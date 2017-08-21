@@ -116,11 +116,13 @@ typedef struct {
 
 	packet_parser_t p;
 
+	uint32_t frame_len;
+
 	odp_pktio_t input;
 
-	uint32_t frame_len;
 	uint32_t headroom;
 	uint32_t tailroom;
+	uint32_t shared_len;
 
 	/*
 	 * Members below are not initialized by packet_init()
@@ -217,6 +219,7 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	* segment occupied by the allocated length.
 	*/
 	pkt_hdr->frame_len = len;
+	pkt_hdr->shared_len = 0;
 	pkt_hdr->headroom  = CONFIG_PACKET_HEADROOM;
 	pkt_hdr->tailroom  = CONFIG_PACKET_MAX_SEG_LEN - seg_len +
 			     CONFIG_PACKET_TAILROOM;

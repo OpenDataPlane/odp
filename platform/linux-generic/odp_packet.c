@@ -494,6 +494,76 @@ static inline void copy_buf_hdr(odp_packet_hdr_t *pkt_hdr, int first, int num,
 	}
 }
 
+static inline void buffer_ref_inc(odp_buffer_hdr_t *buf_hdr)
+{
+	uint32_t ref_cnt = odp_atomic_load_u32(&buf_hdr->ref_cnt);
+
+	/* First count increment after alloc */
+	if (odp_likely(ref_cnt) == 0)
+		odp_atomic_store_u32(&buf_hdr->ref_cnt, 2);
+	else
+		odp_atomic_inc_u32(&buf_hdr->ref_cnt);
+}
+
+static inline uint32_t buffer_ref_dec(odp_buffer_hdr_t *buf_hdr)
+{
+	return odp_atomic_fetch_dec_u32(&buf_hdr->ref_cnt);
+}
+
+static inline uint32_t buffer_ref(odp_buffer_hdr_t *buf_hdr)
+{
+	return odp_atomic_load_u32(&buf_hdr->ref_cnt);
+}
+
+static inline int is_multi_ref(uint32_t ref_cnt)
+{
+	return (ref_cnt > 1);
+}
+
+static inline void packet_ref_inc(odp_packet_hdr_t *pkt_hdr)
+{
+	seg_entry_t *seg;
+	int i;
+	int seg_count = pkt_hdr->buf_hdr.segcount;
+	odp_packet_hdr_t *hdr = pkt_hdr;
+	uint8_t idx = 0;
+
+	for (i = 0; i < seg_count; i++) {
+		seg = seg_entry_next(&hdr, &idx);
+		buffer_ref_inc(seg->hdr);
+	}
+}
+
+static inline void packet_free_multi(odp_buffer_hdr_t *hdr[], int num)
+{
+	int i;
+	uint32_t ref_cnt;
+	int num_ref = 0;
+
+	for (i = 0; i < num; i++) {
+		/* Zero when reference API has not been used */
+		ref_cnt = buffer_ref(hdr[i]);
+
+		if (odp_unlikely(ref_cnt)) {
+			ref_cnt = buffer_ref_dec(hdr[i]);
+
+			if (is_multi_ref(ref_cnt)) {
+				num_ref++;
+				continue;
+			}
+		}
+
+		/* Skip references and pack to be freed headers to array head */
+		if (odp_unlikely(num_ref))
+			hdr[i - num_ref] = hdr[i];
+	}
+
+	num -= num_ref;
+
+	if (odp_likely(num))
+		buffer_free_multi(hdr, num);
+}
+
 static inline void free_all_segments(odp_packet_hdr_t *pkt_hdr, int num)
 {
 	seg_entry_t *seg;
@@ -506,7 +576,7 @@ static inline void free_all_segments(odp_packet_hdr_t *pkt_hdr, int num)
 		buf_hdr[i] = seg->hdr;
 	}
 
-	buffer_free_multi(buf_hdr, num);
+	packet_free_multi(buf_hdr, num);
 }
 
 static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
@@ -563,7 +633,7 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 
 		pkt_hdr = new_hdr;
 
-		buffer_free_multi(buf_hdr, num);
+		packet_free_multi(buf_hdr, num);
 	} else {
 		/* Free last 'num' bufs.
 		 * First, find the last remaining header. */
@@ -578,7 +648,7 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 			buf_hdr[i] = seg->hdr;
 		}
 
-		buffer_free_multi(buf_hdr, num);
+		packet_free_multi(buf_hdr, num);
 
 		/* Head segment remains, no need to copy or update majority
 		 * of the metadata. */
@@ -702,7 +772,7 @@ void odp_packet_free(odp_packet_t pkt)
 	int num_seg = pkt_hdr->buf_hdr.segcount;
 
 	if (odp_likely(CONFIG_PACKET_MAX_SEGS == 1 || num_seg == 1))
-		buffer_free_multi((odp_buffer_hdr_t **)&hdl, 1);
+		packet_free_multi((odp_buffer_hdr_t **)&hdl, 1);
 	else
 		free_all_segments(pkt_hdr, num_seg);
 }
@@ -710,7 +780,7 @@ void odp_packet_free(odp_packet_t pkt)
 void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 {
 	if (CONFIG_PACKET_MAX_SEGS == 1) {
-		buffer_free_multi((odp_buffer_hdr_t **)(uintptr_t)pkt, num);
+		packet_free_multi((odp_buffer_hdr_t **)(uintptr_t)pkt, num);
 	} else {
 		odp_buffer_hdr_t *buf_hdr[num * CONFIG_PACKET_MAX_SEGS];
 		int i;
@@ -731,7 +801,7 @@ void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 			bufs += num_seg - 1;
 		}
 
-		buffer_free_multi(buf_hdr, bufs);
+		packet_free_multi(buf_hdr, bufs);
 	}
 }
 
@@ -1942,7 +2012,12 @@ uint64_t odp_packet_seg_to_u64(odp_packet_seg_t hdl)
 
 odp_packet_t odp_packet_ref_static(odp_packet_t pkt)
 {
-	return odp_packet_copy(pkt, odp_packet_pool(pkt));
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	packet_ref_inc(pkt_hdr);
+	pkt_hdr->shared_len = pkt_hdr->frame_len;
+
+	return pkt;
 }
 
 odp_packet_t odp_packet_ref(odp_packet_t pkt, uint32_t offset)
@@ -2004,14 +2079,32 @@ odp_packet_t odp_packet_ref_pkt(odp_packet_t pkt, uint32_t offset,
 
 int odp_packet_has_ref(odp_packet_t pkt)
 {
-	(void)pkt;
+	odp_buffer_hdr_t *buf_hdr;
+	seg_entry_t *seg;
+	int i;
+	uint32_t ref_cnt;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+	int seg_count = pkt_hdr->buf_hdr.segcount;
+	odp_packet_hdr_t *hdr = pkt_hdr;
+	uint8_t idx = 0;
+
+	for (i = 0; i < seg_count; i++) {
+		seg = seg_entry_next(&hdr, &idx);
+		buf_hdr = seg->hdr;
+		ref_cnt = buffer_ref(buf_hdr);
+
+		if (is_multi_ref(ref_cnt))
+			return 1;
+	}
 
 	return 0;
 }
 
 uint32_t odp_packet_unshared_len(odp_packet_t pkt)
 {
-	return odp_packet_len(pkt);
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	return packet_len(pkt_hdr) - pkt_hdr->shared_len;
 }
 
 /* Include non-inlined versions of API functions */

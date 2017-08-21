@@ -62,11 +62,16 @@ struct odp_buffer_hdr_t {
 	/* Last header of the segment list */
 	void *last_seg;
 
-	/* Initial buffer data pointer and length */
+	/* Initial buffer data pointer */
 	uint8_t  *base_data;
-	uint8_t  *buf_end;
 
-	/* --- 40 bytes --- */
+	/* Reference count */
+	odp_atomic_u32_t ref_cnt;
+
+	/* Event type. Maybe different than pool type (crypto compl event) */
+	int8_t    event_type;
+
+	/* --- 37 bytes --- */
 
 	/* Segments */
 	seg_entry_t seg[CONFIG_PACKET_MAX_SEGS];
@@ -93,14 +98,17 @@ struct odp_buffer_hdr_t {
 	/* Pool pointer */
 	void *pool_ptr;
 
+	/* Initial buffer tail pointer */
+	uint8_t  *buf_end;
+
 	/* User area pointer */
 	void    *uarea_addr;
 
 	/* User area size */
 	uint32_t uarea_size;
 
-	/* Event type. Maybe different than pool type (crypto compl event) */
-	int8_t    event_type;
+	/* Max data size */
+	uint32_t size;
 
 	/* ipc mapped process can not walk over pointers,
 	 * offset has to be used */
@@ -109,9 +117,6 @@ struct odp_buffer_hdr_t {
 	/* Pool handle: will be removed, used only for odp_packet_pool()
 	 * inlining */
 	odp_pool_t pool_hdl;
-
-	/* Max data size */
-	uint32_t size;
 
 	/* Data or next header */
 	uint8_t data[0];
