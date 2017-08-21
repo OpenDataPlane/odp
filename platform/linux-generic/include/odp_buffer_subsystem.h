@@ -16,6 +16,8 @@ extern "C" {
 #include <odp_module.h>
 #include <odp/api/buffer.h>
 
+#define BUFFER_SUBSYSTEM_VERSION 0x00010000UL
+
 /* ODP buffer public APIs subsystem */
 ODP_SUBSYSTEM_DECLARE(buffer);
 

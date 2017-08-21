@@ -9,29 +9,30 @@
 #include <odp_buffer_internal.h>
 #include <odp_buffer_inlines.h>
 #include <odp_debug_internal.h>
+#include <odp_buffer_subsystem.h>
 
 #include <string.h>
 #include <stdio.h>
 #include <inttypes.h>
 
-odp_buffer_t odp_buffer_from_event(odp_event_t ev)
+static odp_buffer_t generic_buffer_from_event(odp_event_t ev)
 {
 	return (odp_buffer_t)ev;
 }
 
-odp_event_t odp_buffer_to_event(odp_buffer_t buf)
+static odp_event_t generic_buffer_to_event(odp_buffer_t buf)
 {
 	return (odp_event_t)buf;
 }
 
-void *odp_buffer_addr(odp_buffer_t buf)
+static void *generic_buffer_addr(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = buf_hdl_to_hdr(buf);
 
 	return hdr->seg[0].data;
 }
 
-uint32_t odp_buffer_size(odp_buffer_t buf)
+static uint32_t generic_buffer_size(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = buf_hdl_to_hdr(buf);
 
@@ -52,34 +53,34 @@ int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
 	hdr = buf_hdl_to_hdr(buf);
 	pool = hdr->pool_ptr;
 
-	len += snprintf(&str[len], n-len,
+	len += snprintf(&str[len], n - len,
 			"Buffer\n");
-	len += snprintf(&str[len], n-len,
+	len += snprintf(&str[len], n - len,
 			"  pool         %" PRIu64 "\n",
 			odp_pool_to_u64(pool->pool_hdl));
-	len += snprintf(&str[len], n-len,
+	len += snprintf(&str[len], n - len,
 			"  addr         %p\n",          hdr->seg[0].data);
-	len += snprintf(&str[len], n-len,
+	len += snprintf(&str[len], n - len,
 			"  size         %" PRIu32 "\n", hdr->size);
-	len += snprintf(&str[len], n-len,
+	len += snprintf(&str[len], n - len,
 			"  type         %i\n",          hdr->type);
 
 	return len;
 }
 
-void odp_buffer_print(odp_buffer_t buf)
+static void generic_buffer_print(odp_buffer_t buf)
 {
 	int max_len = 512;
 	char str[max_len];
 	int len;
 
-	len = odp_buffer_snprint(str, max_len-1, buf);
+	len = odp_buffer_snprint(str, max_len - 1, buf);
 	str[len] = 0;
 
 	ODP_PRINT("\n%s\n", str);
 }
 
-uint64_t odp_buffer_to_u64(odp_buffer_t hdl)
+static uint64_t generic_buffer_to_u64(odp_buffer_t hdl)
 {
 	return _odp_pri(hdl);
 }
@@ -265,7 +266,7 @@ void buffer_free_multi(odp_buffer_hdr_t *buf_hdr[], int num_total)
 	}
 }
 
-odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
+static odp_buffer_t generic_buffer_alloc(odp_pool_t pool_hdl)
 {
 	odp_buffer_t buf;
 	pool_t *pool;
@@ -282,7 +283,8 @@ odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 	return ODP_BUFFER_INVALID;
 }
 
-int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
+static int generic_buffer_alloc_multi(odp_pool_t pool_hdl,
+				      odp_buffer_t buf[], int num)
 {
 	pool_t *pool;
 
@@ -293,24 +295,24 @@ int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
 	return buffer_alloc_multi(pool, (odp_buffer_hdr_t **)buf, num);
 }
 
-void odp_buffer_free(odp_buffer_t buf)
+static void generic_buffer_free(odp_buffer_t buf)
 {
 	buffer_free_multi((odp_buffer_hdr_t **)&buf, 1);
 }
 
-void odp_buffer_free_multi(const odp_buffer_t buf[], int num)
+static void generic_buffer_free_multi(const odp_buffer_t buf[], int num)
 {
 	buffer_free_multi((odp_buffer_hdr_t **)(uintptr_t)buf, num);
 }
 
-odp_pool_t odp_buffer_pool(odp_buffer_t buf)
+static odp_pool_t generic_buffer_pool(odp_buffer_t buf)
 {
 	pool_t *pool = pool_from_buf(buf);
 
 	return pool->pool_hdl;
 }
 
-int odp_buffer_is_valid(odp_buffer_t buf)
+static int generic_buffer_is_valid(odp_buffer_t buf)
 {
 	pool_t *pool;
 
@@ -327,3 +329,32 @@ int odp_buffer_is_valid(odp_buffer_t buf)
 
 	return 1;
 }
+
+odp_buffer_module_t generic_buffer = {
+	.base = {
+		.name = "generic_buffer",
+		.init_local = NULL,
+		.term_local = NULL,
+		.init_global = NULL,
+		.term_global = NULL,
+		},
+	.buffer_from_event = generic_buffer_from_event,
+	.buffer_to_event = generic_buffer_to_event,
+	.buffer_addr = generic_buffer_addr,
+	.buffer_alloc_multi = generic_buffer_alloc_multi,
+	.buffer_free_multi = generic_buffer_free_multi,
+	.buffer_alloc = generic_buffer_alloc,
+	.buffer_free = generic_buffer_free,
+	.buffer_size = generic_buffer_size,
+	.buffer_is_valid = generic_buffer_is_valid,
+	.buffer_pool = generic_buffer_pool,
+	.buffer_print = generic_buffer_print,
+	.buffer_to_u64 = generic_buffer_to_u64,
+};
+
+ODP_MODULE_CONSTRUCTOR(generic_buffer)
+{
+	odp_module_constructor(&generic_buffer);
+	odp_subsystem_register_module(buffer, &generic_buffer);
+}
+
