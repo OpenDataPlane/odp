@@ -106,3 +106,8 @@ uint64_t odp_buffer_to_u64(odp_buffer_t hdl)
 {
 	return _odp_pri(hdl);
 }
+
+odp_pool_t odp_buffer_pool(odp_buffer_t buf)
+{
+	return buf_hdl_to_hdr(buf)->pool_hdl;
+}
