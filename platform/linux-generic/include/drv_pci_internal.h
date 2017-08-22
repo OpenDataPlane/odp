@@ -120,6 +120,7 @@ typedef struct pci_dev_t {
 
 /* path where PCI devices are shown in sysfs: */
 const char *pci_get_sysfs_path(void);
+int pci_read_config(pci_dev_t *dev, void *buf, size_t len, off_t offset);
 
 struct pci_dev_t *pci_open_device(const char *);
 int pci_close_device(pci_dev_t *);

@@ -157,6 +157,21 @@ const char *pci_get_sysfs_path(void)
         return path;
 }
 
+int pci_read_config(pci_dev_t *dev, void *buf, size_t len, off_t offset)
+{
+	if (dev == NULL || dev->user_access_ops == NULL) {
+		ODP_DBG("Called pci_read_config with NULL device or dev->user_access_ops.\n");
+		return -1;
+	}
+
+	if (dev->user_access_ops->read_config == NULL) {
+		ODP_DBG("Called pci_read_config with read_config==NULL.\n");
+		return -1;
+	}
+
+	return dev->user_access_ops->read_config(dev, buf, len, offset);
+}
+
 /*
  * parse a sysfs (or other) file containing one integer value
  * return this positive integer, or -1 on error
