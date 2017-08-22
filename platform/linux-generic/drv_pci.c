@@ -637,6 +637,7 @@ int _odp_pci_term_global(void)
 	return 0;
 }
 
+
 /* pci drivers use this function to open a PCI device from the /sys/bus filesystem
  * It returns a pci_dev_t struct with several fields filled in. The driver can
  * then decide if it can handle the device or not based on device ID.
@@ -668,4 +669,14 @@ pci_dev_t *pci_open_device(const char *dev)
 		ODP_ERR("Could not dump\n");
 
 	return pci_dev;
+}
+
+int pci_close_device(pci_dev_t *dev)
+{
+	if (dev->user_access_ops != NULL)
+		dev->user_access_ops->unmap_resource(dev);
+
+	free_dev(dev);
+
+	return 0;
 }

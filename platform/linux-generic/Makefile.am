@@ -290,6 +290,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   drv_barrier.c \
 			   drv_driver.c \
 			   drv_pci.c \
+			   drv_pci_uio.c \
 			   drv_shm.c \
 			   drv_spinlock.c
 

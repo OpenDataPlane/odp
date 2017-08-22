@@ -28,6 +28,9 @@
 #define PCI_PKTIO_PREFIX "pci:"
 #define PCI_PKTIO_PREFIX_LEN (sizeof(PCI_PKTIO_PREFIX) - 1)
 
+/* FIXME: this should be registered as a DevIO */
+extern const user_access_ops_t uio_access_ops;
+
 static int virtio_init_global(void)
 {
 	ODP_PRINT("PKTIO: initialized pci interface.\n");
@@ -53,6 +56,23 @@ static int virtio_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	if (pci_dev == NULL) {
 		ODP_ERR("pci: could not open PCI device %s as a VirtIO device\n",
 			pci_device);
+		return -1;
+	}
+
+	/* Find suitable DevIO DDF module to work with the driver. */
+	if (pci_dev->kdrv == PCI_KDRV_UIO_GENERIC) {
+		/* probing would be done for each possible DevIO */
+		if (uio_access_ops.probe(pci_dev)) {
+			ODP_ERR("Could not enable DevIO for device %s\n",
+				devname);
+			pci_close_device(pci_dev);
+			return -1;
+		}
+		pci_dev->user_access_ops = &uio_access_ops;
+	} else {
+		ODP_ERR("Could not find suitable DevIO for device %s\n",
+			devname);
+		pci_close_device(pci_dev);
 		return -1;
 	}
 
