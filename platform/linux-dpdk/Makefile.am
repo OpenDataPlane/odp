@@ -17,6 +17,7 @@ endif
 AM_CFLAGS +=  $(PLAT_CFLAGS)
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include
+AM_CFLAGS +=  -I$(top_srcdir)/frameworks/modular
 AM_CFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
 AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_builddir)/include
@@ -196,6 +197,7 @@ noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_packet_socket.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_pkt_queue_internal.h \
 		  ${srcdir}/include/odp_pool_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_pool_subsystem.h \
 		  ${srcdir}/include/odp_posix_extensions.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_queue_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_queue_if.h \
@@ -243,11 +245,12 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_packet_io.c \
 			   ../linux-generic/pktio/loop.c \
 			   ../linux-generic/odp_pkt_queue.c \
-			   odp_pool.c \
+			   pool/dpdk.c \
 			   ../linux-generic/odp_queue.c \
 			   ../linux-generic/odp_queue_if.c \
 			   ../linux-generic/odp_rwlock.c \
 			   ../linux-generic/odp_rwlock_recursive.c \
+			   ../linux-generic/pool/subsystem.c \
 			   ../linux-generic/odp_schedule.c \
 			   ../linux-generic/odp_schedule_if.c \
 			   ../linux-generic/odp_schedule_iquery.c \
@@ -290,6 +293,8 @@ __LIB__libodp_dpdk_la_SOURCES += arch/x86/cpu_flags.c \
 				 arch/x86/odp_cpu_arch.c \
 				 arch/x86/odp_sysinfo_parse.c
 endif
+
+pool/dpdk.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
 
 # Build modular framework into odp-linux library
 modularframeworkdir = $(top_srcdir)/frameworks/modular

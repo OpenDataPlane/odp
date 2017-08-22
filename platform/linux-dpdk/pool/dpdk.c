@@ -48,15 +48,13 @@ typedef struct pool_table_t {
 	odp_shm_t shm;
 } pool_table_t;
 
-
 /* The pool table ptr - resides in shared memory */
 static pool_table_t *pool_tbl;
 
 /* Pool entry pointers (for inlining) */
 void *pool_entry_ptr[ODP_CONFIG_POOLS];
 
-
-int odp_pool_init_global(void)
+static int dpdk_pool_init_global(void)
 {
 	uint32_t i;
 	odp_shm_t shm;
@@ -76,6 +74,7 @@ int odp_pool_init_global(void)
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		/* init locks */
 		pool_entry_t *pool = &pool_tbl->pool[i];
+
 		LOCK_INIT(&pool->s.lock);
 		pool->s.pool_hdl = pool_index_to_handle(i);
 
@@ -91,12 +90,12 @@ int odp_pool_init_global(void)
 	return 0;
 }
 
-int odp_pool_init_local(void)
+static int dpdk_pool_init_local(void)
 {
 	return 0;
 }
 
-int odp_pool_term_global(void)
+static int dpdk_pool_term_global(void)
 {
 	int ret;
 
@@ -107,12 +106,12 @@ int odp_pool_term_global(void)
 	return ret;
 }
 
-int odp_pool_term_local(void)
+static int dpdk_pool_term_local(void)
 {
 	return 0;
 }
 
-int odp_pool_capability(odp_pool_capability_t *capa)
+static int dpdk_pool_capability(odp_pool_capability_t *capa)
 {
 	memset(capa, 0, sizeof(odp_pool_capability_t));
 
@@ -163,8 +162,8 @@ odp_dpdk_mbuf_pool_ctor(struct rte_mempool *mp,
 
 	if (mp->private_data_size < sizeof(struct mbuf_pool_ctor_arg)) {
 		ODP_ERR("(%s) private_data_size %d < %d",
-			mp->name, (int) mp->private_data_size,
-			(int) sizeof(struct mbuf_pool_ctor_arg));
+			mp->name, (int)mp->private_data_size,
+			(int)sizeof(struct mbuf_pool_ctor_arg));
 		return;
 	}
 	mbp_priv = rte_mempool_get_priv(mp);
@@ -205,6 +204,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	/* keep some headroom between start of buffer and data */
 	if (mb_ctor_arg->type == ODP_POOL_PACKET) {
 		odp_packet_hdr_t *pkt_hdr;
+
 		mb->data_off = RTE_PKTMBUF_HEADROOM;
 		mb->nb_segs = 1;
 		mb->port = 0xff;
@@ -299,7 +299,8 @@ static int check_params(odp_pool_param_t *params)
 	return 0;
 }
 
-odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
+static odp_pool_t dpdk_pool_create(const char *name,
+				   odp_pool_param_t *params)
 {
 	struct mbuf_pool_ctor_arg mbp_ctor_arg;
 	struct mbuf_ctor_arg mb_ctor_arg;
@@ -325,7 +326,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 		pool_name[ODP_POOL_NAME_LEN - 1] = 0;
 	}
 
-	/* Find an unused buffer pool slot and initalize it as requested */
+	/* Find an unused buffer pool slot and initialize it as requested */
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		uint32_t num;
 		struct rte_mempool *mp;
@@ -424,7 +425,6 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 				params->type);
 			UNLOCK(&pool->s.lock);
 			return ODP_POOL_INVALID;
-			break;
 		}
 
 		mb_ctor_arg.seg_buf_offset =
@@ -448,7 +448,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 				break;
 			}
 		if (odp_unlikely(cache_size > RTE_MEMPOOL_CACHE_MAX_SIZE ||
-				 (uint32_t) cache_size * 1.5 > num)) {
+				 (uint32_t)cache_size * 1.5 > num)) {
 			ODP_ERR("cache_size calc failure: %d\n", cache_size);
 			cache_size = 0;
 		}
@@ -506,8 +506,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 	return pool_hdl;
 }
 
-
-odp_pool_t odp_pool_lookup(const char *name)
+static odp_pool_t dpdk_pool_lookup(const char *name)
 {
 	struct rte_mempool *mp = NULL;
 	odp_pool_t pool_hdl = ODP_POOL_INVALID;
@@ -519,6 +518,7 @@ odp_pool_t odp_pool_lookup(const char *name)
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		pool_entry_t *pool = get_pool_entry(i);
+
 		LOCK(&pool->s.lock);
 		if (pool->s.rte_mempool != mp) {
 			UNLOCK(&pool->s.lock);
@@ -529,7 +529,6 @@ odp_pool_t odp_pool_lookup(const char *name)
 	}
 	return pool_hdl;
 }
-
 
 static odp_buffer_t buffer_alloc(pool_entry_t *pool)
 {
@@ -546,10 +545,10 @@ static odp_buffer_t buffer_alloc(pool_entry_t *pool)
 	if ((struct rte_mbuf *)buffer == NULL) {
 		rte_errno = ENOMEM;
 		return ODP_BUFFER_INVALID;
-	} else {
-		buf_hdl_to_hdr(buffer)->next = NULL;
-		return buffer;
 	}
+
+	buf_hdl_to_hdr(buffer)->next = NULL;
+	return buffer;
 }
 
 odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
@@ -595,16 +594,18 @@ void odp_buffer_free_multi(const odp_buffer_t buf[], int num)
 	}
 }
 
-void odp_pool_print(odp_pool_t pool_hdl)
+static void dpdk_pool_print(odp_pool_t pool_hdl)
 {
 	uint32_t pool_id = pool_handle_to_index(pool_hdl);
 	pool_entry_t *pool = get_pool_entry(pool_id);
+
 	rte_mempool_dump(stdout, pool->s.rte_mempool);
 }
 
-int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
+static int dpdk_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 {
 	uint32_t pool_id = pool_handle_to_index(pool_hdl);
+
 	pool_entry_t *pool = get_pool_entry(pool_id);
 
 	if (pool == NULL || info == NULL)
@@ -618,15 +619,15 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 
 /*
  * DPDK doesn't support pool destroy at the moment. Instead we should improve
- * odp_pool_create() to try to reuse pools
+ * dpdk_pool_create() to try to reuse pools
  */
-int odp_pool_destroy(odp_pool_t pool_hdl)
+static int dpdk_pool_destroy(odp_pool_t pool_hdl)
 {
 	uint32_t pool_id = pool_handle_to_index(pool_hdl);
 	pool_entry_t *pool = get_pool_entry(pool_id);
-	struct rte_mempool *mp;
+	struct rte_mempool *mp = rte_mempool_lookup(pool->s.name);
 
-	if ((mp = rte_mempool_lookup(pool->s.name)) == NULL) {
+	if (mp == NULL) {
 		ODP_ERR("Can't find pool with this name!\n");
 		return -1;
 	}
@@ -637,18 +638,36 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 	return 0;
 }
 
-odp_pool_t odp_buffer_pool(odp_buffer_t buf)
-{
-	return buf_hdl_to_hdr(buf)->pool_hdl;
-}
-
-void odp_pool_param_init(odp_pool_param_t *params)
+static void dpdk_pool_param_init(odp_pool_param_t *params)
 {
 	memset(params, 0, sizeof(odp_pool_param_t));
 }
 
-uint64_t odp_pool_to_u64(odp_pool_t hdl)
+static uint64_t dpdk_pool_to_u64(odp_pool_t hdl)
 {
 	return _odp_pri(hdl);
 }
 
+pool_module_t dpdk_pool = {
+	.base = {
+		.name = "dpdk_pool",
+		.init_local = dpdk_pool_init_local,
+		.term_local = dpdk_pool_term_local,
+		.init_global = dpdk_pool_init_global,
+		.term_global = dpdk_pool_term_global,
+		},
+	.capability = dpdk_pool_capability,
+	.create = dpdk_pool_create,
+	.destroy = dpdk_pool_destroy,
+	.lookup = dpdk_pool_lookup,
+	.info = dpdk_pool_info,
+	.print = dpdk_pool_print,
+	.to_u64 = dpdk_pool_to_u64,
+	.param_init = dpdk_pool_param_init,
+};
+
+ODP_MODULE_CONSTRUCTOR(dpdk_pool)
+{
+	odp_module_constructor(&dpdk_pool);
+	odp_subsystem_register_module(pool, &dpdk_pool);
+}
