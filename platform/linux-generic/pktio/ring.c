@@ -100,8 +100,10 @@ static TAILQ_HEAD(, _ring) odp_ring_list;
 		switch (n & 0x3) { \
 		case 3: \
 		r->ring[idx++] = obj_table[i++]; \
+		/* fallthrough */ \
 		case 2: \
 		r->ring[idx++] = obj_table[i++]; \
+		/* fallthrough */ \
 		case 1: \
 		r->ring[idx++] = obj_table[i++]; \
 		} \
@@ -129,8 +131,10 @@ static TAILQ_HEAD(, _ring) odp_ring_list;
 		switch (n & 0x3) { \
 		case 3: \
 		obj_table[i++] = r->ring[idx++]; \
+		/* fallthrough */ \
 		case 2: \
 		obj_table[i++] = r->ring[idx++]; \
+		/* fallthrough */ \
 		case 1: \
 		obj_table[i++] = r->ring[idx++]; \
 		} \
