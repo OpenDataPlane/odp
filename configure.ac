@@ -331,7 +331,6 @@ ODP_CHECK_CFLAG([-Wformat-nonliteral])
 ODP_CHECK_CFLAG([-Wformat-security])
 ODP_CHECK_CFLAG([-Wundef])
 ODP_CHECK_CFLAG([-Wwrite-strings])
-ODP_CHECK_CFLAG([-Wimplicit-fallthrough=0])
 ODP_CHECK_CFLAG([-Wformat-truncation=0])
 ODP_CHECK_CFLAG([-Wformat-overflow=0])
 
