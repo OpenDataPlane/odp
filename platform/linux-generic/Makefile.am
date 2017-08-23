@@ -203,6 +203,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_schedule_scalable.h \
 		  ${srcdir}/include/odp_schedule_scalable_config.h \
 		  ${srcdir}/include/odp_schedule_scalable_ordered.h \
+		  ${srcdir}/include/odp_schedule_subsystem.h \
 		  ${srcdir}/include/odp_sorted_list_internal.h \
 		  ${srcdir}/include/odp_shm_internal.h \
 		  ${srcdir}/include/odp_time_internal.h \
@@ -286,6 +287,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_schedule_iquery.c \
 			   odp_schedule_scalable.c \
 			   odp_schedule_scalable_ordered.c \
+			   schedule/subsystem.c \
 			   odp_shared_memory.c \
 			   odp_sorted_list.c \
 			   odp_spinlock.c \
