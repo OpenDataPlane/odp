@@ -281,12 +281,12 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_queue_scalable.c \
 			   odp_rwlock.c \
 			   odp_rwlock_recursive.c \
-			   odp_schedule.c \
 			   odp_schedule_if.c \
-			   odp_schedule_sp.c \
-			   odp_schedule_iquery.c \
-			   odp_schedule_scalable.c \
-			   odp_schedule_scalable_ordered.c \
+			   schedule/generic.c \
+			   schedule/iquery.c \
+			   schedule/scalable.c \
+			   schedule/scalable_ordered.c \
+			   schedule/sp.c \
 			   schedule/subsystem.c \
 			   odp_shared_memory.c \
 			   odp_sorted_list.c \
@@ -334,6 +334,17 @@ endif
 
 pool/generic.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
 buffer/generic.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
+if ODP_SCHEDULE_SCALABLE
+schedule/scalable.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
+else
+schedule/generic.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
+endif
+if ODP_SCHEDULE_SP
+schedule/sp.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
+endif
+if ODP_SCHEDULE_IQUERY
+schedule/iquery.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
+endif
 
 # Build modular framework into odp-linux library
 modularframeworkdir = $(top_srcdir)/frameworks/modular

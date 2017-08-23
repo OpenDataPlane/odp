@@ -20,18 +20,13 @@ typedef void (*schedule_pktio_start_fn_t)(int pktio_index, int num_in_queue,
 typedef int (*schedule_thr_add_fn_t)(odp_schedule_group_t group, int thr);
 typedef int (*schedule_thr_rem_fn_t)(odp_schedule_group_t group, int thr);
 typedef int (*schedule_num_grps_fn_t)(void);
-typedef int (*schedule_init_queue_fn_t)(uint32_t queue_index,
-					const odp_schedule_param_t *sched_param
-				       );
+typedef int (*schedule_init_queue_fn_t)(
+	uint32_t queue_index, const odp_schedule_param_t *sched_param);
 typedef void (*schedule_destroy_queue_fn_t)(uint32_t queue_index);
 typedef int (*schedule_sched_queue_fn_t)(uint32_t queue_index);
 typedef int (*schedule_unsched_queue_fn_t)(uint32_t queue_index);
 typedef int (*schedule_ord_enq_multi_fn_t)(queue_t q_int,
 					   void *buf_hdr[], int num, int *ret);
-typedef int (*schedule_init_global_fn_t)(void);
-typedef int (*schedule_term_global_fn_t)(void);
-typedef int (*schedule_init_local_fn_t)(void);
-typedef int (*schedule_term_local_fn_t)(void);
 typedef void (*schedule_order_lock_fn_t)(void);
 typedef void (*schedule_order_unlock_fn_t)(void);
 typedef unsigned (*schedule_max_ordered_locks_fn_t)(void);
@@ -47,10 +42,6 @@ typedef struct schedule_fn_t {
 	schedule_destroy_queue_fn_t destroy_queue;
 	schedule_sched_queue_fn_t   sched_queue;
 	schedule_ord_enq_multi_fn_t ord_enq_multi;
-	schedule_init_global_fn_t   init_global;
-	schedule_term_global_fn_t   term_global;
-	schedule_init_local_fn_t    init_local;
-	schedule_term_local_fn_t    term_local;
 	schedule_order_lock_fn_t    order_lock;
 	schedule_order_unlock_fn_t  order_unlock;
 	schedule_max_ordered_locks_fn_t max_ordered_locks;
@@ -71,32 +62,6 @@ odp_queue_t sched_cb_queue_handle(uint32_t queue_index);
 void sched_cb_queue_destroy_finalize(uint32_t queue_index);
 int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num);
 int sched_cb_queue_empty(uint32_t queue_index);
-
-/* API functions */
-typedef struct {
-	uint64_t (*schedule_wait_time)(uint64_t);
-	odp_event_t (*schedule)(odp_queue_t *, uint64_t);
-	int (*schedule_multi)(odp_queue_t *, uint64_t, odp_event_t [], int);
-	void (*schedule_pause)(void);
-	void (*schedule_resume)(void);
-	void (*schedule_release_atomic)(void);
-	void (*schedule_release_ordered)(void);
-	void (*schedule_prefetch)(int);
-	int (*schedule_num_prio)(void);
-	odp_schedule_group_t (*schedule_group_create)(const char *,
-						      const odp_thrmask_t *);
-	int (*schedule_group_destroy)(odp_schedule_group_t);
-	odp_schedule_group_t (*schedule_group_lookup)(const char *);
-	int (*schedule_group_join)(odp_schedule_group_t, const odp_thrmask_t *);
-	int (*schedule_group_leave)(odp_schedule_group_t,
-				    const odp_thrmask_t *);
-	int (*schedule_group_thrmask)(odp_schedule_group_t, odp_thrmask_t *);
-	int (*schedule_group_info)(odp_schedule_group_t,
-				   odp_schedule_group_info_t *);
-	void (*schedule_order_lock)(unsigned);
-	void (*schedule_order_unlock)(unsigned);
-
-} schedule_api_t;
 
 #ifdef __cplusplus
 }

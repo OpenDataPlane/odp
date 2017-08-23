@@ -16,6 +16,7 @@
 #include <odp_config_internal.h>
 #include <odp_ring_internal.h>
 #include <odp_timer_internal.h>
+#include <odp_schedule_subsystem.h>
 
 #define NUM_THREAD        ODP_THREAD_COUNT_MAX
 #define NUM_QUEUE         ODP_CONFIG_QUEUES
@@ -836,10 +837,6 @@ const schedule_fn_t schedule_sp_fn = {
 	.destroy_queue = destroy_queue,
 	.sched_queue   = sched_queue,
 	.ord_enq_multi = ord_enq_multi,
-	.init_global   = init_global,
-	.term_global   = term_global,
-	.init_local    = init_local,
-	.term_local    = term_local,
 	.order_lock    = order_lock,
 	.order_unlock  = order_unlock,
 	.max_ordered_locks = max_ordered_locks,
@@ -848,8 +845,15 @@ const schedule_fn_t schedule_sp_fn = {
 };
 
 /* Fill in scheduler API calls */
-const schedule_api_t schedule_sp_api = {
-	.schedule_wait_time       = schedule_wait_time,
+odp_schedule_module_t schedule_sp = {
+	.base = {
+		.name = "schedule_sp",
+		.init_global = init_global,
+		.term_global = term_global,
+		.init_local = init_local,
+		.term_local = term_local,
+	},
+	.wait_time                = schedule_wait_time,
 	.schedule                 = schedule,
 	.schedule_multi           = schedule_multi,
 	.schedule_pause           = schedule_pause,
@@ -868,3 +872,9 @@ const schedule_api_t schedule_sp_api = {
 	.schedule_order_lock      = schedule_order_lock,
 	.schedule_order_unlock    = schedule_order_unlock
 };
+
+ODP_MODULE_CONSTRUCTOR(schedule_sp)
+{
+	odp_module_constructor(&schedule_sp);
+	odp_subsystem_register_module(schedule, &schedule_sp);
+}

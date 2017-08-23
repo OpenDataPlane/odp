@@ -113,6 +113,11 @@ int odp_queue_term_global(void);
 int odp_crypto_init_global(void);
 int odp_crypto_term_global(void);
 
+int odp_schedule_init_global(void);
+int odp_schedule_term_global(void);
+int odp_schedule_init_local(void);
+int odp_schedule_term_local(void);
+
 int odp_timer_init_global(const odp_init_t *params);
 int odp_timer_term_global(void);
 int odp_timer_disarm_all(void);

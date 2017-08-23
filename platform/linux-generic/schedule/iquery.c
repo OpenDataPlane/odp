@@ -23,6 +23,7 @@
 #include <odp/api/packet_io.h>
 #include <odp_config_internal.h>
 #include <odp_timer_internal.h>
+#include <odp_schedule_subsystem.h>
 
 /* Should remove this dependency */
 #include <odp_queue_internal.h>
@@ -1336,10 +1337,6 @@ const schedule_fn_t schedule_iquery_fn = {
 	.destroy_queue = destroy_sched_queue,
 	.sched_queue   = schedule_sched_queue,
 	.ord_enq_multi = schedule_ord_enq_multi,
-	.init_global   = schedule_init_global,
-	.term_global   = schedule_term_global,
-	.init_local    = schedule_init_local,
-	.term_local    = schedule_term_local,
 	.order_lock    = order_lock,
 	.order_unlock  = order_unlock,
 	.max_ordered_locks = schedule_max_ordered_locks,
@@ -1348,8 +1345,15 @@ const schedule_fn_t schedule_iquery_fn = {
 };
 
 /* Fill in scheduler API calls */
-const schedule_api_t schedule_iquery_api = {
-	.schedule_wait_time       = schedule_wait_time,
+odp_schedule_module_t schedule_iquery = {
+	.base = {
+		.name = "schedule_iquery",
+		.init_global = schedule_init_global,
+		.term_global = schedule_term_global,
+		.init_local = schedule_init_local,
+		.term_local = schedule_term_local,
+	},
+	.wait_time                = schedule_wait_time,
 	.schedule                 = schedule,
 	.schedule_multi           = schedule_multi,
 	.schedule_pause           = schedule_pause,
@@ -1368,6 +1372,12 @@ const schedule_api_t schedule_iquery_api = {
 	.schedule_order_lock      = schedule_order_lock,
 	.schedule_order_unlock    = schedule_order_unlock
 };
+
+ODP_MODULE_CONSTRUCTOR(schedule_iquery)
+{
+	odp_module_constructor(&schedule_iquery);
+	odp_subsystem_register_module(schedule, &schedule_iquery);
+}
 
 static void thread_set_interest(sched_thread_local_t *thread,
 				unsigned int queue_index, int prio)

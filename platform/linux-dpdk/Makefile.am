@@ -252,9 +252,12 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_rwlock.c \
 			   ../linux-generic/odp_rwlock_recursive.c \
 			   ../linux-generic/pool/subsystem.c \
-			   ../linux-generic/odp_schedule.c \
 			   ../linux-generic/odp_schedule_if.c \
-			   ../linux-generic/odp_schedule_iquery.c \
+			   ../linux-generic/schedule/generic.c \
+			   ../linux-generic/schedule/iquery.c \
+			   ../linux-generic/schedule/scalable.c \
+			   ../linux-generic/schedule/scalable_ordered.c \
+			   ../linux-generic/schedule/sp.c \
 			   ../linux-generic/schedule/subsystem.c \
 			   ../linux-generic/odp_shared_memory.c \
 			   ../linux-generic/odp_sorted_list.c \
@@ -297,6 +300,19 @@ __LIB__libodp_dpdk_la_SOURCES += arch/x86/cpu_flags.c \
 endif
 
 pool/dpdk.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
+if ODP_SCHEDULE_SCALABLE
+../linux-generic/schedule/scalable.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
+else
+if ODP_SCHEDULE_SP
+../linux-generic/schedule/sp.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
+else
+if ODP_SCHEDULE_IQUERY
+../linux-generic/schedule/iquery.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
+else
+../linux-generic/schedule/generic.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
+endif
+endif
+endif
 
 # Build modular framework into odp-linux library
 modularframeworkdir = $(top_srcdir)/frameworks/modular
