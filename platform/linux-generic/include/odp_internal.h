@@ -131,6 +131,7 @@ int _odp_ishm_term_global(void);
 int _odp_ishm_term_local(void);
 
 int cpuinfo_parser(FILE *file, system_info_t *sysinfo);
+uint64_t odp_cpufreq_id(const char *filename, int id);
 uint64_t odp_cpu_hz_current(int id);
 void sys_info_print_arch(void);
 
