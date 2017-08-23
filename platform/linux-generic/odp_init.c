@@ -178,7 +178,7 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = QUEUE_INIT;
 
-	if (sched_fn->init_global()) {
+	if (odp_schedule_init_global()) {
 		ODP_ERR("ODP schedule init failed.\n");
 		goto init_failed;
 	}
@@ -306,7 +306,7 @@ int _odp_term_global(enum init_stage stage)
 		/* Fall through */
 
 	case SCHED_INIT:
-		if (sched_fn->term_global()) {
+		if (odp_schedule_term_global()) {
 			ODP_ERR("ODP schedule term failed.\n");
 			rc = -1;
 		}
@@ -414,7 +414,7 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 	}
 	stage = QUEUE_INIT;
 
-	if (sched_fn->init_local()) {
+	if (odp_schedule_init_local()) {
 		ODP_ERR("ODP schedule local init failed.\n");
 		goto init_fail;
 	}
@@ -447,7 +447,7 @@ int _odp_term_local(enum init_stage stage)
 	case ALL_INIT:
 
 	case SCHED_INIT:
-		if (sched_fn->term_local()) {
+		if (odp_schedule_term_local()) {
 			ODP_ERR("ODP schedule local term failed.\n");
 			rc = -1;
 		}

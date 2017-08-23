@@ -23,6 +23,7 @@
 #include <odp/api/packet_io.h>
 #include <odp_ring_internal.h>
 #include <odp_timer_internal.h>
+#include <odp_schedule_subsystem.h>
 
 /* Should remove this dependency */
 #include <odp_queue_internal.h>
@@ -389,9 +390,9 @@ static int schedule_term_global(void)
 					odp_event_t events[1];
 					int num;
 
-					num = sched_cb_queue_deq_multi(qi,
-								       events,
-								       1);
+					num = queue_idx_deq_multi(qi,
+								  events,
+								  1);
 
 					if (num < 0)
 						queue_destroy_finalize(qi);
@@ -1397,10 +1398,6 @@ const schedule_fn_t schedule_default_fn = {
 	.destroy_queue = schedule_destroy_queue,
 	.sched_queue = schedule_sched_queue,
 	.ord_enq_multi = schedule_ord_enq_multi,
-	.init_global = schedule_init_global,
-	.term_global = schedule_term_global,
-	.init_local  = schedule_init_local,
-	.term_local  = schedule_term_local,
 	.order_lock = order_lock,
 	.order_unlock = order_unlock,
 	.max_ordered_locks = schedule_max_ordered_locks,
@@ -1409,8 +1406,15 @@ const schedule_fn_t schedule_default_fn = {
 };
 
 /* Fill in scheduler API calls */
-const schedule_api_t schedule_default_api = {
-	.schedule_wait_time       = schedule_wait_time,
+odp_schedule_module_t schedule_generic = {
+	.base = {
+		.name = "schedule_generic",
+		.init_global = schedule_init_global,
+		.term_global = schedule_term_global,
+		.init_local = schedule_init_local,
+		.term_local = schedule_term_local,
+	},
+	.wait_time                = schedule_wait_time,
 	.schedule                 = schedule,
 	.schedule_multi           = schedule_multi,
 	.schedule_pause           = schedule_pause,
@@ -1429,3 +1433,9 @@ const schedule_api_t schedule_default_api = {
 	.schedule_order_lock      = schedule_order_lock,
 	.schedule_order_unlock    = schedule_order_unlock
 };
+
+ODP_MODULE_CONSTRUCTOR(schedule_generic)
+{
+	odp_module_constructor(&schedule_generic);
+	odp_subsystem_register_module(schedule, &schedule_generic);
+}

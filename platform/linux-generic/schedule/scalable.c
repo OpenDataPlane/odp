@@ -28,6 +28,7 @@
 #include <odp_llqueue.h>
 #include <odp_queue_scalable_internal.h>
 #include <odp_schedule_if.h>
+#include <odp_schedule_subsystem.h>
 #include <odp_bitset.h>
 #include <odp_packet_io_internal.h>
 
@@ -1949,17 +1950,20 @@ const schedule_fn_t schedule_scalable_fn = {
 	.destroy_queue	= destroy_queue,
 	.sched_queue	= sched_queue,
 	.ord_enq_multi	= ord_enq_multi,
-	.init_global	= schedule_init_global,
-	.term_global	= schedule_term_global,
-	.init_local	= schedule_init_local,
-	.term_local	= schedule_term_local,
 	.order_lock	= order_lock,
 	.order_unlock	= order_unlock,
 	.max_ordered_locks = schedule_max_ordered_locks,
 };
 
-const schedule_api_t schedule_scalable_api = {
-	.schedule_wait_time		= schedule_wait_time,
+odp_schedule_module_t schedule_scalable = {
+	.base = {
+		.name = "schedule_scalable",
+		.init_global = schedule_init_global,
+		.term_global = schedule_term_global,
+		.init_local = schedule_init_local,
+		.term_local = schedule_term_local,
+	},
+	.wait_time			= schedule_wait_time,
 	.schedule			= schedule,
 	.schedule_multi			= schedule_multi,
 	.schedule_pause			= schedule_pause,
@@ -1978,3 +1982,9 @@ const schedule_api_t schedule_scalable_api = {
 	.schedule_order_lock		= schedule_order_lock,
 	.schedule_order_unlock		= schedule_order_unlock,
 };
+
+ODP_MODULE_CONSTRUCTOR(schedule_scalable)
+{
+	odp_module_constructor(&schedule_scalable);
+	odp_subsystem_register_module(schedule, &schedule_scalable);
+}
