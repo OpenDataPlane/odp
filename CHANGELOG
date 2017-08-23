@@ -26,6 +26,10 @@ Compilation failures using GCC 7 series
 ==== https://bugs.linaro.org/show_bug.cgi?id=3039[Bug 3039]
 Socket pktio recv fails on large number of packet
 
+==== https://bugs.linaro.org/show_bug.cgi?id=3177[bug 3177]
+Test case for classification enable field in odp_pktin_queue_config
+parameter.
+
 === Bug Fixes (Unnumbered)
 * git_hash: handle git worktree
 * Use PRIu32 to print uint32_t values
