@@ -59,9 +59,6 @@ endif
 if netmap_support
 TESTS += validation/api/pktio/pktio_run_netmap.sh
 endif
-if PKTIO_DPDK
-TESTS += validation/api/pktio/pktio_run_dpdk.sh
-endif
 TESTS += pktio_ipc/pktio_ipc_run.sh
 SUBDIRS += pktio_ipc
 else
