@@ -126,9 +126,10 @@ int main(int argc, char *argv[])
 	cpu = odp_cpumask_first(&cpu_mask);
 	printf("the first CPU:              %i\n", cpu);
 
-	/* reserve cpu 0 for the control plane so remove it from
-	 * the default mask */
-	odp_cpumask_clr(&cpu_mask, 0);
+	/* If possible, remove CPU 0 from the default mask to reserve it for the
+	 * control plane. */
+	if (num_workers > 1)
+		odp_cpumask_clr(&cpu_mask, 0);
 	num_workers = odp_cpumask_count(&cpu_mask);
 	(void)odp_cpumask_to_str(&cpu_mask, cpumaskstr, sizeof(cpumaskstr));
 	printf("new cpu mask:               %s\n", cpumaskstr);

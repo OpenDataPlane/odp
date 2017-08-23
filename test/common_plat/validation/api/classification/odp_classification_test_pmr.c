@@ -171,8 +171,6 @@ void classification_test_pktin_classifier_flag(void)
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 
 	odp_packet_free(pkt);
-
-	odp_packet_free(pkt);
 	odp_cos_destroy(cos);
 	odp_cos_destroy(default_cos);
 	odp_cls_pmr_destroy(pmr);
