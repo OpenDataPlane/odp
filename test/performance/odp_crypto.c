@@ -837,6 +837,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if (cargs.schedule || cargs.poll)
+		odp_queue_destroy(out_queue);
 	if (odp_pool_destroy(pool)) {
 		app_err("Error: pool destroy\n");
 		exit(EXIT_FAILURE);
