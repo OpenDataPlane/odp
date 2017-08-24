@@ -1579,11 +1579,13 @@ int _odp_packet_cmp_data(odp_packet_t pkt, uint32_t offset,
  * ********************************************************
  *
  */
-
 void odp_packet_print(odp_packet_t pkt)
 {
 	odp_packet_seg_t seg;
-	int max_len = 512;
+	seg_entry_t *seg_entry;
+	odp_packet_hdr_t *seg_hdr;
+	uint8_t idx;
+	int max_len = 1024;
 	char str[max_len];
 	int len = 0;
 	int n = max_len - 1;
@@ -1619,12 +1621,22 @@ void odp_packet_print(odp_packet_t pkt)
 	len += snprintf(&str[len], n - len,
 			"  num_segs     %i\n", odp_packet_num_segs(pkt));
 
+	seg_hdr = hdr;
+	idx = 0;
 	seg = odp_packet_first_seg(pkt);
 
 	while (seg != ODP_PACKET_SEG_INVALID) {
+		odp_buffer_hdr_t *buf_hdr;
+
+		seg_entry = seg_entry_next(&seg_hdr, &idx);
+		buf_hdr = seg_entry->hdr;
+
 		len += snprintf(&str[len], n - len,
-				"    seg_len    %" PRIu32 "\n",
-				odp_packet_seg_data_len(pkt, seg));
+				"    seg_len    %-4" PRIu32 "  seg_data %p ",
+				odp_packet_seg_data_len(pkt, seg),
+				odp_packet_seg_data(pkt, seg));
+		len += snprintf(&str[len], n - len, "ref_cnt %u\n",
+				buffer_ref(buf_hdr));
 
 		seg = odp_packet_next_seg(pkt, seg);
 	}
