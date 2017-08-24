@@ -560,6 +560,8 @@ run_measure_one(crypto_args_t *cargs,
 				if (rc <= 0) {
 					app_err("failed odp_crypto_packet_op_enq: rc = %d\n",
 						rc);
+					if (!cargs->reuse_packet)
+						odp_packet_free(pkt);
 					break;
 				}
 				packets_sent += rc;
@@ -569,6 +571,8 @@ run_measure_one(crypto_args_t *cargs,
 				if (rc <= 0) {
 					app_err("failed odp_crypto_packet_op: rc = %d\n",
 						rc);
+					if (!cargs->reuse_packet)
+						odp_packet_free(pkt);
 					break;
 				}
 				packets_sent += rc;
@@ -582,16 +586,14 @@ run_measure_one(crypto_args_t *cargs,
 						  config->session.
 						   auth_digest_len);
 				}
-				if (!cargs->in_place) {
-					if (cargs->reuse_packet)
-						pkt = out_pkt;
-					else
-						odp_packet_free(out_pkt);
-				}
+				if (cargs->reuse_packet)
+					pkt = out_pkt;
+				else
+					odp_packet_free(out_pkt);
 			}
 		}
 
-		if (out_queue != ODP_QUEUE_INVALID) {
+		if (cargs->schedule || cargs->poll) {
 			odp_event_t ev;
 			odp_crypto_packet_result_t result;
 			odp_packet_t out_pkt;
@@ -646,7 +648,7 @@ run_measure_one(crypto_args_t *cargs,
 					cargs->iteration_count;
 	}
 
-	if (ODP_PACKET_INVALID != pkt)
+	if (cargs->reuse_packet)
 		odp_packet_free(pkt);
 
 	return rc < 0 ? rc : 0;
