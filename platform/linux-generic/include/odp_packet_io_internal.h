@@ -34,7 +34,6 @@ extern "C" {
 #include <odp_packet_socket.h>
 #include <odp_packet_netmap.h>
 #include <odp_packet_tap.h>
-#include <odp_packet_dpdk.h>
 
 #define PKTIO_NAME_LEN 256
 
@@ -121,7 +120,6 @@ struct pktio_entry {
 		pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap
 						 *   API for IO */
 		pkt_netmap_t pkt_nm;		/**< using netmap API for IO */
-		pkt_dpdk_t pkt_dpdk;		/**< using DPDK for IO */
 #ifdef HAVE_PCAP
 		pkt_pcap_t pkt_pcap;		/**< Using pcap for IO */
 #endif
@@ -253,7 +251,6 @@ static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
 }
 
 extern const pktio_if_ops_t netmap_pktio_ops;
-extern const pktio_if_ops_t dpdk_pktio_ops;
 extern const pktio_if_ops_t sock_mmsg_pktio_ops;
 extern const pktio_if_ops_t sock_mmap_pktio_ops;
 extern const pktio_if_ops_t loopback_pktio_ops;

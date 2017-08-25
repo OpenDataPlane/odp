@@ -152,13 +152,6 @@ typedef struct odp_packet_hdr_t {
 	/* Result for crypto packet op */
 	odp_crypto_packet_result_t crypto_op_result;
 
-#ifdef ODP_PKTIO_DPDK
-	/* Type of extra data */
-	uint8_t extra_type;
-	/* Extra space for packet descriptors. E.g. DPDK mbuf  */
-	uint8_t extra[PKT_EXTRA_LEN] ODP_ALIGNED_CACHE;
-#endif
-
 	/* Packet data storage */
 	uint8_t data[0];
 } odp_packet_hdr_t;
