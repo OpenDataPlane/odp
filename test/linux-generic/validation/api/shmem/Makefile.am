@@ -7,6 +7,7 @@ test_extradir = $(testdir)
 
 #shmem_linux is stand alone, pure linux (no ODP):
 dist_shmem_linux_SOURCES = shmem_linux.c
+shmem_linux_CFLAGS = $(AM_CFLAGS) -I$(top_builddir)/include
 shmem_linux_LDFLAGS = $(AM_LDFLAGS) -lrt
 
 #shmem_odp1 and shmem_odp2 are the 2 ODP processes:

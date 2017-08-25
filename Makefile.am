@@ -1,5 +1,4 @@
 ACLOCAL_AMFLAGS=-I m4
-AUTOMAKE_OPTIONS = foreign
 AM_DISTCHECK_CONFIGURE_FLAGS = --enable-test-cpp	\
 			       --enable-test-example	\
 			       --enable-test-helper	\

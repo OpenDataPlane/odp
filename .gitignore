@@ -34,6 +34,9 @@ depcomp
 doc/output
 dpdk/
 install-sh
+include/config.h.in
+include/config.h
+include/stamp-h1
 lib/
 libtool
 ltmain.sh

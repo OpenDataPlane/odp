@@ -19,9 +19,9 @@ AC_SUBST(ODP_VERSION_API_MINOR)
 AC_CONFIG_FILES([include/odp/api/spec/version.h
                  include/odp/api/spec/deprecated.h])
 
-AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects])
-AC_CONFIG_SRCDIR([helper/config.h.in])
-AM_CONFIG_HEADER([helper/config.h])
+AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects foreign nostdinc])
+AC_CONFIG_SRCDIR([include/odp/api/spec/init.h])
+AM_CONFIG_HEADER([include/config.h])
 
 AC_USE_SYSTEM_EXTENSIONS
 AC_SYS_LARGEFILE
@@ -63,9 +63,10 @@ AC_SUBST([LIBTOOL_DEPS])
 AM_PROG_LIBTOOL
 
 # Checks for library functions.
-AC_FUNC_MALLOC
+dnl breaks cross-compilation and malloc(0) behaviour is not that important
+dnl AC_FUNC_MALLOC
 AC_FUNC_MMAP
-AC_CHECK_FUNCS([bzero clock_gettime gethostbyname getpagesize gettimeofday memset munmap socket strchr strerror strrchr strstr strtoull])
+AC_CHECK_FUNCS([bzero clock_gettime gethostbyname getpagesize gettimeofday malloc memset munmap socket strchr strerror strrchr strstr strtoull])
 
 # Checks for header files.
 AC_HEADER_RESOLV
@@ -174,7 +175,8 @@ else
     exit 1
 fi
 
-ODP_CFLAGS="$ODP_CFLAGS -DIMPLEMENTATION_NAME=$IMPLEMENTATION_NAME"
+AC_DEFINE_UNQUOTED([IMPLEMENTATION_NAME], ["$IMPLEMENTATION_NAME"],
+		   [Define to the name of the implementation])
 
 ##########################################################################
 # Include m4 files
@@ -251,20 +253,18 @@ AC_ARG_ENABLE([debug-print],
     [  --enable-debug-print    display debugging information],
     [if test "x$enableval" = "xyes"; then
 	ODP_DEBUG_PRINT=1
-     else
-	ODP_DEBUG_PRINT=0
     fi])
-ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG_PRINT"
+AC_DEFINE_UNQUOTED([ODP_DEBUG_PRINT], [$ODP_DEBUG_PRINT],
+		   [Define to 1 to display debug information])
 
 ODPH_DEBUG_PRINT=0
 AC_ARG_ENABLE([helper-debug-print],
     [  --enable-helper-debug-print    display helper debugging information],
     [if test "x$enableval" = "xyes"; then
 	ODPH_DEBUG_PRINT=1
-     else
-	ODPH_DEBUG_PRINT=0
     fi])
-ODP_CFLAGS="$ODP_CFLAGS -DODPH_DEBUG_PRINT=$ODPH_DEBUG_PRINT"
+AC_DEFINE_UNQUOTED([ODPH_DEBUG_PRINT], [$ODPH_DEBUG_PRINT],
+		   [Define to 1 to display helper debug information])
 
 ##########################################################################
 # Enable/disable ODP_DEBUG
@@ -274,10 +274,9 @@ AC_ARG_ENABLE([debug],
     [  --enable-debug          include additional code],
     [if test "x$enableval" = "xyes"; then
 	ODP_DEBUG=1
-     else
-	ODP_DEBUG=0
     fi])
-ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
+AC_DEFINE_UNQUOTED([ODP_DEBUG], [$ODP_DEBUG],
+		   [Define to 1 to include additional debug code])
 
 ##########################################################################
 # Enable/disable ABI compatible build
@@ -310,23 +309,32 @@ AC_SUBST(ODP_DEPRECATED_API)
 ##########################################################################
 # Default warning setup
 ##########################################################################
-ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes"
-ODP_CFLAGS="$ODP_CFLAGS -Wmissing-declarations -Wold-style-definition -Wpointer-arith"
-ODP_CFLAGS="$ODP_CFLAGS -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral"
-ODP_CFLAGS="$ODP_CFLAGS -Wformat-security -Wundef -Wwrite-strings"
-ODP_CFLAGS="$ODP_CFLAGS -std=c99"
+ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror"
 
 dnl Use -Werror in the checks below since Clang emits a warning instead of
 dnl an error when it encounters an unknown warning option.
-AX_CHECK_COMPILE_FLAG([-Wimplicit-fallthrough=0],
-                      [ODP_CFLAGS="$ODP_CFLAGS -Wimplicit-fallthrough=0"],
-                      [], [-Werror])
-AX_CHECK_COMPILE_FLAG([-Wformat-truncation=0],
-                      [ODP_CFLAGS="$ODP_CFLAGS -Wformat-truncation=0"],
-                      [], [-Werror])
-AX_CHECK_COMPILE_FLAG([-Wformat-overflow=0],
-                      [ODP_CFLAGS="$ODP_CFLAGS -Wformat-overflow=0"],
-                      [], [-Werror])
+AC_DEFUN([ODP_CHECK_CFLAG],
+	 [AX_CHECK_COMPILE_FLAG([$1],
+				[ODP_CFLAGS="$ODP_CFLAGS $1"],
+				[], [-W -Wall -Werror],
+				[AC_LANG_SOURCE([int main(void)
+						{return 0;}])])])
+ODP_CHECK_CFLAG([-Wstrict-prototypes])
+ODP_CHECK_CFLAG([-Wmissing-prototypes])
+ODP_CHECK_CFLAG([-Wmissing-declarations])
+ODP_CHECK_CFLAG([-Wold-style-definition])
+ODP_CHECK_CFLAG([-Wpointer-arith])
+ODP_CHECK_CFLAG([-Wcast-align])
+ODP_CHECK_CFLAG([-Wnested-externs])
+ODP_CHECK_CFLAG([-Wcast-qual])
+ODP_CHECK_CFLAG([-Wformat-nonliteral])
+ODP_CHECK_CFLAG([-Wformat-security])
+ODP_CHECK_CFLAG([-Wundef])
+ODP_CHECK_CFLAG([-Wwrite-strings])
+ODP_CHECK_CFLAG([-Wformat-truncation=0])
+ODP_CHECK_CFLAG([-Wformat-overflow=0])
+
+ODP_CFLAGS="$ODP_CFLAGS -std=c99"
 
 # Extra flags for example to suppress certain warning types
 ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"

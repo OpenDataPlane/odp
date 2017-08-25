@@ -5,6 +5,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
+#include <config.h>
 
 #include <odp/api/shared_memory.h>
 #include <odp_queue_scalable_internal.h>

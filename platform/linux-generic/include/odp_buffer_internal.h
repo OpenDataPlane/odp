@@ -89,8 +89,7 @@ struct odp_buffer_hdr_t {
 	/* Burst table */
 	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
 
-	/* Used only if _ODP_PKTIO_IPC is set.
-	 * ipc mapped process can not walk over pointers,
+	/* ipc mapped process can not walk over pointers,
 	 * offset has to be used */
 	uint64_t ipc_data_offset;
 

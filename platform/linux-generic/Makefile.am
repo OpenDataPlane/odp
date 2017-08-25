@@ -11,7 +11,6 @@ AM_CFLAGS +=  -I$(top_builddir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/arch/@ARCH_DIR@
 AM_CFLAGS +=  -Iinclude
 AM_CFLAGS +=  -DSYSCONFDIR=\"@sysconfdir@\"
-AM_CFLAGS +=  -D_ODP_PKTIO_IPC
 
 AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
 AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
