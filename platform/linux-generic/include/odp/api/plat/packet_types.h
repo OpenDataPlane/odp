@@ -74,33 +74,33 @@ typedef enum {
 /** @internal Packet header field offsets for inline functions */
 typedef struct _odp_packet_inline_offset_t {
 	/** @internal field offset */
-	size_t data;
+	uint16_t data;
 	/** @internal field offset */
-	size_t seg_len;
+	uint16_t seg_len;
 	/** @internal field offset */
-	size_t frame_len;
+	uint16_t frame_len;
 	/** @internal field offset */
-	size_t headroom;
+	uint16_t headroom;
 	/** @internal field offset */
-	size_t tailroom;
+	uint16_t tailroom;
 	/** @internal field offset */
-	size_t pool;
+	uint16_t pool;
 	/** @internal field offset */
-	size_t input;
+	uint16_t input;
 	/** @internal field offset */
-	size_t segcount;
+	uint16_t segcount;
 	/** @internal field offset */
-	size_t user_ptr;
+	uint16_t user_ptr;
 	/** @internal field offset */
-	size_t user_area;
+	uint16_t user_area;
 	/** @internal field offset */
-	size_t user_area_size;
+	uint16_t user_area_size;
 	/** @internal field offset */
-	size_t flow_hash;
+	uint16_t flow_hash;
 	/** @internal field offset */
-	size_t timestamp;
+	uint16_t timestamp;
 	/** @internal field offset */
-	size_t input_flags;
+	uint16_t input_flags;
 
 } _odp_packet_inline_offset_t;
 
