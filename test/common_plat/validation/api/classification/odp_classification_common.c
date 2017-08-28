@@ -317,8 +317,7 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 		ip->src_addr = odp_cpu_to_be_32(addr);
 		ip->ver_ihl = ODPH_IPV4 << 4 | ODPH_IPV4HDR_IHL_MIN;
 		ip->id = odp_cpu_to_be_16(seqno);
-		ip->chksum = 0;
-		ip->chksum = odph_ipv4_csum_update(pkt);
+		odph_ipv4_csum_update(pkt);
 		ip->proto = next_hdr;
 		ip->tot_len = odp_cpu_to_be_16(l3_len);
 		ip->ttl = DEFAULT_TTL;
