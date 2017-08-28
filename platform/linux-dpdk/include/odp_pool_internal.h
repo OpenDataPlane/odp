@@ -67,7 +67,12 @@ typedef union pool_entry_u {
 
 } pool_entry_t;
 
-extern void *pool_entry_ptr[];
+typedef struct pool_table_t {
+	pool_entry_t pool[ODP_CONFIG_POOLS];
+	odp_shm_t shm;
+} pool_table_t;
+
+extern pool_table_t *pool_tbl;
 
 static inline uint32_t pool_handle_to_index(odp_pool_t pool_hdl)
 {
@@ -76,7 +81,7 @@ static inline uint32_t pool_handle_to_index(odp_pool_t pool_hdl)
 
 static inline void *get_pool_entry(uint32_t pool_id)
 {
-	return pool_entry_ptr[pool_id];
+	return &pool_tbl->pool[pool_id];
 }
 
 static inline pool_entry_t *odp_pool_to_entry(odp_pool_t pool)
