@@ -43,16 +43,8 @@
 /* Define a practical limit for contiguous memory allocations */
 #define MAX_SIZE   (10 * 1024 * 1024)
 
-typedef struct pool_table_t {
-	pool_entry_t pool[ODP_CONFIG_POOLS];
-	odp_shm_t shm;
-} pool_table_t;
-
 /* The pool table ptr - resides in shared memory */
-static pool_table_t *pool_tbl;
-
-/* Pool entry pointers (for inlining) */
-void *pool_entry_ptr[ODP_CONFIG_POOLS];
+pool_table_t *pool_tbl;
 
 static int dpdk_pool_init_global(void)
 {
@@ -77,8 +69,6 @@ static int dpdk_pool_init_global(void)
 
 		LOCK_INIT(&pool->s.lock);
 		pool->s.pool_hdl = pool_index_to_handle(i);
-
-		pool_entry_ptr[i] = pool;
 	}
 
 	ODP_DBG("\nPool init global\n");
