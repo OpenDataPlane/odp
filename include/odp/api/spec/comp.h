@@ -457,8 +457,12 @@ typedef struct odp_comp_packet_op_param_t {
 	 */
 	odp_bool_t last;
 
-	/** Valid Data range */
-	odp_packet_data_range_t data_range;
+	/** Input data range */
+	odp_packet_data_range_t indata_range;
+
+	/** Output packet data range. Indicates where
+	* processed packet output will be written.
+	*/
 } odp_comp_packet_op_param_t;
 
 /**
@@ -702,8 +706,8 @@ int odp_comp_decompress(const odp_packet_t pkt_in[],
  * @retval <0 on failure
  */
 int odp_comp_compress_enq(const odp_packet_t pkt_in[],
-			  const odp_packet_t pkt_out[],
-			  const odp_crypto_packet_op_param_t param[],
+			  odp_packet_t pkt_out[],
+			  odp_comp_packet_op_param_t param[],
 			  int num_pkt);
 
 /**
@@ -750,8 +754,8 @@ int odp_comp_compress_enq(const odp_packet_t pkt_in[],
  * @retval <0 on failure
  */
 int odp_comp_decompress_enq(const odp_packet_t pkt_in[],
-			    const odp_packet_t pkt_out[],
-			    const odp_crypto_packet_op_param_t param[],
+			    odp_packet_t pkt_out[],
+			    odp_crypto_packet_op_param_t param[],
 			    int num_pkt);
 
  /**
