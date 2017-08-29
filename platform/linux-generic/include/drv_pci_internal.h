@@ -11,6 +11,9 @@
 extern "C" {
 #endif
 
+#define PCI_CAPABILITY_LIST	0x34
+#define PCI_CAP_ID_VNDR		0x09
+
 /* Nb. of values in PCI resource file format. */
 #define PCI_RESOURCE_FMT_NVAL 3
 /** Nb. of values in PCI device address string. */
@@ -106,6 +109,7 @@ typedef struct user_access_ops_t {
 			    const void *data, size_t len, off_t offset);
 } user_access_ops_t;
 
+
 /* structure for PCI device: */
 typedef struct pci_dev_t {
 	struct pci_dev_t *next;
@@ -116,6 +120,8 @@ typedef struct pci_dev_t {
 	enum pci_kernel_driver kdrv;	      /* Kernel driver */
 	struct user_access_context_t *user_access_context;
 	const struct user_access_ops_t *user_access_ops;
+	void *driver_data;
+	void *device_data;
 } pci_dev_t;
 
 /* path where PCI devices are shown in sysfs: */

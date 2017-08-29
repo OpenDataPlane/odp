@@ -25,6 +25,8 @@
 #include <drv_pci_internal.h>
 #include <odp_pktio_ops_virtio.h>
 
+#include "virtio_pci.h"
+
 #define PCI_PKTIO_PREFIX "pci:"
 #define PCI_PKTIO_PREFIX_LEN (sizeof(PCI_PKTIO_PREFIX) - 1)
 
@@ -59,19 +61,8 @@ static int virtio_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		return -1;
 	}
 
-	/* Find suitable DevIO DDF module to work with the driver. */
-	if (pci_dev->kdrv == PCI_KDRV_UIO_GENERIC) {
-		/* probing would be done for each possible DevIO */
-		if (uio_access_ops.probe(pci_dev)) {
-			ODP_ERR("Could not enable DevIO for device %s\n",
-				devname);
-			pci_close_device(pci_dev);
-			return -1;
-		}
-		pci_dev->user_access_ops = &uio_access_ops;
-	} else {
-		ODP_ERR("Could not find suitable DevIO for device %s\n",
-			devname);
+	if (virtio_pci_init(pci_dev)) {
+		ODP_ERR("virtio: Could not open device %s\n", devname);
 		pci_close_device(pci_dev);
 		return -1;
 	}

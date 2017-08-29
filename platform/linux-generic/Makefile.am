@@ -260,6 +260,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pktio/sysfs.c \
 			   pktio/tap.c \
 			   pktio/virtio.c \
+			   pktio/virtio_pci.c \
 			   pktio/ring.c \
 			   pool/generic.c \
 			   pool/subsystem.c \
