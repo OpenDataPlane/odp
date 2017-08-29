@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, Linaro Limited
+/* Copyright (c) 2017, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -14,24 +14,23 @@
 #define ODP_API_COMP_H_
 
 #include <odp/visibility_begin.h>
+#include <odp/api/support.h>
+#include <odp/api/packet.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <odp/api/support.h>
-#include <odp/api/packet.h>
-
 /** @defgroup odp_compression ODP COMP
- *  ODP Compression defines API set to compress/decompress along with hash
+ *  ODP Compression is an API set to do compression+hash or decompression+hash
  *  operations on data. Hash is calculated on plaintext.
  *
- *  if opcode = ODP_COMP_COMPRESS, then it will Compress and apply hash,
- *  if opcode = ODP_COMP_DECOMPRESS, then it will Decompress and apply
+ *  if opcode = ODP_COMP_COMPRESS, then it will apply hash and then compress,
+ *  if opcode = ODP_COMP_DECOMPRESS, then it will decompress and then apply
  *  hash.
  *  Independent hash-only operations are not supported. Implementation should
  *  perform hash along with valid compression algo.
- *  Macros, enums, types and operations to utilize compression.
+ *  Macros, enums, types and operations to utilize compression interface.
  *  @{
  */
 
@@ -60,7 +59,7 @@ typedef enum {
  *
  */
 typedef enum {
-	/** Compress  */
+	/** Compress */
 	ODP_COMP_OP_COMPRESS,
 	/** Decompress */
 	ODP_COMP_OP_DECOMPRESS
@@ -71,11 +70,13 @@ typedef enum {
  *
  */
 typedef enum {
-	/** ODP_COMP_HASH_ALG_NONE*/
+	/** ODP_COMP_HASH_ALG_NONE - No hash algorithm selected. */
 	ODP_COMP_HASH_ALG_NONE,
-	/** ODP_COMP_HASH_ALG_SHA1*/
+	/** ODP_COMP_HASH_ALG_SHA1 - SHA-1 hash algorithm. */
 	ODP_COMP_HASH_ALG_SHA1,
-	/**  ODP_COMP_HASH_ALG_SHA256*/
+	/** ODP_COMP_HASH_ALG_SHA256 - SHA-2 hash algorithm
+	* 256-bit digest length.
+	*/
 	ODP_COMP_HASH_ALG_SHA256
 } odp_comp_hash_alg_t;
 
@@ -195,10 +196,10 @@ typedef enum {
 typedef union odp_comp_hash_algos_t {
 	/** hash algorithms */
 	struct {
-		/** SHA-1 */
+		/** ODP_COMP_HASH_ALG_SHA1 */
 		uint32_t sha1  : 1;
 
-		/** SHA with 256 bits of Message Digest */
+		/** ODP_COMP_HASH_ALG_SHA256 */
 		uint32_t sha256 : 1;
 
 	} bit;
@@ -247,14 +248,10 @@ typedef struct odp_comp_capability_t {
 	uint32_t max_sessions;
 
 	/** Supported compression algorithms */
-	odp_comp_algos_t comp_algs;
+	odp_comp_algos_t comp_algos;
 
 	/** Supported hash algorithms. */
-	odp_comp_hash_algos_t hash_algs;
-
-	/* sync/async mode of operation support.
-	 * Implementation should support atleast one of the mode.
-	 */
+	odp_comp_hash_algos_t hash_algos;
 
 	/** Support type for synchronous operation mode (ODP_COMP_SYNC).
 	 *  User should set odp_comp_session_param_t:mode based on
@@ -282,7 +279,7 @@ typedef struct odp_comp_hash_alg_capability_t {
  * Compression algorithm capabilities structure for each algorithm.
  *
  */
-typedef struct odp_comp_alg_capability_t {
+typedef struct odp_comp_algo_capability_t {
 	/** Enumeration indicating alg support for dictionary load */
 	odp_support_t support_dict;
 
@@ -322,15 +319,16 @@ typedef struct odp_comp_alg_capability_t {
 	uint32_t max_level;
 
 	/* Supported hash algorithms */
-	odp_comp_hash_algos_t hash_alg;
-} odp_comp_alg_capability_t;
+	odp_comp_hash_algos_t hash_algo;
+} odp_comp_algo_capability_t;
 
 /**
  * Comp API dictionary type
- *
+ * Consists of pointer to byte buffer. length of dictionary
+ * indicated by length parameter.
  */
 typedef struct odp_comp_dict_t {
-	/** pointer to character array */
+	/** pointer to byte array */
 	uint8_t *buf;
 	/** length of the dictionary. */
 	uint32_t len;
@@ -340,7 +338,10 @@ typedef struct odp_comp_dict_t {
  * Comp API algorithm specific parameters
  *
  */
-typedef struct odp_comp_alg_param_t {
+typedef struct odp_comp_algo_param_t {
+	/** struct for defining deflate algorithm parameters.
+	* Also initialized by other deflate based algorithms , ex. ZLIB
+	*/
 	struct comp_alg_def_param {
 		/** compression level where
 		 * ODP_COMP_LEVEL_MIN <= level <= ODP_COMP_LEVEL_MAX
@@ -349,25 +350,14 @@ typedef struct odp_comp_alg_param_t {
 		/** huffman code to use */
 		odp_comp_huffman_code_t comp_code;
 	} deflate;
+
+	/** struct for defining zlib algorithm parameters.
+	*/
 	struct comp_alg_zlib_param {
 			/** deflate algo params */
 			struct comp_alg_def_param def;
 	} zlib;
-} odp_comp_alg_param_t;
-
-/**
- * Comp API data range specifier
- *
- */
-typedef union odp_comp_data_t {
-	struct {
-		/** packet */
-		odp_packet_t packet;
-
-		/** packet data range to operate on  */
-		odp_packet_data_range_t data_range;
-	} pkt;
-} odp_comp_data_t;
+} odp_comp_algo_param_t;
 
  /**
  * Comp API session creation parameters
@@ -377,13 +367,13 @@ typedef struct odp_comp_session_param_t {
 	/** Compress vs. Decompress operation */
 	odp_comp_op_t op;
 
-	/** Sync vs Async
+	/** Sync vs Async mode
 	 *
-	 * When mode = ODP_COMP_SYNC, odp_comp_compress()/odp_comp_decomp()
+	 * When mode = ODP_COMP_SYNC, odp_comp_xxx()
 	 * should be called.
 	 *
-	 * When mode = ODP_COMP_ASYNC, odp_comp_compress_enq()/
-	 * odp_comp_decomp_enq() should be called.
+	 * When mode = ODP_COMP_ASYNC, odp_comp_xxx_enq()
+	 * should be called.
 	 *
 	 * Use odp_comp_capability() for supported mode.
 	 *
@@ -394,7 +384,7 @@ typedef struct odp_comp_session_param_t {
 	 *
 	 *  Use odp_comp_capability() for supported algorithms.
 	 */
-	odp_comp_alg_t comp_alg;
+	odp_comp_alg_t comp_algo;
 
 	/** Hash algorithm
 	 *
@@ -404,10 +394,10 @@ typedef struct odp_comp_session_param_t {
 	 *  data + hash.
 	 *
 	 */
-	odp_comp_hash_alg_t hash_alg;
+	odp_comp_hash_alg_t hash_algo;
 
 	/** parameters specific to compression */
-	odp_comp_alg_param_t alg_param;
+	odp_comp_algo_param_t alg_param;
 
 	/** Async mode completion event queue
 	 *
@@ -428,16 +418,20 @@ typedef struct odp_comp_session_param_t {
 } odp_comp_session_param_t;
 
 /**
- * Comp API operation parameters.
- * Called to process each data unit.
+ * Comp API per packet operation result
  *
  */
-typedef struct odp_comp_op_param_t {
+typedef struct odp_comp_packet_result_t {
+	/** Operation Return Code */
+	odp_comp_err_t err;
+} odp_comp_packet_result_t;
+
+/**
+ * Comp packet API per packet operation parameters
+ */
+typedef struct odp_comp_packet_op_param_t {
 	/** Session handle from creation */
 	odp_comp_session_t session;
-
-	/** User context */
-	void *ctx;
 
 	/** Boolean indicating End of data, where
 	 *
@@ -446,60 +440,26 @@ typedef struct odp_comp_op_param_t {
 	 *   false: more to follow
 	 *
 	 * If set to true, indicates this is the last chunk of
-	 * data. After processing of last chunk of data is complete i.e.
-	 * call returned with any error code except ODP_COMP_ERR_OUT_OF_SPACE,
+	 * data which was being processed in stateful mode. After processing
+	 * of last chunk of data is complete (i.e.call return with any
+	 * error code except ODP_COMP_ERR_OUT_OF_SPACE),
 	 * implementation should move algorithm to stateless mode
 	 * for next of batch of operation i.e. reset history,
-	 * insert 'End of Block' marker into compressed data stream(if
-	 * supported by algo).See deflate/zlib for interpretation of
-	 * stateless/stateful.
+	 * insert 'End of Block' marker into compressed data stream, if
+	 * supported by algo.(See deflate/zlib for interpretation of
+	 * stateless/stateful).
 	 *
 	 * For stateless compressions (ex ipcomp), last should be set to 'true'
 	 * for every input packet processing call.
 	 *
 	 * For compression + hash, digest will be available after
-	 * last chunk is processed completely. In case of
-	 * ODP_COMP_ERR_OUT_OF_SPACE, application should keep on calling
-	 * odp_comp_xxx() API with more output buffer unless call returns
-	 * with ODP_COMP_ERR_NONE or other failure code except
-	 *  ODP_COMP_ERR_OUT_OF_SPACE.
+	 * last chunk is processed completely.
 	 */
 	odp_bool_t last;
 
-	/** Input data */
-	odp_comp_data_t input;
-
-	/** placeholder for output data.
-	 *
-	 * For Compression/Decompression+hash session,
-	 * output  will store both data and digest(with digest appended at
-	 * end-of-data). User should pass packet of sufficiently large size
-	 * to store digest.
-	 *
-	 */
-	odp_comp_data_t output;
-} odp_comp_op_param_t;
-
-/**
- * Comp API per operation result
- *
- */
-typedef struct odp_comp_op_result_t {
-	/** User context from request */
-	void *ctx;
-
-	/** Operation Return Code */
-	odp_comp_err_t err;
-
-	/** Pointer to output.Valid when odp_comp_err_t is
-	 * ODP_COMP_ERR_NONE or ODP_COMP_ERR_OUT_OF_SPACE
-	 *
-	 * Contain data after compression/decompression operation,
-	 * or data + digest for compression/decompression + hash operation.
-	 *
-	 */
-	odp_comp_data_t output;
-} odp_comp_op_result_t;
+	/** Valid Data range */
+	odp_packet_data_range_t data_range;
+} odp_comp_packet_op_param_t;
 
 /**
  * Query comp capabilities
@@ -611,123 +571,209 @@ int odp_comp_set_dict(odp_comp_session_t session,
 		      odp_comp_dict_t *dict);
 
 /**
- * Comp compress data in synchronous mode
+ * Comp packet operation synchronous
+ *
+ * Performs the SYNC compression/decompression operations on the packets.
+ *
+ * If session is created in ODP_COMP_SYNC mode, this call wait for operation
+ * to complete.
+ *
+ * If session is created in ODP_COMP_ASYNC mode, behavior is undefined.
+ *
+ * for compression + hash, call returns with hash appended to the end of
+ * last processed chunk of data.
+ *
+ * User should compute processed data len = total output len - digest_len, where
+ * digest_len queried through odp_comp_hash_alg_capability().
+ *
+ * Caller should initialize pkt_out with valid output
+ * packet handles. All arrays should be of num_pkt size.
+ *
+ * In case of partially processed array i.e. when
+ * number of packets returned < num_pkt, application should call
+ * odp_comp_result() on 1st failed packet (i.e. n+1th packet where
+ * n=number of packets returned) to ensure if error code is
+ * ODP_COMP_ERR_OUT_OF_SPACE.
+ *
+ * In case of ODP_COMP_ERR_OUT_OF_SPACE, application should keep on calling
+ * odp_comp_op() API with more output buffer until call returns
+ * with num_pkt or with result as ODP_COMP_ERR_NONE or any other
+ * failure code.
+ *
+ * @param         pkt_in   Packets to be processed
+ * @param[in,out] pkt_out  Packet handle array specifying resulting packets
+ * @param         param    Operation parameters array
+ * @param         num_pkt  Number of packets to be processed
+ *
+ * @return Number of input packets consumed (0 ... num_pkt)
+ * @retval <0 on failure
+ */
+int odp_comp_compress(const odp_packet_t pkt_in[],
+		      odp_packet_t pkt_out[],
+		      odp_comp_packet_op_param_t param[],
+		      int num_pkt);
+
+/**
+ * Comp packet operation synchronous
+ *
+ * Performs the SYNC decompression operations on the packets.
  *
  * If session is created in ODP_COMP_SYNC mode, this call wait for operation
  * to complete and update result at output
  *
- * If session is created in ODP_COMP_ASYNC mode, this call fails and update
- * status code ODP_COMP_ERR_NOT_SUPPORTED.
+ * If session is created in ODP_COMP_ASYNC mode, behavior of this call
+ * is undefined.
  *
- * If operation returns ODP_COMP_ERR_OUT_OF_SPACE, then application should call
- * API again with valid output buffer (and no-more input) until call completes
- * with status code except ODP_COMP_ERR_OUT_OF_SPACE.
+ * For decompression + hash, call returns with hash appended to the end of
+ * last processed chunk of data.User should compute processed data len =
+ * total output len - digest_len, where digest_len queried through
+ * odp_comp_hash_alg_capability().
  *
- * for compression + hash, call returns with hash appended to the end of
- * last processed chunk of data.
- * User should compute processed data len = total output len - digest_len, where
- * digest_len queried through odp_comp_hash_alg_capability().
+ * Caller should initialize pkt_out with valid output
+ * packet handles. All arrays should be of num_pkt size.
+ * In case of partially processed array i.e. when
+ * number of packets returned < num_pkt, application should call
+ * odp_comp_result() on 1st failed packet (i.e. n+1th packet where
+ * n=number of packets returned) to ensure if error code is
+ * ODP_COMP_ERR_OUT_OF_SPACE.
  *
- * @param param[in]         Operation parameters.
- * @param result[out]       Result of operation.
+ * In case of ODP_COMP_ERR_OUT_OF_SPACE, application should keep on calling
+ * odp_comp_op() API with more output buffer until call returns
+ * with num_pkt or with result as ODP_COMP_ERR_NONE or any other
+ * failure code.
  *
- * @retval 0 on success
+ * @param         pkt_in   Packets to be processed
+ * @param[in,out] pkt_out  Packet handle array specifying resulting packets
+ * @param         param    Operation parameters array
+ * @param         num_pkt  Number of packets to be processed
+ *
+ * @return Number of input packets consumed (0 ... num_pkt)
  * @retval <0 on failure
  */
-int odp_comp_compress(odp_comp_op_param_t   *param,
-		      odp_comp_op_result_t  *result);
+int odp_comp_decompress(const odp_packet_t pkt_in[],
+			odp_packet_t pkt_out[],
+			odp_comp_packet_op_param_t param[],
+			int num_pkt);
 
 /**
- * Comp compress data in asynchronous mode.
+ * Comp packet operation asynchronous
  *
+ * Performs the ASYNC compression operations on the packets.
  * If session is created in ODP_COMP_ASYNC mode, event will be queued
  * to completion queue. Application should monitor ODP_EVENT_PACKET with
  * subtype ODP_EVENT_PACKET_COMP on queue.
  *
- * If session is created in ODP_COMP_SYNC mode, call fails with status
- * code ODP_COMP_ERR_NOT_SUPPORTED.
+ * If session is created in ODP_COMP_SYNC mode, behavior is undefined.
+ *
+ * Caller should initialize pkt_out with valid output
+ * packet handles.All arrays should be of num_pkt size. Resulting packets
+ * are returned through events.
+ *
+ * In case of partially processed array i.e. when
+ * number of packets returned < num_pkt, application should call
+ * odp_comp_result() on 1st failed packet (i.e. n+1th packet where
+ * n=number of packets returned) to ensure if error code is
+ * ODP_COMP_ERR_OUT_OF_SPACE.
+ *
+ * In case of ODP_COMP_ERR_OUT_OF_SPACE, application should keep on calling
+ * odp_comp_op() API with more output buffer until call returns
+ * with num_pkt or with result as ODP_COMP_ERR_NONE or any other
+ * failure code.
  *
  * For compression + hash, call returns with hash appended to the end of
  * last processed chunk of data.
+ *
  * User should compute processed data len = total output len - digest_len, where
  * digest_len queried through odp_comp_hash_alg_capability().
  *
- * If operation updates result structure with status
- * ODP_COMP_ERR_OUT_OF_SPACE then application
- * should call API again with valid output buffer (and no-more input)
- * until call completes with any other error code.
  * Please note it is always recommended that application using async mode,
  * provide sufficiently large buffer size to avoid ODP_COMP_ERR_OUT_OF_SPACE.
  * Else it is recommended that application maintain relevant context
  * with respect to each input processing request to correctly identify
  * its corresponding enqueued event.
  *
- * @param param[in]          Operation parameters.
  *
- * @retval 0 on success
+ * @param pkt_in   Packets to be processed
+ * @param pkt_out  Packet handle array specifying resulting packets
+ * @param param    Operation parameters array
+ * @param num_pkt  Number of packets to be processed
+ *
+ * @return Number of input packets consumed (0 ... num_pkt)
  * @retval <0 on failure
  */
-int odp_comp_compress_enq(odp_comp_op_param_t *param);
+int odp_comp_compress_enq(const odp_packet_t pkt_in[],
+			  const odp_packet_t pkt_out[],
+			  const odp_crypto_packet_op_param_t param[],
+			  int num_pkt);
 
-  /**
-   * Comp decompress data in synchronous mode
-   *
-   * If session is created in ODP_COMP_SYNC mode, this call wait for operation
-   * to complete and update result at output
-   *
-   * If session is created in ODP_COMP_ASYNC mode, this call fails and update
-   * status code ODP_COMP_ERR_NOT_SUPPORTED.
-   *
-   * If operation returns ODP_COMP_ERR_OUT_OF_SPACE, then application should
-   * call API again with valid output buffer (and no-more input) until call
-   * completes with status code except ODP_COMP_ERR_OUT_OF_SPACE.
-   *
-   * for decompression + hash, call returns with hash appended to the end of
-   * last processed chunk of data.User should compute processed data len =
-   * total output len - digest_len, where digest_len queried through
-   * odp_comp_hash_alg_capability().
-   *
-   * @param param[in]          Operation parameters.
-   * @param result[out]        Result of operation.
-   *
-   * @retval 0 on success
-   * @retval <0 on failure
-   */
-int odp_comp_decomp(odp_comp_op_param_t   *param,
-		    odp_comp_op_result_t  *result);
+/**
+ * Comp packet operation
+ *
+ * Performs the ASYNC decompression operations on the packet array.
+ *
+ * If session is created in ODP_COMP_ASYNC mode, result will be queued
+ * to completion queue. Application should monitor ODP_EVENT_PACKET
+ * with subtype ODP_EVENT_PACKET_COMP on queue.
+ *
+ * If session is created in ODP_COMP_SYNC mode, behavior is undefined.
+ *
+ * for decompression+hash, call returns with hash appended to the end of
+ * last processed chunk of data.
+ *
+ * User should compute processed data len = total output length - digest_len,
+ * where digest_len queried through odp_comp_hash_alg_capability().
+ *
+ * Caller should initialize pkt_out with valid output
+ * packet handles.All arrays should be of num_pkt size. Resulting packets
+ * are returned through events.
+ * In case of partially processed array i.e. when
+ * number of packets returned < num_pkt, application should call
+ * odp_comp_result() on 1st failed packet (i.e. n+1th packet where
+ * n=number of packets returned) to ensure if error code is
+ * ODP_COMP_ERR_OUT_OF_SPACE.
+ * In case of ODP_COMP_ERR_OUT_OF_SPACE, application should keep on calling
+ * odp_comp_op() API with more output buffer until call returns
+ * with num_pkt or with result as ODP_COMP_ERR_NONE or any other
+ * failure code.
+ *
+ * Please note it is always recommended that application using async mode,
+ * provide sufficiently large buffer size to avoid ODP_COMP_ERR_OUT_OF_SPACE.
+ * Else it is recommended that application maintain required context
+ * to associate event to its respective input.
+ *
+ * @param pkt_in   Packets to be processed
+ * @param pkt_out  Packet handle array specifying resulting packets
+ * @param param    Operation parameters array
+ * @param num_pkt  Number of packets to be processed
+ *
+ * @return Number of input packets consumed (0 ... num_pkt)
+ * @retval <0 on failure
+ */
+int odp_comp_decompress_enq(const odp_packet_t pkt_in[],
+			    const odp_packet_t pkt_out[],
+			    const odp_crypto_packet_op_param_t param[],
+			    int num_pkt);
 
  /**
-  * Comp decompress data in asynchronous mode.
-  *
-  * If session is created in ODP_COMP_ASYNC mode, result will be queued
-  * to completion queue. Application should monitor ODP_EVENT_PACKET
-  * with subtype ODP_EVENT_PACKET_COMP on queue.
-  *
-  * If session is created in ODP_COMP_SYNC mode, call fails with status
-  * code ODP_COMP_ERR_NOT_SUPPORTED.
-  *
-  * for decompression+hash, call returns with hash appended to the end of
-  * last processed chunk of data.
-  *
-  * User should compute processed data len = total output length - digest_len,
-  * where digest_len queried through odp_comp_hash_alg_capability().
-  *
-  * If operation updates result structure with status
-  * ODP_COMP_ERR_OUT_OF_SPACE then application
-  * should call API again with valid output buffer (and no-more input)
-  * until call completes with any other error code.
-  *
-  * Please note it is always recommended that application using async mode,
-  * provide sufficiently large buffer size to avoid ODP_COMP_ERR_OUT_OF_SPACE.
-  * Else it is recommended that application maintain required context
-  * to associate event to its respective input.
-  *
-  * @param param[in]          Operation parameters.
-  *
-  * @retval 0 on success
-  * @retval <0 on failure
-  */
-int odp_comp_decomp_enq(odp_comp_op_param_t *param);
+ * Get compression/decompression operation results from an processed packet.
+ *
+ * Successful compression/decompression operations produce
+ * packets which contain operation result metadata. This function copies the
+ * operation results from an processed packet. Event subtype of this kind
+ * of packet is ODP_EVENT_PACKET_COMP. Results are undefined if input packet
+ * has not be processed by compression/decompression call.
+ *
+ * @param[out]    result  Pointer to operation result for output
+ * @param	    packet  An processed packet (ODP_EVENT_PACKET_COMP)
+ *
+ * @retval  0     On success
+ * @retval <0     On failure
+ *
+ * @see odp_comp_compress_enq(), odp_comp_decompress_enq(),
+ *	   odp_comp_packet_from_event()
+ */
+int odp_comp_result(odp_comp_packet_result_t *result,
+		    odp_packet_t packet);
 
  /**
   * Convert processed packet event to packet handle
@@ -750,7 +796,7 @@ int odp_comp_decomp_enq(odp_comp_op_param_t *param);
   * if(subtype == ODP_PACKET_EVENT_COMP) {
   *  pkt = odp_comp_packet_from_event(ev);
   *  odp_comp_op_result_t res;
-  *  odp_comp_result(packet, &res);
+  *  odp_comp_result(&res, packet);
   * }
   * }
   */
@@ -768,27 +814,6 @@ odp_packet_t odp_comp_packet_from_event(odp_event_t event);
   * @return Event handle
   */
 odp_event_t odp_comp_packet_to_event(odp_packet_t pkt);
-
- /**
-  * Get compression/decompression operation results from an processed packet.
-  *
-  * Successful compression/decompression operations produce
-  * packets which contain operation result metadata. This function copies the
-  * operation results from an processed packet. Event subtype of this kind
-  * of packet is ODP_EVENT_PACKET_COMP. Results are undefined if input packet
-  * has not be processed by compression/decompression call.
-  *
-  * @param[out]    result  Pointer to operation result for output
-  * @param	   packet  An processed packet (ODP_EVENT_PACKET_COMP)
-  *
-  * @retval  0	   On success
-  * @retval <0	   On failure
-  *
-  * @see odp_comp_compress_enq(), odp_comp_decomp_enq(),
-  *	  odp_comp_packet_from_event()
-  */
-int odp_comp_result(odp_packet_t packet,
-		    odp_comp_op_result_t *result);
 
 /**
  * Get printable value for an odp_comp_session_t
