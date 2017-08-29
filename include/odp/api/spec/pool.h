@@ -97,6 +97,13 @@ typedef struct odp_pool_capability_t {
 		 * packet input and user allocated packets.*/
 		uint32_t min_headroom;
 
+		/** Maximum packet level headroom length in bytes
+		 *
+		 * The maximum value of packet pool headroom parameter
+		 * that can be configured. This value applies to both ODP
+		 * packet input and user allocated packets.*/
+		uint32_t max_headroom;
+
 		/** Minimum packet level tailroom length in bytes
 		 *
 		 * The minimum number of tailroom bytes that newly created
@@ -214,6 +221,13 @@ typedef struct odp_pool_param_t {
 			    defined by pool capability pkt.max_uarea_size.
 			    Specify as 0 if no user area is needed. */
 			uint32_t uarea_size;
+
+			/** Minimum Headroom size in bytes. Each newly allocated
+			    packet from the pool must have at least this much
+			    headroom. The maximum value is defined by pool
+			    capability pkt.max_headroom.
+			    Use zero if headroom is not needed. */
+			uint32_t headroom;
 		} pkt;
 
 		/** Parameters for timeout pools */
