@@ -77,6 +77,10 @@ extern "C" {
  *  List of event subtypes:
  * - ODP_EVENT_PACKET_BASIC
  *     - Packet event (odp_packet_t) with basic packet metadata
+ * - ODP_EVENT_PACKET_CRYPTO
+ *     - Packet event (odp_packet_t) generated as a result of a Crypto
+ *       operation. It contains crypto specific metadata in addition to the
+ *       basic packet metadata.
  * - ODP_EVENT_PACKET_IPSEC
  *     - Packet event (odp_packet_t) generated as a result of an IPsec
  *       operation. It contains IPSEC specific metadata in addition to the basic
