@@ -156,6 +156,7 @@ script:
           --with-netmap-path=`pwd`/netmap
           --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH $CONF
           --enable-debug=full
+          --enable-helper-linux
         - make -j $(nproc)
         - mkdir /dev/shm/odp
         - sudo LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check
@@ -182,6 +183,7 @@ jobs:
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug=full
                             --disable-test-cpp
+                            --enable-helper-linux
                             --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
@@ -193,6 +195,7 @@ jobs:
                           - ./configure --prefix=$HOME/odp/odp-install $CROSS
                             --enable-debug=full
                             --disable-test-cpp
+                            --enable-helper-linux
                             --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
@@ -204,6 +207,7 @@ jobs:
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug=full
                             --disable-test-cpp
+                            --enable-helper-linux
                             --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
@@ -215,6 +219,7 @@ jobs:
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug=full
                             --disable-test-cpp
+                            --enable-helper-linux
                             --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
@@ -226,6 +231,7 @@ jobs:
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug=full
                             --disable-test-cpp
+                            --enable-helper-linux
                             --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
@@ -237,6 +243,7 @@ jobs:
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug=full
                             --disable-test-cpp
+                            --enable-helper-linux
                             --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
@@ -252,6 +259,7 @@ jobs:
                             --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                               CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
                             --enable-debug=full
+                            --enable-helper-linux
                           - sudo LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" PATH=${PATH//:\.\/node_modules\/\.bin/} make check
                           - find . -type f -iname '*.[ch]' -not -path ".git/*" -execdir gcov {} \; ; bash <(curl -s https://codecov.io/bash) -X coveragepy
                 - stage: test
