@@ -69,6 +69,7 @@ env:
         - CONF="--enable-schedule-sp"
         - CONF="--enable-schedule-iquery"
         - CONF="--enable-dpdk-zero-copy"
+        - CONF="--enable-helper-linux"
 
 before_install:
 
