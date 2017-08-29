@@ -652,6 +652,84 @@ int _odp_pci_term_global(void)
 	return 0;
 }
 
+int pci_ioport_map(pci_dev_t *dev , int idx, pci_ioport_t *p)
+{
+	int ret = -1;
+
+	if (dev == NULL || dev->user_access_ops == NULL) {
+		ODP_DBG("Called pci_unmap_device with NULL device or "
+			"dev->user_access_ops.\n");
+		return -1;
+	}
+
+	if (dev->user_access_ops->ioport_map == NULL) {
+		ODP_DBG("Called pci_unmap_device with ioport_map==NULL.\n");
+		return -1;
+	}
+
+	ret = dev->user_access_ops->ioport_map(dev, idx, p);
+
+	if (!ret)
+		p->dev = dev;
+
+	return ret;
+}
+
+int pci_ioport_unmap(pci_dev_t *dev, pci_ioport_t *p )
+{
+	int ret = -1;
+
+	if (dev == NULL || dev->user_access_ops == NULL) {
+		ODP_DBG("Called pci_unmap_device with NULL device or "
+			"dev->user_access_ops.\n");
+		return -1;
+	}
+
+	if (dev->user_access_ops->ioport_unmap == NULL) {
+		ODP_DBG("Called pci_unmap_device with "
+			"pci_ioport_unmap==NULL.\n");
+		return -1;
+	}
+
+	ret = dev->user_access_ops->ioport_unmap(dev, p);
+
+	return ret;
+}
+
+void pci_ioport_read(pci_dev_t *dev, pci_ioport_t *p, void *data, size_t len,
+		     off_t offset)
+{
+	if (dev == NULL || dev->user_access_ops == NULL) {
+		ODP_DBG("Called pci_unmap_device with NULL device or "
+			"dev->user_access_ops.\n");
+		return ;
+	}
+
+	if (dev->user_access_ops->ioport_read == NULL) {
+		ODP_DBG("Called pci_unmap_device with ioport_read==NULL.\n");
+		return ;
+	}
+
+	dev->user_access_ops->ioport_read(dev, p, data, len, offset);
+}
+
+void pci_ioport_write(pci_dev_t *dev, pci_ioport_t *p ODP_UNUSED,
+		      const void *data ODP_UNUSED, size_t len ODP_UNUSED,
+		      off_t offset ODP_UNUSED)
+{
+	if (dev == NULL || dev->user_access_ops == NULL) {
+		ODP_DBG("Called pci_unmap_device with NULL device or "
+			"dev->user_access_ops.\n");
+		return ;
+	}
+
+	if (dev->user_access_ops->ioport_write == NULL) {
+		ODP_DBG("Called pci_unmap_device with ioport_write==NULL.\n");
+		return ;
+	}
+
+	dev->user_access_ops->ioport_write(dev, p, data, len, offset);
+}
 
 /* pci drivers use this function to open a PCI device from the /sys/bus filesystem
  * It returns a pci_dev_t struct with several fields filled in. The driver can

@@ -67,7 +67,7 @@ enum pci_kernel_driver {
 
 /**
  * A structure used to access io resources for a pci device.
- * rte_pci_ioport is arch, os, driver specific, and should not be used outside
+ * pci_ioport_t is arch, os, driver specific, and should not be used outside
  * of pci ioport api.
  */
 typedef struct pci_ioport_t {
@@ -120,7 +120,17 @@ typedef struct pci_dev_t {
 
 /* path where PCI devices are shown in sysfs: */
 const char *pci_get_sysfs_path(void);
+
+/* read from PCI configuration area len bytes at offset */
 int pci_read_config(pci_dev_t *dev, void *buf, size_t len, off_t offset);
+
+/* IO port operations */
+int pci_ioport_map(pci_dev_t *dev, int bar, pci_ioport_t *p);
+int pci_ioport_unmap(pci_dev_t *dev, pci_ioport_t *p);
+void pci_ioport_read(pci_dev_t *dev, pci_ioport_t *p, void *data, size_t len,
+		     off_t offset);
+void pci_ioport_write(pci_dev_t *dev, pci_ioport_t *p,const void *data,
+		      size_t len, off_t offset);
 
 struct pci_dev_t *pci_open_device(const char *);
 int pci_close_device(pci_dev_t *);
