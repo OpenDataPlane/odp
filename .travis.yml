@@ -69,6 +69,7 @@ env:
         - CONF="--enable-schedule-sp"
         - CONF="--enable-schedule-iquery"
         - CONF="--enable-dpdk-zero-copy"
+        - CONF="--enable-helper-linux"
 
 before_install:
 
@@ -150,8 +151,19 @@ install:
 
 script:
         - ./bootstrap
-        - ./configure --prefix=$HOME/odp-install  --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH $CONF
+        - ./configure --prefix=$HOME/odp-install
+          --enable-test-cpp
+          --enable-test-vald
+          --enable-test-helper
+          --enable-test-perf
+          --enable-user-guides
+          --enable-test-perf-proc
+          --enable-test-example
+          --with-dpdk-path=`pwd`/dpdk/${TARGET}
+          --with-netmap-path=`pwd`/netmap
+          --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH $CONF
           --enable-debug
+          --enable-debug-print
         - make -j $(nproc)
         - mkdir /dev/shm/odp
         - sudo LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check
@@ -175,8 +187,16 @@ jobs:
                   install: true
                   script:
                           - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install $CROSS --enable-debug
-                            --disable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-test-perf-proc --enable-test-example --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
+                          - ./configure --prefix=$HOME/odp-install $CROSS
+                            --enable-debug
+                            --enable-debug-print
+                            --disable-test-cpp
+                            --enable-test-vald
+                            --enable-test-helper
+                            --enable-test-perf
+                            --enable-test-perf-proc
+                            --enable-test-example
+                            --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
                   compiler: "\"clang-3.8 --target=aarch64-linux-gnu\""
@@ -184,8 +204,16 @@ jobs:
                   install: true
                   script:
                           - ./bootstrap
-                          - ./configure --prefix=$HOME/odp/odp-install $CROSS --enable-debug
-                            --disable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-test-perf-proc --enable-test-example --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
+                          - ./configure --prefix=$HOME/odp/odp-install $CROSS
+                            --enable-debug
+                            --enable-debug-print
+                            --disable-test-cpp
+                            --enable-test-vald
+                            --enable-test-helper
+                            --enable-test-perf
+                            --enable-test-perf-proc
+                            --enable-test-example
+                            --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
                   compiler: arm-linux-gnueabihf-gcc
@@ -193,8 +221,16 @@ jobs:
                   install: true
                   script:
                           - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install $CROSS --enable-debug
-                            --disable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-test-perf-proc --enable-test-example --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
+                          - ./configure --prefix=$HOME/odp-install $CROSS
+                            --enable-debug
+                            --enable-debug-print
+                            --disable-test-cpp
+                            --enable-test-vald
+                            --enable-test-helper
+                            --enable-test-perf
+                            --enable-test-perf-proc
+                            --enable-test-example
+                            --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
                   compiler: "\"clang-3.8 --target=arm-linux-gnueabihf\""
@@ -202,8 +238,16 @@ jobs:
                   install: true
                   script:
                           - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install $CROSS --enable-debug
-                            --disable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-test-perf-proc --enable-test-example --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
+                          - ./configure --prefix=$HOME/odp-install $CROSS
+                            --enable-debug
+                            --enable-debug-print
+                            --disable-test-cpp
+                            --enable-test-vald
+                            --enable-test-helper
+                            --enable-test-perf
+                            --enable-test-perf-proc
+                            --enable-test-example
+                            --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
                   compiler: powerpc-linux-gnu-gcc
@@ -211,8 +255,16 @@ jobs:
                   install: true
                   script:
                           - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install $CROSS --enable-debug
-                            --disable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-test-perf-proc --enable-test-example --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
+                          - ./configure --prefix=$HOME/odp-install $CROSS
+                            --enable-debug
+                            --enable-debug-print
+                            --disable-test-cpp
+                            --enable-test-vald
+                            --enable-test-helper
+                            --enable-test-perf
+                            --enable-test-perf-proc
+                            --enable-test-example
+                            --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
                   compiler: "\"clang-3.8 --target=powerpc-linux-gnu\""
@@ -220,16 +272,37 @@ jobs:
                   install: true
                   script:
                           - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install $CROSS --enable-debug
-                            --disable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-test-perf-proc --enable-test-example --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
+                          - ./configure --prefix=$HOME/odp-install $CROSS
+                            --enable-debug
+                            --enable-debug-print
+                            --disable-test-cpp
+                            --enable-test-vald
+                            --enable-test-helper
+                            --enable-test-perf
+                            --enable-test-perf-proc
+                            --enable-test-example
+                            --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
                   env: TEST=coverage
                   compiler: gcc
                   script:
                           - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap CFLAGS="-O0 -coverage" --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
+                          - ./configure --prefix=$HOME/odp-install
+                            --enable-test-cpp
+                            --enable-test-vald
+                            --enable-test-helper
+                            --enable-test-perf
+                            --enable-user-guides
+                            --enable-test-perf-proc
+                            --enable-test-example
+                            --with-dpdk-path=`pwd`/dpdk/${TARGET}
+                            --with-netmap-path=`pwd`/netmap CFLAGS="-O0
+                              -coverage"
+                            --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
+                              CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
                             --enable-debug
+                            --enable-debug-print
                           - sudo LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" PATH=${PATH//:\.\/node_modules\/\.bin/} make check
                           - find . -type f -iname '*.[ch]' -not -path ".git/*" -execdir gcov {} \; ; bash <(curl -s https://codecov.io/bash) -X coveragepy
                 - stage: test
@@ -237,7 +310,15 @@ jobs:
                   compiler: gcc
                   script:
                           - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
+                          - ./configure --prefix=$HOME/odp-install
+                            --enable-test-cpp
+                            --enable-test-vald
+                            --enable-test-helper
+                            --enable-test-perf
+                            --enable-user-guides
+                            --enable-test-perf-proc
+                            --enable-test-example
+                            --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - sudo PATH="$PATH" LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make distcheck DISTCHECK_CONFIGURE_FLAGS="--with-cunit-path=$HOME/cunit-install/$CROSS_ARCH"
                 - stage: test
                   env: TEST=doxygen
