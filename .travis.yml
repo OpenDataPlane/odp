@@ -151,13 +151,7 @@ install:
 script:
         - ./bootstrap
         - ./configure --prefix=$HOME/odp-install
-          --enable-test-cpp
-          --enable-test-vald
-          --enable-test-helper
-          --enable-test-perf
           --enable-user-guides
-          --enable-test-perf-proc
-          --enable-test-example
           --with-dpdk-path=`pwd`/dpdk/${TARGET}
           --with-netmap-path=`pwd`/netmap
           --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH $CONF
@@ -188,11 +182,6 @@ jobs:
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug
                             --disable-test-cpp
-                            --enable-test-vald
-                            --enable-test-helper
-                            --enable-test-perf
-                            --enable-test-perf-proc
-                            --enable-test-example
                             --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
@@ -204,11 +193,6 @@ jobs:
                           - ./configure --prefix=$HOME/odp/odp-install $CROSS
                             --enable-debug
                             --disable-test-cpp
-                            --enable-test-vald
-                            --enable-test-helper
-                            --enable-test-perf
-                            --enable-test-perf-proc
-                            --enable-test-example
                             --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
@@ -220,11 +204,6 @@ jobs:
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug
                             --disable-test-cpp
-                            --enable-test-vald
-                            --enable-test-helper
-                            --enable-test-perf
-                            --enable-test-perf-proc
-                            --enable-test-example
                             --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
@@ -236,11 +215,6 @@ jobs:
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug
                             --disable-test-cpp
-                            --enable-test-vald
-                            --enable-test-helper
-                            --enable-test-perf
-                            --enable-test-perf-proc
-                            --enable-test-example
                             --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
@@ -252,11 +226,6 @@ jobs:
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug
                             --disable-test-cpp
-                            --enable-test-vald
-                            --enable-test-helper
-                            --enable-test-perf
-                            --enable-test-perf-proc
-                            --enable-test-example
                             --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
@@ -268,11 +237,6 @@ jobs:
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug
                             --disable-test-cpp
-                            --enable-test-vald
-                            --enable-test-helper
-                            --enable-test-perf
-                            --enable-test-perf-proc
-                            --enable-test-example
                             --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - make -j $(nproc)
                 - stage: test
@@ -281,13 +245,7 @@ jobs:
                   script:
                           - ./bootstrap
                           - ./configure --prefix=$HOME/odp-install
-                            --enable-test-cpp
-                            --enable-test-vald
-                            --enable-test-helper
-                            --enable-test-perf
                             --enable-user-guides
-                            --enable-test-perf-proc
-                            --enable-test-example
                             --with-dpdk-path=`pwd`/dpdk/${TARGET}
                             --with-netmap-path=`pwd`/netmap CFLAGS="-O0
                               -coverage"
@@ -302,13 +260,7 @@ jobs:
                   script:
                           - ./bootstrap
                           - ./configure --prefix=$HOME/odp-install
-                            --enable-test-cpp
-                            --enable-test-vald
-                            --enable-test-helper
-                            --enable-test-perf
                             --enable-user-guides
-                            --enable-test-perf-proc
-                            --enable-test-example
                             --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
                           - sudo PATH="$PATH" LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make distcheck DISTCHECK_CONFIGURE_FLAGS="--with-cunit-path=$HOME/cunit-install/$CROSS_ARCH"
                 - stage: test
