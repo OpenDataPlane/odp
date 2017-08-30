@@ -330,7 +330,7 @@ void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->p.error_flags.all  = 0;
 	pkt_hdr->p.input_flags.all  = 0;
 	pkt_hdr->p.output_flags.all = 0;
-	pkt_hdr->p.l2_offset        = 0;
+	pkt_hdr->p.l2_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->p.l3_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->p.l4_offset        = ODP_PACKET_OFFSET_INVALID;
 }
@@ -1978,35 +1978,16 @@ static inline void parse_udp(packet_parser_t *prs,
 	*parseptr += sizeof(_odp_udphdr_t);
 }
 
-/**
- * Parse common packet headers up to given layer
- *
- * The function expects at least PACKET_PARSE_SEG_LEN bytes of data to be
- * available from the ptr.
- */
-int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
-			uint32_t frame_len, uint32_t seg_len,
-			odp_pktio_parser_layer_t layer)
+static inline
+int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
+			      uint32_t offset,
+			      uint32_t frame_len, uint32_t seg_len,
+			      odp_pktio_parser_layer_t layer,
+			      uint16_t ethtype)
 {
-	uint32_t offset;
-	uint16_t ethtype;
-	const uint8_t *parseptr;
 	uint8_t  ip_proto;
 
-	parseptr = ptr;
-	offset = 0;
-
-	if (layer == ODP_PKTIO_PARSER_LAYER_NONE)
-		return 0;
-
-	/* We only support Ethernet for now */
-	prs->input_flags.eth = 1;
-	/* Assume valid L2 header, no CRC/FCS check in SW */
-	prs->input_flags.l2 = 1;
-
-	ethtype = parse_eth(prs, &parseptr, &offset, frame_len);
-
-	if (layer == ODP_PKTIO_PARSER_LAYER_L2)
+	if (layer <= ODP_PKTIO_PARSER_LAYER_L2)
 		return prs->error_flags.all != 0;
 
 	/* Set l3_offset+flag only for known ethtypes */
@@ -2091,6 +2072,38 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 }
 
 /**
+ * Parse common packet headers up to given layer
+ *
+ * The function expects at least PACKET_PARSE_SEG_LEN bytes of data to be
+ * available from the ptr.
+ */
+int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
+			uint32_t frame_len, uint32_t seg_len,
+			odp_pktio_parser_layer_t layer)
+{
+	uint32_t offset;
+	uint16_t ethtype;
+	const uint8_t *parseptr;
+
+	parseptr = ptr;
+	offset = 0;
+
+	if (layer == ODP_PKTIO_PARSER_LAYER_NONE)
+		return 0;
+
+	/* Assume valid L2 header, no CRC/FCS check in SW */
+	prs->l2_offset = offset;
+	prs->input_flags.l2 = 1;
+	/* We only support Ethernet for now */
+	prs->input_flags.eth = 1;
+
+	ethtype = parse_eth(prs, &parseptr, &offset, frame_len);
+
+	return packet_parse_common_l3_l4(prs, parseptr, offset, frame_len,
+					 seg_len, layer, ethtype);
+}
+
+/**
  * Simple packet parser
  */
 int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
@@ -2101,6 +2114,22 @@ int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
 
 	return packet_parse_common(&pkt_hdr->p, base, pkt_hdr->frame_len,
 				   seg_len, layer);
+}
+
+int packet_parse_l3_l4(odp_packet_hdr_t *pkt_hdr,
+		       odp_pktio_parser_layer_t layer,
+		       uint32_t l3_offset,
+		       uint16_t ethtype)
+{
+	uint32_t seg_len = 0;
+	void *base = packet_map(pkt_hdr, l3_offset, &seg_len, NULL);
+
+	if (seg_len == 0)
+		return -1;
+
+	return packet_parse_common_l3_l4(&pkt_hdr->p, base, l3_offset,
+					 pkt_hdr->frame_len, seg_len,
+					 layer, ethtype);
 }
 
 uint64_t odp_packet_to_u64(odp_packet_t hdl)
