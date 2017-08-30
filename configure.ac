@@ -200,19 +200,18 @@ AC_SUBST(SDK_INSTALL_PATH)
 # Set the install directory for test binaries/scripts
 ##########################################################################
 AC_ARG_WITH([testdir],
-    AC_HELP_STRING([--with-testdir=DIR installation directory for tests]),
-	[if test "$withval" = "yes"; then
-	     testdir=$libdir/odp/tests
-	 else
-	     testdir=$withval
-	 fi], [])
+    [AC_HELP_STRING([--with-testdir=DIR], [installation directory for tests])],
+	[testdir=$withval],
+	[testdir=no])
+AS_IF([test "x$testdir" = "xyes"], [testdir=$libdir/odp/tests],
+      [test "x$testdir" = "xno"], [testdir=])
 AC_SUBST([testdir])
+AM_CONDITIONAL([test_installdir], [test "x$testdir" != "xno"])
 
 ##########################################################################
 # Set conditionals as computed within platform specific files
 ##########################################################################
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
-AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
 AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
