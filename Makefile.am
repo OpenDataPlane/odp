@@ -1,5 +1,6 @@
 ACLOCAL_AMFLAGS=-I m4
 AM_DISTCHECK_CONFIGURE_FLAGS = --enable-user-guides	\
+			       --enable-helper-linux	\
 			       --with-testdir
 
 #@with_platform@ works alone in subdir but not as part of a path???
