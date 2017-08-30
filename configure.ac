@@ -239,37 +239,38 @@ DX_INIT_DOXYGEN($PACKAGE_NAME,
 		${builddir}/doc/driver-api-guide/output)
 
 ##########################################################################
+# Enable/disable ODP_DEBUG
+##########################################################################
+AC_ARG_ENABLE([debug],
+    [AS_HELP_STRING([--enable-debug],
+		    [include additional debugging code ]
+		    [(set to 'full' to enable all --enable-*-debug-* options)])])
+
+AS_IF([test "x$enable_debug" != "xno"], [ODP_DEBUG=1],
+      [ODP_DEBUG=0])
+AC_DEFINE_UNQUOTED([ODP_DEBUG], [$ODP_DEBUG],
+		   [Define to 1 to include additional debug code])
+
+##########################################################################
 # Enable/disable ODP_DEBUG_PRINT
 ##########################################################################
-ODP_DEBUG_PRINT=0
 AC_ARG_ENABLE([debug-print],
-    [  --enable-debug-print    display debugging information],
-    [if test "x$enableval" = "xyes"; then
-	ODP_DEBUG_PRINT=1
-    fi])
+    [AS_HELP_STRING([--enable-debug-print], [display debugging information])],
+    [], [AS_IF([test "x$enable_debug" = "xfull"], [enable_debug_print=yes],
+	       [enable_debug_print=no])])
+AS_IF([test "x$enable_debug_print" != "xno"], [ODP_DEBUG_PRINT=1],
+      [ODP_DEBUG_PRINT=0])
 AC_DEFINE_UNQUOTED([ODP_DEBUG_PRINT], [$ODP_DEBUG_PRINT],
 		   [Define to 1 to display debug information])
 
-ODPH_DEBUG_PRINT=0
 AC_ARG_ENABLE([helper-debug-print],
-    [  --enable-helper-debug-print    display helper debugging information],
-    [if test "x$enableval" = "xyes"; then
-	ODPH_DEBUG_PRINT=1
-    fi])
+    [AS_HELP_STRING([--enable-helper-debug-print], [display helper debugging information])],
+    [], [AS_IF([test "x$enable_debug" = "xfull"], [enable_helper_debug_print=yes],
+	       [enable_helper_debug_print=no])])
+AS_IF([test "x$enable_helper_debug_print" != "xno"], [ODPH_DEBUG_PRINT=1],
+      [ODPH_DEBUG_PRINT=0])
 AC_DEFINE_UNQUOTED([ODPH_DEBUG_PRINT], [$ODPH_DEBUG_PRINT],
 		   [Define to 1 to display helper debug information])
-
-##########################################################################
-# Enable/disable ODP_DEBUG
-##########################################################################
-ODP_DEBUG=0
-AC_ARG_ENABLE([debug],
-    [  --enable-debug          include additional code],
-    [if test "x$enableval" = "xyes"; then
-	ODP_DEBUG=1
-    fi])
-AC_DEFINE_UNQUOTED([ODP_DEBUG], [$ODP_DEBUG],
-		   [Define to 1 to include additional debug code])
 
 ##########################################################################
 # Enable/disable ABI compatible build
