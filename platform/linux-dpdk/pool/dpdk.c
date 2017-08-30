@@ -44,40 +44,61 @@
 #define MAX_SIZE   (10 * 1024 * 1024)
 
 /* The pool table ptr - resides in shared memory */
-pool_table_t *pool_tbl;
+pool_table_cp_t *pool_tbl_cp;
+pool_table_dp_t *pool_tbl_dp;
 
 static int dpdk_pool_init_global(void)
 {
 	uint32_t i;
 	odp_shm_t shm;
 
-	shm = odp_shm_reserve("odp_pools",
-			      sizeof(pool_table_t),
-			      sizeof(pool_entry_t), 0);
-
-	pool_tbl = odp_shm_addr(shm);
-
-	if (pool_tbl == NULL)
+	shm = odp_shm_reserve("odp_pools_cp",
+			      sizeof(pool_table_cp_t),
+			      sizeof(pool_entry_cp_t), 0);
+	if (shm == ODP_SHM_INVALID)
 		return -1;
 
-	memset(pool_tbl, 0, sizeof(pool_table_t));
-	pool_tbl->shm = shm;
+	pool_tbl_cp = odp_shm_addr(shm);
+	if (pool_tbl_cp == NULL)
+		return -1;
+
+	memset(pool_tbl_cp, 0, sizeof(pool_table_cp_t));
+	pool_tbl_cp->shm_cp = shm;
+
+	shm = odp_shm_reserve("odp_pools_dp",
+			      sizeof(pool_table_dp_t),
+			      ODP_CACHE_LINE_SIZE, 0);
+	if (shm == ODP_SHM_INVALID)
+		return -1;
+
+	pool_tbl_dp = odp_shm_addr(shm);
+	if (pool_tbl_dp == NULL)
+		goto dp_tbl_alloc_failed;
+
+	memset(pool_tbl_dp, 0, sizeof(pool_table_dp_t));
+	pool_tbl_cp->shm_dp = shm;
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		/* init locks */
-		pool_entry_t *pool = &pool_tbl->pool[i];
+		pool_entry_cp_t *pool_cp = &pool_tbl_cp->pool[i];
 
-		LOCK_INIT(&pool->s.lock);
-		pool->s.pool_hdl = pool_index_to_handle(i);
+		LOCK_INIT(&pool_cp->lock);
+		pool_cp->pool_hdl = pool_index_to_handle(i);
 	}
 
 	ODP_DBG("\nPool init global\n");
-	ODP_DBG("  pool_entry_s size     %zu\n", sizeof(struct pool_entry_s));
-	ODP_DBG("  pool_entry_t size     %zu\n", sizeof(pool_entry_t));
+	ODP_DBG("  pool_entry_cp_t size     %zu\n", sizeof(pool_entry_cp_t));
+	ODP_DBG("  pool_entry_dp_t size     %zu\n", sizeof(pool_entry_dp_t));
+	ODP_DBG("  pool_table_cp_t size     %zu\n", sizeof(pool_table_cp_t));
+	ODP_DBG("  pool_table_dp_t size     %zu\n", sizeof(pool_table_dp_t));
 	ODP_DBG("  odp_buffer_hdr_t size %zu\n", sizeof(odp_buffer_hdr_t));
 	ODP_DBG("\n");
 
 	return 0;
+
+dp_tbl_alloc_failed:
+	odp_shm_free(pool_tbl_cp->shm_cp);
+	return -1;
 }
 
 static int dpdk_pool_init_local(void)
@@ -89,9 +110,13 @@ static int dpdk_pool_term_global(void)
 {
 	int ret;
 
-	ret = odp_shm_free(pool_tbl->shm);
+	ret = odp_shm_free(pool_tbl_cp->shm_dp);
 	if (ret < 0)
-		ODP_ERR("shm free failed");
+		ODP_ERR("Pool DP shm free failed\n");
+
+	ret = odp_shm_free(pool_tbl_cp->shm_cp);
+	if (ret < 0)
+		ODP_ERR("Pool CP shm free failed\n");
 
 	return ret;
 }
@@ -222,7 +247,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 #define CHECK_U16_OVERFLOW(X)	do {			\
 	if (odp_unlikely(X > UINT16_MAX)) {		\
 		ODP_ERR("Invalid size: %d", X);		\
-		UNLOCK(&pool->s.lock);			\
+		UNLOCK(&pool_cp->lock);			\
 		return ODP_POOL_INVALID;		\
 	}						\
 } while (0)
@@ -297,7 +322,8 @@ static odp_pool_t dpdk_pool_create(const char *name,
 	odp_pool_t pool_hdl = ODP_POOL_INVALID;
 	unsigned mb_size, i, cache_size;
 	size_t hdr_size;
-	pool_entry_t *pool;
+	pool_entry_cp_t *pool_cp;
+	pool_entry_dp_t *pool_dp;
 	uint32_t buf_align, blk_size, headroom, tailroom, min_seg_len;
 	uint32_t max_len, min_align;
 	char pool_name[ODP_POOL_NAME_LEN];
@@ -321,11 +347,12 @@ static odp_pool_t dpdk_pool_create(const char *name,
 		uint32_t num;
 		struct rte_mempool *mp;
 
-		pool = get_pool_entry(i);
+		pool_cp = get_pool_entry_cp(i);
+		pool_dp = get_pool_entry_dp(i);
 
-		LOCK(&pool->s.lock);
-		if (pool->s.rte_mempool != NULL) {
-			UNLOCK(&pool->s.lock);
+		LOCK(&pool_cp->lock);
+		if (pool_dp->rte_mempool != NULL) {
+			UNLOCK(&pool_cp->lock);
 			continue;
 		}
 
@@ -338,7 +365,7 @@ static odp_pool_t dpdk_pool_create(const char *name,
 			if (buf_align > ODP_CONFIG_BUFFER_ALIGN_MAX ||
 			    buf_align !=
 			    ROUNDDOWN_POWER2(buf_align, buf_align)) {
-				UNLOCK(&pool->s.lock);
+				UNLOCK(&pool_cp->lock);
 				return ODP_POOL_INVALID;
 			}
 
@@ -413,7 +440,7 @@ static odp_pool_t dpdk_pool_create(const char *name,
 		default:
 			ODP_ERR("Bad type %i\n",
 				params->type);
-			UNLOCK(&pool->s.lock);
+			UNLOCK(&pool_cp->lock);
 			return ODP_POOL_INVALID;
 		}
 
@@ -422,7 +449,7 @@ static odp_pool_t dpdk_pool_create(const char *name,
 		mb_ctor_arg.seg_buf_size = mbp_ctor_arg.pkt.mbuf_data_room_size;
 		mb_ctor_arg.type = params->type;
 		mb_size = mb_ctor_arg.seg_buf_offset + mb_ctor_arg.seg_buf_size;
-		mbp_ctor_arg.pool_hdl = pool->s.pool_hdl;
+		mbp_ctor_arg.pool_hdl = pool_cp->pool_hdl;
 		mbp_ctor_arg.pkt.mbuf_priv_size = mb_ctor_arg.seg_buf_offset -
 			sizeof(struct rte_mbuf);
 
@@ -453,7 +480,7 @@ static odp_pool_t dpdk_pool_create(const char *name,
 				 pool_name);
 		}
 
-		pool->s.rte_mempool =
+		pool_dp->rte_mempool =
 			rte_mempool_create(rte_name ? rte_name : pool_name,
 					   num,
 					   mb_size,
@@ -466,30 +493,30 @@ static odp_pool_t dpdk_pool_create(const char *name,
 					   rte_socket_id(),
 					   0);
 		free(rte_name);
-		if (pool->s.rte_mempool == NULL) {
+		if (pool_dp->rte_mempool == NULL) {
 			ODP_ERR("Cannot init DPDK mbuf pool: %s\n",
 				rte_strerror(rte_errno));
-			UNLOCK(&pool->s.lock);
+			UNLOCK(&pool_cp->lock);
 			return ODP_POOL_INVALID;
 		}
 		/* found free pool */
 		if (name == NULL) {
-			pool->s.name[0] = 0;
+			pool_cp->name[0] = 0;
 		} else {
-			strncpy(pool->s.name, name,
+			strncpy(pool_cp->name, name,
 				ODP_POOL_NAME_LEN - 1);
-			pool->s.name[ODP_POOL_NAME_LEN - 1] = 0;
+			pool_cp->name[ODP_POOL_NAME_LEN - 1] = 0;
 		}
 
-		pool->s.params = *params;
-		mp = pool->s.rte_mempool;
+		pool_cp->params = *params;
+		mp = pool_dp->rte_mempool;
 		ODP_DBG("Header/element/trailer size: %u/%u/%u, "
 			"total pool size: %lu\n",
 			mp->header_size, mp->elt_size, mp->trailer_size,
 			(unsigned long)((mp->header_size + mp->elt_size +
 			mp->trailer_size) * num));
-		UNLOCK(&pool->s.lock);
-		pool_hdl = pool->s.pool_hdl;
+		UNLOCK(&pool_cp->lock);
+		pool_hdl = pool_cp->pool_hdl;
 		break;
 	}
 
@@ -507,30 +534,34 @@ static odp_pool_t dpdk_pool_lookup(const char *name)
 		return ODP_POOL_INVALID;
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
-		pool_entry_t *pool = get_pool_entry(i);
+		pool_entry_cp_t *pool_cp = get_pool_entry_cp(i);
+		pool_entry_dp_t *pool_dp = get_pool_entry_dp(i);
 
-		LOCK(&pool->s.lock);
-		if (pool->s.rte_mempool != mp) {
-			UNLOCK(&pool->s.lock);
+		LOCK(&pool_cp->lock);
+		if (pool_dp->rte_mempool != mp) {
+			UNLOCK(&pool_cp->lock);
 			continue;
 		}
-		UNLOCK(&pool->s.lock);
-		pool_hdl = pool->s.pool_hdl;
+		UNLOCK(&pool_cp->lock);
+		pool_hdl = pool_cp->pool_hdl;
+		break;
 	}
 	return pool_hdl;
 }
 
-static odp_buffer_t buffer_alloc(pool_entry_t *pool)
+static odp_buffer_t buffer_alloc(odp_pool_t pool_hdl)
 {
 	odp_buffer_t buffer;
+	pool_entry_cp_t *pool_cp;
+	pool_entry_dp_t *pool_dp;
 
-	if (odp_unlikely(pool->s.params.type != ODP_POOL_BUFFER &&
-			 pool->s.params.type != ODP_POOL_TIMEOUT)) {
-		rte_errno = EINVAL;
-		return ODP_BUFFER_INVALID;
-	}
+	pool_cp = odp_pool_to_entry_cp(pool_hdl);
+	pool_dp = odp_pool_to_entry_dp(pool_hdl);
 
-	buffer = (odp_buffer_t)rte_ctrlmbuf_alloc(pool->s.rte_mempool);
+	ODP_ASSERT(pool_cp->params.type != ODP_POOL_BUFFER &&
+		   pool_cp->params.type != ODP_POOL_TIMEOUT);
+
+	buffer = (odp_buffer_t)rte_ctrlmbuf_alloc(pool_dp->rte_mempool);
 
 	if ((struct rte_mbuf *)buffer == NULL) {
 		rte_errno = ENOMEM;
@@ -545,9 +576,7 @@ odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 {
 	ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
 
-	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
-
-	return buffer_alloc(pool);
+	return buffer_alloc(pool_hdl);
 }
 
 int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
@@ -556,10 +585,8 @@ int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
 
 	ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
 
-	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
-
 	for (i = 0; i < num; i++) {
-		buf[i] = buffer_alloc(pool);
+		buf[i] = buffer_alloc(pool_hdl);
 		if (buf[i] == ODP_BUFFER_INVALID)
 			return rte_errno == ENOMEM ? i : -EINVAL;
 	}
@@ -586,23 +613,20 @@ void odp_buffer_free_multi(const odp_buffer_t buf[], int num)
 
 static void dpdk_pool_print(odp_pool_t pool_hdl)
 {
-	uint32_t pool_id = pool_handle_to_index(pool_hdl);
-	pool_entry_t *pool = get_pool_entry(pool_id);
+	pool_entry_dp_t *pool_dp = odp_pool_to_entry_dp(pool_hdl);
 
-	rte_mempool_dump(stdout, pool->s.rte_mempool);
+	rte_mempool_dump(stdout, pool_dp->rte_mempool);
 }
 
 static int dpdk_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 {
-	uint32_t pool_id = pool_handle_to_index(pool_hdl);
+	pool_entry_cp_t *pool_cp = odp_pool_to_entry_cp(pool_hdl);
 
-	pool_entry_t *pool = get_pool_entry(pool_id);
-
-	if (pool == NULL || info == NULL)
+	if (pool_cp == NULL || info == NULL)
 		return -1;
 
-	info->name = pool->s.name;
-	info->params = pool->s.params;
+	info->name = pool_cp->name;
+	info->params = pool_cp->params;
 
 	return 0;
 }
@@ -613,17 +637,15 @@ static int dpdk_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
  */
 static int dpdk_pool_destroy(odp_pool_t pool_hdl)
 {
-	uint32_t pool_id = pool_handle_to_index(pool_hdl);
-	pool_entry_t *pool = get_pool_entry(pool_id);
-	struct rte_mempool *mp = rte_mempool_lookup(pool->s.name);
+	pool_entry_dp_t *pool_dp = odp_pool_to_entry_dp(pool_hdl);
 
-	if (mp == NULL) {
-		ODP_ERR("Can't find pool with this name!\n");
+	if (pool_dp->rte_mempool == NULL) {
+		ODP_ERR("Can't find pool!\n");
 		return -1;
 	}
 
-	rte_mempool_free(mp);
-	pool->s.rte_mempool = NULL;
+	rte_mempool_free(pool_dp->rte_mempool);
+	pool_dp->rte_mempool = NULL;
 	/* The pktio supposed to be closed by now */
 	return 0;
 }
