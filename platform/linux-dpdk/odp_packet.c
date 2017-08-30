@@ -81,17 +81,20 @@ static inline odp_packet_hdr_t *buf_to_packet_hdr(odp_buffer_t buf)
 	return (odp_packet_hdr_t *)buf_hdl_to_hdr(buf);
 }
 
-static odp_packet_t packet_alloc(pool_entry_t* pool, uint32_t len)
+static odp_packet_t packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 {
+	pool_entry_dp_t *pool_dp;
 	odp_packet_t pkt;
 	uintmax_t totsize = RTE_PKTMBUF_HEADROOM + len;
 	odp_packet_hdr_t *pkt_hdr;
 	struct rte_mbuf *mbuf;
 
-	if (pool->s.params.type != ODP_POOL_PACKET)
-		return ODP_PACKET_INVALID;
+	ODP_ASSERT(odp_pool_to_entry_cp(pool_hdl)->params.type
+		   != ODP_POOL_PACKET);
 
-	mbuf = rte_pktmbuf_alloc(pool->s.rte_mempool);
+	pool_dp = odp_pool_to_entry_dp(pool_hdl);
+
+	mbuf = rte_pktmbuf_alloc(pool_dp->rte_mempool);
 	if (mbuf == NULL) {
 		rte_errno = ENOMEM;
 		return ODP_PACKET_INVALID;
@@ -105,7 +108,7 @@ static odp_packet_t packet_alloc(pool_entry_t* pool, uint32_t len)
 
 		do {
 			struct rte_mbuf *nextseg =
-				rte_pktmbuf_alloc(pool->s.rte_mempool);
+				rte_pktmbuf_alloc(pool_dp->rte_mempool);
 
 			if (nextseg == NULL) {
 				rte_pktmbuf_free(mbuf);
@@ -130,19 +133,16 @@ static odp_packet_t packet_alloc(pool_entry_t* pool, uint32_t len)
 
 odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 {
-	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
-
-	return packet_alloc(pool, len);
+	return packet_alloc(pool_hdl, len);
 }
 
 int odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 			   odp_packet_t pkt[], int num)
 {
 	int i;
-	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
 
 	for (i = 0; i < num; i++) {
-		pkt[i] = packet_alloc(pool, len);
+		pkt[i] = packet_alloc(pool_hdl, len);
 		if (pkt[i] == ODP_PACKET_INVALID)
 			return rte_errno == ENOMEM ? i : -EINVAL;
 	}

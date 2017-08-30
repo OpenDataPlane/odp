@@ -47,8 +47,8 @@ extern "C" {
 #include <odp/api/spinlock.h>
 #endif
 
-
-struct pool_entry_s {
+/* Control plane structure - Accessed only by control plane code */
+typedef struct pool_entry_cp_t {
 #ifdef POOL_USE_TICKETLOCK
 	odp_ticketlock_t	lock ODP_ALIGNED_CACHE;
 #else
@@ -57,36 +57,51 @@ struct pool_entry_s {
 	char			name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t	params;
 	odp_pool_t		pool_hdl;
+} pool_entry_cp_t;
+
+/* Data plane structure - Accessed only by data plane code */
+typedef struct pool_entry_dp_t {
 	struct rte_mempool	*rte_mempool;
-};
+} pool_entry_dp_t;
 
-typedef union pool_entry_u {
-	struct pool_entry_s s;
+/* Control plane only pool info */
+typedef struct pool_table_cp_t {
+	pool_entry_cp_t pool[ODP_CONFIG_POOLS];
+	odp_shm_t shm_cp;
+	odp_shm_t shm_dp;
+} pool_table_cp_t;
 
-	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct pool_entry_s))];
+/* Data plane only pool info */
+typedef struct pool_table_dp_t {
+	pool_entry_dp_t pool[ODP_CONFIG_POOLS];
+} pool_table_dp_t ODP_ALIGNED_CACHE;
 
-} pool_entry_t;
-
-typedef struct pool_table_t {
-	pool_entry_t pool[ODP_CONFIG_POOLS];
-	odp_shm_t shm;
-} pool_table_t;
-
-extern pool_table_t *pool_tbl;
+extern pool_table_cp_t *pool_tbl_cp;
+extern pool_table_dp_t *pool_tbl_dp;
 
 static inline uint32_t pool_handle_to_index(odp_pool_t pool_hdl)
 {
 	return _odp_typeval(pool_hdl);
 }
 
-static inline void *get_pool_entry(uint32_t pool_id)
+static inline void *get_pool_entry_cp(uint32_t pool_id)
 {
-	return &pool_tbl->pool[pool_id];
+	return &pool_tbl_cp->pool[pool_id];
 }
 
-static inline pool_entry_t *odp_pool_to_entry(odp_pool_t pool)
+static inline void *get_pool_entry_dp(uint32_t pool_id)
 {
-	return (pool_entry_t *)get_pool_entry(pool_handle_to_index(pool));
+	return &pool_tbl_dp->pool[pool_id];
+}
+
+static inline pool_entry_cp_t *odp_pool_to_entry_cp(odp_pool_t pool)
+{
+	return (pool_entry_cp_t *)get_pool_entry_cp(pool_handle_to_index(pool));
+}
+
+static inline pool_entry_dp_t *odp_pool_to_entry_dp(odp_pool_t pool)
+{
+	return (pool_entry_dp_t *)get_pool_entry_dp(pool_handle_to_index(pool));
 }
 
 static inline odp_pool_t pool_index_to_handle(uint32_t pool_id)
