@@ -14,9 +14,15 @@ extern "C" {
 #include <odp/api/queue.h>
 #include <odp_queue_if.h>
 #include <odp/api/schedule.h>
+#include <odp_forward_typedefs_internal.h>
 
-typedef void (*schedule_pktio_start_fn_t)(int pktio_index, int num_in_queue,
-					  int in_queue_idx[]);
+/* Number of ordered locks per queue */
+#define SCHEDULE_ORDERED_LOCKS_PER_QUEUE 2
+
+typedef void (*schedule_pktio_start_fn_t)(int pktio_index,
+					 int num_in_queue,
+					 int in_queue_idx[],
+					 odp_queue_t odpq[]);
 typedef int (*schedule_thr_add_fn_t)(odp_schedule_group_t group, int thr);
 typedef int (*schedule_thr_rem_fn_t)(odp_schedule_group_t group, int thr);
 typedef int (*schedule_num_grps_fn_t)(void);
@@ -66,6 +72,7 @@ extern const schedule_fn_t *sched_fn;
 
 /* Interface for the scheduler */
 int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[]);
+int sched_cb_pktin_poll_one(int pktio_index, int rx_queue, odp_event_t evts[]);
 void sched_cb_pktio_stop_finalize(int pktio_index);
 odp_queue_t sched_cb_queue_handle(uint32_t queue_index);
 void sched_cb_queue_destroy_finalize(uint32_t queue_index);

@@ -424,7 +424,10 @@ static int ord_enq_multi(queue_t q_int, void *buf_hdr[], int num,
 	return 0;
 }
 
-static void pktio_start(int pktio_index, int num, int pktin_idx[])
+static void pktio_start(int pktio_index,
+			int num,
+			int pktin_idx[],
+			odp_queue_t odpq[] ODP_UNUSED)
 {
 	int i;
 	sched_cmd_t *cmd;

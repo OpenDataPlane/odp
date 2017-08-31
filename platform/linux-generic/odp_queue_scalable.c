@@ -70,6 +70,11 @@ static queue_entry_t *get_qentry(uint32_t queue_id)
 	return &queue_tbl->queue[queue_id];
 }
 
+queue_entry_t *qentry_from_ext(odp_queue_t handle)
+{
+	return get_qentry(queue_to_id(handle));
+}
+
 static int _odp_queue_disable_enq(sched_elem_t *q)
 {
 	ringidx_t old_read, old_write, new_write;
@@ -170,9 +175,12 @@ static int queue_init(queue_entry_t *queue, const char *name,
 				goto rwin_create_failed;
 			}
 		}
+		sched_elem->sched_grp = param->sched.group;
+		sched_elem->sched_prio = param->sched.prio;
 		sched_elem->schedq =
-			schedq_from_sched_group(param->sched.group,
-						param->sched.prio);
+			sched_queue_add(param->sched.group, param->sched.prio);
+		ODP_ASSERT(sched_elem->schedq != NULL);
+
 	}
 
 	return 0;
@@ -433,19 +441,20 @@ static int queue_destroy(odp_queue_t handle)
 			doze();
 	}
 
-	/* Adjust the spread factor for the queues in the schedule group */
-	if (queue->s.type == ODP_QUEUE_TYPE_SCHED)
-		sched_group_xcount_dec(queue->s.param.sched.group,
-				       queue->s.param.sched.prio);
+	if (q->schedq != NULL) {
+		sched_queue_rem(q->sched_grp, q->sched_prio);
+		q->schedq = NULL;
+	}
 
 	_odp_ishm_pool_free(queue_shm_pool, q->prod_ring);
 
-	if (queue->s.param.sched.sync == ODP_SCHED_SYNC_ORDERED) {
+	if (q->rwin != NULL) {
 		if (rwin_free(queue_shm_pool, q->rwin) < 0) {
 			ODP_ERR("Failed to free reorder window\n");
 			UNLOCK(&queue->s.lock);
 			return -1;
 		}
+		q->rwin = NULL;
 	}
 	queue->s.status = QUEUE_STATUS_FREE;
 	UNLOCK(&queue->s.lock);
@@ -554,11 +563,11 @@ static inline int _odp_queue_enq(sched_elem_t *q,
 	return actual;
 }
 
-#else
+#endif
 
-static inline int _odp_queue_enq_sp(sched_elem_t *q,
-				    odp_buffer_hdr_t *buf_hdr[],
-				    int num)
+int _odp_queue_enq_sp(sched_elem_t *q,
+		      odp_buffer_hdr_t *buf_hdr[],
+		      int num)
 {
 	ringidx_t old_read;
 	ringidx_t old_write;
@@ -602,7 +611,6 @@ static inline int _odp_queue_enq_sp(sched_elem_t *q,
 
 	return actual;
 }
-#endif
 
 static int _queue_enq_multi(queue_t handle, odp_buffer_hdr_t *buf_hdr[],
 			    int num)

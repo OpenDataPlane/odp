@@ -115,6 +115,8 @@ reorder_window_t *rwin_alloc(_odp_ishm_pool_t *pool,
 			     unsigned lock_count);
 int rwin_free(_odp_ishm_pool_t *pool, reorder_window_t *rwin);
 bool rwin_reserve(reorder_window_t *rwin, uint32_t *sn);
+bool rwin_reserve_sc(reorder_window_t *rwin, uint32_t *sn);
+void rwin_unreserve_sc(reorder_window_t *rwin, uint32_t sn);
 void rctx_init(reorder_context_t *rctx, uint16_t idx,
 	       reorder_window_t *rwin, uint32_t sn);
 void rctx_release(reorder_context_t *rctx);
