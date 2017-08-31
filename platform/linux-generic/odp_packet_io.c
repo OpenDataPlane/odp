@@ -469,9 +469,11 @@ int odp_pktio_start(odp_pktio_t hdl)
 		unsigned i;
 		unsigned num = entry->s.num_in_queue;
 		int index[num];
+		odp_queue_t odpq[num];
 
 		for (i = 0; i < num; i++) {
 			index[i] = i;
+			odpq[i] = entry->s.in_queue[i].queue;
 
 			if (entry->s.in_queue[i].queue == ODP_QUEUE_INVALID) {
 				ODP_ERR("No input queue\n");
@@ -479,7 +481,7 @@ int odp_pktio_start(odp_pktio_t hdl)
 			}
 		}
 
-		sched_fn->pktio_start(pktio_to_id(hdl), num, index);
+		sched_fn->pktio_start(pktio_to_id(hdl), num, index, odpq);
 	}
 
 	return res;
@@ -666,6 +668,51 @@ static int pktin_deq_multi(queue_t q_int, odp_buffer_hdr_t *buf_hdr[], int num)
 	if (j)
 		queue_fn->enq_multi(q_int, hdr_tbl, j);
 	return nbr;
+}
+
+int sched_cb_pktin_poll_one(int pktio_index,
+			    int rx_queue,
+			    odp_event_t evt_tbl[QUEUE_MULTI_MAX])
+{
+	int num_rx, num_pkts, i;
+	pktio_entry_t *entry = pktio_entry_by_index(pktio_index);
+	odp_packet_t pkt;
+	odp_packet_hdr_t *pkt_hdr;
+	odp_buffer_hdr_t *buf_hdr;
+	odp_packet_t packets[QUEUE_MULTI_MAX];
+	queue_t queue;
+
+	if (odp_unlikely(entry->s.state != PKTIO_STATE_STARTED)) {
+		if (entry->s.state < PKTIO_STATE_ACTIVE ||
+		    entry->s.state == PKTIO_STATE_STOP_PENDING)
+			return -1;
+
+		ODP_DBG("interface not started\n");
+		return 0;
+	}
+
+	ODP_ASSERT((unsigned)rx_queue < entry->s.num_in_queue);
+	num_pkts = entry->s.ops->recv(entry, rx_queue,
+				      packets, QUEUE_MULTI_MAX);
+
+	num_rx = 0;
+	for (i = 0; i < num_pkts; i++) {
+		pkt = packets[i];
+		pkt_hdr = odp_packet_hdr(pkt);
+		if (odp_unlikely(pkt_hdr->p.input_flags.dst_queue)) {
+			queue = pkt_hdr->dst_queue;
+			buf_hdr = packet_to_buf_hdr(pkt);
+			if (queue_fn->enq_multi(queue, &buf_hdr, 1) < 0)
+				/* Queue full? */
+				odp_packet_free(pkt);
+				__atomic_fetch_add(&entry->s.stats.in_discards,
+						   1,
+						   __ATOMIC_RELAXED);
+		} else {
+			evt_tbl[num_rx++] = odp_packet_to_event(pkt);
+		}
+	}
+	return num_rx;
 }
 
 int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])

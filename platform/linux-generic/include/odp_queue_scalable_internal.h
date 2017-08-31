@@ -58,6 +58,8 @@ union queue_entry_u {
 int _odp_queue_deq(sched_elem_t *q, odp_buffer_hdr_t *buf_hdr[], int num);
 int _odp_queue_deq_sc(sched_elem_t *q, odp_event_t *evp, int num);
 int _odp_queue_deq_mc(sched_elem_t *q, odp_event_t *evp, int num);
+int _odp_queue_enq_sp(sched_elem_t *q, odp_buffer_hdr_t *buf_hdr[], int num);
+queue_entry_t *qentry_from_ext(odp_queue_t handle);
 
 /* Round up memory size to next cache line size to
  * align all memory addresses on cache line boundary.
