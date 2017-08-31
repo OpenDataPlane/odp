@@ -571,7 +571,10 @@ static inline void free_pktio_cmd(pktio_cmd_t *cmd)
 	odp_rwlock_write_unlock(&sched->pktio_poll.lock);
 }
 
-static void schedule_pktio_start(int pktio, int count, int pktin[])
+static void schedule_pktio_start(int pktio,
+				 int count,
+				 int pktin[],
+				 odp_queue_t odpq[] ODP_UNUSED)
 {
 	int i, index;
 	pktio_cmd_t *cmd;

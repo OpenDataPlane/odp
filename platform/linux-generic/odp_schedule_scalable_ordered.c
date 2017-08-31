@@ -72,6 +72,32 @@ bool rwin_reserve(reorder_window_t *rwin, uint32_t *sn)
 	return true;
 }
 
+bool rwin_reserve_sc(reorder_window_t *rwin, uint32_t *sn)
+{
+	uint32_t head;
+	uint32_t oldt;
+	uint32_t newt;
+	uint32_t winmask;
+
+	/* Read head and tail separately */
+	oldt = rwin->tail;
+	winmask = rwin->winmask;
+	head = rwin->hc.head;
+	if (odp_unlikely(oldt - head >= winmask))
+		return false;
+	newt = oldt + 1;
+	rwin->tail = newt;
+	*sn = oldt;
+
+	return true;
+}
+
+void rwin_unreserve_sc(reorder_window_t *rwin, uint32_t sn)
+{
+	ODP_ASSERT(rwin->tail == sn + 1);
+	rwin->tail = sn;
+}
+
 static void rwin_insert(reorder_window_t *rwin,
 			reorder_context_t *rctx,
 			uint32_t sn,
