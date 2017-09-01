@@ -693,7 +693,7 @@ static inline void _schedule_release_ordered(sched_scalable_thread_state_t *ts)
 	ts->rctx = NULL;
 }
 
-static void pktin_poll(sched_scalable_thread_state_t *ts)
+static void poll_pktin(sched_scalable_thread_state_t *ts)
 {
 	uint32_t i, tag, hi, npolls = 0;
 	int pktio_index, queue_index;
@@ -715,8 +715,8 @@ static void pktin_poll(sched_scalable_thread_state_t *ts)
 		/* Tag grabbed */
 		pktio_index = TAG_2_PKTIO(tag);
 		queue_index = TAG_2_QUEUE(tag);
-		if (odp_unlikely(sched_cb_pktin_poll(pktio_index,
-						     1, &queue_index))) {
+		if (odp_unlikely(pktin_poll(pktio_index,
+					    1, &queue_index))) {
 			/* Pktio stopped or closed
 			 * Remove tag from pktin_tags
 			 */
@@ -729,7 +729,7 @@ static void pktin_poll(sched_scalable_thread_state_t *ts)
 			 */
 			if (__atomic_sub_fetch(&pktin_count[pktio_index], 1,
 					       __ATOMIC_RELAXED) == 0)
-				sched_cb_pktio_stop_finalize(pktio_index);
+				pktio_stop_finalize(pktio_index);
 		} else {
 		    /* We don't know whether any packets were found and enqueued
 		     * Write back original tag value to release pktin queue
@@ -984,7 +984,7 @@ restart_same:
 		}
 	}
 
-	pktin_poll(ts);
+	poll_pktin(ts);
 	return 0;
 }
 
