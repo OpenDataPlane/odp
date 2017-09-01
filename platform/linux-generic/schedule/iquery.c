@@ -24,6 +24,7 @@
 #include <odp_config_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_schedule_subsystem.h>
+#include <odp_packet_io_internal.h>
 
 /* Should remove this dependency */
 #include <odp_queue_internal.h>
@@ -293,10 +294,10 @@ static int schedule_term_global(void)
 		odp_event_t events[1];
 
 		if (sched->availables[i])
-			count = sched_cb_queue_deq_multi(i, events, 1);
+			count = queue_idx_deq_multi(i, events, 1);
 
 		if (count < 0)
-			sched_cb_queue_destroy_finalize(i);
+			queue_destroy_finalize(i);
 		else if (count > 0)
 			ODP_ERR("Queue (%d) not empty\n", i);
 	}
@@ -673,16 +674,16 @@ static inline void pktio_poll_input(void)
 		cmd = &sched->pktio_poll.commands[index];
 
 		/* Poll packet input */
-		if (odp_unlikely(sched_cb_pktin_poll(cmd->pktio,
-						     cmd->count,
-						     cmd->pktin))) {
+		if (odp_unlikely(pktin_poll(cmd->pktio,
+					    cmd->count,
+					    cmd->pktin))) {
 			/* Pktio stopped or closed. Remove poll
 			 * command and call stop_finalize when all
 			 * commands of the pktio has been removed.
 			 */
 			if (schedule_pktio_stop(cmd->pktio,
 						cmd->pktin[0]) == 0)
-				sched_cb_pktio_stop_finalize(cmd->pktio);
+				pktio_stop_finalize(cmd->pktio);
 
 			free_pktio_cmd(cmd);
 		} else {
@@ -1514,12 +1515,11 @@ static inline int consume_queue(int prio, unsigned int queue_index)
 	if (is_ordered_queue(queue_index))
 		max = 1;
 
-	count = sched_cb_queue_deq_multi(
-		queue_index, cache->stash, max);
+	count = queue_idx_deq_multi(queue_index, cache->stash, max);
 
 	if (count < 0) {
 		DO_SCHED_UNLOCK();
-		sched_cb_queue_destroy_finalize(queue_index);
+		queue_destroy_finalize(queue_index);
 		DO_SCHED_LOCK();
 		return 0;
 	}
@@ -1529,7 +1529,7 @@ static inline int consume_queue(int prio, unsigned int queue_index)
 
 	cache->top = &cache->stash[0];
 	cache->count = count;
-	cache->queue = sched_cb_queue_handle(queue_index);
+	cache->queue = queue_handle(queue_index);
 	return count;
 }
 

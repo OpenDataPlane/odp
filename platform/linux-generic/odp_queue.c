@@ -234,7 +234,7 @@ static odp_queue_t queue_create(const char *name,
 	return handle;
 }
 
-void sched_cb_queue_destroy_finalize(uint32_t queue_index)
+void queue_destroy_finalize(uint32_t queue_index)
 {
 	queue_entry_t *queue = get_qentry(queue_index);
 
@@ -643,19 +643,19 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 	return 0;
 }
 
-odp_queue_t sched_cb_queue_handle(uint32_t queue_index)
+odp_queue_t queue_handle(uint32_t queue_index)
 {
 	return queue_from_id(queue_index);
 }
 
-int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num)
+int queue_idx_deq_multi(uint32_t queue_index, odp_event_t ev[], int num)
 {
 	queue_entry_t *qe = get_qentry(queue_index);
 
 	return deq_multi(qe, (odp_buffer_hdr_t **)ev, num);
 }
 
-int sched_cb_queue_empty(uint32_t queue_index)
+int queue_empty(uint32_t queue_index)
 {
 	queue_entry_t *queue = get_qentry(queue_index);
 	int ret = 0;

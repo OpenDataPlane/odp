@@ -207,6 +207,9 @@ extern const pktio_if_ops_t loopback_pktio_ops;
 extern const pktio_if_ops_t dpdk_pktio_ops;
 extern const pktio_if_ops_t * const pktio_if_ops[];
 
+int pktin_poll(int pktio_index, int num_queue, int index[]);
+void pktio_stop_finalize(int pktio_index);
+
 #ifdef __cplusplus
 }
 #endif

@@ -24,6 +24,7 @@
 #include <odp_ring_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_schedule_subsystem.h>
+#include <odp_packet_io_internal.h>
 
 /* Should remove this dependency */
 #include <odp_queue_internal.h>
@@ -366,11 +367,6 @@ static int schedule_init_global(void)
 	ODP_DBG("done\n");
 
 	return 0;
-}
-
-static inline void queue_destroy_finalize(uint32_t qi)
-{
-	sched_cb_queue_destroy_finalize(qi);
 }
 
 static int schedule_term_global(void)
@@ -858,13 +854,13 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 			if (ordered && max_num < MAX_DEQ)
 				max_deq = max_num;
 
-			num = sched_cb_queue_deq_multi(qi, sched_local.ev_stash,
-						       max_deq);
+			num = queue_idx_deq_multi(qi, sched_local.ev_stash,
+						  max_deq);
 
 			if (num < 0) {
 				/* Destroyed queue. Continue scheduling the same
 				 * priority queue. */
-				sched_cb_queue_destroy_finalize(qi);
+				queue_destroy_finalize(qi);
 				continue;
 			}
 
@@ -874,7 +870,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 				continue;
 			}
 
-			handle            = sched_cb_queue_handle(qi);
+			handle            = queue_handle(qi);
 			sched_local.num   = num;
 			sched_local.index = 0;
 			sched_local.queue = handle;
@@ -1003,15 +999,15 @@ static inline int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		cmd = &sched->pktio_cmd[cmd_index];
 
 		/* Poll packet input */
-		if (odp_unlikely(sched_cb_pktin_poll(cmd->pktio_index,
-						     cmd->num_pktin,
-						     cmd->pktin))){
+		if (odp_unlikely(pktin_poll(cmd->pktio_index,
+					    cmd->num_pktin,
+					    cmd->pktin))){
 			/* Pktio stopped or closed. Remove poll command and call
 			 * stop_finalize when all commands of the pktio has
 			 * been removed. */
 			if (schedule_pktio_stop(cmd->pktio_index,
 						cmd->pktin[0]) == 0)
-				sched_cb_pktio_stop_finalize(cmd->pktio_index);
+				pktio_stop_finalize(cmd->pktio_index);
 
 			free_pktio_cmd(cmd);
 		} else {

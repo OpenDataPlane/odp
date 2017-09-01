@@ -665,7 +665,7 @@ static int pktin_deq_multi(queue_t q_int, odp_buffer_hdr_t *buf_hdr[], int num)
 	return nbr;
 }
 
-int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
+int pktin_poll(int pktio_index, int num_queue, int index[])
 {
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	int num, idx;
@@ -703,7 +703,7 @@ int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 	return 0;
 }
 
-void sched_cb_pktio_stop_finalize(int pktio_index)
+void pktio_stop_finalize(int pktio_index)
 {
 	int state;
 	pktio_entry_t *entry = pktio_entry_by_index(pktio_index);

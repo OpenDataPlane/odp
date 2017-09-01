@@ -271,6 +271,9 @@ int sock_stats_fd(pktio_entry_t *pktio_entry,
 		  int fd);
 int sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd);
 
+int pktin_poll(int pktio_index, int num_queue, int index[]);
+void pktio_stop_finalize(int pktio_index);
+
 #ifdef __cplusplus
 }
 #endif

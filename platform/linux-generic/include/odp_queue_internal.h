@@ -76,6 +76,11 @@ static inline queue_t qentry_to_int(queue_entry_t *qentry)
 	return (queue_t)(qentry);
 }
 
+odp_queue_t queue_handle(uint32_t queue_index);
+void queue_destroy_finalize(uint32_t queue_index);
+int queue_idx_deq_multi(uint32_t queue_index, odp_event_t ev[], int num);
+int queue_empty(uint32_t queue_index);
+
 #ifdef __cplusplus
 }
 #endif

@@ -17,6 +17,8 @@
 #include <odp_ring_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_schedule_subsystem.h>
+#include <odp_packet_io_internal.h>
+#include <odp_queue_internal.h>
 
 #define NUM_THREAD        ODP_THREAD_COUNT_MAX
 #define NUM_QUEUE         ODP_CONFIG_QUEUES
@@ -224,7 +226,7 @@ static int term_global(void)
 	for (qi = 0; qi < NUM_QUEUE; qi++) {
 		if (sched_global->queue_cmd[qi].s.init) {
 			/* todo: dequeue until empty ? */
-			sched_cb_queue_destroy_finalize(qi);
+			queue_destroy_finalize(qi);
 		}
 	}
 
@@ -500,7 +502,7 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 
 	if (sched_local.cmd) {
 		/* Continue scheduling if queue is not empty */
-		if (sched_cb_queue_empty(sched_local.cmd->s.index) == 0)
+		if (queue_empty(sched_local.cmd->s.index) == 0)
 			add_tail(sched_local.cmd);
 
 		sched_local.cmd = NULL;
@@ -519,10 +521,10 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 		cmd = sched_cmd();
 
 		if (cmd && cmd->s.type == CMD_PKTIO) {
-			if (sched_cb_pktin_poll(cmd->s.index, cmd->s.num_pktin,
-						cmd->s.pktin_idx)) {
+			if (pktin_poll(cmd->s.index, cmd->s.num_pktin,
+				       cmd->s.pktin_idx)) {
 				/* Pktio stopped or closed. */
-				sched_cb_pktio_stop_finalize(cmd->s.index);
+				pktio_stop_finalize(cmd->s.index);
 			} else {
 				/* Continue polling pktio. */
 				add_tail(cmd);
@@ -554,20 +556,20 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 		}
 
 		qi  = cmd->s.index;
-		num = sched_cb_queue_deq_multi(qi, events, 1);
+		num = queue_idx_deq_multi(qi, events, 1);
 
 		if (num > 0) {
 			sched_local.cmd = cmd;
 
 			if (from)
-				*from = sched_cb_queue_handle(qi);
+				*from = queue_handle(qi);
 
 			return num;
 		}
 
 		if (num < 0) {
 			/* Destroyed queue */
-			sched_cb_queue_destroy_finalize(qi);
+			queue_destroy_finalize(qi);
 			continue;
 		}
 
