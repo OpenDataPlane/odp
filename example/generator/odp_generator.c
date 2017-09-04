@@ -765,11 +765,12 @@ static int gen_recv_thread(void *arg)
  */
 static void print_global_stats(int num_workers)
 {
-	odp_time_t cur, wait, next;
+	odp_time_t cur, wait, next, left;
 	uint64_t pkts_snd = 0, pkts_snd_prev = 0;
 	uint64_t pps_snd = 0, maximum_pps_snd = 0;
 	uint64_t pkts_rcv = 0, pkts_rcv_prev = 0;
 	uint64_t pps_rcv = 0, maximum_pps_rcv = 0;
+	uint64_t stall;
 	int verbose_interval = 20;
 	odp_thrmask_t thrd_mask;
 
@@ -786,8 +787,15 @@ static void print_global_stats(int num_workers)
 		}
 
 		cur = odp_time_local();
-		if (odp_time_cmp(next, cur) > 0)
+		if (odp_time_cmp(next, cur) > 0) {
+			left = odp_time_diff(next, cur);
+			stall = odp_time_to_ns(left);
+			if (stall / ODP_TIME_SEC_IN_NS)
+				sleep(1);
+			else
+				usleep(stall / ODP_TIME_USEC_IN_NS);
 			continue;
+		}
 
 		next = odp_time_sum(cur, wait);
 		switch (args->appl.mode) {
