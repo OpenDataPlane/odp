@@ -200,26 +200,19 @@ AC_SUBST(SDK_INSTALL_PATH)
 # Set the install directory for test binaries/scripts
 ##########################################################################
 AC_ARG_WITH([testdir],
-    AC_HELP_STRING([--with-testdir=DIR installation directory for tests]),
-	[if test "$withval" = "yes"; then
-	     testdir=$libdir/odp/tests
-	 else
-	     testdir=$withval
-	 fi], [])
+    [AC_HELP_STRING([--with-testdir=DIR], [installation directory for tests])],
+	[testdir=$withval],
+	[testdir=no])
+AS_IF([test "x$testdir" = "xyes"], [testdir=$libdir/odp/tests],
+      [test "x$testdir" = "xno"], [testdir=])
 AC_SUBST([testdir])
+AM_CONDITIONAL([test_installdir], [test "x$testdir" != "xno"])
 
 ##########################################################################
 # Set conditionals as computed within platform specific files
 ##########################################################################
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
-AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
 AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
-AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])
-AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
-AM_CONDITIONAL([test_perf_proc], [test x$test_perf_proc = xyes ])
-AM_CONDITIONAL([test_cpp], [test x$test_cpp = xyes ])
-AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
-AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
@@ -246,37 +239,38 @@ DX_INIT_DOXYGEN($PACKAGE_NAME,
 		${builddir}/doc/driver-api-guide/output)
 
 ##########################################################################
+# Enable/disable ODP_DEBUG
+##########################################################################
+AC_ARG_ENABLE([debug],
+    [AS_HELP_STRING([--enable-debug],
+		    [include additional debugging code ]
+		    [(set to 'full' to enable all --enable-*-debug-* options)])])
+
+AS_IF([test "x$enable_debug" != "xno"], [ODP_DEBUG=1],
+      [ODP_DEBUG=0])
+AC_DEFINE_UNQUOTED([ODP_DEBUG], [$ODP_DEBUG],
+		   [Define to 1 to include additional debug code])
+
+##########################################################################
 # Enable/disable ODP_DEBUG_PRINT
 ##########################################################################
-ODP_DEBUG_PRINT=0
 AC_ARG_ENABLE([debug-print],
-    [  --enable-debug-print    display debugging information],
-    [if test "x$enableval" = "xyes"; then
-	ODP_DEBUG_PRINT=1
-    fi])
+    [AS_HELP_STRING([--enable-debug-print], [display debugging information])],
+    [], [AS_IF([test "x$enable_debug" = "xfull"], [enable_debug_print=yes],
+	       [enable_debug_print=no])])
+AS_IF([test "x$enable_debug_print" != "xno"], [ODP_DEBUG_PRINT=1],
+      [ODP_DEBUG_PRINT=0])
 AC_DEFINE_UNQUOTED([ODP_DEBUG_PRINT], [$ODP_DEBUG_PRINT],
 		   [Define to 1 to display debug information])
 
-ODPH_DEBUG_PRINT=0
 AC_ARG_ENABLE([helper-debug-print],
-    [  --enable-helper-debug-print    display helper debugging information],
-    [if test "x$enableval" = "xyes"; then
-	ODPH_DEBUG_PRINT=1
-    fi])
+    [AS_HELP_STRING([--enable-helper-debug-print], [display helper debugging information])],
+    [], [AS_IF([test "x$enable_debug" = "xfull"], [enable_helper_debug_print=yes],
+	       [enable_helper_debug_print=no])])
+AS_IF([test "x$enable_helper_debug_print" != "xno"], [ODPH_DEBUG_PRINT=1],
+      [ODPH_DEBUG_PRINT=0])
 AC_DEFINE_UNQUOTED([ODPH_DEBUG_PRINT], [$ODPH_DEBUG_PRINT],
 		   [Define to 1 to display helper debug information])
-
-##########################################################################
-# Enable/disable ODP_DEBUG
-##########################################################################
-ODP_DEBUG=0
-AC_ARG_ENABLE([debug],
-    [  --enable-debug          include additional code],
-    [if test "x$enableval" = "xyes"; then
-	ODP_DEBUG=1
-    fi])
-AC_DEFINE_UNQUOTED([ODP_DEBUG], [$ODP_DEBUG],
-		   [Define to 1 to include additional debug code])
 
 ##########################################################################
 # Enable/disable ABI compatible build
