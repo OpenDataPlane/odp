@@ -1,5 +1,3 @@
-include $(top_srcdir)/platform/@with_platform@/Makefile.inc
-
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = $(top_builddir)/pkgconfig/libodphelper.pc
 
@@ -9,6 +7,7 @@ AM_CFLAGS += -I$(top_srcdir)/platform/@with_platform@/include
 AM_CFLAGS += -I$(top_srcdir)/include
 AM_CFLAGS += -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
 AM_CFLAGS += -I$(top_builddir)/platform/@with_platform@/include
+AM_CFLAGS += -I$(top_srcdir)/platform/@with_platform@/arch/@ARCH_DIR@
 AM_CFLAGS += -I$(top_builddir)/include
 
 AM_LDFLAGS += -version-number '$(ODPHELPER_LIBSO_VERSION)'

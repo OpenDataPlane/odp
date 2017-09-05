@@ -1,4 +1,3 @@
-include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 LIB   = $(top_builddir)/lib
 
 #in the following line, the libs using the symbols should come before
@@ -12,6 +11,7 @@ INCFLAGS = \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/include/odp/arch/@ARCH_ABI@ \
 	-I$(top_srcdir)/platform/@with_platform@/include \
+	-I$(top_srcdir)/platform/@with_platform@/arch/@ARCH_DIR@ \
 	-I$(top_srcdir)/test \
 	-I$(top_builddir)/include
 

@@ -2,13 +2,13 @@
 #export CUSTOM_STR=https://git.linaro.org/lng/odp.git
 
 include $(top_srcdir)/platform/Makefile.inc
-include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
 AM_CFLAGS +=  -I$(top_builddir)/include
 AM_CFLAGS +=  -Iinclude
+AM_CFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/$(ARCH_DIR)
 
 AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
 AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
@@ -170,8 +170,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/protocols/ip.h \
 		  ${srcdir}/include/protocols/ipsec.h \
 		  ${srcdir}/include/protocols/tcp.h \
-		  ${srcdir}/include/protocols/udp.h \
-		  ${srcdir}/Makefile.inc
+		  ${srcdir}/include/protocols/udp.h
 
 __LIB__libodp_linux_la_SOURCES = \
 			   _fdserver.c \
