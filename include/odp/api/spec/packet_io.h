@@ -256,11 +256,27 @@ typedef struct odp_pktio_param_t {
  * belong to time synchronization protocol (PTP).
  *
  * Packet input checksum checking may be enabled or disabled. When it is
- * enabled, implementation will verify checksum correctness on incoming packets
- * and depending on drop configuration either deliver erroneous packets with
- * appropriate flags set (e.g. odp_packet_has_l3_error()) or drop those.
- * When packet dropping is enabled, application will never receive a packet
- * with the specified error and may avoid to check the error flag.
+ * enabled, implementation will attempt to verify checksum correctness on
+ * incoming packets and depending on drop configuration either deliver erroneous
+ * packets with appropriate flags set (e.g. odp_packet_has_l3_error(),
+ * odp_packet_l3_chksum_status()) or drop those. When packet dropping is
+ * enabled, application will never receive a packet with the specified error
+ * and may avoid to check the error flag.
+ *
+ * If checksum checking is enabled, IPv4 header checksum checking is always
+ * done for packets that do not have IP options and L4 checksum checking
+ * is done for unfragmented packets that do not have IPv4 options or IPv6
+ * extension headers. In other cases checksum checking may or may not
+ * be done. For example, L4 checksum of fragmented packets is typically
+ * not checked.
+ *
+ * IPv4 checksum checking may be enabled only when parsing level is
+ * ODP_PKTIO_PARSER_LAYER_L3 or higher. Similarly, L4 level checksum checking
+ * may be enabled only with parsing level ODP_PKTIO_PARSER_LAYER_L4 or higher.
+ *
+ * Whether checksum checking was done and whether a checksum was correct
+ * can be queried for each received packet with odp_packet_l3_chksum_status()
+ * and odp_packet_l4_chksum_status().
  */
 typedef union odp_pktin_config_opt_t {
 	/** Option flags */
@@ -314,13 +330,27 @@ typedef union odp_pktin_config_opt_t {
  * Packet output configuration options listed in a bit field structure. Packet
  * output checksum insertion may be enabled or disabled. When it is enabled,
  * implementation will calculate and insert checksum into every outgoing packet
- * by default. Application may use a packet metadata flag to disable checksum
- * insertion per packet bases. For correct operation, packet metadata must
- * provide valid offsets for the appropriate protocols. For example, UDP
- * checksum calculation needs both L3 and L4 offsets (to access IP and UDP
- * headers). When application (e.g. a switch) does not modify L3/L4 data and
- * thus checksum does not need to be updated, output checksum insertion should
- * be disabled for optimal performance.
+ * by default. Application may disable checksum insertion (e.g.
+ * odp_packet_l4_chksum_insert()) on per packet basis. For correct operation,
+ * packet metadata must provide valid offsets for the appropriate protocols.
+ * For example, UDP checksum calculation needs both L3 and L4 offsets (to access
+ * IP and UDP headers). When application (e.g. a switch) does not modify L3/L4
+ * data and thus checksum does not need to be updated, output checksum insertion
+ * should be disabled for optimal performance.
+ *
+ * Packet flags (odp_packet_has_*()) are ignored for the purpose of checksum
+ * insertion in packet output.
+ *
+ * UDP, TCP and SCTP checksum insertion must not be requested for IP fragments.
+ * Use checksum override function (odp_packet_l4_chksum_insert()) to disable
+ * checksumming when sending a fragment through a packet IO interface that has
+ * the relevant L4 checksum insertion enabled.
+ *
+ * Result of checksum insertion at packet output is undefined if the protocol
+ * headers required for checksum calculation are not well formed. Packet must
+ * contain at least as many data bytes after L3/L4 offsets as the headers
+ * indicate. Other data bytes of the packet are ignored for the checksum
+ * insertion.
  */
 typedef union odp_pktout_config_opt_t {
 	/** Option flags */

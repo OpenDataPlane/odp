@@ -156,7 +156,9 @@ typedef struct odp_ipsec_inbound_config_t {
 	odp_ipsec_proto_layer_t parse;
 
 	/** Flags to control IPSEC payload data checks up to the selected parse
-	 *  level. */
+	 *  level. Checksum checking status can be queried for each packet with
+	 *  odp_packet_l3_chksum_status() and odp_packet_l4_chksum_status().
+	 */
 	union {
 		/** Mapping for individual bits */
 		struct {
@@ -191,10 +193,12 @@ typedef struct odp_ipsec_inbound_config_t {
  */
 typedef struct odp_ipsec_outbound_config_t {
 	/** Flags to control L3/L4 checksum insertion as part of outbound
-	 *  packet processing. Packet must have set with valid L3/L4 offsets.
-	 *  Checksum configuration is ignored for packets that checksum cannot
-	 *  be computed for (e.g. IPv4 fragments). Application may use a packet
-	 *  metadata flag to disable checksum insertion per packet bases.
+	 *  packet processing. These flags control checksum insertion (for the
+	 *  payload packet) in the same way as the checksum flags in
+	 *  odp_pktout_config_opt_t control checksum insertion when sending
+	 *  packets out through a pktio interface. Also packet checksum override
+	 *  functions (e.g. odp_packet_l4_chksum_insert()) can be used in
+	 *  the same way.
 	 */
 	union {
 		/** Mapping for individual bits */
