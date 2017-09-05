@@ -1,12 +1,13 @@
 /* Copyright (c) 2013, Linaro Limited
  * All rights reserved.
  *
- * SPDX-License-Identifier:     BSD-3-Clause
+ * SPDX-License-Identifier:	BSD-3-Clause
  */
 
 #include <odp/api/queue.h>
 #include <odp_queue_internal.h>
 #include <odp_queue_if.h>
+#include <odp_queue_subsystem.h>
 #include <odp/api/std_types.h>
 #include <odp/api/align.h>
 #include <odp/api/buffer.h>
@@ -65,7 +66,7 @@ queue_entry_t *get_qentry(uint32_t queue_id)
 	return &queue_tbl->queue[queue_id];
 }
 
-static int queue_init_global(void)
+static int generic_queue_init_global(void)
 {
 	uint32_t i;
 	odp_shm_t shm;
@@ -86,6 +87,7 @@ static int queue_init_global(void)
 	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
 		/* init locks */
 		queue_entry_t *queue = get_qentry(i);
+
 		LOCK_INIT(&queue->s.lock);
 		queue->s.index  = i;
 		queue->s.handle = queue_from_id(i);
@@ -102,17 +104,17 @@ static int queue_init_global(void)
 	return 0;
 }
 
-static int queue_init_local(void)
+static int generic_queue_init_local(void)
 {
 	return 0;
 }
 
-static int queue_term_local(void)
+static int generic_queue_term_local(void)
 {
 	return 0;
 }
 
-static int queue_term_global(void)
+static int generic_queue_term_global(void)
 {
 	int ret = 0;
 	int rc = 0;
@@ -138,7 +140,7 @@ static int queue_term_global(void)
 	return rc;
 }
 
-static int queue_capability(odp_queue_capability_t *capa)
+static int generic_queue_capability(odp_queue_capability_t *capa)
 {
 	memset(capa, 0, sizeof(odp_queue_capability_t));
 
@@ -153,27 +155,27 @@ static int queue_capability(odp_queue_capability_t *capa)
 	return 0;
 }
 
-static odp_queue_type_t queue_type(odp_queue_t handle)
+static odp_queue_type_t generic_queue_type(odp_queue_t handle)
 {
 	return handle_to_qentry(handle)->s.type;
 }
 
-static odp_schedule_sync_t queue_sched_type(odp_queue_t handle)
+static odp_schedule_sync_t generic_queue_sched_type(odp_queue_t handle)
 {
 	return handle_to_qentry(handle)->s.param.sched.sync;
 }
 
-static odp_schedule_prio_t queue_sched_prio(odp_queue_t handle)
+static odp_schedule_prio_t generic_queue_sched_prio(odp_queue_t handle)
 {
 	return handle_to_qentry(handle)->s.param.sched.prio;
 }
 
-static odp_schedule_group_t queue_sched_group(odp_queue_t handle)
+static odp_schedule_group_t generic_queue_sched_group(odp_queue_t handle)
 {
 	return handle_to_qentry(handle)->s.param.sched.group;
 }
 
-static int queue_lock_count(odp_queue_t handle)
+static int generic_queue_lock_count(odp_queue_t handle)
 {
 	queue_entry_t *queue = handle_to_qentry(handle);
 
@@ -181,8 +183,8 @@ static int queue_lock_count(odp_queue_t handle)
 		(int)queue->s.param.sched.lock_count : -1;
 }
 
-static odp_queue_t queue_create(const char *name,
-				const odp_queue_param_t *param)
+static odp_queue_t generic_queue_create(const char *name,
+					const odp_queue_param_t *param)
 {
 	uint32_t i;
 	queue_entry_t *queue;
@@ -247,9 +249,10 @@ void queue_destroy_finalize(uint32_t queue_index)
 	UNLOCK(&queue->s.lock);
 }
 
-static int queue_destroy(odp_queue_t handle)
+static int generic_queue_destroy(odp_queue_t handle)
 {
 	queue_entry_t *queue;
+
 	queue = handle_to_qentry(handle);
 
 	if (handle == ODP_QUEUE_INVALID)
@@ -292,8 +295,8 @@ static int queue_destroy(odp_queue_t handle)
 	return 0;
 }
 
-static int queue_context_set(odp_queue_t handle, void *context,
-			     uint32_t len ODP_UNUSED)
+static int generic_queue_context_set(odp_queue_t handle, void *context,
+				     uint32_t len ODP_UNUSED)
 {
 	odp_mb_full();
 	handle_to_qentry(handle)->s.param.context = context;
@@ -301,12 +304,12 @@ static int queue_context_set(odp_queue_t handle, void *context,
 	return 0;
 }
 
-static void *queue_context(odp_queue_t handle)
+static void *generic_queue_context(odp_queue_t handle)
 {
 	return handle_to_qentry(handle)->s.param.context;
 }
 
-static odp_queue_t queue_lookup(const char *name)
+static odp_queue_t generic_queue_lookup(const char *name)
 {
 	uint32_t i;
 
@@ -424,7 +427,8 @@ static int queue_int_enq(queue_t q_int, odp_buffer_hdr_t *buf_hdr)
 		return -1;
 }
 
-static int queue_enq_multi(odp_queue_t handle, const odp_event_t ev[], int num)
+static int generic_queue_enq_multi(odp_queue_t handle,
+				   const odp_event_t ev[], int num)
 {
 	queue_entry_t *queue = handle_to_qentry(handle);
 
@@ -438,7 +442,7 @@ static int queue_enq_multi(odp_queue_t handle, const odp_event_t ev[], int num)
 				      (odp_buffer_hdr_t **)(uintptr_t)ev, num);
 }
 
-static int queue_enq(odp_queue_t handle, odp_event_t ev)
+static int generic_queue_enq(odp_queue_t handle, odp_event_t ev)
 {
 	queue_entry_t *queue = handle_to_qentry(handle);
 
@@ -543,7 +547,8 @@ static odp_buffer_hdr_t *queue_int_deq(queue_t q_int)
 		return NULL;
 }
 
-static int queue_deq_multi(odp_queue_t handle, odp_event_t ev[], int num)
+static int generic_queue_deq_multi(odp_queue_t handle, odp_event_t ev[],
+				   int num)
 {
 	queue_entry_t *queue = handle_to_qentry(handle);
 
@@ -554,7 +559,7 @@ static int queue_deq_multi(odp_queue_t handle, odp_event_t ev[], int num)
 				      (odp_buffer_hdr_t **)ev, num);
 }
 
-static odp_event_t queue_deq(odp_queue_t handle)
+static odp_event_t generic_queue_deq(odp_queue_t handle)
 {
 	queue_entry_t *queue = handle_to_qentry(handle);
 
@@ -593,7 +598,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 	return 0;
 }
 
-static void queue_param_init(odp_queue_param_t *params)
+static void generic_queue_param_init(odp_queue_param_t *params)
 {
 	memset(params, 0, sizeof(odp_queue_param_t));
 	params->type = ODP_QUEUE_TYPE_PLAIN;
@@ -604,7 +609,7 @@ static void queue_param_init(odp_queue_param_t *params)
 	params->sched.group = ODP_SCHED_GROUP_ALL;
 }
 
-static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
+static int generic_queue_info(odp_queue_t handle, odp_queue_info_t *info)
 {
 	uint32_t queue_id;
 	queue_entry_t *queue;
@@ -681,7 +686,7 @@ int queue_empty(uint32_t queue_index)
 	return ret;
 }
 
-static uint64_t queue_to_u64(odp_queue_t hdl)
+static uint64_t generic_queue_to_u64(odp_queue_t hdl)
 {
 	return _odp_pri(hdl);
 }
@@ -744,33 +749,42 @@ static odp_queue_t queue_to_ext(queue_t q_int)
 }
 
 /* API functions */
-queue_api_t queue_default_api = {
-	.queue_create = queue_create,
-	.queue_destroy = queue_destroy,
-	.queue_lookup = queue_lookup,
-	.queue_capability = queue_capability,
-	.queue_context_set = queue_context_set,
-	.queue_context = queue_context,
-	.queue_enq = queue_enq,
-	.queue_enq_multi = queue_enq_multi,
-	.queue_deq = queue_deq,
-	.queue_deq_multi = queue_deq_multi,
-	.queue_type = queue_type,
-	.queue_sched_type = queue_sched_type,
-	.queue_sched_prio = queue_sched_prio,
-	.queue_sched_group = queue_sched_group,
-	.queue_lock_count = queue_lock_count,
-	.queue_to_u64 = queue_to_u64,
-	.queue_param_init = queue_param_init,
-	.queue_info = queue_info
+odp_queue_module_t generic_queue = {
+	.base = {
+		.name = "generic_queue",
+		.init_global = generic_queue_init_global,
+		.term_global = generic_queue_term_global,
+		.init_local = generic_queue_init_local,
+		.term_local = generic_queue_term_local,
+	},
+	.create = generic_queue_create,
+	.destroy = generic_queue_destroy,
+	.lookup = generic_queue_lookup,
+	.capability = generic_queue_capability,
+	.context_set = generic_queue_context_set,
+	.context = generic_queue_context,
+	.enq = generic_queue_enq,
+	.enq_multi = generic_queue_enq_multi,
+	.deq = generic_queue_deq,
+	.deq_multi = generic_queue_deq_multi,
+	.type = generic_queue_type,
+	.sched_type = generic_queue_sched_type,
+	.sched_prio = generic_queue_sched_prio,
+	.sched_group = generic_queue_sched_group,
+	.lock_count = generic_queue_lock_count,
+	.to_u64 = generic_queue_to_u64,
+	.param_init = generic_queue_param_init,
+	.info = generic_queue_info,
 };
+
+ODP_MODULE_CONSTRUCTOR(generic_queue)
+{
+	odp_module_constructor(&generic_queue);
+	odp_subsystem_register_module(queue, &generic_queue);
+}
 
 /* Functions towards internal components */
 queue_fn_t queue_default_fn = {
-	.init_global = queue_init_global,
-	.term_global = queue_term_global,
-	.init_local = queue_init_local,
-	.term_local = queue_term_local,
 	.from_ext = queue_from_ext,
 	.to_ext = queue_to_ext,
 	.enq = queue_int_enq,
@@ -781,5 +795,5 @@ queue_fn_t queue_default_fn = {
 	.set_pktout = queue_set_pktout,
 	.get_pktin = queue_get_pktin,
 	.set_pktin = queue_set_pktin,
-	.set_enq_deq_fn = queue_set_enq_deq_func
+	.set_enq_deq_fn = queue_set_enq_deq_func,
 };

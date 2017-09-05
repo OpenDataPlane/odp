@@ -172,7 +172,7 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = POOL_INIT;
 
-	if (queue_fn->init_global()) {
+	if (odp_queue_init_global()) {
 		ODP_ERR("ODP queue init failed.\n");
 		goto init_failed;
 	}
@@ -313,7 +313,7 @@ int _odp_term_global(enum init_stage stage)
 		/* Fall through */
 
 	case QUEUE_INIT:
-		if (queue_fn->term_global()) {
+		if (odp_queue_term_global()) {
 			ODP_ERR("ODP queue term failed.\n");
 			rc = -1;
 		}
@@ -408,7 +408,7 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 	}
 	stage = POOL_INIT;
 
-	if (queue_fn->init_local()) {
+	if (odp_queue_init_local()) {
 		ODP_ERR("ODP queue local init failed.\n");
 		goto init_fail;
 	}
@@ -454,7 +454,7 @@ int _odp_term_local(enum init_stage stage)
 		/* Fall through */
 
 	case QUEUE_INIT:
-		if (queue_fn->term_local()) {
+		if (odp_queue_term_local()) {
 			ODP_ERR("ODP queue local term failed.\n");
 			rc = -1;
 		}

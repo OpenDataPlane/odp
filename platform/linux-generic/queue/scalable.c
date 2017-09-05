@@ -3,7 +3,7 @@
  * Copyright (c) 2017, Linaro Limited
  * All rights reserved.
  *
- * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-License-Identifier:	BSD-3-Clause
  */
 
 #include <odp/api/hints.h>
@@ -22,6 +22,7 @@
 #include <odp_packet_io_internal.h>
 #include <odp_pool_internal.h>
 #include <odp_queue_scalable_internal.h>
+#include <odp_queue_subsystem.h>
 #include <odp_schedule_if.h>
 #include <_ishm_internal.h>
 #include <_ishmpool_internal.h>
@@ -182,7 +183,7 @@ rwin_create_failed:
 	return -1;
 }
 
-static int queue_init_global(void)
+static int scalable_queue_init_global(void)
 {
 	uint32_t i;
 	uint64_t pool_size;
@@ -258,7 +259,7 @@ queue_tbl_ishm_alloc_failed:
 	return -1;
 }
 
-static int queue_term_global(void)
+static int scalable_queue_term_global(void)
 {
 	int ret = 0;
 	int rc = 0;
@@ -285,17 +286,17 @@ static int queue_term_global(void)
 	return rc;
 }
 
-static int queue_init_local(void)
+static int scalable_queue_init_local(void)
 {
 	return 0;
 }
 
-static int queue_term_local(void)
+static int scalable_queue_term_local(void)
 {
 	return 0;
 }
 
-static int queue_capability(odp_queue_capability_t *capa)
+static int scalable_queue_capability(odp_queue_capability_t *capa)
 {
 	memset(capa, 0, sizeof(odp_queue_capability_t));
 
@@ -312,27 +313,27 @@ static int queue_capability(odp_queue_capability_t *capa)
 	return 0;
 }
 
-static odp_queue_type_t queue_type(odp_queue_t handle)
+static odp_queue_type_t scalable_queue_type(odp_queue_t handle)
 {
 	return qentry_from_int(queue_from_ext(handle))->s.type;
 }
 
-static odp_schedule_sync_t queue_sched_type(odp_queue_t handle)
+static odp_schedule_sync_t scalable_queue_sched_type(odp_queue_t handle)
 {
 	return qentry_from_int(queue_from_ext(handle))->s.param.sched.sync;
 }
 
-static odp_schedule_prio_t queue_sched_prio(odp_queue_t handle)
+static odp_schedule_prio_t scalable_queue_sched_prio(odp_queue_t handle)
 {
 	return qentry_from_int(queue_from_ext(handle))->s.param.sched.prio;
 }
 
-static odp_schedule_group_t queue_sched_group(odp_queue_t handle)
+static odp_schedule_group_t scalable_queue_sched_group(odp_queue_t handle)
 {
 	return qentry_from_int(queue_from_ext(handle))->s.param.sched.group;
 }
 
-static int queue_lock_count(odp_queue_t handle)
+static int scalable_queue_lock_count(odp_queue_t handle)
 {
 	queue_entry_t *queue = qentry_from_int(queue_from_ext(handle));
 
@@ -340,8 +341,8 @@ static int queue_lock_count(odp_queue_t handle)
 		(int)queue->s.param.sched.lock_count : -1;
 }
 
-static odp_queue_t queue_create(const char *name,
-				const odp_queue_param_t *param)
+static odp_queue_t scalable_queue_create(const char *name,
+					 const odp_queue_param_t *param)
 {
 	int queue_idx;
 	odp_queue_t handle = ODP_QUEUE_INVALID;
@@ -375,7 +376,7 @@ static odp_queue_t queue_create(const char *name,
 	return handle;
 }
 
-static int queue_destroy(odp_queue_t handle)
+static int scalable_queue_destroy(odp_queue_t handle)
 {
 	queue_entry_t *queue;
 	sched_elem_t *q;
@@ -451,8 +452,8 @@ static int queue_destroy(odp_queue_t handle)
 	return 0;
 }
 
-static int queue_context_set(odp_queue_t handle, void *context,
-			     uint32_t len ODP_UNUSED)
+static int scalable_queue_context_set(odp_queue_t handle, void *context,
+				      uint32_t len ODP_UNUSED)
 {
 	odp_mb_full();
 	qentry_from_int(queue_from_ext(handle))->s.param.context = context;
@@ -460,12 +461,12 @@ static int queue_context_set(odp_queue_t handle, void *context,
 	return 0;
 }
 
-static void *queue_context(odp_queue_t handle)
+static void *scalable_queue_context(odp_queue_t handle)
 {
 	return qentry_from_int(queue_from_ext(handle))->s.param.context;
 }
 
-static odp_queue_t queue_lookup(const char *name)
+static odp_queue_t scalable_queue_lookup(const char *name)
 {
 	uint32_t i;
 
@@ -645,7 +646,8 @@ static int _queue_enq(queue_t handle, odp_buffer_hdr_t *buf_hdr)
 		_queue_enq_multi(handle, &buf_hdr, 1) == 1) ? 0 : -1;
 }
 
-static int queue_enq_multi(odp_queue_t handle, const odp_event_t ev[], int num)
+static int scalable_queue_enq_multi(odp_queue_t handle,
+				    const odp_event_t ev[], int num)
 {
 	odp_buffer_hdr_t *buf_hdr[QUEUE_MULTI_MAX];
 	queue_entry_t *queue;
@@ -662,7 +664,7 @@ static int queue_enq_multi(odp_queue_t handle, const odp_event_t ev[], int num)
 	return queue->s.enqueue_multi(qentry_to_int(queue), buf_hdr, num);
 }
 
-static int queue_enq(odp_queue_t handle, odp_event_t ev)
+static int scalable_queue_enq(odp_queue_t handle, odp_event_t ev)
 {
 	odp_buffer_hdr_t *buf_hdr;
 	queue_entry_t *queue;
@@ -827,7 +829,8 @@ static odp_buffer_hdr_t *_queue_deq(queue_t handle)
 		return NULL;
 }
 
-static int queue_deq_multi(odp_queue_t handle, odp_event_t ev[], int num)
+static int scalable_queue_deq_multi(odp_queue_t handle, odp_event_t ev[],
+				    int num)
 {
 	queue_entry_t *queue;
 
@@ -835,10 +838,11 @@ static int queue_deq_multi(odp_queue_t handle, odp_event_t ev[], int num)
 		num = QUEUE_MULTI_MAX;
 
 	queue = qentry_from_int(queue_from_ext(handle));
-	return queue->s.dequeue_multi(qentry_to_int(queue), (odp_buffer_hdr_t **)ev, num);
+	return queue->s.dequeue_multi(qentry_to_int(queue),
+				      (odp_buffer_hdr_t **)ev, num);
 }
 
-static odp_event_t queue_deq(odp_queue_t handle)
+static odp_event_t scalable_queue_deq(odp_queue_t handle)
 {
 	queue_entry_t *queue;
 
@@ -846,7 +850,7 @@ static odp_event_t queue_deq(odp_queue_t handle)
 	return (odp_event_t)queue->s.dequeue(qentry_to_int(queue));
 }
 
-static void queue_param_init(odp_queue_param_t *params)
+static void scalable_queue_param_init(odp_queue_param_t *params)
 {
 	memset(params, 0, sizeof(odp_queue_param_t));
 	params->type = ODP_QUEUE_TYPE_PLAIN;
@@ -857,7 +861,7 @@ static void queue_param_init(odp_queue_param_t *params)
 	params->sched.group = ODP_SCHED_GROUP_ALL;
 }
 
-static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
+static int scalable_queue_info(odp_queue_t handle, odp_queue_info_t *info)
 {
 	uint32_t queue_id;
 	queue_entry_t *queue;
@@ -896,7 +900,7 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 	return 0;
 }
 
-static uint64_t queue_to_u64(odp_queue_t hdl)
+static uint64_t scalable_queue_to_u64(odp_queue_t hdl)
 {
 	return _odp_pri(hdl);
 }
@@ -956,33 +960,42 @@ static odp_queue_t queue_to_ext(queue_t handle)
 }
 
 /* API functions */
-queue_api_t queue_scalable_api = {
-	.queue_create = queue_create,
-	.queue_destroy = queue_destroy,
-	.queue_lookup = queue_lookup,
-	.queue_capability = queue_capability,
-	.queue_context_set = queue_context_set,
-	.queue_context = queue_context,
-	.queue_enq = queue_enq,
-	.queue_enq_multi = queue_enq_multi,
-	.queue_deq = queue_deq,
-	.queue_deq_multi = queue_deq_multi,
-	.queue_type = queue_type,
-	.queue_sched_type = queue_sched_type,
-	.queue_sched_prio = queue_sched_prio,
-	.queue_sched_group = queue_sched_group,
-	.queue_lock_count = queue_lock_count,
-	.queue_to_u64 = queue_to_u64,
-	.queue_param_init = queue_param_init,
-	.queue_info = queue_info
+odp_queue_module_t scalable_queue = {
+	.base = {
+		.name = "scalable_queue",
+		.init_global = scalable_queue_init_global,
+		.term_global = scalable_queue_term_global,
+		.init_local = scalable_queue_init_local,
+		.term_local = scalable_queue_term_local,
+	},
+	.create = scalable_queue_create,
+	.destroy = scalable_queue_destroy,
+	.lookup = scalable_queue_lookup,
+	.capability = scalable_queue_capability,
+	.context_set = scalable_queue_context_set,
+	.context = scalable_queue_context,
+	.enq = scalable_queue_enq,
+	.enq_multi = scalable_queue_enq_multi,
+	.deq = scalable_queue_deq,
+	.deq_multi = scalable_queue_deq_multi,
+	.type = scalable_queue_type,
+	.sched_type = scalable_queue_sched_type,
+	.sched_prio = scalable_queue_sched_prio,
+	.sched_group = scalable_queue_sched_group,
+	.lock_count = scalable_queue_lock_count,
+	.to_u64 = scalable_queue_to_u64,
+	.param_init = scalable_queue_param_init,
+	.info = scalable_queue_info,
 };
+
+ODP_MODULE_CONSTRUCTOR(scalable_queue)
+{
+	odp_module_constructor(&scalable_queue);
+	odp_subsystem_register_module(queue, &scalable_queue);
+}
 
 /* Functions towards internal components */
 queue_fn_t queue_scalable_fn = {
-	.init_global = queue_init_global,
-	.term_global = queue_term_global,
-	.init_local = queue_init_local,
-	.term_local = queue_term_local,
 	.from_ext = queue_from_ext,
 	.to_ext = queue_to_ext,
 	.enq = _queue_enq,
@@ -993,5 +1006,5 @@ queue_fn_t queue_scalable_fn = {
 	.set_pktout = queue_set_pktout,
 	.get_pktin = queue_get_pktin,
 	.set_pktin = queue_set_pktin,
-	.set_enq_deq_fn = queue_set_enq_deq_func
+	.set_enq_deq_fn = queue_set_enq_deq_func,
 };
