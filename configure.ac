@@ -329,6 +329,7 @@ ODP_CHECK_CFLAG([-Wformat-truncation=0])
 ODP_CHECK_CFLAG([-Wformat-overflow=0])
 
 ODP_CFLAGS="$ODP_CFLAGS -std=c99"
+ODP_CXXFLAGS="$ODP_CXXFLAGS -std=c++11"
 
 # Extra flags for example to suppress certain warning types
 ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
@@ -347,8 +348,8 @@ esac
 ##########################################################################
 # Default include setup
 ##########################################################################
-AM_CFLAGS="$AM_CFLAGS $ODP_CFLAGS"
-AM_CXXFLAGS="-std=c++11"
+CFLAGS="$CFLAGS $ODP_CFLAGS"
+CXXFLAGS="$CXXFLAGS $ODP_CXXFLAGS"
 
 AC_CONFIG_FILES([Makefile
 		 pkgconfig/libodp-linux.pc
@@ -359,11 +360,8 @@ AC_CONFIG_FILES([Makefile
 # distribute the changed variables among the Makefiles
 
 AC_SUBST([LIBS])
-AC_SUBST([AM_CPPFLAGS])
 AC_SUBST([CPPFLAGS])
-AC_SUBST([AM_CFLAGS])
 AC_SUBST([CFLAGS])
-AC_SUBST([AM_LDFLAGS])
 AC_SUBST([LDFLAGS])
 AC_SUBST([EXEEXT])
 
@@ -390,12 +388,8 @@ AC_MSG_RESULT([
 	cc:			${CC}
 	cc version:             ${CC_VERSION}
 	cppflags:		${CPPFLAGS}
-	am_cppflags:		${AM_CPPFLAGS}
-	am_cxxflags:		${AM_CXXFLAGS}
 	cflags:			${CFLAGS}
-	am_cflags:		${AM_CFLAGS}
 	ldflags:		${LDFLAGS}
-	am_ldflags:		${AM_LDFLAGS}
 	libs:			${LIBS}
 	defs:			${DEFS}
 	static libraries:	${enable_static}
