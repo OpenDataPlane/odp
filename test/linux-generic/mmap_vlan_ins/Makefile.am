@@ -8,7 +8,6 @@ dist_check_SCRIPTS = vlan.pcap \
 test_SCRIPTS = $(dist_check_SCRIPTS)
 
 test_PROGRAMS = plat_mmap_vlan_ins$(EXEEXT)
-plat_mmap_vlan_ins_LDFLAGS = $(AM_LDFLAGS) -static
 plat_mmap_vlan_ins_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/example
 
 # Clonned from example odp_l2fwd simple

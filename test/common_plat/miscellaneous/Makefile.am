@@ -7,6 +7,4 @@ endif
 
 odp_api_from_cpp_CXXFLAGS = $(AM_CXXFLAGS)
 
-odp_api_from_cpp_LDFLAGS = $(AM_LDFLAGS) -static
-
 odp_api_from_cpp_SOURCES = odp_api_from_cpp.cpp
