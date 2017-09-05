@@ -5,9 +5,7 @@ test_PROGRAMS = pktio_ipc1\
 		pktio_ipc2
 
 pktio_ipc1_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/example
-pktio_ipc1_LDFLAGS = $(AM_LDFLAGS) -static
 pktio_ipc2_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/example
-pktio_ipc2_LDFLAGS = $(AM_LDFLAGS) -static
 
 pktio_ipc1_SOURCES = pktio_ipc1.c ipc_common.c ipc_common.h
 pktio_ipc2_SOURCES = pktio_ipc2.c ipc_common.c ipc_common.h

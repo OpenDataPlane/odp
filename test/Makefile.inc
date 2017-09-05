@@ -18,7 +18,7 @@ INCFLAGS = \
 AM_CPPFLAGS = $(INCFLAGS)
 AM_CFLAGS = $(CUNIT_CFLAGS)
 
-AM_LDFLAGS = -L$(LIB)
+AM_LDFLAGS = -L$(LIB) -static
 
 @VALGRIND_CHECK_RULES@
 valgrind_tools = memcheck
