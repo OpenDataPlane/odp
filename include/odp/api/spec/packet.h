@@ -83,6 +83,22 @@ typedef struct odp_packet_data_range {
 
 } odp_packet_data_range_t;
 
+/**
+ * Checksum check status in packet
+ */
+typedef enum odp_packet_chksum_status_t {
+	/** Checksum was not checked. Checksum check was not attempted or
+	  * the attempt failed. */
+	ODP_PACKET_CHKSUM_UNKNOWN = 0,
+
+	/** Checksum was checked and it was not correct */
+	ODP_PACKET_CHKSUM_BAD,
+
+	/** Checksum was checked and it was correct */
+	ODP_PACKET_CHKSUM_OK
+
+} odp_packet_chksum_status_t;
+
 /*
  *
  * Alloc and free
@@ -1376,6 +1392,34 @@ uint32_t odp_packet_l4_offset(odp_packet_t pkt);
  * @retval <0 on failure
  */
 int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset);
+
+/**
+ * Layer 3 checksum check status
+ *
+ * Returns the result of the latest layer 3 checksum check done for the packet.
+ * The status tells if checksum check was attempted and the result of the
+ * attempt. It depends on packet input (or IPSEC) configuration, packet content
+ * and implementation capabilities if checksum check is attempted for a packet.
+ *
+ * @param pkt     Packet handle
+ *
+ * @return L3 checksum check status
+ */
+odp_packet_chksum_status_t odp_packet_l3_chksum_status(odp_packet_t pkt);
+
+/**
+ * Layer 4 checksum check status
+ *
+ * Returns the result of the latest layer 4 checksum check done for the packet.
+ * The status tells if checksum check was attempted and the result of the
+ * attempt. It depends on packet input (or IPSEC) configuration, packet content
+ * and implementation capabilities if checksum check is attempted for a packet.
+ *
+ * @param pkt     Packet handle
+ *
+ * @return L4 checksum check status
+ */
+odp_packet_chksum_status_t odp_packet_l4_chksum_status(odp_packet_t pkt);
 
 /**
  * Layer 3 checksum insertion override
