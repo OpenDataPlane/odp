@@ -15,9 +15,8 @@ INCFLAGS = \
 	-I$(top_srcdir)/test \
 	-I$(top_builddir)/include
 
-AM_CFLAGS += $(INCFLAGS)
+AM_CPPFLAGS = $(INCFLAGS)
 AM_CFLAGS += $(CUNIT_CFLAGS)
-AM_CXXFLAGS = $(INCFLAGS)
 
 AM_LDFLAGS += -L$(LIB)
 
