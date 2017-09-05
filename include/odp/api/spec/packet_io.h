@@ -889,6 +889,11 @@ uint64_t odp_pktin_wait_time(uint64_t nsec);
  * is less than 'num', the remaining packets at the end of packets[] array
  * are not consumed, and the caller has to take care of them.
  *
+ * Entire packet data is sent out (odp_packet_len() bytes of data, starting from
+ * odp_packet_data()). All other packet metadata is ignored unless otherwise
+ * specified e.g. for protocol offload purposes. Link protocol specific frame
+ * checksum and padding are added to frames before transmission.
+ *
  * @param queue        Packet output queue handle for sending packets
  * @param packets[]    Array of packets to send
  * @param num          Number of packets to send
