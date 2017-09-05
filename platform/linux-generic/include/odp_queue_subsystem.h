@@ -5,6 +5,7 @@
  *
  * SPDX-License-Identifier:	BSD-3-Clause
  */
+
 #ifndef ODP_QUEUE_SUBSYSTEM_H
 #define ODP_QUEUE_SUBSYSTEM_H
 

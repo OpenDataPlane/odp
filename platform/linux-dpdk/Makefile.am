@@ -201,6 +201,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_posix_extensions.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_queue_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_queue_if.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_queue_subsystem.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_ring_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_schedule_if.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_schedule_subsystem.h \
@@ -247,8 +248,10 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/pktio/loop.c \
 			   ../linux-generic/odp_pkt_queue.c \
 			   pool/dpdk.c \
-			   ../linux-generic/odp_queue.c \
 			   ../linux-generic/odp_queue_if.c \
+			   ../linux-generic/queue/subsystem.c \
+			   ../linux-generic/queue/generic.c \
+			   ../linux-generic/queue/scalable.c \
 			   ../linux-generic/odp_rwlock.c \
 			   ../linux-generic/odp_rwlock_recursive.c \
 			   ../linux-generic/pool/subsystem.c \
@@ -312,6 +315,11 @@ else
 ../linux-generic/schedule/generic.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
 endif
 endif
+endif
+if ODP_SCHEDULE_SCALABLE
+../linux-generic/queue/scalable.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
+else
+../linux-generic/queue/generic.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
 endif
 
 # Build modular framework into odp-linux library

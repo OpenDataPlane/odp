@@ -277,10 +277,10 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pool/generic.c \
 			   pool/subsystem.c \
 			   odp_pkt_queue.c \
-			   odp_queue.c \
 			   odp_queue_if.c \
 			   queue/subsystem.c \
-			   odp_queue_scalable.c \
+			   queue/generic.c \
+			   queue/scalable.c \
 			   odp_rwlock.c \
 			   odp_rwlock_recursive.c \
 			   odp_schedule_if.c \
@@ -346,6 +346,11 @@ schedule/sp.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
 endif
 if ODP_SCHEDULE_IQUERY
 schedule/iquery.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
+endif
+if ODP_SCHEDULE_SCALABLE
+queue/scalable.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
+else
+queue/generic.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
 endif
 
 # Build modular framework into odp-linux library
