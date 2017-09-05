@@ -339,16 +339,7 @@ ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
 case "${host}" in
   i?86? | x86*)
   if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
-     my_save_cflags="$CFLAGS"
-
-     CFLAGS=-mcx16
-     AC_MSG_CHECKING([whether CC supports -mcx16])
-     AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
-  	    [AC_MSG_RESULT([yes])]
-  	    [ODP_CFLAGS="$ODP_CFLAGS $CFLAGS"],
-  	    [AC_MSG_RESULT([no])]
-  	    )
-     CFLAGS="$my_save_cflags"
+     ODP_CHECK_CFLAG([-mcx16])
   fi
   ;;
 esac
