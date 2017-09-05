@@ -88,9 +88,14 @@ typedef struct {
 	error_flags_t  error_flags;
 	output_flags_t output_flags;
 
-	uint32_t l2_offset; /**< offset to L2 hdr, e.g. Eth */
-	uint32_t l3_offset; /**< offset to L3 hdr, e.g. IPv4, IPv6 */
-	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
+	 /* offset to L2 hdr, e.g. Eth */
+	uint16_t l2_offset;
+
+	/* offset to L3 hdr, e.g. IPv4, IPv6 */
+	uint16_t l3_offset;
+
+	/* offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
+	uint16_t l4_offset;
 } packet_parser_t;
 
 /* Packet extra data length */
@@ -116,13 +121,13 @@ typedef struct {
 
 	packet_parser_t p;
 
-	uint32_t frame_len;
-
 	odp_pktio_t input;
 
-	uint32_t headroom;
-	uint32_t tailroom;
+	uint32_t frame_len;
 	uint32_t shared_len;
+
+	uint16_t headroom;
+	uint16_t tailroom;
 
 	/*
 	 * Members below are not initialized by packet_init()

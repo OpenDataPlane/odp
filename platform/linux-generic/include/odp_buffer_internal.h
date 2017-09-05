@@ -65,13 +65,10 @@ struct odp_buffer_hdr_t {
 	/* Initial buffer data pointer */
 	uint8_t  *base_data;
 
-	/* Reference count */
-	odp_atomic_u32_t ref_cnt;
+	/* Pool pointer */
+	void *pool_ptr;
 
-	/* Event type. Maybe different than pool type (crypto compl event) */
-	int8_t    event_type;
-
-	/* --- 37 bytes --- */
+	/* --- 40 bytes --- */
 
 	/* Segments */
 	seg_entry_t seg[CONFIG_PACKET_MAX_SEGS];
@@ -95,8 +92,11 @@ struct odp_buffer_hdr_t {
 		const void *buf_cctx; /* const alias for ctx */
 	};
 
-	/* Pool pointer */
-	void *pool_ptr;
+	/* Reference count */
+	odp_atomic_u32_t ref_cnt;
+
+	/* Event type. Maybe different than pool type (crypto compl event) */
+	int8_t    event_type;
 
 	/* Initial buffer tail pointer */
 	uint8_t  *buf_end;
