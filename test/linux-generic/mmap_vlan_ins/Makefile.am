@@ -12,4 +12,4 @@ plat_mmap_vlan_ins_LDFLAGS = $(AM_LDFLAGS) -static
 plat_mmap_vlan_ins_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/example
 
 # Clonned from example odp_l2fwd simple
-dist_plat_mmap_vlan_ins_SOURCES = mmap_vlan_ins.c
+plat_mmap_vlan_ins_SOURCES = mmap_vlan_ins.c

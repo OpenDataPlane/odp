@@ -40,16 +40,15 @@ odp_scheduling_LDFLAGS = $(AM_LDFLAGS) -static
 odp_scheduling_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/test
 
 noinst_HEADERS = \
-		  $(top_srcdir)/test/test_debug.h \
-		  dummy_crc.h
+		  $(top_srcdir)/test/test_debug.h
 
-dist_odp_bench_packet_SOURCES = odp_bench_packet.c
-dist_odp_crypto_SOURCES = odp_crypto.c
-dist_odp_pktio_ordered_SOURCES = odp_pktio_ordered.c
-dist_odp_sched_latency_SOURCES = odp_sched_latency.c
-dist_odp_scheduling_SOURCES = odp_scheduling.c
-dist_odp_pktio_perf_SOURCES = odp_pktio_perf.c
+odp_bench_packet_SOURCES = odp_bench_packet.c
+odp_crypto_SOURCES = odp_crypto.c
+odp_pktio_ordered_SOURCES = odp_pktio_ordered.c dummy_crc.h
+odp_sched_latency_SOURCES = odp_sched_latency.c
+odp_scheduling_SOURCES = odp_scheduling.c
+odp_pktio_perf_SOURCES = odp_pktio_perf.c
 
-EXTRA_DIST = $(TESTSCRIPTS)
+dist_check_SCRIPTS = $(TESTSCRIPTS)
 
-dist_check_SCRIPTS = udp64.pcap
+dist_check_DATA = udp64.pcap
