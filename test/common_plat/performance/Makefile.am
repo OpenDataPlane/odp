@@ -24,14 +24,6 @@ endif
 
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 
-odp_bench_packet_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/test
-odp_crypto_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/test
-odp_pktio_perf_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/test
-odp_l2fwd_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/test
-odp_pktio_ordered_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/test
-odp_sched_latency_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/test
-odp_scheduling_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/test
-
 noinst_HEADERS = \
 		  $(top_srcdir)/test/test_debug.h
 
