@@ -56,13 +56,13 @@ static inline uint32_t _odp_packet_len(odp_packet_t pkt)
 /** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_headroom(odp_packet_t pkt)
 {
-	return _odp_pkt_get(pkt, uint32_t, headroom);
+	return _odp_pkt_get(pkt, uint16_t, headroom);
 }
 
 /** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_tailroom(odp_packet_t pkt)
 {
-	return _odp_pkt_get(pkt, uint32_t, tailroom);
+	return _odp_pkt_get(pkt, uint16_t, tailroom);
 }
 
 /** @internal Inline function @param pkt @return */

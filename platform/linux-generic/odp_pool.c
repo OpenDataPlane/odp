@@ -41,6 +41,9 @@ ODP_STATIC_ASSERT(CONFIG_POOL_CACHE_SIZE > (2 * CACHE_BURST),
 ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_LEN_MIN >= 256,
 		  "ODP Segment size must be a minimum of 256 bytes");
 
+ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_SIZE < 0xffff,
+		  "Segment size must be less than 64k (16 bit offsets)");
+
 /* Thread local variables */
 typedef struct pool_local_t {
 	pool_cache_t *cache[ODP_CONFIG_POOLS];
