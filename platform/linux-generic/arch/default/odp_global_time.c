@@ -6,19 +6,28 @@
 
 #include "config.h"
 
+#include <odp_posix_extensions.h>
+
+#include <stdlib.h>
+#include <time.h>
+
 #include <odp/api/cpu.h>
 #include <odp/api/hints.h>
 #include <odp/api/system_info.h>
+#include <odp_debug_internal.h>
 #include <odp_time_internal.h>
 
-uint64_t odp_cpu_cycles(void)
+int cpu_has_global_time(void)
 {
-	#define CVMX_TMP_STR(x) CVMX_TMP_STR2(x)
-	#define CVMX_TMP_STR2(x) #x
-	uint64_t cycle;
+	return 0;
+}
 
-	__asm__ __volatile__ ("rdhwr %[rt],$" CVMX_TMP_STR(31) :
-			   [rt] "=d" (cycle) : : "memory");
+uint64_t cpu_global_time(void)
+{
+	return 0;
+}
 
-	return cycle;
+uint64_t cpu_global_time_freq(void)
+{
+	return 0;
 }
