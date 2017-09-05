@@ -118,7 +118,6 @@ install:
         - sudo apt-get install linux-headers-`uname -r`
         - sudo pip install coverage
         - gem install asciidoctor
-        - PATH=${PATH//:\.\/node_modules\/\.bin/}
 
 #	DPDK pktio. Note that cache must be purged if dpdk version changes.
         - TARGET=${TARGET:-"x86_64-native-linuxapp-gcc"}
@@ -265,6 +264,8 @@ jobs:
                 - stage: test
                   env: TEST=doxygen
                   compiler: gcc
+                  install:
+                          - true
                   script:
                           # doxygen does not trap on warnings, check for them here.
                           - ./bootstrap
@@ -274,6 +275,8 @@ jobs:
                 - stage: test
                   env: TEST=checkpatch
                   compiler: gcc
+                  install:
+                          - true
                   script:
                           - echo ${TRAVIS_COMMIT_RANGE};
                           - ODP_PATCHES=`echo ${TRAVIS_COMMIT_RANGE} | sed 's/\.//'`;
