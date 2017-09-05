@@ -16,9 +16,9 @@ INCFLAGS = \
 	-I$(top_builddir)/include
 
 AM_CPPFLAGS = $(INCFLAGS)
-AM_CFLAGS += $(CUNIT_CFLAGS)
+AM_CFLAGS = $(CUNIT_CFLAGS)
 
-AM_LDFLAGS += -L$(LIB)
+AM_LDFLAGS = -L$(LIB)
 
 @VALGRIND_CHECK_RULES@
 valgrind_tools = memcheck

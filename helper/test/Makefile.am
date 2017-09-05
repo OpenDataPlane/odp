@@ -17,8 +17,8 @@ INCFLAGS = \
 
 ODP_PLATFORM=${with_platform}
 
-AM_CPPFLAGS += $(INCFLAGS)
-AM_LDFLAGS += -static
+AM_CPPFLAGS = $(INCFLAGS)
+AM_LDFLAGS = -static
 
 EXECUTABLES = chksum$(EXEEXT) \
               cuckootable$(EXEEXT) \
