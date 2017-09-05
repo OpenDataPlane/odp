@@ -1409,6 +1409,10 @@ odp_packet_chksum_status_t odp_packet_l4_chksum_status(odp_packet_t pkt);
  * overrides a higher level configuration for checksum insertion into a L3
  * header during packet output processing.
  *
+ * Calling this function is always allowed but the checksum will not be
+ * inserted if the packet is output through a pktio that does not have
+ * the relevant pktout chksum bit set in the pktio capability.
+ *
  * @param pkt     Packet handle
  * @param l3      0: do not insert L3 checksum
  *                1: insert L3 checksum
@@ -1421,6 +1425,10 @@ void odp_packet_l3_chksum_insert(odp_packet_t pkt, int l3);
  * Override checksum insertion configuration per packet. This per packet setting
  * overrides a higher level configuration for checksum insertion into a L4
  * header during packet output processing.
+ *
+ * Calling this function is always allowed but the checksum will not be
+ * inserted if the packet is output through a pktio that does not have
+ * the relevant pktout chksum bit set in the pktio capability.
  *
  * @param pkt     Packet handle
  * @param l4      0: do not insert L4 checksum
