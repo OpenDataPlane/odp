@@ -13,9 +13,6 @@ AM_LDFLAGS += -version-number '$(ODP_LIBSO_VERSION)'
 AM_CFLAGS += "-DGIT_HASH=$(VERSION)"
 AM_CFLAGS += $(VISIBILITY_CFLAGS)
 
-#The implementation will need to retain the deprecated implementation
-AM_CFLAGS += -Wno-deprecated-declarations
-
 AM_CFLAGS += @PTHREAD_CFLAGS@
 
 odpapispecincludedir= $(includedir)/odp/api/spec
