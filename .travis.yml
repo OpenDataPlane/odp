@@ -36,8 +36,6 @@ env:
 
 addons:
         apt:
-                sources:
-                        - ubuntu-toolchain-r-test
                 packages:
                         - gcc
                         - clang-3.8
