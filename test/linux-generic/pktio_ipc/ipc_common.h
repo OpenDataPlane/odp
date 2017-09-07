@@ -20,7 +20,7 @@
 #include <signal.h>
 #include <sys/wait.h>
 
-#include <example_debug.h>
+#include <test_debug.h>
 
 #include <odp.h>
 #include <odp/helper/odph_api.h>
