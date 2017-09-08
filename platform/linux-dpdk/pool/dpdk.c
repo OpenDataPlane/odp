@@ -549,68 +549,6 @@ static odp_pool_t dpdk_pool_lookup(const char *name)
 	return pool_hdl;
 }
 
-static odp_buffer_t buffer_alloc(odp_pool_t pool_hdl)
-{
-	odp_buffer_t buffer;
-	pool_entry_cp_t *pool_cp;
-	pool_entry_dp_t *pool_dp;
-
-	pool_cp = odp_pool_to_entry_cp(pool_hdl);
-	pool_dp = odp_pool_to_entry_dp(pool_hdl);
-
-	ODP_ASSERT(pool_cp->params.type != ODP_POOL_BUFFER &&
-		   pool_cp->params.type != ODP_POOL_TIMEOUT);
-
-	buffer = (odp_buffer_t)rte_ctrlmbuf_alloc(pool_dp->rte_mempool);
-
-	if ((struct rte_mbuf *)buffer == NULL) {
-		rte_errno = ENOMEM;
-		return ODP_BUFFER_INVALID;
-	}
-
-	buf_hdl_to_hdr(buffer)->next = NULL;
-	return buffer;
-}
-
-odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
-{
-	ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
-
-	return buffer_alloc(pool_hdl);
-}
-
-int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
-{
-	int i;
-
-	ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
-
-	for (i = 0; i < num; i++) {
-		buf[i] = buffer_alloc(pool_hdl);
-		if (buf[i] == ODP_BUFFER_INVALID)
-			return rte_errno == ENOMEM ? i : -EINVAL;
-	}
-	return i;
-}
-
-void odp_buffer_free(odp_buffer_t buf)
-{
-	struct rte_mbuf *mbuf = (struct rte_mbuf *)buf;
-
-	rte_ctrlmbuf_free(mbuf);
-}
-
-void odp_buffer_free_multi(const odp_buffer_t buf[], int num)
-{
-	int i;
-
-	for (i = 0; i < num; i++) {
-		struct rte_mbuf *mbuf = (struct rte_mbuf *)buf[i];
-
-		rte_ctrlmbuf_free(mbuf);
-	}
-}
-
 static void dpdk_pool_print(odp_pool_t pool_hdl)
 {
 	pool_entry_dp_t *pool_dp = odp_pool_to_entry_dp(pool_hdl);

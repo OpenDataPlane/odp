@@ -168,6 +168,7 @@ odpdrvplatinclude_HEADERS = \
 
 
 noinst_HEADERS = \
+		  ${top_srcdir}/platform/linux-generic/include/odp_buffer_subsystem.h \
 		  ${top_srcdir}/platform/linux-generic/include/_fdserver_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/_ishm_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/_ishmphy_internal.h \
@@ -255,6 +256,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_rwlock.c \
 			   ../linux-generic/odp_rwlock_recursive.c \
 			   ../linux-generic/pool/subsystem.c \
+			   ../linux-generic/buffer/subsystem.c \
 			   ../linux-generic/odp_schedule_if.c \
 			   ../linux-generic/schedule/generic.c \
 			   ../linux-generic/schedule/iquery.c \
@@ -303,6 +305,7 @@ __LIB__libodp_dpdk_la_SOURCES += arch/x86/cpu_flags.c \
 endif
 
 pool/dpdk.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
+buffer/dpdk.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
 if ODP_SCHEDULE_SCALABLE
 ../linux-generic/schedule/scalable.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
 else
