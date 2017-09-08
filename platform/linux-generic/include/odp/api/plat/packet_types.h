@@ -84,13 +84,13 @@ typedef struct _odp_packet_inline_offset_t {
 	/** @internal field offset */
 	size_t tailroom;
 	/** @internal field offset */
-	size_t unshared_len;
-	/** @internal field offset */
 	size_t ref_hdr;
 	/** @internal field offset */
 	size_t ref_offset;
 	/** *internal field offset */
 	size_t ref_len;
+	/** @internal field offset */
+	size_t unshared_len;
 	/** @internal field offset */
 	size_t pool;
 	/** @internal field offset */

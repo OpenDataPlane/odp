@@ -124,7 +124,8 @@ typedef struct odp_packet_hdr_t {
 	uint32_t tailroom;
 
 	/* Fields used to support packet references */
-	uint32_t unshared_len;
+	/* Incremented on refs, decremented on frees. */
+	odp_atomic_u32_t ref_count;
 	/* Next pkt_hdr in reference chain */
 	struct odp_packet_hdr_t *ref_hdr;
 	/* Offset into next pkt_hdr that ref was created at */
@@ -133,8 +134,8 @@ typedef struct odp_packet_hdr_t {
 	 * allows original offset to be maintained when base pkt len
 	 * is changed */
 	uint32_t ref_len;
-	/* Incremented on refs, decremented on frees. */
-	odp_atomic_u32_t ref_count;
+	/* Track unshared portion of frame_len */
+	uint32_t unshared_len;
 
 	/*
 	 * Members below are not initialized by packet_init()
@@ -269,7 +270,6 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	pkt_hdr->input = ODP_PKTIO_INVALID;
 
 	/* By default packet has no references */
-	pkt_hdr->unshared_len = len;
 	pkt_hdr->ref_hdr = NULL;
 }
 

@@ -35,10 +35,10 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.frame_len      = offsetof(odp_packet_hdr_t, frame_len),
 	.headroom       = offsetof(odp_packet_hdr_t, headroom),
 	.tailroom       = offsetof(odp_packet_hdr_t, tailroom),
-	.unshared_len   = offsetof(odp_packet_hdr_t, unshared_len),
 	.ref_hdr        = offsetof(odp_packet_hdr_t, ref_hdr),
 	.ref_offset     = offsetof(odp_packet_hdr_t, ref_offset),
 	.ref_len        = offsetof(odp_packet_hdr_t, ref_len),
+	.unshared_len   = offsetof(odp_packet_hdr_t, unshared_len),
 	.pool           = offsetof(odp_packet_hdr_t, buf_hdr.pool_hdl),
 	.input          = offsetof(odp_packet_hdr_t, input),
 	.segcount       = offsetof(odp_packet_hdr_t, buf_hdr.segcount),
@@ -446,13 +446,14 @@ static inline void free_bufs(odp_packet_hdr_t *pkt_hdr, int first, int num)
 	for (i = 0, nfree = 0; i < num; i++) {
 		odp_packet_hdr_t *hdr = pkt_hdr->buf_hdr.seg[first + i].hdr;
 
-		if (packet_ref_count(hdr) == 1 || packet_ref_dec(hdr) == 1) {
+		if (odp_likely(packet_ref_count(hdr) == 1 ||
+			       packet_ref_dec(hdr) == 1)) {
 			ODP_ASSERT((packet_ref_count_set(hdr, 0), 1));
 			buf_hdr[nfree++] = &hdr->buf_hdr;
 		}
 	}
 
-	if (nfree > 0)
+	if (odp_likely(nfree > 0))
 		buffer_free_multi(buf_hdr, nfree);
 }
 
@@ -470,8 +471,8 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 		for (i = 0, nfree = 0; i < num; i++) {
 			new_hdr = pkt_hdr->buf_hdr.seg[i].hdr;
 
-			if (packet_ref_count(new_hdr) == 1 ||
-			    packet_ref_dec(new_hdr) == 1) {
+			if (odp_likely(packet_ref_count(new_hdr) == 1 ||
+				       packet_ref_dec(new_hdr) == 1)) {
 				ODP_ASSERT((packet_ref_count_set(new_hdr, 0),
 					    1));
 				buf_hdr[nfree++] = &new_hdr->buf_hdr;
@@ -494,7 +495,7 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 
 		pkt_hdr = new_hdr;
 
-		if (nfree > 0)
+		if (odp_likely(nfree > 0))
 			buffer_free_multi(buf_hdr, nfree);
 	} else {
 		/* Free last 'num' bufs */
@@ -660,7 +661,7 @@ void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 			ref_hdr = pkt_hdr->ref_hdr;
 
 			/* Make sure we have enough space for this pkt's segs */
-			if (nfree + num_seg > nbufs) {
+			if (odp_unlikely(nfree + num_seg > nbufs)) {
 				buffer_free_multi(buf_hdr, nfree);
 				nfree = 0;
 			}
@@ -683,7 +684,7 @@ void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 		} while (pkt_hdr);
 	}
 
-	if (nfree > 0)
+	if (odp_likely(nfree > 0))
 		buffer_free_multi(buf_hdr, nfree);
 }
 
