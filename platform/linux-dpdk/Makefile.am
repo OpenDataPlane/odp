@@ -226,7 +226,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_atomic.c \
 			   ../linux-generic/odp_barrier.c \
 			   ../linux-generic/odp_bitmap.c \
-			   odp_buffer.c \
+			   buffer/dpdk.c \
 			   ../linux-generic/odp_byteorder.c \
 			   ../linux-generic/odp_classification.c \
 			   ../linux-generic/odp_cpu.c \
