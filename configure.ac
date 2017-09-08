@@ -62,6 +62,8 @@ LT_INIT([])
 AC_SUBST([LIBTOOL_DEPS])
 AM_PROG_LIBTOOL
 
+PKG_PROG_PKG_CONFIG
+
 # Checks for library functions.
 dnl breaks cross-compilation and malloc(0) behaviour is not that important
 dnl AC_FUNC_MALLOC
