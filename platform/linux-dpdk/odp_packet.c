@@ -90,7 +90,7 @@ static odp_packet_t packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 	struct rte_mbuf *mbuf;
 
 	ODP_ASSERT(odp_pool_to_entry_cp(pool_hdl)->params.type
-		   != ODP_POOL_PACKET);
+		   == ODP_POOL_PACKET);
 
 	pool_dp = odp_pool_to_entry_dp(pool_hdl);
 
