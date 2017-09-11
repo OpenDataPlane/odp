@@ -10,4 +10,4 @@ if test_perf_proc
 TESTS = $(TESTSCRIPTS)
 endif
 
-EXTRA_DIST = $(TESTSCRIPTS)
+dist_check_SCRIPTS = $(TESTSCRIPTS)

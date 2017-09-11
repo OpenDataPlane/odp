@@ -62,6 +62,8 @@ LT_INIT([dlopen])
 AC_SUBST([LIBTOOL_DEPS])
 AM_PROG_LIBTOOL
 
+PKG_PROG_PKG_CONFIG
+
 # Checks for library functions.
 dnl breaks cross-compilation and malloc(0) behaviour is not that important
 dnl AC_FUNC_MALLOC
@@ -329,6 +331,7 @@ ODP_CHECK_CFLAG([-Wformat-truncation=0])
 ODP_CHECK_CFLAG([-Wformat-overflow=0])
 
 ODP_CFLAGS="$ODP_CFLAGS -std=c99"
+ODP_CXXFLAGS="$ODP_CXXFLAGS -std=c++11"
 
 # Extra flags for example to suppress certain warning types
 ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
@@ -339,16 +342,7 @@ ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
 case "${host}" in
   i?86? | x86*)
   if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
-     my_save_cflags="$CFLAGS"
-
-     CFLAGS=-mcx16
-     AC_MSG_CHECKING([whether CC supports -mcx16])
-     AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
-  	    [AC_MSG_RESULT([yes])]
-  	    [ODP_CFLAGS="$ODP_CFLAGS $CFLAGS"],
-  	    [AC_MSG_RESULT([no])]
-  	    )
-     CFLAGS="$my_save_cflags"
+     ODP_CHECK_CFLAG([-mcx16])
   fi
   ;;
 esac
@@ -356,8 +350,8 @@ esac
 ##########################################################################
 # Default include setup
 ##########################################################################
-AM_CFLAGS="$AM_CFLAGS $ODP_CFLAGS"
-AM_CXXFLAGS="-std=c++11"
+CFLAGS="$CFLAGS $ODP_CFLAGS"
+CXXFLAGS="$CXXFLAGS $ODP_CXXFLAGS"
 
 AC_CONFIG_FILES([Makefile
 		 pkgconfig/libodp-linux.pc
@@ -368,11 +362,8 @@ AC_CONFIG_FILES([Makefile
 # distribute the changed variables among the Makefiles
 
 AC_SUBST([LIBS])
-AC_SUBST([AM_CPPFLAGS])
 AC_SUBST([CPPFLAGS])
-AC_SUBST([AM_CFLAGS])
 AC_SUBST([CFLAGS])
-AC_SUBST([AM_LDFLAGS])
 AC_SUBST([LDFLAGS])
 AC_SUBST([EXEEXT])
 
@@ -399,12 +390,8 @@ AC_MSG_RESULT([
 	cc:			${CC}
 	cc version:             ${CC_VERSION}
 	cppflags:		${CPPFLAGS}
-	am_cppflags:		${AM_CPPFLAGS}
-	am_cxxflags:		${AM_CXXFLAGS}
 	cflags:			${CFLAGS}
-	am_cflags:		${AM_CFLAGS}
 	ldflags:		${LDFLAGS}
-	am_ldflags:		${AM_LDFLAGS}
 	libs:			${LIBS}
 	defs:			${DEFS}
 	static libraries:	${enable_static}
