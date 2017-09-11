@@ -276,7 +276,7 @@ int odp_crypto_init_global(void)
 
 		qp_conf.nb_descriptors = NB_MBUF;
 
-		for (queue_pair = 0; queue_pair < nb_queue_pairs - 1;
+		for (queue_pair = 0; queue_pair < nb_queue_pairs;
 							queue_pair++) {
 			rc = rte_cryptodev_queue_pair_setup(cdev_id,
 							    queue_pair,
@@ -900,11 +900,12 @@ int odp_crypto_session_create(odp_crypto_session_param_t *param,
 	/* Setup session */
 	session = rte_cryptodev_sym_session_create(cdev_id, first_xform);
 
-	if (session == NULL)
+	if (session == NULL) {
 		/* remove the crypto_session_entry_t */
 		memset(entry, 0, sizeof(*entry));
 		free_session(entry);
 		return -1;
+	}
 
 	entry->rte_session  = (intptr_t)session;
 	entry->cipher_xform = cipher_xform;
@@ -1011,6 +1012,8 @@ int odp_crypto_operation(odp_crypto_op_param_t *param,
 		ODP_ERR("Failed to allocate crypto operation");
 		goto err;
 	}
+	op->sym->auth.aad.data = NULL;
+	op->sym->cipher.iv.data = NULL;
 
 	odp_spinlock_unlock(&global->lock);
 
@@ -1038,9 +1041,8 @@ int odp_crypto_operation(odp_crypto_op_param_t *param,
 	if (aad_len > 0) {
 		op->sym->auth.aad.data = rte_malloc("aad", aad_len, 0);
 		if (op->sym->auth.aad.data == NULL) {
-			rte_crypto_op_free(op);
 			ODP_ERR("Failed to allocate memory for AAD");
-			goto err;
+			goto err_op_free;
 		}
 
 		memcpy(op->sym->auth.aad.data, aad_head, aad_len);
@@ -1050,16 +1052,14 @@ int odp_crypto_operation(odp_crypto_op_param_t *param,
 	}
 
 	if (entry->iv.length == 0) {
-		rte_crypto_op_free(op);
 		ODP_ERR("Wrong IV length");
-		goto err;
+		goto err_op_free;
 	}
 
 	op->sym->cipher.iv.data = rte_malloc("iv", entry->iv.length, 0);
 	if (op->sym->cipher.iv.data == NULL) {
-		rte_crypto_op_free(op);
 		ODP_ERR("Failed to allocate memory for IV");
-		goto err;
+		goto err_op_free;
 	}
 
 	if (param->override_iv_ptr) {
@@ -1096,18 +1096,16 @@ int odp_crypto_operation(odp_crypto_op_param_t *param,
 		rc = rte_cryptodev_enqueue_burst(rte_session->dev_id,
 						 queue_pair, &op, 1);
 		if (rc == 0) {
-			rte_crypto_op_free(op);
 			ODP_ERR("Failed to enqueue packet");
-			goto err;
+			goto err_op_free;
 		}
 
 		rc = rte_cryptodev_dequeue_burst(rte_session->dev_id,
 						 queue_pair, &op, 1);
 
 		if (rc == 0) {
-			rte_crypto_op_free(op);
 			ODP_ERR("Failed to dequeue packet");
-			goto err;
+			goto err_op_free;
 		}
 
 		param->out_pkt = (odp_packet_t)op->sym->m_src;
@@ -1124,6 +1122,8 @@ int odp_crypto_operation(odp_crypto_op_param_t *param,
 		(rc_cipher == ODP_CRYPTO_ALG_ERR_NONE) &&
 		(rc_auth == ODP_CRYPTO_ALG_ERR_NONE);
 
+	rte_free(op->sym->cipher.iv.data);
+	rte_free(op->sym->auth.aad.data);
 	rte_crypto_op_free(op);
 
 	/* If specified during creation post event to completion queue */
@@ -1156,6 +1156,11 @@ int odp_crypto_operation(odp_crypto_op_param_t *param,
 		*posted = 0;
 	}
 	return 0;
+
+err_op_free:
+	rte_free(op->sym->cipher.iv.data);
+	rte_free(op->sym->auth.aad.data);
+	rte_crypto_op_free(op);
 
 err:
 	if (allocated) {
