@@ -146,7 +146,7 @@ typedef	struct odp_schedule_param_t {
 	/** Ordered lock count for this queue
 	  *
 	  * Default value is 0. */
-	unsigned lock_count;
+	uint32_t lock_count;
 } odp_schedule_param_t;
 
 /**

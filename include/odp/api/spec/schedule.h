@@ -347,12 +347,15 @@ int odp_schedule_group_info(odp_schedule_group_t group,
  * be protected by its own ordered lock. This promotes maximum parallelism by
  * allowing order to maintained on a more granular basis. If an ordered lock
  * is used multiple times in the same ordered context results are undefined.
+ * Only one ordered lock can be active in an ordered context at any given time.
+ * Results are undefined when multiple ordered locks are acquired in nested
+ * fashion within the same ordered context.
  *
  * @param lock_index Index of the ordered lock in the current context to be
  *                   acquired. Must be in the range 0..odp_queue_lock_count()
  *                   - 1
  */
-void odp_schedule_order_lock(unsigned lock_index);
+void odp_schedule_order_lock(uint32_t lock_index);
 
 /**
  * Release ordered context lock
@@ -365,7 +368,7 @@ void odp_schedule_order_lock(unsigned lock_index);
  *                   hold this lock. Must be in the range
  *                   0..odp_queue_lock_count() - 1
  */
-void odp_schedule_order_unlock(unsigned lock_index);
+void odp_schedule_order_unlock(uint32_t lock_index);
 
 /**
  * @}
