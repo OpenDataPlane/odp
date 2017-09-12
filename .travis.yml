@@ -77,7 +77,7 @@ before_install:
                   BUILD_GNU_TYPE=`dpkg-architecture -a"$CROSS_ARCH" -qDEB_BUILD_GNU_TYPE` ;
                   CROSS_GNU_TYPE=`dpkg-architecture -a"$CROSS_ARCH" -qDEB_HOST_GNU_TYPE` ;
                   CROSS_MULTIARCH=`dpkg-architecture -a"$CROSS_ARCH" -qDEB_HOST_MULTIARCH` ;
-                  CROSS="--host="$CROSS_GNU_TYPE" --build="$BUILD_GNU_TYPE" --prefix=/usr --includedir=/usr/include/"$CROSS_MULTIARCH" --libdir=/usr/lib/"$CROSS_MULTIARCH" --libexecdir=/usr/lib/"$CROSS_MULTIARCH"" ;
+                  CROSS="--host="$CROSS_GNU_TYPE" --build="$BUILD_GNU_TYPE"" ;
                   sudo dpkg --add-architecture "$CROSS_ARCH" ;
                   sudo -E apt-add-repository -y "deb http://ports.ubuntu.com trusty main" ;
                   sudo -E apt-add-repository -y "deb http://ports.ubuntu.com trusty-updates main" ;
