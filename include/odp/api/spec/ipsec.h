@@ -714,7 +714,7 @@ typedef struct odp_ipsec_sa_param_t {
 			 *
 			 *  This is the maximum length of IP packets that
 			 *  outbound IPSEC operations may produce. The value may
-			 *  be updated later with odp_ipsec_mtu_update().
+			 *  be updated later with odp_ipsec_sa_mtu_update().
 			 */
 			uint32_t mtu;
 
@@ -1481,7 +1481,7 @@ int odp_ipsec_status(odp_ipsec_status_t *status, odp_event_t event);
  * @retval 0      On success
  * @retval <0     On failure
  */
-int odp_ipsec_mtu_update(odp_ipsec_sa_t sa, uint32_t mtu);
+int odp_ipsec_sa_mtu_update(odp_ipsec_sa_t sa, uint32_t mtu);
 
 /**
  * Get user defined SA context pointer
