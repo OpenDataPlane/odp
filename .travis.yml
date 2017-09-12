@@ -218,7 +218,7 @@ jobs:
                           - make -j $(nproc)
                 - stage: test
                   compiler: powerpc-linux-gnu-gcc
-                  env: TEST="powerpc-linux-gnueabihf" CROSS_ARCH="powerpc"
+                  env: TEST="powerpc-linux-gnueabi" CROSS_ARCH="powerpc"
                   install: true
                   script:
                           - ./bootstrap
