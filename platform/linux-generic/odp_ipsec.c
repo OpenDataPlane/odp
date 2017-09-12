@@ -147,7 +147,7 @@ int odp_ipsec_status(odp_ipsec_status_t *status, odp_event_t event)
 	return -1;
 }
 
-int odp_ipsec_mtu_update(odp_ipsec_sa_t sa, uint32_t mtu)
+int odp_ipsec_sa_mtu_update(odp_ipsec_sa_t sa, uint32_t mtu)
 {
 	(void)sa;
 	(void)mtu;
