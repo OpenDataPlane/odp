@@ -246,6 +246,28 @@ jobs:
                             --enable-helper-linux
                           - make -j $(nproc)
                 - stage: test
+                  compiler: "\"gcc -m32\""
+                  env: TEST="i686-linux-gnueabi" CROSS_ARCH="i386"
+                  install: true
+                  script:
+                          - ./bootstrap
+                          - ./configure --prefix=$HOME/odp-install $CROSS
+                            --enable-debug=full
+                            --disable-test-cpp
+                            --enable-helper-linux
+                          - make -j $(nproc)
+                - stage: test
+                  compiler: "\"clang-3.8 -m32\""
+                  env: TEST="clang-3.8 i686-linux-gnu" CROSS_ARCH="i386"
+                  install: true
+                  script:
+                          - ./bootstrap
+                          - ./configure --prefix=$HOME/odp-install $CROSS
+                            --enable-debug=full
+                            --disable-test-cpp
+                            --enable-helper-linux
+                          - make -j $(nproc)
+                - stage: test
                   env: TEST=coverage
                   compiler: gcc
                   script:
