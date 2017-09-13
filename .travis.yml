@@ -85,12 +85,19 @@ before_install:
                   sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install build-essential ;
                   if [ "$CROSS_ARCH" = "i386" ] ;
                   then
-                        sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install gcc-multilib ;
+                        sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install g++-multilib ;
                   else
-                        sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install gcc-"$CROSS_GNU_TYPE" ;
+                        sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install g++-"$CROSS_GNU_TYPE" ;
                   fi ;
-                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install libc6-dev:"$CROSS_ARCH" libssl-dev:"$CROSS_ARCH" zlib1g-dev:"$CROSS_ARCH" libconfig-dev:"$CROSS_ARCH" ;
+                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install libc6-dev:"$CROSS_ARCH" libssl-dev:"$CROSS_ARCH" zlib1g-dev:"$CROSS_ARCH" libconfig-dev:"$CROSS_ARCH" libstdc++-4.8-dev:"$CROSS_ARCH";
                   export PKG_CONFIG_PATH=/usr/lib/${CROSS_MULTIARCH}/pkgconfig:/usr/${CROSS_MULTIARCH}/lib/pkgconfig ;
+          fi
+        - if [ "${CC#clang}" != "${CC}" ] ;
+          then
+                export CXX="${CC/clang/clang++}";
+          elif [ "$CROSS_ARCH" = "i386" ] ;
+          then
+                export CXX="g++ -m32" ;
           fi
         - if test ! -L /usr/lib/ccache/${CC%% *} ; then sudo ln -s -t /usr/lib/ccache/ `which ${CC%% *}` ; fi
         - ccache -s
@@ -187,7 +194,6 @@ jobs:
                           - ./bootstrap
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug=full
-                            --disable-test-cpp
                             --enable-helper-linux
                           - make -j $(nproc)
                 - stage: test
@@ -198,7 +204,6 @@ jobs:
                           - ./bootstrap
                           - ./configure --prefix=$HOME/odp/odp-install $CROSS
                             --enable-debug=full
-                            --disable-test-cpp
                             --enable-helper-linux
                           - make -j $(nproc)
                 - stage: test
@@ -209,7 +214,6 @@ jobs:
                           - ./bootstrap
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug=full
-                            --disable-test-cpp
                             --enable-helper-linux
                           - make -j $(nproc)
                 - stage: test
@@ -220,7 +224,6 @@ jobs:
                           - ./bootstrap
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug=full
-                            --disable-test-cpp
                             --enable-helper-linux
                           - make -j $(nproc)
                 - stage: test
@@ -231,7 +234,6 @@ jobs:
                           - ./bootstrap
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug=full
-                            --disable-test-cpp
                             --enable-helper-linux
                           - make -j $(nproc)
                 - stage: test
@@ -242,7 +244,6 @@ jobs:
                           - ./bootstrap
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug=full
-                            --disable-test-cpp
                             --enable-helper-linux
                           - make -j $(nproc)
                 - stage: test
@@ -253,7 +254,6 @@ jobs:
                           - ./bootstrap
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug=full
-                            --disable-test-cpp
                             --enable-helper-linux
                           - make -j $(nproc)
                 - stage: test
@@ -264,7 +264,6 @@ jobs:
                           - ./bootstrap
                           - ./configure --prefix=$HOME/odp-install $CROSS
                             --enable-debug=full
-                            --disable-test-cpp
                             --enable-helper-linux
                           - make -j $(nproc)
                 - stage: test
