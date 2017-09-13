@@ -67,6 +67,10 @@ env:
         - CONF="--enable-schedule-sp"
         - CONF="--enable-schedule-iquery"
         - CONF="--enable-dpdk-zero-copy"
+        - CROSS_ARCH="arm64"
+        - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
+        - CROSS_ARCH="powerpc"
+        - CROSS_ARCH="i386"
 
 before_install:
 
@@ -94,10 +98,19 @@ before_install:
           fi
         - if [ "${CC#clang}" != "${CC}" ] ;
           then
+                if [ -n "$CROSS_ARCH" ] ;
+                then
+                        export CC="${CC} --target=$CROSS_GNU_TYPE" ;
+                fi ;
                 export CXX="${CC/clang/clang++}";
           elif [ "$CROSS_ARCH" = "i386" ] ;
           then
+                export CC="gcc -m32" ;
                 export CXX="g++ -m32" ;
+          elif [ -n "$CROSS_ARCH" ] ;
+          then
+                export CC="$CROSS_GNU_TYPE"-gcc ;
+                export CXX="$CROSS_GNU_TYPE"-g++ ;
           fi
         - if test ! -L /usr/lib/ccache/${CC%% *} ; then sudo ln -s -t /usr/lib/ccache/ `which ${CC%% *}` ; fi
         - ccache -s
@@ -128,15 +141,17 @@ install:
         - sudo mkdir -p /mnt/huge
         - sudo mount -t hugetlbfs nodev /mnt/huge
 
-        - sudo apt-get -qq update
-        - sudo apt-get install linux-headers-`uname -r`
-        - sudo pip install coverage
+        - if [ -z "$CROSS_ARCH" ] ;
+          then
+                sudo apt-get -qq update ;
+                sudo apt-get install linux-headers-`uname -r` ;
+          fi
         - gem install asciidoctor
 
 #	DPDK pktio. Note that cache must be purged if dpdk version changes.
         - TARGET=${TARGET:-"x86_64-native-linuxapp-gcc"}
         - |
-          if [ ! -f "dpdk/${TARGET}/lib/libdpdk.a" ]; then
+          if [ -z "$CROSS_ARCH" -a ! -f "dpdk/${TARGET}/lib/libdpdk.a" ]; then
             git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v17.02 http://dpdk.org/git/dpdk dpdk
             pushd dpdk
             git log --oneline --decorate
@@ -151,7 +166,7 @@ install:
 
 #	Netmap pktio
         - |
-          if [ ! -f "netmap/LINUX/netmap.ko" ]; then
+          if [ -z "$CROSS_ARCH" -a ! -f "netmap/LINUX/netmap.ko" ]; then
             git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git
             pushd netmap/LINUX
             ./configure
@@ -193,41 +208,10 @@ script:
 jobs:
         include:
                 - stage: test
-                  compiler: aarch64-linux-gnu-gcc
-                  env: TEST="aarch64-linux-gnu" CROSS_ARCH="arm64"
-                  install: gem install asciidoctor
-                - stage: test
-                  compiler: "\"clang-3.8 --target=aarch64-linux-gnu\""
-                  env: TEST="clang-3.8 aarch64-linux-gnu" CROSS_ARCH="arm64"
-                  install: gem install asciidoctor
-                - stage: test
-                  compiler: arm-linux-gnueabihf-gcc
-                  env: TEST="arm-linux-gnueabihf" CROSS_ARCH="armhf"
-                  install: gem install asciidoctor
-                - stage: test
-                  compiler: "\"clang-3.8 --target=arm-linux-gnueabihf\""
-                  env: TEST="clang-3.8 arm-linux-gnueabihf" CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
-                  install: gem install asciidoctor
-                - stage: test
-                  compiler: powerpc-linux-gnu-gcc
-                  env: TEST="powerpc-linux-gnueabi" CROSS_ARCH="powerpc"
-                  install: gem install asciidoctor
-                - stage: test
-                  compiler: "\"clang-3.8 --target=powerpc-linux-gnu\""
-                  env: TEST="clang-3.8 powerpc-linux-gnu" CROSS_ARCH="powerpc"
-                  install: gem install asciidoctor
-                - stage: test
-                  compiler: "\"gcc -m32\""
-                  env: TEST="i686-linux-gnueabi" CROSS_ARCH="i386"
-                  install: gem install asciidoctor
-                - stage: test
-                  compiler: "\"clang-3.8 -m32\""
-                  env: TEST="clang-3.8 i686-linux-gnu" CROSS_ARCH="i386"
-                  install: gem install asciidoctor
-                - stage: test
                   env: TEST=coverage
                   compiler: gcc
                   script:
+                          - sudo pip install coverage
                           - ./bootstrap
                           - ./configure --prefix=$HOME/odp-install
                             --enable-user-guides
