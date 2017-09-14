@@ -69,6 +69,10 @@ env:
         - CONF="--enable-schedule-iquery"
         - CONF="--enable-schedule-scalable"
         - CONF="--enable-dpdk-zero-copy"
+        - CROSS_ARCH="arm64"
+        - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
+        - CROSS_ARCH="powerpc"
+        - CROSS_ARCH="i386"
 
 before_install:
 
@@ -79,13 +83,36 @@ before_install:
                   BUILD_GNU_TYPE=`dpkg-architecture -a"$CROSS_ARCH" -qDEB_BUILD_GNU_TYPE` ;
                   CROSS_GNU_TYPE=`dpkg-architecture -a"$CROSS_ARCH" -qDEB_HOST_GNU_TYPE` ;
                   CROSS_MULTIARCH=`dpkg-architecture -a"$CROSS_ARCH" -qDEB_HOST_MULTIARCH` ;
-                  CROSS="--host="$CROSS_GNU_TYPE" --build="$BUILD_GNU_TYPE" --prefix=/usr --includedir=/usr/include/"$CROSS_MULTIARCH" --libdir=/usr/lib/"$CROSS_MULTIARCH" --libexecdir=/usr/lib/"$CROSS_MULTIARCH"" ;
+                  CROSS="--host="$CROSS_GNU_TYPE" --build="$BUILD_GNU_TYPE"" ;
                   sudo dpkg --add-architecture "$CROSS_ARCH" ;
                   sudo -E apt-add-repository -y "deb http://ports.ubuntu.com trusty main" ;
                   sudo -E apt-add-repository -y "deb http://ports.ubuntu.com trusty-updates main" ;
                   sudo -E apt-get -y update || true ;
-                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install build-essential gcc-"$CROSS_GNU_TYPE" pkg-config-"$CROSS_GNU_TYPE" ;
-                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install libc6-dev:"$CROSS_ARCH" libconfig-dev:"$CROSS_ARCH" libssl-dev:"$CROSS_ARCH" zlib1g-dev:"$CROSS_ARCH" libconfig-dev:"$CROSS_ARCH" ;
+                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install build-essential ;
+                  if [ "$CROSS_ARCH" = "i386" ] ;
+                  then
+                        sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install g++-multilib ;
+                  else
+                        sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install g++-"$CROSS_GNU_TYPE" ;
+                  fi ;
+                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install libc6-dev:"$CROSS_ARCH" libssl-dev:"$CROSS_ARCH" zlib1g-dev:"$CROSS_ARCH" libconfig-dev:"$CROSS_ARCH" libstdc++-4.8-dev:"$CROSS_ARCH";
+                  export PKG_CONFIG_PATH=/usr/lib/${CROSS_MULTIARCH}/pkgconfig:/usr/${CROSS_MULTIARCH}/lib/pkgconfig ;
+          fi
+        - if [ "${CC#clang}" != "${CC}" ] ;
+          then
+                if [ -n "$CROSS_ARCH" ] ;
+                then
+                        export CC="${CC} --target=$CROSS_GNU_TYPE" ;
+                fi ;
+                export CXX="${CC/clang/clang++}";
+          elif [ "$CROSS_ARCH" = "i386" ] ;
+          then
+                export CC="gcc -m32" ;
+                export CXX="g++ -m32" ;
+          elif [ -n "$CROSS_ARCH" ] ;
+          then
+                export CC="$CROSS_GNU_TYPE"-gcc ;
+                export CXX="$CROSS_GNU_TYPE"-g++ ;
           fi
         - if test ! -L /usr/lib/ccache/${CC%% *} ; then sudo ln -s -t /usr/lib/ccache/ `which ${CC%% *}` ; fi
         - ccache -s
@@ -116,15 +143,17 @@ install:
         - sudo mkdir -p /mnt/huge
         - sudo mount -t hugetlbfs nodev /mnt/huge
 
-        - sudo apt-get -qq update
-        - sudo apt-get install linux-headers-`uname -r`
-        - sudo pip install coverage
+        - if [ -z "$CROSS_ARCH" ] ;
+          then
+                sudo apt-get -qq update ;
+                sudo apt-get install linux-headers-`uname -r` ;
+          fi
         - gem install asciidoctor
 
 #	DPDK pktio. Note that cache must be purged if dpdk version changes.
         - TARGET=${TARGET:-"x86_64-native-linuxapp-gcc"}
         - |
-          if [ ! -f "dpdk/${TARGET}/lib/libdpdk.a" ]; then
+          if [ -z "$CROSS_ARCH" -a ! -f "dpdk/${TARGET}/lib/libdpdk.a" ]; then
             git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v17.02 http://dpdk.org/git/dpdk dpdk
             pushd dpdk
             git log --oneline --decorate
@@ -139,7 +168,7 @@ install:
 
 #	Netmap pktio
         - |
-          if [ ! -f "netmap/LINUX/netmap.ko" ]; then
+          if [ -z "$CROSS_ARCH" -a ! -f "netmap/LINUX/netmap.ko" ]; then
             git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git
             pushd netmap/LINUX
             ./configure
@@ -149,101 +178,42 @@ install:
           fi
 
 script:
+        - if [ -z "$CROSS_ARCH" ] ; then
+                EXTRA_CONF="--with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap" ;
+          fi
         - ./bootstrap
         - ./configure --prefix=$HOME/odp-install
           --enable-user-guides
-          --with-dpdk-path=`pwd`/dpdk/${TARGET}
-          --with-netmap-path=`pwd`/netmap
-          $CONF
           --enable-debug=full
           --enable-helper-linux
+          $CROSS $EXTRA_CONF $CONF
         - make -j $(nproc)
         - mkdir /dev/shm/odp
-        - sudo LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check
+        - if [ -z "$CROSS_ARCH" ] ; then
+          sudo LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
+          fi
         - make install
 
         - echo "Checking linking and run from install..."
         - pushd $HOME
         - echo "Dynamic link.."
-        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux`
-        - LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst
+        - ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_dynamic `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux`
         - echo "Static link.."
-        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux --static` -static
-        - ./odp_hello_inst
+        - ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_static `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux --static` -static
+        - if [ -z "$CROSS_ARCH" ] ; then
+          LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst ;
+          ./odp_hello_inst_static ;
+          fi
+        - popd
         - ccache -s
 
 jobs:
         include:
                 - stage: test
-                  compiler: aarch64-linux-gnu-gcc
-                  env: TEST="aarch64-linux-gnu" CROSS_ARCH="arm64"
-                  install: true
-                  script:
-                          - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install $CROSS
-                            --enable-debug=full
-                            --disable-test-cpp
-                            --enable-helper-linux
-                          - make -j $(nproc)
-                - stage: test
-                  compiler: "\"clang-3.8 --target=aarch64-linux-gnu\""
-                  env: TEST="clang-3.8 aarch64-linux-gnu" CROSS_ARCH="arm64"
-                  install: true
-                  script:
-                          - ./bootstrap
-                          - ./configure --prefix=$HOME/odp/odp-install $CROSS
-                            --enable-debug=full
-                            --disable-test-cpp
-                            --enable-helper-linux
-                          - make -j $(nproc)
-                - stage: test
-                  compiler: arm-linux-gnueabihf-gcc
-                  env: TEST="arm-linux-gnueabihf" CROSS_ARCH="armhf"
-                  install: true
-                  script:
-                          - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install $CROSS
-                            --enable-debug=full
-                            --disable-test-cpp
-                            --enable-helper-linux
-                          - make -j $(nproc)
-                - stage: test
-                  compiler: "\"clang-3.8 --target=arm-linux-gnueabihf\""
-                  env: TEST="clang-3.8 arm-linux-gnueabihf" CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
-                  install: true
-                  script:
-                          - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install $CROSS
-                            --enable-debug=full
-                            --disable-test-cpp
-                            --enable-helper-linux
-                          - make -j $(nproc)
-                - stage: test
-                  compiler: powerpc-linux-gnu-gcc
-                  env: TEST="powerpc-linux-gnueabihf" CROSS_ARCH="powerpc"
-                  install: true
-                  script:
-                          - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install $CROSS
-                            --enable-debug=full
-                            --disable-test-cpp
-                            --enable-helper-linux
-                          - make -j $(nproc)
-                - stage: test
-                  compiler: "\"clang-3.8 --target=powerpc-linux-gnu\""
-                  env: TEST="clang-3.8 powerpc-linux-gnu" CROSS_ARCH="powerpc"
-                  install: true
-                  script:
-                          - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install $CROSS
-                            --enable-debug=full
-                            --disable-test-cpp
-                            --enable-helper-linux
-                          - make -j $(nproc)
-                - stage: test
                   env: TEST=coverage
                   compiler: gcc
                   script:
+                          - sudo pip install coverage
                           - ./bootstrap
                           - ./configure --prefix=$HOME/odp-install
                             --enable-user-guides

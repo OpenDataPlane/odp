@@ -41,6 +41,9 @@ ODP_STATIC_ASSERT(CONFIG_POOL_CACHE_SIZE > (2 * CACHE_BURST),
 ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_LEN_MIN >= 256,
 		  "ODP Segment size must be a minimum of 256 bytes");
 
+ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_SIZE < 0xffff,
+		  "Segment size must be less than 64k (16 bit offsets)");
+
 /* Thread local variables */
 typedef struct pool_local_t {
 	pool_cache_t *cache[ODP_CONFIG_POOLS];
@@ -269,11 +272,16 @@ static void init_buffers(pool_t *pool)
 		/* Show user requested size through API */
 		buf_hdr->uarea_size = pool->params.pkt.uarea_size;
 		buf_hdr->segcount = 1;
+		buf_hdr->num_seg  = 1;
+		buf_hdr->next_seg = NULL;
+		buf_hdr->last_seg = buf_hdr;
 
 		/* Pointer to data start (of the first segment) */
 		buf_hdr->seg[0].hdr       = buf_hdr;
 		buf_hdr->seg[0].data      = &data[offset];
 		buf_hdr->seg[0].len       = pool->data_size;
+
+		odp_atomic_init_u32(&buf_hdr->ref_cnt, 0);
 
 		/* Store base values for fast init */
 		buf_hdr->base_data = buf_hdr->seg[0].data;
