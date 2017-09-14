@@ -50,10 +50,6 @@ struct odp_buffer_hdr_t {
 	/* Pool type */
 	int8_t    type;
 
-	/* Burst counts */
-	uint8_t   burst_num;
-	uint8_t   burst_first;
-
 	/* Segment count */
 	uint8_t   segcount;
 
@@ -63,9 +59,6 @@ struct odp_buffer_hdr_t {
 		uint8_t  *data;
 		uint32_t  len;
 	} seg[CONFIG_PACKET_MAX_SEGS];
-
-	/* Next buf in a list */
-	struct odp_buffer_hdr_t *next;
 
 	/* User context pointer or u64 */
 	union {
@@ -86,9 +79,17 @@ struct odp_buffer_hdr_t {
 	/* Event subtype. Should be ODP_EVENT_NO_SUBTYPE except packets. */
 	int8_t    event_subtype;
 
+#ifndef ODP_SCHEDULE_SCALABLE
+	/* Burst counts */
+	uint8_t   burst_num;
+	uint8_t   burst_first;
+
+	/* Next buf in a list */
+	struct odp_buffer_hdr_t *next;
+
 	/* Burst table */
 	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
-
+#endif
 	/* Used only if _ODP_PKTIO_IPC is set.
 	 * ipc mapped process can not walk over pointers,
 	 * offset has to be used */
