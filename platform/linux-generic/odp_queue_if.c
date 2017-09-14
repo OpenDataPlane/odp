@@ -92,7 +92,7 @@ odp_schedule_group_t odp_queue_sched_group(odp_queue_t queue)
 	return queue_api->queue_sched_group(queue);
 }
 
-int odp_queue_lock_count(odp_queue_t queue)
+uint32_t odp_queue_lock_count(odp_queue_t queue)
 {
 	return queue_api->queue_lock_count(queue);
 }
