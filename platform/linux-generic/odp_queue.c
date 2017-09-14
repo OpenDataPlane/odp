@@ -175,12 +175,12 @@ static odp_schedule_group_t queue_sched_group(odp_queue_t handle)
 	return handle_to_qentry(handle)->s.param.sched.group;
 }
 
-static int queue_lock_count(odp_queue_t handle)
+static uint32_t queue_lock_count(odp_queue_t handle)
 {
 	queue_entry_t *queue = handle_to_qentry(handle);
 
 	return queue->s.param.sched.sync == ODP_SCHED_SYNC_ORDERED ?
-		(int)queue->s.param.sched.lock_count : -1;
+		queue->s.param.sched.lock_count : 0;
 }
 
 static odp_queue_t queue_create(const char *name,
