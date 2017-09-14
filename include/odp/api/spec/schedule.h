@@ -371,6 +371,27 @@ void odp_schedule_order_lock(uint32_t lock_index);
 void odp_schedule_order_unlock(uint32_t lock_index);
 
 /**
+ * Release existing ordered context lock and acquire a new lock
+ *
+ * This call is valid only when holding an ordered synchronization context.
+ * Release a previously locked ordered context lock and acquire a new ordered
+ * context lock. The operation is equivalent to application calling first
+ * odp_schedule_order_unlock(unlock_index) and then
+ * odp_schedule_order_lock(lock_index). The same constraints apply with this
+ * call as with those two.
+ *
+ * @param unlock_index	Index of the acquired ordered lock in the current
+ *			context to be released.
+ * @param lock_index	Index of the ordered lock in the current context to be
+ *			acquired. Must be in the range
+ *			0...odp_queue_lock_count() - 1.
+ *
+ * @see odp_schedule_order_lock(), odp_schedule_order_unlock()
+ *
+ */
+void odp_schedule_order_unlock_lock(uint32_t unlock_index, uint32_t lock_index);
+
+/**
  * @}
  */
 
