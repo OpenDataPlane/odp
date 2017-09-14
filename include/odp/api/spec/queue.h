@@ -106,7 +106,7 @@ typedef struct odp_queue_capability_t {
 	uint32_t max_queues;
 
 	/** Maximum number of ordered locks per queue */
-	unsigned max_ordered_locks;
+	uint32_t max_ordered_locks;
 
 	/** Maximum number of scheduling groups */
 	unsigned max_sched_groups;
@@ -393,10 +393,11 @@ odp_schedule_group_t odp_queue_sched_group(odp_queue_t queue);
  *
  * @param queue   Queue handle
  *
- * @return Number of ordered locks associated with this ordered queue
- * @retval <0 Specified queue is not ordered
+ * @return	Number of ordered locks associated with this ordered queue
+ * @retval 0	Specified queue is not ordered or no ordered lock associated
+ *		with the ordered queue.
  */
-int odp_queue_lock_count(odp_queue_t queue);
+uint32_t odp_queue_lock_count(odp_queue_t queue);
 
 /**
  * Get printable value for an odp_queue_t
