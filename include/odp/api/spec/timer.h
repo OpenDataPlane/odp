@@ -99,12 +99,36 @@ typedef enum {
  * Timer pool parameters are used when creating and querying timer pools.
  */
 typedef struct {
-	uint64_t res_ns; /**< Timeout resolution in nanoseconds */
-	uint64_t min_tmo; /**< Minimum relative timeout in nanoseconds */
-	uint64_t max_tmo; /**< Maximum relative timeout in nanoseconds */
-	uint32_t num_timers; /**< (Minimum) number of supported timers */
-	int priv; /**< Shared (false) or private (true) timer pool */
-	odp_timer_clk_src_t clk_src; /**< Clock source for timers */
+	/** Timeout resolution in nanoseconds. Timer pool must serve timeouts
+	 *  with this or higher resolution. The minimum valid value (highest
+	 *  resolution) is defined by timer capability 'highest_res_ns'. */
+	uint64_t res_ns;
+
+	/** Minimum relative timeout in nanoseconds. All requested timeouts
+	 *  will be at least this many nanoseconds after the current
+	 *  time of the timer pool. Timer set functions return an error, if too
+	 *  short timeout was requested. The value may be also less than
+	 *  'res_ns'. */
+	uint64_t min_tmo;
+
+	/** Maximum relative timeout in nanoseconds. All requested timeouts
+	 *  will be at most this many nanoseconds after the current
+	 *  time of the timer pool. Timer set functions return an error, if too
+	 *  long timeout was requested. */
+	uint64_t max_tmo;
+
+	/** Number of timers needed. Application will create in maximum this
+	 *  many concurrent timers from the timer pool. */
+	uint32_t num_timers;
+
+	/** Thread private timer pool. When zero, multiple thread may use the
+	 *  timer pool concurrently. When non-zero, only single thread uses the
+	 *  timer pool (concurrently). */
+	int priv;
+
+	/** Clock source for timers */
+	odp_timer_clk_src_t clk_src;
+
 } odp_timer_pool_param_t;
 
 /**
