@@ -38,7 +38,7 @@ typedef struct {
 	odp_schedule_sync_t (*queue_sched_type)(odp_queue_t queue);
 	odp_schedule_prio_t (*queue_sched_prio)(odp_queue_t queue);
 	odp_schedule_group_t (*queue_sched_group)(odp_queue_t queue);
-	int (*queue_lock_count)(odp_queue_t queue);
+	uint32_t (*queue_lock_count)(odp_queue_t queue);
 	uint64_t (*queue_to_u64)(odp_queue_t hdl);
 	void (*queue_param_init)(odp_queue_param_t *param);
 	int (*queue_info)(odp_queue_t queue, odp_queue_info_t *info);
