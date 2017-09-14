@@ -267,9 +267,9 @@ void queue_test_info(void)
 	odp_queue_capability_t capability;
 	char q_plain_ctx[] = "test_q_plain context data";
 	char q_order_ctx[] = "test_q_order context data";
-	unsigned lock_count;
+	uint32_t lock_count;
 	char *ctx;
-	int ret;
+	uint32_t ret;
 
 	/* Create a plain queue and set context */
 	q_plain = odp_queue_create(nq_plain, NULL);
@@ -314,8 +314,8 @@ void queue_test_info(void)
 	CU_ASSERT(info.param.sched.sync == odp_queue_sched_type(q_order));
 	CU_ASSERT(info.param.sched.group == odp_queue_sched_group(q_order));
 	ret = odp_queue_lock_count(q_order);
-	CU_ASSERT(ret >= 0);
-	lock_count = (unsigned)ret;
+	CU_ASSERT(ret > 0);
+	lock_count = ret;
 	CU_ASSERT(info.param.sched.lock_count == lock_count);
 
 	CU_ASSERT(odp_queue_destroy(q_plain) == 0);
