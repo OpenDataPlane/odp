@@ -40,7 +40,8 @@ typedef int (*schedule_init_local_fn_t)(void);
 typedef int (*schedule_term_local_fn_t)(void);
 typedef void (*schedule_order_lock_fn_t)(void);
 typedef void (*schedule_order_unlock_fn_t)(void);
-typedef unsigned (*schedule_max_ordered_locks_fn_t)(void);
+typedef void (*schedule_order_unlock_lock_fn_t)(void);
+typedef uint32_t (*schedule_max_ordered_locks_fn_t)(void);
 typedef void (*schedule_save_context_fn_t)(uint32_t queue_index);
 
 typedef struct schedule_fn_t {
@@ -59,6 +60,7 @@ typedef struct schedule_fn_t {
 	schedule_term_local_fn_t    term_local;
 	schedule_order_lock_fn_t    order_lock;
 	schedule_order_unlock_fn_t  order_unlock;
+	schedule_order_unlock_lock_fn_t  order_unlock_lock;
 	schedule_max_ordered_locks_fn_t max_ordered_locks;
 
 	/* Called only when status_sync is set */
@@ -100,8 +102,9 @@ typedef struct {
 	int (*schedule_group_thrmask)(odp_schedule_group_t, odp_thrmask_t *);
 	int (*schedule_group_info)(odp_schedule_group_t,
 				   odp_schedule_group_info_t *);
-	void (*schedule_order_lock)(unsigned);
-	void (*schedule_order_unlock)(unsigned);
+	void (*schedule_order_lock)(uint32_t);
+	void (*schedule_order_unlock)(uint32_t);
+	void (*schedule_order_unlock_lock)(uint32_t, uint32_t);
 
 } schedule_api_t;
 

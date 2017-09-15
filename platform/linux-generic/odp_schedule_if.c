@@ -120,12 +120,17 @@ int odp_schedule_group_info(odp_schedule_group_t group,
 	return sched_api->schedule_group_info(group, info);
 }
 
-void odp_schedule_order_lock(unsigned lock_index)
+void odp_schedule_order_lock(uint32_t lock_index)
 {
 	return sched_api->schedule_order_lock(lock_index);
 }
 
-void odp_schedule_order_unlock(unsigned lock_index)
+void odp_schedule_order_unlock(uint32_t lock_index)
 {
 	return sched_api->schedule_order_unlock(lock_index);
+}
+
+void odp_schedule_order_unlock_lock(uint32_t unlock_index, uint32_t lock_index)
+{
+	sched_api->schedule_order_unlock_lock(unlock_index, lock_index);
 }
