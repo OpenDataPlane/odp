@@ -251,7 +251,7 @@ typedef struct {
 		int         prio;
 		int         queue_per_prio;
 		int         sync;
-		unsigned    order_lock_count;
+		uint32_t    order_lock_count;
 	} queue[ODP_CONFIG_QUEUES];
 
 	struct {
@@ -466,7 +466,7 @@ static inline int grp_update_tbl(void)
 	return num;
 }
 
-static unsigned schedule_max_ordered_locks(void)
+static uint32_t schedule_max_ordered_locks(void)
 {
 	return CONFIG_QUEUE_MAX_ORD_LOCKS;
 }
@@ -700,7 +700,7 @@ static inline void ordered_stash_release(void)
 static inline void release_ordered(void)
 {
 	uint32_t qi;
-	unsigned i;
+	uint32_t i;
 
 	qi = sched_local.ordered.src_queue;
 
@@ -1101,7 +1101,7 @@ static void order_unlock(void)
 {
 }
 
-static void schedule_order_lock(unsigned lock_index)
+static void schedule_order_lock(uint32_t lock_index)
 {
 	odp_atomic_u64_t *ord_lock;
 	uint32_t queue_index;
@@ -1128,7 +1128,7 @@ static void schedule_order_lock(unsigned lock_index)
 	}
 }
 
-static void schedule_order_unlock(unsigned lock_index)
+static void schedule_order_unlock(uint32_t lock_index)
 {
 	odp_atomic_u64_t *ord_lock;
 	uint32_t queue_index;
