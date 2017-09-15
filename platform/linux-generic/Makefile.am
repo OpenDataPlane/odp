@@ -36,6 +36,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/byteorder.h \
 		  $(srcdir)/include/odp/api/classification.h \
 		  $(srcdir)/include/odp/api/compiler.h \
+		  $(srcdir)/include/odp/api/chksum.h \
 		  $(srcdir)/include/odp/api/cpu.h \
 		  $(srcdir)/include/odp/api/cpumask.h \
 		  $(srcdir)/include/odp/api/crypto.h \

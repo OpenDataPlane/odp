@@ -22,6 +22,7 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/barrier.h \
 		  $(top_srcdir)/include/odp/api/spec/buffer.h \
 		  $(top_srcdir)/include/odp/api/spec/byteorder.h \
+		  $(top_srcdir)/include/odp/api/spec/chksum.h \
 		  $(top_srcdir)/include/odp/api/spec/classification.h \
 		  $(top_srcdir)/include/odp/api/spec/compiler.h \
 		  $(top_srcdir)/include/odp/api/spec/cpu.h \

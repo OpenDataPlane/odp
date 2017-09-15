@@ -24,6 +24,7 @@ extern "C" {
 #include <odp/api/compiler.h>
 #include <odp/api/align.h>
 #include <odp/api/hash.h>
+#include <odp/api/chksum.h>
 #include <odp/api/hints.h>
 #include <odp/api/debug.h>
 #include <odp/api/byteorder.h>
