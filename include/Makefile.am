@@ -9,6 +9,7 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/barrier.h \
 		  odp/api/spec/buffer.h \
 		  odp/api/spec/byteorder.h \
+		  odp/api/spec/chksum.h \
 		  odp/api/spec/classification.h \
 		  odp/api/spec/compiler.h \
 		  odp/api/spec/cpu.h \
