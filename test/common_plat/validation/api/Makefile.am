@@ -1,6 +1,7 @@
 ODP_MODULES = atomic \
 	      barrier \
 	      buffer \
+	      chksum \
 	      classification \
 	      cpumask \
 	      crypto \

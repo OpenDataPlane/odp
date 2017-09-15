@@ -11,6 +11,7 @@ AC_CONFIG_FILES([test/common_plat/Makefile
 		 test/common_plat/validation/api/atomic/Makefile
 		 test/common_plat/validation/api/barrier/Makefile
 		 test/common_plat/validation/api/buffer/Makefile
+		 test/common_plat/validation/api/chksum/Makefile
 		 test/common_plat/validation/api/classification/Makefile
 		 test/common_plat/validation/api/cpumask/Makefile
 		 test/common_plat/validation/api/crypto/Makefile
