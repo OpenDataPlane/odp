@@ -1145,6 +1145,13 @@ static void schedule_order_unlock(uint32_t lock_index)
 	odp_atomic_store_rel_u64(ord_lock, sched_local.ordered.ctx + 1);
 }
 
+static void schedule_order_unlock_lock(uint32_t unlock_index,
+				       uint32_t lock_index)
+{
+	schedule_order_unlock(unlock_index);
+	schedule_order_lock(lock_index);
+}
+
 static void schedule_pause(void)
 {
 	sched_local.pause = 1;
@@ -1430,5 +1437,6 @@ const schedule_api_t schedule_default_api = {
 	.schedule_group_thrmask   = schedule_group_thrmask,
 	.schedule_group_info      = schedule_group_info,
 	.schedule_order_lock      = schedule_order_lock,
-	.schedule_order_unlock    = schedule_order_unlock
+	.schedule_order_unlock    = schedule_order_unlock,
+	.schedule_order_unlock_lock    = schedule_order_unlock_lock
 };
