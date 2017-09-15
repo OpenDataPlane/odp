@@ -129,3 +129,8 @@ void odp_schedule_order_unlock(uint32_t lock_index)
 {
 	return sched_api->schedule_order_unlock(lock_index);
 }
+
+void odp_schedule_order_unlock_lock(uint32_t unlock_index, uint32_t lock_index)
+{
+	sched_api->schedule_order_unlock_lock(unlock_index, lock_index);
+}
