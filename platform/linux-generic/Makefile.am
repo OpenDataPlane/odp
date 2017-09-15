@@ -173,6 +173,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_bitmap.c \
 			   odp_buffer.c \
 			   odp_byteorder.c \
+			   odp_chksum.c \
 			   odp_classification.c \
 			   odp_cpu.c \
 			   odp_cpumask.c \
