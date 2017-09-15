@@ -246,7 +246,7 @@ static inline void olock_unlock(const reorder_context_t *rctx,
 static void olock_release(const reorder_context_t *rctx)
 {
 	reorder_window_t *rwin;
-	int i;
+	uint32_t i;
 
 	rwin = rctx->rwin;
 

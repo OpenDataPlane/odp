@@ -1150,7 +1150,7 @@ static inline void ordered_stash_release(void)
 static inline void release_ordered(void)
 {
 	uint32_t qi;
-	unsigned i;
+	uint32_t i;
 
 	qi = thread_local.ordered.src_queue;
 
@@ -1252,7 +1252,7 @@ static void order_unlock(void)
 {
 }
 
-static void schedule_order_lock(unsigned lock_index)
+static void schedule_order_lock(uint32_t lock_index)
 {
 	odp_atomic_u64_t *ord_lock;
 	uint32_t queue_index;
@@ -1279,7 +1279,7 @@ static void schedule_order_lock(unsigned lock_index)
 	}
 }
 
-static void schedule_order_unlock(unsigned lock_index)
+static void schedule_order_unlock(uint32_t lock_index)
 {
 	odp_atomic_u64_t *ord_lock;
 	uint32_t queue_index;
@@ -1296,7 +1296,7 @@ static void schedule_order_unlock(unsigned lock_index)
 	odp_atomic_store_rel_u64(ord_lock, thread_local.ordered.ctx + 1);
 }
 
-static unsigned schedule_max_ordered_locks(void)
+static uint32_t schedule_max_ordered_locks(void)
 {
 	return CONFIG_QUEUE_MAX_ORD_LOCKS;
 }
