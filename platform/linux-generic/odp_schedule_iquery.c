@@ -1296,6 +1296,13 @@ static void schedule_order_unlock(uint32_t lock_index)
 	odp_atomic_store_rel_u64(ord_lock, thread_local.ordered.ctx + 1);
 }
 
+static void schedule_order_unlock_lock(uint32_t unlock_index,
+				       uint32_t lock_index)
+{
+	schedule_order_unlock(unlock_index);
+	schedule_order_lock(lock_index);
+}
+
 static uint32_t schedule_max_ordered_locks(void)
 {
 	return CONFIG_QUEUE_MAX_ORD_LOCKS;
@@ -1368,7 +1375,8 @@ const schedule_api_t schedule_iquery_api = {
 	.schedule_group_thrmask   = schedule_group_thrmask,
 	.schedule_group_info      = schedule_group_info,
 	.schedule_order_lock      = schedule_order_lock,
-	.schedule_order_unlock    = schedule_order_unlock
+	.schedule_order_unlock    = schedule_order_unlock,
+	.schedule_order_unlock_lock    = schedule_order_unlock_lock
 };
 
 static void thread_set_interest(sched_thread_local_t *thread,

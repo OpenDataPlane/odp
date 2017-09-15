@@ -1028,6 +1028,13 @@ static void schedule_order_unlock(uint32_t lock_index)
 	rctx->olock_flags |= 1U << lock_index;
 }
 
+static void schedule_order_unlock_lock(uint32_t unlock_index,
+				       uint32_t lock_index)
+{
+	schedule_order_unlock(unlock_index);
+	schedule_order_lock(lock_index);
+}
+
 static void schedule_release_atomic(void)
 {
 	sched_scalable_thread_state_t *ts;
@@ -1978,4 +1985,5 @@ const schedule_api_t schedule_scalable_api = {
 	.schedule_group_info		= schedule_group_info,
 	.schedule_order_lock		= schedule_order_lock,
 	.schedule_order_unlock		= schedule_order_unlock,
+	.schedule_order_unlock_lock	= schedule_order_unlock_lock,
 };
