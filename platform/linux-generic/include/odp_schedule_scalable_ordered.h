@@ -79,7 +79,7 @@ typedef struct reorder_window {
 	uint32_t tail;
 	uint32_t turn;
 	uint32_t olock[CONFIG_QUEUE_MAX_ORD_LOCKS];
-	uint16_t lock_count;
+	uint32_t lock_count;
 	/* Reorder contexts in this window */
 	reorder_context_t *ring[RWIN_SIZE];
 } reorder_window_t;

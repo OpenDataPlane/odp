@@ -243,7 +243,7 @@ static int term_local(void)
 	return 0;
 }
 
-static unsigned max_ordered_locks(void)
+static uint32_t max_ordered_locks(void)
 {
 	return NUM_ORDERED_LOCKS;
 }
@@ -809,12 +809,12 @@ static int schedule_group_info(odp_schedule_group_t group,
 	return 0;
 }
 
-static void schedule_order_lock(unsigned lock_index)
+static void schedule_order_lock(uint32_t lock_index)
 {
 	(void)lock_index;
 }
 
-static void schedule_order_unlock(unsigned lock_index)
+static void schedule_order_unlock(uint32_t lock_index)
 {
 	(void)lock_index;
 }
