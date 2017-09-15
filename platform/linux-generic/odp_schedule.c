@@ -592,7 +592,7 @@ static inline void free_pktio_cmd(pktio_cmd_t *cmd)
 }
 
 static void schedule_pktio_start(int pktio_index, int num_pktin,
-				 int pktin_idx[])
+				 int pktin_idx[], odp_queue_t odpq[] ODP_UNUSED)
 {
 	int i, idx;
 	pktio_cmd_t *cmd;
