@@ -1,6 +1,7 @@
 ODP_MODULES = atomic \
 	      barrier \
 	      buffer \
+	      chksum \
 	      classification \
 	      cpumask \
 	      crypto \
@@ -32,6 +33,7 @@ TESTS = \
 	atomic/atomic_main$(EXEEXT) \
 	barrier/barrier_main$(EXEEXT) \
 	buffer/buffer_main$(EXEEXT) \
+	chksum/chksum_main$(EXEEXT) \
 	classification/classification_main$(EXEEXT) \
 	cpumask/cpumask_main$(EXEEXT) \
 	crypto/crypto_main$(EXEEXT) \
