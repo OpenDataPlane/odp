@@ -86,6 +86,9 @@ EXTRA_DIST = \
 	     arch/arm/odp/api/cpu_arch.h \
 	     arch/arm/odp_cpu_arch.c \
 	     arch/arm/odp_sysinfo_parse.c \
+	     arch/aarch64/odp/api/cpu_arch.h \
+	     arch/aarch64/odp_cpu_arch.c \
+	     arch/aarch64/odp_sysinfo_parse.c \
 	     arch/default/odp/api/cpu_arch.h \
 	     arch/default/odp_cpu_arch.c \
 	     arch/default/odp_sysinfo_parse.c \

@@ -71,6 +71,9 @@ odpapiinclude_HEADERS = \
 if ARCH_IS_ARM
 odpapiinclude_HEADERS += $(srcdir)/arch/arm/odp/api/cpu_arch.h
 endif
+if ARCH_IS_AARCH64
+odpapiinclude_HEADERS += $(srcdir)/arch/aarch64/odp/api/cpu_arch.h
+endif
 if ARCH_IS_MIPS64
 odpapiinclude_HEADERS += $(srcdir)/arch/mips64/odp/api/cpu_arch.h
 endif
@@ -237,6 +240,10 @@ __LIB__libodp_linux_la_SOURCES = \
 if ARCH_IS_ARM
 __LIB__libodp_linux_la_SOURCES += arch/arm/odp_cpu_arch.c \
 				  arch/arm/odp_sysinfo_parse.c
+endif
+if ARCH_IS_AARCH64
+__LIB__libodp_linux_la_SOURCES += arch/aarch64/odp_cpu_arch.c \
+				  arch/aarch64/odp_sysinfo_parse.c
 endif
 if ARCH_IS_MIPS64
 __LIB__libodp_linux_la_SOURCES += arch/mips64/odp_cpu_arch.c \
