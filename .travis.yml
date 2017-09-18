@@ -39,7 +39,7 @@ addons:
                 packages:
                         - gcc
                         - clang-3.8
-                        - automake autoconf libtool libssl-dev graphviz mscgen doxygen
+                        - automake autoconf libtool libssl-dev graphviz mscgen
                         - libpcap-dev
 #        coverity_scan:
 #                project:
@@ -237,6 +237,13 @@ jobs:
                   install:
                           - true
                   script:
+                          - wget https://github.com/doxygen/doxygen/archive/Release_1_8_13.tar.gz
+                          - tar xpvf Release_1_8_13.tar.gz
+                          - pushd doxygen-Release_1_8_13
+                          - cmake -DCMAKE_INSTALL_PREFIX=/usr .
+                          - sudo make install
+                          - popd
+
                           # doxygen does not trap on warnings, check for them here.
                           - ./bootstrap
                           - ./configure
