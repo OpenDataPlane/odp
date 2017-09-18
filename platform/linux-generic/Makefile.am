@@ -276,9 +276,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pool/generic.c \
 			   pool/subsystem.c \
 			   odp_pkt_queue.c \
-			   odp_queue.c \
 			   odp_queue_if.c \
-			   odp_queue_scalable.c \
 			   odp_rwlock.c \
 			   odp_rwlock_recursive.c \
 			   odp_schedule_if.c \
@@ -326,6 +324,12 @@ if ARCH_IS_X86
 __LIB__libodp_linux_la_SOURCES += arch/x86/cpu_flags.c \
 				  arch/x86/odp_cpu_arch.c \
 				  arch/x86/odp_sysinfo_parse.c
+endif
+
+if ODP_SCHEDULE_SCALABLE
+__LIB__libodp_linux_la_SOURCES += odp_queue_scalable.c
+else
+__LIB__libodp_linux_la_SOURCES += odp_queue.c
 endif
 
 if HAVE_PCAP
