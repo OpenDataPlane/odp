@@ -70,10 +70,25 @@ int cpu_has_global_time(void)
 
 uint64_t cpu_global_time(void)
 {
-	return 0;
+	uint64_t cntvct;
+
+	/*
+	 * To be consistent with other architectures, do not issue a
+	 * serializing instruction, e.g. ISB, before reading this
+	 * sys reg.
+	 */
+
+	/* Memory clobber to minimize optimization around load from sys reg. */
+	__asm__ volatile("mrs %0, cntvct_el0" : "=r"(cntvct) : : "memory");
+
+	return cntvct;
 }
 
 uint64_t cpu_global_time_freq(void)
 {
-	return 0;
+	uint64_t cntfrq;
+
+	__asm__ volatile("mrs %0, cntfrq_el0" : "=r"(cntfrq) : : );
+
+	return cntfrq;
 }
