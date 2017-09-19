@@ -214,7 +214,6 @@ AM_CONDITIONAL([test_installdir], [test "x$testdir" != "xno"])
 # Set conditionals as computed within platform specific files
 ##########################################################################
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
-AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
