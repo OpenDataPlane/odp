@@ -247,8 +247,8 @@ jobs:
                           # doxygen does not trap on warnings, check for them here.
                           - ./bootstrap
                           - ./configure
-                          - make doxygen-doc |tee doxygen.log
-                          - fgrep -rvq warning ./doxygen.log
+                          - make doxygen-doc 2>&1 |tee doxygen.log
+                          - fgrep -rq warning ./doxygen.log && false
                 - stage: test
                   env: TEST=checkpatch
                   compiler: gcc
