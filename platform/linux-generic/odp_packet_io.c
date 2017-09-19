@@ -701,12 +701,13 @@ int sched_cb_pktin_poll_one(int pktio_index,
 		if (odp_unlikely(pkt_hdr->p.input_flags.dst_queue)) {
 			queue = pkt_hdr->dst_queue;
 			buf_hdr = packet_to_buf_hdr(pkt);
-			if (queue_fn->enq_multi(queue, &buf_hdr, 1) < 0)
+			if (queue_fn->enq_multi(queue, &buf_hdr, 1) < 0) {
 				/* Queue full? */
 				odp_packet_free(pkt);
 				__atomic_fetch_add(&entry->s.stats.in_discards,
 						   1,
 						   __ATOMIC_RELAXED);
+			}
 		} else {
 			evt_tbl[num_rx++] = odp_packet_to_event(pkt);
 		}
