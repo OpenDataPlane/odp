@@ -60,6 +60,7 @@ cache:
                 - dpdk
                 - netmap
                 - $HOME/cunit-install
+                - $HOME/doxygen-install
 
 env:
         - CONF=""
@@ -237,13 +238,17 @@ jobs:
                   install:
                           - true
                   script:
-                          - wget https://github.com/doxygen/doxygen/archive/Release_1_8_13.tar.gz
-                          - tar xpvf Release_1_8_13.tar.gz
-                          - pushd doxygen-Release_1_8_13
-                          - cmake -DCMAKE_INSTALL_PREFIX=/usr .
-                          - sudo make install
-                          - popd
+                          - |
+                            if [ ! -f "$HOME/doxygen-install/bin/doxygen" ]; then
+                              wget https://github.com/doxygen/doxygen/archive/Release_1_8_13.tar.gz
+                              tar xpvf Release_1_8_13.tar.gz
+                              pushd doxygen-Release_1_8_13
+                              cmake -DCMAKE_INSTALL_PREFIX=$HOME/doxygen-install .
+                              make install
+                              popd
+                            fi
 
+                          - export PATH=$HOME/doxygen-install/bin:$PATH
                           # doxygen does not trap on warnings, check for them here.
                           - ./bootstrap
                           - ./configure
