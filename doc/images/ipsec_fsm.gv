@@ -1,0 +1,32 @@
+digraph ipsec_state_machine {
+	rankdir=LR;
+	size="12,12";
+	node [fontsize=28];
+	edge [fontsize=28];
+	node [shape=doublecircle]; Unconfigured Configured SA_Ready SA_Expired;
+	node [shape=circle];
+	Unconfigured -> Configured [label="odp_ipsec_config()"
+				   constraint=false];
+	Configured -> SA_Ready [label="odp_ipsec_sa_create()"];
+	SA_Ready -> Disable_Pending [label="odp_ipsec_sa_disable()"];
+	Disable_Pending -> Disable_Check [label="odp_queue_deq()"];
+	Disable_Pending -> Disable_Check [label="odp_schedule()"];
+	SA_Disabled -> Configured [label="odp_ipsec_sa_destroy()"
+				  constraint=false];
+	SA_Ready -> Processing [label="odp_ipsec_in_enq()"];
+	SA_Ready -> Processing [label="odp_ipsec_out_enq()"];
+	Processing -> Op_Complete [label="odp_queue_deq()"];
+	Processing -> Op_Complete [label="odp_schedule()"];
+	Op_Complete -> SA_Expired [label="hard limit reached" constraint=false];
+	SA_Ready -> SA_Ready [label="odp_ipsec_in()"];
+	SA_Ready -> SA_Ready [label="odp_ipsec_out()"];
+	SA_Ready -> SA_Ready [label="odp_ipsec_out_inline()"];
+	SA_Ready -> SA_Expired [label="hard limit reached"];
+	Op_Complete -> SA_Ready [label="odp_ipsec_result()"]
+	Op_Complete -> SA_Ready [label="odp_ipsec_status()"]
+	Disable_Check -> SA_Disabled [label="odp_ipsec_status()"
+				     constraint=false];
+	Disable_Check -> Disable_Pending [label="odp_ipsec_result()"
+					 constraint=false];
+	SA_Expired -> Disable_Pending [label="odp_ipsec_sa_disable()"];
+}
