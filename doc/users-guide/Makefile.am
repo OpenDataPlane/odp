@@ -33,6 +33,8 @@ IMAGES = $(IMAGES_DIR)/overview.svg \
 	 $(IMAGES_DIR)/release_git.svg \
 	 $(IMAGES_DIR)/segment.svg \
 	 $(IMAGES_DIR)/simple_release_git.svg \
+	 $(IMAGES_DIR)/ipsec-lookaside.svg \
+	 $(IMAGES_DIR)/ipsec-inline.svg \
 	 $(IMAGES_DIR)/timeout_fsm.svg \
 	 $(IMAGES_DIR)/timer_fsm.svg \
 	 $(IMAGES_DIR)/tm_hierarchy.svg \
