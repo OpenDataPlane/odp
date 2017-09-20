@@ -1192,6 +1192,8 @@ include::users-guide-timer.adoc[]
 
 include::users-guide-crypto.adoc[]
 
+include::users-guide-ipsec.adoc[]
+
 include::users-guide-tm.adoc[]
 
 include::users-guide-cls.adoc[]
