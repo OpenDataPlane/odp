@@ -186,6 +186,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${srcdir}/include/odp_packet_io_internal.h \
 		  ${srcdir}/include/odp_packet_io_ring_internal.h \
+		  ${srcdir}/include/odp_packet_subsystem.h \
 		  ${srcdir}/pktio/dpdk.h \
 		  ${srcdir}/include/odp_pktio_ops_ipc.h \
 		  ${srcdir}/include/odp_pktio_ops_loopback.h \
@@ -265,6 +266,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_packet.c \
 			   odp_packet_flags.c \
 			   odp_packet_io.c \
+			   packet/subsystem.c \
 			   pktio/ethtool.c \
 			   pktio/subsystem.c \
 			   pktio/ipc.c \
