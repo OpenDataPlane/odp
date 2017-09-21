@@ -82,7 +82,6 @@ typedef ODP_MODULE_CLASS(pktio_ops) {
 
 /* All implementations of this subsystem */
 #include <odp_pktio_ops_ipc.h>
-#include <odp_pktio_ops_loopback.h>
 #include <odp_pktio_ops_netmap.h>
 #include <odp_pktio_ops_pcap.h>
 #include <odp_pktio_ops_socket.h>
@@ -94,7 +93,6 @@ typedef ODP_MODULE_CLASS(pktio_ops) {
 typedef union {
 	void *dpdk;
 	pktio_ops_ipc_data_t ipc;
-	pktio_ops_loopback_data_t loopback;
 	pktio_ops_netmap_data_t netmap;
 	pktio_ops_pcap_data_t pcap;
 	pktio_ops_socket_data_t socket;
