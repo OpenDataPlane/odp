@@ -14,6 +14,7 @@
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>
 #include <odp_queue_if.h>
+#include <odp_pktio_ops_loopback.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>
@@ -21,6 +22,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <linux/if_ether.h>
 
 /* MAC address for the "loop" interface */
 static const char pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
@@ -30,6 +32,9 @@ static int loopback_stats_reset(pktio_entry_t *pktio_entry);
 static int loopback_open(odp_pktio_t id, pktio_entry_t *pktio_entry,
 			 const char *devname, odp_pool_t pool ODP_UNUSED)
 {
+	pktio_ops_loopback_data_t *pkt_lbk =
+		odp_ops_data(pktio_entry, loopback);
+
 	if (strcmp(devname, "loop"))
 		return -1;
 
@@ -37,10 +42,9 @@ static int loopback_open(odp_pktio_t id, pktio_entry_t *pktio_entry,
 
 	snprintf(loopq_name, sizeof(loopq_name), "%" PRIu64 "-pktio_loopq",
 		 odp_pktio_to_u64(id));
-	pktio_entry->ops_data(loopback).loopq =
-		odp_queue_create(loopq_name, NULL);
+	pkt_lbk->loopq = odp_queue_create(loopq_name, NULL);
 
-	if (pktio_entry->ops_data(loopback).loopq == ODP_QUEUE_INVALID)
+	if (pkt_lbk->loopq == ODP_QUEUE_INVALID)
 		return -1;
 
 	loopback_stats_reset(pktio_entry);
@@ -50,7 +54,10 @@ static int loopback_open(odp_pktio_t id, pktio_entry_t *pktio_entry,
 
 static int loopback_close(pktio_entry_t *pktio_entry)
 {
-	return odp_queue_destroy(pktio_entry->ops_data(loopback).loopq);
+	pktio_ops_loopback_data_t *pkt_lbk =
+		odp_ops_data(pktio_entry, loopback);
+
+	return odp_queue_destroy(pkt_lbk->loopq);
 }
 
 static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
@@ -65,13 +72,15 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_time_t *ts = NULL;
 	int num_rx = 0;
 	int failed = 0;
+	pktio_ops_loopback_data_t *pkt_lbk =
+		odp_ops_data(pktio_entry, loopback);
 
 	if (odp_unlikely(len > QUEUE_MULTI_MAX))
 		len = QUEUE_MULTI_MAX;
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
-	queue = queue_fn->from_ext(pktio_entry->ops_data(loopback).loopq);
+	queue = queue_fn->from_ext(pkt_lbk->loopq);
 	nbr = queue_fn->deq_multi(queue, hdr_tbl, len);
 
 	if (pktio_entry->s.config.pktin.bit.ts_all ||
@@ -155,6 +164,8 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int i;
 	int ret;
 	uint32_t bytes = 0;
+	pktio_ops_loopback_data_t *pkt_lbk =
+		odp_ops_data(pktio_entry, loopback);
 
 	if (odp_unlikely(len > QUEUE_MULTI_MAX))
 		len = QUEUE_MULTI_MAX;
@@ -166,7 +177,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
-	queue = queue_fn->from_ext(pktio_entry->ops_data(loopback).loopq);
+	queue = queue_fn->from_ext(pkt_lbk->loopq);
 	ret = queue_fn->enq_multi(queue, hdr_tbl, len);
 
 	if (ret > 0) {
@@ -219,13 +230,19 @@ static int loopback_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 static int loopback_promisc_mode_set(pktio_entry_t *pktio_entry,
 				     odp_bool_t enable)
 {
-	pktio_entry->ops_data(loopback).promisc = enable;
+	pktio_ops_loopback_data_t *pkt_lbk =
+		odp_ops_data(pktio_entry, loopback);
+
+	pkt_lbk->promisc = enable;
 	return 0;
 }
 
 static int loopback_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
-	return pktio_entry->ops_data(loopback).promisc ? 1 : 0;
+	pktio_ops_loopback_data_t *pkt_lbk =
+		odp_ops_data(pktio_entry, loopback);
+
+	return pkt_lbk->promisc ? 1 : 0;
 }
 
 static int loopback_stats(pktio_entry_t *pktio_entry,
