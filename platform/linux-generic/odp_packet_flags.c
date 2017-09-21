@@ -18,13 +18,6 @@
 	pkt_hdr->p.x = (v) & 1;				 \
 	} while (0)
 
-int odp_packet_has_error(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-
-	return pkt_hdr->p.error_flags.all != 0;
-}
-
 /* Get Input Flags */
 
 int odp_packet_has_l2_error(odp_packet_t pkt)

@@ -13,11 +13,6 @@
 #ifndef _ODP_PLAT_PACKET_INLINES_API_H_
 #define _ODP_PLAT_PACKET_INLINES_API_H_
 
-_ODP_INLINE void *odp_packet_data(odp_packet_t pkt)
-{
-	return _odp_packet_data(pkt);
-}
-
 _ODP_INLINE uint32_t odp_packet_seg_len(odp_packet_t pkt)
 {
 	return _odp_packet_seg_len(pkt);
@@ -86,12 +81,6 @@ _ODP_INLINE int odp_packet_is_segmented(odp_packet_t pkt)
 _ODP_INLINE odp_packet_seg_t odp_packet_first_seg(odp_packet_t pkt)
 {
 	return _odp_packet_first_seg(pkt);
-}
-
-_ODP_INLINE void odp_packet_prefetch(odp_packet_t pkt, uint32_t offset,
-				     uint32_t len)
-{
-	return _odp_packet_prefetch(pkt, offset, len);
 }
 
 #endif

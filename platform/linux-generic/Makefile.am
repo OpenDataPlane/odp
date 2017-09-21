@@ -266,6 +266,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_packet.c \
 			   odp_packet_flags.c \
 			   odp_packet_io.c \
+			   packet/generic.c \
 			   packet/subsystem.c \
 			   pktio/ethtool.c \
 			   pktio/subsystem.c \
@@ -341,6 +342,7 @@ endif
 
 pool/generic.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
 buffer/generic.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
+packet/generic.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
 if ODP_SCHEDULE_SCALABLE
 schedule/scalable.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
 else
