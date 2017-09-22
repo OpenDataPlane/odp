@@ -80,15 +80,11 @@ typedef ODP_MODULE_CLASS(pktio_ops) {
 	odp_api_proto(pktio_ops, print) print;
 } pktio_ops_module_t;
 
-/* All implementations of this subsystem */
-#include <odp_pktio_ops_pcap.h>
-
 /* Per implementation private data
  * TODO: refactory each implementation to hide it internally
  */
 typedef union {
 	void *dpdk;
-	pktio_ops_pcap_data_t pcap;
 } pktio_ops_data_t;
 
 /* Extract pktio ops data from pktio entry structure */
