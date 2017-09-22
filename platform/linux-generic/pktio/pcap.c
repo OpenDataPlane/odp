@@ -41,6 +41,7 @@
 #include <odp_api.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
+#include <odp_pktio_ops_pcap.h>
 
 #include <protocols/eth.h>
 
@@ -139,8 +140,7 @@ static int _pcapif_init_tx(pktio_ops_pcap_data_t *pcap)
 static int pcapif_init(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		       const char *devname, odp_pool_t pool)
 {
-	pktio_ops_pcap_data_t *pcap =
-		&pktio_entry->ops_data(pcap);
+	pktio_ops_pcap_data_t *pcap = odp_ops_data(pktio_entry, pcap);
 	int ret;
 
 	memset(pcap, 0, sizeof(pktio_ops_pcap_data_t));
@@ -167,7 +167,7 @@ static int pcapif_init(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 
 static int pcapif_close(pktio_entry_t *pktio_entry)
 {
-	pktio_ops_pcap_data_t *pcap = &pktio_entry->ops_data(pcap);
+	pktio_ops_pcap_data_t *pcap = odp_ops_data(pktio_entry, pcap);
 
 	if (pcap->tx_dump)
 		pcap_dump_close(pcap->tx_dump);
@@ -214,8 +214,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_packet_t pkt;
 	odp_packet_hdr_t *pkt_hdr;
 	uint32_t pkt_len;
-	pktio_ops_pcap_data_t *pcap =
-		&pktio_entry->ops_data(pcap);
+	pktio_ops_pcap_data_t *pcap = odp_ops_data(pktio_entry, pcap);
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
 
@@ -298,8 +297,7 @@ static int _pcapif_dump_pkt(pktio_ops_pcap_data_t *pcap, odp_packet_t pkt)
 static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			   const odp_packet_t pkts[], int len)
 {
-	pktio_ops_pcap_data_t *pcap =
-		&pktio_entry->ops_data(pcap);
+	pktio_ops_pcap_data_t *pcap = odp_ops_data(pktio_entry, pcap);
 	int i;
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
@@ -367,8 +365,7 @@ static int pcapif_promisc_mode_set(pktio_entry_t *pktio_entry,
 {
 	char filter_exp[64] = {0};
 	struct bpf_program bpf;
-	pktio_ops_pcap_data_t *pcap =
-		&pktio_entry->ops_data(pcap);
+	pktio_ops_pcap_data_t *pcap = odp_ops_data(pktio_entry, pcap);
 
 	if (!pcap->rx) {
 		pcap->promisc = enable;
@@ -408,7 +405,9 @@ static int pcapif_promisc_mode_set(pktio_entry_t *pktio_entry,
 
 static int pcapif_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
-	return pktio_entry->ops_data(pcap).promisc;
+	pktio_ops_pcap_data_t *pcap = odp_ops_data(pktio_entry, pcap);
+
+	return pcap->promisc;
 }
 
 static int pcapif_stats_reset(pktio_entry_t *pktio_entry)
