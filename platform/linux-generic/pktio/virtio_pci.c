@@ -63,6 +63,50 @@
 	 1u << VIRTIO_NET_F_MRG_RXBUF     |     \
 	 1ULL << VIRTIO_F_VERSION_1)
 
+static void virtio_print_features(const struct virtio_hw *hw)
+{
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_CSUM))
+		ODP_PRINT("VIRTIO_NET_F_CSUM\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_GUEST_CSUM))
+		ODP_PRINT("VIRTIO_NET_F_GUEST_CSUM\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_MAC))
+		ODP_PRINT("VIRTIO_NET_F_MAC\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_GUEST_TSO4))
+		ODP_PRINT("VIRTIO_NET_F_GUEST_TSO4\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_GUEST_TSO6))
+		ODP_PRINT("VIRTIO_NET_F_GUEST_TSO6\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_GUEST_ECN))
+		ODP_PRINT("VIRTIO_NET_F_GUEST_ECN\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_GUEST_UFO))
+		ODP_PRINT("VIRTIO_NET_F_GUEST_UFO\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_HOST_TSO4))
+		ODP_PRINT("VIRTIO_NET_F_HOST_TSO4\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_HOST_TSO6))
+		ODP_PRINT("VIRTIO_NET_F_HOST_TSO6\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_HOST_ECN))
+		ODP_PRINT("VIRTIO_NET_F_HOST_ECN\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_HOST_UFO))
+		ODP_PRINT("VIRTIO_NET_F_HOST_UFO\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_MRG_RXBUF))
+		ODP_PRINT("VIRTIO_NET_F_MRG_RXBUF\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_STATUS))
+		ODP_PRINT("VIRTIO_NET_F_STATUS\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_CTRL_VQ))
+		ODP_PRINT("VIRTIO_NET_F_CTRL_VQ\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_CTRL_RX))
+		ODP_PRINT("VIRTIO_NET_F_CTRL_RX\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_CTRL_VLAN))
+		ODP_PRINT("VIRTIO_NET_F_CTRL_VLAN\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_CTRL_RX_EXTRA))
+		ODP_PRINT("VIRTIO_NET_F_CTRL_RX_EXTRA\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_GUEST_ANNOUNCE))
+		ODP_PRINT("VIRTIO_NET_F_GUEST_ANNOUNCE\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_MQ))
+		ODP_PRINT("VIRTIO_NET_F_MQ\n");
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_CTRL_MAC_ADDR))
+		ODP_PRINT("VIRTIO_NET_F_CTRL_MAC_ADDR\n");
+}
+
 static inline uint8_t io_read8(uint8_t *addr)
 {
 	return *(volatile uint8_t *)addr;
@@ -428,6 +472,7 @@ static int virtio_init_ethdev(struct virtio_hw *hw)
 	}
 
 	ops->set_features(hw, hw->guest_features);
+	virtio_print_features(hw);
 
 	ops->set_status(hw, VIRTIO_CONFIG_STATUS_FEATURES_OK);
 	if (!(ops->get_status(hw) & VIRTIO_CONFIG_STATUS_FEATURES_OK)) {
