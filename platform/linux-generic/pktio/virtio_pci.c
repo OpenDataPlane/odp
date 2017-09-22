@@ -451,6 +451,42 @@ static void virtio_get_hwaddr(struct virtio_hw *hw)
 	}
 }
 
+static void virtio_get_status(struct virtio_hw *hw)
+{
+	struct virtio_net_config config;
+
+	if (!vtpci_with_feature(hw, VIRTIO_NET_F_STATUS)) {
+		ODP_PRINT("No support for VIRTIO_NET_F_STATUS\n");
+		return;
+	}
+
+	vtpci_read_dev_config(hw,
+			      ODPDRV_OFFSETOF(struct virtio_net_config,
+					      status),
+			      &config.status, sizeof(config.status));
+
+	ODP_PRINT("Status is %u\n", config.status);
+}
+
+static uint16_t virtio_get_num_queues(struct virtio_hw *hw)
+{
+	uint16_t max_pairs;
+
+	if (!vtpci_with_feature(hw, VIRTIO_NET_F_MQ)) {
+		ODP_PRINT("No support for VIRTIO_NET_F_MQ\n");
+		return 1;
+	}
+
+	vtpci_read_dev_config(hw,
+			      ODPDRV_OFFSETOF(struct virtio_net_config,
+					      max_virtqueue_pairs),
+			      &max_pairs, sizeof(max_pairs));
+
+	ODP_PRINT("Device supports maximum of %u virtqueue pairs\n", max_pairs);
+
+	return max_pairs;
+}
+
 static int virtio_init_ethdev(struct virtio_hw *hw)
 {
 	const struct virtio_pci_ops *ops = hw->vtpci_ops;
@@ -481,6 +517,21 @@ static int virtio_init_ethdev(struct virtio_hw *hw)
 	}
 
 	virtio_get_hwaddr(hw);
+	virtio_get_status(hw);
+
+	/* some features depend on F_CTRL_VQ being available */
+	if (vtpci_with_feature(hw, VIRTIO_NET_F_CTRL_VQ)) {
+		uint16_t num_pairs;
+
+		num_pairs = virtio_get_num_queues(hw);
+		/* FIXME: find out minimum available */
+		hw->max_tx_queues = num_pairs;
+		hw->max_rx_queues = num_pairs;
+	} else {
+		hw->cvq = NULL;
+		hw->max_tx_queues = 1;
+		hw->max_rx_queues = 1;
+	}
 
 	return 0;
 }
