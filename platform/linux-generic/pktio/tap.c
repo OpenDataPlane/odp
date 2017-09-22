@@ -45,6 +45,7 @@
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_classification_internal.h>
+#include <pktio/common.h>
 
 #define BUF_SIZE 65536
 

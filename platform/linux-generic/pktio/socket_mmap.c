@@ -32,6 +32,8 @@
 #include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
 #include <odp/api/hints.h>
+#include <pktio/common.h>
+#include <pktio/ethtool.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>
