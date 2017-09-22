@@ -7,6 +7,7 @@
 #ifndef ODP_PACKET_OPS_TAP_H_
 #define ODP_PACKET_OPS_TAP_H_
 
+#include <linux/if_ether.h>
 #include <odp/api/pool.h>
 
 typedef struct {
