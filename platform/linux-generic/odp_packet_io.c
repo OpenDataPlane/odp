@@ -29,6 +29,7 @@
 #include <ifaddrs.h>
 #include <errno.h>
 #include <time.h>
+#include <linux/if_ether.h>
 
 /* Sleep this many nanoseconds between pktin receive calls */
 #define SLEEP_NSEC  1000
