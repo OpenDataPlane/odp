@@ -24,6 +24,7 @@
 #include <odp_classification_internal.h>
 #include <odp_debug_internal.h>
 
+#include <pktio/common.h>
 #include <pktio/dpdk.h>
 #include <protocols/eth.h>
 

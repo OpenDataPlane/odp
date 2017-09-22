@@ -24,6 +24,8 @@
 #include <odp_classification_datamodel.h>
 #include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
+#include <pktio/ethtool.h>
+#include <pktio/common.h>
 
 #include <inttypes.h>
 
