@@ -99,6 +99,9 @@ CC_VERSION_PATCH=$(echo $CC_VERSION | cut -d'.' -f3)
 ##########################################################################
 # Allow valgrind suite to run against the defined tests
 ##########################################################################
+AX_VALGRIND_DFLT([sgcheck], [off])
+AX_VALGRIND_DFLT([helgrind], [off])
+AX_VALGRIND_DFLT([drd], [off])
 AX_VALGRIND_CHECK
 
 ##########################################################################
