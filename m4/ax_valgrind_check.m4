@@ -79,6 +79,10 @@ AC_DEFUN([AX_VALGRIND_DFLT],[
 	m4_define([en_dflt_valgrind_$1], [$2])
 ])dnl
 
+AM_EXTRA_RECURSIVE_TARGETS([check-valgrind])
+m4_foreach([vgtool], [valgrind_tool_list],
+	[AM_EXTRA_RECURSIVE_TARGETS([check-valgrind-]vgtool)])
+
 AC_DEFUN([AX_VALGRIND_CHECK],[
 	dnl Check for --enable-valgrind
 	AC_ARG_ENABLE([valgrind],
@@ -175,7 +179,7 @@ valgrind_quiet_ = $(valgrind_quiet_$(AM_DEFAULT_VERBOSITY))
 valgrind_quiet_0 = --quiet
 valgrind_v_use   = $(valgrind_v_use_$(V))
 valgrind_v_use_  = $(valgrind_v_use_$(AM_DEFAULT_VERBOSITY))
-valgrind_v_use_0 = @echo "  USE   " $(patsubst check-valgrind-%,%,$''@):;
+valgrind_v_use_0 = @echo "  USE   " $(patsubst check-valgrind-%-am,%,$''@):;
 
 # Support running with and without libtool.
 ifneq ($(LIBTOOL),)
@@ -185,7 +189,7 @@ valgrind_lt =
 endif
 
 # Use recursive makes in order to ignore errors during check
-check-valgrind:
+check-valgrind-am:
 ifeq ($(VALGRIND_ENABLED),yes)
 	$(A''M_V_at)$(MAKE) $(AM_MAKEFLAGS) -k \
 		$(foreach tool, $(valgrind_enabled_tools), check-valgrind-$(tool))
@@ -204,14 +208,16 @@ VALGRIND_LOG_COMPILER = \
 	$(valgrind_lt) \
 	$(VALGRIND) $(VALGRIND_SUPPRESSIONS) --error-exitcode=1 $(VALGRIND_FLAGS)
 
-define valgrind_tool_rule =
-check-valgrind-$(1):
+define valgrind_tool_rule
+check-valgrind-$(1)-am:
 ifeq ($$(VALGRIND_ENABLED)-$$(ENABLE_VALGRIND_$(1)),yes-yes)
+ifneq ($$(TESTS),)
 	$$(valgrind_v_use)$$(MAKE) check-TESTS \
 		TESTS_ENVIRONMENT="$$(VALGRIND_TESTS_ENVIRONMENT)" \
 		LOG_COMPILER="$$(VALGRIND_LOG_COMPILER)" \
 		LOG_FLAGS="$$(valgrind_$(1)_flags)" \
 		TEST_SUITE_LOG=test-suite-$(1).log
+endif
 else ifeq ($$(VALGRIND_ENABLED),yes)
 	@echo "Need to reconfigure with --enable-valgrind-$(1)"
 else
