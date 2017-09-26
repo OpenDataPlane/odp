@@ -251,11 +251,17 @@ jobs:
                             fi
 
                           - export PATH=$HOME/doxygen-install/bin:$PATH
-                          # doxygen does not trap on warnings, check for them here.
                           - ./bootstrap
                           - ./configure
+                          # doxygen does not trap on warnings, check for them here.
                           - make doxygen-doc 2>&1 |tee doxygen.log
-                          - fgrep -rq warning ./doxygen.log && false
+                          - |
+                             fgrep -rq warning ./test.log
+                             if [ $? -eq 0 ]; then
+                               false
+                             else
+                               true
+                             fi
                 - stage: test
                   env: TEST=checkpatch
                   compiler: gcc
