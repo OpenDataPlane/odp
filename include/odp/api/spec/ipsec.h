@@ -839,10 +839,16 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param);
  *
  * When in synchronous operation mode, the call will return when it's possible
  * to destroy the SA. In asynchronous mode, the same is indicated by an
- * ODP_EVENT_IPSEC_STATUS event sent to the queue specified for the SA. The
- * status event is guaranteed to be the last event for the SA, i.e. all
- * in-progress operations have completed and resulting events (including status
- * events) have been enqueued before it.
+ * sa_disabled bit in odp_ipsec_warn_t. Warning can be delivered either by an
+ * ODP_EVENT_IPSEC_STATUS event sent to the queue specified for the SA or by a
+ * packet having this bit set in corresponding odp_ipsec_result_t instance,
+ * which is also sent to the SA queue. Which of the event types is used to
+ * deliver completion depends on the exact implementation details. This warning
+ * is guaranteed to be the last event for the SA, i.e. all in-progress
+ * operations have completed and resulting events (including status events)
+ * have been enqueued before it. The will be no more packets coming from SA
+ * queue. If the packet is used to deliver sa_disabled warning, there will be
+ * only one packet with this bit set.
  *
  * @param sa      IPSEC SA to be disabled
  *
@@ -923,7 +929,12 @@ typedef struct odp_ipsec_error_t {
 
 } odp_ipsec_error_t;
 
-/** IPSEC warnings */
+/** IPSEC warnings
+ *
+ * For outbound SAs in ODP_IPSEC_OP_MODE_INLINE mode warnings can be reported
+ * only as status events. In all other cases warnings can be reported either as
+ * a part of packet result or via separate ODP status event.
+ */
 typedef struct odp_ipsec_warn_t {
 	/** IPSEC warnings */
 	union {
@@ -934,6 +945,9 @@ typedef struct odp_ipsec_warn_t {
 
 			/** Soft lifetime expired: packets */
 			uint32_t soft_exp_packets : 1;
+
+			/** SA was disabled */
+			uint32_t sa_disabled : 1;
 		};
 
 		/** All warnings bits */
@@ -1129,26 +1143,14 @@ typedef struct odp_ipsec_packet_result_t {
  * IPSEC status ID
  */
 typedef enum odp_ipsec_status_id_t {
-	/** Response to SA disable command
-	 *
-	 *  Following status event (odp_ipsec_status_t) fields have valid
-	 *  content, other fields must be ignored:
-	 *  - sa:       The SA that was requested to be disabled
-	 *  - result:   Operation result
-	 */
-	ODP_IPSEC_STATUS_SA_DISABLE = 0,
-
 	/** Warning from inline IPSEC processing
 	 *
 	 *  Following status event (odp_ipsec_status_t) fields have valid
 	 *  content, other fields must be ignored:
 	 *  - sa:       The SA that caused the warning
 	 *  - warn:     The warning(s) reported by this event
-	 *
-	 *  This status event is generated only for outbound SAs in
-	 *  ODP_IPSEC_OP_MODE_INLINE mode.
 	 */
-	ODP_IPSEC_STATUS_WARN
+	ODP_IPSEC_STATUS_WARN = 0,
 
 } odp_ipsec_status_id_t;
 
@@ -1161,13 +1163,6 @@ typedef struct odp_ipsec_status_t {
 
 	/** IPSEC SA that was target of the operation */
 	odp_ipsec_sa_t sa;
-
-	/** Result of the operation
-	 *
-	 *   0:    Success
-	 *  <0:    Failure
-	 */
-	int result;
 
 	/** Warnings of an ODP_IPSEC_STATUS_WARN status event */
 	odp_ipsec_warn_t warn;
