@@ -791,7 +791,9 @@ void odp_ipsec_config_init(odp_ipsec_config_t *config);
  *
  * Initialize and configure IPSEC offload with global configuration options.
  * This must be called before any SAs are created. Use odp_ipsec_capability()
- * to examine which features and modes are supported.
+ * to examine which features and modes are supported. This function must be
+ * called before creating the first SA with odp_ipsec_sa_create(). Calling this
+ * function multiple times results in undefined behaviour.
  *
  * @param config   Pointer to IPSEC configuration structure
  *
