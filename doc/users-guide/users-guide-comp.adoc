@@ -1,0 +1,108 @@
+== Compression services
+
+ODP Compression provides APIs to perform compression/decompression operations required by various compression based protocols (_e.g.,_ IPcomp).
+Specification also provide support to compute hash along with compression and decompression.
+This facilitate performing dual operation in one-call to leverage performance gains for compression based application
+employing signature calculation on data. 
+
+API provide following compression services:
+
+* Compression and Decompression
+* Compression/Decompression with Hash (SHA1 and SHA-2 256)
+* Dictionary load (if supported by algorithm)
+
+The digest is always computed on plaintext. Independent hash-only operations are not supported.
+
+=== Compression Sessions
+
+ODP Compression are session based APIs i.e. A session must be created before initiating any compression/decompression operation.
+A session is created by providing session parameter consisting of specific algorithm and mode. Once a session is created, it remain active until it is destroyed via destroy call.
+Before making destroy call, caller should ensure there's no operation in progress else behavior is undefined.
+
+ODP Compression supports synchronous and asynchronous modes of operations. For asynchronous sessions, an event indicating compression/decompression complete is posted to the user-provided completion queue in session parameter during session create.
+
+ODP compression APIs support stateful and stateless mode of operations.
+
+* Stateful means each data unit depends on previous data from compression or decompression. Application can invoke stateful operations when large amount of data is broken down into connected chunks of smaller size and sent for compression or decompression.
+* Stateless means each data unit can be compressed or decompressed independently and does not have to refer to past data for decompression.
+See RFC1951 for more on stateful and stateless mode of operation.
+
+Folowing is the list of all the algorithms supported in the current interface:
+
+* ODP_COMP_ALG_DEFLATE
+* ODP_COMP_ALG_ZLIB
+* ODP_COMP_ALG_LZS
+
+List of hash algorithms:
+
+* ODP_COMP_HASH_ALG_SHA1
+* ODP_COMP_HASH_ALG_SHA256
+
+
+=== Compression operations
+
+After session creation, a compression or decompression (with or without digest calculation) operation can be applied to a packet using the `odp_comp_compress()/odp_comp_decomp()` API for synchronus mode and `odp_comp_compress_enq()/odp_comp_decomp_enq()` for asynchronous mode of operation.
+Compression API doesn't support standalone hash operations. It is performed only along with compression/decompression.
+
+API set also provides an API to load dictionary if support is indicated by compression algorithm capability call.
+Caller should load dictionary before calling operation APIs and after successful session creation.
+Calling dictionary load API in the middle of operation (i.e. when compress/decompress is in progress) results in undefined behavior.
+
+==== Synchronous Operations
+
+For synchronous operation, user should call 'odp_comp_compress()' and 'odp_comp_decomp()' for compression and decompression respectively with valid input and output packet along with associated 'odp_packet_data_range_t' which consists of offset and length information. 
+
+For input packet, offset = start location where data should be read from and length = length of data to read starting from offset.
+
+For output packet, offset = start location where output data should be written to and length = length of data buffer available for output starting from offset.
+
+API call returns with code indicating pass or fail with updated status code as enumerated in `odp_comp_err_t`. In case of failure, user should check for status code in result parameter to check reason for failure. If status code is set to `ODP_COMP_ERR_OUT_OF_SPACE`, then user should call API again with more output buffer but no more input buffers. 
+
+On successful return OR in case of `ODP_COMP_ERR_OUT_OF_SPACE`, API returns with updated output packet with processed data and length by length of actual data written.  
+
+==== Asynchronous Operations
+
+For asynchronous operation, user should call `odp_comp_compress_enq()` or `odp_comp_decomp_enq()` for compression and decompression respectively with valid input and output packet and associated data range specified in `odp_packet_data_range_t`. 
+
+Refer to section *Synchronous Operations* for offset and length field definition for input and output packet.
+
+API call returns with code indicating 'pass' or 'fail' where 'pass' means request has been submitted successfully and 'fail' means requested could not be submitted. On successful submission, user should wait for an event `ODP_EVENT_PACKET` with subtype `ODP_EVENT_SUBTYPE_COMP` on completion queue (provided in session parameter during session creation).
+
+On receiving an `ODP_EVENT_PACKET` with subtype `ODP_EVENT_SUBTYPE_COMP', user should get packet handle on which event is raised from by making a call to `odp_comp_packet_from_event()` and then retrieve corresponding result by making a call to `odp_comp_result()` API. 
+
+User should check for asynchronous operation status through status code updated in `odp_comp_op_result_t:err` field. 
+
+If status code is set to `ODP_COMP_ERR_NONE`, then indicates operation is successfully completed.
+
+If status code is set to `ODP_COMP_ERR_OUT_OF_SPACE`, then operation paused because output buffer exhausted while processing. User should continue to call operation API again with more output buffer with no other change to any other parameter until call ends with any other status code. Though it is always recommended that application provides enough buffer size to avoid 'out of space' condition in async mode.
+
+If required, user can set it's specific information on packet by making call to `odp_packet_set_user_context()` which may help them to track and retrieve more information about a packet as they are received via events. For   example, consider an application consisting of parallel multiple sessions. for such usecase, user can set relevant information on packet as user context and retrieve later.
+ 
+=== Operation Parameter
+
+Current API set support processing on packet of type `odp_packet_t`. Every operation parameter consists:
+
+`session handle` packet belongs to,
+
+'input' an input packet with associated data range,
+
+'output' an output packet with associated data range, and 
+
+'last' indicating if input packet is last chunk of data.
+
+==== More on `last`
+
+While other parameter are straightforward, `last` require more attention and special section to explain how it works in context of current algorithm set supported by compression API. 
+
+ODP Compression API support both stateful and stateless mode of operation. 'Stateful' means algorithm use past data as history for compression of current data thus making that sequence of data dependent on each other and 'Stateless' means every chunk of data is compressed independently and does not depend on past data.
+
+An example of stateful mode of operation is a data set broken down into packets. In such case, starting 1st packet, every packet except last will have its `last` field set to 0 and all of them, inclusive last packet will be compressed in stateful mode. When a packet is received with `last` set to 1, then algorithm winds up operation by resetting its state after current packet processing is complete.
+
+If every packet is to be compressed independently , then each call should have `last` field set to 1.
+If packet has `last` set to 0, indicate packet contains either 1st or chunks except last chunk of data field indicate to API, it is the last chunk of data and subsequent data compression will be independent of current chunk.
+
+Once user is done with it's intended operation,  it should close session with `odp_comp_destroy_session` call. User should ensure there's no operation in-progress before making call to destroy else behavior is undefined.
+
+== Capability Enquaries
+ODP Compression API set provides an API to query interface capability as well per algorithm capability query.
+`odp_comp_capability()` inquire the implementation’s compression interface capabilities. This interface returns information such as maximum number of sessions supported, bitmasks for supported algorithms, modes. See `odp_comp_capability_t` for details. `odp_comp_alg_capability() returns compression algorithm capability supported by implementation. It is not necessary that implementation support all feature of an algorithm i.e. say zlib as an algorithm supports dictionary loads but some implementation mmay not support it i.e. support_dict capability may be set to false by an implementation. Thus it is always recommended that user call and check for interface, compression and hash algorithm capability.
