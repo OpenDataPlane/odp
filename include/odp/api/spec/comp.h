@@ -21,8 +21,8 @@
 extern "C" {
 #endif
 
-/** @defgroup odpx_compression ODPx COMP
- *  ODPx Compression is an API set to do compression+hash or decompression+hash
+/** @defgroup odp_compression ODP COMP
+ *  ODP Compression is an API set to do compression+hash or decompression+hash
  *  operations on data. Hash is calculated on plaintext.
  *
  *  if opcode = ODP_COMP_COMPRESS, then it will apply hash and then compress,
@@ -318,7 +318,9 @@ typedef struct odp_comp_alg_capability_t {
 	 */
 	uint32_t max_level;
 
-	/* Supported hash algorithms */
+	/** bitmask indicating supported hash algorithms
+	 * with this compression algorithm
+	 */
 	odp_comp_hash_algos_t hash_algo;
 } odp_comp_alg_capability_t;
 
@@ -353,6 +355,7 @@ typedef struct odp_comp_alg_def_param_t {
  *
  */
 typedef struct odp_comp_alg_zlib_param_t {
+	/** deflate specific param */
 	odp_comp_alg_def_param_t def;
 } odp_comp_alg_zlib_param_t;
 
@@ -363,6 +366,7 @@ typedef struct odp_comp_alg_zlib_param_t {
 typedef union odp_comp_alg_param_t {
 	/** deflate algo params */
 	odp_comp_alg_def_param_t deflate;
+	/** zlib algo param */
 	odp_comp_alg_zlib_param_t zlib;
 } odp_comp_alg_param_t;
 
@@ -371,6 +375,9 @@ typedef union odp_comp_alg_param_t {
  *
  */
 typedef union odp_comp_data_t {
+	/** structure when input/output data type
+	 * packet
+	 */
 	struct {
 		/** packet */
 		odp_packet_t packet;
@@ -608,7 +615,7 @@ int odp_comp_session_destroy(odp_comp_session_t session);
  * after processing of last chunk of data is complete.
  *
  * @param session           Session handle
- * @param dict[in,out]      Pointer to dictionary.
+ * @param dict              Pointer to dictionary.
  *                          implementation should update length of dictionary
  *                          used at output.
  * @retval 0 on success
@@ -639,8 +646,8 @@ int odp_comp_set_dict(odp_comp_session_t session,
  * User should compute processed data len = total output len - digest_len, where
  * digest_len queried through odp_comp_hash_alg_capability().
  *
- * @param param[in]         Operation parameters.
- * @param result[out]       Result of operation.
+ * @param param         Operation parameters.
+ * @param[out] result       Result of operation.
  *
  * @retval 0 on success
  * @retval <0 on failure
@@ -673,7 +680,7 @@ int odp_comp_compress(odp_comp_op_param_t   *param,
  * with respect to each input processing request to correctly identify
  * its corresponding enqueued event.
  *
- * @param param[in]          Operation parameters.
+ * @param param          Operation parameters.
  *
  * @retval 0 on success
  * @retval <0 on failure
@@ -698,8 +705,8 @@ int odp_comp_compress_enq(odp_comp_op_param_t *param);
  * total output len - digest_len, where digest_len queried through
  * odp_comp_hash_alg_capability().
  *
- * @param param[in]          Operation parameters.
- * @param result[out]        Result of operation.
+ * @param param          Operation parameters.
+ * @param[out] result        Result of operation.
  *
  * @retval 0 on success
  * @retval <0 on failure
@@ -733,7 +740,7 @@ int odp_comp_decomp(odp_comp_op_param_t   *param,
  * Else it is recommended that application maintain required context
  * to associate event to its respective input.
  *
- * @param param[in]          Operation parameters.
+ * @param param          Operation parameters.
  *
  * @retval 0 on success
  * @retval <0 on failure
@@ -747,7 +754,7 @@ int odp_comp_decomp_enq(odp_comp_op_param_t *param);
  * must be ODP_EVENT_PACKET_COMP. compression/decompression operation
  * results can be examined with odp_comp_result().
  *
- * @param ev	    Event handle
+ * @param event	    Event handle
  *
  * @return Valid Packet handle on success,
  *	    ODP_PACKET_INVALID on failure

@@ -157,6 +157,7 @@ static inline void _odp_packet_prefetch(odp_packet_t pkt, uint32_t offset,
 	(void)pkt; (void)offset; (void)len;
 }
 
+/** @internal Inline function @param pkt @return */
 static inline odp_buffer_t packet_to_buffer(odp_packet_t pkt)
 {
 	return (odp_buffer_t)pkt;
