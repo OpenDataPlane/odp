@@ -16,6 +16,7 @@ TESTS = validation/api/pktio/pktio_run.sh \
 	$(ALL_API_VALIDATION_DIR)/classification/classification_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/cpumask/cpumask_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/crypto/crypto_main$(EXEEXT) \
+	$(ALL_API_VALIDATION_DIR)/comp/comp_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/errno/errno_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/hash/hash_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/init/init_main_ok$(EXEEXT) \
