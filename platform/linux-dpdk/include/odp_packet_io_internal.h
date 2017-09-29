@@ -144,6 +144,9 @@ int single_recv_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
 int single_send_queue(pktio_entry_t *entry, int index,
 		      const odp_packet_t packets[], int num);
 
+int pktin_poll_one(int pktio_index,
+		   int rx_queue,
+		   odp_event_t evt_tbl[]);
 int pktin_poll(int pktio_index, int num_queue, int index[]);
 void pktio_stop_finalize(int pktio_index);
 

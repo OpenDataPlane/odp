@@ -14,7 +14,7 @@
 typedef struct schedule_fn_t {
 	int status_sync;
 	void (*pktio_start)(int pktio_index, int num_in_queue,
-			    int in_queue_idx[]);
+			    int in_queue_idx[], odp_queue_t odpq[]);
 	int (*thr_add)(odp_schedule_group_t group, int thr);
 	int (*thr_rem)(odp_schedule_group_t group, int thr);
 	int (*num_grps)(void);

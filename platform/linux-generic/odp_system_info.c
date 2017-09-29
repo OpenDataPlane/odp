@@ -11,6 +11,8 @@
  *   All rights reserved.
  */
 
+#include "config.h"
+
 #include <odp_posix_extensions.h>
 
 #include <odp/api/system_info.h>
@@ -259,6 +261,30 @@ static char *get_hugepage_dir(uint64_t hugepage_sz)
 }
 
 /*
+ * Analysis of /sys/devices/system/cpu/cpu%d/cpufreq/ files
+ */
+uint64_t odp_cpufreq_id(const char *filename, int id)
+{
+	char path[256], buffer[256], *endptr = NULL;
+	FILE *file;
+	uint64_t ret = 0;
+
+	snprintf(path, sizeof(path),
+		 "/sys/devices/system/cpu/cpu%d/cpufreq/%s", id, filename);
+
+	file = fopen(path, "r");
+	if (file == NULL)
+		return ret;
+
+	if (fgets(buffer, sizeof(buffer), file) != NULL)
+		ret = strtoull(buffer, &endptr, 0) * 1000;
+
+	fclose(file);
+
+	return ret;
+}
+
+/*
  * Analysis of /sys/devices/system/cpu/ files
  */
 static int systemcpu(system_info_t *sysinfo)
@@ -308,6 +334,7 @@ static int system_hp(hugepage_info_t *hugeinfo)
  */
 int odp_system_info_init(void)
 {
+	int i;
 	FILE  *file;
 
 	memset(&odp_global_data.system_info, 0, sizeof(system_info_t));
@@ -323,6 +350,13 @@ int odp_system_info_init(void)
 	cpuinfo_parser(file, &odp_global_data.system_info);
 
 	fclose(file);
+
+	for (i = 0; i < MAX_CPU_NUMBER; i++) {
+		uint64_t cpu_hz_max = odp_cpufreq_id("cpuinfo_max_freq", i);
+
+		if (cpu_hz_max)
+			odp_global_data.system_info.cpu_hz_max[i] = cpu_hz_max;
+	}
 
 	if (systemcpu(&odp_global_data.system_info)) {
 		ODP_ERR("systemcpu failed\n");
@@ -349,6 +383,11 @@ int odp_system_info_term(void)
  * Public access functions
  *************************
  */
+uint64_t odp_cpu_hz_current(int id)
+{
+	return odp_cpufreq_id("cpuinfo_cur_freq", id);
+}
+
 uint64_t odp_cpu_hz(void)
 {
 	int id = sched_getcpu();

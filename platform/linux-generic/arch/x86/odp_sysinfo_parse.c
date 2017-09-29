@@ -4,8 +4,10 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 #include <odp_internal.h>
-#include <arch/x86/cpu_flags.h>
+#include <cpu_flags.h>
 #include <string.h>
 
 int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
@@ -35,42 +37,6 @@ int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 			id++;
 		}
 	}
-
-	return 0;
-}
-
-uint64_t odp_cpu_hz_current(int id)
-{
-	char str[1024];
-	FILE *file;
-	int cpu;
-	char *pos;
-	double mhz = 0.0;
-
-	file = fopen("/proc/cpuinfo", "rt");
-
-	/* find the correct processor instance */
-	while (fgets(str, sizeof(str), file) != NULL) {
-		pos = strstr(str, "processor");
-		if (pos) {
-			if (sscanf(pos, "processor : %d", &cpu) == 1)
-				if (cpu == id)
-					break;
-		}
-	}
-
-	/* extract the cpu current speed */
-	while (fgets(str, sizeof(str), file) != NULL) {
-		pos = strstr(str, "cpu MHz");
-		if (pos) {
-			if (sscanf(pos, "cpu MHz : %lf", &mhz) == 1)
-				break;
-		}
-	}
-
-	fclose(file);
-	if (mhz)
-		return (uint64_t)(mhz * 1000000.0);
 
 	return 0;
 }

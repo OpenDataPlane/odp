@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:	BSD-3-Clause
  */
 
+#include "config.h"
+
 #include "traffic_mngr.h"
 
 int main(int argc, char *argv[])

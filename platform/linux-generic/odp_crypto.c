@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 #include <odp_posix_extensions.h>
 #include <odp/api/crypto.h>
 #include <odp_internal.h>
@@ -17,6 +19,7 @@
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>
 #include <odp/api/random.h>
+#include <odp/api/plat/packet_inlines.h>
 #include <odp_packet_internal.h>
 
 #include <string.h>
@@ -44,10 +47,14 @@ static const odp_crypto_cipher_capability_t cipher_capa_trides_cbc[] = {
 {.key_len = 24, .iv_len = 8} };
 
 static const odp_crypto_cipher_capability_t cipher_capa_aes_cbc[] = {
-{.key_len = 16, .iv_len = 16} };
+{.key_len = 16, .iv_len = 16},
+{.key_len = 24, .iv_len = 16},
+{.key_len = 32, .iv_len = 16} };
 
 static const odp_crypto_cipher_capability_t cipher_capa_aes_gcm[] = {
-{.key_len = 16, .iv_len = 12} };
+{.key_len = 16, .iv_len = 12},
+{.key_len = 24, .iv_len = 12},
+{.key_len = 32, .iv_len = 12} };
 
 /*
  * Authentication algorithm capabilities
@@ -701,14 +708,11 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	odp_crypto_generic_session_t *session;
 	int aes_gcm = 0;
 
-	/* Default to successful result */
-	*status = ODP_CRYPTO_SES_CREATE_ERR_NONE;
-
 	/* Allocate memory for this session */
 	session = alloc_session();
 	if (NULL == session) {
 		*status = ODP_CRYPTO_SES_CREATE_ERR_ENOMEM;
-		return -1;
+		goto err;
 	}
 
 	/* Copy parameters */
@@ -716,8 +720,8 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 
 	if (session->p.iv.length > MAX_IV_LEN) {
 		ODP_DBG("Maximum IV length exceeded\n");
-		free_session(session);
-		return -1;
+		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
+		goto err;
 	}
 
 	/* Copy IV data */
@@ -741,23 +745,47 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	case ODP_CIPHER_ALG_3DES_CBC:
 		rc = process_cipher_param(session, EVP_des_ede3_cbc());
 		break;
-	case ODP_CIPHER_ALG_AES_CBC:
 #if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_CBC:
+		if (param->cipher_key.length == 16)
+			rc = process_cipher_param(session, EVP_aes_128_cbc());
+		else
+			rc = -1;
+		break;
 #endif
-		rc = process_cipher_param(session, EVP_aes_128_cbc());
+	case ODP_CIPHER_ALG_AES_CBC:
+		if (param->cipher_key.length == 16)
+			rc = process_cipher_param(session, EVP_aes_128_cbc());
+		else if (param->cipher_key.length == 24)
+			rc = process_cipher_param(session, EVP_aes_192_cbc());
+		else if (param->cipher_key.length == 32)
+			rc = process_cipher_param(session, EVP_aes_256_cbc());
+		else
+			rc = -1;
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_GCM:
-		if (param->auth_alg == ODP_AUTH_ALG_AES128_GCM)
-			aes_gcm = 1;
-		/* Fallthrough */
+		/* AES-GCM requires to do both auth and
+		 * cipher at the same time */
+		if (param->auth_alg != ODP_AUTH_ALG_AES128_GCM)
+			rc = -1;
+		else if (param->cipher_key.length == 16)
+			rc = process_aes_gcm_param(session, EVP_aes_128_gcm());
+		else
+			rc = -1;
+		break;
 #endif
 	case ODP_CIPHER_ALG_AES_GCM:
 		/* AES-GCM requires to do both auth and
 		 * cipher at the same time */
-		if (param->auth_alg == ODP_AUTH_ALG_AES_GCM || aes_gcm)
+		if (param->auth_alg != ODP_AUTH_ALG_AES_GCM)
+			rc = -1;
+		else if (param->cipher_key.length == 16)
 			rc = process_aes_gcm_param(session, EVP_aes_128_gcm());
+		else if (param->cipher_key.length == 24)
+			rc = process_aes_gcm_param(session, EVP_aes_192_gcm());
+		else if (param->cipher_key.length == 32)
+			rc = process_aes_gcm_param(session, EVP_aes_256_gcm());
 		else
 			rc = -1;
 		break;
@@ -768,8 +796,7 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	/* Check result */
 	if (rc) {
 		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
-		free_session(session);
-		return -1;
+		goto err;
 	}
 
 	aes_gcm = 0;
@@ -829,13 +856,20 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	/* Check result */
 	if (rc) {
 		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_AUTH;
-		free_session(session);
-		return -1;
+		goto err;
 	}
 
 	/* We're happy */
 	*session_out = (intptr_t)session;
+	*status = ODP_CRYPTO_SES_CREATE_ERR_NONE;
 	return 0;
+
+err:
+	/* error status should be set at this moment */
+	if (session != NULL)
+		free_session(session);
+	*session_out = ODP_CRYPTO_SESSION_INVALID;
+	return -1;
 }
 
 int odp_crypto_session_destroy(odp_crypto_session_t session)
@@ -999,9 +1033,6 @@ int32_t odp_random_data(uint8_t *buf, uint32_t len, odp_random_kind_t kind)
 
 	switch (kind) {
 	case ODP_RANDOM_BASIC:
-		RAND_pseudo_bytes(buf, len);
-		return len;
-
 	case ODP_RANDOM_CRYPTO:
 		rc = RAND_bytes(buf, len);
 		return (1 == rc) ? (int)len /*success*/: -1 /*failure*/;

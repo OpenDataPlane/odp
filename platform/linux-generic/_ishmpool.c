@@ -41,6 +41,7 @@
  * The second one regroups the functions needed by the slab allocator.
  * The third section regroups the common functions exported externally.
  */
+#include "config.h"
 
 #include <odp_posix_extensions.h>
 #include <odp_internal.h>

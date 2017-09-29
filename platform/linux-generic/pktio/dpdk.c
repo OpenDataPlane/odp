@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 #ifdef ODP_PKTIO_DPDK
 
 #include <odp_posix_extensions.h>
@@ -30,6 +32,10 @@
 #include <rte_mbuf.h>
 #include <rte_mempool.h>
 #include <rte_ethdev.h>
+#include <rte_ip.h>
+#include <rte_ip_frag.h>
+#include <rte_udp.h>
+#include <rte_tcp.h>
 #include <rte_string_fns.h>
 
 static inline pktio_ops_dpdk_data_t *
@@ -141,14 +147,13 @@ static void mbuf_init(struct rte_mempool *mp, struct rte_mbuf *mbuf,
 {
 	void *buf_addr = pkt_hdr->buf_hdr.base_data - RTE_PKTMBUF_HEADROOM;
 
-	rte_mem_lock_page(buf_addr);
-
 	memset(mbuf, 0, sizeof(struct rte_mbuf));
 
 	mbuf->priv_size = 0;
 	mbuf->buf_addr = buf_addr;
 	mbuf->buf_physaddr = rte_mem_virt2phy(buf_addr);
-	if (odp_unlikely(mbuf->buf_physaddr == RTE_BAD_PHYS_ADDR))
+	if (odp_unlikely(mbuf->buf_physaddr == RTE_BAD_PHYS_ADDR ||
+			 mbuf->buf_physaddr == 0))
 		ODP_ABORT("Failed to map virt addr to phy");
 
 	mbuf->buf_len = (uint16_t)rte_pktmbuf_data_room_size(mp);
@@ -174,6 +179,11 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 	unsigned elt_size;
 	unsigned num;
 	uint16_t data_room_size;
+
+	if (!(pool_entry->mem_from_huge_pages)) {
+		ODP_ERR("DPDK requires memory is allocated from huge pages\n");
+		return NULL;
+	}
 
 	num = pool_entry->num;
 	data_room_size = pool_entry->max_seg_len + CONFIG_PACKET_HEADROOM;
@@ -309,6 +319,44 @@ static struct rte_mempool_ops ops_stack = {
 
 MEMPOOL_REGISTER_OPS(ops_stack);
 
+#define HAS_IP4_CSUM_FLAG(m, f) ((m->ol_flags & PKT_RX_IP_CKSUM_MASK) == f)
+#define HAS_L4_PROTO(m, proto) ((m->packet_type & RTE_PTYPE_L4_MASK) == proto)
+#define HAS_L4_CSUM_FLAG(m, f) ((m->ol_flags & PKT_RX_L4_CKSUM_MASK) == f)
+
+#define PKTIN_CSUM_BITS 0x1C
+
+static inline int pkt_set_ol_rx(odp_pktin_config_opt_t *pktin_cfg,
+				odp_packet_hdr_t *pkt_hdr,
+				struct rte_mbuf *mbuf)
+{
+	if (pktin_cfg->bit.ipv4_chksum &&
+	    RTE_ETH_IS_IPV4_HDR(mbuf->packet_type) &&
+	    HAS_IP4_CSUM_FLAG(mbuf, PKT_RX_IP_CKSUM_BAD)) {
+		if (pktin_cfg->bit.drop_ipv4_err)
+			return -1;
+
+		pkt_hdr->p.error_flags.ip_err = 1;
+	}
+
+	if (pktin_cfg->bit.udp_chksum &&
+	    HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_UDP) &&
+	    HAS_L4_CSUM_FLAG(mbuf, PKT_RX_L4_CKSUM_BAD)) {
+		if (pktin_cfg->bit.drop_udp_err)
+			return -1;
+
+		pkt_hdr->p.error_flags.udp_err = 1;
+	} else if (pktin_cfg->bit.tcp_chksum &&
+		   HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_TCP)  &&
+		   HAS_L4_CSUM_FLAG(mbuf, PKT_RX_L4_CKSUM_BAD)) {
+		if (pktin_cfg->bit.drop_tcp_err)
+			return -1;
+
+		pkt_hdr->p.error_flags.tcp_err = 1;
+	}
+
+	return 0;
+}
+
 static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 			      odp_packet_t pkt_table[],
 			      struct rte_mbuf *mbuf_table[],
@@ -323,6 +371,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	int nb_pkts = 0;
 	int alloc_len, num;
 	odp_pool_t pool = __retrieve_op_data(pktio_entry)->pool;
+	odp_pktin_config_opt_t *pktin_cfg = &pktio_entry->s.config.pktin;
 
 	/* Allocate maximum sized packets */
 	alloc_len = __retrieve_op_data(pktio_entry)->data_room;
@@ -377,6 +426,14 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 
 		packet_set_ts(pkt_hdr, ts);
 
+		if (pktin_cfg->all_bits & PKTIN_CSUM_BITS) {
+			if (pkt_set_ol_rx(pktin_cfg, pkt_hdr, mbuf)) {
+				odp_packet_free(pkt);
+				rte_pktmbuf_free(mbuf);
+				continue;
+			}
+		}
+
 		pkt_table[nb_pkts++] = pkt;
 
 		rte_pktmbuf_free(mbuf);
@@ -393,6 +450,95 @@ fail:
 	return (i > 0 ? i : -1);
 }
 
+static inline int check_proto(void *l3_hdr, odp_bool_t *l3_proto_v4,
+			      uint8_t *l4_proto)
+{
+	uint8_t l3_proto_ver = _ODP_IPV4HDR_VER(*(uint8_t *)l3_hdr);
+
+	if (l3_proto_ver == _ODP_IPV4) {
+		struct ipv4_hdr *ip = (struct ipv4_hdr *)l3_hdr;
+
+		*l3_proto_v4 = 1;
+		if (!rte_ipv4_frag_pkt_is_fragmented(ip))
+			*l4_proto = ip->next_proto_id;
+		else
+			*l4_proto = 0;
+
+		return 0;
+	} else if (l3_proto_ver == _ODP_IPV6) {
+		struct ipv6_hdr *ipv6 = (struct ipv6_hdr *)l3_hdr;
+
+		*l3_proto_v4 = 0;
+		*l4_proto = ipv6->proto;
+		return 0;
+	}
+
+	return -1;
+}
+
+static inline uint16_t phdr_csum(odp_bool_t ipv4, void *l3_hdr,
+				 uint64_t ol_flags)
+{
+	if (ipv4)
+		return rte_ipv4_phdr_cksum(l3_hdr, ol_flags);
+	else /*ipv6*/
+		return rte_ipv6_phdr_cksum(l3_hdr, ol_flags);
+}
+
+static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
+				 odp_packet_hdr_t *pkt_hdr,
+				 struct rte_mbuf *mbuf,
+				 char *mbuf_data)
+{
+	void *l3_hdr, *l4_hdr;
+	uint8_t l4_proto;
+	odp_bool_t l3_proto_v4;
+	odp_bool_t ipv4_chksum_pkt, udp_chksum_pkt, tcp_chksum_pkt;
+	packet_parser_t *pkt_p = &pkt_hdr->p;
+
+	l3_hdr = (void *)(mbuf_data + pkt_p->l3_offset);
+
+	if (check_proto(l3_hdr, &l3_proto_v4, &l4_proto))
+		return;
+
+	ipv4_chksum_pkt = pktout_cfg->bit.ipv4_chksum && l3_proto_v4;
+	udp_chksum_pkt =  pktout_cfg->bit.udp_chksum &&
+		(l4_proto == _ODP_IPPROTO_UDP);
+	tcp_chksum_pkt = pktout_cfg->bit.tcp_chksum &&
+			(l4_proto == _ODP_IPPROTO_TCP);
+
+	if (!ipv4_chksum_pkt && !udp_chksum_pkt && !tcp_chksum_pkt)
+			return;
+
+	mbuf->l2_len = pkt_p->l3_offset - pkt_p->l2_offset;
+	mbuf->l3_len = pkt_p->l4_offset - pkt_p->l3_offset;
+
+	if (l3_proto_v4)
+		mbuf->ol_flags = PKT_TX_IPV4;
+	else
+		mbuf->ol_flags = PKT_TX_IPV6;
+
+	if (ipv4_chksum_pkt) {
+		mbuf->ol_flags |=  PKT_TX_IP_CKSUM;
+
+		((struct ipv4_hdr *)l3_hdr)->hdr_checksum = 0;
+	}
+
+	l4_hdr = (void *)(mbuf_data + pkt_p->l4_offset);
+
+	if (udp_chksum_pkt) {
+		mbuf->ol_flags |= PKT_TX_UDP_CKSUM;
+
+		((struct udp_hdr *)l4_hdr)->dgram_cksum =
+			phdr_csum(l3_proto_v4, l3_hdr, mbuf->ol_flags);
+	} else if (tcp_chksum_pkt) {
+		mbuf->ol_flags |= PKT_TX_TCP_CKSUM;
+
+		((struct tcp_hdr *)l4_hdr)->cksum =
+			phdr_csum(l3_proto_v4, l3_hdr, mbuf->ol_flags);
+	}
+}
+
 static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 			      struct rte_mbuf *mbuf_table[],
 			      const odp_packet_t pkt_table[], uint16_t num)
@@ -402,6 +548,7 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 	int i, j;
 	char *data;
 	uint16_t pkt_len;
+	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
 
 	if (odp_unlikely((rte_pktmbuf_alloc_bulk(pkt_dpdk->pkt_pool,
 						 mbuf_table, num)))) {
@@ -421,6 +568,11 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 		data = rte_pktmbuf_append(mbuf_table[i], pkt_len);
 
 		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
+
+		if (pktout_cfg->all_bits)
+			pkt_set_ol_tx(pktout_cfg,
+				      odp_packet_hdr(pkt_table[i]),
+				      mbuf_table[i], data);
 	}
 	return i;
 
@@ -444,6 +596,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 	int i;
 	int nb_pkts = 0;
 	odp_pool_t pool = __retrieve_op_data(pktio_entry)->pool;
+	odp_pktin_config_opt_t *pktin_cfg = &pktio_entry->s.config.pktin;
 
 	for (i = 0; i < mbuf_num; i++) {
 		odp_packet_hdr_t parsed_hdr;
@@ -489,6 +642,13 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 
 		packet_set_ts(pkt_hdr, ts);
 
+		if (pktin_cfg->all_bits & PKTIN_CSUM_BITS) {
+			if (pkt_set_ol_rx(pktin_cfg, pkt_hdr, mbuf)) {
+				rte_pktmbuf_free(mbuf);
+				continue;
+			}
+		}
+
 		pkt_table[nb_pkts++] = pkt;
 	}
 
@@ -498,13 +658,13 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 				   struct rte_mbuf *mbuf_table[],
 				   const odp_packet_t pkt_table[], uint16_t num,
-				   uint16_t *seg_count)
+				   uint16_t *copy_count)
 {
 	pktio_ops_dpdk_data_t *pkt_dpdk =
 		__retrieve_op_data(pktio_entry);
+	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
 	int i;
-
-	*seg_count = 0;
+	*copy_count = 0;
 
 	for (i = 0; i < num; i++) {
 		odp_packet_t pkt = pkt_table[i];
@@ -516,20 +676,34 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 		if (odp_unlikely(pkt_len > pkt_dpdk->mtu))
 			goto fail;
 
-		if (odp_likely(pkt_hdr->buf_hdr.segcount == 1)) {
-			if (odp_unlikely(pkt_hdr->extra_type !=
-					 PKT_EXTRA_TYPE_DPDK))
-				mbuf_init(pkt_dpdk->pkt_pool, mbuf, pkt_hdr);
-
+		if (odp_likely(pkt_hdr->buf_hdr.segcount == 1 &&
+			       pkt_hdr->extra_type == PKT_EXTRA_TYPE_DPDK)) {
 			mbuf_update(mbuf, pkt_hdr, pkt_len);
-		} else {
-			/* Fall back to packet copy */
-			if (odp_unlikely(pkt_to_mbuf(pktio_entry, &mbuf,
-						     &pkt, 1) != 1))
-				goto fail;
-			(*seg_count)++;
-		}
 
+			if (pktout_cfg->all_bits)
+				pkt_set_ol_tx(pktout_cfg, pkt_hdr,
+					      mbuf, odp_packet_data(pkt));
+		} else {
+			pool_t *pool_entry = pkt_hdr->buf_hdr.pool_ptr;
+
+			if (pkt_hdr->buf_hdr.segcount != 1 ||
+			    !pool_entry->mem_from_huge_pages) {
+				/* Fall back to packet copy */
+				if (odp_unlikely(pkt_to_mbuf(pktio_entry, &mbuf,
+							     &pkt, 1) != 1))
+					goto fail;
+				(*copy_count)++;
+
+			} else {
+				mbuf_init(pkt_dpdk->pkt_pool, mbuf,
+					  pkt_hdr);
+				mbuf_update(mbuf, pkt_hdr, pkt_len);
+				if (pktout_cfg->all_bits)
+					pkt_set_ol_tx(pktout_cfg, pkt_hdr,
+						      mbuf,
+						      odp_packet_data(pkt));
+			}
+		}
 		mbuf_table[i] = mbuf;
 	}
 	return i;
@@ -673,6 +847,7 @@ static int dpdk_setup_port(pktio_entry_t *pktio_entry)
 	pktio_ops_dpdk_data_t *pkt_dpdk =
 		__retrieve_op_data(pktio_entry);
 	struct rte_eth_rss_conf rss_conf;
+	uint16_t hw_ip_checksum = 0;
 
 	/* Always set some hash functions to enable DPDK RSS hash calculation */
 	if (pkt_dpdk->hash.all_bits == 0) {
@@ -682,12 +857,17 @@ static int dpdk_setup_port(pktio_entry_t *pktio_entry)
 		rss_conf_to_hash_proto(&rss_conf, &pkt_dpdk->hash);
 	}
 
+	if (pktio_entry->s.config.pktin.bit.ipv4_chksum ||
+	    pktio_entry->s.config.pktin.bit.udp_chksum ||
+	    pktio_entry->s.config.pktin.bit.tcp_chksum)
+		hw_ip_checksum = 1;
+
 	struct rte_eth_conf port_conf = {
 		.rxmode = {
 			.mq_mode = ETH_MQ_RX_RSS,
 			.split_hdr_size = 0,
 			.header_split   = 0,
-			.hw_ip_checksum = 0,
+			.hw_ip_checksum = hw_ip_checksum,
 			.hw_vlan_filter = 0,
 			.hw_strip_crc   = 0,
 			.enable_scatter = 0,
@@ -908,6 +1088,11 @@ static void dpdk_init_capability(pktio_entry_t *pktio_entry,
 	pktio_ops_dpdk_data_t *pkt_dpdk =
 		__retrieve_op_data(pktio_entry);
 	odp_pktio_capability_t *capa = &pkt_dpdk->capa;
+	int ptype_cnt;
+	int ptype_l3_ipv4 = 0;
+	int ptype_l4_tcp = 0;
+	int ptype_l4_udp = 0;
+	uint32_t ptype_mask = RTE_PTYPE_L3_MASK | RTE_PTYPE_L4_MASK;
 
 	memset(dev_info, 0, sizeof(struct rte_eth_dev_info));
 	memset(capa, 0, sizeof(odp_pktio_capability_t));
@@ -919,9 +1104,58 @@ static void dpdk_init_capability(pktio_entry_t *pktio_entry,
 					  PKTIO_MAX_QUEUES);
 	capa->set_op.op.promisc_mode = 1;
 
+	ptype_cnt = rte_eth_dev_get_supported_ptypes(pkt_dpdk->port_id,
+						     ptype_mask, NULL, 0);
+	if (ptype_cnt > 0) {
+		uint32_t ptypes[ptype_cnt];
+		int i;
+
+		ptype_cnt = rte_eth_dev_get_supported_ptypes(pkt_dpdk->port_id,
+							     ptype_mask, ptypes,
+							     ptype_cnt);
+		for (i = 0; i < ptype_cnt; i++)
+			switch (ptypes[i]) {
+			case RTE_PTYPE_L3_IPV4:
+			/* Fall through */
+			case RTE_PTYPE_L3_IPV4_EXT_UNKNOWN:
+			/* Fall through */
+			case RTE_PTYPE_L3_IPV4_EXT:
+				ptype_l3_ipv4 = 1;
+				break;
+			case RTE_PTYPE_L4_TCP:
+				ptype_l4_tcp = 1;
+				break;
+			case RTE_PTYPE_L4_UDP:
+				ptype_l4_udp = 1;
+				break;
+			}
+	}
+
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
 	capa->config.pktin.bit.ts_ptp = 1;
+
+	capa->config.pktin.bit.ipv4_chksum = ptype_l3_ipv4 &&
+		(dev_info->rx_offload_capa & DEV_RX_OFFLOAD_IPV4_CKSUM) ? 1 : 0;
+	if (capa->config.pktin.bit.ipv4_chksum)
+		capa->config.pktin.bit.drop_ipv4_err = 1;
+
+	capa->config.pktin.bit.udp_chksum = ptype_l4_udp &&
+		(dev_info->rx_offload_capa & DEV_RX_OFFLOAD_UDP_CKSUM) ? 1 : 0;
+	if (capa->config.pktin.bit.udp_chksum)
+		capa->config.pktin.bit.drop_udp_err = 1;
+
+	capa->config.pktin.bit.tcp_chksum = ptype_l4_tcp &&
+		(dev_info->rx_offload_capa & DEV_RX_OFFLOAD_TCP_CKSUM) ? 1 : 0;
+	if (capa->config.pktin.bit.tcp_chksum)
+		capa->config.pktin.bit.drop_tcp_err = 1;
+
+	capa->config.pktout.bit.ipv4_chksum =
+		(dev_info->tx_offload_capa & DEV_TX_OFFLOAD_IPV4_CKSUM) ? 1 : 0;
+	capa->config.pktout.bit.udp_chksum =
+		(dev_info->tx_offload_capa & DEV_TX_OFFLOAD_UDP_CKSUM) ? 1 : 0;
+	capa->config.pktout.bit.tcp_chksum =
+		(dev_info->tx_offload_capa & DEV_TX_OFFLOAD_TCP_CKSUM) ? 1 : 0;
 }
 
 static int dpdk_open(odp_pktio_t id ODP_UNUSED,
@@ -1182,7 +1416,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	struct rte_mbuf *tx_mbufs[num];
 	pktio_ops_dpdk_data_t *pkt_dpdk =
 		__retrieve_op_data(pktio_entry);
-	uint16_t seg_count = 0;
+	uint16_t copy_count = 0;
 	int tx_pkts;
 	int i;
 	int mbufs;
@@ -1192,7 +1426,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 
 	if (ODP_DPDK_ZERO_COPY)
 		mbufs = pkt_to_mbuf_zero(pktio_entry, tx_mbufs, pkt_table, num,
-					 &seg_count);
+					 &copy_count);
 	else
 		mbufs = pkt_to_mbuf(pktio_entry, tx_mbufs, pkt_table, num);
 
@@ -1206,11 +1440,11 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 		odp_ticketlock_unlock(&pkt_dpdk->tx_lock[index]);
 
 	if (ODP_DPDK_ZERO_COPY) {
-		/* Free copied segmented packets */
-		if (odp_unlikely(seg_count)) {
+		/* Free copied packets */
+		if (odp_unlikely(copy_count)) {
 			uint16_t freed = 0;
 
-			for (i = 0; i < mbufs && freed != seg_count; i++) {
+			for (i = 0; i < mbufs && freed != copy_count; i++) {
 				odp_packet_t pkt = pkt_table[i];
 				odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 

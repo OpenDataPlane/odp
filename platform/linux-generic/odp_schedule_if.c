@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 #include <odp_schedule_if.h>
 
 extern const schedule_fn_t schedule_sp_fn;

@@ -41,7 +41,7 @@ ODP_SUBSYSTEM_API(queue, odp_schedule_sync_t, sched_type, odp_queue_t queue);
 ODP_SUBSYSTEM_API(queue, odp_schedule_prio_t, sched_prio, odp_queue_t queue);
 ODP_SUBSYSTEM_API(queue, odp_schedule_group_t, sched_group,
 		  odp_queue_t queue);
-ODP_SUBSYSTEM_API(queue, int, lock_count, odp_queue_t queue);
+ODP_SUBSYSTEM_API(queue, uint32_t, lock_count, odp_queue_t queue);
 ODP_SUBSYSTEM_API(queue, uint64_t, to_u64, odp_queue_t hdl);
 ODP_SUBSYSTEM_API(queue, void, param_init, odp_queue_param_t *param);
 ODP_SUBSYSTEM_API(queue, int, info, odp_queue_t queue,

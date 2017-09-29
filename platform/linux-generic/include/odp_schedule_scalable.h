@@ -22,8 +22,12 @@
  * constants, but not ODP_SCHED_PRIO_NUM. The current API for this
  * is odp_schedule_num_prio(). The other schedulers also define
  * this internally as NUM_PRIO.
+ *
+ * One additional priority level for idle pktin queues.
+ * This is only for internal use and not visible to the user.
  */
-#define ODP_SCHED_PRIO_NUM  8
+#define ODP_SCHED_PRIO_PKTIN 8
+#define ODP_SCHED_PRIO_NUM  9
 
 typedef struct {
 	union {
@@ -55,14 +59,18 @@ typedef uint32_t ringidx_t;
 #define ODP_NO_SCHED_QUEUE (ODP_SCHED_SYNC_ORDERED + 1)
 
 typedef struct {
-	struct llnode node;  /* must be first */
+	struct llnode node;
 	sched_queue_t *schedq;
 #ifdef CONFIG_QSCHST_LOCK
 	odp_ticketlock_t qschlock;
 #endif
 	qschedstate_t qschst;
-	uint16_t pop_deficit;
-	uint16_t qschst_type;
+	uint8_t pop_deficit;
+	uint8_t qschst_type;
+	uint8_t pktio_idx;
+	uint8_t rx_queue;
+	uint16_t xoffset;
+	uint8_t sched_prio;
 	ringidx_t prod_read SPLIT_PC;
 	ringidx_t prod_write;
 	ringidx_t prod_mask;
@@ -80,6 +88,7 @@ typedef struct {
 #define cons_ring prod_ring
 #define cons_type qschst_type
 #endif
+	odp_schedule_group_t sched_grp;
 } sched_elem_t ODP_ALIGNED_CACHE;
 
 /* Number of scheduling groups */
@@ -106,6 +115,8 @@ typedef struct {
 typedef struct {
 	/* Atomic queue currently being processed or NULL */
 	sched_elem_t *atomq;
+	/* Schedq the currently processed queue was popped from */
+	sched_queue_t *src_schedq;
 	/* Current reorder context or NULL */
 	reorder_context_t *rctx;
 	uint8_t pause;
@@ -113,8 +124,6 @@ typedef struct {
 	uint8_t tidx;
 	uint8_t pad;
 	uint32_t dequeued; /* Number of events dequeued from atomic queue */
-	uint16_t pktin_next; /* Next pktin tag to poll */
-	uint16_t pktin_poll_cnts;
 	uint16_t ticket; /* Ticket for atomic queue or TICKET_INVALID */
 	uint16_t num_schedq;
 	uint16_t sg_sem; /* Set when sg_wanted is modified by other thread */
@@ -133,7 +142,7 @@ typedef struct {
 
 void sched_update_enq(sched_elem_t *q, uint32_t actual);
 void sched_update_enq_sp(sched_elem_t *q, uint32_t actual);
-sched_queue_t *schedq_from_sched_group(odp_schedule_group_t grp, uint32_t prio);
-void sched_group_xcount_dec(odp_schedule_group_t grp, uint32_t prio);
+sched_queue_t *sched_queue_add(odp_schedule_group_t grp, uint32_t prio);
+void sched_queue_rem(odp_schedule_group_t grp, uint32_t prio);
 
 #endif  /* ODP_SCHEDULE_SCALABLE_H */

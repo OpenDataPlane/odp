@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 #include "odph_debug.h"
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
@@ -108,9 +110,17 @@ int main(int argc ODPH_UNUSED, char *argv[] ODPH_UNUSED)
 				       ODPH_IPV4HDR_LEN);
 	ip->proto = ODPH_IPPROTO_UDP;
 	ip->id = odp_cpu_to_be_16(1);
-	ip->chksum = 0;
 	odp_packet_has_ipv4_set(test_packet, 1);
-	odph_ipv4_csum_update(test_packet);
+	if (odph_ipv4_csum_update(test_packet) < 0)
+		status = -1;
+
+	if (!odph_ipv4_csum_valid(test_packet))
+		status = -1;
+
+	printf("IP chksum = 0x%x\n", odp_be_to_cpu_16(ip->chksum));
+
+	if (odp_be_to_cpu_16(ip->chksum) != 0x3965)
+		status = -1;
 
 	/* udp */
 	odp_packet_l4_offset_set(test_packet, ODPH_ETHHDR_LEN

@@ -4,10 +4,13 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 #include <odp/api/pool.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/align.h>
 #include <odp/api/ticketlock.h>
+#include <odp/api/system_info.h>
 
 #include <odp_pool_internal.h>
 #include <odp_internal.h>
@@ -36,6 +39,9 @@ ODP_STATIC_ASSERT(CONFIG_POOL_CACHE_SIZE > (2 * CACHE_BURST),
 
 ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_LEN_MIN >= 256,
 		  "ODP Segment size must be a minimum of 256 bytes");
+
+ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_SIZE < 0xffff,
+		  "Segment size must be less than 64k (16 bit offsets)");
 
 pool_table_t *pool_tbl;
 __thread pool_local_t local;
@@ -233,11 +239,16 @@ static void init_buffers(pool_t *pool)
 		/* Show user requested size through API */
 		buf_hdr->uarea_size = pool->params.pkt.uarea_size;
 		buf_hdr->segcount = 1;
+		buf_hdr->num_seg  = 1;
+		buf_hdr->next_seg = NULL;
+		buf_hdr->last_seg = buf_hdr;
 
 		/* Pointer to data start (of the first segment) */
 		buf_hdr->seg[0].hdr       = buf_hdr;
 		buf_hdr->seg[0].data      = &data[offset];
 		buf_hdr->seg[0].len       = pool->data_size;
+
+		odp_atomic_init_u32(&buf_hdr->ref_cnt, 0);
 
 		/* Store base values for fast init */
 		buf_hdr->base_data = buf_hdr->seg[0].data;
@@ -247,6 +258,22 @@ static void init_buffers(pool_t *pool)
 		/* Store buffer index into the global pool */
 		ring_enq(ring, mask, i);
 	}
+}
+
+static bool shm_is_from_huge_pages(odp_shm_t shm)
+{
+	odp_shm_info_t info;
+	uint64_t huge_page_size = odp_sys_huge_page_size();
+
+	if (huge_page_size == 0)
+		return 0;
+
+	if (odp_shm_info(shm, &info)) {
+		ODP_ERR("Failed to fetch shm info\n");
+		return 0;
+	}
+
+	return (info.page_size >= huge_page_size);
 }
 
 static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
@@ -296,6 +323,10 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 		break;
 
 	case ODP_POOL_PACKET:
+		if (params->pkt.headroom > CONFIG_PACKET_HEADROOM) {
+			ODP_ERR("Packet headroom size not supported.");
+			return ODP_POOL_INVALID;
+		}
 		headroom    = CONFIG_PACKET_HEADROOM;
 		tailroom    = CONFIG_PACKET_TAILROOM;
 		num         = params->pkt.num;
@@ -373,6 +404,8 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 		ODP_ERR("Shm reserve failed");
 		goto error;
 	}
+
+	pool->mem_from_huge_pages = shm_is_from_huge_pages(pool->shm);
 
 	pool->base_addr = odp_shm_addr(pool->shm);
 
@@ -484,10 +517,8 @@ static odp_pool_t generic_pool_create(const char *name,
 	if (check_params(params))
 		return ODP_POOL_INVALID;
 
-#ifdef _ODP_PKTIO_IPC
 	if (params && (params->type == ODP_POOL_PACKET))
 		shm_flags = ODP_SHM_PROC;
-#endif
 
 	return pool_create(name, params, shm_flags);
 }
@@ -584,6 +615,7 @@ static int generic_pool_capability(odp_pool_capability_t *capa)
 	capa->pkt.max_len          = CONFIG_PACKET_MAX_SEGS * max_seg_len;
 	capa->pkt.max_num	   = CONFIG_POOL_MAX_NUM;
 	capa->pkt.min_headroom     = CONFIG_PACKET_HEADROOM;
+	capa->pkt.max_headroom     = CONFIG_PACKET_HEADROOM;
 	capa->pkt.min_tailroom     = CONFIG_PACKET_TAILROOM;
 	capa->pkt.max_segs_per_pkt = CONFIG_PACKET_MAX_SEGS;
 	capa->pkt.min_seg_len      = max_seg_len;
@@ -636,6 +668,7 @@ static void generic_pool_print(odp_pool_t pool_hdl)
 static void generic_pool_param_init(odp_pool_param_t *params)
 {
 	memset(params, 0, sizeof(odp_pool_param_t));
+	params->pkt.headroom = CONFIG_PACKET_HEADROOM;
 }
 
 static uint64_t generic_pool_to_u64(odp_pool_t hdl)

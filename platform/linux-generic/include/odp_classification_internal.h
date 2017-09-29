@@ -49,13 +49,6 @@ This function should be called during pktio initialization.
 **/
 int pktio_classifier_init(pktio_entry_t *pktio);
 
-void _odp_cls_update_hash_proto(cos_t *cos,
-				odp_pktin_hash_proto_t hash_proto);
-
-uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
-			 odp_cls_hash_proto_t hash_proto,
-			 const uint8_t *base);
-
 #ifdef __cplusplus
 }
 #endif

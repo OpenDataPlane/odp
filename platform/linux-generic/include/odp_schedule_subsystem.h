@@ -47,6 +47,8 @@ ODP_SUBSYSTEM_API(schedule, int, schedule_group_info,
 		  odp_schedule_group_t group, odp_schedule_group_info_t *info);
 ODP_SUBSYSTEM_API(schedule, void, schedule_order_lock, unsigned lock_index);
 ODP_SUBSYSTEM_API(schedule, void, schedule_order_unlock, unsigned lock_index);
+ODP_SUBSYSTEM_API(schedule, void, schedule_order_unlock_lock,
+		  uint32_t unlock_index, uint32_t lock_index);
 
 typedef ODP_MODULE_CLASS(schedule) {
 	odp_module_base_t base;
@@ -65,6 +67,7 @@ typedef ODP_MODULE_CLASS(schedule) {
 	odp_api_proto(schedule, schedule_prefetch) schedule_prefetch;
 	odp_api_proto(schedule, schedule_order_lock) schedule_order_lock;
 	odp_api_proto(schedule, schedule_order_unlock) schedule_order_unlock;
+	odp_api_proto(schedule, schedule_order_unlock_lock) schedule_order_unlock_lock;
 	odp_api_proto(schedule, schedule_release_atomic)
 		schedule_release_atomic;
 	odp_api_proto(schedule, schedule_release_ordered)

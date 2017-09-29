@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 /**
  * @file
  *
@@ -42,7 +44,7 @@ static int ipc_second_process(int master_pid)
 
 	pool = odp_pool_create(TEST_IPC_POOL_NAME, &params);
 	if (pool == ODP_POOL_INVALID) {
-		EXAMPLE_ERR("Error: packet pool create failed.\n");
+		LOG_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -75,7 +77,7 @@ static int ipc_second_process(int master_pid)
 
 	if (odp_pktin_queue(ipc_pktio, &pktin, 1) != 1) {
 		odp_pool_destroy(pool);
-		EXAMPLE_ERR("no input queue\n");
+		LOG_ERR("no input queue\n");
 		return -1;
 	}
 
@@ -103,8 +105,8 @@ static int ipc_second_process(int master_pid)
 			cycle = odp_time_local();
 			diff = odp_time_diff(cycle, start_cycle);
 			if (odp_time_cmp(wait, diff) < 0) {
-				EXAMPLE_DBG("exit after %d seconds\n",
-					    run_time_sec);
+				LOG_DBG("exit after %d seconds\n",
+					run_time_sec);
 				break;
 			}
 		}
@@ -121,7 +123,7 @@ static int ipc_second_process(int master_pid)
 
 			off = odp_packet_l4_offset(pkt);
 			if (off ==  ODP_PACKET_OFFSET_INVALID) {
-				EXAMPLE_ERR("invalid l4 offset\n");
+				LOG_ERR("invalid l4 offset\n");
 				for (int j = i; j < pkts; j++)
 					odp_packet_free(pkt_tbl[j]);
 				break;
@@ -131,10 +133,10 @@ static int ipc_second_process(int master_pid)
 			ret = odp_packet_copy_to_mem(pkt, off, sizeof(head),
 						     &head);
 			if (ret)
-				EXAMPLE_ABORT("unable copy out head data");
+				LOG_ABORT("unable copy out head data");
 
 			if (head.magic != TEST_SEQ_MAGIC) {
-				EXAMPLE_ERR("Wrong head magic! %x", head.magic);
+				LOG_ERR("Wrong head magic! %x", head.magic);
 				for (int j = i; j < pkts; j++)
 					odp_packet_free(pkt_tbl[j]);
 				break;
@@ -145,13 +147,13 @@ static int ipc_second_process(int master_pid)
 			ret = odp_packet_copy_from_mem(pkt, off, sizeof(head),
 						       &head);
 			if (ret)
-				EXAMPLE_ABORT("unable to copy in head data");
+				LOG_ABORT("unable to copy in head data");
 		}
 
 		/* send all packets back */
 		ret = ipc_odp_packet_send_or_free(ipc_pktio, pkt_tbl, i);
 		if (ret < 0)
-			EXAMPLE_ABORT("can not send packets\n");
+			LOG_ABORT("can not send packets\n");
 
 		stat_pkts += ret;
 
@@ -172,13 +174,13 @@ static int ipc_second_process(int master_pid)
 						       sizeof(head),
 						       &head);
 			if (ret)
-				EXAMPLE_ABORT("unable to copy in head data");
+				LOG_ABORT("unable to copy in head data");
 
 			pkt_tbl[0] = alloc_pkt;
 			ret = ipc_odp_packet_send_or_free(ipc_pktio,
 							  pkt_tbl, 1);
 			if (ret < 0)
-				EXAMPLE_ABORT("can not send packets\n");
+				LOG_ABORT("can not send packets\n");
 			stat_pkts += 1;
 		}
 	}
@@ -186,20 +188,20 @@ static int ipc_second_process(int master_pid)
 	/* cleanup and exit */
 	ret = odp_pktio_stop(ipc_pktio);
 	if (ret) {
-		EXAMPLE_DBG("ipc2: odp_pktio_stop error %d\n", ret);
+		LOG_DBG("ipc2: odp_pktio_stop error %d\n", ret);
 		return -1;
 	}
 
 not_started:
 	ret = odp_pktio_close(ipc_pktio);
 	if (ret) {
-		EXAMPLE_DBG("ipc2: odp_pktio_close error %d\n", ret);
+		LOG_DBG("ipc2: odp_pktio_close error %d\n", ret);
 		return -1;
 	}
 
 	ret = odp_pool_destroy(pool);
 	if (ret)
-		EXAMPLE_DBG("ipc2: pool_destroy error %d\n", ret);
+		LOG_DBG("ipc2: pool_destroy error %d\n", ret);
 
 	return stat_pkts > 1000 ? 0 : -1;
 }
@@ -217,7 +219,7 @@ int main(int argc, char *argv[])
 	parse_args(argc, argv);
 
 	if (odp_init_global(&instance, NULL, NULL)) {
-		EXAMPLE_ERR("Error: ODP global init failed.\n");
+		LOG_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -241,19 +243,19 @@ int main(int argc, char *argv[])
 
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_WORKER)) {
-		EXAMPLE_ERR("Error: ODP local init failed.\n");
+		LOG_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	ret = ipc_second_process(master_pid);
 
 	if (odp_term_local()) {
-		EXAMPLE_ERR("Error: odp_term_local() failed.\n");
+		LOG_ERR("Error: odp_term_local() failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_global(instance)) {
-		EXAMPLE_ERR("Error: odp_term_global() failed.\n");
+		LOG_ERR("Error: odp_term_global() failed.\n");
 		exit(EXIT_FAILURE);
 	}
 

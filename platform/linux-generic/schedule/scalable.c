@@ -5,6 +5,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
+#include <config.h>
 
 #include <odp/api/align.h>
 #include <odp/api/atomic.h>
@@ -40,42 +41,17 @@
 #define LOCK(a) _odp_ticketlock_lock((a))
 #define UNLOCK(a) _odp_ticketlock_unlock((a))
 
-#define TAG_EMPTY 0U
-#define TAG_USED (1U << 15)
-#define TAG_BUSY (1U << 31)
-#define PKTIO_QUEUE_2_TAG(p, q) ((p) << 16 | (q) | TAG_USED)
-#define TAG_2_PKTIO(t) (((t) >> 16) & 0x7FFF)
-#define TAG_2_QUEUE(t) ((t) & 0x7FFF)
-#define TAG_IS_READY(t) (((t) & (TAG_USED | TAG_BUSY)) == TAG_USED)
-#define PKTIN_MAX (ODP_CONFIG_PKTIO_ENTRIES * PKTIO_MAX_QUEUES)
 #define MAXTHREADS ATOM_BITSET_SIZE
 
+#define FLAG_PKTIN 0x80
+
 static _odp_ishm_pool_t *sched_shm_pool;
-static uint32_t pktin_num;
-static uint32_t pktin_hi;
-static uint16_t pktin_count[ODP_CONFIG_PKTIO_ENTRIES];
-static uint32_t pktin_tags[PKTIN_MAX] ODP_ALIGNED_CACHE;
 
-#define __atomic_fetch_max(var, v, mo) do { \
-		/* Evalulate 'v' once */ \
-		__typeof__(v) tmp_v = (v); \
-		__typeof__(*var) old_var = \
-			__atomic_load_n((var), __ATOMIC_RELAXED); \
-		while (tmp_v > old_var) { \
-			/* Attempt to store 'v' in '*var' */ \
-			if (__atomic_compare_exchange_n((var), &old_var, \
-							tmp_v, true, (mo), \
-							(mo))) \
-				break; \
-		} \
-		/* v <= old_var, nothing to do */ \
-	} while (0)
-
-ODP_STATIC_ASSERT(ODP_SCHED_PRIO_LOWEST == (ODP_SCHED_PRIO_NUM - 1),
+ODP_STATIC_ASSERT(ODP_SCHED_PRIO_LOWEST == (ODP_SCHED_PRIO_NUM - 2),
 		  "lowest_prio_does_not_match_with_num_prios");
 
 ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
-		  (ODP_SCHED_PRIO_NORMAL < (ODP_SCHED_PRIO_NUM - 1)),
+		  (ODP_SCHED_PRIO_NORMAL < (ODP_SCHED_PRIO_NUM - 2)),
 		  "normal_prio_is_not_between_highest_and_lowest");
 
 ODP_STATIC_ASSERT(CHECK_IS_POWER2(ODP_CONFIG_QUEUES),
@@ -88,7 +64,7 @@ ODP_STATIC_ASSERT(CHECK_IS_POWER2(ODP_CONFIG_QUEUES),
 static sched_group_mask_t sg_free;
 static sched_group_t *sg_vec[MAX_SCHED_GROUP];
 /* Group lock for MT-safe APIs */
-odp_spinlock_t sched_grp_lock;
+static odp_spinlock_t sched_grp_lock;
 
 #define SCHED_GROUP_JOIN 0
 #define SCHED_GROUP_LEAVE 1
@@ -99,9 +75,6 @@ odp_spinlock_t sched_grp_lock;
 static sched_scalable_thread_state_t thread_state[MAXTHREADS];
 __thread sched_scalable_thread_state_t *sched_ts;
 
-/*
- * Forward declarations.
- */
 static int thread_state_init(int tidx)
 {
 	sched_scalable_thread_state_t *ts;
@@ -110,13 +83,12 @@ static int thread_state_init(int tidx)
 	ODP_ASSERT(tidx < MAXTHREADS);
 	ts = &thread_state[tidx];
 	ts->atomq = NULL;
+	ts->src_schedq = NULL;
 	ts->rctx = NULL;
 	ts->pause = false;
 	ts->out_of_order = false;
 	ts->tidx = tidx;
 	ts->dequeued = 0;
-	ts->pktin_next = 0;
-	ts->pktin_poll_cnts = 0;
 	ts->ticket = TICKET_INVALID;
 	ts->priv_rvec_free = 0;
 	ts->rvec_free = (1ULL << TS_RVEC_SIZE) - 1;
@@ -539,7 +511,25 @@ static inline void sched_update_popd(sched_elem_t *elem)
 }
 #endif
 
-sched_queue_t *schedq_from_sched_group(odp_schedule_group_t grp, uint32_t prio)
+static void signal_threads_add(sched_group_t *sg, uint32_t sgi, uint32_t prio)
+{
+	sched_group_mask_t thrds = sg->thr_wanted;
+	uint32_t thr;
+
+	while (!bitset_is_null(thrds)) {
+		thr = bitset_ffs(thrds) - 1;
+		thrds = bitset_clr(thrds, thr);
+		/* Notify the thread about membership in this
+		 * group/priority.
+		 */
+		atom_bitset_set(&thread_state[thr].sg_wanted[prio],
+				sgi, __ATOMIC_RELEASE);
+		__atomic_store_n(&thread_state[thr].sg_sem, 1,
+				 __ATOMIC_RELEASE);
+	}
+}
+
+sched_queue_t *sched_queue_add(odp_schedule_group_t grp, uint32_t prio)
 {
 	uint32_t sgi;
 	sched_group_t *sg;
@@ -561,26 +551,46 @@ sched_queue_t *schedq_from_sched_group(odp_schedule_group_t grp, uint32_t prio)
 		 * Notify all threads in sg->thr_wanted that they
 		 * should join.
 		 */
-		sched_group_mask_t thrds = sg->thr_wanted;
-
-		while (!bitset_is_null(thrds)) {
-			uint32_t thr;
-
-			thr = bitset_ffs(thrds) - 1;
-			thrds = bitset_clr(thrds, thr);
-			/* Notify the thread about membership in this
-			 * group/priority.
-			 */
-			atom_bitset_set(&thread_state[thr].sg_wanted[prio],
-					sgi, __ATOMIC_RELEASE);
-			__atomic_store_n(&thread_state[thr].sg_sem, 1,
-					 __ATOMIC_RELEASE);
-		}
+		signal_threads_add(sg, sgi, prio);
 	}
 	return &sg->schedq[prio * sg->xfactor + x % sg->xfactor];
 }
 
-void sched_group_xcount_dec(odp_schedule_group_t grp, uint32_t prio)
+static uint32_t sched_pktin_add(odp_schedule_group_t grp, uint32_t prio)
+{
+	uint32_t sgi;
+	sched_group_t *sg;
+
+	ODP_ASSERT(grp >= 0 && grp < (odp_schedule_group_t)MAX_SCHED_GROUP);
+	ODP_ASSERT((sg_free & (1ULL << grp)) == 0);
+	ODP_ASSERT(prio < ODP_SCHED_PRIO_NUM);
+
+	sgi = grp;
+	sg = sg_vec[sgi];
+
+	(void)sched_queue_add(grp, ODP_SCHED_PRIO_PKTIN);
+	return (ODP_SCHED_PRIO_PKTIN - prio) * sg->xfactor;
+}
+
+static void signal_threads_rem(sched_group_t *sg, uint32_t sgi, uint32_t prio)
+{
+	sched_group_mask_t thrds = sg->thr_wanted;
+	uint32_t thr;
+
+	while (!bitset_is_null(thrds)) {
+		thr = bitset_ffs(thrds) - 1;
+		thrds = bitset_clr(thrds, thr);
+		/* Notify the thread about membership in this
+		 * group/priority.
+		 */
+		atom_bitset_clr(&thread_state[thr].sg_wanted[prio],
+				sgi, __ATOMIC_RELEASE);
+		__atomic_store_n(&thread_state[thr].sg_sem, 1,
+				 __ATOMIC_RELEASE);
+	}
+}
+
+void sched_queue_rem(odp_schedule_group_t grp, uint32_t prio)
 {
 	uint32_t sgi;
 	sched_group_t *sg;
@@ -594,26 +604,67 @@ void sched_group_xcount_dec(odp_schedule_group_t grp, uint32_t prio)
 	sg = sg_vec[sgi];
 	x = __atomic_sub_fetch(&sg->xcount[prio], 1, __ATOMIC_RELAXED);
 
+	x = __atomic_sub_fetch(&sg->xcount[prio], 1, __ATOMIC_RELAXED);
 	if (x == 0) {
 		/* Last ODP queue for this priority
 		 * Notify all threads in sg->thr_wanted that they
 		 * should leave.
 		 */
-		sched_group_mask_t thrds = sg->thr_wanted;
+		signal_threads_rem(sg, sgi, prio);
+	}
+}
 
-		while (!bitset_is_null(thrds)) {
-			uint32_t thr;
+static void sched_pktin_rem(odp_schedule_group_t grp)
+{
+	sched_queue_rem(grp, ODP_SCHED_PRIO_PKTIN);
+}
 
-			thr = bitset_ffs(thrds) - 1;
-			thrds = bitset_clr(thrds, thr);
-			/* Notify the thread about membership in this
-			 * group/priority.
+static void update_sg_add(sched_scalable_thread_state_t *ts,
+			  uint32_t p,
+			  sched_group_mask_t sg_wanted)
+{
+	sched_group_mask_t added;
+	uint32_t sgi;
+	sched_group_t *sg;
+	uint32_t x;
+
+	added = bitset_andn(sg_wanted, ts->sg_actual[p]);
+	while (!bitset_is_null(added)) {
+		sgi = bitset_ffs(added) - 1;
+		sg = sg_vec[sgi];
+		for (x = 0; x < sg->xfactor; x++) {
+			/* Include our thread index to shift
+			 * (rotate) the order of schedq's
 			 */
-			atom_bitset_clr(&thread_state[thr].sg_wanted[prio],
-					sgi, __ATOMIC_RELEASE);
-			__atomic_store_n(&thread_state[thr].sg_sem, 1,
-					 __ATOMIC_RELEASE);
+			insert_schedq_in_list(ts,
+					      &sg->schedq[p * sg->xfactor +
+					      (x + ts->tidx) % sg->xfactor]);
 		}
+		atom_bitset_set(&sg->thr_actual[p], ts->tidx, __ATOMIC_RELAXED);
+		added = bitset_clr(added, sgi);
+	}
+}
+
+static void update_sg_rem(sched_scalable_thread_state_t *ts,
+			  uint32_t p,
+			  sched_group_mask_t sg_wanted)
+{
+	sched_group_mask_t removed;
+	uint32_t sgi;
+	sched_group_t *sg;
+	uint32_t x;
+
+	removed = bitset_andn(ts->sg_actual[p], sg_wanted);
+	while (!bitset_is_null(removed)) {
+		sgi = bitset_ffs(removed) - 1;
+		sg = sg_vec[sgi];
+		for (x = 0; x < sg->xfactor; x++) {
+			remove_schedq_from_list(ts,
+						&sg->schedq[p *
+						sg->xfactor + x]);
+		}
+		atom_bitset_clr(&sg->thr_actual[p], ts->tidx, __ATOMIC_RELAXED);
+		removed = bitset_clr(removed, sgi);
 	}
 }
 
@@ -621,48 +672,14 @@ static void update_sg_membership(sched_scalable_thread_state_t *ts)
 {
 	uint32_t p;
 	sched_group_mask_t sg_wanted;
-	sched_group_mask_t added;
-	sched_group_mask_t removed;
-	uint32_t sgi;
-	sched_group_t *sg;
-	uint32_t x;
 
 	for (p = 0; p < ODP_SCHED_PRIO_NUM; p++) {
 		sg_wanted = atom_bitset_load(&ts->sg_wanted[p],
 					     __ATOMIC_ACQUIRE);
 		if (!bitset_is_eql(ts->sg_actual[p], sg_wanted)) {
 			/* Our sched_group membership has changed */
-			added = bitset_andn(sg_wanted, ts->sg_actual[p]);
-			while (!bitset_is_null(added)) {
-				sgi = bitset_ffs(added) - 1;
-				sg = sg_vec[sgi];
-				for (x = 0; x < sg->xfactor; x++) {
-					/* Include our thread index to shift
-					 * (rotate) the order of schedq's
-					 */
-					insert_schedq_in_list
-						(ts,
-						 &sg->schedq[p * sg->xfactor +
-						 (x + ts->tidx) % sg->xfactor]);
-				}
-				atom_bitset_set(&sg->thr_actual[p], ts->tidx,
-						__ATOMIC_RELAXED);
-				added = bitset_clr(added, sgi);
-			}
-			removed = bitset_andn(ts->sg_actual[p], sg_wanted);
-			while (!bitset_is_null(removed)) {
-				sgi = bitset_ffs(removed) - 1;
-				sg = sg_vec[sgi];
-				for (x = 0; x < sg->xfactor; x++) {
-					remove_schedq_from_list
-						(ts,
-						 &sg->schedq[p *
-						 sg->xfactor + x]);
-				}
-				atom_bitset_clr(&sg->thr_actual[p], ts->tidx,
-						__ATOMIC_RELAXED);
-				removed = bitset_clr(removed, sgi);
-			}
+			update_sg_add(ts, p, sg_wanted);
+			update_sg_rem(ts, p, sg_wanted);
 			ts->sg_actual[p] = sg_wanted;
 		}
 	}
@@ -693,61 +710,180 @@ static inline void _schedule_release_ordered(sched_scalable_thread_state_t *ts)
 	ts->rctx = NULL;
 }
 
-static void poll_pktin(sched_scalable_thread_state_t *ts)
+static uint16_t poll_count[ODP_CONFIG_PKTIO_ENTRIES];
+
+static void pktio_start(int pktio_idx,
+			int num_in_queue,
+			int in_queue_idx[],
+			odp_queue_t odpq[])
 {
-	uint32_t i, tag, hi, npolls = 0;
-	int pktio_index, queue_index;
+	int i, rxq;
+	queue_entry_t *qentry;
+	sched_elem_t *elem;
 
-	hi = __atomic_load_n(&pktin_hi, __ATOMIC_RELAXED);
-	if (hi == 0)
-		return;
+	ODP_ASSERT(pktio_idx < ODP_CONFIG_PKTIO_ENTRIES);
+	for (i = 0; i < num_in_queue; i++) {
+		rxq = in_queue_idx[i];
+		ODP_ASSERT(rxq < PKTIO_MAX_QUEUES);
+		__atomic_fetch_add(&poll_count[pktio_idx], 1, __ATOMIC_RELAXED);
+		qentry = qentry_from_ext(odpq[i]);
+		elem = &qentry->s.sched_elem;
+		elem->cons_type |= FLAG_PKTIN; /* Set pktin queue flag */
+		elem->pktio_idx = pktio_idx;
+		elem->rx_queue = rxq;
+		elem->xoffset = sched_pktin_add(elem->sched_grp,
+				elem->sched_prio);
+		ODP_ASSERT(elem->schedq != NULL);
+		schedq_push(elem->schedq, elem);
+	}
+}
 
-	for (i = ts->pktin_next; npolls != hi; i = (i + 1) % hi, npolls++) {
-		tag = __atomic_load_n(&pktin_tags[i], __ATOMIC_RELAXED);
-		if (!TAG_IS_READY(tag))
-			continue;
-		if (!__atomic_compare_exchange_n(&pktin_tags[i], &tag,
-						 tag | TAG_BUSY,
-						 true,
-						 __ATOMIC_ACQUIRE,
-						 __ATOMIC_RELAXED))
-			continue;
-		/* Tag grabbed */
-		pktio_index = TAG_2_PKTIO(tag);
-		queue_index = TAG_2_QUEUE(tag);
-		if (odp_unlikely(pktin_poll(pktio_index,
-					    1, &queue_index))) {
-			/* Pktio stopped or closed
-			 * Remove tag from pktin_tags
-			 */
-			__atomic_store_n(&pktin_tags[i],
-					 TAG_EMPTY, __ATOMIC_RELAXED);
-			__atomic_fetch_sub(&pktin_num,
-					   1, __ATOMIC_RELEASE);
-			/* Call stop_finalize when all queues
-			 * of the pktio have been removed
-			 */
-			if (__atomic_sub_fetch(&pktin_count[pktio_index], 1,
-					       __ATOMIC_RELAXED) == 0)
-				pktio_stop_finalize(pktio_index);
-		} else {
-		    /* We don't know whether any packets were found and enqueued
-		     * Write back original tag value to release pktin queue
-		     */
-		    __atomic_store_n(&pktin_tags[i], tag, __ATOMIC_RELAXED);
-		    /* Do not iterate through all pktin queues every time */
-		    if ((ts->pktin_poll_cnts & 0xf) != 0)
-			break;
+static void pktio_stop(sched_elem_t *elem)
+{
+	elem->cons_type &= ~FLAG_PKTIN; /* Clear pktin queue flag */
+	sched_pktin_rem(elem->sched_grp);
+	if (__atomic_sub_fetch(&poll_count[elem->pktio_idx],
+			       1, __ATOMIC_RELAXED) == 0) {
+		/* Call stop_finalize when all queues
+		 * of the pktio have been removed */
+		pktio_stop_finalize(elem->pktio_idx);
+	}
+}
+
+static bool have_reorder_ctx(sched_scalable_thread_state_t *ts)
+{
+	if (odp_unlikely(bitset_is_null(ts->priv_rvec_free))) {
+		ts->priv_rvec_free = atom_bitset_xchg(&ts->rvec_free, 0,
+						      __ATOMIC_RELAXED);
+		if (odp_unlikely(bitset_is_null(ts->priv_rvec_free))) {
+			/* No free reorder contexts for this thread */
+			return false;
 		}
 	}
-	ODP_ASSERT(i < hi);
-	ts->pktin_poll_cnts++;
-	ts->pktin_next = i;
+	return true;
+}
+
+static inline bool is_pktin(sched_elem_t *elem)
+{
+	return (elem->cons_type & FLAG_PKTIN) != 0;
+}
+
+static inline bool is_atomic(sched_elem_t *elem)
+{
+	return elem->cons_type == (ODP_SCHED_SYNC_ATOMIC | FLAG_PKTIN);
+}
+
+static inline bool is_ordered(sched_elem_t *elem)
+{
+	return elem->cons_type == (ODP_SCHED_SYNC_ORDERED | FLAG_PKTIN);
+}
+
+static int poll_pktin(sched_elem_t *elem, odp_event_t ev[], int num_evts)
+{
+	sched_scalable_thread_state_t *ts = sched_ts;
+	int num, i;
+	/* For ordered queues only */
+	reorder_context_t *rctx;
+	reorder_window_t *rwin = NULL;
+	uint32_t sn;
+	uint32_t idx;
+
+	if (is_ordered(elem)) {
+		/* Need reorder context and slot in reorder window */
+		rwin = queue_get_rwin((queue_entry_t *)elem);
+		ODP_ASSERT(rwin != NULL);
+		if (odp_unlikely(!have_reorder_ctx(ts) ||
+				 !rwin_reserve_sc(rwin, &sn))) {
+			/* Put back queue on source schedq */
+			schedq_push(ts->src_schedq, elem);
+			return 0;
+		}
+		/* Slot in reorder window reserved! */
+	}
+
+	/* Try to dequeue events from the ingress queue itself */
+	num = _odp_queue_deq_sc(elem, ev, num_evts);
+	if (odp_likely(num > 0)) {
+events_dequeued:
+		if (is_atomic(elem)) {
+			ts->atomq = elem; /* Remember */
+			ts->dequeued += num;
+			/* Don't push atomic queue on schedq */
+		} else /* Parallel or ordered */ {
+			if (is_ordered(elem)) {
+				/* Find and initialise an unused reorder
+				 * context. */
+				idx = bitset_ffs(ts->priv_rvec_free) - 1;
+				ts->priv_rvec_free =
+					bitset_clr(ts->priv_rvec_free, idx);
+				rctx = &ts->rvec[idx];
+				rctx_init(rctx, idx, rwin, sn);
+				/* Are we in-order or out-of-order? */
+				ts->out_of_order = sn != rwin->hc.head;
+				ts->rctx = rctx;
+			}
+			schedq_push(elem->schedq, elem);
+		}
+		return num;
+	}
+
+	/* Ingress queue empty => poll pktio RX queue */
+	odp_event_t rx_evts[QUEUE_MULTI_MAX];
+	int num_rx = pktin_poll_one(elem->pktio_idx,
+			elem->rx_queue,
+			rx_evts);
+	if (odp_likely(num_rx > 0)) {
+		num = num_rx < num_evts ? num_rx : num_evts;
+		for (i = 0; i < num; i++) {
+			/* Return events directly to caller */
+			ev[i] = rx_evts[i];
+		}
+		if (num_rx > num) {
+			/* Events remain, enqueue them */
+			odp_buffer_hdr_t *bufs[QUEUE_MULTI_MAX];
+
+			for (i = num; i < num_rx; i++)
+				bufs[i] =
+					(odp_buffer_hdr_t *)(void *)rx_evts[i];
+			i = _odp_queue_enq_sp(elem, &bufs[num], num_rx - num);
+			/* Enqueue must succeed as the queue was empty */
+			ODP_ASSERT(i == num_rx - num);
+		}
+		goto events_dequeued;
+	}
+	/* No packets received, reset state and undo side effects */
+	if (is_atomic(elem))
+		ts->atomq = NULL;
+	else if (is_ordered(elem))
+		rwin_unreserve_sc(rwin, sn);
+
+	if (odp_likely(num_rx == 0)) {
+		/* RX queue empty, push it to pktin priority schedq */
+		sched_queue_t *schedq = ts->src_schedq;
+		/* Check if queue came from the designated schedq */
+		if (schedq == elem->schedq) {
+			/* Yes, add offset to the pktin priority level
+			 * in order to get alternate schedq */
+			schedq += elem->xoffset;
+		}
+		/* Else no, queue must have come from alternate schedq */
+		schedq_push(schedq, elem);
+	} else /* num_rx < 0 => pktio stopped or closed */ {
+		/* Remove queue */
+		pktio_stop(elem);
+		/* Don't push queue to schedq */
+	}
+
+	ODP_ASSERT(ts->atomq == NULL);
+	ODP_ASSERT(!ts->out_of_order);
+	ODP_ASSERT(ts->rctx == NULL);
+	return 0;
 }
 
 static int _schedule(odp_queue_t *from, odp_event_t ev[], int num_evts)
 {
 	sched_scalable_thread_state_t *ts;
+	sched_elem_t *first;
 	sched_elem_t *atomq;
 	int num;
 	uint32_t i;
@@ -758,7 +894,23 @@ static int _schedule(odp_queue_t *from, odp_event_t ev[], int num_evts)
 	/* Once an atomic queue has been scheduled to a thread, it will stay
 	 * on that thread until empty or 'rotated' by WRR
 	 */
-	if (atomq != NULL) {
+	if (atomq != NULL && is_pktin(atomq)) {
+		/* Atomic pktin queue */
+		if (ts->dequeued < atomq->qschst.wrr_budget) {
+			ODP_ASSERT(ts->src_schedq != NULL);
+			num = poll_pktin(atomq, ev, num_evts);
+			if (odp_likely(num != 0)) {
+				if (from)
+					*from = queue_get_handle(
+							(queue_entry_t *)atomq);
+				return num;
+			}
+		} else {
+			/* WRR budget exhausted, move queue to end of schedq */
+			schedq_push(atomq->schedq, atomq);
+		}
+		ts->atomq = NULL;
+	} else if (atomq != NULL) {
 		ODP_ASSERT(ts->ticket != TICKET_INVALID);
 #ifdef CONFIG_QSCHST_LOCK
 		LOCK(&atomq->qschlock);
@@ -794,10 +946,6 @@ dequeue_atomic:
 #endif
 	}
 
-	/* Release any previous reorder context. */
-	if (ts->rctx != NULL)
-		_schedule_release_ordered(ts);
-
 	/* Check for and perform any scheduler group updates. */
 	if (odp_unlikely(__atomic_load_n(&ts->sg_sem, __ATOMIC_RELAXED) != 0)) {
 		(void)__atomic_load_n(&ts->sg_sem, __ATOMIC_ACQUIRE);
@@ -806,7 +954,7 @@ dequeue_atomic:
 	}
 
 	/* Scan our schedq list from beginning to end */
-	for (i = 0; i < ts->num_schedq; i++) {
+	for (i = 0, first = NULL; i < ts->num_schedq; i++, first = NULL) {
 		sched_queue_t *schedq = ts->schedq_list[i];
 		sched_elem_t *elem;
 restart_same:
@@ -815,8 +963,24 @@ restart_same:
 			/* Schedq empty, look at next one. */
 			continue;
 		}
+		if (is_pktin(elem)) {
+			/* Pktio ingress queue */
+			if (first == NULL)
+				first = elem;
+			else if (elem == first) /* Wrapped around */
+				continue; /* Go to next schedq */
 
-		if (elem->cons_type == ODP_SCHED_SYNC_ATOMIC) {
+			if (odp_unlikely(!schedq_cond_pop(schedq, elem)))
+				goto restart_same;
+
+			ts->src_schedq = schedq; /* Remember source schedq */
+			num = poll_pktin(elem, ev, num_evts);
+			if (odp_unlikely(num <= 0))
+				goto restart_same;
+			if (from)
+				*from = queue_get_handle((queue_entry_t *)elem);
+			return num;
+		} else if (elem->cons_type == ODP_SCHED_SYNC_ATOMIC) {
 			/* Dequeue element only if it is still at head
 			 * of schedq.
 			 */
@@ -885,19 +1049,9 @@ restart_same:
 			 * collect all outgoing events. Ensure there is at least
 			 * one available reorder context.
 			 */
-			if (odp_unlikely(bitset_is_null(ts->priv_rvec_free))) {
-				ts->priv_rvec_free = atom_bitset_xchg(
-							&ts->rvec_free, 0,
-							__ATOMIC_RELAXED);
-				if (odp_unlikely(bitset_is_null(
-						ts->priv_rvec_free))) {
-					/* No free reorder contexts for
-					 * this thread. Look at next schedq,
-					 * hope we find non-ordered queue.
-					 */
-					continue;
-				}
-			}
+			if (odp_unlikely(!have_reorder_ctx(ts)))
+				continue;
+
 			/* rwin_reserve and odp_queue_deq must be atomic or
 			 * there will be a potential race condition.
 			 * Allocate a slot in the reorder window.
@@ -984,13 +1138,12 @@ restart_same:
 		}
 	}
 
-	poll_pktin(ts);
 	return 0;
 }
 
 /******************************************************************************/
 
-static void schedule_order_lock(unsigned lock_index)
+static void schedule_order_lock(uint32_t lock_index)
 {
 	struct reorder_context *rctx = sched_ts->rctx;
 
@@ -1010,7 +1163,7 @@ static void schedule_order_lock(unsigned lock_index)
 	}
 }
 
-static void schedule_order_unlock(unsigned lock_index)
+static void schedule_order_unlock(uint32_t lock_index)
 {
 	struct reorder_context *rctx;
 
@@ -1026,6 +1179,13 @@ static void schedule_order_unlock(unsigned lock_index)
 			     rctx->sn + 1,
 			     /*readonly=*/false);
 	rctx->olock_flags |= 1U << lock_index;
+}
+
+static void schedule_order_unlock_lock(uint32_t unlock_index,
+				       uint32_t lock_index)
+{
+	schedule_order_unlock(unlock_index);
+	schedule_order_lock(lock_index);
 }
 
 static void schedule_release_atomic(void)
@@ -1066,6 +1226,10 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait, odp_event_t ev[],
 	odp_time_t deadline;
 
 	ts = sched_ts;
+	/* Release any previous reorder context. */
+	if (ts->rctx != NULL)
+		_schedule_release_ordered(ts);
+
 	if (odp_unlikely(ts->pause)) {
 		if (ts->atomq != NULL) {
 #ifdef CONFIG_QSCHST_LOCK
@@ -1078,8 +1242,6 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait, odp_event_t ev[],
 #ifdef CONFIG_QSCHST_LOCK
 			UNLOCK(&atomq->qschlock);
 #endif
-		} else if (ts->rctx != NULL) {
-			_schedule_release_ordered(ts);
 		}
 		return 0;
 	}
@@ -1124,6 +1286,10 @@ static odp_event_t schedule(odp_queue_t *from, uint64_t wait)
 	odp_time_t deadline;
 
 	ts = sched_ts;
+	/* Release any previous reorder context. */
+	if (ts->rctx != NULL)
+		_schedule_release_ordered(ts);
+
 	if (odp_unlikely(ts->pause)) {
 		if (ts->atomq != NULL) {
 #ifdef CONFIG_QSCHST_LOCK
@@ -1136,8 +1302,6 @@ static odp_event_t schedule(odp_queue_t *from, uint64_t wait)
 #ifdef CONFIG_QSCHST_LOCK
 			UNLOCK(&atomq->qschlock);
 #endif
-		} else if (ts->rctx != NULL) {
-			_schedule_release_ordered(ts);
 		}
 		return ev;
 	}
@@ -1190,7 +1354,7 @@ static uint64_t schedule_wait_time(uint64_t ns)
 
 static int schedule_num_prio(void)
 {
-	return ODP_SCHED_PRIO_NUM;
+	return ODP_SCHED_PRIO_NUM - 1; /* Discount the pktin priority level */
 }
 
 static int schedule_group_update(sched_group_t *sg,
@@ -1387,7 +1551,7 @@ static int schedule_group_destroy(odp_schedule_group_t group)
 			ret = -1;
 			goto thrd_q_present_in_group;
 		}
-		if (sg->xcount[p] != 0) {
+		if (p != ODP_SCHED_PRIO_PKTIN && sg->xcount[p] != 0) {
 			ODP_ERR("Group has queues\n");
 			ret = -1;
 			goto thrd_q_present_in_group;
@@ -1783,51 +1947,6 @@ static int schedule_term_local(void)
 	return rc;
 }
 
-static void pktio_start(int pktio_index, int num_in_queue, int in_queue_idx[])
-{
-	int i;
-	uint32_t old, tag, j;
-
-	for (i = 0; i < num_in_queue; i++) {
-		/* Try to reserve a slot */
-		if (__atomic_fetch_add(&pktin_num,
-				       1, __ATOMIC_RELAXED) >= PKTIN_MAX) {
-			__atomic_fetch_sub(&pktin_num, 1, __ATOMIC_RELAXED);
-			ODP_ABORT("Too many pktio in queues for scheduler\n");
-		}
-		/* A slot has been reserved, now we need to find an empty one */
-		for (j = 0; ; j = (j + 1) % PKTIN_MAX) {
-			if (__atomic_load_n(&pktin_tags[j],
-					    __ATOMIC_RELAXED) != TAG_EMPTY)
-				/* Slot used, continue with next */
-				continue;
-			/* Empty slot found */
-			old = TAG_EMPTY;
-			tag = PKTIO_QUEUE_2_TAG(pktio_index, in_queue_idx[i]);
-			if (__atomic_compare_exchange_n(&pktin_tags[j],
-							&old,
-							tag,
-							true,
-							__ATOMIC_RELEASE,
-							__ATOMIC_RELAXED)) {
-				/* Success grabbing slot,update high
-				 * watermark
-				 */
-				__atomic_fetch_max(&pktin_hi,
-						   j + 1, __ATOMIC_RELAXED);
-				/* One more tag (queue) for this pktio
-				 * instance
-				 */
-				__atomic_fetch_add(&pktin_count[pktio_index],
-						   1, __ATOMIC_RELAXED);
-				/* Continue with next RX queue */
-				break;
-			}
-			/* Failed to grab slot */
-		}
-	}
-}
-
 static int num_grps(void)
 {
 	return MAX_SCHED_GROUP;
@@ -1936,7 +2055,7 @@ static void order_unlock(void)
 {
 }
 
-static unsigned schedule_max_ordered_locks(void)
+static uint32_t schedule_max_ordered_locks(void)
 {
 	return CONFIG_QUEUE_MAX_ORD_LOCKS;
 }
@@ -1981,6 +2100,7 @@ odp_schedule_module_t schedule_scalable = {
 	.schedule_group_info		= schedule_group_info,
 	.schedule_order_lock		= schedule_order_lock,
 	.schedule_order_unlock		= schedule_order_unlock,
+	.schedule_order_unlock_lock	= schedule_order_unlock_lock,
 };
 
 ODP_MODULE_CONSTRUCTOR(schedule_scalable)

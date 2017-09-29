@@ -20,9 +20,6 @@
 #include <odp_pool_internal.h>
 #include <odp/api/timer.h>
 
-/* Minimum number of nanoseconds between checking timer pools. */
-#define CONFIG_TIMER_RUN_RATELIMIT_NS 100
-
 /* Minimum number of scheduling rounds between checking timer pools. */
 #define CONFIG_TIMER_RUN_RATELIMIT_ROUNDS 1
 

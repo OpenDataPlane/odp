@@ -91,13 +91,13 @@ m4_include([platform/linux-dpdk/m4/odp_schedule.m4])
 # DPDK build variables
 ##########################################################################
 DPDK_DRIVER_DIR=/usr/lib/$(uname -m)-linux-gnu
-AS_CASE($host_cpu, [x86_64], [AM_CPPFLAGS="$AM_CPPFLAGS -msse4.2"])
-if test ${DPDK_DEFAULT_DIR} = 1; then
-    AM_CPPFLAGS="$AM_CPPFLAGS -I/usr/include/dpdk"
+AS_CASE($host_cpu, [x86_64], [DPDK_CPPFLAGS="$DPDK_CPPFLAGS -msse4.2"])
+if test "x${SDK_INSTALL_PATH}" = "x"; then
+    DPDK_CPPFLAGS="$DPDK_CPPFLAGS -I/usr/include/dpdk"
 else
     DPDK_DRIVER_DIR=$SDK_INSTALL_PATH/lib
-    AM_CPPFLAGS="$AM_CPPFLAGS -I$SDK_INSTALL_PATH/include"
-    AM_LDFLAGS="$AM_LDFLAGS -L$SDK_INSTALL_PATH/lib"
+    DPDK_CPPFLAGS="$DPDK_CPPFLAGS -I$SDK_INSTALL_PATH/include"
+    DPDK_LDFLAGS="$DPDK_CPPFLAGS -L$SDK_INSTALL_PATH/lib"
 fi
 
 # Check if we should link against the static or dynamic DPDK library
@@ -112,8 +112,8 @@ AC_ARG_ENABLE([shared-dpdk],
 ##########################################################################
 OLD_LDFLAGS=$LDFLAGS
 OLD_CPPFLAGS=$CPPFLAGS
-LDFLAGS="$AM_LDFLAGS $LDFLAGS"
-CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS -pthread"
+LDFLAGS="$DPDK_LDFLAGS $LDFLAGS"
+CPPFLAGS="$DPDK_CPPFLAGS $CPPFLAGS -pthread"
 
 ##########################################################################
 # Check for DPDK availability
@@ -121,16 +121,13 @@ CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS -pthread"
 AC_CHECK_HEADERS([rte_config.h], [],
     [AC_MSG_FAILURE(["can't find DPDK headers"])])
 
-AC_SEARCH_LIBS([rte_eal_init], [dpdk], [],
-	[AC_MSG_ERROR([DPDK libraries required])], [-ldl])
-
 ##########################################################################
 # In case of static linking DPDK pmd drivers are not linked unless the
 # --whole-archive option is used. No spaces are allowed between the
 # --whole-arhive flags.
 ##########################################################################
 if test "x$shared_dpdk" = "xtrue"; then
-    LIBS="$LIBS -Wl,--no-as-needed,-ldpdk,-as-needed -ldl -lm -lpcap"
+    DPDK_LIBS="-Wl,--no-as-needed,-ldpdk,-as-needed -ldl -lm -lpcap"
 else
 
     AS_VAR_SET([DPDK_PMDS], [-Wl,--whole-archive,])
@@ -146,8 +143,6 @@ else
     AS_VAR_APPEND([DPDK_PMDS], [--no-whole-archive])
 
     DPDK_LIBS="-L$DPDK_DRIVER_DIR -ldpdk -lpthread -ldl -lm -lpcap"
-    AC_SUBST([DPDK_CPPFLAGS])
-    AC_SUBST([DPDK_LIBS])
     AC_SUBST([DPDK_PMDS])
 fi
 
@@ -156,6 +151,10 @@ fi
 ##########################################################################
 LDFLAGS=$OLD_LDFLAGS
 CPPFLAGS=$OLD_CPPFLAGS
+
+AC_SUBST([DPDK_CPPFLAGS])
+AC_SUBST([DPDK_LDFLAGS])
+AC_SUBST([DPDK_LIBS])
 
 AC_CONFIG_FILES([platform/linux-dpdk/Makefile
 		 platform/linux-dpdk/include/odp/api/plat/static_inline.h])

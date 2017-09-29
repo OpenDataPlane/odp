@@ -5,6 +5,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 #include <odp_posix_extensions.h>
 
 #include <sys/socket.h>
@@ -698,7 +700,7 @@ static uint32_t _tx_pkt_to_iovec(odp_packet_t pkt,
 				 struct iovec iovecs[MAX_SEGS])
 {
 	uint32_t pkt_len = odp_packet_len(pkt);
-	uint32_t offset = odp_packet_l2_offset(pkt);
+	uint32_t offset = 0;
 	uint32_t iov_count = 0;
 
 	while (offset < pkt_len) {

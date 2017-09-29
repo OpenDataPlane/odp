@@ -6,7 +6,9 @@
 
 #define _POSIX_C_SOURCE 200809L
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <sched.h>
 
 #include <stdlib.h>
@@ -18,7 +20,7 @@
 #include <signal.h>
 #include <sys/wait.h>
 
-#include <example_debug.h>
+#include <test_debug.h>
 
 #include <odp.h>
 #include <odp/helper/odph_api.h>

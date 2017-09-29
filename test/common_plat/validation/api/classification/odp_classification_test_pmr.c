@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:	BSD-3-Clause
  */
 
+#include "config.h"
+
 #include "odp_classification_testsuites.h"
 #include "classification.h"
 #include <odp_cunit_common.h>
@@ -169,8 +171,6 @@ void classification_test_pktin_classifier_flag(void)
 	CU_ASSERT(pool != pool_recv);
 	CU_ASSERT(retqueue != queue);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
-
-	odp_packet_free(pkt);
 
 	odp_packet_free(pkt);
 	odp_cos_destroy(cos);
@@ -1678,7 +1678,7 @@ static void classification_test_pmr_term_daddr(void)
 	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	ip->dst_addr = odp_cpu_to_be_32(addr);
-	ip->chksum = odph_ipv4_csum_update(pkt);
+	odph_ipv4_csum_update(pkt);
 
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);

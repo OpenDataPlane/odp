@@ -10,6 +10,8 @@
 #include <stdint.h>
 #include <net/if.h>
 
+#include <config.h>
+
 #include <protocols/eth.h>
 #include <odp/api/align.h>
 #include <odp/api/debug.h>

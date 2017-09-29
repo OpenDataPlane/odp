@@ -2,19 +2,19 @@
 #export CUSTOM_STR=https://git.linaro.org/lng/odp.git
 
 include $(top_srcdir)/platform/Makefile.inc
-include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
 lib_LTLIBRARIES = $(LIB)/libodp-linux.la
 
-AM_CFLAGS +=  -I$(srcdir)/include
-AM_CFLAGS +=  -I$(top_srcdir)/include
-AM_CFLAGS +=  -I$(top_srcdir)/frameworks/modular
-AM_CFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
-AM_CFLAGS +=  -I$(top_builddir)/include
-AM_CFLAGS +=  -I$(top_srcdir)/arch/@ARCH_DIR@
-AM_CFLAGS +=  -Iinclude
-AM_CFLAGS +=  -DSYSCONFDIR=\"@sysconfdir@\"
-AM_CFLAGS +=  -D_ODP_PKTIO_IPC
+AM_CPPFLAGS =  -I$(srcdir)/include
+AM_CPPFLAGS +=  -I$(top_srcdir)/include
+AM_CPPFLAGS +=  -I$(top_srcdir)/frameworks/modular
+AM_CPPFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
+AM_CPPFLAGS +=  -I$(top_builddir)/include
+AM_CPPFLAGS +=  -Iinclude
+AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/$(ARCH_DIR)
+AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)
+AM_CPPFLAGS +=  -Iinclude
+AM_CPPFLAGS +=  -DSYSCONFDIR=\"@sysconfdir@\"
 
 AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
 AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
@@ -219,8 +219,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/protocols/ipsec.h \
 		  ${srcdir}/include/protocols/tcp.h \
 		  ${srcdir}/include/protocols/thash.h \
-		  ${srcdir}/include/protocols/udp.h \
-		  ${srcdir}/Makefile.inc
+		  ${srcdir}/include/protocols/udp.h
 
 if ARCH_IS_ARM
 noinst_HEADERS += ${srcdir}/arch/arm/odp_atomic.h \

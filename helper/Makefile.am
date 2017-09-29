@@ -1,17 +1,16 @@
-include $(top_srcdir)/platform/@with_platform@/Makefile.inc
-
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = $(top_builddir)/pkgconfig/libodphelper.pc
 
 LIB   = $(top_builddir)/lib
-AM_CFLAGS += -I$(srcdir)/include
-AM_CFLAGS += -I$(top_srcdir)/platform/@with_platform@/include
-AM_CFLAGS += -I$(top_srcdir)/include
-AM_CFLAGS += -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
-AM_CFLAGS += -I$(top_builddir)/platform/@with_platform@/include
-AM_CFLAGS += -I$(top_builddir)/include
+AM_CPPFLAGS = -I$(srcdir)/include
+AM_CPPFLAGS += -I$(top_srcdir)/platform/@with_platform@/include
+AM_CPPFLAGS += -I$(top_srcdir)/include
+AM_CPPFLAGS += -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
+AM_CPPFLAGS += -I$(top_builddir)/platform/@with_platform@/include
+AM_CPPFLAGS += -I$(top_srcdir)/platform/@with_platform@/arch/@ARCH_DIR@
+AM_CPPFLAGS += -I$(top_builddir)/include
 
-AM_LDFLAGS += -version-number '$(ODPHELPER_LIBSO_VERSION)'
+AM_LDFLAGS = -version-number '$(ODPHELPER_LIBSO_VERSION)'
 
 helperincludedir = $(includedir)/odp/helper/
 helperinclude_HEADERS = \
@@ -42,8 +41,8 @@ helperlinuxinclude_HEADERS = \
 endif
 
 noinst_HEADERS = \
-		 $(srcdir)/odph_debug.h \
-		 $(srcdir)/odph_list_internal.h
+		 $(srcdir)/include/odph_debug.h \
+		 $(srcdir)/include/odph_list_internal.h
 
 __LIB__libodphelper_la_SOURCES = \
 					eth.c \

@@ -5,6 +5,9 @@
  *
  * SPDX-License-Identifier:	BSD-3-Clause
  */
+
+#include <config.h>
+
 #include <odp/api/queue.h>
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
@@ -219,7 +222,7 @@ odp_schedule_group_t odp_queue_sched_group(odp_queue_t queue_hdl)
 	return mod->sched_group(queue_hdl);
 }
 
-int odp_queue_lock_count(odp_queue_t queue_hdl)
+uint32_t odp_queue_lock_count(odp_queue_t queue_hdl)
 {
 	odp_queue_module_t *mod =
 		odp_subsystem_active_module(queue, mod);
