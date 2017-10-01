@@ -706,6 +706,7 @@ static int process_cmd_line_options(uint32_t argc, char *argv[])
 			}
 		} else {
 			/* Currently all cmd line options are '-' flag based. */
+			printf("Unrecognized cmd line option '%s'\n", arg);
 			return -1;
 		}
 	}
@@ -715,9 +716,7 @@ static int process_cmd_line_options(uint32_t argc, char *argv[])
 
 static void signal_handler(int signal)
 {
-	size_t num_stack_frames;
 	const char  *signal_name;
-	void  *bt_array[128];
 
 	switch (signal) {
 	case SIGILL:
@@ -734,9 +733,7 @@ static void signal_handler(int signal)
 		signal_name = "UNKNOWN";  break;
 	}
 
-	num_stack_frames = backtrace(bt_array, 100);
-	printf("Received signal=%u (%s) exiting.", signal, signal_name);
-	backtrace_symbols_fd(bt_array, num_stack_frames, fileno(stderr));
+	printf("Received signal=%u (%s) exiting.\n", signal, signal_name);
 	fflush(NULL);
 	sync();
 	abort();
