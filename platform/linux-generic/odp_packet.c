@@ -1641,32 +1641,6 @@ int _odp_packet_set_data(odp_packet_t pkt, uint32_t offset,
 	return 0;
 }
 
-int _odp_packet_cmp_data(odp_packet_t pkt, uint32_t offset,
-			 const void *s, uint32_t len)
-{
-	const uint8_t *ptr = s;
-	void *mapaddr;
-	uint32_t seglen = 0; /* GCC */
-	uint32_t cmplen;
-	int ret;
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	ODP_ASSERT(offset + len <= pkt_hdr->frame_len);
-
-	while (len > 0) {
-		mapaddr = packet_map(pkt_hdr, offset, &seglen, NULL);
-		cmplen = len > seglen ? seglen : len;
-		ret = memcmp(mapaddr, ptr, cmplen);
-		if (ret != 0)
-			return ret;
-		offset  += cmplen;
-		len     -= cmplen;
-		ptr     += cmplen;
-	}
-
-	return 0;
-}
-
 /*
  *
  * Debugging
