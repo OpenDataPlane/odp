@@ -24,7 +24,7 @@ AS_IF([test "x$test_vald" = "xyes" -a "x$cunit_support" = "xno"],
       [test "x$test_vald" = "xcheck" -a "x$cunit_support" = "xno"],
       [AC_MSG_WARN([CUnit was not found, disabling validation testsuite])
        test_vald=no],
-      [test_vald=yes])
+      [test "x$test_vald" != "xno"], [test_vald=yes])
 
 AM_CONDITIONAL([cunit_support], [test "x$cunit_support" = "xyes"])
 AM_CONDITIONAL([test_vald], [test "x$test_vald" = "xyes"])
