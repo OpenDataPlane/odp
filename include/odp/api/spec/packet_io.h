@@ -482,6 +482,8 @@ typedef union odp_pktio_set_op_t {
 	struct {
 		/** Promiscuous mode */
 		uint32_t promisc_mode : 1;
+		/** MAC address  */
+		uint32_t mac_addr : 1;
 	} op;
 	/** All bits of the bit field structure.
 	  * This field can be used to set/clear all flags, or bitwise
@@ -977,6 +979,22 @@ int odp_pktio_promisc_mode(odp_pktio_t pktio);
  * @retval <0 on failure
  */
 int odp_pktio_mac_addr(odp_pktio_t pktio, void *mac_addr, int size);
+
+/**
+ * Set the default MAC address of a packet IO interface.
+ *
+ * Support of this operation on a packet IO interface is reported
+ * through ‘mac_addr’ set operation capability.
+ *
+ * @param	pktio     Packet IO handle
+ * @param	mac_addr  MAC address to be set as default address
+ * @param	size      Size of the MAC address
+ *
+ * @return 0 on success
+ * @retval <0 on failure
+ */
+int odp_pktio_mac_addr_set(odp_pktio_t pktio, const void *mac_addr,
+			   int size);
 
 /**
  * Setup per-port default class-of-service.
