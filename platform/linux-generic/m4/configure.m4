@@ -75,7 +75,7 @@ fi
 AC_SUBST([ATOMIC_LIBS])
 
 m4_include([platform/linux-generic/m4/odp_pthread.m4])
-m4_include([platform/linux-generic/m4/odp_timer.m4])
+ODP_TIMER
 ODP_OPENSSL
 m4_include([platform/linux-generic/m4/odp_pcap.m4])
 m4_include([platform/linux-generic/m4/odp_netmap.m4])
