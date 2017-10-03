@@ -378,6 +378,44 @@ int odp_system_info_term(void)
 	return 0;
 }
 
+static uint64_t get_cpuspeed(int id)
+{
+	char str[1024];
+	char *pos;
+	FILE *file = NULL;
+	double mhz = 0.0;
+	int cur_id = 0;
+	uint64_t cur_hz = 0;
+
+	if (id + 1 > odp_global_data.num_cpus_installed) {
+		ODP_ERR("Invalid number of CPUs requested\n");
+		return cur_hz;
+	}
+
+	file = fopen("/proc/cpuinfo", "rt");
+	if (file == NULL) {
+		ODP_ERR("Failed to open /proc/cpuinfo\n");
+		return cur_hz;
+	}
+
+	while (fgets(str, sizeof(str), file) != NULL && id < MAX_CPU_NUMBER) {
+		pos = strstr(str, "cpu MHz");
+		if (pos) {
+			if (id != cur_id) {
+				cur_id++;
+				continue;
+			}
+			if (sscanf(pos, "cpu MHz : %lf", &mhz) == 1) {
+				cur_hz = (uint64_t)(mhz * 1000000.0);
+				break;
+			}
+		}
+	}
+	fclose(file);
+
+	return cur_hz;
+}
+
 /*
  *************************
  * Public access functions
@@ -385,7 +423,12 @@ int odp_system_info_term(void)
  */
 uint64_t odp_cpu_hz_current(int id)
 {
-	return odp_cpufreq_id("cpuinfo_cur_freq", id);
+	uint64_t cur_hz = odp_cpufreq_id("cpuinfo_cur_freq", id);
+
+	if (!cur_hz)
+		cur_hz = get_cpuspeed(id);
+
+	return cur_hz;
 }
 
 uint64_t odp_cpu_hz(void)
