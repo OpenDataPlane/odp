@@ -225,8 +225,8 @@ static inline odp_timer_t tp_idx_to_handle(struct odp_timer_pool_s *tp,
 static void itimer_init(odp_timer_pool *tp);
 static void itimer_fini(odp_timer_pool *tp);
 
-static odp_timer_pool_t odp_timer_pool_new(const char *name,
-					   const odp_timer_pool_param_t *param)
+static odp_timer_pool_t timer_pool_new(const char *name,
+				       const odp_timer_pool_param_t *param)
 {
 	uint32_t tp_idx = odp_atomic_fetch_add_u32(&num_timer_pools, 1);
 	if (odp_unlikely(tp_idx >= MAX_TIMER_POOLS)) {
@@ -804,7 +804,7 @@ odp_timer_pool_create(const char *name,
 		__odp_errno = EINVAL;
 		return ODP_TIMER_POOL_INVALID;
 	}
-	return odp_timer_pool_new(name, param);
+	return timer_pool_new(name, param);
 }
 
 void odp_timer_pool_start(void)
