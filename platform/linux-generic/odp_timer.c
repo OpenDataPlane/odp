@@ -162,7 +162,7 @@ static inline void set_next_free(odp_timer *tim, uint32_t nf)
 }
 
 /******************************************************************************
- * odp_timer_pool abstract datatype
+ * timer_pool_t abstract datatype
  * Inludes alloc and free timer
  *****************************************************************************/
 
@@ -186,18 +186,18 @@ typedef struct odp_timer_pool_s {
 	pthread_t timer_thread; /* pthread_t of timer thread */
 	pid_t timer_thread_id; /* gettid() for timer thread */
 	int timer_thread_exit; /* request to exit for timer thread */
-} odp_timer_pool;
+} timer_pool_t;
 
 #define MAX_TIMER_POOLS 255 /* Leave one for ODP_TIMER_INVALID */
 #define INDEX_BITS 24
 static odp_atomic_u32_t num_timer_pools;
-static odp_timer_pool *timer_pool[MAX_TIMER_POOLS];
+static timer_pool_t *timer_pool[MAX_TIMER_POOLS];
 
-static inline odp_timer_pool *handle_to_tp(odp_timer_t hdl)
+static inline timer_pool_t *handle_to_tp(odp_timer_t hdl)
 {
 	uint32_t tp_idx = _odp_typeval(hdl) >> INDEX_BITS;
 	if (odp_likely(tp_idx < MAX_TIMER_POOLS)) {
-		odp_timer_pool *tp = timer_pool[tp_idx];
+		timer_pool_t *tp = timer_pool[tp_idx];
 		if (odp_likely(tp != NULL))
 			return timer_pool[tp_idx];
 	}
@@ -222,8 +222,8 @@ static inline odp_timer_t tp_idx_to_handle(struct odp_timer_pool_s *tp,
 }
 
 /* Forward declarations */
-static void itimer_init(odp_timer_pool *tp);
-static void itimer_fini(odp_timer_pool *tp);
+static void itimer_init(timer_pool_t *tp);
+static void itimer_fini(timer_pool_t *tp);
 
 static odp_timer_pool_t timer_pool_new(const char *name,
 				       const odp_timer_pool_param_t *param)
@@ -235,7 +235,7 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 		__odp_errno = ENFILE; /* Table overflow */
 		return ODP_TIMER_POOL_INVALID;
 	}
-	size_t sz0 = ROUNDUP_CACHE_LINE(sizeof(odp_timer_pool));
+	size_t sz0 = ROUNDUP_CACHE_LINE(sizeof(timer_pool_t));
 	size_t sz1 = ROUNDUP_CACHE_LINE(sizeof(tick_buf_t) * param->num_timers);
 	size_t sz2 = ROUNDUP_CACHE_LINE(sizeof(odp_timer) * param->num_timers);
 	odp_shm_t shm = odp_shm_reserve(name, sz0 + sz1 + sz2,
@@ -243,7 +243,7 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	if (odp_unlikely(shm == ODP_SHM_INVALID))
 		ODP_ABORT("%s: timer pool shm-alloc(%zuKB) failed\n",
 			  name, (sz0 + sz1 + sz2) / 1024);
-	odp_timer_pool *tp = (odp_timer_pool *)odp_shm_addr(shm);
+	timer_pool_t *tp = (timer_pool_t *)odp_shm_addr(shm);
 	odp_atomic_init_u64(&tp->cur_tick, 0);
 
 	if (name == NULL) {
@@ -292,7 +292,7 @@ static void block_sigalarm(void)
 	sigprocmask(SIG_BLOCK, &sigset, NULL);
 }
 
-static void stop_timer_thread(odp_timer_pool *tp)
+static void stop_timer_thread(timer_pool_t *tp)
 {
 	int ret;
 
@@ -303,7 +303,7 @@ static void stop_timer_thread(odp_timer_pool *tp)
 		ODP_ABORT("unable to join thread, err %d\n", ret);
 }
 
-static void odp_timer_pool_del(odp_timer_pool *tp)
+static void odp_timer_pool_del(timer_pool_t *tp)
 {
 	odp_spinlock_lock(&tp->lock);
 	timer_pool[tp->tp_idx] = NULL;
@@ -326,7 +326,7 @@ static void odp_timer_pool_del(odp_timer_pool *tp)
 	odp_atomic_sub_u32(&num_timer_pools, 1);
 }
 
-static inline odp_timer_t timer_alloc(odp_timer_pool *tp,
+static inline odp_timer_t timer_alloc(timer_pool_t *tp,
 				      odp_queue_t queue,
 				      void *user_ptr)
 {
@@ -357,11 +357,11 @@ static inline odp_timer_t timer_alloc(odp_timer_pool *tp,
 	return hdl;
 }
 
-static odp_buffer_t timer_cancel(odp_timer_pool *tp,
-		uint32_t idx,
-		uint64_t new_state);
+static odp_buffer_t timer_cancel(timer_pool_t *tp,
+				 uint32_t idx,
+				 uint64_t new_state);
 
-static inline odp_buffer_t timer_free(odp_timer_pool *tp, uint32_t idx)
+static inline odp_buffer_t timer_free(timer_pool_t *tp, uint32_t idx)
 {
 	odp_timer *tim = &tp->timers[idx];
 
@@ -391,7 +391,7 @@ static inline odp_buffer_t timer_free(odp_timer_pool *tp, uint32_t idx)
 static bool timer_reset(uint32_t idx,
 		uint64_t abs_tck,
 		odp_buffer_t *tmo_buf,
-		odp_timer_pool *tp)
+		timer_pool_t *tp)
 {
 	bool success = true;
 	tick_buf_t *tb = &tp->tick_buf[idx];
@@ -522,9 +522,9 @@ static bool timer_reset(uint32_t idx,
 	return success;
 }
 
-static odp_buffer_t timer_cancel(odp_timer_pool *tp,
-		uint32_t idx,
-		uint64_t new_state)
+static odp_buffer_t timer_cancel(timer_pool_t *tp,
+				 uint32_t idx,
+				 uint64_t new_state)
 {
 	tick_buf_t *tb = &tp->tick_buf[idx];
 	odp_buffer_t old_buf;
@@ -561,7 +561,7 @@ static odp_buffer_t timer_cancel(odp_timer_pool *tp,
 	return old_buf;
 }
 
-static unsigned timer_expire(odp_timer_pool *tp, uint32_t idx, uint64_t tick)
+static unsigned timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 {
 	odp_timer *tim = &tp->timers[idx];
 	tick_buf_t *tb = &tp->tick_buf[idx];
@@ -677,7 +677,7 @@ static unsigned odp_timer_pool_expire(odp_timer_pool_t tpid, uint64_t tick)
  * Functions that use Linux/POSIX per-process timers and related facilities
  *****************************************************************************/
 
-static void timer_notify(odp_timer_pool *tp)
+static void timer_notify(timer_pool_t *tp)
 {
 	int overrun;
 	int64_t prev_tick;
@@ -707,7 +707,7 @@ static void timer_notify(odp_timer_pool *tp)
 
 static void *timer_thread(void *arg)
 {
-	odp_timer_pool *tp = (odp_timer_pool *)arg;
+	timer_pool_t *tp = (timer_pool_t *)arg;
 	sigset_t sigset;
 	int ret;
 	struct timespec tmo;
@@ -737,7 +737,7 @@ static void *timer_thread(void *arg)
 	return NULL;
 }
 
-static void itimer_init(odp_timer_pool *tp)
+static void itimer_init(timer_pool_t *tp)
 {
 	struct sigevent   sigev;
 	struct itimerspec ispec;
@@ -782,7 +782,7 @@ static void itimer_init(odp_timer_pool *tp)
 			  strerror(errno));
 }
 
-static void itimer_fini(odp_timer_pool *tp)
+static void itimer_fini(timer_pool_t *tp)
 {
 	if (timer_delete(tp->timerid) != 0)
 		ODP_ABORT("timer_delete() returned error %s\n",
@@ -868,7 +868,7 @@ odp_timer_t odp_timer_alloc(odp_timer_pool_t tpid,
 
 odp_event_t odp_timer_free(odp_timer_t hdl)
 {
-	odp_timer_pool *tp = handle_to_tp(hdl);
+	timer_pool_t *tp = handle_to_tp(hdl);
 	uint32_t idx = handle_to_idx(hdl, tp);
 	odp_buffer_t old_buf = timer_free(tp, idx);
 	return odp_buffer_to_event(old_buf);
@@ -878,9 +878,10 @@ int odp_timer_set_abs(odp_timer_t hdl,
 		      uint64_t abs_tck,
 		      odp_event_t *tmo_ev)
 {
-	odp_timer_pool *tp = handle_to_tp(hdl);
+	timer_pool_t *tp = handle_to_tp(hdl);
 	uint32_t idx = handle_to_idx(hdl, tp);
 	uint64_t cur_tick = odp_atomic_load_u64(&tp->cur_tick);
+
 	if (odp_unlikely(abs_tck < cur_tick + tp->min_rel_tck))
 		return ODP_TIMER_TOOEARLY;
 	if (odp_unlikely(abs_tck > cur_tick + tp->max_rel_tck))
@@ -895,7 +896,7 @@ int odp_timer_set_rel(odp_timer_t hdl,
 		      uint64_t rel_tck,
 		      odp_event_t *tmo_ev)
 {
-	odp_timer_pool *tp = handle_to_tp(hdl);
+	timer_pool_t *tp = handle_to_tp(hdl);
 	uint32_t idx = handle_to_idx(hdl, tp);
 	uint64_t abs_tck = odp_atomic_load_u64(&tp->cur_tick) + rel_tck;
 	if (odp_unlikely(rel_tck < tp->min_rel_tck))
@@ -910,7 +911,7 @@ int odp_timer_set_rel(odp_timer_t hdl,
 
 int odp_timer_cancel(odp_timer_t hdl, odp_event_t *tmo_ev)
 {
-	odp_timer_pool *tp = handle_to_tp(hdl);
+	timer_pool_t *tp = handle_to_tp(hdl);
 	uint32_t idx = handle_to_idx(hdl, tp);
 	/* Set the expiration tick of the timer to TMO_INACTIVE */
 	odp_buffer_t old_buf = timer_cancel(tp, idx, TMO_INACTIVE);
@@ -949,7 +950,7 @@ int odp_timeout_fresh(odp_timeout_t tmo)
 {
 	const odp_timeout_hdr_t *hdr = timeout_hdr(tmo);
 	odp_timer_t hdl = hdr->timer;
-	odp_timer_pool *tp = handle_to_tp(hdl);
+	timer_pool_t *tp = handle_to_tp(hdl);
 	uint32_t idx = handle_to_idx(hdl, tp);
 	tick_buf_t *tb = &tp->tick_buf[idx];
 #if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
