@@ -116,15 +116,15 @@ ODP_ALIGNED(16) /* 16-byte atomic operations need properly aligned addresses */
 ODP_STATIC_ASSERT(sizeof(tick_buf_t) == 16, "sizeof(tick_buf_t) == 16");
 #endif
 
-typedef struct odp_timer_s {
+typedef struct {
 	void *user_ptr;
 	odp_queue_t queue;/* Used for free list when timer is free */
-} odp_timer;
+} _odp_timer_t;
 
-static void timer_init(odp_timer *tim,
-		tick_buf_t *tb,
-		odp_queue_t _q,
-		void *_up)
+static void timer_init(_odp_timer_t *tim,
+		       tick_buf_t *tb,
+		       odp_queue_t _q,
+		       void *_up)
 {
 	tim->queue = _q;
 	tim->user_ptr = _up;
@@ -140,7 +140,7 @@ static void timer_init(odp_timer *tim,
 }
 
 /* Teardown when timer is freed */
-static void timer_fini(odp_timer *tim, tick_buf_t *tb)
+static void timer_fini(_odp_timer_t *tim, tick_buf_t *tb)
 {
 	ODP_ASSERT(tb->exp_tck.v == TMO_UNUSED);
 	ODP_ASSERT(tb->tmo_buf == ODP_BUFFER_INVALID);
@@ -148,13 +148,13 @@ static void timer_fini(odp_timer *tim, tick_buf_t *tb)
 	tim->user_ptr = NULL;
 }
 
-static inline uint32_t get_next_free(odp_timer *tim)
+static inline uint32_t get_next_free(_odp_timer_t *tim)
 {
 	/* Reusing 'queue' for next free index */
 	return _odp_typeval(tim->queue);
 }
 
-static inline void set_next_free(odp_timer *tim, uint32_t nf)
+static inline void set_next_free(_odp_timer_t *tim, uint32_t nf)
 {
 	ODP_ASSERT(tim->queue == ODP_QUEUE_INVALID);
 	/* Reusing 'queue' for next free index */
@@ -172,7 +172,7 @@ typedef struct timer_pool_s {
 	uint64_t min_rel_tck;
 	uint64_t max_rel_tck;
 	tick_buf_t *tick_buf; /* Expiration tick and timeout buffer */
-	odp_timer *timers; /* User pointer and queue handle (and lock) */
+	_odp_timer_t *timers; /* User pointer and queue handle (and lock) */
 	odp_atomic_u32_t high_wm;/* High watermark of allocated timers */
 	odp_spinlock_t lock;
 	uint32_t num_alloc;/* Current number of allocated timers */
@@ -237,7 +237,8 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	}
 	size_t sz0 = ROUNDUP_CACHE_LINE(sizeof(timer_pool_t));
 	size_t sz1 = ROUNDUP_CACHE_LINE(sizeof(tick_buf_t) * param->num_timers);
-	size_t sz2 = ROUNDUP_CACHE_LINE(sizeof(odp_timer) * param->num_timers);
+	size_t sz2 = ROUNDUP_CACHE_LINE(sizeof(_odp_timer_t) *
+					param->num_timers);
 	odp_shm_t shm = odp_shm_reserve(name, sz0 + sz1 + sz2,
 			ODP_CACHE_LINE_SIZE, ODP_SHM_SW_ONLY);
 	if (odp_unlikely(shm == ODP_SHM_INVALID))
@@ -337,7 +338,7 @@ static inline odp_timer_t timer_alloc(timer_pool_t *tp,
 		/* Remove first unused timer from free list */
 		ODP_ASSERT(tp->first_free != tp->param.num_timers);
 		uint32_t idx = tp->first_free;
-		odp_timer *tim = &tp->timers[idx];
+		_odp_timer_t *tim = &tp->timers[idx];
 		tp->first_free = get_next_free(tim);
 		/* Initialize timer */
 		timer_init(tim, &tp->tick_buf[idx], queue, user_ptr);
@@ -363,7 +364,7 @@ static odp_buffer_t timer_cancel(timer_pool_t *tp,
 
 static inline odp_buffer_t timer_free(timer_pool_t *tp, uint32_t idx)
 {
-	odp_timer *tim = &tp->timers[idx];
+	_odp_timer_t *tim = &tp->timers[idx];
 
 	/* Free the timer by setting timer state to unused and
 	 * grab any timeout buffer */
@@ -563,7 +564,7 @@ static odp_buffer_t timer_cancel(timer_pool_t *tp,
 
 static unsigned timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 {
-	odp_timer *tim = &tp->timers[idx];
+	_odp_timer_t *tim = &tp->timers[idx];
 	tick_buf_t *tb = &tp->tick_buf[idx];
 	odp_buffer_t tmo_buf = ODP_BUFFER_INVALID;
 	uint64_t exp_tck;
@@ -691,7 +692,7 @@ static void timer_notify(timer_pool_t *tp)
 		}
 	}
 
-	odp_timer *array = &tp->timers[0];
+	_odp_timer_t *array = &tp->timers[0];
 	uint32_t i;
 	/* Prefetch initial cache lines (match 32 above) */
 	for (i = 0; i < 32; i += ODP_CACHE_LINE_SIZE / sizeof(array[0]))
