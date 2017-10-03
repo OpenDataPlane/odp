@@ -166,7 +166,7 @@ static inline void set_next_free(odp_timer *tim, uint32_t nf)
  * Inludes alloc and free timer
  *****************************************************************************/
 
-typedef struct odp_timer_pool_s {
+typedef struct timer_pool_s {
 /* Put frequently accessed fields in the first cache line */
 	odp_atomic_u64_t cur_tick;/* Current tick value */
 	uint64_t min_rel_tck;
@@ -205,7 +205,7 @@ static inline timer_pool_t *handle_to_tp(odp_timer_t hdl)
 }
 
 static inline uint32_t handle_to_idx(odp_timer_t hdl,
-		struct odp_timer_pool_s *tp)
+				     timer_pool_t *tp)
 {
 	uint32_t idx = _odp_typeval(hdl) & ((1U << INDEX_BITS) - 1U);
 	__builtin_prefetch(&tp->tick_buf[idx], 0, 0);
@@ -214,8 +214,8 @@ static inline uint32_t handle_to_idx(odp_timer_t hdl,
 	ODP_ABORT("Invalid timer handle %#x\n", hdl);
 }
 
-static inline odp_timer_t tp_idx_to_handle(struct odp_timer_pool_s *tp,
-		uint32_t idx)
+static inline odp_timer_t tp_idx_to_handle(timer_pool_t *tp,
+					   uint32_t idx)
 {
 	ODP_ASSERT(idx < (1U << INDEX_BITS));
 	return _odp_cast_scalar(odp_timer_t, (tp->tp_idx << INDEX_BITS) | idx);
