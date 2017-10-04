@@ -75,7 +75,7 @@ extern "C" {
 
 /**
  * @def ODP_TM_MAX_TM_QUEUES
- * The largest number of tm_queues that can handled by any one TM system.
+ * The largest number of tm_queues that can be handled by any one TM system.
  */
 
 /**
@@ -97,7 +97,7 @@ extern "C" {
 
 /**
  * @def ODP_TM_MIN_SHAPER_BW
- * The largest amount of bandwidth that any shaper's peak or commit rate can
+ * The lowest amount of bandwidth that any shaper's peak or commit rate can
  * be set to. It is in units of 1000 bytes/second.
  */
 
@@ -143,7 +143,7 @@ extern "C" {
 
 /**
  * @typedef odp_tm_node_t
- * Each odp_tm_queue_t value is an opaque ODP handle representing a specific
+ * Each odp_tm_node_t value is an opaque ODP handle representing a specific
  * tm node within a specific TM system.
  */
 
