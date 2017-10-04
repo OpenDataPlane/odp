@@ -873,6 +873,7 @@ const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.promisc_mode_set = sock_promisc_mode_set,
 	.promisc_mode_get = sock_promisc_mode_get,
 	.mac_get = sock_mac_addr_get,
+	.mac_set = NULL,
 	.link_status = sock_link_status,
 	.capability = sock_capability,
 	.pktin_ts_res = NULL,
