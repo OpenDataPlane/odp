@@ -920,7 +920,7 @@ odp_packet_t odp_packet_ref_static(odp_packet_t pkt);
  * dynamic references must not be mixed. Results are undefined if these
  * restrictions are not observed.
  *
- * The packet handle 'pkt' may itself by a (dynamic) reference to a packet.
+ * The packet handle 'pkt' may itself be a (dynamic) reference to a packet.
  *
  * If the caller does not intend to modify either the packet or the new
  * reference to it, odp_packet_ref_static() may be used to create
@@ -947,7 +947,7 @@ odp_packet_t odp_packet_ref(odp_packet_t pkt, uint32_t offset);
  * packet consists metadata and data of the 'hdr' packet, followed by the
  * shared part of packet 'pkt'.
  *
- * The packet handle ('pkt') may itself by a (dynamic) reference to a packet,
+ * The packet handle ('pkt') may itself be a (dynamic) reference to a packet,
  * but the header packet handle ('hdr') must be unique. Both packets must be
  * have been allocated from the same pool and the handles must not refer to
  * the same packet. Results are undefined if these restrictions are not
