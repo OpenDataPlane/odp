@@ -195,22 +195,6 @@ noinst_HEADERS = \
 		  ${srcdir}/include/protocols/thash.h \
 		  ${srcdir}/include/protocols/udp.h
 
-if ARCH_IS_ARM
-noinst_HEADERS += ${srcdir}/arch/arm/odp_atomic.h \
-		  ${srcdir}/arch/arm/odp_cpu.h \
-		  ${srcdir}/arch/arm/odp_cpu_idling.h \
-		  ${srcdir}/arch/arm/odp_llsc.h
-endif
-if ARCH_IS_MIPS64
-noinst_HEADERS += ${srcdir}/arch/mips64/odp_cpu.h
-endif
-if ARCH_IS_POWERPC
-noinst_HEADERS += ${srcdir}/arch/powerpc/odp_cpu.h
-endif
-if ARCH_IS_X86
-noinst_HEADERS += ${srcdir}/arch/x86/odp_cpu.h
-endif
-
 __LIB__libodp_linux_la_SOURCES = \
 			   _fdserver.c \
 			   _ishm.c \
