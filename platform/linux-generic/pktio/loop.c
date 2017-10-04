@@ -265,6 +265,7 @@ const pktio_if_ops_t loopback_pktio_ops = {
 	.promisc_mode_set = loopback_promisc_mode_set,
 	.promisc_mode_get = loopback_promisc_mode_get,
 	.mac_get = loopback_mac_addr_get,
+	.mac_set = NULL,
 	.link_status = loopback_link_status,
 	.capability = loopback_capability,
 	.pktin_ts_res = NULL,
