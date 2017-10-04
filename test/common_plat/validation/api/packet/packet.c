@@ -1405,7 +1405,7 @@ void packet_test_concat_small(void)
 
 	param.type    = ODP_POOL_PACKET;
 	param.pkt.len = len;
-	param.pkt.num = PACKET_POOL_NUM;
+	param.pkt.num = 65536;
 
 	pool = odp_pool_create("packet_pool_concat", &param);
 	CU_ASSERT(packet_pool != ODP_POOL_INVALID);

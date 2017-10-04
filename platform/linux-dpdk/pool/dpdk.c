@@ -233,6 +233,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	/* init some constant fields */
 	mb->pool         = mp;
 	mb->ol_flags     = 0;
+	rte_mbuf_refcnt_set(mb, 1);
 
 	/* Save index, might be useful for debugging purposes */
 	buf_hdr = (struct odp_buffer_hdr_t *)raw_mbuf;
