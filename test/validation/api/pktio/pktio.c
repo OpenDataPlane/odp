@@ -1065,9 +1065,12 @@ void pktio_test_promisc(void)
 void pktio_test_mac(void)
 {
 	unsigned char mac_addr[ODP_PKTIO_MACADDR_MAXSIZE];
+	unsigned char mac_addr_ref[ODP_PKTIO_MACADDR_MAXSIZE] =	{
+		0xA0, 0xB0, 0xC0, 0xD0, 0xE0, 0xF0};
 	int mac_len;
 	int ret;
 	odp_pktio_t pktio;
+	odp_pktio_capability_t capa;
 
 	pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED,
 			     ODP_PKTOUT_MODE_DIRECT);
@@ -1087,6 +1090,26 @@ void pktio_test_mac(void)
 	/* Fail case: wrong addr_size. Expected <0. */
 	mac_len = odp_pktio_mac_addr(pktio, mac_addr, 2);
 	CU_ASSERT(mac_len < 0);
+
+	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0);
+	if (capa.set_op.op.mac_addr) {
+		/* Fail case: wrong addr_size. Expected <0. */
+		ret = odp_pktio_mac_addr_set(pktio, mac_addr_ref, 2);
+		CU_ASSERT_FATAL(ret < 0);
+
+		ret = odp_pktio_mac_addr_set(pktio, mac_addr_ref,
+					     ODPH_ETHADDR_LEN);
+		CU_ASSERT_FATAL(ret == 0);
+
+		mac_len = odp_pktio_mac_addr(pktio, mac_addr,
+					     ODPH_ETHADDR_LEN);
+		CU_ASSERT(ODPH_ETHADDR_LEN == mac_len);
+
+		CU_ASSERT(odp_memcmp(mac_addr_ref, mac_addr,
+				     ODPH_ETHADDR_LEN) == 0);
+	} else
+		printf("\n mac address set not supported for %s!\n",
+		       iface_name[0]);
 
 	ret = odp_pktio_close(pktio);
 	CU_ASSERT(0 == ret);
