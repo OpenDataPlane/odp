@@ -9,8 +9,8 @@
 #ifndef PLATFORM_LINUXGENERIC_ARCH_ARM_ODP_CPU_H
 #define PLATFORM_LINUXGENERIC_ARCH_ARM_ODP_CPU_H
 
-#if !defined(__arm__)
-#error Use this file only when compiling for ARM architecture
+#if !defined(__aarch64__)
+#error Use this file only when compiling for ARMv8 architecture
 #endif
 
 #include <odp_debug_internal.h>
@@ -38,15 +38,22 @@
  * more scalable) and enables the CPU to enter a sleep state (lower power
  * consumption).
  */
-/* #define CONFIG_WFE */
+#define CONFIG_WFE
 
 static inline void dmb(void)
 {
 	__asm__ volatile("dmb" : : : "memory");
 }
 
+/* Only ARMv8 supports DMB ISHLD */
+/* A load only barrier is much cheaper than full barrier */
 #define _odp_release_barrier(ro) \
-	__atomic_thread_fence(__ATOMIC_RELEASE)
+do {							     \
+	if (ro)						     \
+		__asm__ volatile("dmb ishld" ::: "memory");  \
+	else						     \
+		__asm__ volatile("dmb ish" ::: "memory");    \
+} while (0)
 
 #include "odp_llsc.h"
 #include "odp_atomic.h"
