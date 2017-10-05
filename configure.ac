@@ -358,7 +358,6 @@ CFLAGS="$CFLAGS $ODP_CFLAGS"
 CXXFLAGS="$CXXFLAGS $ODP_CXXFLAGS"
 
 AC_CONFIG_FILES([Makefile
-		 pkgconfig/libodp-linux.pc
 		 pkgconfig/libodphelper.pc
 		 ])
 
