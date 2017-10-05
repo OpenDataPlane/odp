@@ -473,31 +473,15 @@ reliability, the shared data contained in any packet referred to by references
 should be treated as read only once it has been successfully referenced until
 it is known that all references to it have been freed.
 
-To assist applications in working with references, ODP provides two additional
-APIs:
+To assist applications in working with references, ODP provides the additional
+API:
 
 [source,c]
 -----
 int odp_packet_has_ref(odp_packet_t pkt);
-
-uint32_t odp_packet_unshared_len(odp_packet_t pkt);
 -----
 The `odp_packet_has_ref()` API says whether any other packets
 exist that share any bytes with this packet.
-
-Because references and referenced packets consist of an unshared
-prefix, that is modifiable, followed by a shared body that should not be
-modified, the `odp_packet_unshared_len()` API is available that operates as
-shown here:
-
-.Packet Reference Lengths
-image::reflen.svg[align="center"]
-
-`odp_packet_unshared_len()` returns the same value as `odp_packet_len()` when
-`odp_packet_has_ref()` returns 0, but for packets for which
-`odp_packet_has_ref()` returns 1, only returns the number of unshared bytes
-prefixed to them. To ensure portability and reliability, only offsets
-0..`odp_packet_unshared_len()`-1 should be modified by the caller.
 
 ===== Compound References
 Note that architecturally ODP does not limit referencing and so it is possible
@@ -509,11 +493,7 @@ As noted earlier, the intent behind references is that they are lightweight
 objects that can be implemented without requiring data copies. The existence
 of compound references may complicate this goal for some implementations. As a
 result, implementations are always free to perform partial or full copies of
-packets as part of any reference creation call. The
-`odp_packet_unshared_len()` API will always provide an authoritative answer to
-the question of how many bytes of a packet may safely be modified in any
-context, so whether or not copies have been performed applications can be
-assured of portability across all conforming ODP implementations.
+packets as part of any reference creation call.
 
 Note also that a packet may not reference itself, nor may circular reference
 relationships be formed, _e.g.,_ packet A is used as a header for a reference
