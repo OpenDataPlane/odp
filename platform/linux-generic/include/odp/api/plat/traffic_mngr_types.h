@@ -56,7 +56,7 @@ extern "C" {
 #define ODP_TM_MAX_SCHED_WEIGHT  255
 
 /** The ODP_TM_MAX_TM_QUEUES constant is the largest number of tm_queues
- * that can handled by any one TM system.
+ * that can be handled by any one TM system.
  */
 #define ODP_TM_MAX_TM_QUEUES  (16 * 1024 * 1024)
 

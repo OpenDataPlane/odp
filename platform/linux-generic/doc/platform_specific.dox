@@ -28,7 +28,7 @@
  *			to odp_init_local() is actually fully defined by these
  *			requirements: It has to be the value returned by the
  *			unique call to odp_init_global() made by one single
- *			acsendant of the current process.
+ *			ascendant of the current process.
  */
 
 /**
