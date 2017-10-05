@@ -56,11 +56,6 @@ static inline odp_packet_hdr_t *buf_to_packet_hdr(odp_buffer_t buf)
 	return (odp_packet_hdr_t *)buf_hdl_to_hdr(buf);
 }
 
-odp_packet_t _odp_packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
-{
-	return (odp_packet_t)buf_hdr;
-}
-
 static inline seg_entry_t *seg_entry(odp_packet_hdr_t *hdr,
 				     uint32_t seg_idx)
 {
