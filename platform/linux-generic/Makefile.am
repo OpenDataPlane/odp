@@ -66,7 +66,6 @@ odpapiinclude_HEADERS = \
 
 odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \
-		  $(builddir)/include/odp/api/plat/static_inline.h \
 		  include/odp/api/plat/atomic_inlines.h \
 		  include/odp/api/plat/atomic_types.h \
 		  include/odp/api/plat/barrier_types.h \
@@ -104,6 +103,9 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/timer_types.h \
 		  include/odp/api/plat/traffic_mngr_types.h \
 		  include/odp/api/plat/version_types.h
+
+nodist_odpapiplatinclude_HEADERS = \
+		  include/odp/api/plat/static_inline.h
 
 odpdrvincludedir = $(includedir)/odp/drv
 odpdrvinclude_HEADERS = \
