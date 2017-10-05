@@ -9,7 +9,7 @@
 # launched by 'make check'
 
 TEST_DIR="${TEST_DIR:-$(dirname $0)}"
-PERFORMANCE="$TEST_DIR/../../common_plat/performance"
+PERFORMANCE="$TEST_DIR/../../../../test/common_plat/performance"
 ret=0
 ALL=0
 
