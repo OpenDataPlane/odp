@@ -3,13 +3,18 @@ AM_DISTCHECK_CONFIGURE_FLAGS = --enable-user-guides	\
 			       --enable-helper-linux	\
 			       --with-testdir
 
-#@with_platform@ works alone in subdir but not as part of a path???
-SUBDIRS = @platform_with_platform@ \
+if PLATFORM_IS_LINUX_GENERIC
+PLATFORM_DIR = platform/linux-generic
+PLATFORM_TEST_DIR = platform/linux-generic/test
+endif
+
+SUBDIRS = $(PLATFORM_DIR) \
 	  helper \
 	  helper/test \
 	  doc \
 	  example . \
-	  test
+	  test \
+	  $(PLATFORM_TEST_DIR)
 
 @DX_RULES@
 

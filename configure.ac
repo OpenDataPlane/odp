@@ -161,7 +161,9 @@ AC_ARG_WITH([platform],
     ])
 
 AC_SUBST([with_platform])
-AC_SUBST([platform_with_platform], ["platform/${with_platform}"])
+
+AM_CONDITIONAL([PLATFORM_IS_LINUX_GENERIC],
+	       [test "x$with_platform" = "xlinux-generic"])
 
 ##########################################################################
 # Run platform specific checks and settings
@@ -170,7 +172,6 @@ IMPLEMENTATION_NAME=""
 if test "${with_platform}" = "linux-generic";
 then
     m4_include([./platform/linux-generic/m4/configure.m4])
-    m4_include([./test/linux-generic/m4/configure.m4])
     IMPLEMENTATION_NAME="odp-linux"
 else
     echo "UNSUPPORTED PLATFORM: ${with_platform}"

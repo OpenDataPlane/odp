@@ -30,7 +30,8 @@ PATH=$TEST_DIR:$TEST_DIR/../../../example/generator:$PATH
 # exit codes expected by automake for skipped tests
 TEST_SKIPPED=77
 
-PLATFORM_VALIDATION=${TEST_SRC_DIR}/../../$ODP_PLATFORM/validation
+VALIDATION_TESTDIR=platform/$ODP_PLATFORM/test/validation
+PLATFORM_VALIDATION=${TEST_SRC_DIR}/../../../$VALIDATION_TESTDIR
 
 FLOOD_MODE=0
 
