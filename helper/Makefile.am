@@ -1,5 +1,5 @@
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = $(top_builddir)/pkgconfig/libodphelper.pc
+pkgconfig_DATA = libodphelper.pc
 
 LIB   = $(top_builddir)/lib
 AM_CPPFLAGS = -I$(srcdir)/include
