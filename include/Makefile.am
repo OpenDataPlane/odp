@@ -61,15 +61,72 @@ odpapiabidefaultinclude_HEADERS = \
 	odp/arch/default/api/abi/shared_memory.h
 
 odpapiabiarchincludedir= $(includedir)/odp/arch/@ARCH_ABI@/odp/api/abi
+if ARCH_IS_ARM
 odpapiabiarchinclude_HEADERS = \
-	odp/arch/@ARCH_ABI@/odp/api/abi/buffer.h \
-	odp/arch/@ARCH_ABI@/odp/api/abi/classification.h \
-	odp/arch/@ARCH_ABI@/odp/api/abi/crypto.h \
-	odp/arch/@ARCH_ABI@/odp/api/abi/event.h \
-	odp/arch/@ARCH_ABI@/odp/api/abi/packet.h \
-	odp/arch/@ARCH_ABI@/odp/api/abi/pool.h \
-	odp/arch/@ARCH_ABI@/odp/api/abi/queue.h \
-	odp/arch/@ARCH_ABI@/odp/api/abi/shared_memory.h
+	odp/arch/arm32-linux/odp/api/abi/buffer.h \
+	odp/arch/arm32-linux/odp/api/abi/classification.h \
+	odp/arch/arm32-linux/odp/api/abi/crypto.h \
+	odp/arch/arm32-linux/odp/api/abi/event.h \
+	odp/arch/arm32-linux/odp/api/abi/packet.h \
+	odp/arch/arm32-linux/odp/api/abi/pool.h \
+	odp/arch/arm32-linux/odp/api/abi/queue.h \
+	odp/arch/arm32-linux/odp/api/abi/shared_memory.h
+endif
+if ARCH_IS_AARCH64
+odpapiabiarchinclude_HEADERS = \
+	odp/arch/arm64-linux/odp/api/abi/buffer.h \
+	odp/arch/arm64-linux/odp/api/abi/classification.h \
+	odp/arch/arm64-linux/odp/api/abi/crypto.h \
+	odp/arch/arm64-linux/odp/api/abi/event.h \
+	odp/arch/arm64-linux/odp/api/abi/packet.h \
+	odp/arch/arm64-linux/odp/api/abi/pool.h \
+	odp/arch/arm64-linux/odp/api/abi/queue.h \
+	odp/arch/arm64-linux/odp/api/abi/shared_memory.h
+endif
+if ARCH_IS_MIPS64
+odpapiabiarchinclude_HEADERS = \
+	odp/arch/mips64-linux/odp/api/abi/buffer.h \
+	odp/arch/mips64-linux/odp/api/abi/classification.h \
+	odp/arch/mips64-linux/odp/api/abi/crypto.h \
+	odp/arch/mips64-linux/odp/api/abi/event.h \
+	odp/arch/mips64-linux/odp/api/abi/packet.h \
+	odp/arch/mips64-linux/odp/api/abi/pool.h \
+	odp/arch/mips64-linux/odp/api/abi/queue.h \
+	odp/arch/mips64-linux/odp/api/abi/shared_memory.h
+endif
+if ARCH_IS_POWERPC
+odpapiabiarchinclude_HEADERS = \
+	odp/arch/power64-linux/odp/api/abi/buffer.h \
+	odp/arch/power64-linux/odp/api/abi/classification.h \
+	odp/arch/power64-linux/odp/api/abi/crypto.h \
+	odp/arch/power64-linux/odp/api/abi/event.h \
+	odp/arch/power64-linux/odp/api/abi/packet.h \
+	odp/arch/power64-linux/odp/api/abi/pool.h \
+	odp/arch/power64-linux/odp/api/abi/queue.h \
+	odp/arch/power64-linux/odp/api/abi/shared_memory.h
+endif
+if ARCH_IS_X86_32
+odpapiabiarchinclude_HEADERS = \
+	odp/arch/x86_32-linux/odp/api/abi/buffer.h \
+	odp/arch/x86_32-linux/odp/api/abi/classification.h \
+	odp/arch/x86_32-linux/odp/api/abi/crypto.h \
+	odp/arch/x86_32-linux/odp/api/abi/event.h \
+	odp/arch/x86_32-linux/odp/api/abi/packet.h \
+	odp/arch/x86_32-linux/odp/api/abi/pool.h \
+	odp/arch/x86_32-linux/odp/api/abi/queue.h \
+	odp/arch/x86_32-linux/odp/api/abi/shared_memory.h
+endif
+if ARCH_IS_X86_64
+odpapiabiarchinclude_HEADERS = \
+	odp/arch/x86_64-linux/odp/api/abi/buffer.h \
+	odp/arch/x86_64-linux/odp/api/abi/classification.h \
+	odp/arch/x86_64-linux/odp/api/abi/crypto.h \
+	odp/arch/x86_64-linux/odp/api/abi/event.h \
+	odp/arch/x86_64-linux/odp/api/abi/packet.h \
+	odp/arch/x86_64-linux/odp/api/abi/pool.h \
+	odp/arch/x86_64-linux/odp/api/abi/queue.h \
+	odp/arch/x86_64-linux/odp/api/abi/shared_memory.h
+endif
 
 # Create symlink for ABI header files. Application does not need to use the arch
 # specific include path for installed files.
