@@ -167,13 +167,15 @@ install:
 
 #	Netmap pktio
         - |
-          if [ -z "$CROSS_ARCH" -a ! -f "netmap/LINUX/netmap.ko" ]; then
-            git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git
-            pushd netmap/LINUX
-            ./configure
-            make
-            sudo insmod ./netmap.ko
-            popd
+          if [ -z "$CROSS_ARCH" ]; then
+            if [ ! -f "netmap/LINUX/netmap.ko" ]; then
+              git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git
+              pushd netmap/LINUX
+              ./configure
+              make
+              popd
+            fi
+            sudo insmod ./netmap/LINUX/netmap.ko
           fi
 
 script:
