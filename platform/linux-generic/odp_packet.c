@@ -46,11 +46,6 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 
 #include <odp/visibility_end.h>
 
-static inline odp_packet_hdr_t *packet_hdr(odp_packet_t pkt)
-{
-	return (odp_packet_hdr_t *)(uintptr_t)pkt;
-}
-
 static inline odp_buffer_t buffer_handle(odp_packet_hdr_t *pkt_hdr)
 {
 	return (odp_buffer_t)pkt_hdr;

@@ -553,7 +553,7 @@ static inline int pktin_recv_buf(odp_pktin_queue_t queue,
 
 	for (i = 0; i < pkts; i++) {
 		pkt = packets[i];
-		pkt_hdr = odp_packet_hdr(pkt);
+		pkt_hdr = packet_hdr(pkt);
 		buf_hdr = packet_to_buf_hdr(pkt);
 
 		if (pkt_hdr->p.input_flags.dst_queue) {
@@ -681,7 +681,7 @@ int pktin_poll_one(int pktio_index,
 	num_rx = 0;
 	for (i = 0; i < num_pkts; i++) {
 		pkt = packets[i];
-		pkt_hdr = odp_packet_hdr(pkt);
+		pkt_hdr = packet_hdr(pkt);
 		if (odp_unlikely(pkt_hdr->p.input_flags.dst_queue)) {
 			queue = pkt_hdr->dst_queue;
 			buf_hdr = packet_to_buf_hdr(pkt);

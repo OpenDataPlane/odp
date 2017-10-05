@@ -306,7 +306,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		void *base = msgvec[i].msg_hdr.msg_iov->iov_base;
 		struct ethhdr *eth_hdr = base;
 		odp_packet_t pkt = pkt_table[i];
-		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 		uint16_t pkt_len = msgvec[i].msg_len;
 		int ret;
 

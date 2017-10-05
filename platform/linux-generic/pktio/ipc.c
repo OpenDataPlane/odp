@@ -532,14 +532,14 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 		memcpy(pkt_data, rmt_data_ptr, phdr->frame_len);
 
 		/* Copy packets L2, L3 parsed offsets and size */
-		copy_packet_cls_metadata(phdr, odp_packet_hdr(pkt));
+		copy_packet_cls_metadata(phdr, packet_hdr(pkt));
 
-		odp_packet_hdr(pkt)->frame_len = phdr->frame_len;
-		odp_packet_hdr(pkt)->headroom = phdr->headroom;
-		odp_packet_hdr(pkt)->tailroom = phdr->tailroom;
+		packet_hdr(pkt)->frame_len = phdr->frame_len;
+		packet_hdr(pkt)->headroom = phdr->headroom;
+		packet_hdr(pkt)->tailroom = phdr->tailroom;
 
 		/* Take classification fields */
-		odp_packet_hdr(pkt)->p = phdr->p;
+		packet_hdr(pkt)->p = phdr->p;
 
 		pkt_table[i] = pkt;
 	}
@@ -630,7 +630,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 		odp_packet_hdr_t *pkt_hdr;
 		pool_t *pool;
 
-		pkt_hdr = odp_packet_hdr(pkt);
+		pkt_hdr = packet_hdr(pkt);
 		pool = pkt_hdr->buf_hdr.pool_ptr;
 
 		if (pool->pool_idx != ipc_pool->pool_idx ||
@@ -652,7 +652,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 	for (i = 0; i < len; i++) {
 		uint64_t data_pool_off;
 		odp_packet_t pkt = pkt_table_mapped[i];
-		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 		odp_pool_t pool_hdl = odp_packet_pool(pkt);
 		pool_t *pool = pool_entry_from_hdl(pool_hdl);
 
