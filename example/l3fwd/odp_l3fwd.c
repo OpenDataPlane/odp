@@ -11,7 +11,7 @@
 #include <unistd.h>
 #include <inttypes.h>
 
-#include <test_debug.h>
+#include <example_debug.h>
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
@@ -313,7 +313,7 @@ static int run_worker(void *arg)
 	}
 
 	if (num_pktio == 0)
-		LOG_ABORT("No pktio devices found\n");
+		EXAMPLE_ABORT("No pktio devices found\n");
 
 	if_idx = input_ifs[pktio];
 	inq = input_queues[pktio];
@@ -728,28 +728,31 @@ static void setup_worker_qconf(app_args_t *args)
 
 		q = &args->qconf_config[i];
 		if (q->core_idx >= nb_worker || q->if_idx >= if_count)
-			LOG_ABORT("Error queue (%d, %d, %d), max port: "
-				  "%d, max core: %d\n", q->if_idx, q->rxq_idx,
-				  q->core_idx, args->if_count - 1,
-				  args->worker_count - 1);
+			EXAMPLE_ABORT("Error queue (%d, %d, %d), max port: "
+				      "%d, max core: %d\n", q->if_idx,
+				      q->rxq_idx, q->core_idx,
+				      args->if_count - 1,
+				      args->worker_count - 1);
 
 		/* check if one queue is configured twice or more */
 		if (queue_mask[q->if_idx][q->rxq_idx])
-			LOG_ABORT("Error queue (%d, %d, %d), reconfig queue\n",
-				  q->if_idx, q->rxq_idx, q->core_idx);
+			EXAMPLE_ABORT("Error queue (%d, %d, %d),"
+				      " reconfig queue\n",
+				      q->if_idx, q->rxq_idx, q->core_idx);
 		queue_mask[q->if_idx][q->rxq_idx] = 1;
 
 		port = &global.l3fwd_pktios[q->if_idx];
 		if (port->rxq_idx < q->rxq_idx)
-			LOG_ABORT("Error queue (%d, %d, %d), queue should be"
-				  " in sequence and start from 0, queue %d\n",
-				  q->if_idx, q->rxq_idx, q->core_idx,
-				  q->rxq_idx);
+			EXAMPLE_ABORT("Error queue (%d, %d, %d), queue should"
+				      " be in sequence and start from 0, queue"
+				      " %d\n",
+				      q->if_idx, q->rxq_idx, q->core_idx,
+				      q->rxq_idx);
 
 		if (q->rxq_idx > port->nb_rxq) {
-			LOG_ABORT("Error queue (%d, %d, %d), max queue %d\n",
-				  q->if_idx, q->rxq_idx, q->core_idx,
-				  port->nb_rxq - 1);
+			EXAMPLE_ABORT("Error queue (%d, %d, %d), max queue %d\n",
+				      q->if_idx, q->rxq_idx, q->core_idx,
+				      port->nb_rxq - 1);
 		}
 		port->rxq_idx = q->rxq_idx + 1;
 
@@ -810,8 +813,8 @@ static void setup_worker_qconf(app_args_t *args)
 		}
 
 		if (odp_pktin_queue_config(port->pktio, &in_queue_param))
-			LOG_ABORT("Fail to config input queue for port %s\n",
-				  name);
+			EXAMPLE_ABORT("Fail to config input queue for port %s\n",
+				      name);
 
 		out_queue_param.num_queues = port->txq_idx;
 		if (port->txq_idx > port->nb_txq) {
@@ -819,20 +822,20 @@ static void setup_worker_qconf(app_args_t *args)
 			out_queue_param.op_mode = ODP_PKTIO_OP_MT;
 		}
 		if (odp_pktout_queue_config(port->pktio, &out_queue_param))
-			LOG_ABORT("Fail to config output queue for port %s\n",
-				  name);
+			EXAMPLE_ABORT("Fail to config output queue for port %s\n",
+				      name);
 
 		inq = port->ifin;
 		nb_rxq = in_queue_param.num_queues;
 		if (odp_pktin_queue(port->pktio, inq, nb_rxq) != nb_rxq)
-			LOG_ABORT("Fail to set pktin queue for port %s\n",
-				  name);
+			EXAMPLE_ABORT("Fail to set pktin queue for port %s\n",
+				      name);
 
 		outq = port->ifout;
 		nb_txq = out_queue_param.num_queues;
 		if (odp_pktout_queue(port->pktio, outq, nb_txq) != nb_txq)
-			LOG_ABORT("Fail to set pktout queue for port %s\n",
-				  name);
+			EXAMPLE_ABORT("Fail to set pktout queue for port %s\n",
+				      name);
 	}
 }
 
