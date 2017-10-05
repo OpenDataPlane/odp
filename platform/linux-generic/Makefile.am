@@ -14,10 +14,6 @@ AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
 AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
 AM_CPPFLAGS +=  $(NETMAP_CPPFLAGS)
 
-include_HEADERS = \
-		  $(top_srcdir)/include/odp.h \
-		  $(top_srcdir)/include/odp_api.h
-
 odpincludedir= $(includedir)/odp
 odpinclude_HEADERS = \
 		  $(srcdir)/include/odp/visibility_begin.h \
@@ -276,13 +272,3 @@ __LIB__libodp_linux_la_LIBADD += $(TIMER_LIBS)
 if HAVE_PCAP
 __LIB__libodp_linux_la_LIBADD += $(PCAP_LIBS)
 endif
-
-# Create symlink for ABI header files. Application does not need to use the arch
-# specific include path for installed files.
-install-data-hook:
-	if [ -h $(DESTDIR)$(prefix)/include/odp/api/abi ]; then \
-		: ; \
-	else \
-		$(LN_S) -rf $(DESTDIR)$(prefix)/include/odp/arch/@ARCH_ABI@/odp/api/abi \
-			$(DESTDIR)$(prefix)/include/odp/api/abi; \
-	fi

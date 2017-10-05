@@ -8,7 +8,9 @@ PLATFORM_DIR = platform/linux-generic
 PLATFORM_TEST_DIR = platform/linux-generic/test
 endif
 
-SUBDIRS = $(PLATFORM_DIR) \
+SUBDIRS = \
+	  include \
+	  $(PLATFORM_DIR) \
 	  helper \
 	  helper/test \
 	  doc \

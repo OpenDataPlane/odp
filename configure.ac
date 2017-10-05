@@ -16,9 +16,6 @@ ODP_VERSION_API_MAJOR=odpapi_major_version
 AC_SUBST(ODP_VERSION_API_MAJOR)
 ODP_VERSION_API_MINOR=odpapi_minor_version
 AC_SUBST(ODP_VERSION_API_MINOR)
-AC_CONFIG_FILES([include/odp/api/spec/version.h
-                 include/odp/api/spec/deprecated.h])
-
 AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects foreign nostdinc])
 AC_CONFIG_SRCDIR([include/odp/api/spec/init.h])
 AM_CONFIG_HEADER([include/config.h])
@@ -358,6 +355,10 @@ CFLAGS="$CFLAGS $ODP_CFLAGS"
 CXXFLAGS="$CXXFLAGS $ODP_CXXFLAGS"
 
 AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([include/Makefile
+		 include/odp/api/spec/version.h
+		 include/odp/api/spec/deprecated.h])
+
 
 ##########################################################################
 # distribute the changed variables among the Makefiles
