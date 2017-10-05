@@ -1,1 +1,1 @@
-SUBDIRS = common_plat
+SUBDIRS = common performance miscellaneous validation

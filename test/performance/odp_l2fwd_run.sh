@@ -25,13 +25,13 @@ TEST_DIR="${TEST_DIR:-$PWD}"
 # directory where test sources are, including scripts
 TEST_SRC_DIR=$(dirname $0)
 
-PATH=$TEST_DIR:$TEST_DIR/../../../example/generator:$PATH
+PATH=$TEST_DIR:$TEST_DIR/../../example/generator:$PATH
 
 # exit codes expected by automake for skipped tests
 TEST_SKIPPED=77
 
 VALIDATION_TESTDIR=platform/$ODP_PLATFORM/test/validation
-PLATFORM_VALIDATION=${TEST_SRC_DIR}/../../../$VALIDATION_TESTDIR
+PLATFORM_VALIDATION=${TEST_SRC_DIR}/../../$VALIDATION_TESTDIR
 
 FLOOD_MODE=0
 

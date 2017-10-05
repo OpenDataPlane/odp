@@ -25,7 +25,7 @@ ODP_MODULES = atomic \
 SUBDIRS = $(ODP_MODULES)
 
 include $(top_srcdir)/test/Makefile.inc
-TESTS_ENVIRONMENT += TEST_DIR=${top_builddir}/test/common_plat/validation
+TESTS_ENVIRONMENT += TEST_DIR=${top_builddir}/test/validation
 
 TESTS = \
 	atomic/atomic_main$(EXEEXT) \

@@ -13,7 +13,7 @@
 # -in the current directory.
 # running stand alone out of tree requires setting PATH
 PATH=${TEST_DIR}/api/traffic_mngr:$PATH
-PATH=$(dirname $0)/../../../../common_plat/validation/api/traffic_mngr:$PATH
+PATH=$(dirname $0)/../../../../validation/api/traffic_mngr:$PATH
 PATH=$(dirname $0):$PATH
 PATH=`pwd`:$PATH
 
