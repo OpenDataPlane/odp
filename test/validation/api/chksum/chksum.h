@@ -12,6 +12,7 @@
 /* test functions: */
 void chksum_ones_complement_ip(void);
 void chksum_ones_complement_udp(void);
+void chksum_ones_complement_udp_long(void);
 
 /* test arrays: */
 extern odp_testinfo_t chksum_suite[];
