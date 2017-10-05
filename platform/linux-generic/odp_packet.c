@@ -490,7 +490,6 @@ static inline odp_packet_hdr_t *add_segments(odp_packet_hdr_t *pkt_hdr,
 		new_hdr->frame_len = pkt_hdr->frame_len + len;
 		new_hdr->headroom  = pool->headroom + offset;
 		new_hdr->tailroom  = pkt_hdr->tailroom;
-		new_hdr->shared_len = pkt_hdr->shared_len;
 
 		pkt_hdr = new_hdr;
 	} else {
@@ -694,7 +693,6 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 			new_hdr->headroom = seg_headroom(new_hdr, 0);
 
 		new_hdr->frame_len  = pkt_hdr->frame_len - free_len;
-		new_hdr->shared_len = pkt_hdr->shared_len;
 
 		pull_head(new_hdr, pull_len);
 
@@ -2105,7 +2103,6 @@ odp_packet_t odp_packet_ref_static(odp_packet_t pkt)
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
 	packet_ref_inc(pkt_hdr);
-	pkt_hdr->shared_len = pkt_hdr->frame_len;
 
 	return pkt;
 }
@@ -2185,15 +2182,11 @@ odp_packet_t odp_packet_ref(odp_packet_t pkt, uint32_t offset)
 	link_hdr->buf_hdr.segcount  = segcount - seg_idx;
 	link_hdr->frame_len         = len;
 	link_hdr->tailroom          = pkt_hdr->tailroom;
-	link_hdr->shared_len        = len;
 
 	/* Link header does not have headroom, it just points to other
 	 * buffers. Zero length headroom ensures that head of the other buffer
 	 * is not pushed through a reference. */
 	link_hdr->headroom          = 0;
-
-	if (pkt_hdr->shared_len < len)
-		pkt_hdr->shared_len = len;
 
 	return ref;
 
@@ -2204,9 +2197,6 @@ odp_packet_t odp_packet_ref_pkt(odp_packet_t pkt, uint32_t offset,
 {
 	odp_packet_t ref;
 	int ret;
-	odp_packet_hdr_t *new_hdr;
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-	uint32_t len = pkt_hdr->frame_len;
 
 	ref = odp_packet_ref(pkt, offset);
 
@@ -2223,11 +2213,7 @@ odp_packet_t odp_packet_ref_pkt(odp_packet_t pkt, uint32_t offset,
 		return ODP_PACKET_INVALID;
 	}
 
-	new_hdr = packet_hdr(hdr);
-	new_hdr->shared_len = len - offset;
-
 	return hdr;
-
 }
 
 int odp_packet_has_ref(odp_packet_t pkt)
@@ -2251,17 +2237,6 @@ int odp_packet_has_ref(odp_packet_t pkt)
 	}
 
 	return 0;
-}
-
-uint32_t odp_packet_unshared_len(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-	uint32_t len = pkt_hdr->frame_len;
-
-	if (odp_packet_has_ref(pkt))
-		return len - pkt_hdr->shared_len;
-
-	return len;
 }
 
 /* Include non-inlined versions of API functions */
