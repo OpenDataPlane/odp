@@ -2,7 +2,7 @@ include $(top_srcdir)/example/Makefile.inc
 
 bin_PROGRAMS = odp_l3fwd$(EXEEXT)
 odp_l3fwd_LDFLAGS = $(AM_LDFLAGS) -static
-odp_l3fwd_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/example -I${top_srcdir}/test
+odp_l3fwd_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/example
 
 noinst_HEADERS = \
 		  $(top_srcdir)/example/l3fwd/odp_l3fwd_db.h \
