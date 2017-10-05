@@ -24,9 +24,6 @@ endif
 
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 
-noinst_HEADERS = \
-		  $(top_srcdir)/test/test_debug.h
-
 odp_bench_packet_SOURCES = odp_bench_packet.c
 odp_crypto_SOURCES = odp_crypto.c
 odp_pktio_ordered_SOURCES = odp_pktio_ordered.c dummy_crc.h
