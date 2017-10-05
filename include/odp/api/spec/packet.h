@@ -956,25 +956,6 @@ odp_packet_t odp_packet_ref_pkt(odp_packet_t pkt, uint32_t offset,
 				odp_packet_t hdr);
 
 /**
- * Packet unshared data length
- *
- * When a packet has multiple references, packet data is divided into two
- * parts: unshared and shared. The unshared part always precedes the shared
- * part. This call returns number of bytes in the unshared part.  When a
- * packet has only a single reference (see odp_packet_has_ref()), all packet
- * data is unshared and unshared length equals the packet length
- * (odp_packet_len()).
- *
- * Application may modify only the unshared part, the rest of the packet data
- * must be treated as read only.
- *
- * @param pkt  Packet handle
- *
- * @return Packet unshared data length
- */
-uint32_t odp_packet_unshared_len(odp_packet_t pkt);
-
-/**
  * Test if packet has multiple references
  *
  * A packet that has multiple references share data with other packets. In case
