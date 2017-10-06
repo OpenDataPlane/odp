@@ -149,11 +149,17 @@ install:
           fi
         - gem install asciidoctor
 
-#	DPDK pktio. Note that cache must be purged if dpdk version changes.
+        # DPDK pktio. Note that cache must be purged if dpdk version changes.
+        - DPDK_VERS="17.02"
+        - |
+          CACHED_DPDK_VERS=`fgrep Version dpdk/pkg/dpdk.spec | cut -d " " -f 2`
+          if [ "${CACHED_DPDK_VERS}" != "${DPDK_VERS}" ]; then
+            rm -rf dpdk
+          fi
         - TARGET=${TARGET:-"x86_64-native-linuxapp-gcc"}
         - |
           if [ -z "$CROSS_ARCH" -a ! -f "dpdk/${TARGET}/lib/libdpdk.a" ]; then
-            git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v17.02 http://dpdk.org/git/dpdk dpdk
+            git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v${DPDK_VERS} http://dpdk.org/git/dpdk dpdk
             pushd dpdk
             git log --oneline --decorate
             make config T=${TARGET} O=${TARGET}
