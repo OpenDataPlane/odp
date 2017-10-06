@@ -22,7 +22,7 @@ uint16_t odp_chksum_ones_comp16(const void *p, uint32_t len)
 
 	/* Add left-over byte, if any */
 	if (len > 0) {
-		uint16_t left_over;
+		uint16_t left_over = 0;
 
 		*(uint8_t *)&left_over = *(const uint8_t *)data;
 		sum += left_over;
