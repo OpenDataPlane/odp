@@ -58,7 +58,7 @@ cache:
         ccache: true
         pip: true
         directories:
-                - dpdk
+                #- dpdk
                 - netmap
                 - $HOME/cunit-install
                 - $HOME/doxygen-install
@@ -161,6 +161,8 @@ install:
             make config T=${TARGET} O=${TARGET}
             pushd ${TARGET}
             sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
+            cat .config |grep RTE_MACHINE
+            sed -ri 's,(CONFIG_RTE_MACHINE=).*,\1"snb",' .config
             popd
             make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
             rm -r ./doc ./${TARGET}/app ./${TARGET}/build
