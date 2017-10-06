@@ -39,7 +39,7 @@
 #define PKT_BUF_NUM       (32 * 1024)
 #define MAX_NUM_IFACES    2
 #define TEST_HDR_MAGIC    0x92749451
-#define MAX_WORKERS       32
+#define MAX_WORKERS       128
 #define BATCH_LEN_MAX     32
 
 /* Packet rate at which to start when using binary search */
@@ -561,6 +561,12 @@ static int setup_txrx_masks(odp_cpumask_t *thd_mask_tx,
 	if (num_workers < 2) {
 		LOG_ERR("Need at least two cores\n");
 		return TEST_SKIP;
+	}
+
+	if (num_workers > MAX_WORKERS) {
+		LOG_DBG("Worker count limited to MAX_WORKERS define (=%d)\n",
+			MAX_WORKERS);
+		num_workers = MAX_WORKERS;
 	}
 
 	if (gbl_args->args.num_tx_workers) {
