@@ -46,7 +46,7 @@ void sys_info_print_arch(void)
 	cpu_flags_print_all();
 }
 
-uint64_t odp_cpu_arch_hz_current(int id ODP_UNUSED)
+uint64_t odp_cpu_arch_hz_current(int id)
 {
 	char str[1024];
 	FILE *file;
