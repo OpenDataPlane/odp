@@ -229,6 +229,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 
 	odp_pktin_queue_param_init(&pktin_param);
 	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+	pktin_param.classifier_enable = 1;
 
 	if (odp_pktin_queue_config(pktio, &pktin_param)) {
 		EXAMPLE_ERR("pktin queue config failed for %s\n", dev);
