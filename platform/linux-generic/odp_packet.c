@@ -476,8 +476,8 @@ static inline odp_packet_hdr_t *add_segments(odp_packet_hdr_t *pkt_hdr,
 	if (new_hdr == NULL)
 		return NULL;
 
-	seg_len = len - ((num - 1) * pool->max_seg_len);
-	offset  = pool->max_seg_len - seg_len;
+	seg_len = len - ((num - 1) * pool->seg_len);
+	offset  = pool->seg_len - seg_len;
 
 	if (head) {
 		/* add into the head*/
@@ -906,7 +906,7 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 	int num = pkt_hdr->buf_hdr.segcount;
 
-	if (odp_unlikely(len > (pool->max_seg_len * num)))
+	if (odp_unlikely(len > (pool->seg_len * num)))
 		return -1;
 
 	reset_seg(pkt_hdr, 0, num);

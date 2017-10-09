@@ -60,9 +60,8 @@ typedef struct pool_t {
 	uint32_t         align;
 	uint32_t         headroom;
 	uint32_t         tailroom;
-	uint32_t         data_size;
+	uint32_t         seg_len;
 	uint32_t         max_len;
-	uint32_t         max_seg_len;
 	uint32_t         uarea_size;
 	uint32_t         block_size;
 	uint32_t         shm_size;
