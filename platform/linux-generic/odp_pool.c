@@ -285,7 +285,7 @@ static void init_buffers(pool_t *pool)
 
 		memset(buf_hdr, 0, (uintptr_t)data - (uintptr_t)buf_hdr);
 
-		seg_size = pool->headroom + pool->data_size + pool->tailroom;
+		seg_size = pool->headroom + pool->seg_len + pool->tailroom;
 
 		/* Initialize buffer metadata */
 		buf_hdr->index = i;
@@ -305,13 +305,13 @@ static void init_buffers(pool_t *pool)
 		/* Pointer to data start (of the first segment) */
 		buf_hdr->seg[0].hdr       = buf_hdr;
 		buf_hdr->seg[0].data      = &data[offset];
-		buf_hdr->seg[0].len       = pool->data_size;
+		buf_hdr->seg[0].len       = pool->seg_len;
 
 		odp_atomic_init_u32(&buf_hdr->ref_cnt, 0);
 
 		/* Store base values for fast init */
 		buf_hdr->base_data = buf_hdr->seg[0].data;
-		buf_hdr->buf_end   = &data[offset + pool->data_size +
+		buf_hdr->buf_end   = &data[offset + pool->seg_len +
 				     pool->tailroom];
 
 		/* Store buffer index into the global pool */
@@ -341,8 +341,8 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	pool_t *pool;
 	uint32_t uarea_size, headroom, tailroom;
 	odp_shm_t shm;
-	uint32_t data_size, align, num, hdr_size, block_size;
-	uint32_t max_len, max_seg_len;
+	uint32_t seg_len, align, num, hdr_size, block_size;
+	uint32_t max_len;
 	uint32_t ring_size;
 	uint32_t num_extra = 0;
 	int name_len;
@@ -371,15 +371,14 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 
 	headroom    = 0;
 	tailroom    = 0;
-	data_size   = 0;
+	seg_len     = 0;
 	max_len     = 0;
-	max_seg_len = 0;
 	uarea_size  = 0;
 
 	switch (params->type) {
 	case ODP_POOL_BUFFER:
 		num  = params->buf.num;
-		data_size = params->buf.size;
+		seg_len = params->buf.size;
 		break;
 
 	case ODP_POOL_PACKET:
@@ -387,9 +386,8 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 		tailroom    = CONFIG_PACKET_TAILROOM;
 		num         = params->pkt.num;
 		uarea_size  = params->pkt.uarea_size;
-		data_size   = CONFIG_PACKET_MAX_SEG_LEN;
-		max_seg_len = CONFIG_PACKET_MAX_SEG_LEN;
-		max_len     = CONFIG_PACKET_MAX_SEGS * max_seg_len;
+		seg_len   = CONFIG_PACKET_MAX_SEG_LEN;
+		max_len     = CONFIG_PACKET_MAX_SEGS * seg_len;
 		break;
 
 	case ODP_POOL_TIMEOUT:
@@ -428,8 +426,8 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	hdr_size = sizeof(odp_packet_hdr_t);
 	hdr_size = ROUNDUP_CACHE_LINE(hdr_size);
 
-	block_size = ROUNDUP_CACHE_LINE(hdr_size + align + headroom +
-					data_size + tailroom);
+	block_size = ROUNDUP_CACHE_LINE(hdr_size + align + headroom + seg_len +
+					tailroom);
 
 	/* Allocate extra memory for skipping packet buffers which cross huge
 	 * page boundaries. */
@@ -449,9 +447,8 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	pool->num            = num;
 	pool->align          = align;
 	pool->headroom       = headroom;
-	pool->data_size      = data_size;
+	pool->seg_len        = seg_len;
 	pool->max_len        = max_len;
-	pool->max_seg_len    = max_seg_len;
 	pool->tailroom       = tailroom;
 	pool->block_size     = block_size;
 	pool->uarea_size     = uarea_size;
@@ -924,9 +921,8 @@ void odp_pool_print(odp_pool_t pool_hdl)
 	printf("  num             %u\n", pool->num);
 	printf("  align           %u\n", pool->align);
 	printf("  headroom        %u\n", pool->headroom);
-	printf("  data size       %u\n", pool->data_size);
+	printf("  seg len         %u\n", pool->seg_len);
 	printf("  max data len    %u\n", pool->max_len);
-	printf("  max seg len     %u\n", pool->max_seg_len);
 	printf("  tailroom        %u\n", pool->tailroom);
 	printf("  block size      %u\n", pool->block_size);
 	printf("  uarea size      %u\n", pool->uarea_size);

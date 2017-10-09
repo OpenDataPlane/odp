@@ -174,7 +174,7 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 	}
 
 	num = pool_entry->num;
-	data_room_size = pool_entry->max_seg_len + CONFIG_PACKET_HEADROOM;
+	data_room_size = pool_entry->seg_len + CONFIG_PACKET_HEADROOM;
 	elt_size = sizeof(struct rte_mbuf) + (unsigned)data_room_size;
 	mbp_priv.mbuf_data_room_size = data_room_size;
 	mbp_priv.mbuf_priv_size = 0;
@@ -231,7 +231,7 @@ static int pool_dequeue_bulk(struct rte_mempool *mp, void **obj_table,
 	int pkts;
 	int i;
 
-	pkts = packet_alloc_multi(pool, pool_entry->max_seg_len, packet_tbl,
+	pkts = packet_alloc_multi(pool, pool_entry->seg_len, packet_tbl,
 				  num);
 
 	if (odp_unlikely(pkts != (int)num)) {
@@ -1230,7 +1230,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 
 	data_room = rte_pktmbuf_data_room_size(pkt_dpdk->pkt_pool) -
 			RTE_PKTMBUF_HEADROOM;
-	pkt_dpdk->data_room = RTE_MIN(pool_entry->max_seg_len, data_room);
+	pkt_dpdk->data_room = RTE_MIN(pool_entry->seg_len, data_room);
 
 	/* Mbuf chaining not yet supported */
 	 pkt_dpdk->mtu = RTE_MIN(pkt_dpdk->mtu, pkt_dpdk->data_room);
