@@ -294,6 +294,22 @@ odp_pool_t odp_pool_lookup(const char *name);
 typedef struct odp_pool_info_t {
 	const char *name;          /**< pool name */
 	odp_pool_param_t params;   /**< pool parameters */
+
+	/** Minimum data address.
+	 * This is the minimum address that application accessible
+	 * data of any object (event) allocated from the pool may
+	 * locate. When there's no application accessible data
+	 * (e.g. ODP_POOL_TIMEOUT pools), the value may be zero.
+	 */
+	uintptr_t min_data_addr;
+
+	/** Maximum data address.
+	 * This is the maximum address that application accessible
+	 * data of any object (event) allocated from the pool may
+	 * locate. When there's no application accessible data
+	 * (e.g. ODP_POOL_TIMEOUT pools), the value may be zero.
+	 */
+	uintptr_t max_data_addr;
 } odp_pool_info_t;
 
 /**
