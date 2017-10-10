@@ -382,12 +382,33 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 		break;
 
 	case ODP_POOL_PACKET:
+		seg_len = CONFIG_PACKET_MAX_SEG_LEN;
+		max_len = CONFIG_PACKET_MAX_LEN;
+
+		if (params->pkt.len &&
+		    params->pkt.len < CONFIG_PACKET_MAX_SEG_LEN)
+			seg_len = params->pkt.len;
+		if (params->pkt.seg_len && params->pkt.seg_len > seg_len)
+			seg_len = params->pkt.seg_len;
+		if (seg_len < CONFIG_PACKET_SEG_LEN_MIN)
+			seg_len = CONFIG_PACKET_SEG_LEN_MIN;
+
+		/* Make sure that at least one 'max_len' packet can fit in the
+		 * pool. */
+		if (params->pkt.max_len != 0)
+			max_len = params->pkt.max_len;
+		if ((max_len + seg_len - 1) / seg_len > CONFIG_PACKET_MAX_SEGS)
+			seg_len = (max_len + CONFIG_PACKET_MAX_SEGS - 1) /
+				CONFIG_PACKET_MAX_SEGS;
+		if (seg_len > CONFIG_PACKET_MAX_SEG_LEN) {
+			ODP_ERR("Pool unable to store 'max_len' packet");
+			return ODP_POOL_INVALID;
+		}
+
 		headroom    = CONFIG_PACKET_HEADROOM;
 		tailroom    = CONFIG_PACKET_TAILROOM;
 		num         = params->pkt.num;
 		uarea_size  = params->pkt.uarea_size;
-		seg_len     = CONFIG_PACKET_MAX_SEG_LEN;
-		max_len     = CONFIG_PACKET_MAX_LEN;
 		break;
 
 	case ODP_POOL_TIMEOUT:
@@ -887,7 +908,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	capa->pkt.min_headroom     = CONFIG_PACKET_HEADROOM;
 	capa->pkt.min_tailroom     = CONFIG_PACKET_TAILROOM;
 	capa->pkt.max_segs_per_pkt = CONFIG_PACKET_MAX_SEGS;
-	capa->pkt.min_seg_len      = max_seg_len;
+	capa->pkt.min_seg_len      = CONFIG_PACKET_SEG_LEN_MIN;
 	capa->pkt.max_seg_len      = max_seg_len;
 	capa->pkt.max_uarea_size   = MAX_SIZE;
 

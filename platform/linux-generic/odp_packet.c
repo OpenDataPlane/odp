@@ -23,9 +23,6 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-/* Initial packet segment data length */
-#define BASE_LEN  CONFIG_PACKET_MAX_SEG_LEN
-
 #include <odp/visibility_begin.h>
 
 /* Fill in packet header field offsets for inline functions */
@@ -341,6 +338,7 @@ static inline void link_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 	int cur, i;
 	odp_packet_hdr_t *hdr;
 	odp_packet_hdr_t *head = pkt_hdr[0];
+	uint32_t seg_len = pool_entry_from_hdl(head->buf_hdr.pool_hdl)->seg_len;
 
 	cur = 0;
 
@@ -353,7 +351,7 @@ static inline void link_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 			buf_hdr = &pkt_hdr[cur]->buf_hdr;
 			hdr->buf_hdr.seg[i].hdr  = buf_hdr;
 			hdr->buf_hdr.seg[i].data = buf_hdr->base_data;
-			hdr->buf_hdr.seg[i].len  = BASE_LEN;
+			hdr->buf_hdr.seg[i].len  = seg_len;
 			cur++;
 
 			if (cur == num) {
@@ -373,13 +371,15 @@ static inline void link_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 {
 	odp_packet_hdr_t *hdr;
+	uint32_t seg_len;
 
 	/* First segment is the packet descriptor */
 	hdr = pkt_hdr[0];
+	seg_len = pool_entry_from_hdl(hdr->buf_hdr.pool_hdl)->seg_len;
 
 	/* Defaults for single segment packet */
 	hdr->buf_hdr.seg[0].data = hdr->buf_hdr.base_data;
-	hdr->buf_hdr.seg[0].len  = BASE_LEN;
+	hdr->buf_hdr.seg[0].len  = seg_len;
 
 	if (!CONFIG_PACKET_SEG_DISABLED) {
 		hdr->buf_hdr.segcount = num;
@@ -399,6 +399,7 @@ static inline void reset_seg(odp_packet_hdr_t *pkt_hdr, int first, int num)
 	void *base;
 	int i;
 	seg_entry_t *seg;
+	uint32_t seg_len = pool_entry_from_hdl(hdr->buf_hdr.pool_hdl)->seg_len;
 	uint8_t idx;
 
 	seg_entry_find_idx(&hdr, &idx, first);
@@ -406,27 +407,25 @@ static inline void reset_seg(odp_packet_hdr_t *pkt_hdr, int first, int num)
 	for (i = 0; i < num; i++) {
 		base = hdr->buf_hdr.base_data;
 		seg = seg_entry_next(&hdr, &idx);
-		seg->len  = BASE_LEN;
+		seg->len  = seg_len;
 		seg->data = base;
 	}
 }
 
 /* Calculate the number of segments */
-static inline int num_segments(uint32_t len)
+static inline int num_segments(uint32_t len, uint32_t seg_len)
 {
-	uint32_t max_seg_len;
 	int num;
 
 	if (CONFIG_PACKET_SEG_DISABLED)
 		return 1;
 
 	num = 1;
-	max_seg_len = CONFIG_PACKET_MAX_SEG_LEN;
 
-	if (odp_unlikely(len > max_seg_len)) {
-		num = len / max_seg_len;
+	if (odp_unlikely(len > seg_len)) {
+		num = len / seg_len;
 
-		if (odp_likely((num * max_seg_len) != len))
+		if (odp_likely((num * seg_len) != len))
 			num += 1;
 	}
 
@@ -793,7 +792,7 @@ int packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 	pool_t *pool = pool_entry_from_hdl(pool_hdl);
 	int num, num_seg;
 
-	num_seg = num_segments(len);
+	num_seg = num_segments(len, pool->seg_len);
 	num     = packet_alloc(pool, len, max_num, num_seg, pkt);
 
 	return num;
@@ -813,7 +812,7 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 	if (odp_unlikely(len > pool->max_len))
 		return ODP_PACKET_INVALID;
 
-	num_seg = num_segments(len);
+	num_seg = num_segments(len, pool->seg_len);
 	num     = packet_alloc(pool, len, 1, num_seg, &pkt);
 
 	if (odp_unlikely(num == 0))
@@ -836,7 +835,7 @@ int odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 	if (odp_unlikely(len > pool->max_len))
 		return -1;
 
-	num_seg = num_segments(len);
+	num_seg = num_segments(len, pool->seg_len);
 	num     = packet_alloc(pool, len, max_num, num_seg, pkt);
 
 	return num;
@@ -977,7 +976,7 @@ int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len,
 		if (odp_unlikely((frame_len + len) > pool->max_len))
 			return -1;
 
-		num = num_segments(len - headroom);
+		num = num_segments(len - headroom, pool->seg_len);
 		push_head(pkt_hdr, headroom);
 		ptr = add_segments(pkt_hdr, pool, len - headroom, num, 1);
 
@@ -1079,7 +1078,7 @@ int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len,
 		if (odp_unlikely((frame_len + len) > pool->max_len))
 			return -1;
 
-		num = num_segments(len - tailroom);
+		num = num_segments(len - tailroom, pool->seg_len);
 		push_tail(pkt_hdr, tailroom);
 		ptr = add_segments(pkt_hdr, pool, len - tailroom, num, 0);
 

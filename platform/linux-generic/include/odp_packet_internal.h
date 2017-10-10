@@ -194,6 +194,7 @@ static inline seg_entry_t *seg_entry_last(odp_packet_hdr_t *hdr)
  */
 static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
+	pool_t *pool = pool_entry_from_hdl(pkt_hdr->buf_hdr.pool_hdl);
 	uint32_t seg_len;
 	int num = pkt_hdr->buf_hdr.segcount;
 
@@ -203,7 +204,7 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	} else {
 		seg_entry_t *last;
 
-		seg_len = len - ((num - 1) * CONFIG_PACKET_MAX_SEG_LEN);
+		seg_len = len - ((num - 1) * pool->seg_len);
 
 		/* Last segment data length */
 		last      = seg_entry_last(pkt_hdr);
@@ -226,8 +227,7 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	pkt_hdr->frame_len = len;
 	pkt_hdr->shared_len = 0;
 	pkt_hdr->headroom  = CONFIG_PACKET_HEADROOM;
-	pkt_hdr->tailroom  = CONFIG_PACKET_MAX_SEG_LEN - seg_len +
-			     CONFIG_PACKET_TAILROOM;
+	pkt_hdr->tailroom  = pool->seg_len - seg_len + CONFIG_PACKET_TAILROOM;
 
 	pkt_hdr->input = ODP_PKTIO_INVALID;
 }
