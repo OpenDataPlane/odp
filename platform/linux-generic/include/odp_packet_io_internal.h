@@ -50,7 +50,8 @@ typedef union pktio_entry_u pktio_entry_t;
 
 struct pktio_entry {
 	const pktio_ops_module_t *ops;	/**< Implementation specific methods */
-	pktio_ops_data_t ops_data;	/**< IO operation specific data */
+	uint8_t ops_data[ODP_PKTIO_ODPS_DATA_MAX_SIZE]; /**< IO operation
+							specific data */
 	/* These two locks together lock the whole pktio device */
 	odp_ticketlock_t rxl;		/**< RX ticketlock */
 	odp_ticketlock_t txl;		/**< TX ticketlock */

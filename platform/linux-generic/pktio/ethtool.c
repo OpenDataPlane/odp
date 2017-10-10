@@ -19,6 +19,7 @@
 #include <odp_api.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_io_internal.h>
+#include <pktio/ethtool.h>
 
 static struct ethtool_gstrings *get_stringset(int fd, struct ifreq *ifr)
 {
