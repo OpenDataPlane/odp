@@ -2151,7 +2151,10 @@ odp_packet_t odp_packet_ref(odp_packet_t pkt, uint32_t offset)
 	link_hdr->buf_hdr.seg[0].len  = seg->len  - seg_offset;
 	buffer_ref_inc(seg->hdr);
 
-	for (i = 1; i < num_copy; i++) {
+	/* The 'CONFIG_PACKET_SEGS_PER_HDR > 1' condition is required to fix an
+	 * invalid error ('array subscript is above array bounds') thrown by
+	 * gcc (5.4.0). */
+	for (i = 1; CONFIG_PACKET_SEGS_PER_HDR > 1 && i < num_copy; i++) {
 		/* Update link header reference count */
 		if (idx == 0 && seg_is_link(hdr))
 			buffer_ref_inc((odp_buffer_hdr_t *)hdr);
