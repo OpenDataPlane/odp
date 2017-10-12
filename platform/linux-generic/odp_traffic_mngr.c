@@ -4643,19 +4643,19 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 	tm_system = GET_TM_SYSTEM(odp_tm);
 	input_work_queue = tm_system->input_work_queue;
 
-	ODP_DBG("odp_tm_stats_print - tm_system=0x%" PRIX64 " tm_idx=%u\n",
-		odp_tm, tm_system->tm_idx);
-	ODP_DBG("  input_work_queue size=%u current cnt=%u peak cnt=%u\n",
-		INPUT_WORK_RING_SIZE, input_work_queue->queue_cnt,
-		input_work_queue->peak_cnt);
-	ODP_DBG("  input_work_queue enqueues=%" PRIu64 " dequeues=% " PRIu64
-		" fail_cnt=%" PRIu64 "\n", input_work_queue->total_enqueues,
-		input_work_queue->total_dequeues,
-		input_work_queue->enqueue_fail_cnt);
-	ODP_DBG("  green_cnt=%" PRIu64 " yellow_cnt=%" PRIu64 " red_cnt=%"
-		PRIu64 "\n", tm_system->shaper_green_cnt,
-		tm_system->shaper_yellow_cnt,
-		tm_system->shaper_red_cnt);
+	ODP_PRINT("odp_tm_stats_print - tm_system=0x%" PRIX64 " tm_idx=%u\n",
+		  odp_tm, tm_system->tm_idx);
+	ODP_PRINT("  input_work_queue size=%u current cnt=%u peak cnt=%u\n",
+		  INPUT_WORK_RING_SIZE, input_work_queue->queue_cnt,
+		  input_work_queue->peak_cnt);
+	ODP_PRINT("  input_work_queue enqueues=%" PRIu64 " dequeues=% " PRIu64
+		  " fail_cnt=%" PRIu64 "\n", input_work_queue->total_enqueues,
+		  input_work_queue->total_dequeues,
+		  input_work_queue->enqueue_fail_cnt);
+	ODP_PRINT("  green_cnt=%" PRIu64 " yellow_cnt=%" PRIu64 " red_cnt=%"
+		  PRIu64 "\n", tm_system->shaper_green_cnt,
+		  tm_system->shaper_yellow_cnt,
+		  tm_system->shaper_red_cnt);
 
 	_odp_pkt_queue_stats_print(tm_system->_odp_int_queue_pool);
 	_odp_timer_wheel_stats_print(tm_system->_odp_int_timer_wheel);
@@ -4665,14 +4665,14 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 	for (queue_num = 1; queue_num < max_queue_num; queue_num++) {
 		tm_queue_obj = tm_system->queue_num_tbl[queue_num - 1];
 		if (tm_queue_obj && tm_queue_obj->pkts_rcvd_cnt != 0)
-			ODP_DBG("queue_num=%u priority=%u rcvd=%u enqueued=%u "
-				"dequeued=%u consumed=%u\n",
-				queue_num,
-				tm_queue_obj->priority,
-				tm_queue_obj->pkts_rcvd_cnt,
-				tm_queue_obj->pkts_enqueued_cnt,
-				tm_queue_obj->pkts_dequeued_cnt,
-				tm_queue_obj->pkts_consumed_cnt);
+			ODP_PRINT("queue_num=%u priority=%u rcvd=%u enqueued=%u "
+				  "dequeued=%u consumed=%u\n",
+				  queue_num,
+				  tm_queue_obj->priority,
+				  tm_queue_obj->pkts_rcvd_cnt,
+				  tm_queue_obj->pkts_enqueued_cnt,
+				  tm_queue_obj->pkts_dequeued_cnt,
+				  tm_queue_obj->pkts_consumed_cnt);
 	}
 }
 
