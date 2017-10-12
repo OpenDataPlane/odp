@@ -6,4 +6,8 @@ odp_traffic_mgmt_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/example
 
 noinst_HEADERS = $(top_srcdir)/example/example_debug.h
 
+if test_example
+TESTS = odp_traffic_mgmt
+endif
+
 dist_odp_traffic_mgmt_SOURCES = odp_traffic_mgmt.c
