@@ -197,7 +197,7 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	uint32_t seg_len;
 	int num = pkt_hdr->buf_hdr.segcount;
 
-	if (odp_likely(CONFIG_PACKET_MAX_SEGS == 1 || num == 1)) {
+	if (odp_likely(CONFIG_PACKET_SEG_DISABLED || num == 1)) {
 		seg_len = len;
 		pkt_hdr->buf_hdr.seg[0].len = len;
 	} else {
