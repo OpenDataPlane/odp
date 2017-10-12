@@ -386,8 +386,8 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 		tailroom    = CONFIG_PACKET_TAILROOM;
 		num         = params->pkt.num;
 		uarea_size  = params->pkt.uarea_size;
-		seg_len   = CONFIG_PACKET_MAX_SEG_LEN;
-		max_len     = CONFIG_PACKET_MAX_SEGS * seg_len;
+		seg_len     = CONFIG_PACKET_MAX_SEG_LEN;
+		max_len     = CONFIG_PACKET_MAX_LEN;
 		break;
 
 	case ODP_POOL_TIMEOUT:
@@ -882,7 +882,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 
 	/* Packet pools */
 	capa->pkt.max_pools        = ODP_CONFIG_POOLS;
-	capa->pkt.max_len          = CONFIG_PACKET_MAX_SEGS * max_seg_len;
+	capa->pkt.max_len          = CONFIG_PACKET_MAX_LEN;
 	capa->pkt.max_num	   = CONFIG_POOL_MAX_NUM;
 	capa->pkt.min_headroom     = CONFIG_PACKET_HEADROOM;
 	capa->pkt.min_tailroom     = CONFIG_PACKET_TAILROOM;

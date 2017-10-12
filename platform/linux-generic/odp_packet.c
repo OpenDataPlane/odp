@@ -179,7 +179,7 @@ static inline void *packet_seg_data(odp_packet_hdr_t *pkt_hdr, uint32_t seg_idx)
 
 static inline uint16_t packet_last_seg(odp_packet_hdr_t *pkt_hdr)
 {
-	if (CONFIG_PACKET_MAX_SEGS == 1)
+	if (CONFIG_PACKET_SEG_DISABLED)
 		return 0;
 	else
 		return pkt_hdr->buf_hdr.segcount - 1;
@@ -291,7 +291,7 @@ static inline void *packet_map(odp_packet_hdr_t *pkt_hdr,
 	if (odp_unlikely(offset >= pkt_hdr->frame_len))
 		return NULL;
 
-	if (odp_likely(CONFIG_PACKET_MAX_SEGS == 1 || seg_count == 1)) {
+	if (odp_likely(CONFIG_PACKET_SEG_DISABLED || seg_count == 1)) {
 		addr = pkt_hdr->buf_hdr.seg[0].data + offset;
 		len  = pkt_hdr->buf_hdr.seg[0].len - offset;
 	} else {
@@ -347,7 +347,7 @@ static inline void link_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 	while (1) {
 		hdr = pkt_hdr[cur];
 
-		for (i = 0; i < CONFIG_PACKET_MAX_SEGS; i++) {
+		for (i = 0; i < CONFIG_PACKET_SEGS_PER_HDR; i++) {
 			odp_buffer_hdr_t *buf_hdr;
 
 			buf_hdr = &pkt_hdr[cur]->buf_hdr;
@@ -365,7 +365,7 @@ static inline void link_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 			}
 		}
 
-		hdr->buf_hdr.num_seg  = CONFIG_PACKET_MAX_SEGS;
+		hdr->buf_hdr.num_seg  = CONFIG_PACKET_SEGS_PER_HDR;
 		hdr->buf_hdr.next_seg = pkt_hdr[cur];
 	}
 }
@@ -377,22 +377,19 @@ static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 	/* First segment is the packet descriptor */
 	hdr = pkt_hdr[0];
 
+	/* Defaults for single segment packet */
 	hdr->buf_hdr.seg[0].data = hdr->buf_hdr.base_data;
 	hdr->buf_hdr.seg[0].len  = BASE_LEN;
 
-	/* Link segments */
-	if (CONFIG_PACKET_MAX_SEGS != 1) {
+	if (!CONFIG_PACKET_SEG_DISABLED) {
 		hdr->buf_hdr.segcount = num;
-
-		/* Defaults for single segment packet */
 		hdr->buf_hdr.num_seg  = 1;
 		hdr->buf_hdr.next_seg = NULL;
 		hdr->buf_hdr.last_seg = &hdr->buf_hdr;
 
-		if (odp_unlikely(num > 1)) {
+		/* Link segments */
+		if (odp_unlikely(num > 1))
 			link_segments(pkt_hdr, num);
-
-		}
 	}
 }
 
@@ -420,7 +417,7 @@ static inline int num_segments(uint32_t len)
 	uint32_t max_seg_len;
 	int num;
 
-	if (CONFIG_PACKET_MAX_SEGS == 1)
+	if (CONFIG_PACKET_SEG_DISABLED)
 		return 1;
 
 	num = 1;
@@ -850,7 +847,7 @@ void odp_packet_free(odp_packet_t pkt)
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 	int num_seg = pkt_hdr->buf_hdr.segcount;
 
-	if (odp_likely(CONFIG_PACKET_MAX_SEGS == 1 || num_seg == 1)) {
+	if (odp_likely(CONFIG_PACKET_SEG_DISABLED || num_seg == 1)) {
 		odp_buffer_hdr_t *buf_hdr[2];
 		int num = 1;
 
@@ -1027,7 +1024,7 @@ int odp_packet_trunc_head(odp_packet_t *pkt, uint32_t len,
 
 	if (len < seg_len) {
 		pull_head(pkt_hdr, len);
-	} else if (CONFIG_PACKET_MAX_SEGS != 1) {
+	} else if (!CONFIG_PACKET_SEG_DISABLED) {
 		int num = 0;
 		uint32_t pull_len = 0;
 
@@ -1131,7 +1128,7 @@ int odp_packet_trunc_tail(odp_packet_t *pkt, uint32_t len,
 
 	if (len < seg_len) {
 		pull_tail(pkt_hdr, len);
-	} else if (CONFIG_PACKET_MAX_SEGS != 1) {
+	} else if (!CONFIG_PACKET_SEG_DISABLED) {
 		int num = 0;
 		uint32_t pull_len = 0;
 
