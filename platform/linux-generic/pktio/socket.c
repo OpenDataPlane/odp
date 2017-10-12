@@ -881,6 +881,7 @@ static pktio_ops_module_t socket_pktio_ops = {
 	.promisc_mode_set = sock_promisc_mode_set,
 	.promisc_mode_get = sock_promisc_mode_get,
 	.mac_get = sock_mac_addr_get,
+	.mac_set = NULL,
 	.link_status = sock_link_status,
 	.capability = sock_capability,
 	.config = NULL,

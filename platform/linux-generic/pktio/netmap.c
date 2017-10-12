@@ -977,6 +977,7 @@ static pktio_ops_module_t netmap_pktio_ops = {
 	.promisc_mode_set = netmap_promisc_mode_set,
 	.promisc_mode_get = netmap_promisc_mode_get,
 	.mac_get = netmap_mac_addr_get,
+	.mac_set = NULL,
 	.link_status = netmap_link_status,
 	.capability = netmap_capability,
 	.config = NULL,

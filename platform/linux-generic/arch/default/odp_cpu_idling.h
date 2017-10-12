@@ -6,15 +6,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#ifndef ODP_MIPS64_CPU_H_
-#define ODP_MIPS64_CPU_H_
-
-/******************************************************************************
- * Atomics
- *****************************************************************************/
-
-#define atomic_store_release(loc, val, ro) \
-	__atomic_store_n(loc, val, __ATOMIC_RELEASE)
+#ifndef ODP_DEFAULT_CPU_IDLING_H_
+#define ODP_DEFAULT_CPU_IDLING_H_
 
 /******************************************************************************
  * Idle mgmt

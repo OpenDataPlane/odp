@@ -452,6 +452,7 @@ static pktio_ops_module_t pcap_pktio_ops = {
 	.promisc_mode_set = pcapif_promisc_mode_set,
 	.promisc_mode_get = pcapif_promisc_mode_get,
 	.mac_get = pcapif_mac_addr_get,
+	.mac_set = NULL,
 	.link_status = NULL,
 	.capability = pcapif_capability,
 	.config = NULL,

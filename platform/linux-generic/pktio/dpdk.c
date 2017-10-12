@@ -1582,6 +1582,7 @@ static pktio_ops_module_t dpdk_pktio_ops = {
 	.promisc_mode_set = dpdk_promisc_mode_set,
 	.promisc_mode_get = dpdk_promisc_mode_get,
 	.mac_get = dpdk_mac_addr_get,
+	.mac_set = NULL,
 	.link_status = dpdk_link_status,
 	.capability = dpdk_capability,
 	.config = NULL,

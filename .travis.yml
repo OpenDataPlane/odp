@@ -58,7 +58,7 @@ cache:
         ccache: true
         pip: true
         directories:
-                - dpdk
+                #- dpdk
                 - netmap
                 - $HOME/cunit-install
                 - $HOME/doxygen-install
@@ -162,6 +162,8 @@ install:
             pushd ${TARGET}
             sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
             sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_OPENSSL=).*,\1y,' .config
+            cat .config |grep RTE_MACHINE
+            sed -ri 's,(CONFIG_RTE_MACHINE=).*,\1"snb",' .config
             popd
             make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
             rm -r ./doc ./${TARGET}/app ./${TARGET}/build
@@ -170,13 +172,15 @@ install:
 
 #	Netmap pktio
         - |
-          if [ -z "$CROSS_ARCH" -a ! -f "netmap/LINUX/netmap.ko" ]; then
-            git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git
-            pushd netmap/LINUX
-            ./configure
-            make
-            sudo insmod ./netmap.ko
-            popd
+          if [ -z "$CROSS_ARCH" ]; then
+            if [ ! -f "netmap/LINUX/netmap.ko" ]; then
+              git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git
+              pushd netmap/LINUX
+              ./configure
+              make
+              popd
+            fi
+            sudo insmod ./netmap/LINUX/netmap.ko
           fi
 
 script:
@@ -203,7 +207,7 @@ script:
         - echo "Static link.."
         - ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_static `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux --static` -static
         - if [ -z "$CROSS_ARCH" ] ; then
-          LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst ;
+          LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst_dynamic ;
           ./odp_hello_inst_static ;
           fi
         - popd
@@ -252,11 +256,17 @@ jobs:
                             fi
 
                           - export PATH=$HOME/doxygen-install/bin:$PATH
-                          # doxygen does not trap on warnings, check for them here.
                           - ./bootstrap
                           - ./configure
+                          # doxygen does not trap on warnings, check for them here.
                           - make doxygen-doc 2>&1 |tee doxygen.log
-                          - fgrep -rq warning ./doxygen.log && false
+                          - |
+                             fgrep -rq warning ./test.log
+                             if [ $? -eq 0 ]; then
+                               false
+                             else
+                               true
+                             fi
                 - stage: test
                   env: TEST=checkpatch
                   compiler: gcc

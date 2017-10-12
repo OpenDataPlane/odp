@@ -920,7 +920,7 @@ odp_packet_t odp_packet_ref_static(odp_packet_t pkt);
  * dynamic references must not be mixed. Results are undefined if these
  * restrictions are not observed.
  *
- * The packet handle 'pkt' may itself by a (dynamic) reference to a packet.
+ * The packet handle 'pkt' may itself be a (dynamic) reference to a packet.
  *
  * If the caller does not intend to modify either the packet or the new
  * reference to it, odp_packet_ref_static() may be used to create
@@ -947,7 +947,7 @@ odp_packet_t odp_packet_ref(odp_packet_t pkt, uint32_t offset);
  * packet consists metadata and data of the 'hdr' packet, followed by the
  * shared part of packet 'pkt'.
  *
- * The packet handle ('pkt') may itself by a (dynamic) reference to a packet,
+ * The packet handle ('pkt') may itself be a (dynamic) reference to a packet,
  * but the header packet handle ('hdr') must be unique. Both packets must be
  * have been allocated from the same pool and the handles must not refer to
  * the same packet. Results are undefined if these restrictions are not
@@ -970,25 +970,6 @@ odp_packet_t odp_packet_ref(odp_packet_t pkt, uint32_t offset);
  */
 odp_packet_t odp_packet_ref_pkt(odp_packet_t pkt, uint32_t offset,
 				odp_packet_t hdr);
-
-/**
- * Packet unshared data length
- *
- * When a packet has multiple references, packet data is divided into two
- * parts: unshared and shared. The unshared part always precedes the shared
- * part. This call returns number of bytes in the unshared part.  When a
- * packet has only a single reference (see odp_packet_has_ref()), all packet
- * data is unshared and unshared length equals the packet length
- * (odp_packet_len()).
- *
- * Application may modify only the unshared part, the rest of the packet data
- * must be treated as read only.
- *
- * @param pkt  Packet handle
- *
- * @return Packet unshared data length
- */
-uint32_t odp_packet_unshared_len(odp_packet_t pkt);
 
 /**
  * Test if packet has multiple references

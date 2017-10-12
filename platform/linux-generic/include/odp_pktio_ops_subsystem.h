@@ -36,6 +36,7 @@ ODP_SUBSYSTEM_API(pktio_ops, int, promisc_mode_set,
 		  pktio_entry_t *, int enable);
 ODP_SUBSYSTEM_API(pktio_ops, int, promisc_mode_get, pktio_entry_t *);
 ODP_SUBSYSTEM_API(pktio_ops, int, mac_get, pktio_entry_t *, void *);
+ODP_SUBSYSTEM_API(pktio_ops, int, mac_set, pktio_entry_t *, const void *);
 ODP_SUBSYSTEM_API(pktio_ops, int, link_status, pktio_entry_t *);
 ODP_SUBSYSTEM_API(pktio_ops, int, capability, pktio_entry_t *,
 		  odp_pktio_capability_t *);
@@ -70,6 +71,7 @@ typedef ODP_MODULE_CLASS(pktio_ops) {
 	odp_api_proto(pktio_ops, promisc_mode_set) promisc_mode_set;
 	odp_api_proto(pktio_ops, promisc_mode_get) promisc_mode_get;
 	odp_api_proto(pktio_ops, mac_get) mac_get;
+	odp_api_proto(pktio_ops, mac_set) mac_set;
 	odp_api_proto(pktio_ops, link_status) link_status;
 	odp_api_proto(pktio_ops, capability) capability;
 	odp_api_proto(pktio_ops, config) config;

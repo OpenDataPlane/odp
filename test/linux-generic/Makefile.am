@@ -13,6 +13,7 @@ TESTS = validation/api/pktio/pktio_run.sh \
 	$(ALL_API_VALIDATION_DIR)/atomic/atomic_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/barrier/barrier_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/buffer/buffer_main$(EXEEXT) \
+	$(ALL_API_VALIDATION_DIR)/chksum/chksum_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/classification/classification_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/cpumask/cpumask_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/crypto/crypto_main$(EXEEXT) \

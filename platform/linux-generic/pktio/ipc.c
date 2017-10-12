@@ -801,6 +801,7 @@ static pktio_ops_module_t ipc_pktio_ops = {
 	.promisc_mode_set = NULL,
 	.promisc_mode_get = NULL,
 	.mac_get = ipc_mac_addr_get,
+	.mac_set = NULL,
 	.link_status = NULL,
 	.capability = NULL,
 	.config = NULL,

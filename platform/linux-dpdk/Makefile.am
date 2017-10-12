@@ -25,6 +25,7 @@ AM_CPPFLAGS +=  -I$(top_builddir)/include
 AM_CPPFLAGS +=  -Iinclude
 AM_CPPFLAGS +=  -I$(srcdir)
 AM_CPPFLAGS += -I$(top_srcdir)/platform/$(with_platform)/arch/$(ARCH_DIR)
+AM_CPPFLAGS += -I$(top_srcdir)/platform/$(with_platform)/arch/default
 AM_CPPFLAGS +=  -DSYSCONFDIR=\"@sysconfdir@\"
 
 AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
@@ -235,6 +236,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_bitmap.c \
 			   buffer/dpdk.c \
 			   ../linux-generic/odp_byteorder.c \
+			   ../linux-generic/odp_chksum.c \
 			   ../linux-generic/odp_classification.c \
 			   ../linux-generic/odp_cpu.c \
 			   ../linux-generic/odp_cpumask.c \
@@ -294,20 +296,34 @@ __LIB__libodp_dpdk_la_SOURCES = \
 
 if ARCH_IS_ARM
 __LIB__libodp_dpdk_la_SOURCES += arch/arm/odp_cpu_arch.c \
-				 arch/arm/odp_sysinfo_parse.c
+				arch/arm/odp_cpu_cycles.c \
+				arch/arm/odp_global_time.c \
+				arch/arm/odp_sysinfo_parse.c
+endif
+if ARCH_IS_AARCH64
+__LIB__libodp_dpdk_la_SOURCES += arch/default/odp_cpu_arch.c \
+				arch/default/odp_cpu_cycles.c \
+				arch/aarch64/odp_global_time.c \
+				arch/default/odp_sysinfo_parse.c
 endif
 if ARCH_IS_MIPS64
 __LIB__libodp_dpdk_la_SOURCES += arch/mips64/odp_cpu_arch.c \
-				 arch/mips64/odp_sysinfo_parse.c
+				arch/default/odp_cpu_cycles.c \
+				arch/default/odp_global_time.c \
+				arch/mips64/odp_sysinfo_parse.c
 endif
 if ARCH_IS_POWERPC
 __LIB__libodp_dpdk_la_SOURCES += arch/powerpc/odp_cpu_arch.c \
-				 arch/powerpc/odp_sysinfo_parse.c
+				arch/default/odp_cpu_cycles.c \
+				arch/default/odp_global_time.c \
+				arch/powerpc/odp_sysinfo_parse.c
 endif
 if ARCH_IS_X86
 __LIB__libodp_dpdk_la_SOURCES += arch/x86/cpu_flags.c \
-				 arch/x86/odp_cpu_arch.c \
-				 arch/x86/odp_sysinfo_parse.c
+				arch/x86/odp_cpu_arch.c \
+				arch/default/odp_cpu_cycles.c \
+				arch/x86/odp_global_time.c \
+				arch/x86/odp_sysinfo_parse.c
 endif
 
 pool/dpdk.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE

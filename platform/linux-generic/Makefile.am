@@ -13,6 +13,7 @@ AM_CPPFLAGS +=  -I$(top_builddir)/include
 AM_CPPFLAGS +=  -Iinclude
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/$(ARCH_DIR)
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)
+AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/default
 AM_CPPFLAGS +=  -Iinclude
 AM_CPPFLAGS +=  -DSYSCONFDIR=\"@sysconfdir@\"
 
@@ -40,6 +41,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/byteorder.h \
 		  $(srcdir)/include/odp/api/classification.h \
 		  $(srcdir)/include/odp/api/compiler.h \
+		  $(srcdir)/include/odp/api/chksum.h \
 		  $(srcdir)/include/odp/api/cpu.h \
 		  $(srcdir)/include/odp/api/cpumask.h \
 		  $(srcdir)/include/odp/api/crypto.h \
@@ -78,19 +80,6 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/timer.h \
 		  $(srcdir)/include/odp/api/traffic_mngr.h \
 		  $(srcdir)/include/odp/api/version.h
-
-if ARCH_IS_ARM
-odpapiinclude_HEADERS += $(srcdir)/arch/arm/odp/api/cpu_arch.h
-endif
-if ARCH_IS_MIPS64
-odpapiinclude_HEADERS += $(srcdir)/arch/mips64/odp/api/cpu_arch.h
-endif
-if ARCH_IS_POWERPC
-odpapiinclude_HEADERS += $(srcdir)/arch/powerpc/odp/api/cpu_arch.h
-endif
-if ARCH_IS_X86
-odpapiinclude_HEADERS += $(srcdir)/arch/x86/odp/api/cpu_arch.h
-endif
 
 odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \
@@ -221,22 +210,6 @@ noinst_HEADERS = \
 		  ${srcdir}/include/protocols/thash.h \
 		  ${srcdir}/include/protocols/udp.h
 
-if ARCH_IS_ARM
-noinst_HEADERS += ${srcdir}/arch/arm/odp_atomic.h \
-		  ${srcdir}/arch/arm/odp_cpu.h \
-		  ${srcdir}/arch/arm/odp_cpu_idling.h \
-		  ${srcdir}/arch/arm/odp_llsc.h
-endif
-if ARCH_IS_MIPS64
-noinst_HEADERS += ${srcdir}/arch/mips64/odp_cpu.h
-endif
-if ARCH_IS_POWERPC
-noinst_HEADERS += ${srcdir}/arch/powerpc/odp_cpu.h
-endif
-if ARCH_IS_X86
-noinst_HEADERS += ${srcdir}/arch/x86/odp_cpu.h
-endif
-
 __LIB__libodp_linux_la_SOURCES = \
 			   _fdserver.c \
 			   _ishm.c \
@@ -249,6 +222,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   buffer/generic.c \
 			   buffer/subsystem.c \
 			   odp_byteorder.c \
+			   odp_chksum.c \
 			   odp_classification.c \
 			   odp_cpu.c \
 			   odp_cpumask.c \
@@ -315,22 +289,62 @@ __LIB__libodp_linux_la_SOURCES = \
 			   drv_spinlock.c
 
 if ARCH_IS_ARM
-__LIB__libodp_linux_la_SOURCES += arch/arm/odp_cpu_arch.c \
-				  arch/arm/odp_sysinfo_parse.c
+__LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_arch.c \
+				  arch/default/odp_cpu_cycles.c \
+				  arch/default/odp_global_time.c \
+				  arch/default/odp_sysinfo_parse.c
+arch_odp_headers = $(srcdir)/arch/arm/odp/api/cpu_arch.h
+noinst_HEADERS += ${srcdir}/arch/arm/odp_atomic.h \
+		  ${srcdir}/arch/arm/odp_cpu.h \
+		  ${srcdir}/arch/arm/odp_cpu_idling.h \
+		  ${srcdir}/arch/default/odp_cpu_idling.h \
+		  ${srcdir}/arch/arm/odp_llsc.h
+endif
+if ARCH_IS_AARCH64
+__LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_arch.c \
+				  arch/default/odp_cpu_cycles.c \
+				  arch/aarch64/odp_global_time.c \
+				  arch/default/odp_sysinfo_parse.c
+arch_odp_headers = $(srcdir)/arch/aarch64/odp/api/cpu_arch.h
+noinst_HEADERS += ${srcdir}/arch/aarch64/odp_atomic.h \
+		  ${srcdir}/arch/aarch64/odp_cpu.h \
+		  ${srcdir}/arch/aarch64/odp_cpu_idling.h \
+		  ${srcdir}/arch/default/odp_cpu_idling.h \
+		  ${srcdir}/arch/aarch64/odp_llsc.h
 endif
 if ARCH_IS_MIPS64
 __LIB__libodp_linux_la_SOURCES += arch/mips64/odp_cpu_arch.c \
+				  arch/default/odp_cpu_cycles.c \
+				  arch/default/odp_global_time.c \
 				  arch/mips64/odp_sysinfo_parse.c
+arch_odp_headers = $(srcdir)/arch/mips64/odp/api/cpu_arch.h
+noinst_HEADERS += ${srcdir}/arch/default/odp_cpu.h \
+		  ${srcdir}/arch/default/odp_cpu_idling.h
 endif
 if ARCH_IS_POWERPC
-__LIB__libodp_linux_la_SOURCES += arch/powerpc/odp_cpu_arch.c \
+__LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_arch.c \
+				  arch/default/odp_cpu_cycles.c \
+				  arch/default/odp_global_time.c \
 				  arch/powerpc/odp_sysinfo_parse.c
+arch_odp_headers = $(srcdir)/arch/powerpc/odp/api/cpu_arch.h
+noinst_HEADERS += ${srcdir}/arch/default/odp_cpu.h \
+		  ${srcdir}/arch/default/odp_cpu_idling.h
 endif
 if ARCH_IS_X86
 __LIB__libodp_linux_la_SOURCES += arch/x86/cpu_flags.c \
 				  arch/x86/odp_cpu_arch.c \
+				  arch/default/odp_cpu_cycles.c \
+				  arch/x86/odp_global_time.c \
 				  arch/x86/odp_sysinfo_parse.c
+arch_odp_headers = $(srcdir)/arch/x86/odp/api/cpu_arch.h
+noinst_HEADERS += $(srcdir)/arch/x86/cpu_flags.h
+noinst_HEADERS += ${srcdir}/arch/default/odp_cpu.h \
+		  ${srcdir}/arch/default/odp_cpu_idling.h
 endif
+
+noinst_HEADERS += $(srcdir)/arch/default/odp/api/cpu_arch.h
+
+odpapiinclude_HEADERS += $(arch_odp_headers)
 
 if HAVE_PCAP
 __LIB__libodp_linux_la_SOURCES += pktio/pcap.c

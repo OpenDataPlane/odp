@@ -396,6 +396,7 @@ static pktio_ops_module_t tap_pktio_ops = {
 	.promisc_mode_set = tap_promisc_mode_set,
 	.promisc_mode_get = tap_promisc_mode_get,
 	.mac_get = tap_mac_addr_get,
+	.mac_set = NULL,
 	.link_status = NULL,
 	.capability = tap_capability,
 	.config = NULL,

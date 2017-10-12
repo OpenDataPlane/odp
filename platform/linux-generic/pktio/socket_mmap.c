@@ -737,6 +737,7 @@ static pktio_ops_module_t socket_mmap_pktio_ops = {
 	.promisc_mode_set = sock_mmap_promisc_mode_set,
 	.promisc_mode_get = sock_mmap_promisc_mode_get,
 	.mac_get = sock_mmap_mac_addr_get,
+	.mac_set = NULL,
 	.link_status = sock_mmap_link_status,
 	.capability = sock_mmap_capability,
 	.config = NULL,

@@ -747,6 +747,7 @@ static pktio_ops_module_t dpdk_pktio_ops = {
 	.promisc_mode_set = promisc_mode_set_pkt_dpdk,
 	.promisc_mode_get = promisc_mode_get_pkt_dpdk,
 	.mac_get = mac_get_pkt_dpdk,
+	.mac_set = NULL,
 	.link_status = link_status_pkt_dpdk,
 	.capability = capability_pkt_dpdk,
 	.config = NULL,
