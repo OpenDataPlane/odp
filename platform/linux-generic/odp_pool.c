@@ -32,6 +32,10 @@
 #define CACHE_BURST    32
 #define RING_SIZE_MIN  (2 * CACHE_BURST)
 
+/* Make sure packet buffers don't cross huge page boundaries starting from this
+ * page size. 2MB is typically the smallest used huge page size. */
+#define FIRST_HP_SIZE (2 * 1024 * 1024)
+
 /* Define a practical limit for contiguous memory allocations */
 #define MAX_SIZE   (10 * 1024 * 1024)
 
@@ -224,6 +228,7 @@ static void init_buffers(pool_t *pool)
 	uint32_t i;
 	odp_buffer_hdr_t *buf_hdr;
 	odp_packet_hdr_t *pkt_hdr;
+	odp_shm_info_t shm_info;
 	void *addr;
 	void *uarea = NULL;
 	uint8_t *data;
@@ -232,19 +237,41 @@ static void init_buffers(pool_t *pool)
 	uint32_t mask;
 	int type;
 	uint32_t seg_size;
+	uint64_t page_size;
+	int skipped_blocks = 0;
 
+	if (odp_shm_info(pool->shm, &shm_info))
+		ODP_ABORT("Shm info failed\n");
+
+	page_size = shm_info.page_size;
 	ring = &pool->ring->hdr;
 	mask = pool->ring_mask;
 	type = pool->params.type;
 
-	for (i = 0; i < pool->num; i++) {
+	for (i = 0; i < pool->num + skipped_blocks ; i++) {
 		addr    = &pool->base_addr[i * pool->block_size];
 		buf_hdr = addr;
 		pkt_hdr = addr;
+		/* Skip packet buffers which cross huge page boundaries. Some
+		 * NICs cannot handle buffers which cross page boundaries. */
+		if (pool->params.type == ODP_POOL_PACKET &&
+		    page_size >= FIRST_HP_SIZE) {
+			uint64_t first_page;
+			uint64_t last_page;
 
+			first_page = ((uint64_t)(uintptr_t)addr &
+					~(page_size - 1));
+			last_page = (((uint64_t)(uintptr_t)addr +
+					pool->block_size - 1) &
+					~(page_size - 1));
+			if (last_page != first_page) {
+				skipped_blocks++;
+				continue;
+			}
+		}
 		if (pool->uarea_size)
-			uarea = &pool->uarea_base_addr[i * pool->uarea_size];
-
+			uarea = &pool->uarea_base_addr[(i - skipped_blocks) *
+						       pool->uarea_size];
 		data = buf_hdr->data;
 
 		if (type == ODP_POOL_PACKET)
@@ -318,6 +345,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	uint32_t data_size, align, num, hdr_size, block_size;
 	uint32_t max_len, max_seg_len;
 	uint32_t ring_size;
+	uint32_t num_extra = 0;
 	int name_len;
 	const char *postfix = "_uarea";
 	char uarea_name[ODP_POOL_NAME_LEN + sizeof(postfix)];
@@ -408,6 +436,15 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	block_size = ROUNDUP_CACHE_LINE(hdr_size + align + headroom +
 					data_size + tailroom);
 
+	/* Allocate extra memory for skipping packet buffers which cross huge
+	 * page boundaries. */
+	if (params->type == ODP_POOL_PACKET) {
+		num_extra = (((uint64_t)(num * block_size) +
+				FIRST_HP_SIZE - 1) / FIRST_HP_SIZE);
+		num_extra += (((uint64_t)(num_extra * block_size) +
+				FIRST_HP_SIZE - 1) / FIRST_HP_SIZE);
+	}
+
 	if (num <= RING_SIZE_MIN)
 		ring_size = RING_SIZE_MIN;
 	else
@@ -423,7 +460,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	pool->tailroom       = tailroom;
 	pool->block_size     = block_size;
 	pool->uarea_size     = uarea_size;
-	pool->shm_size       = num * block_size;
+	pool->shm_size       = (num + num_extra) * block_size;
 	pool->uarea_shm_size = num * uarea_size;
 	pool->ext_desc       = NULL;
 	pool->ext_destroy    = NULL;

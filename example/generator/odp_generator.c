@@ -1487,17 +1487,7 @@ static void print_info(char *progname, appl_args_t *appl_args)
 {
 	int i;
 
-	printf("\n"
-	       "ODP system info\n"
-	       "---------------\n"
-	       "ODP API version: %s\n"
-	       "CPU model:       %s\n"
-	       "CPU freq (hz):   %"PRIu64"\n"
-	       "Cache line size: %i\n"
-	       "CPU count:       %i\n"
-	       "\n",
-	       odp_version_api_str(), odp_cpu_model_str(), odp_cpu_hz_max(),
-	       odp_sys_cache_line_size(), odp_cpu_count());
+	odp_sys_info_print();
 
 	printf("Running ODP appl: \"%s\"\n"
 	       "-----------------\n"
