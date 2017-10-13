@@ -11,4 +11,4 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/platform/@with_platform@/arch/@ARCH_DIR@ \
 	-I$(top_builddir)/include
 
-AM_LDFLAGS = -L$(LIB)
+AM_LDFLAGS = -L$(LIB) -static

@@ -16,9 +16,6 @@ ODP_VERSION_API_MAJOR=odpapi_major_version
 AC_SUBST(ODP_VERSION_API_MAJOR)
 ODP_VERSION_API_MINOR=odpapi_minor_version
 AC_SUBST(ODP_VERSION_API_MINOR)
-AC_CONFIG_FILES([include/odp/api/spec/version.h
-                 include/odp/api/spec/deprecated.h])
-
 AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects foreign nostdinc])
 AC_CONFIG_SRCDIR([include/odp/api/spec/init.h])
 AM_CONFIG_HEADER([include/config.h])
@@ -164,7 +161,9 @@ AC_ARG_WITH([platform],
     ])
 
 AC_SUBST([with_platform])
-AC_SUBST([platform_with_platform], ["platform/${with_platform}"])
+
+AM_CONDITIONAL([PLATFORM_IS_LINUX_GENERIC],
+	       [test "x$with_platform" = "xlinux-generic"])
 
 ##########################################################################
 # Run platform specific checks and settings
@@ -173,7 +172,6 @@ IMPLEMENTATION_NAME=""
 if test "${with_platform}" = "linux-generic";
 then
     m4_include([./platform/linux-generic/m4/configure.m4])
-    m4_include([./test/linux-generic/m4/configure.m4])
     IMPLEMENTATION_NAME="odp-linux"
 else
     echo "UNSUPPORTED PLATFORM: ${with_platform}"
@@ -226,6 +224,8 @@ AM_CONDITIONAL([ARCH_IS_AARCH64], [test "x${ARCH_DIR}" = "xaarch64"])
 AM_CONDITIONAL([ARCH_IS_MIPS64], [test "x${ARCH_DIR}" = "xmips64"])
 AM_CONDITIONAL([ARCH_IS_POWERPC], [test "x${ARCH_DIR}" = "xpowerpc"])
 AM_CONDITIONAL([ARCH_IS_X86], [test "x${ARCH_DIR}" = "xx86"])
+AM_CONDITIONAL([ARCH_IS_X86_32], [test "x${ARCH_ABI}" = "xx86_32-linux"])
+AM_CONDITIONAL([ARCH_IS_X86_64], [test "x${ARCH_ABI}" = "xx86_64-linux"])
 
 ##########################################################################
 # Setup doxygen documentation
@@ -356,10 +356,11 @@ esac
 CFLAGS="$CFLAGS $ODP_CFLAGS"
 CXXFLAGS="$CXXFLAGS $ODP_CXXFLAGS"
 
-AC_CONFIG_FILES([Makefile
-		 pkgconfig/libodp-linux.pc
-		 pkgconfig/libodphelper.pc
-		 ])
+AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([include/Makefile
+		 include/odp/api/spec/version.h
+		 include/odp/api/spec/deprecated.h])
+
 
 ##########################################################################
 # distribute the changed variables among the Makefiles
