@@ -164,10 +164,11 @@ int odp_pool_capability(odp_pool_capability_t *capa);
 
 /**
  * Pool parameters
- * Used to communicate pool creation options.
- * @note A single thread may not be able to allocate all 'num' elements
- * from the pool at any particular time, as other threads or hardware
- * blocks are allowed to keep some for caching purposes.
+ *
+ * A note for all pool types: a single thread may not be able to allocate all
+ * 'num' elements from the pool at any particular time, as implementations are
+ * allowed to store some elements (per thread and HW engine) for caching
+ * purposes.
  */
 typedef struct odp_pool_param_t {
 	/** Pool type */
@@ -192,17 +193,34 @@ typedef struct odp_pool_param_t {
 
 		/** Parameters for packet pools */
 		struct {
-			/** The number of packets that the pool must provide
-			    that are packet length 'len' bytes or smaller.
-			    The maximum value is defined by pool capability
-			    pkt.max_num. */
+			/** Minimum number of 'len' byte packets.
+			 *
+			 *  The pool must contain at least this many packets
+			 *  that are 'len' bytes or smaller. An implementation
+			 *  may round up the value, as long as the 'max_num'
+			 *  parameter below is not violated. The maximum value
+			 *  for this field is defined by pool capability
+			 *  pkt.max_num.
+			 */
 			uint32_t num;
 
-			/** Minimum packet length that the pool must provide
-			    'num' packets. The number of packets may be less
-			    than 'num' when packets are larger than 'len'.
-			    The maximum value is defined by pool capability
-			    pkt.max_len. Use 0 for default. */
+			/** Maximum number of packets.
+			 *
+			 *  This is the maximum number of packets of any length
+			 *  that can be allocated from the pool. The maximum
+			 *  value is defined by pool capability pkt.max_num.
+			 *  Use 0 when there's no requirement for the maximum
+			 *  number of packets. The default value is 0.
+			 */
+			uint32_t max_num;
+
+			/** Minimum length of 'num' packets.
+			 *
+			 *  The pool must contain at least 'num' packets up to
+			 *  this packet length (1 ... 'len' bytes). The maximum
+			 *  value for this field is defined by pool capability
+			 *  pkt.max_len. Use 0 for default.
+			 */
 			uint32_t len;
 
 			/** Maximum packet length that will be allocated from
