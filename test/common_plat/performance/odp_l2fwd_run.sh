@@ -66,12 +66,10 @@ run_l2fwd()
 		exit 1
 	fi
 
-	# Max 4 workers
-	# @todo: ensure that generator and l2fwd workers are not allocated to
-	# the same CPUs
+	# Run generator with one worker
 	(odp_generator${EXEEXT} --interval $FLOOD_MODE -I $IF0 \
 			--srcip 192.168.0.1 --dstip 192.168.0.2 \
-			-m u -w 4 2>&1 > /dev/null) \
+			-m u -w 1 2>&1 > /dev/null) \
 			2>&1 > /dev/null &
 
 	GEN_PID=$!
