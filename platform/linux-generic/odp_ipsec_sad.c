@@ -215,6 +215,10 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 			       param->inbound.lookup_param.dst_addr,
 			       sizeof(ipsec_sa->in.lookup_dst_ip));
 
+		if (param->inbound.antireplay_ws > IPSEC_ANTIREPLAY_WS)
+			return ODP_IPSEC_SA_INVALID;
+		ipsec_sa->antireplay = (param->inbound.antireplay_ws != 0);
+		odp_atomic_init_u64(&ipsec_sa->in.antireplay, 0);
 	} else {
 		odp_atomic_store_u32(&ipsec_sa->out.seq, 1);
 	}
@@ -527,4 +531,60 @@ int _odp_ipsec_sa_stats_update(ipsec_sa_t *ipsec_sa, uint32_t len,
 	}
 
 	return rc;
+}
+
+int _odp_ipsec_sa_replay_precheck(ipsec_sa_t *ipsec_sa, uint32_t seq,
+				  odp_ipsec_op_status_t *status)
+{
+	/* Try to be as quick as possible, we will discard packets later */
+	if (ipsec_sa->antireplay &&
+	    seq + IPSEC_ANTIREPLAY_WS <=
+	    (odp_atomic_load_u64(&ipsec_sa->in.antireplay) & 0xffffffff)) {
+		status->error.antireplay = 1;
+		return -1;
+	}
+
+	return 0;
+}
+
+int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
+				odp_ipsec_op_status_t *status)
+{
+	int cas = 0;
+	uint64_t state, new_state;
+
+	if (!ipsec_sa->antireplay)
+		return 0;
+
+	state = odp_atomic_load_u64(&ipsec_sa->in.antireplay);
+
+	while (0 == cas) {
+		uint32_t max_seq = state & 0xffffffff;
+		uint32_t mask = state >> 32;
+
+		if (seq + IPSEC_ANTIREPLAY_WS <= max_seq) {
+			status->error.antireplay = 1;
+			return -1;
+		}
+
+		if (seq > max_seq) {
+			mask <<= seq - max_seq;
+			mask |= 1;
+			max_seq = seq;
+		} else {
+			if (mask & (1U << (max_seq - seq))) {
+				status->error.antireplay = 1;
+				return -1;
+			}
+
+			mask |= (1U << (max_seq - seq));
+		}
+
+		new_state = (((uint64_t)mask) << 32) | max_seq;
+
+		cas = odp_atomic_cas_acq_rel_u64(&ipsec_sa->in.antireplay,
+						 &state, new_state);
+	}
+
+	return 0;
 }
