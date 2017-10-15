@@ -42,6 +42,8 @@ int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 
 	capa->max_num_sa = ODP_CONFIG_IPSEC_SAS;
 
+	capa->max_antireplay_ws = IPSEC_ANTIREPLAY_WS;
+
 	rc = odp_crypto_capability(&crypto_capa);
 	if (rc < 0)
 		return rc;
@@ -402,6 +404,12 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		ip->frag_offset = 0;
 		ip->ttl = 0;
 
+		aad.spi = ah.spi;
+		aad.seq_no = ah.seq_no;
+
+		param.aad.ptr = (uint8_t *)&aad;
+		param.aad.length = sizeof(aad);
+
 		param.auth_range.offset = ip_offset;
 		param.auth_range.length = odp_be_to_cpu_16(ip->tot_len);
 		param.hash_result_offset = ipsec_offset + _ODP_AHHDR_LEN;
@@ -411,6 +419,11 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		status->error.proto = 1;
 		goto out;
 	}
+
+	if (_odp_ipsec_sa_replay_precheck(ipsec_sa,
+					  odp_be_to_cpu_32(aad.seq_no),
+					  status) < 0)
+		goto out;
 
 	if (_odp_ipsec_sa_stats_precheck(ipsec_sa, status) < 0)
 		goto out;
@@ -448,6 +461,11 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	}
 
 	if (_odp_ipsec_sa_stats_update(ipsec_sa, stats_length, status) < 0)
+		goto out;
+
+	if (_odp_ipsec_sa_replay_update(ipsec_sa,
+					odp_be_to_cpu_32(aad.seq_no),
+					status) < 0)
 		goto out;
 
 	ip_offset = odp_packet_l3_offset(pkt);
@@ -808,6 +826,12 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 		ah.seq_no = odp_cpu_to_be_32(ipsec_seq_no(ipsec_sa));
 		ah.next_header = ip->proto;
 		ip->proto = _ODP_IPPROTO_AH;
+
+		aad.spi = ah.spi;
+		aad.seq_no = ah.seq_no;
+
+		param.aad.ptr = (uint8_t *)&aad;
+		param.aad.length = sizeof(aad);
 
 		odp_packet_copy_from_mem(pkt,
 					 ipsec_offset, _ODP_AHHDR_LEN,
