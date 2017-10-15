@@ -412,9 +412,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		goto out;
 	}
 
-	if (_odp_ipsec_sa_update_stats(ipsec_sa,
-				       stats_length,
-				       status) < 0)
+	if (_odp_ipsec_sa_stats_precheck(ipsec_sa, status) < 0)
 		goto out;
 
 	param.session = ipsec_sa->session;
@@ -448,6 +446,9 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 
 		goto out;
 	}
+
+	if (_odp_ipsec_sa_stats_update(ipsec_sa, stats_length, status) < 0)
+		goto out;
 
 	ip_offset = odp_packet_l3_offset(pkt);
 	ip = odp_packet_l3_ptr(pkt, NULL);
@@ -830,9 +831,8 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 		goto out;
 	}
 
-	if (_odp_ipsec_sa_update_stats(ipsec_sa,
-				       stats_length,
-				       status) < 0)
+	/* No need to run precheck here, we know that packet is authentic */
+	if (_odp_ipsec_sa_stats_update(ipsec_sa, stats_length, status) < 0)
 		goto out;
 
 	param.session = ipsec_sa->session;

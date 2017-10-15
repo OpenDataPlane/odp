@@ -479,7 +479,28 @@ ipsec_sa_t *_odp_ipsec_sa_lookup(const ipsec_sa_lookup_t *lookup)
 	return best;
 }
 
-int _odp_ipsec_sa_update_stats(ipsec_sa_t *ipsec_sa, uint32_t len,
+int _odp_ipsec_sa_stats_precheck(ipsec_sa_t *ipsec_sa,
+				 odp_ipsec_op_status_t *status)
+{
+	int rc = 0;
+
+	if (ipsec_sa->hard_limit_bytes > 0 &&
+	    odp_atomic_load_u64(&ipsec_sa->bytes) >
+	    ipsec_sa->hard_limit_bytes) {
+		status->error.hard_exp_bytes = 1;
+		rc = -1;
+	}
+	if (ipsec_sa->hard_limit_packets > 0 &&
+	    odp_atomic_load_u64(&ipsec_sa->packets) >
+	    ipsec_sa->hard_limit_packets) {
+		status->error.hard_exp_packets = 1;
+		rc = -1;
+	}
+
+	return rc;
+}
+
+int _odp_ipsec_sa_stats_update(ipsec_sa_t *ipsec_sa, uint32_t len,
 			       odp_ipsec_op_status_t *status)
 {
 	uint64_t bytes = odp_atomic_fetch_add_u64(&ipsec_sa->bytes, len) + len;
