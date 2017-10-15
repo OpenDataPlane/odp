@@ -282,6 +282,9 @@ typedef struct odp_ipsec_capability_t {
 	 *  be used for many SAs. */
 	uint32_t max_queues;
 
+	/** Maximum anti-replay window size. */
+	uint32_t max_antireplay_ws;
+
 	/** Supported cipher algorithms */
 	odp_crypto_cipher_algos_t ciphers;
 
