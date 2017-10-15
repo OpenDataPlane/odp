@@ -81,6 +81,9 @@ int _odp_ipsec_status_send(odp_queue_t queue,
 
 #define IPSEC_MAX_SALT_LEN	4    /**< Maximum salt length in bytes */
 
+/* 32 is minimum required by the standard. We do not support more */
+#define IPSEC_ANTIREPLAY_WS	32
+
 /**
  * Maximum number of available SAs
  */
@@ -127,6 +130,9 @@ struct ipsec_sa_s {
 
 			/* Only for outbound */
 			unsigned	use_counter_iv : 1;
+
+			/* Only for inbound */
+			unsigned	antireplay : 1;
 		};
 	};
 
@@ -134,6 +140,7 @@ struct ipsec_sa_s {
 		struct {
 			odp_ipsec_lookup_mode_t lookup_mode;
 			odp_u32be_t	lookup_dst_ip;
+			odp_atomic_u64_t antireplay;
 		} in;
 
 		struct {
@@ -200,6 +207,19 @@ int _odp_ipsec_sa_stats_precheck(ipsec_sa_t *ipsec_sa,
 int _odp_ipsec_sa_stats_update(ipsec_sa_t *ipsec_sa, uint32_t len,
 			       odp_ipsec_op_status_t *status);
 
+/* Run pre-check on sequence number of the packet.
+ *
+ * @retval <0 if the packet falls out of window
+ */
+int _odp_ipsec_sa_replay_precheck(ipsec_sa_t *ipsec_sa, uint32_t seq,
+				  odp_ipsec_op_status_t *status);
+
+/* Run check on sequence number of the packet and update window if necessary.
+ *
+ * @retval <0 if the packet falls out of window
+ */
+int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
+				odp_ipsec_op_status_t *status);
 /**
  * Try inline IPsec processing of provided packet.
  *
