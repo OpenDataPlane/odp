@@ -185,11 +185,19 @@ void _odp_ipsec_sa_unuse(ipsec_sa_t *ipsec_sa);
 ipsec_sa_t *_odp_ipsec_sa_lookup(const ipsec_sa_lookup_t *lookup);
 
 /**
+ * Run pre-check on SA usage statistics.
+ *
+ * @retval <0 if hard limits were breached
+ */
+int _odp_ipsec_sa_stats_precheck(ipsec_sa_t *ipsec_sa,
+				 odp_ipsec_op_status_t *status);
+
+/**
  * Update SA usage statistics, filling respective status for the packet.
  *
  * @retval <0 if hard limits were breached
  */
-int _odp_ipsec_sa_update_stats(ipsec_sa_t *ipsec_sa, uint32_t len,
+int _odp_ipsec_sa_stats_update(ipsec_sa_t *ipsec_sa, uint32_t len,
 			       odp_ipsec_op_status_t *status);
 
 /**
