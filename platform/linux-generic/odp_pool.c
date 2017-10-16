@@ -689,6 +689,9 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 	info->name = pool->name;
 	info->params = pool->params;
 
+	if (pool->params.type == ODP_POOL_PACKET)
+		info->pkt.max_num = pool->num;
+
 	return 0;
 }
 
