@@ -41,6 +41,9 @@ extern "C" {
  * Maximum pool name length in chars including null char
  */
 
+/** Maximum number of packet pool subparameters */
+#define ODP_POOL_MAX_SUBPARAMS  7
+
 /**
  * Pool capabilities
  */
@@ -134,6 +137,12 @@ typedef struct odp_pool_capability_t {
 		 * The value of zero means that limited only by the available
 		 * memory size for the pool. */
 		uint32_t max_uarea_size;
+
+		/** Maximum number of subparameters
+		 *
+		 *  Maximum number of packet pool subparameters. Valid range is
+		 *  0 ... ODP_POOL_MAX_SUBPARAMS. */
+		uint8_t max_num_subparam;
 	} pkt;
 
 	/** Timeout pool capabilities  */
@@ -161,6 +170,18 @@ typedef struct odp_pool_capability_t {
  * @retval <0 on failure
  */
 int odp_pool_capability(odp_pool_capability_t *capa);
+
+/**
+ * Packet pool subparameters
+ */
+typedef struct odp_pool_pkt_subparam_t {
+	/** Number of 'len' byte packets. */
+	uint32_t num;
+
+	/** Packet length in bytes */
+	uint32_t len;
+
+} odp_pool_pkt_subparam_t;
 
 /**
  * Pool parameters
@@ -246,6 +267,33 @@ typedef struct odp_pool_param_t {
 			    capability pkt.max_headroom.
 			    Use zero if headroom is not needed. */
 			uint32_t headroom;
+
+			/** Number of subparameters
+			 *
+			 *  The number of subparameter table entries used.
+			 *  The maximum value is defined by pool
+			 *  capability pkt.max_num_subparam. The default value
+			 *  is 0.
+			 */
+			uint8_t num_subparam;
+
+			/** Subparameter table
+			 *
+			 *  Subparameters continue pool configuration with
+			 *  additional packet length requirements. The first
+			 *  table entry follows the num/len specification above.
+			 *  So that, sub[0].len > 'len', and sub[0].num refers
+			 *  to packet lengths between 'len' + 1 and sub[0].len.
+			 *  Similarly, sub[1] follows sub[0] specification, and
+			 *  so on.
+			 *
+			 *  Each requirement is supported separately and may be
+			 *  rounded up, as long as the 'max_num' parameter is
+			 *  not violated. It's implementation specific if some
+			 *  requirements are supported simultaneously (e.g.
+			 *  due to subpool design).
+			 */
+			odp_pool_pkt_subparam_t sub[ODP_POOL_MAX_SUBPARAMS];
 		} pkt;
 
 		/** Parameters for timeout pools */
