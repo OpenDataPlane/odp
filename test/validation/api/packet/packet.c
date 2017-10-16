@@ -16,6 +16,11 @@
 #define PACKET_TAILROOM_RESERVE  4
 /* Number of packets in the test packet pool */
 #define PACKET_POOL_NUM 300
+/* Number of large, possibly segmented, test packets */
+#define PACKET_POOL_NUM_SEG 4
+ODP_STATIC_ASSERT(PACKET_POOL_NUM_SEG > 1 &&
+		  PACKET_POOL_NUM_SEG < PACKET_POOL_NUM,
+		  "Invalid PACKET_POOL_NUM_SEG value");
 
 static odp_pool_t packet_pool, packet_pool_no_uarea, packet_pool_double_uarea;
 static uint32_t packet_len;
@@ -108,11 +113,13 @@ int packet_suite_init(void)
 {
 	odp_pool_param_t params;
 	odp_pool_capability_t capa;
+	odp_packet_t pkt_tbl[PACKET_POOL_NUM_SEG];
 	struct udata_struct *udat;
 	uint32_t udat_size;
 	uint8_t data = 0;
 	uint32_t i;
 	uint32_t num = PACKET_POOL_NUM;
+	int ret;
 
 	if (odp_pool_capability(&capa) < 0) {
 		printf("pool_capability failed\n");
@@ -178,14 +185,26 @@ int packet_suite_init(void)
 		data++;
 	}
 
-	/* Try to allocate the largest possible packet to see
+	/* Try to allocate PACKET_POOL_NUM_SEG largest possible packets to see
 	 * if segmentation is supported  */
 	do {
-		segmented_test_packet = odp_packet_alloc(packet_pool,
-							 segmented_packet_len);
-		if (segmented_test_packet == ODP_PACKET_INVALID)
+		ret = odp_packet_alloc_multi(packet_pool, segmented_packet_len,
+					     pkt_tbl, PACKET_POOL_NUM_SEG);
+		if (ret !=  PACKET_POOL_NUM_SEG) {
+			if (ret > 0)
+				odp_packet_free_multi(pkt_tbl, ret);
 			segmented_packet_len -= capa.pkt.min_seg_len;
-	} while (segmented_test_packet == ODP_PACKET_INVALID);
+			continue;
+		}
+	} while (ret != PACKET_POOL_NUM_SEG &&
+		 segmented_packet_len > capa.pkt.min_seg_len);
+
+	if (ret != PACKET_POOL_NUM_SEG) {
+		printf("packet alloc failed\n");
+		return -1;
+	}
+	segmented_test_packet = pkt_tbl[0];
+	odp_packet_free_multi(&pkt_tbl[1], PACKET_POOL_NUM_SEG - 1);
 
 	if (odp_packet_is_valid(test_packet) == 0 ||
 	    odp_packet_is_valid(segmented_test_packet) == 0) {
