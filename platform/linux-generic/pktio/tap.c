@@ -406,6 +406,12 @@ static int tap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 	return ETH_ALEN;
 }
 
+static int tap_link_status(pktio_entry_t *pktio_entry)
+{
+	return link_status_fd(pktio_entry->s.pkt_tap.skfd,
+			      pktio_entry->s.name + 4);
+}
+
 static int tap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 			  odp_pktio_capability_t *capa)
 {
@@ -438,6 +444,7 @@ const pktio_if_ops_t tap_pktio_ops = {
 	.promisc_mode_get = tap_promisc_mode_get,
 	.mac_get = tap_mac_addr_get,
 	.mac_set = NULL,
+	.link_status = tap_link_status,
 	.capability = tap_capability,
 	.pktin_ts_res = NULL,
 	.pktin_ts_from_ns = NULL,
