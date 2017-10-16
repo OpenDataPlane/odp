@@ -191,12 +191,40 @@ void pool_test_alloc_packet_subparam(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+void pool_test_info_packet(void)
+{
+	odp_pool_t pool;
+	odp_pool_info_t info;
+	odp_pool_param_t param;
+	const char pool_name[] = "test_pool_name";
+
+	odp_pool_param_init(&param);
+
+	param.type     = ODP_POOL_PACKET;
+	param.pkt.num  = PKT_NUM;
+	param.pkt.len  = PKT_LEN;
+
+	pool = odp_pool_create(pool_name, &param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	CU_ASSERT_FATAL(odp_pool_info(pool, &info) == 0);
+
+	CU_ASSERT(strncmp(pool_name, info.name, sizeof(pool_name)) == 0);
+	CU_ASSERT(info.params.type    == ODP_POOL_PACKET);
+	CU_ASSERT(info.params.pkt.num == param.pkt.num);
+	CU_ASSERT(info.params.pkt.len == param.pkt.len);
+	CU_ASSERT(info.pkt.max_num    >= param.pkt.num);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
 odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO(pool_test_create_destroy_buffer),
 	ODP_TEST_INFO(pool_test_create_destroy_packet),
 	ODP_TEST_INFO(pool_test_create_destroy_timeout),
 	ODP_TEST_INFO(pool_test_alloc_packet),
 	ODP_TEST_INFO(pool_test_alloc_packet_subparam),
+	ODP_TEST_INFO(pool_test_info_packet),
 	ODP_TEST_INFO(pool_test_lookup_info_print),
 	ODP_TEST_INFO_NULL,
 };
