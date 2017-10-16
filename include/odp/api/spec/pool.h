@@ -358,24 +358,42 @@ odp_pool_t odp_pool_lookup(const char *name);
  * Used to get information about a pool.
  */
 typedef struct odp_pool_info_t {
-	const char *name;          /**< pool name */
-	odp_pool_param_t params;   /**< pool parameters */
+	/** Pool name */
+	const char *name;
+
+	/** Copy of pool parameters */
+	odp_pool_param_t params;
+
+	/** Additional info for packet pools */
+	struct {
+		/** Maximum number of packets of any length
+		 *
+		 *  This is the maximum number of packets that can be allocated
+		 *  from the pool at anytime. Application can use this e.g.
+		 *  to prepare enough per packet contexts.
+		 */
+		uint32_t max_num;
+
+	} pkt;
 
 	/** Minimum data address.
-	 * This is the minimum address that application accessible
-	 * data of any object (event) allocated from the pool may
-	 * locate. When there's no application accessible data
-	 * (e.g. ODP_POOL_TIMEOUT pools), the value may be zero.
+	 *
+	 *  This is the minimum address that application accessible
+	 *  data of any object (event) allocated from the pool may
+	 *  locate. When there's no application accessible data
+	 *  (e.g. ODP_POOL_TIMEOUT pools), the value may be zero.
 	 */
 	uintptr_t min_data_addr;
 
 	/** Maximum data address.
-	 * This is the maximum address that application accessible
-	 * data of any object (event) allocated from the pool may
-	 * locate. When there's no application accessible data
-	 * (e.g. ODP_POOL_TIMEOUT pools), the value may be zero.
+	 *
+	 *  This is the maximum address that application accessible
+	 *  data of any object (event) allocated from the pool may
+	 *  locate. When there's no application accessible data
+	 *  (e.g. ODP_POOL_TIMEOUT pools), the value may be zero.
 	 */
 	uintptr_t max_data_addr;
+
 } odp_pool_info_t;
 
 /**
@@ -389,7 +407,6 @@ typedef struct odp_pool_info_t {
  * @retval 0 Success
  * @retval -1 Failure.  Info could not be retrieved.
  */
-
 int odp_pool_info(odp_pool_t pool, odp_pool_info_t *info);
 
 /**
