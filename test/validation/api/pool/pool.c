@@ -16,11 +16,11 @@
 static const int default_buffer_size = 1500;
 static const int default_buffer_num = 1000;
 
-static void pool_create_destroy(odp_pool_param_t *params)
+static void pool_create_destroy(odp_pool_param_t *param)
 {
 	odp_pool_t pool;
 
-	pool = odp_pool_create(NULL, params);
+	pool = odp_pool_create(NULL, param);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 	CU_ASSERT(odp_pool_to_u64(pool) !=
 		  odp_pool_to_u64(ODP_POOL_INVALID));
@@ -29,42 +29,41 @@ static void pool_create_destroy(odp_pool_param_t *params)
 
 void pool_test_create_destroy_buffer(void)
 {
-	odp_pool_param_t params = {
-			.buf = {
-				.size  = default_buffer_size,
-				.align = ODP_CACHE_LINE_SIZE,
-				.num   = default_buffer_num,
-			},
-			.type = ODP_POOL_BUFFER,
-	};
+	odp_pool_param_t param;
 
-	pool_create_destroy(&params);
+	odp_pool_param_init(&param);
+
+	param.type      = ODP_POOL_BUFFER,
+	param.buf.size  = default_buffer_size;
+	param.buf.align = ODP_CACHE_LINE_SIZE;
+	param.buf.num   = default_buffer_num;
+
+	pool_create_destroy(&param);
 }
 
 void pool_test_create_destroy_packet(void)
 {
-	odp_pool_param_t params = {
-			.pkt = {
-				.seg_len = 0,
-				.len = default_buffer_size,
-				.num   = default_buffer_num,
-			},
-			.type = ODP_POOL_PACKET,
-	};
+	odp_pool_param_t param;
 
-	pool_create_destroy(&params);
+	odp_pool_param_init(&param);
+
+	param.type    = ODP_POOL_PACKET;
+	param.pkt.len = default_buffer_size;
+	param.pkt.num = default_buffer_num;
+
+	pool_create_destroy(&param);
 }
 
 void pool_test_create_destroy_timeout(void)
 {
-	odp_pool_param_t params = {
-			.tmo = {
-				.num   = default_buffer_num,
-			},
-			.type = ODP_POOL_TIMEOUT,
-	};
+	odp_pool_param_t param;
 
-	pool_create_destroy(&params);
+	odp_pool_param_init(&param);
+
+	param.type    = ODP_POOL_TIMEOUT;
+	param.tmo.num = default_buffer_num;
+
+	pool_create_destroy(&param);
 }
 
 void pool_test_lookup_info_print(void)
@@ -72,16 +71,16 @@ void pool_test_lookup_info_print(void)
 	odp_pool_t pool;
 	const char pool_name[] = "pool_for_lookup_test";
 	odp_pool_info_t info;
-	odp_pool_param_t params = {
-			.buf = {
-				.size  = default_buffer_size,
-				.align = ODP_CACHE_LINE_SIZE,
-				.num  = default_buffer_num,
-			},
-			.type  = ODP_POOL_BUFFER,
-	};
+	odp_pool_param_t param;
 
-	pool = odp_pool_create(pool_name, &params);
+	odp_pool_param_init(&param);
+
+	param.type      = ODP_POOL_BUFFER;
+	param.buf.size  = default_buffer_size;
+	param.buf.align = ODP_CACHE_LINE_SIZE;
+	param.buf.num   = default_buffer_num;
+
+	pool = odp_pool_create(pool_name, &param);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	pool = odp_pool_lookup(pool_name);
@@ -89,10 +88,10 @@ void pool_test_lookup_info_print(void)
 
 	CU_ASSERT_FATAL(odp_pool_info(pool, &info) == 0);
 	CU_ASSERT(strncmp(pool_name, info.name, sizeof(pool_name)) == 0);
-	CU_ASSERT(params.buf.size <= info.params.buf.size);
-	CU_ASSERT(params.buf.align <= info.params.buf.align);
-	CU_ASSERT(params.buf.num <= info.params.buf.num);
-	CU_ASSERT(params.type == info.params.type);
+	CU_ASSERT(param.buf.size <= info.params.buf.size);
+	CU_ASSERT(param.buf.align <= info.params.buf.align);
+	CU_ASSERT(param.buf.num <= info.params.buf.num);
+	CU_ASSERT(param.type == info.params.type);
 
 	odp_pool_print(pool);
 
