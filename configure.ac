@@ -193,7 +193,7 @@ m4_include([./test/m4/configure.m4])
 # Set SDK install path
 ##########################################################################
 AC_ARG_WITH([sdk-install-path],
-AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
+AS_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
 	     [(or in the default path if not specified).]),
 [SDK_INSTALL_PATH=$withval SDK_INSTALL_PATH_=1],[SDK_INSTALL_PATH_=])
 
@@ -203,7 +203,7 @@ AC_SUBST(SDK_INSTALL_PATH)
 # Set the install directory for test binaries/scripts
 ##########################################################################
 AC_ARG_WITH([testdir],
-    [AC_HELP_STRING([--with-testdir=DIR], [installation directory for tests])],
+    [AS_HELP_STRING([--with-testdir=DIR], [installation directory for tests])],
 	[testdir=$withval],
 	[testdir=no])
 AS_IF([test "x$testdir" = "xyes"], [testdir=$libdir/odp/tests],

@@ -10,7 +10,7 @@ AC_ARG_VAR([OPENSSL_STATIC_LIBS], [static linker flags for OpenSSL crypto librar
 # Set optional OpenSSL path
 ##########################################################################
 AC_ARG_WITH([openssl-path],
-[AC_HELP_STRING([--with-openssl-path=DIR],
+[AS_HELP_STRING([--with-openssl-path=DIR],
 	       [path to openssl libs and headers (use system path if not provided)])],
 [OPENSSL_CPPFLAGS="-I$withval/include"
 OPENSSL_LIBS="-L$withval/lib -lcrypto"],
