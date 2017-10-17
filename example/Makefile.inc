@@ -1,3 +1,5 @@
+TESTS_ENVIRONMENT = EXEEXT=${EXEEXT}
+
 LIB   = $(top_builddir)/lib
 LDADD = $(LIB)/libodp-linux.la $(LIB)/libodphelper.la $(DPDK_PMDS)
 AM_CFLAGS = \
