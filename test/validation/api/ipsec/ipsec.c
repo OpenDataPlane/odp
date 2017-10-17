@@ -19,6 +19,9 @@ struct suite_context_s suite_context;
 #define PKT_POOL_NUM  64
 #define PKT_POOL_LEN  (1 * 1024)
 
+#define PACKET_USER_PTR	((void *)0x1212fefe)
+#define IPSEC_SA_CTX	((void *)0xfefefafa)
+
 static odp_pktio_t pktio_create(odp_pool_t pool)
 {
 	odp_pktio_t pktio;
@@ -300,6 +303,8 @@ void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
 
 	param->dest_queue = suite_context.queue;
 
+	param->context = IPSEC_SA_CTX;
+
 	param->crypto.cipher_alg = cipher_alg;
 	if (cipher_key)
 		param->crypto.cipher_key = *cipher_key;
@@ -316,6 +321,8 @@ void ipsec_sa_destroy(odp_ipsec_sa_t sa)
 {
 	odp_event_t event;
 	odp_ipsec_status_t status;
+
+	CU_ASSERT_EQUAL(IPSEC_SA_CTX, odp_ipsec_sa_context(sa));
 
 	CU_ASSERT_EQUAL(ODP_IPSEC_OK, odp_ipsec_sa_disable(sa));
 
@@ -338,8 +345,6 @@ void ipsec_sa_destroy(odp_ipsec_sa_t sa)
 
 	CU_ASSERT_EQUAL(ODP_IPSEC_OK, odp_ipsec_sa_destroy(sa));
 }
-
-#define PACKET_USER_PTR	((void *)0x1212fefe)
 
 odp_packet_t ipsec_packet(const ipsec_test_packet *itp)
 {
@@ -612,6 +617,9 @@ void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 					ODP_IPSEC_OP_MODE_INLINE,
 					result.flag.inline_mode);
 			CU_ASSERT_EQUAL(sa, result.sa);
+			if (ODP_IPSEC_SA_INVALID != sa)
+				CU_ASSERT_EQUAL(IPSEC_SA_CTX,
+						odp_ipsec_sa_context(sa));
 		}
 		ipsec_check_packet(part->out[i].pkt_out,
 				   pkto[i]);
@@ -645,6 +653,8 @@ void ipsec_check_out_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 			CU_ASSERT_EQUAL(part->out[i].status.error.all,
 					result.status.error.all);
 			CU_ASSERT_EQUAL(sa, result.sa);
+			CU_ASSERT_EQUAL(IPSEC_SA_CTX,
+					odp_ipsec_sa_context(sa));
 		}
 		ipsec_check_packet(part->out[i].pkt_out,
 				   pkto[i]);
@@ -682,6 +692,8 @@ void ipsec_check_out_in_one(const ipsec_test_part *part,
 			CU_ASSERT_EQUAL(part->out[i].status.error.all,
 					result.status.error.all);
 			CU_ASSERT_EQUAL(sa, result.sa);
+			CU_ASSERT_EQUAL(IPSEC_SA_CTX,
+					odp_ipsec_sa_context(sa));
 		}
 		CU_ASSERT_FATAL(odp_packet_len(pkto[i]) <=
 				sizeof(pkt_in.data));
