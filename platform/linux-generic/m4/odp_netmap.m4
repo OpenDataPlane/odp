@@ -12,7 +12,7 @@ AC_ARG_ENABLE([netmap_support],
 # Set optional netmap path
 ##########################################################################
 AC_ARG_WITH([netmap-path],
-AC_HELP_STRING([--with-netmap-path=DIR   path to netmap root directory],
+AS_HELP_STRING([--with-netmap-path=DIR   path to netmap root directory],
                [(or in the default path if not specified).]),
     [NETMAP_PATH=$withval
     NETMAP_CPPFLAGS="-isystem $NETMAP_PATH/sys"
