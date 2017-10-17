@@ -187,16 +187,6 @@ m4_include([./helper/m4/configure.m4])
 m4_include([./test/m4/configure.m4])
 
 ##########################################################################
-# Set SDK install path
-##########################################################################
-AC_ARG_WITH([sdk-install-path],
-AS_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
-	     [(or in the default path if not specified).]),
-[SDK_INSTALL_PATH=$withval SDK_INSTALL_PATH_=1],[SDK_INSTALL_PATH_=])
-
-AC_SUBST(SDK_INSTALL_PATH)
-
-##########################################################################
 # Set the install directory for test binaries/scripts
 ##########################################################################
 AC_ARG_WITH([testdir],
@@ -211,7 +201,6 @@ AM_CONDITIONAL([test_installdir], [test "x$testdir" != "xno"])
 ##########################################################################
 # Set conditionals as computed within platform specific files
 ##########################################################################
-AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
