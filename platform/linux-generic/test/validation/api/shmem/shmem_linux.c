@@ -218,10 +218,14 @@ int main(int argc __attribute__((unused)), char *argv[])
 	int app2_status;
 	uid_t uid = getuid();
 	char *shm_dir = getenv("ODP_SHM_DIR");
+	const char *exeext = getenv("EXEEXT");
+
+	if (exeext == NULL)
+		exeext = "";
 
 	/* odp_app1 is in the same directory as this file: */
 	strncpy(prg_name, argv[0], PATH_MAX - 1);
-	sprintf(odp_name1, "%s/%s", dirname(prg_name), ODP_APP1_NAME);
+	sprintf(odp_name1, "%s/%s%s", dirname(prg_name), ODP_APP1_NAME, exeext);
 
 	/* start the ODP application: */
 	odp_app1 = fork();
@@ -292,7 +296,7 @@ int main(int argc __attribute__((unused)), char *argv[])
 
 	/* odp_app2 is in the same directory as this file: */
 	strncpy(prg_name, argv[0], PATH_MAX - 1);
-	sprintf(odp_name2, "%s/%s", dirname(prg_name), ODP_APP2_NAME);
+	sprintf(odp_name2, "%s/%s%s", dirname(prg_name), ODP_APP2_NAME, exeext);
 
 	/* start the second ODP application with pid of ODP_APP1 as parameter:*/
 	sprintf(pid1, "%d", odp_app1);
