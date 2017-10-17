@@ -1,7 +1,7 @@
 include ../Makefile.inc
 
 #the main test program is shmem_linux, which, in turn, starts a shmem_odp:
-test_PROGRAMS = shmem_linux$(EXEEXT) shmem_odp1$(EXEEXT) shmem_odp2$(EXEEXT)
+test_PROGRAMS = shmem_linux shmem_odp1 shmem_odp2
 
 #shmem_linux is stand alone, pure linux (no ODP):
 shmem_linux_SOURCES = shmem_linux.c shmem_linux.h shmem_common.h
