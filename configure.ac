@@ -165,15 +165,9 @@ AC_SUBST([with_platform])
 ##########################################################################
 # Run platform specific checks and settings
 ##########################################################################
-IMPLEMENTATION_NAME=""
-if test "${with_platform}" = "linux-generic";
-then
-    m4_include([./platform/linux-generic/m4/configure.m4])
-    IMPLEMENTATION_NAME="odp-linux"
-else
-    echo "UNSUPPORTED PLATFORM: ${with_platform}"
-    exit 1
-fi
+AS_IF([test "${with_platform}" = "linux-generic"],
+      [m4_include([./platform/linux-generic/m4/configure.m4])],
+      [AC_MSG_ERROR([UNSUPPORTED PLATFORM: ${with_platform}])])
 
 AC_DEFINE_UNQUOTED([IMPLEMENTATION_NAME], ["$IMPLEMENTATION_NAME"],
 		   [Define to the name of the implementation])
