@@ -19,12 +19,15 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 3. Required libraries
 
-   Libraries currently required to link: openssl, libconfig
+   Libraries currently required to link: openssl, libconfig, zlib
+
+   zlib also gets installed with some version of openssl in such case
+   separate install not required.
 
 3.1 OpenSSL and libconf native compile
 
-   For native compilation, simply load the necessary libraries using the appropriate
-   tool set.
+   For native compilation, simply load the necessary libraries using
+   the appropriate tool set.
 
    On Debian/Ubuntu systems:
    $ sudo apt-get install libssl-dev libconfig-dev
@@ -34,9 +37,10 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 3.2 OpenSSL cross compilation
 
-   Cross compilation requires cross compiling the individual libraries.  In order for
-   a cross compiled executable to run on a target system, one must build the same
-   version as that which is installed on the target rootfs.
+   Cross compilation requires cross compiling the individual libraries.
+   In order for a cross compiled executable to run on a target system,
+   one must build the same version as that which is installed on the
+   target rootfs.
 
    For example, to build openssl for both 32 and 64 bit compilation:
 
@@ -198,6 +202,34 @@ Prerequisites for building the OpenDataPlane (ODP) API
    1024MB of memory:
    $ sudo ODP_PKTIO_DPDK_PARAMS="-m 1024" ./test/performance/odp_l2fwd -i 0 -c 1
 
+3.5 zlib native compile
+
+   For native compilation, simply load the necessary libraries using the appropriate
+   tool set.
+
+   On Debian/Ubuntu systems:
+   $ sudo apt-get install zlib1g-dev
+
+3.2 ZLIB building from sources
+
+   # get source code from https://zlib.net/
+   # untar downloaded zlib source code
+   $ tar -xvf zlib-1.2.11.tar.gz
+
+   # Build and install
+   $ ./configure --prefix=/home/user/install-zlib
+   $ make
+   $ make install
+
+   # You may now build either 32 or 64 bit ODP
+   $ git clone git://git.linaro.org/lng/odp.git odp
+   $ cd odp
+   $ ./bootstrap
+
+   # Build ODP
+   $ ./configure --with-zlib-path=/home/user/install-zlib
+   $ make
+
 4.0 Packages needed to build API tests
 
    CUnit test framework version 2.1-3 is required
@@ -281,4 +313,4 @@ The tested version of doxygen is 1.8.8
    When submitting patches they should be checked with ./scripts/checkpatch.pl
    To have this tool also check spelling you need codespell.
    # Debian/Ubuntu
-   #sudo apt install codespell
+   # sudo apt install codespell

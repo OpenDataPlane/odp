@@ -28,6 +28,7 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/cpu.h \
 		  $(top_srcdir)/include/odp/api/spec/cpumask.h \
 		  $(top_srcdir)/include/odp/api/spec/crypto.h \
+		  $(top_srcdir)/include/odp/api/spec/comp.h \
 		  $(top_srcdir)/include/odp/api/spec/debug.h \
 		  $(top_srcdir)/include/odp/api/spec/errno.h \
 		  $(top_srcdir)/include/odp/api/spec/event.h \
@@ -82,6 +83,7 @@ odpapiabidefaultinclude_HEADERS = \
 	$(top_srcdir)/include/odp/arch/default/api/abi/buffer.h \
 	$(top_srcdir)/include/odp/arch/default/api/abi/classification.h \
 	$(top_srcdir)/include/odp/arch/default/api/abi/crypto.h \
+	$(top_srcdir)/include/odp/arch/default/api/abi/comp.h \
 	$(top_srcdir)/include/odp/arch/default/api/abi/event.h \
 	$(top_srcdir)/include/odp/arch/default/api/abi/packet.h \
 	$(top_srcdir)/include/odp/arch/default/api/abi/pool.h \
@@ -93,6 +95,7 @@ odpapiabiarchinclude_HEADERS = \
 	$(top_srcdir)/include/odp/arch/@ARCH_ABI@/odp/api/abi/buffer.h \
 	$(top_srcdir)/include/odp/arch/@ARCH_ABI@/odp/api/abi/classification.h \
 	$(top_srcdir)/include/odp/arch/@ARCH_ABI@/odp/api/abi/crypto.h \
+	$(top_srcdir)/include/odp/arch/@ARCH_ABI@/odp/api/abi/comp.h \
 	$(top_srcdir)/include/odp/arch/@ARCH_ABI@/odp/api/abi/event.h \
 	$(top_srcdir)/include/odp/arch/@ARCH_ABI@/odp/api/abi/packet.h \
 	$(top_srcdir)/include/odp/arch/@ARCH_ABI@/odp/api/abi/pool.h \

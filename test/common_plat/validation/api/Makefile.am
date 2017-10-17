@@ -5,6 +5,7 @@ ODP_MODULES = atomic \
 	      classification \
 	      cpumask \
 	      crypto \
+	      comp \
 	      errno \
 	      hash \
 	      init \

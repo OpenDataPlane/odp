@@ -205,6 +205,12 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = CRYPTO_INIT;
 
+	if (odp_comp_init_global()) {
+		ODP_ERR("ODP comp init failed.\n");
+		goto init_failed;
+	}
+	stage = COMP_INIT;
+
 	if (odp_classification_init_global()) {
 		ODP_ERR("ODP classification init failed.\n");
 		goto init_failed;
@@ -280,6 +286,13 @@ int _odp_term_global(enum init_stage stage)
 			rc = -1;
 		}
 		/* Fall through */
+
+	case COMP_INIT:
+		if (odp_comp_term_global()) {
+			ODP_ERR("ODP comp term failed.\n");
+			rc = -1;
+		}
+	/*all through */
 
 	case TIMER_INIT:
 		if (odp_timer_term_global()) {

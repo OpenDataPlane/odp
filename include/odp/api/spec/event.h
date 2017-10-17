@@ -87,6 +87,8 @@ extern "C" {
  *       packet metadata.
  * - ODP_EVENT_NO_SUBTYPE
  *     - An event type does not have any subtypes defined
+ * - ODP_EVENT_PACKET_COMP
+ *     - Packet event generated as a result of compression operaton.
  */
 
 /**

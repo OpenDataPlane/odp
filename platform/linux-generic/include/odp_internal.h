@@ -71,6 +71,7 @@ enum init_stage {
 	PKTIO_INIT,
 	TIMER_INIT,
 	CRYPTO_INIT,
+	COMP_INIT,
 	CLASSIFICATION_INIT,
 	TRAFFIC_MNGR_INIT,
 	NAME_TABLE_INIT,
@@ -111,6 +112,9 @@ int odp_queue_term_global(void);
 
 int odp_crypto_init_global(void);
 int odp_crypto_term_global(void);
+
+int odp_comp_init_global(void);
+int odp_comp_term_global(void);
 
 int odp_timer_init_global(const odp_init_t *params);
 int odp_timer_term_global(void);

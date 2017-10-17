@@ -41,6 +41,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/cpu.h \
 		  $(srcdir)/include/odp/api/cpumask.h \
 		  $(srcdir)/include/odp/api/crypto.h \
+		  $(srcdir)/include/odp/api/comp.h \
 		  $(srcdir)/include/odp/api/debug.h \
 		  $(srcdir)/include/odp/api/deprecated.h \
 		  $(srcdir)/include/odp/api/errno.h \
@@ -89,6 +90,7 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/classification_types.h \
 		  $(srcdir)/include/odp/api/plat/cpumask_types.h \
 		  $(srcdir)/include/odp/api/plat/crypto_types.h \
+		  $(srcdir)/include/odp/api/plat/comp_types.h \
 		  $(srcdir)/include/odp/api/plat/event_types.h \
 		  $(srcdir)/include/odp/api/plat/init_types.h \
 		  $(srcdir)/include/odp/api/plat/ipsec_types.h \
@@ -159,6 +161,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_classification_internal.h \
 		  ${srcdir}/include/odp_config_internal.h \
 		  ${srcdir}/include/odp_crypto_internal.h \
+		  ${srcdir}/include/odp_comp_internal.h \
 		  ${srcdir}/include/odp_debug_internal.h \
 		  ${srcdir}/include/odp_errno_define.h \
 		  ${srcdir}/include/odp_forward_typedefs_internal.h \
@@ -214,6 +217,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_cpumask.c \
 			   odp_cpumask_task.c \
 			   odp_crypto.c \
+			   odp_comp.c \
 			   odp_errno.c \
 			   odp_event.c \
 			   odp_hash.c \
@@ -335,6 +339,7 @@ endif
 
 __LIB__libodp_linux_la_LIBADD = $(ATOMIC_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(OPENSSL_LIBS)
+__LIB__libodp_linux_la_LIBADD += $(ZLIB_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(DPDK_LIBS) $(DPDK_PMDS)
 __LIB__libodp_linux_la_LIBADD += $(PTHREAD_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(TIMER_LIBS)
