@@ -15,4 +15,6 @@ fi
 
 AC_SUBST([PCAP_LIBS])
 
-AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
+AC_CONFIG_COMMANDS_PRE([dnl
+AM_CONDITIONAL([HAVE_PCAP], [test x$have_pcap = xyes])
+])

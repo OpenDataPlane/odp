@@ -162,9 +162,6 @@ AC_ARG_WITH([platform],
 
 AC_SUBST([with_platform])
 
-AM_CONDITIONAL([PLATFORM_IS_LINUX_GENERIC],
-	       [test "x$with_platform" = "xlinux-generic"])
-
 ##########################################################################
 # Run platform specific checks and settings
 ##########################################################################

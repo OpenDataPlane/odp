@@ -43,4 +43,6 @@ fi
 ##########################################################################
 CPPFLAGS=$OLD_CPPFLAGS
 
+AC_CONFIG_COMMANDS_PRE([dnl
 AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
+])
