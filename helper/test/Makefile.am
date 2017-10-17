@@ -1,3 +1,5 @@
+TESTS_ENVIRONMENT = EXEEXT=${EXEEXT}
+
 LIB   = $(top_builddir)/lib
 
 #in the following line, the libs using the symbols should come before
