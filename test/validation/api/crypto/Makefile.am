@@ -1,6 +1,6 @@
 include ../Makefile.inc
 
-test_PROGRAMS = crypto_main$(EXEEXT)
+test_PROGRAMS = crypto_main
 crypto_main_SOURCES = crypto_main.c \
 		      crypto.c \
 		      crypto.h \

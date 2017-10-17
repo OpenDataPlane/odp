@@ -1,5 +1,5 @@
 include ../Makefile.inc
 
-test_PROGRAMS = timer_main$(EXEEXT)
+test_PROGRAMS = timer_main
 timer_main_SOURCES = timer_main.c timer.c timer.h
 timer_main_LDADD = $(LIBCUNIT_COMMON) $(LIBODP)
