@@ -195,113 +195,110 @@ typedef struct odp_pool_param_t {
 	/** Pool type */
 	int type;
 
-	/** Variant parameters for different pool types */
-	union {
-		/** Parameters for buffer pools */
-		struct {
-			/** Number of buffers in the pool */
-			uint32_t num;
+	/** Parameters for buffer pools */
+	struct {
+		/** Number of buffers in the pool */
+		uint32_t num;
 
-			/** Buffer size in bytes. The maximum number of bytes
-			    application will store in each buffer. */
-			uint32_t size;
+		/** Buffer size in bytes. The maximum number of bytes
+		 *  application will store in each buffer.
+		 */
+		uint32_t size;
 
-			/** Minimum buffer alignment in bytes. Valid values are
-			    powers of two. Use 0 for default alignment.
-			    Default will always be a multiple of 8. */
-			uint32_t align;
-		} buf;
+		/** Minimum buffer alignment in bytes. Valid values are
+		 *  powers of two. Use 0 for default alignment.
+		 *  Default will always be a multiple of 8.
+		 */
+		uint32_t align;
+	} buf;
 
-		/** Parameters for packet pools */
-		struct {
-			/** Minimum number of 'len' byte packets.
-			 *
-			 *  The pool must contain at least this many packets
-			 *  that are 'len' bytes or smaller. An implementation
-			 *  may round up the value, as long as the 'max_num'
-			 *  parameter below is not violated. The maximum value
-			 *  for this field is defined by pool capability
-			 *  pkt.max_num.
-			 */
-			uint32_t num;
+	/** Parameters for packet pools */
+	struct {
+		/** Minimum number of 'len' byte packets.
+		 *
+		 *  The pool must contain at least this many packets that are
+		 *  'len' bytes or smaller. An implementation may round up the
+		 *  value, as long as the 'max_num' parameter below is not
+		 *  violated. The maximum value for this field is defined by
+		 *  pool capability pkt.max_num.
+		 */
+		uint32_t num;
 
-			/** Maximum number of packets.
-			 *
-			 *  This is the maximum number of packets of any length
-			 *  that can be allocated from the pool. The maximum
-			 *  value is defined by pool capability pkt.max_num.
-			 *  Use 0 when there's no requirement for the maximum
-			 *  number of packets. The default value is 0.
-			 */
-			uint32_t max_num;
+		/** Maximum number of packets.
+		 *
+		 *  This is the maximum number of packets of any length that can
+		 *  be allocated from the pool. The maximum value is defined by
+		 *  pool capability pkt.max_num. Use 0 when there's no
+		 *  requirement for the maximum number of packets. The default
+		 *  value is 0.
+		 */
+		uint32_t max_num;
 
-			/** Minimum length of 'num' packets.
-			 *
-			 *  The pool must contain at least 'num' packets up to
-			 *  this packet length (1 ... 'len' bytes). The maximum
-			 *  value for this field is defined by pool capability
-			 *  pkt.max_len. Use 0 for default.
-			 */
-			uint32_t len;
+		/** Minimum length of 'num' packets.
+		 *
+		 *  The pool must contain at least 'num' packets up to this
+		 *  packet length (1 ... 'len' bytes). The maximum value for
+		 *  this field is defined by pool capability pkt.max_len.
+		 *  Use 0 for default.
+		 */
+		uint32_t len;
 
-			/** Maximum packet length that will be allocated from
-			    the pool. The maximum value is defined by pool
-			    capability pkt.max_len. Use 0 for default (the
-			    pool maximum). */
-			uint32_t max_len;
+		/** Maximum packet length that will be allocated from
+		 *  the pool. The maximum value is defined by pool capability
+		 *  pkt.max_len. Use 0 for default (the pool maximum).
+		 */
+		uint32_t max_len;
 
-			/** Minimum number of packet data bytes that are stored
-			    in the first segment of a packet. The maximum value
-			    is defined by pool capability pkt.max_seg_len.
-			    Use 0 for default. */
-			uint32_t seg_len;
+		/** Minimum number of packet data bytes that are stored in the
+		 *  first segment of a packet. The maximum value is defined by
+		 *  pool capability pkt.max_seg_len. Use 0 for default.
+		 */
+		uint32_t seg_len;
 
-			/** User area size in bytes. The maximum value is
-			    defined by pool capability pkt.max_uarea_size.
-			    Specify as 0 if no user area is needed. */
-			uint32_t uarea_size;
+		/** User area size in bytes. The maximum value is defined by
+		 *  pool capability pkt.max_uarea_size. Specify as 0 if no user
+		 *  area is needed.
+		 */
+		uint32_t uarea_size;
 
-			/** Minimum Headroom size in bytes. Each newly allocated
-			    packet from the pool must have at least this much
-			    headroom. The maximum value is defined by pool
-			    capability pkt.max_headroom.
-			    Use zero if headroom is not needed. */
-			uint32_t headroom;
+		/** Minimum headroom size in bytes. Each newly allocated
+		 *  packet from the pool must have at least this much headroom.
+		 *  The maximum value is defined by pool capability
+		 *  pkt.max_headroom. Use zero if headroom is not needed.
+		 */
+		uint32_t headroom;
 
-			/** Number of subparameters
-			 *
-			 *  The number of subparameter table entries used.
-			 *  The maximum value is defined by pool
-			 *  capability pkt.max_num_subparam. The default value
-			 *  is 0.
-			 */
-			uint8_t num_subparam;
+		/** Number of subparameters
+		 *
+		 *  The number of subparameter table entries used. The maximum
+		 *  value is defined by pool capability pkt.max_num_subparam.
+		 *  The default value is 0.
+		 */
+		uint8_t num_subparam;
 
-			/** Subparameter table
-			 *
-			 *  Subparameters continue pool configuration with
-			 *  additional packet length requirements. The first
-			 *  table entry follows the num/len specification above.
-			 *  So that, sub[0].len > 'len', and sub[0].num refers
-			 *  to packet lengths between 'len' + 1 and sub[0].len.
-			 *  Similarly, sub[1] follows sub[0] specification, and
-			 *  so on.
-			 *
-			 *  Each requirement is supported separately and may be
-			 *  rounded up, as long as the 'max_num' parameter is
-			 *  not violated. It's implementation specific if some
-			 *  requirements are supported simultaneously (e.g.
-			 *  due to subpool design).
-			 */
-			odp_pool_pkt_subparam_t sub[ODP_POOL_MAX_SUBPARAMS];
-		} pkt;
+		/** Subparameter table
+		 *
+		 *  Subparameters continue pool configuration with additional
+		 *  packet length requirements. The first table entry follows
+		 *  the num/len specification above. So that, sub[0].len > 'len'
+		 *  and sub[0].num refers to packet lengths between 'len' + 1
+		 *  and sub[0].len. Similarly, sub[1] follows sub[0]
+		 *  specification, and so on.
+		 *
+		 *  Each requirement is supported separately and may be rounded
+		 *  up, as long as the 'max_num' parameter is not violated. It's
+		 *  implementation specific if some requirements are supported
+		 *  simultaneously (e.g. due to subpool design).
+		 */
+		odp_pool_pkt_subparam_t sub[ODP_POOL_MAX_SUBPARAMS];
+	} pkt;
 
-		/** Parameters for timeout pools */
-		struct {
-			/** Number of timeouts in the pool */
-			uint32_t num;
-		} tmo;
-	};
+	/** Parameters for timeout pools */
+	struct {
+		/** Number of timeouts in the pool */
+		uint32_t num;
+	} tmo;
+
 } odp_pool_param_t;
 
 /** Packet pool*/
