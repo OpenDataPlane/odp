@@ -238,6 +238,8 @@ AC_SUBST([with_platform])
 ##########################################################################
 AS_IF([test "${with_platform}" = "linux-generic"],
       [m4_include([./platform/linux-generic/m4/configure.m4])],
+      [test "${with_platform}" == "linux-dpdk"],
+      [m4_include([./platform/linux-dpdk/m4/configure.m4])],
       [AC_MSG_ERROR([UNSUPPORTED PLATFORM: ${with_platform}])])
 
 AC_DEFINE_UNQUOTED([IMPLEMENTATION_NAME], ["$IMPLEMENTATION_NAME"],
