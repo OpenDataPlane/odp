@@ -75,7 +75,22 @@ extern "C" {
 /*
  * Maximum number of segments per packet
  */
-#define CONFIG_PACKET_MAX_SEGS 6
+#define CONFIG_PACKET_MAX_SEGS 255
+
+/*
+ * Packet segmentation disabled
+ */
+#define CONFIG_PACKET_SEG_DISABLED (CONFIG_PACKET_MAX_SEGS == 1)
+
+/*
+ * Number of segments stored in a packet header
+ */
+#define CONFIG_PACKET_SEGS_PER_HDR 6
+
+/*
+ * Maximum packet data length in bytes
+ */
+#define CONFIG_PACKET_MAX_LEN (64 * 1024)
 
 /*
  * Maximum packet segment size including head- and tailrooms
