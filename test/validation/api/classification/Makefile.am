@@ -1,6 +1,6 @@
 include ../Makefile.inc
 
-test_PROGRAMS = classification_main$(EXEEXT)
+test_PROGRAMS = classification_main
 classification_main_SOURCES = classification_main.c \
 				   odp_classification_basic.c \
 				   odp_classification_tests.c \
