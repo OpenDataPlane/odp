@@ -1,3 +1,5 @@
+IMPLEMENTATION_NAME="odp-linux"
+
 ODP_VISIBILITY
 ODP_ATOMIC
 
@@ -11,6 +13,9 @@ m4_include([platform/linux-generic/m4/odp_schedule.m4])
 
 m4_include([platform/linux-generic/m4/performance.m4])
 
+AC_CONFIG_COMMANDS_PRE([dnl
+AM_CONDITIONAL([PLATFORM_IS_LINUX_GENERIC],
+	       [test "${with_platform}" = "linux-generic"])
 AC_CONFIG_FILES([platform/linux-generic/Makefile
 		 platform/linux-generic/libodp-linux.pc
 		 platform/linux-generic/include/odp/api/plat/static_inline.h
@@ -21,3 +26,4 @@ AC_CONFIG_FILES([platform/linux-generic/Makefile
 		 platform/linux-generic/test/pktio_ipc/Makefile
 		 platform/linux-generic/test/ring/Makefile
 		 platform/linux-generic/test/performance/Makefile])
+])

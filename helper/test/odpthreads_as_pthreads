@@ -11,4 +11,4 @@ PATH=.:$PATH
 
 # The odpthreads test without the "--odph_proc" option defaults to create
 # odp threads as linux pthreads:
-odpthreads
+odpthreads${EXEEXT}

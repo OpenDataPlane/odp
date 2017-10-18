@@ -1,6 +1,6 @@
 include ../Makefile.inc
 
-test_PROGRAMS = ring_main$(EXEEXT)
+test_PROGRAMS = ring_main
 ring_main_SOURCES = \
 		    ring_main.c \
 		    ring_suites.c ring_suites.h \
