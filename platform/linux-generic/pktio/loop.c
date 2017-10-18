@@ -135,6 +135,12 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		packet_set_ts(pkt_hdr, ts);
 		pkt_hdr->input = pktio_entry->s.handle;
+
+		/* Try IPsec inline processing */
+		if (pktio_entry->s.config.inbound_ipsec &&
+		    odp_packet_has_ipsec(pkt))
+			_odp_ipsec_try_inline(pkt);
+
 		pktio_entry->s.stats.in_octets += pkt_len;
 		pkts[num_rx++] = pkt;
 	}
@@ -163,6 +169,22 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		hdr_tbl[i] = packet_to_buf_hdr(pkt_tbl[i]);
 		bytes += odp_packet_len(pkt_tbl[i]);
 	}
+
+	if (pktio_entry->s.config.outbound_ipsec)
+		for (i = 0; i < len; ++i) {
+			odp_buffer_t buf = buf_from_buf_hdr(hdr_tbl[i]);
+			odp_ipsec_packet_result_t result;
+
+			if (_odp_buffer_event_subtype(buf) !=
+			    ODP_EVENT_PACKET_IPSEC)
+				continue;
+
+			/* Possibly postprocessing packet */
+			odp_ipsec_result(&result, pkt_tbl[i]);
+
+			_odp_buffer_event_subtype_set(buf,
+						      ODP_EVENT_PACKET_BASIC);
+		}
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
@@ -213,6 +235,9 @@ static int loopback_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
 	capa->config.pktin.bit.ts_ptp = 1;
+	capa->config.inbound_ipsec = 1;
+	capa->config.outbound_ipsec = 1;
+
 	return 0;
 }
 

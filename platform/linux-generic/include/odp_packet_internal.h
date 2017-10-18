@@ -26,6 +26,7 @@ extern "C" {
 #include <odp/api/packet_io.h>
 #include <odp/api/crypto.h>
 #include <odp_crypto_internal.h>
+#include <odp_ipsec_internal.h>
 #include <odp/api/plat/packet_types.h>
 #include <odp_queue_if.h>
 
@@ -150,6 +151,9 @@ typedef struct {
 	/* Extra space for packet descriptors. E.g. DPDK mbuf  */
 	uint8_t extra[PKT_EXTRA_LEN] ODP_ALIGNED_CACHE;
 #endif
+
+	/* Context for IPsec */
+	odp_ipsec_packet_result_t ipsec_ctx;
 
 	/* Packet data storage */
 	uint8_t data[0];
@@ -277,6 +281,12 @@ int packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
 		       odp_pktio_parser_layer_t layer);
 
+/* Perform L3 and L4 parsing up to a given protocol layer */
+int packet_parse_l3_l4(odp_packet_hdr_t *pkt_hdr,
+		       odp_pktio_parser_layer_t layer,
+		       uint32_t l3_offset,
+		       uint16_t ethtype);
+
 /* Reset parser metadata for a new parse */
 void packet_parse_reset(odp_packet_hdr_t *pkt_hdr);
 
@@ -319,6 +329,9 @@ int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
 
 int _odp_packet_set_data(odp_packet_t pkt, uint32_t offset,
 			 uint8_t c, uint32_t len);
+
+int _odp_packet_cmp_data(odp_packet_t pkt, uint32_t offset,
+			 const void *s, uint32_t len);
 
 #ifdef __cplusplus
 }

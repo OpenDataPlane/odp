@@ -330,7 +330,7 @@ void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->p.error_flags.all  = 0;
 	pkt_hdr->p.input_flags.all  = 0;
 	pkt_hdr->p.output_flags.all = 0;
-	pkt_hdr->p.l2_offset        = 0;
+	pkt_hdr->p.l2_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->p.l3_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->p.l4_offset        = ODP_PACKET_OFFSET_INVALID;
 }
@@ -1639,6 +1639,32 @@ int _odp_packet_set_data(odp_packet_t pkt, uint32_t offset,
 	return 0;
 }
 
+int _odp_packet_cmp_data(odp_packet_t pkt, uint32_t offset,
+			 const void *s, uint32_t len)
+{
+	const uint8_t *ptr = s;
+	void *mapaddr;
+	uint32_t seglen = 0; /* GCC */
+	uint32_t cmplen;
+	int ret;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	ODP_ASSERT(offset + len <= pkt_hdr->frame_len);
+
+	while (len > 0) {
+		mapaddr = packet_map(pkt_hdr, offset, &seglen, NULL);
+		cmplen = len > seglen ? seglen : len;
+		ret = memcmp(mapaddr, ptr, cmplen);
+		if (ret != 0)
+			return ret;
+		offset  += cmplen;
+		len     -= cmplen;
+		ptr     += cmplen;
+	}
+
+	return 0;
+}
+
 /*
  *
  * Debugging
@@ -1764,6 +1790,78 @@ int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 	 * happen when copying between different pools.
 	 */
 	return dsthdr->buf_hdr.uarea_size < srchdr->buf_hdr.uarea_size;
+}
+
+/** Parser helper function for Ethernet packets */
+static inline uint16_t parse_eth(packet_parser_t *prs, const uint8_t **parseptr,
+				 uint32_t *offset, uint32_t frame_len)
+{
+	uint16_t ethtype;
+	const _odp_ethhdr_t *eth;
+	uint16_t macaddr0, macaddr2, macaddr4;
+	const _odp_vlanhdr_t *vlan;
+
+	/* Detect jumbo frames */
+	if (frame_len > _ODP_ETH_LEN_MAX)
+		prs->input_flags.jumbo = 1;
+
+	eth = (const _odp_ethhdr_t *)*parseptr;
+
+	/* Handle Ethernet broadcast/multicast addresses */
+	macaddr0 = odp_be_to_cpu_16(*((const uint16_t *)(const void *)eth));
+	prs->input_flags.eth_mcast = (macaddr0 & 0x0100) == 0x0100;
+
+	if (macaddr0 == 0xffff) {
+		macaddr2 =
+			odp_be_to_cpu_16(*((const uint16_t *)
+					   (const void *)eth + 1));
+		macaddr4 =
+			odp_be_to_cpu_16(*((const uint16_t *)
+					   (const void *)eth + 2));
+		prs->input_flags.eth_bcast =
+			(macaddr2 == 0xffff) && (macaddr4 == 0xffff);
+	} else {
+		prs->input_flags.eth_bcast = 0;
+	}
+
+	/* Get Ethertype */
+	ethtype = odp_be_to_cpu_16(eth->type);
+	*offset += sizeof(*eth);
+	*parseptr += sizeof(*eth);
+
+	/* Check for SNAP vs. DIX */
+	if (ethtype < _ODP_ETH_LEN_MAX) {
+		prs->input_flags.snap = 1;
+		if (ethtype > frame_len - *offset) {
+			prs->error_flags.snap_len = 1;
+			return 0;
+		}
+		ethtype = odp_be_to_cpu_16(*((const uint16_t *)(uintptr_t)
+					     (parseptr + 6)));
+		*offset   += 8;
+		*parseptr += 8;
+	}
+
+	/* Parse the VLAN header(s), if present */
+	if (ethtype == _ODP_ETHTYPE_VLAN_OUTER) {
+		prs->input_flags.vlan_qinq = 1;
+		prs->input_flags.vlan = 1;
+
+		vlan = (const _odp_vlanhdr_t *)*parseptr;
+		ethtype = odp_be_to_cpu_16(vlan->type);
+		*offset += sizeof(_odp_vlanhdr_t);
+		*parseptr += sizeof(_odp_vlanhdr_t);
+	}
+
+	if (ethtype == _ODP_ETHTYPE_VLAN) {
+		prs->input_flags.vlan = 1;
+		vlan = (const _odp_vlanhdr_t *)*parseptr;
+		ethtype = odp_be_to_cpu_16(vlan->type);
+		*offset += sizeof(_odp_vlanhdr_t);
+		*parseptr += sizeof(_odp_vlanhdr_t);
+	}
+
+	return ethtype;
 }
 
 /**
@@ -1906,92 +2004,16 @@ static inline void parse_udp(packet_parser_t *prs,
 	*parseptr += sizeof(_odp_udphdr_t);
 }
 
-/**
- * Parse common packet headers up to given layer
- *
- * The function expects at least PACKET_PARSE_SEG_LEN bytes of data to be
- * available from the ptr.
- */
-int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
-			uint32_t frame_len, uint32_t seg_len,
-			odp_pktio_parser_layer_t layer)
+static inline
+int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
+			      uint32_t offset,
+			      uint32_t frame_len, uint32_t seg_len,
+			      odp_pktio_parser_layer_t layer,
+			      uint16_t ethtype)
 {
-	uint32_t offset;
-	uint16_t ethtype;
-	const uint8_t *parseptr;
 	uint8_t  ip_proto;
-	const _odp_ethhdr_t *eth;
-	uint16_t macaddr0, macaddr2, macaddr4;
-	const _odp_vlanhdr_t *vlan;
 
-	if (layer == ODP_PKTIO_PARSER_LAYER_NONE)
-		return 0;
-
-	/* We only support Ethernet for now */
-	prs->input_flags.eth = 1;
-	/* Assume valid L2 header, no CRC/FCS check in SW */
-	prs->input_flags.l2 = 1;
-	/* Detect jumbo frames */
-	if (frame_len > _ODP_ETH_LEN_MAX)
-		prs->input_flags.jumbo = 1;
-
-	offset = sizeof(_odp_ethhdr_t);
-	eth = (const _odp_ethhdr_t *)ptr;
-
-	/* Handle Ethernet broadcast/multicast addresses */
-	macaddr0 = odp_be_to_cpu_16(*((const uint16_t *)(const void *)eth));
-	prs->input_flags.eth_mcast = (macaddr0 & 0x0100) == 0x0100;
-
-	if (macaddr0 == 0xffff) {
-		macaddr2 =
-			odp_be_to_cpu_16(*((const uint16_t *)
-					   (const void *)eth + 1));
-		macaddr4 =
-			odp_be_to_cpu_16(*((const uint16_t *)
-					   (const void *)eth + 2));
-		prs->input_flags.eth_bcast =
-			(macaddr2 == 0xffff) && (macaddr4 == 0xffff);
-	} else {
-		prs->input_flags.eth_bcast = 0;
-	}
-
-	/* Get Ethertype */
-	ethtype = odp_be_to_cpu_16(eth->type);
-	parseptr = (const uint8_t *)(eth + 1);
-
-	/* Check for SNAP vs. DIX */
-	if (ethtype < _ODP_ETH_LEN_MAX) {
-		prs->input_flags.snap = 1;
-		if (ethtype > frame_len - offset) {
-			prs->error_flags.snap_len = 1;
-			goto parse_exit;
-		}
-		ethtype = odp_be_to_cpu_16(*((const uint16_t *)(uintptr_t)
-					     (parseptr + 6)));
-		offset   += 8;
-		parseptr += 8;
-	}
-
-	/* Parse the VLAN header(s), if present */
-	if (ethtype == _ODP_ETHTYPE_VLAN_OUTER) {
-		prs->input_flags.vlan_qinq = 1;
-		prs->input_flags.vlan = 1;
-
-		vlan = (const _odp_vlanhdr_t *)parseptr;
-		ethtype = odp_be_to_cpu_16(vlan->type);
-		offset += sizeof(_odp_vlanhdr_t);
-		parseptr += sizeof(_odp_vlanhdr_t);
-	}
-
-	if (ethtype == _ODP_ETHTYPE_VLAN) {
-		prs->input_flags.vlan = 1;
-		vlan = (const _odp_vlanhdr_t *)parseptr;
-		ethtype = odp_be_to_cpu_16(vlan->type);
-		offset += sizeof(_odp_vlanhdr_t);
-		parseptr += sizeof(_odp_vlanhdr_t);
-	}
-
-	if (layer == ODP_PKTIO_PARSER_LAYER_L2)
+	if (layer <= ODP_PKTIO_PARSER_LAYER_L2)
 		return prs->error_flags.all != 0;
 
 	/* Set l3_offset+flag only for known ethtypes */
@@ -2038,6 +2060,10 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 		prs->input_flags.icmp = 1;
 		break;
 
+	case _ODP_IPPROTO_IPIP:
+		/* Do nothing */
+		break;
+
 	case _ODP_IPPROTO_TCP:
 		if (odp_unlikely(offset + _ODP_TCPHDR_LEN > seg_len))
 			return -1;
@@ -2071,8 +2097,40 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 		prs->l4_offset = ODP_PACKET_OFFSET_INVALID;
 		break;
 	}
-parse_exit:
+
 	return prs->error_flags.all != 0;
+}
+
+/**
+ * Parse common packet headers up to given layer
+ *
+ * The function expects at least PACKET_PARSE_SEG_LEN bytes of data to be
+ * available from the ptr.
+ */
+int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
+			uint32_t frame_len, uint32_t seg_len,
+			odp_pktio_parser_layer_t layer)
+{
+	uint32_t offset;
+	uint16_t ethtype;
+	const uint8_t *parseptr;
+
+	parseptr = ptr;
+	offset = 0;
+
+	if (layer == ODP_PKTIO_PARSER_LAYER_NONE)
+		return 0;
+
+	/* Assume valid L2 header, no CRC/FCS check in SW */
+	prs->l2_offset = offset;
+	prs->input_flags.l2 = 1;
+	/* We only support Ethernet for now */
+	prs->input_flags.eth = 1;
+
+	ethtype = parse_eth(prs, &parseptr, &offset, frame_len);
+
+	return packet_parse_common_l3_l4(prs, parseptr, offset, frame_len,
+					 seg_len, layer, ethtype);
 }
 
 /**
@@ -2086,6 +2144,22 @@ int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
 
 	return packet_parse_common(&pkt_hdr->p, base, pkt_hdr->frame_len,
 				   seg_len, layer);
+}
+
+int packet_parse_l3_l4(odp_packet_hdr_t *pkt_hdr,
+		       odp_pktio_parser_layer_t layer,
+		       uint32_t l3_offset,
+		       uint16_t ethtype)
+{
+	uint32_t seg_len = 0;
+	void *base = packet_map(pkt_hdr, l3_offset, &seg_len, NULL);
+
+	if (seg_len == 0)
+		return -1;
+
+	return packet_parse_common_l3_l4(&pkt_hdr->p, base, l3_offset,
+					 pkt_hdr->frame_len, seg_len,
+					 layer, ethtype);
 }
 
 uint64_t odp_packet_to_u64(odp_packet_t hdl)
