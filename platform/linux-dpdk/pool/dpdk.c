@@ -219,14 +219,10 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 
 	/* keep some headroom between start of buffer and data */
 	if (mb_ctor_arg->type == ODP_POOL_PACKET) {
-		odp_packet_hdr_t *pkt_hdr;
-
 		mb->data_off = RTE_PKTMBUF_HEADROOM;
 		mb->nb_segs = 1;
 		mb->port = 0xff;
 		mb->vlan_tci = 0;
-		pkt_hdr = (odp_packet_hdr_t *)raw_mbuf;
-		pkt_hdr->uarea_size = mb_ctor_arg->pkt_uarea_size;
 	} else {
 		mb->data_off = 0;
 	}
