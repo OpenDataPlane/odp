@@ -59,11 +59,10 @@ int odp_pktio_init_global(void)
 	shm = odp_shm_reserve("odp_pktio_entries",
 			      sizeof(pktio_table_t),
 			      sizeof(pktio_entry_t), 0);
-	pktio_tbl = odp_shm_addr(shm);
-
-	if (pktio_tbl == NULL)
+	if (shm == ODP_SHM_INVALID)
 		return -1;
 
+	pktio_tbl = odp_shm_addr(shm);
 	memset(pktio_tbl, 0, sizeof(pktio_table_t));
 
 	odp_spinlock_init(&pktio_tbl->lock);
