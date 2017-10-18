@@ -22,7 +22,10 @@ TESTS = validation/api/pktio/pktio_run.sh \
 	$(ALL_API_VALIDATION_DIR)/init/init_main_ok$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/init/init_main_abort$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/init/init_main_log$(EXEEXT) \
-	$(ALL_API_VALIDATION_DIR)/ipsec/ipsec_main$(EXEEXT) \
+	$(ALL_API_VALIDATION_DIR)/ipsec/ipsec_sync$(EXEEXT) \
+	$(ALL_API_VALIDATION_DIR)/ipsec/ipsec_async$(EXEEXT) \
+	$(ALL_API_VALIDATION_DIR)/ipsec/ipsec_inline_in$(EXEEXT) \
+	$(ALL_API_VALIDATION_DIR)/ipsec/ipsec_inline_out$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/lock/lock_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/packet/packet_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/pool/pool_main$(EXEEXT) \
