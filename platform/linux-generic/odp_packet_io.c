@@ -202,8 +202,10 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 
 	/* if successful, alloc_pktio_entry() returns with the entry locked */
 	pktio_entry = get_pktio_entry(hdl);
-	if (!pktio_entry)
+	if (!pktio_entry) {
+		unlock_entry(pktio_entry);
 		return ODP_PKTIO_INVALID;
+	}
 
 	pktio_entry->s.pool = pool;
 	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
