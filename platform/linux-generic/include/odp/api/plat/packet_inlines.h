@@ -96,12 +96,6 @@ static inline void *_odp_packet_user_area(odp_packet_t pkt)
 }
 
 /** @internal Inline function @param pkt @return */
-static inline uint32_t _odp_packet_user_area_size(odp_packet_t pkt)
-{
-	return _odp_pkt_get(pkt, uint32_t, user_area_size);
-}
-
-/** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_flow_hash(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, uint32_t, flow_hash);

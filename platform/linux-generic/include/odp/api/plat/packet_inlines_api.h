@@ -63,11 +63,6 @@ _ODP_INLINE void *odp_packet_user_area(odp_packet_t pkt)
 	return _odp_packet_user_area(pkt);
 }
 
-_ODP_INLINE uint32_t odp_packet_user_area_size(odp_packet_t pkt)
-{
-	return _odp_packet_user_area_size(pkt);
-}
-
 _ODP_INLINE uint32_t odp_packet_flow_hash(odp_packet_t pkt)
 {
 	return _odp_packet_flow_hash(pkt);

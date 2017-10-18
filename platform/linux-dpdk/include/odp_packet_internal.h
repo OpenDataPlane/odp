@@ -119,9 +119,6 @@ typedef struct {
 	 * Members below are not initialized by packet_init()
 	 */
 
-	/* User metadata size, it's right after odp_packet_hdr_t */
-	uint32_t uarea_size;
-
 	/* Timestamp value */
 	odp_time_t timestamp;
 

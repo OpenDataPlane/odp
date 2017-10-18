@@ -44,7 +44,6 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 			    (size_t)&rte_pktmbuf_data_len((struct rte_mbuf *)0),
 	.nb_segs          = offsetof(odp_packet_hdr_t, buf_hdr.mb) +
 			    offsetof(struct rte_mbuf, nb_segs),
-	.udata_len        = offsetof(odp_packet_hdr_t, uarea_size),
 	.udata            = sizeof(odp_packet_hdr_t),
 	.rss              = offsetof(odp_packet_hdr_t, buf_hdr.mb) +
 			    offsetof(struct rte_mbuf, hash.rss),
@@ -540,6 +539,12 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
  * ********************************************************
  *
  */
+uint32_t odp_packet_user_area_size(odp_packet_t pkt)
+{
+	pool_entry_cp_t *pool_cp = odp_pool_to_entry_cp(odp_packet_pool(pkt));
+
+	return pool_cp->params.pkt.uarea_size;
+}
 
 int odp_packet_input_index(odp_packet_t pkt)
 {
