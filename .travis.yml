@@ -41,6 +41,7 @@ addons:
                         - clang-3.8
                         - automake autoconf libtool libssl-dev graphviz mscgen
                         - libpcap-dev
+                        - libnuma-dev
 #        coverity_scan:
 #                project:
 #                        name: "$TRAVIS_REPO_SLUG"
@@ -150,7 +151,7 @@ install:
         - gem install asciidoctor
 
         # DPDK pktio. Note that cache must be purged if dpdk version changes.
-        - DPDK_VERS="17.02"
+        - DPDK_VERS="17.08"
         - |
           CACHED_DPDK_VERS=`fgrep Version dpdk/pkg/dpdk.spec | cut -d " " -f 2`
           if [ "${CACHED_DPDK_VERS}" != "${DPDK_VERS}" ]; then
