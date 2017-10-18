@@ -1228,12 +1228,12 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 	if (mode == ODP_PKTIN_MODE_DISABLED)
 		return 0;
 
-	num_queues = param->num_queues;
-
-	if (num_queues == 0) {
-		ODP_DBG("pktio %s: zero input queues\n", entry->s.name);
+	if (!param->classifier_enable && param->num_queues == 0) {
+		ODP_DBG("invalid num_queues for operation mode\n");
 		return -1;
 	}
+
+	num_queues = param->classifier_enable ? 1 : param->num_queues;
 
 	rc = odp_pktio_capability(pktio, &capa);
 	if (rc) {
@@ -1263,8 +1263,11 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 			snprintf(name, sizeof(name), "odp-pktin-%i-%i",
 				 pktio_id, i);
 
-			memcpy(&queue_param, &param->queue_param,
-			       sizeof(odp_queue_param_t));
+			if (param->classifier_enable)
+				odp_queue_param_init(&queue_param);
+			else
+				memcpy(&queue_param, &param->queue_param,
+				       sizeof(odp_queue_param_t));
 
 			queue_param.type = ODP_QUEUE_TYPE_PLAIN;
 
