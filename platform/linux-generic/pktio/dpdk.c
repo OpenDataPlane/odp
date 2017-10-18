@@ -924,12 +924,6 @@ static int dpdk_close(pktio_entry_t *pktio_entry)
 			rte_pktmbuf_free(pkt_dpdk->rx_cache[i].s.pkt[idx++]);
 	}
 
-	if (pktio_entry->s.state != PKTIO_STATE_OPENED)
-		rte_eth_dev_close(pkt_dpdk->port_id);
-
-	if (!ODP_DPDK_ZERO_COPY)
-		rte_mempool_free(pkt_dpdk->pkt_pool);
-
 	return 0;
 }
 
@@ -1016,7 +1010,7 @@ static int dpdk_pktio_init(void)
 	}
 	ODP_DBG("rte_eal_init OK\n");
 
-	rte_set_log_level(RTE_LOG_WARNING);
+	rte_log_set_global_level(RTE_LOG_WARNING);
 
 	i = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t),
 				   &original_cpuset);
@@ -1055,6 +1049,28 @@ static int dpdk_pktio_init_local(void)
 	}
 
 	RTE_PER_LCORE(_lcore_id) = cpu;
+
+	return 0;
+}
+
+static void dpdk_mempool_free(struct rte_mempool *mp, void *arg ODP_UNUSED)
+{
+	rte_mempool_free(mp);
+}
+
+static int dpdk_pktio_term(void)
+{
+	uint8_t port_id;
+
+	if (!dpdk_initialized)
+		return 0;
+
+	RTE_ETH_FOREACH_DEV(port_id) {
+		rte_eth_dev_close(port_id);
+	}
+
+	if (!ODP_DPDK_ZERO_COPY)
+		rte_mempool_walk(dpdk_mempool_free, NULL);
 
 	return 0;
 }
@@ -1244,11 +1260,17 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 			pkt_pool = pool_create(pool_entry);
 	} else {
 		snprintf(pool_name, sizeof(pool_name), "pktpool_%s", netdev);
-		pkt_pool = rte_pktmbuf_pool_create(pool_name,
-						   DPDK_NB_MBUF,
-						   DPDK_MEMPOOL_CACHE_SIZE, 0,
-						   DPDK_MBUF_BUF_SIZE,
-						   rte_socket_id());
+		/* Check if the pool exists already */
+		pkt_pool = rte_mempool_lookup(pool_name);
+		if (pkt_pool == NULL) {
+			unsigned cache_size = DPDK_MEMPOOL_CACHE_SIZE;
+
+			pkt_pool = rte_pktmbuf_pool_create(pool_name,
+							   DPDK_NB_MBUF,
+							   cache_size, 0,
+							   DPDK_MBUF_BUF_SIZE,
+							   rte_socket_id());
+		}
 	}
 	if (pkt_pool == NULL) {
 		ODP_ERR("Cannot init mbuf packet pool\n");
@@ -1557,7 +1579,7 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.name = "dpdk",
 	.init_global = dpdk_pktio_init_global,
 	.init_local = dpdk_pktio_init_local,
-	.term = NULL,
+	.term = dpdk_pktio_term,
 	.open = dpdk_open,
 	.close = dpdk_close,
 	.start = dpdk_start,

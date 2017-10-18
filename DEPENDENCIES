@@ -160,13 +160,17 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
    Use DPDK for ODP packet I/O.
 
+   DPDK pktio adds a depency to NUMA library.
+   # Debian/Ubuntu
+   $ sudo apt-get install libnuma-dev
+
    Note: only packet I/O is accelerated with DPDK. Use
 	https://git.linaro.org/lng/odp-dpdk.git
    for fully accelerated odp dpdk platform.
 
 3.4.1 Building DPDK and ODP with DPDK pktio support
 
-   DPDK packet I/O has been tested to work with DPDK v17.02.
+   DPDK packet I/O has been tested to work with DPDK v17.08.
 
    Follow steps in ./scripts/build-pktio-dpdk
 
