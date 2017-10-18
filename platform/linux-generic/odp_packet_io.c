@@ -215,26 +215,24 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
 		ret = pktio_if_ops[pktio_if]->open(hdl, pktio_entry, name,
 						   pool);
-
-		if (!ret) {
-			pktio_entry->s.ops = pktio_if_ops[pktio_if];
-			ODP_DBG("%s uses %s\n",
-				name, pktio_if_ops[pktio_if]->name);
+		if (!ret)
 			break;
-		}
 	}
 
 	if (ret != 0) {
 		pktio_entry->s.state = PKTIO_STATE_FREE;
-		hdl = ODP_PKTIO_INVALID;
+		unlock_entry(pktio_entry);
 		ODP_ERR("Unable to init any I/O type.\n");
-	} else {
-		snprintf(pktio_entry->s.name,
-			 sizeof(pktio_entry->s.name), "%s", name);
-		pktio_entry->s.state = PKTIO_STATE_OPENED;
+		return ODP_PKTIO_INVALID;
 	}
 
+	snprintf(pktio_entry->s.name,
+		 sizeof(pktio_entry->s.name), "%s", name);
+	pktio_entry->s.state = PKTIO_STATE_OPENED;
+	pktio_entry->s.ops = pktio_if_ops[pktio_if];
 	unlock_entry(pktio_entry);
+
+	ODP_DBG("%s uses %s\n", name, pktio_if_ops[pktio_if]->name);
 
 	return hdl;
 }
