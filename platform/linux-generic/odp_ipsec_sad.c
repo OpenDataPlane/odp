@@ -207,6 +207,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	ipsec_sa->context = param->context;
 	ipsec_sa->queue = param->dest_queue;
 	ipsec_sa->mode = param->mode;
+	ipsec_sa->flags = 0;
 	if (ODP_IPSEC_DIR_INBOUND == param->dir) {
 		ipsec_sa->in.lookup_mode = param->inbound.lookup_mode;
 		if (ODP_IPSEC_LOOKUP_DSTADDR_SPI == ipsec_sa->in.lookup_mode)
@@ -298,11 +299,13 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	case ODP_CIPHER_ALG_NULL:
 		ipsec_sa->esp_iv_len = 0;
 		ipsec_sa->esp_block_len = 1;
+		crypto_param.iv.length = 0;
 		break;
 	case ODP_CIPHER_ALG_DES:
 	case ODP_CIPHER_ALG_3DES_CBC:
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 8;
+		crypto_param.iv.length = 8;
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_CBC:
@@ -310,11 +313,13 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	case ODP_CIPHER_ALG_AES_CBC:
 		ipsec_sa->esp_iv_len = 16;
 		ipsec_sa->esp_block_len = 16;
+		crypto_param.iv.length = 16;
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_GCM:
 #endif
 	case ODP_CIPHER_ALG_AES_GCM:
+		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 16;
 		crypto_param.iv.length = 12;
@@ -322,6 +327,10 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	default:
 		return ODP_IPSEC_SA_INVALID;
 	}
+
+	if (1 == ipsec_sa->use_counter_iv &&
+	    ODP_IPSEC_DIR_OUTBOUND == param->dir)
+		odp_atomic_init_u64(&ipsec_sa->out.counter, 1);
 
 	crypto_param.auth_digest_len = ipsec_sa->icv_len;
 
