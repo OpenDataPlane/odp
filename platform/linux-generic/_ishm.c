@@ -1826,3 +1826,52 @@ int _odp_ishm_status(const char *title)
 	odp_spinlock_unlock(&ishm_tbl->lock);
 	return nb_blocks;
 }
+
+void _odp_ishm_print(int block_index)
+{
+	ishm_block_t *block;
+	const char *str;
+
+	odp_spinlock_lock(&ishm_tbl->lock);
+
+	if ((block_index < 0) ||
+	    (block_index >= ISHM_MAX_NB_BLOCKS) ||
+	    (ishm_tbl->block[block_index].len == 0)) {
+		odp_spinlock_unlock(&ishm_tbl->lock);
+		ODP_ERR("Request for info on an invalid block\n");
+		return;
+	}
+
+	block = &ishm_tbl->block[block_index];
+
+	ODP_PRINT("\nSHM block info\n--------------\n");
+	ODP_PRINT(" name:       %s\n",   block->name);
+	ODP_PRINT(" file:       %s\n",   block->filename);
+	ODP_PRINT(" expt:       %s\n",   block->exptname);
+	ODP_PRINT(" user_flags: 0x%x\n", block->user_flags);
+	ODP_PRINT(" flags:      0x%x\n", block->flags);
+	ODP_PRINT(" user_len:   %lu\n",  block->user_len);
+	ODP_PRINT(" start:      %p\n",   block->start);
+	ODP_PRINT(" len:        %lu\n",  block->len);
+
+	switch (block->huge) {
+	case HUGE:
+		str = "huge";
+		break;
+	case NORMAL:
+		str = "normal";
+		break;
+	case EXTERNAL:
+		str = "external";
+		break;
+	default:
+		str = "??";
+	}
+
+	ODP_PRINT(" page type:  %s\n", str);
+	ODP_PRINT(" seq:        %lu\n",  block->seq);
+	ODP_PRINT(" refcnt:     %lu\n",  block->refcnt);
+	ODP_PRINT("\n");
+
+	odp_spinlock_unlock(&ishm_tbl->lock);
+}
