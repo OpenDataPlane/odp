@@ -209,11 +209,20 @@ void *odp_shm_addr(odp_shm_t shm);
  */
 int odp_shm_info(odp_shm_t shm, odp_shm_info_t *info);
 
-
 /**
  * Print all shared memory blocks
  */
 void odp_shm_print_all(void);
+
+/**
+ * Print shared memory block info
+ *
+ * Print implementation defined information about the specified shared memory
+ * block to the ODP log. The information is intended to be used for debugging.
+ *
+ * @param shm        Block handle
+ */
+void odp_shm_print(odp_shm_t shm);
 
 /**
  * Get printable value for an odp_shm_t
