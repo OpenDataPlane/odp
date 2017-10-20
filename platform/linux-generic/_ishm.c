@@ -1708,11 +1708,28 @@ int _odp_ishm_status(const char *title)
 	int nb_allocated_frgments = 0;	/* nb frag describing an allocated VA */
 	int nb_blocks = 0;
 	int single_va_blocks = 0;
+	int max_name_len = 0;
 
 	odp_spinlock_lock(&ishm_tbl->lock);
 	procsync();
 
-	ODP_DBG("ishm blocks allocated at: %s\n", title);
+	/* find longest block name */
+	for (i = 0; i < ISHM_MAX_NB_BLOCKS; i++) {
+		int str_len;
+
+		if (ishm_tbl->block[i].len <= 0)
+			continue;
+
+		str_len = strlen(ishm_tbl->block[i].name);
+
+		if (max_name_len < str_len)
+			max_name_len = str_len;
+	}
+
+	ODP_PRINT("ishm blocks allocated at: %s\n", title);
+
+	ODP_PRINT("    %-*s flag len        user_len seq ref start        fd"
+		  "  file\n", max_name_len, "name");
 
 	/* display block table: 1 line per entry +1 extra line if mapped here */
 	for (i = 0; i < ISHM_MAX_NB_BLOCKS; i++) {
@@ -1742,41 +1759,39 @@ int _odp_ishm_status(const char *title)
 			huge = '?';
 		}
 		proc_index = procfind_block(i);
-		ODP_DBG("%-3d:  name:%-.24s file:%-.24s"
-			" flags:%s,%c len:0x%-08lx"
-			" user_len:%-8ld seq:%-3ld refcnt:%-4d\n",
-			i,
-			ishm_tbl->block[i].name,
-			ishm_tbl->block[i].filename,
-			flags, huge,
-			ishm_tbl->block[i].len,
-			ishm_tbl->block[i].user_len,
-			ishm_tbl->block[i].seq,
-			ishm_tbl->block[i].refcnt);
+		ODP_PRINT("%2i  %-*s %s%c  0x%-08lx %-8lu %-3lu %-3lu",
+			  i, max_name_len, ishm_tbl->block[i].name,
+			  flags, huge,
+			  ishm_tbl->block[i].len,
+			  ishm_tbl->block[i].user_len,
+			  ishm_tbl->block[i].seq,
+			  ishm_tbl->block[i].refcnt);
 
 		if (proc_index < 0)
 			continue;
 
-		ODP_DBG("    start:%-08lx fd:%-3d\n",
-			ishm_proctable->entry[proc_index].start,
-			ishm_proctable->entry[proc_index].fd);
+		ODP_PRINT("%-08lx %-3d",
+			  ishm_proctable->entry[proc_index].start,
+			  ishm_proctable->entry[proc_index].fd);
+
+		ODP_PRINT("%s\n", ishm_tbl->block[i].filename);
 	}
 
 	/* display the virtual space allocations... : */
-	ODP_DBG("ishm virtual space:\n");
+	ODP_PRINT("\nishm virtual space:\n");
 	for (fragmnt = ishm_ftbl->used_fragmnts;
 	     fragmnt; fragmnt = fragmnt->next) {
 		if (fragmnt->block_index >= 0) {
 			nb_allocated_frgments++;
-			ODP_DBG("  %08p - %08p: ALLOCATED by block:%d\n",
-				(uintptr_t)fragmnt->start,
-				(uintptr_t)fragmnt->start + fragmnt->len - 1,
-				fragmnt->block_index);
+			ODP_PRINT("  %08p - %08p: ALLOCATED by block:%d\n",
+				  (uintptr_t)fragmnt->start,
+				  (uintptr_t)fragmnt->start + fragmnt->len - 1,
+				  fragmnt->block_index);
 			consecutive_unallocated = 0;
 		} else {
-			ODP_DBG("  %08p - %08p: NOT ALLOCATED\n",
-				(uintptr_t)fragmnt->start,
-				(uintptr_t)fragmnt->start + fragmnt->len - 1);
+			ODP_PRINT("  %08p - %08p: NOT ALLOCATED\n",
+				  (uintptr_t)fragmnt->start,
+				  (uintptr_t)fragmnt->start + fragmnt->len - 1);
 			if (consecutive_unallocated++)
 				ODP_ERR("defragmentation error\n");
 		}
@@ -1807,9 +1822,9 @@ int _odp_ishm_status(const char *title)
 	     fragmnt; fragmnt = fragmnt->next)
 		nb_unused_frgments++;
 
-	ODP_DBG("ishm: %d fragment used. %d fragments unused. (total=%d)\n",
-		nb_used_frgments, nb_unused_frgments,
-		nb_used_frgments + nb_unused_frgments);
+	ODP_PRINT("ishm: %d fragment used. %d fragments unused. (total=%d)\n",
+		  nb_used_frgments, nb_unused_frgments,
+		  nb_used_frgments + nb_unused_frgments);
 
 	if ((nb_used_frgments + nb_unused_frgments) != ISHM_NB_FRAGMNTS)
 		ODP_ERR("lost fragments!\n");
@@ -1817,7 +1832,7 @@ int _odp_ishm_status(const char *title)
 	if (nb_blocks < ishm_proctable->nb_entries)
 		ODP_ERR("process known block cannot exceed main total sum!\n");
 
-	ODP_DBG("\n");
+	ODP_PRINT("\n");
 
 	odp_spinlock_unlock(&ishm_tbl->lock);
 	return nb_blocks;
