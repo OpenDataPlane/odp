@@ -605,7 +605,8 @@ unsigned odp_pktio_max_index(void);
  * interface setup sequence. Use odp_pktio_capability() to query configuration
  * capabilities. Use odp_pktio_config_init() to initialize
  * configuration options into their default values. Default values are used
- * when 'config' pointer is NULL.
+ * when 'config' pointer is NULL. Attempting to configure options that are
+ * not supported, as indicated by odp_pktio_capability(), will be rejected.
  *
  * @param pktio    Packet IO handle
  * @param config   Packet IO interface configuration. Uses defaults
