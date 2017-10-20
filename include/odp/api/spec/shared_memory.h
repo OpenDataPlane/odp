@@ -50,6 +50,7 @@ extern "C" {
  */
 #define ODP_SHM_SW_ONLY		0x1 /**< Application SW only, no HW access   */
 #define ODP_SHM_PROC		0x2 /**< Share with external processes       */
+
 /**
  * Single virtual address
  *
@@ -58,6 +59,7 @@ extern "C" {
  * of ODP thread type (e.g. pthread vs. process (or fork process time)).
  */
 #define ODP_SHM_SINGLE_VA	0x4
+
 /**
  * Export memory
  *
@@ -70,11 +72,20 @@ extern "C" {
  * Shared memory block info
  */
 typedef struct odp_shm_info_t {
-	const char *name;      /**< Block name */
-	void       *addr;      /**< Block address */
-	uint64_t    size;      /**< Block size in bytes */
-	uint64_t    page_size; /**< Memory page size */
-	uint32_t    flags;     /**< ODP_SHM_* flags */
+	/** Block name */
+	const char *name;
+
+	/** Block address */
+	void       *addr;
+
+	/** Block size in bytes */
+	uint64_t    size;
+
+	/** Memory page size */
+	uint64_t    page_size;
+
+	/** ODP_SHM_* flags */
+	uint32_t    flags;
 } odp_shm_info_t;
 
 /**
@@ -116,11 +127,10 @@ int odp_shm_capability(odp_shm_capability_t *capa);
 /**
  * Reserve a contiguous block of shared memory
  *
- * @param[in] name   Name of the block (maximum ODP_SHM_NAME_LEN - 1 chars)
- * @param[in] size   Block size in bytes
- * @param[in] align  Block alignment in bytes
- * @param[in] flags  Shared memory parameter flags (ODP_SHM_*).
- *                   Default value is 0.
+ * @param name   Name of the block (maximum ODP_SHM_NAME_LEN - 1 chars)
+ * @param size   Block size in bytes
+ * @param align  Block alignment in bytes
+ * @param flags  Shared memory parameter flags (ODP_SHM_*). Default value is 0.
  *
  * @return Handle of the reserved block
  * @retval ODP_SHM_INVALID on failure
@@ -131,10 +141,10 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 /**
  * Free a contiguous block of shared memory
  *
- * Frees a previously reserved block of shared memory.
- * @note Freeing memory that is in use will result in UNDEFINED behavior
+ * Frees a previously reserved block of shared memory. Freeing memory that is
+ * in use will result in UNDEFINED behavior
  *
- * @param[in] shm Block handle
+ * @param shm    Block handle
  *
  * @retval 0 on success
  * @retval <0 on failure
@@ -144,7 +154,7 @@ int odp_shm_free(odp_shm_t shm);
 /**
  * Lookup for a block of shared memory
  *
- * @param[in] name   Name of the block
+ * @param name   Name of the block
  *
  * @return A handle to the block if it is found by name
  * @retval ODP_SHM_INVALID on failure
@@ -177,20 +187,21 @@ odp_shm_t odp_shm_import(const char *remote_name,
 /**
  * Shared memory block address
  *
- * @param[in] shm   Block handle
+ * @param shm    Block handle
  *
  * @return Memory block address
  * @retval NULL on failure
  */
 void *odp_shm_addr(odp_shm_t shm);
 
-
 /**
  * Shared memory block info
- * @note This is the only shared memory API function which accepts invalid
- * shm handles (any bit value) without causing undefined behavior.
  *
- * @param[in]  shm   Block handle
+ * Get information about the specified shared memory block. This is the only
+ * shared memory API function which accepts invalid shm handles (any bit value)
+ * without causing undefined behavior.
+ *
+ * @param      shm   Block handle
  * @param[out] info  Block info pointer for output
  *
  * @retval 0 on success
@@ -207,15 +218,15 @@ void odp_shm_print_all(void);
 /**
  * Get printable value for an odp_shm_t
  *
- * @param hdl  odp_shm_t handle to be printed
- * @return     uint64_t value that can be used to print/display this
- *             handle
+ * This routine is intended to be used for diagnostic purposes to enable
+ * applications to generate a printable value that represents an odp_shm_t
+ * handle.
  *
- * @note This routine is intended to be used for diagnostic purposes
- * to enable applications to generate a printable value that represents
- * an odp_shm_t handle.
+ * @param shm    Block handle
+ *
+ * @return uint64_t value that can be used to print this handle
  */
-uint64_t odp_shm_to_u64(odp_shm_t hdl);
+uint64_t odp_shm_to_u64(odp_shm_t shm);
 
 /**
  * @}
