@@ -152,6 +152,8 @@ void shmem_test_basic(void)
 	odp_cunit_thread_create(run_test_basic_thread, &thrdarg);
 	CU_ASSERT(odp_cunit_thread_exit(&thrdarg) >= 0);
 
+	odp_shm_print(shm);
+
 	CU_ASSERT(0 == odp_shm_free(shm));
 }
 
