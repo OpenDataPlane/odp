@@ -503,6 +503,7 @@ void packet_test_basic_metadata(void)
 {
 	odp_packet_t pkt = test_packet;
 	odp_time_t ts;
+	odp_packet_data_range_t range;
 
 	CU_ASSERT_PTR_NOT_NULL(odp_packet_head(pkt));
 	CU_ASSERT_PTR_NOT_NULL(odp_packet_data(pkt));
@@ -511,6 +512,11 @@ void packet_test_basic_metadata(void)
 	/* Packet was allocated by application so shouldn't have valid pktio. */
 	CU_ASSERT(odp_packet_input(pkt) == ODP_PKTIO_INVALID);
 	CU_ASSERT(odp_packet_input_index(pkt) < 0);
+
+	/* Packet was not received from a packet IO, shouldn't have ones
+	 * complement calculated. */
+	odp_packet_ones_comp(pkt, &range);
+	CU_ASSERT(range.length == 0);
 
 	odp_packet_flow_hash_set(pkt, UINT32_MAX);
 	CU_ASSERT(odp_packet_has_flow_hash(pkt));
