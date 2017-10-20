@@ -296,6 +296,36 @@ static void pool_destroy(void *pool)
 		rte_mempool_free(mp);
 }
 
+static struct rte_mempool *pool_create(pool_t *pool)
+{
+	struct rte_mempool *pkt_pool;
+	char pool_name[RTE_MEMPOOL_NAMESIZE];
+
+	odp_ticketlock_lock(&pool->lock);
+
+	if (pool->ext_desc != NULL) {
+		odp_ticketlock_unlock(&pool->lock);
+		return (struct rte_mempool *)pool->ext_desc;
+	}
+
+	snprintf(pool_name, sizeof(pool_name),
+		 "dpdk_pktpool_%" PRIu32 "", pool->pool_idx);
+	pkt_pool = mbuf_pool_create(pool_name, pool);
+
+	if (pkt_pool == NULL) {
+		odp_ticketlock_unlock(&pool->lock);
+		ODP_ERR("Creating external DPDK pool failed\n");
+		return NULL;
+	}
+
+	pool->ext_desc = pkt_pool;
+	pool->ext_destroy = pool_destroy;
+
+	odp_ticketlock_unlock(&pool->lock);
+
+	return pkt_pool;
+}
+
 static struct rte_mempool_ops ops_stack = {
 	.name = "odp_pool",
 	.alloc = pool_alloc,
@@ -672,6 +702,11 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 		} else {
 			pool_t *pool_entry = pkt_hdr->buf_hdr.pool_ptr;
 
+			if (odp_unlikely(pool_entry->ext_desc == NULL)) {
+				if (pool_create(pool_entry) == NULL)
+					ODP_ABORT("Creating DPDK pool failed");
+			}
+
 			if (pkt_hdr->buf_hdr.segcount != 1 ||
 			    !pool_entry->mem_from_huge_pages) {
 				/* Fall back to packet copy */
@@ -681,8 +716,8 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 				(*copy_count)++;
 
 			} else {
-				mbuf_init(pkt_dpdk->pkt_pool, mbuf,
-					  pkt_hdr);
+				mbuf_init((struct rte_mempool *)
+					  pool_entry->ext_desc, mbuf, pkt_hdr);
 				mbuf_update(mbuf, pkt_hdr, pkt_len);
 				if (pktout_cfg->all_bits)
 					pkt_set_ol_tx(pktout_cfg, pkt_hdr,
@@ -1203,16 +1238,10 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	else
 		pkt_dpdk->min_rx_burst = 0;
 	if (ODP_DPDK_ZERO_COPY) {
-		if (pool_entry->ext_desc != NULL) {
+		if (pool_entry->ext_desc != NULL)
 			pkt_pool = (struct rte_mempool *)pool_entry->ext_desc;
-		} else {
-			snprintf(pool_name, sizeof(pool_name),
-				 "pktpool_%" PRIu32 "", pool_entry->pool_idx);
-			pkt_pool = mbuf_pool_create(pool_name,
-						    pool_entry);
-			pool_entry->ext_destroy = pool_destroy;
-			pool_entry->ext_desc = pkt_pool;
-		}
+		else
+			pkt_pool = pool_create(pool_entry);
 	} else {
 		snprintf(pool_name, sizeof(pool_name), "pktpool_%s", netdev);
 		pkt_pool = rte_pktmbuf_pool_create(pool_name,
