@@ -48,6 +48,9 @@ static int num_ifaces;
     interface that just become up.*/
 static bool wait_for_network;
 
+/* Dummy global variable to avoid compiler optimizing out API calls */
+static volatile uint64_t test_pktio_dummy_u64;
+
 /** local container for pktio attributes */
 typedef struct {
 	const char *name;
@@ -661,10 +664,24 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 	CU_ASSERT(num_rx == num_pkts);
 
 	for (i = 0; i < num_rx; ++i) {
-		CU_ASSERT_FATAL(rx_pkt[i] != ODP_PACKET_INVALID);
-		CU_ASSERT(odp_packet_input(rx_pkt[i]) == pktio_b->id);
-		CU_ASSERT(odp_packet_has_error(rx_pkt[i]) == 0);
-		odp_packet_free(rx_pkt[i]);
+		odp_packet_data_range_t range;
+		uint16_t sum;
+		odp_packet_t pkt = rx_pkt[i];
+
+		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+		CU_ASSERT(odp_packet_input(pkt) == pktio_b->id);
+		CU_ASSERT(odp_packet_has_error(pkt) == 0);
+
+		/* Dummy read to ones complement in case pktio has set it */
+		sum = odp_packet_ones_comp(pkt, &range);
+		if (range.length > 0)
+			test_pktio_dummy_u64 += sum;
+
+		/* Dummy read to flow hash in case pktio has set it */
+		if (odp_packet_has_flow_hash(pkt))
+			test_pktio_dummy_u64 += odp_packet_flow_hash(pkt);
+
+		odp_packet_free(pkt);
 	}
 }
 
