@@ -676,22 +676,35 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 			       ip_data_len +
 			       ipsec_sa->icv_len;
 
-		if (ipsec_sa->esp_iv_len) {
+		if (ipsec_sa->use_counter_iv) {
+			uint64_t ctr;
+
+			/* Both GCM and CTR use 8-bit counters */
+			ODP_ASSERT(sizeof(ctr) == ipsec_sa->esp_iv_len);
+
+			ctr = odp_atomic_fetch_add_u64(&ipsec_sa->out.counter,
+						       1);
+			/* Check for overrun */
+			if (ctr == 0)
+				goto out;
+
+			memcpy(iv, ipsec_sa->salt, ipsec_sa->salt_length);
+			memcpy(iv + ipsec_sa->salt_length, &ctr,
+			       ipsec_sa->esp_iv_len);
+
+		} else if (ipsec_sa->esp_iv_len) {
 			uint32_t len;
 
-			len = odp_random_data(iv + ipsec_sa->salt_length,
-					      ipsec_sa->esp_iv_len,
+			len = odp_random_data(iv, ipsec_sa->esp_iv_len,
 					      ODP_RANDOM_CRYPTO);
 
 			if (len != ipsec_sa->esp_iv_len) {
 				status->error.alg = 1;
 				goto out;
 			}
-
-			memcpy(iv, ipsec_sa->salt, ipsec_sa->salt_length);
-
-			param.override_iv_ptr = iv;
 		}
+
+		param.override_iv_ptr = iv;
 
 		if (odp_packet_extend_tail(&pkt, trl_len, NULL, NULL) < 0) {
 			status->error.alg = 1;
@@ -734,7 +747,6 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 		odp_packet_copy_from_mem(pkt,
 					 ipsec_offset, _ODP_ESPHDR_LEN,
 					 &esp);
-		memcpy(iv, ipsec_sa->salt, ipsec_sa->salt_length);
 		odp_packet_copy_from_mem(pkt,
 					 ipsec_offset + _ODP_ESPHDR_LEN,
 					 ipsec_sa->esp_iv_len,
