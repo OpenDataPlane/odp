@@ -118,9 +118,17 @@ struct ipsec_sa_s {
 	uint8_t		salt[IPSEC_MAX_SALT_LEN];
 	uint32_t	salt_length;
 
-	unsigned	dec_ttl : 1;
-	unsigned	copy_dscp : 1;
-	unsigned	copy_df : 1;
+	union {
+		unsigned flags;
+		struct {
+			unsigned	dec_ttl : 1;
+			unsigned	copy_dscp : 1;
+			unsigned	copy_df : 1;
+
+			/* Only for outbound */
+			unsigned	use_counter_iv : 1;
+		};
+	};
 
 	union {
 		struct {
@@ -135,6 +143,8 @@ struct ipsec_sa_s {
 			/* 32-bit from which low 16 are used */
 			odp_atomic_u32_t tun_hdr_id;
 			odp_atomic_u32_t seq;
+
+			odp_atomic_u64_t counter; /* for CTR/GCM */
 
 			uint8_t		tun_ttl;
 			uint8_t		tun_dscp;
