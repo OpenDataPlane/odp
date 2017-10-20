@@ -526,7 +526,11 @@ static inline uint16_t phdr_csum(odp_bool_t ipv4, void *l3_hdr,
 		return rte_ipv6_phdr_cksum(l3_hdr, ol_flags);
 }
 
+#define OL_TX_CHKSUM_PKT(_cfg, _capa, _proto, _ovr_set, _ovr) \
+	(_capa && _proto && (_ovr_set ? _ovr : _cfg))
+
 static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
+				 odp_pktout_config_opt_t *pktout_capa,
 				 odp_packet_hdr_t *pkt_hdr,
 				 struct rte_mbuf *mbuf,
 				 char *mbuf_data)
@@ -542,11 +546,21 @@ static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
 	if (check_proto(l3_hdr, &l3_proto_v4, &l4_proto))
 		return;
 
-	ipv4_chksum_pkt = pktout_cfg->bit.ipv4_chksum && l3_proto_v4;
-	udp_chksum_pkt =  pktout_cfg->bit.udp_chksum &&
-		(l4_proto == _ODP_IPPROTO_UDP);
-	tcp_chksum_pkt = pktout_cfg->bit.tcp_chksum &&
-			(l4_proto == _ODP_IPPROTO_TCP);
+	ipv4_chksum_pkt = OL_TX_CHKSUM_PKT(pktout_cfg->bit.ipv4_chksum,
+					   pktout_capa->bit.ipv4_chksum,
+					   l3_proto_v4,
+					   pkt_p->output_flags.l3_chksum_set,
+					   pkt_p->output_flags.l3_chksum);
+	udp_chksum_pkt =  OL_TX_CHKSUM_PKT(pktout_cfg->bit.udp_chksum,
+					   pktout_capa->bit.udp_chksum,
+					   (l4_proto == _ODP_IPPROTO_UDP),
+					   pkt_p->output_flags.l4_chksum_set,
+					   pkt_p->output_flags.l4_chksum);
+	tcp_chksum_pkt =  OL_TX_CHKSUM_PKT(pktout_cfg->bit.tcp_chksum,
+					   pktout_capa->bit.tcp_chksum,
+					   (l4_proto == _ODP_IPPROTO_TCP),
+					   pkt_p->output_flags.l4_chksum_set,
+					   pkt_p->output_flags.l4_chksum);
 
 	if (!ipv4_chksum_pkt && !udp_chksum_pkt && !tcp_chksum_pkt)
 			return;
@@ -589,6 +603,8 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 	char *data;
 	uint16_t pkt_len;
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
+	odp_pktout_config_opt_t *pktout_capa =
+		&pktio_entry->s.pkt_dpdk.capa.config.pktout;
 
 	if (odp_unlikely((rte_pktmbuf_alloc_bulk(pkt_dpdk->pkt_pool,
 						 mbuf_table, num)))) {
@@ -609,8 +625,8 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 
 		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
 
-		if (pktout_cfg->all_bits)
-			pkt_set_ol_tx(pktout_cfg,
+		if (pktout_capa->all_bits)
+			pkt_set_ol_tx(pktout_cfg, pktout_capa,
 				      odp_packet_hdr(pkt_table[i]),
 				      mbuf_table[i], data);
 	}
@@ -702,6 +718,8 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
+	odp_pktout_config_opt_t *pktout_capa =
+		&pktio_entry->s.pkt_dpdk.capa.config.pktout;
 	int i;
 	*copy_count = 0;
 
@@ -719,8 +737,8 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 			       pkt_hdr->extra_type == PKT_EXTRA_TYPE_DPDK)) {
 			mbuf_update(mbuf, pkt_hdr, pkt_len);
 
-			if (pktout_cfg->all_bits)
-				pkt_set_ol_tx(pktout_cfg, pkt_hdr,
+			if (pktout_capa->all_bits)
+				pkt_set_ol_tx(pktout_cfg, pktout_capa, pkt_hdr,
 					      mbuf, odp_packet_data(pkt));
 		} else {
 			pool_t *pool_entry = pkt_hdr->buf_hdr.pool_ptr;
@@ -742,8 +760,9 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 				mbuf_init((struct rte_mempool *)
 					  pool_entry->ext_desc, mbuf, pkt_hdr);
 				mbuf_update(mbuf, pkt_hdr, pkt_len);
-				if (pktout_cfg->all_bits)
-					pkt_set_ol_tx(pktout_cfg, pkt_hdr,
+				if (pktout_capa->all_bits)
+					pkt_set_ol_tx(pktout_cfg, pktout_capa,
+						      pkt_hdr,
 						      mbuf,
 						      odp_packet_data(pkt));
 			}
