@@ -1,3 +1,38 @@
-m4_include([test/common_plat/m4/configure.m4])
+m4_include([test/m4/miscellaneous.m4])
+m4_include([test/m4/performance.m4])
+m4_include([test/m4/validation.m4])
 
-AC_CONFIG_FILES([test/Makefile])
+AC_CONFIG_FILES([test/Makefile
+		 test/common/Makefile
+		 test/miscellaneous/Makefile
+		 test/performance/Makefile
+		 test/validation/Makefile
+		 test/validation/api/atomic/Makefile
+		 test/validation/api/barrier/Makefile
+		 test/validation/api/buffer/Makefile
+		 test/validation/api/chksum/Makefile
+		 test/validation/api/classification/Makefile
+		 test/validation/api/cpumask/Makefile
+		 test/validation/api/crypto/Makefile
+		 test/validation/api/errno/Makefile
+		 test/validation/api/hash/Makefile
+		 test/validation/api/init/Makefile
+		 test/validation/api/ipsec/Makefile
+		 test/validation/api/lock/Makefile
+		 test/validation/api/Makefile
+		 test/validation/api/packet/Makefile
+		 test/validation/api/pktio/Makefile
+		 test/validation/api/pool/Makefile
+		 test/validation/api/queue/Makefile
+		 test/validation/api/random/Makefile
+		 test/validation/api/scheduler/Makefile
+		 test/validation/api/shmem/Makefile
+		 test/validation/api/std_clib/Makefile
+		 test/validation/api/system/Makefile
+		 test/validation/api/thread/Makefile
+		 test/validation/api/time/Makefile
+		 test/validation/api/timer/Makefile
+		 test/validation/api/traffic_mngr/Makefile
+		 test/validation/drv/Makefile
+		 test/validation/drv/drvatomic/Makefile
+		 test/validation/drv/drvshmem/Makefile])

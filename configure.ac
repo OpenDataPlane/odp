@@ -16,9 +16,6 @@ ODP_VERSION_API_MAJOR=odpapi_major_version
 AC_SUBST(ODP_VERSION_API_MAJOR)
 ODP_VERSION_API_MINOR=odpapi_minor_version
 AC_SUBST(ODP_VERSION_API_MINOR)
-AC_CONFIG_FILES([include/odp/api/spec/version.h
-                 include/odp/api/spec/deprecated.h])
-
 AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects foreign nostdinc])
 AC_CONFIG_SRCDIR([include/odp/api/spec/init.h])
 AM_CONFIG_HEADER([include/config.h])
@@ -164,21 +161,13 @@ AC_ARG_WITH([platform],
     ])
 
 AC_SUBST([with_platform])
-AC_SUBST([platform_with_platform], ["platform/${with_platform}"])
 
 ##########################################################################
 # Run platform specific checks and settings
 ##########################################################################
-IMPLEMENTATION_NAME=""
-if test "${with_platform}" = "linux-generic";
-then
-    m4_include([./platform/linux-generic/m4/configure.m4])
-    m4_include([./test/linux-generic/m4/configure.m4])
-    IMPLEMENTATION_NAME="odp-linux"
-else
-    echo "UNSUPPORTED PLATFORM: ${with_platform}"
-    exit 1
-fi
+AS_IF([test "${with_platform}" = "linux-generic"],
+      [m4_include([./platform/linux-generic/m4/configure.m4])],
+      [AC_MSG_ERROR([UNSUPPORTED PLATFORM: ${with_platform}])])
 
 AC_DEFINE_UNQUOTED([IMPLEMENTATION_NAME], ["$IMPLEMENTATION_NAME"],
 		   [Define to the name of the implementation])
@@ -192,20 +181,10 @@ m4_include([./helper/m4/configure.m4])
 m4_include([./test/m4/configure.m4])
 
 ##########################################################################
-# Set SDK install path
-##########################################################################
-AC_ARG_WITH([sdk-install-path],
-AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
-	     [(or in the default path if not specified).]),
-[SDK_INSTALL_PATH=$withval SDK_INSTALL_PATH_=1],[SDK_INSTALL_PATH_=])
-
-AC_SUBST(SDK_INSTALL_PATH)
-
-##########################################################################
 # Set the install directory for test binaries/scripts
 ##########################################################################
 AC_ARG_WITH([testdir],
-    [AC_HELP_STRING([--with-testdir=DIR], [installation directory for tests])],
+    [AS_HELP_STRING([--with-testdir=DIR], [installation directory for tests])],
 	[testdir=$withval],
 	[testdir=no])
 AS_IF([test "x$testdir" = "xyes"], [testdir=$libdir/odp/tests],
@@ -216,7 +195,6 @@ AM_CONDITIONAL([test_installdir], [test "x$testdir" != "xno"])
 ##########################################################################
 # Set conditionals as computed within platform specific files
 ##########################################################################
-AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
@@ -226,6 +204,8 @@ AM_CONDITIONAL([ARCH_IS_AARCH64], [test "x${ARCH_DIR}" = "xaarch64"])
 AM_CONDITIONAL([ARCH_IS_MIPS64], [test "x${ARCH_DIR}" = "xmips64"])
 AM_CONDITIONAL([ARCH_IS_POWERPC], [test "x${ARCH_DIR}" = "xpowerpc"])
 AM_CONDITIONAL([ARCH_IS_X86], [test "x${ARCH_DIR}" = "xx86"])
+AM_CONDITIONAL([ARCH_IS_X86_32], [test "x${ARCH_ABI}" = "xx86_32-linux"])
+AM_CONDITIONAL([ARCH_IS_X86_64], [test "x${ARCH_ABI}" = "xx86_64-linux"])
 
 ##########################################################################
 # Setup doxygen documentation
@@ -356,10 +336,11 @@ esac
 CFLAGS="$CFLAGS $ODP_CFLAGS"
 CXXFLAGS="$CXXFLAGS $ODP_CXXFLAGS"
 
-AC_CONFIG_FILES([Makefile
-		 pkgconfig/libodp-linux.pc
-		 pkgconfig/libodphelper.pc
-		 ])
+AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([include/Makefile
+		 include/odp/api/spec/version.h
+		 include/odp/api/spec/deprecated.h])
+
 
 ##########################################################################
 # distribute the changed variables among the Makefiles

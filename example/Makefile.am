@@ -10,3 +10,5 @@ SUBDIRS = classifier \
 	  time \
 	  timer \
 	  traffic_mgmt
+
+noinst_HEADERS = example_debug.h

@@ -71,7 +71,7 @@ struct odp_buffer_hdr_t {
 	/* --- 40 bytes --- */
 
 	/* Segments */
-	seg_entry_t seg[CONFIG_PACKET_MAX_SEGS];
+	seg_entry_t seg[CONFIG_PACKET_SEGS_PER_HDR];
 
 	/* Burst counts */
 	uint8_t   burst_num;
@@ -125,8 +125,8 @@ struct odp_buffer_hdr_t {
 	uint8_t data[0];
 } ODP_ALIGNED_CACHE;
 
-ODP_STATIC_ASSERT(CONFIG_PACKET_MAX_SEGS < 256,
-		  "CONFIG_PACKET_MAX_SEGS_TOO_LARGE");
+ODP_STATIC_ASSERT(CONFIG_PACKET_SEGS_PER_HDR < 256,
+		  "CONFIG_PACKET_SEGS_PER_HDR_TOO_LARGE");
 
 ODP_STATIC_ASSERT(BUFFER_BURST_SIZE < 256, "BUFFER_BURST_SIZE_TOO_LARGE");
 

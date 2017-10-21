@@ -19,4 +19,5 @@ AC_ARG_ENABLE([helper-linux],
 	fi])
 
 AC_CONFIG_FILES([helper/Makefile
-		helper/test/Makefile])
+		 helper/libodphelper.pc
+		 helper/test/Makefile])
