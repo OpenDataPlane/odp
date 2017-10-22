@@ -79,7 +79,6 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/atomic_types.h \
 		  include/odp/api/plat/byteorder_inlines.h \
 		  include/odp/api/plat/byteorder_types.h \
-		  include/odp/api/plat/cpumask_types.h \
 		  include/odp/api/plat/init_types.h \
 		  include/odp/api/plat/ipsec_types.h \
 		  include/odp/api/plat/packet_flag_inlines.h \
@@ -116,6 +115,7 @@ odpapiabiarchinclude_HEADERS = \
 		  include-abi/odp/api/abi/barrier.h \
 		  include-abi/odp/api/abi/buffer.h \
 		  include-abi/odp/api/abi/classification.h \
+		  include-abi/odp/api/abi/cpumask.h \
 		  include-abi/odp/api/abi/crypto.h \
 		  include-abi/odp/api/abi/event.h \
 		  include-abi/odp/api/abi/queue.h \

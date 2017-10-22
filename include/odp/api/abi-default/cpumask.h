@@ -4,15 +4,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
  * ODP CPU masks and enumeration
  */
 
-#ifndef ODP_CPUMASK_TYPES_H_
-#define ODP_CPUMASK_TYPES_H_
+#ifndef ODP_ABI_CPUMASK_H_
+#define ODP_ABI_CPUMASK_H_
 
 #ifdef __cplusplus
 extern "C" {
