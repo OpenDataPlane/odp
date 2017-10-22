@@ -10,17 +10,12 @@
  * ODP queue
  */
 
-#ifndef ODP_QUEUE_TYPES_H_
-#define ODP_QUEUE_TYPES_H_
+#ifndef ODP_API_ABI_QUEUE_H_
+#define ODP_API_ABI_QUEUE_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/plat/static_inline.h>
-#if ODP_ABI_COMPAT == 1
-#include <odp/api/abi/queue.h>
-#else
 
 #include <odp/api/std_types.h>
 #include <odp/api/plat/strong_types.h>
@@ -38,8 +33,6 @@ typedef ODP_HANDLE_T(odp_queue_t);
 /**
  * @}
  */
-
-#endif
 
 #ifdef __cplusplus
 }
