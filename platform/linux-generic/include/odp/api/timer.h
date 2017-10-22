@@ -10,8 +10,8 @@
  * ODP timer service
  */
 
-#ifndef ODP_PLAT_TIMER_H_
-#define ODP_PLAT_TIMER_H_
+#ifndef ODP_API_TIMER_H_
+#define ODP_API_TIMER_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,15 +21,7 @@ extern "C" {
 #include <odp/api/abi/event.h>
 #include <odp/api/plat/pool_types.h>
 #include <odp/api/abi/queue.h>
-#include <odp/api/plat/timer_types.h>
-
-/** @ingroup odp_timer
- *  @{
- */
-
-/**
- * @}
- */
+#include <odp/api/abi/timer.h>
 
 #include <odp/api/spec/timer.h>
 
