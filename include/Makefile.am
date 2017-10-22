@@ -54,16 +54,16 @@ nodist_odpapispecinclude_HEADERS = \
 		  odp/api/spec/deprecated.h \
 		  odp/api/spec/version.h
 
-odpapiabidefaultincludedir= $(includedir)/odp/arch/default/api/abi
+odpapiabidefaultincludedir= $(includedir)/odp/api/abi-default
 odpapiabidefaultinclude_HEADERS = \
-	odp/arch/default/api/abi/buffer.h \
-	odp/arch/default/api/abi/classification.h \
-	odp/arch/default/api/abi/crypto.h \
-	odp/arch/default/api/abi/event.h \
-	odp/arch/default/api/abi/packet.h \
-	odp/arch/default/api/abi/pool.h \
-	odp/arch/default/api/abi/queue.h \
-	odp/arch/default/api/abi/shared_memory.h
+	odp/api/abi-default/buffer.h \
+	odp/api/abi-default/classification.h \
+	odp/api/abi-default/crypto.h \
+	odp/api/abi-default/event.h \
+	odp/api/abi-default/packet.h \
+	odp/api/abi-default/pool.h \
+	odp/api/abi-default/queue.h \
+	odp/api/abi-default/shared_memory.h
 
 odpapiabiarchincludedir= $(includedir)/odp/arch/@ARCH_ABI@/odp/api/abi
 if ARCH_IS_ARM
