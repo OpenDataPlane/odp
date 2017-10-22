@@ -82,6 +82,7 @@ odpapiabidefaultinclude_HEADERS = \
 	odp/api/abi-default/sync.h \
 	odp/api/abi-default/thread.h \
 	odp/api/abi-default/thrmask.h \
+	odp/api/abi-default/ticketlock.h \
 	odp/api/abi-default/time.h \
 	odp/api/abi-default/timer.h \
 	odp/api/abi-default/traffic_mngr.h \
@@ -119,6 +120,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm32-linux/odp/api/abi/sync.h \
 	odp/arch/arm32-linux/odp/api/abi/thread.h \
 	odp/arch/arm32-linux/odp/api/abi/thrmask.h \
+	odp/arch/arm32-linux/odp/api/abi/ticketlock.h \
 	odp/arch/arm32-linux/odp/api/abi/time.h \
 	odp/arch/arm32-linux/odp/api/abi/timer.h \
 	odp/arch/arm32-linux/odp/api/abi/traffic_mngr.h \
@@ -152,6 +154,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm64-linux/odp/api/abi/sync.h \
 	odp/arch/arm64-linux/odp/api/abi/thread.h \
 	odp/arch/arm64-linux/odp/api/abi/thrmask.h \
+	odp/arch/arm64-linux/odp/api/abi/ticketlock.h \
 	odp/arch/arm64-linux/odp/api/abi/time.h \
 	odp/arch/arm64-linux/odp/api/abi/timer.h \
 	odp/arch/arm64-linux/odp/api/abi/traffic_mngr.h \
@@ -185,6 +188,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/mips64-linux/odp/api/abi/sync.h \
 	odp/arch/mips64-linux/odp/api/abi/thread.h \
 	odp/arch/mips64-linux/odp/api/abi/thrmask.h \
+	odp/arch/mips64-linux/odp/api/abi/ticketlock.h \
 	odp/arch/mips64-linux/odp/api/abi/time.h \
 	odp/arch/mips64-linux/odp/api/abi/timer.h \
 	odp/arch/mips64-linux/odp/api/abi/traffic_mngr.h \
@@ -218,6 +222,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/power64-linux/odp/api/abi/sync.h \
 	odp/arch/power64-linux/odp/api/abi/thread.h \
 	odp/arch/power64-linux/odp/api/abi/thrmask.h \
+	odp/arch/power64-linux/odp/api/abi/ticketlock.h \
 	odp/arch/power64-linux/odp/api/abi/time.h \
 	odp/arch/power64-linux/odp/api/abi/timer.h \
 	odp/arch/power64-linux/odp/api/abi/traffic_mngr.h \
@@ -251,6 +256,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_32-linux/odp/api/abi/sync.h \
 	odp/arch/x86_32-linux/odp/api/abi/thread.h \
 	odp/arch/x86_32-linux/odp/api/abi/thrmask.h \
+	odp/arch/x86_32-linux/odp/api/abi/ticketlock.h \
 	odp/arch/x86_32-linux/odp/api/abi/time.h \
 	odp/arch/x86_32-linux/odp/api/abi/timer.h \
 	odp/arch/x86_32-linux/odp/api/abi/traffic_mngr.h \
@@ -284,6 +290,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_64-linux/odp/api/abi/sync.h \
 	odp/arch/x86_64-linux/odp/api/abi/thread.h \
 	odp/arch/x86_64-linux/odp/api/abi/thrmask.h \
+	odp/arch/x86_64-linux/odp/api/abi/ticketlock.h \
 	odp/arch/x86_64-linux/odp/api/abi/time.h \
 	odp/arch/x86_64-linux/odp/api/abi/timer.h \
 	odp/arch/x86_64-linux/odp/api/abi/traffic_mngr.h \
