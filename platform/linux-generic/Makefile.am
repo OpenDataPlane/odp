@@ -62,7 +62,6 @@ odpapiinclude_HEADERS = \
 		  include/odp/api/std_clib.h \
 		  include/odp/api/std_types.h \
 		  include/odp/api/support.h \
-		  include/odp/api/sync.h \
 		  include/odp/api/system_info.h \
 		  include/odp/api/thread.h \
 		  include/odp/api/threshold.h \
@@ -118,6 +117,7 @@ odpapiabiarchinclude_HEADERS = \
 		  include-abi/odp/api/abi/spinlock_recursive.h \
 		  include-abi/odp/api/abi/std_clib.h \
 		  include-abi/odp/api/abi/std_types.h \
+		  include-abi/odp/api/abi/sync.h \
 		  include-abi/odp/api/abi/thread.h \
 		  include-abi/odp/api/abi/thrmask.h \
 		  include-abi/odp/api/abi/time.h \
