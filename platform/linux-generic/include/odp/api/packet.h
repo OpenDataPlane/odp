@@ -22,7 +22,7 @@ extern "C" {
 #include <odp/api/abi/packet_io.h>
 #include <odp/api/plat/packet_types.h>
 #include <odp/api/abi/buffer.h>
-#include <odp/api/plat/pool_types.h>
+#include <odp/api/abi/pool.h>
 
 #include <odp/api/plat/static_inline.h>
 #if ODP_ABI_COMPAT == 0
