@@ -13,14 +13,15 @@
 #ifndef _ODP_PLAT_PACKET_INLINES_H_
 #define _ODP_PLAT_PACKET_INLINES_H_
 
-#include <odp/api/plat/strong_types.h>
-#include <odp/api/plat/packet_types.h>
+#include <odp/api/abi/packet.h>
 #include <odp/api/pool.h>
-#include <odp/api/plat/pool_inline_types.h>
-#include <odp/api/time.h>
 #include <odp/api/abi/packet_io.h>
-#include <odp/api/abi/buffer.h>
 #include <odp/api/hints.h>
+#include <odp/api/time.h>
+#include <odp/api/abi/buffer.h>
+
+#include <odp/api/plat/packet_inline_types.h>
+#include <odp/api/plat/pool_inline_types.h>
 
 /** @internal Inline function @param pkt_ptr @param offset @param seg_len
  *  @param seg_idx @return */
@@ -33,7 +34,9 @@ extern const _odp_packet_inline_offset_t _odp_packet_inline;
 /** @internal Pool inline function offsets */
 extern const _odp_pool_inline_offset_t _odp_pool_inline;
 
+#include <odp/api/plat/static_inline.h>
 #if ODP_ABI_COMPAT == 1
+#include <odp/api/plat/strong_types.h>
 /** @internal Inline function @param seg @return */
 static inline uint32_t _odp_packet_seg_to_ndx(odp_packet_seg_t seg)
 {
@@ -253,21 +256,5 @@ static inline odp_buffer_t packet_to_buffer(odp_packet_t pkt)
 {
 	return (odp_buffer_t)pkt;
 }
-
-/* Include inlined versions of API functions */
-#include <odp/api/plat/static_inline.h>
-#if ODP_ABI_COMPAT == 0
-
-/** @ingroup odp_packet
- *  @{
- */
-
-#include <odp/api/plat/packet_inlines_api.h>
-
-/**
- * @}
- */
-
-#endif
 
 #endif

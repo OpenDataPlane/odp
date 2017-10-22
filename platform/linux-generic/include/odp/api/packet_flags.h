@@ -10,17 +10,14 @@
  * ODP packet flags
  */
 
-#ifndef ODP_PLAT_PACKET_FLAGS_H_
-#define ODP_PLAT_PACKET_FLAGS_H_
+#ifndef ODP_API_PACKET_FLAGS_H_
+#define ODP_API_PACKET_FLAGS_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <odp/api/plat/static_inline.h>
-#if ODP_ABI_COMPAT == 0
-#include <odp/api/plat/packet_flag_inlines.h>
-#endif
+#include <odp/api/abi/packet_flags.h>
 
 #include <odp/api/spec/packet_flags.h>
 
