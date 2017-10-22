@@ -46,26 +46,6 @@ extern "C" {
  */
 
 /**
- * @def ODP_SCHED_GROUP_INVALID
- * Invalid scheduler group
- */
-
-/**
- * @def ODP_SCHED_GROUP_ALL
- * Predefined scheduler group of all threads
- */
-
-/**
- * @def ODP_SCHED_GROUP_WORKER
- * Predefined scheduler group of all worker threads
- */
-
-/**
- * @def ODP_SCHED_GROUP_CONTROL
- * Predefined scheduler group of all control threads
- */
-
-/**
  * Schedule wait time
  *
  * Converts nanoseconds to wait values for other schedule functions.
