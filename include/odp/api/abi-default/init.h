@@ -10,8 +10,8 @@
  * ODP initialization.
  */
 
-#ifndef ODP_INIT_TYPES_H_
-#define ODP_INIT_TYPES_H_
+#ifndef ODP_ABI_INIT_H_
+#define ODP_ABI_INIT_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,7 +25,7 @@ typedef uint64_t odp_instance_t;
  * @internal platform specific data
  */
 typedef struct odp_platform_init_t {
-	int ipc_ns; /**< Name space for ipc shared objects. */
+	char dummy; /**< @internal Dummy */
 } odp_platform_init_t;
 
 #ifdef __cplusplus
