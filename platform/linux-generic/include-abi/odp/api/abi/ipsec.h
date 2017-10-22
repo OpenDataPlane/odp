@@ -10,8 +10,8 @@
  * ODP IPSEC API - platform specific types
  */
 
-#ifndef ODP_PLAT_IPSEC_TYPES_H_
-#define ODP_PLAT_IPSEC_TYPES_H_
+#ifndef ODP_API_ABI_IPSEC_H_
+#define ODP_API_ABI_IPSEC_H_
 
 #ifdef __cplusplus
 extern "C" {
