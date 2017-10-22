@@ -40,9 +40,6 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/ticketlock_inlines.h \
 		  include/odp/api/plat/ticketlock_inlines_api.h
 
-nodist_odpapiplatinclude_HEADERS = \
-		  include/odp/api/plat/static_inline.h
-
 if !ODP_ABI_COMPAT
 odpapiabiarchincludedir = $(archincludedir)/odp/api/abi
 odpapiabiarchinclude_HEADERS = \

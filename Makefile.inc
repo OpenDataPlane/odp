@@ -1,5 +1,4 @@
 ODP_INCLUDES = \
-	-I$(top_builddir)/platform/@with_platform@/include \
 	-I$(top_srcdir)/platform/@with_platform@/include \
 	-I$(top_builddir)/include \
 	-I$(top_srcdir)/include
