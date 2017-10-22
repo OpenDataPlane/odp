@@ -10,22 +10,14 @@
  * ODP thread masks
  */
 
-#ifndef ODP_PLAT_THRMASK_H_
-#define ODP_PLAT_THRMASK_H_
+#ifndef ODP_API_THRMASK_H_
+#define ODP_API_THRMASK_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <odp/api/plat/thrmask_types.h>
-
-/** @ingroup odp_thread
- *  @{
- */
-
-/**
- * @}
- */
+#include <odp/api/abi/thrmask.h>
 
 #include <odp/api/spec/thrmask.h>
 

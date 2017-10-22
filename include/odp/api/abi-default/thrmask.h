@@ -10,8 +10,8 @@
  * ODP thread masks
  */
 
-#ifndef ODP_THRMASK_TYPES_H_
-#define ODP_THRMASK_TYPES_H_
+#ifndef ODP_ABI_THRMASK_H_
+#define ODP_ABI_THRMASK_H_
 
 #ifdef __cplusplus
 extern "C" {
