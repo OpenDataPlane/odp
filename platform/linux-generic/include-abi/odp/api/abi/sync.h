@@ -21,7 +21,7 @@ extern "C" {
  *  @{
  */
 
-#include <odp/api/plat/static_inline.h>
+#define _ODP_INLINE static inline
 #include <odp/api/plat/sync_inlines.h>
 
 /**

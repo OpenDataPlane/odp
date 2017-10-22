@@ -34,8 +34,7 @@ extern const _odp_packet_inline_offset_t _odp_packet_inline;
 /** @internal Pool inline function offsets */
 extern const _odp_pool_inline_offset_t _odp_pool_inline;
 
-#include <odp/api/plat/static_inline.h>
-#if ODP_ABI_COMPAT == 1
+#ifndef _ODP_HAVE_PACKET_SEG_NDX
 #include <odp/api/plat/strong_types.h>
 /** @internal Inline function @param seg @return */
 static inline uint32_t _odp_packet_seg_to_ndx(odp_packet_seg_t seg)

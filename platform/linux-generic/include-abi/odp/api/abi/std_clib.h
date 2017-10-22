@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-#include <odp/api/plat/static_inline.h>
+#define _ODP_INLINE static inline
 #include <odp/api/plat/std_clib_inlines.h>
 
 #ifdef __cplusplus

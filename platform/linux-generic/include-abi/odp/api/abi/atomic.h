@@ -63,7 +63,7 @@ typedef struct odp_atomic_u32_s odp_atomic_u32_t;
  *  @{
  */
 
-#include <odp/api/plat/static_inline.h>
+#define _ODP_INLINE static inline
 #include <odp/api/plat/atomic_inlines.h>
 
 /**
