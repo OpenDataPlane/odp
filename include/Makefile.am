@@ -65,6 +65,7 @@ odpapiabidefaultinclude_HEADERS = \
 	odp/api/abi-default/init.h \
 	odp/api/abi-default/ipsec.h \
 	odp/api/abi-default/packet.h \
+	odp/api/abi-default/packet_io.h \
 	odp/api/abi-default/pool.h \
 	odp/api/abi-default/queue.h \
 	odp/api/abi-default/shared_memory.h
@@ -84,6 +85,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm32-linux/odp/api/abi/init.h \
 	odp/arch/arm32-linux/odp/api/abi/ipsec.h \
 	odp/arch/arm32-linux/odp/api/abi/packet.h \
+	odp/arch/arm32-linux/odp/api/abi/packet_io.h \
 	odp/arch/arm32-linux/odp/api/abi/pool.h \
 	odp/arch/arm32-linux/odp/api/abi/queue.h \
 	odp/arch/arm32-linux/odp/api/abi/shared_memory.h
@@ -99,6 +101,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm64-linux/odp/api/abi/init.h \
 	odp/arch/arm64-linux/odp/api/abi/ipsec.h \
 	odp/arch/arm64-linux/odp/api/abi/packet.h \
+	odp/arch/arm64-linux/odp/api/abi/packet_io.h \
 	odp/arch/arm64-linux/odp/api/abi/pool.h \
 	odp/arch/arm64-linux/odp/api/abi/queue.h \
 	odp/arch/arm64-linux/odp/api/abi/shared_memory.h
@@ -114,6 +117,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/mips64-linux/odp/api/abi/init.h \
 	odp/arch/mips64-linux/odp/api/abi/ipsec.h \
 	odp/arch/mips64-linux/odp/api/abi/packet.h \
+	odp/arch/mips64-linux/odp/api/abi/packet_io.h \
 	odp/arch/mips64-linux/odp/api/abi/pool.h \
 	odp/arch/mips64-linux/odp/api/abi/queue.h \
 	odp/arch/mips64-linux/odp/api/abi/shared_memory.h
@@ -129,6 +133,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/power64-linux/odp/api/abi/init.h \
 	odp/arch/power64-linux/odp/api/abi/ipsec.h \
 	odp/arch/power64-linux/odp/api/abi/packet.h \
+	odp/arch/power64-linux/odp/api/abi/packet_io.h \
 	odp/arch/power64-linux/odp/api/abi/pool.h \
 	odp/arch/power64-linux/odp/api/abi/queue.h \
 	odp/arch/power64-linux/odp/api/abi/shared_memory.h
@@ -144,6 +149,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_32-linux/odp/api/abi/init.h \
 	odp/arch/x86_32-linux/odp/api/abi/ipsec.h \
 	odp/arch/x86_32-linux/odp/api/abi/packet.h \
+	odp/arch/x86_32-linux/odp/api/abi/packet_io.h \
 	odp/arch/x86_32-linux/odp/api/abi/pool.h \
 	odp/arch/x86_32-linux/odp/api/abi/queue.h \
 	odp/arch/x86_32-linux/odp/api/abi/shared_memory.h
@@ -159,6 +165,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_64-linux/odp/api/abi/init.h \
 	odp/arch/x86_64-linux/odp/api/abi/ipsec.h \
 	odp/arch/x86_64-linux/odp/api/abi/packet.h \
+	odp/arch/x86_64-linux/odp/api/abi/packet_io.h \
 	odp/arch/x86_64-linux/odp/api/abi/pool.h \
 	odp/arch/x86_64-linux/odp/api/abi/queue.h \
 	odp/arch/x86_64-linux/odp/api/abi/shared_memory.h
