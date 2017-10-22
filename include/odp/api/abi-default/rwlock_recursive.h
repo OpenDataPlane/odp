@@ -10,8 +10,8 @@
  * ODP recursive read/write lock
  */
 
-#ifndef ODP_RWLOCK_RECURSIVE_TYPES_H_
-#define ODP_RWLOCK_RECURSIVE_TYPES_H_
+#ifndef ODP_ABI_RWLOCK_RECURSIVE_H_
+#define ODP_ABI_RWLOCK_RECURSIVE_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,14 +22,12 @@ extern "C" {
 #include <odp/api/thread.h>
 
 /** @internal */
-struct odp_rwlock_recursive_s {
+typedef struct odp_rwlock_recursive_s {
 	odp_rwlock_t lock;                     /**< the lock */
 	int wr_owner;                          /**< write owner thread */
 	uint32_t wr_cnt;                       /**< write recursion count */
 	uint8_t  rd_cnt[ODP_THREAD_COUNT_MAX]; /**< read recursion count */
-};
-
-typedef struct odp_rwlock_recursive_s odp_rwlock_recursive_t;
+} odp_rwlock_recursive_t;
 
 #ifdef __cplusplus
 }
