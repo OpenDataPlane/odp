@@ -4,28 +4,22 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
  * ODP schedule
  */
 
-#ifndef ODP_SCHEDULE_TYPES_H_
-#define ODP_SCHEDULE_TYPES_H_
+#ifndef ODP_ABI_SCHEDULE_TYPES_H_
+#define ODP_ABI_SCHEDULE_TYPES_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <odp/api/std_types.h>
-
 /** @addtogroup odp_scheduler
  *  @{
  */
-
-#define ODP_SCHED_WAIT     UINT64_MAX
-#define ODP_SCHED_NO_WAIT  0
 
 typedef int odp_schedule_prio_t;
 
@@ -50,8 +44,6 @@ typedef int odp_schedule_group_t;
 #define ODP_SCHED_GROUP_ALL     0
 #define ODP_SCHED_GROUP_WORKER  1
 #define ODP_SCHED_GROUP_CONTROL 2
-
-#define ODP_SCHED_GROUP_NAME_LEN 32
 
 /**
  * @}
