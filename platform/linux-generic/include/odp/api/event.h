@@ -10,22 +10,14 @@
  * ODP event
  */
 
-#ifndef ODP_PLAT_EVENT_H_
-#define ODP_PLAT_EVENT_H_
+#ifndef ODP_API_EVENT_H_
+#define ODP_API_EVENT_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <odp/api/plat/event_types.h>
-
-/** @ingroup odp_event
- *  @{
- */
-
-/**
- * @}
- */
+#include <odp/api/abi/event.h>
 
 #include <odp/api/spec/event.h>
 

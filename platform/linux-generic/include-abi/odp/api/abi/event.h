@@ -11,19 +11,13 @@
  * ODP event
  */
 
-#ifndef ODP_EVENT_TYPES_H_
-#define ODP_EVENT_TYPES_H_
+#ifndef ODP_API_ABI_EVENT_H_
+#define ODP_API_ABI_EVENT_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <odp/api/plat/static_inline.h>
-#if ODP_ABI_COMPAT == 1
-#include <odp/api/abi/event.h>
-#else
-
-#include <odp/api/std_types.h>
 #include <odp/api/plat/strong_types.h>
 
 /** @ingroup odp_event
@@ -52,8 +46,6 @@ typedef enum odp_event_subtype_t {
 /**
  * @}
  */
-
-#endif
 
 #ifdef __cplusplus
 }
