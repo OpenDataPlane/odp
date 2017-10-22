@@ -10,17 +10,12 @@
  * ODP classification descriptor
  */
 
-#ifndef ODP_CLASSIFICATION_TYPES_H_
-#define ODP_CLASSIFICATION_TYPES_H_
+#ifndef ODP_API_ABI_CLASSIFICATION_H_
+#define ODP_API_ABI_CLASSIFICATION_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/plat/static_inline.h>
-#if ODP_ABI_COMPAT == 1
-#include <odp/api/abi/classification.h>
-#else
 
 #include <odp/api/plat/strong_types.h>
 
@@ -39,8 +34,6 @@ typedef ODP_HANDLE_T(odp_pmr_t);
 /**
  * @}
  */
-
-#endif
 
 #ifdef __cplusplus
 }
