@@ -33,11 +33,6 @@ extern "C" {
  */
 
 /**
- * @typedef odp_queue_group_t
- * Queue group instance type
- */
-
-/**
  * @def ODP_QUEUE_INVALID
  * Invalid queue
  */

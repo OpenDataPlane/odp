@@ -23,18 +23,6 @@ extern "C" {
 #include <odp/api/plat/buffer_types.h>
 #include <odp/api/plat/pool_types.h>
 
-/** @ingroup odp_queue
- *  @{
- */
-
-/* REMOVE FROM API SPEC. Typedef needed only for suppressing Doxygen
- * warning. */
-typedef void odp_queue_group_t;
-
-/**
- * @}
- */
-
 #include <odp/api/spec/queue.h>
 
 #ifdef __cplusplus
