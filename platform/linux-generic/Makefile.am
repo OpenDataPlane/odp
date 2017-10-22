@@ -99,8 +99,7 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/ticketlock_types.h \
 		  include/odp/api/plat/time_types.h \
 		  include/odp/api/plat/timer_types.h \
-		  include/odp/api/plat/traffic_mngr_types.h \
-		  include/odp/api/plat/version_types.h
+		  include/odp/api/plat/traffic_mngr_types.h
 
 nodist_odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/static_inline.h
@@ -118,7 +117,8 @@ odpapiabiarchinclude_HEADERS = \
 		  include-abi/odp/api/abi/ipsec.h \
 		  include-abi/odp/api/abi/packet_io.h \
 		  include-abi/odp/api/abi/queue.h \
-		  include-abi/odp/api/abi/shared_memory.h
+		  include-abi/odp/api/abi/shared_memory.h \
+		  include-abi/odp/api/abi/version.h
 endif
 
 noinst_HEADERS = \
