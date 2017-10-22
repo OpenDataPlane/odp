@@ -13,10 +13,11 @@
 #ifndef _ODP_PLAT_PACKET_INLINES_H_
 #define _ODP_PLAT_PACKET_INLINES_H_
 
+#include <odp/api/plat/strong_types.h>
 #include <odp/api/plat/packet_types.h>
 #include <odp/api/pool.h>
 #include <odp/api/time.h>
-#include <odp/api/plat/packet_io_types.h>
+#include <odp/api/abi/packet_io.h>
 #include <odp/api/abi/buffer.h>
 #include <odp/api/hints.h>
 

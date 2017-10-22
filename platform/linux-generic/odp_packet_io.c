@@ -1827,3 +1827,9 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 
 	return entry->s.ops->send(entry, queue.index, packets, num);
 }
+
+/** Get printable format of odp_pktio_t */
+uint64_t odp_pktio_to_u64(odp_pktio_t hdl)
+{
+	return _odp_pri(hdl);
+}
