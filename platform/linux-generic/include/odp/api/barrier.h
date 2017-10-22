@@ -19,7 +19,7 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 #include <odp/api/atomic.h>
-#include <odp/api/plat/shared_memory_types.h>
+#include <odp/api/abi/shared_memory.h>
 #include <odp/api/plat/barrier_types.h>
 
 #include <odp/api/spec/barrier.h>
