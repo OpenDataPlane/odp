@@ -6,8 +6,8 @@
 
 #include "config.h"
 
-#include <odp/api/plat/packet_inlines.h>
 #include <odp/api/packet.h>
+#include <odp/api/plat/packet_inlines.h>
 #include <odp_packet_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>

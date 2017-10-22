@@ -10,8 +10,8 @@
  * ODP packet IO stats
  */
 
-#ifndef ODP_PLAT_PACKET_IO_STATS_H_
-#define ODP_PLAT_PACKET_IO_STATS_H_
+#ifndef ODP_API_PACKET_IO_STATS_H_
+#define ODP_API_PACKET_IO_STATS_H_
 
 #ifdef __cplusplus
 extern "C" {

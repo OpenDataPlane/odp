@@ -10,8 +10,8 @@
  * ODP packet descriptor
  */
 
-#ifndef ODP_PLAT_PACKET_H_
-#define ODP_PLAT_PACKET_H_
+#ifndef ODP_API_PACKET_H_
+#define ODP_API_PACKET_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,14 +20,9 @@ extern "C" {
 #include <odp/api/std_types.h>
 #include <odp/api/abi/event.h>
 #include <odp/api/abi/packet_io.h>
-#include <odp/api/plat/packet_types.h>
+#include <odp/api/abi/packet.h>
 #include <odp/api/abi/buffer.h>
 #include <odp/api/abi/pool.h>
-
-#include <odp/api/plat/static_inline.h>
-#if ODP_ABI_COMPAT == 0
-#include <odp/api/plat/packet_inlines.h>
-#endif
 
 #include <odp/api/spec/packet.h>
 

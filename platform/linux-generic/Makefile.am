@@ -79,9 +79,9 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/byteorder_inlines.h \
 		  include/odp/api/plat/packet_flag_inlines.h \
 		  include/odp/api/plat/packet_flag_inlines_api.h \
+		  include/odp/api/plat/packet_inline_types.h \
 		  include/odp/api/plat/packet_inlines.h \
 		  include/odp/api/plat/packet_inlines_api.h \
-		  include/odp/api/plat/packet_types.h \
 		  include/odp/api/plat/pool_inline_types.h \
 		  include/odp/api/plat/std_clib_inlines.h \
 		  include/odp/api/plat/strong_types.h \
@@ -106,6 +106,8 @@ odpapiabiarchinclude_HEADERS = \
 		  include-abi/odp/api/abi/event.h \
 		  include-abi/odp/api/abi/init.h \
 		  include-abi/odp/api/abi/ipsec.h \
+		  include-abi/odp/api/abi/packet.h \
+		  include-abi/odp/api/abi/packet_flags.h \
 		  include-abi/odp/api/abi/packet_io.h \
 		  include-abi/odp/api/abi/pool.h \
 		  include-abi/odp/api/abi/queue.h \
