@@ -10,17 +10,12 @@
  * ODP pool
  */
 
-#ifndef ODP_POOL_TYPES_H_
-#define ODP_POOL_TYPES_H_
+#ifndef ODP_API_ABI_POOL_H_
+#define ODP_API_ABI_POOL_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/plat/static_inline.h>
-#if ODP_ABI_COMPAT == 1
-#include <odp/api/abi/pool.h>
-#else
 
 #include <odp/api/std_types.h>
 #include <odp/api/plat/strong_types.h>
@@ -45,21 +40,6 @@ typedef enum odp_pool_type_t {
 /**
  * @}
  */
-
-#endif
-
-/** @internal Pool field accessor */
-#define _odp_pool_get(pool, cast, field) \
-	(*(cast *)(uintptr_t)((uint8_t *)pool + _odp_pool_inline.field))
-
-/** @internal Pool header field offsets for inline functions */
-typedef struct _odp_pool_inline_offset_t {
-	/** @internal field offset */
-	uint16_t pool_hdl;
-	/** @internal field offset */
-	uint16_t uarea_size;
-
-} _odp_pool_inline_offset_t;
 
 #ifdef __cplusplus
 }

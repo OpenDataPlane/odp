@@ -21,7 +21,7 @@ extern "C" {
 #include <odp/api/plat/packet_types.h>
 #include <odp/api/abi/crypto.h>
 #include <odp/api/abi/buffer.h>
-#include <odp/api/plat/pool_types.h>
+#include <odp/api/abi/pool.h>
 #include <odp/api/queue.h>
 
 /** @ingroup odp_crypto
