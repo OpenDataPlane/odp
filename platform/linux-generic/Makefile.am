@@ -80,7 +80,6 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/byteorder_inlines.h \
 		  include/odp/api/plat/byteorder_types.h \
 		  include/odp/api/plat/cpumask_types.h \
-		  include/odp/api/plat/crypto_types.h \
 		  include/odp/api/plat/event_types.h \
 		  include/odp/api/plat/init_types.h \
 		  include/odp/api/plat/ipsec_types.h \
@@ -118,7 +117,8 @@ if !ODP_ABI_COMPAT
 odpapiabiarchincludedir = $(archincludedir)/odp/api/abi
 odpapiabiarchinclude_HEADERS = \
 		  include-abi/odp/api/abi/buffer.h \
-		  include-abi/odp/api/abi/classification.h
+		  include-abi/odp/api/abi/classification.h \
+		  include-abi/odp/api/abi/crypto.h
 endif
 
 noinst_HEADERS = \
