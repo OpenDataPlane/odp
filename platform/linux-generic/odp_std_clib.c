@@ -7,6 +7,7 @@
 #include "config.h"
 
 #include <odp/api/std_clib.h>
+#include <odp/api/plat/static_inline.h>
 #if ODP_ABI_COMPAT == 1
 #include <odp/api/plat/std_clib_inlines.h>
 #endif
