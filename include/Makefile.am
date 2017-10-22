@@ -65,6 +65,9 @@ odpapiabidefaultinclude_HEADERS = \
 	odp/api/abi-default/queue.h \
 	odp/api/abi-default/shared_memory.h
 
+# Insall ABI headers only if required
+if ODP_ABI_COMPAT
+
 odpapiabiarchincludedir= $(includedir)/odp/api/abi
 if ARCH_IS_ARM
 odpapiabiarchinclude_HEADERS = \
@@ -132,6 +135,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_64-linux/odp/api/abi/queue.h \
 	odp/arch/x86_64-linux/odp/api/abi/shared_memory.h
 endif
+endif # ODP_ABI_COMPAT
 
 # Rerefence all nodist_*_HEADERS here
 .PHONY: $(nodist_odpapispecinclude_HEADERS)
