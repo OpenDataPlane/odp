@@ -24,19 +24,6 @@ extern "C" {
 #include <odp/api/plat/packet_io_types.h>
 #include <odp/api/plat/queue_types.h>
 
-/** @ingroup odp_classification
- *  @{
- */
-
-/* REMOVE THESE FROM API SPEC. Typedefs needed only for suppressing Doxygen
- * warning. */
-typedef void odp_flowsig_t;
-typedef void odp_cos_flow_set_t;
-
-/**
- * @}
- */
-
 #include <odp/api/spec/classification.h>
 
 #ifdef __cplusplus
