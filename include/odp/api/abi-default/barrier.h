@@ -10,8 +10,8 @@
  * ODP barrier
  */
 
-#ifndef ODP_BARRIER_TYPES_H_
-#define ODP_BARRIER_TYPES_H_
+#ifndef ODP_ABI_BARRIER_H_
+#define ODP_ABI_BARRIER_H_
 
 #ifdef __cplusplus
 extern "C" {
