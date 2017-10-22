@@ -17,7 +17,7 @@
 #include <odp/api/pool.h>
 #include <odp/api/time.h>
 #include <odp/api/plat/packet_io_types.h>
-#include <odp/api/plat/buffer_types.h>
+#include <odp/api/abi/buffer.h>
 #include <odp/api/hints.h>
 
 /** @internal Inline function @param pkt_ptr @param offset @param seg_len
