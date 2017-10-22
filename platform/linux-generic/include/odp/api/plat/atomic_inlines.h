@@ -109,130 +109,281 @@ _ODP_INLINE void odp_atomic_min_u32(odp_atomic_u32_t *atom, uint32_t new_min)
 	}
 }
 
+#ifdef ODP_ATOMIC_U64_LOCK
+
+/**
+ * @internal
+ * CAS operation expression for the ATOMIC_OP macro
+ */
+#define ATOMIC_CAS_OP(ret_ptr, old_val, new_val) \
+({ \
+	if (atom->v == (old_val)) { \
+		atom->v = (new_val); \
+		*(ret_ptr) = 1; \
+	} else { \
+		*(ret_ptr) = 0; \
+	} \
+})
+
+/**
+ * @internal
+ * Helper macro for lock-based atomic operations on 64-bit integers
+ * @param[in,out] atom Pointer to the 64-bit atomic variable
+ * @param expr Expression used update the variable.
+ * @return The old value of the variable.
+ */
+#define ATOMIC_OP(atom, expr) \
+({ \
+	uint64_t _old_val; \
+	/* Loop while lock is already taken, stop when lock becomes clear */ \
+	while (__atomic_test_and_set(&(atom)->lock, __ATOMIC_ACQUIRE)) \
+		(void)0; \
+	_old_val = (atom)->v; \
+	(expr); /* Perform whatever update is desired */ \
+	__atomic_clear(&(atom)->lock, __ATOMIC_RELEASE); \
+	_old_val; /* Return old value */ \
+})
+
 _ODP_INLINE void odp_atomic_init_u64(odp_atomic_u64_t *atom, uint64_t val)
 {
 	atom->v = val;
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	__atomic_clear(&atom->lock, __ATOMIC_RELAXED);
-#endif
 }
 
 _ODP_INLINE uint64_t odp_atomic_load_u64(odp_atomic_u64_t *atom)
 {
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	return ATOMIC_OP(atom, (void)0);
-#else
-	return __atomic_load_n(&atom->v, __ATOMIC_RELAXED);
-#endif
 }
 
 _ODP_INLINE void odp_atomic_store_u64(odp_atomic_u64_t *atom, uint64_t val)
 {
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	(void)ATOMIC_OP(atom, atom->v = val);
-#else
-	__atomic_store_n(&atom->v, val, __ATOMIC_RELAXED);
-#endif
 }
 
 _ODP_INLINE uint64_t odp_atomic_fetch_add_u64(odp_atomic_u64_t *atom,
 					      uint64_t val)
 {
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	return ATOMIC_OP(atom, atom->v += val);
-#else
-	return __atomic_fetch_add(&atom->v, val, __ATOMIC_RELAXED);
-#endif
 }
 
 _ODP_INLINE void odp_atomic_add_u64(odp_atomic_u64_t *atom, uint64_t val)
 {
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	(void)ATOMIC_OP(atom, atom->v += val);
-#else
-	(void)__atomic_fetch_add(&atom->v, val, __ATOMIC_RELAXED);
-#endif
 }
 
 _ODP_INLINE uint64_t odp_atomic_fetch_sub_u64(odp_atomic_u64_t *atom,
 					      uint64_t val)
 {
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	return ATOMIC_OP(atom, atom->v -= val);
-#else
-	return __atomic_fetch_sub(&atom->v, val, __ATOMIC_RELAXED);
-#endif
 }
 
 _ODP_INLINE void odp_atomic_sub_u64(odp_atomic_u64_t *atom, uint64_t val)
 {
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	(void)ATOMIC_OP(atom, atom->v -= val);
-#else
-	(void)__atomic_fetch_sub(&atom->v, val, __ATOMIC_RELAXED);
-#endif
 }
 
 _ODP_INLINE uint64_t odp_atomic_fetch_inc_u64(odp_atomic_u64_t *atom)
 {
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	return ATOMIC_OP(atom, atom->v++);
-#else
-	return __atomic_fetch_add(&atom->v, 1, __ATOMIC_RELAXED);
-#endif
 }
 
 _ODP_INLINE void odp_atomic_inc_u64(odp_atomic_u64_t *atom)
 {
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	(void)ATOMIC_OP(atom, atom->v++);
-#else
-	(void)__atomic_fetch_add(&atom->v, 1, __ATOMIC_RELAXED);
-#endif
 }
 
 _ODP_INLINE uint64_t odp_atomic_fetch_dec_u64(odp_atomic_u64_t *atom)
 {
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	return ATOMIC_OP(atom, atom->v--);
-#else
-	return __atomic_fetch_sub(&atom->v, 1, __ATOMIC_RELAXED);
-#endif
 }
 
 _ODP_INLINE void odp_atomic_dec_u64(odp_atomic_u64_t *atom)
 {
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	(void)ATOMIC_OP(atom, atom->v--);
-#else
-	(void)__atomic_fetch_sub(&atom->v, 1, __ATOMIC_RELAXED);
-#endif
 }
 
 _ODP_INLINE int odp_atomic_cas_u64(odp_atomic_u64_t *atom, uint64_t *old_val,
 				   uint64_t new_val)
 {
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	int ret;
 	*old_val = ATOMIC_OP(atom, ATOMIC_CAS_OP(&ret, *old_val, new_val));
 	return ret;
-#else
-	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
-					   0 /* strong */,
-					   __ATOMIC_RELAXED,
-					   __ATOMIC_RELAXED);
-#endif
 }
 
 _ODP_INLINE uint64_t odp_atomic_xchg_u64(odp_atomic_u64_t *atom,
 					 uint64_t new_val)
 {
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	return ATOMIC_OP(atom, atom->v = new_val);
-#else
-	return __atomic_exchange_n(&atom->v, new_val, __ATOMIC_RELAXED);
-#endif
 }
+
+_ODP_INLINE uint64_t odp_atomic_load_acq_u64(odp_atomic_u64_t *atom)
+{
+	return ATOMIC_OP(atom, (void)0);
+}
+
+_ODP_INLINE void odp_atomic_store_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	(void)ATOMIC_OP(atom, atom->v = val);
+}
+
+_ODP_INLINE void odp_atomic_add_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	(void)ATOMIC_OP(atom, atom->v += val);
+}
+
+_ODP_INLINE void odp_atomic_sub_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	(void)ATOMIC_OP(atom, atom->v -= val);
+}
+
+_ODP_INLINE int odp_atomic_cas_acq_u64(odp_atomic_u64_t *atom,
+				       uint64_t *old_val, uint64_t new_val)
+{
+	int ret;
+	*old_val = ATOMIC_OP(atom, ATOMIC_CAS_OP(&ret, *old_val, new_val));
+	return ret;
+}
+
+_ODP_INLINE int odp_atomic_cas_rel_u64(odp_atomic_u64_t *atom,
+				       uint64_t *old_val, uint64_t new_val)
+{
+	int ret;
+	*old_val = ATOMIC_OP(atom, ATOMIC_CAS_OP(&ret, *old_val, new_val));
+	return ret;
+}
+
+_ODP_INLINE int odp_atomic_cas_acq_rel_u64(odp_atomic_u64_t *atom,
+					   uint64_t *old_val,
+					   uint64_t new_val)
+{
+	int ret;
+	*old_val = ATOMIC_OP(atom, ATOMIC_CAS_OP(&ret, *old_val, new_val));
+	return ret;
+}
+
+#else /* !ODP_ATOMIC_U64_LOCK */
+
+_ODP_INLINE void odp_atomic_init_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	atom->v = val;
+}
+
+_ODP_INLINE uint64_t odp_atomic_load_u64(odp_atomic_u64_t *atom)
+{
+	return __atomic_load_n(&atom->v, __ATOMIC_RELAXED);
+}
+
+_ODP_INLINE void odp_atomic_store_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	__atomic_store_n(&atom->v, val, __ATOMIC_RELAXED);
+}
+
+_ODP_INLINE uint64_t odp_atomic_fetch_add_u64(odp_atomic_u64_t *atom,
+					      uint64_t val)
+{
+	return __atomic_fetch_add(&atom->v, val, __ATOMIC_RELAXED);
+}
+
+_ODP_INLINE void odp_atomic_add_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	(void)__atomic_fetch_add(&atom->v, val, __ATOMIC_RELAXED);
+}
+
+_ODP_INLINE uint64_t odp_atomic_fetch_sub_u64(odp_atomic_u64_t *atom,
+					      uint64_t val)
+{
+	return __atomic_fetch_sub(&atom->v, val, __ATOMIC_RELAXED);
+}
+
+_ODP_INLINE void odp_atomic_sub_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	(void)__atomic_fetch_sub(&atom->v, val, __ATOMIC_RELAXED);
+}
+
+_ODP_INLINE uint64_t odp_atomic_fetch_inc_u64(odp_atomic_u64_t *atom)
+{
+	return __atomic_fetch_add(&atom->v, 1, __ATOMIC_RELAXED);
+}
+
+_ODP_INLINE void odp_atomic_inc_u64(odp_atomic_u64_t *atom)
+{
+	(void)__atomic_fetch_add(&atom->v, 1, __ATOMIC_RELAXED);
+}
+
+_ODP_INLINE uint64_t odp_atomic_fetch_dec_u64(odp_atomic_u64_t *atom)
+{
+	return __atomic_fetch_sub(&atom->v, 1, __ATOMIC_RELAXED);
+}
+
+_ODP_INLINE void odp_atomic_dec_u64(odp_atomic_u64_t *atom)
+{
+	(void)__atomic_fetch_sub(&atom->v, 1, __ATOMIC_RELAXED);
+}
+
+_ODP_INLINE int odp_atomic_cas_u64(odp_atomic_u64_t *atom, uint64_t *old_val,
+				   uint64_t new_val)
+{
+	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
+					   0 /* strong */,
+					   __ATOMIC_RELAXED,
+					   __ATOMIC_RELAXED);
+}
+
+_ODP_INLINE uint64_t odp_atomic_xchg_u64(odp_atomic_u64_t *atom,
+					 uint64_t new_val)
+{
+	return __atomic_exchange_n(&atom->v, new_val, __ATOMIC_RELAXED);
+}
+
+_ODP_INLINE uint64_t odp_atomic_load_acq_u64(odp_atomic_u64_t *atom)
+{
+	return __atomic_load_n(&atom->v, __ATOMIC_ACQUIRE);
+}
+
+_ODP_INLINE void odp_atomic_store_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	__atomic_store_n(&atom->v, val, __ATOMIC_RELEASE);
+}
+
+_ODP_INLINE void odp_atomic_add_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	(void)__atomic_fetch_add(&atom->v, val, __ATOMIC_RELEASE);
+}
+
+_ODP_INLINE void odp_atomic_sub_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	(void)__atomic_fetch_sub(&atom->v, val, __ATOMIC_RELEASE);
+}
+
+_ODP_INLINE int odp_atomic_cas_acq_u64(odp_atomic_u64_t *atom,
+				       uint64_t *old_val, uint64_t new_val)
+{
+	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
+					   0 /* strong */,
+					   __ATOMIC_ACQUIRE,
+					   __ATOMIC_RELAXED);
+}
+
+_ODP_INLINE int odp_atomic_cas_rel_u64(odp_atomic_u64_t *atom,
+				       uint64_t *old_val, uint64_t new_val)
+{
+	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
+					   0 /* strong */,
+					   __ATOMIC_RELEASE,
+					   __ATOMIC_RELAXED);
+}
+
+_ODP_INLINE int odp_atomic_cas_acq_rel_u64(odp_atomic_u64_t *atom,
+					   uint64_t *old_val,
+					   uint64_t new_val)
+{
+	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
+					   0 /* strong */,
+					   __ATOMIC_ACQ_REL,
+					   __ATOMIC_RELAXED);
+}
+
+#endif /* !ODP_ATOMIC_U64_LOCK */
 
 _ODP_INLINE void odp_atomic_max_u64(odp_atomic_u64_t *atom, uint64_t new_max)
 {
@@ -304,88 +455,6 @@ _ODP_INLINE int odp_atomic_cas_acq_rel_u32(odp_atomic_u32_t *atom,
 					   0 /* strong */,
 					   __ATOMIC_ACQ_REL,
 					   __ATOMIC_RELAXED);
-}
-
-_ODP_INLINE uint64_t odp_atomic_load_acq_u64(odp_atomic_u64_t *atom)
-{
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	return ATOMIC_OP(atom, (void)0);
-#else
-	return __atomic_load_n(&atom->v, __ATOMIC_ACQUIRE);
-#endif
-}
-
-_ODP_INLINE void odp_atomic_store_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
-{
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	(void)ATOMIC_OP(atom, atom->v = val);
-#else
-	__atomic_store_n(&atom->v, val, __ATOMIC_RELEASE);
-#endif
-}
-
-_ODP_INLINE void odp_atomic_add_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
-{
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	(void)ATOMIC_OP(atom, atom->v += val);
-#else
-	(void)__atomic_fetch_add(&atom->v, val, __ATOMIC_RELEASE);
-#endif
-}
-
-_ODP_INLINE void odp_atomic_sub_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
-{
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	(void)ATOMIC_OP(atom, atom->v -= val);
-#else
-	(void)__atomic_fetch_sub(&atom->v, val, __ATOMIC_RELEASE);
-#endif
-}
-
-_ODP_INLINE int odp_atomic_cas_acq_u64(odp_atomic_u64_t *atom,
-				       uint64_t *old_val, uint64_t new_val)
-{
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	int ret;
-	*old_val = ATOMIC_OP(atom, ATOMIC_CAS_OP(&ret, *old_val, new_val));
-	return ret;
-#else
-	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
-					   0 /* strong */,
-					   __ATOMIC_ACQUIRE,
-					   __ATOMIC_RELAXED);
-#endif
-}
-
-_ODP_INLINE int odp_atomic_cas_rel_u64(odp_atomic_u64_t *atom,
-				       uint64_t *old_val, uint64_t new_val)
-{
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	int ret;
-	*old_val = ATOMIC_OP(atom, ATOMIC_CAS_OP(&ret, *old_val, new_val));
-	return ret;
-#else
-	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
-					   0 /* strong */,
-					   __ATOMIC_RELEASE,
-					   __ATOMIC_RELAXED);
-#endif
-}
-
-_ODP_INLINE int odp_atomic_cas_acq_rel_u64(odp_atomic_u64_t *atom,
-					   uint64_t *old_val,
-					   uint64_t new_val)
-{
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	int ret;
-	*old_val = ATOMIC_OP(atom, ATOMIC_CAS_OP(&ret, *old_val, new_val));
-	return ret;
-#else
-	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
-					   0 /* strong */,
-					   __ATOMIC_ACQ_REL,
-					   __ATOMIC_RELAXED);
-#endif
 }
 
 #endif
