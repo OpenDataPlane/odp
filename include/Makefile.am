@@ -65,7 +65,7 @@ odpapiabidefaultinclude_HEADERS = \
 	odp/api/abi-default/queue.h \
 	odp/api/abi-default/shared_memory.h
 
-odpapiabiarchincludedir= $(includedir)/odp/arch/@ARCH_ABI@/odp/api/abi
+odpapiabiarchincludedir= $(includedir)/odp/api/abi
 if ARCH_IS_ARM
 odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm32-linux/odp/api/abi/buffer.h \
@@ -132,16 +132,6 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_64-linux/odp/api/abi/queue.h \
 	odp/arch/x86_64-linux/odp/api/abi/shared_memory.h
 endif
-
-# Create symlink for ABI header files. Application does not need to use the arch
-# specific include path for installed files.
-install-data-hook:
-	if [ -h $(DESTDIR)$(prefix)/include/odp/api/abi ]; then \
-		: ; \
-	else \
-		$(LN_S) -rf $(DESTDIR)$(prefix)/include/odp/arch/@ARCH_ABI@/odp/api/abi \
-			$(DESTDIR)$(prefix)/include/odp/api/abi; \
-	fi
 
 # Rerefence all nodist_*_HEADERS here
 .PHONY: $(nodist_odpapispecinclude_HEADERS)
