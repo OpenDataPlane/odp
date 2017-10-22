@@ -75,6 +75,7 @@ odpapiabidefaultinclude_HEADERS = \
 	odp/api/abi-default/spinlock_recursive.h \
 	odp/api/abi-default/thread.h \
 	odp/api/abi-default/thrmask.h \
+	odp/api/abi-default/time.h \
 	odp/api/abi-default/version.h
 
 # Insall ABI headers only if required
@@ -102,6 +103,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm32-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/arm32-linux/odp/api/abi/thread.h \
 	odp/arch/arm32-linux/odp/api/abi/thrmask.h \
+	odp/arch/arm32-linux/odp/api/abi/time.h \
 	odp/arch/arm32-linux/odp/api/abi/version.h
 endif
 if ARCH_IS_AARCH64
@@ -125,6 +127,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm64-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/arm64-linux/odp/api/abi/thread.h \
 	odp/arch/arm64-linux/odp/api/abi/thrmask.h \
+	odp/arch/arm64-linux/odp/api/abi/time.h \
 	odp/arch/arm64-linux/odp/api/abi/version.h
 endif
 if ARCH_IS_MIPS64
@@ -148,6 +151,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/mips64-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/mips64-linux/odp/api/abi/thread.h \
 	odp/arch/mips64-linux/odp/api/abi/thrmask.h \
+	odp/arch/mips64-linux/odp/api/abi/time.h \
 	odp/arch/mips64-linux/odp/api/abi/version.h
 endif
 if ARCH_IS_POWERPC
@@ -171,6 +175,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/power64-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/power64-linux/odp/api/abi/thread.h \
 	odp/arch/power64-linux/odp/api/abi/thrmask.h \
+	odp/arch/power64-linux/odp/api/abi/time.h \
 	odp/arch/power64-linux/odp/api/abi/version.h
 endif
 if ARCH_IS_X86_32
@@ -194,6 +199,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_32-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/x86_32-linux/odp/api/abi/thread.h \
 	odp/arch/x86_32-linux/odp/api/abi/thrmask.h \
+	odp/arch/x86_32-linux/odp/api/abi/time.h \
 	odp/arch/x86_32-linux/odp/api/abi/version.h
 endif
 if ARCH_IS_X86_64
@@ -217,6 +223,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_64-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/x86_64-linux/odp/api/abi/thread.h \
 	odp/arch/x86_64-linux/odp/api/abi/thrmask.h \
+	odp/arch/x86_64-linux/odp/api/abi/time.h \
 	odp/arch/x86_64-linux/odp/api/abi/version.h
 endif
 endif # ODP_ABI_COMPAT
