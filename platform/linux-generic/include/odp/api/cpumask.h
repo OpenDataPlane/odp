@@ -10,14 +10,14 @@
  * ODP CPU masks and enumeration
  */
 
-#ifndef ODP_PLAT_CPUMASK_H_
-#define ODP_PLAT_CPUMASK_H_
+#ifndef ODP_API_CPUMASK_H_
+#define ODP_API_CPUMASK_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <odp/api/plat/cpumask_types.h>
+#include <odp/api/abi/cpumask.h>
 
 #include <odp/api/spec/cpumask.h>
 

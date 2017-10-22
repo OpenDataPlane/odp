@@ -59,6 +59,7 @@ odpapiabidefaultinclude_HEADERS = \
 	odp/api/abi-default/barrier.h \
 	odp/api/abi-default/buffer.h \
 	odp/api/abi-default/classification.h \
+	odp/api/abi-default/cpumask.h \
 	odp/api/abi-default/crypto.h \
 	odp/api/abi-default/event.h \
 	odp/api/abi-default/packet.h \
@@ -75,6 +76,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm32-linux/odp/api/abi/barrier.h \
 	odp/arch/arm32-linux/odp/api/abi/buffer.h \
 	odp/arch/arm32-linux/odp/api/abi/classification.h \
+	odp/arch/arm32-linux/odp/api/abi/cpumask.h \
 	odp/arch/arm32-linux/odp/api/abi/crypto.h \
 	odp/arch/arm32-linux/odp/api/abi/event.h \
 	odp/arch/arm32-linux/odp/api/abi/packet.h \
@@ -87,6 +89,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm64-linux/odp/api/abi/barrier.h \
 	odp/arch/arm64-linux/odp/api/abi/buffer.h \
 	odp/arch/arm64-linux/odp/api/abi/classification.h \
+	odp/arch/arm64-linux/odp/api/abi/cpumask.h \
 	odp/arch/arm64-linux/odp/api/abi/crypto.h \
 	odp/arch/arm64-linux/odp/api/abi/event.h \
 	odp/arch/arm64-linux/odp/api/abi/packet.h \
@@ -99,6 +102,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/mips64-linux/odp/api/abi/barrier.h \
 	odp/arch/mips64-linux/odp/api/abi/buffer.h \
 	odp/arch/mips64-linux/odp/api/abi/classification.h \
+	odp/arch/mips64-linux/odp/api/abi/cpumask.h \
 	odp/arch/mips64-linux/odp/api/abi/crypto.h \
 	odp/arch/mips64-linux/odp/api/abi/event.h \
 	odp/arch/mips64-linux/odp/api/abi/packet.h \
@@ -111,6 +115,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/power64-linux/odp/api/abi/barrier.h \
 	odp/arch/power64-linux/odp/api/abi/buffer.h \
 	odp/arch/power64-linux/odp/api/abi/classification.h \
+	odp/arch/power64-linux/odp/api/abi/cpumask.h \
 	odp/arch/power64-linux/odp/api/abi/crypto.h \
 	odp/arch/power64-linux/odp/api/abi/event.h \
 	odp/arch/power64-linux/odp/api/abi/packet.h \
@@ -123,6 +128,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_32-linux/odp/api/abi/barrier.h \
 	odp/arch/x86_32-linux/odp/api/abi/buffer.h \
 	odp/arch/x86_32-linux/odp/api/abi/classification.h \
+	odp/arch/x86_32-linux/odp/api/abi/cpumask.h \
 	odp/arch/x86_32-linux/odp/api/abi/crypto.h \
 	odp/arch/x86_32-linux/odp/api/abi/event.h \
 	odp/arch/x86_32-linux/odp/api/abi/packet.h \
@@ -135,6 +141,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_64-linux/odp/api/abi/barrier.h \
 	odp/arch/x86_64-linux/odp/api/abi/buffer.h \
 	odp/arch/x86_64-linux/odp/api/abi/classification.h \
+	odp/arch/x86_64-linux/odp/api/abi/cpumask.h \
 	odp/arch/x86_64-linux/odp/api/abi/crypto.h \
 	odp/arch/x86_64-linux/odp/api/abi/event.h \
 	odp/arch/x86_64-linux/odp/api/abi/packet.h \
