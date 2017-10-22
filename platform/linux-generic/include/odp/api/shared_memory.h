@@ -10,22 +10,14 @@
  * ODP shared memory
  */
 
-#ifndef ODP_PLAT_SHARED_MEMORY_H_
-#define ODP_PLAT_SHARED_MEMORY_H_
+#ifndef ODP_API_SHARED_MEMORY_H_
+#define ODP_API_SHARED_MEMORY_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <odp/api/plat/shared_memory_types.h>
-
-/** @ingroup odp_shared_memory
- *  @{
- */
-
-/**
- * @}
- */
+#include <odp/api/abi/shared_memory.h>
 
 #include <odp/api/spec/shared_memory.h>
 

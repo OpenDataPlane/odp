@@ -11,17 +11,12 @@
  * ODP shared memory
  */
 
-#ifndef ODP_SHARED_MEMORY_TYPES_H_
-#define ODP_SHARED_MEMORY_TYPES_H_
+#ifndef ODP_API_ABI_SHARED_MEMORY_H_
+#define ODP_API_ABI_SHARED_MEMORY_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/plat/static_inline.h>
-#if ODP_ABI_COMPAT == 1
-#include <odp/api/abi/shared_memory.h>
-#else
 
 #include <odp/api/std_types.h>
 #include <odp/api/plat/strong_types.h>
@@ -40,8 +35,6 @@ typedef ODP_HANDLE_T(odp_shm_t);
 /**
  * @}
  */
-
-#endif
 
 #ifdef __cplusplus
 }
