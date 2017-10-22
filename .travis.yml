@@ -294,6 +294,14 @@ jobs:
                           - ./configure --prefix=$HOME/odp-install
                             --enable-user-guides
                           - sudo PATH="$PATH" LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make distcheck
+                - stage: test
+                  env: TEST=distcheck-non-abi
+                  compiler: gcc
+                  script:
+                          - ./bootstrap
+                          - ./configure --prefix=$HOME/odp-install
+                            --enable-user-guides
+                          - sudo PATH="$PATH" LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make distcheck DISTCHECK__CONFIGURE_FLAGS=--disable-abi-compat
                 - stage: "build only"
                   env: TEST=doxygen
                   compiler: gcc
