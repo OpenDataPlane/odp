@@ -32,11 +32,6 @@ extern "C" {
  */
 
 /**
- * @typedef odp_flowsig_t
- * flow signature type, only used for packet metadata field.
- */
-
-/**
  * @def ODP_COS_INVALID
  * This value is returned from odp_cls_cos_create() on failure,
  * May also be used as a sink class of service that
@@ -453,12 +448,6 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 			uint8_t qos_table[],
 			odp_cos_t cos_table[],
 			odp_bool_t l3_preference);
-
-/**
- * @typedef odp_cos_flow_set_t
- * Set of header fields that take part in flow signature hash calculation:
- * bit positions per odp_cos_hdr_flow_fields_t enumeration.
- */
 
 /**
  * @typedef odp_pmr_t
