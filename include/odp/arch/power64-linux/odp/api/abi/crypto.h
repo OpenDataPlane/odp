@@ -4,4 +4,4 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/arch/default/api/abi/crypto.h>
+#include <odp/api/abi-default/crypto.h>
