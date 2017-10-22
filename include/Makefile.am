@@ -79,6 +79,7 @@ odpapiabidefaultinclude_HEADERS = \
 	odp/api/abi-default/spinlock_recursive.h \
 	odp/api/abi-default/std_clib.h \
 	odp/api/abi-default/std_types.h \
+	odp/api/abi-default/sync.h \
 	odp/api/abi-default/thread.h \
 	odp/api/abi-default/thrmask.h \
 	odp/api/abi-default/time.h \
@@ -115,6 +116,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm32-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/arm32-linux/odp/api/abi/std_clib.h \
 	odp/arch/arm32-linux/odp/api/abi/std_types.h \
+	odp/arch/arm32-linux/odp/api/abi/sync.h \
 	odp/arch/arm32-linux/odp/api/abi/thread.h \
 	odp/arch/arm32-linux/odp/api/abi/thrmask.h \
 	odp/arch/arm32-linux/odp/api/abi/time.h \
@@ -147,6 +149,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm64-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/arm64-linux/odp/api/abi/std_clib.h \
 	odp/arch/arm64-linux/odp/api/abi/std_types.h \
+	odp/arch/arm64-linux/odp/api/abi/sync.h \
 	odp/arch/arm64-linux/odp/api/abi/thread.h \
 	odp/arch/arm64-linux/odp/api/abi/thrmask.h \
 	odp/arch/arm64-linux/odp/api/abi/time.h \
@@ -179,6 +182,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/mips64-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/mips64-linux/odp/api/abi/std_clib.h \
 	odp/arch/mips64-linux/odp/api/abi/std_types.h \
+	odp/arch/mips64-linux/odp/api/abi/sync.h \
 	odp/arch/mips64-linux/odp/api/abi/thread.h \
 	odp/arch/mips64-linux/odp/api/abi/thrmask.h \
 	odp/arch/mips64-linux/odp/api/abi/time.h \
@@ -211,6 +215,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/power64-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/power64-linux/odp/api/abi/std_clib.h \
 	odp/arch/power64-linux/odp/api/abi/std_types.h \
+	odp/arch/power64-linux/odp/api/abi/sync.h \
 	odp/arch/power64-linux/odp/api/abi/thread.h \
 	odp/arch/power64-linux/odp/api/abi/thrmask.h \
 	odp/arch/power64-linux/odp/api/abi/time.h \
@@ -243,6 +248,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_32-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/x86_32-linux/odp/api/abi/std_clib.h \
 	odp/arch/x86_32-linux/odp/api/abi/std_types.h \
+	odp/arch/x86_32-linux/odp/api/abi/sync.h \
 	odp/arch/x86_32-linux/odp/api/abi/thread.h \
 	odp/arch/x86_32-linux/odp/api/abi/thrmask.h \
 	odp/arch/x86_32-linux/odp/api/abi/time.h \
@@ -275,6 +281,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_64-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/x86_64-linux/odp/api/abi/std_clib.h \
 	odp/arch/x86_64-linux/odp/api/abi/std_types.h \
+	odp/arch/x86_64-linux/odp/api/abi/sync.h \
 	odp/arch/x86_64-linux/odp/api/abi/thread.h \
 	odp/arch/x86_64-linux/odp/api/abi/thrmask.h \
 	odp/arch/x86_64-linux/odp/api/abi/time.h \
