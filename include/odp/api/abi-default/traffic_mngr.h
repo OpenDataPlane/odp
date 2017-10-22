@@ -10,15 +10,14 @@
  * ODP traffic mngr
  */
 
-#ifndef ODP_TRAFFIC_MNGR_TYPES_H_
-#define ODP_TRAFFIC_MNGR_TYPES_H_
+#ifndef ODP_ABI_TRAFFIC_MNGR_H_
+#define ODP_ABI_TRAFFIC_MNGR_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <odp/api/std_types.h>
-#include <odp/api/plat/strong_types.h>
 
 /** @addtogroup odp_traffic_mngr
  *  Macros and operations on a TM system.
@@ -167,12 +166,6 @@ typedef odp_tm_handle_t odp_tm_wred_t;
  * tree/hierarchy of nodes.
  */
 #define ODP_TM_ROOT  ((odp_tm_handle_t)-1)
-
-/** @internal Get printable format of odp_tm_handle_t @param hdl @return */
-static inline uint64_t odp_tm_handle_to_u64(odp_tm_handle_t hdl)
-{
-	return hdl;
-}
 
 /**
  * @}
