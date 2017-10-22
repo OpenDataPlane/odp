@@ -32,6 +32,9 @@ typedef ODP_HANDLE_T(odp_packet_t);
 
 typedef uint8_t odp_packet_seg_t;
 
+/* or it will be provided by packet_inlines.h */
+#define _ODP_HAVE_PACKET_SEG_NDX	1
+
 static inline uint8_t _odp_packet_seg_to_ndx(odp_packet_seg_t seg)
 {
 	return (uint8_t)seg;
@@ -53,7 +56,7 @@ typedef enum {
 
 #define ODP_NUM_PACKET_COLORS 3
 
-#include <odp/api/plat/static_inline.h>
+#define _ODP_INLINE static inline
 #include <odp/api/plat/packet_inlines.h>
 #include <odp/api/plat/packet_inlines_api.h>
 

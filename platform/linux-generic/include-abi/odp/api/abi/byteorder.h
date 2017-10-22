@@ -75,7 +75,7 @@ typedef uint64_t __odp_bitwise	odp_u64be_t;
 typedef uint16_t __odp_bitwise  odp_u16sum_t;
 typedef uint32_t __odp_bitwise  odp_u32sum_t;
 
-#include <odp/api/plat/static_inline.h>
+#define _ODP_INLINE static inline
 #include <odp/api/plat/byteorder_inlines.h>
 
 /**
