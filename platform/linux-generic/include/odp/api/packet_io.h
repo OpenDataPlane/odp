@@ -19,7 +19,7 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 #include <odp/api/plat/pool_types.h>
-#include <odp/api/plat/classification_types.h>
+#include <odp/api/abi/classification.h>
 #include <odp/api/plat/packet_types.h>
 #include <odp/api/plat/packet_io_types.h>
 #include <odp/api/plat/queue_types.h>
