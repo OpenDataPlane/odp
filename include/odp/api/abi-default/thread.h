@@ -10,8 +10,8 @@
  * ODP thread
  */
 
-#ifndef ODP_THREAD_TYPES_H_
-#define ODP_THREAD_TYPES_H_
+#ifndef ODP_ABI_THREAD_H_
+#define ODP_ABI_THREAD_H_
 
 #ifdef __cplusplus
 extern "C" {
