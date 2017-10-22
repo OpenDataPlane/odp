@@ -10,14 +10,14 @@
  * ODP spinlock
  */
 
-#ifndef ODP_PLAT_SPINLOCK_H_
-#define ODP_PLAT_SPINLOCK_H_
+#ifndef ODP_API_SPINLOCK_H_
+#define ODP_API_SPINLOCK_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <odp/api/plat/spinlock_types.h>
+#include <odp/api/abi/spinlock.h>
 
 #include <odp/api/spec/spinlock.h>
 
