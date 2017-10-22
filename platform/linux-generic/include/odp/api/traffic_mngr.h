@@ -10,22 +10,15 @@
  * ODP Traffic manager
  */
 
-#ifndef ODP_PLAT_TRAFFIC_MNGR_H_
-#define ODP_PLAT_TRAFFIC_MNGR_H_
+#ifndef ODP_API_TRAFFIC_MNGR_H_
+#define ODP_API_TRAFFIC_MNGR_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** @ingroup odp_traffic_mngr
- *  @{
- */
+#include <odp/api/abi/traffic_mngr.h>
 
-/**
- * @}
- */
-
-#include <odp/api/plat/traffic_mngr_types.h>
 #include <odp/api/spec/traffic_mngr.h>
 
 #ifdef __cplusplus
