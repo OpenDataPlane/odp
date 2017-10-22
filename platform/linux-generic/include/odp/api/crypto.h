@@ -10,8 +10,8 @@
  * ODP crypto
  */
 
-#ifndef ODP_PLAT_CRYPTO_H_
-#define ODP_PLAT_CRYPTO_H_
+#ifndef ODP_API_CRYPTO_H_
+#define ODP_API_CRYPTO_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,7 +19,7 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 #include <odp/api/plat/packet_types.h>
-#include <odp/api/plat/crypto_types.h>
+#include <odp/api/abi/crypto.h>
 #include <odp/api/abi/buffer.h>
 #include <odp/api/plat/pool_types.h>
 #include <odp/api/queue.h>
