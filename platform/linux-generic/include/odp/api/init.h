@@ -10,22 +10,14 @@
  * ODP initialization.
  */
 
-#ifndef ODP_PLAT_INIT_H_
-#define ODP_PLAT_INIT_H_
+#ifndef ODP_API_INIT_H_
+#define ODP_API_INIT_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <odp/api/plat/init_types.h>
-
-/** @ingroup odp_initialization
- *  @{
- */
-
-/**
- * @}
- */
+#include <odp/api/abi/init.h>
 
 #include <odp/api/spec/init.h>
 
