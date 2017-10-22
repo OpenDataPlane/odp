@@ -10,8 +10,8 @@
  * ODP schedule types
  */
 
-#ifndef ODP_API_SCHEDULE_TYPES_H_
-#define ODP_API_SCHEDULE_TYPES_H_
+#ifndef ODP_API_SPEC_SCHEDULE_TYPES_H_
+#define ODP_API_SPEC_SCHEDULE_TYPES_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
