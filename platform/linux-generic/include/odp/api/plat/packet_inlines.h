@@ -16,6 +16,7 @@
 #include <odp/api/plat/strong_types.h>
 #include <odp/api/plat/packet_types.h>
 #include <odp/api/pool.h>
+#include <odp/api/plat/pool_inline_types.h>
 #include <odp/api/time.h>
 #include <odp/api/abi/packet_io.h>
 #include <odp/api/abi/buffer.h>

@@ -10,24 +10,17 @@
  * ODP pool
  */
 
-#ifndef ODP_PLAT_POOL_H_
-#define ODP_PLAT_POOL_H_
+#ifndef ODP_API_POOL_H_
+#define ODP_API_POOL_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** @ingroup odp_buffer
- *  @{
- */
-
-/**
- * @}
- */
-
-#include <odp/api/plat/pool_types.h>
+#include <odp/api/abi/pool.h>
 #include <odp/api/abi/shared_memory.h>
 #include <odp/api/abi/event.h>
+
 #include <odp/api/spec/pool.h>
 
 #ifdef __cplusplus
