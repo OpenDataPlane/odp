@@ -85,7 +85,6 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/packet_inlines_api.h \
 		  include/odp/api/plat/packet_types.h \
 		  include/odp/api/plat/pool_types.h \
-		  include/odp/api/plat/schedule_types.h \
 		  include/odp/api/plat/std_clib_inlines.h \
 		  include/odp/api/plat/strong_types.h \
 		  include/odp/api/plat/sync_inlines.h \
@@ -111,6 +110,8 @@ odpapiabiarchinclude_HEADERS = \
 		  include-abi/odp/api/abi/queue.h \
 		  include-abi/odp/api/abi/rwlock.h \
 		  include-abi/odp/api/abi/rwlock_recursive.h \
+		  include-abi/odp/api/abi/schedule.h \
+		  include-abi/odp/api/abi/schedule_types.h \
 		  include-abi/odp/api/abi/shared_memory.h \
 		  include-abi/odp/api/abi/spinlock.h \
 		  include-abi/odp/api/abi/spinlock_recursive.h \
