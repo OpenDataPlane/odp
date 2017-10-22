@@ -10,8 +10,8 @@
  * ODP buffer descriptor
  */
 
-#ifndef ODP_PLAT_BUFFER_H_
-#define ODP_PLAT_BUFFER_H_
+#ifndef ODP_API_BUFFER_H_
+#define ODP_API_BUFFER_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,16 +19,8 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 #include <odp/api/plat/event_types.h>
-#include <odp/api/plat/buffer_types.h>
+#include <odp/api/abi/buffer.h>
 #include <odp/api/plat/pool_types.h>
-
-/** @ingroup odp_buffer
- *  @{
- */
-
-/**
- * @}
- */
 
 #include <odp/api/spec/buffer.h>
 
