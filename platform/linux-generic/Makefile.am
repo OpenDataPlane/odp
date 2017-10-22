@@ -3,13 +3,8 @@
 
 include $(top_srcdir)/platform/Makefile.inc
 
-AM_CPPFLAGS =  -I$(srcdir)/include
-AM_CPPFLAGS +=  -I$(top_srcdir)/include
+AM_CPPFLAGS = $(ODP_INCLUDES)
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch
-AM_CPPFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
-AM_CPPFLAGS +=  -I$(top_builddir)/include
-AM_CPPFLAGS +=  -Iinclude
-AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/$(ARCH_DIR)
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/default
 AM_CPPFLAGS +=  -DSYSCONFDIR=\"@sysconfdir@\"
 

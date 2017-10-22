@@ -1,25 +1,17 @@
-TESTS_ENVIRONMENT = EXEEXT=${EXEEXT}
+include $(top_srcdir)/Makefile.inc
 
-LIB   = $(top_builddir)/lib
+TESTS_ENVIRONMENT = EXEEXT=${EXEEXT}
 
 #in the following line, the libs using the symbols should come before
 #the libs containing them! The includer is given a chance to add things
 #before libodp by setting PRE_LDADD before the inclusion.
 LDADD = $(PRE_LDADD) $(LIB)/libodphelper.la $(LIB)/libodp-linux.la
 
-INCFLAGS = \
-	-I$(top_builddir)/platform/@with_platform@/include \
-	-I$(top_srcdir)/helper/include \
-	-I$(top_srcdir)/include \
-	-I$(top_srcdir)/include/odp/arch/@ARCH_ABI@ \
-	-I$(top_srcdir)/platform/@with_platform@/include \
-	-I$(top_srcdir)/platform/@with_platform@/arch/@ARCH_DIR@ \
-	-I$(top_builddir)/include \
-	-I$(top_srcdir)/helper
-
 ODP_PLATFORM=${with_platform}
 
-AM_CPPFLAGS = $(INCFLAGS)
+AM_CPPFLAGS = \
+	$(ODP_INCLUDES) \
+	$(HELPER_INCLUDES)
 AM_LDFLAGS = -static
 
 EXECUTABLES = chksum \

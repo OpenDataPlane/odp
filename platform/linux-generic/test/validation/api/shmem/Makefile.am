@@ -12,11 +12,11 @@ shmem_linux_LDFLAGS = $(AM_LDFLAGS) -lrt
 shmem_odp1_SOURCES = shmem_odp1.c shmem_odp1.h shmem_common.h
 shmem_odp1_CFLAGS = $(AM_CFLAGS) \
 		   $(INCCUNIT_COMMON) \
-		   $(INCODP)
+		   $(ODP_INCLUDES)
 shmem_odp1_LDADD = $(LIBCUNIT_COMMON) $(LIBODP)
 
 shmem_odp2_SOURCES = shmem_odp2.c shmem_odp2.h shmem_common.h
 shmem_odp2_CFLAGS = $(AM_CFLAGS) \
 		   $(INCCUNIT_COMMON) \
-		   $(INCODP)
+		   $(ODP_INCLUDES)
 shmem_odp2_LDADD = $(LIBCUNIT_COMMON) $(LIBODP)
