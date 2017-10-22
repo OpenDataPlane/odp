@@ -10,18 +10,16 @@
  * ODP time
  */
 
-#ifndef ODP_PLAT_TIME_H_
-#define ODP_PLAT_TIME_H_
+#ifndef ODP_API_TIME_H_
+#define ODP_API_TIME_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <odp/api/std_types.h>
+#include <odp/api/abi/time.h>
 
-
-
-#include <odp/api/plat/time_types.h>
 #include <odp/api/spec/time.h>
 
 #ifdef __cplusplus

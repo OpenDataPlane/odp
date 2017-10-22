@@ -91,7 +91,6 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/ticketlock_inlines.h \
 		  include/odp/api/plat/ticketlock_inlines_api.h \
 		  include/odp/api/plat/ticketlock_types.h \
-		  include/odp/api/plat/time_types.h \
 		  include/odp/api/plat/timer_types.h \
 		  include/odp/api/plat/traffic_mngr_types.h
 
@@ -118,6 +117,7 @@ odpapiabiarchinclude_HEADERS = \
 		  include-abi/odp/api/abi/spinlock_recursive.h \
 		  include-abi/odp/api/abi/thread.h \
 		  include-abi/odp/api/abi/thrmask.h \
+		  include-abi/odp/api/abi/time.h \
 		  include-abi/odp/api/abi/version.h
 endif
 

@@ -10,8 +10,8 @@
  * ODP time service
  */
 
-#ifndef ODP_TIME_TYPES_H_
-#define ODP_TIME_TYPES_H_
+#ifndef ODP_ABI_TIME_H_
+#define ODP_ABI_TIME_H_
 
 #ifdef __cplusplus
 extern "C" {
