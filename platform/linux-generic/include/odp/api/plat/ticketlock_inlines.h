@@ -14,10 +14,6 @@
 #define _ODP_PLAT_TICKETLOCK_INLINES_H_
 
 #include <odp/api/atomic.h>
-#include <odp/api/sync.h>
-#include <odp/api/cpu.h>
-
-#include <odp/api/plat/ticketlock_types.h>
 
 /** @internal
  * Acquire ticket lock.
@@ -110,21 +106,5 @@ static inline int _odp_ticketlock_is_locked(odp_ticketlock_t *ticketlock)
 	return odp_atomic_load_u32(&ticketlock->cur_ticket) !=
 		odp_atomic_load_u32(&ticketlock->next_ticket);
 }
-
-/* Include inlined versions of API functions */
-#include <odp/api/plat/static_inline.h>
-#if ODP_ABI_COMPAT == 0
-
-/** @ingroup odp_locks
- *  @{
- */
-
-#include <odp/api/plat/ticketlock_inlines_api.h>
-
-/**
- * @}
- */
-
-#endif
 
 #endif
