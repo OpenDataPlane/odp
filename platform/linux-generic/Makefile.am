@@ -101,6 +101,7 @@ odpapiabiarchinclude_HEADERS = \
 		  include-abi/odp/api/abi/classification.h \
 		  include-abi/odp/api/abi/cpumask.h \
 		  include-abi/odp/api/abi/crypto.h \
+		  include-abi/odp/api/abi/debug.h \
 		  include-abi/odp/api/abi/event.h \
 		  include-abi/odp/api/abi/init.h \
 		  include-abi/odp/api/abi/ipsec.h \
