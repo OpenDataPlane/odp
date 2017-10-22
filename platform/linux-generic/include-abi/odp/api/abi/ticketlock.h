@@ -4,15 +4,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
  * ODP ticketlock
  */
 
-#ifndef ODP_TICKETLOCK_TYPES_H_
-#define ODP_TICKETLOCK_TYPES_H_
+#ifndef ODP_API_ABI_TICKETLOCK_H_
+#define ODP_API_ABI_TICKETLOCK_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,13 +19,24 @@ extern "C" {
 
 #include <odp/api/atomic.h>
 
+/** @ingroup odp_locks
+ *  @{
+ */
+
 /** @internal */
-struct odp_ticketlock_s {
+typedef struct odp_ticketlock_s {
 	odp_atomic_u32_t  next_ticket; /**< Next ticket */
 	odp_atomic_u32_t  cur_ticket;  /**< Current ticket */
-};
+} odp_ticketlock_t;
 
-typedef struct odp_ticketlock_s odp_ticketlock_t;
+/* Include inlined versions of API functions */
+#include <odp/api/plat/static_inline.h>
+#include <odp/api/plat/ticketlock_inlines.h>
+#include <odp/api/plat/ticketlock_inlines_api.h>
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }
