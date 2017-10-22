@@ -22,7 +22,7 @@ extern "C" {
 #include <odp/api/abi/classification.h>
 #include <odp/api/plat/packet_types.h>
 #include <odp/api/plat/packet_io_types.h>
-#include <odp/api/plat/queue_types.h>
+#include <odp/api/abi/queue.h>
 
 #include <odp/api/spec/classification.h>
 
