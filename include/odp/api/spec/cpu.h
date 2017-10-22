@@ -11,8 +11,8 @@
  * ODP CPU API
  */
 
-#ifndef ODP_CPU_H_
-#define ODP_CPU_H_
+#ifndef ODP_API_SPEC_CPU_H_
+#define ODP_API_SPEC_CPU_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus

@@ -11,8 +11,8 @@
  * ODP queue
  */
 
-#ifndef ODP_API_QUEUE_H_
-#define ODP_API_QUEUE_H_
+#ifndef ODP_API_SPEC_QUEUE_H_
+#define ODP_API_SPEC_QUEUE_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus

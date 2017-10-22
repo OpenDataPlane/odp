@@ -11,8 +11,8 @@
  * ODP schedule
  */
 
-#ifndef ODP_API_SCHEDULE_H_
-#define ODP_API_SCHEDULE_H_
+#ifndef ODP_API_SPEC_SCHEDULE_H_
+#define ODP_API_SPEC_SCHEDULE_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus

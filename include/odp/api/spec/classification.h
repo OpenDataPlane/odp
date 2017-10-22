@@ -10,8 +10,8 @@
  * ODP classification descriptor
  */
 
-#ifndef ODP_API_CLASSIFY_H_
-#define ODP_API_CLASSIFY_H_
+#ifndef ODP_API_SPEC_CLASSIFY_H_
+#define ODP_API_SPEC_CLASSIFY_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus

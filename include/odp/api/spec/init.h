@@ -19,8 +19,8 @@
  * - odp_term_local()
  */
 
-#ifndef ODP_API_INIT_H_
-#define ODP_API_INIT_H_
+#ifndef ODP_API_SPEC_INIT_H_
+#define ODP_API_SPEC_INIT_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus

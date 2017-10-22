@@ -11,8 +11,8 @@
  * Compiler related
  */
 
-#ifndef ODP_API_COMPILER_H_
-#define ODP_API_COMPILER_H_
+#ifndef ODP_API_SPEC_COMPILER_H_
+#define ODP_API_SPEC_COMPILER_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
