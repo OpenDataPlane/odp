@@ -24,7 +24,7 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 #include <odp/api/plat/strong_types.h>
-#include <odp/api/plat/event_types.h>
+#include <odp/api/abi/event.h>
 
 /** @ingroup odp_pool
  *  @{

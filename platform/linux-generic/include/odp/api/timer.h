@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 #include <odp/api/std_types.h>
-#include <odp/api/plat/event_types.h>
+#include <odp/api/abi/event.h>
 #include <odp/api/plat/pool_types.h>
 #include <odp/api/plat/queue_types.h>
 #include <odp/api/plat/timer_types.h>
