@@ -10,14 +10,15 @@
  * ODP version
  */
 
-#ifndef ODP_PLAT_VERSION_H_
-#define ODP_PLAT_VERSION_H_
+#ifndef ODP_API_VERSION_H_
+#define ODP_API_VERSION_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <odp/api/plat/version_types.h>
+#include <odp/api/abi/version.h>
+
 #include <odp/api/spec/version.h>
 
 #ifdef __cplusplus

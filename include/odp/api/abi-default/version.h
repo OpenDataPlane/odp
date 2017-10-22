@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#ifndef ODP_VERSION_TYPESH_
-#define ODP_VERSION_TYPESH_
+#ifndef ODP_ABI_VERSION_H_
+#define ODP_ABI_VERSION_H_
 
 #ifdef __cplusplus
 extern "C" {
