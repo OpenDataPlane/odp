@@ -270,6 +270,7 @@ AC_ARG_ENABLE([abi-compat],
 	ODP_LIBSO_VERSION=0:0:0
     fi])
 AC_SUBST(ODP_ABI_COMPAT)
+AM_CONDITIONAL(ODP_ABI_COMPAT, [test "x$ODP_ABI_COMPAT" = "x1"])
 
 ##########################################################################
 # Enable/disable deprecated API definitions
