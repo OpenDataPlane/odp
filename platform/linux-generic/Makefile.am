@@ -24,6 +24,7 @@ odpinclude_HEADERS = \
 		  include/odp/visibility_begin.h \
 		  include/odp/visibility_end.h
 
+if !ODP_ABI_COMPAT
 odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/atomic_inlines.h \
@@ -40,7 +41,6 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/ticketlock_inlines.h \
 		  include/odp/api/plat/ticketlock_inlines_api.h
 
-if !ODP_ABI_COMPAT
 odpapiabiarchincludedir = $(archincludedir)/odp/api/abi
 odpapiabiarchinclude_HEADERS = \
 		  include-abi/odp/api/abi/align.h \
