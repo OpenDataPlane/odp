@@ -206,6 +206,8 @@ if ODP_ABI_COMPAT
 __LIB__libodp_linux_la_SOURCES += \
 			   odp_atomic_api.c \
 			   odp_byteorder.c \
+			   odp_packet_api.c \
+			   odp_packet_flags_api.c \
 			   odp_std_clib.c \
 			   odp_sync.c \
 			   odp_ticketlock.c

@@ -2538,8 +2538,3 @@ int odp_packet_has_ref(odp_packet_t pkt)
 
 	return 0;
 }
-
-/* Include non-inlined versions of API functions */
-#if ODP_ABI_COMPAT == 1
-#include <odp/api/plat/packet_inlines_api.h>
-#endif
