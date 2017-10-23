@@ -22,7 +22,9 @@ ODP_SUBSYSTEM_FOREACH_TEMPLATE(pktio_ops, term_global, ODP_ABORT)
 /* Temporary variable to enable link modules,
  * will remove in Makefile scheme changes.
  */
+#ifdef ODP_PKTIO_DPDK
 extern int enable_link_dpdk_pktio_ops;
+#endif
 extern int enable_link_loopback_pktio_ops;
 
 ODP_SUBSYSTEM_CONSTRUCTOR(pktio_ops)
@@ -30,6 +32,8 @@ ODP_SUBSYSTEM_CONSTRUCTOR(pktio_ops)
 	odp_subsystem_constructor(pktio_ops);
 
 	/* Further initialization per subsystem */
+#ifdef ODP_PKTIO_DPDK
 	enable_link_dpdk_pktio_ops = 1;
+#endif
 	enable_link_loopback_pktio_ops = 1;
 }

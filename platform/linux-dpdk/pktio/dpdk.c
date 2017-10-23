@@ -6,6 +6,8 @@
 
 #include <config.h>
 
+#ifdef ODP_PKTIO_DPDK
+
 #include <odp_posix_extensions.h>
 #include <stdio.h>
 #include <errno.h>
@@ -760,3 +762,4 @@ ODP_MODULE_CONSTRUCTOR(dpdk_pktio_ops)
  */
 int enable_link_dpdk_pktio_ops = 0;
 
+#endif /* ODP_PKTIO_DPDK */

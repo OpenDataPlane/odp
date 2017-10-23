@@ -158,3 +158,9 @@ AC_SUBST([DPDK_LIBS])
 
 AC_CONFIG_FILES([platform/linux-dpdk/Makefile
 		 platform/linux-dpdk/include/odp/api/plat/static_inline.h])
+
+##########################################################################
+# Enable dpdk pktio build
+##########################################################################
+AC_DEFINE([ODP_PKTIO_DPDK], [1],
+	      [Define to 1 to enable DPDK packet I/O support])
