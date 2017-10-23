@@ -7,6 +7,8 @@
 
 #include "config.h"
 
+#ifdef ODP_PKTIO_SOCKET
+
 #include <odp_posix_extensions.h>
 
 #include <sys/socket.h>
@@ -570,3 +572,5 @@ ODP_MODULE_CONSTRUCTOR(socket_pktio_ops)
  * will remove in Makefile scheme changes.
  */
 int enable_link_socket_pktio_ops = 0;
+
+#endif /* ODP_PKTIO_SOCKET */
