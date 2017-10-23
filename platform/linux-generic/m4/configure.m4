@@ -88,3 +88,9 @@ m4_include([platform/linux-generic/m4/odp_schedule.m4])
 
 AC_CONFIG_FILES([platform/linux-generic/Makefile
                  platform/linux-generic/include/odp/api/plat/static_inline.h])
+
+##########################################################################
+# Enable default pktios build
+##########################################################################
+AC_DEFINE([ODP_PKTIO_IPC], [1],
+	      [Define to 1 to enable IPC packet I/O support])
