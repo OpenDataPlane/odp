@@ -94,3 +94,6 @@ AC_CONFIG_FILES([platform/linux-generic/Makefile
 ##########################################################################
 AC_DEFINE([ODP_PKTIO_IPC], [1],
 	      [Define to 1 to enable IPC packet I/O support])
+
+AC_DEFINE([ODP_PKTIO_TAP], [1],
+	      [Define to 1 to enable TAP packet I/O support])

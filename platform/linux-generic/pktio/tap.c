@@ -6,6 +6,8 @@
 
 #include "config.h"
 
+#ifdef ODP_PKTIO_TAP
+
 /**
  * @file
  *
@@ -423,3 +425,5 @@ ODP_MODULE_CONSTRUCTOR(tap_pktio_ops)
  * will remove in Makefile scheme changes.
  */
 int enable_link_tap_pktio_ops = 0;
+
+#endif /* ODP_PKTIO_TAP */

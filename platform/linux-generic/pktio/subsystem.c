@@ -35,7 +35,9 @@ extern int enable_link_pcap_pktio_ops;
 #endif
 extern int enable_link_socket_pktio_ops;
 extern int enable_link_socket_mmap_pktio_ops;
+#ifdef ODP_PKTIO_TAP
 extern int enable_link_tap_pktio_ops;
+#endif
 
 ODP_SUBSYSTEM_CONSTRUCTOR(pktio_ops)
 {
@@ -58,5 +60,7 @@ ODP_SUBSYSTEM_CONSTRUCTOR(pktio_ops)
 #endif
 	enable_link_socket_pktio_ops = 1;
 	enable_link_socket_mmap_pktio_ops = 1;
+#ifdef ODP_PKTIO_TAP
 	enable_link_tap_pktio_ops = 1;
+#endif
 }
