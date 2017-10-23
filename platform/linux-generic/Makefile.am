@@ -145,7 +145,6 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_barrier.c \
 			   odp_bitmap.c \
 			   odp_buffer.c \
-			   odp_byteorder.c \
 			   odp_chksum.c \
 			   odp_classification.c \
 			   odp_cpu.c \
@@ -193,18 +192,24 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_sorted_list.c \
 			   odp_spinlock.c \
 			   odp_spinlock_recursive.c \
-			   odp_std_clib.c \
-			   odp_sync.c \
 			   odp_system_info.c \
 			   odp_thread.c \
 			   odp_thrmask.c \
-			   odp_ticketlock.c \
 			   odp_time.c \
 			   odp_timer.c \
 			   odp_timer_wheel.c \
 			   odp_traffic_mngr.c \
 			   odp_version.c \
 			   odp_weak.c
+
+if ODP_ABI_COMPAT
+__LIB__libodp_linux_la_SOURCES += \
+			   odp_atomic_api.c \
+			   odp_byteorder.c \
+			   odp_std_clib.c \
+			   odp_sync.c \
+			   odp_ticketlock.c
+endif
 
 if ARCH_IS_ARM
 __LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_cycles.c \

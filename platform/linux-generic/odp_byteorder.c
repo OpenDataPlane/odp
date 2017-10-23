@@ -7,7 +7,7 @@
 #include "config.h"
 
 #include <odp/api/byteorder.h>
-#include <odp/api/plat/static_inline.h>
-#if ODP_ABI_COMPAT == 1
+
+/* Include non-inlined versions of API functions */
+#define _ODP_INLINE
 #include <odp/api/plat/byteorder_inlines.h>
-#endif
