@@ -97,3 +97,6 @@ AC_DEFINE([ODP_PKTIO_IPC], [1],
 
 AC_DEFINE([ODP_PKTIO_TAP], [1],
 	      [Define to 1 to enable TAP packet I/O support])
+
+AC_DEFINE([ODP_PKTIO_SOCKET], [1],
+	      [Define to 1 to enable SOCKET packet I/O support])
