@@ -8,6 +8,7 @@
 
 #ifndef ODP_POOL_SUBSYSTEM_H_
 #define ODP_POOL_SUBSYSTEM_H_
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,4 +48,5 @@ typedef ODP_MODULE_CLASS(pool) {
 }
 #endif
 
+#include <odp/visibility_end.h>
 #endif

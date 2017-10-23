@@ -8,6 +8,11 @@
 
 #ifndef ODP_SCHEDULE_SUBSYSTEM_H_
 #define ODP_SCHEDULE_SUBSYSTEM_H_
+#include <odp/visibility_begin.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* API header files */
 #include <odp/api/align.h>
@@ -77,4 +82,9 @@ typedef ODP_MODULE_CLASS(schedule) {
 	odp_api_proto(schedule, schedule_resume) schedule_resume;
 } odp_schedule_module_t;
 
+#ifdef __cplusplus
+}
+#endif
+
+#include <odp/visibility_end.h>
 #endif  /* ODP_SCHEDULE_SUBSYSTEM_H_ */
