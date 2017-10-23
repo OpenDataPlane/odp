@@ -6,6 +6,8 @@
 
 #include "config.h"
 
+#ifdef ODP_PKTIO_IPC
+
 #include <odp_debug_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp/api/system_info.h>
@@ -826,3 +828,5 @@ ODP_MODULE_CONSTRUCTOR(ipc_pktio_ops)
  * will remove in Makefile scheme changes.
  */
 int enable_link_ipc_pktio_ops = 0;
+
+#endif /* ODP_PKTIO_IPC */

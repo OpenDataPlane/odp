@@ -23,7 +23,9 @@ ODP_SUBSYSTEM_FOREACH_TEMPLATE(pktio_ops, term_global, ODP_ABORT)
 #ifdef ODP_PKTIO_DPDK
 extern int enable_link_dpdk_pktio_ops;
 #endif
+#ifdef ODP_PKTIO_IPC
 extern int enable_link_ipc_pktio_ops;
+#endif
 extern int enable_link_loopback_pktio_ops;
 #ifdef ODP_NETMAP
 extern int enable_link_netmap_pktio_ops;
@@ -44,7 +46,9 @@ ODP_SUBSYSTEM_CONSTRUCTOR(pktio_ops)
 #ifdef ODP_PKTIO_DPDK
 	enable_link_dpdk_pktio_ops = 1;
 #endif
+#ifdef ODP_PKTIO_IPC
 	enable_link_ipc_pktio_ops = 1;
+#endif
 	enable_link_loopback_pktio_ops = 1;
 #ifdef ODP_NETMAP
 	enable_link_netmap_pktio_ops = 1;
