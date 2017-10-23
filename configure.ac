@@ -279,7 +279,6 @@ AC_ARG_ENABLE([abi-compat],
 	#if there is no ABI compatibility the .so numbers are meaningless
 	ODP_LIBSO_VERSION=0:0:0
     fi])
-AC_SUBST(ODP_ABI_COMPAT)
 AM_CONDITIONAL(ODP_ABI_COMPAT, [test "x$ODP_ABI_COMPAT" = "x1"])
 
 ##########################################################################
