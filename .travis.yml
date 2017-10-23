@@ -264,7 +264,7 @@ jobs:
                           # doxygen does not trap on warnings, check for them here.
                           - make doxygen-doc 2>&1 |tee doxygen.log
                           - |
-                             fgrep -rq warning ./test.log
+                             fgrep -rq warning ./doxygen.log
                              if [ $? -eq 0 ]; then
                                false
                              else
