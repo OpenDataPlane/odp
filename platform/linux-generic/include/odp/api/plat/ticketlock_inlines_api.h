@@ -33,4 +33,10 @@ _ODP_INLINE int odp_ticketlock_is_locked(odp_ticketlock_t *lock)
 	return _odp_ticketlock_is_locked(lock);
 }
 
+_ODP_INLINE void odp_ticketlock_init(odp_ticketlock_t *ticketlock)
+{
+	odp_atomic_init_u32(&ticketlock->next_ticket, 0);
+	odp_atomic_init_u32(&ticketlock->cur_ticket, 0);
+}
+
 #endif
