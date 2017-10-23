@@ -8,6 +8,7 @@
 
 #ifndef ODP_QUEUE_SUBSYSTEM_H
 #define ODP_QUEUE_SUBSYSTEM_H
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,4 +75,5 @@ typedef ODP_MODULE_CLASS(queue) {
 }
 #endif
 
+#include <odp/visibility_end.h>
 #endif

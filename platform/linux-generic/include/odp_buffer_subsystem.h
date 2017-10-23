@@ -8,6 +8,7 @@
 
 #ifndef ODP_BUFFER_SUBSYSTEM_H_
 #define ODP_BUFFER_SUBSYSTEM_H_
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,5 +59,6 @@ typedef ODP_MODULE_CLASS(buffer) {
 }
 #endif
 
+#include <odp/visibility_end.h>
 #endif
 

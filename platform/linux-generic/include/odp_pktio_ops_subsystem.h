@@ -8,6 +8,11 @@
 
 #ifndef ODP_PKTIO_OPS_SUBSYSTEM_H_
 #define ODP_PKTIO_OPS_SUBSYSTEM_H_
+#include <odp/visibility_begin.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <odp_module.h>
 #include <odp/api/packet_io.h>
@@ -87,4 +92,9 @@ typedef ODP_MODULE_CLASS(pktio_ops) {
 #define odp_ops_data(_p, _mod) \
 	((pktio_ops_ ## _mod ## _data_t *)(uintptr_t)_p->s.ops_data)
 
+#ifdef __cplusplus
+}
+#endif
+
+#include <odp/visibility_end.h>
 #endif

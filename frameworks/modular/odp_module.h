@@ -38,6 +38,11 @@
 
 #ifndef ODP_MODULE_H_
 #define ODP_MODULE_H_
+#include <odp/visibility_begin.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <stdbool.h>
 #include <odp/api/rwlock.h>
@@ -293,4 +298,9 @@ int __subsystem_register_module(
 	__subsystem_set_active(&__subsystem(name), base);	\
 })
 
+#ifdef __cplusplus
+}
+#endif
+
+#include <odp/visibility_end.h>
 #endif
