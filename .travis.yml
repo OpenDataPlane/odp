@@ -78,6 +78,10 @@ env:
         - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
         - CROSS_ARCH="powerpc"
         - CROSS_ARCH="i386"
+        - CROSS_ARCH="arm64" CONF="--disable-abi-compat"
+        - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a" CONF="--disable-abi-compat"
+        - CROSS_ARCH="powerpc" CONF="--disable-abi-compat"
+        - CROSS_ARCH="i386" CONF="--disable-abi-compat"
 
 before_install:
 
