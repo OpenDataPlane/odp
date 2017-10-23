@@ -7,6 +7,8 @@
 
 #include "config.h"
 
+#ifdef ODP_PKTIO_SOCKET_MMAP
+
 #include <odp_posix_extensions.h>
 
 #include <odp_packet_io_internal.h>
@@ -777,3 +779,5 @@ ODP_MODULE_CONSTRUCTOR(socket_mmap_pktio_ops)
  * will remove in Makefile scheme changes.
  */
 int enable_link_socket_mmap_pktio_ops = 0;
+
+#endif /* ODP_PKTIO_SOCKET_MMAP */
