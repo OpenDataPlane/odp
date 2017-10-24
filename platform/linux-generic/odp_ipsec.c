@@ -93,7 +93,7 @@ int odp_ipsec_config(const odp_ipsec_config_t *config)
 	return 0;
 }
 
-static odp_ipsec_packet_result_t *ipsec_pkt_result(odp_packet_t packet)
+odp_ipsec_packet_result_t *_odp_ipsec_pkt_result(odp_packet_t packet)
 {
 	ODP_ASSERT(ODP_EVENT_PACKET_IPSEC ==
 		   odp_event_subtype(odp_packet_to_event(packet)));
@@ -902,7 +902,7 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
 
 		_odp_buffer_event_subtype_set(packet_to_buffer(pkt),
 					      ODP_EVENT_PACKET_IPSEC);
-		result = ipsec_pkt_result(pkt);
+		result = _odp_ipsec_pkt_result(pkt);
 		memset(result, 0, sizeof(*result));
 		result->status = status;
 		if (NULL != ipsec_sa)
@@ -966,7 +966,7 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
 
 		_odp_buffer_event_subtype_set(packet_to_buffer(pkt),
 					      ODP_EVENT_PACKET_IPSEC);
-		result = ipsec_pkt_result(pkt);
+		result = _odp_ipsec_pkt_result(pkt);
 		memset(result, 0, sizeof(*result));
 		result->status = status;
 		result->sa = ipsec_sa->ipsec_sa_hdl;
@@ -1014,7 +1014,7 @@ int odp_ipsec_in_enq(const odp_packet_t pkt_in[], int num_in,
 
 		_odp_buffer_event_subtype_set(packet_to_buffer(pkt),
 					      ODP_EVENT_PACKET_IPSEC);
-		result = ipsec_pkt_result(pkt);
+		result = _odp_ipsec_pkt_result(pkt);
 		memset(result, 0, sizeof(*result));
 		result->status = status;
 		if (NULL != ipsec_sa) {
@@ -1075,7 +1075,7 @@ int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in,
 
 		_odp_buffer_event_subtype_set(packet_to_buffer(pkt),
 					      ODP_EVENT_PACKET_IPSEC);
-		result = ipsec_pkt_result(pkt);
+		result = _odp_ipsec_pkt_result(pkt);
 		memset(result, 0, sizeof(*result));
 		result->status = status;
 		result->sa = ipsec_sa->ipsec_sa_hdl;
@@ -1115,7 +1115,7 @@ int _odp_ipsec_try_inline(odp_packet_t pkt)
 
 	_odp_buffer_event_subtype_set(packet_to_buffer(pkt),
 				      ODP_EVENT_PACKET_IPSEC);
-	result = ipsec_pkt_result(pkt);
+	result = _odp_ipsec_pkt_result(pkt);
 	memset(result, 0, sizeof(*result));
 	result->status = status;
 	result->sa = ipsec_sa->ipsec_sa_hdl;
@@ -1192,7 +1192,7 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 
 		_odp_buffer_event_subtype_set(packet_to_buffer(pkt),
 					      ODP_EVENT_PACKET_IPSEC);
-		result = ipsec_pkt_result(pkt);
+		result = _odp_ipsec_pkt_result(pkt);
 		memset(result, 0, sizeof(*result));
 		result->sa = ipsec_sa->ipsec_sa_hdl;
 		result->status = status;
@@ -1217,7 +1217,7 @@ err:
 			buf = packet_to_buffer(pkt);
 			_odp_buffer_event_subtype_set(buf,
 						      ODP_EVENT_PACKET_IPSEC);
-			result = ipsec_pkt_result(pkt);
+			result = _odp_ipsec_pkt_result(pkt);
 			memset(result, 0, sizeof(*result));
 			result->sa = ipsec_sa->ipsec_sa_hdl;
 			result->status = status;
@@ -1246,7 +1246,7 @@ int odp_ipsec_result(odp_ipsec_packet_result_t *result, odp_packet_t packet)
 
 	ODP_ASSERT(result != NULL);
 
-	res = ipsec_pkt_result(packet);
+	res = _odp_ipsec_pkt_result(packet);
 
 	/* FIXME: maybe postprocess here, setting alg error in case of crypto
 	 * error instead of processing packet fully in ipsec_in/out_single */
