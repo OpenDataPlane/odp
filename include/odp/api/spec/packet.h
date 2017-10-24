@@ -1561,13 +1561,26 @@ void odp_packet_shaper_len_adjust_set(odp_packet_t pkt, int8_t adj);
  */
 
 /**
- * Print packet to the console
+ * Print packet debug information
  *
- * Print all packet debug information to the console.
+ * Print all packet debug information to the ODP log.
  *
  * @param pkt  Packet handle
  */
 void odp_packet_print(odp_packet_t pkt);
+
+/**
+ * Print packet data
+ *
+ * Print packet debug information with packet data to the ODP log. Operation
+ * prints 'len' bytes of packet data starting from 'offset' byte. Offset plus
+ * length must not exceed packet length (odp_packet_len()).
+ *
+ * @param pkt     Packet handle
+ * @param offset  Byte offset into the packet
+ * @param len     Number of bytes to print
+ */
+void odp_packet_print_data(odp_packet_t pkt, uint32_t offset, uint32_t len);
 
 /**
  * Perform full packet validity check
