@@ -315,7 +315,9 @@ void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
 void ipsec_sa_destroy(odp_ipsec_sa_t sa)
 {
 	odp_event_t event;
-	odp_ipsec_status_t status;
+	odp_packet_t packet;
+	odp_ipsec_packet_result_t result;
+	odp_event_subtype_t subtype;
 
 	CU_ASSERT_EQUAL(ODP_IPSEC_OK, odp_ipsec_sa_disable(sa));
 
@@ -324,14 +326,18 @@ void ipsec_sa_destroy(odp_ipsec_sa_t sa)
 			event = odp_queue_deq(suite_context.queue);
 		} while (event == ODP_EVENT_INVALID);
 
-		CU_ASSERT_EQUAL(ODP_EVENT_IPSEC_STATUS, odp_event_type(event));
+		CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
+				odp_event_types(event, &subtype));
+		CU_ASSERT_EQUAL(ODP_EVENT_PACKET_IPSEC,
+				subtype);
 
-		CU_ASSERT_EQUAL(ODP_IPSEC_OK, odp_ipsec_status(&status, event));
+		packet  = odp_ipsec_packet_from_event(event);
 
-		CU_ASSERT_EQUAL(ODP_IPSEC_STATUS_SA_DISABLE, status.id);
-		CU_ASSERT_EQUAL(sa, status.sa);
-		CU_ASSERT_EQUAL(0, status.result);
-		CU_ASSERT_EQUAL(0, status.warn.all);
+		CU_ASSERT_EQUAL(0, odp_ipsec_result(&result, packet));
+
+		CU_ASSERT_EQUAL(sa, result.sa);
+		CU_ASSERT_EQUAL(1, result.status.error.sa_disabled);
+		CU_ASSERT_EQUAL(0, result.status.warn.all);
 
 		odp_event_free(event);
 	}
