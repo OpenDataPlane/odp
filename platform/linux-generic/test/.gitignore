@@ -1,3 +1,4 @@
 *.log
 *.trs
+tests-linux-generic.env
 tests-validation.env
