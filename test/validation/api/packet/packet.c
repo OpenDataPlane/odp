@@ -554,7 +554,10 @@ void packet_test_prefetch(void)
 void packet_test_debug(void)
 {
 	CU_ASSERT(odp_packet_is_valid(test_packet) == 1);
+	printf("\n\n");
 	odp_packet_print(test_packet);
+	odp_packet_print_data(test_packet, 0, 100);
+	odp_packet_print_data(test_packet, 14, 20);
 }
 
 void packet_test_context(void)
@@ -2152,7 +2155,10 @@ void packet_test_ref(void)
 	packet_compare_data(pkt3, ref2);
 
 	/* Try print function on a reference */
+	printf("\n\n");
 	odp_packet_print(ref2);
+	odp_packet_print_data(ref2, 0, 100);
+	odp_packet_print_data(ref2, 14, 20);
 
 	odp_packet_free(ref);
 	odp_packet_free(ref2);
