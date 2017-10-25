@@ -42,6 +42,7 @@ addons:
                         - automake autoconf libtool libssl-dev graphviz mscgen
                         - libpcap-dev
                         - libconfig-dev
+                        - libnuma-dev
 #        coverity_scan:
 #                project:
 #                        name: "$TRAVIS_REPO_SLUG"
@@ -152,7 +153,7 @@ install:
         - gem install asciidoctor
 
         # DPDK pktio. Note that cache must be purged if dpdk version changes.
-        - DPDK_VERS="17.02"
+        - DPDK_VERS="17.08"
         - |
           CACHED_DPDK_VERS=`fgrep Version dpdk/pkg/dpdk.spec | cut -d " " -f 2`
           if [ "${CACHED_DPDK_VERS}" != "${DPDK_VERS}" ]; then
@@ -266,7 +267,7 @@ jobs:
                           # doxygen does not trap on warnings, check for them here.
                           - make doxygen-doc 2>&1 |tee doxygen.log
                           - |
-                             fgrep -rq warning ./test.log
+                             fgrep -rq warning ./doxygen.log
                              if [ $? -eq 0 ]; then
                                false
                              else

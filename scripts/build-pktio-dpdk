@@ -10,7 +10,13 @@ if [ "$?" != "0" ]; then
 	echo "Error: pcap is not installed. You may need to install libpcap-dev"
 fi
 
-git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v17.02 http://dpdk.org/git/dpdk dpdk
+echo '#include "numa.h"' | cpp -H -o /dev/null 2>&1
+if [ "$?" != "0" ]; then
+	echo "Error: NUMA library is not installed. You need to install libnuma-dev"
+	exit 1
+fi
+
+git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v17.08 http://dpdk.org/git/dpdk dpdk
 pushd dpdk
 git log --oneline --decorate
 
