@@ -81,7 +81,7 @@ extern "C" {
  * specifically for dumping internal data.
  */
 #define ODP_PRINT(fmt, ...) \
-	odp_global_data.log_fn(ODP_LOG_PRINT, " " fmt, ##__VA_ARGS__)
+	odp_global_data.log_fn(ODP_LOG_PRINT, fmt, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 }
