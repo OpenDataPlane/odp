@@ -12,12 +12,14 @@ RUN sudo apt-get update && sudo apt-get install -yy \
   gcc-4.8 \
   graphviz \
   kmod \
-  mscgen \
+  libconfig-dev \
   libcunit1-dev \
+  libnuma-dev \
   libpcap-dev \
   libssl-dev \
   libtool \
   linux-headers-`uname -r` \
+  mscgen \
   ruby-dev
 
 RUN sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 10
