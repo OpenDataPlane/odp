@@ -279,7 +279,6 @@ jobs:
                   script:
                           - echo ${TRAVIS_COMMIT_RANGE};
                           - ODP_PATCHES=`echo ${TRAVIS_COMMIT_RANGE} | sed 's/\.//'`;
-                          - if [ -z "${ODP_PATCHES}" ]; then env; exit 0; fi;
                           - ./scripts/ci-checkpatches.sh ${ODP_PATCHES};
 
 after_failure:
