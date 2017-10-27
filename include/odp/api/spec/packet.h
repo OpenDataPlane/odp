@@ -1414,10 +1414,10 @@ odp_packet_chksum_status_t odp_packet_l4_chksum_status(odp_packet_t pkt);
  * the relevant pktout chksum bit set in the pktio capability.
  *
  * @param pkt     Packet handle
- * @param l3      0: do not insert L3 checksum
+ * @param insert  0: do not insert L3 checksum
  *                1: insert L3 checksum
  */
-void odp_packet_l3_chksum_insert(odp_packet_t pkt, int l3);
+void odp_packet_l3_chksum_insert(odp_packet_t pkt, int insert);
 
 /**
  * Layer 4 checksum insertion override
@@ -1431,10 +1431,10 @@ void odp_packet_l3_chksum_insert(odp_packet_t pkt, int l3);
  * the relevant pktout chksum bit set in the pktio capability.
  *
  * @param pkt     Packet handle
- * @param l4      0: do not insert L4 checksum
+ * @param insert  0: do not insert L4 checksum
  *                1: insert L4 checksum
  */
-void odp_packet_l4_chksum_insert(odp_packet_t pkt, int l4);
+void odp_packet_l4_chksum_insert(odp_packet_t pkt, int insert);
 
 /**
  * Packet flow hash value
