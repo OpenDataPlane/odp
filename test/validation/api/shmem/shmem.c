@@ -80,6 +80,7 @@ static int run_test_basic_thread(void *arg ODP_UNUSED)
 	odp_shm_t shm;
 	shared_test_data_t *shared_test_data;
 	int thr;
+	int pagesz_match = 0;
 
 	thr = odp_thread_id();
 	printf("Thread %i starts\n", thr);
@@ -98,8 +99,27 @@ static int run_test_basic_thread(void *arg ODP_UNUSED)
 	CU_ASSERT(0 == info.flags);
 	CU_ASSERT(shared_test_data == info.addr);
 	CU_ASSERT(sizeof(shared_test_data_t) <= info.size);
-	CU_ASSERT((info.page_size == odp_sys_huge_page_size()) ||
-		  (info.page_size == odp_sys_page_size()))
+
+	if (info.page_size == odp_sys_page_size()) {
+		pagesz_match = 1;
+	} else {
+		int num = odp_sys_huge_page_size_all(NULL, 0);
+
+		if (num > 0) {
+			uint64_t pagesz_tbs[num];
+			int i;
+
+			num = odp_sys_huge_page_size_all(pagesz_tbs, num);
+			for (i = 0; i < num; i++) {
+				if (info.page_size == pagesz_tbs[i]) {
+					pagesz_match = 1;
+					break;
+				}
+			}
+		}
+	}
+	CU_ASSERT(pagesz_match == 1);
+
 	odp_shm_print_all();
 
 	fflush(stdout);
