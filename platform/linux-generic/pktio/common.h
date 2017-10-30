@@ -7,6 +7,14 @@
 #ifndef ODP_PKTIO_COMMON_H_
 #define ODP_PKTIO_COMMON_H_
 
+#include <errno.h>
+
+/** Determine if a socket read/write error should be reported. Transient errors
+ *  that simply require the caller to retry are ignored, the _send/_recv APIs
+ *  are non-blocking and it is the caller's responsibility to retry if the
+ *  requested number of packets were not handled. */
+#define SOCK_ERR_REPORT(e) (e != EAGAIN && e != EWOULDBLOCK && e != EINTR)
+
 /**
  * Read the MTU from a packet socket
  */
