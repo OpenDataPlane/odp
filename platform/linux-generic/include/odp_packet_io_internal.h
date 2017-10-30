@@ -149,10 +149,6 @@ static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
 
 int sysfs_stats(pktio_entry_t *pktio_entry,
 		odp_pktio_stats_t *stats);
-int sock_stats_fd(pktio_entry_t *pktio_entry,
-		  odp_pktio_stats_t *stats,
-		  int fd);
-int sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd);
 
 int pktin_poll_one(int pktio_index,
 		   int rx_queue,

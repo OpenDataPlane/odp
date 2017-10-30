@@ -78,4 +78,29 @@ int rss_conf_set_fd(int fd, const char *name,
  */
 void rss_conf_print(const odp_pktin_hash_proto_t *hash_proto);
 
+/**
+ * Get statistics for pktio entry
+ *
+ * @param pktio_entry     Packet IO entry
+ * @param stats[out]	   Output buffer for counters
+ * @param fd              Socket file descriptor
+ *
+ * @retval 0 on success
+ * @retval != 0 on failure
+ */
+int sock_stats_fd(pktio_entry_t *pktio_entry,
+		  odp_pktio_stats_t *stats,
+		  int fd);
+
+/**
+ * Reset statistics for pktio entry
+ *
+ * @param pktio_entry     Packet IO entry
+ * @param fd              Socket file descriptor
+ *
+ * @retval  0 on success
+ * @retval != 0 on failure
+ */
+int sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd);
+
 #endif /*ODP_PKTIO_COMMON_H_*/
