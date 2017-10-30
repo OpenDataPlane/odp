@@ -147,9 +147,6 @@ static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
 	entry->s.cls_enabled = ena;
 }
 
-int sysfs_stats(pktio_entry_t *pktio_entry,
-		odp_pktio_stats_t *stats);
-
 int pktin_poll_one(int pktio_index,
 		   int rx_queue,
 		   odp_event_t evt_tbl[]);

@@ -8,6 +8,7 @@
 
 #include <odp_api.h>
 #include <odp_packet_io_internal.h>
+#include <pktio/sysfs.h>
 #include <errno.h>
 #include <string.h>
 #include <inttypes.h>

@@ -177,6 +177,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_packet_io_ring_internal.h \
 		  ${srcdir}/pktio/ethtool.h \
 		  ${srcdir}/pktio/common.h \
+		  ${srcdir}/pktio/sysfs.h \
 		  ${srcdir}/pktio/dpdk.h \
 		  ${srcdir}/include/odp_pktio_ops_ipc.h \
 		  ${srcdir}/include/odp_pktio_ops_loopback.h \
