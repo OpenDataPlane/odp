@@ -47,6 +47,7 @@
 #include <odp/api/hints.h>
 #include <odp_pktio_ops_socket.h>
 #include <pktio/common.h>
+#include <pktio/sysfs.h>
 #include <pktio/ethtool.h>
 
 #include <protocols/eth.h>

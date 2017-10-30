@@ -11,6 +11,7 @@
 #include <odp_classification_internal.h>
 #include <pktio/ethtool.h>
 #include <pktio/common.h>
+#include <pktio/sysfs.h>
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
