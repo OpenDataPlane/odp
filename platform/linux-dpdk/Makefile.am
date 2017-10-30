@@ -121,9 +121,6 @@ odpdrvinclude_HEADERS = \
 		  $(srcdir)/include/odp/drv/compiler.h
 
 noinst_HEADERS = \
-		  ${top_srcdir}/platform/linux-generic/include/_fdserver_internal.h \
-		  ${top_srcdir}/platform/linux-generic/include/_ishm_internal.h \
-		  ${top_srcdir}/platform/linux-generic/include/_ishmphy_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_align_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_atomic_internal.h \
 		  ${srcdir}/include/odp_buffer_inlines.h \
@@ -154,7 +151,7 @@ noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_ring_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_schedule_if.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_sorted_list_internal.h \
-		  ${top_srcdir}/platform/linux-generic/include/odp_shm_internal.h \
+		  ${srcdir}/include/odp_shm_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_time_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_timer_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_timer_wheel_internal.h \
@@ -167,9 +164,6 @@ noinst_HEADERS = \
 		  ${srcdir}/Makefile.inc
 
 __LIB__libodp_dpdk_la_SOURCES = \
-			   ../linux-generic/_fdserver.c \
-			   ../linux-generic/_ishm.c \
-			   ../linux-generic/_ishmphy.c \
 			   ../linux-generic/odp_atomic.c \
 			   ../linux-generic/odp_barrier.c \
 			   ../linux-generic/odp_bitmap.c \
@@ -199,7 +193,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_schedule.c \
 			   ../linux-generic/odp_schedule_if.c \
 			   ../linux-generic/odp_schedule_iquery.c \
-			   ../linux-generic/odp_shared_memory.c \
+			   odp_shared_memory.c \
 			   ../linux-generic/odp_sorted_list.c \
 			   ../linux-generic/odp_spinlock.c \
 			   ../linux-generic/odp_spinlock_recursive.c \
