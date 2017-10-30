@@ -96,8 +96,8 @@ static int run_test_basic_thread(void *arg ODP_UNUSED)
 	CU_ASSERT(0 == info.flags);
 	CU_ASSERT(shared_test_data == info.addr);
 	CU_ASSERT(sizeof(shared_test_data_t) <= info.size);
-	CU_ASSERT((info.page_size == odp_sys_huge_page_size()) ||
-		  (info.page_size == odp_sys_page_size()))
+	CU_ASSERT(info.page_size > 0);
+
 	odp_shm_print_all();
 
 	fflush(stdout);
