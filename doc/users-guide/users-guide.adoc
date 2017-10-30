@@ -40,11 +40,29 @@ by abstract handles of type `odp_packet_t`, and packet-related APIs take
 arguments of this type. What an `odp_packet_t` actually is is not part of the
 ODP API specification--that is the responsibility of each ODP implementation.
 
+.API Specification Principles
+The ODP API specification is designed to permit wide latitude on the part of
+implementations while at the same time supporting highly efficient processing,
+especially for APIs that are executed frequently.
+
+Both applications and implementations must comply with the API
+specification. If not otherwise documented, results are undefined if an
+application acts against the specification. For example, if an application
+passes bad parameters to an ODP API one implementation may report an error,
+while another may not check them (to maximize performance) but would just
+crash while using the bad values.
+
+Note that many ODP component areas provide an `odp_xxx_capability()` API that
+returns platform-specific information regarding valid input to other APIs in
+that component. For best portability applications should always use these
+capability APIs to determine valid parameter input.
+
 .Summary: ODP API attributes:
 * Open Source, open contribution, BSD-3 licensed.
 * Vendor and platform neutral.
 * Application-centric.  Covers functional needs of data plane applications.
 * Ensures portability by specifying the functional behavior of ODP.
+* Both applications and implementations must conform to the API specification.
 * Defined jointly and openly by application writers and platform implementers.
 * Architected to be implementable on a wide range of platforms efficiently
 * Sponsored, governed, and maintained by the Linaro Networking Group (LNG)
