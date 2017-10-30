@@ -21,6 +21,11 @@
 #include <linux/if_packet.h>
 #include <linux/if_ether.h>
 
+/*
+ * ODP_PACKET_SOCKET_MMSG:
+ * ODP_PACKET_SOCKET_MMAP:
+ * ODP_PACKET_NETMAP:
+ */
 int sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd)
 {
 	int err = 0;
@@ -51,6 +56,11 @@ int sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd)
 	return err;
 }
 
+/*
+ * ODP_PACKET_SOCKET_MMSG:
+ * ODP_PACKET_SOCKET_MMAP:
+ * ODP_PACKET_NETMAP:
+ */
 int sock_stats_fd(pktio_entry_t *pktio_entry,
 		  odp_pktio_stats_t *stats,
 		  int fd)
