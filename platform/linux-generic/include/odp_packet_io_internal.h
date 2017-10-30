@@ -42,12 +42,6 @@ typedef union pktio_entry_u pktio_entry_t;
 #define PKTIN_INVALID  ((odp_pktin_queue_t) {ODP_PKTIO_INVALID, 0})
 #define PKTOUT_INVALID ((odp_pktout_queue_t) {ODP_PKTIO_INVALID, 0})
 
-/** Determine if a socket read/write error should be reported. Transient errors
- *  that simply require the caller to retry are ignored, the _send/_recv APIs
- *  are non-blocking and it is the caller's responsibility to retry if the
- *  requested number of packets were not handled. */
-#define SOCK_ERR_REPORT(e) (e != EAGAIN && e != EWOULDBLOCK && e != EINTR)
-
 struct pktio_entry {
 	const pktio_ops_module_t *ops;	/**< Implementation specific methods */
 	uint8_t ops_data[ODP_PKTIO_ODPS_DATA_MAX_SIZE]; /**< IO operation
