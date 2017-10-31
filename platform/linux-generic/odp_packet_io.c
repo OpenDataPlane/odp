@@ -186,6 +186,7 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	pktio_entry->s.pool = pool;
 	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
 	pktio_entry->s.handle = hdl;
+	pktio_entry->s.stats_type = STATS_UNSUPPORTED;
 
 	odp_pktio_config_init(&pktio_entry->s.config);
 

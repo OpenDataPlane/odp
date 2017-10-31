@@ -199,7 +199,7 @@ noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_pktio_ops_socket.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_pktio_ops_loopback.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_name_table_internal.h \
-		  ${srcdir}/include/odp_packet_io_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_packet_io_internal.h \
 		  ${srcdir}/include/odp_errno_define.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_packet_io_ring_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_pkt_queue_internal.h \
