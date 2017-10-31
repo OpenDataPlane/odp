@@ -53,6 +53,7 @@ typedef union {
 		uint32_t ip_err:1;    /**< IP error,  checks TBD */
 		uint32_t tcp_err:1;   /**< TCP error, checks TBD */
 		uint32_t udp_err:1;   /**< UDP error, checks TBD */
+		uint32_t ipsec_err:1; /**< IPsec error */
 	};
 } error_flags_t;
 
