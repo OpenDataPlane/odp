@@ -5,7 +5,6 @@ PROJECT_NUMBER = $(VERSION)
 PROJECT_LOGO = $(SRCDIR)/doc/images/ODP-Logo-HQ.svg
 INPUT = $(SRCDIR)/doc/application-api-guide \
 	$(SRCDIR)/include
-EXCLUDE_PATTERNS = drv* odp_drv.h
 EXAMPLE_PATH = $(SRCDIR)/example $(SRCDIR)
 PREDEFINED = __GNUC__ \
 	     "ODP_HANDLE_T(type)=odp_handle_t type"
