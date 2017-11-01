@@ -663,10 +663,10 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 		out_ip.id = odp_atomic_fetch_add_u32(&ipsec_sa->out.tun_hdr_id,
 						     1);
 		if (ipsec_sa->copy_df)
-			out_ip.frag_offset = ip->frag_offset;
+			out_ip.frag_offset = ip->frag_offset & 0x4000;
 		else
-			out_ip.frag_offset = (ip->frag_offset & ~0x4000) |
-					     (ipsec_sa->out.tun_df << 14);
+			out_ip.frag_offset =
+				((uint16_t)ipsec_sa->out.tun_df) << 14;
 		out_ip.ttl = ipsec_sa->out.tun_ttl;
 		out_ip.proto = _ODP_IPV4;
 		/* Will be filled later by packet checksum update */
