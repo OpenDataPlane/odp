@@ -190,6 +190,8 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 	capability->supported_terms.bit.tcp_sport = 1;
 	capability->supported_terms.bit.sip_addr = 1;
 	capability->supported_terms.bit.dip_addr = 1;
+	capability->random_early_detection = ODP_SUPPORT_NO;
+	capability->back_pressure = ODP_SUPPORT_NO;
 	return 0;
 }
 
