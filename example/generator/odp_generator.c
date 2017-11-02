@@ -784,15 +784,13 @@ static void print_pkts(int thr, odp_packet_t pkt_tbl[], unsigned len)
 static int gen_recv_thread(void *arg)
 {
 	int thr;
-	thread_args_t *thr_args;
 	odp_packet_t pkts[MAX_RX_BURST], pkt;
 	odp_event_t events[MAX_RX_BURST];
 	int pkt_cnt, ev_cnt, i;
-	interface_t *itfs, *itf;
+	odp_packet_chksum_status_t csum_status;
 
+	(void)arg;
 	thr = odp_thread_id();
-	thr_args = (thread_args_t *)arg;
-	itfs = thr_args->rx.ifs;
 
 	printf("  [%02i] created mode: RECEIVE\n", thr);
 	odp_barrier_wait(&barrier);
@@ -811,21 +809,14 @@ static int gen_recv_thread(void *arg)
 			continue;
 		for (i = 0, pkt_cnt = 0; i < ev_cnt; i++) {
 			pkt = odp_packet_from_event(events[i]);
-			itf = &itfs[odp_pktio_index(odp_packet_input(pkt))];
 
-			if (odp_packet_has_ipv4(pkt)) {
-				if (itf->config.pktin.bit.ipv4_chksum) {
-					if (odp_packet_has_l3_error(pkt))
-						printf("HW detected L3 error\n");
-				}
-			}
+			csum_status = odp_packet_l3_chksum_status(pkt);
+			if (csum_status == ODP_PACKET_CHKSUM_BAD)
+				printf("L3 checksum error detected.\n");
 
-			if (odp_packet_has_udp(pkt)) {
-				if (itf->config.pktin.bit.udp_chksum) {
-					if (odp_packet_has_l4_error(pkt))
-						printf("HW detected L4 error\n");
-				}
-			}
+			csum_status = odp_packet_l4_chksum_status(pkt);
+			if (csum_status == ODP_PACKET_CHKSUM_BAD)
+				printf("L4 checksum error detected.\n");
 
 			/* Drop packets with errors */
 			if (odp_unlikely(odp_packet_has_error(pkt))) {
