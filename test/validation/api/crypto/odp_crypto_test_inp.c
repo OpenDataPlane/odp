@@ -325,6 +325,9 @@ static void alg_test(odp_crypto_op_t op,
 	if (cipher_alg == ODP_CIPHER_ALG_AES_CBC &&
 	    !(capa.ciphers.bit.aes_cbc))
 		rc = -1;
+	if (cipher_alg == ODP_CIPHER_ALG_AES_CTR &&
+	    !(capa.ciphers.bit.aes_ctr))
+		rc = -1;
 	if (cipher_alg == ODP_CIPHER_ALG_AES_GCM &&
 	    !(capa.ciphers.bit.aes_gcm))
 		rc = -1;
@@ -544,6 +547,10 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		break;
 	case ODP_CIPHER_ALG_AES_CBC:
 		if (!capability.ciphers.bit.aes_cbc)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_CIPHER_ALG_AES_CTR:
+		if (!capability.ciphers.bit.aes_ctr)
 			return ODP_TEST_INACTIVE;
 		break;
 	case ODP_CIPHER_ALG_AES_GCM:
@@ -865,6 +872,88 @@ void crypto_test_dec_alg_aes_cbc_ovr_iv(void)
 	}
 }
 
+static int check_alg_aes_ctr(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_AES_CTR, ODP_AUTH_ALG_NULL);
+}
+
+/* This test verifies the correctness of encode (plaintext -> ciphertext)
+ * operation for AES128_CTR algorithm. IV for the operation is the session IV.
+ * In addition the test verifies if the implementation can use the
+ * packet buffer as completion event buffer.*/
+void crypto_test_enc_alg_aes_ctr(void)
+{
+	unsigned int test_vec_num = (sizeof(aes_ctr_reference) /
+				     sizeof(aes_ctr_reference[0]));
+	unsigned int i;
+
+	for (i = 0; i < test_vec_num; i++) {
+		alg_test(ODP_CRYPTO_OP_ENCODE,
+			 ODP_CIPHER_ALG_AES_CTR,
+			 ODP_AUTH_ALG_NULL,
+			 &aes_ctr_reference[i],
+			 false);
+	}
+}
+
+/* This test verifies the correctness of encode (plaintext -> ciphertext)
+ * operation for AES128_CTR algorithm. IV for the operation is the operation IV.
+ * */
+void crypto_test_enc_alg_aes_ctr_ovr_iv(void)
+{
+	unsigned int test_vec_num = (sizeof(aes_ctr_reference) /
+				     sizeof(aes_ctr_reference[0]));
+	unsigned int i;
+
+	for (i = 0; i < test_vec_num; i++) {
+		alg_test(ODP_CRYPTO_OP_ENCODE,
+			 ODP_CIPHER_ALG_AES_CTR,
+			 ODP_AUTH_ALG_NULL,
+			 &aes_ctr_reference[i],
+			 true);
+	}
+}
+
+/* This test verifies the correctness of decode (ciphertext -> plaintext)
+ * operation for AES128_CTR algorithm. IV for the operation is the session IV
+ * In addition the test verifies if the implementation can use the
+ * packet buffer as completion event buffer.
+ * */
+void crypto_test_dec_alg_aes_ctr(void)
+{
+	unsigned int test_vec_num = (sizeof(aes_ctr_reference) /
+				     sizeof(aes_ctr_reference[0]));
+	unsigned int i;
+
+	for (i = 0; i < test_vec_num; i++) {
+		alg_test(ODP_CRYPTO_OP_DECODE,
+			 ODP_CIPHER_ALG_AES_CTR,
+			 ODP_AUTH_ALG_NULL,
+			 &aes_ctr_reference[i],
+			 false);
+	}
+}
+
+/* This test verifies the correctness of decode (ciphertext -> plaintext)
+ * operation for AES128_CTR algorithm. IV for the operation is the session IV
+ * In addition the test verifies if the implementation can use the
+ * packet buffer as completion event buffer.
+ * */
+void crypto_test_dec_alg_aes_ctr_ovr_iv(void)
+{
+	unsigned int test_vec_num = (sizeof(aes_ctr_reference) /
+				     sizeof(aes_ctr_reference[0]));
+	unsigned int i;
+
+	for (i = 0; i < test_vec_num; i++) {
+		alg_test(ODP_CRYPTO_OP_DECODE,
+			 ODP_CIPHER_ALG_AES_CTR,
+			 ODP_AUTH_ALG_NULL,
+			 &aes_ctr_reference[i],
+			 true);
+	}
+}
+
 static int check_alg_hmac_md5(void)
 {
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_MD5_HMAC);
@@ -1098,6 +1187,14 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_aes_cbc),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_cbc_ovr_iv,
 				  check_alg_aes_cbc),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_ctr,
+				  check_alg_aes_ctr),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_ctr,
+				  check_alg_aes_ctr),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_ctr_ovr_iv,
+				  check_alg_aes_ctr),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_ctr_ovr_iv,
+				  check_alg_aes_ctr),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_gcm,
 				  check_alg_aes_gcm),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_gcm_ovr_iv,
