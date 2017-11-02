@@ -337,9 +337,9 @@ static struct rte_mempool_ops ops_stack = {
 
 MEMPOOL_REGISTER_OPS(ops_stack);
 
-#define HAS_IP4_CSUM_FLAG(m, f) ((m->ol_flags & PKT_RX_IP_CKSUM_MASK) == f)
+#define IP4_CSUM_RESULT(m) (m->ol_flags & PKT_RX_IP_CKSUM_MASK)
+#define L4_CSUM_RESULT(m) (m->ol_flags & PKT_RX_L4_CKSUM_MASK)
 #define HAS_L4_PROTO(m, proto) ((m->packet_type & RTE_PTYPE_L4_MASK) == proto)
-#define HAS_L4_CSUM_FLAG(m, f) ((m->ol_flags & PKT_RX_L4_CKSUM_MASK) == f)
 
 #define PKTIN_CSUM_BITS 0x1C
 
@@ -347,29 +347,52 @@ static inline int pkt_set_ol_rx(odp_pktin_config_opt_t *pktin_cfg,
 				odp_packet_hdr_t *pkt_hdr,
 				struct rte_mbuf *mbuf)
 {
-	if (pktin_cfg->bit.ipv4_chksum &&
-	    RTE_ETH_IS_IPV4_HDR(mbuf->packet_type) &&
-	    HAS_IP4_CSUM_FLAG(mbuf, PKT_RX_IP_CKSUM_BAD)) {
-		if (pktin_cfg->bit.drop_ipv4_err)
-			return -1;
+	uint64_t packet_csum_result;
 
-		pkt_hdr->p.error_flags.ip_err = 1;
+	if (pktin_cfg->bit.ipv4_chksum &&
+	    RTE_ETH_IS_IPV4_HDR(mbuf->packet_type)) {
+		packet_csum_result = IP4_CSUM_RESULT(mbuf);
+
+		if (packet_csum_result == PKT_RX_IP_CKSUM_GOOD) {
+			pkt_hdr->p.input_flags.l3_chksum_done = 1;
+		} else if (packet_csum_result != PKT_RX_IP_CKSUM_UNKNOWN) {
+			if (pktin_cfg->bit.drop_ipv4_err)
+				return -1;
+
+			pkt_hdr->p.input_flags.l3_chksum_done = 1;
+			pkt_hdr->p.error_flags.ip_err = 1;
+			pkt_hdr->p.error_flags.l3_chksum = 1;
+		}
 	}
 
 	if (pktin_cfg->bit.udp_chksum &&
-	    HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_UDP) &&
-	    HAS_L4_CSUM_FLAG(mbuf, PKT_RX_L4_CKSUM_BAD)) {
-		if (pktin_cfg->bit.drop_udp_err)
-			return -1;
+	    HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_UDP)) {
+		packet_csum_result = L4_CSUM_RESULT(mbuf);
 
-		pkt_hdr->p.error_flags.udp_err = 1;
+		if (packet_csum_result == PKT_RX_L4_CKSUM_GOOD) {
+			pkt_hdr->p.input_flags.l4_chksum_done = 1;
+		} else if (packet_csum_result != PKT_RX_L4_CKSUM_UNKNOWN) {
+			if (pktin_cfg->bit.drop_udp_err)
+				return -1;
+
+			pkt_hdr->p.input_flags.l4_chksum_done = 1;
+			pkt_hdr->p.error_flags.udp_err = 1;
+			pkt_hdr->p.error_flags.l4_chksum = 1;
+		}
 	} else if (pktin_cfg->bit.tcp_chksum &&
-		   HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_TCP)  &&
-		   HAS_L4_CSUM_FLAG(mbuf, PKT_RX_L4_CKSUM_BAD)) {
-		if (pktin_cfg->bit.drop_tcp_err)
-			return -1;
+		   HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_TCP)) {
+		packet_csum_result = L4_CSUM_RESULT(mbuf);
 
-		pkt_hdr->p.error_flags.tcp_err = 1;
+		if (packet_csum_result == PKT_RX_L4_CKSUM_GOOD) {
+			pkt_hdr->p.input_flags.l4_chksum_done = 1;
+		} else if (packet_csum_result != PKT_RX_L4_CKSUM_UNKNOWN) {
+			if (pktin_cfg->bit.drop_tcp_err)
+				return -1;
+
+			pkt_hdr->p.input_flags.l4_chksum_done = 1;
+			pkt_hdr->p.error_flags.tcp_err = 1;
+			pkt_hdr->p.error_flags.l4_chksum = 1;
+		}
 	}
 
 	return 0;
