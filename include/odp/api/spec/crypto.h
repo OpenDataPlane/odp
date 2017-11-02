@@ -80,6 +80,9 @@ typedef enum {
 	/** AES with cipher block chaining */
 	ODP_CIPHER_ALG_AES_CBC,
 
+	/** AES with counter mode */
+	ODP_CIPHER_ALG_AES_CTR,
+
 	/** AES in Galois/Counter Mode
 	 *
 	 *  @note Must be paired with cipher ODP_AUTH_ALG_AES_GCM
@@ -90,7 +93,7 @@ typedef enum {
 	ODP_DEPRECATE(ODP_CIPHER_ALG_AES128_CBC),
 
 	/** @deprecated  Use ODP_CIPHER_ALG_AES_GCM instead */
-	ODP_DEPRECATE(ODP_CIPHER_ALG_AES128_GCM)
+	ODP_DEPRECATE(ODP_CIPHER_ALG_AES128_GCM),
 
 } odp_cipher_alg_t;
 
@@ -159,6 +162,9 @@ typedef union odp_crypto_cipher_algos_t {
 
 		/** ODP_CIPHER_ALG_AES_CBC */
 		uint32_t aes_cbc     : 1;
+
+		/** ODP_CIPHER_ALG_AES_CTR */
+		uint32_t aes_ctr     : 1;
 
 		/** ODP_CIPHER_ALG_AES_GCM */
 		uint32_t aes_gcm     : 1;
