@@ -29,6 +29,18 @@
 /* AES256-CBC */
 #define AES256_CBC_KEY_LEN        32
 
+/* AES-CBC common */
+#define AES_CTR_IV_LEN         16
+
+/* AES128-CTR */
+#define AES128_CTR_KEY_LEN        16
+
+/* AES192-CTR */
+#define AES192_CTR_KEY_LEN        24
+
+/* AES256-CTR */
+#define AES256_CTR_KEY_LEN        32
+
 /* AES-GCM common */
 #define AES_GCM_IV_LEN         12
 #define AES_GCM_DIGEST_LEN     16
