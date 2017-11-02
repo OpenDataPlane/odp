@@ -72,6 +72,45 @@ extern "C" {
   */
 
 /**
+ * Protocol
+ */
+typedef enum odp_proto_t {
+	/** No protocol defined */
+	ODP_PROTO_NONE = 0,
+
+	/** Ethernet (including VLAN) */
+	ODP_PROTO_ETH,
+
+	/** IP version 4 */
+	ODP_PROTO_IPV4,
+
+	/** IP version 6 */
+	ODP_PROTO_IPV6
+
+} odp_proto_t;
+
+/**
+ * Protocol layer
+ */
+typedef enum odp_proto_layer_t {
+	/** No layers */
+	ODP_PROTO_LAYER_NONE = 0,
+
+	/** Layer L2 protocols (Ethernet, VLAN, etc) */
+	ODP_PROTO_LAYER_L2,
+
+	/** Layer L3 protocols (IPv4, IPv6, ICMP, IPSEC, etc) */
+	ODP_PROTO_LAYER_L3,
+
+	/** Layer L4 protocols (UDP, TCP, SCTP) */
+	ODP_PROTO_LAYER_L4,
+
+	/** All layers */
+	ODP_PROTO_LAYER_ALL
+
+} odp_proto_layer_t;
+
+/**
  * Packet API data range specifier
  */
 typedef struct odp_packet_data_range {
@@ -1138,6 +1177,87 @@ int odp_packet_move_data(odp_packet_t pkt, uint32_t dst_offset,
  * ********************************************************
  *
  */
+
+/**
+ * Packet parse parameters
+ */
+typedef struct odp_packet_parse_param_t {
+	/** Protocol header at parse starting point. Valid values for this
+	 *  field are: ODP_PROTO_ETH, ODP_PROTO_IPV4, ODP_PROTO_IPV6. */
+	odp_proto_t proto;
+
+	/** Continue parsing until this layer. Must be the same or higher
+	 *  layer than the layer of 'proto'. */
+	odp_proto_layer_t layer;
+
+	/** Flags to control payload data checks up to the selected parse
+	 *  layer. Checksum checking status can be queried for each packet with
+	 *  odp_packet_l3_chksum_status() and odp_packet_l4_chksum_status().
+	 */
+	union {
+		/** Individual check bits. */
+		struct {
+			/** Check IPv4 header checksum */
+			uint32_t ipv4_chksum   : 1;
+
+			/** Check UDP checksum */
+			uint32_t udp_chksum    : 1;
+
+			/** Check TCP checksum */
+			uint32_t tcp_chksum    : 1;
+
+			/** Check SCTP checksum */
+			uint32_t sctp_chksum   : 1;
+
+		} check;
+
+		/** All check bits. This can be used to set/clear all flags. */
+		uint32_t all_check;
+	};
+
+} odp_packet_parse_param_t;
+
+/**
+ * Parse packet
+ *
+ * Parse protocol headers in packet data. Parsing starts at 'offset', which
+ * is the first header byte of protocol 'param.proto'. Parameter 'param.layer'
+ * defines the last layer application is interested about.
+ * Use ODP_PROTO_LAYER_ALL for all layers. A successful operation sets or resets
+ * packet metadata for all layers from the layer of 'param.proto' to the
+ * application defined last layer. Metadata of other layers have undefined
+ * values. When operation fails, metadata of all protocol layers have undefined
+ * values.
+ *
+ * @param pkt     Packet handle
+ * @param offset  Byte offset into the packet
+ * @param param   Parse parameters. Proto and layer fields must be set. Clear
+ *                all check bits that are not used.
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_packet_parse(odp_packet_t pkt, uint32_t offset,
+		     const odp_packet_parse_param_t *param);
+
+/**
+ * Parse multiple packets
+ *
+ * Otherwise like odp_packet_parse(), but parses multiple packets. Packets may
+ * have unique offsets, but must start with the same protocol. Also, packets are
+ * parsed up to the same protocol layer.
+ *
+ * @param pkt     Packet handle array
+ * @param offset  Byte offsets into the packets
+ * @param num     Number of packets and offsets
+ * @param param   Parse parameters. Proto and layer fields must be set. Clear
+ *                all check bits that are not used.
+ *
+ * @return Number of packets parsed successfully (0 ... num)
+ * @retval <0 on failure
+ */
+int odp_packet_parse_multi(const odp_packet_t pkt[], const uint32_t offset[],
+			   int num, const odp_packet_parse_param_t *param);
 
 /**
  * Packet pool
