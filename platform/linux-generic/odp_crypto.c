@@ -51,6 +51,11 @@ static const odp_crypto_cipher_capability_t cipher_capa_aes_cbc[] = {
 {.key_len = 24, .iv_len = 16},
 {.key_len = 32, .iv_len = 16} };
 
+static const odp_crypto_cipher_capability_t cipher_capa_aes_ctr[] = {
+{.key_len = 16, .iv_len = 16},
+{.key_len = 24, .iv_len = 16},
+{.key_len = 32, .iv_len = 16} };
+
 static const odp_crypto_cipher_capability_t cipher_capa_aes_gcm[] = {
 {.key_len = 16, .iv_len = 12},
 {.key_len = 24, .iv_len = 12},
@@ -592,6 +597,7 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->ciphers.bit.des        = 1;
 	capa->ciphers.bit.trides_cbc = 1;
 	capa->ciphers.bit.aes_cbc    = 1;
+	capa->ciphers.bit.aes_ctr    = 1;
 	capa->ciphers.bit.aes_gcm    = 1;
 
 	capa->auths.bit.null         = 1;
@@ -638,6 +644,10 @@ int odp_crypto_cipher_capability(odp_cipher_alg_t cipher,
 	case ODP_CIPHER_ALG_AES_CBC:
 		src = cipher_capa_aes_cbc;
 		num = sizeof(cipher_capa_aes_cbc) / size;
+		break;
+	case ODP_CIPHER_ALG_AES_CTR:
+		src = cipher_capa_aes_ctr;
+		num = sizeof(cipher_capa_aes_ctr) / size;
 		break;
 	case ODP_CIPHER_ALG_AES_GCM:
 		src = cipher_capa_aes_gcm;
@@ -760,6 +770,16 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 			rc = process_cipher_param(session, EVP_aes_192_cbc());
 		else if (param->cipher_key.length == 32)
 			rc = process_cipher_param(session, EVP_aes_256_cbc());
+		else
+			rc = -1;
+		break;
+	case ODP_CIPHER_ALG_AES_CTR:
+		if (param->cipher_key.length == 16)
+			rc = process_cipher_param(session, EVP_aes_128_ctr());
+		else if (param->cipher_key.length == 24)
+			rc = process_cipher_param(session, EVP_aes_192_ctr());
+		else if (param->cipher_key.length == 32)
+			rc = process_cipher_param(session, EVP_aes_256_ctr());
 		else
 			rc = -1;
 		break;
