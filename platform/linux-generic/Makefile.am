@@ -116,30 +116,6 @@ odpapiplatinclude_HEADERS = \
 nodist_odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/static_inline.h
 
-odpdrvincludedir = $(includedir)/odp/drv
-odpdrvinclude_HEADERS = \
-		  include/odp/drv/align.h \
-		  include/odp/drv/atomic.h \
-		  include/odp/drv/barrier.h \
-		  include/odp/drv/byteorder.h \
-		  include/odp/drv/compiler.h \
-		  include/odp/drv/driver.h \
-		  include/odp/drv/shm.h \
-		  include/odp/drv/spinlock.h \
-		  include/odp/drv/std_types.h \
-		  include/odp/drv/sync.h
-
-odpdrvplatincludedir = $(includedir)/odp/drv/plat
-odpdrvplatinclude_HEADERS = \
-		  include/odp/drv/plat/atomic_types.h \
-		  include/odp/drv/plat/barrier_types.h \
-		  include/odp/drv/plat/byteorder_types.h \
-		  include/odp/drv/compiler.h \
-		  include/odp/drv/plat/driver_types.h \
-		  include/odp/drv/plat/shm_types.h \
-		  include/odp/drv/plat/spinlock_types.h \
-		  include/odp/drv/plat/strong_types.h
-
 noinst_HEADERS = \
 		  include/_fdserver_internal.h \
 		  include/_ishm_internal.h \
@@ -264,12 +240,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_timer_wheel.c \
 			   odp_traffic_mngr.c \
 			   odp_version.c \
-			   odp_weak.c \
-			   drv_atomic.c \
-			   drv_barrier.c \
-			   drv_driver.c \
-			   drv_shm.c \
-			   drv_spinlock.c
+			   odp_weak.c
 
 if ARCH_IS_ARM
 __LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_arch.c \
