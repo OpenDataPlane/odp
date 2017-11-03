@@ -74,19 +74,19 @@ typedef enum odp_ipsec_op_mode_t {
  */
 typedef enum odp_ipsec_proto_layer_t {
 	/** No layers */
-	ODP_IPSEC_LAYER_NONE = 0,
+	ODP_IPSEC_LAYER_NONE = ODP_PROTO_LAYER_NONE,
 
 	/** Layer L2 protocols (Ethernet, VLAN, etc) */
-	ODP_IPSEC_LAYER_L2,
+	ODP_IPSEC_LAYER_L2 = ODP_PROTO_LAYER_L2,
 
 	/** Layer L3 protocols (IPv4, IPv6, ICMP, IPSEC, etc) */
-	ODP_IPSEC_LAYER_L3,
+	ODP_IPSEC_LAYER_L3 = ODP_PROTO_LAYER_L3,
 
 	/** Layer L4 protocols (UDP, TCP, SCTP) */
-	ODP_IPSEC_LAYER_L4,
+	ODP_IPSEC_LAYER_L4 = ODP_PROTO_LAYER_L4,
 
 	/** All layers */
-	ODP_IPSEC_LAYER_ALL
+	ODP_IPSEC_LAYER_ALL = ODP_PROTO_LAYER_ALL
 
 } odp_ipsec_proto_layer_t;
 
