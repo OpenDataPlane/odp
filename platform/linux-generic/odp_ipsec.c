@@ -337,6 +337,13 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 			goto err;
 		}
 
+		if (ipsec_sa->aes_ctr_iv) {
+			iv[12] = 0;
+			iv[13] = 0;
+			iv[14] = 0;
+			iv[15] = 1;
+		}
+
 		hdr_len = _ODP_ESPHDR_LEN + ipsec_sa->esp_iv_len;
 		trl_len = _ODP_ESPTRL_LEN + ipsec_sa->icv_len;
 
@@ -729,6 +736,12 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 			memcpy(iv + ipsec_sa->salt_length, &ctr,
 			       ipsec_sa->esp_iv_len);
 
+			if (ipsec_sa->aes_ctr_iv) {
+				iv[12] = 0;
+				iv[13] = 0;
+				iv[14] = 0;
+				iv[15] = 1;
+			}
 		} else if (ipsec_sa->esp_iv_len) {
 			uint32_t len;
 
