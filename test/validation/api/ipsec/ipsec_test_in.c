@@ -191,6 +191,36 @@ static void test_in_esp_aes_cbc_sha256(void)
 	ipsec_sa_destroy(sa);
 }
 
+static void test_in_esp_aes_ctr_null(void)
+{
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    true, false, 123, NULL,
+			    ODP_CIPHER_ALG_AES_CTR, &key_a5_128,
+			    ODP_AUTH_ALG_NULL, NULL,
+			    &key_mcgrew_gcm_salt_3);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_icmp_0_esp_aes_ctr_null_1,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .pkt_out = &pkt_icmp_0 },
+		},
+	};
+
+	ipsec_check_in_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
 static void test_in_lookup_ah_sha256(void)
 {
 	odp_ipsec_sa_param_t param;
@@ -987,6 +1017,8 @@ odp_testinfo_t ipsec_in_suite[] = {
 				  ipsec_check_esp_aes_cbc_128_null),
 	ODP_TEST_INFO_CONDITIONAL(test_in_esp_aes_cbc_sha256,
 				  ipsec_check_esp_aes_cbc_128_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_in_esp_aes_ctr_null,
+				  ipsec_check_esp_aes_ctr_128_null),
 	ODP_TEST_INFO_CONDITIONAL(test_in_lookup_ah_sha256,
 				  ipsec_check_ah_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_in_lookup_esp_null_sha256,
