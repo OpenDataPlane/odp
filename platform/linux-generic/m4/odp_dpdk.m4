@@ -3,7 +3,7 @@
 ##########################################################################
 pktio_dpdk_support=no
 AC_ARG_WITH([dpdk-path],
-AC_HELP_STRING([--with-dpdk-path=DIR   path to dpdk build directory]),
+AS_HELP_STRING([--with-dpdk-path=DIR   path to dpdk build directory]),
     [DPDK_PATH="$withval"
     DPDK_CPPFLAGS="-msse4.2 -isystem $DPDK_PATH/include"
     pktio_dpdk_support=yes],[])
@@ -52,7 +52,7 @@ then
     AC_DEFINE_UNQUOTED([ODP_DPDK_ZERO_COPY], [$zero_copy],
 	      [Define to 1 to enable DPDK zero copy support])
 
-    DPDK_LIBS="-L$DPDK_PATH/lib -ldpdk -lpthread -ldl -lpcap -lm"
+    DPDK_LIBS="-L$DPDK_PATH/lib -ldpdk -lpthread -ldl -lpcap -lm -lnuma"
     AC_SUBST([DPDK_CPPFLAGS])
     AC_SUBST([DPDK_LIBS])
     AC_SUBST([DPDK_PMDS])

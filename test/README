@@ -3,7 +3,7 @@ All rights reserved.
 
 SPDX-License-Identifier:        BSD-3-Clause
 
-Files in test/common_plat/validation directory are intended to be terse
+Files in test/validation directory are intended to be terse
 checks that help ensure that the ODP implementations all perform identically
 and to specification. Tests inside the validation directory shall be platform
 independent.

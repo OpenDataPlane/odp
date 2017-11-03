@@ -1,48 +1,49 @@
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = $(top_builddir)/pkgconfig/libodphelper.pc
+pkgconfig_DATA = libodphelper.pc
 
 LIB   = $(top_builddir)/lib
-AM_CPPFLAGS = -I$(srcdir)/include
-AM_CPPFLAGS += -I$(top_srcdir)/platform/@with_platform@/include
-AM_CPPFLAGS += -I$(top_srcdir)/include
-AM_CPPFLAGS += -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
-AM_CPPFLAGS += -I$(top_builddir)/platform/@with_platform@/include
-AM_CPPFLAGS += -I$(top_srcdir)/platform/@with_platform@/arch/@ARCH_DIR@
-AM_CPPFLAGS += -I$(top_builddir)/include
+AM_CPPFLAGS = \
+	-I$(top_builddir)/platform/@with_platform@/include \
+	-I$(top_srcdir)/helper/include \
+	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/include/odp/arch/@ARCH_ABI@ \
+	-I$(top_srcdir)/platform/@with_platform@/include \
+	-I$(top_srcdir)/platform/@with_platform@/arch/@ARCH_DIR@ \
+	-I$(top_builddir)/include
 
 AM_LDFLAGS = -version-number '$(ODPHELPER_LIBSO_VERSION)'
 
 helperincludedir = $(includedir)/odp/helper/
 helperinclude_HEADERS = \
-		  $(srcdir)/include/odp/helper/chksum.h\
-		  $(srcdir)/include/odp/helper/eth.h\
-		  $(srcdir)/include/odp/helper/icmp.h\
-		  $(srcdir)/include/odp/helper/ip.h\
-		  $(srcdir)/include/odp/helper/ipsec.h\
-		  $(srcdir)/include/odp/helper/odph_api.h\
-		  $(srcdir)/include/odp/helper/odph_cuckootable.h\
-		  $(srcdir)/include/odp/helper/odph_hashtable.h\
-		  $(srcdir)/include/odp/helper/odph_iplookuptable.h\
-		  $(srcdir)/include/odp/helper/odph_lineartable.h\
-		  $(srcdir)/include/odp/helper/strong_types.h\
-		  $(srcdir)/include/odp/helper/tcp.h\
-		  $(srcdir)/include/odp/helper/table.h\
-		  $(srcdir)/include/odp/helper/threads.h \
-		  $(srcdir)/include/odp/helper/udp.h
+		  include/odp/helper/chksum.h\
+		  include/odp/helper/eth.h\
+		  include/odp/helper/icmp.h\
+		  include/odp/helper/ip.h\
+		  include/odp/helper/ipsec.h\
+		  include/odp/helper/odph_api.h\
+		  include/odp/helper/odph_cuckootable.h\
+		  include/odp/helper/odph_hashtable.h\
+		  include/odp/helper/odph_iplookuptable.h\
+		  include/odp/helper/odph_lineartable.h\
+		  include/odp/helper/strong_types.h\
+		  include/odp/helper/tcp.h\
+		  include/odp/helper/table.h\
+		  include/odp/helper/threads.h \
+		  include/odp/helper/udp.h
 
 if helper_linux
 helperinclude_HEADERS += \
-		  $(srcdir)/include/odp/helper/linux.h
+		  include/odp/helper/linux.h
 
 helperlinuxincludedir = $(includedir)/odp/helper/linux
 helperlinuxinclude_HEADERS = \
-		  $(srcdir)/include/odp/helper/linux/pthread.h \
-		  $(srcdir)/include/odp/helper/linux/process.h
+		  include/odp/helper/linux/pthread.h \
+		  include/odp/helper/linux/process.h
 endif
 
 noinst_HEADERS = \
-		 $(srcdir)/include/odph_debug.h \
-		 $(srcdir)/include/odph_list_internal.h
+		 include/odph_debug.h \
+		 include/odph_list_internal.h
 
 __LIB__libodphelper_la_SOURCES = \
 					eth.c \

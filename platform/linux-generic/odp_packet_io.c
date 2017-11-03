@@ -57,11 +57,10 @@ int odp_pktio_init_global(void)
 	shm = odp_shm_reserve("odp_pktio_entries",
 			      sizeof(pktio_table_t),
 			      sizeof(pktio_entry_t), 0);
-	pktio_tbl = odp_shm_addr(shm);
-
-	if (pktio_tbl == NULL)
+	if (shm == ODP_SHM_INVALID)
 		return -1;
 
+	pktio_tbl = odp_shm_addr(shm);
 	memset(pktio_tbl, 0, sizeof(pktio_table_t));
 
 	odp_spinlock_init(&pktio_tbl->lock);
@@ -179,8 +178,10 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 
 	/* if successful, alloc_pktio_entry() returns with the entry locked */
 	pktio_entry = get_pktio_entry(hdl);
-	if (!pktio_entry)
+	if (!pktio_entry) {
+		unlock_entry(pktio_entry);
 		return ODP_PKTIO_INVALID;
+	}
 
 	pktio_entry->s.ops = NULL; /* Reset stale ops */
 	pktio_entry->s.pool = pool;
@@ -202,14 +203,14 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 
 	if (pktio_entry->s.ops == NULL) {
 		pktio_entry->s.state = PKTIO_STATE_FREE;
-		hdl = ODP_PKTIO_INVALID;
+		unlock_entry(pktio_entry);
 		ODP_ERR("Unable to init any I/O type.\n");
-	} else {
-		snprintf(pktio_entry->s.name,
-			 sizeof(pktio_entry->s.name), "%s", name);
-		pktio_entry->s.state = PKTIO_STATE_OPENED;
+		return ODP_PKTIO_INVALID;
 	}
 
+	snprintf(pktio_entry->s.name,
+		 sizeof(pktio_entry->s.name), "%s", name);
+	pktio_entry->s.state = PKTIO_STATE_OPENED;
 	unlock_entry(pktio_entry);
 
 	return hdl;
@@ -1284,12 +1285,12 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 	if (mode == ODP_PKTIN_MODE_DISABLED)
 		return 0;
 
-	num_queues = param->num_queues;
-
-	if (num_queues == 0) {
-		ODP_DBG("pktio %s: zero input queues\n", entry->s.name);
+	if (!param->classifier_enable && param->num_queues == 0) {
+		ODP_DBG("invalid num_queues for operation mode\n");
 		return -1;
 	}
+
+	num_queues = param->classifier_enable ? 1 : param->num_queues;
 
 	rc = odp_pktio_capability(pktio, &capa);
 	if (rc) {
@@ -1319,8 +1320,11 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 			snprintf(name, sizeof(name), "odp-pktin-%i-%i",
 				 pktio_id, i);
 
-			memcpy(&queue_param, &param->queue_param,
-			       sizeof(odp_queue_param_t));
+			if (param->classifier_enable)
+				odp_queue_param_init(&queue_param);
+			else
+				memcpy(&queue_param, &param->queue_param,
+				       sizeof(odp_queue_param_t));
 
 			queue_param.type = ODP_QUEUE_TYPE_PLAIN;
 

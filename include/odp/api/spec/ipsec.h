@@ -282,6 +282,9 @@ typedef struct odp_ipsec_capability_t {
 	 *  be used for many SAs. */
 	uint32_t max_queues;
 
+	/** Maximum anti-replay window size. */
+	uint32_t max_antireplay_ws;
+
 	/** Supported cipher algorithms */
 	odp_crypto_cipher_algos_t ciphers;
 
@@ -630,14 +633,6 @@ typedef struct odp_ipsec_sa_param_t {
 	/** SPI value */
 	uint32_t spi;
 
-	/** Select pipelined destination for resulting events
-	 *
-	 *  Asynchronous and inline modes generate events. Select where
-	 *  those events are sent. Inbound SAs may choose to use pipelined
-	 *  classification. The default value is ODP_IPSEC_PIPELINE_NONE.
-	 */
-	odp_ipsec_pipeline_t pipeline;
-
 	/** Destination queue for IPSEC events
 	 *
 	 *  Operations in asynchronous or inline mode enqueue resulting events
@@ -686,6 +681,15 @@ typedef struct odp_ipsec_sa_param_t {
 			 *  anti-replay service.
 			 */
 			uint32_t antireplay_ws;
+
+			/** Select pipelined destination for resulting events
+			 *
+			 * Asynchronous and inline modes generate events.
+			 * Select where those events are sent. Inbound SAs may
+			 * choose to use pipelined classification. The default
+			 * value is ODP_IPSEC_PIPELINE_NONE.
+			 */
+			odp_ipsec_pipeline_t pipeline;
 
 			/** Classifier destination CoS for resulting packets
 			 *

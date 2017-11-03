@@ -176,7 +176,7 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 	}
 
 	num = pool_entry->num;
-	data_room_size = pool_entry->max_seg_len + CONFIG_PACKET_HEADROOM;
+	data_room_size = pool_entry->seg_len + CONFIG_PACKET_HEADROOM;
 	elt_size = sizeof(struct rte_mbuf) + (unsigned)data_room_size;
 	mbp_priv.mbuf_data_room_size = data_room_size;
 	mbp_priv.mbuf_priv_size = 0;
@@ -233,7 +233,7 @@ static int pool_dequeue_bulk(struct rte_mempool *mp, void **obj_table,
 	int pkts;
 	int i;
 
-	pkts = packet_alloc_multi(pool, pool_entry->max_seg_len, packet_tbl,
+	pkts = packet_alloc_multi(pool, pool_entry->seg_len, packet_tbl,
 				  num);
 
 	if (odp_unlikely(pkts != (int)num)) {
@@ -296,6 +296,36 @@ static void pool_destroy(void *pool)
 
 	if (mp != NULL)
 		rte_mempool_free(mp);
+}
+
+static struct rte_mempool *pool_create(pool_t *pool)
+{
+	struct rte_mempool *pkt_pool;
+	char pool_name[RTE_MEMPOOL_NAMESIZE];
+
+	odp_ticketlock_lock(&pool->lock);
+
+	if (pool->ext_desc != NULL) {
+		odp_ticketlock_unlock(&pool->lock);
+		return (struct rte_mempool *)pool->ext_desc;
+	}
+
+	snprintf(pool_name, sizeof(pool_name),
+		 "dpdk_pktpool_%" PRIu32 "", pool->pool_idx);
+	pkt_pool = mbuf_pool_create(pool_name, pool);
+
+	if (pkt_pool == NULL) {
+		odp_ticketlock_unlock(&pool->lock);
+		ODP_ERR("Creating external DPDK pool failed\n");
+		return NULL;
+	}
+
+	pool->ext_desc = pkt_pool;
+	pool->ext_destroy = pool_destroy;
+
+	odp_ticketlock_unlock(&pool->lock);
+
+	return pkt_pool;
 }
 
 static struct rte_mempool_ops ops_stack = {
@@ -679,6 +709,11 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 		} else {
 			pool_t *pool_entry = pkt_hdr->buf_hdr.pool_ptr;
 
+			if (odp_unlikely(pool_entry->ext_desc == NULL)) {
+				if (pool_create(pool_entry) == NULL)
+					ODP_ABORT("Creating DPDK pool failed");
+			}
+
 			if (pkt_hdr->buf_hdr.segcount != 1 ||
 			    !pool_entry->mem_from_huge_pages) {
 				/* Fall back to packet copy */
@@ -688,8 +723,8 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 				(*copy_count)++;
 
 			} else {
-				mbuf_init(pkt_dpdk->pkt_pool, mbuf,
-					  pkt_hdr);
+				mbuf_init((struct rte_mempool *)
+					  pool_entry->ext_desc, mbuf, pkt_hdr);
 				mbuf_update(mbuf, pkt_hdr, pkt_len);
 				if (pktout_cfg->all_bits)
 					pkt_set_ol_tx(pktout_cfg, pkt_hdr,
@@ -899,12 +934,6 @@ static int dpdk_close(pktio_entry_t *pktio_entry)
 			rte_pktmbuf_free(pkt_dpdk->rx_cache[i].s.pkt[idx++]);
 	}
 
-	if (pktio_entry->s.state != PKTIO_STATE_OPENED)
-		rte_eth_dev_close(pkt_dpdk->port_id);
-
-	if (!ODP_DPDK_ZERO_COPY)
-		rte_mempool_free(pkt_dpdk->pkt_pool);
-
 	return 0;
 }
 
@@ -991,7 +1020,7 @@ static int dpdk_pktio_init(void)
 	}
 	ODP_DBG("rte_eal_init OK\n");
 
-	rte_set_log_level(RTE_LOG_WARNING);
+	rte_log_set_global_level(RTE_LOG_WARNING);
 
 	i = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t),
 				   &original_cpuset);
@@ -1030,6 +1059,28 @@ static int dpdk_pktio_init_local(void)
 	}
 
 	RTE_PER_LCORE(_lcore_id) = cpu;
+
+	return 0;
+}
+
+static void dpdk_mempool_free(struct rte_mempool *mp, void *arg ODP_UNUSED)
+{
+	rte_mempool_free(mp);
+}
+
+static int dpdk_pktio_term(void)
+{
+	uint8_t port_id;
+
+	if (!dpdk_initialized)
+		return 0;
+
+	RTE_ETH_FOREACH_DEV(port_id) {
+		rte_eth_dev_close(port_id);
+	}
+
+	if (!ODP_DPDK_ZERO_COPY)
+		rte_mempool_walk(dpdk_mempool_free, NULL);
 
 	return 0;
 }
@@ -1223,23 +1274,23 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	else
 		pkt_dpdk->min_rx_burst = 0;
 	if (ODP_DPDK_ZERO_COPY) {
-		if (pool_entry->ext_desc != NULL) {
+		if (pool_entry->ext_desc != NULL)
 			pkt_pool = (struct rte_mempool *)pool_entry->ext_desc;
-		} else {
-			snprintf(pool_name, sizeof(pool_name),
-				 "pktpool_%" PRIu32 "", pool_entry->pool_idx);
-			pkt_pool = mbuf_pool_create(pool_name,
-						    pool_entry);
-			pool_entry->ext_destroy = pool_destroy;
-			pool_entry->ext_desc = pkt_pool;
-		}
+		else
+			pkt_pool = pool_create(pool_entry);
 	} else {
 		snprintf(pool_name, sizeof(pool_name), "pktpool_%s", netdev);
-		pkt_pool = rte_pktmbuf_pool_create(pool_name,
-						   DPDK_NB_MBUF,
-						   DPDK_MEMPOOL_CACHE_SIZE, 0,
-						   DPDK_MBUF_BUF_SIZE,
-						   rte_socket_id());
+		/* Check if the pool exists already */
+		pkt_pool = rte_mempool_lookup(pool_name);
+		if (pkt_pool == NULL) {
+			unsigned cache_size = DPDK_MEMPOOL_CACHE_SIZE;
+
+			pkt_pool = rte_pktmbuf_pool_create(pool_name,
+							   DPDK_NB_MBUF,
+							   cache_size, 0,
+							   DPDK_MBUF_BUF_SIZE,
+							   rte_socket_id());
+		}
 	}
 	if (pkt_pool == NULL) {
 		ODP_ERR("Cannot init mbuf packet pool\n");
@@ -1250,7 +1301,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 
 	data_room = rte_pktmbuf_data_room_size(pkt_dpdk->pkt_pool) -
 			RTE_PKTMBUF_HEADROOM;
-	pkt_dpdk->data_room = RTE_MIN(pool_entry->max_seg_len, data_room);
+	pkt_dpdk->data_room = RTE_MIN(pool_entry->seg_len, data_room);
 
 	/* Mbuf chaining not yet supported */
 	 pkt_dpdk->mtu = RTE_MIN(pkt_dpdk->mtu, pkt_dpdk->data_room);
@@ -1573,7 +1624,7 @@ static pktio_ops_module_t dpdk_pktio_ops = {
 		.init_local = dpdk_pktio_init_local,
 		.init_global = dpdk_pktio_init_global,
 		.term_local = NULL,
-		.term_global = NULL,
+		.term_global = dpdk_pktio_term,
 	},
 	.open = dpdk_open,
 	.close = dpdk_close,

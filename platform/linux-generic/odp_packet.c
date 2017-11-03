@@ -23,9 +23,6 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-/* Initial packet segment data length */
-#define BASE_LEN  CONFIG_PACKET_MAX_SEG_LEN
-
 #include <odp/visibility_begin.h>
 
 /* Fill in packet header field offsets for inline functions */
@@ -178,7 +175,7 @@ static inline void *packet_seg_data(odp_packet_hdr_t *pkt_hdr, uint32_t seg_idx)
 
 static inline uint16_t packet_last_seg(odp_packet_hdr_t *pkt_hdr)
 {
-	if (CONFIG_PACKET_MAX_SEGS == 1)
+	if (CONFIG_PACKET_SEG_DISABLED)
 		return 0;
 	else
 		return pkt_hdr->buf_hdr.segcount - 1;
@@ -288,7 +285,7 @@ static inline void *packet_map(odp_packet_hdr_t *pkt_hdr,
 	if (odp_unlikely(offset >= pkt_hdr->frame_len))
 		return NULL;
 
-	if (odp_likely(CONFIG_PACKET_MAX_SEGS == 1 || seg_count == 1)) {
+	if (odp_likely(CONFIG_PACKET_SEG_DISABLED || seg_count == 1)) {
 		addr = pkt_hdr->buf_hdr.seg[0].data + offset;
 		len  = pkt_hdr->buf_hdr.seg[0].len - offset;
 	} else {
@@ -328,7 +325,7 @@ void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->p.error_flags.all  = 0;
 	pkt_hdr->p.input_flags.all  = 0;
 	pkt_hdr->p.output_flags.all = 0;
-	pkt_hdr->p.l2_offset        = 0;
+	pkt_hdr->p.l2_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->p.l3_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->p.l4_offset        = ODP_PACKET_OFFSET_INVALID;
 }
@@ -338,19 +335,30 @@ static inline void link_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 	int cur, i;
 	odp_packet_hdr_t *hdr;
 	odp_packet_hdr_t *head = pkt_hdr[0];
+	uint32_t seg_len = pool_entry_from_hdl(head->buf_hdr.pool_hdl)->seg_len;
 
 	cur = 0;
 
 	while (1) {
 		hdr = pkt_hdr[cur];
 
-		for (i = 0; i < CONFIG_PACKET_MAX_SEGS; i++) {
+		for (i = 0; i < CONFIG_PACKET_SEGS_PER_HDR; i++) {
 			odp_buffer_hdr_t *buf_hdr;
 
 			buf_hdr = &pkt_hdr[cur]->buf_hdr;
 			hdr->buf_hdr.seg[i].hdr  = buf_hdr;
 			hdr->buf_hdr.seg[i].data = buf_hdr->base_data;
-			hdr->buf_hdr.seg[i].len  = BASE_LEN;
+			hdr->buf_hdr.seg[i].len  = seg_len;
+
+			/* init_segments() handles first seg ref_cnt init */
+			if (ODP_DEBUG == 1 && cur > 0) {
+				uint32_t prev_ref =
+					odp_atomic_fetch_inc_u32(
+						&pkt_hdr[cur]->buf_hdr.ref_cnt);
+
+				ODP_ASSERT(prev_ref == 0);
+			}
+
 			cur++;
 
 			if (cur == num) {
@@ -362,7 +370,7 @@ static inline void link_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 			}
 		}
 
-		hdr->buf_hdr.num_seg  = CONFIG_PACKET_MAX_SEGS;
+		hdr->buf_hdr.num_seg  = CONFIG_PACKET_SEGS_PER_HDR;
 		hdr->buf_hdr.next_seg = pkt_hdr[cur];
 	}
 }
@@ -370,26 +378,32 @@ static inline void link_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 {
 	odp_packet_hdr_t *hdr;
+	uint32_t seg_len;
 
 	/* First segment is the packet descriptor */
 	hdr = pkt_hdr[0];
+	seg_len = pool_entry_from_hdl(hdr->buf_hdr.pool_hdl)->seg_len;
 
+	/* Defaults for single segment packet */
 	hdr->buf_hdr.seg[0].data = hdr->buf_hdr.base_data;
-	hdr->buf_hdr.seg[0].len  = BASE_LEN;
+	hdr->buf_hdr.seg[0].len  = seg_len;
 
-	/* Link segments */
-	if (CONFIG_PACKET_MAX_SEGS != 1) {
+	if (ODP_DEBUG == 1) {
+		uint32_t prev_ref =
+			odp_atomic_fetch_inc_u32(&hdr->buf_hdr.ref_cnt);
+
+		ODP_ASSERT(prev_ref == 0);
+	}
+
+	if (!CONFIG_PACKET_SEG_DISABLED) {
 		hdr->buf_hdr.segcount = num;
-
-		/* Defaults for single segment packet */
 		hdr->buf_hdr.num_seg  = 1;
 		hdr->buf_hdr.next_seg = NULL;
 		hdr->buf_hdr.last_seg = &hdr->buf_hdr;
 
-		if (odp_unlikely(num > 1)) {
+		/* Link segments */
+		if (odp_unlikely(num > 1))
 			link_segments(pkt_hdr, num);
-
-		}
 	}
 }
 
@@ -399,6 +413,7 @@ static inline void reset_seg(odp_packet_hdr_t *pkt_hdr, int first, int num)
 	void *base;
 	int i;
 	seg_entry_t *seg;
+	uint32_t seg_len = pool_entry_from_hdl(hdr->buf_hdr.pool_hdl)->seg_len;
 	uint8_t idx;
 
 	seg_entry_find_idx(&hdr, &idx, first);
@@ -406,27 +421,25 @@ static inline void reset_seg(odp_packet_hdr_t *pkt_hdr, int first, int num)
 	for (i = 0; i < num; i++) {
 		base = hdr->buf_hdr.base_data;
 		seg = seg_entry_next(&hdr, &idx);
-		seg->len  = BASE_LEN;
+		seg->len  = seg_len;
 		seg->data = base;
 	}
 }
 
 /* Calculate the number of segments */
-static inline int num_segments(uint32_t len)
+static inline int num_segments(uint32_t len, uint32_t seg_len)
 {
-	uint32_t max_seg_len;
 	int num;
 
-	if (CONFIG_PACKET_MAX_SEGS == 1)
+	if (CONFIG_PACKET_SEG_DISABLED)
 		return 1;
 
 	num = 1;
-	max_seg_len = CONFIG_PACKET_MAX_SEG_LEN;
 
-	if (odp_unlikely(len > max_seg_len)) {
-		num = len / max_seg_len;
+	if (odp_unlikely(len > seg_len)) {
+		num = len / seg_len;
 
-		if (odp_likely((num * max_seg_len) != len))
+		if (odp_likely((num * seg_len) != len))
 			num += 1;
 	}
 
@@ -473,8 +486,8 @@ static inline odp_packet_hdr_t *add_segments(odp_packet_hdr_t *pkt_hdr,
 	if (new_hdr == NULL)
 		return NULL;
 
-	seg_len = len - ((num - 1) * pool->max_seg_len);
-	offset  = pool->max_seg_len - seg_len;
+	seg_len = len - ((num - 1) * pool->seg_len);
+	offset  = pool->seg_len - seg_len;
 
 	if (head) {
 		/* add into the head*/
@@ -791,7 +804,7 @@ int packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 	pool_t *pool = pool_entry_from_hdl(pool_hdl);
 	int num, num_seg;
 
-	num_seg = num_segments(len);
+	num_seg = num_segments(len, pool->seg_len);
 	num     = packet_alloc(pool, len, max_num, num_seg, pkt);
 
 	return num;
@@ -811,7 +824,7 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 	if (odp_unlikely(len > pool->max_len))
 		return ODP_PACKET_INVALID;
 
-	num_seg = num_segments(len);
+	num_seg = num_segments(len, pool->seg_len);
 	num     = packet_alloc(pool, len, 1, num_seg, &pkt);
 
 	if (odp_unlikely(num == 0))
@@ -834,7 +847,7 @@ int odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 	if (odp_unlikely(len > pool->max_len))
 		return -1;
 
-	num_seg = num_segments(len);
+	num_seg = num_segments(len, pool->seg_len);
 	num     = packet_alloc(pool, len, max_num, num_seg, pkt);
 
 	return num;
@@ -845,7 +858,9 @@ void odp_packet_free(odp_packet_t pkt)
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 	int num_seg = pkt_hdr->buf_hdr.segcount;
 
-	if (odp_likely(CONFIG_PACKET_MAX_SEGS == 1 || num_seg == 1)) {
+	ODP_ASSERT(buffer_ref(&pkt_hdr->buf_hdr) > 0);
+
+	if (odp_likely(CONFIG_PACKET_SEG_DISABLED || num_seg == 1)) {
 		odp_buffer_hdr_t *buf_hdr[2];
 		int num = 1;
 
@@ -874,6 +889,8 @@ void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt[i]);
 		int num_seg = pkt_hdr->buf_hdr.segcount;
 
+		ODP_ASSERT(buffer_ref(&pkt_hdr->buf_hdr) > 0);
+
 		if (odp_unlikely(num_seg > 1)) {
 			free_all_segments(pkt_hdr, num_seg);
 			num_freed++;
@@ -901,7 +918,7 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 	int num = pkt_hdr->buf_hdr.segcount;
 
-	if (odp_unlikely(len > (pool->max_seg_len * num)))
+	if (odp_unlikely(len > (pool->seg_len * num)))
 		return -1;
 
 	reset_seg(pkt_hdr, 0, num);
@@ -975,7 +992,7 @@ int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len,
 		if (odp_unlikely((frame_len + len) > pool->max_len))
 			return -1;
 
-		num = num_segments(len - headroom);
+		num = num_segments(len - headroom, pool->seg_len);
 		push_head(pkt_hdr, headroom);
 		ptr = add_segments(pkt_hdr, pool, len - headroom, num, 1);
 
@@ -1022,7 +1039,7 @@ int odp_packet_trunc_head(odp_packet_t *pkt, uint32_t len,
 
 	if (len < seg_len) {
 		pull_head(pkt_hdr, len);
-	} else if (CONFIG_PACKET_MAX_SEGS != 1) {
+	} else if (!CONFIG_PACKET_SEG_DISABLED) {
 		int num = 0;
 		uint32_t pull_len = 0;
 
@@ -1054,6 +1071,8 @@ void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len)
 	if (len > pkt_hdr->tailroom)
 		return NULL;
 
+	ODP_ASSERT(odp_packet_has_ref(pkt) == 0);
+
 	old_tail = packet_tail(pkt_hdr);
 	push_tail(pkt_hdr, len);
 
@@ -1069,6 +1088,8 @@ int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len,
 	uint32_t tail_off  = frame_len;
 	int ret = 0;
 
+	ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
+
 	if (len > tailroom) {
 		pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 		int num;
@@ -1077,7 +1098,7 @@ int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len,
 		if (odp_unlikely((frame_len + len) > pool->max_len))
 			return -1;
 
-		num = num_segments(len - tailroom);
+		num = num_segments(len - tailroom, pool->seg_len);
 		push_tail(pkt_hdr, tailroom);
 		ptr = add_segments(pkt_hdr, pool, len - tailroom, num, 0);
 
@@ -1101,6 +1122,8 @@ void *odp_packet_pull_tail(odp_packet_t pkt, uint32_t len)
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 	seg_entry_t *last_seg     = seg_entry_last(pkt_hdr);
 
+	ODP_ASSERT(odp_packet_has_ref(pkt) == 0);
+
 	if (len > last_seg->len)
 		return NULL;
 
@@ -1120,13 +1143,15 @@ int odp_packet_trunc_tail(odp_packet_t *pkt, uint32_t len,
 	if (len > pkt_hdr->frame_len)
 		return -1;
 
+	ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
+
 	last     = packet_last_seg(pkt_hdr);
 	last_seg = seg_entry_last(pkt_hdr);
 	seg_len  = last_seg->len;
 
 	if (len < seg_len) {
 		pull_tail(pkt_hdr, len);
-	} else if (CONFIG_PACKET_MAX_SEGS != 1) {
+	} else if (!CONFIG_PACKET_SEG_DISABLED) {
 		int num = 0;
 		uint32_t pull_len = 0;
 
@@ -1389,6 +1414,8 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 	if (align > ODP_CACHE_LINE_SIZE)
 		return -1;
 
+	ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
+
 	if (seglen >= len) {
 		misalign = align <= 1 ? 0 :
 			ROUNDUP_ALIGN(uaddr, align) - uaddr;
@@ -1426,6 +1453,8 @@ int odp_packet_concat(odp_packet_t *dst, odp_packet_t src)
 	uint32_t dst_len = dst_hdr->frame_len;
 	uint32_t src_len = src_hdr->frame_len;
 
+	ODP_ASSERT(odp_packet_has_ref(*dst) == 0);
+
 	/* Do a copy if packets are from different pools. */
 	if (odp_unlikely(dst_pool != src_pool)) {
 		if (odp_packet_extend_tail(dst, src_len, NULL, NULL) >= 0) {
@@ -1455,6 +1484,8 @@ int odp_packet_split(odp_packet_t *pkt, uint32_t len, odp_packet_t *tail)
 
 	if (len >= pktlen || tail == NULL)
 		return -1;
+
+	ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
 
 	*tail = odp_packet_copy_part(*pkt, len, pktlen - len,
 				     odp_packet_pool(*pkt));
@@ -1643,6 +1674,32 @@ int _odp_packet_set_data(odp_packet_t pkt, uint32_t offset,
 	return 0;
 }
 
+int _odp_packet_cmp_data(odp_packet_t pkt, uint32_t offset,
+			 const void *s, uint32_t len)
+{
+	const uint8_t *ptr = s;
+	void *mapaddr;
+	uint32_t seglen = 0; /* GCC */
+	uint32_t cmplen;
+	int ret;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	ODP_ASSERT(offset + len <= pkt_hdr->frame_len);
+
+	while (len > 0) {
+		mapaddr = packet_map(pkt_hdr, offset, &seglen, NULL);
+		cmplen = len > seglen ? seglen : len;
+		ret = memcmp(mapaddr, ptr, cmplen);
+		if (ret != 0)
+			return ret;
+		offset  += cmplen;
+		len     -= cmplen;
+		ptr     += cmplen;
+	}
+
+	return 0;
+}
+
 /*
  *
  * Debugging
@@ -1721,9 +1778,68 @@ void odp_packet_print(odp_packet_t pkt)
 		seg = odp_packet_next_seg(pkt, seg);
 	}
 
-	str[len] = '\0';
+	ODP_PRINT("%s\n", str);
+}
 
-	ODP_PRINT("\n%s\n", str);
+void odp_packet_print_data(odp_packet_t pkt, uint32_t offset,
+			   uint32_t byte_len)
+{
+	odp_packet_hdr_t *hdr = packet_hdr(pkt);
+	uint32_t bytes_per_row = 16;
+	int num_rows = (byte_len + bytes_per_row - 1) / bytes_per_row;
+	int max_len = 256 + (3 * byte_len) + (3 * num_rows);
+	char str[max_len];
+	int len = 0;
+	int n = max_len - 1;
+	uint32_t data_len = odp_packet_len(pkt);
+	pool_t *pool = hdr->buf_hdr.pool_ptr;
+
+	len += snprintf(&str[len], n - len, "Packet\n------\n");
+	len += snprintf(&str[len], n - len,
+			"  pool index    %" PRIu32 "\n", pool->pool_idx);
+	len += snprintf(&str[len], n - len,
+			"  buf index     %" PRIu32 "\n", hdr->buf_hdr.index);
+	len += snprintf(&str[len], n - len,
+			"  segcount      %" PRIu16 "\n", hdr->buf_hdr.segcount);
+	len += snprintf(&str[len], n - len,
+			"  data len      %" PRIu32 "\n", data_len);
+	len += snprintf(&str[len], n - len,
+			"  data ptr      %p\n", odp_packet_data(pkt));
+	len += snprintf(&str[len], n - len,
+			"  print offset  %" PRIu32 "\n", offset);
+	len += snprintf(&str[len], n - len,
+			"  print length  %" PRIu32 "\n", byte_len);
+
+	if (offset + byte_len > data_len) {
+		len += snprintf(&str[len], n - len, " BAD OFFSET OR LEN\n");
+		ODP_PRINT("%s\n", str);
+		return;
+	}
+
+	while (byte_len) {
+		uint32_t copy_len;
+		uint8_t data[bytes_per_row];
+		uint32_t i;
+
+		if (byte_len > bytes_per_row)
+			copy_len = bytes_per_row;
+		else
+			copy_len = byte_len;
+
+		odp_packet_copy_to_mem(pkt, offset, copy_len, data);
+
+		len += snprintf(&str[len], n - len, " ");
+
+		for (i = 0; i < copy_len; i++)
+			len += snprintf(&str[len], n - len, " %02x", data[i]);
+
+		len += snprintf(&str[len], n - len, "\n");
+
+		byte_len -= copy_len;
+		offset   += copy_len;
+	}
+
+	ODP_PRINT("%s\n", str);
 }
 
 int odp_packet_is_valid(odp_packet_t pkt)
@@ -1767,6 +1883,78 @@ int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 	 * happen when copying between different pools.
 	 */
 	return dst_size < src_size;
+}
+
+/** Parser helper function for Ethernet packets */
+static inline uint16_t parse_eth(packet_parser_t *prs, const uint8_t **parseptr,
+				 uint32_t *offset, uint32_t frame_len)
+{
+	uint16_t ethtype;
+	const _odp_ethhdr_t *eth;
+	uint16_t macaddr0, macaddr2, macaddr4;
+	const _odp_vlanhdr_t *vlan;
+
+	/* Detect jumbo frames */
+	if (frame_len > _ODP_ETH_LEN_MAX)
+		prs->input_flags.jumbo = 1;
+
+	eth = (const _odp_ethhdr_t *)*parseptr;
+
+	/* Handle Ethernet broadcast/multicast addresses */
+	macaddr0 = odp_be_to_cpu_16(*((const uint16_t *)(const void *)eth));
+	prs->input_flags.eth_mcast = (macaddr0 & 0x0100) == 0x0100;
+
+	if (macaddr0 == 0xffff) {
+		macaddr2 =
+			odp_be_to_cpu_16(*((const uint16_t *)
+					   (const void *)eth + 1));
+		macaddr4 =
+			odp_be_to_cpu_16(*((const uint16_t *)
+					   (const void *)eth + 2));
+		prs->input_flags.eth_bcast =
+			(macaddr2 == 0xffff) && (macaddr4 == 0xffff);
+	} else {
+		prs->input_flags.eth_bcast = 0;
+	}
+
+	/* Get Ethertype */
+	ethtype = odp_be_to_cpu_16(eth->type);
+	*offset += sizeof(*eth);
+	*parseptr += sizeof(*eth);
+
+	/* Check for SNAP vs. DIX */
+	if (ethtype < _ODP_ETH_LEN_MAX) {
+		prs->input_flags.snap = 1;
+		if (ethtype > frame_len - *offset) {
+			prs->error_flags.snap_len = 1;
+			return 0;
+		}
+		ethtype = odp_be_to_cpu_16(*((const uint16_t *)(uintptr_t)
+					     (parseptr + 6)));
+		*offset   += 8;
+		*parseptr += 8;
+	}
+
+	/* Parse the VLAN header(s), if present */
+	if (ethtype == _ODP_ETHTYPE_VLAN_OUTER) {
+		prs->input_flags.vlan_qinq = 1;
+		prs->input_flags.vlan = 1;
+
+		vlan = (const _odp_vlanhdr_t *)*parseptr;
+		ethtype = odp_be_to_cpu_16(vlan->type);
+		*offset += sizeof(_odp_vlanhdr_t);
+		*parseptr += sizeof(_odp_vlanhdr_t);
+	}
+
+	if (ethtype == _ODP_ETHTYPE_VLAN) {
+		prs->input_flags.vlan = 1;
+		vlan = (const _odp_vlanhdr_t *)*parseptr;
+		ethtype = odp_be_to_cpu_16(vlan->type);
+		*offset += sizeof(_odp_vlanhdr_t);
+		*parseptr += sizeof(_odp_vlanhdr_t);
+	}
+
+	return ethtype;
 }
 
 /**
@@ -1909,92 +2097,16 @@ static inline void parse_udp(packet_parser_t *prs,
 	*parseptr += sizeof(_odp_udphdr_t);
 }
 
-/**
- * Parse common packet headers up to given layer
- *
- * The function expects at least PACKET_PARSE_SEG_LEN bytes of data to be
- * available from the ptr.
- */
-int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
-			uint32_t frame_len, uint32_t seg_len,
-			odp_pktio_parser_layer_t layer)
+static inline
+int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
+			      uint32_t offset,
+			      uint32_t frame_len, uint32_t seg_len,
+			      odp_pktio_parser_layer_t layer,
+			      uint16_t ethtype)
 {
-	uint32_t offset;
-	uint16_t ethtype;
-	const uint8_t *parseptr;
 	uint8_t  ip_proto;
-	const _odp_ethhdr_t *eth;
-	uint16_t macaddr0, macaddr2, macaddr4;
-	const _odp_vlanhdr_t *vlan;
 
-	if (layer == ODP_PKTIO_PARSER_LAYER_NONE)
-		return 0;
-
-	/* We only support Ethernet for now */
-	prs->input_flags.eth = 1;
-	/* Assume valid L2 header, no CRC/FCS check in SW */
-	prs->input_flags.l2 = 1;
-	/* Detect jumbo frames */
-	if (frame_len > _ODP_ETH_LEN_MAX)
-		prs->input_flags.jumbo = 1;
-
-	offset = sizeof(_odp_ethhdr_t);
-	eth = (const _odp_ethhdr_t *)ptr;
-
-	/* Handle Ethernet broadcast/multicast addresses */
-	macaddr0 = odp_be_to_cpu_16(*((const uint16_t *)(const void *)eth));
-	prs->input_flags.eth_mcast = (macaddr0 & 0x0100) == 0x0100;
-
-	if (macaddr0 == 0xffff) {
-		macaddr2 =
-			odp_be_to_cpu_16(*((const uint16_t *)
-					   (const void *)eth + 1));
-		macaddr4 =
-			odp_be_to_cpu_16(*((const uint16_t *)
-					   (const void *)eth + 2));
-		prs->input_flags.eth_bcast =
-			(macaddr2 == 0xffff) && (macaddr4 == 0xffff);
-	} else {
-		prs->input_flags.eth_bcast = 0;
-	}
-
-	/* Get Ethertype */
-	ethtype = odp_be_to_cpu_16(eth->type);
-	parseptr = (const uint8_t *)(eth + 1);
-
-	/* Check for SNAP vs. DIX */
-	if (ethtype < _ODP_ETH_LEN_MAX) {
-		prs->input_flags.snap = 1;
-		if (ethtype > frame_len - offset) {
-			prs->error_flags.snap_len = 1;
-			goto parse_exit;
-		}
-		ethtype = odp_be_to_cpu_16(*((const uint16_t *)(uintptr_t)
-					     (parseptr + 6)));
-		offset   += 8;
-		parseptr += 8;
-	}
-
-	/* Parse the VLAN header(s), if present */
-	if (ethtype == _ODP_ETHTYPE_VLAN_OUTER) {
-		prs->input_flags.vlan_qinq = 1;
-		prs->input_flags.vlan = 1;
-
-		vlan = (const _odp_vlanhdr_t *)parseptr;
-		ethtype = odp_be_to_cpu_16(vlan->type);
-		offset += sizeof(_odp_vlanhdr_t);
-		parseptr += sizeof(_odp_vlanhdr_t);
-	}
-
-	if (ethtype == _ODP_ETHTYPE_VLAN) {
-		prs->input_flags.vlan = 1;
-		vlan = (const _odp_vlanhdr_t *)parseptr;
-		ethtype = odp_be_to_cpu_16(vlan->type);
-		offset += sizeof(_odp_vlanhdr_t);
-		parseptr += sizeof(_odp_vlanhdr_t);
-	}
-
-	if (layer == ODP_PKTIO_PARSER_LAYER_L2)
+	if (layer <= ODP_PKTIO_PARSER_LAYER_L2)
 		return prs->error_flags.all != 0;
 
 	/* Set l3_offset+flag only for known ethtypes */
@@ -2041,6 +2153,10 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 		prs->input_flags.icmp = 1;
 		break;
 
+	case _ODP_IPPROTO_IPIP:
+		/* Do nothing */
+		break;
+
 	case _ODP_IPPROTO_TCP:
 		if (odp_unlikely(offset + _ODP_TCPHDR_LEN > seg_len))
 			return -1;
@@ -2074,8 +2190,40 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 		prs->l4_offset = ODP_PACKET_OFFSET_INVALID;
 		break;
 	}
-parse_exit:
+
 	return prs->error_flags.all != 0;
+}
+
+/**
+ * Parse common packet headers up to given layer
+ *
+ * The function expects at least PACKET_PARSE_SEG_LEN bytes of data to be
+ * available from the ptr.
+ */
+int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
+			uint32_t frame_len, uint32_t seg_len,
+			odp_pktio_parser_layer_t layer)
+{
+	uint32_t offset;
+	uint16_t ethtype;
+	const uint8_t *parseptr;
+
+	parseptr = ptr;
+	offset = 0;
+
+	if (layer == ODP_PKTIO_PARSER_LAYER_NONE)
+		return 0;
+
+	/* Assume valid L2 header, no CRC/FCS check in SW */
+	prs->l2_offset = offset;
+	prs->input_flags.l2 = 1;
+	/* We only support Ethernet for now */
+	prs->input_flags.eth = 1;
+
+	ethtype = parse_eth(prs, &parseptr, &offset, frame_len);
+
+	return packet_parse_common_l3_l4(prs, parseptr, offset, frame_len,
+					 seg_len, layer, ethtype);
 }
 
 /**
@@ -2089,6 +2237,22 @@ int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
 
 	return packet_parse_common(&pkt_hdr->p, base, pkt_hdr->frame_len,
 				   seg_len, layer);
+}
+
+int packet_parse_l3_l4(odp_packet_hdr_t *pkt_hdr,
+		       odp_pktio_parser_layer_t layer,
+		       uint32_t l3_offset,
+		       uint16_t ethtype)
+{
+	uint32_t seg_len = 0;
+	void *base = packet_map(pkt_hdr, l3_offset, &seg_len, NULL);
+
+	if (seg_len == 0)
+		return -1;
+
+	return packet_parse_common_l3_l4(&pkt_hdr->p, base, l3_offset,
+					 pkt_hdr->frame_len, seg_len,
+					 layer, ethtype);
 }
 
 uint64_t odp_packet_to_u64(odp_packet_t hdl)
@@ -2153,7 +2317,10 @@ odp_packet_t odp_packet_ref(odp_packet_t pkt, uint32_t offset)
 	link_hdr->buf_hdr.seg[0].len  = seg->len  - seg_offset;
 	buffer_ref_inc(seg->hdr);
 
-	for (i = 1; i < num_copy; i++) {
+	/* The 'CONFIG_PACKET_SEGS_PER_HDR > 1' condition is required to fix an
+	 * invalid error ('array subscript is above array bounds') thrown by
+	 * gcc (5.4.0). */
+	for (i = 1; CONFIG_PACKET_SEGS_PER_HDR > 1 && i < num_copy; i++) {
 		/* Update link header reference count */
 		if (idx == 0 && seg_is_link(hdr))
 			buffer_ref_inc((odp_buffer_hdr_t *)hdr);

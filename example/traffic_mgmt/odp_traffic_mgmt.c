@@ -766,12 +766,13 @@ int main(int argc, char *argv[])
 	rc = odp_init_global(&instance, &ODP_INIT_PARAMS, NULL);
 	if (rc != 0) {
 		printf("Error: odp_init_global() failed, rc = %d\n", rc);
-		abort();
+		return -1;
 	}
+
 	rc = odp_init_local(instance, ODP_THREAD_CONTROL);
 	if (rc != 0) {
 		printf("Error: odp_init_local() failed, rc = %d\n", rc);
-		abort();
+		return -1;
 	}
 
 	if (process_cmd_line_options(argc, argv) < 0)
@@ -793,5 +794,30 @@ int main(int argc, char *argv[])
 	       pkts_into_tm, pkts_from_tm);
 
 	odp_tm_stats_print(odp_tm_test);
+
+	rc = odp_pool_destroy(odp_pool);
+	if (rc != 0) {
+		printf("Error: odp_pool_destroy() failed, rc = %d\n", rc);
+		return -1;
+	}
+
+	rc = odp_tm_destroy(odp_tm_test);
+	if (rc != 0) {
+		printf("Error: odp_tm_destroy() failed, rc = %d\n", rc);
+		return -1;
+	}
+
+	rc = odp_term_local();
+	if (rc != 0) {
+		printf("Error: odp_term_local() failed, rc = %d\n", rc);
+		return -1;
+	}
+
+	/* Trying to keep this example as simple as possible we avoid
+	 * clean termination of TM queues. This will error on global
+	 * termination code
+	 */
+	(void)odp_term_global(instance);
+
 	return 0;
 }

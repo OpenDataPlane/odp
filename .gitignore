@@ -40,9 +40,9 @@ include/stamp-h1
 lib/
 libtool
 ltmain.sh
-m4/*.m4
+m4/libtool.m4
+m4/lt*.m4
 missing
 perf.data*
-pkgconfig/libodp*.pc
 tags
 test-driver

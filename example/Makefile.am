@@ -12,3 +12,5 @@ SUBDIRS = classifier \
 	  traffic_mgmt \
 	  ddf_ifs \
 	  ddf_app
+
+noinst_HEADERS = example_debug.h

@@ -1,0 +1,45 @@
+language: c
+
+compiler:
+  - gcc
+  - clang
+
+env:
+  matrix:
+    - CONF=""
+    # - CONF="--disable-abi-compat"
+    # - CONF="--enable-schedule-sp"
+    # - CONF="--enable-schedule-iquery"
+    # - CONF="--enable-dpdk-zero-copy"
+    # - CROSS_ARCH="arm64"
+    # - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
+    # - CROSS_ARCH="powerpc"
+    # - CROSS_ARCH="i386"
+  global:
+    # - PLACEHOLDER=""
+
+build:
+  pre_ci:
+    # use Dockerfile to install additional CI dependencies
+    - docker build -t=odp/dev ./scripts
+
+  # use image built in 'pre_ci' for CI job
+  pre_ci_boot:
+    image_name: odp/dev
+    image_tag: latest
+    pull: false
+    options:
+
+  ci:
+    - echo 1000 | sudo tee /proc/sys/vm/nr_hugepages
+    - sudo mkdir -p /mnt/huge
+    - sudo mount -t hugetlbfs nodev /mnt/huge
+    - mkdir -p /dev/shm/odp
+    - ./bootstrap
+    - ./configure --disable-test-perf
+    - make
+    - sudo env ODP_SHM_DIR=/dev/shm/odp make check
+
+  on_failure:
+    - cat config.log
+    - find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done

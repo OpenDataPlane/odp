@@ -1414,10 +1414,10 @@ odp_packet_chksum_status_t odp_packet_l4_chksum_status(odp_packet_t pkt);
  * the relevant pktout chksum bit set in the pktio capability.
  *
  * @param pkt     Packet handle
- * @param l3      0: do not insert L3 checksum
+ * @param insert  0: do not insert L3 checksum
  *                1: insert L3 checksum
  */
-void odp_packet_l3_chksum_insert(odp_packet_t pkt, int l3);
+void odp_packet_l3_chksum_insert(odp_packet_t pkt, int insert);
 
 /**
  * Layer 4 checksum insertion override
@@ -1431,10 +1431,10 @@ void odp_packet_l3_chksum_insert(odp_packet_t pkt, int l3);
  * the relevant pktout chksum bit set in the pktio capability.
  *
  * @param pkt     Packet handle
- * @param l4      0: do not insert L4 checksum
+ * @param insert  0: do not insert L4 checksum
  *                1: insert L4 checksum
  */
-void odp_packet_l4_chksum_insert(odp_packet_t pkt, int l4);
+void odp_packet_l4_chksum_insert(odp_packet_t pkt, int insert);
 
 /**
  * Packet flow hash value
@@ -1561,13 +1561,26 @@ void odp_packet_shaper_len_adjust_set(odp_packet_t pkt, int8_t adj);
  */
 
 /**
- * Print packet to the console
+ * Print packet debug information
  *
- * Print all packet debug information to the console.
+ * Print all packet debug information to the ODP log.
  *
  * @param pkt  Packet handle
  */
 void odp_packet_print(odp_packet_t pkt);
+
+/**
+ * Print packet data
+ *
+ * Print packet debug information with packet data to the ODP log. Operation
+ * prints 'len' bytes of packet data starting from 'offset' byte. Offset plus
+ * length must not exceed packet length (odp_packet_len()).
+ *
+ * @param pkt     Packet handle
+ * @param offset  Byte offset into the packet
+ * @param len     Number of bytes to print
+ */
+void odp_packet_print_data(odp_packet_t pkt, uint32_t offset, uint32_t len);
 
 /**
  * Perform full packet validity check

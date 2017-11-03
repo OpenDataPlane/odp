@@ -229,6 +229,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 
 	odp_pktin_queue_param_init(&pktin_param);
 	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+	pktin_param.classifier_enable = 1;
 
 	if (odp_pktin_queue_config(pktio, &pktin_param)) {
 		EXAMPLE_ERR("pktin queue config failed for %s\n", dev);
@@ -879,18 +880,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
  */
 static void print_info(char *progname, appl_args_t *appl_args)
 {
-	printf("\n"
-			"ODP system info\n"
-			"---------------\n"
-			"ODP API version: %s\n"
-			"CPU model:       %s\n"
-			"CPU freq (hz):   %"PRIu64"\n"
-			"Cache line size: %i\n"
-			"CPU count:       %i\n"
-			"\n",
-			odp_version_api_str(), odp_cpu_model_str(),
-			odp_cpu_hz_max(), odp_sys_cache_line_size(),
-			odp_cpu_count());
+	odp_sys_info_print();
 
 	printf("Running ODP appl: \"%s\"\n"
 			"-----------------\n"
