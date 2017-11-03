@@ -127,6 +127,7 @@ struct ipsec_sa_s {
 			unsigned	dec_ttl : 1;
 			unsigned	copy_dscp : 1;
 			unsigned	copy_df : 1;
+			unsigned	aes_ctr_iv : 1;
 
 			/* Only for outbound */
 			unsigned	use_counter_iv : 1;
