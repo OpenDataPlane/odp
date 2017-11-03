@@ -168,6 +168,10 @@ int ipsec_check(odp_bool_t ah,
 		if (!capa.ciphers.bit.aes_cbc)
 			return ODP_TEST_INACTIVE;
 		break;
+	case ODP_CIPHER_ALG_AES_CTR:
+		if (!capa.ciphers.bit.aes_ctr)
+			return ODP_TEST_INACTIVE;
+		break;
 	case ODP_CIPHER_ALG_AES_GCM:
 		if (!capa.ciphers.bit.aes_gcm)
 			return ODP_TEST_INACTIVE;
@@ -257,6 +261,12 @@ int ipsec_check_esp_aes_cbc_128_sha256(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_CBC, 128,
 				ODP_AUTH_ALG_SHA256_HMAC);
+}
+
+int ipsec_check_esp_aes_ctr_128_null(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_CTR, 128,
+				ODP_AUTH_ALG_NULL);
 }
 
 int ipsec_check_esp_aes_gcm_128(void)
