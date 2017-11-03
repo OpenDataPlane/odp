@@ -82,10 +82,12 @@ AM_CONDITIONAL([HAVE_PCAP], [false])
 AM_CONDITIONAL([netmap_support], [false])
 AM_CONDITIONAL([PKTIO_DPDK], [false])
 m4_include([platform/linux-dpdk/m4/odp_pthread.m4])
-m4_include([platform/linux-dpdk/m4/odp_timer.m4])
-m4_include([platform/linux-dpdk/m4/odp_openssl.m4])
+ODP_TIMER
+ODP_OPENSSL
 m4_include([platform/linux-dpdk/m4/odp_modules.m4])
 m4_include([platform/linux-dpdk/m4/odp_schedule.m4])
+
+m4_include([platform/linux-dpdk/m4/performance.m4])
 
 ##########################################################################
 # DPDK build variables
@@ -156,8 +158,16 @@ AC_SUBST([DPDK_CPPFLAGS])
 AC_SUBST([DPDK_LDFLAGS])
 AC_SUBST([DPDK_LIBS])
 
+AC_CONFIG_COMMANDS_PRE([dnl
+AM_CONDITIONAL([PLATFORM_IS_LINUX_DPDK],
+               [test "${with_platform}" = "linux-dpdk"])
+])
+
 AC_CONFIG_FILES([platform/linux-dpdk/Makefile
-		 platform/linux-dpdk/include/odp/api/plat/static_inline.h])
+		 platform/linux-dpdk/libodp-dpdk.pc
+		 platform/linux-dpdk/include/odp/api/plat/static_inline.h
+		 platform/linux-dpdk/test/Makefile
+		 platform/linux-dpdk/test/validation/api/pktio/Makefile])
 
 ##########################################################################
 # Enable dpdk pktio build

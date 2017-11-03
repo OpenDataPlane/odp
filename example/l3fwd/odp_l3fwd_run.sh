@@ -11,7 +11,7 @@ PCAP_OUT="pcapout.pcap"
 PCAP_IN_SIZE=`stat -c %s ${PCAP_IN}`
 echo "using PCAP_IN = ${PCAP_IN}, PCAP_OUT = ${PCAP_OUT}"
 
-./odp_l3fwd -i pcap:in=${PCAP_IN},pcap:out=${PCAP_OUT} \
+./odp_l3fwd${EXEEXT} -i pcap:in=${PCAP_IN},pcap:out=${PCAP_OUT} \
 	    -r "10.0.0.0/24,pcap:out=${PCAP_OUT}" -d 30
 
 STATUS=$?

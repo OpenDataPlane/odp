@@ -1,6 +1,9 @@
 include $(top_srcdir)/platform/Makefile.inc
 include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libodp-dpdk.pc
+
 lib_LTLIBRARIES = $(LIB)/libodp-dpdk.la
 
 PLAT_CFLAGS  =
@@ -192,6 +195,7 @@ noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_crypto_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_forward_typedefs_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_ipsec_internal.h \
 		  ${srcdir}/pktio/dpdk.h \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_pktio_ops_ipc.h \
@@ -248,6 +252,8 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   odp_init.c \
 			   ../linux-generic/odp_impl.c \
 			   ../linux-generic/odp_ipsec.c \
+			   ../linux-generic/odp_ipsec_events.c \
+			   ../linux-generic/odp_ipsec_sad.c \
 			   ../linux-generic/odp_name_table.c \
 			   odp_packet.c \
 			   pktio/dpdk.c \

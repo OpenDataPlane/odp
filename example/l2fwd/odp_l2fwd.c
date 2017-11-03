@@ -1,1 +1,1 @@
-../../test/common_plat/performance/odp_l2fwd.c
+../../test/performance/odp_l2fwd.c

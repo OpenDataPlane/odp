@@ -362,7 +362,7 @@ static void mmap_fill_ring(struct ring *ring, odp_pool_t pool_hdl, int fanout)
 	pool = pool_entry_from_hdl(pool_hdl);
 
 	/* Frame has to capture full packet which can fit to the pool block.*/
-	ring->req.tp_frame_size = (pool->headroom + pool->data_size +
+	ring->req.tp_frame_size = (pool->headroom + pool->seg_len +
 				   pool->tailroom + TPACKET_HDRLEN +
 				   TPACKET_ALIGNMENT + + (pz - 1)) & (-pz);
 

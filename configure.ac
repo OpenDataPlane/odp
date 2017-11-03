@@ -16,9 +16,6 @@ ODP_VERSION_API_MAJOR=odpapi_major_version
 AC_SUBST(ODP_VERSION_API_MAJOR)
 ODP_VERSION_API_MINOR=odpapi_minor_version
 AC_SUBST(ODP_VERSION_API_MINOR)
-AC_CONFIG_FILES([include/odp/api/spec/version.h
-                 include/odp/api/spec/deprecated.h])
-
 AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects foreign nostdinc])
 AC_CONFIG_SRCDIR([include/odp/api/spec/init.h])
 AM_CONFIG_HEADER([include/config.h])
@@ -99,6 +96,9 @@ CC_VERSION_PATCH=$(echo $CC_VERSION | cut -d'.' -f3)
 ##########################################################################
 # Allow valgrind suite to run against the defined tests
 ##########################################################################
+AX_VALGRIND_DFLT([sgcheck], [off])
+AX_VALGRIND_DFLT([helgrind], [off])
+AX_VALGRIND_DFLT([drd], [off])
 AX_VALGRIND_CHECK
 
 ##########################################################################
@@ -162,7 +162,6 @@ AC_ARG_WITH([platform],
     ])
 
 AC_SUBST([with_platform])
-AC_SUBST([platform_with_platform], ["platform/${with_platform}"])
 
 ##########################################################################
 # Include m4 files
@@ -188,13 +187,11 @@ AC_SUBST(SDK_INSTALL_PATH)
 IMPLEMENTATION_NAME=""
 AS_IF([test "${with_platform}" = "linux-generic"],
          [m4_include([./platform/linux-generic/m4/configure.m4])]
-         [m4_include([./test/linux-generic/m4/configure.m4])]
          [IMPLEMENTATION_NAME="linux-generic"]
          [ODP_CFLAGS="$ODP_CFLAGS -std=c99"]
          [ODP_LIB_STR="odp-linux"],
       [test "${with_platform}" = "linux-dpdk"],
           [m4_include([./platform/linux-dpdk/m4/configure.m4])]
-          [m4_include([./test/linux-dpdk/m4/configure.m4])]
           [IMPLEMENTATION_NAME="linux-dpdk"]
           [ODP_CFLAGS="$ODP_CFLAGS -std=gnu99"]
           [ODP_LIB_STR="odp-dpdk"],
@@ -207,7 +204,7 @@ AC_SUBST(ODP_LIB_STR)
 # Set the install directory for test binaries/scripts
 ##########################################################################
 AC_ARG_WITH([testdir],
-    [AC_HELP_STRING([--with-testdir=DIR], [installation directory for tests])],
+    [AS_HELP_STRING([--with-testdir=DIR], [installation directory for tests])],
 	[testdir=$withval],
 	[testdir=no])
 AS_IF([test "x$testdir" = "xyes"], [testdir=$libdir/odp/tests],
@@ -227,6 +224,9 @@ AM_CONDITIONAL([ARCH_IS_ARM], [test "x${ARCH_DIR}" = "xarm"])
 AM_CONDITIONAL([ARCH_IS_AARCH64], [test "x${ARCH_DIR}" = "xaarch64"])
 AM_CONDITIONAL([ARCH_IS_MIPS64], [test "x${ARCH_DIR}" = "xmips64"])
 AM_CONDITIONAL([ARCH_IS_POWERPC], [test "x${ARCH_DIR}" = "xpowerpc"])
+AM_CONDITIONAL([ARCH_IS_X86], [test "x${ARCH_DIR}" = "xx86"])
+AM_CONDITIONAL([ARCH_IS_X86_32], [test "x${ARCH_ABI}" = "xx86_32-linux"])
+AM_CONDITIONAL([ARCH_IS_X86_64], [test "x${ARCH_ABI}" = "xx86_64-linux"])
 
 ##########################################################################
 # Setup doxygen documentation
@@ -357,11 +357,10 @@ esac
 CFLAGS="$CFLAGS $ODP_CFLAGS"
 CXXFLAGS="$CXXFLAGS $ODP_CXXFLAGS"
 
-AC_CONFIG_FILES([Makefile
-		 pkgconfig/libodp-linux.pc
-		 pkgconfig/libodp-dpdk.pc
-		 pkgconfig/libodphelper.pc
-		 ])
+AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([include/Makefile
+		 include/odp/api/spec/version.h
+		 include/odp/api/spec/deprecated.h])
 
 ##########################################################################
 # distribute the changed variables among the Makefiles

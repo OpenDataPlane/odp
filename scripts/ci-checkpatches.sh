@@ -1,17 +1,23 @@
-#!/bin/bash
+#!/bin/bash -x
 
 PATCHES=$1
 echo "Run checkpatch for ${PATCHES}"
 # Generate patches provided with $1.
 # In case of force push and range is broken
 # validate only the latest commit if it's not merge commit.
-git format-patch ${PATCHES}
-if [ $? -ne 0 ]; then
-	git show --summary HEAD| grep -q '^Merge:';
-	if [ $? -ne 0 ]; then
-		git format-patch HEAD^;
-		perl ./scripts/checkpatch.pl *.patch;
-	fi;
-else
+
+if [ "$PATCHES" = "" ]; then
+	git format-patch -1 HEAD;
 	perl ./scripts/checkpatch.pl *.patch;
+	exit $?
 fi
+
+git show --summary HEAD| grep -q '^Merge:';
+if [ $? -ne 0 ]; then
+	git format-patch -1 HEAD;
+	perl ./scripts/checkpatch.pl *.patch;
+	exit $?
+fi
+
+git format-patch ${PATCHES}
+perl ./scripts/checkpatch.pl *.patch;
