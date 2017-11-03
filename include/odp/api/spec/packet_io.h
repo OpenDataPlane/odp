@@ -23,6 +23,7 @@ extern "C" {
 #include <odp/api/packet_io_stats.h>
 #include <odp/api/queue.h>
 #include <odp/api/time.h>
+#include <odp/api/packet.h>
 
 /** @defgroup odp_packet_io ODP PACKET IO
  *  Operations on a packet Input/Output interface.
@@ -381,19 +382,19 @@ typedef union odp_pktout_config_opt_t {
  */
 typedef enum odp_pktio_parser_layer_t {
 	/** No layers */
-	ODP_PKTIO_PARSER_LAYER_NONE = 0,
+	ODP_PKTIO_PARSER_LAYER_NONE = ODP_PROTO_LAYER_NONE,
 
 	/** Layer L2 protocols (Ethernet, VLAN, ARP, etc) */
-	ODP_PKTIO_PARSER_LAYER_L2,
+	ODP_PKTIO_PARSER_LAYER_L2 = ODP_PROTO_LAYER_L2,
 
 	/** Layer L3 protocols (IPv4, IPv6, ICMP, IPsec, etc) */
-	ODP_PKTIO_PARSER_LAYER_L3,
+	ODP_PKTIO_PARSER_LAYER_L3 = ODP_PROTO_LAYER_L3,
 
 	/** Layer L4 protocols (UDP, TCP, SCTP) */
-	ODP_PKTIO_PARSER_LAYER_L4,
+	ODP_PKTIO_PARSER_LAYER_L4 = ODP_PROTO_LAYER_L4,
 
 	/** All layers */
-	ODP_PKTIO_PARSER_LAYER_ALL
+	ODP_PKTIO_PARSER_LAYER_ALL = ODP_PROTO_LAYER_ALL
 
 } odp_pktio_parser_layer_t;
 
