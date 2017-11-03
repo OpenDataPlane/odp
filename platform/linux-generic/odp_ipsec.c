@@ -286,6 +286,11 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 
 	ipsec_offset = ip_offset + ip_hdr_len;
 
+	if (odp_be_to_cpu_16(ip->tot_len) + ip_offset > odp_packet_len(pkt)) {
+		status->error.alg = 1;
+		goto err;
+	}
+
 	if (_ODP_IPV4HDR_IS_FRAGMENT(odp_be_to_cpu_16(ip->frag_offset))) {
 		status->error.proto = 1;
 		goto err;
@@ -630,6 +635,11 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 
 	if (ODP_IPSEC_MODE_TRANSPORT == ipsec_sa->mode &&
 	    _ODP_IPV4HDR_IS_FRAGMENT(odp_be_to_cpu_16(ip->frag_offset))) {
+		status->error.alg = 1;
+		goto err;
+	}
+
+	if (odp_be_to_cpu_16(ip->tot_len) + ip_offset > odp_packet_len(pkt)) {
 		status->error.alg = 1;
 		goto err;
 	}
