@@ -54,7 +54,6 @@
 #include <odp/api/align.h>
 #include <odp/api/system_info.h>
 #include <odp/api/debug.h>
-#include <odp/drv/shm.h>
 #include <odp_shm_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
@@ -86,7 +85,7 @@
  * if some of the block ownwers never procsync() after free). This number
  * should take that into account)
  */
-#define ISHM_MAX_NB_BLOCKS ODPDRV_CONFIG_SHM_BLOCKS
+#define ISHM_MAX_NB_BLOCKS 128
 
 /*
  * Maximum internal shared memory block name length in chars

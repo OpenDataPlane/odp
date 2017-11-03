@@ -1,7 +1,6 @@
 include_HEADERS = \
 		  odp.h \
-		  odp_api.h \
-		  odp_drv.h
+		  odp_api.h
 
 odpapispecincludedir= $(includedir)/odp/api/spec
 odpapispecinclude_HEADERS = \
@@ -53,19 +52,6 @@ odpapispecinclude_HEADERS = \
 nodist_odpapispecinclude_HEADERS = \
 		  odp/api/spec/deprecated.h \
 		  odp/api/spec/version.h
-
-odpdrvspecincludedir= $(includedir)/odp/drv/spec
-odpdrvspecinclude_HEADERS = \
-		  odp/drv/spec/align.h \
-		  odp/drv/spec/atomic.h \
-		  odp/drv/spec/barrier.h \
-		  odp/drv/spec/byteorder.h \
-		  odp/drv/spec/compiler.h \
-		  odp/drv/spec/driver.h \
-		  odp/drv/spec/shm.h \
-		  odp/drv/spec/spinlock.h \
-		  odp/drv/spec/std_types.h \
-		  odp/drv/spec/sync.h
 
 odpapiabidefaultincludedir= $(includedir)/odp/arch/default/api/abi
 odpapiabidefaultinclude_HEADERS = \
