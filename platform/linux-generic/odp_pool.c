@@ -236,7 +236,6 @@ static void init_buffers(pool_t *pool)
 	ring_t *ring;
 	uint32_t mask;
 	int type;
-	uint32_t seg_size;
 	uint64_t page_size;
 	int skipped_blocks = 0;
 
@@ -285,11 +284,8 @@ static void init_buffers(pool_t *pool)
 
 		memset(buf_hdr, 0, (uintptr_t)data - (uintptr_t)buf_hdr);
 
-		seg_size = pool->headroom + pool->seg_len + pool->tailroom;
-
 		/* Initialize buffer metadata */
 		buf_hdr->index = i;
-		buf_hdr->size = seg_size;
 		buf_hdr->type = type;
 		buf_hdr->event_type = type;
 		buf_hdr->pool_hdl = pool->pool_hdl;
@@ -469,6 +465,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	pool->align          = align;
 	pool->headroom       = headroom;
 	pool->seg_len        = seg_len;
+	pool->max_seg_len    = headroom + seg_len + tailroom;
 	pool->max_len        = max_len;
 	pool->tailroom       = tailroom;
 	pool->block_size     = block_size;
