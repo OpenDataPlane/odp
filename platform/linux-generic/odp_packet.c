@@ -957,8 +957,9 @@ odp_event_t odp_packet_to_event(odp_packet_t pkt)
 uint32_t odp_packet_buf_len(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+	pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 
-	return pkt_hdr->buf_hdr.size * pkt_hdr->buf_hdr.segcount;
+	return pool->max_seg_len * pkt_hdr->buf_hdr.segcount;
 }
 
 void *odp_packet_tail(odp_packet_t pkt)
@@ -1404,6 +1405,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 	uint32_t shift;
 	uint32_t seglen = 0;  /* GCC */
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(*pkt);
+	pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 	void *addr = packet_map(pkt_hdr, offset, &seglen, NULL);
 	uint64_t uaddr = (uint64_t)(uintptr_t)addr;
 	uint64_t misalign;
@@ -1420,7 +1422,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 			return 0;
 		shift = align - misalign;
 	} else {
-		if (len > pkt_hdr->buf_hdr.size)
+		if (len > pool->max_seg_len)
 			return -1;
 		shift  = len - seglen;
 		uaddr -= shift;
