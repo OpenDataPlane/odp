@@ -338,7 +338,7 @@ static inline void link_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 	int cur, i;
 	odp_packet_hdr_t *hdr;
 	odp_packet_hdr_t *head = pkt_hdr[0];
-	uint32_t seg_len = pool_entry_from_hdl(head->buf_hdr.pool_hdl)->seg_len;
+	uint32_t seg_len = ((pool_t *)(head->buf_hdr.pool_ptr))->seg_len;
 
 	cur = 0;
 
@@ -385,7 +385,7 @@ static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 
 	/* First segment is the packet descriptor */
 	hdr = pkt_hdr[0];
-	seg_len = pool_entry_from_hdl(hdr->buf_hdr.pool_hdl)->seg_len;
+	seg_len = ((pool_t *)(hdr->buf_hdr.pool_ptr))->seg_len;
 
 	/* Defaults for single segment packet */
 	hdr->buf_hdr.seg[0].data = hdr->buf_hdr.base_data;
@@ -416,7 +416,7 @@ static inline void reset_seg(odp_packet_hdr_t *pkt_hdr, int first, int num)
 	void *base;
 	int i;
 	seg_entry_t *seg;
-	uint32_t seg_len = pool_entry_from_hdl(hdr->buf_hdr.pool_hdl)->seg_len;
+	uint32_t seg_len = ((pool_t *)(hdr->buf_hdr.pool_ptr))->seg_len;
 	uint8_t idx;
 
 	seg_entry_find_idx(&hdr, &idx, first);
