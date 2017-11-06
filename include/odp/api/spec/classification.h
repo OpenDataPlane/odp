@@ -20,6 +20,7 @@ extern "C" {
 
 #include <odp/api/packet_io.h>
 #include <odp/api/support.h>
+#include <odp/api/threshold.h>
 /** @defgroup odp_classification ODP CLASSIFICATION
  *  Classification operations.
  *  @{
@@ -107,6 +108,61 @@ typedef union odp_cls_pmr_terms_t {
 	uint64_t all_bits;
 } odp_cls_pmr_terms_t;
 
+/** Random Early Detection (RED)
+ * Random Early Detection is enabled to initiate a drop probability for the
+ * incoming packet when the packets in the queue/pool cross the specified
+ * threshold values. RED is enabled when 'red_enable' boolean is true and
+ * the resource usage is equal to or greater than the minimum threshold value.
+ * Resource usage could be defined either as the percentage of pool being full
+ * or the number of packets/bytes occupied in the queue depening on the platform
+ * capabilities.
+ * When RED is enabled for a particular flow then further incoming packets are
+ * assigned a drop probability based on the size of the pool/queue.
+ *
+ * Drop probability is configured as follows
+ * * Drop probability is 100%, when resource usage >= threshold.max
+ * * Drop probability is 0%, when resource usage <= threshold.min
+ * * Drop probability is between 0...100 % when resource usage is between
+ *	threshold.min and threshold.max
+ *
+ * RED is logically configured in the CoS and could be implemented in either
+ * pool or queue linked to the CoS depending on platform capabilities.
+ * Application should make sure not to link multiple CoS with different RED or
+ * BP configuration to the same queue or pool.
+ */
+typedef struct odp_red_param_t {
+	/** A boolean to enable RED
+	 * When true, RED is enabled and configured with RED parameters.
+	 * Otherwise, RED parameters are ignored. */
+	odp_bool_t enable;
+
+	/** Threshold parameters for RED
+	 * RED is enabled when the resource usage is equal to or greater than
+	 * the minimum threshold value and is disabled otherwise
+	 */
+	odp_threshold_t threshold;
+} odp_red_param_t;
+
+/** Back pressure (BP)
+ * When back pressure is enabled for a particular flow, the HW can send
+ * back pressure information to the remote peer indicating a network congestion.
+ */
+typedef struct odp_bp_param_t {
+	/** A boolean to enable Back pressure
+	 * When true, back pressure is enabled and configured with the BP
+	 * parameters. Otherwise BP parameters are ignored.
+	 */
+	odp_bool_t enable;
+
+	/** Threshold value for back pressure.
+	 * BP is enabled when the resource usage is equal to or greater than the
+	 * max backpressure threshold. Min threshold parameters are ignored for
+	 * BP configuration.
+	 * @see odp_red_param_t for 'resource usage' documentation.
+	 */
+	odp_threshold_t threshold;
+} odp_bp_param_t;
+
 /**
  * Classification capabilities
  * This capability structure defines system level classification capability
@@ -135,6 +191,18 @@ typedef struct odp_cls_capability_t {
 
 	/** A Boolean to denote support of PMR range */
 	odp_bool_t pmr_range_supported;
+
+	/** Support for Random Early Detection */
+	odp_support_t random_early_detection;
+
+	/** Supported threshold type for RED */
+	odp_threshold_types_t threshold_red;
+
+	/** Support for Back Pressure to the remote peer */
+	odp_support_t back_pressure;
+
+	/** Supported threshold type for BP */
+	odp_threshold_types_t threshold_bp;
 } odp_cls_capability_t;
 
 /**
@@ -206,6 +274,12 @@ typedef struct odp_cls_cos_param {
 
 	/** Drop policy associated with CoS */
 	odp_cls_drop_t drop_policy;
+
+	/** Random Early Detection configuration */
+	odp_red_param_t red;
+
+	/** Back Pressure configuration */
+	odp_bp_param_t bp;
 } odp_cls_cos_param_t;
 
 /**
