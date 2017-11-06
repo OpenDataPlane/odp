@@ -193,7 +193,7 @@ static inline seg_entry_t *seg_entry_last(odp_packet_hdr_t *hdr)
  */
 static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
-	pool_t *pool = pool_entry_from_hdl(pkt_hdr->buf_hdr.pool_hdl);
+	pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 	uint32_t seg_len;
 	int num = pkt_hdr->buf_hdr.segcount;
 
