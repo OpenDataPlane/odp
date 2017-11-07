@@ -333,6 +333,14 @@ typedef struct odp_crypto_session_param_t {
 	 */
 	uint32_t auth_digest_len;
 
+	/** Additional Authenticated Data (AAD) length in bytes
+	 *
+	 *  AAD length is constant for all operations (packets) of the session.
+	 *  Set to zero when AAD is not used. Use odp_crypto_auth_capability()
+	 *  for supported AAD lengths. The default value is zero.
+	 */
+	uint32_t auth_aad_len;
+
 	/** Async mode completion event queue
 	 *
 	 *  The completion queue is used to return completions from
@@ -401,12 +409,11 @@ typedef struct odp_crypto_op_param_t {
 
 	/** Additional Authenticated Data (AAD) */
 	struct {
-		/** Pointer to ADD */
+		/** Pointer to AAD. AAD length is defined by 'auth_aad_len'
+		 *  session parameter.
+		 */
 		uint8_t *ptr;
 
-		/** AAD length in bytes. Use odp_crypto_auth_capability() for
-		 *  supported AAD lengths. */
-		uint32_t length;
 	} aad;
 
 	/** Data range to apply cipher */
@@ -442,12 +449,11 @@ typedef struct odp_crypto_packet_op_param_t {
 
 	/** Additional Authenticated Data (AAD) */
 	struct {
-		/** Pointer to ADD */
+		/** Pointer to AAD. AAD length is defined by 'auth_aad_len'
+		 *  session parameter.
+		 */
 		uint8_t *ptr;
 
-		/** AAD length in bytes. Use odp_crypto_auth_capability() for
-		 *  supported AAD lengths. */
-		uint32_t length;
 	} aad;
 
 	/** Data range to apply cipher */
