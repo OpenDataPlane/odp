@@ -20,11 +20,6 @@
 
 #include <string.h>
 
-typedef struct ODP_PACKED {
-	odp_u32be_t spi;     /**< Security Parameter Index */
-	odp_u32be_t seq_no;  /**< Sequence Number */
-} ipsec_aad_t;
-
 int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 {
 	int rc;
@@ -358,7 +353,6 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		aad.seq_no = esp.seq_no;
 
 		param.aad.ptr = (uint8_t *)&aad;
-		param.aad.length = sizeof(aad);
 
 		param.auth_range.offset = ipsec_offset;
 		param.auth_range.length = odp_be_to_cpu_16(ip->tot_len) -
@@ -431,7 +425,6 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		aad.seq_no = ah.seq_no;
 
 		param.aad.ptr = (uint8_t *)&aad;
-		param.aad.length = sizeof(aad);
 
 		param.auth_range.offset = ip_offset;
 		param.auth_range.length = odp_be_to_cpu_16(ip->tot_len);
@@ -798,7 +791,6 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 		aad.seq_no = esp.seq_no;
 
 		param.aad.ptr = (uint8_t *)&aad;
-		param.aad.length = sizeof(aad);
 
 		memset(&esptrl, 0, sizeof(esptrl));
 		esptrl.pad_len = encrypt_len - ip_data_len - _ODP_ESPTRL_LEN;
@@ -874,7 +866,6 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 		aad.seq_no = ah.seq_no;
 
 		param.aad.ptr = (uint8_t *)&aad;
-		param.aad.length = sizeof(aad);
 
 		/* For GMAC */
 		if (ipsec_sa->use_counter_iv) {
