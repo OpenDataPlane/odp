@@ -7,6 +7,7 @@
 #include "config.h"
 
 #include <odp/api/ipsec.h>
+#include <odp/api/chksum.h>
 
 #include <odp/api/plat/packet_inlines.h>
 
@@ -103,34 +104,6 @@ static odp_ipsec_packet_result_t *ipsec_pkt_result(odp_packet_t packet)
 	return &odp_packet_hdr(packet)->ipsec_ctx;
 }
 
-/**
- * Checksum
- *
- * @param buffer calculate chksum for buffer
- * @param len    buffer length
- *
- * @return checksum value in network order
- */
-static inline
-odp_u16sum_t _odp_chksum(void *buffer, int len)
-{
-	uint16_t *buf = (uint16_t *)buffer;
-	uint32_t sum = 0;
-	uint16_t result;
-
-	for (sum = 0; len > 1; len -= 2)
-		sum += *buf++;
-
-	if (len == 1)
-		sum += *(unsigned char *)buf;
-
-	sum = (sum >> 16) + (sum & 0xFFFF);
-	sum += (sum >> 16);
-	result = ~sum;
-
-	return  (__odp_force odp_u16sum_t) result;
-}
-
 static inline int _odp_ipv4_csum(odp_packet_t pkt,
 				 uint32_t offset,
 				 _odp_ipv4hdr_t *ip,
@@ -150,7 +123,7 @@ static inline int _odp_ipv4_csum(odp_packet_t pkt,
 	if (odp_unlikely(res < 0))
 		return res;
 
-	*chksum = _odp_chksum(buf, nleft);
+	*chksum = ~odp_chksum_ones_comp16(buf, nleft);
 
 	return 0;
 }
