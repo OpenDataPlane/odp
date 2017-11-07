@@ -57,6 +57,16 @@ typedef struct pool_local_t {
 pool_table_t *pool_tbl;
 static __thread pool_local_t local;
 
+#include <odp/visibility_begin.h>
+
+/* Fill in pool header field offsets for inline functions */
+const _odp_pool_inline_offset_t _odp_pool_inline ODP_ALIGNED_CACHE = {
+	.pool_hdl          = offsetof(pool_t, pool_hdl),
+	.uarea_size        = offsetof(pool_t, params.pkt.uarea_size)
+};
+
+#include <odp/visibility_end.h>
+
 static inline odp_pool_t pool_index_to_handle(uint32_t pool_idx)
 {
 	return _odp_cast_scalar(odp_pool_t, pool_idx);
@@ -288,11 +298,8 @@ static void init_buffers(pool_t *pool)
 		buf_hdr->index = i;
 		buf_hdr->type = type;
 		buf_hdr->event_type = type;
-		buf_hdr->pool_hdl = pool->pool_hdl;
 		buf_hdr->pool_ptr = pool;
 		buf_hdr->uarea_addr = uarea;
-		/* Show user requested size through API */
-		buf_hdr->uarea_size = pool->params.pkt.uarea_size;
 		buf_hdr->segcount = 1;
 		buf_hdr->num_seg  = 1;
 		buf_hdr->next_seg = NULL;
