@@ -82,7 +82,6 @@ static int alg_op(odp_packet_t pkt,
 		  odp_packet_data_range_t *cipher_range,
 		  odp_packet_data_range_t *auth_range,
 		  uint8_t *aad,
-		  uint32_t aad_len,
 		  unsigned int plaintext_len)
 {
 	int rc;
@@ -104,7 +103,6 @@ static int alg_op(odp_packet_t pkt,
 		op_params.override_iv_ptr = op_iv_ptr;
 
 	op_params.aad.ptr = aad;
-	op_params.aad.length = aad_len;
 
 	op_params.hash_result_offset = plaintext_len;
 
@@ -159,7 +157,6 @@ static int alg_packet_op(odp_packet_t pkt,
 			 odp_packet_data_range_t *cipher_range,
 			 odp_packet_data_range_t *auth_range,
 			 uint8_t *aad,
-			 uint32_t aad_len,
 			 unsigned int plaintext_len)
 {
 	int rc;
@@ -178,7 +175,6 @@ static int alg_packet_op(odp_packet_t pkt,
 		op_params.override_iv_ptr = op_iv_ptr;
 
 	op_params.aad.ptr = aad;
-	op_params.aad.length = aad_len;
 
 	op_params.hash_result_offset = plaintext_len;
 
@@ -218,7 +214,6 @@ static int alg_packet_op_enq(odp_packet_t pkt,
 			     odp_packet_data_range_t *cipher_range,
 			     odp_packet_data_range_t *auth_range,
 			     uint8_t *aad,
-			     uint32_t aad_len,
 			     unsigned int plaintext_len)
 {
 	int rc;
@@ -238,7 +233,6 @@ static int alg_packet_op_enq(odp_packet_t pkt,
 		op_params.override_iv_ptr = op_iv_ptr;
 
 	op_params.aad.ptr = aad;
-	op_params.aad.length = aad_len;
 
 	op_params.hash_result_offset = plaintext_len;
 
@@ -440,6 +434,7 @@ static void alg_test(odp_crypto_op_t op,
 	ses_params.iv = iv;
 	ses_params.auth_key = auth_key;
 	ses_params.auth_digest_len = ref->digest_length;
+	ses_params.auth_aad_len = ref->aad_length;
 
 	rc = odp_crypto_session_create(&ses_params, &session, &status);
 	CU_ASSERT_FATAL(!rc);
@@ -476,20 +471,17 @@ restart:
 		rc = alg_op(pkt, &ok, session,
 			    ovr_iv ? ref->iv : NULL,
 			    &cipher_range, &auth_range,
-			    ref->aad, ref->aad_length,
-			    ref->length);
+			    ref->aad, ref->length);
 	else if (ODP_CRYPTO_ASYNC == suite_context.op_mode)
 		rc = alg_packet_op_enq(pkt, &ok, session,
 				       ovr_iv ? ref->iv : NULL,
 				       &cipher_range, &auth_range,
-				       ref->aad, ref->aad_length,
-				       ref->length);
+				       ref->aad, ref->length);
 	else
 		rc = alg_packet_op(pkt, &ok, session,
 				   ovr_iv ? ref->iv : NULL,
 				   &cipher_range, &auth_range,
-				   ref->aad, ref->aad_length,
-				   ref->length);
+				   ref->aad, ref->length);
 	if (rc < 0) {
 		goto cleanup;
 	}

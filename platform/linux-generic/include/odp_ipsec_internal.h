@@ -177,6 +177,12 @@ typedef struct odp_ipsec_sa_lookup_s {
 	void    *dst_addr;
 } ipsec_sa_lookup_t;
 
+/** IPSEC AAD */
+typedef struct ODP_PACKED {
+	odp_u32be_t spi;     /**< Security Parameter Index */
+	odp_u32be_t seq_no;  /**< Sequence Number */
+} ipsec_aad_t;
+
 /**
  * Obtain SA reference
  */
