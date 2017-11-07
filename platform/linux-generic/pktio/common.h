@@ -96,7 +96,7 @@ void rss_conf_print(const odp_pktin_hash_proto_t *hash_proto);
  * @retval 0 on success
  * @retval != 0 on failure
  */
-int sock_stats_fd(pktio_entry_t *pktio_entry,
+int sock_stats_fd(odp_pktio_entry_t *pktio_entry,
 		  odp_pktio_stats_t *stats,
 		  int fd);
 
@@ -109,6 +109,6 @@ int sock_stats_fd(pktio_entry_t *pktio_entry,
  * @retval  0 on success
  * @retval != 0 on failure
  */
-int sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd);
+int sock_stats_reset_fd(odp_pktio_entry_t *pktio_entry, int fd);
 
 #endif /*ODP_PKTIO_COMMON_H_*/

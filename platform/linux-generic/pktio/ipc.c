@@ -47,7 +47,7 @@ static const char *_ipc_odp_buffer_pool_shm_name(odp_pool_t pool_hdl)
 	return info.name;
 }
 
-static int _ipc_master_start(pktio_entry_t *pktio_entry)
+static int _ipc_master_start(odp_pktio_entry_t *pktio_entry)
 {
 	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
 	struct pktio_info *pinfo = pkt_ipc->pinfo;
@@ -70,11 +70,11 @@ static int _ipc_master_start(pktio_entry_t *pktio_entry)
 
 	odp_atomic_store_u32(&pkt_ipc->ready, 1);
 
-	IPC_ODP_DBG("%s started.\n",  pktio_entry->s.name);
+	IPC_ODP_DBG("%s started.\n",  pktio_entry->name);
 	return 0;
 }
 
-static int _ipc_init_master(pktio_entry_t *pktio_entry,
+static int _ipc_init_master(odp_pktio_entry_t *pktio_entry,
 			    const char *dev,
 			    odp_pool_t pool_hdl)
 {
@@ -227,7 +227,7 @@ static void *_ipc_shm_map(char *name, int pid)
 }
 
 static int _ipc_init_slave(const char *dev,
-			   pktio_entry_t *pktio_entry,
+			   odp_pktio_entry_t *pktio_entry,
 			   odp_pool_t pool)
 {
 	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
@@ -239,7 +239,7 @@ static int _ipc_init_slave(const char *dev,
 	return 0;
 }
 
-static int _ipc_slave_start(pktio_entry_t *pktio_entry)
+static int _ipc_slave_start(odp_pktio_entry_t *pktio_entry)
 {
 	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
 	char ipc_shm_name[ODP_POOL_NAME_LEN + sizeof("_slave_r")];
@@ -249,7 +249,7 @@ static int _ipc_slave_start(pktio_entry_t *pktio_entry)
 	char dev[ODP_POOL_NAME_LEN];
 	int pid;
 
-	if (sscanf(pktio_entry->s.name, "ipc:%d:%s", &pid, tail) != 2) {
+	if (sscanf(pktio_entry->name, "ipc:%d:%s", &pid, tail) != 2) {
 		ODP_ERR("wrong pktio name\n");
 		return -1;
 	}
@@ -314,7 +314,7 @@ static int _ipc_slave_start(pktio_entry_t *pktio_entry)
 	odp_atomic_store_u32(&pkt_ipc->ready, 1);
 	pinfo->slave.init_done = 1;
 
-	ODP_DBG("%s started.\n",  pktio_entry->s.name);
+	ODP_DBG("%s started.\n",  pktio_entry->name);
 	return 0;
 
 free_s_prod:
@@ -333,7 +333,7 @@ free_m_prod:
 }
 
 static int ipc_pktio_open(odp_pktio_t id ODP_UNUSED,
-			  pktio_entry_t *pktio_entry,
+			  odp_pktio_entry_t *pktio_entry,
 			  const char *dev,
 			  odp_pool_t pool)
 {
@@ -399,7 +399,7 @@ static int ipc_pktio_open(odp_pktio_t id ODP_UNUSED,
 	return ret;
 }
 
-static void _ipc_free_ring_packets(pktio_entry_t *pktio_entry, _ring_t *r)
+static void _ipc_free_ring_packets(odp_pktio_entry_t *pktio_entry, _ring_t *r)
 {
 	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
 	uintptr_t offsets[PKTIO_IPC_ENTRIES];
@@ -434,7 +434,7 @@ static void _ipc_free_ring_packets(pktio_entry_t *pktio_entry, _ring_t *r)
 	}
 }
 
-static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
+static int ipc_pktio_recv_lockless(odp_pktio_entry_t *pktio_entry,
 				   odp_packet_t pkt_table[], int len)
 {
 	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
@@ -573,21 +573,21 @@ repeat:
 	return pkts;
 }
 
-static int ipc_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+static int ipc_pktio_recv(odp_pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  odp_packet_t pkt_table[], int len)
 {
 	int ret;
 
-	odp_ticketlock_lock(&pktio_entry->s.rxl);
+	odp_ticketlock_lock(&pktio_entry->rxl);
 
 	ret = ipc_pktio_recv_lockless(pktio_entry, pkt_table, len);
 
-	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+	odp_ticketlock_unlock(&pktio_entry->rxl);
 
 	return ret;
 }
 
-static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
+static int ipc_pktio_send_lockless(odp_pktio_entry_t *pktio_entry,
 				   const odp_packet_t pkt_table[], int len)
 {
 	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
@@ -674,40 +674,40 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 	return len;
 }
 
-static int ipc_pktio_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+static int ipc_pktio_send(odp_pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  const odp_packet_t pkt_table[], int len)
 {
 	int ret;
 
-	odp_ticketlock_lock(&pktio_entry->s.txl);
+	odp_ticketlock_lock(&pktio_entry->txl);
 
 	ret = ipc_pktio_send_lockless(pktio_entry, pkt_table, len);
 
-	odp_ticketlock_unlock(&pktio_entry->s.txl);
+	odp_ticketlock_unlock(&pktio_entry->txl);
 
 	return ret;
 }
 
-static uint32_t ipc_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
+static uint32_t ipc_mtu_get(odp_pktio_entry_t *pktio_entry ODP_UNUSED)
 {
 	/* mtu not limited, pool settings are used. */
 	return (9 * 1024);
 }
 
-static int ipc_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
+static int ipc_mac_addr_get(odp_pktio_entry_t *pktio_entry ODP_UNUSED,
 			    void *mac_addr)
 {
 	memcpy(mac_addr, pktio_ipc_mac, ETH_ALEN);
 	return ETH_ALEN;
 }
 
-static int ipc_start(pktio_entry_t *pktio_entry)
+static int ipc_start(odp_pktio_entry_t *pktio_entry)
 {
 	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
 	uint32_t ready = odp_atomic_load_u32(&pkt_ipc->ready);
 
 	if (ready) {
-		ODP_ABORT("%s Already started\n", pktio_entry->s.name);
+		ODP_ABORT("%s Already started\n", pktio_entry->name);
 		return -1;
 	}
 
@@ -717,7 +717,7 @@ static int ipc_start(pktio_entry_t *pktio_entry)
 		return _ipc_slave_start(pktio_entry);
 }
 
-static int ipc_stop(pktio_entry_t *pktio_entry)
+static int ipc_stop(odp_pktio_entry_t *pktio_entry)
 {
 	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
 	unsigned tx_send = 0, tx_free = 0;
@@ -744,11 +744,11 @@ static int ipc_stop(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
-static int ipc_close(pktio_entry_t *pktio_entry)
+static int ipc_close(odp_pktio_entry_t *pktio_entry)
 {
 	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
 	char ipc_shm_name[ODP_POOL_NAME_LEN + sizeof("_m_prod")];
-	char *dev = pktio_entry->s.name;
+	char *dev = pktio_entry->name;
 	char name[ODP_POOL_NAME_LEN];
 	char tail[ODP_POOL_NAME_LEN];
 	int pid = 0;

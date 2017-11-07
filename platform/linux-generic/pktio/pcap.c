@@ -52,7 +52,7 @@
 #define PKTIO_PCAP_MTU (64 * 1024)
 static const char pcap_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x04};
 
-static int pcapif_stats_reset(pktio_entry_t *pktio_entry);
+static int pcapif_stats_reset(odp_pktio_entry_t *pktio_entry);
 
 static int _pcapif_parse_devname(pktio_ops_pcap_data_t *pcap,
 				 const char *devname)
@@ -137,7 +137,8 @@ static int _pcapif_init_tx(pktio_ops_pcap_data_t *pcap)
 	return pcap_dump_flush(pcap->tx_dump);
 }
 
-static int pcapif_init(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
+static int pcapif_init(odp_pktio_t id ODP_UNUSED,
+		       odp_pktio_entry_t *pktio_entry,
 		       const char *devname, odp_pool_t pool)
 {
 	pktio_ops_pcap_data_t *pcap = odp_ops_data(pktio_entry, pcap);
@@ -165,7 +166,7 @@ static int pcapif_init(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	return ret;
 }
 
-static int pcapif_close(pktio_entry_t *pktio_entry)
+static int pcapif_close(odp_pktio_entry_t *pktio_entry)
 {
 	pktio_ops_pcap_data_t *pcap = odp_ops_data(pktio_entry, pcap);
 
@@ -205,7 +206,7 @@ static int _pcapif_reopen(pktio_ops_pcap_data_t *pcap)
 	return 0;
 }
 
-static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+static int pcapif_recv_pkt(odp_pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			   odp_packet_t pkts[], int len)
 {
 	int i;
@@ -218,14 +219,14 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
 
-	odp_ticketlock_lock(&pktio_entry->s.rxl);
+	odp_ticketlock_lock(&pktio_entry->rxl);
 
-	if (pktio_entry->s.state != PKTIO_STATE_STARTED || !pcap->rx) {
-		odp_ticketlock_unlock(&pktio_entry->s.rxl);
+	if (pktio_entry->state != PKTIO_STATE_STARTED || !pcap->rx) {
+		odp_ticketlock_unlock(&pktio_entry->rxl);
 		return 0;
 	}
-	if (pktio_entry->s.config.pktin.bit.ts_all ||
-	    pktio_entry->s.config.pktin.bit.ts_ptp)
+	if (pktio_entry->config.pktin.bit.ts_all ||
+	    pktio_entry->config.pktin.bit.ts_ptp)
 		ts = &ts_val;
 
 	for (i = 0; i < len; ) {
@@ -257,19 +258,19 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		}
 
 		packet_parse_layer(pkt_hdr,
-				   pktio_entry->s.config.parser.layer);
-		pktio_entry->s.stats.in_octets += pkt_hdr->frame_len;
+				   pktio_entry->config.parser.layer);
+		pktio_entry->stats.in_octets += pkt_hdr->frame_len;
 
 		packet_set_ts(pkt_hdr, ts);
-		pkt_hdr->input = pktio_entry->s.handle;
+		pkt_hdr->input = pktio_entry->handle;
 
 		pkts[i] = pkt;
 
 		i++;
 	}
-	pktio_entry->s.stats.in_ucast_pkts += i;
+	pktio_entry->stats.in_ucast_pkts += i;
 
-	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+	odp_ticketlock_unlock(&pktio_entry->rxl);
 
 	return i;
 }
@@ -294,16 +295,16 @@ static int _pcapif_dump_pkt(pktio_ops_pcap_data_t *pcap, odp_packet_t pkt)
 	return 0;
 }
 
-static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+static int pcapif_send_pkt(odp_pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			   const odp_packet_t pkts[], int len)
 {
 	pktio_ops_pcap_data_t *pcap = odp_ops_data(pktio_entry, pcap);
 	int i;
 
-	odp_ticketlock_lock(&pktio_entry->s.txl);
+	odp_ticketlock_lock(&pktio_entry->txl);
 
-	if (pktio_entry->s.state != PKTIO_STATE_STARTED) {
-		odp_ticketlock_unlock(&pktio_entry->s.txl);
+	if (pktio_entry->state != PKTIO_STATE_STARTED) {
+		odp_ticketlock_unlock(&pktio_entry->txl);
 		return 0;
 	}
 
@@ -312,7 +313,7 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		if (pkt_len > PKTIO_PCAP_MTU) {
 			if (i == 0) {
-				odp_ticketlock_unlock(&pktio_entry->s.txl);
+				odp_ticketlock_unlock(&pktio_entry->txl);
 				return -1;
 			}
 			break;
@@ -321,23 +322,23 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		if (_pcapif_dump_pkt(pcap, pkts[i]) != 0)
 			break;
 
-		pktio_entry->s.stats.out_octets += pkt_len;
+		pktio_entry->stats.out_octets += pkt_len;
 		odp_packet_free(pkts[i]);
 	}
 
-	pktio_entry->s.stats.out_ucast_pkts += i;
+	pktio_entry->stats.out_ucast_pkts += i;
 
-	odp_ticketlock_unlock(&pktio_entry->s.txl);
+	odp_ticketlock_unlock(&pktio_entry->txl);
 
 	return i;
 }
 
-static uint32_t pcapif_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
+static uint32_t pcapif_mtu_get(odp_pktio_entry_t *pktio_entry ODP_UNUSED)
 {
 	return PKTIO_PCAP_MTU;
 }
 
-static int pcapif_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
+static int pcapif_mac_addr_get(odp_pktio_entry_t *pktio_entry ODP_UNUSED,
 			       void *mac_addr)
 {
 	memcpy(mac_addr, pcap_mac, _ODP_ETHADDR_LEN);
@@ -345,7 +346,7 @@ static int pcapif_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
 	return _ODP_ETHADDR_LEN;
 }
 
-static int pcapif_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
+static int pcapif_capability(odp_pktio_entry_t *pktio_entry ODP_UNUSED,
 			     odp_pktio_capability_t *capa)
 {
 	memset(capa, 0, sizeof(odp_pktio_capability_t));
@@ -360,7 +361,7 @@ static int pcapif_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	return 0;
 }
 
-static int pcapif_promisc_mode_set(pktio_entry_t *pktio_entry,
+static int pcapif_promisc_mode_set(odp_pktio_entry_t *pktio_entry,
 				   odp_bool_t enable)
 {
 	char filter_exp[64] = {0};
@@ -403,23 +404,23 @@ static int pcapif_promisc_mode_set(pktio_entry_t *pktio_entry,
 	return 0;
 }
 
-static int pcapif_promisc_mode_get(pktio_entry_t *pktio_entry)
+static int pcapif_promisc_mode_get(odp_pktio_entry_t *pktio_entry)
 {
 	pktio_ops_pcap_data_t *pcap = odp_ops_data(pktio_entry, pcap);
 
 	return pcap->promisc;
 }
 
-static int pcapif_stats_reset(pktio_entry_t *pktio_entry)
+static int pcapif_stats_reset(odp_pktio_entry_t *pktio_entry)
 {
-	memset(&pktio_entry->s.stats, 0, sizeof(odp_pktio_stats_t));
+	memset(&pktio_entry->stats, 0, sizeof(odp_pktio_stats_t));
 	return 0;
 }
 
-static int pcapif_stats(pktio_entry_t *pktio_entry,
+static int pcapif_stats(odp_pktio_entry_t *pktio_entry,
 			odp_pktio_stats_t *stats)
 {
-	memcpy(stats, &pktio_entry->s.stats, sizeof(odp_pktio_stats_t));
+	memcpy(stats, &pktio_entry->stats, sizeof(odp_pktio_stats_t));
 	return 0;
 }
 
