@@ -17,7 +17,7 @@
  * @retval != 0 on failure
  */
 
-int sysfs_stats(pktio_entry_t *pktio_entry,
+int sysfs_stats(odp_pktio_entry_t *pktio_entry,
 		odp_pktio_stats_t *stats);
 
 #endif /* ODP_PKTIO_SYSFS_H_ */

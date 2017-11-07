@@ -63,7 +63,7 @@ static int gen_random_mac(unsigned char *mac)
 }
 
 static int tap_pktio_open(odp_pktio_t id ODP_UNUSED,
-			  pktio_entry_t *pktio_entry,
+			  odp_pktio_entry_t *pktio_entry,
 			  const char *devname, odp_pool_t pool)
 {
 	int fd, skfd, flags;
@@ -166,7 +166,7 @@ tap_err:
 	return -1;
 }
 
-static int tap_pktio_close(pktio_entry_t *pktio_entry)
+static int tap_pktio_close(odp_pktio_entry_t *pktio_entry)
 {
 	int ret = 0;
 	pktio_ops_tap_data_t *tap = odp_ops_data(pktio_entry, tap);
@@ -186,7 +186,8 @@ static int tap_pktio_close(pktio_entry_t *pktio_entry)
 	return ret;
 }
 
-static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
+static odp_packet_t pack_odp_pkt(odp_pktio_entry_t *pktio_entry,
+				 const void *data,
 				 unsigned int len, odp_time_t *ts)
 {
 	pktio_ops_tap_data_t *tap = odp_ops_data(pktio_entry, tap);
@@ -219,15 +220,15 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 		copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 	else
 		packet_parse_layer(pkt_hdr,
-				   pktio_entry->s.config.parser.layer);
+				   pktio_entry->config.parser.layer);
 
 	packet_set_ts(pkt_hdr, ts);
-	pkt_hdr->input = pktio_entry->s.handle;
+	pkt_hdr->input = pktio_entry->handle;
 
 	return pkt;
 }
 
-static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+static int tap_pktio_recv(odp_pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  odp_packet_t pkts[], int len)
 {
 	ssize_t retval;
@@ -237,10 +238,10 @@ static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
 
-	odp_ticketlock_lock(&pktio_entry->s.rxl);
+	odp_ticketlock_lock(&pktio_entry->rxl);
 
-	if (pktio_entry->s.config.pktin.bit.ts_all ||
-	    pktio_entry->s.config.pktin.bit.ts_ptp)
+	if (pktio_entry->config.pktin.bit.ts_all ||
+	    pktio_entry->config.pktin.bit.ts_ptp)
 		ts = &ts_val;
 
 	for (i = 0; i < len; i++) {
@@ -261,12 +262,12 @@ static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			break;
 	}
 
-	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+	odp_ticketlock_unlock(&pktio_entry->rxl);
 
 	return i;
 }
 
-static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
+static int tap_pktio_send_lockless(odp_pktio_entry_t *pktio_entry,
 				   const odp_packet_t pkts[], int len)
 {
 	ssize_t retval;
@@ -318,49 +319,49 @@ static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
 	return i;
 }
 
-static int tap_pktio_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+static int tap_pktio_send(odp_pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  const odp_packet_t pkts[], int len)
 {
 	int ret;
 
-	odp_ticketlock_lock(&pktio_entry->s.txl);
+	odp_ticketlock_lock(&pktio_entry->txl);
 
 	ret = tap_pktio_send_lockless(pktio_entry, pkts, len);
 
-	odp_ticketlock_unlock(&pktio_entry->s.txl);
+	odp_ticketlock_unlock(&pktio_entry->txl);
 
 	return ret;
 }
 
-static uint32_t tap_mtu_get(pktio_entry_t *pktio_entry)
+static uint32_t tap_mtu_get(odp_pktio_entry_t *pktio_entry)
 {
 	uint32_t ret;
 	pktio_ops_tap_data_t *tap = odp_ops_data(pktio_entry, tap);
 
-	ret =  mtu_get_fd(tap->skfd, pktio_entry->s.name + 4);
+	ret =  mtu_get_fd(tap->skfd, pktio_entry->name + 4);
 	if (ret > 0)
 		tap->mtu = ret;
 
 	return ret;
 }
 
-static int tap_promisc_mode_set(pktio_entry_t *pktio_entry,
+static int tap_promisc_mode_set(odp_pktio_entry_t *pktio_entry,
 				odp_bool_t enable)
 {
 	pktio_ops_tap_data_t *tap = odp_ops_data(pktio_entry, tap);
 
 	return promisc_mode_set_fd(tap->skfd,
-				   pktio_entry->s.name + 4, enable);
+				   pktio_entry->name + 4, enable);
 }
 
-static int tap_promisc_mode_get(pktio_entry_t *pktio_entry)
+static int tap_promisc_mode_get(odp_pktio_entry_t *pktio_entry)
 {
 	pktio_ops_tap_data_t *tap = odp_ops_data(pktio_entry, tap);
 
-	return promisc_mode_get_fd(tap->skfd, pktio_entry->s.name + 4);
+	return promisc_mode_get_fd(tap->skfd, pktio_entry->name + 4);
 }
 
-static int tap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
+static int tap_mac_addr_get(odp_pktio_entry_t *pktio_entry, void *mac_addr)
 {
 	pktio_ops_tap_data_t *tap = odp_ops_data(pktio_entry, tap);
 
@@ -368,7 +369,7 @@ static int tap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 	return ETH_ALEN;
 }
 
-static int tap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
+static int tap_capability(odp_pktio_entry_t *pktio_entry ODP_UNUSED,
 			  odp_pktio_capability_t *capa)
 {
 	memset(capa, 0, sizeof(odp_pktio_capability_t));

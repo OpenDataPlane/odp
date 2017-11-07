@@ -22,36 +22,36 @@ ODP_SUBSYSTEM_DECLARE(pktio_ops);
 
 /* Subsystem APIs declarations */
 ODP_SUBSYSTEM_API(pktio_ops, int, open, odp_pktio_t,
-		  pktio_entry_t *, const char *, odp_pool_t);
-ODP_SUBSYSTEM_API(pktio_ops, int, close, pktio_entry_t *);
-ODP_SUBSYSTEM_API(pktio_ops, int, start, pktio_entry_t *);
-ODP_SUBSYSTEM_API(pktio_ops, int, stop, pktio_entry_t *);
-ODP_SUBSYSTEM_API(pktio_ops, int, stats, pktio_entry_t *,
+		  odp_pktio_entry_t *, const char *, odp_pool_t);
+ODP_SUBSYSTEM_API(pktio_ops, int, close, odp_pktio_entry_t *);
+ODP_SUBSYSTEM_API(pktio_ops, int, start, odp_pktio_entry_t *);
+ODP_SUBSYSTEM_API(pktio_ops, int, stop, odp_pktio_entry_t *);
+ODP_SUBSYSTEM_API(pktio_ops, int, stats, odp_pktio_entry_t *,
 		  odp_pktio_stats_t *stats);
-ODP_SUBSYSTEM_API(pktio_ops, int, stats_reset, pktio_entry_t *);
-ODP_SUBSYSTEM_API(pktio_ops, uint64_t, pktin_ts_res, pktio_entry_t *);
+ODP_SUBSYSTEM_API(pktio_ops, int, stats_reset, odp_pktio_entry_t *);
+ODP_SUBSYSTEM_API(pktio_ops, uint64_t, pktin_ts_res, odp_pktio_entry_t *);
 ODP_SUBSYSTEM_API(pktio_ops, odp_time_t, pktin_ts_from_ns,
-		  pktio_entry_t *, uint64_t ns);
-ODP_SUBSYSTEM_API(pktio_ops, int, recv, pktio_entry_t *,
+		  odp_pktio_entry_t *, uint64_t ns);
+ODP_SUBSYSTEM_API(pktio_ops, int, recv, odp_pktio_entry_t *,
 		  int index, odp_packet_t packets[], int count);
-ODP_SUBSYSTEM_API(pktio_ops, int, send, pktio_entry_t *,
+ODP_SUBSYSTEM_API(pktio_ops, int, send, odp_pktio_entry_t *,
 		  int index, const odp_packet_t packets[], int count);
-ODP_SUBSYSTEM_API(pktio_ops, uint32_t, mtu_get, pktio_entry_t *);
+ODP_SUBSYSTEM_API(pktio_ops, uint32_t, mtu_get, odp_pktio_entry_t *);
 ODP_SUBSYSTEM_API(pktio_ops, int, promisc_mode_set,
-		  pktio_entry_t *, int enable);
-ODP_SUBSYSTEM_API(pktio_ops, int, promisc_mode_get, pktio_entry_t *);
-ODP_SUBSYSTEM_API(pktio_ops, int, mac_get, pktio_entry_t *, void *);
-ODP_SUBSYSTEM_API(pktio_ops, int, mac_set, pktio_entry_t *, const void *);
-ODP_SUBSYSTEM_API(pktio_ops, int, link_status, pktio_entry_t *);
-ODP_SUBSYSTEM_API(pktio_ops, int, capability, pktio_entry_t *,
+		  odp_pktio_entry_t *, int enable);
+ODP_SUBSYSTEM_API(pktio_ops, int, promisc_mode_get, odp_pktio_entry_t *);
+ODP_SUBSYSTEM_API(pktio_ops, int, mac_get, odp_pktio_entry_t *, void *);
+ODP_SUBSYSTEM_API(pktio_ops, int, mac_set, odp_pktio_entry_t *, const void *);
+ODP_SUBSYSTEM_API(pktio_ops, int, link_status, odp_pktio_entry_t *);
+ODP_SUBSYSTEM_API(pktio_ops, int, capability, odp_pktio_entry_t *,
 		  odp_pktio_capability_t *);
-ODP_SUBSYSTEM_API(pktio_ops, int, config, pktio_entry_t *,
+ODP_SUBSYSTEM_API(pktio_ops, int, config, odp_pktio_entry_t *,
 		  const odp_pktio_config_t *);
 ODP_SUBSYSTEM_API(pktio_ops, int, input_queues_config,
-		  pktio_entry_t *, const odp_pktin_queue_param_t *);
+		  odp_pktio_entry_t *, const odp_pktin_queue_param_t *);
 ODP_SUBSYSTEM_API(pktio_ops, int, output_queues_config,
-		  pktio_entry_t *, const odp_pktout_queue_param_t *);
-ODP_SUBSYSTEM_API(pktio_ops, void, print, pktio_entry_t *);
+		  odp_pktio_entry_t *, const odp_pktout_queue_param_t *);
+ODP_SUBSYSTEM_API(pktio_ops, void, print, odp_pktio_entry_t *);
 
 /* Declare subsystem init and term routines */
 ODP_SUBSYSTEM_API(pktio_ops, int, init_global, bool);
@@ -90,7 +90,7 @@ typedef ODP_MODULE_CLASS(pktio_ops) {
 
 /* Extract pktio ops data from pktio entry structure */
 #define odp_ops_data(_p, _mod) \
-	((pktio_ops_ ## _mod ## _data_t *)(uintptr_t)_p->s.ops_data)
+	((pktio_ops_ ## _mod ## _data_t *)(uintptr_t)_p->ops_data)
 
 #ifdef __cplusplus
 }

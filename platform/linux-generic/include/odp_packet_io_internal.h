@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -33,7 +32,7 @@ extern "C" {
 
 #define PKTIO_MAX_QUEUES 64
 /* Forward declaration */
-typedef union pktio_entry_u pktio_entry_t;
+typedef struct pktio_entry odp_pktio_entry_t;
 #include <odp_pktio_ops_subsystem.h>
 
 #define PKTIO_NAME_LEN 256
@@ -99,10 +98,12 @@ struct pktio_entry {
 	} out_queue[PKTIO_MAX_QUEUES];
 };
 
-union pktio_entry_u {
-	struct pktio_entry s;
-	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct pktio_entry))];
-};
+typedef union pktio_entry_u {
+	odp_pktio_entry_t s;
+	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(odp_pktio_entry_t))];
+} pktio_entry_t;
+
+#define ODP_PKTIO_ENTRY(_p) ((odp_pktio_entry_t *)(uintptr_t)_p)
 
 typedef struct {
 	odp_spinlock_t lock;
@@ -116,7 +117,7 @@ static inline int pktio_to_id(odp_pktio_t pktio)
 	return _odp_typeval(pktio) - 1;
 }
 
-static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
+static inline odp_pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 {
 	if (odp_unlikely(pktio == ODP_PKTIO_INVALID))
 		return NULL;
@@ -127,17 +128,17 @@ static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 		return NULL;
 	}
 
-	return pktio_entry_ptr[pktio_to_id(pktio)];
+	return ODP_PKTIO_ENTRY(pktio_entry_ptr[pktio_to_id(pktio)]);
 }
 
-static inline int pktio_cls_enabled(pktio_entry_t *entry)
+static inline int pktio_cls_enabled(odp_pktio_entry_t *entry)
 {
-	return entry->s.cls_enabled;
+	return entry->cls_enabled;
 }
 
-static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
+static inline void pktio_cls_enabled_set(odp_pktio_entry_t *entry, int ena)
 {
-	entry->s.cls_enabled = ena;
+	entry->cls_enabled = ena;
 }
 
 int pktin_poll_one(int pktio_index,
