@@ -296,7 +296,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->icv_len = 16;
 		break;
 	default:
-		return ODP_IPSEC_SA_INVALID;
+		goto error;
 	}
 
 	switch (crypto_param.cipher_alg) {
@@ -329,7 +329,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		crypto_param.iv.length = 12;
 		break;
 	default:
-		return ODP_IPSEC_SA_INVALID;
+		goto error;
 	}
 
 	if (1 == ipsec_sa->use_counter_iv &&
