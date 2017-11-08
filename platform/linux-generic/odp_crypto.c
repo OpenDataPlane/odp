@@ -25,7 +25,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <openssl/des.h>
 #include <openssl/rand.h>
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
@@ -39,9 +38,6 @@
  */
 static const odp_crypto_cipher_capability_t cipher_capa_null[] = {
 {.key_len = 0, .iv_len = 0} };
-
-static const odp_crypto_cipher_capability_t cipher_capa_des[] = {
-{.key_len = 24, .iv_len = 8} };
 
 static const odp_crypto_cipher_capability_t cipher_capa_trides_cbc[] = {
 {.key_len = 24, .iv_len = 8} };
@@ -589,7 +585,6 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	memset(capa, 0, sizeof(odp_crypto_capability_t));
 
 	capa->ciphers.bit.null       = 1;
-	capa->ciphers.bit.des        = 1;
 	capa->ciphers.bit.trides_cbc = 1;
 	capa->ciphers.bit.aes_cbc    = 1;
 	capa->ciphers.bit.aes_gcm    = 1;
@@ -626,10 +621,6 @@ int odp_crypto_cipher_capability(odp_cipher_alg_t cipher,
 	case ODP_CIPHER_ALG_NULL:
 		src = cipher_capa_null;
 		num = sizeof(cipher_capa_null) / size;
-		break;
-	case ODP_CIPHER_ALG_DES:
-		src = cipher_capa_des;
-		num = sizeof(cipher_capa_des) / size;
 		break;
 	case ODP_CIPHER_ALG_3DES_CBC:
 		src = cipher_capa_trides_cbc;
@@ -741,7 +732,6 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 		session->cipher.func = null_crypto_routine;
 		rc = 0;
 		break;
-	case ODP_CIPHER_ALG_DES:
 	case ODP_CIPHER_ALG_3DES_CBC:
 		rc = process_cipher_param(session, EVP_des_ede3_cbc());
 		break;
