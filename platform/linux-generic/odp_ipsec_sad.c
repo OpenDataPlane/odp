@@ -267,38 +267,6 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	crypto_param.auth_alg = param->crypto.auth_alg;
 	crypto_param.auth_key = param->crypto.auth_key;
 
-	switch (crypto_param.auth_alg) {
-	case ODP_AUTH_ALG_NULL:
-		ipsec_sa->icv_len = 0;
-		break;
-#if ODP_DEPRECATED_API
-	case ODP_AUTH_ALG_MD5_96:
-#endif
-	case ODP_AUTH_ALG_MD5_HMAC:
-		ipsec_sa->icv_len = 12;
-		break;
-	case ODP_AUTH_ALG_SHA1_HMAC:
-		ipsec_sa->icv_len = 12;
-		break;
-#if ODP_DEPRECATED_API
-	case ODP_AUTH_ALG_SHA256_128:
-#endif
-	case ODP_AUTH_ALG_SHA256_HMAC:
-		ipsec_sa->icv_len = 16;
-		break;
-	case ODP_AUTH_ALG_SHA512_HMAC:
-		ipsec_sa->icv_len = 32;
-		break;
-#if ODP_DEPRECATED_API
-	case ODP_AUTH_ALG_AES128_GCM:
-#endif
-	case ODP_AUTH_ALG_AES_GCM:
-		ipsec_sa->icv_len = 16;
-		break;
-	default:
-		goto error;
-	}
-
 	switch (crypto_param.cipher_alg) {
 	case ODP_CIPHER_ALG_NULL:
 		ipsec_sa->esp_iv_len = 0;
@@ -333,6 +301,47 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 16;
+		crypto_param.iv.length = 12;
+		break;
+	default:
+		goto error;
+	}
+
+	switch (crypto_param.auth_alg) {
+	case ODP_AUTH_ALG_NULL:
+		ipsec_sa->icv_len = 0;
+		break;
+#if ODP_DEPRECATED_API
+	case ODP_AUTH_ALG_MD5_96:
+#endif
+	case ODP_AUTH_ALG_MD5_HMAC:
+		ipsec_sa->icv_len = 12;
+		break;
+	case ODP_AUTH_ALG_SHA1_HMAC:
+		ipsec_sa->icv_len = 12;
+		break;
+#if ODP_DEPRECATED_API
+	case ODP_AUTH_ALG_SHA256_128:
+#endif
+	case ODP_AUTH_ALG_SHA256_HMAC:
+		ipsec_sa->icv_len = 16;
+		break;
+	case ODP_AUTH_ALG_SHA512_HMAC:
+		ipsec_sa->icv_len = 32;
+		break;
+#if ODP_DEPRECATED_API
+	case ODP_AUTH_ALG_AES128_GCM:
+#endif
+	case ODP_AUTH_ALG_AES_GCM:
+		ipsec_sa->icv_len = 16;
+		break;
+	case ODP_AUTH_ALG_AES_GMAC:
+		if (ODP_CIPHER_ALG_NULL != crypto_param.cipher_alg)
+			return ODP_IPSEC_SA_INVALID;
+		ipsec_sa->use_counter_iv = 1;
+		ipsec_sa->esp_iv_len = 8;
+		ipsec_sa->esp_block_len = 16;
+		ipsec_sa->icv_len = 16;
 		crypto_param.iv.length = 12;
 		break;
 	default:
