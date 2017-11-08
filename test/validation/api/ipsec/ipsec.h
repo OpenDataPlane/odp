@@ -74,11 +74,12 @@ void ipsec_check_out_in_one(const ipsec_test_part *part,
 int ipsec_check(odp_bool_t ah,
 		odp_cipher_alg_t cipher,
 		uint32_t cipher_bits,
-		odp_auth_alg_t auth);
-#define ipsec_check_ah(auth) \
-	ipsec_check(true, ODP_CIPHER_ALG_NULL, 0, auth)
-#define ipsec_check_esp(cipher, cipher_bits, auth) \
-	ipsec_check(false, cipher, cipher_bits, auth)
+		odp_auth_alg_t auth,
+		uint32_t auth_bits);
+#define ipsec_check_ah(auth, auth_bits) \
+	ipsec_check(true, ODP_CIPHER_ALG_NULL, 0, auth, auth_bits)
+#define ipsec_check_esp(cipher, cipher_bits, auth, auth_bits) \
+	ipsec_check(false, cipher, cipher_bits, auth, auth_bits)
 int ipsec_check_ah_sha256(void);
 int ipsec_check_esp_null_sha256(void);
 int ipsec_check_esp_aes_cbc_128_null(void);
