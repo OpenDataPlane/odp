@@ -51,7 +51,10 @@ struct odp_crypto_generic_session {
 		uint8_t  key[EVP_MAX_KEY_LENGTH];
 		uint32_t key_length;
 		uint32_t bytes;
-		const EVP_MD *evp_md;
+		union {
+			const EVP_MD *evp_md;
+			const EVP_CIPHER *evp_cipher;
+		};
 		crypto_func_t func;
 	} auth;
 };
