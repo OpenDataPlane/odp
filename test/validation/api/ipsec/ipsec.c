@@ -208,6 +208,10 @@ int ipsec_check(odp_bool_t ah,
 		if (!capa.auths.bit.aes_gcm)
 			return ODP_TEST_INACTIVE;
 		break;
+	case ODP_AUTH_ALG_AES_GMAC:
+		if (!capa.auths.bit.aes_gmac)
+			return ODP_TEST_INACTIVE;
+		break;
 	default:
 		fprintf(stderr, "Unsupported authentication algorithm\n");
 		return ODP_TEST_INACTIVE;
@@ -295,6 +299,12 @@ int ipsec_check_esp_aes_gcm_256(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_GCM, 256,
 				ODP_AUTH_ALG_AES_GCM, 0);
+}
+
+int ipsec_check_esp_null_aes_gmac_128(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
+				ODP_AUTH_ALG_AES_GMAC, 128);
 }
 
 void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
