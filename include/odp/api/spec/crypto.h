@@ -134,6 +134,20 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_AES_GCM,
 
+	/** AES in Galois/Counter MAC Mode
+	 *
+	 * NIST and RFC specifications of GCM/GMAC refer to all data to be
+	 * authenticated as AAD. In constrast to that, ODP API specifies the
+	 * bulk of authenticated data to be located in packet payload for all
+	 * authentication algorithms, including GMAC. Thus for GMAC application
+	 * should also pass all data to be authenticated as packet data. AAD is
+	 * not used for GMAC. GMAC IV should be passed via session IV or
+	 * per-packet IV override.
+	 *
+	 * @note Must be paired with cipher ODP_CIPHER_ALG_NULL
+	 */
+	ODP_AUTH_ALG_AES_GMAC,
+
 	/** @deprecated  Use ODP_AUTH_ALG_MD5_HMAC instead */
 	ODP_DEPRECATE(ODP_AUTH_ALG_MD5_96),
 
@@ -207,6 +221,9 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_AES_GCM */
 		uint32_t aes_gcm     : 1;
+
+		/** ODP_AUTH_ALG_AES_GMAC*/
+		uint32_t aes_gmac    : 1;
 
 		/** @deprecated  Use md5_hmac instead */
 		uint32_t ODP_DEPRECATE(md5_96)     : 1;
