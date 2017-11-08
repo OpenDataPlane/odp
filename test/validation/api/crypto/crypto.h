@@ -36,6 +36,8 @@ void crypto_test_gen_alg_hmac_sha256(void);
 void crypto_test_check_alg_hmac_sha256(void);
 void crypto_test_gen_alg_hmac_sha512(void);
 void crypto_test_check_alg_hmac_sha512(void);
+void crypto_test_gen_alg_aes_gmac(void);
+void crypto_test_check_alg_aes_gmac(void);
 
 /* test arrays: */
 extern odp_testinfo_t crypto_suite[];
