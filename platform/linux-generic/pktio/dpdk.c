@@ -439,7 +439,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 
 		if (pktio_cls_enabled(pktio_entry))
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
-		else
+		else if (pktio_entry->s.config.parser.layer)
 			packet_parse_layer(pkt_hdr,
 					   pktio_entry->s.config.parser.layer);
 
@@ -654,7 +654,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 
 		if (pktio_cls_enabled(pktio_entry))
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
-		else
+		else if (pktio_entry->s.config.parser.layer)
 			packet_parse_layer(pkt_hdr,
 					   pktio_entry->s.config.parser.layer);
 
