@@ -78,6 +78,15 @@ be overridden as part of ODP build-time customization if desired.
 PktIO IPC support has received improvements in both performance and
 reliability and is now suitable for development use.
 
+==== Netmap Improvements
+The thread ID is now used to create unique vdev MAC addresses to avoid
+conflicts with multiple ODP processes running on the same host system.
+
+==== `drv` directory removed
+The `include/odp/drv` directory and related files have been removed. Driver
+support is moved to a follow-on ODP release, so removing these files avoids
+confusion as they are still incomplete.
+
 === Dependency Changes
 
 ==== Dependency on autoconf-archive removed
@@ -140,6 +149,9 @@ requirements introduced by Doxygen 1.8.13.
 ==== https://bugs.linaro.org/show_bug.cgi?id=2254[Bug 2254]
 check-odp: valgrind generates "No rule to make target"
 
+==== https://bugs.linaro.org/show_bug.cgi?id=2407[Bug 2407]
+test odp_l2fwd_run.sh contains todo items
+
 ==== https://bugs.linaro.org/show_bug.cgi?id=2812[Bug 2812]
 Helper/test/process fails on a single core system
 
@@ -199,6 +211,9 @@ Missing doxygen detected by Travis
 
 ==== https://bugs.linaro.org/show_bug.cgi?id=3300[Bug 3300]
 Validation tests cannot be disabled after commit b4d17b1
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3411[Bug 3411]
+wrong openssl_lock pointer type
 
 === Known Issues
 
