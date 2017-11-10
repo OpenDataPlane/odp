@@ -87,9 +87,9 @@ typedef struct odp_crypto_global_s odp_crypto_global_t;
 
 struct odp_crypto_global_s {
 	odp_spinlock_t                lock;
-	odp_ticketlock_t **openssl_lock;
 	odp_crypto_generic_session_t *free;
-	odp_crypto_generic_session_t  sessions[0];
+	odp_crypto_generic_session_t  sessions[MAX_SESSIONS];
+	odp_ticketlock_t              openssl_lock[0];
 };
 
 static odp_crypto_global_t *global;
@@ -945,11 +945,9 @@ static void ODP_UNUSED openssl_lock(int mode, int n,
 				    int line ODP_UNUSED)
 {
 	if (mode & CRYPTO_LOCK)
-		odp_ticketlock_lock((odp_ticketlock_t *)
-				    &global->openssl_lock[n]);
+		odp_ticketlock_lock(&global->openssl_lock[n]);
 	else
-		odp_ticketlock_unlock((odp_ticketlock_t *)
-				      &global->openssl_lock[n]);
+		odp_ticketlock_unlock(&global->openssl_lock[n]);
 }
 
 int
@@ -961,8 +959,7 @@ odp_crypto_init_global(void)
 	int nlocks = CRYPTO_num_locks();
 
 	/* Calculate the memory size we need */
-	mem_size  = sizeof(*global);
-	mem_size += (MAX_SESSIONS * sizeof(odp_crypto_generic_session_t));
+	mem_size  = sizeof(odp_crypto_global_t);
 	mem_size += nlocks * sizeof(odp_ticketlock_t);
 
 	/* Allocate our globally shared memory */
@@ -982,12 +979,8 @@ odp_crypto_init_global(void)
 	odp_spinlock_init(&global->lock);
 
 	if (nlocks > 0) {
-		global->openssl_lock =
-			(odp_ticketlock_t **)&global->sessions[MAX_SESSIONS];
-
 		for (idx = 0; idx < nlocks; idx++)
-			odp_ticketlock_init((odp_ticketlock_t *)
-					    &global->openssl_lock[idx]);
+			odp_ticketlock_init(&global->openssl_lock[idx]);
 
 		CRYPTO_THREADID_set_callback(openssl_thread_id);
 		CRYPTO_set_locking_callback(openssl_lock);
