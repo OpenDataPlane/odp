@@ -2098,8 +2098,7 @@ static inline
 int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 			      uint32_t offset,
 			      uint32_t frame_len, uint32_t seg_len,
-			      odp_pktio_parser_layer_t layer,
-			      uint16_t ethtype)
+			      int layer, uint16_t ethtype)
 {
 	uint8_t  ip_proto;
 
@@ -2199,7 +2198,7 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
  */
 int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 			uint32_t frame_len, uint32_t seg_len,
-			odp_pktio_parser_layer_t layer)
+			int layer)
 {
 	uint32_t offset;
 	uint16_t ethtype;
@@ -2250,6 +2249,63 @@ int packet_parse_l3_l4(odp_packet_hdr_t *pkt_hdr,
 	return packet_parse_common_l3_l4(&pkt_hdr->p, base, l3_offset,
 					 pkt_hdr->frame_len, seg_len,
 					 layer, ethtype);
+}
+
+int odp_packet_parse(odp_packet_t pkt, uint32_t offset,
+		     const odp_packet_parse_param_t *param)
+{
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+	void *data;
+	uint32_t seg_len;
+	uint32_t packet_len = pkt_hdr->frame_len;
+	odp_proto_t proto = param->proto;
+	odp_proto_layer_t layer = param->layer;
+	int ret;
+	uint16_t ethtype;
+
+	if (proto == ODP_PROTO_NONE || layer == ODP_PROTO_LAYER_NONE)
+		return -1;
+
+	data = packet_map(pkt_hdr, offset, &seg_len, NULL);
+
+	if (data == NULL)
+		return -1;
+
+	packet_parse_reset(pkt_hdr);
+
+	if (proto == ODP_PROTO_ETH) {
+		ret = packet_parse_common(&pkt_hdr->p, data, packet_len,
+					  seg_len, layer);
+
+		if (ret)
+			return -1;
+	} else {
+		if (proto == ODP_PROTO_IPV4)
+			ethtype = _ODP_ETHTYPE_IPV4;
+		else
+			ethtype = _ODP_ETHTYPE_IPV6;
+
+		ret = packet_parse_common_l3_l4(&pkt_hdr->p, data, offset,
+						packet_len, seg_len,
+						layer, ethtype);
+
+		if (ret)
+			return -1;
+	}
+
+	return 0;
+}
+
+int odp_packet_parse_multi(const odp_packet_t pkt[], const uint32_t offset[],
+			   int num, const odp_packet_parse_param_t *param)
+{
+	int i;
+
+	for (i = 0; i < num; i++)
+		if (odp_packet_parse(pkt[i], offset[i], param))
+			return i;
+
+	return num;
 }
 
 uint64_t odp_packet_to_u64(odp_packet_t hdl)
