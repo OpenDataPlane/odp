@@ -1557,6 +1557,26 @@ void odp_packet_l3_chksum_insert(odp_packet_t pkt, int insert);
 void odp_packet_l4_chksum_insert(odp_packet_t pkt, int insert);
 
 /**
+ * Ones' complement sum of packet data
+ *
+ * Returns 16-bit ones' complement sum that was calculated over a portion of
+ * packet data during a packet processing operation (e.g. packet input or
+ * IPSEC offload). The data range is output with 'range' parameter, and usually
+ * includes IP payload (L4 headers and payload). When 'range.length' is zero,
+ * the sum has not been calculated. In case of odd number of bytes,
+ * calculation uses a zero byte as padding at the end. The sum may be used as
+ * part of e.g. UDP/TCP checksum checking, especially with IP fragments.
+ *
+ * @param      pkt    Packet handle
+ * @param[out] range  Data range of the sum (output). The calculation started
+ *                    from range.offset and included range.length bytes. When
+ *                    range.length is zero, the sum has not been calculated.
+ *
+ * @return Ones' complement sum over the data range
+ */
+uint16_t odp_packet_ones_comp(odp_packet_t pkt, odp_packet_data_range_t *range);
+
+/**
  * Packet flow hash value
  *
  * Returns the hash generated from the packet header. Use
