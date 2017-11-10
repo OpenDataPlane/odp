@@ -30,12 +30,13 @@ ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
 		  , "DPDK mempool cache size failure");
 #endif
 
-#define DPDK_IXGBE_MIN_RX_BURST 4
+/* Minimum RX burst size */
+#define DPDK_MIN_RX_BURST 4
 
 /** Cache for storing packets */
 struct pkt_cache_t {
 	/** array for storing extra RX packets */
-	struct rte_mbuf *pkt[DPDK_IXGBE_MIN_RX_BURST];
+	struct rte_mbuf *pkt[DPDK_MIN_RX_BURST];
 	unsigned idx;			  /**< head of cache */
 	unsigned count;			  /**< packets in cache */
 };
