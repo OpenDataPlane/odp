@@ -1306,7 +1306,6 @@ int odp_crypto_int(odp_packet_t pkt_in,
 	odp_crypto_alg_err_t rc_cipher = ODP_CRYPTO_ALG_ERR_NONE;
 	odp_crypto_alg_err_t rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
 	odp_crypto_generic_session_t *session;
-	odp_crypto_packet_result_t local_result;
 	odp_bool_t allocated = false;
 	odp_packet_t out_pkt = *pkt_out;
 	odp_crypto_packet_result_t *op_result;
@@ -1352,18 +1351,16 @@ int odp_crypto_int(odp_packet_t pkt_in,
 	}
 
 	/* Fill in result */
-	local_result.cipher_status.alg_err = rc_cipher;
-	local_result.cipher_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
-	local_result.auth_status.alg_err = rc_auth;
-	local_result.auth_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
-	local_result.ok =
-		(rc_cipher == ODP_CRYPTO_ALG_ERR_NONE) &&
-		(rc_auth == ODP_CRYPTO_ALG_ERR_NONE);
-
 	_odp_buffer_event_subtype_set(packet_to_buffer(out_pkt),
 				      ODP_EVENT_PACKET_CRYPTO);
 	op_result = get_op_result_from_packet(out_pkt);
-	*op_result = local_result;
+	op_result->cipher_status.alg_err = rc_cipher;
+	op_result->cipher_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
+	op_result->auth_status.alg_err = rc_auth;
+	op_result->auth_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
+	op_result->ok =
+		(rc_cipher == ODP_CRYPTO_ALG_ERR_NONE) &&
+		(rc_auth == ODP_CRYPTO_ALG_ERR_NONE);
 
 	/* Synchronous, simply return results */
 	*pkt_out = out_pkt;
