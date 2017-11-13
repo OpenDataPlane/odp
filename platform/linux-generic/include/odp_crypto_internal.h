@@ -50,7 +50,6 @@ struct odp_crypto_generic_session {
 	struct {
 		uint8_t  key[EVP_MAX_KEY_LENGTH];
 		uint32_t key_length;
-		uint32_t bytes;
 		union {
 			const EVP_MD *evp_md;
 			const EVP_CIPHER *evp_cipher;

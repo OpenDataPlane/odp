@@ -207,7 +207,7 @@ odp_crypto_alg_err_t auth_gen(odp_packet_t pkt,
 	/* Copy to the output location */
 	odp_packet_copy_from_mem(pkt,
 				 param->hash_result_offset,
-				 session->auth.bytes,
+				 session->p.auth_digest_len,
 				 hash);
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
@@ -218,7 +218,7 @@ odp_crypto_alg_err_t auth_check(odp_packet_t pkt,
 				const odp_crypto_packet_op_param_t *param,
 				odp_crypto_generic_session_t *session)
 {
-	uint32_t bytes = session->auth.bytes;
+	uint32_t bytes = session->p.auth_digest_len;
 	uint8_t  hash_in[EVP_MAX_MD_SIZE];
 	uint8_t  hash_out[EVP_MAX_MD_SIZE];
 
@@ -703,8 +703,7 @@ static int process_auth_param(odp_crypto_generic_session_t *session,
 	session->auth.evp_md = evp_md;
 
 	/* Number of valid bytes */
-	session->auth.bytes = session->p.auth_digest_len;
-	if (session->auth.bytes < (unsigned)EVP_MD_size(evp_md) / 2)
+	if (session->p.auth_digest_len < (unsigned)EVP_MD_size(evp_md) / 2)
 		return -1;
 
 	/* Convert keys */
