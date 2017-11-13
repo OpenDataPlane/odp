@@ -43,8 +43,6 @@ typedef union pktio_entry_u pktio_entry_t;
 
 struct pktio_entry {
 	const pktio_ops_module_t *ops;	/**< Implementation specific methods */
-	uint8_t ops_data[ODP_PKTIO_ODPS_DATA_MAX_SIZE]; /**< IO operation
-							specific data */
 	/* These two locks together lock the whole pktio device */
 	odp_ticketlock_t rxl;		/**< RX ticketlock */
 	odp_ticketlock_t txl;		/**< TX ticketlock */
@@ -97,12 +95,17 @@ struct pktio_entry {
 		odp_queue_t        queue;
 		odp_pktout_queue_t pktout;
 	} out_queue[PKTIO_MAX_QUEUES];
+
+	uint8_t ops_data[ODP_PKTIO_ODPS_DATA_MIN_SIZE]; /**< IO operation
+							specific data */
 };
 
 union pktio_entry_u {
 	struct pktio_entry s;
 	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct pktio_entry))];
 };
+
+#define ODP_PKTIO_ODPS_DATA_MAX_SIZE (sizeof(pktio_entry_t) - offsetof(struct pktio_entry, ops_data))
 
 typedef struct {
 	odp_spinlock_t lock;
