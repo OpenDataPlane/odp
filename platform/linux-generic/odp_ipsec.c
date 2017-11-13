@@ -1131,6 +1131,7 @@ int _odp_ipsec_try_inline(odp_packet_t pkt)
 	memset(result, 0, sizeof(*result));
 	result->status = status;
 	result->sa = ipsec_sa->ipsec_sa_hdl;
+	result->flag.inline_mode = 1;
 
 	pkt_hdr = odp_packet_hdr(pkt);
 	pkt_hdr->p.input_flags.dst_queue = 1;
