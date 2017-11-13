@@ -1,0 +1,466 @@
+== IPsec services
+
+In addition to general cryptographic services, ODP offers offload support for
+the IPsec protocol. IPsec is a general term referencing a suite of protocols
+and packet formats and as such a full discussion of IPsec is beyond the scope
+of this document. See https://tools.ietf.org/html/rfc4301[RFC 4301] and
+related RFCs for more detail. This section assumes the reader is already
+familiar with IPsec and focuses on explaining the ODP APIs that support it.
+
+ODP provides APIs for the following IPsec services:
+
+* General IPsec configuration
+* Security Association (SA) configuration and lifecycle management
+* Synchronous and Asynchronous IPsec lookaside processing
+* Inline processing for full IPsec RX and/or TX offload
+* Pipelining for RX traffic
+* Fragmentation support for TX traffic
+* IPsec event management
+
+=== IPsec Capabilities and Configuration
+As with other features, ODP provides APIs that permit applications to query
+platform-specific IPsec capabilities. The `odp_ipsec_capability()` API queries
+the general IPsec features available while the `odp_ipsec_cipher_capability()`
+and `odp_ipsec_auth_capability()` APIs provide detail on the range of
+cipher and authentication algorithms supported by IPsec on this platform.
+
+General IPsec capabilities that are reported include:
+
+* The IPsec operation modes supported by this implementation. Different
+operation modes may be _not supported_, _supported_, or _preferred_. A
+preferred form means that this mode takes advantage of hardware
+acceleration features to achieve best performance.
+* Whether IPsec AH processing is supported. All ODP platforms must provide
+support for IPsec ESP processing, however since AH is relatively rare, it
+may not be supported, or supported only via software emulation (_e.g.,_ be
+non-preferred).
+* Whether IPsec headers can be retained on decrypt for inbound inline
+operations.
+* Whether classification pipelining is supported (to be discussed below).
+
+In addition, capabilities also inform the application of the maximum number
+of destination queues and classification CoS targets supported. These
+will be discussed further later.
+
+==== IPsec Operation Modes
+IPsec operates in one of three modes: Synchronous, Asynchronous, and Inline.
+
+==== Lookaside Processing
+Synchronous and Asynchronous are types of _lookaside_ processing. Which of
+these forms may be used depends on the IPsec operation mode. So synchronous
+APIs may only be used when operating in synchronous mode, and asynchronous
+APIs may only be used when operating in asynchronous mode.
+
+In lookaside mode, the application receives (or creates) an IPsec packet and
+then uses ODP to perform one of two functions:
+
+* To decrypt an IPsec packet into a "normal" packet
+* To take a "normal" packet and encrypt it into an IPsec packet.
+
+This process may be performed _synchronously_ with the APIs `odp_ipsec_in()`
+(to decrypt) and `odp_ipsec_out()` (to encrypt). Upon return from these calls
+the requested packet transformation is complete, or an error return code
+indicates that it could not be performed (_e.g.,_ packet decryption failed).
+
+Synchronous processing may be preferred if the application has a large number
+of worker threads so that blocking any individual worker while IPsec processing
+is performed represents a reasonable design. The alternative is to use
+_asynchronous_ forms of these APIs:
+
+* `odp_ipsec_in_enq()` for decrypt
+* `odp_ipsec_out_enq()` for encrypt
+
+These simply pass packets to IPsec for processing. When this processing is
+complete, the resulting packets are sent to the completion queue associated
+with the SA used by the operation, serving as IPsec completion events as
+shown here:
+
+image::ipsec-lookaside.svg[align="center"]
+
+If the operation fails because SA lookup failed for inbound processing, then
+these result packets are sent to the default queue specified as part of the
+`odp_ipsec_inbound_config_t` used in the `odp_ipsec_config()` call.
+
+Following an asynchronous IPsec call, the worker thread moves on to process
+other events until the IPsec completion shows up. At that point the worker
+thread sees whether the operation was successful or not and continues
+processing for that packet. These events may be direct-polled with
+`odp_queue_deq()` if the completion queue was created as a plain queue, or
+processed via the ODP scheduler if the completion queue was created as a
+scheduled queue.
+
+==== Inline Processing
+While lookaside processing offers flexibility, it still requires extra
+processing steps not required by modern hardware. To avoid this overhead
+ODP also offers _inline_ processing support for IPsec. In this mode the
+processing of IPsec packets on the RX and TX paths is fully offloaded as
+shown here:
+
+image::ipsec-inline.svg[align="center"]
+
+It is worth noting that, depending on the implementation and application
+needs, inline processing may be enabled only for one direction (inbound or
+outbound) or for both directions.
+
+On the receive side, once configured for inline processing, arriving IPsec
+packets that are recognized at the PktIO interface are decrypted automatically
+before the application ever sees them. On the transmit side, the application
+calls `odp_ipsec_out_inline()` and the packet is encrypted and queued for
+transmission as a single operation without further application involvement.
+Note that if an inbound IPsec packet is not recognized (_e.g.,_ it belongs to
+an unknown SA) then it will be presented to the application as-is without
+further processing. The application may then use a lookaside call to process
+the packet if it is able to supply a matching SA by other means.
+
+On the receive side, after an IPsec packet is decrypted, it may be
+_pipelined_ to the ODP classifier or added to a poll queue, as the
+application wishes. The advantage of classification pipelining is that inbound
+IPsec traffic is automatically decrypted and classified into appropriate
+flow-based queues for ease of processing.
+
+On the transmit side, since IPsec encryption and tunneling may exceed an
+output MTU, ODP also offers support for MTU configuration and automatic IPsec
+TX fragmentation.
+
+Both classification pipelining and TX fragmentation support are support
+features that are indicated by `odp_ipsec_capability()`.
+
+Note that at present inline IPsec output support sends resulting packets
+directly to an output PktIO. If it's desired to send them to the ODP
+Traffic Manager for shaping prior to transmission, use the lookaside APIs
+to perform the IPsec encrypt and then call `odp_tm_enq()` on the resulting
+packet.
+
+=== IPsec Configuration
+Prior to making use of IPsec services, the `odp_ipsec_config()` API is used to
+configure IPsec processing options. This API takes a pointer to an
+`odp_ipsec_config_t` struct as its argument.
+
+The `odp_ipsec_config_t` struct specifies the inbound and outbound processing
+modes (SYNC, ASYNC, or INLINE) that the application plans to use, the maximum
+number of Security Associations it will use, and sets inbound and outbound
+processing options.
+
+==== IPsec Inbound Configuration
+Inbound configuration options for IPsec specify the default `odp_queue_t` to
+be used for processing global events like SA lookup failures, how Security
+Parameter Index (SPI) lookup is to be performed, and whether the application
+requires ODP to retain outer headers for decrypted IPsec packets.
+
+Parsing options specify how "deep" decrypted packets are to be parsed
+after IPsec processing by specifying the packet layers of interest to the
+application (None, L2, L3, L4, or All). And which checksums should be verified
+on decrypted packets.
+
+==== IPsec Outbound Configuration
+Outbound configuration options for IPsec specify checksum insertion processing
+that should be performed prior to encryption.
+
+=== IPsec Events
+IPsec introduces one new event type and one new event subtype. These are:
+
+* IPsec packet events. These are events of type `ODP_EVENT_PACKET` that have
+subtype `ODP_EVENT_PACKET_IPSEC`. These are packets that carry additional
+IPsec-related metadata in the form of an `odp_ipsec_packet_result_t` struct
+that can be retrieved from the packet via the `odp_ipsec_result()` API.
+
+* IPsec status notifications. These are events of type `ODP_EVENT_IPSEC_STATUS`
+that indicate status events not associated with any particular IPsec
+packet. Such events carry status in the form of an `odp_ipsec_status_t`
+struct that is retrieved from the event via the `odp_ipsec_status()` API.
+
+IPsec-related events are thus part of normal and exception processing when
+working with IPsec.
+
+=== Security Associations (SAs)
+The fundamental "building block" for IPsec processing is the _Security
+Association (SA)_. Similar to a crypto session, the SA encapsulates the keying
+material and context needed to perform IPsec protocol processing for inbound
+or outbound packets on a given flow, as well as additional processing options
+that control how IPsec is to be used for packets processed under this
+SA. Security Associations are unidirectional (RX or TX) so a flow that
+requires both inbound (decrypt) and outbound (encrypt) IPsec functions will
+have two SAs associated with it. SAs in ODP are represented by the
+abstract type `odp_ipsec_sa_t`.
+
+After ODP initialization, IPsec support is dormant until it is configured
+by a call to `odp_ipsec_config()` as described earlier. Once configured,
+SAs may be created by calling `odp_ipsec_sa_create()`.
+
+==== SA Creation and Configuration
+The `odp_ipsec_sa_create()` API takes an `odp_ipsec_sa_param_t` argument that
+describes the SA to be created. Use the `odp_ipsec_sa_param_init()` API to
+initialize this to its default state and then override selected fields within
+the param struct as needed.
+
+Items specified in the `odp_ipsec_sa_param_t` struct include:
+
+* The direction of the SA (inbound or outbound).
+
+* The IPsec protocol being used (ESP or AH).
+
+* The IPsec protocol mode (Transport or Tunnel).
+
+* The parameters needed for the crypto and authentication algorithms to be
+used by this SA.
+
+* Miscellaneous SA options that control behavior such as use of Extended
+Sequence Numbers (ESNs), the use of UDP encapsulation, various copy
+options for header fields, and whether the TTL (Hop Limit) field should be
+decremented when operating in tunnel mode.
+
+* Parameters controlling the SA lifetime.
+
+* The Security Parameter Index (SPI) that packets will use to indicate that
+they belong to this SA.
+
+* The pipeline mode used by this SA.
+
+* The destination `odp_queue_t` to be used for events associated with this SA.
+
+* The user context pointer (and length) associated with this SA for
+application use.
+
+In addition, there are specific direction-specific parameters that vary
+based on whether the SA is for inbound or outbound use. For inbound SAs:
+
+* Controls for how this SA is to be looked up.
+
+* The minimum size of the anti-replay window to be used.
+
+* The default CoS to use when classification pipelining packets matching this
+SA.
+
+For outbound SAs:
+
+* Tunnel parameters to use when doing outbound processing in tunnel mode.
+
+* The fragmentation mode to be used.
+
+* The MTU to be used to control the maximum length IP packets that outbound
+IPsec operations may produce. This can be changed dynamically by the
+`odp_ipsec_sa_mtu_update()` API.
+
+As can be seen, SAs have a large degree of configurability.
+
+==== SA Lifecycle Management
+In discussing the lifecycle of an SA, it is useful to refer to the following
+state diagram:
+
+image::ipsec_fsm.svg[align="center"]
+
+After creation, IPsec services are active for this Security Association.  The
+specific APIs that can be used on this SA depends on the IPsec operating mode
+that has been configured.
+
+===== IPsec Lookaside Processing
+If IPsec is operating in lookaside mode for the SA's direction (the
+`odp_ipsec_op_mode_t` is `ODP_IPSEC_OP_MODE_SYNC` or `ODP_IPSEC_OP_MODE_ASYNC`),
+then inbound or outbound lookaside operations may be performed. Asynchronous
+lookaside operations are also permitted if the SA is operating in inline
+mode, as described in the next section.
+
+The synchronous forms of these APIs are:
+
+* `odp_ipsec_in()`
+* `odp_ipsec_out()`
+
+Upon return from these calls, the return code tells the application the number
+of number of input packets that were consumed by the operation. The result of
+the operation is determined by calling the `odp_ipsec_result()` API for each
+output packet to retrieve its associated `odp_ipsec_result_t`.
+
+The asynchronous forms of these APIs are:
+
+* `odp_ipsec_in_enq()`
+* `odp_ipsec_out_enq()`
+
+Here again, the return code indicates how many input packets were
+processed. The success or failure is determined by inspecting the
+`odp_ipsec_result_t` associated with each packet completion event. These are
+presented as events of type `ODP_EVENT_PACKET` with subtype
+`ODP_EVENT_PACKET_IPSEC`.
+
+For both synchronous and asynchronous IPsec operations an input packet array
+is transformed into an output packet array as specified by a controlling
+parameter struct. For inbound operations, the `odp_ipsec_in_param_t` is
+used to specify how SA processing is to be performed for the requested
+operation. The caller may say that SA lookup processing should be performed
+for each input packet, a single (specified) SA should be used for all packets,
+or that each packet has a specified individual SA.
+
+For outbound lookaside operations, a corresponding `odp_ipsec_out_param_t`
+serves a similar role, but here the SA must be specified since the input
+packet(s) are non-IPsec packets. Again the option is to use a single SA for
+all input packets or one per input packet.
+
+For outbound operations, an associated array of `odp_ipsec_out_opt_t` structs
+is also used to control the fragmentation mode to be used as part of the
+outbound processing. Options here are to not fragment, to fragment before
+IPsec processing, after IPsec processing, or to only check whether IP
+fragmentation is needed but not to perform it. For check processing, the `mtu`
+status error bit in the `odp_ipsec_packet_result_t` is set if check processing
+detects that the resulting packet will not fit into the configured MTU. Note
+that the MTU associated with a given SA is set at SA creation and can be
+changed at any time via the `odp_ipsec_sa_mtu_update()` API.
+
+Once an asynchronous lookaside operation has been initiated, the worker thread
+that issued the asynchronous call can handle other events while waiting for
+the operation to complete. Completion of an asynchronous operation is
+indicated by the worker receiving an `ODP_EVENT_PACKET` that has subtype
+`ODP_EVENT_PACKET_IPSEC`. These events can be retrieved directly by polling
+the completion queue associated with the SA, or (more typically) via the ODP
+scheduler. Typical code for such completion processing would look as follows:
+
+[source,c]
+-----
+while (1) {
+	ev = odp_schedule(&queue, ODP_SCHED_WAIT);
+	ev_type = odp_event_types(ev, &ev_subtype);
+
+	switch (ev_type) {
+	case ODP_EVENT_PACKET:
+
+		switch (ev_subtype) {
+		case ODP_EVENT_PACKET_IPSEC:
+			pkt = odp_packet_from_event(ev);
+
+			if (odp_unlikely(odp_ipsec_result(&result, pkt) != 0)) {
+				/* Stale event, discard */
+				odp_event_free(ev);
+				continue;
+			}
+
+			if (odp_unlikely(result.status.all != ODP_IPSEC_OK)) {
+				 if (result.status.error != ODP_IPSEC_OK) {
+					 ...process error result
+					 odp_event_free(ev);
+					 continue;
+				 } else {
+					 ...process packet warnings
+				 }
+			}
+
+			my_context = odp_ipsec_sa_context(result.sa);
+
+			if (result.flag.inline_mode) {
+				...process inline inbound packet
+			} else {
+				...process the async completion event
+			}
+
+			...
+			break;
+
+		case ...
+		}
+		break;
+
+	case ODP_EVENT_IPSEC_STATUS:
+		...process IPsec status event
+		break;
+
+	}
+}
+-----
+
+===== IPsec Inline Processing
+When IPsec is configured to operate in `ODP_IPSEC_OP_MODE_INLINE` mode,
+inbound processing is implicit. The application never sees these packets until
+after IPsec has already decrypted them. As shown in the code sketch above,
+such packets appear as events of subtype `ODP_EVENT_PACKET_IPSEC` and the
+`flag` field in the associated `odp_ipsec_packet_result_t` indicates
+`inline_mode`.
+
+For outbound IPsec processing, the `odp_ipsec_out_inline()` API operates as
+a "fire and forget" API. A success return code from this call indicates that
+the packet will be encrypted and transmitted to the `odp_pktio_t` indicated
+in the `odp_ipsec_out_inline_param_t` specified at the time of the call without
+any further application involvement. Only if a problem arises will the packet
+be returned to the application with an `odp_ipsec_packet_result_t` indicating
+the nature of the problem.
+
+Note that while operating in inline mode, asychronous lookaside operations are
+also permitted. This provide the application with additional flexibility if,
+for example, some packets need additional handling that cannot be supported
+directly with inline IPsec processing.
+
+==== SA Lifetimes
+A fundamental principle of good security is that the keying material
+associated with sessions has a limited lifetime. In effect, keys grow "stale"
+over time or due to being used to encrypt too much data. The metrics used
+to limit effective SA lifetimes are:
+
+* Duration (time)
+* Usage (volume of traffic using the keys)
+
+Associated with each of these metrics are "soft" and "hard" limits. When a
+hard limit is reached, the SA is expired and cannot be used further. To support
+graceful transition to a replacement SA, soft limits are used. A soft limit is
+similar to a "low fuel" warning light on a car. It alerts the application that
+the SA is nearing the end of its useful life and should be renegotiated even
+as the SA continues to work normally.
+
+ODP support for SA limits is based on packet/byte counts. Applications that
+wish to use time-based SA limits may do so on their own using the timing
+facilities that ODP provides. However, since especially with inline IPsec
+processing, the application may not have explicit knowledge of the traffic
+volumes associated with a given SA, support for usage-based limits is
+integrated into ODP IPsec support.
+
+At `odp_ipsec_sa_create()` time, one of the fields in the
+`odp_ipsec_sa_param_t` struct is the `odp_ipsec_lifetime_t` sub-structure.
+This struct allows hard and/or soft limits to be specified in terms of total
+bytes encrypted/decrypted, total packet count, or both. A limit specification
+of 0 indicates no limit for that metric. If either is specified, the limit
+is triggered on whichever occurs first. Given the defined behavior of hard vs.
+soft limits, the soft limits, if used, should always be specified as lower
+than the hard limits. These should be sufficiently lower to enable adequate
+time to switch over to a replacement SA before the hard limit is reached.
+
+As noted, when an SA hard limit is reached the SA immediately enters the
+expired state and attempts to use it further are failed with an
+`odp_ipsec_result_t` that indicates a hard expiration limit. When a soft
+limit is reached for packets sent via `odp_ipsec_out_inline()`, this results
+in an `ODP_EVENT_IPSEC_STATUS` event being sent to the application on the
+queue associated with the SA that has reached the soft limit. This status
+event has an `odp_ipsec_status_id_t` of `ODP_IPSEC_STATUS_WARN` with a
+`odp_ipsec_warn_t` bits set to indicate the type of soft expiration reached.
+Receipt of this event alerts the application that the SA is nearing the end of
+its useful life and that it should be replaced. It is the application's
+responsibility to heed this warning. It is implementation-defined how many
+such warnings are issued when a soft limit is exceeded (once, first N packets,
+or all packets beyond the limit), so applications should be written to
+allow for possible repeated warnings.
+
+When operating in lookaside mode, expiration limits are carried as a warning
+in the `odp_op_status_t` section of the `odp_ipsec_result_t` struct. The same
+is true for inline inbound packets. When the soft limit is reached, these
+packets will carry a warning flag indicating this condition.
+
+==== SA Disablement and Destruction
+When it is time to retire an SA, the application does so by first issuing a
+call to the `odp_ipsec_sa_disable()` API. This call initiates termination
+processing for an SA by stopping use of the SA for new operations while still
+allowing those that are "in flight" to complete processing. Following this call
+the application continues to receive and process IPsec events as normal.
+
+Disable completion is indicated by the application seeing an event of type
+`ODP_EVENT_IPSEC_STATUS` for this SA that contains an `odp_ipsec_status_id_t`
+of `ODP_IPSEC_STATUS_SA_DISABLE`. For inbound SAs, receipt of this event means
+that the application has seen all IPsec packets associatd with this SA that
+were pending at the time of the disable call. For outbound SAs, receipt of
+this event means that the application has seen all result events associated
+with packets sent via this SA.
+
+Note that once a packet has been "seen" by the application, it becomes the
+application's responsibility to ensure that it is fully processed before
+attempting to destroy its associated SA. The disable call exists to give
+the application assurance that there are no pending IPsec events for this
+SA associated with packets that it has not seen before.
+
+So after disabling the SA, the application can process pending packets
+normally until it sees the disable status event. At that point it knows that
+all pending packets that arrived before the disable have been seen and it is
+safe for the application to destroy it via `odp_ipsec_sa_destroy()`, thus
+completing the SA lifecycle.
