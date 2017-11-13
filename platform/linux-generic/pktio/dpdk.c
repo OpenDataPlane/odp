@@ -106,8 +106,7 @@ static unsigned cache_size(uint32_t num)
 static inline uint16_t mbuf_data_off(struct rte_mbuf *mbuf,
 				     odp_packet_hdr_t *pkt_hdr)
 {
-	return (uint64_t)pkt_hdr->buf_hdr.seg[0].data -
-			(uint64_t)mbuf->buf_addr;
+	return (uint64_t)pkt_hdr->buf_hdr.base_data - (uint64_t)mbuf->buf_addr;
 }
 
 /**
@@ -122,8 +121,7 @@ static inline void mbuf_update(struct rte_mbuf *mbuf, odp_packet_hdr_t *pkt_hdr,
 	mbuf->pkt_len = pkt_len;
 	mbuf->refcnt = 1;
 
-	if (odp_unlikely(pkt_hdr->buf_hdr.base_data !=
-			 pkt_hdr->buf_hdr.seg[0].data))
+	if (odp_unlikely(pkt_hdr->headroom != CONFIG_PACKET_HEADROOM))
 		mbuf->data_off = mbuf_data_off(mbuf, pkt_hdr);
 }
 
@@ -647,7 +645,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 
 		/* Init buffer segments. Currently, only single segment packets
 		 * are supported. */
-		pkt_hdr->buf_hdr.seg[0].data = data;
+		pkt_hdr->buf_hdr.base_data = data;
 
 		packet_init(pkt_hdr, pkt_len);
 		pkt_hdr->input = pktio_entry->s.handle;

@@ -207,7 +207,6 @@ static void init_buffers(pool_t *pool)
 	ring_t *ring;
 	uint32_t mask;
 	int type;
-	uint32_t seg_size;
 	uint64_t page_size;
 	int skipped_blocks = 0;
 
@@ -256,33 +255,25 @@ static void init_buffers(pool_t *pool)
 
 		memset(buf_hdr, 0, (uintptr_t)data - (uintptr_t)buf_hdr);
 
-		seg_size = pool->headroom + pool->seg_len + pool->tailroom;
-
 		/* Initialize buffer metadata */
-		buf_hdr->size = seg_size;
+		buf_hdr->size = pool->seg_len;
 		buf_hdr->type = type;
 		buf_hdr->event_type = type;
 		buf_hdr->event_subtype = ODP_EVENT_NO_SUBTYPE;
 		buf_hdr->pool_hdl = pool->pool_hdl;
 		buf_hdr->pool_ptr = pool;
 		buf_hdr->uarea_addr = uarea;
-		/* Show user requested size through API */
-		buf_hdr->segcount = 1;
-		buf_hdr->num_seg  = 1;
+		buf_hdr->segcount = 0;
 		buf_hdr->next_seg = NULL;
-		buf_hdr->last_seg = buf_hdr;
-
-		/* Pointer to data start (of the first segment) */
-		buf_hdr->seg[0].hdr       = buf_hdr;
-		buf_hdr->seg[0].data      = &data[offset];
-		buf_hdr->seg[0].len       = pool->seg_len;
 
 		odp_atomic_init_u32(&buf_hdr->ref_cnt, 0);
 
-		/* Store base values for fast init */
-		buf_hdr->base_data = buf_hdr->seg[0].data;
-		buf_hdr->buf_end   = &data[offset + pool->seg_len +
-				     pool->tailroom];
+		ODP_ASSERT(offset <= 255);
+		buf_hdr->pristine_offset = offset;
+
+		buf_hdr->base_data = &data[offset];
+		buf_hdr->buf_end =
+			&data[offset + pool->seg_len + pool->tailroom];
 
 		/* Store buffer index into the global pool */
 		ring_enq(ring, mask, i);

@@ -2193,7 +2193,7 @@ void packet_test_ref(void)
 				     odp_packet_pool(segmented_test_packet));
 	CU_ASSERT_FATAL(hdr_pkt[1] != ODP_PACKET_INVALID);
 	hdr_len[1] = odp_packet_len(hdr_pkt[1]);
-	offset[1]  = 5;
+	offset[1]  = 0;
 
 	hdr_pkt[2] = odp_packet_copy_part(test_packet, 0,
 					  odp_packet_len(test_packet) / 4,
