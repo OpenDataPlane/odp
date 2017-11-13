@@ -264,7 +264,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	unsigned stats_length;
 	uint16_t ipsec_offset;   /**< Offset of IPsec header from
 				      buffer start */
-	uint8_t	iv[MAX_IV_LEN];  /**< ESP IV storage */
+	uint8_t	iv[IPSEC_MAX_IV_LEN];  /**< ESP IV storage */
 	ipsec_aad_t aad;         /**< AAD, note ESN is not fully supported */
 	unsigned hdr_len;        /**< Length of IPsec headers */
 	unsigned trl_len;        /**< Length of IPsec trailers */
@@ -628,7 +628,7 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	int rc;
 	uint16_t ipsec_offset;   /**< Offset of IPsec header from
 				      buffer start */
-	uint8_t	iv[MAX_IV_LEN];  /**< ESP IV storage */
+	uint8_t	iv[IPSEC_MAX_IV_LEN];  /**< ESP IV storage */
 	ipsec_aad_t aad;         /**< AAD, note ESN is not fully supported */
 	unsigned hdr_len;        /**< Length of IPsec headers */
 	unsigned trl_len;        /**< Length of IPsec trailers */
