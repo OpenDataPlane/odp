@@ -301,6 +301,12 @@ int ipsec_check_esp_aes_gcm_256(void)
 				ODP_AUTH_ALG_AES_GCM, 0);
 }
 
+int ipsec_check_ah_aes_gmac_128(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
+				ODP_AUTH_ALG_AES_GMAC, 128);
+}
+
 int ipsec_check_esp_null_aes_gmac_128(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
