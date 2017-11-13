@@ -608,6 +608,9 @@ void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 			CU_ASSERT_EQUAL(0, odp_ipsec_result(&result, pkto[i]));
 			CU_ASSERT_EQUAL(part->out[i].status.error.all,
 					result.status.error.all);
+			CU_ASSERT_EQUAL(suite_context.inbound_op_mode ==
+					ODP_IPSEC_OP_MODE_INLINE,
+					result.flag.inline_mode);
 			CU_ASSERT_EQUAL(sa, result.sa);
 		}
 		ipsec_check_packet(part->out[i].pkt_out,
