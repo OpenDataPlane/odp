@@ -400,6 +400,16 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 			}
 		}
 
+		memcpy(iv, ipsec_sa->salt, ipsec_sa->salt_length);
+		if (odp_packet_copy_to_mem(pkt,
+					   ipsec_offset + _ODP_AHHDR_LEN,
+					   ipsec_sa->esp_iv_len,
+					   iv + ipsec_sa->salt_length) < 0) {
+			status->error.alg = 1;
+			goto err;
+		}
+		param.override_iv_ptr = iv;
+
 		hdr_len = (ah.ah_len + 2) * 4;
 		trl_len = 0;
 
@@ -425,7 +435,8 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 
 		param.auth_range.offset = ip_offset;
 		param.auth_range.length = odp_be_to_cpu_16(ip->tot_len);
-		param.hash_result_offset = ipsec_offset + _ODP_AHHDR_LEN;
+		param.hash_result_offset = ipsec_offset + _ODP_AHHDR_LEN +
+					ipsec_sa->esp_iv_len;
 
 		stats_length = param.auth_range.length;
 	} else {
@@ -826,7 +837,8 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	} else if (ipsec_sa->proto == ODP_IPSEC_AH) {
 		_odp_ahhdr_t ah;
 
-		hdr_len = _ODP_AHHDR_LEN + ipsec_sa->icv_len;
+		hdr_len = _ODP_AHHDR_LEN + ipsec_sa->esp_iv_len +
+			ipsec_sa->icv_len;
 		trl_len = 0;
 
 		/* Save IPv4 stuff */
@@ -853,7 +865,7 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 
 		memset(&ah, 0, sizeof(ah));
 		ah.spi = odp_cpu_to_be_32(ipsec_sa->spi);
-		ah.ah_len = 1 + (ipsec_sa->icv_len / 4);
+		ah.ah_len = 1 + (ipsec_sa->esp_iv_len + ipsec_sa->icv_len) / 4;
 		ah.seq_no = odp_cpu_to_be_32(ipsec_seq_no(ipsec_sa));
 		ah.next_header = ip->proto;
 		ip->proto = _ODP_IPPROTO_AH;
@@ -864,11 +876,34 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 		param.aad.ptr = (uint8_t *)&aad;
 		param.aad.length = sizeof(aad);
 
+		/* For GMAC */
+		if (ipsec_sa->use_counter_iv) {
+			uint64_t ctr;
+
+			ODP_ASSERT(sizeof(ctr) == ipsec_sa->esp_iv_len);
+
+			ctr = odp_atomic_fetch_add_u64(&ipsec_sa->out.counter,
+						       1);
+			/* Check for overrun */
+			if (ctr == 0)
+				goto err;
+
+			memcpy(iv, ipsec_sa->salt, ipsec_sa->salt_length);
+			memcpy(iv + ipsec_sa->salt_length, &ctr,
+			       ipsec_sa->esp_iv_len);
+			param.override_iv_ptr = iv;
+		}
+
 		odp_packet_copy_from_mem(pkt,
 					 ipsec_offset, _ODP_AHHDR_LEN,
 					 &ah);
+		odp_packet_copy_from_mem(pkt,
+					 ipsec_offset + _ODP_AHHDR_LEN,
+					 ipsec_sa->esp_iv_len,
+					 iv + ipsec_sa->salt_length);
 		_odp_packet_set_data(pkt,
-				     ipsec_offset + _ODP_AHHDR_LEN,
+				     ipsec_offset + _ODP_AHHDR_LEN +
+				       ipsec_sa->esp_iv_len,
 				     0, ipsec_sa->icv_len);
 
 		ip->chksum = 0;
@@ -878,7 +913,8 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 
 		param.auth_range.offset = ip_offset;
 		param.auth_range.length = odp_be_to_cpu_16(ip->tot_len);
-		param.hash_result_offset = ipsec_offset + _ODP_AHHDR_LEN;
+		param.hash_result_offset = ipsec_offset + _ODP_AHHDR_LEN +
+					ipsec_sa->esp_iv_len;
 
 		stats_length = param.auth_range.length;
 	} else {
