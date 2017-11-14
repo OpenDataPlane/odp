@@ -20,6 +20,8 @@ AM_CFLAGS = $(CUNIT_CFLAGS)
 
 AM_LDFLAGS = -L$(LIB) -static
 
+LOG_COMPILER = $(top_srcdir)/platform/@with_platform@/test/wrapper-script.sh
+
 @VALGRIND_CHECK_RULES@
 
 TESTS_ENVIRONMENT = ODP_PLATFORM=${with_platform} \
