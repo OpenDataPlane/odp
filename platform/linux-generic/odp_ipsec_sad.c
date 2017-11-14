@@ -207,6 +207,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	ipsec_sa->context = param->context;
 	ipsec_sa->queue = param->dest_queue;
 	ipsec_sa->mode = param->mode;
+	ipsec_sa->flags = 0;
 	if (ODP_IPSEC_DIR_INBOUND == param->dir) {
 		ipsec_sa->in.lookup_mode = param->inbound.lookup_mode;
 		if (ODP_IPSEC_LOOKUP_DSTADDR_SPI == ipsec_sa->in.lookup_mode)
@@ -214,6 +215,10 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 			       param->inbound.lookup_param.dst_addr,
 			       sizeof(ipsec_sa->in.lookup_dst_ip));
 
+		if (param->inbound.antireplay_ws > IPSEC_ANTIREPLAY_WS)
+			return ODP_IPSEC_SA_INVALID;
+		ipsec_sa->antireplay = (param->inbound.antireplay_ws != 0);
+		odp_atomic_init_u64(&ipsec_sa->in.antireplay, 0);
 	} else {
 		odp_atomic_store_u32(&ipsec_sa->out.seq, 1);
 	}
@@ -291,18 +296,20 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->icv_len = 16;
 		break;
 	default:
-		return ODP_IPSEC_SA_INVALID;
+		goto error;
 	}
 
 	switch (crypto_param.cipher_alg) {
 	case ODP_CIPHER_ALG_NULL:
 		ipsec_sa->esp_iv_len = 0;
 		ipsec_sa->esp_block_len = 1;
+		crypto_param.iv.length = 0;
 		break;
 	case ODP_CIPHER_ALG_DES:
 	case ODP_CIPHER_ALG_3DES_CBC:
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 8;
+		crypto_param.iv.length = 8;
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_CBC:
@@ -310,18 +317,31 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	case ODP_CIPHER_ALG_AES_CBC:
 		ipsec_sa->esp_iv_len = 16;
 		ipsec_sa->esp_block_len = 16;
+		crypto_param.iv.length = 16;
+		break;
+	case ODP_CIPHER_ALG_AES_CTR:
+		ipsec_sa->use_counter_iv = 1;
+		ipsec_sa->aes_ctr_iv = 1;
+		ipsec_sa->esp_iv_len = 8;
+		ipsec_sa->esp_block_len = 16;
+		crypto_param.iv.length = 16;
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_GCM:
 #endif
 	case ODP_CIPHER_ALG_AES_GCM:
+		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 16;
 		crypto_param.iv.length = 12;
 		break;
 	default:
-		return ODP_IPSEC_SA_INVALID;
+		goto error;
 	}
+
+	if (1 == ipsec_sa->use_counter_iv &&
+	    ODP_IPSEC_DIR_OUTBOUND == param->dir)
+		odp_atomic_init_u64(&ipsec_sa->out.counter, 1);
 
 	crypto_param.auth_digest_len = ipsec_sa->icv_len;
 
@@ -470,7 +490,28 @@ ipsec_sa_t *_odp_ipsec_sa_lookup(const ipsec_sa_lookup_t *lookup)
 	return best;
 }
 
-int _odp_ipsec_sa_update_stats(ipsec_sa_t *ipsec_sa, uint32_t len,
+int _odp_ipsec_sa_stats_precheck(ipsec_sa_t *ipsec_sa,
+				 odp_ipsec_op_status_t *status)
+{
+	int rc = 0;
+
+	if (ipsec_sa->hard_limit_bytes > 0 &&
+	    odp_atomic_load_u64(&ipsec_sa->bytes) >
+	    ipsec_sa->hard_limit_bytes) {
+		status->error.hard_exp_bytes = 1;
+		rc = -1;
+	}
+	if (ipsec_sa->hard_limit_packets > 0 &&
+	    odp_atomic_load_u64(&ipsec_sa->packets) >
+	    ipsec_sa->hard_limit_packets) {
+		status->error.hard_exp_packets = 1;
+		rc = -1;
+	}
+
+	return rc;
+}
+
+int _odp_ipsec_sa_stats_update(ipsec_sa_t *ipsec_sa, uint32_t len,
 			       odp_ipsec_op_status_t *status)
 {
 	uint64_t bytes = odp_atomic_fetch_add_u64(&ipsec_sa->bytes, len) + len;
@@ -497,4 +538,60 @@ int _odp_ipsec_sa_update_stats(ipsec_sa_t *ipsec_sa, uint32_t len,
 	}
 
 	return rc;
+}
+
+int _odp_ipsec_sa_replay_precheck(ipsec_sa_t *ipsec_sa, uint32_t seq,
+				  odp_ipsec_op_status_t *status)
+{
+	/* Try to be as quick as possible, we will discard packets later */
+	if (ipsec_sa->antireplay &&
+	    seq + IPSEC_ANTIREPLAY_WS <=
+	    (odp_atomic_load_u64(&ipsec_sa->in.antireplay) & 0xffffffff)) {
+		status->error.antireplay = 1;
+		return -1;
+	}
+
+	return 0;
+}
+
+int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
+				odp_ipsec_op_status_t *status)
+{
+	int cas = 0;
+	uint64_t state, new_state;
+
+	if (!ipsec_sa->antireplay)
+		return 0;
+
+	state = odp_atomic_load_u64(&ipsec_sa->in.antireplay);
+
+	while (0 == cas) {
+		uint32_t max_seq = state & 0xffffffff;
+		uint32_t mask = state >> 32;
+
+		if (seq + IPSEC_ANTIREPLAY_WS <= max_seq) {
+			status->error.antireplay = 1;
+			return -1;
+		}
+
+		if (seq > max_seq) {
+			mask <<= seq - max_seq;
+			mask |= 1;
+			max_seq = seq;
+		} else {
+			if (mask & (1U << (max_seq - seq))) {
+				status->error.antireplay = 1;
+				return -1;
+			}
+
+			mask |= (1U << (max_seq - seq));
+		}
+
+		new_state = (((uint64_t)mask) << 32) | max_seq;
+
+		cas = odp_atomic_cas_acq_rel_u64(&ipsec_sa->in.antireplay,
+						 &state, new_state);
+	}
+
+	return 0;
 }
