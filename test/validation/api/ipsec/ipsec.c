@@ -122,13 +122,14 @@ static void pktio_stop(odp_pktio_t pktio)
 int ipsec_check(odp_bool_t ah,
 		odp_cipher_alg_t cipher,
 		uint32_t cipher_bits,
-		odp_auth_alg_t auth)
+		odp_auth_alg_t auth,
+		uint32_t auth_bits)
 {
 	odp_ipsec_capability_t capa;
 	odp_crypto_cipher_capability_t cipher_capa[MAX_ALG_CAPA];
 	odp_crypto_auth_capability_t   auth_capa[MAX_ALG_CAPA];
 	int i, num;
-	odp_bool_t found = false;
+	odp_bool_t found;
 
 	if (odp_ipsec_capability(&capa) < 0)
 		return ODP_TEST_INACTIVE;
@@ -207,6 +208,10 @@ int ipsec_check(odp_bool_t ah,
 		if (!capa.auths.bit.aes_gcm)
 			return ODP_TEST_INACTIVE;
 		break;
+	case ODP_AUTH_ALG_AES_GMAC:
+		if (!capa.auths.bit.aes_gmac)
+			return ODP_TEST_INACTIVE;
+		break;
 	default:
 		fprintf(stderr, "Unsupported authentication algorithm\n");
 		return ODP_TEST_INACTIVE;
@@ -219,6 +224,7 @@ int ipsec_check(odp_bool_t ah,
 	}
 
 	/* Search for the test case */
+	found = false;
 	for (i = 0; i < num; i++) {
 		if (cipher_capa[i].key_len == cipher_bits / 8) {
 			found = 1;
@@ -237,48 +243,74 @@ int ipsec_check(odp_bool_t ah,
 		return ODP_TEST_INACTIVE;
 	}
 
+	/* Search for the test case */
+	found = false;
+	for (i = 0; i < num; i++) {
+		if (auth_capa[i].key_len == auth_bits / 8) {
+			found = 1;
+			break;
+		}
+	}
+
+	if (!found) {
+		fprintf(stderr, "Unsupported auth key length\n");
+		return ODP_TEST_INACTIVE;
+	}
+
 	return ODP_TEST_ACTIVE;
 }
 
 int ipsec_check_ah_sha256(void)
 {
-	return ipsec_check_ah(ODP_AUTH_ALG_SHA256_HMAC);
+	return ipsec_check_ah(ODP_AUTH_ALG_SHA256_HMAC, 256);
 }
 
 int ipsec_check_esp_null_sha256(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
-				ODP_AUTH_ALG_SHA256_HMAC);
+				ODP_AUTH_ALG_SHA256_HMAC, 256);
 }
 
 int ipsec_check_esp_aes_cbc_128_null(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_CBC, 128,
-				ODP_AUTH_ALG_NULL);
+				ODP_AUTH_ALG_NULL, 0);
 }
 
 int ipsec_check_esp_aes_cbc_128_sha256(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_CBC, 128,
-				ODP_AUTH_ALG_SHA256_HMAC);
+				ODP_AUTH_ALG_SHA256_HMAC, 256);
 }
 
 int ipsec_check_esp_aes_ctr_128_null(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_CTR, 128,
-				ODP_AUTH_ALG_NULL);
+				ODP_AUTH_ALG_NULL, 0);
 }
 
 int ipsec_check_esp_aes_gcm_128(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_GCM, 128,
-				ODP_AUTH_ALG_AES_GCM);
+				ODP_AUTH_ALG_AES_GCM, 0);
 }
 
 int ipsec_check_esp_aes_gcm_256(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_GCM, 256,
-				ODP_AUTH_ALG_AES_GCM);
+				ODP_AUTH_ALG_AES_GCM, 0);
+}
+
+int ipsec_check_ah_aes_gmac_128(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
+				ODP_AUTH_ALG_AES_GMAC, 128);
+}
+
+int ipsec_check_esp_null_aes_gmac_128(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
+				ODP_AUTH_ALG_AES_GMAC, 128);
 }
 
 void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
