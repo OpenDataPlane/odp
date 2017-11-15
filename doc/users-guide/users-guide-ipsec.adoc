@@ -244,12 +244,13 @@ IPsec operations may produce. This can be changed dynamically by the
 As can be seen, SAs have a large degree of configurability.
 
 ==== SA Lifecycle Management
-In discussing the lifecycle of an SA, it is useful to refer to the following
-state diagram:
+In discussing the lifecycle of an SA and the operations it supports, it is
+useful to refer to the following sequence diagram for IPsec configuration, SA
+management, and IPsec operations:
 
-image::ipsec_fsm.svg[align="center"]
+image:ipsec_sa_states.svg[align="center"]
 
-After creation, IPsec services are active for this Security Association.  The
+After creation, IPsec services are active for this Security Association. The
 specific APIs that can be used on this SA depends on the IPsec operating mode
 that has been configured.
 
