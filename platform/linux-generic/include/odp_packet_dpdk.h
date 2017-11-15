@@ -60,7 +60,6 @@ typedef struct {
 	uint8_t lockless_tx;		  /**< no locking for tx */
 	uint8_t port_id;			  /**< DPDK port identifier */
 	/* --- 34 bytes --- */
-	odp_pktio_capability_t	capa;	 /**< interface capabilities */
 	odp_ticketlock_t rx_lock[PKTIO_MAX_QUEUES];  /**< RX queue locks */
 	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES];  /**< TX queue locks */
 	/** cache for storing extra RX packets */
