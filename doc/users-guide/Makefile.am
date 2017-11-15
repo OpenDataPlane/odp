@@ -11,7 +11,7 @@ SRC    = users-guide.adoc \
 TARGET = users-guide.html
 IMAGES = $(IMAGES_DIR)/overview.svg \
 	 $(IMAGES_DIR)/atomic_queue.svg \
-	 $(IMAGES_DIR)/ipsec_fsm.svg \
+	 $(IMAGES_DIR)/ipsec_sa_states.svg \
 	 $(IMAGES_DIR)/odp_components.svg \
 	 $(IMAGES_DIR)/ODP-Logo-HQ.svg \
 	 $(IMAGES_DIR)/odp_rx_processing.svg \
@@ -48,7 +48,7 @@ IMAGES += $(IMAGES_DIR)/resource_management.svg
 endif
 
 IMAGES_SRCS = \
-	 $(IMAGES_DIR)/ipsec_fsm.gv \
+	 $(IMAGES_DIR)/ipsec_sa_states.msc \
 	 $(IMAGES_DIR)/pktio_fsm.gv \
 	 $(IMAGES_DIR)/resource_management.msc \
 	 $(IMAGES_DIR)/timeout_fsm.gv \
