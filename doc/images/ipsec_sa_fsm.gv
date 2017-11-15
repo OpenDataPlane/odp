@@ -1,0 +1,18 @@
+digraph ipsec_sa_state_machine {
+	rankdir=LR;
+	size="12,12";
+	node [fontsize=28];
+	edge [fontsize=28];
+	node [shape=doublecircle]; Nonexistent SA_Ready SA_Expired
+	node [shape=circle];
+
+	SA_Ready -> SA_Ready [label="ODP IPsec packet operations"];
+	Nonexistent -> SA_Ready [label="odp_ipsec_sa_create()"
+				constraint=false];
+	SA_Ready -> SA_Expired [label="hard limit reached"];
+	SA_Expired -> Disable_Pending [label="odp_ipsec_sa_disable()"];
+	SA_Ready -> Disable_Pending [label="odp_ipsec_sa_disable()"];
+	Disable_Pending -> Disable_Pending [label="odp_ipsec_result()"];
+	Disable_Pending -> SA_Disabled [label="odp_ipsec_status()"];
+	SA_Disabled -> Nonexistent [label="odp_ipsec_sa_destroy()"];
+}
