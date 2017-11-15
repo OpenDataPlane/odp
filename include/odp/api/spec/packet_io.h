@@ -970,6 +970,36 @@ int odp_pktio_promisc_mode_set(odp_pktio_t pktio, odp_bool_t enable);
 int odp_pktio_promisc_mode(odp_pktio_t pktio);
 
 /**
+ * Maximum frame length at packet input
+ *
+ * Maximum frame length in bytes that the packet IO interface can receive.
+ * For Ethernet, the frame length bytes start with MAC addresses and continue
+ * to the end of the payload. So, Ethernet checksum, interpacket gap
+ * and preamble bytes are excluded from the length.
+ *
+ * @param pktio  Packet IO handle.
+ *
+ * @return Maximum frame length at packet input
+ * @retval 0 on failure
+ */
+uint32_t odp_pktin_maxlen(odp_pktio_t pktio);
+
+/**
+ * Maximum frame length at packet output
+ *
+ * Maximum frame length in bytes that the packet IO interface can transmit.
+ * For Ethernet, the frame length bytes start with MAC addresses and continue
+ * to the end of the payload. So, Ethernet checksum, interpacket gap
+ * and preamble bytes are excluded from the length.
+ *
+ * @param pktio  Packet IO handle.
+ *
+ * @return Maximum frame length at packet output
+ * @retval 0 on failure
+ */
+uint32_t odp_pktout_maxlen(odp_pktio_t pktio);
+
+/**
  * Get the default MAC address of a packet IO interface.
  *
  * @param	pktio     Packet IO handle
