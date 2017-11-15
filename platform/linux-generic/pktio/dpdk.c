@@ -1083,7 +1083,7 @@ static int dpdk_input_queues_config(pktio_entry_t *pktio_entry,
 				    const odp_pktin_queue_param_t *p)
 {
 	odp_pktin_mode_t mode = pktio_entry->s.param.in_mode;
-	odp_bool_t lockless;
+	uint8_t lockless;
 
 	/**
 	 * Scheduler synchronizes input queue polls. Only single thread
@@ -1106,7 +1106,7 @@ static int dpdk_output_queues_config(pktio_entry_t *pktio_entry,
 				     const odp_pktout_queue_param_t *p)
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
-	odp_bool_t lockless;
+	uint8_t lockless;
 
 	if (p->op_mode == ODP_PKTIO_OP_MT_UNSAFE)
 		lockless = 1;
@@ -1122,7 +1122,7 @@ static void dpdk_init_capability(pktio_entry_t *pktio_entry,
 				 struct rte_eth_dev_info *dev_info)
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
-	odp_pktio_capability_t *capa = &pkt_dpdk->capa;
+	odp_pktio_capability_t *capa = &pktio_entry->s.capa;
 	int ptype_cnt;
 	int ptype_l3_ipv4 = 0;
 	int ptype_l4_tcp = 0;
@@ -1545,7 +1545,7 @@ static int dpdk_promisc_mode_get(pktio_entry_t *pktio_entry)
 static int dpdk_capability(pktio_entry_t *pktio_entry,
 			   odp_pktio_capability_t *capa)
 {
-	*capa = pktio_entry->s.pkt_dpdk.capa;
+	*capa = pktio_entry->s.capa;
 	return 0;
 }
 
