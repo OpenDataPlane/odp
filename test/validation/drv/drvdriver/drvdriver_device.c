@@ -22,8 +22,8 @@ typedef struct dev_enumr_data_t { /* enumerator data for registered devices */
 #define NB_DEVICES 5
 
 /* forward declaration */
-static int enumr1_probe(void);
-static int enumr1_remove(void);
+static int enumr1_probe(void *);
+static int enumr1_remove(void *);
 static int enumr_class1_probe(void);
 static int enumr_class1_remove(void);
 
@@ -68,7 +68,8 @@ static odpdrv_enumr_t enumr1_register(void)
 		.api_version = 1,
 		.probe = enumr1_probe,
 		.remove = enumr1_remove,
-		.register_notifier = NULL
+		.register_notifier = NULL,
+		.enumr_data = NULL
 	};
 
 	enumr1 = odpdrv_enumr_register(&param);
@@ -76,7 +77,7 @@ static odpdrv_enumr_t enumr1_register(void)
 }
 
 /*enumerator probe functions, just making sure they have been run: */
-static int enumr1_probe(void)
+static int enumr1_probe(void *enumr_data __attribute__((__unused__)))
 {
 	int dev;
 	odpdrv_shm_t shm;
@@ -128,7 +129,7 @@ static void  enumr5_device_destroy_terminate(void *priv_data)
 }
 
 /*enumerator remove functions, to remove the enumerated devices: */
-static int enumr1_remove(void)
+static int enumr1_remove(void *data __attribute__((__unused__)))
 {
 	odpdrv_device_t *my_devices;
 	odpdrv_device_t *dev;

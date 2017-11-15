@@ -205,12 +205,12 @@ struct odpdrv_enumr_param_t {
 	 * Called by ODP when it is ready for device creation/deletion
 	 * returns an negative value on error or 0 on success.
 	 */
-	int (*probe)(void);
+	int (*probe)(void *enumr_data);
 
 	/** Remove function:
 	 * destroy all enumerated devices and release all resources
 	 */
-	int (*remove)(void);
+	int (*remove)(void *enumr_data);
 
 	/** Register event notifier function for hotplug events:
 	 * register_notifier(fcnt,event_mask) registers fcnt as a callback when
@@ -218,6 +218,12 @@ struct odpdrv_enumr_param_t {
 	 */
 	int (*register_notifier)(void (*event_handler) (uint64_t event),
 				 int64_t event_mask);
+
+	/** Class dependent part
+	 * This part is allocated by the enumerator class for use by the
+	 * enumerator, it is passed as a parameter to the probe function.
+	 */
+	void *enumr_data;
 };
 
 /* The following events are supported by enumerators */

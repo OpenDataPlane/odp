@@ -851,7 +851,7 @@ void _odpdrv_driver_probe_drv_items(void)
 	enumr = enumr_lst.head;
 	while (enumr) {
 		if (!enumr->probed) {
-			enumr->param.probe();
+			enumr->param.probe(enumr->param.enumr_data);
 			enumr->probed = 1;
 		}
 		enumr = enumr->next;
@@ -1055,7 +1055,7 @@ int _odpdrv_driver_term_global(void)
 	while (enumr_lst.head) {
 		enumr = enumr_lst.head;
 		if (enumr->param.remove) { /* run remove callback, if any */
-			if (enumr->param.remove())
+			if (enumr->param.remove(enumr->param.enumr_data))
 				ODP_ERR("Enumerator (API %s) removal failed.\n",
 					enumr->param.api_name);
 		}
