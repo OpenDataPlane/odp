@@ -777,7 +777,7 @@ void sched_cb_pktio_stop_finalize(int pktio_index)
 	unlock_entry(entry);
 }
 
-uint32_t odp_pktio_mtu(odp_pktio_t hdl)
+static inline uint32_t pktio_mtu(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
 	uint32_t ret = 0;
@@ -801,6 +801,21 @@ uint32_t odp_pktio_mtu(odp_pktio_t hdl)
 
 	unlock_entry(entry);
 	return ret;
+}
+
+uint32_t odp_pktio_mtu(odp_pktio_t pktio)
+{
+	return pktio_mtu(pktio);
+}
+
+uint32_t odp_pktin_maxlen(odp_pktio_t pktio)
+{
+	return pktio_mtu(pktio);
+}
+
+uint32_t odp_pktout_maxlen(odp_pktio_t pktio)
+{
+	return pktio_mtu(pktio);
 }
 
 int odp_pktio_promisc_mode_set(odp_pktio_t hdl, odp_bool_t enable)
@@ -1089,8 +1104,11 @@ void odp_pktio_print(odp_pktio_t hdl)
 			"  mac               %02x:%02x:%02x:%02x:%02x:%02x\n",
 			addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 	len += snprintf(&str[len], n - len,
-			"  mtu               %" PRIu32 "\n",
-			odp_pktio_mtu(hdl));
+			"  pktin maxlen      %" PRIu32 "\n",
+			odp_pktin_maxlen(hdl));
+	len += snprintf(&str[len], n - len,
+			"  pktout maxlen     %" PRIu32 "\n",
+			odp_pktout_maxlen(hdl));
 	len += snprintf(&str[len], n - len,
 			"  promisc           %s\n",
 			odp_pktio_promisc_mode(hdl) ? "yes" : "no");
