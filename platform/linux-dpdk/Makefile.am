@@ -265,8 +265,6 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   pool/dpdk.c \
 			   ../linux-generic/odp_queue_if.c \
 			   ../linux-generic/queue/subsystem.c \
-			   ../linux-generic/queue/generic.c \
-			   ../linux-generic/queue/scalable.c \
 			   ../linux-generic/odp_rwlock.c \
 			   ../linux-generic/odp_rwlock_recursive.c \
 			   ../linux-generic/pool/subsystem.c \
@@ -348,8 +346,10 @@ endif
 endif
 endif
 if ODP_SCHEDULE_SCALABLE
+__LIB__libodp_dpdk_la_SOURCES += ../linux-generic/queue/scalable.c
 ../linux-generic/queue/scalable.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
 else
+__LIB__libodp_dpdk_la_SOURCES += ../linux-generic/queue/generic.c
 ../linux-generic/queue/generic.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
 endif
 

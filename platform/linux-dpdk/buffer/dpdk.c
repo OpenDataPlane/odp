@@ -36,7 +36,6 @@ static odp_buffer_t buffer_alloc(odp_pool_t pool_hdl)
 		return ODP_BUFFER_INVALID;
 	}
 
-	buf_hdl_to_hdr(buffer)->next = NULL;
 	return buffer;
 }
 
