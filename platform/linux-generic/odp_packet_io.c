@@ -755,7 +755,7 @@ static inline uint32_t pktio_mtu(odp_pktio_t hdl)
 	return ret;
 }
 
-uint32_t odp_pktio_mtu(odp_pktio_t pktio)
+uint32_t ODP_DEPRECATE(odp_pktio_mtu)(odp_pktio_t pktio)
 {
 	return pktio_mtu(pktio);
 }

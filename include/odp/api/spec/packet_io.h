@@ -30,7 +30,7 @@ extern "C" {
  *
  * Packet IO is the Ingress and Egress interface to ODP processing. It
  * allows manipulation of the interface for setting such attributes as
- * the mtu, mac etc.
+ * number of queues, MAC address etc.
  * Pktio is usually followed by the classifier and a default class COS
  * can be set so that the scheduler may distribute flows. The interface
  * may be used directly in polled mode with odp_pktin_recv() and
@@ -949,14 +949,18 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 		    int num);
 
 /**
- * Return the currently configured MTU value of a packet IO interface.
+ * MTU value of a packet IO interface
  *
- * @param[in] pktio  Packet IO handle.
+ * @deprecated  Use odp_pktin_maxlen() and odp_pktout_maxlen() instead. MTU was
+ * not well defined. There may be difference between MTU and maximum frame
+ * length values.
+ *
+ * @param pktio  Packet IO handle.
  *
  * @return MTU value on success
  * @retval 0 on failure
  */
-uint32_t odp_pktio_mtu(odp_pktio_t pktio);
+uint32_t ODP_DEPRECATE(odp_pktio_mtu)(odp_pktio_t pktio);
 
 /**
  * Enable/Disable promiscuous mode on a packet IO interface.
