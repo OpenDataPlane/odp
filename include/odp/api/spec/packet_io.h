@@ -965,8 +965,8 @@ uint32_t ODP_DEPRECATE(odp_pktio_mtu)(odp_pktio_t pktio);
 /**
  * Enable/Disable promiscuous mode on a packet IO interface.
  *
- * @param[in] pktio	Packet IO handle.
- * @param[in] enable	1 to enable, 0 to disable.
+ * @param pktio   Packet IO handle.
+ * @param enable  1 to enable, 0 to disable.
  *
  * @retval 0 on success
  * @retval <0 on failure
@@ -976,7 +976,7 @@ int odp_pktio_promisc_mode_set(odp_pktio_t pktio, odp_bool_t enable);
 /**
  * Determine if promiscuous mode is enabled for a packet IO interface.
  *
- * @param[in] pktio Packet IO handle.
+ * @param pktio  Packet IO handle.
  *
  * @retval  1 if promiscuous mode is enabled.
  * @retval  0 if promiscuous mode is disabled.
@@ -1045,14 +1045,13 @@ int odp_pktio_mac_addr_set(odp_pktio_t pktio, const void *mac_addr,
 /**
  * Setup per-port default class-of-service.
  *
- * @param[in]	pktio		Ingress port pktio handle.
- * @param[in]	default_cos	Class-of-service set to all packets arriving
- *				at this ingress port,
- *				unless overridden by subsequent
- *				header-based filters.
+ * @param pktio        Ingress port pktio handle.
+ * @param default_cos  Class-of-service set to all packets arriving at this
+ *                     ingress port, unless overridden by subsequent
+ *                     header-based filters.
  *
- * @retval			0 on success
- * @retval			<0 on failure
+ * @retval  0 on success
+ * @retval <0 on failure
  *
  * @note The default_cos has to be unique per odp_pktio_t instance.
  */
@@ -1061,12 +1060,12 @@ int odp_pktio_default_cos_set(odp_pktio_t pktio, odp_cos_t default_cos);
 /**
  * Setup per-port error class-of-service
  *
- * @param[in]	pktio		Ingress port pktio handle.
- * @param[in]	error_cos	class-of-service set to all packets arriving
- *				at this ingress port that contain an error.
+ * @param pktio      Ingress port pktio handle.
+ * @param error_cos  class-of-service set to all packets arriving at this
+ *                   ingress port that contain an error.
  *
- * @retval			0 on success
- * @retval			<0 on failure
+ * @retval  0 on success
+ * @retval <0 on failure
  *
  * @note Optional.
  */
@@ -1075,24 +1074,23 @@ int odp_pktio_error_cos_set(odp_pktio_t pktio, odp_cos_t error_cos);
 /**
  * Setup per-port header offset
  *
- * @param[in]	pktio		Ingress port pktio handle.
- * @param[in]	offset		Number of bytes the classifier must skip.
+ * @param pktio      Ingress port pktio handle.
+ * @param offset     Number of bytes the classifier must skip.
  *
- * @retval			0 on success
- * @retval			<0 on failure
- * @note  Optional.
+ * @retval  0 on success
+ * @retval <0 on failure
  *
+ * @note Optional.
  */
 int odp_pktio_skip_set(odp_pktio_t pktio, uint32_t offset);
 
 /**
  * Specify per-port buffer headroom
  *
- * @param[in]	pktio		Ingress port pktio handle.
- * @param[in]	headroom	Number of bytes of space preceding
- *				packet data to reserve for use as headroom.
- *				Must not exceed the implementation
- *				defined ODP_PACKET_MAX_HEADROOM.
+ * @param pktio     Ingress port pktio handle.
+ * @param headroom  Number of bytes of space preceding packet data to reserve
+ *                  for use as headroom. Must not exceed the implementation
+ *                  defined ODP_PACKET_MAX_HEADROOM.
  *
  * @retval			0 on success
  * @retval			<0 on failure
