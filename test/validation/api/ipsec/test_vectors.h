@@ -49,7 +49,7 @@ KEY(key_mcgrew_gcm_15, 0x4c, 0x80, 0xcd, 0xef, 0xbb, 0x5d, 0x10, 0xda,
 		       0x90, 0x6a, 0xc7, 0x3c, 0x36, 0x13, 0xa6, 0x34);
 KEY(key_mcgrew_gcm_salt_15, 0x22, 0x43, 0x3c, 0x64);
 
-static const ODP_UNUSED ipsec_test_packet pkt_icmp_0 = {
+static const ODP_UNUSED ipsec_test_packet pkt_ipv4_icmp_0 = {
 	.len = 142,
 	.l2_offset = 0,
 	.l3_offset = 14,
@@ -82,7 +82,7 @@ static const ODP_UNUSED ipsec_test_packet pkt_icmp_0 = {
 	},
 };
 
-static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_ipip = {
+static const ODP_UNUSED ipsec_test_packet pkt_ipv4_icmp_0_ipip = {
 	.len = 162,
 	.l2_offset = 0,
 	.l3_offset = 14,
@@ -120,7 +120,7 @@ static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_ipip = {
 	},
 };
 
-static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_ah_sha256_1 = {
+static const ODP_UNUSED ipsec_test_packet pkt_ipv4_icmp_0_ah_sha256_1 = {
 	.len = 170,
 	.l2_offset = 0,
 	.l3_offset = 14,
@@ -159,7 +159,8 @@ static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_ah_sha256_1 = {
 	},
 };
 
-static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_ah_tun_sha256_1 = {
+static const ODP_UNUSED ipsec_test_packet
+		pkt_ipv4_icmp_0_ah_tun_ipv4_sha256_1 = {
 	.len = 190,
 	.l2_offset = 0,
 	.l3_offset = 14,
@@ -203,7 +204,7 @@ static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_ah_tun_sha256_1 = {
 	},
 };
 
-static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_ah_sha256_1_bad1 = {
+static const ODP_UNUSED ipsec_test_packet pkt_ipv4_icmp_0_ah_sha256_1_bad1 = {
 	.len = 168,
 	.l2_offset = 0,
 	.l3_offset = 14,
@@ -242,7 +243,7 @@ static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_ah_sha256_1_bad1 = {
 	},
 };
 
-static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_ah_sha256_1_bad2 = {
+static const ODP_UNUSED ipsec_test_packet pkt_ipv4_icmp_0_ah_sha256_1_bad2 = {
 	.len = 170,
 	.l2_offset = 0,
 	.l3_offset = 14,
@@ -281,7 +282,7 @@ static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_ah_sha256_1_bad2 = {
 	},
 };
 
-static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_ah_sha256_1235 = {
+static const ODP_UNUSED ipsec_test_packet pkt_ipv4_icmp_0_ah_sha256_1235 = {
 	.len = 170,
 	.l2_offset = 0,
 	.l3_offset = 14,
@@ -325,7 +326,7 @@ static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_ah_sha256_1235 = {
 	},
 };
 
-static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_esp_null_sha256_1 = {
+static const ODP_UNUSED ipsec_test_packet pkt_ipv4_icmp_0_esp_null_sha256_1 = {
 	.len = 170,
 	.l2_offset = 0,
 	.l3_offset = 14,
@@ -368,7 +369,8 @@ static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_esp_null_sha256_1 = {
 	},
 };
 
-static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_esp_tun_null_sha256_1 = {
+static const ODP_UNUSED ipsec_test_packet
+		pkt_ipv4_icmp_0_esp_tun_ipv4_null_sha256_1 = {
 	.len = 190,
 	.l2_offset = 0,
 	.l3_offset = 14,
@@ -416,7 +418,8 @@ static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_esp_tun_null_sha256_1 = {
 	},
 };
 
-static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_esp_null_sha256_1_bad1 = {
+static const ODP_UNUSED ipsec_test_packet
+		pkt_ipv4_icmp_0_esp_null_sha256_1_bad1 = {
 	.len = 170,
 	.l2_offset = 0,
 	.l3_offset = 14,
@@ -459,7 +462,8 @@ static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_esp_null_sha256_1_bad1 = {
 	},
 };
 
-static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_esp_null_sha256_1235 = {
+static const ODP_UNUSED ipsec_test_packet
+		pkt_ipv4_icmp_0_esp_null_sha256_1235 = {
 	.len = 170,
 	.l2_offset = 0,
 	.l3_offset = 14,
@@ -502,7 +506,7 @@ static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_esp_null_sha256_1235 = {
 	},
 };
 
-static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_esp_aes_cbc_null_1 = {
+static const ODP_UNUSED ipsec_test_packet pkt_ipv4_icmp_0_esp_aes_cbc_null_1 = {
 	.len = 170,
 	.l2_offset = 0,
 	.l3_offset = 14,
@@ -542,7 +546,8 @@ static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_esp_aes_cbc_null_1 = {
 	},
 };
 
-static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_esp_aes_cbc_sha256_1 = {
+static const ODP_UNUSED ipsec_test_packet
+		pkt_ipv4_icmp_0_esp_aes_cbc_sha256_1 = {
 	.len = 186,
 	.l2_offset = 0,
 	.l3_offset = 14,
@@ -586,7 +591,7 @@ static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_esp_aes_cbc_sha256_1 = {
 	},
 };
 
-static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_esp_aes_ctr_null_1 = {
+static const ODP_UNUSED ipsec_test_packet pkt_ipv4_icmp_0_esp_aes_ctr_null_1 = {
 	.len = 162,
 	.l2_offset = 0,
 	.l3_offset = 14,
@@ -625,7 +630,7 @@ static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_esp_aes_ctr_null_1 = {
 	},
 };
 
-static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_ah_aes_gmac_128_1 = {
+static const ODP_UNUSED ipsec_test_packet pkt_ipv4_icmp_0_ah_aes_gmac_128_1 = {
 	.len = 178,
 	.l2_offset = 0,
 	.l3_offset = 14,
@@ -665,7 +670,8 @@ static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_ah_aes_gmac_128_1 = {
 	},
 };
 
-static const ODP_UNUSED ipsec_test_packet pkt_icmp_0_esp_null_aes_gmac_128_1 = {
+static const ODP_UNUSED ipsec_test_packet
+		pkt_ipv4_icmp_0_esp_null_aes_gmac_128_1 = {
 	.len = 178,
 	.l2_offset = 0,
 	.l3_offset = 14,
