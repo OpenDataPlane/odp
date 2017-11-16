@@ -108,6 +108,7 @@ typedef struct {
 	int error_check;        /**< Check packet errors */
 	int sched_mode;         /**< Scheduler mode */
 	int num_groups;         /**< Number of scheduling groups */
+	int verbose;		/**< Verbose output */
 } appl_args_t;
 
 static int exit_threads;	/**< Break workers loop if set to 1 */
@@ -697,6 +698,9 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	printf("created pktio %" PRIu64 ", dev: %s, drv: %s\n",
 	       odp_pktio_to_u64(pktio), dev, info.drv_name);
 
+	if (gbl_args->appl.verbose)
+		odp_pktio_print(pktio);
+
 	if (odp_pktio_capability(pktio, &capa)) {
 		LOG_ERR("Error: capability query failed %s\n", dev);
 		return -1;
@@ -1164,11 +1168,12 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"src_change", required_argument, NULL, 's'},
 		{"error_check", required_argument, NULL, 'e'},
 		{"groups", required_argument, NULL, 'g'},
+		{"verbose", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts =  "+c:+t:+a:i:m:o:r:d:s:e:g:h";
+	static const char *shortopts =  "+c:+t:+a:i:m:o:r:d:s:e:g:vh";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	odph_parse_options(argc, argv, shortopts, longopts);
@@ -1179,6 +1184,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->src_change = 1; /* change eth src address by default */
 	appl_args->num_groups = 0; /* use default group */
 	appl_args->error_check = 0; /* don't check packet errors by default */
+	appl_args->verbose = 0;
 
 	opterr = 0; /* do not issue errors on helper options */
 
@@ -1305,6 +1311,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 		case 'g':
 			appl_args->num_groups = atoi(optarg);
+			break;
+		case 'v':
+			appl_args->verbose = 1;
 			break;
 		case 'h':
 			usage(argv[0]);
