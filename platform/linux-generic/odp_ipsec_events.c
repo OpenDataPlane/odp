@@ -6,6 +6,8 @@
 
 #include "config.h"
 
+#include <string.h>
+
 #include <odp/api/ipsec.h>
 #include <odp/api/shared_memory.h>
 
@@ -13,6 +15,8 @@
 #include <odp_buffer_inlines.h>
 #include <odp_debug_internal.h>
 #include <odp_ipsec_internal.h>
+#include <odp/api/packet.h>
+#include <odp/api/plat/packet_inlines.h>
 #include <odp_pool_internal.h>
 
 typedef struct {
@@ -23,6 +27,7 @@ typedef struct {
 } ipsec_status_hdr_t;
 
 static odp_pool_t ipsec_status_pool = ODP_POOL_INVALID;
+static odp_pool_t ipsec_sa_disabled_pool = ODP_POOL_INVALID;
 
 #define IPSEC_EVENTS_POOL_BUF_COUNT 1024
 
@@ -43,8 +48,24 @@ int _odp_ipsec_events_init_global(void)
 		goto err_status;
 	}
 
+	odp_pool_param_init(&param);
+
+	param.pkt.seg_len = 16;
+	param.pkt.len     = 16;
+	param.pkt.num     = ODP_CONFIG_IPSEC_SAS;
+	param.type        = ODP_POOL_PACKET;
+
+	ipsec_sa_disabled_pool = odp_pool_create("ipsec_sa_disabled_pool",
+						 &param);
+	if (ODP_POOL_INVALID == ipsec_sa_disabled_pool) {
+		ODP_ERR("Error: sa_disabled pool create failed.\n");
+		goto err_sa_disabled;
+	}
+
 	return 0;
 
+err_sa_disabled:
+	odp_pool_destroy(ipsec_status_pool);
 err_status:
 	return -1;
 }
@@ -53,6 +74,12 @@ int _odp_ipsec_events_term_global(void)
 {
 	int ret = 0;
 	int rc = 0;
+
+	ret = odp_pool_destroy(ipsec_sa_disabled_pool);
+	if (ret < 0) {
+		ODP_ERR("sa_disabled pool destroy failed");
+		rc = -1;
+	}
 
 	ret = odp_pool_destroy(ipsec_status_pool);
 	if (ret < 0) {
@@ -112,7 +139,6 @@ void _odp_ipsec_status_free(ipsec_status_t status)
 int _odp_ipsec_status_send(odp_queue_t queue,
 			   odp_ipsec_status_id_t id,
 			   odp_ipsec_sa_t sa,
-			   int result,
 			   odp_ipsec_warn_t warn)
 {
 	ipsec_status_t ipsec_ev = odp_ipsec_status_alloc();
@@ -125,7 +151,6 @@ int _odp_ipsec_status_send(odp_queue_t queue,
 
 	status_hdr->status.id = id;
 	status_hdr->status.sa = sa;
-	status_hdr->status.result = result;
 	status_hdr->status.warn = warn;
 
 	if (odp_queue_enq(queue, ipsec_status_to_event(ipsec_ev))) {
@@ -151,6 +176,31 @@ int odp_ipsec_status(odp_ipsec_status_t *status, odp_event_t event)
 	status_hdr = ipsec_status_hdr(ipsec_ev);
 
 	*status = status_hdr->status;
+
+	return 0;
+}
+
+int _odp_ipsec_sa_disabled_send(odp_queue_t queue,
+				odp_ipsec_sa_t sa)
+{
+	odp_packet_t packet;
+	odp_ipsec_packet_result_t *result;
+
+	ODP_ASSERT(ODP_POOL_INVALID != ipsec_sa_disabled_pool);
+	packet = odp_packet_alloc(ipsec_sa_disabled_pool, 0);
+	ODP_ASSERT(ODP_PACKET_INVALID != packet);
+
+	_odp_buffer_event_subtype_set(packet_to_buffer(packet),
+				      ODP_EVENT_PACKET_IPSEC);
+	result = _odp_ipsec_pkt_result(packet);
+	memset(result, 0, sizeof(*result));
+	result->status.error.sa_disabled = 1;
+	result->sa = sa;
+
+	if (odp_queue_enq(queue, odp_ipsec_packet_to_event(packet))) {
+		odp_packet_free(packet);
+		return -1;
+	}
 
 	return 0;
 }

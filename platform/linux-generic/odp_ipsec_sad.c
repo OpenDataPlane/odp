@@ -171,7 +171,6 @@ void _odp_ipsec_sa_unuse(ipsec_sa_t *ipsec_sa)
 {
 	odp_queue_t queue;
 	odp_ipsec_sa_t sa;
-	odp_ipsec_warn_t warn = { .all = 0 };
 
 	ODP_ASSERT(NULL != ipsec_sa);
 
@@ -179,9 +178,7 @@ void _odp_ipsec_sa_unuse(ipsec_sa_t *ipsec_sa)
 	sa = ipsec_sa->ipsec_sa_hdl;
 
 	if (ipsec_sa_unlock(ipsec_sa) && ODP_QUEUE_INVALID != queue)
-		_odp_ipsec_status_send(queue,
-				       ODP_IPSEC_STATUS_SA_DISABLE,
-				       sa, 0, warn);
+		_odp_ipsec_sa_disabled_send(queue, sa);
 }
 
 void odp_ipsec_sa_param_init(odp_ipsec_sa_param_t *param)
@@ -399,17 +396,12 @@ int odp_ipsec_sa_disable(odp_ipsec_sa_t sa)
 	}
 
 	if (ODP_QUEUE_INVALID != ipsec_sa->queue) {
-		odp_ipsec_warn_t warn = { .all = 0 };
-
 		/*
-		 * If there were not active state when we disabled SA,
-		 * send the event.
+		 * If there was no active state when we disabled SA, send the
+		 * event. Otherwise it will be sent by _odp_ipsec_sa_unuse().
 		 */
 		if (0 == state)
-			_odp_ipsec_status_send(ipsec_sa->queue,
-					       ODP_IPSEC_STATUS_SA_DISABLE,
-					       ipsec_sa->ipsec_sa_hdl,
-					       0, warn);
+			_odp_ipsec_sa_disabled_send(ipsec_sa->queue, sa);
 
 		return 0;
 	}

@@ -74,8 +74,19 @@ void _odp_ipsec_status_free(ipsec_status_t status);
 int _odp_ipsec_status_send(odp_queue_t queue,
 			   odp_ipsec_status_id_t id,
 			   odp_ipsec_sa_t sa,
-			   int result,
 			   odp_ipsec_warn_t warn);
+
+/**
+ * @internal Send SA_DISABLED event
+ *
+ * Sends the packet notifying application that SA finished all processing and
+ * is now disabled.
+ *
+ * @param queue         destination queue
+ * @param sa            SA respective to the operation
+ */
+int _odp_ipsec_sa_disabled_send(odp_queue_t queue,
+				odp_ipsec_sa_t sa);
 
 #define IPSEC_MAX_IV_LEN	32   /**< Maximum IV length in bytes */
 
@@ -228,6 +239,13 @@ int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
  *           processing
  */
 int _odp_ipsec_try_inline(odp_packet_t pkt);
+
+/**
+ * Return IPsec result instance connected to the IPsec packet
+ *
+ * @param packet packet of ODP_EVENT_PACKET_IPSEC subtype
+ */
+odp_ipsec_packet_result_t *_odp_ipsec_pkt_result(odp_packet_t packet);
 
 /**
  * @}
