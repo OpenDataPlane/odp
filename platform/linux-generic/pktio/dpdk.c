@@ -832,6 +832,13 @@ static uint32_t dpdk_mtu_get(pktio_entry_t *pktio_entry)
 	return mtu;
 }
 
+static uint32_t dpdk_frame_maxlen(pktio_entry_t *pktio_entry)
+{
+	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+
+	return pkt_dpdk->mtu;
+}
+
 static int dpdk_vdev_promisc_mode_get(uint8_t port_id)
 {
 	struct rte_eth_dev_info dev_info;
@@ -1631,7 +1638,7 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.recv = dpdk_recv,
 	.send = dpdk_send,
 	.link_status = dpdk_link_status,
-	.mtu_get = dpdk_mtu_get,
+	.mtu_get = dpdk_frame_maxlen,
 	.promisc_mode_set = dpdk_promisc_mode_set,
 	.promisc_mode_get = dpdk_promisc_mode_get,
 	.mac_get = dpdk_mac_addr_get,
