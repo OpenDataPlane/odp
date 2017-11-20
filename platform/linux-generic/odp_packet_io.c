@@ -10,6 +10,7 @@
 
 #include <odp/api/packet_io.h>
 #include <odp_packet_io_internal.h>
+#include <odp_packet_io_pool.h>
 #include <odp/api/packet.h>
 #include <odp_packet_internal.h>
 #include <odp_internal.h>
@@ -76,6 +77,10 @@ int odp_pktio_init_global(void)
 		pktio_entry_ptr[i] = pktio_entry;
 	}
 
+	if (_odp_packet_io_pool_create()) {
+		odp_shm_free(shm);
+		return -1;
+	}
 	return odp_pktio_ops_init_global(true);
 }
 
@@ -1121,6 +1126,10 @@ int odp_pktio_term_global(void)
 	}
 
 	ret = odp_pktio_ops_term_global(false);
+
+	ret = _odp_packet_io_pool_destroy();
+	if (ret)
+		ODP_ERR("unable to destroy pktio pool\n");
 
 	ret = odp_shm_free(odp_shm_lookup("odp_pktio_entries"));
 	if (ret != 0)

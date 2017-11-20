@@ -494,23 +494,27 @@ static int mmap_bind_sock(pktio_ops_socket_mmap_data_t *pkt_sock,
 
 static int sock_mmap_close(pktio_entry_t *entry)
 {
-	pktio_ops_socket_mmap_data_t
-		*const pkt_sock = odp_ops_data(entry, socket_mmap);
+	pktio_ops_socket_mmap_data_t *const pkt_sock = entry->s.ops_data;
 	int ret;
+	int status = 0;
 
 	ret = mmap_unmap_sock(pkt_sock);
 	if (ret != 0) {
 		ODP_ERR("mmap_unmap_sock() %s\n", strerror(errno));
-		return -1;
+		status = -1;
 	}
 
 	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
 		__odp_errno = errno;
 		ODP_ERR("close(sockfd): %s\n", strerror(errno));
-		return -1;
+		status = -1;
 	}
 
-	return 0;
+	if (ODP_OPS_DATA_FREE(entry->s.ops_data)) {
+		ODP_ERR("ops_data_free(sock_mmap) failed\n");
+		status = -1;
+	}
+	return status;
 }
 
 static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
@@ -520,21 +524,26 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 	int if_idx;
 	int ret = 0;
 	odp_pktio_stats_t cur_stats;
+	pktio_ops_socket_mmap_data_t *pkt_sock;
+	int fanout = 1;
 
 	if (disable_pktio)
 		return -1;
 
-	pktio_ops_socket_mmap_data_t
-		*const pkt_sock = odp_ops_data(pktio_entry, socket_mmap);
-	int fanout = 1;
+	if (pool == ODP_POOL_INVALID)
+		return -1;
+
+	pktio_entry->s.ops_data = ODP_OPS_DATA_ALLOC(sizeof(*pkt_sock));
+	if (odp_unlikely(pktio_entry->s.ops_data == NULL)) {
+		ODP_ERR("Failed to allocate pktio_ops_socket_mmap_data_t struct");
+		return -1;
+	}
+	pkt_sock = pktio_entry->s.ops_data;
 
 	/* Init pktio entry */
 	memset(pkt_sock, 0, sizeof(*pkt_sock));
 	/* set sockfd to -1, because a valid socked might be initialized to 0 */
 	pkt_sock->sockfd = -1;
-
-	if (pool == ODP_POOL_INVALID)
-		return -1;
 
 	/* Store eth buffer offset for pkt buffers from this pool */
 	pkt_sock->frame_offset = 0;
@@ -610,8 +619,7 @@ error:
 static int sock_mmap_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  odp_packet_t pkt_table[], int len)
 {
-	pktio_ops_socket_mmap_data_t
-		*const pkt_sock = odp_ops_data(pktio_entry, socket_mmap);
+	pktio_ops_socket_mmap_data_t *const pkt_sock = pktio_entry->s.ops_data;
 	int ret;
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
@@ -626,8 +634,7 @@ static int sock_mmap_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  const odp_packet_t pkt_table[], int len)
 {
 	int ret;
-	pktio_ops_socket_mmap_data_t
-		*const pkt_sock = odp_ops_data(pktio_entry, socket_mmap);
+	pktio_ops_socket_mmap_data_t *const pkt_sock = pktio_entry->s.ops_data;
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 	ret = pkt_mmap_v2_tx(pkt_sock->tx_ring.sock, &pkt_sock->tx_ring,
@@ -639,16 +646,14 @@ static int sock_mmap_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 static uint32_t sock_mmap_mtu_get(pktio_entry_t *pktio_entry)
 {
-	pktio_ops_socket_mmap_data_t
-		*const pkt_sock = odp_ops_data(pktio_entry, socket_mmap);
+	pktio_ops_socket_mmap_data_t *const pkt_sock = pktio_entry->s.ops_data;
 
 	return mtu_get_fd(pkt_sock->sockfd, pktio_entry->s.name);
 }
 
 static int sock_mmap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 {
-	pktio_ops_socket_mmap_data_t
-		*const pkt_sock = odp_ops_data(pktio_entry, socket_mmap);
+	pktio_ops_socket_mmap_data_t *const pkt_sock = pktio_entry->s.ops_data;
 
 	memcpy(mac_addr, pkt_sock->if_mac, ETH_ALEN);
 	return ETH_ALEN;
@@ -657,8 +662,7 @@ static int sock_mmap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 static int sock_mmap_promisc_mode_set(pktio_entry_t *pktio_entry,
 				      odp_bool_t enable)
 {
-	pktio_ops_socket_mmap_data_t
-		*const pkt_sock = odp_ops_data(pktio_entry, socket_mmap);
+	pktio_ops_socket_mmap_data_t *const pkt_sock = pktio_entry->s.ops_data;
 
 	return promisc_mode_set_fd(pkt_sock->sockfd,
 				   pktio_entry->s.name, enable);
@@ -666,8 +670,7 @@ static int sock_mmap_promisc_mode_set(pktio_entry_t *pktio_entry,
 
 static int sock_mmap_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
-	pktio_ops_socket_mmap_data_t
-		*const pkt_sock = odp_ops_data(pktio_entry, socket_mmap);
+	pktio_ops_socket_mmap_data_t *const pkt_sock = pktio_entry->s.ops_data;
 
 	return promisc_mode_get_fd(pkt_sock->sockfd,
 				   pktio_entry->s.name);
@@ -675,8 +678,7 @@ static int sock_mmap_promisc_mode_get(pktio_entry_t *pktio_entry)
 
 static int sock_mmap_link_status(pktio_entry_t *pktio_entry)
 {
-	pktio_ops_socket_mmap_data_t
-		*const pkt_sock = odp_ops_data(pktio_entry, socket_mmap);
+	pktio_ops_socket_mmap_data_t *const pkt_sock = pktio_entry->s.ops_data;
 
 	return link_status_fd(pkt_sock->sockfd, pktio_entry->s.name);
 }
@@ -699,8 +701,7 @@ static int sock_mmap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 static int sock_mmap_stats(pktio_entry_t *pktio_entry,
 			   odp_pktio_stats_t *stats)
 {
-	pktio_ops_socket_mmap_data_t
-		*const pkt_sock = odp_ops_data(pktio_entry, socket_mmap);
+	pktio_ops_socket_mmap_data_t *const pkt_sock = pktio_entry->s.ops_data;
 
 	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED) {
 		memset(stats, 0, sizeof(*stats));
@@ -713,8 +714,7 @@ static int sock_mmap_stats(pktio_entry_t *pktio_entry,
 
 static int sock_mmap_stats_reset(pktio_entry_t *pktio_entry)
 {
-	pktio_ops_socket_mmap_data_t
-		*const pkt_sock = odp_ops_data(pktio_entry, socket_mmap);
+	pktio_ops_socket_mmap_data_t *const pkt_sock = pktio_entry->s.ops_data;
 
 	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED) {
 		memset(&pktio_entry->s.stats, 0,
