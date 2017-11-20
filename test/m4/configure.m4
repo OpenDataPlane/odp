@@ -32,8 +32,4 @@ AC_CONFIG_FILES([test/Makefile
 		 test/validation/api/thread/Makefile
 		 test/validation/api/time/Makefile
 		 test/validation/api/timer/Makefile
-		 test/validation/api/traffic_mngr/Makefile
-		 test/validation/drv/Makefile
-		 test/validation/drv/drvatomic/Makefile
-		 test/validation/drv/drvdriver/Makefile
-		 test/validation/drv/drvshmem/Makefile])
+		 test/validation/api/traffic_mngr/Makefile])

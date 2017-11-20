@@ -1,4 +1,3 @@
 if test_vald
-    SUBDIRS = api \
-	      drv
+    SUBDIRS = api
 endif
