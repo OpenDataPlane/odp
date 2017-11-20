@@ -10,7 +10,7 @@
 #include <odp/api/std_types.h>
 #include <odp/api/debug.h>
 #include <odp_debug_internal.h>
-#include <drv_driver_internal.h>
+#include <driver_internal.h>
 #include <libconfig.h>
 #include <dlfcn.h>
 

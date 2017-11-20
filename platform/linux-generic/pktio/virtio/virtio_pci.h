@@ -36,7 +36,7 @@
 
 #include <stdint.h>
 
-#include <drv_pci_internal.h>
+#include <pci_internal.h>
 
 struct virtqueue;
 struct virtnet_ctl;

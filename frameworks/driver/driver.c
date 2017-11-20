@@ -7,18 +7,17 @@
 #include <config.h>
 
 #include <string.h>
+#include <inttypes.h>
 
 #include <odp_config_internal.h>
 #include <_ishmpool_internal.h>
 
+#include <driver.h>
 #include <odp/api/std_types.h>
 #include <odp/api/debug.h>
 #include <odp/api/rwlock_recursive.h>
 #include <odp/api/ticketlock.h>
-#include <odp/drv/driver.h>
-#include <odp/drv/spec/driver.h>
 #include <odp_debug_internal.h>
-#include <drv_driver_internal.h>
 
 static enum {UNDONE, IN_PROGRESS, DONE} init_global_status;
 

@@ -22,7 +22,7 @@
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>
 
-#include <drv_pci_internal.h>
+#include <pci_internal.h>
 #include <odp_pktio_ops_virtio.h>
 
 #include "virtio_pci.h"
