@@ -23,6 +23,7 @@ AM_CPPFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include
 AM_CPPFLAGS +=  -I$(srcdir)/include
 AM_CPPFLAGS +=  -I$(top_srcdir)/include
 AM_CPPFLAGS +=  -I$(top_srcdir)/frameworks/modular
+AM_CPPFLAGS +=  -I$(top_srcdir)/frameworks/driver/include
 AM_CPPFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
 AM_CPPFLAGS +=  -I$(top_builddir)/include
 AM_CPPFLAGS +=  -Iinclude
@@ -37,8 +38,7 @@ AM_CPPFLAGS +=  $(LIBCONFIG_CFLAGS)
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \
-		  $(top_srcdir)/include/odp_api.h \
-		  $(top_srcdir)/include/odp_drv.h
+		  $(top_srcdir)/include/odp_api.h
 
 odpincludedir= $(includedir)/odp
 odpinclude_HEADERS = \
@@ -148,39 +148,12 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/traffic_mngr_types.h \
 		  $(srcdir)/include/odp/api/plat/version_types.h
 
-odpdrvincludedir = $(includedir)/odp/drv
-odpdrvinclude_HEADERS = \
-		  $(srcdir)/include/odp/drv/align.h \
-		  $(srcdir)/include/odp/drv/atomic.h \
-		  $(srcdir)/include/odp/drv/barrier.h \
-		  $(srcdir)/include/odp/drv/byteorder.h \
-		  $(srcdir)/include/odp/drv/compiler.h \
-		  $(srcdir)/include/odp/drv/driver.h \
-		  $(srcdir)/include/odp/drv/hints.h \
-		  $(srcdir)/include/odp/drv/shm.h \
-		  $(srcdir)/include/odp/drv/spinlock.h \
-		  $(srcdir)/include/odp/drv/std_types.h \
-		  $(srcdir)/include/odp/drv/sync.h
-
-odpdrvplatincludedir = $(includedir)/odp/drv/plat
-odpdrvplatinclude_HEADERS = \
-		  $(srcdir)/include/odp/drv/plat/atomic_types.h \
-		  $(srcdir)/include/odp/drv/plat/barrier_types.h \
-		  $(srcdir)/include/odp/drv/plat/byteorder_types.h \
-		  $(srcdir)/include/odp/drv/compiler.h \
-		  $(srcdir)/include/odp/drv/plat/driver_types.h \
-		  $(srcdir)/include/odp/drv/plat/shm_types.h \
-		  $(srcdir)/include/odp/drv/plat/spinlock_types.h \
-		  $(srcdir)/include/odp/drv/plat/strong_types.h
-
-
 noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_buffer_subsystem.h \
 		  ${top_srcdir}/platform/linux-generic/include/_fdserver_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/_ishm_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/_ishmphy_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/_ishmpool_internal.h \
-		  ${top_srcdir}/platform/linux-generic/include/drv_driver_internal.h\
 		  ${top_srcdir}/platform/linux-generic/include/odp_align_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_atomic_internal.h \
 		  ${srcdir}/include/odp_buffer_inlines.h \
@@ -293,12 +266,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_timer_wheel.c \
 			   ../linux-generic/odp_traffic_mngr.c \
 			   ../linux-generic/odp_version.c \
-			   ../linux-generic/odp_weak.c \
-			   ../linux-generic/drv_atomic.c \
-			   ../linux-generic/drv_barrier.c \
-			   ../linux-generic/drv_driver.c \
-			   ../linux-generic/drv_shm.c \
-			   ../linux-generic/drv_spinlock.c
+			   ../linux-generic/odp_weak.c
 
 if ARCH_IS_ARM
 __LIB__libodp_dpdk_la_SOURCES += arch/arm/odp_cpu_arch.c \
@@ -359,6 +327,14 @@ noinst_HEADERS += $(modularframeworkdir)/list.h \
 		  $(modularframeworkdir)/odp_module.h
 
 __LIB__libodp_dpdk_la_SOURCES += ../../frameworks/modular/odp_module.c
+
+# Build driver framework into odp-linux library
+driverframeworkdir = $(top_srcdir)/frameworks/driver
+noinst_HEADERS += $(driverframeworkdir)/include/driver.h \
+                  $(driverframeworkdir)/include/driver_types.h \
+                  $(driverframeworkdir)/include/driver_internal.h
+
+__LIB__libodp_dpdk_la_SOURCES += ../../frameworks/driver/driver.c
 
 __LIB__libodp_dpdk_la_LIBADD = $(ATOMIC_LIBS)
 __LIB__libodp_dpdk_la_LIBADD += $(DPDK_LIBS)

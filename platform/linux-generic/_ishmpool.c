@@ -48,7 +48,6 @@
 #include <odp/api/spinlock.h>
 #include <odp/api/align.h>
 #include <odp/api/debug.h>
-#include <odp/drv/shm.h>
 #include <odp_shm_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>

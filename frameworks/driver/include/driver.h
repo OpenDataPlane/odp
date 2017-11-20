@@ -14,6 +14,9 @@
 #define ODPDRV_DRIVER_H_
 #include <odp/visibility_begin.h>
 
+#include "driver_types.h"
+#include "driver_internal.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

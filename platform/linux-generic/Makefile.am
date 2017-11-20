@@ -11,6 +11,7 @@ lib_LTLIBRARIES = $(LIB)/libodp-linux.la
 AM_CPPFLAGS =  -I$(srcdir)/include
 AM_CPPFLAGS +=  -I$(top_srcdir)/include
 AM_CPPFLAGS +=  -I$(top_srcdir)/frameworks/modular
+AM_CPPFLAGS +=  -I$(top_srcdir)/frameworks/driver/include
 AM_CPPFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
 AM_CPPFLAGS +=  -I$(top_builddir)/include
 AM_CPPFLAGS +=  -Iinclude
@@ -123,39 +124,12 @@ odpapiplatinclude_HEADERS = \
 nodist_odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/static_inline.h
 
-odpdrvincludedir = $(includedir)/odp/drv
-odpdrvinclude_HEADERS = \
-		  include/odp/drv/align.h \
-		  include/odp/drv/atomic.h \
-		  include/odp/drv/barrier.h \
-		  include/odp/drv/byteorder.h \
-		  include/odp/drv/compiler.h \
-		  include/odp/drv/driver.h \
-		  include/odp/drv/hints.h \
-		  include/odp/drv/shm.h \
-		  include/odp/drv/spinlock.h \
-		  include/odp/drv/std_types.h \
-		  include/odp/drv/sync.h
-
-odpdrvplatincludedir = $(includedir)/odp/drv/plat
-odpdrvplatinclude_HEADERS = \
-		  include/odp/drv/plat/atomic_types.h \
-		  include/odp/drv/plat/barrier_types.h \
-		  include/odp/drv/plat/byteorder_types.h \
-		  include/odp/drv/compiler.h \
-		  include/odp/drv/plat/driver_types.h \
-		  include/odp/drv/plat/shm_types.h \
-		  include/odp/drv/plat/spinlock_types.h \
-		  include/odp/drv/plat/strong_types.h
-
 noinst_HEADERS = \
 		  include/_fdserver_internal.h \
 		  include/_ishm_internal.h \
 		  include/_ishmphy_internal.h \
 		  include/_ishmpool_internal.h \
 		  include/_str_functions_internal.h \
-		  include/drv_driver_internal.h \
-		  include/drv_pci_internal.h \
 		  include/odp_align_internal.h \
 		  include/odp_atomic_internal.h \
 		  include/odp_buffer_inlines.h \
@@ -259,8 +233,8 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pktio/socket_mmap.c \
 			   pktio/sysfs.c \
 			   pktio/tap.c \
-			   pktio/virtio.c \
-			   pktio/virtio_pci.c \
+			   pktio/virtio/virtio.c \
+			   pktio/virtio/virtio_pci.c \
 			   pktio/ring.c \
 			   pool/generic.c \
 			   pool/subsystem.c \
@@ -286,14 +260,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_timer_wheel.c \
 			   odp_traffic_mngr.c \
 			   odp_version.c \
-			   odp_weak.c \
-			   drv_atomic.c \
-			   drv_barrier.c \
-			   drv_driver.c \
-			   drv_pci.c \
-			   drv_pci_uio.c \
-			   drv_shm.c \
-			   drv_spinlock.c
+			   odp_weak.c
 
 if ARCH_IS_ARM
 __LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_arch.c \
@@ -392,6 +359,17 @@ noinst_HEADERS += $(modularframeworkdir)/list.h \
 		  $(modularframeworkdir)/odp_module.h
 
 __LIB__libodp_linux_la_SOURCES += ../../frameworks/modular/odp_module.c
+
+# Build driver framework into odp-linux library
+driverframeworkdir = $(top_srcdir)/frameworks/driver
+noinst_HEADERS += $(driverframeworkdir)/include/driver.h \
+		  $(driverframeworkdir)/include/driver_types.h \
+		  $(driverframeworkdir)/include/driver_internal.h \
+		  $(driverframeworkdir)/include/pci_internal.h
+
+__LIB__libodp_linux_la_SOURCES += ../../frameworks/driver/driver.c \
+				  ../../frameworks/driver/pci.c \
+				  ../../frameworks/driver/pci_uio.c
 
 __LIB__libodp_linux_la_LIBADD = $(ATOMIC_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(OPENSSL_LIBS)

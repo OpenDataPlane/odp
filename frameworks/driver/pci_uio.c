@@ -47,10 +47,9 @@
 #include <odp_posix_extensions.h>
 #include <odp_config_internal.h>
 #include <odp_internal.h>
-#include <odp/drv/shm.h>
 #include <odp_debug_internal.h>
 
-#include <drv_pci_internal.h>
+#include <pci_internal.h>
 
 typedef struct user_access_context_t {
 	int uio_num; /**< device number assigned by UIO: /dev/uioX */

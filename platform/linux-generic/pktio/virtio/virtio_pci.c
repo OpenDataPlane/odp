@@ -45,9 +45,9 @@
 #include <inttypes.h>
 
 #include <config.h>
-#include <odp_drv.h>
+#include <driver.h>
 #include <odp_debug_internal.h>
-#include <drv_pci_internal.h>
+#include <pci_internal.h>
 
 #include "virtio_pci.h"
 
@@ -435,8 +435,8 @@ static void virtio_get_hwaddr(struct virtio_hw *hw)
 {
 	if (vtpci_with_feature(hw, VIRTIO_NET_F_MAC)) {
 		vtpci_read_dev_config(hw,
-				      ODPDRV_OFFSETOF(struct virtio_net_config,
-						      mac),
+				      ODP_OFFSETOF(struct virtio_net_config,
+						   mac),
 				      &hw->mac_addr,
 				      6);
 		ODP_PRINT("MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
@@ -461,8 +461,8 @@ static void virtio_get_status(struct virtio_hw *hw)
 	}
 
 	vtpci_read_dev_config(hw,
-			      ODPDRV_OFFSETOF(struct virtio_net_config,
-					      status),
+			      ODP_OFFSETOF(struct virtio_net_config,
+					   status),
 			      &config.status, sizeof(config.status));
 
 	ODP_PRINT("Status is %u\n", config.status);
@@ -478,8 +478,8 @@ static uint16_t virtio_get_num_queues(struct virtio_hw *hw)
 	}
 
 	vtpci_read_dev_config(hw,
-			      ODPDRV_OFFSETOF(struct virtio_net_config,
-					      max_virtqueue_pairs),
+			      ODP_OFFSETOF(struct virtio_net_config,
+					   max_virtqueue_pairs),
 			      &max_pairs, sizeof(max_pairs));
 
 	ODP_PRINT("Device supports maximum of %u virtqueue pairs\n", max_pairs);

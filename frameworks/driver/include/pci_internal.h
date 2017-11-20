@@ -7,6 +7,8 @@
 #ifndef DRV_PCI_INTERNAL_H_
 #define DRV_PCI_INTERNAL_H_
 
+#include <inttypes.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

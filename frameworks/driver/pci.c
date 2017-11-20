@@ -44,7 +44,7 @@
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
 
-#include <drv_pci_internal.h>
+#include <pci_internal.h>
 
 #define MAX_PCI_DEVICES 16
 

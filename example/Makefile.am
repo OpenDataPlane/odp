@@ -9,8 +9,6 @@ SUBDIRS = classifier \
 	  switch \
 	  time \
 	  timer \
-	  traffic_mgmt \
-	  ddf_ifs \
-	  ddf_app
+	  traffic_mgmt
 
 noinst_HEADERS = example_debug.h
