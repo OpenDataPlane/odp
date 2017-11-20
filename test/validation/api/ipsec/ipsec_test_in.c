@@ -947,6 +947,7 @@ static void test_in_ipv4_mcgrew_gcm_4_esp(void)
 	ipsec_sa_destroy(sa);
 }
 
+#if 0
 static void test_in_ipv4_mcgrew_gcm_12_esp(void)
 {
 	odp_ipsec_tunnel_param_t tunnel = {};
@@ -977,6 +978,7 @@ static void test_in_ipv4_mcgrew_gcm_12_esp(void)
 
 	ipsec_sa_destroy(sa);
 }
+#endif
 
 static void test_in_ipv4_mcgrew_gcm_15_esp(void)
 {
@@ -1094,8 +1096,10 @@ odp_testinfo_t ipsec_in_suite[] = {
 				  ipsec_check_esp_aes_gcm_256),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_mcgrew_gcm_4_esp,
 				  ipsec_check_esp_aes_gcm_128),
+#if 0
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_mcgrew_gcm_12_esp,
 				  ipsec_check_esp_aes_gcm_128),
+#endif
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_mcgrew_gcm_15_esp,
 				  ipsec_check_esp_null_aes_gmac_128),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_ah_sha256,
