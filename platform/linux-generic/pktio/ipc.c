@@ -49,7 +49,7 @@ static const char *_ipc_odp_buffer_pool_shm_name(odp_pool_t pool_hdl)
 
 static int _ipc_master_start(pktio_entry_t *pktio_entry)
 {
-	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
+	pktio_ops_ipc_data_t *pkt_ipc = pktio_entry->s.ops_data;
 	struct pktio_info *pinfo = pkt_ipc->pinfo;
 	odp_shm_t shm;
 
@@ -78,7 +78,7 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 			    const char *dev,
 			    odp_pool_t pool_hdl)
 {
-	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
+	pktio_ops_ipc_data_t *pkt_ipc = pktio_entry->s.ops_data;
 	char ipc_shm_name[ODP_POOL_NAME_LEN + sizeof("_m_prod")];
 	pool_t *pool;
 	struct pktio_info *pinfo;
@@ -230,7 +230,7 @@ static int _ipc_init_slave(const char *dev,
 			   pktio_entry_t *pktio_entry,
 			   odp_pool_t pool)
 {
-	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
+	pktio_ops_ipc_data_t *pkt_ipc = pktio_entry->s.ops_data;
 
 	if (strlen(dev) > (ODP_POOL_NAME_LEN - sizeof("_slave_r")))
 		ODP_ABORT("too big ipc name\n");
@@ -241,7 +241,7 @@ static int _ipc_init_slave(const char *dev,
 
 static int _ipc_slave_start(pktio_entry_t *pktio_entry)
 {
-	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
+	pktio_ops_ipc_data_t *pkt_ipc = pktio_entry->s.ops_data;
 	char ipc_shm_name[ODP_POOL_NAME_LEN + sizeof("_slave_r")];
 	struct pktio_info *pinfo;
 	odp_shm_t shm;
@@ -343,13 +343,22 @@ static int ipc_pktio_open(odp_pktio_t id ODP_UNUSED,
 	char name[ODP_POOL_NAME_LEN + sizeof("_info")];
 	char tail[ODP_POOL_NAME_LEN];
 	odp_shm_t shm;
-	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
+	pktio_ops_ipc_data_t *pkt_ipc;
 
 	ODP_STATIC_ASSERT(ODP_POOL_NAME_LEN == _RING_NAMESIZE,
 			  "mismatch pool and ring name arrays");
 
 	if (strncmp(dev, "ipc", 3))
 		return -1;
+
+	pktio_entry->s.ops_data = ODP_OPS_DATA_ALLOC(sizeof(*pkt_ipc));
+	if (odp_unlikely(pktio_entry->s.ops_data == NULL)) {
+		ODP_ERR("Failed to allocate pktio_ops_ipc_data_t struct");
+		return -1;
+	}
+
+	pkt_ipc = pktio_entry->s.ops_data;
+	memset(pkt_ipc, 0, sizeof(*pkt_ipc));
 
 	odp_atomic_init_u32(&pkt_ipc->ready, 0);
 
@@ -364,12 +373,15 @@ static int ipc_pktio_open(odp_pktio_t id ODP_UNUSED,
 		snprintf(name, sizeof(name), "ipc:%s_info", tail);
 		IPC_ODP_DBG("lookup for name %s for pid %d\n", name, pid);
 		shm = odp_shm_import(name, pid, name);
-		if (ODP_SHM_INVALID == shm)
+		if (ODP_SHM_INVALID == shm) {
+			ODP_OPS_DATA_FREE(pktio_entry->s.ops_data);
 			return -1;
+		}
 		pinfo = odp_shm_addr(shm);
 
 		if (!pinfo->master.init_done) {
 			odp_shm_free(shm);
+			ODP_OPS_DATA_FREE(pktio_entry->s.ops_data);
 			return -1;
 		}
 		pkt_ipc->pinfo = pinfo;
@@ -384,6 +396,7 @@ static int ipc_pktio_open(odp_pktio_t id ODP_UNUSED,
 				      _ODP_ISHM_EXPORT | _ODP_ISHM_LOCK);
 		if (ODP_SHM_INVALID == shm) {
 			ODP_ERR("can not create shm %s\n", name);
+			ODP_OPS_DATA_FREE(pktio_entry->s.ops_data);
 			return -1;
 		}
 
@@ -396,12 +409,14 @@ static int ipc_pktio_open(odp_pktio_t id ODP_UNUSED,
 		ret = _ipc_init_master(pktio_entry, dev, pool);
 	}
 
+	if (ret)
+		ODP_OPS_DATA_FREE(pktio_entry->s.ops_data);
 	return ret;
 }
 
 static void _ipc_free_ring_packets(pktio_entry_t *pktio_entry, _ring_t *r)
 {
-	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
+	pktio_ops_ipc_data_t *pkt_ipc = pktio_entry->s.ops_data;
 	uintptr_t offsets[PKTIO_IPC_ENTRIES];
 	int ret;
 	void **rbuf_p;
@@ -437,7 +452,7 @@ static void _ipc_free_ring_packets(pktio_entry_t *pktio_entry, _ring_t *r)
 static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 				   odp_packet_t pkt_table[], int len)
 {
-	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
+	pktio_ops_ipc_data_t *pkt_ipc = pktio_entry->s.ops_data;
 	int pkts = 0;
 	int i;
 	_ring_t *r;
@@ -590,7 +605,7 @@ static int ipc_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 				   const odp_packet_t pkt_table[], int len)
 {
-	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
+	pktio_ops_ipc_data_t *pkt_ipc = pktio_entry->s.ops_data;
 	_ring_t *r;
 	void **rbuf_p;
 	int ret;
@@ -703,7 +718,7 @@ static int ipc_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
 
 static int ipc_start(pktio_entry_t *pktio_entry)
 {
-	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
+	pktio_ops_ipc_data_t *pkt_ipc = pktio_entry->s.ops_data;
 	uint32_t ready = odp_atomic_load_u32(&pkt_ipc->ready);
 
 	if (ready) {
@@ -719,7 +734,7 @@ static int ipc_start(pktio_entry_t *pktio_entry)
 
 static int ipc_stop(pktio_entry_t *pktio_entry)
 {
-	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
+	pktio_ops_ipc_data_t *pkt_ipc = pktio_entry->s.ops_data;
 	unsigned tx_send = 0, tx_free = 0;
 
 	odp_atomic_store_u32(&pkt_ipc->ready, 0);
@@ -746,7 +761,7 @@ static int ipc_stop(pktio_entry_t *pktio_entry)
 
 static int ipc_close(pktio_entry_t *pktio_entry)
 {
-	pktio_ops_ipc_data_t *pkt_ipc = odp_ops_data(pktio_entry, ipc);
+	pktio_ops_ipc_data_t *pkt_ipc = pktio_entry->s.ops_data;
 	char ipc_shm_name[ODP_POOL_NAME_LEN + sizeof("_m_prod")];
 	char *dev = pktio_entry->s.name;
 	char name[ODP_POOL_NAME_LEN];
@@ -776,7 +791,7 @@ static int ipc_close(pktio_entry_t *pktio_entry)
 	_ring_destroy(ipc_shm_name);
 	_ring_destroy("ipc_rx_cache");
 
-	return 0;
+	return ODP_OPS_DATA_FREE(pktio_entry->s.ops_data);
 }
 
 static int ipc_pktio_init_global(void)
