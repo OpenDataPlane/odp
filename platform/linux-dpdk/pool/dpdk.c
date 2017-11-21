@@ -137,12 +137,12 @@ static int dpdk_pool_capability(odp_pool_capability_t *capa)
 	capa->buf.max_pools = ODP_CONFIG_POOLS;
 	capa->buf.max_align = ODP_CONFIG_BUFFER_ALIGN_MAX;
 	capa->buf.max_size  = MAX_SIZE;
-	capa->buf.max_num   = CONFIG_POOL_MAX_NUM;
+	capa->buf.max_num   = 0;
 
 	/* Packet pools */
 	capa->pkt.max_pools        = ODP_CONFIG_POOLS;
 	capa->pkt.max_len          = 0;
-	capa->pkt.max_num	   = CONFIG_POOL_MAX_NUM;
+	capa->pkt.max_num	   = 0;
 	capa->pkt.min_headroom     = CONFIG_PACKET_HEADROOM;
 	capa->pkt.min_tailroom     = CONFIG_PACKET_TAILROOM;
 	capa->pkt.max_segs_per_pkt = CONFIG_PACKET_MAX_SEGS;
@@ -152,7 +152,7 @@ static int dpdk_pool_capability(odp_pool_capability_t *capa)
 
 	/* Timeout pools */
 	capa->tmo.max_pools = ODP_CONFIG_POOLS;
-	capa->tmo.max_num   = CONFIG_POOL_MAX_NUM;
+	capa->tmo.max_num   = 0;
 
 	return 0;
 }
@@ -258,11 +258,6 @@ static int check_params(odp_pool_param_t *params)
 
 	switch (params->type) {
 	case ODP_POOL_BUFFER:
-		if (params->buf.num > capa.buf.max_num) {
-			printf("buf.num too large %u\n", params->buf.num);
-			return -1;
-		}
-
 		if (params->buf.size > capa.buf.max_size) {
 			printf("buf.size too large %u\n", params->buf.size);
 			return -1;
@@ -276,12 +271,6 @@ static int check_params(odp_pool_param_t *params)
 		break;
 
 	case ODP_POOL_PACKET:
-		if (params->pkt.num > capa.pkt.max_num) {
-			printf("pkt.num too large %u\n", params->pkt.num);
-
-			return -1;
-		}
-
 		if (params->pkt.seg_len > capa.pkt.max_seg_len) {
 			printf("pkt.seg_len too large %u\n",
 			       params->pkt.seg_len);
@@ -297,10 +286,6 @@ static int check_params(odp_pool_param_t *params)
 		break;
 
 	case ODP_POOL_TIMEOUT:
-		if (params->tmo.num > capa.tmo.max_num) {
-			printf("tmo.num too large %u\n", params->tmo.num);
-			return -1;
-		}
 		break;
 
 	default:
