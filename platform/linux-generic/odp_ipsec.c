@@ -125,6 +125,8 @@ static inline int _odp_ipv4_csum(odp_packet_t pkt,
 
 #define _ODP_IPV4HDR_CSUM_OFFSET ODP_OFFSETOF(_odp_ipv4hdr_t, chksum)
 #define _ODP_IPV4HDR_PROTO_OFFSET ODP_OFFSETOF(_odp_ipv4hdr_t, proto)
+#define _ODP_IPV6HDR_NHDR_OFFSET ODP_OFFSETOF(_odp_ipv6hdr_t, next_hdr)
+#define _ODP_IPV6HDREXT_NHDR_OFFSET ODP_OFFSETOF(_odp_ipv6hdr_ext_t, next_hdr)
 
 /**
  * Calculate and fill in IPv4 checksum
@@ -159,11 +161,6 @@ static inline int _odp_ipv4_csum_update(odp_packet_t pkt)
 }
 
 #define ipv4_hdr_len(ip) (_ODP_IPV4HDR_IHL((ip)->ver_ihl) * 4)
-static inline
-void ipv4_adjust_len(_odp_ipv4hdr_t *ip, int adj)
-{
-	ip->tot_len = odp_cpu_to_be_16(odp_be_to_cpu_16(ip->tot_len) + adj);
-}
 
 static const uint8_t ipsec_padding[255] = {
 	      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
@@ -219,13 +216,17 @@ static inline odp_pktio_parser_layer_t parse_layer(odp_ipsec_proto_layer_t l)
 }
 
 typedef struct {
-	_odp_ipv4hdr_t *ip;
+	void *ip;
 	unsigned stats_length;
 	uint16_t ip_offset;
 	uint16_t ip_hdr_len;
 	uint16_t ip_tot_len;
+	uint16_t ip_next_hdr_offset;
+	uint8_t  ip_next_hdr;
+	unsigned is_ipv4 : 1;
 	union {
 		struct {
+			uint32_t ip_flabel;
 			uint16_t ip_df;
 			uint8_t  ip_tos;
 		} out_tunnel;
@@ -233,25 +234,76 @@ typedef struct {
 			uint16_t hdr_len;
 			uint16_t trl_len;
 		} in;
+		odp_u32be_t ipv4_addr;
+		uint8_t ipv6_addr[_ODP_IPV6ADDR_LEN];
 	};
 	union {
 		struct {
 			uint8_t  tos;
 			uint8_t  ttl;
-			uint16_t frag_offset;
+			odp_u16be_t frag_offset;
 		} ah_ipv4;
+		struct {
+			odp_u32be_t ver_tc_flow;
+			uint8_t hop_limit;
+		} ah_ipv6;
 	};
 	ipsec_aad_t aad;
 	uint8_t	iv[IPSEC_MAX_IV_LEN];
 } ipsec_state_t;
 
-static int ipsec_parse_ipv4(ipsec_state_t *state)
+static int ipsec_parse_ipv4(ipsec_state_t *state, odp_packet_t pkt)
 {
-	if (_ODP_IPV4HDR_IS_FRAGMENT(odp_be_to_cpu_16(state->ip->frag_offset)))
+	_odp_ipv4hdr_t ipv4hdr;
+
+	odp_packet_copy_to_mem(pkt, state->ip_offset,
+			       _ODP_IPV4HDR_LEN, &ipv4hdr);
+
+	if (_ODP_IPV4HDR_IS_FRAGMENT(odp_be_to_cpu_16(ipv4hdr.frag_offset)))
 		return -1;
 
-	state->ip_hdr_len = ipv4_hdr_len(state->ip);
-	state->ip_tot_len = odp_be_to_cpu_16(state->ip->tot_len);
+	state->ip_hdr_len = ipv4_hdr_len(&ipv4hdr);
+	state->ip_tot_len = odp_be_to_cpu_16(ipv4hdr.tot_len);
+	state->ip_next_hdr = ipv4hdr.proto;
+	state->ip_next_hdr_offset = state->ip_offset +
+		_ODP_IPV4HDR_PROTO_OFFSET;
+	state->ipv4_addr = ipv4hdr.dst_addr;
+
+	return 0;
+}
+
+static int ipsec_parse_ipv6(ipsec_state_t *state, odp_packet_t pkt)
+{
+	_odp_ipv6hdr_t ipv6hdr;
+	_odp_ipv6hdr_ext_t ipv6hdrext;
+
+	odp_packet_copy_to_mem(pkt, state->ip_offset,
+			       _ODP_IPV6HDR_LEN, &ipv6hdr);
+
+	state->ip_hdr_len = _ODP_IPV6HDR_LEN;
+	state->ip_next_hdr = ipv6hdr.next_hdr;
+	state->ip_next_hdr_offset = state->ip_offset + _ODP_IPV6HDR_NHDR_OFFSET;
+	/* FIXME: Jumbo frames */
+	state->ip_tot_len = odp_be_to_cpu_16(ipv6hdr.payload_len) +
+			    _ODP_IPV6HDR_LEN;
+	memcpy(state->ipv6_addr, &ipv6hdr.dst_addr, _ODP_IPV6ADDR_LEN);
+
+	while (state->ip_next_hdr == _ODP_IPPROTO_HOPOPTS ||
+	       state->ip_next_hdr == _ODP_IPPROTO_DEST ||
+	       state->ip_next_hdr == _ODP_IPPROTO_ROUTE) {
+		odp_packet_copy_to_mem(pkt,
+				       state->ip_offset + state->ip_hdr_len,
+				       sizeof(ipv6hdrext),
+				       &ipv6hdrext);
+		state->ip_next_hdr = ipv6hdrext.next_hdr;
+		state->ip_next_hdr_offset = state->ip_offset +
+			state->ip_hdr_len +
+			_ODP_IPV6HDREXT_NHDR_OFFSET;
+		state->ip_hdr_len += (ipv6hdrext.ext_len + 1) * 8;
+	}
+
+	if (_ODP_IPPROTO_FRAG == state->ip_next_hdr)
+		return -1;
 
 	return 0;
 }
@@ -259,6 +311,7 @@ static int ipsec_parse_ipv4(ipsec_state_t *state)
 static inline ipsec_sa_t *ipsec_get_sa(odp_ipsec_sa_t sa,
 				       odp_ipsec_protocol_t proto,
 				       uint32_t spi,
+				       odp_ipsec_ip_version_t ver,
 				       void *dst_addr,
 				       odp_ipsec_op_status_t *status)
 {
@@ -269,6 +322,7 @@ static inline ipsec_sa_t *ipsec_get_sa(odp_ipsec_sa_t sa,
 
 		lookup.proto = proto;
 		lookup.spi = spi;
+		lookup.ver = ver;
 		lookup.dst_addr = dst_addr;
 
 		ipsec_sa = _odp_ipsec_sa_lookup(&lookup);
@@ -332,7 +386,9 @@ static int ipsec_in_esp(odp_packet_t *pkt,
 
 	ipsec_sa = ipsec_get_sa(sa, ODP_IPSEC_ESP,
 				odp_be_to_cpu_32(esp.spi),
-				&state->ip->dst_addr, status);
+				state->is_ipv4 ? ODP_IPSEC_IPV4 :
+						ODP_IPSEC_IPV6,
+				&state->ipv4_addr, status);
 	*_ipsec_sa = ipsec_sa;
 	if (status->error.all)
 		return -1;
@@ -386,8 +442,10 @@ static int ipsec_in_esp_post(odp_packet_t pkt,
 				 ipsec_padding, esptrl.pad_len) != 0)
 		return -1;
 
-	state->ip->proto = esptrl.next_header;
+	odp_packet_copy_from_mem(pkt, state->ip_next_hdr_offset,
+				 1, &esptrl.next_header);
 	state->in.trl_len += esptrl.pad_len;
+	state->ip_next_hdr = esptrl.next_header;
 
 	return 0;
 }
@@ -413,7 +471,9 @@ static int ipsec_in_ah(odp_packet_t *pkt,
 
 	ipsec_sa = ipsec_get_sa(sa, ODP_IPSEC_AH,
 				odp_be_to_cpu_32(ah.spi),
-				&state->ip->dst_addr, status);
+				state->is_ipv4 ? ODP_IPSEC_IPV4 :
+						ODP_IPSEC_IPV6,
+				&state->ipv4_addr, status);
 	*_ipsec_sa = ipsec_sa;
 	if (status->error.all)
 		return -1;
@@ -429,19 +489,31 @@ static int ipsec_in_ah(odp_packet_t *pkt,
 	state->in.hdr_len = (ah.ah_len + 2) * 4;
 	state->in.trl_len = 0;
 
-	/* Save everything to context */
-	state->ah_ipv4.tos = state->ip->tos;
-	state->ah_ipv4.frag_offset = state->ip->frag_offset;
-	state->ah_ipv4.ttl = state->ip->ttl;
+	if (state->is_ipv4) {
+		_odp_ipv4hdr_t *ipv4hdr = state->ip;
 
-	/* FIXME: zero copy of header, passing it to crypto! */
-	/*
-	 * If authenticating, zero the mutable fields build the request
-	 */
-	state->ip->chksum = 0;
-	state->ip->tos = 0;
-	state->ip->frag_offset = 0;
-	state->ip->ttl = 0;
+		/* Save everything to context */
+		state->ah_ipv4.tos = ipv4hdr->tos;
+		state->ah_ipv4.frag_offset = ipv4hdr->frag_offset;
+		state->ah_ipv4.ttl = ipv4hdr->ttl;
+
+		/* FIXME: zero copy of header, passing it to crypto! */
+		/*
+		 * If authenticating, zero the mutable fields build the request
+		 */
+		ipv4hdr->chksum = 0;
+		ipv4hdr->tos = 0;
+		ipv4hdr->frag_offset = 0;
+		ipv4hdr->ttl = 0;
+	} else {
+		_odp_ipv6hdr_t *ipv6hdr = state->ip;
+
+		state->ah_ipv6.ver_tc_flow = ipv6hdr->ver_tc_flow;
+		state->ah_ipv6.hop_limit = ipv6hdr->hop_limit;
+		ipv6hdr->ver_tc_flow =
+			odp_cpu_to_be_32(6 << _ODP_IPV6HDR_VERSION_SHIFT);
+		ipv6hdr->hop_limit = 0;
+	}
 
 	state->aad.spi = ah.spi;
 	state->aad.seq_no = ah.seq_no;
@@ -470,12 +542,23 @@ static int ipsec_in_ah_post(odp_packet_t pkt,
 				   sizeof(ah), &ah) < 0)
 		return -1;
 
-	state->ip->proto = ah.next_header;
+	odp_packet_copy_from_mem(pkt, state->ip_next_hdr_offset,
+				 1, &ah.next_header);
 
 	/* Restore mutable fields */
-	state->ip->ttl = state->ah_ipv4.ttl;
-	state->ip->tos = state->ah_ipv4.tos;
-	state->ip->frag_offset = state->ah_ipv4.frag_offset;
+	if (state->is_ipv4) {
+		_odp_ipv4hdr_t *ipv4hdr = state->ip;
+
+		ipv4hdr->ttl = state->ah_ipv4.ttl;
+		ipv4hdr->tos = state->ah_ipv4.tos;
+		ipv4hdr->frag_offset = state->ah_ipv4.frag_offset;
+	} else {
+		_odp_ipv6hdr_t *ipv6hdr = odp_packet_l3_ptr(pkt, NULL);
+
+		ipv6hdr->ver_tc_flow = state->ah_ipv6.ver_tc_flow;
+		ipv6hdr->hop_limit = state->ah_ipv6.hop_limit;
+	}
+	state->ip_next_hdr = ah.next_header;
 
 	return 0;
 }
@@ -501,7 +584,17 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	/* Initialize parameters block */
 	memset(&param, 0, sizeof(param));
 
-	rc = ipsec_parse_ipv4(&state);
+	/*
+	 * FIXME: maybe use packet flag as below ???
+	 * This adds requirement that input packets contain not only valid
+	 * l3/l4 offsets, but also valid packet flags
+	 * state.is_ipv4 = odp_packet_has_ipv4(pkt);
+	 */
+	state.is_ipv4 = (((uint8_t *)state.ip)[0] >> 4) == 0x4;
+	if (state.is_ipv4)
+		rc = ipsec_parse_ipv4(&state, pkt);
+	else
+		rc = ipsec_parse_ipv6(&state, pkt);
 	if (rc < 0 ||
 	    state.ip_tot_len + state.ip_offset > odp_packet_len(pkt)) {
 		status->error.alg = 1;
@@ -509,9 +602,9 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	}
 
 	/* Check IP header for IPSec protocols and look it up */
-	if (_ODP_IPPROTO_ESP == state.ip->proto) {
+	if (_ODP_IPPROTO_ESP == state.ip_next_hdr) {
 		rc = ipsec_in_esp(&pkt, &state, &ipsec_sa, sa, &param, status);
-	} else if (_ODP_IPPROTO_AH == state.ip->proto) {
+	} else if (_ODP_IPPROTO_AH == state.ip_next_hdr) {
 		rc = ipsec_in_ah(&pkt, &state, &ipsec_sa, sa, &param, status);
 	} else {
 		status->error.proto = 1;
@@ -587,6 +680,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		status->error.alg = 1;
 		goto err;
 	}
+	state.ip_tot_len -= state.in.trl_len;
 
 	if (ODP_IPSEC_MODE_TUNNEL == ipsec_sa->mode) {
 		/* We have a tunneled IPv4 packet, strip outer and IPsec
@@ -600,11 +694,14 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 			status->error.alg = 1;
 			goto err;
 		}
-
-		if (odp_packet_len(pkt) > sizeof(*state.ip)) {
-			state.ip = odp_packet_l3_ptr(pkt, NULL);
-			state.ip->ttl -= ipsec_sa->dec_ttl;
-			_odp_ipv4_csum_update(pkt);
+		state.ip_tot_len -= state.ip_hdr_len + state.in.hdr_len;
+		if (_ODP_IPPROTO_IPIP == state.ip_next_hdr) {
+			state.is_ipv4 = 1;
+		} else if (_ODP_IPPROTO_IPV6 == state.ip_next_hdr) {
+			state.is_ipv4 = 0;
+		} else {
+			status->error.proto = 1;
+			goto err;
 		}
 	} else {
 		odp_packet_move_data(pkt, state.in.hdr_len, 0,
@@ -614,13 +711,30 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 			status->error.alg = 1;
 			goto err;
 		}
+		state.ip_tot_len -= state.in.hdr_len;
+	}
 
-		if (odp_packet_len(pkt) > sizeof(*state.ip)) {
-			state.ip = odp_packet_l3_ptr(pkt, NULL);
-			ipv4_adjust_len(state.ip,
-					-(state.in.hdr_len + state.in.trl_len));
-			_odp_ipv4_csum_update(pkt);
-		}
+	/* Finalize the IPv4 header */
+	if (state.is_ipv4 && odp_packet_len(pkt) > _ODP_IPV4HDR_LEN) {
+		_odp_ipv4hdr_t *ipv4hdr = odp_packet_l3_ptr(pkt, NULL);
+
+		if (ODP_IPSEC_MODE_TRANSPORT == ipsec_sa->mode)
+			ipv4hdr->tot_len = odp_cpu_to_be_16(state.ip_tot_len);
+		else
+			ipv4hdr->ttl -= ipsec_sa->dec_ttl;
+		_odp_ipv4_csum_update(pkt);
+	} else if (!state.is_ipv4 && odp_packet_len(pkt) > _ODP_IPV6HDR_LEN) {
+		_odp_ipv6hdr_t *ipv6hdr = odp_packet_l3_ptr(pkt, NULL);
+
+		if (ODP_IPSEC_MODE_TRANSPORT == ipsec_sa->mode)
+			ipv6hdr->payload_len =
+				odp_cpu_to_be_16(state.ip_tot_len -
+						 _ODP_IPV6HDR_LEN);
+		else
+			ipv6hdr->hop_limit -= ipsec_sa->dec_ttl;
+	} else {
+		status->error.proto = 1;
+		goto err;
 	}
 
 	pkt_hdr = odp_packet_hdr(pkt);
@@ -628,7 +742,10 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	packet_parse_reset(pkt_hdr);
 
 	packet_parse_l3_l4(pkt_hdr, parse_layer(ipsec_config.inbound.parse),
-			   state.ip_offset, _ODP_ETHTYPE_IPV4);
+			   state.ip_offset,
+			   state.is_ipv4 ?
+			   _ODP_ETHTYPE_IPV4 :
+			   _ODP_ETHTYPE_IPV6);
 
 	*pkt_out = pkt;
 
@@ -662,6 +779,24 @@ static int ipsec_out_tunnel_parse_ipv4(ipsec_state_t *state,
 	ipv4hdr->ttl -= ipsec_sa->dec_ttl;
 	state->out_tunnel.ip_tos = ipv4hdr->tos;
 	state->out_tunnel.ip_df = _ODP_IPV4HDR_FLAGS_DONT_FRAG(flags);
+	state->out_tunnel.ip_flabel = 0;
+
+	return 0;
+}
+
+static int ipsec_out_tunnel_parse_ipv6(ipsec_state_t *state,
+				       ipsec_sa_t *ipsec_sa)
+{
+	_odp_ipv6hdr_t *ipv6hdr = state->ip;
+
+	ipv6hdr->hop_limit -= ipsec_sa->dec_ttl;
+	state->out_tunnel.ip_tos = (ipv6hdr->ver_tc_flow &
+				    _ODP_IPV6HDR_TC_MASK) >>
+		_ODP_IPV6HDR_TC_SHIFT;
+	state->out_tunnel.ip_df = 0;
+	state->out_tunnel.ip_flabel = (ipv6hdr->ver_tc_flow &
+				       _ODP_IPV6HDR_FLOW_LABEL_MASK) >>
+		_ODP_IPV6HDR_FLOW_LABEL_SHIFT;
 
 	return 0;
 }
@@ -679,26 +814,25 @@ static int ipsec_out_tunnel_ipv4(odp_packet_t *pkt,
 	else
 		out_ip.tos = (state->out_tunnel.ip_tos &
 			      ~_ODP_IP_TOS_DSCP_MASK) |
-			     (ipsec_sa->out.tun_dscp <<
+			     (ipsec_sa->out.tun_ipv4.dscp <<
 			      _ODP_IP_TOS_DSCP_SHIFT);
 	state->ip_tot_len = odp_packet_len(*pkt) - state->ip_offset;
 	state->ip_tot_len += _ODP_IPV4HDR_LEN;
 
 	out_ip.tot_len = odp_cpu_to_be_16(state->ip_tot_len);
 	/* No need to convert to BE: ID just should not be duplicated */
-	out_ip.id = odp_atomic_fetch_add_u32(&ipsec_sa->out.tun_hdr_id,
+	out_ip.id = odp_atomic_fetch_add_u32(&ipsec_sa->out.tun_ipv4.hdr_id,
 					     1);
 	if (ipsec_sa->copy_df)
 		flags = state->out_tunnel.ip_df;
 	else
-		flags = ((uint16_t)ipsec_sa->out.tun_df) << 14;
+		flags = ((uint16_t)ipsec_sa->out.tun_ipv4.df) << 14;
 	out_ip.frag_offset = odp_cpu_to_be_16(flags);
-	out_ip.ttl = ipsec_sa->out.tun_ttl;
-	out_ip.proto = _ODP_IPPROTO_IPIP;
+	out_ip.ttl = ipsec_sa->out.tun_ipv4.ttl;
 	/* Will be filled later by packet checksum update */
 	out_ip.chksum = 0;
-	out_ip.src_addr = ipsec_sa->out.tun_src_ip;
-	out_ip.dst_addr = ipsec_sa->out.tun_dst_ip;
+	out_ip.src_addr = ipsec_sa->out.tun_ipv4.src_ip;
+	out_ip.dst_addr = ipsec_sa->out.tun_ipv4.dst_ip;
 
 	if (odp_packet_extend_head(pkt, _ODP_IPV4HDR_LEN,
 				   NULL, NULL) < 0)
@@ -713,6 +847,70 @@ static int ipsec_out_tunnel_ipv4(odp_packet_t *pkt,
 
 	state->ip = odp_packet_l3_ptr(*pkt, NULL);
 	state->ip_hdr_len = _ODP_IPV4HDR_LEN;
+	if (state->is_ipv4)
+		state->ip_next_hdr = _ODP_IPPROTO_IPIP;
+	else
+		state->ip_next_hdr = _ODP_IPPROTO_IPV6;
+	state->ip_next_hdr_offset = state->ip_offset +
+		_ODP_IPV4HDR_PROTO_OFFSET;
+
+	state->is_ipv4 = 1;
+
+	return 0;
+}
+
+static int ipsec_out_tunnel_ipv6(odp_packet_t *pkt,
+				 ipsec_state_t *state,
+				 ipsec_sa_t *ipsec_sa)
+{
+	_odp_ipv6hdr_t out_ip;
+	uint32_t ver;
+
+	ver = 6 << _ODP_IPV6HDR_VERSION_SHIFT;
+	if (ipsec_sa->copy_dscp)
+		ver |= state->out_tunnel.ip_tos << _ODP_IPV6HDR_TC_SHIFT;
+	else
+		ver |= ((state->out_tunnel.ip_tos &
+			 ~_ODP_IP_TOS_DSCP_MASK) |
+			(ipsec_sa->out.tun_ipv6.dscp <<
+			 _ODP_IP_TOS_DSCP_SHIFT)) <<
+			_ODP_IPV6HDR_TC_SHIFT;
+	if (ipsec_sa->copy_flabel)
+		ver |= state->out_tunnel.ip_flabel;
+	else
+		ver |= ipsec_sa->out.tun_ipv6.flabel;
+	out_ip.ver_tc_flow = odp_cpu_to_be_32(ver);
+
+	state->ip_tot_len = odp_packet_len(*pkt) - state->ip_offset;
+	out_ip.payload_len = odp_cpu_to_be_16(state->ip_tot_len);
+	state->ip_tot_len += _ODP_IPV6HDR_LEN;
+
+	out_ip.hop_limit = ipsec_sa->out.tun_ipv6.hlimit;
+	memcpy(&out_ip.src_addr, ipsec_sa->out.tun_ipv6.src_ip,
+	       _ODP_IPV6ADDR_LEN);
+	memcpy(&out_ip.dst_addr, ipsec_sa->out.tun_ipv6.dst_ip,
+	       _ODP_IPV6ADDR_LEN);
+
+	if (odp_packet_extend_head(pkt, _ODP_IPV6HDR_LEN,
+				   NULL, NULL) < 0)
+		return -1;
+
+	odp_packet_move_data(*pkt, 0, _ODP_IPV6HDR_LEN, state->ip_offset);
+
+	odp_packet_copy_from_mem(*pkt, state->ip_offset,
+				 sizeof(out_ip), &out_ip);
+
+	odp_packet_l4_offset_set(*pkt, state->ip_offset + _ODP_IPV6HDR_LEN);
+
+	state->ip = odp_packet_l3_ptr(*pkt, NULL);
+	state->ip_hdr_len = _ODP_IPV6HDR_LEN;
+	if (state->is_ipv4)
+		state->ip_next_hdr = _ODP_IPPROTO_IPIP;
+	else
+		state->ip_next_hdr = _ODP_IPPROTO_IPV6;
+	state->ip_next_hdr_offset = state->ip_offset + _ODP_IPV6HDR_NHDR_OFFSET;
+
+	state->is_ipv4 = 0;
 
 	return 0;
 }
@@ -770,6 +968,7 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 	uint16_t ipsec_offset = state->ip_offset + state->ip_hdr_len;
 	unsigned hdr_len;
 	unsigned trl_len;
+	uint8_t proto = _ODP_IPPROTO_ESP;
 
 	/* ESP trailer should be 32-bit right aligned */
 	if (pad_block < 4)
@@ -790,26 +989,6 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 
 	param->override_iv_ptr = state->iv;
 
-	if (odp_packet_extend_tail(pkt, trl_len, NULL, NULL) < 0 ||
-	    odp_packet_extend_head(pkt, hdr_len, NULL, NULL) < 0) {
-		status->error.alg = 1;
-		return -1;
-	}
-
-	odp_packet_move_data(*pkt, 0, hdr_len, ipsec_offset);
-
-	state->ip = odp_packet_l3_ptr(*pkt, NULL);
-
-	/* Set IPv4 length before authentication */
-	ipv4_adjust_len(state->ip, hdr_len + trl_len);
-	state->ip_tot_len += hdr_len + trl_len;
-
-	uint32_t esptrl_offset = state->ip_offset +
-				 state->ip_hdr_len +
-				 hdr_len +
-				 encrypt_len -
-				 _ODP_ESPTRL_LEN;
-
 	memset(&esp, 0, sizeof(esp));
 	esp.spi = odp_cpu_to_be_32(ipsec_sa->spi);
 	esp.seq_no = odp_cpu_to_be_32(ipsec_seq_no(ipsec_sa));
@@ -821,8 +1000,34 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 
 	memset(&esptrl, 0, sizeof(esptrl));
 	esptrl.pad_len = encrypt_len - ip_data_len - _ODP_ESPTRL_LEN;
-	esptrl.next_header = state->ip->proto;
-	state->ip->proto = _ODP_IPPROTO_ESP;
+	esptrl.next_header = state->ip_next_hdr;
+
+	odp_packet_copy_from_mem(*pkt, state->ip_next_hdr_offset, 1, &proto);
+	state->ip_tot_len += hdr_len + trl_len;
+	if (state->is_ipv4) {
+		_odp_ipv4hdr_t *ipv4hdr = state->ip;
+
+		ipv4hdr->tot_len = odp_cpu_to_be_16(state->ip_tot_len);
+	} else {
+		_odp_ipv6hdr_t *ipv6hdr = state->ip;
+
+		ipv6hdr->payload_len = odp_cpu_to_be_16(state->ip_tot_len -
+							_ODP_IPV6HDR_LEN);
+	}
+
+	if (odp_packet_extend_tail(pkt, trl_len, NULL, NULL) < 0 ||
+	    odp_packet_extend_head(pkt, hdr_len, NULL, NULL) < 0) {
+		status->error.alg = 1;
+		return -1;
+	}
+
+	odp_packet_move_data(*pkt, 0, hdr_len, ipsec_offset);
+
+	uint32_t esptrl_offset = state->ip_offset +
+				 state->ip_hdr_len +
+				 hdr_len +
+				 encrypt_len -
+				 _ODP_ESPTRL_LEN;
 
 	odp_packet_copy_from_mem(*pkt,
 				 ipsec_offset, _ODP_ESPHDR_LEN,
@@ -857,6 +1062,12 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 	return 0;
 }
 
+static void ipsec_out_esp_post(ipsec_state_t *state, odp_packet_t pkt)
+{
+	if (state->is_ipv4)
+		_odp_ipv4_csum_update(pkt);
+}
+
 static int ipsec_out_ah(odp_packet_t *pkt,
 			ipsec_state_t *state,
 			ipsec_sa_t *ipsec_sa,
@@ -867,31 +1078,44 @@ static int ipsec_out_ah(odp_packet_t *pkt,
 	unsigned hdr_len = _ODP_AHHDR_LEN + ipsec_sa->esp_iv_len +
 		ipsec_sa->icv_len;
 	uint16_t ipsec_offset = state->ip_offset + state->ip_hdr_len;
-
-	/* Save IPv4 stuff */
-	state->ah_ipv4.tos = state->ip->tos;
-	state->ah_ipv4.frag_offset = state->ip->frag_offset;
-	state->ah_ipv4.ttl = state->ip->ttl;
-
-	if (odp_packet_extend_head(pkt, hdr_len, NULL, NULL) < 0) {
-		status->error.alg = 1;
-		return -1;
-	}
-
-	odp_packet_move_data(*pkt, 0, hdr_len, ipsec_offset);
-
-	state->ip = odp_packet_l3_ptr(*pkt, NULL);
-
-	/* Set IPv4 length before authentication */
-	ipv4_adjust_len(state->ip, hdr_len);
-	state->ip_tot_len += hdr_len;
+	uint8_t proto = _ODP_IPPROTO_AH;
 
 	memset(&ah, 0, sizeof(ah));
 	ah.spi = odp_cpu_to_be_32(ipsec_sa->spi);
-	ah.ah_len = 1 + (ipsec_sa->esp_iv_len + ipsec_sa->icv_len) / 4;
 	ah.seq_no = odp_cpu_to_be_32(ipsec_seq_no(ipsec_sa));
-	ah.next_header = state->ip->proto;
-	state->ip->proto = _ODP_IPPROTO_AH;
+	ah.next_header = state->ip_next_hdr;
+
+	odp_packet_copy_from_mem(*pkt, state->ip_next_hdr_offset, 1, &proto);
+	/* Save IP stuff */
+	if (state->is_ipv4) {
+		_odp_ipv4hdr_t *ipv4hdr = state->ip;
+
+		state->ah_ipv4.tos = ipv4hdr->tos;
+		state->ah_ipv4.frag_offset = ipv4hdr->frag_offset;
+		state->ah_ipv4.ttl = ipv4hdr->ttl;
+		ipv4hdr->chksum = 0;
+		ipv4hdr->tos = 0;
+		ipv4hdr->frag_offset = 0;
+		ipv4hdr->ttl = 0;
+		hdr_len = IPSEC_PAD_LEN(hdr_len, 4);
+		state->ip_tot_len += hdr_len;
+		ipv4hdr->tot_len = odp_cpu_to_be_16(state->ip_tot_len);
+	} else {
+		_odp_ipv6hdr_t *ipv6hdr = state->ip;
+
+		state->ah_ipv6.ver_tc_flow = ipv6hdr->ver_tc_flow;
+		state->ah_ipv6.hop_limit = ipv6hdr->hop_limit;
+		ipv6hdr->ver_tc_flow =
+			odp_cpu_to_be_32(6 << _ODP_IPV6HDR_VERSION_SHIFT);
+		ipv6hdr->hop_limit = 0;
+
+		hdr_len = IPSEC_PAD_LEN(hdr_len, 8);
+		state->ip_tot_len += hdr_len;
+		ipv6hdr->payload_len = odp_cpu_to_be_16(state->ip_tot_len -
+							_ODP_IPV6HDR_LEN);
+	}
+
+	ah.ah_len = hdr_len / 4 - 2;
 
 	state->aad.spi = ah.spi;
 	state->aad.seq_no = ah.seq_no;
@@ -906,6 +1130,13 @@ static int ipsec_out_ah(odp_packet_t *pkt,
 
 	param->override_iv_ptr = state->iv;
 
+	if (odp_packet_extend_head(pkt, hdr_len, NULL, NULL) < 0) {
+		status->error.alg = 1;
+		return -1;
+	}
+
+	odp_packet_move_data(*pkt, 0, hdr_len, ipsec_offset);
+
 	odp_packet_copy_from_mem(*pkt,
 				 ipsec_offset, _ODP_AHHDR_LEN,
 				 &ah);
@@ -916,12 +1147,8 @@ static int ipsec_out_ah(odp_packet_t *pkt,
 	_odp_packet_set_data(*pkt,
 			     ipsec_offset + _ODP_AHHDR_LEN +
 			       ipsec_sa->esp_iv_len,
-			     0, ipsec_sa->icv_len);
-
-	state->ip->chksum = 0;
-	state->ip->tos = 0;
-	state->ip->frag_offset = 0;
-	state->ip->ttl = 0;
+			     0,
+			     hdr_len - _ODP_AHHDR_LEN - ipsec_sa->esp_iv_len);
 
 	param->auth_range.offset = state->ip_offset;
 	param->auth_range.length = state->ip_tot_len;
@@ -933,11 +1160,22 @@ static int ipsec_out_ah(odp_packet_t *pkt,
 	return 0;
 }
 
-static void ipsec_out_ah_post(ipsec_state_t *state)
+static void ipsec_out_ah_post(ipsec_state_t *state, odp_packet_t pkt)
 {
-	state->ip->ttl = state->ah_ipv4.ttl;
-	state->ip->tos = state->ah_ipv4.tos;
-	state->ip->frag_offset = state->ah_ipv4.frag_offset;
+	if (state->is_ipv4) {
+		_odp_ipv4hdr_t *ipv4hdr = odp_packet_l3_ptr(pkt, NULL);
+
+		ipv4hdr->ttl = state->ah_ipv4.ttl;
+		ipv4hdr->tos = state->ah_ipv4.tos;
+		ipv4hdr->frag_offset = state->ah_ipv4.frag_offset;
+
+		_odp_ipv4_csum_update(pkt);
+	} else {
+		_odp_ipv6hdr_t *ipv6hdr = odp_packet_l3_ptr(pkt, NULL);
+
+		ipv6hdr->ver_tc_flow = state->ah_ipv6.ver_tc_flow;
+		ipv6hdr->hop_limit = state->ah_ipv6.hop_limit;
+	}
 }
 
 static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
@@ -965,18 +1203,30 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	/* Initialize parameters block */
 	memset(&param, 0, sizeof(param));
 
+	state.is_ipv4 = (((uint8_t *)state.ip)[0] >> 4) == 0x4;
+
 	if (ODP_IPSEC_MODE_TRANSPORT == ipsec_sa->mode) {
-		rc = ipsec_parse_ipv4(&state);
+		if (state.is_ipv4)
+			rc = ipsec_parse_ipv4(&state, pkt);
+		else
+			rc = ipsec_parse_ipv6(&state, pkt);
+
 		if (state.ip_tot_len + state.ip_offset != odp_packet_len(pkt))
 			rc = -1;
 	} else {
-		rc = ipsec_out_tunnel_parse_ipv4(&state, ipsec_sa);
+		if (state.is_ipv4)
+			rc = ipsec_out_tunnel_parse_ipv4(&state, ipsec_sa);
+		else
+			rc = ipsec_out_tunnel_parse_ipv6(&state, ipsec_sa);
 		if (rc < 0) {
 			status->error.alg = 1;
 			goto err;
 		}
 
-		rc = ipsec_out_tunnel_ipv4(&pkt, &state, ipsec_sa);
+		if (ipsec_sa->tun_ipv4)
+			rc = ipsec_out_tunnel_ipv4(&pkt, &state, ipsec_sa);
+		else
+			rc = ipsec_out_tunnel_ipv6(&pkt, &state, ipsec_sa);
 	}
 	if (rc < 0) {
 		status->error.alg = 1;
@@ -1033,8 +1283,10 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	}
 
 	/* Finalize the IPv4 header */
-	if (ODP_IPSEC_AH == ipsec_sa->proto)
-		ipsec_out_ah_post(&state);
+	if (ODP_IPSEC_ESP == ipsec_sa->proto)
+		ipsec_out_esp_post(&state, pkt);
+	else if (ODP_IPSEC_AH == ipsec_sa->proto)
+		ipsec_out_ah_post(&state, pkt);
 
 	_odp_ipv4_csum_update(pkt);
 
