@@ -403,13 +403,14 @@ static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 	for (i = 0; i < nb_rx; ++i) {
 		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt_table[i]);
 
-		packet_parse_reset(pkt_hdr);
 		pkt_hdr->input = pktio_entry->s.handle;
 
 		if (!pktio_cls_enabled(pktio_entry) &&
-		    pktio_entry->s.config.parser.layer)
+		    pktio_entry->s.config.parser.layer) {
+			packet_parse_reset(pkt_hdr);
 			packet_parse_layer(pkt_hdr,
 					   pktio_entry->s.config.parser.layer);
+		}
 		packet_set_ts(pkt_hdr, ts);
 	}
 
