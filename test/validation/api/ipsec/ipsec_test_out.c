@@ -83,6 +83,50 @@ static void test_out_ipv4_ah_sha256_tun_ipv4(void)
 	ipsec_sa_destroy(sa);
 }
 
+static void test_out_ipv4_ah_sha256_tun_ipv6(void)
+{
+	uint8_t src[16] = {
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x02, 0x11, 0x43, 0xff, 0xfe, 0x4a, 0xd7, 0x0a,
+	};
+	uint8_t dst[16] = {
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16,
+	};
+	odp_ipsec_tunnel_param_t tunnel = {
+		.type = ODP_IPSEC_TUNNEL_IPV6,
+		.ipv6.src_addr = src,
+		.ipv6.dst_addr = dst,
+		.ipv6.hlimit = 64,
+	};
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    false, true, 123, &tunnel,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_icmp_0,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .pkt_out = &pkt_ipv4_icmp_0_ah_tun_ipv6_sha256_1 },
+		},
+	};
+
+	ipsec_check_out_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
 static void test_out_ipv4_esp_null_sha256(void)
 {
 	odp_ipsec_sa_param_t param;
@@ -144,6 +188,51 @@ static void test_out_ipv4_esp_null_sha256_tun_ipv4(void)
 			  .status.error.all = 0,
 			  .pkt_out =
 				  &pkt_ipv4_icmp_0_esp_tun_ipv4_null_sha256_1 },
+		},
+	};
+
+	ipsec_check_out_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
+static void test_out_ipv4_esp_null_sha256_tun_ipv6(void)
+{
+	uint8_t src[16] = {
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x02, 0x11, 0x43, 0xff, 0xfe, 0x4a, 0xd7, 0x0a,
+	};
+	uint8_t dst[16] = {
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16,
+	};
+	odp_ipsec_tunnel_param_t tunnel = {
+		.type = ODP_IPSEC_TUNNEL_IPV6,
+		.ipv6.src_addr = src,
+		.ipv6.dst_addr = dst,
+		.ipv6.hlimit = 64,
+	};
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    false, false, 123, &tunnel,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_icmp_0,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .pkt_out =
+				  &pkt_ipv4_icmp_0_esp_tun_ipv6_null_sha256_1 },
 		},
 	};
 
@@ -380,6 +469,232 @@ static void test_out_ipv4_esp_null_aes_gmac_128(void)
 	ipsec_sa_destroy(sa);
 }
 
+static void test_out_ipv6_ah_sha256(void)
+{
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    false, true, 123, NULL,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv6_icmp_0,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .pkt_out = &pkt_ipv6_icmp_0_ah_sha256_1 },
+		},
+	};
+
+	ipsec_check_out_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
+static void test_out_ipv6_ah_sha256_tun_ipv4(void)
+{
+	uint32_t src = IPV4ADDR(10, 0, 111, 2);
+	uint32_t dst = IPV4ADDR(10, 0, 222, 2);
+	odp_ipsec_tunnel_param_t tunnel = {
+		.type = ODP_IPSEC_TUNNEL_IPV4,
+		.ipv4.src_addr = &src,
+		.ipv4.dst_addr = &dst,
+		.ipv4.ttl = 64,
+	};
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    false, true, 123, &tunnel,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv6_icmp_0,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .pkt_out = &pkt_ipv6_icmp_0_ah_tun_ipv4_sha256_1 },
+		},
+	};
+
+	ipsec_check_out_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
+static void test_out_ipv6_ah_sha256_tun_ipv6(void)
+{
+	uint8_t src[16] = {
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x02, 0x11, 0x43, 0xff, 0xfe, 0x4a, 0xd7, 0x0a,
+	};
+	uint8_t dst[16] = {
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16,
+	};
+	odp_ipsec_tunnel_param_t tunnel = {
+		.type = ODP_IPSEC_TUNNEL_IPV6,
+		.ipv6.src_addr = src,
+		.ipv6.dst_addr = dst,
+		.ipv6.hlimit = 64,
+	};
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    false, true, 123, &tunnel,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv6_icmp_0,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .pkt_out = &pkt_ipv6_icmp_0_ah_tun_ipv6_sha256_1 },
+		},
+	};
+
+	ipsec_check_out_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
+static void test_out_ipv6_esp_null_sha256(void)
+{
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    false, false, 123, NULL,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv6_icmp_0,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .pkt_out = &pkt_ipv6_icmp_0_esp_null_sha256_1 },
+		},
+	};
+
+	ipsec_check_out_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
+static void test_out_ipv6_esp_null_sha256_tun_ipv4(void)
+{
+	uint32_t src = IPV4ADDR(10, 0, 111, 2);
+	uint32_t dst = IPV4ADDR(10, 0, 222, 2);
+	odp_ipsec_tunnel_param_t tunnel = {
+		.type = ODP_IPSEC_TUNNEL_IPV4,
+		.ipv4.src_addr = &src,
+		.ipv4.dst_addr = &dst,
+		.ipv4.ttl = 64,
+	};
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    false, false, 123, &tunnel,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv6_icmp_0,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .pkt_out =
+				  &pkt_ipv6_icmp_0_esp_tun_ipv4_null_sha256_1 },
+		},
+	};
+
+	ipsec_check_out_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
+static void test_out_ipv6_esp_null_sha256_tun_ipv6(void)
+{
+	uint8_t src[16] = {
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x02, 0x11, 0x43, 0xff, 0xfe, 0x4a, 0xd7, 0x0a,
+	};
+	uint8_t dst[16] = {
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16,
+	};
+	odp_ipsec_tunnel_param_t tunnel = {
+		.type = ODP_IPSEC_TUNNEL_IPV6,
+		.ipv6.src_addr = &src,
+		.ipv6.dst_addr = &dst,
+		.ipv6.hlimit = 64,
+	};
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    false, false, 123, &tunnel,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv6_icmp_0,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .pkt_out =
+				  &pkt_ipv6_icmp_0_esp_tun_ipv6_null_sha256_1 },
+		},
+	};
+
+	ipsec_check_out_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
 static void ipsec_test_capability(void)
 {
 	odp_ipsec_capability_t capa;
@@ -393,9 +708,13 @@ odp_testinfo_t ipsec_out_suite[] = {
 				  ipsec_check_ah_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sha256_tun_ipv4,
 				  ipsec_check_ah_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sha256_tun_ipv6,
+				  ipsec_check_ah_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_sha256,
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_sha256_tun_ipv4,
+				  ipsec_check_esp_null_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_sha256_tun_ipv6,
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_aes_cbc_null,
 				  ipsec_check_esp_aes_cbc_128_null),
@@ -409,5 +728,17 @@ odp_testinfo_t ipsec_out_suite[] = {
 				  ipsec_check_ah_aes_gmac_128),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_aes_gmac_128,
 				  ipsec_check_esp_null_aes_gmac_128),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv6_ah_sha256,
+				  ipsec_check_ah_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv6_ah_sha256_tun_ipv4,
+				  ipsec_check_ah_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv6_ah_sha256_tun_ipv6,
+				  ipsec_check_ah_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv6_esp_null_sha256,
+				  ipsec_check_esp_null_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv6_esp_null_sha256_tun_ipv4,
+				  ipsec_check_esp_null_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv6_esp_null_sha256_tun_ipv6,
+				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_NULL,
 };
