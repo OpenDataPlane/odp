@@ -65,6 +65,7 @@ odpapiinclude_HEADERS = \
 		  include/odp/api/sync.h \
 		  include/odp/api/system_info.h \
 		  include/odp/api/thread.h \
+		  include/odp/api/threshold.h \
 		  include/odp/api/thrmask.h \
 		  include/odp/api/ticketlock.h \
 		  include/odp/api/time.h \
