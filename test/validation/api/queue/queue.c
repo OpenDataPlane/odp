@@ -69,6 +69,8 @@ void queue_test_capa(void)
 	CU_ASSERT(capa.sched_prios != 0);
 	CU_ASSERT(capa.plain.max_num != 0);
 	CU_ASSERT(capa.sched.max_num != 0);
+	CU_ASSERT(capa.plain.nonblocking >= ODP_BLOCKING);
+	CU_ASSERT(capa.sched.nonblocking >= ODP_BLOCKING);
 
 	min = capa.plain.max_num;
 	if (min > capa.sched.max_num)
@@ -82,6 +84,7 @@ void queue_test_capa(void)
 	name[ODP_QUEUE_NAME_LEN - 1] = 0;
 
 	odp_queue_param_init(&qparams);
+	CU_ASSERT(qparams.nonblocking == ODP_BLOCKING);
 
 	for (j = 0; j < 2; j++) {
 		if (j == 0) {
