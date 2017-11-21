@@ -102,6 +102,16 @@ AX_VALGRIND_DFLT([drd], [off])
 AX_VALGRIND_CHECK
 
 ##########################################################################
+# Architecture-specific dir
+##########################################################################
+AC_ARG_WITH([archincludedir],
+	    [AS_HELP_STRING([--with-archincludedir=DIR],
+	     [directory to hold arch-specific headers (${includedir})])],
+	    [archincludedir=$with_archincludedir],
+	    [archincludedir="${includedir}"])
+AC_SUBST([archincludedir])
+
+##########################################################################
 # Which architecture optimizations will we use
 ##########################################################################
 AS_CASE([$host],

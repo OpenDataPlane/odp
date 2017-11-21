@@ -68,7 +68,7 @@ odpapiabidefaultinclude_HEADERS = \
 # Insall ABI headers only if required
 if ODP_ABI_COMPAT
 
-odpapiabiarchincludedir= $(includedir)/odp/api/abi
+odpapiabiarchincludedir = $(archincludedir)/odp/api/abi
 if ARCH_IS_ARM
 odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm32-linux/odp/api/abi/buffer.h \

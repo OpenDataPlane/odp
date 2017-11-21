@@ -117,7 +117,7 @@ nodist_odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/static_inline.h
 
 if !ODP_ABI_COMPAT
-odpapiabiarchincludedir= $(includedir)/odp/api/abi
+odpapiabiarchincludedir = $(archincludedir)/odp/api/abi
 endif
 
 noinst_HEADERS = \
@@ -296,7 +296,8 @@ endif
 
 noinst_HEADERS += arch/default/odp/api/cpu_arch.h
 
-odpapiinclude_HEADERS += $(arch_odp_headers)
+odpapiarchincludedir = $(archincludedir)/odp/api
+odpapiarchinclude_HEADERS = $(arch_odp_headers)
 
 if HAVE_PCAP
 __LIB__libodp_linux_la_SOURCES += pktio/pcap.c
