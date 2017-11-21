@@ -211,10 +211,18 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	ipsec_sa->flags = 0;
 	if (ODP_IPSEC_DIR_INBOUND == param->dir) {
 		ipsec_sa->in.lookup_mode = param->inbound.lookup_mode;
-		if (ODP_IPSEC_LOOKUP_DSTADDR_SPI == ipsec_sa->in.lookup_mode)
-			memcpy(&ipsec_sa->in.lookup_dst_ip,
-			       param->inbound.lookup_param.dst_addr,
-			       sizeof(ipsec_sa->in.lookup_dst_ip));
+		if (ODP_IPSEC_LOOKUP_DSTADDR_SPI == ipsec_sa->in.lookup_mode) {
+			ipsec_sa->in.lookup_ver =
+				param->inbound.lookup_param.ip_version;
+			if (ODP_IPSEC_IPV4 == ipsec_sa->in.lookup_ver)
+				memcpy(&ipsec_sa->in.lookup_dst_ipv4,
+				       param->inbound.lookup_param.dst_addr,
+				       sizeof(ipsec_sa->in.lookup_dst_ipv4));
+			else
+				memcpy(&ipsec_sa->in.lookup_dst_ipv6,
+				       param->inbound.lookup_param.dst_addr,
+				       sizeof(ipsec_sa->in.lookup_dst_ipv6));
+		}
 
 		if (param->inbound.antireplay_ws > IPSEC_ANTIREPLAY_WS)
 			return ODP_IPSEC_SA_INVALID;
@@ -226,6 +234,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	ipsec_sa->dec_ttl = param->opt.dec_ttl;
 	ipsec_sa->copy_dscp = param->opt.copy_dscp;
 	ipsec_sa->copy_df = param->opt.copy_df;
+	ipsec_sa->copy_flabel = param->opt.copy_flabel;
 
 	odp_atomic_store_u64(&ipsec_sa->bytes, 0);
 	odp_atomic_store_u64(&ipsec_sa->packets, 0);
@@ -236,19 +245,36 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 
 	if (ODP_IPSEC_MODE_TUNNEL == ipsec_sa->mode &&
 	    ODP_IPSEC_DIR_OUTBOUND == param->dir) {
-		if (param->outbound.tunnel.type != ODP_IPSEC_TUNNEL_IPV4)
-			goto error;
-
-		memcpy(&ipsec_sa->out.tun_src_ip,
-		       param->outbound.tunnel.ipv4.src_addr,
-		       sizeof(ipsec_sa->out.tun_src_ip));
-		memcpy(&ipsec_sa->out.tun_dst_ip,
-		       param->outbound.tunnel.ipv4.dst_addr,
-		       sizeof(ipsec_sa->out.tun_dst_ip));
-		odp_atomic_init_u32(&ipsec_sa->out.tun_hdr_id, 0);
-		ipsec_sa->out.tun_ttl = param->outbound.tunnel.ipv4.ttl;
-		ipsec_sa->out.tun_dscp = param->outbound.tunnel.ipv4.dscp;
-		ipsec_sa->out.tun_df = param->outbound.tunnel.ipv4.df;
+		if (ODP_IPSEC_TUNNEL_IPV4 == param->outbound.tunnel.type) {
+			ipsec_sa->tun_ipv4 = 1;
+			memcpy(&ipsec_sa->out.tun_ipv4.src_ip,
+			       param->outbound.tunnel.ipv4.src_addr,
+			       sizeof(ipsec_sa->out.tun_ipv4.src_ip));
+			memcpy(&ipsec_sa->out.tun_ipv4.dst_ip,
+			       param->outbound.tunnel.ipv4.dst_addr,
+			       sizeof(ipsec_sa->out.tun_ipv4.dst_ip));
+			odp_atomic_init_u32(&ipsec_sa->out.tun_ipv4.hdr_id, 0);
+			ipsec_sa->out.tun_ipv4.ttl =
+				param->outbound.tunnel.ipv4.ttl;
+			ipsec_sa->out.tun_ipv4.dscp =
+				param->outbound.tunnel.ipv4.dscp;
+			ipsec_sa->out.tun_ipv4.df =
+				param->outbound.tunnel.ipv4.df;
+		} else {
+			ipsec_sa->tun_ipv4 = 0;
+			memcpy(&ipsec_sa->out.tun_ipv6.src_ip,
+			       param->outbound.tunnel.ipv6.src_addr,
+			       sizeof(ipsec_sa->out.tun_ipv6.src_ip));
+			memcpy(&ipsec_sa->out.tun_ipv6.dst_ip,
+			       param->outbound.tunnel.ipv6.dst_addr,
+			       sizeof(ipsec_sa->out.tun_ipv6.dst_ip));
+			ipsec_sa->out.tun_ipv6.hlimit =
+				param->outbound.tunnel.ipv6.hlimit;
+			ipsec_sa->out.tun_ipv6.dscp =
+				param->outbound.tunnel.ipv6.dscp;
+			ipsec_sa->out.tun_ipv6.flabel =
+				param->outbound.tunnel.ipv6.flabel;
+		}
 	}
 
 	odp_crypto_session_param_init(&crypto_param);
@@ -485,8 +511,11 @@ ipsec_sa_t *_odp_ipsec_sa_lookup(const ipsec_sa_lookup_t *lookup)
 		if (ODP_IPSEC_LOOKUP_DSTADDR_SPI == ipsec_sa->in.lookup_mode &&
 		    lookup->proto == ipsec_sa->proto &&
 		    lookup->spi == ipsec_sa->spi &&
-		    !memcmp(lookup->dst_addr, &ipsec_sa->in.lookup_dst_ip,
-			    sizeof(ipsec_sa->in.lookup_dst_ip))) {
+		    lookup->ver == ipsec_sa->in.lookup_ver &&
+		    !memcmp(lookup->dst_addr, &ipsec_sa->in.lookup_dst_ipv4,
+			    lookup->ver == ODP_IPSEC_IPV4 ?
+				    _ODP_IPV4ADDR_LEN :
+				    _ODP_IPV6ADDR_LEN)) {
 			if (NULL != best)
 				_odp_ipsec_sa_unuse(best);
 			return ipsec_sa;

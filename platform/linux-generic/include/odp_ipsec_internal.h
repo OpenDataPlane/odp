@@ -24,6 +24,8 @@ extern "C" {
 #include <odp/api/ipsec.h>
 #include <odp/api/ticketlock.h>
 
+#include <protocols/ip.h>
+
 /** @ingroup odp_ipsec
  *  @{
  */
@@ -127,10 +129,12 @@ struct ipsec_sa_s {
 			unsigned	dec_ttl : 1;
 			unsigned	copy_dscp : 1;
 			unsigned	copy_df : 1;
+			unsigned	copy_flabel : 1;
 			unsigned	aes_ctr_iv : 1;
 
 			/* Only for outbound */
 			unsigned	use_counter_iv : 1;
+			unsigned	tun_ipv4 : 1;
 
 			/* Only for inbound */
 			unsigned	antireplay : 1;
@@ -140,23 +144,38 @@ struct ipsec_sa_s {
 	union {
 		struct {
 			odp_ipsec_lookup_mode_t lookup_mode;
-			odp_u32be_t	lookup_dst_ip;
+			odp_ipsec_ip_version_t lookup_ver;
+			union {
+				odp_u32be_t	lookup_dst_ipv4;
+				uint8_t lookup_dst_ipv6[_ODP_IPV6ADDR_LEN];
+			};
 			odp_atomic_u64_t antireplay;
 		} in;
 
 		struct {
-			odp_u32be_t	tun_src_ip;
-			odp_u32be_t	tun_dst_ip;
-
-			/* 32-bit from which low 16 are used */
-			odp_atomic_u32_t tun_hdr_id;
+			odp_atomic_u64_t counter; /* for CTR/GCM */
 			odp_atomic_u32_t seq;
 
-			odp_atomic_u64_t counter; /* for CTR/GCM */
+			union {
+			struct {
+				odp_u32be_t	src_ip;
+				odp_u32be_t	dst_ip;
 
-			uint8_t		tun_ttl;
-			uint8_t		tun_dscp;
-			uint8_t		tun_df;
+				/* 32-bit from which low 16 are used */
+				odp_atomic_u32_t hdr_id;
+
+				uint8_t		ttl;
+				uint8_t		dscp;
+				uint8_t		df;
+			} tun_ipv4;
+			struct {
+				uint8_t		src_ip[_ODP_IPV6ADDR_LEN];
+				uint8_t		dst_ip[_ODP_IPV6ADDR_LEN];
+				uint8_t		hlimit;
+				uint8_t		dscp;
+				uint32_t	flabel;
+			} tun_ipv6;
+			};
 		} out;
 	};
 };
@@ -171,7 +190,8 @@ typedef struct odp_ipsec_sa_lookup_s {
 	/** SPI value */
 	uint32_t spi;
 
-	/* FIXME: IPv4 vs IPv6 */
+	/** IP protocol version */
+	odp_ipsec_ip_version_t ver;
 
 	/** IP destination address (NETWORK ENDIAN) */
 	void    *dst_addr;
