@@ -159,6 +159,7 @@ struct pktio_entry {
 
 	odp_pool_t pool;
 	odp_pktio_param_t param;
+	odp_pktio_capability_t capa;	/**< Packet IO capabilities */
 
 	/* Storage for queue handles
 	 * Multi-queue support is pktio driver specific */

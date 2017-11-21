@@ -267,9 +267,9 @@ static inline int netmap_wait_for_link(pktio_entry_t *pktio_entry)
 static void netmap_init_capability(pktio_entry_t *pktio_entry)
 {
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
-	odp_pktio_capability_t *capa = &pkt_nm->capa;
+	odp_pktio_capability_t *capa = &pktio_entry->s.capa;
 
-	memset(&pkt_nm->capa, 0, sizeof(odp_pktio_capability_t));
+	memset(capa, 0, sizeof(odp_pktio_capability_t));
 
 	capa->max_input_queues = PKTIO_MAX_QUEUES;
 	if (pkt_nm->num_rx_rings < PKTIO_MAX_QUEUES)
@@ -395,8 +395,8 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 			ODP_DBG("Unable to fetch thread ID. VALE port MAC "
 				"addresses may not be unique.\n");
 
-		pkt_nm->capa.max_input_queues = 1;
-		pkt_nm->capa.set_op.op.promisc_mode = 0;
+		pktio_entry->s.capa.max_input_queues = 1;
+		pktio_entry->s.capa.set_op.op.promisc_mode = 0;
 		pkt_nm->mtu = buf_size;
 		pktio_entry->s.stats_type = STATS_UNSUPPORTED;
 		/* Set MAC address for virtual interface */
@@ -430,7 +430,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	/* Check if RSS is supported. If not, set 'max_input_queues' to 1. */
 	if (rss_conf_get_supported_fd(sockfd, netdev, &hash_proto) == 0) {
 		ODP_DBG("RSS not supported\n");
-		pkt_nm->capa.max_input_queues = 1;
+		pktio_entry->s.capa.max_input_queues = 1;
 	}
 
 	err = netmap_do_ioctl(pktio_entry, SIOCGIFFLAGS, 0);
@@ -897,7 +897,7 @@ static int netmap_promisc_mode_get(pktio_entry_t *pktio_entry)
 static int netmap_capability(pktio_entry_t *pktio_entry,
 			     odp_pktio_capability_t *capa)
 {
-	*capa = pktio_entry->s.pkt_nm.capa;
+	*capa = pktio_entry->s.capa;
 	return 0;
 }
 

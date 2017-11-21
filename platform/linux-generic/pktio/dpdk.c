@@ -45,6 +45,10 @@ ODP_STATIC_ASSERT(PKT_EXTRA_LEN >= sizeof(struct rte_mbuf),
 		  "DPDK rte_mbuf won't fit in odp_packet_hdr_t.extra!");
 #endif
 
+/* DPDK poll mode drivers requiring minimum RX burst size DPDK_MIN_RX_BURST */
+#define IXGBE_DRV_NAME "net_ixgbe"
+#define I40E_DRV_NAME "net_i40e"
+
 static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 
 /* Has dpdk_pktio_init() been called */
@@ -458,7 +462,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 
 		if (pktio_cls_enabled(pktio_entry))
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
-		else
+		else if (pktio_entry->s.config.parser.layer)
 			packet_parse_layer(pkt_hdr,
 					   pktio_entry->s.config.parser.layer);
 
@@ -604,7 +608,7 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 	uint16_t pkt_len;
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
 	odp_pktout_config_opt_t *pktout_capa =
-		&pktio_entry->s.pkt_dpdk.capa.config.pktout;
+		&pktio_entry->s.capa.config.pktout;
 
 	if (odp_unlikely((rte_pktmbuf_alloc_bulk(pkt_dpdk->pkt_pool,
 						 mbuf_table, num)))) {
@@ -689,7 +693,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 
 		if (pktio_cls_enabled(pktio_entry))
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
-		else
+		else if (pktio_entry->s.config.parser.layer)
 			packet_parse_layer(pkt_hdr,
 					   pktio_entry->s.config.parser.layer);
 
@@ -719,7 +723,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
 	odp_pktout_config_opt_t *pktout_capa =
-		&pktio_entry->s.pkt_dpdk.capa.config.pktout;
+		&pktio_entry->s.capa.config.pktout;
 	int i;
 	*copy_count = 0;
 
@@ -1121,7 +1125,7 @@ static int dpdk_input_queues_config(pktio_entry_t *pktio_entry,
 				    const odp_pktin_queue_param_t *p)
 {
 	odp_pktin_mode_t mode = pktio_entry->s.param.in_mode;
-	odp_bool_t lockless;
+	uint8_t lockless;
 
 	/**
 	 * Scheduler synchronizes input queue polls. Only single thread
@@ -1144,7 +1148,7 @@ static int dpdk_output_queues_config(pktio_entry_t *pktio_entry,
 				     const odp_pktout_queue_param_t *p)
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
-	odp_bool_t lockless;
+	uint8_t lockless;
 
 	if (p->op_mode == ODP_PKTIO_OP_MT_UNSAFE)
 		lockless = 1;
@@ -1160,7 +1164,7 @@ static void dpdk_init_capability(pktio_entry_t *pktio_entry,
 				 struct rte_eth_dev_info *dev_info)
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
-	odp_pktio_capability_t *capa = &pkt_dpdk->capa;
+	odp_pktio_capability_t *capa = &pktio_entry->s.capa;
 	int ptype_cnt;
 	int ptype_l3_ipv4 = 0;
 	int ptype_l4_tcp = 0;
@@ -1173,6 +1177,13 @@ static void dpdk_init_capability(pktio_entry_t *pktio_entry,
 	rte_eth_dev_info_get(pkt_dpdk->port_id, dev_info);
 	capa->max_input_queues = RTE_MIN(dev_info->max_rx_queues,
 					 PKTIO_MAX_QUEUES);
+
+	/* ixgbe devices support only 16 rx queues in RSS mode */
+	if (!strncmp(dev_info->driver_name, IXGBE_DRV_NAME,
+		     strlen(IXGBE_DRV_NAME)))
+		capa->max_input_queues = RTE_MIN((unsigned)16,
+						 capa->max_input_queues);
+
 	capa->max_output_queues = RTE_MIN(dev_info->max_tx_queues,
 					  PKTIO_MAX_QUEUES);
 	capa->set_op.op.promisc_mode = 1;
@@ -1291,10 +1302,16 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		pkt_dpdk->vdev_sysc_promisc = 1;
 	rte_eth_promiscuous_disable(pkt_dpdk->port_id);
 
-	if (!strcmp(dev_info.driver_name, "rte_ixgbe_pmd"))
-		pkt_dpdk->min_rx_burst = DPDK_IXGBE_MIN_RX_BURST;
+	/* Drivers requiring minimum burst size. Supports also *_vf versions
+	 * of the drivers. */
+	if (!strncmp(dev_info.driver_name, IXGBE_DRV_NAME,
+		     strlen(IXGBE_DRV_NAME)) ||
+	    !strncmp(dev_info.driver_name, I40E_DRV_NAME,
+		     strlen(I40E_DRV_NAME)))
+		pkt_dpdk->min_rx_burst = DPDK_MIN_RX_BURST;
 	else
 		pkt_dpdk->min_rx_burst = 0;
+
 	if (ODP_DPDK_ZERO_COPY) {
 		if (pool_entry->ext_desc != NULL)
 			pkt_pool = (struct rte_mempool *)pool_entry->ext_desc;
@@ -1414,10 +1431,10 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 	if (!pkt_dpdk->lockless_rx)
 		odp_ticketlock_lock(&pkt_dpdk->rx_lock[index]);
 	/**
-	 * ixgbe_pmd has a minimum supported RX burst size ('min_rx_burst'). If
-	 * 'num' < 'min_rx_burst', 'min_rx_burst' is used as rte_eth_rx_burst()
-	 * argument and the possibly received extra packets are cached for the
-	 * next dpdk_recv_queue() call to use.
+	 * ixgbe and i40e drivers have a minimum supported RX burst size
+	 * ('min_rx_burst'). If 'num' < 'min_rx_burst', 'min_rx_burst' is used
+	 * as rte_eth_rx_burst() argument and the possibly received extra
+	 * packets are cached for the next dpdk_recv_queue() call to use.
 	 *
 	 * Either use cached packets or receive new ones. Not both during the
 	 * same call. */
@@ -1570,7 +1587,7 @@ static int dpdk_promisc_mode_get(pktio_entry_t *pktio_entry)
 static int dpdk_capability(pktio_entry_t *pktio_entry,
 			   odp_pktio_capability_t *capa)
 {
-	*capa = pktio_entry->s.pkt_dpdk.capa;
+	*capa = pktio_entry->s.capa;
 	return 0;
 }
 

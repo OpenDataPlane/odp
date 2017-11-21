@@ -94,8 +94,6 @@ typedef struct _odp_packet_inline_offset_t {
 	/** @internal field offset */
 	uint16_t user_area;
 	/** @internal field offset */
-	uint16_t user_area_size;
-	/** @internal field offset */
 	uint16_t flow_hash;
 	/** @internal field offset */
 	uint16_t timestamp;

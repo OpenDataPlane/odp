@@ -227,7 +227,8 @@ DX_INIT_DOXYGEN($PACKAGE_NAME,
 AC_ARG_ENABLE([debug],
     [AS_HELP_STRING([--enable-debug],
 		    [include additional debugging code ]
-		    [(set to 'full' to enable all --enable-*-debug-* options)])])
+		    [(set to 'full' to enable all --enable-*-debug-* options)])],
+		    [], [enable_debug=no])
 
 AS_IF([test "x$enable_debug" != "xno"], [ODP_DEBUG=1],
       [ODP_DEBUG=0])
@@ -380,6 +381,7 @@ AC_MSG_RESULT([
 	shared libraries:	${enable_shared}
 	ABI compatible:		${abi_compat}
 	Deprecated APIs:	${deprecated}
+	debug:			${enable_debug}
 	cunit:			${cunit_support}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}

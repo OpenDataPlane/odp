@@ -23,6 +23,9 @@
 /** @internal Inline function offsets */
 extern const _odp_packet_inline_offset_t _odp_packet_inline;
 
+/** @internal Pool inline function offsets */
+extern const _odp_pool_inline_offset_t _odp_pool_inline;
+
 #if ODP_ABI_COMPAT == 1
 /** @internal Inline function @param seg @return */
 static inline uint32_t _odp_packet_seg_to_ndx(odp_packet_seg_t seg)
@@ -70,7 +73,9 @@ static inline uint32_t _odp_packet_tailroom(odp_packet_t pkt)
 /** @internal Inline function @param pkt @return */
 static inline odp_pool_t _odp_packet_pool(odp_packet_t pkt)
 {
-	return _odp_pkt_get(pkt, odp_pool_t, pool);
+	void *pool = _odp_pkt_get(pkt, void *, pool);
+
+	return _odp_pool_get(pool, odp_pool_t, pool_hdl);
 }
 
 /** @internal Inline function @param pkt @return */
@@ -100,7 +105,9 @@ static inline void *_odp_packet_user_area(odp_packet_t pkt)
 /** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_user_area_size(odp_packet_t pkt)
 {
-	return _odp_pkt_get(pkt, uint32_t, user_area_size);
+	void *pool = _odp_pkt_get(pkt, void *, pool);
+
+	return _odp_pool_get(pool, uint32_t, uarea_size);
 }
 
 /** @internal Inline function @param pkt @return */

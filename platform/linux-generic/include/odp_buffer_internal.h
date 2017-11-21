@@ -117,10 +117,6 @@ struct odp_buffer_hdr_t {
 	 * offset has to be used */
 	uint64_t ipc_data_offset;
 
-	/* Pool handle: will be removed, used only for odp_packet_pool()
-	 * inlining */
-	odp_pool_t pool_hdl;
-
 	/* Data or next header */
 	uint8_t data[0];
 } ODP_ALIGNED_CACHE;

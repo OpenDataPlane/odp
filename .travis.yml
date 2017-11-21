@@ -11,6 +11,9 @@ language: c
 sudo: required
 dist: trusty
 group: deprecated-2017Q2
+stages:
+  - "build only"
+  - test
 env:
   global:
     # COVERITY_SCAN_TOKEN
@@ -258,7 +261,7 @@ jobs:
                           - ./configure --prefix=$HOME/odp-install
                             --enable-user-guides
                           - sudo PATH="$PATH" LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make distcheck
-                - stage: test
+                - stage: "build only"
                   env: TEST=doxygen
                   compiler: gcc
                   install:
@@ -284,6 +287,38 @@ jobs:
                           - echo ${TRAVIS_COMMIT_RANGE};
                           - ODP_PATCHES=`echo ${TRAVIS_COMMIT_RANGE} | sed 's/\.//'`;
                           - ./scripts/ci-checkpatches.sh ${ODP_PATCHES};
+                - stage: "build only"
+                  env: CONF=""
+                  compiler: gcc
+                  install: true
+                  script:
+                          - ./bootstrap
+                          - ./configure --enable-helper-linux
+                          - make
+                - stage: "build only"
+                  env: CONF=""
+                  compiler: clang-3.8
+                  install: true
+                  script:
+                          - ./bootstrap
+                          - ./configure --enable-helper-linux
+                          - make
+                - stage: "build only"
+                  env: CROSS_ARCH="i386"
+                  compiler: gcc
+                  install: true
+                  script:
+                          - ./bootstrap
+                          - ./configure --enable-helper-linux $CROSS
+                          - make
+                - stage: "build only"
+                  env: CROSS_ARCH="arm64"
+                  compiler: gcc
+                  install: true
+                  script:
+                          - ./bootstrap
+                          - ./configure --enable-helper-linux $CROSS
+                          - make
 
 after_failure:
   - cat config.log

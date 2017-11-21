@@ -32,12 +32,11 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.frame_len      = offsetof(odp_packet_hdr_t, frame_len),
 	.headroom       = offsetof(odp_packet_hdr_t, headroom),
 	.tailroom       = offsetof(odp_packet_hdr_t, tailroom),
-	.pool           = offsetof(odp_packet_hdr_t, buf_hdr.pool_hdl),
+	.pool           = offsetof(odp_packet_hdr_t, buf_hdr.pool_ptr),
 	.input          = offsetof(odp_packet_hdr_t, input),
 	.segcount       = offsetof(odp_packet_hdr_t, buf_hdr.segcount),
 	.user_ptr       = offsetof(odp_packet_hdr_t, buf_hdr.buf_ctx),
 	.user_area      = offsetof(odp_packet_hdr_t, buf_hdr.uarea_addr),
-	.user_area_size = offsetof(odp_packet_hdr_t, buf_hdr.uarea_size),
 	.flow_hash      = offsetof(odp_packet_hdr_t, flow_hash),
 	.timestamp      = offsetof(odp_packet_hdr_t, timestamp),
 	.input_flags    = offsetof(odp_packet_hdr_t, p.input_flags)
@@ -265,7 +264,6 @@ static inline void packet_seg_copy_md(odp_packet_hdr_t *dst,
 	/* buffer header side packet metadata */
 	dst->buf_hdr.buf_u64    = src->buf_hdr.buf_u64;
 	dst->buf_hdr.uarea_addr = src->buf_hdr.uarea_addr;
-	dst->buf_hdr.uarea_size = src->buf_hdr.uarea_size;
 
 	/* segmentation data is not copied:
 	 *   buf_hdr.seg[]
@@ -337,7 +335,7 @@ static inline void link_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 	int cur, i;
 	odp_packet_hdr_t *hdr;
 	odp_packet_hdr_t *head = pkt_hdr[0];
-	uint32_t seg_len = pool_entry_from_hdl(head->buf_hdr.pool_hdl)->seg_len;
+	uint32_t seg_len = ((pool_t *)(head->buf_hdr.pool_ptr))->seg_len;
 
 	cur = 0;
 
@@ -384,7 +382,7 @@ static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 
 	/* First segment is the packet descriptor */
 	hdr = pkt_hdr[0];
-	seg_len = pool_entry_from_hdl(hdr->buf_hdr.pool_hdl)->seg_len;
+	seg_len = ((pool_t *)(hdr->buf_hdr.pool_ptr))->seg_len;
 
 	/* Defaults for single segment packet */
 	hdr->buf_hdr.seg[0].data = hdr->buf_hdr.base_data;
@@ -415,7 +413,7 @@ static inline void reset_seg(odp_packet_hdr_t *pkt_hdr, int first, int num)
 	void *base;
 	int i;
 	seg_entry_t *seg;
-	uint32_t seg_len = pool_entry_from_hdl(hdr->buf_hdr.pool_hdl)->seg_len;
+	uint32_t seg_len = ((pool_t *)(hdr->buf_hdr.pool_ptr))->seg_len;
 	uint8_t idx;
 
 	seg_entry_find_idx(&hdr, &idx, first);
@@ -956,8 +954,9 @@ odp_event_t odp_packet_to_event(odp_packet_t pkt)
 uint32_t odp_packet_buf_len(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+	pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 
-	return pkt_hdr->buf_hdr.size * pkt_hdr->buf_hdr.segcount;
+	return pool->max_seg_len * pkt_hdr->buf_hdr.segcount;
 }
 
 void *odp_packet_tail(odp_packet_t pkt)
@@ -1453,6 +1452,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 	uint32_t shift;
 	uint32_t seglen = 0;  /* GCC */
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(*pkt);
+	pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 	void *addr = packet_map(pkt_hdr, offset, &seglen, NULL);
 	uint64_t uaddr = (uint64_t)(uintptr_t)addr;
 	uint64_t misalign;
@@ -1469,7 +1469,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 			return 0;
 		shift = align - misalign;
 	} else {
-		if (len > pkt_hdr->buf_hdr.size)
+		if (len > pool->max_seg_len)
 			return -1;
 		shift  = len - seglen;
 		uaddr -= shift;
@@ -1910,18 +1910,20 @@ int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 {
 	odp_packet_hdr_t *srchdr = packet_hdr(srcpkt);
 	odp_packet_hdr_t *dsthdr = packet_hdr(dstpkt);
+	pool_t *src_pool = srchdr->buf_hdr.pool_ptr;
+	pool_t *dst_pool = dsthdr->buf_hdr.pool_ptr;
+	uint32_t src_uarea_size = src_pool->params.pkt.uarea_size;
+	uint32_t dst_uarea_size = dst_pool->params.pkt.uarea_size;
 
 	dsthdr->input = srchdr->input;
 	dsthdr->dst_queue = srchdr->dst_queue;
 	dsthdr->buf_hdr.buf_u64 = srchdr->buf_hdr.buf_u64;
 	if (dsthdr->buf_hdr.uarea_addr != NULL &&
-	    srchdr->buf_hdr.uarea_addr != NULL)
-		memcpy(dsthdr->buf_hdr.uarea_addr,
-		       srchdr->buf_hdr.uarea_addr,
-		       dsthdr->buf_hdr.uarea_size <=
-		       srchdr->buf_hdr.uarea_size ?
-		       dsthdr->buf_hdr.uarea_size :
-		       srchdr->buf_hdr.uarea_size);
+	    srchdr->buf_hdr.uarea_addr != NULL) {
+		memcpy(dsthdr->buf_hdr.uarea_addr, srchdr->buf_hdr.uarea_addr,
+		       dst_uarea_size <= src_uarea_size ? dst_uarea_size :
+		       src_uarea_size);
+	}
 
 	copy_packet_parser_metadata(srchdr, dsthdr);
 
@@ -1929,7 +1931,7 @@ int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 	 * user area was truncated in the process. Note this can only
 	 * happen when copying between different pools.
 	 */
-	return dsthdr->buf_hdr.uarea_size < srchdr->buf_hdr.uarea_size;
+	return dst_uarea_size < src_uarea_size;
 }
 
 /** Parser helper function for Ethernet packets */
