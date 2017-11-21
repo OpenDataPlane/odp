@@ -41,7 +41,7 @@ typedef struct {
 	ring_t   hdr;
 
 	/* Ring data: buffer handles */
-	uint32_t buf[CONFIG_POOL_MAX_NUM];
+	uint32_t buf[];
 
 } pool_ring_t ODP_ALIGNED_CACHE;
 

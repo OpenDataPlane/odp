@@ -148,11 +148,6 @@
 #define CONFIG_BURST_SIZE 16
 
 /*
- * Maximum number of events in a pool
- */
-#define CONFIG_POOL_MAX_NUM (1 * 1024 * 1024)
-
-/*
  * Maximum number of events in a thread local pool cache
  */
 #define CONFIG_POOL_CACHE_SIZE 256
