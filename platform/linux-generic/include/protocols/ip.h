@@ -161,11 +161,13 @@ typedef struct ODP_PACKED {
 #define _ODP_IPPROTO_IPIP    0x04 /**< IP Encapsulation within IP (4) */
 #define _ODP_IPPROTO_TCP     0x06 /**< Transmission Control Protocol (6) */
 #define _ODP_IPPROTO_UDP     0x11 /**< User Datagram Protocol (17) */
+#define _ODP_IPPROTO_IPV6    0x29 /**< IPv6 Routing header (41) */
 #define _ODP_IPPROTO_ROUTE   0x2B /**< IPv6 Routing header (43) */
 #define _ODP_IPPROTO_FRAG    0x2C /**< IPv6 Fragment (44) */
 #define _ODP_IPPROTO_AH      0x33 /**< Authentication Header (51) */
 #define _ODP_IPPROTO_ESP     0x32 /**< Encapsulating Security Payload (50) */
 #define _ODP_IPPROTO_ICMPv6  0x3A /**< Internet Control Message Protocol (58) */
+#define _ODP_IPPROTO_DEST    0x3C /**< IPv6 Destination header (60) */
 #define _ODP_IPPROTO_SCTP    0x84 /**< Stream Control Transmission protocol
 				       (132) */
 #define _ODP_IPPROTO_INVALID 0xFF /**< Reserved invalid by IANA */
