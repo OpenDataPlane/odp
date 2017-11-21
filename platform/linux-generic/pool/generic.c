@@ -156,11 +156,12 @@ static int generic_pool_term_local(void)
 	return 0;
 }
 
-static pool_t *reserve_pool(void)
+static pool_t *reserve_pool(uint32_t ring_size)
 {
 	int i;
 	pool_t *pool;
 	char ring_name[ODP_POOL_NAME_LEN];
+	uint32_t ring_shm_size;
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		pool = pool_entry(i);
@@ -169,10 +170,13 @@ static pool_t *reserve_pool(void)
 		if (pool->reserved == 0) {
 			pool->reserved = 1;
 			UNLOCK(&pool->lock);
-			sprintf(ring_name, "pool_ring_%d", i);
+			snprintf(ring_name, ODP_POOL_NAME_LEN,
+				 "pool_ring_%d", i);
+			ring_shm_size = sizeof(pool_ring_t) +
+					sizeof(pool->ring->buf[0]) * ring_size;
 			pool->ring_shm =
 				odp_shm_reserve(ring_name,
-						sizeof(pool_ring_t),
+						ring_shm_size,
 						ODP_CACHE_LINE_SIZE, 0);
 			if (odp_unlikely(pool->ring_shm == ODP_SHM_INVALID)) {
 				ODP_ERR("Unable to alloc pool ring %d\n", i);
@@ -395,7 +399,12 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	if (uarea_size)
 		uarea_size = ROUNDUP_CACHE_LINE(uarea_size);
 
-	pool = reserve_pool();
+	if (num <= RING_SIZE_MIN)
+		ring_size = RING_SIZE_MIN;
+	else
+		ring_size = ROUNDUP_POWER2_U32(num);
+
+	pool = reserve_pool(ring_size);
 
 	if (pool == NULL) {
 		ODP_ERR("No more free pools");
@@ -430,11 +439,6 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 		num_extra += (((uint64_t)(num_extra * block_size) +
 				FIRST_HP_SIZE - 1) / FIRST_HP_SIZE);
 	}
-
-	if (num <= RING_SIZE_MIN)
-		ring_size = RING_SIZE_MIN;
-	else
-		ring_size = ROUNDUP_POWER2_U32(num);
 
 	pool->ring_mask      = ring_size - 1;
 	pool->num            = num;
@@ -506,11 +510,6 @@ static int check_params(odp_pool_param_t *params)
 
 	switch (params->type) {
 	case ODP_POOL_BUFFER:
-		if (params->buf.num > capa.buf.max_num) {
-			printf("buf.num too large %u\n", params->buf.num);
-			return -1;
-		}
-
 		if (params->buf.size > capa.buf.max_size) {
 			printf("buf.size too large %u\n", params->buf.size);
 			return -1;
@@ -550,10 +549,6 @@ static int check_params(odp_pool_param_t *params)
 		break;
 
 	case ODP_POOL_TIMEOUT:
-		if (params->tmo.num > capa.tmo.max_num) {
-			printf("tmo.num too large %u\n", params->tmo.num);
-			return -1;
-		}
 		break;
 
 	default:
@@ -663,12 +658,12 @@ static int generic_pool_capability(odp_pool_capability_t *capa)
 	capa->buf.max_pools = ODP_CONFIG_POOLS;
 	capa->buf.max_align = ODP_CONFIG_BUFFER_ALIGN_MAX;
 	capa->buf.max_size  = MAX_SIZE;
-	capa->buf.max_num   = CONFIG_POOL_MAX_NUM;
+	capa->buf.max_num   = 0;
 
 	/* Packet pools */
 	capa->pkt.max_pools        = ODP_CONFIG_POOLS;
 	capa->pkt.max_len          = CONFIG_PACKET_MAX_LEN;
-	capa->pkt.max_num	   = CONFIG_POOL_MAX_NUM;
+	capa->pkt.max_num	   = 0;
 	capa->pkt.min_headroom     = CONFIG_PACKET_HEADROOM;
 	capa->pkt.max_headroom     = CONFIG_PACKET_HEADROOM;
 	capa->pkt.min_tailroom     = CONFIG_PACKET_TAILROOM;
@@ -679,7 +674,7 @@ static int generic_pool_capability(odp_pool_capability_t *capa)
 
 	/* Timeout pools */
 	capa->tmo.max_pools = ODP_CONFIG_POOLS;
-	capa->tmo.max_num   = CONFIG_POOL_MAX_NUM;
+	capa->tmo.max_num   = 0;
 
 	return 0;
 }
