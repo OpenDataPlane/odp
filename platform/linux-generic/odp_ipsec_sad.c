@@ -195,6 +195,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	ipsec_sa_t *ipsec_sa;
 	odp_crypto_session_param_t crypto_param;
 	odp_crypto_ses_create_err_t ses_create_rc;
+	uint32_t aad_len = 0;
 
 	ipsec_sa = ipsec_sa_reserve();
 	if (NULL == ipsec_sa) {
@@ -334,6 +335,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 #endif
 	case ODP_AUTH_ALG_AES_GCM:
 		ipsec_sa->icv_len = 16;
+		aad_len = sizeof(ipsec_aad_t);
 		break;
 	case ODP_AUTH_ALG_AES_GMAC:
 		if (ODP_CIPHER_ALG_NULL != crypto_param.cipher_alg)
@@ -353,6 +355,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		odp_atomic_init_u64(&ipsec_sa->out.counter, 1);
 
 	crypto_param.auth_digest_len = ipsec_sa->icv_len;
+	crypto_param.auth_aad_len    = aad_len;
 
 	if (param->crypto.cipher_key_extra.length) {
 		if (param->crypto.cipher_key_extra.length >
