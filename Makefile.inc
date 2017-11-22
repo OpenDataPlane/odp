@@ -8,6 +8,9 @@ ODP_INCLUDES = \
 if ODP_ABI_COMPAT
 ODP_INCLUDES += \
 	-I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
+else
+ODP_INCLUDES += \
+	-I$(top_srcdir)/platform/@with_platform@/include-abi
 endif
 
 HELPER_INCLUDES = \
