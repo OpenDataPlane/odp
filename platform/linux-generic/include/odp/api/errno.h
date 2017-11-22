@@ -10,13 +10,12 @@
  * ODP errno API
  */
 
-#ifndef ODP_PLAT_ERRNO_H_
-#define ODP_PLAT_ERRNO_H_
+#ifndef ODP_API_ERRNO_H_
+#define ODP_API_ERRNO_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 #include <odp/api/spec/errno.h>
 

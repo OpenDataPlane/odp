@@ -10,8 +10,8 @@
  * ODP CPU
  */
 
-#ifndef ODP_PLAT_CPU_H_
-#define ODP_PLAT_CPU_H_
+#ifndef ODP_API_CPU_H_
+#define ODP_API_CPU_H_
 
 #ifdef __cplusplus
 extern "C" {

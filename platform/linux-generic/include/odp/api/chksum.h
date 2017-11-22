@@ -10,20 +10,12 @@
  * ODP checksum functions
  */
 
-#ifndef ODP_PLAT_CHKSUM_H_
-#define ODP_PLAT_CHKSUM_H_
+#ifndef ODP_API_CHKSUM_H_
+#define ODP_API_CHKSUM_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/** @ingroup odp_chksum
- *  @{
- */
-
-/**
- * @}
- */
 
 #include <odp/api/spec/chksum.h>
 
