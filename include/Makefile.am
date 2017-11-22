@@ -56,6 +56,7 @@ nodist_odpapispecinclude_HEADERS = \
 
 odpapiabidefaultincludedir= $(includedir)/odp/api/abi-default
 odpapiabidefaultinclude_HEADERS = \
+	odp/api/abi-default/atomic.h \
 	odp/api/abi-default/barrier.h \
 	odp/api/abi-default/buffer.h \
 	odp/api/abi-default/classification.h \
@@ -89,6 +90,7 @@ if ODP_ABI_COMPAT
 odpapiabiarchincludedir = $(archincludedir)/odp/api/abi
 if ARCH_IS_ARM
 odpapiabiarchinclude_HEADERS = \
+	odp/arch/arm32-linux/odp/api/abi/atomic.h \
 	odp/arch/arm32-linux/odp/api/abi/barrier.h \
 	odp/arch/arm32-linux/odp/api/abi/buffer.h \
 	odp/arch/arm32-linux/odp/api/abi/classification.h \
@@ -118,6 +120,7 @@ odpapiabiarchinclude_HEADERS = \
 endif
 if ARCH_IS_AARCH64
 odpapiabiarchinclude_HEADERS = \
+	odp/arch/arm64-linux/odp/api/abi/atomic.h \
 	odp/arch/arm64-linux/odp/api/abi/barrier.h \
 	odp/arch/arm64-linux/odp/api/abi/buffer.h \
 	odp/arch/arm64-linux/odp/api/abi/classification.h \
@@ -147,6 +150,7 @@ odpapiabiarchinclude_HEADERS = \
 endif
 if ARCH_IS_MIPS64
 odpapiabiarchinclude_HEADERS = \
+	odp/arch/mips64-linux/odp/api/abi/atomic.h \
 	odp/arch/mips64-linux/odp/api/abi/barrier.h \
 	odp/arch/mips64-linux/odp/api/abi/buffer.h \
 	odp/arch/mips64-linux/odp/api/abi/classification.h \
@@ -176,6 +180,7 @@ odpapiabiarchinclude_HEADERS = \
 endif
 if ARCH_IS_POWERPC
 odpapiabiarchinclude_HEADERS = \
+	odp/arch/power64-linux/odp/api/abi/atomic.h \
 	odp/arch/power64-linux/odp/api/abi/barrier.h \
 	odp/arch/power64-linux/odp/api/abi/buffer.h \
 	odp/arch/power64-linux/odp/api/abi/classification.h \
@@ -205,6 +210,7 @@ odpapiabiarchinclude_HEADERS = \
 endif
 if ARCH_IS_X86_32
 odpapiabiarchinclude_HEADERS = \
+	odp/arch/x86_32-linux/odp/api/abi/atomic.h \
 	odp/arch/x86_32-linux/odp/api/abi/barrier.h \
 	odp/arch/x86_32-linux/odp/api/abi/buffer.h \
 	odp/arch/x86_32-linux/odp/api/abi/classification.h \
@@ -234,6 +240,7 @@ odpapiabiarchinclude_HEADERS = \
 endif
 if ARCH_IS_X86_64
 odpapiabiarchinclude_HEADERS = \
+	odp/arch/x86_64-linux/odp/api/abi/atomic.h \
 	odp/arch/x86_64-linux/odp/api/abi/barrier.h \
 	odp/arch/x86_64-linux/odp/api/abi/buffer.h \
 	odp/arch/x86_64-linux/odp/api/abi/classification.h \

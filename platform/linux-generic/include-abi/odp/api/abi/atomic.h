@@ -10,8 +10,8 @@
  * ODP atomic operations
  */
 
-#ifndef ODP_ATOMIC_TYPES_H_
-#define ODP_ATOMIC_TYPES_H_
+#ifndef ODP_API_ABI_ATOMIC_H_
+#define ODP_API_ABI_ATOMIC_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,6 +59,16 @@ typedef struct odp_atomic_u64_s odp_atomic_u64_t;
 
 typedef struct odp_atomic_u32_s odp_atomic_u32_t;
 
+/** @ingroup odp_atomic
+ *  @{
+ */
+
+#include <odp/api/plat/static_inline.h>
+#include <odp/api/plat/atomic_inlines.h>
+
+/**
+ * @}
+ */
 #ifdef __cplusplus
 }
 #endif
