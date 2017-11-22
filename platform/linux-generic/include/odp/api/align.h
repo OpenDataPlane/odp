@@ -17,37 +17,7 @@
 extern "C" {
 #endif
 
-#include <odp/api/abi/cpu.h>
-
-/** @ingroup odp_compiler_optim
- *  @{
- */
-
-#ifdef __GNUC__
-
-#define ODP_ALIGNED(x) __attribute__((__aligned__(x)))
-
-#define ODP_PACKED __attribute__((__packed__))
-
-#define ODP_OFFSETOF(type, member) __builtin_offsetof(type, member)
-
-#define ODP_FIELD_SIZEOF(type, member) sizeof(((type *)0)->member)
-
-#else
-#error Non-gcc compatible compiler
-#endif
-
-#define ODP_CACHE_LINE_SIZE _ODP_CACHE_LINE_SIZE
-
-#define ODP_PAGE_SIZE       4096
-
-#define ODP_ALIGNED_CACHE   ODP_ALIGNED(ODP_CACHE_LINE_SIZE)
-
-#define ODP_ALIGNED_PAGE    ODP_ALIGNED(ODP_PAGE_SIZE)
-
-/**
- * @}
- */
+#include <odp/api/abi/align.h>
 
 #include <odp/api/spec/align.h>
 

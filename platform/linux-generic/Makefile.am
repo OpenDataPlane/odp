@@ -95,6 +95,7 @@ nodist_odpapiplatinclude_HEADERS = \
 if !ODP_ABI_COMPAT
 odpapiabiarchincludedir = $(archincludedir)/odp/api/abi
 odpapiabiarchinclude_HEADERS = \
+		  include-abi/odp/api/abi/align.h \
 		  include-abi/odp/api/abi/atomic.h \
 		  include-abi/odp/api/abi/barrier.h \
 		  include-abi/odp/api/abi/buffer.h \
