@@ -545,6 +545,10 @@ static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
 	odp_bool_t ipv4_chksum_pkt, udp_chksum_pkt, tcp_chksum_pkt;
 	packet_parser_t *pkt_p = &pkt_hdr->p;
 
+	if (pkt_p->l3_offset == ODP_PACKET_OFFSET_INVALID ||
+	    pkt_p->l4_offset == ODP_PACKET_OFFSET_INVALID)
+		return;
+
 	l3_hdr = (void *)(mbuf_data + pkt_p->l3_offset);
 
 	if (check_proto(l3_hdr, &l3_proto_v4, &l4_proto))
