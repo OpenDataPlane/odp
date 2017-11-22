@@ -77,7 +77,6 @@ odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/atomic_inlines.h \
 		  include/odp/api/plat/byteorder_inlines.h \
-		  include/odp/api/plat/byteorder_types.h \
 		  include/odp/api/plat/packet_flag_inlines.h \
 		  include/odp/api/plat/packet_flag_inlines_api.h \
 		  include/odp/api/plat/packet_inlines.h \
@@ -100,6 +99,7 @@ odpapiabiarchinclude_HEADERS = \
 		  include-abi/odp/api/abi/atomic.h \
 		  include-abi/odp/api/abi/barrier.h \
 		  include-abi/odp/api/abi/buffer.h \
+		  include-abi/odp/api/abi/byteorder.h \
 		  include-abi/odp/api/abi/classification.h \
 		  include-abi/odp/api/abi/cpumask.h \
 		  include-abi/odp/api/abi/crypto.h \
