@@ -10,8 +10,8 @@
  * Control deprecated API definitions
  */
 
-#ifndef ODP_PLAT_DEPRECATED_H_
-#define ODP_PLAT_DEPRECATED_H_
+#ifndef ODP_API_DEPRECATED_H_
+#define ODP_API_DEPRECATED_H_
 
 #ifdef __cplusplus
 extern "C" {

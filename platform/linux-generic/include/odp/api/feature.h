@@ -10,20 +10,12 @@
  * ODP features.
  */
 
-#ifndef ODP_PLAT_FEATURE_H_
-#define ODP_PLAT_FEATURE_H_
+#ifndef ODP_API_FEATURE_H_
+#define ODP_API_FEATURE_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/** @ingroup odp_feature
- *  @{
- */
-
-/**
- * @}
- */
 
 #include <odp/api/spec/feature.h>
 

@@ -10,20 +10,12 @@
  * ODP Hash function
  */
 
-#ifndef ODP_PLAT_HASH_H_
-#define ODP_PLAT_HASH_H_
+#ifndef ODP_API_HASH_H_
+#define ODP_API_HASH_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/** @ingroup odp_hash
- *  @{
- */
-
-/**
- * @}
- */
 
 #include <odp/api/spec/hash.h>
 

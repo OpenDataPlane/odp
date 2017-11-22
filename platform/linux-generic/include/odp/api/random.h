@@ -10,20 +10,12 @@
  * ODP random number API
  */
 
-#ifndef ODP_PLAT_RANDOM_H_
-#define ODP_PLAT_RANDOM_H_
+#ifndef ODP_API_RANDOM_H_
+#define ODP_API_RANDOM_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/** @ingroup odp_random ODP RANDOM
- *  @{
- */
-
-/**
- * @}
- */
 
 #include <odp/api/spec/random.h>
 
