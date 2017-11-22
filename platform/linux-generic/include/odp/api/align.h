@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-#include <odp/api/cpu_arch.h>
+#include <odp/api/abi/cpu.h>
 
 /** @ingroup odp_compiler_optim
  *  @{
