@@ -2,6 +2,56 @@ include_HEADERS = \
 		  odp.h \
 		  odp_api.h
 
+odpapiincludedir= $(includedir)/odp/api/
+odpapiinclude_HEADERS = \
+	odp/api/align.h \
+	odp/api/atomic.h \
+	odp/api/barrier.h \
+	odp/api/buffer.h \
+	odp/api/byteorder.h \
+	odp/api/chksum.h \
+	odp/api/classification.h \
+	odp/api/compiler.h \
+	odp/api/cpu.h \
+	odp/api/cpumask.h \
+	odp/api/crypto.h \
+	odp/api/debug.h \
+	odp/api/deprecated.h \
+	odp/api/errno.h \
+	odp/api/event.h \
+	odp/api/feature.h \
+	odp/api/hash.h \
+	odp/api/hints.h \
+	odp/api/init.h \
+	odp/api/ipsec.h \
+	odp/api/packet.h \
+	odp/api/packet_flags.h \
+	odp/api/packet_io.h \
+	odp/api/packet_io_stats.h \
+	odp/api/pool.h \
+	odp/api/queue.h \
+	odp/api/random.h \
+	odp/api/rwlock.h \
+	odp/api/rwlock_recursive.h \
+	odp/api/schedule.h \
+	odp/api/schedule_types.h \
+	odp/api/shared_memory.h \
+	odp/api/spinlock.h \
+	odp/api/spinlock_recursive.h \
+	odp/api/std_clib.h \
+	odp/api/std_types.h \
+	odp/api/support.h \
+	odp/api/sync.h \
+	odp/api/system_info.h \
+	odp/api/thread.h \
+	odp/api/threshold.h \
+	odp/api/thrmask.h \
+	odp/api/ticketlock.h \
+	odp/api/time.h \
+	odp/api/timer.h \
+	odp/api/traffic_mngr.h \
+	odp/api/version.h
+
 odpapispecincludedir= $(includedir)/odp/api/spec
 odpapispecinclude_HEADERS = \
 		  odp/api/spec/align.h \

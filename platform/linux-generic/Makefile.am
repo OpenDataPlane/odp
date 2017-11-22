@@ -24,55 +24,6 @@ odpinclude_HEADERS = \
 		  include/odp/visibility_begin.h \
 		  include/odp/visibility_end.h
 
-odpapiincludedir= $(includedir)/odp/api
-odpapiinclude_HEADERS = \
-		  include/odp/api/align.h \
-		  include/odp/api/atomic.h \
-		  include/odp/api/barrier.h \
-		  include/odp/api/buffer.h \
-		  include/odp/api/byteorder.h \
-		  include/odp/api/chksum.h \
-		  include/odp/api/classification.h \
-		  include/odp/api/compiler.h \
-		  include/odp/api/cpu.h \
-		  include/odp/api/cpumask.h \
-		  include/odp/api/crypto.h \
-		  include/odp/api/debug.h \
-		  include/odp/api/deprecated.h \
-		  include/odp/api/errno.h \
-		  include/odp/api/event.h \
-		  include/odp/api/feature.h \
-		  include/odp/api/hash.h \
-		  include/odp/api/hints.h \
-		  include/odp/api/init.h \
-		  include/odp/api/ipsec.h \
-		  include/odp/api/packet_flags.h \
-		  include/odp/api/packet.h \
-		  include/odp/api/packet_io.h \
-		  include/odp/api/packet_io_stats.h \
-		  include/odp/api/pool.h \
-		  include/odp/api/queue.h \
-		  include/odp/api/random.h \
-		  include/odp/api/rwlock.h \
-		  include/odp/api/rwlock_recursive.h \
-		  include/odp/api/schedule.h \
-		  include/odp/api/schedule_types.h \
-		  include/odp/api/shared_memory.h \
-		  include/odp/api/spinlock.h \
-		  include/odp/api/spinlock_recursive.h \
-		  include/odp/api/std_clib.h \
-		  include/odp/api/std_types.h \
-		  include/odp/api/support.h \
-		  include/odp/api/system_info.h \
-		  include/odp/api/thread.h \
-		  include/odp/api/threshold.h \
-		  include/odp/api/thrmask.h \
-		  include/odp/api/ticketlock.h \
-		  include/odp/api/time.h \
-		  include/odp/api/timer.h \
-		  include/odp/api/traffic_mngr.h \
-		  include/odp/api/version.h
-
 odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/atomic_inlines.h \
