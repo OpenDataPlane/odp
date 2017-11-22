@@ -10,23 +10,25 @@
  * ODP byteorder
  */
 
-#ifndef ODP_BYTEORDER_TYPES_H_
-#define ODP_BYTEORDER_TYPES_H_
+#ifndef ODP_API_ABI_BYTEORDER_H_
+#define ODP_API_ABI_BYTEORDER_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#include <odp/api/std_types.h>
+
 #ifndef __BYTE_ORDER__
-#error __BYTE_ORDER not defined!
+#error __BYTE_ORDER__ not defined!
 #endif
 
 #ifndef __ORDER_BIG_ENDIAN__
-#error __BIG_ENDIAN not defined!
+#error __ORDER_BIG_ENDIAN__ not defined!
 #endif
 
 #ifndef __ORDER_LITTLE_ENDIAN__
-#error __LITTLE_ENDIAN not defined!
+#error __ORDER_LITTLE_ENDIAN__ not defined!
 #endif
 
 /* for use with type checkers such as sparse */
@@ -72,6 +74,9 @@ typedef uint64_t __odp_bitwise	odp_u64be_t;
 
 typedef uint16_t __odp_bitwise  odp_u16sum_t;
 typedef uint32_t __odp_bitwise  odp_u32sum_t;
+
+#include <odp/api/plat/static_inline.h>
+#include <odp/api/plat/byteorder_inlines.h>
 
 /**
  * @}

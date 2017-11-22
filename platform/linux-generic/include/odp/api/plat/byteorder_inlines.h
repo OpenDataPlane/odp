@@ -17,6 +17,12 @@
 extern "C" {
 #endif
 
+#ifndef __odp_force
+#define __odp_force
+#endif
+
+#include <odp/api/compiler.h>
+
 /** @ingroup odp_compiler_optim
  *  @{
  */
