@@ -10,20 +10,12 @@
  * Compiler related
  */
 
-#ifndef ODP_PLAT_COMPILER_H_
-#define ODP_PLAT_COMPILER_H_
+#ifndef ODP_API_COMPILER_H_
+#define ODP_API_COMPILER_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/** @ingroup odp_compiler_optim
- *  @{
- */
-
-/**
- * @}
- */
 
 #include <odp/api/spec/compiler.h>
 

@@ -10,15 +10,14 @@
  * ODP system information
  */
 
-#ifndef ODP_PLAT_SYSTEM_INFO_H_
-#define ODP_PLAT_SYSTEM_INFO_H_
+#ifndef ODP_API_SYSTEM_INFO_H_
+#define ODP_API_SYSTEM_INFO_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <odp/api/std_types.h>
-
 
 #include <odp/api/spec/system_info.h>
 

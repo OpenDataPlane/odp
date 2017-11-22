@@ -10,20 +10,12 @@
  * ODP support API - platform specific header
  */
 
-#ifndef ODP_PLAT_SUPPORT_H_
-#define ODP_PLAT_SUPPORT_H_
+#ifndef ODP_API_SUPPORT_H_
+#define ODP_API_SUPPORT_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/** @ingroup odp_support
- *  @{
- */
-
-/**
- * @}
- */
 
 #include <odp/api/spec/support.h>
 
