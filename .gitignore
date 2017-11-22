@@ -2,13 +2,16 @@
 *.gcda
 *.gcno
 *.gcov
+*.trs
 *.la
 *.lo
+*.log
 *.o
 *.orig
 *.patch
 *.rej
 *.swp
+*.xml
 *~
 .deps/
 .dirstamp
