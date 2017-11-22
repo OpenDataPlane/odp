@@ -19,6 +19,7 @@ extern "C" {
 
 #include <odp/api/plat/ticketlock_types.h>
 
+#include <odp/api/plat/static_inline.h>
 #if ODP_ABI_COMPAT == 0
 #include <odp/api/plat/ticketlock_inlines.h>
 #endif

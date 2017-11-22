@@ -7,6 +7,7 @@
 #include "config.h"
 
 #include <odp/api/atomic.h>
+#include <odp/api/plat/static_inline.h>
 #if ODP_ABI_COMPAT == 1
 #include <odp/api/plat/atomic_inlines.h>
 #endif
