@@ -567,7 +567,10 @@ static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
 					   pkt_p->output_flags.l4_chksum);
 
 	if (!ipv4_chksum_pkt && !udp_chksum_pkt && !tcp_chksum_pkt)
-			return;
+		return;
+
+	if (pkt_p->l4_offset == ODP_PACKET_OFFSET_INVALID)
+		return;
 
 	mbuf->l2_len = pkt_p->l3_offset - pkt_p->l2_offset;
 	mbuf->l3_len = pkt_p->l4_offset - pkt_p->l3_offset;
@@ -607,8 +610,6 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 	char *data;
 	uint16_t pkt_len;
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
-	odp_pktout_config_opt_t *pktout_capa =
-		&pktio_entry->s.capa.config.pktout;
 
 	if (odp_unlikely((rte_pktmbuf_alloc_bulk(pkt_dpdk->pkt_pool,
 						 mbuf_table, num)))) {
@@ -616,7 +617,9 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 		return 0;
 	}
 	for (i = 0; i < num; i++) {
-		pkt_len = _odp_packet_len(pkt_table[i]);
+		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt_table[i]);
+
+		pkt_len = packet_len(pkt_hdr);
 
 		if (pkt_len > pkt_dpdk->mtu) {
 			if (i == 0)
@@ -629,10 +632,13 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 
 		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
 
-		if (pktout_capa->all_bits)
-			pkt_set_ol_tx(pktout_cfg, pktout_capa,
-				      odp_packet_hdr(pkt_table[i]),
+		if (pkt_hdr->p.l3_offset != ODP_PACKET_OFFSET_INVALID) {
+			odp_pktout_config_opt_t *pktout_capa =
+			&pktio_entry->s.capa.config.pktout;
+
+			pkt_set_ol_tx(pktout_cfg, pktout_capa, pkt_hdr,
 				      mbuf_table[i], data);
+		}
 	}
 	return i;
 
@@ -741,9 +747,9 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 			       pkt_hdr->extra_type == PKT_EXTRA_TYPE_DPDK)) {
 			mbuf_update(mbuf, pkt_hdr, pkt_len);
 
-			if (pktout_capa->all_bits)
+			if (pkt_hdr->p.l3_offset != ODP_PACKET_OFFSET_INVALID)
 				pkt_set_ol_tx(pktout_cfg, pktout_capa, pkt_hdr,
-					      mbuf, odp_packet_data(pkt));
+					      mbuf, _odp_packet_data(pkt));
 		} else {
 			pool_t *pool_entry = pkt_hdr->buf_hdr.pool_ptr;
 
@@ -764,11 +770,11 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 				mbuf_init((struct rte_mempool *)
 					  pool_entry->ext_desc, mbuf, pkt_hdr);
 				mbuf_update(mbuf, pkt_hdr, pkt_len);
-				if (pktout_capa->all_bits)
+				if (pkt_hdr->p.l3_offset !=
+				    ODP_PACKET_OFFSET_INVALID)
 					pkt_set_ol_tx(pktout_cfg, pktout_capa,
-						      pkt_hdr,
-						      mbuf,
-						      odp_packet_data(pkt));
+						      pkt_hdr, mbuf,
+						      _odp_packet_data(pkt));
 			}
 		}
 		mbuf_table[i] = mbuf;
