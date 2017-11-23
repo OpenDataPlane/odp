@@ -21,7 +21,7 @@ extern "C" {
 #include <odp/api/shared_memory.h>
 #include <odp/api/ticketlock.h>
 
-#include <odp_pool_subsystem.h>
+#include <subsystem/spec/pool_subsystem.h>
 #include <odp_buffer_internal.h>
 #include <odp_config_internal.h>
 #include <odp_ring_internal.h>

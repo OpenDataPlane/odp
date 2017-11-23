@@ -191,7 +191,6 @@ noinst_HEADERS = \
 		  include/odp_pkt_queue_internal.h \
 		  include/odp_queue_subsystem.h \
 		  include/odp_pool_internal.h \
-		  include/odp_pool_subsystem.h \
 		  include/odp_posix_extensions.h \
 		  include/odp_queue_internal.h \
 		  include/odp_queue_scalable_internal.h \
