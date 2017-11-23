@@ -11,7 +11,7 @@
 #include <odp_buffer_internal.h>
 #include <odp_buffer_inlines.h>
 #include <odp_debug_internal.h>
-#include <odp_buffer_subsystem.h>
+#include <subsystem/spec/buffer_subsystem.h>
 
 #include <string.h>
 #include <stdio.h>
