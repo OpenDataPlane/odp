@@ -175,7 +175,6 @@ odpdrvplatinclude_HEADERS = \
 
 
 noinst_HEADERS = \
-		  ${top_srcdir}/platform/linux-generic/include/odp_buffer_subsystem.h \
 		  ${top_srcdir}/platform/linux-generic/include/_fdserver_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/_ishm_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/_ishmphy_internal.h \
