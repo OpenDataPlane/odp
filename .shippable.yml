@@ -39,6 +39,7 @@ build:
     - ./configure --disable-test-perf
     - make
     - sudo env ODP_SHM_DIR=/dev/shm/odp make check
+    - sh -x ./scripts/shipabble-stats.sh
 
   on_failure:
     - cat config.log
