@@ -9,7 +9,7 @@
 #include <odp/api/queue.h>
 #include <odp_queue_internal.h>
 #include <odp_queue_if.h>
-#include <odp_queue_subsystem.h>
+#include <subsystem/spec/queue_subsystem.h>
 #include <odp/api/std_types.h>
 #include <odp/api/align.h>
 #include <odp/api/buffer.h>
