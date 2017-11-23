@@ -15,7 +15,7 @@
 #include <odp_debug_internal.h>
 #include <odp_internal.h>
 #include <odp_module.h>
-#include <odp_schedule_subsystem.h>
+#include <subsystem/spec/schedule_subsystem.h>
 
 ODP_SUBSYSTEM_DEFINE(schedule, "schedule public APIs",
 		     SCHEDULE_SUBSYSTEM_VERSION);

@@ -199,7 +199,6 @@ noinst_HEADERS = \
 		  include/odp_schedule_scalable.h \
 		  include/odp_schedule_scalable_config.h \
 		  include/odp_schedule_scalable_ordered.h \
-		  include/odp_schedule_subsystem.h \
 		  include/odp_sorted_list_internal.h \
 		  include/odp_shm_internal.h \
 		  include/odp_time_internal.h \

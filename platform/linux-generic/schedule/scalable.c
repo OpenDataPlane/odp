@@ -29,7 +29,7 @@
 #include <odp_llqueue.h>
 #include <odp_queue_scalable_internal.h>
 #include <odp_schedule_if.h>
-#include <odp_schedule_subsystem.h>
+#include <subsystem/spec/schedule_subsystem.h>
 #include <odp_bitset.h>
 #include <odp_packet_io_internal.h>
 
