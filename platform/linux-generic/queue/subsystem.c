@@ -11,7 +11,7 @@
 #include <odp/api/queue.h>
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_queue_subsystem.h>
+#include <subsystem/spec/queue_subsystem.h>
 #include <odp_module.h>
 
 ODP_SUBSYSTEM_DEFINE(queue, "queue public APIs", QUEUE_SUBSYSTEM_VERSION);

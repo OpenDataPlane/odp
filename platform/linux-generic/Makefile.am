@@ -189,7 +189,6 @@ noinst_HEADERS = \
 		  include/odp_pktio_ops_tap.h \
 		  include/odp_pktio_ops_subsystem.h \
 		  include/odp_pkt_queue_internal.h \
-		  include/odp_queue_subsystem.h \
 		  include/odp_pool_internal.h \
 		  include/odp_posix_extensions.h \
 		  include/odp_queue_internal.h \

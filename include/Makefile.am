@@ -71,7 +71,8 @@ odpdrvspecinclude_HEADERS = \
 subsystemspecincludedir= $(includedir)/subsystem/spec
 subsystemspecinclude_HEADERS = \
 		  subsystem/spec/buffer_subsystem.h \
-		  subsystem/spec/pool_subsystem.h
+		  subsystem/spec/pool_subsystem.h \
+		  subsystem/spec/queue_subsystem.h
 
 odpapiabidefaultincludedir= $(includedir)/odp/arch/default/api/abi
 odpapiabidefaultinclude_HEADERS = \
