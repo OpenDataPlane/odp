@@ -214,7 +214,6 @@ noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_queue_if.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_ring_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_schedule_if.h \
-		  ${top_srcdir}/platform/linux-generic/include/odp_schedule_subsystem.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_sorted_list_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_shm_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_time_internal.h \

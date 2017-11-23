@@ -25,7 +25,7 @@
 #include <odp/api/packet_io.h>
 #include <odp_config_internal.h>
 #include <odp_timer_internal.h>
-#include <odp_schedule_subsystem.h>
+#include <subsystem/spec/schedule_subsystem.h>
 #include <odp_packet_io_internal.h>
 
 /* Should remove this dependency */
