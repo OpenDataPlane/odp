@@ -5,6 +5,7 @@ PROJECT_NUMBER = $(VERSION)
 PROJECT_LOGO = $(SRCDIR)/doc/images/ODP-Logo-HQ.svg
 INPUT = $(SRCDIR)/doc/application-api-guide \
 	$(SRCDIR)/include
+EXCLUDE = $(SRCDIR)/include/subsystem
 EXCLUDE_PATTERNS = drv* odp_drv.h
 EXAMPLE_PATH = $(SRCDIR)/example $(SRCDIR)
 WARNINGS = NO
