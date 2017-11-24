@@ -77,6 +77,16 @@ odp_time_t odp_time_global(void);
 odp_time_t odp_time_diff(odp_time_t t2, odp_time_t t1);
 
 /**
+ * Time difference in nanoseconds
+ *
+ * @param t2    Second time stamp
+ * @param t1    First time stamp
+ *
+ * @return Difference of time stamps (t2 - t1) in nanoseconds
+ */
+uint64_t odp_time_diff_ns(odp_time_t t2, odp_time_t t1);
+
+/**
  * Time sum
  *
  * @param t1    Time stamp
