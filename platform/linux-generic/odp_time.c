@@ -228,6 +228,15 @@ odp_time_t odp_time_diff(odp_time_t t2, odp_time_t t1)
 	return time;
 }
 
+uint64_t odp_time_diff_ns(odp_time_t t2, odp_time_t t1)
+{
+	odp_time_t time;
+
+	time.u64 = t2.u64 - t1.u64;
+
+	return time_to_ns(time);
+}
+
 uint64_t odp_time_to_ns(odp_time_t time)
 {
 	return time_to_ns(time);
