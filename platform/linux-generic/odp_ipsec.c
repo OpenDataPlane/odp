@@ -233,6 +233,7 @@ typedef struct {
 		struct {
 			uint16_t hdr_len;
 			uint16_t trl_len;
+			odp_u32be_t seq_no;
 		} in;
 		odp_u32be_t ipv4_addr;
 		uint8_t ipv6_addr[_ODP_IPV6ADDR_LEN];
@@ -247,8 +248,10 @@ typedef struct {
 			odp_u32be_t ver_tc_flow;
 			uint8_t hop_limit;
 		} ah_ipv6;
+		struct {
+			ipsec_aad_t aad;
+		} esp;
 	};
-	ipsec_aad_t aad;
 	uint8_t	iv[IPSEC_MAX_IV_LEN];
 } ipsec_state_t;
 
@@ -409,10 +412,11 @@ static int ipsec_in_esp(odp_packet_t *pkt,
 				    ipsec_sa->icv_len;
 	param->override_iv_ptr = state->iv;
 
-	state->aad.spi = esp.spi;
-	state->aad.seq_no = esp.seq_no;
+	state->esp.aad.spi = esp.spi;
+	state->esp.aad.seq_no = esp.seq_no;
+	state->in.seq_no = odp_be_to_cpu_32(esp.seq_no);
 
-	param->aad.ptr = (uint8_t *)&state->aad;
+	param->aad.ptr = (uint8_t *)&state->esp.aad;
 
 	param->auth_range.offset = ipsec_offset;
 	param->auth_range.length = state->ip_tot_len -
@@ -515,10 +519,7 @@ static int ipsec_in_ah(odp_packet_t *pkt,
 		ipv6hdr->hop_limit = 0;
 	}
 
-	state->aad.spi = ah.spi;
-	state->aad.seq_no = ah.seq_no;
-
-	param->aad.ptr = (uint8_t *)&state->aad;
+	state->in.seq_no = odp_be_to_cpu_32(ah.seq_no);
 
 	param->auth_range.offset = state->ip_offset;
 	param->auth_range.length = state->ip_tot_len;
@@ -614,7 +615,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		goto err;
 
 	if (_odp_ipsec_sa_replay_precheck(ipsec_sa,
-					  odp_be_to_cpu_32(state.aad.seq_no),
+					  state.in.seq_no,
 					  status) < 0)
 		goto err;
 
@@ -659,7 +660,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		goto err;
 
 	if (_odp_ipsec_sa_replay_update(ipsec_sa,
-					odp_be_to_cpu_32(state.aad.seq_no),
+					state.in.seq_no,
 					status) < 0)
 		goto err;
 
@@ -993,10 +994,10 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 	esp.spi = odp_cpu_to_be_32(ipsec_sa->spi);
 	esp.seq_no = odp_cpu_to_be_32(ipsec_seq_no(ipsec_sa));
 
-	state->aad.spi = esp.spi;
-	state->aad.seq_no = esp.seq_no;
+	state->esp.aad.spi = esp.spi;
+	state->esp.aad.seq_no = esp.seq_no;
 
-	param->aad.ptr = (uint8_t *)&state->aad;
+	param->aad.ptr = (uint8_t *)&state->esp.aad;
 
 	memset(&esptrl, 0, sizeof(esptrl));
 	esptrl.pad_len = encrypt_len - ip_data_len - _ODP_ESPTRL_LEN;
@@ -1116,11 +1117,6 @@ static int ipsec_out_ah(odp_packet_t *pkt,
 	}
 
 	ah.ah_len = hdr_len / 4 - 2;
-
-	state->aad.spi = ah.spi;
-	state->aad.seq_no = ah.seq_no;
-
-	param->aad.ptr = (uint8_t *)&state->aad;
 
 	/* For GMAC */
 	if (ipsec_out_iv(state, ipsec_sa) < 0) {
