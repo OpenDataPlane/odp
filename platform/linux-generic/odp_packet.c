@@ -2061,6 +2061,17 @@ static inline void parse_udp(packet_parser_t *prs,
 	if (odp_unlikely(udplen < sizeof(_odp_udphdr_t)))
 		prs->error_flags.udp_err = 1;
 
+	if (odp_cpu_to_be_16(_ODP_UDP_IPSEC_PORT) == udp->dst_port &&
+	    udplen > 4) {
+		uint32_t val;
+
+		memcpy(&val, udp + 1, 4);
+		if (val != 0) {
+			prs->input_flags.ipsec = 1;
+			prs->input_flags.ipsec_udp = 1;
+		}
+	}
+
 	if (offset)
 		*offset   += sizeof(_odp_udphdr_t);
 	*parseptr += sizeof(_odp_udphdr_t);
