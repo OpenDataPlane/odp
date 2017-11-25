@@ -235,6 +235,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	ipsec_sa->copy_dscp = param->opt.copy_dscp;
 	ipsec_sa->copy_df = param->opt.copy_df;
 	ipsec_sa->copy_flabel = param->opt.copy_flabel;
+	ipsec_sa->udp_encap = param->opt.udp_encap;
 
 	odp_atomic_store_u64(&ipsec_sa->bytes, 0);
 	odp_atomic_store_u64(&ipsec_sa->packets, 0);
