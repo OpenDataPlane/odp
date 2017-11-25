@@ -151,6 +151,7 @@ typedef union {
 
 		uint64_t l3_chksum_done:1; /**< L3 checksum validation done */
 		uint64_t l4_chksum_done:1; /**< L4 checksum validation done */
+		uint64_t ipsec_udp:1; /**< UDP-encapsulated IPsec packet */
 	};
 
 } _odp_packet_input_flags_t;
