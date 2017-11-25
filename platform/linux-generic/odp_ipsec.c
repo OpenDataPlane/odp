@@ -18,6 +18,7 @@
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 #include <protocols/ipsec.h>
+#include <protocols/udp.h>
 
 #include <string.h>
 
@@ -378,8 +379,28 @@ static int ipsec_in_esp(odp_packet_t *pkt,
 	_odp_esphdr_t esp;
 	uint16_t ipsec_offset;
 	ipsec_sa_t *ipsec_sa;
+	odp_bool_t udp_encap = false;
 
 	ipsec_offset = state->ip_offset + state->ip_hdr_len;
+
+	if (_ODP_IPPROTO_UDP == state->ip_next_hdr) {
+		_odp_udphdr_t udp;
+		uint16_t ip_data_len = state->ip_tot_len -
+				       state->ip_hdr_len;
+
+		odp_packet_copy_to_mem(*pkt, ipsec_offset,
+				       _ODP_UDPHDR_LEN, &udp);
+
+		if (udp.dst_port != odp_cpu_to_be_16(_ODP_UDP_IPSEC_PORT) ||
+		    udp.length != odp_cpu_to_be_16(ip_data_len)) {
+			status->error.proto = 1;
+			return -1;
+		}
+
+		ipsec_offset += _ODP_UDPHDR_LEN;
+		state->ip_hdr_len += _ODP_UDPHDR_LEN;
+		udp_encap = true;
+	}
 
 	if (odp_packet_copy_to_mem(*pkt, ipsec_offset,
 				   sizeof(esp), &esp) < 0) {
@@ -395,6 +416,11 @@ static int ipsec_in_esp(odp_packet_t *pkt,
 	*_ipsec_sa = ipsec_sa;
 	if (status->error.all)
 		return -1;
+
+	if (!!ipsec_sa->udp_encap != udp_encap) {
+		status->error.proto = 1;
+		return -1;
+	}
 
 	if (ipsec_in_iv(*pkt, state, ipsec_sa,
 			ipsec_offset + _ODP_ESPHDR_LEN) < 0) {
@@ -445,6 +471,11 @@ static int ipsec_in_esp_post(odp_packet_t pkt,
 	    _odp_packet_cmp_data(pkt, esptrl_offset - esptrl.pad_len,
 				 ipsec_padding, esptrl.pad_len) != 0)
 		return -1;
+
+	if (udp_encap) {
+		state->ip_hdr_len -= _ODP_UDPHDR_LEN;
+		state->in.hdr_len += _ODP_UDPHDR_LEN;
+	}
 
 	odp_packet_copy_from_mem(pkt, state->ip_next_hdr_offset,
 				 1, &esptrl.next_header);
@@ -603,7 +634,8 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	}
 
 	/* Check IP header for IPSec protocols and look it up */
-	if (_ODP_IPPROTO_ESP == state.ip_next_hdr) {
+	if (_ODP_IPPROTO_ESP == state.ip_next_hdr ||
+	    _ODP_IPPROTO_UDP == state.ip_next_hdr) {
 		rc = ipsec_in_esp(&pkt, &state, &ipsec_sa, sa, &param, status);
 	} else if (_ODP_IPPROTO_AH == state.ip_next_hdr) {
 		rc = ipsec_in_ah(&pkt, &state, &ipsec_sa, sa, &param, status);
@@ -962,6 +994,7 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 {
 	_odp_esphdr_t esp;
 	_odp_esptrl_t esptrl;
+	_odp_udphdr_t udphdr;
 	uint32_t encrypt_len;
 	uint16_t ip_data_len = state->ip_tot_len -
 			       state->ip_hdr_len;
@@ -982,6 +1015,16 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 	trl_len = encrypt_len -
 		       ip_data_len +
 		       ipsec_sa->icv_len;
+
+	if (ipsec_sa->udp_encap) {
+		hdr_len += _ODP_UDPHDR_LEN;
+		proto = _ODP_IPPROTO_UDP;
+		udphdr.src_port = odp_cpu_to_be_16(_ODP_UDP_IPSEC_PORT);
+		udphdr.dst_port = odp_cpu_to_be_16(_ODP_UDP_IPSEC_PORT);
+		udphdr.length = odp_cpu_to_be_16(ip_data_len +
+						 hdr_len + trl_len);
+		udphdr.chksum = 0; /* should be 0 by RFC */
+	}
 
 	if (ipsec_out_iv(state, ipsec_sa) < 0) {
 		status->error.alg = 1;
@@ -1029,6 +1072,14 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 				 hdr_len +
 				 encrypt_len -
 				 _ODP_ESPTRL_LEN;
+
+	if (ipsec_sa->udp_encap) {
+		odp_packet_copy_from_mem(*pkt, ipsec_offset, _ODP_UDPHDR_LEN,
+					 &udphdr);
+		ipsec_offset += _ODP_UDPHDR_LEN;
+		hdr_len -= _ODP_UDPHDR_LEN;
+		state->ip_hdr_len += _ODP_UDPHDR_LEN;
+	}
 
 	odp_packet_copy_from_mem(*pkt,
 				 ipsec_offset, _ODP_ESPHDR_LEN,

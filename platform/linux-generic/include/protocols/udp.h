@@ -38,6 +38,8 @@ typedef struct ODP_PACKED {
 ODP_STATIC_ASSERT(sizeof(_odp_udphdr_t) == _ODP_UDPHDR_LEN,
 		  "_ODP_UDPHDR_T__SIZE_ERROR");
 
+#define _ODP_UDP_IPSEC_PORT 4500
+
 /**
  * @}
  */

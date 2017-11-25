@@ -131,6 +131,7 @@ struct ipsec_sa_s {
 			unsigned	copy_df : 1;
 			unsigned	copy_flabel : 1;
 			unsigned	aes_ctr_iv : 1;
+			unsigned	udp_encap : 1;
 
 			/* Only for outbound */
 			unsigned	use_counter_iv : 1;
