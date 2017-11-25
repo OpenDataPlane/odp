@@ -472,7 +472,7 @@ static int ipsec_in_esp_post(odp_packet_t pkt,
 				 ipsec_padding, esptrl.pad_len) != 0)
 		return -1;
 
-	if (udp_encap) {
+	if (_ODP_IPPROTO_UDP == state->ip_next_hdr) {
 		state->ip_hdr_len -= _ODP_UDPHDR_LEN;
 		state->in.hdr_len += _ODP_UDPHDR_LEN;
 	}
