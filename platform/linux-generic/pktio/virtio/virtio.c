@@ -23,9 +23,14 @@
 #include <odp/api/hints.h>
 
 #include <drv_pci_internal.h>
-#include <odp_pktio_ops_virtio.h>
 
 #include "virtio_pci.h"
+
+typedef struct {
+	struct pci_dev_t *pci_dev;
+	int dev_id;
+	char name[32]; /**< Unique identifier name */
+} pktio_ops_virtio_data_t;
 
 #define PCI_PKTIO_PREFIX "pci:"
 #define PCI_PKTIO_PREFIX_LEN (sizeof(PCI_PKTIO_PREFIX) - 1)
