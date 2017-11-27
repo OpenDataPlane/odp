@@ -50,6 +50,10 @@ static int virtio_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	if (strncmp(devname, PCI_PKTIO_PREFIX, PCI_PKTIO_PREFIX_LEN))
 		return -1;
 
+	virtio_entry = ODP_OPS_DATA_ALLOC(sizeof(*virtio_entry));
+	if (virtio_entry == NULL)
+		return -2;
+
 	pci_device = devname + PCI_PKTIO_PREFIX_LEN;
 
 	ODP_PRINT("virtio_open: %s\n", pci_device);
@@ -58,27 +62,39 @@ static int virtio_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	if (pci_dev == NULL) {
 		ODP_ERR("pci: could not open PCI device %s as a VirtIO device\n",
 			pci_device);
+		ODP_OPS_DATA_FREE(virtio_entry);
 		return -1;
 	}
 
 	if (virtio_pci_init(pci_dev)) {
 		ODP_ERR("virtio: Could not open device %s\n", devname);
 		pci_close_device(pci_dev);
+		ODP_OPS_DATA_FREE(virtio_entry);
 		return -1;
 	}
 
-	virtio_entry = odp_ops_data(pktio_entry, virtio);
 	memset(virtio_entry, 0, sizeof(pktio_ops_virtio_data_t));
 	snprintf(virtio_entry->name, sizeof(virtio_entry->name),
 		 "virtio_%u", dev_id++);
+	virtio_entry->pci_dev = pci_dev;
+
+	pktio_entry->s.ops_data = virtio_entry;
 
 	ODP_PRINT("virtio: opened %s\n", virtio_entry->name);
 
 	return 0;
 }
 
-static int virtio_close(pktio_entry_t *pktio_entry ODP_UNUSED)
+static int virtio_close(pktio_entry_t *pktio_entry)
 {
+	pktio_ops_virtio_data_t *virtio_entry = pktio_entry->s.ops_data;
+
+	if (virtio_entry == NULL)
+		return 0;
+
+	pci_close_device(virtio_entry->pci_dev);
+	ODP_OPS_DATA_FREE(virtio_entry);
+
 	return 0;
 }
 
