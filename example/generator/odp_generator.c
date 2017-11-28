@@ -544,6 +544,10 @@ static int create_pktio(const char *dev, odp_pool_t pool,
 		itf->config.pktin.bit.drop_udp_err =
 			capa.config.pktin.bit.drop_udp_err;
 
+		itf->config.pktout.bit.ipv4_chksum_ena =
+			capa.config.pktout.bit.ipv4_chksum_ena;
+		itf->config.pktout.bit.udp_chksum_ena =
+			capa.config.pktout.bit.udp_chksum_ena;
 		itf->config.pktout.bit.ipv4_chksum =
 			capa.config.pktout.bit.ipv4_chksum;
 		itf->config.pktout.bit.udp_chksum =
@@ -551,6 +555,8 @@ static int create_pktio(const char *dev, odp_pool_t pool,
 	} else { /* explicit disable */
 		itf->config.pktin.bit.ipv4_chksum = 0;
 		itf->config.pktin.bit.udp_chksum = 0;
+		itf->config.pktout.bit.ipv4_chksum_ena = 0;
+		itf->config.pktout.bit.udp_chksum_ena = 0;
 		itf->config.pktout.bit.ipv4_chksum = 0;
 		itf->config.pktout.bit.udp_chksum = 0;
 	}
