@@ -260,6 +260,12 @@ typedef struct odp_ipsec_capability_t {
 	/** IP Authenticated Header (ODP_IPSEC_AH) support */
 	odp_support_t proto_ah;
 
+	/** Fragment after IPsec support */
+	odp_support_t frag_after;
+
+	/** Fragment before IPsec support */
+	odp_support_t frag_before;
+
 	/**
 	 * Support of pipelined classification (ODP_IPSEC_PIPELINE_CLS) of
 	 *  resulting inbound packets
