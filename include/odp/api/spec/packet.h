@@ -1543,7 +1543,7 @@ odp_packet_chksum_status_t odp_packet_l4_chksum_status(odp_packet_t pkt);
  *
  * Calling this function is always allowed but the checksum will not be
  * inserted if the packet is output through a pktio that does not have
- * the relevant pktout chksum bit set in the pktio capability.
+ * the relevant checksum insertion enabled.
  *
  * @param pkt     Packet handle
  * @param insert  0: do not insert L3 checksum
@@ -1560,7 +1560,7 @@ void odp_packet_l3_chksum_insert(odp_packet_t pkt, int insert);
  *
  * Calling this function is always allowed but the checksum will not be
  * inserted if the packet is output through a pktio that does not have
- * the relevant pktout chksum bit set in the pktio capability.
+ * the relevant checksum insertion enabled.
  *
  * @param pkt     Packet handle
  * @param insert  0: do not insert L4 checksum

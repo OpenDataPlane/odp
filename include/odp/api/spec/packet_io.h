@@ -329,15 +329,29 @@ typedef union odp_pktin_config_opt_t {
  * Packet output configuration options bit field
  *
  * Packet output configuration options listed in a bit field structure. Packet
- * output checksum insertion may be enabled or disabled. When it is enabled,
- * implementation will calculate and insert checksum into every outgoing packet
- * by default. Application may disable checksum insertion (e.g.
- * odp_packet_l4_chksum_insert()) on per packet basis. For correct operation,
- * packet metadata must provide valid offsets for the appropriate protocols.
- * For example, UDP checksum calculation needs both L3 and L4 offsets (to access
- * IP and UDP headers). When application (e.g. a switch) does not modify L3/L4
- * data and thus checksum does not need to be updated, output checksum insertion
- * should be disabled for optimal performance.
+ * output checksum insertion may be enabled or disabled (e.g. ipv4_chksum_ena):
+ *
+ *  0: Disable checksum insertion. Application will not request checksum
+ *     insertion for any packet. This is the default value for xxx_chksum_ena
+ *     bits.
+ *  1: Enable checksum insertion. Application will request checksum insertion
+ *     for some packets.
+ *
+ * When checksum insertion is enabled, application may use configuration options
+ * to set the default behaviour on packet output (e.g. ipv4_chksum):
+ *
+ *  0: Do not insert checksum by default. This is the default value for
+ *     xxx_chksum bits.
+ *  1: Calculate and insert checksum by default.
+ *
+ * These defaults may be overridden on per packet basis using e.g.
+ * odp_packet_l4_chksum_insert().
+ *
+ * For correct operation, packet metadata must provide valid offsets for the
+ * appropriate protocols. For example, UDP checksum calculation needs both L3
+ * and L4 offsets (to access IP and UDP headers). When application
+ * (e.g. a switch) does not modify L3/L4 data and thus checksum does not need
+ * to be updated, checksum insertion should be disabled for optimal performance.
  *
  * Packet flags (odp_packet_has_*()) are ignored for the purpose of checksum
  * insertion in packet output.
@@ -354,19 +368,31 @@ typedef union odp_pktin_config_opt_t {
  * insertion.
  */
 typedef union odp_pktout_config_opt_t {
-	/** Option flags */
+	/** Option flags for packet output */
 	struct {
-		/** Insert IPv4 header checksum on packet output */
-		uint64_t ipv4_chksum  : 1;
+		/** Enable IPv4 header checksum insertion. */
+		uint64_t ipv4_chksum_ena : 1;
 
-		/** Insert UDP checksum on packet output */
-		uint64_t udp_chksum   : 1;
+		/** Enable UDP checksum insertion */
+		uint64_t udp_chksum_ena  : 1;
 
-		/** Insert TCP checksum on packet output */
-		uint64_t tcp_chksum   : 1;
+		/** Enable TCP checksum insertion */
+		uint64_t tcp_chksum_ena  : 1;
 
-		/** Insert SCTP checksum on packet output */
-		uint64_t sctp_chksum  : 1;
+		/** Enable SCTP checksum insertion */
+		uint64_t sctp_chksum_ena : 1;
+
+		/** Insert IPv4 header checksum by default */
+		uint64_t ipv4_chksum     : 1;
+
+		/** Insert UDP checksum on packet by default */
+		uint64_t udp_chksum      : 1;
+
+		/** Insert TCP checksum on packet by default */
+		uint64_t tcp_chksum      : 1;
+
+		/** Insert SCTP checksum on packet by default */
+		uint64_t sctp_chksum     : 1;
 
 	} bit;
 
