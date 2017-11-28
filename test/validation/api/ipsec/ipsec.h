@@ -45,6 +45,8 @@ typedef struct {
 typedef struct {
 	const ipsec_test_packet *pkt_in;
 	odp_bool_t lookup;
+	int num_opt;
+	odp_ipsec_out_opt_t opt;
 	int out_pkt;
 	struct {
 		odp_ipsec_op_status_t status;
