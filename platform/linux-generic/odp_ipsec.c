@@ -582,7 +582,7 @@ uint32_t ipsec_seq_no(ipsec_sa_t *ipsec_sa)
 static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 				    odp_ipsec_sa_t sa,
 				    odp_packet_t *pkt_out,
-				    odp_ipsec_out_opt_t *opt ODP_UNUSED,
+				    const odp_ipsec_out_opt_t *opt ODP_UNUSED,
 				    odp_ipsec_op_status_t *status)
 {
 	ipsec_sa_t *ipsec_sa = NULL;
@@ -998,7 +998,7 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
 	return in_pkt;
 }
 
-static odp_ipsec_out_opt_t default_opt = {
+static const odp_ipsec_out_opt_t default_opt = {
 	.mode = ODP_IPSEC_FRAG_DISABLED,
 };
 
@@ -1022,7 +1022,7 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
 		odp_ipsec_sa_t sa;
 		ipsec_sa_t *ipsec_sa;
 		odp_ipsec_packet_result_t *result;
-		odp_ipsec_out_opt_t *opt;
+		const odp_ipsec_out_opt_t *opt;
 
 		memset(&status, 0, sizeof(status));
 
@@ -1130,7 +1130,7 @@ int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in,
 		odp_ipsec_sa_t sa;
 		ipsec_sa_t *ipsec_sa;
 		odp_ipsec_packet_result_t *result;
-		odp_ipsec_out_opt_t *opt;
+		const odp_ipsec_out_opt_t *opt;
 		odp_queue_t queue;
 
 		memset(&status, 0, sizeof(status));
@@ -1222,7 +1222,7 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 		odp_ipsec_sa_t sa;
 		ipsec_sa_t *ipsec_sa;
 		odp_ipsec_packet_result_t *result;
-		odp_ipsec_out_opt_t *opt;
+		const odp_ipsec_out_opt_t *opt;
 		uint32_t hdr_len, offset;
 		const void *ptr;
 
