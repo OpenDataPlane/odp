@@ -990,7 +990,8 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 			 ipsec_state_t *state,
 			 ipsec_sa_t *ipsec_sa,
 			 odp_crypto_packet_op_param_t *param,
-			 odp_ipsec_op_status_t *status)
+			 odp_ipsec_op_status_t *status,
+			 uint32_t mtu)
 {
 	_odp_esphdr_t esp;
 	_odp_esptrl_t esptrl;
@@ -1024,6 +1025,11 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 		udphdr.length = odp_cpu_to_be_16(ip_data_len +
 						 hdr_len + trl_len);
 		udphdr.chksum = 0; /* should be 0 by RFC */
+	}
+
+	if (state->ip_tot_len + hdr_len + trl_len > mtu) {
+		status->error.mtu = 1;
+		return -1;
 	}
 
 	if (ipsec_out_iv(state, ipsec_sa) < 0) {
@@ -1124,13 +1130,19 @@ static int ipsec_out_ah(odp_packet_t *pkt,
 			ipsec_state_t *state,
 			ipsec_sa_t *ipsec_sa,
 			odp_crypto_packet_op_param_t *param,
-			odp_ipsec_op_status_t *status)
+			odp_ipsec_op_status_t *status,
+			uint32_t mtu)
 {
 	_odp_ahhdr_t ah;
 	unsigned hdr_len = _ODP_AHHDR_LEN + ipsec_sa->esp_iv_len +
 		ipsec_sa->icv_len;
 	uint16_t ipsec_offset = state->ip_offset + state->ip_hdr_len;
 	uint8_t proto = _ODP_IPPROTO_AH;
+
+	if (state->ip_tot_len + hdr_len > mtu) {
+		status->error.mtu = 1;
+		return -1;
+	}
 
 	memset(&ah, 0, sizeof(ah));
 	ah.spi = odp_cpu_to_be_32(ipsec_sa->spi);
@@ -1228,7 +1240,7 @@ static void ipsec_out_ah_post(ipsec_state_t *state, odp_packet_t pkt)
 static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 				    odp_ipsec_sa_t sa,
 				    odp_packet_t *pkt_out,
-				    const odp_ipsec_out_opt_t *opt ODP_UNUSED,
+				    const odp_ipsec_out_opt_t *opt,
 				    odp_ipsec_op_status_t *status)
 {
 	ipsec_state_t state;
@@ -1237,6 +1249,7 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	int rc;
 	odp_crypto_packet_result_t crypto; /**< Crypto operation result */
 	odp_packet_hdr_t *pkt_hdr;
+	uint32_t mtu;
 
 	state.ip_offset = odp_packet_l3_offset(pkt);
 	ODP_ASSERT(ODP_PACKET_OFFSET_INVALID != state.ip_offset);
@@ -1246,6 +1259,12 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 
 	ipsec_sa = _odp_ipsec_sa_use(sa);
 	ODP_ASSERT(NULL != ipsec_sa);
+
+	if ((opt && opt->mode == ODP_IPSEC_FRAG_CHECK) ||
+	    (!opt && ipsec_sa->out.frag_mode == ODP_IPSEC_FRAG_CHECK))
+		mtu = ipsec_sa->out.mtu;
+	else
+		mtu = UINT32_MAX;
 
 	/* Initialize parameters block */
 	memset(&param, 0, sizeof(param));
@@ -1281,9 +1300,9 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	}
 
 	if (ODP_IPSEC_ESP == ipsec_sa->proto) {
-		rc = ipsec_out_esp(&pkt, &state, ipsec_sa, &param, status);
+		rc = ipsec_out_esp(&pkt, &state, ipsec_sa, &param, status, mtu);
 	} else if (ODP_IPSEC_AH == ipsec_sa->proto) {
-		rc = ipsec_out_ah(&pkt, &state, ipsec_sa, &param, status);
+		rc = ipsec_out_ah(&pkt, &state, ipsec_sa, &param, status, mtu);
 	} else {
 		status->error.alg = 1;
 		goto err;
@@ -1401,10 +1420,6 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
 	return in_pkt;
 }
 
-static const odp_ipsec_out_opt_t default_opt = {
-	.mode = ODP_IPSEC_FRAG_DISABLED,
-};
-
 int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
 		  odp_packet_t pkt_out[], int *num_out,
 		  const odp_ipsec_out_param_t *param)
@@ -1433,7 +1448,7 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
 		ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 
 		if (0 == param->num_opt)
-			opt = &default_opt;
+			opt = NULL;
 		else
 			opt = &param->opt[opt_idx];
 
@@ -1540,7 +1555,7 @@ int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in,
 		ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 
 		if (0 == param->num_opt)
-			opt = &default_opt;
+			opt = NULL;
 		else
 			opt = &param->opt[opt_idx];
 
@@ -1635,7 +1650,7 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 		}
 
 		if (0 == param->num_opt)
-			opt = &default_opt;
+			opt = NULL;
 		else
 			opt = &param->opt[opt_idx];
 
