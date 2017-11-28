@@ -1027,13 +1027,13 @@ typedef struct odp_ipsec_out_param_t {
 	int num_opt;
 
 	/** Pointer to an array of IPSEC SAs */
-	odp_ipsec_sa_t *sa;
+	const odp_ipsec_sa_t *sa;
 
 	/** Pointer to an array of outbound operation options
 	 *
 	 *  May be NULL when num_opt is zero.
 	 */
-	odp_ipsec_out_opt_t *opt;
+	const odp_ipsec_out_opt_t *opt;
 
 } odp_ipsec_out_param_t;
 
@@ -1061,7 +1061,7 @@ typedef struct odp_ipsec_in_param_t {
 	 *
 	 *  May be NULL when num_sa is zero.
 	 */
-	odp_ipsec_sa_t *sa;
+	const odp_ipsec_sa_t *sa;
 
 } odp_ipsec_in_param_t;
 
