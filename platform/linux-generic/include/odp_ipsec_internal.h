@@ -156,6 +156,8 @@ struct ipsec_sa_s {
 		struct {
 			odp_atomic_u64_t counter; /* for CTR/GCM */
 			odp_atomic_u32_t seq;
+			odp_ipsec_frag_mode_t frag_mode;
+			uint32_t mtu;
 
 			union {
 			struct {
