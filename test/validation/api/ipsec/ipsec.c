@@ -556,8 +556,8 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 	memset(&param, 0, sizeof(param));
 	param.num_sa = 1;
 	param.sa = &sa;
-	param.num_opt = 0;
-	param.opt = NULL;
+	param.num_opt = part->num_opt;
+	param.opt = &part->opt;
 
 	if (ODP_IPSEC_OP_MODE_SYNC == suite_context.outbound_op_mode) {
 		CU_ASSERT_EQUAL(part->out_pkt, odp_ipsec_out(&pkt, 1,
