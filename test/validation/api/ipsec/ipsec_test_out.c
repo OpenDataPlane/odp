@@ -500,6 +500,192 @@ static void test_out_ipv4_esp_null_aes_gmac_128(void)
 	ipsec_sa_destroy(sa);
 }
 
+static void test_out_ipv4_ah_sha256_frag_check(void)
+{
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    false, true, 123, NULL,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+	param.outbound.frag_mode = ODP_IPSEC_FRAG_CHECK;
+	param.outbound.mtu = 100;
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_icmp_0,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.mtu = 1,
+			  .pkt_out = NULL },
+		},
+	};
+
+	ipsec_test_part test2 = {
+		.pkt_in = &pkt_ipv4_icmp_0,
+		.num_opt = 1,
+		.opt = { .mode = ODP_IPSEC_FRAG_DISABLED, },
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .pkt_out = &pkt_ipv4_icmp_0_ah_sha256_1 },
+		},
+	};
+
+	ipsec_check_out_one(&test, sa);
+
+	ipsec_check_out_one(&test2, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
+static void test_out_ipv4_ah_sha256_frag_check_2(void)
+{
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    false, true, 123, NULL,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+	param.outbound.frag_mode = ODP_IPSEC_FRAG_CHECK;
+	param.outbound.mtu = 100;
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_icmp_0,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.mtu = 1,
+			  .pkt_out = NULL },
+		},
+	};
+
+	ipsec_test_part test2 = {
+		.pkt_in = &pkt_ipv4_icmp_0,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .pkt_out = &pkt_ipv4_icmp_0_ah_sha256_1 },
+		},
+	};
+
+	ipsec_check_out_one(&test, sa);
+
+	odp_ipsec_sa_mtu_update(sa, 256);
+
+	ipsec_check_out_one(&test2, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
+static void test_out_ipv4_esp_null_sha256_frag_check(void)
+{
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    false, false, 123, NULL,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+
+	param.outbound.frag_mode = ODP_IPSEC_FRAG_CHECK;
+	param.outbound.mtu = 100;
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_icmp_0,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.mtu = 1,
+			  .pkt_out = NULL },
+		},
+	};
+
+	ipsec_test_part test2 = {
+		.pkt_in = &pkt_ipv4_icmp_0,
+		.num_opt = 1,
+		.opt = { .mode = ODP_IPSEC_FRAG_DISABLED, },
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .pkt_out = &pkt_ipv4_icmp_0_esp_null_sha256_1 },
+		},
+	};
+
+	ipsec_check_out_one(&test, sa);
+
+	ipsec_check_out_one(&test2, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
+static void test_out_ipv4_esp_null_sha256_frag_check_2(void)
+{
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    false, false, 123, NULL,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+
+	param.outbound.frag_mode = ODP_IPSEC_FRAG_CHECK;
+	param.outbound.mtu = 100;
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_icmp_0,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.mtu = 1,
+			  .pkt_out = NULL },
+		},
+	};
+
+	ipsec_test_part test2 = {
+		.pkt_in = &pkt_ipv4_icmp_0,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .pkt_out = &pkt_ipv4_icmp_0_esp_null_sha256_1 },
+		},
+	};
+
+	ipsec_check_out_one(&test, sa);
+
+	odp_ipsec_sa_mtu_update(sa, 256);
+
+	ipsec_check_out_one(&test2, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
 static void test_out_ipv6_ah_sha256(void)
 {
 	odp_ipsec_sa_param_t param;
@@ -792,6 +978,14 @@ odp_testinfo_t ipsec_out_suite[] = {
 				  ipsec_check_ah_aes_gmac_128),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_aes_gmac_128,
 				  ipsec_check_esp_null_aes_gmac_128),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sha256_frag_check,
+				  ipsec_check_ah_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sha256_frag_check_2,
+				  ipsec_check_ah_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_sha256_frag_check,
+				  ipsec_check_esp_null_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_sha256_frag_check_2,
+				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv6_ah_sha256,
 				  ipsec_check_ah_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv6_ah_sha256_tun_ipv4,
