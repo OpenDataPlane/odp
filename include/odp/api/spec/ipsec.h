@@ -158,33 +158,9 @@ typedef struct odp_ipsec_inbound_config_t {
 	/** Flags to control IPSEC payload data checks up to the selected parse
 	 *  level. Checksum checking status can be queried for each packet with
 	 *  odp_packet_l3_chksum_status() and odp_packet_l4_chksum_status().
+	 *  Default value for all bits is 0 (skip all checksum checks).
 	 */
-	union {
-		/** Mapping for individual bits */
-		struct {
-			/** Check IPv4 header checksum in IPSEC payload.
-			 *  Default value is 0. */
-			uint32_t ipv4_chksum   : 1;
-
-			/** Check UDP checksum in IPSEC payload.
-			 *  Default value is 0. */
-			uint32_t udp_chksum    : 1;
-
-			/** Check TCP checksum in IPSEC payload.
-			 *  Default value is 0. */
-			uint32_t tcp_chksum    : 1;
-
-			/** Check SCTP checksum in IPSEC payload.
-			 *  Default value is 0. */
-			uint32_t sctp_chksum   : 1;
-		} check;
-
-		/** All bits of the bit field structure
-		  *
-		  * This field can be used to set/clear all flags, or bitwise
-		  * operations over the entire structure. */
-		uint32_t all_check;
-	};
+	odp_proto_chksums_t chksums;
 
 } odp_ipsec_inbound_config_t;
 
