@@ -114,7 +114,8 @@ struct pktio_entry {
 	/* These two locks together lock the whole pktio device */
 	odp_ticketlock_t rxl;		/**< RX ticketlock */
 	odp_ticketlock_t txl;		/**< TX ticketlock */
-	int cls_enabled;		/**< is classifier enabled */
+	uint8_t cls_enabled;            /**< classifier enabled */
+	uint8_t chksum_insert_ena;      /**< pktout checksum offload enabled */
 	odp_pktio_t handle;		/**< pktio handle */
 	union {
 		pkt_loop_t pkt_loop;            /**< Using loopback for IO */
