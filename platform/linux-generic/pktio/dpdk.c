@@ -138,6 +138,7 @@ static inline void mbuf_update(struct rte_mbuf *mbuf, odp_packet_hdr_t *pkt_hdr,
 	mbuf->data_len = pkt_len;
 	mbuf->pkt_len = pkt_len;
 	mbuf->refcnt = 1;
+	mbuf->ol_flags = 0;
 
 	if (odp_unlikely(pkt_hdr->buf_hdr.base_data !=
 			 pkt_hdr->buf_hdr.seg[0].data))
@@ -1275,6 +1276,13 @@ static void dpdk_init_capability(pktio_entry_t *pktio_entry,
 		(dev_info->tx_offload_capa & DEV_TX_OFFLOAD_UDP_CKSUM) ? 1 : 0;
 	capa->config.pktout.bit.tcp_chksum =
 		(dev_info->tx_offload_capa & DEV_TX_OFFLOAD_TCP_CKSUM) ? 1 : 0;
+
+	capa->config.pktout.bit.ipv4_chksum_ena =
+		capa->config.pktout.bit.ipv4_chksum;
+	capa->config.pktout.bit.udp_chksum_ena =
+		capa->config.pktout.bit.udp_chksum;
+	capa->config.pktout.bit.tcp_chksum_ena =
+		capa->config.pktout.bit.tcp_chksum;
 }
 
 static int dpdk_open(odp_pktio_t id ODP_UNUSED,
@@ -1410,9 +1418,47 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 	}
 	/* Init TX queues */
 	for (i = 0; i < pktio_entry->s.num_out_queue; i++) {
+		struct rte_eth_dev_info dev_info;
+		const struct rte_eth_txconf *txconf = NULL;
+		int ip_ena  = pktio_entry->s.config.pktout.bit.ipv4_chksum_ena;
+		int udp_ena = pktio_entry->s.config.pktout.bit.udp_chksum_ena;
+		int tcp_ena = pktio_entry->s.config.pktout.bit.tcp_chksum_ena;
+		int sctp_ena = pktio_entry->s.config.pktout.bit.sctp_chksum_ena;
+		int chksum_ena = ip_ena | udp_ena | tcp_ena | sctp_ena;
+
+		if (chksum_ena) {
+			/* Enable UDP, TCP, STCP checksum offload */
+			uint32_t txq_flags = 0;
+
+			if (udp_ena == 0)
+				txq_flags |= ETH_TXQ_FLAGS_NOXSUMUDP;
+
+			if (tcp_ena == 0)
+				txq_flags |= ETH_TXQ_FLAGS_NOXSUMTCP;
+
+			if (sctp_ena == 0)
+				txq_flags |= ETH_TXQ_FLAGS_NOXSUMSCTP;
+
+			/* When IP checksum is requested alone, enable UDP
+			 * offload. DPDK IP checksum offload is enabled only
+			 * when one of the L4 checksum offloads is requested.*/
+			if ((udp_ena == 0) && (tcp_ena == 0) && (sctp_ena == 0))
+				txq_flags = ETH_TXQ_FLAGS_NOXSUMTCP |
+					    ETH_TXQ_FLAGS_NOXSUMSCTP;
+
+			txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS |
+				     ETH_TXQ_FLAGS_NOREFCOUNT |
+				     ETH_TXQ_FLAGS_NOMULTMEMP |
+				     ETH_TXQ_FLAGS_NOVLANOFFL;
+
+			rte_eth_dev_info_get(port_id, &dev_info);
+			dev_info.default_txconf.txq_flags = txq_flags;
+			txconf = &dev_info.default_txconf;
+		}
+
 		ret = rte_eth_tx_queue_setup(port_id, i, DPDK_NM_TX_DESC,
 					     rte_eth_dev_socket_id(port_id),
-					     NULL);
+					     txconf);
 		if (ret < 0) {
 			ODP_ERR("Queue setup failed: err=%d, port=%" PRIu8 "\n",
 				ret, port_id);
