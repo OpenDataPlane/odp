@@ -119,7 +119,8 @@ static void pktio_stop(odp_pktio_t pktio)
 int ipsec_check(odp_bool_t ah,
 		odp_cipher_alg_t cipher,
 		uint32_t cipher_bits,
-		odp_auth_alg_t auth)
+		odp_auth_alg_t auth,
+		uint32_t auth_bits)
 {
 	odp_ipsec_capability_t capa;
 	odp_crypto_cipher_capability_t cipher_capa[MAX_ALG_CAPA];
@@ -220,13 +221,26 @@ int ipsec_check(odp_bool_t ah,
 	}
 
 	if (!found) {
-		fprintf(stderr, "Unsupported key length\n");
+		fprintf(stderr, "Unsupported cipher key length\n");
 		return ODP_TEST_INACTIVE;
 	}
 
+	found = false;
 	num = odp_ipsec_auth_capability(auth, auth_capa, MAX_ALG_CAPA);
 	if (num <= 0) {
 		fprintf(stderr, "Wrong auth capabilities\n");
+		return ODP_TEST_INACTIVE;
+	}
+
+	for (i = 0; i < num; i++) {
+		if (auth_capa[i].key_len == auth_bits / 8) {
+			found = 1;
+			break;
+		}
+	}
+
+	if (!found) {
+		fprintf(stderr, "Unsupported auth key length\n");
 		return ODP_TEST_INACTIVE;
 	}
 
@@ -235,37 +249,37 @@ int ipsec_check(odp_bool_t ah,
 
 int ipsec_check_ah_sha256(void)
 {
-	return ipsec_check_ah(ODP_AUTH_ALG_SHA256_HMAC);
+	return ipsec_check_ah(ODP_AUTH_ALG_SHA256_HMAC, 256);
 }
 
 int ipsec_check_esp_null_sha256(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
-				ODP_AUTH_ALG_SHA256_HMAC);
+				ODP_AUTH_ALG_SHA256_HMAC, 256);
 }
 
 int ipsec_check_esp_aes_cbc_128_null(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_CBC, 128,
-				ODP_AUTH_ALG_NULL);
+				ODP_AUTH_ALG_NULL, 0);
 }
 
 int ipsec_check_esp_aes_cbc_128_sha256(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_CBC, 128,
-				ODP_AUTH_ALG_SHA256_HMAC);
+				ODP_AUTH_ALG_SHA256_HMAC, 256);
 }
 
 int ipsec_check_esp_aes_gcm_128(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_GCM, 128,
-				ODP_AUTH_ALG_AES_GCM);
+				ODP_AUTH_ALG_AES_GCM, 128);
 }
 
 int ipsec_check_esp_aes_gcm_256(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_GCM, 256,
-				ODP_AUTH_ALG_AES_GCM);
+				ODP_AUTH_ALG_AES_GCM, 256);
 }
 
 void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,

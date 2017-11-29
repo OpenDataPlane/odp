@@ -31,6 +31,14 @@
 #define MAX_SESSIONS 2048
 #define NB_MBUF  8192
 
+enum crypto_chain_order {
+	CRYPTO_CHAIN_ONLY_CIPHER,
+	CRYPTO_CHAIN_ONLY_AUTH,
+	CRYPTO_CHAIN_CIPHER_AUTH,
+	CRYPTO_CHAIN_AUTH_CIPHER,
+	CRYPTO_CHAIN_NOT_SUPPORTED
+};
+
 typedef struct crypto_session_entry_s crypto_session_entry_t;
 struct crypto_session_entry_s {
 		struct crypto_session_entry_s *next;
@@ -108,7 +116,8 @@ static int cipher_alg_odp_to_rte(odp_cipher_alg_t cipher_alg,
 }
 
 static int auth_alg_odp_to_rte(odp_auth_alg_t auth_alg,
-			       struct rte_crypto_sym_xform *auth_xform)
+			       struct rte_crypto_sym_xform *auth_xform,
+			       uint32_t auth_digest_len)
 {
 	int rc = 0;
 
@@ -116,35 +125,45 @@ static int auth_alg_odp_to_rte(odp_auth_alg_t auth_alg,
 	switch (auth_alg) {
 	case ODP_AUTH_ALG_NULL:
 		auth_xform->auth.algo = RTE_CRYPTO_AUTH_NULL;
+		auth_xform->auth.digest_length = auth_digest_len;
 		break;
-	case ODP_AUTH_ALG_MD5_HMAC:
 #if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_MD5_96:
-#endif
 		auth_xform->auth.algo = RTE_CRYPTO_AUTH_MD5_HMAC;
 		auth_xform->auth.digest_length = 12;
 		break;
-	case ODP_AUTH_ALG_SHA256_HMAC:
+#endif
+	case ODP_AUTH_ALG_MD5_HMAC:
+		auth_xform->auth.algo = RTE_CRYPTO_AUTH_MD5_HMAC;
+		auth_xform->auth.digest_length = auth_digest_len;
+		break;
 #if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_SHA256_128:
-#endif
 		auth_xform->auth.algo = RTE_CRYPTO_AUTH_SHA256_HMAC;
 		auth_xform->auth.digest_length = 16;
 		break;
+#endif
+	case ODP_AUTH_ALG_SHA256_HMAC:
+		auth_xform->auth.algo = RTE_CRYPTO_AUTH_SHA256_HMAC;
+		auth_xform->auth.digest_length = auth_digest_len;
+		break;
 	case ODP_AUTH_ALG_SHA1_HMAC:
 		auth_xform->auth.algo = RTE_CRYPTO_AUTH_SHA1_HMAC;
-		auth_xform->auth.digest_length = 20;
+		auth_xform->auth.digest_length = auth_digest_len;
 		break;
 	case ODP_AUTH_ALG_SHA512_HMAC:
 		auth_xform->auth.algo = RTE_CRYPTO_AUTH_SHA512_HMAC;
-		auth_xform->auth.digest_length = 64;
+		auth_xform->auth.digest_length = auth_digest_len;
 		break;
-	case ODP_AUTH_ALG_AES_GCM:
 #if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_AES128_GCM:
-#endif
 		auth_xform->auth.algo = RTE_CRYPTO_AUTH_AES_GCM;
 		auth_xform->auth.digest_length = 16;
+		break;
+#endif
+	case ODP_AUTH_ALG_AES_GCM:
+		auth_xform->auth.algo = RTE_CRYPTO_AUTH_AES_GCM;
+		auth_xform->auth.digest_length = auth_digest_len;
 		break;
 	default:
 		rc = -1;
@@ -538,9 +557,9 @@ int odp_crypto_cipher_capability(odp_cipher_alg_t cipher,
 		i = 0;
 		cap = &dev_info.capabilities[i];
 		while (cap->op != RTE_CRYPTO_OP_TYPE_UNDEFINED) {
-			cap_cipher_algo = cap->sym.cipher.algo;
 			if (cap->sym.xform_type ==
 			    RTE_CRYPTO_SYM_XFORM_CIPHER) {
+				cap_cipher_algo = cap->sym.cipher.algo;
 				if (cap_cipher_algo == cipher_xform.cipher.algo)
 						break;
 			}
@@ -594,7 +613,7 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 	enum rte_crypto_auth_algorithm cap_auth_algo;
 	struct rte_crypto_sym_xform auth_xform;
 
-	rc = auth_alg_odp_to_rte(auth, &auth_xform);
+	rc = auth_alg_odp_to_rte(auth, &auth_xform, 0);
 
 	/* Check result */
 	if (rc)
@@ -615,7 +634,7 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 		while (cap->op != RTE_CRYPTO_OP_TYPE_UNDEFINED) {
 			cap_auth_algo = cap->sym.auth.algo;
 			if (cap->sym.xform_type ==
-			    RTE_CRYPTO_SYM_XFORM_CIPHER) {
+			    RTE_CRYPTO_SYM_XFORM_AUTH) {
 				if (cap_auth_algo == auth_xform.auth.algo)
 						break;
 			}
@@ -663,16 +682,37 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 	return idx;
 }
 
-static int get_crypto_dev(struct rte_crypto_sym_xform *cipher_xform,
-			  struct rte_crypto_sym_xform *auth_xform,
+static int get_crypto_dev(struct rte_crypto_sym_xform *first_xform,
+			  enum crypto_chain_order order,
 			  uint16_t iv_length, uint8_t *dev_id)
 {
 	uint8_t cdev_id, id;
 	const struct rte_cryptodev_capabilities *cap;
+	struct rte_crypto_sym_xform *auth_xform = NULL;
+	struct rte_crypto_sym_xform *cipher_xform = NULL;
 	enum rte_crypto_cipher_algorithm cap_cipher_algo;
 	enum rte_crypto_auth_algorithm cap_auth_algo;
 	enum rte_crypto_cipher_algorithm app_cipher_algo;
 	enum rte_crypto_auth_algorithm app_auth_algo;
+
+	switch (order) {
+	case CRYPTO_CHAIN_ONLY_CIPHER:
+		cipher_xform = first_xform;
+		break;
+	case CRYPTO_CHAIN_ONLY_AUTH:
+		auth_xform = first_xform;
+		break;
+	case CRYPTO_CHAIN_CIPHER_AUTH:
+		cipher_xform = first_xform;
+		auth_xform = first_xform->next;
+		break;
+	case CRYPTO_CHAIN_AUTH_CIPHER:
+		auth_xform = first_xform;
+		cipher_xform = first_xform->next;
+		break;
+	default:
+		return -1;
+	}
 
 	for (id = 0; id < global->enabled_crypto_devs; id++) {
 		struct rte_cryptodev_info dev_info;
@@ -680,59 +720,65 @@ static int get_crypto_dev(struct rte_crypto_sym_xform *cipher_xform,
 
 		cdev_id = global->enabled_crypto_dev_ids[id];
 		rte_cryptodev_info_get(cdev_id, &dev_info);
-		app_cipher_algo = cipher_xform->cipher.algo;
 		cap = &dev_info.capabilities[i];
-		while (cap->op != RTE_CRYPTO_OP_TYPE_UNDEFINED) {
-			cap_cipher_algo = cap->sym.cipher.algo;
+		while (cipher_xform && cap->op !=
+			RTE_CRYPTO_OP_TYPE_UNDEFINED) {
 			if (cap->sym.xform_type ==
 			    RTE_CRYPTO_SYM_XFORM_CIPHER) {
+				app_cipher_algo = cipher_xform->cipher.algo;
+				cap_cipher_algo = cap->sym.cipher.algo;
 				if (cap_cipher_algo == app_cipher_algo)
 						break;
 			}
-					cap = &dev_info.capabilities[++i];
+			cap = &dev_info.capabilities[++i];
 		}
 
 		if (cap->op == RTE_CRYPTO_OP_TYPE_UNDEFINED)
 			continue;
 
-		/* Check if key size is supported by the algorithm. */
-		if (cipher_xform->cipher.key.length) {
-			if (is_valid_size(cipher_xform->cipher.key.length,
-					  cap->sym.cipher.key_size.min,
-					  cap->sym.cipher.key_size.max,
-					  cap->sym.cipher.key_size.
-					  increment) != 0) {
-				ODP_ERR("Unsupported cipher key length\n");
-				return -1;
-			}
-		/* No size provided, use minimum size. */
-		} else
-			cipher_xform->cipher.key.length =
-					cap->sym.cipher.key_size.min;
+		if (cipher_xform) {
+			/* Check if key size is supported by the algorithm. */
+			if (cipher_xform->cipher.key.length) {
+				if (is_valid_size(
+						cipher_xform->cipher.key.length,
+						cap->sym.cipher.key_size.min,
+						cap->sym.cipher.key_size.max,
+						cap->sym.cipher.key_size.
+						increment) != 0) {
+					ODP_ERR("Invalid cipher key length\n");
+					return -1;
+				}
+			/* No size provided, use minimum size. */
+			} else
+				cipher_xform->cipher.key.length =
+						cap->sym.cipher.key_size.min;
 
-		/* Check if iv length is supported by the algorithm. */
-		if (iv_length) {
+			/* Check if iv length is supported by the algorithm. */
 			if (is_valid_size(iv_length,
 					  cap->sym.cipher.iv_size.min,
 					  cap->sym.cipher.iv_size.max,
 					  cap->sym.cipher.iv_size.
 					  increment) != 0) {
-				ODP_ERR("Unsupported iv length\n");
+				ODP_ERR("Invalid iv length\n");
 				return -1;
 			}
 		}
 
-		i = 0;
-		app_auth_algo = auth_xform->auth.algo;
-		cap = &dev_info.capabilities[i];
-		while (cap->op != RTE_CRYPTO_OP_TYPE_UNDEFINED) {
-			cap_auth_algo = cap->sym.auth.algo;
-			if ((cap->sym.xform_type ==
-			    RTE_CRYPTO_SYM_XFORM_AUTH) &
-			    (cap_auth_algo == app_auth_algo)) {
-				break;
-			}
+		if (cipher_xform && !auth_xform) {
+			memcpy(dev_id, &cdev_id, sizeof(cdev_id));
+			return 0;
+		}
 
+		i = 0;
+		cap = &dev_info.capabilities[i];
+		while (auth_xform && cap->op != RTE_CRYPTO_OP_TYPE_UNDEFINED) {
+			if ((cap->sym.xform_type ==
+			    RTE_CRYPTO_SYM_XFORM_AUTH)) {
+				app_auth_algo = auth_xform->auth.algo;
+				cap_auth_algo = cap->sym.auth.algo;
+				if (cap_auth_algo == app_auth_algo)
+					break;
+			}
 			cap = &dev_info.capabilities[++i];
 		}
 
@@ -776,6 +822,43 @@ static int get_crypto_dev(struct rte_crypto_sym_xform *cipher_xform,
 	return -1;
 }
 
+static enum crypto_chain_order set_chain_order(
+				      odp_bool_t do_cipher_first,
+				      struct rte_crypto_sym_xform **first_xform,
+				      struct rte_crypto_sym_xform *auth_xform,
+				      struct rte_crypto_sym_xform *cipher_xform)
+{
+	/* Process based on cipher */
+	/* Derive order */
+	if (do_cipher_first) {
+		if (auth_xform->auth.algo != RTE_CRYPTO_AUTH_NULL &&
+		    cipher_xform->cipher.algo != RTE_CRYPTO_CIPHER_NULL) {
+			*first_xform = cipher_xform;
+			(*first_xform)->next = auth_xform;
+			return CRYPTO_CHAIN_CIPHER_AUTH;
+		}
+	} else {
+		if (auth_xform->auth.algo != RTE_CRYPTO_AUTH_NULL &&
+		    cipher_xform->cipher.algo != RTE_CRYPTO_CIPHER_NULL) {
+			*first_xform = auth_xform;
+			(*first_xform)->next = cipher_xform;
+			return CRYPTO_CHAIN_AUTH_CIPHER;
+		}
+	}
+
+	if (auth_xform->auth.algo == RTE_CRYPTO_AUTH_NULL) {
+		*first_xform = cipher_xform;
+		(*first_xform)->next = NULL;
+		 return CRYPTO_CHAIN_ONLY_CIPHER;
+	} else if (cipher_xform->cipher.algo == RTE_CRYPTO_CIPHER_NULL) {
+		*first_xform = auth_xform;
+		(*first_xform)->next = NULL;
+		return CRYPTO_CHAIN_ONLY_AUTH;
+	}
+
+	return CRYPTO_CHAIN_NOT_SUPPORTED;
+}
+
 int odp_crypto_session_create(odp_crypto_session_param_t *param,
 			      odp_crypto_session_t *session_out,
 			      odp_crypto_ses_create_err_t *status)
@@ -784,8 +867,9 @@ int odp_crypto_session_create(odp_crypto_session_param_t *param,
 	uint8_t cdev_id = 0;
 	struct rte_crypto_sym_xform cipher_xform;
 	struct rte_crypto_sym_xform auth_xform;
-	struct rte_crypto_sym_xform *first_xform;
+	struct rte_crypto_sym_xform *first_xform = NULL;
 	struct rte_cryptodev_sym_session *session;
+	enum crypto_chain_order order = CRYPTO_CHAIN_NOT_SUPPORTED;
 	crypto_session_entry_t *entry;
 
 	*session_out = ODP_CRYPTO_SESSION_INVALID;
@@ -810,6 +894,16 @@ int odp_crypto_session_create(odp_crypto_session_param_t *param,
 
 	cipher_xform.type = RTE_CRYPTO_SYM_XFORM_CIPHER;
 	cipher_xform.next = NULL;
+	rc = cipher_alg_odp_to_rte(param->cipher_alg, &cipher_xform);
+
+	/* Check result */
+	if (rc) {
+		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
+		/* remove the crypto_session_entry_t */
+		memset(entry, 0, sizeof(*entry));
+		free_session(entry);
+		return -1;
+	}
 
 	if (param->cipher_key.length) {
 		/* Cipher Data */
@@ -828,12 +922,24 @@ int odp_crypto_session_create(odp_crypto_session_param_t *param,
 		       param->cipher_key.data,
 		       param->cipher_key.length);
 	} else {
-		cipher_xform.cipher.key.data = 0;
 		cipher_xform.cipher.key.length = 0;
+		cipher_xform.cipher.key.data = 0;
 	}
 
 	auth_xform.type = RTE_CRYPTO_SYM_XFORM_AUTH;
 	auth_xform.next = NULL;
+	rc = auth_alg_odp_to_rte(param->auth_alg,
+				 &auth_xform,
+				 param->auth_digest_len);
+
+	/* Check result */
+	if (rc) {
+		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_AUTH;
+		/* remove the crypto_session_entry_t */
+		memset(entry, 0, sizeof(*entry));
+		free_session(entry);
+		return -1;
+	}
 
 	if (param->auth_key.length) {
 		/* Authentication Data */
@@ -857,46 +963,30 @@ int odp_crypto_session_create(odp_crypto_session_param_t *param,
 
 
 	/* Derive order */
-	if (ODP_CRYPTO_OP_ENCODE == param->op)
-		entry->do_cipher_first =  param->auth_cipher_text;
-	else
-		entry->do_cipher_first = !param->auth_cipher_text;
-
-	/* Process based on cipher */
-	/* Derive order */
-	if (entry->do_cipher_first) {
+	if (ODP_CRYPTO_OP_ENCODE == param->op) {
 		cipher_xform.cipher.op = RTE_CRYPTO_CIPHER_OP_ENCRYPT;
 		auth_xform.auth.op = RTE_CRYPTO_AUTH_OP_GENERATE;
-		first_xform = &cipher_xform;
-		first_xform->next = &auth_xform;
+		entry->do_cipher_first =  param->auth_cipher_text;
 	} else {
 		cipher_xform.cipher.op = RTE_CRYPTO_CIPHER_OP_DECRYPT;
 		auth_xform.auth.op = RTE_CRYPTO_AUTH_OP_VERIFY;
-		first_xform = &auth_xform;
-		first_xform->next = &cipher_xform;
+		entry->do_cipher_first = !param->auth_cipher_text;
 	}
 
-	rc = cipher_alg_odp_to_rte(param->cipher_alg, &cipher_xform);
-
-	/* Check result */
-	if (rc) {
-		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
-		return -1;
-	}
-
-	rc = auth_alg_odp_to_rte(param->auth_alg, &auth_xform);
-
-	/* Check result */
-	if (rc) {
-		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_AUTH;
+	order = set_chain_order(entry->do_cipher_first,
+				&first_xform,
+				&auth_xform,
+				&cipher_xform);
+	if (order == CRYPTO_CHAIN_NOT_SUPPORTED) {
+		ODP_ERR("Couldn't set chain order");
 		/* remove the crypto_session_entry_t */
 		memset(entry, 0, sizeof(*entry));
 		free_session(entry);
 		return -1;
 	}
 
-	rc = get_crypto_dev(&cipher_xform,
-			    &auth_xform,
+	rc = get_crypto_dev(first_xform,
+			    order,
 			    param->iv.length,
 			    &cdev_id);
 
@@ -1269,15 +1359,13 @@ int odp_crypto_int(odp_packet_t pkt_in,
 		op->sym->auth.aad.length = aad_len;
 	}
 
-	if (entry->iv.length == 0) {
-		ODP_ERR("Wrong IV length");
-		goto err_op_free;
-	}
 
-	op->sym->cipher.iv.data = rte_malloc("iv", entry->iv.length, 0);
-	if (op->sym->cipher.iv.data == NULL) {
-		ODP_ERR("Failed to allocate memory for IV");
-		goto err_op_free;
+	if (entry->iv.length) {
+		op->sym->cipher.iv.data = rte_malloc("iv", entry->iv.length, 0);
+		if (op->sym->cipher.iv.data == NULL) {
+			ODP_ERR("Failed to allocate memory for IV");
+			goto err_op_free;
+		}
 	}
 
 	if (param->override_iv_ptr) {

@@ -303,6 +303,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	case ODP_CIPHER_ALG_3DES_CBC:
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 8;
+		crypto_param.iv.length = 8;
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_CBC:
@@ -310,6 +311,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	case ODP_CIPHER_ALG_AES_CBC:
 		ipsec_sa->esp_iv_len = 16;
 		ipsec_sa->esp_block_len = 16;
+		crypto_param.iv.length = 16;
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_GCM:
