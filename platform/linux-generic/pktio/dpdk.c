@@ -561,6 +561,9 @@ static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
 	odp_bool_t ipv4_chksum_pkt, udp_chksum_pkt, tcp_chksum_pkt;
 	packet_parser_t *pkt_p = &pkt_hdr->p;
 
+	if (pkt_p->l3_offset == ODP_PACKET_OFFSET_INVALID)
+		return;
+
 	l3_hdr = (void *)(mbuf_data + pkt_p->l3_offset);
 
 	if (check_proto(l3_hdr, &l3_proto_v4, &l4_proto))
@@ -648,7 +651,7 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 
 		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
 
-		if (pkt_hdr->p.l3_offset != ODP_PACKET_OFFSET_INVALID) {
+		if (odp_unlikely(pktio_entry->s.chksum_insert_ena)) {
 			odp_pktout_config_opt_t *pktout_capa =
 			&pktio_entry->s.capa.config.pktout;
 
@@ -763,7 +766,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 			       pkt_hdr->extra_type == PKT_EXTRA_TYPE_DPDK)) {
 			mbuf_update(mbuf, pkt_hdr, pkt_len);
 
-			if (pkt_hdr->p.l3_offset != ODP_PACKET_OFFSET_INVALID)
+			if (odp_unlikely(pktio_entry->s.chksum_insert_ena))
 				pkt_set_ol_tx(pktout_cfg, pktout_capa, pkt_hdr,
 					      mbuf, _odp_packet_data(pkt));
 		} else {
@@ -786,8 +789,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 				mbuf_init((struct rte_mempool *)
 					  pool_entry->ext_desc, mbuf, pkt_hdr);
 				mbuf_update(mbuf, pkt_hdr, pkt_len);
-				if (pkt_hdr->p.l3_offset !=
-				    ODP_PACKET_OFFSET_INVALID)
+				if (pktio_entry->s.chksum_insert_ena)
 					pkt_set_ol_tx(pktout_cfg, pktout_capa,
 						      pkt_hdr, mbuf,
 						      _odp_packet_data(pkt));
@@ -1454,6 +1456,7 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 			rte_eth_dev_info_get(port_id, &dev_info);
 			dev_info.default_txconf.txq_flags = txq_flags;
 			txconf = &dev_info.default_txconf;
+			pktio_entry->s.chksum_insert_ena = 1;
 		}
 
 		ret = rte_eth_tx_queue_setup(port_id, i, DPDK_NM_TX_DESC,
