@@ -1,6 +1,7 @@
 #!/bin/bash
 
-export ODP_PLATFORM_PARAMS=${ODP_PLATFORM_PARAMS:--n 4 --vdev "crypto_openssl"}
+export ODP_PLATFORM_PARAMS=${ODP_PLATFORM_PARAMS:--n 4 "--vdev \
+"crypto_openssl" --vdev "crypto_null""}
 # where to mount huge pages
 export HUGEPAGEDIR=${HUGEPAGEDIR:-/mnt/huge}
 
