@@ -1179,6 +1179,31 @@ int odp_packet_move_data(odp_packet_t pkt, uint32_t dst_offset,
  */
 
 /**
+ * Flags to control packet data checksum checking
+ */
+typedef union odp_proto_chksums_t {
+	/** Individual checksum bits. */
+	struct {
+		/** IPv4 header checksum */
+		uint32_t ipv4   : 1;
+
+		/** UDP checksum */
+		uint32_t udp    : 1;
+
+		/** TCP checksum */
+		uint32_t tcp    : 1;
+
+		/** SCTP checksum */
+		uint32_t sctp   : 1;
+
+	} chksum;
+
+	/** All checksum bits. This can be used to set/clear all flags. */
+	uint32_t all_chksum;
+
+} odp_proto_chksums_t;
+
+/**
  * Packet parse parameters
  */
 typedef struct odp_packet_parse_param_t {
@@ -1190,30 +1215,12 @@ typedef struct odp_packet_parse_param_t {
 	 *  layer than the layer of 'proto'. */
 	odp_proto_layer_t layer;
 
-	/** Flags to control payload data checks up to the selected parse
-	 *  layer. Checksum checking status can be queried for each packet with
-	 *  odp_packet_l3_chksum_status() and odp_packet_l4_chksum_status().
+	/** Flags to control payload data checksums checks up to the selected
+	 *  parse layer. Checksum checking status can be queried for each packet
+	 *  with odp_packet_l3_chksum_status() and
+	 *  odp_packet_l4_chksum_status().
 	 */
-	union {
-		/** Individual check bits. */
-		struct {
-			/** Check IPv4 header checksum */
-			uint32_t ipv4_chksum   : 1;
-
-			/** Check UDP checksum */
-			uint32_t udp_chksum    : 1;
-
-			/** Check TCP checksum */
-			uint32_t tcp_chksum    : 1;
-
-			/** Check SCTP checksum */
-			uint32_t sctp_chksum   : 1;
-
-		} check;
-
-		/** All check bits. This can be used to set/clear all flags. */
-		uint32_t all_check;
-	};
+	odp_proto_chksums_t chksums;
 
 } odp_packet_parse_param_t;
 
