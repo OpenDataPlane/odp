@@ -21,8 +21,6 @@ extern "C" {
 
 odp_event_type_t _odp_buffer_event_type(odp_buffer_t buf);
 void _odp_buffer_event_type_set(odp_buffer_t buf, int ev);
-odp_event_subtype_t _odp_buffer_event_subtype(odp_buffer_t buf);
-void _odp_buffer_event_subtype_set(odp_buffer_t buf, int ev);
 int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf);
 
 static inline odp_buffer_t buf_from_buf_hdr(odp_buffer_hdr_t *hdr)
