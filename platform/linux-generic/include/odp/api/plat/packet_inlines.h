@@ -159,18 +159,5 @@ static inline odp_buffer_t packet_to_buffer(odp_packet_t pkt)
 
 /* Include inlined versions of API functions */
 #include <odp/api/plat/static_inline.h>
-#if ODP_ABI_COMPAT == 0
-
-/** @ingroup odp_packet
- *  @{
- */
-
-#include <odp/api/plat/packet_inlines_api.h>
-
-/**
- * @}
- */
-
-#endif
 
 #endif

@@ -70,20 +70,4 @@ static inline int _odp_packet_has_ts(odp_packet_t pkt)
 	return flags.timestamp;
 }
 
-/* Include inlined versions of API functions */
-#include <odp/api/plat/static_inline.h>
-#if ODP_ABI_COMPAT == 0
-
-/** @ingroup odp_packet
- *  @{
- */
-
-#include <odp/api/plat/packet_flag_inlines_api.h>
-
-/**
- * @}
- */
-
-#endif
-
 #endif
