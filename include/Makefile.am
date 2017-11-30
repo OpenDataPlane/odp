@@ -71,6 +71,7 @@ odpdrvspecinclude_HEADERS = \
 subsystemspecincludedir= $(includedir)/subsystem/spec
 subsystemspecinclude_HEADERS = \
 		  subsystem/spec/buffer_subsystem.h \
+		  subsystem/spec/packet_subsystem.h \
 		  subsystem/spec/pool_subsystem.h \
 		  subsystem/spec/queue_subsystem.h \
 		  subsystem/spec/schedule_subsystem.h

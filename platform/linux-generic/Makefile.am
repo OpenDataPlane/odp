@@ -243,6 +243,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_packet_flags.c \
 			   odp_packet_io.c \
 			   odp_packet_io_pool.c \
+			   packet/subsystem.c \
 			   pktio/ethtool.c \
 			   pktio/subsystem.c \
 			   pktio/ipc.c \
