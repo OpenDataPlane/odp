@@ -104,12 +104,6 @@ struct odp_buffer_hdr_t {
 	/* User area pointer */
 	void    *uarea_addr;
 
-	/* User area size */
-	uint32_t uarea_size;
-
-	/* Max data size */
-	uint32_t size;
-
 	/* Event subtype. Should be ODP_EVENT_NO_SUBTYPE except packets. */
 	int8_t    event_subtype;
 
