@@ -132,6 +132,9 @@ typedef struct {
 	uint16_t headroom;
 	uint16_t tailroom;
 
+	/* Event subtype */
+	int8_t subtype;
+
 	/*
 	 * Members below are not initialized by packet_init()
 	 */
@@ -195,6 +198,16 @@ static inline seg_entry_t *seg_entry_last(odp_packet_hdr_t *hdr)
 	return &last->buf_hdr.seg[last_seg];
 }
 
+static inline odp_event_subtype_t packet_subtype(odp_packet_t pkt)
+{
+	return odp_packet_hdr(pkt)->subtype;
+}
+
+static inline void packet_subtype_set(odp_packet_t pkt, int ev)
+{
+	odp_packet_hdr(pkt)->subtype = ev;
+}
+
 /**
  * Initialize packet
  */
@@ -234,9 +247,10 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	pkt_hdr->headroom  = CONFIG_PACKET_HEADROOM;
 	pkt_hdr->tailroom  = pool->seg_len - seg_len + CONFIG_PACKET_TAILROOM;
 
-	pkt_hdr->input = ODP_PKTIO_INVALID;
-	pkt_hdr->buf_hdr.event_subtype = ODP_EVENT_PACKET_BASIC;
+	if (odp_unlikely(pkt_hdr->subtype != ODP_EVENT_PACKET_BASIC))
+		pkt_hdr->subtype = ODP_EVENT_PACKET_BASIC;
 
+	pkt_hdr->input = ODP_PKTIO_INVALID;
 }
 
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
