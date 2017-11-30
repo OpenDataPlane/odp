@@ -68,6 +68,19 @@ void odp_event_free(odp_event_t event)
 	}
 }
 
+void odp_event_free_multi(const odp_event_t event[], int num)
+{
+	int i;
+
+	for (i = 0; i < num; i++)
+		odp_event_free(event[i]);
+}
+
+void odp_event_free_sp(const odp_event_t event[], int num)
+{
+	odp_event_free_multi(event, num);
+}
+
 uint64_t odp_event_to_u64(odp_event_t hdl)
 {
 	return _odp_pri(hdl);
