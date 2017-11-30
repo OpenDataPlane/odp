@@ -69,6 +69,7 @@ cache:
 env:
         - CONF=""
         - CONF="--disable-abi-compat"
+        - CONF="--enable-deprecated"
         - CONF="--enable-schedule-sp"
         - CONF="--enable-schedule-iquery"
         - CONF="--enable-dpdk-zero-copy"
