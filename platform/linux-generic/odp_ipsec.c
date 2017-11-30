@@ -973,8 +973,7 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
 
 		ipsec_sa = ipsec_in_single(pkt, sa, &pkt, &status);
 
-		_odp_buffer_event_subtype_set(packet_to_buffer(pkt),
-					      ODP_EVENT_PACKET_IPSEC);
+		packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
 		result = ipsec_pkt_result(pkt);
 		memset(result, 0, sizeof(*result));
 		result->status = status;
@@ -1037,8 +1036,7 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
 		ipsec_sa = ipsec_out_single(pkt, sa, &pkt, opt, &status);
 		ODP_ASSERT(NULL != ipsec_sa);
 
-		_odp_buffer_event_subtype_set(packet_to_buffer(pkt),
-					      ODP_EVENT_PACKET_IPSEC);
+		packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
 		result = ipsec_pkt_result(pkt);
 		memset(result, 0, sizeof(*result));
 		result->status = status;
@@ -1085,8 +1083,7 @@ int odp_ipsec_in_enq(const odp_packet_t pkt_in[], int num_in,
 
 		ipsec_sa = ipsec_in_single(pkt, sa, &pkt, &status);
 
-		_odp_buffer_event_subtype_set(packet_to_buffer(pkt),
-					      ODP_EVENT_PACKET_IPSEC);
+		packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
 		result = ipsec_pkt_result(pkt);
 		memset(result, 0, sizeof(*result));
 		result->status = status;
@@ -1146,8 +1143,7 @@ int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in,
 		ipsec_sa = ipsec_out_single(pkt, sa, &pkt, opt, &status);
 		ODP_ASSERT(NULL != ipsec_sa);
 
-		_odp_buffer_event_subtype_set(packet_to_buffer(pkt),
-					      ODP_EVENT_PACKET_IPSEC);
+		packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
 		result = ipsec_pkt_result(pkt);
 		memset(result, 0, sizeof(*result));
 		result->status = status;
@@ -1186,8 +1182,7 @@ int _odp_ipsec_try_inline(odp_packet_t pkt)
 	if (NULL == ipsec_sa)
 		return -1;
 
-	_odp_buffer_event_subtype_set(packet_to_buffer(pkt),
-				      ODP_EVENT_PACKET_IPSEC);
+	packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
 	result = ipsec_pkt_result(pkt);
 	memset(result, 0, sizeof(*result));
 	result->status = status;
@@ -1264,8 +1259,7 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 		ipsec_sa = ipsec_out_single(pkt, sa, &pkt, opt, &status);
 		ODP_ASSERT(NULL != ipsec_sa);
 
-		_odp_buffer_event_subtype_set(packet_to_buffer(pkt),
-					      ODP_EVENT_PACKET_IPSEC);
+		packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
 		result = ipsec_pkt_result(pkt);
 		memset(result, 0, sizeof(*result));
 		result->sa = ipsec_sa->ipsec_sa_hdl;
@@ -1286,11 +1280,8 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 			}
 		} else {
 			odp_queue_t queue;
-			odp_buffer_t buf;
 err:
-			buf = packet_to_buffer(pkt);
-			_odp_buffer_event_subtype_set(buf,
-						      ODP_EVENT_PACKET_IPSEC);
+			packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
 			result = ipsec_pkt_result(pkt);
 			memset(result, 0, sizeof(*result));
 			result->sa = ipsec_sa->ipsec_sa_hdl;
