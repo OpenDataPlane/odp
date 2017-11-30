@@ -583,10 +583,18 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 	} else {
 		struct odp_ipsec_out_inline_param_t inline_param;
 		odp_queue_t queue;
-		uint32_t hdr_len = part->out[0].pkt_out->l3_offset;
-		uint8_t hdr[hdr_len];
+		uint32_t hdr_len;
+		uint8_t hdr[32];
 
-		memcpy(hdr, part->out[0].pkt_out->data, hdr_len);
+		if (NULL != part->out[0].pkt_out) {
+			hdr_len = part->out[0].pkt_out->l3_offset;
+			CU_ASSERT_FATAL(hdr_len <= sizeof(hdr));
+			memcpy(hdr, part->out[0].pkt_out->data, hdr_len);
+		} else {
+			hdr_len = part->pkt_in->l3_offset;
+			CU_ASSERT_FATAL(hdr_len <= sizeof(hdr));
+			memcpy(hdr, part->pkt_in->data, hdr_len);
+		}
 		inline_param.pktio = suite_context.pktio;
 		inline_param.outer_hdr.ptr = hdr;
 		inline_param.outer_hdr.len = hdr_len;
