@@ -150,6 +150,28 @@ uint64_t odp_event_to_u64(odp_event_t hdl);
 void odp_event_free(odp_event_t event);
 
 /**
+ * Free multiple events
+ *
+ * Otherwise like odp_event_free(), but frees multiple events to their
+ * originating pools.
+ *
+ * @param event    Array of event handles
+ * @param num      Number of events to free
+ */
+void odp_event_free_multi(const odp_event_t event[], int num);
+
+/**
+ * Free multiple events to the same pool
+ *
+ * Otherwise like odp_event_free_multi(), but all events must be from the
+ * same originating pool.
+ *
+ * @param event    Array of event handles
+ * @param num      Number of events to free
+ */
+void odp_event_free_sp(const odp_event_t event[], int num);
+
+/**
  * @}
  */
 
