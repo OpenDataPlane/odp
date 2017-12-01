@@ -912,6 +912,11 @@ void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 		packet_free_multi(buf_hdr, num - num_freed);
 }
 
+void odp_packet_free_sp(const odp_packet_t pkt[], int num)
+{
+	odp_packet_free_multi(pkt, num);
+}
+
 int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr_t *const pkt_hdr = packet_hdr(pkt);
@@ -942,6 +947,24 @@ odp_event_t odp_packet_to_event(odp_packet_t pkt)
 		return ODP_EVENT_INVALID;
 
 	return (odp_event_t)buffer_handle(packet_hdr(pkt));
+}
+
+void odp_packet_from_event_multi(odp_packet_t pkt[], const odp_event_t ev[],
+				 int num)
+{
+	int i;
+
+	for (i = 0; i < num; i++)
+		pkt[i] = odp_packet_from_event(ev[i]);
+}
+
+void odp_packet_to_event_multi(const odp_packet_t pkt[], odp_event_t ev[],
+			       int num)
+{
+	int i;
+
+	for (i = 0; i < num; i++)
+		ev[i] = odp_packet_to_event(pkt[i]);
 }
 
 /*
