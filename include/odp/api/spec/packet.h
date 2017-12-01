@@ -205,6 +205,17 @@ void odp_packet_free(odp_packet_t pkt);
 void odp_packet_free_multi(const odp_packet_t pkt[], int num);
 
 /**
+ * Free multiple packets to the same pool
+ *
+ * Otherwise like odp_packet_free_multi(), but all packets must be from the
+ * same originating pool.
+ *
+ * @param pkt           Array of packet handles
+ * @param num           Number of packets to free
+ */
+void odp_packet_free_sp(const odp_packet_t pkt[], int num);
+
+/**
  * Reset packet
  *
  * Resets all packet metadata to their default values. Packet length is used
@@ -236,6 +247,18 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len);
 odp_packet_t odp_packet_from_event(odp_event_t ev);
 
 /**
+ * Convert multiple packet events to packet handles
+ *
+ * All events must be of type ODP_EVENT_PACKET.
+ *
+ * @param[out] pkt  Packet handle array for output
+ * @param      ev   Array of event handles to convert
+ * @param      num  Number of packets and events
+ */
+void odp_packet_from_event_multi(odp_packet_t pkt[], const odp_event_t ev[],
+				 int num);
+
+/**
  * Convert packet handle to event
  *
  * @param pkt  Packet handle
@@ -243,6 +266,16 @@ odp_packet_t odp_packet_from_event(odp_event_t ev);
  * @return Event handle
  */
 odp_event_t odp_packet_to_event(odp_packet_t pkt);
+
+/**
+ * Convert multiple packet handles to events
+ *
+ * @param      pkt  Array of packet handles to convert
+ * @param[out] ev   Event handle array for output
+ * @param      num  Number of packets and events
+ */
+void odp_packet_to_event_multi(const odp_packet_t pkt[], odp_event_t ev[],
+			       int num);
 
 /*
  *
