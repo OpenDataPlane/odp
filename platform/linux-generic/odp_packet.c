@@ -983,6 +983,27 @@ void odp_packet_to_event_multi(const odp_packet_t pkt[], odp_event_t ev[],
 		ev[i] = odp_packet_to_event(pkt[i]);
 }
 
+int odp_event_filter_packet(const odp_event_t event[],
+			    odp_packet_t packet[],
+			    odp_event_t remain[], int num)
+{
+	int i;
+	int num_pkt = 0;
+	int num_rem = 0;
+
+	for (i = 0; i < num; i++) {
+		if (odp_event_type(event[i]) == ODP_EVENT_PACKET) {
+			packet[num_pkt] = odp_packet_from_event(event[i]);
+			num_pkt++;
+		} else {
+			remain[num_rem] = event[i];
+			num_rem++;
+		}
+	}
+
+	return num_pkt;
+}
+
 /*
  *
  * Pointers and lengths
