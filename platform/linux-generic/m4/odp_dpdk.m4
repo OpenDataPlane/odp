@@ -5,7 +5,7 @@ pktio_dpdk_support=no
 AC_ARG_WITH([dpdk-path],
 [AS_HELP_STRING([--with-dpdk-path=DIR], [path to dpdk build directory])],
     [DPDK_PATH="$withval"
-    DPDK_CPPFLAGS="-msse4.2 -isystem $DPDK_PATH/include"
+    DPDK_CPPFLAGS="-isystem $DPDK_PATH/include"
     DPDK_LDFLAGS="-L$DPDK_PATH/lib"
     pktio_dpdk_support=yes],[])
 
