@@ -6,6 +6,7 @@ ODP_MODULES = atomic \
 	      cpumask \
 	      crypto \
 	      errno \
+	      event \
 	      hash \
 	      init \
 	      ipsec \
@@ -38,6 +39,7 @@ TESTS = \
 	cpumask/cpumask_main$(EXEEXT) \
 	crypto/crypto_main$(EXEEXT) \
 	errno/errno_main$(EXEEXT) \
+	event/event_main$(EXEEXT) \
 	hash/hash_main$(EXEEXT) \
 	init/init_main_ok$(EXEEXT) \
 	init/init_main_abort$(EXEEXT) \
