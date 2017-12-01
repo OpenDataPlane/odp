@@ -126,6 +126,22 @@ odp_event_type_t odp_event_types(odp_event_t event,
 				 odp_event_subtype_t *subtype);
 
 /**
+ * Event type of multiple events
+ *
+ * Returns the number of first events in the array which have the same event
+ * type. Outputs the event type of those events.
+ *
+ * @param      event    Array of event handles
+ * @param      num      Number of events (> 0)
+ * @param[out] type     Event type pointer for output
+ *
+ * @return Number of first events (1 ... num) with the same event type
+ *         (includes event[0])
+ */
+int odp_event_type_multi(const odp_event_t event[], int num,
+			 odp_event_type_t *type);
+
+/**
  * Get printable value for an odp_event_t
  *
  * @param hdl  odp_event_t handle to be printed
