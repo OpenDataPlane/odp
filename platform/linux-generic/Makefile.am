@@ -14,6 +14,12 @@ AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
 AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
 AM_CPPFLAGS +=  $(NETMAP_CPPFLAGS)
 
+if PKTIO_DPDK
+if ARCH_IS_X86
+AM_CFLAGS += -msse4.2
+endif
+endif
+
 odpincludedir= $(includedir)/odp
 odpinclude_HEADERS = \
 		  include/odp/visibility_begin.h \
