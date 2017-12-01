@@ -396,6 +396,50 @@ void packet_test_alloc_free_multi(void)
 	CU_ASSERT(odp_pool_destroy(pool[1]) == 0);
 }
 
+void packet_test_free_sp(void)
+{
+	const int num_pkt = 10;
+	odp_pool_t pool;
+	int i, ret;
+	odp_packet_t packet[num_pkt];
+	odp_pool_param_t params;
+	odp_pool_capability_t capa;
+	uint32_t len = packet_len;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+
+	if (capa.pkt.max_len < len)
+		len = capa.pkt.max_len;
+
+	odp_pool_param_init(&params);
+
+	params.type           = ODP_POOL_PACKET;
+	params.pkt.len        = len;
+	params.pkt.num        = num_pkt;
+
+	pool = odp_pool_create("packet_pool_free_sp", &params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	ret = packet_alloc_multi(pool, len, packet, num_pkt);
+	CU_ASSERT_FATAL(ret == num_pkt);
+	for (i = 0; i < num_pkt; i++) {
+		CU_ASSERT_FATAL(packet[i] != ODP_PACKET_INVALID);
+		CU_ASSERT(odp_packet_len(packet[i]) == len);
+	}
+	odp_packet_free_sp(packet, num_pkt);
+
+	/* Check that all the packets were returned back to the pool */
+	ret = packet_alloc_multi(pool, len, packet, num_pkt);
+	CU_ASSERT_FATAL(ret == num_pkt);
+	for (i = 0; i < num_pkt; i++) {
+		CU_ASSERT_FATAL(packet[i] != ODP_PACKET_INVALID);
+		CU_ASSERT(odp_packet_len(packet[i]) == len);
+	}
+	odp_packet_free_sp(packet, num_pkt);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
 void packet_test_alloc_segmented(void)
 {
 	const int num = 5;
@@ -481,23 +525,41 @@ void packet_test_alloc_segmented(void)
 
 void packet_test_event_conversion(void)
 {
-	odp_packet_t pkt = test_packet;
+	odp_packet_t pkt0 = test_packet;
+	odp_packet_t pkt1 = segmented_test_packet;
 	odp_packet_t tmp_pkt;
-	odp_event_t ev;
+	odp_event_t event;
 	odp_event_subtype_t subtype;
+	odp_packet_t pkt[2] = {pkt0, pkt1};
+	odp_event_t ev[2];
+	int i;
 
-	ev = odp_packet_to_event(pkt);
-	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
-	CU_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
-	CU_ASSERT(odp_event_subtype(ev) == ODP_EVENT_PACKET_BASIC);
-	CU_ASSERT(odp_event_types(ev, &subtype) ==
+	event = odp_packet_to_event(pkt0);
+	CU_ASSERT_FATAL(event != ODP_EVENT_INVALID);
+	CU_ASSERT(odp_event_type(event) == ODP_EVENT_PACKET);
+	CU_ASSERT(odp_event_subtype(event) == ODP_EVENT_PACKET_BASIC);
+	CU_ASSERT(odp_event_types(event, &subtype) ==
 		  ODP_EVENT_PACKET);
 	CU_ASSERT(subtype == ODP_EVENT_PACKET_BASIC);
 
-	tmp_pkt = odp_packet_from_event(ev);
+	tmp_pkt = odp_packet_from_event(event);
 	CU_ASSERT_FATAL(tmp_pkt != ODP_PACKET_INVALID);
-	CU_ASSERT(tmp_pkt == pkt);
-	packet_compare_data(tmp_pkt, pkt);
+	CU_ASSERT(tmp_pkt == pkt0);
+	packet_compare_data(tmp_pkt, pkt0);
+
+	odp_packet_to_event_multi(pkt, ev, 2);
+
+	for (i = 0; i < 2; i++) {
+		CU_ASSERT_FATAL(ev[i] != ODP_EVENT_INVALID);
+		CU_ASSERT(odp_event_type(ev[i]) == ODP_EVENT_PACKET);
+		CU_ASSERT(odp_event_subtype(ev[i]) == ODP_EVENT_PACKET_BASIC);
+	}
+
+	odp_packet_from_event_multi(pkt, ev, 2);
+	CU_ASSERT(pkt[0] == pkt0);
+	CU_ASSERT(pkt[1] == pkt1);
+	packet_compare_data(pkt[0], pkt0);
+	packet_compare_data(pkt[1], pkt1);
 }
 
 void packet_test_basic_metadata(void)
@@ -2595,6 +2657,7 @@ void packet_test_parse(void)
 odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_alloc_free),
 	ODP_TEST_INFO(packet_test_alloc_free_multi),
+	ODP_TEST_INFO(packet_test_free_sp),
 	ODP_TEST_INFO(packet_test_alloc_segmented),
 	ODP_TEST_INFO(packet_test_basic_metadata),
 	ODP_TEST_INFO(packet_test_debug),
