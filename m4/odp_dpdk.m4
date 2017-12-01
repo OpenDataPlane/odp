@@ -16,6 +16,31 @@ AS_VAR_APPEND([DPDK_PMDS], [--no-whole-archive])
 AC_SUBST([DPDK_PMDS])
 ])
 
+# _ODP_DPDK_CHECK_LIB(LDFLAGS, [LIBS], [EXTRA_LIBS])
+# ----------------------------------
+# Check if one can use -ldpdk with provided set of libs
+AC_DEFUN([_ODP_DPDK_CHECK_LIB], [dnl
+##########################################################################
+# Save and set temporary compilation flags
+##########################################################################
+OLD_LDFLAGS=$LDFLAGS
+OLD_LIBS=$LIBS
+LDFLAGS="$1 $LDFLAGS"
+LIBS="$LIBS -ldpdk $2"
+
+AC_MSG_CHECKING([for rte_eal_init in -ldpdk $2])
+AC_LINK_IFELSE([AC_LANG_CALL([], [rte_eal_init])],
+	       [AC_MSG_RESULT([yes])
+	        DPDK_LIBS="$1 -ldpdk $3 $2"],
+	       [AC_MSG_RESULT([no])])
+
+##########################################################################
+# Restore old saved variables
+##########################################################################
+LDFLAGS=$OLD_LDFLAGS
+LIBS=$OLD_LIBS
+])
+
 # ODP_DPDK_CHECK(CPPFLAGS, LDFLAGS, ACTION-IF-FOUND, ACTION-IF-NOT-FOUND)
 # -----------------------------------------------------------------------
 # Check for DPDK availability
@@ -23,10 +48,7 @@ AC_DEFUN([ODP_DPDK_CHECK], [dnl
 ##########################################################################
 # Save and set temporary compilation flags
 ##########################################################################
-OLD_LDFLAGS=$LDFLAGS
-OLD_LIBS=$LIBS
 OLD_CPPFLAGS=$CPPFLAGS
-LDFLAGS="$2 $LDFLAGS"
 CPPFLAGS="$1 $CPPFLAGS"
 
 dpdk_check_ok=yes
@@ -34,16 +56,21 @@ dpdk_check_ok=yes
 AC_CHECK_HEADERS([rte_config.h], [],
 		 [dpdk_check_ok=no])
 
-AC_CHECK_LIB([dpdk], [rte_eal_init], [],
-	     [dpdk_check_ok=no], [-ldl -lpthread -lnuma])
+DPDK_LIBS=""
+_ODP_DPDK_CHECK_LIB([$2])
+AS_IF([test "x$DPDK_LIBS" = "x"],
+      [_ODP_DPDK_CHECK_LIB([$2], [-ldl -lpthread], [-lm])])
+AS_IF([test "x$DPDK_LIBS" = "x"],
+      [_ODP_DPDK_CHECK_LIB([$2], [-ldl -lpthread -lnuma], [-lm])])
+AS_IF([test "x$DPDK_LIBS" = "x"],
+      [dpdk_check_ok=no])
 AS_IF([test "x$dpdk_check_ok" != "xno"],
-      [m4_default([$3], [:])],
+      [AC_SUBST([DPDK_LIBS])
+       m4_default([$3], [:])],
       [m4_default([$4], [:])])
 
 ##########################################################################
 # Restore old saved variables
 ##########################################################################
-LDFLAGS=$OLD_LDFLAGS
-LIBS=$OLD_LIBS
 CPPFLAGS=$OLD_CPPFLAGS
 ])
