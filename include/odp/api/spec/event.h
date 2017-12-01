@@ -19,11 +19,12 @@
 extern "C" {
 #endif
 
+#include <odp/api/packet.h>
+
 /** @defgroup odp_event ODP EVENT
  *  Operations on an event.
  *  @{
  */
-
 
 /**
  * @typedef odp_event_t
@@ -140,6 +141,27 @@ odp_event_type_t odp_event_types(odp_event_t event,
  */
 int odp_event_type_multi(const odp_event_t event[], int num,
 			 odp_event_type_t *type);
+
+/**
+ * Filter and convert packet events
+ *
+ * Checks event type of all input events, converts all packet events and outputs
+ * packet handles. Returns the number packet handles outputted. Outputs the
+ * remaining, non-packet event handles to 'remain' array. Handles are outputted
+ * to both arrays in the same order those are stored in 'event' array. Both
+ * output arrays must fit 'num' elements.
+ *
+ * @param      event    Array of event handles
+ * @param[out] packet   Packet handle array for output
+ * @param[out] remain   Event handle array for output of remaining, non-packet
+ *                      events
+ * @param      num      Number of events (> 0)
+ *
+ * @return Number of packets outputted (0 ... num)
+ */
+int odp_event_filter_packet(const odp_event_t event[],
+			    odp_packet_t packet[],
+			    odp_event_t remain[], int num);
 
 /**
  * Get printable value for an odp_event_t
