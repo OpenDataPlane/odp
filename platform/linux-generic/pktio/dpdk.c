@@ -29,14 +29,27 @@
 
 #include <rte_config.h>
 #include <rte_malloc.h>
+#if __GNUC__ >= 7
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wimplicit-fallthrough=0"
+#endif
 #include <rte_mbuf.h>
+#if __GNUC__ >= 7
+#pragma GCC diagnostic pop
+#endif
 #include <rte_mempool.h>
 #include <rte_ethdev.h>
 #include <rte_ip.h>
 #include <rte_ip_frag.h>
+#include <rte_log.h>
 #include <rte_udp.h>
 #include <rte_tcp.h>
 #include <rte_string_fns.h>
+#include <rte_version.h>
+
+#if RTE_VERSION < RTE_VERSION_NUM(17, 5, 0, 0)
+#define rte_log_set_global_level rte_set_log_level
+#endif
 
 #if ODP_DPDK_ZERO_COPY
 ODP_STATIC_ASSERT(CONFIG_PACKET_HEADROOM == RTE_PKTMBUF_HEADROOM,
@@ -54,6 +67,7 @@ static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 /* Has dpdk_pktio_init() been called */
 static odp_bool_t dpdk_initialized;
 
+#ifndef RTE_BUILD_SHARED_LIB
 #define MEMPOOL_OPS(hdl) \
 extern void mp_hdlr_init_##hdl(void)
 
@@ -77,6 +91,7 @@ void refer_constructors(void)
 	mp_hdlr_init_ops_sp_mc();
 	mp_hdlr_init_ops_stack();
 }
+#endif
 
 /**
  * Calculate valid cache size for DPDK packet pool
@@ -928,6 +943,11 @@ static int dpdk_close(pktio_entry_t *pktio_entry)
 			rte_pktmbuf_free(pkt_dpdk->rx_cache[i].s.pkt[idx++]);
 	}
 
+#if RTE_VERSION < RTE_VERSION_NUM(17, 8, 0, 0)
+	if (pktio_entry->s.state != PKTIO_STATE_OPENED)
+		rte_eth_dev_close(pkt_dpdk->port_id);
+#endif
+
 	return 0;
 }
 
@@ -1064,14 +1084,16 @@ static void dpdk_mempool_free(struct rte_mempool *mp, void *arg ODP_UNUSED)
 
 static int dpdk_pktio_term(void)
 {
-	uint8_t port_id;
-
 	if (!dpdk_initialized)
 		return 0;
+
+#if RTE_VERSION >= RTE_VERSION_NUM(17, 8, 0, 0)
+	uint8_t port_id;
 
 	RTE_ETH_FOREACH_DEV(port_id) {
 		rte_eth_dev_close(port_id);
 	}
+#endif
 
 	if (!ODP_DPDK_ZERO_COPY)
 		rte_mempool_walk(dpdk_mempool_free, NULL);
