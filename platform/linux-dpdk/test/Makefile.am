@@ -14,8 +14,6 @@ SUBDIRS += validation/api/pktio
 endif
 endif
 
-TEST_EXTENSIONS = .sh
-
 TESTNAME = linux-dpdk
 
 TESTENV = tests-$(TESTNAME).env
