@@ -348,11 +348,50 @@ static void event_test_type_multi(void)
 	CU_ASSERT(odp_pool_destroy(pkt_pool) == 0);
 }
 
+static void event_test_filter_packet(void)
+{
+	odp_pool_t buf_pool, pkt_pool;
+	int i, num_pkt, num_rem;
+	int num = 2 * NUM_TYPE_TEST;
+	odp_event_t buf_event[NUM_TYPE_TEST];
+	odp_event_t pkt_event[NUM_TYPE_TEST];
+	odp_event_t event[num];
+	odp_packet_t packet[num];
+	odp_event_t remain[num];
+
+	type_test_init(&buf_pool, &pkt_pool, buf_event, pkt_event, event);
+
+	for (i = 0; i < num; i++) {
+		packet[i] = ODP_PACKET_INVALID;
+		remain[i] = ODP_EVENT_INVALID;
+	}
+
+	num_pkt = odp_event_filter_packet(event, packet, remain, num);
+	CU_ASSERT(num_pkt == NUM_TYPE_TEST);
+
+	for (i = 0; i < num_pkt; i++)
+		CU_ASSERT(packet[i] != ODP_PACKET_INVALID);
+
+	num_rem = num - num_pkt;
+	CU_ASSERT(num_rem == NUM_TYPE_TEST);
+
+	for (i = 0; i < num_rem; i++) {
+		CU_ASSERT(remain[i] != ODP_EVENT_INVALID);
+		CU_ASSERT(odp_event_type(remain[i]) == ODP_EVENT_BUFFER);
+	}
+
+	odp_event_free_multi(event, num);
+
+	CU_ASSERT(odp_pool_destroy(buf_pool) == 0);
+	CU_ASSERT(odp_pool_destroy(pkt_pool) == 0);
+}
+
 odp_testinfo_t event_suite[] = {
 	ODP_TEST_INFO(event_test_free),
 	ODP_TEST_INFO(event_test_free_multi),
 	ODP_TEST_INFO(event_test_free_multi_mixed),
 	ODP_TEST_INFO(event_test_type_multi),
+	ODP_TEST_INFO(event_test_filter_packet),
 	ODP_TEST_INFO_NULL,
 };
 
