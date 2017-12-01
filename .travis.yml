@@ -99,7 +99,8 @@ before_install:
                   else
                         sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install g++-"$CROSS_GNU_TYPE" ;
                   fi ;
-                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install libc6-dev:"$CROSS_ARCH" libssl-dev:"$CROSS_ARCH" zlib1g-dev:"$CROSS_ARCH" libconfig-dev:"$CROSS_ARCH" libstdc++-4.8-dev:"$CROSS_ARCH";
+                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install libc6-dev:"$CROSS_ARCH" libssl-dev:"$CROSS_ARCH" zlib1g-dev:"$CROSS_ARCH" libconfig-dev:"$CROSS_ARCH" libstdc++-4.8-dev:"$CROSS_ARCH" libpcap0.8-dev:"$CROSS_ARCH" ;
+                  [ "$CROSS_ARCH" = "armhf" ] || sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install libnuma-dev:"$CROSS_ARCH";
                   export PKG_CONFIG_PATH=/usr/lib/${CROSS_MULTIARCH}/pkgconfig:/usr/${CROSS_MULTIARCH}/lib/pkgconfig ;
           fi
         - if [ "${CC#clang}" != "${CC}" ] ;
@@ -107,16 +108,24 @@ before_install:
                 if [ -n "$CROSS_ARCH" ] ;
                 then
                         export CC="${CC} --target=$CROSS_GNU_TYPE" ;
+                        if [ "$CROSS_ARCH" = "i386" ] ;
+                        then
+                                DPDK_CFLAGS="-m32" ;
+                        else
+                                DPDK_CROSS="$CROSS_GNU_TYPE-" ;
+                        fi
                 fi ;
                 export CXX="${CC/clang/clang++}";
           elif [ "$CROSS_ARCH" = "i386" ] ;
           then
                 export CC="gcc -m32" ;
                 export CXX="g++ -m32" ;
+                DPDK_CFLAGS="-m32" ;
           elif [ -n "$CROSS_ARCH" ] ;
           then
                 export CC="$CROSS_GNU_TYPE"-gcc ;
                 export CXX="$CROSS_GNU_TYPE"-g++ ;
+                DPDK_CROSS="$CROSS_GNU_TYPE-" ;
           fi
         - if test ! -L /usr/lib/ccache/${CC%% *} ; then sudo ln -s -t /usr/lib/ccache/ `which ${CC%% *}` ; fi
         - ccache -s
@@ -174,21 +183,48 @@ install:
           if [ "${CACHED_DPDK_VERS}" != "${DPDK_VERS}" ]; then
             rm -rf dpdk
           fi
-        - TARGET=${TARGET:-"x86_64-native-linuxapp-gcc"}
         - |
-          if [ -z "$CROSS_ARCH" -a ! -f "dpdk/${TARGET}/lib/libdpdk.a" ]; then
+          case "$CROSS_ARCH" in
+            "arm64")
+              TARGET="arm64-armv8a-linuxapp-gcc"
+              ;;
+            "armhf")
+              TARGET="arm-armv7a-linuxapp-gcc"
+              ;;
+            "i386")
+              TARGET="i686-native-linuxapp-gcc"
+              ;;
+            "")
+              TARGET="x86_64-native-linuxapp-gcc"
+              DPDK_MACHINE=snb
+              ;;
+          esac
+        - |
+          if [ -n "$TARGET" -a ! -f "dpdk/${TARGET}/lib/libdpdk.a" ]; then
             git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v${DPDK_VERS} http://dpdk.org/git/dpdk dpdk
             pushd dpdk
             git log --oneline --decorate
+            echo $CC
+            # AArch64 && ARMv7 fixup
+            sed -i -e 's/40900/40800/g' lib/librte_eal/common/include/arch/arm/rte_vect.h
+            sed -i -e 's/!(/!(defined(__arm__) \&\& defined(__clang__) || /g' lib/librte_eal/common/include/arch/arm/rte_byteorder.h
+            sed -i -e 's/__GNUC__/defined(__arm__) \&\& defined(__clang__) || __GNUC__/' lib/librte_eal/common/include/generic/rte_byteorder.h
             make config T=${TARGET} O=${TARGET}
             pushd ${TARGET}
             sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
             cat .config |grep RTE_MACHINE
-            sed -ri 's,(CONFIG_RTE_MACHINE=).*,\1"snb",' .config
+            if test -n "${DPDK_MACHINE}" ; then
+              sed -ri 's,(CONFIG_RTE_MACHINE=).*,\1"'${DPDK_MACHINE}'",' .config
+            fi
+            if test -n "$CROSS_ARCH" ; then
+              sed -ri -e 's,(CONFIG_RTE_EAL_IGB_UIO=).*,\1n,' .config
+              sed -ri -e 's,(CONFIG_RTE_KNI_KMOD=).*,\1n,' .config
+            fi
             popd
-            make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
+            make install T=${TARGET} EXTRA_CFLAGS="-fPIC $DPDK_CFLAGS" CROSS="$DPDK_CROSS"
             rm -r ./doc ./${TARGET}/app ./${TARGET}/build
             popd
+            EXTRA_CONF="$EXTRA_CONF --with-dpdk-path=`pwd`/dpdk/${TARGET}"
           fi
 
 #	Netmap pktio
@@ -202,12 +238,10 @@ install:
               popd
             fi
             sudo insmod ./netmap/LINUX/netmap.ko
+            EXTRA_CONF="$EXTRA_CONF --with-netmap-path=`pwd`/netmap"
           fi
 
 script:
-        - if [ -z "$CROSS_ARCH" ] ; then
-                EXTRA_CONF="--with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap" ;
-          fi
         - ./bootstrap
         - ./configure --prefix=$HOME/odp-install
           --enable-user-guides
