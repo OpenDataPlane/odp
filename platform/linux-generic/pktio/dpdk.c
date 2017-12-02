@@ -123,8 +123,8 @@ static unsigned cache_size(uint32_t num)
 static inline uint16_t mbuf_data_off(struct rte_mbuf *mbuf,
 				     odp_packet_hdr_t *pkt_hdr)
 {
-	return (uint64_t)pkt_hdr->buf_hdr.seg[0].data -
-			(uint64_t)mbuf->buf_addr;
+	return (uintptr_t)pkt_hdr->buf_hdr.seg[0].data -
+			(uintptr_t)mbuf->buf_addr;
 }
 
 /**
