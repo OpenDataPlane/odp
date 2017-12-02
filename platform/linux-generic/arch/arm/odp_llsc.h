@@ -23,7 +23,7 @@ static inline uint32_t ll8(uint8_t *var, int mm)
 			 : );
 	/* Barrier after an acquiring load */
 	if (mm == __ATOMIC_ACQUIRE)
-		dmb();
+		_odp_dmb();
 	return old;
 }
 
@@ -37,7 +37,7 @@ static inline uint32_t ll(uint32_t *var, int mm)
 			 : );
 	/* Barrier after an acquiring load */
 	if (mm == __ATOMIC_ACQUIRE)
-		dmb();
+		_odp_dmb();
 	return old;
 }
 
@@ -50,7 +50,7 @@ static inline uint32_t sc(uint32_t *var, uint32_t neu, int mm)
 
 	/* Barrier before a releasing store */
 	if (mm == __ATOMIC_RELEASE)
-		dmb();
+		_odp_dmb();
 	__asm__ volatile("strex %0, %1, [%2]"
 			 : "=&r" (ret)
 			 : "r" (neu), "r" (var)
@@ -70,7 +70,7 @@ static inline uint64_t lld(uint64_t *var, int mm)
 			 : );
 	/* Barrier after an acquiring load */
 	if (mm == __ATOMIC_ACQUIRE)
-		dmb();
+		_odp_dmb();
 	return old;
 }
 
@@ -83,7 +83,7 @@ static inline uint32_t scd(uint64_t *var, uint64_t neu, int mm)
 
 	/* Barrier before a releasing store */
 	if (mm == __ATOMIC_RELEASE)
-		dmb();
+		_odp_dmb();
 	__asm__ volatile("strexd %0, %1, %H1, [%2]"
 			 : "=&r" (ret)
 			 : "r" (neu), "r" (var)
