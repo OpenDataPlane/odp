@@ -309,7 +309,7 @@ int odp_queue_enq(odp_queue_t queue, odp_event_t ev);
  * has to take care of them.
  *
  * @param queue   Queue handle
- * @param[in] events Array of event handles
+ * @param events  Array of event handles
  * @param num     Number of event handles to enqueue
  *
  * @return Number of events actually enqueued (0 ... num)
