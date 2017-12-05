@@ -287,7 +287,7 @@ typedef struct odp_cls_cos_param {
  *
  * Initialize an odp_cls_cos_param_t to its default value for all fields
  *
- * @param param   Address of the odp_cls_cos_param_t to be initialized
+ * @param param        Address of the odp_cls_cos_param_t to be initialized
  */
 void odp_cls_cos_param_init(odp_cls_cos_param_t *param);
 
@@ -296,10 +296,10 @@ void odp_cls_cos_param_init(odp_cls_cos_param_t *param);
  *
  * Outputs classification capabilities on success.
  *
- * @param[out]	capability	Pointer to classification capability structure.
+ * @param[out] capability  Pointer to classification capability structure.
  *
- * @retval	0 on success
- * @retval	<0 on failure
+ * @retval  0 on success
+ * @retval <0 on failure
  */
 int odp_cls_capability(odp_cls_capability_t *capability);
 
@@ -308,12 +308,12 @@ int odp_cls_capability(odp_cls_capability_t *capability);
  *
  * The use of class-of-service name is optional. Unique names are not required.
  *
- * @param       name    Name of the class-of-service or NULL. Maximum string
- *                      length is ODP_COS_NAME_LEN.
- * @param       param   Class-of-service parameters
+ * @param name         Name of the class-of-service or NULL. Maximum string
+ *                     length is ODP_COS_NAME_LEN.
+ * @param param        Class-of-service parameters
  *
- * @retval              Class-of-service handle
- * @retval              ODP_COS_INVALID on failure.
+ * @retval Class-of-service handle
+ * @retval ODP_COS_INVALID on failure.
  *
  * @note ODP_QUEUE_INVALID and ODP_POOL_INVALID are valid values for queue
  * and pool associated with a class of service and when any one of these values
@@ -327,12 +327,11 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param);
  * based on the packet parameters and hash protocol field configured with the
  * class of service.
  *
- * @param	cos	class of service
- * @param	packet	Packet handle
+ * @param cos          class of service
+ * @param packet       Packet handle
  *
- * @retval		Returns the queue handle on which this packet will be
- *			enqueued.
- * @retval		ODP_QUEUE_INVALID for error case
+ * @retval Returns the queue handle on which this packet will be enqueued.
+ * @retval ODP_QUEUE_INVALID for error case
  *
  * @note The packet has to be updated with valid header pointers L2, L3 and L4.
  */
@@ -341,60 +340,54 @@ odp_queue_t odp_cls_hash_result(odp_cos_t cos, odp_packet_t packet);
 /**
  * Discard a class-of-service along with all its associated resources
  *
- * @param[in]	cos_id	class-of-service instance.
+ * @param cos_id       class-of-service instance.
  *
- * @retval		0 on success
- * @retval		<0 on failure
+ * @retval  0 on success
+ * @retval <0 on failure
  */
 int odp_cos_destroy(odp_cos_t cos_id);
 
 /**
  * Assign a queue for a class-of-service
  *
- * @param[in]	cos_id		class-of-service instance.
+ * @param cos_id       class-of-service instance.
+ * @param queue_id     Identifier of a queue where all packets of this specific
+ *                     class of service will be enqueued.
  *
- * @param[in]	queue_id	Identifier of a queue where all packets
- *				of this specific class of service
- *				will be enqueued.
- *
- * @retval			0 on success
- * @retval			<0 on failure
+ * @retval  0 on success
+ * @retval <0 on failure
  */
 int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id);
 
 /**
 * Get the queue associated with the specific class-of-service
 *
-* @param[in]	cos_id			class-of-service instance.
+* @param cos_id        class-of-service instance.
 *
-* @retval	queue_handle		Queue handle associated with the
-*					given class-of-service
-*
-* @retval	ODP_QUEUE_INVALID	on failure
+* @retval Queue handle associated with the given class-of-service
+* @retval ODP_QUEUE_INVALID on failure
 */
 odp_queue_t odp_cos_queue(odp_cos_t cos_id);
 
 /**
  * Get the number of queues linked with the specific class-of-service
  *
- * @param	cos_id		class-of-service instance.
+ * @param cos_id       class-of-service instance.
  *
- * @return			Number of queues linked with the class-of-service.
+ * @return Number of queues linked with the class-of-service.
  */
 uint32_t odp_cls_cos_num_queue(odp_cos_t cos_id);
 
 /**
  * Get the list of queue associated with the specific class-of-service
  *
- * @param[in]	cos_id		class-of-service instance.
+ * @param      cos_id  class-of-service instance.
+ * @param[out] queue   Array of queue handles associated with
+ *                     the class-of-service.
+ * @param      num     Maximum number of queue handles to output.
  *
- * @param[out]	queue		Array of queue handles associated
- *				with the class-of-service.
- *
- * @param[in]	num		Maximum number of queue handles to output.
- *
- * @return			Number of queues linked with CoS
- * @retval	0		on failure
+ * @return Number of queues linked with CoS
+ * @retval on 0 failure
  */
 uint32_t odp_cls_cos_queues(odp_cos_t cos_id, odp_queue_t queue[],
 			    uint32_t num);
@@ -402,11 +395,11 @@ uint32_t odp_cls_cos_queues(odp_cos_t cos_id, odp_queue_t queue[],
 /**
  * Assign packet drop policy for specific class-of-service
  *
- * @param[in]	cos_id		class-of-service instance.
- * @param[in]	drop_policy	Desired packet drop policy for this class.
+ * @param cos_id       class-of-service instance.
+ * @param drop_policy  Desired packet drop policy for this class.
  *
- * @retval			0 on success
- * @retval			<0 on failure
+ * @retval  0 on success
+ * @retval <0 on failure
  *
  * @note Optional.
  */
@@ -415,10 +408,9 @@ int odp_cos_drop_set(odp_cos_t cos_id, odp_cls_drop_t drop_policy);
 /**
 * Get the drop policy configured for a specific class-of-service instance.
 *
-* @param[in]	cos_id		class-of-service instance.
+* @param cos_id        class-of-service instance.
 *
-* @retval			Drop policy configured with the given
-*				class-of-service
+* @retval Drop policy configured with the given class-of-service
 */
 odp_cls_drop_t odp_cos_drop(odp_cos_t cos_id);
 
@@ -426,13 +418,14 @@ odp_cls_drop_t odp_cos_drop(odp_cos_t cos_id);
  * Request to override per-port class of service
  * based on Layer-2 priority field if present.
  *
- * @param[in]	pktio_in	Ingress port identifier.
- * @param[in]	num_qos		Number of QoS levels, typically 8.
- * @param[in]	qos_table	Values of the Layer-2 QoS header field.
- * @param[in]	cos_table	Class-of-service assigned to each of the
- *				allowed Layer-2 QOS levels.
- * @retval			0 on success
- * @retval			<0 on failure
+ * @param pktio_in     Ingress port identifier.
+ * @param num_qos      Number of QoS levels, typically 8.
+ * @param qos_table    Values of the Layer-2 QoS header field.
+ * @param cos_table    Class-of-service assigned to each of the allowed
+ *                     Layer-2 QOS levels.
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
  */
 int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
 			     uint8_t num_qos,
@@ -443,16 +436,15 @@ int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
  * Request to override per-port class of service
  * based on Layer-3 priority field if present.
  *
- * @param[in]	pktio_in	Ingress port identifier.
- * @param[in]	num_qos		Number of allowed Layer-3 QoS levels.
- * @param[in]	qos_table	Values of the Layer-3 QoS header field.
- * @param[in]	cos_table	Class-of-service assigned to each of the
- *				allowed Layer-3 QOS levels.
- * @param[in]	l3_preference	when true, Layer-3 QoS overrides
- *				L2 QoS when present.
+ * @param pktio_in       Ingress port identifier.
+ * @param num_qos        Number of allowed Layer-3 QoS levels.
+ * @param qos_table      Values of the Layer-3 QoS header field.
+ * @param cos_table      Class-of-service assigned to each of the allowed
+ *                       Layer-3 QOS levels.
+ * @param l3_preference	 when true, Layer-3 QoS overrides L2 QoS when present.
  *
- * @retval			0 on success
- * @retval			<0 on failure
+ * @retval  0 on success
+ * @retval <0 on failure
  *
  * @note Optional.
  */
@@ -461,7 +453,6 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 			uint8_t qos_table[],
 			odp_cos_t cos_table[],
 			odp_bool_t l3_preference);
-
 
 /**
  * @typedef odp_cos_flow_set_t
@@ -554,7 +545,7 @@ typedef struct odp_pmr_param_t {
  *
  * Initialize an odp_pmr_param_t to its default values for all fields
  *
- * @param param Address of the odp_pmr_param_t to be initialized
+ * @param param        Address of the odp_pmr_param_t to be initialized
  */
 void odp_cls_pmr_param_init(odp_pmr_param_t *param);
 
@@ -571,14 +562,14 @@ void odp_cls_pmr_param_init(odp_pmr_param_t *param);
  * of inspecting the return value when installing such rules, and perform
  * appropriate fallback action.
  *
- * @param[in]	terms		Array of odp_pmr_param_t entries, one entry per
- *				term desired.
- * @param[in]	num_terms	Number of terms in the match rule.
- * @param[in]	src_cos		source CoS handle
- * @param[in]	dst_cos		destination CoS handle
+ * @param terms        Array of odp_pmr_param_t entries, one entry per term
+ *                     desired.
+ * @param num_terms    Number of terms in the match rule.
+ * @param src_cos      source CoS handle
+ * @param dst_cos      destination CoS handle
  *
- * @return			Handle to the Packet Match Rule.
- * @retval			ODP_PMR_INVAL on failure
+ * @return Handle to the Packet Match Rule.
+ * @retval ODP_PMR_INVAL on failure
  */
 odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 			     odp_cos_t src_cos, odp_cos_t dst_cos);
@@ -593,10 +584,10 @@ odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
  * may not guarantee the availability of hardware resources to create the
  * same or essentially similar rule.
  *
- * @param[in]	pmr_id	Identifier of the PMR to be destroyed
+ * @param pmr_id       Identifier of the PMR to be destroyed
  *
- * @retval		0 on success
- * @retval		<0 on failure
+ * @retval  0 on success
+ * @retval <0 on failure
  */
 int odp_cls_pmr_destroy(odp_pmr_t pmr_id);
 
@@ -607,31 +598,30 @@ int odp_cls_pmr_destroy(odp_pmr_t pmr_id);
 * The packet pool associated with class of service will supersede the
 * packet pool associated with the pktio interface.
 *
-* @param	cos_id	class of service handle
-* @param	pool_id	packet pool handle
+* @param cos_id        class of service handle
+* @param pool_id       packet pool handle
 *
-* @retval	0 on success
-* @retval	<0 on failure
+* @retval  0 on success
+* @retval <0 on failure
 */
 int odp_cls_cos_pool_set(odp_cos_t cos_id, odp_pool_t pool_id);
 
 /**
 * Get the pool associated with the given class of service
 *
-* @param	cos_id	class of service handle
+* @param cos_id        class of service handle
 *
-* @retval	pool handle of the associated pool
-* @retval	ODP_POOL_INVALID if no associated pool found or
-*		in case of an error
+* @retval pool handle of the associated pool
+* @retval ODP_POOL_INVALID if no associated pool found or in case of an error
 */
 odp_pool_t odp_cls_cos_pool(odp_cos_t cos_id);
 
 /**
  * Get printable value for an odp_cos_t
  *
- * @param hdl  odp_cos_t handle to be printed
- * @return     uint64_t value that can be used to print/display this
- *             handle
+ * @param hdl          odp_cos_t handle to be printed
+ *
+ * @return uint64_t value that can be used to print/display this handle
  *
  * @note This routine is intended to be used for diagnostic purposes
  * to enable applications to generate a printable value that represents
@@ -642,9 +632,9 @@ uint64_t odp_cos_to_u64(odp_cos_t hdl);
 /**
  * Get printable value for an odp_pmr_t
  *
- * @param hdl  odp_pmr_t handle to be printed
- * @return     uint64_t value that can be used to print/display this
- *             handle
+ * @param hdl          odp_pmr_t handle to be printed
+ *
+ * @return uint64_t value that can be used to print/display this handle
  *
  * @note This routine is intended to be used for diagnostic purposes
  * to enable applications to generate a printable value that represents
