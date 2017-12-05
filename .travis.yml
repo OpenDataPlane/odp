@@ -35,7 +35,7 @@ env:
     # By default Linaro CODECOV_TOKEN token is used. It's ok to use it to see
     # for individual commit validation. But you you want to track tests history
     # you need generated new one at https://codecov.io specific for your repo.
-    - CODECOV_TOKEN=8e1c0fd8-62ff-411e-a79f-5839f6662c11
+    - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
 
 addons:
         apt:
@@ -245,12 +245,11 @@ jobs:
                           - ./configure --prefix=$HOME/odp-install
                             --enable-user-guides
                             --with-dpdk-path=`pwd`/dpdk/${TARGET}
-                            --with-netmap-path=`pwd`/netmap CFLAGS="-O0
-                              -coverage"
+                            --with-netmap-path=`pwd`/netmap CFLAGS="-O0 -coverage"
                               CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
                             --enable-debug=full
                             --enable-helper-linux
-                          - sudo LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" PATH=${PATH//:\.\/node_modules\/\.bin/} make check
+                          - sudo CCACHE_DISABLE=1 LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" PATH=${PATH//:\.\/node_modules\/\.bin/} make check
                           - find . -type f -iname '*.[ch]' -not -path ".git/*" -execdir gcov {} \; ; bash <(curl -s https://codecov.io/bash) -X coveragepy
                 - stage: test
                   env: TEST=distcheck
