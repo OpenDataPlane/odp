@@ -655,7 +655,6 @@ static int gen_send_thread(void *arg)
 						   burst_size - ret);
 				burst_start += ret;
 				burst_size -= ret;
-				odp_time_wait_ns(ODP_TIME_MSEC_IN_NS);
 				continue;
 			}
 			EXAMPLE_ERR("  [%02i] packet send failed\n", thr);
