@@ -352,11 +352,6 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	const char *postfix = "_uarea";
 	char uarea_name[ODP_POOL_NAME_LEN + sizeof(postfix)];
 
-	if (params == NULL) {
-		ODP_ERR("No params");
-		return ODP_POOL_INVALID;
-	}
-
 	align = 0;
 
 	if (params->type == ODP_POOL_BUFFER)
@@ -533,7 +528,7 @@ static int check_params(odp_pool_param_t *params)
 {
 	odp_pool_capability_t capa;
 
-	if (odp_pool_capability(&capa) < 0)
+	if (!params || odp_pool_capability(&capa) < 0)
 		return -1;
 
 	switch (params->type) {
@@ -603,7 +598,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 	if (check_params(params))
 		return ODP_POOL_INVALID;
 
-	if (params && (params->type == ODP_POOL_PACKET))
+	if (params->type == ODP_POOL_PACKET)
 		shm_flags = ODP_SHM_PROC;
 
 	return pool_create(name, params, shm_flags);
