@@ -61,7 +61,7 @@ cache:
         ccache: true
         pip: true
         directories:
-                #- dpdk
+                - dpdk
                 - netmap
                 - $HOME/cunit-install
                 - $HOME/doxygen-install
