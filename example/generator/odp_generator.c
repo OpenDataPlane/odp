@@ -26,7 +26,8 @@
 #define POOL_NUM_PKT           2048  /* Number of packets in packet pool */
 #define POOL_PKT_LEN           1856  /* Max packet length */
 #define DEFAULT_PKT_INTERVAL   1000  /* Interval between each packet */
-#define MAX_UDP_TX_BURST	32
+#define DEFAULT_UDP_TX_BURST	16
+#define MAX_UDP_TX_BURST	512
 #define MAX_RX_BURST		32
 
 #define APPL_MODE_UDP    0			/**< UDP mode */
@@ -1311,7 +1312,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->payload = 56;
 	appl_args->timeout = -1;
 	appl_args->interval = DEFAULT_PKT_INTERVAL;
-	appl_args->udp_tx_burst = 16;
+	appl_args->udp_tx_burst = DEFAULT_UDP_TX_BURST;
 	appl_args->srcport = 0;
 	appl_args->dstport = 0;
 
