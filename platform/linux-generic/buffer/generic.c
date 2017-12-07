@@ -193,7 +193,7 @@ static inline void buffer_free_to_pool(pool_t *pool,
 		ring  = &pool->ring->hdr;
 		mask  = pool->ring_mask;
 		for (i = 0; i < num; i++)
-			buf_index[i] = buf_hdr[i]->index;
+			buf_index[i] = buf_hdr_to_index(buf_hdr[i]);
 
 		ring_enq_multi(ring, mask, buf_index, num);
 
@@ -233,7 +233,7 @@ static inline void buffer_free_to_pool(pool_t *pool,
 	}
 
 	for (i = 0; i < num; i++)
-		cache->buf_index[cache_num + i] = buf_hdr[i]->index;
+		cache->buf_index[cache_num + i] = buf_hdr_to_index(buf_hdr[i]);
 
 	cache->num = cache_num + num;
 }

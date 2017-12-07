@@ -259,7 +259,6 @@ static void init_buffers(pool_t *pool)
 		seg_size = pool->headroom + pool->seg_len + pool->tailroom;
 
 		/* Initialize buffer metadata */
-		buf_hdr->index = i;
 		buf_hdr->size = seg_size;
 		buf_hdr->type = type;
 		buf_hdr->event_type = type;

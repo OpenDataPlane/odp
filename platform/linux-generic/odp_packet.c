@@ -10,6 +10,7 @@
 #include <odp/api/packet.h>
 #include <odp_packet_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_pool_internal.h>
 #include <odp/api/hints.h>
 #include <odp/api/byteorder.h>
 
@@ -1796,7 +1797,8 @@ void odp_packet_print_data(odp_packet_t pkt, uint32_t offset,
 	len += snprintf(&str[len], n - len,
 			"  pool index    %" PRIu32 "\n", pool->pool_idx);
 	len += snprintf(&str[len], n - len,
-			"  buf index     %" PRIu32 "\n", hdr->buf_hdr.index);
+			"  buf index     %" PRIu32 "\n",
+			buf_hdr_to_index(&hdr->buf_hdr));
 	len += snprintf(&str[len], n - len,
 			"  segcount      %" PRIu16 "\n", hdr->buf_hdr.segcount);
 	len += snprintf(&str[len], n - len,

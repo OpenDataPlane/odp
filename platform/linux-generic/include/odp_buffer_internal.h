@@ -43,10 +43,6 @@ typedef struct seg_entry_t {
 
 /* Common buffer header */
 struct odp_buffer_hdr_t {
-
-	/* Buffer index in the pool */
-	uint32_t  index;
-
 	/* Total segment count */
 	uint16_t  segcount;
 
