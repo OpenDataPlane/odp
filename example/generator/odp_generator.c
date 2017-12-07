@@ -76,6 +76,7 @@ typedef struct {
 				     each packet */
 	int udp_tx_burst;	/**< number of udp packets to send with one
 				      API call */
+	odp_bool_t csum;	/**< use platform csum support if available */
 } appl_args_t;
 
 /**
@@ -516,14 +517,26 @@ static int create_pktio(const char *dev, odp_pool_t pool,
 		return -1;
 	}
 	odp_pktio_config_init(&itf->config);
-	itf->config.pktin.bit.ipv4_chksum = capa.config.pktin.bit.ipv4_chksum;
-	itf->config.pktin.bit.udp_chksum = capa.config.pktin.bit.udp_chksum;
-	itf->config.pktin.bit.drop_ipv4_err =
-		capa.config.pktin.bit.drop_ipv4_err;
-	itf->config.pktin.bit.drop_udp_err = capa.config.pktin.bit.drop_udp_err;
+	if (args->appl.csum) {
+		itf->config.pktin.bit.ipv4_chksum =
+			capa.config.pktin.bit.ipv4_chksum;
+		itf->config.pktin.bit.udp_chksum =
+			capa.config.pktin.bit.udp_chksum;
+		itf->config.pktin.bit.drop_ipv4_err =
+			capa.config.pktin.bit.drop_ipv4_err;
+		itf->config.pktin.bit.drop_udp_err =
+			capa.config.pktin.bit.drop_udp_err;
 
-	itf->config.pktout.bit.ipv4_chksum = capa.config.pktout.bit.ipv4_chksum;
-	itf->config.pktout.bit.udp_chksum = capa.config.pktout.bit.udp_chksum;
+		itf->config.pktout.bit.ipv4_chksum =
+			capa.config.pktout.bit.ipv4_chksum;
+		itf->config.pktout.bit.udp_chksum =
+			capa.config.pktout.bit.udp_chksum;
+	} else { /* explicit disable */
+		itf->config.pktin.bit.ipv4_chksum = 0;
+		itf->config.pktin.bit.udp_chksum = 0;
+		itf->config.pktout.bit.ipv4_chksum = 0;
+		itf->config.pktout.bit.udp_chksum = 0;
+	}
 
 	if (odp_pktio_config(itf->pktio, &itf->config)) {
 		EXAMPLE_ERR("Error: Failed to set interface configuration %s\n",
@@ -1299,10 +1312,11 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"interval", required_argument, NULL, 'i'},
 		{"help", no_argument, NULL, 'h'},
 		{"udp_tx_burst", required_argument, NULL, 'x'},
+		{"csum", no_argument, NULL, 'y'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+I:a:b:s:d:p:i:m:n:t:w:c:x:he:f:";
+	static const char *shortopts = "+I:a:b:s:d:p:i:m:n:t:w:c:x:he:f:y";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	odph_parse_options(argc, argv, shortopts, longopts);
@@ -1315,6 +1329,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->udp_tx_burst = DEFAULT_UDP_TX_BURST;
 	appl_args->srcport = 0;
 	appl_args->dstport = 0;
+	appl_args->csum = 0;
 
 	opterr = 0; /* do not issue errors on helper options */
 
@@ -1455,6 +1470,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			}
 			break;
 
+		case 'y':
+			appl_args->csum = 1;
+			break;
 		case 'h':
 			usage(argv[0]);
 			exit(EXIT_SUCCESS);
@@ -1541,6 +1559,8 @@ static void usage(char *progname)
 	       "  -n, --count the number of packets to be send\n"
 	       "  -c, --cpumask to set on cores\n"
 	       "  -x, --udp_tx_burst size of UDP TX burst\n"
+	       "  -y, --csum use platform checksum support if available\n"
+	       "	         default is disabled\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 	      );
 }
