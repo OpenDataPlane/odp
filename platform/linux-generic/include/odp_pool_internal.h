@@ -139,6 +139,14 @@ static inline odp_buffer_hdr_t *buf_hdr_from_index(pool_t *pool,
 	return buf_hdr;
 }
 
+static inline uint32_t buf_hdr_to_index(odp_buffer_hdr_t *buf_hdr)
+{
+	pool_t *pool = buf_hdr->pool_ptr;
+	uint32_t index = ((uint8_t *)buf_hdr - pool->base_addr)
+			 / pool->block_size;
+
+	return index;
+}
 int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int num);
 void buffer_free_multi(odp_buffer_hdr_t *buf_hdr[], int num_free);
 
