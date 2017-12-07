@@ -23,87 +23,111 @@ extern "C" {
 #include <odp/api/packet.h>
 
 /** @addtogroup odp_packet
- *  Boolean operations on a packet.
+ *  Operations on packet metadata flags.
  *  @{
  */
 
 /**
- * Check for packet errors
+ * Check for all errors in packet
  *
- * Checks all error flags at once.
+ * Check if packet parsing has found any errors in the packet. The level of
+ * error checking depends on the parse configuration (e.g. included layers and
+ * checksums). Protocol layer functions (e.g. odp_packet_has_l3()) indicate
+ * which layers have been checked, and layer error functions
+ * (e.g. odp_packet_has_l3_error()) which layers have errors.
  *
- * @param pkt Packet handle
- * @retval non-zero packet has errors
- * @retval 0 packet has no errors
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet has errors
+ * @retval 0           No errors were found
  */
 int odp_packet_has_error(odp_packet_t pkt);
 
 /**
- * Check for packet L2 errors
+ * Check for errors in layer 2
  *
- * check for all L2 errors
+ * When layer 2 is included in the parse configuration, check if any errors were
+ * found in layer 2 of the packet.
  *
- * @param pkt Packet handle
- * @retval non-zero packet has L2 errors
- * @retval 0 packet has no L2 error
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet has errors in layer 2
+ * @retval 0           No errors were found in layer 2
  */
 int odp_packet_has_l2_error(odp_packet_t pkt);
 
 /**
- * Check for L2 header, e.g. ethernet
+ * Check for errors in layer 3
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains a valid & known L2 header
- * @retval 0 if packet does not contain a valid & known L2 header
- */
-int odp_packet_has_l2(odp_packet_t pkt);
-
-/**
- * Check for packet L3 errors
+ * When layer 3 is included in the parse configuration, check if any errors were
+ * found in layer 3 of the packet.
  *
- * check for all L3 errors
+ * @param pkt          Packet handle
  *
- * @param pkt Packet handle
- * @retval non-zero packet has L3 errors
- * @retval 0 packet has no L3 error
+ * @retval non-zero    Packet has errors in layer 3
+ * @retval 0           No errors found in layer 3
  */
 int odp_packet_has_l3_error(odp_packet_t pkt);
 
 /**
- * Check for L3 header, e.g. IPv4, IPv6
+ * Check for errors in layer 4
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains a valid & known L3 header
- * @retval 0 if packet does not contain a valid & known L3 header
- */
-int odp_packet_has_l3(odp_packet_t pkt);
-
-/**
- * Check for packet L4 errors
+ * When layer 4 is included in the parse configuration, check if any errors were
+ * found in layer 4 of the packet.
  *
- * check for all L4 errors
+ * @param pkt          Packet handle
  *
- * @param pkt Packet handle
- * @retval non-zero packet has L4 errors
- * @retval 0 packet has no L4 error
+ * @retval non-zero    Packet has errors in layer 4
+ * @retval 0           No errors were found in layer 4
  */
 int odp_packet_has_l4_error(odp_packet_t pkt);
 
 /**
- * Check for L4 header, e.g. UDP, TCP, SCTP (also ICMP)
+ * Check for layer 2 protocols
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains a valid & known L4 header
- * @retval 0 if packet does not contain a valid & known L4 header
+ * When layer 2 is included in the parse configuration, check if packet parsing
+ * has found and checked a layer 2 protocol (e.g. Ethernet) in the packet.
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    A layer 2 protocol header was found and checked
+ * @retval 0           No layer 2 protocol was found
+ */
+int odp_packet_has_l2(odp_packet_t pkt);
+
+/**
+ * Check for layer 3 protocols
+ *
+ * When layer 3 is included in the parse configuration, check if packet parsing
+ * has found and checked a layer 3 protocol (e.g. IPv4, IPv6) in the packet.
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    A layer 3 protocol header was found and checked
+ * @retval 0           No layer 3 protocol was found
+ */
+int odp_packet_has_l3(odp_packet_t pkt);
+
+/**
+ * Check for layer 4 protocols
+ *
+ * When layer 4 is included in the parse configuration, check if packet parsing
+ * has found and checked a layer 4 protocol (e.g. UDP, TCP, SCTP) in the packet.
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    A layer 4 protocol header was found and checked
+ * @retval 0           No layer 4 protocol was found
  */
 int odp_packet_has_l4(odp_packet_t pkt);
 
 /**
  * Check for Ethernet header
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains a valid eth header
- * @retval 0 if packet does not contain a valid eth header
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains an Ethernet header
+ * @retval 0           Packet does not contain an Ethernet header
  */
 int odp_packet_has_eth(odp_packet_t pkt);
 
