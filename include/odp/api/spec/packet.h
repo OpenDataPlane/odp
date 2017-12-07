@@ -1347,15 +1347,16 @@ uint32_t odp_packet_user_area_size(odp_packet_t pkt);
 /**
  * Layer 2 start pointer
  *
- * Returns pointer to the start of the layer 2 header. Optionally, outputs
- * number of data bytes in the segment following the pointer.
+ * Returns pointer to the start of layer 2. Optionally, outputs number of data
+ * bytes in the segment following the pointer. The pointer value is generated
+ * from the current layer 2 offset.
  *
  * @param      pkt      Packet handle
  * @param[out] len      Number of data bytes remaining in the segment (output).
  *                      Ignored when NULL.
  *
- * @return  Layer 2 start pointer
- * @retval  NULL packet does not contain a valid L2 header
+ * @return Layer 2 start pointer
+ * @retval NULL  Layer 2 offset has not been set
  *
  * @see odp_packet_l2_offset(), odp_packet_l2_offset_set(), odp_packet_has_l2()
  */
@@ -1364,16 +1365,16 @@ void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len);
 /**
  * Layer 2 start offset
  *
- * Returns offset to the start of the layer 2 header. The offset is calculated
- * from the current odp_packet_data() position in bytes.
- *
- * User is responsible to update the offset when modifying the packet data
- * pointer position.
+ * Returns offset to the start of layer 2. The offset is calculated from the
+ * current odp_packet_data() position in bytes. Packet parsing sets the offset
+ * according to parse configuration and layers recognized in the packet. Data
+ * start position updating functions (e.g. odp_packet_push_head()) do not modify
+ * the offset, but user sets a new value when needed.
  *
  * @param pkt  Packet handle
  *
- * @return  Layer 2 start offset
- * @retval ODP_PACKET_OFFSET_INVALID packet does not contain a valid L2 header
+ * @return Layer 2 start offset
+ * @retval ODP_PACKET_OFFSET_INVALID  Layer 2 offset has not been set
  *
  * @see odp_packet_l2_offset_set(), odp_packet_has_l2()
  */
@@ -1382,9 +1383,9 @@ uint32_t odp_packet_l2_offset(odp_packet_t pkt);
 /**
  * Set layer 2 start offset
  *
- * Set offset to the start of the layer 2 header. The offset is calculated from
- * the current odp_packet_data() position in bytes. Offset must not exceed
- * packet data length. Packet is not modified on an error.
+ * Set offset to the start of layer 2. The offset is calculated from the current
+ * odp_packet_data() position in bytes. Offset must not exceed packet data
+ * length. Offset is not modified on an error.
  *
  * @param pkt     Packet handle
  * @param offset  Layer 2 start offset (0 ... odp_packet_len()-1)
@@ -1397,15 +1398,16 @@ int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset);
 /**
  * Layer 3 start pointer
  *
- * Returns pointer to the start of the layer 3 header. Optionally, outputs
- * number of data bytes in the segment following the pointer.
+ * Returns pointer to the start of layer 3. Optionally, outputs number of data
+ * bytes in the segment following the pointer. The pointer value is generated
+ * from the current layer 3 offset.
  *
  * @param      pkt      Packet handle
  * @param[out] len      Number of data bytes remaining in the segment (output).
  *                      Ignored when NULL.
  *
- * @return  Layer 3 start pointer
- * @retval NULL packet does not contain a valid L3 header
+ * @return Layer 3 start pointer
+ * @retval NULL  Layer 3 offset has not been set
  *
  * @see odp_packet_l3_offset(), odp_packet_l3_offset_set(), odp_packet_has_l3()
  */
@@ -1414,16 +1416,16 @@ void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len);
 /**
  * Layer 3 start offset
  *
- * Returns offset to the start of the layer 3 header. The offset is calculated
- * from the current odp_packet_data() position in bytes.
- *
- * User is responsible to update the offset when modifying the packet data
- * pointer position.
+ * Returns offset to the start of layer 3. The offset is calculated from the
+ * current odp_packet_data() position in bytes. Packet parsing sets the offset
+ * according to parse configuration and layers recognized in the packet. Data
+ * start position updating functions (e.g. odp_packet_push_head()) do not modify
+ * the offset, but user sets a new value when needed.
  *
  * @param pkt  Packet handle
  *
- * @return  Layer 3 start offset, or ODP_PACKET_OFFSET_INVALID when packet does
- *          not contain a valid L3 header.
+ * @return Layer 3 start offset
+ * @retval ODP_PACKET_OFFSET_INVALID  Layer 3 offset has not been set
  *
  * @see odp_packet_l3_offset_set(), odp_packet_has_l3()
  */
@@ -1432,9 +1434,9 @@ uint32_t odp_packet_l3_offset(odp_packet_t pkt);
 /**
  * Set layer 3 start offset
  *
- * Set offset to the start of the layer 3 header. The offset is calculated from
- * the current odp_packet_data() position in bytes. Offset must not exceed
- * packet data length. Packet is not modified on an error.
+ * Set offset to the start of layer 3. The offset is calculated from the current
+ * odp_packet_data() position in bytes. Offset must not exceed packet data
+ * length. Offset is not modified on an error.
  *
  * @param pkt     Packet handle
  * @param offset  Layer 3 start offset (0 ... odp_packet_len()-1)
@@ -1447,15 +1449,16 @@ int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset);
 /**
  * Layer 4 start pointer
  *
- * Returns pointer to the start of the layer 4 header. Optionally, outputs
- * number of data bytes in the segment following the pointer.
+ * Returns pointer to the start of layer 4. Optionally, outputs number of data
+ * bytes in the segment following the pointer. The pointer value is generated
+ * from the current layer 4 offset.
  *
  * @param      pkt      Packet handle
  * @param[out] len      Number of data bytes remaining in the segment (output).
  *                      Ignored when NULL.
  *
- * @return  Layer 4 start pointer
- * @retval NULL packet does not contain a valid L4 header
+ * @return Layer 4 start pointer
+ * @retval NULL  Layer 4 offset has not been set
  *
  * @see odp_packet_l4_offset(), odp_packet_l4_offset_set(), odp_packet_has_l4()
  */
@@ -1464,16 +1467,16 @@ void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len);
 /**
  * Layer 4 start offset
  *
- * Returns offset to the start of the layer 4 header. The offset is calculated
- * from the current odp_packet_data() position in bytes.
- *
- * User is responsible to update the offset when modifying the packet data
- * pointer position.
+ * Returns offset to the start of layer 4. The offset is calculated from the
+ * current odp_packet_data() position in bytes. Packet parsing sets the offset
+ * according to parse configuration and layers recognized in the packet. Data
+ * start position updating functions (e.g. odp_packet_push_head()) do not modify
+ * the offset, but user sets a new value when needed.
  *
  * @param pkt  Packet handle
  *
- * @return  Layer 4 start offset
- * @retval ODP_PACKET_OFFSET_INVALID packet does not contain a valid L4 header
+ * @return Layer 4 start offset
+ * @retval ODP_PACKET_OFFSET_INVALID  Layer 4 offset has not been set
  *
  * @see odp_packet_l4_offset_set(), odp_packet_has_l4()
  */
@@ -1482,9 +1485,9 @@ uint32_t odp_packet_l4_offset(odp_packet_t pkt);
 /**
  * Set layer 4 start offset
  *
- * Set offset to the start of the layer 4 header. The offset is calculated from
- * the current odp_packet_data() position in bytes. Offset must not exceed
- * packet data length. Packet is not modified on an error.
+ * Set offset to the start of layer 4. The offset is calculated from the current
+ * odp_packet_data() position in bytes. Offset must not exceed packet data
+ * length. Offset is not modified on an error.
  *
  * @param pkt     Packet handle
  * @param offset  Layer 4 start offset (0 ... odp_packet_len()-1)
