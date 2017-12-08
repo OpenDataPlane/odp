@@ -2444,7 +2444,7 @@ void packet_test_parse(void)
 	}
 
 	parse.proto = ODP_PROTO_ETH;
-	parse.layer = ODP_PROTO_LAYER_ALL;
+	parse.last_layer = ODP_PROTO_LAYER_ALL;
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], offset[0], &parse) == 0);
@@ -2475,7 +2475,7 @@ void packet_test_parse(void)
 	}
 
 	parse.proto = ODP_PROTO_IPV4;
-	parse.layer = ODP_PROTO_LAYER_L4;
+	parse.last_layer = ODP_PROTO_LAYER_L4;
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], offset[0], &parse) == 0);
@@ -2505,7 +2505,7 @@ void packet_test_parse(void)
 	}
 
 	parse.proto = ODP_PROTO_ETH;
-	parse.layer = ODP_PROTO_LAYER_L4;
+	parse.last_layer = ODP_PROTO_LAYER_L4;
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], offset[0], &parse) == 0);
@@ -2535,7 +2535,7 @@ void packet_test_parse(void)
 	}
 
 	parse.proto = ODP_PROTO_ETH;
-	parse.layer = ODP_PROTO_LAYER_L4;
+	parse.last_layer = ODP_PROTO_LAYER_L4;
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], offset[0], &parse) == 0);
@@ -2566,7 +2566,7 @@ void packet_test_parse(void)
 	}
 
 	parse.proto = ODP_PROTO_ETH;
-	parse.layer = ODP_PROTO_LAYER_ALL;
+	parse.last_layer = ODP_PROTO_LAYER_ALL;
 	parse.chksums.all_chksum = 0;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], offset[0], &parse) == 0);
