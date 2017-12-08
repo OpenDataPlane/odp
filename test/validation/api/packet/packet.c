@@ -477,7 +477,9 @@ static void packet_test_alloc_segmented(void)
 	if (pool_capa.pkt.max_segs_per_pkt == 0)
 		pool_capa.pkt.max_segs_per_pkt = 10;
 
-	if (pool_capa.pkt.max_len)
+	if (pool_capa.pkt.max_len &&
+	    pool_capa.pkt.max_len <
+	      pool_capa.pkt.max_segs_per_pkt * pool_capa.pkt.min_seg_len)
 		max_len = pool_capa.pkt.max_len;
 	else
 		max_len = pool_capa.pkt.min_seg_len *
@@ -1804,6 +1806,8 @@ static void packet_test_extend_small(void)
 
 	param.type    = ODP_POOL_PACKET;
 	param.pkt.len = len;
+	param.pkt.seg_len = (len + pool_capa.pkt.max_segs_per_pkt - 1) /
+			    pool_capa.pkt.max_segs_per_pkt;
 	param.pkt.num = PACKET_POOL_NUM;
 
 	pool = odp_pool_create("packet_pool_extend", &param);
