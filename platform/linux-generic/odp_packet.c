@@ -2311,7 +2311,7 @@ int odp_packet_parse(odp_packet_t pkt, uint32_t offset,
 	uint32_t seg_len;
 	uint32_t packet_len = pkt_hdr->frame_len;
 	odp_proto_t proto = param->proto;
-	odp_proto_layer_t layer = param->layer;
+	odp_proto_layer_t layer = param->last_layer;
 	int ret;
 	uint16_t ethtype;
 
