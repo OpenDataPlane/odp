@@ -2198,11 +2198,12 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 {
 	uint8_t  ip_proto;
 
+	prs->l3_offset = offset;
+
 	if (layer <= ODP_PKTIO_PARSER_LAYER_L2)
 		return prs->error_flags.all != 0;
 
-	/* Set l3_offset+flag only for known ethtypes */
-	prs->l3_offset = offset;
+	/* Set l3 flag only for known ethtypes */
 	prs->input_flags.l3 = 1;
 
 	/* Parse Layer 3 headers */
@@ -2210,12 +2211,14 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 	case _ODP_ETHTYPE_IPV4:
 		prs->input_flags.ipv4 = 1;
 		ip_proto = parse_ipv4(prs, &parseptr, &offset, frame_len);
+		prs->l4_offset = offset;
 		break;
 
 	case _ODP_ETHTYPE_IPV6:
 		prs->input_flags.ipv6 = 1;
 		ip_proto = parse_ipv6(prs, &parseptr, &offset, frame_len,
 				      seg_len);
+		prs->l4_offset = offset;
 		break;
 
 	case _ODP_ETHTYPE_ARP:
@@ -2225,15 +2228,13 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 
 	default:
 		prs->input_flags.l3 = 0;
-		prs->l3_offset = ODP_PACKET_OFFSET_INVALID;
 		ip_proto = 255;  /* Reserved invalid by IANA */
 	}
 
 	if (layer == ODP_PKTIO_PARSER_LAYER_L3)
 		return prs->error_flags.all != 0;
 
-	/* Set l4_offset+flag only for known ip_proto */
-	prs->l4_offset = offset;
+	/* Set l4 flag only for known ip_proto */
 	prs->input_flags.l4 = 1;
 
 	/* Parse Layer 4 headers */
@@ -2279,7 +2280,6 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 
 	default:
 		prs->input_flags.l4 = 0;
-		prs->l4_offset = ODP_PACKET_OFFSET_INVALID;
 		break;
 	}
 
