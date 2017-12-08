@@ -1246,7 +1246,7 @@ typedef struct odp_packet_parse_param_t {
 
 	/** Continue parsing until this layer. Must be the same or higher
 	 *  layer than the layer of 'proto'. */
-	odp_proto_layer_t layer;
+	odp_proto_layer_t last_layer;
 
 	/** Flags to control payload data checksums checks up to the selected
 	 *  parse layer. Checksum checking status can be queried for each packet
@@ -1260,19 +1260,21 @@ typedef struct odp_packet_parse_param_t {
 /**
  * Parse packet
  *
- * Parse protocol headers in packet data. Parsing starts at 'offset', which
- * is the first header byte of protocol 'param.proto'. Parameter 'param.layer'
- * defines the last layer application is interested about.
- * Use ODP_PROTO_LAYER_ALL for all layers. A successful operation sets or resets
- * packet metadata for all layers from the layer of 'param.proto' to the
- * application defined last layer. Metadata of other layers have undefined
- * values. When operation fails, metadata of all protocol layers have undefined
- * values.
+ * Parse protocol headers in packet data and update layer/protocol specific
+ * metadata (e.g. offsets, errors, protocols, checksum statuses, etc). Parsing
+ * starts at 'offset', which is the first header byte of protocol 'param.proto'.
+ * Parameter 'param.last_layer' defines the last layer application requests
+ * to check. Use ODP_PROTO_LAYER_ALL for all layers. A successful operation
+ * sets (or resets) packet metadata for all layers from the layer of
+ * 'param.proto' to the application defined last layer. In addition, offset
+ * (and pointer) to the next layer is set. Other layer/protocol specific
+ * metadata have undefined values. When operation fails, all layer/protocol
+ * specific metadata have undefined values.
  *
  * @param pkt     Packet handle
  * @param offset  Byte offset into the packet
- * @param param   Parse parameters. Proto and layer fields must be set. Clear
- *                all check bits that are not used.
+ * @param param   Parse parameters. Proto and last_layer fields must be set.
+ *                Clear all check bits that are not used.
  *
  * @retval 0 on success
  * @retval <0 on failure
@@ -1284,14 +1286,14 @@ int odp_packet_parse(odp_packet_t pkt, uint32_t offset,
  * Parse multiple packets
  *
  * Otherwise like odp_packet_parse(), but parses multiple packets. Packets may
- * have unique offsets, but must start with the same protocol. Also, packets are
- * parsed up to the same protocol layer.
+ * have unique offsets, but must start with the same protocol. The same
+ * parse parameters are applied to all packets.
  *
  * @param pkt     Packet handle array
  * @param offset  Byte offsets into the packets
  * @param num     Number of packets and offsets
- * @param param   Parse parameters. Proto and layer fields must be set. Clear
- *                all check bits that are not used.
+ * @param param   Parse parameters. Proto and last_layer fields must be set.
+ *                Clear all check bits that are not used.
  *
  * @return Number of packets parsed successfully (0 ... num)
  * @retval <0 on failure
