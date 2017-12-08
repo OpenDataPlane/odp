@@ -404,8 +404,13 @@ typedef enum odp_pktio_parser_layer_t {
 typedef struct odp_pktio_parser_config_t {
 	/** Protocol parsing level in packet input
 	  *
-	  * Parse protocol layers in minimum up to this level during packet
-	  * input. The default value is ODP_PKTIO_PARSER_LAYER_ALL. */
+	  * Application requires that protocol headers in a packet are checked
+	  * up to this layer during packet input. Use ODP_PROTO_LAYER_ALL for
+	  * all layers. Packet metadata for this and all preceding layers are
+	  * set. In addition, offset (and pointer) to the next layer is set.
+	  * Other layer/protocol specific metadata have undefined values.
+	  *
+	  * The default value is ODP_PKTIO_PARSER_LAYER_ALL. */
 	odp_pktio_parser_layer_t layer;
 
 } odp_pktio_parser_config_t;
