@@ -57,12 +57,17 @@ struct odp_buffer_hdr_t {
 	 /* ODP buffer type, not DPDK buf type */
 	int type;
 
+#ifndef ODP_SCHEDULE_SCALABLE
 	/* Burst counts */
 	int burst_num;
 	int burst_first;
 
 	/* Next buf in a list */
 	struct odp_buffer_hdr_t *next;
+
+	/* Burst table */
+	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
+#endif
 
 	/* User context pointer or u64 */
 	union {
@@ -76,9 +81,6 @@ struct odp_buffer_hdr_t {
 
 	/* Event subtype. Should be ODP_EVENT_NO_SUBTYPE except packets. */
 	odp_event_type_t         event_subtype;
-
-	/* Burst table */
-	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
 
 	/* Pool handle */
 	odp_pool_t pool_hdl;

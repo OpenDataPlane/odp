@@ -189,8 +189,6 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	pkt_hdr->p.l3_offset = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->p.l4_offset = ODP_PACKET_OFFSET_INVALID;
 
-	pkt_hdr->buf_hdr.next = NULL;
-
 	pkt_hdr->input = ODP_PKTIO_INVALID;
 	pkt_hdr->buf_hdr.event_subtype = ODP_EVENT_PACKET_BASIC;
 
