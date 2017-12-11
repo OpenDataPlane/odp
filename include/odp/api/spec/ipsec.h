@@ -148,10 +148,15 @@ typedef struct odp_ipsec_inbound_config_t {
 	/** Parse packet headers after IPSEC transformation
 	 *
 	 *  Select header parsing level after inbound processing. Headers of the
-	 *  resulting packet must be parsed (at least) up to this level. Parsing
-	 *  starts from IP (layer 3). Each successfully transformed packet has
-	 *  a valid value for L3 offset regardless of the parse configuration.
-	 *  Default value is ODP_IPSEC_LAYER_NONE.
+	 *  resulting packet must be checked (at least) up to this level.
+	 *  Parsing starts from IP (layer 3). Packet metadata from IP to this
+	 *  layer is set. In addition, offset (and pointer) to the next layer
+	 *  is set. Other layer/protocol specific metadata have undefined
+	 *  values.
+	 *
+	 *  Each successfully transformed packet has a valid value for L3 offset
+	 *  regardless of the parse configuration. Default value is
+	 *  ODP_IPSEC_LAYER_NONE. ODP_IPSEC_LAYER_L2 is not a valid value.
 	 */
 	odp_ipsec_proto_layer_t parse;
 
