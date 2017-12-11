@@ -830,7 +830,7 @@ odp_event_t odp_crypto_packet_to_event(odp_packet_t pkt);
  * Successful crypto operations of all types (SYNC and ASYNC) produce packets
  * which contain crypto result metadata. This function copies the operation
  * results from an crypto processed packet. Event subtype of this kind of
- * packet is ODP_EVENT_PACKET_crypto. Results are undefined if a non-crypto
+ * packet is ODP_EVENT_PACKET_CRYPTO. Results are undefined if a non-crypto
  * processed packet is passed as input.
  *
  * @param         packet  An crypto processed packet (ODP_EVENT_PACKET_CRYPTO)
