@@ -40,7 +40,7 @@
  */
 #define CONFIG_WFE
 
-static inline void dmb(void)
+static inline void _odp_dmb(void)
 {
 	__asm__ volatile("dmb" : : : "memory");
 }
