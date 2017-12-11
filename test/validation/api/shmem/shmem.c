@@ -136,24 +136,59 @@ void shmem_test_basic(void)
 	odp_shm_t shm2;
 	shared_test_data_t *shared_test_data;
 	odp_cpumask_t unused;
+	int i;
+	char max_name[ODP_SHM_NAME_LEN];
 
+	for (i = 0; i < ODP_SHM_NAME_LEN; i++)
+		max_name[i] = 'A' + (i % 26);
+
+	max_name[ODP_QUEUE_NAME_LEN - 1] = 0;
+
+	/* NULL name */
+	shm = odp_shm_reserve(NULL,
+			      sizeof(shared_test_data_t), ALIGN_SIZE, 0);
+	CU_ASSERT(ODP_SHM_INVALID != shm);
+	shared_test_data = odp_shm_addr(shm);
+	CU_ASSERT_FATAL(NULL != shared_test_data);
+	shared_test_data->foo = 0;
+	CU_ASSERT(0 == odp_shm_free(shm));
+
+	/* Maximum length name */
+	shm = odp_shm_reserve(max_name,
+			      sizeof(shared_test_data_t), ALIGN_SIZE, 0);
+	CU_ASSERT(ODP_SHM_INVALID != shm);
+	shm2 = odp_shm_lookup(max_name);
+	CU_ASSERT(ODP_SHM_INVALID != shm2);
+	CU_ASSERT(odp_shm_addr(shm) == odp_shm_addr(shm2));
+	shared_test_data = odp_shm_addr(shm);
+	CU_ASSERT_FATAL(NULL != shared_test_data);
+	shared_test_data->foo = 0;
+	CU_ASSERT(0 == odp_shm_free(shm));
+
+	/* Non-unique name */
 	shm = odp_shm_reserve(MEM_NAME,
 			      sizeof(shared_test_data_t), ALIGN_SIZE, 0);
 	CU_ASSERT(ODP_SHM_INVALID != shm);
 	CU_ASSERT(odp_shm_to_u64(shm) !=
 					odp_shm_to_u64(ODP_SHM_INVALID));
-
-	/* also check that another reserve with same name is accepted: */
 	shm2 = odp_shm_reserve(MEM_NAME,
 			       sizeof(shared_test_data_t), ALIGN_SIZE, 0);
 	CU_ASSERT(ODP_SHM_INVALID != shm2);
 	CU_ASSERT(odp_shm_to_u64(shm2) !=
 					odp_shm_to_u64(ODP_SHM_INVALID));
 
+	CU_ASSERT(odp_shm_addr(shm) != odp_shm_addr(shm2));
+	shared_test_data = odp_shm_addr(shm);
+	CU_ASSERT_FATAL(NULL != shared_test_data);
+	shared_test_data->foo = 0;
+	shared_test_data = odp_shm_addr(shm2);
+	CU_ASSERT_FATAL(NULL != shared_test_data);
+	shared_test_data->foo = 0;
 	CU_ASSERT(0 == odp_shm_free(shm));
 	CU_ASSERT(0 == odp_shm_free(shm2));
 	CU_ASSERT(ODP_SHM_INVALID == odp_shm_lookup(MEM_NAME));
 
+	/* Share with multiple threads */
 	shm = odp_shm_reserve(MEM_NAME,
 			      sizeof(shared_test_data_t), ALIGN_SIZE, 0);
 	CU_ASSERT(ODP_SHM_INVALID != shm);
