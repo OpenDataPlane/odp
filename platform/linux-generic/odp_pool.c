@@ -924,33 +924,33 @@ void odp_pool_print(odp_pool_t pool_hdl)
 
 	pool = pool_entry_from_hdl(pool_hdl);
 
-	printf("\nPool info\n");
-	printf("---------\n");
-	printf("  pool            %" PRIu64 "\n",
-	       odp_pool_to_u64(pool->pool_hdl));
-	printf("  name            %s\n", pool->name);
-	printf("  pool type       %s\n",
-	       pool->params.type == ODP_POOL_BUFFER ? "buffer" :
-	       (pool->params.type == ODP_POOL_PACKET ? "packet" :
-	       (pool->params.type == ODP_POOL_TIMEOUT ? "timeout" :
-		"unknown")));
-	printf("  pool shm        %" PRIu64 "\n",
-	       odp_shm_to_u64(pool->shm));
-	printf("  user area shm   %" PRIu64 "\n",
-	       odp_shm_to_u64(pool->uarea_shm));
-	printf("  num             %u\n", pool->num);
-	printf("  align           %u\n", pool->align);
-	printf("  headroom        %u\n", pool->headroom);
-	printf("  seg len         %u\n", pool->seg_len);
-	printf("  max data len    %u\n", pool->max_len);
-	printf("  tailroom        %u\n", pool->tailroom);
-	printf("  block size      %u\n", pool->block_size);
-	printf("  uarea size      %u\n", pool->uarea_size);
-	printf("  shm size        %u\n", pool->shm_size);
-	printf("  base addr       %p\n", pool->base_addr);
-	printf("  uarea shm size  %u\n", pool->uarea_shm_size);
-	printf("  uarea base addr %p\n", pool->uarea_base_addr);
-	printf("\n");
+	ODP_PRINT("\nPool info\n");
+	ODP_PRINT("---------\n");
+	ODP_PRINT("  pool            %" PRIu64 "\n",
+		  odp_pool_to_u64(pool->pool_hdl));
+	ODP_PRINT("  name            %s\n", pool->name);
+	ODP_PRINT("  pool type       %s\n",
+		  pool->params.type == ODP_POOL_BUFFER ? "buffer" :
+		  (pool->params.type == ODP_POOL_PACKET ? "packet" :
+		   (pool->params.type == ODP_POOL_TIMEOUT ? "timeout" :
+		    "unknown")));
+	ODP_PRINT("  pool shm        %" PRIu64 "\n",
+		  odp_shm_to_u64(pool->shm));
+	ODP_PRINT("  user area shm   %" PRIu64 "\n",
+		  odp_shm_to_u64(pool->uarea_shm));
+	ODP_PRINT("  num             %u\n", pool->num);
+	ODP_PRINT("  align           %u\n", pool->align);
+	ODP_PRINT("  headroom        %u\n", pool->headroom);
+	ODP_PRINT("  seg len         %u\n", pool->seg_len);
+	ODP_PRINT("  max data len    %u\n", pool->max_len);
+	ODP_PRINT("  tailroom        %u\n", pool->tailroom);
+	ODP_PRINT("  block size      %u\n", pool->block_size);
+	ODP_PRINT("  uarea size      %u\n", pool->uarea_size);
+	ODP_PRINT("  shm size        %u\n", pool->shm_size);
+	ODP_PRINT("  base addr       %p\n", pool->base_addr);
+	ODP_PRINT("  uarea shm size  %u\n", pool->uarea_shm_size);
+	ODP_PRINT("  uarea base addr %p\n", pool->uarea_base_addr);
+	ODP_PRINT("\n");
 }
 
 odp_pool_t odp_buffer_pool(odp_buffer_t buf)
