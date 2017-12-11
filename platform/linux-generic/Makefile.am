@@ -184,6 +184,7 @@ noinst_HEADERS = \
 		  pktio/common.h \
 		  pktio/sysfs.h \
 		  pktio/dpdk.h \
+		  pktio/physmem/physmem.h \
 		  include/odp_pktio_ops_ipc.h \
 		  include/odp_pktio_ops_loopback.h \
 		  include/odp_pktio_ops_netmap.h \
@@ -250,6 +251,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_packet_flags.c \
 			   odp_packet_io.c \
 			   odp_packet_io_pool.c \
+			   pktio/physmem/physmem.c \
 			   pktio/ethtool.c \
 			   pktio/subsystem.c \
 			   pktio/ipc.c \
