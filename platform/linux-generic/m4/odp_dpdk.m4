@@ -2,27 +2,37 @@
 # Enable DPDK support
 ##########################################################################
 pktio_dpdk_support=no
+
+AC_ARG_ENABLE([dpdk],
+	      [AS_HELP_STRING([--enable-dpdk], [enable DPDK support for Packet I/O])],
+	      [pktio_dpdk_support=$enableval
+	       DPDK_PATH=system])
+
 AC_ARG_WITH([dpdk-path],
-AS_HELP_STRING([--with-dpdk-path=DIR   path to dpdk build directory]),
+[AS_HELP_STRING([--with-dpdk-path=DIR], [path to dpdk build directory])],
     [DPDK_PATH="$withval"
-    DPDK_CPPFLAGS="-msse4.2 -isystem $DPDK_PATH/include"
-    pktio_dpdk_support=yes],[])
+     pktio_dpdk_support=yes],[])
+
+AS_IF([test "x$DPDK_PATH" = "xsystem"],
+      [DPDK_CPPFLAGS="-isystem/usr/include/dpdk"
+       DPDK_LDFLAGS=""
+       DPDK_PMD_PATH="`$CC --print-file-name=librte_pmd_null.a`"
+       DPDK_PMD_PATH="`dirname "$DPDK_PMD_PATH"`"
+       AS_IF([test "x$DPDK_PMD_PATH" = "x"],
+	     [AC_MSG_FAILURE([Could not locate system DPDK PMD directory])])],
+      [DPDK_CPPFLAGS="-isystem $DPDK_PATH/include"
+       DPDK_LDFLAGS="-L$DPDK_PATH/lib"
+       DPDK_PMD_PATH="$DPDK_PATH/lib"])
 
 ##########################################################################
 # Enable zero-copy DPDK pktio
 ##########################################################################
 zero_copy=0
 AC_ARG_ENABLE([dpdk-zero-copy],
-    [  --enable-dpdk-zero-copy  enable experimental zero-copy DPDK pktio mode],
+    [AS_HELP_STRING([--enable-dpdk-zero-copy], [enable experimental zero-copy DPDK pktio mode])],
     [if test x$enableval = xyes; then
         zero_copy=1
     fi])
-
-##########################################################################
-# Save and set temporary compilation flags
-##########################################################################
-OLD_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$DPDK_CPPFLAGS $CPPFLAGS"
 
 ##########################################################################
 # Check for DPDK availability
@@ -32,37 +42,24 @@ CPPFLAGS="$DPDK_CPPFLAGS $CPPFLAGS"
 ##########################################################################
 if test x$pktio_dpdk_support = xyes
 then
-    AC_CHECK_HEADERS([rte_config.h], [],
-        [AC_MSG_FAILURE(["can't find DPDK header"])])
+    ODP_DPDK_CHECK([$DPDK_CPPFLAGS], [$DPDK_LDFLAGS], [],
+                   [AC_MSG_FAILURE([can't find DPDK])])
 
-    AS_VAR_SET([DPDK_PMDS], [-Wl,--whole-archive,])
-    for filename in "$DPDK_PATH"/lib/librte_pmd_*.a; do
-        cur_driver=`basename "$filename" .a | sed -e 's/^lib//'`
-        # rte_pmd_nfp has external dependencies which break linking
-        if test "$cur_driver" = "rte_pmd_nfp"; then
-            echo "skip linking rte_pmd_nfp"
-        else
-            AS_VAR_APPEND([DPDK_PMDS], [-l$cur_driver,])
-        fi
-    done
-    AS_VAR_APPEND([DPDK_PMDS], [--no-whole-archive])
+    ODP_DPDK_PMDS([$DPDK_PMD_PATH])
 
     AC_DEFINE([ODP_PKTIO_DPDK], [1],
 	      [Define to 1 to enable DPDK packet I/O support])
     AC_DEFINE_UNQUOTED([ODP_DPDK_ZERO_COPY], [$zero_copy],
 	      [Define to 1 to enable DPDK zero copy support])
 
-    DPDK_LIBS="-L$DPDK_PATH/lib -ldpdk -lpthread -ldl -lpcap -lm -lnuma"
+    if test -r "$DPDK_PMD_PATH/librte_pmd_pcap.a" &&
+       ! test -r "$DPDK_PMD_PATH/librte_pmd_pcap.so" ; then
+        DPDK_LIBS="$DPDK_LIBS -lpcap"
+    fi
     AC_SUBST([DPDK_CPPFLAGS])
     AC_SUBST([DPDK_LIBS])
-    AC_SUBST([DPDK_PMDS])
 else
     pktio_dpdk_support=no
 fi
-
-##########################################################################
-# Restore old saved variables
-##########################################################################
-CPPFLAGS=$OLD_CPPFLAGS
 
 AM_CONDITIONAL([PKTIO_DPDK], [test x$pktio_dpdk_support = xyes ])
