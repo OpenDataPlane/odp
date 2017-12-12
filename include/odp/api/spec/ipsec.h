@@ -1183,6 +1183,7 @@ typedef struct odp_ipsec_status_t {
  *
  * Each input packet must have a valid value for these metadata (other metadata
  * is ignored):
+ * - IPv4 or IPv6 flag: Set packet flag according to packet contents.
  * - L3 offset: Offset to the first byte of the (outmost) IP header
  * - L4 offset: When udp_encap is enabled, offset to the first byte of the
  *              encapsulating UDP header
@@ -1207,6 +1208,7 @@ typedef struct odp_ipsec_status_t {
  * Each successfully transformed packet has a valid value for these metadata
  * regardless of the inner packet parse configuration
  * (odp_ipsec_inbound_config_t):
+ * - IPv4 or IPv6 flag: Set packet flag according to packet contents.
  * - L3 offset: Offset to the first byte of the (outmost) IP header
  * - pktio:     For inline IPSEC processed packets, original packet input
  *              interface
@@ -1253,6 +1255,7 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
  *
  * Each input packet must have a valid value for these metadata (other metadata
  * is ignored):
+ * - IPv4 or IPv6 flag: Set packet flag according to packet contents.
  * - L3 offset: Offset to the first byte of the (outmost) IP header
  * - L4 offset: Offset to the L4 header if L4 checksum offload is requested
  *
@@ -1270,6 +1273,7 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
  * and content of packet data before the IP header is undefined.
  *
  * Each successfully transformed packet has a valid value for these metadata:
+ * - IPv4 or IPv6 flag: Set packet flag according to packet contents.
  * - L3 offset: Offset to the first byte of the (outmost) IP header
  *
  * @param          pkt_in   Packets to be processed
