@@ -160,6 +160,7 @@ noinst_HEADERS = \
 		  include/odp_queue_scalable_internal.h \
 		  include/odp_ring_internal.h \
 		  include/odp_queue_if.h \
+		  include/odp_queue_lf.h \
 		  include/odp_schedule_if.h \
 		  include/odp_schedule_scalable.h \
 		  include/odp_schedule_scalable_config.h \
@@ -220,6 +221,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_pool.c \
 			   odp_queue.c \
 			   odp_queue_if.c \
+			   odp_queue_lf.c \
 			   odp_queue_scalable.c \
 			   odp_rwlock.c \
 			   odp_rwlock_recursive.c \
