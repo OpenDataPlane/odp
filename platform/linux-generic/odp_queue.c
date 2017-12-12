@@ -150,9 +150,7 @@ static int queue_capability(odp_queue_capability_t *capa)
 	capa->max_sched_groups  = sched_fn->num_grps();
 	capa->sched_prios       = odp_schedule_num_prio();
 	capa->plain.max_num     = capa->max_queues;
-	capa->plain.nonblocking = ODP_BLOCKING;
 	capa->sched.max_num     = capa->max_queues;
-	capa->sched.nonblocking = ODP_BLOCKING;
 
 	return 0;
 }
