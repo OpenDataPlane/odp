@@ -756,7 +756,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	parse_param.proto = state.is_ipv4 ?
 				ODP_PROTO_IPV4 :
 				ODP_PROTO_IPV6;
-	parse_param.last_layer = (odp_proto_layer_t)ipsec_config.inbound.parse;
+	parse_param.last_layer = ipsec_config.inbound.parse_level;
 	parse_param.chksums = ipsec_config.inbound.chksums;
 
 	/* We do not care about return code here.
