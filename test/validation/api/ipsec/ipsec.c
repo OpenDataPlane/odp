@@ -904,7 +904,7 @@ int ipsec_config(odp_instance_t ODP_UNUSED inst)
 	ipsec_config.inbound_mode = suite_context.inbound_op_mode;
 	ipsec_config.outbound_mode = suite_context.outbound_op_mode;
 	ipsec_config.inbound.default_queue = suite_context.queue;
-	ipsec_config.inbound.parse = ODP_IPSEC_LAYER_ALL;
+	ipsec_config.inbound.parse_level = ODP_PROTO_LAYER_ALL;
 
 	if (ODP_IPSEC_OK != odp_ipsec_config(&ipsec_config))
 		return -1;

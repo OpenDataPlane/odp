@@ -156,9 +156,9 @@ typedef struct odp_ipsec_inbound_config_t {
 	 *
 	 *  Each successfully transformed packet has a valid value for L3 offset
 	 *  regardless of the parse configuration. Default value is
-	 *  ODP_IPSEC_LAYER_NONE. ODP_IPSEC_LAYER_L2 is not a valid value.
+	 *  ODP_PROTO_LAYER_NONE. ODP_PROTO_LAYER_L2 is not a valid value.
 	 */
-	odp_ipsec_proto_layer_t parse;
+	odp_proto_layer_t parse_level;
 
 	/** Flags to control IPSEC payload data checks up to the selected parse
 	 *  level. Checksum checking status can be queried for each packet with
