@@ -8,6 +8,7 @@
 
 #include <odp/api/queue.h>
 #include <odp_queue_internal.h>
+#include <odp_queue_lf.h>
 #include <odp_queue_if.h>
 #include <odp/api/std_types.h>
 #include <odp/api/align.h>
@@ -39,11 +40,16 @@
 static int queue_init(queue_entry_t *queue, const char *name,
 		      const odp_queue_param_t *param);
 
-typedef struct queue_table_t {
-	queue_entry_t  queue[ODP_CONFIG_QUEUES];
-} queue_table_t;
+typedef struct queue_global_t {
+	queue_entry_t   queue[ODP_CONFIG_QUEUES];
 
-static queue_table_t *queue_tbl;
+	uint32_t        queue_lf_num;
+	uint32_t        queue_lf_size;
+	queue_lf_func_t queue_lf_func;
+
+} queue_global_t;
+
+static queue_global_t *queue_glb;
 
 static
 queue_entry_t *get_qentry(uint32_t queue_id);
@@ -64,26 +70,28 @@ static inline odp_queue_t queue_from_id(uint32_t queue_id)
 static
 queue_entry_t *get_qentry(uint32_t queue_id)
 {
-	return &queue_tbl->queue[queue_id];
+	return &queue_glb->queue[queue_id];
 }
 
 static int queue_init_global(void)
 {
 	uint32_t i;
 	odp_shm_t shm;
+	uint32_t lf_size = 0;
+	queue_lf_func_t *lf_func;
 
 	ODP_DBG("Queue init ... ");
 
 	shm = odp_shm_reserve("odp_queues",
-			      sizeof(queue_table_t),
+			      sizeof(queue_global_t),
 			      sizeof(queue_entry_t), 0);
 
-	queue_tbl = odp_shm_addr(shm);
+	queue_glb = odp_shm_addr(shm);
 
-	if (queue_tbl == NULL)
+	if (queue_glb == NULL)
 		return -1;
 
-	memset(queue_tbl, 0, sizeof(queue_table_t));
+	memset(queue_glb, 0, sizeof(queue_global_t));
 
 	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
 		/* init locks */
@@ -92,6 +100,10 @@ static int queue_init_global(void)
 		queue->s.index  = i;
 		queue->s.handle = queue_from_id(i);
 	}
+
+	lf_func = &queue_glb->queue_lf_func;
+	queue_glb->queue_lf_num  = queue_lf_init_global(&lf_size, lf_func);
+	queue_glb->queue_lf_size = lf_size;
 
 	ODP_DBG("done\n");
 	ODP_DBG("Queue init global\n");
@@ -122,7 +134,7 @@ static int queue_term_global(void)
 	int i;
 
 	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
-		queue = &queue_tbl->queue[i];
+		queue = &queue_glb->queue[i];
 		LOCK(&queue->s.lock);
 		if (queue->s.status != QUEUE_STATUS_FREE) {
 			ODP_ERR("Not destroyed queue: %s\n", queue->s.name);
@@ -130,6 +142,8 @@ static int queue_term_global(void)
 		}
 		UNLOCK(&queue->s.lock);
 	}
+
+	queue_lf_term_global();
 
 	ret = odp_shm_free(odp_shm_lookup("odp_queues"));
 	if (ret < 0) {
@@ -151,6 +165,8 @@ static int queue_capability(odp_queue_capability_t *capa)
 	capa->sched_prios       = odp_schedule_num_prio();
 	capa->plain.max_num     = capa->max_queues;
 	capa->sched.max_num     = capa->max_queues;
+	capa->plain.lockfree.max_num  = queue_glb->queue_lf_num;
+	capa->plain.lockfree.max_size = queue_glb->queue_lf_size;
 
 	return 0;
 }
@@ -188,6 +204,7 @@ static odp_queue_t queue_create(const char *name,
 {
 	uint32_t i;
 	queue_entry_t *queue;
+	void *queue_lf;
 	odp_queue_t handle = ODP_QUEUE_INVALID;
 	odp_queue_type_t type = ODP_QUEUE_TYPE_PLAIN;
 	odp_queue_param_t default_param;
@@ -198,7 +215,7 @@ static odp_queue_t queue_create(const char *name,
 	}
 
 	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
-		queue = &queue_tbl->queue[i];
+		queue = &queue_glb->queue[i];
 
 		if (queue->s.status != QUEUE_STATUS_FREE)
 			continue;
@@ -207,7 +224,26 @@ static odp_queue_t queue_create(const char *name,
 		if (queue->s.status == QUEUE_STATUS_FREE) {
 			if (queue_init(queue, name, param)) {
 				UNLOCK(&queue->s.lock);
-				return handle;
+				return ODP_QUEUE_INVALID;
+			}
+
+			if (param->nonblocking == ODP_NONBLOCKING_LF) {
+				queue_lf_func_t *lf_func;
+
+				lf_func = &queue_glb->queue_lf_func;
+
+				queue_lf = queue_lf_create(queue);
+
+				if (queue_lf == NULL) {
+					UNLOCK(&queue->s.lock);
+					return ODP_QUEUE_INVALID;
+				}
+				queue->s.queue_lf = queue_lf;
+
+				queue->s.enqueue       = lf_func->enq;
+				queue->s.enqueue_multi = lf_func->enq_multi;
+				queue->s.dequeue       = lf_func->deq;
+				queue->s.dequeue_multi = lf_func->deq_multi;
 			}
 
 			type = queue->s.type;
@@ -224,7 +260,10 @@ static odp_queue_t queue_create(const char *name,
 		UNLOCK(&queue->s.lock);
 	}
 
-	if (handle != ODP_QUEUE_INVALID && type == ODP_QUEUE_TYPE_SCHED) {
+	if (handle == ODP_QUEUE_INVALID)
+		return ODP_QUEUE_INVALID;
+
+	if (type == ODP_QUEUE_TYPE_SCHED) {
 		if (sched_fn->init_queue(queue->s.index,
 					 &queue->s.param.sched)) {
 			queue->s.status = QUEUE_STATUS_FREE;
@@ -289,6 +328,10 @@ static int queue_destroy(odp_queue_t handle)
 	default:
 		ODP_ABORT("Unexpected queue status\n");
 	}
+
+	if (queue->s.param.nonblocking == ODP_NONBLOCKING_LF)
+		queue_lf_destroy(queue->s.queue_lf);
+
 	UNLOCK(&queue->s.lock);
 
 	return 0;
@@ -313,7 +356,7 @@ static odp_queue_t queue_lookup(const char *name)
 	uint32_t i;
 
 	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
-		queue_entry_t *queue = &queue_tbl->queue[i];
+		queue_entry_t *queue = &queue_glb->queue[i];
 
 		if (queue->s.status == QUEUE_STATUS_FREE ||
 		    queue->s.status == QUEUE_STATUS_DESTROYED)
