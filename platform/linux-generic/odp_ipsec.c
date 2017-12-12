@@ -198,24 +198,6 @@ static const uint8_t ipsec_padding[255] = {
 	0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff,
 };
 
-static inline odp_pktio_parser_layer_t parse_layer(odp_ipsec_proto_layer_t l)
-{
-	switch (l) {
-	case ODP_IPSEC_LAYER_NONE:
-		return ODP_PKTIO_PARSER_LAYER_NONE;
-	case ODP_IPSEC_LAYER_L2:
-		return ODP_PKTIO_PARSER_LAYER_L2;
-	case ODP_IPSEC_LAYER_L3:
-		return ODP_PKTIO_PARSER_LAYER_L3;
-	case ODP_IPSEC_LAYER_L4:
-		return ODP_PKTIO_PARSER_LAYER_L4;
-	case ODP_IPSEC_LAYER_ALL:
-		return ODP_PKTIO_PARSER_LAYER_ALL;
-	}
-
-	return ODP_PKTIO_PARSER_LAYER_NONE;
-}
-
 typedef struct {
 	void *ip;
 	unsigned stats_length;
@@ -605,6 +587,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	odp_crypto_packet_op_param_t param;
 	int rc;
 	odp_crypto_packet_result_t crypto; /**< Crypto operation result */
+	odp_packet_parse_param_t parse_param;
 	odp_packet_hdr_t *pkt_hdr;
 
 	state.ip_offset = odp_packet_l3_offset(pkt);
@@ -770,15 +753,15 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		goto err;
 	}
 
-	pkt_hdr = odp_packet_hdr(pkt);
+	parse_param.proto = state.is_ipv4 ?
+				ODP_PROTO_IPV4 :
+				ODP_PROTO_IPV6;
+	parse_param.last_layer = (odp_proto_layer_t)ipsec_config.inbound.parse;
+	parse_param.chksums = ipsec_config.inbound.chksums;
 
-	packet_parse_reset(pkt_hdr);
-
-	packet_parse_l3_l4(pkt_hdr, parse_layer(ipsec_config.inbound.parse),
-			   state.ip_offset,
-			   state.is_ipv4 ?
-			   _ODP_ETHTYPE_IPV4 :
-			   _ODP_ETHTYPE_IPV6);
+	/* We do not care about return code here.
+	 * Parsing error should not result in IPsec error. */
+	odp_packet_parse(pkt, state.ip_offset, &parse_param);
 
 	*pkt_out = pkt;
 
