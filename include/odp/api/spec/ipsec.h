@@ -70,27 +70,6 @@ typedef enum odp_ipsec_op_mode_t {
 } odp_ipsec_op_mode_t;
 
 /**
- * Protocol layers in IPSEC configuration
- */
-typedef enum odp_ipsec_proto_layer_t {
-	/** No layers */
-	ODP_IPSEC_LAYER_NONE = ODP_PROTO_LAYER_NONE,
-
-	/** Layer L2 protocols (Ethernet, VLAN, etc) */
-	ODP_IPSEC_LAYER_L2 = ODP_PROTO_LAYER_L2,
-
-	/** Layer L3 protocols (IPv4, IPv6, ICMP, IPSEC, etc) */
-	ODP_IPSEC_LAYER_L3 = ODP_PROTO_LAYER_L3,
-
-	/** Layer L4 protocols (UDP, TCP, SCTP) */
-	ODP_IPSEC_LAYER_L4 = ODP_PROTO_LAYER_L4,
-
-	/** All layers */
-	ODP_IPSEC_LAYER_ALL = ODP_PROTO_LAYER_ALL
-
-} odp_ipsec_proto_layer_t;
-
-/**
  * Configuration options for IPSEC inbound processing
  */
 typedef struct odp_ipsec_inbound_config_t {
@@ -125,25 +104,25 @@ typedef struct odp_ipsec_inbound_config_t {
 	 *
 	 *  Select up to which protocol layer (at least) outer headers are
 	 *  retained in inbound inline processing. Default value is
-	 *  ODP_IPSEC_LAYER_NONE.
+	 *  ODP_PROTO_LAYER_NONE.
 	 *
-	 *  ODP_IPSEC_LAYER_NONE: Application does not require any outer
+	 *  ODP_PROTO_LAYER_NONE: Application does not require any outer
 	 *                        headers to be retained.
 	 *
-	 *  ODP_IPSEC_LAYER_L2:   Retain headers up to layer 2.
+	 *  ODP_PROTO_LAYER_L2:   Retain headers up to layer 2.
 	 *
-	 *  ODP_IPSEC_LAYER_L3:   Retain headers up to layer 3, otherwise the
-	 *                        same as ODP_IPSEC_LAYER_ALL.
+	 *  ODP_PROTO_LAYER_L3:   Retain headers up to layer 3, otherwise the
+	 *                        same as ODP_PROTO_LAYER_ALL.
 	 *
-	 *  ODP_IPSEC_LAYER_L4:   Retain headers up to layer 4, otherwise the
-	 *                        same as ODP_IPSEC_LAYER_ALL.
+	 *  ODP_PROTO_LAYER_L4:   Retain headers up to layer 4, otherwise the
+	 *                        same as ODP_PROTO_LAYER_ALL.
 	 *
-	 *  ODP_IPSEC_LAYER_ALL:  In tunnel mode, all headers before IPSEC are
+	 *  ODP_PROTO_LAYER_ALL:  In tunnel mode, all headers before IPSEC are
 	 *                        retained. In transport mode, all headers
 	 *                        before IP (carrying IPSEC) are retained.
 	 *
 	 */
-	odp_ipsec_proto_layer_t retain_outer;
+	odp_proto_layer_t retain_outer;
 
 	/** Parse packet headers after IPSEC transformation
 	 *
