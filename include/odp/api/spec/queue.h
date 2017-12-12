@@ -159,35 +159,81 @@ typedef struct odp_queue_capability_t {
 
 	/** Plain queue capabilities */
 	struct {
-		/** Maximum number of plain queues of the default size. */
+		/** Maximum number of plain (ODP_BLOCKING) queues of the
+		  * default size. */
 		uint32_t max_num;
 
-		/** Maximum number of events a plain queue can store
-		  * simultaneously. The value of zero means that plain
+		/** Maximum number of events a plain (ODP_BLOCKING) queue can
+		  * store simultaneously. The value of zero means that plain
 		  * queues do not have a size limit, but a single queue can
 		  * store all available events. */
 		uint32_t max_size;
 
-		/** The strongest guarantee of block freedom that is supported
-		  * for plain queues. */
-		odp_nonblocking_t nonblocking;
+		/** Lock-free (ODP_NONBLOCKING_LF) implementation capabilities.
+		  * The specification is the same as for the blocking
+		  * implementation. */
+		struct {
+			/** Maximum number of queues. Lock-free queues are not
+			  * supported when zero. */
+			uint32_t max_num;
+
+			/** Maximum queue size */
+			uint32_t max_size;
+
+		} lockfree;
+
+		/** Wait-free (ODP_NONBLOCKING_WF) implementation capabilities.
+		  * The specification is the same as for the blocking
+		  * implementation. */
+		struct {
+			/** Maximum number of queues. Wait-free queues are not
+			  * supported when zero. */
+			uint32_t max_num;
+
+			/** Maximum queue size */
+			uint32_t max_size;
+
+		} waitfree;
 
 	} plain;
 
 	/** Scheduled queue capabilities */
 	struct {
-		/** Maximum number of scheduled queues of the default size. */
+		/** Maximum number of scheduled (ODP_BLOCKING) queues of the
+		  * default size. */
 		uint32_t max_num;
 
-		/** Maximum number of events a scheduled queue can store
-		  * simultaneously. The value of zero means that scheduled
-		  * queues do not have a size limit, but a single queue can
-		  * store all available events. */
+		/** Maximum number of events a scheduled (ODP_BLOCKING) queue
+		  * can store simultaneously. The value of zero means that
+		  * scheduled queues do not have a size limit, but a single
+		  * queue can store all available events. */
 		uint32_t max_size;
 
-		/** The strongest guarantee of block freedom that is supported
-		  * for scheduled queues. */
-		odp_nonblocking_t nonblocking;
+		/** Lock-free (ODP_NONBLOCKING_LF) implementation capabilities.
+		  * The specification is the same as for the blocking
+		  * implementation. */
+		struct {
+			/** Maximum number of queues. Lock-free queues are not
+			  * supported when zero. */
+			uint32_t max_num;
+
+			/** Maximum queue size */
+			uint32_t max_size;
+
+		} lockfree;
+
+		/** Wait-free (ODP_NONBLOCKING_WF) implementation capabilities.
+		  * The specification is the same as for the blocking
+		  * implementation. */
+		struct {
+			/** Maximum number of queues. Wait-free queues are not
+			  * supported when zero. */
+			uint32_t max_num;
+
+			/** Maximum queue size */
+			uint32_t max_size;
+
+		} waitfree;
 
 	} sched;
 
