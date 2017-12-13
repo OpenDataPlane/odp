@@ -74,7 +74,7 @@ ODP_STATIC_ASSERT(sizeof(dummy.ol_flags) == sizeof(uint64_t),
 
 static inline odp_buffer_t buffer_handle(odp_packet_hdr_t *pkt_hdr)
 {
-	return pkt_hdr->buf_hdr.handle.handle;
+	return (odp_buffer_t)pkt_hdr;
 }
 
 static inline odp_packet_hdr_t *buf_to_packet_hdr(odp_buffer_t buf)
@@ -261,9 +261,6 @@ void *odp_packet_push_head(odp_packet_t pkt, uint32_t len)
 static void _copy_head_metadata(struct rte_mbuf *newhead,
 				struct rte_mbuf *oldhead)
 {
-	odp_packet_t pkt = (odp_packet_t)newhead;
-	uint32_t saved_index = odp_packet_hdr(pkt)->buf_hdr.index;
-
 	rte_mbuf_refcnt_set(newhead, rte_mbuf_refcnt_read(oldhead));
 	newhead->port = oldhead->port;
 	newhead->ol_flags = oldhead->ol_flags;
@@ -276,9 +273,6 @@ static void _copy_head_metadata(struct rte_mbuf *newhead,
 	memcpy(&newhead->tx_offload, &oldhead->tx_offload,
 	       sizeof(odp_packet_hdr_t) -
 	       offsetof(struct rte_mbuf, tx_offload));
-	odp_packet_hdr(pkt)->buf_hdr.handle.handle =
-			(odp_buffer_t)newhead;
-	odp_packet_hdr(pkt)->buf_hdr.index = saved_index;
 }
 
 int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len, void **data_ptr,
@@ -1121,8 +1115,6 @@ void odp_packet_print_data(odp_packet_t pkt, uint32_t offset,
 	len += snprintf(&str[len], n - len, "Packet\n------\n");
 	len += snprintf(&str[len], n - len,
 			"  pool index    %" PRIu32 "\n", pool_handle_to_index(pool));
-	len += snprintf(&str[len], n - len,
-			"  buf index     %" PRIu32 "\n", hdr->buf_hdr.index);
 	len += snprintf(&str[len], n - len,
 			"  data len      %" PRIu32 "\n", data_len);
 	len += snprintf(&str[len], n - len,
