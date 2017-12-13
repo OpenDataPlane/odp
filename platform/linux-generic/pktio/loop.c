@@ -22,6 +22,9 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <stdlib.h>
+
+#define MAX_LOOP 16
 
 /* MAC address for the "loop" interface */
 static const char pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
@@ -31,15 +34,26 @@ static int loopback_stats_reset(pktio_entry_t *pktio_entry);
 static int loopback_open(odp_pktio_t id, pktio_entry_t *pktio_entry,
 			 const char *devname, odp_pool_t pool ODP_UNUSED)
 {
-	if (strcmp(devname, "loop"))
-		return -1;
-
+	long idx;
 	char loopq_name[ODP_QUEUE_NAME_LEN];
+
+	if (!strcmp(devname, "loop")) {
+		idx = 0;
+	} else if (!strncmp(devname, "loop", 4)) {
+		char *end;
+
+		idx = strtol(devname + 4, &end, 10);
+		if (idx <= 0 || idx >= MAX_LOOP || *end)
+			return -1;
+	} else {
+		return -1;
+	}
 
 	snprintf(loopq_name, sizeof(loopq_name), "%" PRIu64 "-pktio_loopq",
 		 odp_pktio_to_u64(id));
 	pktio_entry->s.pkt_loop.loopq =
 		odp_queue_create(loopq_name, NULL);
+	pktio_entry->s.pkt_loop.idx = idx;
 
 	if (pktio_entry->s.pkt_loop.loopq == ODP_QUEUE_INVALID)
 		return -1;
@@ -213,6 +227,7 @@ static int loopback_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
 				 void *mac_addr)
 {
 	memcpy(mac_addr, pktio_loop_mac, ETH_ALEN);
+	((uint8_t *)mac_addr)[ETH_ALEN - 1] += pktio_entry->s.pkt_loop.idx;
 	return ETH_ALEN;
 }
 
