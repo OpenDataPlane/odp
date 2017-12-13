@@ -51,8 +51,6 @@ typedef union odp_buffer_bits_t {
 struct odp_buffer_hdr_t {
 	/* Underlying DPDK rte_mbuf */
 	struct rte_mbuf mb;
-	/* Handle union */
-	odp_buffer_bits_t handle;
 
 	 /* ODP buffer type, not DPDK buf type */
 	int type;
@@ -87,8 +85,6 @@ struct odp_buffer_hdr_t {
 
 	/* Total size of all allocated segs */
 	uint32_t totsize;
-	/* Index in the rte_mempool */
-	uint32_t index;
 };
 
 ODP_STATIC_ASSERT(BUFFER_BURST_SIZE < 256, "BUFFER_BURST_SIZE_TOO_LARGE");

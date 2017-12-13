@@ -194,7 +194,7 @@ static void
 odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 		   void *opaque_arg,
 		   void *raw_mbuf,
-		   unsigned i)
+		   unsigned i ODP_UNUSED)
 {
 	struct mbuf_ctor_arg *mb_ctor_arg;
 	struct rte_mbuf *mb = raw_mbuf;
@@ -231,10 +231,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	mb->pool         = mp;
 	mb->ol_flags     = 0;
 
-	/* Save index, might be useful for debugging purposes */
 	buf_hdr = (struct odp_buffer_hdr_t *)raw_mbuf;
-	buf_hdr->index = i;
-	buf_hdr->handle.handle = (odp_buffer_t)buf_hdr;
 	buf_hdr->pool_hdl = mbp_ctor_arg->pool_hdl;
 	buf_hdr->type = mb_ctor_arg->type;
 	buf_hdr->event_type = mb_ctor_arg->type;
