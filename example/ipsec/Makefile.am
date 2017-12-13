@@ -19,12 +19,10 @@ odp_ipsec_SOURCES = odp_ipsec.c \
 		    odp_ipsec_sa_db.c \
 		    odp_ipsec_sp_db.c \
 		    odp_ipsec_fwd_db.c \
-		    odp_ipsec_loop_db.c \
 		    odp_ipsec_cache.c \
 		    odp_ipsec_stream.c \
 		    odp_ipsec_cache.h \
 		    odp_ipsec_fwd_db.h \
-		    odp_ipsec_loop_db.h \
 		    odp_ipsec_misc.h \
 		    odp_ipsec_sa_db.h \
 		    odp_ipsec_sp_db.h \
