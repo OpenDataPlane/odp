@@ -2,6 +2,7 @@ SUBDIRS = classifier \
 	  generator \
 	  hello \
 	  ipsec \
+	  ipsec_api \
 	  ipfragreass \
 	  l2fwd_simple \
 	  l3fwd \
