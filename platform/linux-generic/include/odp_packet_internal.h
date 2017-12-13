@@ -294,11 +294,11 @@ int packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 
 /* Perform packet parse up to a given protocol layer */
 int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
-		       odp_pktio_parser_layer_t layer);
+		       odp_proto_layer_t layer);
 
 /* Perform L3 and L4 parsing up to a given protocol layer */
 int packet_parse_l3_l4(odp_packet_hdr_t *pkt_hdr,
-		       odp_pktio_parser_layer_t layer,
+		       odp_proto_layer_t layer,
 		       uint32_t l3_offset,
 		       uint16_t ethtype);
 
