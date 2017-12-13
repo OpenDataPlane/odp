@@ -693,6 +693,89 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	return nb_rx;
 }
 
+static int sock_fd_set(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+		       fd_set *readfds)
+{
+	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
+	const int sockfd = pkt_sock->sockfd;
+
+	FD_SET(sockfd, readfds);
+	return sockfd;
+}
+
+static int sock_recv_tmo(pktio_entry_t *pktio_entry, int index,
+			 odp_packet_t pkt_table[], int num, uint64_t usecs)
+{
+	struct timeval timeout;
+	int ret;
+	int maxfd;
+	fd_set readfds;
+
+	ret = sock_mmsg_recv(pktio_entry, index, pkt_table, num);
+	if (ret != 0)
+		return ret;
+
+	timeout.tv_sec = usecs / (1000 * 1000);
+	timeout.tv_usec = usecs - timeout.tv_sec * (1000ULL * 1000ULL);
+
+	FD_ZERO(&readfds);
+	maxfd = sock_fd_set(pktio_entry, index, &readfds);
+
+	if (select(maxfd + 1, &readfds, NULL, NULL,
+		   usecs == ODP_PKTIN_WAIT ? NULL : &timeout) == 0)
+		return 0;
+
+	return sock_mmsg_recv(pktio_entry, index, pkt_table, num);
+}
+
+static int sock_recv_mq_tmo(pktio_entry_t *pktio_entry[], int index[],
+			    int num_q, odp_packet_t pkt_table[], int num,
+			    unsigned *from, uint64_t usecs)
+{
+	struct timeval timeout;
+	int i;
+	int ret;
+	int maxfd = -1, maxfd2;
+	fd_set readfds;
+
+	for (i = 0; i < num_q; i++) {
+		ret = sock_mmsg_recv(pktio_entry[i], index[i], pkt_table, num);
+
+		if (ret > 0 && from)
+			*from = i;
+
+		if (ret != 0)
+			return ret;
+	}
+
+	timeout.tv_sec = usecs / (1000 * 1000);
+	timeout.tv_usec = usecs - timeout.tv_sec * (1000ULL * 1000ULL);
+
+	FD_ZERO(&readfds);
+
+	for (i = 0; i < num_q; i++) {
+		maxfd2 = sock_fd_set(pktio_entry[i], index[i], &readfds);
+		if (maxfd2 > maxfd)
+			maxfd = maxfd2;
+	}
+
+	if (select(maxfd + 1, &readfds, NULL, NULL,
+		   usecs == ODP_PKTIN_WAIT ? NULL : &timeout) == 0)
+		return 0;
+
+	for (i = 0; i < num_q; i++) {
+		ret = sock_mmsg_recv(pktio_entry[i], index[i], pkt_table, num);
+
+		if (ret > 0 && from)
+			*from = i;
+
+		if (ret != 0)
+			return ret;
+	}
+
+	return 0;
+}
+
 static uint32_t _tx_pkt_to_iovec(odp_packet_t pkt,
 				 struct iovec iovecs[MAX_SEGS])
 {
@@ -868,6 +951,9 @@ const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.stats = sock_stats,
 	.stats_reset = sock_stats_reset,
 	.recv = sock_mmsg_recv,
+	.recv_tmo = sock_recv_tmo,
+	.recv_mq_tmo = sock_recv_mq_tmo,
+	.fd_set = sock_fd_set,
 	.send = sock_mmsg_send,
 	.mtu_get = sock_mtu_get,
 	.promisc_mode_set = sock_promisc_mode_set,
