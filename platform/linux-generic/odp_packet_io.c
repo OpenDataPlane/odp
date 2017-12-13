@@ -1681,12 +1681,23 @@ int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[], int num,
 	struct timespec ts;
 	int started = 0;
 	uint64_t sleep_round = 0;
+	pktio_entry_t *entry;
 
 	ts.tv_sec  = 0;
 	ts.tv_nsec = 1000 * SLEEP_USEC;
 
+	entry = get_pktio_entry(queue.pktio);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", queue.pktio);
+		return -1;
+	}
+
+	if (entry->s.ops->recv_tmo && wait != ODP_PKTIN_NO_WAIT)
+		return entry->s.ops->recv_tmo(entry, queue.index, packets, num,
+					      wait);
+
 	while (1) {
-		ret = odp_pktin_recv(queue, packets, num);
+		ret = entry->s.ops->recv(entry, queue.index, packets, num);
 
 		if (ret != 0)
 			return ret;
@@ -1730,6 +1741,26 @@ int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned num_q,
 	struct timespec ts;
 	int started = 0;
 	uint64_t sleep_round = 0;
+	int trial_successful = 0;
+
+	for (i = 0; i < num_q; i++) {
+		ret = odp_pktin_recv(queues[i], packets, num);
+
+		if (ret > 0 && from)
+			*from = i;
+
+		if (ret != 0)
+			return ret;
+	}
+
+	if (wait == 0)
+		return 0;
+
+	ret = sock_recv_mq_tmo_try_int_driven(queues, num_q, from,
+					      packets, num, wait,
+					      &trial_successful);
+	if (trial_successful)
+		return ret;
 
 	ts.tv_sec  = 0;
 	ts.tv_nsec = 1000 * SLEEP_USEC;
