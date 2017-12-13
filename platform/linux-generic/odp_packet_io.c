@@ -899,7 +899,7 @@ void odp_pktio_config_init(odp_pktio_config_t *config)
 {
 	memset(config, 0, sizeof(odp_pktio_config_t));
 
-	config->parser.layer = ODP_PKTIO_PARSER_LAYER_ALL;
+	config->parser.layer = ODP_PROTO_LAYER_ALL;
 }
 
 int odp_pktio_info(odp_pktio_t hdl, odp_pktio_info_t *info)
@@ -1101,7 +1101,7 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 
 	/* The same parser is used for all pktios */
 	if (ret == 0)
-		capa->config.parser.layer = ODP_PKTIO_PARSER_LAYER_ALL;
+		capa->config.parser.layer = ODP_PROTO_LAYER_ALL;
 
 	return ret;
 }
