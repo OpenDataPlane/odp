@@ -797,7 +797,7 @@ static int test_init(void)
 	 * affects scalability.
 	 */
 	odp_pktio_config_init(&cfg);
-	cfg.parser.layer = ODP_PKTIO_PARSER_LAYER_NONE;
+	cfg.parser.layer = ODP_PROTO_LAYER_NONE;
 	odp_pktio_config(gbl_args->pktio_rx, &cfg);
 
 	if (gbl_args->args.num_ifaces > 1) {
