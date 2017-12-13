@@ -737,8 +737,8 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 
 	odp_pktio_config_init(&config);
 	config.parser.layer = gbl_args->appl.extra_check ?
-			ODP_PKTIO_PARSER_LAYER_ALL :
-			ODP_PKTIO_PARSER_LAYER_NONE;
+			ODP_PROTO_LAYER_ALL :
+			ODP_PROTO_LAYER_NONE;
 
 	if (gbl_args->appl.chksum) {
 		printf("Checksum offload enabled\n");
