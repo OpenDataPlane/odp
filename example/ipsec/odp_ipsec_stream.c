@@ -24,7 +24,6 @@
 #include <odp/helper/odph_api.h>
 
 #include <odp_ipsec_stream.h>
-#include <odp_ipsec_loop_db.h>
 
 #define STREAM_MAGIC 0xBABE01234567CAFE
 
@@ -94,15 +93,10 @@ int create_stream_db_entry(char *input)
 			parse_ipv4_string(token, &entry->dst_ip, NULL);
 			break;
 		case 2:
-			entry->input.loop = loop_if_index(token);
-			if (entry->input.loop < 0) {
-				EXAMPLE_ERR("Error: stream must have input"
-					    " loop\n");
-				exit(EXIT_FAILURE);
-			}
+			entry->input.intf = strdup(token);
 			break;
 		case 3:
-			entry->output.loop = loop_if_index(token);
+			entry->output.intf = strdup(token);
 			break;
 		case 4:
 			entry->count = atoi(token);
@@ -157,11 +151,15 @@ void resolve_stream_db(void)
 						  NULL);
 		stream->input.entry = entry;
 
+		stream->input.pktio = odp_pktio_lookup(stream->input.intf);
+
 		/* Lookup output entry */
 		entry = find_ipsec_cache_entry_out(stream->src_ip,
 						   stream->dst_ip,
 						   0);
 		stream->output.entry = entry;
+
+		stream->output.pktio = odp_pktio_lookup(stream->output.intf);
 	}
 }
 
@@ -556,8 +554,25 @@ int create_stream_db_inputs(void)
 	/* For each stream create corresponding input packets */
 	for (stream = stream_db->list; NULL != stream; stream = stream->next) {
 		int count;
-		uint8_t *dmac = query_loopback_db_mac(stream->input.loop);
-		odp_queue_t queue = query_loopback_db_inq(stream->input.loop);
+		int ret;
+		uint8_t dmac[ODPH_ETHADDR_LEN];
+		odp_pktout_queue_t queue;
+
+		ret = odp_pktio_mac_addr(stream->input.pktio,
+					 dmac, sizeof(dmac));
+		if (ret <= 0) {
+			EXAMPLE_ERR("Error: failed during MAC address get "
+				    "for %s\n",
+					stream->input.intf);
+			continue;
+		}
+
+		ret = odp_pktout_queue(stream->input.pktio, &queue, 1);
+		if (ret < 1) {
+			EXAMPLE_ERR("Error: failed to get outqueue for %s\n",
+				    stream->input.intf);
+			continue;
+		}
 
 		for (count = stream->count; count > 0; count--) {
 			odp_packet_t pkt;
@@ -568,7 +583,7 @@ int create_stream_db_inputs(void)
 				break;
 			}
 			stream->created++;
-			if (odp_queue_enq(queue, odp_packet_to_event(pkt))) {
+			if (odp_pktout_send(queue, &pkt, 1) != 1) {
 				odp_packet_free(pkt);
 				printf("Queue enqueue failed\n");
 				break;
@@ -594,13 +609,16 @@ odp_bool_t verify_stream_db_outputs(void)
 	for (stream = stream_db->list; NULL != stream; stream = stream->next) {
 		int idx;
 		int count;
+		int ret;
 		odp_queue_t queue;
 		odp_event_t ev_tbl[LOOP_DEQ_COUNT];
 
-		queue = query_loopback_db_outq(stream->output.loop);
-
-		if (ODP_QUEUE_INVALID == queue)
+		ret = odp_pktin_event_queue(stream->output.pktio, &queue, 1);
+		if (ret < 1) {
+			EXAMPLE_ERR("Error: failed to get inqueue for %s\n",
+				    stream->output.intf);
 			continue;
+		}
 
 		for (;;) {
 			if (env) {

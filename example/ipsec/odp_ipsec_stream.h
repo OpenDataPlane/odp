@@ -28,13 +28,15 @@ typedef struct stream_db_entry_s {
 	uint32_t         created;       /**< Number successfully created */
 	uint32_t         verified;      /**< Number successfully verified */
 	struct {
-		int      loop;          /**< Input loop interface index */
+		const char *intf;	/**< Input interface name */
+		odp_pktio_t pktio;	/**< Input PktI/O interface */
 		uint32_t ah_seq;        /**< AH sequence number if present */
 		uint32_t esp_seq;       /**< ESP sequence number if present */
 		ipsec_cache_entry_t *entry;  /**< IPsec to apply on input */
 	} input;
 	struct {
-		int      loop;          /**< Output loop interface index */
+		const char *intf;	/**< Output interface name */
+		odp_pktio_t pktio;	/**< Output PktI/O interface */
 		ipsec_cache_entry_t *entry;  /**t IPsec to verify on output */
 	} output;
 } stream_db_entry_t;
