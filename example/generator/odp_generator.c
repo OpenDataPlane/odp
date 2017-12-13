@@ -28,7 +28,8 @@
 #define DEFAULT_PKT_INTERVAL   1000  /* Interval between each packet */
 #define DEFAULT_UDP_TX_BURST	16
 #define MAX_UDP_TX_BURST	512
-#define MAX_RX_BURST		32
+#define DEFAULT_RX_BURST	32
+#define MAX_RX_BURST		512
 
 #define APPL_MODE_UDP    0			/**< UDP mode */
 #define APPL_MODE_PING   1			/**< ping mode */
@@ -80,6 +81,8 @@ typedef struct {
 				     each packet */
 	int udp_tx_burst;	/**< number of udp packets to send with one
 				      API call */
+	int rx_burst;	/**< number of packets to receive with one
+				      API call */
 	odp_bool_t csum;	/**< use platform csum support if available */
 } appl_args_t;
 
@@ -130,6 +133,7 @@ typedef struct {
 	/** Global arguments */
 	int thread_cnt;
 	int tx_burst_size;
+	int rx_burst_size;
 } args_t;
 
 /** Global pointer to args */
@@ -828,10 +832,11 @@ static int gen_recv_thread(void *arg)
 	odp_event_t events[MAX_RX_BURST];
 	int pkt_cnt, ev_cnt, i;
 	odp_packet_chksum_status_t csum_status;
+	int burst_size;
 
-	(void)arg;
 	thr = odp_thread_id();
 	thr_args = (thread_args_t *)arg;
+	burst_size = args->rx_burst_size;
 
 	printf("  [%02i] created mode: RECEIVE\n", thr);
 	odp_barrier_wait(&barrier);
@@ -842,7 +847,7 @@ static int gen_recv_thread(void *arg)
 
 		/* Use schedule to get buf from any input queue */
 		ev_cnt = odp_schedule_multi(NULL, ODP_SCHED_NO_WAIT,
-					    events, MAX_RX_BURST);
+					    events, burst_size);
 		if (ev_cnt == 0)
 			continue;
 		for (i = 0, pkt_cnt = 0; i < ev_cnt; i++) {
@@ -1076,12 +1081,16 @@ int main(int argc, char *argv[])
 	args->thread_cnt = num_workers;
 
 	/* Burst size */
-	if (args->appl.mode == APPL_MODE_PING)
+	if (args->appl.mode == APPL_MODE_PING) {
 		args->tx_burst_size = 1;
-	else if (args->appl.mode == APPL_MODE_UDP)
+		args->rx_burst_size = 1;
+	} else if (args->appl.mode == APPL_MODE_UDP) {
 		args->tx_burst_size = args->appl.udp_tx_burst;
-	else
+		args->rx_burst_size = 0;
+	} else {
 		args->tx_burst_size = 0;
+		args->rx_burst_size = args->appl.rx_burst;
+	}
 
 	/* Create packet pool */
 	odp_pool_param_init(&params);
@@ -1383,11 +1392,12 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"interval", required_argument, NULL, 'i'},
 		{"help", no_argument, NULL, 'h'},
 		{"udp_tx_burst", required_argument, NULL, 'x'},
+		{"rx_burst", required_argument, NULL, 'r'},
 		{"csum", no_argument, NULL, 'y'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+I:a:b:s:d:p:i:m:n:t:w:c:x:he:f:y";
+	static const char *shortopts = "+I:a:b:s:d:p:i:m:n:t:w:c:x:he:f:yr:";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	odph_parse_options(argc, argv, shortopts, longopts);
@@ -1398,6 +1408,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->timeout = -1;
 	appl_args->interval = DEFAULT_PKT_INTERVAL;
 	appl_args->udp_tx_burst = DEFAULT_UDP_TX_BURST;
+	appl_args->rx_burst = DEFAULT_RX_BURST;
 	appl_args->srcport = 0;
 	appl_args->dstport = 0;
 	appl_args->csum = 0;
@@ -1540,6 +1551,14 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 				exit(EXIT_FAILURE);
 			}
 			break;
+		case 'r':
+			appl_args->rx_burst = atoi(optarg);
+			if (appl_args->rx_burst >  MAX_RX_BURST) {
+				EXAMPLE_ERR("wrong Rx burst size (max %d)\n",
+					    MAX_RX_BURST);
+				exit(EXIT_FAILURE);
+			}
+			break;
 
 		case 'y':
 			appl_args->csum = 1;
@@ -1630,6 +1649,7 @@ static void usage(char *progname)
 	       "  -n, --count the number of packets to be send\n"
 	       "  -c, --cpumask to set on cores\n"
 	       "  -x, --udp_tx_burst size of UDP TX burst\n"
+	       "  -r, --rx_burst size of RX burst\n"
 	       "  -y, --csum use platform checksum support if available\n"
 	       "	         default is disabled\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
