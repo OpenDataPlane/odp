@@ -272,8 +272,8 @@ typedef struct odp_pktio_param_t {
  * not checked.
  *
  * IPv4 checksum checking may be enabled only when parsing level is
- * ODP_PKTIO_PARSER_LAYER_L3 or higher. Similarly, L4 level checksum checking
- * may be enabled only with parsing level ODP_PKTIO_PARSER_LAYER_L4 or higher.
+ * ODP_PROTO_LAYER_L3 or higher. Similarly, L4 level checksum checking
+ * may be enabled only with parsing level ODP_PROTO_LAYER_L4 or higher.
  *
  * Whether checksum checking was done and whether a checksum was correct
  * can be queried for each received packet with odp_packet_l3_chksum_status()
@@ -405,24 +405,30 @@ typedef union odp_pktout_config_opt_t {
 
 /**
  * Parser layers
+ *
+ * @deprecated Use odp_proto_layer_t instead
  */
-typedef enum odp_pktio_parser_layer_t {
-	/** No layers */
-	ODP_PKTIO_PARSER_LAYER_NONE = ODP_PROTO_LAYER_NONE,
+typedef odp_proto_layer_t odp_pktio_parser_layer_t;
 
-	/** Layer L2 protocols (Ethernet, VLAN, ARP, etc) */
-	ODP_PKTIO_PARSER_LAYER_L2 = ODP_PROTO_LAYER_L2,
+/** No layers
+ *  @deprecated Use ODP_PROTO_LAYER_NONE, instead */
+#define ODP_PKTIO_PARSER_LAYER_NONE ODP_PROTO_LAYER_NONE
 
-	/** Layer L3 protocols (IPv4, IPv6, ICMP, IPsec, etc) */
-	ODP_PKTIO_PARSER_LAYER_L3 = ODP_PROTO_LAYER_L3,
+/** Layer L2 protocols (Ethernet, VLAN, ARP, etc)
+ *  @deprecated Use ODP_PROTO_LAYER_L2, instead */
+#define ODP_PKTIO_PARSER_LAYER_L2 ODP_PROTO_LAYER_L2
 
-	/** Layer L4 protocols (UDP, TCP, SCTP) */
-	ODP_PKTIO_PARSER_LAYER_L4 = ODP_PROTO_LAYER_L4,
+/** Layer L3 protocols (IPv4, IPv6, ICMP, IPsec, etc)
+ *  @deprecated Use ODP_PROTO_LAYER_L3, instead */
+#define ODP_PKTIO_PARSER_LAYER_L3 ODP_PROTO_LAYER_L3
 
-	/** All layers */
-	ODP_PKTIO_PARSER_LAYER_ALL = ODP_PROTO_LAYER_ALL
+/** Layer L4 protocols (UDP, TCP, SCTP)
+ *  @deprecated Use ODP_PROTO_LAYER_L4, instead */
+#define ODP_PKTIO_PARSER_LAYER_L4 ODP_PROTO_LAYER_L4
 
-} odp_pktio_parser_layer_t;
+/** All layers
+ *  @deprecated Use ODP_PROTO_LAYER_ALL instead */
+#define ODP_PKTIO_PARSER_LAYER_ALL ODP_PROTO_LAYER_ALL
 
 /**
  * Parser configuration
@@ -436,8 +442,8 @@ typedef struct odp_pktio_parser_config_t {
 	  * set. In addition, offset (and pointer) to the next layer is set.
 	  * Other layer/protocol specific metadata have undefined values.
 	  *
-	  * The default value is ODP_PKTIO_PARSER_LAYER_ALL. */
-	odp_pktio_parser_layer_t layer;
+	  * The default value is ODP_PROTO_LAYER_ALL. */
+	odp_proto_layer_t layer;
 
 } odp_pktio_parser_config_t;
 
