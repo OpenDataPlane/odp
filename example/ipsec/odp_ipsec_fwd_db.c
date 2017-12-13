@@ -119,7 +119,8 @@ int create_fwd_db_entry(char *input, char **if_names, int if_count)
 	return 0;
 }
 
-void resolve_fwd_db(char *intf, odp_pktout_queue_t pktout, uint8_t *mac)
+void resolve_fwd_db(char *intf, odp_pktio_t pktio, odp_pktout_queue_t pktout,
+		    uint8_t *mac)
 {
 	fwd_db_entry_t *entry;
 
@@ -128,6 +129,7 @@ void resolve_fwd_db(char *intf, odp_pktout_queue_t pktout, uint8_t *mac)
 		if (strcmp(intf, entry->oif))
 			continue;
 
+		entry->pktio = pktio;
 		entry->pktout = pktout;
 		memcpy(entry->src_mac, mac, ODPH_ETHADDR_LEN);
 	}
