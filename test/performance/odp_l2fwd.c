@@ -704,8 +704,9 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 
 	odp_pktio_config_init(&config);
 	config.parser.layer = gbl_args->appl.error_check ?
-			ODP_PKTIO_PARSER_LAYER_ALL :
-			ODP_PKTIO_PARSER_LAYER_NONE;
+			ODP_PROTO_LAYER_ALL :
+			ODP_PROTO_LAYER_NONE;
+
 	odp_pktio_config(pktio, &config);
 
 	odp_pktin_queue_param_init(&pktin_param);
