@@ -11,6 +11,7 @@ AC_CONFIG_FILES([example/classifier/Makefile
 		 example/generator/Makefile
 		 example/hello/Makefile
 		 example/ipsec/Makefile
+		 example/ipsec_api/Makefile
 		 example/ipfragreass/Makefile
 		 example/ipsec_offload/Makefile
 		 example/l2fwd_simple/Makefile
