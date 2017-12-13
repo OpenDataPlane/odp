@@ -84,7 +84,7 @@ static int pktio_start(odp_pktio_t pktio, odp_bool_t in, odp_bool_t out)
 		return 0;
 
 	odp_pktio_config_init(&config);
-	config.parser.layer = ODP_PKTIO_PARSER_LAYER_ALL;
+	config.parser.layer = ODP_PROTO_LAYER_ALL;
 	config.inbound_ipsec = in;
 	config.outbound_ipsec = out;
 

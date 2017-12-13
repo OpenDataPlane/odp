@@ -122,7 +122,7 @@ static odp_pktio_t create_pktio(int iface_idx, odp_pool_t pool)
 	}
 
 	odp_pktio_config_init(&config);
-	config.parser.layer = ODP_PKTIO_PARSER_LAYER_ALL;
+	config.parser.layer = ODP_PROTO_LAYER_ALL;
 	if (odp_pktio_config(pktio, &config)) {
 		printf("Error:  failed to configure %s\n", iface);
 		return ODP_PKTIO_INVALID;
