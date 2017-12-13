@@ -186,19 +186,18 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		bytes += odp_packet_len(pkt_tbl[i]);
 	}
 
-	if (pktio_entry->s.config.outbound_ipsec)
-		for (i = 0; i < len; ++i) {
-			odp_ipsec_packet_result_t result;
+	for (i = 0; i < len; ++i) {
+		odp_ipsec_packet_result_t result;
 
-			if (packet_subtype(pkt_tbl[i]) !=
-			    ODP_EVENT_PACKET_IPSEC)
-				continue;
+		if (packet_subtype(pkt_tbl[i]) ==
+				ODP_EVENT_PACKET_IPSEC &&
+		    pktio_entry->s.config.outbound_ipsec) {
 
 			/* Possibly postprocessing packet */
 			odp_ipsec_result(&result, pkt_tbl[i]);
-
-			packet_subtype_set(pkt_tbl[i], ODP_EVENT_PACKET_BASIC);
 		}
+		packet_subtype_set(pkt_tbl[i], ODP_EVENT_PACKET_BASIC);
+	}
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
