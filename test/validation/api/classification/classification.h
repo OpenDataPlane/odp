@@ -100,6 +100,7 @@ void classification_test_pmr_term_dmac(void);
 void classification_test_pmr_term_packet_len(void);
 void classification_test_pmr_term_vlan_id_0(void);
 void classification_test_pmr_term_vlan_id_x(void);
+void classification_test_pmr_term_ld_vni(void);
 void classification_test_pmr_term_eth_type_0(void);
 void classification_test_pmr_term_eth_type_x(void);
 void classification_test_pktin_classifier_flag(void);

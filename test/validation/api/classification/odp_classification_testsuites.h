@@ -18,6 +18,7 @@ typedef struct cls_packet_info {
 	bool	vlan_qinq;
 	odp_atomic_u32_t *seq;
 	bool	udp;
+	bool	vxlan;
 	bool	ipv6;
 	uint32_t len;
 } cls_packet_info_t;
