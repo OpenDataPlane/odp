@@ -30,12 +30,18 @@
  */
 #define POOL_NUM_PKT  64
 
-static uint8_t test_iv[8] = "01234567";
+static uint8_t test_iv[16] = "0123456789abcdef";
 
 static uint8_t test_key16[16] = { 0x01, 0x02, 0x03, 0x04, 0x05,
 				  0x06, 0x07, 0x08, 0x09, 0x0a,
 				  0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
 				  0x10,
+};
+
+static uint8_t test_key20[20] = { 0x01, 0x02, 0x03, 0x04, 0x05,
+				  0x06, 0x07, 0x08, 0x09, 0x0a,
+				  0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+				  0x10, 0x11, 0x12, 0x13, 0x14,
 };
 
 static uint8_t test_key24[24] = { 0x01, 0x02, 0x03, 0x04, 0x05,
@@ -224,6 +230,69 @@ static crypto_alg_config_t algs_config[] = {
 				.length = sizeof(test_key16)
 			},
 			.auth_digest_len = 12,
+		},
+	},
+	{
+		.name = "aes-cbc-null",
+		.session = {
+			.cipher_alg = ODP_CIPHER_ALG_AES_CBC,
+			.cipher_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.iv = {
+				.data = test_iv,
+				.length = 16,
+			},
+			.auth_alg = ODP_AUTH_ALG_NULL
+		},
+	},
+	{
+		.name = "aes-cbc-hmac-sha1-96",
+		.session = {
+			.cipher_alg = ODP_CIPHER_ALG_AES_CBC,
+			.cipher_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.iv = {
+				.data = test_iv,
+				.length = 16,
+			},
+			.auth_alg = ODP_AUTH_ALG_SHA1_HMAC,
+			.auth_key = {
+				.data = test_key20,
+				.length = sizeof(test_key20)
+			},
+			.auth_digest_len = 12,
+		},
+	},
+	{
+		.name = "null-hmac-sha1-96",
+		.session = {
+			.cipher_alg = ODP_CIPHER_ALG_NULL,
+			.auth_alg = ODP_AUTH_ALG_SHA1_HMAC,
+			.auth_key = {
+				.data = test_key20,
+				.length = sizeof(test_key20)
+			},
+			.auth_digest_len = 12,
+		},
+	},
+	{
+		.name = "aes-gcm",
+		.session = {
+			.cipher_alg = ODP_CIPHER_ALG_AES_GCM,
+			.cipher_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.iv = {
+				.data = test_iv,
+				.length = 12,
+			},
+			.auth_alg = ODP_AUTH_ALG_AES_GCM,
+			.auth_digest_len = 16,
 		},
 	},
 };
