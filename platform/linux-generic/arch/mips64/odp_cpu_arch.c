@@ -9,7 +9,6 @@
 #include <odp/api/cpu.h>
 #include <odp/api/hints.h>
 #include <odp/api/system_info.h>
-#include <odp_time_internal.h>
 
 uint64_t odp_cpu_cycles(void)
 {
