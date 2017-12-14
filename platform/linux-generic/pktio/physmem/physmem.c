@@ -544,7 +544,7 @@ static void init_blocks(void)
 	LIST_INIT(&block_data.empty);
 }
 
-int physmem_block_global_init(void)
+int physmem_block_init_global(void)
 {
 	init_blocks();
 
@@ -557,7 +557,7 @@ int physmem_block_global_init(void)
 	return 0;
 }
 
-int physmem_block_global_term(void)
+int physmem_block_term_global(void)
 {
 	for (int i = 0; i < MAX_HUGEPAGES; ++i) {
 		if (pages[i].fd == 0)

@@ -32,8 +32,8 @@ struct physmem_block {
 	physmem_block_type_t type;
 };
 
-int physmem_block_global_init(void);
-int physmem_block_global_term(void);
+int physmem_block_init_global(void);
+int physmem_block_term_global(void);
 
 struct physmem_block *physmem_block_alloc(uint64_t);
 void physmem_block_free(struct physmem_block *);
