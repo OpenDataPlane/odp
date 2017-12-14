@@ -12,7 +12,7 @@
 #include <odp/api/time.h>
 #include <odp/api/hints.h>
 #include <odp_debug_internal.h>
-#include <odp_time_internal.h>
+#include <odp_arch_time_internal.h>
 #include <string.h>
 #include <inttypes.h>
 
