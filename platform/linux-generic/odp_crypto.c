@@ -15,7 +15,6 @@
 #include <odp/api/debug.h>
 #include <odp/api/align.h>
 #include <odp/api/shared_memory.h>
-#include <odp_crypto_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>
 #include <odp/api/random.h>
@@ -88,6 +87,49 @@ static const odp_crypto_auth_capability_t auth_capa_aes_gcm[] = {
 
 static const odp_crypto_auth_capability_t auth_capa_aes_gmac[] = {
 {.digest_len = 16, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
+
+/** Forward declaration of session structure */
+typedef struct odp_crypto_generic_session_t odp_crypto_generic_session_t;
+
+/**
+ * Algorithm handler function prototype
+ */
+typedef
+odp_crypto_alg_err_t (*crypto_func_t)(odp_packet_t pkt,
+				      const odp_crypto_packet_op_param_t *param,
+				      odp_crypto_generic_session_t *session);
+
+/**
+ * Per crypto session data structure
+ */
+struct odp_crypto_generic_session_t {
+	odp_crypto_generic_session_t *next;
+
+	/* Session creation parameters */
+	odp_crypto_session_param_t p;
+
+	odp_bool_t do_cipher_first;
+
+	struct {
+		/* Copy of session IV data */
+		uint8_t iv_data[EVP_MAX_IV_LENGTH];
+		uint8_t key_data[EVP_MAX_KEY_LENGTH];
+
+		const EVP_CIPHER *evp_cipher;
+		crypto_func_t func;
+	} cipher;
+
+	struct {
+		uint8_t  key[EVP_MAX_KEY_LENGTH];
+		uint32_t key_length;
+		uint32_t bytes;
+		union {
+			const EVP_MD *evp_md;
+			const EVP_CIPHER *evp_cipher;
+		};
+		crypto_func_t func;
+	} auth;
+};
 
 typedef struct odp_crypto_global_s odp_crypto_global_t;
 
@@ -860,7 +902,7 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	/* Copy parameters */
 	session->p = *param;
 
-	if (session->p.iv.length > MAX_IV_LEN) {
+	if (session->p.iv.length > EVP_MAX_IV_LENGTH) {
 		ODP_DBG("Maximum IV length exceeded\n");
 		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
 		goto err;
