@@ -88,6 +88,7 @@ static int alloc_hugepage(struct hugepage_info *hp)
 		perror("mmap");
 		close(hp->fd);
 		unlink(hp->filename);
+		hp->fd = 0;
 		return -1;
 	}
 
@@ -422,26 +423,61 @@ void physmem_block_free(struct physmem_block *block)
 	unlock_list();
 }
 
-int physmem_block_map(struct physmem_block *block, void *anchor_addr)
+static int reserve_va_area(struct physmem_block *block)
 {
 	void *addr;
+	void *addr_aligned;
+	uintptr_t align, len;
+
+	if (block == NULL)
+		return -1;
+
+	len = block->size;
+	align = block->hp_size;
+
+	addr = mmap(NULL, len + align, PROT_NONE,
+		    MAP_SHARED | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+	if (addr == MAP_FAILED) {
+		ODP_ERR("Failed to reserve VA memory\n");
+		return -1;
+	}
+
+	if (mprotect(addr, len, PROT_NONE))
+			ODP_ERR("failure for protect\n");
+
+	addr_aligned = (void *)(((uintptr_t)addr + align - 1) & (-align));
+
+	ODP_DBG("physmem: VA Reserved: %p, aligned: %p, len=%p\n",
+		addr, addr_aligned, len + align);
+
+	block->va = addr_aligned;
+	block->va_reserved = addr;
+	block->va_reserved_size = len + align;
+
+	return 0;
+}
+
+int physmem_block_map(struct physmem_block *block, void *addr)
+{
 	int retval;
 	int mapped_cnt;
 	struct hugepage_info *hp;
 
-	if (block == NULL || anchor_addr == NULL)
+	if (block == NULL)
 		return -EINVAL;
 
-	/* make sure we can actually map this memory region */
-	addr = mmap(anchor_addr, block->size,
-		    PROT_READ | PROT_WRITE,
-		    MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED,
-		    -1, 0);
+	if (addr == NULL) {
+		if (reserve_va_area(block))
+			return -ENOMEM;
+		addr = block->va;
+	} else {
+		if (((uintptr_t)addr & (uintptr_t)(block->hp_size - 1)) != 0)
+			return -EINVAL;
+		block->va = addr;
+		block->va_reserved = NULL;
+		block->va_reserved_size = 0;
+	}
 
-	if (addr == MAP_FAILED)
-		return errno;
-
-	block->va = addr;
 	mapped_cnt = 0;
 
 	ODP_DBG("Mapping block %d at %p\n", block->id, block->va);
@@ -507,11 +543,17 @@ int physmem_block_map(struct physmem_block *block, void *anchor_addr)
 
 exit_failure:
 
+	/* FIXME: give back reserved memory */
+	block->va_reserved = NULL;
+	block->va_reserved_size = 0;
+
+
 	while (mapped_cnt--) {
 		hp = &pages[block->first + mapped_cnt];
 		munmap(hp->va, hp->size);
 		hp->va = NULL;
 	}
+
 	block->va = NULL;
 
 	return retval;
@@ -532,6 +574,12 @@ int physmem_block_unmap(struct physmem_block *block)
 			ret = errno;
 	}
 
+	if (block->va_reserved != block->va) {
+		if (munmap(block->va_reserved,
+		    (uintptr_t)block->va - (uintptr_t)block->va_reserved))
+			ret = errno;
+	}
+
 	return ret;
 }
 
@@ -548,8 +596,10 @@ int physmem_block_init_global(void)
 {
 	init_blocks();
 
-	if (init_hugepages())
+	if (init_hugepages()) {
+		physmem_block_term_global();
 		return -1;
+	}
 
 	if (sort_in_blocks(pages, MAX_HUGEPAGES) != 0)
 		return -1;

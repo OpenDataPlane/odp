@@ -22,8 +22,10 @@ typedef enum {
 struct physmem_block {
 	LIST_ENTRY(physmem_block) next;
 	void *va; /* virtual address where the block is mapped */
+	void *va_reserved; /* internal */
 	uint64_t pa; /* physical address where it starts */
 	uint64_t size; /* the size of this memory block */
+	uint64_t va_reserved_size; /* internal */
 	uint32_t first; /* index of first hugepage belonging to this block
 			 * in pages[] */
 	uint32_t count; /* number of hugepages in this block */
@@ -35,8 +37,8 @@ struct physmem_block {
 int physmem_block_init_global(void);
 int physmem_block_term_global(void);
 
-struct physmem_block *physmem_block_alloc(uint64_t);
-void physmem_block_free(struct physmem_block *);
+struct physmem_block *physmem_block_alloc(uint64_t size);
+void physmem_block_free(struct physmem_block *block);
 int physmem_block_map(struct physmem_block *block, void *addr);
 int physmem_block_unmap(struct physmem_block *block);
 
