@@ -658,7 +658,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 
 		offsets[i] = (uint8_t *)pkt_hdr -
 			     (uint8_t *)odp_shm_addr(pool->shm);
-		data_pool_off = (uint8_t *)pkt_hdr->buf_hdr.base_data -
+		data_pool_off = packet_base_data(pkt_hdr) -
 				(uint8_t *)odp_shm_addr(pool->shm);
 
 		/* compile all function code even if ipc disabled with config */

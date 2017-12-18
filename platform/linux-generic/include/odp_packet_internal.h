@@ -180,6 +180,11 @@ static inline odp_packet_t packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
 	return (odp_packet_t)(odp_packet_hdr_t *)buf_hdr;
 }
 
+static inline uint8_t *packet_base_data(odp_packet_hdr_t *pkt_hdr)
+{
+	return pkt_hdr->buf_hdr.buf_start + pkt_hdr->headroom;
+}
+
 static inline odp_packet_hdr_t *packet_last_seg(odp_packet_hdr_t *pkt_hdr)
 {
 	int segcount = pkt_hdr->buf_hdr.segcount;
@@ -214,18 +219,13 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 
 	pkt_hdr->buf_hdr.event_subtype = ODP_EVENT_PACKET_BASIC;
 
-	/* Restore each segment's base_data and size fields */
+	/* Restore each segment's size field */
 	while (len > pool->seg_len) {
-		pkt_hdr->buf_hdr.base_data =
-			&pkt_hdr->data[pkt_hdr->buf_hdr.pristine_offset];
 		pkt_hdr->buf_hdr.size = pool->seg_len;
 
 		len -= pool->seg_len;
-
 		pkt_hdr = pkt_hdr->buf_hdr.next_seg;
 	}
-	pkt_hdr->buf_hdr.base_data =
-		&pkt_hdr->data[pkt_hdr->buf_hdr.pristine_offset];
 	pkt_hdr->buf_hdr.size = len;
 
 	old_pkt_hdr->tailroom += pool->seg_len - len;

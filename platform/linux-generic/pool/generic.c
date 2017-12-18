@@ -247,11 +247,11 @@ static void init_buffers(pool_t *pool)
 		if (type == ODP_POOL_PACKET)
 			data = pkt_hdr->data;
 
+		/* Determine amount of offset needed for desired alignment. */
 		offset = pool->headroom;
-
-		/* move to correct align */
 		while (((uintptr_t)&data[offset]) % pool->align != 0)
 			offset++;
+		offset -= pool->headroom;
 
 		memset(buf_hdr, 0, (uintptr_t)data - (uintptr_t)buf_hdr);
 
@@ -268,12 +268,9 @@ static void init_buffers(pool_t *pool)
 
 		odp_atomic_init_u32(&buf_hdr->ref_cnt, 0);
 
-		ODP_ASSERT(offset <= 255);
-		buf_hdr->pristine_offset = offset;
-
-		buf_hdr->base_data = &data[offset];
-		buf_hdr->buf_end =
-			&data[offset + pool->seg_len + pool->tailroom];
+		buf_hdr->buf_start = &data[offset];
+		buf_hdr->buf_end = buf_hdr->buf_start +
+			pool->headroom + pool->seg_len + pool->tailroom;
 
 		/* Store buffer index into the global pool */
 		ring_enq(ring, mask, i);

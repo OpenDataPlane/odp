@@ -43,14 +43,13 @@ struct odp_buffer_hdr_t {
 	/* Pool type */
 	int8_t    type;
 
-	/* Offset used to restore base_data */
-	uint8_t pristine_offset;
+	/* uint8_t unused0; */
 
 	/* Next header which continues the segment list */
 	void *next_seg;
 
-	/* Pointer to start of segment */
-	uint8_t  *base_data;
+	/* Pointer to start of aligned buffer */
+	uint8_t *buf_start;
 
 	/* Pool pointer */
 	void *pool_ptr;
@@ -81,8 +80,8 @@ struct odp_buffer_hdr_t {
 	/* Event type. Maybe different than pool type (crypto compl event) */
 	int8_t    event_type;
 
-	/* Initial buffer tail pointer */
-	uint8_t  *buf_end;
+	/* Pointer to end of buffer */
+	uint8_t *buf_end;
 
 	/* User area pointer */
 	void    *uarea_addr;
