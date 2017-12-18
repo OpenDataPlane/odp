@@ -217,17 +217,17 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = TRAFFIC_MNGR_INIT;
 
-	if (_odp_pci_init_global()) {
-		ODP_ERR("ODP pci init failed.\n");
-		goto init_failed;
-	}
-	stage = PCI_INIT;
-
 	if (_odp_int_name_tbl_init_global()) {
 		ODP_ERR("ODP name table init failed\n");
 		goto init_failed;
 	}
 	stage = NAME_TABLE_INIT;
+
+	if (_odp_pci_init_global()) {
+		ODP_ERR("ODP pci init failed.\n");
+		goto init_failed;
+	}
+	stage = PCI_INIT;
 
 	if (_odpdrv_driver_init_global()) {
 		ODP_ERR("ODP drivers init failed\n");

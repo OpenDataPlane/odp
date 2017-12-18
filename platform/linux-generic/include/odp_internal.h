@@ -74,11 +74,11 @@ enum init_stage {
 	CLASSIFICATION_INIT,
 	TRAFFIC_MNGR_INIT,
 	NAME_TABLE_INIT,
+	PCI_INIT,
 	DRIVER_INIT,
 	IPSEC_EVENTS_INIT,
 	IPSEC_SAD_INIT,
 	MODULES_INIT,
-	PCI_INIT,
 	ALL_INIT      /* All init stages completed */
 };
 
