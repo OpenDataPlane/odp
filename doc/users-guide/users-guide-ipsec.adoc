@@ -245,9 +245,14 @@ As can be seen, SAs have a large degree of configurability.
 
 ==== SA Lifecycle Management
 In discussing the lifecycle of an SA, it is useful to refer to the following
-state diagram:
+two state diagrams. The first shows the SA state transitions:
 
-image::ipsec_fsm.svg[align="center"]
+image::ipsec_sa_fsm.svg[align="center"]
+
+The second shows the state transitions of IPsec operations performed against
+SAs:
+
+image::ipsec_op_fsm.svg[align="center"]
 
 After creation, IPsec services are active for this Security Association.  The
 specific APIs that can be used on this SA depends on the IPsec operating mode

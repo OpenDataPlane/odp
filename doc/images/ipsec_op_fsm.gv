@@ -1,0 +1,21 @@
+digraph ipsec_op_state_machine {
+	rankdir=LR;
+	size="12,12";
+	node [fontsize=28];
+	edge [fontsize=28];
+	node [shape=doublecircle]; SA_Ready
+	node [shape=circle];
+
+	SA_Ready -> SA_Ready [label="odp_ipsec_in()"];
+	SA_Ready -> SA_Ready [label="odp_ipsec_out()"]
+	SA_Ready -> SA_Ready [label="odp_ipsec_out_inline()"];
+
+	SA_Ready -> Processing [label="odp_ipsec_in_enq()"];
+	SA_Ready -> Processing [label="odp_ipsec_out_enq()"];
+
+	Processing -> Op_Complete [label="odp_queue_deq()"];
+	Processing -> Op_Complete [label="odp_schedule()"];
+
+	Op_Complete -> SA_Ready [label="odp_ipsec_result()"];
+	Op_Complete -> SA_Ready [label="odp_ipsec_status()"];
+}
