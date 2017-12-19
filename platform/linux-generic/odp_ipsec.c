@@ -57,16 +57,75 @@ int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 	return 0;
 }
 
+/* This should be enough for all ciphers and auths. Currently used maximum is 3
+ * capabilities */
+#define MAX_CAPS 10
+
 int odp_ipsec_cipher_capability(odp_cipher_alg_t cipher,
-				odp_crypto_cipher_capability_t capa[], int num)
+				odp_ipsec_cipher_capability_t capa[], int num)
 {
-	return odp_crypto_cipher_capability(cipher, capa, num);
+	odp_crypto_cipher_capability_t crypto_capa[MAX_CAPS];
+	uint32_t req_iv_len;
+	int rc, i, out;
+
+	rc = odp_crypto_cipher_capability(cipher, crypto_capa, MAX_CAPS);
+	if (rc <= 0)
+		return rc;
+
+	ODP_ASSERT(rc <= MAX_CAPS);
+	if (rc > MAX_CAPS)
+		rc = MAX_CAPS;
+
+	req_iv_len = _odp_ipsec_cipher_iv_len(cipher);
+	for (i = 0, out = 0; i < rc; i++) {
+		if (crypto_capa[i].iv_len != req_iv_len)
+			continue;
+
+		if (out < num)
+			capa[out].key_len = crypto_capa[i].key_len;
+		out++;
+	}
+
+	return out;
 }
 
 int odp_ipsec_auth_capability(odp_auth_alg_t auth,
-			      odp_crypto_auth_capability_t capa[], int num)
+			      odp_ipsec_auth_capability_t capa[], int num)
 {
-	return odp_crypto_auth_capability(auth, capa, num);
+	odp_crypto_auth_capability_t crypto_capa[MAX_CAPS];
+	uint32_t req_digest_len;
+	int rc, i, out;
+
+	rc = odp_crypto_auth_capability(auth, crypto_capa, MAX_CAPS);
+	if (rc <= 0)
+		return rc;
+
+	ODP_ASSERT(rc <= MAX_CAPS);
+	if (rc > MAX_CAPS)
+		rc = MAX_CAPS;
+
+	req_digest_len = _odp_ipsec_auth_digest_len(auth);
+	for (i = 0, out = 0; i < rc; i++) {
+		if (crypto_capa[i].digest_len != req_digest_len)
+			continue;
+
+		if (ODP_AUTH_ALG_AES_GCM == auth ||
+		    ODP_DEPRECATE(ODP_AUTH_ALG_AES128_GCM) == auth) {
+			uint8_t aad_len = 12;
+
+			if (aad_len < crypto_capa[i].aad_len.min ||
+			    aad_len > crypto_capa[i].aad_len.max ||
+			    0 != (aad_len - crypto_capa[i].aad_len.min) %
+				  crypto_capa[i].aad_len.inc)
+				continue;
+		}
+
+		if (out < num)
+			capa[out].key_len = crypto_capa[i].key_len;
+		out++;
+	}
+
+	return out;
 }
 
 void odp_ipsec_config_init(odp_ipsec_config_t *config)

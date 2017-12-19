@@ -206,6 +206,12 @@ typedef struct ODP_PACKED {
 	odp_u32be_t seq_no;  /**< Sequence Number */
 } ipsec_aad_t;
 
+/* Return IV length required for the cipher for IPsec use */
+uint32_t _odp_ipsec_cipher_iv_len(odp_cipher_alg_t cipher);
+
+/* Return digest length required for the cipher for IPsec use */
+uint32_t _odp_ipsec_auth_digest_len(odp_auth_alg_t auth);
+
 /**
  * Obtain SA reference
  */
