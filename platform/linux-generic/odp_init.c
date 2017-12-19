@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <pktio/physmem/physmem.h>
 
 /* the name of the ODP configuration file: */
 #define CONFIGURATION_FILE_ENV_NONE "none"
@@ -223,6 +224,12 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = NAME_TABLE_INIT;
 
+	if (physmem_block_init_global()) {
+		ODP_ERR("ODP PHYSMEM init failed.\n");
+		goto init_failed;
+	}
+	stage = PHYSMEM_INIT;
+
 	if (_odp_pci_init_global()) {
 		ODP_ERR("ODP pci init failed.\n");
 		goto init_failed;
@@ -301,6 +308,13 @@ int _odp_term_global(enum init_stage stage)
 	case PCI_INIT:
 		if (_odp_pci_term_global()) {
 			ODP_ERR("PCI term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
+	case PHYSMEM_INIT:
+		if (physmem_block_term_global()) {
+			ODP_ERR("PHYSMEM term failed\n");
 			rc = -1;
 		}
 		/* Fall through */
