@@ -260,6 +260,24 @@ typedef struct odp_ipsec_capability_t {
 } odp_ipsec_capability_t;
 
 /**
+ * Cipher algorithm capabilities
+ */
+typedef struct odp_ipsec_cipher_capability_t {
+	/** Key length in bytes */
+	uint32_t key_len;
+
+} odp_ipsec_cipher_capability_t;
+
+/**
+ * Authentication algorithm capabilities
+ */
+typedef struct odp_ipsec_auth_capability_t {
+	/** Key length in bytes */
+	uint32_t key_len;
+
+} odp_ipsec_auth_capability_t;
+
+/**
  * IPSEC configuration options
  */
 typedef struct odp_ipsec_config_t {
@@ -723,7 +741,7 @@ int odp_ipsec_capability(odp_ipsec_capability_t *capa);
  * @retval <0 on failure
  */
 int odp_ipsec_cipher_capability(odp_cipher_alg_t cipher,
-				odp_crypto_cipher_capability_t capa[], int num);
+				odp_ipsec_cipher_capability_t capa[], int num);
 
 /**
  * Query supported IPSEC authentication algorithm capabilities
@@ -745,7 +763,7 @@ int odp_ipsec_cipher_capability(odp_cipher_alg_t cipher,
  * @retval <0 on failure
  */
 int odp_ipsec_auth_capability(odp_auth_alg_t auth,
-			      odp_crypto_auth_capability_t capa[], int num);
+			      odp_ipsec_auth_capability_t capa[], int num);
 
 /**
  * Initialize IPSEC configuration options
