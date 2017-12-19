@@ -35,9 +35,7 @@
  * Keep sorted: first by key length, then by IV length
  */
 static const odp_crypto_cipher_capability_t cipher_capa_null[] = {
-{.key_len = 0, .iv_len = 0},
-/* Special case for GMAC */
-{.key_len = 0, .iv_len = 12} };
+{.key_len = 0, .iv_len = 0} };
 
 static const odp_crypto_cipher_capability_t cipher_capa_trides_cbc[] = {
 {.key_len = 24, .iv_len = 8} };
@@ -85,7 +83,8 @@ static const odp_crypto_auth_capability_t auth_capa_aes_gcm[] = {
 {.digest_len = 16, .key_len = 0, .aad_len = {.min = 8, .max = 12, .inc = 4} } };
 
 static const odp_crypto_auth_capability_t auth_capa_aes_gmac[] = {
-{.digest_len = 16, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
+{.digest_len = 16, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0},
+	.iv_len = 12 } };
 
 /** Forward declaration of session structure */
 typedef struct odp_crypto_generic_session_t odp_crypto_generic_session_t;
@@ -122,6 +121,7 @@ struct odp_crypto_generic_session_t {
 
 	struct {
 		uint8_t  key[EVP_MAX_KEY_LENGTH];
+		uint8_t  iv_data[EVP_MAX_IV_LENGTH];
 		uint32_t key_length;
 		uint32_t bytes;
 		union {
@@ -710,10 +710,10 @@ odp_crypto_alg_err_t aes_gmac_gen(odp_packet_t pkt,
 	uint8_t block[EVP_MAX_MD_SIZE];
 	int ret;
 
-	if (param->cipher_iv_ptr)
-		iv_ptr = param->cipher_iv_ptr;
-	else if (session->p.cipher_iv.data)
-		iv_ptr = session->cipher.iv_data;
+	if (param->auth_iv_ptr)
+		iv_ptr = param->auth_iv_ptr;
+	else if (session->p.auth_iv.data)
+		iv_ptr = session->auth.iv_data;
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
@@ -752,10 +752,10 @@ odp_crypto_alg_err_t aes_gmac_check(odp_packet_t pkt,
 	uint8_t block[EVP_MAX_MD_SIZE];
 	int ret;
 
-	if (param->cipher_iv_ptr)
-		iv_ptr = param->cipher_iv_ptr;
-	else if (session->p.cipher_iv.data)
-		iv_ptr = session->cipher.iv_data;
+	if (param->auth_iv_ptr)
+		iv_ptr = param->auth_iv_ptr;
+	else if (session->p.auth_iv.data)
+		iv_ptr = session->auth.iv_data;
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
@@ -976,10 +976,20 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 		goto err;
 	}
 
+	if (session->p.auth_iv.length > EVP_MAX_IV_LENGTH) {
+		ODP_DBG("Maximum auth IV length exceeded\n");
+		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
+		goto err;
+	}
+
 	/* Copy IV data */
 	if (session->p.cipher_iv.data)
 		memcpy(session->cipher.iv_data, session->p.cipher_iv.data,
 		       session->p.cipher_iv.length);
+
+	if (session->p.auth_iv.data)
+		memcpy(session->auth.iv_data, session->p.auth_iv.data,
+		       session->p.auth_iv.length);
 
 	/* Derive order */
 	if (ODP_CRYPTO_OP_ENCODE == param->op)
@@ -1172,6 +1182,7 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 
 	packet_param.session = param->session;
 	packet_param.cipher_iv_ptr = param->cipher_iv_ptr;
+	packet_param.auth_iv_ptr = param->auth_iv_ptr;
 	packet_param.hash_result_offset = param->hash_result_offset;
 	packet_param.aad_ptr = param->aad_ptr;
 	packet_param.cipher_range = param->cipher_range;

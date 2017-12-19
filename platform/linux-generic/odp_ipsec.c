@@ -480,6 +480,7 @@ static int ipsec_in_esp(odp_packet_t *pkt,
 				    state->in.hdr_len -
 				    ipsec_sa->icv_len;
 	param->cipher_iv_ptr = state->iv;
+	param->auth_iv_ptr = state->iv;
 
 	state->esp.aad.spi = esp.spi;
 	state->esp.aad.seq_no = esp.seq_no;
@@ -562,7 +563,7 @@ static int ipsec_in_ah(odp_packet_t *pkt,
 		return -1;
 	}
 
-	param->cipher_iv_ptr = state->iv;
+	param->auth_iv_ptr = state->iv;
 
 	state->in.hdr_len = (ah.ah_len + 2) * 4;
 	state->in.trl_len = 0;
@@ -1082,6 +1083,7 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 	}
 
 	param->cipher_iv_ptr = state->iv;
+	param->auth_iv_ptr = state->iv;
 
 	memset(&esp, 0, sizeof(esp));
 	esp.spi = _odp_cpu_to_be_32(ipsec_sa->spi);
@@ -1231,7 +1233,7 @@ static int ipsec_out_ah(odp_packet_t *pkt,
 		return -1;
 	}
 
-	param->cipher_iv_ptr = state->iv;
+	param->auth_iv_ptr = state->iv;
 
 	if (odp_packet_extend_head(pkt, hdr_len, NULL, NULL) < 0) {
 		status->error.alg = 1;
