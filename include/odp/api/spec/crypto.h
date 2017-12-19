@@ -333,6 +333,9 @@ typedef struct odp_crypto_session_param_t {
 	 */
 	odp_crypto_key_t auth_key;
 
+	/** Authentication Initialization Vector (IV) */
+	odp_crypto_iv_t auth_iv;
+
 	/** Authentication digest length in bytes
 	 *
 	 *  Use odp_crypto_auth_capability() for supported digest lengths.
@@ -408,6 +411,9 @@ typedef struct odp_crypto_op_param_t {
 		uint8_t *cipher_iv_ptr;
 	};
 
+	/** Override session authentication IV pointer */
+	uint8_t *auth_iv_ptr;
+
 	/** Offset from start of packet for hash result
 	 *
 	 *  Specifies the offset where the hash result is to be stored. In case
@@ -448,6 +454,9 @@ typedef struct odp_crypto_packet_op_param_t {
 		/** Override session IV pointer for cipher */
 		uint8_t *cipher_iv_ptr;
 	};
+
+	/** Override session IV pointer for authentication */
+	uint8_t *auth_iv_ptr;
 
 	/** Offset from start of packet for hash result
 	 *
@@ -613,6 +622,9 @@ typedef struct odp_crypto_auth_capability_t {
 
 	/** Key length in bytes */
 	uint32_t key_len;
+
+	/** IV length in bytes */
+	uint32_t iv_len;
 
 	/** Additional Authenticated Data (AAD) lengths */
 	struct {
