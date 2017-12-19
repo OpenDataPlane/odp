@@ -478,7 +478,7 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
 				     odp_crypto_generic_session_t *session)
 {
 	EVP_CIPHER_CTX *ctx;
-	const uint8_t *aad_head = param->aad.ptr;
+	const uint8_t *aad_head = param->aad_ptr;
 	uint32_t aad_len = session->p.auth_aad_len;
 	void *iv_ptr;
 	int dummy_len = 0;
@@ -525,7 +525,7 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
 				     odp_crypto_generic_session_t *session)
 {
 	EVP_CIPHER_CTX *ctx;
-	const uint8_t *aad_head = param->aad.ptr;
+	const uint8_t *aad_head = param->aad_ptr;
 	uint32_t aad_len = session->p.auth_aad_len;
 	int dummy_len = 0;
 	void *iv_ptr;
@@ -1057,7 +1057,7 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 	packet_param.session = param->session;
 	packet_param.override_iv_ptr = param->override_iv_ptr;
 	packet_param.hash_result_offset = param->hash_result_offset;
-	packet_param.aad.ptr = param->aad.ptr;
+	packet_param.aad_ptr = param->aad_ptr;
 	packet_param.cipher_range = param->cipher_range;
 	packet_param.auth_range = param->auth_range;
 
