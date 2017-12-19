@@ -1272,6 +1272,16 @@ static void crypto_test_check_alg_aes_gmac(void)
 		  false);
 }
 
+static void crypto_test_check_alg_aes_gmac_ovr_iv(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_NULL,
+		  ODP_AUTH_ALG_AES_GMAC,
+		  aes_gmac_reference,
+		  ARRAY_SIZE(aes_gmac_reference),
+		  false);
+}
+
 static int check_alg_aes_cmac(void)
 {
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_AES_CMAC);
@@ -1423,6 +1433,8 @@ odp_testinfo_t crypto_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_aes_gmac_ovr_iv,
 				  check_alg_aes_gmac),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_aes_gmac,
+				  check_alg_aes_gmac),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_aes_gmac_ovr_iv,
 				  check_alg_aes_gmac),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_aes_cmac,
 				  check_alg_aes_cmac),
