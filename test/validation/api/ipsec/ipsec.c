@@ -126,8 +126,8 @@ int ipsec_check(odp_bool_t ah,
 		uint32_t auth_bits)
 {
 	odp_ipsec_capability_t capa;
-	odp_crypto_cipher_capability_t cipher_capa[MAX_ALG_CAPA];
-	odp_crypto_auth_capability_t   auth_capa[MAX_ALG_CAPA];
+	odp_ipsec_cipher_capability_t cipher_capa[MAX_ALG_CAPA];
+	odp_ipsec_auth_capability_t   auth_capa[MAX_ALG_CAPA];
 	int i, num;
 	odp_bool_t found;
 
