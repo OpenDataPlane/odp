@@ -102,7 +102,7 @@ static int alg_op(odp_packet_t pkt,
 	if (op_iv_ptr)
 		op_params.override_iv_ptr = op_iv_ptr;
 
-	op_params.aad.ptr = aad;
+	op_params.aad_ptr = aad;
 
 	op_params.hash_result_offset = plaintext_len;
 
@@ -174,7 +174,7 @@ static int alg_packet_op(odp_packet_t pkt,
 	if (op_iv_ptr)
 		op_params.override_iv_ptr = op_iv_ptr;
 
-	op_params.aad.ptr = aad;
+	op_params.aad_ptr = aad;
 
 	op_params.hash_result_offset = plaintext_len;
 
@@ -232,7 +232,7 @@ static int alg_packet_op_enq(odp_packet_t pkt,
 	if (op_iv_ptr)
 		op_params.override_iv_ptr = op_iv_ptr;
 
-	op_params.aad.ptr = aad;
+	op_params.aad_ptr = aad;
 
 	op_params.hash_result_offset = plaintext_len;
 

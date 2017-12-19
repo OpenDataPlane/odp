@@ -424,7 +424,7 @@ static int ipsec_in_esp(odp_packet_t *pkt,
 	state->esp.aad.seq_no = esp.seq_no;
 	state->in.seq_no = odp_be_to_cpu_32(esp.seq_no);
 
-	param->aad.ptr = (uint8_t *)&state->esp.aad;
+	param->aad_ptr = (uint8_t *)&state->esp.aad;
 
 	param->auth_range.offset = ipsec_offset;
 	param->auth_range.length = state->ip_tot_len -
@@ -1029,7 +1029,7 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 	state->esp.aad.spi = esp.spi;
 	state->esp.aad.seq_no = esp.seq_no;
 
-	param->aad.ptr = (uint8_t *)&state->esp.aad;
+	param->aad_ptr = (uint8_t *)&state->esp.aad;
 
 	memset(&esptrl, 0, sizeof(esptrl));
 	esptrl.pad_len = encrypt_len - ip_data_len - _ODP_ESPTRL_LEN;
