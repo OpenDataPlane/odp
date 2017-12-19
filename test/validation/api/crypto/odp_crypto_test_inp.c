@@ -80,6 +80,7 @@ static int alg_op(odp_packet_t pkt,
 		  odp_bool_t *ok,
 		  odp_crypto_session_t session,
 		  uint8_t *cipher_iv_ptr,
+		  uint8_t *auth_iv_ptr,
 		  odp_packet_data_range_t *cipher_range,
 		  odp_packet_data_range_t *auth_range,
 		  uint8_t *aad,
@@ -102,6 +103,8 @@ static int alg_op(odp_packet_t pkt,
 	op_params.auth_range = *auth_range;
 	if (cipher_iv_ptr)
 		op_params.cipher_iv_ptr = cipher_iv_ptr;
+	if (auth_iv_ptr)
+		op_params.auth_iv_ptr = auth_iv_ptr;
 
 	op_params.aad_ptr = aad;
 
@@ -155,6 +158,7 @@ static int alg_packet_op(odp_packet_t pkt,
 			 odp_bool_t *ok,
 			 odp_crypto_session_t session,
 			 uint8_t *cipher_iv_ptr,
+			 uint8_t *auth_iv_ptr,
 			 odp_packet_data_range_t *cipher_range,
 			 odp_packet_data_range_t *auth_range,
 			 uint8_t *aad,
@@ -174,6 +178,8 @@ static int alg_packet_op(odp_packet_t pkt,
 	op_params.auth_range = *auth_range;
 	if (cipher_iv_ptr)
 		op_params.cipher_iv_ptr = cipher_iv_ptr;
+	if (auth_iv_ptr)
+		op_params.auth_iv_ptr = auth_iv_ptr;
 
 	op_params.aad_ptr = aad;
 
@@ -212,6 +218,7 @@ static int alg_packet_op_enq(odp_packet_t pkt,
 			     odp_bool_t *ok,
 			     odp_crypto_session_t session,
 			     uint8_t *cipher_iv_ptr,
+			     uint8_t *auth_iv_ptr,
 			     odp_packet_data_range_t *cipher_range,
 			     odp_packet_data_range_t *auth_range,
 			     uint8_t *aad,
@@ -232,6 +239,8 @@ static int alg_packet_op_enq(odp_packet_t pkt,
 	op_params.auth_range = *auth_range;
 	if (cipher_iv_ptr)
 		op_params.cipher_iv_ptr = cipher_iv_ptr;
+	if (auth_iv_ptr)
+		op_params.auth_iv_ptr = auth_iv_ptr;
 
 	op_params.aad_ptr = aad;
 
@@ -319,6 +328,10 @@ static void alg_test(odp_crypto_op_t op,
 		.data = ovr_iv ? NULL : ref->cipher_iv,
 		.length = ref->cipher_iv_length
 	};
+	odp_crypto_iv_t auth_iv = {
+		.data = ovr_iv ? NULL : ref->auth_iv,
+		.length = ref->auth_iv_length
+	};
 
 	/* Create a crypto session */
 	odp_crypto_session_param_init(&ses_params);
@@ -332,6 +345,7 @@ static void alg_test(odp_crypto_op_t op,
 	ses_params.output_pool = suite_context.pool;
 	ses_params.cipher_key = cipher_key;
 	ses_params.cipher_iv = cipher_iv;
+	ses_params.auth_iv = auth_iv;
 	ses_params.auth_key = auth_key;
 	ses_params.auth_digest_len = ref->digest_length;
 	ses_params.auth_aad_len = ref->aad_length;
@@ -382,16 +396,19 @@ static void alg_test(odp_crypto_op_t op,
 		if (!suite_context.packet)
 			rc = alg_op(pkt, &ok, session,
 				    ovr_iv ? ref->cipher_iv : NULL,
+				    ovr_iv ? ref->auth_iv : NULL,
 				    &cipher_range, &auth_range,
 				    ref->aad, ref->length);
 		else if (ODP_CRYPTO_ASYNC == suite_context.op_mode)
 			rc = alg_packet_op_enq(pkt, &ok, session,
 					       ovr_iv ? ref->cipher_iv : NULL,
+					       ovr_iv ? ref->auth_iv : NULL,
 					       &cipher_range, &auth_range,
 					       ref->aad, ref->length);
 		else
 			rc = alg_packet_op(pkt, &ok, session,
 					   ovr_iv ? ref->cipher_iv : NULL,
+					   ovr_iv ? ref->auth_iv : NULL,
 					   &cipher_range, &auth_range,
 					   ref->aad, ref->length);
 		if (rc < 0)
@@ -536,6 +553,8 @@ static void check_alg(odp_crypto_op_t op,
 		for (i = 0; i < auth_num; i++) {
 			if (auth_capa[i].digest_len ==
 			    ref[idx].digest_length &&
+			    auth_capa[i].iv_len ==
+			    ref[idx].auth_iv_length &&
 			    auth_capa[i].key_len ==
 			    ref[idx].auth_key_length) {
 				auth_idx = i;
@@ -545,9 +564,10 @@ static void check_alg(odp_crypto_op_t op,
 
 		if (auth_idx < 0) {
 			printf("\n    Unsupported: alg=%s, key_len=%" PRIu32
-			       ", digest_len=%" PRIu32 "\n",
+			       ", iv_len=%" PRIu32 ", digest_len=%" PRIu32 "\n",
 			       auth_alg_name(auth_alg),
 			       ref[idx].auth_key_length,
+			       ref[idx].auth_iv_length,
 			       ref[idx].digest_length);
 			continue;
 		}
@@ -1104,6 +1124,16 @@ static void crypto_test_gen_alg_aes_gmac(void)
 			  false);
 }
 
+static void crypto_test_gen_alg_aes_gmac_ovr_iv(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_NULL,
+		  ODP_AUTH_ALG_AES_GMAC,
+		  aes_gmac_reference,
+		  ARRAY_SIZE(aes_gmac_reference),
+		  true);
+}
+
 static void crypto_test_check_alg_aes_gmac(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
@@ -1220,6 +1250,8 @@ odp_testinfo_t crypto_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_hmac_sha512,
 				  check_alg_hmac_sha512),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_aes_gmac,
+				  check_alg_aes_gmac),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_aes_gmac_ovr_iv,
 				  check_alg_aes_gmac),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_aes_gmac,
 				  check_alg_aes_gmac),
