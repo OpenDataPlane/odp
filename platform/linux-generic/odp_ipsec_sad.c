@@ -409,7 +409,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 16;
-		crypto_param.cipher_iv.length = 12;
+		crypto_param.auth_iv.length = 12;
 		break;
 	default:
 		break;
