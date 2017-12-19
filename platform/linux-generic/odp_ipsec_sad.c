@@ -190,12 +190,66 @@ void odp_ipsec_sa_param_init(odp_ipsec_sa_param_t *param)
 	param->dest_queue = ODP_QUEUE_INVALID;
 }
 
+/* Return IV length required for the cipher for IPsec use */
+uint32_t _odp_ipsec_cipher_iv_len(odp_cipher_alg_t cipher)
+{
+	switch (cipher) {
+	case ODP_CIPHER_ALG_NULL:
+		return 0;
+	case ODP_CIPHER_ALG_DES:
+	case ODP_CIPHER_ALG_3DES_CBC:
+		return 8;
+#if ODP_DEPRECATED_API
+	case ODP_CIPHER_ALG_AES128_CBC:
+#endif
+	case ODP_CIPHER_ALG_AES_CBC:
+	case ODP_CIPHER_ALG_AES_CTR:
+		return 16;
+#if ODP_DEPRECATED_API
+	case ODP_CIPHER_ALG_AES128_GCM:
+#endif
+	case ODP_CIPHER_ALG_AES_GCM:
+		return 12;
+	default:
+		return (uint32_t)-1;
+	}
+}
+
+/* Return digest length required for the cipher for IPsec use */
+uint32_t _odp_ipsec_auth_digest_len(odp_auth_alg_t auth)
+{
+	switch (auth) {
+	case ODP_AUTH_ALG_NULL:
+		return 0;
+#if ODP_DEPRECATED_API
+	case ODP_AUTH_ALG_MD5_96:
+#endif
+	case ODP_AUTH_ALG_MD5_HMAC:
+	case ODP_AUTH_ALG_SHA1_HMAC:
+		return 12;
+#if ODP_DEPRECATED_API
+	case ODP_AUTH_ALG_SHA256_128:
+#endif
+	case ODP_AUTH_ALG_SHA256_HMAC:
+		return 16;
+	case ODP_AUTH_ALG_SHA512_HMAC:
+		return 32;
+#if ODP_DEPRECATED_API
+	case ODP_AUTH_ALG_AES128_GCM:
+#endif
+	case ODP_AUTH_ALG_AES_GCM:
+	case ODP_AUTH_ALG_AES_GMAC:
+		return 16;
+	default:
+		return (uint32_t)-1;
+	}
+}
+
 odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 {
 	ipsec_sa_t *ipsec_sa;
 	odp_crypto_session_param_t crypto_param;
 	odp_crypto_ses_create_err_t ses_create_rc;
-	uint32_t aad_len = 0;
 
 	ipsec_sa = ipsec_sa_reserve();
 	if (NULL == ipsec_sa) {
@@ -297,17 +351,25 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	crypto_param.auth_alg = param->crypto.auth_alg;
 	crypto_param.auth_key = param->crypto.auth_key;
 
+	crypto_param.iv.length =
+		_odp_ipsec_cipher_iv_len(crypto_param.cipher_alg);
+
+	crypto_param.auth_digest_len =
+		_odp_ipsec_auth_digest_len(crypto_param.auth_alg);
+
+	if ((uint32_t)-1 == crypto_param.iv.length ||
+	    (uint32_t)-1 == crypto_param.auth_digest_len)
+		goto error;
+
 	switch (crypto_param.cipher_alg) {
 	case ODP_CIPHER_ALG_NULL:
 		ipsec_sa->esp_iv_len = 0;
 		ipsec_sa->esp_block_len = 1;
-		crypto_param.iv.length = 0;
 		break;
 	case ODP_CIPHER_ALG_DES:
 	case ODP_CIPHER_ALG_3DES_CBC:
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 8;
-		crypto_param.iv.length = 8;
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_CBC:
@@ -315,14 +377,12 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	case ODP_CIPHER_ALG_AES_CBC:
 		ipsec_sa->esp_iv_len = 16;
 		ipsec_sa->esp_block_len = 16;
-		crypto_param.iv.length = 16;
 		break;
 	case ODP_CIPHER_ALG_AES_CTR:
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->aes_ctr_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 16;
-		crypto_param.iv.length = 16;
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_GCM:
@@ -331,40 +391,17 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 16;
-		crypto_param.iv.length = 12;
 		break;
 	default:
 		goto error;
 	}
 
 	switch (crypto_param.auth_alg) {
-	case ODP_AUTH_ALG_NULL:
-		ipsec_sa->icv_len = 0;
-		break;
-#if ODP_DEPRECATED_API
-	case ODP_AUTH_ALG_MD5_96:
-#endif
-	case ODP_AUTH_ALG_MD5_HMAC:
-		ipsec_sa->icv_len = 12;
-		break;
-	case ODP_AUTH_ALG_SHA1_HMAC:
-		ipsec_sa->icv_len = 12;
-		break;
-#if ODP_DEPRECATED_API
-	case ODP_AUTH_ALG_SHA256_128:
-#endif
-	case ODP_AUTH_ALG_SHA256_HMAC:
-		ipsec_sa->icv_len = 16;
-		break;
-	case ODP_AUTH_ALG_SHA512_HMAC:
-		ipsec_sa->icv_len = 32;
-		break;
 #if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_AES128_GCM:
 #endif
 	case ODP_AUTH_ALG_AES_GCM:
-		ipsec_sa->icv_len = 16;
-		aad_len = sizeof(ipsec_aad_t);
+		crypto_param.auth_aad_len = sizeof(ipsec_aad_t);
 		break;
 	case ODP_AUTH_ALG_AES_GMAC:
 		if (ODP_CIPHER_ALG_NULL != crypto_param.cipher_alg)
@@ -372,19 +409,17 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 16;
-		ipsec_sa->icv_len = 16;
 		crypto_param.iv.length = 12;
 		break;
 	default:
-		goto error;
+		break;
 	}
 
 	if (1 == ipsec_sa->use_counter_iv &&
 	    ODP_IPSEC_DIR_OUTBOUND == param->dir)
 		odp_atomic_init_u64(&ipsec_sa->out.counter, 1);
 
-	crypto_param.auth_digest_len = ipsec_sa->icv_len;
-	crypto_param.auth_aad_len    = aad_len;
+	ipsec_sa->icv_len = crypto_param.auth_digest_len;
 
 	if (param->crypto.cipher_key_extra.length) {
 		if (param->crypto.cipher_key_extra.length >
