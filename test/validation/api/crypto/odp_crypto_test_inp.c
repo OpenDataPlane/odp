@@ -276,6 +276,13 @@ static int alg_packet_op_enq(odp_packet_t pkt,
 	return 0;
 }
 
+typedef enum crypto_test {
+	NORMAL_TEST = 0,   /**< Plain execution */
+	REPEAT_TEST,       /**< Rerun without reinitializing the session */
+	WRONG_DIGEST_TEST, /**< Check against wrong digest */
+	MAX_TEST,          /**< Final mark */
+} crypto_test;
+
 /* Basic algorithm run function for async inplace mode.
  * Creates a session from input parameters and runs one operation
  * on input_vec. Checks the output of the crypto operation against
@@ -296,7 +303,7 @@ static void alg_test(odp_crypto_op_t op,
 	int rc;
 	odp_crypto_ses_create_err_t status;
 	odp_bool_t ok = false;
-	odp_bool_t should_fail = false;
+	int iteration;
 	odp_crypto_session_param_t ses_params;
 	odp_crypto_cipher_capability_t cipher_capa[MAX_ALG_CAPA];
 	odp_crypto_auth_capability_t   auth_capa[MAX_ALG_CAPA];
@@ -451,66 +458,71 @@ static void alg_test(odp_crypto_op_t op,
 	odp_packet_t pkt = odp_packet_alloc(suite_context.pool,
 					    ref->length + ref->digest_length);
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
-restart:
-	if (op == ODP_CRYPTO_OP_ENCODE) {
-		odp_packet_copy_from_mem(pkt, 0, ref->length, ref->plaintext);
-	} else {
-		odp_packet_copy_from_mem(pkt, 0, ref->length, ref->ciphertext);
-		odp_packet_copy_from_mem(pkt, ref->length,
-					 ref->digest_length,
-					 ref->digest);
-		if (should_fail) {
-			uint8_t byte = ~ref->digest[0];
 
+	for (iteration = NORMAL_TEST; iteration < MAX_TEST; iteration++) {
+		/* checking against wrong digest is meaningless for NULL digest
+		 * or when generating digest */
+		if (iteration == WRONG_DIGEST_TEST &&
+		    (auth_alg == ODP_AUTH_ALG_NULL ||
+		     op == ODP_CRYPTO_OP_ENCODE))
+			continue;
+
+		if (op == ODP_CRYPTO_OP_ENCODE) {
+			odp_packet_copy_from_mem(pkt, 0, ref->length,
+						 ref->plaintext);
+		} else {
+			odp_packet_copy_from_mem(pkt, 0, ref->length,
+						 ref->ciphertext);
 			odp_packet_copy_from_mem(pkt, ref->length,
-						 1, &byte);
+						 ref->digest_length,
+						 ref->digest);
+			if (iteration == WRONG_DIGEST_TEST) {
+				uint8_t byte = ~ref->digest[0];
+
+				odp_packet_copy_from_mem(pkt, ref->length,
+							 1, &byte);
+			}
+		}
+
+		if (!suite_context.packet)
+			rc = alg_op(pkt, &ok, session,
+				    ovr_iv ? ref->iv : NULL,
+				    &cipher_range, &auth_range,
+				    ref->aad, ref->length);
+		else if (ODP_CRYPTO_ASYNC == suite_context.op_mode)
+			rc = alg_packet_op_enq(pkt, &ok, session,
+					       ovr_iv ? ref->iv : NULL,
+					       &cipher_range, &auth_range,
+					       ref->aad, ref->length);
+		else
+			rc = alg_packet_op(pkt, &ok, session,
+					   ovr_iv ? ref->iv : NULL,
+					   &cipher_range, &auth_range,
+					   ref->aad, ref->length);
+		if (rc < 0)
+			break;
+
+		if (iteration == WRONG_DIGEST_TEST) {
+			CU_ASSERT(!ok);
+			continue;
+		}
+
+		CU_ASSERT(ok);
+
+		if (op == ODP_CRYPTO_OP_ENCODE) {
+			CU_ASSERT(!packet_cmp_mem(pkt, 0,
+						  ref->ciphertext,
+						  ref->length));
+			CU_ASSERT(!packet_cmp_mem(pkt, ref->length,
+						  ref->digest,
+						  ref->digest_length));
+		} else {
+			CU_ASSERT(!packet_cmp_mem(pkt, 0,
+						  ref->plaintext,
+						  ref->length));
 		}
 	}
 
-	if (!suite_context.packet)
-		rc = alg_op(pkt, &ok, session,
-			    ovr_iv ? ref->iv : NULL,
-			    &cipher_range, &auth_range,
-			    ref->aad, ref->length);
-	else if (ODP_CRYPTO_ASYNC == suite_context.op_mode)
-		rc = alg_packet_op_enq(pkt, &ok, session,
-				       ovr_iv ? ref->iv : NULL,
-				       &cipher_range, &auth_range,
-				       ref->aad, ref->length);
-	else
-		rc = alg_packet_op(pkt, &ok, session,
-				   ovr_iv ? ref->iv : NULL,
-				   &cipher_range, &auth_range,
-				   ref->aad, ref->length);
-	if (rc < 0) {
-		goto cleanup;
-	}
-
-	if (should_fail) {
-		CU_ASSERT(!ok);
-		goto cleanup;
-	}
-
-	CU_ASSERT(ok);
-
-	if (op == ODP_CRYPTO_OP_ENCODE) {
-		CU_ASSERT(!packet_cmp_mem(pkt, 0,
-					  ref->ciphertext,
-					  ref->length));
-		CU_ASSERT(!packet_cmp_mem(pkt, ref->length,
-					  ref->digest,
-					  ref->digest_length));
-	} else {
-		CU_ASSERT(!packet_cmp_mem(pkt, 0,
-					  ref->plaintext,
-					  ref->length));
-		if (ref->digest_length != 0) {
-			should_fail = true;
-			goto restart;
-		}
-	}
-
-cleanup:
 	rc = odp_crypto_session_destroy(session);
 	CU_ASSERT(!rc);
 
