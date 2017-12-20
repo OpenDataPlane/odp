@@ -146,6 +146,7 @@ typedef union {
 		uint64_t sctp:1;      /**< SCTP */
 		uint64_t icmp:1;      /**< ICMP */
 
+		uint64_t vxlan:1;     /**< VXLAN */
 		uint64_t color:2;     /**< Packet color for traffic mgmt */
 		uint64_t nodrop:1;    /**< Drop eligibility status */
 

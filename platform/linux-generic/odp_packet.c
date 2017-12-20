@@ -17,6 +17,7 @@
 #include <protocols/ip.h>
 #include <protocols/tcp.h>
 #include <protocols/udp.h>
+#include <protocols/vxlan.h>
 
 #include <errno.h>
 #include <string.h>
@@ -2173,12 +2174,31 @@ static inline void parse_tcp(packet_parser_t *prs,
 	*parseptr += (uint32_t)tcp->hl * 4;
 }
 
+static inline void parse_vxlan(packet_parser_t *prs, packet_parser_t *in_prs,
+			       const uint8_t **parseptr, uint32_t *offset,
+			       uint32_t frame_len, uint32_t seg_len)
+{
+	const _odp_vxlanhdr_t *vxlan = (const _odp_vxlanhdr_t *)*parseptr;
+
+	if (ODPH_VXLAN_BIT(vxlan->flags))
+		prs->input_flags.vxlan = 1;
+
+	if (offset)
+		*offset += sizeof(_odp_vxlanhdr_t);
+
+	*parseptr += sizeof(_odp_vxlanhdr_t);
+	packet_parse_common(in_prs, prs, *parseptr, frame_len, seg_len,
+			    ODP_PKTIO_PARSER_LAYER_L4);
+}
+
 /**
  * Parser helper function for UDP
  */
-static inline void parse_udp(packet_parser_t *prs,
-			     const uint8_t **parseptr, uint32_t *offset)
+static inline void parse_udp(packet_parser_t *prs, packet_parser_t *in_p,
+			     const uint8_t **parseptr, uint32_t *offset,
+			     uint32_t frame_len, uint32_t seg_len)
 {
+	uint16_t dport;
 	const _odp_udphdr_t *udp = (const _odp_udphdr_t *)*parseptr;
 	uint32_t udplen = odp_be_to_cpu_16(udp->length);
 
@@ -2198,12 +2218,15 @@ static inline void parse_udp(packet_parser_t *prs,
 
 	if (offset)
 		*offset   += sizeof(_odp_udphdr_t);
-	*parseptr += sizeof(_odp_udphdr_t);
+	*parseptr += _ODP_UDPHDR_LEN;
+	dport = odp_be_to_cpu_16(udp->dst_port);
+	if (dport == _ODP_UDP_VXLAN_PORT)
+		parse_vxlan(prs, in_p, parseptr, offset, frame_len, seg_len);
 }
 
 static inline
-int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
-			      uint32_t offset,
+int packet_parse_common_l3_l4(packet_parser_t *prs, packet_parser_t *inner_prs,
+			      const uint8_t *parseptr, uint32_t offset,
 			      uint32_t frame_len, uint32_t seg_len,
 			      int layer, uint16_t ethtype)
 {
@@ -2272,7 +2295,7 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 		if (odp_unlikely(offset + _ODP_UDPHDR_LEN > seg_len))
 			return -1;
 		prs->input_flags.udp = 1;
-		parse_udp(prs, &parseptr, NULL);
+		parse_udp(prs, inner_prs, &parseptr, NULL, frame_len, seg_len);
 		break;
 
 	case _ODP_IPPROTO_AH:
@@ -2303,9 +2326,9 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
  * The function expects at least PACKET_PARSE_SEG_LEN bytes of data to be
  * available from the ptr.
  */
-int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
-			uint32_t frame_len, uint32_t seg_len,
-			int layer)
+int packet_parse_common(packet_parser_t *prs, packet_parser_t *inner_prs,
+			const uint8_t *ptr, uint32_t frame_len,
+			uint32_t seg_len, odp_pktio_parser_layer_t layer)
 {
 	uint32_t offset;
 	uint16_t ethtype;
@@ -2325,7 +2348,7 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 
 	ethtype = parse_eth(prs, &parseptr, &offset, frame_len);
 
-	return packet_parse_common_l3_l4(prs, parseptr, offset, frame_len,
+	return packet_parse_common_l3_l4(prs, inner_prs, parseptr, offset, frame_len,
 					 seg_len, layer, ethtype);
 }
 
@@ -2338,8 +2361,8 @@ int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
 	uint32_t seg_len = packet_first_seg_len(pkt_hdr);
 	void *base = packet_data(pkt_hdr);
 
-	return packet_parse_common(&pkt_hdr->p, base, pkt_hdr->frame_len,
-				   seg_len, layer);
+	return packet_parse_common(&pkt_hdr->p, &pkt_hdr->inner_p, base,
+				   pkt_hdr->frame_len, seg_len, layer);
 }
 
 int packet_parse_l3_l4(odp_packet_hdr_t *pkt_hdr,
@@ -2353,9 +2376,9 @@ int packet_parse_l3_l4(odp_packet_hdr_t *pkt_hdr,
 	if (seg_len == 0)
 		return -1;
 
-	return packet_parse_common_l3_l4(&pkt_hdr->p, base, l3_offset,
-					 pkt_hdr->frame_len, seg_len,
-					 layer, ethtype);
+	return packet_parse_common_l3_l4(&pkt_hdr->p, &pkt_hdr->inner_p, base,
+					 l3_offset, pkt_hdr->frame_len,
+					 seg_len, layer, ethtype);
 }
 
 int odp_packet_parse(odp_packet_t pkt, uint32_t offset,
@@ -2381,8 +2404,8 @@ int odp_packet_parse(odp_packet_t pkt, uint32_t offset,
 	packet_parse_reset(pkt_hdr);
 
 	if (proto == ODP_PROTO_ETH) {
-		ret = packet_parse_common(&pkt_hdr->p, data, packet_len,
-					  seg_len, layer);
+		ret = packet_parse_common(&pkt_hdr->p, &pkt_hdr->inner_p, data,
+					  packet_len, seg_len, layer);
 
 		if (ret)
 			return -1;
@@ -2392,9 +2415,9 @@ int odp_packet_parse(odp_packet_t pkt, uint32_t offset,
 		else
 			ethtype = _ODP_ETHTYPE_IPV6;
 
-		ret = packet_parse_common_l3_l4(&pkt_hdr->p, data, offset,
-						packet_len, seg_len,
-						layer, ethtype);
+		ret = packet_parse_common_l3_l4(&pkt_hdr->p, &pkt_hdr->inner_p,
+						data, offset, packet_len,
+						seg_len, layer, ethtype);
 
 		if (ret)
 			return -1;

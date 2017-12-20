@@ -124,6 +124,7 @@ typedef struct {
 	 */
 
 	packet_parser_t p;
+	packet_parser_t inner_p;
 
 	odp_pktio_t input;
 
@@ -338,8 +339,9 @@ static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 	}
 }
 
-int packet_parse_common(packet_parser_t *pkt_hdr, const uint8_t *ptr,
-			uint32_t pkt_len, uint32_t seg_len, int layer);
+int packet_parse_common(packet_parser_t *pkt_hdr, packet_parser_t *innner_prs,
+			const uint8_t *ptr, uint32_t pkt_len, uint32_t seg_len,
+			odp_pktio_parser_layer_t layer);
 
 int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
 
