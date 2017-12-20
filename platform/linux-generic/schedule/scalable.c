@@ -145,10 +145,6 @@ static void remove_schedq_from_list(sched_scalable_thread_state_t *ts,
 /*******************************************************************************
  * Scheduler queues
  ******************************************************************************/
-#ifndef odp_container_of
-#define odp_container_of(pointer, type, member) \
-	((type *)(void *)(((char *)pointer) - offsetof(type, member)))
-#endif
 
 static inline void schedq_init(sched_queue_t *schedq, uint32_t prio)
 {

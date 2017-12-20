@@ -21,13 +21,11 @@ extern "C" {
 #include <stdbool.h>
 #include <string.h>
 #include <odp/api/hints.h>
+#include <odp_internal.h>
 
 /* Generate unique identifier for instantiated class */
 #define TOKENIZE(template, line) \
 	template ## _ ## line ## _ ## __COUNTER__
-
-/* Array size in general */
-#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 #define BITS_PER_BYTE	(8)
 #define BITS_PER_LONG	__WORDSIZE

@@ -33,13 +33,6 @@
 
 #define NUM_INTERNAL_QUEUES 64
 
-#define MIN(a, b) \
-	({ \
-		__typeof__(a) tmp_a = (a); \
-		__typeof__(b) tmp_b = (b); \
-		tmp_a < tmp_b ? tmp_a : tmp_b; \
-	})
-
 #define LOCK(a)      _odp_ticketlock_lock(a)
 #define UNLOCK(a)    _odp_ticketlock_unlock(a)
 #define LOCK_INIT(a) odp_ticketlock_init(a)
