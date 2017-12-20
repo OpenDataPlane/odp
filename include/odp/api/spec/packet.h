@@ -106,7 +106,10 @@ typedef enum odp_proto_layer_t {
 	ODP_PROTO_LAYER_L4,
 
 	/** All layers */
-	ODP_PROTO_LAYER_ALL
+	ODP_PROTO_LAYER_ALL,
+
+	/** Inner header may repeat above values with this offset */
+	ODP_PROTO_LAYER_INNER_HDR_OFF = 32
 
 } odp_proto_layer_t;
 
