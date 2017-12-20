@@ -593,7 +593,7 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 				   pktio_entry->s.name,
 				   &cur_stats);
 	if (ret != 0) {
-		ret = sysfs_stats(pktio_entry, &cur_stats);
+		ret = sysfs_netif_stats(pktio_entry->s.name, &cur_stats);
 		if (ret != 0) {
 			pktio_entry->s.stats_type = STATS_UNSUPPORTED;
 			ODP_DBG("pktio: %s unsupported stats\n",
