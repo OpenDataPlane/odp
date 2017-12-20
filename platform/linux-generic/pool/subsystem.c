@@ -7,7 +7,7 @@
  */
 #include <odp/api/pool.h>
 #include <odp_internal.h>
-#include <odp_pool_subsystem.h>
+#include <subsystem/spec/pool_subsystem.h>
 #include <odp_debug_internal.h>
 #include <odp_module.h>
 

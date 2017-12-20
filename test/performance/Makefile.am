@@ -31,6 +31,6 @@ odp_sched_latency_SOURCES = odp_sched_latency.c
 odp_scheduling_SOURCES = odp_scheduling.c
 odp_pktio_perf_SOURCES = odp_pktio_perf.c
 
-dist_check_SCRIPTS = $(TESTSCRIPTS)
+dist_check_SCRIPTS = $(TESTSCRIPTS) $(LOG_COMPILER)
 
 dist_check_DATA = udp64.pcap

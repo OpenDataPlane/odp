@@ -20,7 +20,7 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 #include <odp/api/pool.h>
-#include <odp_pool_subsystem.h>
+#include <subsystem/spec/pool_subsystem.h>
 #include <odp_buffer_internal.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/align.h>

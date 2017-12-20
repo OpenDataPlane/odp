@@ -23,7 +23,7 @@
 #include <odp_packet_io_internal.h>
 #include <odp_pool_internal.h>
 #include <odp_queue_scalable_internal.h>
-#include <odp_queue_subsystem.h>
+#include <subsystem/spec/queue_subsystem.h>
 #include <odp_schedule_if.h>
 #include <_ishm_internal.h>
 #include <_ishmpool_internal.h>

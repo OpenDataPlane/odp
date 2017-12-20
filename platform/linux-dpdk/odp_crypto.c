@@ -271,7 +271,7 @@ int odp_crypto_init_global(void)
 
 		qp_conf.nb_descriptors = NB_MBUF;
 
-		for (queue_pair = 0; queue_pair < nb_queue_pairs - 1;
+		for (queue_pair = 0; queue_pair < nb_queue_pairs;
 							queue_pair++) {
 			rc = rte_cryptodev_queue_pair_setup(cdev_id,
 							    queue_pair,
@@ -808,40 +808,53 @@ int odp_crypto_session_create(odp_crypto_session_param_t *param,
 	/* Default to successful result */
 	*status = ODP_CRYPTO_SES_CREATE_ERR_NONE;
 
-	/* Cipher Data */
-	cipher_xform.cipher.key.data = rte_malloc("crypto key",
-						param->cipher_key.length, 0);
-	if (cipher_xform.cipher.key.data == NULL) {
-		ODP_ERR("Failed to allocate memory for cipher key\n");
-		/* remove the crypto_session_entry_t */
-		memset(entry, 0, sizeof(*entry));
-		free_session(entry);
-		return -1;
-	}
-
 	cipher_xform.type = RTE_CRYPTO_SYM_XFORM_CIPHER;
 	cipher_xform.next = NULL;
-	cipher_xform.cipher.key.length = param->cipher_key.length;
-	memcpy(cipher_xform.cipher.key.data,
-	       param->cipher_key.data,
-	       param->cipher_key.length);
 
-	/* Authentication Data */
-	auth_xform.auth.key.data = rte_malloc("auth key",
-						param->auth_key.length, 0);
-	if (auth_xform.auth.key.data == NULL) {
-		ODP_ERR("Failed to allocate memory for auth key\n");
-		/* remove the crypto_session_entry_t */
-		memset(entry, 0, sizeof(*entry));
-		free_session(entry);
-		return -1;
+	if (param->cipher_key.length) {
+		/* Cipher Data */
+		cipher_xform.cipher.key.data = rte_malloc("crypto key",
+						   param->cipher_key.length, 0);
+		if (cipher_xform.cipher.key.data == NULL) {
+			ODP_ERR("Failed to allocate memory for cipher key\n");
+			/* remove the crypto_session_entry_t */
+			memset(entry, 0, sizeof(*entry));
+			free_session(entry);
+			return -1;
+		}
+
+		cipher_xform.cipher.key.length = param->cipher_key.length;
+		memcpy(cipher_xform.cipher.key.data,
+		       param->cipher_key.data,
+		       param->cipher_key.length);
+	} else {
+		cipher_xform.cipher.key.data = 0;
+		cipher_xform.cipher.key.length = 0;
 	}
+
 	auth_xform.type = RTE_CRYPTO_SYM_XFORM_AUTH;
 	auth_xform.next = NULL;
-	auth_xform.auth.key.length = param->auth_key.length;
-	memcpy(auth_xform.auth.key.data,
-	       param->auth_key.data,
-	       param->auth_key.length);
+
+	if (param->auth_key.length) {
+		/* Authentication Data */
+		auth_xform.auth.key.data = rte_malloc("auth key",
+						     param->auth_key.length, 0);
+		if (auth_xform.auth.key.data == NULL) {
+			ODP_ERR("Failed to allocate memory for auth key\n");
+			/* remove the crypto_session_entry_t */
+			memset(entry, 0, sizeof(*entry));
+			free_session(entry);
+			return -1;
+		}
+		auth_xform.auth.key.length = param->auth_key.length;
+		memcpy(auth_xform.auth.key.data,
+		       param->auth_key.data,
+		       param->auth_key.length);
+	} else {
+		auth_xform.auth.key.data = 0;
+		auth_xform.auth.key.length = 0;
+	}
+
 
 	/* Derive order */
 	if (ODP_CRYPTO_OP_ENCODE == param->op)
@@ -898,11 +911,12 @@ int odp_crypto_session_create(odp_crypto_session_param_t *param,
 	/* Setup session */
 	session = rte_cryptodev_sym_session_create(cdev_id, first_xform);
 
-	if (session == NULL)
+	if (session == NULL) {
 		/* remove the crypto_session_entry_t */
 		memset(entry, 0, sizeof(*entry));
 		free_session(entry);
 		return -1;
+	}
 
 	entry->rte_session  = (intptr_t)session;
 	entry->cipher_xform = cipher_xform;
@@ -1216,6 +1230,9 @@ int odp_crypto_int(odp_packet_t pkt_in,
 		goto err;
 	}
 
+	op->sym->auth.aad.data = NULL;
+	op->sym->cipher.iv.data = NULL;
+
 	odp_spinlock_unlock(&global->lock);
 
 	/* Set crypto operation data parameters */
@@ -1242,9 +1259,8 @@ int odp_crypto_int(odp_packet_t pkt_in,
 	if (aad_len > 0) {
 		op->sym->auth.aad.data = rte_malloc("aad", aad_len, 0);
 		if (op->sym->auth.aad.data == NULL) {
-			rte_crypto_op_free(op);
 			ODP_ERR("Failed to allocate memory for AAD");
-			goto err;
+			goto err_op_free;
 		}
 
 		memcpy(op->sym->auth.aad.data, aad_head, aad_len);
@@ -1254,27 +1270,27 @@ int odp_crypto_int(odp_packet_t pkt_in,
 	}
 
 	if (entry->iv.length == 0) {
-		rte_crypto_op_free(op);
 		ODP_ERR("Wrong IV length");
-		goto err;
+		goto err_op_free;
 	}
 
 	op->sym->cipher.iv.data = rte_malloc("iv", entry->iv.length, 0);
 	if (op->sym->cipher.iv.data == NULL) {
-		rte_crypto_op_free(op);
 		ODP_ERR("Failed to allocate memory for IV");
-		goto err;
+		goto err_op_free;
 	}
 
 	if (param->override_iv_ptr) {
 		memcpy(op->sym->cipher.iv.data,
 		       param->override_iv_ptr,
 		       entry->iv.length);
+		op->sym->cipher.iv.phys_addr =
+				rte_malloc_virt2phy(op->sym->cipher.iv.data);
+		op->sym->cipher.iv.length = entry->iv.length;
 	} else if (entry->iv.data) {
 		memcpy(op->sym->cipher.iv.data,
 		       entry->iv.data,
 		       entry->iv.length);
-
 		op->sym->cipher.iv.phys_addr =
 				rte_malloc_virt2phy(op->sym->cipher.iv.data);
 		op->sym->cipher.iv.length = entry->iv.length;
@@ -1300,18 +1316,16 @@ int odp_crypto_int(odp_packet_t pkt_in,
 		rc = rte_cryptodev_enqueue_burst(rte_session->dev_id,
 						 queue_pair, &op, 1);
 		if (rc == 0) {
-			rte_crypto_op_free(op);
 			ODP_ERR("Failed to enqueue packet");
-			goto err;
+			goto err_op_free;
 		}
 
 		rc = rte_cryptodev_dequeue_burst(rte_session->dev_id,
 						 queue_pair, &op, 1);
 
 		if (rc == 0) {
-			rte_crypto_op_free(op);
 			ODP_ERR("Failed to dequeue packet");
-			goto err;
+			goto err_op_free;
 		}
 
 		out_pkt = (odp_packet_t)op->sym->m_src;
@@ -1327,16 +1341,23 @@ int odp_crypto_int(odp_packet_t pkt_in,
 		(rc_auth == ODP_CRYPTO_ALG_ERR_NONE);
 
 	_odp_buffer_event_subtype_set(packet_to_buffer(out_pkt),
-				      ODP_EVENT_PACKET_BASIC);
+				      ODP_EVENT_PACKET_CRYPTO);
 	op_result = get_op_result_from_packet(out_pkt);
 	*op_result = local_result;
 
+	rte_free(op->sym->cipher.iv.data);
+	rte_free(op->sym->auth.aad.data);
 	rte_crypto_op_free(op);
 
 	/* Synchronous, simply return results */
 	*pkt_out = out_pkt;
 
 	return 0;
+
+err_op_free:
+	rte_free(op->sym->cipher.iv.data);
+	rte_free(op->sym->auth.aad.data);
+	rte_crypto_op_free(op);
 
 err:
 	if (allocated) {

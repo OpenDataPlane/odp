@@ -6,7 +6,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include <odp/api/buffer.h>
-#include <odp_buffer_subsystem.h>
+#include <subsystem/spec/buffer_subsystem.h>
 #include <odp_debug_internal.h>
 #include <odp_module.h>
 

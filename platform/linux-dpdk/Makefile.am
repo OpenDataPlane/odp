@@ -175,7 +175,6 @@ odpdrvplatinclude_HEADERS = \
 
 
 noinst_HEADERS = \
-		  ${top_srcdir}/platform/linux-generic/include/odp_buffer_subsystem.h \
 		  ${top_srcdir}/platform/linux-generic/include/_fdserver_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/_ishm_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/_ishmphy_internal.h \
@@ -210,14 +209,11 @@ noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_packet_io_pool_access.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_pkt_queue_internal.h \
 		  ${srcdir}/include/odp_pool_internal.h \
-		  ${top_srcdir}/platform/linux-generic/include/odp_pool_subsystem.h \
 		  ${srcdir}/include/odp_posix_extensions.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_queue_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_queue_if.h \
-		  ${top_srcdir}/platform/linux-generic/include/odp_queue_subsystem.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_ring_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_schedule_if.h \
-		  ${top_srcdir}/platform/linux-generic/include/odp_schedule_subsystem.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_sorted_list_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_shm_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_time_internal.h \

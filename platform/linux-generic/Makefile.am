@@ -162,7 +162,6 @@ noinst_HEADERS = \
 		  include/odp_bitmap_internal.h \
 		  include/odp_bitset.h \
 		  include/odp_buffer_internal.h \
-		  include/odp_buffer_subsystem.h \
 		  include/odp_classification_datamodel.h \
 		  include/odp_classification_inlines.h \
 		  include/odp_classification_internal.h \
@@ -193,9 +192,7 @@ noinst_HEADERS = \
 		  include/odp_pktio_ops_tap.h \
 		  include/odp_pktio_ops_subsystem.h \
 		  include/odp_pkt_queue_internal.h \
-		  include/odp_queue_subsystem.h \
 		  include/odp_pool_internal.h \
-		  include/odp_pool_subsystem.h \
 		  include/odp_posix_extensions.h \
 		  include/odp_queue_internal.h \
 		  include/odp_queue_scalable_internal.h \
@@ -205,7 +202,6 @@ noinst_HEADERS = \
 		  include/odp_schedule_scalable.h \
 		  include/odp_schedule_scalable_config.h \
 		  include/odp_schedule_scalable_ordered.h \
-		  include/odp_schedule_subsystem.h \
 		  include/odp_sorted_list_internal.h \
 		  include/odp_shm_internal.h \
 		  include/odp_time_internal.h \

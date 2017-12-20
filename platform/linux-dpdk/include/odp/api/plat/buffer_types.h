@@ -31,7 +31,7 @@ extern "C" {
 
 typedef ODP_HANDLE_T(odp_buffer_t);
 
-#define ODP_BUFFER_INVALID _odp_cast_scalar(odp_buffer_t, 0xffffffff)
+#define ODP_BUFFER_INVALID _odp_cast_scalar(odp_buffer_t, NULL)
 
 typedef ODP_HANDLE_T(odp_buffer_seg_t);
 
