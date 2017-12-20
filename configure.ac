@@ -410,4 +410,5 @@ AC_MSG_RESULT([
 	test_helper:		${test_helper}
 	test_example:		${test_example}
 	user_guides:		${user_guides}
+	mdev:			${mdev_support}
 ])

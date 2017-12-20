@@ -14,6 +14,7 @@ m4_include([platform/linux-generic/m4/odp_modules.m4])
 m4_include([platform/linux-generic/m4/odp_netmap.m4])
 m4_include([platform/linux-generic/m4/odp_dpdk.m4])
 m4_include([platform/linux-generic/m4/odp_schedule.m4])
+m4_include([platform/linux-generic/m4/odp_mdev.m4])
 
 m4_include([platform/linux-generic/m4/performance.m4])
 

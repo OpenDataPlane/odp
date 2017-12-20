@@ -177,10 +177,12 @@ noinst_HEADERS = \
 		  include/odp_packet_io_pool.h \
 		  include/odp_packet_io_pool_access.h \
 		  include/odp_packet_io_ring_internal.h \
-		  pktio/ethtool.h \
 		  pktio/common.h \
-		  pktio/sysfs.h \
 		  pktio/dpdk.h \
+		  pktio/ethtool.h \
+		  pktio/mdev.h \
+		  pktio/sysfs.h \
+		  pktio/uapi_net_mdev.h \
 		  include/odp_pktio_ops_ipc.h \
 		  include/odp_pktio_ops_loopback.h \
 		  include/odp_pktio_ops_netmap.h \
@@ -243,18 +245,19 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_packet_flags.c \
 			   odp_packet_io.c \
 			   odp_packet_io_pool.c \
-			   pktio/ethtool.c \
-			   pktio/subsystem.c \
-			   pktio/ipc.c \
 			   pktio/common.c \
-			   pktio/loopback.c \
-			   pktio/netmap.c \
 			   pktio/dpdk.c \
+			   pktio/ethtool.c \
+			   pktio/ipc.c \
+			   pktio/loopback.c \
+			   pktio/mdev.c \
+			   pktio/netmap.c \
+			   pktio/ring.c \
 			   pktio/socket.c \
 			   pktio/socket_mmap.c \
+			   pktio/subsystem.c \
 			   pktio/sysfs.c \
 			   pktio/tap.c \
-			   pktio/ring.c \
 			   pool/generic.c \
 			   pool/subsystem.c \
 			   odp_pkt_queue.c \
