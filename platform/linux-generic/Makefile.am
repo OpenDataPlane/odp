@@ -176,7 +176,8 @@ noinst_HEADERS = \
 		  include/protocols/ipsec.h \
 		  include/protocols/tcp.h \
 		  include/protocols/thash.h \
-		  include/protocols/udp.h
+		  include/protocols/udp.h \
+		  include/protocols/vxlan.h
 
 __LIB__libodp_linux_la_SOURCES = \
 			   _fdserver.c \
