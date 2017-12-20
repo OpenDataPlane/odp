@@ -159,12 +159,27 @@ static int ethtool_stats(int fd, struct ifreq *ifr, odp_pktio_stats_t *stats)
 	return 0;
 }
 
-int ethtool_stats_get_fd(int fd, const char *name, odp_pktio_stats_t *stats)
+int ethtool_stats_get_fd(int fd, const char *netif_name,
+			 odp_pktio_stats_t *stats)
 {
 	struct ifreq ifr;
 
 	memset(&ifr, 0, sizeof(ifr));
-	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
+	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", netif_name);
 
 	return ethtool_stats(fd, &ifr, stats);
+}
+
+int ethtool_ringparam_get_fd(int fd, const char *netif_name,
+			     struct ethtool_ringparam *param)
+{
+	struct ifreq ifr;
+
+	memset(&ifr, 0, sizeof(ifr));
+	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", netif_name);
+
+	param->cmd = ETHTOOL_GRINGPARAM;
+	ifr.ifr_data = (void *)param;
+
+	return ioctl(fd, SIOCETHTOOL, &ifr);
 }
