@@ -533,6 +533,15 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 	if (odp_crypto_capability(&capability))
 		return ODP_TEST_INACTIVE;
 
+	if (suite_context.packet) {
+		if (suite_context.op_mode == ODP_CRYPTO_SYNC &&
+		    capability.sync_mode == ODP_SUPPORT_NO)
+			return ODP_TEST_INACTIVE;
+		if (suite_context.op_mode == ODP_CRYPTO_ASYNC &&
+		    capability.async_mode == ODP_SUPPORT_NO)
+			return ODP_TEST_INACTIVE;
+	}
+
 	/* Cipher algorithms */
 	switch (cipher) {
 	case ODP_CIPHER_ALG_NULL:
