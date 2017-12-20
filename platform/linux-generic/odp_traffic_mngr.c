@@ -28,6 +28,7 @@
 #include <odp_traffic_mngr_internal.h>
 #include <odp/api/plat/packet_inlines.h>
 #include <odp/api/plat/byteorder_inlines.h>
+#include <odp_macros_internal.h>
 
 /* Local vars */
 static const
@@ -731,7 +732,8 @@ static uint64_t time_till_not_red(tm_shaper_params_t *shaper_params,
 		commit_delay = (-shaper_obj->commit_cnt)
 			/ shaper_params->commit_rate;
 
-	min_time_delay = MAX(shaper_obj->shaper_params->min_time_delta, 256);
+	min_time_delay =
+	    MAX(shaper_obj->shaper_params->min_time_delta, UINT64_C(256));
 	commit_delay = MAX(commit_delay, min_time_delay);
 	if (shaper_params->peak_rate == 0)
 		return commit_delay;
@@ -1670,7 +1672,7 @@ static odp_tm_percent_t tm_queue_fullness(tm_wred_params_t      *wred_params,
 		return 0;
 
 	fullness = (10000 * current_cnt) / max_cnt;
-	return (odp_tm_percent_t)MIN(fullness, 50000);
+	return (odp_tm_percent_t)MIN(fullness, UINT64_C(50000));
 }
 
 static odp_bool_t tm_local_random_drop(tm_system_t      *tm_system,
@@ -2501,7 +2503,7 @@ static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
 	memset(cap_ptr, 0, sizeof(odp_tm_capabilities_t));
 
 	max_queues       = MIN(req_ptr->max_tm_queues,
-			       ODP_TM_MAX_NUM_TM_NODES);
+			       (uint32_t)ODP_TM_MAX_NUM_TM_NODES);
 	shaper_supported = req_ptr->tm_queue_shaper_needed;
 	wred_supported   = req_ptr->tm_queue_wred_needed;
 	dual_slope       = req_ptr->tm_queue_dual_slope_needed;
@@ -2525,8 +2527,9 @@ static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
 		per_level_req = &req_ptr->per_level[level_idx];
 
 		max_nodes        = MIN(per_level_req->max_num_tm_nodes,
-				       ODP_TM_MAX_NUM_TM_NODES);
-		max_fanin        = MIN(per_level_req->max_fanin_per_node, 1024);
+				       (uint32_t)ODP_TM_MAX_NUM_TM_NODES);
+		max_fanin        = MIN(per_level_req->max_fanin_per_node,
+				       UINT32_C(1024));
 		max_priority     = MIN(per_level_req->max_priority,
 				       ODP_TM_MAX_PRIORITIES - 1);
 		min_weight       = MAX(per_level_req->min_weight,

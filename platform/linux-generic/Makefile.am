@@ -101,6 +101,7 @@ noinst_HEADERS = \
 		  include/odp_internal.h \
 		  include/odp_ipsec_internal.h \
 		  include/odp_llqueue.h \
+		  include/odp_macros_internal.h \
 		  include/odp_name_table_internal.h \
 		  include/odp_packet_internal.h \
 		  include/odp_packet_io_internal.h \

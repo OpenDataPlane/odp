@@ -34,9 +34,6 @@ extern "C" {
 
 typedef struct stat  file_stat_t;
 
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-
 #define INPUT_WORK_RING_SIZE  (16 * 1024)
 
 #define TM_QUEUE_MAGIC_NUM   0xBABEBABE
