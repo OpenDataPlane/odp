@@ -32,7 +32,7 @@ extern "C" {
 #include <odp/helper/table.h>
 #include <odp/helper/threads.h>
 #include <odp/helper/udp.h>
-
+#include <odp/helper/vxlan.h>
 #ifdef __cplusplus
 }
 #endif

@@ -29,7 +29,8 @@ helperinclude_HEADERS = \
 		  include/odp/helper/tcp.h\
 		  include/odp/helper/table.h\
 		  include/odp/helper/threads.h \
-		  include/odp/helper/udp.h
+		  include/odp/helper/udp.h \
+		  include/odp/helper/vxlan.h
 
 if helper_linux
 helperinclude_HEADERS += \

@@ -107,8 +107,23 @@ int cls_pkt_set_seq(odp_packet_t pkt)
 	CU_ASSERT_FATAL(offset != ODP_PACKET_OFFSET_INVALID);
 
 	if (ip->proto == ODPH_IPPROTO_UDP)
-		status = odp_packet_copy_from_mem(pkt, offset + ODPH_UDPHDR_LEN,
-						  sizeof(data), &data);
+		if (odp_packet_has_vxlan(pkt)) {
+			/* TODO: Inner header parsing is not supported
+			 * in this ODP release. Hence the packet parsing
+			 * is skipped. This code has to be modified once
+			 * inner header parsing support is added */
+
+			/* skipping inner header for Vxlan */
+			offset += ODPH_UDPHDR_LEN;
+			offset += ODPH_ETHADDR_LEN;
+			offset += ODPH_IPV4HDR_LEN;
+			offset += ODPH_TCPHDR_LEN;
+			status = odp_packet_copy_from_mem(pkt, offset,
+							  sizeof(data), &data);
+		} else
+			status = odp_packet_copy_from_mem(pkt, offset +
+							  ODPH_UDPHDR_LEN,
+							  sizeof(data), &data);
 	else {
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 		status = odp_packet_copy_from_mem(pkt, offset + tcp->hl * 4,
@@ -132,8 +147,19 @@ uint32_t cls_pkt_get_seq(odp_packet_t pkt)
 		return TEST_SEQ_INVALID;
 
 	if (ip->proto == ODPH_IPPROTO_UDP)
-		odp_packet_copy_to_mem(pkt, offset + ODPH_UDPHDR_LEN,
-				       sizeof(data), &data);
+		/* get packet magic from inner header */
+		if (odp_packet_has_vxlan(pkt)) {
+			/* skipping inner header for Vxlan */
+			offset += ODPH_UDPHDR_LEN;
+			offset += ODPH_ETHADDR_LEN;
+			offset += ODPH_IPV4HDR_LEN;
+			offset += ODPH_TCPHDR_LEN;
+			odp_packet_copy_to_mem(pkt, offset,
+					       sizeof(data), &data);
+		} else {
+			odp_packet_copy_to_mem(pkt, offset + ODPH_UDPHDR_LEN,
+					       sizeof(data), &data);
+		}
 	else {
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 		odp_packet_copy_to_mem(pkt, offset + tcp->hl * 4,
@@ -249,9 +275,11 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	uint16_t l2_hdr_len = 0;
 	uint16_t l3_hdr_len = 0;
 	uint16_t l4_hdr_len = 0;
+	uint16_t vxlan_len;
 	uint16_t eth_type;
 	odp_u16be_t *vlan_type;
 	odph_vlanhdr_t *vlan_hdr;
+	uint16_t inner_hdr_len;
 
 	/* 48 bit ethernet address needs to be left shifted for proper
 	value after changing to be*/
@@ -262,14 +290,16 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	payload_len = sizeof(cls_test_packet_t) + pkt_info.len;
 	seqno = odp_atomic_fetch_inc_u32(pkt_info.seq);
 
+	inner_hdr_len = ODPH_ETHADDR_LEN + ODPH_IPV4HDR_LEN + ODPH_TCPHDR_LEN;
 	vlan_hdr_len = pkt_info.vlan ? ODPH_VLANHDR_LEN : 0;
 	vlan_hdr_len = pkt_info.vlan_qinq ? 2 * vlan_hdr_len : vlan_hdr_len;
 	l3_hdr_len = pkt_info.ipv6 ? ODPH_IPV6HDR_LEN : ODPH_IPV4HDR_LEN;
 	l4_hdr_len = pkt_info.udp ? ODPH_UDPHDR_LEN : ODPH_TCPHDR_LEN;
 	eth_type = pkt_info.ipv6 ? ODPH_ETHTYPE_IPV6 : ODPH_ETHTYPE_IPV4;
 	next_hdr = pkt_info.udp ? ODPH_IPPROTO_UDP : ODPH_IPPROTO_TCP;
+	vxlan_len = pkt_info.vxlan ? ODPH_VXLANHDR_LEN + inner_hdr_len : 0;
 	l2_hdr_len   = ODPH_ETHHDR_LEN + vlan_hdr_len;
-	l4_len	= l4_hdr_len + payload_len;
+	l4_len	= l4_hdr_len + payload_len + vxlan_len;
 	l3_len	= l3_hdr_len + l4_len;
 	l2_len	= l2_hdr_len + l3_len;
 	packet_len	= l2_len;
@@ -351,9 +381,61 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 		udp->length = odp_cpu_to_be_16(payload_len + ODPH_UDPHDR_LEN);
 		udp->chksum = 0;
 		odp_packet_has_udp_set(pkt, 1);
-		if (odph_udp_tcp_chksum(pkt, ODPH_CHKSUM_GENERATE, NULL) != 0) {
-			LOG_ERR("odph_udp_tcp_chksum failed\n");
-			return ODP_PACKET_INVALID;
+
+		/* vxlan */
+		if (pkt_info.vxlan) {
+			odph_vxlanhdr_t *vxlan;
+			uint32_t vni;
+			odph_ethhdr_t *eth;
+			odph_ipv4hdr_t *ipv4;
+			odph_tcphdr_t *tcp;
+			uint8_t *ptr;
+
+			/* Outer header UDP chksum set to zero */
+			udp->chksum = 0;
+			odp_packet_has_vxlan_set(pkt, 1);
+			vxlan = (odph_vxlanhdr_t *)(buf + l4_offset +
+						    ODPH_UDPHDR_LEN);
+			ptr = (uint8_t *)vxlan;
+			vxlan->flags = 0x08;
+			vni = 1000 << 8;
+			vxlan->vni = odp_cpu_to_be_32(vni);
+
+			/* inner header L2 */
+			eth = (odph_ethhdr_t *)(ptr + ODPH_VXLANHDR_LEN);
+			ptr += ODPH_VXLANHDR_LEN;
+			memcpy(eth->src.addr, &src_mac, ODPH_ETHADDR_LEN);
+			memcpy(eth->dst.addr, &dst_mac_be, ODPH_ETHADDR_LEN);
+			eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
+
+			/* inner header L3 */
+			ipv4 = (odph_ipv4hdr_t *)(ptr + ODPH_ETHADDR_LEN);
+			parse_ipv4_string(CLS_DEFAULT_DADDR, &addr, &mask);
+			ipv4->dst_addr = odp_cpu_to_be_32(addr);
+
+			parse_ipv4_string(CLS_DEFAULT_SADDR, &addr, &mask);
+			ipv4->src_addr = odp_cpu_to_be_32(addr);
+			ipv4->ver_ihl = ODPH_IPV4 << 4 | ODPH_IPV4HDR_IHL_MIN;
+			ipv4->id = odp_cpu_to_be_16(seqno);
+			ipv4->proto = next_hdr;
+			ipv4->tot_len = odp_cpu_to_be_16(l3_len);
+			ipv4->ttl = DEFAULT_TTL;
+			ptr += ODPH_IPV4HDR_LEN;
+
+			/* inner header L4 */
+			tcp = (odph_tcphdr_t *)(ptr + ODPH_IPV4HDR_LEN);
+			tcp->src_port = odp_cpu_to_be_16(CLS_DEFAULT_SPORT);
+			tcp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
+			tcp->hl = ODPH_TCPHDR_LEN / 4;
+			tcp->cksm = 0;
+			odp_packet_has_tcp_set(pkt, 1);
+			ptr += ODPH_TCPHDR_LEN;
+		} else {
+			if (odph_udp_tcp_chksum(pkt, ODPH_CHKSUM_GENERATE,
+						NULL) != 0) {
+				LOG_ERR("odph_udp_tcp_chksum failed\n");
+				return ODP_PACKET_INVALID;
+			}
 		}
 	} else {
 		tcp->src_port = odp_cpu_to_be_16(CLS_DEFAULT_SPORT);

@@ -78,6 +78,11 @@ int odp_packet_has_vlan(odp_packet_t pkt)
 	retflag(pkt, input_flags.vlan);
 }
 
+int odp_packet_has_vxlan(odp_packet_t pkt)
+{
+	retflag(pkt, input_flags.vxlan);
+}
+
 int odp_packet_has_vlan_qinq(odp_packet_t pkt)
 {
 	retflag(pkt, input_flags.vlan_qinq);
@@ -269,6 +274,11 @@ void odp_packet_has_ipsec_set(odp_packet_t pkt, int val)
 void odp_packet_has_udp_set(odp_packet_t pkt, int val)
 {
 	setflag(pkt, input_flags.udp, val);
+}
+
+void odp_packet_has_vxlan_set(odp_packet_t pkt, int val)
+{
+	setflag(pkt, input_flags.vxlan, val);
 }
 
 void odp_packet_has_tcp_set(odp_packet_t pkt, int val)

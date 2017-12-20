@@ -24,6 +24,7 @@ extern "C" {
 #include <protocols/ipsec.h>
 #include <protocols/udp.h>
 #include <protocols/tcp.h>
+#include <protocols/vxlan.h>
 #include <odp_packet_internal.h>
 #include <stdio.h>
 #include <inttypes.h>
@@ -304,11 +305,25 @@ static inline int verify_pmr_ipsec_spi(const uint8_t *pkt_addr,
 	return 0;
 }
 
-static inline int verify_pmr_ld_vni(const uint8_t *pkt_addr ODP_UNUSED,
-				    odp_packet_hdr_t *pkt_hdr ODP_UNUSED,
-				    pmr_term_value_t *term_value ODP_UNUSED)
+static inline int verify_pmr_ld_vni(const uint8_t *pkt_addr,
+				    odp_packet_hdr_t *pkt_hdr,
+				    pmr_term_value_t *term_value)
 {
-	ODP_UNIMPLEMENTED();
+	uint32_t vni;
+	uint32_t vni_be;
+	const _odp_vxlanhdr_t *vxlan;
+
+	if (!pkt_hdr->p.input_flags.vxlan)
+		return 0;
+
+	pkt_addr += pkt_hdr->p.l4_offset;
+	pkt_addr += _ODP_UDPHDR_LEN;
+	vxlan = (const _odp_vxlanhdr_t *)pkt_addr;
+	vni = odp_be_to_cpu_32(vxlan->vni);
+	vni_be = ODPH_VXLAN_VNI(vni);
+	if (term_value->match.value == (vni_be & term_value->match.mask))
+		return 1;
+
 	return 0;
 }
 
