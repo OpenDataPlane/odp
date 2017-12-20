@@ -204,7 +204,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 				   pktio_entry->s.name,
 				   &cur_stats);
 	if (err != 0) {
-		err = sysfs_stats(pktio_entry, &cur_stats);
+		err = sysfs_netif_stats(pktio_entry->s.name, &cur_stats);
 		if (err != 0) {
 			pktio_entry->s.stats_type = STATS_UNSUPPORTED;
 			ODP_DBG("pktio: %s unsupported stats\n",

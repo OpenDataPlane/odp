@@ -7,74 +7,158 @@
 #include "config.h"
 
 #include <odp_api.h>
-#include <odp_packet_io_internal.h>
+#include <odp_errno_define.h>
 #include <pktio/sysfs.h>
+
 #include <errno.h>
 #include <string.h>
 #include <inttypes.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-static int sysfs_get_val(const char *fname, uint64_t *val)
+ODP_PRINTF_FORMAT(3, 0)
+static int _sysfs_attr_raw_get(char *buf, size_t buf_size, const char *fmt,
+			       va_list args)
 {
-	FILE  *file;
-	char str[128];
-	int ret = -1;
+	char path[256];
+	FILE *file;
+	int ret;
 
-	file = fopen(fname, "rt");
-	if (file == NULL) {
+	ret = vsnprintf(path, sizeof(path), fmt, args);
+
+	if (ret < 0) {
 		__odp_errno = errno;
-		/* do not print debug err if sysfs is not supported by
-		 * kernel driver.
-		 */
-		if (errno != ENOENT)
-			ODP_ERR("fopen %s: %s\n", fname, strerror(errno));
-		return 0;
+		return -1;
 	}
 
-	if (fgets(str, sizeof(str), file) != NULL)
-		ret = sscanf(str, "%" SCNx64, val);
+	if (ret >= (ssize_t)sizeof(path)) {
+		__odp_errno = EINVAL;
+		return -1;
+	}
 
+	file = fopen(path, "rt");
+	if (file == NULL) {
+		__odp_errno = errno;
+		return -1;
+	}
+
+	buf = fgets(buf, buf_size, file);
 	(void)fclose(file);
 
-	if (ret != 1) {
-		ODP_ERR("read %s\n", fname);
+	if (buf == NULL) {
+		__odp_errno = errno;
 		return -1;
 	}
 
 	return 0;
 }
 
-int sysfs_stats(pktio_entry_t *pktio_entry,
-		odp_pktio_stats_t *stats)
+ODP_PRINTF_FORMAT(3, 4)
+int sysfs_attr_raw_get(char *buf, size_t buf_size, const char *fmt, ...)
 {
-	char fname[256];
-	const char *dev = pktio_entry->s.name;
-	int ret = 0;
+	va_list args;
+	int ret;
 
-	sprintf(fname, "/sys/class/net/%s/statistics/rx_bytes", dev);
-	ret -= sysfs_get_val(fname, &stats->in_octets);
+	va_start(args, fmt);
+	ret = _sysfs_attr_raw_get(buf, buf_size, fmt, args);
+	va_end(args);
 
-	sprintf(fname, "/sys/class/net/%s/statistics/rx_packets", dev);
-	ret -= sysfs_get_val(fname, &stats->in_ucast_pkts);
+	return ret;
+}
 
-	sprintf(fname, "/sys/class/net/%s/statistics/rx_droppped", dev);
-	ret -= sysfs_get_val(fname, &stats->in_discards);
+ODP_PRINTF_FORMAT(2, 3)
+int sysfs_attr_u64_get(uint64_t *value, const char *fmt, ...)
+{
+	char buf[20 + 1 + 1]; /* 20 digits (UINT64_MAX) + '\n' + '\0' */
+	va_list args;
+	char *endptr;
+	int ret;
 
-	sprintf(fname, "/sys/class/net/%s/statistics/rx_errors", dev);
-	ret -= sysfs_get_val(fname, &stats->in_errors);
+	va_start(args, fmt);
+	ret = _sysfs_attr_raw_get(buf, sizeof(buf), fmt, args);
+	va_end(args);
+
+	if (ret < 0)
+		return -1;
+
+	if (buf[0] == '\0') {
+		__odp_errno = EINVAL;
+		return -1;
+	}
+
+	*value = strtoull(buf, &endptr, 0);
+
+	/* It is OK to have '\n' in sysfs */
+	if (*endptr == '\n')
+		endptr++;
+
+	if (*endptr != '\0') {
+		__odp_errno = EINVAL;
+		return -1;
+	}
+
+	return 0;
+}
+
+int sysfs_netif_stats(const char *netif_name, odp_pktio_stats_t *stats)
+{
+	int ret;
+
+	/*
+	 * Do not print debug err if sysfs is not supported by
+	 * kernel driver.
+	 */
+
+	ret = sysfs_attr_u64_get(&stats->in_octets,
+				 "/sys/class/net/%s/statistics/rx_bytes",
+				 netif_name);
+	if (ret < 0 && __odp_errno != ENOENT)
+		return -1;
+
+	ret = sysfs_attr_u64_get(&stats->in_ucast_pkts,
+				 "/sys/class/net/%s/statistics/rx_packets",
+				 netif_name);
+	if (ret < 0 && __odp_errno != ENOENT)
+		return -1;
+
+	ret = sysfs_attr_u64_get(&stats->in_discards,
+				 "/sys/class/net/%s/statistics/rx_droppped",
+				 netif_name);
+	if (ret < 0 && __odp_errno != ENOENT)
+		return -1;
+
+	ret = sysfs_attr_u64_get(&stats->in_errors,
+				 "/sys/class/net/%s/statistics/rx_errors",
+				 netif_name);
+	if (ret < 0 && __odp_errno != ENOENT)
+		return -1;
 
 	/* stats->in_unknown_protos is not supported in sysfs */
 
-	sprintf(fname, "/sys/class/net/%s/statistics/tx_bytes", dev);
-	ret -= sysfs_get_val(fname, &stats->out_octets);
+	ret = sysfs_attr_u64_get(&stats->out_octets,
+				 "/sys/class/net/%s/statistics/tx_bytes",
+				 netif_name);
+	if (ret < 0 && __odp_errno != ENOENT)
+		return -1;
 
-	sprintf(fname, "/sys/class/net/%s/statistics/tx_packets", dev);
-	ret -= sysfs_get_val(fname, &stats->out_ucast_pkts);
+	ret = sysfs_attr_u64_get(&stats->out_ucast_pkts,
+				 "/sys/class/net/%s/statistics/tx_packets",
+				 netif_name);
+	if (ret < 0 && __odp_errno != ENOENT)
+		return -1;
 
-	sprintf(fname, "/sys/class/net/%s/statistics/tx_dropped", dev);
-	ret -= sysfs_get_val(fname, &stats->out_discards);
+	ret = sysfs_attr_u64_get(&stats->out_discards,
+				 "/sys/class/net/%s/statistics/tx_dropped",
+				 netif_name);
+	if (ret < 0 && __odp_errno != ENOENT)
+		return -1;
 
-	sprintf(fname, "/sys/class/net/%s/statistics/tx_errors", dev);
-	ret -= sysfs_get_val(fname, &stats->out_errors);
+	ret = sysfs_attr_u64_get(&stats->out_errors,
+				 "/sys/class/net/%s/statistics/tx_errors",
+				 netif_name);
+	if (ret < 0 && __odp_errno != ENOENT)
+		return -1;
 
-	return ret;
+	return 0;
 }

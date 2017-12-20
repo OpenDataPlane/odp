@@ -45,7 +45,7 @@ int sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd)
 					   pktio_entry->s.name,
 					   &cur_stats);
 	} else if (pktio_entry->s.stats_type == STATS_SYSFS) {
-		err = sysfs_stats(pktio_entry, &cur_stats);
+		err = sysfs_netif_stats(pktio_entry->s.name, &cur_stats);
 		if (err != 0)
 			ODP_ERR("stats error\n");
 	}
@@ -78,7 +78,7 @@ int sock_stats_fd(pktio_entry_t *pktio_entry,
 					   pktio_entry->s.name,
 					   &cur_stats);
 	} else if (pktio_entry->s.stats_type == STATS_SYSFS) {
-		sysfs_stats(pktio_entry, &cur_stats);
+		sysfs_netif_stats(pktio_entry->s.name, &cur_stats);
 	}
 
 	stats->in_octets = cur_stats.in_octets -
