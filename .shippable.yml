@@ -38,7 +38,13 @@ build:
     - ./bootstrap
     - ./configure --disable-test-perf
     - make
-    - sudo env ODP_SHM_DIR=/dev/shm/odp make check
+    - sudo env ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes make check
+    - wget https://raw.githubusercontent.com/shawnliang/cunit-to-junit/master/cunit-to-junit.xsl
+    - |
+      for FILE in `find  ./test ./platform/ -name  "*.xml"`; do
+         bname=`basename $FILE`;
+         xsltproc --novalid cunit-to-junit.xsl $FILE > $SHIPPABLE_BUILD_DIR/shippable/testresults/${bname}
+      done
 
   on_failure:
     - cat config.log

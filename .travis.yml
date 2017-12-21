@@ -138,6 +138,8 @@ before_install:
             curl -sSOL https://github.com/Linaro/libcunit/releases/download/${CUNIT_VERSION}/CUnit-${CUNIT_VERSION}.tar.bz2
             tar -jxf *.bz2
             pushd CUnit*
+            # Using the latest stable CUNIT but new compillers are more strict to functions declaration.
+            sed -i s/\(\)/\(void\)/g ./CUnit/Headers/Automated.h
             libtoolize --force --copy
             aclocal
             autoheader
