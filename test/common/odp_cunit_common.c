@@ -6,13 +6,16 @@
 
 #include "config.h"
 
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <odp_api.h>
 #include "odp_cunit_common.h"
 #include <odp/helper/odph_api.h>
 /* Globals */
 static odph_odpthread_t thread_tbl[MAX_WORKERS];
 static odp_instance_t instance;
+static char *progname;
 
 /*
  * global init/term functions which may be registered
@@ -296,8 +299,13 @@ int odp_cunit_run(void)
 	printf("\tODP implementation name:    %s\n", odp_version_impl_name());
 	printf("\tODP implementation version: %s\n", odp_version_impl_str());
 
-	CU_basic_set_mode(CU_BRM_VERBOSE);
-	CU_basic_run_tests();
+	if (getenv("ODP_TEST_OUT_XML")) {
+		CU_set_output_filename(progname);
+		CU_automated_run_tests();
+	} else {
+		CU_basic_set_mode(CU_BRM_VERBOSE);
+		CU_basic_run_tests();
+	}
 
 	ret = CU_get_number_of_failure_records();
 
@@ -371,5 +379,6 @@ int odp_cunit_register(odp_suiteinfo_t testsuites[])
  */
 int odp_cunit_parse_options(int argc, char *argv[])
 {
+	progname = argv[0];
 	return odph_parse_options(argc, argv, NULL, NULL);
 }

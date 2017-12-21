@@ -352,11 +352,6 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	const char *postfix = "_uarea";
 	char uarea_name[ODP_POOL_NAME_LEN + sizeof(postfix)];
 
-	if (params == NULL) {
-		ODP_ERR("No params");
-		return ODP_POOL_INVALID;
-	}
-
 	align = 0;
 
 	if (params->type == ODP_POOL_BUFFER)
@@ -538,23 +533,23 @@ static int check_params(odp_pool_param_t *params)
 {
 	odp_pool_capability_t capa;
 
-	if (odp_pool_capability(&capa) < 0)
+	if (!params || odp_pool_capability(&capa) < 0)
 		return -1;
 
 	switch (params->type) {
 	case ODP_POOL_BUFFER:
 		if (params->buf.num > capa.buf.max_num) {
-			printf("buf.num too large %u\n", params->buf.num);
+			ODP_DBG("buf.num too large %u\n", params->buf.num);
 			return -1;
 		}
 
 		if (params->buf.size > capa.buf.max_size) {
-			printf("buf.size too large %u\n", params->buf.size);
+			ODP_DBG("buf.size too large %u\n", params->buf.size);
 			return -1;
 		}
 
 		if (params->buf.align > capa.buf.max_align) {
-			printf("buf.align too large %u\n", params->buf.align);
+			ODP_DBG("buf.align too large %u\n", params->buf.align);
 			return -1;
 		}
 
@@ -562,25 +557,25 @@ static int check_params(odp_pool_param_t *params)
 
 	case ODP_POOL_PACKET:
 		if (params->pkt.len > capa.pkt.max_len) {
-			printf("pkt.len too large %u\n", params->pkt.len);
+			ODP_DBG("pkt.len too large %u\n", params->pkt.len);
 			return -1;
 		}
 
 		if (params->pkt.max_len > capa.pkt.max_len) {
-			printf("pkt.max_len too large %u\n",
-			       params->pkt.max_len);
+			ODP_DBG("pkt.max_len too large %u\n",
+				params->pkt.max_len);
 			return -1;
 		}
 
 		if (params->pkt.seg_len > capa.pkt.max_seg_len) {
-			printf("pkt.seg_len too large %u\n",
-			       params->pkt.seg_len);
+			ODP_DBG("pkt.seg_len too large %u\n",
+				params->pkt.seg_len);
 			return -1;
 		}
 
 		if (params->pkt.uarea_size > capa.pkt.max_uarea_size) {
-			printf("pkt.uarea_size too large %u\n",
-			       params->pkt.uarea_size);
+			ODP_DBG("pkt.uarea_size too large %u\n",
+				params->pkt.uarea_size);
 			return -1;
 		}
 
@@ -588,13 +583,13 @@ static int check_params(odp_pool_param_t *params)
 
 	case ODP_POOL_TIMEOUT:
 		if (params->tmo.num > capa.tmo.max_num) {
-			printf("tmo.num too large %u\n", params->tmo.num);
+			ODP_DBG("tmo.num too large %u\n", params->tmo.num);
 			return -1;
 		}
 		break;
 
 	default:
-		printf("bad pool type %i\n", params->type);
+		ODP_DBG("bad pool type %i\n", params->type);
 		return -1;
 	}
 
@@ -608,7 +603,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 	if (check_params(params))
 		return ODP_POOL_INVALID;
 
-	if (params && (params->type == ODP_POOL_PACKET))
+	if (params->type == ODP_POOL_PACKET)
 		shm_flags = ODP_SHM_PROC;
 
 	return pool_create(name, params, shm_flags);
@@ -938,33 +933,33 @@ void odp_pool_print(odp_pool_t pool_hdl)
 
 	pool = pool_entry_from_hdl(pool_hdl);
 
-	printf("\nPool info\n");
-	printf("---------\n");
-	printf("  pool            %" PRIu64 "\n",
-	       odp_pool_to_u64(pool->pool_hdl));
-	printf("  name            %s\n", pool->name);
-	printf("  pool type       %s\n",
-	       pool->params.type == ODP_POOL_BUFFER ? "buffer" :
-	       (pool->params.type == ODP_POOL_PACKET ? "packet" :
-	       (pool->params.type == ODP_POOL_TIMEOUT ? "timeout" :
-		"unknown")));
-	printf("  pool shm        %" PRIu64 "\n",
-	       odp_shm_to_u64(pool->shm));
-	printf("  user area shm   %" PRIu64 "\n",
-	       odp_shm_to_u64(pool->uarea_shm));
-	printf("  num             %u\n", pool->num);
-	printf("  align           %u\n", pool->align);
-	printf("  headroom        %u\n", pool->headroom);
-	printf("  seg len         %u\n", pool->seg_len);
-	printf("  max data len    %u\n", pool->max_len);
-	printf("  tailroom        %u\n", pool->tailroom);
-	printf("  block size      %u\n", pool->block_size);
-	printf("  uarea size      %u\n", pool->uarea_size);
-	printf("  shm size        %u\n", pool->shm_size);
-	printf("  base addr       %p\n", pool->base_addr);
-	printf("  uarea shm size  %u\n", pool->uarea_shm_size);
-	printf("  uarea base addr %p\n", pool->uarea_base_addr);
-	printf("\n");
+	ODP_PRINT("\nPool info\n");
+	ODP_PRINT("---------\n");
+	ODP_PRINT("  pool            %" PRIu64 "\n",
+		  odp_pool_to_u64(pool->pool_hdl));
+	ODP_PRINT("  name            %s\n", pool->name);
+	ODP_PRINT("  pool type       %s\n",
+		  pool->params.type == ODP_POOL_BUFFER ? "buffer" :
+		  (pool->params.type == ODP_POOL_PACKET ? "packet" :
+		   (pool->params.type == ODP_POOL_TIMEOUT ? "timeout" :
+		    "unknown")));
+	ODP_PRINT("  pool shm        %" PRIu64 "\n",
+		  odp_shm_to_u64(pool->shm));
+	ODP_PRINT("  user area shm   %" PRIu64 "\n",
+		  odp_shm_to_u64(pool->uarea_shm));
+	ODP_PRINT("  num             %u\n", pool->num);
+	ODP_PRINT("  align           %u\n", pool->align);
+	ODP_PRINT("  headroom        %u\n", pool->headroom);
+	ODP_PRINT("  seg len         %u\n", pool->seg_len);
+	ODP_PRINT("  max data len    %u\n", pool->max_len);
+	ODP_PRINT("  tailroom        %u\n", pool->tailroom);
+	ODP_PRINT("  block size      %u\n", pool->block_size);
+	ODP_PRINT("  uarea size      %u\n", pool->uarea_size);
+	ODP_PRINT("  shm size        %u\n", pool->shm_size);
+	ODP_PRINT("  base addr       %p\n", pool->base_addr);
+	ODP_PRINT("  uarea shm size  %u\n", pool->uarea_shm_size);
+	ODP_PRINT("  uarea base addr %p\n", pool->uarea_base_addr);
+	ODP_PRINT("\n");
 }
 
 odp_pool_t odp_buffer_pool(odp_buffer_t buf)
