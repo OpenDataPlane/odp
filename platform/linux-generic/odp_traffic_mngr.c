@@ -26,6 +26,7 @@
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 #include <odp_traffic_mngr_internal.h>
+#include <odp/api/plat/packet_inlines.h>
 
 /* Local vars */
 static const
@@ -1966,7 +1967,7 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 	uint32_t       hdr_len, l3_offset, old_chksum, ones_compl_sum, tos_diff;
 	uint8_t        old_tos, new_tos, ecn;
 
-	l3_offset    = odp_packet_l3_offset(odp_pkt);
+	l3_offset    = _odp_packet_l3_offset(odp_pkt);
 	ipv4_hdr_ptr = odp_packet_l3_ptr(odp_pkt, &hdr_len);
 
 	/* If the split_hdr variable below is TRUE, then this indicates that
@@ -2032,7 +2033,7 @@ static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 	uint32_t       hdr_len, old_ver_tc_flow, new_ver_tc_flow, l3_offset;
 	uint8_t        old_tc, new_tc, ecn;
 
-	l3_offset    = odp_packet_l3_offset(odp_pkt);
+	l3_offset    = _odp_packet_l3_offset(odp_pkt);
 	ipv6_hdr_ptr = odp_packet_l3_ptr(odp_pkt, &hdr_len);
 
 	/* If the split_hdr variable below is TRUE, then this indicates that
