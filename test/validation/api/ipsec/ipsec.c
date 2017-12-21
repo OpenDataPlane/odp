@@ -136,7 +136,7 @@ int ipsec_check(odp_bool_t ah,
 
 	if ((ODP_IPSEC_OP_MODE_SYNC == suite_context.inbound_op_mode &&
 	     ODP_SUPPORT_NO == capa.op_mode_sync) ||
-	    (ODP_IPSEC_OP_MODE_ASYNC == suite_context.outbound_op_mode &&
+	    (ODP_IPSEC_OP_MODE_SYNC == suite_context.outbound_op_mode &&
 	     ODP_SUPPORT_NO == capa.op_mode_sync) ||
 	    (ODP_IPSEC_OP_MODE_ASYNC == suite_context.inbound_op_mode &&
 	     ODP_SUPPORT_NO == capa.op_mode_async) ||
@@ -888,7 +888,7 @@ int ipsec_config(odp_instance_t ODP_UNUSED inst)
 	 * in test checking function and just say that the test is inactive. */
 	if ((ODP_IPSEC_OP_MODE_SYNC == suite_context.inbound_op_mode &&
 	     ODP_SUPPORT_NO == capa.op_mode_sync) ||
-	    (ODP_IPSEC_OP_MODE_ASYNC == suite_context.outbound_op_mode &&
+	    (ODP_IPSEC_OP_MODE_SYNC == suite_context.outbound_op_mode &&
 	     ODP_SUPPORT_NO == capa.op_mode_sync) ||
 	    (ODP_IPSEC_OP_MODE_ASYNC == suite_context.inbound_op_mode &&
 	     ODP_SUPPORT_NO == capa.op_mode_async) ||
