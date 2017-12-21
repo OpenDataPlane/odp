@@ -722,6 +722,9 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	/* Initialize crypto capability structure */
 	memset(capa, 0, sizeof(odp_crypto_capability_t));
 
+	capa->sync_mode = ODP_SUPPORT_PREFERRED;
+	capa->async_mode = ODP_SUPPORT_YES;
+
 	capa->ciphers.bit.null       = 1;
 	capa->ciphers.bit.trides_cbc = 1;
 	capa->ciphers.bit.aes_cbc    = 1;
