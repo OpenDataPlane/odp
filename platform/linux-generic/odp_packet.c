@@ -37,6 +37,9 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.segcount       = offsetof(odp_packet_hdr_t, buf_hdr.segcount),
 	.user_ptr       = offsetof(odp_packet_hdr_t, buf_hdr.buf_ctx),
 	.user_area      = offsetof(odp_packet_hdr_t, buf_hdr.uarea_addr),
+	.l2_offset      = offsetof(odp_packet_hdr_t, p.l2_offset),
+	.l3_offset      = offsetof(odp_packet_hdr_t, p.l3_offset),
+	.l4_offset      = offsetof(odp_packet_hdr_t, p.l4_offset),
 	.flow_hash      = offsetof(odp_packet_hdr_t, flow_hash),
 	.timestamp      = offsetof(odp_packet_hdr_t, timestamp),
 	.input_flags    = offsetof(odp_packet_hdr_t, p.input_flags)
@@ -1213,15 +1216,6 @@ void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 	return packet_map(pkt_hdr, pkt_hdr->p.l2_offset, len, NULL);
 }
 
-uint32_t odp_packet_l2_offset(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	if (!packet_hdr_has_l2(pkt_hdr))
-		return ODP_PACKET_OFFSET_INVALID;
-	return pkt_hdr->p.l2_offset;
-}
-
 int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
@@ -1241,13 +1235,6 @@ void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len)
 	return packet_map(pkt_hdr, pkt_hdr->p.l3_offset, len, NULL);
 }
 
-uint32_t odp_packet_l3_offset(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	return pkt_hdr->p.l3_offset;
-}
-
 int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
@@ -1264,13 +1251,6 @@ void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len)
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
 	return packet_map(pkt_hdr, pkt_hdr->p.l4_offset, len, NULL);
-}
-
-uint32_t odp_packet_l4_offset(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	return pkt_hdr->p.l4_offset;
 }
 
 int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
