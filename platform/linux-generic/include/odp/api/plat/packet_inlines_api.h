@@ -83,6 +83,21 @@ _ODP_INLINE uint32_t odp_packet_l4_offset(odp_packet_t pkt)
 	return _odp_packet_l4_offset(pkt);
 }
 
+_ODP_INLINE void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
+{
+	return _odp_packet_l2_ptr(pkt, len);
+}
+
+_ODP_INLINE void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len)
+{
+	return _odp_packet_l3_ptr(pkt, len);
+}
+
+_ODP_INLINE void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len)
+{
+	return _odp_packet_l4_ptr(pkt, len);
+}
+
 _ODP_INLINE uint32_t odp_packet_flow_hash(odp_packet_t pkt)
 {
 	return _odp_packet_flow_hash(pkt);

@@ -278,11 +278,12 @@ static inline void packet_seg_copy_md(odp_packet_hdr_t *dst,
 	 */
 }
 
-static inline void *packet_map(odp_packet_hdr_t *pkt_hdr,
-			       uint32_t offset, uint32_t *seg_len, int *seg_idx)
+static inline void *packet_map(void *pkt_ptr, uint32_t offset,
+			       uint32_t *seg_len, int *seg_idx)
 {
 	void *addr;
 	uint32_t len;
+	odp_packet_hdr_t *pkt_hdr = pkt_ptr;
 	int seg_id = 0;
 	int seg_count = pkt_hdr->buf_hdr.segcount;
 
@@ -322,6 +323,18 @@ static inline void *packet_map(odp_packet_hdr_t *pkt_hdr,
 
 	return addr;
 }
+
+#include <odp/visibility_begin.h>
+
+/* This file uses the inlined version directly. Inlined API calls use this when
+ * offset does not point to the first segment. */
+void *_odp_packet_map(void *pkt_ptr, uint32_t offset, uint32_t *seg_len,
+		      int *seg_idx)
+{
+	return packet_map(pkt_ptr, offset, seg_len, seg_idx);
+}
+
+#include <odp/visibility_end.h>
 
 void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 {
@@ -1207,15 +1220,6 @@ void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ctx)
 	packet_hdr(pkt)->buf_hdr.buf_cctx = ctx;
 }
 
-void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	if (!packet_hdr_has_l2(pkt_hdr))
-		return NULL;
-	return packet_map(pkt_hdr, pkt_hdr->p.l2_offset, len, NULL);
-}
-
 int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
@@ -1228,13 +1232,6 @@ int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 	return 0;
 }
 
-void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	return packet_map(pkt_hdr, pkt_hdr->p.l3_offset, len, NULL);
-}
-
 int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
@@ -1244,13 +1241,6 @@ int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset)
 
 	pkt_hdr->p.l3_offset = offset;
 	return 0;
-}
-
-void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	return packet_map(pkt_hdr, pkt_hdr->p.l4_offset, len, NULL);
 }
 
 int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
