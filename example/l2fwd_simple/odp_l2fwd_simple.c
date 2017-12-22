@@ -88,6 +88,7 @@ static int run_worker(void *arg ODP_UNUSED)
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	int pkts, sent, tx_drops, i;
 	int total_pkts = 0;
+	uint64_t wait_time = odp_pktin_wait_time(ODP_TIME_SEC_IN_NS);
 
 	if (odp_pktio_start(global.if0)) {
 		printf("unable to start input interface\n");
@@ -103,7 +104,7 @@ static int run_worker(void *arg ODP_UNUSED)
 
 	while (!exit_thr) {
 		pkts = odp_pktin_recv_tmo(global.if0in, pkt_tbl, MAX_PKT_BURST,
-					  ODP_PKTIN_NO_WAIT);
+					  wait_time);
 
 		if (odp_unlikely(pkts <= 0))
 			continue;
