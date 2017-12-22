@@ -12,6 +12,18 @@
 #include <odp_api.h>
 #include "odp_cunit_common.h"
 #include <odp/helper/odph_api.h>
+
+#include <CUnit/TestDB.h>
+
+#if defined __GNUC__ && (((__GNUC__ == 4) && (__GNUC_MINOR__ >= 4)) || (__GNUC__ > 4))
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-prototypes"
+#endif
+#include <CUnit/Automated.h>
+#if defined __GNUC__ && (((__GNUC__ == 4) && (__GNUC_MINOR__ >= 4)) || (__GNUC__ > 4))
+#pragma GCC diagnostic pop
+#endif
+
 /* Globals */
 static odph_odpthread_t thread_tbl[MAX_WORKERS];
 static odp_instance_t instance;
