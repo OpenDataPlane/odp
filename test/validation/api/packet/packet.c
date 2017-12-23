@@ -2442,7 +2442,7 @@ void packet_test_ref(void)
 	ref_pkt[0] = odp_packet_ref(base_pkt, offset[0]);
 	CU_ASSERT_FATAL(ref_pkt[0] != ODP_PACKET_INVALID);
 	ref_len[0] = odp_packet_len(ref_pkt[0]);
-	CU_ASSERT(ref_len[0] = odp_packet_len(base_pkt) - offset[0]);
+	CU_ASSERT(ref_len[0] == odp_packet_len(base_pkt) - offset[0]);
 
 	CU_ASSERT(odp_packet_push_head(base_pkt,
 				       base_hr - base_hr / 2) != NULL);
