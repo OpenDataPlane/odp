@@ -559,12 +559,16 @@ static void check_alg(odp_crypto_op_t op,
 
 	for (i = 0; i < cipher_num; i++) {
 		cipher_ok |= cipher_tested[i];
-		if (!cipher_tested[i])
+		if (!cipher_tested[i]) {
+			/* GMAC-related hacks */
+			if (cipher_alg == ODP_CIPHER_ALG_NULL)
+				continue;
 			printf("\n    Untested: alg=%s, key_len=%" PRIu32 ", "
 			       "iv_len=%" PRIu32 "\n",
 			       cipher_alg_name(cipher_alg),
 			       cipher_capa[i].key_len,
 			       cipher_capa[i].iv_len);
+		}
 	}
 
 	for (i = 0; i < auth_num; i++) {
