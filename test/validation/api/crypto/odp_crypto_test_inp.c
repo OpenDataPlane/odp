@@ -631,7 +631,7 @@ static int check_alg_null(void)
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_NULL);
 }
 
-void crypto_test_enc_alg_null(void)
+static void crypto_test_enc_alg_null(void)
 {
 	unsigned int test_vec_num = (sizeof(null_reference) /
 				     sizeof(null_reference[0]));
@@ -645,7 +645,7 @@ void crypto_test_enc_alg_null(void)
 			 false);
 }
 
-void crypto_test_dec_alg_null(void)
+static void crypto_test_dec_alg_null(void)
 {
 	unsigned int test_vec_num = (sizeof(null_reference) /
 				     sizeof(null_reference[0]));
@@ -668,7 +668,7 @@ static int check_alg_3des_cbc(void)
  * operation for 3DES_CBC algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
-void crypto_test_enc_alg_3des_cbc(void)
+static void crypto_test_enc_alg_3des_cbc(void)
 {
 	unsigned int test_vec_num = (sizeof(tdes_cbc_reference) /
 				     sizeof(tdes_cbc_reference[0]));
@@ -685,7 +685,7 @@ void crypto_test_enc_alg_3des_cbc(void)
 /* This test verifies the correctness of encode (plaintext -> ciphertext)
  * operation for 3DES_CBC algorithm. IV for the operation is the operation IV.
  * */
-void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
+static void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
 {
 	unsigned int test_vec_num = (sizeof(tdes_cbc_reference) /
 				     sizeof(tdes_cbc_reference[0]));
@@ -704,7 +704,7 @@ void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_3des_cbc(void)
+static void crypto_test_dec_alg_3des_cbc(void)
 {
 	unsigned int test_vec_num = (sizeof(tdes_cbc_reference) /
 				     sizeof(tdes_cbc_reference[0]));
@@ -723,7 +723,7 @@ void crypto_test_dec_alg_3des_cbc(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
+static void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
 {
 	unsigned int test_vec_num = (sizeof(tdes_cbc_reference) /
 				     sizeof(tdes_cbc_reference[0]));
@@ -746,7 +746,7 @@ static int check_alg_aes_gcm(void)
  * operation for AES128_GCM algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
-void crypto_test_enc_alg_aes_gcm(void)
+static void crypto_test_enc_alg_aes_gcm(void)
 {
 	unsigned int test_vec_num = (sizeof(aes_gcm_reference) /
 				     sizeof(aes_gcm_reference[0]));
@@ -765,7 +765,7 @@ void crypto_test_enc_alg_aes_gcm(void)
  * operation for AES128_GCM algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
-void crypto_test_enc_alg_aes_gcm_ovr_iv(void)
+static void crypto_test_enc_alg_aes_gcm_ovr_iv(void)
 {
 	unsigned int test_vec_num = (sizeof(aes_gcm_reference) /
 				     sizeof(aes_gcm_reference[0]));
@@ -785,7 +785,7 @@ void crypto_test_enc_alg_aes_gcm_ovr_iv(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_aes_gcm(void)
+static void crypto_test_dec_alg_aes_gcm(void)
 {
 	unsigned int test_vec_num = (sizeof(aes_gcm_reference) /
 				     sizeof(aes_gcm_reference[0]));
@@ -805,7 +805,7 @@ void crypto_test_dec_alg_aes_gcm(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_aes_gcm_ovr_iv(void)
+static void crypto_test_dec_alg_aes_gcm_ovr_iv(void)
 {
 	unsigned int test_vec_num = (sizeof(aes_gcm_reference) /
 				     sizeof(aes_gcm_reference[0]));
@@ -829,7 +829,7 @@ static int check_alg_aes_cbc(void)
  * operation for AES128_CBC algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
-void crypto_test_enc_alg_aes_cbc(void)
+static void crypto_test_enc_alg_aes_cbc(void)
 {
 	unsigned int test_vec_num = (sizeof(aes_cbc_reference) /
 				     sizeof(aes_cbc_reference[0]));
@@ -847,7 +847,7 @@ void crypto_test_enc_alg_aes_cbc(void)
 /* This test verifies the correctness of encode (plaintext -> ciphertext)
  * operation for AES128_CBC algorithm. IV for the operation is the operation IV.
  * */
-void crypto_test_enc_alg_aes_cbc_ovr_iv(void)
+static void crypto_test_enc_alg_aes_cbc_ovr_iv(void)
 {
 	unsigned int test_vec_num = (sizeof(aes_cbc_reference) /
 				     sizeof(aes_cbc_reference[0]));
@@ -867,7 +867,7 @@ void crypto_test_enc_alg_aes_cbc_ovr_iv(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_aes_cbc(void)
+static void crypto_test_dec_alg_aes_cbc(void)
 {
 	unsigned int test_vec_num = (sizeof(aes_cbc_reference) /
 				     sizeof(aes_cbc_reference[0]));
@@ -887,7 +887,7 @@ void crypto_test_dec_alg_aes_cbc(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_aes_cbc_ovr_iv(void)
+static void crypto_test_dec_alg_aes_cbc_ovr_iv(void)
 {
 	unsigned int test_vec_num = (sizeof(aes_cbc_reference) /
 				     sizeof(aes_cbc_reference[0]));
@@ -911,7 +911,7 @@ static int check_alg_aes_ctr(void)
  * operation for AES128_CTR algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
-void crypto_test_enc_alg_aes_ctr(void)
+static void crypto_test_enc_alg_aes_ctr(void)
 {
 	unsigned int test_vec_num = (sizeof(aes_ctr_reference) /
 				     sizeof(aes_ctr_reference[0]));
@@ -929,7 +929,7 @@ void crypto_test_enc_alg_aes_ctr(void)
 /* This test verifies the correctness of encode (plaintext -> ciphertext)
  * operation for AES128_CTR algorithm. IV for the operation is the operation IV.
  * */
-void crypto_test_enc_alg_aes_ctr_ovr_iv(void)
+static void crypto_test_enc_alg_aes_ctr_ovr_iv(void)
 {
 	unsigned int test_vec_num = (sizeof(aes_ctr_reference) /
 				     sizeof(aes_ctr_reference[0]));
@@ -949,7 +949,7 @@ void crypto_test_enc_alg_aes_ctr_ovr_iv(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_aes_ctr(void)
+static void crypto_test_dec_alg_aes_ctr(void)
 {
 	unsigned int test_vec_num = (sizeof(aes_ctr_reference) /
 				     sizeof(aes_ctr_reference[0]));
@@ -969,7 +969,7 @@ void crypto_test_dec_alg_aes_ctr(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_aes_ctr_ovr_iv(void)
+static void crypto_test_dec_alg_aes_ctr_ovr_iv(void)
 {
 	unsigned int test_vec_num = (sizeof(aes_ctr_reference) /
 				     sizeof(aes_ctr_reference[0]));
@@ -996,7 +996,7 @@ static int check_alg_hmac_md5(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_gen_alg_hmac_md5(void)
+static void crypto_test_gen_alg_hmac_md5(void)
 {
 	unsigned int test_vec_num = (sizeof(hmac_md5_reference) /
 				     sizeof(hmac_md5_reference[0]));
@@ -1010,7 +1010,7 @@ void crypto_test_gen_alg_hmac_md5(void)
 			 false);
 }
 
-void crypto_test_check_alg_hmac_md5(void)
+static void crypto_test_check_alg_hmac_md5(void)
 {
 	unsigned int test_vec_num = (sizeof(hmac_md5_reference) /
 				     sizeof(hmac_md5_reference[0]));
@@ -1036,7 +1036,7 @@ static int check_alg_hmac_sha1(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_gen_alg_hmac_sha1(void)
+static void crypto_test_gen_alg_hmac_sha1(void)
 {
 	unsigned int test_vec_num = (sizeof(hmac_sha1_reference) /
 				     sizeof(hmac_sha1_reference[0]));
@@ -1050,7 +1050,7 @@ void crypto_test_gen_alg_hmac_sha1(void)
 			 false);
 }
 
-void crypto_test_check_alg_hmac_sha1(void)
+static void crypto_test_check_alg_hmac_sha1(void)
 {
 	unsigned int test_vec_num = (sizeof(hmac_sha1_reference) /
 				     sizeof(hmac_sha1_reference[0]));
@@ -1076,7 +1076,7 @@ static int check_alg_hmac_sha256(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_gen_alg_hmac_sha256(void)
+static void crypto_test_gen_alg_hmac_sha256(void)
 {
 	unsigned int test_vec_num = (sizeof(hmac_sha256_reference) /
 				     sizeof(hmac_sha256_reference[0]));
@@ -1090,7 +1090,7 @@ void crypto_test_gen_alg_hmac_sha256(void)
 			 false);
 }
 
-void crypto_test_check_alg_hmac_sha256(void)
+static void crypto_test_check_alg_hmac_sha256(void)
 {
 	unsigned int test_vec_num = (sizeof(hmac_sha256_reference) /
 				     sizeof(hmac_sha256_reference[0]));
@@ -1116,7 +1116,7 @@ static int check_alg_hmac_sha512(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_gen_alg_hmac_sha512(void)
+static void crypto_test_gen_alg_hmac_sha512(void)
 {
 	unsigned int test_vec_num = (sizeof(hmac_sha512_reference) /
 				     sizeof(hmac_sha512_reference[0]));
@@ -1130,7 +1130,7 @@ void crypto_test_gen_alg_hmac_sha512(void)
 			 false);
 }
 
-void crypto_test_check_alg_hmac_sha512(void)
+static void crypto_test_check_alg_hmac_sha512(void)
 {
 	unsigned int test_vec_num = (sizeof(hmac_sha512_reference) /
 				     sizeof(hmac_sha512_reference[0]));
@@ -1149,7 +1149,7 @@ static int check_alg_aes_gmac(void)
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_AES_GMAC);
 }
 
-void crypto_test_gen_alg_aes_gmac(void)
+static void crypto_test_gen_alg_aes_gmac(void)
 {
 	unsigned int test_vec_num = (sizeof(aes_gmac_reference) /
 				     sizeof(aes_gmac_reference[0]));
@@ -1163,7 +1163,7 @@ void crypto_test_gen_alg_aes_gmac(void)
 			 false);
 }
 
-void crypto_test_check_alg_aes_gmac(void)
+static void crypto_test_check_alg_aes_gmac(void)
 {
 	unsigned int test_vec_num = (sizeof(aes_gmac_reference) /
 				     sizeof(aes_gmac_reference[0]));
