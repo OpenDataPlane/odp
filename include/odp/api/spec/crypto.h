@@ -110,6 +110,24 @@ typedef enum {
 	 */
 	ODP_CIPHER_ALG_CHACHA20_POLY1305,
 
+	/** Confidentiality F8 algorithm (UEA1)
+	 *
+	 *  KASUMI-based F8 algorithm (also known as UEA1).
+	 */
+	ODP_CIPHER_ALG_KASUMI_F8,
+
+	/** Confidentiality UEA2 algorithm (128-EEA1)
+	 *
+	 *  SNOW 3G-based UEA2 algorithm (also known as 128-EEA1).
+	 */
+	ODP_CIPHER_ALG_SNOW3G_UEA2,
+
+	/** Confidentiality 128-EEA3 algorithm
+	 *
+	 *  ZUC-based 128-EEA3 algorithm.
+	 */
+	ODP_CIPHER_ALG_ZUC_EEA3,
+
 	/** @deprecated  Use ODP_CIPHER_ALG_AES_CBC instead */
 	ODP_DEPRECATE(ODP_CIPHER_ALG_AES128_CBC),
 
@@ -214,6 +232,27 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_CHACHA20_POLY1305,
 
+	/** Integrity F9 algorithm (UIA1)
+	 *
+	 *  KASUMI-based F9 algorithm (also known as UIA1).
+	 *
+	 *  IV (9 bytes) is a concatenation of COUNT (32b), FRESH (32b) and
+	 *  DIRECTION (LSB-aligned, 1b).
+	 */
+	ODP_AUTH_ALG_KASUMI_F9,
+
+	/** Integrity UIA2 algorithm (128-EEA1)
+	 *
+	 *  SNOW 3G-based UIA2 algorithm (also known as 128-EIA1).
+	 */
+	ODP_AUTH_ALG_SNOW3G_UIA2,
+
+	/** Integrity 128-EIA3 algorithm
+	 *
+	 *  ZUC-based 128-EIA3 algorithm.
+	 */
+	ODP_AUTH_ALG_ZUC_EIA3,
+
 	/** @deprecated  Use ODP_AUTH_ALG_MD5_HMAC instead */
 	ODP_DEPRECATE(ODP_AUTH_ALG_MD5_96),
 
@@ -254,6 +293,15 @@ typedef union odp_crypto_cipher_algos_t {
 
 		/** ODP_CIPHER_ALG_CHACHA20_POLY1305 */
 		uint32_t chacha20_poly1305 : 1;
+
+		/** ODP_CIPHER_ALG_KASUMI_F8 */
+		uint32_t kasumi_f8   : 1;
+
+		/** ODP_CIPHER_ALG_SNOW3G_UEA2 */
+		uint32_t snow3g_uea2 : 1;
+
+		/** ODP_CIPHER_ALG_ZUC_EEA3 */
+		uint32_t zuc_eea3    : 1;
 
 		/** @deprecated  Use aes_cbc instead */
 		uint32_t ODP_DEPRECATE(aes128_cbc) : 1;
@@ -311,6 +359,15 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_CHACHA20_POLY1305 */
 		uint32_t chacha20_poly1305 : 1;
+
+		/** ODP_AUTH_ALG_KASUMI_F9 */
+		uint32_t kasumi_f9   : 1;
+
+		/** ODP_AUTH_ALG_SNOW3G_UIA2 */
+		uint32_t snow3g_uia2 : 1;
+
+		/** ODP_AUTH_ALG_ZUC_EIA3 */
+		uint32_t zuc_eia3    : 1;
 
 		/** @deprecated  Use md5_hmac instead */
 		uint32_t ODP_DEPRECATE(md5_96)     : 1;
