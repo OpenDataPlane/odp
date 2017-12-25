@@ -70,4 +70,31 @@
 #define AES_XCBC_MAC_96_CHECK_LEN  12
 #define AES_XCBC_MAC_CHECK_LEN     16
 
+/* KASUMI_F8 */
+#define KASUMI_F8_KEY_LEN        16
+#define KASUMI_F8_IV_LEN         8
+
+/* SNOW3G_UEA2 */
+#define SNOW3G_UEA2_KEY_LEN      16
+#define SNOW3G_UEA2_IV_LEN       16
+
+/* ZUC_EEA3 */
+#define ZUC_EEA3_KEY_LEN         16
+#define ZUC_EEA3_IV_LEN          16
+
+/* KASUMI_F9 */
+#define KASUMI_F9_KEY_LEN        16
+#define KASUMI_F9_IV_LEN         9
+#define KASUMI_F9_DIGEST_LEN     4
+
+/* SNOW3G_UIA2 */
+#define SNOW3G_UIA2_KEY_LEN      16
+#define SNOW3G_UIA2_IV_LEN       16
+#define SNOW3G_UIA2_DIGEST_LEN   4
+
+/* ZUC_EIA3 */
+#define ZUC_EIA3_KEY_LEN         16
+#define ZUC_EIA3_IV_LEN          16
+#define ZUC_EIA3_DIGEST_LEN      4
+
 #endif
