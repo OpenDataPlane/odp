@@ -26,6 +26,7 @@
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 #include <odp_traffic_mngr_internal.h>
+#include <odp/api/plat/packet_inlines.h>
 
 /* Local vars */
 static const
@@ -1927,7 +1928,7 @@ static void egress_vlan_marking(tm_vlan_marking_t *vlan_marking,
 	uint32_t        hdr_len;
 	uint16_t        old_tci, new_tci;
 
-	ether_hdr_ptr = odp_packet_l2_ptr(odp_pkt, &hdr_len);
+	ether_hdr_ptr = _odp_packet_l2_ptr(odp_pkt, &hdr_len);
 	vlan_hdr_ptr  = (_odp_vlanhdr_t *)(ether_hdr_ptr + 1);
 
 	/* If the split_hdr variable below is TRUE, then this indicates that
@@ -1966,8 +1967,8 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 	uint32_t       hdr_len, l3_offset, old_chksum, ones_compl_sum, tos_diff;
 	uint8_t        old_tos, new_tos, ecn;
 
-	l3_offset    = odp_packet_l3_offset(odp_pkt);
-	ipv4_hdr_ptr = odp_packet_l3_ptr(odp_pkt, &hdr_len);
+	l3_offset    = _odp_packet_l3_offset(odp_pkt);
+	ipv4_hdr_ptr = _odp_packet_l3_ptr(odp_pkt, &hdr_len);
 
 	/* If the split_hdr variable below is TRUE, then this indicates that
 	 * for this odp (output) packet the IPv4 header is not all in the same
@@ -2032,8 +2033,8 @@ static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 	uint32_t       hdr_len, old_ver_tc_flow, new_ver_tc_flow, l3_offset;
 	uint8_t        old_tc, new_tc, ecn;
 
-	l3_offset    = odp_packet_l3_offset(odp_pkt);
-	ipv6_hdr_ptr = odp_packet_l3_ptr(odp_pkt, &hdr_len);
+	l3_offset    = _odp_packet_l3_offset(odp_pkt);
+	ipv6_hdr_ptr = _odp_packet_l3_ptr(odp_pkt, &hdr_len);
 
 	/* If the split_hdr variable below is TRUE, then this indicates that
 	 * for this odp (output) packet the IPv6 header is not all in the same
