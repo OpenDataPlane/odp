@@ -434,6 +434,8 @@ static void check_alg(odp_crypto_op_t op,
 	int rc, cipher_num, auth_num, i;
 	odp_bool_t cipher_tested[MAX_ALG_CAPA];
 	odp_bool_t auth_tested[MAX_ALG_CAPA];
+	odp_bool_t cipher_ok = false;
+	odp_bool_t auth_ok = false;
 	size_t idx;
 
 	rc = odp_crypto_capability(&capa);
@@ -552,21 +554,29 @@ static void check_alg(odp_crypto_op_t op,
 		auth_tested[auth_idx] = true;
 	}
 
-	for (i = 0; i < cipher_num; i++)
+	for (i = 0; i < cipher_num; i++) {
+		cipher_ok |= cipher_tested[i];
 		if (!cipher_tested[i])
 			printf("\n    Untested: alg=%s, key_len=%" PRIu32 ", "
 			       "iv_len=%" PRIu32 "\n",
 			       cipher_alg_name(cipher_alg),
 			       cipher_capa[i].key_len,
 			       cipher_capa[i].iv_len);
+	}
 
-	for (i = 0; i < auth_num; i++)
+	for (i = 0; i < auth_num; i++) {
+		auth_ok |= auth_tested[i];
 		if (!auth_tested[i])
 			printf("\n    Untested: alg=%s, key_len=%" PRIu32 ", "
 			       "digest_len=%" PRIu32 "\n",
 			       auth_alg_name(auth_alg),
 			       auth_capa[i].key_len,
 			       auth_capa[i].digest_len);
+	}
+
+	/* Verify that we were able to run at least several tests */
+	CU_ASSERT(cipher_ok);
+	CU_ASSERT(auth_ok);
 }
 
 /**
