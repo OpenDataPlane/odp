@@ -23,6 +23,7 @@ extern "C" {
 #include <odp/api/packet_io_stats.h>
 #include <odp/api/queue.h>
 #include <odp/api/time.h>
+#include <odp/api/packet.h>
 
 /** @defgroup odp_packet_io ODP PACKET IO
  *  Operations on a packet Input/Output interface.
@@ -256,11 +257,27 @@ typedef struct odp_pktio_param_t {
  * belong to time synchronization protocol (PTP).
  *
  * Packet input checksum checking may be enabled or disabled. When it is
- * enabled, implementation will verify checksum correctness on incoming packets
- * and depending on drop configuration either deliver erroneous packets with
- * appropriate flags set (e.g. odp_packet_has_l3_error()) or drop those.
- * When packet dropping is enabled, application will never receive a packet
- * with the specified error and may avoid to check the error flag.
+ * enabled, implementation will attempt to verify checksum correctness on
+ * incoming packets and depending on drop configuration either deliver erroneous
+ * packets with appropriate flags set (e.g. odp_packet_has_l3_error(),
+ * odp_packet_l3_chksum_status()) or drop those. When packet dropping is
+ * enabled, application will never receive a packet with the specified error
+ * and may avoid to check the error flag.
+ *
+ * If checksum checking is enabled, IPv4 header checksum checking is always
+ * done for packets that do not have IP options and L4 checksum checking
+ * is done for unfragmented packets that do not have IPv4 options or IPv6
+ * extension headers. In other cases checksum checking may or may not
+ * be done. For example, L4 checksum of fragmented packets is typically
+ * not checked.
+ *
+ * IPv4 checksum checking may be enabled only when parsing level is
+ * ODP_PROTO_LAYER_L3 or higher. Similarly, L4 level checksum checking
+ * may be enabled only with parsing level ODP_PROTO_LAYER_L4 or higher.
+ *
+ * Whether checksum checking was done and whether a checksum was correct
+ * can be queried for each received packet with odp_packet_l3_chksum_status()
+ * and odp_packet_l4_chksum_status().
  */
 typedef union odp_pktin_config_opt_t {
 	/** Option flags */
@@ -314,13 +331,27 @@ typedef union odp_pktin_config_opt_t {
  * Packet output configuration options listed in a bit field structure. Packet
  * output checksum insertion may be enabled or disabled. When it is enabled,
  * implementation will calculate and insert checksum into every outgoing packet
- * by default. Application may use a packet metadata flag to disable checksum
- * insertion per packet bases. For correct operation, packet metadata must
- * provide valid offsets for the appropriate protocols. For example, UDP
- * checksum calculation needs both L3 and L4 offsets (to access IP and UDP
- * headers). When application (e.g. a switch) does not modify L3/L4 data and
- * thus checksum does not need to be updated, output checksum insertion should
- * be disabled for optimal performance.
+ * by default. Application may disable checksum insertion (e.g.
+ * odp_packet_l4_chksum_insert()) on per packet basis. For correct operation,
+ * packet metadata must provide valid offsets for the appropriate protocols.
+ * For example, UDP checksum calculation needs both L3 and L4 offsets (to access
+ * IP and UDP headers). When application (e.g. a switch) does not modify L3/L4
+ * data and thus checksum does not need to be updated, output checksum insertion
+ * should be disabled for optimal performance.
+ *
+ * Packet flags (odp_packet_has_*()) are ignored for the purpose of checksum
+ * insertion in packet output.
+ *
+ * UDP, TCP and SCTP checksum insertion must not be requested for IP fragments.
+ * Use checksum override function (odp_packet_l4_chksum_insert()) to disable
+ * checksumming when sending a fragment through a packet IO interface that has
+ * the relevant L4 checksum insertion enabled.
+ *
+ * Result of checksum insertion at packet output is undefined if the protocol
+ * headers required for checksum calculation are not well formed. Packet must
+ * contain at least as many data bytes after L3/L4 offsets as the headers
+ * indicate. Other data bytes of the packet are ignored for the checksum
+ * insertion.
  */
 typedef union odp_pktout_config_opt_t {
 	/** Option flags */
@@ -348,24 +379,30 @@ typedef union odp_pktout_config_opt_t {
 
 /**
  * Parser layers
+ *
+ * @deprecated Use odp_proto_layer_t instead
  */
-typedef enum odp_pktio_parser_layer_t {
-	/** No layers */
-	ODP_PKTIO_PARSER_LAYER_NONE = 0,
+typedef odp_proto_layer_t odp_pktio_parser_layer_t;
 
-	/** Layer L2 protocols (Ethernet, VLAN, ARP, etc) */
-	ODP_PKTIO_PARSER_LAYER_L2,
+/** No layers
+ *  @deprecated Use ODP_PROTO_LAYER_NONE, instead */
+#define ODP_PKTIO_PARSER_LAYER_NONE ODP_PROTO_LAYER_NONE
 
-	/** Layer L3 protocols (IPv4, IPv6, ICMP, IPsec, etc) */
-	ODP_PKTIO_PARSER_LAYER_L3,
+/** Layer L2 protocols (Ethernet, VLAN, ARP, etc)
+ *  @deprecated Use ODP_PROTO_LAYER_L2, instead */
+#define ODP_PKTIO_PARSER_LAYER_L2 ODP_PROTO_LAYER_L2
 
-	/** Layer L4 protocols (UDP, TCP, SCTP) */
-	ODP_PKTIO_PARSER_LAYER_L4,
+/** Layer L3 protocols (IPv4, IPv6, ICMP, IPsec, etc)
+ *  @deprecated Use ODP_PROTO_LAYER_L3, instead */
+#define ODP_PKTIO_PARSER_LAYER_L3 ODP_PROTO_LAYER_L3
 
-	/** All layers */
-	ODP_PKTIO_PARSER_LAYER_ALL
+/** Layer L4 protocols (UDP, TCP, SCTP)
+ *  @deprecated Use ODP_PROTO_LAYER_L4, instead */
+#define ODP_PKTIO_PARSER_LAYER_L4 ODP_PROTO_LAYER_L4
 
-} odp_pktio_parser_layer_t;
+/** All layers
+ *  @deprecated Use ODP_PROTO_LAYER_ALL instead */
+#define ODP_PKTIO_PARSER_LAYER_ALL ODP_PROTO_LAYER_ALL
 
 /**
  * Parser configuration
@@ -373,9 +410,14 @@ typedef enum odp_pktio_parser_layer_t {
 typedef struct odp_pktio_parser_config_t {
 	/** Protocol parsing level in packet input
 	  *
-	  * Parse protocol layers in minimum up to this level during packet
-	  * input. The default value is ODP_PKTIO_PARSER_LAYER_ALL. */
-	odp_pktio_parser_layer_t layer;
+	  * Application requires that protocol headers in a packet are checked
+	  * up to this layer during packet input. Use ODP_PROTO_LAYER_ALL for
+	  * all layers. Packet metadata for this and all preceding layers are
+	  * set. In addition, offset (and pointer) to the next layer is set.
+	  * Other layer/protocol specific metadata have undefined values.
+	  *
+	  * The default value is ODP_PROTO_LAYER_ALL. */
+	odp_proto_layer_t layer;
 
 } odp_pktio_parser_config_t;
 
@@ -407,6 +449,38 @@ typedef struct odp_pktio_config_t {
 	 * is an optional feature per interface and should be queried in the
 	 * interface capability before enabling the same. */
 	odp_bool_t enable_loop;
+
+	/** Inbound IPSEC inlined with packet input
+	 *
+	 *  Enable/disable inline inbound IPSEC operation. When enabled packet
+	 *  input directs all IPSEC packets automatically to IPSEC inbound
+	 *  processing. IPSEC configuration is done through the IPSEC API.
+	 *  Packets that are not (recognized as) IPSEC are processed
+	 *  according to the packet input configuration.
+	 *
+	 *  0: Disable inbound IPSEC inline operation (default)
+	 *  1: Enable inbound IPSEC inline operation
+	 *
+	 *  @see odp_ipsec_config(), odp_ipsec_sa_create()
+	 */
+	odp_bool_t inbound_ipsec;
+
+	/** Outbound IPSEC inlined with packet output
+	 *
+	 *  Enable/disable inline outbound IPSEC operation. When enabled IPSEC
+	 *  outbound processing can send outgoing IPSEC packets directly
+	 *  to the pktio interface for output. IPSEC configuration is done
+	 *  through the IPSEC API.
+	 *
+	 *  Outbound IPSEC inline operation cannot be combined with traffic
+	 *  manager (ODP_PKTOUT_MODE_TM).
+	 *
+	 *  0: Disable outbound IPSEC inline operation (default)
+	 *  1: Enable outbound IPSEC inline operation
+	 *
+	 *  @see odp_ipsec_config(), odp_ipsec_sa_create()
+	 */
+	odp_bool_t outbound_ipsec;
 
 } odp_pktio_config_t;
 

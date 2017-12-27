@@ -40,7 +40,6 @@
 #include <odp_ipsec_sa_db.h>
 #include <odp_ipsec_sp_db.h>
 #include <odp_ipsec_fwd_db.h>
-#include <odp_ipsec_loop_db.h>
 #include <odp_ipsec_cache.h>
 #include <odp_ipsec_stream.h>
 
@@ -144,7 +143,7 @@ typedef struct {
 	uint32_t dst_ip;         /**< SA dest IP address */
 
 	/* Output only */
-	odp_crypto_op_param_t params;   /**< Parameters for crypto call */
+	odp_crypto_packet_op_param_t params; /**< Parameters for crypto call */
 	uint32_t *ah_seq;               /**< AH sequence number location */
 	uint32_t *esp_seq;              /**< ESP sequence number location */
 	uint16_t *tun_hdr_id;           /**< Tunnel header ID > */
@@ -407,76 +406,20 @@ void ipsec_init_post(crypto_api_mode_e api_mode)
 	}
 }
 
-/**
- * Initialize loopback
- *
- * Initialize ODP queues to create our own idea of loopbacks, which allow
- * testing without physical interfaces.  Interface name string will be of
- * the format "loopX" where X is the decimal number of the interface.
- *
- * @param intf     Loopback interface name string
- */
-#if 0 /* Temporarely disable loopback mode. Needs packet output event queues */
 static
-void initialize_loop(char *intf)
+int check_stream_db_out(const char *intf)
 {
-	int idx;
-	odp_queue_t outq_def;
-	odp_queue_t inq_def;
-	char queue_name[ODP_QUEUE_NAME_LEN];
-	odp_queue_param_t qparam;
-	uint8_t *mac;
-	char mac_str[MAX_STRING];
+	stream_db_entry_t *stream = NULL;
 
-	/* Derive loopback interface index */
-	idx = loop_if_index(intf);
-	if (idx < 0) {
-		EXAMPLE_ERR("Error: loopback \"%s\" invalid\n", intf);
-		exit(EXIT_FAILURE);
+	/* For each stream look for input and output IPsec entries */
+	for (stream = stream_db->list; NULL != stream; stream = stream->next) {
+		if (!strcmp(stream->output.intf, intf))
+			return 1;
 	}
 
-	/* Create input queue */
-	odp_queue_param_init(&qparam);
-	qparam.type        = ODP_QUEUE_TYPE_SCHED;
-	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_ALL;
-	snprintf(queue_name, sizeof(queue_name), "%i-loop_inq_def", idx);
-	queue_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
-
-	inq_def = queue_create(queue_name, &qparam);
-	if (ODP_QUEUE_INVALID == inq_def) {
-		EXAMPLE_ERR("Error: input queue creation failed for %s\n",
-			    intf);
-		exit(EXIT_FAILURE);
-	}
-	/* Create output queue */
-	snprintf(queue_name, sizeof(queue_name), "%i-loop_outq_def", idx);
-	queue_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
-
-	outq_def = queue_create(queue_name, NULL);
-	if (ODP_QUEUE_INVALID == outq_def) {
-		EXAMPLE_ERR("Error: output queue creation failed for %s\n",
-			    intf);
-		exit(EXIT_FAILURE);
-	}
-
-	/* Initialize the loopback DB entry */
-	create_loopback_db_entry(idx, inq_def, outq_def, pkt_pool);
-	mac = query_loopback_db_mac(idx);
-
-	printf("Created loop:%02i, queue mode (ATOMIC queues)\n"
-	       "          default loop%02i-INPUT queue:%" PRIu64 "\n"
-	       "          default loop%02i-OUTPUT queue:%" PRIu64 "\n"
-	       "          source mac address %s\n",
-	       idx, idx, odp_queue_to_u64(inq_def), idx,
-	       odp_queue_to_u64(outq_def),
-	       mac_addr_str(mac_str, mac));
-
-	/* Resolve any routes using this interface for output */
-	resolve_fwd_db(intf, outq_def, mac);
+	return 0;
 }
-#endif
+
 /**
  * Initialize interface
  *
@@ -499,7 +442,8 @@ void initialize_intf(char *intf)
 
 	odp_pktio_param_init(&pktio_param);
 
-	if (getenv("ODP_IPSEC_USE_POLL_QUEUES"))
+	if (getenv("ODP_IPSEC_USE_POLL_QUEUES") ||
+	    check_stream_db_out(intf))
 		pktio_param.in_mode = ODP_PKTIN_MODE_QUEUE;
 	else
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
@@ -558,7 +502,7 @@ void initialize_intf(char *intf)
 	       mac_addr_str(src_mac_str, src_mac));
 
 	/* Resolve any routes using this interface for output */
-	resolve_fwd_db(intf, pktout, src_mac);
+	resolve_fwd_db(intf, pktio, pktout, src_mac);
 }
 
 /**
@@ -629,19 +573,18 @@ pkt_disposition_e do_route_fwd_db(odp_packet_t pkt, pkt_ctx_t *ctx)
  * @return PKT_CONTINUE if done else PKT_POSTED
  */
 static
-pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
+pkt_disposition_e do_ipsec_in_classify(odp_packet_t *pkt,
 				       pkt_ctx_t *ctx,
-				       odp_bool_t *skip,
-				       odp_crypto_op_result_t *result)
+				       odp_bool_t *skip)
 {
-	uint8_t *buf = odp_packet_data(pkt);
-	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
+	uint8_t *buf = odp_packet_data(*pkt);
+	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(*pkt, NULL);
 	int hdr_len;
 	odph_ahhdr_t *ah = NULL;
 	odph_esphdr_t *esp = NULL;
 	ipsec_cache_entry_t *entry;
-	odp_crypto_op_param_t params;
-	odp_bool_t posted = 0;
+	odp_crypto_packet_op_param_t params;
+	odp_packet_t out_pkt;
 
 	/* Default to skip IPsec */
 	*skip = TRUE;
@@ -662,10 +605,8 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 
 	/* Initialize parameters block */
 	memset(&params, 0, sizeof(params));
-	params.ctx = ctx;
 	params.session = entry->state.session;
-	params.pkt = pkt;
-	params.out_pkt = entry->in_place ? pkt : ODP_PACKET_INVALID;
+	out_pkt = entry->in_place ? *pkt : ODP_PACKET_INVALID;
 
 	/*Save everything to context */
 	ctx->ipsec.ip_tos = ip->tos;
@@ -700,12 +641,17 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 	/* Issue crypto request */
 	*skip = FALSE;
 	ctx->state = PKT_STATE_IPSEC_IN_FINISH;
-	if (odp_crypto_operation(&params,
-				 &posted,
-				 result)) {
-		abort();
+	if (entry->async) {
+		if (odp_crypto_op_enq(pkt, &out_pkt, &params, 1))
+			abort();
+		return PKT_POSTED;
 	}
-	return (posted) ? PKT_POSTED : PKT_CONTINUE;
+
+	if (odp_crypto_op(pkt, &out_pkt, &params, 1))
+		abort();
+	*pkt = out_pkt;
+
+	return PKT_CONTINUE;
 }
 
 /**
@@ -718,18 +664,20 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
  */
 static
 pkt_disposition_e do_ipsec_in_finish(odp_packet_t pkt,
-				     pkt_ctx_t *ctx,
-				     odp_crypto_op_result_t *result)
+				     pkt_ctx_t *ctx)
 {
 	odph_ipv4hdr_t *ip;
+	odp_crypto_packet_result_t result;
 	int hdr_len = ctx->ipsec.hdr_len;
 	int trl_len = 0;
 
+	odp_crypto_result(&result, pkt);
+
 	/* Check crypto result */
-	if (!result->ok) {
-		if (!is_crypto_compl_status_ok(&result->cipher_status))
+	if (!result.ok) {
+		if (!is_crypto_op_status_ok(&result.cipher_status))
 			return PKT_DROP;
-		if (!is_crypto_compl_status_ok(&result->auth_status))
+		if (!is_crypto_op_status_ok(&result.auth_status))
 			return PKT_DROP;
 	}
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
@@ -819,7 +767,7 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 	uint16_t ip_data_len = ipv4_data_len(ip);
 	uint8_t *ip_data = ipv4_data_p(ip);
 	ipsec_cache_entry_t *entry;
-	odp_crypto_op_param_t params;
+	odp_crypto_packet_op_param_t params;
 	int hdr_len = 0;
 	int trl_len = 0;
 	odph_ahhdr_t *ah = NULL;
@@ -843,9 +791,6 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 	/* Initialize parameters block */
 	memset(&params, 0, sizeof(params));
 	params.session = entry->state.session;
-	params.ctx = ctx;
-	params.pkt = pkt;
-	params.out_pkt = entry->in_place ? pkt : ODP_PACKET_INVALID;
 
 	if (entry->mode == IPSEC_SA_MODE_TUNNEL) {
 		hdr_len += sizeof(odph_ipv4hdr_t);
@@ -953,12 +898,19 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
  * @return PKT_CONTINUE if done else PKT_POSTED
  */
 static
-pkt_disposition_e do_ipsec_out_seq(odp_packet_t pkt,
-				   pkt_ctx_t *ctx,
-				   odp_crypto_op_result_t *result)
+pkt_disposition_e do_ipsec_out_seq(odp_packet_t *pkt,
+				   pkt_ctx_t *ctx)
 {
-	uint8_t *buf = odp_packet_data(pkt);
-	odp_bool_t posted = 0;
+	uint8_t *buf = odp_packet_data(*pkt);
+	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(*pkt, NULL);
+	odp_packet_t out_pkt;
+	ipsec_cache_entry_t *entry;
+
+	entry = find_ipsec_cache_entry_out(odp_be_to_cpu_32(ip->src_addr),
+					   odp_be_to_cpu_32(ip->dst_addr),
+					   ip->proto);
+	if (!entry)
+		return PKT_DROP;
 
 	/* We were dispatched from atomic queue, assign sequence numbers */
 	if (ctx->ipsec.ah_offset) {
@@ -989,13 +941,22 @@ pkt_disposition_e do_ipsec_out_seq(odp_packet_t pkt,
 		}
 	}
 
+	out_pkt = entry->in_place ? *pkt : ODP_PACKET_INVALID;
+
 	/* Issue crypto request */
-	if (odp_crypto_operation(&ctx->ipsec.params,
-				 &posted,
-				 result)) {
-		abort();
+	if (entry->async) {
+		if (odp_crypto_op_enq(pkt, &out_pkt,
+				      &ctx->ipsec.params, 1))
+			abort();
+		return PKT_POSTED;
 	}
-	return (posted) ? PKT_POSTED : PKT_CONTINUE;
+
+	if (odp_crypto_op(pkt, &out_pkt,
+			  &ctx->ipsec.params, 1))
+		abort();
+	*pkt = out_pkt;
+
+	return PKT_CONTINUE;
 }
 
 /**
@@ -1008,16 +969,18 @@ pkt_disposition_e do_ipsec_out_seq(odp_packet_t pkt,
  */
 static
 pkt_disposition_e do_ipsec_out_finish(odp_packet_t pkt,
-				      pkt_ctx_t *ctx,
-				      odp_crypto_op_result_t *result)
+				      pkt_ctx_t *ctx)
 {
 	odph_ipv4hdr_t *ip;
+	odp_crypto_packet_result_t result;
+
+	odp_crypto_result(&result, pkt);
 
 	/* Check crypto result */
-	if (!result->ok) {
-		if (!is_crypto_compl_status_ok(&result->cipher_status))
+	if (!result.ok) {
+		if (!is_crypto_op_status_ok(&result.cipher_status))
 			return PKT_DROP;
-		if (!is_crypto_compl_status_ok(&result->auth_status))
+		if (!is_crypto_op_status_ok(&result.auth_status))
 			return PKT_DROP;
 	}
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
@@ -1067,15 +1030,15 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 		pkt_disposition_e rc;
 		pkt_ctx_t   *ctx;
 		odp_queue_t  dispatchq;
-		odp_crypto_op_result_t result;
+		odp_event_subtype_t subtype;
 
 		/* Use schedule to get event from any input queue */
 		ev = schedule(&dispatchq);
 
 		/* Determine new work versus completion or sequence number */
-		if (ODP_EVENT_PACKET == odp_event_type(ev)) {
+		if (ODP_EVENT_PACKET == odp_event_types(ev, &subtype)) {
 			pkt = odp_packet_from_event(ev);
-			if (seqnumq == dispatchq) {
+			if (seqnumq == dispatchq || completionq == dispatchq) {
 				ctx = get_pkt_ctx_from_pkt(pkt);
 			} else {
 				ctx = alloc_pkt_ctx(pkt);
@@ -1085,14 +1048,6 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 				}
 				ctx->state = PKT_STATE_INPUT_VERIFY;
 			}
-		} else if (ODP_EVENT_CRYPTO_COMPL == odp_event_type(ev)) {
-			odp_crypto_compl_t compl;
-
-			compl = odp_crypto_compl_from_event(ev);
-			odp_crypto_compl_result(compl, &result);
-			odp_crypto_compl_free(compl);
-			pkt = result.pkt;
-			ctx = result.ctx;
 		} else {
 			abort();
 		}
@@ -1122,15 +1077,14 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 			case PKT_STATE_IPSEC_IN_CLASSIFY:
 
 				ctx->state = PKT_STATE_ROUTE_LOOKUP;
-				rc = do_ipsec_in_classify(pkt,
+				rc = do_ipsec_in_classify(&pkt,
 							  ctx,
-							  &skip,
-							  &result);
+							  &skip);
 				break;
 
 			case PKT_STATE_IPSEC_IN_FINISH:
 
-				rc = do_ipsec_in_finish(pkt, ctx, &result);
+				rc = do_ipsec_in_finish(pkt, ctx);
 				ctx->state = PKT_STATE_ROUTE_LOOKUP;
 				break;
 
@@ -1157,12 +1111,12 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 			case PKT_STATE_IPSEC_OUT_SEQ:
 
 				ctx->state = PKT_STATE_IPSEC_OUT_FINISH;
-				rc = do_ipsec_out_seq(pkt, ctx, &result);
+				rc = do_ipsec_out_seq(&pkt, ctx);
 				break;
 
 			case PKT_STATE_IPSEC_OUT_FINISH:
 
-				rc = do_ipsec_out_finish(pkt, ctx, &result);
+				rc = do_ipsec_out_finish(pkt, ctx);
 				ctx->state = PKT_STATE_TRANSMIT;
 				break;
 
@@ -1257,7 +1211,6 @@ main(int argc, char *argv[])
 	/* Must init our databases before parsing args */
 	ipsec_init_pre();
 	init_fwd_db();
-	init_loopback_db();
 	init_stream_db();
 
 	/* Parse and store the application arguments */
@@ -1318,12 +1271,7 @@ main(int argc, char *argv[])
 
 	/* Initialize interfaces (which resolves FWD DB entries */
 	for (i = 0; i < args->appl.if_count; i++) {
-#if 0 /* Temporarely disable loopback mode. Needs packet output event queues */
-		if (!strncmp("loop", args->appl.if_names[i], strlen("loop")))
-			initialize_loop(args->appl.if_names[i]);
-		else
-#endif
-			initialize_intf(args->appl.if_names[i]);
+		initialize_intf(args->appl.if_names[i]);
 	}
 
 	/* If we have test streams build them before starting workers */
@@ -1367,9 +1315,6 @@ main(int argc, char *argv[])
 	shm = odp_shm_lookup("shm_fwd_db");
 	if (odp_shm_free(shm) != 0)
 		EXAMPLE_ERR("Error: shm free shm_fwd_db failed\n");
-	shm = odp_shm_lookup("loopback_db");
-	if (odp_shm_free(shm) != 0)
-		EXAMPLE_ERR("Error: shm free loopback_db failed\n");
 	shm = odp_shm_lookup("shm_sa_db");
 	if (odp_shm_free(shm) != 0)
 		EXAMPLE_ERR("Error: shm free shm_sa_db failed\n");

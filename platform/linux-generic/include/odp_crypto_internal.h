@@ -23,7 +23,8 @@ typedef struct odp_crypto_generic_session odp_crypto_generic_session_t;
  * Algorithm handler function prototype
  */
 typedef
-odp_crypto_alg_err_t (*crypto_func_t)(odp_crypto_op_param_t *param,
+odp_crypto_alg_err_t (*crypto_func_t)(odp_packet_t pkt,
+				      const odp_crypto_packet_op_param_t *param,
 				      odp_crypto_generic_session_t *session);
 
 /**
@@ -49,19 +50,13 @@ struct odp_crypto_generic_session {
 	struct {
 		uint8_t  key[EVP_MAX_KEY_LENGTH];
 		uint32_t key_length;
-		uint32_t bytes;
-		const EVP_MD *evp_md;
+		union {
+			const EVP_MD *evp_md;
+			const EVP_CIPHER *evp_cipher;
+		};
 		crypto_func_t func;
 	} auth;
 };
-
-/**
- * Per packet operation result
- */
-typedef struct odp_crypto_generic_op_result {
-	uint32_t magic;
-	odp_crypto_op_result_t result;
-} odp_crypto_generic_op_result_t;
 
 /**
  * Per session creation operation result

@@ -1,0 +1,76 @@
+msc {
+
+    a [label = "Application"],
+    o [label = "ODP"],
+    p [label = "Platform"];
+
+    --- [label = "IPsec configuration, done once"];
+    a->o [label = "odp_ipsec_config()"];
+    o->p [label = "Config IPsec"];
+    o->a [label = "OK"];
+
+    |||;
+    --- [label = "IPsec SA creation, per SA"];
+    |||;
+
+    a->o [label = "odp_ipsec_sa_create()"];
+    o->p [label = "SA Create"];
+    o->a [label = "OK"];
+
+    |||;
+    --- [label = "IPsec operations, per SA"];
+    |||;
+
+    a->o [label = "odp_ipsec_in()"];
+    o->p [label = "IPsec Decrypt"];
+    p->a [label = "Done"];
+
+    a->o [label = "odp_ipsec_out()"];
+    o->p [label = "IPsec Encrypt"];
+    p->a [label = "Done"];
+
+    a->o [label = "odp_ipsec_out_inline()"];
+    o->p [label = "IPsec Encrypt Inline"];
+    o->a [label = "OK"];
+    p->o [label = "OK"];
+
+    a->o [label = "odp_ipsec_in_enq()"];
+    o->p [label = "Initiate IPsec operation"];
+    a->o [label = "odp_ipsec_out_enq()"];
+    o->p [label = "Initiate IPsec operation"];
+
+    |||;
+    --- [label = "Time passes"];
+    |||;
+
+    p->o [label = "IPsec op complete"];
+    a->o [label = "odp_schedule()"];
+    o->p [label = "Get Event"];
+    p->a [label = "ODP_EVENT_PACKET subtype ODP_EVENT_PACKET_IPSEC"];
+    a->o [label = "odp_ipsec_result()"];
+    o->a [label = "OK"];
+
+    |||;
+    --- [label = "App done with SA, per SA"];
+    |||;
+
+    a->o [label = "odp_ipsec_sa_disable()"];
+    o->p [label = "Disable/Delete SA"];
+    o->a [label = "OK"];
+    p->o [label = "Done"];
+
+    |||;
+    --- [label = "Time passes"];
+    |||;
+
+    a->o [label = "odp_schedule()"];
+    o->p [label = "Get Event"];
+    p->a [label = "ODP_EVENT_IPSEC_STATUS"];
+    a->o [label = "odp_ipsec_status"];
+    o->a [label = "ODP_IPSEC_STATUS_SA_DISABLED"];
+
+    a->o [label = "odp_ipsec_sa_destroy()"];
+    o->a [label = "OK"];
+
+
+}

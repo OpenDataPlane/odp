@@ -23,87 +23,111 @@ extern "C" {
 #include <odp/api/packet.h>
 
 /** @addtogroup odp_packet
- *  Boolean operations on a packet.
+ *  Operations on packet metadata flags.
  *  @{
  */
 
 /**
- * Check for packet errors
+ * Check for all errors in packet
  *
- * Checks all error flags at once.
+ * Check if packet parsing has found any errors in the packet. The level of
+ * error checking depends on the parse configuration (e.g. included layers and
+ * checksums). Protocol layer functions (e.g. odp_packet_has_l3()) indicate
+ * which layers have been checked, and layer error functions
+ * (e.g. odp_packet_has_l3_error()) which layers have errors.
  *
- * @param pkt Packet handle
- * @retval non-zero packet has errors
- * @retval 0 packet has no errors
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet has errors
+ * @retval 0           No errors were found
  */
 int odp_packet_has_error(odp_packet_t pkt);
 
 /**
- * Check for packet L2 errors
+ * Check for errors in layer 2
  *
- * check for all L2 errors
+ * When layer 2 is included in the parse configuration, check if any errors were
+ * found in layer 2 of the packet.
  *
- * @param pkt Packet handle
- * @retval non-zero packet has L2 errors
- * @retval 0 packet has no L2 error
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet has errors in layer 2
+ * @retval 0           No errors were found in layer 2
  */
 int odp_packet_has_l2_error(odp_packet_t pkt);
 
 /**
- * Check for L2 header, e.g. ethernet
+ * Check for errors in layer 3
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains a valid & known L2 header
- * @retval 0 if packet does not contain a valid & known L2 header
- */
-int odp_packet_has_l2(odp_packet_t pkt);
-
-/**
- * Check for packet L3 errors
+ * When layer 3 is included in the parse configuration, check if any errors were
+ * found in layer 3 of the packet.
  *
- * check for all L3 errors
+ * @param pkt          Packet handle
  *
- * @param pkt Packet handle
- * @retval non-zero packet has L3 errors
- * @retval 0 packet has no L3 error
+ * @retval non-zero    Packet has errors in layer 3
+ * @retval 0           No errors found in layer 3
  */
 int odp_packet_has_l3_error(odp_packet_t pkt);
 
 /**
- * Check for L3 header, e.g. IPv4, IPv6
+ * Check for errors in layer 4
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains a valid & known L3 header
- * @retval 0 if packet does not contain a valid & known L3 header
- */
-int odp_packet_has_l3(odp_packet_t pkt);
-
-/**
- * Check for packet L4 errors
+ * When layer 4 is included in the parse configuration, check if any errors were
+ * found in layer 4 of the packet.
  *
- * check for all L4 errors
+ * @param pkt          Packet handle
  *
- * @param pkt Packet handle
- * @retval non-zero packet has L4 errors
- * @retval 0 packet has no L4 error
+ * @retval non-zero    Packet has errors in layer 4
+ * @retval 0           No errors were found in layer 4
  */
 int odp_packet_has_l4_error(odp_packet_t pkt);
 
 /**
- * Check for L4 header, e.g. UDP, TCP, SCTP (also ICMP)
+ * Check for layer 2 protocols
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains a valid & known L4 header
- * @retval 0 if packet does not contain a valid & known L4 header
+ * When layer 2 is included in the parse configuration, check if packet parsing
+ * has found and checked a layer 2 protocol (e.g. Ethernet) in the packet.
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    A layer 2 protocol header was found and checked
+ * @retval 0           No layer 2 protocol was found
+ */
+int odp_packet_has_l2(odp_packet_t pkt);
+
+/**
+ * Check for layer 3 protocols
+ *
+ * When layer 3 is included in the parse configuration, check if packet parsing
+ * has found and checked a layer 3 protocol (e.g. IPv4, IPv6) in the packet.
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    A layer 3 protocol header was found and checked
+ * @retval 0           No layer 3 protocol was found
+ */
+int odp_packet_has_l3(odp_packet_t pkt);
+
+/**
+ * Check for layer 4 protocols
+ *
+ * When layer 4 is included in the parse configuration, check if packet parsing
+ * has found and checked a layer 4 protocol (e.g. UDP, TCP, SCTP) in the packet.
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    A layer 4 protocol header was found and checked
+ * @retval 0           No layer 4 protocol was found
  */
 int odp_packet_has_l4(odp_packet_t pkt);
 
 /**
  * Check for Ethernet header
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains a valid eth header
- * @retval 0 if packet does not contain a valid eth header
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains an Ethernet header
+ * @retval 0           Packet does not contain an Ethernet header
  */
 int odp_packet_has_eth(odp_packet_t pkt);
 
@@ -113,9 +137,10 @@ int odp_packet_has_eth(odp_packet_t pkt);
  * ODP recognizes the destination MAC address FF:FF:FF:FF:FF:FF as
  * a broadcast address. All others are considered non-broadcast.
  *
- * @param pkt Packet handle
- * @retval non-zero if Ethernet destination address is the broadcast address
- * @retval 0 if Ethernet destination address is not the broadcast address
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Ethernet destination address is the broadcast address
+ * @retval 0           Ethernet destination address is not the broadcast address
  */
 int odp_packet_has_eth_bcast(odp_packet_t pkt);
 
@@ -124,63 +149,70 @@ int odp_packet_has_eth_bcast(odp_packet_t pkt);
  *
  * ODP recognizes the destination MAC address as multicast if bit 7 is 1.
  *
- * @param pkt Packet handle
- * @retval non-zero if Ethernet destination address is a multicast address
- * @retval 0 if Ethernet destination address is not a multicast address
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Ethernet destination address is a multicast address
+ * @retval 0           Ethernet destination address is not a multicast address
  */
 int odp_packet_has_eth_mcast(odp_packet_t pkt);
 
 /**
  * Check for jumbo frame
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains a jumbo frame
- * @retval 0 if packet does not contain a jumbo frame
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet is a jumbo frame
+ * @retval 0           Packet is not a jumbo frame
  */
 int odp_packet_has_jumbo(odp_packet_t pkt);
 
 /**
  * Check for VLAN
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains a VLAN header
- * @retval 0 if packet does not contain a VLAN header
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains a VLAN header
+ * @retval 0           Packet does not contain a VLAN header
  */
 int odp_packet_has_vlan(odp_packet_t pkt);
 
 /**
  * Check for VLAN QinQ (stacked VLAN)
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains a VLAN QinQ header
- * @retval 0 if packet does not contain a VLAN QinQ header
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains a VLAN QinQ header
+ * @retval 0           Packet does not contain a VLAN QinQ header
  */
 int odp_packet_has_vlan_qinq(odp_packet_t pkt);
 
 /**
  * Check for ARP
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains an ARP message
- * @retval 0 if packet does not contain an ARP message
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains an ARP message
+ * @retval 0           Packet does not contain an ARP message
  */
 int odp_packet_has_arp(odp_packet_t pkt);
 
 /**
  * Check for IPv4
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains an IPv4 header
- * @retval 0 if packet does not contain an IPv4 header
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains an IPv4 header
+ * @retval 0           Packet does not contain an IPv4 header
  */
 int odp_packet_has_ipv4(odp_packet_t pkt);
 
 /**
  * Check for IPv6
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains an IPv6 header
- * @retval 0 if packet does not contain an IPv6 header
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains an IPv6 header
+ * @retval 0           Packet does not contain an IPv6 header
  */
 int odp_packet_has_ipv6(odp_packet_t pkt);
 
@@ -192,9 +224,10 @@ int odp_packet_has_ipv6(odp_packet_t pkt);
  *
  * For IPv6, no destination addresses are recognized as broadcast addresses.
  *
- * @param pkt Packet handle
- * @retval non-zero if IP destination address is a broadcast address
- * @retval 0 if IP destination address is not a broadcast address
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    IP destination address is a broadcast address
+ * @retval 0           IP destination address is not a broadcast address
  */
 int odp_packet_has_ip_bcast(odp_packet_t pkt);
 
@@ -207,91 +240,100 @@ int odp_packet_has_ip_bcast(odp_packet_t pkt);
  * For IPv6 ODP recognizes destination IP addresses with prefixes FF00::
  * through FFFF:: as multicast addresses.
  *
- * @param pkt Packet handle
- * @retval non-zero if IP destination address is a multicast address
- * @retval 0 if IP destination address is not a multicast address
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    IP destination address is a multicast address
+ * @retval 0           IP destination address is not a multicast address
  */
 int odp_packet_has_ip_mcast(odp_packet_t pkt);
 
 /**
  * Check for IP fragment
  *
- * @param pkt Packet handle
- * @retval non-zero if packet is an IP fragment
- * @retval 0 if packet is not an IP fragment
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet is an IP fragment
+ * @retval 0           Packet is not an IP fragment
  */
 int odp_packet_has_ipfrag(odp_packet_t pkt);
 
 /**
  * Check for IP options
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains IP options
- * @retval 0 if packet does not contain IP options
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains IP options
+ * @retval 0           Packet does not contain IP options
  */
 int odp_packet_has_ipopt(odp_packet_t pkt);
 
 /**
  * Check for IPSec
  *
- * @param pkt Packet handle
- * @retval non-zero if packet requires IPSec processing
- * @retval 0 if packet does not require IPSec processing
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet requires IPSec processing
+ * @retval 0           Packet does not require IPSec processing
  */
 int odp_packet_has_ipsec(odp_packet_t pkt);
 
 /**
  * Check for UDP
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains a UDP header
- * @retval 0 if packet does not contain a UDP header
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains a UDP header
+ * @retval 0           Packet does not contain a UDP header
  */
 int odp_packet_has_udp(odp_packet_t pkt);
 
 /**
  * Check for TCP
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains a TCP header
- * @retval 0 if packet does not contain a TCP header
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains a TCP header
+ * @retval 0           Packet does not contain a TCP header
  */
 int odp_packet_has_tcp(odp_packet_t pkt);
 
 /**
  * Check for SCTP
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains a SCTP header
- * @retval 0 if packet does not contain a SCTP header
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains a SCTP header
+ * @retval 0           Packet does not contain a SCTP header
  */
 int odp_packet_has_sctp(odp_packet_t pkt);
 
 /**
  * Check for ICMP
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains an ICMP header
- * @retval 0 if packet does not contain an ICMP header
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains an ICMP header
+ * @retval 0           Packet does not contain an ICMP header
  */
 int odp_packet_has_icmp(odp_packet_t pkt);
 
 /**
  * Check for packet flow hash
  *
- * @param pkt Packet handle
- * @retval non-zero if packet contains a hash value
- * @retval 0 if packet does not contain a hash value
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains a hash value
+ * @retval 0           Packet does not contain a hash value
  */
 int odp_packet_has_flow_hash(odp_packet_t pkt);
 
 /**
  * Check for packet timestamp
  *
- * @param pkt Packet handle
+ * @param pkt          Packet handle
  *
- * @retval non-zero if packet contains a timestamp value
- * @retval 0 if packet does not contain a timestamp value
+ * @retval non-zero    Packet contains a timestamp value
+ * @retval 0           Packet does not contain a timestamp value
  *
  * @see odp_packet_has_ts_clr()
  */

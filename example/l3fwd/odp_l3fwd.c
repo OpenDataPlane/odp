@@ -123,8 +123,8 @@ static int create_pktio(const char *name, odp_pool_t pool,
 
 	odp_pktio_config_init(&config);
 	config.parser.layer = global.cmd_args.error_check ?
-			ODP_PKTIO_PARSER_LAYER_ALL :
-			ODP_PKTIO_PARSER_LAYER_L4;
+			ODP_PROTO_LAYER_ALL :
+			ODP_PROTO_LAYER_L4;
 	odp_pktio_config(pktio, &config);
 
 	fwd_pktio->nb_rxq = (int)capa.max_input_queues;

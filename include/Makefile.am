@@ -9,6 +9,7 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/barrier.h \
 		  odp/api/spec/buffer.h \
 		  odp/api/spec/byteorder.h \
+		  odp/api/spec/chksum.h \
 		  odp/api/spec/classification.h \
 		  odp/api/spec/compiler.h \
 		  odp/api/spec/cpu.h \
@@ -21,6 +22,7 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/hash.h \
 		  odp/api/spec/hints.h \
 		  odp/api/spec/init.h \
+		  odp/api/spec/ipsec.h \
 		  odp/api/spec/packet.h \
 		  odp/api/spec/packet_flags.h \
 		  odp/api/spec/packet_io.h \
@@ -37,6 +39,7 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/spinlock_recursive.h \
 		  odp/api/spec/std_clib.h \
 		  odp/api/spec/std_types.h \
+		  odp/api/spec/support.h \
 		  odp/api/spec/sync.h \
 		  odp/api/spec/system_info.h \
 		  odp/api/spec/thread.h \

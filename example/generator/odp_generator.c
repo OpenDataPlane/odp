@@ -369,7 +369,7 @@ static int setup_udp_pkt(odp_packet_t pkt, odp_pktout_config_opt_t *pktout_cfg,
 	ip->id = odp_cpu_to_be_16(seq);
 	if (!pktout_cfg->bit.ipv4_chksum) {
 		ip->chksum = 0;
-		ip->chksum = odph_chksum(ip, ODPH_IPV4HDR_LEN);
+		ip->chksum = ~odp_chksum_ones_comp16(ip, ODPH_IPV4HDR_LEN);
 	}
 
 	if (pktout_cfg->bit.ipv4_chksum || pktout_cfg->bit.udp_chksum) {
@@ -469,7 +469,7 @@ static int setup_icmp_pkt(odp_packet_t pkt,
 	ip->id = odp_cpu_to_be_16(seq);
 	if (!pktout_cfg->bit.ipv4_chksum) {
 		ip->chksum = 0;
-		ip->chksum = odph_chksum(ip, ODPH_IPV4HDR_LEN);
+		ip->chksum = ~odp_chksum_ones_comp16(ip, ODPH_IPV4HDR_LEN);
 	}
 
 	/* icmp */
@@ -482,7 +482,8 @@ static int setup_icmp_pkt(odp_packet_t pkt,
 	memcpy(tval_d, &tval, sizeof(uint64_t));
 
 	icmp->chksum = 0;
-	icmp->chksum = odph_chksum(icmp, args->appl.payload + ODPH_ICMPHDR_LEN);
+	icmp->chksum = ~odp_chksum_ones_comp16(icmp, args->appl.payload +
+					       ODPH_ICMPHDR_LEN);
 
 	if (pktout_cfg->bit.ipv4_chksum) {
 		odp_packet_l2_offset_set(pkt, 0);

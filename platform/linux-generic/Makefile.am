@@ -32,6 +32,7 @@ odpapiinclude_HEADERS = \
 		  include/odp/api/barrier.h \
 		  include/odp/api/buffer.h \
 		  include/odp/api/byteorder.h \
+		  include/odp/api/chksum.h \
 		  include/odp/api/classification.h \
 		  include/odp/api/compiler.h \
 		  include/odp/api/cpu.h \
@@ -45,6 +46,7 @@ odpapiinclude_HEADERS = \
 		  include/odp/api/hash.h \
 		  include/odp/api/hints.h \
 		  include/odp/api/init.h \
+		  include/odp/api/ipsec.h \
 		  include/odp/api/packet_flags.h \
 		  include/odp/api/packet.h \
 		  include/odp/api/packet_io.h \
@@ -61,6 +63,7 @@ odpapiinclude_HEADERS = \
 		  include/odp/api/spinlock_recursive.h \
 		  include/odp/api/std_clib.h \
 		  include/odp/api/std_types.h \
+		  include/odp/api/support.h \
 		  include/odp/api/sync.h \
 		  include/odp/api/system_info.h \
 		  include/odp/api/thread.h \
@@ -84,6 +87,7 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/crypto_types.h \
 		  include/odp/api/plat/event_types.h \
 		  include/odp/api/plat/init_types.h \
+		  include/odp/api/plat/ipsec_types.h \
 		  include/odp/api/plat/packet_flag_inlines.h \
 		  include/odp/api/plat/packet_flag_inlines_api.h \
 		  include/odp/api/plat/packet_inlines.h \
@@ -132,6 +136,7 @@ noinst_HEADERS = \
 		  include/odp_errno_define.h \
 		  include/odp_forward_typedefs_internal.h \
 		  include/odp_internal.h \
+		  include/odp_ipsec_internal.h \
 		  include/odp_name_table_internal.h \
 		  include/odp_packet_internal.h \
 		  include/odp_packet_io_internal.h \
@@ -169,6 +174,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_bitmap.c \
 			   odp_buffer.c \
 			   odp_byteorder.c \
+			   odp_chksum.c \
 			   odp_classification.c \
 			   odp_cpu.c \
 			   odp_cpumask.c \
@@ -179,6 +185,9 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_hash.c \
 			   odp_init.c \
 			   odp_impl.c \
+			   odp_ipsec.c \
+			   odp_ipsec_events.c \
+			   odp_ipsec_sad.c \
 			   odp_name_table.c \
 			   odp_packet.c \
 			   odp_packet_flags.c \
