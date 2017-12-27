@@ -11,10 +11,10 @@ libtestipsec_la_SOURCES = \
 	ipsec.c
 
 test_PROGRAMS = \
-	ipsec_sync$(EXEEXT) \
-	ipsec_async$(EXEEXT) \
-	ipsec_inline_in$(EXEEXT) \
-	ipsec_inline_out$(EXEEXT)
+	ipsec_sync \
+	ipsec_async \
+	ipsec_inline_in \
+	ipsec_inline_out
 
 ipsec_sync_SOURCES = ipsec_sync.c
 ipsec_async_SOURCES = ipsec_async.c
