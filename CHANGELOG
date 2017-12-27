@@ -1,3 +1,382 @@
+== OpenDataPlane (1.17.0.0)
+=== New Features
+ODP v1.17.0.0 is Tiger Moth Release Candidate 1 (RC 1). It introduces
+significant new API support as well as functional refinements that expand
+ODP offload support to cover IPsec, as well as other improvements.
+
+==== APIs
+The following new and changed APIs are included in this release:
+
+===== Event Extensions
+The ODP event model has been expanded to include new types as well as event
+subtypes. Subtypes are used to qualify an event by indicating that the event
+carries additional metadata relating to specific usage or operations.
+
+New event `ODP_EVENT_IPSEC_STATUS` (to be discussed
+below) is added. The initial subtypes defined are: `ODP_EVENT_PACKET_BASIC`,
+`ODP_EVENT_PACKET_CRYPTO`, `ODP_EVENT_PACKET_IPSEC`, and
+`ODP_EVENT_NO_SUBTYPE`, which are also discussed below.
+
+Associated with this support, new event APIs are added:
+
+* `odp_event_subtype()` extracts the `odp_event_subtype_t` from an
+`odp_event_t`.
+
+* `odp_event_types()` returns the `odp_event_type_t` and `odp_event_subtype_t`
+of an `odp_event_t` in a single call.
+
+* `odp_event_type_multi()` scans a list of `odp_event_t` objects and returns
+the number that share the same indicated `odp_event_type_t`. This allows
+multiple events to be processed by groups of the same event type.
+
+* `odp_event_filter_packet()` scans a list of `odp_event_t` objects and
+partitions them into a returned array of `odp_packet_t` objects and a remaining
+array of non-packet events.
+
+* `odp_event_free_multi()` frees multiple events in a single call.
+
+* `odp_event_free_sp()` frees multiple events originating from the same
+pool in a single call. The caller must assure that the input events are from
+the same pool.
+
+===== IPsec support
+ODP Tiger Moth introduces comprehensive protocol offload support for IPsec,
+allowing applications to leverage the IPsec acceleration capabilities of many
+SoCs. Support includes APIs for Security Association (SA) creation and
+lifecycle management, as well as IPsec packet operations for inbound (RX) and
+outbound (TX) processing. Packet operations are further divided into lookaside
+and inline support.
+
+====== Lookaside Support
+Lookaside processing enables IPsec packets to be decrypted into plain packets
+or plain packets to be encrypted into IPsec packets in a single operation under
+explicit application control. This is useful for packets that need pre- or
+post-processing, or to better fit with existing application design.
+
+Two forms of lookaside processing are provided: the `odp_ipsec_in()` and
+`odp_ipsec_out()` APIs provide synchronous decrypt and encrypt support,
+respectively. The corresponding `odp_ipsec_in_enq()` and `odp_ipsec_out_enq()`
+APIs provide these same services in asynchronous form where operations can be
+launched and completed later.
+
+====== Inline Support
+In contrast to lookaside support, IPsec inline support permits applications to
+fully leverage the offload capabilities found in many SoCs by allowing inbound
+IPsec packets to be recognized and decrypted automatically before they are
+presented to the application for processing. This is done by configuring a
+Security Association (SA) and its associated PktIO to operate in inline mode.
+
+Similarly, following output SA and PktIO configuration, the
+`odp_ipsec_out_inline()` API permits a packet to be encrypted into an IPsec
+packet and automatically scheduled for TX processing in a single
+operation. Such "fire and forget" processing enables applications to leverage
+IPsec HW support for such processing in a portable manner.
+
+Applications using IPsec inline support need only "touch" a packet once
+compared to three times when using lookaside processing, leading to greater
+processing efficiency.
+
+====== IPsec Events
+New event types and subtypes are introduced to provide support for IPsec
+processing. The `ODP_EVENT_PACKET` type has a new subtype:
+`ODP_EVENT_PACKET_IPSEC` that provides extended metadata associated with
+IPsec packets that have been processed. The new `ODP_EVENT_IPSEC_STATUS`
+event, in turn, is used to report IPsec status events such as completion
+notifications associated with `odp_ipsec_sa_disable()` calls.
+
+The `odp_ipsec_result()` API is used to obtain IPsec result metadata from
+a packet that has event subtype `ODP_EVENT_PACKET_IPSEC`, while the
+`odp_ipsec_status()` API is used to obtain IPsec status metadata from an
+`ODP_EVENT_IPSEC_STATUS` event.
+
+===== Parser APIs
+Packet parsing has been overhauled with the introduction of two new APIs:
+
+* `odp_packet_parse()`
+* `odp_packet_parse_multi()`
+
+These use an `odp_packet_parse_param_t` struct to control the type and depth
+of parsing to be performed. These routines are intended to be used to
+process packets that have been decapsulated following IPsec decryption or other
+tunneling or on IP fragments after they have been reassembled.
+
+Associated with this improved parse support, the `odp_parser_layer_t` struct
+is deprecated and replaced with a more general `odp_proto_layer_t` struct that
+is used both in PktIO configuration as well as the new parser APIs.
+
+===== Crypto AES-CTR and AES-GMAC Support
+The ODP crypto APIs are extended to provide support for AES-CTR cipher and
+AES-GMAC authentication modes, reflecting the growing availability of
+accelerated support for these.
+
+===== Crypto removal of DES-CBC
+DES-CBC is no longer considered secure and support for it is removed in ODP.
+
+===== Crypto move AAD length to sessions
+The Additional Authentication Data (AAD) length is now part of the
+`odp_crypto_session_t` rather than individual crypto operations. This provides
+better compatibility with DPDK, which made a similar API adjustment in it's
+17.08 release.
+
+===== Crypto Packet APIs
+While the `odp_crypto_operation()` API is retained for compatibility,
+new packet-oriented variants are introduced that provide additional
+capabilities and flexibility. These APIs are:
+
+* `odp_crypto_op()` Performs synchronous crypto operations on one or more
+input packets under the control of an associated `odp_crypto_packet_op_param_t`
+struct.
+
+* `odp_crypto_op_enq()` Performs asynchronous crypto operations on or or more
+input packets under the control of an associated `odp_crypto_packet_op_param_t`
+struct.
+
+While `odp_crypto_operation()` calls result in `ODP_EVENT_CRYPTO_COMPL` events
+for compatibility, the new packet-oriented APIs result in `ODP_EVENT_PACKET`
+events that carry the new event subtype `ODP_EVENT_PACKET_CRYPTO`. These
+packets contain additional metadata associated with the crypto operation.
+New APIs added for manipulating this metadata include:
+
+* `odp_crypto_packet_from_event()` converts an `odp_event_t` of type
+`ODP_EVENT_PACKET` and subtype `ODP_EVENT_PACKET_CRYPTO` to an `odp_packet_t`.
+
+* `odp_crypto_packet_to_event()` converts an `odp_packet_t` crypto packet
+back into an `odp_event_t`.
+
+* `odp_crypto_result()` extracts the `odp_crypto_packet_result_t` struct that
+contains the crypto metadata associated with an `odp_packet_t` of event
+subtype `ODP_EVENT_PACKET_CRYPTO`. This struct provides a summary bit that
+says whether the operation completed successfully as well as
+`odp_crypto_op_status_t` fields for the `cipher_status` and `auth_status` if a
+problem was detected.
+
+===== Classification Random Early Detection (RED) Support
+Random Early Detection (RED) provides a means for input HW to ensure that
+traffic is treated fairly under conditions of temporary resource overload due
+to excessive inbound traffic. ODP RED support provides the ability to measure
+and respond to resource pressure on either pools or queues, and only provides
+flexibility in how such conditions are to be processed. They can result in
+input packet drops or backpressure being indicated by transmitting pause
+frames, depending on the underlying platform capabilities.
+
+The `odp_cls_capability_t` struct returned by the `odp_cls_capability()` API
+has been expanded to cover this support.
+
+===== Time difference in nanoseconds
+The new `odp_time_diff_ns()` API permits the delta between two `odp_time_t`
+values to be computed in a single call.
+
+===== PktIO API Changes
+====== PktIO Maximum Frame Lengths
+The `odp_pktio_mtu()` API is deprecated and replaced by two new APIs:
+`odp_pktin_maxlen()` and `odp_pktout_maxlen()`. These return the maximum
+sized packets that are supported for RX and TX processing,
+respectively, on a given `odp_pktio_t`.
+
+====== PktIO settable MAC address
+The `odp_pktio_mac_addr_set()` API is added to allow setting of the MAC
+address associated with an `odp_pktio_t`. The `odp_pktio_set_op_t` field of
+the `odp_pktio_capability_t` returned by the `odp_pktio_capability()` API now
+includes the `mac_addr`` field to indicate that this `odp_ptkio_t` supports
+setting its MAC address.
+
+====== Multiple loop devices
+The reserved device name `loop` is now extended to `loopX` where X == integer
+(_e.g.,_ `loop1`, `loop2`, etc.). For compatibility, `loop` is a synonym for
+`loop0`.
+
+===== Pool API Changes
+====== Pool extent info
+The `odp_pool_info()` API is extended to return the `min_data_addr` and
+`max_data_addr` fields. These provide information about the minimum and maximum
+application-visible addresses that may be seen in objects allocated from a
+particular `odp_pool_t`. Some applications use this information to enable them
+to store buffer addresses in compressed format. For example, if the
+"span" of valid addresses is less than 4GB this allows a 64-bit buffer address
+to be stored as a 32-bit offset.
+
+Since this is purely informational, ODP implementations are under no constraint
+as to what addresses may be returned for these fields. 0 and `UNINTPTR_MAX`
+may be used if there are no limits on pool extents.
+
+====== Pool subparameter support
+The `odp_pool_param_t` structure has been expanded to provide more flexibility
+to support platforms that are able to offer multiple segment sizes within a
+single pool. This can lead to greater storage efficiency. These are called
+subparameters and implementations supporting up to 7 of these are accommodated
+with these extensions.
+
+The `odp_pool_capability_t` structure is expanded to return the number of
+subparameters supported by this implementation. The application, in turn,
+specifies its expected packet size and number distribution in the
+`odp_pool_pkt_subparam_t` structure that is part of the `odp_pool_param_t`
+used to define the characteristics of `ODP_POOL_PACKET` pools.
+
+This is fully compatible with previous packet pool support since ODP
+implementations are under no obligation to support pool subparameters and
+these, when present, are advisory in nature. They simply serve to allow the
+application to better communicate its expected packet distribution within a
+pool so that the ODP implementation may better optimize storage use in the
+pool.
+
+===== Checksum support
+Checksum processing support has been formalized with the addition of APIs for
+determining packet checksum status, controlling packet checksum processing,
+retrieving partially computed checksums on packets, and computing checksum
+partial sums for memory areas.
+
+====== Checksum status
+The APIs `odp_packet_l3_chksum_status()` and `odp_packet_l4_status()` are
+added to allow the results of packet input checksum processing to be
+queried. These APIs return an `odp_packet_chksum_status_t` enum that indicates
+whether checksum validation processing was performed and if so whether the
+layer 3 or 4 checksum was found to be valid. This is applicable to both
+normal packet input as well as those processed via IPsec.
+
+====== Checksum insertion
+PktIOs output checksum processing is configured as part of the
+`odp_pktout_config_opt_t` struct used as input to `odp_pktio_config()` API.
+These control whether L3 and/or L4 checksums are to be inserted by default
+as part of packet TX processing.
+
+Individual packets may override these defaults via the new
+`odp_packet_l3_chksum_insert()` and `odp_packet_l4_chksum_insert()` APIs. These
+take precedence over the PktIO default, allowing checksums to be inserted
+when the PktIO default is to not insert checksums or to suppress checksum
+insertion if when the PktIO default is to insert checksums.
+
+====== One's complement sums
+Two new APIs: `odp_packet_ones_comp()` and `odp_chksum_ones_comp16()` are
+added to assist in application-managed checksum processing. If an
+implementation has computed a partial checksum as part of the receive
+processing for an IP fragment, for example, then `odp_packet_ones_comp()` can
+be used to retrieve this computed value, as well as the byte range over which
+it was computed. The `odp_chksum_ones_comp16()` API, by contrast, allows the
+application to perform a 16-bit ones-complement sum over a range of in-memory
+bytes. Together these can be used to calculate IPv4, TCP, and UDP checksums.
+
+===== Packet multi-event conversion and single pool support
+New packet APIs have been added to streamline packet processing:
+
+* `odp_packet_free_sp()` is the same as `odp_packet_free_multi()` except that
+the application guarantees that all packets come from the same pool.
+
+* `odp_packet_from_event_multi()` allows multiple events to be converted
+from `odp_event_t` to `odp_packet_t` objects in a single call. The caller
+guarantees that all input `odp_event_t` objects are of type `ODP_EVENT_PACKET`.
+
+* `odp_packet_to_event_multi()` converts multiple `odp_packet_t` objects to
+corresponding `odp_event_t` objects in a single call.
+
+===== Shared Memory API changes
+Several changes have been made to the ODP shared memory APIs:
+
+* The `name` field used as input to `odp_shm_reserve()` is now optional.
+If specified as `NULL` the shared memory area is anonymous and cannot be
+looked up with `odp_shm_lookup()`. There is also no requirement that names be
+unique. Duplicate names result in indeterminate output from `odp_shm_lookup()`.
+
+* The `odp_shm_info_t` now includes the `page_size` of the shared memory block
+and it's (optional) name.
+
+* `odp_shm_print()` API is added to print implementation-defined information
+associated with the `odp_shm_t` to the ODP log for diagnostic purposes.
+
+===== Add support for non-blocking Queues
+New queue attributes are introduced to characterize queue behavior as
+blocking or non-blocking. A blocking queue may stall other threads if a thread
+is interrupted or suspending during an enqueue or dequeue operation.
+Nonblocking queues may be either lock free or wait free and provide
+progress and fairness guarantees to all threads regardless of
+interruptions or stalls on the part of threads performing queue operations.
+
+The various `odp_nonblocking_t` attributes available are returned by the
+`odp_queue_capability()` API for both plain and scheduled queues and are in
+turn requested as part of the `odp_queue_param_t` struct passed to the
+`odp_queue_create()` API. The intent is to allow applications that have
+realtime response requirements to better express these needs and utilize
+platform-specific capabilities in this area.
+
+===== Scheduler ordered lock API changes
+The following changes have been made to the scheduler APIs:
+
+* Documentation clarifies that an ordered context may only hold one ordered
+lock at a time. Results are undefined if a second ordered lock is attempted to
+be acquired while already holding one.
+
+* The `odp_schedule_order_unlock_lock()` API is added to permit an ordered
+context to switch from one ordered lock to another in a single operation.
+
+===== Timer Capabilities
+The `odp_timer_capability()` API is added to return an `odp_timer_capability_t`
+struct that details platform-specific timer capabilities for application use.
+The only capability currently defined is `highest_res_ns`, which indicates the
+highest supported resolution supported by a timer. This is the minimum valid
+value for the `res_ns` timer pool parameter.
+
+=== Scalable Scheduler
+The `odp-linux` reference implementation adds a new _scalable scheduler_ to
+the existing default, strict priority, and iquery schedulers. This is enabled
+by:
+
+`./configure --enable-schedule-scalable`
+
+The scalable scheduler is designed to offer superior scalability in many core
+environments, especially on AArch64 platforms.
+
+=== Miscellaneous Fixes and Improvements
+The following miscellaneous improvements have been made to the `linux-generic`
+reference implementation of ODP.
+
+==== Additional packet inline functions
+When compiling with `--enable-abi-compat=no` the following additional packet
+functions are inlined:
+
+* `odp_packet_l2_offset()`
+* `odp_packet_l2_ptr()`
+* `odp_packet_l3_offset()`
+* `odp_packet_l3_ptr()`
+* `odp_packet_l4_offset()`
+* `odp_packet_l4_ptr()`
+
+==== Dependencies
+The ODP test suite now automatically skips C++ tests if no C++ compiler
+is available.
+
+The odp_pktio_ordered tests are only performed if PCAP is available.
+
+The DEPENDENCIES file has been updated to reflect build/test requirements for
+running under Red Hat Linux distributions.
+
+==== DPDK 17.08 Support
+PktIO DPDK support has been upgraded to DPDK 17.08.
+
+=== Test/Example improvements
+=== l2fwd Example
+A verbose option is added to provide more detail on test runs.
+
+=== ODP generator
+Numerous performance improvements have been made that results in significantly
+better I/O rates. This includes a configuration option to control checksum
+usage.
+
+=== Bug Fixes
+==== https://bugs.linaro.org/show_bug.cgi?id=3465[Bug 3465]
+CID 1461688: odp_pool_create: Dereference before null check
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3466[Bug 3466]
+CID 1396968: buggy check
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3491[Bug 3491]
+l2fwd segfaults on api-next with dpdk checksum insertion override
+
+=== Known Issues
+==== https://bugs.linaro.org/show_bug.cgi?id=3210[Bug 3210]
+packet header parsing routines should verify header checksums
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3517[Bug 3517]
+timer test might fail
+
 == OpenDataPlane (1.16.0.0)
 === New Features
 ODP v1.16.0.0 is the final preview release before the official release of
