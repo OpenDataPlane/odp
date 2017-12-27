@@ -962,8 +962,8 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	case ODP_AUTH_ALG_MD5_96:
 		/* Fixed digest tag length with deprecated algo */
 		session->p.auth_digest_len = 96 / 8;
-		/* Fallthrough */
 #endif
+		/* Fallthrough */
 	case ODP_AUTH_ALG_MD5_HMAC:
 		rc = process_auth_param(session, 16, EVP_md5());
 		break;
@@ -974,8 +974,8 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	case ODP_AUTH_ALG_SHA256_128:
 		/* Fixed digest tag length with deprecated algo */
 		session->p.auth_digest_len = 128 / 8;
-		/* Fallthrough */
 #endif
+		/* Fallthrough */
 	case ODP_AUTH_ALG_SHA256_HMAC:
 		rc = process_auth_param(session, 32, EVP_sha256());
 		break;
@@ -988,8 +988,8 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 			aes_gcm = 1;
 		/* Fixed digest tag length with deprecated algo */
 		session->p.auth_digest_len = 16;
-		/* Fallthrough */
 #endif
+		/* Fallthrough */
 	case ODP_AUTH_ALG_AES_GCM:
 		/* AES-GCM requires to do both auth and
 		 * cipher at the same time */
