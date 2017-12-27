@@ -196,7 +196,6 @@ uint32_t _odp_ipsec_cipher_iv_len(odp_cipher_alg_t cipher)
 	switch (cipher) {
 	case ODP_CIPHER_ALG_NULL:
 		return 0;
-	case ODP_CIPHER_ALG_DES:
 	case ODP_CIPHER_ALG_3DES_CBC:
 		return 8;
 #if ODP_DEPRECATED_API
@@ -366,7 +365,6 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->esp_iv_len = 0;
 		ipsec_sa->esp_block_len = 1;
 		break;
-	case ODP_CIPHER_ALG_DES:
 	case ODP_CIPHER_ALG_3DES_CBC:
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 8;
