@@ -49,15 +49,6 @@ This function should be called during pktio initialization.
 **/
 int pktio_classifier_init(pktio_entry_t *pktio);
 
-/**
-@internal
-Flow Signature Calculation
-
-This function calculates the Flow Signature for a packet based on
-CoS and updates in Packet Meta Data
-**/
-int update_flow_signature(uint8_t *pkt_addr, cos_t *cos);
-
 #ifdef __cplusplus
 }
 #endif
