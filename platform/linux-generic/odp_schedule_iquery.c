@@ -24,6 +24,7 @@
 #include <odp/api/thrmask.h>
 #include <odp/api/packet_io.h>
 #include <odp_config_internal.h>
+#include <odp_timer_internal.h>
 
 /* Should remove this dependency */
 #include <odp_queue_internal.h>
@@ -570,7 +571,10 @@ static inline void free_pktio_cmd(pktio_cmd_t *cmd)
 	odp_rwlock_write_unlock(&sched->pktio_poll.lock);
 }
 
-static void schedule_pktio_start(int pktio, int count, int pktin[])
+static void schedule_pktio_start(int pktio,
+				 int count,
+				 int pktin[],
+				 odp_queue_t odpq[] ODP_UNUSED)
 {
 	int i, index;
 	pktio_cmd_t *cmd;
@@ -747,6 +751,8 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 	odp_time_t next, wtime;
 
 	while (1) {
+		timer_run();
+
 		count = do_schedule(out_queue, out_ev, max_num);
 
 		if (count)
@@ -1144,7 +1150,7 @@ static inline void ordered_stash_release(void)
 static inline void release_ordered(void)
 {
 	uint32_t qi;
-	unsigned i;
+	uint32_t i;
 
 	qi = thread_local.ordered.src_queue;
 
@@ -1246,7 +1252,7 @@ static void order_unlock(void)
 {
 }
 
-static void schedule_order_lock(unsigned lock_index)
+static void schedule_order_lock(uint32_t lock_index)
 {
 	odp_atomic_u64_t *ord_lock;
 	uint32_t queue_index;
@@ -1273,7 +1279,7 @@ static void schedule_order_lock(unsigned lock_index)
 	}
 }
 
-static void schedule_order_unlock(unsigned lock_index)
+static void schedule_order_unlock(uint32_t lock_index)
 {
 	odp_atomic_u64_t *ord_lock;
 	uint32_t queue_index;
@@ -1290,7 +1296,14 @@ static void schedule_order_unlock(unsigned lock_index)
 	odp_atomic_store_rel_u64(ord_lock, thread_local.ordered.ctx + 1);
 }
 
-static unsigned schedule_max_ordered_locks(void)
+static void schedule_order_unlock_lock(uint32_t unlock_index,
+				       uint32_t lock_index)
+{
+	schedule_order_unlock(unlock_index);
+	schedule_order_lock(lock_index);
+}
+
+static uint32_t schedule_max_ordered_locks(void)
 {
 	return CONFIG_QUEUE_MAX_ORD_LOCKS;
 }
@@ -1362,7 +1375,8 @@ const schedule_api_t schedule_iquery_api = {
 	.schedule_group_thrmask   = schedule_group_thrmask,
 	.schedule_group_info      = schedule_group_info,
 	.schedule_order_lock      = schedule_order_lock,
-	.schedule_order_unlock    = schedule_order_unlock
+	.schedule_order_unlock    = schedule_order_unlock,
+	.schedule_order_unlock_lock    = schedule_order_unlock_lock
 };
 
 static void thread_set_interest(sched_thread_local_t *thread,

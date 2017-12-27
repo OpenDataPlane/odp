@@ -320,7 +320,7 @@ static inline int verify_pmr_custom_frame(const uint8_t *pkt_addr,
 	uint32_t offset = term_value->offset;
 	uint32_t val_sz = term_value->val_sz;
 
-	ODP_ASSERT(val_sz <= ODP_PMR_TERM_BYTES_MAX);
+	ODP_ASSERT(val_sz <= CLS_PMR_TERM_BYTES_MAX);
 
 	if (packet_len(pkt_hdr) <= offset + val_sz)
 		return 0;

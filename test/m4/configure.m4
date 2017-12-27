@@ -10,12 +10,15 @@ AC_CONFIG_FILES([test/Makefile
 		 test/validation/api/atomic/Makefile
 		 test/validation/api/barrier/Makefile
 		 test/validation/api/buffer/Makefile
+		 test/validation/api/chksum/Makefile
 		 test/validation/api/classification/Makefile
 		 test/validation/api/cpumask/Makefile
 		 test/validation/api/crypto/Makefile
 		 test/validation/api/errno/Makefile
+		 test/validation/api/event/Makefile
 		 test/validation/api/hash/Makefile
 		 test/validation/api/init/Makefile
+		 test/validation/api/ipsec/Makefile
 		 test/validation/api/lock/Makefile
 		 test/validation/api/Makefile
 		 test/validation/api/packet/Makefile

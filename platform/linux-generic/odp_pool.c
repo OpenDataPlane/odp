@@ -380,6 +380,11 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 		break;
 
 	case ODP_POOL_PACKET:
+		if (params->pkt.headroom > CONFIG_PACKET_HEADROOM) {
+			ODP_ERR("Packet headroom size not supported.");
+			return ODP_POOL_INVALID;
+		}
+
 		seg_len = CONFIG_PACKET_MAX_SEG_LEN;
 		max_len = CONFIG_PACKET_MAX_LEN;
 
@@ -684,6 +689,9 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 	info->name = pool->name;
 	info->params = pool->params;
 
+	if (pool->params.type == ODP_POOL_PACKET)
+		info->pkt.max_num = pool->num;
+
 	return 0;
 }
 
@@ -905,6 +913,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	capa->pkt.max_len          = CONFIG_PACKET_MAX_LEN;
 	capa->pkt.max_num	   = CONFIG_POOL_MAX_NUM;
 	capa->pkt.min_headroom     = CONFIG_PACKET_HEADROOM;
+	capa->pkt.max_headroom     = CONFIG_PACKET_HEADROOM;
 	capa->pkt.min_tailroom     = CONFIG_PACKET_TAILROOM;
 	capa->pkt.max_segs_per_pkt = CONFIG_PACKET_MAX_SEGS;
 	capa->pkt.min_seg_len      = CONFIG_PACKET_SEG_LEN_MIN;
@@ -963,6 +972,7 @@ odp_pool_t odp_buffer_pool(odp_buffer_t buf)
 void odp_pool_param_init(odp_pool_param_t *params)
 {
 	memset(params, 0, sizeof(odp_pool_param_t));
+	params->pkt.headroom = CONFIG_PACKET_HEADROOM;
 }
 
 uint64_t odp_pool_to_u64(odp_pool_t hdl)

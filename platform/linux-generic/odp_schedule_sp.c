@@ -17,6 +17,7 @@
 #include <odp_align_internal.h>
 #include <odp_config_internal.h>
 #include <odp_ring_internal.h>
+#include <odp_timer_internal.h>
 
 #define NUM_THREAD        ODP_THREAD_COUNT_MAX
 #define NUM_QUEUE         ODP_CONFIG_QUEUES
@@ -242,7 +243,7 @@ static int term_local(void)
 	return 0;
 }
 
-static unsigned max_ordered_locks(void)
+static uint32_t max_ordered_locks(void)
 {
 	return NUM_ORDERED_LOCKS;
 }
@@ -423,7 +424,10 @@ static int ord_enq_multi(queue_t q_int, void *buf_hdr[], int num,
 	return 0;
 }
 
-static void pktio_start(int pktio_index, int num, int pktin_idx[])
+static void pktio_start(int pktio_index,
+			int num,
+			int pktin_idx[],
+			odp_queue_t odpq[] ODP_UNUSED)
 {
 	int i;
 	sched_cmd_t *cmd;
@@ -513,6 +517,8 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 		sched_cmd_t *cmd;
 		uint32_t qi;
 		int num;
+
+		timer_run();
 
 		cmd = sched_cmd();
 
@@ -806,13 +812,20 @@ static int schedule_group_info(odp_schedule_group_t group,
 	return 0;
 }
 
-static void schedule_order_lock(unsigned lock_index)
+static void schedule_order_lock(uint32_t lock_index)
 {
 	(void)lock_index;
 }
 
-static void schedule_order_unlock(unsigned lock_index)
+static void schedule_order_unlock(uint32_t lock_index)
 {
+	(void)lock_index;
+}
+
+static void schedule_order_unlock_lock(uint32_t unlock_index,
+				       uint32_t lock_index)
+{
+	(void)unlock_index;
 	(void)lock_index;
 }
 
@@ -865,5 +878,6 @@ const schedule_api_t schedule_sp_api = {
 	.schedule_group_thrmask   = schedule_group_thrmask,
 	.schedule_group_info      = schedule_group_info,
 	.schedule_order_lock      = schedule_order_lock,
-	.schedule_order_unlock    = schedule_order_unlock
+	.schedule_order_unlock    = schedule_order_unlock,
+	.schedule_order_unlock_lock	= schedule_order_unlock_lock
 };

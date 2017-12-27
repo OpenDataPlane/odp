@@ -33,6 +33,7 @@
 #define APPL_MODE_UDP    0			/**< UDP mode */
 #define APPL_MODE_PING   1			/**< ping mode */
 #define APPL_MODE_RCV    2			/**< receive mode */
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 #define PING_THR_TX 0
 #define PING_THR_RX 1
@@ -369,7 +370,7 @@ static int setup_udp_pkt(odp_packet_t pkt, odp_pktout_config_opt_t *pktout_cfg,
 	ip->id = odp_cpu_to_be_16(seq);
 	if (!pktout_cfg->bit.ipv4_chksum) {
 		ip->chksum = 0;
-		ip->chksum = odph_chksum(ip, ODPH_IPV4HDR_LEN);
+		ip->chksum = ~odp_chksum_ones_comp16(ip, ODPH_IPV4HDR_LEN);
 	}
 
 	if (pktout_cfg->bit.ipv4_chksum || pktout_cfg->bit.udp_chksum) {
@@ -469,7 +470,7 @@ static int setup_icmp_pkt(odp_packet_t pkt,
 	ip->id = odp_cpu_to_be_16(seq);
 	if (!pktout_cfg->bit.ipv4_chksum) {
 		ip->chksum = 0;
-		ip->chksum = odph_chksum(ip, ODPH_IPV4HDR_LEN);
+		ip->chksum = ~odp_chksum_ones_comp16(ip, ODPH_IPV4HDR_LEN);
 	}
 
 	/* icmp */
@@ -482,7 +483,8 @@ static int setup_icmp_pkt(odp_packet_t pkt,
 	memcpy(tval_d, &tval, sizeof(uint64_t));
 
 	icmp->chksum = 0;
-	icmp->chksum = odph_chksum(icmp, args->appl.payload + ODPH_ICMPHDR_LEN);
+	icmp->chksum = ~odp_chksum_ones_comp16(icmp, args->appl.payload +
+					       ODPH_ICMPHDR_LEN);
 
 	if (pktout_cfg->bit.ipv4_chksum) {
 		odp_packet_l2_offset_set(pkt, 0);
@@ -542,6 +544,10 @@ static int create_pktio(const char *dev, odp_pool_t pool,
 		itf->config.pktin.bit.drop_udp_err =
 			capa.config.pktin.bit.drop_udp_err;
 
+		itf->config.pktout.bit.ipv4_chksum_ena =
+			capa.config.pktout.bit.ipv4_chksum_ena;
+		itf->config.pktout.bit.udp_chksum_ena =
+			capa.config.pktout.bit.udp_chksum_ena;
 		itf->config.pktout.bit.ipv4_chksum =
 			capa.config.pktout.bit.ipv4_chksum;
 		itf->config.pktout.bit.udp_chksum =
@@ -549,6 +555,8 @@ static int create_pktio(const char *dev, odp_pool_t pool,
 	} else { /* explicit disable */
 		itf->config.pktin.bit.ipv4_chksum = 0;
 		itf->config.pktin.bit.udp_chksum = 0;
+		itf->config.pktout.bit.ipv4_chksum_ena = 0;
+		itf->config.pktout.bit.udp_chksum_ena = 0;
 		itf->config.pktout.bit.ipv4_chksum = 0;
 		itf->config.pktout.bit.udp_chksum = 0;
 	}
@@ -819,11 +827,11 @@ static int gen_recv_thread(void *arg)
 	odp_packet_t pkts[MAX_RX_BURST], pkt;
 	odp_event_t events[MAX_RX_BURST];
 	int pkt_cnt, ev_cnt, i;
-	interface_t *itfs, *itf;
+	odp_packet_chksum_status_t csum_status;
 
+	(void)arg;
 	thr = odp_thread_id();
 	thr_args = (thread_args_t *)arg;
-	itfs = thr_args->rx.ifs;
 
 	printf("  [%02i] created mode: RECEIVE\n", thr);
 	odp_barrier_wait(&barrier);
@@ -839,21 +847,14 @@ static int gen_recv_thread(void *arg)
 			continue;
 		for (i = 0, pkt_cnt = 0; i < ev_cnt; i++) {
 			pkt = odp_packet_from_event(events[i]);
-			itf = &itfs[odp_pktio_index(odp_packet_input(pkt))];
 
-			if (odp_packet_has_ipv4(pkt)) {
-				if (itf->config.pktin.bit.ipv4_chksum) {
-					if (odp_packet_has_l3_error(pkt))
-						printf("HW detected L3 error\n");
-				}
-			}
+			csum_status = odp_packet_l3_chksum_status(pkt);
+			if (csum_status == ODP_PACKET_CHKSUM_BAD)
+				printf("L3 checksum error detected.\n");
 
-			if (odp_packet_has_udp(pkt)) {
-				if (itf->config.pktin.bit.udp_chksum) {
-					if (odp_packet_has_l4_error(pkt))
-						printf("HW detected L4 error\n");
-				}
-			}
+			csum_status = odp_packet_l4_chksum_status(pkt);
+			if (csum_status == ODP_PACKET_CHKSUM_BAD)
+				printf("L4 checksum error detected.\n");
 
 			/* Drop packets with errors */
 			if (odp_unlikely(odp_packet_has_error(pkt))) {
@@ -1011,6 +1012,7 @@ int main(int argc, char *argv[])
 	interface_t *ifs;
 	odp_instance_t instance;
 	odph_odpthread_params_t thr_params;
+	odp_timer_capability_t timer_capa;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, NULL, NULL)) {
@@ -1097,7 +1099,12 @@ int main(int argc, char *argv[])
 	odp_pool_print(pool);
 
 	/* Create timer pool */
-	tparams.res_ns = 1 * ODP_TIME_MSEC_IN_NS;
+	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa)) {
+		EXAMPLE_ERR("Error: get timer capacity failed.\n");
+		exit(EXIT_FAILURE);
+	}
+	tparams.res_ns = MAX(1 * ODP_TIME_MSEC_IN_NS,
+			     timer_capa.highest_res_ns);
 	tparams.min_tmo = 0;
 	tparams.max_tmo = 10000 * ODP_TIME_SEC_IN_NS;
 	tparams.num_timers = num_workers; /* One timer per worker */

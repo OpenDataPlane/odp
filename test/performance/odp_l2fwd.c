@@ -92,6 +92,7 @@ static inline int sched_mode(pktin_mode_t in_mode)
  * Parsed command line application arguments
  */
 typedef struct {
+	int extra_check;        /**< Some extra checks have been enabled */
 	int cpu_count;
 	int if_count;		/**< Number of interfaces to be used */
 	int addr_count;		/**< Number of dst addresses to be used */
@@ -106,8 +107,10 @@ typedef struct {
 	int dst_change;		/**< Change destination eth addresses */
 	int src_change;		/**< Change source eth addresses */
 	int error_check;        /**< Check packet errors */
+	int chksum;             /**< Checksum offload */
 	int sched_mode;         /**< Scheduler mode */
 	int num_groups;         /**< Number of scheduling groups */
+	int verbose;		/**< Verbose output */
 } appl_args_t;
 
 static int exit_threads;	/**< Break workers loop if set to 1 */
@@ -292,6 +295,18 @@ static inline int event_queue_send(odp_queue_t queue, odp_packet_t *pkt_tbl,
 	return sent;
 }
 
+static inline void chksum_insert(odp_packet_t *pkt_tbl, int pkts)
+{
+	odp_packet_t pkt;
+	int i;
+
+	for (i = 0; i < pkts; i++) {
+		pkt = pkt_tbl[i];
+		odp_packet_l3_chksum_insert(pkt, 1);
+		odp_packet_l4_chksum_insert(pkt, 1);
+	}
+}
+
 /**
  * Packet IO worker thread using scheduled queues
  *
@@ -365,18 +380,23 @@ static int run_worker_sched_mode(void *arg)
 		for (i = 0; i < pkts; i++)
 			pkt_tbl[i] = odp_packet_from_event(ev_tbl[i]);
 
-		if (gbl_args->appl.error_check) {
-			int rx_drops;
+		if (odp_unlikely(gbl_args->appl.extra_check)) {
+			if (gbl_args->appl.chksum)
+				chksum_insert(pkt_tbl, pkts);
 
-			/* Drop packets with errors */
-			rx_drops = drop_err_pkts(pkt_tbl, pkts);
+			if (gbl_args->appl.error_check) {
+				int rx_drops;
 
-			if (odp_unlikely(rx_drops)) {
-				stats->s.rx_drops += rx_drops;
-				if (pkts == rx_drops)
-					continue;
+				/* Drop packets with errors */
+				rx_drops = drop_err_pkts(pkt_tbl, pkts);
 
-				pkts -= rx_drops;
+				if (odp_unlikely(rx_drops)) {
+					stats->s.rx_drops += rx_drops;
+					if (pkts == rx_drops)
+						continue;
+
+					pkts -= rx_drops;
+				}
 			}
 		}
 
@@ -486,18 +506,23 @@ static int run_worker_plain_queue_mode(void *arg)
 		for (i = 0; i < pkts; i++)
 			pkt_tbl[i] = odp_packet_from_event(event[i]);
 
-		if (gbl_args->appl.error_check) {
-			int rx_drops;
+		if (odp_unlikely(gbl_args->appl.extra_check)) {
+			if (gbl_args->appl.chksum)
+				chksum_insert(pkt_tbl, pkts);
 
-			/* Drop packets with errors */
-			rx_drops = drop_err_pkts(pkt_tbl, pkts);
+			if (gbl_args->appl.error_check) {
+				int rx_drops;
 
-			if (odp_unlikely(rx_drops)) {
-				stats->s.rx_drops += rx_drops;
-				if (pkts == rx_drops)
-					continue;
+				/* Drop packets with errors */
+				rx_drops = drop_err_pkts(pkt_tbl, pkts);
 
-				pkts -= rx_drops;
+				if (odp_unlikely(rx_drops)) {
+					stats->s.rx_drops += rx_drops;
+					if (pkts == rx_drops)
+						continue;
+
+					pkts -= rx_drops;
+				}
 			}
 		}
 
@@ -604,18 +629,23 @@ static int run_worker_direct_mode(void *arg)
 		if (odp_unlikely(pkts <= 0))
 			continue;
 
-		if (gbl_args->appl.error_check) {
-			int rx_drops;
+		if (odp_unlikely(gbl_args->appl.extra_check)) {
+			if (gbl_args->appl.chksum)
+				chksum_insert(pkt_tbl, pkts);
 
-			/* Drop packets with errors */
-			rx_drops = drop_err_pkts(pkt_tbl, pkts);
+			if (gbl_args->appl.error_check) {
+				int rx_drops;
 
-			if (odp_unlikely(rx_drops)) {
-				stats->s.rx_drops += rx_drops;
-				if (pkts == rx_drops)
-					continue;
+				/* Drop packets with errors */
+				rx_drops = drop_err_pkts(pkt_tbl, pkts);
 
-				pkts -= rx_drops;
+				if (odp_unlikely(rx_drops)) {
+					stats->s.rx_drops += rx_drops;
+					if (pkts == rx_drops)
+						continue;
+
+					pkts -= rx_drops;
+				}
 			}
 		}
 
@@ -697,15 +727,26 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	printf("created pktio %" PRIu64 ", dev: %s, drv: %s\n",
 	       odp_pktio_to_u64(pktio), dev, info.drv_name);
 
+	if (gbl_args->appl.verbose)
+		odp_pktio_print(pktio);
+
 	if (odp_pktio_capability(pktio, &capa)) {
 		LOG_ERR("Error: capability query failed %s\n", dev);
 		return -1;
 	}
 
 	odp_pktio_config_init(&config);
-	config.parser.layer = gbl_args->appl.error_check ?
-			ODP_PKTIO_PARSER_LAYER_ALL :
-			ODP_PKTIO_PARSER_LAYER_NONE;
+	config.parser.layer = gbl_args->appl.extra_check ?
+			ODP_PROTO_LAYER_ALL :
+			ODP_PROTO_LAYER_NONE;
+
+	if (gbl_args->appl.chksum) {
+		printf("Checksum offload enabled\n");
+		config.pktout.bit.ipv4_chksum_ena = 1;
+		config.pktout.bit.udp_chksum_ena  = 1;
+		config.pktout.bit.tcp_chksum_ena  = 1;
+	}
+
 	odp_pktio_config(pktio, &config);
 
 	odp_pktin_queue_param_init(&pktin_param);
@@ -1128,9 +1169,12 @@ static void usage(char *progname)
 	       "                          Requires also the -d flag to be set\n"
 	       "  -e, --error_check <arg> 0: Don't check packet errors (default)\n"
 	       "                          1: Check packet errors\n"
+	       "  -k, --chksum <arg>      0: Don't use checksum offload (default)\n"
+	       "                          1: Use checksum offload\n"
 	       "  -g, --groups <num>      Number of groups to use: 0 ... num\n"
 	       "                          0: SCHED_GROUP_ALL (default)\n"
 	       "                          num: must not exceed number of interfaces or workers\n"
+	       "  -v, --verbose           Verbose output.\n"
 	       "  -h, --help              Display help and exit.\n\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
 	    );
@@ -1162,12 +1206,14 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"dst_change", required_argument, NULL, 'd'},
 		{"src_change", required_argument, NULL, 's'},
 		{"error_check", required_argument, NULL, 'e'},
+		{"chksum", required_argument, NULL, 'k'},
 		{"groups", required_argument, NULL, 'g'},
+		{"verbose", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts =  "+c:+t:+a:i:m:o:r:d:s:e:g:h";
+	static const char *shortopts =  "+c:+t:+a:i:m:o:r:d:s:e:k:g:vh";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	odph_parse_options(argc, argv, shortopts, longopts);
@@ -1178,6 +1224,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->src_change = 1; /* change eth src address by default */
 	appl_args->num_groups = 0; /* use default group */
 	appl_args->error_check = 0; /* don't check packet errors by default */
+	appl_args->verbose = 0;
+	appl_args->chksum = 0; /* don't use checksum offload by default */
 
 	opterr = 0; /* do not issue errors on helper options */
 
@@ -1302,8 +1350,14 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'e':
 			appl_args->error_check = atoi(optarg);
 			break;
+		case 'k':
+			appl_args->chksum = atoi(optarg);
+			break;
 		case 'g':
 			appl_args->num_groups = atoi(optarg);
+			break;
+		case 'v':
+			appl_args->verbose = 1;
 			break;
 		case 'h':
 			usage(argv[0]);
@@ -1325,6 +1379,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
+
+	appl_args->extra_check = appl_args->error_check || appl_args->chksum;
 
 	optind = 1;		/* reset 'extern optind' from the getopt lib */
 }
@@ -1421,13 +1477,23 @@ int main(int argc, char *argv[])
 	odp_instance_t instance;
 	int num_groups;
 	odp_schedule_group_t group[MAX_PKTIOS];
+	odp_init_t init;
+
+	odp_init_param_init(&init);
+
+	/* List features not to be used (may optimize performance) */
+	init.not_used.feat.cls    = 1;
+	init.not_used.feat.crypto = 1;
+	init.not_used.feat.ipsec  = 1;
+	init.not_used.feat.timer  = 1;
+	init.not_used.feat.tm     = 1;
 
 	/* Signal handler has to be registered before global init in case ODP
 	 * implementation creates internal threads/processes. */
 	signal(SIGINT, sig_handler);
 
 	/* Init ODP before calling anything else */
-	if (odp_init_global(&instance, NULL, NULL)) {
+	if (odp_init_global(&instance, &init, NULL)) {
 		LOG_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}

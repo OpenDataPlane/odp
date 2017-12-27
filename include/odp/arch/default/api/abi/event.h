@@ -29,8 +29,15 @@ typedef enum odp_event_type_t {
 	ODP_EVENT_PACKET       = 2,
 	ODP_EVENT_TIMEOUT      = 3,
 	ODP_EVENT_CRYPTO_COMPL = 4,
-	ODP_EVENT_IPSEC_RESULT = 5
+	ODP_EVENT_IPSEC_STATUS = 5
 } odp_event_type_t;
+
+typedef enum odp_event_subtype_t {
+	ODP_EVENT_NO_SUBTYPE   = 0,
+	ODP_EVENT_PACKET_BASIC = 1,
+	ODP_EVENT_PACKET_CRYPTO = 2,
+	ODP_EVENT_PACKET_IPSEC = 3
+} odp_event_subtype_t;
 
 /**
  * @}

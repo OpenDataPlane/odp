@@ -24,6 +24,7 @@ extern "C" {
 #include <odp/api/compiler.h>
 #include <odp/api/align.h>
 #include <odp/api/hash.h>
+#include <odp/api/chksum.h>
 #include <odp/api/hints.h>
 #include <odp/api/debug.h>
 #include <odp/api/byteorder.h>
@@ -59,6 +60,8 @@ extern "C" {
 #include <odp/api/spinlock_recursive.h>
 #include <odp/api/rwlock_recursive.h>
 #include <odp/api/std_clib.h>
+#include <odp/api/support.h>
+#include <odp/api/ipsec.h>
 
 #ifdef __cplusplus
 }

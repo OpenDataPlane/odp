@@ -468,9 +468,11 @@ int odp_pktio_start(odp_pktio_t hdl)
 		unsigned i;
 		unsigned num = entry->s.num_in_queue;
 		int index[num];
+		odp_queue_t odpq[num];
 
 		for (i = 0; i < num; i++) {
 			index[i] = i;
+			odpq[i] = entry->s.in_queue[i].queue;
 
 			if (entry->s.in_queue[i].queue == ODP_QUEUE_INVALID) {
 				ODP_ERR("No input queue\n");
@@ -478,7 +480,7 @@ int odp_pktio_start(odp_pktio_t hdl)
 			}
 		}
 
-		sched_fn->pktio_start(pktio_to_id(hdl), num, index);
+		sched_fn->pktio_start(pktio_to_id(hdl), num, index, odpq);
 	}
 
 	return res;
@@ -667,6 +669,52 @@ static int pktin_deq_multi(queue_t q_int, odp_buffer_hdr_t *buf_hdr[], int num)
 	return nbr;
 }
 
+int sched_cb_pktin_poll_one(int pktio_index,
+			    int rx_queue,
+			    odp_event_t evt_tbl[QUEUE_MULTI_MAX])
+{
+	int num_rx, num_pkts, i;
+	pktio_entry_t *entry = pktio_entry_by_index(pktio_index);
+	odp_packet_t pkt;
+	odp_packet_hdr_t *pkt_hdr;
+	odp_buffer_hdr_t *buf_hdr;
+	odp_packet_t packets[QUEUE_MULTI_MAX];
+	queue_t queue;
+
+	if (odp_unlikely(entry->s.state != PKTIO_STATE_STARTED)) {
+		if (entry->s.state < PKTIO_STATE_ACTIVE ||
+		    entry->s.state == PKTIO_STATE_STOP_PENDING)
+			return -1;
+
+		ODP_DBG("interface not started\n");
+		return 0;
+	}
+
+	ODP_ASSERT((unsigned)rx_queue < entry->s.num_in_queue);
+	num_pkts = entry->s.ops->recv(entry, rx_queue,
+				      packets, QUEUE_MULTI_MAX);
+
+	num_rx = 0;
+	for (i = 0; i < num_pkts; i++) {
+		pkt = packets[i];
+		pkt_hdr = odp_packet_hdr(pkt);
+		if (odp_unlikely(pkt_hdr->p.input_flags.dst_queue)) {
+			queue = pkt_hdr->dst_queue;
+			buf_hdr = packet_to_buf_hdr(pkt);
+			if (queue_fn->enq_multi(queue, &buf_hdr, 1) < 0) {
+				/* Queue full? */
+				odp_packet_free(pkt);
+				__atomic_fetch_add(&entry->s.stats.in_discards,
+						   1,
+						   __ATOMIC_RELAXED);
+			}
+		} else {
+			evt_tbl[num_rx++] = odp_packet_to_event(pkt);
+		}
+	}
+	return num_rx;
+}
+
 int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 {
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
@@ -729,7 +777,7 @@ void sched_cb_pktio_stop_finalize(int pktio_index)
 	unlock_entry(entry);
 }
 
-uint32_t odp_pktio_mtu(odp_pktio_t hdl)
+static inline uint32_t pktio_mtu(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
 	uint32_t ret = 0;
@@ -753,6 +801,21 @@ uint32_t odp_pktio_mtu(odp_pktio_t hdl)
 
 	unlock_entry(entry);
 	return ret;
+}
+
+uint32_t ODP_DEPRECATE(odp_pktio_mtu)(odp_pktio_t pktio)
+{
+	return pktio_mtu(pktio);
+}
+
+uint32_t odp_pktin_maxlen(odp_pktio_t pktio)
+{
+	return pktio_mtu(pktio);
+}
+
+uint32_t odp_pktout_maxlen(odp_pktio_t pktio)
+{
+	return pktio_mtu(pktio);
 }
 
 int odp_pktio_promisc_mode_set(odp_pktio_t hdl, odp_bool_t enable)
@@ -846,6 +909,42 @@ int odp_pktio_mac_addr(odp_pktio_t hdl, void *mac_addr, int addr_size)
 	return ret;
 }
 
+int odp_pktio_mac_addr_set(odp_pktio_t hdl, const void *mac_addr, int addr_size)
+{
+	pktio_entry_t *entry;
+	int ret = -1;
+
+	if (addr_size < ETH_ALEN) {
+		/* Input buffer too small */
+		return -1;
+	}
+
+	entry = get_pktio_entry(hdl);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", hdl);
+		return -1;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_DBG("already freed pktio\n");
+		return -1;
+	}
+
+	if (entry->s.state == PKTIO_STATE_STARTED) {
+		unlock_entry(entry);
+		return -1;
+	}
+
+	if (entry->s.ops->mac_set)
+		ret = entry->s.ops->mac_set(entry, mac_addr);
+
+	unlock_entry(entry);
+	return ret;
+}
+
 int odp_pktio_link_status(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
@@ -899,7 +998,7 @@ void odp_pktio_config_init(odp_pktio_config_t *config)
 {
 	memset(config, 0, sizeof(odp_pktio_config_t));
 
-	config->parser.layer = ODP_PKTIO_PARSER_LAYER_ALL;
+	config->parser.layer = ODP_PROTO_LAYER_ALL;
 }
 
 int odp_pktio_info(odp_pktio_t hdl, odp_pktio_info_t *info)
@@ -1005,8 +1104,11 @@ void odp_pktio_print(odp_pktio_t hdl)
 			"  mac               %02x:%02x:%02x:%02x:%02x:%02x\n",
 			addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 	len += snprintf(&str[len], n - len,
-			"  mtu               %" PRIu32 "\n",
-			odp_pktio_mtu(hdl));
+			"  pktin maxlen      %" PRIu32 "\n",
+			odp_pktin_maxlen(hdl));
+	len += snprintf(&str[len], n - len,
+			"  pktout maxlen     %" PRIu32 "\n",
+			odp_pktout_maxlen(hdl));
 	len += snprintf(&str[len], n - len,
 			"  promisc           %s\n",
 			odp_pktio_promisc_mode(hdl) ? "yes" : "no");
@@ -1101,7 +1203,7 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 
 	/* The same parser is used for all pktios */
 	if (ret == 0)
-		capa->config.parser.layer = ODP_PKTIO_PARSER_LAYER_ALL;
+		capa->config.parser.layer = ODP_PROTO_LAYER_ALL;
 
 	return ret;
 }

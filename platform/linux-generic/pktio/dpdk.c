@@ -138,6 +138,7 @@ static inline void mbuf_update(struct rte_mbuf *mbuf, odp_packet_hdr_t *pkt_hdr,
 	mbuf->data_len = pkt_len;
 	mbuf->pkt_len = pkt_len;
 	mbuf->refcnt = 1;
+	mbuf->ol_flags = 0;
 
 	if (odp_unlikely(pkt_hdr->buf_hdr.base_data !=
 			 pkt_hdr->buf_hdr.seg[0].data))
@@ -356,9 +357,9 @@ static struct rte_mempool_ops ops_stack = {
 
 MEMPOOL_REGISTER_OPS(ops_stack);
 
-#define HAS_IP4_CSUM_FLAG(m, f) ((m->ol_flags & PKT_RX_IP_CKSUM_MASK) == f)
+#define IP4_CSUM_RESULT(m) (m->ol_flags & PKT_RX_IP_CKSUM_MASK)
+#define L4_CSUM_RESULT(m) (m->ol_flags & PKT_RX_L4_CKSUM_MASK)
 #define HAS_L4_PROTO(m, proto) ((m->packet_type & RTE_PTYPE_L4_MASK) == proto)
-#define HAS_L4_CSUM_FLAG(m, f) ((m->ol_flags & PKT_RX_L4_CKSUM_MASK) == f)
 
 #define PKTIN_CSUM_BITS 0x1C
 
@@ -366,29 +367,52 @@ static inline int pkt_set_ol_rx(odp_pktin_config_opt_t *pktin_cfg,
 				odp_packet_hdr_t *pkt_hdr,
 				struct rte_mbuf *mbuf)
 {
-	if (pktin_cfg->bit.ipv4_chksum &&
-	    RTE_ETH_IS_IPV4_HDR(mbuf->packet_type) &&
-	    HAS_IP4_CSUM_FLAG(mbuf, PKT_RX_IP_CKSUM_BAD)) {
-		if (pktin_cfg->bit.drop_ipv4_err)
-			return -1;
+	uint64_t packet_csum_result;
 
-		pkt_hdr->p.error_flags.ip_err = 1;
+	if (pktin_cfg->bit.ipv4_chksum &&
+	    RTE_ETH_IS_IPV4_HDR(mbuf->packet_type)) {
+		packet_csum_result = IP4_CSUM_RESULT(mbuf);
+
+		if (packet_csum_result == PKT_RX_IP_CKSUM_GOOD) {
+			pkt_hdr->p.input_flags.l3_chksum_done = 1;
+		} else if (packet_csum_result != PKT_RX_IP_CKSUM_UNKNOWN) {
+			if (pktin_cfg->bit.drop_ipv4_err)
+				return -1;
+
+			pkt_hdr->p.input_flags.l3_chksum_done = 1;
+			pkt_hdr->p.error_flags.ip_err = 1;
+			pkt_hdr->p.error_flags.l3_chksum = 1;
+		}
 	}
 
 	if (pktin_cfg->bit.udp_chksum &&
-	    HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_UDP) &&
-	    HAS_L4_CSUM_FLAG(mbuf, PKT_RX_L4_CKSUM_BAD)) {
-		if (pktin_cfg->bit.drop_udp_err)
-			return -1;
+	    HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_UDP)) {
+		packet_csum_result = L4_CSUM_RESULT(mbuf);
 
-		pkt_hdr->p.error_flags.udp_err = 1;
+		if (packet_csum_result == PKT_RX_L4_CKSUM_GOOD) {
+			pkt_hdr->p.input_flags.l4_chksum_done = 1;
+		} else if (packet_csum_result != PKT_RX_L4_CKSUM_UNKNOWN) {
+			if (pktin_cfg->bit.drop_udp_err)
+				return -1;
+
+			pkt_hdr->p.input_flags.l4_chksum_done = 1;
+			pkt_hdr->p.error_flags.udp_err = 1;
+			pkt_hdr->p.error_flags.l4_chksum = 1;
+		}
 	} else if (pktin_cfg->bit.tcp_chksum &&
-		   HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_TCP)  &&
-		   HAS_L4_CSUM_FLAG(mbuf, PKT_RX_L4_CKSUM_BAD)) {
-		if (pktin_cfg->bit.drop_tcp_err)
-			return -1;
+		   HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_TCP)) {
+		packet_csum_result = L4_CSUM_RESULT(mbuf);
 
-		pkt_hdr->p.error_flags.tcp_err = 1;
+		if (packet_csum_result == PKT_RX_L4_CKSUM_GOOD) {
+			pkt_hdr->p.input_flags.l4_chksum_done = 1;
+		} else if (packet_csum_result != PKT_RX_L4_CKSUM_UNKNOWN) {
+			if (pktin_cfg->bit.drop_tcp_err)
+				return -1;
+
+			pkt_hdr->p.input_flags.l4_chksum_done = 1;
+			pkt_hdr->p.error_flags.tcp_err = 1;
+			pkt_hdr->p.error_flags.l4_chksum = 1;
+		}
 	}
 
 	return 0;
@@ -522,7 +546,11 @@ static inline uint16_t phdr_csum(odp_bool_t ipv4, void *l3_hdr,
 		return rte_ipv6_phdr_cksum(l3_hdr, ol_flags);
 }
 
+#define OL_TX_CHKSUM_PKT(_cfg, _capa, _proto, _ovr_set, _ovr) \
+	(_capa && _proto && (_ovr_set ? _ovr : _cfg))
+
 static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
+				 odp_pktout_config_opt_t *pktout_capa,
 				 odp_packet_hdr_t *pkt_hdr,
 				 struct rte_mbuf *mbuf,
 				 char *mbuf_data)
@@ -533,19 +561,35 @@ static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
 	odp_bool_t ipv4_chksum_pkt, udp_chksum_pkt, tcp_chksum_pkt;
 	packet_parser_t *pkt_p = &pkt_hdr->p;
 
+	if (pkt_p->l3_offset == ODP_PACKET_OFFSET_INVALID)
+		return;
+
 	l3_hdr = (void *)(mbuf_data + pkt_p->l3_offset);
 
 	if (check_proto(l3_hdr, &l3_proto_v4, &l4_proto))
 		return;
 
-	ipv4_chksum_pkt = pktout_cfg->bit.ipv4_chksum && l3_proto_v4;
-	udp_chksum_pkt =  pktout_cfg->bit.udp_chksum &&
-		(l4_proto == _ODP_IPPROTO_UDP);
-	tcp_chksum_pkt = pktout_cfg->bit.tcp_chksum &&
-			(l4_proto == _ODP_IPPROTO_TCP);
+	ipv4_chksum_pkt = OL_TX_CHKSUM_PKT(pktout_cfg->bit.ipv4_chksum,
+					   pktout_capa->bit.ipv4_chksum,
+					   l3_proto_v4,
+					   pkt_p->output_flags.l3_chksum_set,
+					   pkt_p->output_flags.l3_chksum);
+	udp_chksum_pkt =  OL_TX_CHKSUM_PKT(pktout_cfg->bit.udp_chksum,
+					   pktout_capa->bit.udp_chksum,
+					   (l4_proto == _ODP_IPPROTO_UDP),
+					   pkt_p->output_flags.l4_chksum_set,
+					   pkt_p->output_flags.l4_chksum);
+	tcp_chksum_pkt =  OL_TX_CHKSUM_PKT(pktout_cfg->bit.tcp_chksum,
+					   pktout_capa->bit.tcp_chksum,
+					   (l4_proto == _ODP_IPPROTO_TCP),
+					   pkt_p->output_flags.l4_chksum_set,
+					   pkt_p->output_flags.l4_chksum);
 
 	if (!ipv4_chksum_pkt && !udp_chksum_pkt && !tcp_chksum_pkt)
-			return;
+		return;
+
+	if (pkt_p->l4_offset == ODP_PACKET_OFFSET_INVALID)
+		return;
 
 	mbuf->l2_len = pkt_p->l3_offset - pkt_p->l2_offset;
 	mbuf->l3_len = pkt_p->l4_offset - pkt_p->l3_offset;
@@ -592,7 +636,9 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 		return 0;
 	}
 	for (i = 0; i < num; i++) {
-		pkt_len = _odp_packet_len(pkt_table[i]);
+		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt_table[i]);
+
+		pkt_len = packet_len(pkt_hdr);
 
 		if (pkt_len > pkt_dpdk->mtu) {
 			if (i == 0)
@@ -605,10 +651,13 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 
 		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
 
-		if (pktout_cfg->all_bits)
-			pkt_set_ol_tx(pktout_cfg,
-				      odp_packet_hdr(pkt_table[i]),
+		if (odp_unlikely(pktio_entry->s.chksum_insert_ena)) {
+			odp_pktout_config_opt_t *pktout_capa =
+			&pktio_entry->s.capa.config.pktout;
+
+			pkt_set_ol_tx(pktout_cfg, pktout_capa, pkt_hdr,
 				      mbuf_table[i], data);
+		}
 	}
 	return i;
 
@@ -698,6 +747,8 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
+	odp_pktout_config_opt_t *pktout_capa =
+		&pktio_entry->s.capa.config.pktout;
 	int i;
 	*copy_count = 0;
 
@@ -715,9 +766,9 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 			       pkt_hdr->extra_type == PKT_EXTRA_TYPE_DPDK)) {
 			mbuf_update(mbuf, pkt_hdr, pkt_len);
 
-			if (pktout_cfg->all_bits)
-				pkt_set_ol_tx(pktout_cfg, pkt_hdr,
-					      mbuf, odp_packet_data(pkt));
+			if (odp_unlikely(pktio_entry->s.chksum_insert_ena))
+				pkt_set_ol_tx(pktout_cfg, pktout_capa, pkt_hdr,
+					      mbuf, _odp_packet_data(pkt));
 		} else {
 			pool_t *pool_entry = pkt_hdr->buf_hdr.pool_ptr;
 
@@ -738,10 +789,10 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 				mbuf_init((struct rte_mempool *)
 					  pool_entry->ext_desc, mbuf, pkt_hdr);
 				mbuf_update(mbuf, pkt_hdr, pkt_len);
-				if (pktout_cfg->all_bits)
-					pkt_set_ol_tx(pktout_cfg, pkt_hdr,
-						      mbuf,
-						      odp_packet_data(pkt));
+				if (pktio_entry->s.chksum_insert_ena)
+					pkt_set_ol_tx(pktout_cfg, pktout_capa,
+						      pkt_hdr, mbuf,
+						      _odp_packet_data(pkt));
 			}
 		}
 		mbuf_table[i] = mbuf;
@@ -807,6 +858,13 @@ static uint32_t dpdk_mtu_get(pktio_entry_t *pktio_entry)
 		return pkt_dpdk->data_room;
 
 	return mtu;
+}
+
+static uint32_t dpdk_frame_maxlen(pktio_entry_t *pktio_entry)
+{
+	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+
+	return pkt_dpdk->mtu;
 }
 
 static int dpdk_vdev_promisc_mode_get(uint8_t port_id)
@@ -1220,6 +1278,13 @@ static void dpdk_init_capability(pktio_entry_t *pktio_entry,
 		(dev_info->tx_offload_capa & DEV_TX_OFFLOAD_UDP_CKSUM) ? 1 : 0;
 	capa->config.pktout.bit.tcp_chksum =
 		(dev_info->tx_offload_capa & DEV_TX_OFFLOAD_TCP_CKSUM) ? 1 : 0;
+
+	capa->config.pktout.bit.ipv4_chksum_ena =
+		capa->config.pktout.bit.ipv4_chksum;
+	capa->config.pktout.bit.udp_chksum_ena =
+		capa->config.pktout.bit.udp_chksum;
+	capa->config.pktout.bit.tcp_chksum_ena =
+		capa->config.pktout.bit.tcp_chksum;
 }
 
 static int dpdk_open(odp_pktio_t id ODP_UNUSED,
@@ -1355,9 +1420,48 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 	}
 	/* Init TX queues */
 	for (i = 0; i < pktio_entry->s.num_out_queue; i++) {
+		struct rte_eth_dev_info dev_info;
+		const struct rte_eth_txconf *txconf = NULL;
+		int ip_ena  = pktio_entry->s.config.pktout.bit.ipv4_chksum_ena;
+		int udp_ena = pktio_entry->s.config.pktout.bit.udp_chksum_ena;
+		int tcp_ena = pktio_entry->s.config.pktout.bit.tcp_chksum_ena;
+		int sctp_ena = pktio_entry->s.config.pktout.bit.sctp_chksum_ena;
+		int chksum_ena = ip_ena | udp_ena | tcp_ena | sctp_ena;
+
+		if (chksum_ena) {
+			/* Enable UDP, TCP, STCP checksum offload */
+			uint32_t txq_flags = 0;
+
+			if (udp_ena == 0)
+				txq_flags |= ETH_TXQ_FLAGS_NOXSUMUDP;
+
+			if (tcp_ena == 0)
+				txq_flags |= ETH_TXQ_FLAGS_NOXSUMTCP;
+
+			if (sctp_ena == 0)
+				txq_flags |= ETH_TXQ_FLAGS_NOXSUMSCTP;
+
+			/* When IP checksum is requested alone, enable UDP
+			 * offload. DPDK IP checksum offload is enabled only
+			 * when one of the L4 checksum offloads is requested.*/
+			if ((udp_ena == 0) && (tcp_ena == 0) && (sctp_ena == 0))
+				txq_flags = ETH_TXQ_FLAGS_NOXSUMTCP |
+					    ETH_TXQ_FLAGS_NOXSUMSCTP;
+
+			txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS |
+				     ETH_TXQ_FLAGS_NOREFCOUNT |
+				     ETH_TXQ_FLAGS_NOMULTMEMP |
+				     ETH_TXQ_FLAGS_NOVLANOFFL;
+
+			rte_eth_dev_info_get(port_id, &dev_info);
+			dev_info.default_txconf.txq_flags = txq_flags;
+			txconf = &dev_info.default_txconf;
+			pktio_entry->s.chksum_insert_ena = 1;
+		}
+
 		ret = rte_eth_tx_queue_setup(port_id, i, DPDK_NM_TX_DESC,
 					     rte_eth_dev_socket_id(port_id),
-					     NULL);
+					     txconf);
 		if (ret < 0) {
 			ODP_ERR("Queue setup failed: err=%d, port=%" PRIu8 "\n",
 				ret, port_id);
@@ -1628,10 +1732,11 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.recv = dpdk_recv,
 	.send = dpdk_send,
 	.link_status = dpdk_link_status,
-	.mtu_get = dpdk_mtu_get,
+	.mtu_get = dpdk_frame_maxlen,
 	.promisc_mode_set = dpdk_promisc_mode_set,
 	.promisc_mode_get = dpdk_promisc_mode_get,
 	.mac_get = dpdk_mac_addr_get,
+	.mac_set = NULL,
 	.capability = dpdk_capability,
 	.pktin_ts_res = NULL,
 	.pktin_ts_from_ns = NULL,

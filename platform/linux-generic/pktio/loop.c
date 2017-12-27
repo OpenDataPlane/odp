@@ -11,6 +11,7 @@
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_classification_internal.h>
+#include <odp_ipsec_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>
 #include <odp_queue_if.h>
@@ -21,6 +22,9 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <stdlib.h>
+
+#define MAX_LOOP 16
 
 /* MAC address for the "loop" interface */
 static const char pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
@@ -30,15 +34,26 @@ static int loopback_stats_reset(pktio_entry_t *pktio_entry);
 static int loopback_open(odp_pktio_t id, pktio_entry_t *pktio_entry,
 			 const char *devname, odp_pool_t pool ODP_UNUSED)
 {
-	if (strcmp(devname, "loop"))
-		return -1;
-
+	long idx;
 	char loopq_name[ODP_QUEUE_NAME_LEN];
+
+	if (!strcmp(devname, "loop")) {
+		idx = 0;
+	} else if (!strncmp(devname, "loop", 4)) {
+		char *end;
+
+		idx = strtol(devname + 4, &end, 10);
+		if (idx <= 0 || idx >= MAX_LOOP || *end)
+			return -1;
+	} else {
+		return -1;
+	}
 
 	snprintf(loopq_name, sizeof(loopq_name), "%" PRIu64 "-pktio_loopq",
 		 odp_pktio_to_u64(id));
 	pktio_entry->s.pkt_loop.loopq =
 		odp_queue_create(loopq_name, NULL);
+	pktio_entry->s.pkt_loop.idx = idx;
 
 	if (pktio_entry->s.pkt_loop.loopq == ODP_QUEUE_INVALID)
 		return -1;
@@ -87,6 +102,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		pkt_len = odp_packet_len(pkt);
 		pkt_hdr = odp_packet_hdr(pkt);
 
+		packet_parse_reset(pkt_hdr);
 		if (pktio_cls_enabled(pktio_entry)) {
 			odp_packet_t new_pkt;
 			odp_pool_t new_pool;
@@ -135,6 +151,12 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		packet_set_ts(pkt_hdr, ts);
 		pkt_hdr->input = pktio_entry->s.handle;
+
+		/* Try IPsec inline processing */
+		if (pktio_entry->s.config.inbound_ipsec &&
+		    odp_packet_has_ipsec(pkt))
+			_odp_ipsec_try_inline(pkt);
+
 		pktio_entry->s.stats.in_octets += pkt_len;
 		pkts[num_rx++] = pkt;
 	}
@@ -162,6 +184,19 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	for (i = 0; i < len; ++i) {
 		hdr_tbl[i] = packet_to_buf_hdr(pkt_tbl[i]);
 		bytes += odp_packet_len(pkt_tbl[i]);
+	}
+
+	for (i = 0; i < len; ++i) {
+		odp_ipsec_packet_result_t result;
+
+		if (packet_subtype(pkt_tbl[i]) ==
+				ODP_EVENT_PACKET_IPSEC &&
+		    pktio_entry->s.config.outbound_ipsec) {
+
+			/* Possibly postprocessing packet */
+			odp_ipsec_result(&result, pkt_tbl[i]);
+		}
+		packet_subtype_set(pkt_tbl[i], ODP_EVENT_PACKET_BASIC);
 	}
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
@@ -192,6 +227,7 @@ static int loopback_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
 				 void *mac_addr)
 {
 	memcpy(mac_addr, pktio_loop_mac, ETH_ALEN);
+	((uint8_t *)mac_addr)[ETH_ALEN - 1] += pktio_entry->s.pkt_loop.idx;
 	return ETH_ALEN;
 }
 
@@ -213,6 +249,9 @@ static int loopback_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
 	capa->config.pktin.bit.ts_ptp = 1;
+	capa->config.inbound_ipsec = 1;
+	capa->config.outbound_ipsec = 1;
+
 	return 0;
 }
 
@@ -265,6 +304,7 @@ const pktio_if_ops_t loopback_pktio_ops = {
 	.promisc_mode_set = loopback_promisc_mode_set,
 	.promisc_mode_get = loopback_promisc_mode_get,
 	.mac_get = loopback_mac_addr_get,
+	.mac_set = NULL,
 	.link_status = loopback_link_status,
 	.capability = loopback_capability,
 	.pktin_ts_res = NULL,

@@ -53,6 +53,7 @@ struct pktio_if_ops;
 typedef struct {
 	odp_queue_t loopq;		/**< loopback queue for "loop" device */
 	odp_bool_t promisc;		/**< promiscuous mode state */
+	uint8_t idx;			/**< index of "loop" device */
 } pkt_loop_t;
 
 #ifdef HAVE_PCAP
@@ -113,7 +114,8 @@ struct pktio_entry {
 	/* These two locks together lock the whole pktio device */
 	odp_ticketlock_t rxl;		/**< RX ticketlock */
 	odp_ticketlock_t txl;		/**< TX ticketlock */
-	int cls_enabled;		/**< is classifier enabled */
+	uint8_t cls_enabled;            /**< classifier enabled */
+	uint8_t chksum_insert_ena;      /**< pktout checksum offload enabled */
 	odp_pktio_t handle;		/**< pktio handle */
 	union {
 		pkt_loop_t pkt_loop;            /**< Using loopback for IO */
@@ -211,6 +213,7 @@ typedef struct pktio_if_ops {
 	int (*promisc_mode_set)(pktio_entry_t *pktio_entry,  int enable);
 	int (*promisc_mode_get)(pktio_entry_t *pktio_entry);
 	int (*mac_get)(pktio_entry_t *pktio_entry, void *mac_addr);
+	int (*mac_set)(pktio_entry_t *pktio_entry, const void *mac_addr);
 	int (*link_status)(pktio_entry_t *pktio_entry);
 	int (*capability)(pktio_entry_t *pktio_entry,
 			  odp_pktio_capability_t *capa);

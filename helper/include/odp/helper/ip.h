@@ -125,7 +125,7 @@ static inline int odph_ipv4_csum(odp_packet_t pkt,
 	if (odp_unlikely(res < 0))
 		return res;
 
-	*chksum = odph_chksum(buf, nleft);
+	*chksum = ~odp_chksum_ones_comp16(buf, nleft);
 
 	return 0;
 }

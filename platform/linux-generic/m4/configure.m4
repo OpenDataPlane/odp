@@ -3,10 +3,14 @@ IMPLEMENTATION_NAME="odp-linux"
 ODP_VISIBILITY
 ODP_ATOMIC
 
+dnl Check for libconfig (required)
+PKG_CHECK_MODULES([LIBCONFIG], [libconfig >= 1.3.2])
+
 m4_include([platform/linux-generic/m4/odp_pthread.m4])
 ODP_TIMER
 ODP_OPENSSL
 m4_include([platform/linux-generic/m4/odp_pcap.m4])
+m4_include([platform/linux-generic/m4/odp_modules.m4])
 m4_include([platform/linux-generic/m4/odp_netmap.m4])
 m4_include([platform/linux-generic/m4/odp_dpdk.m4])
 m4_include([platform/linux-generic/m4/odp_schedule.m4])

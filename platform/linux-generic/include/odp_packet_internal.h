@@ -25,7 +25,7 @@ extern "C" {
 #include <odp/api/packet.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/crypto.h>
-#include <odp_crypto_internal.h>
+#include <odp/api/ipsec.h>
 #include <odp/api/plat/packet_types.h>
 #include <odp_queue_if.h>
 
@@ -50,8 +50,12 @@ typedef union {
 		uint32_t snap_len:1;  /**< Snap length error */
 		uint32_t l2_chksum:1; /**< L2 checksum error, checks TBD */
 		uint32_t ip_err:1;    /**< IP error,  checks TBD */
+		uint32_t l3_chksum:1; /**< L3 checksum error */
 		uint32_t tcp_err:1;   /**< TCP error, checks TBD */
 		uint32_t udp_err:1;   /**< UDP error, checks TBD */
+		uint32_t ipsec_err:1; /**< IPsec error */
+		uint32_t crypto_err:1; /**< Crypto packet operation error */
+		uint32_t l4_chksum:1; /**< L4 checksum error */
 	};
 } error_flags_t;
 
@@ -128,6 +132,9 @@ typedef struct {
 	uint16_t headroom;
 	uint16_t tailroom;
 
+	/* Event subtype */
+	int8_t subtype;
+
 	/*
 	 * Members below are not initialized by packet_init()
 	 */
@@ -141,8 +148,8 @@ typedef struct {
 	/* Classifier destination queue */
 	queue_t dst_queue;
 
-	/* Result for crypto */
-	odp_crypto_generic_op_result_t op_result;
+	/* Result for crypto packet op */
+	odp_crypto_packet_result_t crypto_op_result;
 
 #ifdef ODP_PKTIO_DPDK
 	/* Type of extra data */
@@ -150,6 +157,9 @@ typedef struct {
 	/* Extra space for packet descriptors. E.g. DPDK mbuf  */
 	uint8_t extra[PKT_EXTRA_LEN] ODP_ALIGNED_CACHE;
 #endif
+
+	/* Context for IPsec */
+	odp_ipsec_packet_result_t ipsec_ctx;
 
 	/* Packet data storage */
 	uint8_t data[0];
@@ -186,6 +196,16 @@ static inline seg_entry_t *seg_entry_last(odp_packet_hdr_t *hdr)
 	last     = hdr->buf_hdr.last_seg;
 	last_seg = last->buf_hdr.num_seg - 1;
 	return &last->buf_hdr.seg[last_seg];
+}
+
+static inline odp_event_subtype_t packet_subtype(odp_packet_t pkt)
+{
+	return odp_packet_hdr(pkt)->subtype;
+}
+
+static inline void packet_subtype_set(odp_packet_t pkt, int ev)
+{
+	odp_packet_hdr(pkt)->subtype = ev;
 }
 
 /**
@@ -227,6 +247,9 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	pkt_hdr->headroom  = CONFIG_PACKET_HEADROOM;
 	pkt_hdr->tailroom  = pool->seg_len - seg_len + CONFIG_PACKET_TAILROOM;
 
+	if (odp_unlikely(pkt_hdr->subtype != ODP_EVENT_PACKET_BASIC))
+		pkt_hdr->subtype = ODP_EVENT_PACKET_BASIC;
+
 	pkt_hdr->input = ODP_PKTIO_INVALID;
 }
 
@@ -243,7 +266,6 @@ static inline void copy_packet_cls_metadata(odp_packet_hdr_t *src_hdr,
 	dst_hdr->dst_queue = src_hdr->dst_queue;
 	dst_hdr->flow_hash = src_hdr->flow_hash;
 	dst_hdr->timestamp = src_hdr->timestamp;
-	dst_hdr->op_result = src_hdr->op_result;
 }
 
 static inline void pull_tail(odp_packet_hdr_t *pkt_hdr, uint32_t len)
@@ -274,7 +296,13 @@ int packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 
 /* Perform packet parse up to a given protocol layer */
 int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
-		       odp_pktio_parser_layer_t layer);
+		       odp_proto_layer_t layer);
+
+/* Perform L3 and L4 parsing up to a given protocol layer */
+int packet_parse_l3_l4(odp_packet_hdr_t *pkt_hdr,
+		       odp_proto_layer_t layer,
+		       uint32_t l3_offset,
+		       uint16_t ethtype);
 
 /* Reset parser metadata for a new parse */
 void packet_parse_reset(odp_packet_hdr_t *pkt_hdr);
@@ -311,13 +339,15 @@ static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 }
 
 int packet_parse_common(packet_parser_t *pkt_hdr, const uint8_t *ptr,
-			uint32_t pkt_len, uint32_t seg_len,
-			odp_pktio_parser_layer_t layer);
+			uint32_t pkt_len, uint32_t seg_len, int layer);
 
 int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
 
 int _odp_packet_set_data(odp_packet_t pkt, uint32_t offset,
 			 uint8_t c, uint32_t len);
+
+int _odp_packet_cmp_data(odp_packet_t pkt, uint32_t offset,
+			 const void *s, uint32_t len);
 
 #ifdef __cplusplus
 }

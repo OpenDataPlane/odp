@@ -12,6 +12,7 @@
 /* test functions: */
 void packet_test_alloc_free(void);
 void packet_test_alloc_free_multi(void);
+void packet_test_free_sp(void);
 void packet_test_alloc_segmented(void);
 void packet_test_event_conversion(void);
 void packet_test_basic_metadata(void);
@@ -39,6 +40,7 @@ void packet_test_extend_ref(void);
 void packet_test_align(void);
 void packet_test_offset(void);
 void packet_test_ref(void);
+void packet_test_parse(void);
 
 /* test arrays: */
 extern odp_testinfo_t packet_suite[];

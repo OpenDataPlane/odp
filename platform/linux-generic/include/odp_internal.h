@@ -23,6 +23,7 @@ extern "C" {
 #include <odp_errno_define.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <libconfig.h>
 
 #define MAX_CPU_NUMBER 128
 #define UID_MAXLEN 30
@@ -53,6 +54,7 @@ struct odp_global_data_s {
 	odp_cpumask_t control_cpus;
 	odp_cpumask_t worker_cpus;
 	int num_cpus_installed;
+	config_t configuration;
 };
 
 enum init_stage {
@@ -72,6 +74,9 @@ enum init_stage {
 	CLASSIFICATION_INIT,
 	TRAFFIC_MNGR_INIT,
 	NAME_TABLE_INIT,
+	IPSEC_EVENTS_INIT,
+	IPSEC_SAD_INIT,
+	MODULES_INIT,
 	ALL_INIT      /* All init stages completed */
 };
 
@@ -109,7 +114,7 @@ int odp_queue_term_global(void);
 int odp_crypto_init_global(void);
 int odp_crypto_term_global(void);
 
-int odp_timer_init_global(void);
+int odp_timer_init_global(const odp_init_t *params);
 int odp_timer_term_global(void);
 int odp_timer_disarm_all(void);
 
@@ -129,6 +134,14 @@ int _odp_ishm_init_global(void);
 int _odp_ishm_init_local(void);
 int _odp_ishm_term_global(void);
 int _odp_ishm_term_local(void);
+
+int _odp_ipsec_sad_init_global(void);
+int _odp_ipsec_sad_term_global(void);
+
+int _odp_ipsec_events_init_global(void);
+int _odp_ipsec_events_term_global(void);
+
+int _odp_modules_init_global(void);
 
 int cpuinfo_parser(FILE *file, system_info_t *sysinfo);
 uint64_t odp_cpufreq_id(const char *filename, int id);
