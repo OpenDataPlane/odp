@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#ifndef ODP_TIME_INTERNAL_H_
-#define ODP_TIME_INTERNAL_H_
+#ifndef ODP_ARCH_TIME_INTERNAL_H_
+#define ODP_ARCH_TIME_INTERNAL_H_
 
 #ifdef __cplusplus
 extern "C" {

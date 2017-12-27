@@ -54,7 +54,7 @@
 #include <odp/api/sync.h>
 #include <odp/api/time.h>
 #include <odp/api/timer.h>
-#include <odp_time_internal.h>
+#include <odp_arch_time_internal.h>
 #include <odp_timer_internal.h>
 
 #define TMO_UNUSED   ((uint64_t)0xFFFFFFFFFFFFFFFF)

@@ -5,6 +5,7 @@ include $(top_srcdir)/platform/Makefile.inc
 
 AM_CPPFLAGS =  -I$(srcdir)/include
 AM_CPPFLAGS +=  -I$(top_srcdir)/include
+AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch
 AM_CPPFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
 AM_CPPFLAGS +=  -I$(top_builddir)/include
 AM_CPPFLAGS +=  -Iinclude
@@ -124,6 +125,7 @@ nodist_odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/static_inline.h
 
 noinst_HEADERS = \
+		  arch/odp_arch_time_internal.h \
 		  include/_fdserver_internal.h \
 		  include/_ishm_internal.h \
 		  include/_ishmphy_internal.h \
@@ -167,7 +169,6 @@ noinst_HEADERS = \
 		  include/odp_schedule_scalable_ordered.h \
 		  include/odp_sorted_list_internal.h \
 		  include/odp_shm_internal.h \
-		  include/odp_time_internal.h \
 		  include/odp_timer_internal.h \
 		  include/odp_timer_wheel_internal.h \
 		  include/odp_traffic_mngr_internal.h \
@@ -250,8 +251,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_weak.c
 
 if ARCH_IS_ARM
-__LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_arch.c \
-				  arch/default/odp_cpu_cycles.c \
+__LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_cycles.c \
 				  arch/default/odp_global_time.c \
 				  arch/default/odp_sysinfo_parse.c
 arch_odp_headers = arch/arm/odp/api/cpu_arch.h
@@ -262,8 +262,7 @@ noinst_HEADERS += arch/arm/odp_atomic.h \
 		  arch/arm/odp_llsc.h
 endif
 if ARCH_IS_AARCH64
-__LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_arch.c \
-				  arch/default/odp_cpu_cycles.c \
+__LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_cycles.c \
 				  arch/aarch64/odp_global_time.c \
 				  arch/default/odp_sysinfo_parse.c
 arch_odp_headers = arch/aarch64/odp/api/cpu_arch.h
@@ -274,8 +273,7 @@ noinst_HEADERS += arch/aarch64/odp_atomic.h \
 		  arch/aarch64/odp_llsc.h
 endif
 if ARCH_IS_MIPS64
-__LIB__libodp_linux_la_SOURCES += arch/mips64/odp_cpu_arch.c \
-				  arch/default/odp_cpu_cycles.c \
+__LIB__libodp_linux_la_SOURCES += arch/mips64/odp_cpu_cycles.c \
 				  arch/default/odp_global_time.c \
 				  arch/mips64/odp_sysinfo_parse.c
 arch_odp_headers = arch/mips64/odp/api/cpu_arch.h
@@ -283,8 +281,7 @@ noinst_HEADERS += arch/default/odp_cpu.h \
 		  arch/default/odp_cpu_idling.h
 endif
 if ARCH_IS_POWERPC
-__LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_arch.c \
-				  arch/default/odp_cpu_cycles.c \
+__LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_cycles.c \
 				  arch/default/odp_global_time.c \
 				  arch/powerpc/odp_sysinfo_parse.c
 arch_odp_headers = arch/powerpc/odp/api/cpu_arch.h
@@ -293,8 +290,7 @@ noinst_HEADERS += arch/default/odp_cpu.h \
 endif
 if ARCH_IS_X86
 __LIB__libodp_linux_la_SOURCES += arch/x86/cpu_flags.c \
-				  arch/x86/odp_cpu_arch.c \
-				  arch/default/odp_cpu_cycles.c \
+				  arch/x86/odp_cpu_cycles.c \
 				  arch/x86/odp_global_time.c \
 				  arch/x86/odp_sysinfo_parse.c
 arch_odp_headers = arch/x86/odp/api/cpu_arch.h

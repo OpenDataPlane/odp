@@ -13,7 +13,7 @@
 #include <odp/api/cpu.h>
 #include <odp/api/hints.h>
 #include <odp_debug_internal.h>
-#include <odp_time_internal.h>
+#include <odp_arch_time_internal.h>
 
 uint64_t cpu_global_time(void)
 {
