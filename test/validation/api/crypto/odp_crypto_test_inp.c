@@ -458,6 +458,8 @@ static void alg_test(odp_crypto_op_t op,
 	odp_packet_t pkt = odp_packet_alloc(suite_context.pool,
 					    ref->length + ref->digest_length);
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	if (pkt == ODP_PACKET_INVALID)
+		goto cleanup;
 
 	for (iteration = NORMAL_TEST; iteration < MAX_TEST; iteration++) {
 		/* checking against wrong digest is meaningless for NULL digest
@@ -523,10 +525,11 @@ static void alg_test(odp_crypto_op_t op,
 		}
 	}
 
+	odp_packet_free(pkt);
+
+cleanup:
 	rc = odp_crypto_session_destroy(session);
 	CU_ASSERT(!rc);
-
-	odp_packet_free(pkt);
 }
 
 /**
