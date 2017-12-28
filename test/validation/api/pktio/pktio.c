@@ -1846,7 +1846,9 @@ void pktio_test_send_failure(void)
 		 * the initial short packets should be sent successfully */
 		odp_errno_zero();
 		ret = odp_pktout_send(pktout, pkt_tbl, TX_BATCH_LEN);
-		CU_ASSERT_FATAL(ret == long_pkt_idx);
+		CU_ASSERT(ret == long_pkt_idx);
+		if (ret != long_pkt_idx)
+			goto cleanup;
 		CU_ASSERT(odp_errno() == 0);
 
 		info_rx.id   = pktio_rx;
@@ -1897,6 +1899,7 @@ void pktio_test_send_failure(void)
 			odp_packet_free(pkt_tbl[i]);
 	}
 
+cleanup:
 	if (pktio_rx != pktio_tx) {
 		CU_ASSERT(odp_pktio_stop(pktio_rx) == 0);
 		CU_ASSERT(odp_pktio_close(pktio_rx) == 0);
