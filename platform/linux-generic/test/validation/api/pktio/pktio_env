@@ -91,7 +91,8 @@ setup_pktio_env()
 	fi
 
 	for iface in $IF0 $IF1 $IF2 $IF3; do
-		ip link set $iface mtu 9216 up
+		#ip link set $iface mtu 9216 up
+		ip link set $iface mtu 1500 up
 		ifconfig $iface -arp
 	done
 
