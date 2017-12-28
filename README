@@ -26,12 +26,12 @@ Main git repository:
 
     To execute all the testcases, assuming CUnit is installed for the validation tests:
         ./bootstrap
-        ./configure --enable-test-perf --enable-test-vald
+        ./configure
         make check
 
     To generate the users guides:
         ./bootstrap
-        ./configure --enable-user-guide
+        ./configure --enable-user-guides
         make
 
 Patches tracking system:
