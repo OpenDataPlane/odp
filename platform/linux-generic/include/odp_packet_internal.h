@@ -29,6 +29,7 @@ extern "C" {
 #include <odp_ipsec_internal.h>
 #include <odp/api/plat/packet_types.h>
 #include <odp_queue_if.h>
+#include <subsystem/spec/packet_subsystem.h>
 
 /** Minimum segment length expected by packet_parse_common() */
 #define PACKET_PARSE_SEG_LEN 96
