@@ -7,7 +7,7 @@ OpenDataPlane (ODP) project source code.
     http://www.opendataplane.org/
 
 Main git repository:
-    git://git.linaro.org/lng/odp.git
+    https://github.com/Linaro/odp.git
 
     How to build:
     Look in platform/linux-*/README for more detail how to build.
@@ -35,7 +35,10 @@ Main git repository:
         make
 
 Patches tracking system:
-    http://patches.opendataplane.org/project/lng-odp/list/
+    Patchwork:
+      http://patches.opendataplane.org/project/lng-odp/list/
+    Github pull requests:
+      https://github.com/Linaro/odp/pulls
 
 Mailing list:
     lng-odp@lists.linaro.org
