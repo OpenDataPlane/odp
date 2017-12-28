@@ -63,7 +63,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ make install
 
    # You may now build either 32 or 64 bit ODP
-   $ git clone git://git.linaro.org/lng/odp.git odp
+   $ git clone https://github.com/Linaro/odp.git odp
    $ cd odp
    $ ./bootstrap
 
@@ -167,7 +167,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ sudo yum install numactl-devel
 
    Note: only packet I/O is accelerated with DPDK. Use
-	https://git.linaro.org/lng/odp-dpdk.git
+        https://github.com/Linaro/odp-dpdk.git
    for fully accelerated odp dpdk platform.
 
 3.4.1 Building DPDK and ODP with DPDK pktio support
