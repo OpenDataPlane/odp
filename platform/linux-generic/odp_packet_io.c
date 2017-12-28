@@ -32,10 +32,11 @@
 #include <errno.h>
 #include <time.h>
 
-/* Sleep this many nanoseconds between pktin receive calls */
-#define SLEEP_NSEC  1000
+/* Sleep this many microseconds between pktin receive calls. Must be smaller
+ * than 1000000 (a million), i.e. smaller than a second. */
+#define SLEEP_USEC  1
 
-/* Check total sleep time about every SLEEP_CHECK * SLEEP_NSEC nanoseconds.
+/* Check total sleep time about every SLEEP_CHECK * SLEEP_USEC microseconds.
  * Must be power of two. */
 #define SLEEP_CHECK 32
 
@@ -1679,9 +1680,10 @@ int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[], int num,
 	odp_time_t t1, t2;
 	struct timespec ts;
 	int started = 0;
+	uint64_t sleep_round = 0;
 
 	ts.tv_sec  = 0;
-	ts.tv_nsec = SLEEP_NSEC;
+	ts.tv_nsec = 1000 * SLEEP_USEC;
 
 	while (1) {
 		ret = odp_pktin_recv(queue, packets, num);
@@ -1698,21 +1700,20 @@ int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[], int num,
 			if (odp_unlikely(!started)) {
 				odp_time_t t;
 
-				t = odp_time_local_from_ns(wait * SLEEP_NSEC);
+				t = odp_time_local_from_ns(wait * 1000);
 				started = 1;
 				t1 = odp_time_sum(odp_time_local(), t);
 			}
 
 			/* Check every SLEEP_CHECK rounds if total wait time
 			 * has been exceeded. */
-			if ((wait & (SLEEP_CHECK - 1)) == 0) {
+			if ((++sleep_round & (SLEEP_CHECK - 1)) == 0) {
 				t2 = odp_time_local();
 
 				if (odp_time_cmp(t2, t1) > 0)
 					return 0;
 			}
-
-			wait--;
+			wait = wait > SLEEP_USEC ? wait - SLEEP_USEC : 0;
 		}
 
 		nanosleep(&ts, NULL);
@@ -1728,9 +1729,10 @@ int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned num_q,
 	odp_time_t t1, t2;
 	struct timespec ts;
 	int started = 0;
+	uint64_t sleep_round = 0;
 
 	ts.tv_sec  = 0;
-	ts.tv_nsec = SLEEP_NSEC;
+	ts.tv_nsec = 1000 * SLEEP_USEC;
 
 	while (1) {
 		for (i = 0; i < num_q; i++) {
@@ -1750,19 +1752,20 @@ int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned num_q,
 			if (odp_unlikely(!started)) {
 				odp_time_t t;
 
-				t = odp_time_local_from_ns(wait * SLEEP_NSEC);
+				t = odp_time_local_from_ns(wait * 1000);
 				started = 1;
 				t1 = odp_time_sum(odp_time_local(), t);
 			}
 
-			if ((wait & (SLEEP_CHECK - 1)) == 0) {
+			/* Check every SLEEP_CHECK rounds if total wait time
+			 * has been exceeded. */
+			if ((++sleep_round & (SLEEP_CHECK - 1)) == 0) {
 				t2 = odp_time_local();
 
 				if (odp_time_cmp(t2, t1) > 0)
 					return 0;
 			}
-
-			wait--;
+			wait = wait > SLEEP_USEC ? wait - SLEEP_USEC : 0;
 		}
 
 		nanosleep(&ts, NULL);
@@ -1774,9 +1777,9 @@ uint64_t odp_pktin_wait_time(uint64_t nsec)
 	if (nsec == 0)
 		return 0;
 
-	/* number of nanosleep calls rounded up by one, so that
+	/* number of microseconds rounded up by one, so that
 	 * recv_mq_tmo call waits at least 'nsec' nanoseconds. */
-	return (nsec / SLEEP_NSEC) + 1;
+	return (nsec / (1000)) + 1;
 }
 
 int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
