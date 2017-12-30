@@ -11,7 +11,6 @@ odpapiinclude_HEADERS = \
 	odp/api/byteorder.h \
 	odp/api/chksum.h \
 	odp/api/classification.h \
-	odp/api/compiler.h \
 	odp/api/cpu.h \
 	odp/api/cpumask.h \
 	odp/api/crypto.h \
@@ -61,7 +60,6 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/byteorder.h \
 		  odp/api/spec/chksum.h \
 		  odp/api/spec/classification.h \
-		  odp/api/spec/compiler.h \
 		  odp/api/spec/cpu.h \
 		  odp/api/spec/cpumask.h \
 		  odp/api/spec/crypto.h \
