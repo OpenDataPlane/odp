@@ -71,9 +71,6 @@ typedef enum {
 	/** No cipher algorithm specified */
 	ODP_CIPHER_ALG_NULL,
 
-	/** DES */
-	ODP_CIPHER_ALG_DES,
-
 	/** Triple DES with cipher block chaining */
 	ODP_CIPHER_ALG_3DES_CBC,
 
@@ -94,6 +91,9 @@ typedef enum {
 
 	/** @deprecated  Use ODP_CIPHER_ALG_AES_GCM instead */
 	ODP_DEPRECATE(ODP_CIPHER_ALG_AES128_GCM),
+
+	/** @deprecated  Do not use DES, 56-bit keys are too weak nowadays */
+	ODP_DEPRECATE(ODP_CIPHER_ALG_DES),
 
 } odp_cipher_alg_t;
 
@@ -168,9 +168,6 @@ typedef union odp_crypto_cipher_algos_t {
 		/** ODP_CIPHER_ALG_NULL */
 		uint32_t null        : 1;
 
-		/** ODP_CIPHER_ALG_DES */
-		uint32_t des         : 1;
-
 		/** ODP_CIPHER_ALG_3DES_CBC */
 		uint32_t trides_cbc  : 1;
 
@@ -188,6 +185,9 @@ typedef union odp_crypto_cipher_algos_t {
 
 		/** @deprecated  Use aes_gcm instead */
 		uint32_t ODP_DEPRECATE(aes128_gcm) : 1;
+
+		/** @deprecated  Too weak, do not use */
+		uint32_t ODP_DEPRECATE(des)        : 1;
 
 	} bit;
 

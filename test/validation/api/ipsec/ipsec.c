@@ -157,10 +157,6 @@ int ipsec_check(odp_bool_t ah,
 		if (!capa.ciphers.bit.null)
 			return ODP_TEST_INACTIVE;
 		break;
-	case ODP_CIPHER_ALG_DES:
-		if (!capa.ciphers.bit.des)
-			return ODP_TEST_INACTIVE;
-		break;
 	case ODP_CIPHER_ALG_3DES_CBC:
 		if (!capa.ciphers.bit.trides_cbc)
 			return ODP_TEST_INACTIVE;

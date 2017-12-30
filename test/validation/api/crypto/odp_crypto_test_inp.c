@@ -62,8 +62,6 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 	switch (cipher) {
 	case ODP_CIPHER_ALG_NULL:
 		return "ODP_CIPHER_ALG_NULL";
-	case ODP_CIPHER_ALG_DES:
-		return "ODP_CIPHER_ALG_DES";
 	case ODP_CIPHER_ALG_3DES_CBC:
 		return "ODP_CIPHER_ALG_3DES_CBC";
 	case ODP_CIPHER_ALG_AES_CBC:
@@ -339,9 +337,6 @@ static void alg_test(odp_crypto_op_t op,
 	if (cipher_alg == ODP_CIPHER_ALG_AES_GCM &&
 	    !(capa.ciphers.bit.aes_gcm))
 		rc = -1;
-	if (cipher_alg == ODP_CIPHER_ALG_DES &&
-	    !(capa.ciphers.bit.des))
-		rc = -1;
 	if (cipher_alg == ODP_CIPHER_ALG_NULL &&
 	    !(capa.ciphers.bit.null))
 		rc = -1;
@@ -561,10 +556,6 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 	switch (cipher) {
 	case ODP_CIPHER_ALG_NULL:
 		if (!capability.ciphers.bit.null)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_CIPHER_ALG_DES:
-		if (!capability.ciphers.bit.des)
 			return ODP_TEST_INACTIVE;
 		break;
 	case ODP_CIPHER_ALG_3DES_CBC:
