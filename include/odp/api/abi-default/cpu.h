@@ -11,8 +11,8 @@
 extern "C" {
 #endif
 
-#ifndef _ODP_CACHE_LINE_SIZE
-#define _ODP_CACHE_LINE_SIZE 64
+#ifndef ODP_CACHE_LINE_SIZE
+#define ODP_CACHE_LINE_SIZE 64
 #endif
 
 #ifdef _ODP_NEED_GENERIC_CPU_PAUSE
