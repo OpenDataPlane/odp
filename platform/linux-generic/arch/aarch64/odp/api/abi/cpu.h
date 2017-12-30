@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#define _ODP_CACHE_LINE_SIZE 64
+#define ODP_CACHE_LINE_SIZE 64
 
 static inline void odp_cpu_pause(void)
 {
