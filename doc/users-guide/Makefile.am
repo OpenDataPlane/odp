@@ -32,6 +32,12 @@ IMAGES = $(IMAGES_DIR)/overview.svg \
 	 $(IMAGES_DIR)/pktio_fsm.svg \
 	 $(IMAGES_DIR)/pktout_direct_send.svg \
 	 $(IMAGES_DIR)/pktout_queue_send.svg \
+	 $(IMAGES_DIR)/ref.svg \
+	 $(IMAGES_DIR)/refpkt1.svg \
+	 $(IMAGES_DIR)/refpkt2.svg \
+	 $(IMAGES_DIR)/refpktmulti.svg \
+	 $(IMAGES_DIR)/refpktsingle.svg \
+	 $(IMAGES_DIR)/refstatic.svg \
 	 $(IMAGES_DIR)/release_git.svg \
 	 $(IMAGES_DIR)/segment.svg \
 	 $(IMAGES_DIR)/simple_release_git.svg \
