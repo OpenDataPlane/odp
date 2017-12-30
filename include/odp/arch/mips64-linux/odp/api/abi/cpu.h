@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 #if defined __OCTEON__
-#define _ODP_CACHE_LINE_SIZE 128
+#define ODP_CACHE_LINE_SIZE 128
 #else
 #error Please add support for your arch in abi/cpu.h
 #endif

@@ -37,7 +37,7 @@ extern "C" {
 #error Non-gcc compatible compiler
 #endif
 
-#define ODP_CACHE_LINE_SIZE _ODP_CACHE_LINE_SIZE
+/* ODP_CACHE_LINE_SIZE is defined in odp/api/abi/cpu.h */
 
 #define ODP_PAGE_SIZE       4096
 
