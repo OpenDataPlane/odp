@@ -11,7 +11,7 @@ LIBTHRMASK_COMMON = $(COMMON_DIR)/libthrmask_common.la
 #in the following line, the libs using the symbols should come before
 #the libs containing them! The includer is given a chance to add things
 #before libodp by setting PRELDADD before the inclusion.
-LDADD = $(PRELDADD) $(LIBODP) $(DPDK_PMDS)
+LDADD = $(PRELDADD) $(LIBODP) $(DPDK_LIBS_LT)
 PRELDADD =
 
 INCFLAGS = \
