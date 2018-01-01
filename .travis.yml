@@ -74,6 +74,7 @@ env:
         - CONF="--enable-schedule-iquery"
         - CONF="--enable-schedule-scalable"
         - CONF="--enable-dpdk-zero-copy"
+        - CONF="--disable-static-applications"
         - CROSS_ARCH="arm64"
         - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
         - CROSS_ARCH="powerpc"
