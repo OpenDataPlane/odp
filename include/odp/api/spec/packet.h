@@ -1376,6 +1376,18 @@ void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ctx);
 void *odp_packet_user_area(odp_packet_t pkt);
 
 /**
+ * Packet handle from user area pointer
+ *
+ * Return handle of a packet associated with given user area.
+ *
+ * @param uarea  User area address
+ *
+ * @return Packet handle
+ * @retval ODP_PACKET_INVALID on failure or if not supported
+ */
+odp_packet_t odp_packet_from_user_area(void *uarea);
+
+/**
  * User area size
  *
  * The size is fixed and defined in packet pool parameters.
