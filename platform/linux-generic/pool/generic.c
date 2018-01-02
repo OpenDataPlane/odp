@@ -120,7 +120,7 @@ static int generic_pool_init_local(void)
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		pool           = pool_entry(i);
 		local.cache[i] = &pool->local_cache[thr_id];
-		local.cache[i]->num = 0;
+		local.cache[i]->s.num = 0;
 	}
 
 	local.thr_id = thr_id;
@@ -135,12 +135,12 @@ static void flush_cache(pool_cache_t *cache, pool_t *pool)
 
 	ring = &pool->ring->hdr;
 	mask = pool->ring_mask;
-	cache_num = cache->num;
+	cache_num = cache->s.num;
 
 	for (i = 0; i < cache_num; i++)
-		ring_enq(ring, mask, cache->buf_index[i]);
+		ring_enq(ring, mask, cache->s.buf_index[i]);
 
-	cache->num = 0;
+	cache->s.num = 0;
 }
 
 static int generic_pool_term_local(void)

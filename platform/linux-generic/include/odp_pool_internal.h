@@ -29,10 +29,15 @@ extern "C" {
 
 #define CACHE_BURST    32
 
-typedef struct pool_cache_t {
+struct pool_cache_s {
 	uint32_t num;
 	uint32_t buf_index[CONFIG_POOL_CACHE_SIZE];
 
+};
+
+typedef union pool_cache_u {
+	struct pool_cache_s s;
+	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct pool_cache_s))];
 } pool_cache_t ODP_ALIGNED_CACHE;
 
 /* Buffer header ring */
