@@ -37,6 +37,7 @@ struct physmem_block {
 int physmem_block_init_global(void);
 int physmem_block_term_global(void);
 
+struct physmem_block *physmem_block_reserve(uint64_t size);
 struct physmem_block *physmem_block_alloc(uint64_t size);
 void physmem_block_free(struct physmem_block *block);
 int physmem_block_map(struct physmem_block *block, void *addr);

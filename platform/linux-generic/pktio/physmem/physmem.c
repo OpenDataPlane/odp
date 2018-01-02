@@ -251,7 +251,7 @@ static struct physmem_block *block_get(void)
 	return block;
 }
 
-struct physmem_block *physmem_block_alloc(uint64_t size)
+struct physmem_block *physmem_block_reserve(uint64_t size)
 {
 	struct physmem_block *block;
 	struct physmem_block *ret = NULL;
@@ -329,6 +329,22 @@ struct physmem_block *physmem_block_alloc(uint64_t size)
 	unlock_list();
 
 	return ret;
+}
+
+struct physmem_block *physmem_block_alloc(uint64_t size)
+{
+	struct physmem_block *block;
+
+	block = physmem_block_reserve(size);
+	if (block == NULL)
+		return NULL;
+
+	if (physmem_block_map(block, NULL)) {
+		physmem_block_free(block);
+		return NULL;
+	}
+
+	return block;
 }
 
 void physmem_block_free(struct physmem_block *block)
@@ -546,7 +562,6 @@ exit_failure:
 	/* FIXME: give back reserved memory */
 	block->va_reserved = NULL;
 	block->va_reserved_size = 0;
-
 
 	while (mapped_cnt--) {
 		hp = &pages[block->first + mapped_cnt];
