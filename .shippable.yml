@@ -39,6 +39,8 @@ build:
     - ./configure --disable-test-perf
     - make
     - sudo env ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes make check
+
+  post_ci:
     - wget https://raw.githubusercontent.com/shawnliang/cunit-to-junit/master/cunit-to-junit.xsl
     - |
       for FILE in `find  ./test ./platform/ -name  "*.xml"`; do
