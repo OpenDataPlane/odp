@@ -11,7 +11,6 @@ AM_CPPFLAGS +=  -I$(top_builddir)/include
 AM_CPPFLAGS +=  -Iinclude
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/$(ARCH_DIR)
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/default
-AM_CPPFLAGS +=  -DSYSCONFDIR=\"@sysconfdir@\"
 
 AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
 AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
