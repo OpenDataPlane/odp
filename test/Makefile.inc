@@ -33,5 +33,4 @@ AM_LDFLAGS = -L$(LIB) -static
 @VALGRIND_CHECK_RULES@
 
 TESTS_ENVIRONMENT = ODP_PLATFORM=${with_platform} \
-		    EXEEXT=${EXEEXT} \
-		    ODP_SYSCONFIG_FILE=none
+		    EXEEXT=${EXEEXT}
