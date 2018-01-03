@@ -313,7 +313,13 @@ typedef struct odp_crypto_session_param_t {
 	odp_crypto_key_t cipher_key;
 
 	/** Cipher Initialization Vector (IV) */
-	odp_crypto_iv_t iv;
+	union {
+		/** @deprecated Use cipher_iv */
+		odp_crypto_iv_t ODP_DEPRECATE(iv);
+
+		/** Cipher Initialization Vector (IV) */
+		odp_crypto_iv_t cipher_iv;
+	};
 
 	/** Authentication algorithm
 	 *
