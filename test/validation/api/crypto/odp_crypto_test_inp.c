@@ -315,9 +315,9 @@ static void alg_test(odp_crypto_op_t op,
 		.data = ref->auth_key,
 		.length = ref->auth_key_length
 	};
-	odp_crypto_iv_t iv = {
-		.data = ovr_iv ? NULL : ref->iv,
-		.length = ref->iv_length
+	odp_crypto_iv_t cipher_iv = {
+		.data = ovr_iv ? NULL : ref->cipher_iv,
+		.length = ref->cipher_iv_length
 	};
 
 	/* Create a crypto session */
@@ -331,7 +331,7 @@ static void alg_test(odp_crypto_op_t op,
 	ses_params.compl_queue = suite_context.queue;
 	ses_params.output_pool = suite_context.pool;
 	ses_params.cipher_key = cipher_key;
-	ses_params.iv = iv;
+	ses_params.cipher_iv = cipher_iv;
 	ses_params.auth_key = auth_key;
 	ses_params.auth_digest_len = ref->digest_length;
 	ses_params.auth_aad_len = ref->aad_length;
@@ -381,17 +381,17 @@ static void alg_test(odp_crypto_op_t op,
 
 		if (!suite_context.packet)
 			rc = alg_op(pkt, &ok, session,
-				    ovr_iv ? ref->iv : NULL,
+				    ovr_iv ? ref->cipher_iv : NULL,
 				    &cipher_range, &auth_range,
 				    ref->aad, ref->length);
 		else if (ODP_CRYPTO_ASYNC == suite_context.op_mode)
 			rc = alg_packet_op_enq(pkt, &ok, session,
-					       ovr_iv ? ref->iv : NULL,
+					       ovr_iv ? ref->cipher_iv : NULL,
 					       &cipher_range, &auth_range,
 					       ref->aad, ref->length);
 		else
 			rc = alg_packet_op(pkt, &ok, session,
-					   ovr_iv ? ref->iv : NULL,
+					   ovr_iv ? ref->cipher_iv : NULL,
 					   &cipher_range, &auth_range,
 					   ref->aad, ref->length);
 		if (rc < 0)
@@ -518,7 +518,7 @@ static void check_alg(odp_crypto_op_t op,
 			if (cipher_capa[i].key_len ==
 			    ref[idx].cipher_key_length &&
 			    cipher_capa[i].iv_len ==
-			    ref[idx].iv_length) {
+			    ref[idx].cipher_iv_length) {
 				cipher_idx = i;
 				break;
 			}
@@ -529,7 +529,7 @@ static void check_alg(odp_crypto_op_t op,
 			       ", iv_len=%" PRIu32 "\n",
 			       cipher_alg_name(cipher_alg),
 			       ref[idx].cipher_key_length,
-			       ref[idx].iv_length);
+			       ref[idx].cipher_iv_length);
 			continue;
 		}
 
