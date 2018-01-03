@@ -79,7 +79,7 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 static int alg_op(odp_packet_t pkt,
 		  odp_bool_t *ok,
 		  odp_crypto_session_t session,
-		  uint8_t *op_iv_ptr,
+		  uint8_t *cipher_iv_ptr,
 		  odp_packet_data_range_t *cipher_range,
 		  odp_packet_data_range_t *auth_range,
 		  uint8_t *aad,
@@ -100,8 +100,8 @@ static int alg_op(odp_packet_t pkt,
 
 	op_params.cipher_range = *cipher_range;
 	op_params.auth_range = *auth_range;
-	if (op_iv_ptr)
-		op_params.override_iv_ptr = op_iv_ptr;
+	if (cipher_iv_ptr)
+		op_params.cipher_iv_ptr = cipher_iv_ptr;
 
 	op_params.aad_ptr = aad;
 
@@ -154,7 +154,7 @@ static int alg_op(odp_packet_t pkt,
 static int alg_packet_op(odp_packet_t pkt,
 			 odp_bool_t *ok,
 			 odp_crypto_session_t session,
-			 uint8_t *op_iv_ptr,
+			 uint8_t *cipher_iv_ptr,
 			 odp_packet_data_range_t *cipher_range,
 			 odp_packet_data_range_t *auth_range,
 			 uint8_t *aad,
@@ -172,8 +172,8 @@ static int alg_packet_op(odp_packet_t pkt,
 
 	op_params.cipher_range = *cipher_range;
 	op_params.auth_range = *auth_range;
-	if (op_iv_ptr)
-		op_params.override_iv_ptr = op_iv_ptr;
+	if (cipher_iv_ptr)
+		op_params.cipher_iv_ptr = cipher_iv_ptr;
 
 	op_params.aad_ptr = aad;
 
@@ -211,7 +211,7 @@ static int alg_packet_op(odp_packet_t pkt,
 static int alg_packet_op_enq(odp_packet_t pkt,
 			     odp_bool_t *ok,
 			     odp_crypto_session_t session,
-			     uint8_t *op_iv_ptr,
+			     uint8_t *cipher_iv_ptr,
 			     odp_packet_data_range_t *cipher_range,
 			     odp_packet_data_range_t *auth_range,
 			     uint8_t *aad,
@@ -230,8 +230,8 @@ static int alg_packet_op_enq(odp_packet_t pkt,
 
 	op_params.cipher_range = *cipher_range;
 	op_params.auth_range = *auth_range;
-	if (op_iv_ptr)
-		op_params.override_iv_ptr = op_iv_ptr;
+	if (cipher_iv_ptr)
+		op_params.cipher_iv_ptr = cipher_iv_ptr;
 
 	op_params.aad_ptr = aad;
 

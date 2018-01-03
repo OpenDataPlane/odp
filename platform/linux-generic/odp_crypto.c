@@ -483,8 +483,8 @@ odp_crypto_alg_err_t cipher_encrypt(odp_packet_t pkt,
 	void *iv_ptr;
 	int ret;
 
-	if (param->override_iv_ptr)
-		iv_ptr = param->override_iv_ptr;
+	if (param->cipher_iv_ptr)
+		iv_ptr = param->cipher_iv_ptr;
 	else if (session->p.cipher_iv.data)
 		iv_ptr = session->cipher.iv_data;
 	else
@@ -517,8 +517,8 @@ odp_crypto_alg_err_t cipher_decrypt(odp_packet_t pkt,
 	void *iv_ptr;
 	int ret;
 
-	if (param->override_iv_ptr)
-		iv_ptr = param->override_iv_ptr;
+	if (param->cipher_iv_ptr)
+		iv_ptr = param->cipher_iv_ptr;
 	else if (session->p.cipher_iv.data)
 		iv_ptr = session->cipher.iv_data;
 	else
@@ -588,8 +588,8 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
 	uint8_t block[EVP_MAX_MD_SIZE];
 	int ret;
 
-	if (param->override_iv_ptr)
-		iv_ptr = param->override_iv_ptr;
+	if (param->cipher_iv_ptr)
+		iv_ptr = param->cipher_iv_ptr;
 	else if (session->p.cipher_iv.data)
 		iv_ptr = session->cipher.iv_data;
 	else
@@ -638,8 +638,8 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
 	uint8_t block[EVP_MAX_MD_SIZE];
 	int ret;
 
-	if (param->override_iv_ptr)
-		iv_ptr = param->override_iv_ptr;
+	if (param->cipher_iv_ptr)
+		iv_ptr = param->cipher_iv_ptr;
 	else if (session->p.cipher_iv.data)
 		iv_ptr = session->cipher.iv_data;
 	else
@@ -710,8 +710,8 @@ odp_crypto_alg_err_t aes_gmac_gen(odp_packet_t pkt,
 	uint8_t block[EVP_MAX_MD_SIZE];
 	int ret;
 
-	if (param->override_iv_ptr)
-		iv_ptr = param->override_iv_ptr;
+	if (param->cipher_iv_ptr)
+		iv_ptr = param->cipher_iv_ptr;
 	else if (session->p.cipher_iv.data)
 		iv_ptr = session->cipher.iv_data;
 	else
@@ -752,8 +752,8 @@ odp_crypto_alg_err_t aes_gmac_check(odp_packet_t pkt,
 	uint8_t block[EVP_MAX_MD_SIZE];
 	int ret;
 
-	if (param->override_iv_ptr)
-		iv_ptr = param->override_iv_ptr;
+	if (param->cipher_iv_ptr)
+		iv_ptr = param->cipher_iv_ptr;
 	else if (session->p.cipher_iv.data)
 		iv_ptr = session->cipher.iv_data;
 	else
@@ -1171,7 +1171,7 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 	int rc;
 
 	packet_param.session = param->session;
-	packet_param.override_iv_ptr = param->override_iv_ptr;
+	packet_param.cipher_iv_ptr = param->cipher_iv_ptr;
 	packet_param.hash_result_offset = param->hash_result_offset;
 	packet_param.aad_ptr = param->aad_ptr;
 	packet_param.cipher_range = param->cipher_range;

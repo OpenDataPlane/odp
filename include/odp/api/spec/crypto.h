@@ -400,8 +400,13 @@ typedef struct odp_crypto_op_param_t {
 	 */
 	odp_packet_t out_pkt;
 
-	/** Override session IV pointer */
-	uint8_t *override_iv_ptr;
+	/** Override session IV pointer for cipher */
+	union {
+		/** @deprecated use cipher_iv_ptr */
+		uint8_t *ODP_DEPRECATE(override_iv_ptr);
+		/** Override session IV pointer for cipher */
+		uint8_t *cipher_iv_ptr;
+	};
 
 	/** Offset from start of packet for hash result
 	 *
@@ -436,8 +441,13 @@ typedef struct odp_crypto_packet_op_param_t {
 	/** Session handle from creation */
 	odp_crypto_session_t session;
 
-	/** Override session IV pointer */
-	uint8_t *override_iv_ptr;
+	/** Override session IV pointer for cipher */
+	union {
+		/** @deprecated use cipher_iv_ptr */
+		uint8_t *ODP_DEPRECATE(override_iv_ptr);
+		/** Override session IV pointer for cipher */
+		uint8_t *cipher_iv_ptr;
+	};
 
 	/** Offset from start of packet for hash result
 	 *
