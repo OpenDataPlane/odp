@@ -9,7 +9,6 @@ TESTS = $(TESTSCRIPTS)
 
 test_PROGRAMS = time_main
 time_main_SOURCES = time_main.c time.c time_test.h
-time_main_LDADD = $(LIBCUNIT_COMMON) $(LIBODP)
 
 dist_check_SCRIPTS = $(TESTSCRIPTS)
 test_SCRIPTS = $(dist_check_SCRIPTS)

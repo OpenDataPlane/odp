@@ -6,4 +6,4 @@ ring_main_SOURCES = \
 		    ring_suites.c ring_suites.h \
 		    ring_basic.c ring_stress.c
 
-ring_main_LDADD = $(LIBCUNIT_COMMON) $(LIBODP)
+PRELDADD += $(LIBCUNIT_COMMON)

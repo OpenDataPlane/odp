@@ -9,7 +9,7 @@ TESTS = $(TESTSCRIPTS)
 
 test_PROGRAMS = traffic_mngr_main
 traffic_mngr_main_SOURCES = traffic_mngr_main.c traffic_mngr.c traffic_mngr.h
-traffic_mngr_main_LDADD = -lm $(LIBCUNIT_COMMON) $(LIBODP)
+LDADD += -lm
 
 dist_check_SCRIPTS = $(TESTSCRIPTS)
 test_SCRIPTS = $(dist_check_SCRIPTS)
