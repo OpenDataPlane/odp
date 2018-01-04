@@ -24,14 +24,14 @@ extern "C" {
  */
 
 /** VXLAN header length */
-#define _ODP_VXLANHDR_LEN 8
+#define _ODP_VXLAN_HDR_LEN 8
 
 /** VXLAN UDP destination port */
 #define _ODP_UDP_VXLAN_PORT 4789
 
-#define ODPH_VXLAN_VNI(vxlan_vni) ((vxlan_vni & 0xffffff00) >> 8)
+#define _ODP_VXLAN_VNI(vxlan_vni) ((vxlan_vni & 0xffffff00) >> 8)
 
-#define ODPH_VXLAN_BIT(vxlan_flag) (vxlan_flag & 0x08)
+#define _ODP_VXLAN_BIT(vxlan_flag) (vxlan_flag & 0x08)
 
 /** UDP header */
 typedef struct ODP_PACKED {
@@ -42,8 +42,8 @@ typedef struct ODP_PACKED {
 } _odp_vxlanhdr_t;
 
 /** @internal Compile time assert */
-ODP_STATIC_ASSERT(sizeof(_odp_vxlanhdr_t) == _ODP_VXLANHDR_LEN,
-		  "_ODP_VXLANHDR_T__SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(_odp_vxlanhdr_t) == _ODP_VXLAN_HDR_LEN,
+		  "_ODP_VXLAN_HDR_T__SIZE_ERROR");
 
 /**
  * @}

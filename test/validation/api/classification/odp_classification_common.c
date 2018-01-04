@@ -297,7 +297,7 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	l4_hdr_len = pkt_info.udp ? ODPH_UDPHDR_LEN : ODPH_TCPHDR_LEN;
 	eth_type = pkt_info.ipv6 ? ODPH_ETHTYPE_IPV6 : ODPH_ETHTYPE_IPV4;
 	next_hdr = pkt_info.udp ? ODPH_IPPROTO_UDP : ODPH_IPPROTO_TCP;
-	vxlan_len = pkt_info.vxlan ? ODPH_VXLANHDR_LEN + inner_hdr_len : 0;
+	vxlan_len = pkt_info.vxlan ? ODPH_VXLAN_HDR_LEN + inner_hdr_len : 0;
 	l2_hdr_len   = ODPH_ETHHDR_LEN + vlan_hdr_len;
 	l4_len	= l4_hdr_len + payload_len + vxlan_len;
 	l3_len	= l3_hdr_len + l4_len;
@@ -402,8 +402,8 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 			vxlan->vni = odp_cpu_to_be_32(vni);
 
 			/* inner header L2 */
-			eth = (odph_ethhdr_t *)(ptr + ODPH_VXLANHDR_LEN);
-			ptr += ODPH_VXLANHDR_LEN;
+			eth = (odph_ethhdr_t *)(ptr + ODPH_VXLAN_HDR_LEN);
+			ptr += ODPH_VXLAN_HDR_LEN;
 			memcpy(eth->src.addr, &src_mac, ODPH_ETHADDR_LEN);
 			memcpy(eth->dst.addr, &dst_mac_be, ODPH_ETHADDR_LEN);
 			eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);

@@ -2180,7 +2180,7 @@ static inline void parse_vxlan(packet_parser_t *prs, packet_parser_t *in_prs,
 {
 	const _odp_vxlanhdr_t *vxlan = (const _odp_vxlanhdr_t *)*parseptr;
 
-	if (ODPH_VXLAN_BIT(vxlan->flags))
+	if (_ODP_VXLAN_BIT(vxlan->flags))
 		prs->input_flags.vxlan = 1;
 
 	if (offset)

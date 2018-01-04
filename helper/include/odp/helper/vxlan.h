@@ -24,7 +24,7 @@ extern "C" {
  */
 
 /** VXLAN header length */
-#define ODPH_VXLANHDR_LEN 8
+#define ODPH_VXLAN_HDR_LEN 8
 
 /** VNI from VXLAN header format */
 #define ODPH_VXLAN_VNI(vxlan_vni) ((vxlan_vni & 0xffffff00) >> 8)
@@ -44,8 +44,8 @@ typedef struct ODP_PACKED {
 } odph_vxlanhdr_t;
 
 /** @internal Compile time assert */
-ODP_STATIC_ASSERT(sizeof(odph_vxlanhdr_t) == ODPH_VXLANHDR_LEN,
-		  "ODPH_VXLANHDR_T__SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(odph_vxlanhdr_t) == ODPH_VXLAN_HDR_LEN,
+		  "ODPH_VXLAN_HDR_T__SIZE_ERROR");
 
 /**
  * @}
