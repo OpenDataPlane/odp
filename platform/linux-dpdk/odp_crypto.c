@@ -623,7 +623,7 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 		while (cap->op != RTE_CRYPTO_OP_TYPE_UNDEFINED) {
 			cap_auth_algo = cap->sym.auth.algo;
 			if (cap->sym.xform_type ==
-			    RTE_CRYPTO_SYM_XFORM_CIPHER) {
+			    RTE_CRYPTO_SYM_XFORM_AUTH) {
 				if (cap_auth_algo == auth_xform.auth.algo)
 						break;
 			}
