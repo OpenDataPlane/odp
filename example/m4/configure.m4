@@ -37,4 +37,5 @@ AC_CONFIG_FILES([example/classifier/Makefile
 		 example/traffic_mgmt/Makefile
 		 example/ddf_ifs/Makefile
 		 example/ddf_app/Makefile
+		 example/instrum/Makefile
 		 example/Makefile])

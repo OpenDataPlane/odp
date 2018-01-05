@@ -13,4 +13,8 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/platform/@with_platform@/arch/@ARCH_DIR@ \
 	-I$(top_builddir)/include
 
+if CODE_INSTRUM
+AM_LDFLAGS = -L$(LIB) -lssl -lcrypto -latomic
+else
 AM_LDFLAGS = -L$(LIB) -static
+endif
