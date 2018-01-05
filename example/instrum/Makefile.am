@@ -16,5 +16,19 @@ AM_LDFLAGS = -L$(PAPI_PATH)/lib -lpapi
 
 lib_LTLIBRARIES = $(LIB)/libinstrum.la
 
+noinst_HEADERS = \
+		$(srcdir)/instrum_common.h \
+		$(srcdir)/sample.h \
+		$(srcdir)/store.h \
+		$(srcdir)/papi_cnt.h \
+		$(srcdir)/init.h \
+		$(srcdir)/drv.h \
+		$(srcdir)/sched.h
+
 __LIB__libinstrum_la_SOURCES = \
-		instrum.c
+		instrum.c \
+		store.c \
+		papi_cnt.c \
+		init.c \
+		drv.c \
+		sched.c
