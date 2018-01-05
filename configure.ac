@@ -411,4 +411,5 @@ AC_MSG_RESULT([
 	test_example:		${test_example}
 	user_guides:		${user_guides}
 	mdev:			${mdev_support}
+	code instrumentation:	${code_instrumentation}
 ])

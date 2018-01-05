@@ -7,6 +7,22 @@ AC_ARG_ENABLE([test-example],
     [test_example=yes])
 AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
 
+code_instrumentation=no
+AC_ARG_ENABLE([code-instrum],
+    [  --enable-code-instrum   enable code instrumentation support],
+    [if test x$enableval = xyes; then
+        code_instrumentation=yes
+    fi])
+
+PAPI_PATH=""
+AC_ARG_WITH([papi-path],
+AS_HELP_STRING([--with-papi-path=DIR   path to papi install directory]),
+    [PAPI_PATH="$withval"
+    code_instrumentation=yes],[])
+
+AC_SUBST([PAPI_PATH])
+AM_CONDITIONAL([CODE_INSTRUM], [test x$code_instrumentation = xyes ])
+
 AC_CONFIG_FILES([example/classifier/Makefile
 		 example/generator/Makefile
 		 example/hello/Makefile
