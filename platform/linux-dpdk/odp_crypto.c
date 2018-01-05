@@ -72,6 +72,9 @@ static inline int is_valid_size(uint16_t length, uint16_t min,
 	if (length < supp_size)
 		return -1;
 
+	if (supp_size != length && increment == 0)
+		return -1;
+
 	for (; supp_size <= max; supp_size += increment) {
 		if (length == supp_size)
 			return 0;
