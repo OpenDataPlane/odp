@@ -46,6 +46,7 @@ extern int enable_link_tap_pktio_ops;
 #endif
 #if defined(_ODP_MDEV) && _ODP_MDEV == 1
 extern int enable_link_cxgb4_pktio_ops;
+extern int enable_link_e1000e_pktio_ops;
 extern int enable_link_i40e_pktio_ops;
 #endif
 
@@ -79,6 +80,7 @@ ODP_SUBSYSTEM_CONSTRUCTOR(pktio_ops)
 #endif
 #if defined(_ODP_MDEV) && _ODP_MDEV == 1
 	enable_link_cxgb4_pktio_ops = 1;
+	enable_link_e1000e_pktio_ops = 1;
 	enable_link_i40e_pktio_ops = 1;
 #endif
 }
