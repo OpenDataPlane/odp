@@ -84,6 +84,7 @@ typedef struct {
 	int rx_burst;	/**< number of packets to receive with one
 				      API call */
 	odp_bool_t csum;	/**< use platform csum support if available */
+	odp_bool_t sched;	/**< use scheduler API to receive packets */
 } appl_args_t;
 
 /**
@@ -1394,10 +1395,11 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"udp_tx_burst", required_argument, NULL, 'x'},
 		{"rx_burst", required_argument, NULL, 'r'},
 		{"csum", no_argument, NULL, 'y'},
+		{"sched", no_argument, NULL, 'z'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+I:a:b:s:d:p:i:m:n:t:w:c:x:he:f:yr:";
+	static const char *shortopts = "+I:a:b:s:d:p:i:m:n:t:w:c:x:he:f:yr:z";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	odph_parse_options(argc, argv, shortopts, longopts);
@@ -1412,6 +1414,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->srcport = 0;
 	appl_args->dstport = 0;
 	appl_args->csum = 0;
+	appl_args->sched = 0;
 
 	opterr = 0; /* do not issue errors on helper options */
 
@@ -1563,6 +1566,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'y':
 			appl_args->csum = 1;
 			break;
+		case 'z':
+			appl_args->sched = 1;
+			break;
 		case 'h':
 			usage(argv[0]);
 			exit(EXIT_SUCCESS);
@@ -1652,6 +1658,8 @@ static void usage(char *progname)
 	       "  -r, --rx_burst size of RX burst\n"
 	       "  -y, --csum use platform checksum support if available\n"
 	       "	         default is disabled\n"
+	       "  -z, --sched use scheduler API to receive packets\n"
+	       "                 default is direct mode API\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 	      );
 }
