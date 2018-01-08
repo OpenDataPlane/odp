@@ -55,6 +55,8 @@ typedef struct {
 	odp_pktio_config_t config;
 	odp_pktout_queue_t pktout[MAX_WORKERS];
 	unsigned pktout_count;
+	odp_pktin_queue_t pktin[MAX_WORKERS];
+	unsigned pktin_count;
 } interface_t;
 
 /**
@@ -111,6 +113,7 @@ typedef struct {
 			odp_pktout_config_opt_t *pktout_cfg; /**< Packet output config*/
 		} tx;
 		struct {
+			odp_pktin_queue_t pktin; /**< Packet input queue */
 			interface_t *ifs; /**< Interfaces array */
 			int ifs_count; /**< Interfaces array size */
 		} rx;
@@ -520,10 +523,15 @@ static int create_pktio(const char *dev, odp_pool_t pool,
 	odp_pktio_param_t pktio_param;
 	odp_pktin_queue_param_t pktin_param;
 	odp_pktout_queue_param_t pktout_param;
-	odp_pktio_op_mode_t pktout_mode;
+	odp_pktio_op_mode_t pktout_mode, pktin_mode;
+	odp_bool_t sched = args->appl.sched;
 
 	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+	pktio_param.in_mode = num_rx_queues ?
+		(sched ? ODP_PKTIN_MODE_SCHED : ODP_PKTIN_MODE_DIRECT) :
+		ODP_PKTIN_MODE_DISABLED;
+	pktio_param.out_mode = num_tx_queues ? ODP_PKTOUT_MODE_DIRECT :
+		ODP_PKTOUT_MODE_DISABLED;
 
 	/* Open a packet IO instance */
 	itf->pktio = odp_pktio_open(dev, pool, &pktio_param);
@@ -572,31 +580,47 @@ static int create_pktio(const char *dev, odp_pool_t pool,
 		return -1;
 	}
 
-	if (num_rx_queues > capa.max_input_queues)
-		num_rx_queues = capa.max_input_queues;
+	if (num_rx_queues) {
+		pktin_mode = ODP_PKTIO_OP_MT_UNSAFE;
+		if (num_rx_queues > capa.max_input_queues) {
+			num_rx_queues = capa.max_input_queues;
+			pktin_mode = ODP_PKTIO_OP_MT;
+			EXAMPLE_DBG("Warning: Force RX multithread safe mode "
+				    "(slower)on %s\n",	dev);
+		}
 
-	odp_pktin_queue_param_init(&pktin_param);
-	pktin_param.num_queues = num_rx_queues;
-	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+		odp_pktin_queue_param_init(&pktin_param);
+		pktin_param.num_queues = num_rx_queues;
+		pktin_param.op_mode = pktin_mode;
+		if (sched)
+			pktin_param.queue_param.sched.sync =
+				ODP_SCHED_SYNC_ATOMIC;
 
-	if (odp_pktin_queue_config(itf->pktio, &pktin_param)) {
-		EXAMPLE_ERR("Error: pktin queue config failed for %s\n", dev);
-		return -1;
+		if (odp_pktin_queue_config(itf->pktio, &pktin_param)) {
+			EXAMPLE_ERR("Error: pktin queue config failed "
+				    "for %s\n", dev);
+			return -1;
+		}
 	}
 
-	pktout_mode = ODP_PKTIO_OP_MT_UNSAFE;
-	if (num_tx_queues > capa.max_output_queues) {
-		num_tx_queues = capa.max_output_queues;
-		pktout_mode = ODP_PKTIO_OP_MT;
-	}
+	if (num_tx_queues) {
+		pktout_mode = ODP_PKTIO_OP_MT_UNSAFE;
+		if (num_tx_queues > capa.max_output_queues) {
+			num_tx_queues = capa.max_output_queues;
+			pktout_mode = ODP_PKTIO_OP_MT;
+			EXAMPLE_DBG("Warning: Force TX multithread safe mode "
+				    "(slower) on %s\n", dev);
+		}
 
-	odp_pktout_queue_param_init(&pktout_param);
-	pktout_param.num_queues = num_tx_queues;
-	pktout_param.op_mode = pktout_mode;
+		odp_pktout_queue_param_init(&pktout_param);
+		pktout_param.num_queues = num_tx_queues;
+		pktout_param.op_mode = pktout_mode;
 
-	if (odp_pktout_queue_config(itf->pktio, &pktout_param)) {
-		EXAMPLE_ERR("Error: pktout queue config failed for %s\n", dev);
-		return -1;
+		if (odp_pktout_queue_config(itf->pktio, &pktout_param)) {
+			EXAMPLE_ERR("Error: pktout queue config failed for %s\n",
+				    dev);
+			return -1;
+		}
 	}
 
 	ret = odp_pktio_start(itf->pktio);
@@ -604,9 +628,18 @@ static int create_pktio(const char *dev, odp_pool_t pool,
 		EXAMPLE_ABORT("Error: unable to start %s\n", dev);
 
 	itf->pktout_count = num_tx_queues;
-	if (odp_pktout_queue(itf->pktio, itf->pktout, itf->pktout_count) !=
-			     (int)itf->pktout_count) {
+	if (itf->pktout_count &&
+	    odp_pktout_queue(itf->pktio, itf->pktout, itf->pktout_count) !=
+	    (int)itf->pktout_count) {
 		EXAMPLE_ERR("Error: failed to get output queues for %s\n", dev);
+		return -1;
+	}
+
+	itf->pktin_count = num_rx_queues;
+	if (!sched && itf->pktin_count &&
+	    odp_pktin_queue(itf->pktio, itf->pktin, itf->pktin_count) !=
+	    (int)itf->pktin_count) {
+		EXAMPLE_ERR("Error: failed to get input queues for %s\n", dev);
 		return -1;
 	}
 
@@ -1140,28 +1173,29 @@ int main(int argc, char *argv[])
 
 	ifs = malloc(sizeof(interface_t) * args->appl.if_count);
 
-	if (args->appl.mode == APPL_MODE_PING ||
-	    args->appl.mode == APPL_MODE_UDP)
-		num_rx_queues = 1;
-	else
-		num_rx_queues = num_workers;
+	for (i = 0; i < args->appl.if_count; ++i) {
+		if (args->appl.mode == APPL_MODE_PING) {
+			num_rx_queues = 1;
+			num_tx_queues = 1;
+		} else if (args->appl.mode == APPL_MODE_UDP) {
+			num_rx_queues = 0;
+			num_tx_queues = num_workers / args->appl.if_count;
+			if (i < num_workers % args->appl.if_count)
+				num_tx_queues++;
+		} else { /* APPL_MODE_RCV*/
+			num_rx_queues = num_workers / args->appl.if_count;
+			if (i < num_workers % args->appl.if_count)
+				num_rx_queues++;
+			num_tx_queues = 0;
+		}
 
-	if (args->appl.mode == APPL_MODE_PING ||
-	    args->appl.mode == APPL_MODE_RCV)
-		num_tx_queues = 1;
-	else {
-		num_tx_queues = num_workers / args->appl.if_count;
-		if (num_workers % args->appl.if_count)
-			num_tx_queues++;
-	}
-
-	for (i = 0; i < args->appl.if_count; ++i)
 		if (create_pktio(args->appl.if_names[i], pool, num_rx_queues,
 				 num_tx_queues, &ifs[i])) {
 			EXAMPLE_ERR("Error: create interface %s failed.\n",
 				    args->appl.if_names[i]);
 			exit(EXIT_FAILURE);
 		}
+	}
 
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
