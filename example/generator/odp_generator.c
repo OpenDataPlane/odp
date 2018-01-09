@@ -572,6 +572,12 @@ static int create_pktio(const char *dev, odp_pool_t pool,
 		itf->config.pktout.bit.udp_chksum = 0;
 	}
 
+	itf->config.parser.layer = ODP_PROTO_LAYER_L2;
+	if (itf->config.pktin.bit.udp_chksum)
+		itf->config.parser.layer = ODP_PROTO_LAYER_L4;
+	else if (itf->config.pktin.bit.ipv4_chksum)
+		itf->config.parser.layer = ODP_PROTO_LAYER_L3;
+
 	if (odp_pktio_config(itf->pktio, &itf->config)) {
 		EXAMPLE_ERR("Error: Failed to set interface configuration %s\n",
 			    dev);
@@ -781,11 +787,12 @@ static int gen_send_thread(void *arg)
  */
 
 static void process_icmp_pkt(int thr, thread_args_t *thr_args,
-			     odph_icmphdr_t *icmp)
+			     uint8_t *_icmp)
 {
 	uint64_t trecv;
 	uint64_t tsend;
 	uint64_t rtt_ms, rtt_us;
+	odph_icmphdr_t *icmp = (odph_icmphdr_t *)_icmp;
 
 	if (icmp->type == ICMP_ECHOREPLY) {
 		thr_args->counters.ctr_icmp_reply_rcv++;
@@ -818,17 +825,11 @@ static void process_pkts(int thr, thread_args_t *thr_args,
 {
 	odp_packet_t pkt;
 	odp_packet_chksum_status_t csum_status;
-	char *buf;
+	uint32_t left, offset, i;
 	odph_ipv4hdr_t *ip;
-	odph_icmphdr_t *icmp;
-	unsigned i;
 
 	for (i = 0; i < len; ++i) {
 		pkt = pkt_tbl[i];
-
-		/* only ip pkts */
-		if (!odp_packet_has_ipv4(pkt))
-			continue;
 
 		csum_status = odp_packet_l3_chksum_status(pkt);
 		if (csum_status == ODP_PACKET_CHKSUM_BAD)
@@ -842,20 +843,36 @@ static void process_pkts(int thr, thread_args_t *thr_args,
 		if (odp_unlikely(odp_packet_has_error(pkt)))
 			continue;
 
+		offset = odp_packet_l3_offset(pkt);
+		left = odp_packet_len(pkt) - offset;
+
+		if (left < sizeof(odph_ipv4hdr_t))
+			continue;
+
+		ip = (odph_ipv4hdr_t *)((uint8_t *)odp_packet_data(pkt) +
+					offset);
+
+		/* only ip pkts */
+		if (ODPH_IPV4HDR_VER(ip->ver_ihl) != ODPH_IPV4)
+			continue;
+
 		thr_args->counters.ctr_pkt_rcv++;
-		buf = odp_packet_data(pkt);
-		ip = (odph_ipv4hdr_t *)(buf + odp_packet_l3_offset(pkt));
 
 		/* udp */
-		if (ip->proto == ODPH_IPPROTO_UDP)
+		if (ip->proto == ODPH_IPPROTO_UDP) {
 			thr_args->counters.ctr_udp_rcv++;
+		} else if (ip->proto == ODPH_IPPROTO_ICMPv4) {
+			uint32_t l3_size = ODPH_IPV4HDR_IHL(ip->ver_ihl) * 4;
 
-		/* icmp */
-		if (ip->proto == ODPH_IPPROTO_ICMPv4) {
-			icmp = (odph_icmphdr_t *)(buf +
-				odp_packet_l4_offset(pkt));
+			offset += l3_size;
+			left -=  l3_size;
 
-			process_icmp_pkt(thr, thr_args, icmp);
+			if (left < sizeof(odph_icmphdr_t))
+				continue;
+
+			process_icmp_pkt(thr, thr_args,
+					 (uint8_t *)odp_packet_data(pkt) +
+					 offset);
 		}
 	}
 }
