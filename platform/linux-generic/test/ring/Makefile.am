@@ -7,3 +7,6 @@ ring_main_SOURCES = \
 		    ring_basic.c ring_stress.c
 
 PRELDADD += $(LIBCUNIT_COMMON)
+
+AM_CPPFLAGS += \
+		     -I$(top_srcdir)/platform/linux-generic/include

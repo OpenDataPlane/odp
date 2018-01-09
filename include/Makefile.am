@@ -2,6 +2,11 @@ include_HEADERS = \
 		  odp.h \
 		  odp_api.h
 
+odpincludedir= $(includedir)/odp
+odpinclude_HEADERS = \
+		  odp/visibility_begin.h \
+		  odp/visibility_end.h
+
 odpapiincludedir= $(includedir)/odp/api/
 odpapiinclude_HEADERS = \
 	odp/api/align.h \
