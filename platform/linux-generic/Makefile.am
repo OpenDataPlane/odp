@@ -4,6 +4,7 @@
 include $(top_srcdir)/platform/Makefile.inc
 
 AM_CPPFLAGS = $(ODP_INCLUDES)
+AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/include
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/@ARCH_DIR@
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/default
@@ -18,11 +19,6 @@ if ARCH_IS_X86
 AM_CFLAGS += -msse4.2
 endif
 endif
-
-odpincludedir= $(includedir)/odp
-odpinclude_HEADERS = \
-		  include/odp/visibility_begin.h \
-		  include/odp/visibility_end.h
 
 if !ODP_ABI_COMPAT
 odpapiplatincludedir= $(includedir)/odp/api/plat
