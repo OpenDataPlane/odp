@@ -813,14 +813,17 @@ int odp_pktio_start(odp_pktio_t pktio);
  * received from the network may be still available from interface and
  * application can receive those normally. New packets may not be accepted for
  * transmit. Packets already stored for transmit are not freed. A following
- * odp_packet_start() call restarts packet receive and transmit.
+ * odp_packet_start() call restarts packet receive and transmit. Any active
+ * odp_pktin_recv_tmo() or odp_pktin_recv_mq_tmo() calls for this interface
+ * are terminated by this call.
  *
  * @param pktio  Packet IO handle
  *
  * @retval 0 on success
  * @retval <0 on failure
  *
- * @see odp_pktio_start(), odp_pktio_close()
+ * @see odp_pktio_start(), odp_pktio_close(), odp_pktin_recv_tmo(),
+ * odp_pktin_recv_mq_tmo()
  */
 int odp_pktio_stop(odp_pktio_t pktio);
 
@@ -884,14 +887,19 @@ int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num);
  * @param      num        Maximum number of packets to receive
  * @param      wait       Wait time specified as as follows:
  *                        * ODP_PKTIN_NO_WAIT: Do not wait
- *                        * ODP_PKTIN_WAIT:    Wait infinitely
+ *                        * ODP_PKTIN_WAIT:    Wait indefinitely. Returns
+ *                          <0 if interface is stopped during the wait.
  *                        * Other values specify the minimum time to wait.
  *                          Use odp_pktin_wait_time() to convert nanoseconds
  *                          to a valid parameter value. Wait time may be
  *                          rounded up a small, platform specific amount.
+ *                          Timeout value may be expired early if the
+ *                          interface is stopped during the timed wait.
  *
  * @return Number of packets received
  * @retval <0 on failure
+ *
+ * @see odp_pktio_stop()
  */
 int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[],
 		       int num, uint64_t wait);
@@ -923,14 +931,19 @@ int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[],
  * @param      num        Maximum number of packets to receive
  * @param      wait       Wait time specified as as follows:
  *                        * ODP_PKTIN_NO_WAIT: Do not wait
- *                        * ODP_PKTIN_WAIT:    Wait infinitely
+ *                        * ODP_PKTIN_WAIT:    Wait indefinitely. Returns
+ *                          <0 if interface is stopped during the wait.
  *                        * Other values specify the minimum time to wait.
  *                          Use odp_pktin_wait_time() to convert nanoseconds
  *                          to a valid parameter value. Wait time may be
  *                          rounded up a small, platform specific amount.
+ *                          Timeout value may be expired early if the
+ *                          interface is stopped during the timed wait.
  *
  * @return Number of packets received
  * @retval <0 on failure
+ *
+ * @see odp_pktio_stop()
  */
 int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned num_q,
 			  unsigned *from, odp_packet_t packets[], int num,
