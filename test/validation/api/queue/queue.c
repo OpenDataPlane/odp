@@ -10,10 +10,26 @@
 #include <odp_cunit_common.h>
 #include "queue.h"
 
-#define MAX_BUFFER_QUEUE        (8)
-#define MSG_POOL_SIZE           (4 * 1024 * 1024)
-#define CONFIG_MAX_ITERATION    (100)
+#define BURST_SIZE              (8)
+#define MAX_NUM_EVENT           (1 * 1024)
+#define MAX_ITERATION           (100)
 #define MAX_QUEUES              (64 * 1024)
+#define GLOBALS_NAME		"queue_test_globals"
+#define DEQ_RETRIES             100
+#define ENQ_RETRIES             100
+
+typedef struct {
+	pthrd_arg        cu_thr;
+	int              num_workers;
+	odp_barrier_t    barrier;
+	odp_queue_t      queue;
+	odp_atomic_u32_t num_event;
+
+	struct {
+		uint32_t num_event;
+	} thread[ODP_THREAD_COUNT_MAX];
+
+} test_globals_t;
 
 static int queue_context = 0xff;
 static odp_pool_t pool;
@@ -31,11 +47,36 @@ static void generate_name(char *name, uint32_t index)
 
 int queue_suite_init(void)
 {
+	odp_shm_t shm;
+	test_globals_t *globals;
 	odp_pool_param_t params;
+	int num_workers;
+	odp_cpumask_t mask;
 
-	params.buf.size  = 0;
+	shm = odp_shm_reserve(GLOBALS_NAME, sizeof(test_globals_t),
+			      ODP_CACHE_LINE_SIZE, 0);
+
+	if (shm == ODP_SHM_INVALID) {
+		printf("Shared memory reserve failed\n");
+		return -1;
+	}
+
+	globals = odp_shm_addr(shm);
+	memset(globals, 0, sizeof(test_globals_t));
+
+	num_workers = odp_cpumask_default_worker(&mask, 0);
+
+	if (num_workers > MAX_WORKERS)
+		num_workers = MAX_WORKERS;
+
+	globals->num_workers = num_workers;
+	odp_barrier_init(&globals->barrier, num_workers);
+
+	odp_pool_param_init(&params);
+
+	params.buf.size  = 4;
 	params.buf.align = ODP_CACHE_LINE_SIZE;
-	params.buf.num   = 1024 * 10;
+	params.buf.num   = MAX_NUM_EVENT;
 	params.type      = ODP_POOL_BUFFER;
 
 	pool = odp_pool_create("msg_pool", &params);
@@ -49,7 +90,25 @@ int queue_suite_init(void)
 
 int queue_suite_term(void)
 {
-	return odp_pool_destroy(pool);
+	odp_shm_t shm;
+
+	shm = odp_shm_lookup(GLOBALS_NAME);
+	if (shm == ODP_SHM_INVALID) {
+		printf("SHM lookup failed.\n");
+		return -1;
+	}
+
+	if (odp_shm_free(shm)) {
+		printf("SHM free failed.\n");
+		return -1;
+	}
+
+	if (odp_pool_destroy(pool)) {
+		printf("Pool destroy failed.\n");
+		return -1;
+	}
+
+	return 0;
 }
 
 void queue_test_capa(void)
@@ -69,8 +128,6 @@ void queue_test_capa(void)
 	CU_ASSERT(capa.sched_prios != 0);
 	CU_ASSERT(capa.plain.max_num != 0);
 	CU_ASSERT(capa.sched.max_num != 0);
-	CU_ASSERT(capa.plain.nonblocking >= ODP_BLOCKING);
-	CU_ASSERT(capa.sched.nonblocking >= ODP_BLOCKING);
 
 	min = capa.plain.max_num;
 	if (min > capa.sched.max_num)
@@ -155,18 +212,105 @@ void queue_test_mode(void)
 	}
 }
 
+static odp_event_t dequeue_event(odp_queue_t queue)
+{
+	odp_event_t ev;
+	int i;
+
+	for (i = 0; i < MAX_ITERATION; i++) {
+		ev = odp_queue_deq(queue);
+		if (ev != ODP_EVENT_INVALID)
+			break;
+	}
+
+	return ev;
+}
+
+void queue_test_lockfree(void)
+{
+	odp_queue_param_t param;
+	odp_queue_t queue;
+	odp_queue_capability_t capa;
+	uint32_t max_burst, burst, i, j;
+	odp_pool_t pool;
+	odp_buffer_t buf;
+	odp_event_t ev;
+	uint32_t *data;
+
+	CU_ASSERT_FATAL(odp_queue_capability(&capa) == 0);
+
+	if (capa.plain.lockfree.max_num == 0)
+		return;
+
+	max_burst = capa.plain.lockfree.max_size;
+
+	if (max_burst == 0 || max_burst > MAX_NUM_EVENT)
+		max_burst = MAX_NUM_EVENT;
+
+	pool = odp_pool_lookup("msg_pool");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	odp_queue_param_init(&param);
+	param.type        = ODP_QUEUE_TYPE_PLAIN;
+	param.nonblocking = ODP_NONBLOCKING_LF;
+	param.size        = max_burst;
+
+	queue = odp_queue_create("lockfree_queue", &param);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	CU_ASSERT(odp_queue_deq(queue) == ODP_EVENT_INVALID);
+
+	buf = odp_buffer_alloc(pool);
+	CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+	ev = odp_buffer_to_event(buf);
+	CU_ASSERT(odp_queue_enq(queue, ev) == 0);
+	ev = dequeue_event(queue);
+	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+	if (ev != ODP_EVENT_INVALID)
+		odp_event_free(ev);
+
+	for (j = 0; j < 2; j++) {
+		if (j == 0)
+			burst = max_burst / 4;
+		else
+			burst = max_burst;
+
+		for (i = 0; i < burst; i++) {
+			buf = odp_buffer_alloc(pool);
+			CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+			data = odp_buffer_addr(buf);
+			*data = i;
+			ev = odp_buffer_to_event(buf);
+			CU_ASSERT(odp_queue_enq(queue, ev) == 0);
+		}
+
+		for (i = 0; i < burst; i++) {
+			ev = dequeue_event(queue);
+			CU_ASSERT(ev != ODP_EVENT_INVALID);
+			if (ev != ODP_EVENT_INVALID) {
+				buf  = odp_buffer_from_event(ev);
+				data = odp_buffer_addr(buf);
+				CU_ASSERT(*data == i);
+				odp_event_free(ev);
+			}
+		}
+	}
+
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+}
+
 void queue_test_param(void)
 {
 	odp_queue_t queue, null_queue;
-	odp_event_t enev[MAX_BUFFER_QUEUE];
-	odp_event_t deev[MAX_BUFFER_QUEUE];
+	odp_event_t enev[BURST_SIZE];
+	odp_event_t deev[BURST_SIZE];
 	odp_buffer_t buf;
 	odp_event_t ev;
 	odp_pool_t msg_pool;
 	odp_event_t *pev_tmp;
 	int i, deq_ret, ret;
 	int nr_deq_entries = 0;
-	int max_iteration = CONFIG_MAX_ITERATION;
+	int max_iteration = MAX_ITERATION;
 	odp_queue_param_t qparams;
 	odp_buffer_t enbuf;
 
@@ -225,7 +369,7 @@ void queue_test_param(void)
 		odp_buffer_free(buf);
 	}
 
-	for (i = 0; i < MAX_BUFFER_QUEUE; i++) {
+	for (i = 0; i < BURST_SIZE; i++) {
 		buf = odp_buffer_alloc(msg_pool);
 		enev[i] = odp_buffer_to_event(buf);
 	}
@@ -235,23 +379,22 @@ void queue_test_param(void)
 	 * constraints in the implementation at that given point of time.
 	 * But here we assume that we succeed in enqueuing all buffers.
 	 */
-	ret = odp_queue_enq_multi(queue, enev, MAX_BUFFER_QUEUE);
-	CU_ASSERT(MAX_BUFFER_QUEUE == ret);
+	ret = odp_queue_enq_multi(queue, enev, BURST_SIZE);
+	CU_ASSERT(BURST_SIZE == ret);
 	i = ret < 0 ? 0 : ret;
-	for ( ; i < MAX_BUFFER_QUEUE; i++)
+	for ( ; i < BURST_SIZE; i++)
 		odp_event_free(enev[i]);
 
 	pev_tmp = deev;
 	do {
-		deq_ret  = odp_queue_deq_multi(queue, pev_tmp,
-					       MAX_BUFFER_QUEUE);
+		deq_ret = odp_queue_deq_multi(queue, pev_tmp, BURST_SIZE);
 		nr_deq_entries += deq_ret;
 		max_iteration--;
 		pev_tmp += deq_ret;
 		CU_ASSERT(max_iteration >= 0);
-	} while (nr_deq_entries < MAX_BUFFER_QUEUE);
+	} while (nr_deq_entries < BURST_SIZE);
 
-	for (i = 0; i < MAX_BUFFER_QUEUE; i++) {
+	for (i = 0; i < BURST_SIZE; i++) {
 		enbuf = odp_buffer_from_event(enev[i]);
 		CU_ASSERT(enev[i] == deev[i]);
 		odp_buffer_free(enbuf);
@@ -325,11 +468,211 @@ void queue_test_info(void)
 	CU_ASSERT(odp_queue_destroy(q_order) == 0);
 }
 
+static uint32_t alloc_and_enqueue(odp_queue_t queue, odp_pool_t pool,
+				  uint32_t num)
+{
+	uint32_t i, ret;
+	odp_buffer_t buf;
+	odp_event_t ev;
+
+	for (i = 0; i < num; i++) {
+		buf = odp_buffer_alloc(pool);
+
+		CU_ASSERT(buf != ODP_BUFFER_INVALID);
+
+		ev = odp_buffer_to_event(buf);
+
+		ret = odp_queue_enq(queue, ev);
+
+		CU_ASSERT(ret == 0);
+
+		if (ret)
+			break;
+	}
+
+	return i;
+}
+
+static uint32_t dequeue_and_free_all(odp_queue_t queue)
+{
+	odp_event_t ev;
+	uint32_t num, retries;
+
+	num = 0;
+	retries = 0;
+
+	while (1) {
+		ev = odp_queue_deq(queue);
+
+		if (ev == ODP_EVENT_INVALID) {
+			if (retries >= DEQ_RETRIES)
+				return num;
+
+			retries++;
+			continue;
+		}
+
+		retries = 0;
+		num++;
+
+		odp_event_free(ev);
+	}
+
+	return num;
+}
+
+static int enqueue_with_retry(odp_queue_t queue, odp_event_t ev)
+{
+	int i;
+
+	for (i = 0; i < ENQ_RETRIES; i++)
+		if (odp_queue_enq(queue, ev) == 0)
+			return 0;
+
+	return -1;
+}
+
+static int queue_test_worker(void *arg)
+{
+	uint32_t num, retries, num_workers;
+	int thr_id, ret;
+	odp_event_t ev;
+	odp_queue_t queue;
+	test_globals_t *globals = arg;
+
+	thr_id      = odp_thread_id();
+	queue       = globals->queue;
+	num_workers = globals->num_workers;
+
+	if (num_workers > 1)
+		odp_barrier_wait(&globals->barrier);
+
+	retries = 0;
+	num     = odp_atomic_fetch_inc_u32(&globals->num_event);
+
+	/* On average, each worker deq-enq each event once */
+	while (num < (num_workers * MAX_NUM_EVENT)) {
+		ev = odp_queue_deq(queue);
+
+		if (ev == ODP_EVENT_INVALID) {
+			if (retries < DEQ_RETRIES) {
+				retries++;
+				continue;
+			}
+
+			/* Prevent thread to starve */
+			num = odp_atomic_fetch_inc_u32(&globals->num_event);
+			retries = 0;
+			continue;
+		}
+
+		globals->thread[thr_id].num_event++;
+
+		ret = enqueue_with_retry(queue, ev);
+
+		CU_ASSERT(ret == 0);
+
+		num = odp_atomic_fetch_inc_u32(&globals->num_event);
+	}
+
+	return 0;
+}
+
+static void reset_thread_stat(test_globals_t *globals)
+{
+	int i;
+
+	odp_atomic_init_u32(&globals->num_event, 0);
+
+	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++)
+		globals->thread[i].num_event = 0;
+}
+
+static void multithread_test(odp_nonblocking_t nonblocking)
+{
+	odp_shm_t shm;
+	test_globals_t *globals;
+	odp_queue_t queue;
+	odp_queue_param_t qparams;
+	odp_queue_capability_t capa;
+	uint32_t queue_size, max_size;
+	uint32_t num, sum, num_free, i;
+
+	CU_ASSERT(odp_queue_capability(&capa) == 0);
+
+	queue_size = 2 * MAX_NUM_EVENT;
+
+	max_size = capa.plain.max_size;
+
+	if (nonblocking == ODP_NONBLOCKING_LF) {
+		if (capa.plain.lockfree.max_num == 0)
+			return;
+
+		max_size = capa.plain.lockfree.max_size;
+	}
+
+	if (max_size && queue_size > max_size)
+		queue_size = max_size;
+
+	num = MAX_NUM_EVENT;
+
+	if (num > queue_size)
+		num = queue_size / 2;
+
+	shm = odp_shm_lookup(GLOBALS_NAME);
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+
+	globals = odp_shm_addr(shm);
+	globals->cu_thr.numthrds = globals->num_workers;
+
+	odp_queue_param_init(&qparams);
+	qparams.type = ODP_QUEUE_TYPE_PLAIN;
+	qparams.size = queue_size;
+	qparams.nonblocking = nonblocking;
+
+	queue = odp_queue_create("queue_test_mt", &qparams);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	globals->queue = queue;
+	reset_thread_stat(globals);
+
+	CU_ASSERT(alloc_and_enqueue(queue, pool, num) == num);
+
+	odp_cunit_thread_create(queue_test_worker, (pthrd_arg *)globals);
+
+	/* Wait for worker threads to terminate */
+	odp_cunit_thread_exit((pthrd_arg *)globals);
+
+	sum = 0;
+	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++)
+		sum += globals->thread[i].num_event;
+
+	CU_ASSERT(sum != 0);
+
+	num_free = dequeue_and_free_all(queue);
+
+	CU_ASSERT(num_free == num);
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+}
+
+static void queue_test_mt_plain_block(void)
+{
+	multithread_test(ODP_BLOCKING);
+}
+
+static void queue_test_mt_plain_nonblock_lf(void)
+{
+	multithread_test(ODP_NONBLOCKING_LF);
+}
+
 odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_capa),
 	ODP_TEST_INFO(queue_test_mode),
+	ODP_TEST_INFO(queue_test_lockfree),
 	ODP_TEST_INFO(queue_test_param),
 	ODP_TEST_INFO(queue_test_info),
+	ODP_TEST_INFO(queue_test_mt_plain_block),
+	ODP_TEST_INFO(queue_test_mt_plain_nonblock_lf),
 	ODP_TEST_INFO_NULL,
 };
 
