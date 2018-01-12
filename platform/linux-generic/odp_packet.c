@@ -38,7 +38,7 @@ const _odp_packet_inline_offset_t ODP_ALIGNED_CACHE _odp_packet_inline = {
 	.pool           = offsetof(odp_packet_hdr_t, buf_hdr.pool_ptr),
 	.input          = offsetof(odp_packet_hdr_t, input),
 	.segcount       = offsetof(odp_packet_hdr_t, buf_hdr.segcount),
-	.user_ptr       = offsetof(odp_packet_hdr_t, buf_hdr.buf_ctx),
+	.user_ptr       = offsetof(odp_packet_hdr_t, buf_hdr.user_ptr),
 	.user_area      = offsetof(odp_packet_hdr_t, buf_hdr.uarea_addr),
 	.l2_offset      = offsetof(odp_packet_hdr_t, p.l2_offset),
 	.l3_offset      = offsetof(odp_packet_hdr_t, p.l3_offset),
@@ -262,7 +262,7 @@ static inline void packet_seg_copy_md(odp_packet_hdr_t *dst,
 	dst->timestamp = src->timestamp;
 
 	/* buffer header side packet metadata */
-	dst->buf_hdr.buf_u64    = src->buf_hdr.buf_u64;
+	dst->buf_hdr.user_ptr   = src->buf_hdr.user_ptr;
 	dst->buf_hdr.uarea_addr = src->buf_hdr.uarea_addr;
 
 	/* segmentation data is not copied:
@@ -1264,9 +1264,9 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
  *
  */
 
-void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ctx)
+void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ptr)
 {
-	packet_hdr(pkt)->buf_hdr.buf_cctx = ctx;
+	packet_hdr(pkt)->buf_hdr.user_ptr = ptr;
 }
 
 int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
@@ -1887,7 +1887,7 @@ int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 
 	dsthdr->input = srchdr->input;
 	dsthdr->dst_queue = srchdr->dst_queue;
-	dsthdr->buf_hdr.buf_u64 = srchdr->buf_hdr.buf_u64;
+	dsthdr->buf_hdr.user_ptr = srchdr->buf_hdr.user_ptr;
 	if (dsthdr->buf_hdr.uarea_addr != NULL &&
 	    srchdr->buf_hdr.uarea_addr != NULL) {
 		memcpy(dsthdr->buf_hdr.uarea_addr, srchdr->buf_hdr.uarea_addr,
