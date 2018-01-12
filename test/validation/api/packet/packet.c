@@ -322,6 +322,9 @@ static void packet_test_alloc_free(void)
 	CU_ASSERT(odp_packet_to_u64(packet) !=
 		  odp_packet_to_u64(ODP_PACKET_INVALID));
 
+	/* User pointer should be NULL after alloc */
+	CU_ASSERT(odp_packet_user_ptr(packet) == NULL);
+
 	/* Pool should have only one packet */
 	CU_ASSERT_FATAL(odp_packet_alloc(pool, packet_len)
 			== ODP_PACKET_INVALID);
@@ -401,6 +404,9 @@ static void packet_test_alloc_free_multi(void)
 		CU_ASSERT(subtype == ODP_EVENT_PACKET_BASIC);
 		CU_ASSERT(odp_packet_to_u64(packet[i]) !=
 			  odp_packet_to_u64(ODP_PACKET_INVALID));
+
+		/* User pointer should be NULL after alloc */
+		CU_ASSERT(odp_packet_user_ptr(packet[i]) == NULL);
 	}
 
 	/* Pools should have no more packets */
@@ -680,7 +686,15 @@ static void packet_test_context(void)
 	CU_ASSERT(memcmp(udat, &test_packet_udata, sizeof(struct udata_struct))
 		  == 0);
 
+	odp_packet_user_ptr_set(pkt, NULL);
+	CU_ASSERT(odp_packet_user_ptr(pkt) == NULL);
+	odp_packet_user_ptr_set(pkt, (void *)0xdead);
+	CU_ASSERT(odp_packet_user_ptr(pkt) == (void *)0xdead);
+
 	odp_packet_reset(pkt, packet_len);
+
+	/* User pointer should be NULL after reset */
+	CU_ASSERT(odp_packet_user_ptr(pkt) == NULL);
 }
 
 static void packet_test_layer_offsets(void)
