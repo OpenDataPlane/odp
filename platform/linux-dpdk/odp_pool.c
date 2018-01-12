@@ -610,6 +610,7 @@ void odp_pool_print(odp_pool_t pool_hdl)
 int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 {
 	pool_t *pool = pool_entry_from_hdl(pool_hdl);
+	struct rte_mempool_memhdr *hdr;
 
 	if (pool == NULL || info == NULL)
 		return -1;
@@ -619,6 +620,10 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 
 	if (pool->params.type == ODP_POOL_PACKET)
 		info->pkt.max_num = pool->rte_mempool->size;
+
+	hdr = STAILQ_FIRST(&pool->rte_mempool->mem_list);
+	info->min_data_addr = (uintptr_t)hdr->addr;
+	info->max_data_addr = (uintptr_t)hdr->addr + hdr->len - 1;
 
 	return 0;
 }
