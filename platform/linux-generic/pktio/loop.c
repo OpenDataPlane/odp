@@ -25,6 +25,7 @@
 #include <stdlib.h>
 
 #define MAX_LOOP 16
+#define LOOP_MTU (64 * 1024)
 
 /* MAC address for the "loop" interface */
 static const char pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
@@ -176,6 +177,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	queue_t queue;
 	int i;
 	int ret;
+	int nb_tx = 0;
 	uint32_t bytes = 0;
 	uint32_t out_octets_tbl[len];
 
@@ -183,15 +185,25 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		len = QUEUE_MULTI_MAX;
 
 	for (i = 0; i < len; ++i) {
+		uint32_t pkt_len = odp_packet_len(pkt_tbl[i]);
+
+		if (pkt_len > LOOP_MTU) {
+			if (nb_tx == 0) {
+				__odp_errno = EMSGSIZE;
+				return -1;
+			}
+			break;
+		}
 		hdr_tbl[i] = packet_to_buf_hdr(pkt_tbl[i]);
-		bytes += odp_packet_len(pkt_tbl[i]);
+		bytes += pkt_len;
 		/* Store cumulative byte counts to update 'stats.out_octets'
 		 * correctly in case enq_multi() fails to enqueue all packets.
 		 */
 		out_octets_tbl[i] = bytes;
+		nb_tx++;
 	}
 
-	for (i = 0; i < len; ++i) {
+	for (i = 0; i < nb_tx; ++i) {
 		odp_ipsec_packet_result_t result;
 
 		if (packet_subtype(pkt_tbl[i]) ==
@@ -207,7 +219,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
 	queue = queue_fn->from_ext(pktio_entry->s.pkt_loop.loopq);
-	ret = queue_fn->enq_multi(queue, hdr_tbl, len);
+	ret = queue_fn->enq_multi(queue, hdr_tbl, nb_tx);
 
 	if (ret > 0) {
 		pktio_entry->s.stats.out_ucast_pkts += ret;
@@ -224,8 +236,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 static uint32_t loopback_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
-	/* the loopback interface imposes no maximum transmit size limit */
-	return INT_MAX;
+	return LOOP_MTU;
 }
 
 static int loopback_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
