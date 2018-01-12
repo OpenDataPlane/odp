@@ -538,12 +538,18 @@ static void dpdk_pool_print(odp_pool_t pool_hdl)
 static int dpdk_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 {
 	pool_entry_cp_t *pool_cp = odp_pool_to_entry_cp(pool_hdl);
+	pool_entry_dp_t *pool_dp = odp_pool_to_entry_dp(pool_hdl);
+	struct rte_mempool_memhdr *hdr;
 
 	if (pool_cp == NULL || info == NULL)
 		return -1;
 
 	info->name = pool_cp->name;
 	info->params = pool_cp->params;
+
+	hdr = STAILQ_FIRST(&pool_dp->rte_mempool->mem_list);
+	info->min_data_addr = (uint64_t)hdr->addr;
+	info->max_data_addr = (uint64_t)hdr->addr + hdr->len - 1;
 
 	return 0;
 }
