@@ -177,6 +177,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int i;
 	int ret;
 	uint32_t bytes = 0;
+	uint32_t out_octets_tbl[len];
 
 	if (odp_unlikely(len > QUEUE_MULTI_MAX))
 		len = QUEUE_MULTI_MAX;
@@ -184,6 +185,10 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	for (i = 0; i < len; ++i) {
 		hdr_tbl[i] = packet_to_buf_hdr(pkt_tbl[i]);
 		bytes += odp_packet_len(pkt_tbl[i]);
+		/* Store cumulative byte counts to update 'stats.out_octets'
+		 * correctly in case enq_multi() fails to enqueue all packets.
+		 */
+		out_octets_tbl[i] = bytes;
 	}
 
 	for (i = 0; i < len; ++i) {
@@ -206,7 +211,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	if (ret > 0) {
 		pktio_entry->s.stats.out_ucast_pkts += ret;
-		pktio_entry->s.stats.out_octets += bytes;
+		pktio_entry->s.stats.out_octets += out_octets_tbl[ret - 1];
 	} else {
 		ODP_DBG("queue enqueue failed %i\n", ret);
 		ret = -1;
