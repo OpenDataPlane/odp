@@ -84,13 +84,7 @@ struct odp_buffer_hdr_t {
 	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
 
 	/* --- Mostly read only data --- */
-
-	/* User context pointer or u64 */
-	union {
-		uint64_t    buf_u64;
-		void       *buf_ctx;
-		const void *buf_cctx; /* const alias for ctx */
-	};
+	const void *user_ptr;
 
 	/* Reference count */
 	odp_atomic_u32_t ref_cnt;
