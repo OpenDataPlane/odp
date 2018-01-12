@@ -45,7 +45,8 @@ const _odp_packet_inline_offset_t ODP_ALIGNED_CACHE _odp_packet_inline = {
 	.l4_offset      = offsetof(odp_packet_hdr_t, p.l4_offset),
 	.flow_hash      = offsetof(odp_packet_hdr_t, flow_hash),
 	.timestamp      = offsetof(odp_packet_hdr_t, timestamp),
-	.input_flags    = offsetof(odp_packet_hdr_t, p.input_flags)
+	.input_flags    = offsetof(odp_packet_hdr_t, p.input_flags),
+	.flags          = offsetof(odp_packet_hdr_t, p.flags)
 
 };
 
@@ -1265,7 +1266,15 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
 
 void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ptr)
 {
-	packet_hdr(pkt)->buf_hdr.user_ptr = ptr;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	if (odp_unlikely(ptr == NULL)) {
+		pkt_hdr->p.flags.user_ptr_set = 0;
+		return;
+	}
+
+	pkt_hdr->buf_hdr.user_ptr     = ptr;
+	pkt_hdr->p.flags.user_ptr_set = 1;
 }
 
 int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)

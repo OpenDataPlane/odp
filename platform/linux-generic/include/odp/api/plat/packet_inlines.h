@@ -104,6 +104,13 @@ static inline int _odp_packet_num_segs(odp_packet_t pkt)
 
 static inline void *_odp_packet_user_ptr(odp_packet_t pkt)
 {
+	_odp_packet_flags_t flags;
+
+	flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
+
+	if (flags.user_ptr_set == 0)
+		return NULL;
+
 	return _odp_pkt_get(pkt, void *, user_ptr);
 }
 
