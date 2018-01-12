@@ -143,7 +143,7 @@ uint32_t mtu_get_fd(int fd, const char *name)
 			ifr.ifr_name);
 		return 0;
 	}
-	return ifr.ifr_mtu;
+	return ifr.ifr_mtu + _ODP_ETHHDR_LEN;
 }
 
 /*
