@@ -456,6 +456,12 @@ int odp_pktio_config(odp_pktio_t hdl, const odp_pktio_config_t *config)
 
 	entry->s.config = *config;
 
+	entry->s.in_chksums.all_chksum = 0;
+	entry->s.in_chksums.chksum.ipv4 = config->pktin.bit.ipv4_chksum;
+	entry->s.in_chksums.chksum.tcp = config->pktin.bit.tcp_chksum;
+	entry->s.in_chksums.chksum.udp = config->pktin.bit.udp_chksum;
+	entry->s.in_chksums.chksum.sctp = config->pktin.bit.sctp_chksum;
+
 	if (entry->s.ops->config)
 		res = entry->s.ops->config(entry, config);
 
