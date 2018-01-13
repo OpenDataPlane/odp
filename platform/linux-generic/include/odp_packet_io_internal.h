@@ -155,6 +155,7 @@ struct pktio_entry {
 	odp_pktio_config_t config;	/**< Device configuration */
 	classifier_t cls;		/**< classifier linked with this pktio*/
 	odp_pktio_stats_t stats;	/**< statistic counters for pktio */
+	odp_proto_chksums_t in_chksums; /**< Checksums validation settings */
 	enum {
 		STATS_SYSFS = 0,
 		STATS_ETHTOOL,
