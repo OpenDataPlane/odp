@@ -286,7 +286,8 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 		copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 	else
 		packet_parse_layer(pkt_hdr,
-				   pktio_entry->s.config.parser.layer);
+				   pktio_entry->s.config.parser.layer,
+				   pktio_entry->s.in_chksums);
 
 	packet_set_ts(pkt_hdr, ts);
 	pkt_hdr->input = pktio_entry->s.handle;

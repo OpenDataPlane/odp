@@ -256,7 +256,8 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		}
 
 		packet_parse_layer(pkt_hdr,
-				   pktio_entry->s.config.parser.layer);
+				   pktio_entry->s.config.parser.layer,
+				   pktio_entry->s.in_chksums);
 		pktio_entry->s.stats.in_octets += pkt_hdr->frame_len;
 
 		packet_set_ts(pkt_hdr, ts);
