@@ -357,6 +357,9 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
 	capa->config.pktin.bit.ts_ptp = 1;
+	capa->config.pktin.bit.ipv4_chksum = 1;
+	capa->config.pktin.bit.tcp_chksum = 1;
+	capa->config.pktin.bit.udp_chksum = 1;
 	capa->config.pktout.bit.ipv4_chksum = 1;
 	capa->config.pktout.bit.tcp_chksum = 1;
 	capa->config.pktout.bit.udp_chksum = 1;
