@@ -151,7 +151,8 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			}
 		} else {
 			packet_parse_layer(pkt_hdr,
-					   pktio_entry->s.config.parser.layer);
+					   pktio_entry->s.config.parser.layer,
+					   pktio_entry->s.in_chksums);
 		}
 
 		packet_set_ts(pkt_hdr, ts);
