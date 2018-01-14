@@ -137,12 +137,10 @@ typedef union {
 } stats_t ODP_ALIGNED_CACHE;
 
 /**
- * Thread specific arguments
+ * Thread specific data
  */
 typedef struct thread_args_t {
-	int thr_idx;
-	int num_pktio;
-	int num_groups;
+	stats_t stats;
 
 	struct {
 		odp_pktin_queue_t pktin;
@@ -158,24 +156,22 @@ typedef struct thread_args_t {
 	/* Groups to join */
 	odp_schedule_group_t group[MAX_PKTIOS];
 
-	/* Pointer to per thread stats */
-	stats_t *stats;
-
+	int thr_idx;
+	int num_pktio;
+	int num_groups;
 } thread_args_t;
 
 /**
  * Grouping of all global data
  */
 typedef struct {
+	/** Thread specific arguments */
+	thread_args_t thread[MAX_WORKERS];
 	/** Barriers to synchronize main and workers */
 	odp_barrier_t init_barrier;
 	odp_barrier_t term_barrier;
-	/** Per thread packet stats */
-	stats_t stats[MAX_WORKERS];
 	/** Application (parsed) arguments */
 	appl_args_t appl;
-	/** Thread specific arguments */
-	thread_args_t thread[MAX_WORKERS];
 	/** Table of port ethernet addresses */
 	odph_ethaddr_t port_eth_addr[MAX_PKTIOS];
 	/** Table of dst ethernet addresses */
@@ -322,7 +318,7 @@ static int run_worker_sched_mode(void *arg)
 	odp_pktout_queue_t pktout[MAX_PKTIOS];
 	odp_queue_t tx_queue[MAX_PKTIOS];
 	thread_args_t *thr_args = arg;
-	stats_t *stats = thr_args->stats;
+	stats_t *stats = &thr_args->stats;
 	int use_event_queue = gbl_args->appl.out_mode;
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
 
@@ -464,7 +460,7 @@ static int run_worker_plain_queue_mode(void *arg)
 	odp_queue_t tx_queue;
 	int pktio = 0;
 	thread_args_t *thr_args = arg;
-	stats_t *stats = thr_args->stats;
+	stats_t *stats = &thr_args->stats;
 	int use_event_queue = gbl_args->appl.out_mode;
 	int i;
 
@@ -592,7 +588,7 @@ static int run_worker_direct_mode(void *arg)
 	odp_queue_t tx_queue;
 	int pktio = 0;
 	thread_args_t *thr_args = arg;
-	stats_t *stats = thr_args->stats;
+	stats_t *stats = &thr_args->stats;
 	int use_event_queue = gbl_args->appl.out_mode;
 
 	thr = odp_thread_id();
@@ -849,12 +845,12 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
  *  Print statistics
  *
  * @param num_workers Number of worker threads
- * @param thr_stats Pointer to stats storage
+ * @param thr_stats Pointers to stats storage
  * @param duration Number of seconds to loop in
  * @param timeout Number of seconds for stats calculation
  *
  */
-static int print_speed_stats(int num_workers, stats_t *thr_stats,
+static int print_speed_stats(int num_workers, stats_t **thr_stats,
 			     int duration, int timeout)
 {
 	uint64_t pkts = 0;
@@ -882,9 +878,9 @@ static int print_speed_stats(int num_workers, stats_t *thr_stats,
 		sleep(timeout);
 
 		for (i = 0; i < num_workers; i++) {
-			pkts += thr_stats[i].s.packets;
-			rx_drops += thr_stats[i].s.rx_drops;
-			tx_drops += thr_stats[i].s.tx_drops;
+			pkts += thr_stats[i]->s.packets;
+			rx_drops += thr_stats[i]->s.rx_drops;
+			tx_drops += thr_stats[i]->s.tx_drops;
 		}
 		if (stats_enabled) {
 			pps = (pkts - pkts_prev) / timeout;
@@ -1471,7 +1467,7 @@ int main(int argc, char *argv[])
 	odph_ethaddr_t new_addr;
 	odp_pool_param_t params;
 	int ret;
-	stats_t *stats;
+	stats_t *stats[MAX_WORKERS];
 	int if_count;
 	int (*thr_run_func)(void *);
 	odp_instance_t instance;
@@ -1641,8 +1637,6 @@ int main(int argc, char *argv[])
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
-	stats = gbl_args->stats;
-
 	odp_barrier_init(&gbl_args->init_barrier, num_workers + 1);
 	odp_barrier_init(&gbl_args->term_barrier, num_workers + 1);
 
@@ -1669,7 +1663,7 @@ int main(int argc, char *argv[])
 		gbl_args->thread[i].num_groups = 1;
 		gbl_args->thread[i].group[0] = group[i % num_groups];
 
-		gbl_args->thread[i].stats = &stats[i];
+		stats[i] = &gbl_args->thread[i].stats;
 
 		odp_cpumask_zero(&thd_mask);
 		odp_cpumask_set(&thd_mask, cpu);
