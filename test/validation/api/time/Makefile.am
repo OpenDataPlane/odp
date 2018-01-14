@@ -1,14 +1,4 @@
 include ../Makefile.inc
 
-TESTS_ENVIRONMENT += TEST_DIR=${builddir}
-
-TESTSCRIPTS = time.sh
-TEST_EXTENSIONS = .sh
-
-TESTS = $(TESTSCRIPTS)
-
 test_PROGRAMS = time_main
 time_main_SOURCES = time_main.c time.c time_test.h
-
-dist_check_SCRIPTS = $(TESTSCRIPTS)
-test_SCRIPTS = $(dist_check_SCRIPTS)

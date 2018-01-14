@@ -56,7 +56,7 @@ TESTS = \
 	scheduler/scheduler_main$(EXEEXT) \
 	std_clib/std_clib_main$(EXEEXT) \
 	thread/thread_main$(EXEEXT) \
-	time/time.sh \
+	time/time_main$(EXEEXT) \
 	timer/timer_main$(EXEEXT) \
 	traffic_mngr/traffic_mngr.sh \
 	shmem/shmem_main$(EXEEXT) \
