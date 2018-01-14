@@ -635,7 +635,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t *pkt,
 	if (esp) {
 		params.cipher_range.offset = ipv4_data_p(ip) + hdr_len - buf;
 		params.cipher_range.length = ipv4_data_len(ip) - hdr_len;
-		params.override_iv_ptr = esp->iv;
+		params.cipher_iv_ptr = esp->iv;
 	}
 
 	/* Issue crypto request */

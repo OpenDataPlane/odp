@@ -140,7 +140,6 @@ noinst_HEADERS = \
 		  include/odp_classification_inlines.h \
 		  include/odp_classification_internal.h \
 		  include/odp_config_internal.h \
-		  include/odp_crypto_internal.h \
 		  include/odp_debug_internal.h \
 		  include/odp_errno_define.h \
 		  include/odp_forward_typedefs_internal.h \

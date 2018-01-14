@@ -351,13 +351,13 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	crypto_param.auth_alg = param->crypto.auth_alg;
 	crypto_param.auth_key = param->crypto.auth_key;
 
-	crypto_param.iv.length =
+	crypto_param.cipher_iv.length =
 		_odp_ipsec_cipher_iv_len(crypto_param.cipher_alg);
 
 	crypto_param.auth_digest_len =
 		_odp_ipsec_auth_digest_len(crypto_param.auth_alg);
 
-	if ((uint32_t)-1 == crypto_param.iv.length ||
+	if ((uint32_t)-1 == crypto_param.cipher_iv.length ||
 	    (uint32_t)-1 == crypto_param.auth_digest_len)
 		goto error;
 
@@ -409,7 +409,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 16;
-		crypto_param.iv.length = 12;
+		crypto_param.auth_iv.length = 12;
 		break;
 	default:
 		break;
