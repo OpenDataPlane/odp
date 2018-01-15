@@ -1418,7 +1418,7 @@ int odp_crypto_int(odp_packet_t pkt_in,
 		(rc_auth == ODP_CRYPTO_ALG_ERR_NONE);
 
 	pkt_hdr = odp_packet_hdr(out_pkt);
-	pkt_hdr->p.error_flags.crypto_err = !op_result->ok;
+	pkt_hdr->p.flags.crypto_err = !op_result->ok;
 
 	/* Synchronous, simply return results */
 	*pkt_out = out_pkt;

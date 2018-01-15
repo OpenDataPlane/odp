@@ -24,7 +24,7 @@ int odp_packet_has_error(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	return pkt_hdr->p.error_flags.all != 0;
+	return pkt_hdr->p.flags.all.error != 0;
 }
 
 /* Get Input Flags */
@@ -34,9 +34,7 @@ int odp_packet_has_l2_error(odp_packet_t pkt)
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 	/* L2 parsing is always done by default and hence
 	no additional check is required */
-	return pkt_hdr->p.error_flags.frame_len
-		| pkt_hdr->p.error_flags.snap_len
-		| pkt_hdr->p.error_flags.l2_chksum;
+	return pkt_hdr->p.flags.snap_len_err;
 }
 
 int odp_packet_has_l3(odp_packet_t pkt)
@@ -48,7 +46,7 @@ int odp_packet_has_l3_error(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	return pkt_hdr->p.error_flags.ip_err;
+	return pkt_hdr->p.flags.ip_err;
 }
 
 int odp_packet_has_l4(odp_packet_t pkt)
@@ -60,7 +58,7 @@ int odp_packet_has_l4_error(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	return pkt_hdr->p.error_flags.tcp_err | pkt_hdr->p.error_flags.udp_err;
+	return pkt_hdr->p.flags.tcp_err | pkt_hdr->p.flags.udp_err;
 }
 
 int odp_packet_has_eth_bcast(odp_packet_t pkt)
@@ -169,14 +167,14 @@ void odp_packet_drop_eligible_set(odp_packet_t pkt, odp_bool_t drop)
 
 int8_t odp_packet_shaper_len_adjust(odp_packet_t pkt)
 {
-	retflag(pkt, output_flags.shaper_len_adj);
+	retflag(pkt, flags.shaper_len_adj);
 }
 
 void odp_packet_shaper_len_adjust_set(odp_packet_t pkt, int8_t adj)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	pkt_hdr->p.output_flags.shaper_len_adj = adj;
+	pkt_hdr->p.flags.shaper_len_adj = adj;
 }
 
 /* Set Input Flags */

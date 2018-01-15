@@ -101,6 +101,47 @@ typedef union {
 
 } _odp_packet_input_flags_t;
 
+/*
+ * Additional packet flags
+ */
+typedef union {
+	/* All flags */
+	uint32_t all_flags;
+
+	struct {
+		uint32_t reserved1:     12;
+
+	/*
+	 * Packet output flags
+	 */
+		uint32_t l3_chksum_set:  1; /* L3 chksum bit is valid */
+		uint32_t l3_chksum:      1; /* L3 chksum override */
+		uint32_t l4_chksum_set:  1; /* L4 chksum bit is valid */
+		uint32_t l4_chksum:      1; /* L4 chksum override  */
+		uint32_t shaper_len_adj: 8; /* Adjustment for traffic mgr */
+
+	/*
+	 * Error flags
+	 */
+		uint32_t snap_len_err:   1; /* Snap length error */
+		uint32_t ip_err:         1; /* IP error */
+		uint32_t l3_chksum_err:  1; /* L3 checksum error */
+		uint32_t tcp_err:        1; /* TCP error */
+		uint32_t udp_err:        1; /* UDP error */
+		uint32_t l4_chksum_err:  1; /* L4 checksum error */
+		uint32_t ipsec_err:      1; /* IPsec error */
+		uint32_t crypto_err:     1; /* Crypto packet operation error */
+	};
+
+	/* Flag groups */
+	struct {
+		uint32_t reserved2:     12;
+		uint32_t other:         12; /* All other flags */
+		uint32_t error:          8; /* All error flags */
+	} all;
+
+} _odp_packet_flags_t;
+
 /** @endcond */
 
 #ifdef __cplusplus
