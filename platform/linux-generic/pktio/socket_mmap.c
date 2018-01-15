@@ -37,6 +37,9 @@
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 
+/* Maximum number of packets to store in each RX/TX block */
+#define MAX_PKTS_PER_BLOCK 512
+
 static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 
 static int set_pkt_sock_fanout_mmap(pkt_sock_mmap_t *const pkt_sock,
@@ -349,6 +352,7 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 
 static void mmap_fill_ring(struct ring *ring, odp_pool_t pool_hdl, int fanout)
 {
+	uint32_t num_frames;
 	int pz = getpagesize();
 	pool_t *pool;
 
@@ -360,13 +364,15 @@ static void mmap_fill_ring(struct ring *ring, odp_pool_t pool_hdl, int fanout)
 	/* Frame has to capture full packet which can fit to the pool block.*/
 	ring->req.tp_frame_size = (pool->headroom + pool->seg_len +
 				   pool->tailroom + TPACKET_HDRLEN +
-				   TPACKET_ALIGNMENT + + (pz - 1)) & (-pz);
+				   TPACKET_ALIGNMENT + (pz - 1)) & (-pz);
 
-	/* Calculate how many pages do we need to hold all pool packets
-	*  and align size to page boundary.
-	*/
-	ring->req.tp_block_size = (ring->req.tp_frame_size *
-				   pool->num + (pz - 1)) & (-pz);
+	/* Calculate how many pages we need to hold at most MAX_PKTS_PER_BLOCK
+	 * packets and align size to page boundary.
+	 */
+	num_frames = pool->num < MAX_PKTS_PER_BLOCK ? pool->num :
+			MAX_PKTS_PER_BLOCK;
+	ring->req.tp_block_size = (ring->req.tp_frame_size * num_frames +
+				   (pz - 1)) & (-pz);
 
 	if (!fanout) {
 		/* Single socket is in use. Use 1 block with buf_num frames. */
