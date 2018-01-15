@@ -1341,7 +1341,10 @@ int odp_packet_input_index(odp_packet_t pkt);
 /**
  * User context pointer
  *
- * Return previously stored user context pointer.
+ * Return previously stored user context pointer. If not otherwise documented,
+ * the pointer value is maintained over packet manipulating operations.
+ * Implementation initializes the pointer value to NULL during new packet
+ * creation (e.g. alloc and packet input) and reset.
  *
  * @param pkt  Packet handle
  *
@@ -1357,10 +1360,10 @@ void *odp_packet_user_ptr(odp_packet_t pkt);
  * value of type intptr_t. ODP may use the pointer for data prefetching, but
  * must ignore any invalid addresses.
  *
- * @param pkt  Packet handle
- * @param ctx  User context pointer
+ * @param pkt       Packet handle
+ * @param user_ptr  User context pointer
  */
-void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ctx);
+void odp_packet_user_ptr_set(odp_packet_t pkt, const void *user_ptr);
 
 /**
  * User area address
