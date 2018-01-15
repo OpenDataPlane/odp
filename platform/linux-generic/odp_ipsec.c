@@ -828,7 +828,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 
 err:
 	pkt_hdr = odp_packet_hdr(pkt);
-	pkt_hdr->p.error_flags.ipsec_err = 1;
+	pkt_hdr->p.flags.ipsec_err = 1;
 
 	*pkt_out = pkt;
 
@@ -1404,7 +1404,7 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 err:
 	pkt_hdr = odp_packet_hdr(pkt);
 
-	pkt_hdr->p.error_flags.ipsec_err = 1;
+	pkt_hdr->p.flags.ipsec_err = 1;
 
 	*pkt_out = pkt;
 	return ipsec_sa;
