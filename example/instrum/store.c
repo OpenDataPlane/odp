@@ -23,6 +23,7 @@ static __thread uint64_t profile_sample_ovf;
 #define STORE_FILE_NAME_SIZE_MAX 250
 
 static char store_dir[STORE_DIR_NAME_SIZE_MAX];
+static int counters_cnt;
 
 int instr_store_init(void)
 {
@@ -38,6 +39,7 @@ int instr_store_init(void)
 	if (papi_init())
 		return -1;
 
+	counters_cnt = papi_counters_cnt();
 	return 0;
 }
 
@@ -78,7 +80,7 @@ static void store_dump(void)
 			profile_sample_tab[i].timestamp_ns,
 			profile_sample_tab[i].diff_cyc,
 			profile_sample_tab[i].name);
-		for (j = 0; j < SAMPLE_COUNTER_TAB_SIZE; j++) {
+		for (j = 0; j < counters_cnt; j++) {
 			sprintf(smpl_tmp, ",%lld",
 				profile_sample_tab[i].counters[j]);
 			strcat(smpl, smpl_tmp);
