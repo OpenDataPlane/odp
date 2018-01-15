@@ -380,8 +380,8 @@ static inline int pkt_set_ol_rx(odp_pktin_config_opt_t *pktin_cfg,
 				return -1;
 
 			pkt_hdr->p.input_flags.l3_chksum_done = 1;
-			pkt_hdr->p.error_flags.ip_err = 1;
-			pkt_hdr->p.error_flags.l3_chksum = 1;
+			pkt_hdr->p.flags.ip_err = 1;
+			pkt_hdr->p.flags.l3_chksum_err = 1;
 		}
 	}
 
@@ -396,8 +396,8 @@ static inline int pkt_set_ol_rx(odp_pktin_config_opt_t *pktin_cfg,
 				return -1;
 
 			pkt_hdr->p.input_flags.l4_chksum_done = 1;
-			pkt_hdr->p.error_flags.udp_err = 1;
-			pkt_hdr->p.error_flags.l4_chksum = 1;
+			pkt_hdr->p.flags.udp_err = 1;
+			pkt_hdr->p.flags.l4_chksum_err = 1;
 		}
 	} else if (pktin_cfg->bit.tcp_chksum &&
 		   HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_TCP)) {
@@ -410,8 +410,8 @@ static inline int pkt_set_ol_rx(odp_pktin_config_opt_t *pktin_cfg,
 				return -1;
 
 			pkt_hdr->p.input_flags.l4_chksum_done = 1;
-			pkt_hdr->p.error_flags.tcp_err = 1;
-			pkt_hdr->p.error_flags.l4_chksum = 1;
+			pkt_hdr->p.flags.tcp_err = 1;
+			pkt_hdr->p.flags.l4_chksum_err = 1;
 		}
 	}
 
@@ -573,18 +573,18 @@ static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
 	ipv4_chksum_pkt = OL_TX_CHKSUM_PKT(pktout_cfg->bit.ipv4_chksum,
 					   pktout_capa->bit.ipv4_chksum,
 					   l3_proto_v4,
-					   pkt_p->output_flags.l3_chksum_set,
-					   pkt_p->output_flags.l3_chksum);
+					   pkt_p->flags.l3_chksum_set,
+					   pkt_p->flags.l3_chksum);
 	udp_chksum_pkt =  OL_TX_CHKSUM_PKT(pktout_cfg->bit.udp_chksum,
 					   pktout_capa->bit.udp_chksum,
 					   (l4_proto == _ODP_IPPROTO_UDP),
-					   pkt_p->output_flags.l4_chksum_set,
-					   pkt_p->output_flags.l4_chksum);
+					   pkt_p->flags.l4_chksum_set,
+					   pkt_p->flags.l4_chksum);
 	tcp_chksum_pkt =  OL_TX_CHKSUM_PKT(pktout_cfg->bit.tcp_chksum,
 					   pktout_capa->bit.tcp_chksum,
 					   (l4_proto == _ODP_IPPROTO_TCP),
-					   pkt_p->output_flags.l4_chksum_set,
-					   pkt_p->output_flags.l4_chksum);
+					   pkt_p->flags.l4_chksum_set,
+					   pkt_p->flags.l4_chksum);
 
 	if (!ipv4_chksum_pkt && !udp_chksum_pkt && !tcp_chksum_pkt)
 		return;
