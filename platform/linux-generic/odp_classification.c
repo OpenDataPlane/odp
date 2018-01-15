@@ -931,7 +931,7 @@ static inline cos_t *cls_select_cos(pktio_entry_t *entry,
 	default_cos = cls->default_cos;
 
 	/* Return error cos for error packet */
-	if (pkt_hdr->p.error_flags.all)
+	if (pkt_hdr->p.flags.all.error)
 		return cls->error_cos;
 	/* Calls all the PMRs attached at the PKTIO level*/
 	for (i = 0; i < odp_atomic_load_u32(&default_cos->s.num_rule); i++) {
