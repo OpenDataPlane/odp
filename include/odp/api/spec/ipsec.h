@@ -1216,9 +1216,12 @@ typedef struct odp_ipsec_status_t {
  * Each successfully transformed packet has a valid value for these metadata
  * regardless of the inner packet parse configuration
  * (odp_ipsec_inbound_config_t):
- * - L3 offset: Offset to the first byte of the (outmost) IP header
- * - pktio:     For inline IPSEC processed packets, original packet input
- *              interface
+ * - L3 offset:       Offset to the first byte of the (outmost) IP header
+ * - IPv4/IPv6 flags: These flags can be used to determine packet contents.
+ *                    If neither IPv4 nor IPv6 flag are set, received packet is
+ *                    TFC dummy packet and should be dropped by an application
+ * - pktio:           For inline IPSEC processed packets, original packet input
+ *                    interface
  *
  * Other metadata for parse results and error checks depend on configuration
  * (selected parse and error check levels).
