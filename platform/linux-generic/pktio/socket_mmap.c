@@ -23,6 +23,7 @@
 #include <poll.h>
 #include <sys/ioctl.h>
 #include <errno.h>
+#include <time.h>
 
 #include <odp_api.h>
 #include <odp_packet_socket.h>
@@ -36,6 +37,12 @@
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>
+
+/* Maximum number of retries per sock_mmap_send() call */
+#define TX_RETRIES 10
+
+/* Number of nanoseconds to wait between TX retries */
+#define TX_RETRY_NSEC 1000
 
 /* Maximum number of packets to store in each RX/TX block */
 #define MAX_PKTS_PER_BLOCK 512
@@ -149,6 +156,11 @@ static uint8_t *pkt_mmap_vlan_insert(uint8_t *l2_hdr_ptr,
 	return l2_hdr_ptr;
 }
 
+static inline unsigned next_frame(unsigned cur_frame, unsigned frame_count)
+{
+	return odp_unlikely(cur_frame + 1 >= frame_count) ? 0 : cur_frame + 1;
+}
+
 static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 				      pkt_sock_mmap_t *pkt_sock,
 				      odp_packet_t pkt_table[], unsigned len,
@@ -186,7 +198,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			ts_val = odp_time_global();
 
 		ppd.raw = ring->rd[frame_num].iov_base;
-		next_frame_num = (frame_num + 1) % ring->rd_num;
+		next_frame_num = next_frame(frame_num, ring->rd_num);
 
 		pkt_buf = (uint8_t *)ppd.raw + ppd.v2->tp_h.tp_mac;
 		pkt_len = ppd.v2->tp_h.tp_snaplen;
@@ -252,6 +264,50 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	return nb_rx;
 }
 
+static unsigned handle_pending_frames(int sock, struct ring *ring, int frames)
+{
+	int i;
+	int retry = 0;
+	unsigned nb_tx = 0;
+	unsigned frame_num;
+	unsigned frame_count = ring->rd_num;
+	unsigned first_frame_num = ring->frame_num;
+
+	for (frame_num = first_frame_num, i = 0; i < frames; i++) {
+		struct tpacket2_hdr *hdr = ring->rd[frame_num].iov_base;
+
+		if (odp_likely(hdr->tp_status == TP_STATUS_AVAILABLE ||
+			       hdr->tp_status == TP_STATUS_SENDING)) {
+			nb_tx++;
+		} else if (hdr->tp_status == TP_STATUS_SEND_REQUEST) {
+			if (retry++ < TX_RETRIES) {
+				struct timespec ts = { .tv_nsec = TX_RETRY_NSEC,
+						       .tv_sec = 0 };
+
+				sendto(sock, NULL, 0, MSG_DONTWAIT, NULL, 0);
+				nanosleep(&ts, NULL);
+				i--;
+				continue;
+			} else {
+				hdr->tp_status = TP_STATUS_AVAILABLE;
+			}
+		} else { /* TP_STATUS_WRONG_FORMAT */
+			/* Don't try re-sending frames after failure */
+			for (; i < frames; i++) {
+				hdr = ring->rd[frame_num].iov_base;
+				hdr->tp_status = TP_STATUS_AVAILABLE;
+				frame_num = next_frame(frame_num, frame_count);
+			}
+			break;
+		}
+		frame_num = next_frame(frame_num, frame_count);
+	}
+
+	ring->frame_num = next_frame(first_frame_num + nb_tx - 1, frame_count);
+
+	return nb_tx;
+}
+
 static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 				      const odp_packet_t pkt_table[],
 				      unsigned len)
@@ -261,7 +317,7 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 	unsigned first_frame_num, frame_num, frame_count;
 	int ret;
 	uint8_t *buf;
-	unsigned n, i = 0;
+	unsigned i = 0;
 	unsigned nb_tx = 0;
 	int send_errno;
 	int total_len = 0;
@@ -286,9 +342,7 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 
 		mmap_tx_user_ready(ppd.raw);
 
-		if (++frame_num >= frame_count)
-			frame_num = 0;
-
+		frame_num = next_frame(frame_num, frame_count);
 		i++;
 	}
 
@@ -302,27 +356,11 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 	if (odp_likely(ret == total_len)) {
 		nb_tx = i;
 		ring->frame_num = frame_num;
-	} else if (ret == -1) {
-		for (frame_num = first_frame_num, n = 0; n < i; ++n) {
-			struct tpacket2_hdr *hdr = ring->rd[frame_num].iov_base;
+	} else {
+		nb_tx = handle_pending_frames(sock, ring, i);
 
-			if (odp_likely(hdr->tp_status == TP_STATUS_AVAILABLE ||
-				       hdr->tp_status == TP_STATUS_SENDING)) {
-				nb_tx++;
-			} else {
-				/* The remaining frames weren't sent, clear
-				 * their status to indicate we're not waiting
-				 * for the kernel to process them. */
-				hdr->tp_status = TP_STATUS_AVAILABLE;
-			}
-
-			if (++frame_num >= frame_count)
-				frame_num = 0;
-		}
-
-		ring->frame_num = (first_frame_num + nb_tx) % frame_count;
-
-		if (nb_tx == 0 && SOCK_ERR_REPORT(send_errno)) {
+		if (odp_unlikely(ret == -1 && nb_tx == 0 &&
+				 SOCK_ERR_REPORT(send_errno))) {
 			__odp_errno = send_errno;
 			/* ENOBUFS indicates that the transmit queue is full,
 			 * which will happen regularly when overloaded so don't
@@ -332,16 +370,6 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 					strerror(send_errno));
 			return -1;
 		}
-	} else {
-		/* Short send, return value is number of bytes sent so use this
-		 * to determine number of complete frames sent. */
-		for (n = 0; n < i && ret > 0; ++n) {
-			ret -= odp_packet_len(pkt_table[n]);
-			if (ret >= 0)
-				nb_tx++;
-		}
-
-		ring->frame_num = (first_frame_num + nb_tx) % frame_count;
 	}
 
 	for (i = 0; i < nb_tx; ++i)
