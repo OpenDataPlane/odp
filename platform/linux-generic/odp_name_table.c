@@ -56,7 +56,7 @@ typedef struct name_tbl_entry_s name_tbl_entry_t;
  /* It is important for most platforms that the following struct fit within
  * one cacheline.
  */
-struct name_tbl_entry_s {
+struct ODP_ALIGNED_CACHE name_tbl_entry_s {
 	name_tbl_entry_t *next_entry;
 	uint64_t          user_data;
 	_odp_int_name_t   name_tbl_id;
@@ -64,9 +64,9 @@ struct name_tbl_entry_s {
 	uint8_t           name_kind;
 	uint8_t           name_len;
 	char              name[_ODP_INT_NAME_LEN + 1];
-} ODP_ALIGNED_CACHE;
+};
 
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	uint32_t          num_allocd;
 	uint32_t          num_used;
 	uint32_t          num_added_to_free_list;
@@ -74,7 +74,7 @@ typedef struct {
 	uint32_t          base_id;
 	name_tbl_entry_t *free_list_head;
 	name_tbl_entry_t  entries[0];
-} ODP_ALIGNED_CACHE name_tbl_t;
+} name_tbl_t;
 
 typedef struct {
 	name_tbl_t *tbls[NUM_NAME_TBLS];

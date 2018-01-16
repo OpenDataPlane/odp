@@ -41,13 +41,13 @@ struct pkt_cache_t {
 	unsigned count;			  /**< packets in cache */
 };
 
-typedef union {
+typedef union ODP_ALIGNED_CACHE {
 	struct pkt_cache_t s;
 	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct pkt_cache_t))];
-} pkt_cache_t ODP_ALIGNED_CACHE;
+} pkt_cache_t;
 
 /** Packet IO using DPDK interface */
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	odp_pool_t pool;		  /**< pool to alloc packets from */
 	struct rte_mempool *pkt_pool;	  /**< DPDK packet pool */
 	uint32_t data_room;		  /**< maximum packet length */
@@ -64,6 +64,6 @@ typedef struct {
 	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES];  /**< TX queue locks */
 	/** cache for storing extra RX packets */
 	pkt_cache_t rx_cache[PKTIO_MAX_QUEUES];
-} pkt_dpdk_t ODP_ALIGNED_CACHE;
+} pkt_dpdk_t;
 
 #endif

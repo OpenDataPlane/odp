@@ -55,12 +55,12 @@ typedef struct {
 	int fairness;   /**< Check fairness */
 } test_args_t;
 
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	uint64_t num_ev;
 
 	/* Round up the struct size to cache line size */
 	uint8_t pad[ODP_CACHE_LINE_SIZE - sizeof(uint64_t)];
-} queue_context_t ODP_ALIGNED_CACHE;
+} queue_context_t;
 
 /** Test global variables */
 typedef struct {
