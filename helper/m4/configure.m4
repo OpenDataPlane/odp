@@ -8,15 +8,12 @@ AC_ARG_ENABLE([test-helper],
 AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
 
 ##########################################################################
-# Enable/disable helper-ext
-# platform specific non portable extensions
+# Enable/disable Linux helpers
 ##########################################################################
-helper_linux=no
 AC_ARG_ENABLE([helper-linux],
-	[  --enable-helper-linux	build helper platform extensions (not portable)],
-	[if test "x$enableval" = "xyes"; then
-		helper_linux=yes
-	fi])
+    [AS_HELP_STRING([--disable-helper-linux], [disable Linux helpers])],
+    [helper_linux=$enableval],
+    [helper_linux=yes])
 
 AC_CONFIG_FILES([helper/Makefile
 		 helper/libodphelper.pc
