@@ -423,11 +423,12 @@ static void time_test_accuracy(time_cb time_cur, time_from_ns_cb time_from_ns)
 {
 	int i;
 	odp_time_t t1, t2, wait, diff;
-	clock_t c1, c2;
+	struct timespec ts1, ts2, tsdiff;
 	double sec_t, sec_c;
 	odp_time_t sec = time_from_ns(ODP_TIME_SEC_IN_NS);
 
-	c1 = clock();
+	i = clock_gettime(CLOCK_MONOTONIC, &ts1);
+	CU_ASSERT(i == 0);
 	t1 = time_cur();
 
 	wait = odp_time_sum(t1, sec);
@@ -436,12 +437,21 @@ static void time_test_accuracy(time_cb time_cur, time_from_ns_cb time_from_ns)
 		wait = odp_time_sum(wait, sec);
 	}
 
+	i = clock_gettime(CLOCK_MONOTONIC, &ts2);
+	CU_ASSERT(i == 0);
 	t2 = time_cur();
-	c2 = clock();
+
+	if (ts2.tv_nsec < ts1.tv_nsec) {
+		tsdiff.tv_nsec = 1000000000L + ts2.tv_nsec - ts1.tv_nsec;
+		tsdiff.tv_sec = ts2.tv_sec - 1 - ts1.tv_sec;
+	} else {
+		tsdiff.tv_nsec = ts2.tv_nsec - ts1.tv_nsec;
+		tsdiff.tv_sec = ts2.tv_sec - ts1.tv_sec;
+	}
 
 	diff  = odp_time_diff(t2, t1);
 	sec_t = ((double)odp_time_to_ns(diff)) / ODP_TIME_SEC_IN_NS;
-	sec_c = ((double)(c2 - c1)) / CLOCKS_PER_SEC;
+	sec_c = ((double)(tsdiff.tv_nsec) / 1000000000L) + tsdiff.tv_sec;
 
 	/* Check that ODP time is within +-5% of system time */
 	CU_ASSERT(sec_t < sec_c * 1.05);
