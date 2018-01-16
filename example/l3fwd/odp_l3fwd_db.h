@@ -39,7 +39,7 @@ typedef struct ip_addr_range_s {
 /**
  * TCP/UDP flow
  */
-typedef struct ipv4_tuple5_s {
+typedef struct ODP_ALIGNED_CACHE ipv4_tuple5_s {
 	union {
 		struct {
 			int32_t src_ip;
@@ -55,7 +55,7 @@ typedef struct ipv4_tuple5_s {
 			int64_t lo64;
 		};
 	};
-} ipv4_tuple5_t ODP_ALIGNED_CACHE;
+} ipv4_tuple5_t;
 
 /**
  * Forwarding data base entry

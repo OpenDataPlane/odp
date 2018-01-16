@@ -156,7 +156,7 @@ typedef struct {
 	/* Type of extra data */
 	uint8_t extra_type;
 	/* Extra space for packet descriptors. E.g. DPDK mbuf  */
-	uint8_t extra[PKT_EXTRA_LEN] ODP_ALIGNED_CACHE;
+	uint8_t ODP_ALIGNED_CACHE extra[PKT_EXTRA_LEN];
 #endif
 
 	/* Context for IPsec */

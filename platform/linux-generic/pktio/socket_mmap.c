@@ -61,9 +61,10 @@ static int set_pkt_sock_fanout_mmap(pkt_sock_mmap_t *const pkt_sock,
 
 union frame_map {
 	struct {
-		struct tpacket2_hdr tp_h ODP_ALIGNED(TPACKET_ALIGNMENT);
-		struct sockaddr_ll s_ll
-		ODP_ALIGNED(TPACKET_ALIGN(sizeof(struct tpacket2_hdr)));
+		struct tpacket2_hdr ODP_ALIGNED(TPACKET_ALIGNMENT) tp_h;
+		struct sockaddr_ll
+			ODP_ALIGNED(TPACKET_ALIGN(sizeof(struct tpacket2_hdr)))
+			s_ll;
 	} *v2;
 
 	void *raw;

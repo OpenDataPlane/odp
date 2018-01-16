@@ -96,7 +96,7 @@ typedef enum {
 } cache_type_t;
 
 /** A IP lookup table structure. */
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	/**< for check */
 	uint32_t magicword;
 	/** Name of the hash. */
@@ -118,7 +118,7 @@ typedef struct {
 	odp_queue_t free_slots[2];
 	/** The number of pool used by each queue. */
 	uint32_t cache_count[2];
-} odph_iplookup_table_impl ODP_ALIGNED_CACHE;
+} odph_iplookup_table_impl;
 
 /***********************************************************
  *****************   Cache management   ********************

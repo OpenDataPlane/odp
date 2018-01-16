@@ -29,10 +29,9 @@ extern "C" {
 /**
  * Pointer atomic type
  */
-typedef struct {
+typedef struct ODP_ALIGNED(sizeof(void *)) {
 	void *v; /**< Actual storage for the atomic variable */
-} _odp_atomic_ptr_t
-ODP_ALIGNED(sizeof(void *)); /* Enforce alignement! */
+} _odp_atomic_ptr_t;
 
 /**
  * Atomic flag (boolean) type
@@ -709,9 +708,9 @@ static inline void _odp_atomic_flag_clear(_odp_atomic_flag_t *flag)
 typedef __int128 _uint128_t;
 
 /** Atomic 128-bit type */
-typedef struct {
+typedef struct ODP_ALIGNED(16) {
 	_uint128_t v; /**< Actual storage for the atomic variable */
-} _odp_atomic_u128_t ODP_ALIGNED(16);
+} _odp_atomic_u128_t;
 
 /**
  * 16-byte atomic exchange operation
