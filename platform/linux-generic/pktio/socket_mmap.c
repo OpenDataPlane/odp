@@ -203,6 +203,13 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		pkt_buf = (uint8_t *)ppd.raw + ppd.v2->tp_h.tp_mac;
 		pkt_len = ppd.v2->tp_h.tp_snaplen;
 
+		if (odp_unlikely(pkt_len > pkt_sock->mtu)) {
+			mmap_rx_user_ready(ppd.raw);
+			frame_num = next_frame_num;
+			ODP_DBG("dropped oversized packet\n");
+			continue;
+		}
+
 		/* Don't receive packets sent by ourselves */
 		eth_hdr = (struct ethhdr *)pkt_buf;
 		if (odp_unlikely(ethaddrs_equal(if_mac,
@@ -591,6 +598,10 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 
 	ret = mac_addr_get_fd(pkt_sock->sockfd, netdev, pkt_sock->if_mac);
 	if (ret != 0)
+		goto error;
+
+	pkt_sock->mtu = mtu_get_fd(pkt_sock->sockfd, netdev);
+	if (!pkt_sock->mtu)
 		goto error;
 
 	if_idx = if_nametoindex(netdev);

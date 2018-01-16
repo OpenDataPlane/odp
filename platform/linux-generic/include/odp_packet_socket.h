@@ -73,6 +73,7 @@ typedef struct {
 
 	int ODP_ALIGNED_CACHE sockfd;
 	odp_pool_t pool;
+	int mtu; /**< maximum transmission unit */
 	size_t frame_offset; /**< frame start offset from start of pkt buf */
 	uint8_t *mmap_base;
 	unsigned mmap_len;
