@@ -824,20 +824,11 @@ static void process_pkts(int thr, thread_args_t *thr_args,
 			 odp_packet_t pkt_tbl[], unsigned len)
 {
 	odp_packet_t pkt;
-	odp_packet_chksum_status_t csum_status;
 	uint32_t left, offset, i;
 	odph_ipv4hdr_t *ip;
 
 	for (i = 0; i < len; ++i) {
 		pkt = pkt_tbl[i];
-
-		csum_status = odp_packet_l3_chksum_status(pkt);
-		if (csum_status == ODP_PACKET_CHKSUM_BAD)
-			printf("L3 checksum error detected.\n");
-
-		csum_status = odp_packet_l4_chksum_status(pkt);
-		if (csum_status == ODP_PACKET_CHKSUM_BAD)
-			printf("L4 checksum error detected.\n");
 
 		/* Drop packets with errors */
 		if (odp_unlikely(odp_packet_has_error(pkt)))
