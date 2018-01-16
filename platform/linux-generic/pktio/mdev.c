@@ -6,7 +6,7 @@
 
 #include "config.h"
 
-#ifdef ODP_MDEV
+#if defined(ODP_MDEV) && ODP_MDEV == 1
 
 #include <dirent.h>
 #include <errno.h>

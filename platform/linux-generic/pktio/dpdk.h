@@ -13,7 +13,7 @@
 
 #include <net/if.h>
 
-#ifdef ODP_PKTIO_DPDK
+#if defined(ODP_PKTIO_DPDK) && ODP_PKTIO_DPDK == 1
 #include <rte_config.h>
 #include <rte_mbuf.h>
 

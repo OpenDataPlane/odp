@@ -6,7 +6,7 @@
 
 #include "config.h"
 
-#ifdef ODP_PKTIO_DPDK
+#if defined(ODP_PKTIO_DPDK) && ODP_PKTIO_DPDK == 1
 
 #include <odp_posix_extensions.h>
 

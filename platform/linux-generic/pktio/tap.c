@@ -6,7 +6,7 @@
 
 #include "config.h"
 
-#ifdef ODP_PKTIO_TAP
+#if defined(ODP_PKTIO_TAP) && ODP_PKTIO_TAP == 1
 
 /**
  * @file

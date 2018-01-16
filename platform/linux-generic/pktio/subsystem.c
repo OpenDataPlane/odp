@@ -22,29 +22,29 @@ ODP_SUBSYSTEM_FOREACH_TEMPLATE(pktio_ops, term_global, ODP_ABORT)
 /* Temporary variable to enable link modules,
  * will remove in Makefile scheme changes.
  */
-#ifdef ODP_PKTIO_DPDK
+#if defined(ODP_PKTIO_DPDK) && ODP_PKTIO_DPDK == 1
 extern int enable_link_dpdk_pktio_ops;
 #endif
-#ifdef ODP_PKTIO_IPC
+#if defined(ODP_PKTIO_IPC) && ODP_PKTIO_IPC == 1
 extern int enable_link_ipc_pktio_ops;
 #endif
 extern int enable_link_loopback_pktio_ops;
-#ifdef ODP_NETMAP
+#if defined(ODP_NETMAP) && ODP_NETMAP == 1
 extern int enable_link_netmap_pktio_ops;
 #endif
-#ifdef HAVE_PCAP
+#if defined(HAVE_PCAP) && HAVE_PCAP == 1
 extern int enable_link_pcap_pktio_ops;
 #endif
-#ifdef ODP_PKTIO_SOCKET
+#if defined(ODP_PKTIO_SOCKET) && ODP_PKTIO_SOCKET == 1
 extern int enable_link_socket_pktio_ops;
 #endif
-#ifdef ODP_PKTIO_SOCKET_MMAP
+#if defined(ODP_PKTIO_SOCKET_MMAP) && ODP_PKTIO_SOCKET_MMAP == 1
 extern int enable_link_socket_mmap_pktio_ops;
 #endif
-#ifdef ODP_PKTIO_TAP
+#if defined(ODP_PKTIO_TAP) && ODP_PKTIO_TAP == 1
 extern int enable_link_tap_pktio_ops;
 #endif
-#ifdef ODP_MDEV
+#if defined(ODP_MDEV) && ODP_MDEV == 1
 extern int enable_link_cxgb4_pktio_ops;
 extern int enable_link_i40e_pktio_ops;
 #endif
@@ -55,29 +55,29 @@ ODP_SUBSYSTEM_CONSTRUCTOR(pktio_ops)
 
 	/* Further initialization per subsystem */
 
-#ifdef ODP_PKTIO_DPDK
+#if defined(ODP_PKTIO_DPDK) && ODP_PKTIO_DPDK == 1
 	enable_link_dpdk_pktio_ops = 1;
 #endif
-#ifdef ODP_PKTIO_IPC
+#if defined(ODP_PKTIO_IPC) && ODP_PKTIO_IPC == 1
 	enable_link_ipc_pktio_ops = 1;
 #endif
 	enable_link_loopback_pktio_ops = 1;
-#ifdef ODP_NETMAP
+#if defined(ODP_NETMAP) && ODP_NETMAP == 1
 	enable_link_netmap_pktio_ops = 1;
 #endif
-#ifdef HAVE_PCAP
+#if defined(HAVE_PCAP) && HAVE_PCAP == 1
 	enable_link_pcap_pktio_ops = 1;
 #endif
-#ifdef ODP_PKTIO_SOCKET
+#if defined(ODP_PKTIO_SOCKET) && ODP_PKTIO_SOCKET == 1
 	enable_link_socket_pktio_ops = 1;
 #endif
-#ifdef ODP_PKTIO_SOCKET_MMAP
+#if defined(ODP_PKTIO_SOCKET_MMAP) && ODP_PKTIO_SOCKET_MMAP == 1
 	enable_link_socket_mmap_pktio_ops = 1;
 #endif
-#ifdef ODP_PKTIO_TAP
+#if defined(ODP_PKTIO_TAP) && ODP_PKTIO_TAP == 1
 	enable_link_tap_pktio_ops = 1;
 #endif
-#ifdef ODP_MDEV
+#if defined(ODP_MDEV) && ODP_MDEV == 1
 	enable_link_cxgb4_pktio_ops = 1;
 	enable_link_i40e_pktio_ops = 1;
 #endif
