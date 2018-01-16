@@ -600,6 +600,20 @@ error:
 	return -1;
 }
 
+static int sock_mmap_fd_set(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			    fd_set *readfds)
+{
+	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
+	int fd;
+
+	odp_ticketlock_lock(&pktio_entry->s.rxl);
+	fd = pkt_sock->sockfd;
+	FD_SET(fd, readfds);
+	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+
+	return fd;
+}
+
 static int sock_mmap_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  odp_packet_t pkt_table[], int len)
 {
@@ -612,6 +626,79 @@ static int sock_mmap_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_ticketlock_unlock(&pktio_entry->s.rxl);
 
 	return ret;
+}
+
+static int sock_mmap_recv_tmo(pktio_entry_t *pktio_entry, int index,
+			      odp_packet_t pkt_table[], int num, uint64_t usecs)
+{
+	struct timeval timeout;
+	int ret;
+	int maxfd;
+	fd_set readfds;
+
+	ret = sock_mmap_recv(pktio_entry, index, pkt_table, num);
+	if (ret != 0)
+		return ret;
+
+	timeout.tv_sec = usecs / (1000 * 1000);
+	timeout.tv_usec = usecs - timeout.tv_sec * (1000ULL * 1000ULL);
+
+	FD_ZERO(&readfds);
+	maxfd = sock_mmap_fd_set(pktio_entry, index, &readfds);
+
+	if (select(maxfd + 1, &readfds, NULL, NULL,
+		   usecs == ODP_PKTIN_WAIT ? NULL : &timeout) == 0)
+		return 0;
+
+	return sock_mmap_recv(pktio_entry, index, pkt_table, num);
+}
+
+static int sock_mmap_recv_mq_tmo(pktio_entry_t *pktio_entry[], int index[],
+				 int num_q, odp_packet_t pkt_table[], int num,
+				 unsigned *from, uint64_t usecs)
+{
+	struct timeval timeout;
+	int i;
+	int ret;
+	int maxfd = -1, maxfd2;
+	fd_set readfds;
+
+	for (i = 0; i < num_q; i++) {
+		ret = sock_mmap_recv(pktio_entry[i], index[i], pkt_table, num);
+
+		if (ret > 0 && from)
+			*from = i;
+
+		if (ret != 0)
+			return ret;
+	}
+
+	FD_ZERO(&readfds);
+
+	for (i = 0; i < num_q; i++) {
+		maxfd2 = sock_mmap_fd_set(pktio_entry[i], index[i], &readfds);
+		if (maxfd2 > maxfd)
+			maxfd = maxfd2;
+	}
+
+	timeout.tv_sec = usecs / (1000 * 1000);
+	timeout.tv_usec = usecs - timeout.tv_sec * (1000ULL * 1000ULL);
+
+	if (select(maxfd + 1, &readfds, NULL, NULL,
+		   usecs == ODP_PKTIN_WAIT ? NULL : &timeout) == 0)
+		return 0;
+
+	for (i = 0; i < num_q; i++) {
+		ret = sock_mmap_recv(pktio_entry[i], index[i], pkt_table, num);
+
+		if (ret > 0 && from)
+			*from = i;
+
+		if (ret != 0)
+			return ret;
+	}
+
+	return 0;
 }
 
 static int sock_mmap_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
@@ -725,7 +812,10 @@ const pktio_if_ops_t sock_mmap_pktio_ops = {
 	.stats = sock_mmap_stats,
 	.stats_reset = sock_mmap_stats_reset,
 	.recv = sock_mmap_recv,
+	.recv_tmo = sock_mmap_recv_tmo,
+	.recv_mq_tmo = sock_mmap_recv_mq_tmo,
 	.send = sock_mmap_send,
+	.fd_set = sock_mmap_fd_set,
 	.mtu_get = sock_mmap_mtu_get,
 	.promisc_mode_set = sock_mmap_promisc_mode_set,
 	.promisc_mode_get = sock_mmap_promisc_mode_get,
