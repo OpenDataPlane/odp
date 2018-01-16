@@ -939,6 +939,7 @@ static int gen_recv_direct_thread(void *arg)
 	odp_packet_t pkts[MAX_RX_BURST];
 	int pkt_cnt, burst_size;
 	odp_pktin_queue_t pktin;
+	uint64_t wait = odp_pktin_wait_time(ODP_TIME_SEC_IN_NS);
 
 	thr = odp_thread_id();
 	thr_args = (thread_args_t *)arg;
@@ -952,8 +953,7 @@ static int gen_recv_direct_thread(void *arg)
 		if (thr_args->stop)
 			break;
 
-		pkt_cnt = odp_pktin_recv_tmo(pktin, pkts, burst_size,
-					     ODP_PKTIN_NO_WAIT);
+		pkt_cnt = odp_pktin_recv_tmo(pktin, pkts, burst_size, wait);
 
 		if (pkt_cnt > 0) {
 			process_pkts(thr, thr_args, pkts, pkt_cnt);
