@@ -6,7 +6,7 @@
 
 #include "config.h"
 
-#ifdef ODP_PKTIO_IPC
+#if defined(ODP_PKTIO_IPC) && ODP_PKTIO_IPC == 1
 
 #include <odp_debug_internal.h>
 #include <odp_packet_io_internal.h>

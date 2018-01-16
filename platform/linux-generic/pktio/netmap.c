@@ -6,7 +6,7 @@
 
 #include "config.h"
 
-#ifdef ODP_NETMAP
+#if defined(ODP_NETMAP) && ODP_NETMAP == 1
 
 #include <odp_posix_extensions.h>
 

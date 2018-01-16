@@ -7,7 +7,7 @@
 
 #include "config.h"
 
-#ifdef ODP_PKTIO_SOCKET
+#if defined(ODP_PKTIO_SOCKET) && ODP_PKTIO_SOCKET == 1
 
 #include <odp_posix_extensions.h>
 
