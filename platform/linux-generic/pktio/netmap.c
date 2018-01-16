@@ -350,9 +350,6 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	pkt_nm->sockfd = -1;
 	pkt_nm->pool = pool;
 
-	/* max frame len taking into account the l2-offset */
-	pkt_nm->max_frame_len = pool_entry_from_hdl(pool)->max_len;
-
 	/* allow interface to be opened with or without the 'netmap:' prefix */
 	prefix = "netmap:";
 	if (strncmp(netdev, "netmap:", 7) == 0)
@@ -642,12 +639,6 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 
 		odp_prefetch(slot.buf);
 
-		if (odp_unlikely(len > pktio_entry->s.pkt_nm.max_frame_len)) {
-			ODP_ERR("RX: frame too big %" PRIu16 " %zu!\n", len,
-				pktio_entry->s.pkt_nm.max_frame_len);
-			goto fail;
-		}
-
 		if (pktio_cls_enabled(pktio_entry)) {
 			if (cls_classify_packet(pktio_entry,
 						(const uint8_t *)slot.buf, len,
@@ -692,6 +683,7 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 	netmap_slot_t slot_tbl[num];
 	char *buf;
 	uint32_t slot_id;
+	uint32_t mtu = pktio_entry->s.pkt_nm.mtu;
 	int i;
 	int ring_id = desc->cur_rx_ring;
 	int num_rx = 0;
@@ -711,10 +703,12 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 			slot_id = ring->cur;
 			buf = NETMAP_BUF(ring, ring->slot[slot_id].buf_idx);
 
-			slot_tbl[num_rx].buf = buf;
-			slot_tbl[num_rx].len = ring->slot[slot_id].len;
-			num_rx++;
-
+			if (odp_likely(ring->slot[slot_id].len <= mtu)) {
+				slot_tbl[num_rx].buf = buf;
+				slot_tbl[num_rx].len = ring->slot[slot_id].len;
+				ODP_DBG("dropped oversized packet\n");
+				num_rx++;
+			}
 			ring->cur = nm_ring_next(ring, slot_id);
 		}
 		ring->head = ring->cur;
