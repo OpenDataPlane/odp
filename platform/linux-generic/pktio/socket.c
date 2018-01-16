@@ -643,6 +643,11 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		uint16_t pkt_len = msgvec[i].msg_len;
 		int ret;
 
+		if (odp_unlikely(msgvec[i].msg_hdr.msg_flags & MSG_TRUNC)) {
+			odp_packet_free(pkt);
+			ODP_DBG("dropped truncated packet\n");
+			continue;
+		}
 		if (pktio_cls_enabled(pktio_entry)) {
 			uint16_t seg_len =  pkt_len;
 
