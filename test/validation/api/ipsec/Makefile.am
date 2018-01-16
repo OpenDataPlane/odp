@@ -21,7 +21,4 @@ ipsec_async_SOURCES = ipsec_async.c
 ipsec_inline_in_SOURCES = ipsec_inline_in.c
 ipsec_inline_out_SOURCES = ipsec_inline_out.c
 
-ipsec_sync_LDADD = libtestipsec.la $(LIBCUNIT_COMMON) $(LIBODP)
-ipsec_async_LDADD = libtestipsec.la $(LIBCUNIT_COMMON) $(LIBODP)
-ipsec_inline_in_LDADD = libtestipsec.la $(LIBCUNIT_COMMON) $(LIBODP)
-ipsec_inline_out_LDADD = libtestipsec.la $(LIBCUNIT_COMMON) $(LIBODP)
+LDADD += libtestipsec.la

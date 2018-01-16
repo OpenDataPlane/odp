@@ -32,65 +32,21 @@ extern "C" {
 /** Minimum segment length expected by packet_parse_common() */
 #define PACKET_PARSE_SEG_LEN 96
 
-
 ODP_STATIC_ASSERT(sizeof(_odp_packet_input_flags_t) == sizeof(uint64_t),
 		  "INPUT_FLAGS_SIZE_ERROR");
 
-/**
- * Packet error flags
- */
-typedef union {
-	/* All error flags */
-	uint32_t all;
-
-	struct {
-		/* Bitfield flags for each detected error */
-		uint32_t app_error:1; /**< Error bit for application use */
-		uint32_t frame_len:1; /**< Frame length error */
-		uint32_t snap_len:1;  /**< Snap length error */
-		uint32_t l2_chksum:1; /**< L2 checksum error, checks TBD */
-		uint32_t ip_err:1;    /**< IP error,  checks TBD */
-		uint32_t l3_chksum:1; /**< L3 checksum error */
-		uint32_t tcp_err:1;   /**< TCP error, checks TBD */
-		uint32_t udp_err:1;   /**< UDP error, checks TBD */
-		uint32_t ipsec_err:1; /**< IPsec error */
-		uint32_t crypto_err:1; /**< Crypto packet operation error */
-		uint32_t l4_chksum:1; /**< L4 checksum error */
-	};
-} error_flags_t;
-
-ODP_STATIC_ASSERT(sizeof(error_flags_t) == sizeof(uint32_t),
-		  "ERROR_FLAGS_SIZE_ERROR");
-
-/**
- * Packet output flags
- */
-typedef union {
-	/* All output flags */
-	uint32_t all;
-
-	struct {
-		/** adjustment for traffic mgr */
-		uint32_t shaper_len_adj:8;
-
-		/* Bitfield flags for each output option */
-		uint32_t l3_chksum_set:1; /**< L3 chksum bit is valid */
-		uint32_t l3_chksum:1;     /**< L3 chksum override */
-		uint32_t l4_chksum_set:1; /**< L3 chksum bit is valid */
-		uint32_t l4_chksum:1;     /**< L4 chksum override  */
-	};
-} output_flags_t;
-
-ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t),
-		  "OUTPUT_FLAGS_SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(_odp_packet_flags_t) == sizeof(uint32_t),
+		  "PACKET_FLAGS_SIZE_ERROR");
 
 /**
  * Packet parser metadata
  */
 typedef struct {
+	/* Packet input flags */
 	_odp_packet_input_flags_t  input_flags;
-	error_flags_t  error_flags;
-	output_flags_t output_flags;
+
+	/* Other flags */
+	_odp_packet_flags_t        flags;
 
 	 /* offset to L2 hdr, e.g. Eth */
 	uint16_t l2_offset;
@@ -231,8 +187,7 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	}
 
 	pkt_hdr->p.input_flags.all  = 0;
-	pkt_hdr->p.output_flags.all = 0;
-	pkt_hdr->p.error_flags.all  = 0;
+	pkt_hdr->p.flags.all_flags  = 0;
 
 	pkt_hdr->p.l2_offset = 0;
 	pkt_hdr->p.l3_offset = ODP_PACKET_OFFSET_INVALID;

@@ -1,5 +1,7 @@
 include $(top_srcdir)/example/Makefile.inc
 
+LDADD += $(ATOMIC_LIBS)
+
 bin_PROGRAMS = odp_ipfragreass
 
 odp_ipfragreass_SOURCES = odp_ipfragreass.c \

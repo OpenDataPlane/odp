@@ -10,6 +10,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/platform/@with_platform@/include \
 	-I$(top_srcdir)/platform/@with_platform@/arch/@ARCH_DIR@ \
 	-I$(top_builddir)/include
+AM_CFLAGS = $(PTHREAD_CFLAGS)
 
 AM_LDFLAGS = -version-number '$(ODPHELPER_LIBSO_VERSION)'
 
@@ -59,5 +60,7 @@ if helper_linux
 __LIB__libodphelper_la_SOURCES += \
 				linux/thread.c
 endif
+
+__LIB__libodphelper_la_LIBADD = $(PTHREAD_LIBS) $(LIB)/libodp-linux.la
 
 lib_LTLIBRARIES = $(LIB)/libodphelper.la
