@@ -13,6 +13,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/plat/strong_types.h>
 #include <odp/api/queue.h>
 #include <odp_forward_typedefs_internal.h>
 #include <odp_queue_if.h>

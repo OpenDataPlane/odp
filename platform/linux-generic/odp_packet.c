@@ -6,8 +6,8 @@
 
 #include "config.h"
 
-#include <odp/api/plat/packet_inlines.h>
 #include <odp/api/packet.h>
+#include <odp/api/plat/packet_inlines.h>
 #include <odp_packet_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>
@@ -2538,8 +2538,3 @@ int odp_packet_has_ref(odp_packet_t pkt)
 
 	return 0;
 }
-
-/* Include non-inlined versions of API functions */
-#if ODP_ABI_COMPAT == 1
-#include <odp/api/plat/packet_inlines_api.h>
-#endif

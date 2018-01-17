@@ -1,4 +1,4 @@
-LIB   = $(top_builddir)/lib
+include $(top_srcdir)/Makefile.inc
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libodp-linux.pc

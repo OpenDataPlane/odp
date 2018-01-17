@@ -11,7 +11,6 @@
 extern "C" {
 #endif
 
-#include <odp/api/spec/std_types.h>
 #include <string.h>
 
 _ODP_INLINE void *odp_memcpy(void *dst, const void *src, size_t num)

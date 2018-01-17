@@ -10,8 +10,8 @@
  * ODP execution barriers
  */
 
-#ifndef ODP_API_BARRIER_H_
-#define ODP_API_BARRIER_H_
+#ifndef ODP_API_SPEC_BARRIER_H_
+#define ODP_API_SPEC_BARRIER_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus

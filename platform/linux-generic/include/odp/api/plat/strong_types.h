@@ -15,6 +15,8 @@
 #ifndef STRONG_TYPES_H_
 #define STRONG_TYPES_H_
 
+#include <odp/api/std_types.h>
+
 /** Use strong typing for ODP types */
 #ifdef __cplusplus
 /* Allow type to be expanded before concatenation with underscore */
