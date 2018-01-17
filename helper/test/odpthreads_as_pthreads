@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (c) 2016, Linaro Limited
+# Copyright (c) 2016-2018, Linaro Limited
 # All rights reserved.
 #
 # SPDX-License-Identifier:	BSD-3-Clause
