@@ -70,7 +70,7 @@ static int loopback_close(pktio_entry_t *pktio_entry)
 }
 
 static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
-			 odp_packet_t pkts[], int len)
+			 odp_packet_t pkts[], int num)
 {
 	int nbr, i;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
@@ -82,13 +82,13 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int num_rx = 0;
 	int failed = 0;
 
-	if (odp_unlikely(len > QUEUE_MULTI_MAX))
-		len = QUEUE_MULTI_MAX;
+	if (odp_unlikely(num > QUEUE_MULTI_MAX))
+		num = QUEUE_MULTI_MAX;
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
 	queue = queue_fn->from_ext(pktio_entry->s.pkt_loop.loopq);
-	nbr = queue_fn->deq_multi(queue, hdr_tbl, len);
+	nbr = queue_fn->deq_multi(queue, hdr_tbl, num);
 
 	if (pktio_entry->s.config.pktin.bit.ts_all ||
 	    pktio_entry->s.config.pktin.bit.ts_ptp) {
@@ -171,7 +171,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 }
 
 static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
-			 const odp_packet_t pkt_tbl[], int len)
+			 const odp_packet_t pkt_tbl[], int num)
 {
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	queue_t queue;
@@ -179,12 +179,12 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int ret;
 	int nb_tx = 0;
 	uint32_t bytes = 0;
-	uint32_t out_octets_tbl[len];
+	uint32_t out_octets_tbl[num];
 
-	if (odp_unlikely(len > QUEUE_MULTI_MAX))
-		len = QUEUE_MULTI_MAX;
+	if (odp_unlikely(num > QUEUE_MULTI_MAX))
+		num = QUEUE_MULTI_MAX;
 
-	for (i = 0; i < len; ++i) {
+	for (i = 0; i < num; ++i) {
 		uint32_t pkt_len = odp_packet_len(pkt_tbl[i]);
 
 		if (pkt_len > LOOP_MTU) {

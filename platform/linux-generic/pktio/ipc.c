@@ -565,13 +565,13 @@ repeat:
 }
 
 static int ipc_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
-			  odp_packet_t pkt_table[], int len)
+			  odp_packet_t pkt_table[], int num)
 {
 	int ret;
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
-	ret = ipc_pktio_recv_lockless(pktio_entry, pkt_table, len);
+	ret = ipc_pktio_recv_lockless(pktio_entry, pkt_table, num);
 
 	odp_ticketlock_unlock(&pktio_entry->s.rxl);
 
@@ -579,16 +579,16 @@ static int ipc_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 }
 
 static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
-				   const odp_packet_t pkt_table[], int len)
+				   const odp_packet_t pkt_table[], int num)
 {
 	_ring_t *r;
 	void **rbuf_p;
 	int ret;
 	int i;
 	uint32_t ready = odp_atomic_load_u32(&pktio_entry->s.ipc.ready);
-	odp_packet_t pkt_table_mapped[len]; /**< Ready to send packet has to be
+	odp_packet_t pkt_table_mapped[num]; /**< Ready to send packet has to be
 					      * in memory mapped pool. */
-	uintptr_t offsets[len];
+	uintptr_t offsets[num];
 
 	if (odp_unlikely(!ready))
 		return 0;
@@ -598,7 +598,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 	/* Copy packets to shm shared pool if they are in different
 	 * pool, or if they are references (we can't share across IPC).
 	 */
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < num; i++) {
 		odp_packet_t pkt =  pkt_table[i];
 		pool_t *ipc_pool = pool_entry_from_hdl(pktio_entry->s.ipc.pool);
 		odp_packet_hdr_t *pkt_hdr;
@@ -623,7 +623,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 	}
 
 	/* Set offset to phdr for outgoing packets */
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < num; i++) {
 		uint64_t data_pool_off;
 		odp_packet_t pkt = pkt_table_mapped[i];
 		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
@@ -639,7 +639,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 		pkt_hdr->buf_hdr.ipc_data_offset = data_pool_off;
 		IPC_ODP_DBG("%d/%d send packet %llx, pool %llx,"
 			    "phdr = %p, offset %x sendoff %x, addr %llx iaddr %llx\n",
-			    i, len,
+			    i, num,
 			    odp_packet_to_u64(pkt), odp_pool_to_u64(pool_hdl),
 			    pkt_hdr, pkt_hdr->buf_hdr.ipc_data_offset,
 			    offsets[i], odp_shm_addr(pool->shm),
@@ -650,7 +650,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 	/* Put packets to ring to be processed by other process. */
 	rbuf_p = (void *)&offsets[0];
 	r = pktio_entry->s.ipc.tx.send;
-	ret = _ring_mp_enqueue_burst(r, rbuf_p, len);
+	ret = _ring_mp_enqueue_burst(r, rbuf_p, num);
 	if (odp_unlikely(ret < 0)) {
 		ODP_ERR("pid %d odp_ring_mp_enqueue_bulk fail, ipc_slave %d, ret %d\n",
 			getpid(),
@@ -662,17 +662,17 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 		ODP_ABORT("Unexpected!\n");
 	}
 
-	return len;
+	return num;
 }
 
 static int ipc_pktio_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
-			  const odp_packet_t pkt_table[], int len)
+			  const odp_packet_t pkt_table[], int num)
 {
 	int ret;
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
-	ret = ipc_pktio_send_lockless(pktio_entry, pkt_table, len);
+	ret = ipc_pktio_send_lockless(pktio_entry, pkt_table, num);
 
 	odp_ticketlock_unlock(&pktio_entry->s.txl);
 
