@@ -163,7 +163,7 @@ static inline unsigned next_frame(unsigned cur_frame, unsigned frame_count)
 
 static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 				      pkt_sock_mmap_t *pkt_sock,
-				      odp_packet_t pkt_table[], unsigned len,
+				      odp_packet_t pkt_table[], unsigned num,
 				      unsigned char if_mac[])
 {
 	union frame_map ppd;
@@ -185,11 +185,11 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	ring  = &pkt_sock->rx_ring;
 	frame_num = ring->frame_num;
 
-	for (i = 0, nb_rx = 0; i < len; i++) {
+	for (i = 0, nb_rx = 0; i < num; i++) {
 		odp_packet_hdr_t *hdr;
 		odp_packet_hdr_t parsed_hdr;
 		odp_pool_t pool = pkt_sock->pool;
-		int num;
+		int pkts;
 
 		if (!mmap_rx_kernel_ready(ring->rd[frame_num].iov_base))
 			break;
@@ -234,9 +234,9 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			}
 		}
 
-		num = packet_alloc_multi(pool, pkt_len, &pkt_table[nb_rx], 1);
+		pkts = packet_alloc_multi(pool, pkt_len, &pkt_table[nb_rx], 1);
 
-		if (odp_unlikely(num != 1)) {
+		if (odp_unlikely(pkts != 1)) {
 			pkt_table[nb_rx] = ODP_PACKET_INVALID;
 			mmap_rx_user_ready(ppd.raw); /* drop */
 			frame_num = next_frame_num;
@@ -317,7 +317,7 @@ static unsigned handle_pending_frames(int sock, struct ring *ring, int frames)
 
 static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 				      const odp_packet_t pkt_table[],
-				      unsigned len)
+				      unsigned num)
 {
 	union frame_map ppd;
 	uint32_t pkt_len;
@@ -333,7 +333,7 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 	frame_num = first_frame_num;
 	frame_count = ring->rd_num;
 
-	while (i < len) {
+	while (i < num) {
 		ppd.raw = ring->rd[frame_num].iov_base;
 		if (!odp_unlikely(mmap_tx_kernel_ready(ppd.raw)))
 			break;
@@ -661,13 +661,13 @@ static int sock_mmap_fd_set(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 }
 
 static int sock_mmap_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
-			  odp_packet_t pkt_table[], int len)
+			  odp_packet_t pkt_table[], int num)
 {
 	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
 	int ret;
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
-	ret = pkt_mmap_v2_rx(pktio_entry, pkt_sock, pkt_table, len,
+	ret = pkt_mmap_v2_rx(pktio_entry, pkt_sock, pkt_table, num,
 			     pkt_sock->if_mac);
 	odp_ticketlock_unlock(&pktio_entry->s.rxl);
 
@@ -748,14 +748,14 @@ static int sock_mmap_recv_mq_tmo(pktio_entry_t *pktio_entry[], int index[],
 }
 
 static int sock_mmap_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
-			  const odp_packet_t pkt_table[], int len)
+			  const odp_packet_t pkt_table[], int num)
 {
 	int ret;
 	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 	ret = pkt_mmap_v2_tx(pkt_sock->tx_ring.sock, &pkt_sock->tx_ring,
-			     pkt_table, len);
+			     pkt_table, num);
 	odp_ticketlock_unlock(&pktio_entry->s.txl);
 
 	return ret;
