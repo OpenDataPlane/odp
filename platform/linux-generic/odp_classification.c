@@ -250,7 +250,7 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 				cos->s.num_queue = param->num_queue;
 				_odp_cls_update_hash_proto(cos,
 							   param->hash_proto);
-				tbl_index = cos->s.index * CLS_COS_QUEUE_MAX;
+				tbl_index = i * CLS_COS_QUEUE_MAX;
 				for (j = 0; j < CLS_COS_QUEUE_MAX; j++) {
 					queue = odp_queue_create(NULL, &cos->s.
 								 queue_param);
