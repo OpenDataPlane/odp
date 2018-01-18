@@ -1307,7 +1307,7 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	ipsec_sa = _odp_ipsec_sa_use(sa);
 	ODP_ASSERT(NULL != ipsec_sa);
 
-	if ((opt && opt->mode == ODP_IPSEC_FRAG_CHECK) ||
+	if ((opt && opt->frag_mode == ODP_IPSEC_FRAG_CHECK) ||
 	    (!opt && ipsec_sa->out.frag_mode == ODP_IPSEC_FRAG_CHECK))
 		mtu = ipsec_sa->out.mtu;
 	else
