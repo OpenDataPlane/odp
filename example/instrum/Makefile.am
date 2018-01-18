@@ -25,10 +25,20 @@ noinst_HEADERS = \
 		$(srcdir)/drv.h \
 		$(srcdir)/sched.h
 
-__LIB__libinstrum_la_SOURCES = \
+INSTRUM_SRC = \
 		instrum.c \
 		store.c \
 		papi_cnt.c \
-		init.c \
-		drv.c \
-		sched.c
+		init.c
+
+if CODE_INSTRUM_SCHED
+AM_CFLAGS += -DCODE_INSTRUM_SCHED
+INSTRUM_SRC += sched.c
+endif
+
+if CODE_INSTRUM_DDF
+AM_CFLAGS += -DCODE_INSTRUM_DDF
+INSTRUM_SRC += drv.c
+endif
+
+__LIB__libinstrum_la_SOURCES = $(INSTRUM_SRC)

@@ -7,6 +7,8 @@
 #ifndef __INSTRUM_SCHED_H__
 #define __INSTRUM_SCHED_H__
 
+#ifdef CODE_INSTRUM_SCHED
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -16,4 +18,5 @@ int instr_odpsched_init(void);
 #ifdef __cplusplus
 }
 #endif
+#endif /* CODE_INSTRUM_SCHED */
 #endif /* __INSTRUM_SCHED_H__ */

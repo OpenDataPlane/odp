@@ -7,15 +7,22 @@ AC_ARG_ENABLE([test-example],
     [test_example=yes])
 AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
 
-PAPI_PATH=""
-code_instrumentation=no
 AC_ARG_WITH([papi-path],
 AS_HELP_STRING([--with-papi-path=DIR   path to papi install directory]),
     [PAPI_PATH="$withval"
-    code_instrumentation=yes],[])
-
+    code_instrumentation=yes],
+    [PAPI_PATH=""
+    code_instrumentation=no])
 AC_SUBST([PAPI_PATH])
-AM_CONDITIONAL([CODE_INSTRUM], [test x$code_instrumentation = xyes ])
+AM_CONDITIONAL([CODE_INSTRUM], [test x$code_instrumentation = xyes])
+
+AC_ARG_WITH([code-instrum-profile],
+AS_HELP_STRING([--with-code-instrum-profile=all|scheduler|ddf   set code instrumentation profile]),
+    [code_instrum_profile="$withval"],
+    [code_instrum_profile="all"])
+
+AM_CONDITIONAL([CODE_INSTRUM_SCHED],[test $code_instrum_profile = "all" || test $code_instrum_profile = "scheduler"])
+AM_CONDITIONAL([CODE_INSTRUM_DDF],[test $code_instrum_profile = "all" || test $code_instrum_profile = "ddf"])
 
 AC_CONFIG_FILES([example/classifier/Makefile
 		 example/generator/Makefile
