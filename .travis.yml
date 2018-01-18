@@ -159,18 +159,6 @@ before_install:
         - export PKG_CONFIG_PATH="$HOME/cunit-install/$CROSS_ARCH/lib/pkgconfig:${PKG_CONFIG_PATH}"
         - find $HOME/cunit-install
 
-          # Updated Doxygen
-        - |
-          if [ ! -f "$HOME/doxygen-install/bin/doxygen" ]; then
-                wget https://github.com/doxygen/doxygen/archive/Release_1_8_13.tar.gz
-                tar xpvf Release_1_8_13.tar.gz
-                pushd doxygen-Release_1_8_13
-                cmake -DCMAKE_INSTALL_PREFIX=$HOME/doxygen-install .
-                make install
-                popd
-          fi
-        - export PATH=$HOME/doxygen-install/bin:$PATH
-
 
 install:
         - echo 1000 | sudo tee /proc/sys/vm/nr_hugepages
@@ -313,7 +301,17 @@ jobs:
                   env: TEST=doxygen
                   compiler: gcc
                   install:
-                          - true
+                          # Updated Doxygen
+                        - |
+                          if [ ! -f "$HOME/doxygen-install/bin/doxygen" ]; then
+                                wget https://github.com/doxygen/doxygen/archive/Release_1_8_13.tar.gz
+                                tar xpvf Release_1_8_13.tar.gz
+                                pushd doxygen-Release_1_8_13
+                                cmake -DCMAKE_INSTALL_PREFIX=$HOME/doxygen-install .
+                                make install
+                                popd
+                          fi
+                        - export PATH=$HOME/doxygen-install/bin:$PATH
                   script:
                           - ./bootstrap
                           - ./configure
