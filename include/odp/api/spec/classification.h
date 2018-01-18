@@ -10,8 +10,8 @@
  * ODP classification descriptor
  */
 
-#ifndef ODP_API_CLASSIFY_H_
-#define ODP_API_CLASSIFY_H_
+#ifndef ODP_API_SPEC_CLASSIFY_H_
+#define ODP_API_SPEC_CLASSIFY_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
@@ -29,11 +29,6 @@ extern "C" {
 /**
  * @typedef odp_cos_t
  * ODP Class of service handle
- */
-
-/**
- * @typedef odp_flowsig_t
- * flow signature type, only used for packet metadata field.
  */
 
 /**
@@ -453,12 +448,6 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 			uint8_t qos_table[],
 			odp_cos_t cos_table[],
 			odp_bool_t l3_preference);
-
-/**
- * @typedef odp_cos_flow_set_t
- * Set of header fields that take part in flow signature hash calculation:
- * bit positions per odp_cos_hdr_flow_fields_t enumeration.
- */
 
 /**
  * @typedef odp_pmr_t

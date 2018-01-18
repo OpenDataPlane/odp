@@ -11,8 +11,8 @@
  * ODP crypto
  */
 
-#ifndef ODP_API_CRYPTO_H_
-#define ODP_API_CRYPTO_H_
+#ifndef ODP_API_SPEC_CRYPTO_H_
+#define ODP_API_SPEC_CRYPTO_H_
 #include <odp/visibility_begin.h>
 
 #include <odp/api/deprecated.h>

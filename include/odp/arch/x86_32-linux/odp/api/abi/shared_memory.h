@@ -4,4 +4,4 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/arch/default/api/abi/shared_memory.h>
+#include <odp/api/abi-default/shared_memory.h>

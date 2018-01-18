@@ -7,6 +7,7 @@
 #include "config.h"
 
 #include <odp/api/std_clib.h>
-#if ODP_ABI_COMPAT == 1
+
+/* Include non-inlined versions of API functions */
+#define _ODP_INLINE
 #include <odp/api/plat/std_clib_inlines.h>
-#endif

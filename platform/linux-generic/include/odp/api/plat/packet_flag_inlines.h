@@ -13,7 +13,8 @@
 #ifndef _ODP_PLAT_PACKET_FLAG_INLINES_H_
 #define _ODP_PLAT_PACKET_FLAG_INLINES_H_
 
-#include <odp/api/plat/packet_types.h>
+#include <odp/api/abi/packet.h>
+#include <odp/api/plat/packet_inlines.h>
 #include <odp/api/hints.h>
 
 /** @internal Inline function offsets */
@@ -69,21 +70,5 @@ static inline int _odp_packet_has_ts(odp_packet_t pkt)
 	flags.all = _odp_packet_input_flags(pkt);
 	return flags.timestamp;
 }
-
-/* Include inlined versions of API functions */
-#include <odp/api/plat/static_inline.h>
-#if ODP_ABI_COMPAT == 0
-
-/** @ingroup odp_packet
- *  @{
- */
-
-#include <odp/api/plat/packet_flag_inlines_api.h>
-
-/**
- * @}
- */
-
-#endif
 
 #endif

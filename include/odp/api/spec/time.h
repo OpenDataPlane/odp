@@ -11,8 +11,8 @@
  * ODP time
  */
 
-#ifndef ODP_API_TIME_H_
-#define ODP_API_TIME_H_
+#ifndef ODP_API_SPEC_TIME_H_
+#define ODP_API_SPEC_TIME_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
