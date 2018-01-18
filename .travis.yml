@@ -197,7 +197,8 @@ install:
               ;;
           esac
         - |
-          if [ -n "$TARGET" -a ! -f "dpdk/${TARGET}/lib/libdpdk.a" ]; then
+          if [ -n "$TARGET" ] ; then
+           if [ ! -f "dpdk/${TARGET}/lib/libdpdk.a" ] ; then
             git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v${DPDK_VERS} http://dpdk.org/git/dpdk dpdk
             pushd dpdk
             git log --oneline --decorate
@@ -221,7 +222,8 @@ install:
             make install T=${TARGET} EXTRA_CFLAGS="-fPIC $DPDK_CFLAGS" CROSS="$DPDK_CROSS" -j $(nproc)
             rm -r ./doc ./${TARGET}/app ./${TARGET}/build
             popd
-            EXTRA_CONF="$EXTRA_CONF --with-dpdk-path=`pwd`/dpdk/${TARGET}"
+           fi
+           EXTRA_CONF="$EXTRA_CONF --with-dpdk-path=`pwd`/dpdk/${TARGET}"
           fi
 
 #	Netmap pktio
