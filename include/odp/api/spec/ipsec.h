@@ -984,7 +984,7 @@ typedef struct odp_ipsec_op_flag_t {
  */
 typedef struct odp_ipsec_out_opt_t {
 	/** Fragmentation mode */
-	odp_ipsec_frag_mode_t mode;
+	odp_ipsec_frag_mode_t frag_mode;
 
 } odp_ipsec_out_opt_t;
 
