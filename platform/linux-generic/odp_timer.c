@@ -98,7 +98,11 @@ static odp_timeout_hdr_t *timeout_hdr(odp_timeout_t tmo)
  * odp_timer abstract datatype
  *****************************************************************************/
 
-typedef struct tick_buf_s {
+typedef struct
+#ifdef ODP_ATOMIC_U128
+ODP_ALIGNED(16) /* 16-byte atomic operations need properly aligned addresses */
+#endif
+tick_buf_s {
 #if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	/* No atomics support for 64-bit variables, will use separate lock */
 	/* Use the same layout as odp_atomic_u64_t but without lock variable */
@@ -112,11 +116,7 @@ typedef struct tick_buf_s {
 #ifdef TB_NEEDS_PAD
 	uint32_t pad;/* Need to be able to access padding for successful CAS */
 #endif
-} tick_buf_t
-#ifdef ODP_ATOMIC_U128
-ODP_ALIGNED(16) /* 16-byte atomic operations need properly aligned addresses */
-#endif
-;
+} tick_buf_t;
 
 #if __GCC_ATOMIC_LLONG_LOCK_FREE >= 2
 /* Only assert this when we perform atomic operations on tick_buf_t */
