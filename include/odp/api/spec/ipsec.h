@@ -382,6 +382,44 @@ typedef struct odp_ipsec_crypto_param_t {
 
 } odp_ipsec_crypto_param_t;
 
+/** IPv4 header parameters */
+typedef struct odp_ipsec_ipv4_param_t {
+	/** IPv4 source address (NETWORK ENDIAN) */
+	void *src_addr;
+
+	/** IPv4 destination address (NETWORK ENDIAN) */
+	void *dst_addr;
+
+	/** IPv4 Differentiated Services Code Point */
+	uint8_t dscp;
+
+	/** IPv4 Don't Fragment bit */
+	uint8_t df;
+
+	/** IPv4 Time To Live */
+	uint8_t ttl;
+
+} odp_ipsec_ipv4_param_t;
+
+/** IPv6 header parameters */
+typedef struct odp_ipsec_ipv6_param_t {
+	/** IPv6 source address (NETWORK ENDIAN) */
+	void *src_addr;
+
+	/** IPv6 destination address (NETWORK ENDIAN) */
+	void *dst_addr;
+
+	/** IPv6 flow label */
+	uint32_t flabel;
+
+	/** IPv6 Differentiated Services Code Point */
+	uint8_t dscp;
+
+	/** IPv6 hop limit */
+	uint8_t hlimit;
+
+} odp_ipsec_ipv6_param_t;
+
 /**
  * IPSEC tunnel parameters
  *
@@ -397,40 +435,10 @@ typedef struct odp_ipsec_tunnel_param_t {
 	/** Variant mappings for tunnel parameters */
 	union {
 		/** IPv4 header parameters */
-		struct {
-			/** IPv4 source address (NETWORK ENDIAN) */
-			void *src_addr;
-
-			/** IPv4 destination address (NETWORK ENDIAN) */
-			void *dst_addr;
-
-			/** IPv4 Differentiated Services Code Point */
-			uint8_t dscp;
-
-			/** IPv4 Don't Fragment bit */
-			uint8_t df;
-
-			/** IPv4 Time To Live */
-			uint8_t ttl;
-		} ipv4;
+		odp_ipsec_ipv4_param_t ipv4;
 
 		/** IPv6 header parameters */
-		struct {
-			/** IPv6 source address (NETWORK ENDIAN) */
-			void *src_addr;
-
-			/** IPv6 destination address (NETWORK ENDIAN) */
-			void *dst_addr;
-
-			/** IPv6 Differentiated Services Code Point */
-			uint8_t dscp;
-
-			/** IPv6 flow label */
-			uint32_t flabel;
-
-			/** IPv6 hop limit */
-			uint8_t hlimit;
-		} ipv6;
+		odp_ipsec_ipv6_param_t ipv6;
 	};
 } odp_ipsec_tunnel_param_t;
 
