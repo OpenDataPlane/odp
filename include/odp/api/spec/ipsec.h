@@ -238,6 +238,11 @@ typedef struct odp_ipsec_capability_t {
 	 */
 	odp_support_t retain_header;
 
+	/**
+	 * Inner packet checksum check offload support in inbound direction.
+	 */
+	odp_proto_chksums_t chksums_in;
+
 	/** Maximum number of different destination CoSes in classification
 	 *  pipelining. The same CoS may be used for many SAs. This is equal or
 	 *  less than 'max_cos' capability in classifier API.
