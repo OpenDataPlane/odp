@@ -6,8 +6,7 @@ SUBDIRS = performance
 if test_vald
 TESTS = validation/api/pktio/pktio_run.sh \
 	validation/api/pktio/pktio_run_tap.sh \
-	validation/api/shmem/shmem_linux$(EXEEXT) \
-	ring/ring_main$(EXEEXT)
+	validation/api/shmem/shmem_linux$(EXEEXT)
 
 SUBDIRS += validation/api/pktio\
 	   validation/api/shmem\
