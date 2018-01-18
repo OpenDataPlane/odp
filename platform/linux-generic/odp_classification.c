@@ -194,6 +194,7 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 	capability->back_pressure = ODP_SUPPORT_NO;
 	capability->threshold_red.all_bits = 0;
 	capability->threshold_bp.all_bits = 0;
+	capability->max_hash_queues = CLS_COS_QUEUE_MAX;
 	return 0;
 }
 
@@ -220,8 +221,8 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 	cos_t *cos;
 	uint32_t tbl_index;
 
-	/* Packets are dropped if Queue or Pool is invalid*/
-	if (param->num_queue > CLS_COS_QUEUE_MAX)
+	/* num_queue should not be zero */
+	if (param->num_queue > CLS_COS_QUEUE_MAX || param->num_queue < 1)
 		return ODP_COS_INVALID;
 
 	drop_policy = param->drop_policy;
