@@ -11,7 +11,6 @@ AM_CPPFLAGS +=  -I$(top_builddir)/include
 AM_CPPFLAGS +=  -Iinclude
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/$(ARCH_DIR)
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/default
-AM_CPPFLAGS +=  -DSYSCONFDIR=\"@sysconfdir@\"
 
 AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
 AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
@@ -307,7 +306,7 @@ endif
 
 __LIB__libodp_linux_la_LIBADD = $(ATOMIC_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(OPENSSL_LIBS)
-__LIB__libodp_linux_la_LIBADD += $(DPDK_LIBS) $(DPDK_PMDS)
+__LIB__libodp_linux_la_LIBADD += $(DPDK_LIBS_LT)
 __LIB__libodp_linux_la_LIBADD += $(PTHREAD_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(TIMER_LIBS)
 

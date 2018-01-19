@@ -612,7 +612,7 @@ run_measure_one(crypto_args_t *cargs,
 
 				if (cargs->debug_packets) {
 					mem = odp_packet_data(out_pkt);
-					print_mem("Receieved encrypted packet",
+					print_mem("Received encrypted packet",
 						  mem,
 						  payload_length +
 						  config->
