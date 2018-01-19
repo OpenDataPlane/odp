@@ -207,6 +207,12 @@ typedef struct pktio_if_ops {
 	odp_time_t (*pktin_ts_from_ns)(pktio_entry_t *pktio_entry, uint64_t ns);
 	int (*recv)(pktio_entry_t *entry, int index, odp_packet_t packets[],
 		    int num);
+	int (*recv_tmo)(pktio_entry_t *entry, int index, odp_packet_t packets[],
+			int num, uint64_t wait_usecs);
+	int (*recv_mq_tmo)(pktio_entry_t *entry[], int index[], int num_q,
+			   odp_packet_t packets[], int num, unsigned *from,
+			   uint64_t wait_usecs);
+	int (*fd_set)(pktio_entry_t *entry, int index, fd_set *readfds);
 	int (*send)(pktio_entry_t *entry, int index,
 		    const odp_packet_t packets[], int num);
 	uint32_t (*mtu_get)(pktio_entry_t *pktio_entry);
@@ -274,6 +280,26 @@ int sock_stats_fd(pktio_entry_t *pktio_entry,
 		  odp_pktio_stats_t *stats,
 		  int fd);
 int sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd);
+
+/**
+ * Try interrupt-driven receive
+ *
+ * @param queues Pktin queues
+ * @param num_q Number of queues
+ * @param packets Output packet slots
+ * @param num Number of output packet slots
+ * @param from Queue from which the call received packets
+ * @param usecs Microseconds to wait
+ * @param trial_successful Will receive information whether trial was successful
+ *
+ * @return >=0 on success, number of packets received
+ * @return <0 on failure
+ */
+int sock_recv_mq_tmo_try_int_driven(const struct odp_pktin_queue_t queues[],
+				    unsigned num_q, unsigned *from,
+				    odp_packet_t packets[], int num,
+				    uint64_t usecs,
+				    int *trial_successful);
 
 #ifdef __cplusplus
 }

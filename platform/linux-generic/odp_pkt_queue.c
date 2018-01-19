@@ -22,15 +22,16 @@
 
 #define NUM_PKTS     7
 
-typedef struct /* Must be exactly 64 bytes long AND cacheline aligned! */ {
+/* Must be exactly 64 bytes long AND cacheline aligned! */
+typedef struct ODP_ALIGNED_CACHE {
 	uint32_t next_queue_blk_idx;
 	uint32_t tail_queue_blk_idx;
 	odp_packet_t pkts[NUM_PKTS];
-} ODP_ALIGNED_CACHE queue_blk_t;
+} queue_blk_t;
 
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	queue_blk_t blks[0];
-} ODP_ALIGNED_CACHE queue_blks_t;
+} queue_blks_t;
 
 /* The queue_num_tbl is used to map from a queue_num to a queue_num_desc.
  * The reason is based on the assumption that usually only a small fraction

@@ -11,8 +11,8 @@
  * ODP random number API
  */
 
-#ifndef ODP_API_RANDOM_H_
-#define ODP_API_RANDOM_H_
+#ifndef ODP_API_SPEC_RANDOM_H_
+#define ODP_API_SPEC_RANDOM_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus

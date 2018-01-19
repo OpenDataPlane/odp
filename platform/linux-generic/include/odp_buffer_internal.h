@@ -42,7 +42,7 @@ typedef struct seg_entry_t {
 } seg_entry_t;
 
 /* Common buffer header */
-struct odp_buffer_hdr_t {
+struct ODP_ALIGNED_CACHE odp_buffer_hdr_t {
 
 	/* Buffer index in the pool */
 	uint32_t  index;
@@ -110,7 +110,7 @@ struct odp_buffer_hdr_t {
 
 	/* Data or next header */
 	uint8_t data[0];
-} ODP_ALIGNED_CACHE;
+};
 
 ODP_STATIC_ASSERT(CONFIG_PACKET_SEGS_PER_HDR < 256,
 		  "CONFIG_PACKET_SEGS_PER_HDR_TOO_LARGE");

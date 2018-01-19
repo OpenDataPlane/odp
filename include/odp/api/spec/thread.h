@@ -11,8 +11,8 @@
  * ODP thread API
  */
 
-#ifndef ODP_API_THREAD_H_
-#define ODP_API_THREAD_H_
+#ifndef ODP_API_SPEC_THREAD_H_
+#define ODP_API_SPEC_THREAD_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus

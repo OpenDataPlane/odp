@@ -23,10 +23,11 @@ extern "C" {
 #include <odp_pool_internal.h>
 #include <odp_buffer_inlines.h>
 #include <odp/api/packet.h>
+#include <odp/api/plat/packet_inline_types.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/crypto.h>
-#include <odp/api/ipsec.h>
-#include <odp/api/plat/packet_types.h>
+#include <odp_ipsec_internal.h>
+#include <odp/api/abi/packet.h>
 #include <odp_queue_if.h>
 
 /** Minimum segment length expected by packet_parse_common() */
@@ -155,7 +156,7 @@ typedef struct {
 	/* Type of extra data */
 	uint8_t extra_type;
 	/* Extra space for packet descriptors. E.g. DPDK mbuf  */
-	uint8_t extra[PKT_EXTRA_LEN] ODP_ALIGNED_CACHE;
+	uint8_t ODP_ALIGNED_CACHE extra[PKT_EXTRA_LEN];
 #endif
 
 	/* Context for IPsec */

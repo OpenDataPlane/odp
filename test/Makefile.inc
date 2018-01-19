@@ -1,4 +1,4 @@
-LIB   = $(top_builddir)/lib
+include $(top_srcdir)/Makefile.inc
 
 COMMON_DIR = $(top_builddir)/test/common
 
@@ -14,18 +14,10 @@ LIBTHRMASK_COMMON = $(COMMON_DIR)/libthrmask_common.la
 LDADD = $(PRELDADD) $(LIBODP) $(DPDK_LIBS_LT)
 PRELDADD =
 
-INCFLAGS = \
-	-I$(top_builddir)/platform/@with_platform@/include \
-	-I$(top_srcdir)/helper/include \
-	-I$(top_srcdir)/include \
-	-I$(top_srcdir)/include/odp/arch/@ARCH_ABI@ \
-	-I$(top_srcdir)/platform/@with_platform@/include \
-	-I$(top_srcdir)/platform/@with_platform@/arch/@ARCH_DIR@ \
-	-I$(top_srcdir)/test/common \
-	-I$(top_builddir)/include
-
-AM_CPPFLAGS = $(INCFLAGS)
-AM_CPPFLAGS += -I$(top_srcdir)/test/common
+AM_CPPFLAGS = \
+	$(ODP_INCLUDES) \
+	$(HELPER_INCLUDES) \
+	-I$(top_srcdir)/test/common
 AM_CFLAGS = $(CUNIT_CFLAGS)
 
 AM_LDFLAGS = -L$(LIB) -static

@@ -4,4 +4,4 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/arch/default/api/abi/buffer.h>
+#include <odp/api/abi-default/buffer.h>

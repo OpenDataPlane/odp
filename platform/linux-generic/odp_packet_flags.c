@@ -299,8 +299,3 @@ void odp_packet_has_ts_clr(odp_packet_t pkt)
 
 	pkt_hdr->p.input_flags.timestamp = 0;
 }
-
-/* Include non-inlined versions of API functions */
-#if ODP_ABI_COMPAT == 1
-#include <odp/api/plat/packet_flag_inlines_api.h>
-#endif

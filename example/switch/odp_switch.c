@@ -66,7 +66,7 @@ static int exit_threads;   /**< Break workers loop if set to 1 */
 /**
  * Statistics
  */
-typedef union {
+typedef union ODP_ALIGNED_CACHE {
 	struct {
 		/** Number of received packets */
 		uint64_t rx_packets;
@@ -79,7 +79,7 @@ typedef union {
 	} s;
 
 	uint8_t padding[ODP_CACHE_LINE_SIZE];
-} stats_t ODP_ALIGNED_CACHE;
+} stats_t;
 
 /**
  * Packet buffer

@@ -13,6 +13,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/plat/strong_types.h>
 #include <odp/api/queue.h>
 #include <odp_forward_typedefs_internal.h>
 #include <odp_queue_if.h>
@@ -33,10 +34,10 @@ extern "C" {
 struct queue_entry_s {
 	sched_elem_t     sched_elem;
 
-	odp_ticketlock_t lock ODP_ALIGNED_CACHE;
+	odp_ticketlock_t ODP_ALIGNED_CACHE lock;
 	int              status;
 
-	queue_enq_fn_t       enqueue ODP_ALIGNED_CACHE;
+	queue_enq_fn_t       ODP_ALIGNED_CACHE enqueue;
 	queue_deq_fn_t       dequeue;
 	queue_enq_multi_fn_t enqueue_multi;
 	queue_deq_multi_fn_t dequeue_multi;

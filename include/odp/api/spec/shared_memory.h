@@ -11,8 +11,8 @@
  * ODP shared memory
  */
 
-#ifndef ODP_API_SHARED_MEMORY_H_
-#define ODP_API_SHARED_MEMORY_H_
+#ifndef ODP_API_SPEC_SHARED_MEMORY_H_
+#define ODP_API_SPEC_SHARED_MEMORY_H_
 #include <odp/visibility_begin.h>
 #include <odp/api/init.h>
 

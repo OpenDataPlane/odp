@@ -10,8 +10,8 @@
 
 #include <odp_posix_extensions.h>
 
-#include <odp/api/plat/packet_inlines.h>
 #include <odp/api/packet.h>
+#include <odp/api/plat/packet_inlines.h>
 
 #include <odp_packet_io_internal.h>
 #include <odp_packet_netmap.h>
@@ -732,6 +732,44 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 	return 0;
 }
 
+static int netmap_fd_set(pktio_entry_t *pktio_entry, int index, fd_set *readfds)
+{
+	struct nm_desc *desc;
+	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
+	unsigned first_desc_id = pkt_nm->rx_desc_ring[index].s.first;
+	unsigned last_desc_id = pkt_nm->rx_desc_ring[index].s.last;
+	unsigned desc_id;
+	int num_desc = pkt_nm->rx_desc_ring[index].s.num;
+	int i;
+	int max_fd = 0;
+
+	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
+		return 0;
+
+	if (!pkt_nm->lockless_rx)
+		odp_ticketlock_lock(&pkt_nm->rx_desc_ring[index].s.lock);
+
+	desc_id = pkt_nm->rx_desc_ring[index].s.cur;
+
+	for (i = 0; i < num_desc; i++) {
+		if (desc_id > last_desc_id)
+			desc_id = first_desc_id;
+
+		desc = pkt_nm->rx_desc_ring[index].s.desc[desc_id];
+
+		FD_SET(desc->fd, readfds);
+		if (desc->fd > max_fd)
+			max_fd = desc->fd;
+		desc_id++;
+	}
+	pkt_nm->rx_desc_ring[index].s.cur = desc_id;
+
+	if (!pkt_nm->lockless_rx)
+		odp_ticketlock_unlock(&pkt_nm->rx_desc_ring[index].s.lock);
+
+	return max_fd;
+}
+
 static int netmap_recv(pktio_entry_t *pktio_entry, int index,
 		       odp_packet_t pkt_table[], int num)
 {
@@ -784,6 +822,78 @@ static int netmap_recv(pktio_entry_t *pktio_entry, int index,
 		odp_ticketlock_unlock(&pkt_nm->rx_desc_ring[index].s.lock);
 
 	return num_rx;
+}
+
+static int netmap_recv_tmo(pktio_entry_t *pktio_entry, int index,
+			   odp_packet_t pkt_table[], int num, uint64_t usecs)
+{
+	struct timeval timeout;
+	int ret;
+	int maxfd;
+	fd_set readfds;
+
+	ret = netmap_recv(pktio_entry, index, pkt_table, num);
+	if (ret != 0)
+		return ret;
+
+	timeout.tv_sec = usecs / (1000 * 1000);
+	timeout.tv_usec = usecs - timeout.tv_sec * (1000ULL * 1000ULL);
+	FD_ZERO(&readfds);
+	maxfd = netmap_fd_set(pktio_entry, index, &readfds);
+
+	if (select(maxfd + 1, &readfds, NULL, NULL,
+		   usecs == ODP_PKTIN_WAIT ? NULL : &timeout) == 0)
+		return 0;
+
+	return netmap_recv(pktio_entry, index, pkt_table, num);
+}
+
+static int netmap_recv_mq_tmo(pktio_entry_t *pktio_entry[], int index[],
+			      int num_q, odp_packet_t pkt_table[], int num,
+			      unsigned *from, uint64_t usecs)
+{
+	struct timeval timeout;
+	int i;
+	int ret;
+	int maxfd = -1, maxfd2;
+	fd_set readfds;
+
+	for (i = 0; i < num_q; i++) {
+		ret = netmap_recv(pktio_entry[i], index[i], pkt_table, num);
+
+		if (ret > 0 && from)
+			*from = i;
+
+		if (ret != 0)
+			return ret;
+	}
+
+	FD_ZERO(&readfds);
+
+	for (i = 0; i < num_q; i++) {
+		maxfd2 = netmap_fd_set(pktio_entry[i], index[i], &readfds);
+		if (maxfd2 > maxfd)
+			maxfd = maxfd2;
+	}
+
+	timeout.tv_sec = usecs / (1000 * 1000);
+	timeout.tv_usec = usecs - timeout.tv_sec * (1000ULL * 1000ULL);
+
+	if (select(maxfd + 1, &readfds, NULL, NULL,
+		   usecs == ODP_PKTIN_WAIT ? NULL : &timeout) == 0)
+		return 0;
+
+	for (i = 0; i < num_q; i++) {
+		ret = netmap_recv(pktio_entry[i], index[i], pkt_table, num);
+
+		if (ret > 0 && from)
+			*from = i;
+
+		if (ret != 0)
+			return ret;
+	}
+
+	return 0;
 }
 
 static int netmap_send(pktio_entry_t *pktio_entry, int index,
@@ -975,7 +1085,10 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.input_queues_config = netmap_input_queues_config,
 	.output_queues_config = netmap_output_queues_config,
 	.recv = netmap_recv,
-	.send = netmap_send
+	.recv_tmo = netmap_recv_tmo,
+	.recv_mq_tmo = netmap_recv_mq_tmo,
+	.send = netmap_send,
+	.fd_set = netmap_fd_set
 };
 
 #endif /* ODP_NETMAP */

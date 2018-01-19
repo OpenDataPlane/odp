@@ -57,12 +57,12 @@
  * We need a point of synchronisation where this knowledge and potential state
  * change can be transferred between threads.
  */
-typedef struct hc {
+typedef struct ODP_ALIGNED(sizeof(uint64_t)) hc {
 	/* First missing context */
 	uint32_t head;
 	/* Change indicator */
 	uint32_t chgi;
-} hc_t ODP_ALIGNED(sizeof(uint64_t));
+} hc_t;
 
 /* Number of reorder contects in the reorder window.
  * Should be at least one per CPU.
@@ -90,7 +90,7 @@ typedef struct reorder_window {
  */
 #define RC_EVT_SIZE 18
 
-struct reorder_context {
+struct ODP_ALIGNED_CACHE reorder_context {
 	/* Reorder window to which this context belongs */
 	reorder_window_t *rwin;
 	/* Pointer to TS->rvec_free */
@@ -109,7 +109,7 @@ struct reorder_context {
 	/* Events stored in this context */
 	odp_buffer_hdr_t *events[RC_EVT_SIZE];
 	queue_entry_t *destq[RC_EVT_SIZE];
-} ODP_ALIGNED_CACHE;
+};
 
 reorder_window_t *rwin_alloc(_odp_ishm_pool_t *pool,
 			     unsigned lock_count);

@@ -11,8 +11,8 @@
  * ODP buffer descriptor
  */
 
-#ifndef ODP_API_BUFFER_H_
-#define ODP_API_BUFFER_H_
+#ifndef ODP_API_SPEC_BUFFER_H_
+#define ODP_API_SPEC_BUFFER_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus

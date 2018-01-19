@@ -123,7 +123,7 @@ static void sig_handler(int signo ODP_UNUSED)
 /**
  * Statistics
  */
-typedef union {
+typedef union ODP_ALIGNED_CACHE {
 	struct {
 		/** Number of forwarded packets */
 		uint64_t packets;
@@ -134,7 +134,7 @@ typedef union {
 	} s;
 
 	uint8_t padding[ODP_CACHE_LINE_SIZE];
-} stats_t ODP_ALIGNED_CACHE;
+} stats_t;
 
 /**
  * Thread specific data

@@ -11,8 +11,8 @@
  * ODP packet descriptor
  */
 
-#ifndef ODP_API_PACKET_H_
-#define ODP_API_PACKET_H_
+#ifndef ODP_API_SPEC_PACKET_H_
+#define ODP_API_SPEC_PACKET_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus

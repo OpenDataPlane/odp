@@ -21,7 +21,6 @@ extern "C" {
 #include <odp/api/deprecated.h>
 #include <odp/api/version.h>
 #include <odp/api/std_types.h>
-#include <odp/api/compiler.h>
 #include <odp/api/align.h>
 #include <odp/api/hash.h>
 #include <odp/api/chksum.h>

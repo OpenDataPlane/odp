@@ -11,8 +11,8 @@
  * ODP system information
  */
 
-#ifndef ODP_API_SYSTEM_INFO_H_
-#define ODP_API_SYSTEM_INFO_H_
+#ifndef ODP_API_SPEC_SYSTEM_INFO_H_
+#define ODP_API_SPEC_SYSTEM_INFO_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus

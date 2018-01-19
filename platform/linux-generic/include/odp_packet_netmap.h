@@ -30,10 +30,10 @@ struct netmap_ring_t {
 	odp_ticketlock_t lock;  /**< Queue lock */
 };
 
-typedef union {
+typedef union ODP_ALIGNED_CACHE {
 	struct netmap_ring_t s;
 	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct netmap_ring_t))];
-} netmap_ring_t ODP_ALIGNED_CACHE;
+} netmap_ring_t;
 
 /** Netmap ring slot */
 typedef struct  {

@@ -10,6 +10,7 @@
 
 #include <unistd.h>
 #include <signal.h>
+#include <string.h>
 #include <inttypes.h>
 #include <sys/resource.h>
 #include <execinfo.h>

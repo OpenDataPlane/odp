@@ -10,8 +10,9 @@
  * ODP threshold descriptor
  */
 
-#ifndef ODP_API_THRESHOLD_H_
-#define ODP_API_THRESHOLD_H_
+#ifndef ODP_API_SPEC_THRESHOLD_H_
+#define ODP_API_SPEC_THRESHOLD_H_
+
 #include <odp/visibility_begin.h>
 #include <odp/api/std_types.h>
 

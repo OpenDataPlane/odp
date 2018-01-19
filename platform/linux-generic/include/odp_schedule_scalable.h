@@ -29,7 +29,7 @@
 #define ODP_SCHED_PRIO_PKTIN 8
 #define ODP_SCHED_PRIO_NUM  9
 
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	union {
 		struct {
 			struct llqueue llq;
@@ -37,16 +37,16 @@ typedef struct {
 		};
 		char line[ODP_CACHE_LINE_SIZE];
 	};
-} sched_queue_t ODP_ALIGNED_CACHE;
+} sched_queue_t;
 
 #define TICKET_INVALID (uint16_t)(~0U)
 
-typedef struct {
+typedef struct ODP_ALIGNED(sizeof(uint64_t)) {
 	int32_t numevts;
 	uint16_t wrr_budget;
 	uint8_t cur_ticket;
 	uint8_t nxt_ticket;
-} qschedstate_t ODP_ALIGNED(sizeof(uint64_t));
+} qschedstate_t;
 
 typedef uint32_t ringidx_t;
 
@@ -58,7 +58,7 @@ typedef uint32_t ringidx_t;
 
 #define ODP_NO_SCHED_QUEUE (ODP_SCHED_SYNC_ORDERED + 1)
 
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	struct llnode node;
 	sched_queue_t *schedq;
 #ifdef CONFIG_QSCHST_LOCK
@@ -89,7 +89,7 @@ typedef struct {
 #define cons_type qschst_type
 #endif
 	odp_schedule_group_t sched_grp;
-} sched_elem_t ODP_ALIGNED_CACHE;
+} sched_elem_t;
 
 /* Number of scheduling groups */
 #define MAX_SCHED_GROUP (sizeof(sched_group_mask_t) * CHAR_BIT)
@@ -98,7 +98,7 @@ typedef bitset_t sched_group_mask_t;
 
 typedef struct {
 	/* Threads currently associated with the sched group */
-	bitset_t thr_actual[ODP_SCHED_PRIO_NUM] ODP_ALIGNED_CACHE;
+	bitset_t ODP_ALIGNED_CACHE thr_actual[ODP_SCHED_PRIO_NUM];
 	bitset_t thr_wanted;
 	/* Used to spread queues over schedq's */
 	uint32_t xcount[ODP_SCHED_PRIO_NUM];
@@ -106,13 +106,13 @@ typedef struct {
 	uint32_t xfactor;
 	char name[ODP_SCHED_GROUP_NAME_LEN];
 	/* ODP_SCHED_PRIO_NUM * xfactor. Must be last. */
-	sched_queue_t schedq[1] ODP_ALIGNED_CACHE;
+	sched_queue_t ODP_ALIGNED_CACHE schedq[1];
 } sched_group_t;
 
 /* Number of reorder contexts per thread */
 #define TS_RVEC_SIZE 16
 
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	/* Atomic queue currently being processed or NULL */
 	sched_elem_t *atomq;
 	/* Schedq the currently processed queue was popped from */
@@ -135,10 +135,10 @@ typedef struct {
 	sched_group_mask_t sg_wanted[ODP_SCHED_PRIO_NUM];
 	bitset_t priv_rvec_free;
 	/* Bitset of free entries in rvec[] */
-	bitset_t rvec_free ODP_ALIGNED_CACHE;
+	bitset_t ODP_ALIGNED_CACHE rvec_free;
 	/* Reordering contexts to allocate from */
-	reorder_context_t rvec[TS_RVEC_SIZE] ODP_ALIGNED_CACHE;
-} sched_scalable_thread_state_t ODP_ALIGNED_CACHE;
+	reorder_context_t ODP_ALIGNED_CACHE rvec[TS_RVEC_SIZE];
+} sched_scalable_thread_state_t;
 
 void sched_update_enq(sched_elem_t *q, uint32_t actual);
 void sched_update_enq_sp(sched_elem_t *q, uint32_t actual);

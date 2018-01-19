@@ -25,7 +25,7 @@ extern "C" {
  * must be a power of two. Also ring size must be larger than the maximum
  * number of data items that will be stored on it (there's no check against
  * overwriting). */
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	/* Writer head and tail */
 	odp_atomic_u32_t w_head;
 	odp_atomic_u32_t w_tail;
@@ -36,7 +36,7 @@ typedef struct {
 	odp_atomic_u32_t r_tail;
 
 	uint32_t data[0];
-} ring_t ODP_ALIGNED_CACHE;
+} ring_t;
 
 /* Initialize ring */
 static inline void ring_init(ring_t *ring)

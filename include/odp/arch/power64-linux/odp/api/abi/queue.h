@@ -4,4 +4,4 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/arch/default/api/abi/queue.h>
+#include <odp/api/abi-default/queue.h>

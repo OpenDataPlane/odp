@@ -11,6 +11,8 @@
 #include <odp/helper/linux/pthread.h>
 #include <odp/helper/linux/process.h>
 
+#include <string.h>
+
 #define NUMBER_WORKERS 16 /* 0 = max */
 
 static void *worker_fn(void *arg ODPH_UNUSED)

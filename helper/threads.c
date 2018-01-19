@@ -10,6 +10,7 @@
 #define _GNU_SOURCE
 #endif
 #include <sched.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/prctl.h>

@@ -29,10 +29,9 @@ extern "C" {
 /**
  * Pointer atomic type
  */
-typedef struct {
+typedef struct ODP_ALIGNED(sizeof(void *)) {
 	void *v; /**< Actual storage for the atomic variable */
-} _odp_atomic_ptr_t
-ODP_ALIGNED(sizeof(void *)); /* Enforce alignement! */
+} _odp_atomic_ptr_t;
 
 /**
  * Atomic flag (boolean) type
@@ -223,7 +222,7 @@ static inline void _odp_atomic_u32_sub_mm(odp_atomic_u32_t *atom,
  *****************************************************************************/
 
 /* Check if the compiler support lock-less atomic operations on 64-bit types */
-#if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
+#ifdef ODP_ATOMIC_U64_LOCK
 /**
  * @internal
  * Helper macro for lock-based atomic operations on 64-bit integers
@@ -247,7 +246,6 @@ static inline void _odp_atomic_u32_sub_mm(odp_atomic_u32_t *atom,
 		 __ATOMIC_SEQ_CST : __ATOMIC_RELEASE); \
 	 old_val; /* Return old value */ \
 })
-#endif
 
 /**
  * Atomic load of 64-bit atomic variable
@@ -258,13 +256,9 @@ static inline void _odp_atomic_u32_sub_mm(odp_atomic_u32_t *atom,
  * @return Value of the variable
  */
 static inline uint64_t _odp_atomic_u64_load_mm(odp_atomic_u64_t *atom,
-		_odp_memmodel_t mmodel)
+					       _odp_memmodel_t mmodel)
 {
-#if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	return ATOMIC_OP_MM(atom, (void)0, mmodel);
-#else
-	return __atomic_load_n(&atom->v, mmodel);
-#endif
 }
 
 /**
@@ -275,14 +269,10 @@ static inline uint64_t _odp_atomic_u64_load_mm(odp_atomic_u64_t *atom,
  * @param mmodel Memory order associated with the store operation
  */
 static inline void _odp_atomic_u64_store_mm(odp_atomic_u64_t *atom,
-		uint64_t val,
-		_odp_memmodel_t mmodel)
+					    uint64_t val,
+					    _odp_memmodel_t mmodel)
 {
-#if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	(void)ATOMIC_OP_MM(atom, atom->v = val, mmodel);
-#else
-	__atomic_store_n(&atom->v, val, mmodel);
-#endif
 }
 
 /**
@@ -295,15 +285,11 @@ static inline void _odp_atomic_u64_store_mm(odp_atomic_u64_t *atom,
  * @return Old value of variable
  */
 static inline uint64_t _odp_atomic_u64_xchg_mm(odp_atomic_u64_t *atom,
-		uint64_t val,
-		_odp_memmodel_t mmodel)
+					       uint64_t val,
+					       _odp_memmodel_t mmodel)
 
 {
-#if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	return ATOMIC_OP_MM(atom, atom->v = val, mmodel);
-#else
-	return __atomic_exchange_n(&atom->v, val, mmodel);
-#endif
 }
 
 /**
@@ -322,12 +308,11 @@ static inline uint64_t _odp_atomic_u64_xchg_mm(odp_atomic_u64_t *atom,
  * @retval 0 exchange failed and '*exp' updated with current value
  */
 static inline int _odp_atomic_u64_cmp_xchg_strong_mm(odp_atomic_u64_t *atom,
-		uint64_t *exp,
-		uint64_t val,
-		_odp_memmodel_t success,
-		_odp_memmodel_t failure)
+						     uint64_t *exp,
+						     uint64_t val,
+						     _odp_memmodel_t success,
+						     _odp_memmodel_t failure)
 {
-#if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	/* Possibly we are a bit pessimistic with the memory models */
 	odp_bool_t ret_succ;
 	/* Loop while lock is already taken, stop when lock becomes clear */
@@ -346,10 +331,6 @@ static inline int _odp_atomic_u64_cmp_xchg_strong_mm(odp_atomic_u64_t *atom,
 		       (ret_succ ? success : failure) == _ODP_MEMMODEL_SC ?
 		       __ATOMIC_SEQ_CST : __ATOMIC_RELEASE);
 	return ret_succ;
-#else
-	return __atomic_compare_exchange_n(&atom->v, exp, val,
-			false/*strong*/, success, failure);
-#endif
 }
 
 /**
@@ -362,14 +343,10 @@ static inline int _odp_atomic_u64_cmp_xchg_strong_mm(odp_atomic_u64_t *atom,
  * @return Value of the atomic variable before the addition
  */
 static inline uint64_t _odp_atomic_u64_fetch_add_mm(odp_atomic_u64_t *atom,
-		uint64_t val,
-		_odp_memmodel_t mmodel)
+						    uint64_t val,
+						    _odp_memmodel_t mmodel)
 {
-#if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	return ATOMIC_OP_MM(atom, atom->v += val, mmodel);
-#else
-	return __atomic_fetch_add(&atom->v, val, mmodel);
-#endif
 }
 
 /**
@@ -380,15 +357,11 @@ static inline uint64_t _odp_atomic_u64_fetch_add_mm(odp_atomic_u64_t *atom,
  * @param mmodel Memory order associated with the add operation.
  */
 static inline void _odp_atomic_u64_add_mm(odp_atomic_u64_t *atom,
-		uint64_t val,
-		_odp_memmodel_t mmodel)
+					  uint64_t val,
+					  _odp_memmodel_t mmodel)
 
 {
-#if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	(void)ATOMIC_OP_MM(atom, atom->v += val, mmodel);
-#else
-	(void)__atomic_fetch_add(&atom->v, val, mmodel);
-#endif
 }
 
 /**
@@ -401,14 +374,10 @@ static inline void _odp_atomic_u64_add_mm(odp_atomic_u64_t *atom,
  * @return Value of the atomic variable before the subtraction
  */
 static inline uint64_t _odp_atomic_u64_fetch_sub_mm(odp_atomic_u64_t *atom,
-		uint64_t val,
-		_odp_memmodel_t mmodel)
+						    uint64_t val,
+						    _odp_memmodel_t mmodel)
 {
-#if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	return ATOMIC_OP_MM(atom, atom->v -= val, mmodel);
-#else
-	return __atomic_fetch_sub(&atom->v, val, mmodel);
-#endif
 }
 
 /**
@@ -419,20 +388,150 @@ static inline uint64_t _odp_atomic_u64_fetch_sub_mm(odp_atomic_u64_t *atom,
  * @param mmodel Memory order associated with the subtract operation
  */
 static inline void _odp_atomic_u64_sub_mm(odp_atomic_u64_t *atom,
-		uint64_t val,
-		_odp_memmodel_t mmodel)
+					  uint64_t val,
+					  _odp_memmodel_t mmodel)
 
 {
-#if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	(void)ATOMIC_OP_MM(atom, atom->v -= val, mmodel);
-#else
-	(void)__atomic_fetch_sub(&atom->v, val, mmodel);
-#endif
 }
 
-#if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 #undef ATOMIC_OP_MM
-#endif
+
+#else /* ! ODP_ATOMIC_U64_LOCK */
+
+/**
+ * Atomic load of 64-bit atomic variable
+ *
+ * @param atom Pointer to a 64-bit atomic variable
+ * @param mmodel Memory order associated with the load operation
+ *
+ * @return Value of the variable
+ */
+static inline uint64_t _odp_atomic_u64_load_mm(odp_atomic_u64_t *atom,
+					       _odp_memmodel_t mmodel)
+{
+	return __atomic_load_n(&atom->v, mmodel);
+}
+
+/**
+ * Atomic store to 64-bit atomic variable
+ *
+ * @param[out] atom Pointer to a 64-bit atomic variable
+ * @param val  Value to write to the atomic variable
+ * @param mmodel Memory order associated with the store operation
+ */
+static inline void _odp_atomic_u64_store_mm(odp_atomic_u64_t *atom,
+					    uint64_t val,
+					    _odp_memmodel_t mmodel)
+{
+	__atomic_store_n(&atom->v, val, mmodel);
+}
+
+/**
+ * Atomic exchange (swap) of 64-bit atomic variable
+ *
+ * @param[in,out] atom Pointer to a 64-bit atomic variable
+ * @param val   New value to write to the atomic variable
+ * @param mmodel Memory order associated with the exchange operation
+ *
+ * @return Old value of variable
+ */
+static inline uint64_t _odp_atomic_u64_xchg_mm(odp_atomic_u64_t *atom,
+					       uint64_t val,
+					       _odp_memmodel_t mmodel)
+
+{
+	return __atomic_exchange_n(&atom->v, val, mmodel);
+}
+
+/**
+ * Atomic compare and exchange (swap) of 64-bit atomic variable
+ * "Strong" semantics, will not fail spuriously.
+ *
+ * @param[in,out] atom Pointer to a 64-bit atomic variable
+ * @param[in,out] exp Pointer to expected value (updated on failure)
+ * @param val   New value to write
+ * @param success Memory order associated with a successful compare-and-swap
+ * operation
+ * @param failure Memory order associated with a failed compare-and-swap
+ * operation
+ *
+ * @retval 1 exchange successful
+ * @retval 0 exchange failed and '*exp' updated with current value
+ */
+static inline int _odp_atomic_u64_cmp_xchg_strong_mm(odp_atomic_u64_t *atom,
+						     uint64_t *exp,
+						     uint64_t val,
+						     _odp_memmodel_t success,
+						     _odp_memmodel_t failure)
+{
+	return __atomic_compare_exchange_n(&atom->v, exp, val,
+					   false/*strong*/, success, failure);
+}
+
+/**
+ * Atomic fetch and add of 64-bit atomic variable
+ *
+ * @param[in,out] atom Pointer to a 64-bit atomic variable
+ * @param val   Value to add to the atomic variable
+ * @param mmodel Memory order associated with the add operation
+ *
+ * @return Value of the atomic variable before the addition
+ */
+static inline uint64_t _odp_atomic_u64_fetch_add_mm(odp_atomic_u64_t *atom,
+						    uint64_t val,
+						    _odp_memmodel_t mmodel)
+{
+	return __atomic_fetch_add(&atom->v, val, mmodel);
+}
+
+/**
+ * Atomic add of 64-bit atomic variable
+ *
+ * @param[in,out] atom Pointer to a 64-bit atomic variable
+ * @param val   Value to add to the atomic variable
+ * @param mmodel Memory order associated with the add operation.
+ */
+static inline void _odp_atomic_u64_add_mm(odp_atomic_u64_t *atom,
+					  uint64_t val,
+					  _odp_memmodel_t mmodel)
+
+{
+	(void)__atomic_fetch_add(&atom->v, val, mmodel);
+}
+
+/**
+ * Atomic fetch and subtract of 64-bit atomic variable
+ *
+ * @param[in,out] atom Pointer to a 64-bit atomic variable
+ * @param val   Value to subtract from the atomic variable
+ * @param mmodel Memory order associated with the subtract operation
+ *
+ * @return Value of the atomic variable before the subtraction
+ */
+static inline uint64_t _odp_atomic_u64_fetch_sub_mm(odp_atomic_u64_t *atom,
+						    uint64_t val,
+						    _odp_memmodel_t mmodel)
+{
+	return __atomic_fetch_sub(&atom->v, val, mmodel);
+}
+
+/**
+ * Atomic subtract of 64-bit atomic variable
+ *
+ * @param[in,out] atom Pointer to a 64-bit atomic variable
+ * @param val   Value to subtract from the atomic variable
+ * @param mmodel Memory order associated with the subtract operation
+ */
+static inline void _odp_atomic_u64_sub_mm(odp_atomic_u64_t *atom,
+					  uint64_t val,
+					  _odp_memmodel_t mmodel)
+
+{
+	(void)__atomic_fetch_sub(&atom->v, val, mmodel);
+}
+
+#endif /* ! ODP_ATOMIC_U64_LOCK */
 
 /*****************************************************************************
  * Operations on pointer atomics
@@ -609,9 +708,9 @@ static inline void _odp_atomic_flag_clear(_odp_atomic_flag_t *flag)
 typedef __int128 _uint128_t;
 
 /** Atomic 128-bit type */
-typedef struct {
+typedef struct ODP_ALIGNED(16) {
 	_uint128_t v; /**< Actual storage for the atomic variable */
-} _odp_atomic_u128_t ODP_ALIGNED(16);
+} _odp_atomic_u128_t;
 
 /**
  * 16-byte atomic exchange operation
