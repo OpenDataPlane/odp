@@ -51,8 +51,7 @@ static int null_recv_tmo(pktio_entry_t *pktio_entry ODP_UNUSED,
 	timeout.tv_usec = usecs - timeout.tv_sec * (1000ULL * 1000ULL);
 	FD_ZERO(&readfds);
 
-	select(maxfd + 1, &readfds, NULL, NULL,
-	       usecs == ODP_PKTIN_WAIT ? NULL : &timeout);
+	select(maxfd + 1, &readfds, NULL, NULL, &timeout);
 
 	return 0;
 }
@@ -72,8 +71,7 @@ static int null_recv_mq_tmo(pktio_entry_t *pktio_entry[] ODP_UNUSED,
 
 	FD_ZERO(&readfds);
 
-	select(maxfd + 1, &readfds, NULL, NULL,
-	       usecs == ODP_PKTIN_WAIT ? NULL : &timeout);
+	select(maxfd + 1, &readfds, NULL, NULL, &timeout);
 
 	return 0;
 }

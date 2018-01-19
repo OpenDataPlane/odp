@@ -41,6 +41,9 @@
  * Must be power of two. */
 #define SLEEP_CHECK 32
 
+/* Max wait time supported to avoid potential overflow */
+#define MAX_WAIT_TIME (UINT64_MAX / 1024)
+
 static pktio_table_t *pktio_tbl;
 
 /* pktio pointer entries ( for inlines) */
@@ -1690,33 +1693,31 @@ int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[], int num,
 	while (1) {
 		ret = entry->s.ops->recv(entry, queue.index, packets, num);
 
-		if (ret != 0)
+		if (ret != 0 || wait == 0)
 			return ret;
 
-		if (wait == 0)
-			return 0;
+		/* Avoid unnecessary system calls. Record the start time
+		 * only when needed and after the first call to recv. */
+		if (odp_unlikely(!started)) {
+			odp_time_t t;
 
-		if (wait != ODP_PKTIN_WAIT) {
-			/* Avoid unnecessary system calls. Record the start time
-			 * only when needed and after the first call to recv. */
-			if (odp_unlikely(!started)) {
-				odp_time_t t;
-
-				t = odp_time_local_from_ns(wait * 1000);
-				started = 1;
-				t1 = odp_time_sum(odp_time_local(), t);
-			}
-
-			/* Check every SLEEP_CHECK rounds if total wait time
-			 * has been exceeded. */
-			if ((++sleep_round & (SLEEP_CHECK - 1)) == 0) {
-				t2 = odp_time_local();
-
-				if (odp_time_cmp(t2, t1) > 0)
-					return 0;
-			}
-			wait = wait > SLEEP_USEC ? wait - SLEEP_USEC : 0;
+			/* Avoid overflow issues for large wait times */
+			if (wait > MAX_WAIT_TIME)
+				wait = MAX_WAIT_TIME;
+			t = odp_time_local_from_ns(wait * 1000);
+			started = 1;
+			t1 = odp_time_sum(odp_time_local(), t);
 		}
+
+		/* Check every SLEEP_CHECK rounds if total wait time
+		 * has been exceeded. */
+		if ((++sleep_round & (SLEEP_CHECK - 1)) == 0) {
+			t2 = odp_time_local();
+
+			if (odp_time_cmp(t2, t1) > 0)
+				return 0;
+		}
+		wait = wait > SLEEP_USEC ? wait - SLEEP_USEC : 0;
 
 		nanosleep(&ts, NULL);
 	}
@@ -1770,25 +1771,26 @@ int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned num_q,
 		if (wait == 0)
 			return 0;
 
-		if (wait != ODP_PKTIN_WAIT) {
-			if (odp_unlikely(!started)) {
-				odp_time_t t;
+		if (odp_unlikely(!started)) {
+			odp_time_t t;
 
-				t = odp_time_local_from_ns(wait * 1000);
-				started = 1;
-				t1 = odp_time_sum(odp_time_local(), t);
-			}
-
-			/* Check every SLEEP_CHECK rounds if total wait time
-			 * has been exceeded. */
-			if ((++sleep_round & (SLEEP_CHECK - 1)) == 0) {
-				t2 = odp_time_local();
-
-				if (odp_time_cmp(t2, t1) > 0)
-					return 0;
-			}
-			wait = wait > SLEEP_USEC ? wait - SLEEP_USEC : 0;
+			/* Avoid overflow issues for large wait times */
+			if (wait > MAX_WAIT_TIME)
+				wait = MAX_WAIT_TIME;
+			t = odp_time_local_from_ns(wait * 1000);
+			started = 1;
+			t1 = odp_time_sum(odp_time_local(), t);
 		}
+
+		/* Check every SLEEP_CHECK rounds if total wait time
+		 * has been exceeded. */
+		if ((++sleep_round & (SLEEP_CHECK - 1)) == 0) {
+			t2 = odp_time_local();
+
+			if (odp_time_cmp(t2, t1) > 0)
+				return 0;
+		}
+		wait = wait > SLEEP_USEC ? wait - SLEEP_USEC : 0;
 
 		nanosleep(&ts, NULL);
 	}
