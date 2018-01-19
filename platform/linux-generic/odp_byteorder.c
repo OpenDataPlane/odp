@@ -11,3 +11,4 @@
 /* Include non-inlined versions of API functions */
 #define _ODP_INLINE
 #include <odp/api/plat/byteorder_inlines.h>
+#include <odp/api/plat/byteorder_inlines_api.h>
