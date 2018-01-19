@@ -145,7 +145,7 @@ typedef struct {
 	/* Result for crypto packet op */
 	odp_crypto_packet_result_t crypto_op_result;
 
-#ifdef ODP_PKTIO_DPDK
+#if defined(ODP_PKTIO_DPDK) && ODP_PKTIO_DPDK == 1
 	/* Type of extra data */
 	uint8_t extra_type;
 	/* Extra space for packet descriptors. E.g. DPDK mbuf  */
