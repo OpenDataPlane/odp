@@ -67,10 +67,10 @@ void thash_load_ipv6_addr(const _odp_ipv6hdr_t *ipv6,
 
 	for (i = 0; i < 4; i++) {
 		*(tuple->v6.src_addr.u32 + i) =
-		odp_be_to_cpu_32(*(ipv6->src_addr.u32 + i));
+		_odp_be_to_cpu_32(*(ipv6->src_addr.u32 + i));
 
 		*(tuple->v6.dst_addr.u32 + i) =
-		odp_be_to_cpu_32(*(ipv6->dst_addr.u32 + i));
+		_odp_be_to_cpu_32(*(ipv6->dst_addr.u32 + i));
 	}
 }
 
@@ -83,9 +83,9 @@ uint32_t thash_softrss(uint32_t *tuple, uint8_t len,
 	for (j = 0; j < len; j++) {
 		for (i = 0; i < 32; i++) {
 			if (tuple[j] & (1 << (31 - i))) {
-				ret ^= odp_cpu_to_be_32(((const uint32_t *)
+				ret ^= _odp_cpu_to_be_32(((const uint32_t *)
 				key.u32)[j]) << i | (uint32_t)((uint64_t)
-				(odp_cpu_to_be_32(((const uint32_t *)key.u32)
+				(_odp_cpu_to_be_32(((const uint32_t *)key.u32)
 				[j + 1])) >> (32 - i));
 			}
 		}
