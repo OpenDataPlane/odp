@@ -74,6 +74,7 @@ env:
         - CONF="--enable-schedule-iquery"
         - CONF="--enable-schedule-scalable"
         - CONF="--enable-dpdk-zero-copy"
+        - DPDK_SHARED="y"
         - CROSS_ARCH="arm64"
         - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
         - CROSS_ARCH="powerpc"
@@ -97,15 +98,15 @@ before_install:
                   sudo -E apt-add-repository -y "deb http://ports.ubuntu.com trusty main" ;
                   sudo -E apt-add-repository -y "deb http://ports.ubuntu.com trusty-updates main" ;
                   sudo -E apt-get -y update || true ;
-                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install build-essential ;
+                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install build-essential  || exit 1;
                   if [ "$CROSS_ARCH" = "i386" ] ;
                   then
-                        sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install g++-multilib ;
+                        sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install g++-multilib || exit 1;
                   else
-                        sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install g++-"$CROSS_GNU_TYPE" ;
+                        sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install g++-"$CROSS_GNU_TYPE" || exit 1;
                   fi ;
-                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install libc6-dev:"$CROSS_ARCH" libssl-dev:"$CROSS_ARCH" zlib1g-dev:"$CROSS_ARCH" libconfig-dev:"$CROSS_ARCH" libstdc++-4.8-dev:"$CROSS_ARCH" libpcap0.8-dev:"$CROSS_ARCH" ;
-                  [ "$CROSS_ARCH" = "armhf" ] || sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install libnuma-dev:"$CROSS_ARCH";
+                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install libc6-dev:"$CROSS_ARCH" libssl-dev:"$CROSS_ARCH" zlib1g-dev:"$CROSS_ARCH" libconfig-dev:"$CROSS_ARCH" libstdc++-4.8-dev:"$CROSS_ARCH" libpcap0.8-dev:"$CROSS_ARCH" || exit 1;
+                  [ "$CROSS_ARCH" = "armhf" ] || sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install libnuma-dev:"$CROSS_ARCH" || exit 1;
                   export PKG_CONFIG_PATH=/usr/lib/${CROSS_MULTIARCH}/pkgconfig:/usr/${CROSS_MULTIARCH}/lib/pkgconfig ;
           fi
         - if [ "${CC#clang}" != "${CC}" ] ;
@@ -149,24 +150,12 @@ before_install:
             automake --add-missing --include-deps --copy
             autoconf
             ./configure --prefix=$HOME/cunit-install/$CROSS_ARCH --enable-debug --enable-automated --enable-basic --enable-console --enable-examples --enable-test $CROSS || cat config.log
-            make
+            make -j $(nproc)
             sudo make install
             popd
           fi
         - export PKG_CONFIG_PATH="$HOME/cunit-install/$CROSS_ARCH/lib/pkgconfig:${PKG_CONFIG_PATH}"
         - find $HOME/cunit-install
-
-          # Updated Doxygen
-        - |
-          if [ ! -f "$HOME/doxygen-install/bin/doxygen" ]; then
-                wget https://github.com/doxygen/doxygen/archive/Release_1_8_13.tar.gz
-                tar xpvf Release_1_8_13.tar.gz
-                pushd doxygen-Release_1_8_13
-                cmake -DCMAKE_INSTALL_PREFIX=$HOME/doxygen-install .
-                make install
-                popd
-          fi
-        - export PATH=$HOME/doxygen-install/bin:$PATH
 
 
 install:
@@ -205,7 +194,15 @@ install:
               ;;
           esac
         - |
-          if [ -n "$TARGET" -a ! -f "dpdk/${TARGET}/lib/libdpdk.a" ]; then
+          if [ -n "$TARGET" ] ; then
+           # force DPDK rebuild if it does not match shared/non-shared requirement
+           if [ -n "$DPDK_SHARED" -a ! -f "dpdk/${TARGET}/lib/libdpdk.so" ] ; then
+            rm -rf dpdk/"$TARGET"
+           fi
+           if [ -z "$DPDK_SHARED" -a ! -f "dpdk/${TARGET}/lib/libdpdk.a" ] ; then
+            rm -rf dpdk/"$TARGET"
+           fi
+           if [ ! -f "dpdk/${TARGET}/lib/libdpdk.a" -a ! -f "dpdk/${TARGET}/lib/libdpdk.so" ]; then
             git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v${DPDK_VERS} http://dpdk.org/git/dpdk dpdk
             pushd dpdk
             git log --oneline --decorate
@@ -221,15 +218,21 @@ install:
             if test -n "${DPDK_MACHINE}" ; then
               sed -ri 's,(CONFIG_RTE_MACHINE=).*,\1"'${DPDK_MACHINE}'",' .config
             fi
+            if test -n "${DPDK_SHARED}" ; then
+              sed -ri 's,(CONFIG_RTE_BUILD_SHARED_LIB=).*,\1y,' .config
+              export LD_LIBRARY_PATH="`pwd`/${TARGET}:$LD_LIBRARY_PATH"
+              echo $LD_LIBRARY_PATH
+            fi
             if test -n "$CROSS_ARCH" ; then
               sed -ri -e 's,(CONFIG_RTE_EAL_IGB_UIO=).*,\1n,' .config
               sed -ri -e 's,(CONFIG_RTE_KNI_KMOD=).*,\1n,' .config
             fi
             popd
-            make install T=${TARGET} EXTRA_CFLAGS="-fPIC $DPDK_CFLAGS" CROSS="$DPDK_CROSS"
+            make install T=${TARGET} EXTRA_CFLAGS="-fPIC $DPDK_CFLAGS" CROSS="$DPDK_CROSS" -j $(nproc)
             rm -r ./doc ./${TARGET}/app ./${TARGET}/build
             popd
-            EXTRA_CONF="$EXTRA_CONF --with-dpdk-path=`pwd`/dpdk/${TARGET}"
+           fi
+           EXTRA_CONF="$EXTRA_CONF --with-dpdk-path=`pwd`/dpdk/${TARGET}"
           fi
 
 #	Netmap pktio
@@ -239,7 +242,7 @@ install:
               git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git
               pushd netmap/LINUX
               ./configure
-              make
+              make -j $(nproc)
               popd
             fi
             sudo insmod ./netmap/LINUX/netmap.ko
@@ -264,11 +267,17 @@ script:
         - pushd $HOME
         - echo "Dynamic link.."
         - ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_dynamic `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux`
-        - echo "Static link.."
-        - ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_static `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux --static` -static
         - if [ -z "$CROSS_ARCH" ] ; then
-          LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst_dynamic ;
-          ./odp_hello_inst_static ;
+            LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst_dynamic ;
+          fi
+        - echo "Static link.."
+        - |
+          # it is not possible to do static linking if we only have shared DPDK library. Compiler complains about missing -ldpdk
+          if [ -z "$TARGET" -o -z "$DPDK_SHARED" ] ; then
+            ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_static `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux --static` -static || exit 1
+            if [ -z "$CROSS_ARCH" ] ; then
+            ./odp_hello_inst_static || exit 1;
+            fi
           fi
         - popd
         - ccache -s
@@ -288,6 +297,7 @@ jobs:
                               CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
                             --enable-debug=full
                             --enable-helper-linux
+                          - CCACHE_DISABLE=1 make -j $(nproc)
                           - sudo CCACHE_DISABLE=1 LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" PATH=${PATH//:\.\/node_modules\/\.bin/} make check
                           - find . -type f -iname '*.[ch]' -not -path ".git/*" -execdir gcov {} \; ; bash <(curl -s https://codecov.io/bash) -X coveragepy
                 - stage: test
@@ -310,7 +320,18 @@ jobs:
                   env: TEST=doxygen
                   compiler: gcc
                   install:
-                          - true
+                          # Updated Doxygen
+                        - |
+                          if [ ! -f "$HOME/doxygen-install/bin/doxygen" ]; then
+                                wget https://github.com/doxygen/doxygen/archive/Release_1_8_13.tar.gz
+                                tar xpvf Release_1_8_13.tar.gz
+                                pushd doxygen-Release_1_8_13
+                                cmake -DCMAKE_INSTALL_PREFIX=$HOME/doxygen-install .
+                                make -j $(nproc)
+                                make install
+                                popd
+                          fi
+                        - export PATH=$HOME/doxygen-install/bin:$PATH
                   script:
                           - ./bootstrap
                           - ./configure
@@ -339,7 +360,7 @@ jobs:
                   script:
                           - ./bootstrap
                           - ./configure --enable-helper-linux
-                          - make
+                          - make -j $(nproc)
                 - stage: "build only"
                   env: CONF=""
                   compiler: clang-3.8
@@ -347,7 +368,7 @@ jobs:
                   script:
                           - ./bootstrap
                           - ./configure --enable-helper-linux
-                          - make
+                          - make -j $(nproc)
                 - stage: "build only"
                   env: CROSS_ARCH="i386"
                   compiler: gcc
@@ -355,7 +376,7 @@ jobs:
                   script:
                           - ./bootstrap
                           - ./configure --enable-helper-linux $CROSS
-                          - make
+                          - make -j $(nproc)
                 - stage: "build only"
                   env: CROSS_ARCH="arm64"
                   compiler: gcc
@@ -363,7 +384,7 @@ jobs:
                   script:
                           - ./bootstrap
                           - ./configure --enable-helper-linux $CROSS
-                          - make
+                          - make -j $(nproc)
 
 after_failure:
   - cat config.log
