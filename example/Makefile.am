@@ -13,4 +13,8 @@ SUBDIRS = classifier \
 	  ddf_ifs \
 	  ddf_app
 
+if CODE_INSTRUM
+SUBDIRS += instrum
+endif
+
 noinst_HEADERS = example_debug.h
