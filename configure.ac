@@ -161,6 +161,21 @@ PKGCONFIG_VERSION=$(echo $VERSION | awk -F '.git' '{print $1}')
 AC_SUBST(PKGCONFIG_VERSION)
 
 ##########################################################################
+# Enable/disable ABI compatible build
+##########################################################################
+ODP_ABI_COMPAT=1
+abi_compat=yes
+AC_ARG_ENABLE([abi-compat],
+    [  --disable-abi-compat    disables ABI compatible mode, enables inline code in header files],
+    [if test "x$enableval" = "xno"; then
+	ODP_ABI_COMPAT=0
+	abi_compat=no
+	#if there is no ABI compatibility the .so numbers are meaningless
+	ODP_LIBSO_VERSION=0:0:0
+    fi])
+AM_CONDITIONAL(ODP_ABI_COMPAT, [test "x$ODP_ABI_COMPAT" = "x1"])
+
+##########################################################################
 # Determine which platform to build for
 ##########################################################################
 AC_ARG_WITH([platform],
@@ -281,21 +296,6 @@ AS_IF([test "x$enable_helper_debug_print" != "xno"], [ODPH_DEBUG_PRINT=1],
       [ODPH_DEBUG_PRINT=0])
 AC_DEFINE_UNQUOTED([ODPH_DEBUG_PRINT], [$ODPH_DEBUG_PRINT],
 		   [Define to 1 to display helper debug information])
-
-##########################################################################
-# Enable/disable ABI compatible build
-##########################################################################
-ODP_ABI_COMPAT=1
-abi_compat=yes
-AC_ARG_ENABLE([abi-compat],
-    [  --disable-abi-compat    disables ABI compatible mode, enables inline code in header files],
-    [if test "x$enableval" = "xno"; then
-	ODP_ABI_COMPAT=0
-	abi_compat=no
-	#if there is no ABI compatibility the .so numbers are meaningless
-	ODP_LIBSO_VERSION=0:0:0
-    fi])
-AM_CONDITIONAL(ODP_ABI_COMPAT, [test "x$ODP_ABI_COMPAT" = "x1"])
 
 ##########################################################################
 # Enable/disable deprecated API definitions
