@@ -94,6 +94,43 @@ CC_VERSION_MINOR=$(echo $CC_VERSION | cut -d'.' -f2)
 CC_VERSION_PATCH=$(echo $CC_VERSION | cut -d'.' -f3)
 
 ##########################################################################
+# Default warning setup
+##########################################################################
+ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror"
+
+ODP_CHECK_CFLAG([-Wstrict-prototypes])
+ODP_CHECK_CFLAG([-Wmissing-prototypes])
+ODP_CHECK_CFLAG([-Wmissing-declarations])
+ODP_CHECK_CFLAG([-Wold-style-definition])
+ODP_CHECK_CFLAG([-Wpointer-arith])
+ODP_CHECK_CFLAG([-Wcast-align])
+ODP_CHECK_CFLAG([-Wnested-externs])
+ODP_CHECK_CFLAG([-Wcast-qual])
+ODP_CHECK_CFLAG([-Wformat-nonliteral])
+ODP_CHECK_CFLAG([-Wformat-security])
+ODP_CHECK_CFLAG([-Wundef])
+ODP_CHECK_CFLAG([-Wwrite-strings])
+ODP_CHECK_CFLAG([-Wformat-truncation=0])
+ODP_CHECK_CFLAG([-Wformat-overflow=0])
+
+ODP_CFLAGS="$ODP_CFLAGS -std=c99"
+ODP_CXXFLAGS="$ODP_CXXFLAGS -std=c++11"
+
+# Extra flags for example to suppress certain warning types
+ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
+
+##########################################################################
+# Check if compiler supports cmpxchng16 on x86-based architectures
+##########################################################################
+case "${host}" in
+  i?86? | x86*)
+  if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
+     ODP_CHECK_CFLAG([-mcx16])
+  fi
+  ;;
+esac
+
+##########################################################################
 # Allow valgrind suite to run against the defined tests
 ##########################################################################
 AX_VALGRIND_DFLT([sgcheck], [off])
@@ -309,43 +346,6 @@ AC_ARG_ENABLE([deprecated],
 	deprecated=yes
     fi])
 AC_SUBST(ODP_DEPRECATED_API)
-
-##########################################################################
-# Default warning setup
-##########################################################################
-ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror"
-
-ODP_CHECK_CFLAG([-Wstrict-prototypes])
-ODP_CHECK_CFLAG([-Wmissing-prototypes])
-ODP_CHECK_CFLAG([-Wmissing-declarations])
-ODP_CHECK_CFLAG([-Wold-style-definition])
-ODP_CHECK_CFLAG([-Wpointer-arith])
-ODP_CHECK_CFLAG([-Wcast-align])
-ODP_CHECK_CFLAG([-Wnested-externs])
-ODP_CHECK_CFLAG([-Wcast-qual])
-ODP_CHECK_CFLAG([-Wformat-nonliteral])
-ODP_CHECK_CFLAG([-Wformat-security])
-ODP_CHECK_CFLAG([-Wundef])
-ODP_CHECK_CFLAG([-Wwrite-strings])
-ODP_CHECK_CFLAG([-Wformat-truncation=0])
-ODP_CHECK_CFLAG([-Wformat-overflow=0])
-
-ODP_CFLAGS="$ODP_CFLAGS -std=c99"
-ODP_CXXFLAGS="$ODP_CXXFLAGS -std=c++11"
-
-# Extra flags for example to suppress certain warning types
-ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
-
-##########################################################################
-# Check if compiler supports cmpxchng16 on x86-based architectures
-##########################################################################
-case "${host}" in
-  i?86? | x86*)
-  if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
-     ODP_CHECK_CFLAG([-mcx16])
-  fi
-  ;;
-esac
 
 ##########################################################################
 # Default include setup
