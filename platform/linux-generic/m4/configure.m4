@@ -3,7 +3,7 @@ IMPLEMENTATION_NAME="odp-linux"
 ODP_VISIBILITY
 ODP_ATOMIC
 
-m4_include([platform/linux-generic/m4/odp_pthread.m4])
+ODP_PTHREAD
 ODP_TIMER
 ODP_OPENSSL
 m4_include([platform/linux-generic/m4/odp_pcap.m4])
