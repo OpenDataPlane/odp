@@ -98,15 +98,18 @@ before_install:
                   sudo -E apt-add-repository -y "deb http://ports.ubuntu.com trusty main" ;
                   sudo -E apt-add-repository -y "deb http://ports.ubuntu.com trusty-updates main" ;
                   sudo -E apt-get -y update || true ;
-                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install build-essential  || exit 1;
+                  PKGS="build-essential libc6-dev:$CROSS_ARCH libssl-dev:$CROSS_ARCH zlib1g-dev:$CROSS_ARCH libconfig-dev:$CROSS_ARCH libstdc++-4.8-dev:$CROSS_ARCH libpcap0.8-dev:$CROSS_ARCH" ;
                   if [ "$CROSS_ARCH" = "i386" ] ;
                   then
-                        sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install g++-multilib || exit 1;
+                        PKGS="$PKGS g++-multilib" ;
                   else
-                        sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install g++-"$CROSS_GNU_TYPE" || exit 1;
+                        PKGS="$PKGS g++-$CROSS_GNU_TYPE" ;
                   fi ;
-                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install libc6-dev:"$CROSS_ARCH" libssl-dev:"$CROSS_ARCH" zlib1g-dev:"$CROSS_ARCH" libconfig-dev:"$CROSS_ARCH" libstdc++-4.8-dev:"$CROSS_ARCH" libpcap0.8-dev:"$CROSS_ARCH" || exit 1;
-                  [ "$CROSS_ARCH" = "armhf" ] || sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install libnuma-dev:"$CROSS_ARCH" || exit 1;
+                  if [ "$CROSS_ARCH" != "armhf" ] ;
+                  then
+                        PKGS="$PKGS libnuma-dev:$CROSS_ARCH" ;
+                  fi ;
+                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install $PKGS || exit 1 ;
                   export PKG_CONFIG_PATH=/usr/lib/${CROSS_MULTIARCH}/pkgconfig:/usr/${CROSS_MULTIARCH}/lib/pkgconfig ;
           fi
         - if [ "${CC#clang}" != "${CC}" ] ;
