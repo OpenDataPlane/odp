@@ -183,6 +183,16 @@ AC_DEFINE_UNQUOTED([IMPLEMENTATION_NAME], ["$IMPLEMENTATION_NAME"],
 		   [Define to the name of the implementation])
 
 ##########################################################################
+# Build examples/tests dynamically
+##########################################################################
+AC_ARG_ENABLE([static-applications],
+	      [AS_HELP_STRING([--disable-static-applications],
+			      [disable static linking of examples and tests]
+			      [ with ODP])], [],
+	      [enable_static_applications=yes])
+AM_CONDITIONAL([STATIC_APPS], [test "x$enable_static_applications" != "xno"])
+
+##########################################################################
 # Include m4 files
 ##########################################################################
 m4_include([./doc/m4/configure.m4])
@@ -393,6 +403,7 @@ AC_MSG_RESULT([
 	Deprecated APIs:	${deprecated}
 	debug:			${enable_debug}
 	cunit:			${cunit_support}
+	static tests linkage:	${enable_static_applications}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}
 	test_perf_proc:		${test_perf_proc}

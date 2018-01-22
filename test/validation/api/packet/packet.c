@@ -2466,6 +2466,8 @@ void packet_test_parse(void)
 	odp_packet_parse_param_t parse;
 	int ret, num_test_pkt, i;
 	uint32_t len, max_len;
+	odp_packet_chksum_status_t chksum_status;
+	odp_proto_chksums_t all_chksums;
 	int num_pkt = 10;
 	odp_packet_t pkt[num_pkt];
 	uint32_t offset[num_pkt];
@@ -2479,6 +2481,12 @@ void packet_test_parse(void)
 				   sizeof(test_packet_ipv6_tcp),
 				   sizeof(test_packet_ipv6_udp),
 				   sizeof(test_packet_vlan_ipv6_udp) };
+
+	all_chksums.all_chksum  = 0;
+	all_chksums.chksum.ipv4 = 1;
+	all_chksums.chksum.udp  = 1;
+	all_chksums.chksum.tcp  = 1;
+	all_chksums.chksum.sctp = 1;
 
 	num_test_pkt = sizeof(test_pkt_len) / sizeof(uint32_t);
 	max_len = 0;
@@ -2509,11 +2517,16 @@ void packet_test_parse(void)
 		CU_ASSERT(ret == 0);
 
 		offset[i] = 0;
+
+		chksum_status = odp_packet_l3_chksum_status(pkt[i]);
+		CU_ASSERT(chksum_status == ODP_PACKET_CHKSUM_UNKNOWN);
+		chksum_status = odp_packet_l4_chksum_status(pkt[i]);
+		CU_ASSERT(chksum_status == ODP_PACKET_CHKSUM_UNKNOWN);
 	}
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_ALL;
-	parse.chksums.all_chksum = 0;
+	parse.chksums = all_chksums;
 
 	CU_ASSERT(odp_packet_parse(pkt[0], offset[0], &parse) == 0);
 	CU_ASSERT(odp_packet_parse_multi(&pkt[1], &offset[1],

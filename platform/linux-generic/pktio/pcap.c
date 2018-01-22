@@ -204,7 +204,7 @@ static int _pcapif_reopen(pkt_pcap_t *pcap)
 }
 
 static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
-			   odp_packet_t pkts[], int len)
+			   odp_packet_t pkts[], int num)
 {
 	int i;
 	struct pcap_pkthdr *hdr;
@@ -226,7 +226,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	    pktio_entry->s.config.pktin.bit.ts_ptp)
 		ts = &ts_val;
 
-	for (i = 0; i < len; ) {
+	for (i = 0; i < num; ) {
 		int ret;
 
 		ret = pcap_next_ex(pcap->rx, &hdr, &data);
@@ -293,7 +293,7 @@ static int _pcapif_dump_pkt(pkt_pcap_t *pcap, odp_packet_t pkt)
 }
 
 static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
-			   const odp_packet_t pkts[], int len)
+			   const odp_packet_t pkts[], int num)
 {
 	pkt_pcap_t *pcap = &pktio_entry->s.pkt_pcap;
 	int i;
@@ -305,7 +305,7 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		return 0;
 	}
 
-	for (i = 0; i < len; ++i) {
+	for (i = 0; i < num; ++i) {
 		int pkt_len = odp_packet_len(pkts[i]);
 
 		if (pkt_len > PKTIO_PCAP_MTU) {

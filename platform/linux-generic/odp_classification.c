@@ -212,6 +212,12 @@ static void _odp_cls_update_hash_proto(cos_t *cos,
 		cos->s.hash_proto.udp = 1;
 }
 
+static inline void _cls_queue_unwind(uint32_t tbl_index, uint32_t j)
+{
+	while (j > 0)
+		odp_queue_destroy(queue_grp_tbl->s.queue[tbl_index + --j]);
+}
+
 odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 {
 	int i, j;
@@ -250,11 +256,13 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 				cos->s.num_queue = param->num_queue;
 				_odp_cls_update_hash_proto(cos,
 							   param->hash_proto);
-				tbl_index = cos->s.index * CLS_COS_QUEUE_MAX;
+				tbl_index = i * CLS_COS_QUEUE_MAX;
 				for (j = 0; j < CLS_COS_QUEUE_MAX; j++) {
 					queue = odp_queue_create(NULL, &cos->s.
 								 queue_param);
 					if (queue == ODP_QUEUE_INVALID) {
+						/* unwind the queues */
+						_cls_queue_unwind(tbl_index, j);
 						UNLOCK(&cos->s.lock);
 						return ODP_COS_INVALID;
 					}
@@ -1103,7 +1111,7 @@ cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, const uint8_t *pkt_addr,
 	    packet_hdr_has_eth(hdr)) {
 		eth = (const _odp_ethhdr_t *)(pkt_addr + hdr->p.l2_offset);
 		vlan = (const _odp_vlanhdr_t *)(eth + 1);
-		qos = odp_be_to_cpu_16(vlan->tci);
+		qos = _odp_be_to_cpu_16(vlan->tci);
 		qos = ((qos >> 13) & 0x07);
 		cos = l2_cos->cos[qos];
 	}

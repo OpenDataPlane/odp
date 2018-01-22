@@ -143,7 +143,7 @@ uint32_t mtu_get_fd(int fd, const char *name)
 			ifr.ifr_name);
 		return 0;
 	}
-	return ifr.ifr_mtu;
+	return ifr.ifr_mtu + _ODP_ETHHDR_LEN;
 }
 
 /*
@@ -601,15 +601,15 @@ static uint32_t _rx_pkt_to_iovec(odp_packet_t pkt,
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
-			  odp_packet_t pkt_table[], int len)
+			  odp_packet_t pkt_table[], int num)
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	odp_pool_t pool = pkt_sock->pool;
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
 	const int sockfd = pkt_sock->sockfd;
-	struct mmsghdr msgvec[len];
-	struct iovec iovecs[len][MAX_SEGS];
+	struct mmsghdr msgvec[num];
+	struct iovec iovecs[num][MAX_SEGS];
 	int nb_rx = 0;
 	int nb_pkts;
 	int recv_msgs;
@@ -623,7 +623,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	memset(msgvec, 0, sizeof(msgvec));
 
-	nb_pkts = packet_alloc_multi(pool, pkt_sock->mtu, pkt_table, len);
+	nb_pkts = packet_alloc_multi(pool, pkt_sock->mtu, pkt_table, num);
 	for (i = 0; i < nb_pkts; i++) {
 		msgvec[i].msg_hdr.msg_iovlen =
 			_rx_pkt_to_iovec(pkt_table[i], iovecs[i]);
@@ -643,6 +643,11 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		uint16_t pkt_len = msgvec[i].msg_len;
 		int ret;
 
+		if (odp_unlikely(msgvec[i].msg_hdr.msg_flags & MSG_TRUNC)) {
+			odp_packet_free(pkt);
+			ODP_DBG("dropped truncated packet\n");
+			continue;
+		}
 		if (pktio_cls_enabled(pktio_entry)) {
 			uint16_t seg_len =  pkt_len;
 
@@ -799,11 +804,11 @@ static uint32_t _tx_pkt_to_iovec(odp_packet_t pkt,
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
-			  const odp_packet_t pkt_table[], int len)
+			  const odp_packet_t pkt_table[], int num)
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
-	struct mmsghdr msgvec[len];
-	struct iovec iovecs[len][MAX_SEGS];
+	struct mmsghdr msgvec[num];
+	struct iovec iovecs[num][MAX_SEGS];
 	int ret;
 	int sockfd;
 	int n, i;
@@ -813,14 +818,14 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	sockfd = pkt_sock->sockfd;
 	memset(msgvec, 0, sizeof(msgvec));
 
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < num; i++) {
 		msgvec[i].msg_hdr.msg_iov = iovecs[i];
 		msgvec[i].msg_hdr.msg_iovlen = _tx_pkt_to_iovec(pkt_table[i],
 				iovecs[i]);
 	}
 
-	for (i = 0; i < len; ) {
-		ret = sendmmsg(sockfd, &msgvec[i], len - i, MSG_DONTWAIT);
+	for (i = 0; i < num; ) {
+		ret = sendmmsg(sockfd, &msgvec[i], num - i, MSG_DONTWAIT);
 		if (odp_unlikely(ret <= -1)) {
 			if (i == 0 && SOCK_ERR_REPORT(errno)) {
 				__odp_errno = errno;

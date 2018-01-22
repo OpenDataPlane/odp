@@ -294,7 +294,7 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 }
 
 static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
-			  odp_packet_t pkts[], int len)
+			  odp_packet_t pkts[], int num)
 {
 	ssize_t retval;
 	int i;
@@ -309,7 +309,7 @@ static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	    pktio_entry->s.config.pktin.bit.ts_ptp)
 		ts = &ts_val;
 
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < num; i++) {
 		do {
 			retval = read(tap->fd, buf, BUF_SIZE);
 		} while (retval < 0 && errno == EINTR);
@@ -333,7 +333,7 @@ static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 }
 
 static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
-				   const odp_packet_t pkts[], int len)
+				   const odp_packet_t pkts[], int num)
 {
 	ssize_t retval;
 	int i, n;
@@ -341,7 +341,7 @@ static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
 	uint8_t buf[BUF_SIZE];
 	pkt_tap_t *tap = &pktio_entry->s.pkt_tap;
 
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < num; i++) {
 		pkt_len = odp_packet_len(pkts[i]);
 
 		if (pkt_len > tap->mtu) {
@@ -385,13 +385,13 @@ static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
 }
 
 static int tap_pktio_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
-			  const odp_packet_t pkts[], int len)
+			  const odp_packet_t pkts[], int num)
 {
 	int ret;
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
-	ret = tap_pktio_send_lockless(pktio_entry, pkts, len);
+	ret = tap_pktio_send_lockless(pktio_entry, pkts, num);
 
 	odp_ticketlock_unlock(&pktio_entry->s.txl);
 
