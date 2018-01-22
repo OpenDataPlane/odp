@@ -16,6 +16,11 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/atomic_inlines.h \
 		  include/odp/api/plat/byteorder_inlines.h \
 		  include/odp/api/plat/byteorder_inlines_api.h \
+		  include/odp/api/plat/packet_flag_inlines.h \
+		  include/odp/api/plat/packet_flag_inlines_api.h \
+		  include/odp/api/plat/packet_inline_types.h \
+		  include/odp/api/plat/packet_inlines.h \
+		  include/odp/api/plat/packet_inlines_api.h \
 		  include/odp/api/plat/strong_types.h \
 		  include/odp/api/plat/sync_inlines.h \
 		  include/odp/api/plat/thread_inlines.h \
@@ -69,18 +74,24 @@ noinst_HEADERS = \
 		  include/odp_align_internal.h \
 		  include/odp_atomic_internal.h \
 		  include/odp_bitmap_internal.h \
+		  include/odp_buffer_inlines.h \
+		  include/odp_buffer_internal.h \
 		  include/odp_classification_datamodel.h \
 		  include/odp_classification_inlines.h \
 		  include/odp_classification_internal.h \
+		  include/odp_config_internal.h \
 		  include/odp_debug_internal.h \
 		  include/odp_forward_typedefs_internal.h \
 		  include/odp_internal.h \
 		  include/odp_ipsec_internal.h \
 		  include/odp_name_table_internal.h \
+		  include/odp_packet_dpdk.h \
+		  include/odp_packet_internal.h \
 		  include/odp_packet_io_ipc_internal.h \
 		  include/odp_packet_io_ring_internal.h \
 		  include/odp_packet_socket.h \
 		  include/odp_pkt_queue_internal.h \
+		  include/odp_pool_internal.h \
 		  include/odp_posix_extensions.h \
 		  include/odp_queue_internal.h \
 		  include/odp_ring_internal.h \
@@ -106,6 +117,7 @@ __LIB__libodp_linux_la_SOURCES = \
 		  odp_atomic.c \
 		  odp_barrier.c \
 		  odp_bitmap.c \
+		  odp_buffer.c \
 		  odp_chksum.c \
 		  odp_classification.c \
 		  odp_cpu.c \
@@ -119,8 +131,11 @@ __LIB__libodp_linux_la_SOURCES = \
 		  odp_ipsec_events.c \
 		  odp_ipsec_sad.c \
 		  odp_name_table.c \
+		  odp_packet.c \
+		  odp_packet_flags.c \
 		  odp_packet_io.c \
 		  pktio/loop.c \
+		  odp_pool.c \
 		  odp_pkt_queue.c \
 		  odp_queue.c \
 		  odp_queue_if.c \
