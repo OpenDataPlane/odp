@@ -3,8 +3,7 @@
 #distribution.
 
 EXTRA_DIST = \
-	     Doxyfile \
-	     $(top_srcdir)/platform/${with_platform}/doc/*.dox
+	     Doxyfile
 
 
 clean-local:
