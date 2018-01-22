@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, Linaro Limited
+/* Copyright (c) 2014-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -15,7 +15,6 @@
 #include <odp/api/debug.h>
 #include <odp/api/align.h>
 #include <odp/api/shared_memory.h>
-#include <odp_crypto_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>
 #include <odp/api/random.h>
@@ -37,9 +36,7 @@
  * Keep sorted: first by key length, then by IV length
  */
 static const odp_crypto_cipher_capability_t cipher_capa_null[] = {
-{.key_len = 0, .iv_len = 0},
-/* Special case for GMAC */
-{.key_len = 0, .iv_len = 12} };
+{.key_len = 0, .iv_len = 0} };
 
 static const odp_crypto_cipher_capability_t cipher_capa_trides_cbc[] = {
 {.key_len = 24, .iv_len = 8} };
@@ -87,7 +84,52 @@ static const odp_crypto_auth_capability_t auth_capa_aes_gcm[] = {
 {.digest_len = 16, .key_len = 0, .aad_len = {.min = 8, .max = 12, .inc = 4} } };
 
 static const odp_crypto_auth_capability_t auth_capa_aes_gmac[] = {
-{.digest_len = 16, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
+{.digest_len = 16, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0},
+	.iv_len = 12 } };
+
+/** Forward declaration of session structure */
+typedef struct odp_crypto_generic_session_t odp_crypto_generic_session_t;
+
+/**
+ * Algorithm handler function prototype
+ */
+typedef
+odp_crypto_alg_err_t (*crypto_func_t)(odp_packet_t pkt,
+				      const odp_crypto_packet_op_param_t *param,
+				      odp_crypto_generic_session_t *session);
+
+/**
+ * Per crypto session data structure
+ */
+struct odp_crypto_generic_session_t {
+	odp_crypto_generic_session_t *next;
+
+	/* Session creation parameters */
+	odp_crypto_session_param_t p;
+
+	odp_bool_t do_cipher_first;
+
+	struct {
+		/* Copy of session IV data */
+		uint8_t iv_data[EVP_MAX_IV_LENGTH];
+		uint8_t key_data[EVP_MAX_KEY_LENGTH];
+
+		const EVP_CIPHER *evp_cipher;
+		crypto_func_t func;
+	} cipher;
+
+	struct {
+		uint8_t  key[EVP_MAX_KEY_LENGTH];
+		uint8_t  iv_data[EVP_MAX_IV_LENGTH];
+		uint32_t key_length;
+		uint32_t bytes;
+		union {
+			const EVP_MD *evp_md;
+			const EVP_CIPHER *evp_cipher;
+		};
+		crypto_func_t func;
+	} auth;
+};
 
 typedef struct odp_crypto_global_s odp_crypto_global_t;
 
@@ -392,9 +434,9 @@ odp_crypto_alg_err_t cipher_encrypt(odp_packet_t pkt,
 	void *iv_ptr;
 	int ret;
 
-	if (param->override_iv_ptr)
-		iv_ptr = param->override_iv_ptr;
-	else if (session->p.iv.data)
+	if (param->cipher_iv_ptr)
+		iv_ptr = param->cipher_iv_ptr;
+	else if (session->p.cipher_iv.data)
 		iv_ptr = session->cipher.iv_data;
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
@@ -423,9 +465,9 @@ odp_crypto_alg_err_t cipher_decrypt(odp_packet_t pkt,
 	void *iv_ptr;
 	int ret;
 
-	if (param->override_iv_ptr)
-		iv_ptr = param->override_iv_ptr;
-	else if (session->p.iv.data)
+	if (param->cipher_iv_ptr)
+		iv_ptr = param->cipher_iv_ptr;
+	else if (session->p.cipher_iv.data)
 		iv_ptr = session->cipher.iv_data;
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
@@ -454,8 +496,9 @@ static int process_cipher_param(odp_crypto_generic_session_t *session,
 		return -1;
 
 	/* Verify IV len is correct */
-	if (!((0 == session->p.iv.length) ||
-	      ((uint32_t)EVP_CIPHER_iv_length(cipher) == session->p.iv.length)))
+	if (!((0 == session->p.cipher_iv.length) ||
+	      ((uint32_t)EVP_CIPHER_iv_length(cipher) ==
+	       session->p.cipher_iv.length)))
 		return -1;
 
 	session->cipher.evp_cipher = cipher;
@@ -485,9 +528,9 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
 	uint8_t block[EVP_MAX_MD_SIZE];
 	int ret;
 
-	if (param->override_iv_ptr)
-		iv_ptr = param->override_iv_ptr;
-	else if (session->p.iv.data)
+	if (param->cipher_iv_ptr)
+		iv_ptr = param->cipher_iv_ptr;
+	else if (session->p.cipher_iv.data)
 		iv_ptr = session->cipher.iv_data;
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
@@ -497,7 +540,7 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
 	EVP_EncryptInit_ex(ctx, session->cipher.evp_cipher, NULL,
 			   session->cipher.key_data, NULL);
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
-			    session->p.iv.length, NULL);
+			    session->p.cipher_iv.length, NULL);
 	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
 	EVP_CIPHER_CTX_set_padding(ctx, 0);
 
@@ -532,9 +575,9 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
 	uint8_t block[EVP_MAX_MD_SIZE];
 	int ret;
 
-	if (param->override_iv_ptr)
-		iv_ptr = param->override_iv_ptr;
-	else if (session->p.iv.data)
+	if (param->cipher_iv_ptr)
+		iv_ptr = param->cipher_iv_ptr;
+	else if (session->p.cipher_iv.data)
 		iv_ptr = session->cipher.iv_data;
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
@@ -544,7 +587,7 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
 	EVP_DecryptInit_ex(ctx, session->cipher.evp_cipher, NULL,
 			   session->cipher.key_data, NULL);
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
-			    session->p.iv.length, NULL);
+			    session->p.cipher_iv.length, NULL);
 	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
 	EVP_CIPHER_CTX_set_padding(ctx, 0);
 
@@ -598,10 +641,10 @@ odp_crypto_alg_err_t aes_gmac_gen(odp_packet_t pkt,
 	uint8_t block[EVP_MAX_MD_SIZE];
 	int ret;
 
-	if (param->override_iv_ptr)
-		iv_ptr = param->override_iv_ptr;
-	else if (session->p.iv.data)
-		iv_ptr = session->cipher.iv_data;
+	if (param->auth_iv_ptr)
+		iv_ptr = param->auth_iv_ptr;
+	else if (session->p.auth_iv.data)
+		iv_ptr = session->auth.iv_data;
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
@@ -610,7 +653,7 @@ odp_crypto_alg_err_t aes_gmac_gen(odp_packet_t pkt,
 	EVP_EncryptInit_ex(ctx, session->auth.evp_cipher, NULL,
 			   session->auth.key, NULL);
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
-			    session->p.iv.length, NULL);
+			    session->p.cipher_iv.length, NULL);
 	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
 	EVP_CIPHER_CTX_set_padding(ctx, 0);
 
@@ -637,10 +680,10 @@ odp_crypto_alg_err_t aes_gmac_check(odp_packet_t pkt,
 	uint8_t block[EVP_MAX_MD_SIZE];
 	int ret;
 
-	if (param->override_iv_ptr)
-		iv_ptr = param->override_iv_ptr;
-	else if (session->p.iv.data)
-		iv_ptr = session->cipher.iv_data;
+	if (param->auth_iv_ptr)
+		iv_ptr = param->auth_iv_ptr;
+	else if (session->p.auth_iv.data)
+		iv_ptr = session->auth.iv_data;
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
@@ -649,7 +692,7 @@ odp_crypto_alg_err_t aes_gmac_check(odp_packet_t pkt,
 	EVP_DecryptInit_ex(ctx, session->auth.evp_cipher, NULL,
 			   session->auth.key, NULL);
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
-			    session->p.iv.length, NULL);
+			    session->p.cipher_iv.length, NULL);
 	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
 	EVP_CIPHER_CTX_set_padding(ctx, 0);
 
@@ -860,16 +903,26 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	/* Copy parameters */
 	session->p = *param;
 
-	if (session->p.iv.length > MAX_IV_LEN) {
+	if (session->p.cipher_iv.length > EVP_MAX_IV_LENGTH) {
 		ODP_DBG("Maximum IV length exceeded\n");
 		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
 		goto err;
 	}
 
+	if (session->p.auth_iv.length > EVP_MAX_IV_LENGTH) {
+		ODP_DBG("Maximum auth IV length exceeded\n");
+		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
+		goto err;
+	}
+
 	/* Copy IV data */
-	if (session->p.iv.data)
-		memcpy(session->cipher.iv_data, session->p.iv.data,
-		       session->p.iv.length);
+	if (session->p.cipher_iv.data)
+		memcpy(session->cipher.iv_data, session->p.cipher_iv.data,
+		       session->p.cipher_iv.length);
+
+	if (session->p.auth_iv.data)
+		memcpy(session->auth.iv_data, session->p.auth_iv.data,
+		       session->p.auth_iv.length);
 
 	/* Derive order */
 	if (ODP_CRYPTO_OP_ENCODE == param->op)
@@ -1058,7 +1111,8 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 	int rc;
 
 	packet_param.session = param->session;
-	packet_param.override_iv_ptr = param->override_iv_ptr;
+	packet_param.cipher_iv_ptr = param->cipher_iv_ptr;
+	packet_param.auth_iv_ptr = param->auth_iv_ptr;
 	packet_param.hash_result_offset = param->hash_result_offset;
 	packet_param.aad_ptr = param->aad_ptr;
 	packet_param.cipher_range = param->cipher_range;

@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, Linaro Limited
+/* Copyright (c) 2013-2018, Linaro Limited
  * Copyright (c) 2013, Nokia Solutions and Networks
  * All rights reserved.
  *

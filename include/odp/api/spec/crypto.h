@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, Linaro Limited
+/* Copyright (c) 2014-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -313,7 +313,13 @@ typedef struct odp_crypto_session_param_t {
 	odp_crypto_key_t cipher_key;
 
 	/** Cipher Initialization Vector (IV) */
-	odp_crypto_iv_t iv;
+	union {
+		/** @deprecated Use cipher_iv */
+		odp_crypto_iv_t ODP_DEPRECATE(iv);
+
+		/** Cipher Initialization Vector (IV) */
+		odp_crypto_iv_t cipher_iv;
+	};
 
 	/** Authentication algorithm
 	 *
@@ -326,6 +332,9 @@ typedef struct odp_crypto_session_param_t {
 	 *  Use odp_crypto_auth_capability() for supported key lengths.
 	 */
 	odp_crypto_key_t auth_key;
+
+	/** Authentication Initialization Vector (IV) */
+	odp_crypto_iv_t auth_iv;
 
 	/** Authentication digest length in bytes
 	 *
@@ -394,8 +403,16 @@ typedef struct odp_crypto_op_param_t {
 	 */
 	odp_packet_t out_pkt;
 
-	/** Override session IV pointer */
-	uint8_t *override_iv_ptr;
+	/** Override session IV pointer for cipher */
+	union {
+		/** @deprecated use cipher_iv_ptr */
+		uint8_t *ODP_DEPRECATE(override_iv_ptr);
+		/** Override session IV pointer for cipher */
+		uint8_t *cipher_iv_ptr;
+	};
+
+	/** Override session authentication IV pointer */
+	uint8_t *auth_iv_ptr;
 
 	/** Offset from start of packet for hash result
 	 *
@@ -430,8 +447,16 @@ typedef struct odp_crypto_packet_op_param_t {
 	/** Session handle from creation */
 	odp_crypto_session_t session;
 
-	/** Override session IV pointer */
-	uint8_t *override_iv_ptr;
+	/** Override session IV pointer for cipher */
+	union {
+		/** @deprecated use cipher_iv_ptr */
+		uint8_t *ODP_DEPRECATE(override_iv_ptr);
+		/** Override session IV pointer for cipher */
+		uint8_t *cipher_iv_ptr;
+	};
+
+	/** Override session IV pointer for authentication */
+	uint8_t *auth_iv_ptr;
 
 	/** Offset from start of packet for hash result
 	 *
@@ -597,6 +622,9 @@ typedef struct odp_crypto_auth_capability_t {
 
 	/** Key length in bytes */
 	uint32_t key_len;
+
+	/** IV length in bytes */
+	uint32_t iv_len;
 
 	/** Additional Authenticated Data (AAD) lengths */
 	struct {
