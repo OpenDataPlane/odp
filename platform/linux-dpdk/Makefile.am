@@ -155,6 +155,7 @@ __LIB__libodp_linux_la_SOURCES = \
 		  odp_system_info.c \
 		  odp_thread.c \
 		  odp_thrmask.c \
+		  odp_time.c \
 		  odp_timer.c \
 		  odp_timer_wheel.c \
 		  odp_traffic_mngr.c \
