@@ -153,6 +153,7 @@ __LIB__libodp_linux_la_SOURCES = \
 		  odp_spinlock.c \
 		  odp_spinlock_recursive.c \
 		  odp_system_info.c \
+		  odp_thread.c \
 		  odp_thrmask.c \
 		  odp_timer.c \
 		  odp_timer_wheel.c \
