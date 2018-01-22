@@ -130,6 +130,7 @@ __LIB__libodp_linux_la_SOURCES = \
 		  odp_event.c \
 		  odp_hash.c \
 		  odp_impl.c \
+		  odp_init.c \
 		  odp_ipsec.c \
 		  odp_ipsec_events.c \
 		  odp_ipsec_sad.c \
