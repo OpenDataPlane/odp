@@ -21,6 +21,8 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/packet_inline_types.h \
 		  include/odp/api/plat/packet_inlines.h \
 		  include/odp/api/plat/packet_inlines_api.h \
+		  include/odp/api/plat/pktio_inlines.h \
+		  include/odp/api/plat/pktio_inlines_api.h \
 		  include/odp/api/plat/strong_types.h \
 		  include/odp/api/plat/sync_inlines.h \
 		  include/odp/api/plat/thread_inlines.h \
@@ -87,6 +89,7 @@ noinst_HEADERS = \
 		  include/odp_name_table_internal.h \
 		  include/odp_packet_dpdk.h \
 		  include/odp_packet_internal.h \
+		  include/odp_packet_io_internal.h \
 		  include/odp_packet_io_ipc_internal.h \
 		  include/odp_packet_io_ring_internal.h \
 		  include/odp_packet_socket.h \
@@ -132,6 +135,7 @@ __LIB__libodp_linux_la_SOURCES = \
 		  odp_ipsec_sad.c \
 		  odp_name_table.c \
 		  odp_packet.c \
+		  odp_packet_dpdk.c \
 		  odp_packet_flags.c \
 		  odp_packet_io.c \
 		  pktio/loop.c \
@@ -162,6 +166,7 @@ __LIB__libodp_linux_la_SOURCES += \
 		  odp_byteorder.c \
 		  odp_packet_api.c \
 		  odp_packet_flags_api.c \
+		  odp_pktio_api.c \
 		  odp_sync.c \
 		  odp_ticketlock.c
 endif
