@@ -83,6 +83,7 @@ noinst_HEADERS = \
 		  include/odp_classification_internal.h \
 		  include/odp_config_internal.h \
 		  include/odp_debug_internal.h \
+		  include/odp_errno_define.h \
 		  include/odp_forward_typedefs_internal.h \
 		  include/odp_internal.h \
 		  include/odp_ipsec_internal.h \
@@ -127,6 +128,7 @@ __LIB__libodp_linux_la_SOURCES = \
 		  odp_cpumask.c \
 		  odp_cpumask_task.c \
 		  odp_crypto.c \
+		  odp_errno.c \
 		  odp_event.c \
 		  odp_hash.c \
 		  odp_impl.c \
