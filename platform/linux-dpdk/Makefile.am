@@ -23,6 +23,7 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/packet_inlines_api.h \
 		  include/odp/api/plat/pktio_inlines.h \
 		  include/odp/api/plat/pktio_inlines_api.h \
+		  include/odp/api/plat/std_clib_inlines.h \
 		  include/odp/api/plat/strong_types.h \
 		  include/odp/api/plat/sync_inlines.h \
 		  include/odp/api/plat/thread_inlines.h \
@@ -172,6 +173,7 @@ __LIB__libodp_linux_la_SOURCES += \
 		  odp_packet_api.c \
 		  odp_packet_flags_api.c \
 		  odp_pktio_api.c \
+		  odp_std_clib_api.c \
 		  odp_sync.c \
 		  odp_ticketlock.c
 endif
