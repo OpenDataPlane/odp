@@ -1670,6 +1670,9 @@ int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num)
 		return -1;
 	}
 
+	if (entry->s.state != PKTIO_STATE_STARTED)
+		return -1;
+
 	return entry->s.ops->recv(entry, queue.index, packets, num);
 }
 
@@ -1824,6 +1827,9 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 		ODP_DBG("pktio entry %d does not exist\n", pktio);
 		return -1;
 	}
+
+	if (entry->s.state != PKTIO_STATE_STARTED)
+		return -1;
 
 	return entry->s.ops->send(entry, queue.index, packets, num);
 }
