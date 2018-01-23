@@ -10,6 +10,8 @@
 language: c
 sudo: required
 dist: trusty
+notifications:
+  email: false
 env:
   global:
     # COVERITY_SCAN_TOKEN
@@ -19,7 +21,7 @@ env:
     # The secure key to be filled below is the 685 character long encrypted
     # token you can find as follow from your coverity dashboard
     # (at https://scan.coverity.com/dashboard):
-    # Click on the github project (<you>/odp)
+    # Click on the github project (<you>/odp-dpdk)
     # Click on "submit build"
     # Click on "Configure Travis CI"
     # Look at the COVERITY_SCAN_TOKEN in the env: global: section
@@ -35,25 +37,27 @@ env:
 
 addons:
         apt:
-                sources:
-                        - ubuntu-toolchain-r-test
-                        - llvm-toolchain-precise-3.8
                 packages:
                         - gcc
-                        - clang-3.8
-                        - automake autoconf autoconf-archive libtool libssl-dev graphviz mscgen doxygen
+                        - automake autoconf autoconf-archive libtool graphviz mscgen doxygen
+                        - codespell
+                        - libssl-dev
                         - libpcap-dev
 #        coverity_scan:
 #                project:
 #                        name: "$TRAVIS_REPO_SLUG"
 #                        notification_email: xxxx
-#                        build_command_prepend: "./bootstrap && ./configure --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example"
+#                        build_command_prepend: "./bootstrap && ./configure --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-example"
 #                        build_command:   "make"
 #                        branch_pattern: coverity_scan
 
 compiler:
         - gcc
-        - clang-3.8
+
+cache:
+        pip: true
+        directories:
+                - dpdk
 
 env:
         - CONF=""
@@ -61,65 +65,68 @@ env:
         - CONF="--enable-schedule-sp"
         - CONF="--enable-schedule-iquery"
 
-install:
-        - echo 1000 | sudo tee /proc/sys/vm/nr_hugepages
-        - sudo mkdir -p /mnt/huge
-        - sudo mount -t hugetlbfs nodev /mnt/huge
-
-        - sudo apt-get -qq update
-        - sudo apt-get install linux-headers-`uname -r`
-        - sudo pip install coverage
-        - gem install asciidoctor
-        - PATH=${PATH//:\.\/node_modules\/\.bin/}
-
+before_install:
 #       Install cunit for the validation tests because distro version is too old and fails C99 compile
         - sudo apt-get remove libcunit1-dev libcunit1
-        - export CUNIT_VERSION=2.1-3
-        - curl -sSOL https://github.com/Linaro/libcunit/releases/download/${CUNIT_VERSION}/CUnit-${CUNIT_VERSION}.tar.bz2
-        - tar -jxf *.bz2
-        - pushd CUnit*
-        - ./bootstrap
-        - ./configure --enable-debug --enable-automated --enable-basic --enable-console --enable-examples --enable-test
-        - make
-        - sudo make install
-        - popd
-        - export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
+        - wget http://ftp.debian.org/debian/pool/main/c/cunit/libcunit1_2.1-3-dfsg-2_amd64.deb
+        - wget http://ftp.debian.org/debian/pool/main/c/cunit/libcunit1-dev_2.1-3-dfsg-2_amd64.deb
+        - sudo dpkg -i libcunit1_2.1-3-dfsg-2_amd64.deb libcunit1-dev_2.1-3-dfsg-2_amd64.deb
 
-#	DPDK pktio
-        - TARGET=${TARGET:-"x86_64-native-linuxapp-gcc"}
-        - git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v17.02 http://dpdk.org/git/dpdk dpdk
-        - pushd dpdk
-        - git log --oneline --decorate
-        - make config T=${TARGET} O=${TARGET}
-        - pushd ${TARGET}
-        - sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
-        - popd
-        - make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
-        - popd
+install:
+        - sudo apt-get -qq update
+        - sudo apt-get install linux-headers-`uname -r`
+        - gem install asciidoctor
 
-#	Netmap pktio
-        - git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git
-        - pushd netmap/LINUX
-        - ./configure
-        - make
-        - sudo insmod ./netmap.ko
-        - popd
+        # DPDK. Note that cache must be purged if dpdk version changes.
+        - DPDK_VERS="17.02"
+        - |
+          CACHED_DPDK_VERS=`fgrep Version dpdk/pkg/dpdk.spec | cut -d " " -f 2`
+          if [ "${CACHED_DPDK_VERS}" != "${DPDK_VERS}" ]; then
+            rm -rf dpdk
+          fi
+        - TARGET="x86_64-native-linuxapp-gcc"
+        - DPDK_MACHINE=snb
+        - |
+          if [ -n "$TARGET" -a ! -f "dpdk/${TARGET}/lib/libdpdk.a" ]; then
+            git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v${DPDK_VERS} http://dpdk.org/git/dpdk dpdk
+            pushd dpdk
+            git log --oneline --decorate
+            echo $CC
+            make config T=${TARGET} O=${TARGET}
+            pushd ${TARGET}
+            sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
+            sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_OPENSSL=).*,\1y,' .config
+            cat .config |grep RTE_MACHINE
+            if test -n "${DPDK_MACHINE}" ; then
+              sed -ri 's,(CONFIG_RTE_MACHINE=).*,\1"'${DPDK_MACHINE}'",' .config
+            fi
+            popd
+            make install T=${TARGET} EXTRA_CFLAGS="-fPIC $DPDK_CFLAGS"
+            rm -r ./doc ./${TARGET}/app ./${TARGET}/build
+            popd
+            EXTRA_CONF="$EXTRA_CONF --with-dpdk-path=`pwd`/dpdk/${TARGET}"
+          fi
 
 script:
         - ./bootstrap
-        - ./configure --prefix=$HOME/odp-install  --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap $CONF
+        - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-example --with-sdk-install-path=`pwd`/dpdk/${TARGET} $CONF
         - make -j $(nproc)
         - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make check
         - make install
 
+        # Wrapper-script.sh unmounts huge pages after make check
+        - echo 1000 | sudo tee /proc/sys/vm/nr_hugepages
+        - sudo mkdir -p /mnt/huge
+        - sudo mount -t hugetlbfs nodev /mnt/huge
+
         - echo "Checking linking and run from install..."
         - pushd $HOME
         - echo "Dynamic link.."
-        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-linux -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -ldpdk -lpthread -lcrypto -lpcap -ldl
-        - LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst
+        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/include -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-dpdk -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -msse4.2 -ldpdk -lpthread -lcrypto -lpcap -ldl
+        - sudo ODP_PLATFORM_PARAMS="-n 2" LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst
         - echo "Static link.."
-        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-linux -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -ldpdk -lpthread -lcrypto -lpcap -ldl -static
-        - ./odp_hello_inst
+        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/include -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-dpdk -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -msse4.2 -ldpdk -lpthread -lcrypto -lpcap -ldl -lm -static
+        - sudo ODP_PLATFORM_PARAMS="-n 2" ./odp_hello_inst
 
 jobs:
         include:
@@ -127,34 +134,36 @@ jobs:
                   env: TEST=coverage
                   compiler: gcc
                   script:
+                          - sudo -H pip install coverage
                           - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap CFLAGS="-O0 -coverage" CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
+                          - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-example --with-sdk-install-path=`pwd`/dpdk/${TARGET} CFLAGS="-O0 -coverage" CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
                           - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" PATH=${PATH//:\.\/node_modules\/\.bin/} make check
                           - find . -type f -iname '*.[ch]' -not -path ".git/*" -execdir gcov {} \; ; bash <(curl -s https://codecov.io/bash) -X coveragepy
-                - stage: test
-                  env: TEST=distcheck
-                  compiler: gcc
-                  script:
-                          - ./bootstrap
-                          - ./configure
-                          - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make distcheck
                 - stage: test
                   env: TEST=doxygen
                   compiler: gcc
                   script:
-                          # doxygen does not trap on warnings, check for them here.
                           - ./bootstrap
-                          - ./configure
-                          - make doxygen-doc |tee doxygen.log
-                          - fgrep -rvq warning ./doxygen.log
+                          - ./configure --with-sdk-install-path=`pwd`/dpdk/${TARGET}
+                          # doxygen does not trap on warnings, check for them here.
+                          - make doxygen-doc 2>&1 |tee doxygen.log
+                          - |
+                             fgrep -rq warning ./doxygen.log
+                             if [ $? -eq 0 ]; then
+                               false
+                             else
+                               true
+                             fi
                 - stage: test
                   env: TEST=checkpatch
                   compiler: gcc
+                  install:
+                          - true
                   script:
                           - echo ${TRAVIS_COMMIT_RANGE};
                           - ODP_PATCHES=`echo ${TRAVIS_COMMIT_RANGE} | sed 's/\.//'`;
-                          - if [ -z "${ODP_PATCHES}" ]; then env; exit 1; fi;
                           - ./scripts/ci-checkpatches.sh ${ODP_PATCHES};
 
 after_failure:
+  - cat config.log
   - find . -name 'test-suite.log' -execdir grep -il "FAILED" {} \; -exec echo {} \; -exec cat {} \;
