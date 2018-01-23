@@ -34,6 +34,7 @@ extern "C" {
 #include <odp_packet_socket.h>
 #include <odp_packet_netmap.h>
 #include <odp_packet_tap.h>
+#include <odp_packet_null.h>
 #include <odp_packet_dpdk.h>
 
 #define PKTIO_NAME_LEN 256
@@ -129,6 +130,7 @@ struct pktio_entry {
 #endif
 		pkt_tap_t pkt_tap;		/**< using TAP for IO */
 		_ipc_pktio_t ipc;		/**< IPC pktio data */
+		pkt_null_t pkt_null;		/**< using null for IO */
 	};
 	enum {
 		/* Not allocated */
@@ -271,6 +273,7 @@ extern const pktio_if_ops_t loopback_pktio_ops;
 extern const pktio_if_ops_t pcap_pktio_ops;
 #endif
 extern const pktio_if_ops_t tap_pktio_ops;
+extern const pktio_if_ops_t null_pktio_ops;
 extern const pktio_if_ops_t ipc_pktio_ops;
 extern const pktio_if_ops_t * const pktio_if_ops[];
 

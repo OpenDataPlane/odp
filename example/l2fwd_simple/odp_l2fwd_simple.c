@@ -145,6 +145,8 @@ int main(int argc, char **argv)
 	odph_odpthread_params_t thr_params;
 	int opt;
 	int long_index;
+	odph_ethaddr_t correct_src;
+	uint32_t mtu1, mtu2;
 
 	static const struct option longopts[] = { {NULL, 0, NULL, 0} };
 	static const char *shortopts = "";
@@ -203,6 +205,23 @@ int main(int argc, char **argv)
 								&global.if0out);
 	global.if1 = create_pktio(argv[optind + 1], pool, &global.if1in,
 								&global.if1out);
+
+	/* Do some operations to increase code coverage in tests */
+	if (odp_pktio_mac_addr(global.if0, &correct_src, sizeof(correct_src))
+	    != sizeof(correct_src))
+		printf("Warning: can't get MAC address\n");
+	else if (memcmp(&correct_src, &global.src, sizeof(correct_src)) != 0)
+		printf("Warning: src MAC invalid\n");
+
+	odp_pktio_promisc_mode_set(global.if0, true);
+	odp_pktio_promisc_mode_set(global.if1, true);
+	(void)odp_pktio_promisc_mode(global.if0);
+	(void)odp_pktio_promisc_mode(global.if1);
+
+	mtu1 = odp_pktin_maxlen(global.if0);
+	mtu2 = odp_pktout_maxlen(global.if1);
+	if (mtu1 && mtu2 && mtu1 > mtu2)
+		printf("Warning: input MTU bigger than output MTU\n");
 
 	odp_cpumask_default_worker(&cpumask, MAX_WORKERS);
 
