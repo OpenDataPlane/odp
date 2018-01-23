@@ -122,11 +122,25 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_SHA256_HMAC,
 
+	 /** HMAC-SHA-384
+	 *
+	 *  SHA-384 algorithm in HMAC mode
+	 */
+	ODP_AUTH_ALG_SHA384_HMAC,
+
 	/** HMAC-SHA-512
 	 *
 	 *  SHA-512 algorithm in HMAC mode
 	 */
 	ODP_AUTH_ALG_SHA512_HMAC,
+
+	/** AES-XCBC
+	 *
+	 *  AES-XCBC algorithm, 
+	 *	reference to RFC 3566 
+	 *  The AES-XCBC-MAC-96 Algorithm and Its Use With IPsec
+	 */	
+	ODP_AUTH_ALG_AES_XCBC,
 
 	/** AES in Galois/Counter Mode
 	 *
