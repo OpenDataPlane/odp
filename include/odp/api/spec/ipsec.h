@@ -1226,12 +1226,23 @@ typedef struct odp_ipsec_status_t {
  * e.g. RFC 4302 and 4303). Resulting packets are well formed, reconstructed
  * original IP packets, with IPSEC headers removed and valid header field values
  * restored. The amount and content of packet data before the IP header is
- * undefined.
+ * undefined. Some amount of TFC padding may follow the IP packet payload,
+ * in which case packet length is larger than protocol headers indicate.
+ * TFC dummy packets have l3_type set to ODP_PROTO_L3_TYPE_NONE in tunnel mode
+ * or l4_type set to ODP_PROTO_L4_TYPE_NO_NEXT in transport mode. Dummy
+ * packets contain implementation specific amount of (dummy) data. Furthermore,
+ * inline IPSEC processing may drop dummy packets.
  *
  * Each successfully transformed packet has a valid value for these metadata
  * regardless of the inner packet parse configuration
  * (odp_ipsec_inbound_config_t):
- * - L3 offset: Offset to the first byte of the (outmost) IP header
+ * - l3_offset: Offset to the first byte of the original IP packet. The value
+ *              is implementation specific for tunnel mode TFC dummy packets.
+ * - l3_type:   Specifies if the original packet is IPv4 or IPv6. For tunnel
+ *              mode TFC dummy packets set to ODP_PROTO_L3_TYPE_NONE.
+ * - l4_type:   Always set to ODP_PROTO_L4_TYPE_NO_NEXT for transport mode dummy
+ *              packets. Otherwise, depends on parse configuration. Default
+ *              value is ODP_PROTO_L4_TYPE_NONE.
  * - pktio:     For inline IPSEC processed packets, original packet input
  *              interface
  *
