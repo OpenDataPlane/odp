@@ -1025,8 +1025,8 @@ static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
 	if (pkt_hdr->p.input_flags.ipv4) {
 		if (hash_proto.ipv4) {
 			/* add ipv4 */
-			ipv4 = (const _odp_ipv4hdr_t *)base +
-				pkt_hdr->p.l3_offset;
+			ipv4 = (const _odp_ipv4hdr_t *)(base +
+				pkt_hdr->p.l3_offset);
 			tuple.v4.src_addr = ipv4->src_addr;
 			tuple.v4.dst_addr = ipv4->dst_addr;
 			tuple_len += 2;
@@ -1034,15 +1034,15 @@ static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
 
 		if (pkt_hdr->p.input_flags.tcp && hash_proto.tcp) {
 			/* add tcp */
-			tcp = (const _odp_tcphdr_t *)base +
-			       pkt_hdr->p.l4_offset;
+			tcp = (const _odp_tcphdr_t *)(base +
+			       pkt_hdr->p.l4_offset);
 			tuple.v4.sport = tcp->src_port;
 			tuple.v4.dport = tcp->dst_port;
 			tuple_len += 1;
 		} else if (pkt_hdr->p.input_flags.udp && hash_proto.udp) {
 			/* add udp */
-			udp = (const _odp_udphdr_t *)base +
-			       pkt_hdr->p.l4_offset;
+			udp = (const _odp_udphdr_t *)(base +
+			       pkt_hdr->p.l4_offset);
 			tuple.v4.sport = udp->src_port;
 			tuple.v4.dport = udp->dst_port;
 			tuple_len += 1;
@@ -1050,23 +1050,23 @@ static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
 	} else if (pkt_hdr->p.input_flags.ipv6) {
 		if (hash_proto.ipv6) {
 			/* add ipv6 */
-			ipv6 = (const _odp_ipv6hdr_t *)base +
-				pkt_hdr->p.l3_offset;
+			ipv6 = (const _odp_ipv6hdr_t *)(base +
+				pkt_hdr->p.l3_offset);
 			thash_load_ipv6_addr(ipv6, &tuple);
 			tuple_len += 8;
 		}
 		if (pkt_hdr->p.input_flags.tcp && hash_proto.tcp) {
-			tcp = (const _odp_tcphdr_t *)base +
-			       pkt_hdr->p.l4_offset;
-			tuple.v4.sport = tcp->src_port;
-			tuple.v4.dport = tcp->dst_port;
+			tcp = (const _odp_tcphdr_t *)(base +
+			       pkt_hdr->p.l4_offset);
+			tuple.v6.sport = tcp->src_port;
+			tuple.v6.dport = tcp->dst_port;
 			tuple_len += 1;
 		} else if (pkt_hdr->p.input_flags.udp && hash_proto.udp) {
 			/* add udp */
-			udp = (const _odp_udphdr_t *)base +
-			       pkt_hdr->p.l4_offset;
-			tuple.v4.sport = udp->src_port;
-			tuple.v4.dport = udp->dst_port;
+			udp = (const _odp_udphdr_t *)(base +
+			       pkt_hdr->p.l4_offset);
+			tuple.v6.sport = udp->src_port;
+			tuple.v6.dport = udp->dst_port;
 			tuple_len += 1;
 		}
 	}
