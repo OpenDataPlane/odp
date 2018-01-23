@@ -33,11 +33,6 @@
 
 #define MODULE_NAME "cxgb4"
 
-#define CXGB4_TX_BUF_SIZE 2048U
-
-#define CXGB4_TX_INLINE_MAX (256 - sizeof(cxgb4_fw_eth_tx_pkt_wr_t) \
-				 - sizeof(cxgb4_cpl_tx_pkt_core_t))
-
 /* RX queue definitions */
 #define CXGB4_RX_QUEUE_NUM_MAX 32
 
@@ -98,20 +93,52 @@ typedef struct ODP_ALIGNED_CACHE {
 
 /* TX queue definitions */
 #define CXGB4_TX_QUEUE_NUM_MAX 32
+#define CXGB4_TX_BUF_SIZE 2048U
 
 typedef struct {
 	odp_u64be_t data[8];
 } cxgb4_tx_desc_t;
 
+/* coalesced WR */
 typedef struct {
-#define CXGB4_FW_ETH_TX_PKT_WR 0x08000000UL
-	odp_u32be_t op_immdlen;
-	odp_u32be_t equiq_to_len16;
-	odp_u64be_t r3;
-} cxgb4_fw_eth_tx_pkt_wr_t;
+	uint8_t pkt_count;
+	uint32_t pkt_acc_len;
+	uint32_t wr_len;
+	void *ptr;
+} cxgb4_coalesce_t;
+
+#define COALESCE_WR_LEN 512
+#define CXGB4_DESCS_PER_BLOCK_SHIFT \
+	__builtin_ctz(COALESCE_WR_LEN / sizeof(cxgb4_tx_desc_t))
+#define BLOCKS_TO_DESCS(__tmp) (__tmp << CXGB4_DESCS_PER_BLOCK_SHIFT)
+#define DESCS_TO_BLOCKS(__tmp) (__tmp >> CXGB4_DESCS_PER_BLOCK_SHIFT)
+/*
+ * Currently there are two types of coalesce WR.
+ * Type 0 needs 48 bytes per packet (if one sgl is present)
+ * and type 1 needs 32 bytes.
+ * type 0 can fit a maximum of 10 packets per WR and type 1
+ * 15 packets.
+ * We only support type 1
+*/
+#define CXGB4_COALESCE_WR_TYPE1 1
 
 typedef struct {
-#define CPL_TX_PKT_XT	0xEE000000UL
+/*
+ * Chelsio's DPDK is using 0x09000000 Intel's 0x78000000
+ * there seems to be no performance difference between these
+ */
+#define CXGB4_FW_ETH_TX_PKTS_WR (0x78UL << 24)
+#define CXGB4_FW_WR_EQUEQ (1UL << 30)
+	odp_u32be_t op_pkd;
+	odp_u32be_t equiq_to_len16;
+	odp_u32be_t r3;
+	odp_u16be_t pkt_acc_len;
+	uint8_t pkt_count;
+	uint8_t type;
+} cxgb4_fw_eth_tx_pkts_wr_t;
+
+typedef struct {
+#define CPL_TX_PKT_XT	(0xEEUL << 24)
 #define TXPKT_PF_S	8
 #define TXPKT_PF_V(x)	((x) << TXPKT_PF_S)
 #define TXPKT_INTF_S	16
@@ -147,14 +174,16 @@ typedef struct {
 typedef struct ODP_ALIGNED_CACHE {
 	cxgb4_tx_desc_t *tx_descs;	/**< TX queue base */
 	cxgb4_tx_queue_stats *stats;	/**< TX queue stats */
+	cxgb4_coalesce_t coalesce;	/**< coalesce information */
 
 	odp_u32le_t *doorbell_desc;	/**< TX queue doorbell */
 	uint32_t doorbell_desc_key;	/**< 'Key' to the doorbell */
 
 	uint16_t tx_queue_len;		/**< Number of TX desc entries */
-	uint16_t tx_next;		/**< Next TX desc to insert */
+	uint16_t pidx;			/**< Next TX desc to insert */
 
 	mdev_dma_area_t tx_data;	/**< TX packet payload area */
+	uint64_t offset;		/**< Payload offset */
 
 	odp_ticketlock_t lock;		/**< TX queue lock */
 } cxgb4_tx_queue_t;
@@ -329,6 +358,14 @@ static int cxgb4_tx_queue_register(pktio_ops_cxgb4_data_t *pkt_cxgb4,
 		return -1;
 	}
 	txq->tx_queue_len = ering.tx_pending;
+	/*
+	 * We only support type1 coalescing on tx
+	 */
+	if (txq->tx_queue_len & 7) {
+		ODP_ERR("tx queue len needs to be a multiple of 8\n");
+		return -1;
+	}
+
 
 	ret = sysfs_attr_u64_get(&val, "/sys/class/net/%s/queues/tx-%u/cxgb4/"
 				 "doorbell_desc_offset",
@@ -361,8 +398,11 @@ static int cxgb4_tx_queue_register(pktio_ops_cxgb4_data_t *pkt_cxgb4,
 
 	txq->stats =
 	    (cxgb4_tx_queue_stats *)(txq->tx_descs + txq->tx_queue_len);
-
-	txq->tx_data.size = txq->tx_queue_len * CXGB4_TX_BUF_SIZE;
+	/*
+	 * 1 descriptor holds 2 packets on type 1 coalescing
+	 * we can fit 15 packets in 512 bytes(each descriptor is 64bytes long)
+	 */
+	txq->tx_data.size = 2 * txq->tx_queue_len * CXGB4_TX_BUF_SIZE;
 	ret = mdev_dma_area_alloc(&pkt_cxgb4->mdev, &txq->tx_data);
 	if (ret) {
 		ODP_ERR("Cannot allocate TX queue DMA area\n");
@@ -667,117 +707,141 @@ static int cxgb4_recv(pktio_entry_t *pktio_entry,
 	return rx_pkts;
 }
 
+/*
+ * Fills in WR header for coalesced packets and submits it
+ * to the hardware
+ */
+static void submit_coalesced_wr(cxgb4_tx_queue_t *txq, cxgb4_tx_desc_t *txd)
+
+{
+	uint32_t wr_mid;
+	cxgb4_fw_eth_tx_pkts_wr_t *wr;
+
+	ODP_ASSERT(txq->coalesce.wr_len <= COALESCE_WR_LEN);
+
+	/* fill the pkts WR header */
+	wr = (cxgb4_fw_eth_tx_pkts_wr_t *)txd;
+	wr->op_pkd = odp_cpu_to_be_32(CXGB4_FW_ETH_TX_PKTS_WR);
+
+	wr_mid = DIV_ROUND_UP(txq->coalesce.wr_len, 16);
+	/* Request CIDX update from firmware from time to time */
+	if (!(txq->pidx & ((DESCS_TO_BLOCKS(txq->tx_queue_len) >> 2) - 1)))
+		wr_mid |= CXGB4_FW_WR_EQUEQ;
+
+	wr->equiq_to_len16 = odp_cpu_to_be_32(wr_mid);
+	wr->pkt_acc_len = odp_cpu_to_be_16(txq->coalesce.pkt_acc_len);
+	wr->pkt_count = txq->coalesce.pkt_count;
+	wr->r3 = odp_cpu_to_be_32(0);
+	wr->type = CXGB4_COALESCE_WR_TYPE1;
+
+	txq->pidx++;
+	if (odp_unlikely(txq->pidx >= DESCS_TO_BLOCKS(txq->tx_queue_len)))
+		txq->pidx = 0;
+
+	/* zero out coalesce structure members */
+	txq->coalesce.pkt_count = 0;
+	txq->coalesce.wr_len = 0;
+	txq->coalesce.pkt_acc_len = 0;
+
+	/*
+	 * Aggregate some coalesced wr's before ringing the doorbell
+	 * This is going to have some impact on latency
+	 * Chelsio default config is 1024 tx-descriptors
+	 * We treat 512 bytes of descriptors as a single "block" which gives us
+	 * 128 blocks in the default config. Every "block" can send up to 15
+	 * packets
+	 * Instead of ringing the doorbell every block we do it every 4 blocks
+	 * TODO implement a timer to send leftovers if a user tries to send
+	 * less packets
+	 */
+	if (!(txq->pidx & ((DESCS_TO_BLOCKS(txq->tx_queue_len) >> 5) - 1)))
+		odpdrv_mmio_u32le_write(txq->doorbell_desc_key |
+					txq->tx_queue_len >> 5,
+					txq->doorbell_desc);
+}
+
 static int cxgb4_send(pktio_entry_t *pktio_entry,
 		      int txq_idx, const odp_packet_t pkt_table[], int num)
 {
 	pktio_ops_cxgb4_data_t *pkt_cxgb4 = pktio_entry->s.ops_data;
 	cxgb4_tx_queue_t *txq = &pkt_cxgb4->tx_queues[txq_idx];
-	uint16_t budget, tx_txds = 0;
+	uint16_t budget, tx_blocks = 0;
 	int tx_pkts = 0;
 
 	if (!pkt_cxgb4->lockless_tx)
 		odp_ticketlock_lock(&txq->lock);
 
-	/* Determine how many packets will fit in TX queue */
+	/* Determine how many blocks will fit in TX queue */
 	budget = txq->tx_queue_len - 1;
-	budget -= txq->tx_next;
+	budget -= BLOCKS_TO_DESCS(txq->pidx);
 	budget += odp_be_to_cpu_16(txq->stats->cidx);
 	budget &= txq->tx_queue_len - 1;
+	budget = DESCS_TO_BLOCKS(budget);
 
-	while (tx_txds < budget && tx_pkts < num) {
+	while (tx_blocks < budget && tx_pkts < num) {
 		uint16_t pkt_len = _odp_packet_len(pkt_table[tx_pkts]);
-
-		cxgb4_tx_desc_t *txd = &txq->tx_descs[txq->tx_next];
-		uint32_t txd_len;
-
-		cxgb4_fw_eth_tx_pkt_wr_t *wr;
+		unsigned int wr_len = 0;
+		cxgb4_sg_list_t *sgl;
+		cxgb4_tx_desc_t *txd =
+			&txq->tx_descs[BLOCKS_TO_DESCS(txq->pidx)];
 		cxgb4_cpl_tx_pkt_core_t *cpl;
-		uint32_t op_immdlen;
+		/* Mandatory CPL header for each packet */
+		wr_len = sizeof(cxgb4_cpl_tx_pkt_core_t);
 
-		/* Skip oversized packets silently */
-		if (odp_unlikely(pkt_len > CXGB4_TX_BUF_SIZE)) {
-			tx_pkts++;
-			continue;
-		}
+		/* Mandatory SGL header with packet head addr & length */
+		wr_len += sizeof(cxgb4_sg_list_t);
 
-		wr = (cxgb4_fw_eth_tx_pkt_wr_t *)txd;
-		cpl = (cxgb4_cpl_tx_pkt_core_t *)(wr + 1);
-
-		txd_len = sizeof(*wr) + sizeof(*cpl);
-		op_immdlen = CXGB4_FW_ETH_TX_PKT_WR | sizeof(*cpl);
-
-		if (pkt_len <= CXGB4_TX_INLINE_MAX) {
-			uint8_t *pos;
-			uint32_t left;
-
-			txd_len += pkt_len;
-
-			/* Try next time */
-			if (tx_txds + DIV_ROUND_UP(txd_len, sizeof(*txd)) >
-			    budget)
-				break;
-
-			op_immdlen += pkt_len;
-
-			/* Packet copying shall take care of wrapping */
-			pos = (uint8_t *)(cpl + 1);
-			left = (uint8_t *)(txq->tx_descs + txq->tx_queue_len) -
-			    pos;
-
-			if (odp_likely(left >= pkt_len)) {
-				odp_packet_copy_to_mem(pkt_table[tx_pkts], 0,
-						       pkt_len, pos);
-			} else {
-				odp_packet_copy_to_mem(pkt_table[tx_pkts], 0,
-						       left, pos);
-				odp_packet_copy_to_mem(pkt_table[tx_pkts], left,
-						       pkt_len - left,
-						       &txq->tx_descs[0]);
+		if (txq->coalesce.pkt_count) {
+			/*
+			 * add and check if we need to send packets when we
+			 * reach sgl list limit
+			 */
+			if (txq->coalesce.wr_len + wr_len > COALESCE_WR_LEN) {
+				submit_coalesced_wr(txq, txd);
+				tx_blocks++;
+				continue;
 			}
 		} else {
-			uint32_t offset = txq->tx_next * CXGB4_TX_BUF_SIZE;
-			cxgb4_sg_list_t *sgl;
-
-			txd_len += sizeof(*sgl);
-
-			odp_packet_copy_to_mem(pkt_table[tx_pkts], 0, pkt_len,
-					       (uint8_t *)txq->tx_data.vaddr +
-					       offset);
-
-			sgl = (cxgb4_sg_list_t *)(cpl + 1);
-
-			sgl->sg_pairs_num =
-			    odp_cpu_to_be_32(CXGB4_ULP_TX_SC_DSGL | 1);
-			sgl->addr0 =
-			    odp_cpu_to_be_64(txq->tx_data.iova + offset);
-			sgl->len0 = odp_cpu_to_be_32(pkt_len);
+			/* new WR */
+			txq->coalesce.wr_len =
+				sizeof(cxgb4_fw_eth_tx_pkts_wr_t);
+			txq->coalesce.ptr =
+				(uint8_t *)txd + txq->coalesce.wr_len;
 		}
 
-		wr->op_immdlen = odp_cpu_to_be_32(op_immdlen);
-		wr->equiq_to_len16 =
-		    odp_cpu_to_be_32(DIV_ROUND_UP(txd_len, 16));
-		wr->r3 = odp_cpu_to_be_64(0);
+		cpl = (cxgb4_cpl_tx_pkt_core_t *)txq->coalesce.ptr;
+		/* update coalesce structure for this txq */
+		txq->coalesce.wr_len += wr_len;
+		txq->coalesce.pkt_acc_len += pkt_len;
+		txq->coalesce.ptr = (uint8_t *)txq->coalesce.ptr + wr_len;
 
-		cpl->ctrl0 =
-		    odp_cpu_to_be_32(CPL_TX_PKT_XT |
-				     TXPKT_INTF_V(pkt_cxgb4->tx_channel) |
-				     TXPKT_PF_V(pkt_cxgb4->phys_function));
+		cpl->ctrl0 = odp_cpu_to_be_32(CPL_TX_PKT_XT |
+			TXPKT_INTF_V(pkt_cxgb4->tx_channel) |
+			TXPKT_PF_V(pkt_cxgb4->phys_function));
 		cpl->pack = odp_cpu_to_be_16(0);
 		cpl->len = odp_cpu_to_be_16(pkt_len);
-		cpl->ctrl1 =
-		    odp_cpu_to_be_64(TXPKT_L4CSUM_DIS_F | TXPKT_IPCSUM_DIS_F);
+		cpl->ctrl1 = odp_cpu_to_be_64(TXPKT_L4CSUM_DIS_F |
+			TXPKT_IPCSUM_DIS_F);
 
-		txq->tx_next += DIV_ROUND_UP(txd_len, sizeof(*txd));
-		if (odp_unlikely(txq->tx_next >= txq->tx_queue_len))
-			txq->tx_next -= txq->tx_queue_len;
+		odp_packet_copy_to_mem(pkt_table[tx_pkts], 0, pkt_len,
+				       (uint8_t *)txq->tx_data.vaddr +
+				       txq->offset);
 
-		tx_txds += DIV_ROUND_UP(txd_len, sizeof(*txd));
+		sgl = (cxgb4_sg_list_t *)(cpl + 1);
+		/* TODO add support for pairs/fragments */
+		sgl->sg_pairs_num =
+			odp_cpu_to_be_32(CXGB4_ULP_TX_SC_DSGL | 1);
+		sgl->addr0 =
+			odp_cpu_to_be_64(txq->tx_data.iova + txq->offset);
+		sgl->len0 = odp_cpu_to_be_32(pkt_len);
+
+		txq->offset += CXGB4_TX_BUF_SIZE;
+		if (odp_unlikely(txq->offset >= txq->tx_data.size))
+			txq->offset = 0;
+
+		txq->coalesce.pkt_count++;
 		tx_pkts++;
 	}
-
-	/* Ring the doorbell */
-	odpdrv_mmio_u32le_write(txq->doorbell_desc_key | tx_txds,
-				txq->doorbell_desc);
 
 	if (!pkt_cxgb4->lockless_tx)
 		odp_ticketlock_unlock(&txq->lock);
