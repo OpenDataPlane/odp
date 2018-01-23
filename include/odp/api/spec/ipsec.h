@@ -991,6 +991,22 @@ typedef struct odp_ipsec_out_opt_t {
 			/** Use fragmentation mode option */
 			uint32_t frag_mode: 1;
 
+			/** Use TFC padding length option */
+			uint32_t tfc_pad:   1;
+
+			/** Tunnel mode TFC dummy packet. This can be used only
+			 *  in tunnel mode. When the flag is set, packet length
+			 *  and content is ignored and instead a TFC dummy
+			 *  packet is created during IPSEC operation. The dummy
+			 *  packet length is defined by 'tfc_pad_len' option.
+			 *  If the SA is configured to copy IP header fields
+			 *  from inner IP packet, those fields must be passed
+			 *  with IP parameters option. */
+			uint32_t tfc_dummy: 1;
+
+			/** Use IP parameters option */
+			uint32_t ip_param:  1;
+
 		} flag;
 
 		/** All flag bits */
@@ -999,6 +1015,26 @@ typedef struct odp_ipsec_out_opt_t {
 
 	/** Fragmentation mode */
 	odp_ipsec_frag_mode_t frag_mode;
+
+	/** TFC padding length
+	 *
+	 *  Number of TFC padding bytes added to the packet during IPSEC
+	 *  processing. Resulting packet should not exceed the maximum packet
+	 *  length of the pool, otherwise IPSEC operation may fail.
+	 *  Implementation guarantees that the padding does not contain any
+	 *  confidential information. */
+	uint32_t tfc_pad_len;
+
+	/** Union of IP parameters */
+	union {
+		/** Override IPv4 parameters in outer header creation.
+		 *  IP addresses are ignored. */
+		odp_ipsec_ipv4_param_t ipv4;
+
+		/** Override IPv6 parameters in outer header creation.
+		 *  IP addresses are ignored. */
+		odp_ipsec_ipv6_param_t ipv6;
+	};
 
 } odp_ipsec_out_opt_t;
 
@@ -1302,7 +1338,13 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
  * The operation does packet transformation according to IPSEC standards (see
  * e.g. RFC 4302 and 4303). Resulting packets are well formed IP packets
  * with IPSEC, etc headers constructed according to the standards. The amount
- * and content of packet data before the IP header is undefined.
+ * and content of packet data before the IP header is undefined. Use outbound
+ * operation parameters to specify the amount of TFC padding appended to
+ * the packet during IPSEC transformation. Options can be used also to create
+ * TFC dummy packets. Packet data content is ignored in tunnel mode TFC dummy
+ * packet creation as tfc_pad_len option defines solely the packet length.
+ * In all other cases, payload length for the IPSEC transformation is specified
+ * by odp_packet_len() minus odp_packet_l3_offset() plus tfc_pad_len option.
  *
  * Each successfully transformed packet has a valid value for these metadata:
  * - L3 offset: Offset to the first byte of the (outmost) IP header
