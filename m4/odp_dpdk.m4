@@ -130,5 +130,8 @@ AS_IF([test "x$1" = "xsystem"], [dnl
 	DPDK_SHARED=yes
     fi
 ])
+AS_IF([test "x$DPDK_SHARED" = "xyes"],
+      [AC_MSG_NOTICE([Using shared DPDK library found at $DPDK_PMD_PATH])],
+      [AC_MSG_NOTICE([Using static DPDK library found at $DPDK_PMD_PATH])])
 _ODP_DPDK_CHECK([$DPDK_CPPFLAGS], [$DPDK_LDFLAGS], [$2], [$3])
 ])
