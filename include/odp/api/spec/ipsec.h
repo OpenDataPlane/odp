@@ -983,6 +983,20 @@ typedef struct odp_ipsec_op_flag_t {
  * These may be used to override some SA level options
  */
 typedef struct odp_ipsec_out_opt_t {
+	/** Union of all flag bits */
+	union {
+		/** Option flags. Set flag for those options that are
+		 *  used, all other options are ignored. */
+		struct {
+			/** Use fragmentation mode option */
+			uint32_t frag_mode: 1;
+
+		} flag;
+
+		/** All flag bits */
+		uint32_t all_flags;
+	};
+
 	/** Fragmentation mode */
 	odp_ipsec_frag_mode_t frag_mode;
 
