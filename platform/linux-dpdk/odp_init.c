@@ -20,6 +20,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <pwd.h>
 
 #define _ODP_FILES_FMT "odp-%d-"
 #define _ODP_TMPDIR    "/dev/shm"
@@ -153,13 +155,16 @@ static int cleanup_files(const char *dirpath, int odp_pid)
 {
 	struct dirent *e;
 	DIR *dir;
+	char userdir[PATH_MAX];
 	char prefix[PATH_MAX];
 	char *fullpath;
 	int d_len = strlen(dirpath);
 	int p_len;
 	int f_len;
 
-	dir = opendir(dirpath);
+	snprintf(userdir, PATH_MAX, "%s/%s", dirpath, odp_global_data.uid);
+
+	dir = opendir(userdir);
 	if (!dir) {
 		/* ok if the dir does not exist. no much to delete then! */
 		ODP_DBG("opendir failed for %s: %s\n",
@@ -195,9 +200,14 @@ int odp_init_global(odp_instance_t *instance,
 		    const odp_platform_init_t *platform_params)
 {
 	char *hpdir;
+	uid_t uid;
 
 	memset(&odp_global_data, 0, sizeof(struct odp_global_data_s));
 	odp_global_data.main_pid = getpid();
+
+	uid = getuid();
+	snprintf(odp_global_data.uid, UID_MAXLEN, "%d",
+		 uid);
 
 	enum init_stage stage = NO_INIT;
 	odp_global_data.log_fn = odp_override_log;
