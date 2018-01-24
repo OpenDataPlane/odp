@@ -205,6 +205,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_rwlock_recursive.c \
 			   ../linux-generic/odp_schedule.c \
 			   ../linux-generic/odp_schedule_if.c \
+			   ../linux-generic/odp_schedule_sp.c \
 			   ../linux-generic/odp_schedule_iquery.c \
 			   odp_shared_memory.c \
 			   ../linux-generic/odp_sorted_list.c \

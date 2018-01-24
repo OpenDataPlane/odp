@@ -47,7 +47,7 @@ AC_LINK_IFELSE(
    AC_CHECK_LIB(
      [atomic], [__atomic_exchange_8],
      [use_libatomic=yes],
-     [AC_MSG_CHECKING([__atomic_exchange_8 is not available])])
+     [AC_MSG_FAILURE([__atomic_exchange_8 is not available])])
   ])
 
 AC_MSG_CHECKING(whether -latomic is needed for 128-bit atomic built-ins)
@@ -79,6 +79,7 @@ AC_SUBST([ATOMIC_LIBS])
 AM_CONDITIONAL([HAVE_PCAP], [false])
 m4_include([platform/linux-dpdk/m4/odp_pthread.m4])
 m4_include([platform/linux-dpdk/m4/odp_openssl.m4])
+m4_include([platform/linux-dpdk/m4/odp_schedule.m4])
 
 ##########################################################################
 # DPDK build variables
