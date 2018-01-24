@@ -9,7 +9,7 @@
 /* Maximum */
 #define MAX_KEY_LEN         64
 #define MAX_IV_LEN          16
-#define MAX_DATA_LEN        128
+#define MAX_DATA_LEN        270
 #define MAX_AAD_LEN         12
 #define MAX_DIGEST_LEN      64
 
@@ -54,5 +54,10 @@
 #define HMAC_SHA512_KEY_LEN        64
 #define HMAC_SHA512_256_CHECK_LEN  32
 #define HMAC_SHA512_CHECK_LEN      64
+
+/* ChaCha20-Poly1305 */
+#define CHACHA20_POLY1305_KEY_LEN  32
+#define CHACHA20_POLY1305_IV_LEN   12
+#define CHACHA20_POLY1305_CHECK_LEN 16
 
 #endif
