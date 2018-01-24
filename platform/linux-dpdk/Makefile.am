@@ -161,6 +161,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_posix_extensions.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_queue_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_ring_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_queue_if.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_schedule_if.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_sorted_list_internal.h \
 		  ${srcdir}/include/odp_shm_internal.h \
@@ -200,6 +201,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_pkt_queue.c \
 			   odp_pool.c \
 			   ../linux-generic/odp_queue.c \
+			   ../linux-generic/odp_queue_if.c \
 			   ../linux-generic/odp_rwlock.c \
 			   ../linux-generic/odp_rwlock_recursive.c \
 			   ../linux-generic/odp_schedule.c \
