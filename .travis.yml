@@ -14,28 +14,6 @@ group: deprecated-2017Q2
 stages:
   - "build only"
   - test
-env:
-  global:
-    # COVERITY_SCAN_TOKEN
-    # ** specific to your project **
-    # Note:
-    # You should have a github account and travis linked travis account.
-    # The secure key to be filled below is the 685 character long encrypted
-    # token you can find as follow from your coverity dashboard
-    # (at https://scan.coverity.com/dashboard):
-    # Click on the github project (<you>/odp)
-    # Click on "submit build"
-    # Click on "Configure Travis CI"
-    # Look at the COVERITY_SCAN_TOKEN in the env: global: section
-    # of the configuration example.
-    # copy the secure:<key> below
-    #
-    - secure: "xxxx"
-    #
-    # By default Linaro CODECOV_TOKEN token is used. It's ok to use it to see
-    # for individual commit validation. But you you want to track tests history
-    # you need generated new one at https://codecov.io specific for your repo.
-    - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
 
 addons:
         apt:
@@ -53,10 +31,6 @@ addons:
 #                        build_command:   "make"
 #                        branch_pattern: coverity_scan
 
-compiler:
-        - gcc
-        - clang-3.8
-
 cache:
         ccache: true
         pip: true
@@ -67,6 +41,13 @@ cache:
                 - $HOME/doxygen-install
 
 env:
+    global:
+        #
+        # By default Linaro CODECOV_TOKEN token is used. It's ok to use it to see
+        # for individual commit validation. But you you want to track tests history
+        # you need generated new one at https://codecov.io specific for your repo.
+        - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
+    matrix:
         - CONF=""
         - CONF="--disable-abi-compat"
         - CONF="--enable-deprecated"
@@ -83,6 +64,10 @@ env:
         - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a" CONF="--disable-abi-compat"
         - CROSS_ARCH="powerpc" CONF="--disable-abi-compat"
         - CROSS_ARCH="i386" CONF="--disable-abi-compat"
+
+compiler:
+        - gcc
+        - clang-3.8
 
 before_install:
 
