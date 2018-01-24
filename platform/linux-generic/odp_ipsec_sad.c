@@ -17,7 +17,8 @@
 #include <string.h>
 
 #define IPSEC_SA_STATE_DISABLE	0x40000000
-#define IPSEC_SA_STATE_FREE	0xc0000000 /* This includes disable !!! */
+#define IPSEC_SA_STATE_FREE	0xc0000000
+#define IPSEC_SA_STATE_RESERVED	0x80000000
 
 typedef struct ipsec_sa_table_t {
 	ipsec_sa_t ipsec_sa[ODP_CONFIG_IPSEC_SAS];
@@ -108,7 +109,8 @@ static ipsec_sa_t *ipsec_sa_reserve(void)
 
 		ipsec_sa = ipsec_sa_entry(i);
 
-		if (odp_atomic_cas_acq_u32(&ipsec_sa->state, &state, 0))
+		if (odp_atomic_cas_acq_u32(&ipsec_sa->state, &state,
+					   IPSEC_SA_STATE_RESERVED))
 			return ipsec_sa;
 	}
 
@@ -120,6 +122,12 @@ static void ipsec_sa_release(ipsec_sa_t *ipsec_sa)
 	odp_atomic_store_rel_u32(&ipsec_sa->state, IPSEC_SA_STATE_FREE);
 }
 
+/* Mark reserved SA as available now */
+static void ipsec_sa_publish(ipsec_sa_t *ipsec_sa)
+{
+	odp_atomic_store_rel_u32(&ipsec_sa->state, 0);
+}
+
 static int ipsec_sa_lock(ipsec_sa_t *ipsec_sa)
 {
 	int cas = 0;
@@ -128,9 +136,11 @@ static int ipsec_sa_lock(ipsec_sa_t *ipsec_sa)
 	while (0 == cas) {
 		/*
 		 * This can be called from lookup path, so we really need this
-		 * check
+		 * check. Thanks to the way flags are defined we actually test
+		 * that the SA is not DISABLED, FREE or RESERVED using just one
+		 * condition.
 		 */
-		if (state & IPSEC_SA_STATE_DISABLE)
+		if (state & IPSEC_SA_STATE_FREE)
 			return -1;
 
 		cas = odp_atomic_cas_acq_u32(&ipsec_sa->state, &state,
@@ -437,6 +447,8 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	if (odp_crypto_session_create(&crypto_param, &ipsec_sa->session,
 				      &ses_create_rc))
 		goto error;
+
+	ipsec_sa_publish(ipsec_sa);
 
 	return ipsec_sa->ipsec_sa_hdl;
 
