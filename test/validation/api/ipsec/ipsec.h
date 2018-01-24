@@ -91,5 +91,6 @@ int ipsec_check_esp_aes_gcm_128(void);
 int ipsec_check_esp_aes_gcm_256(void);
 int ipsec_check_ah_aes_gmac_128(void);
 int ipsec_check_esp_null_aes_gmac_128(void);
+int ipsec_check_esp_chacha20_poly1305(void);
 
 #endif
