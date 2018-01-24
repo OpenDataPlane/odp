@@ -274,8 +274,8 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	ipsec_sa->mode = param->mode;
 	ipsec_sa->flags = 0;
 	if (ODP_IPSEC_DIR_INBOUND == param->dir) {
-		ipsec_sa->in.lookup_mode = param->inbound.lookup_mode;
-		if (ODP_IPSEC_LOOKUP_DSTADDR_SPI == ipsec_sa->in.lookup_mode) {
+		ipsec_sa->lookup_mode = param->inbound.lookup_mode;
+		if (ODP_IPSEC_LOOKUP_DSTADDR_SPI == ipsec_sa->lookup_mode) {
 			ipsec_sa->in.lookup_ver =
 				param->inbound.lookup_param.ip_version;
 			if (ODP_IPSEC_IPV4 == ipsec_sa->in.lookup_ver)
@@ -293,6 +293,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->antireplay = (param->inbound.antireplay_ws != 0);
 		odp_atomic_init_u64(&ipsec_sa->in.antireplay, 0);
 	} else {
+		ipsec_sa->lookup_mode = ODP_IPSEC_LOOKUP_DISABLED;
 		odp_atomic_store_u32(&ipsec_sa->out.seq, 1);
 		ipsec_sa->out.frag_mode = param->outbound.frag_mode;
 		ipsec_sa->out.mtu = param->outbound.mtu;
@@ -552,19 +553,16 @@ int odp_ipsec_sa_mtu_update(odp_ipsec_sa_t sa, uint32_t mtu)
 
 ipsec_sa_t *_odp_ipsec_sa_lookup(const ipsec_sa_lookup_t *lookup)
 {
-	(void)lookup;
-
 	int i;
-	ipsec_sa_t *ipsec_sa;
 	ipsec_sa_t *best = NULL;
 
 	for (i = 0; i < ODP_CONFIG_IPSEC_SAS; i++) {
-		ipsec_sa = ipsec_sa_entry(i);
+		ipsec_sa_t *ipsec_sa = ipsec_sa_entry(i);
 
 		if (ipsec_sa_lock(ipsec_sa) < 0)
 			continue;
 
-		if (ODP_IPSEC_LOOKUP_DSTADDR_SPI == ipsec_sa->in.lookup_mode &&
+		if (ODP_IPSEC_LOOKUP_DSTADDR_SPI == ipsec_sa->lookup_mode &&
 		    lookup->proto == ipsec_sa->proto &&
 		    lookup->spi == ipsec_sa->spi &&
 		    lookup->ver == ipsec_sa->in.lookup_ver &&
@@ -576,7 +574,7 @@ ipsec_sa_t *_odp_ipsec_sa_lookup(const ipsec_sa_lookup_t *lookup)
 				_odp_ipsec_sa_unuse(best);
 			return ipsec_sa;
 		} else if (NULL == best &&
-			   ODP_IPSEC_LOOKUP_SPI == ipsec_sa->in.lookup_mode &&
+			   ODP_IPSEC_LOOKUP_SPI == ipsec_sa->lookup_mode &&
 			   lookup->proto == ipsec_sa->proto &&
 			   lookup->spi == ipsec_sa->spi) {
 			best = ipsec_sa;
