@@ -177,6 +177,10 @@ int ipsec_check(odp_bool_t ah,
 		if (!capa.ciphers.bit.aes_gcm)
 			return ODP_TEST_INACTIVE;
 		break;
+	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
+		if (!capa.ciphers.bit.chacha20_poly1305)
+			return ODP_TEST_INACTIVE;
+		break;
 	default:
 		fprintf(stderr, "Unsupported cipher algorithm\n");
 		return ODP_TEST_INACTIVE;
@@ -210,6 +214,10 @@ int ipsec_check(odp_bool_t ah,
 		break;
 	case ODP_AUTH_ALG_AES_GMAC:
 		if (!capa.auths.bit.aes_gmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_CHACHA20_POLY1305:
+		if (!capa.auths.bit.chacha20_poly1305)
 			return ODP_TEST_INACTIVE;
 		break;
 	default:
@@ -311,6 +319,12 @@ int ipsec_check_esp_null_aes_gmac_128(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
 				ODP_AUTH_ALG_AES_GMAC, 128);
+}
+
+int ipsec_check_esp_chacha20_poly1305(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_CHACHA20_POLY1305, 256,
+				ODP_AUTH_ALG_CHACHA20_POLY1305, 0);
 }
 
 void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
