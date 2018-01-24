@@ -1136,6 +1136,37 @@ static void test_in_ipv4_mcgrew_gcm_15_esp(void)
 	ipsec_sa_destroy(sa);
 }
 
+static void test_in_ipv4_rfc7634_chacha(void)
+{
+	odp_ipsec_tunnel_param_t tunnel = {};
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    true, false, 0x01020304, &tunnel,
+			    ODP_CIPHER_ALG_CHACHA20_POLY1305, &key_rfc7634,
+			    ODP_AUTH_ALG_CHACHA20_POLY1305, NULL,
+			    &key_rfc7634_salt);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_rfc7634_esp,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .pkt_out = &pkt_ipv4_rfc7634},
+		},
+	};
+
+	ipsec_check_in_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
 static void test_in_ipv4_ah_aes_gmac_128(void)
 {
 	odp_ipsec_sa_param_t param;
@@ -1474,6 +1505,8 @@ odp_testinfo_t ipsec_in_suite[] = {
 #endif
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_mcgrew_gcm_15_esp,
 				  ipsec_check_esp_null_aes_gmac_128),
+	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_rfc7634_chacha,
+				  ipsec_check_esp_chacha20_poly1305),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_ah_sha256,
 				  ipsec_check_ah_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_ah_sha256_tun_ipv4,
