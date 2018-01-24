@@ -509,20 +509,22 @@ out:
 
 static int cxgb4_close(pktio_entry_t *pktio_entry)
 {
+	uint16_t i;
+
 	pktio_ops_cxgb4_data_t *pkt_cxgb4 = pktio_entry->s.ops_data;
 
 	ODP_DBG("%s: close %s\n", MODULE_NAME, pkt_cxgb4->mdev.if_name);
 
 	mdev_device_destroy(&pkt_cxgb4->mdev);
 
-	for (uint16_t i = 0; i < pkt_cxgb4->capa.max_input_queues; i++) {
+	for (i = 0; i < pkt_cxgb4->capa.max_input_queues; i++) {
 		cxgb4_rx_queue_t *rxq = &pkt_cxgb4->rx_queues[i];
 
 		if (rxq->rx_data.size)
 			mdev_dma_area_free(&pkt_cxgb4->mdev, &rxq->rx_data);
 	}
 
-	for (uint16_t i = 0; i < pkt_cxgb4->capa.max_output_queues; i++) {
+	for (i = 0; i < pkt_cxgb4->capa.max_output_queues; i++) {
 		cxgb4_tx_queue_t *txq = &pkt_cxgb4->tx_queues[i];
 
 		if (txq->tx_data.size)
