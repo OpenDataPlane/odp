@@ -23,9 +23,6 @@
 #include <sys/types.h>
 #include <pwd.h>
 
-#define _ODP_FILES_FMT "odp-%d-"
-#define _ODP_TMPDIR    "/dev/shm"
-
 #define MEMPOOL_OPS(hdl) extern void mp_hdlr_init_##hdl(void);
 MEMPOOL_OPS(ops_mp_mc)
 MEMPOOL_OPS(ops_sp_sc)
@@ -150,64 +147,12 @@ static int odp_init_dpdk(const char *cmdline)
 
 struct odp_global_data_s odp_global_data;
 
-/* remove all files staring with "odp-<pid>" from a directory "dir" */
-static int cleanup_files(const char *dirpath, int odp_pid)
-{
-	struct dirent *e;
-	DIR *dir;
-	char userdir[PATH_MAX];
-	char prefix[PATH_MAX];
-	char *fullpath;
-	int d_len = strlen(dirpath);
-	int p_len;
-	int f_len;
-
-	snprintf(userdir, PATH_MAX, "%s/%s", dirpath, odp_global_data.uid);
-
-	dir = opendir(userdir);
-	if (!dir) {
-		/* ok if the dir does not exist. no much to delete then! */
-		ODP_DBG("opendir failed for %s: %s\n",
-			dirpath, strerror(errno));
-		return 0;
-	}
-	snprintf(prefix, PATH_MAX, _ODP_FILES_FMT, odp_pid);
-	p_len = strlen(prefix);
-	while ((e = readdir(dir)) != NULL) {
-		if (strncmp(e->d_name, prefix, p_len) == 0) {
-			f_len = strlen(e->d_name);
-			fullpath = malloc(d_len + f_len + 2);
-			if (fullpath == NULL) {
-				closedir(dir);
-				return -1;
-			}
-			snprintf(fullpath, PATH_MAX, "%s/%s",
-				 dirpath, e->d_name);
-			ODP_DBG("deleting obsolete file: %s\n", fullpath);
-			if (unlink(fullpath))
-				ODP_ERR("unlink failed for %s: %s\n",
-					fullpath, strerror(errno));
-			free(fullpath);
-		}
-	}
-	closedir(dir);
-
-	return 0;
-}
-
 int odp_init_global(odp_instance_t *instance,
 		    const odp_init_t *params,
 		    const odp_platform_init_t *platform_params)
 {
-	char *hpdir;
-	uid_t uid;
-
 	memset(&odp_global_data, 0, sizeof(struct odp_global_data_s));
 	odp_global_data.main_pid = getpid();
-
-	uid = getuid();
-	snprintf(odp_global_data.uid, UID_MAXLEN, "%d",
-		 uid);
 
 	enum init_stage stage = NO_INIT;
 	odp_global_data.log_fn = odp_override_log;
@@ -219,8 +164,6 @@ int odp_init_global(odp_instance_t *instance,
 		if (params->abort_fn != NULL)
 			odp_global_data.abort_fn = params->abort_fn;
 	}
-
-	cleanup_files(_ODP_TMPDIR, odp_global_data.main_pid);
 
 	if (odp_cpumask_init_global(params)) {
 		ODP_ERR("ODP cpumask init failed.\n");
@@ -243,10 +186,6 @@ int odp_init_global(odp_instance_t *instance,
 		ODP_ERR("ODP system_info init failed.\n");
 		goto init_failed;
 	}
-	hpdir = odp_global_data.hugepage_info.default_huge_page_dir;
-	/* cleanup obsolete huge page files, if any */
-	if (hpdir)
-		cleanup_files(hpdir, odp_global_data.main_pid);
 	stage = SYSINFO_INIT;
 
 	if (_odp_shm_init_global()) {
