@@ -382,7 +382,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->aes_ctr_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
-		ipsec_sa->esp_block_len = 16;
+		ipsec_sa->esp_block_len = 1;
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_GCM:
