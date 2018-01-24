@@ -210,6 +210,8 @@ uint32_t _odp_ipsec_cipher_iv_len(odp_cipher_alg_t cipher)
 #endif
 	case ODP_CIPHER_ALG_AES_GCM:
 		return 12;
+	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
+		return 12;
 	default:
 		return (uint32_t)-1;
 	}
@@ -239,6 +241,8 @@ uint32_t _odp_ipsec_auth_digest_len(odp_auth_alg_t auth)
 #endif
 	case ODP_AUTH_ALG_AES_GCM:
 	case ODP_AUTH_ALG_AES_GMAC:
+		return 16;
+	case ODP_AUTH_ALG_CHACHA20_POLY1305:
 		return 16;
 	default:
 		return (uint32_t)-1;
@@ -392,6 +396,11 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 16;
 		break;
+	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
+		ipsec_sa->use_counter_iv = 1;
+		ipsec_sa->esp_iv_len = 8;
+		ipsec_sa->esp_block_len = 1;
+		break;
 	default:
 		goto error;
 	}
@@ -410,6 +419,9 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 16;
 		crypto_param.auth_iv.length = 12;
+		break;
+	case ODP_AUTH_ALG_CHACHA20_POLY1305:
+		crypto_param.auth_aad_len = sizeof(ipsec_aad_t);
 		break;
 	default:
 		break;
