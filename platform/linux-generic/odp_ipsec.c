@@ -112,6 +112,7 @@ int odp_ipsec_auth_capability(odp_auth_alg_t auth,
 			continue;
 
 		if (ODP_AUTH_ALG_AES_GCM == auth ||
+		    ODP_AUTH_ALG_CHACHA20_POLY1305 == auth ||
 		    ODP_DEPRECATE(ODP_AUTH_ALG_AES128_GCM) == auth) {
 			uint8_t aad_len = 12;
 
