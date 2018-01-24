@@ -191,6 +191,12 @@ AC_ARG_ENABLE([static-applications],
 			      [ with ODP])], [],
 	      [enable_static_applications=yes])
 AM_CONDITIONAL([STATIC_APPS], [test "x$enable_static_applications" != "xno"])
+if test "x$DPDK_SHARED" = "xyes" -a "x$enable_static_applications" != "xno" ;
+then
+	AC_MSG_WARN([Static linking of examples and tests might fail when ]
+	   [shared DPDK is detected. If build fails please retry with ]
+	   [--disable-static-applications])
+fi
 
 ##########################################################################
 # Include m4 files

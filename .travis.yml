@@ -14,28 +14,6 @@ group: deprecated-2017Q2
 stages:
   - "build only"
   - test
-env:
-  global:
-    # COVERITY_SCAN_TOKEN
-    # ** specific to your project **
-    # Note:
-    # You should have a github account and travis linked travis account.
-    # The secure key to be filled below is the 685 character long encrypted
-    # token you can find as follow from your coverity dashboard
-    # (at https://scan.coverity.com/dashboard):
-    # Click on the github project (<you>/odp)
-    # Click on "submit build"
-    # Click on "Configure Travis CI"
-    # Look at the COVERITY_SCAN_TOKEN in the env: global: section
-    # of the configuration example.
-    # copy the secure:<key> below
-    #
-    - secure: "xxxx"
-    #
-    # By default Linaro CODECOV_TOKEN token is used. It's ok to use it to see
-    # for individual commit validation. But you you want to track tests history
-    # you need generated new one at https://codecov.io specific for your repo.
-    - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
 
 addons:
         apt:
@@ -53,10 +31,6 @@ addons:
 #                        build_command:   "make"
 #                        branch_pattern: coverity_scan
 
-compiler:
-        - gcc
-        - clang-3.8
-
 cache:
         ccache: true
         pip: true
@@ -67,6 +41,14 @@ cache:
                 - $HOME/doxygen-install
 
 env:
+    global:
+        #
+        # By default Linaro CODECOV_TOKEN token is used. It's ok to use it to see
+        # for individual commit validation. But you you want to track tests history
+        # you need generated new one at https://codecov.io specific for your repo.
+        - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
+        - DPDK_VERS="17.08"
+    matrix:
         - CONF=""
         - CONF="--disable-abi-compat"
         - CONF="--enable-deprecated"
@@ -75,6 +57,7 @@ env:
         - CONF="--enable-schedule-scalable"
         - CONF="--enable-dpdk-zero-copy"
         - CONF="--disable-static-applications"
+        - DPDK_SHARED="y" CONF="--disable-static-applications"
         - CROSS_ARCH="arm64"
         - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
         - CROSS_ARCH="powerpc"
@@ -83,6 +66,10 @@ env:
         - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a" CONF="--disable-abi-compat"
         - CROSS_ARCH="powerpc" CONF="--disable-abi-compat"
         - CROSS_ARCH="i386" CONF="--disable-abi-compat"
+
+compiler:
+        - gcc
+        - clang-3.8
 
 before_install:
 
@@ -174,7 +161,6 @@ install:
         - gem install asciidoctor
 
         # DPDK pktio. Note that cache must be purged if dpdk version changes.
-        - DPDK_VERS="17.08"
         - |
           CACHED_DPDK_VERS=`fgrep Version dpdk/pkg/dpdk.spec | cut -d " " -f 2`
           if [ "${CACHED_DPDK_VERS}" != "${DPDK_VERS}" ]; then
@@ -183,43 +169,53 @@ install:
         - |
           case "$CROSS_ARCH" in
             "arm64")
-              TARGET="arm64-armv8a-linuxapp-gcc"
+              DPDK_TARGET="arm64-armv8a-linuxapp-gcc"
               ;;
             "armhf")
-              TARGET="arm-armv7a-linuxapp-gcc"
+              DPDK_TARGET="arm-armv7a-linuxapp-gcc"
               ;;
             "i386")
-              TARGET="i686-native-linuxapp-gcc"
+              DPDK_TARGET="i686-native-linuxapp-gcc"
               ;;
             "")
-              TARGET="x86_64-native-linuxapp-gcc"
+              DPDK_TARGET="x86_64-native-linuxapp-gcc"
               DPDK_MACHINE=snb
               ;;
           esac
         - |
-          if [ -n "$TARGET" ] ; then
-           if [ ! -f "dpdk/${TARGET}/lib/libdpdk.a" ] ; then
+          if [ -n "$DPDK_TARGET" ] ; then
+           if [ -n "$DPDK_SHARED" ] ; then
+            TARGET="$DPDK_TARGET"-shared
+            LIBDPDKEXT=so
+            export LD_LIBRARY_PATH="`pwd`/${TARGET}:$LD_LIBRARY_PATH"
+            echo $LD_LIBRARY_PATH
+           else
+            TARGET="$DPDK_TARGET"
+            LIBDPDKEXT=a
+           fi
+           if [ ! -f "dpdk/${TARGET}/lib/libdpdk.$LIBDPDKEXT" ]; then
             git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v${DPDK_VERS} http://dpdk.org/git/dpdk dpdk
             pushd dpdk
             git log --oneline --decorate
-            echo $CC
             # AArch64 && ARMv7 fixup
             sed -i -e 's/40900/40800/g' lib/librte_eal/common/include/arch/arm/rte_vect.h
             sed -i -e 's/!(/!(defined(__arm__) \&\& defined(__clang__) || /g' lib/librte_eal/common/include/arch/arm/rte_byteorder.h
             sed -i -e 's/__GNUC__/defined(__arm__) \&\& defined(__clang__) || __GNUC__/' lib/librte_eal/common/include/generic/rte_byteorder.h
-            make config T=${TARGET} O=${TARGET}
+            make config T=${DPDK_TARGET} O=${TARGET}
             pushd ${TARGET}
             sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
-            cat .config |grep RTE_MACHINE
             if test -n "${DPDK_MACHINE}" ; then
               sed -ri 's,(CONFIG_RTE_MACHINE=).*,\1"'${DPDK_MACHINE}'",' .config
+            fi
+            if test -n "${DPDK_SHARED}" ; then
+              sed -ri 's,(CONFIG_RTE_BUILD_SHARED_LIB=).*,\1y,' .config
             fi
             if test -n "$CROSS_ARCH" ; then
               sed -ri -e 's,(CONFIG_RTE_EAL_IGB_UIO=).*,\1n,' .config
               sed -ri -e 's,(CONFIG_RTE_KNI_KMOD=).*,\1n,' .config
             fi
             popd
-            make install T=${TARGET} EXTRA_CFLAGS="-fPIC $DPDK_CFLAGS" CROSS="$DPDK_CROSS" -j $(nproc)
+            make build T=${DPDK_TARGET} O=${TARGET} EXTRA_CFLAGS="-fPIC $DPDK_CFLAGS" CROSS="$DPDK_CROSS" -j $(nproc)
             rm -r ./doc ./${TARGET}/app ./${TARGET}/build
             popd
            fi
@@ -258,11 +254,17 @@ script:
         - pushd $HOME
         - echo "Dynamic link.."
         - ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_dynamic `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux`
-        - echo "Static link.."
-        - ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_static `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux --static` -static
         - if [ -z "$CROSS_ARCH" ] ; then
-          LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst_dynamic ;
-          ./odp_hello_inst_static ;
+            LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst_dynamic ;
+          fi
+        - |
+          # it is not possible to do static linking if we only have shared DPDK library. Compiler complains about missing -ldpdk
+          if [ -z "$TARGET" -o -z "$DPDK_SHARED" ] ; then
+            echo "Static link.."
+            ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_static `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux --static` -static || exit 1
+            if [ -z "$CROSS_ARCH" ] ; then
+            ./odp_hello_inst_static;
+            fi
           fi
         - popd
         - ccache -s
