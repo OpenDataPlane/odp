@@ -416,7 +416,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		break;
 	case ODP_AUTH_ALG_AES_GMAC:
 		if (ODP_CIPHER_ALG_NULL != crypto_param.cipher_alg)
-			return ODP_IPSEC_SA_INVALID;
+			goto error;
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 16;
