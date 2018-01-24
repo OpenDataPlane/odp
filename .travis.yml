@@ -58,14 +58,6 @@ env:
         - CONF="--enable-dpdk-zero-copy"
         - CONF="--disable-static-applications"
         - DPDK_SHARED="y" CONF="--disable-static-applications"
-        - CROSS_ARCH="arm64"
-        - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
-        - CROSS_ARCH="powerpc"
-        - CROSS_ARCH="i386"
-        - CROSS_ARCH="arm64" CONF="--disable-abi-compat"
-        - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a" CONF="--disable-abi-compat"
-        - CROSS_ARCH="powerpc" CONF="--disable-abi-compat"
-        - CROSS_ARCH="i386" CONF="--disable-abi-compat"
 
 compiler:
         - gcc
@@ -331,15 +323,6 @@ jobs:
                              else
                                true
                              fi
-                - stage: test
-                  env: TEST=checkpatch
-                  compiler: gcc
-                  install:
-                          - true
-                  script:
-                          - echo ${TRAVIS_COMMIT_RANGE};
-                          - ODP_PATCHES=`echo ${TRAVIS_COMMIT_RANGE} | sed 's/\.//'`;
-                          - ./scripts/ci-checkpatches.sh ${ODP_PATCHES};
                 - stage: "build only"
                   env: CONF=""
                   compiler: gcc
@@ -372,6 +355,63 @@ jobs:
                           - ./bootstrap
                           - ./configure --enable-helper-linux $CROSS
                           - make -j $(nproc)
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="arm64"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="arm64"
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="powerpc"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="powerpc"
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="i386"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="i386"
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="arm64" CONF="--disable-abi-compat"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="arm64" CONF="--disable-abi-compat"
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="armhf" CFLAGS="-march=armv7-a" CONF="--disable-abi-compat"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="armhf" CFLAGS="-march=armv7-a" CONF="--disable-abi-compat"
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="powerpc" CONF="--disable-abi-compat"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="powerpc" CONF="--disable-abi-compat"
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="i386" CONF="--disable-abi-compat"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="i386" CONF="--disable-abi-compat"
+                - stage: test
+                  env: TEST=checkpatch
+                  compiler: gcc
+                  install:
+                          - true
+                  script:
+                          - echo ${TRAVIS_COMMIT_RANGE};
+                          - ODP_PATCHES=`echo ${TRAVIS_COMMIT_RANGE} | sed 's/\.//'`;
+                          - ./scripts/ci-checkpatches.sh ${ODP_PATCHES};
 
 after_failure:
   - cat config.log
