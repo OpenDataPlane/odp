@@ -289,7 +289,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		}
 
 		if (param->inbound.antireplay_ws > IPSEC_ANTIREPLAY_WS)
-			return ODP_IPSEC_SA_INVALID;
+			goto error;
 		ipsec_sa->antireplay = (param->inbound.antireplay_ws != 0);
 		odp_atomic_init_u64(&ipsec_sa->in.antireplay, 0);
 	} else {
