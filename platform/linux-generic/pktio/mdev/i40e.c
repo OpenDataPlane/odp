@@ -344,20 +344,22 @@ out:
 
 static int i40e_close(pktio_entry_t *pktio_entry)
 {
+	uint16_t i;
+
 	pktio_ops_i40e_data_t *pkt_i40e = pktio_entry->s.ops_data;
 
 	ODP_DBG("%s: close %s\n", MODULE_NAME, pkt_i40e->mdev.if_name);
 
 	mdev_device_destroy(&pkt_i40e->mdev);
 
-	for (uint16_t i = 0; i < pkt_i40e->capa.max_input_queues; i++) {
+	for (i = 0; i < pkt_i40e->capa.max_input_queues; i++) {
 		i40e_rx_queue_t *rxq = &pkt_i40e->rx_queues[i];
 
 		if (rxq->rx_data.size)
 			mdev_dma_area_free(&pkt_i40e->mdev, &rxq->rx_data);
 	}
 
-	for (uint16_t i = 0; i < pkt_i40e->capa.max_output_queues; i++) {
+	for (i = 0; i < pkt_i40e->capa.max_output_queues; i++) {
 		i40e_tx_queue_t *txq = &pkt_i40e->tx_queues[i];
 
 		if (txq->tx_data.size)
