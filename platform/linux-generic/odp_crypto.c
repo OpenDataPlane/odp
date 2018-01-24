@@ -27,6 +27,12 @@
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
 
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(OPENSSL_NO_POLY1305)
+#define _ODP_HAVE_CHACHA20_POLY1305 1
+#else
+#define _ODP_HAVE_CHACHA20_POLY1305 0
+#endif
+
 #define MAX_SESSIONS 32
 
 /*
@@ -54,6 +60,11 @@ static const odp_crypto_cipher_capability_t cipher_capa_aes_gcm[] = {
 {.key_len = 16, .iv_len = 12},
 {.key_len = 24, .iv_len = 12},
 {.key_len = 32, .iv_len = 12} };
+
+#if _ODP_HAVE_CHACHA20_POLY1305
+static const odp_crypto_cipher_capability_t cipher_capa_chacha20_poly1305[] = {
+{.key_len = 32, .iv_len = 12} };
+#endif
 
 /*
  * Authentication algorithm capabilities
@@ -85,6 +96,11 @@ static const odp_crypto_auth_capability_t auth_capa_aes_gcm[] = {
 static const odp_crypto_auth_capability_t auth_capa_aes_gmac[] = {
 {.digest_len = 16, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0},
 	.iv_len = 12 } };
+
+#if _ODP_HAVE_CHACHA20_POLY1305
+static const odp_crypto_auth_capability_t auth_capa_chacha20_poly1305[] = {
+{.digest_len = 16, .key_len = 0, .aad_len = {.min = 8, .max = 12, .inc = 4} } };
+#endif
 
 /** Forward declaration of session structure */
 typedef struct odp_crypto_generic_session_t odp_crypto_generic_session_t;
@@ -838,6 +854,9 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->ciphers.bit.aes_cbc    = 1;
 	capa->ciphers.bit.aes_ctr    = 1;
 	capa->ciphers.bit.aes_gcm    = 1;
+#if _ODP_HAVE_CHACHA20_POLY1305
+	capa->ciphers.bit.chacha20_poly1305 = 1;
+#endif
 
 	capa->auths.bit.null         = 1;
 	capa->auths.bit.md5_hmac     = 1;
@@ -846,6 +865,9 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->auths.bit.sha512_hmac  = 1;
 	capa->auths.bit.aes_gcm      = 1;
 	capa->auths.bit.aes_gmac     = 1;
+#if _ODP_HAVE_CHACHA20_POLY1305
+	capa->auths.bit.chacha20_poly1305 = 1;
+#endif
 
 #if ODP_DEPRECATED_API
 	capa->ciphers.bit.aes128_cbc = 1;
@@ -889,6 +911,12 @@ int odp_crypto_cipher_capability(odp_cipher_alg_t cipher,
 		src = cipher_capa_aes_gcm;
 		num = sizeof(cipher_capa_aes_gcm) / size;
 		break;
+#if _ODP_HAVE_CHACHA20_POLY1305
+	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
+		src = cipher_capa_chacha20_poly1305;
+		num = sizeof(cipher_capa_chacha20_poly1305) / size;
+		break;
+#endif
 	default:
 		return -1;
 	}
@@ -937,6 +965,12 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 		src = auth_capa_aes_gmac;
 		num = sizeof(auth_capa_aes_gmac) / size;
 		break;
+#if _ODP_HAVE_CHACHA20_POLY1305
+	case ODP_AUTH_ALG_CHACHA20_POLY1305:
+		src = auth_capa_chacha20_poly1305;
+		num = sizeof(auth_capa_chacha20_poly1305) / size;
+		break;
+#endif
 	default:
 		return -1;
 	}
@@ -1059,6 +1093,17 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 		else
 			rc = -1;
 		break;
+#if _ODP_HAVE_CHACHA20_POLY1305
+	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
+		/* ChaCha20_Poly1305 requires to do both auth and
+		 * cipher at the same time */
+		if (param->auth_alg != ODP_AUTH_ALG_CHACHA20_POLY1305)
+			rc = -1;
+		else
+			rc = process_aes_gcm_param(session,
+						   EVP_chacha20_poly1305());
+		break;
+#endif
 	default:
 		rc = -1;
 	}
@@ -1131,6 +1176,19 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 		else
 			rc = -1;
 		break;
+#if _ODP_HAVE_CHACHA20_POLY1305
+	case ODP_AUTH_ALG_CHACHA20_POLY1305:
+		/* ChaCha20_Poly1305 requires to do both auth and
+		 * cipher at the same time */
+		if (param->cipher_alg == ODP_CIPHER_ALG_CHACHA20_POLY1305) {
+			session->auth.func = null_crypto_routine;
+			session->auth.init = null_crypto_init_routine;
+			rc = 0;
+		} else {
+			rc = -1;
+		}
+		break;
+#endif
 	default:
 		rc = -1;
 	}
