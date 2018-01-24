@@ -203,7 +203,7 @@ Examples of modules for the application interface includes "classification"
 (functions dealing with time, excluding timers which have their own module),
 timer, ...
 The complete module list can be seen at:
-http://docs.opendataplane.org/master/linux-generic-doxygen-html/modules.html[ODP Modules] +
+https://www.opendataplane.org/api-documentation/master/api/modules.html[ODP Modules] +
 Within the platform agnostic area, the validation tests for a given interface
 are also grouped by modules, matching the ODP interface modules: for instance,
 `test/common_plat/validation/api` mainly contains a list of
