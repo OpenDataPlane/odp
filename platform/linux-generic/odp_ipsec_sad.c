@@ -575,9 +575,10 @@ ipsec_sa_t *_odp_ipsec_sa_lookup(const ipsec_sa_lookup_t *lookup)
 			if (NULL != best)
 				_odp_ipsec_sa_unuse(best);
 			return ipsec_sa;
-		} else if (ODP_IPSEC_LOOKUP_SPI == ipsec_sa->in.lookup_mode &&
-				lookup->proto == ipsec_sa->proto &&
-				lookup->spi == ipsec_sa->spi) {
+		} else if (NULL == best &&
+			   ODP_IPSEC_LOOKUP_SPI == ipsec_sa->in.lookup_mode &&
+			   lookup->proto == ipsec_sa->proto &&
+			   lookup->spi == ipsec_sa->spi) {
 			best = ipsec_sa;
 		} else {
 			_odp_ipsec_sa_unuse(ipsec_sa);
