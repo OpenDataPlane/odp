@@ -22,7 +22,7 @@
 #include <errno.h>
 
 #define _ODP_FILES_FMT "odp-%d-"
-#define _ODP_TMPDIR    "/tmp"
+#define _ODP_TMPDIR    "/dev/shm"
 
 #define MEMPOOL_OPS(hdl) extern void mp_hdlr_init_##hdl(void);
 MEMPOOL_OPS(ops_mp_mc)
