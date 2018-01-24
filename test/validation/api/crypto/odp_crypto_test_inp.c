@@ -53,6 +53,8 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 		return "ODP_AUTH_ALG_AES_GCM";
 	case ODP_AUTH_ALG_AES_GMAC:
 		return "ODP_AUTH_ALG_AES_GMAC";
+	case ODP_AUTH_ALG_CHACHA20_POLY1305:
+		return "ODP_AUTH_ALG_CHACHA20_POLY1305";
 	default:
 		return "Unknown";
 	}
@@ -71,6 +73,8 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 		return "ODP_CIPHER_ALG_AES_CBC";
 	case ODP_CIPHER_ALG_AES_GCM:
 		return "ODP_CIPHER_ALG_AES_GCM";
+	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
+		return "ODP_CIPHER_ALG_CHACHA20_POLY1305";
 	default:
 		return "Unknown";
 	}
@@ -474,6 +478,9 @@ static void check_alg(odp_crypto_op_t op,
 	if (cipher_alg == ODP_CIPHER_ALG_AES_GCM &&
 	    !(capa.ciphers.bit.aes_gcm))
 		rc = -1;
+	if (cipher_alg == ODP_CIPHER_ALG_CHACHA20_POLY1305 &&
+	    !(capa.ciphers.bit.chacha20_poly1305))
+		rc = -1;
 	if (cipher_alg == ODP_CIPHER_ALG_DES &&
 	    !(capa.ciphers.bit.des))
 		rc = -1;
@@ -489,6 +496,9 @@ static void check_alg(odp_crypto_op_t op,
 		rc = -1;
 	if (auth_alg == ODP_AUTH_ALG_AES_GMAC &&
 	    !(capa.auths.bit.aes_gmac))
+		rc = -1;
+	if (auth_alg == ODP_AUTH_ALG_CHACHA20_POLY1305 &&
+	    !(capa.auths.bit.chacha20_poly1305))
 		rc = -1;
 	if (auth_alg == ODP_AUTH_ALG_MD5_HMAC &&
 	    !(capa.auths.bit.md5_hmac))
@@ -655,6 +665,10 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		if (!capability.ciphers.bit.aes_gcm)
 			return ODP_TEST_INACTIVE;
 		break;
+	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
+		if (!capability.ciphers.bit.chacha20_poly1305)
+			return ODP_TEST_INACTIVE;
+		break;
 	default:
 		fprintf(stderr, "Unsupported cipher algorithm\n");
 		return ODP_TEST_INACTIVE;
@@ -688,6 +702,10 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		break;
 	case ODP_AUTH_ALG_AES_GMAC:
 		if (!capability.auths.bit.aes_gmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_CHACHA20_POLY1305:
+		if (!capability.auths.bit.chacha20_poly1305)
 			return ODP_TEST_INACTIVE;
 		break;
 	default:
@@ -783,6 +801,52 @@ static void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
 		  ODP_AUTH_ALG_NULL,
 		  tdes_cbc_reference,
 		  ARRAY_SIZE(tdes_cbc_reference),
+		  true);
+}
+
+static int check_alg_chacha20_poly1305(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_CHACHA20_POLY1305,
+				 ODP_AUTH_ALG_CHACHA20_POLY1305);
+}
+
+static void crypto_test_enc_alg_chacha20_poly1305(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_CHACHA20_POLY1305,
+		  ODP_AUTH_ALG_CHACHA20_POLY1305,
+		  chacha20_poly1305_reference,
+		  ARRAY_SIZE(chacha20_poly1305_reference),
+		  false);
+}
+
+static void crypto_test_enc_alg_chacha20_poly1305_ovr_iv(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_CHACHA20_POLY1305,
+		  ODP_AUTH_ALG_CHACHA20_POLY1305,
+		  chacha20_poly1305_reference,
+		  ARRAY_SIZE(chacha20_poly1305_reference),
+		  true);
+}
+
+static void crypto_test_dec_alg_chacha20_poly1305(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_CHACHA20_POLY1305,
+		  ODP_AUTH_ALG_CHACHA20_POLY1305,
+		  chacha20_poly1305_reference,
+		  ARRAY_SIZE(chacha20_poly1305_reference),
+		  false);
+}
+
+static void crypto_test_dec_alg_chacha20_poly1305_ovr_iv(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_CHACHA20_POLY1305,
+		  ODP_AUTH_ALG_CHACHA20_POLY1305,
+		  chacha20_poly1305_reference,
+		  ARRAY_SIZE(chacha20_poly1305_reference),
 		  true);
 }
 
@@ -1230,6 +1294,14 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_aes_gcm),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_gcm_ovr_iv,
 				  check_alg_aes_gcm),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_chacha20_poly1305,
+				  check_alg_chacha20_poly1305),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_chacha20_poly1305_ovr_iv,
+				  check_alg_chacha20_poly1305),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_chacha20_poly1305,
+				  check_alg_chacha20_poly1305),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_chacha20_poly1305_ovr_iv,
+				  check_alg_chacha20_poly1305),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_hmac_md5,
 				  check_alg_hmac_md5),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_hmac_md5,
