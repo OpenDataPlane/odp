@@ -30,6 +30,7 @@ extern "C" {
 #include <odp_crypto_internal.h>
 #include <protocols/eth.h>
 #include <odp/api/plat/packet_types.h>
+#include <odp_queue_if.h>
 
 #include <rte_acl_osdep.h>
 
@@ -126,7 +127,7 @@ typedef struct {
 	odp_time_t timestamp;
 
 	/* Classifier destination queue */
-	odp_queue_t dst_queue;
+	queue_t dst_queue;
 
 	/* Result for crypto */
 	odp_crypto_generic_op_result_t op_result;
