@@ -834,8 +834,7 @@ static int netmap_recv_tmo(pktio_entry_t *pktio_entry, int index,
 	FD_ZERO(&readfds);
 	maxfd = netmap_fd_set(pktio_entry, index, &readfds);
 
-	if (select(maxfd + 1, &readfds, NULL, NULL,
-		   usecs == ODP_PKTIN_WAIT ? NULL : &timeout) == 0)
+	if (select(maxfd + 1, &readfds, NULL, NULL, &timeout) == 0)
 		return 0;
 
 	return netmap_recv(pktio_entry, index, pkt_table, num);
@@ -872,8 +871,7 @@ static int netmap_recv_mq_tmo(pktio_entry_t *pktio_entry[], int index[],
 	timeout.tv_sec = usecs / (1000 * 1000);
 	timeout.tv_usec = usecs - timeout.tv_sec * (1000ULL * 1000ULL);
 
-	if (select(maxfd + 1, &readfds, NULL, NULL,
-		   usecs == ODP_PKTIN_WAIT ? NULL : &timeout) == 0)
+	if (select(maxfd + 1, &readfds, NULL, NULL, &timeout) == 0)
 		return 0;
 
 	for (i = 0; i < num_q; i++) {
