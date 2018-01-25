@@ -247,6 +247,7 @@ endif
 __LIB__libodp_dpdk_la_LIBADD = $(ATOMIC_LIBS)
 __LIB__libodp_dpdk_la_LIBADD += $(OPENSSL_LIBS)
 __LIB__libodp_dpdk_la_LIBADD += $(PTHREAD_LIBS)
+__LIB__libodp_dpdk_la_LIBADD += $(TIMER_LIBS)
 
 # Create symlink for ABI header files. Application does not need to use the arch
 # specific include path for installed files.
