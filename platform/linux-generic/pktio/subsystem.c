@@ -44,7 +44,7 @@ extern int enable_link_socket_mmap_pktio_ops;
 #if defined(ODP_PKTIO_TAP) && ODP_PKTIO_TAP == 1
 extern int enable_link_tap_pktio_ops;
 #endif
-#if defined(ODP_MDEV) && ODP_MDEV == 1
+#if defined(_ODP_MDEV) && _ODP_MDEV == 1
 extern int enable_link_cxgb4_pktio_ops;
 extern int enable_link_i40e_pktio_ops;
 #endif
@@ -77,7 +77,7 @@ ODP_SUBSYSTEM_CONSTRUCTOR(pktio_ops)
 #if defined(ODP_PKTIO_TAP) && ODP_PKTIO_TAP == 1
 	enable_link_tap_pktio_ops = 1;
 #endif
-#if defined(ODP_MDEV) && ODP_MDEV == 1
+#if defined(_ODP_MDEV) && _ODP_MDEV == 1
 	enable_link_cxgb4_pktio_ops = 1;
 	enable_link_i40e_pktio_ops = 1;
 #endif

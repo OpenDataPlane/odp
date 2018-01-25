@@ -6,7 +6,7 @@
 
 #include "config.h"
 
-#if defined(ODP_MDEV) && ODP_MDEV == 1
+#if defined(_ODP_MDEV) && _ODP_MDEV == 1
 
 #include <dirent.h>
 #include <errno.h>
@@ -590,4 +590,4 @@ void mdev_device_destroy(mdev_device_t *mdev)
 		munmap(mdev->mappings[i].addr, mdev->mappings[i].size);
 }
 
-#endif /* ODP_MDEV */
+#endif /* _ODP_MDEV */
