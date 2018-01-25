@@ -20,6 +20,8 @@ AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_builddir)/include
 AM_CFLAGS +=  -Iinclude
 
+AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
+
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \
 		  $(top_srcdir)/include/odp_api.h
@@ -243,6 +245,7 @@ __LIB__libodp_dpdk_la_SOURCES += arch/x86/cpu_flags.c \
 endif
 
 __LIB__libodp_dpdk_la_LIBADD = $(ATOMIC_LIBS)
+__LIB__libodp_dpdk_la_LIBADD += $(OPENSSL_LIBS)
 
 # Create symlink for ABI header files. Application does not need to use the arch
 # specific include path for installed files.
