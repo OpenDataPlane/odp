@@ -248,6 +248,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pktio/common.c \
 			   pktio/dpdk.c \
 			   pktio/ethtool.c \
+			   pktio/subsystem.c \
 			   pktio/ipc.c \
 			   pktio/loopback.c \
 			   pktio/mdev.c \
@@ -258,7 +259,6 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pktio/ring.c \
 			   pktio/socket.c \
 			   pktio/socket_mmap.c \
-			   pktio/subsystem.c \
 			   pktio/sysfs.c \
 			   pktio/tap.c \
 			   pool/generic.c \
