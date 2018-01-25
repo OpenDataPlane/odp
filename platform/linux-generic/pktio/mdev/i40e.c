@@ -6,7 +6,7 @@
 
 #include "config.h"
 
-#if defined(ODP_MDEV) && ODP_MDEV == 1
+#if defined(_ODP_MDEV) && _ODP_MDEV == 1
 
 #include <linux/types.h>
 #include <protocols/eth.h>
@@ -640,4 +640,4 @@ ODP_MODULE_CONSTRUCTOR(netmap_pktio_ops)
  */
 int enable_link_i40e_pktio_ops;
 
-#endif /* ODP_MDEV */
+#endif /* _ODP_MDEV */

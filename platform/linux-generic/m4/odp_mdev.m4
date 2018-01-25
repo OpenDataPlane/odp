@@ -19,7 +19,7 @@ CPPFLAGS="$MDEV_CPPFLAGS $CPPFLAGS"
 ##########################################################################
 if test x$mdev_support = xyes
 then
-    AC_DEFINE([ODP_MDEV], [1],
+    AC_DEFINE([_ODP_MDEV], [1],
 	      [Define to 1 to enable mediated device drivers support])
     AC_SUBST([MDEV_CPPFLAGS])
 else

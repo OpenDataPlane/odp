@@ -6,7 +6,7 @@
 
 #include "config.h"
 
-#if defined(ODP_MDEV) && ODP_MDEV == 1
+#if defined(_ODP_MDEV) && _ODP_MDEV == 1
 
 #include <linux/types.h>
 #include <protocols/eth.h>
@@ -954,4 +954,4 @@ ODP_MODULE_CONSTRUCTOR(cxgb4_module_init)
  */
 int enable_link_cxgb4_pktio_ops;
 
-#endif /* ODP_MDEV */
+#endif /* _ODP_MDEV */
