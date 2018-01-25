@@ -83,9 +83,12 @@ typedef enum {
 	/** AES with counter mode */
 	ODP_CIPHER_ALG_AES_CTR,
 
-	/** AES in Galois/Counter Mode
+	/** AES-GCM
 	 *
-	 *  @note Must be paired with cipher ODP_AUTH_ALG_AES_GCM
+	 *  AES in Galois/Counter Mode (GCM) algorithm. GCM provides both
+	 *  authentication and ciphering of data (authenticated encryption)
+	 *  in the same operation. Hence this algorithm must be paired always
+	 *  with ODP_AUTH_ALG_AES_GCM authentication.
 	 */
 	ODP_CIPHER_ALG_AES_GCM,
 
@@ -128,23 +131,29 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_SHA512_HMAC,
 
-	/** AES in Galois/Counter Mode
+	/** AES-GCM
 	 *
-	 *  @note Must be paired with cipher ODP_CIPHER_ALG_AES_GCM
+	 *  AES in Galois/Counter Mode (GCM) algorithm. GCM provides both
+	 *  authentication and ciphering of data (authenticated encryption)
+	 *  in the same operation. Hence this algorithm must be paired always
+	 *  with ODP_CIPHER_ALG_AES_GCM cipher.
 	 */
 	ODP_AUTH_ALG_AES_GCM,
 
-	/** AES in Galois/Counter MAC Mode
+	/** AES-GMAC
 	 *
-	 * NIST and RFC specifications of GCM/GMAC refer to all data to be
-	 * authenticated as AAD. In constrast to that, ODP API specifies the
-	 * bulk of authenticated data to be located in packet payload for all
-	 * authentication algorithms, including GMAC. Thus for GMAC application
-	 * should also pass all data to be authenticated as packet data. AAD is
-	 * not used for GMAC. GMAC IV should be passed via session IV or
-	 * per-packet IV override.
+	 *  AES Galois Message Authentication Code (GMAC) algorithm. AES-GMAC
+	 *  is based on AES-GCM operation, but provides authentication only.
+	 *  Hence this algorithm can be paired only with ODP_CIPHER_ALG_NULL
+	 *  cipher.
 	 *
-	 * @note Must be paired with cipher ODP_CIPHER_ALG_NULL
+	 *  NIST and RFC specifications of GMAC refer to all data to be
+	 *  authenticated as AAD. In constrast to that, ODP API specifies
+	 *  the bulk of authenticated data to be located in packet payload for
+	 *  all authentication algorithms. Thus GMAC operation authenticates
+	 *  only packet payload and AAD is not used. GMAC needs
+	 *  an initialization vector, which can be passed via session (auth_iv)
+	 *  or packet (auth_iv_ptr) level parameters.
 	 */
 	ODP_AUTH_ALG_AES_GMAC,
 
