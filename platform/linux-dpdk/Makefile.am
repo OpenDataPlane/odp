@@ -1,18 +1,7 @@
 include $(top_srcdir)/platform/Makefile.inc
 include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
-PLAT_CFLAGS  =
-if ARCH_X86
-PLAT_CFLAGS  += -msse4.2
-endif
-
-if DPDK_DEFAULT_DIR
-PLAT_CFLAGS += -include /usr/include/dpdk/rte_config.h
-else
-PLAT_CFLAGS += -include $(SDK_INSTALL_PATH)/include/rte_config.h
-endif
-
-AM_CFLAGS +=  $(PLAT_CFLAGS)
+AM_CFLAGS +=  $(DPDK_CFLAGS)
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include
 AM_CFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
@@ -21,6 +10,7 @@ AM_CFLAGS +=  -I$(top_builddir)/include
 AM_CFLAGS +=  -Iinclude
 
 AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
+AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \
@@ -246,6 +236,7 @@ endif
 
 __LIB__libodp_dpdk_la_LIBADD = $(ATOMIC_LIBS)
 __LIB__libodp_dpdk_la_LIBADD += $(OPENSSL_LIBS)
+__LIB__libodp_dpdk_la_LIBADD += $(DPDK_LIBS) $(DPDK_PMDS)
 __LIB__libodp_dpdk_la_LIBADD += $(PTHREAD_LIBS)
 __LIB__libodp_dpdk_la_LIBADD += $(TIMER_LIBS)
 

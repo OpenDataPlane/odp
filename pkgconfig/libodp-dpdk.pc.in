@@ -8,4 +8,4 @@ Description: The ODP packet processing engine
 Version: @PKGCONFIG_VERSION@
 Libs: -L${libdir} -lodp-dpdk @DPDK_LIBS@
 Libs.private: @OPENSSL_STATIC_LIBS@ @DPDK_PMDS@ @DPDK_LIBS@ @PTHREAD_LIBS@ @TIMER_LIBS@ -lpthread @ATOMIC_LIBS@
-Cflags: -I${includedir}
+Cflags: -I${includedir} @DPDK_CPPFLAGS@
