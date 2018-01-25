@@ -39,7 +39,7 @@ addons:
         apt:
                 packages:
                         - gcc
-                        - automake autoconf autoconf-archive libtool graphviz mscgen doxygen
+                        - automake autoconf libtool graphviz mscgen doxygen
                         - codespell
                         - libssl-dev
                         - libpcap-dev
@@ -122,10 +122,10 @@ script:
         - echo "Checking linking and run from install..."
         - pushd $HOME
         - echo "Dynamic link.."
-        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/include -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-dpdk -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -msse4.2 -ldpdk -lpthread -lcrypto -lpcap -ldl
+        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig pkg-config --cflags --libs libodp-dpdk`
         - sudo ODP_PLATFORM_PARAMS="-n 2" LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst
         - echo "Static link.."
-        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/include -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-dpdk -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -msse4.2 -ldpdk -lpthread -lcrypto -lpcap -ldl -lm -static
+        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig pkg-config --cflags --libs libodp-dpdk --static` -static
         - sudo ODP_PLATFORM_PARAMS="-n 2" ./odp_hello_inst
 
 jobs:
