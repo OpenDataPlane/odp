@@ -92,6 +92,15 @@ typedef enum {
 	 */
 	ODP_CIPHER_ALG_AES_GCM,
 
+	/** AES-CCM
+	 *
+	 *  AES in Counter with CBC-MAC (CCM) mode algorithm. CCM provides both
+	 *  authentication and ciphering of data (authenticated encryption)
+	 *  in the same operation. Hence this algorithm must be paired always
+	 *  with ODP_AUTH_ALG_AES_CCM authentication.
+	 */
+	ODP_CIPHER_ALG_AES_CCM,
+
 	/** @deprecated  Use ODP_CIPHER_ALG_AES_CBC instead */
 	ODP_DEPRECATE(ODP_CIPHER_ALG_AES128_CBC),
 
@@ -157,6 +166,15 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_AES_GMAC,
 
+	/** AES-CCM
+	 *
+	 *  AES in Counter with CBC-MAC (CCM) mode algorithm. CCM provides both
+	 *  authentication and ciphering of data (authenticated encryption)
+	 *  in the same operation. Hence this algorithm must be paired always
+	 *  with ODP_CIPHER_ALG_AES_CCM cipher.
+	 */
+	ODP_AUTH_ALG_AES_CCM,
+
 	/** @deprecated  Use ODP_AUTH_ALG_MD5_HMAC instead */
 	ODP_DEPRECATE(ODP_AUTH_ALG_MD5_96),
 
@@ -191,6 +209,9 @@ typedef union odp_crypto_cipher_algos_t {
 
 		/** ODP_CIPHER_ALG_AES_GCM */
 		uint32_t aes_gcm     : 1;
+
+		/** ODP_CIPHER_ALG_AES_CCM */
+		uint32_t aes_ccm     : 1;
 
 		/** @deprecated  Use aes_cbc instead */
 		uint32_t ODP_DEPRECATE(aes128_cbc) : 1;
@@ -233,6 +254,9 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_AES_GMAC*/
 		uint32_t aes_gmac    : 1;
+
+		/** ODP_AUTH_ALG_AES_CCM */
+		uint32_t aes_ccm     : 1;
 
 		/** @deprecated  Use md5_hmac instead */
 		uint32_t ODP_DEPRECATE(md5_96)     : 1;
