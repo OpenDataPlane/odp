@@ -205,6 +205,16 @@ install:
             fi
             sudo insmod ./netmap/LINUX/netmap.ko
           fi
+#	PAPI library
+        - |
+          if [ -z "$CROSS_ARCH" -a ! -f "$HOME/papi-install/lib/libpapi.so" ]; then
+            git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=papi-5-6-0-t https://bitbucket.org/icl/papi.git
+            pushd papi/src
+            ./configure --prefix=$HOME/papi-install
+            make
+            make install
+            popd
+          fi
 
 script:
         - if [ -z "$CROSS_ARCH" ] ; then
@@ -307,6 +317,17 @@ jobs:
                           - ./configure --with-platform=linux-dpdk --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-sdk-install-path=`pwd`/dpdk-17.02/${TARGET} --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH $CONF
                           - make -j $(nproc)
                           - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make check
+                - stage: test
+                  env: TEST=code_instrum
+                  compiler: gcc
+                  script:
+                          - ./bootstrap
+                          - ./configure --prefix=$HOME/odp-papi-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH --with-papi-path=$HOME/papi-install $CONF
+                          - make -j $(nproc)
+                          - make install
+                          - sudo $HOME/papi-install/bin/papi_avail
+                          - mkdir $HOME/store
+                          - sudo LD_LIBRARY_PATH="/usr/local/lib:$HOME/odp-papi-install/lib:$HOME/papi-install/lib:$LD_LIBRARY_PATH" ODP_INSTRUM_STORE_DIR=$HOME/store LD_PRELOAD=libinstrum.so.0.0.0 $HOME/odp-papi-install/bin/odp_generator -I lo --srcmac a0:36:9f:28:e2:57 --dstmac 00:0f:fe:c5:73:66 --srcip 192.168.150.1 --dstip 192.168.150.2 -m u -n 200
 after_failure:
   - cat config.log
   - find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
