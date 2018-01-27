@@ -25,6 +25,7 @@
 
 #include <openssl/rand.h>
 #include <openssl/hmac.h>
+#include <openssl/cmac.h>
 #include <openssl/evp.h>
 
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(OPENSSL_NO_POLY1305)
@@ -108,6 +109,14 @@ static const odp_crypto_auth_capability_t auth_capa_aes_gmac[] = {
 {.digest_len = 16, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0},
 	.iv_len = 12 } };
 
+static const odp_crypto_auth_capability_t auth_capa_aes_cmac[] = {
+{.digest_len = 12, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0} },
+{.digest_len = 16, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0} },
+{.digest_len = 12, .key_len = 24, .aad_len = {.min = 0, .max = 0, .inc = 0} },
+{.digest_len = 16, .key_len = 24, .aad_len = {.min = 0, .max = 0, .inc = 0} },
+{.digest_len = 12, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0} },
+{.digest_len = 16, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
+
 #if _ODP_HAVE_CHACHA20_POLY1305
 static const odp_crypto_auth_capability_t auth_capa_chacha20_poly1305[] = {
 {.digest_len = 16, .key_len = 0, .aad_len = {.min = 8, .max = 12, .inc = 4} } };
@@ -177,6 +186,7 @@ static odp_crypto_global_t *global;
 
 typedef struct crypto_local_t {
 	HMAC_CTX *hmac_ctx[MAX_SESSIONS];
+	CMAC_CTX *cmac_ctx[MAX_SESSIONS];
 	EVP_CIPHER_CTX *cipher_ctx[MAX_SESSIONS];
 	EVP_CIPHER_CTX *mac_cipher_ctx[MAX_SESSIONS];
 	uint8_t *ctx_valid;
@@ -335,6 +345,93 @@ odp_crypto_alg_err_t auth_hmac_check(odp_packet_t pkt,
 
 	/* Hash it */
 	packet_hmac(pkt, param, session, hash_out);
+
+	/* Verify match */
+	if (0 != memcmp(hash_in, hash_out, bytes))
+		return ODP_CRYPTO_ALG_ERR_ICV_CHECK;
+
+	/* Matched */
+	return ODP_CRYPTO_ALG_ERR_NONE;
+}
+
+static void
+auth_cmac_init(odp_crypto_generic_session_t *session)
+{
+	CMAC_CTX *ctx = local.cmac_ctx[session->idx];
+
+	CMAC_Init(ctx,
+		  session->auth.key,
+		  session->p.auth_key.length,
+		  session->auth.evp_cipher,
+		  NULL);
+}
+
+static
+void packet_cmac(odp_packet_t pkt,
+		 const odp_crypto_packet_op_param_t *param,
+		 odp_crypto_generic_session_t *session,
+		 uint8_t *hash)
+{
+	CMAC_CTX *ctx = local.cmac_ctx[session->idx];
+	uint32_t offset = param->auth_range.offset;
+	uint32_t len   = param->auth_range.length;
+	size_t outlen;
+
+	ODP_ASSERT(offset + len <= odp_packet_len(pkt));
+
+	/* Reinitialize CMAC calculation without resetting the key */
+	CMAC_Init(ctx, NULL, 0, NULL, NULL);
+
+	while (len > 0) {
+		uint32_t seglen = 0; /* GCC */
+		void *mapaddr = odp_packet_offset(pkt, offset, &seglen, NULL);
+		uint32_t maclen = len > seglen ? seglen : len;
+
+		CMAC_Update(ctx, mapaddr, maclen);
+		offset  += maclen;
+		len     -= maclen;
+	}
+
+	CMAC_Final(ctx, hash, &outlen);
+}
+
+static
+odp_crypto_alg_err_t auth_cmac_gen(odp_packet_t pkt,
+				   const odp_crypto_packet_op_param_t *param,
+				   odp_crypto_generic_session_t *session)
+{
+	uint8_t  hash[EVP_MAX_MD_SIZE];
+
+	/* Hash it */
+	packet_cmac(pkt, param, session, hash);
+
+	/* Copy to the output location */
+	odp_packet_copy_from_mem(pkt,
+				 param->hash_result_offset,
+				 session->p.auth_digest_len,
+				 hash);
+
+	return ODP_CRYPTO_ALG_ERR_NONE;
+}
+
+static
+odp_crypto_alg_err_t auth_cmac_check(odp_packet_t pkt,
+				     const odp_crypto_packet_op_param_t *param,
+				     odp_crypto_generic_session_t *session)
+{
+	uint32_t bytes = session->p.auth_digest_len;
+	uint8_t  hash_in[EVP_MAX_MD_SIZE];
+	uint8_t  hash_out[EVP_MAX_MD_SIZE];
+
+	/* Copy current value out and clear it before authentication */
+	odp_packet_copy_to_mem(pkt, param->hash_result_offset,
+			       bytes, hash_in);
+
+	_odp_packet_set_data(pkt, param->hash_result_offset,
+			     0, bytes);
+
+	/* Hash it */
+	packet_cmac(pkt, param, session, hash_out);
 
 	/* Verify match */
 	if (0 != memcmp(hash_in, hash_out, bytes))
@@ -1001,6 +1098,35 @@ static int process_auth_hmac_param(odp_crypto_generic_session_t *session,
 	return 0;
 }
 
+static int process_auth_cmac_param(odp_crypto_generic_session_t *session,
+				   const EVP_CIPHER *cipher)
+{
+	/* Verify Key len is valid */
+	if ((uint32_t)EVP_CIPHER_key_length(cipher) !=
+	    session->p.auth_key.length)
+		return -1;
+
+	/* Set function */
+	if (ODP_CRYPTO_OP_ENCODE == session->p.op)
+		session->auth.func = auth_cmac_gen;
+	else
+		session->auth.func = auth_cmac_check;
+	session->auth.init = auth_cmac_init;
+
+	session->auth.evp_cipher = cipher;
+
+	/* Number of valid bytes */
+	if (session->p.auth_digest_len <
+	    (unsigned)EVP_CIPHER_block_size(cipher) / 2)
+		return -1;
+
+	/* Convert keys */
+	memcpy(session->auth.key, session->p.auth_key.data,
+	       session->p.auth_key.length);
+
+	return 0;
+}
+
 int odp_crypto_capability(odp_crypto_capability_t *capa)
 {
 	if (NULL == capa)
@@ -1030,6 +1156,7 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->auths.bit.aes_gcm      = 1;
 	capa->auths.bit.aes_ccm      = 1;
 	capa->auths.bit.aes_gmac     = 1;
+	capa->auths.bit.aes_cmac     = 1;
 #if _ODP_HAVE_CHACHA20_POLY1305
 	capa->auths.bit.chacha20_poly1305 = 1;
 #endif
@@ -1137,6 +1264,10 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 	case ODP_AUTH_ALG_AES_CCM:
 		src = auth_capa_aes_ccm;
 		num = sizeof(auth_capa_aes_ccm) / size;
+		break;
+	case ODP_AUTH_ALG_AES_CMAC:
+		src = auth_capa_aes_cmac;
+		num = sizeof(auth_capa_aes_cmac) / size;
 		break;
 #if _ODP_HAVE_CHACHA20_POLY1305
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
@@ -1374,6 +1505,19 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 			rc = -1;
 		}
 		break;
+	case ODP_AUTH_ALG_AES_CMAC:
+		if (param->auth_key.length == 16)
+			rc = process_auth_cmac_param(session,
+						     EVP_aes_128_cbc());
+		else if (param->auth_key.length == 24)
+			rc = process_auth_cmac_param(session,
+						     EVP_aes_192_cbc());
+		else if (param->auth_key.length == 32)
+			rc = process_auth_cmac_param(session,
+						     EVP_aes_256_cbc());
+		else
+			rc = -1;
+		break;
 #if _ODP_HAVE_CHACHA20_POLY1305
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
 		/* ChaCha20_Poly1305 requires to do both auth and
@@ -1561,6 +1705,7 @@ int _odp_crypto_init_local(void)
 
 	for (i = 0; i < MAX_SESSIONS; i++) {
 		local.hmac_ctx[i] = HMAC_CTX_new();
+		local.cmac_ctx[i] = CMAC_CTX_new();
 		local.cipher_ctx[i] = EVP_CIPHER_CTX_new();
 		local.mac_cipher_ctx[i] = EVP_CIPHER_CTX_new();
 
@@ -1584,6 +1729,8 @@ int _odp_crypto_term_local(void)
 	unsigned i;
 
 	for (i = 0; i < MAX_SESSIONS; i++) {
+		if (local.cmac_ctx[i] != NULL)
+			CMAC_CTX_free(local.cmac_ctx[i]);
 		if (local.hmac_ctx[i] != NULL)
 			HMAC_CTX_free(local.hmac_ctx[i]);
 		if (local.cipher_ctx[i] != NULL)
