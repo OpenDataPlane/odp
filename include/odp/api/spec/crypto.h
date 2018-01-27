@@ -175,6 +175,14 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_AES_CCM,
 
+	/** AES-CMAC
+	 *
+	 *  AES Cipher-based Message Authentication Code (CMAC) algorithm. CMAC
+	 *  is a keyed hash function that is based on a symmetric key block
+	 *  cipher, such as the AES.
+	 */
+	ODP_AUTH_ALG_AES_CMAC,
+
 	/** @deprecated  Use ODP_AUTH_ALG_MD5_HMAC instead */
 	ODP_DEPRECATE(ODP_AUTH_ALG_MD5_96),
 
@@ -257,6 +265,9 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_AES_CCM */
 		uint32_t aes_ccm     : 1;
+
+		/** ODP_AUTH_ALG_AES_CMAC*/
+		uint32_t aes_cmac    : 1;
 
 		/** @deprecated  Use md5_hmac instead */
 		uint32_t ODP_DEPRECATE(md5_96)     : 1;
