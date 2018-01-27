@@ -54,6 +54,8 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 		return "ODP_AUTH_ALG_AES_GMAC";
 	case ODP_AUTH_ALG_AES_CCM:
 		return "ODP_AUTH_ALG_AES_CCM";
+	case ODP_AUTH_ALG_AES_CMAC:
+		return "ODP_AUTH_ALG_AES_CMAC";
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
 		return "ODP_AUTH_ALG_CHACHA20_POLY1305";
 	default:
@@ -503,6 +505,9 @@ static void check_alg(odp_crypto_op_t op,
 	if (auth_alg == ODP_AUTH_ALG_AES_GMAC &&
 	    !(capa.auths.bit.aes_gmac))
 		rc = -1;
+	if (auth_alg == ODP_AUTH_ALG_AES_CMAC &&
+	    !(capa.auths.bit.aes_cmac))
+		rc = -1;
 	if (auth_alg == ODP_AUTH_ALG_AES_CCM &&
 	    !(capa.auths.bit.aes_ccm))
 		rc = -1;
@@ -719,6 +724,10 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		break;
 	case ODP_AUTH_ALG_AES_CCM:
 		if (!capability.auths.bit.aes_ccm)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_AES_CMAC:
+		if (!capability.auths.bit.aes_cmac)
 			return ODP_TEST_INACTIVE;
 		break;
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
@@ -1285,6 +1294,36 @@ static void crypto_test_check_alg_aes_gmac_ovr_iv(void)
 			 true);
 }
 
+static int check_alg_aes_cmac(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_AES_CMAC);
+}
+
+static void crypto_test_gen_alg_aes_cmac(void)
+{
+	unsigned int test_vec_num = (sizeof(aes_cmac_reference) /
+				     sizeof(aes_cmac_reference[0]));
+	unsigned int i;
+
+	for (i = 0; i < test_vec_num; i++)
+		check_alg(ODP_CRYPTO_OP_ENCODE,
+			  ODP_CIPHER_ALG_NULL,
+			  ODP_AUTH_ALG_AES_CMAC,
+			  aes_cmac_reference,
+			  ARRAY_SIZE(aes_cmac_reference),
+			  false);
+}
+
+static void crypto_test_check_alg_aes_cmac(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_NULL,
+		  ODP_AUTH_ALG_AES_CMAC,
+		  aes_cmac_reference,
+		  ARRAY_SIZE(aes_cmac_reference),
+		  false);
+}
+
 int crypto_suite_sync_init(void)
 {
 	suite_context.pool = odp_pool_lookup("packet_pool");
@@ -1414,6 +1453,10 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_aes_gmac),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_aes_gmac_ovr_iv,
 				  check_alg_aes_gmac),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_aes_cmac,
+				  check_alg_aes_cmac),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_aes_cmac,
+				  check_alg_aes_cmac),
 	ODP_TEST_INFO_NULL,
 };
 
