@@ -19,14 +19,19 @@ extern "C" {
 
 #include <odp_buffer_internal.h>
 
-static inline odp_buffer_t odp_hdr_to_buf(odp_buffer_hdr_t *hdr)
+static inline odp_buffer_t buf_from_buf_hdr(odp_buffer_hdr_t *hdr)
 {
 	return (odp_buffer_t)hdr;
 }
 
+static inline odp_event_t event_from_buf_hdr(odp_buffer_hdr_t *hdr)
+{
+	return (odp_event_t)hdr;
+}
+
 static inline odp_buffer_hdr_t *buf_hdl_to_hdr(odp_buffer_t buf)
 {
-	return (odp_buffer_hdr_t *)(void *)buf;
+	return (odp_buffer_hdr_t *)(uintptr_t)buf;
 }
 
 static inline odp_event_type_t _odp_buffer_event_type(odp_buffer_t buf)

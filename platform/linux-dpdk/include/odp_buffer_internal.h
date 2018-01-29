@@ -43,17 +43,13 @@ ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_LEN_MIN >= 256,
 ODP_STATIC_ASSERT(CONFIG_PACKET_MAX_SEGS < 256,
 		  "Maximum of 255 segments supported");
 
-typedef union odp_buffer_bits_t {
-	odp_buffer_t handle;
-} odp_buffer_bits_t;
-
 #define BUFFER_BURST_SIZE    CONFIG_BURST_SIZE
 
 struct odp_buffer_hdr_t {
 	/* Underlying DPDK rte_mbuf */
 	struct rte_mbuf mb;
-	/* Handle union */
-	odp_buffer_bits_t handle;
+	/* Buffer index in the pool */
+	uint32_t index;
 
 	 /* ODP buffer type, not DPDK buf type */
 	int type;
@@ -78,13 +74,15 @@ struct odp_buffer_hdr_t {
 	/* Burst table */
 	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
 
-	/* Pool handle */
+	/* Pool handle: will be removed, used only for odp_packet_pool()
+	 * inlining */
 	odp_pool_t pool_hdl;
+
+	/* Pool pointer */
+	void *pool_ptr;
 
 	/* Total size of all allocated segs */
 	uint32_t totsize;
-	/* Index in the rte_mempool */
-	uint32_t index;
 };
 
 ODP_STATIC_ASSERT(BUFFER_BURST_SIZE < 256, "BUFFER_BURST_SIZE_TOO_LARGE");

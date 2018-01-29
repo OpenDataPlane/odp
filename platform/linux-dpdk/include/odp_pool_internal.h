@@ -46,8 +46,7 @@ extern "C" {
 #include <odp/api/spinlock.h>
 #endif
 
-
-struct pool_entry_s {
+typedef struct ODP_ALIGNED_CACHE {
 #ifdef POOL_USE_TICKETLOCK
 	odp_ticketlock_t	lock ODP_ALIGNED_CACHE;
 #else
@@ -57,35 +56,24 @@ struct pool_entry_s {
 	odp_pool_param_t	params;
 	odp_pool_t		pool_hdl;
 	struct rte_mempool	*rte_mempool;
-};
 
-typedef union pool_entry_u {
-	struct pool_entry_s s;
+} pool_t;
 
-	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct pool_entry_s))];
+typedef struct pool_table_t {
+	pool_t		pool[ODP_CONFIG_POOLS];
+	odp_shm_t	shm;
+} pool_table_t;
 
-} pool_entry_t;
+extern pool_table_t *pool_tbl;
 
-extern void *pool_entry_ptr[];
-
-static inline uint32_t pool_handle_to_index(odp_pool_t pool_hdl)
+static inline pool_t *pool_entry(uint32_t pool_idx)
 {
-	return _odp_typeval(pool_hdl);
+	return &pool_tbl->pool[pool_idx];
 }
 
-static inline void *get_pool_entry(uint32_t pool_id)
+static inline pool_t *pool_entry_from_hdl(odp_pool_t pool_hdl)
 {
-	return pool_entry_ptr[pool_id];
-}
-
-static inline pool_entry_t *odp_pool_to_entry(odp_pool_t pool)
-{
-	return (pool_entry_t *)get_pool_entry(pool_handle_to_index(pool));
-}
-
-static inline odp_pool_t pool_index_to_handle(uint32_t pool_id)
-{
-	return _odp_cast_scalar(odp_pool_t, pool_id);
+	return &pool_tbl->pool[_odp_typeval(pool_hdl)];
 }
 
 #ifdef __cplusplus

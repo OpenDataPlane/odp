@@ -198,8 +198,7 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 	int sid = rte_eth_dev_socket_id(pkt_dpdk->portid);
 	int socket_id =  sid < 0 ? 0 : sid;
 	uint16_t nbrxq, nbtxq;
-	pool_entry_t *pool_entry =
-			get_pool_entry(_odp_typeval(pktio_entry->s.pool));
+	pool_t *pool = pool_entry_from_hdl(pktio_entry->s.pool);
 	uint16_t nb_rxd = RTE_TEST_RX_DESC_DEFAULT;
 	uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
 	struct rte_eth_rss_conf rss_conf;
@@ -234,7 +233,7 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 	 * VLAN tag
 	 */
 	port_conf.rxmode.max_rx_pkt_len =
-		rte_pktmbuf_data_room_size(pool_entry->s.rte_mempool) -
+		rte_pktmbuf_data_room_size(pool->rte_mempool) -
 		2 * 4 - RTE_PKTMBUF_HEADROOM;
 
 	nbtxq = pktio_entry->s.num_out_queue;
@@ -247,20 +246,19 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 		return -1;
 	}
 
-	if (nb_rxd + nb_txd > pool_entry->s.params.pkt.num / 4) {
-		double downrate = (double)(pool_entry->s.params.pkt.num / 4) /
+	if (nb_rxd + nb_txd > pool->params.pkt.num / 4) {
+		double downrate = (double)(pool->params.pkt.num / 4) /
 				  (double)(nb_rxd + nb_txd);
 		nb_rxd >>= (int)ceil(downrate);
 		nb_txd >>= (int)ceil(downrate);
 		ODP_DBG("downrate %f\n", downrate);
 		ODP_DBG("Descriptors scaled down. RX: %u TX: %u pool: %u\n",
-			nb_rxd, nb_txd, pool_entry->s.params.pkt.num);
+			nb_rxd, nb_txd, pool->params.pkt.num);
 	}
 	/* init one RX queue on each port */
 	for (i = 0; i < nbrxq; i++) {
 		ret = rte_eth_rx_queue_setup(portid, i, nb_rxd, socket_id,
-					     NULL,
-					     pool_entry->s.rte_mempool);
+					     NULL, pool->rte_mempool);
 		if (ret < 0) {
 			ODP_ERR("rxq:err=%d, port=%u\n", ret, (unsigned)portid);
 			return -1;
@@ -313,9 +311,8 @@ static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
 	int i;
 	unsigned j;
 	odp_packet_t dummy;
-	pool_entry_t *pool_entry =
-		get_pool_entry(_odp_typeval(pktio_entry->s.pool));
-	struct rte_mempool *rte_mempool = pool_entry->s.rte_mempool;
+	pool_t *pool = pool_entry_from_hdl(pktio_entry->s.pool);
+	struct rte_mempool *rte_mempool = pool->rte_mempool;
 
 	for (j = 0; j < pktio_entry->s.num_out_queue; j++)
 		send_pkt_dpdk(pktio_entry, j, &dummy, 0);
@@ -376,10 +373,8 @@ static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 	}
 
 	if (nb_rx == 0 && !pkt_dpdk->lockless_tx) {
-		pool_entry_t *pool_entry =
-			get_pool_entry(_odp_typeval(pktio_entry->s.pool));
-		struct rte_mempool *rte_mempool =
-			pool_entry->s.rte_mempool;
+		pool_t *pool = pool_entry_from_hdl(pktio_entry->s.pool);
+		struct rte_mempool *rte_mempool = pool->rte_mempool;
 		if (rte_mempool_avail_count(rte_mempool) == 0)
 			_odp_pktio_send_completion(pktio_entry);
 	}
