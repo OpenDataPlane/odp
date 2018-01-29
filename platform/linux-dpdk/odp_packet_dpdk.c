@@ -41,6 +41,7 @@
  * Array must be NULL terminated */
 const pktio_if_ops_t * const pktio_if_ops[]  = {
 	&loopback_pktio_ops,
+	&null_pktio_ops,
 	&dpdk_pktio_ops,
 	NULL
 };
@@ -502,7 +503,7 @@ static int send_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 
 static uint32_t _dpdk_vdev_mtu(uint8_t port_id)
 {
-	struct rte_eth_dev_info dev_info = {0};
+	struct rte_eth_dev_info dev_info;
 	struct ifreq ifr;
 	int ret;
 	int sockfd;
@@ -539,7 +540,7 @@ static uint32_t mtu_get_pkt_dpdk(pktio_entry_t *pktio_entry)
 
 static int _dpdk_vdev_promisc_mode_set(uint8_t port_id, int enable)
 {
-	struct rte_eth_dev_info dev_info = {0};
+	struct rte_eth_dev_info dev_info;
 	struct ifreq ifr;
 	int ret;
 	int sockfd;
@@ -598,7 +599,7 @@ static int promisc_mode_set_pkt_dpdk(pktio_entry_t *pktio_entry,  int enable)
 
 static int _dpdk_vdev_promisc_mode(uint8_t port_id)
 {
-	struct rte_eth_dev_info dev_info = {0};
+	struct rte_eth_dev_info dev_info;
 	struct ifreq ifr;
 	int ret;
 	int sockfd;

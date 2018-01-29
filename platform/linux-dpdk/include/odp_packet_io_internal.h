@@ -23,6 +23,7 @@ extern "C" {
 #include <odp_classification_datamodel.h>
 #include <odp_align_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_packet_null.h>
 
 #include <odp_config_internal.h>
 #include <odp/api/hints.h>
@@ -72,6 +73,7 @@ struct pktio_entry {
 	odp_pktio_t handle;		/**< pktio handle */
 	union {
 		pkt_loop_t pkt_loop;	/**< Using loopback for IO */
+		pkt_null_t pkt_null;	/**< Using null for IO */
 		pkt_dpdk_t pkt_dpdk;	/**< using DPDK API for IO */
 	};
 	enum {
@@ -199,6 +201,7 @@ static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
 }
 
 extern const pktio_if_ops_t loopback_pktio_ops;
+extern const pktio_if_ops_t null_pktio_ops;
 extern const pktio_if_ops_t dpdk_pktio_ops;
 extern const pktio_if_ops_t * const pktio_if_ops[];
 
