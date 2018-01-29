@@ -1941,8 +1941,8 @@ static void egress_vlan_marking(tm_vlan_marking_t *vlan_marking,
 	 * correctness rather then performance. */
 	split_hdr = hdr_len < (_ODP_ETHHDR_LEN + _ODP_VLANHDR_LEN);
 	if (split_hdr) {
-		odp_packet_copy_to_mem(odp_pkt, _ODP_ETHHDR_LEN,
-				       _ODP_VLANHDR_LEN, &vlan_hdr);
+		_odp_packet_copy_to_mem(odp_pkt, _ODP_ETHHDR_LEN,
+					_ODP_VLANHDR_LEN, &vlan_hdr);
 		vlan_hdr_ptr = &vlan_hdr;
 	}
 
@@ -1956,8 +1956,8 @@ static void egress_vlan_marking(tm_vlan_marking_t *vlan_marking,
 
 	vlan_hdr_ptr->tci = _odp_cpu_to_be_16(new_tci);
 	if (split_hdr)
-		odp_packet_copy_from_mem(odp_pkt, _ODP_ETHHDR_LEN,
-					 _ODP_VLANHDR_LEN, &vlan_hdr);
+		_odp_packet_copy_from_mem(odp_pkt, _ODP_ETHHDR_LEN,
+					  _ODP_VLANHDR_LEN, &vlan_hdr);
 }
 
 static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
@@ -1980,8 +1980,8 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 	 * correctness rather then performance. */
 	split_hdr = hdr_len < 12;
 	if (split_hdr) {
-		odp_packet_copy_to_mem(odp_pkt, l3_offset,
-				       _ODP_IPV4HDR_LEN, &ipv4_hdr);
+		_odp_packet_copy_to_mem(odp_pkt, l3_offset,
+					_ODP_IPV4HDR_LEN, &ipv4_hdr);
 		ipv4_hdr_ptr = &ipv4_hdr;
 	}
 
@@ -2022,8 +2022,8 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 	ipv4_hdr_ptr->tos    = new_tos;
 	ipv4_hdr_ptr->chksum = _odp_cpu_to_be_16((~ones_compl_sum) & 0xFFFF);
 	if (split_hdr)
-		odp_packet_copy_from_mem(odp_pkt, l3_offset,
-					 _ODP_IPV4HDR_LEN, &ipv4_hdr);
+		_odp_packet_copy_from_mem(odp_pkt, l3_offset,
+					  _ODP_IPV4HDR_LEN, &ipv4_hdr);
 }
 
 static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
@@ -2046,8 +2046,8 @@ static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 	 * correctness rather then performance. */
 	split_hdr = hdr_len < 4;
 	if (split_hdr) {
-		odp_packet_copy_to_mem(odp_pkt, l3_offset,
-				       _ODP_IPV6HDR_LEN, &ipv6_hdr);
+		_odp_packet_copy_to_mem(odp_pkt, l3_offset,
+					_ODP_IPV6HDR_LEN, &ipv6_hdr);
 		ipv6_hdr_ptr = &ipv6_hdr;
 	}
 
@@ -2075,8 +2075,8 @@ static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 	ipv6_hdr_ptr->ver_tc_flow = _odp_cpu_to_be_32(new_ver_tc_flow);
 
 	if (split_hdr)
-		odp_packet_copy_from_mem(odp_pkt, l3_offset,
-					 _ODP_IPV6HDR_LEN, &ipv6_hdr);
+		_odp_packet_copy_from_mem(odp_pkt, l3_offset,
+					  _ODP_IPV6HDR_LEN, &ipv6_hdr);
 }
 
 static void tm_egress_marking(tm_system_t *tm_system, odp_packet_t odp_pkt)

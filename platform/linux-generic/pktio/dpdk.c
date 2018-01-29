@@ -471,7 +471,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		pkt_hdr = odp_packet_hdr(pkt);
 		pull_tail(pkt_hdr, alloc_len - pkt_len);
 
-		if (odp_packet_copy_from_mem(pkt, 0, pkt_len, data) != 0)
+		if (_odp_packet_copy_from_mem(pkt, 0, pkt_len, data) != 0)
 			goto fail;
 
 		pkt_hdr->input = pktio_entry->s.handle;
@@ -649,7 +649,7 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 		/* Packet always fits in mbuf */
 		data = rte_pktmbuf_append(mbuf_table[i], pkt_len);
 
-		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
+		_odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
 
 		if (odp_unlikely(pktio_entry->s.chksum_insert_ena)) {
 			odp_pktout_config_opt_t *pktout_capa =
