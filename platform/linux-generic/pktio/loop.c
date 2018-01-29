@@ -101,7 +101,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		pkt = packet_from_buf_hdr(hdr_tbl[i]);
 		pkt_len = odp_packet_len(pkt);
-		pkt_hdr = odp_packet_hdr(pkt);
+		pkt_hdr = packet_hdr(pkt);
 
 		packet_parse_reset(pkt_hdr);
 		if (pktio_cls_enabled(pktio_entry)) {

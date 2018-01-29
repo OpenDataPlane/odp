@@ -243,7 +243,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			frame_num = next_frame_num;
 			continue;
 		}
-		hdr = odp_packet_hdr(pkt_table[nb_rx]);
+		hdr = packet_hdr(pkt_table[nb_rx]);
 		ret = _odp_packet_copy_from_mem(pkt_table[nb_rx], 0,
 						pkt_len, pkt_buf);
 		if (ret != 0) {
