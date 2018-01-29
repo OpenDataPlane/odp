@@ -483,7 +483,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 					   pktio_entry->s.config.parser.layer);
 
 		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
-			odp_packet_flow_hash_set(pkt, mbuf->hash.rss);
+			packet_set_flow_hash(pkt_hdr, mbuf->hash.rss);
 
 		packet_set_ts(pkt_hdr, ts);
 
@@ -723,7 +723,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 					   pktio_entry->s.config.parser.layer);
 
 		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
-			odp_packet_flow_hash_set(pkt, mbuf->hash.rss);
+			packet_set_flow_hash(pkt_hdr, mbuf->hash.rss);
 
 		packet_set_ts(pkt_hdr, ts);
 
