@@ -26,6 +26,7 @@
 #include <time.h>
 
 #include <odp_api.h>
+#include <odp/api/plat/packet_inlines.h>
 #include <odp_packet_socket.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
@@ -243,8 +244,8 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			continue;
 		}
 		hdr = odp_packet_hdr(pkt_table[nb_rx]);
-		ret = odp_packet_copy_from_mem(pkt_table[nb_rx], 0,
-					       pkt_len, pkt_buf);
+		ret = _odp_packet_copy_from_mem(pkt_table[nb_rx], 0,
+						pkt_len, pkt_buf);
 		if (ret != 0) {
 			odp_packet_free(pkt_table[nb_rx]);
 			mmap_rx_user_ready(ppd.raw); /* drop */
@@ -345,7 +346,7 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 
 		buf = (uint8_t *)ppd.raw + TPACKET2_HDRLEN -
 		       sizeof(struct sockaddr_ll);
-		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, buf);
+		_odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, buf);
 
 		mmap_tx_user_ready(ppd.raw);
 
