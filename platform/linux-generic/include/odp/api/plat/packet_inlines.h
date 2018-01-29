@@ -23,10 +23,18 @@
 #include <odp/api/plat/packet_inline_types.h>
 #include <odp/api/plat/pool_inline_types.h>
 
+#include <string.h>
+
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 void *_odp_packet_map(void *pkt_ptr, uint32_t offset, uint32_t *seg_len,
 		      int *seg_idx);
+
+int _odp_packet_copy_from_mem_seg(odp_packet_t pkt, uint32_t offset,
+				  uint32_t len, const void *src);
+
+int _odp_packet_copy_to_mem_seg(odp_packet_t pkt, uint32_t offset,
+				uint32_t len, void *dst);
 
 extern const _odp_packet_inline_offset_t _odp_packet_inline;
 extern const _odp_pool_inline_offset_t   _odp_pool_inline;
@@ -223,6 +231,34 @@ static inline void _odp_packet_prefetch(odp_packet_t pkt, uint32_t offset,
 static inline odp_buffer_t packet_to_buffer(odp_packet_t pkt)
 {
 	return (odp_buffer_t)pkt;
+}
+
+static inline int _odp_packet_copy_from_mem(odp_packet_t pkt, uint32_t offset,
+					    uint32_t len, const void *src)
+{
+	uint32_t seg_len = _odp_packet_seg_len(pkt);
+	uint8_t *data    = (uint8_t *)_odp_packet_data(pkt);
+
+	if (odp_unlikely(offset + len > seg_len))
+		return _odp_packet_copy_from_mem_seg(pkt, offset, len, src);
+
+	memcpy(data + offset, src, len);
+
+	return 0;
+}
+
+static inline int _odp_packet_copy_to_mem(odp_packet_t pkt, uint32_t offset,
+					  uint32_t len, void *dst)
+{
+	uint32_t seg_len = _odp_packet_seg_len(pkt);
+	uint8_t *data    = (uint8_t *)_odp_packet_data(pkt);
+
+	if (odp_unlikely(offset + len > seg_len))
+		return _odp_packet_copy_to_mem_seg(pkt, offset, len, dst);
+
+	memcpy(dst, data + offset, len);
+
+	return 0;
 }
 
 /** @endcond */
