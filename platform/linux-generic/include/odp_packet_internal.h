@@ -331,6 +331,13 @@ static inline int packet_hdr_has_ipv6(odp_packet_hdr_t *pkt_hdr)
 	return pkt_hdr->p.input_flags.ipv6;
 }
 
+static inline void packet_set_flow_hash(odp_packet_hdr_t *pkt_hdr,
+					uint32_t flow_hash)
+{
+	pkt_hdr->flow_hash = flow_hash;
+	pkt_hdr->p.input_flags.flow_hash = 1;
+}
+
 static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 {
 	if (ts != NULL) {
