@@ -225,7 +225,14 @@ static inline odp_packet_seg_t _odp_packet_next_seg(odp_packet_t pkt,
 static inline void _odp_packet_prefetch(odp_packet_t pkt, uint32_t offset,
 					uint32_t len)
 {
-	(void)pkt; (void)offset; (void)len;
+	uint32_t seg_len = _odp_packet_seg_len(pkt);
+	uint8_t *data    = (uint8_t *)_odp_packet_data(pkt);
+	(void)len;
+
+	if (odp_unlikely(offset >= seg_len))
+		return;
+
+	odp_prefetch(data + offset);
 }
 
 static inline int _odp_packet_copy_from_mem(odp_packet_t pkt, uint32_t offset,
