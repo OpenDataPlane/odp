@@ -169,7 +169,7 @@ typedef struct {
 /**
  * Return the packet header
  */
-static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
+static inline odp_packet_hdr_t *packet_hdr(odp_packet_t pkt)
 {
 	return (odp_packet_hdr_t *)(uintptr_t)pkt;
 }
@@ -181,7 +181,7 @@ static inline odp_packet_t packet_handle(odp_packet_hdr_t *pkt_hdr)
 
 static inline odp_buffer_hdr_t *packet_to_buf_hdr(odp_packet_t pkt)
 {
-	return &odp_packet_hdr(pkt)->buf_hdr;
+	return &packet_hdr(pkt)->buf_hdr;
 }
 
 static inline odp_packet_t packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
@@ -201,12 +201,12 @@ static inline seg_entry_t *seg_entry_last(odp_packet_hdr_t *hdr)
 
 static inline odp_event_subtype_t packet_subtype(odp_packet_t pkt)
 {
-	return odp_packet_hdr(pkt)->subtype;
+	return packet_hdr(pkt)->subtype;
 }
 
 static inline void packet_subtype_set(odp_packet_t pkt, int ev)
 {
-	odp_packet_hdr(pkt)->subtype = ev;
+	packet_hdr(pkt)->subtype = ev;
 }
 
 /**

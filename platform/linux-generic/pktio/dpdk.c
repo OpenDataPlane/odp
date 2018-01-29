@@ -262,7 +262,7 @@ static int pool_dequeue_bulk(struct rte_mempool *mp, void **obj_table,
 
 	for (i = 0; i < pkts; i++) {
 		odp_packet_t pkt = packet_tbl[i];
-		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 		struct rte_mbuf *mbuf = (struct rte_mbuf *)
 					(uintptr_t)pkt_hdr->extra;
 		if (pkt_hdr->extra_type != PKT_EXTRA_TYPE_DPDK)
@@ -468,7 +468,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		}
 
 		pkt     = pkt_table[i];
-		pkt_hdr = odp_packet_hdr(pkt);
+		pkt_hdr = packet_hdr(pkt);
 		pull_tail(pkt_hdr, alloc_len - pkt_len);
 
 		if (_odp_packet_copy_from_mem(pkt, 0, pkt_len, data) != 0)
@@ -636,7 +636,7 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 		return 0;
 	}
 	for (i = 0; i < num; i++) {
-		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt_table[i]);
+		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt_table[i]);
 
 		pkt_len = packet_len(pkt_hdr);
 
@@ -697,7 +697,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		pkt_len = rte_pktmbuf_pkt_len(mbuf);
 
 		pkt = (odp_packet_t)mbuf->userdata;
-		pkt_hdr = odp_packet_hdr(pkt);
+		pkt_hdr = packet_hdr(pkt);
 
 		if (pktio_cls_enabled(pktio_entry)) {
 			if (cls_classify_packet(pktio_entry,
@@ -754,7 +754,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 
 	for (i = 0; i < num; i++) {
 		odp_packet_t pkt = pkt_table[i];
-		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 		struct rte_mbuf *mbuf = (struct rte_mbuf *)
 					(uintptr_t)pkt_hdr->extra;
 		uint16_t pkt_len = odp_packet_len(pkt);
@@ -1606,7 +1606,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 
 			for (i = 0; i < mbufs && freed != copy_count; i++) {
 				odp_packet_t pkt = pkt_table[i];
-				odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+				odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
 				if (pkt_hdr->buf_hdr.segcount > 1) {
 					if (odp_likely(i < tx_pkts))

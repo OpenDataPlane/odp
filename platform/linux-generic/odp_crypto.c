@@ -1434,7 +1434,7 @@ odp_event_t odp_crypto_packet_to_event(odp_packet_t pkt)
 static
 odp_crypto_packet_result_t *get_op_result_from_packet(odp_packet_t pkt)
 {
-	odp_packet_hdr_t *hdr = odp_packet_hdr(pkt);
+	odp_packet_hdr_t *hdr = packet_hdr(pkt);
 
 	return &hdr->crypto_op_result;
 }
@@ -1520,7 +1520,7 @@ int odp_crypto_int(odp_packet_t pkt_in,
 		(rc_cipher == ODP_CRYPTO_ALG_ERR_NONE) &&
 		(rc_auth == ODP_CRYPTO_ALG_ERR_NONE);
 
-	pkt_hdr = odp_packet_hdr(out_pkt);
+	pkt_hdr = packet_hdr(out_pkt);
 	pkt_hdr->p.error_flags.crypto_err = !op_result->ok;
 
 	/* Synchronous, simply return results */

@@ -280,7 +280,7 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 		return ODP_PACKET_INVALID;
 	}
 
-	pkt_hdr = odp_packet_hdr(pkt);
+	pkt_hdr = packet_hdr(pkt);
 
 	if (pktio_cls_enabled(pktio_entry))
 		copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
