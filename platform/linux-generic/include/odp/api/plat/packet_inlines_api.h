@@ -140,4 +140,16 @@ _ODP_INLINE void odp_packet_prefetch(odp_packet_t pkt, uint32_t offset,
 	return _odp_packet_prefetch(pkt, offset, len);
 }
 
+_ODP_INLINE int odp_packet_copy_from_mem(odp_packet_t pkt, uint32_t offset,
+					 uint32_t len, const void *src)
+{
+	return _odp_packet_copy_from_mem(pkt, offset, len, src);
+}
+
+_ODP_INLINE int odp_packet_copy_to_mem(odp_packet_t pkt, uint32_t offset,
+				       uint32_t len, void *dst)
+{
+	return _odp_packet_copy_to_mem(pkt, offset, len, dst);
+}
+
 #endif
