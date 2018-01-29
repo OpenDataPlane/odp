@@ -20,7 +20,7 @@ typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_buffer_t;
 
 typedef _odp_abi_buffer_t *odp_buffer_t;
 
-#define ODP_BUFFER_INVALID   ((odp_buffer_t)NULL)
+#define ODP_BUFFER_INVALID   ((odp_buffer_t)0)
 
 /**
  * @}
