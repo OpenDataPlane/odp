@@ -19,6 +19,8 @@ extern "C" {
 
 #include <odp/api/abi/cpu.h>
 
+/* Thread inline file implements cpu API function */
+#include <odp/api/thread.h>
 #include <odp/api/spec/cpu.h>
 
 #ifdef __cplusplus

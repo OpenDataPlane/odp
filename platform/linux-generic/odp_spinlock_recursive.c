@@ -8,6 +8,7 @@
 
 #include <odp/api/spinlock_recursive.h>
 #include <odp/api/thread.h>
+#include <odp/api/plat/thread_inlines.h>
 
 #define NO_OWNER (-1)
 
@@ -20,7 +21,7 @@ void odp_spinlock_recursive_init(odp_spinlock_recursive_t *rlock)
 
 void odp_spinlock_recursive_lock(odp_spinlock_recursive_t *rlock)
 {
-	int thr = odp_thread_id();
+	int thr = _odp_thread_id();
 
 	if (rlock->owner == thr) {
 		rlock->cnt++;
@@ -34,7 +35,7 @@ void odp_spinlock_recursive_lock(odp_spinlock_recursive_t *rlock)
 
 int odp_spinlock_recursive_trylock(odp_spinlock_recursive_t *rlock)
 {
-	int thr = odp_thread_id();
+	int thr = _odp_thread_id();
 
 	if (rlock->owner == thr) {
 		rlock->cnt++;
@@ -63,7 +64,7 @@ void odp_spinlock_recursive_unlock(odp_spinlock_recursive_t *rlock)
 
 int odp_spinlock_recursive_is_locked(odp_spinlock_recursive_t *rlock)
 {
-	int thr = odp_thread_id();
+	int thr = _odp_thread_id();
 
 	if (rlock->owner == thr)
 		return 1;

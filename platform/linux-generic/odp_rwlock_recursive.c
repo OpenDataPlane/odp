@@ -8,6 +8,7 @@
 
 #include <odp/api/rwlock_recursive.h>
 #include <odp/api/thread.h>
+#include <odp/api/plat/thread_inlines.h>
 #include <string.h>
 
 #define NO_OWNER (-1)
@@ -22,7 +23,7 @@ void odp_rwlock_recursive_init(odp_rwlock_recursive_t *rlock)
 /* Multiple readers can recurse the lock concurrently */
 void odp_rwlock_recursive_read_lock(odp_rwlock_recursive_t *rlock)
 {
-	int thr = odp_thread_id();
+	int thr = _odp_thread_id();
 
 	if (rlock->rd_cnt[thr]) {
 		rlock->rd_cnt[thr]++;
@@ -36,7 +37,7 @@ void odp_rwlock_recursive_read_lock(odp_rwlock_recursive_t *rlock)
 /* Multiple readers can recurse the lock concurrently */
 int odp_rwlock_recursive_read_trylock(odp_rwlock_recursive_t *rlock)
 {
-	int thr = odp_thread_id();
+	int thr = _odp_thread_id();
 
 	if (rlock->rd_cnt[thr]) {
 		rlock->rd_cnt[thr]++;
@@ -53,7 +54,7 @@ int odp_rwlock_recursive_read_trylock(odp_rwlock_recursive_t *rlock)
 
 void odp_rwlock_recursive_read_unlock(odp_rwlock_recursive_t *rlock)
 {
-	int thr = odp_thread_id();
+	int thr = _odp_thread_id();
 
 	rlock->rd_cnt[thr]--;
 
@@ -66,7 +67,7 @@ void odp_rwlock_recursive_read_unlock(odp_rwlock_recursive_t *rlock)
 /* Only one writer can recurse the lock */
 void odp_rwlock_recursive_write_lock(odp_rwlock_recursive_t *rlock)
 {
-	int thr = odp_thread_id();
+	int thr = _odp_thread_id();
 
 	if (rlock->wr_owner == thr) {
 		rlock->wr_cnt++;
@@ -81,7 +82,7 @@ void odp_rwlock_recursive_write_lock(odp_rwlock_recursive_t *rlock)
 /* Only one writer can recurse the lock */
 int odp_rwlock_recursive_write_trylock(odp_rwlock_recursive_t *rlock)
 {
-	int thr = odp_thread_id();
+	int thr = _odp_thread_id();
 
 	if (rlock->wr_owner == thr) {
 		rlock->wr_cnt++;

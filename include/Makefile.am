@@ -96,6 +96,7 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/sync.h \
 		  odp/api/spec/system_info.h \
 		  odp/api/spec/thread.h \
+		  odp/api/spec/thread_types.h \
 		  odp/api/spec/threshold.h \
 		  odp/api/spec/thrmask.h \
 		  odp/api/spec/ticketlock.h \

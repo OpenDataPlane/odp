@@ -19,20 +19,14 @@
 #include <odp/api/align.h>
 #include <odp/api/cpu.h>
 #include <odp_schedule_if.h>
+#include <odp/api/plat/thread_inlines.h>
 
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 typedef struct {
-	int thr;
-	int cpu;
-	odp_thread_type_t type;
-} thread_state_t;
-
-
-typedef struct {
-	thread_state_t thr[ODP_THREAD_COUNT_MAX];
+	_odp_thread_state_t thr[ODP_THREAD_COUNT_MAX];
 
 	struct {
 		odp_thrmask_t  all;
@@ -46,14 +40,15 @@ typedef struct {
 	odp_spinlock_t lock;
 } thread_globals_t;
 
-
 /* Globals */
 static thread_globals_t *thread_globals;
 
+#include <odp/visibility_begin.h>
 
 /* Thread local */
-static __thread thread_state_t *this_thread;
+__thread _odp_thread_state_t *_odp_this_thread;
 
+#include <odp/visibility_end.h>
 
 int odp_thread_init_global(void)
 {
@@ -162,7 +157,7 @@ int odp_thread_init_local(odp_thread_type_t type)
 	thread_globals->thr[id].cpu  = cpu;
 	thread_globals->thr[id].type = type;
 
-	this_thread = &thread_globals->thr[id];
+	_odp_this_thread = &thread_globals->thr[id];
 
 	sched_fn->thr_add(ODP_SCHED_GROUP_ALL, id);
 
@@ -177,8 +172,8 @@ int odp_thread_init_local(odp_thread_type_t type)
 int odp_thread_term_local(void)
 {
 	int num;
-	int id = this_thread->thr;
-	odp_thread_type_t type = this_thread->type;
+	int id = _odp_this_thread->thr;
+	odp_thread_type_t type = _odp_this_thread->type;
 
 	sched_fn->thr_rem(ODP_SCHED_GROUP_ALL, id);
 
@@ -199,11 +194,6 @@ int odp_thread_term_local(void)
 	return num; /* return a number of threads left */
 }
 
-int odp_thread_id(void)
-{
-	return this_thread->thr;
-}
-
 int odp_thread_count(void)
 {
 	return thread_globals->num;
@@ -212,16 +202,6 @@ int odp_thread_count(void)
 int odp_thread_count_max(void)
 {
 	return ODP_THREAD_COUNT_MAX;
-}
-
-odp_thread_type_t odp_thread_type(void)
-{
-	return this_thread->type;
-}
-
-int odp_cpu_id(void)
-{
-	return this_thread->cpu;
 }
 
 int odp_thrmask_worker(odp_thrmask_t *mask)
