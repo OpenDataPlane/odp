@@ -22,6 +22,7 @@
 
 #include <odp/api/plat/packet_inline_types.h>
 #include <odp/api/plat/pool_inline_types.h>
+#include <odp/api/plat/pktio_inlines.h>
 
 #include <string.h>
 
@@ -87,6 +88,13 @@ static inline odp_pool_t _odp_packet_pool(odp_packet_t pkt)
 static inline odp_pktio_t _odp_packet_input(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, odp_pktio_t, input);
+}
+
+static inline int _odp_packet_input_index(odp_packet_t pkt)
+{
+	odp_pktio_t pktio = _odp_packet_input(pkt);
+
+	return _odp_pktio_index(pktio);
 }
 
 static inline int _odp_packet_num_segs(odp_packet_t pkt)
