@@ -24,7 +24,7 @@ extern "C" {
 /*
  * Maximum number of ordered locks per queue
  */
-#define CONFIG_QUEUE_MAX_ORD_LOCKS 4
+#define CONFIG_QUEUE_MAX_ORD_LOCKS 2
 
 /*
  * Maximum number of packet IO resources
@@ -56,10 +56,10 @@ extern "C" {
  * size e.g. due to HW or a protocol specific alignment requirement.
  *
  * @internal In odp-linux implementation:
- * The default value (66) allows a 1500-byte packet to be received into a single
- * segment with Ethernet offset alignment and room for some header expansion.
+ * The default value (128) allows a 1500-byte packet to be received into a
+ * single segment with room for some header expansion.
  */
-#define CONFIG_PACKET_HEADROOM 66
+#define CONFIG_PACKET_HEADROOM 128
 
 /*
  * Default packet tailroom

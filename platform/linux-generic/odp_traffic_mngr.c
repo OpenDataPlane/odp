@@ -37,9 +37,6 @@ static const pkt_desc_t EMPTY_PKT_DESC = { .word = 0 };
 #define MAX_PRIORITIES ODP_TM_MAX_PRIORITIES
 #define NUM_SHAPER_COLORS ODP_NUM_SHAPER_COLORS
 
-/* Traffic manager queue */
-#define QUEUE_TYPE_TM  4
-
 static tm_prop_t basic_prop_tbl[MAX_PRIORITIES][NUM_SHAPER_COLORS] = {
 	[0] = {
 		[ODP_TM_SHAPER_GREEN] = { 0, DECR_BOTH },
@@ -102,17 +99,17 @@ static odp_bool_t tm_demote_pkt_desc(tm_system_t *tm_system,
 				     tm_shaper_obj_t *timer_shaper,
 				     pkt_desc_t *demoted_pkt_desc);
 
-static int queue_tm_reenq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
+static int queue_tm_reenq(queue_t queue, odp_buffer_hdr_t *buf_hdr)
 {
 	odp_tm_queue_t tm_queue = MAKE_ODP_TM_QUEUE((uint8_t *)queue -
 						    offsetof(tm_queue_obj_t,
 							     tm_qentry));
-	odp_packet_t pkt = _odp_packet_from_buffer(buf_hdr->handle.handle);
+	odp_packet_t pkt = _odp_packet_from_buf_hdr(buf_hdr);
 
 	return odp_tm_enq(tm_queue, pkt);
 }
 
-static int queue_tm_reenq_multi(queue_entry_t *queue ODP_UNUSED,
+static int queue_tm_reenq_multi(queue_t queue ODP_UNUSED,
 				odp_buffer_hdr_t *buf[] ODP_UNUSED,
 				int num ODP_UNUSED)
 {
@@ -3882,6 +3879,7 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 	tm_queue_obj_t *tm_queue_obj;
 	tm_wred_node_t *tm_wred_node;
 	odp_tm_queue_t odp_tm_queue;
+	odp_queue_t queue;
 	odp_tm_wred_t wred_profile;
 	tm_system_t *tm_system;
 	uint32_t color;
@@ -3918,9 +3916,16 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 	tm_queue_obj->pkt = ODP_PACKET_INVALID;
 	odp_ticketlock_init(&tm_wred_node->tm_wred_node_lock);
 
-	tm_queue_obj->tm_qentry.s.type = QUEUE_TYPE_TM;
-	tm_queue_obj->tm_qentry.s.enqueue = queue_tm_reenq;
-	tm_queue_obj->tm_qentry.s.enqueue_multi = queue_tm_reenq_multi;
+	queue = odp_queue_create(NULL, NULL);
+	if (queue == ODP_QUEUE_INVALID) {
+		free(tm_wred_node);
+		free(tm_queue_obj);
+		return ODP_TM_INVALID;
+	}
+	tm_queue_obj->tm_qentry = queue_fn->from_ext(queue);
+	queue_fn->set_enq_deq_fn(tm_queue_obj->tm_qentry,
+				 queue_tm_reenq, queue_tm_reenq_multi,
+				 NULL, NULL);
 
 	tm_system->queue_num_tbl[tm_queue_obj->queue_num - 1] = tm_queue_obj;
 	odp_ticketlock_lock(&tm_system->tm_system_lock);
@@ -3991,6 +3996,8 @@ int odp_tm_queue_destroy(odp_tm_queue_t tm_queue)
 	/* Now that all of the checks are done, time to so some freeing. */
 	odp_ticketlock_lock(&tm_system->tm_system_lock);
 	tm_system->queue_num_tbl[tm_queue_obj->queue_num - 1] = NULL;
+
+	odp_queue_destroy(queue_fn->to_ext(tm_queue_obj->tm_qentry));
 
 	/* First delete any associated tm_wred_node and then the tm_queue_obj
 	 * itself */

@@ -59,8 +59,7 @@ static int _ipc_master_start(pktio_entry_t *pktio_entry)
 
 	pktio_entry->s.ipc.remote_pool_shm = shm;
 	pktio_entry->s.ipc.pool_base = odp_shm_addr(shm);
-	pktio_entry->s.ipc.pool_mdata_base = (char *)odp_shm_addr(shm) +
-					     pinfo->slave.base_addr_offset;
+	pktio_entry->s.ipc.pool_mdata_base = (char *)odp_shm_addr(shm);
 
 	odp_atomic_store_u32(&pktio_entry->s.ipc.ready, 1);
 
@@ -153,7 +152,6 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	}
 
 	memcpy(pinfo->master.pool_name, pool_name, strlen(pool_name));
-	pinfo->slave.base_addr_offset = 0;
 	pinfo->slave.base_addr = 0;
 	pinfo->slave.pid = 0;
 	pinfo->slave.init_done = 0;
@@ -297,8 +295,7 @@ static int _ipc_slave_start(pktio_entry_t *pktio_entry)
 	shm = _ipc_map_remote_pool(pinfo->master.pool_name,
 				   pid);
 	pktio_entry->s.ipc.remote_pool_shm = shm;
-	pktio_entry->s.ipc.pool_mdata_base = (char *)odp_shm_addr(shm) +
-					     pinfo->master.base_addr_offset;
+	pktio_entry->s.ipc.pool_mdata_base = (char *)odp_shm_addr(shm);
 	pktio_entry->s.ipc.pkt_size = pinfo->master.block_size;
 
 	_ipc_export_pool(pinfo, pktio_entry->s.ipc.pool);
@@ -343,6 +340,10 @@ static int ipc_pktio_open(odp_pktio_t id ODP_UNUSED,
 		return -1;
 
 	odp_atomic_init_u32(&pktio_entry->s.ipc.ready, 0);
+
+	pktio_entry->s.ipc.rx.cache = _ring_create("ipc_rx_cache",
+						   PKTIO_IPC_ENTRIES,
+						   _RING_NO_LIST);
 
 	/* Shared info about remote pktio */
 	if (sscanf(dev, "ipc:%d:%s", &pid, tail) == 2) {
@@ -392,24 +393,29 @@ static void _ipc_free_ring_packets(pktio_entry_t *pktio_entry, _ring_t *r)
 	int ret;
 	void **rbuf_p;
 	int i;
+	void *addr;
+	pool_t *pool;
 
 	if (!r)
 		return;
+
+	pool = pool_entry_from_hdl(pktio_entry->s.ipc.pool);
+	addr = odp_shm_addr(pool->shm);
 
 	rbuf_p = (void *)&offsets;
 
 	while (1) {
 		ret = _ring_mc_dequeue_burst(r, rbuf_p,
 					     PKTIO_IPC_ENTRIES);
-		if (0 == ret)
+		if (ret <= 0)
 			break;
 		for (i = 0; i < ret; i++) {
 			odp_packet_hdr_t *phdr;
 			odp_packet_t pkt;
-			void *mbase = pktio_entry->s.ipc.pool_mdata_base;
 
-			phdr = (void *)((uint8_t *)mbase + offsets[i]);
+			phdr = (void *)((uint8_t *)addr + offsets[i]);
 			pkt = packet_handle(phdr);
+
 			odp_packet_free(pkt);
 		}
 	}
@@ -423,7 +429,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 	_ring_t *r;
 	_ring_t *r_p;
 	uintptr_t offsets[PKTIO_IPC_ENTRIES];
-	void **ipcbufs_p = (void *)&offsets;
+	void **ipcbufs_p = (void *)&offsets[0];
 	uint32_t ready;
 	int pkts_ring;
 
@@ -435,10 +441,20 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 
 	_ipc_free_ring_packets(pktio_entry, pktio_entry->s.ipc.tx.free);
 
-	r = pktio_entry->s.ipc.rx.recv;
+	/* rx from cache */
+	r = pktio_entry->s.ipc.rx.cache;
 	pkts = _ring_mc_dequeue_burst(r, ipcbufs_p, len);
 	if (odp_unlikely(pkts < 0))
 		ODP_ABORT("internal error dequeue\n");
+
+	/* rx from other app */
+	if (pkts == 0) {
+		ipcbufs_p = (void *)&offsets[0];
+		r = pktio_entry->s.ipc.rx.recv;
+		pkts = _ring_mc_dequeue_burst(r, ipcbufs_p, len);
+		if (odp_unlikely(pkts < 0))
+			ODP_ABORT("internal error dequeue\n");
+	}
 
 	/* fast path */
 	if (odp_likely(0 == pkts))
@@ -466,10 +482,12 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 			/* Original pool might be smaller then
 			*  PKTIO_IPC_ENTRIES. If packet can not be
 			 * allocated from pool at this time,
-			 * simple get in on next recv() call.
+			 * simple get in on next recv() call. To keep
+			 * packet ordering store such packets in local
+			 * cache.
 			 */
-			if (i == 0)
-				return 0;
+			IPC_ODP_DBG("unable to allocate packet %d/%d\n",
+				    i, pkts);
 			break;
 		}
 
@@ -498,13 +516,38 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 		pkt_table[i] = pkt;
 	}
 
+	/* put back to rx ring dequed but not processed packets*/
+	if (pkts != i) {
+		ipcbufs_p = (void *)&offsets[i];
+		r_p = pktio_entry->s.ipc.rx.cache;
+		pkts_ring = _ring_mp_enqueue_burst(r_p, ipcbufs_p, pkts - i);
+
+		if (pkts_ring != (pkts - i))
+			ODP_ABORT("bug to enqueue packets\n");
+
+		if (i == 0)
+			return 0;
+
+	}
+
+	/*num of actually received packets*/
+	pkts = i;
+
 	/* Now tell other process that we no longer need that buffers.*/
 	r_p = pktio_entry->s.ipc.rx.free;
 
 repeat:
+
+	ipcbufs_p = (void *)&offsets[0];
 	pkts_ring = _ring_mp_enqueue_burst(r_p, ipcbufs_p, pkts);
-	if (odp_unlikely(pkts < 0))
+	if (odp_unlikely(pkts_ring < 0))
 		ODP_ABORT("ipc: odp_ring_mp_enqueue_bulk r_p fail\n");
+
+	for (i = 0; i < pkts; i++) {
+		IPC_ODP_DBG("%d/%d send to be free packet offset %x\n",
+			    i, pkts, offsets[i]);
+	}
+
 	if (odp_unlikely(pkts != pkts_ring)) {
 		IPC_ODP_DBG("odp_ring_full: %d, odp_ring_count %d,"
 			    " _ring_free_count %d\n",
@@ -553,12 +596,13 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 	for (i = 0; i < len; i++) {
 		odp_packet_t pkt =  pkt_table[i];
 		pool_t *ipc_pool = pool_entry_from_hdl(pktio_entry->s.ipc.pool);
-		odp_buffer_bits_t handle;
-		uint32_t pkt_pool_id;
+		odp_packet_hdr_t *pkt_hdr;
+		pool_t *pool;
 
-		handle.handle = _odp_packet_to_buffer(pkt);
-		pkt_pool_id = handle.pool_id;
-		if (pkt_pool_id != ipc_pool->pool_idx) {
+		pkt_hdr = odp_packet_hdr(pkt);
+		pool = pkt_hdr->buf_hdr.pool_ptr;
+
+		if (pool->pool_idx != ipc_pool->pool_idx) {
 			odp_packet_t newpkt;
 
 			newpkt = odp_packet_copy(pkt, pktio_entry->s.ipc.pool);
@@ -588,10 +632,13 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 		/* compile all function code even if ipc disabled with config */
 		pkt_hdr->buf_hdr.ipc_data_offset = data_pool_off;
 		IPC_ODP_DBG("%d/%d send packet %llx, pool %llx,"
-			    "phdr = %p, offset %x\n",
+			    "phdr = %p, offset %x sendoff %x, addr %llx iaddr %llx\n",
 			    i, len,
 			    odp_packet_to_u64(pkt), odp_pool_to_u64(pool_hdl),
-			    pkt_hdr, pkt_hdr->buf_hdr.ipc_data_offset);
+			    pkt_hdr, pkt_hdr->buf_hdr.ipc_data_offset,
+			    offsets[i], odp_shm_addr(pool->shm),
+			    odp_shm_addr(pool_entry_from_hdl(
+					 pktio_entry->s.ipc.pool)->shm));
 	}
 
 	/* Put packets to ring to be processed by other process. */
@@ -609,7 +656,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 		ODP_ABORT("Unexpected!\n");
 	}
 
-	return ret;
+	return len;
 }
 
 static int ipc_pktio_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
@@ -709,6 +756,7 @@ static int ipc_close(pktio_entry_t *pktio_entry)
 	_ring_destroy(ipc_shm_name);
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_prod", name);
 	_ring_destroy(ipc_shm_name);
+	_ring_destroy("ipc_rx_cache");
 
 	return 0;
 }

@@ -11,6 +11,7 @@
 #include <odp_classification_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>
+#include <odp_queue_if.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>
@@ -55,7 +56,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 {
 	int nbr, i;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	queue_entry_t *qentry;
+	queue_t queue;
 	odp_packet_hdr_t *pkt_hdr;
 	odp_packet_hdr_t parsed_hdr;
 	odp_packet_t pkt;
@@ -69,8 +70,8 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
-	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
-	nbr = queue_deq_multi(qentry, hdr_tbl, len);
+	queue = queue_fn->from_ext(pktio_entry->s.pkt_loop.loopq);
+	nbr = queue_fn->deq_multi(queue, hdr_tbl, len);
 
 	if (pktio_entry->s.config.pktin.bit.ts_all ||
 	    pktio_entry->s.config.pktin.bit.ts_ptp) {
@@ -81,7 +82,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	for (i = 0; i < nbr; i++) {
 		uint32_t pkt_len;
 
-		pkt = _odp_packet_from_buffer(odp_hdr_to_buf(hdr_tbl[i]));
+		pkt = packet_from_buf_hdr(hdr_tbl[i]);
 		pkt_len = odp_packet_len(pkt);
 
 
@@ -154,7 +155,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			 const odp_packet_t pkt_tbl[], int len)
 {
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	queue_entry_t *qentry;
+	queue_t queue;
 	int i;
 	int ret;
 	uint32_t bytes = 0;
@@ -163,14 +164,14 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		len = QUEUE_MULTI_MAX;
 
 	for (i = 0; i < len; ++i) {
-		hdr_tbl[i] = buf_hdl_to_hdr(_odp_packet_to_buffer(pkt_tbl[i]));
+		hdr_tbl[i] = packet_to_buf_hdr(pkt_tbl[i]);
 		bytes += odp_packet_len(pkt_tbl[i]);
 	}
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
-	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
-	ret = queue_enq_multi(qentry, hdr_tbl, len);
+	queue = queue_fn->from_ext(pktio_entry->s.pkt_loop.loopq);
+	ret = queue_fn->enq_multi(queue, hdr_tbl, len);
 
 	if (ret > 0) {
 		pktio_entry->s.stats.out_ucast_pkts += ret;

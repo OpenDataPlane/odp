@@ -26,7 +26,7 @@ typedef int (*schedule_init_queue_fn_t)(uint32_t queue_index,
 typedef void (*schedule_destroy_queue_fn_t)(uint32_t queue_index);
 typedef int (*schedule_sched_queue_fn_t)(uint32_t queue_index);
 typedef int (*schedule_unsched_queue_fn_t)(uint32_t queue_index);
-typedef int (*schedule_ord_enq_multi_fn_t)(uint32_t queue_index,
+typedef int (*schedule_ord_enq_multi_fn_t)(queue_t q_int,
 					   void *buf_hdr[], int num, int *ret);
 typedef int (*schedule_init_global_fn_t)(void);
 typedef int (*schedule_term_global_fn_t)(void);
@@ -35,9 +35,10 @@ typedef int (*schedule_term_local_fn_t)(void);
 typedef void (*schedule_order_lock_fn_t)(void);
 typedef void (*schedule_order_unlock_fn_t)(void);
 typedef unsigned (*schedule_max_ordered_locks_fn_t)(void);
-typedef void (*schedule_save_context_fn_t)(queue_entry_t *queue);
+typedef void (*schedule_save_context_fn_t)(uint32_t queue_index);
 
 typedef struct schedule_fn_t {
+	int                         status_sync;
 	schedule_pktio_start_fn_t   pktio_start;
 	schedule_thr_add_fn_t       thr_add;
 	schedule_thr_rem_fn_t       thr_rem;
@@ -45,7 +46,6 @@ typedef struct schedule_fn_t {
 	schedule_init_queue_fn_t    init_queue;
 	schedule_destroy_queue_fn_t destroy_queue;
 	schedule_sched_queue_fn_t   sched_queue;
-	schedule_unsched_queue_fn_t unsched_queue;
 	schedule_ord_enq_multi_fn_t ord_enq_multi;
 	schedule_init_global_fn_t   init_global;
 	schedule_term_global_fn_t   term_global;
@@ -54,7 +54,11 @@ typedef struct schedule_fn_t {
 	schedule_order_lock_fn_t    order_lock;
 	schedule_order_unlock_fn_t  order_unlock;
 	schedule_max_ordered_locks_fn_t max_ordered_locks;
+
+	/* Called only when status_sync is set */
+	schedule_unsched_queue_fn_t unsched_queue;
 	schedule_save_context_fn_t  save_context;
+
 } schedule_fn_t;
 
 /* Interface towards the scheduler */
@@ -64,11 +68,6 @@ extern const schedule_fn_t *sched_fn;
 int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[]);
 void sched_cb_pktio_stop_finalize(int pktio_index);
 int sched_cb_num_pktio(void);
-int sched_cb_num_queues(void);
-int sched_cb_queue_prio(uint32_t queue_index);
-int sched_cb_queue_grp(uint32_t queue_index);
-int sched_cb_queue_is_ordered(uint32_t queue_index);
-int sched_cb_queue_is_atomic(uint32_t queue_index);
 odp_queue_t sched_cb_queue_handle(uint32_t queue_index);
 void sched_cb_queue_destroy_finalize(uint32_t queue_index);
 int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num);

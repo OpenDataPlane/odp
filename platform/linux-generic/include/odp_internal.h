@@ -25,6 +25,7 @@ extern "C" {
 #include <sys/types.h>
 
 #define MAX_CPU_NUMBER 128
+#define UID_MAXLEN 30
 
 typedef struct {
 	uint64_t cpu_hz_max[MAX_CPU_NUMBER];
@@ -41,7 +42,10 @@ typedef struct {
 } hugepage_info_t;
 
 struct odp_global_data_s {
+	char *shm_dir; /*< directory for odp mmaped files */
+	int   shm_dir_from_env; /*< overload default with env */
 	pid_t main_pid;
+	char uid[UID_MAXLEN];
 	odp_log_func_t log_fn;
 	odp_abort_func_t abort_fn;
 	system_info_t system_info;
@@ -56,8 +60,8 @@ enum init_stage {
 	CPUMASK_INIT,
 	TIME_INIT,
 	SYSINFO_INIT,
-	FDSERVER_INIT,
 	ISHM_INIT,
+	FDSERVER_INIT,
 	THREAD_INIT,
 	POOL_INIT,
 	QUEUE_INIT,

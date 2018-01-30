@@ -208,6 +208,10 @@ int main(int argc, char *argv[])
 {
 	odp_instance_t instance;
 	int ret;
+	cpu_set_t cpu_set;
+	odp_cpumask_t mask;
+	int cpu;
+	pid_t pid;
 
 	/* Parse and store the application arguments */
 	parse_args(argc, argv);
@@ -217,8 +221,26 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	odp_cpumask_default_worker(&mask, 0);
+	cpu = odp_cpumask_first(&mask);
+	ret = odp_cpumask_next(&mask, cpu);
+	if (ret != -1)
+		cpu = ret;
+
+	CPU_ZERO(&cpu_set);
+	CPU_SET(cpu, &cpu_set);
+
+	pid = getpid();
+
+	if (sched_setaffinity(pid, sizeof(cpu_set_t), &cpu_set)) {
+		printf("Set CPU affinity failed to cpu %d.\n", cpu);
+		return -1;
+	}
+
+	printf("ipc_pktio2 %d run on cpu %d\n", pid, cpu);
+
 	/* Init this thread */
-	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_WORKER)) {
 		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}

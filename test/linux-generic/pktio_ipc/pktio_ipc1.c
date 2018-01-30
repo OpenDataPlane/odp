@@ -42,6 +42,7 @@ static int pktio_run_loop(odp_pool_t pool)
 	int ret;
 	odp_pktin_queue_t pktin;
 	char name[30];
+	int sync_cnt = 0;
 
 	if (master_pid)
 		sprintf(name, TEST_IPC_PKTIO_PID_NAME, master_pid);
@@ -178,7 +179,7 @@ static int pktio_run_loop(odp_pool_t pool)
 
 				cnt_recv++;
 
-				if (head.seq != cnt_recv) {
+				if (head.seq != cnt_recv && sync_cnt) {
 					stat_errors++;
 					odp_packet_free(pkt);
 					EXAMPLE_DBG("head.seq %d - "
@@ -187,7 +188,6 @@ static int pktio_run_loop(odp_pool_t pool)
 						    head.seq, cnt_recv,
 						    head.seq - cnt_recv);
 					cnt_recv = head.seq;
-					stat_errors++;
 					stat_free++;
 					continue;
 				}
@@ -211,13 +211,6 @@ static int pktio_run_loop(odp_pool_t pool)
 			stat_pkts_alloc++;
 			odp_packet_l4_offset_set(pkt, 30);
 			pkt_tbl[i] = pkt;
-		}
-
-		/* exit if no packets allocated */
-		if (i == 0) {
-			EXAMPLE_DBG("unable to alloc packet pkts %d/%d\n",
-				    i, pkts);
-			break;
 		}
 
 		pkts = i;
@@ -262,6 +255,10 @@ static int pktio_run_loop(odp_pool_t pool)
 		if (odp_time_cmp(odp_time_local_from_ns(ODP_TIME_SEC_IN_NS),
 				 diff) < 0) {
 			current_cycle = cycle;
+			if (!sync_cnt && stat_errors == (MAX_PKT_BURST + 2)) {
+				stat_errors = 0;
+				sync_cnt = 1;
+			}
 			printf("\rpkts:  %" PRIu64 ", alloc  %" PRIu64 ","
 			       " errors %" PRIu64 ", pps  %" PRIu64 ","
 			       " free %" PRIu64 ".",
@@ -287,7 +284,7 @@ exit:
 		return -1;
 	}
 
-	return (stat_errors > 10 || stat_pkts < 1000) ? -1 : 0;
+	return (stat_errors || stat_pkts < 1000) ? -1 : 0;
 }
 
 /**
@@ -299,6 +296,10 @@ int main(int argc, char *argv[])
 	odp_pool_param_t params;
 	odp_instance_t instance;
 	int ret;
+	cpu_set_t cpu_set;
+	odp_cpumask_t mask;
+	int cpu;
+	pid_t pid;
 
 	/* Parse and store the application arguments */
 	parse_args(argc, argv);
@@ -309,8 +310,23 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	odp_cpumask_default_worker(&mask, 0);
+	cpu = odp_cpumask_first(&mask);
+
+	CPU_ZERO(&cpu_set);
+	CPU_SET(cpu, &cpu_set);
+
+	pid = getpid();
+
+	if (sched_setaffinity(pid, sizeof(cpu_set_t), &cpu_set)) {
+		printf("Set CPU affinity failed.\n");
+		return -1;
+	}
+
+	printf("ipc_pktio1 %d run on cpu %d\n", pid, cpu);
+
 	/* Init this thread */
-	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_WORKER)) {
 		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}

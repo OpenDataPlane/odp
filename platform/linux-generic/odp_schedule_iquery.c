@@ -12,7 +12,6 @@
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_ring_internal.h>
-#include <odp_queue_internal.h>
 #include <odp_buffer_internal.h>
 #include <odp_bitmap_internal.h>
 #include <odp/api/thread.h>
@@ -23,6 +22,9 @@
 #include <odp/api/thrmask.h>
 #include <odp/api/packet_io.h>
 #include <odp_config_internal.h>
+
+/* Should remove this dependency */
+#include <odp_queue_internal.h>
 
 /* Number of priority levels */
 #define NUM_SCHED_PRIO 8
@@ -68,6 +70,8 @@ typedef struct {
 /* Maximum number of pktio poll commands */
 #define NUM_PKTIO_CMD (MAX_PKTIN * NUM_PKTIO)
 
+/* Not a valid index */
+#define NULL_INDEX ((uint32_t)-1)
 /* Pktio command is free */
 #define PKTIO_CMD_FREE ((uint32_t)-1)
 
@@ -114,6 +118,19 @@ typedef struct {
 /* Forward declaration */
 typedef struct sched_thread_local sched_thread_local_t;
 
+/* Order context of a queue */
+typedef struct {
+	/* Current ordered context id */
+	odp_atomic_u64_t  ctx ODP_ALIGNED_CACHE;
+
+	/* Next unallocated context id */
+	odp_atomic_u64_t  next_ctx;
+
+	/* Array of ordered locks */
+	odp_atomic_u64_t  lock[CONFIG_QUEUE_MAX_ORD_LOCKS];
+
+} order_context_t ODP_ALIGNED_CACHE;
+
 typedef struct {
 	odp_shm_t selfie;
 
@@ -136,6 +153,8 @@ typedef struct {
 
 	/* Quick reference to per thread context */
 	sched_thread_local_t *threads[ODP_THREAD_COUNT_MAX];
+
+	order_context_t order[ODP_CONFIG_QUEUES];
 } sched_global_t;
 
 /* Per thread events cache */
@@ -145,19 +164,13 @@ typedef struct {
 	odp_event_t stash[MAX_DEQ], *top;
 } event_cache_t;
 
-/* Maximum number of ordered locks per queue */
-#define MAX_ORDERED_LOCKS_PER_QUEUE 2
-
-ODP_STATIC_ASSERT(MAX_ORDERED_LOCKS_PER_QUEUE <= CONFIG_QUEUE_MAX_ORD_LOCKS,
-		  "Too_many_ordered_locks");
-
 /* Ordered stash size */
 #define MAX_ORDERED_STASH 512
 
 /* Storage for stashed enqueue operation arguments */
 typedef struct {
 	odp_buffer_hdr_t *buf_hdr[QUEUE_MULTI_MAX];
-	queue_entry_t *queue;
+	uint32_t queue_index;
 	int num;
 } ordered_stash_t;
 
@@ -198,7 +211,8 @@ struct sched_thread_local {
 	sparse_bitmap_iterator_t iterators[NUM_SCHED_PRIO];
 
 	struct {
-		queue_entry_t *src_queue; /**< Source queue entry */
+		/* Source queue index */
+		uint32_t src_queue;
 		uint64_t ctx; /**< Ordered context id */
 		int stash_num; /**< Number of stashed enqueue operations */
 		uint8_t in_order; /**< Order status */
@@ -317,6 +331,7 @@ static void sched_thread_local_reset(void)
 
 	thread_local.thread = odp_thread_id();
 	thread_local.cache.queue = ODP_QUEUE_INVALID;
+	thread_local.ordered.src_queue = NULL_INDEX;
 
 	odp_rwlock_init(&thread_local.lock);
 
@@ -398,7 +413,7 @@ static int schedule_term_local(void)
 static int init_sched_queue(uint32_t queue_index,
 			    const odp_schedule_param_t *sched_param)
 {
-	int prio, group, thread;
+	int prio, group, thread, i;
 	sched_prio_t *P;
 	sched_group_t *G;
 	sched_thread_local_t *local;
@@ -430,6 +445,12 @@ static int init_sched_queue(uint32_t queue_index,
 	/* Cache queue parameters for easy reference */
 	memcpy(&sched->queues[queue_index],
 	       sched_param, sizeof(odp_schedule_param_t));
+
+	odp_atomic_init_u64(&sched->order[queue_index].ctx, 0);
+	odp_atomic_init_u64(&sched->order[queue_index].next_ctx, 0);
+
+	for (i = 0; i < CONFIG_QUEUE_MAX_ORD_LOCKS; i++)
+		odp_atomic_init_u64(&sched->order[queue_index].lock[i], 0);
 
 	/* Update all threads in this schedule group to
 	 * start check this queue index upon scheduling.
@@ -505,6 +526,11 @@ static void destroy_sched_queue(uint32_t queue_index)
 
 	__destroy_sched_queue(G, queue_index);
 	odp_rwlock_write_unlock(&G->lock);
+
+	if (sched->queues[queue_index].sync == ODP_SCHED_SYNC_ORDERED &&
+	    odp_atomic_load_u64(&sched->order[queue_index].ctx) !=
+	    odp_atomic_load_u64(&sched->order[queue_index].next_ctx))
+		ODP_ERR("queue reorder incomplete\n");
 }
 
 static int pktio_cmd_queue_hash(int pktio, int pktin)
@@ -1071,20 +1097,20 @@ static void schedule_release_atomic(void)
 	}
 }
 
-static inline int ordered_own_turn(queue_entry_t *queue)
+static inline int ordered_own_turn(uint32_t queue_index)
 {
 	uint64_t ctx;
 
-	ctx = odp_atomic_load_acq_u64(&queue->s.ordered.ctx);
+	ctx = odp_atomic_load_acq_u64(&sched->order[queue_index].ctx);
 
 	return ctx == thread_local.ordered.ctx;
 }
 
-static inline void wait_for_order(queue_entry_t *queue)
+static inline void wait_for_order(uint32_t queue_index)
 {
 	/* Busy loop to synchronize ordered processing */
 	while (1) {
-		if (ordered_own_turn(queue))
+		if (ordered_own_turn(queue_index))
 			break;
 		odp_cpu_pause();
 	}
@@ -1100,52 +1126,55 @@ static inline void ordered_stash_release(void)
 	int i;
 
 	for (i = 0; i < thread_local.ordered.stash_num; i++) {
-		queue_entry_t *queue;
+		queue_entry_t *queue_entry;
+		uint32_t queue_index;
 		odp_buffer_hdr_t **buf_hdr;
 		int num;
 
-		queue = thread_local.ordered.stash[i].queue;
+		queue_index = thread_local.ordered.stash[i].queue_index;
+		queue_entry = get_qentry(queue_index);
 		buf_hdr = thread_local.ordered.stash[i].buf_hdr;
 		num = thread_local.ordered.stash[i].num;
 
-		queue_enq_multi(queue, buf_hdr, num);
+		queue_fn->enq_multi(qentry_to_int(queue_entry), buf_hdr, num);
 	}
 	thread_local.ordered.stash_num = 0;
 }
 
 static inline void release_ordered(void)
 {
+	uint32_t qi;
 	unsigned i;
-	queue_entry_t *queue;
 
-	queue = thread_local.ordered.src_queue;
+	qi = thread_local.ordered.src_queue;
 
-	wait_for_order(queue);
+	wait_for_order(qi);
 
 	/* Release all ordered locks */
-	for (i = 0; i < queue->s.param.sched.lock_count; i++) {
+	for (i = 0; i < sched->queues[qi].lock_count; i++) {
 		if (!thread_local.ordered.lock_called.u8[i])
-			odp_atomic_store_rel_u64(&queue->s.ordered.lock[i],
+			odp_atomic_store_rel_u64(&sched->order[qi].lock[i],
 						 thread_local.ordered.ctx + 1);
 	}
 
 	thread_local.ordered.lock_called.all = 0;
-	thread_local.ordered.src_queue = NULL;
+	thread_local.ordered.src_queue = NULL_INDEX;
 	thread_local.ordered.in_order = 0;
 
 	ordered_stash_release();
 
 	/* Next thread can continue processing */
-	odp_atomic_add_rel_u64(&queue->s.ordered.ctx, 1);
+	odp_atomic_add_rel_u64(&sched->order[qi].ctx, 1);
 }
 
 static void schedule_release_ordered(void)
 {
-	queue_entry_t *queue;
+	uint32_t queue_index;
 
-	queue = thread_local.ordered.src_queue;
+	queue_index = thread_local.ordered.src_queue;
 
-	if (odp_unlikely(!queue || thread_local.cache.count))
+	if (odp_unlikely((queue_index == NULL_INDEX) ||
+			 thread_local.cache.count))
 		return;
 
 	release_ordered();
@@ -1153,21 +1182,21 @@ static void schedule_release_ordered(void)
 
 static inline void schedule_release_context(void)
 {
-	if (thread_local.ordered.src_queue != NULL)
+	if (thread_local.ordered.src_queue != NULL_INDEX)
 		release_ordered();
 	else
 		schedule_release_atomic();
 }
 
-static int schedule_ord_enq_multi(uint32_t queue_index, void *buf_hdr[],
+static int schedule_ord_enq_multi(queue_t q_int, void *buf_hdr[],
 				  int num, int *ret)
 {
 	int i;
 	uint32_t stash_num = thread_local.ordered.stash_num;
-	queue_entry_t *dst_queue = get_qentry(queue_index);
-	queue_entry_t *src_queue = thread_local.ordered.src_queue;
+	queue_entry_t *dst_queue = qentry_from_int(q_int);
+	uint32_t src_queue = thread_local.ordered.src_queue;
 
-	if (!thread_local.ordered.src_queue || thread_local.ordered.in_order)
+	if ((src_queue == NULL_INDEX) || thread_local.ordered.in_order)
 		return 0;
 
 	if (ordered_own_turn(src_queue)) {
@@ -1190,7 +1219,7 @@ static int schedule_ord_enq_multi(uint32_t queue_index, void *buf_hdr[],
 		return 0;
 	}
 
-	thread_local.ordered.stash[stash_num].queue = dst_queue;
+	thread_local.ordered.stash[stash_num].queue_index = dst_queue->s.index;
 	thread_local.ordered.stash[stash_num].num = num;
 	for (i = 0; i < num; i++)
 		thread_local.ordered.stash[stash_num].buf_hdr[i] = buf_hdr[i];
@@ -1203,14 +1232,14 @@ static int schedule_ord_enq_multi(uint32_t queue_index, void *buf_hdr[],
 
 static void order_lock(void)
 {
-	queue_entry_t *queue;
+	uint32_t queue_index;
 
-	queue = thread_local.ordered.src_queue;
+	queue_index = thread_local.ordered.src_queue;
 
-	if (!queue)
+	if (queue_index == NULL_INDEX)
 		return;
 
-	wait_for_order(queue);
+	wait_for_order(queue_index);
 }
 
 static void order_unlock(void)
@@ -1220,14 +1249,15 @@ static void order_unlock(void)
 static void schedule_order_lock(unsigned lock_index)
 {
 	odp_atomic_u64_t *ord_lock;
-	queue_entry_t *queue;
+	uint32_t queue_index;
 
-	queue = thread_local.ordered.src_queue;
+	queue_index = thread_local.ordered.src_queue;
 
-	ODP_ASSERT(queue && lock_index <= queue->s.param.sched.lock_count &&
+	ODP_ASSERT(queue_index != NULL_INDEX &&
+		   lock_index <= sched->queues[queue_index].lock_count &&
 		   !thread_local.ordered.lock_called.u8[lock_index]);
 
-	ord_lock = &queue->s.ordered.lock[lock_index];
+	ord_lock = &sched->order[queue_index].lock[lock_index];
 
 	/* Busy loop to synchronize ordered processing */
 	while (1) {
@@ -1246,13 +1276,14 @@ static void schedule_order_lock(unsigned lock_index)
 static void schedule_order_unlock(unsigned lock_index)
 {
 	odp_atomic_u64_t *ord_lock;
-	queue_entry_t *queue;
+	uint32_t queue_index;
 
-	queue = thread_local.ordered.src_queue;
+	queue_index = thread_local.ordered.src_queue;
 
-	ODP_ASSERT(queue && lock_index <= queue->s.param.sched.lock_count);
+	ODP_ASSERT(queue_index != NULL_INDEX &&
+		   lock_index <= sched->queues[queue_index].lock_count);
 
-	ord_lock = &queue->s.ordered.lock[lock_index];
+	ord_lock = &sched->order[queue_index].lock[lock_index];
 
 	ODP_ASSERT(thread_local.ordered.ctx == odp_atomic_load_u64(ord_lock));
 
@@ -1261,27 +1292,38 @@ static void schedule_order_unlock(unsigned lock_index)
 
 static unsigned schedule_max_ordered_locks(void)
 {
-	return MAX_ORDERED_LOCKS_PER_QUEUE;
+	return CONFIG_QUEUE_MAX_ORD_LOCKS;
 }
 
-static void schedule_save_context(queue_entry_t *queue)
+static inline bool is_atomic_queue(unsigned int queue_index)
 {
-	if (queue->s.param.sched.sync == ODP_SCHED_SYNC_ATOMIC) {
-		thread_local.atomic = &sched->availables[queue->s.index];
-	} else if (queue->s.param.sched.sync == ODP_SCHED_SYNC_ORDERED) {
+	return (sched->queues[queue_index].sync == ODP_SCHED_SYNC_ATOMIC);
+}
+
+static inline bool is_ordered_queue(unsigned int queue_index)
+{
+	return (sched->queues[queue_index].sync == ODP_SCHED_SYNC_ORDERED);
+}
+
+static void schedule_save_context(uint32_t queue_index)
+{
+	if (is_atomic_queue(queue_index)) {
+		thread_local.atomic = &sched->availables[queue_index];
+	} else if (is_ordered_queue(queue_index)) {
 		uint64_t ctx;
 		odp_atomic_u64_t *next_ctx;
 
-		next_ctx = &queue->s.ordered.next_ctx;
+		next_ctx = &sched->order[queue_index].next_ctx;
 		ctx = odp_atomic_fetch_inc_u64(next_ctx);
 
 		thread_local.ordered.ctx = ctx;
-		thread_local.ordered.src_queue = queue;
+		thread_local.ordered.src_queue = queue_index;
 	}
 }
 
 /* Fill in scheduler interface */
 const schedule_fn_t schedule_iquery_fn = {
+	.status_sync   = 1,
 	.pktio_start   = schedule_pktio_start,
 	.thr_add       = group_add_thread,
 	.thr_rem       = group_remove_thread,
@@ -1289,7 +1331,6 @@ const schedule_fn_t schedule_iquery_fn = {
 	.init_queue    = init_sched_queue,
 	.destroy_queue = destroy_sched_queue,
 	.sched_queue   = schedule_sched_queue,
-	.unsched_queue = schedule_unsched_queue,
 	.ord_enq_multi = schedule_ord_enq_multi,
 	.init_global   = schedule_init_global,
 	.term_global   = schedule_term_global,
@@ -1298,7 +1339,8 @@ const schedule_fn_t schedule_iquery_fn = {
 	.order_lock    = order_lock,
 	.order_unlock  = order_unlock,
 	.max_ordered_locks = schedule_max_ordered_locks,
-	.save_context  = schedule_save_context,
+	.unsched_queue = schedule_unsched_queue,
+	.save_context  = schedule_save_context
 };
 
 /* Fill in scheduler API calls */
@@ -1423,18 +1465,6 @@ static void thread_clear_interests(sched_thread_local_t *thread,
 			thread_clear_interest(thread, queue_index, prio);
 		}
 	}
-}
-
-static inline bool is_atomic_queue(unsigned int queue_index)
-{
-	return (sched->queues[queue_index].sync
-			== ODP_SCHED_SYNC_ATOMIC);
-}
-
-static inline bool is_ordered_queue(unsigned int queue_index)
-{
-	return (sched->queues[queue_index].sync
-			== ODP_SCHED_SYNC_ORDERED);
 }
 
 static inline bool compete_atomic_queue(unsigned int queue_index)
