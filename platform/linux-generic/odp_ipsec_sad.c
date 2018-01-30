@@ -232,8 +232,12 @@ uint32_t _odp_ipsec_auth_digest_len(odp_auth_alg_t auth)
 #endif
 	case ODP_AUTH_ALG_SHA256_HMAC:
 		return 16;
+	case ODP_AUTH_ALG_SHA384_HMAC:
+		return 24;
 	case ODP_AUTH_ALG_SHA512_HMAC:
 		return 32;
+	case ODP_AUTH_ALG_AES_XCBC_MAC:
+		return 12;
 #if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_AES128_GCM:
 #endif
