@@ -101,6 +101,15 @@ typedef enum {
 	 */
 	ODP_CIPHER_ALG_AES_CCM,
 
+	/** ChaCha20-Poly1305
+	 *
+	 *  ChaCha20 with Poly1305 provide both authentication and ciphering of
+	 *  data (authenticated encryption) in the same operation. Hence this
+	 *  algorithm must be paired always with ODP_AUTH_ALG_CHACHA20_POLY1305
+	 *  authentication.
+	 */
+	ODP_CIPHER_ALG_CHACHA20_POLY1305,
+
 	/** @deprecated  Use ODP_CIPHER_ALG_AES_CBC instead */
 	ODP_DEPRECATE(ODP_CIPHER_ALG_AES128_CBC),
 
@@ -175,6 +184,23 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_AES_CCM,
 
+	/** AES-CMAC
+	 *
+	 *  AES Cipher-based Message Authentication Code (CMAC) algorithm. CMAC
+	 *  is a keyed hash function that is based on a symmetric key block
+	 *  cipher, such as the AES.
+	 */
+	ODP_AUTH_ALG_AES_CMAC,
+
+	/** ChaCha20-Poly1305 AEAD
+	 *
+	 *  ChaCha20 with Poly1305 provide both authentication and ciphering of
+	 *  data (authenticated encryption) in the same operation. Hence this
+	 *  algorithm must be paired always with
+	 *  ODP_CIPHER_ALG_CHACHA20_POLY1305 cipher.
+	 */
+	ODP_AUTH_ALG_CHACHA20_POLY1305,
+
 	/** @deprecated  Use ODP_AUTH_ALG_MD5_HMAC instead */
 	ODP_DEPRECATE(ODP_AUTH_ALG_MD5_96),
 
@@ -212,6 +238,9 @@ typedef union odp_crypto_cipher_algos_t {
 
 		/** ODP_CIPHER_ALG_AES_CCM */
 		uint32_t aes_ccm     : 1;
+
+		/** ODP_CIPHER_ALG_CHACHA20_POLY1305 */
+		uint32_t chacha20_poly1305 : 1;
 
 		/** @deprecated  Use aes_cbc instead */
 		uint32_t ODP_DEPRECATE(aes128_cbc) : 1;
@@ -257,6 +286,12 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_AES_CCM */
 		uint32_t aes_ccm     : 1;
+
+		/** ODP_AUTH_ALG_AES_CMAC*/
+		uint32_t aes_cmac    : 1;
+
+		/** ODP_AUTH_ALG_CHACHA20_POLY1305 */
+		uint32_t chacha20_poly1305 : 1;
 
 		/** @deprecated  Use md5_hmac instead */
 		uint32_t ODP_DEPRECATE(md5_96)     : 1;

@@ -52,6 +52,12 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 		return "ODP_AUTH_ALG_AES_GCM";
 	case ODP_AUTH_ALG_AES_GMAC:
 		return "ODP_AUTH_ALG_AES_GMAC";
+	case ODP_AUTH_ALG_AES_CCM:
+		return "ODP_AUTH_ALG_AES_CCM";
+	case ODP_AUTH_ALG_AES_CMAC:
+		return "ODP_AUTH_ALG_AES_CMAC";
+	case ODP_AUTH_ALG_CHACHA20_POLY1305:
+		return "ODP_AUTH_ALG_CHACHA20_POLY1305";
 	default:
 		return "Unknown";
 	}
@@ -70,6 +76,10 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 		return "ODP_CIPHER_ALG_AES_CBC";
 	case ODP_CIPHER_ALG_AES_GCM:
 		return "ODP_CIPHER_ALG_AES_GCM";
+	case ODP_CIPHER_ALG_AES_CCM:
+		return "ODP_CIPHER_ALG_AES_CCM";
+	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
+		return "ODP_CIPHER_ALG_CHACHA20_POLY1305";
 	default:
 		return "Unknown";
 	}
@@ -473,6 +483,12 @@ static void check_alg(odp_crypto_op_t op,
 	if (cipher_alg == ODP_CIPHER_ALG_AES_GCM &&
 	    !(capa.ciphers.bit.aes_gcm))
 		rc = -1;
+	if (cipher_alg == ODP_CIPHER_ALG_AES_CCM &&
+	    !(capa.ciphers.bit.aes_ccm))
+		rc = -1;
+	if (cipher_alg == ODP_CIPHER_ALG_CHACHA20_POLY1305 &&
+	    !(capa.ciphers.bit.chacha20_poly1305))
+		rc = -1;
 	if (cipher_alg == ODP_CIPHER_ALG_DES &&
 	    !(capa.ciphers.bit.des))
 		rc = -1;
@@ -488,6 +504,15 @@ static void check_alg(odp_crypto_op_t op,
 		rc = -1;
 	if (auth_alg == ODP_AUTH_ALG_AES_GMAC &&
 	    !(capa.auths.bit.aes_gmac))
+		rc = -1;
+	if (auth_alg == ODP_AUTH_ALG_AES_CMAC &&
+	    !(capa.auths.bit.aes_cmac))
+		rc = -1;
+	if (auth_alg == ODP_AUTH_ALG_AES_CCM &&
+	    !(capa.auths.bit.aes_ccm))
+		rc = -1;
+	if (auth_alg == ODP_AUTH_ALG_CHACHA20_POLY1305 &&
+	    !(capa.auths.bit.chacha20_poly1305))
 		rc = -1;
 	if (auth_alg == ODP_AUTH_ALG_MD5_HMAC &&
 	    !(capa.auths.bit.md5_hmac))
@@ -580,9 +605,6 @@ static void check_alg(odp_crypto_op_t op,
 	for (i = 0; i < cipher_num; i++) {
 		cipher_ok |= cipher_tested[i];
 		if (!cipher_tested[i]) {
-			/* GMAC-related hacks */
-			if (cipher_alg == ODP_CIPHER_ALG_NULL)
-				continue;
 			printf("\n    Untested: alg=%s, key_len=%" PRIu32 ", "
 			       "iv_len=%" PRIu32 "\n",
 			       cipher_alg_name(cipher_alg),
@@ -657,6 +679,14 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		if (!capability.ciphers.bit.aes_gcm)
 			return ODP_TEST_INACTIVE;
 		break;
+	case ODP_CIPHER_ALG_AES_CCM:
+		if (!capability.ciphers.bit.aes_ccm)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
+		if (!capability.ciphers.bit.chacha20_poly1305)
+			return ODP_TEST_INACTIVE;
+		break;
 	default:
 		fprintf(stderr, "Unsupported cipher algorithm\n");
 		return ODP_TEST_INACTIVE;
@@ -690,6 +720,18 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		break;
 	case ODP_AUTH_ALG_AES_GMAC:
 		if (!capability.auths.bit.aes_gmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_AES_CCM:
+		if (!capability.auths.bit.aes_ccm)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_AES_CMAC:
+		if (!capability.auths.bit.aes_cmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_CHACHA20_POLY1305:
+		if (!capability.auths.bit.chacha20_poly1305)
 			return ODP_TEST_INACTIVE;
 		break;
 	default:
@@ -788,6 +830,52 @@ static void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
 		  true);
 }
 
+static int check_alg_chacha20_poly1305(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_CHACHA20_POLY1305,
+				 ODP_AUTH_ALG_CHACHA20_POLY1305);
+}
+
+static void crypto_test_enc_alg_chacha20_poly1305(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_CHACHA20_POLY1305,
+		  ODP_AUTH_ALG_CHACHA20_POLY1305,
+		  chacha20_poly1305_reference,
+		  ARRAY_SIZE(chacha20_poly1305_reference),
+		  false);
+}
+
+static void crypto_test_enc_alg_chacha20_poly1305_ovr_iv(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_CHACHA20_POLY1305,
+		  ODP_AUTH_ALG_CHACHA20_POLY1305,
+		  chacha20_poly1305_reference,
+		  ARRAY_SIZE(chacha20_poly1305_reference),
+		  true);
+}
+
+static void crypto_test_dec_alg_chacha20_poly1305(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_CHACHA20_POLY1305,
+		  ODP_AUTH_ALG_CHACHA20_POLY1305,
+		  chacha20_poly1305_reference,
+		  ARRAY_SIZE(chacha20_poly1305_reference),
+		  false);
+}
+
+static void crypto_test_dec_alg_chacha20_poly1305_ovr_iv(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_CHACHA20_POLY1305,
+		  ODP_AUTH_ALG_CHACHA20_POLY1305,
+		  chacha20_poly1305_reference,
+		  ARRAY_SIZE(chacha20_poly1305_reference),
+		  true);
+}
+
 static int check_alg_aes_gcm(void)
 {
 	return check_alg_support(ODP_CIPHER_ALG_AES_GCM, ODP_AUTH_ALG_AES_GCM);
@@ -848,6 +936,51 @@ static void crypto_test_dec_alg_aes_gcm_ovr_iv(void)
 		  ODP_AUTH_ALG_AES_GCM,
 		  aes_gcm_reference,
 		  ARRAY_SIZE(aes_gcm_reference),
+		  true);
+}
+
+static int check_alg_aes_ccm(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_AES_CCM, ODP_AUTH_ALG_AES_CCM);
+}
+
+static void crypto_test_enc_alg_aes_ccm(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_AES_CCM,
+		  ODP_AUTH_ALG_AES_CCM,
+		  aes_ccm_reference,
+		  ARRAY_SIZE(aes_ccm_reference),
+		  false);
+}
+
+static void crypto_test_enc_alg_aes_ccm_ovr_iv(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_AES_CCM,
+		  ODP_AUTH_ALG_AES_CCM,
+		  aes_ccm_reference,
+		  ARRAY_SIZE(aes_ccm_reference),
+		  true);
+}
+
+static void crypto_test_dec_alg_aes_ccm(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_AES_CCM,
+		  ODP_AUTH_ALG_AES_CCM,
+		  aes_ccm_reference,
+		  ARRAY_SIZE(aes_ccm_reference),
+		  false);
+}
+
+static void crypto_test_dec_alg_aes_ccm_ovr_iv(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_AES_CCM,
+		  ODP_AUTH_ALG_AES_CCM,
+		  aes_ccm_reference,
+		  ARRAY_SIZE(aes_ccm_reference),
 		  true);
 }
 
@@ -1161,6 +1294,36 @@ static void crypto_test_check_alg_aes_gmac_ovr_iv(void)
 			 true);
 }
 
+static int check_alg_aes_cmac(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_AES_CMAC);
+}
+
+static void crypto_test_gen_alg_aes_cmac(void)
+{
+	unsigned int test_vec_num = (sizeof(aes_cmac_reference) /
+				     sizeof(aes_cmac_reference[0]));
+	unsigned int i;
+
+	for (i = 0; i < test_vec_num; i++)
+		check_alg(ODP_CRYPTO_OP_ENCODE,
+			  ODP_CIPHER_ALG_NULL,
+			  ODP_AUTH_ALG_AES_CMAC,
+			  aes_cmac_reference,
+			  ARRAY_SIZE(aes_cmac_reference),
+			  false);
+}
+
+static void crypto_test_check_alg_aes_cmac(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_NULL,
+		  ODP_AUTH_ALG_AES_CMAC,
+		  aes_cmac_reference,
+		  ARRAY_SIZE(aes_cmac_reference),
+		  false);
+}
+
 int crypto_suite_sync_init(void)
 {
 	suite_context.pool = odp_pool_lookup("packet_pool");
@@ -1250,6 +1413,22 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_aes_gcm),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_gcm_ovr_iv,
 				  check_alg_aes_gcm),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_ccm,
+				  check_alg_aes_ccm),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_ccm_ovr_iv,
+				  check_alg_aes_ccm),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_ccm,
+				  check_alg_aes_ccm),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_ccm_ovr_iv,
+				  check_alg_aes_ccm),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_chacha20_poly1305,
+				  check_alg_chacha20_poly1305),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_chacha20_poly1305_ovr_iv,
+				  check_alg_chacha20_poly1305),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_chacha20_poly1305,
+				  check_alg_chacha20_poly1305),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_chacha20_poly1305_ovr_iv,
+				  check_alg_chacha20_poly1305),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_hmac_md5,
 				  check_alg_hmac_md5),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_hmac_md5,
@@ -1274,6 +1453,10 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_aes_gmac),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_aes_gmac_ovr_iv,
 				  check_alg_aes_gmac),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_aes_cmac,
+				  check_alg_aes_cmac),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_aes_cmac,
+				  check_alg_aes_cmac),
 	ODP_TEST_INFO_NULL,
 };
 
