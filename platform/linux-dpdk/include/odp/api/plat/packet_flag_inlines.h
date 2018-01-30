@@ -21,8 +21,7 @@ extern const _odp_packet_inline_offset_t _odp_packet_inline;
 /** @internal Inline function @param pkt @return */
 static inline uint64_t _odp_packet_input_flags(odp_packet_t pkt)
 {
-	return *(uint64_t *)(uintptr_t)((uint8_t *)pkt +
-	       _odp_packet_inline.input_flags);
+	return _odp_pkt_get(pkt, uint64_t, input_flags);
 }
 
 /** @internal Inline function @param pkt @return */
@@ -55,15 +54,16 @@ static inline int _odp_packet_has_jumbo(odp_packet_t pkt)
 /** @internal Inline function @param pkt @return */
 static inline int _odp_packet_has_flow_hash(odp_packet_t pkt)
 {
-	return *(uint64_t *)((char *)pkt + _odp_packet_inline.ol_flags) &
-					   _odp_packet_inline.rss_flag;
+	return _odp_pkt_get(pkt, uint64_t, ol_flags) &
+			_odp_packet_inline.rss_flag;
 }
 
 /** @internal Inline function @param pkt */
 static inline void _odp_packet_has_flow_hash_clr(odp_packet_t pkt)
 {
-	*(uint64_t *)((char *)pkt + _odp_packet_inline.ol_flags) &=
-				    ~_odp_packet_inline.rss_flag;
+	uint64_t *ol_flags = &_odp_pkt_get(pkt, uint64_t, ol_flags);
+
+	*ol_flags &= ~_odp_packet_inline.rss_flag;
 }
 
 /** @internal Inline function @param pkt @return */
