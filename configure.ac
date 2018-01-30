@@ -97,6 +97,7 @@ CC_VERSION_PATCH=$(echo $CC_VERSION | cut -d'.' -f3)
 # Default warning setup
 ##########################################################################
 ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror"
+ODP_CXXFLAGS="$ODP_CXXFLAGS -W -Wall -Werror"
 
 ODP_CHECK_CFLAG([-Wstrict-prototypes])
 ODP_CHECK_CFLAG([-Wmissing-prototypes])
