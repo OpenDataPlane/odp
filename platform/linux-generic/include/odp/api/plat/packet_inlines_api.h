@@ -48,6 +48,11 @@ _ODP_INLINE odp_pktio_t odp_packet_input(odp_packet_t pkt)
 	return _odp_packet_input(pkt);
 }
 
+_ODP_INLINE int odp_packet_input_index(odp_packet_t pkt)
+{
+	return _odp_packet_input_index(pkt);
+}
+
 _ODP_INLINE int odp_packet_num_segs(odp_packet_t pkt)
 {
 	return _odp_packet_num_segs(pkt);
