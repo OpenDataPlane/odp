@@ -348,14 +348,15 @@ int _odp_term_global(enum init_stage stage)
 		}
 		/* Fall through */
 
+	/* Needed to prevent compiler warning */
+	case FDSERVER_INIT:
 	case ISHM_INIT:
 		if (_odp_shm_term_global()) {
 			ODP_ERR("ODP shm term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */
-	/* Needed to prevent compiler warning */
-	case FDSERVER_INIT:
+
 	case SYSINFO_INIT:
 		if (odp_system_info_term()) {
 			ODP_ERR("ODP system info term failed.\n");
