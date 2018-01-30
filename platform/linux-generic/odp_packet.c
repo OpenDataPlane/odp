@@ -13,6 +13,8 @@
 #include <odp/api/hints.h>
 #include <odp/api/byteorder.h>
 #include <odp/api/plat/byteorder_inlines.h>
+#include <odp/api/packet_io.h>
+#include <odp/api/plat/pktio_inlines.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>
@@ -1269,7 +1271,7 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
 
 int odp_packet_input_index(odp_packet_t pkt)
 {
-	return odp_pktio_index(packet_hdr(pkt)->input);
+	return _odp_pktio_index(packet_hdr(pkt)->input);
 }
 
 void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ctx)
