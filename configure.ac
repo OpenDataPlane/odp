@@ -315,14 +315,6 @@ AC_SUBST(ODP_DEPRECATED_API)
 ##########################################################################
 ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror"
 
-dnl Use -Werror in the checks below since Clang emits a warning instead of
-dnl an error when it encounters an unknown warning option.
-AC_DEFUN([ODP_CHECK_CFLAG],
-	 [AX_CHECK_COMPILE_FLAG([$1],
-				[ODP_CFLAGS="$ODP_CFLAGS $1"],
-				[], [-W -Wall -Werror],
-				[AC_LANG_SOURCE([int main(void)
-						{return 0;}])])])
 ODP_CHECK_CFLAG([-Wstrict-prototypes])
 ODP_CHECK_CFLAG([-Wmissing-prototypes])
 ODP_CHECK_CFLAG([-Wmissing-declarations])
