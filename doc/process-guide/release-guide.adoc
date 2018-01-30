@@ -23,7 +23,7 @@ potentially backwards incompatible happening at lower frequency. Generation
 releases are significantly less frequent. The specific digits used for the
 generation and version numbering are described in the ODP API Documentation.
 The roles referenced in this document are defined in the
-http://www.opendataplane.org/api-documentation/by-laws/[By-laws].
+https://www.opendataplane.org/developers/bylaws/index.html[By-laws].
 
 === Patch to release flow ===
 Changes to the API are staged in api-next until they have been sufficiently
