@@ -61,11 +61,6 @@ union queue_entry_u {
 	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct queue_entry_s))];
 };
 
-queue_entry_t *get_qentry(uint32_t queue_id);
-
-void queue_lock(queue_entry_t *queue);
-void queue_unlock(queue_entry_t *queue);
-
 static inline uint32_t queue_to_id(odp_queue_t handle)
 {
 	return _odp_typeval(handle) - 1;

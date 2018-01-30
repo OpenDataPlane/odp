@@ -107,10 +107,6 @@ ODP_STATIC_ASSERT(CONFIG_PACKET_MAX_SEGS < 256,
 
 ODP_STATIC_ASSERT(BUFFER_BURST_SIZE < 256, "BUFFER_BURST_SIZE_TOO_LARGE");
 
-/* Forward declarations */
-int seg_alloc_tail(odp_buffer_hdr_t *buf_hdr, int segcount);
-void seg_free_tail(odp_buffer_hdr_t *buf_hdr, int segcount);
-
 #ifdef __cplusplus
 }
 #endif

@@ -36,7 +36,7 @@
  * Must be power of two. */
 #define SLEEP_CHECK 32
 
-pktio_table_t *pktio_tbl;
+static pktio_table_t *pktio_tbl;
 
 /* pktio pointer entries ( for inlines) */
 void *pktio_entry_ptr[ODP_CONFIG_PKTIO_ENTRIES];
@@ -727,11 +727,6 @@ void sched_cb_pktio_stop_finalize(int pktio_index)
 	unlock_entry(entry);
 }
 
-int sched_cb_num_pktio(void)
-{
-	return ODP_CONFIG_PKTIO_ENTRIES;
-}
-
 uint32_t odp_pktio_mtu(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
@@ -1075,6 +1070,17 @@ int odp_pktio_term_global(void)
 	return ret;
 }
 
+static
+int single_capability(odp_pktio_capability_t *capa)
+{
+	memset(capa, 0, sizeof(odp_pktio_capability_t));
+	capa->max_input_queues  = 1;
+	capa->max_output_queues = 1;
+	capa->set_op.op.promisc_mode = 1;
+
+	return 0;
+}
+
 int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 {
 	pktio_entry_t *entry;
@@ -1233,6 +1239,8 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 			entry->s.name);
 		return -1;
 	}
+
+	pktio_cls_enabled_set(entry, param->classifier_enable);
 
 	if (num_queues > capa.max_input_queues) {
 		ODP_DBG("pktio %s: too many input queues\n", entry->s.name);
@@ -1677,14 +1685,4 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 	}
 
 	return entry->s.ops->send(entry, queue.index, packets, num);
-}
-
-int single_capability(odp_pktio_capability_t *capa)
-{
-	memset(capa, 0, sizeof(odp_pktio_capability_t));
-	capa->max_input_queues  = 1;
-	capa->max_output_queues = 1;
-	capa->set_op.op.promisc_mode = 1;
-
-	return 0;
 }
