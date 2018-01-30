@@ -18,6 +18,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/packet_io.h>
+#include <odp/api/plat/pktio_inlines.h>
 #include <odp/api/spinlock.h>
 #include <odp/api/ticketlock.h>
 #include <odp_classification_datamodel.h>
@@ -235,13 +237,10 @@ typedef struct pktio_if_ops {
 
 extern void *pktio_entry_ptr[];
 
-static inline int pktio_to_id(odp_pktio_t pktio)
-{
-	return _odp_typeval(pktio) - 1;
-}
-
 static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 {
+	int idx;
+
 	if (odp_unlikely(pktio == ODP_PKTIO_INVALID))
 		return NULL;
 
@@ -251,7 +250,9 @@ static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 		return NULL;
 	}
 
-	return pktio_entry_ptr[pktio_to_id(pktio)];
+	idx = _odp_pktio_index(pktio);
+
+	return pktio_entry_ptr[idx];
 }
 
 static inline int pktio_cls_enabled(pktio_entry_t *entry)

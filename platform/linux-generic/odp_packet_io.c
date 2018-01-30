@@ -9,6 +9,7 @@
 #include <odp_posix_extensions.h>
 
 #include <odp/api/packet_io.h>
+#include <odp/api/plat/pktio_inlines.h>
 #include <odp_packet_io_internal.h>
 #include <odp/api/packet.h>
 #include <odp_packet_internal.h>
@@ -481,7 +482,7 @@ int odp_pktio_start(odp_pktio_t hdl)
 			}
 		}
 
-		sched_fn->pktio_start(pktio_to_id(hdl), num, index, odpq);
+		sched_fn->pktio_start(_odp_pktio_index(hdl), num, index, odpq);
 	}
 
 	return res;
@@ -1022,16 +1023,6 @@ int odp_pktio_info(odp_pktio_t hdl, odp_pktio_info_t *info)
 	return 0;
 }
 
-int odp_pktio_index(odp_pktio_t pktio)
-{
-	pktio_entry_t *entry = get_pktio_entry(pktio);
-
-	if (!entry || is_free(entry))
-		return -1;
-
-	return pktio_to_id(pktio);
-}
-
 uint64_t odp_pktin_ts_res(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
@@ -1361,7 +1352,7 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 		    mode == ODP_PKTIN_MODE_SCHED) {
 			odp_queue_param_t queue_param;
 			char name[ODP_QUEUE_NAME_LEN];
-			int pktio_id = pktio_to_id(pktio);
+			int pktio_id = _odp_pktio_index(pktio);
 
 			snprintf(name, sizeof(name), "odp-pktin-%i-%i",
 				 pktio_id, i);
@@ -1496,7 +1487,7 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 			odp_queue_param_t queue_param;
 			queue_t q_int;
 			char name[ODP_QUEUE_NAME_LEN];
-			int pktio_id = pktio_to_id(pktio);
+			int pktio_id = _odp_pktio_index(pktio);
 
 			snprintf(name, sizeof(name), "odp-pktout-%i-%i",
 				 pktio_id, i);

@@ -30,6 +30,8 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/packet_inline_types.h \
 		  include/odp/api/plat/packet_inlines.h \
 		  include/odp/api/plat/packet_inlines_api.h \
+		  include/odp/api/plat/pktio_inlines.h \
+		  include/odp/api/plat/pktio_inlines_api.h \
 		  include/odp/api/plat/pool_inline_types.h \
 		  include/odp/api/plat/std_clib_inlines.h \
 		  include/odp/api/plat/strong_types.h \
@@ -205,6 +207,7 @@ __LIB__libodp_linux_la_SOURCES += \
 			   odp_byteorder.c \
 			   odp_packet_api.c \
 			   odp_packet_flags_api.c \
+			   odp_pktio_api.c \
 			   odp_std_clib.c \
 			   odp_sync.c \
 			   odp_thread_api.c \
