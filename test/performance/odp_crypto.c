@@ -240,7 +240,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
 			},
-			.iv = {
+			.cipher_iv = {
 				.data = test_iv,
 				.length = 16,
 			},
@@ -255,7 +255,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
 			},
-			.iv = {
+			.cipher_iv = {
 				.data = test_iv,
 				.length = 16,
 			},
@@ -287,7 +287,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
 			},
-			.iv = {
+			.cipher_iv = {
 				.data = test_iv,
 				.length = 12,
 			},
