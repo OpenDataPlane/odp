@@ -159,8 +159,6 @@ typedef struct crypto_local_t {
 
 static __thread crypto_local_t local;
 
-typedef enum { KIND_HMAC, KIND_CIPHER, KIND_MAC_CIPHER } crypto_kind_t;
-
 static inline void crypto_init(odp_crypto_generic_session_t *session)
 {
 	if (local.ctx_valid[session->idx])
