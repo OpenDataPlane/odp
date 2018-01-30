@@ -221,7 +221,7 @@ static inline void _cls_queue_unwind(uint32_t tbl_index, uint32_t j)
 
 odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 {
-	int i, j;
+	uint32_t i, j;
 	odp_queue_t queue;
 	odp_cls_drop_t drop_policy;
 	cos_t *cos;
@@ -258,7 +258,7 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 				_odp_cls_update_hash_proto(cos,
 							   param->hash_proto);
 				tbl_index = i * CLS_COS_QUEUE_MAX;
-				for (j = 0; j < CLS_COS_QUEUE_MAX; j++) {
+				for (j = 0; j < param->num_queue; j++) {
 					queue = odp_queue_create(NULL, &cos->s.
 								 queue_param);
 					if (queue == ODP_QUEUE_INVALID) {
@@ -1003,7 +1003,8 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	hash = packet_rss_hash(pkt_hdr, cos->s.hash_proto, base);
 	/* CLS_COS_QUEUE_MAX is a power of 2 */
 	hash = hash & (CLS_COS_QUEUE_MAX - 1);
-	tbl_index = (cos->s.index * CLS_COS_QUEUE_MAX) + hash;
+	tbl_index = (cos->s.index * CLS_COS_QUEUE_MAX) + (hash %
+							  cos->s.num_queue);
 	pkt_hdr->dst_queue = queue_fn->from_ext(queue_grp_tbl->
 						s.queue[tbl_index]);
 	return 0;
