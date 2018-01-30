@@ -34,6 +34,8 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/std_clib_inlines.h \
 		  include/odp/api/plat/strong_types.h \
 		  include/odp/api/plat/sync_inlines.h \
+		  include/odp/api/plat/thread_inlines.h \
+		  include/odp/api/plat/thread_inlines_api.h \
 		  include/odp/api/plat/ticketlock_inlines.h \
 		  include/odp/api/plat/ticketlock_inlines_api.h
 
@@ -106,6 +108,7 @@ noinst_HEADERS = \
 		  include/odp_packet_dpdk.h \
 		  include/odp_packet_socket.h \
 		  include/odp_packet_tap.h \
+		  include/odp_packet_null.h \
 		  include/odp_pkt_queue_internal.h \
 		  include/odp_pool_internal.h \
 		  include/odp_posix_extensions.h \
@@ -163,6 +166,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pktio/pktio_common.c \
 			   pktio/loop.c \
 			   pktio/netmap.c \
+			   pktio/null.c \
 			   pktio/dpdk.c \
 			   pktio/socket.c \
 			   pktio/socket_mmap.c \
@@ -205,6 +209,7 @@ __LIB__libodp_linux_la_SOURCES += \
 			   odp_packet_flags_api.c \
 			   odp_std_clib.c \
 			   odp_sync.c \
+			   odp_thread_api.c \
 			   odp_ticketlock.c
 endif
 
@@ -273,7 +278,7 @@ endif
 
 __LIB__libodp_linux_la_LIBADD = $(ATOMIC_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(OPENSSL_LIBS)
-__LIB__libodp_linux_la_LIBADD += $(DPDK_LIBS_LT)
+__LIB__libodp_linux_la_LIBADD += $(DPDK_LIBS_LIBODP)
 __LIB__libodp_linux_la_LIBADD += $(PTHREAD_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(TIMER_LIBS)
 
