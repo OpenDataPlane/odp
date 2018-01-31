@@ -40,7 +40,7 @@ typedef enum {
  * @param buffer calculate chksum for buffer
  * @param len    buffer length
  *
- * @return checksum value in host cpu order
+ * @return checksum value in network order
  */
 static inline odp_u16sum_t odph_chksum(void *buffer, int len)
 {

@@ -42,8 +42,8 @@ helperlinuxinclude_HEADERS = \
 endif
 
 noinst_HEADERS = \
-		 $(srcdir)/odph_debug.h \
-		 $(srcdir)/odph_list_internal.h
+		 $(srcdir)/include/odph_debug.h \
+		 $(srcdir)/include/odph_list_internal.h
 
 __LIB__libodphelper_la_SOURCES = \
 					eth.c \

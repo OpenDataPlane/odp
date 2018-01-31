@@ -37,7 +37,9 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <arch/x86/cpu_flags.h>
+#include "config.h"
+
+#include <cpu_flags.h>
 #include <odp_debug_internal.h>
 #include <odp_time_internal.h>
 #include <stdio.h>

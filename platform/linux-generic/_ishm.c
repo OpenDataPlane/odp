@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 /* This file handles the internal shared memory: internal shared memory
  * is memory which is sharable by all ODP threads regardless of how the
  * ODP thread is implemented (pthread or process) and regardless of fork()

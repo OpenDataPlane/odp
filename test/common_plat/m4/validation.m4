@@ -1,30 +1,19 @@
 ##########################################################################
 # Enable/disable Unit tests
 ##########################################################################
-cunit_support=no
-test_vald=no
 AC_ARG_ENABLE([test_vald],
-    [  --enable-test-vald       run test in test/validation],
-    [if test x$enableval = xyes; then
-        test_vald=yes
-        cunit_support=yes
-    fi])
-
-##########################################################################
-# Enable/disable Unit tests
-##########################################################################
-AC_ARG_ENABLE([cunit_support],
-    [  --enable-cunit-support  include cunit infrastructure],
-    [if test x$enableval = xyes; then
-        cunit_support=yes
-    fi])
+    [AS_HELP_STRING([--enable-test-vald], [run test in test/validation])],
+    [test_vald=$enableval],
+    [test_vald=yes])
+AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])
 
 ##########################################################################
 # Set optional CUnit path
 ##########################################################################
+cunit_support=$test_vald
 AC_ARG_WITH([cunit-path],
-AC_HELP_STRING([--with-cunit-path=DIR   path to CUnit libs and headers],
-               [(or in the default path if not specified).]),
+AC_HELP_STRING([--with-cunit-path=DIR],
+	       [path to CUnit libs and headers (if not present at default path)]),
     [CUNIT_PATH=$withval
      CUNIT_CPPFLAGS="-I$CUNIT_PATH/include"
      CUNIT_LIBS="-L$CUNIT_PATH/lib"
