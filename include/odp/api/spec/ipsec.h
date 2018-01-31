@@ -1206,12 +1206,22 @@ typedef struct odp_ipsec_status_t {
  * restored. The amount and content of packet data before the IP header is
  * undefined.
  *
+ * Additional TFC padding might be present after packet contents. ODP
+ * packet will extend beyond the end of the IP packet it contains or the
+ * resulting IP packet will extend beyond the end of the IP payload protocol
+ * (for tunnel or transport cases respectively). An ODP application can detect
+ * and remove such padding by inspecting the length fields of the relevant
+ * protocol headers in the result packet.
+ *
  * Each successfully transformed packet has a valid value for these metadata
  * regardless of the inner packet parse configuration
  * (odp_ipsec_inbound_config_t):
- * - L3 offset: Offset to the first byte of the (outmost) IP header
- * - pktio:     For inline IPSEC processed packets, original packet input
- *              interface
+ * - L3 offset:       Offset to the first byte of the (outmost) IP header
+ * - IPv4/IPv6 flags: These flags can be used to determine packet contents.
+ *                    If neither IPv4 nor IPv6 flag are set, received packet is
+ *                    TFC dummy packet and should be dropped by an application
+ * - pktio:           For inline IPSEC processed packets, original packet input
+ *                    interface
  *
  * Other metadata for parse results and error checks depend on configuration
  * (selected parse and error check levels).
@@ -1258,9 +1268,11 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
  * - L3 offset: Offset to the first byte of the (outmost) IP header
  * - L4 offset: Offset to the L4 header if L4 checksum offload is requested
  *
- * Additionally, input IP packet length (odp_packet_len() minus
- * odp_packet_l3_offset()) must match values in protocol headers. Otherwise
- * results are undefined.
+ * Additionally, input L3 packet length (odp_packet_len() minus
+ * odp_packet_l3_offset()) must not be smaller than the IP packet lenght
+ * indicated by the IP header. Otherwise results are undefined. If the input L3
+ * packet length is bigger than the IP packet length, the additional packet
+ * data is used as TFC padding.
  *
  * Packets are processed in the input order. Packet order is maintained from
  * input 'pkt' array to output 'pkt' array. Packet order is not guaranteed
@@ -1270,6 +1282,9 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
  * e.g. RFC 4302 and 4303). Resulting packets are well formed IP packets
  * with IPSEC, etc headers constructed according to the standards. The amount
  * and content of packet data before the IP header is undefined.
+ *
+ * Additional TFC padding might be present after packet payload. Such padding
+ * should be filled by application before submitting packet to ODP.
  *
  * Each successfully transformed packet has a valid value for these metadata:
  * - L3 offset: Offset to the first byte of the (outmost) IP header
