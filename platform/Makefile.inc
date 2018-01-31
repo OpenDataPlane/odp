@@ -8,13 +8,10 @@ pkgconfig_DATA = $(top_builddir)/pkgconfig/libodp-dpdk.pc
 VPATH = $(srcdir) $(builddir)
 lib_LTLIBRARIES = $(LIB)/libodp-dpdk.la
 
-AM_LDFLAGS += -version-number '$(ODP_LIBSO_VERSION)'
+AM_LDFLAGS = -version-number '$(ODP_LIBSO_VERSION)'
 
-AM_CFLAGS += "-DGIT_HASH=$(VERSION)"
+AM_CFLAGS = "-DGIT_HASH=$(VERSION)"
 AM_CFLAGS += $(VISIBILITY_CFLAGS)
-
-#The implementation will need to retain the deprecated implementation
-AM_CFLAGS += -Wno-deprecated-declarations
 
 AM_CFLAGS += @PTHREAD_CFLAGS@
 

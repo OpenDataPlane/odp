@@ -1,5 +1,3 @@
-include $(top_srcdir)/platform/@with_platform@/Makefile.inc
-
 LIB   = $(top_builddir)/lib
 
 #in the following line, the libs using the symbols should come before
@@ -13,13 +11,14 @@ INCFLAGS = \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/include/odp/arch/@ARCH_ABI@ \
 	-I$(top_srcdir)/platform/@with_platform@/include \
+	-I$(top_srcdir)/platform/@with_platform@/arch/@ARCH_DIR@ \
 	-I$(top_builddir)/include \
 	-I$(top_srcdir)/helper
 
 ODP_PLATFORM=${with_platform}
 
-AM_CFLAGS += $(INCFLAGS)
-AM_LDFLAGS += -static
+AM_CPPFLAGS = $(INCFLAGS)
+AM_LDFLAGS = -static
 
 EXECUTABLES = chksum$(EXEEXT) \
               cuckootable$(EXEEXT) \
@@ -45,15 +44,13 @@ if test_helper
 TESTS = $(EXECUTABLES) $(TESTSCRIPTS)
 endif
 
-dist_bin_SCRIPTS =
-
 test_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 
-EXTRA_DIST = odpthreads_as_processes odpthreads_as_pthreads
+dist_check_SCRIPTS = odpthreads_as_processes odpthreads_as_pthreads
 
-dist_chksum_SOURCES = chksum.c
-dist_cuckootable_SOURCES = cuckootable.c
-dist_odpthreads_SOURCES = odpthreads.c
-dist_parse_SOURCES = parse.c
-dist_table_SOURCES = table.c
-dist_iplookuptable_SOURCES = iplookuptable.c
+chksum_SOURCES = chksum.c
+cuckootable_SOURCES = cuckootable.c
+odpthreads_SOURCES = odpthreads.c
+parse_SOURCES = parse.c
+table_SOURCES = table.c
+iplookuptable_SOURCES = iplookuptable.c
