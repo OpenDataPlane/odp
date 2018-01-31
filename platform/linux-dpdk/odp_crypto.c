@@ -1216,9 +1216,6 @@ int32_t odp_random_data(uint8_t *buf, uint32_t len, odp_random_kind_t kind)
 
 	switch (kind) {
 	case ODP_RANDOM_BASIC:
-		RAND_pseudo_bytes(buf, len);
-		return len;
-
 	case ODP_RANDOM_CRYPTO:
 		rc = RAND_bytes(buf, len);
 		return (1 == rc) ? (int)len /*success*/: -1 /*failure*/;
