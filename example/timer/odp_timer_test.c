@@ -363,15 +363,7 @@ int main(int argc, char *argv[])
 	}
 
 	printf("\n");
-	printf("ODP system info\n");
-	printf("---------------\n");
-	printf("ODP API version: %s\n",        odp_version_api_str());
-	printf("CPU model:       %s\n",        odp_cpu_model_str());
-	printf("CPU freq (hz):   %"PRIu64"\n", odp_cpu_hz_max());
-	printf("Cache line size: %i\n",        odp_sys_cache_line_size());
-	printf("Max CPU count:   %i\n",        odp_cpu_count());
-
-	printf("\n");
+	odp_sys_info_print();
 
 	/* Reserve memory for test_globals_t from shared mem */
 	shm = odp_shm_reserve("shm_test_globals", sizeof(test_globals_t),

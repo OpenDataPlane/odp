@@ -99,6 +99,9 @@ CC_VERSION_PATCH=$(echo $CC_VERSION | cut -d'.' -f3)
 ##########################################################################
 # Allow valgrind suite to run against the defined tests
 ##########################################################################
+AX_VALGRIND_DFLT([sgcheck], [off])
+AX_VALGRIND_DFLT([helgrind], [off])
+AX_VALGRIND_DFLT([drd], [off])
 AX_VALGRIND_CHECK
 
 ##########################################################################
@@ -109,7 +112,7 @@ AS_CASE([$host],
   [i686*], [ARCH_DIR=x86],
   [mips64*], [ARCH_DIR=mips64],
   [powerpc*], [ARCH_DIR=powerpc],
-  [aarch64*], [ARCH_DIR=arm],
+  [aarch64*], [ARCH_DIR=aarch64],
   [arm*], [ARCH_DIR=arm],
   [ARCH_DIR=undefined]
 )
@@ -224,6 +227,7 @@ AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
 AM_CONDITIONAL([helper_linux], [test x$helper_linux = xyes ])
 AM_CONDITIONAL([ARCH_IS_ARM], [test "x${ARCH_DIR}" = "xarm"])
+AM_CONDITIONAL([ARCH_IS_AARCH64], [test "x${ARCH_DIR}" = "xaarch64"])
 AM_CONDITIONAL([ARCH_IS_MIPS64], [test "x${ARCH_DIR}" = "xmips64"])
 AM_CONDITIONAL([ARCH_IS_POWERPC], [test "x${ARCH_DIR}" = "xpowerpc"])
 AM_CONDITIONAL([ARCH_IS_X86], [test "x${ARCH_DIR}" = "xx86"])

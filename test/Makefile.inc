@@ -23,6 +23,5 @@ AM_CFLAGS = $(CUNIT_CFLAGS)
 AM_LDFLAGS = -L$(LIB) -static
 
 @VALGRIND_CHECK_RULES@
-valgrind_tools = memcheck
 
 TESTS_ENVIRONMENT= ODP_PLATFORM=${with_platform} EXEEXT=${EXEEXT}

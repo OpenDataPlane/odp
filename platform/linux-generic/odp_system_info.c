@@ -385,7 +385,12 @@ int odp_system_info_term(void)
  */
 uint64_t odp_cpu_hz_current(int id)
 {
-	return odp_cpufreq_id("cpuinfo_cur_freq", id);
+	uint64_t cur_hz = odp_cpufreq_id("cpuinfo_cur_freq", id);
+
+	if (!cur_hz)
+		cur_hz = odp_cpu_arch_hz_current(id);
+
+	return cur_hz;
 }
 
 uint64_t odp_cpu_hz(void)

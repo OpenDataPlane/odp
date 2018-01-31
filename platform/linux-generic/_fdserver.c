@@ -160,7 +160,7 @@ static int send_fdserver_msg(int sock, int command,
 	res = sendmsg(sock, &socket_message, 0);
 	if (res < 0) {
 		ODP_ERR("send_fdserver_msg: %s\n", strerror(errno));
-		return(-1);
+		return -1;
 	}
 
 	return 0;
@@ -206,7 +206,7 @@ static int recv_fdserver_msg(int sock, int *command,
 	/* receive the message */
 	if (recvmsg(sock, &socket_message, MSG_CMSG_CLOEXEC) < 0) {
 		ODP_ERR("recv_fdserver_msg: %s\n", strerror(errno));
-		return(-1);
+		return -1;
 	}
 
 	*command = msg.command;
@@ -251,7 +251,7 @@ static int get_socket(void)
 	s_sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (s_sock == -1) {
 		ODP_ERR("cannot connect to server: %s\n", strerror(errno));
-		return(-1);
+		return -1;
 	}
 
 	remote.sun_family = AF_UNIX;
@@ -260,7 +260,7 @@ static int get_socket(void)
 	if (connect(s_sock, (struct sockaddr *)&remote, len) == -1) {
 		ODP_ERR("cannot connect to server: %s\n", strerror(errno));
 		close(s_sock);
-		return(-1);
+		return -1;
 	}
 
 	return s_sock;
@@ -286,7 +286,7 @@ int _odp_fdserver_register_fd(fd_server_context_e context, uint64_t key,
 	s_sock = get_socket();
 	if (s_sock < 0) {
 		odp_spinlock_unlock(client_lock);
-		return(-1);
+		return -1;
 	}
 
 	res =  send_fdserver_msg(s_sock, FD_REGISTER_REQ, context, key,
@@ -332,7 +332,7 @@ int _odp_fdserver_deregister_fd(fd_server_context_e context, uint64_t key)
 	s_sock = get_socket();
 	if (s_sock < 0) {
 		odp_spinlock_unlock(client_lock);
-		return(-1);
+		return -1;
 	}
 
 	res =  send_fdserver_msg(s_sock, FD_DEREGISTER_REQ, context, key, -1);
@@ -375,7 +375,7 @@ int _odp_fdserver_lookup_fd(fd_server_context_e context, uint64_t key)
 	s_sock = get_socket();
 	if (s_sock < 0) {
 		odp_spinlock_unlock(client_lock);
-		return(-1);
+		return -1;
 	}
 
 	res =  send_fdserver_msg(s_sock, FD_LOOKUP_REQ, context, key, -1);
@@ -418,7 +418,7 @@ static int stop_server(void)
 	s_sock = get_socket();
 	if (s_sock < 0) {
 		odp_spinlock_unlock(client_lock);
-		return(-1);
+		return -1;
 	}
 
 	res =  send_fdserver_msg(s_sock, FD_SERVERSTOP_REQ, 0, 0, -1);
@@ -604,7 +604,7 @@ int _odp_fdserver_init_global(void)
 	sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sock == -1) {
 		ODP_ERR("_odp_fdserver_init_global: %s\n", strerror(errno));
-		return(-1);
+		return -1;
 	}
 
 	/* remove previous named socket if it already exists: */
@@ -617,14 +617,14 @@ int _odp_fdserver_init_global(void)
 	if (res == -1) {
 		ODP_ERR("_odp_fdserver_init_global: %s\n", strerror(errno));
 		close(sock);
-		return(-1);
+		return -1;
 	}
 
 	/* listen for incoming conections: */
 	if (listen(sock, FDSERVER_BACKLOG) == -1) {
 		ODP_ERR("_odp_fdserver_init_global: %s\n", strerror(errno));
 		close(sock);
-		return(-1);
+		return -1;
 	}
 
 	/* fork a server process: */
@@ -632,7 +632,7 @@ int _odp_fdserver_init_global(void)
 	if (server_pid == -1) {
 		ODP_ERR("Could not fork!\n");
 		close(sock);
-		return(-1);
+		return -1;
 	}
 
 	if (server_pid == 0) { /*child */

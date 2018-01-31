@@ -139,13 +139,7 @@ void parse_args(int argc, char *argv[])
  */
 void print_info(char *progname)
 {
-	printf("\n"
-	       "ODP system info\n"
-	       "---------------\n"
-	       "ODP API version: %s\n"
-	       "CPU model:       %s\n"
-	       "\n",
-	       odp_version_api_str(), odp_cpu_model_str());
+	odp_sys_info_print();
 
 	printf("Running ODP appl: \"%s\"\n"
 	       "-----------------\n"

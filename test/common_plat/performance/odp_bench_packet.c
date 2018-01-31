@@ -1372,19 +1372,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
  */
 static void print_info(char *progname, appl_args_t *appl_args ODP_UNUSED)
 {
-	printf("\n"
-	       "ODP system info\n"
-	       "---------------\n"
-	       "ODP API version: %s\n"
-	       "ODP impl name:   %s\n"
-	       "CPU model:       %s\n"
-	       "CPU freq (hz):   %" PRIu64 "\n"
-	       "Cache line size: %i\n"
-	       "CPU count:       %i\n"
-	       "\n",
-	       odp_version_api_str(), odp_version_impl_name(),
-	       odp_cpu_model_str(), odp_cpu_hz_max(),
-	       odp_sys_cache_line_size(), odp_cpu_count());
+	odp_sys_info_print();
 
 	printf("Running ODP appl: \"%s\"\n"
 	       "-----------------\n", progname);

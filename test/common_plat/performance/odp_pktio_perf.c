@@ -39,7 +39,7 @@
 #define PKT_BUF_NUM       (32 * 1024)
 #define MAX_NUM_IFACES    2
 #define TEST_HDR_MAGIC    0x92749451
-#define MAX_WORKERS       32
+#define MAX_WORKERS       128
 #define BATCH_LEN_MAX     32
 
 /* Packet rate at which to start when using binary search */
@@ -167,14 +167,13 @@ static test_globals_t *gbl_args;
 /*
  * Generate a single test packet for transmission.
  */
-static odp_packet_t pktio_create_packet(void)
+static odp_packet_t pktio_create_packet(uint32_t seq)
 {
 	odp_packet_t pkt;
 	odph_ethhdr_t *eth;
 	odph_ipv4hdr_t *ip;
 	odph_udphdr_t *udp;
 	char *buf;
-	uint16_t seq;
 	uint32_t offset;
 	pkt_head_t pkt_hdr;
 	size_t payload_len;
@@ -209,7 +208,6 @@ static odp_packet_t pktio_create_packet(void)
 				       ODPH_IPV4HDR_LEN);
 	ip->ttl = 128;
 	ip->proto = ODPH_IPPROTO_UDP;
-	seq = odp_atomic_fetch_inc_u32(&ip_seq);
 	ip->id = odp_cpu_to_be_16(seq);
 	ip->chksum = 0;
 	odph_ipv4_csum_update(pkt);
@@ -241,18 +239,16 @@ static int pktio_pkt_has_magic(odp_packet_t pkt)
 	size_t l4_off;
 	pkt_head_t pkt_hdr;
 
-	l4_off = odp_packet_l4_offset(pkt);
-	if (l4_off) {
-		int ret = odp_packet_copy_to_mem(pkt,
-						 l4_off + ODPH_UDPHDR_LEN,
-						 sizeof(pkt_hdr), &pkt_hdr);
+	l4_off = ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN;
+	int ret = odp_packet_copy_to_mem(pkt,
+					 l4_off + ODPH_UDPHDR_LEN,
+					 sizeof(pkt_hdr), &pkt_hdr);
 
-		if (ret != 0)
-			return 0;
+	if (ret != 0)
+		return 0;
 
-		if (pkt_hdr.magic == TEST_HDR_MAGIC)
-			return 1;
-	}
+	if (pkt_hdr.magic == TEST_HDR_MAGIC)
+		return 1;
 
 	return 0;
 }
@@ -263,9 +259,11 @@ static int pktio_pkt_has_magic(odp_packet_t pkt)
 static int alloc_packets(odp_packet_t *pkt_tbl, int num_pkts)
 {
 	int n;
+	uint16_t seq;
 
+	seq = odp_atomic_fetch_add_u32(&ip_seq, num_pkts);
 	for (n = 0; n < num_pkts; ++n) {
-		pkt_tbl[n] = pktio_create_packet();
+		pkt_tbl[n] = pktio_create_packet(seq + n);
 		if (pkt_tbl[n] == ODP_PACKET_INVALID)
 			break;
 	}
@@ -563,6 +561,12 @@ static int setup_txrx_masks(odp_cpumask_t *thd_mask_tx,
 		return TEST_SKIP;
 	}
 
+	if (num_workers > MAX_WORKERS) {
+		LOG_DBG("Worker count limited to MAX_WORKERS define (=%d)\n",
+			MAX_WORKERS);
+		num_workers = MAX_WORKERS;
+	}
+
 	if (gbl_args->args.num_tx_workers) {
 		if (gbl_args->args.num_tx_workers > (num_workers - 1)) {
 			LOG_ERR("Invalid TX worker count\n");
@@ -739,6 +743,7 @@ static int test_init(void)
 	odp_pool_param_t params;
 	const char *iface;
 	int schedule;
+	odp_pktio_config_t cfg;
 
 	odp_pool_param_init(&params);
 	params.pkt.len     = PKT_HDR_LEN + gbl_args->args.pkt_len;
@@ -787,6 +792,13 @@ static int test_init(void)
 		LOG_ERR("failed to configure pktio_tx queue\n");
 		return -1;
 	}
+
+	/* Disable packet parsing as this is done in the driver where it
+	 * affects scalability.
+	 */
+	odp_pktio_config_init(&cfg);
+	cfg.parser.layer = ODP_PKTIO_PARSER_LAYER_NONE;
+	odp_pktio_config(gbl_args->pktio_rx, &cfg);
 
 	if (gbl_args->args.num_ifaces > 1) {
 		if (odp_pktout_queue_config(gbl_args->pktio_rx, NULL)) {
