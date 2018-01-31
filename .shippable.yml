@@ -38,7 +38,7 @@ build:
     - ./bootstrap
     - ./configure --disable-test-perf
     - make
-    - sudo env ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes make check
+    - sudo env ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes make check -k
 
   on_success:
     - ./scripts/shippable-post.sh
