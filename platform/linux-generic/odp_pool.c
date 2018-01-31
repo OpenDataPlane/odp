@@ -693,6 +693,9 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 	if (pool->params.type == ODP_POOL_PACKET)
 		info->pkt.max_num = pool->num;
 
+	info->min_data_addr = (uintptr_t)pool->base_addr;
+	info->max_data_addr = (uintptr_t)pool->base_addr + pool->shm_size - 1;
+
 	return 0;
 }
 
