@@ -990,7 +990,7 @@ int odp_packet_move_data(odp_packet_t pkt, uint32_t dst_offset,
 void odp_packet_print(odp_packet_t pkt)
 {
 	odp_packet_seg_t seg;
-	int max_len = 512;
+	int max_len = 1024;
 	char str[max_len];
 	uint8_t *p;
 	int len = 0;
@@ -1031,8 +1031,9 @@ void odp_packet_print(odp_packet_t pkt)
 
 	while (seg != ODP_PACKET_SEG_INVALID) {
 		len += snprintf(&str[len], n - len,
-				"    seg_len    %" PRIu32 "\n",
-				odp_packet_seg_data_len(pkt, seg));
+				"    seg_len    %-4" PRIu32 "  seg_data %p ",
+				odp_packet_seg_data_len(pkt, seg),
+				odp_packet_seg_data(pkt, seg));
 
 		seg = odp_packet_next_seg(pkt, seg);
 	}
