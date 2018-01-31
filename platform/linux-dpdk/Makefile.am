@@ -3,7 +3,7 @@ include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
 AM_CFLAGS +=  $(DPDK_CFLAGS)
 
-AM_CPPFLAGS +=  -I$(srcdir)/include
+AM_CPPFLAGS =  -I$(srcdir)/include
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include
 AM_CPPFLAGS +=  -I$(top_srcdir)/include
 AM_CPPFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
