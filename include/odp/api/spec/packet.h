@@ -72,6 +72,79 @@ extern "C" {
   */
 
 /**
+ * @typedef odp_proto_l3_type_t
+ * Layer 3 protocol type
+ */
+
+/**
+ * @def ODP_PROTO_L3_TYPE_NONE
+ * Layer 3 protocol type not defined
+ *
+ * @def ODP_PROTO_L3_TYPE_ARP
+ * Layer 3 protocol is ARP
+ *
+ * @def ODP_PROTO_L3_TYPE_RARP
+ * Layer 3 protocol is RARP
+ *
+ * @def ODP_PROTO_L3_TYPE_MPLS
+ * Layer 3 protocol is MPLS
+ *
+ * @def ODP_PROTO_L3_TYPE_IPV4
+ * Layer 3 protocol type is IPv4
+ *
+ * @def ODP_PROTO_L3_TYPE_IPV6
+ * Layer 3 protocol type is IPv6
+ */
+
+/**
+ * @def ODP_PROTO_L4_TYPE_NONE
+ * Layer 4 protocol type not defined
+ *
+ * @def ODP_PROTO_L4_TYPE_ICMPV4
+ * Layer 4 protocol type is ICMPv4
+ *
+ * @def ODP_PROTO_L4_TYPE_IGMP
+ * Layer 4 protocol type is IGMP
+ *
+ * @def ODP_PROTO_L4_TYPE_IPV4
+ * Layer 4 protocol type is IPv4
+ *
+ * @def ODP_PROTO_L4_TYPE_TCP
+ * Layer 4 protocol type is TCP
+ *
+ * @def ODP_PROTO_L4_TYPE_UDP
+ * Layer 4 protocol type is UDP
+ *
+ * @def ODP_PROTO_L4_TYPE_IPV6
+ * Layer 4 protocol type is IPv6
+ *
+ * @def ODP_PROTO_L4_TYPE_GRE
+ * Layer 4 protocol type is GRE
+ *
+ * @def ODP_PROTO_L4_TYPE_ESP
+ * Layer 4 protocol type is IPSEC ESP
+ *
+ * @def ODP_PROTO_L4_TYPE_AH
+ * Layer 4 protocol type is IPSEC AH
+ *
+ * @def ODP_PROTO_L4_TYPE_ICMPV6
+ * Layer 4 protocol type is ICMPv6
+ *
+ * @def ODP_PROTO_L4_TYPE_NO_NEXT
+ * Layer 4 protocol type is "No Next Header".
+ * Protocol / next header number is 59.
+ *
+ * @def ODP_PROTO_L4_TYPE_IPCOMP
+ * Layer 4 protocol type is IP Payload Compression Protocol
+ *
+ * @def ODP_PROTO_L4_TYPE_SCTP
+ * Layer 4 protocol type is SCTP
+ *
+ * @def ODP_PROTO_L4_TYPE_ROHC
+ * Layer 4 protocol type is ROHC
+ */
+
+/**
  * Protocol
  */
 typedef enum odp_proto_t {
@@ -1541,6 +1614,28 @@ uint32_t odp_packet_l4_offset(odp_packet_t pkt);
  * @retval <0 on failure
  */
 int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset);
+
+/**
+ * Layer 3 protocol type
+ *
+ * Returns layer 3 protocol type. Initial type value is ODP_PROTO_L3_TYPE_NONE.
+ *
+ * @param      pkt      Packet handle
+ *
+ * @return Layer 3 protocol type
+ */
+odp_proto_l3_type_t odp_packet_l3_type(odp_packet_t pkt);
+
+/**
+ * Layer 4 protocol type
+ *
+ * Returns layer 4 protocol type. Initial type value is ODP_PROTO_L4_TYPE_NONE.
+ *
+ * @param      pkt      Packet handle
+ *
+ * @return Layer 4 protocol type
+ */
+odp_proto_l4_type_t odp_packet_l4_type(odp_packet_t pkt);
 
 /**
  * Layer 3 checksum check status
