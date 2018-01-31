@@ -7,6 +7,8 @@
 #ifndef __INSTRUM_PKTIO_DIRECT_H__
 #define __INSTRUM_PKTIO_DIRECT_H__
 
+#ifdef CODE_INSTRUM_PKTIO_DIRECT
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -16,5 +18,6 @@ int instr_odppktio_direct_init(void);
 #ifdef __cplusplus
 }
 #endif
+#endif /* CODE_INSTRUM_PKTIO_DIRECT */
 #endif /* __INSTRUM_PKTIO_DIRECT_H__ */
 

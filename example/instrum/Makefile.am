@@ -16,13 +16,11 @@ AM_LDFLAGS = -L$(PAPI_PATH)/lib -lpapi
 
 lib_LTLIBRARIES = $(LIB)/libinstrum.la
 
-__LIB__libinstrum_la_SOURCES = \
+INSTRUM_SRC = \
 		instrum.c \
 		store.c \
 		papi_cnt.c \
 		init.c \
-		pktio_direct.c\
-		sched.c \
 		instrum_common.h \
 		sample.h \
 		store.h \
@@ -30,3 +28,15 @@ __LIB__libinstrum_la_SOURCES = \
 		init.h \
 		pktio_direct.h \
 		sched.h
+
+if CODE_INSTRUM_SCHED
+AM_CFLAGS += -DCODE_INSTRUM_SCHED
+INSTRUM_SRC += sched.c
+endif
+
+if CODE_INSTRUM_PKTIO_DIRECT
+AM_CFLAGS += -DCODE_INSTRUM_PKTIO_DIRECT
+INSTRUM_SRC += pktio_direct.c
+endif
+
+__LIB__libinstrum_la_SOURCES = $(INSTRUM_SRC)
