@@ -40,14 +40,10 @@ build:
     - make
     - sudo env ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes make check
 
-  post_ci:
-    - wget https://raw.githubusercontent.com/shawnliang/cunit-to-junit/master/cunit-to-junit.xsl
-    - |
-      for FILE in `find  ./test ./platform/ -name  "*.xml"`; do
-         bname=`basename $FILE`;
-         xsltproc --novalid cunit-to-junit.xsl $FILE > $SHIPPABLE_BUILD_DIR/shippable/testresults/${bname}
-      done
+  on_success:
+    - ./scripts/shippable-post.sh
 
   on_failure:
+    - ./scripts/shippable-post.sh
     - cat config.log
     - find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
