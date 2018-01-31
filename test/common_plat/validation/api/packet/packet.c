@@ -1376,7 +1376,7 @@ void packet_test_concat_small(void)
 	int ret;
 	uint8_t *data;
 	uint32_t i;
-	uint32_t len = 32000;
+	uint32_t len = PACKET_POOL_NUM / 4;
 	uint8_t buf[len];
 
 	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
@@ -2072,14 +2072,107 @@ void packet_test_ref(void)
 {
 	odp_packet_t base_pkt, segmented_base_pkt, hdr_pkt[4],
 		ref_pkt[4], refhdr_pkt[4], hdr_cpy;
+	odp_packet_t pkt, pkt2, pkt3, ref, ref2;
 	uint32_t pkt_len, segmented_pkt_len, hdr_len[4], offset[4], hr[4],
 		base_hr, ref_len[4];
-	int i;
+	int i, ret;
+	odp_pool_t pool;
 
+	/* Create references and compare data */
+	pool = odp_packet_pool(test_packet);
+
+	pkt = odp_packet_copy(test_packet, pool);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID)
+	ref = odp_packet_ref_static(pkt);
+	CU_ASSERT_FATAL(ref != ODP_PACKET_INVALID)
+	packet_compare_data(pkt, ref);
+	odp_packet_free(ref);
+	odp_packet_free(pkt);
+
+	pkt = odp_packet_copy(test_packet, pool);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID)
+	ref = odp_packet_ref(pkt, 0);
+	CU_ASSERT_FATAL(ref != ODP_PACKET_INVALID)
+	packet_compare_data(pkt, ref);
+	odp_packet_free(ref);
+	odp_packet_free(pkt);
+
+	pkt  = odp_packet_copy(test_packet, pool);
+	pkt3 = odp_packet_copy(test_packet, pool);
+	CU_ASSERT_FATAL(pkt  != ODP_PACKET_INVALID)
+	CU_ASSERT_FATAL(pkt3 != ODP_PACKET_INVALID)
+	ret = odp_packet_concat(&pkt3, pkt);
+	CU_ASSERT_FATAL(ret >= 0);
+
+	pkt  = odp_packet_copy(test_packet, pool);
+	pkt2 = odp_packet_copy(test_packet, pool);
+	CU_ASSERT_FATAL(pkt  != ODP_PACKET_INVALID)
+	CU_ASSERT_FATAL(pkt2 != ODP_PACKET_INVALID)
+	ref = odp_packet_ref_pkt(pkt, 0, pkt2);
+	CU_ASSERT_FATAL(ref != ODP_PACKET_INVALID)
+	packet_compare_data(pkt3, ref);
+	odp_packet_free(ref);
+	odp_packet_free(pkt);
+	odp_packet_free(pkt3);
+
+	/* Do the same for segmented packets */
+	pool = odp_packet_pool(segmented_test_packet);
+
+	pkt = odp_packet_copy(segmented_test_packet, pool);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID)
+	ref = odp_packet_ref_static(pkt);
+	CU_ASSERT_FATAL(ref != ODP_PACKET_INVALID)
+	packet_compare_data(pkt, ref);
+	odp_packet_free(ref);
+	odp_packet_free(pkt);
+
+	pkt = odp_packet_copy(segmented_test_packet, pool);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID)
+	ref = odp_packet_ref(pkt, 0);
+	CU_ASSERT_FATAL(ref != ODP_PACKET_INVALID)
+	packet_compare_data(pkt, ref);
+	odp_packet_free(ref);
+	odp_packet_free(pkt);
+
+	/* Avoid to create too large packets with concat */
+	pool = odp_packet_pool(test_packet);
+
+	pkt  = odp_packet_copy(test_packet, pool);
+	pkt2 = odp_packet_copy(test_packet, pool);
+	pkt3 = odp_packet_copy(test_packet, pool);
+	CU_ASSERT_FATAL(pkt  != ODP_PACKET_INVALID)
+	CU_ASSERT_FATAL(pkt2 != ODP_PACKET_INVALID)
+	CU_ASSERT_FATAL(pkt3 != ODP_PACKET_INVALID)
+	ret = odp_packet_concat(&pkt3, pkt2);
+	CU_ASSERT_FATAL(ret >= 0);
+	ret = odp_packet_concat(&pkt3, pkt);
+	CU_ASSERT_FATAL(ret >= 0);
+
+	pkt  = odp_packet_copy(test_packet, pool);
+	pkt2 = odp_packet_copy(test_packet, pool);
+	CU_ASSERT_FATAL(pkt  != ODP_PACKET_INVALID)
+	CU_ASSERT_FATAL(pkt2 != ODP_PACKET_INVALID)
+	ref = odp_packet_ref_pkt(pkt, 0, pkt2);
+	CU_ASSERT_FATAL(ref != ODP_PACKET_INVALID)
+	pkt2 = odp_packet_copy(test_packet, pool);
+	CU_ASSERT_FATAL(pkt2 != ODP_PACKET_INVALID)
+	ref2 = odp_packet_ref_pkt(ref, 0, pkt2);
+	CU_ASSERT_FATAL(ref2 != ODP_PACKET_INVALID)
+	packet_compare_data(pkt3, ref2);
+
+	/* Try print function on a reference */
+	odp_packet_print(ref2);
+
+	odp_packet_free(ref);
+	odp_packet_free(ref2);
+	odp_packet_free(pkt);
+	odp_packet_free(pkt3);
+
+	/* Test has_ref, unshared_len, lengths, etc */
 	base_pkt = odp_packet_copy(test_packet, odp_packet_pool(test_packet));
-	base_hr = odp_packet_headroom(base_pkt);
-	pkt_len  = odp_packet_len(test_packet);
 	CU_ASSERT_FATAL(base_pkt != ODP_PACKET_INVALID);
+	base_hr = odp_packet_headroom(base_pkt);
+	pkt_len = odp_packet_len(test_packet);
 
 	segmented_base_pkt =
 		odp_packet_copy(segmented_test_packet,
@@ -2224,8 +2317,14 @@ void packet_test_ref(void)
 	CU_ASSERT(ref_pkt[0] != ODP_PACKET_INVALID);
 
 	if (odp_packet_has_ref(base_pkt) == 1) {
-		/* CU_ASSERT needs braces */
 		CU_ASSERT(odp_packet_has_ref(ref_pkt[0]) == 1);
+		CU_ASSERT(odp_packet_unshared_len(base_pkt) == 0);
+		CU_ASSERT(odp_packet_unshared_len(ref_pkt[0]) == 0);
+	} else {
+		CU_ASSERT(odp_packet_unshared_len(base_pkt) ==
+			  odp_packet_len(base_pkt));
+		CU_ASSERT(odp_packet_unshared_len(ref_pkt[0]) ==
+			  odp_packet_len(ref_pkt[0]));
 	}
 
 	CU_ASSERT(odp_packet_len(ref_pkt[0]) == odp_packet_len(base_pkt));

@@ -34,7 +34,7 @@ void odp_barrier_wait(odp_barrier_t *barrier)
 	uint32_t count;
 	int wasless;
 
-	odp_mb_full();
+	odp_mb_release();
 
 	count   = odp_atomic_fetch_inc_u32(&barrier->bar);
 	wasless = count < barrier->count;
@@ -48,5 +48,5 @@ void odp_barrier_wait(odp_barrier_t *barrier)
 			odp_cpu_pause();
 	}
 
-	odp_mb_full();
+	odp_mb_acquire();
 }

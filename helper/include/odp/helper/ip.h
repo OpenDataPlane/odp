@@ -95,6 +95,17 @@ typedef struct ODP_PACKED {
 ODP_STATIC_ASSERT(sizeof(odph_ipv4hdr_t) == ODPH_IPV4HDR_LEN,
 		  "ODPH_IPV4HDR_T__SIZE_ERROR");
 
+/**
+ * Calculate IPv4 header checksum
+ *
+ * @param pkt         The packet to be checksummed
+ * @param offset      Offset into pkt of start of IP header
+ * @param ip          Pointer to IPv4 header to be checksummed
+ * @param[out] chksum Field to receive checksum results
+ *
+ * @retval 0  On success
+ * @retval <0 On failure
+ */
 static inline int odph_ipv4_csum(odp_packet_t pkt,
 				 uint32_t offset,
 				 odph_ipv4hdr_t *ip,
