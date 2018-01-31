@@ -4,7 +4,7 @@
 
 AM_LDFLAGS += -static
 
-AM_CPPFLAGS += $(CUNIT_CPPFLAGS)
+AM_CFLAGS += $(CUNIT_CFLAGS)
 
 LIBCUNIT_COMMON = $(top_builddir)/test/common_plat/common/libcunit_common.la
 LIB   = $(top_builddir)/lib
