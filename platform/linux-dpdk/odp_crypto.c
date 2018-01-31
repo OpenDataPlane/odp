@@ -4,6 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <odp_posix_extensions.h>
 #include <odp/api/crypto.h>
 #include <odp_internal.h>
 #include <odp/api/atomic.h>

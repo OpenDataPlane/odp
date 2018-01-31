@@ -22,6 +22,8 @@ extern "C" {
 #include <odp/api/packet_io.h>
 #include <odp/api/hints.h>
 
+/* Required by rte_mbuf.h */
+#include <sys/types.h>
 #include <rte_mbuf.h>
 
 /** @internal Inline function offsets */
