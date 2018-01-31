@@ -48,18 +48,30 @@ ODP_STATIC_ASSERT(CONFIG_PACKET_MAX_SEGS < 256,
 struct odp_buffer_hdr_t {
 	/* Underlying DPDK rte_mbuf */
 	struct rte_mbuf mb;
-	/* Buffer index in the pool */
-	uint32_t index;
 
-	 /* ODP buffer type, not DPDK buf type */
-	int type;
+	/* Buffer index in the pool */
+	uint32_t  index;
+
+	/* Total size of all allocated segs */
+	uint32_t  totsize;
+
+	/* Pool type */
+	int8_t    type;
+
+	/* Event type. Maybe different than pool type (crypto compl event) */
+	int8_t    event_type;
 
 	/* Burst counts */
-	int burst_num;
-	int burst_first;
+	uint8_t   burst_num;
+	uint8_t   burst_first;
 
 	/* Next buf in a list */
 	struct odp_buffer_hdr_t *next;
+
+	/* Burst table */
+	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
+
+	/* --- Mostly read only data --- */
 
 	/* User context pointer or u64 */
 	union {
@@ -68,21 +80,12 @@ struct odp_buffer_hdr_t {
 		const void *buf_cctx; /* const alias for ctx */
 	};
 
-	/* Event type. Maybe different than pool type (crypto compl event) */
-	odp_event_type_t         event_type;
-
-	/* Burst table */
-	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
+	/* Pool pointer */
+	void *pool_ptr;
 
 	/* Pool handle: will be removed, used only for odp_packet_pool()
 	 * inlining */
 	odp_pool_t pool_hdl;
-
-	/* Pool pointer */
-	void *pool_ptr;
-
-	/* Total size of all allocated segs */
-	uint32_t totsize;
 };
 
 ODP_STATIC_ASSERT(BUFFER_BURST_SIZE < 256, "BUFFER_BURST_SIZE_TOO_LARGE");
