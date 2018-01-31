@@ -36,6 +36,7 @@ build:
     - sudo mount -t hugetlbfs nodev /mnt/huge
     - mkdir -p /dev/shm/odp
     - ./bootstrap
+    - if [ "${CC#clang}" != "${CC}" ] ; then export CXX="${CC/clang/clang++}"; fi
     - ./configure --disable-test-perf
     - make
     - sudo env ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes make check -k
