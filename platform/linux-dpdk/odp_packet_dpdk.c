@@ -42,7 +42,7 @@ const pktio_if_ops_t * const pktio_if_ops[]  = {
 	NULL
 };
 
-extern pktio_table_t *pktio_tbl;
+extern void *pktio_entry_ptr[ODP_CONFIG_PKTIO_ENTRIES];
 
 static uint32_t mtu_get_pkt_dpdk(pktio_entry_t *pktio_entry);
 
@@ -318,7 +318,7 @@ static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
 		send_pkt_dpdk(pktio_entry, j, &dummy, 0);
 
 	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
-		pktio_entry_t *entry = &pktio_tbl->entries[i];
+		pktio_entry_t *entry = pktio_entry_ptr[i];
 
 		if (rte_mempool_avail_count(rte_mempool) != 0)
 			return;
