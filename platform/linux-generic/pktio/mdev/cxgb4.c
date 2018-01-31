@@ -36,6 +36,25 @@
 /* RX queue definitions */
 #define CXGB4_RX_QUEUE_NUM_MAX 32
 
+/* RX buffer size indices for firmware */
+#define CXGB4_RX_BUF_SIZE_INDEX_4K	0x0UL
+#define CXGB4_RX_BUF_SIZE_INDEX_64K	0x1UL
+#define CXGB4_RX_BUF_SIZE_INDEX_1500	0x2UL
+#define CXGB4_RX_BUF_SIZE_INDEX_9000	0x3UL
+
+/* Default RX buffer size index to use */
+#ifndef CXGB4_RX_BUF_SIZE_INDEX
+#define CXGB4_RX_BUF_SIZE_INDEX CXGB4_RX_BUF_SIZE_INDEX_4K
+#endif /* CXGB4_RX_BUF_SIZE_INDEX */
+
+#if CXGB4_RX_BUF_SIZE_INDEX == CXGB4_RX_BUF_SIZE_INDEX_4K
+#define CXGB4_RX_BUF_SIZE 4096UL
+#elif CXGB4_RX_BUF_SIZE_INDEX == CXGB4_RX_BUF_SIZE_INDEX_1500
+#define CXGB4_RX_BUF_SIZE 2048UL
+#else /* CXGB4_RX_BUF_SIZE_INDEX */
+#error "Support for requested RX buffer size isn't implemented"
+#endif /* CXGB4_RX_BUF_SIZE_INDEX */
+
 /** RX descriptor */
 typedef struct {
 	uint32_t padding[12];
@@ -72,18 +91,15 @@ typedef struct ODP_ALIGNED_CACHE {
 	uint32_t doorbell_desc_key;	/**< 'Key' to the doorbell */
 
 	uint16_t rx_queue_len;		/**< Number of RX desc entries */
-	uint16_t rx_next;		/**< Next RX desc to handle */
+	uint16_t cidx;			/**< Next RX desc to handle */
 
 	uint32_t gen:1;			/**< RX queue generation */
 
 	odp_u64be_t *free_list;		/**< Free list base */
-
-	uint8_t free_list_len;		/**< Number of free list entries */
-	uint8_t commit_pending;		/**< Free list entries pending commit */
-
-	uint8_t cidx;			/**< Free list consumer index */
-	uint8_t pidx;			/**< Free list producer index */
-
+	uint16_t free_list_len;		/**< Number of free list entries */
+	uint16_t commit_pending;	/**< Free list entries pending commit */
+	uint16_t free_list_cidx;	/**< Free list consumer index */
+	uint16_t free_list_pidx;	/**< Free list producer index */
 	uint32_t offset;		/**< Offset into last free fragment */
 
 	mdev_dma_area_t rx_data;	/**< RX packet payload area */
@@ -214,7 +230,7 @@ typedef struct {
 	mdev_device_t mdev;		/**< Common mdev data */
 } pktio_ops_cxgb4_data_t;
 
-static void cxgb4_rx_refill(cxgb4_rx_queue_t *rxq, uint8_t num);
+static void cxgb4_rx_refill(cxgb4_rx_queue_t *rxq, uint16_t num);
 static void cxgb4_wait_link_up(pktio_entry_t *pktio_entry);
 static int cxgb4_close(pktio_entry_t *pktio_entry);
 
@@ -236,7 +252,8 @@ static int cxgb4_mmio_register(pktio_ops_cxgb4_data_t *pkt_cxgb4,
 
 static int cxgb4_rx_queue_register(pktio_ops_cxgb4_data_t *pkt_cxgb4,
 				   uint64_t offset, uint64_t size,
-				   uint64_t free_list_offset)
+				   uint64_t free_list_offset,
+				   uint64_t free_list_size)
 {
 	uint16_t rxq_idx = pkt_cxgb4->capa.max_input_queues++;
 	cxgb4_rx_queue_t *rxq = &pkt_cxgb4->rx_queues[rxq_idx];
@@ -305,17 +322,14 @@ static int cxgb4_rx_queue_register(pktio_ops_cxgb4_data_t *pkt_cxgb4,
 		return -1;
 	}
 
-	ODP_ASSERT(rxq->free_list_len * sizeof(*rxq->free_list) <=
-		   ODP_PAGE_SIZE);
-
-	rxq->free_list =
-	    mdev_region_mmap(&pkt_cxgb4->mdev, free_list_offset, ODP_PAGE_SIZE);
+	rxq->free_list = mdev_region_mmap(&pkt_cxgb4->mdev, free_list_offset,
+			free_list_size);
 	if (rxq->free_list == MAP_FAILED) {
 		ODP_ERR("Cannot mmap RX queue free list\n");
 		return -1;
 	}
 
-	rxq->rx_data.size = rxq->free_list_len * ODP_PAGE_SIZE;
+	rxq->rx_data.size = rxq->free_list_len * CXGB4_RX_BUF_SIZE;
 	ret = mdev_dma_area_alloc(&pkt_cxgb4->mdev, &rxq->rx_data);
 	if (ret) {
 		ODP_ERR("Cannot allocate RX queue DMA area\n");
@@ -329,7 +343,7 @@ static int cxgb4_rx_queue_register(pktio_ops_cxgb4_data_t *pkt_cxgb4,
 	 * otherwise HW will think the free list is empty.
 	 */
 	cxgb4_rx_refill(rxq, rxq->free_list_len - 8);
-	rxq->cidx = rxq->free_list_len - 1;
+	rxq->free_list_cidx = rxq->free_list_len - 1;
 
 	ODP_DBG("Register RX queue region: 0x%llx@%016llx\n", size, offset);
 	ODP_DBG("    RX descriptors: %u\n", rxq->rx_queue_len);
@@ -450,12 +464,11 @@ static int cxgb4_region_info_cb(mdev_device_t *mdev,
 			return -1;
 		}
 
-		ODP_ASSERT(sparse->areas[1].size == ODP_PAGE_SIZE);
-
 		return cxgb4_rx_queue_register(pkt_cxgb4,
 					       sparse->areas[0].offset,
 					       sparse->areas[0].size,
-					       sparse->areas[1].offset);
+					       sparse->areas[1].offset,
+					       sparse->areas[1].size);
 
 	case VFIO_NET_MDEV_TX_RING:
 		return cxgb4_tx_queue_register(pkt_cxgb4,
@@ -579,18 +592,20 @@ static int cxgb4_close(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
-static void cxgb4_rx_refill(cxgb4_rx_queue_t *rxq, uint8_t num)
+static void cxgb4_rx_refill(cxgb4_rx_queue_t *rxq, uint16_t num)
 {
 	rxq->commit_pending += num;
 
 	while (num) {
-		uint64_t iova = rxq->rx_data.iova + rxq->pidx * ODP_PAGE_SIZE;
+		uint64_t iova = rxq->rx_data.iova +
+			rxq->free_list_pidx * CXGB4_RX_BUF_SIZE;
 
-		rxq->free_list[rxq->pidx] = odp_cpu_to_be_64(iova);
+		rxq->free_list[rxq->free_list_pidx] =
+			odp_cpu_to_be_64(iova | CXGB4_RX_BUF_SIZE_INDEX);
 
-		rxq->pidx++;
-		if (odp_unlikely(rxq->pidx >= rxq->free_list_len))
-			rxq->pidx = 0;
+		rxq->free_list_pidx++;
+		if (odp_unlikely(rxq->free_list_pidx >= rxq->free_list_len))
+			rxq->free_list_pidx = 0;
 
 		num--;
 	}
@@ -618,31 +633,13 @@ static int cxgb4_recv(pktio_entry_t *pktio_entry,
 		odp_ticketlock_lock(&rxq->lock);
 
 	while (rx_pkts < num) {
-		volatile cxgb4_rx_desc_t *rxd = &rxq->rx_descs[rxq->rx_next];
+		volatile cxgb4_rx_desc_t *rxd = &rxq->rx_descs[rxq->cidx];
 		odp_packet_t pkt;
 		odp_packet_hdr_t *pkt_hdr;
 		uint32_t pkt_len;
 
 		if (RX_DESC_TO_GEN(rxd) != rxq->gen)
 			break;
-
-		/*
-		 * RX queue shall receive only packet descriptors, so this
-		 * condition shall never ever become true. Still, we try to
-		 * be on a safe side and gracefully skip unexpected descriptor.
-		 */
-		if (odp_unlikely(RX_DESC_TO_TYPE(rxd) !=
-				 RX_DESC_TYPE_FLBUF_X)) {
-			ODP_ERR("Invalid rxd type %u\n", RX_DESC_TO_TYPE(rxd));
-
-			rxq->rx_next++;
-			if (odp_unlikely(rxq->rx_next >= rxq->rx_queue_len)) {
-				rxq->rx_next = 0;
-				rxq->gen ^= 1;
-			}
-
-			continue;
-		}
 
 		pkt_len = odp_be_to_cpu_32(rxd->pldbuflen_qid);
 
@@ -657,9 +654,10 @@ static int cxgb4_recv(pktio_entry_t *pktio_entry,
 		 * next one from the beginning.
 		 */
 		if (pkt_len & RX_DESC_NEW_BUF_FLAG) {
-			rxq->cidx++;
-			if (odp_unlikely(rxq->cidx >= rxq->free_list_len))
-				rxq->cidx = 0;
+			rxq->free_list_cidx++;
+			if (odp_unlikely(rxq->free_list_cidx >=
+					 rxq->free_list_len))
+				rxq->free_list_cidx = 0;
 
 			rxq->offset = 0;
 			refill_count++;
@@ -668,15 +666,15 @@ static int cxgb4_recv(pktio_entry_t *pktio_entry,
 		}
 
 		/* TODO: gracefully put pktio into error state */
-		if (odp_unlikely(rxq->offset + pkt_len > ODP_PAGE_SIZE))
+		if (odp_unlikely(rxq->offset + pkt_len > CXGB4_RX_BUF_SIZE))
 			ODP_ABORT("Packet write beyond buffer boundary\n");
 
 		rxq->offset +=
 		    ROUNDUP_ALIGN(pkt_len, pkt_cxgb4->free_list_align);
 
-		rxq->rx_next++;
-		if (odp_unlikely(rxq->rx_next >= rxq->rx_queue_len)) {
-			rxq->rx_next = 0;
+		rxq->cidx++;
+		if (odp_unlikely(rxq->cidx >= rxq->rx_queue_len)) {
+			rxq->cidx = 0;
 			rxq->gen ^= 1;
 		}
 
@@ -686,8 +684,8 @@ static int cxgb4_recv(pktio_entry_t *pktio_entry,
 		 */
 		odp_packet_copy_from_mem(pkt, 0, pkt_len - 2,
 					 (uint8_t *)rxq->rx_data.vaddr +
-					 rxq->cidx * ODP_PAGE_SIZE +
-					 rxq->offset + 2);
+					 rxq->free_list_cidx *
+					 CXGB4_RX_BUF_SIZE + rxq->offset + 2);
 
 		pkt_hdr = odp_packet_hdr(pkt);
 		pkt_hdr->input = pktio_entry->s.handle;
