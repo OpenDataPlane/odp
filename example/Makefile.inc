@@ -1,3 +1,5 @@
+include $(top_srcdir)/platform/@with_platform@/Makefile.inc
+
 LIB   = $(top_builddir)/lib
 LDADD = $(LIB)/libodp-dpdk.la $(LIB)/libodphelper.la $(DPDK_PMDS)
 AM_CFLAGS = \

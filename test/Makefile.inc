@@ -1,3 +1,5 @@
+include $(top_srcdir)/platform/@with_platform@/Makefile.inc
+
 LIB   = $(top_builddir)/lib
 
 #in the following line, the libs using the symbols should come before

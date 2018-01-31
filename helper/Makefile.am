@@ -1,3 +1,5 @@
+include $(top_srcdir)/platform/@with_platform@/Makefile.inc
+
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = $(top_builddir)/pkgconfig/libodphelper.pc
 
