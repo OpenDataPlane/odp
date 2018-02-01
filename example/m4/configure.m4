@@ -17,6 +17,14 @@ AC_ARG_ENABLE([code-instrum],
 
 AM_CONDITIONAL([CODE_INSTRUM], [test x$code_instrumentation = xyes ])
 
+AC_ARG_WITH([code-instrum-profile],
+AS_HELP_STRING([--with-code-instrum-profile=all|scheduler|pktio_direct   set code instrumentation profile]),
+    [code_instrum_profile="$withval"],
+    [code_instrum_profile="all"])
+
+AM_CONDITIONAL([CODE_INSTRUM_SCHED],[test $code_instrum_profile = "all" || test $code_instrum_profile = "scheduler"])
+AM_CONDITIONAL([CODE_INSTRUM_PKTIO_DIRECT],[test $code_instrum_profile = "all" || test $code_instrum_profile = "pktio_direct"])
+
 AC_CONFIG_FILES([example/classifier/Makefile
 		 example/generator/Makefile
 		 example/hello/Makefile
