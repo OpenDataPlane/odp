@@ -76,6 +76,7 @@ AC_SUBST([DPDK_PMDS])
 CPPFLAGS=$OLD_CPPFLAGS
 
 AC_CONFIG_FILES([platform/linux-dpdk/Makefile
+		 platform/linux-dpdk/libodp-dpdk.pc
 		 platform/linux-dpdk/include/odp/api/plat/static_inline.h
 		 platform/linux-dpdk/test/Makefile
 		 platform/linux-dpdk/test/validation/api/pktio/Makefile])
