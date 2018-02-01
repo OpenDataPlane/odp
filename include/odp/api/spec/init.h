@@ -107,23 +107,29 @@ typedef int (*odp_log_func_t)(odp_log_level_t level, const char *fmt, ...);
 typedef void (*odp_abort_func_t)(void) ODP_NORETURN;
 
 /**
- * ODP initialization data
+ * Global initialization parameters
  *
- * Data that is required to initialize the ODP API with the
- * application specific data such as specifying a logging callback, the log
- * level etc.
+ * These parameters may be used at global initialization time to configure and
+ * optimize ODP implementation to match the intended usage. Application
+ * specifies maximum resource usage. Implementation may round up resource
+ * reservations as needed. Initialization function returns a failure if resource
+ * requirements are too high. Init parameters may be used also to override
+ * logging and abort functions.
  *
- * @note It is expected that all unassigned members are zero
+ * Use odp_init_param_init() to initialize the parameters into their default
+ * values. Unused parameters are left to default values.
  */
 typedef struct odp_init_t {
 	/** Maximum number of worker threads the user will run concurrently.
 	    Valid range is from 0 to platform specific maximum. Set both
 	    num_worker and num_control to zero for default number of threads. */
 	int num_worker;
+
 	/** Maximum number of control threads the user will run concurrently.
 	    Valid range is from 0 to platform specific maximum. Set both
 	    num_worker and num_control to zero for default number of threads. */
 	int num_control;
+
 	/** Pointer to bit mask mapping CPUs available to this ODP instance
 	    for running worker threads.
 	    Initialize to a NULL pointer to use default CPU mapping.
@@ -139,6 +145,7 @@ typedef struct odp_init_t {
 		  worker masks
 	 */
 	const odp_cpumask_t *worker_cpus;
+
 	/** Pointer to bit mask mapping CPUs available to this ODP instance
 	    for running control threads.
 	    Initialize to a NULL pointer to use default CPU mapping.
@@ -150,10 +157,13 @@ typedef struct odp_init_t {
 	    worker and control masks do not overlap.
 	 */
 	const odp_cpumask_t *control_cpus;
+
 	/** Replacement for the default log fn */
 	odp_log_func_t log_fn;
+
 	/** Replacement for the default abort fn */
 	odp_abort_func_t abort_fn;
+
 	/** Unused features. These are hints to the ODP implementation that
 	 * the application will not use any APIs associated with these
 	 * features. Implementations may use this information to provide
@@ -161,6 +171,15 @@ typedef struct odp_init_t {
 	 * that a feature will not be used and it is used anyway.
 	 */
 	odp_feature_t not_used;
+
+	/** Shared memory parameters */
+	struct {
+		/** Maximum memory usage in bytes. This is the maximum
+		 *  amount of shared memory that application will reserve
+		 *  concurrently. */
+		uint64_t max_memory;
+	} shm;
+
 } odp_init_t;
 
 /**
@@ -189,7 +208,8 @@ void odp_init_param_init(odp_init_t *param);
  * system and outputs a handle for it. The handle is used in other calls
  * (e.g. odp_init_local()) as a reference to the instance. When user provides
  * configuration parameters, the platform may configure and optimize the
- * instance to match user requirements.
+ * instance to match user requirements. A failure is returned if requirements
+ * cannot be met.
  *
  * Configuration parameters are divided into standard and platform specific
  * parts. Standard parameters are supported by any ODP platform, where as
