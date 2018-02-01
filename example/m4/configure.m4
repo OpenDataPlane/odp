@@ -31,4 +31,5 @@ AC_CONFIG_FILES([example/classifier/Makefile
 		 example/time/Makefile
 		 example/timer/Makefile
 		 example/traffic_mgmt/Makefile
+		 example/instrum/Makefile
 		 example/Makefile])

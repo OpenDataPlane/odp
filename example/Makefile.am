@@ -13,4 +13,8 @@ SUBDIRS = classifier \
 	  timer \
 	  traffic_mgmt
 
+if CODE_INSTRUM
+SUBDIRS += instrum
+endif
+
 noinst_HEADERS = example_debug.h
