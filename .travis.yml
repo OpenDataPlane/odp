@@ -404,6 +404,7 @@ jobs:
                   compiler: clang-3.8
                   env: CROSS_ARCH="i386" CONF="--disable-abi-compat"
                 - stage: test
+                  canfail: yes
                   env: TEST=checkpatch
                   compiler: gcc
                   install:
@@ -412,6 +413,8 @@ jobs:
                           - echo ${TRAVIS_COMMIT_RANGE};
                           - ODP_PATCHES=`echo ${TRAVIS_COMMIT_RANGE} | sed 's/\.//'`;
                           - ./scripts/ci-checkpatches.sh ${ODP_PATCHES};
+        allow_failures:
+          - canfail: yes
 
 after_failure:
   - cat config.log
