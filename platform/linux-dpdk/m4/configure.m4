@@ -79,7 +79,7 @@ AC_SUBST([ATOMIC_LIBS])
 AM_CONDITIONAL([HAVE_PCAP], [false])
 m4_include([platform/linux-dpdk/m4/odp_pthread.m4])
 m4_include([platform/linux-dpdk/m4/odp_timer.m4])
-m4_include([platform/linux-dpdk/m4/odp_openssl.m4])
+ODP_OPENSSL
 m4_include([platform/linux-dpdk/m4/odp_schedule.m4])
 
 ##########################################################################
