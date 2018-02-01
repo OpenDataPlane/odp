@@ -40,7 +40,7 @@ SUBDIRS += validation/api/pktio
 endif
 endif
 
-dist_check_SCRIPTS = run-test tests-validation.env $(LOG_COMPILER)
+dist_check_SCRIPTS = tests-validation.env $(LOG_COMPILER)
 
 test_SCRIPTS = $(dist_check_SCRIPTS)
 
@@ -51,6 +51,6 @@ tests-validation.env:
 
 if test_installdir
 installcheck-local:
-	$(DESTDIR)/$(testdir)/run-test
+	$(DESTDIR)/$(testdir)/run-test.sh
 endif
 
