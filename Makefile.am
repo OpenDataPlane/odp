@@ -3,9 +3,9 @@ AM_DISTCHECK_CONFIGURE_FLAGS = --enable-user-guides	\
 			       --enable-helper-linux	\
 			       --with-testdir
 
-if PLATFORM_IS_LINUX_GENERIC
-PLATFORM_DIR = platform/linux-generic
-PLATFORM_TEST_DIR = platform/linux-generic/test
+if PLATFORM_IS_LINUX_DPDK
+PLATFORM_DIR = platform/linux-dpdk
+PLATFORM_TEST_DIR = platform/linux-dpdk/test
 endif
 
 SUBDIRS = \
