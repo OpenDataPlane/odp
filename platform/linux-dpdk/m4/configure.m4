@@ -12,17 +12,27 @@ ODP_OPENSSL
 m4_include([platform/linux-dpdk/m4/odp_schedule.m4])
 
 ##########################################################################
+# Set DPDK install path
+##########################################################################
+dpdk_default_dir=yes
+AC_ARG_WITH([dpdk-path],
+AS_HELP_STRING([--with-dpdk-path=DIR   path to dpdk build directory]),
+    [DPDK_PATH=$withval
+    dpdk_default_dir=no],
+    [dpdk_default_dir=yes])
+
+##########################################################################
 # DPDK build variables
 ##########################################################################
 DPDK_DRIVER_DIR=/usr/lib/$(uname -m)-linux-gnu
 AS_CASE($host_cpu, [x86_64], [DPDK_CPPFLAGS="-msse4.2"])
-if test ${DPDK_DEFAULT_DIR} = 1; then
+if test x$dpdk_default_dir = xyes; then
     DPDK_CFLAGS="-include /usr/include/dpdk/rte_config.h"
     DPDK_CPPFLAGS="$DPDK_CPPFLAGS -I/usr/include/dpdk"
 else
-    DPDK_DRIVER_DIR=$SDK_INSTALL_PATH/lib
-    DPDK_CFLAGS="-include $SDK_INSTALL_PATH/include/rte_config.h"
-    DPDK_CPPFLAGS="$DPDK_CPPFLAGS -I$SDK_INSTALL_PATH/include"
+    DPDK_DRIVER_DIR=$DPDK_PATH/lib
+    DPDK_CFLAGS="-include $DPDK_PATH/include/rte_config.h"
+    DPDK_CPPFLAGS="$DPDK_CPPFLAGS -I$DPDK_PATH/include"
 fi
 
 # Check if we should link against the static or dynamic DPDK library

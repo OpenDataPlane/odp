@@ -110,7 +110,7 @@ install:
 
 script:
         - ./bootstrap
-        - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-example --with-sdk-install-path=`pwd`/dpdk/${TARGET} $CONF
+        - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} $CONF
         - make -j $(nproc)
         - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make check
         - make install
@@ -137,7 +137,7 @@ jobs:
                   script:
                           - sudo -H pip install coverage
                           - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-example --with-sdk-install-path=`pwd`/dpdk/${TARGET} CFLAGS="-O0 -coverage" CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
+                          - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} CFLAGS="-O0 -coverage" CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
                           - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" PATH=${PATH//:\.\/node_modules\/\.bin/} make check
                           - find . -type f -iname '*.[ch]' -not -path ".git/*" -execdir gcov {} \; ; bash <(curl -s https://codecov.io/bash) -X coveragepy
                 - stage: test
@@ -145,7 +145,7 @@ jobs:
                   compiler: gcc
                   script:
                           - ./bootstrap
-                          - ./configure --with-sdk-install-path=`pwd`/dpdk/${TARGET}
+                          - ./configure --with-dpdk-path=`pwd`/dpdk/${TARGET}
                           # doxygen does not trap on warnings, check for them here.
                           - make doxygen-doc 2>&1 |tee doxygen.log
                           - |
