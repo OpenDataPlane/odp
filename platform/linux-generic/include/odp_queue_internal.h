@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, Linaro Limited
+/* Copyright (c) 2013-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -54,6 +54,7 @@ struct queue_entry_s {
 	odp_queue_param_t param;
 	odp_pktin_queue_t pktin;
 	odp_pktout_queue_t pktout;
+	void             *queue_lf;
 	char              name[ODP_QUEUE_NAME_LEN];
 };
 

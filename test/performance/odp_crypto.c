@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, Linaro Limited
+/* Copyright (c) 2015-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -193,7 +193,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key24,
 				.length = sizeof(test_key24)
 			},
-			.iv = {
+			.cipher_iv = {
 				.data = test_iv,
 				.length = 8,
 			},
@@ -208,7 +208,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key24,
 				.length = sizeof(test_key24)
 			},
-			.iv = {
+			.cipher_iv = {
 				.data = test_iv,
 				.length = 8,
 			},
@@ -240,7 +240,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
 			},
-			.iv = {
+			.cipher_iv = {
 				.data = test_iv,
 				.length = 16,
 			},
@@ -255,7 +255,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
 			},
-			.iv = {
+			.cipher_iv = {
 				.data = test_iv,
 				.length = 16,
 			},
@@ -287,7 +287,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
 			},
-			.iv = {
+			.cipher_iv = {
 				.data = test_iv,
 				.length = 12,
 			},

@@ -1,4 +1,4 @@
-/* Copyright (c) 2016, Linaro Limited
+/* Copyright (c) 2016-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -258,7 +258,7 @@ static void *alloc_fragment(uintptr_t size, int block_index, intptr_t align,
 	ishm_fragment_t *rem_fragmnt;
 	uintptr_t border;/* possible start of new fragment (next alignement)  */
 	intptr_t left;	 /* room remaining after, if the segment is allocated */
-	uintptr_t remainder = ODP_CONFIG_ISHM_VA_PREALLOC_SZ;
+	uintptr_t remainder = odp_global_data.shm_max_memory;
 
 	/*
 	 * search for the best bit, i.e. search for the unallocated fragment
@@ -1436,7 +1436,7 @@ int _odp_ishm_cleanup_files(const char *dirpath)
 	return 0;
 }
 
-int _odp_ishm_init_global(void)
+int _odp_ishm_init_global(const odp_init_t *init)
 {
 	void *addr;
 	void *spce_addr;
@@ -1444,7 +1444,15 @@ int _odp_ishm_init_global(void)
 	uid_t uid;
 	char *hp_dir = odp_global_data.hugepage_info.default_huge_page_dir;
 	uint64_t align;
+	uint64_t max_memory = ODP_CONFIG_ISHM_VA_PREALLOC_SZ;
+	uint64_t internal   = ODP_CONFIG_ISHM_VA_PREALLOC_SZ / 8;
 
+	/* user requested memory size + some extra for internal use */
+	if (init && init->shm.max_memory)
+		max_memory = init->shm.max_memory + internal;
+
+	odp_global_data.shm_max_memory = max_memory;
+	odp_global_data.shm_max_size   = max_memory - internal;
 	odp_global_data.main_pid = getpid();
 	odp_global_data.shm_dir = getenv("ODP_SHM_DIR");
 	if (odp_global_data.shm_dir) {
@@ -1507,7 +1515,7 @@ int _odp_ishm_init_global(void)
 	 *reserve the address space for _ODP_ISHM_SINGLE_VA reserved blocks,
 	 * only address space!
 	 */
-	spce_addr = _odp_ishmphy_book_va(ODP_CONFIG_ISHM_VA_PREALLOC_SZ, align);
+	spce_addr = _odp_ishmphy_book_va(max_memory, align);
 	if (!spce_addr) {
 		ODP_ERR("unable to reserve virtual space\n.");
 		goto init_glob_err3;
@@ -1516,7 +1524,7 @@ int _odp_ishm_init_global(void)
 	/* use the first fragment descriptor to describe to whole VA space: */
 	ishm_ftbl->fragment[0].block_index   = -1;
 	ishm_ftbl->fragment[0].start = spce_addr;
-	ishm_ftbl->fragment[0].len   = ODP_CONFIG_ISHM_VA_PREALLOC_SZ;
+	ishm_ftbl->fragment[0].len   = max_memory;
 	ishm_ftbl->fragment[0].prev  = NULL;
 	ishm_ftbl->fragment[0].next  = NULL;
 	ishm_ftbl->used_fragmnts   = &ishm_ftbl->fragment[0];

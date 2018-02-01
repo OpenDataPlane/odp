@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, Linaro Limited
+/* Copyright (c) 2014-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -83,11 +83,23 @@ typedef enum {
 	/** AES with counter mode */
 	ODP_CIPHER_ALG_AES_CTR,
 
-	/** AES in Galois/Counter Mode
+	/** AES-GCM
 	 *
-	 *  @note Must be paired with cipher ODP_AUTH_ALG_AES_GCM
+	 *  AES in Galois/Counter Mode (GCM) algorithm. GCM provides both
+	 *  authentication and ciphering of data (authenticated encryption)
+	 *  in the same operation. Hence this algorithm must be paired always
+	 *  with ODP_AUTH_ALG_AES_GCM authentication.
 	 */
 	ODP_CIPHER_ALG_AES_GCM,
+
+	/** AES-CCM
+	 *
+	 *  AES in Counter with CBC-MAC (CCM) mode algorithm. CCM provides both
+	 *  authentication and ciphering of data (authenticated encryption)
+	 *  in the same operation. Hence this algorithm must be paired always
+	 *  with ODP_AUTH_ALG_AES_CCM authentication.
+	 */
+	ODP_CIPHER_ALG_AES_CCM,
 
 	/** @deprecated  Use ODP_CIPHER_ALG_AES_CBC instead */
 	ODP_DEPRECATE(ODP_CIPHER_ALG_AES128_CBC),
@@ -128,25 +140,40 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_SHA512_HMAC,
 
-	/** AES in Galois/Counter Mode
+	/** AES-GCM
 	 *
-	 *  @note Must be paired with cipher ODP_CIPHER_ALG_AES_GCM
+	 *  AES in Galois/Counter Mode (GCM) algorithm. GCM provides both
+	 *  authentication and ciphering of data (authenticated encryption)
+	 *  in the same operation. Hence this algorithm must be paired always
+	 *  with ODP_CIPHER_ALG_AES_GCM cipher.
 	 */
 	ODP_AUTH_ALG_AES_GCM,
 
-	/** AES in Galois/Counter MAC Mode
+	/** AES-GMAC
 	 *
-	 * NIST and RFC specifications of GCM/GMAC refer to all data to be
-	 * authenticated as AAD. In constrast to that, ODP API specifies the
-	 * bulk of authenticated data to be located in packet payload for all
-	 * authentication algorithms, including GMAC. Thus for GMAC application
-	 * should also pass all data to be authenticated as packet data. AAD is
-	 * not used for GMAC. GMAC IV should be passed via session IV or
-	 * per-packet IV override.
+	 *  AES Galois Message Authentication Code (GMAC) algorithm. AES-GMAC
+	 *  is based on AES-GCM operation, but provides authentication only.
+	 *  Hence this algorithm can be paired only with ODP_CIPHER_ALG_NULL
+	 *  cipher.
 	 *
-	 * @note Must be paired with cipher ODP_CIPHER_ALG_NULL
+	 *  NIST and RFC specifications of GMAC refer to all data to be
+	 *  authenticated as AAD. In constrast to that, ODP API specifies
+	 *  the bulk of authenticated data to be located in packet payload for
+	 *  all authentication algorithms. Thus GMAC operation authenticates
+	 *  only packet payload and AAD is not used. GMAC needs
+	 *  an initialization vector, which can be passed via session (auth_iv)
+	 *  or packet (auth_iv_ptr) level parameters.
 	 */
 	ODP_AUTH_ALG_AES_GMAC,
+
+	/** AES-CCM
+	 *
+	 *  AES in Counter with CBC-MAC (CCM) mode algorithm. CCM provides both
+	 *  authentication and ciphering of data (authenticated encryption)
+	 *  in the same operation. Hence this algorithm must be paired always
+	 *  with ODP_CIPHER_ALG_AES_CCM cipher.
+	 */
+	ODP_AUTH_ALG_AES_CCM,
 
 	/** @deprecated  Use ODP_AUTH_ALG_MD5_HMAC instead */
 	ODP_DEPRECATE(ODP_AUTH_ALG_MD5_96),
@@ -182,6 +209,9 @@ typedef union odp_crypto_cipher_algos_t {
 
 		/** ODP_CIPHER_ALG_AES_GCM */
 		uint32_t aes_gcm     : 1;
+
+		/** ODP_CIPHER_ALG_AES_CCM */
+		uint32_t aes_ccm     : 1;
 
 		/** @deprecated  Use aes_cbc instead */
 		uint32_t ODP_DEPRECATE(aes128_cbc) : 1;
@@ -224,6 +254,9 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_AES_GMAC*/
 		uint32_t aes_gmac    : 1;
+
+		/** ODP_AUTH_ALG_AES_CCM */
+		uint32_t aes_ccm     : 1;
 
 		/** @deprecated  Use md5_hmac instead */
 		uint32_t ODP_DEPRECATE(md5_96)     : 1;
@@ -313,7 +346,13 @@ typedef struct odp_crypto_session_param_t {
 	odp_crypto_key_t cipher_key;
 
 	/** Cipher Initialization Vector (IV) */
-	odp_crypto_iv_t iv;
+	union {
+		/** @deprecated Use cipher_iv */
+		odp_crypto_iv_t ODP_DEPRECATE(iv);
+
+		/** Cipher Initialization Vector (IV) */
+		odp_crypto_iv_t cipher_iv;
+	};
 
 	/** Authentication algorithm
 	 *
@@ -326,6 +365,9 @@ typedef struct odp_crypto_session_param_t {
 	 *  Use odp_crypto_auth_capability() for supported key lengths.
 	 */
 	odp_crypto_key_t auth_key;
+
+	/** Authentication Initialization Vector (IV) */
+	odp_crypto_iv_t auth_iv;
 
 	/** Authentication digest length in bytes
 	 *
@@ -394,8 +436,16 @@ typedef struct odp_crypto_op_param_t {
 	 */
 	odp_packet_t out_pkt;
 
-	/** Override session IV pointer */
-	uint8_t *override_iv_ptr;
+	/** Override session IV pointer for cipher */
+	union {
+		/** @deprecated use cipher_iv_ptr */
+		uint8_t *ODP_DEPRECATE(override_iv_ptr);
+		/** Override session IV pointer for cipher */
+		uint8_t *cipher_iv_ptr;
+	};
+
+	/** Override session authentication IV pointer */
+	uint8_t *auth_iv_ptr;
 
 	/** Offset from start of packet for hash result
 	 *
@@ -430,8 +480,16 @@ typedef struct odp_crypto_packet_op_param_t {
 	/** Session handle from creation */
 	odp_crypto_session_t session;
 
-	/** Override session IV pointer */
-	uint8_t *override_iv_ptr;
+	/** Override session IV pointer for cipher */
+	union {
+		/** @deprecated use cipher_iv_ptr */
+		uint8_t *ODP_DEPRECATE(override_iv_ptr);
+		/** Override session IV pointer for cipher */
+		uint8_t *cipher_iv_ptr;
+	};
+
+	/** Override session IV pointer for authentication */
+	uint8_t *auth_iv_ptr;
 
 	/** Offset from start of packet for hash result
 	 *
@@ -597,6 +655,9 @@ typedef struct odp_crypto_auth_capability_t {
 
 	/** Key length in bytes */
 	uint32_t key_len;
+
+	/** IV length in bytes */
+	uint32_t iv_len;
 
 	/** Additional Authenticated Data (AAD) lengths */
 	struct {

@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, Linaro Limited
+/* Copyright (c) 2013-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -70,11 +70,6 @@ extern "C" {
 /**
  * @def ODP_PKTIN_NO_WAIT
  * Do not wait on packet input
- */
-
-/**
- * @def ODP_PKTIN_WAIT
- * Wait infinitely on packet input
  */
 
 /**
@@ -884,7 +879,6 @@ int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num);
  * @param      num        Maximum number of packets to receive
  * @param      wait       Wait time specified as as follows:
  *                        * ODP_PKTIN_NO_WAIT: Do not wait
- *                        * ODP_PKTIN_WAIT:    Wait infinitely
  *                        * Other values specify the minimum time to wait.
  *                          Use odp_pktin_wait_time() to convert nanoseconds
  *                          to a valid parameter value. Wait time may be
@@ -923,7 +917,6 @@ int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[],
  * @param      num        Maximum number of packets to receive
  * @param      wait       Wait time specified as as follows:
  *                        * ODP_PKTIN_NO_WAIT: Do not wait
- *                        * ODP_PKTIN_WAIT:    Wait infinitely
  *                        * Other values specify the minimum time to wait.
  *                          Use odp_pktin_wait_time() to convert nanoseconds
  *                          to a valid parameter value. Wait time may be

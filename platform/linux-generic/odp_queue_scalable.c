@@ -1,6 +1,6 @@
 /* Copyright (c) 2017, ARM Limited. All rights reserved.
  *
- * Copyright (c) 2017, Linaro Limited
+ * Copyright (c) 2017-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -316,10 +316,8 @@ static int queue_capability(odp_queue_capability_t *capa)
 	capa->sched_prios       = odp_schedule_num_prio();
 	capa->plain.max_num     = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
 	capa->plain.max_size    = 0;
-	capa->plain.nonblocking = ODP_BLOCKING;
 	capa->sched.max_num     = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
 	capa->sched.max_size    = 0;
-	capa->sched.nonblocking = ODP_BLOCKING;
 
 	return 0;
 }

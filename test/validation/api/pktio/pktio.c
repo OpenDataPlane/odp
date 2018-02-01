@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, Linaro Limited
+/* Copyright (c) 2014-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -554,10 +554,8 @@ static int recv_packets_tmo(odp_pktio_t pktio, odp_packet_t pkt_tbl[],
 			CU_ASSERT(from_val < (unsigned)num_q);
 	} while (num_rx < num);
 
-	if (tmo == ODP_PKTIN_WAIT)
-		CU_ASSERT(num_rx == num);
 	if (num_rx < num)
-		CU_ASSERT(odp_time_to_ns(odp_time_diff(ts2, ts1)) >=  ns);
+		CU_ASSERT(odp_time_diff_ns(ts2, ts1) >= ns);
 
 	return num_rx;
 }
@@ -981,7 +979,7 @@ static void test_recv_tmo(recv_tmo_mode_e mode)
 	CU_ASSERT_FATAL(ret == test_pkt_count);
 
 	ret = recv_packets_tmo(pktio_rx, &pkt_tbl[0], &pkt_seq[0], 1, mode,
-			       ODP_PKTIN_WAIT, 0);
+			       odp_pktin_wait_time(UINT64_MAX), 0);
 	CU_ASSERT_FATAL(ret == 1);
 
 	ret = recv_packets_tmo(pktio_rx, &pkt_tbl[1], &pkt_seq[1], 1, mode,

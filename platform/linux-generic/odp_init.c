@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, Linaro Limited
+/* Copyright (c) 2013-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -66,7 +66,7 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = SYSINFO_INIT;
 
-	if (_odp_ishm_init_global()) {
+	if (_odp_ishm_init_global(params)) {
 		ODP_ERR("ODP ishm init failed.\n");
 		goto init_failed;
 	}

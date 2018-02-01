@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, Linaro Limited
+/* Copyright (c) 2013-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -44,6 +44,8 @@ typedef struct {
 struct odp_global_data_s {
 	char *shm_dir; /*< directory for odp mmaped files */
 	int   shm_dir_from_env; /*< overload default with env */
+	uint64_t shm_max_memory;
+	uint64_t shm_max_size;
 	pid_t main_pid;
 	char uid[UID_MAXLEN];
 	odp_log_func_t log_fn;
@@ -129,7 +131,7 @@ int _odp_int_name_tbl_term_global(void);
 int _odp_fdserver_init_global(void);
 int _odp_fdserver_term_global(void);
 
-int _odp_ishm_init_global(void);
+int _odp_ishm_init_global(const odp_init_t *init);
 int _odp_ishm_init_local(void);
 int _odp_ishm_term_global(void);
 int _odp_ishm_term_local(void);

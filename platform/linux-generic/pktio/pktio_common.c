@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, Linaro Limited
+/* Copyright (c) 2013-2018, Linaro Limited
  * Copyright (c) 2013, Nokia Solutions and Networks
  * All rights reserved.
  *
@@ -107,8 +107,7 @@ static int sock_recv_mq_tmo_select(pktio_entry_t * const *entry,
 	timeout.tv_sec = usecs / (1000 * 1000);
 	timeout.tv_usec = usecs - timeout.tv_sec * (1000ULL * 1000ULL);
 
-	if (select(maxfd + 1, readfds, NULL, NULL,
-		   usecs == ODP_PKTIN_WAIT ? NULL : &timeout) == 0)
+	if (select(maxfd + 1, readfds, NULL, NULL, &timeout) == 0)
 		return 0;
 
 	for (i = 0; i < num_q; i++) {

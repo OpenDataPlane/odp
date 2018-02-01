@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, Linaro Limited
+/* Copyright (c) 2014-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -22,6 +22,8 @@
 #define STRESS_SIZE 32		/* power of 2 and <=256 */
 #define STRESS_RANDOM_SZ 5
 #define STRESS_ITERATION 5000
+#define MEGA            1000000UL
+#define MAX_MEMORY_USED (100 * MEGA)
 
 typedef enum {
 	STRESS_FREE, /* entry is free and can be allocated */
@@ -210,6 +212,55 @@ void shmem_test_basic(void)
 	odp_shm_print(shm);
 
 	CU_ASSERT(0 == odp_shm_free(shm));
+}
+
+/*
+ * maximum size reservation
+ */
+static void shmem_test_max_reserve(void)
+{
+	odp_shm_capability_t capa;
+	odp_shm_t shm;
+	uint64_t size, align;
+	uint8_t *data;
+	uint64_t i;
+
+	memset(&capa, 0, sizeof(odp_shm_capability_t));
+	CU_ASSERT_FATAL(odp_shm_capability(&capa) == 0);
+
+	CU_ASSERT(capa.max_blocks > 0);
+
+	size  = capa.max_size;
+	align = capa.max_align;
+
+	/* Assuming that system has at least MAX_MEMORY_USED bytes available */
+	if (capa.max_size == 0 || capa.max_size > MAX_MEMORY_USED)
+		size = MAX_MEMORY_USED;
+
+	if (capa.max_align == 0 || capa.max_align > MEGA)
+		align = MEGA;
+
+	printf("\n    size:  %" PRIu64 "\n", size);
+	printf("    align: %" PRIu64 "\n", align);
+
+	shm = odp_shm_reserve("test_max_reserve", size, align, 0);
+	CU_ASSERT(shm != ODP_SHM_INVALID);
+
+	data = odp_shm_addr(shm);
+	CU_ASSERT(data != NULL);
+
+	if (data) {
+		memset(data, 0xde, size);
+		for (i = 0; i < size; i++) {
+			if (data[i] != 0xde) {
+				CU_FAIL("Data error");
+				break;
+			}
+		}
+	}
+
+	if (shm != ODP_SHM_INVALID)
+		CU_ASSERT(odp_shm_free(shm) == 0);
 }
 
 /*
@@ -769,6 +820,7 @@ void shmem_test_stress(void)
 
 odp_testinfo_t shmem_suite[] = {
 	ODP_TEST_INFO(shmem_test_basic),
+	ODP_TEST_INFO(shmem_test_max_reserve),
 	ODP_TEST_INFO(shmem_test_reserve_after_fork),
 	ODP_TEST_INFO(shmem_test_singleva_after_fork),
 	ODP_TEST_INFO(shmem_test_stress),

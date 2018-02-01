@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, Linaro Limited
+/* Copyright (c) 2013-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -12,6 +12,7 @@
 #include <odp/api/shared_memory.h>
 #include <odp/api/plat/strong_types.h>
 #include <_ishm_internal.h>
+#include <odp_internal.h>
 #include <string.h>
 
 ODP_STATIC_ASSERT(ODP_CONFIG_SHM_BLOCKS >= ODP_CONFIG_POOLS,
@@ -47,7 +48,7 @@ int odp_shm_capability(odp_shm_capability_t *capa)
 	memset(capa, 0, sizeof(odp_shm_capability_t));
 
 	capa->max_blocks = ODP_CONFIG_SHM_BLOCKS;
-	capa->max_size = 0;
+	capa->max_size = odp_global_data.shm_max_size;
 	capa->max_align = 0;
 
 	return 0;
