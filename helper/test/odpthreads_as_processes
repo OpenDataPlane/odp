@@ -11,4 +11,4 @@ PATH=.:$PATH
 
 # The odpthreads test recognise the "--odph_proc" option to create
 # odp threads as linux processes:
-odpthreads --odph_proc
+odpthreads${EXEEXT} --odph_proc
