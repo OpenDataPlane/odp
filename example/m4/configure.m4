@@ -7,6 +7,16 @@ AC_ARG_ENABLE([test-example],
     [test_example=yes])
 AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
 
+code_instrumentation=no
+AC_ARG_ENABLE([code-instrum],
+    [AS_HELP_STRING([--enable-code-instrum], [enable code instrumentation support])],
+    [if test x$enableval = xyes; then
+        code_instrumentation=yes
+        PKG_CHECK_MODULES([PAPI], [papi-5])
+    fi])
+
+AM_CONDITIONAL([CODE_INSTRUM], [test x$code_instrumentation = xyes ])
+
 AC_CONFIG_FILES([example/classifier/Makefile
 		 example/generator/Makefile
 		 example/hello/Makefile
