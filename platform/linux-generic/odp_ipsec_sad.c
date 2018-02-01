@@ -17,7 +17,8 @@
 #include <string.h>
 
 #define IPSEC_SA_STATE_DISABLE	0x40000000
-#define IPSEC_SA_STATE_FREE	0xc0000000 /* This includes disable !!! */
+#define IPSEC_SA_STATE_FREE	0xc0000000
+#define IPSEC_SA_STATE_RESERVED	0x80000000
 
 typedef struct ipsec_sa_table_t {
 	ipsec_sa_t ipsec_sa[ODP_CONFIG_IPSEC_SAS];
@@ -108,7 +109,8 @@ static ipsec_sa_t *ipsec_sa_reserve(void)
 
 		ipsec_sa = ipsec_sa_entry(i);
 
-		if (odp_atomic_cas_acq_u32(&ipsec_sa->state, &state, 0))
+		if (odp_atomic_cas_acq_u32(&ipsec_sa->state, &state,
+					   IPSEC_SA_STATE_RESERVED))
 			return ipsec_sa;
 	}
 
@@ -120,6 +122,12 @@ static void ipsec_sa_release(ipsec_sa_t *ipsec_sa)
 	odp_atomic_store_rel_u32(&ipsec_sa->state, IPSEC_SA_STATE_FREE);
 }
 
+/* Mark reserved SA as available now */
+static void ipsec_sa_publish(ipsec_sa_t *ipsec_sa)
+{
+	odp_atomic_store_rel_u32(&ipsec_sa->state, 0);
+}
+
 static int ipsec_sa_lock(ipsec_sa_t *ipsec_sa)
 {
 	int cas = 0;
@@ -128,9 +136,11 @@ static int ipsec_sa_lock(ipsec_sa_t *ipsec_sa)
 	while (0 == cas) {
 		/*
 		 * This can be called from lookup path, so we really need this
-		 * check
+		 * check. Thanks to the way flags are defined we actually test
+		 * that the SA is not DISABLED, FREE or RESERVED using just one
+		 * condition.
 		 */
-		if (state & IPSEC_SA_STATE_DISABLE)
+		if (state & IPSEC_SA_STATE_FREE)
 			return -1;
 
 		cas = odp_atomic_cas_acq_u32(&ipsec_sa->state, &state,
@@ -264,8 +274,8 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	ipsec_sa->mode = param->mode;
 	ipsec_sa->flags = 0;
 	if (ODP_IPSEC_DIR_INBOUND == param->dir) {
-		ipsec_sa->in.lookup_mode = param->inbound.lookup_mode;
-		if (ODP_IPSEC_LOOKUP_DSTADDR_SPI == ipsec_sa->in.lookup_mode) {
+		ipsec_sa->lookup_mode = param->inbound.lookup_mode;
+		if (ODP_IPSEC_LOOKUP_DSTADDR_SPI == ipsec_sa->lookup_mode) {
 			ipsec_sa->in.lookup_ver =
 				param->inbound.lookup_param.ip_version;
 			if (ODP_IPSEC_IPV4 == ipsec_sa->in.lookup_ver)
@@ -279,10 +289,11 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		}
 
 		if (param->inbound.antireplay_ws > IPSEC_ANTIREPLAY_WS)
-			return ODP_IPSEC_SA_INVALID;
+			goto error;
 		ipsec_sa->antireplay = (param->inbound.antireplay_ws != 0);
 		odp_atomic_init_u64(&ipsec_sa->in.antireplay, 0);
 	} else {
+		ipsec_sa->lookup_mode = ODP_IPSEC_LOOKUP_DISABLED;
 		odp_atomic_store_u32(&ipsec_sa->out.seq, 1);
 		ipsec_sa->out.frag_mode = param->outbound.frag_mode;
 		ipsec_sa->out.mtu = param->outbound.mtu;
@@ -382,7 +393,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->aes_ctr_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
-		ipsec_sa->esp_block_len = 16;
+		ipsec_sa->esp_block_len = 1;
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_GCM:
@@ -405,7 +416,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		break;
 	case ODP_AUTH_ALG_AES_GMAC:
 		if (ODP_CIPHER_ALG_NULL != crypto_param.cipher_alg)
-			return ODP_IPSEC_SA_INVALID;
+			goto error;
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 16;
@@ -437,6 +448,8 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	if (odp_crypto_session_create(&crypto_param, &ipsec_sa->session,
 				      &ses_create_rc))
 		goto error;
+
+	ipsec_sa_publish(ipsec_sa);
 
 	return ipsec_sa->ipsec_sa_hdl;
 
@@ -540,19 +553,16 @@ int odp_ipsec_sa_mtu_update(odp_ipsec_sa_t sa, uint32_t mtu)
 
 ipsec_sa_t *_odp_ipsec_sa_lookup(const ipsec_sa_lookup_t *lookup)
 {
-	(void)lookup;
-
 	int i;
-	ipsec_sa_t *ipsec_sa;
 	ipsec_sa_t *best = NULL;
 
 	for (i = 0; i < ODP_CONFIG_IPSEC_SAS; i++) {
-		ipsec_sa = ipsec_sa_entry(i);
+		ipsec_sa_t *ipsec_sa = ipsec_sa_entry(i);
 
 		if (ipsec_sa_lock(ipsec_sa) < 0)
 			continue;
 
-		if (ODP_IPSEC_LOOKUP_DSTADDR_SPI == ipsec_sa->in.lookup_mode &&
+		if (ODP_IPSEC_LOOKUP_DSTADDR_SPI == ipsec_sa->lookup_mode &&
 		    lookup->proto == ipsec_sa->proto &&
 		    lookup->spi == ipsec_sa->spi &&
 		    lookup->ver == ipsec_sa->in.lookup_ver &&
@@ -563,9 +573,10 @@ ipsec_sa_t *_odp_ipsec_sa_lookup(const ipsec_sa_lookup_t *lookup)
 			if (NULL != best)
 				_odp_ipsec_sa_unuse(best);
 			return ipsec_sa;
-		} else if (ODP_IPSEC_LOOKUP_SPI == ipsec_sa->in.lookup_mode &&
-				lookup->proto == ipsec_sa->proto &&
-				lookup->spi == ipsec_sa->spi) {
+		} else if (NULL == best &&
+			   ODP_IPSEC_LOOKUP_SPI == ipsec_sa->lookup_mode &&
+			   lookup->proto == ipsec_sa->proto &&
+			   lookup->spi == ipsec_sa->spi) {
 			best = ipsec_sa;
 		} else {
 			_odp_ipsec_sa_unuse(ipsec_sa);

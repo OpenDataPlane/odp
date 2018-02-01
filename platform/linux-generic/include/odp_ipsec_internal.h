@@ -122,6 +122,7 @@ struct ipsec_sa_s {
 
 	uint8_t		salt[IPSEC_MAX_SALT_LEN];
 	uint32_t	salt_length;
+	odp_ipsec_lookup_mode_t lookup_mode;
 
 	union {
 		unsigned flags;
@@ -144,7 +145,6 @@ struct ipsec_sa_s {
 
 	union {
 		struct {
-			odp_ipsec_lookup_mode_t lookup_mode;
 			odp_ipsec_ip_version_t lookup_ver;
 			union {
 				odp_u32be_t	lookup_dst_ipv4;
