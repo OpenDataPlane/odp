@@ -102,6 +102,7 @@ before_install:
                                 DPDK_CFLAGS="-m32" ;
                         else
                                 DPDK_CROSS="$CROSS_GNU_TYPE-" ;
+                                DPDK_CFLAGS="--target=$CROSS_GNU_TYPE" ;
                         fi
                 fi ;
                 export CXX="${CC/clang/clang++}";
@@ -162,30 +163,36 @@ install:
         - |
           case "$CROSS_ARCH" in
             "arm64")
-              DPDK_TARGET="arm64-armv8a-linuxapp-gcc"
+              DPDK_TARGET="arm64-armv8a-linuxapp-"
               ;;
             "armhf")
-              DPDK_TARGET="arm-armv7a-linuxapp-gcc"
+              DPDK_TARGET="arm-armv7a-linuxapp-"
               ;;
             "i386")
-              DPDK_TARGET="i686-native-linuxapp-gcc"
+              DPDK_TARGET="i686-native-linuxapp-"
               ;;
             "")
-              DPDK_TARGET="x86_64-native-linuxapp-gcc"
+              DPDK_TARGET="x86_64-native-linuxapp-"
               DPDK_MACHINE=snb
               ;;
           esac
         - |
           if [ -n "$DPDK_TARGET" ] ; then
+           if [ "${CC#clang}" != "${CC}" ] ; then
+            DPDKCC=clang ;
+           else
+            DPDKCC=gcc ;
+           fi
            if [ -n "$DPDK_SHARED" ] ; then
-            TARGET="$DPDK_TARGET"-shared
+            TARGET="${DPDK_TARGET}$DPDKCC"-shared
             LIBDPDKEXT=so
             export LD_LIBRARY_PATH="`pwd`/${TARGET}:$LD_LIBRARY_PATH"
             echo $LD_LIBRARY_PATH
            else
-            TARGET="$DPDK_TARGET"
+            TARGET="${DPDK_TARGET}$DPDKCC"
             LIBDPDKEXT=a
            fi
+           DPDK_TARGET="${DPDK_TARGET}gcc"
            if [ ! -f "dpdk/${TARGET}/lib/libdpdk.$LIBDPDKEXT" ]; then
             git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v${DPDK_VERS} http://dpdk.org/git/dpdk dpdk
             pushd dpdk
@@ -194,6 +201,7 @@ install:
             sed -i -e 's/40900/40800/g' lib/librte_eal/common/include/arch/arm/rte_vect.h
             sed -i -e 's/!(/!(defined(__arm__) \&\& defined(__clang__) || /g' lib/librte_eal/common/include/arch/arm/rte_byteorder.h
             sed -i -e 's/__GNUC__/defined(__arm__) \&\& defined(__clang__) || __GNUC__/' lib/librte_eal/common/include/generic/rte_byteorder.h
+            sed -i -e 's,\$(CC),\0 $(EXTRA_CFLAGS),g' lib/librte_acl/Makefile
             make config T=${DPDK_TARGET} O=${TARGET}
             pushd ${TARGET}
             sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
@@ -207,8 +215,11 @@ install:
               sed -ri -e 's,(CONFIG_RTE_EAL_IGB_UIO=).*,\1n,' .config
               sed -ri -e 's,(CONFIG_RTE_KNI_KMOD=).*,\1n,' .config
             fi
+            sed -ri -e 's,(CONFIG_RTE_TOOLCHAIN=).*,\1"'${DPDKCC}'",' .config
+            sed -ri -e '/CONFIG_RTE_TOOLCHAIN_.*/d' .config
+            echo CONFIG_RTE_TOOLCHAIN_${DPDKCC^^}=y >> .config
             popd
-            make build T=${DPDK_TARGET} O=${TARGET} EXTRA_CFLAGS="-fPIC $DPDK_CFLAGS" CROSS="$DPDK_CROSS" -j $(nproc)
+            make build O=${TARGET} EXTRA_CFLAGS="-fPIC $DPDK_CFLAGS" CROSS="$DPDK_CROSS" CC="$CC" HOSTCC=gcc -j $(nproc)
             rm -r ./doc ./${TARGET}/app ./${TARGET}/build
             popd
            fi
