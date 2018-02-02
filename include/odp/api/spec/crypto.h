@@ -143,6 +143,12 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_SHA256_HMAC,
 
+	 /** HMAC-SHA-384
+	 *
+	 *  SHA-384 algorithm in HMAC mode
+	 */
+	ODP_AUTH_ALG_SHA384_HMAC,
+
 	/** HMAC-SHA-512
 	 *
 	 *  SHA-512 algorithm in HMAC mode
@@ -274,6 +280,9 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_SHA256_HMAC */
 		uint32_t sha256_hmac : 1;
+
+		/** ODP_AUTH_ALG_SHA384_HMAC */
+		uint32_t sha384_hmac : 1;
 
 		/** ODP_AUTH_ALG_SHA512_HMAC */
 		uint32_t sha512_hmac : 1;
