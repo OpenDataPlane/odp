@@ -1555,11 +1555,6 @@ int odp_packet_has_ref(odp_packet_t pkt)
 	return 0;
 }
 
-uint32_t odp_packet_unshared_len(odp_packet_t pkt)
-{
-	return odp_packet_len(pkt);
-}
-
 /* Include non-inlined versions of API functions */
 #if ODP_ABI_COMPAT == 1
 #include <odp/api/plat/packet_inlines_api.h>
