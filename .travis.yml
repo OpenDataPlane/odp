@@ -21,6 +21,7 @@ addons:
                         - gcc
                         - clang-3.8
                         - automake autoconf libtool libssl-dev graphviz mscgen
+                        - codespell
                         - libpcap-dev
                         - libnuma-dev
 #        coverity_scan:
