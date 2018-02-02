@@ -238,6 +238,11 @@ typedef struct odp_ipsec_capability_t {
 	 */
 	odp_support_t retain_header;
 
+	/**
+	 * Inner packet checksum check offload support in inbound direction.
+	 */
+	odp_proto_chksums_t chksums_in;
+
 	/** Maximum number of different destination CoSes in classification
 	 *  pipelining. The same CoS may be used for many SAs. This is equal or
 	 *  less than 'max_cos' capability in classifier API.
@@ -382,6 +387,44 @@ typedef struct odp_ipsec_crypto_param_t {
 
 } odp_ipsec_crypto_param_t;
 
+/** IPv4 header parameters */
+typedef struct odp_ipsec_ipv4_param_t {
+	/** IPv4 source address (NETWORK ENDIAN) */
+	void *src_addr;
+
+	/** IPv4 destination address (NETWORK ENDIAN) */
+	void *dst_addr;
+
+	/** IPv4 Differentiated Services Code Point */
+	uint8_t dscp;
+
+	/** IPv4 Don't Fragment bit */
+	uint8_t df;
+
+	/** IPv4 Time To Live */
+	uint8_t ttl;
+
+} odp_ipsec_ipv4_param_t;
+
+/** IPv6 header parameters */
+typedef struct odp_ipsec_ipv6_param_t {
+	/** IPv6 source address (NETWORK ENDIAN) */
+	void *src_addr;
+
+	/** IPv6 destination address (NETWORK ENDIAN) */
+	void *dst_addr;
+
+	/** IPv6 flow label */
+	uint32_t flabel;
+
+	/** IPv6 Differentiated Services Code Point */
+	uint8_t dscp;
+
+	/** IPv6 hop limit */
+	uint8_t hlimit;
+
+} odp_ipsec_ipv6_param_t;
+
 /**
  * IPSEC tunnel parameters
  *
@@ -397,40 +440,10 @@ typedef struct odp_ipsec_tunnel_param_t {
 	/** Variant mappings for tunnel parameters */
 	union {
 		/** IPv4 header parameters */
-		struct {
-			/** IPv4 source address (NETWORK ENDIAN) */
-			void *src_addr;
-
-			/** IPv4 destination address (NETWORK ENDIAN) */
-			void *dst_addr;
-
-			/** IPv4 Differentiated Services Code Point */
-			uint8_t dscp;
-
-			/** IPv4 Don't Fragment bit */
-			uint8_t df;
-
-			/** IPv4 Time To Live */
-			uint8_t ttl;
-		} ipv4;
+		odp_ipsec_ipv4_param_t ipv4;
 
 		/** IPv6 header parameters */
-		struct {
-			/** IPv6 source address (NETWORK ENDIAN) */
-			void *src_addr;
-
-			/** IPv6 destination address (NETWORK ENDIAN) */
-			void *dst_addr;
-
-			/** IPv6 Differentiated Services Code Point */
-			uint8_t dscp;
-
-			/** IPv6 flow label */
-			uint32_t flabel;
-
-			/** IPv6 hop limit */
-			uint8_t hlimit;
-		} ipv6;
+		odp_ipsec_ipv6_param_t ipv6;
 	};
 } odp_ipsec_tunnel_param_t;
 
@@ -975,8 +988,58 @@ typedef struct odp_ipsec_op_flag_t {
  * These may be used to override some SA level options
  */
 typedef struct odp_ipsec_out_opt_t {
+	/** Union of all flag bits */
+	union {
+		/** Option flags. Set flag for those options that are
+		 *  used, all other options are ignored. */
+		struct {
+			/** Use fragmentation mode option */
+			uint32_t frag_mode: 1;
+
+			/** Use TFC padding length option */
+			uint32_t tfc_pad:   1;
+
+			/** Tunnel mode TFC dummy packet. This can be used only
+			 *  in tunnel mode. When the flag is set, packet length
+			 *  and content is ignored and instead a TFC dummy
+			 *  packet is created during IPSEC operation. The dummy
+			 *  packet length is defined by 'tfc_pad_len' option.
+			 *  If the SA is configured to copy IP header fields
+			 *  from inner IP packet, those fields must be passed
+			 *  with IP parameters option. */
+			uint32_t tfc_dummy: 1;
+
+			/** Use IP parameters option */
+			uint32_t ip_param:  1;
+
+		} flag;
+
+		/** All flag bits */
+		uint32_t all_flags;
+	};
+
 	/** Fragmentation mode */
-	odp_ipsec_frag_mode_t mode;
+	odp_ipsec_frag_mode_t frag_mode;
+
+	/** TFC padding length
+	 *
+	 *  Number of TFC padding bytes added to the packet during IPSEC
+	 *  processing. Resulting packet should not exceed the maximum packet
+	 *  length of the pool, otherwise IPSEC operation may fail.
+	 *  Implementation guarantees that the padding does not contain any
+	 *  confidential information. */
+	uint32_t tfc_pad_len;
+
+	/** Union of IP parameters */
+	union {
+		/** Override IPv4 parameters in outer header creation.
+		 *  IP addresses are ignored. */
+		odp_ipsec_ipv4_param_t ipv4;
+
+		/** Override IPv6 parameters in outer header creation.
+		 *  IP addresses are ignored. */
+		odp_ipsec_ipv6_param_t ipv6;
+	};
 
 } odp_ipsec_out_opt_t;
 
@@ -1204,12 +1267,23 @@ typedef struct odp_ipsec_status_t {
  * e.g. RFC 4302 and 4303). Resulting packets are well formed, reconstructed
  * original IP packets, with IPSEC headers removed and valid header field values
  * restored. The amount and content of packet data before the IP header is
- * undefined.
+ * undefined. Some amount of TFC padding may follow the IP packet payload,
+ * in which case packet length is larger than protocol headers indicate.
+ * TFC dummy packets have l3_type set to ODP_PROTO_L3_TYPE_NONE in tunnel mode
+ * or l4_type set to ODP_PROTO_L4_TYPE_NO_NEXT in transport mode. Dummy
+ * packets contain implementation specific amount of (dummy) data. Furthermore,
+ * inline IPSEC processing may drop dummy packets.
  *
  * Each successfully transformed packet has a valid value for these metadata
  * regardless of the inner packet parse configuration
  * (odp_ipsec_inbound_config_t):
- * - L3 offset: Offset to the first byte of the (outmost) IP header
+ * - l3_offset: Offset to the first byte of the original IP packet. The value
+ *              is implementation specific for tunnel mode TFC dummy packets.
+ * - l3_type:   Specifies if the original packet is IPv4 or IPv6. For tunnel
+ *              mode TFC dummy packets set to ODP_PROTO_L3_TYPE_NONE.
+ * - l4_type:   Always set to ODP_PROTO_L4_TYPE_NO_NEXT for transport mode dummy
+ *              packets. Otherwise, depends on parse configuration. Default
+ *              value is ODP_PROTO_L4_TYPE_NONE.
  * - pktio:     For inline IPSEC processed packets, original packet input
  *              interface
  *
@@ -1269,7 +1343,13 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
  * The operation does packet transformation according to IPSEC standards (see
  * e.g. RFC 4302 and 4303). Resulting packets are well formed IP packets
  * with IPSEC, etc headers constructed according to the standards. The amount
- * and content of packet data before the IP header is undefined.
+ * and content of packet data before the IP header is undefined. Use outbound
+ * operation parameters to specify the amount of TFC padding appended to
+ * the packet during IPSEC transformation. Options can be used also to create
+ * TFC dummy packets. Packet data content is ignored in tunnel mode TFC dummy
+ * packet creation as tfc_pad_len option defines solely the packet length.
+ * In all other cases, payload length for the IPSEC transformation is specified
+ * by odp_packet_len() minus odp_packet_l3_offset() plus tfc_pad_len option.
  *
  * Each successfully transformed packet has a valid value for these metadata:
  * - L3 offset: Offset to the first byte of the (outmost) IP header
