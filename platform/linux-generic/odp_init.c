@@ -66,7 +66,7 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = SYSINFO_INIT;
 
-	if (_odp_ishm_init_global()) {
+	if (_odp_ishm_init_global(params)) {
 		ODP_ERR("ODP ishm init failed.\n");
 		goto init_failed;
 	}
