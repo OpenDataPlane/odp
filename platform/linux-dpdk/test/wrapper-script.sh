@@ -3,6 +3,8 @@
 export ODP_PLATFORM_PARAMS=${ODP_PLATFORM_PARAMS:--n 4 --vdev "crypto_openssl"}
 # where to mount huge pages
 export HUGEPAGEDIR=${HUGEPAGEDIR:-/mnt/huge}
+# exit codes expected by automake for skipped tests
+TEST_SKIPPED=77
 
 # Make sure huge pages are released when a unit test crashes "make check"
 trap ctrl_c INT
@@ -42,6 +44,13 @@ function mount_and_reserve() {
 if [ ! -d $HUGEPAGEDIR ]; then
 	sudo mkdir -p $HUGEPAGEDIR
 fi
+
+# Need to be root to use DPDK
+if [ "$(id -u)" != "0" ]; then
+	echo "DPDK needs root privileges"
+	exit $TEST_SKIPPED
+fi
+
 echo "Mounting hugetlbfs"
 export SIZE=1G
 export SIZE_KB=1048576
@@ -60,15 +69,7 @@ if [ $res -ne 0 ]; then
 	fi
 fi
 echo "running $1!"
-if [ ${1: -3} == ".sh" ]
-then
-	sudo TEST_DIR=${TEST_DIR} \
-		ODP_PLATFORM_PARAMS="$ODP_PLATFORM_PARAMS" \
-			ODP_GDB=$ODP_GDB $1
-else
-	sudo TEST_DIR=${TEST_DIR} ODP_PLATFORM_PARAMS="$ODP_PLATFORM_PARAMS" \
-		$ODP_GDB $1
-fi
+$1
 res=$?
 echo "Unmounting hugetlbfs"
 sleep 0.3 && sudo umount -a -t hugetlbfs
