@@ -107,10 +107,6 @@ odpapiplatinclude_HEADERS = \
 nodist_odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/static_inline.h
 
-odpdrvincludedir = $(includedir)/odp/drv
-odpdrvinclude_HEADERS = \
-		  include/odp/drv/compiler.h
-
 noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_align_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_atomic_internal.h \
