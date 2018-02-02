@@ -149,6 +149,11 @@ static int odp_init_dpdk(const char *cmdline)
 
 struct odp_global_data_s odp_global_data;
 
+void odp_init_param_init(odp_init_t *param)
+{
+	memset(param, 0, sizeof(odp_init_t));
+}
+
 int odp_init_global(odp_instance_t *instance,
 		    const odp_init_t *params,
 		    const odp_platform_init_t *platform_params)
