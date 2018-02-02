@@ -44,6 +44,7 @@ addons:
                         - codespell
                         - libssl-dev
                         - libpcap-dev
+                        - libnuma-dev
 #        coverity_scan:
 #                project:
 #                        name: "$TRAVIS_REPO_SLUG"

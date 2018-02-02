@@ -1267,17 +1267,6 @@ static int bench_packet_ref_pkt(void)
 	return i;
 }
 
-static int bench_packet_unshared_len(void)
-{
-	int i;
-	uint32_t ret = 0;
-
-	for (i = 0; i < TEST_REPEAT_COUNT; i++)
-		ret += odp_packet_unshared_len(gbl_args->pkt_tbl[i]);
-
-	return ret;
-}
-
 static int bench_packet_has_ref(void)
 {
 	int i;
@@ -1516,8 +1505,6 @@ bench_info_t test_suite[] = {
 		BENCH_INFO(bench_packet_ref, create_packets,
 			   free_packets_twice, NULL),
 		BENCH_INFO(bench_packet_ref_pkt, alloc_packets_twice,
-			   free_packets_twice, NULL),
-		BENCH_INFO(bench_packet_unshared_len, alloc_ref_packets,
 			   free_packets_twice, NULL),
 		BENCH_INFO(bench_packet_has_ref, alloc_ref_packets,
 			   free_packets_twice, NULL),

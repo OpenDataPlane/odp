@@ -93,6 +93,9 @@
 /** Maximum number of pktio queues per interface */
 #define MAX_QUEUES		32
 
+/** Seems to need at least 8192 elements per queue */
+#define QUEUE_SIZE		8192
+
 /** Maximum number of pktio interfaces */
 #define MAX_PKTIOS		8
 
@@ -1222,6 +1225,7 @@ int main(int argc, char *argv[])
 			qparam.sched.prio = ODP_SCHED_PRIO_DEFAULT;
 			qparam.sched.sync = ODP_SCHED_SYNC_ATOMIC;
 			qparam.sched.group = ODP_SCHED_GROUP_ALL;
+			qparam.size	  = QUEUE_SIZE;
 
 			gbl_args->flow_qcontext[i][j].idx = i;
 			gbl_args->flow_qcontext[i][j].input_queue = 0;

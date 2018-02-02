@@ -40,11 +40,29 @@ by abstract handles of type `odp_packet_t`, and packet-related APIs take
 arguments of this type. What an `odp_packet_t` actually is is not part of the
 ODP API specification--that is the responsibility of each ODP implementation.
 
+.API Specification Principles
+The ODP API specification is designed to permit wide latitude on the part of
+implementations while at the same time supporting highly efficient processing,
+especially for APIs that are executed frequently.
+
+Both applications and implementations must comply with the API
+specification. If not otherwise documented, results are undefined if an
+application acts against the specification. For example, if an application
+passes bad parameters to an ODP API one implementation may report an error,
+while another may not check them (to maximize performance) but would just
+crash while using the bad values.
+
+Note that many ODP component areas provide an `odp_xxx_capability()` API that
+returns platform-specific information regarding valid input to other APIs in
+that component. For best portability applications should always use these
+capability APIs to determine valid parameter input.
+
 .Summary: ODP API attributes:
 * Open Source, open contribution, BSD-3 licensed.
 * Vendor and platform neutral.
 * Application-centric.  Covers functional needs of data plane applications.
 * Ensures portability by specifying the functional behavior of ODP.
+* Both applications and implementations must conform to the API specification.
 * Defined jointly and openly by application writers and platform implementers.
 * Architected to be implementable on a wide range of platforms efficiently
 * Sponsored, governed, and maintained by the Linaro Networking Group (LNG)
@@ -540,20 +558,44 @@ calling the terminate functions should only be done when the application is
 sure it has closed the ingress and subsequently drained all queues, etc.
 
 === Startup
-The first API that must be called by an ODP application is 'odp_init_global()'.
+The first API that must be called by an ODP application is `odp_init_global()`:
+[source,c]
+-----
+int odp_init_global(odp_instance_t *instance,
+		    const odp_init_t *param,
+		    const odp_platform_init_t *platform_param);
+-----
 This takes two pointers. The first, `odp_init_t`, contains ODP initialization
 data that is platform independent and portable, while the second,
 `odp_platform_init_t`, is passed unparsed to the implementation
 to be used for platform specific data that is not yet, or may never be
-suitable for the ODP API.
+suitable for the ODP API. Each of these parameters is optional and may be
+specified as NULL to accept the implementation-defined default initialization
+values.
 
-Calling odp_init_global() establishes the ODP API framework and MUST be
+Calling `odp_init_global()` establishes the ODP API framework and MUST be
 called before any other ODP API may be called. Note that it is only called
-once per application. Following global initialization, each thread in turn
+once per application. A successful call to `odp_init_global()` returns rc = 0
+and sets the `instance` variable supplied as input to the call to an handle
+representing this unique ODP instance.
+
+The `odp_init_t` parameter is used to specify various customizations to the
+ODP environment being established by this call. For example, the caller can
+specify the maximum number of worker threads it will use, the thread masks
+associated with these threads, as well as whether the default logging or
+abort functions are to be overridden with an application-supplied handler.
+
+The application may also provide optimization hints to the ODP implementation
+if it knows that it will never use specific ODP feature sets, such as the
+packet classifier or traffic manager. Implementations may use such hints to
+provide optimized behavior to applications that are known not to need these
+features.
+
+Following global initialization, each thread in turn
 calls 'odp_init_local()'. This establishes the local ODP thread
 context for that thread and MUST be called before other ODP APIs may be
-called by that thread. The sole argument to this call is the _thread type_,
-which is either `ODP_THREAD_WORKER` or `ODP_THREAD_CONTROL`.
+called by that thread. The sole argument to this call is the `instance`
+variable returned by `odp_init_global()`.
 
 === Shutdown
 Shutdown is the logical reverse of the initialization procedure, with

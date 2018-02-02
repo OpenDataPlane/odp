@@ -35,6 +35,7 @@ odpapiinclude_HEADERS = \
 		  include/odp/api/deprecated.h \
 		  include/odp/api/errno.h \
 		  include/odp/api/event.h \
+		  include/odp/api/feature.h \
 		  include/odp/api/hash.h \
 		  include/odp/api/hints.h \
 		  include/odp/api/init.h \
@@ -106,10 +107,6 @@ odpapiplatinclude_HEADERS = \
 
 nodist_odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/static_inline.h
-
-odpdrvincludedir = $(includedir)/odp/drv
-odpdrvinclude_HEADERS = \
-		  include/odp/drv/compiler.h
 
 noinst_HEADERS = \
 		  include/_fdserver_internal.h \
