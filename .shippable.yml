@@ -5,7 +5,6 @@ compiler:
   - clang
 
 env:
-  matrix:
     - CONF="--disable-test-perf"
     - CONF="--disable-abi-compat --disable-test-perf"
     # - CONF="--enable-schedule-sp"
@@ -15,8 +14,11 @@ env:
     # - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
     # - CROSS_ARCH="powerpc"
     # - CROSS_ARCH="i386"
-  global:
-    # - PLACEHOLDER=""
+
+matrix:
+  allow_failures:
+    - compiler: clang
+      env: CONF="--disable-abi-compat --disable-test-perf"
 
 build:
   pre_ci:
