@@ -198,6 +198,13 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_AES_CMAC,
 
+	/** AES-XCBC-MAC
+	 *
+	 *  AES CBC MAC for arbitrary-length messages (XCBC-MAC).
+	 *
+	 */
+	ODP_AUTH_ALG_AES_XCBC_MAC,
+
 	/** ChaCha20-Poly1305 AEAD
 	 *
 	 *  ChaCha20 with Poly1305 provide both authentication and ciphering of
@@ -298,6 +305,9 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_AES_CMAC*/
 		uint32_t aes_cmac    : 1;
+
+		/** ODP_AUTH_ALG_AES_XCBC_MAC*/
+		uint32_t aes_xcbc_mac    : 1;
 
 		/** ODP_AUTH_ALG_CHACHA20_POLY1305 */
 		uint32_t chacha20_poly1305 : 1;
