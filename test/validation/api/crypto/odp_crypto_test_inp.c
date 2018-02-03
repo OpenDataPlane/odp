@@ -1244,17 +1244,12 @@ static int check_alg_aes_gmac(void)
 
 static void crypto_test_gen_alg_aes_gmac(void)
 {
-	unsigned int test_vec_num = (sizeof(aes_gmac_reference) /
-				     sizeof(aes_gmac_reference[0]));
-	unsigned int i;
-
-	for (i = 0; i < test_vec_num; i++)
-		check_alg(ODP_CRYPTO_OP_ENCODE,
-			  ODP_CIPHER_ALG_NULL,
-			  ODP_AUTH_ALG_AES_GMAC,
-			  aes_gmac_reference,
-			  ARRAY_SIZE(aes_gmac_reference),
-			  false);
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_NULL,
+		  ODP_AUTH_ALG_AES_GMAC,
+		  aes_gmac_reference,
+		  ARRAY_SIZE(aes_gmac_reference),
+		  false);
 }
 
 static void crypto_test_gen_alg_aes_gmac_ovr_iv(void)
@@ -1284,17 +1279,12 @@ static int check_alg_aes_cmac(void)
 
 static void crypto_test_gen_alg_aes_cmac(void)
 {
-	unsigned int test_vec_num = (sizeof(aes_cmac_reference) /
-				     sizeof(aes_cmac_reference[0]));
-	unsigned int i;
-
-	for (i = 0; i < test_vec_num; i++)
-		check_alg(ODP_CRYPTO_OP_ENCODE,
-			  ODP_CIPHER_ALG_NULL,
-			  ODP_AUTH_ALG_AES_CMAC,
-			  aes_cmac_reference,
-			  ARRAY_SIZE(aes_cmac_reference),
-			  false);
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_NULL,
+		  ODP_AUTH_ALG_AES_CMAC,
+		  aes_cmac_reference,
+		  ARRAY_SIZE(aes_cmac_reference),
+		  false);
 }
 
 static void crypto_test_check_alg_aes_cmac(void)
