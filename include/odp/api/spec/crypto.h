@@ -755,6 +755,22 @@ typedef struct odp_crypto_cipher_capability_t {
 	/** IV length in bytes */
 	uint32_t iv_len;
 
+	/** Cipher is operating in bitwise mode
+	 *
+	 * This cipher works on series of bits, rather than sequences of bytes:
+	 * cipher_range in odp_crypto_op_param_t and
+	 * odp_crypto_packet_op_param_t will use bits, rather than bytes.
+	 *
+	 * Note: data buffer MUST start on the byte boundary, using offset
+	 * which is not divisible by 8 is unsupported and will result in
+	 * unspecified behaviour.
+	 *
+	 * Note2: currently data length MUST be divisible by 8. Specifying data
+	 * which does not consist of full bytes will result in unspecified
+	 * behaviour.
+	 */
+	odp_bool_t bit_mode;
+
 } odp_crypto_cipher_capability_t;
 
 /**
@@ -782,6 +798,18 @@ typedef struct odp_crypto_auth_capability_t {
 		 *  (in bytes) */
 		uint32_t inc;
 	} aad_len;
+
+	/** Auth is operating in bitstring mode
+	 *
+	 * This auth works on series of bits, rather than sequences of bytes:
+	 * auth_range in odp_crypto_op_param_t and
+	 * odp_crypto_packet_op_param_t will use bits, rather than bytes.
+	 *
+	 * Note: data buffer MUST start on the byte boundary, using offset
+	 * which is not divisible by 8 is unsupported and will result in
+	 * unpredictable behaviour.
+	 */
+	odp_bool_t bit_mode;
 
 } odp_crypto_auth_capability_t;
 
