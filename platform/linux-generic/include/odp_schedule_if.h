@@ -41,6 +41,8 @@ typedef int (*schedule_term_local_fn_t)(void);
 typedef void (*schedule_order_lock_fn_t)(void);
 typedef void (*schedule_order_unlock_fn_t)(void);
 typedef void (*schedule_order_unlock_lock_fn_t)(void);
+typedef void (*schedule_order_lock_start_fn_t)(void);
+typedef void (*schedule_order_lock_wait_fn_t)(void);
 typedef uint32_t (*schedule_max_ordered_locks_fn_t)(void);
 typedef void (*schedule_save_context_fn_t)(uint32_t queue_index);
 
@@ -60,6 +62,8 @@ typedef struct schedule_fn_t {
 	schedule_term_local_fn_t    term_local;
 	schedule_order_lock_fn_t    order_lock;
 	schedule_order_unlock_fn_t  order_unlock;
+	schedule_order_lock_start_fn_t	start_order_lock;
+	schedule_order_lock_wait_fn_t	wait_order_lock;
 	schedule_order_unlock_lock_fn_t  order_unlock_lock;
 	schedule_max_ordered_locks_fn_t max_ordered_locks;
 
@@ -105,6 +109,8 @@ typedef struct {
 	void (*schedule_order_lock)(uint32_t);
 	void (*schedule_order_unlock)(uint32_t);
 	void (*schedule_order_unlock_lock)(uint32_t, uint32_t);
+	void (*schedule_order_lock_start)(uint32_t);
+	void (*schedule_order_lock_wait)(uint32_t);
 
 } schedule_api_t;
 

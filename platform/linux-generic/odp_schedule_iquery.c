@@ -1308,6 +1308,16 @@ static uint32_t schedule_max_ordered_locks(void)
 	return CONFIG_QUEUE_MAX_ORD_LOCKS;
 }
 
+static void schedule_order_lock_start(uint32_t lock_index)
+{
+	(void)lock_index;
+}
+
+static void schedule_order_lock_wait(uint32_t lock_index)
+{
+	schedule_order_lock(lock_index);
+}
+
 static inline bool is_atomic_queue(unsigned int queue_index)
 {
 	return (sched->queues[queue_index].sync == ODP_SCHED_SYNC_ATOMIC);
@@ -1376,7 +1386,9 @@ const schedule_api_t schedule_iquery_api = {
 	.schedule_group_info      = schedule_group_info,
 	.schedule_order_lock      = schedule_order_lock,
 	.schedule_order_unlock    = schedule_order_unlock,
-	.schedule_order_unlock_lock    = schedule_order_unlock_lock
+	.schedule_order_unlock_lock    = schedule_order_unlock_lock,
+	.schedule_order_lock_start	= schedule_order_lock_start,
+	.schedule_order_lock_wait	= schedule_order_lock_wait
 };
 
 static void thread_set_interest(sched_thread_local_t *thread,
