@@ -143,6 +143,12 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_SHA256_HMAC,
 
+	 /** HMAC-SHA-384
+	 *
+	 *  SHA-384 algorithm in HMAC mode
+	 */
+	ODP_AUTH_ALG_SHA384_HMAC,
+
 	/** HMAC-SHA-512
 	 *
 	 *  SHA-512 algorithm in HMAC mode
@@ -191,6 +197,13 @@ typedef enum {
 	 *  cipher, such as the AES.
 	 */
 	ODP_AUTH_ALG_AES_CMAC,
+
+	/** AES-XCBC-MAC
+	 *
+	 *  AES CBC MAC for arbitrary-length messages (XCBC-MAC).
+	 *
+	 */
+	ODP_AUTH_ALG_AES_XCBC_MAC,
 
 	/** ChaCha20-Poly1305 AEAD
 	 *
@@ -275,6 +288,9 @@ typedef union odp_crypto_auth_algos_t {
 		/** ODP_AUTH_ALG_SHA256_HMAC */
 		uint32_t sha256_hmac : 1;
 
+		/** ODP_AUTH_ALG_SHA384_HMAC */
+		uint32_t sha384_hmac : 1;
+
 		/** ODP_AUTH_ALG_SHA512_HMAC */
 		uint32_t sha512_hmac : 1;
 
@@ -289,6 +305,9 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_AES_CMAC*/
 		uint32_t aes_cmac    : 1;
+
+		/** ODP_AUTH_ALG_AES_XCBC_MAC*/
+		uint32_t aes_xcbc_mac    : 1;
 
 		/** ODP_AUTH_ALG_CHACHA20_POLY1305 */
 		uint32_t chacha20_poly1305 : 1;
