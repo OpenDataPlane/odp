@@ -24,9 +24,9 @@ extern "C" {
  *  @{
  **/
 
-struct odp_timer_pool_s; /**< Forward declaration */
+struct timer_pool_s; /**< Forward declaration */
 
-typedef struct odp_timer_pool_s *odp_timer_pool_t;
+typedef struct timer_pool_s *odp_timer_pool_t;
 
 #define ODP_TIMER_POOL_INVALID NULL
 
@@ -38,7 +38,7 @@ typedef ODP_HANDLE_T(odp_timer_t);
 
 typedef ODP_HANDLE_T(odp_timeout_t);
 
-#define ODP_TIMEOUT_INVALID  _odp_cast_scalar(odp_timeout_t, 0xffffffff)
+#define ODP_TIMEOUT_INVALID  _odp_cast_scalar(odp_timeout_t, NULL)
 
 /**
  * @}

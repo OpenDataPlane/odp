@@ -10,6 +10,7 @@
 language: c
 sudo: required
 dist: trusty
+group: deprecated-2017Q2
 notifications:
   email: false
 env:
@@ -39,10 +40,11 @@ addons:
         apt:
                 packages:
                         - gcc
-                        - automake autoconf autoconf-archive libtool graphviz mscgen doxygen
+                        - automake autoconf libtool graphviz mscgen doxygen
                         - codespell
                         - libssl-dev
                         - libpcap-dev
+                        - libnuma-dev
 #        coverity_scan:
 #                project:
 #                        name: "$TRAVIS_REPO_SLUG"
@@ -109,7 +111,7 @@ install:
 
 script:
         - ./bootstrap
-        - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-example --with-sdk-install-path=`pwd`/dpdk/${TARGET} $CONF
+        - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} $CONF
         - make -j $(nproc)
         - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make check
         - make install
@@ -122,10 +124,10 @@ script:
         - echo "Checking linking and run from install..."
         - pushd $HOME
         - echo "Dynamic link.."
-        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/include -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-dpdk -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -msse4.2 -ldpdk -lpthread -lcrypto -lpcap -ldl
+        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig pkg-config --cflags --libs libodp-dpdk`
         - sudo ODP_PLATFORM_PARAMS="-n 2" LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst
         - echo "Static link.."
-        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/include -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-dpdk -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -msse4.2 -ldpdk -lpthread -lcrypto -lpcap -ldl -lm -static
+        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig pkg-config --cflags --libs libodp-dpdk --static` -static
         - sudo ODP_PLATFORM_PARAMS="-n 2" ./odp_hello_inst
 
 jobs:
@@ -136,7 +138,7 @@ jobs:
                   script:
                           - sudo -H pip install coverage
                           - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-example --with-sdk-install-path=`pwd`/dpdk/${TARGET} CFLAGS="-O0 -coverage" CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
+                          - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} CFLAGS="-O0 -coverage" CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
                           - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" PATH=${PATH//:\.\/node_modules\/\.bin/} make check
                           - find . -type f -iname '*.[ch]' -not -path ".git/*" -execdir gcov {} \; ; bash <(curl -s https://codecov.io/bash) -X coveragepy
                 - stage: test
@@ -144,7 +146,7 @@ jobs:
                   compiler: gcc
                   script:
                           - ./bootstrap
-                          - ./configure --with-sdk-install-path=`pwd`/dpdk/${TARGET}
+                          - ./configure --with-dpdk-path=`pwd`/dpdk/${TARGET}
                           # doxygen does not trap on warnings, check for them here.
                           - make doxygen-doc 2>&1 |tee doxygen.log
                           - |
@@ -166,4 +168,4 @@ jobs:
 
 after_failure:
   - cat config.log
-  - find . -name 'test-suite.log' -execdir grep -il "FAILED" {} \; -exec echo {} \; -exec cat {} \;
+  - find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done

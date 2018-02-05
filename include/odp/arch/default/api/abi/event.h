@@ -22,13 +22,14 @@ typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_event_t;
 
 typedef _odp_abi_event_t *odp_event_t;
 
-#define ODP_EVENT_INVALID  ((odp_event_t)0xffffffff)
+#define ODP_EVENT_INVALID  ((odp_event_t)NULL)
 
 typedef enum odp_event_type_t {
 	ODP_EVENT_BUFFER       = 1,
 	ODP_EVENT_PACKET       = 2,
 	ODP_EVENT_TIMEOUT      = 3,
-	ODP_EVENT_CRYPTO_COMPL = 4
+	ODP_EVENT_CRYPTO_COMPL = 4,
+	ODP_EVENT_IPSEC_RESULT = 5
 } odp_event_type_t;
 
 /**

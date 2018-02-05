@@ -11,6 +11,8 @@
  *   All rights reserved.
  */
 
+#include "config.h"
+
 #include <odp_posix_extensions.h>
 
 #include <odp/api/system_info.h>
@@ -259,6 +261,30 @@ static char *get_hugepage_dir(uint64_t hugepage_sz)
 }
 
 /*
+ * Analysis of /sys/devices/system/cpu/cpu%d/cpufreq/ files
+ */
+uint64_t odp_cpufreq_id(const char *filename, int id)
+{
+	char path[256], buffer[256], *endptr = NULL;
+	FILE *file;
+	uint64_t ret = 0;
+
+	snprintf(path, sizeof(path),
+		 "/sys/devices/system/cpu/cpu%d/cpufreq/%s", id, filename);
+
+	file = fopen(path, "r");
+	if (file == NULL)
+		return ret;
+
+	if (fgets(buffer, sizeof(buffer), file) != NULL)
+		ret = strtoull(buffer, &endptr, 0) * 1000;
+
+	fclose(file);
+
+	return ret;
+}
+
+/*
  * Analysis of /sys/devices/system/cpu/ files
  */
 static int systemcpu(system_info_t *sysinfo)
@@ -308,6 +334,7 @@ static int system_hp(hugepage_info_t *hugeinfo)
  */
 int odp_system_info_init(void)
 {
+	int i;
 	FILE  *file;
 
 	memset(&odp_global_data.system_info, 0, sizeof(system_info_t));
@@ -323,6 +350,13 @@ int odp_system_info_init(void)
 	cpuinfo_parser(file, &odp_global_data.system_info);
 
 	fclose(file);
+
+	for (i = 0; i < MAX_CPU_NUMBER; i++) {
+		uint64_t cpu_hz_max = odp_cpufreq_id("cpuinfo_max_freq", i);
+
+		if (cpu_hz_max)
+			odp_global_data.system_info.cpu_hz_max[i] = cpu_hz_max;
+	}
 
 	if (systemcpu(&odp_global_data.system_info)) {
 		ODP_ERR("systemcpu failed\n");
@@ -349,6 +383,16 @@ int odp_system_info_term(void)
  * Public access functions
  *************************
  */
+uint64_t odp_cpu_hz_current(int id)
+{
+	uint64_t cur_hz = odp_cpufreq_id("cpuinfo_cur_freq", id);
+
+	if (!cur_hz)
+		cur_hz = odp_cpu_arch_hz_current(id);
+
+	return cur_hz;
+}
+
 uint64_t odp_cpu_hz(void)
 {
 	int id = sched_getcpu();
@@ -377,6 +421,42 @@ uint64_t odp_cpu_hz_max_id(int id)
 uint64_t odp_sys_huge_page_size(void)
 {
 	return odp_global_data.hugepage_info.default_huge_page_size;
+}
+
+static int pagesz_compare(const void *pagesz1, const void *pagesz2)
+{
+	return (*(const uint64_t *)pagesz1 - *(const uint64_t *)pagesz2);
+}
+
+int odp_sys_huge_page_size_all(uint64_t size[], int num)
+{
+	DIR *dir;
+	struct dirent *entry;
+	int pagesz_num = 0;
+	int saved = 0;
+
+	/* See: kernel.org: hugetlbpage.txt */
+	dir = opendir("/sys/kernel/mm/hugepages");
+	if (!dir) {
+		ODP_ERR("Failed to open huge page directory\n");
+		return -1;
+	}
+
+	while ((entry = readdir(dir)) != NULL) {
+		unsigned long sz;
+
+		if (sscanf(entry->d_name, "hugepages-%8lukB", &sz) == 1) {
+			if (size != NULL && saved < num)
+				size[saved++] = sz * 1024;
+			pagesz_num++;
+		}
+	}
+	closedir(dir);
+
+	if (size != NULL && saved > 1)
+		qsort(size, saved, sizeof(uint64_t), pagesz_compare);
+
+	return pagesz_num;
 }
 
 uint64_t odp_sys_page_size(void)

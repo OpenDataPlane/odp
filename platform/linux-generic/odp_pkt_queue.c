@@ -6,6 +6,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "config.h"
+
 #include <stdint.h>
 #include <string.h>
 #include <malloc.h>
@@ -85,17 +87,27 @@ static queue_blk_t *blk_idx_to_queue_blk(queue_pool_t *queue_pool,
 	return &queue_region_desc->queue_blks->blks[blk_tbl_idx];
 }
 
+static void free_alloced_queue_blks(uint32_t end, queue_blks_t *blk_array[])
+{
+	uint32_t i;
+
+	for (i = 0; i < end; i++)
+		free(blk_array[i]);
+}
+
 static int pkt_queue_free_list_add(queue_pool_t *pool,
 				   uint32_t num_queue_blks)
 {
 	queue_region_desc_t *region_desc;
 	queue_blks_t *queue_blks;
+	queue_blks_t *alloced_queue_blks[num_queue_blks];
 	queue_blk_t *queue_blk;
 	uint32_t which_region, blks_added, num_blks, start_idx;
-	uint32_t malloc_len, blks_to_add, cnt, i;
+	uint32_t malloc_len, blks_to_add, cnt, i, alloc_cnt;
 
 	which_region = pool->current_region;
 	blks_added = 0;
+	alloc_cnt = 0;
 	while ((blks_added < num_queue_blks) && (pool->all_regions_used == 0)) {
 		region_desc = &pool->queue_region_descs[which_region];
 		start_idx = region_desc->next_blk_idx;
@@ -104,6 +116,13 @@ static int pkt_queue_free_list_add(queue_pool_t *pool,
 		if (!queue_blks) {
 			malloc_len = num_blks * sizeof(queue_blk_t);
 			queue_blks = malloc(malloc_len);
+			if (!queue_blks) {
+				free_alloced_queue_blks(alloc_cnt,
+							alloced_queue_blks);
+				return -1;
+			}
+			alloced_queue_blks[alloc_cnt] = queue_blks;
+			alloc_cnt++;
 
 			for (i = 0; i < num_blks; i++)
 				init_queue_blk(&queue_blks->blks[i]);
@@ -194,7 +213,18 @@ _odp_int_queue_pool_t _odp_queue_pool_create(uint32_t max_num_queues,
 	int rc;
 
 	pool = malloc(sizeof(queue_pool_t));
+	if (!pool)
+		return _ODP_INT_QUEUE_POOL_INVALID;
+
 	memset(pool, 0, sizeof(queue_pool_t));
+
+	malloc_len = max_num_queues * sizeof(uint32_t);
+	pool->queue_num_tbl = malloc(malloc_len);
+	if (!pool->queue_num_tbl)  {
+		free(pool);
+		return _ODP_INT_QUEUE_POOL_INVALID;
+	}
+	memset(pool->queue_num_tbl, 0, malloc_len);
 
        /* Initialize the queue_blk_tbl_sizes array based upon the
 	* max_queued_pkts.
@@ -213,8 +243,11 @@ _odp_int_queue_pool_t _odp_queue_pool_create(uint32_t max_num_queues,
 	*/
 	initial_free_list_size = MIN(64 * 1024, max_queued_pkts / 4);
 	rc = pkt_queue_free_list_add(pool, initial_free_list_size);
-	if (rc < 0)
+	if (rc < 0) {
+		free(pool->queue_num_tbl);
+		free(pool);
 		return _ODP_INT_QUEUE_POOL_INVALID;
+	}
 
 	/* Discard the first queue blk with idx 0 */
 	queue_blk_alloc(pool, &first_queue_blk_idx);
@@ -222,10 +255,6 @@ _odp_int_queue_pool_t _odp_queue_pool_create(uint32_t max_num_queues,
 	pool->max_queue_num = max_num_queues;
 	pool->max_queued_pkts = max_queued_pkts;
 	pool->next_queue_num = 1;
-
-	malloc_len = max_num_queues * sizeof(uint32_t);
-	pool->queue_num_tbl = malloc(malloc_len);
-	memset(pool->queue_num_tbl, 0, malloc_len);
 
 	pool->min_free_list_size = pool->free_list_size;
 	pool->peak_free_list_size = pool->free_list_size;
@@ -363,17 +392,17 @@ void _odp_pkt_queue_stats_print(_odp_int_queue_pool_t queue_pool)
 	queue_pool_t *pool;
 
 	pool = (queue_pool_t *)(uintptr_t)queue_pool;
-	ODP_DBG("pkt_queue_stats - queue_pool=0x%" PRIX64 "\n", queue_pool);
-	ODP_DBG("  max_queue_num=%u max_queued_pkts=%u next_queue_num=%u\n",
-		pool->max_queue_num, pool->max_queued_pkts,
-		pool->next_queue_num);
-	ODP_DBG("  total pkt appends=%" PRIu64 " total pkt removes=%" PRIu64
-		" bad removes=%" PRIu64 "\n",
-		pool->total_pkt_appends, pool->total_pkt_removes,
-		pool->total_bad_removes);
-	ODP_DBG("  free_list size=%u min size=%u peak size=%u\n",
-		pool->free_list_size, pool->min_free_list_size,
-		pool->peak_free_list_size);
+	ODP_PRINT("pkt_queue_stats - queue_pool=0x%" PRIX64 "\n", queue_pool);
+	ODP_PRINT("  max_queue_num=%u max_queued_pkts=%u next_queue_num=%u\n",
+		  pool->max_queue_num, pool->max_queued_pkts,
+		  pool->next_queue_num);
+	ODP_PRINT("  total pkt appends=%" PRIu64 " total pkt removes=%" PRIu64
+		  " bad removes=%" PRIu64 "\n",
+		  pool->total_pkt_appends, pool->total_pkt_removes,
+		  pool->total_bad_removes);
+	ODP_PRINT("  free_list size=%u min size=%u peak size=%u\n",
+		  pool->free_list_size, pool->min_free_list_size,
+		  pool->peak_free_list_size);
 }
 
 void _odp_queue_pool_destroy(_odp_int_queue_pool_t queue_pool)

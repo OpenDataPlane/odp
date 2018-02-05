@@ -8,6 +8,7 @@
 #include <odp_buffer_internal.h>
 #include <odp_buffer_inlines.h>
 #include <odp_debug_internal.h>
+#include <odp_pool_internal.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -62,6 +63,7 @@ int odp_buffer_is_valid(odp_buffer_t buf)
 int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr;
+	pool_t *pool;
 	int len = 0;
 
 	if (!odp_buffer_is_valid(buf)) {
@@ -70,11 +72,13 @@ int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
 	}
 
 	hdr = buf_hdl_to_hdr(buf);
+	pool = hdr->pool_ptr;
 
 	len += snprintf(&str[len], n-len,
 			"Buffer\n");
 	len += snprintf(&str[len], n-len,
-			"  pool         %p\n", hdr->mb.pool);
+			"  pool         %" PRIu64 "\n",
+			odp_pool_to_u64(pool->pool_hdl));
 	len += snprintf(&str[len], n-len,
 			"  phy_addr     %"PRIu64"\n", hdr->mb.buf_physaddr);
 	len += snprintf(&str[len], n-len,

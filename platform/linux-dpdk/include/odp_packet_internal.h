@@ -30,6 +30,7 @@ extern "C" {
 #include <odp_crypto_internal.h>
 #include <protocols/eth.h>
 #include <odp/api/plat/packet_types.h>
+#include <odp_queue_if.h>
 
 #include <rte_acl_osdep.h>
 
@@ -91,9 +92,14 @@ typedef struct {
 	error_flags_t  error_flags;
 	output_flags_t output_flags;
 
-	uint32_t l2_offset; /**< offset to L2 hdr, e.g. Eth */
-	uint32_t l3_offset; /**< offset to L3 hdr, e.g. IPv4, IPv6 */
-	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
+	 /* offset to L2 hdr, e.g. Eth */
+	uint16_t l2_offset;
+
+	/* offset to L3 hdr, e.g. IPv4, IPv6 */
+	uint16_t l3_offset;
+
+	/* offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
+	uint16_t l4_offset;
 } packet_parser_t;
 
 /**
@@ -126,7 +132,7 @@ typedef struct {
 	odp_time_t timestamp;
 
 	/* Classifier destination queue */
-	odp_queue_t dst_queue;
+	queue_t dst_queue;
 
 	/* Result for crypto */
 	odp_crypto_generic_op_result_t op_result;
@@ -143,6 +149,16 @@ static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
 static inline struct rte_mbuf *pkt_to_mbuf(odp_packet_hdr_t *pkt_hdr)
 {
 	return &pkt_hdr->buf_hdr.mb;
+}
+
+static inline odp_buffer_hdr_t *packet_to_buf_hdr(odp_packet_t pkt)
+{
+	return &odp_packet_hdr(pkt)->buf_hdr;
+}
+
+static inline odp_packet_t packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
+{
+	return (odp_packet_t)(odp_packet_hdr_t *)buf_hdr;
 }
 
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
@@ -189,11 +205,8 @@ static inline void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->p.l4_offset        = ODP_PACKET_OFFSET_INVALID;
 }
 
-/* Convert a packet handle to a buffer handle */
-odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt);
-
 /* Convert a buffer handle to a packet handle */
-odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf);
+odp_packet_t _odp_packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr);
 
 static inline int packet_hdr_has_l2(odp_packet_hdr_t *pkt_hdr)
 {

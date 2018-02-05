@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 #include <odp/api/classification.h>
 #include <odp/api/align.h>
 #include <odp/api/queue.h>
@@ -31,11 +33,13 @@
 static cos_tbl_t *cos_tbl;
 static pmr_tbl_t	*pmr_tbl;
 
+static
 cos_t *get_cos_entry_internal(odp_cos_t cos_id)
 {
 	return &cos_tbl->cos_entry[_odp_typeval(cos_id)];
 }
 
+static
 pmr_t *get_pmr_entry_internal(odp_pmr_t pmr_id)
 {
 	return &pmr_tbl->pmr[_odp_typeval(pmr_id)];
@@ -157,14 +161,14 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 {
 	int i, j;
-	queue_entry_t *queue;
+	queue_t queue;
 	odp_cls_drop_t drop_policy;
 
 	/* Packets are dropped if Queue or Pool is invalid*/
 	if (param->queue == ODP_QUEUE_INVALID)
-		queue = NULL;
+		queue = QUEUE_NULL;
 	else
-		queue = queue_to_qentry(param->queue);
+		queue = queue_fn->from_ext(param->queue);
 
 	drop_policy = param->drop_policy;
 
@@ -200,6 +204,10 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 	return ODP_COS_INVALID;
 }
 
+/*
+ * Allocate an odp_pmr_t Handle
+ */
+static
 odp_pmr_t alloc_pmr(pmr_t **pmr)
 {
 	int i;
@@ -220,6 +228,7 @@ odp_pmr_t alloc_pmr(pmr_t **pmr)
 	return ODP_PMR_INVAL;
 }
 
+static
 cos_t *get_cos_entry(odp_cos_t cos_id)
 {
 	if (_odp_typeval(cos_id) >= ODP_COS_MAX_ENTRY ||
@@ -230,6 +239,7 @@ cos_t *get_cos_entry(odp_cos_t cos_id)
 	return &cos_tbl->cos_entry[_odp_typeval(cos_id)];
 }
 
+static
 pmr_t *get_pmr_entry(odp_pmr_t pmr_id)
 {
 	if (_odp_typeval(pmr_id) >= ODP_PMR_MAX_ENTRY ||
@@ -264,9 +274,9 @@ int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id)
 	/* Locking is not required as intermittent stale
 	data during CoS modification is acceptable*/
 	if (queue_id == ODP_QUEUE_INVALID)
-		cos->s.queue = NULL;
+		cos->s.queue = QUEUE_NULL;
 	else
-		cos->s.queue = queue_to_qentry(queue_id);
+		cos->s.queue = queue_fn->from_ext(queue_id);
 	return 0;
 }
 
@@ -279,10 +289,10 @@ odp_queue_t odp_cos_queue(odp_cos_t cos_id)
 		return ODP_QUEUE_INVALID;
 	}
 
-	if (!cos->s.queue)
+	if (cos->s.queue == QUEUE_NULL)
 		return ODP_QUEUE_INVALID;
 
-	return cos->s.queue->s.handle;
+	return queue_fn->to_ext(cos->s.queue);
 }
 
 int odp_cos_drop_set(odp_cos_t cos_id, odp_cls_drop_t drop_policy)
@@ -328,7 +338,6 @@ int odp_pktio_default_cos_set(odp_pktio_t pktio_in, odp_cos_t default_cos)
 	}
 
 	entry->s.cls.default_cos = cos;
-	pktio_cls_enabled_set(entry, 1);
 	return 0;
 }
 
@@ -403,7 +412,6 @@ int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
 				l2_cos->cos[qos_table[i]] = cos;
 		}
 	}
-	pktio_cls_enabled_set(entry, 1);
 	UNLOCK(&l2_cos->lock);
 	return 0;
 }
@@ -436,7 +444,6 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 				l3_cos->cos[qos_table[i]] = cos;
 		}
 	}
-	pktio_cls_enabled_set(entry, 1);
 	UNLOCK(&l3_cos->lock);
 	return 0;
 }
@@ -602,6 +609,11 @@ odp_pool_t odp_cls_cos_pool(odp_cos_t cos_id)
 	return cos->s.pool;
 }
 
+/*
+ * This function goes through each PMR_TERM value in pmr_t structure and calls
+ * verification function for each term.Returns 1 if PMR matches or 0 otherwise.
+ */
+static
 int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr, odp_packet_hdr_t *pkt_hdr)
 {
 	int pmr_failure = 0;
@@ -720,6 +732,12 @@ int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr, odp_packet_hdr_t *pkt_hdr)
 	return true;
 }
 
+/*
+ * Match a PMR chain with a Packet and return matching CoS
+ * This function gets called recursively to check the chained PMR Term value
+ * with the packet.
+ */
+static
 cos_t *match_pmr_cos(cos_t *cos, const uint8_t *pkt_addr, pmr_t *pmr,
 		     odp_packet_hdr_t *hdr)
 {
@@ -765,6 +783,10 @@ int pktio_classifier_init(pktio_entry_t *entry)
 
 	return 0;
 }
+
+static
+cos_t *match_qos_cos(pktio_entry_t *entry, const uint8_t *pkt_addr,
+		     odp_packet_hdr_t *hdr);
 
 /**
 Select a CoS for the given Packet based on pktio
@@ -841,16 +863,17 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	if (cos == NULL)
 		return -EINVAL;
 
-	if (cos->s.queue == NULL || cos->s.pool == ODP_POOL_INVALID)
+	if (cos->s.queue == QUEUE_NULL || cos->s.pool == ODP_POOL_INVALID)
 		return -EFAULT;
 
 	*pool = cos->s.pool;
 	pkt_hdr->p.input_flags.dst_queue = 1;
-	pkt_hdr->dst_queue = cos->s.queue->s.handle;
+	pkt_hdr->dst_queue = cos->s.queue;
 
 	return 0;
 }
 
+static
 cos_t *match_qos_l3_cos(pmr_l3_cos_t *l3_cos, const uint8_t *pkt_addr,
 			odp_packet_hdr_t *hdr)
 {
@@ -872,6 +895,7 @@ cos_t *match_qos_l3_cos(pmr_l3_cos_t *l3_cos, const uint8_t *pkt_addr,
 	return cos;
 }
 
+static
 cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, const uint8_t *pkt_addr,
 			odp_packet_hdr_t *hdr)
 {
@@ -891,6 +915,12 @@ cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, const uint8_t *pkt_addr,
 	return cos;
 }
 
+/*
+ * Select a CoS for the given Packet based on QoS values
+ * This function returns the COS object matching the L2 and L3 QoS
+ * based on the l3_preference value of the pktio
+*/
+static
 cos_t *match_qos_cos(pktio_entry_t *entry, const uint8_t *pkt_addr,
 		     odp_packet_hdr_t *hdr)
 {

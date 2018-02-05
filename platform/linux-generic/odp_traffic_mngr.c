@@ -6,7 +6,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "config.h"
+
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <stdint.h>
 #include <string.h>
 #include <malloc.h>
@@ -36,9 +40,6 @@ static const pkt_desc_t EMPTY_PKT_DESC = { .word = 0 };
 
 #define MAX_PRIORITIES ODP_TM_MAX_PRIORITIES
 #define NUM_SHAPER_COLORS ODP_NUM_SHAPER_COLORS
-
-/* Traffic manager queue */
-#define QUEUE_TYPE_TM  4
 
 static tm_prop_t basic_prop_tbl[MAX_PRIORITIES][NUM_SHAPER_COLORS] = {
 	[0] = {
@@ -102,17 +103,17 @@ static odp_bool_t tm_demote_pkt_desc(tm_system_t *tm_system,
 				     tm_shaper_obj_t *timer_shaper,
 				     pkt_desc_t *demoted_pkt_desc);
 
-static int queue_tm_reenq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
+static int queue_tm_reenq(queue_t queue, odp_buffer_hdr_t *buf_hdr)
 {
 	odp_tm_queue_t tm_queue = MAKE_ODP_TM_QUEUE((uint8_t *)queue -
 						    offsetof(tm_queue_obj_t,
 							     tm_qentry));
-	odp_packet_t pkt = _odp_packet_from_buffer(buf_hdr->handle.handle);
+	odp_packet_t pkt = _odp_packet_from_buf_hdr(buf_hdr);
 
 	return odp_tm_enq(tm_queue, pkt);
 }
 
-static int queue_tm_reenq_multi(queue_entry_t *queue ODP_UNUSED,
+static int queue_tm_reenq_multi(queue_t queue ODP_UNUSED,
 				odp_buffer_hdr_t *buf[] ODP_UNUSED,
 				int num ODP_UNUSED)
 {
@@ -3882,6 +3883,7 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 	tm_queue_obj_t *tm_queue_obj;
 	tm_wred_node_t *tm_wred_node;
 	odp_tm_queue_t odp_tm_queue;
+	odp_queue_t queue;
 	odp_tm_wred_t wred_profile;
 	tm_system_t *tm_system;
 	uint32_t color;
@@ -3918,9 +3920,16 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 	tm_queue_obj->pkt = ODP_PACKET_INVALID;
 	odp_ticketlock_init(&tm_wred_node->tm_wred_node_lock);
 
-	tm_queue_obj->tm_qentry.s.type = QUEUE_TYPE_TM;
-	tm_queue_obj->tm_qentry.s.enqueue = queue_tm_reenq;
-	tm_queue_obj->tm_qentry.s.enqueue_multi = queue_tm_reenq_multi;
+	queue = odp_queue_create(NULL, NULL);
+	if (queue == ODP_QUEUE_INVALID) {
+		free(tm_wred_node);
+		free(tm_queue_obj);
+		return ODP_TM_INVALID;
+	}
+	tm_queue_obj->tm_qentry = queue_fn->from_ext(queue);
+	queue_fn->set_enq_deq_fn(tm_queue_obj->tm_qentry,
+				 queue_tm_reenq, queue_tm_reenq_multi,
+				 NULL, NULL);
 
 	tm_system->queue_num_tbl[tm_queue_obj->queue_num - 1] = tm_queue_obj;
 	odp_ticketlock_lock(&tm_system->tm_system_lock);
@@ -3991,6 +4000,8 @@ int odp_tm_queue_destroy(odp_tm_queue_t tm_queue)
 	/* Now that all of the checks are done, time to so some freeing. */
 	odp_ticketlock_lock(&tm_system->tm_system_lock);
 	tm_system->queue_num_tbl[tm_queue_obj->queue_num - 1] = NULL;
+
+	odp_queue_destroy(queue_fn->to_ext(tm_queue_obj->tm_qentry));
 
 	/* First delete any associated tm_wred_node and then the tm_queue_obj
 	 * itself */
@@ -4632,19 +4643,19 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 	tm_system = GET_TM_SYSTEM(odp_tm);
 	input_work_queue = tm_system->input_work_queue;
 
-	ODP_DBG("odp_tm_stats_print - tm_system=0x%" PRIX64 " tm_idx=%u\n",
-		odp_tm, tm_system->tm_idx);
-	ODP_DBG("  input_work_queue size=%u current cnt=%u peak cnt=%u\n",
-		INPUT_WORK_RING_SIZE, input_work_queue->queue_cnt,
-		input_work_queue->peak_cnt);
-	ODP_DBG("  input_work_queue enqueues=%" PRIu64 " dequeues=% " PRIu64
-		" fail_cnt=%" PRIu64 "\n", input_work_queue->total_enqueues,
-		input_work_queue->total_dequeues,
-		input_work_queue->enqueue_fail_cnt);
-	ODP_DBG("  green_cnt=%" PRIu64 " yellow_cnt=%" PRIu64 " red_cnt=%"
-		PRIu64 "\n", tm_system->shaper_green_cnt,
-		tm_system->shaper_yellow_cnt,
-		tm_system->shaper_red_cnt);
+	ODP_PRINT("odp_tm_stats_print - tm_system=0x%" PRIX64 " tm_idx=%u\n",
+		  odp_tm, tm_system->tm_idx);
+	ODP_PRINT("  input_work_queue size=%u current cnt=%u peak cnt=%u\n",
+		  INPUT_WORK_RING_SIZE, input_work_queue->queue_cnt,
+		  input_work_queue->peak_cnt);
+	ODP_PRINT("  input_work_queue enqueues=%" PRIu64 " dequeues=% " PRIu64
+		  " fail_cnt=%" PRIu64 "\n", input_work_queue->total_enqueues,
+		  input_work_queue->total_dequeues,
+		  input_work_queue->enqueue_fail_cnt);
+	ODP_PRINT("  green_cnt=%" PRIu64 " yellow_cnt=%" PRIu64 " red_cnt=%"
+		  PRIu64 "\n", tm_system->shaper_green_cnt,
+		  tm_system->shaper_yellow_cnt,
+		  tm_system->shaper_red_cnt);
 
 	_odp_pkt_queue_stats_print(tm_system->_odp_int_queue_pool);
 	_odp_timer_wheel_stats_print(tm_system->_odp_int_timer_wheel);
@@ -4654,14 +4665,14 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 	for (queue_num = 1; queue_num < max_queue_num; queue_num++) {
 		tm_queue_obj = tm_system->queue_num_tbl[queue_num - 1];
 		if (tm_queue_obj && tm_queue_obj->pkts_rcvd_cnt != 0)
-			ODP_DBG("queue_num=%u priority=%u rcvd=%u enqueued=%u "
-				"dequeued=%u consumed=%u\n",
-				queue_num,
-				tm_queue_obj->priority,
-				tm_queue_obj->pkts_rcvd_cnt,
-				tm_queue_obj->pkts_enqueued_cnt,
-				tm_queue_obj->pkts_dequeued_cnt,
-				tm_queue_obj->pkts_consumed_cnt);
+			ODP_PRINT("queue_num=%u priority=%u rcvd=%u enqueued=%u "
+				  "dequeued=%u consumed=%u\n",
+				  queue_num,
+				  tm_queue_obj->priority,
+				  tm_queue_obj->pkts_rcvd_cnt,
+				  tm_queue_obj->pkts_enqueued_cnt,
+				  tm_queue_obj->pkts_dequeued_cnt,
+				  tm_queue_obj->pkts_consumed_cnt);
 	}
 }
 

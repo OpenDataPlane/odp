@@ -74,6 +74,9 @@ extern "C" {
 /** @internal Returns true if IPv4 packet is a fragment */
 #define ODPH_IPV4HDR_IS_FRAGMENT(frag_offset) ((frag_offset) & 0x3fff)
 
+/** @internal Checksum offset in IPv4 header */
+#define ODPH_IPV4HDR_CSUM_OFFSET	10
+
 /** IPv4 header */
 typedef struct ODP_PACKED {
 	uint8_t    ver_ihl;     /**< Version / Header length */
@@ -93,6 +96,41 @@ ODP_STATIC_ASSERT(sizeof(odph_ipv4hdr_t) == ODPH_IPV4HDR_LEN,
 		  "ODPH_IPV4HDR_T__SIZE_ERROR");
 
 /**
+ * Calculate IPv4 header checksum
+ *
+ * @param pkt         The packet to be checksummed
+ * @param offset      Offset into pkt of start of IP header
+ * @param ip          Pointer to IPv4 header to be checksummed
+ * @param[out] chksum Field to receive checksum results
+ *
+ * @retval 0  On success
+ * @retval <0 On failure
+ */
+static inline int odph_ipv4_csum(odp_packet_t pkt,
+				 uint32_t offset,
+				 odph_ipv4hdr_t *ip,
+				 odp_u16sum_t *chksum)
+{
+	unsigned nleft = ODPH_IPV4HDR_IHL(ip->ver_ihl) * 4;
+	uint16_t buf[nleft / 2];
+	int res;
+
+	if (odp_unlikely(nleft < sizeof(*ip)))
+		return -1;
+	ip->chksum = 0;
+	memcpy(buf, ip, sizeof(*ip));
+	res = odp_packet_copy_to_mem(pkt, offset + sizeof(*ip),
+				     nleft - sizeof(*ip),
+				     buf + sizeof(*ip) / 2);
+	if (odp_unlikely(res < 0))
+		return res;
+
+	*chksum = odph_chksum(buf, nleft);
+
+	return 0;
+}
+
+/**
  * Check if IPv4 checksum is valid
  *
  * @param pkt  ODP packet
@@ -102,49 +140,57 @@ ODP_STATIC_ASSERT(sizeof(odph_ipv4hdr_t) == ODPH_IPV4HDR_LEN,
 static inline int odph_ipv4_csum_valid(odp_packet_t pkt)
 {
 	uint32_t offset;
-	odp_u16be_t res = 0;
-	uint16_t *w;
-	int nleft = sizeof(odph_ipv4hdr_t);
+	int res;
 	odph_ipv4hdr_t ip;
-	odp_u16be_t chksum;
+	odp_u16sum_t chksum, cur_chksum;
 
 	offset = odp_packet_l3_offset(pkt);
 	if (offset == ODP_PACKET_OFFSET_INVALID)
 		return 0;
 
-	odp_packet_copy_to_mem(pkt, offset, sizeof(odph_ipv4hdr_t), &ip);
+	res = odp_packet_copy_to_mem(pkt, offset, sizeof(odph_ipv4hdr_t), &ip);
+	if (odp_unlikely(res < 0))
+		return 0;
 
-	w = (uint16_t *)(void *)&ip;
 	chksum = ip.chksum;
-	ip.chksum = 0x0;
 
-	res = odph_chksum(w, nleft);
-	return (res == chksum) ? 1 : 0;
+	res = odph_ipv4_csum(pkt, offset, &ip, &cur_chksum);
+	if (odp_unlikely(res < 0))
+		return 0;
+
+	return (cur_chksum == chksum) ? 1 : 0;
 }
 
 /**
  * Calculate and fill in IPv4 checksum
  *
- * @note when using this api to populate data destined for the wire
- * odp_cpu_to_be_16() can be used to remove sparse warnings
- *
  * @param pkt  ODP packet
  *
- * @return IPv4 checksum in host cpu order, or 0 on failure
+ * @retval 0 on success
+ * @retval <0 on failure
  */
-static inline odp_u16sum_t odph_ipv4_csum_update(odp_packet_t pkt)
+static inline int odph_ipv4_csum_update(odp_packet_t pkt)
 {
-	uint16_t *w;
-	odph_ipv4hdr_t *ip;
-	int nleft = sizeof(odph_ipv4hdr_t);
+	uint32_t offset;
+	odph_ipv4hdr_t ip;
+	odp_u16sum_t chksum;
+	int res;
 
-	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
-	if (ip == NULL)
-		return 0;
+	offset = odp_packet_l3_offset(pkt);
+	if (offset == ODP_PACKET_OFFSET_INVALID)
+		return -1;
 
-	w = (uint16_t *)(void *)ip;
-	ip->chksum = odph_chksum(w, nleft);
-	return ip->chksum;
+	res = odp_packet_copy_to_mem(pkt, offset, sizeof(ip), &ip);
+	if (odp_unlikely(res < 0))
+		return res;
+
+	res = odph_ipv4_csum(pkt, offset, &ip, &chksum);
+	if (odp_unlikely(res < 0))
+		return res;
+
+	return odp_packet_copy_from_mem(pkt,
+					offset + ODPH_IPV4HDR_CSUM_OFFSET,
+					2, &chksum);
 }
 
 /** IPv6 version */

@@ -1,0 +1,4 @@
+*.log
+*.trs
+tests-linux-dpdk.env
+tests-validation.env

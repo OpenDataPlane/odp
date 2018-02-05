@@ -1,12 +1,11 @@
 ##########################################################################
 # Enable/disable test-helper
 ##########################################################################
-test_helper=no
 AC_ARG_ENABLE([test-helper],
-    [  --enable-test-helper      run test in helper/test],
-    [if test "x$enableval" = "xyes"; then
-        test_helper=yes
-    fi])
+    [AS_HELP_STRING([--enable-test-helper], [run test in helper/test])],
+    [test_helper=$enableval],
+    [test_helper=yes])
+AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
 
 ##########################################################################
 # Enable/disable helper-ext
@@ -20,4 +19,5 @@ AC_ARG_ENABLE([helper-linux],
 	fi])
 
 AC_CONFIG_FILES([helper/Makefile
-		helper/test/Makefile])
+		 helper/libodphelper.pc
+		 helper/test/Makefile])

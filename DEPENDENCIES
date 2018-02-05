@@ -8,14 +8,14 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
    automake
    autoconf
-   autoconf-archive
    libtool
+   pkg-config
 
    On Debian/Ubuntu systems:
-   $ sudo apt-get install automake autoconf autoconf-archive libtool
+   $ sudo apt-get install automake autoconf libtool pkg-config
 
    On CentOS/RedHat/Fedora systems:
-   $ sudo yum install automake autoconf autoconf-archive libtool
+   $ sudo yum install automake autoconf libtool pkgconfig
 
 3. Required libraries
 
@@ -160,13 +160,17 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
    Use DPDK for ODP packet I/O.
 
+   DPDK pktio adds a depency to NUMA library.
+   # Debian/Ubuntu
+   $ sudo apt-get install libnuma-dev
+
    Note: only packet I/O is accelerated with DPDK. Use
 	https://git.linaro.org/lng/odp-dpdk.git
    for fully accelerated odp dpdk platform.
 
 3.4.1 Building DPDK and ODP with DPDK pktio support
 
-   DPDK packet I/O has been tested to work with DPDK v17.02.
+   DPDK packet I/O has been tested to work with DPDK v17.08.
 
    Follow steps in ./scripts/build-pktio-dpdk
 
@@ -200,11 +204,11 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 4.0 Packages needed to build API tests
 
-   Cunit test framework version 2.1-3 is required
-   Cunit prvodes a framework to run the API test suite that proves conformance to the
+   CUnit test framework version 2.1-3 is required
+   CUnit provides a framework to run the API test suite that proves conformance to the
    ODP API. The home page http://cunit.sourceforge.net/doc/introduction.html
 
-4.1 Native Cunit install
+4.1 Native CUnit install
 
    # Debian/Ubuntu
    $ apt-get install libcunit1-dev
@@ -224,7 +228,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    sudo make install
 
    # ... OR ... Install CUnit into user defined location. The same path is
-   # used in step 4.4 --with-cunit-path=/home/<my_cunit_path>
+   # used in step 4.4: PKG_CONFIG_PATH=/home/<my_cunit_path>/lib/pkgconfig
    ./configure --prefix=/home/<my_cunit_path>
    make
    make install
@@ -233,20 +237,24 @@ Prerequisites for building the OpenDataPlane (ODP) API
    # reboot, before trying to run e.g. 'make distcheck'.
    sudo ldconfig
 
-4.3 Cross compile of Cunit
+4.3 Cross compile of CUnit
 
    $ git svn clone http://svn.code.sf.net/p/cunit/code/trunk cunit-code
    $ cd cunit-code
    $ ./bootstrap
    $ ./configure --host=arm-linux-gnueabihf --prefix=/home/${USER}/src/install-cunit
 
-4.4 Using Cunit with ODP
-   $ Add the configuration option to the regular configuration options
-   # Use the default path ...
-   ./configure  --enable-cunit
+4.4 Using CUnit with ODP
 
-   # ... OR the user defined path.
-   ./configure  --with-cunit-path=/home/<my_cunit_path>
+   Configure will automatically look for CUnit if validation testsuite is
+   enabled. By default it uses pkg-config to locate CUnit. Usually no
+   additional configuration will be required. Few corner cases:
+
+   # User directory installation
+   ./configure PKG_CONFIG_PATH=/home/<my_cunit_path>/lib/pkgconfig
+
+   # ... OR directly specifying flags
+   ./configure CUNIT_CFLAGS="-I/home/<my_cunit_path>/include" CUNIT_LIBS="/home/<my_cunit_path>/lib -lcunit"
 
 5.0 Documentation Images & Doxygen
 

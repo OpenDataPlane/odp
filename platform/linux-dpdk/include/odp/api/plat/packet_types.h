@@ -36,7 +36,7 @@ typedef ODP_HANDLE_T(odp_packet_t);
 
 #define ODP_PACKET_INVALID _odp_cast_scalar(odp_packet_t, NULL)
 
-#define ODP_PACKET_OFFSET_INVALID (0x0fffffff)
+#define ODP_PACKET_OFFSET_INVALID 0xffff
 
 typedef ODP_HANDLE_T(odp_packet_seg_t);
 
@@ -57,39 +57,43 @@ typedef enum {
 
 #endif
 
+/** @internal Packet field accessor */
+#define _odp_pkt_get(pkt, cast, field) \
+	(*(cast *)(uintptr_t)((uint8_t *)pkt + _odp_packet_inline.field))
+
 /** @internal Packet header field offsets for inline functions */
 typedef struct _odp_packet_inline_offset_t {
 	/** @internal field offset */
-	size_t mb;
+	uint16_t mb;
 	/** @internal field offset */
-	size_t pool;
+	uint16_t pool;
 	/** @internal field offset */
-	size_t input;
+	uint16_t input;
 	/** @internal field offset */
-	size_t user_ptr;
+	uint16_t user_ptr;
 	/** @internal field offset */
-	size_t timestamp;
+	uint16_t timestamp;
 	/** @internal field offset */
-	size_t input_flags;
+	uint16_t input_flags;
 	/** @internal field offset */
-	unsigned int buf_addr;
+	uint16_t buf_addr;
 	/** @internal field offset */
-	unsigned int data;
+	uint16_t data;
 	/** @internal field offset */
-	unsigned int pkt_len;
+	uint16_t pkt_len;
 	/** @internal field offset */
-	unsigned int seg_len;
+	uint16_t seg_len;
 	/** @internal field offset */
-	unsigned int nb_segs;
+	uint16_t nb_segs;
 	/** @internal field offset */
-	unsigned int udata_len;
+	uint16_t udata_len;
+	/** @internal offset */
+	uint16_t udata;
 	/** @internal field offset */
-	unsigned int udata;
+	uint16_t rss;
 	/** @internal field offset */
-	unsigned int rss;
-	/** @internal field offset */
-	unsigned int ol_flags;
-	/** @internal field offset */
+	uint16_t ol_flags;
+	/** @internal rss hash result set */
 	uint64_t rss_flag;
 
 } _odp_packet_inline_offset_t;

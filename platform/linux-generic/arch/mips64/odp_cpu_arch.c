@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 #include <odp/api/cpu.h>
 #include <odp/api/hints.h>
 #include <odp/api/system_info.h>
@@ -19,29 +21,4 @@ uint64_t odp_cpu_cycles(void)
 			   [rt] "=d" (cycle) : : "memory");
 
 	return cycle;
-}
-
-uint64_t odp_cpu_cycles_max(void)
-{
-	return UINT64_MAX;
-}
-
-uint64_t odp_cpu_cycles_resolution(void)
-{
-	return 1;
-}
-
-int cpu_has_global_time(void)
-{
-	return 0;
-}
-
-uint64_t cpu_global_time(void)
-{
-	return 0;
-}
-
-uint64_t cpu_global_time_freq(void)
-{
-	return 0;
 }

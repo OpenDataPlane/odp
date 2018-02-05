@@ -1,18 +1,29 @@
 ACLOCAL_AMFLAGS=-I m4
-AUTOMAKE_OPTIONS = foreign
-AM_DISTCHECK_CONFIGURE_FLAGS = --enable-test-cpp \
-			       --enable-test-perf \
-			       --enable-test-vald \
+AM_DISTCHECK_CONFIGURE_FLAGS = --enable-user-guides	\
+			       --enable-helper-linux	\
 			       --with-testdir
 
-#@with_platform@ works alone in subdir but not as part of a path???
-SUBDIRS = @platform_with_platform@ \
+if PLATFORM_IS_LINUX_DPDK
+PLATFORM_DIR = platform/linux-dpdk
+PLATFORM_TEST_DIR = platform/linux-dpdk/test
+endif
+
+SUBDIRS = \
+	  include \
+	  $(PLATFORM_DIR) \
 	  helper \
 	  helper/test \
 	  doc \
 	  example . \
-	  test
+	  test \
+	  $(PLATFORM_TEST_DIR)
 
 @DX_RULES@
 
-EXTRA_DIST = bootstrap $(DX_CONFIG) CHANGELOG config/README
+EXTRA_DIST = bootstrap CHANGELOG config/README
+
+distcheck-hook:
+	if test -n "$(DX_CLEANFILES)" ; \
+	then \
+		$(MAKE) doxygen-doc ; \
+	fi

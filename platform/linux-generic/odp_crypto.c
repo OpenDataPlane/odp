@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 #include <odp_posix_extensions.h>
 #include <odp/api/crypto.h>
 #include <odp_internal.h>
@@ -17,6 +19,7 @@
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>
 #include <odp/api/random.h>
+#include <odp/api/plat/packet_inlines.h>
 #include <odp_packet_internal.h>
 
 #include <string.h>
@@ -80,9 +83,9 @@ typedef struct odp_crypto_global_s odp_crypto_global_t;
 
 struct odp_crypto_global_s {
 	odp_spinlock_t                lock;
-	odp_ticketlock_t **openssl_lock;
 	odp_crypto_generic_session_t *free;
-	odp_crypto_generic_session_t  sessions[0];
+	odp_crypto_generic_session_t  sessions[MAX_SESSIONS];
+	odp_ticketlock_t              openssl_lock[0];
 };
 
 static odp_crypto_global_t *global;
@@ -128,20 +131,18 @@ null_crypto_routine(odp_crypto_op_param_t *param ODP_UNUSED,
 }
 
 static
-void packet_hmac(odp_crypto_op_param_t *param,
-		 odp_crypto_generic_session_t *session,
-		 uint8_t *hash)
+void packet_hmac_calculate(HMAC_CTX *ctx,
+			   odp_crypto_op_param_t *param,
+			   odp_crypto_generic_session_t *session,
+			   uint8_t *hash)
 {
 	odp_packet_t pkt = param->out_pkt;
 	uint32_t offset = param->auth_range.offset;
 	uint32_t len   = param->auth_range.length;
-	HMAC_CTX ctx;
 
 	ODP_ASSERT(offset + len <= odp_packet_len(pkt));
 
-	/* Hash it */
-	HMAC_CTX_init(&ctx);
-	HMAC_Init_ex(&ctx,
+	HMAC_Init_ex(ctx,
 		     session->auth.key,
 		     session->auth.key_length,
 		     session->auth.evp_md,
@@ -152,14 +153,41 @@ void packet_hmac(odp_crypto_op_param_t *param,
 		void *mapaddr = odp_packet_offset(pkt, offset, &seglen, NULL);
 		uint32_t maclen = len > seglen ? seglen : len;
 
-		HMAC_Update(&ctx, mapaddr, maclen);
+		HMAC_Update(ctx, mapaddr, maclen);
 		offset  += maclen;
 		len     -= maclen;
 	}
 
-	HMAC_Final(&ctx, hash, NULL);
+	HMAC_Final(ctx, hash, NULL);
+}
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+static
+void packet_hmac(odp_crypto_op_param_t *param,
+		 odp_crypto_generic_session_t *session,
+		 uint8_t *hash)
+{
+	HMAC_CTX ctx;
+
+	/* Hash it */
+	HMAC_CTX_init(&ctx);
+	packet_hmac_calculate(&ctx, param, session, hash);
 	HMAC_CTX_cleanup(&ctx);
 }
+#else
+static
+void packet_hmac(odp_crypto_op_param_t *param,
+		 odp_crypto_generic_session_t *session,
+		 uint8_t *hash)
+{
+	HMAC_CTX *ctx;
+
+	/* Hash it */
+	ctx = HMAC_CTX_new();
+	packet_hmac_calculate(ctx, param, session, hash);
+	HMAC_CTX_free(ctx);
+}
+#endif
 
 static
 odp_crypto_alg_err_t auth_gen(odp_crypto_op_param_t *param,
@@ -217,6 +245,8 @@ int internal_encrypt(EVP_CIPHER_CTX *ctx, odp_crypto_op_param_t *param)
 	int cipher_len;
 	int ret;
 
+	ODP_ASSERT(in_pos + in_len <= odp_packet_len(pkt));
+
 	while (in_len > 0) {
 		uint32_t seglen = 0; /* GCC */
 		uint8_t *insegaddr = odp_packet_offset(pkt, in_pos,
@@ -271,6 +301,8 @@ int internal_decrypt(EVP_CIPHER_CTX *ctx, odp_crypto_op_param_t *param)
 	unsigned block_len = EVP_CIPHER_block_size(EVP_CIPHER_CTX_cipher(ctx));
 	int cipher_len;
 	int ret;
+
+	ODP_ASSERT(in_pos + in_len <= odp_packet_len(pkt));
 
 	while (in_len > 0) {
 		uint32_t seglen = 0; /* GCC */
@@ -929,11 +961,9 @@ static void ODP_UNUSED openssl_lock(int mode, int n,
 				    int line ODP_UNUSED)
 {
 	if (mode & CRYPTO_LOCK)
-		odp_ticketlock_lock((odp_ticketlock_t *)
-				    &global->openssl_lock[n]);
+		odp_ticketlock_lock(&global->openssl_lock[n]);
 	else
-		odp_ticketlock_unlock((odp_ticketlock_t *)
-				      &global->openssl_lock[n]);
+		odp_ticketlock_unlock(&global->openssl_lock[n]);
 }
 
 int
@@ -945,8 +975,7 @@ odp_crypto_init_global(void)
 	int nlocks = CRYPTO_num_locks();
 
 	/* Calculate the memory size we need */
-	mem_size  = sizeof(*global);
-	mem_size += (MAX_SESSIONS * sizeof(odp_crypto_generic_session_t));
+	mem_size  = sizeof(odp_crypto_global_t);
 	mem_size += nlocks * sizeof(odp_ticketlock_t);
 
 	/* Allocate our globally shared memory */
@@ -966,12 +995,8 @@ odp_crypto_init_global(void)
 	odp_spinlock_init(&global->lock);
 
 	if (nlocks > 0) {
-		global->openssl_lock =
-			(odp_ticketlock_t **)&global->sessions[MAX_SESSIONS];
-
 		for (idx = 0; idx < nlocks; idx++)
-			odp_ticketlock_init((odp_ticketlock_t *)
-					    &global->openssl_lock[idx]);
+			odp_ticketlock_init(&global->openssl_lock[idx]);
 
 		CRYPTO_THREADID_set_callback(openssl_thread_id);
 		CRYPTO_set_locking_callback(openssl_lock);
@@ -1017,9 +1042,6 @@ int32_t odp_random_data(uint8_t *buf, uint32_t len, odp_random_kind_t kind)
 
 	switch (kind) {
 	case ODP_RANDOM_BASIC:
-		RAND_pseudo_bytes(buf, len);
-		return len;
-
 	case ODP_RANDOM_CRYPTO:
 		rc = RAND_bytes(buf, len);
 		return (1 == rc) ? (int)len /*success*/: -1 /*failure*/;

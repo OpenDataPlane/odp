@@ -33,52 +33,57 @@ extern "C" {
 #include <odp_schedule_if.h>
 #include <stddef.h>
 
-typedef union odp_buffer_bits_t {
-	odp_buffer_t             handle;
-
-	union {
-		uint32_t         u32;
-
-		struct {
-			uint32_t pool_id: 8;
-			uint32_t index:   24;
-		};
-	};
-} odp_buffer_bits_t;
-
 #define BUFFER_BURST_SIZE    CONFIG_BURST_SIZE
+
+typedef struct seg_entry_t {
+	void     *hdr;
+	uint8_t  *data;
+	uint32_t  len;
+} seg_entry_t;
 
 /* Common buffer header */
 struct odp_buffer_hdr_t {
-	/* Handle union */
-	odp_buffer_bits_t handle;
 
-	/* Initial buffer data pointer and length */
-	uint8_t  *base_data;
-	uint8_t  *buf_end;
+	/* Buffer index in the pool */
+	uint32_t  index;
 
-	/* Max data size */
-	uint32_t  size;
+	/* Total segment count */
+	uint16_t  segcount;
 
 	/* Pool type */
 	int8_t    type;
+
+	/* Number of seg[] entries used */
+	uint8_t   num_seg;
+
+	/* Next header which continues the segment list */
+	void *next_seg;
+
+	/* Last header of the segment list */
+	void *last_seg;
+
+	/* Initial buffer data pointer */
+	uint8_t  *base_data;
+
+	/* Pool pointer */
+	void *pool_ptr;
+
+	/* --- 40 bytes --- */
+
+	/* Segments */
+	seg_entry_t seg[CONFIG_PACKET_SEGS_PER_HDR];
 
 	/* Burst counts */
 	uint8_t   burst_num;
 	uint8_t   burst_first;
 
-	/* Segment count */
-	uint8_t   segcount;
-
-	/* Segments */
-	struct {
-		void     *hdr;
-		uint8_t  *data;
-		uint32_t  len;
-	} seg[CONFIG_PACKET_MAX_SEGS];
-
 	/* Next buf in a list */
 	struct odp_buffer_hdr_t *next;
+
+	/* Burst table */
+	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
+
+	/* --- Mostly read only data --- */
 
 	/* User context pointer or u64 */
 	union {
@@ -87,38 +92,40 @@ struct odp_buffer_hdr_t {
 		const void *buf_cctx; /* const alias for ctx */
 	};
 
+	/* Reference count */
+	odp_atomic_u32_t ref_cnt;
+
+	/* Event type. Maybe different than pool type (crypto compl event) */
+	int8_t    event_type;
+
+	/* Initial buffer tail pointer */
+	uint8_t  *buf_end;
+
 	/* User area pointer */
 	void    *uarea_addr;
 
 	/* User area size */
 	uint32_t uarea_size;
 
-	/* Event type. Maybe different than pool type (crypto compl event) */
-	int8_t    event_type;
+	/* Max data size */
+	uint32_t size;
 
-	/* Burst table */
-	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
-
-	/* Used only if _ODP_PKTIO_IPC is set.
-	 * ipc mapped process can not walk over pointers,
+	/* ipc mapped process can not walk over pointers,
 	 * offset has to be used */
 	uint64_t ipc_data_offset;
 
-	/* Pool handle */
+	/* Pool handle: will be removed, used only for odp_packet_pool()
+	 * inlining */
 	odp_pool_t pool_hdl;
 
 	/* Data or next header */
 	uint8_t data[0];
-};
+} ODP_ALIGNED_CACHE;
 
-ODP_STATIC_ASSERT(CONFIG_PACKET_MAX_SEGS < 256,
-		  "CONFIG_PACKET_MAX_SEGS_TOO_LARGE");
+ODP_STATIC_ASSERT(CONFIG_PACKET_SEGS_PER_HDR < 256,
+		  "CONFIG_PACKET_SEGS_PER_HDR_TOO_LARGE");
 
 ODP_STATIC_ASSERT(BUFFER_BURST_SIZE < 256, "BUFFER_BURST_SIZE_TOO_LARGE");
-
-/* Forward declarations */
-int seg_alloc_tail(odp_buffer_hdr_t *buf_hdr, int segcount);
-void seg_free_tail(odp_buffer_hdr_t *buf_hdr, int segcount);
 
 #ifdef __cplusplus
 }

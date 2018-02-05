@@ -3,7 +3,7 @@ AC_PREREQ([2.5])
 # Set correct API version
 ##########################################################################
 m4_define([odpapi_generation_version], [1])
-m4_define([odpapi_major_version], [15])
+m4_define([odpapi_major_version], [16])
 m4_define([odpapi_minor_version], [0])
 m4_define([odpapi_point_version], [0])
 m4_define([odpapi_version],
@@ -16,12 +16,9 @@ ODP_VERSION_API_MAJOR=odpapi_major_version
 AC_SUBST(ODP_VERSION_API_MAJOR)
 ODP_VERSION_API_MINOR=odpapi_minor_version
 AC_SUBST(ODP_VERSION_API_MINOR)
-AC_CONFIG_FILES([include/odp/api/spec/version.h
-                 include/odp/api/spec/deprecated.h])
-
-AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects])
-AC_CONFIG_SRCDIR([helper/config.h.in])
-AM_CONFIG_HEADER([helper/config.h])
+AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects foreign nostdinc])
+AC_CONFIG_SRCDIR([include/odp/api/spec/init.h])
+AM_CONFIG_HEADER([include/config.h])
 
 AC_USE_SYSTEM_EXTENSIONS
 AC_SYS_LARGEFILE
@@ -39,10 +36,10 @@ AM_SILENT_RULES([yes])
 # 3. if interfaces were removed, then use C+1:0:0
 ##########################################################################
 
-ODP_LIBSO_VERSION=115:0:2
+ODP_LIBSO_VERSION=116:0:0
 AC_SUBST(ODP_LIBSO_VERSION)
 
-ODPHELPER_LIBSO_VERSION=112:1:0
+ODPHELPER_LIBSO_VERSION=113:1:1
 AC_SUBST(ODPHELPER_LIBSO_VERSION)
 
 # Checks for programs.
@@ -62,10 +59,13 @@ LT_INIT([])
 AC_SUBST([LIBTOOL_DEPS])
 AM_PROG_LIBTOOL
 
+PKG_PROG_PKG_CONFIG
+
 # Checks for library functions.
-AC_FUNC_MALLOC
+dnl breaks cross-compilation and malloc(0) behaviour is not that important
+dnl AC_FUNC_MALLOC
 AC_FUNC_MMAP
-AC_CHECK_FUNCS([bzero clock_gettime gethostbyname getpagesize gettimeofday memset munmap socket strchr strerror strrchr strstr strtoull])
+AC_CHECK_FUNCS([bzero clock_gettime gethostbyname getpagesize gettimeofday malloc memset munmap socket strchr strerror strrchr strstr strtoull])
 
 # Checks for header files.
 AC_HEADER_RESOLV
@@ -96,6 +96,9 @@ CC_VERSION_PATCH=$(echo $CC_VERSION | cut -d'.' -f3)
 ##########################################################################
 # Allow valgrind suite to run against the defined tests
 ##########################################################################
+AX_VALGRIND_DFLT([sgcheck], [off])
+AX_VALGRIND_DFLT([helgrind], [off])
+AX_VALGRIND_DFLT([drd], [off])
 AX_VALGRIND_CHECK
 
 ##########################################################################
@@ -106,17 +109,16 @@ AS_CASE([$host],
   [i686*], [ARCH_DIR=x86],
   [mips64*], [ARCH_DIR=mips64],
   [powerpc*], [ARCH_DIR=powerpc],
-  [aarch64*], [ARCH_DIR=arm],
+  [aarch64*], [ARCH_DIR=aarch64],
   [arm*], [ARCH_DIR=arm],
   [ARCH_DIR=undefined]
 )
 AC_SUBST([ARCH_DIR])
-AM_CONDITIONAL([ARCH_X86], [test "x${ARCH_DIR}" = "xx86"])
 
 ##########################################################################
 # Warn on the defaults if arch is undefined
 ##########################################################################
-if test "${ARCH_DIR}" == "undefined";
+if test "${ARCH_DIR}" = "undefined";
 then
     echo "ARCH_DIR is undefined, please add your ARCH_DIR based on host=${host}"
     exit 1
@@ -136,7 +138,7 @@ AS_CASE([$host],
 )
 AC_SUBST([ARCH_ABI])
 
-if test "${ARCH_ABI}" == "undefined";
+if test "${ARCH_ABI}" = "undefined";
 then
     echo "ARCH_ABI is undefined, please add your ARCH_ABI based on host=${host}"
     exit 1
@@ -159,7 +161,6 @@ AC_ARG_WITH([platform],
     ])
 
 AC_SUBST([with_platform])
-AC_SUBST([platform_with_platform], ["platform/${with_platform}"])
 
 ##########################################################################
 # Include m4 files
@@ -170,66 +171,41 @@ m4_include([./helper/m4/configure.m4])
 m4_include([./test/m4/configure.m4])
 
 ##########################################################################
-# Set SDK install path
-##########################################################################
-AC_ARG_WITH([sdk-install-path],
-AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
-    [(or in the default path if not specified).]),
-    [SDK_INSTALL_PATH=$withval
-    DPDK_DEFAULT_DIR=0],
-    [DPDK_DEFAULT_DIR=1])
-
-AC_SUBST(DPDK_DEFAULT_DIR)
-AC_SUBST(SDK_INSTALL_PATH)
-
-##########################################################################
 # Run platform specific checks and settings
 ##########################################################################
-IMPLEMENTATION_NAME=""
-if test "${with_platform}" == "linux-dpdk";
-then
-    m4_include([./platform/linux-dpdk/m4/configure.m4])
-    m4_include([./test/linux-dpdk/m4/configure.m4])
-    IMPLEMENTATION_NAME="odp-dpdk"
-else
-    echo "UNSUPPORTED PLATFORM: ${with_platform}"
-    exit 1
-fi
+AS_IF([test "${with_platform}" = "linux-dpdk"],
+      [m4_include([./platform/linux-dpdk/m4/configure.m4])],
+      [AC_MSG_ERROR([UNSUPPORTED PLATFORM: ${with_platform}])])
 
-ODP_CFLAGS="$ODP_CFLAGS -DIMPLEMENTATION_NAME=$IMPLEMENTATION_NAME"
+AC_DEFINE_UNQUOTED([IMPLEMENTATION_NAME], ["$IMPLEMENTATION_NAME"],
+		   [Define to the name of the implementation])
 
 ##########################################################################
 # Set the install directory for test binaries/scripts
 ##########################################################################
 AC_ARG_WITH([testdir],
-    AC_HELP_STRING([--with-testdir=DIR installation directory for tests]),
-	[if test "$withval" = "yes"; then
-	     testdir=$libdir/odp/tests
-	 else
-	     testdir=$withval
-	 fi], [])
+    [AS_HELP_STRING([--with-testdir=DIR], [installation directory for tests])],
+	[testdir=$withval],
+	[testdir=no])
+AS_IF([test "x$testdir" = "xyes"], [testdir=$libdir/odp/tests],
+      [test "x$testdir" = "xno"], [testdir=])
 AC_SUBST([testdir])
+AM_CONDITIONAL([test_installdir], [test "x$testdir" != "xno"])
 
 ##########################################################################
 # Set conditionals as computed within platform specific files
 ##########################################################################
-AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
-AM_CONDITIONAL([PKTIO_DPDK], [test x$pktio_dpdk_support = xyes ])
-AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
-AM_CONDITIONAL([DPDK_DEFAULT_DIR], [test "x${DPDK_DEFAULT_DIR}" = "x1"])
-AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
-AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
-AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])
-AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
-AM_CONDITIONAL([test_perf_proc], [test x$test_perf_proc = xyes ])
-AM_CONDITIONAL([test_cpp], [test x$test_cpp = xyes ])
-AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
-AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
 AM_CONDITIONAL([helper_linux], [test x$helper_linux = xyes ])
+AM_CONDITIONAL([ARCH_IS_ARM], [test "x${ARCH_DIR}" = "xarm"])
+AM_CONDITIONAL([ARCH_IS_AARCH64], [test "x${ARCH_DIR}" = "xaarch64"])
+AM_CONDITIONAL([ARCH_IS_MIPS64], [test "x${ARCH_DIR}" = "xmips64"])
+AM_CONDITIONAL([ARCH_IS_POWERPC], [test "x${ARCH_DIR}" = "xpowerpc"])
 AM_CONDITIONAL([ARCH_IS_X86], [test "x${ARCH_DIR}" = "xx86"])
+AM_CONDITIONAL([ARCH_IS_X86_32], [test "x${ARCH_ABI}" = "xx86_32-linux"])
+AM_CONDITIONAL([ARCH_IS_X86_64], [test "x${ARCH_ABI}" = "xx86_64-linux"])
 
 ##########################################################################
 # Setup doxygen documentation
@@ -243,45 +219,41 @@ DX_INIT_DOXYGEN($PACKAGE_NAME,
 		${srcdir}/doc/helper-guide/Doxyfile,
 		${builddir}/doc/helper-guide/output,
 		${srcdir}/doc/platform-api-guide/Doxyfile,
-		${builddir}/doc/platform-api-guide/output,
-		${srcdir}/doc/driver-api-guide/Doxyfile,
-		${builddir}/doc/driver-api-guide/output)
-
-##########################################################################
-# Enable/disable ODP_DEBUG_PRINT
-##########################################################################
-ODP_DEBUG_PRINT=0
-AC_ARG_ENABLE([debug-print],
-    [  --enable-debug-print    display debugging information],
-    [if test "x$enableval" = "xyes"; then
-	ODP_DEBUG_PRINT=1
-     else
-	ODP_DEBUG_PRINT=0
-    fi])
-ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG_PRINT"
-
-ODPH_DEBUG_PRINT=0
-AC_ARG_ENABLE([helper-debug-print],
-    [  --enable-helper-debug-print    display helper debugging information],
-    [if test "x$enableval" = "xyes"; then
-	ODPH_DEBUG_PRINT=1
-     else
-	ODPH_DEBUG_PRINT=0
-    fi])
-ODP_CFLAGS="$ODP_CFLAGS -DODPH_DEBUG_PRINT=$ODPH_DEBUG_PRINT"
+		${builddir}/doc/platform-api-guide/output)
 
 ##########################################################################
 # Enable/disable ODP_DEBUG
 ##########################################################################
-ODP_DEBUG=0
 AC_ARG_ENABLE([debug],
-    [  --enable-debug          include additional code],
-    [if test "x$enableval" = "xyes"; then
-	ODP_DEBUG=1
-     else
-	ODP_DEBUG=0
-    fi])
-ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
+    [AS_HELP_STRING([--enable-debug],
+		    [include additional debugging code ]
+		    [(set to 'full' to enable all --enable-*-debug-* options)])])
+
+AS_IF([test "x$enable_debug" != "xno"], [ODP_DEBUG=1],
+      [ODP_DEBUG=0])
+AC_DEFINE_UNQUOTED([ODP_DEBUG], [$ODP_DEBUG],
+		   [Define to 1 to include additional debug code])
+
+##########################################################################
+# Enable/disable ODP_DEBUG_PRINT
+##########################################################################
+AC_ARG_ENABLE([debug-print],
+    [AS_HELP_STRING([--enable-debug-print], [display debugging information])],
+    [], [AS_IF([test "x$enable_debug" = "xfull"], [enable_debug_print=yes],
+	       [enable_debug_print=no])])
+AS_IF([test "x$enable_debug_print" != "xno"], [ODP_DEBUG_PRINT=1],
+      [ODP_DEBUG_PRINT=0])
+AC_DEFINE_UNQUOTED([ODP_DEBUG_PRINT], [$ODP_DEBUG_PRINT],
+		   [Define to 1 to display debug information])
+
+AC_ARG_ENABLE([helper-debug-print],
+    [AS_HELP_STRING([--enable-helper-debug-print], [display helper debugging information])],
+    [], [AS_IF([test "x$enable_debug" = "xfull"], [enable_helper_debug_print=yes],
+	       [enable_helper_debug_print=no])])
+AS_IF([test "x$enable_helper_debug_print" != "xno"], [ODPH_DEBUG_PRINT=1],
+      [ODPH_DEBUG_PRINT=0])
+AC_DEFINE_UNQUOTED([ODPH_DEBUG_PRINT], [$ODPH_DEBUG_PRINT],
+		   [Define to 1 to display helper debug information])
 
 ##########################################################################
 # Enable/disable ABI compatible build
@@ -314,23 +286,33 @@ AC_SUBST(ODP_DEPRECATED_API)
 ##########################################################################
 # Default warning setup
 ##########################################################################
-ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes"
-ODP_CFLAGS="$ODP_CFLAGS -Wmissing-declarations -Wold-style-definition -Wpointer-arith"
-ODP_CFLAGS="$ODP_CFLAGS -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral"
-ODP_CFLAGS="$ODP_CFLAGS -Wformat-security -Wundef -Wwrite-strings"
-ODP_CFLAGS="$ODP_CFLAGS -std=gnu99"
+ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror"
 
 dnl Use -Werror in the checks below since Clang emits a warning instead of
 dnl an error when it encounters an unknown warning option.
-AX_CHECK_COMPILE_FLAG([-Wimplicit-fallthrough=0],
-                      [ODP_CFLAGS="$ODP_CFLAGS -Wimplicit-fallthrough=0"],
-                      [], [-Werror])
-AX_CHECK_COMPILE_FLAG([-Wformat-truncation=0],
-                      [ODP_CFLAGS="$ODP_CFLAGS -Wformat-truncation=0"],
-                      [], [-Werror])
-AX_CHECK_COMPILE_FLAG([-Wformat-overflow=0],
-                      [ODP_CFLAGS="$ODP_CFLAGS -Wformat-overflow=0"],
-                      [], [-Werror])
+AC_DEFUN([ODP_CHECK_CFLAG],
+	 [AX_CHECK_COMPILE_FLAG([$1],
+				[ODP_CFLAGS="$ODP_CFLAGS $1"],
+				[], [-W -Wall -Werror],
+				[AC_LANG_SOURCE([int main(void)
+						{return 0;}])])])
+ODP_CHECK_CFLAG([-Wstrict-prototypes])
+ODP_CHECK_CFLAG([-Wmissing-prototypes])
+ODP_CHECK_CFLAG([-Wmissing-declarations])
+ODP_CHECK_CFLAG([-Wold-style-definition])
+ODP_CHECK_CFLAG([-Wpointer-arith])
+ODP_CHECK_CFLAG([-Wcast-align])
+ODP_CHECK_CFLAG([-Wnested-externs])
+ODP_CHECK_CFLAG([-Wcast-qual])
+ODP_CHECK_CFLAG([-Wformat-nonliteral])
+ODP_CHECK_CFLAG([-Wformat-security])
+ODP_CHECK_CFLAG([-Wundef])
+ODP_CHECK_CFLAG([-Wwrite-strings])
+ODP_CHECK_CFLAG([-Wformat-truncation=0])
+ODP_CHECK_CFLAG([-Wformat-overflow=0])
+
+ODP_CFLAGS="$ODP_CFLAGS -std=c99"
+ODP_CXXFLAGS="$ODP_CXXFLAGS -std=c++11"
 
 # Extra flags for example to suppress certain warning types
 ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
@@ -341,16 +323,7 @@ ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
 case "${host}" in
   i?86? | x86*)
   if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
-     my_save_cflags="$CFLAGS"
-
-     CFLAGS=-mcx16
-     AC_MSG_CHECKING([whether CC supports -mcx16])
-     AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
-  	    [AC_MSG_RESULT([yes])]
-  	    [ODP_CFLAGS="$ODP_CFLAGS $CFLAGS"],
-  	    [AC_MSG_RESULT([no])]
-  	    )
-     CFLAGS="$my_save_cflags"
+     ODP_CHECK_CFLAG([-mcx16])
   fi
   ;;
 esac
@@ -358,25 +331,21 @@ esac
 ##########################################################################
 # Default include setup
 ##########################################################################
-AM_CFLAGS="$AM_CFLAGS $ODP_CFLAGS"
-AM_CXXFLAGS="-std=c++11"
+CFLAGS="$CFLAGS $ODP_CFLAGS"
+CXXFLAGS="$CXXFLAGS $ODP_CXXFLAGS"
 
-AC_CONFIG_FILES([Makefile
-		 pkgconfig/libodp-dpdk.pc
-		 pkgconfig/libodphelper.pc
-		 ])
+AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([include/Makefile
+		 include/odp/api/spec/version.h
+		 include/odp/api/spec/deprecated.h])
 
-AC_SEARCH_LIBS([timer_create],[rt posix4])
 
 ##########################################################################
 # distribute the changed variables among the Makefiles
 
 AC_SUBST([LIBS])
-AC_SUBST([AM_CPPFLAGS])
 AC_SUBST([CPPFLAGS])
-AC_SUBST([AM_CFLAGS])
 AC_SUBST([CFLAGS])
-AC_SUBST([AM_LDFLAGS])
 AC_SUBST([LDFLAGS])
 AC_SUBST([EXEEXT])
 
@@ -403,12 +372,8 @@ AC_MSG_RESULT([
 	cc:			${CC}
 	cc version:             ${CC_VERSION}
 	cppflags:		${CPPFLAGS}
-	am_cppflags:		${AM_CPPFLAGS}
-	am_cxxflags:		${AM_CXXFLAGS}
 	cflags:			${CFLAGS}
-	am_cflags:		${AM_CFLAGS}
 	ldflags:		${LDFLAGS}
-	am_ldflags:		${AM_LDFLAGS}
 	libs:			${LIBS}
 	defs:			${DEFS}
 	static libraries:	${enable_static}

@@ -1,13 +1,8 @@
 include $(top_srcdir)/example/Makefile.inc
 
-bin_PROGRAMS = odp_l2fwd_simple$(EXEEXT)
-odp_l2fwd_simple_LDFLAGS = $(AM_LDFLAGS) -static
-odp_l2fwd_simple_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/example
+bin_PROGRAMS = odp_l2fwd_simple
 
-noinst_HEADERS = \
-		  $(top_srcdir)/example/example_debug.h
-
-dist_odp_l2fwd_simple_SOURCES = odp_l2fwd_simple.c
+odp_l2fwd_simple_SOURCES = odp_l2fwd_simple.c
 
 if test_example
 if HAVE_PCAP

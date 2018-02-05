@@ -19,6 +19,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/deprecated.h>
 #include <odp/api/packet_io_stats.h>
 #include <odp/api/queue.h>
 #include <odp/api/time.h>
@@ -445,11 +446,8 @@ typedef struct odp_pktio_capability_t {
 	 * set to zero. */
 	odp_pktio_set_op_t set_op;
 
-	/** Support of Loopback mode
-	 *
-	 * A boolean to denote whether loop back mode is supported on this
-	 * specific interface. */
-	odp_bool_t loop_supported;
+	/** @deprecated Use enable_loop inside odp_pktin_config_t */
+	odp_bool_t ODP_DEPRECATE(loop_supported);
 } odp_pktio_capability_t;
 
 /**
@@ -858,6 +856,11 @@ uint64_t odp_pktin_wait_time(uint64_t nsec);
  * A successful call returns the actual number of packets sent. If return value
  * is less than 'num', the remaining packets at the end of packets[] array
  * are not consumed, and the caller has to take care of them.
+ *
+ * Entire packet data is sent out (odp_packet_len() bytes of data, starting from
+ * odp_packet_data()). All other packet metadata is ignored unless otherwise
+ * specified e.g. for protocol offload purposes. Link protocol specific frame
+ * checksum and padding are added to frames before transmission.
  *
  * @param queue        Packet output queue handle for sending packets
  * @param packets[]    Array of packets to send

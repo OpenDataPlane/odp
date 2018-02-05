@@ -1,13 +1,8 @@
 include $(top_srcdir)/example/Makefile.inc
 
-bin_PROGRAMS = odp_switch$(EXEEXT)
-odp_switch_LDFLAGS = $(AM_LDFLAGS) -static
-odp_switch_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/example
+bin_PROGRAMS = odp_switch
 
-noinst_HEADERS = \
-		  $(top_srcdir)/example/example_debug.h
-
-dist_odp_switch_SOURCES = odp_switch.c
+odp_switch_SOURCES = odp_switch.c
 
 if test_example
 if HAVE_PCAP

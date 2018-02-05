@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 #include <odp_posix_extensions.h>
 
 #include <time.h>
@@ -102,9 +104,7 @@ static inline odp_time_t time_hw_cur(void)
 
 static inline uint64_t time_hw_res(void)
 {
-	/* Promise a bit lower resolution than average cycle counter
-	 * frequency */
-	return global.hw_freq_hz / 10;
+	return global.hw_freq_hz;
 }
 
 static inline uint64_t time_hw_to_ns(odp_time_t time)
