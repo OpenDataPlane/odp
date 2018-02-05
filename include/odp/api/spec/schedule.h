@@ -371,6 +371,34 @@ void odp_schedule_order_unlock(uint32_t lock_index);
  */
 void odp_schedule_order_unlock_lock(uint32_t unlock_index, uint32_t lock_index);
 
+/** Asynchronous ordered context lock
+ * Request an ordered context lock to be acquired. Starts an ordered context
+ * lock acquire operation, but does not wait until the lock has been acquired.
+ * Application can use this call to potentially interleave some processing
+ * within waiting for this lock. Each start lock call must be paired with a wait
+ * call that blocks until the lock has been acquired. Locks cannot be acquired
+ * in nested fashion i.e each start call must follow a paring wait and unlock
+ * calls, before using another lock.
+ * The same constraints apply as with odp_schedule_order_lock()
+ *
+ * @param lock_index	Index of the ordered lock in the current context to
+ *			start acquire operation.
+ *			Must be in the range 0..odp_queue_lock_count() - 1.
+ *
+ */
+void odp_schedule_order_lock_start(uint32_t lock_index);
+
+/** Asynchronous ordered context lock wait
+ * Wait for a previously started lock acquire operation to finish.
+ * Lock index must match with the previous start call. Ordered lock acquisition
+ * will be completed during this call.
+ *
+ * @param lock_index	Index of the ordered lock in the current context to
+ *			complete acquire operation.
+ *			Must be in the range 0..odp_queue_lock_count() - 1.
+ */
+void odp_schedule_order_lock_wait(uint32_t lock_index);
+
 /**
  * @}
  */
