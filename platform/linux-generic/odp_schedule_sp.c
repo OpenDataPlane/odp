@@ -829,6 +829,16 @@ static void schedule_order_unlock_lock(uint32_t unlock_index,
 	(void)lock_index;
 }
 
+static void schedule_order_lock_start(uint32_t lock_index)
+{
+	(void)lock_index;
+}
+
+static void schedule_order_lock_wait(uint32_t lock_index)
+{
+	(void)lock_index;
+}
+
 static void order_lock(void)
 {
 }
@@ -879,5 +889,7 @@ const schedule_api_t schedule_sp_api = {
 	.schedule_group_info      = schedule_group_info,
 	.schedule_order_lock      = schedule_order_lock,
 	.schedule_order_unlock    = schedule_order_unlock,
-	.schedule_order_unlock_lock	= schedule_order_unlock_lock
+	.schedule_order_unlock_lock	= schedule_order_unlock_lock,
+	.schedule_order_lock_start	= schedule_order_lock_start,
+	.schedule_order_lock_wait	= schedule_order_lock_wait
 };
