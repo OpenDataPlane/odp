@@ -94,6 +94,44 @@ CC_VERSION_MINOR=$(echo $CC_VERSION | cut -d'.' -f2)
 CC_VERSION_PATCH=$(echo $CC_VERSION | cut -d'.' -f3)
 
 ##########################################################################
+# Default warning setup
+##########################################################################
+ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror"
+ODP_CXXFLAGS="$ODP_CXXFLAGS -W -Wall -Werror"
+
+ODP_CHECK_CFLAG([-Wstrict-prototypes])
+ODP_CHECK_CFLAG([-Wmissing-prototypes])
+ODP_CHECK_CFLAG([-Wmissing-declarations])
+ODP_CHECK_CFLAG([-Wold-style-definition])
+ODP_CHECK_CFLAG([-Wpointer-arith])
+ODP_CHECK_CFLAG([-Wcast-align])
+ODP_CHECK_CFLAG([-Wnested-externs])
+ODP_CHECK_CFLAG([-Wcast-qual])
+ODP_CHECK_CFLAG([-Wformat-nonliteral])
+ODP_CHECK_CFLAG([-Wformat-security])
+ODP_CHECK_CFLAG([-Wundef])
+ODP_CHECK_CFLAG([-Wwrite-strings])
+ODP_CHECK_CFLAG([-Wformat-truncation=0])
+ODP_CHECK_CFLAG([-Wformat-overflow=0])
+
+ODP_CFLAGS="$ODP_CFLAGS -std=c99"
+ODP_CXXFLAGS="$ODP_CXXFLAGS -std=c++11"
+
+# Extra flags for example to suppress certain warning types
+ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
+
+##########################################################################
+# Check if compiler supports cmpxchng16 on x86-based architectures
+##########################################################################
+case "${host}" in
+  i?86? | x86*)
+  if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
+     ODP_CHECK_CFLAG([-mcx16])
+  fi
+  ;;
+esac
+
+##########################################################################
 # Allow valgrind suite to run against the defined tests
 ##########################################################################
 AX_VALGRIND_DFLT([sgcheck], [off])
@@ -159,6 +197,21 @@ fi
 ##########################################################################
 PKGCONFIG_VERSION=$(echo $VERSION | awk -F '.git' '{print $1}')
 AC_SUBST(PKGCONFIG_VERSION)
+
+##########################################################################
+# Enable/disable ABI compatible build
+##########################################################################
+ODP_ABI_COMPAT=1
+abi_compat=yes
+AC_ARG_ENABLE([abi-compat],
+    [  --disable-abi-compat    disables ABI compatible mode, enables inline code in header files],
+    [if test "x$enableval" = "xno"; then
+	ODP_ABI_COMPAT=0
+	abi_compat=no
+	#if there is no ABI compatibility the .so numbers are meaningless
+	ODP_LIBSO_VERSION=0:0:0
+    fi])
+AM_CONDITIONAL(ODP_ABI_COMPAT, [test "x$ODP_ABI_COMPAT" = "x1"])
 
 ##########################################################################
 # Determine which platform to build for
@@ -283,21 +336,6 @@ AC_DEFINE_UNQUOTED([ODPH_DEBUG_PRINT], [$ODPH_DEBUG_PRINT],
 		   [Define to 1 to display helper debug information])
 
 ##########################################################################
-# Enable/disable ABI compatible build
-##########################################################################
-ODP_ABI_COMPAT=1
-abi_compat=yes
-AC_ARG_ENABLE([abi-compat],
-    [  --disable-abi-compat    disables ABI compatible mode, enables inline code in header files],
-    [if test "x$enableval" = "xno"; then
-	ODP_ABI_COMPAT=0
-	abi_compat=no
-	#if there is no ABI compatibility the .so numbers are meaningless
-	ODP_LIBSO_VERSION=0:0:0
-    fi])
-AM_CONDITIONAL(ODP_ABI_COMPAT, [test "x$ODP_ABI_COMPAT" = "x1"])
-
-##########################################################################
 # Enable/disable deprecated API definitions
 ##########################################################################
 ODP_DEPRECATED_API=0
@@ -309,51 +347,6 @@ AC_ARG_ENABLE([deprecated],
 	deprecated=yes
     fi])
 AC_SUBST(ODP_DEPRECATED_API)
-
-##########################################################################
-# Default warning setup
-##########################################################################
-ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror"
-
-dnl Use -Werror in the checks below since Clang emits a warning instead of
-dnl an error when it encounters an unknown warning option.
-AC_DEFUN([ODP_CHECK_CFLAG],
-	 [AX_CHECK_COMPILE_FLAG([$1],
-				[ODP_CFLAGS="$ODP_CFLAGS $1"],
-				[], [-W -Wall -Werror],
-				[AC_LANG_SOURCE([int main(void)
-						{return 0;}])])])
-ODP_CHECK_CFLAG([-Wstrict-prototypes])
-ODP_CHECK_CFLAG([-Wmissing-prototypes])
-ODP_CHECK_CFLAG([-Wmissing-declarations])
-ODP_CHECK_CFLAG([-Wold-style-definition])
-ODP_CHECK_CFLAG([-Wpointer-arith])
-ODP_CHECK_CFLAG([-Wcast-align])
-ODP_CHECK_CFLAG([-Wnested-externs])
-ODP_CHECK_CFLAG([-Wcast-qual])
-ODP_CHECK_CFLAG([-Wformat-nonliteral])
-ODP_CHECK_CFLAG([-Wformat-security])
-ODP_CHECK_CFLAG([-Wundef])
-ODP_CHECK_CFLAG([-Wwrite-strings])
-ODP_CHECK_CFLAG([-Wformat-truncation=0])
-ODP_CHECK_CFLAG([-Wformat-overflow=0])
-
-ODP_CFLAGS="$ODP_CFLAGS -std=c99"
-ODP_CXXFLAGS="$ODP_CXXFLAGS -std=c++11"
-
-# Extra flags for example to suppress certain warning types
-ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
-
-##########################################################################
-# Check if compiler supports cmpxchng16 on x86-based architectures
-##########################################################################
-case "${host}" in
-  i?86? | x86*)
-  if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
-     ODP_CHECK_CFLAG([-mcx16])
-  fi
-  ;;
-esac
 
 ##########################################################################
 # Default include setup
