@@ -692,10 +692,19 @@ static int sock_mmap_recv_tmo(pktio_entry_t *pktio_entry, int index,
 	FD_ZERO(&readfds);
 	maxfd = sock_mmap_fd_set(pktio_entry, index, &readfds);
 
-	if (select(maxfd + 1, &readfds, NULL, NULL, &timeout) == 0)
-		return 0;
+	while (1) {
+		ret = select(maxfd + 1, &readfds, NULL, NULL, &timeout);
 
-	return sock_mmap_recv(pktio_entry, index, pkt_table, num);
+		if (ret <= 0)
+			return ret;
+
+		ret = sock_mmap_recv(pktio_entry, index, pkt_table, num);
+
+		if (ret)
+			return ret;
+
+		/* If no packets, continue wait until timeout expires */
+	}
 }
 
 static int sock_mmap_recv_mq_tmo(pktio_entry_t *pktio_entry[], int index[],
@@ -729,20 +738,25 @@ static int sock_mmap_recv_mq_tmo(pktio_entry_t *pktio_entry[], int index[],
 	timeout.tv_sec = usecs / (1000 * 1000);
 	timeout.tv_usec = usecs - timeout.tv_sec * (1000ULL * 1000ULL);
 
-	if (select(maxfd + 1, &readfds, NULL, NULL, &timeout) == 0)
-		return 0;
+	while (1) {
+		ret = select(maxfd + 1, &readfds, NULL, NULL, &timeout);
 
-	for (i = 0; i < num_q; i++) {
-		ret = sock_mmap_recv(pktio_entry[i], index[i], pkt_table, num);
-
-		if (ret > 0 && from)
-			*from = i;
-
-		if (ret != 0)
+		if (ret <= 0)
 			return ret;
-	}
 
-	return 0;
+		for (i = 0; i < num_q; i++) {
+			ret = sock_mmap_recv(pktio_entry[i], index[i],
+					     pkt_table, num);
+
+			if (ret > 0 && from)
+				*from = i;
+
+			if (ret)
+				return ret;
+		}
+
+		/* If no packets, continue wait until timeout expires */
+	}
 }
 
 static int sock_mmap_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
