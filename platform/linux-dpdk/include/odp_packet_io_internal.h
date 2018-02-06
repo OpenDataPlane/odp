@@ -48,19 +48,17 @@ typedef struct {
 
 /** Packet socket using dpdk mmaped rings for both Rx and Tx */
 typedef struct {
-	odp_pktio_capability_t	capa;	  /**< interface capabilities */
-
-	/********************************/
-	char ifname[32];
-	uint8_t min_rx_burst;
-	uint8_t portid;
-	odp_bool_t vdev_sysc_promisc;	/**< promiscuous mode defined with
-					    system call */
+	uint8_t portid;			  /**< DPDK port identifier */
+	uint8_t lockless_rx;		  /**< no locking for rx */
+	uint8_t lockless_tx;		  /**< no locking for tx */
+	uint8_t min_rx_burst;		  /**< minimum RX burst size */
 	odp_pktin_hash_proto_t hash;	  /**< Packet input hash protocol */
-	odp_bool_t lockless_rx;		  /**< no locking for rx */
-	odp_bool_t lockless_tx;		  /**< no locking for tx */
+	odp_pktio_capability_t	capa;	  /**< interface capabilities */
+	char ifname[32];
 	odp_ticketlock_t rx_lock[PKTIO_MAX_QUEUES];  /**< RX queue locks */
 	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES];  /**< TX queue locks */
+	uint8_t vdev_sysc_promisc;	/**< promiscuous mode defined with
+					    system call */
 } pkt_dpdk_t;
 
 struct pktio_entry {
