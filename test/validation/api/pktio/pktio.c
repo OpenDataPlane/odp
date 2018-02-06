@@ -510,7 +510,7 @@ static int wait_for_packets(pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
 
 static int recv_packets_tmo(odp_pktio_t pktio, odp_packet_t pkt_tbl[],
 			    uint32_t seq_tbl[], int num, recv_tmo_mode_e mode,
-			    uint64_t tmo, uint64_t ns)
+			    uint64_t tmo, uint64_t ns, int no_pkt)
 {
 	odp_packet_t pkt_tmp[num];
 	odp_pktin_queue_t pktin[MAX_QUEUES];
@@ -541,8 +541,19 @@ static int recv_packets_tmo(odp_pktio_t pktio, odp_packet_t pkt_tbl[],
 						  num - num_rx, tmo);
 		ts2 = odp_time_global();
 
+		CU_ASSERT(n >= 0);
+
 		if (n <= 0)
 			break;
+
+		/* When we don't expect any packets, drop all packets and
+		 * retry timeout test. */
+		if (no_pkt) {
+			printf("    drop %i dummy packets\n", n);
+			odp_packet_free_multi(pkt_tmp, n);
+			continue;
+		}
+
 		for (i = 0; i < n; i++) {
 			if (pktio_pkt_seq(pkt_tmp[i]) == seq_tbl[num_rx])
 				pkt_tbl[num_rx++] = pkt_tmp[i];
@@ -553,8 +564,15 @@ static int recv_packets_tmo(odp_pktio_t pktio, odp_packet_t pkt_tbl[],
 			CU_ASSERT(from_val < (unsigned)num_q);
 	} while (num_rx < num);
 
-	if (num_rx < num)
-		CU_ASSERT(odp_time_diff_ns(ts2, ts1) >= ns);
+	if (num_rx < num) {
+		uint64_t diff = odp_time_diff_ns(ts2, ts1);
+
+		if (diff < ns)
+			printf("    diff %" PRIu64 ", ns %" PRIu64 "\n",
+			       diff, ns);
+
+		CU_ASSERT(diff >= ns);
+	}
 
 	return num_rx;
 }
@@ -966,8 +984,9 @@ static void test_recv_tmo(recv_tmo_mode_e mode)
 
 	/* No packets sent yet, so should wait */
 	ns = 100 * ODP_TIME_MSEC_IN_NS;
+
 	ret = recv_packets_tmo(pktio_rx, &pkt_tbl[0], &pkt_seq[0], 1, mode,
-			       odp_pktin_wait_time(ns), ns);
+			       odp_pktin_wait_time(ns), ns, 1);
 	CU_ASSERT(ret == 0);
 
 	ret = create_packets(pkt_tbl, pkt_seq, test_pkt_count, pktio_tx,
@@ -978,19 +997,19 @@ static void test_recv_tmo(recv_tmo_mode_e mode)
 	CU_ASSERT_FATAL(ret == test_pkt_count);
 
 	ret = recv_packets_tmo(pktio_rx, &pkt_tbl[0], &pkt_seq[0], 1, mode,
-			       odp_pktin_wait_time(UINT64_MAX), 0);
+			       odp_pktin_wait_time(UINT64_MAX), 0, 0);
 	CU_ASSERT_FATAL(ret == 1);
 
 	ret = recv_packets_tmo(pktio_rx, &pkt_tbl[1], &pkt_seq[1], 1, mode,
-			       ODP_PKTIN_NO_WAIT, 0);
+			       ODP_PKTIN_NO_WAIT, 0, 0);
 	CU_ASSERT_FATAL(ret == 1);
 
 	ret = recv_packets_tmo(pktio_rx, &pkt_tbl[2], &pkt_seq[2], 1, mode,
-			       odp_pktin_wait_time(0), 0);
+			       odp_pktin_wait_time(0), 0, 0);
 	CU_ASSERT_FATAL(ret == 1);
 
 	ret = recv_packets_tmo(pktio_rx, &pkt_tbl[3], &pkt_seq[3], 3, mode,
-			       odp_pktin_wait_time(ns), ns);
+			       odp_pktin_wait_time(ns), ns, 0);
 	CU_ASSERT_FATAL(ret == 3);
 
 	for (i = 0; i < test_pkt_count; i++)
