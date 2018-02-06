@@ -14,78 +14,49 @@ m4_include([platform/linux-dpdk/m4/odp_schedule.m4])
 ##########################################################################
 # Set DPDK install path
 ##########################################################################
-dpdk_default_dir=yes
 AC_ARG_WITH([dpdk-path],
-AS_HELP_STRING([--with-dpdk-path=DIR   path to dpdk build directory]),
-    [DPDK_PATH=$withval
-    dpdk_default_dir=no],
-    [dpdk_default_dir=yes])
+[AS_HELP_STRING([--with-dpdk-path=DIR], [path to dpdk build directory])],
+    [DPDK_PATH="$withval"
+     pktio_dpdk_support=yes],[])
 
-##########################################################################
-# DPDK build variables
-##########################################################################
-DPDK_DRIVER_DIR=/usr/lib/$(uname -m)-linux-gnu
+
 AS_CASE($host_cpu, [x86_64], [DPDK_CPPFLAGS="-msse4.2"])
-if test x$dpdk_default_dir = xyes; then
-    DPDK_CFLAGS="-include /usr/include/dpdk/rte_config.h"
-    DPDK_CPPFLAGS="$DPDK_CPPFLAGS -I/usr/include/dpdk"
-else
-    DPDK_DRIVER_DIR=$DPDK_PATH/lib
-    DPDK_CFLAGS="-include $DPDK_PATH/include/rte_config.h"
-    DPDK_CPPFLAGS="$DPDK_CPPFLAGS -I$DPDK_PATH/include"
-fi
-
-# Check if we should link against the static or dynamic DPDK library
-AC_ARG_ENABLE([shared-dpdk],
-	[  --enable-shared-dpdk    link against the shared DPDK library],
-	[if test "x$enableval" = "xyes"; then
-		shared_dpdk=true
-	fi])
-AM_CONDITIONAL([SHARED_DPDK], [test x$shared_dpdk = xtrue])
-
-##########################################################################
-# Save and set temporary compilation flags
-##########################################################################
-OLD_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$DPDK_CPPFLAGS $CPPFLAGS"
+AS_IF([test "x$DPDK_PATH" = "xsystem"],
+      [DPDK_CPPFLAGS="$DPDK_CPPFLAGS -isystem/usr/include/dpdk"
+       DPDK_LDFLAGS=""
+       DPDK_PMD_PATH="`$CC --print-file-name=librte_pmd_null.a`"
+       DPDK_PMD_PATH="`dirname "$DPDK_PMD_PATH"`"
+       AS_IF([test "x$DPDK_PMD_PATH" = "x"],
+	     [AC_MSG_FAILURE([Could not locate system DPDK PMD directory])])],
+      [DPDK_CPPFLAGS="$DPDK_CPPFLAGS -isystem $DPDK_PATH/include"
+       DPDK_LDFLAGS="-L$DPDK_PATH/lib"
+       DPDK_PMD_PATH="$DPDK_PATH/lib"])
 
 ##########################################################################
 # Check for DPDK availability
+#
+# DPDK pmd drivers are not linked unless the --whole-archive option is
+# used. No spaces are allowed between the --whole-arhive flags.
 ##########################################################################
-AC_CHECK_HEADERS([rte_config.h], [],
-    [AC_MSG_FAILURE(["can't find DPDK headers"])])
 
-##########################################################################
-# In case of static linking DPDK pmd drivers are not linked unless the
-# --whole-archive option is used. No spaces are allowed between the
-# --whole-arhive flags.
-##########################################################################
-if test "x$shared_dpdk" = "xtrue"; then
-    DPDK_LIBS="-Wl,--no-as-needed,-ldpdk,-as-needed -ldl -lm -lpcap"
-else
-    AS_VAR_SET([DPDK_PMDS], [-Wl,--whole-archive,])
-    for filename in "$DPDK_DRIVER_DIR"/librte_pmd_*.a; do
-        cur_driver=`basename "$filename" .a | sed -e 's/^lib//'`
-        # rte_pmd_nfp has external dependencies which break linking
-        if test "$cur_driver" = "rte_pmd_nfp"; then
-            echo "skip linking rte_pmd_nfp"
-        else
-            AS_VAR_APPEND([DPDK_PMDS], [-l$cur_driver,])
-        fi
-    done
-    AS_VAR_APPEND([DPDK_PMDS], [--no-whole-archive])
-    DPDK_LIBS="-L$DPDK_DRIVER_DIR/ -ldpdk -lpthread -ldl -lm -lpcap"
+ODP_DPDK_CHECK([$DPDK_CPPFLAGS], [$DPDK_LDFLAGS], [],
+               [AC_MSG_FAILURE([can't find DPDK])])
+
+ODP_DPDK_PMDS([$DPDK_PMD_PATH])
+
+AC_DEFINE([ODP_PKTIO_DPDK], [1],
+	  [Define to 1 to enable DPDK packet I/O support])
+AC_DEFINE_UNQUOTED([ODP_DPDK_ZERO_COPY], [$zero_copy],
+	  [Define to 1 to enable DPDK zero copy support])
+
+if test -r "$DPDK_PMD_PATH/librte_pmd_pcap.a" &&
+   ! test -r "$DPDK_PMD_PATH/librte_pmd_pcap.so" ; then
+    DPDK_LIBS="$DPDK_LIBS -lpcap"
 fi
 
-AC_SUBST([DPDK_CFLAGS])
+AC_SUBST([DPDK_LDFLAGS])
 AC_SUBST([DPDK_CPPFLAGS])
 AC_SUBST([DPDK_LIBS])
-AC_SUBST([DPDK_PMDS])
-
-##########################################################################
-# Restore old saved variables
-##########################################################################
-CPPFLAGS=$OLD_CPPFLAGS
 
 AC_CONFIG_COMMANDS_PRE([dnl
 AM_CONDITIONAL([PLATFORM_IS_LINUX_DPDK],
