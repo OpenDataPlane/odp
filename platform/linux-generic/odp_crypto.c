@@ -1127,7 +1127,7 @@ odp_event_t odp_crypto_packet_to_event(odp_packet_t pkt)
 static
 odp_crypto_packet_result_t *get_op_result_from_packet(odp_packet_t pkt)
 {
-	odp_packet_hdr_t *hdr = odp_packet_hdr(pkt);
+	odp_packet_hdr_t *hdr = packet_hdr(pkt);
 
 	return &hdr->crypto_op_result;
 }

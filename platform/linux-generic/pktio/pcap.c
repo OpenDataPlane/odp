@@ -259,7 +259,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		if (ts != NULL)
 			ts_val = odp_time_global();
 
-		pkt_hdr = odp_packet_hdr(pkt);
+		pkt_hdr = packet_hdr(pkt);
 
 		if (odp_packet_copy_from_mem(pkt, 0, hdr->caplen, data) != 0) {
 			ODP_ERR("failed to copy packet data\n");

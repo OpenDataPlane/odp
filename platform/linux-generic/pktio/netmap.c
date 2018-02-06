@@ -676,7 +676,7 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 		}
 
 		pkt = pkt_tbl[i];
-		pkt_hdr = odp_packet_hdr(pkt);
+		pkt_hdr = packet_hdr(pkt);
 		pull_tail(pkt_hdr, alloc_len - len);
 
 		/* For now copy the data in the mbuf,

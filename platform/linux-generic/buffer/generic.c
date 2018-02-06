@@ -31,7 +31,7 @@ static void *generic_buffer_addr(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = buf_hdl_to_hdr(buf);
 
-	return hdr->seg[0].data;
+	return hdr->buf_start;
 }
 
 static uint32_t generic_buffer_size(odp_buffer_t buf)
@@ -61,7 +61,7 @@ int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
 			"  pool         %" PRIu64 "\n",
 			odp_pool_to_u64(pool->pool_hdl));
 	len += snprintf(&str[len], n - len,
-			"  addr         %p\n",          hdr->seg[0].data);
+			"  addr         %p\n",          hdr->buf_start);
 	len += snprintf(&str[len], n - len,
 			"  size         %" PRIu32 "\n", hdr->size);
 	len += snprintf(&str[len], n - len,

@@ -36,12 +36,6 @@ static inline odp_packet_seg_t _odp_packet_seg_from_ndx(uint32_t ndx)
 #endif
 
 /** @internal Inline function @param pkt @return */
-static inline void *_odp_packet_data(odp_packet_t pkt)
-{
-	return _odp_pkt_get(pkt, void *, data);
-}
-
-/** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_seg_len(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, uint32_t, seg_len);
@@ -63,6 +57,13 @@ static inline uint32_t _odp_packet_headroom(odp_packet_t pkt)
 static inline uint32_t _odp_packet_tailroom(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, uint16_t, tailroom);
+}
+
+/** @internal Inline function @param pkt @return */
+static inline void *_odp_packet_data(odp_packet_t pkt)
+{
+	return _odp_pkt_get(pkt, uint8_t *, buf_start) +
+		_odp_packet_headroom(pkt);
 }
 
 /** @internal Inline function @param pkt @return */
@@ -110,7 +111,7 @@ static inline odp_time_t _odp_packet_ts(odp_packet_t pkt)
 /** @internal Inline function @param pkt @return */
 static inline void *_odp_packet_head(odp_packet_t pkt)
 {
-	return (uint8_t *)_odp_packet_data(pkt) - _odp_packet_headroom(pkt);
+	return _odp_pkt_get(pkt, void *, buf_start);
 }
 
 /** @internal Inline function @param pkt @return */
