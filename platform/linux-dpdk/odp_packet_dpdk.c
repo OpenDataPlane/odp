@@ -156,6 +156,7 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 	struct rte_eth_dev_info dev_info;
 	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	int i;
+	unsigned max_queues;
 
 	if (!_dpdk_netdev_is_valid(netdev)) {
 		ODP_DBG("Interface name should only contain numbers!: %s\n",
@@ -183,8 +184,12 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 
 	_dpdk_print_port_mac(portid);
 
-	pkt_dpdk->capa.max_input_queues = RTE_MIN(dev_info.max_rx_queues,
-						  PKTIO_MAX_QUEUES);
+	max_queues = RTE_MIN(dev_info.max_rx_queues, PKTIO_MAX_QUEUES);
+	/* ixgbe devices support only 16 RX queues in RSS mode */
+	if (!strncmp(dev_info.driver_name, IXGBE_DRV_NAME,
+		     strlen(IXGBE_DRV_NAME)))
+		max_queues = RTE_MIN((unsigned)16, max_queues);
+	pkt_dpdk->capa.max_input_queues = max_queues;
 	pkt_dpdk->capa.max_output_queues = RTE_MIN(dev_info.max_tx_queues,
 						   PKTIO_MAX_QUEUES);
 
