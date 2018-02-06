@@ -1,4 +1,4 @@
-Copyright (c) 2014, Linaro Limited
+Copyright (c) 2018, Linaro Limited
 All rights reserved.
 
 SPDX-License-Identifier:        BSD-3-Clause
@@ -81,17 +81,17 @@ This only ensures building DPDK, but traffic is not tested with this build yet.
 =================================================
 
 Build dependencies are listed in DEPENDENCIES. Use absolute DPDK directory
-path with the --with-sdk-install-path option.
+path with the --with-dpdk-path option.
 
     cd <odp-dir>
     ./bootstrap
 
 The following step depends on if shared libraries are required.
 SHARED libraries:
-    ./configure --with-sdk-install-path=<dpdk-dir>/x86_64-native-linuxapp-gcc
+    ./configure --with-dpdk-path=<dpdk-dir>/x86_64-native-linuxapp-gcc
 
 STATIC libraries (better performance):
-    ./configure --with-sdk-install-path=<dpdk-dir>/x86_64-native-linuxapp-gcc --disable-shared
+    ./configure --with-dpdk-path=<dpdk-dir>/x86_64-native-linuxapp-gcc --disable-shared
 
     make
 
