@@ -29,7 +29,7 @@
 
 const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.mb               = offsetof(odp_packet_hdr_t, buf_hdr.mb),
-	.pool             = offsetof(odp_packet_hdr_t, buf_hdr.pool_hdl),
+	.pool             = offsetof(odp_packet_hdr_t, buf_hdr.pool_ptr),
 	.input            = offsetof(odp_packet_hdr_t, input),
 	.user_ptr         = offsetof(odp_packet_hdr_t, buf_hdr.buf_ctx),
 	.timestamp        = offsetof(odp_packet_hdr_t, timestamp),
@@ -39,7 +39,6 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.pkt_len          = offsetof(odp_packet_hdr_t, buf_hdr.mb.pkt_len),
 	.seg_len          = offsetof(odp_packet_hdr_t, buf_hdr.mb.data_len),
 	.nb_segs          = offsetof(odp_packet_hdr_t, buf_hdr.mb.nb_segs),
-	.udata_len        = offsetof(odp_packet_hdr_t, uarea_size),
 	.udata            = sizeof(odp_packet_hdr_t),
 	.rss              = offsetof(odp_packet_hdr_t, buf_hdr.mb.hash.rss),
 	.ol_flags         = offsetof(odp_packet_hdr_t, buf_hdr.mb.ol_flags),

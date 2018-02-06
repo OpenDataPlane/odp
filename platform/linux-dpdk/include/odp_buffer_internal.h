@@ -82,10 +82,6 @@ struct odp_buffer_hdr_t {
 
 	/* Pool pointer */
 	void *pool_ptr;
-
-	/* Pool handle: will be removed, used only for odp_packet_pool()
-	 * inlining */
-	odp_pool_t pool_hdl;
 };
 
 ODP_STATIC_ASSERT(BUFFER_BURST_SIZE < 256, "BUFFER_BURST_SIZE_TOO_LARGE");

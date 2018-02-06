@@ -48,6 +48,16 @@
 /* The pool table ptr - resides in shared memory */
 pool_table_t *pool_tbl;
 
+#include <odp/visibility_begin.h>
+
+/* Fill in pool header field offsets for inline functions */
+const _odp_pool_inline_offset_t _odp_pool_inline ODP_ALIGNED_CACHE = {
+	.pool_hdl          = offsetof(pool_t, pool_hdl),
+	.uarea_size        = offsetof(pool_t, params.pkt.uarea_size)
+};
+
+#include <odp/visibility_end.h>
+
 static inline odp_pool_t pool_index_to_handle(uint32_t pool_idx)
 {
 	return _odp_cast_scalar(odp_pool_t, pool_idx);
@@ -199,13 +209,10 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 
 	/* keep some headroom between start of buffer and data */
 	if (mb_ctor_arg->type == ODP_POOL_PACKET) {
-		odp_packet_hdr_t *pkt_hdr;
 		mb->data_off = RTE_PKTMBUF_HEADROOM;
 		mb->nb_segs = 1;
 		mb->port = 0xff;
 		mb->vlan_tci = 0;
-		pkt_hdr = (odp_packet_hdr_t *)raw_mbuf;
-		pkt_hdr->uarea_size = mb_ctor_arg->pkt_uarea_size;
 	} else {
 		mb->data_off = 0;
 	}
@@ -217,7 +224,6 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	/* Save index, might be useful for debugging purposes */
 	buf_hdr = (struct odp_buffer_hdr_t *)raw_mbuf;
 	buf_hdr->index = i;
-	buf_hdr->pool_hdl = pool->pool_hdl;
 	buf_hdr->pool_ptr = pool;
 	buf_hdr->type = mb_ctor_arg->type;
 	buf_hdr->event_type = mb_ctor_arg->type;
@@ -632,7 +638,9 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 
 odp_pool_t odp_buffer_pool(odp_buffer_t buf)
 {
-	return buf_hdl_to_hdr(buf)->pool_hdl;
+	pool_t *pool = buf_hdl_to_hdr(buf)->pool_ptr;
+
+	return pool->pool_hdl;
 }
 
 void odp_pool_param_init(odp_pool_param_t *params)

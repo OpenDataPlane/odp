@@ -85,8 +85,6 @@ typedef struct _odp_packet_inline_offset_t {
 	uint16_t seg_len;
 	/** @internal field offset */
 	uint16_t nb_segs;
-	/** @internal field offset */
-	uint16_t udata_len;
 	/** @internal offset */
 	uint16_t udata;
 	/** @internal field offset */
