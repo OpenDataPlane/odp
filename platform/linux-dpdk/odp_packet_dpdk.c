@@ -34,6 +34,13 @@
 #include <net/if.h>
 #include <math.h>
 
+/* DPDK poll mode drivers requiring minimum RX burst size DPDK_MIN_RX_BURST */
+#define IXGBE_DRV_NAME "net_ixgbe"
+#define I40E_DRV_NAME "net_i40e"
+
+/* Minimum RX burst size */
+#define DPDK_MIN_RX_BURST 4
+
 /* Ops for all implementation of pktio.
  * Order matters. The first implementation to setup successfully
  * will be picked.
@@ -164,8 +171,13 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 		ODP_DBG("No driver found for interface: %s\n", netdev);
 		return -1;
 	}
-	if (!strcmp(dev_info.driver_name, "rte_ixgbe_pmd"))
-		pkt_dpdk->min_rx_burst = 4;
+	/* Drivers requiring minimum burst size. Supports also *_vf versions
+	 * of the drivers. */
+	if (!strncmp(dev_info.driver_name, IXGBE_DRV_NAME,
+		     strlen(IXGBE_DRV_NAME)) ||
+	    !strncmp(dev_info.driver_name, I40E_DRV_NAME,
+		     strlen(I40E_DRV_NAME)))
+		pkt_dpdk->min_rx_burst = DPDK_MIN_RX_BURST;
 	else
 		pkt_dpdk->min_rx_burst = 0;
 
