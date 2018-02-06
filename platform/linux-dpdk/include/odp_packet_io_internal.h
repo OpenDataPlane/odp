@@ -53,7 +53,6 @@ typedef struct {
 	uint8_t lockless_tx;		  /**< no locking for tx */
 	uint8_t min_rx_burst;		  /**< minimum RX burst size */
 	odp_pktin_hash_proto_t hash;	  /**< Packet input hash protocol */
-	odp_pktio_capability_t	capa;	  /**< interface capabilities */
 	char ifname[32];
 	odp_ticketlock_t rx_lock[PKTIO_MAX_QUEUES];  /**< RX queue locks */
 	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES];  /**< TX queue locks */
@@ -97,6 +96,7 @@ struct pktio_entry {
 					   pktio_open() */
 	odp_pool_t pool;
 	odp_pktio_param_t param;
+	odp_pktio_capability_t capa;	/**< Packet IO capabilities */
 
 	/* Storage for queue handles
 	 * Multi-queue support is pktio driver specific */

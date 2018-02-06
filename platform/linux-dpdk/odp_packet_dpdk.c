@@ -189,9 +189,9 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 	if (!strncmp(dev_info.driver_name, IXGBE_DRV_NAME,
 		     strlen(IXGBE_DRV_NAME)))
 		max_queues = RTE_MIN((unsigned)16, max_queues);
-	pkt_dpdk->capa.max_input_queues = max_queues;
-	pkt_dpdk->capa.max_output_queues = RTE_MIN(dev_info.max_tx_queues,
-						   PKTIO_MAX_QUEUES);
+	pktio_entry->s.capa.max_input_queues = max_queues;
+	pktio_entry->s.capa.max_output_queues = RTE_MIN(dev_info.max_tx_queues,
+							PKTIO_MAX_QUEUES);
 
 	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
 		odp_ticketlock_init(&pkt_dpdk->rx_lock[i]);
@@ -649,7 +649,7 @@ static int mac_get_pkt_dpdk(pktio_entry_t *pktio_entry, void *mac_addr)
 static int capability_pkt_dpdk(pktio_entry_t *pktio_entry,
 			       odp_pktio_capability_t *capa)
 {
-	*capa = pktio_entry->s.pkt_dpdk.capa;
+	*capa = pktio_entry->s.capa;
 	return 0;
 }
 static int link_status_pkt_dpdk(pktio_entry_t *pktio_entry)
