@@ -71,4 +71,13 @@ static inline int _odp_packet_has_ts(odp_packet_t pkt)
 	return flags.timestamp;
 }
 
+/** @internal Inline function @param pkt @return */
+static inline int _odp_packet_has_ipsec(odp_packet_t pkt)
+{
+	_odp_packet_input_flags_t flags;
+
+	flags.all = _odp_packet_input_flags(pkt);
+	return flags.ipsec;
+}
+
 #endif
