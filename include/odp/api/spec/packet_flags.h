@@ -21,6 +21,7 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 #include <odp/api/packet.h>
+#include <odp/api/deprecated.h>
 
 /** @addtogroup odp_packet
  *  Operations on packet metadata flags.
@@ -412,28 +413,28 @@ void odp_packet_has_vlan_set(odp_packet_t pkt, int val);
 void odp_packet_has_vlan_qinq_set(odp_packet_t pkt, int val);
 
 /**
- * Set flag for ARP
+ * @deprecated Use odp_packet_l3_type_set instead */
  *
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_has_arp_set(odp_packet_t pkt, int val);
+void ODP_DEPRECATE(odp_packet_has_arp_set)(odp_packet_t pkt, int val);
 
 /**
- * Set flag for IPv4
+ * @deprecated Use odp_packet_l3_type_set instead */
  *
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_has_ipv4_set(odp_packet_t pkt, int val);
+void ODP_DEPRECATE(odp_packet_has_ipv4_set)(odp_packet_t pkt, int val);
 
 /**
- * Set flag for IPv6
+ * @deprecated Use odp_packet_l3_type_set instead */
  *
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_has_ipv6_set(odp_packet_t pkt, int val);
+void ODP_DEPRECATE(odp_packet_has_ipv6_set)(odp_packet_t pkt, int val);
 
 /**
  * Set flag for IP broadcast address
@@ -476,36 +477,36 @@ void odp_packet_has_ipopt_set(odp_packet_t pkt, int val);
 void odp_packet_has_ipsec_set(odp_packet_t pkt, int val);
 
 /**
- * Set flag for UDP
+ * @deprecated Use odp_packet_l3_type_set instead */
  *
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_has_udp_set(odp_packet_t pkt, int val);
+void ODP_DEPRECATE(odp_packet_has_udp_set)(odp_packet_t pkt, int val);
 
 /**
- * Set flag for TCP
+ * @deprecated Use odp_packet_l3_type_set instead */
  *
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_has_tcp_set(odp_packet_t pkt, int val);
+void ODP_DEPRECATE(odp_packet_has_tcp_set)(odp_packet_t pkt, int val);
 
 /**
- * Set flag for SCTP
+ * @deprecated Use odp_packet_l3_type_set instead */
  *
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_has_sctp_set(odp_packet_t pkt, int val);
+void ODP_DEPRECATE(odp_packet_has_sctp_set)(odp_packet_t pkt, int val);
 
 /**
- * Set flag for ICMP
+ * @deprecated Use odp_packet_l3_type_set instead */
  *
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_has_icmp_set(odp_packet_t pkt, int val);
+void ODP_DEPRECATE(odp_packet_has_icmp_set)(odp_packet_t pkt, int val);
 
 /**
  * Clear flag for packet flow hash
