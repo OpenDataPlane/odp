@@ -2197,12 +2197,14 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 	switch (ethtype) {
 	case _ODP_ETHTYPE_IPV4:
 		prs->input_flags.ipv4 = 1;
+		prs->input_flags.l3_type = ODP_PROTO_L3_TYPE_IPV4;
 		ip_proto = parse_ipv4(prs, &parseptr, &offset, frame_len);
 		prs->l4_offset = offset;
 		break;
 
 	case _ODP_ETHTYPE_IPV6:
 		prs->input_flags.ipv6 = 1;
+		prs->input_flags.l3_type = ODP_PROTO_L3_TYPE_IPV6;
 		ip_proto = parse_ipv6(prs, &parseptr, &offset, frame_len,
 				      seg_len);
 		prs->l4_offset = offset;
@@ -2210,6 +2212,7 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 
 	case _ODP_ETHTYPE_ARP:
 		prs->input_flags.arp = 1;
+		prs->input_flags.l3_type = ODP_PROTO_L3_TYPE_ARP;
 		ip_proto = 255;  /* Reserved invalid by IANA */
 		break;
 
@@ -2223,6 +2226,7 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 
 	/* Set l4 flag only for known ip_proto */
 	prs->input_flags.l4 = 1;
+	prs->input_flags.l4_type = ip_proto;
 
 	/* Parse Layer 4 headers */
 	switch (ip_proto) {
@@ -2267,6 +2271,7 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 
 	default:
 		prs->input_flags.l4 = 0;
+		prs->input_flags.l4_type = ODP_PROTO_L4_TYPE_NONE;
 		break;
 	}
 
@@ -2543,4 +2548,18 @@ int odp_packet_has_ref(odp_packet_t pkt)
 	}
 
 	return 0;
+}
+
+odp_proto_l3_type_t odp_packet_l3_type(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->p.input_flags.l3_type;
+}
+
+odp_proto_l4_type_t odp_packet_l4_type(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->p.input_flags.l4_type;
 }
