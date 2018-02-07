@@ -350,7 +350,7 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 		udp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
 		udp->length = odp_cpu_to_be_16(payload_len + ODPH_UDPHDR_LEN);
 		udp->chksum = 0;
-		odp_packet_has_udp_set(pkt, 1);
+		odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_UDP);
 		if (odph_udp_tcp_chksum(pkt, ODPH_CHKSUM_GENERATE, NULL) != 0) {
 			LOG_ERR("odph_udp_tcp_chksum failed\n");
 			return ODP_PACKET_INVALID;
@@ -360,7 +360,7 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 		tcp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
 		tcp->hl = ODPH_TCPHDR_LEN / 4;
 		tcp->cksm = 0;
-		odp_packet_has_tcp_set(pkt, 1);
+		odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_TCP);
 		if (odph_udp_tcp_chksum(pkt, ODPH_CHKSUM_GENERATE, NULL) != 0) {
 			LOG_ERR("odph_udp_tcp_chksum failed\n");
 			return ODP_PACKET_INVALID;

@@ -775,7 +775,7 @@ static odp_packet_t make_pkt(odp_pool_t  pkt_pool,
 
 	if (pkt_info->use_tcp) {
 		/* TCP Header */
-		odp_packet_has_tcp_set(odp_pkt, 1);
+		odp_packet_l4_type_set(odp_pkt, ODP_PROTO_L4_TYPE_TCP);
 		tcp_hdr->src_port = odp_cpu_to_be_16(DEFAULT_TCP_SRC_PORT);
 		tcp_hdr->dst_port = odp_cpu_to_be_16(DEFAULT_TCP_DST_PORT);
 		tcp_hdr->seq_no   = odp_cpu_to_be_32(cpu_tcp_seq_num);
@@ -790,7 +790,7 @@ static odp_packet_t make_pkt(odp_pool_t  pkt_pool,
 		cpu_tcp_seq_num       += payload_len;
 	} else {
 		/* UDP Header */
-		odp_packet_has_udp_set(odp_pkt, 1);
+		odp_packet_l4_type_set(odp_pkt, ODP_PROTO_L4_TYPE_UDP);
 		udp_hdr->src_port = odp_cpu_to_be_16(DEFAULT_UDP_SRC_PORT);
 		udp_hdr->dst_port = odp_cpu_to_be_16(DEFAULT_UDP_DST_PORT);
 		udp_hdr->length   = odp_cpu_to_be_16(l4_len);
