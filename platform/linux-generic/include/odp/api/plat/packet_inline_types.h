@@ -80,14 +80,7 @@ typedef union {
 
 		uint64_t ipsec:1;     /* IPSec packet. Required by the
 					   odp_packet_has_ipsec_set() func. */
-		uint64_t ipsec_ah:1;  /* IPSec authentication header */
-		uint64_t ipsec_esp:1; /* IPSec encapsulating security
-					   payload */
-		uint64_t udp:1;       /* UDP */
-		uint64_t tcp:1;       /* TCP */
 		uint64_t tcpopt:1;    /* TCP options present */
-		uint64_t sctp:1;      /* SCTP */
-		uint64_t icmp:1;      /* ICMP */
 
 		uint64_t color:2;     /* Packet color for traffic mgmt */
 		uint64_t nodrop:1;    /* Drop eligibility status */

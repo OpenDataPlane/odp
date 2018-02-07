@@ -9,6 +9,7 @@
 #include <odp/api/plat/packet_flag_inlines.h>
 #include <odp/api/packet_flags.h>
 #include <odp_packet_internal.h>
+#include <odp_debug_internal.h>
 
 #define retflag(pkt, x) do {                             \
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt); \
@@ -129,22 +130,31 @@ int odp_packet_has_ipsec(odp_packet_t pkt)
 
 int odp_packet_has_udp(odp_packet_t pkt)
 {
-	retflag(pkt, input_flags.udp);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->p.input_flags.l4_type == ODP_PROTO_L4_TYPE_UDP;
 }
 
 int odp_packet_has_tcp(odp_packet_t pkt)
 {
-	retflag(pkt, input_flags.tcp);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->p.input_flags.l4_type == ODP_PROTO_L4_TYPE_TCP;
 }
 
 int odp_packet_has_sctp(odp_packet_t pkt)
 {
-	retflag(pkt, input_flags.sctp);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->p.input_flags.l4_type == ODP_PROTO_L4_TYPE_SCTP;
 }
 
 int odp_packet_has_icmp(odp_packet_t pkt)
 {
-	retflag(pkt, input_flags.icmp);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->p.input_flags.l4_type == ODP_PROTO_L4_TYPE_ICMPV4 ||
+	       pkt_hdr->p.input_flags.l4_type == ODP_PROTO_L4_TYPE_ICMPV6;
 }
 
 odp_packet_color_t odp_packet_color(odp_packet_t pkt)
@@ -290,22 +300,56 @@ void odp_packet_has_ipsec_set(odp_packet_t pkt, int val)
 
 void odp_packet_has_udp_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.udp, val);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	odp_proto_l4_type_t type = ODP_PROTO_L4_TYPE_UDP;
+
+	if (val)
+		pkt_hdr->p.input_flags.l4_type = type;
+	else if (pkt_hdr->p.input_flags.l4_type == type)
+		pkt_hdr->p.input_flags.l4_type = ODP_PROTO_L4_TYPE_NONE;
 }
 
 void odp_packet_has_tcp_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.tcp, val);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	odp_proto_l4_type_t type = ODP_PROTO_L4_TYPE_TCP;
+
+	if (val)
+		pkt_hdr->p.input_flags.l4_type = type;
+	else if (pkt_hdr->p.input_flags.l4_type == type)
+		pkt_hdr->p.input_flags.l4_type = ODP_PROTO_L4_TYPE_NONE;
 }
 
 void odp_packet_has_sctp_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.sctp, val);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	odp_proto_l4_type_t type = ODP_PROTO_L4_TYPE_SCTP;
+
+	if (val)
+		pkt_hdr->p.input_flags.l4_type = type;
+	else if (pkt_hdr->p.input_flags.l4_type == type)
+		pkt_hdr->p.input_flags.l4_type = ODP_PROTO_L4_TYPE_NONE;
 }
 
 void odp_packet_has_icmp_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.icmp, val);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	odp_proto_l3_type_t ip4 = ODP_PROTO_L3_TYPE_IPV4;
+	odp_proto_l3_type_t ip6 = ODP_PROTO_L3_TYPE_IPV6;
+	odp_proto_l4_type_t type4 = ODP_PROTO_L4_TYPE_ICMPV4;
+	odp_proto_l4_type_t type6 = ODP_PROTO_L4_TYPE_ICMPV6;
+
+	if (val) {
+		if (pkt_hdr->p.input_flags.l3_type == ip4)
+			pkt_hdr->p.input_flags.l4_type = type4;
+		else if (pkt_hdr->p.input_flags.l3_type == ip6)
+			pkt_hdr->p.input_flags.l4_type = type6;
+		else
+			ODP_ERR("Setting ICMP flag for non-IPv4/IPv6 packet!\n");
+	} else if (pkt_hdr->p.input_flags.l3_type == type4 ||
+		   pkt_hdr->p.input_flags.l3_type == type6) {
+		pkt_hdr->p.input_flags.l4_type = ODP_PROTO_L4_TYPE_NONE;
+	}
 }
 
 void odp_packet_has_flow_hash_clr(odp_packet_t pkt)

@@ -291,6 +291,16 @@ static inline int packet_hdr_has_ipv6(odp_packet_hdr_t *pkt_hdr)
 	return pkt_hdr->p.input_flags.l3_type == ODP_PROTO_L3_TYPE_IPV6;
 }
 
+static inline int packet_hdr_has_tcp(odp_packet_hdr_t *pkt_hdr)
+{
+	return pkt_hdr->p.input_flags.l4_type == ODP_PROTO_L4_TYPE_TCP;
+}
+
+static inline int packet_hdr_has_udp(odp_packet_hdr_t *pkt_hdr)
+{
+	return pkt_hdr->p.input_flags.l4_type == ODP_PROTO_L4_TYPE_UDP;
+}
+
 static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 {
 	if (ts != NULL) {

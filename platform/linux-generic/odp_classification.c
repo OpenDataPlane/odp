@@ -1036,14 +1036,14 @@ static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
 			tuple_len += 2;
 		}
 
-		if (pkt_hdr->p.input_flags.tcp && hash_proto.tcp) {
+		if (packet_hdr_has_tcp(pkt_hdr) && hash_proto.tcp) {
 			/* add tcp */
 			tcp = (const _odp_tcphdr_t *)(base +
 			       pkt_hdr->p.l4_offset);
 			tuple.v4.sport = tcp->src_port;
 			tuple.v4.dport = tcp->dst_port;
 			tuple_len += 1;
-		} else if (pkt_hdr->p.input_flags.udp && hash_proto.udp) {
+		} else if (packet_hdr_has_udp(pkt_hdr) && hash_proto.udp) {
 			/* add udp */
 			udp = (const _odp_udphdr_t *)(base +
 			       pkt_hdr->p.l4_offset);
@@ -1059,13 +1059,13 @@ static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
 			thash_load_ipv6_addr(ipv6, &tuple);
 			tuple_len += 8;
 		}
-		if (pkt_hdr->p.input_flags.tcp && hash_proto.tcp) {
+		if (packet_hdr_has_tcp(pkt_hdr) && hash_proto.tcp) {
 			tcp = (const _odp_tcphdr_t *)(base +
 			       pkt_hdr->p.l4_offset);
 			tuple.v6.sport = tcp->src_port;
 			tuple.v6.dport = tcp->dst_port;
 			tuple_len += 1;
-		} else if (pkt_hdr->p.input_flags.udp && hash_proto.udp) {
+		} else if (packet_hdr_has_udp(pkt_hdr) && hash_proto.udp) {
 			/* add udp */
 			udp = (const _odp_udphdr_t *)(base +
 			       pkt_hdr->p.l4_offset);
