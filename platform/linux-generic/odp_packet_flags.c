@@ -8,6 +8,7 @@
 
 #include <odp/api/plat/packet_flag_inlines.h>
 #include <odp/api/packet_flags.h>
+#include <odp/api/deprecated.h>
 #include <odp_packet_internal.h>
 
 #define retflag(pkt, x) do {                             \
@@ -239,6 +240,7 @@ void odp_packet_has_vlan_qinq_set(odp_packet_t pkt, int val)
 	setflag(pkt, input_flags.vlan_qinq, val);
 }
 
+#if ODP_DEPRECATED_API
 void odp_packet_has_arp_set(odp_packet_t pkt, int val)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
@@ -268,6 +270,7 @@ void odp_packet_has_ipv6_set(odp_packet_t pkt, int val)
 	else if (pkt_hdr->p.input_flags.l3_type == ODP_PROTO_L3_TYPE_IPV6)
 		odp_packet_l3_type_set(pkt, ODP_PROTO_L3_TYPE_NONE);
 }
+#endif
 
 void odp_packet_has_ip_bcast_set(odp_packet_t pkt, int val)
 {
@@ -294,6 +297,7 @@ void odp_packet_has_ipsec_set(odp_packet_t pkt, int val)
 	setflag(pkt, input_flags.ipsec, val);
 }
 
+#if ODP_DEPRECATED_API
 void odp_packet_has_udp_set(odp_packet_t pkt, int val)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
@@ -337,6 +341,7 @@ void odp_packet_has_icmp_set(odp_packet_t pkt, int val)
 	else if (pkt_hdr->p.input_flags.l3_type == ODP_PROTO_L4_TYPE_ICMPV6)
 		odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_NONE);
 }
+#endif
 
 void odp_packet_has_flow_hash_clr(odp_packet_t pkt)
 {
