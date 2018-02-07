@@ -24,6 +24,13 @@
 #include <odp_debug_internal.h>
 #include <odp/api/time.h>
 
+#include <sys/inotify.h>
+#include <odp_pcapng.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <sys/uio.h>
+
 #include <string.h>
 #include <inttypes.h>
 #include <sys/ioctl.h>
@@ -87,6 +94,274 @@ int odp_pktio_init_global(void)
 int odp_pktio_init_local(void)
 {
 	return odp_pktio_ops_init_local(true);
+}
+
+static int write_pcapng_hdr(pktio_entry_t *entry, int qidx)
+{
+	size_t len;
+	pcapng_section_hdr_block_t shb;
+	pcapng_interface_description_block_s idb;
+	int fd = entry->s.pcapng_info.pcapng_fd[qidx];
+
+	memset(&shb, 0, sizeof(shb));
+	memset(&idb, 0, sizeof(idb));
+
+	shb.block_type = PCAPNG_BLOCK_TYPE_SHB;
+	shb.block_total_length = sizeof(shb);
+	shb.block_total_length2 = sizeof(shb);
+	shb.magic = PCAPNG_ENDIAN_MAGIC;
+	shb.version_major = 0x1;
+	shb.version_minor = 0x0;
+	shb.section_len = -1;
+
+	len = write(fd, &shb, sizeof(shb));
+	fsync(fd);
+	/* fail to write shb/idb means the pcapng is unreadable */
+	if (!len) {
+		ODP_ERR("Failed to write pcapng section hdr\n");
+		close(fd);
+		return -1;
+	}
+
+	idb.block_type = PCAPNG_BLOCK_TYPE_IDB;
+	idb.block_total_length = sizeof(idb);
+	idb.block_total_length2 = sizeof(idb);
+	idb.linktype = 0x1; /* LINKTYPE_ETHERNET */
+	idb.snaplen = 0x0; /* unlimited */
+	len = write(fd, &idb, sizeof(idb));
+	if (!len) {
+		ODP_ERR("Failed to write pcapng interface description\n");
+		close(fd);
+		return -1;
+	}
+	fsync(fd);
+
+	entry->s.pcapng_info.state[qidx] = PCAPNG_WR_HDR;
+
+	return 0;
+}
+
+static int write_pcapng_pkts(pktio_entry_t *entry, int qidx,
+			     const odp_packet_t packets[], int num)
+{
+	int i = 0;
+	struct iovec packet_iov[3 * num];
+	pcapng_enhanced_packet_block_t epb;
+	int iovcnt = 0;
+	ssize_t len = 0;
+	int fd = entry->s.pcapng_info.pcapng_fd[qidx];
+
+	for (i = 0; i < num; i++) {
+		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(packets[i]);
+		uint32_t pkt_len = _odp_packet_len(packets[i]);
+		char *buf = (char *)odp_packet_data(packets[i]);
+
+		epb.block_type = PCAPNG_BLOCK_TYPE_EPB;
+		epb.block_total_length = sizeof(epb) +
+			ROUNDUP_ALIGN(pkt_len, PCAP_DATA_ALIGN) +
+			PCAP_DATA_ALIGN;
+		epb.interface_idx = 0;
+		epb.timestamp_high = (uint32_t)(pkt_hdr->timestamp.u64 >> 32);
+		epb.timestamp_low = (uint32_t)(pkt_hdr->timestamp.u64);
+		epb.captured_len = pkt_len;
+		epb.packet_len = pkt_len;
+
+		/* epb */
+		packet_iov[iovcnt].iov_base = &epb;
+		packet_iov[iovcnt].iov_len = sizeof(epb);
+		iovcnt++;
+
+		/* data */
+		packet_iov[iovcnt].iov_base = buf;
+		packet_iov[iovcnt].iov_len =
+			ROUNDUP_ALIGN(pkt_len, PCAP_DATA_ALIGN);
+		iovcnt++;
+
+		/* trailing */
+		packet_iov[iovcnt].iov_base = &epb.block_total_length;
+		packet_iov[iovcnt].iov_len = sizeof(uint32_t);
+		iovcnt++;
+	}
+
+	/* we don't really care if we manage to write *all* data */
+	len = writev(fd, packet_iov, iovcnt);
+	if (!len)
+		ODP_ERR("Failed to write pcapng data\n");
+	fsync(fd);
+
+	return len;
+}
+
+static void pcapng_drain_fifo(int fd)
+{
+	char c;
+	ssize_t len;
+
+	do {
+		len = read(fd, &c, sizeof(c));
+	} while (len > 0 && len != -1);
+	ODP_DBG("Drain pcap fifo %d\n", len);
+}
+
+static void *inotify_update(void *arg)
+{
+	pktio_entry_t *entry = (pktio_entry_t *)arg;
+	struct timeval time;
+	int ret;
+	ssize_t rdlen;
+	int i;
+	char buffer[INOTIFY_BUF_LEN];
+	unsigned int max_queue =
+		MAX(entry->s.num_in_queue, entry->s.num_out_queue);
+	fd_set rfds;
+
+	while (1) {
+		i = 0;
+		FD_ZERO(&rfds);
+		FD_SET(entry->s.pcapng_info.inotify_pcapng_fd, &rfds);
+		time.tv_sec = 2;
+		time.tv_usec = 0;
+		select(entry->s.pcapng_info.inotify_pcapng_fd + 1, &rfds, NULL,
+		       NULL, &time);
+		if (FD_ISSET(entry->s.pcapng_info.inotify_pcapng_fd, &rfds)) {
+			rdlen = read(entry->s.pcapng_info.inotify_pcapng_fd,
+				     buffer, INOTIFY_BUF_LEN);
+			while (i < rdlen) {
+				char *e;
+				unsigned int qidx;
+				struct inotify_event *event =
+					(struct inotify_event *)(void *)
+					 &buffer[i];
+
+				e = strrchr(event->name, '-');
+				e++;
+				if (!e)
+					continue;
+				qidx = atoi(e);
+				if (qidx > max_queue) {
+					ODP_ERR("Invalid queue number\n");
+					i += INOTIFY_EVENT_SIZE + event->len;
+					continue;
+				}
+
+				if (entry->s.pcapng_info.state[qidx] ==
+				    PCAPNG_WR_INVALID)
+					continue;
+
+				if (event->mask & IN_OPEN) {
+					int fd = entry->s.pcapng_info.pcapng_fd[qidx];
+
+					pcapng_drain_fifo(fd);
+					ret = write_pcapng_hdr(entry, i);
+					if (ret)
+						entry->s.pcapng_info.state[qidx] =
+							PCAPNG_WR_STOP;
+					else
+						entry->s.pcapng_info.state[qidx] =
+							PCAPNG_WR_PKT;
+					ODP_DBG("Open %s for pcap tracing\n",
+						event->name);
+				} else if (event->mask & IN_CLOSE) {
+					entry->s.pcapng_info.state[qidx] =
+						PCAPNG_WR_STOP;
+					ODP_DBG("Close %s for pcap tracing\n",
+						event->name);
+				} else {
+					ODP_ERR("Unknown inotify event 0x%08x\n",
+						event->mask);
+				}
+				i += INOTIFY_EVENT_SIZE + event->len;
+			}
+		}
+	}
+
+	return NULL;
+}
+
+static void pcapng_destroy(pktio_entry_t *entry)
+{
+	int ret;
+	unsigned int i;
+	unsigned int max_queue =
+		MAX(entry->s.num_in_queue, entry->s.num_out_queue);
+
+	ret = pthread_cancel(entry->s.pcapng_info.inotify_thread);
+	if (ret)
+		ODP_ERR("can't cancel inotify thread %s\n", strerror(errno));
+
+	/* fd's will be -1 in case of any failure */
+	ret = inotify_rm_watch(entry->s.pcapng_info.inotify_pcapng_fd,
+			       entry->s.pcapng_info.inotify_watch_fd);
+	if (ret)
+		ODP_ERR("can't deregister inotify %s\n", strerror(errno));
+
+	close(entry->s.pcapng_info.inotify_pcapng_fd);
+
+	for (i = 0; i < max_queue; i++) {
+		entry->s.pcapng_info.state[i] = PCAPNG_WR_INVALID;
+		close(entry->s.pcapng_info.pcapng_fd[i]);
+	}
+}
+
+static int pcapng_prepare(pktio_entry_t *entry)
+{
+	int ret = -1, fd;
+	pthread_attr_t attr;
+	unsigned int i;
+	unsigned int max_queue =
+		MAX(entry->s.num_in_queue, entry->s.num_out_queue);
+
+	for (i = 0; i < max_queue; i++) {
+		char pcap_entry[256];
+
+		snprintf(pcap_entry, sizeof(pcap_entry),
+			 "%s/%s-flow-%d", PCAPNG_WATCH_DIR, entry->s.name, i);
+		if (mkfifo(pcap_entry, O_RDWR)) {
+			ODP_ERR("pcap not available for %s %s\n",
+				pcap_entry, strerror(errno));
+			entry->s.pcapng_info.state[i] = PCAPNG_WR_INVALID;
+			continue;
+		}
+
+		fd = open(pcap_entry, O_RDWR | O_NONBLOCK);
+		if (fd == -1) {
+			ODP_ERR("Fail to open fifo\n");
+			entry->s.pcapng_info.state[i] = PCAPNG_WR_INVALID;
+			continue;
+		}
+		entry->s.pcapng_info.pcapng_fd[i] = fd;
+
+		ret = write_pcapng_hdr(entry, i);
+		if (ret)
+			entry->s.pcapng_info.state[i] = PCAPNG_WR_STOP;
+		else
+			entry->s.pcapng_info.state[i] = PCAPNG_WR_HDR;
+	}
+
+	entry->s.pcapng_info.inotify_pcapng_fd = inotify_init();
+	if (entry->s.pcapng_info.inotify_pcapng_fd == -1) {
+		ODP_ERR("can't init inotify. pcap disabled\n");
+		return -1;
+	}
+
+	entry->s.pcapng_info.inotify_watch_fd =
+		inotify_add_watch(entry->s.pcapng_info.inotify_pcapng_fd,
+				  PCAPNG_WATCH_DIR, IN_CLOSE | IN_OPEN);
+
+	if (entry->s.pcapng_info.inotify_watch_fd == -1) {
+		ODP_ERR("can't register inotify for %s\n", strerror(errno));
+		return -1;
+	}
+	entry->s.pcapng_info.inotify_watch_fd = ret;
+
+	/* create a thread to poll inotify triggers */
+	pthread_attr_init(&attr);
+	ret = pthread_create(&entry->s.pcapng_info.inotify_thread, &attr,
+			     inotify_update, entry);
+	if (ret)
+		pcapng_destroy(entry);
+
+	return ret;
 }
 
 static inline int is_free(pktio_entry_t *entry)
@@ -467,6 +742,9 @@ int odp_pktio_start(odp_pktio_t hdl)
 		sched_fn->pktio_start(pktio_to_id(hdl), num, index, odpq);
 	}
 
+	if (pcapng_prepare(entry))
+		pcapng_destroy(entry);
+
 	return res;
 }
 
@@ -488,6 +766,8 @@ static int _pktio_stop(pktio_entry_t *entry)
 		entry->s.state = PKTIO_STATE_STOP_PENDING;
 	else
 		entry->s.state = PKTIO_STATE_STOPPED;
+
+	pcapng_destroy(entry);
 
 	return res;
 }
@@ -1633,6 +1913,10 @@ int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num)
 		return -1;
 	}
 
+	if (odp_unlikely(entry->s.pcapng_info.state[queue.index] ==
+			 PCAPNG_WR_PKT))
+		write_pcapng_pkts(entry, queue.index, packets, num);
+
 	return entry->s.ops->recv(entry, queue.index, packets, num);
 }
 
@@ -1754,6 +2038,10 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 		ODP_DBG("pktio entry %d does not exist\n", pktio);
 		return -1;
 	}
+
+	if (odp_unlikely(entry->s.pcapng_info.state[queue.index] ==
+			 PCAPNG_WR_PKT))
+		write_pcapng_pkts(entry, queue.index, packets, num);
 
 	return entry->s.ops->send(entry, queue.index, packets, num);
 }

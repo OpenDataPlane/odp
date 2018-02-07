@@ -97,6 +97,20 @@ struct pktio_entry {
 		odp_queue_t        queue;
 		odp_pktout_queue_t pktout;
 	} out_queue[PKTIO_MAX_QUEUES];
+
+	/**< inotify instance for pcapng fifos */
+	struct {
+		int inotify_pcapng_fd;
+		int inotify_watch_fd;
+		pthread_t inotify_thread;
+		enum {
+			PCAPNG_WR_INVALID = 0,
+			PCAPNG_WR_STOP,
+			PCAPNG_WR_HDR,
+			PCAPNG_WR_PKT,
+		} state[PKTIO_MAX_QUEUES];
+		int pcapng_fd[PKTIO_MAX_QUEUES];
+	} pcapng_info;
 };
 
 union pktio_entry_u {
