@@ -1627,6 +1627,16 @@ int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset);
 odp_proto_l3_type_t odp_packet_l3_type(odp_packet_t pkt);
 
 /**
+ * Set Layer 3 protocol type
+ *
+ * Set layer 3 protocol type. Initial type value is ODP_PROTO_L3_TYPE_NONE.
+ *
+ * @param      pkt      Packet handle
+ * @param      val      Layer 3 protocol type
+ */
+void odp_packet_l3_type_set(odp_packet_t pkt, odp_proto_l3_type_t val);
+
+/**
  * Layer 4 protocol type
  *
  * Returns layer 4 protocol type. Initial type value is ODP_PROTO_L4_TYPE_NONE.
@@ -1636,6 +1646,16 @@ odp_proto_l3_type_t odp_packet_l3_type(odp_packet_t pkt);
  * @return Layer 4 protocol type
  */
 odp_proto_l4_type_t odp_packet_l4_type(odp_packet_t pkt);
+
+/**
+ * Set Layer 4 protocol type
+ *
+ * Set layer 4 protocol type. Initial type value is ODP_PROTO_L4_TYPE_NONE.
+ *
+ * @param      pkt      Packet handle
+ * @param      val      Layer 4 protocol type
+ */
+void odp_packet_l4_type_set(odp_packet_t pkt, odp_proto_l4_type_t val);
 
 /**
  * Layer 3 checksum check status

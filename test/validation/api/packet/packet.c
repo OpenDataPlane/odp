@@ -1047,18 +1047,91 @@ void packet_test_in_flags(void)
 	TEST_INFLAG(pkt, jumbo);
 	TEST_INFLAG(pkt, vlan);
 	TEST_INFLAG(pkt, vlan_qinq);
-	TEST_INFLAG(pkt, arp);
-	TEST_INFLAG(pkt, ipv4);
-	TEST_INFLAG(pkt, ipv6);
 	TEST_INFLAG(pkt, ip_bcast);
 	TEST_INFLAG(pkt, ip_mcast);
 	TEST_INFLAG(pkt, ipfrag);
 	TEST_INFLAG(pkt, ipopt);
 	TEST_INFLAG(pkt, ipsec);
-	TEST_INFLAG(pkt, udp);
-	TEST_INFLAG(pkt, tcp);
-	TEST_INFLAG(pkt, sctp);
-	TEST_INFLAG(pkt, icmp);
+
+	odp_packet_l3_type_set(pkt, ODP_PROTO_L3_TYPE_NONE);
+	CU_ASSERT_EQUAL(odp_packet_l3_type(pkt), ODP_PROTO_L3_TYPE_NONE);
+	CU_ASSERT(!odp_packet_has_arp(pkt));
+	CU_ASSERT(!odp_packet_has_ipv4(pkt));
+	CU_ASSERT(!odp_packet_has_ipv6(pkt));
+
+	odp_packet_l3_type_set(pkt, ODP_PROTO_L3_TYPE_ARP);
+	CU_ASSERT_EQUAL(odp_packet_l3_type(pkt), ODP_PROTO_L3_TYPE_ARP);
+	CU_ASSERT(odp_packet_has_arp(pkt));
+	CU_ASSERT(!odp_packet_has_ipv4(pkt));
+	CU_ASSERT(!odp_packet_has_ipv6(pkt));
+
+	odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_NONE);
+	CU_ASSERT_EQUAL(odp_packet_l4_type(pkt), ODP_PROTO_L4_TYPE_NONE);
+	CU_ASSERT(!odp_packet_has_tcp(pkt));
+	CU_ASSERT(!odp_packet_has_udp(pkt));
+	CU_ASSERT(!odp_packet_has_sctp(pkt));
+	CU_ASSERT(!odp_packet_has_icmp(pkt));
+
+	odp_packet_l3_type_set(pkt, ODP_PROTO_L3_TYPE_IPV4);
+	CU_ASSERT_EQUAL(odp_packet_l3_type(pkt), ODP_PROTO_L3_TYPE_IPV4);
+	CU_ASSERT(!odp_packet_has_arp(pkt));
+	CU_ASSERT(odp_packet_has_ipv4(pkt));
+	CU_ASSERT(!odp_packet_has_ipv6(pkt));
+
+	odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_ICMPV4);
+	CU_ASSERT_EQUAL(odp_packet_l4_type(pkt), ODP_PROTO_L4_TYPE_ICMPV4);
+	CU_ASSERT(!odp_packet_has_tcp(pkt));
+	CU_ASSERT(!odp_packet_has_udp(pkt));
+	CU_ASSERT(!odp_packet_has_sctp(pkt));
+	CU_ASSERT(odp_packet_has_icmp(pkt));
+
+	odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_TCP);
+	CU_ASSERT_EQUAL(odp_packet_l4_type(pkt), ODP_PROTO_L4_TYPE_TCP);
+	CU_ASSERT(odp_packet_has_tcp(pkt));
+	CU_ASSERT(!odp_packet_has_udp(pkt));
+	CU_ASSERT(!odp_packet_has_sctp(pkt));
+	CU_ASSERT(!odp_packet_has_icmp(pkt));
+
+	odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_UDP);
+	CU_ASSERT_EQUAL(odp_packet_l4_type(pkt), ODP_PROTO_L4_TYPE_UDP);
+	CU_ASSERT(!odp_packet_has_tcp(pkt));
+	CU_ASSERT(odp_packet_has_udp(pkt));
+	CU_ASSERT(!odp_packet_has_sctp(pkt));
+	CU_ASSERT(!odp_packet_has_icmp(pkt));
+
+	odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_SCTP);
+	CU_ASSERT_EQUAL(odp_packet_l4_type(pkt), ODP_PROTO_L4_TYPE_SCTP);
+	CU_ASSERT(!odp_packet_has_tcp(pkt));
+	CU_ASSERT(!odp_packet_has_udp(pkt));
+	CU_ASSERT(odp_packet_has_sctp(pkt));
+	CU_ASSERT(!odp_packet_has_icmp(pkt));
+
+	odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_AH);
+	CU_ASSERT_EQUAL(odp_packet_l4_type(pkt), ODP_PROTO_L4_TYPE_AH);
+	CU_ASSERT(!odp_packet_has_tcp(pkt));
+	CU_ASSERT(!odp_packet_has_udp(pkt));
+	CU_ASSERT(!odp_packet_has_sctp(pkt));
+	CU_ASSERT(!odp_packet_has_icmp(pkt));
+
+	odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_ESP);
+	CU_ASSERT_EQUAL(odp_packet_l4_type(pkt), ODP_PROTO_L4_TYPE_ESP);
+	CU_ASSERT(!odp_packet_has_tcp(pkt));
+	CU_ASSERT(!odp_packet_has_udp(pkt));
+	CU_ASSERT(!odp_packet_has_sctp(pkt));
+	CU_ASSERT(!odp_packet_has_icmp(pkt));
+
+	odp_packet_l3_type_set(pkt, ODP_PROTO_L3_TYPE_IPV6);
+	CU_ASSERT_EQUAL(odp_packet_l3_type(pkt), ODP_PROTO_L3_TYPE_IPV6);
+	CU_ASSERT(!odp_packet_has_arp(pkt));
+	CU_ASSERT(!odp_packet_has_ipv4(pkt));
+	CU_ASSERT(odp_packet_has_ipv6(pkt));
+
+	odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_ICMPV6);
+	CU_ASSERT_EQUAL(odp_packet_l4_type(pkt), ODP_PROTO_L4_TYPE_ICMPV6);
+	CU_ASSERT(!odp_packet_has_tcp(pkt));
+	CU_ASSERT(!odp_packet_has_udp(pkt));
+	CU_ASSERT(!odp_packet_has_sctp(pkt));
+	CU_ASSERT(odp_packet_has_icmp(pkt));
 }
 
 void packet_test_error_flags(void)
@@ -2552,6 +2625,10 @@ void packet_test_parse(void)
 		CU_ASSERT(odp_packet_has_udp(pkt[i]));
 		CU_ASSERT(!odp_packet_has_ipv6(pkt[i]));
 		CU_ASSERT(!odp_packet_has_tcp(pkt[i]));
+		CU_ASSERT_EQUAL(odp_packet_l3_type(pkt[i]),
+				ODP_PROTO_L3_TYPE_IPV4);
+		CU_ASSERT_EQUAL(odp_packet_l4_type(pkt[i]),
+				ODP_PROTO_L4_TYPE_UDP);
 	}
 
 	odp_packet_free_multi(pkt, num_pkt);
@@ -2582,6 +2659,10 @@ void packet_test_parse(void)
 		CU_ASSERT(odp_packet_has_udp(pkt[i]));
 		CU_ASSERT(!odp_packet_has_ipv6(pkt[i]));
 		CU_ASSERT(!odp_packet_has_tcp(pkt[i]));
+		CU_ASSERT_EQUAL(odp_packet_l3_type(pkt[i]),
+				ODP_PROTO_L3_TYPE_IPV4);
+		CU_ASSERT_EQUAL(odp_packet_l4_type(pkt[i]),
+				ODP_PROTO_L4_TYPE_UDP);
 	}
 
 	odp_packet_free_multi(pkt, num_pkt);
@@ -2612,6 +2693,10 @@ void packet_test_parse(void)
 		CU_ASSERT(odp_packet_has_tcp(pkt[i]));
 		CU_ASSERT(!odp_packet_has_ipv6(pkt[i]));
 		CU_ASSERT(!odp_packet_has_udp(pkt[i]));
+		CU_ASSERT_EQUAL(odp_packet_l3_type(pkt[i]),
+				ODP_PROTO_L3_TYPE_IPV4);
+		CU_ASSERT_EQUAL(odp_packet_l4_type(pkt[i]),
+				ODP_PROTO_L4_TYPE_TCP);
 	}
 
 	odp_packet_free_multi(pkt, num_pkt);
@@ -2643,6 +2728,10 @@ void packet_test_parse(void)
 		CU_ASSERT(odp_packet_has_udp(pkt[i]));
 		CU_ASSERT(!odp_packet_has_ipv4(pkt[i]));
 		CU_ASSERT(!odp_packet_has_tcp(pkt[i]));
+		CU_ASSERT_EQUAL(odp_packet_l3_type(pkt[i]),
+				ODP_PROTO_L3_TYPE_IPV6);
+		CU_ASSERT_EQUAL(odp_packet_l4_type(pkt[i]),
+				ODP_PROTO_L4_TYPE_UDP);
 	}
 
 	odp_packet_free_multi(pkt, num_pkt);
@@ -2674,6 +2763,10 @@ void packet_test_parse(void)
 		CU_ASSERT(odp_packet_has_tcp(pkt[i]));
 		CU_ASSERT(!odp_packet_has_ipv4(pkt[i]));
 		CU_ASSERT(!odp_packet_has_udp(pkt[i]));
+		CU_ASSERT_EQUAL(odp_packet_l3_type(pkt[i]),
+				ODP_PROTO_L3_TYPE_IPV6);
+		CU_ASSERT_EQUAL(odp_packet_l4_type(pkt[i]),
+				ODP_PROTO_L4_TYPE_TCP);
 	}
 
 	odp_packet_free_multi(pkt, num_pkt);

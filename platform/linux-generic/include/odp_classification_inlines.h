@@ -51,7 +51,8 @@ static inline int verify_pmr_ip_proto(const uint8_t *pkt_addr,
 {
 	const _odp_ipv4hdr_t *ip;
 	uint8_t proto;
-	if (!pkt_hdr->p.input_flags.ipv4)
+
+	if (!packet_hdr_has_ipv4(pkt_hdr))
 		return 0;
 	ip = (const _odp_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
 	proto = ip->proto;
@@ -67,7 +68,8 @@ static inline int verify_pmr_ipv4_saddr(const uint8_t *pkt_addr,
 {
 	const _odp_ipv4hdr_t *ip;
 	uint32_t ipaddr;
-	if (!pkt_hdr->p.input_flags.ipv4)
+
+	if (!packet_hdr_has_ipv4(pkt_hdr))
 		return 0;
 	ip = (const _odp_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
 	ipaddr = _odp_be_to_cpu_32(ip->src_addr);
@@ -83,7 +85,8 @@ static inline int verify_pmr_ipv4_daddr(const uint8_t *pkt_addr,
 {
 	const _odp_ipv4hdr_t *ip;
 	uint32_t ipaddr;
-	if (!pkt_hdr->p.input_flags.ipv4)
+
+	if (!packet_hdr_has_ipv4(pkt_hdr))
 		return 0;
 	ip = (const _odp_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
 	ipaddr = _odp_be_to_cpu_32(ip->dst_addr);
@@ -99,7 +102,8 @@ static inline int verify_pmr_tcp_sport(const uint8_t *pkt_addr,
 {
 	uint16_t sport;
 	const _odp_tcphdr_t *tcp;
-	if (!pkt_hdr->p.input_flags.tcp)
+
+	if (!packet_hdr_has_tcp(pkt_hdr))
 		return 0;
 	tcp = (const _odp_tcphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
 	sport = _odp_be_to_cpu_16(tcp->src_port);
@@ -115,7 +119,8 @@ static inline int verify_pmr_tcp_dport(const uint8_t *pkt_addr,
 {
 	uint16_t dport;
 	const _odp_tcphdr_t *tcp;
-	if (!pkt_hdr->p.input_flags.tcp)
+
+	if (!packet_hdr_has_tcp(pkt_hdr))
 		return 0;
 	tcp = (const _odp_tcphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
 	dport = _odp_be_to_cpu_16(tcp->dst_port);
@@ -131,7 +136,8 @@ static inline int verify_pmr_udp_dport(const uint8_t *pkt_addr,
 {
 	uint16_t dport;
 	const _odp_udphdr_t *udp;
-	if (!pkt_hdr->p.input_flags.udp)
+
+	if (!packet_hdr_has_udp(pkt_hdr))
 		return 0;
 	udp = (const _odp_udphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
 	dport = _odp_be_to_cpu_16(udp->dst_port);
@@ -148,7 +154,7 @@ static inline int verify_pmr_udp_sport(const uint8_t *pkt_addr,
 	uint16_t sport;
 	const _odp_udphdr_t *udp;
 
-	if (!pkt_hdr->p.input_flags.udp)
+	if (!packet_hdr_has_udp(pkt_hdr))
 		return 0;
 	udp = (const _odp_udphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
 	sport = _odp_be_to_cpu_16(udp->src_port);
@@ -288,11 +294,11 @@ static inline int verify_pmr_ipsec_spi(const uint8_t *pkt_addr,
 
 	pkt_addr += pkt_hdr->p.l4_offset;
 
-	if (pkt_hdr->p.input_flags.ipsec_ah) {
+	if (pkt_hdr->p.input_flags.l4_type == ODP_PROTO_L4_TYPE_AH) {
 		const _odp_ahhdr_t *ahhdr = (const _odp_ahhdr_t *)pkt_addr;
 
 		spi = _odp_be_to_cpu_32(ahhdr->spi);
-	} else if (pkt_hdr->p.input_flags.ipsec_esp) {
+	} else if (pkt_hdr->p.input_flags.l4_type == ODP_PROTO_L4_TYPE_ESP) {
 		const _odp_esphdr_t *esphdr = (const _odp_esphdr_t *)pkt_addr;
 
 		spi = _odp_be_to_cpu_32(esphdr->spi);

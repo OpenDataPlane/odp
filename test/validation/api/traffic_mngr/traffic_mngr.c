@@ -739,7 +739,7 @@ static odp_packet_t make_pkt(odp_pool_t  pkt_pool,
 	odp_packet_l3_offset_set(odp_pkt, l3_offset);
 	if (pkt_info->use_ipv6) {
 		/* IPv6 Header */
-		odp_packet_has_ipv6_set(odp_pkt, 1);
+		odp_packet_l3_type_set(odp_pkt, ODP_PROTO_L3_TYPE_IPV6);
 		version     = ODPH_IPV6        << ODPH_IPV6HDR_VERSION_SHIFT;
 		tc          = pkt_info->ip_tos << ODPH_IPV6HDR_TC_SHIFT;
 		flow        = unique_id        << ODPH_IPV6HDR_FLOW_LABEL_SHIFT;
@@ -754,7 +754,7 @@ static odp_packet_t make_pkt(odp_pool_t  pkt_pool,
 		memcpy(ipv6_hdr->dst_addr, IPV6_DST_ADDR, ODPH_IPV6ADDR_LEN);
 	} else {
 		/* IPv4 Header */
-		odp_packet_has_ipv4_set(odp_pkt, 1);
+		odp_packet_l3_type_set(odp_pkt, ODP_PROTO_L3_TYPE_IPV4);
 		ipv4_hdr              = (odph_ipv4hdr_t *)(buf + l3_offset);
 		ipv4_hdr->ver_ihl     = (ODPH_IPV4 << 4) | ODPH_IPV4HDR_IHL_MIN;
 		ipv4_hdr->tos         = pkt_info->ip_tos;
@@ -775,7 +775,7 @@ static odp_packet_t make_pkt(odp_pool_t  pkt_pool,
 
 	if (pkt_info->use_tcp) {
 		/* TCP Header */
-		odp_packet_has_tcp_set(odp_pkt, 1);
+		odp_packet_l4_type_set(odp_pkt, ODP_PROTO_L4_TYPE_TCP);
 		tcp_hdr->src_port = odp_cpu_to_be_16(DEFAULT_TCP_SRC_PORT);
 		tcp_hdr->dst_port = odp_cpu_to_be_16(DEFAULT_TCP_DST_PORT);
 		tcp_hdr->seq_no   = odp_cpu_to_be_32(cpu_tcp_seq_num);
@@ -790,7 +790,7 @@ static odp_packet_t make_pkt(odp_pool_t  pkt_pool,
 		cpu_tcp_seq_num       += payload_len;
 	} else {
 		/* UDP Header */
-		odp_packet_has_udp_set(odp_pkt, 1);
+		odp_packet_l4_type_set(odp_pkt, ODP_PROTO_L4_TYPE_UDP);
 		udp_hdr->src_port = odp_cpu_to_be_16(DEFAULT_UDP_SRC_PORT);
 		udp_hdr->dst_port = odp_cpu_to_be_16(DEFAULT_UDP_DST_PORT);
 		udp_hdr->length   = odp_cpu_to_be_16(l4_len);

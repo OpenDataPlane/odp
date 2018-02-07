@@ -324,7 +324,7 @@ static odp_packet_t setup_udp_pkt_ref(odp_pool_t pool,
 
 	/* ip */
 	odp_packet_l3_offset_set(pkt, ODPH_ETHHDR_LEN);
-	odp_packet_has_ipv4_set(pkt, 1);
+	odp_packet_l3_type_set(pkt, ODP_PROTO_L3_TYPE_IPV4);
 	ip = (odph_ipv4hdr_t *)(buf + ODPH_ETHHDR_LEN);
 	ip->dst_addr = odp_cpu_to_be_32(args->appl.dstip);
 	ip->src_addr = odp_cpu_to_be_32(args->appl.srcip);
@@ -338,7 +338,7 @@ static odp_packet_t setup_udp_pkt_ref(odp_pool_t pool,
 
 	/* udp */
 	odp_packet_l4_offset_set(pkt, ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
-	odp_packet_has_udp_set(pkt, 1);
+	odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_UDP);
 	udp = (odph_udphdr_t *)(buf + ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
 	udp->src_port = odp_cpu_to_be_16(args->appl.srcport);
 	udp->dst_port = odp_cpu_to_be_16(args->appl.dstport);
