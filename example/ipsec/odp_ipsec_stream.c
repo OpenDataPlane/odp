@@ -202,7 +202,7 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 
 	/* IPv4 */
-	odp_packet_has_ipv4_set(pkt, 1);
+	odp_packet_l3_type_set(pkt, ODP_PROTO_L3_TYPE_IPV4);
 	ip = (odph_ipv4hdr_t *)data;
 	data += sizeof(*ip);
 

@@ -58,7 +58,7 @@ odp_packet_t pack_udp_ipv4_packet(odp_pool_t pool, odp_u16be_t ip_id,
 	header_len = WORDS_TO_BYTES(header_len_words);
 	assert(header_len >= IP_HDR_LEN_MIN && header_len <= IP_HDR_LEN_MAX);
 	odp_packet_l3_offset_set(result, 0);
-	odp_packet_has_ipv4_set(result, 1);
+	odp_packet_l3_type_set(result, ODP_PROTO_L3_TYPE_IPV4);
 	buffer = odp_packet_data(result);
 	header = (odph_ipv4hdr_t *)buffer;
 	ipv4hdr_init(header);
