@@ -51,7 +51,8 @@ static inline int verify_pmr_ip_proto(const uint8_t *pkt_addr,
 {
 	const _odp_ipv4hdr_t *ip;
 	uint8_t proto;
-	if (!pkt_hdr->p.input_flags.ipv4)
+
+	if (!packet_hdr_has_ipv4(pkt_hdr))
 		return 0;
 	ip = (const _odp_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
 	proto = ip->proto;
@@ -67,7 +68,8 @@ static inline int verify_pmr_ipv4_saddr(const uint8_t *pkt_addr,
 {
 	const _odp_ipv4hdr_t *ip;
 	uint32_t ipaddr;
-	if (!pkt_hdr->p.input_flags.ipv4)
+
+	if (!packet_hdr_has_ipv4(pkt_hdr))
 		return 0;
 	ip = (const _odp_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
 	ipaddr = _odp_be_to_cpu_32(ip->src_addr);
@@ -83,7 +85,8 @@ static inline int verify_pmr_ipv4_daddr(const uint8_t *pkt_addr,
 {
 	const _odp_ipv4hdr_t *ip;
 	uint32_t ipaddr;
-	if (!pkt_hdr->p.input_flags.ipv4)
+
+	if (!packet_hdr_has_ipv4(pkt_hdr))
 		return 0;
 	ip = (const _odp_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
 	ipaddr = _odp_be_to_cpu_32(ip->dst_addr);
