@@ -1026,7 +1026,7 @@ static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
 
 	tuple_len = 0;
 	hash = 0;
-	if (pkt_hdr->p.input_flags.ipv4) {
+	if (packet_hdr_has_ipv4(pkt_hdr)) {
 		if (hash_proto.ipv4) {
 			/* add ipv4 */
 			ipv4 = (const _odp_ipv4hdr_t *)(base +
@@ -1051,7 +1051,7 @@ static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
 			tuple.v4.dport = udp->dst_port;
 			tuple_len += 1;
 		}
-	} else if (pkt_hdr->p.input_flags.ipv6) {
+	} else if (packet_hdr_has_ipv6(pkt_hdr)) {
 		if (hash_proto.ipv6) {
 			/* add ipv6 */
 			ipv6 = (const _odp_ipv6hdr_t *)(base +
@@ -1089,11 +1089,11 @@ cos_t *match_qos_l3_cos(pmr_l3_cos_t *l3_cos, const uint8_t *pkt_addr,
 	const _odp_ipv4hdr_t *ipv4;
 	const _odp_ipv6hdr_t *ipv6;
 
-	if (hdr->p.input_flags.l3 && hdr->p.input_flags.ipv4) {
+	if (hdr->p.input_flags.l3 && packet_hdr_has_ipv4(hdr)) {
 		ipv4 = (const _odp_ipv4hdr_t *)(pkt_addr + hdr->p.l3_offset);
 		dscp = _ODP_IPV4HDR_DSCP(ipv4->tos);
 		cos = l3_cos->cos[dscp];
-	} else if (hdr->p.input_flags.l3 && hdr->p.input_flags.ipv6) {
+	} else if (hdr->p.input_flags.l3 && packet_hdr_has_ipv6(hdr)) {
 		ipv6 = (const _odp_ipv6hdr_t *)(pkt_addr + hdr->p.l3_offset);
 		dscp = _ODP_IPV6HDR_DSCP(ipv6->ver_tc_flow);
 		cos = l3_cos->cos[dscp];

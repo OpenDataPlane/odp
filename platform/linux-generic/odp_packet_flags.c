@@ -83,17 +83,23 @@ int odp_packet_has_vlan_qinq(odp_packet_t pkt)
 
 int odp_packet_has_arp(odp_packet_t pkt)
 {
-	retflag(pkt, input_flags.arp);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->p.input_flags.l3_type == ODP_PROTO_L3_TYPE_ARP;
 }
 
 int odp_packet_has_ipv4(odp_packet_t pkt)
 {
-	retflag(pkt, input_flags.ipv4);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->p.input_flags.l3_type == ODP_PROTO_L3_TYPE_IPV4;
 }
 
 int odp_packet_has_ipv6(odp_packet_t pkt)
 {
-	retflag(pkt, input_flags.ipv6);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->p.input_flags.l3_type == ODP_PROTO_L3_TYPE_IPV6;
 }
 
 int odp_packet_has_ip_bcast(odp_packet_t pkt)
@@ -226,17 +232,35 @@ void odp_packet_has_vlan_qinq_set(odp_packet_t pkt, int val)
 
 void odp_packet_has_arp_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.arp, val);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	odp_proto_l3_type_t type = ODP_PROTO_L3_TYPE_ARP;
+
+	if (val)
+		pkt_hdr->p.input_flags.l3_type = type;
+	else if (pkt_hdr->p.input_flags.l3_type == type)
+		pkt_hdr->p.input_flags.l3_type = ODP_PROTO_L3_TYPE_NONE;
 }
 
 void odp_packet_has_ipv4_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.ipv4, val);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	odp_proto_l3_type_t type = ODP_PROTO_L3_TYPE_IPV4;
+
+	if (val)
+		pkt_hdr->p.input_flags.l3_type = type;
+	else if (pkt_hdr->p.input_flags.l3_type == type)
+		pkt_hdr->p.input_flags.l3_type = ODP_PROTO_L3_TYPE_NONE;
 }
 
 void odp_packet_has_ipv6_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.ipv6, val);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	odp_proto_l3_type_t type = ODP_PROTO_L3_TYPE_IPV6;
+
+	if (val)
+		pkt_hdr->p.input_flags.l3_type = type;
+	else if (pkt_hdr->p.input_flags.l3_type == type)
+		pkt_hdr->p.input_flags.l3_type = ODP_PROTO_L3_TYPE_NONE;
 }
 
 void odp_packet_has_ip_bcast_set(odp_packet_t pkt, int val)

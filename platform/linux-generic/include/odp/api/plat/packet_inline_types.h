@@ -72,10 +72,7 @@ typedef union {
 		uint64_t vlan_qinq:1; /* Stacked VLAN found, QinQ */
 
 		uint64_t snap:1;      /* SNAP */
-		uint64_t arp:1;       /* ARP */
 
-		uint64_t ipv4:1;      /* IPv4 */
-		uint64_t ipv6:1;      /* IPv6 */
 		uint64_t ip_bcast:1;  /* IP broadcast */
 		uint64_t ip_mcast:1;  /* IP multicast */
 		uint64_t ipfrag:1;    /* IP fragment */
