@@ -2557,9 +2557,31 @@ odp_proto_l3_type_t odp_packet_l3_type(odp_packet_t pkt)
 	return pkt_hdr->p.input_flags.l3_type;
 }
 
+void odp_packet_l3_type_set(odp_packet_t pkt, odp_proto_l3_type_t val)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	pkt_hdr->p.input_flags.l3_type = val;
+	pkt_hdr->p.input_flags.arp = (val == ODP_PROTO_L3_TYPE_ARP);
+	pkt_hdr->p.input_flags.ipv4 = (val == ODP_PROTO_L3_TYPE_IPV4);
+	pkt_hdr->p.input_flags.ipv6 = (val == ODP_PROTO_L3_TYPE_IPV6);
+}
+
 odp_proto_l4_type_t odp_packet_l4_type(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
 	return pkt_hdr->p.input_flags.l4_type;
+}
+
+void odp_packet_l4_type_set(odp_packet_t pkt, odp_proto_l4_type_t val)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	pkt_hdr->p.input_flags.l4_type = val;
+	pkt_hdr->p.input_flags.tcp = (val == ODP_PROTO_L4_TYPE_TCP);
+	pkt_hdr->p.input_flags.udp = (val == ODP_PROTO_L4_TYPE_UDP);
+	pkt_hdr->p.input_flags.sctp = (val == ODP_PROTO_L4_TYPE_SCTP);
+	pkt_hdr->p.input_flags.icmp = (val == ODP_PROTO_L4_TYPE_ICMPV4) ||
+				      (val == ODP_PROTO_L4_TYPE_ICMPV6);
 }
