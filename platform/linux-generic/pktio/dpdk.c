@@ -1402,6 +1402,8 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 
 static int dpdk_start(pktio_entry_t *pktio_entry)
 {
+	struct rte_eth_dev_info dev_info;
+	struct rte_eth_rxconf *rxconf;
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	uint8_t port_id = pkt_dpdk->port_id;
 	int ret;
@@ -1420,7 +1422,6 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 	}
 	/* Init TX queues */
 	for (i = 0; i < pktio_entry->s.num_out_queue; i++) {
-		struct rte_eth_dev_info dev_info;
 		const struct rte_eth_txconf *txconf = NULL;
 		int ip_ena  = pktio_entry->s.config.pktout.bit.ipv4_chksum_ena;
 		int udp_ena = pktio_entry->s.config.pktout.bit.udp_chksum_ena;
@@ -1469,10 +1470,13 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 		}
 	}
 	/* Init RX queues */
+	rte_eth_dev_info_get(port_id, &dev_info);
+	rxconf = &dev_info.default_rxconf;
+	rxconf->rx_drop_en = 1;
 	for (i = 0; i < pktio_entry->s.num_in_queue; i++) {
 		ret = rte_eth_rx_queue_setup(port_id, i, DPDK_NM_RX_DESC,
 					     rte_eth_dev_socket_id(port_id),
-					     NULL, pkt_dpdk->pkt_pool);
+					     rxconf, pkt_dpdk->pkt_pool);
 		if (ret < 0) {
 			ODP_ERR("Queue setup failed: err=%d, port=%" PRIu8 "\n",
 				ret, port_id);
