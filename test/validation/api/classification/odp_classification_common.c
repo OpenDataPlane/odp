@@ -321,10 +321,10 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 		ip->proto = next_hdr;
 		ip->tot_len = odp_cpu_to_be_16(l3_len);
 		ip->ttl = DEFAULT_TTL;
-		odp_packet_has_ipv4_set(pkt, 1);
+		odp_packet_l3_type_set(pkt, ODP_PROTO_L3_TYPE_IPV4);
 	} else {
 		/* ipv6 */
-		odp_packet_has_ipv6_set(pkt, 1);
+		odp_packet_l3_type_set(pkt, ODP_PROTO_L3_TYPE_IPV6);
 		ipv6 = (odph_ipv6hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 		version     = ODPH_IPV6        << ODPH_IPV6HDR_VERSION_SHIFT;
 		tc          = DEFAULT_TOS << ODPH_IPV6HDR_TC_SHIFT;

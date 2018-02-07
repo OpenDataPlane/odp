@@ -739,7 +739,7 @@ static odp_packet_t make_pkt(odp_pool_t  pkt_pool,
 	odp_packet_l3_offset_set(odp_pkt, l3_offset);
 	if (pkt_info->use_ipv6) {
 		/* IPv6 Header */
-		odp_packet_has_ipv6_set(odp_pkt, 1);
+		odp_packet_l3_type_set(odp_pkt, ODP_PROTO_L3_TYPE_IPV6);
 		version     = ODPH_IPV6        << ODPH_IPV6HDR_VERSION_SHIFT;
 		tc          = pkt_info->ip_tos << ODPH_IPV6HDR_TC_SHIFT;
 		flow        = unique_id        << ODPH_IPV6HDR_FLOW_LABEL_SHIFT;
@@ -754,7 +754,7 @@ static odp_packet_t make_pkt(odp_pool_t  pkt_pool,
 		memcpy(ipv6_hdr->dst_addr, IPV6_DST_ADDR, ODPH_IPV6ADDR_LEN);
 	} else {
 		/* IPv4 Header */
-		odp_packet_has_ipv4_set(odp_pkt, 1);
+		odp_packet_l3_type_set(odp_pkt, ODP_PROTO_L3_TYPE_IPV4);
 		ipv4_hdr              = (odph_ipv4hdr_t *)(buf + l3_offset);
 		ipv4_hdr->ver_ihl     = (ODPH_IPV4 << 4) | ODPH_IPV4HDR_IHL_MIN;
 		ipv4_hdr->tos         = pkt_info->ip_tos;

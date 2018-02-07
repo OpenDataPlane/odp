@@ -1047,9 +1047,6 @@ void packet_test_in_flags(void)
 	TEST_INFLAG(pkt, jumbo);
 	TEST_INFLAG(pkt, vlan);
 	TEST_INFLAG(pkt, vlan_qinq);
-	TEST_INFLAG(pkt, arp);
-	TEST_INFLAG(pkt, ipv4);
-	TEST_INFLAG(pkt, ipv6);
 	TEST_INFLAG(pkt, ip_bcast);
 	TEST_INFLAG(pkt, ip_mcast);
 	TEST_INFLAG(pkt, ipfrag);
@@ -1059,6 +1056,30 @@ void packet_test_in_flags(void)
 	TEST_INFLAG(pkt, tcp);
 	TEST_INFLAG(pkt, sctp);
 	TEST_INFLAG(pkt, icmp);
+
+	odp_packet_l3_type_set(pkt, ODP_PROTO_L3_TYPE_NONE);
+	CU_ASSERT_EQUAL(odp_packet_l3_type(pkt), ODP_PROTO_L3_TYPE_NONE);
+	CU_ASSERT(!odp_packet_has_arp(pkt));
+	CU_ASSERT(!odp_packet_has_ipv4(pkt));
+	CU_ASSERT(!odp_packet_has_ipv6(pkt));
+
+	odp_packet_l3_type_set(pkt, ODP_PROTO_L3_TYPE_ARP);
+	CU_ASSERT_EQUAL(odp_packet_l3_type(pkt), ODP_PROTO_L3_TYPE_ARP);
+	CU_ASSERT(odp_packet_has_arp(pkt));
+	CU_ASSERT(!odp_packet_has_ipv4(pkt));
+	CU_ASSERT(!odp_packet_has_ipv6(pkt));
+
+	odp_packet_l3_type_set(pkt, ODP_PROTO_L3_TYPE_IPV4);
+	CU_ASSERT_EQUAL(odp_packet_l3_type(pkt), ODP_PROTO_L3_TYPE_IPV4);
+	CU_ASSERT(!odp_packet_has_arp(pkt));
+	CU_ASSERT(odp_packet_has_ipv4(pkt));
+	CU_ASSERT(!odp_packet_has_ipv6(pkt));
+
+	odp_packet_l3_type_set(pkt, ODP_PROTO_L3_TYPE_IPV6);
+	CU_ASSERT_EQUAL(odp_packet_l3_type(pkt), ODP_PROTO_L3_TYPE_IPV6);
+	CU_ASSERT(!odp_packet_has_arp(pkt));
+	CU_ASSERT(!odp_packet_has_ipv4(pkt));
+	CU_ASSERT(odp_packet_has_ipv6(pkt));
 }
 
 void packet_test_error_flags(void)
