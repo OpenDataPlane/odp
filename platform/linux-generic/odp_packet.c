@@ -1917,28 +1917,33 @@ static inline uint16_t parse_eth(packet_parser_t *prs, const uint8_t **parseptr,
 	const _odp_ethhdr_t *eth;
 	uint16_t macaddr0, macaddr2, macaddr4;
 	const _odp_vlanhdr_t *vlan;
+	_odp_packet_input_flags_t input_flags;
 
-	/* Detect jumbo frames */
-	if (frame_len > _ODP_ETH_LEN_MAX)
-		prs->input_flags.jumbo = 1;
+	input_flags.all = 0;
+	input_flags.l2  = 1;
+	input_flags.eth = 1;
 
 	eth = (const _odp_ethhdr_t *)*parseptr;
 
+	/* Detect jumbo frames */
+	if (odp_unlikely(frame_len > _ODP_ETH_LEN_MAX))
+		input_flags.jumbo = 1;
+
 	/* Handle Ethernet broadcast/multicast addresses */
 	macaddr0 = _odp_be_to_cpu_16(*((const uint16_t *)(const void *)eth));
-	prs->input_flags.eth_mcast = (macaddr0 & 0x0100) == 0x0100;
+	if (odp_unlikely((macaddr0 & 0x0100) == 0x0100))
+		input_flags.eth_mcast = 1;
 
-	if (macaddr0 == 0xffff) {
+	if (odp_unlikely(macaddr0 == 0xffff)) {
 		macaddr2 =
 			_odp_be_to_cpu_16(*((const uint16_t *)
 					    (const void *)eth + 1));
 		macaddr4 =
 			_odp_be_to_cpu_16(*((const uint16_t *)
 					    (const void *)eth + 2));
-		prs->input_flags.eth_bcast =
-			(macaddr2 == 0xffff) && (macaddr4 == 0xffff);
-	} else {
-		prs->input_flags.eth_bcast = 0;
+
+		if ((macaddr2 == 0xffff) && (macaddr4 == 0xffff))
+			input_flags.eth_bcast = 1;
 	}
 
 	/* Get Ethertype */
@@ -1947,11 +1952,12 @@ static inline uint16_t parse_eth(packet_parser_t *prs, const uint8_t **parseptr,
 	*parseptr += sizeof(*eth);
 
 	/* Check for SNAP vs. DIX */
-	if (ethtype < _ODP_ETH_LEN_MAX) {
-		prs->input_flags.snap = 1;
+	if (odp_unlikely(ethtype < _ODP_ETH_LEN_MAX)) {
+		input_flags.snap = 1;
 		if (ethtype > frame_len - *offset) {
 			prs->error_flags.snap_len = 1;
-			return 0;
+			ethtype = 0;
+			goto error;
 		}
 		ethtype = _odp_be_to_cpu_16(*((const uint16_t *)(uintptr_t)
 					      (parseptr + 6)));
@@ -1960,9 +1966,9 @@ static inline uint16_t parse_eth(packet_parser_t *prs, const uint8_t **parseptr,
 	}
 
 	/* Parse the VLAN header(s), if present */
-	if (ethtype == _ODP_ETHTYPE_VLAN_OUTER) {
-		prs->input_flags.vlan_qinq = 1;
-		prs->input_flags.vlan = 1;
+	if (odp_unlikely(ethtype == _ODP_ETHTYPE_VLAN_OUTER)) {
+		input_flags.vlan_qinq = 1;
+		input_flags.vlan = 1;
 
 		vlan = (const _odp_vlanhdr_t *)*parseptr;
 		ethtype = _odp_be_to_cpu_16(vlan->type);
@@ -1971,12 +1977,15 @@ static inline uint16_t parse_eth(packet_parser_t *prs, const uint8_t **parseptr,
 	}
 
 	if (ethtype == _ODP_ETHTYPE_VLAN) {
-		prs->input_flags.vlan = 1;
+		input_flags.vlan = 1;
 		vlan = (const _odp_vlanhdr_t *)*parseptr;
 		ethtype = _odp_be_to_cpu_16(vlan->type);
 		*offset += sizeof(_odp_vlanhdr_t);
 		*parseptr += sizeof(_odp_vlanhdr_t);
 	}
+
+error:
+	prs->input_flags.all |= input_flags.all;
 
 	return ethtype;
 }
@@ -2240,14 +2249,11 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 	parseptr = ptr;
 	offset = 0;
 
-	if (layer == ODP_PROTO_LAYER_NONE)
+	if (odp_unlikely(layer == ODP_PROTO_LAYER_NONE))
 		return 0;
 
 	/* Assume valid L2 header, no CRC/FCS check in SW */
 	prs->l2_offset = offset;
-	prs->input_flags.l2 = 1;
-	/* We only support Ethernet for now */
-	prs->input_flags.eth = 1;
 
 	ethtype = parse_eth(prs, &parseptr, &offset, frame_len);
 
