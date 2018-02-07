@@ -131,7 +131,7 @@ int main(int argc ODPH_UNUSED, char *argv[] ODPH_UNUSED)
 	udp->dst_port = 0;
 	udp->length = odp_cpu_to_be_16(udat_size + ODPH_UDPHDR_LEN);
 	udp->chksum = 0;
-	odp_packet_has_udp_set(test_packet, 1);
+	odp_packet_l4_type_set(test_packet, ODP_PROTO_L4_TYPE_UDP);
 	udp->chksum = odph_ipv4_udp_chksum(test_packet);
 
 	if (udp->chksum == 0)
