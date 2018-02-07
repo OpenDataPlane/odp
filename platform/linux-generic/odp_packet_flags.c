@@ -129,22 +129,31 @@ int odp_packet_has_ipsec(odp_packet_t pkt)
 
 int odp_packet_has_udp(odp_packet_t pkt)
 {
-	retflag(pkt, input_flags.udp);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->p.input_flags.l4_type == ODP_PROTO_L4_TYPE_UDP;
 }
 
 int odp_packet_has_tcp(odp_packet_t pkt)
 {
-	retflag(pkt, input_flags.tcp);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->p.input_flags.l4_type == ODP_PROTO_L4_TYPE_TCP;
 }
 
 int odp_packet_has_sctp(odp_packet_t pkt)
 {
-	retflag(pkt, input_flags.sctp);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->p.input_flags.l4_type == ODP_PROTO_L4_TYPE_SCTP;
 }
 
 int odp_packet_has_icmp(odp_packet_t pkt)
 {
-	retflag(pkt, input_flags.icmp);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->p.input_flags.l4_type == ODP_PROTO_L4_TYPE_ICMPV4 ||
+	       pkt_hdr->p.input_flags.l4_type == ODP_PROTO_L4_TYPE_ICMPV6;
 }
 
 odp_packet_color_t odp_packet_color(odp_packet_t pkt)
@@ -287,22 +296,46 @@ void odp_packet_has_ipsec_set(odp_packet_t pkt, int val)
 
 void odp_packet_has_udp_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.udp, val);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	if (val)
+		odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_UDP);
+	else if (pkt_hdr->p.input_flags.l3_type == ODP_PROTO_L4_TYPE_UDP)
+		odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_NONE);
 }
 
 void odp_packet_has_tcp_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.tcp, val);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	if (val)
+		odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_TCP);
+	else if (pkt_hdr->p.input_flags.l3_type == ODP_PROTO_L4_TYPE_TCP)
+		odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_NONE);
 }
 
 void odp_packet_has_sctp_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.sctp, val);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	if (val)
+		odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_SCTP);
+	else if (pkt_hdr->p.input_flags.l3_type == ODP_PROTO_L4_TYPE_SCTP)
+		odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_NONE);
 }
 
 void odp_packet_has_icmp_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.icmp, val);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	if (val && odp_packet_has_ipv6(pkt))
+		odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_ICMPV6);
+	else if (val)
+		odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_ICMPV4);
+	else if (pkt_hdr->p.input_flags.l3_type == ODP_PROTO_L4_TYPE_ICMPV4)
+		odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_NONE);
+	else if (pkt_hdr->p.input_flags.l3_type == ODP_PROTO_L4_TYPE_ICMPV6)
+		odp_packet_l4_type_set(pkt, ODP_PROTO_L4_TYPE_NONE);
 }
 
 void odp_packet_has_flow_hash_clr(odp_packet_t pkt)
