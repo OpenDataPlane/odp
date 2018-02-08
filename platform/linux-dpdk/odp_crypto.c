@@ -1134,11 +1134,12 @@ int odp_crypto_operation(odp_crypto_op_param_t *param,
 	if (ODP_QUEUE_INVALID != entry->compl_queue) {
 		odp_event_t completion_event;
 		odp_crypto_generic_op_result_t *op_result;
+		odp_buffer_t buf;
 
 		completion_event = odp_packet_to_event(param->out_pkt);
-		_odp_buffer_event_type_set(
-			odp_buffer_from_event(completion_event),
-			ODP_EVENT_CRYPTO_COMPL);
+		buf = odp_buffer_from_event(completion_event);
+		_odp_buffer_event_type_set(buf, ODP_EVENT_CRYPTO_COMPL);
+		_odp_buffer_event_subtype_set(buf, ODP_EVENT_NO_SUBTYPE);
 		/* Asynchronous, build result (no HW so no errors) and send it*/
 		op_result = get_op_result_from_event(completion_event);
 		op_result->magic = OP_RESULT_MAGIC;
@@ -1275,9 +1276,11 @@ void odp_crypto_compl_result(odp_crypto_compl_t completion_event,
 
 void odp_crypto_compl_free(odp_crypto_compl_t completion_event)
 {
-	_odp_buffer_event_type_set(
-		odp_buffer_from_event((odp_event_t)completion_event),
-		ODP_EVENT_PACKET);
+	odp_buffer_t buf =
+		odp_buffer_from_event((odp_event_t)completion_event);
+
+	_odp_buffer_event_type_set(buf, ODP_EVENT_PACKET);
+	_odp_buffer_event_subtype_set(buf, ODP_EVENT_PACKET_BASIC);
 }
 
 void odp_crypto_session_param_init(odp_crypto_session_param_t *param)

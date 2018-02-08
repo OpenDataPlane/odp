@@ -65,6 +65,9 @@ struct odp_buffer_hdr_t {
 	uint8_t   burst_num;
 	uint8_t   burst_first;
 
+	/* Event subtype. Should be ODP_EVENT_NO_SUBTYPE except packets. */
+	int8_t    event_subtype;
+
 	/* Next buf in a list */
 	struct odp_buffer_hdr_t *next;
 

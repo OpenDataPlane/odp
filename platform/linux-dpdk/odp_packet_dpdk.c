@@ -406,6 +406,7 @@ static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 
 		packet_parse_reset(pkt_hdr);
 		pkt_hdr->input = pktio_entry->s.handle;
+		pkt_hdr->buf_hdr.event_subtype = ODP_EVENT_PACKET_BASIC;
 
 		if (!pktio_cls_enabled(pktio_entry) &&
 		    pktio_entry->s.config.parser.layer)
