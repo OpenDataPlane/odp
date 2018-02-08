@@ -6,6 +6,7 @@ AM_CFLAGS +=  $(DPDK_CFLAGS)
 AM_CPPFLAGS =  -I$(srcdir)/include
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include
 AM_CPPFLAGS +=  -I$(top_srcdir)/include
+AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch
 AM_CPPFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
 AM_CPPFLAGS +=  -I$(top_builddir)/include
 AM_CPPFLAGS +=  -Iinclude
@@ -109,6 +110,7 @@ nodist_odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/static_inline.h
 
 noinst_HEADERS = \
+		  arch/odp_arch_time_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_align_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_atomic_internal.h \
 		  include/odp_buffer_inlines.h \
@@ -140,7 +142,6 @@ noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_schedule_if.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_sorted_list_internal.h \
 		  include/odp_shm_internal.h \
-		  ${top_srcdir}/platform/linux-generic/include/odp_time_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_timer_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_timer_wheel_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_traffic_mngr_internal.h \
