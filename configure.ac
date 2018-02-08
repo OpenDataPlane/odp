@@ -181,14 +181,13 @@ AS_CASE([$host],
   [powerpc*], [ARCH_ABI=power64-linux],
   [aarch64*], [ARCH_ABI=arm64-linux],
   [arm*],     [ARCH_ABI=arm32-linux],
-  [ARCH_ABI=undefined]
+  [ARCH_ABI=default-linux]
 )
 AC_SUBST([ARCH_ABI])
 
-if test "${ARCH_ABI}" = "undefined";
+if test "${ARCH_ABI}" = "default-linux";
 then
-    echo "ARCH_ABI is undefined, please add your ARCH_ABI based on host=${host}"
-    exit 1
+    AC_MSG_WARN([ARCH_ABI is undefined, please add your ARCH_ABI based on host=${host}])
 fi
 
 ##########################################################################
