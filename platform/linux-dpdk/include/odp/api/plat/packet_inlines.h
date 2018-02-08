@@ -251,6 +251,12 @@ static inline void _odp_packet_prefetch(odp_packet_t pkt, uint32_t offset, uint3
 		rte_prefetch0(addr + ofs);
 }
 
+/** @internal Inline function @param pkt @return */
+static inline odp_buffer_t packet_to_buffer(odp_packet_t pkt)
+{
+	return (odp_buffer_t)pkt;
+}
+
 /* Include inlined versions of API functions */
 #include <odp/api/plat/static_inline.h>
 

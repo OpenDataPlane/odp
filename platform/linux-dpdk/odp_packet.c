@@ -83,11 +83,6 @@ odp_packet_t _odp_packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
 	return (odp_packet_t)buf_hdr;
 }
 
-static inline odp_buffer_t packet_to_buffer(odp_packet_t pkt)
-{
-	return (odp_buffer_t)pkt;
-}
-
 static odp_packet_t packet_alloc(pool_t *pool, uint32_t len)
 {
 	odp_packet_t pkt;
