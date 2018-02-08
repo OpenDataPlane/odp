@@ -162,6 +162,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_bitmap.c \
 			   odp_buffer.c \
 			   ../linux-generic/odp_byteorder.c \
+			   ../linux-generic/odp_chksum.c \
 			   ../linux-generic/odp_classification.c \
 			   ../linux-generic/odp_cpu.c \
 			   ../linux-generic/odp_cpumask.c \
