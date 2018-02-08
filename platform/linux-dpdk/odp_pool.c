@@ -247,17 +247,17 @@ static int check_params(odp_pool_param_t *params)
 	switch (params->type) {
 	case ODP_POOL_BUFFER:
 		if (params->buf.num > capa.buf.max_num) {
-			printf("buf.num too large %u\n", params->buf.num);
+			ODP_DBG("buf.num too large %u\n", params->buf.num);
 			return -1;
 		}
 
 		if (params->buf.size > capa.buf.max_size) {
-			printf("buf.size too large %u\n", params->buf.size);
+			ODP_DBG("buf.size too large %u\n", params->buf.size);
 			return -1;
 		}
 
 		if (params->buf.align > capa.buf.max_align) {
-			printf("buf.align too large %u\n", params->buf.align);
+			ODP_DBG("buf.align too large %u\n", params->buf.align);
 			return -1;
 		}
 
@@ -265,20 +265,19 @@ static int check_params(odp_pool_param_t *params)
 
 	case ODP_POOL_PACKET:
 		if (params->pkt.num > capa.pkt.max_num) {
-			printf("pkt.num too large %u\n", params->pkt.num);
-
+			ODP_DBG("pkt.num too large %u\n", params->pkt.num);
 			return -1;
 		}
 
 		if (params->pkt.seg_len > capa.pkt.max_seg_len) {
-			printf("pkt.seg_len too large %u\n",
-			       params->pkt.seg_len);
+			ODP_DBG("pkt.seg_len too large %u\n",
+				params->pkt.seg_len);
 			return -1;
 		}
 
 		if (params->pkt.uarea_size > capa.pkt.max_uarea_size) {
-			printf("pkt.uarea_size too large %u\n",
-			       params->pkt.uarea_size);
+			ODP_DBG("pkt.uarea_size too large %u\n",
+				params->pkt.uarea_size);
 			return -1;
 		}
 
@@ -286,13 +285,13 @@ static int check_params(odp_pool_param_t *params)
 
 	case ODP_POOL_TIMEOUT:
 		if (params->tmo.num > capa.tmo.max_num) {
-			printf("tmo.num too large %u\n", params->tmo.num);
+			ODP_DBG("tmo.num too large %u\n", params->tmo.num);
 			return -1;
 		}
 		break;
 
 	default:
-		printf("bad pool type %i\n", params->type);
+		ODP_DBG("bad pool type %i\n", params->type);
 		return -1;
 	}
 
