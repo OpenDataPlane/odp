@@ -13,12 +13,6 @@ AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
 AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
 AM_CPPFLAGS +=  $(NETMAP_CPPFLAGS)
 
-if PKTIO_DPDK
-if ARCH_IS_X86
-AM_CFLAGS += -msse4.2
-endif
-endif
-
 if !ODP_ABI_COMPAT
 odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \

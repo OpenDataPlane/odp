@@ -34,6 +34,12 @@ then
     ODP_DPDK([$DPDK_PATH], [],
 	     [AC_MSG_FAILURE([can't find DPDK])])
 
+    case "${host}" in
+      i?86* | x86*)
+	DPDK_CPPFLAGS="${DPDK_CPPFLAGS} -msse4.2"
+      ;;
+    esac
+
     AC_DEFINE([ODP_PKTIO_DPDK], [1],
 	      [Define to 1 to enable DPDK packet I/O support])
     AC_DEFINE_UNQUOTED([ODP_DPDK_ZERO_COPY], [$zero_copy],
