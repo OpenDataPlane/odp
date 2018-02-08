@@ -1988,15 +1988,15 @@ static inline uint8_t parse_ipv4(packet_parser_t *prs, const uint8_t **parseptr,
 				 uint32_t *offset, uint32_t frame_len)
 {
 	const _odp_ipv4hdr_t *ipv4 = (const _odp_ipv4hdr_t *)*parseptr;
-	uint8_t ver = _ODP_IPV4HDR_VER(ipv4->ver_ihl);
-	uint8_t ihl = _ODP_IPV4HDR_IHL(ipv4->ver_ihl);
-	uint16_t frag_offset;
 	uint32_t dstaddr = _odp_be_to_cpu_32(ipv4->dst_addr);
 	uint32_t l3_len = _odp_be_to_cpu_16(ipv4->tot_len);
+	uint16_t frag_offset = _odp_be_to_cpu_16(ipv4->frag_offset);
+	uint8_t ver = _ODP_IPV4HDR_VER(ipv4->ver_ihl);
+	uint8_t ihl = _ODP_IPV4HDR_IHL(ipv4->ver_ihl);
 
-	if (odp_unlikely(ihl < _ODP_IPV4HDR_IHL_MIN) ||
-	    odp_unlikely(ver != 4) ||
-	    (l3_len > frame_len - *offset)) {
+	if (odp_unlikely(ihl < _ODP_IPV4HDR_IHL_MIN ||
+			 ver != 4 ||
+			 (l3_len > frame_len - *offset))) {
 		prs->error_flags.ip_err = 1;
 		return 0;
 	}
@@ -2012,13 +2012,15 @@ static inline uint8_t parse_ipv4(packet_parser_t *prs, const uint8_t **parseptr,
 	*     OR
 	*  "fragment offset" field is nonzero (all fragments except the first)
 	*/
-	frag_offset = _odp_be_to_cpu_16(ipv4->frag_offset);
 	if (odp_unlikely(_ODP_IPV4HDR_IS_FRAGMENT(frag_offset)))
 		prs->input_flags.ipfrag = 1;
 
 	/* Handle IPv4 broadcast / multicast */
-	prs->input_flags.ip_bcast = (dstaddr == 0xffffffff);
-	prs->input_flags.ip_mcast = (dstaddr >> 28) == 0xd;
+	if (odp_unlikely(dstaddr == 0xffffffff))
+		prs->input_flags.ip_bcast = 1;
+
+	if (odp_unlikely((dstaddr >> 28) == 0xd))
+		prs->input_flags.ip_mcast = 1;
 
 	return ipv4->proto;
 }
@@ -2107,17 +2109,16 @@ static inline void parse_tcp(packet_parser_t *prs,
 /**
  * Parser helper function for UDP
  */
-static inline void parse_udp(packet_parser_t *prs,
-			     const uint8_t **parseptr, uint32_t *offset)
+static inline void parse_udp(packet_parser_t *prs, const uint8_t **parseptr)
 {
 	const _odp_udphdr_t *udp = (const _odp_udphdr_t *)*parseptr;
 	uint32_t udplen = _odp_be_to_cpu_16(udp->length);
+	uint16_t ipsec_port = _odp_cpu_to_be_16(_ODP_UDP_IPSEC_PORT);
 
 	if (odp_unlikely(udplen < sizeof(_odp_udphdr_t)))
 		prs->error_flags.udp_err = 1;
 
-	if (_odp_cpu_to_be_16(_ODP_UDP_IPSEC_PORT) == udp->dst_port &&
-	    udplen > 4) {
+	if (odp_unlikely(ipsec_port == udp->dst_port && udplen > 4)) {
 		uint32_t val;
 
 		memcpy(&val, udp + 1, 4);
@@ -2127,8 +2128,6 @@ static inline void parse_udp(packet_parser_t *prs,
 		}
 	}
 
-	if (offset)
-		*offset   += sizeof(_odp_udphdr_t);
 	*parseptr += sizeof(_odp_udphdr_t);
 }
 
@@ -2142,7 +2141,7 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 
 	prs->l3_offset = offset;
 
-	if (layer <= ODP_PROTO_LAYER_L2)
+	if (odp_unlikely(layer <= ODP_PROTO_LAYER_L2))
 		return prs->error_flags.all != 0;
 
 	/* Set l3 flag only for known ethtypes */
@@ -2203,7 +2202,7 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 		if (odp_unlikely(offset + _ODP_UDPHDR_LEN > seg_len))
 			return -1;
 		prs->input_flags.udp = 1;
-		parse_udp(prs, &parseptr, NULL);
+		parse_udp(prs, &parseptr);
 		break;
 
 	case _ODP_IPPROTO_AH:
@@ -2232,7 +2231,7 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
  * Parse common packet headers up to given layer
  *
  * The function expects at least PACKET_PARSE_SEG_LEN bytes of data to be
- * available from the ptr.
+ * available from the ptr. Also parse metadata must be already initialized.
  */
 int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 			uint32_t frame_len, uint32_t seg_len,
