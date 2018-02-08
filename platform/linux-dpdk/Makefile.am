@@ -170,6 +170,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_hash.c \
 			   odp_init.c \
 			   ../linux-generic/odp_impl.c \
+			   ../linux-generic/odp_ipsec.c \
 			   ../linux-generic/odp_name_table.c \
 			   odp_packet.c \
 			   odp_packet_dpdk.c \
