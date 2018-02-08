@@ -1267,3 +1267,171 @@ uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl)
 {
 	return (uint64_t)hdl;
 }
+
+odp_packet_t odp_crypto_packet_from_event(odp_event_t ev)
+{
+	/* This check not mandated by the API specification */
+	ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
+	ODP_ASSERT(odp_event_subtype(ev) == ODP_EVENT_PACKET_CRYPTO);
+
+	return odp_packet_from_event(ev);
+}
+
+odp_event_t odp_crypto_packet_to_event(odp_packet_t pkt)
+{
+	return odp_packet_to_event(pkt);
+}
+
+static
+odp_crypto_packet_result_t *get_op_result_from_packet(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *hdr = odp_packet_hdr(pkt);
+
+	return &hdr->crypto_op_result;
+}
+
+int odp_crypto_packet_result(odp_crypto_packet_result_t *result,
+			     odp_packet_t packet)
+{
+	odp_crypto_packet_result_t *op_result;
+
+	ODP_ASSERT(odp_event_subtype(odp_packet_to_event(packet)) ==
+		   ODP_EVENT_PACKET_CRYPTO);
+
+	op_result = get_op_result_from_packet(packet);
+
+	memcpy(result, op_result, sizeof(*result));
+
+	return 0;
+}
+
+static
+int odp_crypto_op(odp_packet_t pkt_in,
+		  odp_packet_t *pkt_out,
+		  const odp_crypto_packet_op_param_t *param)
+{
+	odp_crypto_alg_err_t rc_cipher = ODP_CRYPTO_ALG_ERR_NONE;
+	odp_crypto_alg_err_t rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
+	odp_crypto_generic_session_t *session;
+	odp_crypto_packet_result_t local_result;
+	odp_bool_t allocated = false;
+	odp_packet_t out_pkt = *pkt_out;
+	odp_crypto_packet_result_t *op_result;
+
+	session = (odp_crypto_generic_session_t *)(intptr_t)param->session;
+
+	/* Resolve output buffer */
+	if (ODP_PACKET_INVALID == out_pkt &&
+	    ODP_POOL_INVALID != session->p.output_pool) {
+		out_pkt = odp_packet_alloc(session->p.output_pool,
+					   odp_packet_len(pkt_in));
+		allocated = true;
+	}
+
+	if (odp_unlikely(ODP_PACKET_INVALID == out_pkt)) {
+		ODP_DBG("Alloc failed.\n");
+		return -1;
+	}
+
+	if (pkt_in != out_pkt) {
+		int ret;
+
+		ret = odp_packet_copy_from_pkt(out_pkt,
+					       0,
+					       pkt_in,
+					       0,
+					       odp_packet_len(pkt_in));
+		if (odp_unlikely(ret < 0))
+			goto err;
+
+		_odp_packet_copy_md_to_packet(pkt_in, out_pkt);
+		odp_packet_free(pkt_in);
+		pkt_in = ODP_PACKET_INVALID;
+	}
+
+	/* Invoke the functions */
+	if (session->do_cipher_first) {
+		rc_cipher = session->cipher.func(out_pkt, param, session);
+		rc_auth = session->auth.func(out_pkt, param, session);
+	} else {
+		rc_auth = session->auth.func(out_pkt, param, session);
+		rc_cipher = session->cipher.func(out_pkt, param, session);
+	}
+
+	/* Fill in result */
+	local_result.cipher_status.alg_err = rc_cipher;
+	local_result.cipher_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
+	local_result.auth_status.alg_err = rc_auth;
+	local_result.auth_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
+	local_result.ok =
+		(rc_cipher == ODP_CRYPTO_ALG_ERR_NONE) &&
+		(rc_auth == ODP_CRYPTO_ALG_ERR_NONE);
+
+	_odp_buffer_event_subtype_set(packet_to_buffer(out_pkt),
+				      ODP_EVENT_PACKET_CRYPTO);
+	op_result = get_op_result_from_packet(out_pkt);
+	*op_result = local_result;
+
+	/* Synchronous, simply return results */
+	*pkt_out = out_pkt;
+
+	return 0;
+
+err:
+	if (allocated) {
+		odp_packet_free(out_pkt);
+		out_pkt = ODP_PACKET_INVALID;
+	}
+
+	return -1;
+}
+
+int odp_crypto_packet_op(const odp_packet_t pkt_in[],
+			 odp_packet_t pkt_out[],
+			 const odp_crypto_packet_op_param_t param[],
+			 int num_pkt)
+{
+	int i, rc;
+	odp_crypto_generic_session_t *session;
+
+	session = (odp_crypto_generic_session_t *)(intptr_t)param->session;
+	ODP_ASSERT(ODP_CRYPTO_SYNC == session->p.packet_op_mode);
+
+	for (i = 0; i < num_pkt; i++) {
+		rc = odp_crypto_op(pkt_in[i], &pkt_out[i], &param[i]);
+		if (rc < 0)
+			break;
+	}
+
+	return i;
+}
+
+int odp_crypto_packet_op_enq(const odp_packet_t pkt_in[],
+			     const odp_packet_t pkt_out[],
+			     const odp_crypto_packet_op_param_t param[],
+			     int num_pkt)
+{
+	odp_packet_t pkt;
+	odp_event_t event;
+	odp_crypto_generic_session_t *session;
+	int i, rc;
+
+	session = (odp_crypto_generic_session_t *)(intptr_t)param->session;
+	ODP_ASSERT(ODP_CRYPTO_ASYNC == session->p.packet_op_mode);
+	ODP_ASSERT(ODP_QUEUE_INVALID != session->p.compl_queue);
+
+	for (i = 0; i < num_pkt; i++) {
+		pkt = pkt_out[i];
+		rc = odp_crypto_op(pkt_in[i], &pkt, &param[i]);
+		if (rc < 0)
+			break;
+
+		event = odp_packet_to_event(pkt);
+		if (odp_queue_enq(session->p.compl_queue, event)) {
+			odp_event_free(event);
+			break;
+		}
+	}
+
+	return i;
+}
