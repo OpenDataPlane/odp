@@ -241,6 +241,16 @@ noinst_HEADERS += arch/aarch64/odp_atomic.h \
 		  arch/default/odp_cpu_idling.h \
 		  arch/aarch64/odp_llsc.h
 endif
+if ARCH_IS_DEFAULT
+__LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_cycles.c \
+				  arch/default/odp_global_time.c \
+				  arch/default/odp_sysinfo_parse.c
+if !ODP_ABI_COMPAT
+odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/cpu.h
+endif
+noinst_HEADERS += arch/default/odp_cpu.h \
+		  arch/default/odp_cpu_idling.h
+endif
 if ARCH_IS_MIPS64
 __LIB__libodp_linux_la_SOURCES += arch/mips64/odp_cpu_cycles.c \
 				  arch/default/odp_global_time.c \
