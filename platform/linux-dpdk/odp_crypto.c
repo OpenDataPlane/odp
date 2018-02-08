@@ -792,35 +792,31 @@ int odp_crypto_session_create(odp_crypto_session_param_t *param,
 	struct rte_crypto_sym_xform cipher_xform;
 	struct rte_crypto_sym_xform auth_xform;
 	struct rte_crypto_sym_xform *first_xform;
-	struct rte_cryptodev_sym_session *session;
-	crypto_session_entry_t *entry;
+	struct rte_cryptodev_sym_session *rte_session;
+	crypto_session_entry_t *session = NULL;
 
 	*session_out = ODP_CRYPTO_SESSION_INVALID;
 
 	if (rte_cryptodev_count() == 0) {
 		ODP_ERR("No crypto devices available\n");
-		return -1;
+		*status = ODP_CRYPTO_SES_CREATE_ERR_ENOMEM;
+		goto err;
 	}
 
 	/* Allocate memory for this session */
-	entry = alloc_session();
-	if (entry == NULL) {
-		ODP_ERR("Failed to allocate a session entry");
-		return -1;
+	session = alloc_session();
+	if (session == NULL) {
+		*status = ODP_CRYPTO_SES_CREATE_ERR_ENOMEM;
+		goto err;
 	}
-
-	/* Default to successful result */
-	*status = ODP_CRYPTO_SES_CREATE_ERR_NONE;
 
 	/* Cipher Data */
 	cipher_xform.cipher.key.data = rte_malloc("crypto key",
 						param->cipher_key.length, 0);
 	if (cipher_xform.cipher.key.data == NULL) {
 		ODP_ERR("Failed to allocate memory for cipher key\n");
-		/* remove the crypto_session_entry_t */
-		memset(entry, 0, sizeof(*entry));
-		free_session(entry);
-		return -1;
+		*status = ODP_CRYPTO_SES_CREATE_ERR_ENOMEM;
+		goto err;
 	}
 
 	cipher_xform.type = RTE_CRYPTO_SYM_XFORM_CIPHER;
@@ -835,10 +831,8 @@ int odp_crypto_session_create(odp_crypto_session_param_t *param,
 						param->auth_key.length, 0);
 	if (auth_xform.auth.key.data == NULL) {
 		ODP_ERR("Failed to allocate memory for auth key\n");
-		/* remove the crypto_session_entry_t */
-		memset(entry, 0, sizeof(*entry));
-		free_session(entry);
-		return -1;
+		*status = ODP_CRYPTO_SES_CREATE_ERR_ENOMEM;
+		goto err;
 	}
 	auth_xform.type = RTE_CRYPTO_SYM_XFORM_AUTH;
 	auth_xform.next = NULL;
@@ -849,13 +843,13 @@ int odp_crypto_session_create(odp_crypto_session_param_t *param,
 
 	/* Derive order */
 	if (ODP_CRYPTO_OP_ENCODE == param->op)
-		entry->do_cipher_first =  param->auth_cipher_text;
+		session->do_cipher_first =  param->auth_cipher_text;
 	else
-		entry->do_cipher_first = !param->auth_cipher_text;
+		session->do_cipher_first = !param->auth_cipher_text;
 
 	/* Process based on cipher */
 	/* Derive order */
-	if (entry->do_cipher_first) {
+	if (session->do_cipher_first) {
 		cipher_xform.cipher.op = RTE_CRYPTO_CIPHER_OP_ENCRYPT;
 		auth_xform.auth.op = RTE_CRYPTO_AUTH_OP_GENERATE;
 		first_xform = &cipher_xform;
@@ -872,7 +866,7 @@ int odp_crypto_session_create(odp_crypto_session_param_t *param,
 	/* Check result */
 	if (rc) {
 		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
-		return -1;
+		goto err;
 	}
 
 	rc = auth_alg_odp_to_rte(param->auth_alg, &auth_xform);
@@ -880,10 +874,7 @@ int odp_crypto_session_create(odp_crypto_session_param_t *param,
 	/* Check result */
 	if (rc) {
 		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_AUTH;
-		/* remove the crypto_session_entry_t */
-		memset(entry, 0, sizeof(*entry));
-		free_session(entry);
-		return -1;
+		goto err;
 	}
 
 	rc = get_crypto_dev(&cipher_xform,
@@ -893,34 +884,38 @@ int odp_crypto_session_create(odp_crypto_session_param_t *param,
 
 	if (rc) {
 		ODP_ERR("Couldn't find a crypto device");
-		/* remove the crypto_session_entry_t */
-		memset(entry, 0, sizeof(*entry));
-		free_session(entry);
-		return -1;
+		*status = ODP_CRYPTO_SES_CREATE_ERR_ENOMEM;
+		goto err;
 	}
 
 	/* Setup session */
-	session = rte_cryptodev_sym_session_create(cdev_id, first_xform);
-
-	if (session == NULL) {
-		/* remove the crypto_session_entry_t */
-		memset(entry, 0, sizeof(*entry));
-		free_session(entry);
-		return -1;
+	rte_session = rte_cryptodev_sym_session_create(cdev_id, first_xform);
+	if (rte_session == NULL) {
+		*status = ODP_CRYPTO_SES_CREATE_ERR_ENOMEM;
+		goto err;
 	}
 
-	entry->rte_session  = (intptr_t)session;
-	entry->cipher_xform = cipher_xform;
-	entry->auth_xform = auth_xform;
-	entry->iv.length = param->iv.length;
-	entry->iv.data = param->iv.data;
-	entry->output_pool = param->output_pool;
-	entry->compl_queue = param->compl_queue;
+	session->rte_session  = (intptr_t)rte_session;
+	session->cipher_xform = cipher_xform;
+	session->auth_xform = auth_xform;
+	session->iv.length = param->iv.length;
+	session->iv.data = param->iv.data;
+	session->output_pool = param->output_pool;
+	session->compl_queue = param->compl_queue;
 
 	/* We're happy */
-	*session_out = (intptr_t)entry;
-
+	*session_out = (intptr_t)session;
+	*status = ODP_CRYPTO_SES_CREATE_ERR_NONE;
 	return 0;
+
+err:
+	/* error status should be set at this moment */
+	if (session != NULL) {
+		memset(session, 0, sizeof(*session));
+		free_session(session);
+	}
+	*session_out = ODP_CRYPTO_SESSION_INVALID;
+	return -1;
 }
 
 int odp_crypto_session_destroy(odp_crypto_session_t session)
