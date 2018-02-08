@@ -506,31 +506,6 @@ int odp_packet_trunc_tail(odp_packet_t *pkt, uint32_t len, void **tail_ptr,
 	return 0;
 }
 
-void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
-			odp_packet_seg_t *seg)
-{
-	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-
-	do {
-		if (mb->data_len > offset) {
-			break;
-		} else {
-			offset -= mb->data_len;
-			mb = mb->next;
-		}
-	} while (mb);
-
-	if (mb) {
-		if (len)
-			*len = mb->data_len - offset;
-		if (seg)
-			*seg = (odp_packet_seg_t)(uintptr_t)mb;
-		return (void *)(rte_pktmbuf_mtod(mb, char *) + offset);
-	} else {
-		return NULL;
-	}
-}
-
 /*
  *
  * Meta-data
@@ -548,27 +523,6 @@ void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ctx)
 	odp_packet_hdr(pkt)->buf_hdr.buf_cctx = ctx;
 }
 
-static inline void *packet_offset_to_ptr(odp_packet_t pkt, uint32_t *len,
-					 const size_t offset)
-{
-	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
-		return NULL;
-
-	if (len)
-		return odp_packet_offset(pkt, offset, len, NULL);
-	else
-		return odp_packet_offset(pkt, offset, NULL, NULL);
-}
-
-void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
-{
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-
-	if (!packet_hdr_has_l2(pkt_hdr))
-		return NULL;
-	return packet_offset_to_ptr(pkt, len, pkt_hdr->p.l2_offset);
-}
-
 int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
@@ -581,13 +535,6 @@ int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 	return 0;
 }
 
-void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len)
-{
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-
-	return packet_offset_to_ptr(pkt, len, pkt_hdr->p.l3_offset);
-}
-
 int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
@@ -597,13 +544,6 @@ int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset)
 
 	pkt_hdr->p.l3_offset = offset;
 	return 0;
-}
-
-void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len)
-{
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-
-	return packet_offset_to_ptr(pkt, len, pkt_hdr->p.l4_offset);
 }
 
 int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)

@@ -32,6 +32,38 @@ extern const _odp_packet_inline_offset_t _odp_packet_inline;
 /** @internal Pool inline function offsets */
 extern const _odp_pool_inline_offset_t _odp_pool_inline;
 
+/** @internal Inline function @param pkt @param offset @param len @param seg
+ *  @return */
+static inline void *_odp_packet_offset(odp_packet_t pkt, uint32_t offset,
+				       uint32_t *len, odp_packet_seg_t *seg)
+{
+	struct rte_mbuf *mb = &_odp_pkt_get(pkt, struct rte_mbuf, mb);
+
+	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
+		goto err;
+
+	do {
+		if (mb->data_len > offset)
+			break;
+		offset -= mb->data_len;
+		mb = mb->next;
+	} while (mb);
+
+	if (mb) {
+		if (len)
+			*len = mb->data_len - offset;
+		if (seg)
+			*seg = (odp_packet_seg_t)(uintptr_t)mb;
+		return (void *)(rte_pktmbuf_mtod(mb, char *) + offset);
+	}
+err:
+	if (len)
+		*len = 0;
+	if (seg)
+		*seg = NULL;
+	return NULL;
+}
+
 /** @internal Inline function @param pkt @return */
 static inline void *_odp_packet_data(odp_packet_t pkt)
 {
@@ -123,6 +155,27 @@ static inline uint32_t _odp_packet_l3_offset(odp_packet_t pkt)
 static inline uint32_t _odp_packet_l4_offset(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, uint16_t, l4_offset);
+}
+
+/** @internal Inline function @param pkt @param len @return */
+static inline void *_odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
+{
+	return _odp_packet_offset(pkt, _odp_pkt_get(pkt, uint16_t, l2_offset),
+				  len, NULL);
+}
+
+/** @internal Inline function @param pkt @param len @return */
+static inline void *_odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len)
+{
+	return _odp_packet_offset(pkt, _odp_pkt_get(pkt, uint16_t, l3_offset),
+				  len, NULL);
+}
+
+/** @internal Inline function @param pkt @param len @return */
+static inline void *_odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len)
+{
+	return _odp_packet_offset(pkt, _odp_pkt_get(pkt, uint16_t, l4_offset),
+				  len, NULL);
 }
 
 /** @internal Inline function @param pkt @return */
