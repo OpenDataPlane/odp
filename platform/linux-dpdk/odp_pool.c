@@ -241,7 +241,7 @@ static int check_params(odp_pool_param_t *params)
 {
 	odp_pool_capability_t capa;
 
-	if (odp_pool_capability(&capa) < 0)
+	if (!params || odp_pool_capability(&capa) < 0)
 		return -1;
 
 	switch (params->type) {
