@@ -72,10 +72,7 @@ typedef union {
 		uint64_t vlan_qinq:1; /* Stacked VLAN found, QinQ */
 
 		uint64_t snap:1;      /* SNAP */
-		uint64_t arp:1;       /* ARP */
 
-		uint64_t ipv4:1;      /* IPv4 */
-		uint64_t ipv6:1;      /* IPv6 */
 		uint64_t ip_bcast:1;  /* IP broadcast */
 		uint64_t ip_mcast:1;  /* IP multicast */
 		uint64_t ipfrag:1;    /* IP fragment */
@@ -83,14 +80,7 @@ typedef union {
 
 		uint64_t ipsec:1;     /* IPSec packet. Required by the
 					   odp_packet_has_ipsec_set() func. */
-		uint64_t ipsec_ah:1;  /* IPSec authentication header */
-		uint64_t ipsec_esp:1; /* IPSec encapsulating security
-					   payload */
-		uint64_t udp:1;       /* UDP */
-		uint64_t tcp:1;       /* TCP */
 		uint64_t tcpopt:1;    /* TCP options present */
-		uint64_t sctp:1;      /* SCTP */
-		uint64_t icmp:1;      /* ICMP */
 
 		uint64_t color:2;     /* Packet color for traffic mgmt */
 		uint64_t nodrop:1;    /* Drop eligibility status */
@@ -98,6 +88,9 @@ typedef union {
 		uint64_t l3_chksum_done:1; /* L3 checksum validation done */
 		uint64_t l4_chksum_done:1; /* L4 checksum validation done */
 		uint64_t ipsec_udp:1; /* UDP-encapsulated IPsec packet */
+
+		uint64_t l3_type : 8; /* L3 packet type */
+		uint64_t l4_type : 8; /* L4 packet type */
 	};
 
 } _odp_packet_input_flags_t;
