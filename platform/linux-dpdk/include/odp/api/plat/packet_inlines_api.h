@@ -68,6 +68,21 @@ _ODP_INLINE uint32_t odp_packet_user_area_size(odp_packet_t pkt)
 	return _odp_packet_user_area_size(pkt);
 }
 
+_ODP_INLINE uint32_t odp_packet_l2_offset(odp_packet_t pkt)
+{
+	return _odp_packet_l2_offset(pkt);
+}
+
+_ODP_INLINE uint32_t odp_packet_l3_offset(odp_packet_t pkt)
+{
+	return _odp_packet_l3_offset(pkt);
+}
+
+_ODP_INLINE uint32_t odp_packet_l4_offset(odp_packet_t pkt)
+{
+	return _odp_packet_l4_offset(pkt);
+}
+
 _ODP_INLINE uint32_t odp_packet_flow_hash(odp_packet_t pkt)
 {
 	return _odp_packet_flow_hash(pkt);

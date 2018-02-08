@@ -72,6 +72,12 @@ typedef struct _odp_packet_inline_offset_t {
 	/** @internal field offset */
 	uint16_t user_ptr;
 	/** @internal field offset */
+	uint16_t l2_offset;
+	/** @internal field offset */
+	uint16_t l3_offset;
+	/** @internal field offset */
+	uint16_t l4_offset;
+	/** @internal field offset */
 	uint16_t timestamp;
 	/** @internal field offset */
 	uint16_t input_flags;

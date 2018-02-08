@@ -108,6 +108,24 @@ static inline uint32_t _odp_packet_user_area_size(odp_packet_t pkt)
 }
 
 /** @internal Inline function @param pkt @return */
+static inline uint32_t _odp_packet_l2_offset(odp_packet_t pkt)
+{
+	return _odp_pkt_get(pkt, uint16_t, l2_offset);
+}
+
+/** @internal Inline function @param pkt @return */
+static inline uint32_t _odp_packet_l3_offset(odp_packet_t pkt)
+{
+	return _odp_pkt_get(pkt, uint16_t, l3_offset);
+}
+
+/** @internal Inline function @param pkt @return */
+static inline uint32_t _odp_packet_l4_offset(odp_packet_t pkt)
+{
+	return _odp_pkt_get(pkt, uint16_t, l4_offset);
+}
+
+/** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_flow_hash(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, uint32_t, rss);
