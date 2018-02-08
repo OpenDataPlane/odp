@@ -40,6 +40,7 @@ odpapiinclude_HEADERS = \
 		  include/odp/api/hash.h \
 		  include/odp/api/hints.h \
 		  include/odp/api/init.h \
+		  include/odp/api/ipsec.h \
 		  include/odp/api/packet_flags.h \
 		  include/odp/api/packet.h \
 		  include/odp/api/packet_io.h \
@@ -79,6 +80,7 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/crypto_types.h \
 		  include/odp/api/plat/event_types.h \
 		  include/odp/api/plat/init_types.h \
+		  include/odp/api/plat/ipsec_types.h \
 		  include/odp/api/plat/packet_flag_inlines.h \
 		  include/odp/api/plat/packet_flag_inlines_api.h \
 		  include/odp/api/plat/packet_inlines.h \
