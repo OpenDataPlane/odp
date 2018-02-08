@@ -159,17 +159,16 @@ AS_CASE([$host],
   [powerpc*], [ARCH_DIR=powerpc],
   [aarch64*], [ARCH_DIR=aarch64],
   [arm*], [ARCH_DIR=arm],
-  [ARCH_DIR=undefined]
+  [ARCH_DIR=default]
 )
 AC_SUBST([ARCH_DIR])
 
 ##########################################################################
 # Warn on the defaults if arch is undefined
 ##########################################################################
-if test "${ARCH_DIR}" = "undefined";
+if test "${ARCH_DIR}" = "default";
 then
-    echo "ARCH_DIR is undefined, please add your ARCH_DIR based on host=${host}"
-    exit 1
+    AC_MSG_WARN([ARCH_DIR is undefined, please add your ARCH_DIR based on host=${host}])
 fi
 
 ##########################################################################
@@ -280,6 +279,7 @@ AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
 AM_CONDITIONAL([helper_linux], [test x$helper_linux = xyes ])
 AM_CONDITIONAL([ARCH_IS_ARM], [test "x${ARCH_DIR}" = "xarm"])
 AM_CONDITIONAL([ARCH_IS_AARCH64], [test "x${ARCH_DIR}" = "xaarch64"])
+AM_CONDITIONAL([ARCH_IS_DEFAULT], [test "x${ARCH_DIR}" = "xdefault"])
 AM_CONDITIONAL([ARCH_IS_MIPS64], [test "x${ARCH_DIR}" = "xmips64"])
 AM_CONDITIONAL([ARCH_IS_POWERPC], [test "x${ARCH_DIR}" = "xpowerpc"])
 AM_CONDITIONAL([ARCH_IS_X86], [test "x${ARCH_DIR}" = "xx86"])
