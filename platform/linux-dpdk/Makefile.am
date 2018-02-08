@@ -27,6 +27,7 @@ odpapiinclude_HEADERS = \
 		  include/odp/api/barrier.h \
 		  include/odp/api/buffer.h \
 		  include/odp/api/byteorder.h \
+		  include/odp/api/chksum.h \
 		  include/odp/api/classification.h \
 		  include/odp/api/compiler.h \
 		  include/odp/api/cpu.h \
