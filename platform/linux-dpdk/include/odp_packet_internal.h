@@ -131,8 +131,6 @@ typedef struct {
 	/* Classifier destination queue */
 	queue_t dst_queue;
 
-	/* Result for crypto */
-	odp_crypto_generic_op_result_t op_result;
 } odp_packet_hdr_t __rte_cache_aligned;
 
 /**
@@ -170,7 +168,6 @@ static inline void copy_packet_cls_metadata(odp_packet_hdr_t *src_hdr,
 	dst_hdr->p = src_hdr->p;
 	dst_hdr->dst_queue = src_hdr->dst_queue;
 	dst_hdr->timestamp = src_hdr->timestamp;
-	dst_hdr->op_result = src_hdr->op_result;
 }
 
 static inline uint32_t packet_len(odp_packet_hdr_t *pkt_hdr)
