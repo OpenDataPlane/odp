@@ -202,39 +202,34 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_weak.c
 
 if ARCH_IS_ARM
-__LIB__libodp_dpdk_la_SOURCES += arch/default/odp_cpu_arch.c \
-				  arch/default/odp_cpu_cycles.c \
-				  arch/default/odp_global_time.c \
-				  arch/default/odp_sysinfo_parse.c
+__LIB__libodp_dpdk_la_SOURCES += arch/default/odp_cpu_cycles.c \
+				 arch/default/odp_global_time.c \
+				 arch/default/odp_sysinfo_parse.c
 arch_odp_headers = arch/arm/odp/api/cpu_arch.h
 endif
 if ARCH_IS_AARCH64
-__LIB__libodp_dpdk_la_SOURCES += arch/default/odp_cpu_arch.c \
-				  arch/default/odp_cpu_cycles.c \
-				  arch/aarch64/odp_global_time.c \
-				  arch/default/odp_sysinfo_parse.c
+__LIB__libodp_dpdk_la_SOURCES += arch/default/odp_cpu_cycles.c \
+				 arch/aarch64/odp_global_time.c \
+				 arch/default/odp_sysinfo_parse.c
 arch_odp_headers = arch/aarch64/odp/api/cpu_arch.h
 endif
 if ARCH_IS_MIPS64
-__LIB__libodp_dpdk_la_SOURCES += arch/mips64/odp_cpu_arch.c \
-				  arch/default/odp_cpu_cycles.c \
-				  arch/default/odp_global_time.c \
-				  arch/mips64/odp_sysinfo_parse.c
+__LIB__libodp_dpdk_la_SOURCES += arch/mips64/odp_cpu_cycles.c \
+				 arch/default/odp_global_time.c \
+				 arch/mips64/odp_sysinfo_parse.c
 arch_odp_headers = arch/mips64/odp/api/cpu_arch.h
 endif
 if ARCH_IS_POWERPC
-__LIB__libodp_dpdk_la_SOURCES += arch/default/odp_cpu_arch.c \
-				  arch/default/odp_cpu_cycles.c \
-				  arch/default/odp_global_time.c \
-				  arch/powerpc/odp_sysinfo_parse.c
+__LIB__libodp_dpdk_la_SOURCES += arch/default/odp_cpu_cycles.c \
+				 arch/default/odp_global_time.c \
+				 arch/powerpc/odp_sysinfo_parse.c
 arch_odp_headers = arch/powerpc/odp/api/cpu_arch.h
 endif
 if ARCH_IS_X86
 __LIB__libodp_dpdk_la_SOURCES += arch/x86/cpu_flags.c \
-				  arch/x86/odp_cpu_arch.c \
-				  arch/default/odp_cpu_cycles.c \
-				  arch/x86/odp_global_time.c \
-				  arch/x86/odp_sysinfo_parse.c
+				 arch/x86/odp_cpu_cycles.c \
+				 arch/x86/odp_global_time.c \
+				 arch/x86/odp_sysinfo_parse.c
 arch_odp_headers = arch/x86/odp/api/cpu_arch.h
 noinst_HEADERS += arch/x86/cpu_flags.h
 endif
