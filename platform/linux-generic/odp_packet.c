@@ -2091,19 +2091,15 @@ static inline uint8_t parse_ipv6(packet_parser_t *prs, const uint8_t **parseptr,
 /**
  * Parser helper function for TCP
  */
-static inline void parse_tcp(packet_parser_t *prs,
-			     const uint8_t **parseptr, uint32_t *offset)
+static inline void parse_tcp(packet_parser_t *prs, const uint8_t **parseptr)
 {
 	const _odp_tcphdr_t *tcp = (const _odp_tcphdr_t *)*parseptr;
+	uint32_t len = tcp->hl * 4;
 
-	if (tcp->hl < sizeof(_odp_tcphdr_t) / sizeof(uint32_t))
+	if (odp_unlikely(tcp->hl < sizeof(_odp_tcphdr_t) / sizeof(uint32_t)))
 		prs->error_flags.tcp_err = 1;
-	else if ((uint32_t)tcp->hl * 4 > sizeof(_odp_tcphdr_t))
-		prs->input_flags.tcpopt = 1;
 
-	if (offset)
-		*offset   += (uint32_t)tcp->hl * 4;
-	*parseptr += (uint32_t)tcp->hl * 4;
+	*parseptr += len;
 }
 
 /**
@@ -2195,7 +2191,7 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 		if (odp_unlikely(offset + _ODP_TCPHDR_LEN > seg_len))
 			return -1;
 		prs->input_flags.tcp = 1;
-		parse_tcp(prs, &parseptr, NULL);
+		parse_tcp(prs, &parseptr);
 		break;
 
 	case _ODP_IPPROTO_UDP:
