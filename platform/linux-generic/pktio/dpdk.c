@@ -433,6 +433,8 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	int alloc_len, num;
 	odp_pool_t pool = pktio_entry->s.pkt_dpdk.pool;
 	odp_pktin_config_opt_t *pktin_cfg = &pktio_entry->s.config.pktin;
+	odp_proto_layer_t parse_layer = pktio_entry->s.config.parser.layer;
+	odp_pktio_t input = pktio_entry->s.handle;
 
 	/* Allocate maximum sized packets */
 	alloc_len = pktio_entry->s.pkt_dpdk.data_room;
@@ -474,13 +476,12 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		if (_odp_packet_copy_from_mem(pkt, 0, pkt_len, data) != 0)
 			goto fail;
 
-		pkt_hdr->input = pktio_entry->s.handle;
+		pkt_hdr->input = input;
 
 		if (pktio_cls_enabled(pktio_entry))
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
-		else if (pktio_entry->s.config.parser.layer)
-			packet_parse_layer(pkt_hdr,
-					   pktio_entry->s.config.parser.layer);
+		else if (parse_layer != ODP_PROTO_LAYER_NONE)
+			packet_parse_layer(pkt_hdr, parse_layer);
 
 		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
 			packet_set_flow_hash(pkt_hdr, mbuf->hash.rss);
@@ -682,6 +683,8 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 	int nb_pkts = 0;
 	odp_pool_t pool = pktio_entry->s.pkt_dpdk.pool;
 	odp_pktin_config_opt_t *pktin_cfg = &pktio_entry->s.config.pktin;
+	odp_proto_layer_t parse_layer = pktio_entry->s.config.parser.layer;
+	odp_pktio_t input = pktio_entry->s.handle;
 
 	for (i = 0; i < mbuf_num; i++) {
 		odp_packet_hdr_t parsed_hdr;
@@ -694,6 +697,8 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		}
 
 		data = rte_pktmbuf_mtod(mbuf, char *);
+		odp_prefetch(data);
+
 		pkt_len = rte_pktmbuf_pkt_len(mbuf);
 
 		pkt = (odp_packet_t)mbuf->userdata;
@@ -714,13 +719,12 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		pkt_hdr->buf_hdr.seg[0].data = data;
 
 		packet_init(pkt_hdr, pkt_len);
-		pkt_hdr->input = pktio_entry->s.handle;
+		pkt_hdr->input = input;
 
 		if (pktio_cls_enabled(pktio_entry))
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
-		else if (pktio_entry->s.config.parser.layer)
-			packet_parse_layer(pkt_hdr,
-					   pktio_entry->s.config.parser.layer);
+		else if (parse_layer != ODP_PROTO_LAYER_NONE)
+			packet_parse_layer(pkt_hdr, parse_layer);
 
 		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
 			packet_set_flow_hash(pkt_hdr, mbuf->hash.rss);
