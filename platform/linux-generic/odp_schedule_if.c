@@ -7,6 +7,7 @@
 #include "config.h"
 
 #include <odp_schedule_if.h>
+#include <odp_internal.h>
 
 extern const schedule_fn_t schedule_sp_fn;
 extern const schedule_api_t schedule_sp_api;
@@ -145,3 +146,12 @@ void odp_schedule_order_lock_wait(uint32_t lock_index)
 	sched_api->schedule_order_lock_wait(lock_index);
 }
 
+int _odp_schedule_init_global(void)
+{
+	return sched_fn->init_global();
+}
+
+int _odp_schedule_term_global(void)
+{
+	return sched_fn->term_global();
+}

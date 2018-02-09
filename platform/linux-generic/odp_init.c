@@ -96,7 +96,7 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = QUEUE_INIT;
 
-	if (sched_fn->init_global()) {
+	if (_odp_schedule_init_global()) {
 		ODP_ERR("ODP schedule init failed.\n");
 		goto init_failed;
 	}
@@ -231,7 +231,7 @@ int _odp_term_global(enum init_stage stage)
 		/* Fall through */
 
 	case SCHED_INIT:
-		if (sched_fn->term_global()) {
+		if (_odp_schedule_term_global()) {
 			ODP_ERR("ODP schedule term failed.\n");
 			rc = -1;
 		}
