@@ -103,6 +103,9 @@ int odp_pool_term_local(void);
 int _odp_queue_init_global(void);
 int _odp_queue_term_global(void);
 
+int _odp_schedule_init_global(void);
+int _odp_schedule_term_global(void);
+
 int odp_pktio_init_global(void);
 int odp_pktio_term_global(void);
 int odp_pktio_init_local(void);
