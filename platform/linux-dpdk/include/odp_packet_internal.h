@@ -254,6 +254,11 @@ int packet_parse_common(packet_parser_t *pkt_hdr, const uint8_t *ptr,
 			uint32_t pkt_len, uint32_t seg_len,
 			odp_pktio_parser_layer_t layer);
 
+int _odp_packet_set_data(odp_packet_t pkt, uint32_t offset,
+			 uint8_t c, uint32_t len);
+
+int _odp_packet_cmp_data(odp_packet_t pkt, uint32_t offset,
+			 const void *s, uint32_t len);
 
 /* We can't enforce tailroom reservation for received packets */
 ODP_STATIC_ASSERT(CONFIG_PACKET_TAILROOM == 0,

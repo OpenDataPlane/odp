@@ -900,6 +900,56 @@ int odp_packet_move_data(odp_packet_t pkt, uint32_t dst_offset,
 					pkt, src_offset, len);
 }
 
+int _odp_packet_set_data(odp_packet_t pkt, uint32_t offset,
+			 uint8_t c, uint32_t len)
+{
+	void *mapaddr;
+	uint32_t seglen = 0; /* GCC */
+	uint32_t setlen;
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	if (offset + len > packet_len(pkt_hdr))
+		return -1;
+
+	while (len > 0) {
+		mapaddr = _odp_packet_offset(pkt, offset, &seglen, NULL);
+		setlen = len > seglen ? seglen : len;
+		if (odp_unlikely(setlen == 0))
+			return -1;
+		memset(mapaddr, c, setlen);
+		offset  += setlen;
+		len     -= setlen;
+	}
+
+	return 0;
+}
+
+int _odp_packet_cmp_data(odp_packet_t pkt, uint32_t offset,
+			 const void *s, uint32_t len)
+{
+	const uint8_t *ptr = s;
+	void *mapaddr;
+	uint32_t seglen = 0; /* GCC */
+	uint32_t cmplen;
+	int ret;
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	ODP_ASSERT(offset + len <= packet_len(pkt_hdr));
+
+	while (len > 0) {
+		mapaddr = _odp_packet_offset(pkt, offset, &seglen, NULL);
+		cmplen = len > seglen ? seglen : len;
+		ret = memcmp(mapaddr, ptr, cmplen);
+		if (ret != 0)
+			return ret;
+		offset  += cmplen;
+		len     -= cmplen;
+		ptr     += cmplen;
+	}
+
+	return 0;
+}
+
 /*
  *
  * Debugging
