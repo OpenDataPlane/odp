@@ -27,7 +27,6 @@ extern "C" {
 #include <odp/api/packet.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/crypto.h>
-#include <odp_crypto_internal.h>
 #include <odp_ipsec_internal.h>
 #include <protocols/eth.h>
 #include <odp/api/plat/packet_types.h>
