@@ -7,6 +7,7 @@
 #include "config.h"
 
 #include <odp_queue_if.h>
+#include <odp_internal.h>
 
 extern const queue_api_t queue_scalable_api;
 extern const queue_fn_t queue_scalable_fn;
@@ -110,4 +111,14 @@ void odp_queue_param_init(odp_queue_param_t *param)
 int odp_queue_info(odp_queue_t queue, odp_queue_info_t *info)
 {
 	return queue_api->queue_info(queue, info);
+}
+
+int _odp_queue_init_global(void)
+{
+	return queue_fn->init_global();
+}
+
+int _odp_queue_term_global(void)
+{
+	return queue_fn->term_global();
 }
