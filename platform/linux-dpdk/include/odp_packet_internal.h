@@ -28,6 +28,7 @@ extern "C" {
 #include <odp/api/packet_io.h>
 #include <odp/api/crypto.h>
 #include <odp_crypto_internal.h>
+#include <odp_ipsec_internal.h>
 #include <protocols/eth.h>
 #include <odp/api/plat/packet_types.h>
 #include <odp_queue_if.h>
@@ -133,6 +134,9 @@ typedef struct {
 
 	/* Result for crypto packet op */
 	odp_crypto_packet_result_t crypto_op_result;
+
+	/* Context for IPsec */
+	odp_ipsec_packet_result_t ipsec_ctx;
 
 } odp_packet_hdr_t __rte_cache_aligned;
 
