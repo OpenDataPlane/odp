@@ -159,6 +159,26 @@ static inline odp_packet_t packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
 	return (odp_packet_t)(odp_packet_hdr_t *)buf_hdr;
 }
 
+/**
+ * Initialize ODP headers
+ */
+static inline void packet_init(odp_packet_hdr_t *pkt_hdr)
+{
+	pkt_hdr->p.input_flags.all  = 0;
+	pkt_hdr->p.output_flags.all = 0;
+	pkt_hdr->p.error_flags.all  = 0;
+
+	pkt_hdr->p.l2_offset        = 0;
+	pkt_hdr->p.l3_offset        = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->p.l4_offset        = ODP_PACKET_OFFSET_INVALID;
+
+	if (odp_unlikely(pkt_hdr->buf_hdr.event_subtype !=
+			ODP_EVENT_PACKET_BASIC))
+		pkt_hdr->buf_hdr.event_subtype = ODP_EVENT_PACKET_BASIC;
+
+	pkt_hdr->input = ODP_PKTIO_INVALID;
+}
+
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
 					       odp_packet_hdr_t *dst_hdr)
 {
@@ -191,16 +211,7 @@ int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
 		       odp_pktio_parser_layer_t layer);
 
 /* Reset parser metadata for a new parse */
-static inline void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
-{
-	/* Reset parser metadata before new parse */
-	pkt_hdr->p.error_flags.all  = 0;
-	pkt_hdr->p.input_flags.all  = 0;
-	pkt_hdr->p.output_flags.all = 0;
-	pkt_hdr->p.l2_offset        = 0;
-	pkt_hdr->p.l3_offset        = ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->p.l4_offset        = ODP_PACKET_OFFSET_INVALID;
-}
+void packet_parse_reset(odp_packet_hdr_t *pkt_hdr);
 
 /* Convert a buffer handle to a packet handle */
 odp_packet_t _odp_packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr);

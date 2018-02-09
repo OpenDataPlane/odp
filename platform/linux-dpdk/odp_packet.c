@@ -61,12 +61,6 @@ ODP_STATIC_ASSERT(sizeof(dummy.hash.rss) == sizeof(uint32_t),
 		  "hash.rss should be uint32_t");
 ODP_STATIC_ASSERT(sizeof(dummy.ol_flags) == sizeof(uint64_t),
 		  "ol_flags should be uint64_t");
-/*
- *
- * Alloc and free
- * ********************************************************
- *
- */
 
 static inline odp_buffer_t buffer_handle(odp_packet_hdr_t *pkt_hdr)
 {
@@ -81,6 +75,17 @@ static inline odp_packet_hdr_t *buf_to_packet_hdr(odp_buffer_t buf)
 odp_packet_t _odp_packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
 {
 	return (odp_packet_t)buf_hdr;
+}
+
+void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
+{
+	/* Reset parser metadata before new parse */
+	pkt_hdr->p.error_flags.all  = 0;
+	pkt_hdr->p.input_flags.all  = 0;
+	pkt_hdr->p.output_flags.all = 0;
+	pkt_hdr->p.l2_offset        = 0;
+	pkt_hdr->p.l3_offset        = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->p.l4_offset        = ODP_PACKET_OFFSET_INVALID;
 }
 
 static odp_packet_t packet_alloc(pool_t *pool, uint32_t len)
