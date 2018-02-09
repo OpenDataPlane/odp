@@ -211,7 +211,8 @@ AC_SUBST(PKGCONFIG_VERSION)
 ODP_ABI_COMPAT=1
 abi_compat=yes
 AC_ARG_ENABLE([abi-compat],
-    [  --disable-abi-compat    disables ABI compatible mode, enables inline code in header files],
+    [AS_HELP_STRING([--disable-abi-compat],
+		    [disables ABI compatible mode, enables inline code in header files])],
     [if test "x$enableval" = "xno"; then
 	ODP_ABI_COMPAT=0
 	abi_compat=no
