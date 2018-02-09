@@ -164,14 +164,6 @@ AS_CASE([$host],
 AC_SUBST([ARCH_DIR])
 
 ##########################################################################
-# Warn on the defaults if arch is undefined
-##########################################################################
-if test "${ARCH_DIR}" = "default";
-then
-    AC_MSG_WARN([ARCH_DIR is undefined, please add your ARCH_DIR based on host=${host}])
-fi
-
-##########################################################################
 # Architecture for ABI support
 ##########################################################################
 AS_CASE([$host],
@@ -184,6 +176,23 @@ AS_CASE([$host],
   [ARCH_ABI=default-linux]
 )
 AC_SUBST([ARCH_ABI])
+
+AC_ARG_ENABLE([host-optimization],
+	      [AS_HELP_STRING([--disable-host-optimization],
+			      [disables using host-specific ARCH and ABI files])],
+			      [], [enable_host_optimization=yes])
+if test "x$enable_host_optimization" = "xno" ; then
+	ARCH_DIR=default
+	ARCH_ABI=default-linux
+fi
+
+##########################################################################
+# Warn on the defaults if arch is undefined
+##########################################################################
+if test "${ARCH_DIR}" = "default";
+then
+    AC_MSG_WARN([ARCH_DIR is undefined, please add your ARCH_DIR based on host=${host}])
+fi
 
 if test "${ARCH_ABI}" = "default-linux";
 then
