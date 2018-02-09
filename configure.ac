@@ -124,7 +124,7 @@ ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
 # Check if compiler supports cmpxchng16 on x86-based architectures
 ##########################################################################
 case "${host}" in
-  i?86? | x86*)
+  i?86* | x86*)
   if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
      ODP_CHECK_CFLAG([-mcx16])
   fi
