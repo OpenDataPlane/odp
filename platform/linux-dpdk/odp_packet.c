@@ -1343,6 +1343,10 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 		prs->input_flags.icmp = 1;
 		break;
 
+	case _ODP_IPPROTO_IPIP:
+		/* Do nothing */
+		break;
+
 	case _ODP_IPPROTO_TCP:
 		if (odp_unlikely(offset + _ODP_TCPHDR_LEN > seg_len))
 			return -1;
