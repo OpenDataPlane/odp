@@ -19,7 +19,9 @@ extern "C" {
 
 #include <odp/api/plat/packet_types.h>
 #include <odp/api/pool.h>
-#include <odp/api/packet_io.h>
+#include <odp/api/time.h>
+#include <odp/api/plat/packet_io_types.h>
+#include <odp/api/plat/buffer_types.h>
 #include <odp/api/hints.h>
 
 /* Required by rte_mbuf.h */
