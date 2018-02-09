@@ -123,6 +123,9 @@ typedef struct {
 
 	odp_pktio_t input;
 
+	/* Event subtype */
+	int8_t subtype;
+
 	/*
 	 * Members below are not initialized by packet_init()
 	 */
@@ -164,6 +167,16 @@ static inline odp_packet_t packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
 	return (odp_packet_t)(odp_packet_hdr_t *)buf_hdr;
 }
 
+static inline odp_event_subtype_t packet_subtype(odp_packet_t pkt)
+{
+	return odp_packet_hdr(pkt)->subtype;
+}
+
+static inline void packet_subtype_set(odp_packet_t pkt, int ev)
+{
+	odp_packet_hdr(pkt)->subtype = ev;
+}
+
 /**
  * Initialize ODP headers
  */
@@ -177,9 +190,8 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->p.l3_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->p.l4_offset        = ODP_PACKET_OFFSET_INVALID;
 
-	if (odp_unlikely(pkt_hdr->buf_hdr.event_subtype !=
-			ODP_EVENT_PACKET_BASIC))
-		pkt_hdr->buf_hdr.event_subtype = ODP_EVENT_PACKET_BASIC;
+	if (odp_unlikely(pkt_hdr->subtype != ODP_EVENT_PACKET_BASIC))
+		pkt_hdr->subtype = ODP_EVENT_PACKET_BASIC;
 
 	pkt_hdr->input = ODP_PKTIO_INVALID;
 }

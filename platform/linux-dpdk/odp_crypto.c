@@ -1361,8 +1361,7 @@ int odp_crypto_int(odp_packet_t pkt_in,
 	}
 
 	/* Fill in result */
-	_odp_buffer_event_subtype_set(packet_to_buffer(out_pkt),
-				      ODP_EVENT_PACKET_CRYPTO);
+	packet_subtype_set(out_pkt, ODP_EVENT_PACKET_BASIC);
 	op_result = get_op_result_from_packet(out_pkt);
 	op_result->cipher_status.alg_err = rc_cipher;
 	op_result->cipher_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
