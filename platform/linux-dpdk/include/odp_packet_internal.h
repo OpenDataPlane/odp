@@ -210,6 +210,12 @@ int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
 		       odp_pktio_parser_layer_t layer);
 
+/* Perform L3 and L4 parsing up to a given protocol layer */
+int packet_parse_l3_l4(odp_packet_hdr_t *pkt_hdr,
+		       odp_pktio_parser_layer_t layer,
+		       uint32_t l3_offset,
+		       uint16_t ethtype);
+
 /* Reset parser metadata for a new parse */
 void packet_parse_reset(odp_packet_hdr_t *pkt_hdr);
 
