@@ -36,6 +36,10 @@
 typedef struct crypto_session_entry_s crypto_session_entry_t;
 struct crypto_session_entry_s {
 		struct crypto_session_entry_s *next;
+
+		/* Session creation parameters */
+		odp_crypto_session_param_t p;
+
 		uint64_t rte_session;
 		odp_bool_t do_cipher_first;
 		struct rte_crypto_sym_xform cipher_xform;
@@ -810,6 +814,9 @@ int odp_crypto_session_create(odp_crypto_session_param_t *param,
 		goto err;
 	}
 
+	/* Copy parameters */
+	session->p = *param;
+
 	/* Cipher Data */
 	cipher_xform.cipher.key.data = rte_malloc("crypto key",
 						param->cipher_key.length, 0);
@@ -1033,7 +1040,7 @@ int odp_crypto_operation(odp_crypto_op_param_t *param,
 	}
 
 	aad_head = param->aad.ptr;
-	aad_len = param->aad.length;
+	aad_len = entry->p.auth_aad_len;
 
 	if (aad_len > 0) {
 		op->sym->auth.aad.data = rte_malloc("aad", aad_len, 0);
