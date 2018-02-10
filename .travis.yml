@@ -53,9 +53,6 @@ env:
         - CONF=""
         - CONF="--disable-abi-compat"
         - CONF="--enable-deprecated"
-        - CONF="--enable-schedule-sp"
-        - CONF="--enable-schedule-iquery"
-        - CONF="--enable-schedule-scalable"
         - CONF="--enable-dpdk-zero-copy"
         - CONF="--disable-static-applications"
         - CONF="--disable-host-optimization"
@@ -253,8 +250,16 @@ script:
           $CROSS $EXTRA_CONF $CONF
         - make -j $(nproc)
         - mkdir /dev/shm/odp
+        # Run all tests only for default configuration
         - if [ -z "$CROSS_ARCH" ] ; then
-          sudo LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
+            if [ -n "$CONF" ] ; then
+              sudo LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
+            else
+              sudo ODP_SCHEDULER=basic LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
+              sudo ODP_SCHEDULER=sp LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
+              sudo ODP_SCHEDULER=iquery LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
+              sudo ODP_SCHEDULER=scalable LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
+            fi
           fi
         - make install
 
@@ -293,7 +298,10 @@ jobs:
                             --enable-debug=full
                             --enable-helper-linux
                           - CCACHE_DISABLE=1 make -j $(nproc)
-                          - sudo CCACHE_DISABLE=1 LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" PATH=${PATH//:\.\/node_modules\/\.bin/} make check
+                          - sudo CCACHE_DISABLE=1 ODP_SCHEDULER=basic LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make check
+                          - sudo CCACHE_DISABLE=1 ODP_SCHEDULER=sp LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make check
+                          - sudo CCACHE_DISABLE=1 ODP_SCHEDULER=iquery LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make check
+                          - sudo CCACHE_DISABLE=1 ODP_SCHEDULER=scalable LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make check
                           - find . -type f -iname '*.[ch]' -not -path ".git/*" -execdir gcov {} \; ; bash <(curl -s https://codecov.io/bash) -X coveragepy
                 - stage: test
                   env: TEST=distcheck
