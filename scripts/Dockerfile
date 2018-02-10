@@ -8,7 +8,7 @@ RUN sudo apt-get update && sudo apt-get install -yy \
   autoconf \
   automake \
   ccache \
-  clang-3.8 \
+  clang-4.0 \
   gcc-4.8 \
   graphviz \
   kmod \
@@ -24,5 +24,5 @@ RUN sudo apt-get update && sudo apt-get install -yy \
   xsltproc
 
 RUN sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 10
-RUN sudo ln -s /usr/bin/clang-3.8 /usr/bin/clang
-RUN sudo ln -s /usr/bin/clang++-3.8 /usr/bin/clang++
+RUN sudo ln -s /usr/bin/clang-4.0 /usr/bin/clang
+RUN sudo ln -s /usr/bin/clang++-4.0 /usr/bin/clang++
