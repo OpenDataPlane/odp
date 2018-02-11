@@ -6,8 +6,8 @@ compiler:
 
 env:
   matrix:
-    - CONF=""
-    # - CONF="--disable-abi-compat"
+    - CONF="--disable-test-perf"
+    - CONF="--disable-abi-compat --disable-test-perf"
     # - CONF="--enable-schedule-sp"
     # - CONF="--enable-schedule-iquery"
     # - CONF="--enable-dpdk-zero-copy"
@@ -37,7 +37,7 @@ build:
     - mkdir -p /dev/shm/odp
     - ./bootstrap
     - if [ "${CC#clang}" != "${CC}" ] ; then export CXX="${CC/clang/clang++}"; fi
-    - ./configure --disable-test-perf
+    - ./configure $CONF
     - make
     - sudo env ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes make check -k
 
