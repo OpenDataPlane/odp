@@ -40,7 +40,7 @@ build:
     - ./bootstrap
     - if [ "${CC#clang}" != "${CC}" ] ; then export CXX="${CC/clang/clang++}"; fi
     - ./configure $CONF
-    - make
+    - make -j $(nproc)
     - sudo env ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes make check -k
 
   on_success:
