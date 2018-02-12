@@ -59,6 +59,8 @@ env:
         - CONF="--enable-dpdk-zero-copy"
         - CONF="--disable-static-applications"
         - DPDK_SHARED="y" CONF="--disable-static-applications"
+        - DPDK_VERS="17.11" CONF=""
+        - DPDK_VERS="17.11" DPDK_SHARED="y" CONF="--disable-static-applications"
 
 compiler:
         - gcc
