@@ -1358,7 +1358,7 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 
 	prs->l3_offset = offset;
 
-	if (layer <= ODP_PKTIO_PARSER_LAYER_L2)
+	if (layer <= ODP_PROTO_LAYER_L2)
 		return prs->error_flags.all != 0;
 
 	/* Set l3 flag only for known ethtypes */
@@ -1389,7 +1389,7 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 		ip_proto = 255;  /* Reserved invalid by IANA */
 	}
 
-	if (layer == ODP_PKTIO_PARSER_LAYER_L3)
+	if (layer == ODP_PROTO_LAYER_L3)
 		return prs->error_flags.all != 0;
 
 	/* Set l4 flag only for known ip_proto */
@@ -1461,7 +1461,7 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 	parseptr = ptr;
 	offset = 0;
 
-	if (layer == ODP_PKTIO_PARSER_LAYER_NONE)
+	if (layer == ODP_PROTO_LAYER_NONE)
 		return 0;
 
 	/* Assume valid L2 header, no CRC/FCS check in SW */
@@ -1480,7 +1480,7 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
  * Simple packet parser
  */
 int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
-		       odp_pktio_parser_layer_t layer)
+		       odp_proto_layer_t layer)
 {
 	uint32_t seg_len = odp_packet_seg_len((odp_packet_t)pkt_hdr);
 	uint32_t len = packet_len(pkt_hdr);
@@ -1490,7 +1490,7 @@ int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
 }
 
 int packet_parse_l3_l4(odp_packet_hdr_t *pkt_hdr,
-		       odp_pktio_parser_layer_t layer,
+		       odp_proto_layer_t layer,
 		       uint32_t l3_offset,
 		       uint16_t ethtype)
 {
