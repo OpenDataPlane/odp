@@ -153,6 +153,7 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 		   const char *netdev, odp_pool_t pool ODP_UNUSED)
 {
 	uint8_t portid = 0;
+	uint32_t mtu;
 	struct rte_eth_dev_info dev_info;
 	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	int i;
@@ -192,6 +193,13 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 	pktio_entry->s.capa.max_input_queues = max_queues;
 	pktio_entry->s.capa.max_output_queues = RTE_MIN(dev_info.max_tx_queues,
 							PKTIO_MAX_QUEUES);
+
+	mtu = mtu_get_pkt_dpdk(pktio_entry);
+	if (mtu == 0) {
+		ODP_ERR("Failed to read interface MTU\n");
+		return -1;
+	}
+	pkt_dpdk->mtu = mtu + _ODP_ETHHDR_LEN;
 
 	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
 		odp_ticketlock_init(&pkt_dpdk->rx_lock[i]);
@@ -498,7 +506,7 @@ static int send_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 		if (odp_unlikely(rte_errno != 0))
 			return -1;
 
-		mtu = mtu_get_pkt_dpdk(pktio_entry);
+		mtu = pktio_entry->s.pkt_dpdk.mtu;
 		if (odp_unlikely(odp_packet_len(pkt_table[0]) > mtu)) {
 			__odp_errno = EMSGSIZE;
 			return -1;
@@ -543,6 +551,13 @@ static uint32_t mtu_get_pkt_dpdk(pktio_entry_t *pktio_entry)
 	if (mtu == 0)
 		mtu = _dpdk_vdev_mtu(pktio_entry->s.pkt_dpdk.portid);
 	return mtu;
+}
+
+static uint32_t dpdk_frame_maxlen(pktio_entry_t *pktio_entry)
+{
+	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+
+	return pkt_dpdk->mtu;
 }
 
 static int _dpdk_vdev_promisc_mode_set(uint8_t port_id, int enable)
@@ -712,7 +727,7 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.stats_reset = stats_reset_pkt_dpdk,
 	.pktin_ts_res = NULL,
 	.pktin_ts_from_ns = NULL,
-	.mtu_get = mtu_get_pkt_dpdk,
+	.mtu_get = dpdk_frame_maxlen,
 	.promisc_mode_set = promisc_mode_set_pkt_dpdk,
 	.promisc_mode_get = promisc_mode_get_pkt_dpdk,
 	.mac_get = mac_get_pkt_dpdk,

@@ -54,6 +54,7 @@ typedef struct {
 	uint8_t lockless_tx;		  /**< no locking for tx */
 	uint8_t min_rx_burst;		  /**< minimum RX burst size */
 	odp_pktin_hash_proto_t hash;	  /**< Packet input hash protocol */
+	uint16_t mtu;			  /**< maximum transmission unit */
 	char ifname[32];
 	odp_ticketlock_t rx_lock[PKTIO_MAX_QUEUES];  /**< RX queue locks */
 	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES];  /**< TX queue locks */
