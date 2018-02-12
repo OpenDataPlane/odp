@@ -25,3 +25,4 @@ RUN sudo apt-get update && sudo apt-get install -yy \
 
 RUN sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 10
 RUN sudo ln -s /usr/bin/clang-3.8 /usr/bin/clang
+RUN sudo ln -s /usr/bin/clang++-3.8 /usr/bin/clang++

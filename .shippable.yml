@@ -5,9 +5,8 @@ compiler:
   - clang
 
 env:
-  matrix:
-    - CONF=""
-    # - CONF="--disable-abi-compat"
+    - CONF="--disable-test-perf"
+    - CONF="--disable-abi-compat --disable-test-perf"
     # - CONF="--enable-schedule-sp"
     # - CONF="--enable-schedule-iquery"
     # - CONF="--enable-dpdk-zero-copy"
@@ -15,8 +14,11 @@ env:
     # - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
     # - CROSS_ARCH="powerpc"
     # - CROSS_ARCH="i386"
-  global:
-    # - PLACEHOLDER=""
+
+matrix:
+  allow_failures:
+    - compiler: clang
+      env: CONF="--disable-abi-compat --disable-test-perf"
 
 build:
   pre_ci:
@@ -36,18 +38,15 @@ build:
     - sudo mount -t hugetlbfs nodev /mnt/huge
     - mkdir -p /dev/shm/odp
     - ./bootstrap
-    - ./configure --disable-test-perf
-    - make
-    - sudo env ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes make check
+    - if [ "${CC#clang}" != "${CC}" ] ; then export CXX="${CC/clang/clang++}"; fi
+    - ./configure $CONF
+    - make -j $(nproc)
+    - sudo env ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes make check -k
 
-  post_ci:
-    - wget https://raw.githubusercontent.com/shawnliang/cunit-to-junit/master/cunit-to-junit.xsl
-    - |
-      for FILE in `find  ./test ./platform/ -name  "*.xml"`; do
-         bname=`basename $FILE`;
-         xsltproc --novalid cunit-to-junit.xsl $FILE > $SHIPPABLE_BUILD_DIR/shippable/testresults/${bname}
-      done
+  on_success:
+    - ./scripts/shippable-post.sh
 
   on_failure:
+    - ./scripts/shippable-post.sh
     - cat config.log
     - find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
