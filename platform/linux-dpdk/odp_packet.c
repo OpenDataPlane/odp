@@ -558,6 +558,14 @@ int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
 	return 0;
 }
 
+uint16_t odp_packet_ones_comp(odp_packet_t pkt, odp_packet_data_range_t *range)
+{
+	(void)pkt;
+	range->length = 0;
+	range->offset = 0;
+	return 0;
+}
+
 void odp_packet_ts_set(odp_packet_t pkt, odp_time_t timestamp)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
