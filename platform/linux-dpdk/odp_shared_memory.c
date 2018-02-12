@@ -436,6 +436,34 @@ void odp_shm_print_all(void)
 	odp_spinlock_unlock(&shm_tbl->lock);
 }
 
+void odp_shm_print(odp_shm_t shm)
+{
+	shm_block_t *block;
+	int idx = handle_to_idx(shm);
+
+	odp_spinlock_lock(&shm_tbl->lock);
+
+	if (!handle_is_valid(shm)) {
+		odp_spinlock_unlock(&shm_tbl->lock);
+		return;
+	}
+
+	block = &shm_tbl->block[idx];
+
+	ODP_PRINT("\nSHM block info\n--------------\n");
+	ODP_PRINT(" name:       %s\n",   block->name);
+	ODP_PRINT(" type:       %s\n",   block->type == SHM_TYPE_LOCAL ? "local"
+			: "remote");
+	ODP_PRINT(" flags:      0x%x\n", shm_zone(block->mz)->flags);
+	ODP_PRINT(" start:      %p\n",   block->mz->addr);
+	ODP_PRINT(" len:        %" PRIu64 "\n",  shm_size(block->mz));
+	ODP_PRINT(" page size:  %" PRIu64 "\n", block->mz->hugepage_sz);
+	ODP_PRINT(" NUMA ID:    %" PRIi32 "\n",  block->mz->socket_id);
+	ODP_PRINT("\n");
+
+	odp_spinlock_unlock(&shm_tbl->lock);
+}
+
 uint64_t odp_shm_to_u64(odp_shm_t hdl)
 {
 	return _odp_pri(hdl);
