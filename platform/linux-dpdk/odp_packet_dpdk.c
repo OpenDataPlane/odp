@@ -155,8 +155,10 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 	uint8_t portid = 0;
 	uint32_t mtu;
 	struct rte_eth_dev_info dev_info;
+	struct ether_addr mac_addr;
 	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	int i;
+	int ret;
 	unsigned max_queues;
 
 	if (!_dpdk_netdev_is_valid(netdev)) {
@@ -184,6 +186,16 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 		pkt_dpdk->min_rx_burst = 0;
 
 	_dpdk_print_port_mac(portid);
+
+	/* Check if setting default MAC address is supporter */
+	rte_eth_macaddr_get(portid, &mac_addr);
+	ret = rte_eth_dev_default_mac_addr_set(portid, &mac_addr);
+	if (ret == 0) {
+		pktio_entry->s.capa.set_op.op.mac_addr = 1;
+	} else if (ret != -ENOTSUP) {
+		ODP_ERR("Failed to set interface default MAC\n");
+		return -1;
+	}
 
 	max_queues = RTE_MIN(dev_info.max_rx_queues, PKTIO_MAX_QUEUES);
 	/* ixgbe devices support only 16 RX queues in RSS mode */
@@ -660,6 +672,13 @@ static int mac_get_pkt_dpdk(pktio_entry_t *pktio_entry, void *mac_addr)
 	return ETH_ALEN;
 }
 
+static int mac_set_pkt_dpdk(pktio_entry_t *pktio_entry, const void *mac_addr)
+{
+	struct ether_addr addr = *(const struct ether_addr *)mac_addr;
+
+	return rte_eth_dev_default_mac_addr_set(pktio_entry->s.pkt_dpdk.portid,
+						&addr);
+}
 
 static int capability_pkt_dpdk(pktio_entry_t *pktio_entry,
 			       odp_pktio_capability_t *capa)
@@ -731,6 +750,7 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.promisc_mode_set = promisc_mode_set_pkt_dpdk,
 	.promisc_mode_get = promisc_mode_get_pkt_dpdk,
 	.mac_get = mac_get_pkt_dpdk,
+	.mac_set = mac_set_pkt_dpdk,
 	.link_status = link_status_pkt_dpdk,
 	.capability = capability_pkt_dpdk,
 	.config = NULL,
