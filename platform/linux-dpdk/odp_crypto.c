@@ -1039,7 +1039,7 @@ int odp_crypto_operation(odp_crypto_op_param_t *param,
 		op->sym->auth.data.length = param->auth_range.length;
 	}
 
-	aad_head = param->aad.ptr;
+	aad_head = param->aad_ptr;
 	aad_len = entry->p.auth_aad_len;
 
 	if (aad_len > 0) {
