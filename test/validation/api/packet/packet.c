@@ -2703,10 +2703,10 @@ odp_testinfo_t packet_suite[] = {
 };
 
 odp_suiteinfo_t packet_suites[] = {
-	{ .pName = "packet tests",
-			.pTests = packet_suite,
-			.pInitFunc = packet_suite_init,
-			.pCleanupFunc = packet_suite_term,
+	{ .name         = "packet tests",
+	  .testinfo_tbl = packet_suite,
+	  .init_func    = packet_suite_init,
+	  .term_func    = packet_suite_term,
 	},
 	ODP_SUITE_INFO_NULL,
 };

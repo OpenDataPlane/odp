@@ -23,16 +23,16 @@
 typedef int (*cunit_test_check_active)(void);
 
 typedef struct {
-	const char *pName;
-	CU_TestFunc pTestFunc;
+	const char             *name;
+	CU_TestFunc             test_func;
 	cunit_test_check_active check_active;
 } odp_testinfo_t;
 
 typedef struct {
-	const char       *pName;
-	CU_InitializeFunc pInitFunc;
-	CU_CleanupFunc    pCleanupFunc;
-	odp_testinfo_t   *pTests;
+	const char       *name;
+	CU_InitializeFunc init_func;
+	CU_CleanupFunc    term_func;
+	odp_testinfo_t   *testinfo_tbl;
 } odp_suiteinfo_t;
 
 static inline int odp_cunit_test_inactive(void) { return 0; }

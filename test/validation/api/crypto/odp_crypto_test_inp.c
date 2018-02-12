@@ -1230,14 +1230,14 @@ int crypto_suite_term(void)
 	int i;
 	int first = 1;
 
-	for (i = 0; crypto_suite[i].pName; i++) {
+	for (i = 0; crypto_suite[i].name; i++) {
 		if (crypto_suite[i].check_active &&
 		    crypto_suite[i].check_active() == ODP_TEST_INACTIVE) {
 			if (first) {
 				first = 0;
 				printf("\n\n  Inactive tests:\n");
 			}
-			printf("    %s\n", crypto_suite[i].pName);
+			printf("    %s\n", crypto_suite[i].name);
 		}
 	}
 	return 0;

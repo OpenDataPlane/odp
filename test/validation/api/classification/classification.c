@@ -12,18 +12,18 @@
 #include "classification.h"
 
 odp_suiteinfo_t classification_suites[] = {
-	{ .pName = "classification basic",
-			.pTests = classification_suite_basic,
+	{ .name         = "classification basic",
+	  .testinfo_tbl = classification_suite_basic,
 	},
-	{ .pName = "classification pmr tests",
-			.pTests = classification_suite_pmr,
-			.pInitFunc = classification_suite_pmr_init,
-			.pCleanupFunc = classification_suite_pmr_term,
+	{ .name         = "classification pmr tests",
+	  .testinfo_tbl = classification_suite_pmr,
+	  .init_func    = classification_suite_pmr_init,
+	  .term_func    = classification_suite_pmr_term,
 	},
-	{ .pName = "classification tests",
-			.pTests = classification_suite,
-			.pInitFunc = classification_suite_init,
-			.pCleanupFunc = classification_suite_term,
+	{ .name         = "classification tests",
+	  .testinfo_tbl = classification_suite,
+	  .init_func    = classification_suite_init,
+	  .term_func    = classification_suite_term,
 	},
 	ODP_SUITE_INFO_NULL,
 };
