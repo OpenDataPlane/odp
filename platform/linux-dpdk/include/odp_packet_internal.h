@@ -54,10 +54,12 @@ typedef union {
 		uint32_t snap_len:1;  /**< Snap length error */
 		uint32_t l2_chksum:1; /**< L2 checksum error, checks TBD */
 		uint32_t ip_err:1;    /**< IP error,  checks TBD */
+		uint32_t l3_chksum:1; /**< L3 checksum error */
 		uint32_t tcp_err:1;   /**< TCP error, checks TBD */
 		uint32_t udp_err:1;   /**< UDP error, checks TBD */
 		uint32_t ipsec_err:1; /**< IPsec error */
 		uint32_t crypto_err:1; /**< Crypto packet operation error */
+		uint32_t l4_chksum:1; /**< L4 checksum error */
 	};
 } error_flags_t;
 
