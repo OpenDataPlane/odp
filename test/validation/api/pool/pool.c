@@ -230,8 +230,8 @@ odp_testinfo_t pool_suite[] = {
 };
 
 odp_suiteinfo_t pool_suites[] = {
-	{ .pName = "Pool tests",
-			.pTests = pool_suite,
+	{ .name         = "Pool tests",
+	  .testinfo_tbl = pool_suite,
 	},
 	ODP_SUITE_INFO_NULL,
 };
