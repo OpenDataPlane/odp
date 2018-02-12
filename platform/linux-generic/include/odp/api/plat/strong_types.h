@@ -29,10 +29,10 @@
 #endif
 
 /** Internal macro to get value of an ODP handle */
-#define _odp_typeval(handle) ((uint32_t)(uintptr_t)(handle))
+#define _odp_typeval(handle) ((uintptr_t)(handle))
 
 /** Internal macro to get printable value of an ODP handle */
-#define _odp_pri(handle) ((uint64_t)_odp_typeval(handle))
+#define _odp_pri(handle) ((uint64_t)(uintptr_t)(handle))
 
 /** Internal macro to convert a scalar to a typed handle */
 #define _odp_cast_scalar(type, val) ((type)(uintptr_t)(val))
