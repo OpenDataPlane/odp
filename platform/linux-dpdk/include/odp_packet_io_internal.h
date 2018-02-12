@@ -44,6 +44,7 @@ struct pkt_dpdk_t;
 typedef struct {
 	odp_queue_t loopq;		/**< loopback queue for "loop" device */
 	odp_bool_t promisc;		/**< promiscuous mode state */
+	uint8_t idx;			/**< index of "loop" device */
 } pkt_loop_t;
 
 /** Packet socket using dpdk mmaped rings for both Rx and Tx */
