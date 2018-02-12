@@ -337,6 +337,9 @@ int odp_crypto_capability(odp_crypto_capability_t *capability)
 	/* Initialize crypto capability structure */
 	memset(capability, 0, sizeof(odp_crypto_capability_t));
 
+	capability->sync_mode = ODP_SUPPORT_YES;
+	capability->async_mode = ODP_SUPPORT_PREFERRED;
+
 	cdev_count = rte_cryptodev_count();
 	if (cdev_count == 0) {
 		ODP_ERR("No crypto devices available\n");
