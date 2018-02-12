@@ -147,6 +147,7 @@ typedef union {
 
 		uint64_t color:2;     /**< Packet color for traffic mgmt */
 		uint64_t nodrop:1;    /**< Drop eligibility status */
+		uint64_t ipsec_udp:1; /**< UDP-encapsulated IPsec packet */
 	};
 } _odp_packet_input_flags_t;
 
