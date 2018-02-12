@@ -97,7 +97,7 @@ static void name_to_mz_name(const char *name, char *mz_name)
 
 	/* Use pid and counter to make name unique */
 	do {
-		snprintf(mz_name, RTE_MEMZONE_NAMESIZE - 1, SHM_BLOCK_NAME,
+		snprintf(mz_name, RTE_MEMZONE_NAMESIZE, SHM_BLOCK_NAME,
 			 (odp_instance_t)odp_global_data.main_pid, i++, name);
 		mz_name[RTE_MEMZONE_NAMESIZE - 1] = 0;
 	} while (mz_name_used(mz_name));
@@ -270,7 +270,7 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	}
 
 	block->mz = mz;
-	snprintf(block->name, ODP_SHM_NAME_LEN - 1, "%s", name);
+	snprintf(block->name, ODP_SHM_NAME_LEN, "%s", name);
 	block->name[ODP_SHM_NAME_LEN - 1] = 0;
 	block->type = SHM_TYPE_LOCAL;
 	/* Note: ODP_SHM_SW_ONLY/ODP_SHM_PROC/ODP_SHM_SINGLE_VA flags are
@@ -290,7 +290,7 @@ odp_shm_t odp_shm_import(const char *remote_name, odp_instance_t odp_inst,
 	char mz_name[RTE_MEMZONE_NAMESIZE];
 	int idx;
 
-	snprintf(mz_name, RTE_MEMZONE_NAMESIZE - 1, SHM_BLOCK_NAME, odp_inst, 0,
+	snprintf(mz_name, RTE_MEMZONE_NAMESIZE, SHM_BLOCK_NAME, odp_inst, 0,
 		 remote_name);
 	mz_name[RTE_MEMZONE_NAMESIZE - 1] = 0;
 
@@ -316,7 +316,7 @@ odp_shm_t odp_shm_import(const char *remote_name, odp_instance_t odp_inst,
 	block = &shm_tbl->block[idx];
 
 	block->mz = mz;
-	snprintf(block->name, ODP_SHM_NAME_LEN - 1, "%s", local_name);
+	snprintf(block->name, ODP_SHM_NAME_LEN, "%s", local_name);
 	block->name[ODP_SHM_NAME_LEN - 1] = 0;
 	block->type = SHM_TYPE_REMOTE;
 
