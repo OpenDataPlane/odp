@@ -231,7 +231,7 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = PKTIO_INIT;
 
-	if (odp_timer_init_global()) {
+	if (odp_timer_init_global(params)) {
 		ODP_ERR("ODP timer init failed.\n");
 		goto init_failed;
 	}
