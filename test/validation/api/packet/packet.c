@@ -2633,6 +2633,7 @@ static void parse_eth_ipv4_tcp(void)
 					 num_pkt - 1, &parse) == (num_pkt - 1));
 
 	for (i = 0; i < num_pkt; i++) {
+		CU_ASSERT(odp_packet_has_eth(pkt[i]));
 		CU_ASSERT(odp_packet_has_ipv4(pkt[i]));
 		CU_ASSERT(odp_packet_has_tcp(pkt[i]));
 		CU_ASSERT(!odp_packet_has_ipv6(pkt[i]));
@@ -2702,6 +2703,194 @@ static void parse_eth_ipv6_tcp(void)
 	odp_packet_free_multi(pkt, num_pkt);
 }
 
+/* Ethernet/VLAN/IPv4/UDP */
+static void parse_eth_vlan_ipv4_udp(void)
+{
+	odp_packet_parse_param_t parse;
+	int i;
+	int num_pkt = PARSE_TEST_NUM_PKT;
+	odp_packet_t pkt[num_pkt];
+
+	parse_test_alloc(pkt, test_packet_vlan_ipv4_udp,
+			 sizeof(test_packet_vlan_ipv4_udp));
+
+	parse.proto = ODP_PROTO_ETH;
+	parse.last_layer = ODP_PROTO_LAYER_L4;
+	parse.chksums.all_chksum = 0;
+
+	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+					 num_pkt - 1, &parse) == (num_pkt - 1));
+
+	for (i = 0; i < num_pkt; i++) {
+		CU_ASSERT(odp_packet_has_eth(pkt[i]));
+		CU_ASSERT(odp_packet_has_vlan(pkt[i]));
+		CU_ASSERT(odp_packet_has_ipv4(pkt[i]));
+		CU_ASSERT(odp_packet_has_udp(pkt[i]));
+		CU_ASSERT(!odp_packet_has_ipv6(pkt[i]));
+		CU_ASSERT(!odp_packet_has_tcp(pkt[i]));
+	}
+
+	odp_packet_free_multi(pkt, num_pkt);
+}
+
+/* Ethernet/VLAN/IPv6/UDP */
+static void parse_eth_vlan_ipv6_udp(void)
+{
+	odp_packet_parse_param_t parse;
+	int i;
+	int num_pkt = PARSE_TEST_NUM_PKT;
+	odp_packet_t pkt[num_pkt];
+
+	parse_test_alloc(pkt, test_packet_vlan_ipv6_udp,
+			 sizeof(test_packet_vlan_ipv6_udp));
+
+	parse.proto = ODP_PROTO_ETH;
+	parse.last_layer = ODP_PROTO_LAYER_L4;
+	parse.chksums.all_chksum = 0;
+
+	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+					 num_pkt - 1, &parse) == (num_pkt - 1));
+
+	for (i = 0; i < num_pkt; i++) {
+		CU_ASSERT(odp_packet_has_eth(pkt[i]));
+		CU_ASSERT(odp_packet_has_vlan(pkt[i]));
+		CU_ASSERT(odp_packet_has_ipv6(pkt[i]));
+		CU_ASSERT(odp_packet_has_udp(pkt[i]));
+		CU_ASSERT(!odp_packet_has_ipv4(pkt[i]));
+		CU_ASSERT(!odp_packet_has_tcp(pkt[i]));
+	}
+
+	odp_packet_free_multi(pkt, num_pkt);
+}
+
+/* Ethernet/VLAN/VLAN/IPv4/UDP */
+static void parse_eth_vlan_qinq_ipv4_udp(void)
+{
+	odp_packet_parse_param_t parse;
+	int i;
+	int num_pkt = PARSE_TEST_NUM_PKT;
+	odp_packet_t pkt[num_pkt];
+
+	parse_test_alloc(pkt, test_packet_vlan_qinq_ipv4_udp,
+			 sizeof(test_packet_vlan_qinq_ipv4_udp));
+
+	parse.proto = ODP_PROTO_ETH;
+	parse.last_layer = ODP_PROTO_LAYER_L4;
+	parse.chksums.all_chksum = 0;
+
+	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+					 num_pkt - 1, &parse) == (num_pkt - 1));
+
+	for (i = 0; i < num_pkt; i++) {
+		CU_ASSERT(odp_packet_has_eth(pkt[i]));
+		CU_ASSERT(odp_packet_has_vlan(pkt[i]));
+		CU_ASSERT(odp_packet_has_vlan_qinq(pkt[i]));
+		CU_ASSERT(odp_packet_has_ipv4(pkt[i]));
+		CU_ASSERT(odp_packet_has_udp(pkt[i]));
+		CU_ASSERT(!odp_packet_has_ipv6(pkt[i]));
+		CU_ASSERT(!odp_packet_has_tcp(pkt[i]));
+	}
+
+	odp_packet_free_multi(pkt, num_pkt);
+}
+
+/* Ethernet/ARP */
+static void parse_eth_arp(void)
+{
+	odp_packet_parse_param_t parse;
+	int i;
+	int num_pkt = PARSE_TEST_NUM_PKT;
+	odp_packet_t pkt[num_pkt];
+
+	parse_test_alloc(pkt, test_packet_arp,
+			 sizeof(test_packet_arp));
+
+	parse.proto = ODP_PROTO_ETH;
+	parse.last_layer = ODP_PROTO_LAYER_L4;
+	parse.chksums.all_chksum = 0;
+
+	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+					 num_pkt - 1, &parse) == (num_pkt - 1));
+
+	for (i = 0; i < num_pkt; i++) {
+		CU_ASSERT(odp_packet_has_eth(pkt[i]));
+		CU_ASSERT(odp_packet_has_eth_bcast(pkt[i]));
+		CU_ASSERT(odp_packet_has_arp(pkt[i]));
+		CU_ASSERT(!odp_packet_has_vlan(pkt[i]));
+		CU_ASSERT(!odp_packet_has_ipv4(pkt[i]));
+		CU_ASSERT(!odp_packet_has_ipv6(pkt[i]));
+		CU_ASSERT(!odp_packet_has_udp(pkt[i]));
+	}
+
+	odp_packet_free_multi(pkt, num_pkt);
+}
+
+/* Ethernet/IPv4/ICMP */
+static void parse_eth_ipv4_icmp(void)
+{
+	odp_packet_parse_param_t parse;
+	int i;
+	int num_pkt = PARSE_TEST_NUM_PKT;
+	odp_packet_t pkt[num_pkt];
+
+	parse_test_alloc(pkt, test_packet_ipv4_icmp,
+			 sizeof(test_packet_ipv4_icmp));
+
+	parse.proto = ODP_PROTO_ETH;
+	parse.last_layer = ODP_PROTO_LAYER_L4;
+	parse.chksums.all_chksum = 0;
+
+	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+					 num_pkt - 1, &parse) == (num_pkt - 1));
+
+	for (i = 0; i < num_pkt; i++) {
+		CU_ASSERT(odp_packet_has_eth(pkt[i]));
+		CU_ASSERT(odp_packet_has_ipv4(pkt[i]));
+		CU_ASSERT(odp_packet_has_icmp(pkt[i]));
+		CU_ASSERT(!odp_packet_has_eth_bcast(pkt[i]));
+		CU_ASSERT(!odp_packet_has_ipv6(pkt[i]));
+		CU_ASSERT(!odp_packet_has_tcp(pkt[i]));
+	}
+
+	odp_packet_free_multi(pkt, num_pkt);
+}
+
+/* Ethernet/IPv6/ICMP */
+static void parse_eth_ipv6_icmp(void)
+{
+	odp_packet_parse_param_t parse;
+	int i;
+	int num_pkt = PARSE_TEST_NUM_PKT;
+	odp_packet_t pkt[num_pkt];
+
+	parse_test_alloc(pkt, test_packet_ipv6_icmp,
+			 sizeof(test_packet_ipv6_icmp));
+
+	parse.proto = ODP_PROTO_ETH;
+	parse.last_layer = ODP_PROTO_LAYER_L4;
+	parse.chksums.all_chksum = 0;
+
+	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+					 num_pkt - 1, &parse) == (num_pkt - 1));
+
+	for (i = 0; i < num_pkt; i++) {
+		CU_ASSERT(odp_packet_has_eth(pkt[i]));
+		CU_ASSERT(odp_packet_has_ipv6(pkt[i]));
+		CU_ASSERT(odp_packet_has_icmp(pkt[i]));
+		CU_ASSERT(!odp_packet_has_eth_bcast(pkt[i]));
+		CU_ASSERT(!odp_packet_has_ipv4(pkt[i]));
+		CU_ASSERT(!odp_packet_has_tcp(pkt[i]));
+	}
+
+	odp_packet_free_multi(pkt, num_pkt);
+}
+
 odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_alloc_free),
 	ODP_TEST_INFO(packet_test_alloc_free_multi),
@@ -2742,6 +2931,12 @@ odp_testinfo_t packet_parse_suite[] = {
 	ODP_TEST_INFO(parse_eth_ipv4_tcp),
 	ODP_TEST_INFO(parse_eth_ipv6_udp),
 	ODP_TEST_INFO(parse_eth_ipv6_tcp),
+	ODP_TEST_INFO(parse_eth_vlan_ipv4_udp),
+	ODP_TEST_INFO(parse_eth_vlan_ipv6_udp),
+	ODP_TEST_INFO(parse_eth_vlan_qinq_ipv4_udp),
+	ODP_TEST_INFO(parse_eth_arp),
+	ODP_TEST_INFO(parse_eth_ipv4_icmp),
+	ODP_TEST_INFO(parse_eth_ipv6_icmp),
 	ODP_TEST_INFO_NULL,
 };
 
