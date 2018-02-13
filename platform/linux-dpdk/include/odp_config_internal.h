@@ -22,6 +22,13 @@ extern "C" {
 #define ODP_CONFIG_QUEUES 1024
 
 /*
+ * Maximum queue depth. Maximum number of elements that can be stored in a
+ * queue. This value is used only when the size is not explicitly provided
+ * during queue creation.
+ */
+#define CONFIG_QUEUE_SIZE 4096
+
+/*
  * Maximum number of ordered locks per queue
  */
 #define CONFIG_QUEUE_MAX_ORD_LOCKS 2
@@ -121,16 +128,6 @@ extern "C" {
  * Maximum number of events in a thread local pool cache
  */
 #define CONFIG_POOL_CACHE_SIZE 256
-
-/*
- * Size of the virtual address space pre-reserver for ISHM
- *
- * This is just virtual space preallocation size, not memory allocation.
- * This address space is used by ISHM to map things at a common address in
- * all ODP threads (when the _ODP_ISHM_SINGLE_VA flag is used).
- * In bytes.
- */
-#define ODP_CONFIG_ISHM_VA_PREALLOC_SZ (536870912L)
 
 #ifdef __cplusplus
 }

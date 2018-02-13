@@ -146,9 +146,13 @@ noinst_HEADERS = \
 		  include/odp_pool_internal.h \
 		  include/odp_posix_extensions.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_queue_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_queue_scalable_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_ring_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_queue_if.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_schedule_if.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_schedule_scalable.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_schedule_scalable_config.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_schedule_scalable_ordered.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_sorted_list_internal.h \
 		  include/odp_shm_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_timer_internal.h \
@@ -192,12 +196,15 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   odp_pool.c \
 			   ../linux-generic/odp_queue.c \
 			   ../linux-generic/odp_queue_if.c \
+			   ../linux-generic/odp_queue_scalable.c \
 			   ../linux-generic/odp_rwlock.c \
 			   ../linux-generic/odp_rwlock_recursive.c \
 			   ../linux-generic/odp_schedule.c \
 			   ../linux-generic/odp_schedule_if.c \
 			   ../linux-generic/odp_schedule_sp.c \
 			   ../linux-generic/odp_schedule_iquery.c \
+			   ../linux-generic/odp_schedule_scalable.c \
+			   ../linux-generic/odp_schedule_scalable_ordered.c \
 			   odp_shared_memory.c \
 			   ../linux-generic/odp_sorted_list.c \
 			   ../linux-generic/odp_spinlock.c \
