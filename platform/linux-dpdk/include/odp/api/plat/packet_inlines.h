@@ -118,7 +118,7 @@ static inline odp_pktio_t _odp_packet_input(odp_packet_t pkt)
 /** @internal Inline function @param pkt @return */
 static inline int _odp_packet_num_segs(odp_packet_t pkt)
 {
-	return _odp_pkt_get(pkt, uint8_t, nb_segs);
+	return _odp_pkt_get(pkt, uint16_t, nb_segs);
 }
 
 /** @internal Inline function @param pkt @return */

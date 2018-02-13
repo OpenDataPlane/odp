@@ -211,7 +211,6 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	/* keep some headroom between start of buffer and data */
 	if (mb_ctor_arg->type == ODP_POOL_PACKET) {
 		mb->data_off = RTE_PKTMBUF_HEADROOM;
-		mb->nb_segs = 1;
 		mb->port = 0xff;
 		mb->vlan_tci = 0;
 	} else {
@@ -219,8 +218,11 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	}
 
 	/* init some constant fields */
-	mb->pool         = mp;
-	mb->ol_flags     = 0;
+	mb->pool = mp;
+	mb->nb_segs = 1;
+	mb->ol_flags = 0;
+	rte_mbuf_refcnt_set(mb, 1);
+	mb->next = NULL;
 
 	/* Save index, might be useful for debugging purposes */
 	buf_hdr = (struct odp_buffer_hdr_t *)raw_mbuf;

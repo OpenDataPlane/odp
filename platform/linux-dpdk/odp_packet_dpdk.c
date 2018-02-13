@@ -149,6 +149,17 @@ static int output_queues_config_pkt_dpdk(pktio_entry_t *pktio_entry,
 	return 0;
 }
 
+static int term_pkt_dpdk(void)
+{
+	uint8_t port_id;
+
+	RTE_ETH_FOREACH_DEV(port_id) {
+		rte_eth_dev_close(port_id);
+	}
+
+	return 0;
+}
+
 static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_entry,
 		   const char *netdev, odp_pool_t pool ODP_UNUSED)
 {
@@ -220,12 +231,8 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 	return 0;
 }
 
-static int close_pkt_dpdk(pktio_entry_t *pktio_entry)
+static int close_pkt_dpdk(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
-	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
-
-	if (pktio_entry->s.state == PKTIO_STATE_STOPPED)
-		rte_eth_dev_close(pkt_dpdk->portid);
 	return 0;
 }
 
@@ -747,7 +754,7 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.print = NULL,
 	.init_global = NULL,
 	.init_local = NULL,
-	.term = NULL,
+	.term = term_pkt_dpdk,
 	.open = setup_pkt_dpdk,
 	.close = close_pkt_dpdk,
 	.start = start_pkt_dpdk,

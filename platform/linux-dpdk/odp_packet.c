@@ -50,6 +50,7 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 
 #include <odp/visibility_end.h>
 
+/* Catch if DPDK mbuf members sizes have changed */
 struct rte_mbuf dummy;
 ODP_STATIC_ASSERT(sizeof(dummy.data_off) == sizeof(uint16_t),
 		  "data_off should be uint16_t");
@@ -57,6 +58,8 @@ ODP_STATIC_ASSERT(sizeof(dummy.pkt_len) == sizeof(uint32_t),
 		  "pkt_len should be uint32_t");
 ODP_STATIC_ASSERT(sizeof(dummy.data_len) == sizeof(uint16_t),
 		  "data_len should be uint16_t");
+ODP_STATIC_ASSERT(sizeof(dummy.nb_segs) == sizeof(uint16_t),
+		  "nb_segs should be uint16_t");
 ODP_STATIC_ASSERT(sizeof(dummy.hash.rss) == sizeof(uint32_t),
 		  "hash.rss should be uint32_t");
 ODP_STATIC_ASSERT(sizeof(dummy.ol_flags) == sizeof(uint64_t),
