@@ -11,7 +11,7 @@
 #include <time.h>
 
 #include <odp_debug_internal.h>
-#include <odp_time_internal.h>
+#include <odp_arch_time_internal.h>
 
 int cpu_has_global_time(void)
 {

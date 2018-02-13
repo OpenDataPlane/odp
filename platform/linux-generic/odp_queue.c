@@ -150,7 +150,9 @@ static int queue_capability(odp_queue_capability_t *capa)
 	capa->max_sched_groups  = sched_fn->num_grps();
 	capa->sched_prios       = odp_schedule_num_prio();
 	capa->plain.max_num     = capa->max_queues;
+	capa->plain.nonblocking = ODP_BLOCKING;
 	capa->sched.max_num     = capa->max_queues;
+	capa->sched.nonblocking = ODP_BLOCKING;
 
 	return 0;
 }
@@ -175,12 +177,12 @@ static odp_schedule_group_t queue_sched_group(odp_queue_t handle)
 	return handle_to_qentry(handle)->s.param.sched.group;
 }
 
-static int queue_lock_count(odp_queue_t handle)
+static uint32_t queue_lock_count(odp_queue_t handle)
 {
 	queue_entry_t *queue = handle_to_qentry(handle);
 
 	return queue->s.param.sched.sync == ODP_SCHED_SYNC_ORDERED ?
-		(int)queue->s.param.sched.lock_count : -1;
+		queue->s.param.sched.lock_count : 0;
 }
 
 static odp_queue_t queue_create(const char *name,
@@ -601,6 +603,7 @@ static void queue_param_init(odp_queue_param_t *params)
 	params->type = ODP_QUEUE_TYPE_PLAIN;
 	params->enq_mode = ODP_QUEUE_OP_MT;
 	params->deq_mode = ODP_QUEUE_OP_MT;
+	params->nonblocking = ODP_BLOCKING;
 	params->sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	params->sched.sync  = ODP_SCHED_SYNC_PARALLEL;
 	params->sched.group = ODP_SCHED_GROUP_ALL;

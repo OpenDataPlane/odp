@@ -8,11 +8,19 @@
 
 #include <odp_queue_if.h>
 
+extern const queue_api_t queue_scalable_api;
+extern const queue_fn_t queue_scalable_fn;
+
 extern const queue_api_t queue_default_api;
 extern const queue_fn_t queue_default_fn;
 
+#ifdef ODP_SCHEDULE_SCALABLE
+const queue_api_t *queue_api = &queue_scalable_api;
+const queue_fn_t *queue_fn = &queue_scalable_fn;
+#else
 const queue_api_t *queue_api = &queue_default_api;
 const queue_fn_t *queue_fn = &queue_default_fn;
+#endif
 
 odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param)
 {
@@ -84,7 +92,7 @@ odp_schedule_group_t odp_queue_sched_group(odp_queue_t queue)
 	return queue_api->queue_sched_group(queue);
 }
 
-int odp_queue_lock_count(odp_queue_t queue)
+uint32_t odp_queue_lock_count(odp_queue_t queue)
 {
 	return queue_api->queue_lock_count(queue);
 }

@@ -13,12 +13,52 @@
 #include <odp/api/timer.h>
 #include <odp/api/pool.h>
 #include <odp_buffer_internal.h>
+#include <odp_ipsec_internal.h>
 #include <odp_buffer_inlines.h>
 #include <odp_debug_internal.h>
+#include <odp_packet_internal.h>
 
 odp_event_type_t odp_event_type(odp_event_t event)
 {
 	return _odp_buffer_event_type(odp_buffer_from_event(event));
+}
+
+odp_event_subtype_t odp_event_subtype(odp_event_t event)
+{
+	if (_odp_buffer_event_type(odp_buffer_from_event(event)) !=
+			ODP_EVENT_PACKET)
+		return ODP_EVENT_NO_SUBTYPE;
+
+	return packet_subtype(odp_packet_from_event(event));
+}
+
+odp_event_type_t odp_event_types(odp_event_t event,
+				 odp_event_subtype_t *subtype)
+{
+	odp_buffer_t buf = odp_buffer_from_event(event);
+	odp_event_type_t event_type = _odp_buffer_event_type(buf);
+
+	*subtype = event_type == ODP_EVENT_PACKET ?
+			packet_subtype(odp_packet_from_event(event)) :
+			ODP_EVENT_NO_SUBTYPE;
+
+	return event_type;
+}
+
+int odp_event_type_multi(const odp_event_t event[], int num,
+			 odp_event_type_t *type_out)
+{
+	int i;
+	odp_event_type_t type = odp_event_type(event[0]);
+
+	for (i = 1; i < num; i++) {
+		if (odp_event_type(event[i]) != type)
+			break;
+	}
+
+	*type_out = type;
+
+	return i;
 }
 
 void odp_event_free(odp_event_t event)
@@ -36,9 +76,25 @@ void odp_event_free(odp_event_t event)
 	case ODP_EVENT_CRYPTO_COMPL:
 		odp_crypto_compl_free(odp_crypto_compl_from_event(event));
 		break;
+	case ODP_EVENT_IPSEC_STATUS:
+		_odp_ipsec_status_free(_odp_ipsec_status_from_event(event));
+		break;
 	default:
 		ODP_ABORT("Invalid event type: %d\n", odp_event_type(event));
 	}
+}
+
+void odp_event_free_multi(const odp_event_t event[], int num)
+{
+	int i;
+
+	for (i = 0; i < num; i++)
+		odp_event_free(event[i]);
+}
+
+void odp_event_free_sp(const odp_event_t event[], int num)
+{
+	odp_event_free_multi(event, num);
 }
 
 uint64_t odp_event_to_u64(odp_event_t hdl)

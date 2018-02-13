@@ -94,7 +94,11 @@ typedef struct _odp_packet_inline_offset_t {
 	/** @internal field offset */
 	uint16_t user_area;
 	/** @internal field offset */
-	uint16_t user_area_size;
+	uint16_t l2_offset;
+	/** @internal field offset */
+	uint16_t l3_offset;
+	/** @internal field offset */
+	uint16_t l4_offset;
 	/** @internal field offset */
 	uint16_t flow_hash;
 	/** @internal field offset */
@@ -150,6 +154,10 @@ typedef union {
 
 		uint64_t color:2;     /**< Packet color for traffic mgmt */
 		uint64_t nodrop:1;    /**< Drop eligibility status */
+
+		uint64_t l3_chksum_done:1; /**< L3 checksum validation done */
+		uint64_t l4_chksum_done:1; /**< L4 checksum validation done */
+		uint64_t ipsec_udp:1; /**< UDP-encapsulated IPsec packet */
 	};
 
 } _odp_packet_input_flags_t;

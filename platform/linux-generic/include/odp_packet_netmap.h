@@ -52,7 +52,6 @@ typedef struct {
 	char nm_name[IF_NAMESIZE + 7];  /**< netmap:<ifname> */
 	char if_name[IF_NAMESIZE];	/**< interface name used in ioctl */
 	odp_bool_t is_virtual;		/**< nm virtual port (VALE/pipe) */
-	odp_pktio_capability_t	capa;	/**< interface capabilities */
 	uint32_t num_rx_rings;		/**< number of nm rx rings */
 	uint32_t num_tx_rings;		/**< number of nm tx rings */
 	unsigned num_rx_desc_rings;	/**< number of rx descriptor rings */

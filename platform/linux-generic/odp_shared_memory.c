@@ -116,6 +116,11 @@ void odp_shm_print_all(void)
 	_odp_ishm_status("Memory allocation status:");
 }
 
+void odp_shm_print(odp_shm_t shm)
+{
+	_odp_ishm_print(from_handle(shm));
+}
+
 uint64_t odp_shm_to_u64(odp_shm_t hdl)
 {
 	return _odp_pri(hdl);

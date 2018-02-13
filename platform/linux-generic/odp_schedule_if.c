@@ -17,12 +17,18 @@ extern const schedule_api_t schedule_default_api;
 extern const schedule_fn_t schedule_iquery_fn;
 extern const schedule_api_t schedule_iquery_api;
 
+extern const schedule_fn_t  schedule_scalable_fn;
+extern const schedule_api_t schedule_scalable_api;
+
 #ifdef ODP_SCHEDULE_SP
 const schedule_fn_t *sched_fn   = &schedule_sp_fn;
 const schedule_api_t *sched_api = &schedule_sp_api;
 #elif defined(ODP_SCHEDULE_IQUERY)
 const schedule_fn_t *sched_fn   = &schedule_iquery_fn;
 const schedule_api_t *sched_api = &schedule_iquery_api;
+#elif defined(ODP_SCHEDULE_SCALABLE)
+const schedule_fn_t  *sched_fn  = &schedule_scalable_fn;
+const schedule_api_t *sched_api = &schedule_scalable_api;
 #else
 const schedule_fn_t  *sched_fn  = &schedule_default_fn;
 const schedule_api_t *sched_api = &schedule_default_api;
@@ -114,12 +120,17 @@ int odp_schedule_group_info(odp_schedule_group_t group,
 	return sched_api->schedule_group_info(group, info);
 }
 
-void odp_schedule_order_lock(unsigned lock_index)
+void odp_schedule_order_lock(uint32_t lock_index)
 {
 	return sched_api->schedule_order_lock(lock_index);
 }
 
-void odp_schedule_order_unlock(unsigned lock_index)
+void odp_schedule_order_unlock(uint32_t lock_index)
 {
 	return sched_api->schedule_order_unlock(lock_index);
+}
+
+void odp_schedule_order_unlock_lock(uint32_t unlock_index, uint32_t lock_index)
+{
+	sched_api->schedule_order_unlock_lock(unlock_index, lock_index);
 }

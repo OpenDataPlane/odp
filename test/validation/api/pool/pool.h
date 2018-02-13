@@ -13,8 +13,10 @@
 void pool_test_create_destroy_buffer(void);
 void pool_test_create_destroy_packet(void);
 void pool_test_create_destroy_timeout(void);
-void pool_test_create_destroy_buffer_shm(void);
 void pool_test_lookup_info_print(void);
+void pool_test_alloc_packet(void);
+void pool_test_alloc_packet_subparam(void);
+void pool_test_info_packet(void);
 
 /* test arrays: */
 extern odp_testinfo_t pool_suite[];

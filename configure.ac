@@ -3,7 +3,7 @@ AC_PREREQ([2.5])
 # Set correct API version
 ##########################################################################
 m4_define([odpapi_generation_version], [1])
-m4_define([odpapi_major_version], [16])
+m4_define([odpapi_major_version], [17])
 m4_define([odpapi_minor_version], [0])
 m4_define([odpapi_point_version], [0])
 m4_define([odpapi_version],
@@ -36,10 +36,10 @@ AM_SILENT_RULES([yes])
 # 3. if interfaces were removed, then use C+1:0:0
 ##########################################################################
 
-ODP_LIBSO_VERSION=116:0:0
+ODP_LIBSO_VERSION=117:0:0
 AC_SUBST(ODP_LIBSO_VERSION)
 
-ODPHELPER_LIBSO_VERSION=113:1:1
+ODPHELPER_LIBSO_VERSION=113:2:1
 AC_SUBST(ODPHELPER_LIBSO_VERSION)
 
 # Checks for programs.
@@ -227,7 +227,8 @@ DX_INIT_DOXYGEN($PACKAGE_NAME,
 AC_ARG_ENABLE([debug],
     [AS_HELP_STRING([--enable-debug],
 		    [include additional debugging code ]
-		    [(set to 'full' to enable all --enable-*-debug-* options)])])
+		    [(set to 'full' to enable all --enable-*-debug-* options)])],
+		    [], [enable_debug=no])
 
 AS_IF([test "x$enable_debug" != "xno"], [ODP_DEBUG=1],
       [ODP_DEBUG=0])
@@ -380,6 +381,7 @@ AC_MSG_RESULT([
 	shared libraries:	${enable_shared}
 	ABI compatible:		${abi_compat}
 	Deprecated APIs:	${deprecated}
+	debug:			${enable_debug}
 	cunit:			${cunit_support}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}

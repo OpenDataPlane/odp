@@ -59,6 +59,29 @@ static int gen_random_mac(unsigned char *mac)
 	return 0;
 }
 
+static int mac_addr_set_fd(int fd, const char *name,
+			   const unsigned char mac_dst[])
+{
+	struct ifreq ethreq;
+	int ret;
+
+	memset(&ethreq, 0, sizeof(ethreq));
+	snprintf(ethreq.ifr_name, IF_NAMESIZE, "%s", name);
+
+	ethreq.ifr_hwaddr.sa_family = AF_UNIX;
+	memcpy(ethreq.ifr_hwaddr.sa_data, mac_dst, ETH_ALEN);
+
+	ret = ioctl(fd, SIOCSIFHWADDR, &ethreq);
+	if (ret != 0) {
+		__odp_errno = errno;
+		ODP_ERR("ioctl(SIOCSIFHWADDR): %s: \"%s\".\n", strerror(errno),
+			ethreq.ifr_name);
+		return -1;
+	}
+
+	return 0;
+}
+
 static int tap_pktio_open(odp_pktio_t id ODP_UNUSED,
 			  pktio_entry_t *pktio_entry,
 			  const char *devname, odp_pool_t pool)
@@ -134,22 +157,6 @@ static int tap_pktio_open(odp_pktio_t id ODP_UNUSED,
 		goto sock_err;
 	}
 
-	/* Up interface by default. */
-	if (ioctl(skfd, SIOCGIFFLAGS, &ifr) < 0) {
-		__odp_errno = errno;
-		ODP_ERR("ioctl(SIOCGIFFLAGS) failed: %s\n", strerror(errno));
-		goto sock_err;
-	}
-
-	ifr.ifr_flags |= IFF_UP;
-	ifr.ifr_flags |= IFF_RUNNING;
-
-	if (ioctl(skfd, SIOCSIFFLAGS, &ifr) < 0) {
-		__odp_errno = errno;
-		ODP_ERR("failed to come up: %s\n", strerror(errno));
-		goto sock_err;
-	}
-
 	tap->fd = fd;
 	tap->skfd = skfd;
 	tap->mtu = mtu;
@@ -160,6 +167,68 @@ sock_err:
 tap_err:
 	close(fd);
 	ODP_ERR("Tap device alloc failed.\n");
+	return -1;
+}
+
+static int tap_pktio_start(pktio_entry_t *pktio_entry)
+{
+	struct ifreq ifr;
+	pkt_tap_t *tap = &pktio_entry->s.pkt_tap;
+
+	odp_memset(&ifr, 0, sizeof(ifr));
+	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s",
+		 (char *)pktio_entry->s.name + 4);
+
+		/* Up interface by default. */
+	if (ioctl(tap->skfd, SIOCGIFFLAGS, &ifr) < 0) {
+		__odp_errno = errno;
+		ODP_ERR("ioctl(SIOCGIFFLAGS) failed: %s\n", strerror(errno));
+		goto sock_err;
+	}
+
+	ifr.ifr_flags |= IFF_UP;
+	ifr.ifr_flags |= IFF_RUNNING;
+
+	if (ioctl(tap->skfd, SIOCSIFFLAGS, &ifr) < 0) {
+		__odp_errno = errno;
+		ODP_ERR("failed to come up: %s\n", strerror(errno));
+		goto sock_err;
+	}
+
+	return 0;
+sock_err:
+	ODP_ERR("Tap device open failed.\n");
+	return -1;
+}
+
+static int tap_pktio_stop(pktio_entry_t *pktio_entry)
+{
+	struct ifreq ifr;
+	pkt_tap_t *tap = &pktio_entry->s.pkt_tap;
+
+	odp_memset(&ifr, 0, sizeof(ifr));
+	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s",
+		 (char *)pktio_entry->s.name + 4);
+
+		/* Up interface by default. */
+	if (ioctl(tap->skfd, SIOCGIFFLAGS, &ifr) < 0) {
+		__odp_errno = errno;
+		ODP_ERR("ioctl(SIOCGIFFLAGS) failed: %s\n", strerror(errno));
+		goto sock_err;
+	}
+
+	ifr.ifr_flags &= ~IFF_UP;
+	ifr.ifr_flags &= ~IFF_RUNNING;
+
+	if (ioctl(tap->skfd, SIOCSIFFLAGS, &ifr) < 0) {
+		__odp_errno = errno;
+		ODP_ERR("failed to come up: %s\n", strerror(errno));
+		goto sock_err;
+	}
+
+	return 0;
+sock_err:
+	ODP_ERR("Tap device open failed.\n");
 	return -1;
 }
 
@@ -360,6 +429,22 @@ static int tap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 	return ETH_ALEN;
 }
 
+static int tap_mac_addr_set(pktio_entry_t *pktio_entry, const void *mac_addr)
+{
+	pkt_tap_t *tap = &pktio_entry->s.pkt_tap;
+
+	memcpy(tap->if_mac, mac_addr, ETH_ALEN);
+
+	return mac_addr_set_fd(tap->fd, (char *)pktio_entry->s.name + 4,
+			  tap->if_mac);
+}
+
+static int tap_link_status(pktio_entry_t *pktio_entry)
+{
+	return link_status_fd(pktio_entry->s.pkt_tap.skfd,
+			      pktio_entry->s.name + 4);
+}
+
 static int tap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 			  odp_pktio_capability_t *capa)
 {
@@ -368,6 +453,7 @@ static int tap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	capa->max_input_queues  = 1;
 	capa->max_output_queues = 1;
 	capa->set_op.op.promisc_mode = 1;
+	capa->set_op.op.mac_addr = 1;
 
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
@@ -383,14 +469,16 @@ const pktio_if_ops_t tap_pktio_ops = {
 	.term = NULL,
 	.open = tap_pktio_open,
 	.close = tap_pktio_close,
-	.start = NULL,
-	.stop = NULL,
+	.start = tap_pktio_start,
+	.stop = tap_pktio_stop,
 	.recv = tap_pktio_recv,
 	.send = tap_pktio_send,
 	.mtu_get = tap_mtu_get,
 	.promisc_mode_set = tap_promisc_mode_set,
 	.promisc_mode_get = tap_promisc_mode_get,
 	.mac_get = tap_mac_addr_get,
+	.mac_set = tap_mac_addr_set,
+	.link_status = tap_link_status,
 	.capability = tap_capability,
 	.pktin_ts_res = NULL,
 	.pktin_ts_from_ns = NULL,

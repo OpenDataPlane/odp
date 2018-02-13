@@ -4,18 +4,28 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#ifndef ODP_TIME_INTERNAL_H_
-#define ODP_TIME_INTERNAL_H_
+/**
+ * @file
+ *
+ * ODP checksum functions
+ */
+
+#ifndef ODP_PLAT_CHKSUM_H_
+#define ODP_PLAT_CHKSUM_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stdint.h>
+/** @ingroup odp_chksum
+ *  @{
+ */
 
-int cpu_has_global_time(void);
-uint64_t cpu_global_time(void);
-uint64_t cpu_global_time_freq(void);
+/**
+ * @}
+ */
+
+#include <odp/api/spec/chksum.h>
 
 #ifdef __cplusplus
 }

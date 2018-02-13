@@ -72,6 +72,8 @@ enum init_stage {
 	CLASSIFICATION_INIT,
 	TRAFFIC_MNGR_INIT,
 	NAME_TABLE_INIT,
+	IPSEC_EVENTS_INIT,
+	IPSEC_SAD_INIT,
 	ALL_INIT      /* All init stages completed */
 };
 
@@ -109,7 +111,7 @@ int odp_queue_term_global(void);
 int odp_crypto_init_global(void);
 int odp_crypto_term_global(void);
 
-int odp_timer_init_global(void);
+int odp_timer_init_global(const odp_init_t *params);
 int odp_timer_term_global(void);
 int odp_timer_disarm_all(void);
 
@@ -129,6 +131,12 @@ int _odp_ishm_init_global(void);
 int _odp_ishm_init_local(void);
 int _odp_ishm_term_global(void);
 int _odp_ishm_term_local(void);
+
+int _odp_ipsec_sad_init_global(void);
+int _odp_ipsec_sad_term_global(void);
+
+int _odp_ipsec_events_init_global(void);
+int _odp_ipsec_events_term_global(void);
 
 int cpuinfo_parser(FILE *file, system_info_t *sysinfo);
 uint64_t odp_cpufreq_id(const char *filename, int id);

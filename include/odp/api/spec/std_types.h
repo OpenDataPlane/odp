@@ -15,6 +15,8 @@
 #ifndef ODP_API_STD_TYPES_H_
 #define ODP_API_STD_TYPES_H_
 #include <odp/visibility_begin.h>
+/* uint64_t, uint32_t, etc */
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,6 +32,14 @@ extern "C" {
  * regardless which compiler is used as this facilities interoperability
  * between e.g. different compilers.
  */
+
+/**
+ * Percentage type
+ * Use odp_percent_t for specifying fields that are percentages. It is a fixed
+ * point integer whose units are expressed as one-hundredth of a percent.
+ * Hence 100% is represented as integer value 10000.
+ */
+typedef uint32_t odp_percent_t;
 
 /**
  * @}

@@ -48,6 +48,9 @@ static int num_ifaces;
     interface that just become up.*/
 static bool wait_for_network;
 
+/* Dummy global variable to avoid compiler optimizing out API calls */
+static volatile uint64_t test_pktio_dummy_u64;
+
 /** local container for pktio attributes */
 typedef struct {
 	const char *name;
@@ -614,13 +617,13 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 
 	if (packet_len == USE_MTU) {
 		odp_pool_capability_t pool_capa;
-		uint32_t mtu;
+		uint32_t maxlen;
 
-		mtu = odp_pktio_mtu(pktio_a->id);
-		if (odp_pktio_mtu(pktio_b->id) < mtu)
-			mtu = odp_pktio_mtu(pktio_b->id);
-		CU_ASSERT_FATAL(mtu > 0);
-		packet_len = mtu;
+		maxlen = odp_pktout_maxlen(pktio_a->id);
+		if (odp_pktout_maxlen(pktio_b->id) < maxlen)
+			maxlen = odp_pktout_maxlen(pktio_b->id);
+		CU_ASSERT_FATAL(maxlen > 0);
+		packet_len = maxlen;
 		if (packet_len > PKT_LEN_MAX)
 			packet_len = PKT_LEN_MAX;
 
@@ -661,10 +664,24 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 	CU_ASSERT(num_rx == num_pkts);
 
 	for (i = 0; i < num_rx; ++i) {
-		CU_ASSERT_FATAL(rx_pkt[i] != ODP_PACKET_INVALID);
-		CU_ASSERT(odp_packet_input(rx_pkt[i]) == pktio_b->id);
-		CU_ASSERT(odp_packet_has_error(rx_pkt[i]) == 0);
-		odp_packet_free(rx_pkt[i]);
+		odp_packet_data_range_t range;
+		uint16_t sum;
+		odp_packet_t pkt = rx_pkt[i];
+
+		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+		CU_ASSERT(odp_packet_input(pkt) == pktio_b->id);
+		CU_ASSERT(odp_packet_has_error(pkt) == 0);
+
+		/* Dummy read to ones complement in case pktio has set it */
+		sum = odp_packet_ones_comp(pkt, &range);
+		if (range.length > 0)
+			test_pktio_dummy_u64 += sum;
+
+		/* Dummy read to flow hash in case pktio has set it */
+		if (odp_packet_has_flow_hash(pkt))
+			test_pktio_dummy_u64 += odp_packet_flow_hash(pkt);
+
+		odp_packet_free(pkt);
 	}
 }
 
@@ -1009,16 +1026,21 @@ void pktio_test_recv_mtu(void)
 void pktio_test_mtu(void)
 {
 	int ret;
-	uint32_t mtu;
+	uint32_t maxlen;
 
 	odp_pktio_t pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED,
 					 ODP_PKTOUT_MODE_DIRECT);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
-	mtu = odp_pktio_mtu(pktio);
-	CU_ASSERT(mtu > 0);
+	maxlen = odp_pktout_maxlen(pktio);
+	CU_ASSERT(maxlen > 0);
 
-	printf(" %" PRIu32 " ",  mtu);
+	printf(" %" PRIu32 " ",  maxlen);
+
+	maxlen = odp_pktin_maxlen(pktio);
+	CU_ASSERT(maxlen > 0);
+
+	printf(" %" PRIu32 " ",  maxlen);
 
 	ret = odp_pktio_close(pktio);
 	CU_ASSERT(ret == 0);
@@ -1065,9 +1087,12 @@ void pktio_test_promisc(void)
 void pktio_test_mac(void)
 {
 	unsigned char mac_addr[ODP_PKTIO_MACADDR_MAXSIZE];
+	unsigned char mac_addr_ref[ODP_PKTIO_MACADDR_MAXSIZE] =	{
+		0xA0, 0xB0, 0xC0, 0xD0, 0xE0, 0xF0};
 	int mac_len;
 	int ret;
 	odp_pktio_t pktio;
+	odp_pktio_capability_t capa;
 
 	pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED,
 			     ODP_PKTOUT_MODE_DIRECT);
@@ -1087,6 +1112,26 @@ void pktio_test_mac(void)
 	/* Fail case: wrong addr_size. Expected <0. */
 	mac_len = odp_pktio_mac_addr(pktio, mac_addr, 2);
 	CU_ASSERT(mac_len < 0);
+
+	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0);
+	if (capa.set_op.op.mac_addr) {
+		/* Fail case: wrong addr_size. Expected <0. */
+		ret = odp_pktio_mac_addr_set(pktio, mac_addr_ref, 2);
+		CU_ASSERT_FATAL(ret < 0);
+
+		ret = odp_pktio_mac_addr_set(pktio, mac_addr_ref,
+					     ODPH_ETHADDR_LEN);
+		CU_ASSERT_FATAL(ret == 0);
+
+		mac_len = odp_pktio_mac_addr(pktio, mac_addr,
+					     ODPH_ETHADDR_LEN);
+		CU_ASSERT(ODPH_ETHADDR_LEN == mac_len);
+
+		CU_ASSERT(odp_memcmp(mac_addr_ref, mac_addr,
+				     ODPH_ETHADDR_LEN) == 0);
+	} else
+		printf("\n mac address set not supported for %s!\n",
+		       iface_name[0]);
 
 	ret = odp_pktio_close(pktio);
 	CU_ASSERT(0 == ret);
@@ -1185,7 +1230,7 @@ void pktio_test_pktio_config(void)
 
 	odp_pktio_config_init(&config);
 
-	CU_ASSERT(config.parser.layer == ODP_PKTIO_PARSER_LAYER_ALL);
+	CU_ASSERT(config.parser.layer == ODP_PROTO_LAYER_ALL);
 
 	CU_ASSERT(odp_pktio_config(pktio, NULL) == 0);
 
@@ -1666,14 +1711,14 @@ void pktio_test_start_stop(void)
 
 /*
  * This is a pre-condition check that the pktio_test_send_failure()
- * test case can be run. If the TX interface MTU is larger that the
+ * test case can be run. If the TX interface max frame len is larger that the
  * biggest packet we can allocate then the test won't be able to
- * attempt to send packets larger than the MTU, so skip the test.
+ * attempt to send packets larger than the max len, so skip the test.
  */
 int pktio_check_send_failure(void)
 {
 	odp_pktio_t pktio_tx;
-	uint32_t mtu;
+	uint32_t maxlen;
 	odp_pktio_param_t pktio_param;
 	int iface_idx = 0;
 	const char *iface = iface_name[iface_idx];
@@ -1694,14 +1739,14 @@ int pktio_check_send_failure(void)
 		return ODP_TEST_INACTIVE;
 	}
 
-	/* read the MTU from the transmit interface */
-	mtu = odp_pktio_mtu(pktio_tx);
+	/* read the maxlen from the transmit interface */
+	maxlen = odp_pktout_maxlen(pktio_tx);
 
 	odp_pktio_close(pktio_tx);
 
 	/* Failure test supports only single segment */
 	if (pool_capa.pkt.max_seg_len &&
-	    pool_capa.pkt.max_seg_len < mtu + 32)
+	    pool_capa.pkt.max_seg_len < maxlen + 32)
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
@@ -1713,7 +1758,7 @@ void pktio_test_send_failure(void)
 	odp_packet_t pkt_tbl[TX_BATCH_LEN];
 	uint32_t pkt_seq[TX_BATCH_LEN];
 	int ret, i, alloc_pkts;
-	uint32_t mtu;
+	uint32_t maxlen;
 	odp_pool_param_t pool_params;
 	odp_pool_t pkt_pool;
 	int long_pkt_idx = TX_BATCH_LEN / 2;
@@ -1730,8 +1775,8 @@ void pktio_test_send_failure(void)
 
 	CU_ASSERT_FATAL(odp_pktout_queue(pktio_tx, &pktout, 1) == 1);
 
-	/* read the MTU from the transmit interface */
-	mtu = odp_pktio_mtu(pktio_tx);
+	/* read maxlen from the transmit interface */
+	maxlen = odp_pktout_maxlen(pktio_tx);
 
 	ret = odp_pktio_start(pktio_tx);
 	CU_ASSERT_FATAL(ret == 0);
@@ -1741,15 +1786,15 @@ void pktio_test_send_failure(void)
 	CU_ASSERT_FATAL(odp_pool_capability(&pool_capa) == 0);
 
 	if (pool_capa.pkt.max_seg_len &&
-	    pool_capa.pkt.max_seg_len < mtu + 32) {
+	    pool_capa.pkt.max_seg_len < maxlen + 32) {
 		CU_FAIL("Max packet seg length is too small.");
 		return;
 	}
 
 	/* configure the pool so that we can generate test packets larger
-	 * than the interface MTU */
+	 * than the interface max transmit length */
 	odp_pool_param_init(&pool_params);
-	pool_params.pkt.len     = mtu + 32;
+	pool_params.pkt.len     = maxlen + 32;
 	pool_params.pkt.seg_len = pool_params.pkt.len;
 	pool_params.pkt.num     = TX_BATCH_LEN + 1;
 	pool_params.type        = ODP_POOL_PACKET;
@@ -1801,7 +1846,9 @@ void pktio_test_send_failure(void)
 		 * the initial short packets should be sent successfully */
 		odp_errno_zero();
 		ret = odp_pktout_send(pktout, pkt_tbl, TX_BATCH_LEN);
-		CU_ASSERT_FATAL(ret == long_pkt_idx);
+		CU_ASSERT(ret == long_pkt_idx);
+		if (ret != long_pkt_idx)
+			goto cleanup;
 		CU_ASSERT(odp_errno() == 0);
 
 		info_rx.id   = pktio_rx;
@@ -1852,6 +1899,7 @@ void pktio_test_send_failure(void)
 			odp_packet_free(pkt_tbl[i]);
 	}
 
+cleanup:
 	if (pktio_rx != pktio_tx) {
 		CU_ASSERT(odp_pktio_stop(pktio_rx) == 0);
 		CU_ASSERT(odp_pktio_close(pktio_rx) == 0);

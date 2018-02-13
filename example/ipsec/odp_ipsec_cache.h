@@ -32,6 +32,7 @@ typedef enum {
 typedef struct ipsec_cache_entry_s {
 	struct ipsec_cache_entry_s  *next;        /**< Next entry on list */
 	odp_bool_t                   in_place;    /**< Crypto API mode */
+	odp_bool_t                   async;       /**< ASYNC or SYNC mode */
 	uint32_t                     src_ip;      /**< Source v4 address */
 	uint32_t                     dst_ip;      /**< Destination v4 address */
 	sa_mode_t		     mode;        /**< SA mode - transport/tun */
