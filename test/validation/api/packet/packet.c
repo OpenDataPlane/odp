@@ -65,7 +65,10 @@ static uint32_t parse_test_pkt_len[] = {
 	sizeof(test_packet_ipv4_ipsec_ah),
 	sizeof(test_packet_ipv4_ipsec_esp),
 	sizeof(test_packet_ipv6_ipsec_ah),
-	sizeof(test_packet_ipv6_ipsec_esp)
+	sizeof(test_packet_ipv6_ipsec_esp),
+	sizeof(test_packet_mcast_eth_ipv4_udp),
+	sizeof(test_packet_bcast_eth_ipv4_udp),
+	sizeof(test_packet_mcast_eth_ipv6_udp)
 };
 
 #define packet_compare_offset(pkt1, off1, pkt2, off2, len) \
@@ -3051,6 +3054,109 @@ static void parse_eth_ipv6_ipsec_esp(void)
 	odp_packet_free_multi(pkt, num_pkt);
 }
 
+/* Ethernet mcast/IPv4 mcast/UDP */
+static void parse_mcast_eth_ipv4_udp(void)
+{
+	odp_packet_parse_param_t parse;
+	int i;
+	int num_pkt = PARSE_TEST_NUM_PKT;
+	odp_packet_t pkt[num_pkt];
+
+	parse_test_alloc(pkt, test_packet_mcast_eth_ipv4_udp,
+			 sizeof(test_packet_mcast_eth_ipv4_udp));
+
+	parse.proto = ODP_PROTO_ETH;
+	parse.last_layer = ODP_PROTO_LAYER_L4;
+	parse.chksums.all_chksum = 0;
+
+	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+					 num_pkt - 1, &parse) == (num_pkt - 1));
+
+	for (i = 0; i < num_pkt; i++) {
+		CU_ASSERT(odp_packet_has_eth(pkt[i]));
+		CU_ASSERT(odp_packet_has_eth_mcast(pkt[i]));
+		CU_ASSERT(odp_packet_has_ipv4(pkt[i]));
+		CU_ASSERT(odp_packet_has_ip_mcast(pkt[i]));
+		CU_ASSERT(odp_packet_has_udp(pkt[i]));
+		CU_ASSERT(!odp_packet_has_ipv6(pkt[i]));
+		CU_ASSERT(!odp_packet_has_tcp(pkt[i]));
+		CU_ASSERT(!odp_packet_has_eth_bcast(pkt[i]));
+		CU_ASSERT(!odp_packet_has_ip_bcast(pkt[i]));
+	}
+
+	odp_packet_free_multi(pkt, num_pkt);
+}
+
+/* Ethernet bcast/IPv4 bcast/UDP */
+static void parse_bcast_eth_ipv4_udp(void)
+{
+	odp_packet_parse_param_t parse;
+	int i;
+	int num_pkt = PARSE_TEST_NUM_PKT;
+	odp_packet_t pkt[num_pkt];
+
+	parse_test_alloc(pkt, test_packet_bcast_eth_ipv4_udp,
+			 sizeof(test_packet_bcast_eth_ipv4_udp));
+
+	parse.proto = ODP_PROTO_ETH;
+	parse.last_layer = ODP_PROTO_LAYER_L4;
+	parse.chksums.all_chksum = 0;
+
+	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+					 num_pkt - 1, &parse) == (num_pkt - 1));
+
+	for (i = 0; i < num_pkt; i++) {
+		CU_ASSERT(odp_packet_has_eth(pkt[i]));
+		CU_ASSERT(odp_packet_has_eth_bcast(pkt[i]));
+		/* API specifies that Ethernet broadcast is also multicast */
+		CU_ASSERT(odp_packet_has_eth_mcast(pkt[i]));
+		CU_ASSERT(odp_packet_has_ipv4(pkt[i]));
+		CU_ASSERT(odp_packet_has_ip_bcast(pkt[i]));
+		CU_ASSERT(odp_packet_has_udp(pkt[i]));
+		CU_ASSERT(!odp_packet_has_ipv6(pkt[i]));
+		CU_ASSERT(!odp_packet_has_tcp(pkt[i]));
+		CU_ASSERT(!odp_packet_has_ip_mcast(pkt[i]));
+	}
+
+	odp_packet_free_multi(pkt, num_pkt);
+}
+
+/* Ethernet mcast/IPv6 mcast/UDP */
+static void parse_mcast_eth_ipv6_udp(void)
+{
+	odp_packet_parse_param_t parse;
+	int i;
+	int num_pkt = PARSE_TEST_NUM_PKT;
+	odp_packet_t pkt[num_pkt];
+
+	parse_test_alloc(pkt, test_packet_mcast_eth_ipv6_udp,
+			 sizeof(test_packet_mcast_eth_ipv6_udp));
+
+	parse.proto = ODP_PROTO_ETH;
+	parse.last_layer = ODP_PROTO_LAYER_L4;
+	parse.chksums.all_chksum = 0;
+
+	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+					 num_pkt - 1, &parse) == (num_pkt - 1));
+
+	for (i = 0; i < num_pkt; i++) {
+		CU_ASSERT(odp_packet_has_eth(pkt[i]));
+		CU_ASSERT(odp_packet_has_eth_mcast(pkt[i]));
+		CU_ASSERT(odp_packet_has_ipv6(pkt[i]));
+		CU_ASSERT(odp_packet_has_ip_mcast(pkt[i]));
+		CU_ASSERT(odp_packet_has_udp(pkt[i]));
+		CU_ASSERT(!odp_packet_has_ipv4(pkt[i]));
+		CU_ASSERT(!odp_packet_has_tcp(pkt[i]));
+		CU_ASSERT(!odp_packet_has_eth_bcast(pkt[i]));
+		CU_ASSERT(!odp_packet_has_ip_bcast(pkt[i]));
+	}
+
+	odp_packet_free_multi(pkt, num_pkt);
+}
+
 odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_alloc_free),
 	ODP_TEST_INFO(packet_test_alloc_free_multi),
@@ -3102,6 +3208,9 @@ odp_testinfo_t packet_parse_suite[] = {
 	ODP_TEST_INFO(parse_eth_ipv4_ipsec_esp),
 	ODP_TEST_INFO(parse_eth_ipv6_ipsec_ah),
 	ODP_TEST_INFO(parse_eth_ipv6_ipsec_esp),
+	ODP_TEST_INFO(parse_mcast_eth_ipv4_udp),
+	ODP_TEST_INFO(parse_bcast_eth_ipv4_udp),
+	ODP_TEST_INFO(parse_mcast_eth_ipv6_udp),
 	ODP_TEST_INFO_NULL,
 };
 
