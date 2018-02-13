@@ -12,6 +12,7 @@ AM_CPPFLAGS +=  -I$(top_builddir)/include
 AM_CPPFLAGS +=  -Iinclude
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/$(ARCH_DIR)
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/default
+AM_CPPFLAGS +=  -DSYSCONFDIR=\"@sysconfdir@\"
 
 AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
 AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
@@ -237,6 +238,10 @@ __LIB__libodp_dpdk_la_SOURCES += arch/default/odp_cpu_cycles.c \
 				 arch/aarch64/odp_global_time.c \
 				 arch/default/odp_sysinfo_parse.c
 arch_odp_headers = arch/aarch64/odp/api/cpu_arch.h
+noinst_HEADERS += arch/aarch64/odp_atomic.h \
+		  arch/aarch64/odp_cpu.h \
+		  arch/aarch64/odp_cpu_idling.h \
+		  arch/aarch64/odp_llsc.h
 endif
 if ARCH_IS_MIPS64
 __LIB__libodp_dpdk_la_SOURCES += arch/mips64/odp_cpu_cycles.c \
