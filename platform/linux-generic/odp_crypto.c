@@ -35,7 +35,7 @@
 #endif
 
 #define MAX_SESSIONS 32
-
+#define AES_BLOCK_SIZE 16
 /*
  * Cipher algorithm capabilities
  *
@@ -95,9 +95,17 @@ static const odp_crypto_auth_capability_t auth_capa_sha256_hmac[] = {
 {.digest_len = 16, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0} },
 {.digest_len = 32, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
 
+static const odp_crypto_auth_capability_t auth_capa_sha384_hmac[] = {
+{.digest_len = 24, .key_len = 48, .aad_len = {.min = 0, .max = 0, .inc = 0} },
+{.digest_len = 48, .key_len = 48, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
+
 static const odp_crypto_auth_capability_t auth_capa_sha512_hmac[] = {
 {.digest_len = 32, .key_len = 64, .aad_len = {.min = 0, .max = 0, .inc = 0} },
 {.digest_len = 64, .key_len = 64, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
+
+static const odp_crypto_auth_capability_t auth_capa_aes_xcbc[] = {
+{.digest_len = 12, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0} },
+{.digest_len = 16, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
 
 static const odp_crypto_auth_capability_t auth_capa_aes_gcm[] = {
 {.digest_len = 16, .key_len = 0, .aad_len = {.min = 8, .max = 12, .inc = 4} } };
@@ -1293,7 +1301,9 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->auths.bit.md5_hmac     = 1;
 	capa->auths.bit.sha1_hmac    = 1;
 	capa->auths.bit.sha256_hmac  = 1;
+	capa->auths.bit.sha384_hmac  = 1;
 	capa->auths.bit.sha512_hmac  = 1;
+	capa->auths.bit.aes_xcbc_mac = 1;
 	capa->auths.bit.aes_gcm      = 1;
 	capa->auths.bit.aes_ccm      = 1;
 	capa->auths.bit.aes_gmac     = 1;
@@ -1390,9 +1400,17 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 		src = auth_capa_sha256_hmac;
 		num = sizeof(auth_capa_sha256_hmac) / size;
 		break;
+	case ODP_AUTH_ALG_SHA384_HMAC:
+		src = auth_capa_sha384_hmac;
+		num = sizeof(auth_capa_sha384_hmac) / size;
+		break;
 	case ODP_AUTH_ALG_SHA512_HMAC:
 		src = auth_capa_sha512_hmac;
 		num = sizeof(auth_capa_sha512_hmac) / size;
+		break;
+	case ODP_AUTH_ALG_AES_XCBC_MAC:
+		src = auth_capa_aes_xcbc;
+		num = sizeof(auth_capa_aes_xcbc) / size;
 		break;
 	case ODP_AUTH_ALG_AES_GCM:
 		src = auth_capa_aes_gcm;
@@ -1603,8 +1621,14 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	case ODP_AUTH_ALG_SHA256_HMAC:
 		rc = process_auth_hmac_param(session, EVP_sha256());
 		break;
+	case ODP_AUTH_ALG_SHA384_HMAC:
+		rc = process_auth_hmac_param(session, EVP_sha384());
+		break;
 	case ODP_AUTH_ALG_SHA512_HMAC:
 		rc = process_auth_hmac_param(session, EVP_sha512());
+		break;
+	case ODP_AUTH_ALG_AES_XCBC_MAC:
+		rc = process_aesxcbc_param(session, EVP_aes_128_ecb());
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_AES128_GCM:
