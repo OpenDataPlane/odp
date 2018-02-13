@@ -789,14 +789,14 @@ static int ipsec_suite_term(odp_testinfo_t *suite)
 	if (suite_context.pktio != ODP_PKTIO_INVALID)
 		pktio_stop(suite_context.pktio);
 
-	for (i = 0; suite[i].pName; i++) {
+	for (i = 0; suite[i].name; i++) {
 		if (suite[i].check_active &&
 		    suite[i].check_active() == ODP_TEST_INACTIVE) {
 			if (first) {
 				first = 0;
 				printf("\n\n  Inactive tests:\n");
 			}
-			printf("    %s\n", suite[i].pName);
+			printf("    %s\n", suite[i].name);
 		}
 	}
 

@@ -40,7 +40,6 @@ void packet_test_extend_ref(void);
 void packet_test_align(void);
 void packet_test_offset(void);
 void packet_test_ref(void);
-void packet_test_parse(void);
 
 /* test arrays: */
 extern odp_testinfo_t packet_suite[];
