@@ -2028,7 +2028,7 @@ static inline uint8_t parse_ipv4(packet_parser_t *prs, const uint8_t **parseptr,
 	if (odp_unlikely(dstaddr == 0xffffffff))
 		prs->input_flags.ip_bcast = 1;
 
-	if (odp_unlikely((dstaddr >> 28) == 0xd))
+	if (odp_unlikely((dstaddr >> 28) == 0xe))
 		prs->input_flags.ip_mcast = 1;
 
 	return ipv4->proto;
