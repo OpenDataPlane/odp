@@ -19,6 +19,9 @@ struct suite_context_s suite_context;
 #define PKT_POOL_NUM  64
 #define PKT_POOL_LEN  (1 * 1024)
 
+#define PACKET_USER_PTR	((void *)0x1212fefe)
+#define IPSEC_SA_CTX	((void *)0xfefefafa)
+
 static odp_pktio_t pktio_create(odp_pool_t pool)
 {
 	odp_pktio_t pktio;
@@ -81,7 +84,7 @@ static int pktio_start(odp_pktio_t pktio, odp_bool_t in, odp_bool_t out)
 		return 0;
 
 	odp_pktio_config_init(&config);
-	config.parser.layer = ODP_PKTIO_PARSER_LAYER_ALL;
+	config.parser.layer = ODP_PROTO_LAYER_ALL;
 	config.inbound_ipsec = in;
 	config.outbound_ipsec = out;
 
@@ -123,17 +126,17 @@ int ipsec_check(odp_bool_t ah,
 		uint32_t auth_bits)
 {
 	odp_ipsec_capability_t capa;
-	odp_crypto_cipher_capability_t cipher_capa[MAX_ALG_CAPA];
-	odp_crypto_auth_capability_t   auth_capa[MAX_ALG_CAPA];
+	odp_ipsec_cipher_capability_t cipher_capa[MAX_ALG_CAPA];
+	odp_ipsec_auth_capability_t   auth_capa[MAX_ALG_CAPA];
 	int i, num;
-	odp_bool_t found = false;
+	odp_bool_t found;
 
 	if (odp_ipsec_capability(&capa) < 0)
 		return ODP_TEST_INACTIVE;
 
 	if ((ODP_IPSEC_OP_MODE_SYNC == suite_context.inbound_op_mode &&
 	     ODP_SUPPORT_NO == capa.op_mode_sync) ||
-	    (ODP_IPSEC_OP_MODE_ASYNC == suite_context.outbound_op_mode &&
+	    (ODP_IPSEC_OP_MODE_SYNC == suite_context.outbound_op_mode &&
 	     ODP_SUPPORT_NO == capa.op_mode_sync) ||
 	    (ODP_IPSEC_OP_MODE_ASYNC == suite_context.inbound_op_mode &&
 	     ODP_SUPPORT_NO == capa.op_mode_async) ||
@@ -164,6 +167,10 @@ int ipsec_check(odp_bool_t ah,
 		break;
 	case ODP_CIPHER_ALG_AES_CBC:
 		if (!capa.ciphers.bit.aes_cbc)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_CIPHER_ALG_AES_CTR:
+		if (!capa.ciphers.bit.aes_ctr)
 			return ODP_TEST_INACTIVE;
 		break;
 	case ODP_CIPHER_ALG_AES_GCM:
@@ -201,6 +208,10 @@ int ipsec_check(odp_bool_t ah,
 		if (!capa.auths.bit.aes_gcm)
 			return ODP_TEST_INACTIVE;
 		break;
+	case ODP_AUTH_ALG_AES_GMAC:
+		if (!capa.auths.bit.aes_gmac)
+			return ODP_TEST_INACTIVE;
+		break;
 	default:
 		fprintf(stderr, "Unsupported authentication algorithm\n");
 		return ODP_TEST_INACTIVE;
@@ -213,6 +224,7 @@ int ipsec_check(odp_bool_t ah,
 	}
 
 	/* Search for the test case */
+	found = false;
 	for (i = 0; i < num; i++) {
 		if (cipher_capa[i].key_len == cipher_bits / 8) {
 			found = 1;
@@ -225,13 +237,14 @@ int ipsec_check(odp_bool_t ah,
 		return ODP_TEST_INACTIVE;
 	}
 
-	found = false;
 	num = odp_ipsec_auth_capability(auth, auth_capa, MAX_ALG_CAPA);
 	if (num <= 0) {
 		fprintf(stderr, "Wrong auth capabilities\n");
 		return ODP_TEST_INACTIVE;
 	}
 
+	/* Search for the test case */
+	found = false;
 	for (i = 0; i < num; i++) {
 		if (auth_capa[i].key_len == auth_bits / 8) {
 			found = 1;
@@ -270,6 +283,12 @@ int ipsec_check_esp_aes_cbc_128_sha256(void)
 				ODP_AUTH_ALG_SHA256_HMAC, 256);
 }
 
+int ipsec_check_esp_aes_ctr_128_null(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_CTR, 128,
+				ODP_AUTH_ALG_NULL, 0);
+}
+
 int ipsec_check_esp_aes_gcm_128(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_GCM, 128,
@@ -280,6 +299,18 @@ int ipsec_check_esp_aes_gcm_256(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_GCM, 256,
 				ODP_AUTH_ALG_AES_GCM, 256);
+}
+
+int ipsec_check_ah_aes_gmac_128(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
+				ODP_AUTH_ALG_AES_GMAC, 128);
+}
+
+int ipsec_check_esp_null_aes_gmac_128(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
+				ODP_AUTH_ALG_AES_GMAC, 128);
 }
 
 void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
@@ -314,6 +345,8 @@ void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
 
 	param->dest_queue = suite_context.queue;
 
+	param->context = IPSEC_SA_CTX;
+
 	param->crypto.cipher_alg = cipher_alg;
 	if (cipher_key)
 		param->crypto.cipher_key = *cipher_key;
@@ -330,6 +363,8 @@ void ipsec_sa_destroy(odp_ipsec_sa_t sa)
 {
 	odp_event_t event;
 	odp_ipsec_status_t status;
+
+	CU_ASSERT_EQUAL(IPSEC_SA_CTX, odp_ipsec_sa_context(sa));
 
 	CU_ASSERT_EQUAL(ODP_IPSEC_OK, odp_ipsec_sa_disable(sa));
 
@@ -352,8 +387,6 @@ void ipsec_sa_destroy(odp_ipsec_sa_t sa)
 
 	CU_ASSERT_EQUAL(ODP_IPSEC_OK, odp_ipsec_sa_destroy(sa));
 }
-
-#define PACKET_USER_PTR	((void *)0x1212fefe)
 
 odp_packet_t ipsec_packet(const ipsec_test_packet *itp)
 {
@@ -523,8 +556,8 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 	memset(&param, 0, sizeof(param));
 	param.num_sa = 1;
 	param.sa = &sa;
-	param.num_opt = 0;
-	param.opt = NULL;
+	param.num_opt = part->num_opt;
+	param.opt = &part->opt;
 
 	if (ODP_IPSEC_OP_MODE_SYNC == suite_context.outbound_op_mode) {
 		CU_ASSERT_EQUAL(part->out_pkt, odp_ipsec_out(&pkt, 1,
@@ -550,10 +583,18 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 	} else {
 		struct odp_ipsec_out_inline_param_t inline_param;
 		odp_queue_t queue;
-		uint32_t hdr_len = part->out[0].pkt_out->l3_offset;
-		uint8_t hdr[hdr_len];
+		uint32_t hdr_len;
+		uint8_t hdr[32];
 
-		memcpy(hdr, part->out[0].pkt_out->data, hdr_len);
+		if (NULL != part->out[0].pkt_out) {
+			hdr_len = part->out[0].pkt_out->l3_offset;
+			CU_ASSERT_FATAL(hdr_len <= sizeof(hdr));
+			memcpy(hdr, part->out[0].pkt_out->data, hdr_len);
+		} else {
+			hdr_len = part->pkt_in->l3_offset;
+			CU_ASSERT_FATAL(hdr_len <= sizeof(hdr));
+			memcpy(hdr, part->pkt_in->data, hdr_len);
+		}
 		inline_param.pktio = suite_context.pktio;
 		inline_param.outer_hdr.ptr = hdr;
 		inline_param.outer_hdr.len = hdr_len;
@@ -622,7 +663,15 @@ void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 			CU_ASSERT_EQUAL(0, odp_ipsec_result(&result, pkto[i]));
 			CU_ASSERT_EQUAL(part->out[i].status.error.all,
 					result.status.error.all);
+			CU_ASSERT(!result.status.error.all ==
+				  !odp_packet_has_error(pkto[i]));
+			CU_ASSERT_EQUAL(suite_context.inbound_op_mode ==
+					ODP_IPSEC_OP_MODE_INLINE,
+					result.flag.inline_mode);
 			CU_ASSERT_EQUAL(sa, result.sa);
+			if (ODP_IPSEC_SA_INVALID != sa)
+				CU_ASSERT_EQUAL(IPSEC_SA_CTX,
+						odp_ipsec_sa_context(sa));
 		}
 		ipsec_check_packet(part->out[i].pkt_out,
 				   pkto[i]);
@@ -655,7 +704,11 @@ void ipsec_check_out_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 			CU_ASSERT_EQUAL(0, odp_ipsec_result(&result, pkto[i]));
 			CU_ASSERT_EQUAL(part->out[i].status.error.all,
 					result.status.error.all);
+			CU_ASSERT(!result.status.error.all ==
+				  !odp_packet_has_error(pkto[i]));
 			CU_ASSERT_EQUAL(sa, result.sa);
+			CU_ASSERT_EQUAL(IPSEC_SA_CTX,
+					odp_ipsec_sa_context(sa));
 		}
 		ipsec_check_packet(part->out[i].pkt_out,
 				   pkto[i]);
@@ -693,6 +746,8 @@ void ipsec_check_out_in_one(const ipsec_test_part *part,
 			CU_ASSERT_EQUAL(part->out[i].status.error.all,
 					result.status.error.all);
 			CU_ASSERT_EQUAL(sa, result.sa);
+			CU_ASSERT_EQUAL(IPSEC_SA_CTX,
+					odp_ipsec_sa_context(sa));
 		}
 		CU_ASSERT_FATAL(odp_packet_len(pkto[i]) <=
 				sizeof(pkt_in.data));
@@ -833,7 +888,7 @@ int ipsec_config(odp_instance_t ODP_UNUSED inst)
 	 * in test checking function and just say that the test is inactive. */
 	if ((ODP_IPSEC_OP_MODE_SYNC == suite_context.inbound_op_mode &&
 	     ODP_SUPPORT_NO == capa.op_mode_sync) ||
-	    (ODP_IPSEC_OP_MODE_ASYNC == suite_context.outbound_op_mode &&
+	    (ODP_IPSEC_OP_MODE_SYNC == suite_context.outbound_op_mode &&
 	     ODP_SUPPORT_NO == capa.op_mode_sync) ||
 	    (ODP_IPSEC_OP_MODE_ASYNC == suite_context.inbound_op_mode &&
 	     ODP_SUPPORT_NO == capa.op_mode_async) ||
@@ -849,7 +904,7 @@ int ipsec_config(odp_instance_t ODP_UNUSED inst)
 	ipsec_config.inbound_mode = suite_context.inbound_op_mode;
 	ipsec_config.outbound_mode = suite_context.outbound_op_mode;
 	ipsec_config.inbound.default_queue = suite_context.queue;
-	ipsec_config.inbound.parse = ODP_IPSEC_LAYER_ALL;
+	ipsec_config.inbound.parse_level = ODP_PROTO_LAYER_ALL;
 
 	if (ODP_IPSEC_OK != odp_ipsec_config(&ipsec_config))
 		return -1;

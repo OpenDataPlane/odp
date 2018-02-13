@@ -1,1 +1,1 @@
-../../../../linux-generic/include/odp/api/rwlock_recursive.h
+../../../../linux-generic/include-abi/odp/api/abi/rwlock_recursive.h

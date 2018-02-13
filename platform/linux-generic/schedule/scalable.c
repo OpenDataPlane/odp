@@ -598,8 +598,8 @@ void sched_queue_rem(odp_schedule_group_t grp, uint32_t prio)
 
 	sgi = grp;
 	sg = sg_vec[sgi];
-	x = __atomic_sub_fetch(&sg->xcount[prio], 1, __ATOMIC_RELAXED);
 
+	x = __atomic_sub_fetch(&sg->xcount[prio], 1, __ATOMIC_RELAXED);
 	if (x == 0) {
 		/* Last ODP queue for this priority
 		 * Notify all threads in sg->thr_wanted that they

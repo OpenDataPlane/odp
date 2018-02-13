@@ -103,9 +103,6 @@ setup_pktio_env()
 			return 5
 		fi
 	done
-
-	# disable socket mmsg pktio since it was not working already
-	export ODP_PKTIO_DISABLE_SOCKET_MMSG=1
 }
 
 cleanup_pktio_env()

@@ -11,8 +11,8 @@
  * ODP schedule
  */
 
-#ifndef ODP_API_SCHEDULE_H_
-#define ODP_API_SCHEDULE_H_
+#ifndef ODP_API_SPEC_SCHEDULE_H_
+#define ODP_API_SPEC_SCHEDULE_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
@@ -43,26 +43,6 @@ extern "C" {
 /**
  * @def ODP_SCHED_GROUP_NAME_LEN
  * Maximum schedule group name length in chars including null char
- */
-
-/**
- * @def ODP_SCHED_GROUP_INVALID
- * Invalid scheduler group
- */
-
-/**
- * @def ODP_SCHED_GROUP_ALL
- * Predefined scheduler group of all threads
- */
-
-/**
- * @def ODP_SCHED_GROUP_WORKER
- * Predefined scheduler group of all worker threads
- */
-
-/**
- * @def ODP_SCHED_GROUP_CONTROL
- * Predefined scheduler group of all control threads
  */
 
 /**

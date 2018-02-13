@@ -82,7 +82,7 @@ AM_CONDITIONAL([HAVE_PCAP], [false])
 AM_CONDITIONAL([netmap_support], [false])
 AM_CONDITIONAL([mdev_support], [false])
 AM_CONDITIONAL([PKTIO_DPDK], [false])
-m4_include([platform/linux-dpdk/m4/odp_pthread.m4])
+ODP_PTHREAD
 ODP_TIMER
 ODP_OPENSSL
 m4_include([platform/linux-dpdk/m4/odp_modules.m4])

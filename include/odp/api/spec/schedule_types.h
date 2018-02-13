@@ -10,8 +10,8 @@
  * ODP schedule types
  */
 
-#ifndef ODP_API_SCHEDULE_TYPES_H_
-#define ODP_API_SCHEDULE_TYPES_H_
+#ifndef ODP_API_SPEC_SCHEDULE_TYPES_H_
+#define ODP_API_SPEC_SCHEDULE_TYPES_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
@@ -113,6 +113,11 @@ extern "C" {
  */
 
 /**
+ * @def ODP_SCHED_GROUP_INVALID
+ * Invalid scheduler group
+ */
+
+/**
  * @def ODP_SCHED_GROUP_ALL
  * Group of all threads. All active worker and control threads belong to this
  * group. The group is automatically updated when new threads enter or old
@@ -124,6 +129,11 @@ extern "C" {
  * Group of all worker threads. All active worker threads belong to this
  * group. The group is automatically updated when new worker threads enter or
  * old threads exit ODP.
+ */
+
+/**
+ * @def ODP_SCHED_GROUP_CONTROL
+ * Predefined scheduler group of all control threads
  */
 
 /** Scheduler parameters */

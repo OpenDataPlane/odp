@@ -1,1 +1,1 @@
-../../../../linux-generic/include/odp/api/spinlock.h
+../../../../linux-generic/include-abi/odp/api/abi/spinlock.h

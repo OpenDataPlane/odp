@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#ifndef ODP_TRAFFIC_MNGR_H_
-#define ODP_TRAFFIC_MNGR_H_
+#ifndef ODP_API_SPEC_TRAFFIC_MNGR_H_
+#define ODP_API_SPEC_TRAFFIC_MNGR_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
@@ -484,8 +484,8 @@ typedef struct {
  * odp_tm_requirements_t record before it is first used or assigned to.
  * This is done to allow for vendor specific additions to this record.
  *
- * @param[in] requirements  A pointer to an odp_tm_requirements_t record which
- *                          is to be initialized.
+ * @param requirements  A pointer to an odp_tm_requirements_t record which
+ *                      is to be initialized.
  */
 void odp_tm_requirements_init(odp_tm_requirements_t *requirements);
 
@@ -495,8 +495,8 @@ void odp_tm_requirements_init(odp_tm_requirements_t *requirements);
  * record before it is first used or assigned to.
  * This is done to allow for vendor specific additions to this record.
  *
- * @param[in] egress  A pointer to an odp_tm_egress_t record which
- *                    is to be initialized.
+ * @param egress  A pointer to an odp_tm_egress_t record which
+ *                is to be initialized.
  */
 void odp_tm_egress_init(odp_tm_egress_t *egress);
 
@@ -518,7 +518,7 @@ void odp_tm_egress_init(odp_tm_egress_t *egress);
  *
  * @param[out] capabilities      An array of odp_tm_capabilities_t records to
  *                               be filled in.
- * @param[in]  capabilities_size The number of odp_tm_capabilities_t records
+ * @param      capabilities_size The number of odp_tm_capabilities_t records
  *                               in the capabilities array.
  * @return                       Returns < 0 upon failure.  Returns N > 0,
  *                               where N is the maximum number of different
@@ -531,16 +531,16 @@ int odp_tm_capabilities(odp_tm_capabilities_t capabilities[],
 
 /** Create/instantiate a TM Packet Scheduling system.
  *
- * @param[in] name          The name to be assigned to this TM system.  Cannot
- *                          be NULL, and also must be unique amongst all other
- *                          TM system names.
- * @param[in] requirements  The minimum required feature set and limits needed
- *                          by the ODP application.
- * @param[in] egress        Describes the single egress "spigot" of this
- *                          TM system.
- * @return                  Returns ODP_TM_INVALID upon failure, otherwise the
- *                          newly created TM system's odp_tm_t handle is
- *                          returned.
+ * @param name          The name to be assigned to this TM system.  Cannot
+ *                      be NULL, and also must be unique amongst all other
+ *                      TM system names.
+ * @param requirements  The minimum required feature set and limits needed
+ *                      by the ODP application.
+ * @param egress        Describes the single egress "spigot" of this
+ *                      TM system.
+ * @return              Returns ODP_TM_INVALID upon failure, otherwise the
+ *                      newly created TM system's odp_tm_t handle is
+ *                      returned.
  */
 odp_tm_t odp_tm_create(const char            *name,
 		       odp_tm_requirements_t *requirements,
@@ -558,21 +558,21 @@ odp_tm_t odp_tm_create(const char            *name,
  * the existing (built-in or created by odp_tm_create) TM system that best
  * matches the requirements is returned.
  *
- * @param[in] name          If NULL then only uses the requirements parameter to
- *                          find a closest match, otherwise if the name is
- *                          matched by an existing TM system it is returned.
- * @param[in] requirements  Used when the name is NULL (in which case the
- *                          closest match is returned) or when the name is
- *                          not-NULL, but doesn't match any existing TM system
- *                          in which case the requirements is used to find the
- *                          FIRST TM system matching exactly these limits.
- * @param[in] egress        If a TM system is found, then this specifies the
- *                          egress "spigot" to be associated with this TM
- *                          system.
- * @return                  If an existing TM system (built-in or previously
- *                          created via odp_tm_create) is found, its
- *                          odp_tm_t value is returned, otherwise
- *                          ODP_TM_INVALID is returned.
+ * @param name          If NULL then only uses the requirements parameter to
+ *                      find a closest match, otherwise if the name is
+ *                      matched by an existing TM system it is returned.
+ * @param requirements  Used when the name is NULL (in which case the
+ *                      closest match is returned) or when the name is
+ *                      not-NULL, but doesn't match any existing TM system
+ *                      in which case the requirements is used to find the
+ *                      FIRST TM system matching exactly these limits.
+ * @param egress        If a TM system is found, then this specifies the
+ *                      egress "spigot" to be associated with this TM
+ *                      system.
+ * @return              If an existing TM system (built-in or previously
+ *                      created via odp_tm_create) is found, its
+ *                      odp_tm_t value is returned, otherwise
+ *                      ODP_TM_INVALID is returned.
  */
 odp_tm_t odp_tm_find(const char            *name,
 		     odp_tm_requirements_t *requirements,
@@ -591,7 +591,7 @@ odp_tm_t odp_tm_find(const char            *name,
  * In addition, ODP TM implementations should fail API requests that "exceed"
  * the limits or features contracted for in the requirements.
  *
- * @param[in]  odp_tm        The odp_tm_t value of the TM system to be
+ * @param      odp_tm        The odp_tm_t value of the TM system to be
  *                           queried.
  * @param[out] capabilities  A pointer to an odp_tm_capabilities_t record
  *                           where the actual limits used by the TM system are
@@ -619,9 +619,9 @@ int odp_tm_capability(odp_tm_t odp_tm, odp_tm_capabilities_t *capabilities);
  * TM system, other than EVENTUALLY these packets will be either sent (in ANY
  * order) or freed.
  *
- * @param[in] odp_tm  The odp_tm_t value of the TM system to be destroyed (and
- *                    hence destroyed (and hence freed).
- * @return            0 upon success, < 0 upon failure.
+ * @param odp_tm  The odp_tm_t value of the TM system to be destroyed (and
+ *                hence destroyed (and hence freed).
+ * @return        0 upon success, < 0 upon failure.
  */
 int odp_tm_destroy(odp_tm_t odp_tm);
 
@@ -640,13 +640,13 @@ int odp_tm_destroy(odp_tm_t odp_tm);
  * calls to this function with drop_eligible_enabled == FALSE - i.e. must
  * always return 0 when disabling this feature.
  *
- * @param[in] odp_tm                 Odp_tm is used to identify the TM system
- *                                   whose egress behavior is being changed.
- * @param[in] color                  The packet color whose egress marking is
- *                                   being changed.
- * @param[in] drop_eligible_enabled  If true then will set the DEI bit for
- *                                   egressed VLAN tagged pkts with this color.
- * @return                           0 upon success, < 0 upon failure.
+ * @param odp_tm                 Odp_tm is used to identify the TM system
+ *                               whose egress behavior is being changed.
+ * @param color                  The packet color whose egress marking is
+ *                               being changed.
+ * @param drop_eligible_enabled  If true then will set the DEI bit for
+ *                               egressed VLAN tagged pkts with this color.
+ * @return                       0 upon success, < 0 upon failure.
  */
 int odp_tm_vlan_marking(odp_tm_t           odp_tm,
 			odp_packet_color_t color,
@@ -669,16 +669,16 @@ int odp_tm_vlan_marking(odp_tm_t           odp_tm,
  * calls to this function with ecn_ce_enabled == FALSE - i.e. must always
  * return 0 when disabling this feature.
  *
- * @param[in] odp_tm          Odp_tm is used to identify the TM system whose
- *                            egress behavior is being changed.
- * @param[in] color           The packet color whose egress marking is
- *                            being changed.
- * @param[in] ecn_ce_enabled  If true then egressed IPv4/IPv6 pkts whose
- *                            protocol field is TCP AND whose ECN subfield has
- *                            either one of the two values 1 or 2, will set this
- *                            subfield to the value ECN_CE - i.e. Congestion
- *                            Experienced (whose value is 3).
- * @return                    0 upon success, < 0 upon failure.
+ * @param odp_tm          Odp_tm is used to identify the TM system whose
+ *                        egress behavior is being changed.
+ * @param color           The packet color whose egress marking is
+ *                        being changed.
+ * @param ecn_ce_enabled  If true then egressed IPv4/IPv6 pkts whose
+ *                        protocol field is TCP AND whose ECN subfield has
+ *                        either one of the two values 1 or 2, will set this
+ *                        subfield to the value ECN_CE - i.e. Congestion
+ *                        Experienced (whose value is 3).
+ * @return                0 upon success, < 0 upon failure.
  */
 int odp_tm_ecn_marking(odp_tm_t           odp_tm,
 		       odp_packet_color_t color,
@@ -709,15 +709,15 @@ int odp_tm_ecn_marking(odp_tm_t           odp_tm,
  * calls to this function with drop_prec_enabled == FALSE - i.e. must always
  * return 0 when disabling this feature.
  *
- * @param[in] odp_tm            Odp_tm is used to identify the TM system whose
- *                              egress behavior is being changed.
- * @param[in] color             The packet color whose egress marking is
- *                              being changed.
- * @param[in] drop_prec_enabled If true then egressed IPv4/IPv6 pkts with this
- *                              color will have the pkt's Drop Precedence
- *                              sub-subfield of the DSCP subfield set to
- *                              LOW, MEDIUM or HIGH drop precedence.
- * @return                      0 upon success, < 0 upon failure.
+ * @param odp_tm            Odp_tm is used to identify the TM system whose
+ *                          egress behavior is being changed.
+ * @param color             The packet color whose egress marking is
+ *                          being changed.
+ * @param drop_prec_enabled If true then egressed IPv4/IPv6 pkts with this
+ *                          color will have the pkt's Drop Precedence
+ *                          sub-subfield of the DSCP subfield set to
+ *                          LOW, MEDIUM or HIGH drop precedence.
+ * @return                  0 upon success, < 0 upon failure.
  */
 int odp_tm_drop_prec_marking(odp_tm_t           odp_tm,
 			     odp_packet_color_t color,
@@ -785,8 +785,8 @@ typedef struct {
 /** odp_tm_shaper_params_init() must be called to initialize any
  * odp_tm_shaper_params_t record before it is first used or assigned to.
  *
- * @param[in] params  A pointer to an odp_tm_shaper_params_t record which
- *                    is to be initialized.
+ * @param params  A pointer to an odp_tm_shaper_params_t record which
+ *                is to be initialized.
  */
 void odp_tm_shaper_params_init(odp_tm_shaper_params_t *params);
 
@@ -794,14 +794,14 @@ void odp_tm_shaper_params_init(odp_tm_shaper_params_t *params);
  * subsequently be attached to any number (including zero) of tm_queues
  * or tm_nodes.
  *
- * @param[in] name    Optional name associated with this shaper profile.  Can
- *                    be NULL.  If non-NULL must be unique amongst the set of
- *                    all other shaper profiles.
- * @param[in] params  The profile parameters.  See comments associated with
- *                    the odp_tm_shaper_params_t for more details.
- * @return            Returns ODP_TM_INVALID upon failure, or the newly
- *                    allocated odp_tm_shaper_t value representing this
- *                    profile object.
+ * @param name    Optional name associated with this shaper profile.  Can
+ *                be NULL.  If non-NULL must be unique amongst the set of
+ *                all other shaper profiles.
+ * @param params  The profile parameters.  See comments associated with
+ *                the odp_tm_shaper_params_t for more details.
+ * @return        Returns ODP_TM_INVALID upon failure, or the newly
+ *                allocated odp_tm_shaper_t value representing this
+ *                profile object.
  */
 odp_tm_shaper_t odp_tm_shaper_create(const char *name,
 				     odp_tm_shaper_params_t *params);
@@ -812,9 +812,9 @@ odp_tm_shaper_t odp_tm_shaper_create(const char *name,
  * profile object.  It is an error if this shaper profile is still being
  * referenced by an active (connected) tm_node.
  *
- * @param[in] shaper_profile   Specifies the shaper profile object which is
- *                             being destroyed.
- * @return                     Returns < 0 upon failure or 0 upon success.
+ * @param shaper_profile   Specifies the shaper profile object which is
+ *                         being destroyed.
+ * @return                 Returns < 0 upon failure or 0 upon success.
  */
 int odp_tm_shaper_destroy(odp_tm_shaper_t shaper_profile);
 
@@ -822,7 +822,7 @@ int odp_tm_shaper_destroy(odp_tm_shaper_t shaper_profile);
  * with the specified shaper profile object, and copies them into the supplied
  * record.
  *
- * @param[in]  shaper_profile  Specifies the shaper profile object whose
+ * @param      shaper_profile  Specifies the shaper profile object whose
  *                             values are to be read.
  * @param[out] params          A pointer to an odp_tm_shaper_params_t record
  *                             where the current shaper profile object values
@@ -837,12 +837,12 @@ int odp_tm_shaper_params_read(odp_tm_shaper_t shaper_profile,
  * effect that all tm_input's and tm_nodes that are associated (attached?)
  * with this shaper profile object will be updated with the new values.
  *
- * @param[in] shaper_profile  Specifies the shaper profile object whose
- *                            values are to be set.
- * @param[in] params          A pointer to an odp_tm_shaper_params_t record
- *                            where the new shaper profile object values
- *                            are taken from.
- * @return                    Returns < 0 upon failure or 0 upon success.
+ * @param shaper_profile  Specifies the shaper profile object whose
+ *                        values are to be set.
+ * @param params          A pointer to an odp_tm_shaper_params_t record
+ *                        where the new shaper profile object values
+ *                        are taken from.
+ * @return                Returns < 0 upon failure or 0 upon success.
  */
 int odp_tm_shaper_params_update(odp_tm_shaper_t shaper_profile,
 				odp_tm_shaper_params_t *params);
@@ -850,10 +850,10 @@ int odp_tm_shaper_params_update(odp_tm_shaper_t shaper_profile,
 /** odp_tm_shaper_lookup() can be used to find the shaper profile object
  * created with the specified name.
  *
- * @param[in] name  Name of a previously created shaper profile.  Cannot be
- *                  NULL.
- * @return          Returns ODP_TM_INVALID upon failure, or the shaper
- *                  profile handle created with this name.
+ * @param name  Name of a previously created shaper profile.  Cannot be NULL.
+ *
+ * @return      Returns ODP_TM_INVALID upon failure, or the shaper
+ *              profile handle created with this name.
  */
 odp_tm_shaper_t odp_tm_shaper_lookup(const char *name);
 
@@ -896,22 +896,22 @@ typedef struct {
 /** odp_tm_sched_params_init() must be called to initialize any
  * odp_tm_sched_params_t record before it is first used or assigned to.
  *
- * @param[in] params  A pointer to an odp_tm_sched_params_t record which
- *                    is to be initialized.
+ * @param params  A pointer to an odp_tm_sched_params_t record which
+ *                is to be initialized.
  */
 void odp_tm_sched_params_init(odp_tm_sched_params_t *params);
 
 /** odp_tm_sched_create() creates a scheduler profile object, which can
  * subsequently be attached to any number (including zero) of tm_nodes.
  *
- * @param[in] name    Optional name associated with this scheduler profile.
- *                    Can be NULL.  If non-NULL must be unique amongst the
- *                    set of all other scheduler profiles.
- * @param[in] params  The profile parameters.  See comments associated with
- *                    the odp_tm_sched_params_t for more details.
- * @return            Returns ODP_TM_INVALID upon failure, or the newly
- *                    allocated odp_tm_sched_t value representing this profile
- *                    object.
+ * @param name    Optional name associated with this scheduler profile.
+ *                Can be NULL.  If non-NULL must be unique amongst the
+ *                set of all other scheduler profiles.
+ * @param params  The profile parameters.  See comments associated with
+ *                the odp_tm_sched_params_t for more details.
+ * @return        Returns ODP_TM_INVALID upon failure, or the newly
+ *                allocated odp_tm_sched_t value representing this profile
+ *                object.
  */
 odp_tm_sched_t odp_tm_sched_create(const char *name,
 				   odp_tm_sched_params_t *params);
@@ -922,9 +922,9 @@ odp_tm_sched_t odp_tm_sched_create(const char *name,
  * profile object.  It is an error if this scheduler profile is still being
  * referenced by an active (connected) tm_node.
  *
- * @param[in] sched_profile  Specifies the shaper profile object which is
- *                           being destroyed.
- * @return                   Returns < 0 upon failure or 0 upon success.
+ * @param sched_profile  Specifies the shaper profile object which is
+ *                       being destroyed.
+ * @return               Returns < 0 upon failure or 0 upon success.
  */
 int odp_tm_sched_destroy(odp_tm_sched_t sched_profile);
 
@@ -932,7 +932,7 @@ int odp_tm_sched_destroy(odp_tm_sched_t sched_profile);
  * with the specified scheduler profile object, and copies them into the
  * supplied record.
  *
- * @param[in]  sched_profile  Specifies the scheduler profile whose values
+ * @param      sched_profile  Specifies the scheduler profile whose values
  *                            are to be read.
  * @param[out] params         A pointer to an odp_tm_sched_params_t record
  *                            where the current scheduler profile object
@@ -947,12 +947,12 @@ int odp_tm_sched_params_read(odp_tm_sched_t sched_profile,
  * the effect that all tm_nodes that are associated (attached?) with this
  * Scheduler profile object will be updated with the new values.
  *
- * @param[in] sched_profile   Specifies the Scheduler profile object whose
- *                            values are to be set.
- * @param[in] params          A pointer to an odp_tm_sched_params_t record
- *                            where the new scheduler profile object values
- *                            are taken from.
- * @return                    Returns < 0 upon failure or 0 upon success.
+ * @param sched_profile   Specifies the Scheduler profile object whose
+ *                        values are to be set.
+ * @param params          A pointer to an odp_tm_sched_params_t record
+ *                        where the new scheduler profile object values
+ *                        are taken from.
+ * @return                Returns < 0 upon failure or 0 upon success.
  */
 int odp_tm_sched_params_update(odp_tm_sched_t sched_profile,
 			       odp_tm_sched_params_t *params);
@@ -960,10 +960,10 @@ int odp_tm_sched_params_update(odp_tm_sched_t sched_profile,
 /** odp_tm_sched_lookup() can be used to find the scheduler profile object
  * created with the specified name.
  *
- * @param[in] name  Name of a previously created scheduler profile.  Cannot be
- *                  NULL.
- * @return          Returns ODP_TM_INVALID upon failure, or the scheduler
- *                  profile handle created with this name.
+ * @param name  Name of a previously created scheduler profile.  Cannot be NULL.
+ *
+ * @return      Returns ODP_TM_INVALID upon failure, or the scheduler
+ *              profile handle created with this name.
  */
 odp_tm_sched_t odp_tm_sched_lookup(const char *name);
 
@@ -985,8 +985,8 @@ typedef struct {
 /** odp_tm_threshold_params_init() must be called to initialize any
  * odp_tm_threshold_params_t record before it is first used or assigned to.
  *
- * @param[in] params  A pointer to an odp_tm_threshold_params_t record which
- *                    is to be initialized.
+ * @param params  A pointer to an odp_tm_threshold_params_t record which
+ *                is to be initialized.
  */
 void odp_tm_threshold_params_init(odp_tm_threshold_params_t *params);
 
@@ -994,14 +994,14 @@ void odp_tm_threshold_params_init(odp_tm_threshold_params_t *params);
  * can subsequently be attached to any number (including zero) of tm_queues or
  * tm_nodes.
  *
- * @param[in] name    Optional name associated with this queue threshold
- *                    profile.  Can be NULL.  If non-NULL must be unique
- *                    amongst the set of all other queue threshold profiles.
- * @param[in] params  The profile parameters.  See comments associated with
- *                    the odp_tm_threshold_params_t for more details.
- * @return            Returns ODP_TM_INVALID upon failure, or the newly
- *                    allocated odp_tm_threshold_t value representing this
- *                    profile object.
+ * @param name    Optional name associated with this queue threshold
+ *                profile.  Can be NULL.  If non-NULL must be unique
+ *                amongst the set of all other queue threshold profiles.
+ * @param params  The profile parameters.  See comments associated with
+ *                the odp_tm_threshold_params_t for more details.
+ * @return        Returns ODP_TM_INVALID upon failure, or the newly
+ *                allocated odp_tm_threshold_t value representing this
+ *                profile object.
  */
 odp_tm_threshold_t odp_tm_threshold_create(const char *name,
 					   odp_tm_threshold_params_t *params);
@@ -1012,9 +1012,9 @@ odp_tm_threshold_t odp_tm_threshold_create(const char *name,
  * profile object.  It is an error if this threshold profile is still being
  * referenced by an active (connected) tm_queue or tm_node.
  *
- * @param[in] threshold_profile  Specifies the queue thresholds profile
- *                               object which is being destroyed.
- * @return                       Returns < 0 upon failure or 0 upon success.
+ * @param threshold_profile  Specifies the queue thresholds profile
+ *                           object which is being destroyed.
+ * @return                   Returns < 0 upon failure or 0 upon success.
  */
 int odp_tm_threshold_destroy(odp_tm_threshold_t threshold_profile);
 
@@ -1022,7 +1022,7 @@ int odp_tm_threshold_destroy(odp_tm_threshold_t threshold_profile);
  * with the specified queue thresholds profile object, and copies them into the
  * supplied record.
  *
- * @param[in]  threshold_profile  Specifies the queue thresholds profile
+ * @param      threshold_profile  Specifies the queue thresholds profile
  *                                object whose values are to be read.
  * @param[out] params             A pointer to an odp_tm_threshold_params_t
  *                                record where the current queue thresholds
@@ -1038,12 +1038,12 @@ int odp_tm_thresholds_params_read(odp_tm_threshold_t threshold_profile,
  * associated (attached?) with this queue thresholds profile object will be
  * updated with the new values.
  *
- * @param[in] threshold_profile  Specifies the queue thresholds profile
- *                               object whose values are to be set.
- * @param[in] params             A pointer to an odp_tm_threshold_params_t
- *                               record where the current queue thresholds
- *                               profile object values are taken from.
- * @return                       Returns < 0 upon failure or 0 upon success.
+ * @param threshold_profile  Specifies the queue thresholds profile
+ *                           object whose values are to be set.
+ * @param params             A pointer to an odp_tm_threshold_params_t
+ *                           record where the current queue thresholds
+ *                           profile object values are taken from.
+ * @return                   Returns < 0 upon failure or 0 upon success.
  */
 int odp_tm_thresholds_params_update(odp_tm_threshold_t threshold_profile,
 				    odp_tm_threshold_params_t *params);
@@ -1051,10 +1051,10 @@ int odp_tm_thresholds_params_update(odp_tm_threshold_t threshold_profile,
 /** odp_tm_thresholds_lookup() can be used to find the queue thresholds
  * profile object created with the specified name.
  *
- * @param[in] name  Name of a previously created queue thresholds profile.
- *                  Cannot be NULL.
- * @return          Returns ODP_TM_INVALID upon failure, or the queue
- *                  thresholds profile handle created with this name.
+ * @param name  Name of a previously created queue thresholds profile.
+ *              Cannot be NULL.
+ * @return      Returns ODP_TM_INVALID upon failure, or the queue
+ *              thresholds profile handle created with this name.
  */
 odp_tm_threshold_t odp_tm_thresholds_lookup(const char *name);
 
@@ -1121,8 +1121,8 @@ typedef struct {
 /** odp_tm_wred_params_init() must be called to initialize any
  * odp_tm_wred_params_t record before it is first used or assigned to.
  *
- * @param[in] params  A pointer to an odp_tm_wred_params_t record which
- *                    is to be initialized.
+ * @param params  A pointer to an odp_tm_wred_params_t record which
+ *                is to be initialized.
  */
 void odp_tm_wred_params_init(odp_tm_wred_params_t *params);
 
@@ -1130,14 +1130,14 @@ void odp_tm_wred_params_init(odp_tm_wred_params_t *params);
  * profile object, which can subsequently be attached to any number (including
  * zero) of tm_queues or tm_nodes.
  *
- * @param[in] name    Optional name associated with this WRED profile.  Can
- *                    be NULL.  If non-NULL must be unique amongst the set of
- *                    all other WRED profiles.
- * @param[in] params  The profile parameters.  See comments associated with the
- *                    odp_tm_wred_params_t for more details.
- * @return            Returns ODP_TM_INVALID upon failure, or the newly
- *                    allocated odp_tm_wred_t value representing this profile
- *                    object.
+ * @param name    Optional name associated with this WRED profile.  Can
+ *                be NULL.  If non-NULL must be unique amongst the set of
+ *                all other WRED profiles.
+ * @param params  The profile parameters.  See comments associated with the
+ *                odp_tm_wred_params_t for more details.
+ * @return        Returns ODP_TM_INVALID upon failure, or the newly
+ *                allocated odp_tm_wred_t value representing this profile
+ *                object.
  */
 odp_tm_wred_t odp_tm_wred_create(const char *name,
 				 odp_tm_wred_params_t *params);
@@ -1148,9 +1148,9 @@ odp_tm_wred_t odp_tm_wred_create(const char *name,
  * profile object.  It is an error if this profile object is still being
  * referenced by an active (connected) tm_node.
  *
- * @param[in] wred_profile   Specifies the WRED profile object which is
- *                            being destroyed.
- * @return                    Returns < 0 upon failure or 0 upon success.
+ * @param wred_profile   Specifies the WRED profile object which is
+ *                       being destroyed.
+ * @return               Returns < 0 upon failure or 0 upon success.
  */
 int odp_tm_wred_destroy(odp_tm_wred_t wred_profile);
 
@@ -1158,7 +1158,7 @@ int odp_tm_wred_destroy(odp_tm_wred_t wred_profile);
  * with the specified WRED profile object, and copies them into the supplied
  * record.
  *
- * @param[in]  wred_profile  Specifies the WRED profile object whose
+ * @param      wred_profile  Specifies the WRED profile object whose
  *                           values are to be read.
  * @param[out] params        A pointer to an odp_tm_wred_params_t record
  *                           where the current WRED profile object values
@@ -1173,12 +1173,12 @@ int odp_tm_wred_params_read(odp_tm_wred_t wred_profile,
  * effect that all tm_input's and tm_nodes that are associated (attached?)
  * with this WRED profile object will be updated with the new values.
  *
- * @param[in] wred_profile  Specifies the WRED profile object whose
- *                          values are to be set.
- * @param[in] params        A pointer to an odp_tm_wred_params_t record
- *                          where the new WRED profile object values
- *                          are taken from.
- * @return                  Returns < 0 upon failure or 0 upon success.
+ * @param wred_profile  Specifies the WRED profile object whose
+ *                      values are to be set.
+ * @param params        A pointer to an odp_tm_wred_params_t record
+ *                      where the new WRED profile object values
+ *                      are taken from.
+ * @return              Returns < 0 upon failure or 0 upon success.
  */
 int odp_tm_wred_params_update(odp_tm_wred_t wred_profile,
 			      odp_tm_wred_params_t *params);
@@ -1186,10 +1186,10 @@ int odp_tm_wred_params_update(odp_tm_wred_t wred_profile,
 /** odp_tm_wred_lookup() can be used to find the WRED profile object created
  * with the specified name.
  *
- * @param[in] name  Name of a previously created WRED profile.  Cannot be
- *                  NULL.
- * @return          Returns ODP_TM_INVALID upon failure, or the WRED
- *                  profile handle created with this name.
+ * @param name  Name of a previously created WRED profile.  Cannot be NULL.
+ *
+ * @return      Returns ODP_TM_INVALID upon failure, or the WRED
+ *              profile handle created with this name.
  */
 odp_tm_wred_t odp_tm_wred_lookup(const char *name);
 
@@ -1237,8 +1237,8 @@ typedef struct {
 /** odp_tm_node_params_init() must be called to initialize any
  * odp_tm_node_params_t record before it is first used or assigned to.
  *
- * @param[in] params  A pointer to an odp_tm_node_params_t record which
- *                    is to be initialized.
+ * @param params  A pointer to an odp_tm_node_params_t record which
+ *                is to be initialized.
  */
 void odp_tm_node_params_init(odp_tm_node_params_t *params);
 
@@ -1249,15 +1249,15 @@ void odp_tm_node_params_init(odp_tm_node_params_t *params);
  * strict priority levels for an tm_node cannot be changed after tm_node
  * creation.  The level parameter MUST be in the range 0..max_level - 1.
  *
- * @param[in] odp_tm  Odp_tm is used to identify the TM system into which this
- *                    odp_tm_node object is created.
- * @param[in] name    Optional name that can be used later later to find this
- *                    same odp_tm_node_t.  Can be NULL, otherwise must be
- *                    unique across all odp_tm_node objects.
- * @param[in] params  A pointer to a record holding (an extensible) set of
- *                    properties/attributes of this tm_node.
- * @return            Returns ODP_TM_INVALID upon failure, otherwise returns
- *                    a valid odp_tm_node_t handle if successful.
+ * @param odp_tm  Odp_tm is used to identify the TM system into which this
+ *                odp_tm_node object is created.
+ * @param name    Optional name that can be used later later to find this
+ *                same odp_tm_node_t.  Can be NULL, otherwise must be
+ *                unique across all odp_tm_node objects.
+ * @param params  A pointer to a record holding (an extensible) set of
+ *                properties/attributes of this tm_node.
+ * @return        Returns ODP_TM_INVALID upon failure, otherwise returns
+ *                a valid odp_tm_node_t handle if successful.
  */
 odp_tm_node_t odp_tm_node_create(odp_tm_t              odp_tm,
 				 const char           *name,
@@ -1268,21 +1268,21 @@ odp_tm_node_t odp_tm_node_create(odp_tm_t              odp_tm,
  * The odp_tm_node_destroy frees the resources used by a tm_node_t object.
  * The tm_node to be destroyed MUST not have any parent or child entities.
  *
- * @param[in] tm_node  Specifies the tm_node to be destroyed (freed).
- * @return             Returns -1 upon failure, 0 upon success.
+ * @param tm_node  Specifies the tm_node to be destroyed (freed).
+ * @return         Returns -1 upon failure, 0 upon success.
  */
 int odp_tm_node_destroy(odp_tm_node_t tm_node);
 
 /** The odp_tm_node_shaper_config() function is used to dynamically set or
  * change the shaper profile associated with this tm_node.
  *
- * @param[in] tm_node         Specifies the tm_node to be changed.
- * @param[in] shaper_profile  Specifies the shaper profile that should
- *                            now be used for the shaper entity within the
- *                            given tm_node.  Note that it is legal to specify
- *                            ODP_TM_INVALID indicating that this tm_node
- *                            no longer implements a shaper function.
- * @return                    Returns 0 upon success and < 0 upon failure.
+ * @param tm_node         Specifies the tm_node to be changed.
+ * @param shaper_profile  Specifies the shaper profile that should
+ *                        now be used for the shaper entity within the
+ *                        given tm_node.  Note that it is legal to specify
+ *                        ODP_TM_INVALID indicating that this tm_node
+ *                        no longer implements a shaper function.
+ * @return                Returns 0 upon success and < 0 upon failure.
  */
 int odp_tm_node_shaper_config(odp_tm_node_t tm_node,
 			      odp_tm_shaper_t shaper_profile);
@@ -1290,15 +1290,15 @@ int odp_tm_node_shaper_config(odp_tm_node_t tm_node,
 /** The odp_tm_node_sched_config() function is used to dynamically set or
  * change the scheduler profile associated with a tm_node.
  *
- * @param[in] tm_node         Specifies the tm_node to be changed.
- * @param[in] tm_fan_in_node  Specifies which of the specified tm_node's
- *                            fan-in's weights etc are to be changed. The
- *                            fan-in is identified by the "producer"/parent
- *                            tm_node actually connected to this fan-in.
- * @param[in] sched_profile   Specifies the scheduler profile that should
- *                            now be used for the WFQ/RR entity within the
- *                            given tm_node.
- * @return                    Returns 0 upon success and < 0 upon failure.
+ * @param tm_node         Specifies the tm_node to be changed.
+ * @param tm_fan_in_node  Specifies which of the specified tm_node's
+ *                        fan-in's weights etc are to be changed. The
+ *                        fan-in is identified by the "producer"/parent
+ *                        tm_node actually connected to this fan-in.
+ * @param sched_profile   Specifies the scheduler profile that should
+ *                        now be used for the WFQ/RR entity within the
+ *                        given tm_node.
+ * @return                Returns 0 upon success and < 0 upon failure.
  */
 int odp_tm_node_sched_config(odp_tm_node_t tm_node,
 			     odp_tm_node_t tm_fan_in_node,
@@ -1307,10 +1307,10 @@ int odp_tm_node_sched_config(odp_tm_node_t tm_node,
 /** The odp_tm_node_threshold_config() function is used to dynamically set or
  * change the queue threshold profile associated with this tm_node.
  *
- * @param[in] tm_node             Specifies the tm_node to be changed.
- * @param[in] thresholds_profile  Specifies the queue threshold profile that
- *                                should now be used for the given tm_node.
- * @return                        Returns 0 upon success and < 0 upon failure.
+ * @param tm_node             Specifies the tm_node to be changed.
+ * @param thresholds_profile  Specifies the queue threshold profile that
+ *                            should now be used for the given tm_node.
+ * @return                    Returns 0 upon success and < 0 upon failure.
  */
 int odp_tm_node_threshold_config(odp_tm_node_t tm_node,
 				 odp_tm_threshold_t thresholds_profile);
@@ -1319,16 +1319,16 @@ int odp_tm_node_threshold_config(odp_tm_node_t tm_node,
  * change the WRED profile associated with this tm_node or tm_node/pkt_color
  * combination.
  *
- * @param[in] tm_node       Specifies the tm_node to be changed.
- * @param[in] pkt_color     Specifies the pkt_color that this profile is to be
- *                          used with.  Can also be the special value
- *                          ALL_PKT_COLORS.
- * @param[in] wred_profile  Specifies the WRED profile that should now be used
- *                          by this tm_queue, when processing pkts of this
- *                          pkt_color.  It can be the value ODP_TM_INVALID
- *                          indicating that this tm_queue/pkt_color combination
- *                          no longer implements WRED.
- * @return                  Returns 0 upon success and < 0 upon failure.
+ * @param tm_node       Specifies the tm_node to be changed.
+ * @param pkt_color     Specifies the pkt_color that this profile is to be
+ *                      used with.  Can also be the special value
+ *                      ALL_PKT_COLORS.
+ * @param wred_profile  Specifies the WRED profile that should now be used
+ *                      by this tm_queue, when processing pkts of this
+ *                      pkt_color.  It can be the value ODP_TM_INVALID
+ *                      indicating that this tm_queue/pkt_color combination
+ *                      no longer implements WRED.
+ * @return              Returns 0 upon success and < 0 upon failure.
  */
 int odp_tm_node_wred_config(odp_tm_node_t tm_node,
 			    odp_packet_color_t pkt_color,
@@ -1337,34 +1337,33 @@ int odp_tm_node_wred_config(odp_tm_node_t tm_node,
 /** odp_tm_node_lookup() can be used to find the tm_node object created with
  * the specified name.
  *
- * @param[in] odp_tm  Odp_tm is used to identify the TM system into which this
- *                    odp_tm_node object is created.
- * @param[in] name    Name of a previously created tm_node.  Cannot be
- *                    NULL.
- * @return            Returns ODP_TM_INVALID upon failure, or the tm_node
- *                    handle created with this name.
+ * @param odp_tm  Odp_tm is used to identify the TM system into which this
+ *                odp_tm_node object is created.
+ * @param name    Name of a previously created tm_node.  Cannot be NULL.
+ *
+ * @return        Returns ODP_TM_INVALID upon failure, or the tm_node
+ *                handle created with this name.
  */
 odp_tm_node_t odp_tm_node_lookup(odp_tm_t odp_tm, const char *name);
 
 /** odp_tm_node_context() can be used to get the user_context value that is
  * associated with the given tm_node.
  *
- * @param[in] tm_node Specifies the tm_node whose user_context is to be gotten.
- * @return            Returns the user_context pointer associated with this
- *                    tm_node.  Returns NULL if the tm_node is not valid OR
- *                    if the user_context was NLL.
- *                    handle created with this name.
+ * @param tm_node Specifies the tm_node whose user_context is to be gotten.
+ * @return        Returns the user_context pointer associated with this
+ *                tm_node.  Returns NULL if the tm_node is not valid OR
+ *                if the user_context was NULL.
  */
 void *odp_tm_node_context(odp_tm_node_t tm_node);
 
 /** odp_tm_node_context_set() can be used to set the user_context value that is
  * associated with the given tm_node.
  *
- * @param[in] tm_node Specifies the tm_node whose user_context is to be set.
- * @param[in] user_context  Generic pointer associated with the given tm_node.
- *                          Does not have any effect on the tm_node semantics.
- * @return                  Returns 0 upon success and -1 if the given tm_node
- *                          is not valid.
+ * @param tm_node       Specifies the tm_node whose user_context is to be set.
+ * @param user_context  Generic pointer associated with the given tm_node.
+ *                      Does not have any effect on the tm_node semantics.
+ * @return              Returns 0 upon success and -1 if the given tm_node
+ *                      is not valid.
  */
 int odp_tm_node_context_set(odp_tm_node_t tm_node, void *user_context);
 
@@ -1406,8 +1405,8 @@ typedef struct {
 /** odp_tm_queue_params_init() must be called to initialize any
  * odp_tm_queue_params_t record before it is first used or assigned to.
  *
- * @param[in] params  A pointer to an odp_tm_queue_params_t record which
- *                    is to be initialized.
+ * @param params  A pointer to an odp_tm_queue_params_t record which
+ *                is to be initialized.
  */
 void odp_tm_queue_params_init(odp_tm_queue_params_t *params);
 
@@ -1419,12 +1418,12 @@ void odp_tm_queue_params_init(odp_tm_queue_params_t *params);
  * number of buffers and instead limit the queue memory usage by buffer counts
  * versus strictly using byte counts.
  *
- * @param[in] odp_tm  Odp_tm is used to identify the TM system into which this
- *                    odp_tm_queue object is created.
- * @param[in] params  A pointer to a record holding (an extensible) set of
- *                    properties/attributes of this tm_queue.
- * @return            Returns ODP_TM_INVALID upon failure, otherwise a valid
- *                    odp_tm_queue_t handle.
+ * @param odp_tm  Odp_tm is used to identify the TM system into which this
+ *                odp_tm_queue object is created.
+ * @param params  A pointer to a record holding (an extensible) set of
+ *                properties/attributes of this tm_queue.
+ * @return        Returns ODP_TM_INVALID upon failure, otherwise a valid
+ *                odp_tm_queue_t handle.
  */
 odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 				   odp_tm_queue_params_t *params);
@@ -1433,44 +1432,43 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
  * used by a tm_queue_t object.  The tm_queue to be destroyed MUST not be
  * connected in a tm system, and consequently cannot contain any pkts.
  *
- * @param[in] tm_queue  Specifies the tm_queue to be destroyed (freed).
- * @return              Returns -1 upon failure, 0 upon success.
+ * @param tm_queue  Specifies the tm_queue to be destroyed (freed).
+ * @return          Returns -1 upon failure, 0 upon success.
  */
 int odp_tm_queue_destroy(odp_tm_queue_t tm_queue);
 
 /** odp_tm_queue_context() can be used to get the user_context value that is
  * associated with the given tm_queue.
  *
- * @param[in] tm_queue  Specifies the tm_queue whose user_context is to be
- *                      returned.
- * @return              Returns the user_context pointer associated with this
- *                      tm_queue.  Returns NULL if the tm_quue is not valid OR
- *                      if the user_context was NULL.
+ * @param tm_queue  Specifies the tm_queue whose user_context is to be
+ *                  returned.
+ * @return          Returns the user_context pointer associated with this
+ *                  tm_queue.  Returns NULL if the tm_quue is not valid OR
+ *                  if the user_context was NULL.
  */
 void *odp_tm_queue_context(odp_tm_queue_t tm_queue);
 
 /** odp_tm_queue_context_set() can be used to set the user_context value that is
  * associated with the given tm_queue.
  *
- * @param[in] tm_queue      Specifies the tm_queue whose user_context is to be
- *                          set.
- * @param[in] user_context  Generic pointer associated with the given tm_queue.
- *                          Does not have any effect on the tm_queue semantics.
- * @return                  Returns 0 upon success and -1 if the given tm_queu
- *                          is not valid.
+ * @param tm_queue      Specifies the tm_queue whose user_context is to be set.
+ * @param user_context  Generic pointer associated with the given tm_queue.
+ *                      Does not have any effect on the tm_queue semantics.
+ * @return              Returns 0 upon success and -1 if the given tm_queue
+ *                      is not valid.
  */
 int odp_tm_queue_context_set(odp_tm_queue_t tm_queue, void *user_context);
 
 /** The odp_tm_queue_shaper_config() function is used to dynamically set
  * or change the shaper profile associated with this tm_queue.
  *
- * @param[in] tm_queue        Specifies the tm_queue to be changed.
- * @param[in] shaper_profile  Specifies the shaper profile that should now be
- *                            used for shaping the tm_queue's packet stream.
- *                            Note that it is legal to specify ODP_TM_INVALID
- *                            indicating that this tm_queue no longer
- *                            implements a shaper function.
- * @return                    Returns 0 upon success and < 0 upon failure.
+ * @param tm_queue        Specifies the tm_queue to be changed.
+ * @param shaper_profile  Specifies the shaper profile that should now be
+ *                        used for shaping the tm_queue's packet stream.
+ *                        Note that it is legal to specify ODP_TM_INVALID
+ *                        indicating that this tm_queue no longer
+ *                        implements a shaper function.
+ * @return                Returns 0 upon success and < 0 upon failure.
  */
 int odp_tm_queue_shaper_config(odp_tm_queue_t tm_queue,
 			       odp_tm_shaper_t shaper_profile);
@@ -1480,15 +1478,15 @@ int odp_tm_queue_shaper_config(odp_tm_queue_t tm_queue,
  * the name, this function affects a tm_node scheduler - specifically the
  * scheduler fan-in when such fan-in comes from an tm_queue.
  *
- * @param[in] tm_node         Specifies the tm_node to be changed.
- * @param[in] tm_fan_in_queue Specifies which of the specified tm_node's
- *                            fan-in's weights etc are to be changed. The
- *                            fan-in is identified by the "producer"/parent
- *                            tm_queue actually connected to this fan-in.
- * @param[in] sched_profile   Specifies the scheduler profile that should
- *                            now be used for the WFQ/RR entity within the
- *                            given tm_node.
- * @return                    Returns 0 upon success and < 0 upon failure.
+ * @param tm_node         Specifies the tm_node to be changed.
+ * @param tm_fan_in_queue Specifies which of the specified tm_node's
+ *                        fan-in's weights etc are to be changed. The
+ *                        fan-in is identified by the "producer"/parent
+ *                        tm_queue actually connected to this fan-in.
+ * @param sched_profile   Specifies the scheduler profile that should
+ *                        now be used for the WFQ/RR entity within the
+ *                        given tm_node.
+ * @return                Returns 0 upon success and < 0 upon failure.
  */
 int odp_tm_queue_sched_config(odp_tm_node_t tm_node,
 			      odp_tm_queue_t tm_fan_in_queue,
@@ -1497,10 +1495,10 @@ int odp_tm_queue_sched_config(odp_tm_node_t tm_node,
 /** The odp_tm_queue_threshold_config() function is used to dynamically set or
  * change the queue threshold profile associated with this tm_queue.
  *
- * @param[in] tm_queue            Specifies the tm_queue to be changed.
- * @param[in] thresholds_profile  Specifies the queue threshold profile that
- *                                should now be used for the given tm_queue.
- * @return                        Returns 0 upon success and < 0 upon failure.
+ * @param tm_queue            Specifies the tm_queue to be changed.
+ * @param thresholds_profile  Specifies the queue threshold profile that
+ *                            should now be used for the given tm_queue.
+ * @return                    Returns 0 upon success and < 0 upon failure.
  */
 int odp_tm_queue_threshold_config(odp_tm_queue_t tm_queue,
 				  odp_tm_threshold_t thresholds_profile);
@@ -1509,16 +1507,16 @@ int odp_tm_queue_threshold_config(odp_tm_queue_t tm_queue,
  * the WRED profile associated with this tm_queue or tm_queue/pkt_color
  * combination.
  *
- * @param[in] tm_queue      Specifies the tm_queue to be changed.
- * @param[in] pkt_color     Specifies the pkt_color that this profile is to be
- *                          used with.  Can also be the special value
- *                          ALL_PKT_COLORS.
- * @param[in] wred_profile  Specifies the WRED profile that should now be used
- *                          by this tm_queue, when processing pkts of this
- *                          pkt_color.  It can be the value ODP_TM_INVALID
- *                          indicating that this tm_queue/pkt_color combination
- *                          no longer implements WRED.
- * @return                  Returns 0 upon success and < 0 upon failure.
+ * @param tm_queue      Specifies the tm_queue to be changed.
+ * @param pkt_color     Specifies the pkt_color that this profile is to be
+ *                      used with.  Can also be the special value
+ *                      ALL_PKT_COLORS.
+ * @param wred_profile  Specifies the WRED profile that should now be used
+ *                      by this tm_queue, when processing pkts of this
+ *                      pkt_color.  It can be the value ODP_TM_INVALID
+ *                      indicating that this tm_queue/pkt_color combination
+ *                      no longer implements WRED.
+ * @return              Returns 0 upon success and < 0 upon failure.
  */
 int odp_tm_queue_wred_config(odp_tm_queue_t tm_queue,
 			     odp_packet_color_t pkt_color,
@@ -1532,14 +1530,14 @@ int odp_tm_queue_wred_config(odp_tm_queue_t tm_queue,
  * dst_tm_node.  Note that an ODP_TM_ROOT handle passed in for the
  * dst_tm_node implies connection to the egress/root object of this TM system.
  *
- * @param[in] src_tm_node  odp_tm_node_t handle of the tm_node whose output is
- *                         to be connected to the fan-in of the next tm_node
- *                         as represented by the dst_tm_node.
- * @param[in] dst_tm_node  odp_tm_node_t handle of the tm_node object that will
- *                         receive all of the pkt_descs from the src tm_node
- *                         output.  If ODP_TM_ROOT, then attachment is to
- *                         the root egress object/spigot.
- * @return                 0 upon success, < 0 on failure.
+ * @param src_tm_node  odp_tm_node_t handle of the tm_node whose output is
+ *                     to be connected to the fan-in of the next tm_node
+ *                     as represented by the dst_tm_node.
+ * @param dst_tm_node  odp_tm_node_t handle of the tm_node object that will
+ *                     receive all of the pkt_descs from the src tm_node
+ *                     output.  If ODP_TM_ROOT, then attachment is to
+ *                     the root egress object/spigot.
+ * @return             0 upon success, < 0 on failure.
  */
 int odp_tm_node_connect(odp_tm_node_t src_tm_node, odp_tm_node_t dst_tm_node);
 
@@ -1550,11 +1548,10 @@ int odp_tm_node_connect(odp_tm_node_t src_tm_node, odp_tm_node_t dst_tm_node);
  * tm_queue to be in the fanin tree (directly or indirectly) of this tm_node.
  * Note that it is legal for this tm_node to no fanout connection.
  *
- * @param[in] src_tm_node  odp_tm_node_t handle of the tm_node whose output is
- *                         to be disconnected from the fan-in of the next
- *                         tm_node.
+ * @param src_tm_node  odp_tm_node_t handle of the tm_node whose output is
+ *                     to be disconnected from the fan-in of the next tm_node.
  *
- * @return                 0 upon success, < 0 on failure.
+ * @return             0 upon success, < 0 on failure.
  */
 int odp_tm_node_disconnect(odp_tm_node_t src_tm_node);
 
@@ -1562,12 +1559,12 @@ int odp_tm_node_disconnect(odp_tm_node_t src_tm_node);
  * parent tm_node or to the egress/root node.  The tm_queue will then become
  * one of the dst node's fan-in set.
  *
- * @param[in] tm_queue     Specifies the tm_queue.
- * @param[in] dst_tm_node  odp_tm_node_t handle of the tm_node object that will
- *                         receive all of the pkt_descs from the src tm_node
- *                         output.  If ODP_TM_ROOT, then attachment is to
- *                         the root egress object/spigot.
- * @return                 Returns 0 upon success and < 0 upon failure.
+ * @param tm_queue     Specifies the tm_queue.
+ * @param dst_tm_node  odp_tm_node_t handle of the tm_node object that will
+ *                     receive all of the pkt_descs from the src tm_node
+ *                     output.  If ODP_TM_ROOT, then attachment is to
+ *                     the root egress object/spigot.
+ * @return             Returns 0 upon success and < 0 upon failure.
  */
 int odp_tm_queue_connect(odp_tm_queue_t tm_queue, odp_tm_node_t dst_tm_node);
 
@@ -1577,8 +1574,8 @@ int odp_tm_queue_connect(odp_tm_queue_t tm_queue, odp_tm_node_t dst_tm_node);
  * tm_queue from its fanout. Note that it is legal for this tm_queue to
  * have no fanout connection.
  *
- * @param[in] tm_queue     Specifies the tm_queue.
- * @return                 0 upon success, < 0 on failure.
+ * @param tm_queue     Specifies the tm_queue.
+ * @return             0 upon success, < 0 on failure.
  */
 int odp_tm_queue_disconnect(odp_tm_queue_t tm_queue);
 
@@ -1597,10 +1594,10 @@ int odp_tm_queue_disconnect(odp_tm_queue_t tm_queue);
  * shaper_color produced from the TM shaper entities within the tm_inputs and
  * tm_nodes.
  *
- * @param[in] tm_queue  Specifies the tm_queue (and indirectly the TM system).
- * @param[in] pkt       Handle to a packet.
- * @return              Returns 0 upon success, < 0 upon failure. One of the
- *                      more common failure reasons is WRED drop.
+ * @param tm_queue  Specifies the tm_queue (and indirectly the TM system).
+ * @param pkt       Handle to a packet.
+ * @return          Returns 0 upon success, < 0 upon failure. One of the
+ *                  more common failure reasons is WRED drop.
  */
 int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt);
 
@@ -1608,10 +1605,10 @@ int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt);
  * except that it also returns (an approximation to?) the current tm_queue
  * packet queue count.
  *
- * @param[in] tm_queue  Specifies the tm_queue (and indirectly the TM system).
- * @param[in] pkt       Handle to a packet.
- * @return              Returns the number of packets previously enqueued on
- *                      this tm_queue upon success, < 0 upon failure.
+ * @param tm_queue  Specifies the tm_queue (and indirectly the TM system).
+ * @param pkt       Handle to a packet.
+ * @return          Returns the number of packets previously enqueued on
+ *                  this tm_queue upon success, < 0 upon failure.
  */
 int odp_tm_enq_with_cnt(odp_tm_queue_t tm_queue, odp_packet_t pkt);
 
@@ -1656,7 +1653,7 @@ typedef struct {
  * The odp_tm_node_info() function is used to extract various bits of
  * configuration associated with a given tm_node.
  *
- * @param[in]  tm_node  Specifies the tm_node to be queried.
+ * @param      tm_node  Specifies the tm_node to be queried.
  * @param[out] info     A pointer to an odp_tm_node_info_t record that is to
  *                      be filled in by this call.
  * @return              Returns < 0 upon failure, 0 upon success.
@@ -1716,11 +1713,11 @@ typedef struct {
  * Note that all new additions to a fanin list always take place at the end of
  * the list.
  *
- * @param[in]  tm_node    Specifies the tm_node to be queried.
- * @param[inout] info     A pointer to an odp_tm_node_fanin_info_t record that
- *                        is used to determine which fanin entry is to be
- *                        next filled in by this call.
- * @return                Returns < 0 upon failure, 0 upon success.
+ * @param         tm_node  Specifies the tm_node to be queried.
+ * @param[in,out] info     A pointer to an odp_tm_node_fanin_info_t record that
+ *                         is used to determine which fanin entry is to be
+ *                         next filled in by this call.
+ * @return                 Returns < 0 upon failure, 0 upon success.
  */
 int odp_tm_node_fanin_info(odp_tm_node_t             tm_node,
 			   odp_tm_node_fanin_info_t *info);
@@ -1761,7 +1758,7 @@ typedef struct {
  * The odp_tm_queue_info() function is used to extract various bits of
  * configuration associated with a given tm_queue.
  *
- * @param[in]  tm_queue  Specifies the tm_queue to be queried.
+ * @param      tm_queue  Specifies the tm_queue to be queried.
  * @param[out] info      A pointer to an odp_tm_queue_info_t record that is to
  *                       be filled in by this call.
  * @return               Returns < 0 upon failure, 0 upon success.
@@ -1845,7 +1842,7 @@ typedef struct {
  * regardless of query_flags if the cost of returning all the counts is
  * comparable to the cost of checking the query_flags.
  *
- * @param[in]  tm_queue     Specifies the tm_queue (and indirectly the
+ * @param      tm_queue     Specifies the tm_queue (and indirectly the
  *                          TM system).
  * @param[out] query_flags  A set of flag bits indicating which counters are
  *                          being requested to be returned in the info record.
@@ -1865,8 +1862,8 @@ int odp_tm_queue_query(odp_tm_queue_t       tm_queue,
  * returning all the counts is comparable to the cost of checking the
  * query_flags.
  *
- * @param[in]  odp_tm       Specifies the TM system.
- * @param[in]  priority     Supplies the strict priority level used to specify
+ * @param      odp_tm       Specifies the TM system.
+ * @param      priority     Supplies the strict priority level used to specify
  *                          which tm_queues are included in the info values.
  * @param[out] query_flags  A set of flag bits indicating which counters are
  *                          being requested to be returned in the info record.
@@ -1887,7 +1884,7 @@ int odp_tm_priority_query(odp_tm_t             odp_tm,
  * returning all the counts is comparable to the cost of checking the
  * query_flags.
  *
- * @param[in]  odp_tm       Specifies the TM system.
+ * @param      odp_tm       Specifies the TM system.
  * @param[out] query_flags  A set of flag bits indicating which counters are
  *                          being requested to be returned in the info record.
  * @param[out] info         Pointer to an odp_tm_query_info_t record where the
@@ -1904,14 +1901,14 @@ int odp_tm_total_query(odp_tm_t             odp_tm,
  * semantic effects other than returning these queue threshold values in the
  * odp_tm_query_info_t record.
  *
- * @param[in] odp_tm              Specifies the TM system.
- * @param[in] priority            Supplies the strict priority level that
- *                                the threshold profile params are associated
- *                                with.
- * @param[in] thresholds_profile  Specifies the queue threshold profile that
- *                                should now be associated with the supplied
- *                                strict priority level.
- * @return                        Returns 0 upon success and < 0 upon failure.
+ * @param odp_tm              Specifies the TM system.
+ * @param priority            Supplies the strict priority level that
+ *                            the threshold profile params are associated with.
+ *
+ * @param thresholds_profile  Specifies the queue threshold profile that
+ *                            should now be associated with the supplied
+ *                            strict priority level.
+ * @return                    Returns 0 upon success and < 0 upon failure.
  */
 int odp_tm_priority_threshold_config(odp_tm_t           odp_tm,
 				     uint8_t            priority,
@@ -1923,11 +1920,11 @@ int odp_tm_priority_threshold_config(odp_tm_t           odp_tm,
  * other than returning these queue threshold values in the
  * odp_tm_query_info_t record.
  *
- * @param[in] odp_tm              Specifies the TM system.
- * @param[in] thresholds_profile  Specifies the queue threshold profile that
- *                                should now be used for the entire TM
- *                                system.
- * @return                        Returns 0 upon success and < 0 upon failure.
+ * @param odp_tm              Specifies the TM system.
+ * @param thresholds_profile  Specifies the queue threshold profile that
+ *                            should now be used for the entire TM
+ *                            system.
+ * @return                    Returns 0 upon success and < 0 upon failure.
  */
 int odp_tm_total_threshold_config(odp_tm_t odp_tm,
 				  odp_tm_threshold_t thresholds_profile);
@@ -1941,8 +1938,8 @@ int odp_tm_total_threshold_config(odp_tm_t odp_tm,
  * since for some implementations this call could take a fairly long time
  * to execute!
  *
- * @param[in] odp_tm  Specifies the TM system.
- * @return            Returns 1 if the TM system is idle and 0 otherwise.
+ * @param odp_tm  Specifies the TM system.
+ * @return        Returns 1 if the TM system is idle and 0 otherwise.
  */
 odp_bool_t odp_tm_is_idle(odp_tm_t odp_tm);
 
@@ -1950,7 +1947,7 @@ odp_bool_t odp_tm_is_idle(odp_tm_t odp_tm);
  * information about the specified TM system to the ODP log. The intended use
  * is for debugging.
  *
- * @param[in] odp_tm  Specifies the TM system.
+ * @param odp_tm  Specifies the TM system.
  */
 void odp_tm_stats_print(odp_tm_t odp_tm);
 

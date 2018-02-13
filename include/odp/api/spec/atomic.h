@@ -10,8 +10,8 @@
  * ODP atomic operations
  */
 
-#ifndef ODP_API_ATOMIC_H_
-#define ODP_API_ATOMIC_H_
+#ifndef ODP_API_SPEC_ATOMIC_H_
+#define ODP_API_SPEC_ATOMIC_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus

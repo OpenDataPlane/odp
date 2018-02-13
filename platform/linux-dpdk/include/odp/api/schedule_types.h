@@ -1,1 +1,1 @@
-../../../../linux-generic/include/odp/api/schedule_types.h
+../../../../linux-generic/include-abi/odp/api/abi/schedule_types.h

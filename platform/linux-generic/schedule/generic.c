@@ -30,6 +30,7 @@
 
 /* Should remove this dependency */
 #include <odp_queue_internal.h>
+#include <odp_timer_internal.h>
 
 /* Number of priority levels  */
 #define NUM_PRIO 8
@@ -178,24 +179,24 @@ typedef struct {
 } sched_local_t;
 
 /* Priority queue */
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	/* Ring header */
 	ring_t ring;
 
 	/* Ring data: queue indexes */
 	uint32_t queue_index[PRIO_QUEUE_RING_SIZE];
 
-} prio_queue_t ODP_ALIGNED_CACHE;
+} prio_queue_t;
 
 /* Packet IO queue */
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	/* Ring header */
 	ring_t ring;
 
 	/* Ring data: pktio poll command indexes */
 	uint32_t cmd_index[PKTIO_RING_SIZE];
 
-} pktio_queue_t ODP_ALIGNED_CACHE;
+} pktio_queue_t;
 
 /* Packet IO poll command */
 typedef struct {
@@ -206,17 +207,17 @@ typedef struct {
 } pktio_cmd_t;
 
 /* Order context of a queue */
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	/* Current ordered context id */
-	odp_atomic_u64_t  ctx ODP_ALIGNED_CACHE;
+	odp_atomic_u64_t ODP_ALIGNED_CACHE ctx;
 
 	/* Next unallocated context id */
-	odp_atomic_u64_t  next_ctx;
+	odp_atomic_u64_t next_ctx;
 
 	/* Array of ordered locks */
-	odp_atomic_u64_t  lock[CONFIG_QUEUE_MAX_ORD_LOCKS];
+	odp_atomic_u64_t lock[CONFIG_QUEUE_MAX_ORD_LOCKS];
 
-} order_context_t ODP_ALIGNED_CACHE;
+} order_context_t;
 
 typedef struct {
 	pri_mask_t     pri_mask[NUM_PRIO];

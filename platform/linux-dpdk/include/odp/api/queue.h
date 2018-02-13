@@ -1,1 +1,1 @@
-../../../../linux-generic/include/odp/api/queue.h
+../../../../linux-generic/include-abi/odp/api/abi/queue.h

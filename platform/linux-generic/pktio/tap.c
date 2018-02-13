@@ -44,6 +44,7 @@
 #include <linux/if_tun.h>
 
 #include <odp_api.h>
+#include <odp/api/plat/packet_inlines.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_classification_internal.h>
@@ -290,13 +291,13 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 	if (num != 1)
 		return ODP_PACKET_INVALID;
 
-	if (odp_packet_copy_from_mem(pkt, 0, len, data) < 0) {
+	if (_odp_packet_copy_from_mem(pkt, 0, len, data) < 0) {
 		ODP_ERR("failed to copy packet data\n");
 		odp_packet_free(pkt);
 		return ODP_PACKET_INVALID;
 	}
 
-	pkt_hdr = odp_packet_hdr(pkt);
+	pkt_hdr = packet_hdr(pkt);
 
 	if (pktio_cls_enabled(pktio_entry))
 		copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
@@ -311,7 +312,7 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 }
 
 static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
-			  odp_packet_t pkts[], int len)
+			  odp_packet_t pkts[], int num)
 {
 	ssize_t retval;
 	int i;
@@ -326,7 +327,7 @@ static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	    pktio_entry->s.config.pktin.bit.ts_ptp)
 		ts = &ts_val;
 
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < num; i++) {
 		do {
 			retval = read(tap->fd, buf, BUF_SIZE);
 		} while (retval < 0 && errno == EINTR);
@@ -350,7 +351,7 @@ static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 }
 
 static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
-				   const odp_packet_t pkts[], int len)
+				   const odp_packet_t pkts[], int num)
 {
 	ssize_t retval;
 	int i, n;
@@ -358,7 +359,7 @@ static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
 	uint8_t buf[BUF_SIZE];
 	pktio_ops_tap_data_t *tap = pktio_entry->s.ops_data;
 
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < num; i++) {
 		pkt_len = odp_packet_len(pkts[i]);
 
 		if (pkt_len > tap->mtu) {
@@ -369,7 +370,7 @@ static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
 			break;
 		}
 
-		if (odp_packet_copy_to_mem(pkts[i], 0, pkt_len, buf) < 0) {
+		if (_odp_packet_copy_to_mem(pkts[i], 0, pkt_len, buf) < 0) {
 			ODP_ERR("failed to copy packet data\n");
 			break;
 		}
@@ -402,13 +403,13 @@ static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
 }
 
 static int tap_pktio_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
-			  const odp_packet_t pkts[], int len)
+			  const odp_packet_t pkts[], int num)
 {
 	int ret;
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
-	ret = tap_pktio_send_lockless(pktio_entry, pkts, len);
+	ret = tap_pktio_send_lockless(pktio_entry, pkts, num);
 
 	odp_ticketlock_unlock(&pktio_entry->s.txl);
 

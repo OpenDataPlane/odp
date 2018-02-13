@@ -1,9 +1,7 @@
 include $(top_srcdir)/platform/Makefile.inc
 include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
-pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libodp-dpdk.pc
-
 lib_LTLIBRARIES = $(LIB)/libodp-dpdk.la
 
 PLAT_CFLAGS  =

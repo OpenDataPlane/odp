@@ -6,16 +6,10 @@
 
 #include "config.h"
 
-#include <odp/api/plat/ticketlock_inlines.h>
-#include <odp/api/spec/ticketlock.h>
+#include <odp/api/ticketlock.h>
 
-void odp_ticketlock_init(odp_ticketlock_t *ticketlock)
-{
-	odp_atomic_init_u32(&ticketlock->next_ticket, 0);
-	odp_atomic_init_u32(&ticketlock->cur_ticket, 0);
-}
+#include <odp/api/plat/ticketlock_inlines.h>
 
 /* Include non-inlined versions of API functions */
-#if ODP_ABI_COMPAT == 1
+#define _ODP_INLINE
 #include <odp/api/plat/ticketlock_inlines_api.h>
-#endif

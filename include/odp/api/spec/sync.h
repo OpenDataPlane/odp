@@ -10,8 +10,8 @@
  * ODP memory barriers
  */
 
-#ifndef ODP_API_SYNC_H_
-#define ODP_API_SYNC_H_
+#ifndef ODP_API_SPEC_SYNC_H_
+#define ODP_API_SPEC_SYNC_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus

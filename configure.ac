@@ -3,7 +3,7 @@ AC_PREREQ([2.5])
 # Set correct API version
 ##########################################################################
 m4_define([odpapi_generation_version], [1])
-m4_define([odpapi_major_version], [15])
+m4_define([odpapi_major_version], [17])
 m4_define([odpapi_minor_version], [0])
 m4_define([odpapi_point_version], [0])
 m4_define([odpapi_version],
@@ -36,10 +36,10 @@ AM_SILENT_RULES([yes])
 # 3. if interfaces were removed, then use C+1:0:0
 ##########################################################################
 
-ODP_LIBSO_VERSION=115:0:2
+ODP_LIBSO_VERSION=117:0:0
 AC_SUBST(ODP_LIBSO_VERSION)
 
-ODPHELPER_LIBSO_VERSION=112:1:0
+ODPHELPER_LIBSO_VERSION=113:2:1
 AC_SUBST(ODPHELPER_LIBSO_VERSION)
 
 # Checks for programs.
@@ -94,12 +94,59 @@ CC_VERSION_MINOR=$(echo $CC_VERSION | cut -d'.' -f2)
 CC_VERSION_PATCH=$(echo $CC_VERSION | cut -d'.' -f3)
 
 ##########################################################################
+# Default warning setup
+##########################################################################
+ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror"
+ODP_CXXFLAGS="$ODP_CXXFLAGS -W -Wall -Werror"
+
+ODP_CHECK_CFLAG([-Wstrict-prototypes])
+ODP_CHECK_CFLAG([-Wmissing-prototypes])
+ODP_CHECK_CFLAG([-Wmissing-declarations])
+ODP_CHECK_CFLAG([-Wold-style-definition])
+ODP_CHECK_CFLAG([-Wpointer-arith])
+ODP_CHECK_CFLAG([-Wcast-align])
+ODP_CHECK_CFLAG([-Wnested-externs])
+ODP_CHECK_CFLAG([-Wcast-qual])
+ODP_CHECK_CFLAG([-Wformat-nonliteral])
+ODP_CHECK_CFLAG([-Wformat-security])
+ODP_CHECK_CFLAG([-Wundef])
+ODP_CHECK_CFLAG([-Wwrite-strings])
+ODP_CHECK_CFLAG([-Wformat-truncation=0])
+ODP_CHECK_CFLAG([-Wformat-overflow=0])
+
+ODP_CXXFLAGS="$ODP_CXXFLAGS -std=c++11"
+
+# Extra flags for example to suppress certain warning types
+ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
+
+##########################################################################
+# Check if compiler supports cmpxchng16 on x86-based architectures
+##########################################################################
+case "${host}" in
+  i?86? | x86*)
+  if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
+     ODP_CHECK_CFLAG([-mcx16])
+  fi
+  ;;
+esac
+
+##########################################################################
 # Allow valgrind suite to run against the defined tests
 ##########################################################################
 AX_VALGRIND_DFLT([sgcheck], [off])
 AX_VALGRIND_DFLT([helgrind], [off])
 AX_VALGRIND_DFLT([drd], [off])
 AX_VALGRIND_CHECK
+
+##########################################################################
+# Architecture-specific dir
+##########################################################################
+AC_ARG_WITH([archincludedir],
+	    [AS_HELP_STRING([--with-archincludedir=DIR],
+	     [directory to hold arch-specific headers (${includedir})])],
+	    [archincludedir=$with_archincludedir],
+	    [archincludedir="${includedir}"])
+AC_SUBST([archincludedir])
 
 ##########################################################################
 # Which architecture optimizations will we use
@@ -152,6 +199,21 @@ PKGCONFIG_VERSION=$(echo $VERSION | awk -F '.git' '{print $1}')
 AC_SUBST(PKGCONFIG_VERSION)
 
 ##########################################################################
+# Enable/disable ABI compatible build
+##########################################################################
+ODP_ABI_COMPAT=1
+abi_compat=yes
+AC_ARG_ENABLE([abi-compat],
+    [  --disable-abi-compat    disables ABI compatible mode, enables inline code in header files],
+    [if test "x$enableval" = "xno"; then
+	ODP_ABI_COMPAT=0
+	abi_compat=no
+	#if there is no ABI compatibility the .so numbers are meaningless
+	ODP_LIBSO_VERSION=0:0:0
+    fi])
+AM_CONDITIONAL(ODP_ABI_COMPAT, [test "x$ODP_ABI_COMPAT" = "x1"])
+
+##########################################################################
 # Determine which platform to build for
 ##########################################################################
 AC_ARG_WITH([platform],
@@ -162,14 +224,6 @@ AC_ARG_WITH([platform],
     ])
 
 AC_SUBST([with_platform])
-
-##########################################################################
-# Include m4 files
-##########################################################################
-m4_include([./doc/m4/configure.m4])
-m4_include([./example/m4/configure.m4])
-m4_include([./helper/m4/configure.m4])
-m4_include([./test/m4/configure.m4])
 
 ##########################################################################
 # Set SDK install path
@@ -199,6 +253,30 @@ AS_IF([test "${with_platform}" = "linux-generic"],
 
 ODP_CFLAGS="$ODP_CFLAGS -DIMPLEMENTATION_NAME=$IMPLEMENTATION_NAME"
 AC_SUBST(ODP_LIB_STR)
+
+##########################################################################
+# Build examples/tests dynamically
+##########################################################################
+AC_ARG_ENABLE([static-applications],
+	      [AS_HELP_STRING([--disable-static-applications],
+			      [disable static linking of examples and tests]
+			      [ with ODP])], [],
+	      [enable_static_applications=yes])
+AM_CONDITIONAL([STATIC_APPS], [test "x$enable_static_applications" != "xno"])
+if test "x$DPDK_SHARED" = "xyes" -a "x$enable_static_applications" != "xno" ;
+then
+	AC_MSG_WARN([Static linking of examples and tests might fail when ]
+	   [shared DPDK is detected. If build fails please retry with ]
+	   [--disable-static-applications])
+fi
+
+##########################################################################
+# Include m4 files
+##########################################################################
+m4_include([./doc/m4/configure.m4])
+m4_include([./example/m4/configure.m4])
+m4_include([./helper/m4/configure.m4])
+m4_include([./test/m4/configure.m4])
 
 ##########################################################################
 # Set the install directory for test binaries/scripts
@@ -240,9 +318,7 @@ DX_INIT_DOXYGEN($PACKAGE_NAME,
 		${srcdir}/doc/helper-guide/Doxyfile,
 		${builddir}/doc/helper-guide/output,
 		${srcdir}/doc/platform-api-guide/Doxyfile,
-		${builddir}/doc/platform-api-guide/output,
-		${srcdir}/doc/driver-api-guide/Doxyfile,
-		${builddir}/doc/driver-api-guide/output)
+		${builddir}/doc/platform-api-guide/output)
 
 ##########################################################################
 # Enable/disable ODP_DEBUG
@@ -250,7 +326,8 @@ DX_INIT_DOXYGEN($PACKAGE_NAME,
 AC_ARG_ENABLE([debug],
     [AS_HELP_STRING([--enable-debug],
 		    [include additional debugging code ]
-		    [(set to 'full' to enable all --enable-*-debug-* options)])])
+		    [(set to 'full' to enable all --enable-*-debug-* options)])],
+		    [], [enable_debug=no])
 
 AS_IF([test "x$enable_debug" != "xno"], [ODP_DEBUG=1],
       [ODP_DEBUG=0])
@@ -279,21 +356,6 @@ AC_DEFINE_UNQUOTED([ODPH_DEBUG_PRINT], [$ODPH_DEBUG_PRINT],
 		   [Define to 1 to display helper debug information])
 
 ##########################################################################
-# Enable/disable ABI compatible build
-##########################################################################
-ODP_ABI_COMPAT=1
-abi_compat=yes
-AC_ARG_ENABLE([abi-compat],
-    [  --disable-abi-compat    disables ABI compatible mode, enables inline code in header files],
-    [if test "x$enableval" = "xno"; then
-	ODP_ABI_COMPAT=0
-	abi_compat=no
-	#if there is no ABI compatibility the .so numbers are meaningless
-	ODP_LIBSO_VERSION=0:0:0
-    fi])
-AC_SUBST(ODP_ABI_COMPAT)
-
-##########################################################################
 # Enable/disable deprecated API definitions
 ##########################################################################
 ODP_DEPRECATED_API=0
@@ -307,51 +369,6 @@ AC_ARG_ENABLE([deprecated],
 AC_SUBST(ODP_DEPRECATED_API)
 
 ##########################################################################
-# Default warning setup
-##########################################################################
-ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror"
-
-dnl Use -Werror in the checks below since Clang emits a warning instead of
-dnl an error when it encounters an unknown warning option.
-AC_DEFUN([ODP_CHECK_CFLAG],
-	 [AX_CHECK_COMPILE_FLAG([$1],
-				[ODP_CFLAGS="$ODP_CFLAGS $1"],
-				[], [-W -Wall -Werror],
-				[AC_LANG_SOURCE([int main(void)
-						{return 0;}])])])
-ODP_CHECK_CFLAG([-Wstrict-prototypes])
-ODP_CHECK_CFLAG([-Wmissing-prototypes])
-ODP_CHECK_CFLAG([-Wmissing-declarations])
-ODP_CHECK_CFLAG([-Wold-style-definition])
-ODP_CHECK_CFLAG([-Wpointer-arith])
-ODP_CHECK_CFLAG([-Wcast-align])
-ODP_CHECK_CFLAG([-Wnested-externs])
-ODP_CHECK_CFLAG([-Wcast-qual])
-ODP_CHECK_CFLAG([-Wformat-nonliteral])
-ODP_CHECK_CFLAG([-Wformat-security])
-ODP_CHECK_CFLAG([-Wundef])
-ODP_CHECK_CFLAG([-Wwrite-strings])
-ODP_CHECK_CFLAG([-Wformat-truncation=0])
-ODP_CHECK_CFLAG([-Wformat-overflow=0])
-
-ODP_CFLAGS="$ODP_CFLAGS -std=c99"
-ODP_CXXFLAGS="$ODP_CXXFLAGS -std=c++11"
-
-# Extra flags for example to suppress certain warning types
-ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
-
-##########################################################################
-# Check if compiler supports cmpxchng16 on x86-based architectures
-##########################################################################
-case "${host}" in
-  i?86? | x86*)
-  if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
-     ODP_CHECK_CFLAG([-mcx16])
-  fi
-  ;;
-esac
-
-##########################################################################
 # Default include setup
 ##########################################################################
 CFLAGS="$CFLAGS $ODP_CFLAGS"
@@ -361,6 +378,7 @@ AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([include/Makefile
 		 include/odp/api/spec/version.h
 		 include/odp/api/spec/deprecated.h])
+
 
 ##########################################################################
 # distribute the changed variables among the Makefiles
@@ -402,7 +420,9 @@ AC_MSG_RESULT([
 	shared libraries:	${enable_shared}
 	ABI compatible:		${abi_compat}
 	Deprecated APIs:	${deprecated}
+	debug:			${enable_debug}
 	cunit:			${cunit_support}
+	static tests linkage:	${enable_static_applications}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}
 	test_perf_proc:		${test_perf_proc}

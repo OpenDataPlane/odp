@@ -190,6 +190,11 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 	capability->supported_terms.bit.tcp_sport = 1;
 	capability->supported_terms.bit.sip_addr = 1;
 	capability->supported_terms.bit.dip_addr = 1;
+	capability->random_early_detection = ODP_SUPPORT_NO;
+	capability->back_pressure = ODP_SUPPORT_NO;
+	capability->threshold_red.all_bits = 0;
+	capability->threshold_bp.all_bits = 0;
+	capability->max_hash_queues = CLS_COS_QUEUE_MAX;
 	return 0;
 }
 
@@ -208,16 +213,22 @@ static void _odp_cls_update_hash_proto(cos_t *cos,
 		cos->s.hash_proto.udp = 1;
 }
 
+static inline void _cls_queue_unwind(uint32_t tbl_index, uint32_t j)
+{
+	while (j > 0)
+		odp_queue_destroy(queue_grp_tbl->s.queue[tbl_index + --j]);
+}
+
 odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 {
-	int i, j;
+	uint32_t i, j;
 	odp_queue_t queue;
 	odp_cls_drop_t drop_policy;
 	cos_t *cos;
 	uint32_t tbl_index;
 
-	/* Packets are dropped if Queue or Pool is invalid*/
-	if (param->num_queue > CLS_COS_QUEUE_MAX)
+	/* num_queue should not be zero */
+	if (param->num_queue > CLS_COS_QUEUE_MAX || param->num_queue < 1)
 		return ODP_COS_INVALID;
 
 	drop_policy = param->drop_policy;
@@ -246,11 +257,13 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 				cos->s.num_queue = param->num_queue;
 				_odp_cls_update_hash_proto(cos,
 							   param->hash_proto);
-				tbl_index = cos->s.index * CLS_COS_QUEUE_MAX;
-				for (j = 0; j < CLS_COS_QUEUE_MAX; j++) {
+				tbl_index = i * CLS_COS_QUEUE_MAX;
+				for (j = 0; j < param->num_queue; j++) {
 					queue = odp_queue_create(NULL, &cos->s.
 								 queue_param);
 					if (queue == ODP_QUEUE_INVALID) {
+						/* unwind the queues */
+						_cls_queue_unwind(tbl_index, j);
 						UNLOCK(&cos->s.lock);
 						return ODP_COS_INVALID;
 					}
@@ -969,14 +982,16 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	packet_set_len(pkt_hdr, pkt_len);
 
 	packet_parse_common(&pkt_hdr->p, base, pkt_len, seg_len,
-			    ODP_PKTIO_PARSER_LAYER_ALL);
+			    ODP_PROTO_LAYER_ALL);
 	cos = cls_select_cos(entry, base, pkt_hdr);
 
 	if (cos == NULL)
 		return -EINVAL;
 
-	if (cos->s.queue == ODP_QUEUE_INVALID ||
-	    cos->s.pool == ODP_POOL_INVALID)
+	if (cos->s.queue == ODP_QUEUE_INVALID && cos->s.num_queue == 1)
+		return -EFAULT;
+
+	if (cos->s.pool == ODP_POOL_INVALID)
 		return -EFAULT;
 
 	*pool = cos->s.pool;
@@ -990,7 +1005,8 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	hash = packet_rss_hash(pkt_hdr, cos->s.hash_proto, base);
 	/* CLS_COS_QUEUE_MAX is a power of 2 */
 	hash = hash & (CLS_COS_QUEUE_MAX - 1);
-	tbl_index = (cos->s.index * CLS_COS_QUEUE_MAX) + hash;
+	tbl_index = (cos->s.index * CLS_COS_QUEUE_MAX) + (hash %
+							  cos->s.num_queue);
 	pkt_hdr->dst_queue = queue_fn->from_ext(queue_grp_tbl->
 						s.queue[tbl_index]);
 	return 0;
@@ -1013,8 +1029,8 @@ static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
 	if (pkt_hdr->p.input_flags.ipv4) {
 		if (hash_proto.ipv4) {
 			/* add ipv4 */
-			ipv4 = (const _odp_ipv4hdr_t *)base +
-				pkt_hdr->p.l3_offset;
+			ipv4 = (const _odp_ipv4hdr_t *)(base +
+				pkt_hdr->p.l3_offset);
 			tuple.v4.src_addr = ipv4->src_addr;
 			tuple.v4.dst_addr = ipv4->dst_addr;
 			tuple_len += 2;
@@ -1022,15 +1038,15 @@ static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
 
 		if (pkt_hdr->p.input_flags.tcp && hash_proto.tcp) {
 			/* add tcp */
-			tcp = (const _odp_tcphdr_t *)base +
-			       pkt_hdr->p.l4_offset;
+			tcp = (const _odp_tcphdr_t *)(base +
+			       pkt_hdr->p.l4_offset);
 			tuple.v4.sport = tcp->src_port;
 			tuple.v4.dport = tcp->dst_port;
 			tuple_len += 1;
 		} else if (pkt_hdr->p.input_flags.udp && hash_proto.udp) {
 			/* add udp */
-			udp = (const _odp_udphdr_t *)base +
-			       pkt_hdr->p.l4_offset;
+			udp = (const _odp_udphdr_t *)(base +
+			       pkt_hdr->p.l4_offset);
 			tuple.v4.sport = udp->src_port;
 			tuple.v4.dport = udp->dst_port;
 			tuple_len += 1;
@@ -1038,23 +1054,23 @@ static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
 	} else if (pkt_hdr->p.input_flags.ipv6) {
 		if (hash_proto.ipv6) {
 			/* add ipv6 */
-			ipv6 = (const _odp_ipv6hdr_t *)base +
-				pkt_hdr->p.l3_offset;
+			ipv6 = (const _odp_ipv6hdr_t *)(base +
+				pkt_hdr->p.l3_offset);
 			thash_load_ipv6_addr(ipv6, &tuple);
 			tuple_len += 8;
 		}
 		if (pkt_hdr->p.input_flags.tcp && hash_proto.tcp) {
-			tcp = (const _odp_tcphdr_t *)base +
-			       pkt_hdr->p.l4_offset;
-			tuple.v4.sport = tcp->src_port;
-			tuple.v4.dport = tcp->dst_port;
+			tcp = (const _odp_tcphdr_t *)(base +
+			       pkt_hdr->p.l4_offset);
+			tuple.v6.sport = tcp->src_port;
+			tuple.v6.dport = tcp->dst_port;
 			tuple_len += 1;
 		} else if (pkt_hdr->p.input_flags.udp && hash_proto.udp) {
 			/* add udp */
-			udp = (const _odp_udphdr_t *)base +
-			       pkt_hdr->p.l4_offset;
-			tuple.v4.sport = udp->src_port;
-			tuple.v4.dport = udp->dst_port;
+			udp = (const _odp_udphdr_t *)(base +
+			       pkt_hdr->p.l4_offset);
+			tuple.v6.sport = udp->src_port;
+			tuple.v6.dport = udp->dst_port;
 			tuple_len += 1;
 		}
 	}
@@ -1099,7 +1115,7 @@ cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, const uint8_t *pkt_addr,
 	    packet_hdr_has_eth(hdr)) {
 		eth = (const _odp_ethhdr_t *)(pkt_addr + hdr->p.l2_offset);
 		vlan = (const _odp_vlanhdr_t *)(eth + 1);
-		qos = odp_be_to_cpu_16(vlan->tci);
+		qos = _odp_be_to_cpu_16(vlan->tci);
 		qos = ((qos >> 13) & 0x07);
 		cos = l2_cos->cos[qos];
 	}

@@ -1,1 +1,1 @@
-../../../../linux-generic/include/odp/api/rwlock.h
+../../../../linux-generic/include-abi/odp/api/abi/rwlock.h

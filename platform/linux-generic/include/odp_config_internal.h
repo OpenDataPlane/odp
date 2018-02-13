@@ -7,6 +7,10 @@
 #ifndef ODP_CONFIG_INTERNAL_H_
 #define ODP_CONFIG_INTERNAL_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Maximum number of pools
  */
@@ -140,7 +144,8 @@
  */
 #define ODPDRV_CONFIG_SHM_BLOCKS 48
 
-/* Maximum event burst size
+/*
+ * Maximum event burst size
  *
  * This controls the burst size on various enqueue, dequeue, etc calls. Large
  * burst size improves throughput, but may degrade QoS (increase latency).
@@ -148,8 +153,17 @@
 #define CONFIG_BURST_SIZE 16
 
 /*
+ * Maximum number of events in a pool
+ */
+#define CONFIG_POOL_MAX_NUM (1 * 1024 * 1024)
+
+/*
  * Maximum number of events in a thread local pool cache
  */
 #define CONFIG_POOL_CACHE_SIZE 255
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

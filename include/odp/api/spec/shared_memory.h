@@ -11,8 +11,8 @@
  * ODP shared memory
  */
 
-#ifndef ODP_API_SHARED_MEMORY_H_
-#define ODP_API_SHARED_MEMORY_H_
+#ifndef ODP_API_SPEC_SHARED_MEMORY_H_
+#define ODP_API_SPEC_SHARED_MEMORY_H_
 #include <odp/visibility_begin.h>
 #include <odp/api/init.h>
 
@@ -127,7 +127,14 @@ int odp_shm_capability(odp_shm_capability_t *capa);
 /**
  * Reserve a contiguous block of shared memory
  *
- * @param name   Name of the block (maximum ODP_SHM_NAME_LEN - 1 chars)
+ * Reserve a contiguous block of shared memory that fulfills size, alignment
+ * and shareability (ODP_SHM_* flags) requirements. In general, a name is
+ * optional and does not need to be unique. However, if the block will be
+ * searched with odp_shm_lookup() or odp_shm_import(), a unique name is needed
+ * for correct match.
+ *
+ * @param name   Name of the block or NULL. Maximum string length is
+ *               ODP_SHM_NAME_LEN.
  * @param size   Block size in bytes
  * @param align  Block alignment in bytes
  * @param flags  Shared memory parameter flags (ODP_SHM_*). Default value is 0.

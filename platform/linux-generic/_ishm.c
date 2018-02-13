@@ -90,6 +90,7 @@
 
 /*
  * Maximum internal shared memory block name length in chars
+ * probably taking the same number as SHM name size make sense at this stage
  */
 #define ISHM_NAME_MAXLEN 128
 
@@ -865,8 +866,8 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 		 * the same address every where, otherwise alignment may be
 		 * be wrong for some process */
 		hp_align = align;
-		if (hp_align <= odp_sys_huge_page_size())
-			hp_align = odp_sys_huge_page_size();
+		if (hp_align <= page_hp_size)
+			hp_align = page_hp_size;
 		else
 			flags |= _ODP_ISHM_SINGLE_VA;
 
@@ -1442,6 +1443,8 @@ int _odp_ishm_init_global(void)
 	void *spce_addr;
 	int i;
 	uid_t uid;
+	char *hp_dir = odp_global_data.hugepage_info.default_huge_page_dir;
+	uint64_t align;
 
 	odp_global_data.main_pid = getpid();
 	odp_global_data.shm_dir = getenv("ODP_SHM_DIR");
@@ -1467,13 +1470,13 @@ int _odp_ishm_init_global(void)
 		return -1;
 	}
 
-	if (!odp_global_data.hugepage_info.default_huge_page_dir)
+	if (!hp_dir) {
 		ODP_DBG("NOTE: No support for huge pages\n");
-	else {
-		ODP_DBG("Huge pages mount point is: %s\n",
-			odp_global_data.hugepage_info.default_huge_page_dir);
-		_odp_ishm_cleanup_files(
-			odp_global_data.hugepage_info.default_huge_page_dir);
+		align = odp_sys_page_size();
+	} else {
+		ODP_DBG("Huge pages mount point is: %s\n", hp_dir);
+		_odp_ishm_cleanup_files(hp_dir);
+		align = odp_sys_huge_page_size();
 	}
 
 	_odp_ishm_cleanup_files(odp_global_data.shm_dir);
@@ -1505,8 +1508,7 @@ int _odp_ishm_init_global(void)
 	 *reserve the address space for _ODP_ISHM_SINGLE_VA reserved blocks,
 	 * only address space!
 	 */
-	spce_addr = _odp_ishmphy_book_va(ODP_CONFIG_ISHM_VA_PREALLOC_SZ,
-					 odp_sys_huge_page_size());
+	spce_addr = _odp_ishmphy_book_va(ODP_CONFIG_ISHM_VA_PREALLOC_SZ, align);
 	if (!spce_addr) {
 		ODP_ERR("unable to reserve virtual space\n.");
 		goto init_glob_err3;

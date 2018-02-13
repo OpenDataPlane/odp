@@ -13,113 +13,201 @@
 #ifndef _ODP_PLAT_PACKET_INLINES_H_
 #define _ODP_PLAT_PACKET_INLINES_H_
 
-#include <odp/api/plat/packet_types.h>
+#include <odp/api/abi/packet.h>
 #include <odp/api/pool.h>
-#include <odp/api/packet_io.h>
+#include <odp/api/abi/packet_io.h>
 #include <odp/api/hints.h>
+#include <odp/api/time.h>
+#include <odp/api/abi/buffer.h>
 
-/** @internal Inline function offsets */
+#include <odp/api/plat/packet_inline_types.h>
+#include <odp/api/plat/pool_inline_types.h>
+#include <odp/api/plat/pktio_inlines.h>
+
+#include <string.h>
+
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
+
+void *_odp_packet_map(void *pkt_ptr, uint32_t offset, uint32_t *seg_len,
+		      int *seg_idx);
+
+int _odp_packet_copy_from_mem_seg(odp_packet_t pkt, uint32_t offset,
+				  uint32_t len, const void *src);
+
+int _odp_packet_copy_to_mem_seg(odp_packet_t pkt, uint32_t offset,
+				uint32_t len, void *dst);
+
 extern const _odp_packet_inline_offset_t _odp_packet_inline;
+extern const _odp_pool_inline_offset_t   _odp_pool_inline;
 
-#if ODP_ABI_COMPAT == 1
-/** @internal Inline function @param seg @return */
+#ifndef _ODP_HAVE_PACKET_SEG_NDX
+#include <odp/api/plat/strong_types.h>
 static inline uint32_t _odp_packet_seg_to_ndx(odp_packet_seg_t seg)
 {
 	return _odp_typeval(seg);
 }
 
-/** @internal Inline function @param ndx @return */
 static inline odp_packet_seg_t _odp_packet_seg_from_ndx(uint32_t ndx)
 {
 	return _odp_cast_scalar(odp_packet_seg_t, ndx);
 }
 #endif
 
-/** @internal Inline function @param pkt @return */
 static inline void *_odp_packet_data(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, void *, data);
 }
 
-/** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_seg_len(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, uint32_t, seg_len);
 }
 
-/** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_len(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, uint32_t, frame_len);
 }
 
-/** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_headroom(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, uint16_t, headroom);
 }
 
-/** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_tailroom(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, uint16_t, tailroom);
 }
 
-/** @internal Inline function @param pkt @return */
 static inline odp_pool_t _odp_packet_pool(odp_packet_t pkt)
 {
-	return _odp_pkt_get(pkt, odp_pool_t, pool);
+	void *pool = _odp_pkt_get(pkt, void *, pool);
+
+	return _odp_pool_get(pool, odp_pool_t, pool_hdl);
 }
 
-/** @internal Inline function @param pkt @return */
 static inline odp_pktio_t _odp_packet_input(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, odp_pktio_t, input);
 }
 
-/** @internal Inline function @param pkt @return */
+static inline int _odp_packet_input_index(odp_packet_t pkt)
+{
+	odp_pktio_t pktio = _odp_packet_input(pkt);
+
+	return _odp_pktio_index(pktio);
+}
+
 static inline int _odp_packet_num_segs(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, uint8_t, segcount);
 }
 
-/** @internal Inline function @param pkt @return */
 static inline void *_odp_packet_user_ptr(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, void *, user_ptr);
 }
 
-/** @internal Inline function @param pkt @return */
 static inline void *_odp_packet_user_area(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, void *, user_area);
 }
 
-/** @internal Inline function @param pkt @return */
+static inline uint32_t _odp_packet_user_area_size(odp_packet_t pkt)
+{
+	void *pool = _odp_pkt_get(pkt, void *, pool);
+
+	return _odp_pool_get(pool, uint32_t, uarea_size);
+}
+
+static inline uint32_t _odp_packet_l2_offset(odp_packet_t pkt)
+{
+	return _odp_pkt_get(pkt, uint16_t, l2_offset);
+}
+
+static inline uint32_t _odp_packet_l3_offset(odp_packet_t pkt)
+{
+	return _odp_pkt_get(pkt, uint16_t, l3_offset);
+}
+
+static inline uint32_t _odp_packet_l4_offset(odp_packet_t pkt)
+{
+	return _odp_pkt_get(pkt, uint16_t, l4_offset);
+}
+
+static inline void *_odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
+{
+	uint32_t offset  = _odp_packet_l2_offset(pkt);
+	uint32_t seg_len = _odp_packet_seg_len(pkt);
+	uint8_t *data    = (uint8_t *)_odp_packet_data(pkt);
+
+	if (odp_unlikely(offset >= seg_len)) {
+		void *pkt_hdr = (void *)pkt;
+
+		return _odp_packet_map(pkt_hdr, offset, len, NULL);
+	}
+
+	if (len)
+		*len = seg_len - offset;
+
+	return data + offset;
+}
+
+static inline void *_odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len)
+{
+	uint32_t offset  = _odp_packet_l3_offset(pkt);
+	uint32_t seg_len = _odp_packet_seg_len(pkt);
+	uint8_t *data    = (uint8_t *)_odp_packet_data(pkt);
+
+	if (odp_unlikely(offset >= seg_len)) {
+		void *pkt_hdr = (void *)pkt;
+
+		return _odp_packet_map(pkt_hdr, offset, len, NULL);
+	}
+
+	if (len)
+		*len = seg_len - offset;
+
+	return data + offset;
+}
+
+static inline void *_odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len)
+{
+	uint32_t offset  = _odp_packet_l4_offset(pkt);
+	uint32_t seg_len = _odp_packet_seg_len(pkt);
+	uint8_t *data    = (uint8_t *)_odp_packet_data(pkt);
+
+	if (odp_unlikely(offset >= seg_len)) {
+		void *pkt_hdr = (void *)pkt;
+
+		return _odp_packet_map(pkt_hdr, offset, len, NULL);
+	}
+
+	if (len)
+		*len = seg_len - offset;
+
+	return data + offset;
+}
+
 static inline uint32_t _odp_packet_flow_hash(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, uint32_t, flow_hash);
 }
 
-/** @internal Inline function @param pkt @return */
 static inline odp_time_t _odp_packet_ts(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, odp_time_t, timestamp);
 }
 
-/** @internal Inline function @param pkt @return */
 static inline void *_odp_packet_head(odp_packet_t pkt)
 {
 	return (uint8_t *)_odp_packet_data(pkt) - _odp_packet_headroom(pkt);
 }
 
-/** @internal Inline function @param pkt @return */
 static inline int _odp_packet_is_segmented(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, uint8_t, segcount) > 1;
 }
 
-/** @internal Inline function @param pkt @return */
 static inline odp_packet_seg_t _odp_packet_first_seg(odp_packet_t pkt)
 {
 	(void)pkt;
@@ -127,13 +215,11 @@ static inline odp_packet_seg_t _odp_packet_first_seg(odp_packet_t pkt)
 	return _odp_packet_seg_from_ndx(0);
 }
 
-/** @internal Inline function @param pkt @return */
 static inline odp_packet_seg_t _odp_packet_last_seg(odp_packet_t pkt)
 {
 	return _odp_packet_seg_from_ndx(_odp_packet_num_segs(pkt) - 1);
 }
 
-/** @internal Inline function @param pkt @param seg @return */
 static inline odp_packet_seg_t _odp_packet_next_seg(odp_packet_t pkt,
 						    odp_packet_seg_t seg)
 {
@@ -144,33 +230,76 @@ static inline odp_packet_seg_t _odp_packet_next_seg(odp_packet_t pkt,
 	return seg + 1;
 }
 
-/** @internal Inline function @param pkt @param offset @param len */
 static inline void _odp_packet_prefetch(odp_packet_t pkt, uint32_t offset,
 					uint32_t len)
 {
-	(void)pkt; (void)offset; (void)len;
+	uint32_t seg_len = _odp_packet_seg_len(pkt);
+	uint8_t *data    = (uint8_t *)_odp_packet_data(pkt);
+	(void)len;
+
+	if (odp_unlikely(offset >= seg_len))
+		return;
+
+	odp_prefetch(data + offset);
 }
 
-/** @internal Inline function @param pkt @return */
-static inline odp_buffer_t packet_to_buffer(odp_packet_t pkt)
+static inline int _odp_packet_copy_from_mem(odp_packet_t pkt, uint32_t offset,
+					    uint32_t len, const void *src)
 {
-	return (odp_buffer_t)pkt;
+	uint32_t seg_len = _odp_packet_seg_len(pkt);
+	uint8_t *data    = (uint8_t *)_odp_packet_data(pkt);
+
+	if (odp_unlikely(offset + len > seg_len))
+		return _odp_packet_copy_from_mem_seg(pkt, offset, len, src);
+
+	memcpy(data + offset, src, len);
+
+	return 0;
 }
 
-/* Include inlined versions of API functions */
-#include <odp/api/plat/static_inline.h>
-#if ODP_ABI_COMPAT == 0
+static inline int _odp_packet_copy_to_mem(odp_packet_t pkt, uint32_t offset,
+					  uint32_t len, void *dst)
+{
+	uint32_t seg_len = _odp_packet_seg_len(pkt);
+	uint8_t *data    = (uint8_t *)_odp_packet_data(pkt);
 
-/** @ingroup odp_packet
- *  @{
- */
+	if (odp_unlikely(offset + len > seg_len))
+		return _odp_packet_copy_to_mem_seg(pkt, offset, len, dst);
 
-#include <odp/api/plat/packet_inlines_api.h>
+	memcpy(dst, data + offset, len);
 
-/**
- * @}
- */
+	return 0;
+}
 
-#endif
+static inline odp_packet_t _odp_packet_from_event(odp_event_t ev)
+{
+	return (odp_packet_t)ev;
+}
+
+static inline odp_event_t _odp_packet_to_event(odp_packet_t pkt)
+{
+	return (odp_event_t)pkt;
+}
+
+static inline void _odp_packet_from_event_multi(odp_packet_t pkt[],
+						const odp_event_t ev[],
+						int num)
+{
+	int i;
+
+	for (i = 0; i < num; i++)
+		pkt[i] = _odp_packet_from_event(ev[i]);
+}
+
+static inline void _odp_packet_to_event_multi(const odp_packet_t pkt[],
+					      odp_event_t ev[], int num)
+{
+	int i;
+
+	for (i = 0; i < num; i++)
+		ev[i] = _odp_packet_to_event(pkt[i]);
+}
+
+/** @endcond */
 
 #endif

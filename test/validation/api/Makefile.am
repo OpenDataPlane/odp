@@ -6,6 +6,7 @@ ODP_MODULES = atomic \
 	      cpumask \
 	      crypto \
 	      errno \
+	      event \
 	      hash \
 	      init \
 	      ipsec \
@@ -38,6 +39,7 @@ TESTS = \
 	cpumask/cpumask_main$(EXEEXT) \
 	crypto/crypto_main$(EXEEXT) \
 	errno/errno_main$(EXEEXT) \
+	event/event_main$(EXEEXT) \
 	hash/hash_main$(EXEEXT) \
 	init/init_main_ok$(EXEEXT) \
 	init/init_main_abort$(EXEEXT) \
@@ -54,7 +56,7 @@ TESTS = \
 	scheduler/scheduler_main$(EXEEXT) \
 	std_clib/std_clib_main$(EXEEXT) \
 	thread/thread_main$(EXEEXT) \
-	time/time.sh \
+	time/time_main$(EXEEXT) \
 	timer/timer_main$(EXEEXT) \
 	traffic_mngr/traffic_mngr.sh \
 	shmem/shmem_main$(EXEEXT) \

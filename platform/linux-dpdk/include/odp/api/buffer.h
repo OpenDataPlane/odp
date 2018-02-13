@@ -1,1 +1,1 @@
-../../../../linux-generic/include/odp/api/buffer.h
+../../../../linux-generic/include-abi/odp/api/abi/buffer.h

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <config.h>
+#include "config.h"
 
 /*-
  *   BSD LICENSE
@@ -93,12 +93,12 @@ struct cuckoo_table_key_value {
  *  into a bucket, and each bucket has at most HASH_BUCKET_ENTRIES
  *  elements.
  */
-struct cuckoo_table_bucket {
+struct ODP_ALIGNED_CACHE cuckoo_table_bucket {
 	struct cuckoo_table_signatures signatures[HASH_BUCKET_ENTRIES];
 	/* Includes dummy key index that always contains index 0 */
 	odp_buffer_t key_buf[HASH_BUCKET_ENTRIES + 1];
 	uint8_t flag[HASH_BUCKET_ENTRIES];
-} ODP_ALIGNED_CACHE;
+};
 
 /* More efficient access to a map of single ullong */
 #define ULLONG_FOR_EACH_1(IDX, MAP)	\
@@ -106,7 +106,7 @@ struct cuckoo_table_bucket {
 		 MAP = (MAP & (MAP - 1)))
 
 /** A hash table structure. */
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	/**< for check */
 	uint32_t magicword;
 	/**< Name of the hash. */
@@ -126,7 +126,7 @@ typedef struct {
 	/** Table with buckets storing all the hash values and key indexes
 	  to the key table*/
 	struct cuckoo_table_bucket *buckets;
-} odph_cuckoo_table_impl ODP_ALIGNED_CACHE;
+} odph_cuckoo_table_impl;
 
 /**
  * Aligns input parameter to the next power of 2

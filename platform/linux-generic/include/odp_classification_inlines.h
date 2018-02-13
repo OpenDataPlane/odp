@@ -19,6 +19,8 @@ extern "C" {
 #endif
 
 #include <odp/api/debug.h>
+#include <odp/api/byteorder.h>
+#include <odp/api/plat/byteorder_inlines.h>
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 #include <protocols/ipsec.h>
@@ -27,6 +29,7 @@ extern "C" {
 #include <odp_packet_internal.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <string.h>
 
 /* PMR term value verification function
 These functions verify the given PMR term value with the value in the packet
@@ -68,7 +71,7 @@ static inline int verify_pmr_ipv4_saddr(const uint8_t *pkt_addr,
 	if (!pkt_hdr->p.input_flags.ipv4)
 		return 0;
 	ip = (const _odp_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
-	ipaddr = odp_be_to_cpu_32(ip->src_addr);
+	ipaddr = _odp_be_to_cpu_32(ip->src_addr);
 	if (term_value->match.value == (ipaddr & term_value->match.mask))
 		return 1;
 
@@ -84,7 +87,7 @@ static inline int verify_pmr_ipv4_daddr(const uint8_t *pkt_addr,
 	if (!pkt_hdr->p.input_flags.ipv4)
 		return 0;
 	ip = (const _odp_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
-	ipaddr = odp_be_to_cpu_32(ip->dst_addr);
+	ipaddr = _odp_be_to_cpu_32(ip->dst_addr);
 	if (term_value->match.value == (ipaddr & term_value->match.mask))
 		return 1;
 
@@ -100,7 +103,7 @@ static inline int verify_pmr_tcp_sport(const uint8_t *pkt_addr,
 	if (!pkt_hdr->p.input_flags.tcp)
 		return 0;
 	tcp = (const _odp_tcphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
-	sport = odp_be_to_cpu_16(tcp->src_port);
+	sport = _odp_be_to_cpu_16(tcp->src_port);
 	if (term_value->match.value == (sport & term_value->match.mask))
 		return 1;
 
@@ -116,7 +119,7 @@ static inline int verify_pmr_tcp_dport(const uint8_t *pkt_addr,
 	if (!pkt_hdr->p.input_flags.tcp)
 		return 0;
 	tcp = (const _odp_tcphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
-	dport = odp_be_to_cpu_16(tcp->dst_port);
+	dport = _odp_be_to_cpu_16(tcp->dst_port);
 	if (term_value->match.value == (dport & term_value->match.mask))
 		return 1;
 
@@ -132,7 +135,7 @@ static inline int verify_pmr_udp_dport(const uint8_t *pkt_addr,
 	if (!pkt_hdr->p.input_flags.udp)
 		return 0;
 	udp = (const _odp_udphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
-	dport = odp_be_to_cpu_16(udp->dst_port);
+	dport = _odp_be_to_cpu_16(udp->dst_port);
 	if (term_value->match.value == (dport & term_value->match.mask))
 			return 1;
 
@@ -149,7 +152,7 @@ static inline int verify_pmr_udp_sport(const uint8_t *pkt_addr,
 	if (!pkt_hdr->p.input_flags.udp)
 		return 0;
 	udp = (const _odp_udphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
-	sport = odp_be_to_cpu_16(udp->src_port);
+	sport = _odp_be_to_cpu_16(udp->src_port);
 	if (term_value->match.value == (sport & term_value->match.mask))
 		return 1;
 
@@ -169,9 +172,9 @@ static inline int verify_pmr_dmac(const uint8_t *pkt_addr,
 
 	eth = (const _odp_ethhdr_t *)(pkt_addr + pkt_hdr->p.l2_offset);
 	memcpy(&dmac_be, eth->dst.addr, _ODP_ETHADDR_LEN);
-	dmac = odp_be_to_cpu_64(dmac_be);
+	dmac = _odp_be_to_cpu_64(dmac_be);
 	/* since we are converting a 48 bit ethernet address from BE to cpu
-	format using odp_be_to_cpu_64() the last 16 bits needs to be right
+	format using _odp_be_to_cpu_64() the last 16 bits needs to be right
 	shifted */
 	if (dmac_be != dmac)
 		dmac = dmac >> (64 - (_ODP_ETHADDR_LEN * 8));
@@ -245,7 +248,7 @@ static inline int verify_pmr_vlan_id_0(const uint8_t *pkt_addr,
 
 	eth = (const _odp_ethhdr_t *)(pkt_addr + pkt_hdr->p.l2_offset);
 	vlan = (const _odp_vlanhdr_t *)(eth + 1);
-	tci = odp_be_to_cpu_16(vlan->tci);
+	tci = _odp_be_to_cpu_16(vlan->tci);
 	vlan_id = tci & 0x0fff;
 
 	if (term_value->match.value == (vlan_id & term_value->match.mask))
@@ -269,7 +272,7 @@ static inline int verify_pmr_vlan_id_x(const uint8_t *pkt_addr ODP_UNUSED,
 	eth = (const _odp_ethhdr_t *)(pkt_addr + pkt_hdr->p.l2_offset);
 	vlan = (const _odp_vlanhdr_t *)(eth + 1);
 	vlan++;
-	tci = odp_be_to_cpu_16(vlan->tci);
+	tci = _odp_be_to_cpu_16(vlan->tci);
 	vlan_id = tci & 0x0fff;
 
 	if (term_value->match.value == (vlan_id & term_value->match.mask))
@@ -289,11 +292,11 @@ static inline int verify_pmr_ipsec_spi(const uint8_t *pkt_addr,
 	if (pkt_hdr->p.input_flags.ipsec_ah) {
 		const _odp_ahhdr_t *ahhdr = (const _odp_ahhdr_t *)pkt_addr;
 
-		spi = odp_be_to_cpu_32(ahhdr->spi);
+		spi = _odp_be_to_cpu_32(ahhdr->spi);
 	} else if (pkt_hdr->p.input_flags.ipsec_esp) {
 		const _odp_esphdr_t *esphdr = (const _odp_esphdr_t *)pkt_addr;
 
-		spi = odp_be_to_cpu_32(esphdr->spi);
+		spi = _odp_be_to_cpu_32(esphdr->spi);
 	} else {
 		return 0;
 	}
@@ -343,7 +346,7 @@ static inline int verify_pmr_eth_type_0(const uint8_t *pkt_addr,
 		return 0;
 
 	eth = (const _odp_ethhdr_t *)(pkt_addr + pkt_hdr->p.l2_offset);
-	ethtype = odp_be_to_cpu_16(eth->type);
+	ethtype = _odp_be_to_cpu_16(eth->type);
 
 	if (term_value->match.value == (ethtype & term_value->match.mask))
 		return 1;
@@ -364,7 +367,7 @@ static inline int verify_pmr_eth_type_x(const uint8_t *pkt_addr,
 
 	eth = (const _odp_ethhdr_t *)(pkt_addr + pkt_hdr->p.l2_offset);
 	vlan = (const _odp_vlanhdr_t *)(eth + 1);
-	ethtype = odp_be_to_cpu_16(vlan->type);
+	ethtype = _odp_be_to_cpu_16(vlan->type);
 
 	if (term_value->match.value == (ethtype & term_value->match.mask))
 		return 1;

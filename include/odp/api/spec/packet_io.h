@@ -11,8 +11,8 @@
  * ODP Packet IO
  */
 
-#ifndef ODP_API_PACKET_IO_H_
-#define ODP_API_PACKET_IO_H_
+#ifndef ODP_API_SPEC_PACKET_IO_H_
+#define ODP_API_SPEC_PACKET_IO_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
@@ -23,13 +23,14 @@ extern "C" {
 #include <odp/api/packet_io_stats.h>
 #include <odp/api/queue.h>
 #include <odp/api/time.h>
+#include <odp/api/packet.h>
 
 /** @defgroup odp_packet_io ODP PACKET IO
  *  Operations on a packet Input/Output interface.
  *
  * Packet IO is the Ingress and Egress interface to ODP processing. It
  * allows manipulation of the interface for setting such attributes as
- * the mtu, mac etc.
+ * number of queues, MAC address etc.
  * Pktio is usually followed by the classifier and a default class COS
  * can be set so that the scheduler may distribute flows. The interface
  * may be used directly in polled mode with odp_pktin_recv() and
@@ -271,8 +272,8 @@ typedef struct odp_pktio_param_t {
  * not checked.
  *
  * IPv4 checksum checking may be enabled only when parsing level is
- * ODP_PKTIO_PARSER_LAYER_L3 or higher. Similarly, L4 level checksum checking
- * may be enabled only with parsing level ODP_PKTIO_PARSER_LAYER_L4 or higher.
+ * ODP_PROTO_LAYER_L3 or higher. Similarly, L4 level checksum checking
+ * may be enabled only with parsing level ODP_PROTO_LAYER_L4 or higher.
  *
  * Whether checksum checking was done and whether a checksum was correct
  * can be queried for each received packet with odp_packet_l3_chksum_status()
@@ -328,15 +329,29 @@ typedef union odp_pktin_config_opt_t {
  * Packet output configuration options bit field
  *
  * Packet output configuration options listed in a bit field structure. Packet
- * output checksum insertion may be enabled or disabled. When it is enabled,
- * implementation will calculate and insert checksum into every outgoing packet
- * by default. Application may disable checksum insertion (e.g.
- * odp_packet_l4_chksum_insert()) on per packet basis. For correct operation,
- * packet metadata must provide valid offsets for the appropriate protocols.
- * For example, UDP checksum calculation needs both L3 and L4 offsets (to access
- * IP and UDP headers). When application (e.g. a switch) does not modify L3/L4
- * data and thus checksum does not need to be updated, output checksum insertion
- * should be disabled for optimal performance.
+ * output checksum insertion may be enabled or disabled (e.g. ipv4_chksum_ena):
+ *
+ *  0: Disable checksum insertion. Application will not request checksum
+ *     insertion for any packet. This is the default value for xxx_chksum_ena
+ *     bits.
+ *  1: Enable checksum insertion. Application will request checksum insertion
+ *     for some packets.
+ *
+ * When checksum insertion is enabled, application may use configuration options
+ * to set the default behaviour on packet output (e.g. ipv4_chksum):
+ *
+ *  0: Do not insert checksum by default. This is the default value for
+ *     xxx_chksum bits.
+ *  1: Calculate and insert checksum by default.
+ *
+ * These defaults may be overridden on per packet basis using e.g.
+ * odp_packet_l4_chksum_insert().
+ *
+ * For correct operation, packet metadata must provide valid offsets for the
+ * appropriate protocols. For example, UDP checksum calculation needs both L3
+ * and L4 offsets (to access IP and UDP headers). When application
+ * (e.g. a switch) does not modify L3/L4 data and thus checksum does not need
+ * to be updated, checksum insertion should be disabled for optimal performance.
  *
  * Packet flags (odp_packet_has_*()) are ignored for the purpose of checksum
  * insertion in packet output.
@@ -353,19 +368,31 @@ typedef union odp_pktin_config_opt_t {
  * insertion.
  */
 typedef union odp_pktout_config_opt_t {
-	/** Option flags */
+	/** Option flags for packet output */
 	struct {
-		/** Insert IPv4 header checksum on packet output */
-		uint64_t ipv4_chksum  : 1;
+		/** Enable IPv4 header checksum insertion. */
+		uint64_t ipv4_chksum_ena : 1;
 
-		/** Insert UDP checksum on packet output */
-		uint64_t udp_chksum   : 1;
+		/** Enable UDP checksum insertion */
+		uint64_t udp_chksum_ena  : 1;
 
-		/** Insert TCP checksum on packet output */
-		uint64_t tcp_chksum   : 1;
+		/** Enable TCP checksum insertion */
+		uint64_t tcp_chksum_ena  : 1;
 
-		/** Insert SCTP checksum on packet output */
-		uint64_t sctp_chksum  : 1;
+		/** Enable SCTP checksum insertion */
+		uint64_t sctp_chksum_ena : 1;
+
+		/** Insert IPv4 header checksum by default */
+		uint64_t ipv4_chksum     : 1;
+
+		/** Insert UDP checksum on packet by default */
+		uint64_t udp_chksum      : 1;
+
+		/** Insert TCP checksum on packet by default */
+		uint64_t tcp_chksum      : 1;
+
+		/** Insert SCTP checksum on packet by default */
+		uint64_t sctp_chksum     : 1;
 
 	} bit;
 
@@ -378,24 +405,30 @@ typedef union odp_pktout_config_opt_t {
 
 /**
  * Parser layers
+ *
+ * @deprecated Use odp_proto_layer_t instead
  */
-typedef enum odp_pktio_parser_layer_t {
-	/** No layers */
-	ODP_PKTIO_PARSER_LAYER_NONE = 0,
+typedef odp_proto_layer_t odp_pktio_parser_layer_t;
 
-	/** Layer L2 protocols (Ethernet, VLAN, ARP, etc) */
-	ODP_PKTIO_PARSER_LAYER_L2,
+/** No layers
+ *  @deprecated Use ODP_PROTO_LAYER_NONE, instead */
+#define ODP_PKTIO_PARSER_LAYER_NONE ODP_PROTO_LAYER_NONE
 
-	/** Layer L3 protocols (IPv4, IPv6, ICMP, IPsec, etc) */
-	ODP_PKTIO_PARSER_LAYER_L3,
+/** Layer L2 protocols (Ethernet, VLAN, ARP, etc)
+ *  @deprecated Use ODP_PROTO_LAYER_L2, instead */
+#define ODP_PKTIO_PARSER_LAYER_L2 ODP_PROTO_LAYER_L2
 
-	/** Layer L4 protocols (UDP, TCP, SCTP) */
-	ODP_PKTIO_PARSER_LAYER_L4,
+/** Layer L3 protocols (IPv4, IPv6, ICMP, IPsec, etc)
+ *  @deprecated Use ODP_PROTO_LAYER_L3, instead */
+#define ODP_PKTIO_PARSER_LAYER_L3 ODP_PROTO_LAYER_L3
 
-	/** All layers */
-	ODP_PKTIO_PARSER_LAYER_ALL
+/** Layer L4 protocols (UDP, TCP, SCTP)
+ *  @deprecated Use ODP_PROTO_LAYER_L4, instead */
+#define ODP_PKTIO_PARSER_LAYER_L4 ODP_PROTO_LAYER_L4
 
-} odp_pktio_parser_layer_t;
+/** All layers
+ *  @deprecated Use ODP_PROTO_LAYER_ALL instead */
+#define ODP_PKTIO_PARSER_LAYER_ALL ODP_PROTO_LAYER_ALL
 
 /**
  * Parser configuration
@@ -403,9 +436,14 @@ typedef enum odp_pktio_parser_layer_t {
 typedef struct odp_pktio_parser_config_t {
 	/** Protocol parsing level in packet input
 	  *
-	  * Parse protocol layers in minimum up to this level during packet
-	  * input. The default value is ODP_PKTIO_PARSER_LAYER_ALL. */
-	odp_pktio_parser_layer_t layer;
+	  * Application requires that protocol headers in a packet are checked
+	  * up to this layer during packet input. Use ODP_PROTO_LAYER_ALL for
+	  * all layers. Packet metadata for this and all preceding layers are
+	  * set. In addition, offset (and pointer) to the next layer is set.
+	  * Other layer/protocol specific metadata have undefined values.
+	  *
+	  * The default value is ODP_PROTO_LAYER_ALL. */
+	odp_proto_layer_t layer;
 
 } odp_pktio_parser_config_t;
 
@@ -937,20 +975,24 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 		    int num);
 
 /**
- * Return the currently configured MTU value of a packet IO interface.
+ * MTU value of a packet IO interface
  *
- * @param[in] pktio  Packet IO handle.
+ * @deprecated  Use odp_pktin_maxlen() and odp_pktout_maxlen() instead. MTU was
+ * not well defined. There may be difference between MTU and maximum frame
+ * length values.
+ *
+ * @param pktio  Packet IO handle.
  *
  * @return MTU value on success
  * @retval 0 on failure
  */
-uint32_t odp_pktio_mtu(odp_pktio_t pktio);
+uint32_t ODP_DEPRECATE(odp_pktio_mtu)(odp_pktio_t pktio);
 
 /**
  * Enable/Disable promiscuous mode on a packet IO interface.
  *
- * @param[in] pktio	Packet IO handle.
- * @param[in] enable	1 to enable, 0 to disable.
+ * @param pktio   Packet IO handle.
+ * @param enable  1 to enable, 0 to disable.
  *
  * @retval 0 on success
  * @retval <0 on failure
@@ -960,13 +1002,43 @@ int odp_pktio_promisc_mode_set(odp_pktio_t pktio, odp_bool_t enable);
 /**
  * Determine if promiscuous mode is enabled for a packet IO interface.
  *
- * @param[in] pktio Packet IO handle.
+ * @param pktio  Packet IO handle.
  *
  * @retval  1 if promiscuous mode is enabled.
  * @retval  0 if promiscuous mode is disabled.
  * @retval <0 on failure
 */
 int odp_pktio_promisc_mode(odp_pktio_t pktio);
+
+/**
+ * Maximum frame length at packet input
+ *
+ * Maximum frame length in bytes that the packet IO interface can receive.
+ * For Ethernet, the frame length bytes start with MAC addresses and continue
+ * to the end of the payload. So, Ethernet checksum, interpacket gap
+ * and preamble bytes are excluded from the length.
+ *
+ * @param pktio  Packet IO handle.
+ *
+ * @return Maximum frame length at packet input
+ * @retval 0 on failure
+ */
+uint32_t odp_pktin_maxlen(odp_pktio_t pktio);
+
+/**
+ * Maximum frame length at packet output
+ *
+ * Maximum frame length in bytes that the packet IO interface can transmit.
+ * For Ethernet, the frame length bytes start with MAC addresses and continue
+ * to the end of the payload. So, Ethernet checksum, interpacket gap
+ * and preamble bytes are excluded from the length.
+ *
+ * @param pktio  Packet IO handle.
+ *
+ * @return Maximum frame length at packet output
+ * @retval 0 on failure
+ */
+uint32_t odp_pktout_maxlen(odp_pktio_t pktio);
 
 /**
  * Get the default MAC address of a packet IO interface.
@@ -999,14 +1071,13 @@ int odp_pktio_mac_addr_set(odp_pktio_t pktio, const void *mac_addr,
 /**
  * Setup per-port default class-of-service.
  *
- * @param[in]	pktio		Ingress port pktio handle.
- * @param[in]	default_cos	Class-of-service set to all packets arriving
- *				at this ingress port,
- *				unless overridden by subsequent
- *				header-based filters.
+ * @param pktio        Ingress port pktio handle.
+ * @param default_cos  Class-of-service set to all packets arriving at this
+ *                     ingress port, unless overridden by subsequent
+ *                     header-based filters.
  *
- * @retval			0 on success
- * @retval			<0 on failure
+ * @retval  0 on success
+ * @retval <0 on failure
  *
  * @note The default_cos has to be unique per odp_pktio_t instance.
  */
@@ -1015,12 +1086,12 @@ int odp_pktio_default_cos_set(odp_pktio_t pktio, odp_cos_t default_cos);
 /**
  * Setup per-port error class-of-service
  *
- * @param[in]	pktio		Ingress port pktio handle.
- * @param[in]	error_cos	class-of-service set to all packets arriving
- *				at this ingress port that contain an error.
+ * @param pktio      Ingress port pktio handle.
+ * @param error_cos  class-of-service set to all packets arriving at this
+ *                   ingress port that contain an error.
  *
- * @retval			0 on success
- * @retval			<0 on failure
+ * @retval  0 on success
+ * @retval <0 on failure
  *
  * @note Optional.
  */
@@ -1029,24 +1100,23 @@ int odp_pktio_error_cos_set(odp_pktio_t pktio, odp_cos_t error_cos);
 /**
  * Setup per-port header offset
  *
- * @param[in]	pktio		Ingress port pktio handle.
- * @param[in]	offset		Number of bytes the classifier must skip.
+ * @param pktio      Ingress port pktio handle.
+ * @param offset     Number of bytes the classifier must skip.
  *
- * @retval			0 on success
- * @retval			<0 on failure
- * @note  Optional.
+ * @retval  0 on success
+ * @retval <0 on failure
  *
+ * @note Optional.
  */
 int odp_pktio_skip_set(odp_pktio_t pktio, uint32_t offset);
 
 /**
  * Specify per-port buffer headroom
  *
- * @param[in]	pktio		Ingress port pktio handle.
- * @param[in]	headroom	Number of bytes of space preceding
- *				packet data to reserve for use as headroom.
- *				Must not exceed the implementation
- *				defined ODP_PACKET_MAX_HEADROOM.
+ * @param pktio     Ingress port pktio handle.
+ * @param headroom  Number of bytes of space preceding packet data to reserve
+ *                  for use as headroom. Must not exceed the implementation
+ *                  defined ODP_PACKET_MAX_HEADROOM.
  *
  * @retval			0 on success
  * @retval			<0 on failure

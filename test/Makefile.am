@@ -1,1 +1,1 @@
-SUBDIRS = common performance miscellaneous validation
+SUBDIRS = common validation performance miscellaneous

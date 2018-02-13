@@ -98,13 +98,13 @@ typedef struct {
 #define MAX_DEQ CONFIG_BURST_SIZE
 
 /* Instantiate a RING data structure as pktio command queue */
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	/* Ring header */
 	ring_t ring;
 
 	/* Ring data: pktio poll command indexes */
 	uint32_t cmd_index[PKTIO_RING_SIZE];
-} pktio_cmd_queue_t ODP_ALIGNED_CACHE;
+} pktio_cmd_queue_t;
 
 /* Packet IO poll command */
 typedef struct {
@@ -127,17 +127,17 @@ typedef struct {
 typedef struct sched_thread_local sched_thread_local_t;
 
 /* Order context of a queue */
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	/* Current ordered context id */
-	odp_atomic_u64_t  ctx ODP_ALIGNED_CACHE;
+	odp_atomic_u64_t ODP_ALIGNED_CACHE ctx;
 
 	/* Next unallocated context id */
-	odp_atomic_u64_t  next_ctx;
+	odp_atomic_u64_t next_ctx;
 
 	/* Array of ordered locks */
-	odp_atomic_u64_t  lock[CONFIG_QUEUE_MAX_ORD_LOCKS];
+	odp_atomic_u64_t lock[CONFIG_QUEUE_MAX_ORD_LOCKS];
 
-} order_context_t ODP_ALIGNED_CACHE;
+} order_context_t;
 
 typedef struct {
 	odp_shm_t selfie;

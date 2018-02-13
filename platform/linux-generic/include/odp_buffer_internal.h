@@ -42,7 +42,7 @@ typedef struct seg_entry_t {
 } seg_entry_t;
 
 /* Common buffer header */
-struct odp_buffer_hdr_t {
+struct ODP_ALIGNED_CACHE odp_buffer_hdr_t {
 	/* Total segment count */
 	uint16_t  segcount;
 
@@ -101,23 +101,13 @@ struct odp_buffer_hdr_t {
 	/* User area pointer */
 	void    *uarea_addr;
 
-	/* Max data size */
-	uint32_t size;
-
-	/* Event subtype. Should be ODP_EVENT_NO_SUBTYPE except packets. */
-	int8_t    event_subtype;
-
 	/* ipc mapped process can not walk over pointers,
 	 * offset has to be used */
 	uint64_t ipc_data_offset;
 
-	/* Pool handle: will be removed, used only for odp_packet_pool()
-	 * inlining */
-	odp_pool_t pool_hdl;
-
 	/* Data or next header */
 	uint8_t data[0];
-} ODP_ALIGNED_CACHE;
+};
 
 ODP_STATIC_ASSERT(CONFIG_PACKET_SEGS_PER_HDR < 256,
 		  "CONFIG_PACKET_SEGS_PER_HDR_TOO_LARGE");

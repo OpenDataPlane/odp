@@ -11,8 +11,8 @@
  * ODP crypto
  */
 
-#ifndef ODP_API_CRYPTO_H_
-#define ODP_API_CRYPTO_H_
+#ifndef ODP_API_SPEC_CRYPTO_H_
+#define ODP_API_SPEC_CRYPTO_H_
 #include <odp/visibility_begin.h>
 
 #include <odp/api/deprecated.h>
@@ -80,6 +80,9 @@ typedef enum {
 	/** AES with cipher block chaining */
 	ODP_CIPHER_ALG_AES_CBC,
 
+	/** AES with counter mode */
+	ODP_CIPHER_ALG_AES_CTR,
+
 	/** AES in Galois/Counter Mode
 	 *
 	 *  @note Must be paired with cipher ODP_AUTH_ALG_AES_GCM
@@ -90,7 +93,7 @@ typedef enum {
 	ODP_DEPRECATE(ODP_CIPHER_ALG_AES128_CBC),
 
 	/** @deprecated  Use ODP_CIPHER_ALG_AES_GCM instead */
-	ODP_DEPRECATE(ODP_CIPHER_ALG_AES128_GCM)
+	ODP_DEPRECATE(ODP_CIPHER_ALG_AES128_GCM),
 
 } odp_cipher_alg_t;
 
@@ -131,6 +134,20 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_AES_GCM,
 
+	/** AES in Galois/Counter MAC Mode
+	 *
+	 * NIST and RFC specifications of GCM/GMAC refer to all data to be
+	 * authenticated as AAD. In constrast to that, ODP API specifies the
+	 * bulk of authenticated data to be located in packet payload for all
+	 * authentication algorithms, including GMAC. Thus for GMAC application
+	 * should also pass all data to be authenticated as packet data. AAD is
+	 * not used for GMAC. GMAC IV should be passed via session IV or
+	 * per-packet IV override.
+	 *
+	 * @note Must be paired with cipher ODP_CIPHER_ALG_NULL
+	 */
+	ODP_AUTH_ALG_AES_GMAC,
+
 	/** @deprecated  Use ODP_AUTH_ALG_MD5_HMAC instead */
 	ODP_DEPRECATE(ODP_AUTH_ALG_MD5_96),
 
@@ -159,6 +176,9 @@ typedef union odp_crypto_cipher_algos_t {
 
 		/** ODP_CIPHER_ALG_AES_CBC */
 		uint32_t aes_cbc     : 1;
+
+		/** ODP_CIPHER_ALG_AES_CTR */
+		uint32_t aes_ctr     : 1;
 
 		/** ODP_CIPHER_ALG_AES_GCM */
 		uint32_t aes_gcm     : 1;
@@ -201,6 +221,9 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_AES_GCM */
 		uint32_t aes_gcm     : 1;
+
+		/** ODP_AUTH_ALG_AES_GMAC*/
+		uint32_t aes_gmac    : 1;
 
 		/** @deprecated  Use md5_hmac instead */
 		uint32_t ODP_DEPRECATE(md5_96)     : 1;
@@ -310,6 +333,14 @@ typedef struct odp_crypto_session_param_t {
 	 */
 	uint32_t auth_digest_len;
 
+	/** Additional Authenticated Data (AAD) length in bytes
+	 *
+	 *  AAD length is constant for all operations (packets) of the session.
+	 *  Set to zero when AAD is not used. Use odp_crypto_auth_capability()
+	 *  for supported AAD lengths. The default value is zero.
+	 */
+	uint32_t auth_aad_len;
+
 	/** Async mode completion event queue
 	 *
 	 *  The completion queue is used to return completions from
@@ -376,15 +407,10 @@ typedef struct odp_crypto_op_param_t {
 	 */
 	uint32_t hash_result_offset;
 
-	/** Additional Authenticated Data (AAD) */
-	struct {
-		/** Pointer to ADD */
-		uint8_t *ptr;
-
-		/** AAD length in bytes. Use odp_crypto_auth_capability() for
-		 *  supported AAD lengths. */
-		uint32_t length;
-	} aad;
+	/** Pointer to AAD. AAD length is defined by 'auth_aad_len'
+	 *  session parameter.
+	 */
+	uint8_t *aad_ptr;
 
 	/** Data range to apply cipher */
 	odp_packet_data_range_t cipher_range;
@@ -417,15 +443,10 @@ typedef struct odp_crypto_packet_op_param_t {
 	 */
 	uint32_t hash_result_offset;
 
-	/** Additional Authenticated Data (AAD) */
-	struct {
-		/** Pointer to ADD */
-		uint8_t *ptr;
-
-		/** AAD length in bytes. Use odp_crypto_auth_capability() for
-		 *  supported AAD lengths. */
-		uint32_t length;
-	} aad;
+	/** Pointer to AAD. AAD length is defined by 'auth_aad_len'
+	 *  session parameter.
+	 */
+	uint8_t *aad_ptr;
 
 	/** Data range to apply cipher */
 	odp_packet_data_range_t cipher_range;
@@ -801,7 +822,7 @@ odp_event_t odp_crypto_packet_to_event(odp_packet_t pkt);
  * Successful crypto operations of all types (SYNC and ASYNC) produce packets
  * which contain crypto result metadata. This function copies the operation
  * results from an crypto processed packet. Event subtype of this kind of
- * packet is ODP_EVENT_PACKET_crypto. Results are undefined if a non-crypto
+ * packet is ODP_EVENT_PACKET_CRYPTO. Results are undefined if a non-crypto
  * processed packet is passed as input.
  *
  * @param         packet  An crypto processed packet (ODP_EVENT_PACKET_CRYPTO)

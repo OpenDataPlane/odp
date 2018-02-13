@@ -7,7 +7,7 @@
 #include "config.h"
 
 #include <odp_internal.h>
-#include <cpu_flags.h>
+#include "cpu_flags.h"
 #include <string.h>
 
 int cpuinfo_parser(FILE *file, system_info_t *sysinfo)

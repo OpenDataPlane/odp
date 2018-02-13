@@ -1,1 +1,1 @@
-../../../../linux-generic/include/odp/api/ticketlock.h
+../../../../linux-generic/include-abi/odp/api/abi/ticketlock.h

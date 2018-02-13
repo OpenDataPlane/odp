@@ -179,7 +179,7 @@ ODP_STATIC_ASSERT(sizeof(flow_t) <= PKT_UAREA_SIZE,
 /**
  * Statistics
  */
-typedef union {
+typedef union ODP_ALIGNED_CACHE {
 	struct {
 		/** Number of forwarded packets */
 		uint64_t packets;
@@ -192,7 +192,7 @@ typedef union {
 	} s;
 
 	uint8_t padding[ODP_CACHE_LINE_SIZE];
-} stats_t ODP_ALIGNED_CACHE;
+} stats_t;
 
 /**
  * IPv4 5-tuple
@@ -618,7 +618,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	}
 
 	odp_pktio_config_init(&config);
-	config.parser.layer = ODP_PKTIO_PARSER_LAYER_L2;
+	config.parser.layer = ODP_PROTO_LAYER_L2;
 	odp_pktio_config(pktio, &config);
 
 	odp_pktin_queue_param_init(&pktin_param);

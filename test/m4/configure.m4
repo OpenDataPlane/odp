@@ -15,6 +15,7 @@ AC_CONFIG_FILES([test/Makefile
 		 test/validation/api/cpumask/Makefile
 		 test/validation/api/crypto/Makefile
 		 test/validation/api/errno/Makefile
+		 test/validation/api/event/Makefile
 		 test/validation/api/hash/Makefile
 		 test/validation/api/init/Makefile
 		 test/validation/api/ipsec/Makefile

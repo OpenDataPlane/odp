@@ -9,4 +9,3 @@ classification_main_SOURCES = classification_main.c \
 				   odp_classification_common.c \
 				   classification.c \
 				   classification.h
-classification_main_LDADD = $(LIBCUNIT_COMMON) $(LIBODP)

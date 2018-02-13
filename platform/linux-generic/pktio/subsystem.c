@@ -28,6 +28,7 @@ extern int enable_link_dpdk_pktio_ops;
 #if defined(ODP_PKTIO_IPC) && ODP_PKTIO_IPC == 1
 extern int enable_link_ipc_pktio_ops;
 #endif
+extern int enable_link_null_pktio_ops;
 extern int enable_link_loopback_pktio_ops;
 #if defined(ODP_NETMAP) && ODP_NETMAP == 1
 extern int enable_link_netmap_pktio_ops;
@@ -62,6 +63,7 @@ ODP_SUBSYSTEM_CONSTRUCTOR(pktio_ops)
 #if defined(ODP_PKTIO_IPC) && ODP_PKTIO_IPC == 1
 	enable_link_ipc_pktio_ops = 1;
 #endif
+	enable_link_null_pktio_ops = 1;
 	enable_link_loopback_pktio_ops = 1;
 #if defined(ODP_NETMAP) && ODP_NETMAP == 1
 	enable_link_netmap_pktio_ops = 1;

@@ -7,6 +7,7 @@
 #ifndef ODP_PKTIO_COMMON_H_
 #define ODP_PKTIO_COMMON_H_
 
+#include <string.h>
 #include <errno.h>
 
 /** Determine if a socket read/write error should be reported. Transient errors
@@ -15,15 +16,27 @@
  *  requested number of packets were not handled. */
 #define SOCK_ERR_REPORT(e) (e != EAGAIN && e != EWOULDBLOCK && e != EINTR)
 
-/**
- * Read the MTU from a packet socket
- */
-uint32_t mtu_get_fd(int fd, const char *name);
+static inline void
+ethaddr_copy(unsigned char mac_dst[], unsigned char mac_src[])
+{
+	memcpy(mac_dst, mac_src, ETH_ALEN);
+}
+
+static inline int
+ethaddrs_equal(unsigned char mac_a[], unsigned char mac_b[])
+{
+	return !memcmp(mac_a, mac_b, ETH_ALEN);
+}
 
 /**
  * Read the MAC address from a packet socket
  */
 int mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[]);
+
+/**
+ * Read the MTU from a packet socket
+ */
+uint32_t mtu_get_fd(int fd, const char *name);
 
 /**
  * Enable/Disable promisc mode for a packet socket

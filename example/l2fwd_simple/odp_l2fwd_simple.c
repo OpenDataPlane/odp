@@ -52,7 +52,7 @@ static odp_pktio_t create_pktio(const char *name, odp_pool_t pool,
 	}
 
 	odp_pktio_config_init(&config);
-	config.parser.layer = ODP_PKTIO_PARSER_LAYER_L2;
+	config.parser.layer = ODP_PROTO_LAYER_L2;
 	odp_pktio_config(pktio, &config);
 
 	odp_pktin_queue_param_init(&in_queue_param);
@@ -88,6 +88,7 @@ static int run_worker(void *arg ODP_UNUSED)
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	int pkts, sent, tx_drops, i;
 	int total_pkts = 0;
+	uint64_t wait_time = odp_pktin_wait_time(ODP_TIME_SEC_IN_NS);
 
 	if (odp_pktio_start(global.if0)) {
 		printf("unable to start input interface\n");
@@ -103,7 +104,7 @@ static int run_worker(void *arg ODP_UNUSED)
 
 	while (!exit_thr) {
 		pkts = odp_pktin_recv_tmo(global.if0in, pkt_tbl, MAX_PKT_BURST,
-					  ODP_PKTIN_NO_WAIT);
+					  wait_time);
 
 		if (odp_unlikely(pkts <= 0))
 			continue;
@@ -144,6 +145,8 @@ int main(int argc, char **argv)
 	odph_odpthread_params_t thr_params;
 	int opt;
 	int long_index;
+	odph_ethaddr_t correct_src;
+	uint32_t mtu1, mtu2;
 
 	static const struct option longopts[] = { {NULL, 0, NULL, 0} };
 	static const char *shortopts = "";
@@ -202,6 +205,23 @@ int main(int argc, char **argv)
 								&global.if0out);
 	global.if1 = create_pktio(argv[optind + 1], pool, &global.if1in,
 								&global.if1out);
+
+	/* Do some operations to increase code coverage in tests */
+	if (odp_pktio_mac_addr(global.if0, &correct_src, sizeof(correct_src))
+	    != sizeof(correct_src))
+		printf("Warning: can't get MAC address\n");
+	else if (memcmp(&correct_src, &global.src, sizeof(correct_src)) != 0)
+		printf("Warning: src MAC invalid\n");
+
+	odp_pktio_promisc_mode_set(global.if0, true);
+	odp_pktio_promisc_mode_set(global.if1, true);
+	(void)odp_pktio_promisc_mode(global.if0);
+	(void)odp_pktio_promisc_mode(global.if1);
+
+	mtu1 = odp_pktin_maxlen(global.if0);
+	mtu2 = odp_pktout_maxlen(global.if1);
+	if (mtu1 && mtu2 && mtu1 > mtu2)
+		printf("Warning: input MTU bigger than output MTU\n");
 
 	odp_cpumask_default_worker(&cpumask, MAX_WORKERS);
 

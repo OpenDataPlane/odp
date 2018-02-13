@@ -11,19 +11,20 @@
  * ODP event
  */
 
-#ifndef ODP_API_EVENT_H_
-#define ODP_API_EVENT_H_
+#ifndef ODP_API_SPEC_EVENT_H_
+#define ODP_API_SPEC_EVENT_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#include <odp/api/packet.h>
+
 /** @defgroup odp_event ODP EVENT
  *  Operations on an event.
  *  @{
  */
-
 
 /**
  * @typedef odp_event_t
@@ -126,6 +127,43 @@ odp_event_type_t odp_event_types(odp_event_t event,
 				 odp_event_subtype_t *subtype);
 
 /**
+ * Event type of multiple events
+ *
+ * Returns the number of first events in the array which have the same event
+ * type. Outputs the event type of those events.
+ *
+ * @param      event    Array of event handles
+ * @param      num      Number of events (> 0)
+ * @param[out] type     Event type pointer for output
+ *
+ * @return Number of first events (1 ... num) with the same event type
+ *         (includes event[0])
+ */
+int odp_event_type_multi(const odp_event_t event[], int num,
+			 odp_event_type_t *type);
+
+/**
+ * Filter and convert packet events
+ *
+ * Checks event type of all input events, converts all packet events and outputs
+ * packet handles. Returns the number packet handles outputted. Outputs the
+ * remaining, non-packet event handles to 'remain' array. Handles are outputted
+ * to both arrays in the same order those are stored in 'event' array. Both
+ * output arrays must fit 'num' elements.
+ *
+ * @param      event    Array of event handles
+ * @param[out] packet   Packet handle array for output
+ * @param[out] remain   Event handle array for output of remaining, non-packet
+ *                      events
+ * @param      num      Number of events (> 0)
+ *
+ * @return Number of packets outputted (0 ... num)
+ */
+int odp_event_filter_packet(const odp_event_t event[],
+			    odp_packet_t packet[],
+			    odp_event_t remain[], int num);
+
+/**
  * Get printable value for an odp_event_t
  *
  * @param hdl  odp_event_t handle to be printed
@@ -148,6 +186,28 @@ uint64_t odp_event_to_u64(odp_event_t hdl);
  *
  */
 void odp_event_free(odp_event_t event);
+
+/**
+ * Free multiple events
+ *
+ * Otherwise like odp_event_free(), but frees multiple events to their
+ * originating pools.
+ *
+ * @param event    Array of event handles
+ * @param num      Number of events to free
+ */
+void odp_event_free_multi(const odp_event_t event[], int num);
+
+/**
+ * Free multiple events to the same pool
+ *
+ * Otherwise like odp_event_free_multi(), but all events must be from the
+ * same originating pool.
+ *
+ * @param event    Array of event handles
+ * @param num      Number of events to free
+ */
+void odp_event_free_sp(const odp_event_t event[], int num);
 
 /**
  * @}

@@ -10,8 +10,8 @@
  * ODP recursive spinlock
  */
 
-#ifndef ODP_API_SPINLOCK_RECURSIVE_H_
-#define ODP_API_SPINLOCK_RECURSIVE_H_
+#ifndef ODP_API_SPEC_SPINLOCK_RECURSIVE_H_
+#define ODP_API_SPEC_SPINLOCK_RECURSIVE_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus

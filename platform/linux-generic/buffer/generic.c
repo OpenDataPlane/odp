@@ -4,7 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <config.h>
+#include "config.h"
 
 #include <odp/api/buffer.h>
 #include <odp_pool_internal.h>
@@ -37,8 +37,9 @@ static void *generic_buffer_addr(odp_buffer_t buf)
 static uint32_t generic_buffer_size(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = buf_hdl_to_hdr(buf);
+	pool_t *pool = hdr->pool_ptr;
 
-	return hdr->size;
+	return pool->seg_len;
 }
 
 int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
@@ -55,16 +56,16 @@ int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
 	hdr = buf_hdl_to_hdr(buf);
 	pool = hdr->pool_ptr;
 
-	len += snprintf(&str[len], n - len,
+	len += snprintf(&str[len], n-len,
 			"Buffer\n");
-	len += snprintf(&str[len], n - len,
+	len += snprintf(&str[len], n-len,
 			"  pool         %" PRIu64 "\n",
 			odp_pool_to_u64(pool->pool_hdl));
-	len += snprintf(&str[len], n - len,
+	len += snprintf(&str[len], n-len,
 			"  addr         %p\n",          hdr->seg[0].data);
-	len += snprintf(&str[len], n - len,
-			"  size         %" PRIu32 "\n", hdr->size);
-	len += snprintf(&str[len], n - len,
+	len += snprintf(&str[len], n-len,
+			"  size         %" PRIu32 "\n", odp_buffer_size(buf));
+	len += snprintf(&str[len], n-len,
 			"  type         %i\n",          hdr->type);
 
 	return len;
@@ -76,7 +77,7 @@ static void generic_buffer_print(odp_buffer_t buf)
 	char str[max_len];
 	int len;
 
-	len = odp_buffer_snprint(str, max_len - 1, buf);
+	len = odp_buffer_snprint(str, max_len-1, buf);
 	str[len] = 0;
 
 	ODP_PRINT("\n%s\n", str);
@@ -97,16 +98,6 @@ void _odp_buffer_event_type_set(odp_buffer_t buf, int ev)
 	buf_hdl_to_hdr(buf)->event_type = ev;
 }
 
-odp_event_subtype_t _odp_buffer_event_subtype(odp_buffer_t buf)
-{
-	return buf_hdl_to_hdr(buf)->event_subtype;
-}
-
-void _odp_buffer_event_subtype_set(odp_buffer_t buf, int ev)
-{
-	buf_hdl_to_hdr(buf)->event_subtype = ev;
-}
-
 int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 {
 	ring_t *ring;
@@ -115,7 +106,7 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 	uint32_t cache_num, num_ch, num_deq, burst;
 	odp_buffer_hdr_t *hdr;
 
-	cache = local.cache[pool->pool_idx];
+	cache = _pool_local_data.cache[pool->pool_idx];
 
 	cache_num = cache->num;
 	num_ch    = max_num;
@@ -183,7 +174,7 @@ static inline void buffer_free_to_pool(pool_t *pool,
 	pool_cache_t *cache;
 	uint32_t cache_num;
 
-	cache = local.cache[pool->pool_idx];
+	cache = _pool_local_data.cache[pool->pool_idx];
 
 	/* Special case of a very large free. Move directly to
 	 * the global pool. */

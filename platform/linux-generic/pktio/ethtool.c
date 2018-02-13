@@ -13,6 +13,7 @@
 #include <netinet/in.h>
 #include <linux/sockios.h>
 #include <linux/ethtool.h>
+#include <string.h>
 #include <errno.h>
 #include <net/if.h>
 

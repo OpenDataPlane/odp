@@ -45,6 +45,8 @@ typedef struct {
 typedef struct {
 	const ipsec_test_packet *pkt_in;
 	odp_bool_t lookup;
+	int num_opt;
+	odp_ipsec_out_opt_t opt;
 	int out_pkt;
 	struct {
 		odp_ipsec_op_status_t status;
@@ -84,6 +86,10 @@ int ipsec_check_ah_sha256(void);
 int ipsec_check_esp_null_sha256(void);
 int ipsec_check_esp_aes_cbc_128_null(void);
 int ipsec_check_esp_aes_cbc_128_sha256(void);
+int ipsec_check_esp_aes_ctr_128_null(void);
 int ipsec_check_esp_aes_gcm_128(void);
 int ipsec_check_esp_aes_gcm_256(void);
+int ipsec_check_ah_aes_gmac_128(void);
+int ipsec_check_esp_null_aes_gmac_128(void);
+
 #endif

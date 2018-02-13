@@ -1,1 +1,1 @@
-../../../../linux-generic/include/odp/api/atomic.h
+../../../../linux-generic/include-abi/odp/api/abi/atomic.h

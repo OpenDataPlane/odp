@@ -11,28 +11,9 @@ language: c
 sudo: required
 dist: trusty
 group: deprecated-2017Q2
-env:
-  global:
-    # COVERITY_SCAN_TOKEN
-    # ** specific to your project **
-    # Note:
-    # You should have a github account and travis linked travis account.
-    # The secure key to be filled below is the 685 character long encrypted
-    # token you can find as follow from your coverity dashboard
-    # (at https://scan.coverity.com/dashboard):
-    # Click on the github project (<you>/odp)
-    # Click on "submit build"
-    # Click on "Configure Travis CI"
-    # Look at the COVERITY_SCAN_TOKEN in the env: global: section
-    # of the configuration example.
-    # copy the secure:<key> below
-    #
-    - secure: "xxxx"
-    #
-    # By default Linaro CODECOV_TOKEN token is used. It's ok to use it to see
-    # for individual commit validation. But you you want to track tests history
-    # you need generated new one at https://codecov.io specific for your repo.
-    - CODECOV_TOKEN=8e1c0fd8-62ff-411e-a79f-5839f6662c11
+stages:
+  - "build only"
+  - test
 
 addons:
         apt:
@@ -40,6 +21,7 @@ addons:
                         - gcc
                         - clang-3.8
                         - automake autoconf libtool libssl-dev graphviz mscgen
+                        - codespell
                         - libpcap-dev
                         - libconfig-dev
                         - libnuma-dev
@@ -51,31 +33,37 @@ addons:
 #                        build_command:   "make"
 #                        branch_pattern: coverity_scan
 
-compiler:
-        - gcc
-        - clang-3.8
-
 cache:
         ccache: true
         pip: true
         directories:
-                #- dpdk
-                - dpdk-17.02
+                - dpdk
                 - netmap
                 - $HOME/cunit-install
                 - $HOME/doxygen-install
 
 env:
+    global:
+        #
+        # By default Linaro CODECOV_TOKEN token is used. It's ok to use it to see
+        # for individual commit validation. But you you want to track tests history
+        # you need generated new one at https://codecov.io specific for your repo.
+        - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
+        - DPDK_VERS="17.08"
+    matrix:
         - CONF=""
         - CONF="--disable-abi-compat"
+        - CONF="--enable-deprecated"
         - CONF="--enable-schedule-sp"
         - CONF="--enable-schedule-iquery"
         - CONF="--enable-schedule-scalable"
         - CONF="--enable-dpdk-zero-copy"
-        - CROSS_ARCH="arm64"
-        - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
-        - CROSS_ARCH="powerpc"
-        - CROSS_ARCH="i386"
+        - CONF="--disable-static-applications"
+        - DPDK_SHARED="y" CONF="--disable-static-applications"
+
+compiler:
+        - gcc
+        - clang-3.8
 
 before_install:
 
@@ -91,14 +79,18 @@ before_install:
                   sudo -E apt-add-repository -y "deb http://ports.ubuntu.com trusty main" ;
                   sudo -E apt-add-repository -y "deb http://ports.ubuntu.com trusty-updates main" ;
                   sudo -E apt-get -y update || true ;
-                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install build-essential ;
+                  PKGS="build-essential libc6-dev:$CROSS_ARCH libssl-dev:$CROSS_ARCH zlib1g-dev:$CROSS_ARCH libconfig-dev:$CROSS_ARCH libstdc++-4.8-dev:$CROSS_ARCH libpcap0.8-dev:$CROSS_ARCH" ;
                   if [ "$CROSS_ARCH" = "i386" ] ;
                   then
-                        sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install g++-multilib ;
+                        PKGS="$PKGS g++-multilib" ;
                   else
-                        sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install g++-"$CROSS_GNU_TYPE" ;
+                        PKGS="$PKGS g++-$CROSS_GNU_TYPE" ;
                   fi ;
-                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install libc6-dev:"$CROSS_ARCH" libssl-dev:"$CROSS_ARCH" zlib1g-dev:"$CROSS_ARCH" libconfig-dev:"$CROSS_ARCH" libstdc++-4.8-dev:"$CROSS_ARCH";
+                  if [ "$CROSS_ARCH" != "armhf" ] ;
+                  then
+                        PKGS="$PKGS libnuma-dev:$CROSS_ARCH" ;
+                  fi ;
+                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install $PKGS || exit 1 ;
                   export PKG_CONFIG_PATH=/usr/lib/${CROSS_MULTIARCH}/pkgconfig:/usr/${CROSS_MULTIARCH}/lib/pkgconfig ;
           fi
         - if [ "${CC#clang}" != "${CC}" ] ;
@@ -106,16 +98,25 @@ before_install:
                 if [ -n "$CROSS_ARCH" ] ;
                 then
                         export CC="${CC} --target=$CROSS_GNU_TYPE" ;
+                        if [ "$CROSS_ARCH" = "i386" ] ;
+                        then
+                                DPDK_CFLAGS="-m32" ;
+                        else
+                                DPDK_CROSS="$CROSS_GNU_TYPE-" ;
+                                DPDK_CFLAGS="--target=$CROSS_GNU_TYPE" ;
+                        fi
                 fi ;
                 export CXX="${CC/clang/clang++}";
           elif [ "$CROSS_ARCH" = "i386" ] ;
           then
                 export CC="gcc -m32" ;
                 export CXX="g++ -m32" ;
+                DPDK_CFLAGS="-m32" ;
           elif [ -n "$CROSS_ARCH" ] ;
           then
                 export CC="$CROSS_GNU_TYPE"-gcc ;
                 export CXX="$CROSS_GNU_TYPE"-g++ ;
+                DPDK_CROSS="$CROSS_GNU_TYPE-" ;
           fi
         - if test ! -L /usr/lib/ccache/${CC%% *} ; then sudo ln -s -t /usr/lib/ccache/ `which ${CC%% *}` ; fi
         - ccache -s
@@ -134,12 +135,13 @@ before_install:
             automake --add-missing --include-deps --copy
             autoconf
             ./configure --prefix=$HOME/cunit-install/$CROSS_ARCH --enable-debug --enable-automated --enable-basic --enable-console --enable-examples --enable-test $CROSS || cat config.log
-            make
+            make -j $(nproc)
             sudo make install
             popd
           fi
         - export PKG_CONFIG_PATH="$HOME/cunit-install/$CROSS_ARCH/lib/pkgconfig:${PKG_CONFIG_PATH}"
         - find $HOME/cunit-install
+
 
 install:
         - echo 1000 | sudo tee /proc/sys/vm/nr_hugepages
@@ -154,45 +156,77 @@ install:
         - gem install asciidoctor
 
         # DPDK pktio. Note that cache must be purged if dpdk version changes.
-        - DPDK_VERS="17.08"
         - |
           CACHED_DPDK_VERS=`fgrep Version dpdk/pkg/dpdk.spec | cut -d " " -f 2`
           if [ "${CACHED_DPDK_VERS}" != "${DPDK_VERS}" ]; then
             rm -rf dpdk
           fi
-        - TARGET=${TARGET:-"x86_64-native-linuxapp-gcc"}
         - |
-          if [ -z "$CROSS_ARCH" -a ! -f "dpdk/${TARGET}/lib/libdpdk.a" ]; then
+          case "$CROSS_ARCH" in
+            "arm64")
+              DPDK_TARGET="arm64-armv8a-linuxapp-"
+              ;;
+            "armhf")
+              DPDK_TARGET="arm-armv7a-linuxapp-"
+              ;;
+            "i386")
+              DPDK_TARGET="i686-native-linuxapp-"
+              ;;
+            "")
+              DPDK_TARGET="x86_64-native-linuxapp-"
+              DPDK_MACHINE=snb
+              ;;
+          esac
+        - |
+          if [ -n "$DPDK_TARGET" ] ; then
+           if [ "${CC#clang}" != "${CC}" ] ; then
+            DPDKCC=clang ;
+           else
+            DPDKCC=gcc ;
+           fi
+           if [ -n "$DPDK_SHARED" ] ; then
+            TARGET="${DPDK_TARGET}$DPDKCC"-shared
+            LIBDPDKEXT=so
+            export LD_LIBRARY_PATH="`pwd`/${TARGET}:$LD_LIBRARY_PATH"
+            echo $LD_LIBRARY_PATH
+           else
+            TARGET="${DPDK_TARGET}$DPDKCC"
+            LIBDPDKEXT=a
+           fi
+           DPDK_TARGET="${DPDK_TARGET}gcc"
+           if [ ! -f "dpdk/${TARGET}/lib/libdpdk.$LIBDPDKEXT" ]; then
             git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v${DPDK_VERS} http://dpdk.org/git/dpdk dpdk
             pushd dpdk
             git log --oneline --decorate
-            make config T=${TARGET} O=${TARGET}
+            # AArch64 && ARMv7 fixup
+            sed -i -e 's/40900/40800/g' lib/librte_eal/common/include/arch/arm/rte_vect.h
+            sed -i -e 's/!(/!(defined(__arm__) \&\& defined(__clang__) || /g' lib/librte_eal/common/include/arch/arm/rte_byteorder.h
+            sed -i -e 's/__GNUC__/defined(__arm__) \&\& defined(__clang__) || __GNUC__/' lib/librte_eal/common/include/generic/rte_byteorder.h
+            sed -i -e 's,\$(CC),\0 $(EXTRA_CFLAGS),g' lib/librte_acl/Makefile
+            make config T=${DPDK_TARGET} O=${TARGET}
             pushd ${TARGET}
             sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
-            sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_OPENSSL=).*,\1y,' .config
-            cat .config |grep RTE_MACHINE
-            sed -ri 's,(CONFIG_RTE_MACHINE=).*,\1"snb",' .config
+            if test -n "${DPDK_MACHINE}" ; then
+              sed -ri 's,(CONFIG_RTE_MACHINE=).*,\1"'${DPDK_MACHINE}'",' .config
+            fi
+            if test -n "${DPDK_SHARED}" ; then
+              sed -ri 's,(CONFIG_RTE_BUILD_SHARED_LIB=).*,\1y,' .config
+            fi
+            if test -n "$CROSS_ARCH" ; then
+              sed -ri -e 's,(CONFIG_RTE_EAL_IGB_UIO=).*,\1n,' .config
+              sed -ri -e 's,(CONFIG_RTE_KNI_KMOD=).*,\1n,' .config
+            fi
+            sed -ri -e 's,(CONFIG_RTE_TOOLCHAIN=).*,\1"'${DPDKCC}'",' .config
+            sed -ri -e '/CONFIG_RTE_TOOLCHAIN_.*/d' .config
+            echo CONFIG_RTE_TOOLCHAIN_${DPDKCC^^}=y >> .config
             popd
-            make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
+            make build O=${TARGET} EXTRA_CFLAGS="-fPIC $DPDK_CFLAGS" CROSS="$DPDK_CROSS" CC="$CC" HOSTCC=gcc -j $(nproc)
             rm -r ./doc ./${TARGET}/app ./${TARGET}/build
             popd
+           fi
+           EXTRA_CONF="$EXTRA_CONF --with-dpdk-path=`pwd`/dpdk/${TARGET}"
           fi
-        - |
-          if [ -z "$CROSS_ARCH" -a ! -f "dpdk-17.02/${TARGET}/lib/libdpdk.a" ]; then
-            git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v17.02 http://dpdk.org/git/dpdk dpdk-17.02
-            pushd dpdk-17.02
-            git log --oneline --decorate
-            make config T=${TARGET} O=${TARGET}
-            pushd ${TARGET}
-            sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
-            sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_OPENSSL=).*,\1y,' .config
-            cat .config |grep RTE_MACHINE
-            sed -ri 's,(CONFIG_RTE_MACHINE=).*,\1"snb",' .config
-            popd
-            make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
-            rm -r ./doc ./${TARGET}/app ./${TARGET}/build
-            popd
-          fi
+
 #	Netmap pktio
         - |
           if [ -z "$CROSS_ARCH" ]; then
@@ -200,16 +234,14 @@ install:
               git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git
               pushd netmap/LINUX
               ./configure
-              make
+              make -j $(nproc)
               popd
             fi
             sudo insmod ./netmap/LINUX/netmap.ko
+            EXTRA_CONF="$EXTRA_CONF --with-netmap-path=`pwd`/netmap"
           fi
 
 script:
-        - if [ -z "$CROSS_ARCH" ] ; then
-                EXTRA_CONF="--with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap" ;
-          fi
         - ./bootstrap
         - ./configure --prefix=$HOME/odp-install
           --enable-user-guides
@@ -227,11 +259,17 @@ script:
         - pushd $HOME
         - echo "Dynamic link.."
         - ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_dynamic `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux`
-        - echo "Static link.."
-        - ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_static `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux --static` -static
         - if [ -z "$CROSS_ARCH" ] ; then
-          LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst_dynamic ;
-          ./odp_hello_inst_static ;
+            LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst_dynamic ;
+          fi
+        - |
+          # it is not possible to do static linking if we only have shared DPDK library. Compiler complains about missing -ldpdk
+          if [ -z "$TARGET" -o -z "$DPDK_SHARED" ] ; then
+            echo "Static link.."
+            ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_static `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux --static` -static || exit 1
+            if [ -z "$CROSS_ARCH" ] ; then
+            ./odp_hello_inst_static;
+            fi
           fi
         - popd
         - ccache -s
@@ -247,12 +285,12 @@ jobs:
                           - ./configure --prefix=$HOME/odp-install
                             --enable-user-guides
                             --with-dpdk-path=`pwd`/dpdk/${TARGET}
-                            --with-netmap-path=`pwd`/netmap CFLAGS="-O0
-                              -coverage"
+                            --with-netmap-path=`pwd`/netmap CFLAGS="-O0 -coverage"
                               CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
                             --enable-debug=full
                             --enable-helper-linux
-                          - sudo LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" PATH=${PATH//:\.\/node_modules\/\.bin/} make check
+                          - CCACHE_DISABLE=1 make -j $(nproc)
+                          - sudo CCACHE_DISABLE=1 LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" PATH=${PATH//:\.\/node_modules\/\.bin/} make check
                           - find . -type f -iname '*.[ch]' -not -path ".git/*" -execdir gcov {} \; ; bash <(curl -s https://codecov.io/bash) -X coveragepy
                 - stage: test
                   env: TEST=distcheck
@@ -263,22 +301,30 @@ jobs:
                             --enable-user-guides
                           - sudo PATH="$PATH" LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make distcheck
                 - stage: test
+                  env: TEST=distcheck-non-abi
+                  compiler: gcc
+                  script:
+                          - ./bootstrap
+                          - ./configure --prefix=$HOME/odp-install
+                            --enable-user-guides
+                          - sudo PATH="$PATH" LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make distcheck DISTCHECK__CONFIGURE_FLAGS=--disable-abi-compat
+                - stage: "build only"
                   env: TEST=doxygen
                   compiler: gcc
                   install:
-                          - true
+                          # Updated Doxygen
+                        - |
+                          if [ ! -f "$HOME/doxygen-install/bin/doxygen" ]; then
+                                wget https://github.com/doxygen/doxygen/archive/Release_1_8_13.tar.gz
+                                tar xpvf Release_1_8_13.tar.gz
+                                pushd doxygen-Release_1_8_13
+                                cmake -DCMAKE_INSTALL_PREFIX=$HOME/doxygen-install .
+                                make -j $(nproc)
+                                make install
+                                popd
+                          fi
+                        - export PATH=$HOME/doxygen-install/bin:$PATH
                   script:
-                          - |
-                            if [ ! -f "$HOME/doxygen-install/bin/doxygen" ]; then
-                              wget https://github.com/doxygen/doxygen/archive/Release_1_8_13.tar.gz
-                              tar xpvf Release_1_8_13.tar.gz
-                              pushd doxygen-Release_1_8_13
-                              cmake -DCMAKE_INSTALL_PREFIX=$HOME/doxygen-install .
-                              make install
-                              popd
-                            fi
-
-                          - export PATH=$HOME/doxygen-install/bin:$PATH
                           - ./bootstrap
                           - ./configure
                           # doxygen does not trap on warnings, check for them here.
@@ -290,7 +336,88 @@ jobs:
                              else
                                true
                              fi
+                - stage: "build only"
+                  env: CONF=""
+                  compiler: gcc
+                  install: true
+                  script:
+                          - ./bootstrap
+                          - ./configure --enable-helper-linux
+                          - make -j $(nproc)
+                - stage: "build only"
+                  env: CONF=""
+                  compiler: clang-3.8
+                  install: true
+                  script:
+                          - ./bootstrap
+                          - ./configure --enable-helper-linux
+                          - make -j $(nproc)
+                - stage: "build only"
+                  env: CROSS_ARCH="i386"
+                  compiler: gcc
+                  install: true
+                  script:
+                          - ./bootstrap
+                          - ./configure --enable-helper-linux $CROSS
+                          - make -j $(nproc)
+                - stage: "build only"
+                  env: CROSS_ARCH="arm64"
+                  compiler: gcc
+                  install: true
+                  script:
+                          - ./bootstrap
+                          - ./configure --enable-helper-linux $CROSS
+                          - make -j $(nproc)
                 - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="arm64"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="arm64"
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="powerpc"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="powerpc"
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="i386"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="i386"
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="arm64" CONF="--disable-abi-compat"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="arm64" CONF="--disable-abi-compat"
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="armhf" CFLAGS="-march=armv7-a" CONF="--disable-abi-compat"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="armhf" CFLAGS="-march=armv7-a" CONF="--disable-abi-compat"
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="powerpc" CONF="--disable-abi-compat"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="powerpc" CONF="--disable-abi-compat"
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="i386" CONF="--disable-abi-compat"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="i386" CONF="--disable-abi-compat"
+                - stage: test
+                  canfail: yes
                   env: TEST=checkpatch
                   compiler: gcc
                   install:
@@ -299,14 +426,9 @@ jobs:
                           - echo ${TRAVIS_COMMIT_RANGE};
                           - ODP_PATCHES=`echo ${TRAVIS_COMMIT_RANGE} | sed 's/\.//'`;
                           - ./scripts/ci-checkpatches.sh ${ODP_PATCHES};
-                - stage: test
-                  env: TEST=linux-dpdk
-                  compiler: gcc
-                  script:
-                          - ./bootstrap
-                          - ./configure --with-platform=linux-dpdk --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-sdk-install-path=`pwd`/dpdk-17.02/${TARGET} --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH $CONF
-                          - make -j $(nproc)
-                          - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make check
+        allow_failures:
+          - canfail: yes
+
 after_failure:
   - cat config.log
   - find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done

@@ -1,1 +1,1 @@
-../../../../linux-generic/include/odp/api/traffic_mngr.h
+../../../../linux-generic/include-abi/odp/api/abi/traffic_mngr.h

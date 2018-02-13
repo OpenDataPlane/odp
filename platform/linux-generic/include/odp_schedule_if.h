@@ -7,9 +7,17 @@
 #ifndef ODP_SCHEDULE_IF_H_
 #define ODP_SCHEDULE_IF_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <odp/api/queue.h>
 #include <odp_queue_if.h>
 #include <odp/api/schedule.h>
+#include <odp_forward_typedefs_internal.h>
+
+/* Number of ordered locks per queue */
+#define SCHEDULE_ORDERED_LOCKS_PER_QUEUE 2
 
 typedef struct schedule_fn_t {
 	int status_sync;
@@ -25,13 +33,19 @@ typedef struct schedule_fn_t {
 	int (*ord_enq_multi)(queue_t q_int, void *buf_hdr[], int num, int *ret);
 	void (*order_lock)(void);
 	void (*order_unlock)(void);
-	unsigned (*max_ordered_locks)(void);
+	void (*order_unlock_lock)(void);
+	uint32_t (*max_ordered_locks)(void);
 
 	/* Called only when status_sync is set */
 	int (*unsched_queue)(uint32_t queue_index);
 	void (*save_context)(uint32_t queue_index);
 } schedule_fn_t;
 
+/* Interface towards the scheduler */
 extern const schedule_fn_t *sched_fn;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

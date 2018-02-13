@@ -24,6 +24,8 @@ extern "C" {
 #include <odp/api/ipsec.h>
 #include <odp/api/ticketlock.h>
 
+#include <protocols/ip.h>
+
 /** @ingroup odp_ipsec
  *  @{
  */
@@ -81,13 +83,16 @@ int _odp_ipsec_status_send(odp_queue_t queue,
 
 #define IPSEC_MAX_SALT_LEN	4    /**< Maximum salt length in bytes */
 
+/* 32 is minimum required by the standard. We do not support more */
+#define IPSEC_ANTIREPLAY_WS	32
+
 /**
  * Maximum number of available SAs
  */
 #define ODP_CONFIG_IPSEC_SAS	8
 
 struct ipsec_sa_s {
-	odp_atomic_u32_t state ODP_ALIGNED_CACHE;
+	odp_atomic_u32_t ODP_ALIGNED_CACHE state;
 
 	uint32_t	ipsec_sa_idx;
 	odp_ipsec_sa_t	ipsec_sa_hdl;
@@ -117,28 +122,63 @@ struct ipsec_sa_s {
 
 	uint8_t		salt[IPSEC_MAX_SALT_LEN];
 	uint32_t	salt_length;
+	odp_ipsec_lookup_mode_t lookup_mode;
 
-	unsigned	dec_ttl : 1;
-	unsigned	copy_dscp : 1;
-	unsigned	copy_df : 1;
+	union {
+		unsigned flags;
+		struct {
+			unsigned	dec_ttl : 1;
+			unsigned	copy_dscp : 1;
+			unsigned	copy_df : 1;
+			unsigned	copy_flabel : 1;
+			unsigned	aes_ctr_iv : 1;
+			unsigned	udp_encap : 1;
+
+			/* Only for outbound */
+			unsigned	use_counter_iv : 1;
+			unsigned	tun_ipv4 : 1;
+
+			/* Only for inbound */
+			unsigned	antireplay : 1;
+		};
+	};
 
 	union {
 		struct {
-			odp_ipsec_lookup_mode_t lookup_mode;
-			odp_u32be_t	lookup_dst_ip;
+			odp_ipsec_ip_version_t lookup_ver;
+			union {
+				odp_u32be_t	lookup_dst_ipv4;
+				uint8_t lookup_dst_ipv6[_ODP_IPV6ADDR_LEN];
+			};
+			odp_atomic_u64_t antireplay;
 		} in;
 
 		struct {
-			odp_u32be_t	tun_src_ip;
-			odp_u32be_t	tun_dst_ip;
-
-			/* 32-bit from which low 16 are used */
-			odp_atomic_u32_t tun_hdr_id;
+			odp_atomic_u64_t counter; /* for CTR/GCM */
 			odp_atomic_u32_t seq;
+			odp_ipsec_frag_mode_t frag_mode;
+			uint32_t mtu;
 
-			uint8_t		tun_ttl;
-			uint8_t		tun_dscp;
-			uint8_t		tun_df;
+			union {
+			struct {
+				odp_u32be_t	src_ip;
+				odp_u32be_t	dst_ip;
+
+				/* 32-bit from which low 16 are used */
+				odp_atomic_u32_t hdr_id;
+
+				uint8_t		ttl;
+				uint8_t		dscp;
+				uint8_t		df;
+			} tun_ipv4;
+			struct {
+				uint8_t		src_ip[_ODP_IPV6ADDR_LEN];
+				uint8_t		dst_ip[_ODP_IPV6ADDR_LEN];
+				uint8_t		hlimit;
+				uint8_t		dscp;
+				uint32_t	flabel;
+			} tun_ipv6;
+			};
 		} out;
 	};
 };
@@ -153,11 +193,24 @@ typedef struct odp_ipsec_sa_lookup_s {
 	/** SPI value */
 	uint32_t spi;
 
-	/* FIXME: IPv4 vs IPv6 */
+	/** IP protocol version */
+	odp_ipsec_ip_version_t ver;
 
 	/** IP destination address (NETWORK ENDIAN) */
 	void    *dst_addr;
 } ipsec_sa_lookup_t;
+
+/** IPSEC AAD */
+typedef struct ODP_PACKED {
+	odp_u32be_t spi;     /**< Security Parameter Index */
+	odp_u32be_t seq_no;  /**< Sequence Number */
+} ipsec_aad_t;
+
+/* Return IV length required for the cipher for IPsec use */
+uint32_t _odp_ipsec_cipher_iv_len(odp_cipher_alg_t cipher);
+
+/* Return digest length required for the cipher for IPsec use */
+uint32_t _odp_ipsec_auth_digest_len(odp_auth_alg_t auth);
 
 /**
  * Obtain SA reference
@@ -175,13 +228,34 @@ void _odp_ipsec_sa_unuse(ipsec_sa_t *ipsec_sa);
 ipsec_sa_t *_odp_ipsec_sa_lookup(const ipsec_sa_lookup_t *lookup);
 
 /**
+ * Run pre-check on SA usage statistics.
+ *
+ * @retval <0 if hard limits were breached
+ */
+int _odp_ipsec_sa_stats_precheck(ipsec_sa_t *ipsec_sa,
+				 odp_ipsec_op_status_t *status);
+
+/**
  * Update SA usage statistics, filling respective status for the packet.
  *
  * @retval <0 if hard limits were breached
  */
-int _odp_ipsec_sa_update_stats(ipsec_sa_t *ipsec_sa, uint32_t len,
+int _odp_ipsec_sa_stats_update(ipsec_sa_t *ipsec_sa, uint32_t len,
 			       odp_ipsec_op_status_t *status);
 
+/* Run pre-check on sequence number of the packet.
+ *
+ * @retval <0 if the packet falls out of window
+ */
+int _odp_ipsec_sa_replay_precheck(ipsec_sa_t *ipsec_sa, uint32_t seq,
+				  odp_ipsec_op_status_t *status);
+
+/* Run check on sequence number of the packet and update window if necessary.
+ *
+ * @retval <0 if the packet falls out of window
+ */
+int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
+				odp_ipsec_op_status_t *status);
 /**
  * Try inline IPsec processing of provided packet.
  *

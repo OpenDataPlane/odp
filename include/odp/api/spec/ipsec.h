@@ -10,8 +10,8 @@
  * ODP IPSEC API
  */
 
-#ifndef ODP_API_IPSEC_H_
-#define ODP_API_IPSEC_H_
+#ifndef ODP_API_SPEC_IPSEC_H_
+#define ODP_API_SPEC_IPSEC_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
@@ -70,27 +70,6 @@ typedef enum odp_ipsec_op_mode_t {
 } odp_ipsec_op_mode_t;
 
 /**
- * Protocol layers in IPSEC configuration
- */
-typedef enum odp_ipsec_proto_layer_t {
-	/** No layers */
-	ODP_IPSEC_LAYER_NONE = 0,
-
-	/** Layer L2 protocols (Ethernet, VLAN, etc) */
-	ODP_IPSEC_LAYER_L2,
-
-	/** Layer L3 protocols (IPv4, IPv6, ICMP, IPSEC, etc) */
-	ODP_IPSEC_LAYER_L3,
-
-	/** Layer L4 protocols (UDP, TCP, SCTP) */
-	ODP_IPSEC_LAYER_L4,
-
-	/** All layers */
-	ODP_IPSEC_LAYER_ALL
-
-} odp_ipsec_proto_layer_t;
-
-/**
  * Configuration options for IPSEC inbound processing
  */
 typedef struct odp_ipsec_inbound_config_t {
@@ -125,66 +104,47 @@ typedef struct odp_ipsec_inbound_config_t {
 	 *
 	 *  Select up to which protocol layer (at least) outer headers are
 	 *  retained in inbound inline processing. Default value is
-	 *  ODP_IPSEC_LAYER_NONE.
+	 *  ODP_PROTO_LAYER_NONE.
 	 *
-	 *  ODP_IPSEC_LAYER_NONE: Application does not require any outer
+	 *  ODP_PROTO_LAYER_NONE: Application does not require any outer
 	 *                        headers to be retained.
 	 *
-	 *  ODP_IPSEC_LAYER_L2:   Retain headers up to layer 2.
+	 *  ODP_PROTO_LAYER_L2:   Retain headers up to layer 2.
 	 *
-	 *  ODP_IPSEC_LAYER_L3:   Retain headers up to layer 3, otherwise the
-	 *                        same as ODP_IPSEC_LAYER_ALL.
+	 *  ODP_PROTO_LAYER_L3:   Retain headers up to layer 3, otherwise the
+	 *                        same as ODP_PROTO_LAYER_ALL.
 	 *
-	 *  ODP_IPSEC_LAYER_L4:   Retain headers up to layer 4, otherwise the
-	 *                        same as ODP_IPSEC_LAYER_ALL.
+	 *  ODP_PROTO_LAYER_L4:   Retain headers up to layer 4, otherwise the
+	 *                        same as ODP_PROTO_LAYER_ALL.
 	 *
-	 *  ODP_IPSEC_LAYER_ALL:  In tunnel mode, all headers before IPSEC are
+	 *  ODP_PROTO_LAYER_ALL:  In tunnel mode, all headers before IPSEC are
 	 *                        retained. In transport mode, all headers
 	 *                        before IP (carrying IPSEC) are retained.
 	 *
 	 */
-	odp_ipsec_proto_layer_t retain_outer;
+	odp_proto_layer_t retain_outer;
 
 	/** Parse packet headers after IPSEC transformation
 	 *
 	 *  Select header parsing level after inbound processing. Headers of the
-	 *  resulting packet must be parsed (at least) up to this level. Parsing
-	 *  starts from IP (layer 3). Each successfully transformed packet has
-	 *  a valid value for L3 offset regardless of the parse configuration.
-	 *  Default value is ODP_IPSEC_LAYER_NONE.
+	 *  resulting packet must be checked (at least) up to this level.
+	 *  Parsing starts from IP (layer 3). Packet metadata from IP to this
+	 *  layer is set. In addition, offset (and pointer) to the next layer
+	 *  is set. Other layer/protocol specific metadata have undefined
+	 *  values.
+	 *
+	 *  Each successfully transformed packet has a valid value for L3 offset
+	 *  regardless of the parse configuration. Default value is
+	 *  ODP_PROTO_LAYER_NONE. ODP_PROTO_LAYER_L2 is not a valid value.
 	 */
-	odp_ipsec_proto_layer_t parse;
+	odp_proto_layer_t parse_level;
 
 	/** Flags to control IPSEC payload data checks up to the selected parse
 	 *  level. Checksum checking status can be queried for each packet with
 	 *  odp_packet_l3_chksum_status() and odp_packet_l4_chksum_status().
+	 *  Default value for all bits is 0 (skip all checksum checks).
 	 */
-	union {
-		/** Mapping for individual bits */
-		struct {
-			/** Check IPv4 header checksum in IPSEC payload.
-			 *  Default value is 0. */
-			uint32_t ipv4_chksum   : 1;
-
-			/** Check UDP checksum in IPSEC payload.
-			 *  Default value is 0. */
-			uint32_t udp_chksum    : 1;
-
-			/** Check TCP checksum in IPSEC payload.
-			 *  Default value is 0. */
-			uint32_t tcp_chksum    : 1;
-
-			/** Check SCTP checksum in IPSEC payload.
-			 *  Default value is 0. */
-			uint32_t sctp_chksum   : 1;
-		} check;
-
-		/** All bits of the bit field structure
-		  *
-		  * This field can be used to set/clear all flags, or bitwise
-		  * operations over the entire structure. */
-		uint32_t all_check;
-	};
+	odp_proto_chksums_t chksums;
 
 } odp_ipsec_inbound_config_t;
 
@@ -260,6 +220,12 @@ typedef struct odp_ipsec_capability_t {
 	/** IP Authenticated Header (ODP_IPSEC_AH) support */
 	odp_support_t proto_ah;
 
+	/** Fragment after IPsec support */
+	odp_support_t frag_after;
+
+	/** Fragment before IPsec support */
+	odp_support_t frag_before;
+
 	/**
 	 * Support of pipelined classification (ODP_IPSEC_PIPELINE_CLS) of
 	 *  resulting inbound packets
@@ -292,6 +258,24 @@ typedef struct odp_ipsec_capability_t {
 	odp_crypto_auth_algos_t   auths;
 
 } odp_ipsec_capability_t;
+
+/**
+ * Cipher algorithm capabilities
+ */
+typedef struct odp_ipsec_cipher_capability_t {
+	/** Key length in bytes */
+	uint32_t key_len;
+
+} odp_ipsec_cipher_capability_t;
+
+/**
+ * Authentication algorithm capabilities
+ */
+typedef struct odp_ipsec_auth_capability_t {
+	/** Key length in bytes */
+	uint32_t key_len;
+
+} odp_ipsec_auth_capability_t;
 
 /**
  * IPSEC configuration options
@@ -757,7 +741,7 @@ int odp_ipsec_capability(odp_ipsec_capability_t *capa);
  * @retval <0 on failure
  */
 int odp_ipsec_cipher_capability(odp_cipher_alg_t cipher,
-				odp_crypto_cipher_capability_t capa[], int num);
+				odp_ipsec_cipher_capability_t capa[], int num);
 
 /**
  * Query supported IPSEC authentication algorithm capabilities
@@ -779,7 +763,7 @@ int odp_ipsec_cipher_capability(odp_cipher_alg_t cipher,
  * @retval <0 on failure
  */
 int odp_ipsec_auth_capability(odp_auth_alg_t auth,
-			      odp_crypto_auth_capability_t capa[], int num);
+			      odp_ipsec_auth_capability_t capa[], int num);
 
 /**
  * Initialize IPSEC configuration options
@@ -1021,13 +1005,13 @@ typedef struct odp_ipsec_out_param_t {
 	int num_opt;
 
 	/** Pointer to an array of IPSEC SAs */
-	odp_ipsec_sa_t *sa;
+	const odp_ipsec_sa_t *sa;
 
 	/** Pointer to an array of outbound operation options
 	 *
 	 *  May be NULL when num_opt is zero.
 	 */
-	odp_ipsec_out_opt_t *opt;
+	const odp_ipsec_out_opt_t *opt;
 
 } odp_ipsec_out_param_t;
 
@@ -1055,7 +1039,7 @@ typedef struct odp_ipsec_in_param_t {
 	 *
 	 *  May be NULL when num_sa is zero.
 	 */
-	odp_ipsec_sa_t *sa;
+	const odp_ipsec_sa_t *sa;
 
 } odp_ipsec_in_param_t;
 

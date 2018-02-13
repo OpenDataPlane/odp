@@ -30,10 +30,10 @@ struct netmap_ring_t {
 	odp_ticketlock_t lock;  /**< Queue lock */
 };
 
-typedef union {
+typedef union ODP_ALIGNED_CACHE {
 	struct netmap_ring_t s;
 	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct netmap_ring_t))];
-} netmap_ring_t ODP_ALIGNED_CACHE;
+} netmap_ring_t;
 
 /** Netmap ring slot */
 typedef struct  {
@@ -44,7 +44,6 @@ typedef struct  {
 /** Packet socket using netmap mmaped rings for both Rx and Tx */
 typedef struct {
 	odp_pool_t pool;		/**< pool to alloc packets from */
-	size_t max_frame_len;		/**< buf_size - sizeof(pkt_hdr) */
 	uint32_t if_flags;		/**< interface flags */
 	uint32_t mtu;			/**< maximum transmission unit */
 	int sockfd;			/**< control socket */
@@ -52,7 +51,6 @@ typedef struct {
 	char nm_name[IF_NAMESIZE + 7];  /**< netmap:<ifname> */
 	char if_name[IF_NAMESIZE];	/**< interface name used in ioctl */
 	odp_bool_t is_virtual;		/**< nm virtual port (VALE/pipe) */
-	odp_pktio_capability_t	capa;	/**< interface capabilities */
 	uint32_t num_rx_rings;		/**< number of nm rx rings */
 	uint32_t num_tx_rings;		/**< number of nm tx rings */
 	unsigned num_rx_desc_rings;	/**< number of rx descriptor rings */

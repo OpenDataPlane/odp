@@ -1073,8 +1073,7 @@ int odp_crypto_operation(odp_crypto_op_param_t *param,
 	/* Indicate to caller operation was sync */
 	*posted = 0;
 
-	_odp_buffer_event_subtype_set(packet_to_buffer(out_pkt),
-				      ODP_EVENT_PACKET_BASIC);
+	packet_subtype_set(out_pkt, ODP_EVENT_PACKET_BASIC);
 
 	/* Fill in result */
 	local_result.ctx = param->ctx;
@@ -1425,8 +1424,7 @@ int odp_crypto_int(odp_packet_t pkt_in,
 		(rc_cipher == ODP_CRYPTO_ALG_ERR_NONE) &&
 		(rc_auth == ODP_CRYPTO_ALG_ERR_NONE);
 
-	_odp_buffer_event_subtype_set(packet_to_buffer(out_pkt),
-				      ODP_EVENT_PACKET_CRYPTO);
+	packet_subtype_set(out_pkt, ODP_EVENT_PACKET_CRYPTO);
 	op_result = get_op_result_from_packet(out_pkt);
 	*op_result = local_result;
 

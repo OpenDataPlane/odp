@@ -1,6 +1,3 @@
-include $(top_srcdir)/test/validation/Makefile.inc
+include $(top_srcdir)/test/Makefile.inc
 
-AM_LDFLAGS += $(DPDK_PMDS)
-
-AM_CFLAGS += $(CUNIT_CFLAGS)
-
+PRELDADD += $(LIBCUNIT_COMMON)

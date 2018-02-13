@@ -1,16 +1,22 @@
+include $(top_srcdir)/Makefile.inc
+
 TESTS_ENVIRONMENT = EXEEXT=${EXEEXT}
 
-LIB   = $(top_builddir)/lib
-LDADD = $(LIB)/lib$(ODP_LIB_STR).la $(LIB)/libodphelper.la $(DPDK_PMDS)
+LDADD = $(LIB)/lib$(ODP_LIB_STR).la $(LIB)/libodphelper.la
+
+# Do not link to DPDK twice in case of dynamic linking with ODP
+if STATIC_APPS
+LDADD += $(DPDK_LIBS_LT)
+endif
+
 AM_CFLAGS = \
 	-I$(srcdir) \
 	-I$(top_srcdir)/example \
-	-I$(top_srcdir)/platform/@with_platform@/include \
-	-I$(top_srcdir)/include/ \
-	-I$(top_srcdir)/include/odp/arch/@ARCH_ABI@ \
-	-I$(top_srcdir)/helper/include \
-	-I$(top_builddir)/platform/@with_platform@/include \
-	-I$(top_srcdir)/platform/@with_platform@/arch/@ARCH_DIR@ \
-	-I$(top_builddir)/include
+	$(ODP_INCLUDES) \
+	$(HELPER_INCLUDES)
 
+if STATIC_APPS
 AM_LDFLAGS = -L$(LIB) -static
+else
+AM_LDFLAGS =
+endif

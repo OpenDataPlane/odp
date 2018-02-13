@@ -11,8 +11,8 @@
  * ODP packet descriptor
  */
 
-#ifndef ODP_API_PACKET_H_
-#define ODP_API_PACKET_H_
+#ifndef ODP_API_SPEC_PACKET_H_
+#define ODP_API_SPEC_PACKET_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
@@ -70,6 +70,45 @@ extern "C" {
   * @def ODP_PACKET_RED
   * Packet is red
   */
+
+/**
+ * Protocol
+ */
+typedef enum odp_proto_t {
+	/** No protocol defined */
+	ODP_PROTO_NONE = 0,
+
+	/** Ethernet (including VLAN) */
+	ODP_PROTO_ETH,
+
+	/** IP version 4 */
+	ODP_PROTO_IPV4,
+
+	/** IP version 6 */
+	ODP_PROTO_IPV6
+
+} odp_proto_t;
+
+/**
+ * Protocol layer
+ */
+typedef enum odp_proto_layer_t {
+	/** No layers */
+	ODP_PROTO_LAYER_NONE = 0,
+
+	/** Layer L2 protocols (Ethernet, VLAN, etc) */
+	ODP_PROTO_LAYER_L2,
+
+	/** Layer L3 protocols (IPv4, IPv6, ICMP, IPSEC, etc) */
+	ODP_PROTO_LAYER_L3,
+
+	/** Layer L4 protocols (UDP, TCP, SCTP) */
+	ODP_PROTO_LAYER_L4,
+
+	/** All layers */
+	ODP_PROTO_LAYER_ALL
+
+} odp_proto_layer_t;
 
 /**
  * Packet API data range specifier
@@ -166,6 +205,17 @@ void odp_packet_free(odp_packet_t pkt);
 void odp_packet_free_multi(const odp_packet_t pkt[], int num);
 
 /**
+ * Free multiple packets to the same pool
+ *
+ * Otherwise like odp_packet_free_multi(), but all packets must be from the
+ * same originating pool.
+ *
+ * @param pkt           Array of packet handles
+ * @param num           Number of packets to free
+ */
+void odp_packet_free_sp(const odp_packet_t pkt[], int num);
+
+/**
  * Reset packet
  *
  * Resets all packet metadata to their default values. Packet length is used
@@ -197,6 +247,18 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len);
 odp_packet_t odp_packet_from_event(odp_event_t ev);
 
 /**
+ * Convert multiple packet events to packet handles
+ *
+ * All events must be of type ODP_EVENT_PACKET.
+ *
+ * @param[out] pkt  Packet handle array for output
+ * @param      ev   Array of event handles to convert
+ * @param      num  Number of packets and events
+ */
+void odp_packet_from_event_multi(odp_packet_t pkt[], const odp_event_t ev[],
+				 int num);
+
+/**
  * Convert packet handle to event
  *
  * @param pkt  Packet handle
@@ -204,6 +266,16 @@ odp_packet_t odp_packet_from_event(odp_event_t ev);
  * @return Event handle
  */
 odp_event_t odp_packet_to_event(odp_packet_t pkt);
+
+/**
+ * Convert multiple packet handles to events
+ *
+ * @param      pkt  Array of packet handles to convert
+ * @param[out] ev   Event handle array for output
+ * @param      num  Number of packets and events
+ */
+void odp_packet_to_event_multi(const odp_packet_t pkt[], odp_event_t ev[],
+			       int num);
 
 /*
  *
@@ -1140,6 +1212,96 @@ int odp_packet_move_data(odp_packet_t pkt, uint32_t dst_offset,
  */
 
 /**
+ * Flags to control packet data checksum checking
+ */
+typedef union odp_proto_chksums_t {
+	/** Individual checksum bits. */
+	struct {
+		/** IPv4 header checksum */
+		uint32_t ipv4   : 1;
+
+		/** UDP checksum */
+		uint32_t udp    : 1;
+
+		/** TCP checksum */
+		uint32_t tcp    : 1;
+
+		/** SCTP checksum */
+		uint32_t sctp   : 1;
+
+	} chksum;
+
+	/** All checksum bits. This can be used to set/clear all flags. */
+	uint32_t all_chksum;
+
+} odp_proto_chksums_t;
+
+/**
+ * Packet parse parameters
+ */
+typedef struct odp_packet_parse_param_t {
+	/** Protocol header at parse starting point. Valid values for this
+	 *  field are: ODP_PROTO_ETH, ODP_PROTO_IPV4, ODP_PROTO_IPV6. */
+	odp_proto_t proto;
+
+	/** Continue parsing until this layer. Must be the same or higher
+	 *  layer than the layer of 'proto'. */
+	odp_proto_layer_t last_layer;
+
+	/** Flags to control payload data checksums checks up to the selected
+	 *  parse layer. Checksum checking status can be queried for each packet
+	 *  with odp_packet_l3_chksum_status() and
+	 *  odp_packet_l4_chksum_status().
+	 */
+	odp_proto_chksums_t chksums;
+
+} odp_packet_parse_param_t;
+
+/**
+ * Parse packet
+ *
+ * Parse protocol headers in packet data and update layer/protocol specific
+ * metadata (e.g. offsets, errors, protocols, checksum statuses, etc). Parsing
+ * starts at 'offset', which is the first header byte of protocol 'param.proto'.
+ * Parameter 'param.last_layer' defines the last layer application requests
+ * to check. Use ODP_PROTO_LAYER_ALL for all layers. A successful operation
+ * sets (or resets) packet metadata for all layers from the layer of
+ * 'param.proto' to the application defined last layer. In addition, offset
+ * (and pointer) to the next layer is set. Other layer/protocol specific
+ * metadata have undefined values. When operation fails, all layer/protocol
+ * specific metadata have undefined values.
+ *
+ * @param pkt     Packet handle
+ * @param offset  Byte offset into the packet
+ * @param param   Parse parameters. Proto and last_layer fields must be set.
+ *                Clear all check bits that are not used.
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_packet_parse(odp_packet_t pkt, uint32_t offset,
+		     const odp_packet_parse_param_t *param);
+
+/**
+ * Parse multiple packets
+ *
+ * Otherwise like odp_packet_parse(), but parses multiple packets. Packets may
+ * have unique offsets, but must start with the same protocol. The same
+ * parse parameters are applied to all packets.
+ *
+ * @param pkt     Packet handle array
+ * @param offset  Byte offsets into the packets
+ * @param num     Number of packets and offsets
+ * @param param   Parse parameters. Proto and last_layer fields must be set.
+ *                Clear all check bits that are not used.
+ *
+ * @return Number of packets parsed successfully (0 ... num)
+ * @retval <0 on failure
+ */
+int odp_packet_parse_multi(const odp_packet_t pkt[], const uint32_t offset[],
+			   int num, const odp_packet_parse_param_t *param);
+
+/**
  * Packet pool
  *
  * Returns handle to the packet pool where the packet was allocated from.
@@ -1227,15 +1389,16 @@ uint32_t odp_packet_user_area_size(odp_packet_t pkt);
 /**
  * Layer 2 start pointer
  *
- * Returns pointer to the start of the layer 2 header. Optionally, outputs
- * number of data bytes in the segment following the pointer.
+ * Returns pointer to the start of layer 2. Optionally, outputs number of data
+ * bytes in the segment following the pointer. The pointer value is generated
+ * from the current layer 2 offset.
  *
  * @param      pkt      Packet handle
  * @param[out] len      Number of data bytes remaining in the segment (output).
  *                      Ignored when NULL.
  *
- * @return  Layer 2 start pointer
- * @retval  NULL packet does not contain a valid L2 header
+ * @return Layer 2 start pointer
+ * @retval NULL  Layer 2 offset has not been set
  *
  * @see odp_packet_l2_offset(), odp_packet_l2_offset_set(), odp_packet_has_l2()
  */
@@ -1244,16 +1407,16 @@ void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len);
 /**
  * Layer 2 start offset
  *
- * Returns offset to the start of the layer 2 header. The offset is calculated
- * from the current odp_packet_data() position in bytes.
- *
- * User is responsible to update the offset when modifying the packet data
- * pointer position.
+ * Returns offset to the start of layer 2. The offset is calculated from the
+ * current odp_packet_data() position in bytes. Packet parsing sets the offset
+ * according to parse configuration and layers recognized in the packet. Data
+ * start position updating functions (e.g. odp_packet_push_head()) do not modify
+ * the offset, but user sets a new value when needed.
  *
  * @param pkt  Packet handle
  *
- * @return  Layer 2 start offset
- * @retval ODP_PACKET_OFFSET_INVALID packet does not contain a valid L2 header
+ * @return Layer 2 start offset
+ * @retval ODP_PACKET_OFFSET_INVALID  Layer 2 offset has not been set
  *
  * @see odp_packet_l2_offset_set(), odp_packet_has_l2()
  */
@@ -1262,9 +1425,9 @@ uint32_t odp_packet_l2_offset(odp_packet_t pkt);
 /**
  * Set layer 2 start offset
  *
- * Set offset to the start of the layer 2 header. The offset is calculated from
- * the current odp_packet_data() position in bytes. Offset must not exceed
- * packet data length. Packet is not modified on an error.
+ * Set offset to the start of layer 2. The offset is calculated from the current
+ * odp_packet_data() position in bytes. Offset must not exceed packet data
+ * length. Offset is not modified on an error.
  *
  * @param pkt     Packet handle
  * @param offset  Layer 2 start offset (0 ... odp_packet_len()-1)
@@ -1277,15 +1440,16 @@ int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset);
 /**
  * Layer 3 start pointer
  *
- * Returns pointer to the start of the layer 3 header. Optionally, outputs
- * number of data bytes in the segment following the pointer.
+ * Returns pointer to the start of layer 3. Optionally, outputs number of data
+ * bytes in the segment following the pointer. The pointer value is generated
+ * from the current layer 3 offset.
  *
  * @param      pkt      Packet handle
  * @param[out] len      Number of data bytes remaining in the segment (output).
  *                      Ignored when NULL.
  *
- * @return  Layer 3 start pointer
- * @retval NULL packet does not contain a valid L3 header
+ * @return Layer 3 start pointer
+ * @retval NULL  Layer 3 offset has not been set
  *
  * @see odp_packet_l3_offset(), odp_packet_l3_offset_set(), odp_packet_has_l3()
  */
@@ -1294,16 +1458,16 @@ void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len);
 /**
  * Layer 3 start offset
  *
- * Returns offset to the start of the layer 3 header. The offset is calculated
- * from the current odp_packet_data() position in bytes.
- *
- * User is responsible to update the offset when modifying the packet data
- * pointer position.
+ * Returns offset to the start of layer 3. The offset is calculated from the
+ * current odp_packet_data() position in bytes. Packet parsing sets the offset
+ * according to parse configuration and layers recognized in the packet. Data
+ * start position updating functions (e.g. odp_packet_push_head()) do not modify
+ * the offset, but user sets a new value when needed.
  *
  * @param pkt  Packet handle
  *
- * @return  Layer 3 start offset, or ODP_PACKET_OFFSET_INVALID when packet does
- *          not contain a valid L3 header.
+ * @return Layer 3 start offset
+ * @retval ODP_PACKET_OFFSET_INVALID  Layer 3 offset has not been set
  *
  * @see odp_packet_l3_offset_set(), odp_packet_has_l3()
  */
@@ -1312,9 +1476,9 @@ uint32_t odp_packet_l3_offset(odp_packet_t pkt);
 /**
  * Set layer 3 start offset
  *
- * Set offset to the start of the layer 3 header. The offset is calculated from
- * the current odp_packet_data() position in bytes. Offset must not exceed
- * packet data length. Packet is not modified on an error.
+ * Set offset to the start of layer 3. The offset is calculated from the current
+ * odp_packet_data() position in bytes. Offset must not exceed packet data
+ * length. Offset is not modified on an error.
  *
  * @param pkt     Packet handle
  * @param offset  Layer 3 start offset (0 ... odp_packet_len()-1)
@@ -1327,15 +1491,16 @@ int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset);
 /**
  * Layer 4 start pointer
  *
- * Returns pointer to the start of the layer 4 header. Optionally, outputs
- * number of data bytes in the segment following the pointer.
+ * Returns pointer to the start of layer 4. Optionally, outputs number of data
+ * bytes in the segment following the pointer. The pointer value is generated
+ * from the current layer 4 offset.
  *
  * @param      pkt      Packet handle
  * @param[out] len      Number of data bytes remaining in the segment (output).
  *                      Ignored when NULL.
  *
- * @return  Layer 4 start pointer
- * @retval NULL packet does not contain a valid L4 header
+ * @return Layer 4 start pointer
+ * @retval NULL  Layer 4 offset has not been set
  *
  * @see odp_packet_l4_offset(), odp_packet_l4_offset_set(), odp_packet_has_l4()
  */
@@ -1344,16 +1509,16 @@ void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len);
 /**
  * Layer 4 start offset
  *
- * Returns offset to the start of the layer 4 header. The offset is calculated
- * from the current odp_packet_data() position in bytes.
- *
- * User is responsible to update the offset when modifying the packet data
- * pointer position.
+ * Returns offset to the start of layer 4. The offset is calculated from the
+ * current odp_packet_data() position in bytes. Packet parsing sets the offset
+ * according to parse configuration and layers recognized in the packet. Data
+ * start position updating functions (e.g. odp_packet_push_head()) do not modify
+ * the offset, but user sets a new value when needed.
  *
  * @param pkt  Packet handle
  *
- * @return  Layer 4 start offset
- * @retval ODP_PACKET_OFFSET_INVALID packet does not contain a valid L4 header
+ * @return Layer 4 start offset
+ * @retval ODP_PACKET_OFFSET_INVALID  Layer 4 offset has not been set
  *
  * @see odp_packet_l4_offset_set(), odp_packet_has_l4()
  */
@@ -1362,9 +1527,9 @@ uint32_t odp_packet_l4_offset(odp_packet_t pkt);
 /**
  * Set layer 4 start offset
  *
- * Set offset to the start of the layer 4 header. The offset is calculated from
- * the current odp_packet_data() position in bytes. Offset must not exceed
- * packet data length. Packet is not modified on an error.
+ * Set offset to the start of layer 4. The offset is calculated from the current
+ * odp_packet_data() position in bytes. Offset must not exceed packet data
+ * length. Offset is not modified on an error.
  *
  * @param pkt     Packet handle
  * @param offset  Layer 4 start offset (0 ... odp_packet_len()-1)
@@ -1411,7 +1576,7 @@ odp_packet_chksum_status_t odp_packet_l4_chksum_status(odp_packet_t pkt);
  *
  * Calling this function is always allowed but the checksum will not be
  * inserted if the packet is output through a pktio that does not have
- * the relevant pktout chksum bit set in the pktio capability.
+ * the relevant checksum insertion enabled.
  *
  * @param pkt     Packet handle
  * @param insert  0: do not insert L3 checksum
@@ -1428,13 +1593,33 @@ void odp_packet_l3_chksum_insert(odp_packet_t pkt, int insert);
  *
  * Calling this function is always allowed but the checksum will not be
  * inserted if the packet is output through a pktio that does not have
- * the relevant pktout chksum bit set in the pktio capability.
+ * the relevant checksum insertion enabled.
  *
  * @param pkt     Packet handle
  * @param insert  0: do not insert L4 checksum
  *                1: insert L4 checksum
  */
 void odp_packet_l4_chksum_insert(odp_packet_t pkt, int insert);
+
+/**
+ * Ones' complement sum of packet data
+ *
+ * Returns 16-bit ones' complement sum that was calculated over a portion of
+ * packet data during a packet processing operation (e.g. packet input or
+ * IPSEC offload). The data range is output with 'range' parameter, and usually
+ * includes IP payload (L4 headers and payload). When 'range.length' is zero,
+ * the sum has not been calculated. In case of odd number of bytes,
+ * calculation uses a zero byte as padding at the end. The sum may be used as
+ * part of e.g. UDP/TCP checksum checking, especially with IP fragments.
+ *
+ * @param      pkt    Packet handle
+ * @param[out] range  Data range of the sum (output). The calculation started
+ *                    from range.offset and included range.length bytes. When
+ *                    range.length is zero, the sum has not been calculated.
+ *
+ * @return Ones' complement sum over the data range
+ */
+uint16_t odp_packet_ones_comp(odp_packet_t pkt, odp_packet_data_range_t *range);
 
 /**
  * Packet flow hash value

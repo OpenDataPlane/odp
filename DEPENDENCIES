@@ -19,7 +19,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 3. Required libraries
 
-   Libraries currently required to link: openssl, libconfig
+   Libraries currently required to link: openssl, libatomic, libconfig
 
 3.1 OpenSSL and libconf native compile
 
@@ -63,7 +63,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ make install
 
    # You may now build either 32 or 64 bit ODP
-   $ git clone git://git.linaro.org/lng/odp.git odp
+   $ git clone https://github.com/Linaro/odp.git odp
    $ cd odp
    $ ./bootstrap
 
@@ -163,9 +163,11 @@ Prerequisites for building the OpenDataPlane (ODP) API
    DPDK pktio adds a depency to NUMA library.
    # Debian/Ubuntu
    $ sudo apt-get install libnuma-dev
+   # CentOS/RedHat/Fedora
+   $ sudo yum install numactl-devel
 
    Note: only packet I/O is accelerated with DPDK. Use
-	https://git.linaro.org/lng/odp-dpdk.git
+        https://github.com/Linaro/odp-dpdk.git
    for fully accelerated odp dpdk platform.
 
 3.4.1 Building DPDK and ODP with DPDK pktio support
@@ -227,14 +229,16 @@ Prerequisites for building the OpenDataPlane (ODP) API
    make
    sudo make install
 
+   # On RedHat you also have to add path /usr/local/lib to /etc/ld.so.conf
+
    # ... OR ... Install CUnit into user defined location. The same path is
    # used in step 4.4: PKG_CONFIG_PATH=/home/<my_cunit_path>/lib/pkgconfig
    ./configure --prefix=/home/<my_cunit_path>
    make
    make install
 
-   # Also (in Ubuntu at least) run ldconfig to update shared lib cache or
-   # reboot, before trying to run e.g. 'make distcheck'.
+   # Also (in Ubuntu/RedHat at least) run ldconfig to update shared lib
+   # cache or reboot, before trying to run e.g. 'make distcheck'.
    sudo ldconfig
 
 4.3 Cross compile of CUnit

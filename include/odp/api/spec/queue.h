@@ -11,8 +11,8 @@
  * ODP queue
  */
 
-#ifndef ODP_API_QUEUE_H_
-#define ODP_API_QUEUE_H_
+#ifndef ODP_API_SPEC_QUEUE_H_
+#define ODP_API_SPEC_QUEUE_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
@@ -30,11 +30,6 @@ extern "C" {
 /**
  * @typedef odp_queue_t
  * ODP queue
- */
-
-/**
- * @typedef odp_queue_group_t
- * Queue group instance type
  */
 
 /**
@@ -97,6 +92,54 @@ typedef enum odp_queue_op_mode_t {
 } odp_queue_op_mode_t;
 
 /**
+ * Non-blocking level
+ *
+ * A non-blocking level defines implementation guarantees for application
+ * progress when multiple threads operate on the same resource (e.g. a queue)
+ * simultaneously. The first level (ODP_BLOCKING) does not have any block
+ * freedom guarantees, but a suspending thread may block the other threads for
+ * the entire time it remains suspended (infinitely if crashed).
+ * On the contrary, actual non-blocking levels provide guarantees of progress:
+ *
+ * ODP_NONBLOCKING_LF:  A non-blocking and lock-free implementation guarantees
+ *                      that at least one of the threads successfully completes
+ *                      its operations, regardless of what other threads do.
+ *                      Application progress is guaranteed, but individual
+ *                      threads may starve while trying to execute their
+ *                      operations on the shared resource.
+ *
+ * ODP_NONBLOCKING_WF:  A non-blocking and wait-free implementation guarantees
+ *                      application progress with starvation freedom. All
+ *                      threads are guaranteed to complete their operations in
+ *                      a bounded number of steps, regardless of what other
+ *                      threads do.
+ *
+ * Non-blocking levels are listed from the weakest to the strongest guarantee of
+ * block freedom. Performance of a non-blocking implementation may be lower than
+ * the blocking one. Non-blocking guarantees are important e.g. for real-time
+ * applications when real-time and non real-time threads share a resource.
+ */
+typedef enum odp_nonblocking_t {
+	/** Blocking implementation. A suspeding thread may block all other
+	 *  threads, i.e. no block freedom guarantees. This is the lowest level.
+	 */
+	ODP_BLOCKING = 0,
+
+	/** Non-blocking and lock-free implementation. Other threads can make
+	 *  progress while a thread is suspended. Starvation freedom is not
+	 *  guaranteed.
+	 */
+	ODP_NONBLOCKING_LF,
+
+	/** Non-blocking and wait-free implementation. Other threads can make
+	 *  progress while a thread is suspended. Starvation freedom is
+	 *  guaranteed.
+	 */
+	ODP_NONBLOCKING_WF
+
+} odp_nonblocking_t;
+
+/**
  * Queue capabilities
  */
 typedef struct odp_queue_capability_t {
@@ -125,6 +168,10 @@ typedef struct odp_queue_capability_t {
 		  * store all available events. */
 		uint32_t max_size;
 
+		/** The strongest guarantee of block freedom that is supported
+		  * for plain queues. */
+		odp_nonblocking_t nonblocking;
+
 	} plain;
 
 	/** Scheduled queue capabilities */
@@ -137,6 +184,10 @@ typedef struct odp_queue_capability_t {
 		  * queues do not have a size limit, but a single queue can
 		  * store all available events. */
 		uint32_t max_size;
+
+		/** The strongest guarantee of block freedom that is supported
+		  * for scheduled queues. */
+		odp_nonblocking_t nonblocking;
 
 	} sched;
 
@@ -177,6 +228,13 @@ typedef struct odp_queue_param_t {
 	  * These parameters are considered only when queue type is
 	  * ODP_QUEUE_TYPE_SCHED. */
 	odp_schedule_param_t sched;
+
+	/** Non-blocking level
+	  *
+	  * Queue implementation must guarantee at least this level of block
+	  * freedom for queue enqueue and dequeue/schedule operations.
+	  * The default value is ODP_BLOCKING. */
+	odp_nonblocking_t nonblocking;
 
 	/** Queue context pointer
 	  *
@@ -309,7 +367,7 @@ int odp_queue_enq(odp_queue_t queue, odp_event_t ev);
  * has to take care of them.
  *
  * @param queue   Queue handle
- * @param[in] events Array of event handles
+ * @param events  Array of event handles
  * @param num     Number of event handles to enqueue
  *
  * @return Number of events actually enqueued (0 ... num)

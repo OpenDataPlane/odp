@@ -12,6 +12,7 @@
 typedef struct {
 	odp_queue_t loopq;  /**< loopback queue for "loop" device */
 	odp_bool_t promisc; /**< promiscuous mode state */
+	uint8_t idx;	    /**< index of "loop" device */
 } pktio_ops_loopback_data_t;
 
 #endif

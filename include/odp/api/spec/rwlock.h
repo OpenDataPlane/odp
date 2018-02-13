@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#ifndef ODP_API_RWLOCK_H_
-#define ODP_API_RWLOCK_H_
+#ifndef ODP_API_SPEC_RWLOCK_H_
+#define ODP_API_SPEC_RWLOCK_H_
 #include <odp/visibility_begin.h>
 
 /**

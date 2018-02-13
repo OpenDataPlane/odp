@@ -1,15 +1,12 @@
+include $(top_srcdir)/Makefile.inc
+
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libodphelper.pc
 
-LIB   = $(top_builddir)/lib
 AM_CPPFLAGS = \
-	-I$(top_builddir)/platform/@with_platform@/include \
-	-I$(top_srcdir)/helper/include \
-	-I$(top_srcdir)/include \
-	-I$(top_srcdir)/include/odp/arch/@ARCH_ABI@ \
-	-I$(top_srcdir)/platform/@with_platform@/include \
-	-I$(top_srcdir)/platform/@with_platform@/arch/@ARCH_DIR@ \
-	-I$(top_builddir)/include
+	$(ODP_INCLUDES) \
+	$(HELPER_INCLUDES)
+AM_CFLAGS = $(PTHREAD_CFLAGS)
 
 AM_LDFLAGS = -version-number '$(ODPHELPER_LIBSO_VERSION)'
 
@@ -59,5 +56,7 @@ if helper_linux
 __LIB__libodphelper_la_SOURCES += \
 				linux/thread.c
 endif
+
+__LIB__libodphelper_la_LIBADD = $(PTHREAD_LIBS) $(LIB)/libodp-linux.la
 
 lib_LTLIBRARIES = $(LIB)/libodphelper.la

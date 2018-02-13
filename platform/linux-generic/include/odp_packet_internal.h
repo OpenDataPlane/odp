@@ -23,11 +23,11 @@ extern "C" {
 #include <odp_pool_internal.h>
 #include <odp_buffer_inlines.h>
 #include <odp/api/packet.h>
+#include <odp/api/plat/packet_inline_types.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/crypto.h>
-#include <odp_crypto_internal.h>
 #include <odp_ipsec_internal.h>
-#include <odp/api/plat/packet_types.h>
+#include <odp/api/abi/packet.h>
 #include <odp_queue_if.h>
 
 /** Minimum segment length expected by packet_parse_common() */
@@ -51,8 +51,12 @@ typedef union {
 		uint32_t snap_len:1;  /**< Snap length error */
 		uint32_t l2_chksum:1; /**< L2 checksum error, checks TBD */
 		uint32_t ip_err:1;    /**< IP error,  checks TBD */
+		uint32_t l3_chksum:1; /**< L3 checksum error */
 		uint32_t tcp_err:1;   /**< TCP error, checks TBD */
 		uint32_t udp_err:1;   /**< UDP error, checks TBD */
+		uint32_t ipsec_err:1; /**< IPsec error */
+		uint32_t crypto_err:1; /**< Crypto packet operation error */
+		uint32_t l4_chksum:1; /**< L4 checksum error */
 	};
 } error_flags_t;
 
@@ -129,6 +133,9 @@ typedef struct {
 	uint16_t headroom;
 	uint16_t tailroom;
 
+	/* Event subtype */
+	int8_t subtype;
+
 	/*
 	 * Members below are not initialized by packet_init()
 	 */
@@ -149,7 +156,7 @@ typedef struct {
 	/* Type of extra data */
 	uint8_t extra_type;
 	/* Extra space for packet descriptors. E.g. DPDK mbuf  */
-	uint8_t extra[PKT_EXTRA_LEN] ODP_ALIGNED_CACHE;
+	uint8_t ODP_ALIGNED_CACHE extra[PKT_EXTRA_LEN];
 #endif
 
 	/* Context for IPsec */
@@ -162,7 +169,7 @@ typedef struct {
 /**
  * Return the packet header
  */
-static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
+static inline odp_packet_hdr_t *packet_hdr(odp_packet_t pkt)
 {
 	return (odp_packet_hdr_t *)(uintptr_t)pkt;
 }
@@ -174,7 +181,7 @@ static inline odp_packet_t packet_handle(odp_packet_hdr_t *pkt_hdr)
 
 static inline odp_buffer_hdr_t *packet_to_buf_hdr(odp_packet_t pkt)
 {
-	return &odp_packet_hdr(pkt)->buf_hdr;
+	return &packet_hdr(pkt)->buf_hdr;
 }
 
 static inline odp_packet_t packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
@@ -192,12 +199,22 @@ static inline seg_entry_t *seg_entry_last(odp_packet_hdr_t *hdr)
 	return &last->buf_hdr.seg[last_seg];
 }
 
+static inline odp_event_subtype_t packet_subtype(odp_packet_t pkt)
+{
+	return packet_hdr(pkt)->subtype;
+}
+
+static inline void packet_subtype_set(odp_packet_t pkt, int ev)
+{
+	packet_hdr(pkt)->subtype = ev;
+}
+
 /**
  * Initialize packet
  */
 static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
-	pool_t *pool = pool_entry_from_hdl(pkt_hdr->buf_hdr.pool_hdl);
+	pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 	uint32_t seg_len;
 	int num = pkt_hdr->buf_hdr.segcount;
 
@@ -231,9 +248,10 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	pkt_hdr->headroom  = CONFIG_PACKET_HEADROOM;
 	pkt_hdr->tailroom  = pool->seg_len - seg_len + CONFIG_PACKET_TAILROOM;
 
-	pkt_hdr->input = ODP_PKTIO_INVALID;
-	pkt_hdr->buf_hdr.event_subtype = ODP_EVENT_PACKET_BASIC;
+	if (odp_unlikely(pkt_hdr->subtype != ODP_EVENT_PACKET_BASIC))
+		pkt_hdr->subtype = ODP_EVENT_PACKET_BASIC;
 
+	pkt_hdr->input = ODP_PKTIO_INVALID;
 }
 
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
@@ -279,11 +297,11 @@ int packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 
 /* Perform packet parse up to a given protocol layer */
 int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
-		       odp_pktio_parser_layer_t layer);
+		       odp_proto_layer_t layer);
 
 /* Perform L3 and L4 parsing up to a given protocol layer */
 int packet_parse_l3_l4(odp_packet_hdr_t *pkt_hdr,
-		       odp_pktio_parser_layer_t layer,
+		       odp_proto_layer_t layer,
 		       uint32_t l3_offset,
 		       uint16_t ethtype);
 
@@ -313,6 +331,13 @@ static inline int packet_hdr_has_ipv6(odp_packet_hdr_t *pkt_hdr)
 	return pkt_hdr->p.input_flags.ipv6;
 }
 
+static inline void packet_set_flow_hash(odp_packet_hdr_t *pkt_hdr,
+					uint32_t flow_hash)
+{
+	pkt_hdr->flow_hash = flow_hash;
+	pkt_hdr->p.input_flags.flow_hash = 1;
+}
+
 static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 {
 	if (ts != NULL) {
@@ -322,8 +347,7 @@ static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 }
 
 int packet_parse_common(packet_parser_t *pkt_hdr, const uint8_t *ptr,
-			uint32_t pkt_len, uint32_t seg_len,
-			odp_pktio_parser_layer_t layer);
+			uint32_t pkt_len, uint32_t seg_len, int layer);
 
 int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
 

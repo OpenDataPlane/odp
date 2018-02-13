@@ -47,9 +47,9 @@ static odp_queue_t reassembled_pkts;
 static odp_atomic_u32_t packets_reassembled;
 
 /** Number of fragments processed per thread in reassembly (for printing) */
-static struct {
+static struct ODP_ALIGNED_CACHE {
 	uint32_t frags;
-} ODP_ALIGNED_CACHE thread_stats[MAX_WORKERS];
+} thread_stats[MAX_WORKERS];
 
 /** Shared hash map structure for reassembly */
 static union fraglist *fraglists;

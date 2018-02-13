@@ -1,7 +1,7 @@
 /* Copyright (c) 2013, Linaro Limited
  * All rights reserved.
  *
- * SPDX-License-Identifier:	BSD-3-Clause
+ * SPDX-License-Identifier:     BSD-3-Clause
  */
 
 #include "config.h"
@@ -89,7 +89,6 @@ static int generic_queue_init_global(void)
 	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
 		/* init locks */
 		queue_entry_t *queue = get_qentry(i);
-
 		LOCK_INIT(&queue->s.lock);
 		queue->s.index  = i;
 		queue->s.handle = queue_from_id(i);
@@ -152,7 +151,9 @@ static int generic_queue_capability(odp_queue_capability_t *capa)
 	capa->max_sched_groups  = sched_fn->num_grps();
 	capa->sched_prios       = odp_schedule_num_prio();
 	capa->plain.max_num     = capa->max_queues;
+	capa->plain.nonblocking = ODP_BLOCKING;
 	capa->sched.max_num     = capa->max_queues;
+	capa->sched.nonblocking = ODP_BLOCKING;
 
 	return 0;
 }
@@ -254,7 +255,6 @@ void queue_destroy_finalize(uint32_t queue_index)
 static int generic_queue_destroy(odp_queue_t handle)
 {
 	queue_entry_t *queue;
-
 	queue = handle_to_qentry(handle);
 
 	if (handle == ODP_QUEUE_INVALID)
@@ -606,6 +606,7 @@ static void generic_queue_param_init(odp_queue_param_t *params)
 	params->type = ODP_QUEUE_TYPE_PLAIN;
 	params->enq_mode = ODP_QUEUE_OP_MT;
 	params->deq_mode = ODP_QUEUE_OP_MT;
+	params->nonblocking = ODP_BLOCKING;
 	params->sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	params->sched.sync  = ODP_SCHED_SYNC_PARALLEL;
 	params->sched.group = ODP_SCHED_GROUP_ALL;
@@ -797,5 +798,5 @@ queue_fn_t queue_default_fn = {
 	.set_pktout = queue_set_pktout,
 	.get_pktin = queue_get_pktin,
 	.set_pktin = queue_set_pktin,
-	.set_enq_deq_fn = queue_set_enq_deq_func,
+	.set_enq_deq_fn = queue_set_enq_deq_func
 };

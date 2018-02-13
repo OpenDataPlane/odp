@@ -1,1 +1,1 @@
-../../../../linux-generic/include/odp/api/thread.h
+../../../../linux-generic/include-abi/odp/api/abi/thread.h

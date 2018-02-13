@@ -11,8 +11,8 @@
  * ODP pool
  */
 
-#ifndef ODP_API_POOL_H_
-#define ODP_API_POOL_H_
+#ifndef ODP_API_SPEC_POOL_H_
+#define ODP_API_SPEC_POOL_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
@@ -40,6 +40,9 @@ extern "C" {
  * @def ODP_POOL_NAME_LEN
  * Maximum pool name length in chars including null char
  */
+
+/** Maximum number of packet pool subparameters */
+#define ODP_POOL_MAX_SUBPARAMS  7
 
 /**
  * Pool capabilities
@@ -134,6 +137,12 @@ typedef struct odp_pool_capability_t {
 		 * The value of zero means that limited only by the available
 		 * memory size for the pool. */
 		uint32_t max_uarea_size;
+
+		/** Maximum number of subparameters
+		 *
+		 *  Maximum number of packet pool subparameters. Valid range is
+		 *  0 ... ODP_POOL_MAX_SUBPARAMS. */
+		uint8_t max_num_subparam;
 	} pkt;
 
 	/** Timeout pool capabilities  */
@@ -163,79 +172,133 @@ typedef struct odp_pool_capability_t {
 int odp_pool_capability(odp_pool_capability_t *capa);
 
 /**
+ * Packet pool subparameters
+ */
+typedef struct odp_pool_pkt_subparam_t {
+	/** Number of 'len' byte packets. */
+	uint32_t num;
+
+	/** Packet length in bytes */
+	uint32_t len;
+
+} odp_pool_pkt_subparam_t;
+
+/**
  * Pool parameters
- * Used to communicate pool creation options.
- * @note A single thread may not be able to allocate all 'num' elements
- * from the pool at any particular time, as other threads or hardware
- * blocks are allowed to keep some for caching purposes.
+ *
+ * A note for all pool types: a single thread may not be able to allocate all
+ * 'num' elements from the pool at any particular time, as implementations are
+ * allowed to store some elements (per thread and HW engine) for caching
+ * purposes.
  */
 typedef struct odp_pool_param_t {
 	/** Pool type */
 	int type;
 
-	/** Variant parameters for different pool types */
-	union {
-		/** Parameters for buffer pools */
-		struct {
-			/** Number of buffers in the pool */
-			uint32_t num;
+	/** Parameters for buffer pools */
+	struct {
+		/** Number of buffers in the pool */
+		uint32_t num;
 
-			/** Buffer size in bytes. The maximum number of bytes
-			    application will store in each buffer. */
-			uint32_t size;
+		/** Buffer size in bytes. The maximum number of bytes
+		 *  application will store in each buffer.
+		 */
+		uint32_t size;
 
-			/** Minimum buffer alignment in bytes. Valid values are
-			    powers of two. Use 0 for default alignment.
-			    Default will always be a multiple of 8. */
-			uint32_t align;
-		} buf;
+		/** Minimum buffer alignment in bytes. Valid values are
+		 *  powers of two. Use 0 for default alignment.
+		 *  Default will always be a multiple of 8.
+		 */
+		uint32_t align;
+	} buf;
 
-		/** Parameters for packet pools */
-		struct {
-			/** The number of packets that the pool must provide
-			    that are packet length 'len' bytes or smaller.
-			    The maximum value is defined by pool capability
-			    pkt.max_num. */
-			uint32_t num;
+	/** Parameters for packet pools */
+	struct {
+		/** Minimum number of 'len' byte packets.
+		 *
+		 *  The pool must contain at least this many packets that are
+		 *  'len' bytes or smaller. An implementation may round up the
+		 *  value, as long as the 'max_num' parameter below is not
+		 *  violated. The maximum value for this field is defined by
+		 *  pool capability pkt.max_num.
+		 */
+		uint32_t num;
 
-			/** Minimum packet length that the pool must provide
-			    'num' packets. The number of packets may be less
-			    than 'num' when packets are larger than 'len'.
-			    The maximum value is defined by pool capability
-			    pkt.max_len. Use 0 for default. */
-			uint32_t len;
+		/** Maximum number of packets.
+		 *
+		 *  This is the maximum number of packets of any length that can
+		 *  be allocated from the pool. The maximum value is defined by
+		 *  pool capability pkt.max_num. Use 0 when there's no
+		 *  requirement for the maximum number of packets. The default
+		 *  value is 0.
+		 */
+		uint32_t max_num;
 
-			/** Maximum packet length that will be allocated from
-			    the pool. The maximum value is defined by pool
-			    capability pkt.max_len. Use 0 for default (the
-			    pool maximum). */
-			uint32_t max_len;
+		/** Minimum length of 'num' packets.
+		 *
+		 *  The pool must contain at least 'num' packets up to this
+		 *  packet length (1 ... 'len' bytes). The maximum value for
+		 *  this field is defined by pool capability pkt.max_len.
+		 *  Use 0 for default.
+		 */
+		uint32_t len;
 
-			/** Minimum number of packet data bytes that are stored
-			    in the first segment of a packet. The maximum value
-			    is defined by pool capability pkt.max_seg_len.
-			    Use 0 for default. */
-			uint32_t seg_len;
+		/** Maximum packet length that will be allocated from
+		 *  the pool. The maximum value is defined by pool capability
+		 *  pkt.max_len. Use 0 for default (the pool maximum).
+		 */
+		uint32_t max_len;
 
-			/** User area size in bytes. The maximum value is
-			    defined by pool capability pkt.max_uarea_size.
-			    Specify as 0 if no user area is needed. */
-			uint32_t uarea_size;
+		/** Minimum number of packet data bytes that are stored in the
+		 *  first segment of a packet. The maximum value is defined by
+		 *  pool capability pkt.max_seg_len. Use 0 for default.
+		 */
+		uint32_t seg_len;
 
-			/** Minimum Headroom size in bytes. Each newly allocated
-			    packet from the pool must have at least this much
-			    headroom. The maximum value is defined by pool
-			    capability pkt.max_headroom.
-			    Use zero if headroom is not needed. */
-			uint32_t headroom;
-		} pkt;
+		/** User area size in bytes. The maximum value is defined by
+		 *  pool capability pkt.max_uarea_size. Specify as 0 if no user
+		 *  area is needed.
+		 */
+		uint32_t uarea_size;
 
-		/** Parameters for timeout pools */
-		struct {
-			/** Number of timeouts in the pool */
-			uint32_t num;
-		} tmo;
-	};
+		/** Minimum headroom size in bytes. Each newly allocated
+		 *  packet from the pool must have at least this much headroom.
+		 *  The maximum value is defined by pool capability
+		 *  pkt.max_headroom. Use zero if headroom is not needed.
+		 */
+		uint32_t headroom;
+
+		/** Number of subparameters
+		 *
+		 *  The number of subparameter table entries used. The maximum
+		 *  value is defined by pool capability pkt.max_num_subparam.
+		 *  The default value is 0.
+		 */
+		uint8_t num_subparam;
+
+		/** Subparameter table
+		 *
+		 *  Subparameters continue pool configuration with additional
+		 *  packet length requirements. The first table entry follows
+		 *  the num/len specification above. So that, sub[0].len > 'len'
+		 *  and sub[0].num refers to packet lengths between 'len' + 1
+		 *  and sub[0].len. Similarly, sub[1] follows sub[0]
+		 *  specification, and so on.
+		 *
+		 *  Each requirement is supported separately and may be rounded
+		 *  up, as long as the 'max_num' parameter is not violated. It's
+		 *  implementation specific if some requirements are supported
+		 *  simultaneously (e.g. due to subpool design).
+		 */
+		odp_pool_pkt_subparam_t sub[ODP_POOL_MAX_SUBPARAMS];
+	} pkt;
+
+	/** Parameters for timeout pools */
+	struct {
+		/** Number of timeouts in the pool */
+		uint32_t num;
+	} tmo;
+
 } odp_pool_param_t;
 
 /** Packet pool*/
@@ -292,24 +355,42 @@ odp_pool_t odp_pool_lookup(const char *name);
  * Used to get information about a pool.
  */
 typedef struct odp_pool_info_t {
-	const char *name;          /**< pool name */
-	odp_pool_param_t params;   /**< pool parameters */
+	/** Pool name */
+	const char *name;
+
+	/** Copy of pool parameters */
+	odp_pool_param_t params;
+
+	/** Additional info for packet pools */
+	struct {
+		/** Maximum number of packets of any length
+		 *
+		 *  This is the maximum number of packets that can be allocated
+		 *  from the pool at anytime. Application can use this e.g.
+		 *  to prepare enough per packet contexts.
+		 */
+		uint32_t max_num;
+
+	} pkt;
 
 	/** Minimum data address.
-	 * This is the minimum address that application accessible
-	 * data of any object (event) allocated from the pool may
-	 * locate. When there's no application accessible data
-	 * (e.g. ODP_POOL_TIMEOUT pools), the value may be zero.
+	 *
+	 *  This is the minimum address that application accessible
+	 *  data of any object (event) allocated from the pool may
+	 *  locate. When there's no application accessible data
+	 *  (e.g. ODP_POOL_TIMEOUT pools), the value may be zero.
 	 */
 	uintptr_t min_data_addr;
 
 	/** Maximum data address.
-	 * This is the maximum address that application accessible
-	 * data of any object (event) allocated from the pool may
-	 * locate. When there's no application accessible data
-	 * (e.g. ODP_POOL_TIMEOUT pools), the value may be zero.
+	 *
+	 *  This is the maximum address that application accessible
+	 *  data of any object (event) allocated from the pool may
+	 *  locate. When there's no application accessible data
+	 *  (e.g. ODP_POOL_TIMEOUT pools), the value may be zero.
 	 */
 	uintptr_t max_data_addr;
+
 } odp_pool_info_t;
 
 /**
@@ -323,7 +404,6 @@ typedef struct odp_pool_info_t {
  * @retval 0 Success
  * @retval -1 Failure.  Info could not be retrieved.
  */
-
 int odp_pool_info(odp_pool_t pool, odp_pool_info_t *info);
 
 /**

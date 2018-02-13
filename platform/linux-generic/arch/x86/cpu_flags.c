@@ -39,9 +39,9 @@
 
 #include "config.h"
 
-#include <cpu_flags.h>
+#include "cpu_flags.h"
 #include <odp_debug_internal.h>
-#include <odp_time_internal.h>
+#include <odp_arch_time_internal.h>
 #include <stdio.h>
 #include <stdint.h>
 

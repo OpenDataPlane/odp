@@ -1,1 +1,1 @@
-../../../../linux-generic/include/odp/api/cpumask.h
+../../../../linux-generic/include-abi/odp/api/abi/cpumask.h

@@ -27,4 +27,10 @@ DIST_SUBDIRS = $(SUBDIRS)
 
 @DX_RULES@
 
-EXTRA_DIST = bootstrap $(DX_CONFIG) CHANGELOG config/README
+EXTRA_DIST = bootstrap CHANGELOG config/README
+
+distcheck-hook:
+	if test -n "$(DX_CLEANFILES)" ; \
+	then \
+		$(MAKE) doxygen-doc ; \
+	fi

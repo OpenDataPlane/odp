@@ -34,4 +34,17 @@ fi
 
 rm -f pcapout.pcap
 
+./odp_l2fwd_simple${EXEEXT} null:0 null:1 \
+	02:00:00:00:00:01 02:00:00:00:00:02 &
+
+sleep 1
+kill -s SIGINT $!
+wait $!
+STATUS=$?
+
+if [ "$STATUS" -ne 255 ]; then
+  echo "Error: status was: $STATUS, expected 255"
+  exit 1
+fi
+
 exit 0

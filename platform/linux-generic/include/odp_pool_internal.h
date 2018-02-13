@@ -27,60 +27,63 @@ extern "C" {
 #include <odp_ring_internal.h>
 #include <odp/api/plat/strong_types.h>
 
-#define CACHE_BURST    32
+/* Used by both pool and buffer generic implementations */
+#define CACHE_BURST 32
 
-typedef struct pool_cache_t {
+typedef struct ODP_ALIGNED_CACHE pool_cache_t {
 	uint32_t num;
 	uint32_t buf_index[CONFIG_POOL_CACHE_SIZE];
 
-} pool_cache_t ODP_ALIGNED_CACHE;
+} pool_cache_t;
 
 /* Buffer header ring */
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	/* Ring header */
 	ring_t   hdr;
 
 	/* Ring data: buffer handles */
-	uint32_t buf[];
+	uint32_t buf[CONFIG_POOL_MAX_NUM];
 
-} pool_ring_t ODP_ALIGNED_CACHE;
+} pool_ring_t;
 
 /* Callback function for pool destroy */
 typedef void (*pool_destroy_cb_fn)(void *pool);
 
 typedef struct pool_t {
-	odp_ticketlock_t lock ODP_ALIGNED_CACHE;
+	odp_ticketlock_t ODP_ALIGNED_CACHE lock;
 
 	char             name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t params;
 	odp_pool_t       pool_hdl;
+	uint32_t         pool_idx;
+	uint32_t         ring_mask;
 	odp_shm_t        shm;
 	odp_shm_t        uarea_shm;
+	int              reserved;
 	uint32_t         num;
 	uint32_t         align;
-	uint32_t         shm_size;
-	uint32_t         uarea_shm_size;
-	odp_shm_t        ring_shm;
-	/* Used by DPDK zero-copy pktio */
-	pool_destroy_cb_fn ext_destroy;
-	void            *ext_desc;
-
-	/* Below is for data plane */
-	uint8_t         *base_addr ODP_ALIGNED_CACHE;
-	uint8_t         *uarea_base_addr;
-	pool_ring_t     *ring;
 	uint32_t         headroom;
 	uint32_t         tailroom;
 	uint32_t         seg_len;
+	uint32_t         max_seg_len;
 	uint32_t         max_len;
 	uint32_t         uarea_size;
 	uint32_t         block_size;
-	uint32_t         pool_idx;
-	uint32_t         ring_mask;
-	uint8_t          reserved;
+	uint32_t         shm_size;
+	uint32_t         uarea_shm_size;
+	uint8_t         *base_addr;
+	uint8_t         *uarea_base_addr;
+
+	/* Used by DPDK zero-copy pktio */
 	uint8_t		mem_from_huge_pages;
+	pool_destroy_cb_fn ext_destroy;
+	void            *ext_desc;
 
 	pool_cache_t     local_cache[ODP_THREAD_COUNT_MAX];
+
+	odp_shm_t        ring_shm;
+	pool_ring_t     *ring;
+
 } pool_t;
 
 typedef struct pool_table_t {
@@ -96,7 +99,7 @@ typedef struct pool_local_t {
 	int thr_id;
 } pool_local_t;
 
-extern __thread pool_local_t local;
+extern __thread pool_local_t _pool_local_data;
 
 static inline pool_t *pool_entry(uint32_t pool_idx)
 {
@@ -113,9 +116,13 @@ static inline odp_buffer_hdr_t *buf_hdl_to_hdr(odp_buffer_t buf)
 	return (odp_buffer_hdr_t *)(uintptr_t)buf;
 }
 
-static inline odp_pool_t pool_index_to_handle(uint32_t pool_idx)
+static inline uint32_t buf_hdr_to_index(odp_buffer_hdr_t *buf_hdr)
 {
-	return _odp_cast_scalar(odp_pool_t, pool_idx);
+	pool_t *pool = buf_hdr->pool_ptr;
+	uint32_t index = ((uint8_t *)buf_hdr - pool->base_addr)
+			 / pool->block_size;
+
+	return index;
 }
 
 static inline pool_t *pool_from_buf(odp_buffer_t buf)
@@ -139,14 +146,6 @@ static inline odp_buffer_hdr_t *buf_hdr_from_index(pool_t *pool,
 	return buf_hdr;
 }
 
-static inline uint32_t buf_hdr_to_index(odp_buffer_hdr_t *buf_hdr)
-{
-	pool_t *pool = buf_hdr->pool_ptr;
-	uint32_t index = ((uint8_t *)buf_hdr - pool->base_addr)
-			 / pool->block_size;
-
-	return index;
-}
 int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int num);
 void buffer_free_multi(odp_buffer_hdr_t *buf_hdr[], int num_free);
 

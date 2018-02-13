@@ -7,7 +7,7 @@ OpenDataPlane (ODP) project source code.
     http://www.opendataplane.org/
 
 Main git repository:
-    git://git.linaro.org/lng/odp.git
+    https://github.com/Linaro/odp.git
 
     How to build:
     Look in platform/linux-*/README for more detail how to build.
@@ -26,16 +26,19 @@ Main git repository:
 
     To execute all the testcases, assuming CUnit is installed for the validation tests:
         ./bootstrap
-        ./configure --enable-test-perf --enable-test-vald
+        ./configure
         make check
 
     To generate the users guides:
         ./bootstrap
-        ./configure --enable-user-guide
+        ./configure --enable-user-guides
         make
 
 Patches tracking system:
-    http://patches.opendataplane.org/project/lng-odp/list/
+    Patchwork:
+      http://patches.opendataplane.org/project/lng-odp/list/
+    Github pull requests:
+      https://github.com/Linaro/odp/pulls
 
 Mailing list:
     lng-odp@lists.linaro.org

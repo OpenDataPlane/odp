@@ -3,11 +3,12 @@
  * Copyright (c) 2017, Linaro Limited
  * All rights reserved.
  *
- * SPDX-License-Identifier:	BSD-3-Clause
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 #include <config.h>
 
 #include <odp/api/hints.h>
+#include <odp/api/ticketlock.h>
 #include <odp/api/plat/ticketlock_inlines.h>
 #include <odp/api/queue.h>
 #include <odp/api/schedule.h>
@@ -309,8 +310,10 @@ static int scalable_queue_capability(odp_queue_capability_t *capa)
 	capa->sched_prios       = odp_schedule_num_prio();
 	capa->plain.max_num     = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
 	capa->plain.max_size    = 0;
+	capa->plain.nonblocking = ODP_BLOCKING;
 	capa->sched.max_num     = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
 	capa->sched.max_size    = 0;
+	capa->sched.nonblocking = ODP_BLOCKING;
 
 	return 0;
 }
@@ -858,6 +861,7 @@ static void scalable_queue_param_init(odp_queue_param_t *params)
 	params->type = ODP_QUEUE_TYPE_PLAIN;
 	params->enq_mode = ODP_QUEUE_OP_MT;
 	params->deq_mode = ODP_QUEUE_OP_MT;
+	params->nonblocking = ODP_BLOCKING;
 	params->sched.prio = ODP_SCHED_PRIO_DEFAULT;
 	params->sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	params->sched.group = ODP_SCHED_GROUP_ALL;
@@ -1008,5 +1012,5 @@ queue_fn_t queue_scalable_fn = {
 	.set_pktout = queue_set_pktout,
 	.get_pktin = queue_get_pktin,
 	.set_pktin = queue_set_pktin,
-	.set_enq_deq_fn = queue_set_enq_deq_func,
+	.set_enq_deq_fn = queue_set_enq_deq_func
 };

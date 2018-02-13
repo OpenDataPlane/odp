@@ -6,7 +6,7 @@ PKG_CHECK_MODULES([LIBCONFIG], [libconfig >= 1.3.2])
 ODP_VISIBILITY
 ODP_ATOMIC
 
-m4_include([platform/linux-generic/m4/odp_pthread.m4])
+ODP_PTHREAD
 ODP_TIMER
 ODP_OPENSSL
 m4_include([platform/linux-generic/m4/odp_pcap.m4])
@@ -25,7 +25,6 @@ AM_CONDITIONAL([PLATFORM_IS_LINUX_GENERIC],
 
 AC_CONFIG_FILES([platform/linux-generic/Makefile
 		 platform/linux-generic/libodp-linux.pc
-		 platform/linux-generic/include/odp/api/plat/static_inline.h
 		 platform/linux-generic/test/Makefile
 		 platform/linux-generic/test/validation/api/shmem/Makefile
 		 platform/linux-generic/test/validation/api/pktio/Makefile

@@ -30,35 +30,36 @@ ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
 		  , "DPDK mempool cache size failure");
 #endif
 
-#define DPDK_IXGBE_MIN_RX_BURST 4
+/* Minimum RX burst size */
+#define DPDK_MIN_RX_BURST 4
 
 /** Cache for storing packets */
 struct pkt_cache_t {
 	/** array for storing extra RX packets */
-	struct rte_mbuf *pkt[DPDK_IXGBE_MIN_RX_BURST];
+	struct rte_mbuf *pkt[DPDK_MIN_RX_BURST];
 	unsigned idx;			  /**< head of cache */
 	unsigned count;			  /**< packets in cache */
 };
 
-typedef union {
+typedef union ODP_ALIGNED_CACHE {
 	struct pkt_cache_t s;
 	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct pkt_cache_t))];
-} pkt_cache_t ODP_ALIGNED_CACHE;
+} pkt_cache_t;
 
 /** Packet IO using DPDK interface */
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	odp_pool_t pool;		  /**< pool to alloc packets from */
 	struct rte_mempool *pkt_pool;	  /**< DPDK packet pool */
-	odp_pktio_capability_t	capa;	  /**< interface capabilities */
 	uint32_t data_room;		  /**< maximum packet length */
-	uint16_t mtu;			  /**< maximum transmission unit */
-	/** Use system call to get/set vdev promisc mode */
-	odp_bool_t vdev_sysc_promisc;
-	uint8_t port_id;		  /**< DPDK port identifier */
 	unsigned min_rx_burst;		  /**< minimum RX burst size */
 	odp_pktin_hash_proto_t hash;	  /**< Packet input hash protocol */
-	odp_bool_t lockless_rx;		  /**< no locking for rx */
-	odp_bool_t lockless_tx;		  /**< no locking for tx */
+	uint16_t mtu;			  /**< maximum transmission unit */
+	/** Use system call to get/set vdev promisc mode */
+	uint8_t vdev_sysc_promisc;
+	uint8_t lockless_rx;		  /**< no locking for rx */
+	uint8_t lockless_tx;		  /**< no locking for tx */
+	uint8_t port_id;			  /**< DPDK port identifier */
+	/* --- 34 bytes --- */
 	odp_ticketlock_t rx_lock[PKTIO_MAX_QUEUES];  /**< RX queue locks */
 	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES];  /**< TX queue locks */
 	/** cache for storing extra RX packets */

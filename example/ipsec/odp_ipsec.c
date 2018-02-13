@@ -40,7 +40,6 @@
 #include <odp_ipsec_sa_db.h>
 #include <odp_ipsec_sp_db.h>
 #include <odp_ipsec_fwd_db.h>
-#include <odp_ipsec_loop_db.h>
 #include <odp_ipsec_cache.h>
 #include <odp_ipsec_stream.h>
 
@@ -407,76 +406,20 @@ void ipsec_init_post(crypto_api_mode_e api_mode)
 	}
 }
 
-/**
- * Initialize loopback
- *
- * Initialize ODP queues to create our own idea of loopbacks, which allow
- * testing without physical interfaces.  Interface name string will be of
- * the format "loopX" where X is the decimal number of the interface.
- *
- * @param intf     Loopback interface name string
- */
-#if 0 /* Temporarely disable loopback mode. Needs packet output event queues */
 static
-void initialize_loop(char *intf)
+int check_stream_db_out(const char *intf)
 {
-	int idx;
-	odp_queue_t outq_def;
-	odp_queue_t inq_def;
-	char queue_name[ODP_QUEUE_NAME_LEN];
-	odp_queue_param_t qparam;
-	uint8_t *mac;
-	char mac_str[MAX_STRING];
+	stream_db_entry_t *stream = NULL;
 
-	/* Derive loopback interface index */
-	idx = loop_if_index(intf);
-	if (idx < 0) {
-		EXAMPLE_ERR("Error: loopback \"%s\" invalid\n", intf);
-		exit(EXIT_FAILURE);
+	/* For each stream look for input and output IPsec entries */
+	for (stream = stream_db->list; NULL != stream; stream = stream->next) {
+		if (!strcmp(stream->output.intf, intf))
+			return 1;
 	}
 
-	/* Create input queue */
-	odp_queue_param_init(&qparam);
-	qparam.type        = ODP_QUEUE_TYPE_SCHED;
-	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_ALL;
-	snprintf(queue_name, sizeof(queue_name), "%i-loop_inq_def", idx);
-	queue_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
-
-	inq_def = queue_create(queue_name, &qparam);
-	if (ODP_QUEUE_INVALID == inq_def) {
-		EXAMPLE_ERR("Error: input queue creation failed for %s\n",
-			    intf);
-		exit(EXIT_FAILURE);
-	}
-	/* Create output queue */
-	snprintf(queue_name, sizeof(queue_name), "%i-loop_outq_def", idx);
-	queue_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
-
-	outq_def = queue_create(queue_name, NULL);
-	if (ODP_QUEUE_INVALID == outq_def) {
-		EXAMPLE_ERR("Error: output queue creation failed for %s\n",
-			    intf);
-		exit(EXIT_FAILURE);
-	}
-
-	/* Initialize the loopback DB entry */
-	create_loopback_db_entry(idx, inq_def, outq_def, pkt_pool);
-	mac = query_loopback_db_mac(idx);
-
-	printf("Created loop:%02i, queue mode (ATOMIC queues)\n"
-	       "          default loop%02i-INPUT queue:%" PRIu64 "\n"
-	       "          default loop%02i-OUTPUT queue:%" PRIu64 "\n"
-	       "          source mac address %s\n",
-	       idx, idx, odp_queue_to_u64(inq_def), idx,
-	       odp_queue_to_u64(outq_def),
-	       mac_addr_str(mac_str, mac));
-
-	/* Resolve any routes using this interface for output */
-	resolve_fwd_db(intf, outq_def, mac);
+	return 0;
 }
-#endif
+
 /**
  * Initialize interface
  *
@@ -499,7 +442,8 @@ void initialize_intf(char *intf)
 
 	odp_pktio_param_init(&pktio_param);
 
-	if (getenv("ODP_IPSEC_USE_POLL_QUEUES"))
+	if (getenv("ODP_IPSEC_USE_POLL_QUEUES") ||
+	    check_stream_db_out(intf))
 		pktio_param.in_mode = ODP_PKTIN_MODE_QUEUE;
 	else
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
@@ -558,7 +502,7 @@ void initialize_intf(char *intf)
 	       mac_addr_str(src_mac_str, src_mac));
 
 	/* Resolve any routes using this interface for output */
-	resolve_fwd_db(intf, pktout, src_mac);
+	resolve_fwd_db(intf, pktio, pktout, src_mac);
 }
 
 /**
@@ -1267,7 +1211,6 @@ main(int argc, char *argv[])
 	/* Must init our databases before parsing args */
 	ipsec_init_pre();
 	init_fwd_db();
-	init_loopback_db();
 	init_stream_db();
 
 	/* Parse and store the application arguments */
@@ -1328,12 +1271,7 @@ main(int argc, char *argv[])
 
 	/* Initialize interfaces (which resolves FWD DB entries */
 	for (i = 0; i < args->appl.if_count; i++) {
-#if 0 /* Temporarely disable loopback mode. Needs packet output event queues */
-		if (!strncmp("loop", args->appl.if_names[i], strlen("loop")))
-			initialize_loop(args->appl.if_names[i]);
-		else
-#endif
-			initialize_intf(args->appl.if_names[i]);
+		initialize_intf(args->appl.if_names[i]);
 	}
 
 	/* If we have test streams build them before starting workers */
@@ -1377,9 +1315,6 @@ main(int argc, char *argv[])
 	shm = odp_shm_lookup("shm_fwd_db");
 	if (odp_shm_free(shm) != 0)
 		EXAMPLE_ERR("Error: shm free shm_fwd_db failed\n");
-	shm = odp_shm_lookup("loopback_db");
-	if (odp_shm_free(shm) != 0)
-		EXAMPLE_ERR("Error: shm free loopback_db failed\n");
 	shm = odp_shm_lookup("shm_sa_db");
 	if (odp_shm_free(shm) != 0)
 		EXAMPLE_ERR("Error: shm free shm_sa_db failed\n");

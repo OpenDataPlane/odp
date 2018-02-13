@@ -1,5 +1,7 @@
 include $(top_srcdir)/example/Makefile.inc
 
+AM_CFLAGS += -I$(top_srcdir)/platform/@with_platform@/include
+
 bin_PROGRAMS = odp_ddf_app$(EXEEXT)
 odp_ddf_app_LDFLAGS = $(AM_LDFLAGS) $(DPDK_LIBS) -static -Wl,--export-dynamic
 odp_ddf_app_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/example

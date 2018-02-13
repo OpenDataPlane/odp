@@ -1,10 +1,6 @@
-LIB   = $(top_builddir)/lib
+include $(top_srcdir)/example/Makefile.inc
 
-AM_CPPFLAGS =  -I$(srcdir) \
-		-I$(top_srcdir)/include \
-		-I$(top_srcdir)/platform/@with_platform@/include \
-		-I$(top_srcdir)/platform/@with_platform@/arch/@ARCH_DIR@
-
+AM_CFLAGS += -I$(top_srcdir)/platform/@with_platform@/include
 lib_LTLIBRARIES = $(LIB)/libddf_ifs.la
 
 noinst_HEADERS = \

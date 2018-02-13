@@ -44,16 +44,6 @@ static inline void _odp_buffer_event_type_set(odp_buffer_t buf, int ev)
 	buf_hdl_to_hdr(buf)->event_type = ev;
 }
 
-static inline odp_event_subtype_t _odp_buffer_event_subtype(odp_buffer_t buf)
-{
-	return buf_hdl_to_hdr(buf)->event_subtype;
-}
-
-static inline void _odp_buffer_event_subtype_set(odp_buffer_t buf, int ev)
-{
-	buf_hdl_to_hdr(buf)->event_subtype = ev;
-}
-
 #ifdef __cplusplus
 }
 #endif

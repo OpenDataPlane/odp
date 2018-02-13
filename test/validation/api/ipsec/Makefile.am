@@ -11,17 +11,14 @@ libtestipsec_la_SOURCES = \
 	ipsec.c
 
 test_PROGRAMS = \
-	ipsec_sync$(EXEEXT) \
-	ipsec_async$(EXEEXT) \
-	ipsec_inline_in$(EXEEXT) \
-	ipsec_inline_out$(EXEEXT)
+	ipsec_sync \
+	ipsec_async \
+	ipsec_inline_in \
+	ipsec_inline_out
 
 ipsec_sync_SOURCES = ipsec_sync.c
 ipsec_async_SOURCES = ipsec_async.c
 ipsec_inline_in_SOURCES = ipsec_inline_in.c
 ipsec_inline_out_SOURCES = ipsec_inline_out.c
 
-ipsec_sync_LDADD = libtestipsec.la $(LIBCUNIT_COMMON) $(LIBODP)
-ipsec_async_LDADD = libtestipsec.la $(LIBCUNIT_COMMON) $(LIBODP)
-ipsec_inline_in_LDADD = libtestipsec.la $(LIBCUNIT_COMMON) $(LIBODP)
-ipsec_inline_out_LDADD = libtestipsec.la $(LIBCUNIT_COMMON) $(LIBODP)
+LDADD += libtestipsec.la

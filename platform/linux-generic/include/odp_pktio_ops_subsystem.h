@@ -35,6 +35,14 @@ ODP_SUBSYSTEM_API(pktio_ops, odp_time_t, pktin_ts_from_ns,
 		  pktio_entry_t *, uint64_t ns);
 ODP_SUBSYSTEM_API(pktio_ops, int, recv, pktio_entry_t *,
 		  int index, odp_packet_t packets[], int count);
+ODP_SUBSYSTEM_API(pktio_ops, int, recv_tmo, pktio_entry_t *,
+		  int index, odp_packet_t packets[], int count,
+		  uint64_t wait_usecs);
+ODP_SUBSYSTEM_API(pktio_ops, int, recv_mq_tmo, pktio_entry_t *entry[],
+		  int index[], int num_q, odp_packet_t packets[],
+		  int count, unsigned *from, uint64_t wait_usecs);
+ODP_SUBSYSTEM_API(pktio_ops, int, fd_set, pktio_entry_t *,
+		  int index, fd_set *readfds);
 ODP_SUBSYSTEM_API(pktio_ops, int, send, pktio_entry_t *,
 		  int index, const odp_packet_t packets[], int count);
 ODP_SUBSYSTEM_API(pktio_ops, uint32_t, mtu_get, pktio_entry_t *);
@@ -72,6 +80,9 @@ typedef ODP_MODULE_CLASS(pktio_ops) {
 	odp_api_proto(pktio_ops, pktin_ts_res) pktin_ts_res;
 	odp_api_proto(pktio_ops, pktin_ts_from_ns) pktin_ts_from_ns;
 	odp_api_proto(pktio_ops, recv) recv;
+	odp_api_proto(pktio_ops, recv_tmo) recv_tmo;
+	odp_api_proto(pktio_ops, recv_mq_tmo) recv_mq_tmo;
+	odp_api_proto(pktio_ops, fd_set) fd_set;
 	odp_api_proto(pktio_ops, send) send;
 	odp_api_proto(pktio_ops, mtu_get) mtu_get;
 	odp_api_proto(pktio_ops, promisc_mode_set) promisc_mode_set;

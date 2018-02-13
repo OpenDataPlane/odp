@@ -18,8 +18,8 @@
 extern "C" {
 #endif
 
-#include <config.h>
-
+#include <odp/api/packet_io.h>
+#include <odp/api/plat/pktio_inlines.h>
 #include <odp/api/spinlock.h>
 #include <odp/api/ticketlock.h>
 #include <odp_classification_datamodel.h>
@@ -48,7 +48,8 @@ struct pktio_entry {
 	/* These two locks together lock the whole pktio device */
 	odp_ticketlock_t rxl;		/**< RX ticketlock */
 	odp_ticketlock_t txl;		/**< TX ticketlock */
-	int cls_enabled;		/**< is classifier enabled */
+	uint8_t cls_enabled;            /**< classifier enabled */
+	uint8_t chksum_insert_ena;      /**< pktout checksum offload enabled */
 	odp_pktio_t handle;		/**< pktio handle */
 	enum {
 		/* Not allocated */
@@ -81,6 +82,7 @@ struct pktio_entry {
 
 	odp_pool_t pool;
 	odp_pktio_param_t param;
+	odp_pktio_capability_t capa;	/**< Packet IO capabilities */
 
 	/* Storage for queue handles
 	 * Multi-queue support is pktio driver specific */
@@ -111,13 +113,10 @@ typedef struct {
 
 extern void *pktio_entry_ptr[];
 
-static inline int pktio_to_id(odp_pktio_t pktio)
-{
-	return _odp_typeval(pktio) - 1;
-}
-
 static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 {
+	int idx;
+
 	if (odp_unlikely(pktio == ODP_PKTIO_INVALID))
 		return NULL;
 
@@ -127,7 +126,9 @@ static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 		return NULL;
 	}
 
-	return pktio_entry_ptr[pktio_to_id(pktio)];
+	idx = _odp_pktio_index(pktio);
+
+	return pktio_entry_ptr[idx];
 }
 
 static inline int pktio_cls_enabled(pktio_entry_t *entry)
@@ -145,6 +146,26 @@ int pktin_poll_one(int pktio_index,
 		   odp_event_t evt_tbl[]);
 int pktin_poll(int pktio_index, int num_queue, int index[]);
 void pktio_stop_finalize(int pktio_index);
+
+/**
+ * Try interrupt-driven receive
+ *
+ * @param queues Pktin queues
+ * @param num_q Number of queues
+ * @param packets Output packet slots
+ * @param num Number of output packet slots
+ * @param from Queue from which the call received packets
+ * @param usecs Microseconds to wait
+ * @param trial_successful Will receive information whether trial was successful
+ *
+ * @return >=0 on success, number of packets received
+ * @return <0 on failure
+ */
+int sock_recv_mq_tmo_try_int_driven(const struct odp_pktin_queue_t queues[],
+				    unsigned num_q, unsigned *from,
+				    odp_packet_t packets[], int num,
+				    uint64_t usecs,
+				    int *trial_successful);
 
 #ifdef __cplusplus
 }

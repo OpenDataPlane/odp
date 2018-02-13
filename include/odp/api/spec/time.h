@@ -11,8 +11,8 @@
  * ODP time
  */
 
-#ifndef ODP_API_TIME_H_
-#define ODP_API_TIME_H_
+#ifndef ODP_API_SPEC_TIME_H_
+#define ODP_API_SPEC_TIME_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
@@ -75,6 +75,16 @@ odp_time_t odp_time_global(void);
  * @return Difference of time stamps
  */
 odp_time_t odp_time_diff(odp_time_t t2, odp_time_t t1);
+
+/**
+ * Time difference in nanoseconds
+ *
+ * @param t2    Second time stamp
+ * @param t1    First time stamp
+ *
+ * @return Difference of time stamps (t2 - t1) in nanoseconds
+ */
+uint64_t odp_time_diff_ns(odp_time_t t2, odp_time_t t1);
 
 /**
  * Time sum

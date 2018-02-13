@@ -1,1 +1,1 @@
-../../../../linux-generic/include/odp/api/sync.h
+../../../../linux-generic/include-abi/odp/api/abi/sync.h

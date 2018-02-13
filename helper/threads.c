@@ -4,12 +4,13 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <config.h>
+#include "config.h"
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
 #include <sched.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/prctl.h>
