@@ -122,6 +122,7 @@ noinst_HEADERS = \
 		  include/odp_buffer_inlines.h \
 		  include/odp_buffer_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_bitmap_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_bitset.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_classification_internal.h \
 		  include/odp_config_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_debug_internal.h \
