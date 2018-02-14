@@ -282,15 +282,28 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 		if (ttp && ttp->tick != TICK_INVALID)
 			CU_FAIL("Stale timeout for active timer");
 	} else {
-		if (!odp_timeout_fresh(tmo))
-			CU_FAIL("Wrong status (stale) for fresh timeout");
-		/* Fresh timeout => local timer must have matching tick */
-		if (ttp && ttp->tick != tick) {
-			LOG_DBG("Wrong tick: expected %" PRIu64
-				" actual %" PRIu64 "\n",
-				ttp->tick, tick);
-			CU_FAIL("odp_timeout_tick() wrong tick");
+		if (ttp && ttp->tick == TICK_INVALID) {
+			/* Timer was cancelled when it has already expired */
+
+			if (odp_timeout_fresh(tmo))
+				CU_FAIL("Wrong status (fresh) "
+					"for cancelled timeout");
+		} else {
+			if (!odp_timeout_fresh(tmo))
+				CU_FAIL("Wrong status (stale) "
+					"for fresh timeout");
+
+			/* Fresh timeout => local timer must have matching tick
+			 */
+			if (ttp && ttp->tick != tick) {
+				LOG_DBG("Wrong tick: expected %" PRIu64
+					" actual %" PRIu64 "\n",
+					ttp->tick, tick);
+				CU_FAIL("odp_timeout_tick() wrong tick");
+			}
 		}
+		if (ttp && ttp->ev != ODP_EVENT_INVALID)
+			CU_FAIL("Wrong state for fresh timer (event)");
 		/* Check that timeout was delivered 'timely' */
 		if (tick > odp_timer_current_tick(tp))
 			CU_FAIL("Timeout delivered early");
@@ -401,9 +414,11 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 		    (rand_r(&seed) % 2 == 0)) {
 			/* Timer active, cancel it */
 			rc = odp_timer_cancel(tt[i].tim, &tt[i].ev);
-			if (rc != 0)
+			if (rc != 0) {
 				/* Cancel failed, timer already expired */
 				ntoolate++;
+				LOG_DBG("Failed to cancel timer, probably already expired\n");
+			}
 			tt[i].tick = TICK_INVALID;
 			ncancel++;
 		} else {
