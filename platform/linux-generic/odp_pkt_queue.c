@@ -16,9 +16,7 @@
 #include <odp_api.h>
 #include <odp_pkt_queue_internal.h>
 #include <odp_debug_internal.h>
-
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#include <odp_macros_internal.h>
 
 #define NUM_PKTS     7
 
@@ -230,7 +228,7 @@ _odp_int_queue_pool_t _odp_queue_pool_create(uint32_t max_num_queues,
        /* Initialize the queue_blk_tbl_sizes array based upon the
 	* max_queued_pkts.
 	*/
-	max_queued_pkts = MAX(max_queued_pkts, 64 * 1024);
+	max_queued_pkts = MAX(max_queued_pkts, 64 * UINT32_C(1024));
 	queue_region_desc_init(pool, 0, max_queued_pkts / 4);
 	queue_region_desc_init(pool, 1, max_queued_pkts / 64);
 	queue_region_desc_init(pool, 2, max_queued_pkts / 64);
@@ -242,7 +240,7 @@ _odp_int_queue_pool_t _odp_queue_pool_create(uint32_t max_num_queues,
        /* Now allocate the first queue_blk_tbl and add its blks to the free
 	* list.  Replenish the queue_blk_t free list.
 	*/
-	initial_free_list_size = MIN(64 * 1024, max_queued_pkts / 4);
+	initial_free_list_size = MIN(64 * UINT32_C(1024), max_queued_pkts / 4);
 	rc = pkt_queue_free_list_add(pool, initial_free_list_size);
 	if (rc < 0) {
 		free(pool->queue_num_tbl);

@@ -16,6 +16,7 @@
 #include <odp_timer_wheel_internal.h>
 #include <odp_traffic_mngr_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_macros_internal.h>
 
 /* The following constants can be changed either at compile time or run time
  * as long as the following constraints are met (by the way REV stands for
@@ -627,7 +628,7 @@ static int timer_current_wheel_update(timer_wheels_t *timer_wheels,
 	slot_idx      = wheel_desc->slot_idx;
 	num_slots     = wheel_desc->num_slots;
 	max_ticks     = wheel_desc->max_ticks;
-	max_cnt       = (uint32_t)MIN(elapsed_ticks, 32);
+	max_cnt       = MIN(elapsed_ticks, UINT32_C(32));
 	current_wheel = timer_wheels->current_wheel;
 	ret_code      = 0;
 	rc            = -1;

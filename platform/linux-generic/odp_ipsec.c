@@ -159,7 +159,7 @@ static odp_ipsec_packet_result_t *ipsec_pkt_result(odp_packet_t packet)
 	ODP_ASSERT(ODP_EVENT_PACKET_IPSEC ==
 		   odp_event_subtype(odp_packet_to_event(packet)));
 
-	return &odp_packet_hdr(packet)->ipsec_ctx;
+	return &packet_hdr(packet)->ipsec_ctx;
 }
 
 static inline int _odp_ipv4_csum(odp_packet_t pkt,
@@ -831,7 +831,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	return ipsec_sa;
 
 err:
-	pkt_hdr = odp_packet_hdr(pkt);
+	pkt_hdr = packet_hdr(pkt);
 	pkt_hdr->p.flags.ipsec_err = 1;
 
 	*pkt_out = pkt;
@@ -1407,7 +1407,7 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	return ipsec_sa;
 
 err:
-	pkt_hdr = odp_packet_hdr(pkt);
+	pkt_hdr = packet_hdr(pkt);
 
 	pkt_hdr->p.flags.ipsec_err = 1;
 
@@ -1631,7 +1631,7 @@ int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in,
 	return in_pkt;
 }
 
-int _odp_ipsec_try_inline(odp_packet_t pkt)
+int _odp_ipsec_try_inline(odp_packet_t *pkt)
 {
 	odp_ipsec_op_status_t status;
 	ipsec_sa_t *ipsec_sa;
@@ -1640,7 +1640,7 @@ int _odp_ipsec_try_inline(odp_packet_t pkt)
 
 	memset(&status, 0, sizeof(status));
 
-	ipsec_sa = ipsec_in_single(pkt, ODP_IPSEC_SA_INVALID, &pkt, &status);
+	ipsec_sa = ipsec_in_single(*pkt, ODP_IPSEC_SA_INVALID, pkt, &status);
 	/*
 	 * Route packet back in case of lookup failure or early error before
 	 * lookup
@@ -1648,14 +1648,14 @@ int _odp_ipsec_try_inline(odp_packet_t pkt)
 	if (NULL == ipsec_sa)
 		return -1;
 
-	packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
-	result = ipsec_pkt_result(pkt);
+	packet_subtype_set(*pkt, ODP_EVENT_PACKET_IPSEC);
+	result = ipsec_pkt_result(*pkt);
 	memset(result, 0, sizeof(*result));
 	result->status = status;
 	result->sa = ipsec_sa->ipsec_sa_hdl;
 	result->flag.inline_mode = 1;
 
-	pkt_hdr = odp_packet_hdr(pkt);
+	pkt_hdr = packet_hdr(*pkt);
 	pkt_hdr->p.input_flags.dst_queue = 1;
 	pkt_hdr->dst_queue = queue_fn->from_ext(ipsec_sa->queue);
 

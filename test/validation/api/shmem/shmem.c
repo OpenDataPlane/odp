@@ -144,7 +144,7 @@ void shmem_test_basic(void)
 	for (i = 0; i < ODP_SHM_NAME_LEN; i++)
 		max_name[i] = 'A' + (i % 26);
 
-	max_name[ODP_QUEUE_NAME_LEN - 1] = 0;
+	max_name[ODP_SHM_NAME_LEN - 1] = 0;
 
 	/* NULL name */
 	shm = odp_shm_reserve(NULL,

@@ -88,7 +88,6 @@ typedef union {
 					   payload */
 		uint64_t udp:1;       /* UDP */
 		uint64_t tcp:1;       /* TCP */
-		uint64_t tcpopt:1;    /* TCP options present */
 		uint64_t sctp:1;      /* SCTP */
 		uint64_t icmp:1;      /* ICMP */
 
