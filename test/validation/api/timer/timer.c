@@ -274,15 +274,10 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 		CU_FAIL("odp_timeout_user_ptr() wrong user ptr");
 	if (ttp && ttp->tim != tim)
 		CU_FAIL("odp_timeout_timer() wrong timer");
-	if (stale) {
-		if (odp_timeout_fresh(tmo))
-			CU_FAIL("Wrong status (fresh) for stale timeout");
-		/* Stale timeout => local timer must have invalid tick */
-		if (ttp && ttp->tick != TICK_INVALID)
-			CU_FAIL("Stale timeout for active timer");
-	} else {
-		if (!odp_timeout_fresh(tmo))
-			CU_FAIL("Wrong status (stale) for fresh timeout");
+
+	if (!odp_timeout_fresh(tmo))
+		CU_FAIL("Wrong status (stale) for fresh timeout");
+	if (!stale) {
 		/* Fresh timeout => local timer must have matching tick */
 		if (ttp && ttp->tick != tick) {
 			LOG_DBG("Wrong tick: expected %" PRIu64
@@ -290,6 +285,9 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 				ttp->tick, tick);
 			CU_FAIL("odp_timeout_tick() wrong tick");
 		}
+		if (ttp && ttp->ev != ODP_EVENT_INVALID)
+			CU_FAIL("Wrong state for fresh timer (event)");
+
 		/* Check that timeout was delivered 'timely' */
 		if (tick > odp_timer_current_tick(tp))
 			CU_FAIL("Timeout delivered early");
@@ -403,11 +401,14 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 		    (rand_r(&seed) % 2 == 0)) {
 			/* Timer active, cancel it */
 			rc = odp_timer_cancel(tt[i].tim, &tt[i].ev);
-			if (rc != 0)
+			if (rc != 0) {
 				/* Cancel failed, timer already expired */
 				ntoolate++;
-			tt[i].tick = TICK_INVALID;
-			ncancel++;
+				LOG_DBG("Failed to cancel timer, probably already expired\n");
+			} else {
+				tt[i].tick = TICK_INVALID;
+				ncancel++;
+			}
 		} else {
 			if (tt[i].ev != ODP_EVENT_INVALID)
 				/* Timer inactive => set */
@@ -461,7 +462,7 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 		thr, ntoolate);
 	LOG_DBG("Thread %u: %" PRIu32 " timeouts received\n", thr, nrcv);
 	LOG_DBG("Thread %u: %" PRIu32
-		" stale timeout(s) after odp_timer_free()\n",
+		" stale timeout(s) after odp_timer_cancel()\n",
 		thr, nstale);
 
 	/* Delay some more to ensure timeouts for expired timers can be
