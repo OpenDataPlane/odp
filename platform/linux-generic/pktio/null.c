@@ -194,7 +194,6 @@ static pktio_ops_module_t null_pktio_ops = {
 	.capability = null_capability,
 	.pktin_ts_res = NULL,
 	.pktin_ts_from_ns = NULL,
-	.config = NULL,
 	.input_queues_config = null_inqueues_config,
 	.output_queues_config = null_outqueues_config,
 	.link_status = NULL,

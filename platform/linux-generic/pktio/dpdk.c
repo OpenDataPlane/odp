@@ -866,7 +866,7 @@ static uint32_t dpdk_mtu_get(pktio_entry_t *pktio_entry)
 
 static uint32_t dpdk_frame_maxlen(pktio_entry_t *pktio_entry)
 {
-	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	pktio_ops_dpdk_data_t *pkt_dpdk = pktio_entry->s.ops_data;
 
 	return pkt_dpdk->mtu;
 }
@@ -1692,9 +1692,7 @@ static int dpdk_promisc_mode_get(pktio_entry_t *pktio_entry)
 static int dpdk_capability(pktio_entry_t *pktio_entry,
 			   odp_pktio_capability_t *capa)
 {
-	pktio_ops_dpdk_data_t *pkt_dpdk = pktio_entry->s.ops_data;
-
-	*capa = pkt_dpdk->capa;
+	*capa = pktio_entry->s.capa;
 	return 0;
 }
 
