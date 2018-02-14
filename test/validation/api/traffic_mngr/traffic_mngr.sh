@@ -31,9 +31,7 @@ TEST_SKIPPED=77
 traffic_mngr_main${EXEEXT}
 ret=$?
 
-SIGSEGV=139
-
-if [ "${TRAVIS}" = "true" ] && [ $ret -ne 0 ] && [ $ret -ne ${SIGSEGV} ]; then
+if [ "${CI}" = "true" ] && [ $ret -eq 255 ]; then
 	echo "SKIP: skip due to not isolated environment"
 	exit ${TEST_SKIPPED}
 fi
