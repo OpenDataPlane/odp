@@ -72,6 +72,19 @@ extern "C" {
   */
 
 /**
+ * @typedef odp_proto_l2_type_t
+ * Layer 2 protocol type
+ */
+
+/**
+ * @def ODP_PROTO_L2_TYPE_NONE
+ * Layer 2 protocol type not defined
+ *
+ * @def ODP_PROTO_L2_TYPE_ETH
+ * Layer 2 protocol is Ethernet
+ */
+
+/**
  * @typedef odp_proto_l3_type_t
  * Layer 3 protocol type
  */
@@ -1614,6 +1627,17 @@ uint32_t odp_packet_l4_offset(odp_packet_t pkt);
  * @retval <0 on failure
  */
 int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset);
+
+/**
+ * Layer 2 protocol type
+ *
+ * Returns layer 2 protocol type. Initial type value is ODP_PROTO_L2_TYPE_NONE.
+ *
+ * @param      pkt      Packet handle
+ *
+ * @return Layer 2 protocol type
+ */
+odp_proto_l2_type_t odp_packet_l2_type(odp_packet_t pkt);
 
 /**
  * Layer 3 protocol type
