@@ -270,12 +270,10 @@ static inline int event_queue_send(odp_queue_t queue, odp_packet_t *pkt_tbl,
 				   unsigned pkts)
 {
 	int ret;
-	unsigned i;
 	unsigned sent = 0;
 	odp_event_t ev_tbl[pkts];
 
-	for (i = 0; i < pkts; i++)
-		ev_tbl[i] = odp_packet_to_event(pkt_tbl[i]);
+	odp_packet_to_event_multi(pkt_tbl, ev_tbl, pkts);
 
 	while (sent < pkts) {
 		ret = odp_queue_enq_multi(queue, &ev_tbl[sent], pkts - sent);
@@ -373,8 +371,7 @@ static int run_worker_sched_mode(void *arg)
 		if (pkts <= 0)
 			continue;
 
-		for (i = 0; i < pkts; i++)
-			pkt_tbl[i] = odp_packet_from_event(ev_tbl[i]);
+		odp_packet_from_event_multi(pkt_tbl, ev_tbl, pkts);
 
 		if (odp_unlikely(gbl_args->appl.extra_check)) {
 			if (gbl_args->appl.chksum)
@@ -499,8 +496,7 @@ static int run_worker_plain_queue_mode(void *arg)
 		if (odp_unlikely(pkts <= 0))
 			continue;
 
-		for (i = 0; i < pkts; i++)
-			pkt_tbl[i] = odp_packet_from_event(event[i]);
+		odp_packet_from_event_multi(pkt_tbl, event, pkts);
 
 		if (odp_unlikely(gbl_args->appl.extra_check)) {
 			if (gbl_args->appl.chksum)

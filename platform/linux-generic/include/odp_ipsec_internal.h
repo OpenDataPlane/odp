@@ -262,7 +262,7 @@ int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
  * @retval 0 if packet was processed and will be queue using IPsec inline
  *           processing
  */
-int _odp_ipsec_try_inline(odp_packet_t pkt);
+int _odp_ipsec_try_inline(odp_packet_t *pkt);
 
 /**
  * @}

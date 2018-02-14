@@ -48,6 +48,11 @@ _ODP_INLINE odp_pktio_t odp_packet_input(odp_packet_t pkt)
 	return _odp_packet_input(pkt);
 }
 
+_ODP_INLINE int odp_packet_input_index(odp_packet_t pkt)
+{
+	return _odp_packet_input_index(pkt);
+}
+
 _ODP_INLINE int odp_packet_num_segs(odp_packet_t pkt)
 {
 	return _odp_packet_num_segs(pkt);
@@ -140,4 +145,37 @@ _ODP_INLINE void odp_packet_prefetch(odp_packet_t pkt, uint32_t offset,
 	return _odp_packet_prefetch(pkt, offset, len);
 }
 
+_ODP_INLINE int odp_packet_copy_from_mem(odp_packet_t pkt, uint32_t offset,
+					 uint32_t len, const void *src)
+{
+	return _odp_packet_copy_from_mem(pkt, offset, len, src);
+}
+
+_ODP_INLINE int odp_packet_copy_to_mem(odp_packet_t pkt, uint32_t offset,
+				       uint32_t len, void *dst)
+{
+	return _odp_packet_copy_to_mem(pkt, offset, len, dst);
+}
+
+_ODP_INLINE odp_packet_t odp_packet_from_event(odp_event_t ev)
+{
+	return _odp_packet_from_event(ev);
+}
+
+_ODP_INLINE odp_event_t odp_packet_to_event(odp_packet_t pkt)
+{
+	return _odp_packet_to_event(pkt);
+}
+
+_ODP_INLINE void odp_packet_from_event_multi(odp_packet_t pkt[],
+					     const odp_event_t ev[], int num)
+{
+	return _odp_packet_from_event_multi(pkt, ev, num);
+}
+
+_ODP_INLINE void odp_packet_to_event_multi(const odp_packet_t pkt[],
+					   odp_event_t ev[], int num)
+{
+	return _odp_packet_to_event_multi(pkt, ev, num);
+}
 #endif

@@ -13,6 +13,7 @@
 #include <odp_classification_internal.h>
 #include <odp_ipsec_internal.h>
 #include <odp_debug_internal.h>
+#include <odp/api/plat/packet_flag_inlines.h>
 #include <odp/api/hints.h>
 #include <odp_queue_if.h>
 
@@ -101,7 +102,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		pkt = packet_from_buf_hdr(hdr_tbl[i]);
 		pkt_len = odp_packet_len(pkt);
-		pkt_hdr = odp_packet_hdr(pkt);
+		pkt_hdr = packet_hdr(pkt);
 
 		packet_parse_reset(pkt_hdr);
 		if (pktio_cls_enabled(pktio_entry)) {
@@ -155,8 +156,9 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		/* Try IPsec inline processing */
 		if (pktio_entry->s.config.inbound_ipsec &&
-		    odp_packet_has_ipsec(pkt))
-			_odp_ipsec_try_inline(pkt);
+		    !pkt_hdr->p.error_flags.ip_err &&
+		    _odp_packet_has_ipsec(pkt))
+			_odp_ipsec_try_inline(&pkt);
 
 		pktio_entry->s.stats.in_octets += pkt_len;
 		pkts[num_rx++] = pkt;

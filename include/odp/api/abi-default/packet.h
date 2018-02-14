@@ -26,7 +26,7 @@ typedef struct { char dummy; /**< *internal Dummy */ } _odp_abi_packet_seg_t;
 typedef _odp_abi_packet_t *odp_packet_t;
 typedef _odp_abi_packet_seg_t *odp_packet_seg_t;
 
-#define ODP_PACKET_INVALID        ((odp_packet_t)0xffffffff)
+#define ODP_PACKET_INVALID        ((odp_packet_t)0)
 #define ODP_PACKET_SEG_INVALID    ((odp_packet_seg_t)0xffffffff)
 #define ODP_PACKET_OFFSET_INVALID 0xffff
 

@@ -647,12 +647,12 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 		}
 
 		pkt = pkt_tbl[i];
-		pkt_hdr = odp_packet_hdr(pkt);
+		pkt_hdr = packet_hdr(pkt);
 		pull_tail(pkt_hdr, alloc_len - len);
 
 		/* For now copy the data in the mbuf,
 		   worry about zero-copy later */
-		if (odp_packet_copy_from_mem(pkt, 0, len, slot.buf) != 0)
+		if (_odp_packet_copy_from_mem(pkt, 0, len, slot.buf) != 0)
 			goto fail;
 
 		pkt_hdr->input = pktio_entry->s.handle;
@@ -936,7 +936,7 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 
 			buf = NETMAP_BUF(ring, ring->slot[slot_id].buf_idx);
 
-			if (odp_packet_copy_to_mem(pkt, 0, pkt_len, buf)) {
+			if (_odp_packet_copy_to_mem(pkt, 0, pkt_len, buf)) {
 				i = NM_INJECT_RETRIES;
 				break;
 			}

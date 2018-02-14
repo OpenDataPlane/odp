@@ -1200,7 +1200,7 @@ void pktio_test_lookup(void)
 
 void pktio_test_index(void)
 {
-	odp_pktio_t pktio, pktio_inval = ODP_PKTIO_INVALID;
+	odp_pktio_t pktio;
 	odp_pktio_param_t pktio_param;
 	int ndx;
 
@@ -1212,10 +1212,8 @@ void pktio_test_index(void)
 
 	ndx = odp_pktio_index(pktio);
 	CU_ASSERT(ndx >= 0);
-	CU_ASSERT(odp_pktio_index(pktio_inval) < 0);
 
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
-	CU_ASSERT(odp_pktio_index(pktio) < 0);
 }
 
 static void pktio_test_print(void)
