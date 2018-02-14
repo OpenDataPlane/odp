@@ -820,7 +820,7 @@ static int dpdk_netdev_is_valid(const char *s)
 	return 1;
 }
 
-static uint32_t dpdk_vdev_mtu_get(uint8_t port_id)
+static uint32_t dpdk_vdev_mtu_get(uint16_t port_id)
 {
 	struct rte_eth_dev_info dev_info;
 	struct ifreq ifr;
@@ -871,7 +871,7 @@ static uint32_t dpdk_frame_maxlen(pktio_entry_t *pktio_entry)
 	return pkt_dpdk->mtu;
 }
 
-static int dpdk_vdev_promisc_mode_get(uint8_t port_id)
+static int dpdk_vdev_promisc_mode_get(uint16_t port_id)
 {
 	struct rte_eth_dev_info dev_info;
 	struct ifreq ifr;
@@ -894,7 +894,7 @@ static int dpdk_vdev_promisc_mode_get(uint8_t port_id)
 	return mode;
 }
 
-static int dpdk_vdev_promisc_mode_set(uint8_t port_id, int enable)
+static int dpdk_vdev_promisc_mode_set(uint16_t port_id, int enable)
 {
 	struct rte_eth_dev_info dev_info;
 	struct ifreq ifr;
@@ -1150,7 +1150,7 @@ static int dpdk_pktio_term(void)
 		return 0;
 
 #if RTE_VERSION >= RTE_VERSION_NUM(17, 8, 0, 0)
-	uint8_t port_id;
+	uint16_t port_id;
 
 	RTE_ETH_FOREACH_DEV(port_id) {
 		rte_eth_dev_close(port_id);
@@ -1409,7 +1409,7 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 	struct rte_eth_dev_info dev_info;
 	struct rte_eth_rxconf *rxconf;
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
-	uint8_t port_id = pkt_dpdk->port_id;
+	uint16_t port_id = pkt_dpdk->port_id;
 	int ret;
 	unsigned i;
 
@@ -1653,7 +1653,7 @@ static int dpdk_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 
 static int dpdk_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable)
 {
-	uint8_t port_id = pktio_entry->s.pkt_dpdk.port_id;
+	uint16_t port_id = pktio_entry->s.pkt_dpdk.port_id;
 
 	if (pktio_entry->s.pkt_dpdk.vdev_sysc_promisc)
 		return dpdk_vdev_promisc_mode_set(port_id, enable);
@@ -1668,7 +1668,7 @@ static int dpdk_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable)
 
 static int dpdk_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
-	uint8_t port_id = pktio_entry->s.pkt_dpdk.port_id;
+	uint16_t port_id = pktio_entry->s.pkt_dpdk.port_id;
 
 	if (pktio_entry->s.pkt_dpdk.vdev_sysc_promisc)
 		return dpdk_vdev_promisc_mode_get(port_id);
