@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #include <linux/ethtool.h>
 #include <linux/sockios.h>
@@ -92,14 +93,15 @@ static void rss_conf_to_hash_proto(struct rte_eth_rss_conf *rss_conf,
 	rss_conf->rss_key = NULL;
 }
 
-static void _dpdk_print_port_mac(uint8_t portid)
+static void _dpdk_print_port_mac(uint16_t port_id)
 {
 	struct ether_addr eth_addr;
 
 	memset(&eth_addr, 0, sizeof(eth_addr));
-	rte_eth_macaddr_get(portid, &eth_addr);
-	ODP_DBG("Port %u, MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
-		(unsigned)portid,
+	rte_eth_macaddr_get(port_id, &eth_addr);
+	ODP_DBG("Port %" PRIu16 ", "
+		"MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
+		port_id,
 		eth_addr.addr_bytes[0],
 		eth_addr.addr_bytes[1],
 		eth_addr.addr_bytes[2],
@@ -151,7 +153,7 @@ static int output_queues_config_pkt_dpdk(pktio_entry_t *pktio_entry,
 
 static int term_pkt_dpdk(void)
 {
-	uint8_t port_id;
+	uint16_t port_id;
 
 	RTE_ETH_FOREACH_DEV(port_id) {
 		rte_eth_dev_close(port_id);
@@ -163,7 +165,7 @@ static int term_pkt_dpdk(void)
 static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_entry,
 		   const char *netdev, odp_pool_t pool ODP_UNUSED)
 {
-	uint8_t portid = 0;
+	uint16_t port_id = 0;
 	uint32_t mtu;
 	struct rte_eth_dev_info dev_info;
 	struct ether_addr mac_addr;
@@ -178,10 +180,10 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 		return -1;
 	}
 
-	portid = atoi(netdev);
-	pkt_dpdk->portid = portid;
+	port_id = atoi(netdev);
+	pkt_dpdk->port_id = port_id;
 	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
-	rte_eth_dev_info_get(portid, &dev_info);
+	rte_eth_dev_info_get(port_id, &dev_info);
 	if (dev_info.driver_name == NULL) {
 		ODP_DBG("No driver found for interface: %s\n", netdev);
 		return -1;
@@ -196,11 +198,11 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 	else
 		pkt_dpdk->min_rx_burst = 0;
 
-	_dpdk_print_port_mac(portid);
+	_dpdk_print_port_mac(port_id);
 
 	/* Check if setting default MAC address is supporter */
-	rte_eth_macaddr_get(portid, &mac_addr);
-	ret = rte_eth_dev_default_mac_addr_set(portid, &mac_addr);
+	rte_eth_macaddr_get(port_id, &mac_addr);
+	ret = rte_eth_dev_default_mac_addr_set(port_id, &mac_addr);
 	if (ret == 0) {
 		pktio_entry->s.capa.set_op.op.mac_addr = 1;
 	} else if (ret != -ENOTSUP) {
@@ -240,8 +242,8 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 {
 	int ret, i;
 	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
-	uint8_t portid = pkt_dpdk->portid;
-	int sid = rte_eth_dev_socket_id(pkt_dpdk->portid);
+	uint16_t port_id = pkt_dpdk->port_id;
+	int sid = rte_eth_dev_socket_id(pkt_dpdk->port_id);
 	int socket_id =  sid < 0 ? 0 : sid;
 	uint16_t nbrxq, nbtxq;
 	pool_t *pool = pool_entry_from_hdl(pktio_entry->s.pool);
@@ -285,10 +287,10 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 	nbtxq = pktio_entry->s.num_out_queue;
 	nbrxq = pktio_entry->s.num_in_queue;
 
-	ret = rte_eth_dev_configure(portid, nbrxq, nbtxq, &port_conf);
+	ret = rte_eth_dev_configure(port_id, nbrxq, nbtxq, &port_conf);
 	if (ret < 0) {
-		ODP_ERR("Cannot configure device: err=%d, port=%u\n",
-			ret, (unsigned)portid);
+		ODP_ERR("Cannot configure device: err=%d, port=%" PRIu16 "\n",
+			ret, port_id);
 		return -1;
 	}
 
@@ -303,38 +305,38 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 	}
 	/* init one RX queue on each port */
 	for (i = 0; i < nbrxq; i++) {
-		ret = rte_eth_rx_queue_setup(portid, i, nb_rxd, socket_id,
+		ret = rte_eth_rx_queue_setup(port_id, i, nb_rxd, socket_id,
 					     NULL, pool->rte_mempool);
 		if (ret < 0) {
-			ODP_ERR("rxq:err=%d, port=%u\n", ret, (unsigned)portid);
+			ODP_ERR("rxq:err=%d, port=%" PRIu16 "\n", ret, port_id);
 			return -1;
 		}
 	}
 
 	/* init one TX queue on each port */
 	for (i = 0; i < nbtxq; i++) {
-		ret = rte_eth_tx_queue_setup(portid, i, nb_txd, socket_id,
+		ret = rte_eth_tx_queue_setup(port_id, i, nb_txd, socket_id,
 					     NULL);
 		if (ret < 0) {
-			ODP_ERR("txq:err=%d, port=%u\n", ret, (unsigned)portid);
+			ODP_ERR("txq:err=%d, port=%" PRIu16 "\n", ret, port_id);
 			return -1;
 		}
 	}
 
-	rte_eth_promiscuous_enable(portid);
+	rte_eth_promiscuous_enable(port_id);
 	/* Some DPDK PMD vdev like pcap do not support promisc mode change. Use
 	 * system call for them. */
-	if (!rte_eth_promiscuous_get(portid))
+	if (!rte_eth_promiscuous_get(port_id))
 		pkt_dpdk->vdev_sysc_promisc = 1;
 	else
 		pkt_dpdk->vdev_sysc_promisc = 0;
 
-	rte_eth_allmulticast_enable(portid);
+	rte_eth_allmulticast_enable(port_id);
 
-	ret = rte_eth_dev_start(portid);
+	ret = rte_eth_dev_start(port_id);
 	if (ret < 0) {
-		ODP_ERR("rte_eth_dev_start:err=%d, port=%u\n",
-			ret, portid);
+		ODP_ERR("rte_eth_dev_start:err=%d, port=%" PRIu16 "\n",
+			ret, port_id);
 		return ret;
 	}
 
@@ -343,7 +345,7 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 
 static int stop_pkt_dpdk(pktio_entry_t *pktio_entry)
 {
-	rte_eth_dev_stop(pktio_entry->s.pkt_dpdk.portid);
+	rte_eth_dev_stop(pktio_entry->s.pkt_dpdk.port_id);
 	return 0;
 }
 
@@ -407,7 +409,7 @@ static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 	if (!pkt_dpdk->lockless_rx)
 		odp_ticketlock_lock(&pkt_dpdk->rx_lock[index]);
 
-	nb_rx = rte_eth_rx_burst((uint8_t)pkt_dpdk->portid,
+	nb_rx = rte_eth_rx_burst(pkt_dpdk->port_id,
 				 (uint16_t)index,
 				 (struct rte_mbuf **)pkt_table,
 				 (uint16_t)RTE_MAX(len, min));
@@ -523,7 +525,7 @@ static int send_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
-	pkts = rte_eth_tx_burst(pkt_dpdk->portid, index,
+	pkts = rte_eth_tx_burst(pkt_dpdk->port_id, index,
 				(struct rte_mbuf **)pkt_table, num_tx);
 #pragma GCC diagnostic pop
 
@@ -545,7 +547,7 @@ static int send_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 	return pkts;
 }
 
-static uint32_t _dpdk_vdev_mtu(uint8_t port_id)
+static uint32_t _dpdk_vdev_mtu(uint16_t port_id)
 {
 	struct rte_eth_dev_info dev_info = {0};
 	struct ifreq ifr;
@@ -570,7 +572,7 @@ static uint32_t mtu_get_pkt_dpdk(pktio_entry_t *pktio_entry)
 	uint16_t mtu = 0;
 	int ret;
 
-	ret = rte_eth_dev_get_mtu(pktio_entry->s.pkt_dpdk.portid, &mtu);
+	ret = rte_eth_dev_get_mtu(pktio_entry->s.pkt_dpdk.port_id, &mtu);
 	if (ret < 0)
 		return 0;
 
@@ -578,7 +580,7 @@ static uint32_t mtu_get_pkt_dpdk(pktio_entry_t *pktio_entry)
 	 * try to use system call if dpdk cannot get mtu value.
 	 */
 	if (mtu == 0)
-		mtu = _dpdk_vdev_mtu(pktio_entry->s.pkt_dpdk.portid);
+		mtu = _dpdk_vdev_mtu(pktio_entry->s.pkt_dpdk.port_id);
 	return mtu;
 }
 
@@ -589,7 +591,7 @@ static uint32_t dpdk_frame_maxlen(pktio_entry_t *pktio_entry)
 	return pkt_dpdk->mtu;
 }
 
-static int _dpdk_vdev_promisc_mode_set(uint8_t port_id, int enable)
+static int _dpdk_vdev_promisc_mode_set(uint16_t port_id, int enable)
 {
 	struct rte_eth_dev_info dev_info = {0};
 	struct ifreq ifr;
@@ -633,14 +635,15 @@ static int _dpdk_vdev_promisc_mode_set(uint8_t port_id, int enable)
 
 static int promisc_mode_set_pkt_dpdk(pktio_entry_t *pktio_entry,  int enable)
 {
-	uint8_t portid = pktio_entry->s.pkt_dpdk.portid;
+	uint16_t port_id = pktio_entry->s.pkt_dpdk.port_id;
+
 	if (enable)
-		rte_eth_promiscuous_enable(portid);
+		rte_eth_promiscuous_enable(port_id);
 	else
-		rte_eth_promiscuous_disable(portid);
+		rte_eth_promiscuous_disable(port_id);
 
 	if (pktio_entry->s.pkt_dpdk.vdev_sysc_promisc) {
-		int ret = _dpdk_vdev_promisc_mode_set(portid, enable);
+		int ret = _dpdk_vdev_promisc_mode_set(port_id, enable);
 		if (ret < 0)
 			ODP_DBG("vdev promisc mode fail\n");
 	}
@@ -648,7 +651,7 @@ static int promisc_mode_set_pkt_dpdk(pktio_entry_t *pktio_entry,  int enable)
 	return 0;
 }
 
-static int _dpdk_vdev_promisc_mode(uint8_t port_id)
+static int _dpdk_vdev_promisc_mode(uint16_t port_id)
 {
 	struct rte_eth_dev_info dev_info = {0};
 	struct ifreq ifr;
@@ -674,17 +677,17 @@ static int _dpdk_vdev_promisc_mode(uint8_t port_id)
 
 static int promisc_mode_get_pkt_dpdk(pktio_entry_t *pktio_entry)
 {
-	uint8_t portid = pktio_entry->s.pkt_dpdk.portid;
+	uint16_t port_id = pktio_entry->s.pkt_dpdk.port_id;
 	if (pktio_entry->s.pkt_dpdk.vdev_sysc_promisc)
-		return _dpdk_vdev_promisc_mode(portid);
+		return _dpdk_vdev_promisc_mode(port_id);
 	else
-		return rte_eth_promiscuous_get(portid);
+		return rte_eth_promiscuous_get(port_id);
 
 }
 
 static int mac_get_pkt_dpdk(pktio_entry_t *pktio_entry, void *mac_addr)
 {
-	rte_eth_macaddr_get(pktio_entry->s.pkt_dpdk.portid,
+	rte_eth_macaddr_get(pktio_entry->s.pkt_dpdk.port_id,
 			    (struct ether_addr *)mac_addr);
 	return ETH_ALEN;
 }
@@ -693,7 +696,7 @@ static int mac_set_pkt_dpdk(pktio_entry_t *pktio_entry, const void *mac_addr)
 {
 	struct ether_addr addr = *(const struct ether_addr *)mac_addr;
 
-	return rte_eth_dev_default_mac_addr_set(pktio_entry->s.pkt_dpdk.portid,
+	return rte_eth_dev_default_mac_addr_set(pktio_entry->s.pkt_dpdk.port_id,
 						&addr);
 }
 
@@ -707,7 +710,7 @@ static int link_status_pkt_dpdk(pktio_entry_t *pktio_entry)
 {
 	struct rte_eth_link link;
 
-	rte_eth_link_get(pktio_entry->s.pkt_dpdk.portid, &link);
+	rte_eth_link_get(pktio_entry->s.pkt_dpdk.port_id, &link);
 	return link.link_status;
 }
 
@@ -730,7 +733,7 @@ static int stats_pkt_dpdk(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats)
 	int ret;
 	struct rte_eth_stats rte_stats;
 
-	ret = rte_eth_stats_get(pktio_entry->s.pkt_dpdk.portid, &rte_stats);
+	ret = rte_eth_stats_get(pktio_entry->s.pkt_dpdk.port_id, &rte_stats);
 
 	if (ret == 0) {
 		stats_convert(&rte_stats, stats);
@@ -745,7 +748,7 @@ static int stats_pkt_dpdk(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats)
 
 static int stats_reset_pkt_dpdk(pktio_entry_t *pktio_entry)
 {
-	rte_eth_stats_reset(pktio_entry->s.pkt_dpdk.portid);
+	rte_eth_stats_reset(pktio_entry->s.pkt_dpdk.port_id);
 	return 0;
 }
 
