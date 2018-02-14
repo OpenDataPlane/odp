@@ -19,6 +19,8 @@ AM_CONDITIONAL([PLATFORM_IS_LINUX_GENERIC],
 AC_CONFIG_FILES([platform/linux-generic/Makefile
 		 platform/linux-generic/libodp-linux.pc
 		 platform/linux-generic/test/Makefile
+		 platform/linux-generic/test/example/Makefile
+		 platform/linux-generic/test/example/generator/Makefile
 		 platform/linux-generic/test/validation/api/shmem/Makefile
 		 platform/linux-generic/test/validation/api/pktio/Makefile
 		 platform/linux-generic/test/mmap_vlan_ins/Makefile
