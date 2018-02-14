@@ -156,7 +156,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		/* Try IPsec inline processing */
 		if (pktio_entry->s.config.inbound_ipsec &&
-		    !pkt_hdr->p.error_flags.ip_err &&
+		    !pkt_hdr->p.flags.ip_err &&
 		    _odp_packet_has_ipsec(pkt))
 			_odp_ipsec_try_inline(&pkt);
 
