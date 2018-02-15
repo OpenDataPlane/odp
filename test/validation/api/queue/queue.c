@@ -8,7 +8,6 @@
 
 #include <odp_api.h>
 #include <odp_cunit_common.h>
-#include "queue.h"
 
 #define MAX_BUFFER_QUEUE        (8)
 #define MSG_POOL_SIZE           (4 * 1024 * 1024)
@@ -29,7 +28,7 @@ static void generate_name(char *name, uint32_t index)
 	name[5] = 'A' + (index % 26);
 }
 
-int queue_suite_init(void)
+static int queue_suite_init(void)
 {
 	odp_pool_param_t params;
 
@@ -47,12 +46,12 @@ int queue_suite_init(void)
 	return 0;
 }
 
-int queue_suite_term(void)
+static int queue_suite_term(void)
 {
 	return odp_pool_destroy(pool);
 }
 
-void queue_test_capa(void)
+static void queue_test_capa(void)
 {
 	odp_queue_capability_t capa;
 	odp_queue_param_t qparams;
@@ -115,7 +114,7 @@ void queue_test_capa(void)
 	}
 }
 
-void queue_test_mode(void)
+static void queue_test_mode(void)
 {
 	odp_queue_param_t qparams;
 	odp_queue_t queue;
@@ -155,7 +154,7 @@ void queue_test_mode(void)
 	}
 }
 
-void queue_test_param(void)
+static void queue_test_param(void)
 {
 	odp_queue_t queue, null_queue;
 	odp_event_t enev[MAX_BUFFER_QUEUE];
@@ -260,7 +259,7 @@ void queue_test_param(void)
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
 }
 
-void queue_test_info(void)
+static void queue_test_info(void)
 {
 	odp_queue_t q_plain, q_order;
 	const char *const nq_plain = "test_q_plain";
@@ -338,7 +337,7 @@ odp_suiteinfo_t queue_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int queue_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 
