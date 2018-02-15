@@ -8,7 +8,6 @@
 
 #include <odp_api.h>
 #include "odp_cunit_common.h"
-#include "buffer.h"
 
 #define BUF_ALIGN  ODP_CACHE_LINE_SIZE
 #define BUF_SIZE   1500
@@ -16,7 +15,7 @@
 static odp_pool_t raw_pool;
 static odp_buffer_t raw_buffer = ODP_BUFFER_INVALID;
 
-int buffer_suite_init(void)
+static int buffer_suite_init(void)
 {
 	odp_pool_param_t params;
 
@@ -35,7 +34,7 @@ int buffer_suite_init(void)
 	return 0;
 }
 
-int buffer_suite_term(void)
+static int buffer_suite_term(void)
 {
 	odp_buffer_free(raw_buffer);
 	if (odp_pool_destroy(raw_pool) != 0)
@@ -43,7 +42,7 @@ int buffer_suite_term(void)
 	return 0;
 }
 
-void buffer_test_pool_alloc(void)
+static void buffer_test_pool_alloc(void)
 {
 	odp_pool_t pool;
 	const int num = 3;
@@ -127,7 +126,7 @@ static int buffer_alloc_multi(odp_pool_t pool, odp_buffer_t buffer[], int num)
 	return total;
 }
 
-void buffer_test_pool_alloc_multi(void)
+static void buffer_test_pool_alloc_multi(void)
 {
 	odp_pool_t pool;
 	const int num = 3;
@@ -192,7 +191,7 @@ void buffer_test_pool_alloc_multi(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-void buffer_test_pool_free(void)
+static void buffer_test_pool_free(void)
 {
 	odp_pool_t pool;
 	odp_buffer_t buffer;
@@ -223,7 +222,7 @@ void buffer_test_pool_free(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-void buffer_test_pool_free_multi(void)
+static void buffer_test_pool_free_multi(void)
 {
 	odp_pool_t pool[2];
 	odp_buffer_t buffer[4];
@@ -261,7 +260,7 @@ void buffer_test_pool_free_multi(void)
 	CU_ASSERT(odp_pool_destroy(pool[1]) == 0);
 }
 
-void buffer_test_management_basic(void)
+static void buffer_test_management_basic(void)
 {
 	odp_event_t ev = odp_buffer_to_event(raw_buffer);
 	odp_event_subtype_t subtype;
@@ -294,7 +293,7 @@ odp_suiteinfo_t buffer_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int buffer_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 
