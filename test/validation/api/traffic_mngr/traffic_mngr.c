@@ -19,7 +19,6 @@
 #include <odp/helper/odph_api.h>
 #include <test_debug.h>
 #include "odp_cunit_common.h"
-#include "traffic_mngr.h"
 
 #define TM_DEBUG                 0
 
@@ -2044,7 +2043,7 @@ static int destroy_tm_systems(void)
 	return 0;
 }
 
-int traffic_mngr_suite_init(void)
+static int traffic_mngr_suite_init(void)
 {
 	uint32_t payload_len, copy_len;
 
@@ -2088,7 +2087,7 @@ int traffic_mngr_suite_init(void)
 	return 0;
 }
 
-int traffic_mngr_suite_term(void)
+static int traffic_mngr_suite_term(void)
 {
 	uint32_t iface;
 
@@ -2133,7 +2132,7 @@ static void check_shaper_profile(char *shaper_name, uint32_t shaper_idx)
 	CU_ASSERT(shaper_params.dual_rate         == 0);
 }
 
-void traffic_mngr_test_shaper_profile(void)
+static void traffic_mngr_test_shaper_profile(void)
 {
 	odp_tm_shaper_params_t shaper_params;
 	odp_tm_shaper_t        profile;
@@ -2197,7 +2196,7 @@ static void check_sched_profile(char *sched_name, uint32_t sched_idx)
 	}
 }
 
-void traffic_mngr_test_sched_profile(void)
+static void traffic_mngr_test_sched_profile(void)
 {
 	odp_tm_sched_params_t sched_params;
 	odp_tm_sched_t        profile;
@@ -2261,7 +2260,7 @@ static void check_threshold_profile(char    *threshold_name,
 	CU_ASSERT(threshold_params.enable_max_bytes == 1);
 }
 
-void traffic_mngr_test_threshold_profile(void)
+static void traffic_mngr_test_threshold_profile(void)
 {
 	odp_tm_threshold_params_t threshold_params;
 	odp_tm_threshold_t        profile;
@@ -2325,7 +2324,7 @@ static void check_wred_profile(char    *wred_name,
 	CU_ASSERT(wred_params.use_byte_fullness == 0);
 }
 
-void traffic_mngr_test_wred_profile(void)
+static void traffic_mngr_test_wred_profile(void)
 {
 	odp_tm_wred_params_t wred_params;
 	odp_tm_wred_t        profile;
@@ -2416,7 +2415,7 @@ static int set_shaper(const char    *node_name,
 	return odp_tm_node_shaper_config(tm_node, shaper_profile);
 }
 
-int traffic_mngr_check_shaper(void)
+static int traffic_mngr_check_shaper(void)
 {
 	odp_cpumask_t cpumask;
 	int cpucount = odp_cpumask_all_available(&cpumask);
@@ -2431,7 +2430,7 @@ int traffic_mngr_check_shaper(void)
 	return ODP_TEST_ACTIVE;
 }
 
-int traffic_mngr_check_scheduler(void)
+static int traffic_mngr_check_scheduler(void)
 {
 	odp_cpumask_t cpumask;
 	int cpucount = odp_cpumask_all_available(&cpumask);
@@ -3808,19 +3807,19 @@ static int test_fanin_info(const char *node_name)
 	return walk_tree_backwards(node_desc->node);
 }
 
-void traffic_mngr_test_capabilities(void)
+static void traffic_mngr_test_capabilities(void)
 {
 	CU_ASSERT(test_overall_capabilities() == 0);
 }
 
-void traffic_mngr_test_tm_create(void)
+static void traffic_mngr_test_tm_create(void)
 {
 	/* Create the first/primary TM system. */
 	CU_ASSERT_FATAL(create_tm_system() == 0);
 	dump_tm_tree(0);
 }
 
-void traffic_mngr_test_shaper(void)
+static void traffic_mngr_test_shaper(void)
 {
 	CU_ASSERT(test_shaper_bw("bw1",   "node_1_1_1", 0, 1   * MBPS) == 0);
 	CU_ASSERT(test_shaper_bw("bw4",   "node_1_1_1", 1, 4   * MBPS) == 0);
@@ -3829,7 +3828,7 @@ void traffic_mngr_test_shaper(void)
 	CU_ASSERT(test_shaper_bw("bw100", "node_1_1_2", 0, 100 * MBPS) == 0);
 }
 
-void traffic_mngr_test_scheduler(void)
+static void traffic_mngr_test_scheduler(void)
 {
 	CU_ASSERT(test_sched_queue_priority("que_prio", "node_1_1_3", 10) == 0);
 	return;
@@ -3848,7 +3847,7 @@ void traffic_mngr_test_scheduler(void)
 				 INCREASING_WEIGHTS) == 0);
 }
 
-void traffic_mngr_test_thresholds(void)
+static void traffic_mngr_test_thresholds(void)
 {
 	CU_ASSERT(test_threshold("thresh_A", "shaper_A", "node_1_2_1", 0,
 				 16, 0)    == 0);
@@ -3856,7 +3855,7 @@ void traffic_mngr_test_thresholds(void)
 				 0,  6400) == 0);
 }
 
-void traffic_mngr_test_byte_wred(void)
+static void traffic_mngr_test_byte_wred(void)
 {
 	if (!tm_capabilities.tm_queue_wred_supported) {
 		LOG_DBG("\nwas not run because tm_capabilities indicates"
@@ -3879,7 +3878,7 @@ void traffic_mngr_test_byte_wred(void)
 				 ODP_PACKET_GREEN, TM_PERCENT(30), false) == 0);
 }
 
-void traffic_mngr_test_pkt_wred(void)
+static void traffic_mngr_test_pkt_wred(void)
 {
 	int rc;
 
@@ -3912,13 +3911,13 @@ void traffic_mngr_test_pkt_wred(void)
 				ODP_PACKET_RED,    TM_PERCENT(70), true) == 0);
 }
 
-void traffic_mngr_test_query(void)
+static void traffic_mngr_test_query(void)
 {
 	CU_ASSERT(test_query_functions("query_shaper", "node_1_3_3", 3, 10)
 		  == 0);
 }
 
-void traffic_mngr_test_marking(void)
+static void traffic_mngr_test_marking(void)
 {
 	odp_packet_color_t color;
 	odp_bool_t         test_ecn, test_drop_prec;
@@ -3967,14 +3966,14 @@ void traffic_mngr_test_marking(void)
 	}
 }
 
-void traffic_mngr_test_fanin_info(void)
+static void traffic_mngr_test_fanin_info(void)
 {
 	CU_ASSERT(test_fanin_info("node_1")     == 0);
 	CU_ASSERT(test_fanin_info("node_1_2")   == 0);
 	CU_ASSERT(test_fanin_info("node_1_3_7") == 0);
 }
 
-void traffic_mngr_test_destroy(void)
+static void traffic_mngr_test_destroy(void)
 {
 	CU_ASSERT(destroy_tm_systems() == 0);
 }
@@ -4006,7 +4005,7 @@ odp_suiteinfo_t traffic_mngr_suites[] = {
 	ODP_SUITE_INFO_NULL
 };
 
-int traffic_mngr_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	/* parse common options: */
 	if (odp_cunit_parse_options(argc, argv))
