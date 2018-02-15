@@ -395,11 +395,22 @@ uint32_t odp_packet_buf_len(odp_packet_t pkt);
  * User can adjust the data pointer with head_push/head_pull (does not modify
  * segmentation) and add_data/rem_data calls (may modify segmentation).
  *
+ * Note that the address returned by this routine is the starting address of
+ * the current first segment of the packet. For newly allocated packets the
+ * caller can be assured that this segment is at least the min_seg_len
+ * specified for the pool it was allocated from. For all other cases, the
+ * caller must take care that it does not attempt to address bytes that extend
+ * beyond the current segment length. Use the odp_packet_offset() or similar
+ * routines for addressing safety in the general case as these return the
+ * number of bytes that are valid along with the returned address. The
+ * odp_packet_seg_len() API can also be used to return the number of bytes
+ * valid from the current odp_packet_data() pointer.
+ *
  * @param pkt  Packet handle
  *
  * @return  Pointer to the packet data
  *
- * @see odp_packet_l2_ptr(), odp_packet_seg_len()
+ * @see odp_packet_l2_ptr(), odp_packet_seg_len(), odp_packet_offset()
  */
 void *odp_packet_data(odp_packet_t pkt);
 
