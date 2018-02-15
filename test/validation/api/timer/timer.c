@@ -372,7 +372,10 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 		      odp_timer_ns_to_tick(tp, (rand_r(&seed) % RANGE_MS)
 					       * 1000000ULL);
 		timer_rc = odp_timer_set_abs(tt[i].tim, tck, &tt[i].ev);
-		if (timer_rc != ODP_TIMER_SUCCESS) {
+		if (timer_rc == ODP_TIMER_TOOEARLY) {
+			LOG_ERR("Missed tick, setting timer\n");
+		} else if (timer_rc != ODP_TIMER_SUCCESS) {
+			LOG_ERR("Failed to set timer: %d\n", timer_rc);
 			CU_FAIL("Failed to set timer");
 		} else {
 			tt[i].tick = tck;
