@@ -11,7 +11,6 @@
 #include <CUnit/Basic.h>
 #include <odp_cunit_common.h>
 #include <unistd.h>
-#include "lock.h"
 
 #define VERBOSE			0
 
@@ -1004,7 +1003,7 @@ static int rwlock_recursive_functional_test(void *arg UNUSED)
 }
 
 /* Thread-unsafe tests */
-void lock_test_no_lock_functional(void)
+static void lock_test_no_lock_functional(void)
 {
 	pthrd_arg arg;
 
@@ -1019,7 +1018,7 @@ odp_testinfo_t lock_suite_no_locking[] = {
 };
 
 /* Spin lock tests */
-void lock_test_spinlock_api(void)
+static void lock_test_spinlock_api(void)
 {
 	pthrd_arg arg;
 
@@ -1028,7 +1027,7 @@ void lock_test_spinlock_api(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-void lock_test_spinlock_functional(void)
+static void lock_test_spinlock_functional(void)
 {
 	pthrd_arg arg;
 
@@ -1038,7 +1037,7 @@ void lock_test_spinlock_functional(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-void lock_test_spinlock_recursive_api(void)
+static void lock_test_spinlock_recursive_api(void)
 {
 	pthrd_arg arg;
 
@@ -1047,7 +1046,7 @@ void lock_test_spinlock_recursive_api(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-void lock_test_spinlock_recursive_functional(void)
+static void lock_test_spinlock_recursive_functional(void)
 {
 	pthrd_arg arg;
 
@@ -1070,7 +1069,7 @@ odp_testinfo_t lock_suite_spinlock_recursive[] = {
 };
 
 /* Ticket lock tests */
-void lock_test_ticketlock_api(void)
+static void lock_test_ticketlock_api(void)
 {
 	pthrd_arg arg;
 
@@ -1079,7 +1078,7 @@ void lock_test_ticketlock_api(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-void lock_test_ticketlock_functional(void)
+static void lock_test_ticketlock_functional(void)
 {
 	pthrd_arg arg;
 
@@ -1097,7 +1096,7 @@ odp_testinfo_t lock_suite_ticketlock[] = {
 };
 
 /* RW lock tests */
-void lock_test_rwlock_api(void)
+static void lock_test_rwlock_api(void)
 {
 	pthrd_arg arg;
 
@@ -1106,7 +1105,7 @@ void lock_test_rwlock_api(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-void lock_test_rwlock_functional(void)
+static void lock_test_rwlock_functional(void)
 {
 	pthrd_arg arg;
 
@@ -1122,7 +1121,7 @@ odp_testinfo_t lock_suite_rwlock[] = {
 	ODP_TEST_INFO_NULL
 };
 
-void lock_test_rwlock_recursive_api(void)
+static void lock_test_rwlock_recursive_api(void)
 {
 	pthrd_arg arg;
 
@@ -1131,7 +1130,7 @@ void lock_test_rwlock_recursive_api(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-void lock_test_rwlock_recursive_functional(void)
+static void lock_test_rwlock_recursive_functional(void)
 {
 	pthrd_arg arg;
 
@@ -1147,7 +1146,7 @@ odp_testinfo_t lock_suite_rwlock_recursive[] = {
 	ODP_TEST_INFO_NULL
 };
 
-int lock_suite_init(void)
+static int lock_suite_init(void)
 {
 	uint32_t num_threads, idx;
 
@@ -1159,7 +1158,7 @@ int lock_suite_init(void)
 	return 0;
 }
 
-int lock_init(odp_instance_t *inst)
+static int lock_init(odp_instance_t *inst)
 {
 	uint32_t workers_count, max_threads;
 	int ret = 0;
@@ -1208,7 +1207,7 @@ int lock_init(odp_instance_t *inst)
 	return ret;
 }
 
-int lock_term(odp_instance_t inst)
+static int lock_term(odp_instance_t inst)
 {
 	odp_shm_t shm;
 
@@ -1247,7 +1246,7 @@ odp_suiteinfo_t lock_suites[] = {
 	ODP_SUITE_INFO_NULL
 };
 
-int lock_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 
