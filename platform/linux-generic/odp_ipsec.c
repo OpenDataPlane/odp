@@ -1296,6 +1296,7 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	int rc;
 	odp_crypto_packet_result_t crypto; /**< Crypto operation result */
 	odp_packet_hdr_t *pkt_hdr;
+	odp_ipsec_frag_mode_t frag_mode;
 	uint32_t mtu;
 
 	state.ip_offset = odp_packet_l3_offset(pkt);
@@ -1307,8 +1308,9 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	ipsec_sa = _odp_ipsec_sa_use(sa);
 	ODP_ASSERT(NULL != ipsec_sa);
 
-	if ((opt && opt->frag_mode == ODP_IPSEC_FRAG_CHECK) ||
-	    (!opt && ipsec_sa->out.frag_mode == ODP_IPSEC_FRAG_CHECK))
+	frag_mode = opt->flag.frag_mode ? opt->frag_mode :
+					  ipsec_sa->out.frag_mode;
+	if (frag_mode == ODP_IPSEC_FRAG_CHECK)
 		mtu = ipsec_sa->out.mtu;
 	else
 		mtu = UINT32_MAX;
@@ -1467,6 +1469,8 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
 	return in_pkt;
 }
 
+static odp_ipsec_out_opt_t default_out_opt;
+
 int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
 		  odp_packet_t pkt_out[], int *num_out,
 		  const odp_ipsec_out_param_t *param)
@@ -1495,7 +1499,7 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
 		ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 
 		if (0 == param->num_opt)
-			opt = NULL;
+			opt = &default_out_opt;
 		else
 			opt = &param->opt[opt_idx];
 
@@ -1602,7 +1606,7 @@ int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in,
 		ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 
 		if (0 == param->num_opt)
-			opt = NULL;
+			opt = &default_out_opt;
 		else
 			opt = &param->opt[opt_idx];
 
@@ -1697,7 +1701,7 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 		}
 
 		if (0 == param->num_opt)
-			opt = NULL;
+			opt = &default_out_opt;
 		else
 			opt = &param->opt[opt_idx];
 
@@ -1800,6 +1804,8 @@ odp_event_t odp_ipsec_packet_to_event(odp_packet_t pkt)
 int _odp_ipsec_init_global(void)
 {
 	odp_ipsec_config_init(&ipsec_config);
+
+	memset(&default_out_opt, 0, sizeof(default_out_opt));
 
 	return 0;
 }
