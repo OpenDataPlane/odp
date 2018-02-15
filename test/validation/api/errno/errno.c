@@ -8,9 +8,8 @@
 
 #include <odp_api.h>
 #include "odp_cunit_common.h"
-#include "errno.h"
 
-void errno_test_odp_errno_sunny_day(void)
+static void errno_test_odp_errno_sunny_day(void)
 {
 	int my_errno;
 
@@ -31,7 +30,7 @@ odp_suiteinfo_t errno_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int errno_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 
