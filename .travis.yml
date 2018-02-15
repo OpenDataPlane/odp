@@ -13,66 +13,77 @@ dist: trusty
 group: deprecated-2017Q2
 notifications:
   email: false
-env:
-  global:
-    # COVERITY_SCAN_TOKEN
-    # ** specific to your project **
-    # Note:
-    # You should have a github account and travis linked travis account.
-    # The secure key to be filled below is the 685 character long encrypted
-    # token you can find as follow from your coverity dashboard
-    # (at https://scan.coverity.com/dashboard):
-    # Click on the github project (<you>/odp-dpdk)
-    # Click on "submit build"
-    # Click on "Configure Travis CI"
-    # Look at the COVERITY_SCAN_TOKEN in the env: global: section
-    # of the configuration example.
-    # copy the secure:<key> below
-    #
-    - secure: "xxxx"
-    #
-    # By default Linaro CODECOV_TOKEN token is used. It's ok to use it to see
-    # for individual commit validation. But you you want to track tests history
-    # you need generated new one at https://codecov.io specific for your repo.
-    - CODECOV_TOKEN=8e1c0fd8-62ff-411e-a79f-5839f6662c11
+stages:
+  - "build only"
+  - test
 
 addons:
         apt:
                 packages:
                         - gcc
-                        - automake autoconf libtool graphviz mscgen doxygen
+                        - clang-3.8
+                        - automake autoconf libtool libssl-dev graphviz mscgen
                         - codespell
-                        - libssl-dev
                         - libpcap-dev
                         - libnuma-dev
 #        coverity_scan:
 #                project:
 #                        name: "$TRAVIS_REPO_SLUG"
 #                        notification_email: xxxx
-#                        build_command_prepend: "./bootstrap && ./configure --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-example"
+#                        build_command_prepend: "./bootstrap && ./configure --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example"
 #                        build_command:   "make"
 #                        branch_pattern: coverity_scan
 
-compiler:
-        - gcc
-
 cache:
+        ccache: true
         pip: true
         directories:
                 - dpdk
+                - $HOME/cunit-install
+                - $HOME/doxygen-install
 
 env:
+    global:
+        #
+        # By default Linaro CODECOV_TOKEN token is used. It's ok to use it to see
+        # for individual commit validation. But you you want to track tests history
+        # you need generated new one at https://codecov.io specific for your repo.
+        - CODECOV_TOKEN=8e1c0fd8-62ff-411e-a79f-5839f6662c11
+        - DPDK_VERS="17.08"
+    matrix:
         - CONF=""
         - CONF="--disable-abi-compat"
+        - CONF="--enable-deprecated"
         - CONF="--enable-schedule-sp"
         - CONF="--enable-schedule-iquery"
+        - CONF="--disable-static-applications"
+
+compiler:
+        - gcc
+        - clang-3.8
 
 before_install:
 #       Install cunit for the validation tests because distro version is too old and fails C99 compile
         - sudo apt-get remove libcunit1-dev libcunit1
-        - wget http://ftp.debian.org/debian/pool/main/c/cunit/libcunit1_2.1-3-dfsg-2_amd64.deb
-        - wget http://ftp.debian.org/debian/pool/main/c/cunit/libcunit1-dev_2.1-3-dfsg-2_amd64.deb
-        - sudo dpkg -i libcunit1_2.1-3-dfsg-2_amd64.deb libcunit1-dev_2.1-3-dfsg-2_amd64.deb
+        - export LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH"
+        - |
+          if [ ! -f "$HOME/cunit-install/$CROSS_ARCH/lib/libcunit.a" ]; then
+            export CUNIT_VERSION=2.1-3
+            curl -sSOL https://github.com/Linaro/libcunit/releases/download/${CUNIT_VERSION}/CUnit-${CUNIT_VERSION}.tar.bz2
+            tar -jxf *.bz2
+            pushd CUnit*
+            libtoolize --force --copy
+            aclocal
+            autoheader
+            automake --add-missing --include-deps --copy
+            autoconf
+            ./configure --prefix=$HOME/cunit-install/$CROSS_ARCH --enable-debug --enable-automated --enable-basic --enable-console --enable-examples --enable-test $CROSS || cat config.log
+            make -j $(nproc)
+            sudo make install
+            popd
+          fi
+        - export PKG_CONFIG_PATH="$HOME/cunit-install/$CROSS_ARCH/lib/pkgconfig:${PKG_CONFIG_PATH}"
+        - find $HOME/cunit-install
 
 install:
         - sudo apt-get -qq update
@@ -80,7 +91,6 @@ install:
         - gem install asciidoctor
 
         # DPDK. Note that cache must be purged if dpdk version changes.
-        - DPDK_VERS="17.08"
         - |
           CACHED_DPDK_VERS=`fgrep Version dpdk/pkg/dpdk.spec | cut -d " " -f 2`
           if [ "${CACHED_DPDK_VERS}" != "${DPDK_VERS}" ]; then
@@ -111,7 +121,12 @@ install:
 
 script:
         - ./bootstrap
-        - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} $CONF
+        - ./configure --prefix=$HOME/odp-install
+          --with-dpdk-path=`pwd`/dpdk/${TARGET}
+          --enable-user-guides
+          --enable-debug=full
+          --enable-helper-linux
+          $CONF
         - make -j $(nproc)
         - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make check
         - make install
@@ -124,11 +139,11 @@ script:
         - echo "Checking linking and run from install..."
         - pushd $HOME
         - echo "Dynamic link.."
-        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig pkg-config --cflags --libs libodp-dpdk`
-        - sudo ODP_PLATFORM_PARAMS="-n 2" LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst
+        - ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_dynamic `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-dpdk`
+        - sudo ODP_PLATFORM_PARAMS="-n 2" LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst_dynamic
         - echo "Static link.."
-        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig pkg-config --cflags --libs libodp-dpdk --static` -static
-        - sudo ODP_PLATFORM_PARAMS="-n 2" ./odp_hello_inst
+        - ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_static `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-dpdk --static` -static
+        - sudo ODP_PLATFORM_PARAMS="-n 2" ./odp_hello_inst_static
 
 jobs:
         include:
@@ -138,15 +153,36 @@ jobs:
                   script:
                           - sudo -H pip install coverage
                           - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} CFLAGS="-O0 -coverage" CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
-                          - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" PATH=${PATH//:\.\/node_modules\/\.bin/} make check
+                          - ./configure --prefix=$HOME/odp-install
+                            --enable-user-guides
+                            --with-dpdk-path=`pwd`/dpdk/${TARGET}
+                              CFLAGS="-O0 -coverage"
+                              CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
+                            --enable-debug=full
+                            --enable-helper-linux
+                          - CCACHE_DISABLE=1 make -j $(nproc)
+                          - sudo CCACHE_DISABLE=1 LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" PATH=${PATH//:\.\/node_modules\/\.bin/} make check
                           - find . -type f -iname '*.[ch]' -not -path ".git/*" -execdir gcov {} \; ; bash <(curl -s https://codecov.io/bash) -X coveragepy
-                - stage: test
+                - stage: "build only"
                   env: TEST=doxygen
                   compiler: gcc
+                  before_install:
+                          # Updated Doxygen
+                        - |
+                          if [ ! -f "$HOME/doxygen-install/bin/doxygen" ]; then
+                                wget https://github.com/doxygen/doxygen/archive/Release_1_8_13.tar.gz
+                                tar xpvf Release_1_8_13.tar.gz
+                                pushd doxygen-Release_1_8_13
+                                cmake -DCMAKE_INSTALL_PREFIX=$HOME/doxygen-install .
+                                make -j $(nproc)
+                                make install
+                                popd
+                          fi
+                        - export PATH=$HOME/doxygen-install/bin:$PATH
                   script:
                           - ./bootstrap
-                          - ./configure --with-dpdk-path=`pwd`/dpdk/${TARGET}
+                          - ./configure
+                            --with-dpdk-path=`pwd`/dpdk/${TARGET}
                           # doxygen does not trap on warnings, check for them here.
                           - make doxygen-doc 2>&1 |tee doxygen.log
                           - |
@@ -156,6 +192,22 @@ jobs:
                              else
                                true
                              fi
+                - stage: "build only"
+                  env: CONF=""
+                  compiler: gcc
+                  script:
+                          - ./bootstrap
+                          - ./configure --enable-helper-linux
+                            --with-dpdk-path=`pwd`/dpdk/${TARGET}
+                          - make -j $(nproc)
+                - stage: "build only"
+                  env: CONF=""
+                  compiler: clang-3.8
+                  script:
+                          - ./bootstrap
+                          - ./configure --enable-helper-linux
+                            --with-dpdk-path=`pwd`/dpdk/${TARGET}
+                          - make -j $(nproc)
                 - stage: test
                   env: TEST=checkpatch
                   compiler: gcc
