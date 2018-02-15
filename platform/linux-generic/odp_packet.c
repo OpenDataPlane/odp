@@ -60,11 +60,6 @@ ODP_STATIC_ASSERT(ODP_BUFFER_INVALID == 0, "Buffer invalid not 0");
 ODP_STATIC_ASSERT(ODP_EVENT_INVALID  == 0, "Event invalid not 0");
 #endif
 
-odp_packet_t _odp_packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
-{
-	return (odp_packet_t)buf_hdr;
-}
-
 static inline odp_buffer_t packet_to_buffer(odp_packet_t pkt)
 {
 	return (odp_buffer_t)pkt;
@@ -2272,22 +2267,6 @@ int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
 
 	return packet_parse_common(&pkt_hdr->p, base, pkt_hdr->frame_len,
 				   seg_len, layer);
-}
-
-int packet_parse_l3_l4(odp_packet_hdr_t *pkt_hdr,
-		       odp_proto_layer_t layer,
-		       uint32_t l3_offset,
-		       uint16_t ethtype)
-{
-	uint32_t seg_len = 0;
-	void *base = packet_map(pkt_hdr, l3_offset, &seg_len, NULL);
-
-	if (seg_len == 0)
-		return -1;
-
-	return packet_parse_common_l3_l4(&pkt_hdr->p, base, l3_offset,
-					 pkt_hdr->frame_len, seg_len,
-					 layer, ethtype);
 }
 
 int odp_packet_parse(odp_packet_t pkt, uint32_t offset,
