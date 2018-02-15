@@ -8,9 +8,8 @@
 
 #include <odp_api.h>
 #include <odp_cunit_common.h>
-#include "random.h"
 
-void random_test_get_size(void)
+static void random_test_get_size(void)
 {
 	int32_t ret;
 	uint8_t buf[32];
@@ -19,7 +18,7 @@ void random_test_get_size(void)
 	CU_ASSERT(ret == sizeof(buf));
 }
 
-void random_test_kind(void)
+static void random_test_kind(void)
 {
 	int32_t rc;
 	uint8_t buf[4096];
@@ -45,7 +44,7 @@ void random_test_kind(void)
 	}
 }
 
-void random_test_repeat(void)
+static void random_test_repeat(void)
 {
 	uint8_t buf1[1024];
 	uint8_t buf2[1024];
@@ -75,7 +74,7 @@ odp_suiteinfo_t random_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int random_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 
