@@ -10,10 +10,11 @@
 #include <CUnit/Basic.h>
 #include <odp_cunit_common.h>
 #include "test_vectors.h"
-#include "odp_crypto_test_inp.h"
-#include "crypto.h"
 
 #define MAX_ALG_CAPA 32
+
+#define PKT_POOL_NUM  64
+#define PKT_POOL_LEN  (1 * 1024)
 
 struct suite_context_s {
 	odp_bool_t packet;
@@ -686,7 +687,7 @@ static int check_alg_null(void)
 }
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
-void crypto_test_enc_alg_null(void)
+static void crypto_test_enc_alg_null(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  ODP_CIPHER_ALG_NULL,
@@ -696,7 +697,7 @@ void crypto_test_enc_alg_null(void)
 		  false);
 }
 
-void crypto_test_dec_alg_null(void)
+static void crypto_test_dec_alg_null(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  ODP_CIPHER_ALG_NULL,
@@ -715,7 +716,7 @@ static int check_alg_3des_cbc(void)
  * operation for 3DES_CBC algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
-void crypto_test_enc_alg_3des_cbc(void)
+static void crypto_test_enc_alg_3des_cbc(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  ODP_CIPHER_ALG_3DES_CBC,
@@ -728,7 +729,7 @@ void crypto_test_enc_alg_3des_cbc(void)
 /* This test verifies the correctness of encode (plaintext -> ciphertext)
  * operation for 3DES_CBC algorithm. IV for the operation is the operation IV.
  * */
-void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
+static void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  ODP_CIPHER_ALG_3DES_CBC,
@@ -743,7 +744,7 @@ void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_3des_cbc(void)
+static void crypto_test_dec_alg_3des_cbc(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  ODP_CIPHER_ALG_3DES_CBC,
@@ -758,7 +759,7 @@ void crypto_test_dec_alg_3des_cbc(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
+static void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  ODP_CIPHER_ALG_3DES_CBC,
@@ -777,7 +778,7 @@ static int check_alg_aes_gcm(void)
  * operation for AES128_GCM algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
-void crypto_test_enc_alg_aes_gcm(void)
+static void crypto_test_enc_alg_aes_gcm(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  ODP_CIPHER_ALG_AES_GCM,
@@ -791,7 +792,7 @@ void crypto_test_enc_alg_aes_gcm(void)
  * operation for AES128_GCM algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
-void crypto_test_enc_alg_aes_gcm_ovr_iv(void)
+static void crypto_test_enc_alg_aes_gcm_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  ODP_CIPHER_ALG_AES_GCM,
@@ -806,7 +807,7 @@ void crypto_test_enc_alg_aes_gcm_ovr_iv(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_aes_gcm(void)
+static void crypto_test_dec_alg_aes_gcm(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  ODP_CIPHER_ALG_AES_GCM,
@@ -821,7 +822,7 @@ void crypto_test_dec_alg_aes_gcm(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_aes_gcm_ovr_iv(void)
+static void crypto_test_dec_alg_aes_gcm_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  ODP_CIPHER_ALG_AES_GCM,
@@ -840,7 +841,7 @@ static int check_alg_aes_cbc(void)
  * operation for AES128_CBC algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
-void crypto_test_enc_alg_aes_cbc(void)
+static void crypto_test_enc_alg_aes_cbc(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  ODP_CIPHER_ALG_AES_CBC,
@@ -853,7 +854,7 @@ void crypto_test_enc_alg_aes_cbc(void)
 /* This test verifies the correctness of encode (plaintext -> ciphertext)
  * operation for AES128_CBC algorithm. IV for the operation is the operation IV.
  * */
-void crypto_test_enc_alg_aes_cbc_ovr_iv(void)
+static void crypto_test_enc_alg_aes_cbc_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  ODP_CIPHER_ALG_AES_CBC,
@@ -868,7 +869,7 @@ void crypto_test_enc_alg_aes_cbc_ovr_iv(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_aes_cbc(void)
+static void crypto_test_dec_alg_aes_cbc(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  ODP_CIPHER_ALG_AES_CBC,
@@ -883,7 +884,7 @@ void crypto_test_dec_alg_aes_cbc(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_aes_cbc_ovr_iv(void)
+static void crypto_test_dec_alg_aes_cbc_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  ODP_CIPHER_ALG_AES_CBC,
@@ -902,7 +903,7 @@ static int check_alg_aes_ctr(void)
  * operation for AES128_CTR algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
-void crypto_test_enc_alg_aes_ctr(void)
+static void crypto_test_enc_alg_aes_ctr(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  ODP_CIPHER_ALG_AES_CTR,
@@ -915,7 +916,7 @@ void crypto_test_enc_alg_aes_ctr(void)
 /* This test verifies the correctness of encode (plaintext -> ciphertext)
  * operation for AES128_CTR algorithm. IV for the operation is the operation IV.
  * */
-void crypto_test_enc_alg_aes_ctr_ovr_iv(void)
+static void crypto_test_enc_alg_aes_ctr_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  ODP_CIPHER_ALG_AES_CTR,
@@ -930,7 +931,7 @@ void crypto_test_enc_alg_aes_ctr_ovr_iv(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_aes_ctr(void)
+static void crypto_test_dec_alg_aes_ctr(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  ODP_CIPHER_ALG_AES_CTR,
@@ -945,7 +946,7 @@ void crypto_test_dec_alg_aes_ctr(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_aes_ctr_ovr_iv(void)
+static void crypto_test_dec_alg_aes_ctr_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  ODP_CIPHER_ALG_AES_CTR,
@@ -967,7 +968,7 @@ static int check_alg_hmac_md5(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_gen_alg_hmac_md5(void)
+static void crypto_test_gen_alg_hmac_md5(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  ODP_CIPHER_ALG_NULL,
@@ -977,7 +978,7 @@ void crypto_test_gen_alg_hmac_md5(void)
 		  false);
 }
 
-void crypto_test_check_alg_hmac_md5(void)
+static void crypto_test_check_alg_hmac_md5(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  ODP_CIPHER_ALG_NULL,
@@ -999,7 +1000,7 @@ static int check_alg_hmac_sha1(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_gen_alg_hmac_sha1(void)
+static void crypto_test_gen_alg_hmac_sha1(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  ODP_CIPHER_ALG_NULL,
@@ -1009,7 +1010,7 @@ void crypto_test_gen_alg_hmac_sha1(void)
 		  false);
 }
 
-void crypto_test_check_alg_hmac_sha1(void)
+static void crypto_test_check_alg_hmac_sha1(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  ODP_CIPHER_ALG_NULL,
@@ -1031,7 +1032,7 @@ static int check_alg_hmac_sha256(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_gen_alg_hmac_sha256(void)
+static void crypto_test_gen_alg_hmac_sha256(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  ODP_CIPHER_ALG_NULL,
@@ -1041,7 +1042,7 @@ void crypto_test_gen_alg_hmac_sha256(void)
 		  false);
 }
 
-void crypto_test_check_alg_hmac_sha256(void)
+static void crypto_test_check_alg_hmac_sha256(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  ODP_CIPHER_ALG_NULL,
@@ -1063,7 +1064,7 @@ static int check_alg_hmac_sha512(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_gen_alg_hmac_sha512(void)
+static void crypto_test_gen_alg_hmac_sha512(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
 		  ODP_CIPHER_ALG_NULL,
@@ -1073,7 +1074,7 @@ void crypto_test_gen_alg_hmac_sha512(void)
 		  false);
 }
 
-void crypto_test_check_alg_hmac_sha512(void)
+static void crypto_test_check_alg_hmac_sha512(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  ODP_CIPHER_ALG_NULL,
@@ -1088,7 +1089,7 @@ static int check_alg_aes_gmac(void)
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_AES_GMAC);
 }
 
-void crypto_test_gen_alg_aes_gmac(void)
+static void crypto_test_gen_alg_aes_gmac(void)
 {
 	unsigned int test_vec_num = (sizeof(aes_gmac_reference) /
 				     sizeof(aes_gmac_reference[0]));
@@ -1103,7 +1104,7 @@ void crypto_test_gen_alg_aes_gmac(void)
 			  false);
 }
 
-void crypto_test_check_alg_aes_gmac(void)
+static void crypto_test_check_alg_aes_gmac(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
 		  ODP_CIPHER_ALG_NULL,
@@ -1113,7 +1114,7 @@ void crypto_test_check_alg_aes_gmac(void)
 		  false);
 }
 
-int crypto_suite_sync_init(void)
+static int crypto_suite_sync_init(void)
 {
 	suite_context.pool = odp_pool_lookup("packet_pool");
 	if (suite_context.pool == ODP_POOL_INVALID)
@@ -1124,7 +1125,7 @@ int crypto_suite_sync_init(void)
 	return 0;
 }
 
-int crypto_suite_async_init(void)
+static int crypto_suite_async_init(void)
 {
 	suite_context.pool = odp_pool_lookup("packet_pool");
 	if (suite_context.pool == ODP_POOL_INVALID)
@@ -1137,7 +1138,7 @@ int crypto_suite_async_init(void)
 	return 0;
 }
 
-int crypto_suite_packet_sync_init(void)
+static int crypto_suite_packet_sync_init(void)
 {
 	suite_context.packet = true;
 	suite_context.op_mode = ODP_CRYPTO_SYNC;
@@ -1150,7 +1151,7 @@ int crypto_suite_packet_sync_init(void)
 	return 0;
 }
 
-int crypto_suite_packet_async_init(void)
+static int crypto_suite_packet_async_init(void)
 {
 	suite_context.packet = true;
 	suite_context.op_mode = ODP_CRYPTO_ASYNC;
@@ -1225,7 +1226,7 @@ odp_testinfo_t crypto_suite[] = {
 	ODP_TEST_INFO_NULL,
 };
 
-int crypto_suite_term(void)
+static int crypto_suite_term(void)
 {
 	int i;
 	int first = 1;
@@ -1241,4 +1242,130 @@ int crypto_suite_term(void)
 		}
 	}
 	return 0;
+}
+
+/* Suite names */
+#define ODP_CRYPTO_SYNC_INP         "odp_crypto_sync_inp"
+#define ODP_CRYPTO_ASYNC_INP        "odp_crypto_async_inp"
+#define ODP_CRYPTO_PACKET_SYNC_INP  "odp_crypto_packet_sync_inp"
+#define ODP_CRYPTO_PACKET_ASYNC_INP "odp_crypto_packet_async_inp"
+
+odp_suiteinfo_t crypto_suites[] = {
+	{ODP_CRYPTO_SYNC_INP, crypto_suite_sync_init,
+	 crypto_suite_term, crypto_suite},
+	{ODP_CRYPTO_ASYNC_INP, crypto_suite_async_init,
+	 crypto_suite_term, crypto_suite},
+	{ODP_CRYPTO_PACKET_SYNC_INP, crypto_suite_packet_sync_init,
+	 crypto_suite_term, crypto_suite},
+	{ODP_CRYPTO_PACKET_ASYNC_INP, crypto_suite_packet_async_init,
+	 crypto_suite_term, crypto_suite},
+	ODP_SUITE_INFO_NULL,
+};
+
+static int crypto_init(odp_instance_t *inst)
+{
+	odp_pool_param_t params;
+	odp_pool_t pool;
+	odp_queue_t out_queue;
+	odp_pool_capability_t pool_capa;
+
+	if (0 != odp_init_global(inst, NULL, NULL)) {
+		fprintf(stderr, "error: odp_init_global() failed.\n");
+		return -1;
+	}
+
+	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
+		fprintf(stderr, "error: odp_init_local() failed.\n");
+		return -1;
+	}
+
+	if (odp_pool_capability(&pool_capa) < 0) {
+		fprintf(stderr, "error: odp_pool_capability() failed.\n");
+		return -1;
+	}
+
+	odp_pool_param_init(&params);
+	params.pkt.seg_len = PKT_POOL_LEN;
+	params.pkt.len     = PKT_POOL_LEN;
+	params.pkt.num     = PKT_POOL_NUM;
+	params.type        = ODP_POOL_PACKET;
+
+	if (pool_capa.pkt.max_seg_len &&
+	    PKT_POOL_LEN > pool_capa.pkt.max_seg_len) {
+		fprintf(stderr, "Warning: small packet segment length\n");
+		params.pkt.seg_len = pool_capa.pkt.max_seg_len;
+	}
+
+	if (pool_capa.pkt.max_len &&
+	    PKT_POOL_LEN > pool_capa.pkt.max_len) {
+		fprintf(stderr, "Pool max packet length too small\n");
+		return -1;
+	}
+
+	pool = odp_pool_create("packet_pool", &params);
+
+	if (ODP_POOL_INVALID == pool) {
+		fprintf(stderr, "Packet pool creation failed.\n");
+		return -1;
+	}
+	out_queue = odp_queue_create("crypto-out", NULL);
+	if (ODP_QUEUE_INVALID == out_queue) {
+		fprintf(stderr, "Crypto outq creation failed.\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+static int crypto_term(odp_instance_t inst)
+{
+	odp_pool_t pool;
+	odp_queue_t out_queue;
+
+	out_queue = odp_queue_lookup("crypto-out");
+	if (ODP_QUEUE_INVALID != out_queue) {
+		if (odp_queue_destroy(out_queue))
+			fprintf(stderr, "Crypto outq destroy failed.\n");
+	} else {
+		fprintf(stderr, "Crypto outq not found.\n");
+	}
+
+	pool = odp_pool_lookup("packet_pool");
+	if (ODP_POOL_INVALID != pool) {
+		if (odp_pool_destroy(pool))
+			fprintf(stderr, "Packet pool destroy failed.\n");
+	} else {
+		fprintf(stderr, "Packet pool not found.\n");
+	}
+
+	if (0 != odp_term_local()) {
+		fprintf(stderr, "error: odp_term_local() failed.\n");
+		return -1;
+	}
+
+	if (0 != odp_term_global(inst)) {
+		fprintf(stderr, "error: odp_term_global() failed.\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+int main(int argc, char *argv[])
+{
+	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
+
+	odp_cunit_register_global_init(crypto_init);
+	odp_cunit_register_global_term(crypto_term);
+
+	ret = odp_cunit_register(crypto_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }
