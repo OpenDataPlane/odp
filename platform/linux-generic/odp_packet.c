@@ -60,11 +60,6 @@ ODP_STATIC_ASSERT(ODP_BUFFER_INVALID == 0, "Buffer invalid not 0");
 ODP_STATIC_ASSERT(ODP_EVENT_INVALID  == 0, "Event invalid not 0");
 #endif
 
-odp_packet_t _odp_packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
-{
-	return (odp_packet_t)buf_hdr;
-}
-
 static inline odp_buffer_t packet_to_buffer(odp_packet_t pkt)
 {
 	return (odp_buffer_t)pkt;
