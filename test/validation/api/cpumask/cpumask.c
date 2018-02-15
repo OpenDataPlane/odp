@@ -9,13 +9,12 @@
 #include <odp_api.h>
 
 #include "odp_cunit_common.h"
-#include "cpumask.h"
 #include "mask_common.h"
 
 /* default worker parameter to get all that may be available */
 #define ALL_AVAILABLE 0
 
-void cpumask_test_odp_cpumask_def_control(void)
+static void cpumask_test_odp_cpumask_def_control(void)
 {
 	unsigned num;
 	unsigned mask_count;
@@ -30,7 +29,7 @@ void cpumask_test_odp_cpumask_def_control(void)
 	CU_ASSERT(num <= max_cpus);
 }
 
-void cpumask_test_odp_cpumask_def_worker(void)
+static void cpumask_test_odp_cpumask_def_worker(void)
 {
 	unsigned num;
 	unsigned mask_count;
@@ -45,7 +44,7 @@ void cpumask_test_odp_cpumask_def_worker(void)
 	CU_ASSERT(num <= max_cpus);
 }
 
-void cpumask_test_odp_cpumask_def(void)
+static void cpumask_test_odp_cpumask_def(void)
 {
 	unsigned mask_count;
 	unsigned num_worker;
@@ -101,7 +100,7 @@ odp_suiteinfo_t cpumask_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int cpumask_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 
