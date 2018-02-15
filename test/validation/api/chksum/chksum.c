@@ -6,7 +6,6 @@
 
 #include <odp_api.h>
 #include <odp_cunit_common.h>
-#include "chksum.h"
 
 #define NUM_IP_HDR   5
 #define IP_HDR_LEN   20
@@ -244,7 +243,7 @@ static uint8_t ODP_ALIGNED(4) udp_test_vect_long[] = {
 };
 
 /* Test ones complement sum with IPv4 headers */
-void chksum_ones_complement_ip(void)
+static void chksum_ones_complement_ip(void)
 {
 	int i;
 	uint16_t sum, res;
@@ -258,7 +257,7 @@ void chksum_ones_complement_ip(void)
 }
 
 /* Test ones complement sum with various length pseudo UDP packets */
-void chksum_ones_complement_udp(void)
+static void chksum_ones_complement_udp(void)
 {
 	int i;
 	uint16_t sum, res;
@@ -273,7 +272,7 @@ void chksum_ones_complement_udp(void)
 }
 
 /* Test ones complement sum with a long pseudo UDP packet */
-void chksum_ones_complement_udp_long(void)
+static void chksum_ones_complement_udp_long(void)
 {
 	int i;
 	uint16_t sum, res;
@@ -326,7 +325,7 @@ odp_suiteinfo_t chksum_suites[] = {
 	ODP_SUITE_INFO_NULL
 };
 
-int chksum_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 
