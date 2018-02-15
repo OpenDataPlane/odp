@@ -512,7 +512,7 @@ static int send_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 	uint16_t num_tx = 0;
 
 	for (i = 0; i < len; i++) {
-		struct rte_mbuf *mbuf = (struct rte_mbuf *)pkt_table[i];
+		struct rte_mbuf *mbuf = pkt_to_mbuf(pkt_table[i]);
 
 		if (odp_unlikely(mbuf->pkt_len > mtu))
 			break;
@@ -532,7 +532,7 @@ static int send_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 		odp_ticketlock_unlock(&pkt_dpdk->tx_lock[index]);
 
 	if (pkts == 0) {
-		struct rte_mbuf *mbuf = (struct rte_mbuf *)pkt_table[0];
+		struct rte_mbuf *mbuf = pkt_to_mbuf(pkt_table[0]);
 
 		if (odp_unlikely(rte_errno != 0))
 			return -1;

@@ -106,6 +106,16 @@ int _odp_buffer_type(odp_buffer_t buf);
  */
 void _odp_buffer_type_set(odp_buffer_t buf, int type);
 
+static inline struct rte_mbuf *buf_to_mbuf(odp_buffer_t buf)
+{
+	return (struct rte_mbuf *)(uintptr_t)buf;
+}
+
+static inline odp_buffer_hdr_t *mbuf_to_buf_hdr(struct rte_mbuf *mbuf)
+{
+	return (odp_buffer_hdr_t *)(uintptr_t)mbuf;
+}
+
 #ifdef __cplusplus
 }
 #endif

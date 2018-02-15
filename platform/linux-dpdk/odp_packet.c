@@ -161,19 +161,15 @@ int odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 
 void odp_packet_free(odp_packet_t pkt)
 {
-	struct rte_mbuf *mbuf = (struct rte_mbuf *)pkt;
-	rte_pktmbuf_free(mbuf);
+	rte_pktmbuf_free(pkt_to_mbuf(pkt));
 }
 
 void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 {
 	int i;
 
-	for (i = 0; i < num; i++) {
-		struct rte_mbuf *mbuf = (struct rte_mbuf *)pkt[i];
-
-		rte_pktmbuf_free(mbuf);
-	}
+	for (i = 0; i < num; i++)
+		rte_pktmbuf_free(pkt_to_mbuf(pkt[i]));
 }
 
 void odp_packet_free_sp(const odp_packet_t pkt[], int num)
@@ -793,8 +789,8 @@ int odp_packet_concat(odp_packet_t *dst, odp_packet_t src)
 {
 	odp_packet_hdr_t *dst_hdr = odp_packet_hdr(*dst);
 	odp_packet_hdr_t *src_hdr = odp_packet_hdr(src);
-	struct rte_mbuf *mb_dst = pkt_to_mbuf(dst_hdr);
-	struct rte_mbuf *mb_src = pkt_to_mbuf(src_hdr);
+	struct rte_mbuf *mb_dst = pkt_to_mbuf(*dst);
+	struct rte_mbuf *mb_src = pkt_to_mbuf(src);
 	odp_packet_t new_dst;
 	odp_pool_t pool;
 	uint32_t dst_len;

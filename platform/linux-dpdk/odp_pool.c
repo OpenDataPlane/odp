@@ -541,7 +541,8 @@ odp_pool_t odp_pool_lookup(const char *name)
 
 static odp_buffer_t buffer_alloc(pool_t *pool)
 {
-	odp_buffer_t buffer;
+	odp_buffer_hdr_t *buf_hdr;
+	struct rte_mbuf *mbuf;
 
 	if (odp_unlikely(pool->params.type != ODP_POOL_BUFFER &&
 			 pool->params.type != ODP_POOL_TIMEOUT)) {
@@ -549,15 +550,16 @@ static odp_buffer_t buffer_alloc(pool_t *pool)
 		return ODP_BUFFER_INVALID;
 	}
 
-	buffer = (odp_buffer_t)rte_ctrlmbuf_alloc(pool->rte_mempool);
-
-	if ((struct rte_mbuf *)buffer == NULL) {
+	mbuf = rte_ctrlmbuf_alloc(pool->rte_mempool);
+	if (odp_unlikely(mbuf == NULL)) {
 		rte_errno = ENOMEM;
 		return ODP_BUFFER_INVALID;
-	} else {
-		buf_hdl_to_hdr(buffer)->next = NULL;
-		return buffer;
 	}
+
+	buf_hdr = mbuf_to_buf_hdr(mbuf);
+	buf_hdr->next = NULL;
+
+	return buf_from_buf_hdr(buf_hdr);
 }
 
 odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
@@ -587,20 +589,15 @@ int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
 
 void odp_buffer_free(odp_buffer_t buf)
 {
-	struct rte_mbuf *mbuf = (struct rte_mbuf *)buf;
-
-	rte_ctrlmbuf_free(mbuf);
+	rte_ctrlmbuf_free(buf_to_mbuf(buf));
 }
 
 void odp_buffer_free_multi(const odp_buffer_t buf[], int num)
 {
 	int i;
 
-	for (i = 0; i < num; i++) {
-		struct rte_mbuf *mbuf = (struct rte_mbuf *)buf[i];
-
-		rte_ctrlmbuf_free(mbuf);
-	}
+	for (i = 0; i < num; i++)
+		rte_ctrlmbuf_free(buf_to_mbuf(buf[i]));
 }
 
 void odp_pool_print(odp_pool_t pool_hdl)

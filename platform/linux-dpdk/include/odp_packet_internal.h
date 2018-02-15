@@ -154,9 +154,9 @@ static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
 	return (odp_packet_hdr_t *)(uintptr_t)pkt;
 }
 
-static inline struct rte_mbuf *pkt_to_mbuf(odp_packet_hdr_t *pkt_hdr)
+static inline struct rte_mbuf *pkt_to_mbuf(odp_packet_t  pkt)
 {
-	return &pkt_hdr->buf_hdr.mb;
+	return (struct rte_mbuf *)(uintptr_t)pkt;
 }
 
 static inline odp_buffer_hdr_t *packet_to_buf_hdr(odp_packet_t pkt)

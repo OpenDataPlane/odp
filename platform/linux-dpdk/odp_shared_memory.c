@@ -116,7 +116,7 @@ static uint64_t shm_size(const struct rte_memzone *mz)
  */
 static shm_zone_t *shm_zone(const struct rte_memzone *mz)
 {
-	return (shm_zone_t *)((uint8_t *)mz->addr + shm_size(mz));
+	return (shm_zone_t *)(uintptr_t)((uint8_t *)mz->addr + shm_size(mz));
 }
 
 static int find_free_block(void)
