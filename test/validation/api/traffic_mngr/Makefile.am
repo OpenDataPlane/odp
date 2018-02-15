@@ -8,7 +8,7 @@ TEST_EXTENSIONS = .sh
 TESTS = $(TESTSCRIPTS)
 
 test_PROGRAMS = traffic_mngr_main
-traffic_mngr_main_SOURCES = traffic_mngr_main.c traffic_mngr.c traffic_mngr.h
+traffic_mngr_main_SOURCES = traffic_mngr.c
 LDADD += -lm
 
 dist_check_SCRIPTS = $(TESTSCRIPTS)
