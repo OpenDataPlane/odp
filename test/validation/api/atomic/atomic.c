@@ -11,7 +11,6 @@
 #include <CUnit/Basic.h>
 #include <odp_cunit_common.h>
 #include <unistd.h>
-#include "atomic.h"
 
 #define VERBOSE			0
 #define MAX_ITERATIONS		1000
@@ -536,7 +535,7 @@ static void test_atomic_validate(int check)
 	}
 }
 
-int atomic_init(odp_instance_t *inst)
+static int atomic_init(odp_instance_t *inst)
 {
 	uint32_t workers_count, max_threads;
 	int ret = 0;
@@ -585,7 +584,7 @@ int atomic_init(odp_instance_t *inst)
 	return ret;
 }
 
-int atomic_term(odp_instance_t inst)
+static int atomic_term(odp_instance_t inst)
 {
 	odp_shm_t shm;
 
@@ -725,48 +724,48 @@ static void test_atomic_functional(int func_ptr(void *), int check)
 	test_atomic_validate(check);
 }
 
-void atomic_test_atomic_inc_dec(void)
+static void atomic_test_atomic_inc_dec(void)
 {
 	test_atomic_functional(test_atomic_inc_dec_thread, 0);
 }
 
-void atomic_test_atomic_add_sub(void)
+static void atomic_test_atomic_add_sub(void)
 {
 	test_atomic_functional(test_atomic_add_sub_thread, 0);
 }
 
-void atomic_test_atomic_fetch_inc_dec(void)
+static void atomic_test_atomic_fetch_inc_dec(void)
 {
 	test_atomic_functional(test_atomic_fetch_inc_dec_thread, 0);
 }
 
-void atomic_test_atomic_fetch_add_sub(void)
+static void atomic_test_atomic_fetch_add_sub(void)
 {
 	test_atomic_functional(test_atomic_fetch_add_sub_thread, 0);
 }
 
-void atomic_test_atomic_max_min(void)
+static void atomic_test_atomic_max_min(void)
 {
 	test_atomic_functional(test_atomic_max_min_thread, CHECK_MAX_MIN);
 }
 
-void atomic_test_atomic_cas_inc_dec(void)
+static void atomic_test_atomic_cas_inc_dec(void)
 {
 	test_atomic_functional(test_atomic_cas_inc_dec_thread, 0);
 }
 
-void atomic_test_atomic_xchg(void)
+static void atomic_test_atomic_xchg(void)
 {
 	test_atomic_functional(test_atomic_xchg_thread, CHECK_XCHG);
 }
 
-void atomic_test_atomic_non_relaxed(void)
+static void atomic_test_atomic_non_relaxed(void)
 {
 	test_atomic_functional(test_atomic_non_relaxed_thread,
 			       CHECK_MAX_MIN | CHECK_XCHG);
 }
 
-void atomic_test_atomic_op_lock_free(void)
+static void atomic_test_atomic_op_lock_free(void)
 {
 	odp_atomic_op_t atomic_op;
 	int ret_null, ret;
@@ -891,7 +890,7 @@ odp_suiteinfo_t atomic_suites[] = {
 	ODP_SUITE_INFO_NULL
 };
 
-int atomic_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 
