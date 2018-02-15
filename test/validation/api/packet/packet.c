@@ -11,7 +11,6 @@
 #include <odp_api.h>
 #include <odp_cunit_common.h>
 #include <test_packet_parser.h>
-#include "packet.h"
 
 /* Reserve some tailroom for tests */
 #define PACKET_TAILROOM_RESERVE  4
@@ -143,7 +142,7 @@ static int fill_data_backward(odp_packet_t pkt, uint32_t offset, uint32_t len,
 	return odp_packet_copy_from_mem(pkt, offset, len, buf);
 }
 
-int packet_suite_init(void)
+static int packet_suite_init(void)
 {
 	odp_pool_param_t params;
 	odp_pool_capability_t capa;
@@ -276,7 +275,7 @@ int packet_suite_init(void)
 	return 0;
 }
 
-int packet_suite_term(void)
+static int packet_suite_term(void)
 {
 	odp_packet_free(test_packet);
 	odp_packet_free(segmented_test_packet);
@@ -289,7 +288,7 @@ int packet_suite_term(void)
 	return 0;
 }
 
-void packet_test_alloc_free(void)
+static void packet_test_alloc_free(void)
 {
 	odp_pool_t pool;
 	odp_packet_t packet;
@@ -356,7 +355,7 @@ static int packet_alloc_multi(odp_pool_t pool, uint32_t pkt_len,
 	return total;
 }
 
-void packet_test_alloc_free_multi(void)
+static void packet_test_alloc_free_multi(void)
 {
 	const int num_pkt = 2;
 	odp_pool_t pool[2];
@@ -429,7 +428,7 @@ void packet_test_alloc_free_multi(void)
 	CU_ASSERT(odp_pool_destroy(pool[1]) == 0);
 }
 
-void packet_test_free_sp(void)
+static void packet_test_free_sp(void)
 {
 	const int num_pkt = 10;
 	odp_pool_t pool;
@@ -473,7 +472,7 @@ void packet_test_free_sp(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-void packet_test_alloc_segmented(void)
+static void packet_test_alloc_segmented(void)
 {
 	const int num = 5;
 	odp_packet_t pkts[num];
@@ -556,7 +555,7 @@ void packet_test_alloc_segmented(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-void packet_test_event_conversion(void)
+static void packet_test_event_conversion(void)
 {
 	odp_packet_t pkt0 = test_packet;
 	odp_packet_t pkt1 = segmented_test_packet;
@@ -595,7 +594,7 @@ void packet_test_event_conversion(void)
 	packet_compare_data(pkt[1], pkt1);
 }
 
-void packet_test_basic_metadata(void)
+static void packet_test_basic_metadata(void)
 {
 	odp_packet_t pkt = test_packet;
 	odp_time_t ts;
@@ -628,7 +627,7 @@ void packet_test_basic_metadata(void)
 	CU_ASSERT(!odp_packet_has_ts(pkt));
 }
 
-void packet_test_length(void)
+static void packet_test_length(void)
 {
 	odp_packet_t pkt = test_packet;
 	uint32_t buf_len, headroom, tailroom;
@@ -647,13 +646,13 @@ void packet_test_length(void)
 	CU_ASSERT(buf_len >= packet_len + headroom + tailroom);
 }
 
-void packet_test_prefetch(void)
+static void packet_test_prefetch(void)
 {
 	odp_packet_prefetch(test_packet, 0, odp_packet_len(test_packet));
 	CU_PASS();
 }
 
-void packet_test_debug(void)
+static void packet_test_debug(void)
 {
 	CU_ASSERT(odp_packet_is_valid(test_packet) == 1);
 	printf("\n\n");
@@ -662,7 +661,7 @@ void packet_test_debug(void)
 	odp_packet_print_data(test_packet, 14, 20);
 }
 
-void packet_test_context(void)
+static void packet_test_context(void)
 {
 	odp_packet_t pkt = test_packet;
 	char ptr_test_value = 2;
@@ -684,7 +683,7 @@ void packet_test_context(void)
 	odp_packet_reset(pkt, packet_len);
 }
 
-void packet_test_layer_offsets(void)
+static void packet_test_layer_offsets(void)
 {
 	odp_packet_t pkt = test_packet;
 	uint8_t *l2_addr, *l3_addr, *l4_addr;
@@ -787,7 +786,7 @@ static void _verify_headroom_shift(odp_packet_t *pkt,
 	CU_ASSERT(odp_packet_data(*pkt) == data);
 }
 
-void packet_test_headroom(void)
+static void packet_test_headroom(void)
 {
 	odp_packet_t pkt = odp_packet_copy(test_packet,
 					   odp_packet_pool(test_packet));
@@ -907,7 +906,7 @@ static void _verify_tailroom_shift(odp_packet_t *pkt,
 	}
 }
 
-void packet_test_tailroom(void)
+static void packet_test_tailroom(void)
 {
 	odp_packet_t pkt = odp_packet_copy(test_packet,
 					   odp_packet_pool(test_packet));
@@ -948,7 +947,7 @@ void packet_test_tailroom(void)
 	odp_packet_free(pkt);
 }
 
-void packet_test_segments(void)
+static void packet_test_segments(void)
 {
 	int num_segs, seg_index;
 	uint32_t data_len;
@@ -1033,7 +1032,7 @@ void packet_test_segments(void)
 		CU_ASSERT(seg == ODP_PACKET_SEG_INVALID);
 }
 
-void packet_test_segment_last(void)
+static void packet_test_segment_last(void)
 {
 	odp_packet_t pkt = test_packet;
 	odp_packet_seg_t seg;
@@ -1053,7 +1052,7 @@ do { \
 	CU_ASSERT(odp_packet_has_##flag(packet) != 0);    \
 } while (0)
 
-void packet_test_in_flags(void)
+static void packet_test_in_flags(void)
 {
 	odp_packet_t pkt = test_packet;
 
@@ -1080,7 +1079,7 @@ void packet_test_in_flags(void)
 	TEST_INFLAG(pkt, icmp);
 }
 
-void packet_test_error_flags(void)
+static void packet_test_error_flags(void)
 {
 	odp_packet_t pkt = test_packet;
 	int err;
@@ -1110,7 +1109,7 @@ struct packet_metadata {
 	uint64_t usr_u64;
 };
 
-void packet_test_add_rem_data(void)
+static void packet_test_add_rem_data(void)
 {
 	odp_packet_t pkt, new_pkt;
 	uint32_t pkt_len, offset, add_len;
@@ -1275,7 +1274,7 @@ static void _packet_compare_offset(odp_packet_t pkt1, uint32_t off1,
 	}
 }
 
-void packet_test_copy(void)
+static void packet_test_copy(void)
 {
 	odp_packet_t pkt;
 	odp_packet_t pkt_copy, pkt_part;
@@ -1377,7 +1376,7 @@ void packet_test_copy(void)
 	odp_packet_free(pkt);
 }
 
-void packet_test_copydata(void)
+static void packet_test_copydata(void)
 {
 	odp_packet_t pkt = test_packet;
 	uint32_t pkt_len = odp_packet_len(pkt);
@@ -1436,7 +1435,7 @@ void packet_test_copydata(void)
 	odp_packet_free(pkt);
 }
 
-void packet_test_concatsplit(void)
+static void packet_test_concatsplit(void)
 {
 	odp_packet_t pkt, pkt2;
 	uint32_t pkt_len;
@@ -1509,7 +1508,7 @@ void packet_test_concatsplit(void)
 	odp_packet_free(pkt);
 }
 
-void packet_test_concat_small(void)
+static void packet_test_concat_small(void)
 {
 	odp_pool_capability_t capa;
 	odp_pool_t pool;
@@ -1572,7 +1571,7 @@ void packet_test_concat_small(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-void packet_test_concat_extend_trunc(void)
+static void packet_test_concat_extend_trunc(void)
 {
 	odp_pool_capability_t capa;
 	odp_pool_t pool;
@@ -1660,7 +1659,7 @@ void packet_test_concat_extend_trunc(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-void packet_test_extend_small(void)
+static void packet_test_extend_small(void)
 {
 	odp_pool_capability_t capa;
 	odp_pool_t pool;
@@ -1752,7 +1751,7 @@ void packet_test_extend_small(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-void packet_test_extend_large(void)
+static void packet_test_extend_large(void)
 {
 	odp_pool_capability_t capa;
 	odp_pool_t pool;
@@ -1872,7 +1871,7 @@ void packet_test_extend_large(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-void packet_test_extend_mix(void)
+static void packet_test_extend_mix(void)
 {
 	odp_pool_capability_t capa;
 	odp_pool_t pool;
@@ -1986,7 +1985,7 @@ void packet_test_extend_mix(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-void packet_test_extend_ref(void)
+static void packet_test_extend_ref(void)
 {
 	odp_packet_t max_pkt, ref;
 	uint32_t hr, tr, max_len;
@@ -2060,7 +2059,7 @@ void packet_test_extend_ref(void)
 	odp_packet_free(max_pkt);
 }
 
-void packet_test_align(void)
+static void packet_test_align(void)
 {
 	odp_packet_t pkt;
 	uint32_t pkt_len, seg_len, offset, aligned_seglen;
@@ -2118,7 +2117,7 @@ void packet_test_align(void)
 	odp_packet_free(pkt);
 }
 
-void packet_test_offset(void)
+static void packet_test_offset(void)
 {
 	odp_packet_t pkt = test_packet;
 	uint32_t seg_len, full_seg_len;
@@ -2164,7 +2163,7 @@ void packet_test_offset(void)
 	CU_ASSERT_PTR_NOT_NULL(ptr);
 }
 
-void packet_test_ref(void)
+static void packet_test_ref(void)
 {
 	odp_packet_t base_pkt, segmented_base_pkt, hdr_pkt[4],
 		ref_pkt[4], refhdr_pkt[4], hdr_cpy;
@@ -3331,7 +3330,7 @@ odp_suiteinfo_t packet_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int packet_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 
