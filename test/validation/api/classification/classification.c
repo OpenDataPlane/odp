@@ -28,7 +28,7 @@ odp_suiteinfo_t classification_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int classification_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 
