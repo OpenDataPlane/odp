@@ -42,6 +42,9 @@ typedef struct {
 	uint8_t data[256];
 } ipsec_test_packet;
 
+#define _ODP_PROTO_L3_TYPE_UNDEF ((odp_proto_l3_type_t)-1)
+#define _ODP_PROTO_L4_TYPE_UNDEF ((odp_proto_l4_type_t)-1)
+
 typedef struct {
 	const ipsec_test_packet *pkt_in;
 	odp_bool_t lookup;
@@ -51,6 +54,8 @@ typedef struct {
 	struct {
 		odp_ipsec_op_status_t status;
 		const ipsec_test_packet *pkt_out;
+		odp_proto_l3_type_t l3_type;
+		odp_proto_l4_type_t l4_type;
 	} out[1];
 } ipsec_test_part;
 
