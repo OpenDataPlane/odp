@@ -149,6 +149,7 @@ void classification_test_cos_set_queue(void)
 	odp_queue_t queue_cos;
 	odp_cos_t cos_queue;
 	odp_queue_t recvqueue;
+	odp_queue_t queue_out = ODP_QUEUE_INVALID;
 
 	pool = pool_create("cls_basic_pool");
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
@@ -171,6 +172,9 @@ void classification_test_cos_set_queue(void)
 	CU_ASSERT(retval == 0);
 	recvqueue = odp_cos_queue(cos_queue);
 	CU_ASSERT(recvqueue == queue_cos);
+	CU_ASSERT(odp_cls_cos_num_queue(cos_queue) == 1);
+	CU_ASSERT(odp_cls_cos_queues(cos_queue, &queue_out, 1) == 1);
+	CU_ASSERT(queue_out == queue_cos);
 
 	odp_cos_destroy(cos_queue);
 	odp_queue_destroy(queue_cos);

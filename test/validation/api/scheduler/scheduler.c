@@ -1336,6 +1336,76 @@ void scheduler_test_pause_resume(void)
 	CU_ASSERT(ret == 0);
 }
 
+/* Basic, single threaded ordered lock API testing */
+static void scheduler_test_ordered_lock(void)
+{
+	odp_queue_t queue;
+	odp_buffer_t buf;
+	odp_event_t ev;
+	odp_queue_t from;
+	int i;
+	int ret;
+	uint32_t lock_count;
+
+	queue = odp_queue_lookup("sched_0_0_o");
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+	CU_ASSERT_FATAL(odp_queue_type(queue) == ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(odp_queue_sched_type(queue) == ODP_SCHED_SYNC_ORDERED);
+
+	lock_count = odp_queue_lock_count(queue);
+
+	if (lock_count == 0) {
+		printf("  NO ORDERED LOCKS. Ordered locks not tested.\n");
+		return;
+	}
+
+	pool = odp_pool_lookup(MSG_POOL_NAME);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	for (i = 0; i < BUFS_PER_QUEUE; i++) {
+		buf = odp_buffer_alloc(pool);
+		CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+		ev = odp_buffer_to_event(buf);
+		ret = odp_queue_enq(queue, ev);
+		CU_ASSERT(ret == 0);
+
+		if (ret)
+			odp_buffer_free(buf);
+	}
+
+	for (i = 0; i < BUFS_PER_QUEUE / 2; i++) {
+		from = ODP_QUEUE_INVALID;
+		ev = odp_schedule(&from, ODP_SCHED_WAIT);
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+		CU_ASSERT(from == queue);
+		buf = odp_buffer_from_event(ev);
+		odp_schedule_order_lock(0);
+		odp_schedule_order_unlock(0);
+		odp_buffer_free(buf);
+	}
+
+	if (lock_count < 2) {
+		printf("  ONLY ONE ORDERED LOCK. Unlock_lock not tested.\n");
+		return;
+	}
+
+	for (i = 0; i < BUFS_PER_QUEUE / 2; i++) {
+		from = ODP_QUEUE_INVALID;
+		ev = odp_schedule(&from, ODP_SCHED_WAIT);
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+		CU_ASSERT(from == queue);
+		buf = odp_buffer_from_event(ev);
+		odp_schedule_order_lock(0);
+		odp_schedule_order_unlock_lock(0, 1);
+		odp_schedule_order_unlock(1);
+		odp_buffer_free(buf);
+	}
+
+	ret = exit_schedule_loop();
+
+	CU_ASSERT(ret == 0);
+}
+
 static int create_queues(void)
 {
 	int i, j, prios, rc;
@@ -1618,6 +1688,7 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_queue_destroy),
 	ODP_TEST_INFO(scheduler_test_groups),
 	ODP_TEST_INFO(scheduler_test_pause_resume),
+	ODP_TEST_INFO(scheduler_test_ordered_lock),
 	ODP_TEST_INFO(scheduler_test_parallel),
 	ODP_TEST_INFO(scheduler_test_atomic),
 	ODP_TEST_INFO(scheduler_test_ordered),
