@@ -51,26 +51,16 @@ typedef struct queue_global_t {
 
 static queue_global_t *queue_glb;
 
-static
-queue_entry_t *get_qentry(uint32_t queue_id);
+static inline queue_entry_t *get_qentry(uint32_t queue_id)
+{
+	return &queue_glb->queue[queue_id];
+}
 
 static inline queue_entry_t *handle_to_qentry(odp_queue_t handle)
 {
-	uint32_t queue_id;
+	uint32_t queue_id = queue_to_index(handle);
 
-	queue_id = queue_to_id(handle);
 	return get_qentry(queue_id);
-}
-
-static inline odp_queue_t queue_from_id(uint32_t queue_id)
-{
-	return _odp_cast_scalar(odp_queue_t, queue_id + 1);
-}
-
-static
-queue_entry_t *get_qentry(uint32_t queue_id)
-{
-	return &queue_glb->queue[queue_id];
 }
 
 static int queue_init_global(void)
@@ -98,7 +88,7 @@ static int queue_init_global(void)
 		queue_entry_t *queue = get_qentry(i);
 		LOCK_INIT(&queue->s.lock);
 		queue->s.index  = i;
-		queue->s.handle = queue_from_id(i);
+		queue->s.handle = queue_from_index(i);
 	}
 
 	lf_func = &queue_glb->queue_lf_func;
@@ -661,7 +651,7 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 		return -1;
 	}
 
-	queue_id = queue_to_id(handle);
+	queue_id = queue_to_index(handle);
 
 	if (odp_unlikely(queue_id >= ODP_CONFIG_QUEUES)) {
 		ODP_ERR("Invalid queue handle:%" PRIu64 "\n",
@@ -687,11 +677,6 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 	UNLOCK(&queue->s.lock);
 
 	return 0;
-}
-
-odp_queue_t sched_cb_queue_handle(uint32_t queue_index)
-{
-	return queue_from_id(queue_index);
 }
 
 int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num)
