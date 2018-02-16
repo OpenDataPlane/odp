@@ -31,6 +31,8 @@ static void test_in_ipv4_ah_sha256(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -62,6 +64,8 @@ static void test_in_ipv4_ah_sha256_tun_ipv4(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -93,6 +97,8 @@ static void test_in_ipv4_ah_sha256_tun_ipv6(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -123,6 +129,9 @@ static void test_in_ipv4_ah_sha256_tun_ipv4_notun(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  /* It is L4_TYPE_IPV4 */
+			  .l4_type = _ODP_PROTO_L4_TYPE_UNDEF,
 			  .pkt_out = &pkt_ipv4_icmp_0_ipip },
 		},
 	};
@@ -153,6 +162,8 @@ static void test_in_ipv4_esp_null_sha256(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -183,6 +194,8 @@ static void test_in_ipv4_esp_aes_cbc_null(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -213,6 +226,8 @@ static void test_in_ipv4_esp_aes_cbc_sha256(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -243,6 +258,8 @@ static void test_in_ipv4_esp_aes_ctr_null(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -274,6 +291,8 @@ static void test_in_ipv4_ah_sha256_lookup(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -305,6 +324,8 @@ static void test_in_ipv4_esp_null_sha256_lookup(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -336,6 +357,8 @@ static void test_in_ipv4_esp_null_sha256_tun_ipv4(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -367,6 +390,8 @@ static void test_in_ipv4_esp_null_sha256_tun_ipv6(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -398,6 +423,8 @@ static void test_in_ipv4_esp_udp_null_sha256(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -430,6 +457,8 @@ static void test_in_ipv4_esp_udp_null_sha256_lookup(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -461,6 +490,8 @@ static void test_in_ipv4_ah_sha256_noreplay(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -471,6 +502,8 @@ static void test_in_ipv4_ah_sha256_noreplay(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -505,6 +538,8 @@ static void test_in_ipv4_ah_sha256_replay(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -525,6 +560,8 @@ static void test_in_ipv4_ah_sha256_replay(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -559,6 +596,8 @@ static void test_in_ipv4_esp_null_sha256_noreplay(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -569,6 +608,8 @@ static void test_in_ipv4_esp_null_sha256_noreplay(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -603,6 +644,8 @@ static void test_in_ipv4_esp_null_sha256_replay(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -623,6 +666,8 @@ static void test_in_ipv4_esp_null_sha256_replay(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -878,6 +923,8 @@ static void test_in_ipv4_rfc3602_5_esp(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_rfc3602_5 },
 		},
 	};
@@ -908,6 +955,8 @@ static void test_in_ipv4_rfc3602_6_esp(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_rfc3602_6 },
 		},
 	};
@@ -939,6 +988,8 @@ static void test_in_ipv4_rfc3602_7_esp(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_rfc3602_7 },
 		},
 	};
@@ -970,6 +1021,8 @@ static void test_in_ipv4_rfc3602_8_esp(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_rfc3602_8 },
 		},
 	};
@@ -1001,6 +1054,8 @@ static void test_in_ipv4_mcgrew_gcm_2_esp(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_UDP,
 			  .pkt_out = &pkt_mcgrew_gcm_test_2},
 		},
 	};
@@ -1032,6 +1087,8 @@ static void test_in_ipv4_mcgrew_gcm_3_esp(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = _ODP_PROTO_L4_TYPE_UNDEF,
 			  .pkt_out = &pkt_mcgrew_gcm_test_3},
 		},
 	};
@@ -1063,6 +1120,8 @@ static void test_in_ipv4_mcgrew_gcm_4_esp(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_mcgrew_gcm_test_4},
 		},
 	};
@@ -1072,12 +1131,16 @@ static void test_in_ipv4_mcgrew_gcm_4_esp(void)
 	ipsec_sa_destroy(sa);
 }
 
-#if 0
 static void test_in_ipv4_mcgrew_gcm_12_esp(void)
 {
 	odp_ipsec_tunnel_param_t tunnel = {};
 	odp_ipsec_sa_param_t param;
 	odp_ipsec_sa_t sa;
+
+	/* This test will not work properly inbound inline mode.
+	 * Packet might be dropped and we will not check for that. */
+	if (suite_context.inbound_op_mode == ODP_IPSEC_OP_MODE_INLINE)
+		return;
 
 	ipsec_sa_param_fill(&param,
 			    true, false, 0x335467ae, &tunnel,
@@ -1095,6 +1158,8 @@ static void test_in_ipv4_mcgrew_gcm_12_esp(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_NONE,
+			  .l4_type = _ODP_PROTO_L4_TYPE_UNDEF,
 			  .pkt_out = &pkt_mcgrew_gcm_test_12},
 		},
 	};
@@ -1103,7 +1168,38 @@ static void test_in_ipv4_mcgrew_gcm_12_esp(void)
 
 	ipsec_sa_destroy(sa);
 }
-#endif
+
+static void test_in_ipv4_mcgrew_gcm_12_esp_notun(void)
+{
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    true, false, 0x335467ae, NULL,
+			    ODP_CIPHER_ALG_AES_GCM, &key_mcgrew_gcm_12,
+			    ODP_AUTH_ALG_AES_GCM, NULL,
+			    &key_mcgrew_gcm_salt_12);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_mcgrew_gcm_test_12_esp,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_NO_NEXT,
+			  .pkt_out = &pkt_mcgrew_gcm_test_12_notun },
+		},
+	};
+
+	ipsec_check_in_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
 
 static void test_in_ipv4_mcgrew_gcm_15_esp(void)
 {
@@ -1127,6 +1223,8 @@ static void test_in_ipv4_mcgrew_gcm_15_esp(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_mcgrew_gcm_test_15},
 		},
 	};
@@ -1158,6 +1256,8 @@ static void test_in_ipv4_rfc7634_chacha(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_rfc7634},
 		},
 	};
@@ -1188,6 +1288,8 @@ static void test_in_ipv4_ah_aes_gmac_128(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -1218,6 +1320,8 @@ static void test_in_ipv4_esp_null_aes_gmac_128(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
 			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
@@ -1248,6 +1352,8 @@ static void test_in_ipv6_ah_sha256(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV6,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV6,
 			  .pkt_out = &pkt_ipv6_icmp_0 },
 		},
 	};
@@ -1279,6 +1385,8 @@ static void test_in_ipv6_ah_sha256_tun_ipv4(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV6,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV6,
 			  .pkt_out = &pkt_ipv6_icmp_0 },
 		},
 	};
@@ -1310,6 +1418,8 @@ static void test_in_ipv6_ah_sha256_tun_ipv6(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV6,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV6,
 			  .pkt_out = &pkt_ipv6_icmp_0 },
 		},
 	};
@@ -1340,6 +1450,8 @@ static void test_in_ipv6_esp_null_sha256(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV6,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV6,
 			  .pkt_out = &pkt_ipv6_icmp_0 },
 		},
 	};
@@ -1371,6 +1483,8 @@ static void test_in_ipv6_esp_null_sha256_tun_ipv4(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV6,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV6,
 			  .pkt_out = &pkt_ipv6_icmp_0 },
 		},
 	};
@@ -1402,6 +1516,8 @@ static void test_in_ipv6_esp_null_sha256_tun_ipv6(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV6,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV6,
 			  .pkt_out = &pkt_ipv6_icmp_0 },
 		},
 	};
@@ -1433,6 +1549,8 @@ static void test_in_ipv6_esp_udp_null_sha256(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV6,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV6,
 			  .pkt_out = &pkt_ipv6_icmp_0 },
 		},
 	};
@@ -1465,6 +1583,8 @@ static void test_in_ipv6_esp_udp_null_sha256_lookup(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV6,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV6,
 			  .pkt_out = &pkt_ipv6_icmp_0 },
 		},
 	};
@@ -1499,10 +1619,10 @@ odp_testinfo_t ipsec_in_suite[] = {
 				  ipsec_check_esp_aes_gcm_256),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_mcgrew_gcm_4_esp,
 				  ipsec_check_esp_aes_gcm_128),
-#if 0
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_mcgrew_gcm_12_esp,
 				  ipsec_check_esp_aes_gcm_128),
-#endif
+	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_mcgrew_gcm_12_esp_notun,
+				  ipsec_check_esp_aes_gcm_128),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_mcgrew_gcm_15_esp,
 				  ipsec_check_esp_null_aes_gmac_128),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_rfc7634_chacha,

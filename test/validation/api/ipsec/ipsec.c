@@ -689,6 +689,14 @@ void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 		}
 		ipsec_check_packet(part->out[i].pkt_out,
 				   pkto[i]);
+		if (part->out[i].pkt_out != NULL &&
+		    part->out[i].l3_type != _ODP_PROTO_L3_TYPE_UNDEF)
+			CU_ASSERT_EQUAL(part->out[i].l3_type,
+					odp_packet_l3_type(pkto[i]));
+		if (part->out[i].pkt_out != NULL &&
+		    part->out[i].l4_type != _ODP_PROTO_L4_TYPE_UNDEF)
+			CU_ASSERT_EQUAL(part->out[i].l4_type,
+					odp_packet_l4_type(pkto[i]));
 		odp_packet_free(pkto[i]);
 	}
 }
