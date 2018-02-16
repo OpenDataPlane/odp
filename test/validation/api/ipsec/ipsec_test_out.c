@@ -572,7 +572,8 @@ static void test_out_ipv4_ah_sha256_frag_check(void)
 	ipsec_test_part test2 = {
 		.pkt_in = &pkt_ipv4_icmp_0,
 		.num_opt = 1,
-		.opt = { .frag_mode = ODP_IPSEC_FRAG_DISABLED, },
+		.opt = { .flag.frag_mode = 1,
+			 .frag_mode = ODP_IPSEC_FRAG_DISABLED, },
 		.out_pkt = 1,
 		.out = {
 			{ .status.warn.all = 0,
@@ -665,7 +666,8 @@ static void test_out_ipv4_esp_null_sha256_frag_check(void)
 	ipsec_test_part test2 = {
 		.pkt_in = &pkt_ipv4_icmp_0,
 		.num_opt = 1,
-		.opt = { .frag_mode = ODP_IPSEC_FRAG_DISABLED, },
+		.opt = { .flag.frag_mode = 1,
+			 .frag_mode = ODP_IPSEC_FRAG_DISABLED, },
 		.out_pkt = 1,
 		.out = {
 			{ .status.warn.all = 0,
