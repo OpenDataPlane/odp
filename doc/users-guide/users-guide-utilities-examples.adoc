@@ -1,0 +1,19 @@
+== Utilities and examples
+
+=== PcapNg capture
+If compiled using `--enable-pcapng-support` ODP will offer packet capturing
+functionality in PcapNg format. If the /var/run/odp directory exists prior to
+launching the application ODP will create a fifo for each NIC queue.
+Queue naming will be of the following format: *<odp global pid>-<NIC
+name>-flow-<queue number>*. Linux dd application can be used for capturing a
+sample of the live stream from the fifo. Killing ether the application or dd
+will stop the capturing process.
+
+. `./configure --enable-pcapng-support`
+. `sudo mkdir /var/run/odp`
+. `sudo ./example/generator/odp_generator -I enp2s0 -mu --dstmac
+A0:F6:FD:AE:62:6C --dstip 192.168.49.20 --srcmac 2c:56:dc:9a:8f:06 --srcip
+192.168.49.4 -i0 -w1`
+. `sudo dd if=/var/run/odp/26737-enp2s0-flow-0 of=~/test.pcap`
+. `ctrl^c`
+. `wireshark ~/test.pcap`

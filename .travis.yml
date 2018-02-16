@@ -58,6 +58,7 @@ env:
         - CONF="--disable-static-applications"
         - CONF="--disable-host-optimization"
         - CONF="--disable-host-optimization --disable-abi-compat"
+        - CONF="--enable-pcapng-support"
         - DPDK_SHARED="y" CONF="--disable-static-applications"
 
 compiler:
