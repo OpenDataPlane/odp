@@ -63,9 +63,14 @@ union queue_entry_u {
 	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct queue_entry_s))];
 };
 
-static inline uint32_t queue_to_id(odp_queue_t handle)
+static inline uint32_t queue_to_index(odp_queue_t handle)
 {
 	return _odp_typeval(handle) - 1;
+}
+
+static inline odp_queue_t queue_from_index(uint32_t queue_id)
+{
+	return _odp_cast_scalar(odp_queue_t, queue_id + 1);
 }
 
 static inline queue_entry_t *qentry_from_int(queue_t q_int)
