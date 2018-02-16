@@ -111,9 +111,10 @@ noinst_HEADERS = \
 		  include/odp_posix_extensions.h \
 		  include/odp_queue_internal.h \
 		  include/odp_queue_scalable_internal.h \
-		  include/odp_ring_internal.h \
 		  include/odp_queue_if.h \
 		  include/odp_queue_lf.h \
+		  include/odp_ring_internal.h \
+		  include/odp_ring_st_internal.h \
 		  include/odp_schedule_if.h \
 		  include/odp_schedule_scalable.h \
 		  include/odp_schedule_scalable_config.h \
