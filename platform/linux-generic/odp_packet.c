@@ -2225,6 +2225,10 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 		prs->input_flags.sctp = 1;
 		break;
 
+	case _ODP_IPPROTO_NO_NEXT:
+		prs->input_flags.no_next_hdr = 1;
+		break;
+
 	default:
 		prs->input_flags.l4 = 0;
 		break;
@@ -2530,6 +2534,8 @@ odp_proto_l4_type_t odp_packet_l4_type(odp_packet_t pkt)
 	else if (pkt_hdr->p.input_flags.icmp &&
 		 pkt_hdr->p.input_flags.ipv6)
 		return ODP_PROTO_L4_TYPE_ICMPV6;
+	else if (pkt_hdr->p.input_flags.no_next_hdr)
+		return ODP_PROTO_L4_TYPE_NO_NEXT;
 
 	return ODP_PROTO_L4_TYPE_NONE;
 }
