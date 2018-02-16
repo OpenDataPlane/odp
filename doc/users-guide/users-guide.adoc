@@ -1204,4 +1204,6 @@ include::users-guide-tm.adoc[]
 
 include::users-guide-cls.adoc[]
 
+include::users-guide-utilities-examples.adoc[]
+
 include::../glossary.adoc[]

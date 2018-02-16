@@ -24,6 +24,7 @@ extern "C" {
 #include <stdio.h>
 #include <sys/types.h>
 #include <libconfig.h>
+#include <pthread.h>
 
 #define MAX_CPU_NUMBER 128
 #define UID_MAXLEN 30
@@ -58,7 +59,10 @@ struct odp_global_data_s {
 	int num_cpus_installed;
 	config_t libconfig_default;
 	config_t libconfig_runtime;
-
+	int inotify_pcapng_fd;
+	int inotify_watch_fd;
+	pthread_t inotify_thread;
+	int inotify_pcapng_is_running;
 };
 
 enum init_stage {
