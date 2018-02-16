@@ -651,7 +651,6 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	odp_crypto_packet_op_param_t param;
 	int rc;
 	odp_crypto_packet_result_t crypto; /**< Crypto operation result */
-	odp_packet_parse_param_t parse_param;
 	odp_packet_hdr_t *pkt_hdr;
 
 	state.ip_offset = odp_packet_l3_offset(pkt);
@@ -784,6 +783,9 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		} else if (_ODP_IPPROTO_IPV6 == state.ip_next_hdr) {
 			state.is_ipv4 = 0;
 			state.is_ipv6 = 1;
+		} else if (_ODP_IPPROTO_NO_NEXT == state.ip_next_hdr) {
+			state.is_ipv4 = 0;
+			state.is_ipv6 = 0;
 		} else {
 			status->error.proto = 1;
 			goto err;
@@ -817,20 +819,30 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 						  _ODP_IPV6HDR_LEN);
 		else
 			ipv6hdr->hop_limit -= ipsec_sa->dec_ttl;
-	} else {
+	} else if (state.ip_next_hdr != _ODP_IPPROTO_NO_NEXT) {
 		status->error.proto = 1;
 		goto err;
 	}
 
-	parse_param.proto = state.is_ipv4 ? ODP_PROTO_IPV4 :
-			    state.is_ipv6 ? ODP_PROTO_IPV6 :
-					    ODP_PROTO_NONE;
-	parse_param.last_layer = ipsec_config.inbound.parse_level;
-	parse_param.chksums = ipsec_config.inbound.chksums;
+	if (_ODP_IPPROTO_NO_NEXT == state.ip_next_hdr &&
+	    ODP_IPSEC_MODE_TUNNEL == ipsec_sa->mode) {
+		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	/* We do not care about return code here.
-	 * Parsing error should not result in IPsec error. */
-	odp_packet_parse(pkt, state.ip_offset, &parse_param);
+		packet_parse_reset(pkt_hdr);
+		pkt_hdr->p.l3_offset = state.ip_offset;
+	} else {
+		odp_packet_parse_param_t parse_param;
+
+		parse_param.proto = state.is_ipv4 ? ODP_PROTO_IPV4 :
+			state.is_ipv6 ? ODP_PROTO_IPV6 :
+			ODP_PROTO_NONE;
+		parse_param.last_layer = ipsec_config.inbound.parse_level;
+		parse_param.chksums = ipsec_config.inbound.chksums;
+
+		/* We do not care about return code here.
+		 * Parsing error should not result in IPsec error. */
+		odp_packet_parse(pkt, state.ip_offset, &parse_param);
+	}
 
 	*pkt_out = pkt;
 
