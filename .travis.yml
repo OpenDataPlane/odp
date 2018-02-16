@@ -58,7 +58,12 @@ env:
         - CONF="--enable-schedule-scalable"
         - CONF="--enable-dpdk-zero-copy"
         - CONF="--disable-static-applications"
+        - CONF="--disable-host-optimization"
+        - CONF="--disable-host-optimization --disable-abi-compat"
+        - CONF="--with-platform=linux-dpdk" ODP_PLATFORM_PARAMS="-n 4"
+        - CONF="--with-platform=linux-dpdk --disable-abi-compat" ODP_PLATFORM_PARAMS="-n 4"
         - DPDK_SHARED="y" CONF="--disable-static-applications"
+        - DPDK_SHARED="y" CONF="--with-platform=linux-dpdk --disable-static-applications" ODP_PLATFORM_PARAMS="-n 4"
 
 compiler:
         - gcc
@@ -250,7 +255,7 @@ script:
         - make -j $(nproc)
         - mkdir /dev/shm/odp
         - if [ -z "$CROSS_ARCH" ] ; then
-          sudo LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
+          sudo LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp ODP_PLATFORM_PARAMS="$ODP_PLATFORM_PARAMS" make check ;
           fi
         - make install
 
@@ -259,7 +264,7 @@ script:
         - echo "Dynamic link.."
         - ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_dynamic `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux`
         - if [ -z "$CROSS_ARCH" ] ; then
-            LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst_dynamic ;
+            sudo LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp ODP_PLATFORM_PARAMS="$ODP_PLATFORM_PARAMS" ./odp_hello_inst_dynamic ;
           fi
         - |
           # it is not possible to do static linking if we only have shared DPDK library. Compiler complains about missing -ldpdk
@@ -267,7 +272,7 @@ script:
             echo "Static link.."
             ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_static `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux --static` -static || exit 1
             if [ -z "$CROSS_ARCH" ] ; then
-            ./odp_hello_inst_static;
+              sudo LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp ODP_PLATFORM_PARAMS="$ODP_PLATFORM_PARAMS" ./odp_hello_inst_static;
             fi
           fi
         - popd
@@ -289,7 +294,8 @@ jobs:
                             --enable-debug=full
                             --enable-helper-linux
                           - CCACHE_DISABLE=1 make -j $(nproc)
-                          - sudo CCACHE_DISABLE=1 LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" PATH=${PATH//:\.\/node_modules\/\.bin/} make check
+                          - mkdir /dev/shm/odp
+                          - sudo CCACHE_DISABLE=1 LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp ODP_PLATFORM_PARAMS="$ODP_PLATFORM_PARAMS" make check
                           - find . -type f -iname '*.[ch]' -not -path ".git/*" -execdir gcov {} \; ; bash <(curl -s https://codecov.io/bash) -X coveragepy
                 - stage: test
                   env: TEST=distcheck
@@ -415,6 +421,18 @@ jobs:
                 - stage: test
                   compiler: clang-3.8
                   env: CROSS_ARCH="i386" CONF="--disable-abi-compat"
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="arm64" CONF="--with-platform=linux-dpdk"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="arm64" CONF="--with-platform=linux-dpdk"
+                - stage: test
+                  compiler: gcc
+                  env: CROSS_ARCH="arm64" CONF="--with-platform=linux-dpdk --disable-abi-compat"
+                - stage: test
+                  compiler: clang-3.8
+                  env: CROSS_ARCH="arm64" CONF="--with-platform=linux-dpdk --disable-abi-compat"
                 - stage: test
                   canfail: yes
                   env: TEST=checkpatch

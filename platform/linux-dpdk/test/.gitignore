@@ -1,0 +1,3 @@
+*.log
+*.trs
+tests-linux-dpdk.env

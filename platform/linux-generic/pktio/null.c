@@ -32,12 +32,6 @@ static int null_recv(pktio_entry_t *pktio_entry ODP_UNUSED,
 	return 0;
 }
 
-static int null_fd_set(pktio_entry_t *pktio_entry ODP_UNUSED,
-		       int index ODP_UNUSED, fd_set *readfds ODP_UNUSED)
-{
-	return 0;
-}
-
 static int null_recv_tmo(pktio_entry_t *pktio_entry ODP_UNUSED,
 			 int index ODP_UNUSED,
 			 odp_packet_t pkt_table[] ODP_UNUSED,
@@ -160,7 +154,6 @@ const pktio_if_ops_t null_pktio_ops = {
 	.recv = null_recv,
 	.recv_tmo = null_recv_tmo,
 	.recv_mq_tmo = null_recv_mq_tmo,
-	.fd_set = null_fd_set,
 	.send = null_send,
 	.mtu_get = null_mtu_get,
 	.promisc_mode_set = null_promisc_mode_set,

@@ -226,6 +226,44 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm64-linux/odp/api/abi/traffic_mngr.h \
 	odp/arch/arm64-linux/odp/api/abi/version.h
 endif
+if ARCH_IS_DEFAULT
+odpapiabiarchinclude_HEADERS = \
+	odp/arch/default-linux/odp/api/abi/align.h \
+	odp/arch/default-linux/odp/api/abi/atomic.h \
+	odp/arch/default-linux/odp/api/abi/barrier.h \
+	odp/arch/default-linux/odp/api/abi/buffer.h \
+	odp/arch/default-linux/odp/api/abi/byteorder.h \
+	odp/arch/default-linux/odp/api/abi/classification.h \
+	odp/arch/default-linux/odp/api/abi/cpu.h \
+	odp/arch/default-linux/odp/api/abi/cpumask.h \
+	odp/arch/default-linux/odp/api/abi/crypto.h \
+	odp/arch/default-linux/odp/api/abi/debug.h \
+	odp/arch/default-linux/odp/api/abi/event.h \
+	odp/arch/default-linux/odp/api/abi/init.h \
+	odp/arch/default-linux/odp/api/abi/ipsec.h \
+	odp/arch/default-linux/odp/api/abi/packet.h \
+	odp/arch/default-linux/odp/api/abi/packet_flags.h \
+	odp/arch/default-linux/odp/api/abi/packet_io.h \
+	odp/arch/default-linux/odp/api/abi/pool.h \
+	odp/arch/default-linux/odp/api/abi/queue.h \
+	odp/arch/default-linux/odp/api/abi/rwlock.h \
+	odp/arch/default-linux/odp/api/abi/rwlock_recursive.h \
+	odp/arch/default-linux/odp/api/abi/schedule.h \
+	odp/arch/default-linux/odp/api/abi/schedule_types.h \
+	odp/arch/default-linux/odp/api/abi/shared_memory.h \
+	odp/arch/default-linux/odp/api/abi/spinlock.h \
+	odp/arch/default-linux/odp/api/abi/spinlock_recursive.h \
+	odp/arch/default-linux/odp/api/abi/std_clib.h \
+	odp/arch/default-linux/odp/api/abi/std_types.h \
+	odp/arch/default-linux/odp/api/abi/sync.h \
+	odp/arch/default-linux/odp/api/abi/thread.h \
+	odp/arch/default-linux/odp/api/abi/thrmask.h \
+	odp/arch/default-linux/odp/api/abi/ticketlock.h \
+	odp/arch/default-linux/odp/api/abi/time.h \
+	odp/arch/default-linux/odp/api/abi/timer.h \
+	odp/arch/default-linux/odp/api/abi/traffic_mngr.h \
+	odp/arch/default-linux/odp/api/abi/version.h
+endif
 if ARCH_IS_MIPS64
 odpapiabiarchinclude_HEADERS = \
 	odp/arch/mips64-linux/odp/api/abi/align.h \
