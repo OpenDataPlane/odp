@@ -900,7 +900,8 @@ static int ipsec_out_tunnel_parse_ipv6(ipsec_state_t *state,
 
 static int ipsec_out_tunnel_ipv4(odp_packet_t *pkt,
 				 ipsec_state_t *state,
-				 ipsec_sa_t *ipsec_sa)
+				 ipsec_sa_t *ipsec_sa,
+				 const odp_ipsec_ipv4_param_t *ipv4_param)
 {
 	_odp_ipv4hdr_t out_ip;
 	uint16_t flags;
@@ -911,7 +912,7 @@ static int ipsec_out_tunnel_ipv4(odp_packet_t *pkt,
 	else
 		out_ip.tos = (state->out_tunnel.ip_tos &
 			      ~_ODP_IP_TOS_DSCP_MASK) |
-			     (ipsec_sa->out.tun_ipv4.dscp <<
+			     (ipv4_param->dscp <<
 			      _ODP_IP_TOS_DSCP_SHIFT);
 	state->ip_tot_len = odp_packet_len(*pkt) - state->ip_offset;
 	state->ip_tot_len += _ODP_IPV4HDR_LEN;
@@ -923,13 +924,15 @@ static int ipsec_out_tunnel_ipv4(odp_packet_t *pkt,
 	if (ipsec_sa->copy_df)
 		flags = state->out_tunnel.ip_df;
 	else
-		flags = ((uint16_t)ipsec_sa->out.tun_ipv4.df) << 14;
+		flags = ((uint16_t)ipv4_param->df) << 14;
 	out_ip.frag_offset = _odp_cpu_to_be_16(flags);
-	out_ip.ttl = ipsec_sa->out.tun_ipv4.ttl;
+	out_ip.ttl = ipv4_param->ttl;
 	/* Will be filled later by packet checksum update */
 	out_ip.chksum = 0;
-	out_ip.src_addr = ipsec_sa->out.tun_ipv4.src_ip;
-	out_ip.dst_addr = ipsec_sa->out.tun_ipv4.dst_ip;
+	memcpy(&out_ip.src_addr, ipv4_param->src_addr,
+	       _ODP_IPV4ADDR_LEN);
+	memcpy(&out_ip.dst_addr, ipv4_param->dst_addr,
+	       _ODP_IPV4ADDR_LEN);
 
 	if (odp_packet_extend_head(pkt, _ODP_IPV4HDR_LEN,
 				   NULL, NULL) < 0)
@@ -959,7 +962,8 @@ static int ipsec_out_tunnel_ipv4(odp_packet_t *pkt,
 
 static int ipsec_out_tunnel_ipv6(odp_packet_t *pkt,
 				 ipsec_state_t *state,
-				 ipsec_sa_t *ipsec_sa)
+				 ipsec_sa_t *ipsec_sa,
+				 const odp_ipsec_ipv6_param_t *ipv6_param)
 {
 	_odp_ipv6hdr_t out_ip;
 	uint32_t ver;
@@ -970,23 +974,23 @@ static int ipsec_out_tunnel_ipv6(odp_packet_t *pkt,
 	else
 		ver |= ((state->out_tunnel.ip_tos &
 			 ~_ODP_IP_TOS_DSCP_MASK) |
-			(ipsec_sa->out.tun_ipv6.dscp <<
+			(ipv6_param->dscp <<
 			 _ODP_IP_TOS_DSCP_SHIFT)) <<
 			_ODP_IPV6HDR_TC_SHIFT;
 	if (ipsec_sa->copy_flabel)
 		ver |= state->out_tunnel.ip_flabel;
 	else
-		ver |= ipsec_sa->out.tun_ipv6.flabel;
+		ver |= ipv6_param->flabel;
 	out_ip.ver_tc_flow = odp_cpu_to_be_32(ver);
 
 	state->ip_tot_len = odp_packet_len(*pkt) - state->ip_offset;
 	out_ip.payload_len = _odp_cpu_to_be_16(state->ip_tot_len);
 	state->ip_tot_len += _ODP_IPV6HDR_LEN;
 
-	out_ip.hop_limit = ipsec_sa->out.tun_ipv6.hlimit;
-	memcpy(&out_ip.src_addr, ipsec_sa->out.tun_ipv6.src_ip,
+	out_ip.hop_limit = ipv6_param->hlimit;
+	memcpy(&out_ip.src_addr, ipv6_param->src_addr,
 	       _ODP_IPV6ADDR_LEN);
-	memcpy(&out_ip.dst_addr, ipsec_sa->out.tun_ipv6.dst_ip,
+	memcpy(&out_ip.dst_addr, ipv6_param->dst_addr,
 	       _ODP_IPV6ADDR_LEN);
 
 	if (odp_packet_extend_head(pkt, _ODP_IPV6HDR_LEN,
@@ -1365,9 +1369,13 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 		}
 
 		if (ipsec_sa->tun_ipv4)
-			rc = ipsec_out_tunnel_ipv4(&pkt, &state, ipsec_sa);
+			rc = ipsec_out_tunnel_ipv4(&pkt, &state, ipsec_sa,
+						   opt->flag.ip_param ? &opt->ipv4 :
+						   &ipsec_sa->out.tun_ipv4.param);
 		else
-			rc = ipsec_out_tunnel_ipv6(&pkt, &state, ipsec_sa);
+			rc = ipsec_out_tunnel_ipv6(&pkt, &state, ipsec_sa,
+						   opt->flag.ip_param ? &opt->ipv6 :
+						   &ipsec_sa->out.tun_ipv6.param);
 	}
 	if (rc < 0) {
 		status->error.alg = 1;
