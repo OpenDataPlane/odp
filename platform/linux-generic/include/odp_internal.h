@@ -76,6 +76,7 @@ enum init_stage {
 	NAME_TABLE_INIT,
 	IPSEC_EVENTS_INIT,
 	IPSEC_SAD_INIT,
+	IPSEC_INIT,
 	ALL_INIT      /* All init stages completed */
 };
 
@@ -135,6 +136,9 @@ int _odp_ishm_init_global(const odp_init_t *init);
 int _odp_ishm_init_local(void);
 int _odp_ishm_term_global(void);
 int _odp_ishm_term_local(void);
+
+int _odp_ipsec_init_global(void);
+int _odp_ipsec_term_global(void);
 
 int _odp_ipsec_sad_init_global(void);
 int _odp_ipsec_sad_term_global(void);
