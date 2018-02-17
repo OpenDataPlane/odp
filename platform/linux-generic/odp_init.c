@@ -150,6 +150,12 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = IPSEC_SAD_INIT;
 
+	if (_odp_ipsec_init_global()) {
+		ODP_ERR("ODP IPsec init failed.\n");
+		goto init_failed;
+	}
+	stage = IPSEC_INIT;
+
 	*instance = (odp_instance_t)odp_global_data.main_pid;
 
 	return 0;
@@ -174,6 +180,13 @@ int _odp_term_global(enum init_stage stage)
 
 	switch (stage) {
 	case ALL_INIT:
+	case IPSEC_INIT:
+		if (_odp_ipsec_term_global()) {
+			ODP_ERR("ODP IPsec term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
 	case IPSEC_SAD_INIT:
 		if (_odp_ipsec_sad_term_global()) {
 			ODP_ERR("ODP IPsec SAD term failed.\n");
