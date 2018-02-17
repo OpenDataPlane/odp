@@ -1796,3 +1796,16 @@ odp_event_t odp_ipsec_packet_to_event(odp_packet_t pkt)
 {
 	return odp_packet_to_event(pkt);
 }
+
+int _odp_ipsec_init_global(void)
+{
+	odp_ipsec_config_init(&ipsec_config);
+
+	return 0;
+}
+
+int _odp_ipsec_term_global(void)
+{
+	/* Do nothing for now */
+	return 0;
+}
