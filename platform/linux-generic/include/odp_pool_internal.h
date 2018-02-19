@@ -55,6 +55,8 @@ typedef struct pool_t {
 	uint32_t         ring_mask;
 	odp_shm_t        shm;
 	odp_shm_t        uarea_shm;
+	uint64_t         shm_size;
+	uint64_t         uarea_shm_size;
 	int              reserved;
 	uint32_t         num;
 	uint32_t         align;
@@ -65,8 +67,6 @@ typedef struct pool_t {
 	uint32_t         max_len;
 	uint32_t         uarea_size;
 	uint32_t         block_size;
-	uint32_t         shm_size;
-	uint32_t         uarea_shm_size;
 	uint8_t         *base_addr;
 	uint8_t         *uarea_base_addr;
 
