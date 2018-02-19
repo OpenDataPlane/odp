@@ -83,10 +83,10 @@ static inline pool_t *pool_from_buf(odp_buffer_t buf)
 static inline odp_buffer_hdr_t *buf_hdr_from_index(pool_t *pool,
 						   uint32_t buffer_idx)
 {
-	uint32_t block_offset;
+	uint64_t block_offset;
 	odp_buffer_hdr_t *buf_hdr;
 
-	block_offset = buffer_idx * pool->block_size;
+	block_offset = buffer_idx * (uint64_t)pool->block_size;
 
 	/* clang requires cast to uintptr_t */
 	buf_hdr = (odp_buffer_hdr_t *)(uintptr_t)&pool->base_addr[block_offset];
@@ -236,7 +236,7 @@ static pool_t *reserve_pool(void)
 
 static void init_buffers(pool_t *pool)
 {
-	uint32_t i;
+	uint64_t i;
 	odp_buffer_hdr_t *buf_hdr;
 	odp_packet_hdr_t *pkt_hdr;
 	odp_shm_info_t shm_info;
