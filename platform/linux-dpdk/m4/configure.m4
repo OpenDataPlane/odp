@@ -16,8 +16,8 @@ m4_include([platform/linux-dpdk/m4/odp_schedule.m4])
 ##########################################################################
 AC_ARG_WITH([dpdk-path],
 [AS_HELP_STRING([--with-dpdk-path=DIR], [path to dpdk build directory])],
-    [DPDK_PATH="$withval"
-     pktio_dpdk_support=yes],[])
+    [DPDK_PATH="$withval"],
+    [DPDK_PATH=system])
 
 
 AS_CASE($host_cpu, [x86_64], [DPDK_CPPFLAGS="-msse4.2"])
