@@ -124,7 +124,7 @@ ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
 # Check if compiler supports cmpxchng16 on x86-based architectures
 ##########################################################################
 case "${host}" in
-  i?86? | x86*)
+  i?86* | x86*)
   if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
      ODP_CHECK_CFLAG([-mcx16])
   fi
@@ -159,18 +159,9 @@ AS_CASE([$host],
   [powerpc*], [ARCH_DIR=powerpc],
   [aarch64*], [ARCH_DIR=aarch64],
   [arm*], [ARCH_DIR=arm],
-  [ARCH_DIR=undefined]
+  [ARCH_DIR=default]
 )
 AC_SUBST([ARCH_DIR])
-
-##########################################################################
-# Warn on the defaults if arch is undefined
-##########################################################################
-if test "${ARCH_DIR}" = "undefined";
-then
-    echo "ARCH_DIR is undefined, please add your ARCH_DIR based on host=${host}"
-    exit 1
-fi
 
 ##########################################################################
 # Architecture for ABI support
@@ -182,14 +173,30 @@ AS_CASE([$host],
   [powerpc*], [ARCH_ABI=power64-linux],
   [aarch64*], [ARCH_ABI=arm64-linux],
   [arm*],     [ARCH_ABI=arm32-linux],
-  [ARCH_ABI=undefined]
+  [ARCH_ABI=default-linux]
 )
 AC_SUBST([ARCH_ABI])
 
-if test "${ARCH_ABI}" = "undefined";
+AC_ARG_ENABLE([host-optimization],
+	      [AS_HELP_STRING([--disable-host-optimization],
+			      [disables using host-specific ARCH and ABI files])],
+			      [], [enable_host_optimization=yes])
+if test "x$enable_host_optimization" = "xno" ; then
+	ARCH_DIR=default
+	ARCH_ABI=default-linux
+fi
+
+##########################################################################
+# Warn on the defaults if arch is undefined
+##########################################################################
+if test "${ARCH_DIR}" = "default";
 then
-    echo "ARCH_ABI is undefined, please add your ARCH_ABI based on host=${host}"
-    exit 1
+    AC_MSG_WARN([ARCH_DIR is undefined, please add your ARCH_DIR based on host=${host}])
+fi
+
+if test "${ARCH_ABI}" = "default-linux";
+then
+    AC_MSG_WARN([ARCH_ABI is undefined, please add your ARCH_ABI based on host=${host}])
 fi
 
 ##########################################################################
@@ -204,7 +211,8 @@ AC_SUBST(PKGCONFIG_VERSION)
 ODP_ABI_COMPAT=1
 abi_compat=yes
 AC_ARG_ENABLE([abi-compat],
-    [  --disable-abi-compat    disables ABI compatible mode, enables inline code in header files],
+    [AS_HELP_STRING([--disable-abi-compat],
+		    [disables ABI compatible mode, enables inline code in header files])],
     [if test "x$enableval" = "xno"; then
 	ODP_ABI_COMPAT=0
 	abi_compat=no
@@ -280,6 +288,7 @@ AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
 AM_CONDITIONAL([helper_linux], [test x$helper_linux = xyes ])
 AM_CONDITIONAL([ARCH_IS_ARM], [test "x${ARCH_DIR}" = "xarm"])
 AM_CONDITIONAL([ARCH_IS_AARCH64], [test "x${ARCH_DIR}" = "xaarch64"])
+AM_CONDITIONAL([ARCH_IS_DEFAULT], [test "x${ARCH_DIR}" = "xdefault"])
 AM_CONDITIONAL([ARCH_IS_MIPS64], [test "x${ARCH_DIR}" = "xmips64"])
 AM_CONDITIONAL([ARCH_IS_POWERPC], [test "x${ARCH_DIR}" = "xpowerpc"])
 AM_CONDITIONAL([ARCH_IS_X86], [test "x${ARCH_DIR}" = "xx86"])
