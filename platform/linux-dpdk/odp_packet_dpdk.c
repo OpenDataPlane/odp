@@ -348,24 +348,22 @@ static int stop_pkt_dpdk(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
-/* Forward declaration */
-static int send_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
-			 const odp_packet_t pkt_table[], int len);
-
 /* This function can't be called if pkt_dpdk->lockless_tx is true */
 static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
 {
 	int i;
 	unsigned j;
-	odp_packet_t dummy;
 	pool_t *pool = pool_entry_from_hdl(pktio_entry->s.pool);
 	struct rte_mempool *rte_mempool = pool->rte_mempool;
+	uint16_t port_id = pktio_entry->s.pkt_dpdk.port_id;
 
 	for (j = 0; j < pktio_entry->s.num_out_queue; j++)
-		send_pkt_dpdk(pktio_entry, j, &dummy, 0);
+		rte_eth_tx_done_cleanup(port_id, j, 0);
 
 	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
 		pktio_entry_t *entry = pktio_entry_ptr[i];
+
+		port_id = entry->s.pkt_dpdk.port_id;
 
 		if (rte_mempool_avail_count(rte_mempool) != 0)
 			return;
@@ -378,8 +376,7 @@ static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
 			    entry->s.ops == &dpdk_pktio_ops) {
 				for (j = 0; j < pktio_entry->s.num_out_queue;
 				     j++)
-					send_pkt_dpdk(pktio_entry, j,
-						      &dummy, 0);
+					rte_eth_tx_done_cleanup(port_id, j, 0);
 			}
 			odp_ticketlock_unlock(&entry->s.txl);
 		}
