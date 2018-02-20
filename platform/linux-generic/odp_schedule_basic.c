@@ -1407,7 +1407,7 @@ static int schedule_num_grps(void)
 }
 
 /* Fill in scheduler interface */
-const schedule_fn_t schedule_default_fn = {
+const schedule_fn_t schedule_basic_fn = {
 	.status_sync = 0,
 	.pktio_start = schedule_pktio_start,
 	.thr_add = schedule_thr_add,
@@ -1429,7 +1429,7 @@ const schedule_fn_t schedule_default_fn = {
 };
 
 /* Fill in scheduler API calls */
-const schedule_api_t schedule_default_api = {
+const schedule_api_t schedule_basic_api = {
 	.schedule_wait_time       = schedule_wait_time,
 	.schedule                 = schedule,
 	.schedule_multi           = schedule_multi,
