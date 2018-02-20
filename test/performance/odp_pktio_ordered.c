@@ -75,11 +75,11 @@
 
 #define JHASH_GOLDEN_RATIO	0x9e3779b9
 
+/* Maximum pool and queue size */
+#define MAX_NUM_PKT             (8 * 1024)
+
 /** Maximum number of worker threads */
 #define MAX_WORKERS		64
-
-/** Number of packet buffers in the memory pool */
-#define PKT_POOL_SIZE		8192
 
 /** Buffer size of the packet pool buffer in bytes*/
 #define PKT_POOL_BUF_SIZE	1856
@@ -92,9 +92,6 @@
 
 /** Maximum number of pktio queues per interface */
 #define MAX_QUEUES		32
-
-/** Seems to need at least 8192 elements per queue */
-#define QUEUE_SIZE		8192
 
 /** Maximum number of pktio interfaces */
 #define MAX_PKTIOS		8
@@ -1074,7 +1071,8 @@ int main(int argc, char *argv[])
 	odp_pool_t pool;
 	odp_pool_param_t params;
 	odp_shm_t shm;
-	odp_queue_capability_t capa;
+	odp_queue_capability_t queue_capa;
+	odp_pool_capability_t pool_capa;
 	odph_ethaddr_t new_addr;
 	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	stats_t *stats;
@@ -1085,6 +1083,7 @@ int main(int argc, char *argv[])
 	int ret;
 	int num_workers;
 	int in_mode;
+	uint32_t queue_size, pool_size;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, NULL, NULL)) {
@@ -1095,6 +1094,16 @@ int main(int argc, char *argv[])
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		LOG_ERR("Error: ODP local init failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_queue_capability(&queue_capa)) {
+		LOG_ERR("Error: Queue capa failed\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_pool_capability(&pool_capa)) {
+		LOG_ERR("Error: Pool capa failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1121,8 +1130,7 @@ int main(int argc, char *argv[])
 
 	if (gbl_args->appl.in_mode == SCHED_ORDERED) {
 		/* At least one ordered lock required  */
-		odp_queue_capability(&capa);
-		if (capa.max_ordered_locks < 1) {
+		if (queue_capa.max_ordered_locks < 1) {
 			LOG_ERR("Error: Ordered locks not available.\n");
 			exit(EXIT_FAILURE);
 		}
@@ -1145,11 +1153,25 @@ int main(int argc, char *argv[])
 	printf("First CPU:          %i\n", odp_cpumask_first(&cpumask));
 	printf("CPU mask:           %s\n\n", cpumaskstr);
 
+	pool_size = MAX_NUM_PKT;
+	if (pool_capa.pkt.max_num && pool_capa.pkt.max_num < MAX_NUM_PKT)
+		pool_size = pool_capa.pkt.max_num;
+
+	queue_size = MAX_NUM_PKT;
+	if (queue_capa.sched.max_size &&
+	    queue_capa.sched.max_size < MAX_NUM_PKT)
+		queue_size = queue_capa.sched.max_size;
+
+	/* Pool should not be larger than queue, otherwise queue enqueues at
+	 * packet input may fail. */
+	if (pool_size > queue_size)
+		pool_size = queue_size;
+
 	/* Create packet pool */
 	odp_pool_param_init(&params);
 	params.pkt.seg_len = PKT_POOL_BUF_SIZE;
 	params.pkt.len     = PKT_POOL_BUF_SIZE;
-	params.pkt.num     = PKT_POOL_SIZE;
+	params.pkt.num     = pool_size;
 	params.pkt.uarea_size = PKT_UAREA_SIZE;
 	params.type        = ODP_POOL_PACKET;
 
@@ -1225,7 +1247,7 @@ int main(int argc, char *argv[])
 			qparam.sched.prio = ODP_SCHED_PRIO_DEFAULT;
 			qparam.sched.sync = ODP_SCHED_SYNC_ATOMIC;
 			qparam.sched.group = ODP_SCHED_GROUP_ALL;
-			qparam.size	  = QUEUE_SIZE;
+			qparam.size	  = queue_size;
 
 			gbl_args->flow_qcontext[i][j].idx = i;
 			gbl_args->flow_qcontext[i][j].input_queue = 0;
