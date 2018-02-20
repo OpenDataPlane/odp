@@ -172,13 +172,13 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pktio/ring.c \
 			   odp_pkt_queue.c \
 			   odp_pool.c \
-			   odp_queue.c \
+			   odp_queue_basic.c \
 			   odp_queue_if.c \
 			   odp_queue_lf.c \
 			   odp_queue_scalable.c \
 			   odp_rwlock.c \
 			   odp_rwlock_recursive.c \
-			   odp_schedule.c \
+			   odp_schedule_basic.c \
 			   odp_schedule_if.c \
 			   odp_schedule_sp.c \
 			   odp_schedule_iquery.c \

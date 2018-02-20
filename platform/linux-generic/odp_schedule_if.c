@@ -12,8 +12,8 @@
 extern const schedule_fn_t schedule_sp_fn;
 extern const schedule_api_t schedule_sp_api;
 
-extern const schedule_fn_t schedule_default_fn;
-extern const schedule_api_t schedule_default_api;
+extern const schedule_fn_t schedule_basic_fn;
+extern const schedule_api_t schedule_basic_api;
 
 extern const schedule_fn_t schedule_iquery_fn;
 extern const schedule_api_t schedule_iquery_api;
@@ -31,8 +31,8 @@ const schedule_api_t *sched_api = &schedule_iquery_api;
 const schedule_fn_t  *sched_fn  = &schedule_scalable_fn;
 const schedule_api_t *sched_api = &schedule_scalable_api;
 #else
-const schedule_fn_t  *sched_fn  = &schedule_default_fn;
-const schedule_api_t *sched_api = &schedule_default_api;
+const schedule_fn_t  *sched_fn  = &schedule_basic_fn;
+const schedule_api_t *sched_api = &schedule_basic_api;
 #endif
 
 uint64_t odp_schedule_wait_time(uint64_t ns)

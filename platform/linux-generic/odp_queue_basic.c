@@ -790,7 +790,7 @@ static odp_queue_t queue_to_ext(queue_t q_int)
 }
 
 /* API functions */
-queue_api_t queue_default_api = {
+queue_api_t queue_basic_api = {
 	.queue_create = queue_create,
 	.queue_destroy = queue_destroy,
 	.queue_lookup = queue_lookup,
@@ -812,7 +812,7 @@ queue_api_t queue_default_api = {
 };
 
 /* Functions towards internal components */
-queue_fn_t queue_default_fn = {
+queue_fn_t queue_basic_fn = {
 	.init_global = queue_init_global,
 	.term_global = queue_term_global,
 	.init_local = queue_init_local,
