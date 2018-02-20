@@ -1,23 +1,6 @@
-AC_ARG_ENABLE([schedule-sp],
-    [  --enable-schedule-sp    enable strict priority scheduler],
-    [if test x$enableval = xyes; then
-	schedule_sp_enabled=yes
-	AC_DEFINE([ODP_SCHEDULE_SP], [1],
-		  [Define to 1 to enable strict priority scheduler])
-    fi])
-
-AC_ARG_ENABLE([schedule-iquery],
-    [  --enable-schedule-iquery    enable interests query (sparse bitmap) scheduler],
-    [if test x$enableval = xyes; then
-	schedule_iquery_enabled=yes
-	AC_DEFINE([ODP_SCHEDULE_IQUERY], [1],
-		  [Define to 1 to enable interests query scheduler])
-    fi])
-
-AC_ARG_ENABLE([schedule_scalable],
-    [  --enable-schedule-scalable   enable scalable scheduler],
-    [if test x$enableval = xyes; then
-	schedule_scalable_enabled=yes
-	AC_DEFINE([ODP_SCHEDULE_SCALABLE], [1],
-		  [Define to 1 to enable scalable scheduler])
-    fi])
+AC_ARG_ENABLE([scheduler-default],
+	      [AS_HELP_STRING([enable-scheduler-default],
+			      [Choose default scheduler (default is basic)])],
+	      [], [enable_scheduler_default=basic])
+AC_DEFINE_UNQUOTED([ODP_SCHEDULE_DEFAULT], ["$enable_scheduler_default"],
+		   [Define to name default scheduler])

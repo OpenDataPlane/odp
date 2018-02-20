@@ -8,6 +8,10 @@
 
 #include <odp_queue_if.h>
 #include <odp_internal.h>
+#include <odp_debug_internal.h>
+
+#include <stdlib.h>
+#include <string.h>
 
 extern const queue_api_t queue_scalable_api;
 extern const queue_fn_t queue_scalable_fn;
@@ -15,13 +19,8 @@ extern const queue_fn_t queue_scalable_fn;
 extern const queue_api_t queue_basic_api;
 extern const queue_fn_t queue_basic_fn;
 
-#ifdef ODP_SCHEDULE_SCALABLE
-const queue_api_t *queue_api = &queue_scalable_api;
-const queue_fn_t *queue_fn = &queue_scalable_fn;
-#else
-const queue_api_t *queue_api = &queue_basic_api;
-const queue_fn_t *queue_fn = &queue_basic_fn;
-#endif
+const queue_api_t *queue_api;
+const queue_fn_t *queue_fn;
 
 odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param)
 {
@@ -115,6 +114,24 @@ int odp_queue_info(odp_queue_t queue, odp_queue_info_t *info)
 
 int _odp_queue_init_global(void)
 {
+	const char *sched = getenv("ODP_SCHEDULER");
+
+	if (sched == NULL || !strcmp(sched, "default"))
+		sched = ODP_SCHEDULE_DEFAULT;
+
+	if (!strcmp(sched, "basic") ||
+	    !strcmp(sched, "sp") ||
+	    !strcmp(sched, "iquery")) {
+		queue_fn = &queue_basic_fn;
+		queue_api = &queue_basic_api;
+	} else if (!strcmp(sched, "scalable")) {
+		queue_fn = &queue_scalable_fn;
+		queue_api = &queue_scalable_api;
+	} else {
+		ODP_ABORT("Unknown scheduler specified via ODP_SCHEDULER\n");
+		return -1;
+	}
+
 	return queue_fn->init_global();
 }
 
