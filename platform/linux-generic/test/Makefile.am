@@ -3,6 +3,10 @@ TESTS_ENVIRONMENT += TEST_DIR=${top_builddir}/test/validation
 
 SUBDIRS = performance
 
+if test_example
+SUBDIRS += example
+endif
+
 if test_vald
 TESTS = validation/api/pktio/pktio_run.sh \
 	validation/api/pktio/pktio_run_tap.sh \
