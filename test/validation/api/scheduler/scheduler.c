@@ -57,6 +57,7 @@ typedef struct {
 	odp_barrier_t barrier;
 	int buf_count;
 	int buf_count_cpy;
+	uint32_t max_sched_queue_size;
 	odp_ticketlock_t lock;
 	odp_spinlock_t atomic_lock;
 	struct {
@@ -1060,7 +1061,7 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 	args->num_queues = num_queues;
 	args->num_prio = num_prio;
 	if (enable_excl_atomic)
-		args->num_bufs = BUFS_PER_QUEUE_EXCL;
+		args->num_bufs = globals->max_sched_queue_size;
 	else
 		args->num_bufs = BUFS_PER_QUEUE;
 	args->num_workers = globals->num_workers;
@@ -1405,7 +1406,7 @@ static void scheduler_test_ordered_lock(void)
 	CU_ASSERT(ret == 0);
 }
 
-static int create_queues(void)
+static int create_queues(test_globals_t *globals)
 {
 	int i, j, prios, rc;
 	odp_queue_capability_t capa;
@@ -1425,6 +1426,12 @@ static int create_queues(void)
 		capa.max_ordered_locks = MAX_ORDERED_LOCKS;
 		printf("Testing only %u ordered locks\n",
 		       capa.max_ordered_locks);
+	}
+
+	globals->max_sched_queue_size = BUFS_PER_QUEUE_EXCL;
+	if (capa.sched.max_size && capa.sched.max_size < BUFS_PER_QUEUE_EXCL) {
+		printf("Max sched queue size %u\n", capa.sched.max_size);
+		globals->max_sched_queue_size = capa.sched.max_size;
 	}
 
 	prios = odp_schedule_num_prio();
@@ -1455,17 +1462,17 @@ static int create_queues(void)
 			q = odp_queue_create(name, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
-				printf("Schedule queue create failed.\n");
+				printf("Parallel queue create failed.\n");
 				return -1;
 			}
 
 			snprintf(name, sizeof(name), "sched_%d_%d_a", i, j);
 			p.sched.sync = ODP_SCHED_SYNC_ATOMIC;
-			p.size = BUFS_PER_QUEUE_EXCL;
+			p.size = globals->max_sched_queue_size;
 			q = odp_queue_create(name, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
-				printf("Schedule queue create failed.\n");
+				printf("Atomic queue create failed.\n");
 				return -1;
 			}
 
@@ -1501,7 +1508,7 @@ static int create_queues(void)
 			q = odp_queue_create(name, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
-				printf("Schedule queue create failed.\n");
+				printf("Ordered queue create failed.\n");
 				return -1;
 			}
 			if (odp_queue_lock_count(q) !=
@@ -1598,7 +1605,7 @@ static int scheduler_suite_init(void)
 	odp_ticketlock_init(&globals->lock);
 	odp_spinlock_init(&globals->atomic_lock);
 
-	if (create_queues() != 0)
+	if (create_queues(globals) != 0)
 		return -1;
 
 	return 0;
