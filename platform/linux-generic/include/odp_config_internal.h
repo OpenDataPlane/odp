@@ -144,7 +144,7 @@ extern "C" {
  * This controls the burst size on various enqueue, dequeue, etc calls. Large
  * burst size improves throughput, but may degrade QoS (increase latency).
  */
-#define CONFIG_BURST_SIZE 16
+#define CONFIG_BURST_SIZE 32
 
 /*
  * Maximum number of events in a pool
