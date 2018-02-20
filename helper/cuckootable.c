@@ -184,12 +184,34 @@ odph_cuckoo_table_create(
 
 	odp_queue_t queue;
 	odp_queue_param_t qparam;
+	odp_queue_capability_t qcapa;
+	odp_pool_capability_t pcapa;
 
 	char pool_name[ODPH_TABLE_NAME_LEN + 3],
 		 queue_name[ODPH_TABLE_NAME_LEN + 3];
 	unsigned i;
 	uint32_t impl_size, kv_entry_size,
 			 bucket_num, bucket_size;
+
+	if (odp_queue_capability(&qcapa)) {
+		ODPH_DBG("queue capa failed\n");
+		return NULL;
+	}
+
+	if (qcapa.plain.max_size && qcapa.plain.max_size < capacity) {
+		ODPH_DBG("queue max_size too small\n");
+		return NULL;
+	}
+
+	if (odp_pool_capability(&pcapa)) {
+		ODPH_DBG("pool capa failed\n");
+		return NULL;
+	}
+
+	if (pcapa.buf.max_num && pcapa.buf.max_num < capacity) {
+		ODPH_DBG("pool max_num too small\n");
+		return NULL;
+	}
 
 	/* Check for valid parameters */
 	if (
