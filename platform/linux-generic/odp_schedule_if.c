@@ -8,6 +8,10 @@
 
 #include <odp_schedule_if.h>
 #include <odp_internal.h>
+#include <odp_debug_internal.h>
+
+#include <stdlib.h>
+#include <string.h>
 
 extern const schedule_fn_t schedule_sp_fn;
 extern const schedule_api_t schedule_sp_api;
@@ -21,19 +25,8 @@ extern const schedule_api_t schedule_iquery_api;
 extern const schedule_fn_t  schedule_scalable_fn;
 extern const schedule_api_t schedule_scalable_api;
 
-#ifdef ODP_SCHEDULE_SP
-const schedule_fn_t *sched_fn   = &schedule_sp_fn;
-const schedule_api_t *sched_api = &schedule_sp_api;
-#elif defined(ODP_SCHEDULE_IQUERY)
-const schedule_fn_t *sched_fn   = &schedule_iquery_fn;
-const schedule_api_t *sched_api = &schedule_iquery_api;
-#elif defined(ODP_SCHEDULE_SCALABLE)
-const schedule_fn_t  *sched_fn  = &schedule_scalable_fn;
-const schedule_api_t *sched_api = &schedule_scalable_api;
-#else
-const schedule_fn_t  *sched_fn  = &schedule_basic_fn;
-const schedule_api_t *sched_api = &schedule_basic_api;
-#endif
+const schedule_fn_t *sched_fn;
+const schedule_api_t *sched_api;
 
 uint64_t odp_schedule_wait_time(uint64_t ns)
 {
@@ -148,6 +141,30 @@ void odp_schedule_order_lock_wait(uint32_t lock_index)
 
 int _odp_schedule_init_global(void)
 {
+	const char *sched = getenv("ODP_SCHEDULER");
+
+	if (sched == NULL || !strcmp(sched, "default"))
+		sched = ODP_SCHEDULE_DEFAULT;
+
+	ODP_PRINT("Using scheduler '%s'\n", sched);
+
+	if (!strcmp(sched, "basic")) {
+		sched_fn = &schedule_basic_fn;
+		sched_api = &schedule_basic_api;
+	} else if (!strcmp(sched, "sp")) {
+		sched_fn = &schedule_sp_fn;
+		sched_api = &schedule_sp_api;
+	} else if (!strcmp(sched, "iquery")) {
+		sched_fn = &schedule_iquery_fn;
+		sched_api = &schedule_iquery_api;
+	} else if (!strcmp(sched, "scalable")) {
+		sched_fn = &schedule_scalable_fn;
+		sched_api = &schedule_scalable_api;
+	} else {
+		ODP_ABORT("Unknown scheduler specified via ODP_SCHEDULER\n");
+		return -1;
+	}
+
 	return sched_fn->init_global();
 }
 
