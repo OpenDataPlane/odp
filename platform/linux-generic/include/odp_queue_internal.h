@@ -29,6 +29,7 @@ extern "C" {
 #include <odp/api/hints.h>
 #include <odp/api/ticketlock.h>
 #include <odp_config_internal.h>
+#include <odp_ring_st_internal.h>
 
 #define QUEUE_STATUS_FREE         0
 #define QUEUE_STATUS_DESTROYED    1
@@ -38,9 +39,7 @@ extern "C" {
 
 struct queue_entry_s {
 	odp_ticketlock_t  ODP_ALIGNED_CACHE lock;
-
-	odp_buffer_hdr_t *head;
-	odp_buffer_hdr_t *tail;
+	ring_st_t         ring_st;
 	int               status;
 
 	queue_enq_fn_t       ODP_ALIGNED_CACHE enqueue;
