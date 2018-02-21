@@ -12,11 +12,11 @@ SUBDIRS = \
 	  include \
 	  $(PLATFORM_DIR) \
 	  helper \
+	  test \
+	  $(PLATFORM_TEST_DIR) \
 	  helper/test \
 	  doc \
-	  example . \
-	  test \
-	  $(PLATFORM_TEST_DIR)
+	  example
 
 @DX_RULES@
 
