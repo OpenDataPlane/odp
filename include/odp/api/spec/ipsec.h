@@ -1346,9 +1346,7 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
  * and content of packet data before the IP header is undefined. Use outbound
  * operation parameters to specify the amount of TFC padding appended to
  * the packet during IPSEC transformation. Options can be used also to create
- * TFC dummy packets. Packet data content is ignored in tunnel mode TFC dummy
- * packet creation as tfc_pad_len option defines solely the packet length.
- * In all other cases, payload length for the IPSEC transformation is specified
+ * TFC dummy packets. Payload length for the IPSEC transformation is specified
  * by odp_packet_len() minus odp_packet_l3_offset() plus tfc_pad_len option.
  *
  * Each successfully transformed packet has a valid value for these metadata:
