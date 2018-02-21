@@ -218,6 +218,59 @@ void pool_test_info_packet(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+static void pool_test_info_data_range(void)
+{
+	odp_pool_t pool;
+	odp_pool_info_t info;
+	odp_pool_param_t param;
+	odp_packet_t pkt[PKT_NUM];
+	uint32_t i, num;
+	uintptr_t pool_len;
+
+	odp_pool_param_init(&param);
+
+	param.type     = ODP_POOL_PACKET;
+	param.pkt.num  = PKT_NUM;
+	param.pkt.len  = PKT_LEN;
+
+	pool = odp_pool_create(NULL, &param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	CU_ASSERT_FATAL(odp_pool_info(pool, &info) == 0);
+
+	pool_len = info.max_data_addr - info.min_data_addr + 1;
+	CU_ASSERT(pool_len >= PKT_NUM * PKT_LEN);
+
+	num = 0;
+
+	for (i = 0; i < PKT_NUM; i++) {
+		pkt[num] = odp_packet_alloc(pool, PKT_LEN);
+		CU_ASSERT(pkt[num] != ODP_PACKET_INVALID);
+
+		if (pkt[num] != ODP_PACKET_INVALID)
+			num++;
+	}
+
+	for (i = 0; i < num; i++) {
+		uintptr_t pkt_data, pkt_data_end;
+		uint32_t offset = 0, seg_len;
+		uint32_t pkt_len = odp_packet_len(pkt[i]);
+
+		while (offset < pkt_len) {
+			pkt_data = (uintptr_t)odp_packet_offset(pkt[i], offset,
+								&seg_len, NULL);
+			pkt_data_end = pkt_data + seg_len - 1;
+			CU_ASSERT((pkt_data >= info.min_data_addr) &&
+				  (pkt_data_end <= info.max_data_addr));
+			offset += seg_len;
+		}
+
+		odp_packet_free(pkt[i]);
+	}
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
 odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO(pool_test_create_destroy_buffer),
 	ODP_TEST_INFO(pool_test_create_destroy_packet),
@@ -226,6 +279,7 @@ odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO(pool_test_alloc_packet_subparam),
 	ODP_TEST_INFO(pool_test_info_packet),
 	ODP_TEST_INFO(pool_test_lookup_info_print),
+	ODP_TEST_INFO(pool_test_info_data_range),
 	ODP_TEST_INFO_NULL,
 };
 
