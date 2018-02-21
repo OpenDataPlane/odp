@@ -1061,7 +1061,8 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 			 ipsec_sa_t *ipsec_sa,
 			 odp_crypto_packet_op_param_t *param,
 			 odp_ipsec_op_status_t *status,
-			 uint32_t mtu)
+			 uint32_t mtu,
+			 const odp_ipsec_out_opt_t *opt)
 {
 	_odp_esphdr_t esp;
 	_odp_esptrl_t esptrl;
@@ -1069,6 +1070,7 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 	uint32_t encrypt_len;
 	uint16_t ip_data_len = state->ip_tot_len -
 			       state->ip_hdr_len;
+	uint16_t tfc_len = opt->flag.tfc_pad ? opt->tfc_pad_len : 0;
 	uint32_t pad_block = ipsec_sa->esp_block_len;
 	uint16_t ipsec_offset = state->ip_offset + state->ip_hdr_len;
 	unsigned hdr_len;
@@ -1079,7 +1081,7 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 	if (pad_block < 4)
 		pad_block = 4;
 
-	encrypt_len = IPSEC_PAD_LEN(ip_data_len + _ODP_ESPTRL_LEN,
+	encrypt_len = IPSEC_PAD_LEN(ip_data_len + tfc_len + _ODP_ESPTRL_LEN,
 				    pad_block);
 
 	hdr_len = _ODP_ESPHDR_LEN + ipsec_sa->esp_iv_len;
@@ -1120,7 +1122,7 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 	param->aad_ptr = (uint8_t *)&state->esp.aad;
 
 	memset(&esptrl, 0, sizeof(esptrl));
-	esptrl.pad_len = encrypt_len - ip_data_len - _ODP_ESPTRL_LEN;
+	esptrl.pad_len = encrypt_len - ip_data_len - tfc_len - _ODP_ESPTRL_LEN;
 	esptrl.next_header = state->ip_next_hdr;
 
 	odp_packet_copy_from_mem(*pkt, state->ip_next_hdr_offset, 1, &proto);
@@ -1165,6 +1167,8 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 				 ipsec_offset + _ODP_ESPHDR_LEN,
 				 ipsec_sa->esp_iv_len,
 				 state->iv + ipsec_sa->salt_length);
+	_odp_packet_set_data(*pkt, esptrl_offset - esptrl.pad_len - tfc_len,
+			     0xa5, tfc_len);
 	odp_packet_copy_from_mem(*pkt,
 				 esptrl_offset - esptrl.pad_len,
 				 esptrl.pad_len, ipsec_padding);
@@ -1383,7 +1387,8 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	}
 
 	if (ODP_IPSEC_ESP == ipsec_sa->proto) {
-		rc = ipsec_out_esp(&pkt, &state, ipsec_sa, &param, status, mtu);
+		rc = ipsec_out_esp(&pkt, &state, ipsec_sa, &param, status, mtu,
+				   opt);
 	} else if (ODP_IPSEC_AH == ipsec_sa->proto) {
 		rc = ipsec_out_ah(&pkt, &state, ipsec_sa, &param, status, mtu);
 	} else {
