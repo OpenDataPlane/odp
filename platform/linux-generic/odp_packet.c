@@ -2485,6 +2485,16 @@ int odp_packet_has_ref(odp_packet_t pkt)
 	return 0;
 }
 
+odp_proto_l2_type_t odp_packet_l2_type(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	if (pkt_hdr->p.input_flags.eth)
+		return ODP_PROTO_L2_TYPE_ETH;
+
+	return ODP_PROTO_L2_TYPE_NONE;
+}
+
 odp_proto_l3_type_t odp_packet_l3_type(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
