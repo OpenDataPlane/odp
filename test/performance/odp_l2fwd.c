@@ -28,10 +28,10 @@
 #define MAX_WORKERS            32
 
 /* Size of the shared memory block */
-#define SHM_PKT_POOL_SIZE      8192
+#define POOL_PKT_NUM           (16 * 1024)
 
 /* Buffer size of the packet pool buffer */
-#define SHM_PKT_POOL_BUF_SIZE  1856
+#define POOL_PKT_LEN           1536
 
 /* Maximum number of packet in a burst */
 #define MAX_PKT_BURST          32
@@ -663,7 +663,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	odp_pktio_t pktio;
 	odp_pktio_param_t pktio_param;
 	odp_schedule_sync_t  sync_mode;
-	odp_pktio_capability_t capa;
+	odp_pktio_capability_t pktio_capa;
 	odp_pktio_config_t config;
 	odp_pktin_queue_param_t pktin_param;
 	odp_pktout_queue_param_t pktout_param;
@@ -699,8 +699,8 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	if (gbl_args->appl.verbose)
 		odp_pktio_print(pktio);
 
-	if (odp_pktio_capability(pktio, &capa)) {
-		LOG_ERR("Error: capability query failed %s\n", dev);
+	if (odp_pktio_capability(pktio, &pktio_capa)) {
+		LOG_ERR("Error: pktio capability query failed %s\n", dev);
 		return -1;
 	}
 
@@ -739,17 +739,17 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 		pktin_param.queue_param.sched.group = group;
 	}
 
-	if (num_rx > (int)capa.max_input_queues) {
+	if (num_rx > (int)pktio_capa.max_input_queues) {
 		printf("Sharing %i input queues between %i workers\n",
-		       capa.max_input_queues, num_rx);
-		num_rx  = capa.max_input_queues;
+		       pktio_capa.max_input_queues, num_rx);
+		num_rx  = pktio_capa.max_input_queues;
 		mode_rx = ODP_PKTIO_OP_MT;
 	}
 
-	if (num_tx > (int)capa.max_output_queues) {
+	if (num_tx > (int)pktio_capa.max_output_queues) {
 		printf("Sharing %i output queues between %i workers\n",
-		       capa.max_output_queues, num_tx);
-		num_tx  = capa.max_output_queues;
+		       pktio_capa.max_output_queues, num_tx);
+		num_tx  = pktio_capa.max_output_queues;
 		mode_tx = ODP_PKTIO_OP_MT;
 	}
 
@@ -1446,6 +1446,8 @@ int main(int argc, char *argv[])
 	int num_groups;
 	odp_schedule_group_t group[MAX_PKTIOS];
 	odp_init_t init;
+	odp_pool_capability_t pool_capa;
+	uint32_t pkt_len, pkt_num;
 
 	odp_init_param_init(&init);
 
@@ -1525,11 +1527,25 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	if (odp_pool_capability(&pool_capa)) {
+		LOG_ERR("Error: pool capability failed\n");
+		return -1;
+	}
+
+	pkt_len = POOL_PKT_LEN;
+	pkt_num = POOL_PKT_NUM;
+
+	if (pool_capa.pkt.max_len && pkt_len > pool_capa.pkt.max_len)
+		pkt_len = pool_capa.pkt.max_len;
+
+	if (pool_capa.pkt.max_num && pkt_num > pool_capa.pkt.max_num)
+		pkt_num = pool_capa.pkt.max_num;
+
 	/* Create packet pool */
 	odp_pool_param_init(&params);
-	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
-	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
-	params.pkt.num     = SHM_PKT_POOL_SIZE;
+	params.pkt.seg_len = pkt_len;
+	params.pkt.len     = pkt_len;
+	params.pkt.num     = pkt_num;
 	params.type        = ODP_POOL_PACKET;
 
 	pool = odp_pool_create("packet pool", &params);
