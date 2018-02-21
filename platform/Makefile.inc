@@ -3,6 +3,9 @@ include $(top_srcdir)/Makefile.inc
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libodp-linux.pc
 
+configdir = $(sysconfdir)/odp
+config_DATA = $(top_srcdir)/config/odp-$(with_platform).conf
+
 VPATH = $(srcdir) $(builddir)
 lib_LTLIBRARIES = $(LIB)/libodp-linux.la
 

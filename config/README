@@ -1,2 +1,12 @@
 ODP configuration options
 -------------------------
+
+Runtime configuration options can be passed to an ODP instance by
+setting ODP_CONFIG_FILE environment variable to point to a libconfig
+format configuration file. A template configuration file with default
+values is provided in config/odp-linux-generic.conf. The values set in
+config/odp-linux-generic.conf are hardcoded during configure/build
+phase. If ODP_CONFIG_FILE is not set at runtime, hardcoded default
+values are used instead of any configuration file. A configuration file
+passed using ODP_CONFIG_FILE doesn't have to include all available
+options. The missing options are replaced with hardcoded default values.
