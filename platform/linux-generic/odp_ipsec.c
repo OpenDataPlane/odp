@@ -949,8 +949,10 @@ static int ipsec_out_tunnel_ipv4(odp_packet_t *pkt,
 	state->ip_hdr_len = _ODP_IPV4HDR_LEN;
 	if (state->is_ipv4)
 		state->ip_next_hdr = _ODP_IPPROTO_IPIP;
-	else
+	else if (state->is_ipv6)
 		state->ip_next_hdr = _ODP_IPPROTO_IPV6;
+	else
+		state->ip_next_hdr = _ODP_IPPROTO_NO_NEXT;
 	state->ip_next_hdr_offset = state->ip_offset +
 		_ODP_IPV4HDR_PROTO_OFFSET;
 
@@ -1008,8 +1010,10 @@ static int ipsec_out_tunnel_ipv6(odp_packet_t *pkt,
 	state->ip_hdr_len = _ODP_IPV6HDR_LEN;
 	if (state->is_ipv4)
 		state->ip_next_hdr = _ODP_IPPROTO_IPIP;
-	else
+	else if (state->is_ipv6)
 		state->ip_next_hdr = _ODP_IPPROTO_IPV6;
+	else
+		state->ip_next_hdr = _ODP_IPPROTO_NO_NEXT;
 	state->ip_next_hdr_offset = state->ip_offset + _ODP_IPV6HDR_NHDR_OFFSET;
 
 	state->is_ipv4 = 0;
@@ -1330,8 +1334,17 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	state.ip_offset = odp_packet_l3_offset(pkt);
 	ODP_ASSERT(ODP_PACKET_OFFSET_INVALID != state.ip_offset);
 
-	state.ip = odp_packet_l3_ptr(pkt, NULL);
-	ODP_ASSERT(NULL != state.ip);
+	if (opt->flag.tfc_dummy) {
+		state.ip = NULL;
+		state.is_ipv4 = 0;
+		state.is_ipv6 = 0;
+	} else {
+		state.ip = odp_packet_l3_ptr(pkt, NULL);
+		ODP_ASSERT(NULL != state.ip);
+
+		state.is_ipv4 = (((uint8_t *)state.ip)[0] >> 4) == 0x4;
+		state.is_ipv6 = (((uint8_t *)state.ip)[0] >> 4) == 0x6;
+	}
 
 	ipsec_sa = _odp_ipsec_sa_use(sa);
 	ODP_ASSERT(NULL != ipsec_sa);
@@ -1346,9 +1359,6 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 
 	/* Initialize parameters block */
 	memset(&param, 0, sizeof(param));
-
-	state.is_ipv4 = (((uint8_t *)state.ip)[0] >> 4) == 0x4;
-	state.is_ipv6 = (((uint8_t *)state.ip)[0] >> 4) == 0x6;
 
 	if (ODP_IPSEC_MODE_TRANSPORT == ipsec_sa->mode) {
 		if (state.is_ipv4)
@@ -1365,7 +1375,12 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 			rc = ipsec_out_tunnel_parse_ipv4(&state, ipsec_sa);
 		else if (state.is_ipv6)
 			rc = ipsec_out_tunnel_parse_ipv6(&state, ipsec_sa);
-		else
+		else if (opt->flag.tfc_dummy) {
+			state.out_tunnel.ip_tos = 0;
+			state.out_tunnel.ip_df = 0;
+			state.out_tunnel.ip_flabel = 0;
+			rc = 0;
+		} else
 			rc = -1;
 		if (rc < 0) {
 			status->error.alg = 1;
