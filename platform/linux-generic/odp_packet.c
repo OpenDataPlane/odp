@@ -1286,7 +1286,7 @@ int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	if (offset >= pkt_hdr->frame_len)
+	if (offset > pkt_hdr->frame_len)
 		return -1;
 
 	packet_hdr_has_l2_set(pkt_hdr, 1);
@@ -1298,7 +1298,7 @@ int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	if (offset >= pkt_hdr->frame_len)
+	if (offset > pkt_hdr->frame_len)
 		return -1;
 
 	pkt_hdr->p.l3_offset = offset;
@@ -1309,7 +1309,7 @@ int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	if (offset >= pkt_hdr->frame_len)
+	if (offset > pkt_hdr->frame_len)
 		return -1;
 
 	pkt_hdr->p.l4_offset = offset;
