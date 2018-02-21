@@ -2552,6 +2552,8 @@ void packet_test_parse(void)
 		CU_ASSERT(odp_packet_has_udp(pkt[i]));
 		CU_ASSERT(!odp_packet_has_ipv6(pkt[i]));
 		CU_ASSERT(!odp_packet_has_tcp(pkt[i]));
+		CU_ASSERT_EQUAL(odp_packet_l2_type(pkt[i]),
+				ODP_PROTO_L2_TYPE_ETH);
 		CU_ASSERT_EQUAL(odp_packet_l3_type(pkt[i]),
 				ODP_PROTO_L3_TYPE_IPV4);
 		CU_ASSERT_EQUAL(odp_packet_l4_type(pkt[i]),
@@ -2620,6 +2622,8 @@ void packet_test_parse(void)
 		CU_ASSERT(odp_packet_has_tcp(pkt[i]));
 		CU_ASSERT(!odp_packet_has_ipv6(pkt[i]));
 		CU_ASSERT(!odp_packet_has_udp(pkt[i]));
+		CU_ASSERT_EQUAL(odp_packet_l2_type(pkt[i]),
+				ODP_PROTO_L2_TYPE_ETH);
 		CU_ASSERT_EQUAL(odp_packet_l3_type(pkt[i]),
 				ODP_PROTO_L3_TYPE_IPV4);
 		CU_ASSERT_EQUAL(odp_packet_l4_type(pkt[i]),
@@ -2655,6 +2659,8 @@ void packet_test_parse(void)
 		CU_ASSERT(odp_packet_has_udp(pkt[i]));
 		CU_ASSERT(!odp_packet_has_ipv4(pkt[i]));
 		CU_ASSERT(!odp_packet_has_tcp(pkt[i]));
+		CU_ASSERT_EQUAL(odp_packet_l2_type(pkt[i]),
+				ODP_PROTO_L2_TYPE_ETH);
 		CU_ASSERT_EQUAL(odp_packet_l3_type(pkt[i]),
 				ODP_PROTO_L3_TYPE_IPV6);
 		CU_ASSERT_EQUAL(odp_packet_l4_type(pkt[i]),
@@ -2690,6 +2696,8 @@ void packet_test_parse(void)
 		CU_ASSERT(odp_packet_has_tcp(pkt[i]));
 		CU_ASSERT(!odp_packet_has_ipv4(pkt[i]));
 		CU_ASSERT(!odp_packet_has_udp(pkt[i]));
+		CU_ASSERT_EQUAL(odp_packet_l2_type(pkt[i]),
+				ODP_PROTO_L2_TYPE_ETH);
 		CU_ASSERT_EQUAL(odp_packet_l3_type(pkt[i]),
 				ODP_PROTO_L3_TYPE_IPV6);
 		CU_ASSERT_EQUAL(odp_packet_l4_type(pkt[i]),
