@@ -21,8 +21,6 @@
 #define DPDK_NB_MBUF 16384
 #define DPDK_MBUF_BUF_SIZE RTE_MBUF_DEFAULT_BUF_SIZE
 #define DPDK_MEMPOOL_CACHE_SIZE 64
-#define DPDK_NM_RX_DESC  128
-#define DPDK_NM_TX_DESC  512
 
 ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
 		  (DPDK_MEMPOOL_CACHE_SIZE <= RTE_MEMPOOL_CACHE_MAX_SIZE) &&
@@ -32,6 +30,13 @@ ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
 
 /* Minimum RX burst size */
 #define DPDK_MIN_RX_BURST 4
+
+/** DPDK runtime configuration options */
+typedef struct {
+	int num_rx_desc;
+	int num_tx_desc;
+	int rx_drop_en;
+} dpdk_opt_t;
 
 /** Cache for storing packets */
 struct pkt_cache_t {
@@ -64,6 +69,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES];  /**< TX queue locks */
 	/** cache for storing extra RX packets */
 	pkt_cache_t rx_cache[PKTIO_MAX_QUEUES];
+	dpdk_opt_t opt;
 } pkt_dpdk_t;
 
 #endif

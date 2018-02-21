@@ -21,6 +21,7 @@ addons:
                         - gcc
                         - clang-3.8
                         - automake autoconf libtool libssl-dev graphviz mscgen
+                        - libconfig-dev
                         - codespell
                         - libpcap-dev
                         - libnuma-dev
@@ -253,7 +254,7 @@ script:
         # Run all tests only for default configuration
         - if [ -z "$CROSS_ARCH" ] ; then
             if [ -n "$CONF" ] ; then
-              sudo LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
+              sudo ODP_CONFIG_FILE="`pwd`/config/odp-linux-generic.conf" LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
             else
               sudo ODP_SCHEDULER=basic LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
               sudo ODP_SCHEDULER=sp LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
