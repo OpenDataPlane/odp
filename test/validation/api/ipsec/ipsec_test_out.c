@@ -997,6 +997,164 @@ static void test_out_ipv6_esp_udp_null_sha256(void)
 	ipsec_sa_destroy(sa);
 }
 
+static void test_out_dummy_esp_null_sha256_tun_ipv4(void)
+{
+	uint32_t src = IPV4ADDR(10, 0, 111, 2);
+	uint32_t dst = IPV4ADDR(10, 0, 222, 2);
+	odp_ipsec_tunnel_param_t tunnel = {
+		.type = ODP_IPSEC_TUNNEL_IPV4,
+		.ipv4.src_addr = &src,
+		.ipv4.dst_addr = &dst,
+		.ipv4.ttl = 64,
+	};
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+	odp_ipsec_sa_t sa2;
+
+	/* This test will not work properly inbound inline mode.
+	 * Packet might be dropped and we will not check for that. */
+	if (suite_context.inbound_op_mode == ODP_IPSEC_OP_MODE_INLINE)
+		return;
+
+	ipsec_sa_param_fill(&param,
+			    false, false, 123, &tunnel,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_sa_param_fill(&param,
+			    true, false, 123, &tunnel,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+
+	sa2 = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa2);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_test_nodata,
+		.num_opt = 1,
+		.opt = { .flag.tfc_dummy = 1,
+			 .tfc_pad_len = 16, },
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_NO_NEXT,
+			  .pkt_out = NULL },
+		},
+	};
+
+	ipsec_test_part test_empty = {
+		.pkt_in = &pkt_test_emtpy,
+		.num_opt = 1,
+		.opt = { .flag.tfc_dummy = 1,
+			 .tfc_pad_len = 16, },
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_NO_NEXT,
+			  .pkt_out = NULL },
+		},
+	};
+
+	ipsec_check_out_in_one(&test, sa, sa2);
+	ipsec_check_out_in_one(&test_empty, sa, sa2);
+
+	ipsec_sa_destroy(sa2);
+	ipsec_sa_destroy(sa);
+}
+
+static void test_out_dummy_esp_null_sha256_tun_ipv6(void)
+{
+	uint8_t src[16] = {
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x02, 0x11, 0x43, 0xff, 0xfe, 0x4a, 0xd7, 0x0a,
+	};
+	uint8_t dst[16] = {
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16,
+	};
+	odp_ipsec_tunnel_param_t tunnel = {
+		.type = ODP_IPSEC_TUNNEL_IPV6,
+		.ipv6.src_addr = src,
+		.ipv6.dst_addr = dst,
+		.ipv6.hlimit = 64,
+	};
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+	odp_ipsec_sa_t sa2;
+
+	/* This test will not work properly inbound inline mode.
+	 * Packet might be dropped and we will not check for that. */
+	if (suite_context.inbound_op_mode == ODP_IPSEC_OP_MODE_INLINE)
+		return;
+
+	ipsec_sa_param_fill(&param,
+			    false, false, 123, &tunnel,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_sa_param_fill(&param,
+			    true, false, 123, &tunnel,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+
+	sa2 = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa2);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_test_nodata,
+		.num_opt = 1,
+		.opt = { .flag.tfc_dummy = 1,
+			 .tfc_pad_len = 16, },
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_NO_NEXT,
+			  .pkt_out = NULL },
+		},
+	};
+
+	ipsec_test_part test_empty = {
+		.pkt_in = &pkt_test_emtpy,
+		.num_opt = 1,
+		.opt = { .flag.tfc_dummy = 1,
+			 .tfc_pad_len = 16, },
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_NO_NEXT,
+			  .pkt_out = NULL },
+		},
+	};
+
+	ipsec_check_out_in_one(&test, sa, sa2);
+	ipsec_check_out_in_one(&test_empty, sa, sa2);
+
+	ipsec_sa_destroy(sa2);
+	ipsec_sa_destroy(sa);
+}
+
 static void ipsec_test_capability(void)
 {
 	odp_ipsec_capability_t capa;
@@ -1055,6 +1213,10 @@ odp_testinfo_t ipsec_out_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv6_esp_null_sha256_tun_ipv6,
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv6_esp_udp_null_sha256,
+				  ipsec_check_esp_null_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_out_dummy_esp_null_sha256_tun_ipv4,
+				  ipsec_check_esp_null_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_out_dummy_esp_null_sha256_tun_ipv6,
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_NULL,
 };

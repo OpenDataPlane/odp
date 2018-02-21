@@ -604,10 +604,15 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 			hdr_len = part->out[0].pkt_out->l3_offset;
 			CU_ASSERT_FATAL(hdr_len <= sizeof(hdr));
 			memcpy(hdr, part->out[0].pkt_out->data, hdr_len);
-		} else {
+		} else if (part->pkt_in->l3_offset !=
+			   ODP_PACKET_OFFSET_INVALID) {
 			hdr_len = part->pkt_in->l3_offset;
 			CU_ASSERT_FATAL(hdr_len <= sizeof(hdr));
 			memcpy(hdr, part->pkt_in->data, hdr_len);
+		} else {
+			/* Dummy header */
+			hdr_len = 14;
+			memset(hdr, 0xff, hdr_len);
 		}
 		inline_param.pktio = suite_context.pktio;
 		inline_param.outer_hdr.ptr = hdr;

@@ -1865,4 +1865,22 @@ static const ODP_UNUSED ipsec_test_packet
 	},
 };
 
+static const ipsec_test_packet pkt_test_emtpy = {
+	.len = 0,
+	.l2_offset = ODP_PACKET_OFFSET_INVALID,
+	.l3_offset = ODP_PACKET_OFFSET_INVALID,
+	.l4_offset = ODP_PACKET_OFFSET_INVALID,
+	.data = { 0 },
+};
+
+static const ipsec_test_packet pkt_test_nodata = {
+	.len = 14,
+	.l2_offset = 0,
+	.l3_offset = ODP_PACKET_OFFSET_INVALID,
+	.l4_offset = ODP_PACKET_OFFSET_INVALID,
+	.data = {
+		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
+		0x0a, 0x0b, 0x0c, 0x0d,
+	},
+};
 #endif
