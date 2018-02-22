@@ -23,6 +23,11 @@ _ODP_INLINE uint32_t odp_packet_seg_len(odp_packet_t pkt)
 	return _odp_packet_seg_len(pkt);
 }
 
+_ODP_INLINE void *odp_packet_data_seg_len(odp_packet_t pkt, uint32_t *seg_len)
+{
+	return _odp_packet_data_seg_len(pkt, seg_len);
+}
+
 _ODP_INLINE uint32_t odp_packet_len(odp_packet_t pkt)
 {
 	return _odp_packet_len(pkt);
