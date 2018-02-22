@@ -636,7 +636,8 @@ static void packet_test_basic_metadata(void)
 static void packet_test_length(void)
 {
 	odp_packet_t pkt = test_packet;
-	uint32_t buf_len, headroom, tailroom;
+	uint32_t buf_len, headroom, tailroom, seg_len;
+	void *data;
 	odp_pool_capability_t capa;
 
 	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
@@ -644,8 +645,13 @@ static void packet_test_length(void)
 	buf_len = odp_packet_buf_len(pkt);
 	headroom = odp_packet_headroom(pkt);
 	tailroom = odp_packet_tailroom(pkt);
+	data     = odp_packet_data(pkt);
 
+	CU_ASSERT(data != NULL);
 	CU_ASSERT(odp_packet_len(pkt) == packet_len);
+	CU_ASSERT(odp_packet_seg_len(pkt) <= packet_len);
+	CU_ASSERT(odp_packet_data_seg_len(pkt, &seg_len) == data);
+	CU_ASSERT(seg_len == odp_packet_seg_len(pkt));
 	CU_ASSERT(headroom >= capa.pkt.min_headroom);
 	CU_ASSERT(tailroom >= capa.pkt.min_tailroom);
 
