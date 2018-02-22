@@ -824,20 +824,11 @@ static void process_pkts(int thr, thread_args_t *thr_args,
 			 odp_packet_t pkt_tbl[], unsigned len)
 {
 	odp_packet_t pkt;
-	odp_packet_chksum_status_t csum_status;
 	uint32_t left, offset, i;
 	odph_ipv4hdr_t *ip;
 
 	for (i = 0; i < len; ++i) {
 		pkt = pkt_tbl[i];
-
-		csum_status = odp_packet_l3_chksum_status(pkt);
-		if (csum_status == ODP_PACKET_CHKSUM_BAD)
-			printf("L3 checksum error detected.\n");
-
-		csum_status = odp_packet_l4_chksum_status(pkt);
-		if (csum_status == ODP_PACKET_CHKSUM_BAD)
-			printf("L4 checksum error detected.\n");
 
 		/* Drop packets with errors */
 		if (odp_unlikely(odp_packet_has_error(pkt)))
@@ -939,6 +930,7 @@ static int gen_recv_direct_thread(void *arg)
 	odp_packet_t pkts[MAX_RX_BURST];
 	int pkt_cnt, burst_size;
 	odp_pktin_queue_t pktin;
+	uint64_t wait = odp_pktin_wait_time(ODP_TIME_SEC_IN_NS);
 
 	thr = odp_thread_id();
 	thr_args = (thread_args_t *)arg;
@@ -952,8 +944,7 @@ static int gen_recv_direct_thread(void *arg)
 		if (thr_args->stop)
 			break;
 
-		pkt_cnt = odp_pktin_recv_tmo(pktin, pkts, burst_size,
-					     ODP_PKTIN_NO_WAIT);
+		pkt_cnt = odp_pktin_recv_tmo(pktin, pkts, burst_size, wait);
 
 		if (pkt_cnt > 0) {
 			process_pkts(thr, thr_args, pkts, pkt_cnt);

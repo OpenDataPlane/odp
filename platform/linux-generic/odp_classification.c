@@ -250,11 +250,12 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 				cos->s.linked_cos[j] = NULL;
 			}
 
+			cos->s.num_queue = param->num_queue;
+
 			if (param->num_queue > 1) {
 				odp_queue_param_init(&cos->s.queue_param);
 				cos->s.queue_group = true;
 				cos->s.queue = ODP_QUEUE_INVALID;
-				cos->s.num_queue = param->num_queue;
 				_odp_cls_update_hash_proto(cos,
 							   param->hash_proto);
 				tbl_index = i * CLS_COS_QUEUE_MAX;
@@ -358,6 +359,12 @@ int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id)
 		ODP_ERR("Invalid odp_cos_t handle");
 		return -1;
 	}
+
+	if (cos->s.num_queue != 1) {
+		ODP_ERR("Hashing enabled, cannot set queue");
+		return -1;
+	}
+
 	/* Locking is not required as intermittent stale
 	data during CoS modification is acceptable*/
 	cos->s.queue = queue_id;
@@ -400,6 +407,14 @@ uint32_t odp_cls_cos_queues(odp_cos_t cos_id, odp_queue_t queue[],
 	if (!cos) {
 		ODP_ERR("Invalid odp_cos_t handle");
 		return 0;
+	}
+
+	if (cos->s.num_queue == 1) {
+		if (num == 0)
+			return 1;
+
+		queue[0] = cos->s.queue;
+		return 1;
 	}
 
 	if (num < cos->s.num_queue)

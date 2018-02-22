@@ -8,7 +8,6 @@
 
 #include <odp_api.h>
 #include <odp_cunit_common.h>
-#include "std_clib.h"
 
 #include <string.h>
 
@@ -95,7 +94,7 @@ odp_suiteinfo_t std_clib_suites[] = {
 	ODP_SUITE_INFO_NULL
 };
 
-int std_clib_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 

@@ -8,7 +8,6 @@
 
 #include <odp_api.h>
 #include "odp_cunit_common.h"
-#include "pool.h"
 
 #define PKT_LEN 400
 #define PKT_NUM 500
@@ -27,7 +26,7 @@ static void pool_create_destroy(odp_pool_param_t *param)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-void pool_test_create_destroy_buffer(void)
+static void pool_test_create_destroy_buffer(void)
 {
 	odp_pool_param_t param;
 
@@ -41,7 +40,7 @@ void pool_test_create_destroy_buffer(void)
 	pool_create_destroy(&param);
 }
 
-void pool_test_create_destroy_packet(void)
+static void pool_test_create_destroy_packet(void)
 {
 	odp_pool_param_t param;
 
@@ -54,7 +53,7 @@ void pool_test_create_destroy_packet(void)
 	pool_create_destroy(&param);
 }
 
-void pool_test_create_destroy_timeout(void)
+static void pool_test_create_destroy_timeout(void)
 {
 	odp_pool_param_t param;
 
@@ -66,7 +65,7 @@ void pool_test_create_destroy_timeout(void)
 	pool_create_destroy(&param);
 }
 
-void pool_test_lookup_info_print(void)
+static void pool_test_lookup_info_print(void)
 {
 	odp_pool_t pool;
 	const char pool_name[] = "pool_for_lookup_test";
@@ -98,7 +97,7 @@ void pool_test_lookup_info_print(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-void pool_test_alloc_packet(void)
+static void pool_test_alloc_packet(void)
 {
 	odp_pool_t pool;
 	odp_pool_param_t param;
@@ -131,7 +130,7 @@ void pool_test_alloc_packet(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-void pool_test_alloc_packet_subparam(void)
+static void pool_test_alloc_packet_subparam(void)
 {
 	odp_pool_t pool;
 	odp_pool_capability_t capa;
@@ -191,7 +190,7 @@ void pool_test_alloc_packet_subparam(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-void pool_test_info_packet(void)
+static void pool_test_info_packet(void)
 {
 	odp_pool_t pool;
 	odp_pool_info_t info;
@@ -230,13 +229,13 @@ odp_testinfo_t pool_suite[] = {
 };
 
 odp_suiteinfo_t pool_suites[] = {
-	{ .pName = "Pool tests",
-			.pTests = pool_suite,
+	{ .name         = "Pool tests",
+	  .testinfo_tbl = pool_suite,
 	},
 	ODP_SUITE_INFO_NULL,
 };
 
-int pool_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 

@@ -12,7 +12,7 @@
 
 #define PMR_SET_NUM	5
 
-void classification_test_create_cos(void)
+static void classification_test_create_cos(void)
 {
 	odp_cos_t cos;
 	odp_cls_cos_param_t cls_param;
@@ -37,7 +37,7 @@ void classification_test_create_cos(void)
 	odp_queue_destroy(queue);
 }
 
-void classification_test_destroy_cos(void)
+static void classification_test_destroy_cos(void)
 {
 	odp_cos_t cos;
 	char name[ODP_COS_NAME_LEN];
@@ -69,7 +69,7 @@ void classification_test_destroy_cos(void)
 	odp_queue_destroy(queue);
 }
 
-void classification_test_create_pmr_match(void)
+static void classification_test_create_pmr_match(void)
 {
 	odp_pmr_t pmr;
 	uint16_t val;
@@ -139,7 +139,7 @@ void classification_test_create_pmr_match(void)
 	odp_pktio_close(pktio);
 }
 
-void classification_test_cos_set_queue(void)
+static void classification_test_cos_set_queue(void)
 {
 	int retval;
 	char cosname[ODP_COS_NAME_LEN];
@@ -149,6 +149,7 @@ void classification_test_cos_set_queue(void)
 	odp_queue_t queue_cos;
 	odp_cos_t cos_queue;
 	odp_queue_t recvqueue;
+	odp_queue_t queue_out = ODP_QUEUE_INVALID;
 
 	pool = pool_create("cls_basic_pool");
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
@@ -171,6 +172,9 @@ void classification_test_cos_set_queue(void)
 	CU_ASSERT(retval == 0);
 	recvqueue = odp_cos_queue(cos_queue);
 	CU_ASSERT(recvqueue == queue_cos);
+	CU_ASSERT(odp_cls_cos_num_queue(cos_queue) == 1);
+	CU_ASSERT(odp_cls_cos_queues(cos_queue, &queue_out, 1) == 1);
+	CU_ASSERT(queue_out == queue_cos);
 
 	odp_cos_destroy(cos_queue);
 	odp_queue_destroy(queue_cos);
@@ -178,7 +182,7 @@ void classification_test_cos_set_queue(void)
 	odp_pool_destroy(pool);
 }
 
-void classification_test_cos_set_pool(void)
+static void classification_test_cos_set_pool(void)
 {
 	int retval;
 	char cosname[ODP_COS_NAME_LEN];
@@ -217,7 +221,7 @@ void classification_test_cos_set_pool(void)
 	odp_pool_destroy(cos_pool);
 }
 
-void classification_test_cos_set_drop(void)
+static void classification_test_cos_set_drop(void)
 {
 	int retval;
 	char cosname[ODP_COS_NAME_LEN];
@@ -252,7 +256,7 @@ void classification_test_cos_set_drop(void)
 	odp_queue_destroy(queue);
 }
 
-void classification_test_pmr_composite_create(void)
+static void classification_test_pmr_composite_create(void)
 {
 	odp_pmr_t pmr_composite;
 	int retval;
