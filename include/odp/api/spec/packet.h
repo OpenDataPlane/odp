@@ -401,30 +401,39 @@ uint32_t odp_packet_buf_len(odp_packet_t pkt);
 /**
  * Packet data pointer
  *
- * Returns the current packet data pointer. When a packet is received
- * from packet input, this points to the first byte of the received
- * packet. Packet level offsets are calculated relative to this position.
+ * Returns pointer to the first byte of packet data. When packet is segmented,
+ * only a portion of packet data follows the pointer. When unsure, use e.g.
+ * odp_packet_seg_len() to check the data length following the pointer. Packet
+ * level offsets are calculated relative to this position.
  *
- * User can adjust the data pointer with head_push/head_pull (does not modify
- * segmentation) and add_data/rem_data calls (may modify segmentation).
+ * When a packet is received from packet input, this points to the first byte
+ * of the received packet. Pool configuration parameters may be used to ensure
+ * that the first packet segment contains all/most of the data relevant to the
+ * application.
+ *
+ * User can adjust the data pointer with e.g. push_head/pull_head (does not
+ * modify segmentation) and extend_head/trunc_head (may modify segmentation)
+ * calls.
  *
  * @param pkt  Packet handle
  *
  * @return  Pointer to the packet data
  *
- * @see odp_packet_l2_ptr(), odp_packet_seg_len()
+ * @see odp_packet_seg_len(), odp_packet_push_head(), odp_packet_extend_head()
  */
 void *odp_packet_data(odp_packet_t pkt);
 
 /**
- * Packet segment data length
+ * Packet data length following the data pointer
  *
- * Returns number of data bytes following the current data pointer
- * (odp_packet_data()) location in the segment.
+ * Returns number of data bytes (in the segment) following the current data
+ * pointer position. When unsure, use this function to check how many bytes
+ * can be accessed linearly after data pointer (odp_packet_data()). This
+ * equals to odp_packet_len() for single segment packets.
  *
  * @param pkt  Packet handle
  *
- * @return  Segment data length in bytes (pointed by odp_packet_data())
+ * @return  Segment data length in bytes following odp_packet_data()
  *
  * @see odp_packet_data()
  */
@@ -433,11 +442,14 @@ uint32_t odp_packet_seg_len(odp_packet_t pkt);
 /**
  * Packet data length
  *
- * Returns sum of data lengths over all packet segments.
+ * Returns total data length over all packet segments. This equals the sum of
+ * segment level data lengths (odp_packet_seg_data_len()).
  *
  * @param pkt  Packet handle
  *
  * @return Packet data length
+ *
+ * @see odp_packet_seg_len(), odp_packet_data(), odp_packet_seg_data_len()
  */
 uint32_t odp_packet_len(odp_packet_t pkt);
 
