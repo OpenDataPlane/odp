@@ -440,6 +440,22 @@ void *odp_packet_data(odp_packet_t pkt);
 uint32_t odp_packet_seg_len(odp_packet_t pkt);
 
 /**
+ * Packet data pointer with segment length
+ *
+ * Returns both data pointer and number of data bytes (in the segment)
+ * following it. This is equivalent to calling odp_packet_data() and
+ * odp_packet_seg_len().
+ *
+ * @param      pkt      Packet handle
+ * @param[out] seg_len  Pointer to output segment length
+ *
+ * @return Pointer to the packet data
+ *
+ * @see odp_packet_data(), odp_packet_seg_len()
+ */
+void *odp_packet_data_seg_len(odp_packet_t pkt, uint32_t *seg_len);
+
+/**
  * Packet data length
  *
  * Returns total data length over all packet segments. This equals the sum of
