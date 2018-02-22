@@ -3053,7 +3053,7 @@ static void parse_eth_ipv6_ipsec_ah(void)
 		CU_ASSERT_EQUAL(odp_packet_l3_type(pkt[i]),
 				ODP_PROTO_L3_TYPE_IPV6);
 		CU_ASSERT_EQUAL(odp_packet_l4_type(pkt[i]),
-				ODP_PROTO_L4_TYPE_TCP);
+				ODP_PROTO_L4_TYPE_AH);
 	}
 
 	odp_packet_free_multi(pkt, num_pkt);
