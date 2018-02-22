@@ -399,7 +399,7 @@ void test_pktio_error_cos(void)
 	odp_packet_free(pkt);
 }
 
-void classification_test_pktio_set_skip(void)
+static void classification_test_pktio_set_skip(void)
 {
 	int retval;
 	size_t offset = 5;
@@ -417,7 +417,7 @@ void classification_test_pktio_set_skip(void)
 	CU_ASSERT(retval == 0);
 }
 
-void classification_test_pktio_set_headroom(void)
+static void classification_test_pktio_set_headroom(void)
 {
 	size_t headroom;
 	int retval;
@@ -681,7 +681,7 @@ void test_pktio_pmr_composite_cos(void)
 	odp_packet_free(pkt);
 }
 
-void classification_test_pktio_configure(void)
+static void classification_test_pktio_configure(void)
 {
 	/* Configure the Different CoS for the pktio interface */
 	if (TEST_DEFAULT)
@@ -698,7 +698,7 @@ void classification_test_pktio_configure(void)
 		configure_pktio_pmr_composite();
 }
 
-void classification_test_pktio_test(void)
+static void classification_test_pktio_test(void)
 {
 	/* Test Different CoS on the pktio interface */
 	if (TEST_DEFAULT)

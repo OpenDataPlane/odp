@@ -8,7 +8,6 @@
 
 #include <odp_api.h>
 #include <odp_cunit_common.h>
-#include "shmem.h"
 #include <stdlib.h>
 
 #define ALIGN_SIZE  (128)
@@ -131,7 +130,7 @@ static int run_test_basic_thread(void *arg ODP_UNUSED)
 /*
  * test basic things: shmem creation, info, share, and free
  */
-void shmem_test_basic(void)
+static void shmem_test_basic(void)
 {
 	pthrd_arg thrdarg;
 	odp_shm_t shm;
@@ -342,7 +341,7 @@ static int run_test_reserve_after_fork(void *arg ODP_UNUSED)
 /*
  * test sharing memory reserved after odp_thread creation (e.g. fork()):
  */
-void shmem_test_reserve_after_fork(void)
+static void shmem_test_reserve_after_fork(void)
 {
 	pthrd_arg thrdarg;
 	odp_shm_t shm;
@@ -531,7 +530,7 @@ static int run_test_singleva_after_fork(void *arg ODP_UNUSED)
  * test sharing memory reserved after odp_thread creation (e.g. fork()):
  * with single VA flag.
  */
-void shmem_test_singleva_after_fork(void)
+static void shmem_test_singleva_after_fork(void)
 {
 	pthrd_arg thrdarg;
 	odp_shm_t shm;
@@ -771,7 +770,7 @@ static int run_test_stress(void *arg ODP_UNUSED)
 /*
  * stress tests
  */
-void shmem_test_stress(void)
+static void shmem_test_stress(void)
 {
 	pthrd_arg thrdarg;
 	odp_shm_t shm;
@@ -834,7 +833,7 @@ odp_suiteinfo_t shmem_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int shmem_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 

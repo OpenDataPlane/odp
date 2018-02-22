@@ -8,9 +8,8 @@
 
 #include <odp_api.h>
 #include <odp_cunit_common.h>
-#include "hash.h"
 
-void hash_test_crc32c(void)
+static void hash_test_crc32c(void)
 {
 	uint32_t test_value = 0x12345678;
 	uint32_t ret = odp_hash_crc32c(&test_value, 4, 0);
@@ -39,7 +38,7 @@ odp_suiteinfo_t hash_suites[] = {
 	ODP_SUITE_INFO_NULL
 };
 
-int hash_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 

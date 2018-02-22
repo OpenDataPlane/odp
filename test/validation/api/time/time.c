@@ -8,7 +8,6 @@
 
 #include <odp_api.h>
 #include "odp_cunit_common.h"
-#include "time_test.h"
 #include <time.h>
 
 #define BUSY_LOOP_CNT		30000000    /* used for t > min resolution */
@@ -25,7 +24,7 @@ typedef odp_time_t time_cb(void);
 typedef uint64_t time_res_cb(void);
 typedef odp_time_t time_from_ns_cb(uint64_t ns);
 
-void time_test_constants(void)
+static void time_test_constants(void)
 {
 	uint64_t ns;
 
@@ -48,12 +47,12 @@ static void time_test_res(time_res_cb time_res, uint64_t *res)
 		(*res)++;
 }
 
-void time_test_local_res(void)
+static void time_test_local_res(void)
 {
 	time_test_res(odp_time_local_res, &local_res);
 }
 
-void time_test_global_res(void)
+static void time_test_global_res(void)
 {
 	time_test_res(odp_time_global_res, &global_res);
 }
@@ -92,17 +91,17 @@ static void time_test_conversion(time_from_ns_cb time_from_ns, uint64_t res)
 	CU_ASSERT(ns1 == 0);
 }
 
-void time_test_local_conversion(void)
+static void time_test_local_conversion(void)
 {
 	time_test_conversion(odp_time_local_from_ns, local_res);
 }
 
-void time_test_global_conversion(void)
+static void time_test_global_conversion(void)
 {
 	time_test_conversion(odp_time_global_from_ns, global_res);
 }
 
-void time_test_monotony(void)
+static void time_test_monotony(void)
 {
 	volatile uint64_t count = 0;
 	odp_time_t l_t1, l_t2, l_t3;
@@ -183,12 +182,12 @@ static void time_test_cmp(time_cb time_cur, time_from_ns_cb time_from_ns)
 	CU_ASSERT(odp_time_cmp(t1, ODP_TIME_NULL) == 0);
 }
 
-void time_test_local_cmp(void)
+static void time_test_local_cmp(void)
 {
 	time_test_cmp(odp_time_local, odp_time_local_from_ns);
 }
 
-void time_test_global_cmp(void)
+static void time_test_global_cmp(void)
 {
 	time_test_cmp(odp_time_global, odp_time_global_from_ns);
 }
@@ -278,12 +277,12 @@ static void time_test_diff(time_cb time_cur,
 	CU_ASSERT(diff_ns == 0);
 }
 
-void time_test_local_diff(void)
+static void time_test_local_diff(void)
 {
 	time_test_diff(odp_time_local, odp_time_local_from_ns, local_res);
 }
 
-void time_test_global_diff(void)
+static void time_test_global_diff(void)
 {
 	time_test_diff(odp_time_global, odp_time_global_from_ns, global_res);
 }
@@ -330,12 +329,12 @@ static void time_test_sum(time_cb time_cur,
 	CU_ASSERT(odp_time_cmp(t2, sum) == 0);
 }
 
-void time_test_local_sum(void)
+static void time_test_local_sum(void)
 {
 	time_test_sum(odp_time_local, odp_time_local_from_ns, local_res);
 }
 
-void time_test_global_sum(void)
+static void time_test_global_sum(void)
 {
 	time_test_sum(odp_time_global, odp_time_global_from_ns, global_res);
 }
@@ -376,17 +375,17 @@ static void time_test_wait_until(time_cb time_cur, time_from_ns_cb time_from_ns)
 	}
 }
 
-void time_test_local_wait_until(void)
+static void time_test_local_wait_until(void)
 {
 	time_test_wait_until(odp_time_local, odp_time_local_from_ns);
 }
 
-void time_test_global_wait_until(void)
+static void time_test_global_wait_until(void)
 {
 	time_test_wait_until(odp_time_global, odp_time_global_from_ns);
 }
 
-void time_test_wait_ns(void)
+static void time_test_wait_ns(void)
 {
 	int i;
 	odp_time_t lower_limit, upper_limit;
@@ -494,7 +493,7 @@ odp_suiteinfo_t time_suites[] = {
 		ODP_SUITE_INFO_NULL
 };
 
-int time_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 

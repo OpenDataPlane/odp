@@ -54,13 +54,13 @@ typedef struct ODP_ALIGNED_CACHE {
 	unsigned min_rx_burst;		  /**< minimum RX burst size */
 	odp_pktin_hash_proto_t hash;	  /**< Packet input hash protocol */
 	uint16_t mtu;			  /**< maximum transmission unit */
+	uint16_t port_id;		  /**< DPDK port identifier */
 	/** Use system call to get/set vdev promisc mode */
 	uint8_t vdev_sysc_promisc;
 	uint8_t lockless_rx;		  /**< no locking for rx */
 	uint8_t lockless_tx;		  /**< no locking for tx */
-	uint8_t port_id;			  /**< DPDK port identifier */
-	/* --- 34 bytes --- */
-	odp_ticketlock_t rx_lock[PKTIO_MAX_QUEUES];  /**< RX queue locks */
+	  /** RX queue locks */
+	odp_ticketlock_t ODP_ALIGNED_CACHE rx_lock[PKTIO_MAX_QUEUES];
 	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES];  /**< TX queue locks */
 	/** cache for storing extra RX packets */
 	pkt_cache_t rx_cache[PKTIO_MAX_QUEUES];

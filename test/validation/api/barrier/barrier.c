@@ -11,7 +11,6 @@
 #include <CUnit/Basic.h>
 #include <odp_cunit_common.h>
 #include <unistd.h>
-#include "barrier.h"
 
 #define VERBOSE			0
 #define MAX_ITERATIONS		1000
@@ -278,7 +277,7 @@ static void barrier_test_init(void)
 }
 
 /* Barrier tests */
-void barrier_test_memory_barrier(void)
+static void barrier_test_memory_barrier(void)
 {
 	volatile int a = 0;
 	volatile int b = 0;
@@ -298,7 +297,7 @@ void barrier_test_memory_barrier(void)
 	temp_result = a + b + c + d;
 }
 
-void barrier_test_no_barrier_functional(void)
+static void barrier_test_no_barrier_functional(void)
 {
 	pthrd_arg arg;
 
@@ -308,7 +307,7 @@ void barrier_test_no_barrier_functional(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-void barrier_test_barrier_functional(void)
+static void barrier_test_barrier_functional(void)
 {
 	pthrd_arg arg;
 
@@ -325,7 +324,7 @@ odp_testinfo_t barrier_suite_barrier[] = {
 	ODP_TEST_INFO_NULL
 };
 
-int barrier_init(odp_instance_t *inst)
+static int barrier_init(odp_instance_t *inst)
 {
 	uint32_t workers_count, max_threads;
 	int ret = 0;
@@ -374,7 +373,7 @@ int barrier_init(odp_instance_t *inst)
 	return ret;
 }
 
-int barrier_term(odp_instance_t inst)
+static int barrier_term(odp_instance_t inst)
 {
 	odp_shm_t shm;
 
@@ -403,7 +402,7 @@ odp_suiteinfo_t barrier_suites[] = {
 	ODP_SUITE_INFO_NULL
 };
 
-int barrier_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 

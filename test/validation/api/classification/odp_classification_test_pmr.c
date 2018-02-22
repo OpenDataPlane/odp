@@ -88,7 +88,7 @@ int classification_suite_pmr_term(void)
 	return retcode;
 }
 
-void classification_test_pktin_classifier_flag(void)
+static void classification_test_pktin_classifier_flag(void)
 {
 	odp_packet_t pkt;
 	odph_tcphdr_t *tcp;
@@ -184,7 +184,7 @@ void classification_test_pktin_classifier_flag(void)
 	odp_pktio_close(pktio);
 }
 
-void classification_test_pmr_term_tcp_dport(void)
+static void classification_test_pmr_term_tcp_dport(void)
 {
 	odp_packet_t pkt;
 	odph_tcphdr_t *tcp;
@@ -298,7 +298,7 @@ void classification_test_pmr_term_tcp_dport(void)
 	odp_pktio_close(pktio);
 }
 
-void classification_test_pmr_term_tcp_sport(void)
+static void classification_test_pmr_term_tcp_sport(void)
 {
 	odp_packet_t pkt;
 	odph_tcphdr_t *tcp;
@@ -410,7 +410,7 @@ void classification_test_pmr_term_tcp_sport(void)
 	odp_pktio_close(pktio);
 }
 
-void classification_test_pmr_term_udp_dport(void)
+static void classification_test_pmr_term_udp_dport(void)
 {
 	odp_packet_t pkt;
 	odph_udphdr_t *udp;
@@ -526,7 +526,7 @@ void classification_test_pmr_term_udp_dport(void)
 	odp_pktio_close(pktio);
 }
 
-void classification_test_pmr_term_udp_sport(void)
+static void classification_test_pmr_term_udp_sport(void)
 {
 	odp_packet_t pkt;
 	odph_udphdr_t *udp;
@@ -641,7 +641,7 @@ void classification_test_pmr_term_udp_sport(void)
 	odp_pktio_close(pktio);
 }
 
-void classification_test_pmr_term_ipproto(void)
+static void classification_test_pmr_term_ipproto(void)
 {
 	odp_packet_t pkt;
 	uint32_t seqno;
@@ -750,7 +750,7 @@ void classification_test_pmr_term_ipproto(void)
 	odp_pktio_close(pktio);
 }
 
-void classification_test_pmr_term_dmac(void)
+static void classification_test_pmr_term_dmac(void)
 {
 	odp_packet_t pkt;
 	uint32_t seqno;
@@ -856,7 +856,7 @@ void classification_test_pmr_term_dmac(void)
 	odp_pktio_close(pktio);
 }
 
-void classification_test_pmr_term_packet_len(void)
+static void classification_test_pmr_term_packet_len(void)
 {
 	odp_packet_t pkt;
 	uint32_t seqno;
@@ -968,7 +968,7 @@ void classification_test_pmr_term_packet_len(void)
 	odp_pktio_close(pktio);
 }
 
-void classification_test_pmr_term_vlan_id_0(void)
+static void classification_test_pmr_term_vlan_id_0(void)
 {
 	odp_packet_t pkt;
 	uint32_t seqno;
@@ -1081,7 +1081,7 @@ void classification_test_pmr_term_vlan_id_0(void)
 	odp_pktio_close(pktio);
 }
 
-void classification_test_pmr_term_vlan_id_x(void)
+static void classification_test_pmr_term_vlan_id_x(void)
 {
 	odp_packet_t pkt;
 	uint32_t seqno;
@@ -1195,7 +1195,7 @@ void classification_test_pmr_term_vlan_id_x(void)
 	odp_pktio_close(pktio);
 }
 
-void classification_test_pmr_term_eth_type_0(void)
+static void classification_test_pmr_term_eth_type_0(void)
 {
 	odp_packet_t pkt;
 	uint32_t seqno;
@@ -1304,7 +1304,7 @@ void classification_test_pmr_term_eth_type_0(void)
 	odp_pktio_close(pktio);
 }
 
-void classification_test_pmr_term_eth_type_x(void)
+static void classification_test_pmr_term_eth_type_x(void)
 {
 	odp_packet_t pkt;
 	uint32_t seqno;

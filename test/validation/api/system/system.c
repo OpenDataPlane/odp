@@ -11,13 +11,15 @@
 #include <odp/api/cpumask.h>
 #include "odp_cunit_common.h"
 #include "test_debug.h"
-#include "system.h"
 
 #define DIFF_TRY_NUM			160
 #define RES_TRY_NUM			10
 #define PAGESZ_NUM			10
 
-void system_test_odp_version_numbers(void)
+#define GIGA_HZ 1000000000ULL
+#define KILO_HZ 1000ULL
+
+static void system_test_odp_version_numbers(void)
 {
 	int char_ok = 0;
 	char version_string[128];
@@ -39,7 +41,7 @@ void system_test_odp_version_numbers(void)
 	CU_ASSERT(char_ok);
 }
 
-void system_test_odp_cpu_count(void)
+static void system_test_odp_cpu_count(void)
 {
 	int cpus;
 
@@ -47,7 +49,7 @@ void system_test_odp_cpu_count(void)
 	CU_ASSERT(0 < cpus);
 }
 
-void system_test_odp_cpu_cycles(void)
+static void system_test_odp_cpu_cycles(void)
 {
 	uint64_t c2, c1;
 
@@ -58,7 +60,7 @@ void system_test_odp_cpu_cycles(void)
 	CU_ASSERT(c2 != c1);
 }
 
-void system_test_odp_cpu_cycles_max(void)
+static void system_test_odp_cpu_cycles_max(void)
 {
 	uint64_t c2, c1;
 	uint64_t max1, max2;
@@ -77,7 +79,7 @@ void system_test_odp_cpu_cycles_max(void)
 	CU_ASSERT(c1 <= max1 && c2 <= max1);
 }
 
-void system_test_odp_cpu_cycles_resolution(void)
+static void system_test_odp_cpu_cycles_resolution(void)
 {
 	int i;
 	uint64_t res;
@@ -99,7 +101,7 @@ void system_test_odp_cpu_cycles_resolution(void)
 	}
 }
 
-void system_test_odp_cpu_cycles_diff(void)
+static void system_test_odp_cpu_cycles_diff(void)
 {
 	int i;
 	uint64_t c2, c1, c3, max;
@@ -165,7 +167,7 @@ void system_test_odp_cpu_cycles_diff(void)
 	printf("wrap was not detected...");
 }
 
-void system_test_odp_sys_cache_line_size(void)
+static void system_test_odp_sys_cache_line_size(void)
 {
 	uint64_t cache_size;
 
@@ -174,7 +176,7 @@ void system_test_odp_sys_cache_line_size(void)
 	CU_ASSERT(ODP_CACHE_LINE_SIZE == cache_size);
 }
 
-void system_test_odp_cpu_model_str(void)
+static void system_test_odp_cpu_model_str(void)
 {
 	char model[128];
 
@@ -183,7 +185,7 @@ void system_test_odp_cpu_model_str(void)
 	CU_ASSERT(strlen(model) < 127);
 }
 
-void system_test_odp_cpu_model_str_id(void)
+static void system_test_odp_cpu_model_str_id(void)
 {
 	char model[128];
 	odp_cpumask_t mask;
@@ -200,7 +202,7 @@ void system_test_odp_cpu_model_str_id(void)
 	}
 }
 
-void system_test_odp_sys_page_size(void)
+static void system_test_odp_sys_page_size(void)
 {
 	uint64_t page;
 
@@ -209,7 +211,7 @@ void system_test_odp_sys_page_size(void)
 	CU_ASSERT(ODP_PAGE_SIZE == page);
 }
 
-void system_test_odp_sys_huge_page_size(void)
+static void system_test_odp_sys_huge_page_size(void)
 {
 	uint64_t page;
 
@@ -217,7 +219,7 @@ void system_test_odp_sys_huge_page_size(void)
 	CU_ASSERT(0 < page);
 }
 
-void system_test_odp_sys_huge_page_size_all(void)
+static void system_test_odp_sys_huge_page_size_all(void)
 {
 	uint64_t pagesz_tbs[PAGESZ_NUM];
 	uint64_t prev_pagesz = 0;
@@ -236,7 +238,7 @@ void system_test_odp_sys_huge_page_size_all(void)
 	}
 }
 
-int system_check_odp_cpu_hz(void)
+static int system_check_odp_cpu_hz(void)
 {
 	if (odp_cpu_hz() == 0) {
 		fprintf(stderr, "odp_cpu_hz is not supported, skipping\n");
@@ -246,7 +248,7 @@ int system_check_odp_cpu_hz(void)
 	return ODP_TEST_ACTIVE;
 }
 
-void system_test_odp_cpu_hz(void)
+static void system_test_odp_cpu_hz(void)
 {
 	uint64_t hz = odp_cpu_hz();
 
@@ -257,7 +259,7 @@ void system_test_odp_cpu_hz(void)
 	CU_ASSERT(hz > 1 * KILO_HZ);
 }
 
-int system_check_odp_cpu_hz_id(void)
+static int system_check_odp_cpu_hz_id(void)
 {
 	uint64_t hz;
 	odp_cpumask_t mask;
@@ -280,7 +282,7 @@ int system_check_odp_cpu_hz_id(void)
 	return ODP_TEST_ACTIVE;
 }
 
-void system_test_odp_cpu_hz_id(void)
+static void system_test_odp_cpu_hz_id(void)
 {
 	uint64_t hz;
 	odp_cpumask_t mask;
@@ -299,7 +301,7 @@ void system_test_odp_cpu_hz_id(void)
 	}
 }
 
-void system_test_odp_cpu_hz_max(void)
+static void system_test_odp_cpu_hz_max(void)
 {
 	uint64_t hz;
 
@@ -307,7 +309,7 @@ void system_test_odp_cpu_hz_max(void)
 	CU_ASSERT(0 < hz);
 }
 
-void system_test_odp_cpu_hz_max_id(void)
+static void system_test_odp_cpu_hz_max_id(void)
 {
 	uint64_t hz;
 	odp_cpumask_t mask;
@@ -323,7 +325,7 @@ void system_test_odp_cpu_hz_max_id(void)
 	}
 }
 
-void system_test_info_print(void)
+static void system_test_info_print(void)
 {
 	printf("\n\nCalling system info print...\n");
 	odp_sys_info_print();
@@ -358,7 +360,7 @@ odp_suiteinfo_t system_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int system_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 

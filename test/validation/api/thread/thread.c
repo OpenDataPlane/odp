@@ -10,25 +10,24 @@
 #include <odp_cunit_common.h>
 #include <mask_common.h>
 #include <test_debug.h>
-#include "thread.h"
 
 /* Test thread entry and exit synchronization barriers */
 odp_barrier_t bar_entry;
 odp_barrier_t bar_exit;
 
-void thread_test_odp_cpu_id(void)
+static void thread_test_odp_cpu_id(void)
 {
 	(void)odp_cpu_id();
 	CU_PASS();
 }
 
-void thread_test_odp_thread_id(void)
+static void thread_test_odp_thread_id(void)
 {
 	(void)odp_thread_id();
 	CU_PASS();
 }
 
-void thread_test_odp_thread_count(void)
+static void thread_test_odp_thread_count(void)
 {
 	(void)odp_thread_count();
 	CU_PASS();
@@ -47,7 +46,7 @@ static int thread_func(void *arg TEST_UNUSED)
 	return CU_get_number_of_failures();
 }
 
-void thread_test_odp_thrmask_worker(void)
+static void thread_test_odp_thrmask_worker(void)
 {
 	odp_thrmask_t mask;
 	int ret;
@@ -84,7 +83,7 @@ void thread_test_odp_thrmask_worker(void)
 	odp_cunit_thread_exit(&args);
 }
 
-void thread_test_odp_thrmask_control(void)
+static void thread_test_odp_thrmask_control(void)
 {
 	odp_thrmask_t mask;
 	int ret;
@@ -125,7 +124,7 @@ odp_suiteinfo_t thread_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int thread_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int ret;
 

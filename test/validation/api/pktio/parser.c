@@ -14,7 +14,6 @@
 
 #include <stdlib.h>
 #include "parser.h"
-#include "pktio.h"
 
 #define MAX_NUM_IFACES         2
 #define PKT_POOL_NUM           256
@@ -208,6 +207,21 @@ static odp_packet_t recv_and_cmp_packet(odp_pktin_queue_t pktin,
 	return pkt;
 }
 
+static void pktio_pkt_set_macs(odp_packet_t pkt, odp_pktio_t src, odp_pktio_t dst)
+{
+	uint32_t len;
+	odph_ethhdr_t *eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, &len);
+	int ret;
+
+	ret = odp_pktio_mac_addr(src, &eth->src, ODP_PKTIO_MACADDR_MAXSIZE);
+	CU_ASSERT(ret == ODPH_ETHADDR_LEN);
+	CU_ASSERT(ret <= ODP_PKTIO_MACADDR_MAXSIZE);
+
+	ret = odp_pktio_mac_addr(dst, &eth->dst, ODP_PKTIO_MACADDR_MAXSIZE);
+	CU_ASSERT(ret == ODPH_ETHADDR_LEN);
+	CU_ASSERT(ret <= ODP_PKTIO_MACADDR_MAXSIZE);
+}
+
 /**
  * Creates a test packet from data array and loops it through the test pktio
  * interfaces forcing packet parsing.
@@ -257,7 +271,7 @@ static odp_packet_t loopback_packet(pktio_info_t *pktio_a,
 	return pkt;
 }
 
-void parser_test_arp(void)
+static void parser_test_arp(void)
 {
 	odp_packet_t pkt;
 
@@ -273,7 +287,7 @@ void parser_test_arp(void)
 	odp_packet_free(pkt);
 }
 
-void parser_test_ipv4_icmp(void)
+static void parser_test_ipv4_icmp(void)
 {
 	odp_packet_t pkt;
 
@@ -291,7 +305,7 @@ void parser_test_ipv4_icmp(void)
 	odp_packet_free(pkt);
 }
 
-void parser_test_ipv4_tcp(void)
+static void parser_test_ipv4_tcp(void)
 {
 	odp_packet_t pkt;
 
@@ -308,7 +322,7 @@ void parser_test_ipv4_tcp(void)
 	odp_packet_free(pkt);
 }
 
-void parser_test_ipv4_udp(void)
+static void parser_test_ipv4_udp(void)
 {
 	odp_packet_t pkt;
 
@@ -325,7 +339,7 @@ void parser_test_ipv4_udp(void)
 	odp_packet_free(pkt);
 }
 
-void parser_test_vlan_ipv4_udp(void)
+static void parser_test_vlan_ipv4_udp(void)
 {
 	odp_packet_t pkt;
 
@@ -343,7 +357,7 @@ void parser_test_vlan_ipv4_udp(void)
 	odp_packet_free(pkt);
 }
 
-void parser_test_vlan_qinq_ipv4_udp(void)
+static void parser_test_vlan_qinq_ipv4_udp(void)
 {
 	odp_packet_t pkt;
 
@@ -362,7 +376,7 @@ void parser_test_vlan_qinq_ipv4_udp(void)
 	odp_packet_free(pkt);
 }
 
-void parser_test_ipv6_icmp(void)
+static void parser_test_ipv6_icmp(void)
 {
 	odp_packet_t pkt;
 
@@ -380,7 +394,7 @@ void parser_test_ipv6_icmp(void)
 	odp_packet_free(pkt);
 }
 
-void parser_test_ipv6_tcp(void)
+static void parser_test_ipv6_tcp(void)
 {
 	odp_packet_t pkt;
 
@@ -397,7 +411,7 @@ void parser_test_ipv6_tcp(void)
 	odp_packet_free(pkt);
 }
 
-void parser_test_ipv6_udp(void)
+static void parser_test_ipv6_udp(void)
 {
 	odp_packet_t pkt;
 
@@ -414,7 +428,7 @@ void parser_test_ipv6_udp(void)
 	odp_packet_free(pkt);
 }
 
-void parser_test_vlan_ipv6_udp(void)
+static void parser_test_vlan_ipv6_udp(void)
 {
 	odp_packet_t pkt;
 
