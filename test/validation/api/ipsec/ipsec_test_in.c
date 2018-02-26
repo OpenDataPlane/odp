@@ -1131,12 +1131,16 @@ static void test_in_ipv4_mcgrew_gcm_4_esp(void)
 	ipsec_sa_destroy(sa);
 }
 
-#if 0
 static void test_in_ipv4_mcgrew_gcm_12_esp(void)
 {
 	odp_ipsec_tunnel_param_t tunnel = {};
 	odp_ipsec_sa_param_t param;
 	odp_ipsec_sa_t sa;
+
+	/* This test will not work properly inbound inline mode.
+	 * Packet might be dropped and we will not check for that. */
+	if (suite_context.inbound_op_mode == ODP_IPSEC_OP_MODE_INLINE)
+		return;
 
 	ipsec_sa_param_fill(&param,
 			    true, false, 0x335467ae, &tunnel,
@@ -1164,7 +1168,38 @@ static void test_in_ipv4_mcgrew_gcm_12_esp(void)
 
 	ipsec_sa_destroy(sa);
 }
-#endif
+
+static void test_in_ipv4_mcgrew_gcm_12_esp_notun(void)
+{
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    true, false, 0x335467ae, NULL,
+			    ODP_CIPHER_ALG_AES_GCM, &key_mcgrew_gcm_12,
+			    ODP_AUTH_ALG_AES_GCM, NULL,
+			    &key_mcgrew_gcm_salt_12);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_mcgrew_gcm_test_12_esp,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_NO_NEXT,
+			  .pkt_out = &pkt_mcgrew_gcm_test_12_notun },
+		},
+	};
+
+	ipsec_check_in_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
 
 static void test_in_ipv4_mcgrew_gcm_15_esp(void)
 {
@@ -1584,10 +1619,10 @@ odp_testinfo_t ipsec_in_suite[] = {
 				  ipsec_check_esp_aes_gcm_256),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_mcgrew_gcm_4_esp,
 				  ipsec_check_esp_aes_gcm_128),
-#if 0
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_mcgrew_gcm_12_esp,
 				  ipsec_check_esp_aes_gcm_128),
-#endif
+	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_mcgrew_gcm_12_esp_notun,
+				  ipsec_check_esp_aes_gcm_128),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_mcgrew_gcm_15_esp,
 				  ipsec_check_esp_null_aes_gmac_128),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_rfc7634_chacha,
