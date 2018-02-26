@@ -1,3 +1,239 @@
+== OpenDataPlane (1.18.0.0)
+=== New Features
+ODP v1.18.0.0 is Tiger Moth Release Candidate 2 (RC 2). It completes the new
+APIs that are part of the Tiger Moth Long Term Support (LTS) release of ODP
+as well as various performance refinements and bug fixes. As of RC2 the ODP
+API is now frozen for the Tiger Moth development series.
+
+==== APIs
+The following new and changed APIs are included in this release:
+
+===== Addition of Shared Memory (SHM) Initialization Parameters
+The `odp_init_t` struct used as the argument to the `odp_init_global()` API
+has been expanded to include a `max_memory` field that specifies the maximum
+amount of shared memory (shm) that the application will use. This is to
+better enable ODP implementations to optimize their use of shared memory in
+support of the application. If left as (or defaulted) to 0, the implementation
+may choose a default limit for the application.
+
+===== Crypto Changes
+A number of crypto refinements are included in this release:
+
+* The single initialization vector (`iv`) in the `odp_crypto_session_param_t`
+is replaced by a separate `cipher_iv` and `auth_iv` fields.
+
+* The single initialization vector (`override_iv_ptr`) in the
+`odp_crypto_op_param_t` is replaced by a separate `cipher_iv_ptr` and
+`auth_iv_ptr` fields.
+
+* The special nature of GCM and GMAC authenticated encryption modes is
+clarified in that these ciphers always combine ciphering with authentication
+and hence require both to be specified when used. This is simply a
+documentation change as this requirement has always existed.
+
+* Enumerations for AES_CCM (`ODP_CIPHER_ALG_AES_CCM` and
+`ODP_AUTH_ALG_AES_CCM`) authenticated encryption modes are added.
+
+* Enumeration for the AES_CMAC authenticated encryption mode
+(`ODP_AUTH_ALG_AES_CMAC`) is added.
+
+* Enumerations for the ChaCha20-Poly1305 (`ODP_CIPHER_ALG_CHACHA20_POLY1305`
+and `ODP_AUTH_ALG_CHACHA20_POLY1305`) authenticated encryption modes are
+added.
+
+* Enumeration for the SHA-384 authentication algorithm
+(`ODP_AUTH_ALG_SHA384_HMAC`) is added.
+
+* Enumeration for the AES-XCBC-MAC authentication algorithm
+(`ODP_AUTH_ALG_AES_XCBC_MAC`) is added.
+
+===== Lock-free and block-free queues
+The `odp_nonblocking_t` enums introduced in ODP v1.17.0.0 are now returned
+as separate `odp_queue_capability()` limits for plain and scheduled queues. The
+ODP reference implementations now support `ODP_NONBLOCKING_LF` queues.
+
+===== User pointer initialized to NULL
+The specification for `odp_packet_user_ptr()` is clarified that unless
+overridden by `odp_packet_user_ptr_set()` the value of NULL will be returned.
+
+===== Removal of `ODP_PKTIN_WAIT` option
+The `ODP_PKTIN_WAIT` option on `odp_pktin_recv_tmo()` and
+`odp_pktin_recv_mq_tmo()` is removed. Timeout options now consist of
+`ODP_PKTIN_NO_WAIT` and a user-supplied timeout value. Since this timeout
+value can be specified to be arbitrarily long, there is no need for an
+indefinite wait capability as provision of such a capability proved
+problematic for some ODP implementations.
+
+===== Addition of packet protocol APIs
+The APIs `odp_packet_l2_type()`, `odp_packet_l3_type()`, and
+`odp_packet_l4_type()` are added to return the Layer 2, 3, and 4 protocols,
+respectively, associated with packets that have been parsed to the
+corresponding layer. If the packet was not parsed to the associated layer
+these return `ODP_PROTO_Ln_TYPE_NONE`.
+
+===== Packet addressability improvements
+The documentation of `odp_packet_data()` is clarified to indicated when this
+shortcut may be used safely and a new API, `odp_packet_data_seg_len()`, is
+added that returns both the address of the start of packet data as well
+as the number of bytes addressable from that pointer.
+
+===== Asynchronous ordered locks
+Two new APIs, `odp_schedule_order_lock_start()` and
+`odp_schedule_order_lock_wait()` are added to allow for asynchronous
+ordered lock acquisition in addition to the existing synchronous
+`odp_schedule_order_lock()` API. In some implementations and applications,
+there may be a performance advantage to indicating the intent to acquire an
+ordered lock to allow the implementation to prepare for this while the
+application continues parallel processing and then enter the critical section
+protected by the ordered lock at a later time. In this case ordered lock
+protection is not guaranteed until the `odp_schedule_order_lock_wait()` call
+returns.
+
+===== IPsec API miscellaneous changes and enhancements
+IPsec support is further enhanced with the following:
+
+* The `odp_ipsec_ipv4_param_t` and `odp_ipsec_ipv6_param_t` structures
+are added to formalize the specification of IPv4 and IPv6 options in the
+`odp_ipsec_tunnel_param_t` configuration.
+
+* The `mode` field of the `odp_ipsec_out_t` is renamed to `frag_mode` for
+better clarity. In addition the `flag.frag-mode` option bit in the
+`odp_ipsec_out_opt_t` struct is defined to hold per-operation options for
+the `odp_ipsec_out_param_t` struct.
+
+* The `odp_ipsec_capability_t` struct returned by the `odp_ipsec_capability()`
+API is expanded to include the `odp_proto_chksums_t` available on inbound
+IPsec traffic. This indicates whether and how inbound packet checksums may
+be validated for decrypted IPsec traffic.
+
+===== IPsec Traffic Flow Confidentiality (TFC) support
+Traffic Flow Confidentiality (TFC) allows applications to defend against
+traffic analysis attacks by inserting dummy packets as well as add pad bytes
+to packets traversing IPsec flows.
+
+Dummy packets have an L3 type of `ODP_PROTO_L3_TYPE_NONE` in tunnel mode and
+`ODP_PROTO_L4_TYPE_NO_NEXT` in transport mode. Padded packets have additional
+data suffixed to them that extends beyond the L3 or L4 packet lengths.
+
+For RX processing, inline dummy packets may or may not be dropped from the
+inbound packet stream. For lookaside processing they are always visible. For TX
+processing, the `odp_ipsec_out_opt_t` struct specifies the `tfc_pad` bit if
+the packet is to be padded or the `tfc_dummy` bit if a dummy packet is to
+be inserted. The dummy packet length is specified by the `tfc_pad_len` option.
+
+=== Streamlined ABI Support
+ABI support has been reorganized to make it more modular and to omit headers
+and related ABI files when configure to disable this support.
+
+=== Reference Implementation Fixes and Improvements
+The ODP Reference Implementation corporates a number of improvements that
+result in better code organization as well as improved processing efficiency.
+
+==== Pktio null device support
+In the LNG Reference Implemenations of ODP, the `odp_pktio_open()` API may now
+specify devices of class `null` to indicate the PktIO is treated as a dummy
+device. Null devices behave just like Linux `/dev/null` in that they never
+receive packets and simply discard any packets sent to them.
+
+Note that not all ODP implementations may support this device class. The
+specific device classes supported by each ODP implementation may vary and are
+listed in their own documentation.
+
+==== Runtime Scheduler Selection
+The ODP Reference Implementation offers both a default and a number of
+alternate scheduler implementations. Previously these were selectable only at
+`configure` time. They can now be dynamically selected at runtime by the use
+of the `ODP_SCHEDULER` environment variable. If this environment variable is
+not set, the default (basic) scheduler is used. It can be set to select
+alternate schedulers:
+
+* `ODP_SCHEDULER=basic` Explicitly selects the default scheduler
+* `ODP_SCHEDULER=sp` Selects the strict priority scheduler
+* `ODP_SCHEDULER=iquery` Selects the iQuery scheduler
+* `ODP_SCHEDULER=scalable` Selects the scalable scheduler
+
+==== Streamlined Queue Implementation
+The ODP Reference Implementation now uses a ring model for implementing
+ODP queues. This results in greatly improved efficiency for queue operations.
+The default maximum queue depth used is 4096 elements, and this information is
+returned via the `odp_queue_capability()` API.
+
+==== Validation Test Simplification
+The tests that are part of the validation test suite are reorganized and
+simplified by having a single test file for each API rather than separate
+CUnit driver files and test files.
+
+=== Test/Example Improvements
+
+==== Crypto Test Improvements
+The `crypto` validation test suite now offers better information on which
+crypto algorithms were skipped because they are not available. Testing of
+full HMAC lengths is now added
+
+==== ODP Generator Improvements
+The `odp_generator` example now offers configurable RX burst size, selectable
+packet handling (Direct I/O or Scheduled I/O), as well as streamlined packet
+processing.
+
+==== `l2fwd` Example Improvements
+The `l2fwd` example offers improved efficiency via better cache usage.
+
+=== Bug Fixes
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3517[Bug 3517]
+timer test might fail
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3572[Bug 3572]
+time_main test fails if run under heavy load
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3576[Bug 3576]
+classification: CoS queues in invalid table index
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3577[Bug 3577]
+classification: multiqueue CoS will always fail
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3578[Bug 3578]
+classification: requested number of queues is ignored in multiqueue CoS
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3579[Bug 3579]
+cls: capability to return max hash queues
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3581[Bug 3581]
+classification: invalid memory access in RSS hash
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3582[Bug 3582]
+classification: incorrect IPv6 RSS hash
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3594[Bug 3594]
+IPsec SA may be used before fully initialized
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3595[Bug 3595]
+IPsec SA lookup may leave extra SAs locked
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3597[Bug 3597]
+new generator test assumes that null:0 pktio is always present
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3613[Bug 3613]
+packet_main test can fail
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3611[Bug 3611]
+ODP linux-generic fails on AArch64 in non-ABI-compat mode
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3618[Bug 3618]
+DPDK pktio stops receiving packets if all configured RX queues are not used
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3628[Bug 3628]
+Another timer_main failure
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3632[Bug 3632]
+Creating a pool with total size over 4.29GB (UINT32_MAX) leads to
+undefined behavior
+
+=== Known Issues
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2988[Bug 2988]
+ODP exposes symbols outside of odp*/_odp* namespace
+
 == OpenDataPlane (1.17.0.0)
 === New Features
 ODP v1.17.0.0 is Tiger Moth Release Candidate 1 (RC 1). It introduces
