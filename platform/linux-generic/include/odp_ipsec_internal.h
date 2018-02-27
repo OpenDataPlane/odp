@@ -161,22 +161,17 @@ struct ipsec_sa_s {
 
 			union {
 			struct {
+				odp_ipsec_ipv4_param_t param;
 				odp_u32be_t	src_ip;
 				odp_u32be_t	dst_ip;
 
 				/* 32-bit from which low 16 are used */
 				odp_atomic_u32_t hdr_id;
-
-				uint8_t		ttl;
-				uint8_t		dscp;
-				uint8_t		df;
 			} tun_ipv4;
 			struct {
+				odp_ipsec_ipv6_param_t param;
 				uint8_t		src_ip[_ODP_IPV6ADDR_LEN];
 				uint8_t		dst_ip[_ODP_IPV6ADDR_LEN];
-				uint8_t		hlimit;
-				uint8_t		dscp;
-				uint32_t	flabel;
 			} tun_ipv6;
 			};
 		} out;
