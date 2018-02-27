@@ -559,7 +559,7 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 		}
 
 		qi  = cmd->s.index;
-		num = sched_cb_queue_deq_multi(qi, events, 1);
+		num = sched_cb_queue_deq_multi(qi, events, 1, 1);
 
 		if (num > 0) {
 			sched_local.cmd = cmd;
