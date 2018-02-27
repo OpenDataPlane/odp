@@ -291,7 +291,7 @@ static int schedule_term_global(void)
 		odp_event_t events[1];
 
 		if (sched->availables[i])
-			count = sched_cb_queue_deq_multi(i, events, 1);
+			count = sched_cb_queue_deq_multi(i, events, 1, 1);
 
 		if (count < 0)
 			sched_cb_queue_destroy_finalize(i);
@@ -1527,7 +1527,7 @@ static inline int consume_queue(int prio, unsigned int queue_index)
 		max = 1;
 
 	count = sched_cb_queue_deq_multi(
-		queue_index, cache->stash, max);
+		queue_index, cache->stash, max, 1);
 
 	if (count < 0) {
 		DO_SCHED_UNLOCK();

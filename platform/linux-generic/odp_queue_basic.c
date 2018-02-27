@@ -299,6 +299,17 @@ void sched_cb_queue_destroy_finalize(uint32_t queue_index)
 	UNLOCK(queue);
 }
 
+void sched_cb_queue_set_status(uint32_t queue_index, int status)
+{
+	queue_entry_t *queue = get_qentry(queue_index);
+
+	LOCK(queue);
+
+	queue->s.status = status;
+
+	UNLOCK(queue);
+}
+
 static int queue_destroy(odp_queue_t handle)
 {
 	queue_entry_t *queue;
@@ -493,7 +504,7 @@ static int queue_enq(odp_queue_t handle, odp_event_t ev)
 }
 
 static inline int deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
-			    int num)
+			    int num, int update_status)
 {
 	int status_sync = sched_fn->status_sync;
 	int num_deq;
@@ -515,7 +526,7 @@ static inline int deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 
 	if (num_deq == 0) {
 		/* Already empty queue */
-		if (queue->s.status == QUEUE_STATUS_SCHED) {
+		if (update_status && queue->s.status == QUEUE_STATUS_SCHED) {
 			queue->s.status = QUEUE_STATUS_NOTSCHED;
 
 			if (status_sync)
@@ -542,7 +553,7 @@ static int queue_int_deq_multi(queue_t q_int, odp_buffer_hdr_t *buf_hdr[],
 {
 	queue_entry_t *queue = qentry_from_int(q_int);
 
-	return deq_multi(queue, buf_hdr, num);
+	return deq_multi(queue, buf_hdr, num, 0);
 }
 
 static odp_buffer_hdr_t *queue_int_deq(queue_t q_int)
@@ -551,7 +562,7 @@ static odp_buffer_hdr_t *queue_int_deq(queue_t q_int)
 	odp_buffer_hdr_t *buf_hdr = NULL;
 	int ret;
 
-	ret = deq_multi(queue, &buf_hdr, 1);
+	ret = deq_multi(queue, &buf_hdr, 1, 0);
 
 	if (ret == 1)
 		return buf_hdr;
@@ -661,11 +672,12 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 	return 0;
 }
 
-int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num)
+int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num,
+			     int update_status)
 {
 	queue_entry_t *qe = get_qentry(queue_index);
 
-	return deq_multi(qe, (odp_buffer_hdr_t **)ev, num);
+	return deq_multi(qe, (odp_buffer_hdr_t **)ev, num, update_status);
 }
 
 int sched_cb_queue_empty(uint32_t queue_index)
