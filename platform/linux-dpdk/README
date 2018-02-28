@@ -29,7 +29,7 @@ Prerequisites and considerations:
   (4.4.0 kernel).
 - DPDK only works on a selected range of network cards. The list of known and
   supported devices can be found in the DPDK documentation:
-      http://dpdk.org/doc/guides-17.02/nics/index.html
+      http://dpdk.org/doc/guides-17.08/nics/index.html
 
 
 2. Preparing DPDK
@@ -39,10 +39,10 @@ Fetching the DPDK code:
 ----------------------
     git clone http://dpdk.org/git/dpdk ./<dpdk-dir>
 
-Right now odp-dpdk only supports DPDK v17.02:
+Right now odp-dpdk only supports DPDK v17.08:
     cd <dpdk-dir>
     git tag -l -- will list all the tags available
-    git checkout -b 17.02 tags/v17.02
+    git checkout -b 17.08 tags/v17.08
 
 Compile DPDK:
 ------------
