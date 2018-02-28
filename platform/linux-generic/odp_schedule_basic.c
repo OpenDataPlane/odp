@@ -25,10 +25,7 @@
 #include <odp/api/packet_io.h>
 #include <odp_ring_internal.h>
 #include <odp_timer_internal.h>
-
-/* Should remove this dependency */
 #include <odp_queue_internal.h>
-#include <odp_timer_internal.h>
 
 /* Number of priority levels  */
 #define NUM_PRIO 8
@@ -876,7 +873,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 				continue;
 			}
 
-			handle            = sched_cb_queue_handle(qi);
+			handle            = queue_from_index(qi);
 			sched_local.num   = num;
 			sched_local.index = 0;
 			sched_local.queue = handle;

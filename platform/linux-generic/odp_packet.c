@@ -1819,7 +1819,8 @@ void odp_packet_print_data(odp_packet_t pkt, uint32_t offset,
 	len += snprintf(&str[len], n - len,
 			"  pool index    %" PRIu32 "\n", pool->pool_idx);
 	len += snprintf(&str[len], n - len,
-			"  buf index     %" PRIu32 "\n", hdr->buf_hdr.index);
+			"  buf index     %" PRIu32 "\n",
+			hdr->buf_hdr.index.buffer);
 	len += snprintf(&str[len], n - len,
 			"  segcount      %" PRIu16 "\n", hdr->buf_hdr.segcount);
 	len += snprintf(&str[len], n - len,

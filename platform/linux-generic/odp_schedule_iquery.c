@@ -1541,7 +1541,7 @@ static inline int consume_queue(int prio, unsigned int queue_index)
 
 	cache->top = &cache->stash[0];
 	cache->count = count;
-	cache->queue = sched_cb_queue_handle(queue_index);
+	cache->queue = queue_from_index(queue_index);
 	return count;
 }
 

@@ -429,7 +429,7 @@ static int test_creation_with_bad_parameters(void)
 	return 0;
 }
 
-#define PERFORMANCE_CAPACITY 1000000
+#define PERFORMANCE_CAPACITY 4000
 
 /*
  * Test the performance of cuckoo hash table.

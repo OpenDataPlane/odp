@@ -6,13 +6,7 @@
 
 #include "config.h"
 
-/**
- * @file
- *
- * @example odp_l2fwd.c  ODP basic forwarding application
- */
-
-/** enable strtok */
+/* enable strtok */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
@@ -30,38 +24,28 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
-/** @def MAX_WORKERS
- * @brief Maximum number of worker threads
- */
+/* Maximum number of worker threads */
 #define MAX_WORKERS            32
 
-/** @def SHM_PKT_POOL_SIZE
- * @brief Size of the shared memory block
- */
-#define SHM_PKT_POOL_SIZE      8192
+/* Size of the shared memory block */
+#define POOL_PKT_NUM           (16 * 1024)
 
-/** @def SHM_PKT_POOL_BUF_SIZE
- * @brief Buffer size of the packet pool buffer
- */
-#define SHM_PKT_POOL_BUF_SIZE  1856
+/* Buffer size of the packet pool buffer */
+#define POOL_PKT_LEN           1536
 
-/** @def MAX_PKT_BURST
- * @brief Maximum number of packet in a burst
- */
+/* Maximum number of packet in a burst */
 #define MAX_PKT_BURST          32
 
-/** Maximum number of pktio queues per interface */
+/* Maximum number of pktio queues per interface */
 #define MAX_QUEUES             32
 
-/** Maximum number of pktio interfaces */
+/* Maximum number of pktio interfaces */
 #define MAX_PKTIOS             8
 
-/** Maximum pktio index table size */
+/* Maximum pktio index table size */
 #define MAX_PKTIO_INDEXES      1024
 
-/**
- * Packet input mode
- */
+/* Packet input mode */
 typedef enum pktin_mode_t {
 	DIRECT_RECV,
 	PLAIN_QUEUE,
@@ -70,9 +54,7 @@ typedef enum pktin_mode_t {
 	SCHED_ORDERED,
 } pktin_mode_t;
 
-/**
- * Packet output modes
- */
+/* Packet output modes */
 typedef enum pktout_mode_t {
 	PKTOUT_DIRECT,
 	PKTOUT_QUEUE
@@ -85,60 +67,56 @@ static inline int sched_mode(pktin_mode_t in_mode)
 	       (in_mode == SCHED_ORDERED);
 }
 
-/** Get rid of path in filename - only for unix-type paths using '/' */
+/* Get rid of path in filename - only for unix-type paths using '/' */
 #define NO_PATH(file_name) (strrchr((file_name), '/') ? \
 			    strrchr((file_name), '/') + 1 : (file_name))
-/**
+/*
  * Parsed command line application arguments
  */
 typedef struct {
-	int extra_check;        /**< Some extra checks have been enabled */
+	int extra_check;        /* Some extra checks have been enabled */
 	int cpu_count;
-	int if_count;		/**< Number of interfaces to be used */
-	int addr_count;		/**< Number of dst addresses to be used */
-	int num_workers;	/**< Number of worker threads */
-	char **if_names;	/**< Array of pointers to interface names */
-	odph_ethaddr_t addrs[MAX_PKTIOS]; /**< Array of dst addresses */
-	pktin_mode_t in_mode;	/**< Packet input mode */
-	pktout_mode_t out_mode; /**< Packet output mode */
-	int time;		/**< Time in seconds to run. */
-	int accuracy;		/**< Number of seconds to get and print statistics */
-	char *if_str;		/**< Storage for interface names */
-	int dst_change;		/**< Change destination eth addresses */
-	int src_change;		/**< Change source eth addresses */
-	int error_check;        /**< Check packet errors */
-	int chksum;             /**< Checksum offload */
-	int sched_mode;         /**< Scheduler mode */
-	int num_groups;         /**< Number of scheduling groups */
-	int verbose;		/**< Verbose output */
+	int if_count;		/* Number of interfaces to be used */
+	int addr_count;		/* Number of dst addresses to be used */
+	int num_workers;	/* Number of worker threads */
+	char **if_names;	/* Array of pointers to interface names */
+	odph_ethaddr_t addrs[MAX_PKTIOS]; /* Array of dst addresses */
+	pktin_mode_t in_mode;	/* Packet input mode */
+	pktout_mode_t out_mode; /* Packet output mode */
+	int time;		/* Time in seconds to run. */
+	int accuracy;		/* Number of seconds to get and print stats */
+	char *if_str;		/* Storage for interface names */
+	int dst_change;		/* Change destination eth addresses */
+	int src_change;		/* Change source eth addresses */
+	int error_check;        /* Check packet errors */
+	int chksum;             /* Checksum offload */
+	int sched_mode;         /* Scheduler mode */
+	int num_groups;         /* Number of scheduling groups */
+	int verbose;		/* Verbose output */
 } appl_args_t;
 
-static int exit_threads;	/**< Break workers loop if set to 1 */
+static int exit_threads;	/* Break workers loop if set to 1 */
 
 static void sig_handler(int signo ODP_UNUSED)
 {
 	exit_threads = 1;
 }
 
-/**
- * Statistics
- */
+/* Statistics */
 typedef union ODP_ALIGNED_CACHE {
 	struct {
-		/** Number of forwarded packets */
+		/* Number of forwarded packets */
 		uint64_t packets;
-		/** Packets dropped due to receive error */
+		/* Packets dropped due to receive error */
 		uint64_t rx_drops;
-		/** Packets dropped due to transmit error */
+		/* Packets dropped due to transmit error */
 		uint64_t tx_drops;
 	} s;
 
 	uint8_t padding[ODP_CACHE_LINE_SIZE];
 } stats_t;
 
-/**
- * Thread specific data
- */
+/* Thread specific data */
 typedef struct thread_args_t {
 	stats_t stats;
 
@@ -161,24 +139,24 @@ typedef struct thread_args_t {
 	int num_groups;
 } thread_args_t;
 
-/**
+/*
  * Grouping of all global data
  */
 typedef struct {
-	/** Thread specific arguments */
+	/* Thread specific arguments */
 	thread_args_t thread[MAX_WORKERS];
-	/** Barriers to synchronize main and workers */
+	/* Barriers to synchronize main and workers */
 	odp_barrier_t init_barrier;
 	odp_barrier_t term_barrier;
-	/** Application (parsed) arguments */
+	/* Application (parsed) arguments */
 	appl_args_t appl;
-	/** Table of port ethernet addresses */
+	/* Table of port ethernet addresses */
 	odph_ethaddr_t port_eth_addr[MAX_PKTIOS];
-	/** Table of dst ethernet addresses */
+	/* Table of dst ethernet addresses */
 	odph_ethaddr_t dst_eth_addr[MAX_PKTIOS];
-	/** Table of dst ports. This is used by non-sched modes. */
+	/* Table of dst ports. This is used by non-sched modes. */
 	int dst_port[MAX_PKTIOS];
-	/** Table of pktio handles */
+	/* Table of pktio handles */
 	struct {
 		odp_pktio_t pktio;
 		odp_pktin_queue_t pktin[MAX_QUEUES];
@@ -193,26 +171,26 @@ typedef struct {
 		int next_tx_queue;
 	} pktios[MAX_PKTIOS];
 
-	/** Destination port lookup table.
-	 *  Table index is pktio_index of the API. This is used by the sched
-	 *  mode. */
+	/* Destination port lookup table.
+	 * Table index is pktio_index of the API. This is used by the sched
+	 * mode. */
 	uint8_t dst_port_from_idx[MAX_PKTIO_INDEXES];
 
 } args_t;
 
-/** Global pointer to args */
+/* Global pointer to args */
 static args_t *gbl_args;
 
-/**
+/*
  * Drop packets which input parsing marked as containing errors.
  *
  * Frees packets with error and modifies pkt_tbl[] to only contain packets with
  * no detected errors.
  *
- * @param pkt_tbl  Array of packets
- * @param num      Number of packets in pkt_tbl[]
+ * pkt_tbl  Array of packets
+ * num      Number of packets in pkt_tbl[]
  *
- * @return Number of packets dropped
+ * Returns number of packets dropped
  */
 static inline int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned num)
 {
@@ -234,12 +212,12 @@ static inline int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned num)
 	return dropped;
 }
 
-/**
+/*
  * Fill packets' eth addresses according to the destination port
  *
- * @param pkt_tbl  Array of packets
- * @param num      Number of packets in the array
- * @param dst_port Destination port
+ * pkt_tbl  Array of packets
+ * num      Number of packets in the array
+ * dst_port Destination port
  */
 static inline void fill_eth_addrs(odp_packet_t pkt_tbl[],
 				  unsigned num, int dst_port)
@@ -301,10 +279,10 @@ static inline void chksum_insert(odp_packet_t *pkt_tbl, int pkts)
 	}
 }
 
-/**
+/*
  * Packet IO worker thread using scheduled queues
  *
- * @param arg  thread arguments of type 'thread_args_t *'
+ * arg  thread arguments of type 'thread_args_t *'
  */
 static int run_worker_sched_mode(void *arg)
 {
@@ -441,10 +419,10 @@ static int run_worker_sched_mode(void *arg)
 	return 0;
 }
 
-/**
+/*
  * Packet IO worker thread using plain queues
  *
- * @param arg  thread arguments of type 'thread_args_t *'
+ * arg  thread arguments of type 'thread_args_t *'
  */
 static int run_worker_plain_queue_mode(void *arg)
 {
@@ -568,10 +546,10 @@ static int run_worker_plain_queue_mode(void *arg)
 	return 0;
 }
 
-/**
+/*
  * Packet IO worker thread accessing IO resources directly
  *
- * @param arg  thread arguments of type 'thread_args_t *'
+ * arg  thread arguments of type 'thread_args_t *'
  */
 static int run_worker_direct_mode(void *arg)
 {
@@ -670,15 +648,14 @@ static int run_worker_direct_mode(void *arg)
 	return 0;
 }
 
-/**
+/*
  * Create a pktio handle, optionally associating a default input queue.
  *
- * @param dev   Name of device to open
- * @param index Pktio index
- * @param pool  Pool to associate with device for packet RX/TX
+ * dev   Name of device to open
+ * index Pktio index
+ * pool  Pool to associate with device for packet RX/TX
  *
- * @retval 0 on success
- * @retval -1 on failure
+ * Returns 0 on success, -1 on failure
  */
 static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 			odp_pool_t pool, odp_schedule_group_t group)
@@ -686,7 +663,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	odp_pktio_t pktio;
 	odp_pktio_param_t pktio_param;
 	odp_schedule_sync_t  sync_mode;
-	odp_pktio_capability_t capa;
+	odp_pktio_capability_t pktio_capa;
 	odp_pktio_config_t config;
 	odp_pktin_queue_param_t pktin_param;
 	odp_pktout_queue_param_t pktout_param;
@@ -722,8 +699,8 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	if (gbl_args->appl.verbose)
 		odp_pktio_print(pktio);
 
-	if (odp_pktio_capability(pktio, &capa)) {
-		LOG_ERR("Error: capability query failed %s\n", dev);
+	if (odp_pktio_capability(pktio, &pktio_capa)) {
+		LOG_ERR("Error: pktio capability query failed %s\n", dev);
 		return -1;
 	}
 
@@ -762,17 +739,17 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 		pktin_param.queue_param.sched.group = group;
 	}
 
-	if (num_rx > (int)capa.max_input_queues) {
+	if (num_rx > (int)pktio_capa.max_input_queues) {
 		printf("Sharing %i input queues between %i workers\n",
-		       capa.max_input_queues, num_rx);
-		num_rx  = capa.max_input_queues;
+		       pktio_capa.max_input_queues, num_rx);
+		num_rx  = pktio_capa.max_input_queues;
 		mode_rx = ODP_PKTIO_OP_MT;
 	}
 
-	if (num_tx > (int)capa.max_output_queues) {
+	if (num_tx > (int)pktio_capa.max_output_queues) {
 		printf("Sharing %i output queues between %i workers\n",
-		       capa.max_output_queues, num_tx);
-		num_tx  = capa.max_output_queues;
+		       pktio_capa.max_output_queues, num_tx);
+		num_tx  = pktio_capa.max_output_queues;
 		mode_tx = ODP_PKTIO_OP_MT;
 	}
 
@@ -837,14 +814,13 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	return 0;
 }
 
-/**
- *  Print statistics
+/*
+ * Print statistics
  *
- * @param num_workers Number of worker threads
- * @param thr_stats Pointers to stats storage
- * @param duration Number of seconds to loop in
- * @param timeout Number of seconds for stats calculation
- *
+ * num_workers Number of worker threads
+ * thr_stats   Pointers to stats storage
+ * duration    Number of seconds to loop in
+ * timeout     Number of seconds for stats calculation
  */
 static int print_speed_stats(int num_workers, stats_t **thr_stats,
 			     int duration, int timeout)
@@ -926,10 +902,10 @@ static void print_port_mapping(void)
 	printf("\n");
 }
 
-/**
+/*
  * Find the destination port for a given input port
  *
- * @param port  Input port index
+ * port  Input port index
  */
 static int find_dest_port(int port)
 {
@@ -1117,7 +1093,7 @@ static void init_port_lookup_tbl(void)
 	}
 }
 
-/**
+/*
  * Prinf usage information
  */
 static void usage(char *progname)
@@ -1172,12 +1148,12 @@ static void usage(char *progname)
 	    );
 }
 
-/**
+/*
  * Parse and store the command line arguments
  *
- * @param argc       argument count
- * @param argv[]     argument vector
- * @param appl_args  Store application arguments here
+ * argc       argument count
+ * argv[]     argument vector
+ * appl_args  Store application arguments here
  */
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 {
@@ -1377,7 +1353,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	optind = 1;		/* reset 'extern optind' from the getopt lib */
 }
 
-/**
+/*
  * Print system and application info
  */
 static void print_info(char *progname, appl_args_t *appl_args)
@@ -1447,8 +1423,8 @@ static void create_groups(int num, odp_schedule_group_t *group)
 	}
 }
 
-/**
- * ODP L2 forwarding main function
+/*
+ * L2 forwarding main function
  */
 int main(int argc, char *argv[])
 {
@@ -1470,6 +1446,8 @@ int main(int argc, char *argv[])
 	int num_groups;
 	odp_schedule_group_t group[MAX_PKTIOS];
 	odp_init_t init;
+	odp_pool_capability_t pool_capa;
+	uint32_t pkt_len, pkt_num;
 
 	odp_init_param_init(&init);
 
@@ -1549,11 +1527,25 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	if (odp_pool_capability(&pool_capa)) {
+		LOG_ERR("Error: pool capability failed\n");
+		return -1;
+	}
+
+	pkt_len = POOL_PKT_LEN;
+	pkt_num = POOL_PKT_NUM;
+
+	if (pool_capa.pkt.max_len && pkt_len > pool_capa.pkt.max_len)
+		pkt_len = pool_capa.pkt.max_len;
+
+	if (pool_capa.pkt.max_num && pkt_num > pool_capa.pkt.max_num)
+		pkt_num = pool_capa.pkt.max_num;
+
 	/* Create packet pool */
 	odp_pool_param_init(&params);
-	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
-	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
-	params.pkt.num     = SHM_PKT_POOL_SIZE;
+	params.pkt.seg_len = pkt_len;
+	params.pkt.len     = pkt_len;
+	params.pkt.num     = pkt_num;
 	params.type        = ODP_POOL_PACKET;
 
 	pool = odp_pool_create("packet pool", &params);

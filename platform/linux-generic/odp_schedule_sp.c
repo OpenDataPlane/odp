@@ -18,6 +18,7 @@
 #include <odp_config_internal.h>
 #include <odp_ring_internal.h>
 #include <odp_timer_internal.h>
+#include <odp_queue_internal.h>
 
 #define NUM_THREAD        ODP_THREAD_COUNT_MAX
 #define NUM_QUEUE         ODP_CONFIG_QUEUES
@@ -564,7 +565,7 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 			sched_local.cmd = cmd;
 
 			if (from)
-				*from = sched_cb_queue_handle(qi);
+				*from = queue_from_index(qi);
 
 			return num;
 		}

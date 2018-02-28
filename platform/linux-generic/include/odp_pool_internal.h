@@ -104,6 +104,34 @@ static inline odp_buffer_hdr_t *buf_hdl_to_hdr(odp_buffer_t buf)
 	return (odp_buffer_hdr_t *)(uintptr_t)buf;
 }
 
+static inline odp_buffer_hdr_t *buf_hdr_from_index(pool_t *pool,
+						   uint32_t buffer_idx)
+{
+	uint64_t block_offset;
+	odp_buffer_hdr_t *buf_hdr;
+
+	block_offset = buffer_idx * (uint64_t)pool->block_size;
+
+	/* clang requires cast to uintptr_t */
+	buf_hdr = (odp_buffer_hdr_t *)(uintptr_t)&pool->base_addr[block_offset];
+
+	return buf_hdr;
+}
+
+static inline odp_buffer_hdr_t *buf_hdr_from_index_u32(uint32_t u32)
+{
+	buffer_index_t index;
+	uint32_t pool_idx, buffer_idx;
+	pool_t *pool;
+
+	index.u32  = u32;
+	pool_idx   = index.pool;
+	buffer_idx = index.buffer;
+	pool       = pool_entry(pool_idx);
+
+	return buf_hdr_from_index(pool, buffer_idx);
+}
+
 int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int num);
 void buffer_free_multi(odp_buffer_hdr_t *buf_hdr[], int num_free);
 

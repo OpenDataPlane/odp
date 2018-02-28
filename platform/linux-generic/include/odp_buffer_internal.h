@@ -33,19 +33,31 @@ extern "C" {
 #include <odp_schedule_if.h>
 #include <stddef.h>
 
-#define BUFFER_BURST_SIZE    CONFIG_BURST_SIZE
-
 typedef struct seg_entry_t {
 	void     *hdr;
 	uint8_t  *data;
 	uint32_t  len;
 } seg_entry_t;
 
+typedef union buffer_index_t {
+	uint32_t u32;
+
+	struct {
+		uint32_t pool   :8;
+		uint32_t buffer :24;
+	};
+} buffer_index_t;
+
+/* Check that pool index fit into bit field */
+ODP_STATIC_ASSERT(ODP_CONFIG_POOLS    <= (0xFF + 1), "TOO_MANY_POOLS");
+
+/* Check that buffer index fit into bit field */
+ODP_STATIC_ASSERT(CONFIG_POOL_MAX_NUM <= (0xFFFFFF + 1), "TOO_LARGE_POOL");
+
 /* Common buffer header */
 struct ODP_ALIGNED_CACHE odp_buffer_hdr_t {
-
-	/* Buffer index in the pool */
-	uint32_t  index;
+	/* Combined pool and buffer index */
+	buffer_index_t index;
 
 	/* Total segment count */
 	uint16_t  segcount;
@@ -73,16 +85,6 @@ struct ODP_ALIGNED_CACHE odp_buffer_hdr_t {
 	/* Segments */
 	seg_entry_t seg[CONFIG_PACKET_SEGS_PER_HDR];
 
-	/* Burst counts */
-	uint8_t   burst_num;
-	uint8_t   burst_first;
-
-	/* Next buf in a list */
-	struct odp_buffer_hdr_t *next;
-
-	/* Burst table */
-	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
-
 	/* --- Mostly read only data --- */
 	const void *user_ptr;
 
@@ -108,8 +110,6 @@ struct ODP_ALIGNED_CACHE odp_buffer_hdr_t {
 
 ODP_STATIC_ASSERT(CONFIG_PACKET_SEGS_PER_HDR < 256,
 		  "CONFIG_PACKET_SEGS_PER_HDR_TOO_LARGE");
-
-ODP_STATIC_ASSERT(BUFFER_BURST_SIZE < 256, "BUFFER_BURST_SIZE_TOO_LARGE");
 
 #ifdef __cplusplus
 }

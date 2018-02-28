@@ -80,20 +80,6 @@ static inline pool_t *pool_from_buf(odp_buffer_t buf)
 	return buf_hdr->pool_ptr;
 }
 
-static inline odp_buffer_hdr_t *buf_hdr_from_index(pool_t *pool,
-						   uint32_t buffer_idx)
-{
-	uint64_t block_offset;
-	odp_buffer_hdr_t *buf_hdr;
-
-	block_offset = buffer_idx * (uint64_t)pool->block_size;
-
-	/* clang requires cast to uintptr_t */
-	buf_hdr = (odp_buffer_hdr_t *)(uintptr_t)&pool->base_addr[block_offset];
-
-	return buf_hdr;
-}
-
 int odp_pool_init_global(void)
 {
 	uint32_t i;
@@ -296,7 +282,9 @@ static void init_buffers(pool_t *pool)
 		memset(buf_hdr, 0, (uintptr_t)data - (uintptr_t)buf_hdr);
 
 		/* Initialize buffer metadata */
-		buf_hdr->index = i;
+		buf_hdr->index.u32    = 0;
+		buf_hdr->index.pool   = pool->pool_idx;
+		buf_hdr->index.buffer = i;
 		buf_hdr->type = type;
 		buf_hdr->event_type = type;
 		buf_hdr->pool_ptr = pool;
@@ -785,7 +773,7 @@ static inline void buffer_free_to_pool(pool_t *pool,
 		ring  = &pool->ring->hdr;
 		mask  = pool->ring_mask;
 		for (i = 0; i < num; i++)
-			buf_index[i] = buf_hdr[i]->index;
+			buf_index[i] = buf_hdr[i]->index.buffer;
 
 		ring_enq_multi(ring, mask, buf_index, num);
 
@@ -825,7 +813,7 @@ static inline void buffer_free_to_pool(pool_t *pool,
 	}
 
 	for (i = 0; i < num; i++)
-		cache->buf_index[cache_num + i] = buf_hdr[i]->index;
+		cache->buf_index[cache_num + i] = buf_hdr[i]->index.buffer;
 
 	cache->num = cache_num + num;
 }
