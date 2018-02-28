@@ -41,13 +41,13 @@ build:
     - if [ "${CC#clang}" != "${CC}" ] ; then export CXX="${CC/clang/clang++}"; fi
     - ./configure $CONF
     - make -j $(nproc)
-    - sudo env ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes ODP_SCHEDULER=basic make check
+    - sudo env CI=true ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes ODP_SCHEDULER=basic make check
     - ./scripts/shippable-post.sh basic
-    - sudo env ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes ODP_SCHEDULER=sp make check
+    - sudo env CI=true ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes ODP_SCHEDULER=sp make check
     - ./scripts/shippable-post.sh sp
-    - sudo env ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes ODP_SCHEDULER=iquery make check
+    - sudo env CI=true ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes ODP_SCHEDULER=iquery make check
     - ./scripts/shippable-post.sh iquery
-    - sudo env ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes ODP_SCHEDULER=scalable make check
+    - sudo env CI=true ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes ODP_SCHEDULER=scalable make check
     - ./scripts/shippable-post.sh scalable
 
   on_failure:
