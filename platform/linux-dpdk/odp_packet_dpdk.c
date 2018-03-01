@@ -162,31 +162,69 @@ static int term_pkt_dpdk(void)
 	return 0;
 }
 
+static int dpdk_init_capability(pktio_entry_t *pktio_entry,
+				struct rte_eth_dev_info *dev_info)
+{
+	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	odp_pktio_capability_t *capa = &pktio_entry->s.capa;
+	unsigned max_rx_queues;
+	struct ether_addr mac_addr;
+	int ret;
+
+	memset(dev_info, 0, sizeof(struct rte_eth_dev_info));
+	memset(capa, 0, sizeof(odp_pktio_capability_t));
+
+	rte_eth_dev_info_get(pkt_dpdk->port_id, dev_info);
+	if (dev_info->driver_name == NULL) {
+		ODP_DBG("No driver found for interface: %d\n",
+			pkt_dpdk->port_id);
+		return -1;
+	}
+
+	/* Set maximum input/output queues number*/
+	max_rx_queues = RTE_MIN(dev_info->max_rx_queues, PKTIO_MAX_QUEUES);
+	/* ixgbe devices support only 16 RX queues in RSS mode */
+	if (!strncmp(dev_info->driver_name, IXGBE_DRV_NAME,
+		     strlen(IXGBE_DRV_NAME)))
+		max_rx_queues = RTE_MIN((unsigned)16, max_rx_queues);
+	capa->max_input_queues = max_rx_queues;
+	capa->max_output_queues = RTE_MIN(dev_info->max_tx_queues,
+					  PKTIO_MAX_QUEUES);
+
+	/* Check if setting default MAC address is supporter */
+	rte_eth_macaddr_get(pkt_dpdk->port_id, &mac_addr);
+	ret = rte_eth_dev_default_mac_addr_set(pkt_dpdk->port_id, &mac_addr);
+	if (ret == 0) {
+		capa->set_op.op.mac_addr = 1;
+	} else if (ret != -ENOTSUP) {
+		ODP_ERR("Failed to set interface default MAC\n");
+		return -1;
+	}
+
+	return 0;
+}
+
 static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_entry,
 		   const char *netdev, odp_pool_t pool ODP_UNUSED)
 {
-	uint16_t port_id = 0;
 	uint32_t mtu;
 	struct rte_eth_dev_info dev_info;
-	struct ether_addr mac_addr;
 	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	int i;
-	int ret;
-	unsigned max_queues;
 
 	if (!_dpdk_netdev_is_valid(netdev)) {
 		ODP_DBG("Interface name should only contain numbers!: %s\n",
 			netdev);
 		return -1;
 	}
+	pkt_dpdk->port_id = atoi(netdev);
 
-	port_id = atoi(netdev);
-	pkt_dpdk->port_id = port_id;
-	rte_eth_dev_info_get(port_id, &dev_info);
-	if (dev_info.driver_name == NULL) {
-		ODP_DBG("No driver found for interface: %s\n", netdev);
+	if (dpdk_init_capability(pktio_entry, &dev_info)) {
+		ODP_DBG("Failed to initialize capabilities for interface: %s\n",
+			netdev);
 		return -1;
 	}
+
 	/* Drivers requiring minimum burst size. Supports also *_vf versions
 	 * of the drivers. */
 	if (!strncmp(dev_info.driver_name, IXGBE_DRV_NAME,
@@ -197,26 +235,7 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 	else
 		pkt_dpdk->min_rx_burst = 0;
 
-	_dpdk_print_port_mac(port_id);
-
-	/* Check if setting default MAC address is supporter */
-	rte_eth_macaddr_get(port_id, &mac_addr);
-	ret = rte_eth_dev_default_mac_addr_set(port_id, &mac_addr);
-	if (ret == 0) {
-		pktio_entry->s.capa.set_op.op.mac_addr = 1;
-	} else if (ret != -ENOTSUP) {
-		ODP_ERR("Failed to set interface default MAC\n");
-		return -1;
-	}
-
-	max_queues = RTE_MIN(dev_info.max_rx_queues, PKTIO_MAX_QUEUES);
-	/* ixgbe devices support only 16 RX queues in RSS mode */
-	if (!strncmp(dev_info.driver_name, IXGBE_DRV_NAME,
-		     strlen(IXGBE_DRV_NAME)))
-		max_queues = RTE_MIN((unsigned)16, max_queues);
-	pktio_entry->s.capa.max_input_queues = max_queues;
-	pktio_entry->s.capa.max_output_queues = RTE_MIN(dev_info.max_tx_queues,
-							PKTIO_MAX_QUEUES);
+	_dpdk_print_port_mac(pkt_dpdk->port_id);
 
 	mtu = mtu_get_pkt_dpdk(pktio_entry);
 	if (mtu == 0) {
