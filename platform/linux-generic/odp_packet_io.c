@@ -638,8 +638,22 @@ static odp_buffer_hdr_t *pktin_dequeue(queue_t q_int)
 	if (pkts <= 0)
 		return NULL;
 
-	if (pkts > 1)
-		queue_fn->enq_multi(q_int, &hdr_tbl[1], pkts - 1);
+	if (pkts > 1) {
+		int num_enq;
+		int num = pkts - 1;
+
+		num_enq = queue_fn->enq_multi(q_int, &hdr_tbl[1], num);
+
+		if (odp_unlikely(num_enq < num)) {
+			if (odp_unlikely(num_enq < 0))
+				num_enq = 0;
+
+			ODP_DBG("Interface %s dropped %i packets\n",
+				entry->s.name, num - num_enq);
+			buffer_free_multi(&hdr_tbl[num_enq + 1], num - num_enq);
+		}
+	}
+
 	buf_hdr = hdr_tbl[0];
 	return buf_hdr;
 }
@@ -676,8 +690,21 @@ static int pktin_deq_multi(queue_t q_int, odp_buffer_hdr_t *buf_hdr[], int num)
 	for (j = 0; i < pkts; i++, j++)
 		hdr_tbl[j] = hdr_tbl[i];
 
-	if (j)
-		queue_fn->enq_multi(q_int, hdr_tbl, j);
+	if (j) {
+		int num_enq;
+
+		num_enq = queue_fn->enq_multi(q_int, hdr_tbl, j);
+
+		if (odp_unlikely(num_enq < j)) {
+			if (odp_unlikely(num_enq < 0))
+				num_enq = 0;
+
+			ODP_DBG("Interface %s dropped %i packets\n",
+				entry->s.name, j - num_enq);
+			buffer_free_multi(&buf_hdr[num_enq], j - num_enq);
+		}
+	}
+
 	return nbr;
 }
 
@@ -763,6 +790,7 @@ int sched_cb_pktin_poll_old(int pktio_index, int num_queue, int index[])
 
 	for (idx = 0; idx < num_queue; idx++) {
 		queue_t q_int;
+		int num_enq;
 
 		num = pktin_recv_buf(entry, index[idx], hdr_tbl,
 				     QUEUE_MULTI_MAX);
@@ -776,7 +804,16 @@ int sched_cb_pktin_poll_old(int pktio_index, int num_queue, int index[])
 		}
 
 		q_int = entry->s.in_queue[index[idx]].queue_int;
-		queue_fn->enq_multi(q_int, hdr_tbl, num);
+		num_enq = queue_fn->enq_multi(q_int, hdr_tbl, num);
+
+		if (odp_unlikely(num_enq < num)) {
+			if (odp_unlikely(num_enq < 0))
+				num_enq = 0;
+
+			ODP_DBG("Interface %s dropped %i packets\n",
+				entry->s.name, num - num_enq);
+			buffer_free_multi(&hdr_tbl[num_enq], num - num_enq);
+		}
 	}
 
 	return 0;

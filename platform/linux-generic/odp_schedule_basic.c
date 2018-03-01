@@ -581,13 +581,23 @@ static inline void ordered_stash_release(void)
 	for (i = 0; i < sched_local.ordered.stash_num; i++) {
 		queue_entry_t *queue_entry;
 		odp_buffer_hdr_t **buf_hdr;
-		int num;
+		int num, num_enq;
 
 		queue_entry = sched_local.ordered.stash[i].queue_entry;
 		buf_hdr = sched_local.ordered.stash[i].buf_hdr;
 		num = sched_local.ordered.stash[i].num;
 
-		queue_fn->enq_multi(qentry_to_int(queue_entry), buf_hdr, num);
+		num_enq = queue_fn->enq_multi(qentry_to_int(queue_entry),
+					      buf_hdr, num);
+
+		/* Drop packets that were not enqueued */
+		if (odp_unlikely(num_enq < num)) {
+			if (odp_unlikely(num_enq < 0))
+				num_enq = 0;
+
+			ODP_DBG("Dropped %i packets\n", num - num_enq);
+			buffer_free_multi(&buf_hdr[num_enq], num - num_enq);
+		}
 	}
 	sched_local.ordered.stash_num = 0;
 }
