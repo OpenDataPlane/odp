@@ -170,6 +170,11 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
 	unsigned max_rx_queues;
 	struct ether_addr mac_addr;
 	int ret;
+	int ptype_cnt;
+	int ptype_l3_ipv4 = 0;
+	int ptype_l4_tcp = 0;
+	int ptype_l4_udp = 0;
+	uint32_t ptype_mask = RTE_PTYPE_L3_MASK | RTE_PTYPE_L4_MASK;
 
 	memset(dev_info, 0, sizeof(struct rte_eth_dev_info));
 	memset(capa, 0, sizeof(odp_pktio_capability_t));
@@ -200,6 +205,54 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
 		ODP_ERR("Failed to set interface default MAC\n");
 		return -1;
 	}
+
+	/* Check supported pktio configuration options */
+	odp_pktio_config_init(&capa->config);
+	capa->config.pktin.bit.ts_all = 1;
+	capa->config.pktin.bit.ts_ptp = 1;
+
+	/* CSUM RX capabilities*/
+	ptype_cnt = rte_eth_dev_get_supported_ptypes(pkt_dpdk->port_id,
+						     ptype_mask, NULL, 0);
+	if (ptype_cnt > 0) {
+		uint32_t ptypes[ptype_cnt];
+		int i;
+
+		ptype_cnt = rte_eth_dev_get_supported_ptypes(pkt_dpdk->port_id,
+							     ptype_mask, ptypes,
+							     ptype_cnt);
+		for (i = 0; i < ptype_cnt; i++)
+			switch (ptypes[i]) {
+			case RTE_PTYPE_L3_IPV4:
+			/* Fall through */
+			case RTE_PTYPE_L3_IPV4_EXT_UNKNOWN:
+			/* Fall through */
+			case RTE_PTYPE_L3_IPV4_EXT:
+				ptype_l3_ipv4 = 1;
+				break;
+			case RTE_PTYPE_L4_TCP:
+				ptype_l4_tcp = 1;
+				break;
+			case RTE_PTYPE_L4_UDP:
+				ptype_l4_udp = 1;
+				break;
+			}
+	}
+
+	capa->config.pktin.bit.ipv4_chksum = ptype_l3_ipv4 &&
+		(dev_info->rx_offload_capa & DEV_RX_OFFLOAD_IPV4_CKSUM) ? 1 : 0;
+	if (capa->config.pktin.bit.ipv4_chksum)
+		capa->config.pktin.bit.drop_ipv4_err = 1;
+
+	capa->config.pktin.bit.udp_chksum = ptype_l4_udp &&
+		(dev_info->rx_offload_capa & DEV_RX_OFFLOAD_UDP_CKSUM) ? 1 : 0;
+	if (capa->config.pktin.bit.udp_chksum)
+		capa->config.pktin.bit.drop_udp_err = 1;
+
+	capa->config.pktin.bit.tcp_chksum = ptype_l4_tcp &&
+		(dev_info->rx_offload_capa & DEV_RX_OFFLOAD_TCP_CKSUM) ? 1 : 0;
+	if (capa->config.pktin.bit.tcp_chksum)
+		capa->config.pktin.bit.drop_tcp_err = 1;
 
 	return 0;
 }
@@ -268,6 +321,7 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 	uint16_t nb_rxd = RTE_TEST_RX_DESC_DEFAULT;
 	uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
 	struct rte_eth_rss_conf rss_conf;
+	uint16_t hw_ip_checksum = 0;
 
 	/* DPDK doesn't support nb_rx_q/nb_tx_q being 0 */
 	if (!pktio_entry->s.num_in_queue)
@@ -277,12 +331,17 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 
 	rss_conf_to_hash_proto(&rss_conf, &pkt_dpdk->hash);
 
+	if (pktio_entry->s.config.pktin.bit.ipv4_chksum ||
+	    pktio_entry->s.config.pktin.bit.udp_chksum ||
+	    pktio_entry->s.config.pktin.bit.tcp_chksum)
+		hw_ip_checksum = 1;
+
 	struct rte_eth_conf port_conf = {
 		.rxmode = {
 			.mq_mode = ETH_MQ_RX_RSS,
 			.split_hdr_size = 0,
 			.header_split   = 0, /**< Header Split */
-			.hw_ip_checksum = 0, /**< IP checksum offload */
+			.hw_ip_checksum = hw_ip_checksum, /**< IP checksum offload */
 			.hw_vlan_filter = 0, /**< VLAN filtering */
 			.jumbo_frame    = 1, /**< Jumbo Frame Support */
 			.hw_strip_crc   = 0, /**< CRC stripp by hardware */
@@ -404,12 +463,74 @@ static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
 	return;
 }
 
+#define IP4_CSUM_RESULT(m) (m->ol_flags & PKT_RX_IP_CKSUM_MASK)
+#define L4_CSUM_RESULT(m) (m->ol_flags & PKT_RX_L4_CKSUM_MASK)
+#define HAS_L4_PROTO(m, proto) ((m->packet_type & RTE_PTYPE_L4_MASK) == proto)
+
+#define PKTIN_CSUM_BITS 0x1C
+
+static inline int pkt_set_ol_rx(odp_pktin_config_opt_t *pktin_cfg,
+				odp_packet_hdr_t *pkt_hdr,
+				struct rte_mbuf *mbuf)
+{
+	uint64_t packet_csum_result;
+
+	if (pktin_cfg->bit.ipv4_chksum &&
+	    RTE_ETH_IS_IPV4_HDR(mbuf->packet_type)) {
+		packet_csum_result = IP4_CSUM_RESULT(mbuf);
+
+		if (packet_csum_result == PKT_RX_IP_CKSUM_GOOD) {
+			pkt_hdr->p.input_flags.l3_chksum_done = 1;
+		} else if (packet_csum_result != PKT_RX_IP_CKSUM_UNKNOWN) {
+			if (pktin_cfg->bit.drop_ipv4_err)
+				return -1;
+
+			pkt_hdr->p.input_flags.l3_chksum_done = 1;
+			pkt_hdr->p.error_flags.ip_err = 1;
+			pkt_hdr->p.error_flags.l3_chksum = 1;
+		}
+	}
+
+	if (pktin_cfg->bit.udp_chksum &&
+	    HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_UDP)) {
+		packet_csum_result = L4_CSUM_RESULT(mbuf);
+
+		if (packet_csum_result == PKT_RX_L4_CKSUM_GOOD) {
+			pkt_hdr->p.input_flags.l4_chksum_done = 1;
+		} else if (packet_csum_result != PKT_RX_L4_CKSUM_UNKNOWN) {
+			if (pktin_cfg->bit.drop_udp_err)
+				return -1;
+
+			pkt_hdr->p.input_flags.l4_chksum_done = 1;
+			pkt_hdr->p.error_flags.udp_err = 1;
+			pkt_hdr->p.error_flags.l4_chksum = 1;
+		}
+	} else if (pktin_cfg->bit.tcp_chksum &&
+		   HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_TCP)) {
+		packet_csum_result = L4_CSUM_RESULT(mbuf);
+
+		if (packet_csum_result == PKT_RX_L4_CKSUM_GOOD) {
+			pkt_hdr->p.input_flags.l4_chksum_done = 1;
+		} else if (packet_csum_result != PKT_RX_L4_CKSUM_UNKNOWN) {
+			if (pktin_cfg->bit.drop_tcp_err)
+				return -1;
+
+			pkt_hdr->p.input_flags.l4_chksum_done = 1;
+			pkt_hdr->p.error_flags.tcp_err = 1;
+			pkt_hdr->p.error_flags.l4_chksum = 1;
+		}
+	}
+
+	return 0;
+}
+
 static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 			 odp_packet_t pkt_table[], int len)
 {
 	uint16_t nb_rx, i;
 	odp_packet_t *saved_pkt_table;
 	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	odp_pktin_config_opt_t *pktin_cfg = &pktio_entry->s.config.pktin;
 	uint8_t min = pkt_dpdk->min_rx_burst;
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
@@ -515,6 +636,26 @@ static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 		nb_rx = success;
 	}
 
+	if (pktin_cfg->all_bits & PKTIN_CSUM_BITS) {
+		int j;
+		odp_packet_t pkt;
+
+		for (i = 0, j = 0; i < nb_rx; i++) {
+			pkt = pkt_table[i];
+
+			if (pkt_set_ol_rx(pktin_cfg,
+					  odp_packet_hdr(pkt),
+					  pkt_to_mbuf(pkt))) {
+				rte_pktmbuf_free(pkt_to_mbuf(pkt));
+				continue;
+			}
+			if (i != j)
+				pkt_table[j] = pkt;
+			j++;
+		}
+
+		nb_rx = j;
+	}
 	return nb_rx;
 }
 
