@@ -578,7 +578,7 @@ odp_pktio_t odp_pktio_lookup(const char *name)
 	return hdl;
 }
 
-static inline int pktin_recv_buf(odp_pktin_queue_t queue,
+static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 				 odp_buffer_hdr_t *buffer_hdrs[], int num)
 {
 	odp_packet_t pkt;
@@ -589,7 +589,7 @@ static inline int pktin_recv_buf(odp_pktin_queue_t queue,
 	int pkts;
 	int num_rx = 0;
 
-	pkts = odp_pktin_recv(queue, packets, num);
+	pkts = entry->s.ops->recv(entry, pktin_index, packets, num);
 
 	for (i = 0; i < pkts; i++) {
 		pkt = packets[i];
@@ -643,13 +643,16 @@ static odp_buffer_hdr_t *pktin_dequeue(queue_t q_int)
 	odp_buffer_hdr_t *buf_hdr;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	int pkts;
+	odp_pktin_queue_t pktin_queue = queue_fn->get_pktin(q_int);
+	odp_pktio_t pktio = pktin_queue.pktio;
+	int pktin_index   = pktin_queue.index;
+	pktio_entry_t *entry = get_pktio_entry(pktio);
 
 	buf_hdr = queue_fn->deq(q_int);
 	if (buf_hdr != NULL)
 		return buf_hdr;
 
-	pkts = pktin_recv_buf(queue_fn->get_pktin(q_int),
-			      hdr_tbl, QUEUE_MULTI_MAX);
+	pkts = pktin_recv_buf(entry, pktin_index, hdr_tbl, QUEUE_MULTI_MAX);
 
 	if (pkts <= 0)
 		return NULL;
@@ -665,6 +668,10 @@ static int pktin_deq_multi(queue_t q_int, odp_buffer_hdr_t *buf_hdr[], int num)
 	int nbr;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	int pkts, i, j;
+	odp_pktin_queue_t pktin_queue = queue_fn->get_pktin(q_int);
+	odp_pktio_t pktio = pktin_queue.pktio;
+	int pktin_index   = pktin_queue.index;
+	pktio_entry_t *entry = get_pktio_entry(pktio);
 
 	nbr = queue_fn->deq_multi(q_int, buf_hdr, num);
 	if (odp_unlikely(nbr > num))
@@ -676,8 +683,8 @@ static int pktin_deq_multi(queue_t q_int, odp_buffer_hdr_t *buf_hdr[], int num)
 	if (nbr == num)
 		return nbr;
 
-	pkts = pktin_recv_buf(queue_fn->get_pktin(q_int),
-			      hdr_tbl, QUEUE_MULTI_MAX);
+	pkts = pktin_recv_buf(entry, pktin_index, hdr_tbl, QUEUE_MULTI_MAX);
+
 	if (pkts <= 0)
 		return nbr;
 
@@ -739,12 +746,29 @@ int sched_cb_pktin_poll_one(int pktio_index,
 	return num_rx;
 }
 
-int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
+int sched_cb_pktin_poll(int pktio_index, int pktin_index,
+			odp_buffer_hdr_t *hdr_tbl[], int num)
+{
+	pktio_entry_t *entry = pktio_entry_by_index(pktio_index);
+	int state = entry->s.state;
+
+	if (odp_unlikely(state != PKTIO_STATE_STARTED)) {
+		if (state < PKTIO_STATE_ACTIVE ||
+		    state == PKTIO_STATE_STOP_PENDING)
+			return -1;
+
+		ODP_DBG("Interface %s not started\n", entry->s.name);
+		return 0;
+	}
+
+	return pktin_recv_buf(entry, pktin_index, hdr_tbl, num);
+}
+
+int sched_cb_pktin_poll_old(int pktio_index, int num_queue, int index[])
 {
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	int num, idx;
-	pktio_entry_t *entry;
-	entry = pktio_entry_by_index(pktio_index);
+	pktio_entry_t *entry = pktio_entry_by_index(pktio_index);
 	int state = entry->s.state;
 
 	if (odp_unlikely(state != PKTIO_STATE_STARTED)) {
@@ -758,9 +782,9 @@ int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 
 	for (idx = 0; idx < num_queue; idx++) {
 		queue_t q_int;
-		odp_pktin_queue_t pktin = entry->s.in_queue[index[idx]].pktin;
 
-		num = pktin_recv_buf(pktin, hdr_tbl, QUEUE_MULTI_MAX);
+		num = pktin_recv_buf(entry, index[idx], hdr_tbl,
+				     QUEUE_MULTI_MAX);
 
 		if (num == 0)
 			continue;

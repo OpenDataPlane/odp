@@ -12,7 +12,6 @@ extern "C" {
 #endif
 
 #include <odp_queue_if.h>
-#include <odp_queue_internal.h>
 
 /* Lock-free queue functions */
 typedef struct {

@@ -674,9 +674,9 @@ static inline void pktio_poll_input(void)
 		cmd = &sched->pktio_poll.commands[index];
 
 		/* Poll packet input */
-		if (odp_unlikely(sched_cb_pktin_poll(cmd->pktio,
-						     cmd->count,
-						     cmd->pktin))) {
+		if (odp_unlikely(sched_cb_pktin_poll_old(cmd->pktio,
+							 cmd->count,
+							 cmd->pktin))) {
 			/* Pktio stopped or closed. Remove poll
 			 * command and call stop_finalize when all
 			 * commands of the pktio has been removed.

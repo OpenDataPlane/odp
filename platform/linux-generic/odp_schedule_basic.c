@@ -26,6 +26,7 @@
 #include <odp_ring_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_queue_internal.h>
+#include <odp_buffer_inlines.h>
 
 /* Number of priority levels  */
 #define NUM_PRIO 8
@@ -699,14 +700,20 @@ static inline int queue_is_pktin(uint32_t queue_index)
 	return sched->queue[queue_index].poll_pktin;
 }
 
-static inline int poll_pktin(uint32_t qi)
+static inline int poll_pktin(uint32_t qi, int stash)
 {
-	int pktio_index, pktin_index, num, num_pktin;
+	odp_buffer_hdr_t *b_hdr[MAX_DEQ];
+	int pktio_index, pktin_index, num, num_pktin, i;
+	int ret;
+	queue_t qint;
 
 	pktio_index = sched->queue[qi].pktio_index;
 	pktin_index = sched->queue[qi].pktin_index;
 
-	num = sched_cb_pktin_poll(pktio_index, 1, &pktin_index);
+	num = sched_cb_pktin_poll(pktio_index, pktin_index, b_hdr, MAX_DEQ);
+
+	if (num == 0)
+		return 0;
 
 	/* Pktio stopped or closed. Call stop_finalize when we have stopped
 	 * polling all pktin queues of the pktio. */
@@ -720,9 +727,33 @@ static inline int poll_pktin(uint32_t qi)
 
 		if (num_pktin == 0)
 			sched_cb_pktio_stop_finalize(pktio_index);
+
+		return num;
 	}
 
-	return num;
+	if (stash) {
+		for (i = 0; i < num; i++)
+			sched_local.ev_stash[i] = event_from_buf_hdr(b_hdr[i]);
+
+		return num;
+	}
+
+	qint = queue_index_to_qint(qi);
+
+	ret = queue_fn->enq_multi(qint, b_hdr, num);
+
+	/* Drop packets that were not enqueued */
+	if (odp_unlikely(ret < num)) {
+		int num_enq = ret;
+
+		if (odp_unlikely(ret < 0))
+			num_enq = 0;
+
+		ODP_DBG("Dropped %i packets\n", num - num_enq);
+		buffer_free_multi(&b_hdr[num_enq], num - num_enq);
+	}
+
+	return ret;
 }
 
 static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
@@ -805,17 +836,26 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 				 * priorities. Stop scheduling queue when pktio
 				 * has been stopped. */
 				if (pktin) {
-					int num_pkt = poll_pktin(qi);
+					int atomic = queue_is_atomic(qi);
+					int num_pkt = poll_pktin(qi, atomic);
 
-					if (odp_likely(num_pkt >= 0)) {
+					if (odp_unlikely(num_pkt < 0))
+						continue;
+
+					if (num_pkt == 0 || !atomic) {
 						ring_enq(ring, RING_MASK, qi);
 						break;
 					}
-				}
 
-				/* Remove empty queue from scheduling. Continue
-				 * scheduling the same priority queue. */
-				continue;
+					/* Process packets from an atomic queue
+					 * right away */
+					num = num_pkt;
+				} else {
+					/* Remove empty queue from scheduling.
+					 * Continue scheduling the same priority
+					 * queue. */
+					continue;
+				}
 			}
 
 			handle            = queue_from_index(qi);

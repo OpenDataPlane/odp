@@ -28,6 +28,11 @@ static inline odp_buffer_t buf_from_buf_hdr(odp_buffer_hdr_t *hdr)
 	return (odp_buffer_t)hdr;
 }
 
+static inline odp_event_t event_from_buf_hdr(odp_buffer_hdr_t *hdr)
+{
+	return (odp_event_t)hdr;
+}
+
 #ifdef __cplusplus
 }
 #endif
