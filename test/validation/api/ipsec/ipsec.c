@@ -204,8 +204,16 @@ int ipsec_check(odp_bool_t ah,
 		if (!capa.auths.bit.sha256_hmac)
 			return ODP_TEST_INACTIVE;
 		break;
+	case ODP_AUTH_ALG_SHA384_HMAC:
+		if (!capa.auths.bit.sha384_hmac)
+			return ODP_TEST_INACTIVE;
+		break;
 	case ODP_AUTH_ALG_SHA512_HMAC:
 		if (!capa.auths.bit.sha512_hmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_AES_XCBC_MAC:
+		if (!capa.auths.bit.aes_xcbc_mac)
 			return ODP_TEST_INACTIVE;
 		break;
 	case ODP_AUTH_ALG_AES_GCM:

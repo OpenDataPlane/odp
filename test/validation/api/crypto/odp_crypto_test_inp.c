@@ -47,8 +47,12 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 		return "ODP_AUTH_ALG_SHA1_HMAC";
 	case ODP_AUTH_ALG_SHA256_HMAC:
 		return "ODP_AUTH_ALG_SHA256_HMAC";
+	case ODP_AUTH_ALG_SHA384_HMAC:
+		return "ODP_AUTH_ALG_SHA384_HMAC";
 	case ODP_AUTH_ALG_SHA512_HMAC:
 		return "ODP_AUTH_ALG_SHA512_HMAC";
+	case ODP_AUTH_ALG_AES_XCBC_MAC:
+		return "ODP_AUTH_ALG_AES_XCBC_MAC";
 	case ODP_AUTH_ALG_AES_GCM:
 		return "ODP_AUTH_ALG_AES_GCM";
 	case ODP_AUTH_ALG_AES_GMAC:
@@ -527,8 +531,14 @@ static void check_alg(odp_crypto_op_t op,
 	if (auth_alg == ODP_AUTH_ALG_SHA256_HMAC &&
 	    !(capa.auths.bit.sha256_hmac))
 		rc = -1;
+	if (auth_alg == ODP_AUTH_ALG_SHA384_HMAC &&
+	    !(capa.auths.bit.sha384_hmac))
+		rc = -1;
 	if (auth_alg == ODP_AUTH_ALG_SHA512_HMAC &&
 	    !(capa.auths.bit.sha512_hmac))
+		rc = -1;
+	if (auth_alg == ODP_AUTH_ALG_AES_XCBC_MAC &&
+	    !(capa.auths.bit.aes_xcbc_mac))
 		rc = -1;
 
 	CU_ASSERT(!rc);
@@ -711,8 +721,16 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		if (!capability.auths.bit.sha256_hmac)
 			return ODP_TEST_INACTIVE;
 		break;
+	case ODP_AUTH_ALG_SHA384_HMAC:
+		if (!capability.auths.bit.sha384_hmac)
+			return ODP_TEST_INACTIVE;
+		break;
 	case ODP_AUTH_ALG_SHA512_HMAC:
 		if (!capability.auths.bit.sha512_hmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_AES_XCBC_MAC:
+		if (!capability.auths.bit.aes_xcbc_mac)
 			return ODP_TEST_INACTIVE;
 		break;
 	case ODP_AUTH_ALG_AES_GCM:
@@ -1205,6 +1223,38 @@ static void crypto_test_check_alg_hmac_sha256(void)
 		  false);
 }
 
+static int check_alg_hmac_sha384(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA384_HMAC);
+}
+
+/* This test verifies the correctness of HMAC_SHA384 digest operation.
+ * The output check length is truncated to 24 bytes (192 bits) as
+ * returned by the crypto operation API call.
+ * Note that hash digest is a one-way operation.
+ * In addition the test verifies if the implementation can use the
+ * packet buffer as completion event buffer.
+ * */
+static void crypto_test_gen_alg_hmac_sha384(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_NULL,
+		  ODP_AUTH_ALG_SHA384_HMAC,
+		  hmac_sha384_reference,
+		  ARRAY_SIZE(hmac_sha384_reference),
+		  false);
+}
+
+static void crypto_test_check_alg_hmac_sha384(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_NULL,
+		  ODP_AUTH_ALG_SHA384_HMAC,
+		  hmac_sha384_reference,
+		  ARRAY_SIZE(hmac_sha384_reference),
+		  false);
+}
+
 static int check_alg_hmac_sha512(void)
 {
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA512_HMAC);
@@ -1234,6 +1284,31 @@ static void crypto_test_check_alg_hmac_sha512(void)
 		  ODP_AUTH_ALG_SHA512_HMAC,
 		  hmac_sha512_reference,
 		  ARRAY_SIZE(hmac_sha512_reference),
+		  false);
+}
+
+static int check_alg_aes_xcbc(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_AES_XCBC_MAC);
+}
+
+static void crypto_test_gen_alg_aes_xcbc(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_NULL,
+		  ODP_AUTH_ALG_AES_XCBC_MAC,
+		  aes_xcbc_reference,
+		  ARRAY_SIZE(aes_xcbc_reference),
+		  false);
+}
+
+static void crypto_test_check_alg_aes_xcbc(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_NULL,
+		  ODP_AUTH_ALG_AES_XCBC_MAC,
+		  aes_xcbc_reference,
+		  ARRAY_SIZE(aes_xcbc_reference),
 		  false);
 }
 
@@ -1424,10 +1499,18 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_hmac_sha256),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_hmac_sha256,
 				  check_alg_hmac_sha256),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_hmac_sha384,
+				  check_alg_hmac_sha384),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_hmac_sha384,
+				  check_alg_hmac_sha384),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_hmac_sha512,
 				  check_alg_hmac_sha512),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_hmac_sha512,
 				  check_alg_hmac_sha512),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_aes_xcbc,
+				  check_alg_aes_xcbc),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_aes_xcbc,
+				  check_alg_aes_xcbc),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_aes_gmac,
 				  check_alg_aes_gmac),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_aes_gmac_ovr_iv,
