@@ -30,6 +30,7 @@ extern "C" {
 #include <odp/api/ticketlock.h>
 #include <odp_config_internal.h>
 #include <odp_ring_st_internal.h>
+#include <odp_queue_lf.h>
 
 #define QUEUE_STATUS_FREE         0
 #define QUEUE_STATUS_DESTROYED    1
@@ -61,6 +62,27 @@ union queue_entry_u {
 	struct queue_entry_s s;
 	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct queue_entry_s))];
 };
+
+typedef struct ODP_ALIGNED_CACHE {
+	/* Storage space for ring data */
+	uint32_t data[CONFIG_QUEUE_SIZE];
+} queue_ring_data_t;
+
+typedef struct queue_global_t {
+	queue_entry_t     queue[ODP_CONFIG_QUEUES];
+	queue_ring_data_t ring_data[ODP_CONFIG_QUEUES];
+	uint32_t          queue_lf_num;
+	uint32_t          queue_lf_size;
+	queue_lf_func_t   queue_lf_func;
+
+} queue_global_t;
+
+extern queue_global_t *queue_glb;
+
+static inline queue_t queue_index_to_qint(uint32_t queue_id)
+{
+	return (queue_t)&queue_glb->queue[queue_id];
+}
 
 static inline uint32_t queue_to_index(odp_queue_t handle)
 {

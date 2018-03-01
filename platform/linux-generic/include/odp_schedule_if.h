@@ -77,7 +77,9 @@ typedef struct schedule_fn_t {
 extern const schedule_fn_t *sched_fn;
 
 /* Interface for the scheduler */
-int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[]);
+int sched_cb_pktin_poll(int pktio_index, int pktin_index,
+			odp_buffer_hdr_t *hdr_tbl[], int num);
+int sched_cb_pktin_poll_old(int pktio_index, int num_queue, int index[]);
 int sched_cb_pktin_poll_one(int pktio_index, int rx_queue, odp_event_t evts[]);
 void sched_cb_pktio_stop_finalize(int pktio_index);
 odp_queue_t sched_cb_queue_handle(uint32_t queue_index);

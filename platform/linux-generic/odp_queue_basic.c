@@ -8,7 +8,6 @@
 
 #include <odp/api/queue.h>
 #include <odp_queue_internal.h>
-#include <odp_queue_lf.h>
 #include <odp_queue_if.h>
 #include <odp/api/std_types.h>
 #include <odp/api/align.h>
@@ -40,21 +39,7 @@
 static int queue_init(queue_entry_t *queue, const char *name,
 		      const odp_queue_param_t *param);
 
-typedef struct ODP_ALIGNED_CACHE {
-	/* Storage space for ring data */
-	uint32_t data[CONFIG_QUEUE_SIZE];
-} ring_data_t;
-
-typedef struct queue_global_t {
-	queue_entry_t   queue[ODP_CONFIG_QUEUES];
-	ring_data_t     ring_data[ODP_CONFIG_QUEUES];
-	uint32_t        queue_lf_num;
-	uint32_t        queue_lf_size;
-	queue_lf_func_t queue_lf_func;
-
-} queue_global_t;
-
-static queue_global_t *queue_glb;
+queue_global_t *queue_glb;
 
 static inline queue_entry_t *get_qentry(uint32_t queue_id)
 {

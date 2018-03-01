@@ -7,7 +7,7 @@
 #include <odp/api/queue.h>
 #include <odp/api/atomic.h>
 #include <odp/api/shared_memory.h>
-#include <odp_queue_lf.h>
+#include <odp_queue_internal.h>
 #include <string.h>
 #include <stdio.h>
 
