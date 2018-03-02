@@ -114,13 +114,14 @@ ODP_STATIC_ASSERT(sizeof(lock_called_t) == sizeof(uint32_t),
 /* Scheduler local data */
 typedef struct {
 	int thr;
-	int num;
-	int index;
+	int stash_num;
+	int stash_index;
 	int pause;
 	uint16_t round;
-	uint32_t queue_index;
-	odp_queue_t queue;
-	odp_event_t ev_stash[MAX_DEQ];
+	uint32_t stash_qi;
+	odp_queue_t stash_queue;
+	odp_event_t stash_ev[MAX_DEQ];
+
 	struct {
 		/* Source queue index */
 		uint32_t src_queue;
@@ -228,9 +229,9 @@ static void sched_local_init(void)
 
 	memset(&sched_local, 0, sizeof(sched_local_t));
 
-	sched_local.thr       = odp_thread_id();
-	sched_local.queue     = ODP_QUEUE_INVALID;
-	sched_local.queue_index = PRIO_QUEUE_EMPTY;
+	sched_local.thr         = odp_thread_id();
+	sched_local.stash_queue = ODP_QUEUE_INVALID;
+	sched_local.stash_qi    = PRIO_QUEUE_EMPTY;
 	sched_local.ordered.src_queue = NULL_INDEX;
 
 	id = sched_local.thr & (QUEUES_PER_PRIO - 1);
@@ -364,7 +365,7 @@ static int schedule_init_local(void)
 
 static int schedule_term_local(void)
 {
-	if (sched_local.num) {
+	if (sched_local.stash_num) {
 		ODP_ERR("Locally pre-scheduled events exist.\n");
 		return -1;
 	}
@@ -536,9 +537,9 @@ static void schedule_pktio_start(int pktio_index, int num_pktin,
 
 static void schedule_release_atomic(void)
 {
-	uint32_t qi = sched_local.queue_index;
+	uint32_t qi = sched_local.stash_qi;
 
-	if (qi != PRIO_QUEUE_EMPTY && sched_local.num  == 0) {
+	if (qi != PRIO_QUEUE_EMPTY && sched_local.stash_num  == 0) {
 		int grp = sched->queue[qi].grp;
 		int prio = sched->queue[qi].prio;
 		int queue_per_prio = sched->queue[qi].queue_per_prio;
@@ -546,7 +547,7 @@ static void schedule_release_atomic(void)
 
 		/* Release current atomic queue */
 		ring_enq(ring, RING_MASK, qi);
-		sched_local.queue_index = PRIO_QUEUE_EMPTY;
+		sched_local.stash_qi = PRIO_QUEUE_EMPTY;
 	}
 }
 
@@ -634,7 +635,7 @@ static void schedule_release_ordered(void)
 
 	queue_index = sched_local.ordered.src_queue;
 
-	if (odp_unlikely((queue_index == NULL_INDEX) || sched_local.num))
+	if (odp_unlikely((queue_index == NULL_INDEX) || sched_local.stash_num))
 		return;
 
 	release_ordered();
@@ -648,14 +649,14 @@ static inline void schedule_release_context(void)
 		schedule_release_atomic();
 }
 
-static inline int copy_events(odp_event_t out_ev[], unsigned int max)
+static inline int copy_from_stash(odp_event_t out_ev[], unsigned int max)
 {
 	int i = 0;
 
-	while (sched_local.num && max) {
-		out_ev[i] = sched_local.ev_stash[sched_local.index];
-		sched_local.index++;
-		sched_local.num--;
+	while (sched_local.stash_num && max) {
+		out_ev[i] = sched_local.stash_ev[sched_local.stash_index];
+		sched_local.stash_index++;
+		sched_local.stash_num--;
 		max--;
 		i++;
 	}
@@ -743,7 +744,7 @@ static inline int poll_pktin(uint32_t qi, int stash)
 
 	if (stash) {
 		for (i = 0; i < num; i++)
-			sched_local.ev_stash[i] = event_from_buf_hdr(b_hdr[i]);
+			sched_local.stash_ev[i] = event_from_buf_hdr(b_hdr[i]);
 
 		return num;
 	}
@@ -829,7 +830,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 			pktin = queue_is_pktin(qi);
 
-			num = sched_cb_queue_deq_multi(qi, sched_local.ev_stash,
+			num = sched_cb_queue_deq_multi(qi, sched_local.stash_ev,
 						       max_deq, !pktin);
 
 			if (num < 0) {
@@ -883,17 +884,17 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 			} else if (queue_is_atomic(qi)) {
 				/* Hold queue during atomic access */
-				sched_local.queue_index = qi;
+				sched_local.stash_qi = qi;
 			} else {
 				/* Continue scheduling the queue */
 				ring_enq(ring, RING_MASK, qi);
 			}
 
-			handle            = queue_from_index(qi);
-			sched_local.num   = num;
-			sched_local.index = 0;
-			sched_local.queue = handle;
-			ret = copy_events(out_ev, max_num);
+			handle = queue_from_index(qi);
+			sched_local.stash_num   = num;
+			sched_local.stash_index = 0;
+			sched_local.stash_queue = handle;
+			ret = copy_from_stash(out_ev, max_num);
 
 			/* Output the source queue handle */
 			if (out_queue)
@@ -918,11 +919,11 @@ static inline int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 	uint16_t round;
 	uint32_t epoch;
 
-	if (sched_local.num) {
-		ret = copy_events(out_ev, max_num);
+	if (sched_local.stash_num) {
+		ret = copy_from_stash(out_ev, max_num);
 
 		if (out_queue)
-			*out_queue = sched_local.queue;
+			*out_queue = sched_local.stash_queue;
 
 		return ret;
 	}
