@@ -90,6 +90,7 @@ typedef union {
 		uint64_t tcp:1;       /* TCP */
 		uint64_t sctp:1;      /* SCTP */
 		uint64_t icmp:1;      /* ICMP */
+		uint64_t no_next_hdr:1; /* No Next Header */
 
 		uint64_t color:2;     /* Packet color for traffic mgmt */
 		uint64_t nodrop:1;    /* Drop eligibility status */

@@ -167,6 +167,7 @@ typedef struct ODP_PACKED {
 #define _ODP_IPPROTO_AH      0x33 /**< Authentication Header (51) */
 #define _ODP_IPPROTO_ESP     0x32 /**< Encapsulating Security Payload (50) */
 #define _ODP_IPPROTO_ICMPV6  0x3A /**< Internet Control Message Protocol (58) */
+#define _ODP_IPPROTO_NO_NEXT 0x3B /**< No Next Header (59) */
 #define _ODP_IPPROTO_DEST    0x3C /**< IPv6 Destination header (60) */
 #define _ODP_IPPROTO_SCTP    0x84 /**< Stream Control Transmission protocol
 				       (132) */

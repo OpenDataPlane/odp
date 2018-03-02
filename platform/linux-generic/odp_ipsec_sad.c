@@ -326,11 +326,15 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 			       param->outbound.tunnel.ipv4.dst_addr,
 			       sizeof(ipsec_sa->out.tun_ipv4.dst_ip));
 			odp_atomic_init_u32(&ipsec_sa->out.tun_ipv4.hdr_id, 0);
-			ipsec_sa->out.tun_ipv4.ttl =
+			ipsec_sa->out.tun_ipv4.param.src_addr =
+				&ipsec_sa->out.tun_ipv4.src_ip;
+			ipsec_sa->out.tun_ipv4.param.dst_addr =
+				&ipsec_sa->out.tun_ipv4.dst_ip;
+			ipsec_sa->out.tun_ipv4.param.ttl =
 				param->outbound.tunnel.ipv4.ttl;
-			ipsec_sa->out.tun_ipv4.dscp =
+			ipsec_sa->out.tun_ipv4.param.dscp =
 				param->outbound.tunnel.ipv4.dscp;
-			ipsec_sa->out.tun_ipv4.df =
+			ipsec_sa->out.tun_ipv4.param.df =
 				param->outbound.tunnel.ipv4.df;
 		} else {
 			ipsec_sa->tun_ipv4 = 0;
@@ -340,11 +344,15 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 			memcpy(&ipsec_sa->out.tun_ipv6.dst_ip,
 			       param->outbound.tunnel.ipv6.dst_addr,
 			       sizeof(ipsec_sa->out.tun_ipv6.dst_ip));
-			ipsec_sa->out.tun_ipv6.hlimit =
+			ipsec_sa->out.tun_ipv4.param.src_addr =
+				&ipsec_sa->out.tun_ipv6.src_ip;
+			ipsec_sa->out.tun_ipv4.param.dst_addr =
+				&ipsec_sa->out.tun_ipv6.dst_ip;
+			ipsec_sa->out.tun_ipv6.param.hlimit =
 				param->outbound.tunnel.ipv6.hlimit;
-			ipsec_sa->out.tun_ipv6.dscp =
+			ipsec_sa->out.tun_ipv6.param.dscp =
 				param->outbound.tunnel.ipv6.dscp;
-			ipsec_sa->out.tun_ipv6.flabel =
+			ipsec_sa->out.tun_ipv6.param.flabel =
 				param->outbound.tunnel.ipv6.flabel;
 		}
 	}
