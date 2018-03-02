@@ -846,19 +846,19 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 				 * priorities. Stop scheduling queue when pktio
 				 * has been stopped. */
 				if (pktin) {
-					int atomic = queue_is_atomic(qi);
-					int num_pkt = poll_pktin(qi, atomic);
+					int stash = !ordered;
+					int num_pkt = poll_pktin(qi, stash);
 
 					if (odp_unlikely(num_pkt < 0))
 						continue;
 
-					if (num_pkt == 0 || !atomic) {
+					if (num_pkt == 0 || !stash) {
 						ring_enq(ring, RING_MASK, qi);
 						break;
 					}
 
-					/* Process packets from an atomic queue
-					 * right away */
+					/* Process packets from an atomic or
+					 * parallel queue right away. */
 					num = num_pkt;
 				} else {
 					/* Remove empty queue from scheduling.
@@ -867,12 +867,6 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 					continue;
 				}
 			}
-
-			handle            = queue_from_index(qi);
-			sched_local.num   = num;
-			sched_local.index = 0;
-			sched_local.queue = handle;
-			ret = copy_events(out_ev, max_num);
 
 			if (ordered) {
 				uint64_t ctx;
@@ -894,6 +888,12 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 				/* Continue scheduling the queue */
 				ring_enq(ring, RING_MASK, qi);
 			}
+
+			handle            = queue_from_index(qi);
+			sched_local.num   = num;
+			sched_local.index = 0;
+			sched_local.queue = handle;
+			ret = copy_events(out_ev, max_num);
 
 			/* Output the source queue handle */
 			if (out_queue)
