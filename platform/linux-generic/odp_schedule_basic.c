@@ -114,13 +114,19 @@ ODP_STATIC_ASSERT(sizeof(lock_called_t) == sizeof(uint32_t),
 /* Scheduler local data */
 typedef struct {
 	int thr;
-	int stash_num;
-	int stash_index;
-	int pause;
+	uint16_t stash_num;
+	uint16_t stash_index;
+	uint16_t pause;
 	uint16_t round;
 	uint32_t stash_qi;
 	odp_queue_t stash_queue;
 	odp_event_t stash_ev[MAX_DEQ];
+
+	uint32_t grp_epoch;
+	int num_grp;
+	uint8_t grp[NUM_SCHED_GRPS];
+	uint8_t weight_tbl[WEIGHT_TBL_SIZE];
+	uint8_t grp_weight[WEIGHT_TBL_SIZE];
 
 	struct {
 		/* Source queue index */
@@ -132,12 +138,6 @@ typedef struct {
 		/** Storage for stashed enqueue operations */
 		ordered_stash_t stash[MAX_ORDERED_STASH];
 	} ordered;
-
-	uint32_t grp_epoch;
-	int num_grp;
-	uint8_t grp[NUM_SCHED_GRPS];
-	uint8_t weight_tbl[WEIGHT_TBL_SIZE];
-	uint8_t grp_weight[WEIGHT_TBL_SIZE];
 
 } sched_local_t;
 
