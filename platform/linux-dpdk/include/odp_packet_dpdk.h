@@ -39,6 +39,10 @@
 #include <rte_random.h>
 #include <rte_ether.h>
 #include <rte_ethdev.h>
+#include <rte_ip.h>
+#include <rte_ip_frag.h>
+#include <rte_udp.h>
+#include <rte_tcp.h>
 #include <rte_hash.h>
 #include <rte_jhash.h>
 #include <rte_hash_crc.h>
