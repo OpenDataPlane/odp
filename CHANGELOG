@@ -216,9 +216,6 @@ new generator test assumes that null:0 pktio is always present
 ==== https://bugs.linaro.org/show_bug.cgi?id=3613[Bug 3613]
 packet_main test can fail
 
-==== https://bugs.linaro.org/show_bug.cgi?id=3611[Bug 3611]
-ODP linux-generic fails on AArch64 in non-ABI-compat mode
-
 ==== https://bugs.linaro.org/show_bug.cgi?id=3618[Bug 3618]
 DPDK pktio stops receiving packets if all configured RX queues are not used
 
@@ -233,6 +230,9 @@ undefined behavior
 
 ==== https://bugs.linaro.org/show_bug.cgi?id=2988[Bug 2988]
 ODP exposes symbols outside of odp*/_odp* namespace
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3611[Bug 3611]
+ODP linux-generic fails on AArch64 in non-ABI-compat mode
 
 == OpenDataPlane (1.17.0.0)
 === New Features
