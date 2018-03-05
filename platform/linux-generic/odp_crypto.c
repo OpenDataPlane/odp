@@ -1872,9 +1872,9 @@ int odp_crypto_result(odp_crypto_packet_result_t *result,
 }
 
 static
-int odp_crypto_int(odp_packet_t pkt_in,
-		   odp_packet_t *pkt_out,
-		   const odp_crypto_packet_op_param_t *param)
+int crypto_int(odp_packet_t pkt_in,
+	       odp_packet_t *pkt_out,
+	       const odp_crypto_packet_op_param_t *param)
 {
 	odp_crypto_alg_err_t rc_cipher = ODP_CRYPTO_ALG_ERR_NONE;
 	odp_crypto_alg_err_t rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
@@ -1966,7 +1966,7 @@ int odp_crypto_op(const odp_packet_t pkt_in[],
 	ODP_ASSERT(ODP_CRYPTO_SYNC == session->p.op_mode);
 
 	for (i = 0; i < num_pkt; i++) {
-		rc = odp_crypto_int(pkt_in[i], &pkt_out[i], &param[i]);
+		rc = crypto_int(pkt_in[i], &pkt_out[i], &param[i]);
 		if (rc < 0)
 			break;
 	}
@@ -1990,7 +1990,7 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 
 	for (i = 0; i < num_pkt; i++) {
 		pkt = pkt_out[i];
-		rc = odp_crypto_int(pkt_in[i], &pkt, &param[i]);
+		rc = crypto_int(pkt_in[i], &pkt, &param[i]);
 		if (rc < 0)
 			break;
 
