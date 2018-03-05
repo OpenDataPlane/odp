@@ -1948,7 +1948,7 @@ int crypto_int(odp_packet_t pkt_in,
 err:
 	if (allocated) {
 		odp_packet_free(out_pkt);
-		out_pkt = ODP_PACKET_INVALID;
+		*pkt_out = ODP_PACKET_INVALID;
 	}
 
 	return -1;
