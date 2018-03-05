@@ -816,7 +816,7 @@ aes_gmac_gen_init(odp_crypto_generic_session_t *session)
 	EVP_EncryptInit_ex(ctx, session->auth.evp_cipher, NULL,
 			   session->auth.key, NULL);
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
-			    session->p.cipher_iv.length, NULL);
+			    session->p.auth_iv.length, NULL);
 	EVP_CIPHER_CTX_set_padding(ctx, 0);
 }
 
@@ -858,7 +858,7 @@ aes_gmac_check_init(odp_crypto_generic_session_t *session)
 	EVP_DecryptInit_ex(ctx, session->auth.evp_cipher, NULL,
 			   session->auth.key, NULL);
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
-			    session->p.cipher_iv.length, NULL);
+			    session->p.auth_iv.length, NULL);
 	EVP_CIPHER_CTX_set_padding(ctx, 0);
 }
 
