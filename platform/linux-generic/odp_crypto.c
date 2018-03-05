@@ -1646,6 +1646,10 @@ odp_crypto_init_global(void)
 	/* Allocate our globally shared memory */
 	shm = odp_shm_reserve("crypto_pool", mem_size,
 			      ODP_CACHE_LINE_SIZE, 0);
+	if (ODP_SHM_INVALID == shm) {
+		ODP_ERR("unable to allocate crypto pool\n");
+		return -1;
+	}
 
 	global = odp_shm_addr(shm);
 
