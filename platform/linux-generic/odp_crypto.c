@@ -816,7 +816,7 @@ aes_gmac_gen_init(odp_crypto_generic_session_t *session)
 	EVP_EncryptInit_ex(ctx, session->auth.evp_cipher, NULL,
 			   session->auth.key, NULL);
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
-			    session->p.cipher_iv.length, NULL);
+			    session->p.auth_iv.length, NULL);
 	EVP_CIPHER_CTX_set_padding(ctx, 0);
 }
 
@@ -858,7 +858,7 @@ aes_gmac_check_init(odp_crypto_generic_session_t *session)
 	EVP_DecryptInit_ex(ctx, session->auth.evp_cipher, NULL,
 			   session->auth.key, NULL);
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
-			    session->p.cipher_iv.length, NULL);
+			    session->p.auth_iv.length, NULL);
 	EVP_CIPHER_CTX_set_padding(ctx, 0);
 }
 
@@ -1646,6 +1646,10 @@ odp_crypto_init_global(void)
 	/* Allocate our globally shared memory */
 	shm = odp_shm_reserve("crypto_pool", mem_size,
 			      ODP_CACHE_LINE_SIZE, 0);
+	if (ODP_SHM_INVALID == shm) {
+		ODP_ERR("unable to allocate crypto pool\n");
+		return -1;
+	}
 
 	global = odp_shm_addr(shm);
 
@@ -1868,9 +1872,9 @@ int odp_crypto_result(odp_crypto_packet_result_t *result,
 }
 
 static
-int odp_crypto_int(odp_packet_t pkt_in,
-		   odp_packet_t *pkt_out,
-		   const odp_crypto_packet_op_param_t *param)
+int crypto_int(odp_packet_t pkt_in,
+	       odp_packet_t *pkt_out,
+	       const odp_crypto_packet_op_param_t *param)
 {
 	odp_crypto_alg_err_t rc_cipher = ODP_CRYPTO_ALG_ERR_NONE;
 	odp_crypto_alg_err_t rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
@@ -1944,7 +1948,7 @@ int odp_crypto_int(odp_packet_t pkt_in,
 err:
 	if (allocated) {
 		odp_packet_free(out_pkt);
-		out_pkt = ODP_PACKET_INVALID;
+		*pkt_out = ODP_PACKET_INVALID;
 	}
 
 	return -1;
@@ -1962,7 +1966,7 @@ int odp_crypto_op(const odp_packet_t pkt_in[],
 	ODP_ASSERT(ODP_CRYPTO_SYNC == session->p.op_mode);
 
 	for (i = 0; i < num_pkt; i++) {
-		rc = odp_crypto_int(pkt_in[i], &pkt_out[i], &param[i]);
+		rc = crypto_int(pkt_in[i], &pkt_out[i], &param[i]);
 		if (rc < 0)
 			break;
 	}
@@ -1986,7 +1990,7 @@ int odp_crypto_op_enq(const odp_packet_t pkt_in[],
 
 	for (i = 0; i < num_pkt; i++) {
 		pkt = pkt_out[i];
-		rc = odp_crypto_int(pkt_in[i], &pkt, &param[i]);
+		rc = crypto_int(pkt_in[i], &pkt, &param[i]);
 		if (rc < 0)
 			break;
 
