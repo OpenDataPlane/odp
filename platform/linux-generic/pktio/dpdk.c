@@ -24,6 +24,7 @@
 #include <odp_classification_internal.h>
 #include <odp_packet_dpdk.h>
 #include <odp_debug_internal.h>
+#include <odp_libconfig_internal.h>
 
 #include <protocols/eth.h>
 
@@ -92,6 +93,64 @@ void refer_constructors(void)
 	mp_hdlr_init_ops_stack();
 }
 #endif
+
+static int lookup_opt(const char *path, const char *drv_name, int *val)
+{
+	const char *base = "pktio_dpdk";
+	char opt_path[256];
+	int ret = 0;
+
+	/* Default option */
+	snprintf(opt_path, sizeof(opt_path), "%s.%s", base, path);
+	ret += _odp_libconfig_lookup_int(opt_path, val);
+
+	/* Driver specific option overrides default option */
+	snprintf(opt_path, sizeof(opt_path), "%s.%s.%s", base, drv_name, path);
+	ret += _odp_libconfig_lookup_int(opt_path, val);
+
+	if (ret == 0)
+		ODP_ERR("Unable to find DPDK configuration option: %s\n", path);
+	return ret;
+}
+
+static int init_options(pktio_entry_t *pktio_entry,
+			const struct rte_eth_dev_info *dev_info)
+{
+	dpdk_opt_t *opt = &pktio_entry->s.pkt_dpdk.opt;
+
+	if (!lookup_opt("num_rx_desc", dev_info->driver_name,
+			&opt->num_rx_desc))
+		return -1;
+	if (opt->num_rx_desc < dev_info->rx_desc_lim.nb_min ||
+	    opt->num_rx_desc > dev_info->rx_desc_lim.nb_max ||
+	    opt->num_rx_desc % dev_info->rx_desc_lim.nb_align) {
+		ODP_ERR("Invalid number of RX descriptors\n");
+		return -1;
+	}
+
+	if (!lookup_opt("num_tx_desc", dev_info->driver_name,
+			&opt->num_tx_desc))
+		return -1;
+	if (opt->num_tx_desc < dev_info->tx_desc_lim.nb_min ||
+	    opt->num_tx_desc > dev_info->tx_desc_lim.nb_max ||
+	    opt->num_tx_desc % dev_info->tx_desc_lim.nb_align) {
+		ODP_ERR("Invalid number of TX descriptors\n");
+		return -1;
+	}
+
+	if (!lookup_opt("rx_drop_en", dev_info->driver_name,
+			&opt->rx_drop_en))
+		return -1;
+	opt->rx_drop_en = !!opt->rx_drop_en;
+
+	ODP_PRINT("DPDK interface (%s): %" PRIu16 "\n", dev_info->driver_name,
+		  pktio_entry->s.pkt_dpdk.port_id);
+	ODP_PRINT("  num_rx_desc: %d\n", opt->num_rx_desc);
+	ODP_PRINT("  num_tx_desc: %d\n", opt->num_tx_desc);
+	ODP_PRINT("  rx_drop_en: %d\n", opt->rx_drop_en);
+
+	return 0;
+}
 
 /**
  * Calculate valid cache size for DPDK packet pool
@@ -1337,6 +1396,12 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 
 	dpdk_init_capability(pktio_entry, &dev_info);
 
+	/* Initialize runtime options */
+	if (init_options(pktio_entry, &dev_info)) {
+		ODP_ERR("Initializing runtime options failed\n");
+		return -1;
+	}
+
 	mtu = dpdk_mtu_get(pktio_entry);
 	if (mtu == 0) {
 		ODP_ERR("Failed to read interface MTU\n");
@@ -1464,7 +1529,8 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 			pktio_entry->s.chksum_insert_ena = 1;
 		}
 
-		ret = rte_eth_tx_queue_setup(port_id, i, DPDK_NM_TX_DESC,
+		ret = rte_eth_tx_queue_setup(port_id, i,
+					     pkt_dpdk->opt.num_tx_desc,
 					     rte_eth_dev_socket_id(port_id),
 					     txconf);
 		if (ret < 0) {
@@ -1476,9 +1542,10 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 	/* Init RX queues */
 	rte_eth_dev_info_get(port_id, &dev_info);
 	rxconf = &dev_info.default_rxconf;
-	rxconf->rx_drop_en = 1;
+	rxconf->rx_drop_en = pkt_dpdk->opt.rx_drop_en;
 	for (i = 0; i < pktio_entry->s.num_in_queue; i++) {
-		ret = rte_eth_rx_queue_setup(port_id, i, DPDK_NM_RX_DESC,
+		ret = rte_eth_rx_queue_setup(port_id, i,
+					     pkt_dpdk->opt.num_rx_desc,
 					     rte_eth_dev_socket_id(port_id),
 					     rxconf, pkt_dpdk->pkt_pool);
 		if (ret < 0) {

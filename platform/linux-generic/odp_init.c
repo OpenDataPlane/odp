@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <odp_internal.h>
 #include <odp_schedule_if.h>
+#include <odp_libconfig_internal.h>
 #include <string.h>
 #include <stdio.h>
 #include <linux/limits.h>
@@ -47,6 +48,12 @@ int odp_init_global(odp_instance_t *instance,
 		if (params->abort_fn != NULL)
 			odp_global_data.abort_fn = params->abort_fn;
 	}
+
+	if (_odp_libconfig_init_global()) {
+		ODP_ERR("ODP runtime config init failed.\n");
+		goto init_failed;
+	}
+	stage = LIBCONFIG_INIT;
 
 	if (odp_cpumask_init_global(params)) {
 		ODP_ERR("ODP cpumask init failed.\n");
@@ -302,6 +309,13 @@ int _odp_term_global(enum init_stage stage)
 	case CPUMASK_INIT:
 		if (odp_cpumask_term_global()) {
 			ODP_ERR("ODP cpumask term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
+	case LIBCONFIG_INIT:
+		if (_odp_libconfig_term_global()) {
+			ODP_ERR("ODP runtime config term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */

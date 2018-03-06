@@ -20,7 +20,7 @@ SUBDIRS = \
 
 @DX_RULES@
 
-EXTRA_DIST = bootstrap CHANGELOG config/README
+EXTRA_DIST = bootstrap CHANGELOG config/README config/odp-$(with_platform).conf
 
 distcheck-hook:
 	if test -n "$(DX_CLEANFILES)" ; \
