@@ -489,26 +489,36 @@ int odp_cpu_count(void)
 
 void odp_sys_info_print(void)
 {
-	int len;
+	int len, num_cpu;
 	int max_len = 512;
+	odp_cpumask_t cpumask;
+	char cpumask_str[ODP_CPUMASK_STR_SIZE];
 	char str[max_len];
+
+	memset(cpumask_str, 0, sizeof(cpumask_str));
+
+	num_cpu = odp_cpumask_all_available(&cpumask);
+	odp_cpumask_to_str(&cpumask, cpumask_str, ODP_CPUMASK_STR_SIZE);
 
 	len = snprintf(str, max_len, "\n"
 		       "ODP system info\n"
 		       "---------------\n"
-		       "ODP API version: %s\n"
-		       "ODP impl name:   %s\n"
-		       "CPU model:       %s\n"
-		       "CPU freq (hz):   %" PRIu64 "\n"
-		       "Cache line size: %i\n"
-		       "CPU count:       %i\n"
+		       "ODP API version:  %s\n"
+		       "ODP impl name:    %s\n"
+		       "ODP impl details: %s\n"
+		       "CPU model:        %s\n"
+		       "CPU freq (hz):    %" PRIu64 "\n"
+		       "Cache line size:  %i\n"
+		       "CPU count:        %i\n"
+		       "CPU mask:         %s\n"
 		       "\n",
 		       odp_version_api_str(),
 		       odp_version_impl_name(),
+		       odp_version_impl_str(),
 		       odp_cpu_model_str(),
 		       odp_cpu_hz_max(),
 		       odp_sys_cache_line_size(),
-		       odp_cpu_count());
+		       num_cpu, cpumask_str);
 
 	str[len] = '\0';
 	ODP_PRINT("%s", str);
