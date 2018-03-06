@@ -23,6 +23,7 @@ extern "C" {
 #include <odp_errno_define.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <libconfig.h>
 
 #define MAX_CPU_NUMBER 128
 #define UID_MAXLEN 30
@@ -55,10 +56,14 @@ struct odp_global_data_s {
 	odp_cpumask_t control_cpus;
 	odp_cpumask_t worker_cpus;
 	int num_cpus_installed;
+	config_t libconfig_default;
+	config_t libconfig_runtime;
+
 };
 
 enum init_stage {
 	NO_INIT = 0,    /* No init stages completed */
+	LIBCONFIG_INIT,
 	CPUMASK_INIT,
 	TIME_INIT,
 	SYSINFO_INIT,

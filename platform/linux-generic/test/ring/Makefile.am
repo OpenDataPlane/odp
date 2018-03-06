@@ -16,6 +16,8 @@ PRELDADD += $(LIBCUNIT_COMMON)
 
 AM_CPPFLAGS += -I$(top_srcdir)/platform/linux-generic/include
 
+AM_CFLAGS += $(LIBCONFIG_CFLAGS)
+
 TESTNAME = linux-generic-ring
 
 TESTENV = tests-$(TESTNAME).env

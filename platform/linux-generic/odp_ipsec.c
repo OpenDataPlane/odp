@@ -476,6 +476,12 @@ static int ipsec_in_esp(odp_packet_t *pkt,
 	state->in.hdr_len = _ODP_ESPHDR_LEN + ipsec_sa->esp_iv_len;
 	state->in.trl_len = _ODP_ESPTRL_LEN + ipsec_sa->icv_len;
 
+	if (odp_unlikely(state->ip_tot_len <
+			 state->ip_hdr_len + state->in.hdr_len + ipsec_sa->icv_len)) {
+		status->error.proto = 1;
+		return -1;
+	}
+
 	param->cipher_range.offset = ipsec_offset + state->in.hdr_len;
 	param->cipher_range.length = state->ip_tot_len -
 				    state->ip_hdr_len -
@@ -949,8 +955,10 @@ static int ipsec_out_tunnel_ipv4(odp_packet_t *pkt,
 	state->ip_hdr_len = _ODP_IPV4HDR_LEN;
 	if (state->is_ipv4)
 		state->ip_next_hdr = _ODP_IPPROTO_IPIP;
-	else
+	else if (state->is_ipv6)
 		state->ip_next_hdr = _ODP_IPPROTO_IPV6;
+	else
+		state->ip_next_hdr = _ODP_IPPROTO_NO_NEXT;
 	state->ip_next_hdr_offset = state->ip_offset +
 		_ODP_IPV4HDR_PROTO_OFFSET;
 
@@ -1008,8 +1016,10 @@ static int ipsec_out_tunnel_ipv6(odp_packet_t *pkt,
 	state->ip_hdr_len = _ODP_IPV6HDR_LEN;
 	if (state->is_ipv4)
 		state->ip_next_hdr = _ODP_IPPROTO_IPIP;
-	else
+	else if (state->is_ipv6)
 		state->ip_next_hdr = _ODP_IPPROTO_IPV6;
+	else
+		state->ip_next_hdr = _ODP_IPPROTO_NO_NEXT;
 	state->ip_next_hdr_offset = state->ip_offset + _ODP_IPV6HDR_NHDR_OFFSET;
 
 	state->is_ipv4 = 0;
@@ -1061,7 +1071,8 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 			 ipsec_sa_t *ipsec_sa,
 			 odp_crypto_packet_op_param_t *param,
 			 odp_ipsec_op_status_t *status,
-			 uint32_t mtu)
+			 uint32_t mtu,
+			 const odp_ipsec_out_opt_t *opt)
 {
 	_odp_esphdr_t esp;
 	_odp_esptrl_t esptrl;
@@ -1069,17 +1080,25 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 	uint32_t encrypt_len;
 	uint16_t ip_data_len = state->ip_tot_len -
 			       state->ip_hdr_len;
+	uint16_t tfc_len = (opt->flag.tfc_pad || opt->flag.tfc_dummy) ?
+		opt->tfc_pad_len : 0;
 	uint32_t pad_block = ipsec_sa->esp_block_len;
 	uint16_t ipsec_offset = state->ip_offset + state->ip_hdr_len;
 	unsigned hdr_len;
 	unsigned trl_len;
+	unsigned pkt_len, new_len;
 	uint8_t proto = _ODP_IPPROTO_ESP;
+
+	if (odp_unlikely(opt->flag.tfc_dummy)) {
+		ip_data_len = 0;
+		state->ip_tot_len = state->ip_offset + state->ip_hdr_len;
+	}
 
 	/* ESP trailer should be 32-bit right aligned */
 	if (pad_block < 4)
 		pad_block = 4;
 
-	encrypt_len = IPSEC_PAD_LEN(ip_data_len + _ODP_ESPTRL_LEN,
+	encrypt_len = IPSEC_PAD_LEN(ip_data_len + tfc_len + _ODP_ESPTRL_LEN,
 				    pad_block);
 
 	hdr_len = _ODP_ESPHDR_LEN + ipsec_sa->esp_iv_len;
@@ -1120,7 +1139,7 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 	param->aad_ptr = (uint8_t *)&state->esp.aad;
 
 	memset(&esptrl, 0, sizeof(esptrl));
-	esptrl.pad_len = encrypt_len - ip_data_len - _ODP_ESPTRL_LEN;
+	esptrl.pad_len = encrypt_len - ip_data_len - tfc_len - _ODP_ESPTRL_LEN;
 	esptrl.next_header = state->ip_next_hdr;
 
 	odp_packet_copy_from_mem(*pkt, state->ip_next_hdr_offset, 1, &proto);
@@ -1129,17 +1148,32 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 		_odp_ipv4hdr_t *ipv4hdr = state->ip;
 
 		ipv4hdr->tot_len = _odp_cpu_to_be_16(state->ip_tot_len);
-	} else {
+	} else if (state->is_ipv6) {
 		_odp_ipv6hdr_t *ipv6hdr = state->ip;
 
 		ipv6hdr->payload_len = _odp_cpu_to_be_16(state->ip_tot_len -
 							 _ODP_IPV6HDR_LEN);
 	}
 
-	if (odp_packet_extend_tail(pkt, trl_len, NULL, NULL) < 0 ||
-	    odp_packet_extend_head(pkt, hdr_len, NULL, NULL) < 0) {
+	if (odp_packet_extend_head(pkt, hdr_len, NULL, NULL) < 0) {
 		status->error.alg = 1;
 		return -1;
+	}
+
+	pkt_len = odp_packet_len(*pkt);
+	new_len = state->ip_offset + state->ip_tot_len;
+	if (pkt_len >= new_len) {
+		if (odp_packet_trunc_tail(pkt, pkt_len - new_len,
+					  NULL, NULL) < 0) {
+			status->error.alg = 1;
+			return -1;
+		}
+	} else {
+		if (odp_packet_extend_tail(pkt, new_len - pkt_len,
+					   NULL, NULL) < 0) {
+			status->error.alg = 1;
+			return -1;
+		}
 	}
 
 	odp_packet_move_data(*pkt, 0, hdr_len, ipsec_offset);
@@ -1165,12 +1199,22 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 				 ipsec_offset + _ODP_ESPHDR_LEN,
 				 ipsec_sa->esp_iv_len,
 				 state->iv + ipsec_sa->salt_length);
+	/* 0xa5 is a good value to fill data instead of generating random data
+	 * to create TFC padding */
+	_odp_packet_set_data(*pkt, esptrl_offset - esptrl.pad_len - tfc_len,
+			     0xa5, tfc_len);
 	odp_packet_copy_from_mem(*pkt,
 				 esptrl_offset - esptrl.pad_len,
 				 esptrl.pad_len, ipsec_padding);
 	odp_packet_copy_from_mem(*pkt,
 				 esptrl_offset, _ODP_ESPTRL_LEN,
 				 &esptrl);
+
+	if (odp_unlikely(state->ip_tot_len <
+			 state->ip_hdr_len + hdr_len + ipsec_sa->icv_len)) {
+		status->error.proto = 1;
+		return -1;
+	}
 
 	param->cipher_range.offset = ipsec_offset + hdr_len;
 	param->cipher_range.length = state->ip_tot_len -
@@ -1323,14 +1367,29 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	odp_ipsec_frag_mode_t frag_mode;
 	uint32_t mtu;
 
-	state.ip_offset = odp_packet_l3_offset(pkt);
-	ODP_ASSERT(ODP_PACKET_OFFSET_INVALID != state.ip_offset);
-
-	state.ip = odp_packet_l3_ptr(pkt, NULL);
-	ODP_ASSERT(NULL != state.ip);
-
 	ipsec_sa = _odp_ipsec_sa_use(sa);
 	ODP_ASSERT(NULL != ipsec_sa);
+
+	if (opt->flag.tfc_dummy) {
+		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+		ODP_ASSERT(ODP_IPSEC_MODE_TUNNEL == ipsec_sa->mode);
+		pkt_hdr->p.l2_offset = ODP_PACKET_OFFSET_INVALID;
+		pkt_hdr->p.l3_offset = 0;
+		state.ip_offset = 0;
+		state.ip = NULL;
+		state.is_ipv4 = 0;
+		state.is_ipv6 = 0;
+	} else {
+		state.ip_offset = odp_packet_l3_offset(pkt);
+		ODP_ASSERT(ODP_PACKET_OFFSET_INVALID != state.ip_offset);
+
+		state.ip = odp_packet_l3_ptr(pkt, NULL);
+		ODP_ASSERT(NULL != state.ip);
+
+		state.is_ipv4 = (((uint8_t *)state.ip)[0] >> 4) == 0x4;
+		state.is_ipv6 = (((uint8_t *)state.ip)[0] >> 4) == 0x6;
+	}
 
 	frag_mode = opt->flag.frag_mode ? opt->frag_mode :
 					  ipsec_sa->out.frag_mode;
@@ -1341,9 +1400,6 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 
 	/* Initialize parameters block */
 	memset(&param, 0, sizeof(param));
-
-	state.is_ipv4 = (((uint8_t *)state.ip)[0] >> 4) == 0x4;
-	state.is_ipv6 = (((uint8_t *)state.ip)[0] >> 4) == 0x6;
 
 	if (ODP_IPSEC_MODE_TRANSPORT == ipsec_sa->mode) {
 		if (state.is_ipv4)
@@ -1360,7 +1416,12 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 			rc = ipsec_out_tunnel_parse_ipv4(&state, ipsec_sa);
 		else if (state.is_ipv6)
 			rc = ipsec_out_tunnel_parse_ipv6(&state, ipsec_sa);
-		else
+		else if (opt->flag.tfc_dummy) {
+			state.out_tunnel.ip_tos = 0;
+			state.out_tunnel.ip_df = 0;
+			state.out_tunnel.ip_flabel = 0;
+			rc = 0;
+		} else
 			rc = -1;
 		if (rc < 0) {
 			status->error.alg = 1;
@@ -1384,7 +1445,8 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	}
 
 	if (ODP_IPSEC_ESP == ipsec_sa->proto) {
-		rc = ipsec_out_esp(&pkt, &state, ipsec_sa, &param, status, mtu);
+		rc = ipsec_out_esp(&pkt, &state, ipsec_sa, &param, status, mtu,
+				   opt);
 	} else if (ODP_IPSEC_AH == ipsec_sa->proto) {
 		rc = ipsec_out_ah(&pkt, &state, ipsec_sa, &param, status, mtu);
 	} else {
@@ -1740,9 +1802,14 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 		else
 			opt = &param->opt[opt_idx];
 
+		ipsec_sa = ipsec_out_single(pkt, sa, &pkt, opt, &status);
+		ODP_ASSERT(NULL != ipsec_sa);
+
 		hdr_len = inline_param[in_pkt].outer_hdr.len;
 		ptr = inline_param[in_pkt].outer_hdr.ptr;
 		offset = odp_packet_l3_offset(pkt);
+		if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
+			offset = 0;
 		if (offset >= hdr_len) {
 			if (odp_packet_trunc_head(&pkt, offset - hdr_len,
 						  NULL, NULL) < 0)
@@ -1760,9 +1827,6 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 					     hdr_len,
 					     ptr) < 0)
 			status.error.alg = 1;
-
-		ipsec_sa = ipsec_out_single(pkt, sa, &pkt, opt, &status);
-		ODP_ASSERT(NULL != ipsec_sa);
 
 		packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
 		result = ipsec_pkt_result(pkt);
