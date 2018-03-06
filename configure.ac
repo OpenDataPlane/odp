@@ -240,7 +240,7 @@ AS_IF([test "${with_platform}" = "linux-generic"],
       [m4_include([./platform/linux-generic/m4/configure.m4])],
       [AC_MSG_ERROR([UNSUPPORTED PLATFORM: ${with_platform}])])
 
-AC_DEFINE_UNQUOTED([IMPLEMENTATION_NAME], ["$IMPLEMENTATION_NAME"],
+AC_DEFINE_UNQUOTED([ODP_IMPLEMENTATION_NAME], ["$ODP_IMPLEMENTATION_NAME"],
 		   [Define to the name of the implementation])
 
 ##########################################################################
@@ -385,7 +385,7 @@ AC_MSG_RESULT([
 	ODP Library version:	${ODP_LIBSO_VERSION}
 	Helper Library version:	${ODPHELPER_LIBSO_VERSION}
 
-	implementation_name:	${IMPLEMENTATION_NAME}
+	implementation_name:	${ODP_IMPLEMENTATION_NAME}
 	host:			${host}
 	ARCH_DIR		${ARCH_DIR}
 	ARCH_ABI		${ARCH_ABI}
