@@ -75,6 +75,10 @@ typedef struct queue_global_t {
 	uint32_t          queue_lf_size;
 	queue_lf_func_t   queue_lf_func;
 
+	struct {
+		uint32_t default_queue_size;
+	} config;
+
 } queue_global_t;
 
 extern queue_global_t *queue_glb;
