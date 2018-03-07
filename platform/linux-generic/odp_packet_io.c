@@ -237,8 +237,6 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	pktio_entry->s.ops = pktio_if_ops[pktio_if];
 	unlock_entry(pktio_entry);
 
-	ODP_DBG("%s uses %s\n", name, pktio_if_ops[pktio_if]->name);
-
 	return hdl;
 }
 
@@ -253,6 +251,18 @@ static int pool_type_is_packet(odp_pool_t pool)
 		return 0;
 
 	return pool_info.params.type == ODP_POOL_PACKET;
+}
+
+static const char *driver_name(odp_pktio_t hdl)
+{
+	pktio_entry_t *entry;
+
+	if (hdl != ODP_PKTIO_INVALID) {
+		entry = get_pktio_entry(hdl);
+		return entry->s.ops->name;
+	}
+
+	return "bad handle";
 }
 
 odp_pktio_t odp_pktio_open(const char *name, odp_pool_t pool,
@@ -278,6 +288,8 @@ odp_pktio_t odp_pktio_open(const char *name, odp_pool_t pool,
 	odp_spinlock_lock(&pktio_tbl->lock);
 	hdl = setup_pktio_entry(name, pool, param);
 	odp_spinlock_unlock(&pktio_tbl->lock);
+
+	ODP_DBG("interface: %s, driver: %s\n", name, driver_name(hdl));
 
 	return hdl;
 }
@@ -391,6 +403,8 @@ int odp_pktio_close(odp_pktio_t hdl)
 
 	unlock_entry(entry);
 
+	ODP_DBG("interface: %s\n", entry->s.name);
+
 	return 0;
 }
 
@@ -488,6 +502,9 @@ int odp_pktio_start(odp_pktio_t hdl)
 		sched_fn->pktio_start(_odp_pktio_index(hdl), num, index, odpq);
 	}
 
+	ODP_DBG("interface: %s, input queues: %u, output queues: %u\n",
+		entry->s.name, entry->s.num_in_queue, entry->s.num_out_queue);
+
 	return res;
 }
 
@@ -525,6 +542,8 @@ int odp_pktio_stop(odp_pktio_t hdl)
 	lock_entry(entry);
 	res = _pktio_stop(entry);
 	unlock_entry(entry);
+
+	ODP_DBG("interface: %s\n", entry->s.name);
 
 	return res;
 }

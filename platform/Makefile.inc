@@ -17,7 +17,7 @@ else
 AM_LDFLAGS += -export-symbols-regex '^(_deprecated_)?_?odp_'
 endif
 
-AM_CFLAGS = "-DGIT_HASH=$(VERSION)"
+AM_CFLAGS = "-DODP_VERSION_BUILD=$(VERSION)"
 AM_CFLAGS += $(VISIBILITY_CFLAGS)
 
 AM_CFLAGS += @PTHREAD_CFLAGS@
