@@ -63,19 +63,17 @@ union queue_entry_u {
 	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct queue_entry_s))];
 };
 
-typedef struct ODP_ALIGNED_CACHE {
-	/* Storage space for ring data */
-	uint32_t data[CONFIG_QUEUE_SIZE];
-} queue_ring_data_t;
-
 typedef struct queue_global_t {
-	queue_entry_t     queue[ODP_CONFIG_QUEUES];
-	queue_ring_data_t ring_data[ODP_CONFIG_QUEUES];
-	uint32_t          queue_lf_num;
-	uint32_t          queue_lf_size;
-	queue_lf_func_t   queue_lf_func;
+	queue_entry_t   queue[ODP_CONFIG_QUEUES];
+	uint32_t        *ring_data;
+	uint32_t        queue_lf_num;
+	uint32_t        queue_lf_size;
+	queue_lf_func_t queue_lf_func;
+	odp_shm_t       queue_gbl_shm;
+	odp_shm_t       queue_ring_shm;
 
 	struct {
+		uint32_t max_queue_size;
 		uint32_t default_queue_size;
 	} config;
 
