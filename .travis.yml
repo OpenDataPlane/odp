@@ -195,7 +195,7 @@ install:
             LIBDPDKEXT=a
            fi
            DPDK_TARGET="${DPDK_TARGET}gcc"
-           if [ ! -f "dpdk/${TARGET}/lib/libdpdk.$LIBDPDKEXT" ]; then
+           if [ ! -f "dpdk/${TARGET}/usr/local/lib/libdpdk.$LIBDPDKEXT" ]; then
             git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v${DPDK_VERS} http://dpdk.org/git/dpdk dpdk
             pushd dpdk
             git log --oneline --decorate
@@ -222,10 +222,11 @@ install:
             echo CONFIG_RTE_TOOLCHAIN_${DPDKCC^^}=y >> .config
             popd
             make build O=${TARGET} EXTRA_CFLAGS="-fPIC $DPDK_CFLAGS" CROSS="$DPDK_CROSS" CC="$CC" HOSTCC=gcc -j $(nproc)
+            make install O=${TARGET} DESTDIR=${TARGET}
             rm -r ./doc ./${TARGET}/app ./${TARGET}/build
             popd
            fi
-           EXTRA_CONF="$EXTRA_CONF --with-dpdk-path=`pwd`/dpdk/${TARGET}"
+           EXTRA_CONF="$EXTRA_CONF --with-dpdk-path=`pwd`/dpdk/${TARGET}/usr/local"
           fi
 
 #	Netmap pktio
@@ -293,7 +294,7 @@ jobs:
                           - ./bootstrap
                           - ./configure --prefix=$HOME/odp-install
                             --enable-user-guides
-                            --with-dpdk-path=`pwd`/dpdk/${TARGET}
+                            --with-dpdk-path=`pwd`/dpdk/${TARGET}/usr/local
                             --with-netmap-path=`pwd`/netmap CFLAGS="-O0 -coverage"
                               CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
                             --enable-debug=full

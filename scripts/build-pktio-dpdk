@@ -28,12 +28,13 @@ sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
 popd
 
 #Build DPDK
-make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
+make build O=${TARGET} EXTRA_CFLAGS="-fPIC"
+make install O=${TARGET} DESTDIR=${TARGET}
 popd
 
 #Build ODP
 ./bootstrap;
 ./configure  --enable-test-vald  --enable-test-perf --enable-test-cpp \
 	     --enable-debug --enable-debug-print \
-	     --with-dpdk-path=`pwd`/dpdk/${TARGET}
+	     --with-dpdk-path=`pwd`/dpdk/${TARGET}/usr/local
 make
