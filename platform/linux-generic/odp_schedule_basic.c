@@ -27,6 +27,7 @@
 #include <odp_timer_internal.h>
 #include <odp_queue_internal.h>
 #include <odp_buffer_inlines.h>
+#include <odp_libconfig_internal.h>
 
 /* Number of priority levels  */
 #define NUM_PRIO 8
@@ -41,15 +42,18 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 /* Number of scheduling groups */
 #define NUM_SCHED_GRPS 32
 
-/* Priority queues per priority */
-#define QUEUES_PER_PRIO  4
+/* Maximum priority queue spread */
+#define MAX_SPREAD 4
+
+/* Minimum priority queue spread */
+#define MIN_SPREAD 1
 
 /* A thread polls a non preferred sched queue every this many polls
  * of the prefer queue. */
 #define PREFER_RATIO 64
 
 /* Size of poll weight table */
-#define WEIGHT_TBL_SIZE ((QUEUES_PER_PRIO - 1) * PREFER_RATIO)
+#define WEIGHT_TBL_SIZE ((MAX_SPREAD - 1) * PREFER_RATIO)
 
 /* Maximum number of packet IO interfaces */
 #define NUM_PKTIO ODP_CONFIG_PKTIO_ENTRIES
@@ -60,14 +64,10 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 /* Not a valid index */
 #define NULL_INDEX ((uint32_t)-1)
 
-/* Priority queue ring size. In worst case, all event queues are scheduled
- * queues and have the same priority. The ring size must be larger than or
- * equal to ODP_CONFIG_QUEUES / QUEUES_PER_PRIO, so that it can hold all
- * queues in the worst case. */
-#define PRIO_QUEUE_RING_SIZE  (ODP_CONFIG_QUEUES / QUEUES_PER_PRIO)
-
-/* Mask for wrapping around priority queue index */
-#define RING_MASK  (PRIO_QUEUE_RING_SIZE - 1)
+/* Maximum priority queue ring size. A ring must be large enough to store all
+ * queues in the worst case (all queues are scheduled, have the same priority
+ * and no spreading). */
+#define MAX_RING_SIZE ODP_CONFIG_QUEUES
 
 /* Priority queue empty, not a valid queue index. */
 #define PRIO_QUEUE_EMPTY NULL_INDEX
@@ -76,14 +76,14 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 ODP_STATIC_ASSERT(CHECK_IS_POWER2(ODP_CONFIG_QUEUES),
 		  "Number_of_queues_is_not_power_of_two");
 
-/* Ring size must be power of two, so that MAX_QUEUE_IDX_MASK can be used. */
-ODP_STATIC_ASSERT(CHECK_IS_POWER2(PRIO_QUEUE_RING_SIZE),
+/* Ring size must be power of two, so that mask can be used. */
+ODP_STATIC_ASSERT(CHECK_IS_POWER2(MAX_RING_SIZE),
 		  "Ring_size_is_not_power_of_two");
 
 /* Mask of queues per priority */
 typedef uint8_t pri_mask_t;
 
-ODP_STATIC_ASSERT((8 * sizeof(pri_mask_t)) >= QUEUES_PER_PRIO,
+ODP_STATIC_ASSERT((8 * sizeof(pri_mask_t)) >= MAX_SPREAD,
 		  "pri_mask_t_is_too_small");
 
 /* Start of named groups in group mask arrays */
@@ -147,7 +147,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	ring_t ring;
 
 	/* Ring data: queue indexes */
-	uint32_t queue_index[PRIO_QUEUE_RING_SIZE];
+	uint32_t queue_index[MAX_RING_SIZE];
 
 } prio_queue_t;
 
@@ -168,14 +168,20 @@ typedef struct {
 	pri_mask_t     pri_mask[NUM_PRIO];
 	odp_spinlock_t mask_lock;
 
-	prio_queue_t   prio_q[NUM_SCHED_GRPS][NUM_PRIO][QUEUES_PER_PRIO];
+	prio_queue_t   prio_q[NUM_SCHED_GRPS][NUM_PRIO][MAX_SPREAD];
 
 	odp_shm_t      shm;
-	uint32_t       pri_count[NUM_PRIO][QUEUES_PER_PRIO];
+
+	struct {
+		uint8_t num_spread;
+	} config;
+
+	uint32_t       pri_count[NUM_PRIO][MAX_SPREAD];
 
 	odp_thrmask_t    mask_all;
 	odp_spinlock_t   grp_lock;
 	odp_atomic_u32_t grp_epoch;
+	uint32_t         ring_mask;
 
 	struct {
 		char           name[ODP_SCHED_GROUP_NAME_LEN];
@@ -186,7 +192,7 @@ typedef struct {
 	struct {
 		uint8_t grp;
 		uint8_t prio;
-		uint8_t queue_per_prio;
+		uint8_t spread;
 		uint8_t sync;
 		uint8_t order_lock_count;
 		uint8_t poll_pktin;
@@ -206,8 +212,7 @@ typedef struct {
 /* Check that queue[] variables are large enough */
 ODP_STATIC_ASSERT(NUM_SCHED_GRPS  <= 256, "Group_does_not_fit_8_bits");
 ODP_STATIC_ASSERT(NUM_PRIO        <= 256, "Prio_does_not_fit_8_bits");
-ODP_STATIC_ASSERT(QUEUES_PER_PRIO <= 256,
-		  "Queues_per_prio_does_not_fit_8_bits");
+ODP_STATIC_ASSERT(MAX_SPREAD      <= 256, "Spread_does_not_fit_8_bits");
 ODP_STATIC_ASSERT(CONFIG_QUEUE_MAX_ORD_LOCKS <= 256,
 		  "Ordered_lock_count_does_not_fit_8_bits");
 ODP_STATIC_ASSERT(NUM_PKTIO        <= 256, "Pktio_index_does_not_fit_8_bits");
@@ -221,11 +226,41 @@ static __thread sched_local_t sched_local;
 /* Function prototypes */
 static inline void schedule_release_context(void);
 
+static int read_config_file(sched_global_t *sched)
+{
+	const char *str;
+	int val = 0;
+
+	ODP_PRINT("Scheduler config:\n");
+
+	str = "sched_basic.prio_spread";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	if (val > MAX_SPREAD || val < MIN_SPREAD) {
+		ODP_ERR("Bad value %s = %u\n", str, val);
+		return -1;
+	}
+
+	sched->config.num_spread = val;
+	ODP_PRINT("  %s: %i\n\n", str, val);
+
+	return 0;
+}
+
+static inline uint8_t prio_spread_index(uint32_t index)
+{
+	return index % sched->config.num_spread;
+}
+
 static void sched_local_init(void)
 {
 	int i;
-	uint8_t id;
-	uint8_t offset = 0;
+	uint8_t spread;
+	uint8_t num_spread = sched->config.num_spread;
+	uint8_t offset = 1;
 
 	memset(&sched_local, 0, sizeof(sched_local_t));
 
@@ -234,17 +269,17 @@ static void sched_local_init(void)
 	sched_local.stash_qi    = PRIO_QUEUE_EMPTY;
 	sched_local.ordered.src_queue = NULL_INDEX;
 
-	id = sched_local.thr & (QUEUES_PER_PRIO - 1);
+	spread = prio_spread_index(sched_local.thr);
 
 	for (i = 0; i < WEIGHT_TBL_SIZE; i++) {
-		sched_local.weight_tbl[i] = id;
+		sched_local.weight_tbl[i] = spread;
 
-		if (i % PREFER_RATIO == 0) {
+		if (num_spread > 1 && (i % PREFER_RATIO) == 0) {
+			sched_local.weight_tbl[i] = prio_spread_index(spread +
+								      offset);
 			offset++;
-			sched_local.weight_tbl[i] = (id + offset) &
-						    (QUEUES_PER_PRIO - 1);
-			if (offset == QUEUES_PER_PRIO - 1)
-				offset = 0;
+			if (offset == num_spread)
+				offset = 1;
 		}
 	}
 }
@@ -269,19 +304,24 @@ static int schedule_init_global(void)
 
 	memset(sched, 0, sizeof(sched_global_t));
 
+	if (read_config_file(sched)) {
+		odp_shm_free(shm);
+		return -1;
+	}
+
 	sched->shm  = shm;
 	odp_spinlock_init(&sched->mask_lock);
 
 	for (grp = 0; grp < NUM_SCHED_GRPS; grp++) {
 		for (i = 0; i < NUM_PRIO; i++) {
-			for (j = 0; j < QUEUES_PER_PRIO; j++) {
+			for (j = 0; j < MAX_SPREAD; j++) {
 				prio_queue_t *prio_q;
 				int k;
 
 				prio_q = &sched->prio_q[grp][i][j];
 				ring_init(&prio_q->ring);
 
-				for (k = 0; k < PRIO_QUEUE_RING_SIZE; k++) {
+				for (k = 0; k < MAX_RING_SIZE; k++) {
 					prio_q->queue_index[k] =
 					PRIO_QUEUE_EMPTY;
 				}
@@ -322,14 +362,15 @@ static int schedule_term_global(void)
 	int ret = 0;
 	int rc = 0;
 	int i, j, grp;
+	uint32_t ring_mask = sched->ring_mask;
 
 	for (grp = 0; grp < NUM_SCHED_GRPS; grp++) {
 		for (i = 0; i < NUM_PRIO; i++) {
-			for (j = 0; j < QUEUES_PER_PRIO; j++) {
+			for (j = 0; j < MAX_SPREAD; j++) {
 				ring_t *ring = &sched->prio_q[grp][i][j].ring;
 				uint32_t qi;
 
-				while ((qi = ring_deq(ring, RING_MASK)) !=
+				while ((qi = ring_deq(ring, ring_mask)) !=
 				       RING_EMPTY) {
 					odp_event_t events[1];
 					int num;
@@ -413,11 +454,6 @@ static uint32_t schedule_max_ordered_locks(void)
 	return CONFIG_QUEUE_MAX_ORD_LOCKS;
 }
 
-static inline int queue_per_prio(uint32_t queue_index)
-{
-	return ((QUEUES_PER_PRIO - 1) & queue_index);
-}
-
 static void pri_set(int id, int prio)
 {
 	odp_spinlock_lock(&sched->mask_lock);
@@ -441,32 +477,38 @@ static void pri_clr(int id, int prio)
 
 static void pri_set_queue(uint32_t queue_index, int prio)
 {
-	int id = queue_per_prio(queue_index);
+	uint8_t id = prio_spread_index(queue_index);
 
 	return pri_set(id, prio);
 }
 
 static void pri_clr_queue(uint32_t queue_index, int prio)
 {
-	int id = queue_per_prio(queue_index);
+	uint8_t id = prio_spread_index(queue_index);
 	pri_clr(id, prio);
 }
 
 static int schedule_init_queue(uint32_t queue_index,
 			       const odp_schedule_param_t *sched_param)
 {
+	uint32_t ring_size;
 	int i;
 	int prio = sched_param->prio;
 
 	pri_set_queue(queue_index, prio);
 	sched->queue[queue_index].grp  = sched_param->group;
 	sched->queue[queue_index].prio = prio;
-	sched->queue[queue_index].queue_per_prio = queue_per_prio(queue_index);
+	sched->queue[queue_index].spread = prio_spread_index(queue_index);
 	sched->queue[queue_index].sync = sched_param->sync;
 	sched->queue[queue_index].order_lock_count = sched_param->lock_count;
 	sched->queue[queue_index].poll_pktin  = 0;
 	sched->queue[queue_index].pktio_index = 0;
 	sched->queue[queue_index].pktin_index = 0;
+
+	ring_size = MAX_RING_SIZE / sched->config.num_spread;
+	ring_size = ROUNDUP_POWER2_U32(ring_size);
+	ODP_ASSERT(ring_size <= MAX_RING_SIZE);
+	sched->ring_mask = ring_size - 1;
 
 	odp_atomic_init_u64(&sched->order[queue_index].ctx, 0);
 	odp_atomic_init_u64(&sched->order[queue_index].next_ctx, 0);
@@ -492,9 +534,9 @@ static void schedule_destroy_queue(uint32_t queue_index)
 	int prio = sched->queue[queue_index].prio;
 
 	pri_clr_queue(queue_index, prio);
-	sched->queue[queue_index].grp = 0;
-	sched->queue[queue_index].prio = 0;
-	sched->queue[queue_index].queue_per_prio = 0;
+	sched->queue[queue_index].grp    = 0;
+	sched->queue[queue_index].prio   = 0;
+	sched->queue[queue_index].spread = 0;
 
 	if (queue_is_ordered(queue_index) &&
 	    odp_atomic_load_u64(&sched->order[queue_index].ctx) !=
@@ -504,12 +546,12 @@ static void schedule_destroy_queue(uint32_t queue_index)
 
 static int schedule_sched_queue(uint32_t queue_index)
 {
-	int grp            = sched->queue[queue_index].grp;
-	int prio           = sched->queue[queue_index].prio;
-	int queue_per_prio = sched->queue[queue_index].queue_per_prio;
-	ring_t *ring       = &sched->prio_q[grp][prio][queue_per_prio].ring;
+	int grp      = sched->queue[queue_index].grp;
+	int prio     = sched->queue[queue_index].prio;
+	int spread   = sched->queue[queue_index].spread;
+	ring_t *ring = &sched->prio_q[grp][prio][spread].ring;
 
-	ring_enq(ring, RING_MASK, queue_index);
+	ring_enq(ring, sched->ring_mask, queue_index);
 	return 0;
 }
 
@@ -540,13 +582,14 @@ static void schedule_release_atomic(void)
 	uint32_t qi = sched_local.stash_qi;
 
 	if (qi != PRIO_QUEUE_EMPTY && sched_local.stash_num  == 0) {
-		int grp = sched->queue[qi].grp;
-		int prio = sched->queue[qi].prio;
-		int queue_per_prio = sched->queue[qi].queue_per_prio;
-		ring_t *ring = &sched->prio_q[grp][prio][queue_per_prio].ring;
+		int grp      = sched->queue[qi].grp;
+		int prio     = sched->queue[qi].prio;
+		int spread   = sched->queue[qi].spread;
+		ring_t *ring = &sched->prio_q[grp][prio][spread].ring;
 
 		/* Release current atomic queue */
-		ring_enq(ring, RING_MASK, qi);
+		ring_enq(ring, sched->ring_mask, qi);
+
 		sched_local.stash_qi = PRIO_QUEUE_EMPTY;
 	}
 }
@@ -773,8 +816,10 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 	int prio, i;
 	int ret;
 	int id;
-	unsigned int max_deq = MAX_DEQ;
 	uint32_t qi;
+	unsigned int max_deq = MAX_DEQ;
+	int num_spread = sched->config.num_spread;
+	uint32_t ring_mask = sched->ring_mask;
 
 	/* Schedule events */
 	for (prio = 0; prio < NUM_PRIO; prio++) {
@@ -785,14 +830,14 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 		/* Select the first ring based on weights */
 		id = first;
 
-		for (i = 0; i < QUEUES_PER_PRIO;) {
+		for (i = 0; i < num_spread;) {
 			int num;
 			int ordered;
 			odp_queue_t handle;
 			ring_t *ring;
 			int pktin;
 
-			if (id >= QUEUES_PER_PRIO)
+			if (id >= num_spread)
 				id = 0;
 
 			/* No queues created for this priority queue */
@@ -805,7 +850,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 			/* Get queue index from the priority queue */
 			ring = &sched->prio_q[grp][prio][id].ring;
-			qi   = ring_deq(ring, RING_MASK);
+			qi   = ring_deq(ring, ring_mask);
 
 			/* Priority queue empty */
 			if (qi == RING_EMPTY) {
@@ -854,7 +899,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 						continue;
 
 					if (num_pkt == 0 || !stash) {
-						ring_enq(ring, RING_MASK, qi);
+						ring_enq(ring, ring_mask, qi);
 						break;
 					}
 
@@ -880,14 +925,14 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 				sched_local.ordered.src_queue = qi;
 
 				/* Continue scheduling ordered queues */
-				ring_enq(ring, RING_MASK, qi);
+				ring_enq(ring, ring_mask, qi);
 
 			} else if (queue_is_atomic(qi)) {
 				/* Hold queue during atomic access */
 				sched_local.stash_qi = qi;
 			} else {
 				/* Continue scheduling the queue */
-				ring_enq(ring, RING_MASK, qi);
+				ring_enq(ring, ring_mask, qi);
 			}
 
 			handle = queue_from_index(qi);
