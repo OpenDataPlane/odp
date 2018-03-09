@@ -127,6 +127,8 @@ AS_IF([test "x$1" = "xsystem"], [dnl
 	DPDK_RPATH="-Wl,-rpath,$DPDK_LIB_PATH"
 	DPDK_RPATH_LT="-R$DPDK_LIB_PATH"
 	DPDK_SHARED=yes
+    elif test ! -r "$DPDK_LIB_PATH"/libdpdk.a ; then
+        AC_MSG_FAILURE([Could not find DPDK])
     fi
 ])
 DPDK_PMD_PATH="$DPDK_LIB_PATH"
