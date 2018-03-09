@@ -34,6 +34,12 @@ odp_sched_latency_SOURCES = odp_sched_latency.c
 odp_scheduling_SOURCES = odp_scheduling.c
 odp_pktio_perf_SOURCES = odp_pktio_perf.c
 
+# l2fwd test depends on generator example
+EXTRA_odp_l2fwd_DEPENDENCIES = example-generator
+.PHONY: $(EXTRA_odp_l2fwd_DEPENDENCIES)
+example-generator:
+	$(MAKE) -C $(top_builddir)/example/generator odp_generator$(EXEEXT)
+
 dist_check_SCRIPTS = $(TESTSCRIPTS)
 
 dist_check_DATA = udp64.pcap
