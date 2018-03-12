@@ -17,7 +17,14 @@ static odp_pool_t pool_list[CLS_ENTRIES];
 
 static odp_pool_t pool_default;
 static odp_pktio_t pktio_loop;
+static odp_cls_testcase_u tc;
 
+#define NUM_COS_PMR_CHAIN	2
+#define NUM_COS_DEFAULT	1
+#define NUM_COS_ERROR	1
+#define NUM_COS_L2_PRIO	CLS_L2_QOS_MAX
+#define NUM_COS_PMR	1
+#define NUM_COS_COMPOSITE	1
 /** sequence number of IP packets */
 odp_atomic_u32_t seq;
 
@@ -30,6 +37,7 @@ int classification_suite_init(void)
 	int ret;
 	odp_pktio_param_t pktio_param;
 	odp_pktin_queue_param_t pktin_param;
+	tc.all_bits = 0;
 
 	pool_default = pool_create("classification_pool");
 	if (ODP_POOL_INVALID == pool_default) {
@@ -683,35 +691,60 @@ void test_pktio_pmr_composite_cos(void)
 
 static void classification_test_pktio_configure(void)
 {
+	odp_cls_capability_t capa;
+	int num_cos;
+
+	odp_cls_capability(&capa);
+	num_cos = capa.max_cos;
+
 	/* Configure the Different CoS for the pktio interface */
-	if (TEST_DEFAULT)
+	if (num_cos >= NUM_COS_DEFAULT && TEST_DEFAULT) {
 		configure_pktio_default_cos();
-	if (TEST_ERROR)
+		tc.default_cos = 1;
+		num_cos -= NUM_COS_DEFAULT;
+	}
+	if (num_cos >= NUM_COS_ERROR && TEST_ERROR) {
 		configure_pktio_error_cos();
-	if (TEST_PMR_CHAIN)
+		tc.error_cos = 1;
+		num_cos -= NUM_COS_ERROR;
+	}
+	if (num_cos >= NUM_COS_PMR_CHAIN && TEST_PMR_CHAIN) {
 		configure_cls_pmr_chain();
-	if (TEST_L2_QOS)
+		tc.pmr_chain = 1;
+		num_cos -= NUM_COS_PMR_CHAIN;
+	}
+	if (num_cos >= NUM_COS_L2_PRIO && TEST_L2_QOS) {
 		configure_cos_with_l2_priority();
-	if (TEST_PMR)
+		tc.l2_priority = 1;
+		num_cos -= NUM_COS_L2_PRIO;
+	}
+	if (num_cos >= NUM_COS_PMR && TEST_PMR) {
 		configure_pmr_cos();
-	if (TEST_PMR_SET)
+		tc.pmr_cos = 1;
+		num_cos -= NUM_COS_PMR;
+	}
+	if (num_cos >= NUM_COS_COMPOSITE && TEST_PMR_SET) {
 		configure_pktio_pmr_composite();
+		tc.pmr_composite_cos = 1;
+		num_cos -= NUM_COS_COMPOSITE;
+	}
+
 }
 
 static void classification_test_pktio_test(void)
 {
 	/* Test Different CoS on the pktio interface */
-	if (TEST_DEFAULT)
+	if (tc.default_cos && TEST_DEFAULT)
 		test_pktio_default_cos();
-	if (TEST_ERROR)
+	if (tc.error_cos && TEST_ERROR)
 		test_pktio_error_cos();
-	if (TEST_PMR_CHAIN)
+	if (tc.pmr_chain && TEST_PMR_CHAIN)
 		test_cls_pmr_chain();
-	if (TEST_L2_QOS)
+	if (tc.l2_priority && TEST_L2_QOS)
 		test_cos_with_l2_priority();
-	if (TEST_PMR)
+	if (tc.pmr_cos && TEST_PMR)
 		test_pmr_cos();
-	if (TEST_PMR_SET)
+	if (tc.pmr_composite_cos && TEST_PMR_SET)
 		test_pktio_pmr_composite_cos();
 }
 
