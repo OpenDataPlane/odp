@@ -17,9 +17,11 @@ Prerequisites for building the OpenDataPlane (ODP) API
    On CentOS/RedHat/Fedora systems:
    $ sudo yum install automake autoconf libtool pkgconfig
 
-3. Required libraries
+3. Required packages
 
    Libraries currently required to link: openssl, libatomic, libconfig
+
+   Required tools: xxd
 
 3.1 OpenSSL native compile
 
