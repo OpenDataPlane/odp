@@ -33,7 +33,8 @@ build:
     options:
 
   ci:
-    - echo 1000 | sudo tee /proc/sys/vm/nr_hugepages
+    # 200M of 2048 pages
+    - echo 102400 | sudo tee /proc/sys/vm/nr_hugepages
     - sudo mkdir -p /mnt/huge
     - sudo mount -t hugetlbfs nodev /mnt/huge
     - mkdir -p /dev/shm/odp
@@ -41,13 +42,13 @@ build:
     - if [ "${CC#clang}" != "${CC}" ] ; then export CXX="${CC/clang/clang++}"; fi
     - ./configure $CONF
     - make -j $(nproc)
-    - sudo env CI=true ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes ODP_SCHEDULER=basic make check
+    - sudo env CI=true ODP_SHM_DIR=/mnt/huge ODP_TEST_OUT_XML=yes ODP_SCHEDULER=basic make check
     - ./scripts/shippable-post.sh basic
-    - sudo env CI=true ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes ODP_SCHEDULER=sp make check
+    - sudo env CI=true ODP_SHM_DIR=/mnt/huge ODP_TEST_OUT_XML=yes ODP_SCHEDULER=sp make check
     - ./scripts/shippable-post.sh sp
-    - sudo env CI=true ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes ODP_SCHEDULER=iquery make check
+    - sudo env CI=true ODP_SHM_DIR=/mnt/huge ODP_TEST_OUT_XML=yes ODP_SCHEDULER=iquery make check
     - ./scripts/shippable-post.sh iquery
-    - sudo env CI=true ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes ODP_SCHEDULER=scalable make check
+    - sudo env CI=true ODP_SHM_DIR=/mnt/huge ODP_TEST_OUT_XML=yes ODP_SCHEDULER=scalable make check
     - ./scripts/shippable-post.sh scalable
 
   on_failure:
