@@ -42,6 +42,9 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 /* Number of scheduling groups */
 #define NUM_SCHED_GRPS 32
 
+/* Group weight table size */
+#define GRP_WEIGHT_TBL_SIZE NUM_SCHED_GRPS
+
 /* Maximum priority queue spread */
 #define MAX_SPREAD 4
 
@@ -52,8 +55,8 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
  * of the prefer queue. */
 #define PREFER_RATIO 64
 
-/* Size of poll weight table */
-#define WEIGHT_TBL_SIZE ((MAX_SPREAD - 1) * PREFER_RATIO)
+/* Spread weight table */
+#define SPREAD_TBL_SIZE ((MAX_SPREAD - 1) * PREFER_RATIO)
 
 /* Maximum number of packet IO interfaces */
 #define NUM_PKTIO ODP_CONFIG_PKTIO_ENTRIES
@@ -116,17 +119,18 @@ typedef struct {
 	int thr;
 	uint16_t stash_num;
 	uint16_t stash_index;
-	uint16_t pause;
-	uint16_t round;
+	uint16_t grp_round;
+	uint16_t spread_round;
 	uint32_t stash_qi;
 	odp_queue_t stash_queue;
 	odp_event_t stash_ev[MAX_DEQ];
 
 	uint32_t grp_epoch;
-	int num_grp;
+	uint16_t num_grp;
+	uint16_t pause;
 	uint8_t grp[NUM_SCHED_GRPS];
-	uint8_t weight_tbl[WEIGHT_TBL_SIZE];
-	uint8_t grp_weight[WEIGHT_TBL_SIZE];
+	uint8_t spread_tbl[SPREAD_TBL_SIZE];
+	uint8_t grp_weight[GRP_WEIGHT_TBL_SIZE];
 
 	struct {
 		/* Source queue index */
@@ -182,6 +186,7 @@ typedef struct {
 	odp_spinlock_t   grp_lock;
 	odp_atomic_u32_t grp_epoch;
 	uint32_t         ring_mask;
+	uint16_t         max_spread;
 
 	struct {
 		char           name[ODP_SCHED_GROUP_NAME_LEN];
@@ -216,6 +221,7 @@ ODP_STATIC_ASSERT(MAX_SPREAD      <= 256, "Spread_does_not_fit_8_bits");
 ODP_STATIC_ASSERT(CONFIG_QUEUE_MAX_ORD_LOCKS <= 256,
 		  "Ordered_lock_count_does_not_fit_8_bits");
 ODP_STATIC_ASSERT(NUM_PKTIO        <= 256, "Pktio_index_does_not_fit_8_bits");
+ODP_STATIC_ASSERT(CHECK_IS_POWER2(GRP_WEIGHT_TBL_SIZE), "Not_power_of_2");
 
 /* Global scheduler context */
 static sched_global_t *sched;
@@ -271,11 +277,11 @@ static void sched_local_init(void)
 
 	spread = prio_spread_index(sched_local.thr);
 
-	for (i = 0; i < WEIGHT_TBL_SIZE; i++) {
-		sched_local.weight_tbl[i] = spread;
+	for (i = 0; i < SPREAD_TBL_SIZE; i++) {
+		sched_local.spread_tbl[i] = spread;
 
 		if (num_spread > 1 && (i % PREFER_RATIO) == 0) {
-			sched_local.weight_tbl[i] = prio_spread_index(spread +
+			sched_local.spread_tbl[i] = prio_spread_index(spread +
 								      offset);
 			offset++;
 			if (offset == num_spread)
@@ -309,6 +315,8 @@ static int schedule_init_global(void)
 		return -1;
 	}
 
+	/* When num_spread == 1, only spread_tbl[0] is used. */
+	sched->max_spread = (sched->config.num_spread - 1) * PREFER_RATIO;
 	sched->shm  = shm;
 	odp_spinlock_init(&sched->mask_lock);
 
@@ -442,7 +450,7 @@ static inline int grp_update_tbl(void)
 	odp_spinlock_unlock(&sched->grp_lock);
 
 	/* Update group weights. Round robin over all thread's groups. */
-	for (i = 0; i < WEIGHT_TBL_SIZE; i++)
+	for (i = 0; i < GRP_WEIGHT_TBL_SIZE; i++)
 		sched_local.grp_weight[i] = i % num;
 
 	sched_local.num_grp = num;
@@ -961,7 +969,7 @@ static inline int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 	int i, num_grp;
 	int ret;
 	int first, grp_id;
-	uint16_t round;
+	uint16_t spread_round, grp_round;
 	uint32_t epoch;
 
 	if (sched_local.stash_num) {
@@ -978,15 +986,17 @@ static inline int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 	if (odp_unlikely(sched_local.pause))
 		return 0;
 
-	/* Each thread prefers a priority queue. Poll weight table avoids
+	/* Each thread prefers a priority queue. Spread weight table avoids
 	 * starvation of other priority queues on low thread counts. */
-	round = sched_local.round + 1;
+	spread_round = sched_local.spread_round;
+	grp_round    = (sched_local.grp_round++) & (GRP_WEIGHT_TBL_SIZE - 1);
 
-	if (odp_unlikely(round == WEIGHT_TBL_SIZE))
-		round = 0;
+	if (odp_unlikely(spread_round + 1 >= sched->max_spread))
+		sched_local.spread_round = 0;
+	else
+		sched_local.spread_round = spread_round + 1;
 
-	sched_local.round = round;
-	first = sched_local.weight_tbl[round];
+	first = sched_local.spread_tbl[spread_round];
 
 	epoch = odp_atomic_load_acq_u32(&sched->grp_epoch);
 	num_grp = sched_local.num_grp;
@@ -996,7 +1006,7 @@ static inline int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		sched_local.grp_epoch = epoch;
 	}
 
-	grp_id = sched_local.grp_weight[round];
+	grp_id = sched_local.grp_weight[grp_round];
 
 	/* Schedule queues per group and priority */
 	for (i = 0; i < num_grp; i++) {
