@@ -46,7 +46,7 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 #define GRP_WEIGHT_TBL_SIZE NUM_SCHED_GRPS
 
 /* Maximum priority queue spread */
-#define MAX_SPREAD 4
+#define MAX_SPREAD 8
 
 /* Minimum priority queue spread */
 #define MIN_SPREAD 1
