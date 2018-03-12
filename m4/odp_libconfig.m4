@@ -8,6 +8,14 @@ AC_DEFUN([ODP_LIBCONFIG],
 PKG_CHECK_MODULES([LIBCONFIG], [libconfig])
 
 ##########################################################################
+# Check for xxd availability
+##########################################################################
+AC_CHECK_PROGS([XXD], [xxd])
+if test -z "$XXD";
+   then AC_MSG_ERROR([Could not find 'xxd'])
+fi
+
+##########################################################################
 # Create a header file odp_libconfig_config.h which containins null
 # terminated hex dump of odp-linux.conf
 ##########################################################################
