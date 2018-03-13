@@ -69,6 +69,9 @@ plat_mmap_vlan_ins${EXEEXT} pktiop0p1 pcap:out=${PCAP_OUT} \
 plat_mmap_vlan_ins${EXEEXT} pcap:in=${PCAP_IN} pktiop1p0 \
 	01:02:03:04:05:06 01:08:09:0a:0b:0c
 
+# Give both processes time to close before removing interfaces
+sleep 4
+
 rm -f ${PCAP_OUT}
 cleanup_pktio_env
 
