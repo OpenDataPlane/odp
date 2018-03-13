@@ -49,7 +49,7 @@ env:
         # for individual commit validation. But you you want to track tests history
         # you need generated new one at https://codecov.io specific for your repo.
         - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
-        - DPDK_VERS="17.08"
+        - DPDK_VERS="17.11"
     matrix:
         - CONF=""
         - CONF="--disable-abi-compat"
@@ -59,8 +59,6 @@ env:
         - CONF="--disable-host-optimization"
         - CONF="--disable-host-optimization --disable-abi-compat"
         - DPDK_SHARED="y" CONF="--disable-static-applications"
-        - DPDK_VERS="17.11" CONF=""
-        - DPDK_VERS="17.11" DPDK_SHARED="y" CONF="--disable-static-applications"
 
 compiler:
         - gcc
@@ -196,7 +194,7 @@ install:
            fi
            DPDK_TARGET="${DPDK_TARGET}gcc"
            if [ ! -f "dpdk/${TARGET}/usr/local/lib/libdpdk.$LIBDPDKEXT" ]; then
-            git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v${DPDK_VERS} http://dpdk.org/git/dpdk dpdk
+            git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=${DPDK_VERS} http://dpdk.org/git/dpdk-stable dpdk
             pushd dpdk
             git log --oneline --decorate
             # AArch64 && ARMv7 fixup
@@ -207,6 +205,10 @@ install:
             make config T=${DPDK_TARGET} O=${TARGET}
             pushd ${TARGET}
             sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
+            # OCTEON TX driver includes ARM v8.1 instructions
+            sed -ri 's,(CONFIG_RTE_LIBRTE_OCTEONTX_PMD=).*,\1n,' .config
+            sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_OCTEONTX_SSOVF=).*,\1n,' .config
+            sed -ri 's,(CONFIG_RTE_LIBRTE_OCTEONTX_MEMPOOL=).*,\1n,' .config
             if test -n "${DPDK_MACHINE}" ; then
               sed -ri 's,(CONFIG_RTE_MACHINE=).*,\1"'${DPDK_MACHINE}'",' .config
             fi

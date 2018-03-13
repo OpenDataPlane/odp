@@ -16,7 +16,7 @@ if [ "$?" != "0" ]; then
 	exit 1
 fi
 
-git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v17.08 http://dpdk.org/git/dpdk dpdk
+git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=17.11 http://dpdk.org/git/dpdk-stable dpdk
 pushd dpdk
 git log --oneline --decorate
 
