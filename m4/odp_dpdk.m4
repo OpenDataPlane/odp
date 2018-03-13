@@ -120,13 +120,15 @@ AS_IF([test "x$1" = "xsystem"], [dnl
     fi
     DPDK_LIB_PATH=`AS_DIRNAME(["$DPDK_LIB_PATH"])`
 ], [dnl
-    DPDK_CPPFLAGS="-isystem $1/include"
+    DPDK_CPPFLAGS="-isystem $1/include/dpdk"
     DPDK_LIB_PATH="$1/lib"
     DPDK_LDFLAGS="-L$DPDK_LIB_PATH"
     if test -r "$DPDK_LIB_PATH"/libdpdk.so ; then
 	DPDK_RPATH="-Wl,-rpath,$DPDK_LIB_PATH"
 	DPDK_RPATH_LT="-R$DPDK_LIB_PATH"
 	DPDK_SHARED=yes
+    elif test ! -r "$DPDK_LIB_PATH"/libdpdk.a ; then
+        AC_MSG_FAILURE([Could not find DPDK])
     fi
 ])
 DPDK_PMD_PATH="$DPDK_LIB_PATH"
