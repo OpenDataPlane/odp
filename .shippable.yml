@@ -40,6 +40,7 @@ build:
     - mkdir -p /dev/shm/odp
     - ./bootstrap
     - if [ "${CC#clang}" != "${CC}" ] ; then export CXX="${CC/clang/clang++}"; fi
+    - echo CC=${CC} ./configure $CONF
     - ./configure $CONF
     - make -j $(nproc)
     - sudo env CI=true ODP_SHM_DIR=/dev/shm/odp ODP_TEST_OUT_XML=yes ODP_SCHEDULER=basic make check
