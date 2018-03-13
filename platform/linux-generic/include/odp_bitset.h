@@ -27,7 +27,12 @@
 /* Find a suitable data type that supports lock-free atomic operations */
 #if defined(__aarch64__) && defined(__SIZEOF_INT128__) && \
 	__SIZEOF_INT128__ == 16
-#define LOCKFREE16
+/* Todo: on thunder-x with gcc4.8 and gcc5 lockfree 16 code with -O0
+ * compiles to hung forever code. With -O2 everything works.
+ * Disable lock free function for now as temporary fix.
+ *
+ * #define LOCKFREE16
+ */
 typedef __int128 bitset_t;
 #define ATOM_BITSET_SIZE (CHAR_BIT * __SIZEOF_INT128__)
 
