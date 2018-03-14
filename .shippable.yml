@@ -36,6 +36,7 @@ build:
     - mkdir -p $HOME/odp-shmdir
     - ./bootstrap
     - if [ "${CC#clang}" != "${CC}" ] ; then export CXX="${CC/clang/clang++}"; fi
+    - if [ "${CC#clang}" != "${CC}" ] ; then export CFLAGS="-fPIC"; fi
     - ./configure $CONF
     - make -j $(nproc)
     - sudo env CI=true ODP_SHM_DIR=$HOME/odp-shmdir ODP_TEST_OUT_XML=yes ODP_SCHEDULER=basic make check
