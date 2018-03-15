@@ -324,6 +324,41 @@ static int close_pkt_dpdk(pktio_entry_t *pktio_entry ODP_UNUSED)
 	return 0;
 }
 
+static odp_bool_t tx_checksum(pktio_entry_t *pktio_entry, uint32_t *txq_flags)
+{
+	unsigned ip_ena  = pktio_entry->s.config.pktout.bit.ipv4_chksum_ena;
+	unsigned udp_ena = pktio_entry->s.config.pktout.bit.udp_chksum_ena;
+	unsigned tcp_ena = pktio_entry->s.config.pktout.bit.tcp_chksum_ena;
+	unsigned sctp_ena = pktio_entry->s.config.pktout.bit.sctp_chksum_ena;
+
+	*txq_flags = 0;
+
+	if (!(ip_ena | udp_ena | tcp_ena | sctp_ena))
+		return false;
+
+	if (udp_ena == 0)
+		*txq_flags |= ETH_TXQ_FLAGS_NOXSUMUDP;
+
+	if (tcp_ena == 0)
+		*txq_flags |= ETH_TXQ_FLAGS_NOXSUMTCP;
+
+	if (sctp_ena == 0)
+		*txq_flags |= ETH_TXQ_FLAGS_NOXSUMSCTP;
+
+	/* When IP checksum is requested alone, enable UDP
+	 * offload. DPDK IP checksum offload is enabled only
+	 * when one of the L4 checksum offloads is requested.*/
+	if ((udp_ena == 0) && (tcp_ena == 0) && (sctp_ena == 0))
+		*txq_flags = ETH_TXQ_FLAGS_NOXSUMTCP | ETH_TXQ_FLAGS_NOXSUMSCTP;
+
+	*txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS |
+			ETH_TXQ_FLAGS_NOREFCOUNT |
+			ETH_TXQ_FLAGS_NOMULTMEMP |
+			ETH_TXQ_FLAGS_NOVLANOFFL;
+
+	return true;
+}
+
 static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 {
 	int ret, i;
@@ -339,6 +374,8 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 	uint16_t hw_ip_checksum = 0;
 	struct rte_eth_dev_info dev_info;
 	struct rte_eth_rxconf *rxconf = NULL;
+	struct rte_eth_txconf *txconf = NULL;
+	uint32_t txq_flags = 0;
 
 	/* DPDK doesn't support nb_rx_q/nb_tx_q being 0 */
 	if (!pktio_entry->s.num_in_queue)
@@ -410,48 +447,18 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 		}
 	}
 
+	/* init TX queues */
+	txconf = NULL;
 	pktio_entry->s.chksum_insert_ena = 0;
 
-	/* init one TX queue on each port */
+	if (tx_checksum(pktio_entry, &txq_flags)) {
+		txconf = &dev_info.default_txconf;
+		txconf->txq_flags = txq_flags;
+		pktio_entry->s.chksum_insert_ena = 1;
+	}
+	/* else - use the default tx queue settings*/
+
 	for (i = 0; i < nbtxq; i++) {
-		const struct rte_eth_txconf *txconf = NULL;
-		int ip_ena  = pktio_entry->s.config.pktout.bit.ipv4_chksum_ena;
-		int udp_ena = pktio_entry->s.config.pktout.bit.udp_chksum_ena;
-		int tcp_ena = pktio_entry->s.config.pktout.bit.tcp_chksum_ena;
-		int sctp_ena = pktio_entry->s.config.pktout.bit.sctp_chksum_ena;
-		int chksum_ena = ip_ena | udp_ena | tcp_ena | sctp_ena;
-
-		if (chksum_ena) {
-			/* Enable UDP, TCP, STCP checksum offload */
-			uint32_t txq_flags = 0;
-
-			if (udp_ena == 0)
-				txq_flags |= ETH_TXQ_FLAGS_NOXSUMUDP;
-
-			if (tcp_ena == 0)
-				txq_flags |= ETH_TXQ_FLAGS_NOXSUMTCP;
-
-			if (sctp_ena == 0)
-				txq_flags |= ETH_TXQ_FLAGS_NOXSUMSCTP;
-
-			/* When IP checksum is requested alone, enable UDP
-			 * offload. DPDK IP checksum offload is enabled only
-			 * when one of the L4 checksum offloads is requested.*/
-			if ((udp_ena == 0) && (tcp_ena == 0) && (sctp_ena == 0))
-				txq_flags = ETH_TXQ_FLAGS_NOXSUMTCP |
-					    ETH_TXQ_FLAGS_NOXSUMSCTP;
-
-			txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS |
-				     ETH_TXQ_FLAGS_NOREFCOUNT |
-				     ETH_TXQ_FLAGS_NOMULTMEMP |
-				     ETH_TXQ_FLAGS_NOVLANOFFL;
-
-			rte_eth_dev_info_get(port_id, &dev_info);
-			dev_info.default_txconf.txq_flags = txq_flags;
-			txconf = &dev_info.default_txconf;
-			pktio_entry->s.chksum_insert_ena = 1;
-		}
-
 		ret = rte_eth_tx_queue_setup(port_id, i, nb_txd, socket_id,
 					     txconf);
 		if (ret < 0) {
