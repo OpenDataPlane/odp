@@ -20,7 +20,7 @@
  * LLD/SCD is on ARM the fastest way to enqueue and dequeue elements from a
  * linked list queue.
  */
-#define CONFIG_LLDSCD
+// #define CONFIG_LLDSCD
 
 /*
  * Use DMB;STR instead of STRL on ARM
