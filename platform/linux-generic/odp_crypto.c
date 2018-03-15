@@ -289,31 +289,31 @@ auth_hmac_init(odp_crypto_generic_session_t *session)
 
 static
 void packet_hmac(odp_packet_t pkt,
-		 const odp_crypto_packet_op_param_t *param,
-		 odp_crypto_generic_session_t *session,
-		 uint8_t *hash)
+                const odp_crypto_packet_op_param_t *param,
+                odp_crypto_generic_session_t *session,
+                uint8_t *hash)
 {
-	HMAC_CTX *ctx = local.hmac_ctx[session->idx];
-	uint32_t offset = param->auth_range.offset;
-	uint32_t len   = param->auth_range.length;
+       HMAC_CTX *ctx = local.hmac_ctx[session->idx];
+       uint32_t offset = param->auth_range.offset;
+       uint32_t len   = param->auth_range.length;
 
-	ODP_ASSERT(offset + len <= odp_packet_len(pkt));
+       ODP_ASSERT(offset + len <= odp_packet_len(pkt));
 
-	/* Reinitialize HMAC calculation without resetting the key */
-	HMAC_Init_ex(ctx, NULL, 0, NULL, NULL);
+       /* Reinitialize HMAC calculation without resetting the key */
+       HMAC_Init_ex(ctx, NULL, 0, NULL, NULL);
 
-	/* Hash it */
-	while (len > 0) {
-		uint32_t seglen = 0; /* GCC */
-		void *mapaddr = odp_packet_offset(pkt, offset, &seglen, NULL);
-		uint32_t maclen = len > seglen ? seglen : len;
+       /* Hash it */
+       while (len > 0) {
+               uint32_t seglen = 0; /* GCC */
+               void *mapaddr = odp_packet_offset(pkt, offset, &seglen, NULL);
+               uint32_t maclen = len > seglen ? seglen : len;
 
-		HMAC_Update(ctx, mapaddr, maclen);
-		offset  += maclen;
-		len     -= maclen;
-	}
+               HMAC_Update(ctx, mapaddr, maclen);
+               offset  += maclen;
+               len     -= maclen;
+       }
 
-	HMAC_Final(ctx, hash, NULL);
+       HMAC_Final(ctx, hash, NULL);
 }
 
 static void do_pad_xor(uint8_t *out, const uint8_t *in, int len)
@@ -339,67 +339,26 @@ static void xor_block(uint32_t *res, const uint32_t *op)
 }
 
 static
-odp_crypto_alg_err_t aesxcbc_gen(odp_packet_t pkt,
-			      const odp_crypto_packet_op_param_t *param,
-			      odp_crypto_generic_session_t *session)
+void packet_aes_xcbc_mac(odp_packet_t pkt,
+		 const odp_crypto_packet_op_param_t *param,
+		 odp_crypto_generic_session_t *session,
+		 uint8_t *hash)
 {
 	uint32_t e[4] = {0, 0, 0, 0};
-	uint8_t *data  = odp_packet_data(pkt);
-	uint8_t *icv   = data;
-	uint32_t len = param->auth_range.length;
-	uint8_t  hash_out[16];
-	EVP_CIPHER_CTX *ctx;
+	uint32_t offset = param->auth_range.offset;
+	uint32_t len   = param->auth_range.length;
+	uint32_t seglen = 0;;
 	int dummy_len = 0;
-	/* Adjust pointer for beginning of area to auth */
-	data += param->auth_range.offset;
-	icv  += param->hash_result_offset;
+	EVP_CIPHER_CTX *ctx;
+	void *mapaddr;
+	uint8_t *data;
+	
+	ODP_ASSERT(offset + len <= odp_packet_len(pkt));
 
 	ctx = EVP_CIPHER_CTX_new();
 	EVP_EncryptInit_ex(ctx, session->auth.evp_cipher, NULL, session->auth.key, NULL);
-	for (; len > AES_BLOCK_SIZE ; len -= AES_BLOCK_SIZE) {
-		xor_block(e, (const uint32_t *)data);
-		EVP_EncryptUpdate(ctx, (uint8_t *)e, &dummy_len, (uint8_t *)e, sizeof(e));
-		data += AES_BLOCK_SIZE;
-	}
-	do_pad_xor((uint8_t *)e, data, len);
-	if (len == AES_BLOCK_SIZE)
-		xor_block(e, (const uint32_t *)(session->auth.key + 16));
-	else
-		xor_block(e, (const uint32_t *)(session->auth.key + 16 * 2));
-
-	EVP_EncryptUpdate(ctx, hash_out, &dummy_len, (uint8_t *)e, sizeof(e));
-	EVP_CIPHER_CTX_free(ctx);
-	memcpy (icv, hash_out, 12);
-	
-	return ODP_CRYPTO_ALG_ERR_NONE;
-}
-
-static
-odp_crypto_alg_err_t aesxcbc_check(odp_packet_t pkt,
-			      const odp_crypto_packet_op_param_t *param,
-			      odp_crypto_generic_session_t *session)
-{
-	uint32_t e[4] = {0, 0, 0, 0};
-	uint8_t *data  = odp_packet_data(pkt);
-	uint8_t *icv   = data;
-	uint32_t len = param->auth_range.length;
-	uint8_t  hash_in[12];
-	uint8_t  hash_out[12];
-	EVP_CIPHER_CTX *ctx;
-	int dummy_len = 0;
-	
-	/* Adjust pointer for beginning of area to auth */
-	data += param->auth_range.offset;
-	icv  += param->hash_result_offset;
-	
-	/* Copy current value out and clear it before authentication */
-	memset(hash_in, 0, sizeof(hash_in));
-	memcpy(hash_in, icv, 12);
-	memset(hash_out, 0, sizeof(hash_out));
-
-	ctx = EVP_CIPHER_CTX_new();
-	EVP_EncryptInit_ex(ctx, session->auth.evp_cipher, NULL, session->auth.key, NULL);
-
+	mapaddr = odp_packet_offset(pkt, offset, &seglen, NULL);
+	data = (uint8_t *)mapaddr;
 	for (; len > AES_BLOCK_SIZE ; len -= AES_BLOCK_SIZE) {
 		xor_block(e, (const uint32_t *) data);
 		EVP_EncryptUpdate(ctx, (uint8_t *)e, &dummy_len, (uint8_t *)e, sizeof(e));
@@ -411,15 +370,56 @@ odp_crypto_alg_err_t aesxcbc_check(odp_packet_t pkt,
 	else
 		xor_block(e, (const uint32_t *)(session->auth.key + 16 * 2));
 
-	EVP_EncryptUpdate(ctx, hash_out, &dummy_len, (uint8_t *)e, sizeof(e));
+	EVP_EncryptUpdate(ctx, hash, &dummy_len, (uint8_t *)e, sizeof(e));
 	EVP_CIPHER_CTX_free(ctx);
+}
+
+
+static
+odp_crypto_alg_err_t auth_xcbcmac_gen(odp_packet_t pkt,
+				   const odp_crypto_packet_op_param_t *param,
+				   odp_crypto_generic_session_t *session)
+{
+	uint8_t  hash[EVP_MAX_MD_SIZE];
+
+	/* Hash it */
+	packet_aes_xcbc_mac(pkt, param, session, hash);
+
+	/* Copy to the output location */
+	odp_packet_copy_from_mem(pkt,
+				 param->hash_result_offset,
+				 session->p.auth_digest_len,
+				 hash);
+
+	return ODP_CRYPTO_ALG_ERR_NONE;
+}
+
+static
+odp_crypto_alg_err_t auth_xcbcmac_check(odp_packet_t pkt,
+				     const odp_crypto_packet_op_param_t *param,
+				     odp_crypto_generic_session_t *session)
+{
+	uint32_t bytes = session->p.auth_digest_len;
+	uint8_t  hash_in[EVP_MAX_MD_SIZE];
+	uint8_t  hash_out[EVP_MAX_MD_SIZE];
+
+	/* Copy current value out and clear it before authentication */
+	odp_packet_copy_to_mem(pkt, param->hash_result_offset,
+			       bytes, hash_in);
+
+	_odp_packet_set_data(pkt, param->hash_result_offset,
+			     0, bytes);
+
+	/* Hash it */
+	packet_aes_xcbc_mac(pkt, param, session, hash_out);
+
 	/* Verify match */
-	if (0 != memcmp(hash_in, hash_out, 12))
+	if (0 != memcmp(hash_in, hash_out, bytes))
 		return ODP_CRYPTO_ALG_ERR_ICV_CHECK;
 
 	/* Matched */
 	return ODP_CRYPTO_ALG_ERR_NONE;
-}	
+}
 
 static int process_aesxcbc_param(odp_crypto_generic_session_t *session,
 				const EVP_CIPHER *cipher)
@@ -432,9 +432,9 @@ static int process_aesxcbc_param(odp_crypto_generic_session_t *session,
 	
 	/* Set function */
 	if (ODP_CRYPTO_OP_ENCODE == session->p.op)
-		session->auth.func = aesxcbc_gen;
+		session->auth.func = auth_xcbcmac_gen;
 	else
-		session->auth.func = aesxcbc_check;
+		session->auth.func = auth_xcbcmac_check;
 	session->auth.init = null_crypto_init_routine;
 
 	session->auth.evp_cipher = cipher;
