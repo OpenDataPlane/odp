@@ -34,18 +34,18 @@ build:
 
   ci:
     - mkdir -p $HOME/odp-shmdir
+    - export CI=true ODP_SHM_DIR=$HOME/odp-shmdir ODP_TEST_OUT_XML=yes
     - ./bootstrap
-    - if [ "${CC#clang}" != "${CC}" ] ; then export CXX="${CC/clang/clang++}"; fi
-    - if [ "${CC#clang}" != "${CC}" ] ; then export CFLAGS="-fPIC"; fi
+    - if [ "${CC}" == "clang" ] ; then export CXX=clang LD=clang CLFAGS="-fPIC"; fi
     - ./configure $CONF
     - make -j $(nproc)
-    - sudo env CI=true ODP_SHM_DIR=$HOME/odp-shmdir ODP_TEST_OUT_XML=yes ODP_SCHEDULER=basic make check
+    - sudo -E ODP_SCHEDULER=basic make check
     - ./scripts/shippable-post.sh basic
-    - sudo env CI=true ODP_SHM_DIR=$HOME/odp-shmdir ODP_TEST_OUT_XML=yes ODP_SCHEDULER=sp make check
+    - sudo -E ODP_SCHEDULER=sp make check
     - ./scripts/shippable-post.sh sp
-    - sudo env CI=true ODP_SHM_DIR=$HOME/odp-shmdir ODP_TEST_OUT_XML=yes ODP_SCHEDULER=iquery make check
+    - sudo -E ODP_SCHEDULER=iquery make check
     - ./scripts/shippable-post.sh iquery
-    - sudo env CI=true ODP_SHM_DIR=$HOME/odp-shmdir ODP_TEST_OUT_XML=yes ODP_SCHEDULER=scalable make check
+    - sudo -E ODP_SCHEDULER=scalable make check
     - ./scripts/shippable-post.sh scalable
     - rm -rf $HOME/odp-shmdir
 
