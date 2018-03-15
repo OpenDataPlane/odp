@@ -4,6 +4,7 @@ TESTS_ENVIRONMENT += TEST_DIR=${builddir}
 
 EXECUTABLES = odp_bench_packet \
 	      odp_crypto \
+	      odp_ipsec \
 	      odp_pktio_perf
 
 COMPILE_ONLY = odp_l2fwd \
@@ -29,6 +30,7 @@ bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 
 odp_bench_packet_SOURCES = odp_bench_packet.c
 odp_crypto_SOURCES = odp_crypto.c
+odp_ipsec_SOURCES = odp_ipsec.c
 odp_pktio_ordered_SOURCES = odp_pktio_ordered.c dummy_crc.h
 odp_sched_latency_SOURCES = odp_sched_latency.c
 odp_scheduling_SOURCES = odp_scheduling.c
