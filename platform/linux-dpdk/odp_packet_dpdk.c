@@ -337,6 +337,8 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 	uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
 	struct rte_eth_rss_conf rss_conf;
 	uint16_t hw_ip_checksum = 0;
+	struct rte_eth_dev_info dev_info;
+	struct rte_eth_rxconf *rxconf = NULL;
 
 	/* DPDK doesn't support nb_rx_q/nb_tx_q being 0 */
 	if (!pktio_entry->s.num_in_queue)
@@ -395,10 +397,13 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 		ODP_DBG("Descriptors scaled down. RX: %u TX: %u pool: %u\n",
 			nb_rxd, nb_txd, pool->params.pkt.num);
 	}
-	/* init one RX queue on each port */
+	/* init RX queues */
+	rte_eth_dev_info_get(port_id, &dev_info);
+	rxconf = &dev_info.default_rxconf;
+	rxconf->rx_drop_en = 1;
 	for (i = 0; i < nbrxq; i++) {
 		ret = rte_eth_rx_queue_setup(port_id, i, nb_rxd, socket_id,
-					     NULL, pool->rte_mempool);
+					     rxconf, pool->rte_mempool);
 		if (ret < 0) {
 			ODP_ERR("rxq:err=%d, port=%" PRIu16 "\n", ret, port_id);
 			return -1;
@@ -409,7 +414,6 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 
 	/* init one TX queue on each port */
 	for (i = 0; i < nbtxq; i++) {
-		struct rte_eth_dev_info dev_info;
 		const struct rte_eth_txconf *txconf = NULL;
 		int ip_ena  = pktio_entry->s.config.pktout.bit.ipv4_chksum_ena;
 		int udp_ena = pktio_entry->s.config.pktout.bit.udp_chksum_ena;
