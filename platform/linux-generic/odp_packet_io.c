@@ -1170,12 +1170,14 @@ void odp_pktio_print(odp_pktio_t hdl)
 	len += snprintf(&str[len], n - len,
 			"pktio\n");
 	len += snprintf(&str[len], n - len,
-			"  handle            %" PRIu64 "\n",
-			odp_pktio_to_u64(hdl));
-	len += snprintf(&str[len], n - len,
 			"  name              %s\n", entry->s.name);
 	len += snprintf(&str[len], n - len,
 			"  type              %s\n", entry->s.ops->name);
+	len += snprintf(&str[len], n - len,
+			"  index             %i\n", _odp_pktio_index(hdl));
+	len += snprintf(&str[len], n - len,
+			"  handle (u64)      %" PRIu64 "\n",
+			odp_pktio_to_u64(hdl));
 	len += snprintf(&str[len], n - len,
 			"  state             %s\n",
 			entry->s.state ==  PKTIO_STATE_STARTED ? "start" :
