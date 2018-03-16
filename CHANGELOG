@@ -1,3 +1,52 @@
+== OpenDataPlane (1.18.0.1)
+=== Summary of Changes
+ODP v1.18.0.1 is a fix level for Tiger Moth Release Candidate 2 (RC 2).
+It incorporates fixes and performance / serviceability enhancements but no
+API changes.
+
+==== APIs
+No changes for this release.
+
+==== Corrected Crypto Functionality
+This release corrects a merge issue with crypto functionality that resulted in
+incorrect crypto operation for certain cipher suites.
+
+==== Runtime Configuration
+Introduces a runtime configuration file that can be used by applications to
+set selected ODP configuration parameters dynamically at runtime rather than
+at `configure` time. At present this is used to configure parameters needed
+by DPDK PMDs when using PktIO interfaces in the DPDK class. The intention is
+to expand the use of this file over time to allow more dynamic control
+of other aspect of ODP runtime configuration.
+
+For the ODP Reference Implementation, a template configuration file is
+provided in `config/odp-linux.conf`. Introduction of this support generates
+an additional dependency on the `libconfig` package, which must be present to
+build ODP.
+
+==== IPsec Traffic Flow Confidentiality (TFC) Corrections
+A few missing implementation features associated with TFC packet generation
+have been added in this fix level. This support is now functionally complete in
+the ODP Reference Implementation.
+
+==== Debug Print Improvements
+The information provided in debug builds of the Reference Implementation is
+improved to print the interface name on open, start, stop, and close calls.
+The driver name and number of queues are also printed to ease verification of
+correct configuration.
+
+==== Default Scheduler Performance Improvements
+The performance of the default scheduler in the Reference Implementation is
+significantly improved in providing scheduled access to PktIO queues. Scheduled
+I/O now operates within 10% of the performance achievable using Direct I/O,
+while providing incomparably better scalability in multicore environments.
+
+==== `.so` Numbering Changes
+In preparation for the Tiger Moth official release, ODP has adopted a
+simplified `.so` naming scheme, which is introduced here. ODP `.so` numbers
+are now tied to the ODP release number since ODP does not promise backward
+compatibility across release boundaries.
+
 == OpenDataPlane (1.18.0.0)
 === New Features
 ODP v1.18.0.0 is Tiger Moth Release Candidate 2 (RC 2). It completes the new
