@@ -6,6 +6,7 @@ compiler:
 
 env:
     - CONF="--disable-test-perf --disable-test-perf-proc"
+    - CONF="--disable-test-perf --disable-test-perf-proc CFLAGS=-O0"
     - CONF="--disable-abi-compat --disable-test-perf --disable-test-perf-proc"
     # - CONF="--enable-schedule-sp"
     # - CONF="--enable-schedule-iquery"
@@ -36,6 +37,7 @@ build:
     - mkdir -p $HOME/odp-shmdir
     - ./bootstrap
     - if [ "${CC#clang}" != "${CC}" ] ; then export CXX="${CC/clang/clang++}"; fi
+    - echo CC=${CC} ./configure $CONF
     - ./configure $CONF
     - make -j $(nproc)
     - sudo env CI=true ODP_SHM_DIR=$HOME/odp-shmdir ODP_TEST_OUT_XML=yes ODP_SCHEDULER=basic make check
