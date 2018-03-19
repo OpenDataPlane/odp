@@ -9,7 +9,8 @@
 
 #include <example_debug.h>
 
-#if __SIZEOF_POINTER__ == 8 && defined(__aarch64__)
+/* todo fix clang hung bug on aarch64 */
+#if __SIZEOF_POINTER__ == 8 && defined(__aarch64_disable__)
 static inline __int128 lld(__int128 *var, int mo)
 {
 	__int128 old;
