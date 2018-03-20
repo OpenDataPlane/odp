@@ -27,7 +27,6 @@
 /* GNU lib C */
 #include <getopt.h>
 
-#define MAX_WORKERS	  64		/**< Maximum number of worker threads */
 #define MAX_QUEUES	  4096		/**< Maximum number of queues */
 #define EVENT_POOL_SIZE	  (1024 * 1024) /**< Event pool size */
 #define TEST_ROUNDS (4 * 1024 * 1024)	/**< Test rounds for each thread */
@@ -105,7 +104,8 @@ typedef union ODP_ALIGNED_CACHE {
 
 /** Test global variables */
 typedef struct {
-	core_stat_t	 core_stat[MAX_WORKERS]; /**< Core specific stats */
+	/** Core specific stats */
+	core_stat_t	 core_stat[ODP_THREAD_COUNT_MAX];
 	odp_barrier_t    barrier; /**< Barrier for thread synchronization */
 	odp_pool_t       pool;	  /**< Pool for allocating test events */
 	test_args_t      args;	  /**< Parsed command line arguments */
@@ -617,8 +617,9 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	}
 
 	/* Make sure arguments are valid */
-	if (args->cpu_count > MAX_WORKERS)
-		args->cpu_count = MAX_WORKERS;
+	/* -1 for main thread */
+	if (args->cpu_count > ODP_THREAD_COUNT_MAX - 1)
+		args->cpu_count = ODP_THREAD_COUNT_MAX - 1;
 	if (args->prio[LO_PRIO].queues > MAX_QUEUES)
 		args->prio[LO_PRIO].queues = MAX_QUEUES;
 	if (args->prio[HI_PRIO].queues > MAX_QUEUES)
