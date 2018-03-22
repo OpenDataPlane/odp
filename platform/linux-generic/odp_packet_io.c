@@ -376,8 +376,10 @@ int odp_pktio_close(odp_pktio_t hdl)
 	int res;
 
 	entry = get_pktio_entry(hdl);
-	if (entry == NULL)
+	if (entry == NULL) {
+		ODP_ERR("Bad handle\n");
 		return -1;
+	}
 
 	if (entry->s.state == PKTIO_STATE_STARTED) {
 		ODP_DBG("Missing odp_pktio_stop() before close.\n");
@@ -416,8 +418,10 @@ int odp_pktio_config(odp_pktio_t hdl, const odp_pktio_config_t *config)
 	int res = 0;
 
 	entry = get_pktio_entry(hdl);
-	if (!entry)
+	if (!entry) {
+		ODP_ERR("Bad handle\n");
 		return -1;
+	}
 
 	if (config == NULL) {
 		odp_pktio_config_init(&default_config);
@@ -466,12 +470,15 @@ int odp_pktio_start(odp_pktio_t hdl)
 	int res = 0;
 
 	entry = get_pktio_entry(hdl);
-	if (!entry)
+	if (!entry) {
+		ODP_ERR("Bad handle\n");
 		return -1;
+	}
 
 	lock_entry(entry);
 	if (entry->s.state == PKTIO_STATE_STARTED) {
 		unlock_entry(entry);
+		ODP_ERR("Already started\n");
 		return -1;
 	}
 	if (entry->s.ops->start)
@@ -513,8 +520,10 @@ static int _pktio_stop(pktio_entry_t *entry)
 	int res = 0;
 	odp_pktin_mode_t mode = entry->s.param.in_mode;
 
-	if (entry->s.state != PKTIO_STATE_STARTED)
+	if (entry->s.state != PKTIO_STATE_STARTED) {
+		ODP_ERR("Not started\n");
 		return -1;
+	}
 
 	if (entry->s.ops->stop)
 		res = entry->s.ops->stop(entry);
@@ -536,8 +545,10 @@ int odp_pktio_stop(odp_pktio_t hdl)
 	int res;
 
 	entry = get_pktio_entry(hdl);
-	if (!entry)
+	if (!entry) {
+		ODP_ERR("Bad handle\n");
 		return -1;
+	}
 
 	lock_entry(entry);
 	res = _pktio_stop(entry);
@@ -1159,12 +1170,14 @@ void odp_pktio_print(odp_pktio_t hdl)
 	len += snprintf(&str[len], n - len,
 			"pktio\n");
 	len += snprintf(&str[len], n - len,
-			"  handle            %" PRIu64 "\n",
-			odp_pktio_to_u64(hdl));
-	len += snprintf(&str[len], n - len,
 			"  name              %s\n", entry->s.name);
 	len += snprintf(&str[len], n - len,
 			"  type              %s\n", entry->s.ops->name);
+	len += snprintf(&str[len], n - len,
+			"  index             %i\n", _odp_pktio_index(hdl));
+	len += snprintf(&str[len], n - len,
+			"  handle (u64)      %" PRIu64 "\n",
+			odp_pktio_to_u64(hdl));
 	len += snprintf(&str[len], n - len,
 			"  state             %s\n",
 			entry->s.state ==  PKTIO_STATE_STARTED ? "start" :
