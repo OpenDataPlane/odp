@@ -648,11 +648,7 @@ static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
 	if (!ipv4_chksum_pkt && !udp_chksum_pkt && !tcp_chksum_pkt)
 		return;
 
-	if (pkt_p->l4_offset == ODP_PACKET_OFFSET_INVALID)
-		return;
-
 	mbuf->l2_len = pkt_p->l3_offset - pkt_p->l2_offset;
-	mbuf->l3_len = pkt_p->l4_offset - pkt_p->l3_offset;
 
 	if (l3_proto_v4)
 		mbuf->ol_flags = PKT_TX_IPV4;
@@ -663,7 +659,13 @@ static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
 		mbuf->ol_flags |=  PKT_TX_IP_CKSUM;
 
 		((struct ipv4_hdr *)l3_hdr)->hdr_checksum = 0;
+		mbuf->l3_len = _ODP_IPV4HDR_IHL(*(uint8_t *)l3_hdr) * 4;
 	}
+
+	if (pkt_p->l4_offset == ODP_PACKET_OFFSET_INVALID)
+		return;
+
+	mbuf->l3_len = pkt_p->l4_offset - pkt_p->l3_offset;
 
 	l4_hdr = (void *)(mbuf_data + pkt_p->l4_offset);
 
