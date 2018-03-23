@@ -661,9 +661,8 @@ static int process_cipher_param(odp_crypto_generic_session_t *session,
 		return -1;
 
 	/* Verify IV len is correct */
-	if (!((0 == session->p.cipher_iv.length) ||
-	      ((uint32_t)EVP_CIPHER_iv_length(cipher) ==
-	       session->p.cipher_iv.length)))
+	if ((uint32_t)EVP_CIPHER_iv_length(cipher) !=
+	       session->p.cipher_iv.length)
 		return -1;
 
 	session->cipher.evp_cipher = cipher;
@@ -791,6 +790,10 @@ static int process_aes_gcm_param(odp_crypto_generic_session_t *session,
 	    session->p.cipher_key.length)
 		return -1;
 
+	/* Verify IV len is correct */
+	if (12 != session->p.cipher_iv.length)
+		return -1;
+
 	memcpy(session->cipher.key_data, session->p.cipher_key.data,
 	       session->p.cipher_key.length);
 
@@ -900,6 +903,10 @@ static int process_aes_gmac_param(odp_crypto_generic_session_t *session,
 	/* Verify Key len is valid */
 	if ((uint32_t)EVP_CIPHER_key_length(cipher) !=
 	    session->p.auth_key.length)
+		return -1;
+
+	/* Verify IV len is correct */
+	if (12 != session->p.auth_iv.length)
 		return -1;
 
 	memcpy(session->auth.key, session->p.auth_key.data,
@@ -1058,6 +1065,11 @@ static int process_aes_ccm_param(odp_crypto_generic_session_t *session,
 	    session->p.cipher_key.length)
 		return -1;
 
+	/* Verify IV len is correct */
+	if (11 != session->p.cipher_iv.length &&
+	    13 != session->p.cipher_iv.length)
+		return -1;
+
 	memcpy(session->cipher.key_data, session->p.cipher_key.data,
 	       session->p.cipher_key.length);
 
@@ -1078,6 +1090,10 @@ static int process_aes_ccm_param(odp_crypto_generic_session_t *session,
 static int process_auth_hmac_param(odp_crypto_generic_session_t *session,
 				   const EVP_MD *evp_md)
 {
+	/* Verify IV len is correct */
+	if (0 != session->p.auth_iv.length)
+		return -1;
+
 	/* Set function */
 	if (ODP_CRYPTO_OP_ENCODE == session->p.op)
 		session->auth.func = auth_hmac_gen;
@@ -1104,6 +1120,9 @@ static int process_auth_cmac_param(odp_crypto_generic_session_t *session,
 	/* Verify Key len is valid */
 	if ((uint32_t)EVP_CIPHER_key_length(cipher) !=
 	    session->p.auth_key.length)
+		return -1;
+
+	if (0 != session->p.auth_iv.length)
 		return -1;
 
 	/* Set function */
