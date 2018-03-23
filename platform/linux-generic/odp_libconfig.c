@@ -16,8 +16,6 @@
 #include <odp_libconfig_internal.h>
 #include <odp_libconfig_config.h>
 
-#define CONF_STR_NAME ((const char *)odp_linux_generic_conf)
-
 extern struct odp_global_data_s odp_global_data;
 
 int _odp_libconfig_init_global(void)
@@ -33,7 +31,7 @@ int _odp_libconfig_init_global(void)
 	config_init(config);
 	config_init(config_rt);
 
-	if (!config_read_string(config, CONF_STR_NAME)) {
+	if (!config_read_string(config, config_builtin)) {
 		ODP_ERR("Failed to read default config: %s(%d): %s\n",
 			config_error_file(config), config_error_line(config),
 			config_error_text(config));
