@@ -122,6 +122,12 @@ typedef struct {
 	 * Specified through -t argument.
 	 */
 	int tunnel;
+
+	/*
+	 * Use AH transformation.
+	 * Specified through -u argument.
+	 */
+	int ah;
 } ipsec_args_t;
 
 /*
@@ -778,6 +784,7 @@ static void usage(char *progname)
 	       "  -s, --schedule       Use scheduler for completion events.\n"
 	       "  -p, --poll           Poll completion queue for completion events.\n"
 	       "  -t, --tunnel         Use tunnel-mode IPsec transformation.\n"
+	       "  -u, --ah             Use AH transformation instead of ESP.\n"
 	       "  -h, --help	       Display help and exit.\n"
 	       "\n");
 }
@@ -798,10 +805,11 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 		{"poll", no_argument, NULL, 'p'},
 		{"schedule", no_argument, NULL, 's'},
 		{"tunnel", no_argument, NULL, 't'},
+		{"ah", no_argument, NULL, 'u'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+a:c:df:hi:m:nl:spt";
+	static const char *shortopts = "+a:c:df:hi:m:nl:sptu";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	odph_parse_options(argc, argv, shortopts, longopts);
@@ -813,6 +821,7 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 	cargs->payload_length = 0;
 	cargs->alg_config = NULL;
 	cargs->schedule = 0;
+	cargs->ah = 0;
 
 	opterr = 0; /* do not issue errors on helper options */
 
@@ -859,6 +868,9 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 			break;
 		case 't':
 			cargs->tunnel = 1;
+			break;
+		case 'u':
+			cargs->ah = 1;
 			break;
 		default:
 			break;
@@ -1011,6 +1023,10 @@ int main(int argc, char *argv[])
 		for (i = 0;
 		     i < (sizeof(algs_config) / sizeof(ipsec_alg_config_t));
 		     i++) {
+			if (cargs.ah &&
+			    algs_config[i].crypto.cipher_alg !=
+			    ODP_CIPHER_ALG_NULL)
+				continue;
 			run_measure_one_config(&cargs, algs_config + i);
 		}
 	}
