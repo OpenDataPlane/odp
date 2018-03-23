@@ -51,6 +51,30 @@ static uint8_t test_key24[24] = { 0x01, 0x02, 0x03, 0x04, 0x05,
 				  0x15, 0x16, 0x17, 0x18
 };
 
+static uint8_t test_key32[32] = { 0x01, 0x02, 0x03, 0x04, 0x05,
+				  0x06, 0x07, 0x08, 0x09, 0x0a,
+				  0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+				  0x10, 0x11, 0x12, 0x13, 0x14,
+				  0x15, 0x16, 0x17, 0x18, 0x19,
+				  0x1a, 0x1b, 0x1c, 0x1d, 0x1e,
+				  0x1f, 0x20,
+};
+
+static uint8_t test_key64[64] = { 0x01, 0x02, 0x03, 0x04, 0x05,
+				  0x06, 0x07, 0x08, 0x09, 0x0a,
+				  0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+				  0x10, 0x11, 0x12, 0x13, 0x14,
+				  0x15, 0x16, 0x17, 0x18, 0x19,
+				  0x1a, 0x1b, 0x1c, 0x1d, 0x1e,
+				  0x1f, 0x20, 0x21, 0x22, 0x23,
+				  0x24, 0x25, 0x26, 0x27, 0x28,
+				  0x29, 0x2a, 0x4b, 0x2c, 0x2d,
+				  0x2e, 0x2f, 0x30, 0x31, 0x32,
+				  0x33, 0x34, 0x55, 0x36, 0x37,
+				  0x38, 0x39, 0x5a, 0x3b, 0x3c,
+				  0x3d, 0x3e, 0x5f, 0x40,
+};
+
 /**
  * Structure that holds template for sa create call
  * for different algorithms supported by test
@@ -246,6 +270,32 @@ static ipsec_alg_config_t algs_config[] = {
 		},
 	},
 	{
+		.name = "aes-ctr-null",
+		.crypto = {
+			.cipher_alg = ODP_CIPHER_ALG_AES_CTR,
+			.cipher_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.auth_alg = ODP_AUTH_ALG_NULL
+		},
+	},
+	{
+		.name = "aes-ctr-hmac-sha1-96",
+		.crypto = {
+			.cipher_alg = ODP_CIPHER_ALG_AES_CTR,
+			.cipher_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.auth_alg = ODP_AUTH_ALG_SHA1_HMAC,
+			.auth_key = {
+				.data = test_key20,
+				.length = sizeof(test_key20)
+			},
+		},
+	},
+	{
 		.name = "null-hmac-sha1-96",
 		.crypto = {
 			.cipher_alg = ODP_CIPHER_ALG_NULL,
@@ -253,6 +303,43 @@ static ipsec_alg_config_t algs_config[] = {
 			.auth_key = {
 				.data = test_key20,
 				.length = sizeof(test_key20)
+			},
+		},
+	},
+	{
+		.name = "null-hmac-sha256-128",
+		.crypto = {
+			.cipher_alg = ODP_CIPHER_ALG_NULL,
+			.auth_alg = ODP_AUTH_ALG_SHA256_HMAC,
+			.auth_key = {
+				.data = test_key32,
+				.length = sizeof(test_key32)
+			},
+		},
+	},
+	{
+		.name = "null-hmac-sha512-256",
+		.crypto = {
+			.cipher_alg = ODP_CIPHER_ALG_NULL,
+			.auth_alg = ODP_AUTH_ALG_SHA512_HMAC,
+			.auth_key = {
+				.data = test_key64,
+				.length = sizeof(test_key64)
+			},
+		},
+	},
+	{
+		.name = "null-aes-gmac",
+		.crypto = {
+			.cipher_alg = ODP_CIPHER_ALG_NULL,
+			.auth_alg = ODP_AUTH_ALG_AES_GMAC,
+			.auth_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.cipher_key_extra = {
+				.data = test_salt,
+				.length = 4,
 			},
 		},
 	},
@@ -269,6 +356,36 @@ static ipsec_alg_config_t algs_config[] = {
 				.length = 4,
 			},
 			.auth_alg = ODP_AUTH_ALG_AES_GCM,
+		},
+	},
+	{
+		.name = "aes-ccm",
+		.crypto = {
+			.cipher_alg = ODP_CIPHER_ALG_AES_CCM,
+			.cipher_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.cipher_key_extra = {
+				.data = test_salt,
+				.length = 3,
+			},
+			.auth_alg = ODP_AUTH_ALG_AES_CCM,
+		},
+	},
+	{
+		.name = "chacha20-poly1305",
+		.crypto = {
+			.cipher_alg = ODP_CIPHER_ALG_CHACHA20_POLY1305,
+			.cipher_key = {
+				.data = test_key32,
+				.length = sizeof(test_key32)
+			},
+			.cipher_key_extra = {
+				.data = test_salt,
+				.length = 4,
+			},
+			.auth_alg = ODP_AUTH_ALG_CHACHA20_POLY1305,
 		},
 	},
 };
