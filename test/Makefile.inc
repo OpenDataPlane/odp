@@ -21,6 +21,8 @@ AM_CPPFLAGS = \
 
 # Do not link to DPDK twice in case of dynamic linking with ODP
 if STATIC_APPS
+LDADD += $(DPDK_LIBS_LT_STATIC)
+else
 LDADD += $(DPDK_LIBS_LT)
 endif
 
