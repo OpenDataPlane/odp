@@ -1711,6 +1711,9 @@ odp_packet_chksum_status_t odp_packet_l3_chksum_status(odp_packet_t pkt);
  * attempt. It depends on packet input (or IPSEC) configuration, packet content
  * and implementation capabilities if checksum check is attempted for a packet.
  *
+ * When a UDP packet does not have a checksum (e.g. checksum field of a UDP/IPv4
+ * packet is zero), checksum check result is ODP_PACKET_CHKSUM_OK.
+ *
  * @param pkt     Packet handle
  *
  * @return L4 checksum check status
