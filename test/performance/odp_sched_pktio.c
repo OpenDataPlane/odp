@@ -8,6 +8,8 @@
 #include <string.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <inttypes.h>
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
@@ -22,11 +24,17 @@
 #define BURST_SIZE        32
 #define CHECK_PERIOD      10000
 #define MAX_PKTIO_INDEXES 256
+#define TEST_PASSED_LIMIT 5000
 
 typedef struct {
 	int  worker_id;
 	void *test_global_ptr;
 } worker_arg_t;
+
+typedef struct ODP_ALIGNED_CACHE {
+	uint64_t rx_pkt;
+	uint64_t tx_pkt;
+} worker_stat_t;
 
 typedef struct {
 	volatile int  stop_workers;
@@ -35,6 +43,7 @@ typedef struct {
 	struct {
 		int num_worker;
 		int num_pktio;
+		uint8_t collect_stat;
 	} opt;
 
 	int max_workers;
@@ -65,6 +74,10 @@ typedef struct {
 
 	/* Maps pktio input index to pktio[] index for output */
 	uint8_t pktio_map[MAX_PKTIO_INDEXES];
+
+	worker_stat_t worker_stat[MAX_WORKERS];
+	uint64_t rx_pkt_sum;
+	uint64_t tx_pkt_sum;
 
 } test_global_t;
 
@@ -143,6 +156,11 @@ static int worker_thread(void *arg)
 
 		if (odp_unlikely(drop))
 			odp_packet_free_multi(&pkt[sent], drop);
+
+		if (odp_unlikely(test_global->opt.collect_stat)) {
+			test_global->worker_stat[worker_id].rx_pkt += num;
+			test_global->worker_stat[worker_id].tx_pkt += sent;
+		}
 	}
 
 	printf("Worker %i stopped\n", worker_id);
@@ -172,7 +190,8 @@ static void print_usage(const char *progname)
 	       "\n"
 	       "OPTIONS:\n"
 	       "  -i, --interface <name>  Packet IO interfaces (comma-separated, no spaces)\n"
-	       "  -c, --count             Worker thread count. Default: 1\n"
+	       "  -c, --count <number>    Worker thread count. Default: 1\n"
+	       "  -s, --stat              Collect statistics.\n"
 	       "  -h, --help              Display help and exit.\n\n",
 	       NO_PATH(progname));
 }
@@ -185,10 +204,11 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 	const struct option longopts[] = {
 		{"interface", required_argument, NULL, 'i'},
 		{"count",     required_argument, NULL, 'c'},
+		{"stat",      no_argument,       NULL, 's'},
 		{"help",      no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+i:c:h";
+	const char *shortopts =  "+i:c:sh";
 	int ret = 0;
 
 	test_global->opt.num_worker = 1;
@@ -236,6 +256,9 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 			break;
 		case 'c':
 			test_global->opt.num_worker = atoi(optarg);
+			break;
+		case 's':
+			test_global->opt.collect_stat = 1;
 			break;
 		case 'h':
 			print_usage(argv[0]);
@@ -342,7 +365,45 @@ static void print_config(test_global_t *test_global)
 	       "  num output queues:     %i\n",
 	       test_global->num_input_queues, test_global->num_output_queues);
 
+	printf("  collect statistics:    %u\n", test_global->opt.collect_stat);
+
 	printf("\n");
+}
+
+static void print_stat(test_global_t *test_global, uint64_t nsec)
+{
+	int i;
+	uint64_t rx, tx, drop;
+	uint64_t rx_sum = 0;
+	uint64_t tx_sum = 0;
+	double sec = 0.0;
+
+	printf("\nTest statistics\n");
+	printf("  worker           rx_pkt           tx_pkt          dropped\n");
+
+	for (i = 0; i < test_global->opt.num_worker; i++) {
+		rx = test_global->worker_stat[i].rx_pkt;
+		tx = test_global->worker_stat[i].tx_pkt;
+		rx_sum += rx;
+		tx_sum += tx;
+
+		printf("  %6i %16" PRIu64 " %16" PRIu64 " %16" PRIu64 "\n",
+		       i, rx, tx, rx - tx);
+	}
+
+	test_global->rx_pkt_sum = rx_sum;
+	test_global->tx_pkt_sum = tx_sum;
+	drop = rx_sum - tx_sum;
+
+	printf("         --------------------------------------------------\n");
+	printf("  total  %16" PRIu64 " %16" PRIu64 " %16" PRIu64 "\n\n",
+	       rx_sum, tx_sum, drop);
+
+	sec = nsec / 1000000000.0;
+	printf("  Total test time: %.2f sec\n", sec);
+	printf("  Rx packet rate:  %.2f pps\n", rx_sum / sec);
+	printf("  Tx packet rate:  %.2f pps\n", tx_sum / sec);
+	printf("  Drop rate:       %.2f pps\n\n", drop / sec);
 }
 
 static int open_pktios(test_global_t *test_global)
@@ -628,7 +689,9 @@ int main(int argc, char *argv[])
 	odp_instance_t instance;
 	odp_init_t init;
 	odp_shm_t shm;
+	odp_time_t t1, t2;
 	odph_odpthread_t thread[MAX_WORKERS];
+	int ret = 0;
 
 	signal(SIGINT, sig_handler);
 
@@ -696,12 +759,27 @@ int main(int argc, char *argv[])
 		odp_mb_full();
 	}
 
+	t1 = odp_time_local();
+
 	wait_workers(thread, test_global);
+
+	t2 = odp_time_local();
 
 quit:
 	stop_pktios(test_global);
 	empty_queues();
 	close_pktios(test_global);
+
+	if (test_global->opt.collect_stat) {
+		print_stat(test_global, odp_time_diff_ns(t2, t1));
+
+		/* Encode return value for validation test usage. */
+		if (test_global->rx_pkt_sum > TEST_PASSED_LIMIT)
+			ret += 1;
+
+		if (test_global->tx_pkt_sum > TEST_PASSED_LIMIT)
+			ret += 2;
+	}
 
 	if (odp_shm_free(shm)) {
 		printf("Error: shm free failed.\n");
@@ -718,5 +796,5 @@ quit:
 		return -1;
 	}
 
-	return 0;
+	return ret;
 }
