@@ -1,5 +1,5 @@
-# ODP_LIBCONFIG
-# -------------
+# ODP_LIBCONFIG(PLATFORM)
+# -----------------------
 AC_DEFUN([ODP_LIBCONFIG],
 [dnl
 ##########################################################################
@@ -18,12 +18,12 @@ AS_IF([test -z "$OD"], [AC_MSG_ERROR([Could not find 'od'])])
 # Create a header file odp_libconfig_config.h which containins null
 # terminated hex dump of odp-linux.conf
 ##########################################################################
-AC_CONFIG_COMMANDS([platform/${with_platform}/include/odp_libconfig_config.h],
-[mkdir -p platform/${with_platform}/include
+AC_CONFIG_COMMANDS([platform/$1/include/odp_libconfig_config.h],
+[mkdir -p platform/$1/include
    (echo "static const char config_builtin[[]] = {"; \
-     $OD -An -v -tx1 < ${srcdir}/config/odp-${with_platform}.conf | \
+     $OD -An -v -tx1 < ${srcdir}/config/odp-$1.conf | \
      $SED -e 's/[[0-9a-f]]\+/0x\0,/g' ; \
      echo "0x00 };") > \
-   platform/${with_platform}/include/odp_libconfig_config.h],
+   platform/$1/include/odp_libconfig_config.h],
  [with_platform=$with_platform OD=$OD SED=$SED])
 ]) # ODP_LIBCONFIG
