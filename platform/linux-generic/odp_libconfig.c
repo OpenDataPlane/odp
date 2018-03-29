@@ -97,3 +97,41 @@ int _odp_libconfig_lookup_int(const char *path, int *value)
 
 	return  (ret_def == CONFIG_TRUE || ret_rt == CONFIG_TRUE) ? 1 : 0;
 }
+
+static int lookup_int(config_t *cfg,
+		      const char *base_path,
+		      const char *local_path,
+		      const char *name,
+		      int *value)
+{
+	char path[256];
+
+	if (local_path) {
+		snprintf(path, sizeof(path), "%s.%s.%s", base_path,
+			 local_path, name);
+		if (config_lookup_int(cfg, path, value) == CONFIG_TRUE)
+			return 1;
+	}
+
+	snprintf(path, sizeof(path), "%s.%s", base_path, name);
+	if (config_lookup_int(cfg, path, value) == CONFIG_TRUE)
+		return 1;
+
+	return 0;
+}
+
+int _odp_libconfig_lookup_ext_int(const char *base_path,
+				  const char *local_path,
+				  const char *name,
+				  int *value)
+{
+	if (lookup_int(&odp_global_data.libconfig_runtime,
+		       base_path, local_path, name, value))
+		return 1;
+
+	if (lookup_int(&odp_global_data.libconfig_default,
+		       base_path, local_path, name, value))
+		return 1;
+
+	return 0;
+}
