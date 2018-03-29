@@ -17,6 +17,12 @@
 extern "C" {
 #endif
 
+enum libconfig_opt_type {
+	LIBCONFIG_OPT_NOT_FOUND = 0,
+	LIBCONFIG_OPT_DEFAULT,
+	LIBCONFIG_OPT_RUNTIME
+};
+
 int _odp_libconfig_init_global(void);
 int _odp_libconfig_term_global(void);
 

@@ -85,15 +85,17 @@ int _odp_libconfig_term_global(void)
 
 int _odp_libconfig_lookup_int(const char *path, int *value)
 {
-	int ret_def = CONFIG_FALSE;
-	int ret_rt = CONFIG_FALSE;
+	int ret;
 
-	ret_def = config_lookup_int(&odp_global_data.libconfig_default, path,
-				    value);
+	ret = config_lookup_int(&odp_global_data.libconfig_runtime, path,
+				value);
+	if (ret == CONFIG_TRUE)
+		return LIBCONFIG_OPT_RUNTIME;
 
-	/* Runtime option overrides default value */
-	ret_rt = config_lookup_int(&odp_global_data.libconfig_runtime, path,
-				   value);
+	ret = config_lookup_int(&odp_global_data.libconfig_default, path,
+				value);
+	if (ret == CONFIG_TRUE)
+		return LIBCONFIG_OPT_DEFAULT;
 
-	return  (ret_def == CONFIG_TRUE || ret_rt == CONFIG_TRUE) ? 1 : 0;
+	return LIBCONFIG_OPT_NOT_FOUND;
 }

@@ -99,19 +99,36 @@ static int lookup_opt(const char *path, const char *drv_name, int *val)
 {
 	const char *base = "pktio_dpdk";
 	char opt_path[256];
-	int ret = 0;
+	int drv_ret = 0;
+	int def_ret = 0;
+	int drv_val = 0;
+	int def_val = 0;
+
+	/* Driver specific option */
+	snprintf(opt_path, sizeof(opt_path), "%s.%s.%s", base, drv_name, path);
+	drv_ret = _odp_libconfig_lookup_int(opt_path, &drv_val);
+	if (drv_ret == LIBCONFIG_OPT_RUNTIME) {
+		*val = drv_val;
+		return 1;
+	}
 
 	/* Default option */
 	snprintf(opt_path, sizeof(opt_path), "%s.%s", base, path);
-	ret += _odp_libconfig_lookup_int(opt_path, val);
+	def_ret = _odp_libconfig_lookup_int(opt_path, &def_val);
+	if (def_ret == LIBCONFIG_OPT_RUNTIME) {
+		*val = def_val;
+		return 1;
+	}
 
-	/* Driver specific option overrides default option */
-	snprintf(opt_path, sizeof(opt_path), "%s.%s.%s", base, drv_name, path);
-	ret += _odp_libconfig_lookup_int(opt_path, val);
+	if (drv_ret == LIBCONFIG_OPT_DEFAULT) {
+		*val = drv_val;
+		return 1;
+	} else if (def_ret == LIBCONFIG_OPT_DEFAULT) {
+		*val = def_val;
+		return 1;
+	}
 
-	if (ret == 0)
-		ODP_ERR("Unable to find DPDK configuration option: %s\n", path);
-	return ret;
+	return 0;
 }
 
 static int init_options(pktio_entry_t *pktio_entry,
