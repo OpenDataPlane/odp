@@ -95,22 +95,16 @@ void refer_constructors(void)
 }
 #endif
 
-static int lookup_opt(const char *path, const char *drv_name, int *val)
+static int lookup_opt(const char *opt_name, const char *drv_name, int *val)
 {
 	const char *base = "pktio_dpdk";
-	char opt_path[256];
-	int ret = 0;
+	int ret;
 
-	/* Default option */
-	snprintf(opt_path, sizeof(opt_path), "%s.%s", base, path);
-	ret += _odp_libconfig_lookup_int(opt_path, val);
-
-	/* Driver specific option overrides default option */
-	snprintf(opt_path, sizeof(opt_path), "%s.%s.%s", base, drv_name, path);
-	ret += _odp_libconfig_lookup_int(opt_path, val);
-
+	ret = _odp_libconfig_lookup_ext_int(base, drv_name, opt_name, val);
 	if (ret == 0)
-		ODP_ERR("Unable to find DPDK configuration option: %s\n", path);
+		ODP_ERR("Unable to find DPDK configuration option: %s\n",
+			opt_name);
+
 	return ret;
 }
 
