@@ -3,6 +3,7 @@
 odp_atomic
 odp_bench_packet
 odp_crypto
+odp_ipsec
 odp_l2fwd
 odp_pktio_ordered
 odp_pktio_perf
