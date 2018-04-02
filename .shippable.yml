@@ -15,11 +15,6 @@ env:
     # - CROSS_ARCH="powerpc"
     # - CROSS_ARCH="i386"
 
-matrix:
-  exclude:
-    - compiler: clang
-      env: CONF="--disable-abi-compat --disable-test-perf --disable-test-perf-proc"
-
 build:
   pre_ci:
     # use Dockerfile to install additional CI dependencies
