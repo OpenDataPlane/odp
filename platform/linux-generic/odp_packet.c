@@ -2266,6 +2266,64 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 					 seg_len, layer, ethtype);
 }
 
+static inline int packet_ipv4_chksum(odp_packet_t pkt,
+				     uint32_t offset,
+				     _odp_ipv4hdr_t *ip,
+				     odp_u16sum_t *chksum)
+{
+	unsigned int nleft = _ODP_IPV4HDR_IHL(ip->ver_ihl) * 4;
+	uint16_t buf[nleft / 2];
+	int res;
+
+	if (odp_unlikely(nleft < sizeof(*ip)))
+		return -1;
+	ip->chksum = 0;
+	memcpy(buf, ip, sizeof(*ip));
+	res = odp_packet_copy_to_mem(pkt, offset + sizeof(*ip),
+				     nleft - sizeof(*ip),
+				     buf + sizeof(*ip) / 2);
+	if (odp_unlikely(res < 0))
+		return res;
+
+	*chksum = ~odp_chksum_ones_comp16(buf, nleft);
+
+	return 0;
+}
+
+#define _ODP_IPV4HDR_CSUM_OFFSET ODP_OFFSETOF(_odp_ipv4hdr_t, chksum)
+
+/**
+ * Calculate and fill in IPv4 checksum
+ *
+ * @param pkt  ODP packet
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int _odp_packet_ipv4_chksum_insert(odp_packet_t pkt)
+{
+	uint32_t offset;
+	_odp_ipv4hdr_t ip;
+	odp_u16sum_t chksum;
+	int res;
+
+	offset = odp_packet_l3_offset(pkt);
+	if (offset == ODP_PACKET_OFFSET_INVALID)
+		return -1;
+
+	res = odp_packet_copy_to_mem(pkt, offset, sizeof(ip), &ip);
+	if (odp_unlikely(res < 0))
+		return res;
+
+	res = packet_ipv4_chksum(pkt, offset, &ip, &chksum);
+	if (odp_unlikely(res < 0))
+		return res;
+
+	return odp_packet_copy_from_mem(pkt,
+					offset + _ODP_IPV4HDR_CSUM_OFFSET,
+					2, &chksum);
+}
+
 /**
  * Simple packet parser
  */
