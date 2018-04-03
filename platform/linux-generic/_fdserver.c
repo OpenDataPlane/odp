@@ -559,8 +559,11 @@ static void wait_requests(int sock)
 		addr_sz = sizeof(remote);
 		c_socket = accept(sock, (struct sockaddr *)&remote, &addr_sz);
 		if (c_socket == -1) {
-				ODP_ERR("wait_requests: %s\n", strerror(errno));
-				return;
+			if (errno == EINTR)
+				continue;
+
+			ODP_ERR("wait_requests: %s\n", strerror(errno));
+			return;
 		}
 
 		if (handle_request(c_socket))
