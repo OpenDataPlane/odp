@@ -312,7 +312,7 @@ appropriate type represented by the event.
 A queue is a message passing channel that holds events.  Events can be
 added to a queue via enqueue operations or removed from a queue via dequeue
 operations. The endpoints of a queue will vary depending on how it is used.
-Queues come in two major types: polled and scheduled, which will be
+Queues come in two major types: plain and scheduled, which will be
 discussed in more detail when the event model is introduced. Queues may also
 have an associated context, which represents a persistent state for all
 events that make use of it. These states are what permit threads to perform
@@ -964,23 +964,23 @@ Queues are the fundamental event sequencing mechanism provided by ODP and all
 ODP applications make use of them either explicitly or implicitly. Queues are
 created via the 'odp_queue_create()' API that returns a handle of type
 `odp_queue_t` that is used to refer to this queue in all subsequent APIs that
-reference it. Queues have one of two ODP-defined _types_, POLL, and SCHED that
-determine how they are used. POLL queues directly managed by the ODP
+reference it. Queues have one of two ODP-defined _types_, PLAIN, and SCHED that
+determine how they are used. PLAIN queues directly managed by the ODP
 application while SCHED queues make use of the *ODP scheduler* to provide
 automatic scalable dispatching and synchronization services.
 
-.Operations on POLL queues
+.Operations on PLAIN queues
 [source,c]
 ----
-odp_queue_t poll_q1 = odp_queue_create("poll queue 1", ODP_QUEUE_TYPE_POLL, NULL);
-odp_queue_t poll_q2 = odp_queue_create("poll queue 2", ODP_QUEUE_TYPE_POLL, NULL);
+odp_queue_t plain_q1 = odp_queue_create("poll queue 1", ODP_QUEUE_TYPE_PLAIN, NULL);
+odp_queue_t plain_q2 = odp_queue_create("poll queue 2", ODP_QUEUE_TYPE_PLAIN, NULL);
 ...
-odp_event_t ev = odp_queue_deq(poll_q1);
+odp_event_t ev = odp_queue_deq(plain_q1);
 ...do something
-int rc = odp_queue_enq(poll_q2, ev);
+int rc = odp_queue_enq(plain_q2, ev);
 ----
 
-The key distinction is that dequeueing events from POLL queues is an
+The key distinction is that dequeueing events from PLAIN queues is an
 application responsibility while dequeueing events from SCHED queues is the
 responsibility of the ODP scheduler.
 
