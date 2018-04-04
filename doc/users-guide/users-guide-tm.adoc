@@ -10,7 +10,7 @@ A given platform supporting this TM API could support one or more pure hardware
 based packet scheduling systems, one or more pure software based systems or one
 or more hybrid systems - where because of hardware constraints some of the
 packet scheduling is done in hardware and some is done in software.  In
-addition, there may also be additional API's beyond those described here for:
+addition, there may also be additional APIs beyond those described here for:
 
 - controlling advanced capabilities supported by specific hardware, software
 or hybrid subsystems
@@ -84,7 +84,7 @@ traffic, while allowing for less idle outputs.
 
 ==== Weighted Fair Queuing
 
-Weighted Fair Queuing (WFQ) is used to arbitrate amongst multiple input
+Weighted Fair Queuing (WFQ) is used to arbitrate among multiple input
 packets with the same priority.  Each input can be assigned a weight in the
 range MIN_WFQ_WEIGHT..MAX_WFQ_WEIGHT (nominally 1..255) that affects the way
 the algorithm chooses the next packet.  If all of the weights are equal AND all
@@ -158,7 +158,7 @@ final scheduling decision is controlled by equal priority schedulers,
 strict priority multiplexers, bandwidth shapers - at multiple levels - all
 forming a tree rooted at a single egress object.  In other words, all
 tm_queues and tm_nodes have the property that their logical "output" feeds
-into one fan-in of a subsequent tm_node or egresss object - forming a proper
+into one fan-in of a subsequent tm_node or egress object - forming a proper
 tree.
 
 .Hierarchical Scheduling
@@ -178,7 +178,7 @@ choice" of what packet/tm_queue should next be serviced.
 Tm_nodes are the main "entity"/object that a TM system is composed of. Each
 tm_node is a mini-TM subsystem of its own, but the interconnection and
 interplay of a multi-level "tree" of tm_nodes can allow the user to specify
-some very sophisticated behaviours. Each tm_node can contain a set of scheduler
+some very sophisticated behaviors. Each tm_node can contain a set of scheduler
 (one per strict priority level), a strict priority multiplexer, a bandwidth
 shaper and a WRED component - or a subset of these.
 

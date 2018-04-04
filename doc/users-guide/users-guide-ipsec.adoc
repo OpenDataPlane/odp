@@ -381,7 +381,7 @@ any further application involvement. Only if a problem arises will the packet
 be returned to the application with an `odp_ipsec_packet_result_t` indicating
 the nature of the problem.
 
-Note that while operating in inline mode, asychronous lookaside operations are
+Note that while operating in inline mode, asynchronous lookaside operations are
 also permitted. This provide the application with additional flexibility if,
 for example, some packets need additional handling that cannot be supported
 directly with inline IPsec processing.
@@ -449,7 +449,7 @@ the application continues to receive and process IPsec events as normal.
 Disable completion is indicated by the application seeing an event of type
 `ODP_EVENT_IPSEC_STATUS` for this SA that contains an `odp_ipsec_status_id_t`
 of `ODP_IPSEC_STATUS_SA_DISABLE`. For inbound SAs, receipt of this event means
-that the application has seen all IPsec packets associatd with this SA that
+that the application has seen all IPsec packets associated with this SA that
 were pending at the time of the disable call. For outbound SAs, receipt of
 this event means that the application has seen all result events associated
 with packets sent via this SA.

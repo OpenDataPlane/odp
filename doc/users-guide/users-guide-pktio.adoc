@@ -114,8 +114,8 @@ typedef struct odp_pktio_param_t {
 ODP defines *"loop"* as a reserved name to indicate that this PktIO represents
 a loopback interface. Loopback interfaces are useful as a means of recycling
 packets back for reclassification after decryption or decapsulation, as well as
-for diagnostic or testing purposes. For example, when receiving IPSEC traffic,
-the classifier is able to recognize that the traffic is IPSEC, however until
+for diagnostic or testing purposes. For example, when receiving IPsec traffic,
+the classifier is able to recognize that the traffic is IPsec, however until
 the traffic is decrypted it is unable to say what that traffic contains.
 So following decryption, sending the decrypted packet back to a loopback
 interface allows the classifier to take a "second look" at the packet and
