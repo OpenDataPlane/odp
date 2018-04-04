@@ -798,16 +798,16 @@ shared_data_t *shared_data;
 shared_data = odp_shm_addr(shm);
 ----
 
-The address returned by `odp_shm_addr()` is valid only in the calling ODP
-thread space: odp_shm_t handles can be shared between ODP threads and remain
-valid within any threads, whereas the address returned by `odp_shm_addr(shm)`
-may differ from ODP threads to ODP threads (for the same 'shm' block), and
-should therefore not be shared between ODP threads.
-For instance, it would be correct to send a shm handle using IPC between two
-ODP threads and let each of these thread do their own `odp_shm_addr()` to
-get the block address. Directly sending the address returned by
-`odp_shm_addr()` from one ODP thread to another would however possibly fail
-(the address may have no sense in the receiver address space).
+The address returned by `odp_shm_addr()` is normally valid only in the calling
+ODP thread space: odp_shm_t handles can be shared between ODP threads and
+remain valid within any threads, whereas the address returned by
+`odp_shm_addr(shm)` may differ from ODP threads to ODP threads (for the same
+'shm' block), and should therefore not be shared between ODP threads.  For
+instance, it would be correct to send a shm handle using IPC between two ODP
+threads and let each of these thread do their own `odp_shm_addr()` to get the
+block address. Directly sending the address returned by `odp_shm_addr()` from
+one ODP thread to another would however possibly fail (the address may make no
+sense in the receiver address space).
 
 The address returned by `odp_shm_addr()` is nevertheless guaranteed to be
 aligned according to the alignment requirements provided at block creation
@@ -819,7 +819,13 @@ All shared memory blocks are contiguous in any ODP thread addressing space:
 as provided in the `odp_shm_reserve()` call) is read and writeable and
 mapping the shared memory block. There is no fragmentation.
 
-=== Memory behaviour
+The exception to this rule is if the `odp_shm_t` is created with the
+`ODP_SHM_SINGLE_VA` flag. This requests that `odp_shm_addr()` return the same
+virtual address for all ODP threads in this instance. Note that there may be a
+performance cost or shm size limit associated with providing this function in
+some implementations.
+
+=== Memory behavior
 By default ODP threads are assumed to behave as cache coherent systems:
 Any change performed on a shared memory block is guaranteed to eventually
 become visible to other ODP threads sharing this memory block.
