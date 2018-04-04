@@ -998,7 +998,7 @@ odp_queue_param_init(&qp);
 odp_schedule_prio_t prio = ...;
 odp_schedule_group_t sched_group = ...;
 qp.sched.prio = prio;
-qp.sched.sync = ODP_SCHED_SYNC_[NONE|ATOMIC|ORDERED];
+qp.sched.sync = ODP_SCHED_SYNC_[PARALLEL|ATOMIC|ORDERED];
 qp.sched.group = sched_group;
 qp.lock_count = n; /* Only relevant for ordered queues */
 odp_queue_t sched_q1 = odp_queue_create("sched queue 1", ODP_QUEUE_TYPE_SCHED, &qp);
@@ -1054,8 +1054,8 @@ Three types of queue scheduler synchronization area supported: Parallel,
 Atomic, and Ordered.
 
 ==== Parallel Queues
-SCHED queues that specify a sync mode of ODP_SCHED_SYNC_NONE are unrestricted
-in how events are processed.
+SCHED queues that specify a sync mode of ODP_SCHED_SYNC_PARALLEL are
+unrestricted in how events are processed.
 
 .Parallel Queue Scheduling
 image::parallel_queue.svg[align="center"]
