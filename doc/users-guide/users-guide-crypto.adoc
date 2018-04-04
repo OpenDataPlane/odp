@@ -175,7 +175,7 @@ any software generated pseudo-random data. May not be available on all
 platforms.
 
 These form a hierarchy with BASIC being the lowest kind of random and TRUE
-behing the highest. The main API for accessing random data is:
+being the highest. The main API for accessing random data is:
 
 [source,c]
 -----
