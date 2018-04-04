@@ -7,7 +7,7 @@ prioritization, classification and scheduling of each packet, so that the
 software application can run faster, scale better and adhere to QoS
 requirements.
 
-The following API abstraction are not modelled after any existing product
+The following API abstraction are not modeled after any existing product
 implementation, but is instead defined in terms of what a typical data-plane
 application may require from such a platform, without sacrificing simplicity and
 avoiding ambiguity. Certain terms that are being used within the context of

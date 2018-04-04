@@ -253,8 +253,8 @@ queued to a PktIO output queue or else they may be handed to the _Traffic
 Manager_ for programmatic _Quality of Service (QoS)_ processing before winding
 up being transmitted (TX). Note that output interfaces may operate in
 _loopback_ mode, in which case packets sent to them are re-routed back to the
-input lines for "second pass" processing. For example, an incoming IPSec packet
-cannot be properly classified (beyond being IPSec traffic) until it is
+input lines for "second pass" processing. For example, an incoming IPsec packet
+cannot be properly classified (beyond being IPsec traffic) until it is
 decrypted. Once decrypted and its actual contents made visible, it can then
 be classified into its real flow.
 
@@ -576,7 +576,7 @@ values.
 Calling `odp_init_global()` establishes the ODP API framework and MUST be
 called before any other ODP API may be called. Note that it is only called
 once per application. A successful call to `odp_init_global()` returns rc = 0
-and sets the `instance` variable supplied as input to the call to an handle
+and sets the `instance` variable supplied as input to the call to a handle
 representing this unique ODP instance.
 
 The `odp_init_t` parameter is used to specify various customizations to the
@@ -661,7 +661,7 @@ area and how best to use ODP to achieve these goals.
 === Portability and Coexistence
 Because ODP offers a programming _framework_ rather than a programming
 _environment_, it is designed to be able to work alongside APIs offered by
-other frameworks with minimual interference. Therefore when we speak of
+other frameworks with minimal interference. Therefore when we speak of
 portability in an ODP context, we of necessity speak of portability of those
 portions of the application that make use of ODP APIs. If an application uses
 non-ODP APIs then those must be taken into consideration as well when
@@ -756,10 +756,10 @@ Architecture (ISA), such as x86-64 or AArch64. Binaries cannot directly port
 between ISAs--that requires a recompilation.
 
 Each ODP implementation will identify which ABI definition it supports, if any.
-When compiling against an ODP implementation in ABI compabitilty mode, the
+When compiling against an ODP implementation in ABI compatibility mode, the
 resulting binary is automatically binary compatible with all other ODP
 implementations that share this ABI. For example, for the x86-64 ISA, both
-the `odp-linux` and `odp-dpdk` implemtations are a common ABI.
+the `odp-linux` and `odp-dpdk` implementations are a common ABI.
 
 == Shared memory
 === Allocating shared memory
