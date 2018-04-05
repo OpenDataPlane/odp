@@ -11,7 +11,7 @@
 #include <odp_packet_io_internal.h>
 #include <odp/api/system_info.h>
 #include <odp_shm_internal.h>
-#include <_ishm_internal.h>
+#include <odp_ishm_internal.h>
 
 #include <sys/mman.h>
 #include <sys/stat.h>

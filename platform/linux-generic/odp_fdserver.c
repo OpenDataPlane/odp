@@ -42,7 +42,7 @@
 #include <odp/api/spinlock.h>
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
-#include <_fdserver_internal.h>
+#include <odp_fdserver_internal.h>
 #include <sys/prctl.h>
 #include <signal.h>
 
