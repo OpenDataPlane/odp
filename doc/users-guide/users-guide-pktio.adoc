@@ -38,6 +38,9 @@ PktIO objects begin life by being _opened_ via the call:
  * errno set. Use odp_pktio_lookup() to obtain a handle to an already open
  * device. Packet IO parameters provide interface level configuration options.
  *
+ * Use odp_pktio_param_init() to initialize packet IO parameters into their
+ * default values. Default values are also used when 'param' pointer is NULL.
+ *
  * Packet input queue configuration must be setup with
  * odp_pktin_queue_config() before odp_pktio_start() is called. When packet
  * input mode is ODP_PKTIN_MODE_DISABLED, odp_pktin_queue_config() call is
@@ -66,7 +69,7 @@ PktIO objects begin life by being _opened_ via the call:
  * @param name   Packet IO device name
  * @param pool   Default pool from which to allocate storage for packets
  *               received over this interface, must be of type ODP_POOL_PACKET
- * @param param  Packet IO parameters
+ * @param param  Packet IO parameters. Uses defaults when NULL.
  *
  * @return Packet IO handle
  * @retval ODP_PKTIO_INVALID on failure
@@ -85,7 +88,7 @@ PktIO objects begin life by being _opened_ via the call:
  * @see odp_pktio_start(), odp_pktio_stop(), odp_pktio_close()
  */
 odp_pktio_t odp_pktio_open(const char *name, odp_pool_t pool,
-                           const odp_pktio_param_t *param);
+			   const odp_pktio_param_t *param);
 -----
 `odp_pktio_open()` takes three arguments: a *name*, which is an
 implementation-defined string that identifies the logical interface to be
@@ -97,18 +100,20 @@ I/O options to be associated with this PktIO instance.
 /**
  * Packet IO parameters
  *
- * In minimum, user must select input and output modes. Use 0 for defaults.
- * Initialize entire struct with zero to maintain API compatibility.
+ * Packet IO interface level parameters. Use odp_pktio_param_init() to
+ * initialize the structure with default values.
  */
 typedef struct odp_pktio_param_t {
 	/** Packet input mode
 	  *
 	  * The default value is ODP_PKTIN_MODE_DIRECT. */
 	odp_pktin_mode_t in_mode;
+
 	/** Packet output mode
 	  *
 	  * The default value is ODP_PKTOUT_MODE_DIRECT. */
 	odp_pktout_mode_t out_mode;
+
 } odp_pktio_param_t;
 -----
 ODP defines *"loop"* as a reserved name to indicate that this PktIO represents
@@ -209,25 +214,48 @@ typedef struct odp_pktin_queue_param_t {
 	  * applicable. */
 	odp_pktio_op_mode_t op_mode;
 
+	/** Enable classifier
+	  *
+	  * * 0: Classifier is disabled (default)
+	  * * 1: Classifier is enabled. Use classifier to direct incoming
+	  *      packets into pktin event queues. Classifier can be enabled
+	  *      only in ODP_PKTIN_MODE_SCHED and ODP_PKTIN_MODE_QUEUE modes.
+	  *      Both classifier and hashing cannot be enabled simultaneously
+	  *      ('hash_enable' must be 0). */
+	odp_bool_t classifier_enable;
+
 	/** Enable flow hashing
-	  * 0: Do not hash flows
-	  * 1: Hash flows to input queues */
+	  *
+	  * * 0: Do not hash flows (default)
+	  * * 1: Enable flow hashing. Use flow hashing to spread incoming
+	  *      packets into input queues. Hashing can be enabled in all
+	  *      modes. Both classifier and hashing cannot be enabled
+	  *      simultaneously ('classifier_enable' must be 0). */
 	odp_bool_t hash_enable;
 
-	/** Protocol field selection for hashing. Multiple protocols can be
-	  * selected. */
+	/** Protocol field selection for hashing
+	  *
+	  * Multiple protocols can be selected. Ignored when 'hash_enable' is
+	  * zero. The default value is all bits zero. */
 	odp_pktin_hash_proto_t hash_proto;
 
-	/** Number of input queues to be created. More than one input queue
-	  * require input hashing or classifier setup. Hash_proto is ignored
-	  * when hash_enable is zero or num_queues is one. This value must be
-	  * between 1 and interface capability. Queue type is defined by the
-	  * input mode. The default value is 1. */
+	/** Number of input queues to be created
+	  *
+	  * When classifier is enabled in odp_pktin_queue_config() this
+	  * value is ignored, otherwise at least one queue is required.
+	  * More than one input queues require flow hashing configured.
+	  * The maximum value is defined by pktio capability 'max_input_queues'.
+	  * Queue type is defined by the input mode. The default value is 1. */
 	unsigned num_queues;
 
-	/** Queue parameters for creating input queues in ODP_PKTIN_MODE_QUEUE
+	/** Queue parameters
+	  *
+	  * These are used for input queue creation in ODP_PKTIN_MODE_QUEUE
 	  * or ODP_PKTIN_MODE_SCHED modes. Scheduler parameters are considered
-	  * only in ODP_PKTIN_MODE_SCHED mode. */
+	  * only in ODP_PKTIN_MODE_SCHED mode. Default values are defined in
+	  * odp_queue_param_t documentation.
+	  * When classifier is enabled in odp_pktin_queue_config() this
+	  * value is ignored. */
 	odp_queue_param_t queue_param;
 
 } odp_pktin_queue_param_t;
@@ -347,8 +375,10 @@ Once started, the PktIn queue handles are used as arguments to
 /**
  * Receive packets directly from an interface input queue
  *
- * Receives up to 'num' packets from the pktio interface input queue. When
- * input queue parameter 'op_mode' has been set to ODP_PKTIO_OP_MT_UNSAFE,
+ * Receives up to 'num' packets from the pktio interface input queue. Returns
+ * the number of packets received.
+ *
+ * When input queue parameter 'op_mode' has been set to ODP_PKTIO_OP_MT_UNSAFE,
  * the operation is optimized for single thread operation per queue and the same
  * queue must not be accessed simultaneously from multiple threads.
  *
@@ -478,6 +508,11 @@ Once the PktIO has been configured for output and started via
  * is less than 'num', the remaining packets at the end of packets[] array
  * are not consumed, and the caller has to take care of them.
  *
+ * Entire packet data is sent out (odp_packet_len() bytes of data, starting from
+ * odp_packet_data()). All other packet metadata is ignored unless otherwise
+ * specified e.g. for protocol offload purposes. Link protocol specific frame
+ * checksum and padding are added to frames before transmission.
+ *
  * @param queue        Packet output queue handle for sending packets
  * @param packets[]    Array of packets to send
  * @param num          Number of packets to send
@@ -485,7 +520,8 @@ Once the PktIO has been configured for output and started via
  * @return Number of packets sent
  * @retval <0 on failure
  */
-int odp_pktout_send(odp_pktout_queue_t queue, odp_packet_t packets[], int num);
+int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
+		    int num);;
 -----
 Note that the argument to this call specifies the PktOut queue that the
 packet is to be added to rather than the PktIO itself. This permits multiple
