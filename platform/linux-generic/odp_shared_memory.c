@@ -11,7 +11,7 @@
 #include <odp/api/std_types.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/plat/strong_types.h>
-#include <_ishm_internal.h>
+#include <odp_ishm_internal.h>
 #include <odp_internal.h>
 #include <string.h>
 
