@@ -18,8 +18,8 @@
 #include <odp/api/debug.h>
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
-#include <_ishm_internal.h>
-#include <_ishmphy_internal.h>
+#include <odp_ishm_internal.h>
+#include <odp_ishmphy_internal.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -31,7 +31,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <_ishmphy_internal.h>
+#include <odp_ishmphy_internal.h>
 
 static void *common_va_address;
 static uint64_t common_va_len;

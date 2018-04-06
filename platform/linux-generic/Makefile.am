@@ -82,15 +82,11 @@ endif
 
 noinst_HEADERS = \
 		  arch/odp_arch_time_internal.h \
-		  include/_fdserver_internal.h \
-		  include/_ishm_internal.h \
-		  include/_ishmphy_internal.h \
-		  include/_ishmpool_internal.h \
 		  include/odp_align_internal.h \
 		  include/odp_atomic_internal.h \
-		  include/odp_buffer_inlines.h \
 		  include/odp_bitmap_internal.h \
 		  include/odp_bitset.h \
+		  include/odp_buffer_inlines.h \
 		  include/odp_buffer_internal.h \
 		  include/odp_classification_datamodel.h \
 		  include/odp_classification_inlines.h \
@@ -98,37 +94,41 @@ noinst_HEADERS = \
 		  include/odp_config_internal.h \
 		  include/odp_debug_internal.h \
 		  include/odp_errno_define.h \
+		  include/odp_fdserver_internal.h \
 		  include/odp_forward_typedefs_internal.h \
 		  include/odp_internal.h \
 		  include/odp_ipsec_internal.h \
+		  include/odp_ishm_internal.h \
+		  include/odp_ishmphy_internal.h \
+		  include/odp_ishmpool_internal.h \
 		  include/odp_libconfig_internal.h \
 		  include/odp_llqueue.h \
 		  include/odp_macros_internal.h \
 		  include/odp_name_table_internal.h \
+		  include/odp_packet_dpdk.h \
 		  include/odp_packet_internal.h \
 		  include/odp_packet_io_internal.h \
 		  include/odp_packet_io_ipc_internal.h \
 		  include/odp_packet_io_ring_internal.h \
 		  include/odp_packet_netmap.h \
-		  include/odp_packet_dpdk.h \
+		  include/odp_packet_null.h \
 		  include/odp_packet_socket.h \
 		  include/odp_packet_tap.h \
-		  include/odp_packet_null.h \
 		  include/odp_pkt_queue_internal.h \
 		  include/odp_pool_internal.h \
 		  include/odp_posix_extensions.h \
-		  include/odp_queue_internal.h \
-		  include/odp_queue_scalable_internal.h \
 		  include/odp_queue_if.h \
+		  include/odp_queue_internal.h \
 		  include/odp_queue_lf.h \
+		  include/odp_queue_scalable_internal.h \
 		  include/odp_ring_internal.h \
 		  include/odp_ring_st_internal.h \
 		  include/odp_schedule_if.h \
-		  include/odp_schedule_scalable.h \
 		  include/odp_schedule_scalable_config.h \
+		  include/odp_schedule_scalable.h \
 		  include/odp_schedule_scalable_ordered.h \
-		  include/odp_sorted_list_internal.h \
 		  include/odp_shm_internal.h \
+		  include/odp_sorted_list_internal.h \
 		  include/odp_timer_internal.h \
 		  include/odp_timer_wheel_internal.h \
 		  include/odp_traffic_mngr_internal.h \
@@ -138,15 +138,10 @@ noinst_HEADERS = \
 		  include/protocols/tcp.h \
 		  include/protocols/thash.h \
 		  include/protocols/udp.h
-
 nodist_noinst_HEADERS = \
 		  include/odp_libconfig_config.h
 
 __LIB__libodp_linux_la_SOURCES = \
-			   _fdserver.c \
-			   _ishm.c \
-			   _ishmphy.c \
-			   _ishmpool.c \
 			   odp_atomic.c \
 			   odp_barrier.c \
 			   odp_bitmap.c \
@@ -159,30 +154,21 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_crypto.c \
 			   odp_errno.c \
 			   odp_event.c \
+			   odp_fdserver.c \
 			   odp_hash.c \
-			   odp_init.c \
 			   odp_impl.c \
+			   odp_init.c \
 			   odp_ipsec.c \
 			   odp_ipsec_events.c \
 			   odp_ipsec_sad.c \
+			   odp_ishm.c \
+			   odp_ishmphy.c \
+			   odp_ishmpool.c \
 			   odp_libconfig.c \
 			   odp_name_table.c \
 			   odp_packet.c \
 			   odp_packet_flags.c \
 			   odp_packet_io.c \
-			   pktio/ethtool.c \
-			   pktio/io_ops.c \
-			   pktio/ipc.c \
-			   pktio/pktio_common.c \
-			   pktio/loop.c \
-			   pktio/netmap.c \
-			   pktio/null.c \
-			   pktio/dpdk.c \
-			   pktio/socket.c \
-			   pktio/socket_mmap.c \
-			   pktio/sysfs.c \
-			   pktio/tap.c \
-			   pktio/ring.c \
 			   odp_pkt_queue.c \
 			   odp_pool.c \
 			   odp_queue_basic.c \
@@ -193,10 +179,10 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_rwlock_recursive.c \
 			   odp_schedule_basic.c \
 			   odp_schedule_if.c \
-			   odp_schedule_sp.c \
 			   odp_schedule_iquery.c \
 			   odp_schedule_scalable.c \
 			   odp_schedule_scalable_ordered.c \
+			   odp_schedule_sp.c \
 			   odp_shared_memory.c \
 			   odp_sorted_list.c \
 			   odp_spinlock.c \
@@ -209,8 +195,20 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_timer_wheel.c \
 			   odp_traffic_mngr.c \
 			   odp_version.c \
-			   odp_weak.c
-
+			   odp_weak.c \
+			   pktio/dpdk.c \
+			   pktio/ethtool.c \
+			   pktio/io_ops.c \
+			   pktio/ipc.c \
+			   pktio/loop.c \
+			   pktio/netmap.c \
+			   pktio/null.c \
+			   pktio/pktio_common.c \
+			   pktio/ring.c \
+			   pktio/socket.c \
+			   pktio/socket_mmap.c \
+			   pktio/sysfs.c \
+			   pktio/tap.c
 if ODP_ABI_COMPAT
 __LIB__libodp_linux_la_SOURCES += \
 			   odp_atomic_api.c \

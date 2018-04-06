@@ -14,7 +14,7 @@
 #include <odp_internal.h>
 #include <odp_align_internal.h>
 #include <odp_bitset.h>
-#include <_ishmpool_internal.h>
+#include <odp_ishmpool_internal.h>
 
 /* High level functioning of reordering
  * Datastructures -

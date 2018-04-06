@@ -57,10 +57,10 @@
 #include <odp_shm_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
-#include <_fdserver_internal.h>
-#include <_ishm_internal.h>
-#include <_ishmphy_internal.h>
-#include <_ishmpool_internal.h>
+#include <odp_fdserver_internal.h>
+#include <odp_ishm_internal.h>
+#include <odp_ishmphy_internal.h>
+#include <odp_ishmpool_internal.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -456,10 +456,7 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 
 	fd = open(filename, oflag, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (fd < 0) {
-		if (huge == HUGE)
-			ODP_DBG("open failed for %s: %s.\n",
-				filename, strerror(errno));
-		else
+		if (huge != HUGE)
 			ODP_ERR("open failed for %s: %s.\n",
 				filename, strerror(errno));
 		return -1;
