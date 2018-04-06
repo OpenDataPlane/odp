@@ -7,14 +7,14 @@ echo "Run checkpatch for ${PATCHES}"
 # validate only the latest commit if it's not merge commit.
 
 if [ "$PATCHES" = "" ]; then
-	git format-patch -1 HEAD;
+	git format-patch -1 -M HEAD;
 	perl ./scripts/checkpatch.pl *.patch;
 	exit $?
 fi
 
 git show --summary HEAD| grep -q '^Merge:';
 if [ $? -ne 0 ]; then
-	git format-patch -1 HEAD;
+	git format-patch -1 -M HEAD;
 	perl ./scripts/checkpatch.pl *.patch;
 	exit $?
 fi
