@@ -15,6 +15,7 @@
 #include <odp_debug_internal.h>
 #include <odp/api/plat/packet_flag_inlines.h>
 #include <odp/api/hints.h>
+#include <odp/api/plat/byteorder_inlines.h>
 #include <odp_queue_if.h>
 
 #include <protocols/eth.h>
@@ -32,6 +33,7 @@
 static const char pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
 
 static int loopback_stats_reset(pktio_entry_t *pktio_entry);
+static int loopback_init_capability(pktio_entry_t *pktio_entry);
 
 static int loopback_open(odp_pktio_t id, pktio_entry_t *pktio_entry,
 			 const char *devname, odp_pool_t pool ODP_UNUSED)
@@ -61,6 +63,7 @@ static int loopback_open(odp_pktio_t id, pktio_entry_t *pktio_entry,
 		return -1;
 
 	loopback_stats_reset(pktio_entry);
+	loopback_init_capability(pktio_entry);
 
 	return 0;
 }
@@ -172,6 +175,85 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	return num_rx;
 }
 
+#define OL_TX_CHKSUM_PKT(_cfg, _capa, _proto, _ovr_set, _ovr) \
+	(_capa && _proto && (_ovr_set ? _ovr : _cfg))
+
+static inline int check_proto(void *l3_hdr,
+			      uint32_t l3_len,
+			      odp_bool_t *l3_proto_v4,
+			      uint8_t *l4_proto)
+{
+	uint8_t l3_proto_ver = _ODP_IPV4HDR_VER(*(uint8_t *)l3_hdr);
+
+	if (l3_proto_ver == _ODP_IPV4 && l3_len >= _ODP_IPV4HDR_LEN) {
+		_odp_ipv4hdr_t *ip = l3_hdr;
+		uint16_t frag_offset = _odp_be_to_cpu_16(ip->frag_offset);
+
+		*l3_proto_v4 = 1;
+		if (!_ODP_IPV4HDR_IS_FRAGMENT(frag_offset))
+			*l4_proto = ip->proto;
+		else
+			*l4_proto = 255;
+
+		return 0;
+	} else if (l3_proto_ver == _ODP_IPV6 && l3_len >= _ODP_IPV6HDR_LEN) {
+		_odp_ipv6hdr_t *ipv6 = l3_hdr;
+
+		*l3_proto_v4 = 0;
+		*l4_proto = ipv6->next_hdr;
+
+		/* FIXME: check that packet is not a fragment !!!
+		 * Might require parsing headers spanning several segments, so
+		 * not implemented yet. */
+		return 0;
+	}
+
+	return -1;
+}
+
+static inline void loopback_fix_checksums(odp_packet_t pkt,
+					  odp_pktout_config_opt_t *pktout_cfg,
+					  odp_pktout_config_opt_t *pktout_capa)
+{
+	odp_bool_t l3_proto_v4 = false;
+	uint8_t l4_proto;
+	void *l3_hdr;
+	uint32_t l3_len;
+	odp_bool_t ipv4_chksum_pkt, udp_chksum_pkt, tcp_chksum_pkt;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	l3_hdr = odp_packet_l3_ptr(pkt, &l3_len);
+
+	if (l3_hdr == NULL ||
+	    check_proto(l3_hdr, l3_len, &l3_proto_v4, &l4_proto))
+		return;
+
+	ipv4_chksum_pkt = OL_TX_CHKSUM_PKT(pktout_cfg->bit.ipv4_chksum,
+					   pktout_capa->bit.ipv4_chksum,
+					   l3_proto_v4,
+					   pkt_hdr->p.flags.l3_chksum_set,
+					   pkt_hdr->p.flags.l3_chksum);
+	udp_chksum_pkt =  OL_TX_CHKSUM_PKT(pktout_cfg->bit.udp_chksum,
+					   pktout_capa->bit.udp_chksum,
+					   l4_proto == _ODP_IPPROTO_UDP,
+					   pkt_hdr->p.flags.l4_chksum_set,
+					   pkt_hdr->p.flags.l4_chksum);
+	tcp_chksum_pkt =  OL_TX_CHKSUM_PKT(pktout_cfg->bit.tcp_chksum,
+					   pktout_capa->bit.tcp_chksum,
+					   l4_proto == _ODP_IPPROTO_TCP,
+					   pkt_hdr->p.flags.l4_chksum_set,
+					   pkt_hdr->p.flags.l4_chksum);
+
+	if (ipv4_chksum_pkt)
+		_odp_packet_ipv4_chksum_insert(pkt);
+
+	if (tcp_chksum_pkt)
+		_odp_packet_tcp_chksum_insert(pkt);
+
+	if (udp_chksum_pkt)
+		_odp_packet_udp_chksum_insert(pkt);
+}
+
 static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			 const odp_packet_t pkt_tbl[], int num)
 {
@@ -182,6 +264,9 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int nb_tx = 0;
 	uint32_t bytes = 0;
 	uint32_t out_octets_tbl[num];
+	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
+	odp_pktout_config_opt_t *pktout_capa =
+		&pktio_entry->s.capa.config.pktout;
 
 	if (odp_unlikely(num > QUEUE_MULTI_MAX))
 		num = QUEUE_MULTI_MAX;
@@ -217,6 +302,9 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		}
 		packet_subtype_set(pkt_tbl[i], ODP_EVENT_PACKET_BASIC);
 	}
+
+	for (i = 0; i < nb_tx; ++i)
+		loopback_fix_checksums(pkt_tbl[i], pktout_cfg, pktout_capa);
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
@@ -255,9 +343,10 @@ static int loopback_link_status(pktio_entry_t *pktio_entry ODP_UNUSED)
 	return 1;
 }
 
-static int loopback_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
-			       odp_pktio_capability_t *capa)
+static int loopback_init_capability(pktio_entry_t *pktio_entry)
 {
+	odp_pktio_capability_t *capa = &pktio_entry->s.capa;
+
 	memset(capa, 0, sizeof(odp_pktio_capability_t));
 
 	capa->max_input_queues  = 1;
@@ -267,9 +356,26 @@ static int loopback_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
 	capa->config.pktin.bit.ts_ptp = 1;
+	capa->config.pktout.bit.ipv4_chksum = 1;
+	capa->config.pktout.bit.tcp_chksum = 1;
+	capa->config.pktout.bit.udp_chksum = 1;
 	capa->config.inbound_ipsec = 1;
 	capa->config.outbound_ipsec = 1;
 
+	capa->config.pktout.bit.ipv4_chksum_ena =
+		capa->config.pktout.bit.ipv4_chksum;
+	capa->config.pktout.bit.udp_chksum_ena =
+		capa->config.pktout.bit.udp_chksum;
+	capa->config.pktout.bit.tcp_chksum_ena =
+		capa->config.pktout.bit.tcp_chksum;
+
+	return 0;
+}
+
+static int loopback_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
+			       odp_pktio_capability_t *capa)
+{
+	*capa = pktio_entry->s.capa;
 	return 0;
 }
 
