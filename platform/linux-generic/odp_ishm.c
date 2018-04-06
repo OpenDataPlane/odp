@@ -456,10 +456,7 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 
 	fd = open(filename, oflag, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (fd < 0) {
-		if (huge == HUGE)
-			ODP_DBG("open failed for %s: %s.\n",
-				filename, strerror(errno));
-		else
+		if (huge != HUGE)
 			ODP_ERR("open failed for %s: %s.\n",
 				filename, strerror(errno));
 		return -1;
