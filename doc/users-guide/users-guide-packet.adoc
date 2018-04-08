@@ -499,3 +499,38 @@ Note also that a packet may not reference itself, nor may circular reference
 relationships be formed, _e.g.,_ packet A is used as a header for a reference
 to packet B and B is used as a header for a reference to packet A.  Results
 are undefined if such circular references are attempted.
+
+=== Packet Parsing, Checksum Processing, and Overrides
+Packet parsing is normally triggered automatically as part of packet RX
+processing. However, the application can trigger parsing explicitly via the
+API:
+[source,c]
+-----
+int odp_packet_parse(odp_packet_t pkt, uint32_t offset,
+		     const odp_packet_parse_param_t *param);
+-----
+This is typically done following packet decapsulation or other preprocessing
+that would prevent RX parsing from "seeing" the relevant portion of the
+packet. The `odp_packet_parse_param_t` struct that is passed to controls the
+depth of the desired parse, as well as whether checksum validation should be
+performed as part of the parse, and if so which checksums require this
+processing.
+
+Packets containing Layer 3 (IPv4) and Layer 4 (TCP, UDP, SCTP) checksums
+can have these validated (on RX) and generated (on TX) automatically.
+This is normally controlled by the settings on the PktIOs that
+receive/transmit them, however they can also be controlled on an
+individual packet basis.
+
+Packets have associated `odp_packet_chksum_status_t` metadata that indicates
+the state any checksums contained in that packet. These can be queried via
+the APIs `odp_packet_l3_chksum_status()` and `odp_packet_l4_chksum_status()`,
+respectively. Checksums can either be known good, known bad, or unknown, where
+unknown means that checksum validation processing has not occurred or the
+attempt to validate the checksum failed.
+
+Similarly, the `odp_packet_l3_chksum_insert()` and
+`odp_packet_l4_chksum_insert()` APIs may be used to override default checksum
+processing for individual packets prior to transmission. If no explicit
+checksum processing is specified for a packet, then any checksum generation
+is controlled by the PktIO configuration of the interface used to transmit it.
