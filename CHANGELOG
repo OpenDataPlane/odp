@@ -1,3 +1,108 @@
+== OpenDataPlane (1.19.0.0)
+=== Summary of Changes
+ODP v1.19.0.0 is the official Tiger Moth final release. It incorporates final
+implementation changes and bug fixes and completes the Tiger Moth ODP
+development cycle.
+
+==== APIs
+No functional changes for this release. The Tiger Moth API was frozen in ODP
+v1.18.0.0.
+
+===== API Documentation Update
+The specification for the `odp_packet_l4_chksum_status()` API has been
+clarified to reflect that in IPv4 UDP checksums are optional. As a result, a
+zero (nonexistent) checksum will be reported as `ODP_PACKET_CHKSUM_OK`.
+
+==== C++ Test Improvements
+The {cpp} test included in the ODP validation suite now uses `cout` instead
+of `printf()` to ensure that {cpp} is being used to compile it.
+
+==== Queue and Scheduler Configuration
+For the ODP Reference Implementation, The `config/odp-linux-generic.conf` file
+is extended with sections to control the default and maximum sizes for basic
+queues, and the priority spread used by the scheduler for scheduled queues.
+
+The configuration file is a template named `platform/odp-$platform.conf` so
+this can be easily inherited by other ODP implementations.
+
+==== Runtime Default `config` File Read Order Improvements
+For the ODP Reference Implementation, the default values of the
+application-provided `config` file (if used) override the values provided by
+the built-in `config/odp-linux-generic.conf` file.
+
+=== Implementation Improvements
+The `odp-linux` reference implementation is improved in a number of areas:
+
+==== Netmap Ring Configuration for VALE
+PktIO netmap support now uses the ODP config file to allow rings used for VALE
+processing to be specified. The supplied defaults provide optimal performance
+in typical settings.
+
+==== AES-XCBC-MAC and SHA384-HMAC
+These crypto/authentication algorithms are now implemented.
+
+==== Packet Checksum Validation and Insertion
+Proper packet checksum validation and insertion, in conformance with the
+relevant ODP APIs, is now provided.
+
+=== Dependency Changes
+
+==== DPDK 17.11 Support
+The Tiger Moth LTS release is synchronized with the most recent DPDK LTS
+release for DPDK pktio support.
+
+==== Removal of dependency on `xxd` package.
+This dependency is removed. The Reference Implementation build tools now use
+the standard `od` tool rather than the optional `xxd` package.
+
+=== Performance Tests
+
+==== `odp_sched_pktio`
+A new test has been added to test the performance of PktIO operations in
+scheduled mode. Scheduled PktIO is inherently more scalable and simpler from
+an application standpoint than direct (polled) I/O, but depending on the
+efficiency of the scheduler implementation can incur additional levels of
+overhead. This test can give insight into a given platform's scheduler
+efficiency. For the `odp-linux` reference implementation, this test has shown
+scheduled I/O to be within 10% of rates achievable via direct I/O, meaning
+that for many applications the simplicity and scalability of the event model
+is preferable.
+
+==== `odp_ipsec`
+A new test has been added that measures outbound (TX) IPsec performance with
+a variety of cipher and authentication algorithms.
+
+=== Example Changes
+
+==== `l2fwd` Example
+The `README` file associated with this example has been clarified to explain
+that this example is a throughput test and as a result does not preserve
+packet order under all conditions.
+
+=== Bug Fixes
+==== https://bugs.linaro.org/show_bug.cgi?id=3611[Bug 3611]
+ODP linux-generic fails on AArch64 in non-ABI-compat mode.
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3657[Bug 3657]
+PktIO does not work with Mellanox Interfaces
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3685[Bug 3685]
+RX UDP checksum offload drops valid UDP packets with Niantic
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3686[Bug 3686]
+IP header checksum not inserted if L4 offset not set
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3690[Bug 3690]
+fdserver process interferes with signal handling
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3736[Bug 3736]
+return value not checked for some fdserver interface functions
+
+=== Known Issues
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2988[Bug 2988]
+ODP exposes symbols outside of odp*/_odp* namespace
+
 == OpenDataPlane (1.18.0.1)
 === Summary of Changes
 ODP v1.18.0.1 is a fix level for Tiger Moth Release Candidate 2 (RC 2).
