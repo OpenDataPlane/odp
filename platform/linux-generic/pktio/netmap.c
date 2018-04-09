@@ -27,6 +27,8 @@
 #include <odp_classification_datamodel.h>
 #include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
+#include <odp_libconfig_internal.h>
+
 
 #include <inttypes.h>
 
@@ -45,6 +47,49 @@
 
 static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 static int netmap_stats_reset(pktio_entry_t *pktio_entry);
+
+static int lookup_opt(const char *opt_name, const char *drv_name, int *val)
+{
+	const char *base = "pktio_netmap";
+	int ret;
+
+	ret = _odp_libconfig_lookup_ext_int(base, drv_name, opt_name, val);
+	if (ret == 0)
+		ODP_ERR("Unable to find netmap configuration option: %s\n",
+			opt_name);
+
+	return ret;
+}
+
+static int init_options(pktio_entry_t *pktio_entry)
+{
+	netmap_opt_t *opt = &pktio_entry->s.pkt_nm.opt;
+
+	if (!lookup_opt("nr_rx_slots", "virt",
+			&opt->nr_rx_slots))
+		return -1;
+	if (opt->nr_rx_slots < 0 ||
+	    opt->nr_rx_slots > 4096) {
+		ODP_ERR("Invalid number of RX slots\n");
+		return -1;
+	}
+
+	if (!lookup_opt("nr_tx_slots", "virt",
+			&opt->nr_tx_slots))
+		return -1;
+	if (opt->nr_tx_slots < 0 ||
+	    opt->nr_tx_slots > 4096) {
+		ODP_ERR("Invalid number of TX slots\n");
+		return -1;
+	}
+
+	ODP_PRINT("netmap interface: %s\n",
+		  pktio_entry->s.pkt_nm.if_name);
+	ODP_PRINT("  num_rx_desc: %d\n", opt->nr_rx_slots);
+	ODP_PRINT("  num_tx_desc: %d\n", opt->nr_tx_slots);
+
+	return 0;
+}
 
 static int netmap_do_ioctl(pktio_entry_t *pktio_entry, unsigned long cmd,
 			   int subcmd)
@@ -363,6 +408,12 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		 netdev);
 	snprintf(pkt_nm->if_name, sizeof(pkt_nm->if_name), "%s", netdev);
 
+	/* Initialize runtime options */
+	if (init_options(pktio_entry)) {
+		ODP_ERR("Initializing runtime options failed\n");
+		return -1;
+	}
+
 	/* Dummy open here to check if netmap module is available and to read
 	 * capability info. */
 	desc = nm_open(pkt_nm->nm_name, NULL, 0, NULL);
@@ -526,6 +577,12 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 
 	base_desc.self = &base_desc;
 	base_desc.mem = NULL;
+	if (pktio_entry->s.pkt_nm.is_virtual) {
+		base_desc.req.nr_rx_slots =
+			pktio_entry->s.pkt_nm.opt.nr_rx_slots;
+		base_desc.req.nr_tx_slots =
+			pktio_entry->s.pkt_nm.opt.nr_tx_slots;
+	}
 	base_desc.req.nr_ringid = 0;
 	if ((base_desc.req.nr_flags & NR_REG_MASK) == NR_REG_ALL_NIC ||
 	    (base_desc.req.nr_flags & NR_REG_MASK) == NR_REG_ONE_NIC) {
@@ -539,6 +596,8 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	/* Only the first rx descriptor does mmap */
 	desc_ring = pkt_nm->rx_desc_ring;
 	flags = NM_OPEN_IFNAME | NETMAP_NO_TX_POLL;
+	if (pktio_entry->s.pkt_nm.is_virtual)
+		flags |= NM_OPEN_RING_CFG;
 	desc_ring[0].s.desc[0] = nm_open(pkt_nm->nm_name, NULL, flags,
 					 &base_desc);
 	if (desc_ring[0].s.desc[0] == NULL) {
@@ -547,6 +606,8 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	}
 	/* Open rest of the rx descriptors (one per netmap ring) */
 	flags = NM_OPEN_IFNAME | NETMAP_NO_TX_POLL | NM_OPEN_NO_MMAP;
+	if (pktio_entry->s.pkt_nm.is_virtual)
+		flags |= NM_OPEN_RING_CFG;
 	for (i = 0; i < pktio_entry->s.num_in_queue; i++) {
 		for (j = desc_ring[i].s.first; j <= desc_ring[i].s.last; j++) {
 			if (i == 0 && j == 0) { /* First already opened */
@@ -568,6 +629,8 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	/* Open tx descriptors */
 	desc_ring = pkt_nm->tx_desc_ring;
 	flags = NM_OPEN_IFNAME | NM_OPEN_NO_MMAP;
+	if (pktio_entry->s.pkt_nm.is_virtual)
+		flags |= NM_OPEN_RING_CFG;
 
 	if ((base_desc.req.nr_flags & NR_REG_MASK) == NR_REG_ALL_NIC) {
 		base_desc.req.nr_flags &= ~NR_REG_ALL_NIC;
