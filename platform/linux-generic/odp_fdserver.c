@@ -654,6 +654,12 @@ int _odp_fdserver_init_global(void)
 		/* orphans being "adopted" by the init process...	*/
 		prctl(PR_SET_PDEATHSIG, SIGTERM);
 
+		res = setsid();
+		if (res == -1) {
+			ODP_ERR("Could not setsid()");
+			exit(1);
+		}
+
 		/* allocate the space for the file descriptor<->key table: */
 		fd_table = malloc(FDSERVER_MAX_ENTRIES * sizeof(fdentry_t));
 		if (!fd_table) {
