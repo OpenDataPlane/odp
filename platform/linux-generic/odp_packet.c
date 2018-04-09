@@ -1910,6 +1910,92 @@ int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 	return dst_uarea_size < src_uarea_size;
 }
 
+/* Simple implementation of ones complement sum.
+ * Based on RFC1071 and its errata.
+ */
+typedef union {
+	uint16_t w;
+	uint8_t b[2];
+} swap_buf_t;
+
+static uint32_t segment_sum16_32(const uint8_t *p,
+				 uint32_t len,
+				 uint32_t offset)
+
+{
+	uint32_t sum = 0;
+
+	/* Include second part of 16-bit short word split between segments */
+	if (len > 0 && (offset % 2)) {
+		swap_buf_t sw;
+
+		sw.b[0] = 0;
+		sw.b[1] = *p++;
+		sum = sw.w;
+		len--;
+	}
+
+	/*
+	 * If pointer is 16-bit aligned, we can do fast path calculation.
+	 * If it is not, we sum hi and lo bytes separately and then sum them.
+	 */
+	if ((uintptr_t)p % 2) {
+		uint32_t sum1 = 0, sum2 = 0;
+
+		while (len > 1) {
+			sum1 += *p++;
+			sum2 += *p++;
+			len -= 2;
+		}
+#if (ODP_BYTE_ORDER == ODP_BIG_ENDIAN)
+		sum += sum2 + (sum1 << 8);
+#else
+		sum += sum1 + (sum2 << 8);
+#endif
+	} else {
+		while (len > 1) {
+			sum += *(const uint16_t *)(uintptr_t)p;
+			p += 2;
+			len -= 2;
+		}
+	}
+
+	/* Add left-over byte, if any */
+	if (len > 0) {
+		swap_buf_t sw;
+
+		sw.b[0] = *p;
+		sw.b[1] = 0;
+		sum += sw.w;
+	}
+
+	return sum;
+}
+
+static uint32_t packet_sum16_32(odp_packet_hdr_t *pkt_hdr,
+				uint32_t offset,
+				uint32_t len)
+{
+	uint32_t sum = 0;
+
+	if (offset + len > pkt_hdr->frame_len)
+		return 0;
+
+	while (len > 0) {
+		uint32_t seglen = 0; /* GCC */
+		void *mapaddr = packet_map(pkt_hdr, offset, &seglen, NULL);
+
+		if (seglen > len)
+			seglen = len;
+
+		sum += segment_sum16_32(mapaddr, seglen, offset);
+		len -= seglen;
+		offset += seglen;
+	}
+
+	return sum;
+}
+
 /** Parser helper function for Ethernet packets */
 static inline uint16_t parse_eth(packet_parser_t *prs, const uint8_t **parseptr,
 				 uint32_t *offset, uint32_t frame_len)
@@ -2291,6 +2377,11 @@ static inline int packet_ipv4_chksum(odp_packet_t pkt,
 }
 
 #define _ODP_IPV4HDR_CSUM_OFFSET ODP_OFFSETOF(_odp_ipv4hdr_t, chksum)
+#define _ODP_IPV4ADDR_OFFSSET ODP_OFFSETOF(_odp_ipv4hdr_t, src_addr)
+#define _ODP_IPV6ADDR_OFFSSET ODP_OFFSETOF(_odp_ipv6hdr_t, src_addr)
+#define _ODP_IPV4HDR_CSUM_OFFSET ODP_OFFSETOF(_odp_ipv4hdr_t, chksum)
+#define _ODP_UDP_LEN_OFFSET ODP_OFFSETOF(_odp_udphdr_t, length)
+#define _ODP_UDP_CSUM_OFFSET ODP_OFFSETOF(_odp_udphdr_t, chksum)
 
 /**
  * Calculate and fill in IPv4 checksum
@@ -2322,6 +2413,96 @@ int _odp_packet_ipv4_chksum_insert(odp_packet_t pkt)
 	return odp_packet_copy_from_mem(pkt,
 					offset + _ODP_IPV4HDR_CSUM_OFFSET,
 					2, &chksum);
+}
+
+static int _odp_packet_tcp_udp_chksum_insert(odp_packet_t pkt, uint16_t proto)
+{
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+	uint32_t zero = 0;
+	uint32_t sum;
+	uint16_t l3_ver;
+	uint16_t chksum;
+	uint32_t chksum_offset;
+
+	if (pkt_hdr->p.l3_offset == ODP_PACKET_OFFSET_INVALID)
+		return -1;
+	if (pkt_hdr->p.l4_offset == ODP_PACKET_OFFSET_INVALID)
+		return -1;
+
+	odp_packet_copy_to_mem(pkt, pkt_hdr->p.l3_offset, 2, &l3_ver);
+
+	if (_ODP_IPV4HDR_VER(l3_ver) == _ODP_IPV4)
+		sum = packet_sum16_32(pkt_hdr,
+				      pkt_hdr->p.l3_offset +
+				      _ODP_IPV4ADDR_OFFSSET,
+				      2 * _ODP_IPV4ADDR_LEN);
+	else
+		sum = packet_sum16_32(pkt_hdr,
+				      pkt_hdr->p.l3_offset +
+				      _ODP_IPV6ADDR_OFFSSET,
+				      2 * _ODP_IPV6ADDR_LEN);
+#if ODP_BYTE_ORDER == ODP_BIG_ENDIAN
+	sum += proto;
+#else
+	sum += proto << 8;
+#endif
+
+	if (proto == _ODP_IPPROTO_TCP) {
+		sum += _odp_cpu_to_be_16(pkt_hdr->frame_len -
+					 pkt_hdr->p.l4_offset);
+		chksum_offset = pkt_hdr->p.l4_offset + _ODP_UDP_CSUM_OFFSET;
+	} else {
+		sum += packet_sum16_32(pkt_hdr,
+				       pkt_hdr->p.l4_offset +
+				       _ODP_UDP_LEN_OFFSET,
+				       2);
+		chksum_offset = pkt_hdr->p.l4_offset + _ODP_UDP_CSUM_OFFSET;
+	}
+	odp_packet_copy_from_mem(pkt, chksum_offset, 2, &zero);
+
+	sum += packet_sum16_32(pkt_hdr,
+			       pkt_hdr->p.l4_offset,
+			       pkt_hdr->frame_len -
+			       pkt_hdr->p.l4_offset);
+
+	/* Not more than two additions */
+	sum = (sum & 0xffff) + (sum >> 16);
+	sum = (sum & 0xffff) + (sum >> 16);
+
+	chksum = ~sum;
+
+	if (proto == _ODP_IPPROTO_UDP && chksum == 0)
+		chksum = 0xffff;
+
+	return odp_packet_copy_from_mem(pkt,
+					chksum_offset,
+					2, &chksum);
+}
+
+/**
+ * Calculate and fill in TCP checksum
+ *
+ * @param pkt  ODP packet
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int _odp_packet_tcp_chksum_insert(odp_packet_t pkt)
+{
+	return _odp_packet_tcp_udp_chksum_insert(pkt, _ODP_IPPROTO_TCP);
+}
+
+/**
+ * Calculate and fill in UDP checksum
+ *
+ * @param pkt  ODP packet
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int _odp_packet_udp_chksum_insert(odp_packet_t pkt)
+{
+	return _odp_packet_tcp_udp_chksum_insert(pkt, _ODP_IPPROTO_UDP);
 }
 
 /**
