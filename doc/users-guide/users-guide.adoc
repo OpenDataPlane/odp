@@ -151,7 +151,7 @@ of the specification or other minor changes that do not affect either the
 syntax or semantics of the specification. Such changes in the API specification
 are expected to be rare. Increments to the minor level
 represent the introduction of new APIs or functional capabilities, or changes
-to he specified syntax or functional behavior of APIs and thus may require
+to the specified syntax or functional behavior of APIs and thus may require
 application source code changes. Such changes are well documented in the
 release notes for each revision of the specification. Finally, increments to
 the major level represent significant structural changes that most likely
@@ -247,14 +247,14 @@ polled by ODP _Threads_, or can pass through the _Classifier_ and sorted into
 Queues that represent individual flows. These queues can then be dispatched
 to application threads via the _Scheduler_.
 
-Threads, in term can invoke various ODP APIs to manipulate packet contents
+Threads, in turn can invoke various ODP APIs to manipulate packet contents
 prior to disposing of them. For output processing, packets make by directly
 queued to a PktIO output queue or else they may be handed to the _Traffic
 Manager_ for programmatic _Quality of Service (QoS)_ processing before winding
 up being transmitted (TX). Note that output interfaces may operate in
 _loopback_ mode, in which case packets sent to them are re-routed back to the
-input lines for "second pass" processing. For example, an incoming IPSec packet
-cannot be properly classified (beyond being IPSec traffic) until it is
+input lines for "second pass" processing. For example, an incoming IPsec packet
+cannot be properly classified (beyond being IPsec traffic) until it is
 decrypted. Once decrypted and its actual contents made visible, it can then
 be classified into its real flow.
 
@@ -312,7 +312,7 @@ appropriate type represented by the event.
 A queue is a message passing channel that holds events.  Events can be
 added to a queue via enqueue operations or removed from a queue via dequeue
 operations. The endpoints of a queue will vary depending on how it is used.
-Queues come in two major types: polled and scheduled, which will be
+Queues come in two major types: plain and scheduled, which will be
 discussed in more detail when the event model is introduced. Queues may also
 have an associated context, which represents a persistent state for all
 events that make use of it. These states are what permit threads to perform
@@ -576,7 +576,7 @@ values.
 Calling `odp_init_global()` establishes the ODP API framework and MUST be
 called before any other ODP API may be called. Note that it is only called
 once per application. A successful call to `odp_init_global()` returns rc = 0
-and sets the `instance` variable supplied as input to the call to an handle
+and sets the `instance` variable supplied as input to the call to a handle
 representing this unique ODP instance.
 
 The `odp_init_t` parameter is used to specify various customizations to the
@@ -661,7 +661,7 @@ area and how best to use ODP to achieve these goals.
 === Portability and Coexistence
 Because ODP offers a programming _framework_ rather than a programming
 _environment_, it is designed to be able to work alongside APIs offered by
-other frameworks with minimual interference. Therefore when we speak of
+other frameworks with minimal interference. Therefore when we speak of
 portability in an ODP context, we of necessity speak of portability of those
 portions of the application that make use of ODP APIs. If an application uses
 non-ODP APIs then those must be taken into consideration as well when
@@ -756,10 +756,10 @@ Architecture (ISA), such as x86-64 or AArch64. Binaries cannot directly port
 between ISAs--that requires a recompilation.
 
 Each ODP implementation will identify which ABI definition it supports, if any.
-When compiling against an ODP implementation in ABI compabitilty mode, the
+When compiling against an ODP implementation in ABI compatibility mode, the
 resulting binary is automatically binary compatible with all other ODP
 implementations that share this ABI. For example, for the x86-64 ISA, both
-the `odp-linux` and `odp-dpdk` implemtations are a common ABI.
+the `odp-linux` and `odp-dpdk` implementations are a common ABI.
 
 == Shared memory
 === Allocating shared memory
@@ -798,16 +798,16 @@ shared_data_t *shared_data;
 shared_data = odp_shm_addr(shm);
 ----
 
-The address returned by `odp_shm_addr()` is valid only in the calling ODP
-thread space: odp_shm_t handles can be shared between ODP threads and remain
-valid within any threads, whereas the address returned by `odp_shm_addr(shm)`
-may differ from ODP threads to ODP threads (for the same 'shm' block), and
-should therefore not be shared between ODP threads.
-For instance, it would be correct to send a shm handle using IPC between two
-ODP threads and let each of these thread do their own `odp_shm_addr()` to
-get the block address. Directly sending the address returned by
-`odp_shm_addr()` from one ODP thread to another would however possibly fail
-(the address may have no sense in the receiver address space).
+The address returned by `odp_shm_addr()` is normally valid only in the calling
+ODP thread space: odp_shm_t handles can be shared between ODP threads and
+remain valid within any threads, whereas the address returned by
+`odp_shm_addr(shm)` may differ from ODP threads to ODP threads (for the same
+'shm' block), and should therefore not be shared between ODP threads.  For
+instance, it would be correct to send a shm handle using IPC between two ODP
+threads and let each of these thread do their own `odp_shm_addr()` to get the
+block address. Directly sending the address returned by `odp_shm_addr()` from
+one ODP thread to another would however possibly fail (the address may make no
+sense in the receiver address space).
 
 The address returned by `odp_shm_addr()` is nevertheless guaranteed to be
 aligned according to the alignment requirements provided at block creation
@@ -819,7 +819,13 @@ All shared memory blocks are contiguous in any ODP thread addressing space:
 as provided in the `odp_shm_reserve()` call) is read and writeable and
 mapping the shared memory block. There is no fragmentation.
 
-=== Memory behaviour
+The exception to this rule is if the `odp_shm_t` is created with the
+`ODP_SHM_SINGLE_VA` flag. This requests that `odp_shm_addr()` return the same
+virtual address for all ODP threads in this instance. Note that there may be a
+performance cost or shm size limit associated with providing this function in
+some implementations.
+
+=== Memory behavior
 By default ODP threads are assumed to behave as cache coherent systems:
 Any change performed on a shared memory block is guaranteed to eventually
 become visible to other ODP threads sharing this memory block.
@@ -964,23 +970,23 @@ Queues are the fundamental event sequencing mechanism provided by ODP and all
 ODP applications make use of them either explicitly or implicitly. Queues are
 created via the 'odp_queue_create()' API that returns a handle of type
 `odp_queue_t` that is used to refer to this queue in all subsequent APIs that
-reference it. Queues have one of two ODP-defined _types_, POLL, and SCHED that
-determine how they are used. POLL queues directly managed by the ODP
+reference it. Queues have one of two ODP-defined _types_, PLAIN, and SCHED that
+determine how they are used. PLAIN queues directly managed by the ODP
 application while SCHED queues make use of the *ODP scheduler* to provide
 automatic scalable dispatching and synchronization services.
 
-.Operations on POLL queues
+.Operations on PLAIN queues
 [source,c]
 ----
-odp_queue_t poll_q1 = odp_queue_create("poll queue 1", ODP_QUEUE_TYPE_POLL, NULL);
-odp_queue_t poll_q2 = odp_queue_create("poll queue 2", ODP_QUEUE_TYPE_POLL, NULL);
+odp_queue_t plain_q1 = odp_queue_create("poll queue 1", ODP_QUEUE_TYPE_PLAIN, NULL);
+odp_queue_t plain_q2 = odp_queue_create("poll queue 2", ODP_QUEUE_TYPE_PLAIN, NULL);
 ...
-odp_event_t ev = odp_queue_deq(poll_q1);
+odp_event_t ev = odp_queue_deq(plain_q1);
 ...do something
-int rc = odp_queue_enq(poll_q2, ev);
+int rc = odp_queue_enq(plain_q2, ev);
 ----
 
-The key distinction is that dequeueing events from POLL queues is an
+The key distinction is that dequeueing events from PLAIN queues is an
 application responsibility while dequeueing events from SCHED queues is the
 responsibility of the ODP scheduler.
 
@@ -992,7 +998,7 @@ odp_queue_param_init(&qp);
 odp_schedule_prio_t prio = ...;
 odp_schedule_group_t sched_group = ...;
 qp.sched.prio = prio;
-qp.sched.sync = ODP_SCHED_SYNC_[NONE|ATOMIC|ORDERED];
+qp.sched.sync = ODP_SCHED_SYNC_[PARALLEL|ATOMIC|ORDERED];
 qp.sched.group = sched_group;
 qp.lock_count = n; /* Only relevant for ordered queues */
 odp_queue_t sched_q1 = odp_queue_create("sched queue 1", ODP_QUEUE_TYPE_SCHED, &qp);
@@ -1048,8 +1054,8 @@ Three types of queue scheduler synchronization area supported: Parallel,
 Atomic, and Ordered.
 
 ==== Parallel Queues
-SCHED queues that specify a sync mode of ODP_SCHED_SYNC_NONE are unrestricted
-in how events are processed.
+SCHED queues that specify a sync mode of ODP_SCHED_SYNC_PARALLEL are
+unrestricted in how events are processed.
 
 .Parallel Queue Scheduling
 image::parallel_queue.svg[align="center"]
