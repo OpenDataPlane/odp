@@ -19,6 +19,12 @@
 
 #define NM_MAX_DESC 64
 
+/** netmap runtime configuration options */
+typedef struct {
+	int nr_rx_slots;
+	int nr_tx_slots;
+} netmap_opt_t;
+
 /** Ring for mapping pktin/pktout queues to netmap descriptors */
 struct netmap_ring_t {
 	unsigned first; /**< Index of first netmap descriptor */
@@ -61,6 +67,7 @@ typedef struct {
 	netmap_ring_t rx_desc_ring[PKTIO_MAX_QUEUES];
 	/** mapping of pktout queues to netmap tx descriptors */
 	netmap_ring_t tx_desc_ring[PKTIO_MAX_QUEUES];
+	netmap_opt_t opt;               /**< options */
 } pkt_netmap_t;
 
 #endif
