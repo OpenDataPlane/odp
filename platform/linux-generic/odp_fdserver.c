@@ -265,7 +265,9 @@ static int get_socket(void)
 	remote.sun_family = AF_UNIX;
 	strcpy(remote.sun_path, sockpath);
 	len = strlen(remote.sun_path) + sizeof(remote.sun_family);
-	if (connect(s_sock, (struct sockaddr *)&remote, len) == -1) {
+	while (connect(s_sock, (struct sockaddr *)&remote, len) == -1) {
+		if (errno == EINTR)
+			continue;
 		ODP_ERR("cannot connect to server: %s\n", strerror(errno));
 		close(s_sock);
 		return -1;
