@@ -938,6 +938,7 @@ int ipsec_config(odp_instance_t ODP_UNUSED inst)
 	odp_ipsec_config_init(&ipsec_config);
 	ipsec_config.inbound_mode = suite_context.inbound_op_mode;
 	ipsec_config.outbound_mode = suite_context.outbound_op_mode;
+	ipsec_config.outbound.all_chksum = ~0;
 	ipsec_config.inbound.default_queue = suite_context.queue;
 	ipsec_config.inbound.parse_level = ODP_PROTO_LAYER_ALL;
 	ipsec_config.inbound.chksums.all_chksum = ~0;
