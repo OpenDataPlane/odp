@@ -647,6 +647,34 @@ int _odp_fdserver_init_global(void)
 	}
 
 	if (server_pid == 0) { /*child */
+		sigset_t sigset;
+		struct sigaction action;
+
+		sigfillset(&sigset);
+		/* undefined if these are ignored, as per POSIX */
+		sigdelset(&sigset, SIGFPE);
+		sigdelset(&sigset, SIGILL);
+		sigdelset(&sigset, SIGSEGV);
+		/* can not be masked */
+		sigdelset(&sigset, SIGKILL);
+		sigdelset(&sigset, SIGSTOP);
+		/* these we want to handle */
+		sigdelset(&sigset, SIGTERM);
+		if (sigprocmask(SIG_SETMASK, &sigset, NULL) == -1) {
+			ODP_ERR("Could not set signal mask");
+			exit(1);
+		}
+
+		/* set default handlers for those signals we can handle */
+		memset(&action, 0, sizeof(action));
+		action.sa_handler = SIG_DFL;
+		sigemptyset(&action.sa_mask);
+		action.sa_flags = 0;
+		sigaction(SIGFPE, &action, NULL);
+		sigaction(SIGILL, &action, NULL);
+		sigaction(SIGSEGV, &action, NULL);
+		sigaction(SIGTERM, &action, NULL);
+
 		/* TODO: pin the server on appropriate service cpu mask */
 		/* when (if) we can agree on the usage of service mask  */
 
