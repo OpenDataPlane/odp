@@ -826,6 +826,7 @@ static int ipsec_out_tunnel_parse_ipv4(ipsec_state_t *state,
 	state->out_tunnel.ip_tos = ipv4hdr->tos;
 	state->out_tunnel.ip_df = _ODP_IPV4HDR_FLAGS_DONT_FRAG(flags);
 	state->out_tunnel.ip_flabel = 0;
+	state->ip_next_hdr = ipv4hdr->proto;
 
 	return 0;
 }
@@ -1295,6 +1296,41 @@ static void ipsec_out_ah_post(ipsec_state_t *state, odp_packet_t pkt)
 	}
 }
 
+#define OL_TX_CHKSUM_PKT(_cfg, _proto, _ovr_set, _ovr) \
+	(_proto && (_ovr_set ? _ovr : _cfg))
+
+static void ipsec_out_checksums(odp_packet_t pkt,
+				ipsec_state_t *state)
+{
+	odp_bool_t ipv4_chksum_pkt, udp_chksum_pkt, tcp_chksum_pkt;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+	odp_ipsec_outbound_config_t outbound = ipsec_config.outbound;
+
+	ipv4_chksum_pkt = OL_TX_CHKSUM_PKT(outbound.chksum.inner_ipv4,
+					   state->is_ipv4,
+					   pkt_hdr->p.flags.l3_chksum_set,
+					   pkt_hdr->p.flags.l3_chksum);
+	udp_chksum_pkt =  OL_TX_CHKSUM_PKT(outbound.chksum.inner_udp,
+					   state->ip_next_hdr ==
+					   _ODP_IPPROTO_UDP,
+					   pkt_hdr->p.flags.l4_chksum_set,
+					   pkt_hdr->p.flags.l4_chksum);
+	tcp_chksum_pkt =  OL_TX_CHKSUM_PKT(outbound.chksum.inner_tcp,
+					   state->ip_next_hdr ==
+					   _ODP_IPPROTO_TCP,
+					   pkt_hdr->p.flags.l4_chksum_set,
+					   pkt_hdr->p.flags.l4_chksum);
+
+	if (ipv4_chksum_pkt)
+		_odp_packet_ipv4_chksum_insert(pkt);
+
+	if (tcp_chksum_pkt)
+		_odp_packet_tcp_chksum_insert(pkt);
+
+	if (udp_chksum_pkt)
+		_odp_packet_udp_chksum_insert(pkt);
+}
+
 static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 				    odp_ipsec_sa_t sa,
 				    odp_packet_t *pkt_out,
@@ -1354,6 +1390,9 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 
 		if (state.ip_tot_len + state.ip_offset != odp_packet_len(pkt))
 			rc = -1;
+
+		if (rc == 0)
+			ipsec_out_checksums(pkt, &state);
 	} else {
 		if (state.is_ipv4)
 			rc = ipsec_out_tunnel_parse_ipv4(&state, ipsec_sa);
@@ -1370,6 +1409,8 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 			status->error.alg = 1;
 			goto err;
 		}
+
+		ipsec_out_checksums(pkt, &state);
 
 		if (ipsec_sa->tun_ipv4)
 			rc = ipsec_out_tunnel_ipv4(&pkt, &state, ipsec_sa,
