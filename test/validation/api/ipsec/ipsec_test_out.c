@@ -1155,6 +1155,36 @@ static void test_out_dummy_esp_null_sha256_tun_ipv6(void)
 	ipsec_sa_destroy(sa);
 }
 
+static void test_out_ipv4_udp_esp_null_sha256(void)
+{
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    false, false, 123, NULL,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			    NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_udp,
+		.out_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .pkt_out = &pkt_ipv4_udp_esp_null_sha256 },
+		},
+	};
+
+	ipsec_check_out_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
 static void ipsec_test_capability(void)
 {
 	odp_ipsec_capability_t capa;
@@ -1217,6 +1247,8 @@ odp_testinfo_t ipsec_out_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_out_dummy_esp_null_sha256_tun_ipv4,
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_dummy_esp_null_sha256_tun_ipv6,
+				  ipsec_check_esp_null_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_udp_esp_null_sha256,
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_NULL,
 };
