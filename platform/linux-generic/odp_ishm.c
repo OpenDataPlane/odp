@@ -566,7 +566,7 @@ static void *do_map(int block_index, uint64_t len, uint32_t align,
 			}
 			return NULL;
 		}
-		ishm_tbl->block[block_index].fragment = fragment;
+		new_block->fragment = fragment;
 	}
 
 	/* try to mmap: */
