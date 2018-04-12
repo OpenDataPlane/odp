@@ -49,6 +49,13 @@
 #include <rte_string_fns.h>
 #include <rte_version.h>
 
+/* NUMA is not supported on all platforms */
+#ifdef RTE_EAL_NUMA_AWARE_HUGEPAGES
+#include <numa.h>
+#else
+#define numa_num_configured_nodes() 1
+#endif
+
 #if RTE_VERSION < RTE_VERSION_NUM(17, 5, 0, 0)
 #define rte_log_set_global_level rte_set_log_level
 #endif
@@ -1086,6 +1093,7 @@ static int dpdk_pktio_init(void)
 	int32_t masklen;
 	int mem_str_len;
 	int cmd_len;
+	int numa_nodes;
 	cpu_set_t original_cpuset;
 	struct rte_config *cfg;
 
@@ -1120,21 +1128,29 @@ static int dpdk_pktio_init(void)
 		return -1;
 	}
 
-	mem_str_len = snprintf(NULL, 0, "%d", DPDK_MEMORY_MB);
+	mem_str_len = snprintf(NULL, 0, "%d,", DPDK_MEMORY_MB);
+	numa_nodes = numa_num_configured_nodes();
+
+	char mem_str[mem_str_len * numa_nodes];
+
+	for (i = 0; i < numa_nodes; i++)
+		sprintf(&mem_str[i * mem_str_len], "%d,", DPDK_MEMORY_MB);
+	mem_str[mem_str_len * numa_nodes - 1] = '\0';
 
 	cmdline = getenv("ODP_PKTIO_DPDK_PARAMS");
 	if (cmdline == NULL)
 		cmdline = "";
 
 	/* masklen includes the terminating null as well */
-	cmd_len = strlen("odpdpdk -c -m ") + masklen + mem_str_len +
-			strlen(cmdline) + strlen("  ");
+	cmd_len = strlen("odpdpdk -c --socket-mem ") + masklen +
+			 strlen(mem_str) + strlen(cmdline) + strlen("  ");
 
 	char full_cmd[cmd_len];
 
 	/* first argument is facility log, simply bind it to odpdpdk for now.*/
-	cmd_len = snprintf(full_cmd, cmd_len, "odpdpdk -c %s -m %d %s",
-			   mask_str, DPDK_MEMORY_MB, cmdline);
+	cmd_len = snprintf(full_cmd, cmd_len,
+			   "odpdpdk -c %s --socket-mem %s %s", mask_str,
+			   mem_str, cmdline);
 
 	for (i = 0, dpdk_argc = 1; i < cmd_len; ++i) {
 		if (isspace(full_cmd[i]))
