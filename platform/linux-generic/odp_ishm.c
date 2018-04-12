@@ -831,7 +831,6 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 	/* If a file descriptor is provided, get the real size and map: */
 	if (fd >= 0) {
 		if (fstat(fd, &statbuf) < 0) {
-			close(fd);
 			odp_spinlock_unlock(&ishm_tbl->lock);
 			ODP_ERR("_ishm_reserve failed (fstat failed: %s).\n",
 				strerror(errno));
@@ -844,7 +843,6 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 		 * page is determined by the provided file descriptor: */
 		addr = do_map(new_index, len, align, flags, EXTERNAL, &fd);
 		if (addr == NULL) {
-			close(fd);
 			odp_spinlock_unlock(&ishm_tbl->lock);
 			ODP_ERR("_ishm_reserve failed.\n");
 			return -1;
