@@ -566,7 +566,7 @@ static void *do_map(int block_index, uint64_t len, uint32_t align,
 			}
 			return NULL;
 		}
-		ishm_tbl->block[block_index].fragment = fragment;
+		new_block->fragment = fragment;
 	}
 
 	/* try to mmap: */
@@ -831,7 +831,6 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 	/* If a file descriptor is provided, get the real size and map: */
 	if (fd >= 0) {
 		if (fstat(fd, &statbuf) < 0) {
-			close(fd);
 			odp_spinlock_unlock(&ishm_tbl->lock);
 			ODP_ERR("_ishm_reserve failed (fstat failed: %s).\n",
 				strerror(errno));
@@ -839,17 +838,16 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 			return -1;
 		}
 		len = statbuf.st_size;
+		new_block->external_fd = 1;
 		/* note that the huge page flag is meningless here as huge
 		 * page is determined by the provided file descriptor: */
 		addr = do_map(new_index, len, align, flags, EXTERNAL, &fd);
 		if (addr == NULL) {
-			close(fd);
 			odp_spinlock_unlock(&ishm_tbl->lock);
 			ODP_ERR("_ishm_reserve failed.\n");
 			return -1;
 		}
 		new_block->huge = EXTERNAL;
-		new_block->external_fd = 1;
 	} else {
 		new_block->external_fd = 0;
 	}
