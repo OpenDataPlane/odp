@@ -722,8 +722,9 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 	if (odp_unlikely(num_deq)) {
 		/* Temporary copy needed since odp_buffer_t is uintptr_t
 		 * and not uint32_t. */
-		uint32_t data[burst];
+		uint32_t *data;
 
+		data = alloca(burst * sizeof(uint32_t));
 		ring      = &pool->ring->hdr;
 		mask      = pool->ring_mask;
 		burst     = ring_deq_multi(ring, mask, data, burst);
@@ -799,8 +800,9 @@ static inline void buffer_free_to_pool(pool_t *pool,
 		{
 			/* Temporary copy needed since odp_buffer_t is
 			 * uintptr_t and not uint32_t. */
-			uint32_t data[burst];
+			uint32_t *data;
 
+			data = alloca(burst * sizeof(uint32_t));
 			index = cache_num - burst;
 
 			for (i = 0; i < burst; i++)
