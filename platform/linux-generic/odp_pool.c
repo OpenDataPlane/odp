@@ -718,12 +718,13 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 		buf_hdr[i] = buf_hdr_from_index(pool, cache->buf_index[j]);
 	}
 
+	/* Declare variable here to fix clang compilation bug */
+	uint32_t data[burst];
+
 	/* If needed, get more from the global pool */
 	if (odp_unlikely(num_deq)) {
-		/* Temporary copy needed since odp_buffer_t is uintptr_t
-		 * and not uint32_t. */
-		uint32_t data[burst];
-
+		/* Temporary copy to data[] needed since odp_buffer_t is
+		 * uintptr_t and not uint32_t. */
 		ring      = &pool->ring->hdr;
 		mask      = pool->ring_mask;
 		burst     = ring_deq_multi(ring, mask, data, burst);
