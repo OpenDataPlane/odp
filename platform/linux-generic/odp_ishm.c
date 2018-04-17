@@ -768,6 +768,65 @@ static void procsync(void)
 }
 
 /*
+ * Free a block as described in block_free(), but
+ * considering whether to close the file descriptor or not, and
+ * whether to deregister from the fdserver.
+ */
+static int block_free_internal(int block_index, int close_fd, int deregister)
+{
+	int proc_index;
+	ishm_block_t *block;	      /* entry in the main block table*/
+	int last;
+	int ret = 0;
+
+	if ((block_index < 0) ||
+	    (block_index >= ISHM_MAX_NB_BLOCKS) ||
+	    (ishm_tbl->block[block_index].len == 0)) {
+		ODP_ERR("Request to free an invalid block\n");
+		return -1;
+	}
+
+	block = &ishm_tbl->block[block_index];
+
+	proc_index = procfind_block(block_index);
+	if (proc_index >= 0) {
+		/* remove the mapping and possible fragment */
+		do_unmap(ishm_proctable->entry[proc_index].start,
+			 block->len,
+			 ishm_proctable->entry[proc_index].flags,
+			 block_index);
+
+		/* close the related fd */
+		if (close_fd)
+			close(ishm_proctable->entry[proc_index].fd);
+
+		/* remove entry from process local table: */
+		last = ishm_proctable->nb_entries - 1;
+		ishm_proctable->entry[proc_index] = ishm_proctable->entry[last];
+		ishm_proctable->nb_entries = last;
+	} else {
+		/* just possibly free the fragment as no mapping exist here: */
+		do_unmap(NULL, 0, block->flags, block_index);
+	}
+
+	/* remove all files related to this block: */
+	if (close_fd)
+		delete_file(block);
+
+	/* deregister the file descriptor from the file descriptor server. */
+	if (deregister)
+		ret = _odp_fdserver_deregister_fd(FD_SRV_CTX_ISHM, block_index);
+
+	/* mark the block as free in the main block table: */
+	block->len = 0;
+
+	/* mark the change so other processes see this entry as obsolete: */
+	block->seq++;
+
+	return ret;
+}
+
+/*
  * Allocate and map internal shared memory, or other objects:
  * If a name is given, check that this name is not already in use.
  * If ok, allocate a new shared memory block and map the
@@ -928,7 +987,10 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 	ishm_proctable->entry[new_proc_entry].fd = fd;
 
 	/* register the file descriptor to the file descriptor server. */
-	_odp_fdserver_register_fd(FD_SRV_CTX_ISHM, new_index, fd);
+	if (_odp_fdserver_register_fd(FD_SRV_CTX_ISHM, new_index, fd) == -1) {
+		block_free_internal(new_index, !new_block->external_fd, 0);
+		new_index = -1;
+	}
 
 	odp_spinlock_unlock(&ishm_tbl->lock);
 	return new_index;
@@ -1034,53 +1096,7 @@ error_exp_file:
  */
 static int block_free(int block_index)
 {
-	int proc_index;
-	ishm_block_t *block;	      /* entry in the main block table*/
-	int last;
-
-	if ((block_index < 0) ||
-	    (block_index >= ISHM_MAX_NB_BLOCKS) ||
-	    (ishm_tbl->block[block_index].len == 0)) {
-		ODP_ERR("Request to free an invalid block\n");
-		return -1;
-	}
-
-	block = &ishm_tbl->block[block_index];
-
-	proc_index = procfind_block(block_index);
-	if (proc_index >= 0) {
-		/* close the related fd */
-		close(ishm_proctable->entry[proc_index].fd);
-
-		/* remove the mapping and possible fragment */
-		do_unmap(ishm_proctable->entry[proc_index].start,
-			 block->len,
-			 ishm_proctable->entry[proc_index].flags,
-			 block_index);
-
-		/* remove entry from process local table: */
-			last = ishm_proctable->nb_entries - 1;
-			ishm_proctable->entry[proc_index] =
-				ishm_proctable->entry[last];
-			ishm_proctable->nb_entries = last;
-	} else {
-		/* just possibly free the fragment as no mapping exist here: */
-		do_unmap(NULL, 0, block->flags, block_index);
-	}
-
-	/* remove all files related to this block: */
-	delete_file(block);
-
-	/* deregister the file descriptor from the file descriptor server. */
-	_odp_fdserver_deregister_fd(FD_SRV_CTX_ISHM, block_index);
-
-	/* mark the block as free in the main block table: */
-	block->len = 0;
-
-	/* mark the change so other processes see this entry as obsolete: */
-	block->seq++;
-
-	return 0;
+	return block_free_internal(block_index, 1, 1);
 }
 
 /*
