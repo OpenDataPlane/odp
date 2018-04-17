@@ -162,66 +162,9 @@ static odp_ipsec_packet_result_t *ipsec_pkt_result(odp_packet_t packet)
 	return &packet_hdr(packet)->ipsec_ctx;
 }
 
-static inline int _odp_ipv4_csum(odp_packet_t pkt,
-				 uint32_t offset,
-				 _odp_ipv4hdr_t *ip,
-				 odp_u16sum_t *chksum)
-{
-	unsigned nleft = _ODP_IPV4HDR_IHL(ip->ver_ihl) * 4;
-	uint16_t buf[nleft / 2];
-	int res;
-
-	if (odp_unlikely(nleft < sizeof(*ip)))
-		return -1;
-	ip->chksum = 0;
-	memcpy(buf, ip, sizeof(*ip));
-	res = odp_packet_copy_to_mem(pkt, offset + sizeof(*ip),
-				     nleft - sizeof(*ip),
-				     buf + sizeof(*ip) / 2);
-	if (odp_unlikely(res < 0))
-		return res;
-
-	*chksum = ~odp_chksum_ones_comp16(buf, nleft);
-
-	return 0;
-}
-
-#define _ODP_IPV4HDR_CSUM_OFFSET ODP_OFFSETOF(_odp_ipv4hdr_t, chksum)
 #define _ODP_IPV4HDR_PROTO_OFFSET ODP_OFFSETOF(_odp_ipv4hdr_t, proto)
 #define _ODP_IPV6HDR_NHDR_OFFSET ODP_OFFSETOF(_odp_ipv6hdr_t, next_hdr)
 #define _ODP_IPV6HDREXT_NHDR_OFFSET ODP_OFFSETOF(_odp_ipv6hdr_ext_t, next_hdr)
-
-/**
- * Calculate and fill in IPv4 checksum
- *
- * @param pkt  ODP packet
- *
- * @retval 0 on success
- * @retval <0 on failure
- */
-static inline int _odp_ipv4_csum_update(odp_packet_t pkt)
-{
-	uint32_t offset;
-	_odp_ipv4hdr_t ip;
-	odp_u16sum_t chksum;
-	int res;
-
-	offset = odp_packet_l3_offset(pkt);
-	if (offset == ODP_PACKET_OFFSET_INVALID)
-		return -1;
-
-	res = odp_packet_copy_to_mem(pkt, offset, sizeof(ip), &ip);
-	if (odp_unlikely(res < 0))
-		return res;
-
-	res = _odp_ipv4_csum(pkt, offset, &ip, &chksum);
-	if (odp_unlikely(res < 0))
-		return res;
-
-	return odp_packet_copy_from_mem(pkt,
-					offset + _ODP_IPV4HDR_CSUM_OFFSET,
-					2, &chksum);
-}
 
 #define ipv4_hdr_len(ip) (_ODP_IPV4HDR_IHL((ip)->ver_ihl) * 4)
 
@@ -815,7 +758,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 			ipv4hdr->tot_len = _odp_cpu_to_be_16(state.ip_tot_len);
 		else
 			ipv4hdr->ttl -= ipsec_sa->dec_ttl;
-		_odp_ipv4_csum_update(pkt);
+		_odp_packet_ipv4_chksum_insert(pkt);
 	} else if (state.is_ipv6 && odp_packet_len(pkt) > _ODP_IPV6HDR_LEN) {
 		_odp_ipv6hdr_t *ipv6hdr = odp_packet_l3_ptr(pkt, NULL);
 
@@ -883,6 +826,7 @@ static int ipsec_out_tunnel_parse_ipv4(ipsec_state_t *state,
 	state->out_tunnel.ip_tos = ipv4hdr->tos;
 	state->out_tunnel.ip_df = _ODP_IPV4HDR_FLAGS_DONT_FRAG(flags);
 	state->out_tunnel.ip_flabel = 0;
+	state->ip_next_hdr = ipv4hdr->proto;
 
 	return 0;
 }
@@ -1238,7 +1182,7 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 static void ipsec_out_esp_post(ipsec_state_t *state, odp_packet_t pkt)
 {
 	if (state->is_ipv4)
-		_odp_ipv4_csum_update(pkt);
+		_odp_packet_ipv4_chksum_insert(pkt);
 }
 
 static int ipsec_out_ah(odp_packet_t *pkt,
@@ -1343,13 +1287,48 @@ static void ipsec_out_ah_post(ipsec_state_t *state, odp_packet_t pkt)
 		ipv4hdr->tos = state->ah_ipv4.tos;
 		ipv4hdr->frag_offset = state->ah_ipv4.frag_offset;
 
-		_odp_ipv4_csum_update(pkt);
+		_odp_packet_ipv4_chksum_insert(pkt);
 	} else {
 		_odp_ipv6hdr_t *ipv6hdr = odp_packet_l3_ptr(pkt, NULL);
 
 		ipv6hdr->ver_tc_flow = state->ah_ipv6.ver_tc_flow;
 		ipv6hdr->hop_limit = state->ah_ipv6.hop_limit;
 	}
+}
+
+#define OL_TX_CHKSUM_PKT(_cfg, _proto, _ovr_set, _ovr) \
+	(_proto && (_ovr_set ? _ovr : _cfg))
+
+static void ipsec_out_checksums(odp_packet_t pkt,
+				ipsec_state_t *state)
+{
+	odp_bool_t ipv4_chksum_pkt, udp_chksum_pkt, tcp_chksum_pkt;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+	odp_ipsec_outbound_config_t outbound = ipsec_config.outbound;
+
+	ipv4_chksum_pkt = OL_TX_CHKSUM_PKT(outbound.chksum.inner_ipv4,
+					   state->is_ipv4,
+					   pkt_hdr->p.flags.l3_chksum_set,
+					   pkt_hdr->p.flags.l3_chksum);
+	udp_chksum_pkt =  OL_TX_CHKSUM_PKT(outbound.chksum.inner_udp,
+					   state->ip_next_hdr ==
+					   _ODP_IPPROTO_UDP,
+					   pkt_hdr->p.flags.l4_chksum_set,
+					   pkt_hdr->p.flags.l4_chksum);
+	tcp_chksum_pkt =  OL_TX_CHKSUM_PKT(outbound.chksum.inner_tcp,
+					   state->ip_next_hdr ==
+					   _ODP_IPPROTO_TCP,
+					   pkt_hdr->p.flags.l4_chksum_set,
+					   pkt_hdr->p.flags.l4_chksum);
+
+	if (ipv4_chksum_pkt)
+		_odp_packet_ipv4_chksum_insert(pkt);
+
+	if (tcp_chksum_pkt)
+		_odp_packet_tcp_chksum_insert(pkt);
+
+	if (udp_chksum_pkt)
+		_odp_packet_udp_chksum_insert(pkt);
 }
 
 static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
@@ -1411,6 +1390,9 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 
 		if (state.ip_tot_len + state.ip_offset != odp_packet_len(pkt))
 			rc = -1;
+
+		if (rc == 0)
+			ipsec_out_checksums(pkt, &state);
 	} else {
 		if (state.is_ipv4)
 			rc = ipsec_out_tunnel_parse_ipv4(&state, ipsec_sa);
@@ -1427,6 +1409,8 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 			status->error.alg = 1;
 			goto err;
 		}
+
+		ipsec_out_checksums(pkt, &state);
 
 		if (ipsec_sa->tun_ipv4)
 			rc = ipsec_out_tunnel_ipv4(&pkt, &state, ipsec_sa,
@@ -1500,7 +1484,7 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	else if (ODP_IPSEC_AH == ipsec_sa->proto)
 		ipsec_out_ah_post(&state, pkt);
 
-	_odp_ipv4_csum_update(pkt);
+	_odp_packet_ipv4_chksum_insert(pkt);
 
 	*pkt_out = pkt;
 	return ipsec_sa;

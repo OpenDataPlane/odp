@@ -303,6 +303,10 @@ int _odp_packet_set_data(odp_packet_t pkt, uint32_t offset,
 int _odp_packet_cmp_data(odp_packet_t pkt, uint32_t offset,
 			 const void *s, uint32_t len);
 
+int _odp_packet_ipv4_chksum_insert(odp_packet_t pkt);
+int _odp_packet_tcp_chksum_insert(odp_packet_t pkt);
+int _odp_packet_udp_chksum_insert(odp_packet_t pkt);
+
 #ifdef __cplusplus
 }
 #endif
