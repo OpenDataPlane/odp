@@ -291,19 +291,17 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 		CU_FAIL("Wrong status (stale) for fresh timeout");
 
 	if (!stale) {
-		/* Fresh timeout => local timer must have matching tick */
-		if (ttp->tick != tick) {
-			LOG_DBG("Wrong tick: expected %" PRIu64
-				" actual %" PRIu64 "\n",
+		/* tmo tick cannot be smaller than pre-calculated tick */
+		if (tick < ttp->tick) {
+			LOG_DBG("Too small tick: pre-calculated %" PRIu64
+				" timeout %" PRIu64 "\n",
 				ttp->tick, tick);
-			CU_FAIL("odp_timeout_tick() wrong tick");
+			CU_FAIL("odp_timeout_tick() too small tick");
 		}
-		if (ttp->ev != ODP_EVENT_INVALID)
-			CU_FAIL("Wrong state for fresh timer (event)");
 
-		/* Check that timeout was delivered 'timely' */
 		if (tick > odp_timer_current_tick(tp))
 			CU_FAIL("Timeout delivered early");
+
 		if (tick < prev_tick) {
 			LOG_DBG("Too late tick: %" PRIu64
 				" prev_tick %" PRIu64"\n",
@@ -421,23 +419,23 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 				ncancel++;
 			}
 		} else {
+			odp_timer_set_t rc;
+			uint64_t cur_tick;
+			uint64_t tck, nsec;
+
 			if (tt[i].ev != ODP_EVENT_INVALID)
 				/* Timer inactive => set */
 				nset++;
 			else
 				/* Timer active => reset */
 				nreset++;
-			uint64_t tck = 1 + odp_timer_ns_to_tick(tp,
-				       (rand_r(&seed) % RANGE_MS) * 1000000ULL);
-			odp_timer_set_t rc;
-			uint64_t cur_tick;
-			/* Loop until we manage to read cur_tick and set a
-			 * relative timer in the same tick */
-			do {
-				cur_tick = odp_timer_current_tick(tp);
-				rc = odp_timer_set_rel(tt[i].tim,
-						       tck, &tt[i].ev);
-			} while (cur_tick != odp_timer_current_tick(tp));
+
+			nsec = (rand_r(&seed) % RANGE_MS) * 1000000ULL;
+			tck  = 1 + odp_timer_ns_to_tick(tp, nsec);
+
+			cur_tick = odp_timer_current_tick(tp);
+			rc = odp_timer_set_rel(tt[i].tim, tck, &tt[i].ev);
+
 			if (rc == ODP_TIMER_TOOEARLY ||
 			    rc == ODP_TIMER_TOOLATE) {
 				CU_FAIL("Failed to set timer (tooearly/toolate)");
