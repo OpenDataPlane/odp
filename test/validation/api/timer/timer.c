@@ -609,6 +609,8 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 			} else if (rc == ODP_TIMER_SUCCESS) {
 				/* Save expected expiration tick on success */
 				tt[i].tick = cur_tick + tck;
+				/* ODP timer owns the event now */
+				tt[i].ev = ODP_EVENT_INVALID;
 			}
 		}
 		ts.tv_sec = 0;
