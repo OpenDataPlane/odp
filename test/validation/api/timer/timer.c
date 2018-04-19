@@ -6,10 +6,6 @@
 
 #include "config.h"
 
-/**
- * @file
- */
-
 /* For rand_r and nanosleep */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -23,29 +19,29 @@
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-/** @private Timeout range in milliseconds (ms) */
+/* Timeout range in milliseconds (ms) */
 #define RANGE_MS 2000
 
-/** @private Number of timers per thread */
+/* Number of timers per thread */
 #define NTIMERS 2000
 
-/** @private Barrier for thread synchronisation */
+/* Barrier for thread synchronisation */
 static odp_barrier_t test_barrier;
 
-/** @private Timeout pool handle used by all threads */
+/* Timeout pool handle used by all threads */
 static odp_pool_t tbp;
 
-/** @private Timer pool handle used by all threads */
+/* Timer pool handle used by all threads */
 static odp_timer_pool_t tp;
 
-/** @private Count of timeouts delivered too late */
+/* Count of timeouts delivered too late */
 static odp_atomic_u32_t ndelivtoolate;
 
-/** @private Sum of all allocated timers from all threads. Thread-local
+/* Sum of all allocated timers from all threads. Thread-local
  * caches may make this number lower than the capacity of the pool  */
 static odp_atomic_u32_t timers_allocated;
 
-/* @private Timer helper structure */
+/* Timer helper structure */
 struct test_timer {
 	odp_timer_t tim; /* Timer handle */
 	odp_event_t ev;  /* Timeout event */
@@ -233,7 +229,7 @@ static void timer_test_odp_timer_cancel(void)
 		CU_FAIL_FATAL("Failed to destroy pool");
 }
 
-/* @private Handle a received (timeout) event */
+/* Handle a received (timeout) event */
 static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 {
 	odp_event_subtype_t subtype;
@@ -307,7 +303,7 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 	}
 }
 
-/* @private Worker thread entrypoint which performs timer alloc/set/cancel/free
+/* Worker thread entrypoint which performs timer alloc/set/cancel/free
  * tests */
 static int worker_entrypoint(void *arg TEST_UNUSED)
 {
@@ -506,7 +502,7 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 	return CU_get_number_of_failures();
 }
 
-/* @private Timer test case entrypoint */
+/* Timer test case entrypoint */
 static void timer_test_odp_timer_all(void)
 {
 	int rc;
