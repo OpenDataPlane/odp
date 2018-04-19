@@ -233,6 +233,10 @@ static void timer_test_odp_timer_cancel(void)
 static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 {
 	odp_event_subtype_t subtype;
+	odp_timeout_t tmo;
+	odp_timer_t tim;
+	uint64_t tick;
+	struct test_timer *ttp;
 
 	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID); /* Internal error */
 	if (odp_event_type(ev) != ODP_EVENT_TIMEOUT) {
@@ -255,33 +259,39 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 		CU_FAIL("Unexpected event subtype received");
 		return;
 	}
+
 	/* Read the metadata from the timeout */
-	odp_timeout_t tmo = odp_timeout_from_event(ev);
-	odp_timer_t tim = odp_timeout_timer(tmo);
-	uint64_t tick = odp_timeout_tick(tmo);
-	struct test_timer *ttp = odp_timeout_user_ptr(tmo);
+	tmo  = odp_timeout_from_event(ev);
+	tim  = odp_timeout_timer(tmo);
+	tick = odp_timeout_tick(tmo);
+	ttp  = odp_timeout_user_ptr(tmo);
 
 	if (tim == ODP_TIMER_INVALID)
 		CU_FAIL("odp_timeout_timer() invalid timer");
-	if (!ttp)
-		CU_FAIL("odp_timeout_user_ptr() null user ptr");
 
-	if (ttp && ttp->ev2 != ev)
+	if (ttp == NULL) {
+		CU_FAIL("odp_timeout_user_ptr() null user ptr");
+		return;
+	}
+
+	if (ttp->ev2 != ev)
 		CU_FAIL("odp_timeout_user_ptr() wrong user ptr");
-	if (ttp && ttp->tim != tim)
+
+	if (ttp->tim != tim)
 		CU_FAIL("odp_timeout_timer() wrong timer");
 
 	if (!odp_timeout_fresh(tmo))
 		CU_FAIL("Wrong status (stale) for fresh timeout");
+
 	if (!stale) {
 		/* Fresh timeout => local timer must have matching tick */
-		if (ttp && ttp->tick != tick) {
+		if (ttp->tick != tick) {
 			LOG_DBG("Wrong tick: expected %" PRIu64
 				" actual %" PRIu64 "\n",
 				ttp->tick, tick);
 			CU_FAIL("odp_timeout_tick() wrong tick");
 		}
-		if (ttp && ttp->ev != ODP_EVENT_INVALID)
+		if (ttp->ev != ODP_EVENT_INVALID)
 			CU_FAIL("Wrong state for fresh timer (event)");
 
 		/* Check that timeout was delivered 'timely' */
@@ -296,11 +306,9 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 		}
 	}
 
-	if (ttp) {
-		/* Internal error */
-		CU_ASSERT_FATAL(ttp->ev == ODP_EVENT_INVALID);
-		ttp->ev = ev;
-	}
+	/* Internal error */
+	CU_ASSERT_FATAL(ttp->ev == ODP_EVENT_INVALID);
+	ttp->ev = ev;
 }
 
 /* Worker thread entrypoint which performs timer alloc/set/cancel/free
