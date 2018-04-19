@@ -25,6 +25,13 @@
 /* Number of timers per thread */
 #define NTIMERS 2000
 
+#define NAME "timer_pool"
+#define RES (10 * ODP_TIME_MSEC_IN_NS / 3)
+#define MIN_TMO (10 * ODP_TIME_MSEC_IN_NS / 3)
+#define MAX_TMO (1000000 * ODP_TIME_MSEC_IN_NS)
+#define USER_PTR ((void *)0xdead)
+#define TICK_INVALID (~(uint64_t)0)
+
 /* Barrier for thread synchronisation */
 static odp_barrier_t test_barrier;
 
@@ -41,6 +48,9 @@ static odp_atomic_u32_t ndelivtoolate;
  * caches may make this number lower than the capacity of the pool  */
 static odp_atomic_u32_t timers_allocated;
 
+/* Timer resolution in nsec */
+static uint64_t resolution_ns;
+
 /* Timer helper structure */
 struct test_timer {
 	odp_timer_t tim; /* Timer handle */
@@ -48,8 +58,6 @@ struct test_timer {
 	odp_event_t ev2; /* Copy of event handle */
 	uint64_t tick; /* Expiration tick or TICK_INVALID */
 };
-
-#define TICK_INVALID (~(uint64_t)0)
 
 static void timer_test_timeout_pool_alloc(void)
 {
@@ -180,7 +188,6 @@ static void timer_test_odp_timer_cancel(void)
 	if (queue == ODP_QUEUE_INVALID)
 		CU_FAIL_FATAL("Queue create failed");
 
-	#define USER_PTR ((void *)0xdead)
 	tim = odp_timer_alloc(tp, queue, USER_PTR);
 	if (tim == ODP_TIMER_INVALID)
 		CU_FAIL_FATAL("Failed to allocate timer");
@@ -518,9 +525,7 @@ static void timer_test_odp_timer_all(void)
 	odp_timer_pool_param_t tparam;
 	odp_cpumask_t unused;
 	odp_timer_pool_info_t tpinfo;
-	uint64_t tick;
-	uint64_t ns;
-	uint64_t t2;
+	uint64_t ns, tick, ns2;
 	pthrd_arg thrdarg;
 	odp_timer_capability_t timer_capa;
 
@@ -546,15 +551,12 @@ static void timer_test_odp_timer_all(void)
 	if (tbp == ODP_POOL_INVALID)
 		CU_FAIL_FATAL("Timeout pool create failed");
 
-#define NAME "timer_pool"
-#define RES (10 * ODP_TIME_MSEC_IN_NS / 3)
-#define MIN_TMO (10 * ODP_TIME_MSEC_IN_NS / 3)
-#define MAX_TMO (1000000 * ODP_TIME_MSEC_IN_NS)
 	/* Create a timer pool */
 	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa))
 		CU_FAIL("Error: get timer capacity failed.\n");
 
-	tparam.res_ns = MAX(RES, timer_capa.highest_res_ns);
+	resolution_ns = MAX(RES, timer_capa.highest_res_ns);
+	tparam.res_ns = resolution_ns;
 	tparam.min_tmo = MIN_TMO;
 	tparam.max_tmo = MAX_TMO;
 	tparam.num_timers = num_workers * NTIMERS;
@@ -581,11 +583,26 @@ static void timer_test_odp_timer_all(void)
 	LOG_DBG("Tmo range: %u ms (%" PRIu64 " ticks)\n", RANGE_MS,
 		odp_timer_ns_to_tick(tp, 1000000ULL * RANGE_MS));
 
-	for (tick = 0; tick < 1000000000000ULL; tick += 1000000ULL) {
-		ns = odp_timer_tick_to_ns(tp, tick);
-		t2 = odp_timer_ns_to_tick(tp, ns);
-		if (tick != t2)
-			CU_FAIL("Invalid conversion tick->ns->tick");
+	tick = odp_timer_ns_to_tick(tp, 0);
+	CU_ASSERT(tick == 0);
+	ns2  = odp_timer_tick_to_ns(tp, tick);
+	CU_ASSERT(ns2 == 0);
+
+	for (ns = resolution_ns; ns < MAX_TMO; ns += resolution_ns) {
+		tick = odp_timer_ns_to_tick(tp, ns);
+		ns2  = odp_timer_tick_to_ns(tp, tick);
+
+		if (ns2 < ns - resolution_ns) {
+			LOG_DBG("FAIL ns:%" PRIu64 " tick:%" PRIu64 " ns2:%"
+				PRIu64 "\n", ns, tick, ns2);
+			CU_FAIL("tick conversion: nsec too small\n");
+		}
+
+		if (ns2 > ns + resolution_ns) {
+			LOG_DBG("FAIL ns:%" PRIu64 " tick:%" PRIu64 " ns2:%"
+				PRIu64 "\n", ns, tick, ns2);
+			CU_FAIL("tick conversion: nsec too large\n");
+		}
 	}
 
 	/* Initialize barrier used by worker threads for synchronization */
