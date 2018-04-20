@@ -497,7 +497,7 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 	uint32_t ncancel;
 	uint32_t ntoolate;
 	uint32_t ms;
-	uint64_t prev_tick;
+	uint64_t prev_tick, nsec;
 	odp_event_t ev;
 	struct timespec ts;
 	uint32_t nstale;
@@ -539,9 +539,9 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 	/* Initial set all timers with a random expiration time */
 	nset = 0;
 	for (i = 0; i < allocated; i++) {
-		tck = odp_timer_current_tick(tp) + 1 +
-		      odp_timer_ns_to_tick(tp, (rand_r(&seed) % RANGE_MS)
-					       * 1000000ULL);
+		nsec = MIN_TMO + (rand_r(&seed) % RANGE_MS) * 1000000ULL;
+		tck = odp_timer_current_tick(tp) +
+		      odp_timer_ns_to_tick(tp, nsec);
 		timer_rc = odp_timer_set_abs(tt[i].tim, tck, &tt[i].ev);
 		if (timer_rc == ODP_TIMER_TOOEARLY) {
 			LOG_ERR("Missed tick, setting timer\n");
@@ -585,7 +585,7 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 		} else {
 			odp_timer_set_t rc;
 			uint64_t cur_tick;
-			uint64_t tck, nsec;
+			uint64_t tck;
 
 			if (tt[i].ev != ODP_EVENT_INVALID)
 				/* Timer inactive => set */
@@ -594,16 +594,18 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 				/* Timer active => reset */
 				nreset++;
 
-			nsec = (rand_r(&seed) % RANGE_MS) * 1000000ULL;
-			tck  = 1 + odp_timer_ns_to_tick(tp, nsec);
+			nsec = MIN_TMO +
+			       (rand_r(&seed) % RANGE_MS) * 1000000ULL;
+			tck  = odp_timer_ns_to_tick(tp, nsec);
 
 			cur_tick = odp_timer_current_tick(tp);
 			rc = odp_timer_set_rel(tt[i].tim, tck, &tt[i].ev);
 
-			if (rc == ODP_TIMER_TOOEARLY ||
-			    rc == ODP_TIMER_TOOLATE) {
-				CU_FAIL("Failed to set timer (tooearly/toolate)");
-			} else if (rc != ODP_TIMER_SUCCESS) {
+			if (rc == ODP_TIMER_TOOEARLY) {
+				CU_FAIL("Failed to set timer: TOO EARLY");
+			} else if (rc == ODP_TIMER_TOOLATE) {
+				CU_FAIL("Failed to set timer: TOO LATE");
+			} else if (rc == ODP_TIMER_NOEVENT) {
 				/* Set/reset failed, timer already expired */
 				ntoolate++;
 			} else if (rc == ODP_TIMER_SUCCESS) {
@@ -611,6 +613,8 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 				tt[i].tick = cur_tick + tck;
 				/* ODP timer owns the event now */
 				tt[i].ev = ODP_EVENT_INVALID;
+			} else {
+				CU_FAIL("Failed to set timer: bad return code");
 			}
 		}
 		ts.tv_sec = 0;
@@ -743,7 +747,10 @@ static void timer_test_odp_timer_all(void)
 	CU_ASSERT(strcmp(tpinfo.name, NAME) == 0);
 
 	LOG_DBG("Timer pool handle: %" PRIu64 "\n", odp_timer_pool_to_u64(tp));
-	LOG_DBG("#timers..: %u\n", NTIMERS);
+	LOG_DBG("Resolution:   %" PRIu64 "\n", tparam.res_ns);
+	LOG_DBG("Min timeout:  %" PRIu64 "\n", tparam.min_tmo);
+	LOG_DBG("Max timeout:  %" PRIu64 "\n", tparam.max_tmo);
+	LOG_DBG("Num timers..: %u\n", tparam.num_timers);
 	LOG_DBG("Tmo range: %u ms (%" PRIu64 " ticks)\n", RANGE_MS,
 		odp_timer_ns_to_tick(tp, 1000000ULL * RANGE_MS));
 
