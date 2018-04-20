@@ -6,10 +6,6 @@
 
 #include "config.h"
 
-/**
- * @file
- */
-
 /* For rand_r and nanosleep */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -23,37 +19,45 @@
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-/** @private Timeout range in milliseconds (ms) */
+/* Timeout range in milliseconds (ms) */
 #define RANGE_MS 2000
 
-/** @private Number of timers per thread */
+/* Number of timers per thread */
 #define NTIMERS 2000
 
-/** @private Barrier for thread synchronisation */
+#define NAME "timer_pool"
+#define RES (10 * ODP_TIME_MSEC_IN_NS / 3)
+#define MIN_TMO (10 * ODP_TIME_MSEC_IN_NS / 3)
+#define MAX_TMO (1000000 * ODP_TIME_MSEC_IN_NS)
+#define USER_PTR ((void *)0xdead)
+#define TICK_INVALID (~(uint64_t)0)
+
+/* Barrier for thread synchronisation */
 static odp_barrier_t test_barrier;
 
-/** @private Timeout pool handle used by all threads */
+/* Timeout pool handle used by all threads */
 static odp_pool_t tbp;
 
-/** @private Timer pool handle used by all threads */
+/* Timer pool handle used by all threads */
 static odp_timer_pool_t tp;
 
-/** @private Count of timeouts delivered too late */
+/* Count of timeouts delivered too late */
 static odp_atomic_u32_t ndelivtoolate;
 
-/** @private Sum of all allocated timers from all threads. Thread-local
+/* Sum of all allocated timers from all threads. Thread-local
  * caches may make this number lower than the capacity of the pool  */
 static odp_atomic_u32_t timers_allocated;
 
-/* @private Timer helper structure */
+/* Timer resolution in nsec */
+static uint64_t resolution_ns;
+
+/* Timer helper structure */
 struct test_timer {
 	odp_timer_t tim; /* Timer handle */
 	odp_event_t ev;  /* Timeout event */
 	odp_event_t ev2; /* Copy of event handle */
 	uint64_t tick; /* Expiration tick or TICK_INVALID */
 };
-
-#define TICK_INVALID (~(uint64_t)0)
 
 static void timer_test_timeout_pool_alloc(void)
 {
@@ -140,6 +144,170 @@ static void timer_test_timeout_pool_free(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+static void timer_test_queue_type(odp_queue_type_t queue_type)
+{
+	odp_pool_t pool;
+	const int num = 10;
+	odp_timeout_t tmo;
+	odp_event_t ev;
+	odp_queue_param_t queue_param;
+	odp_timer_pool_param_t tparam;
+	odp_timer_pool_t tp;
+	odp_queue_t queue;
+	odp_timer_t tim;
+	int i, ret, num_tmo;
+	uint64_t tick_base, tick;
+	uint64_t res_ns, period_ns, period_tick, test_period;
+	uint64_t diff_period, diff_test;
+	odp_pool_param_t params;
+	odp_timer_capability_t timer_capa;
+	odp_time_t t0, t1, t2;
+
+	odp_pool_param_init(&params);
+	params.type    = ODP_POOL_TIMEOUT;
+	params.tmo.num = num;
+
+	pool = odp_pool_create("timeout_pool", &params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa))
+		CU_FAIL_FATAL("Timer capability failed")
+
+	res_ns = 20 * ODP_TIME_MSEC_IN_NS;
+
+	if (timer_capa.highest_res_ns > res_ns)
+		res_ns = timer_capa.highest_res_ns;
+
+	tparam.res_ns     = res_ns;
+	tparam.min_tmo    = 5 * res_ns;
+	tparam.max_tmo    = 10000 * tparam.min_tmo;
+	tparam.num_timers = num + 1;
+	tparam.priv       = 0;
+	tparam.clk_src    = ODP_CLOCK_CPU;
+
+	LOG_DBG("\nTimer pool parameters:\n");
+	LOG_DBG("  res_ns  %" PRIu64 "\n", tparam.res_ns);
+	LOG_DBG("  min_tmo %" PRIu64 "\n", tparam.min_tmo);
+	LOG_DBG("  max_tmo %" PRIu64 "\n", tparam.max_tmo);
+
+	tp = odp_timer_pool_create("timer_pool", &tparam);
+	if (tp == ODP_TIMER_POOL_INVALID)
+		CU_FAIL_FATAL("Timer pool create failed");
+
+	odp_timer_pool_start();
+
+	odp_queue_param_init(&queue_param);
+	if (queue_type == ODP_QUEUE_TYPE_SCHED) {
+		queue_param.type = ODP_QUEUE_TYPE_SCHED;
+		queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+		queue_param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
+		queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+	}
+
+	queue = odp_queue_create("timer_queue", &queue_param);
+	if (queue == ODP_QUEUE_INVALID)
+		CU_FAIL_FATAL("Queue create failed");
+
+	period_ns   = 4 * tparam.min_tmo;
+	period_tick = odp_timer_ns_to_tick(tp, period_ns);
+	test_period = num * period_ns;
+
+	LOG_DBG("  period_ns %" PRIu64 "\n", period_ns);
+	LOG_DBG("  period_tick %" PRIu64 "\n\n", period_tick);
+
+	tick_base = odp_timer_current_tick(tp);
+	t0 = odp_time_local();
+	t1 = t0;
+	t2 = t0;
+
+	for (i = 0; i < num; i++) {
+		tmo = odp_timeout_alloc(pool);
+		CU_ASSERT_FATAL(tmo != ODP_TIMEOUT_INVALID);
+		ev  = odp_timeout_to_event(tmo);
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+
+		tim = odp_timer_alloc(tp, queue, USER_PTR);
+		CU_ASSERT_FATAL(tim != ODP_TIMER_INVALID);
+
+		tick = tick_base + ((i + 1) * period_tick);
+		ret = odp_timer_set_abs(tim, tick, &ev);
+
+		LOG_DBG("abs timer tick %" PRIu64 "\n", tick);
+		if (ret == ODP_TIMER_TOOEARLY)
+			LOG_DBG("Too early %" PRIu64 "\n", tick);
+		else if (ret == ODP_TIMER_TOOLATE)
+			LOG_DBG("Too late %" PRIu64 "\n", tick);
+		else if (ret == ODP_TIMER_NOEVENT)
+			LOG_DBG("No event %" PRIu64 "\n", tick);
+
+		CU_ASSERT(ret == ODP_TIMER_SUCCESS);
+	}
+
+	num_tmo = 0;
+
+	do {
+		if (queue_type == ODP_QUEUE_TYPE_SCHED)
+			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+		else
+			ev = odp_queue_deq(queue);
+
+		t2 = odp_time_local();
+		diff_test = odp_time_diff_ns(t2, t0);
+
+		if (ev != ODP_EVENT_INVALID) {
+			diff_period = odp_time_diff_ns(t2, t1);
+			t1 = odp_time_local();
+			tmo = odp_timeout_from_event(ev);
+			tim = odp_timeout_timer(tmo);
+			tick = odp_timeout_tick(tmo);
+
+			CU_ASSERT(diff_period > (period_ns - (2 * res_ns)));
+			CU_ASSERT(diff_period < (period_ns + (2 * res_ns)));
+
+			LOG_DBG("timeout tick %" PRIu64 "\n", tick);
+
+			odp_timeout_free(tmo);
+			CU_ASSERT(odp_timer_free(tim) == ODP_EVENT_INVALID);
+
+			num_tmo++;
+		}
+
+	} while (diff_test < (2 * test_period) && num_tmo < num);
+
+	CU_ASSERT(num_tmo == num);
+	CU_ASSERT(diff_test > (test_period - tparam.min_tmo));
+	CU_ASSERT(diff_test < (test_period + tparam.min_tmo));
+
+	/* Scalable scheduler needs this pause sequence. Otherwise, it gets
+	 * stuck on terminate. */
+	if (queue_type == ODP_QUEUE_TYPE_SCHED) {
+		odp_schedule_pause();
+		while (1) {
+			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+			if (ev == ODP_EVENT_INVALID)
+				break;
+
+			CU_FAIL("Drop extra event\n");
+			odp_event_free(ev);
+		}
+	}
+
+	odp_timer_pool_destroy(tp);
+
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+static void timer_test_plain_queue(void)
+{
+	timer_test_queue_type(ODP_QUEUE_TYPE_PLAIN);
+}
+
+static void timer_test_sched_queue(void)
+{
+	timer_test_queue_type(ODP_QUEUE_TYPE_SCHED);
+}
+
 static void timer_test_odp_timer_cancel(void)
 {
 	odp_pool_t pool;
@@ -184,7 +352,6 @@ static void timer_test_odp_timer_cancel(void)
 	if (queue == ODP_QUEUE_INVALID)
 		CU_FAIL_FATAL("Queue create failed");
 
-	#define USER_PTR ((void *)0xdead)
 	tim = odp_timer_alloc(tp, queue, USER_PTR);
 	if (tim == ODP_TIMER_INVALID)
 		CU_FAIL_FATAL("Failed to allocate timer");
@@ -233,10 +400,14 @@ static void timer_test_odp_timer_cancel(void)
 		CU_FAIL_FATAL("Failed to destroy pool");
 }
 
-/* @private Handle a received (timeout) event */
+/* Handle a received (timeout) event */
 static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 {
 	odp_event_subtype_t subtype;
+	odp_timeout_t tmo;
+	odp_timer_t tim;
+	uint64_t tick;
+	struct test_timer *ttp;
 
 	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID); /* Internal error */
 	if (odp_event_type(ev) != ODP_EVENT_TIMEOUT) {
@@ -259,38 +430,42 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 		CU_FAIL("Unexpected event subtype received");
 		return;
 	}
+
 	/* Read the metadata from the timeout */
-	odp_timeout_t tmo = odp_timeout_from_event(ev);
-	odp_timer_t tim = odp_timeout_timer(tmo);
-	uint64_t tick = odp_timeout_tick(tmo);
-	struct test_timer *ttp = odp_timeout_user_ptr(tmo);
+	tmo  = odp_timeout_from_event(ev);
+	tim  = odp_timeout_timer(tmo);
+	tick = odp_timeout_tick(tmo);
+	ttp  = odp_timeout_user_ptr(tmo);
 
 	if (tim == ODP_TIMER_INVALID)
 		CU_FAIL("odp_timeout_timer() invalid timer");
-	if (!ttp)
-		CU_FAIL("odp_timeout_user_ptr() null user ptr");
 
-	if (ttp && ttp->ev2 != ev)
+	if (ttp == NULL) {
+		CU_FAIL("odp_timeout_user_ptr() null user ptr");
+		return;
+	}
+
+	if (ttp->ev2 != ev)
 		CU_FAIL("odp_timeout_user_ptr() wrong user ptr");
-	if (ttp && ttp->tim != tim)
+
+	if (ttp->tim != tim)
 		CU_FAIL("odp_timeout_timer() wrong timer");
 
 	if (!odp_timeout_fresh(tmo))
 		CU_FAIL("Wrong status (stale) for fresh timeout");
-	if (!stale) {
-		/* Fresh timeout => local timer must have matching tick */
-		if (ttp && ttp->tick != tick) {
-			LOG_DBG("Wrong tick: expected %" PRIu64
-				" actual %" PRIu64 "\n",
-				ttp->tick, tick);
-			CU_FAIL("odp_timeout_tick() wrong tick");
-		}
-		if (ttp && ttp->ev != ODP_EVENT_INVALID)
-			CU_FAIL("Wrong state for fresh timer (event)");
 
-		/* Check that timeout was delivered 'timely' */
+	if (!stale) {
+		/* tmo tick cannot be smaller than pre-calculated tick */
+		if (tick < ttp->tick) {
+			LOG_DBG("Too small tick: pre-calculated %" PRIu64
+				" timeout %" PRIu64 "\n",
+				ttp->tick, tick);
+			CU_FAIL("odp_timeout_tick() too small tick");
+		}
+
 		if (tick > odp_timer_current_tick(tp))
 			CU_FAIL("Timeout delivered early");
+
 		if (tick < prev_tick) {
 			LOG_DBG("Too late tick: %" PRIu64
 				" prev_tick %" PRIu64"\n",
@@ -300,14 +475,12 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 		}
 	}
 
-	if (ttp) {
-		/* Internal error */
-		CU_ASSERT_FATAL(ttp->ev == ODP_EVENT_INVALID);
-		ttp->ev = ev;
-	}
+	/* Internal error */
+	CU_ASSERT_FATAL(ttp->ev == ODP_EVENT_INVALID);
+	ttp->ev = ev;
 }
 
-/* @private Worker thread entrypoint which performs timer alloc/set/cancel/free
+/* Worker thread entrypoint which performs timer alloc/set/cancel/free
  * tests */
 static int worker_entrypoint(void *arg TEST_UNUSED)
 {
@@ -324,7 +497,7 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 	uint32_t ncancel;
 	uint32_t ntoolate;
 	uint32_t ms;
-	uint64_t prev_tick;
+	uint64_t prev_tick, nsec;
 	odp_event_t ev;
 	struct timespec ts;
 	uint32_t nstale;
@@ -366,9 +539,9 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 	/* Initial set all timers with a random expiration time */
 	nset = 0;
 	for (i = 0; i < allocated; i++) {
-		tck = odp_timer_current_tick(tp) + 1 +
-		      odp_timer_ns_to_tick(tp, (rand_r(&seed) % RANGE_MS)
-					       * 1000000ULL);
+		nsec = MIN_TMO + (rand_r(&seed) % RANGE_MS) * 1000000ULL;
+		tck = odp_timer_current_tick(tp) +
+		      odp_timer_ns_to_tick(tp, nsec);
 		timer_rc = odp_timer_set_abs(tt[i].tim, tck, &tt[i].ev);
 		if (timer_rc == ODP_TIMER_TOOEARLY) {
 			LOG_ERR("Missed tick, setting timer\n");
@@ -410,32 +583,38 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 				ncancel++;
 			}
 		} else {
+			odp_timer_set_t rc;
+			uint64_t cur_tick;
+			uint64_t tck;
+
 			if (tt[i].ev != ODP_EVENT_INVALID)
 				/* Timer inactive => set */
 				nset++;
 			else
 				/* Timer active => reset */
 				nreset++;
-			uint64_t tck = 1 + odp_timer_ns_to_tick(tp,
-				       (rand_r(&seed) % RANGE_MS) * 1000000ULL);
-			odp_timer_set_t rc;
-			uint64_t cur_tick;
-			/* Loop until we manage to read cur_tick and set a
-			 * relative timer in the same tick */
-			do {
-				cur_tick = odp_timer_current_tick(tp);
-				rc = odp_timer_set_rel(tt[i].tim,
-						       tck, &tt[i].ev);
-			} while (cur_tick != odp_timer_current_tick(tp));
-			if (rc == ODP_TIMER_TOOEARLY ||
-			    rc == ODP_TIMER_TOOLATE) {
-				CU_FAIL("Failed to set timer (tooearly/toolate)");
-			} else if (rc != ODP_TIMER_SUCCESS) {
+
+			nsec = MIN_TMO +
+			       (rand_r(&seed) % RANGE_MS) * 1000000ULL;
+			tck  = odp_timer_ns_to_tick(tp, nsec);
+
+			cur_tick = odp_timer_current_tick(tp);
+			rc = odp_timer_set_rel(tt[i].tim, tck, &tt[i].ev);
+
+			if (rc == ODP_TIMER_TOOEARLY) {
+				CU_FAIL("Failed to set timer: TOO EARLY");
+			} else if (rc == ODP_TIMER_TOOLATE) {
+				CU_FAIL("Failed to set timer: TOO LATE");
+			} else if (rc == ODP_TIMER_NOEVENT) {
 				/* Set/reset failed, timer already expired */
 				ntoolate++;
 			} else if (rc == ODP_TIMER_SUCCESS) {
 				/* Save expected expiration tick on success */
 				tt[i].tick = cur_tick + tck;
+				/* ODP timer owns the event now */
+				tt[i].ev = ODP_EVENT_INVALID;
+			} else {
+				CU_FAIL("Failed to set timer: bad return code");
 			}
 		}
 		ts.tv_sec = 0;
@@ -506,7 +685,7 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 	return CU_get_number_of_failures();
 }
 
-/* @private Timer test case entrypoint */
+/* Timer test case entrypoint */
 static void timer_test_odp_timer_all(void)
 {
 	int rc;
@@ -514,9 +693,7 @@ static void timer_test_odp_timer_all(void)
 	odp_timer_pool_param_t tparam;
 	odp_cpumask_t unused;
 	odp_timer_pool_info_t tpinfo;
-	uint64_t tick;
-	uint64_t ns;
-	uint64_t t2;
+	uint64_t ns, tick, ns2;
 	pthrd_arg thrdarg;
 	odp_timer_capability_t timer_capa;
 
@@ -542,15 +719,12 @@ static void timer_test_odp_timer_all(void)
 	if (tbp == ODP_POOL_INVALID)
 		CU_FAIL_FATAL("Timeout pool create failed");
 
-#define NAME "timer_pool"
-#define RES (10 * ODP_TIME_MSEC_IN_NS / 3)
-#define MIN_TMO (10 * ODP_TIME_MSEC_IN_NS / 3)
-#define MAX_TMO (1000000 * ODP_TIME_MSEC_IN_NS)
 	/* Create a timer pool */
 	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa))
 		CU_FAIL("Error: get timer capacity failed.\n");
 
-	tparam.res_ns = MAX(RES, timer_capa.highest_res_ns);
+	resolution_ns = MAX(RES, timer_capa.highest_res_ns);
+	tparam.res_ns = resolution_ns;
 	tparam.min_tmo = MIN_TMO;
 	tparam.max_tmo = MAX_TMO;
 	tparam.num_timers = num_workers * NTIMERS;
@@ -573,15 +747,33 @@ static void timer_test_odp_timer_all(void)
 	CU_ASSERT(strcmp(tpinfo.name, NAME) == 0);
 
 	LOG_DBG("Timer pool handle: %" PRIu64 "\n", odp_timer_pool_to_u64(tp));
-	LOG_DBG("#timers..: %u\n", NTIMERS);
+	LOG_DBG("Resolution:   %" PRIu64 "\n", tparam.res_ns);
+	LOG_DBG("Min timeout:  %" PRIu64 "\n", tparam.min_tmo);
+	LOG_DBG("Max timeout:  %" PRIu64 "\n", tparam.max_tmo);
+	LOG_DBG("Num timers..: %u\n", tparam.num_timers);
 	LOG_DBG("Tmo range: %u ms (%" PRIu64 " ticks)\n", RANGE_MS,
 		odp_timer_ns_to_tick(tp, 1000000ULL * RANGE_MS));
 
-	for (tick = 0; tick < 1000000000000ULL; tick += 1000000ULL) {
-		ns = odp_timer_tick_to_ns(tp, tick);
-		t2 = odp_timer_ns_to_tick(tp, ns);
-		if (tick != t2)
-			CU_FAIL("Invalid conversion tick->ns->tick");
+	tick = odp_timer_ns_to_tick(tp, 0);
+	CU_ASSERT(tick == 0);
+	ns2  = odp_timer_tick_to_ns(tp, tick);
+	CU_ASSERT(ns2 == 0);
+
+	for (ns = resolution_ns; ns < MAX_TMO; ns += resolution_ns) {
+		tick = odp_timer_ns_to_tick(tp, ns);
+		ns2  = odp_timer_tick_to_ns(tp, tick);
+
+		if (ns2 < ns - resolution_ns) {
+			LOG_DBG("FAIL ns:%" PRIu64 " tick:%" PRIu64 " ns2:%"
+				PRIu64 "\n", ns, tick, ns2);
+			CU_FAIL("tick conversion: nsec too small\n");
+		}
+
+		if (ns2 > ns + resolution_ns) {
+			LOG_DBG("FAIL ns:%" PRIu64 " tick:%" PRIu64 " ns2:%"
+				PRIu64 "\n", ns, tick, ns2);
+			CU_FAIL("tick conversion: nsec too large\n");
+		}
 	}
 
 	/* Initialize barrier used by worker threads for synchronization */
@@ -623,6 +815,8 @@ static void timer_test_odp_timer_all(void)
 odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_test_timeout_pool_alloc),
 	ODP_TEST_INFO(timer_test_timeout_pool_free),
+	ODP_TEST_INFO(timer_test_plain_queue),
+	ODP_TEST_INFO(timer_test_sched_queue),
 	ODP_TEST_INFO(timer_test_odp_timer_cancel),
 	ODP_TEST_INFO(timer_test_odp_timer_all),
 	ODP_TEST_INFO_NULL,
