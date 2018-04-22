@@ -507,7 +507,7 @@ int odp_pktio_start(odp_pktio_t hdl)
 			}
 		}
 
-		sched_fn->pktio_start(_odp_pktio_index(hdl), num, index, odpq);
+		sched_fn->pktio_start(odp_pktio_index(hdl), num, index, odpq);
 	}
 
 	ODP_DBG("interface: %s, input queues: %u, output queues: %u\n",
@@ -1183,7 +1183,7 @@ void odp_pktio_print(odp_pktio_t hdl)
 	len += snprintf(&str[len], n - len,
 			"  type              %s\n", entry->s.ops->name);
 	len += snprintf(&str[len], n - len,
-			"  index             %i\n", _odp_pktio_index(hdl));
+			"  index             %i\n", odp_pktio_index(hdl));
 	len += snprintf(&str[len], n - len,
 			"  handle (u64)      %" PRIu64 "\n",
 			odp_pktio_to_u64(hdl));
@@ -1457,7 +1457,7 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 		    mode == ODP_PKTIN_MODE_SCHED) {
 			odp_queue_param_t queue_param;
 			char name[ODP_QUEUE_NAME_LEN];
-			int pktio_id = _odp_pktio_index(pktio);
+			int pktio_id = odp_pktio_index(pktio);
 
 			snprintf(name, sizeof(name), "odp-pktin-%i-%i",
 				 pktio_id, i);
@@ -1592,7 +1592,7 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 			odp_queue_param_t queue_param;
 			queue_t q_int;
 			char name[ODP_QUEUE_NAME_LEN];
-			int pktio_id = _odp_pktio_index(pktio);
+			int pktio_id = odp_pktio_index(pktio);
 
 			snprintf(name, sizeof(name), "odp-pktout-%i-%i",
 				 pktio_id, i);
