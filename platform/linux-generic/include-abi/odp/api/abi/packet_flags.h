@@ -18,7 +18,6 @@ extern "C" {
 #endif
 
 #include <odp/api/plat/packet_flag_inlines.h>
-#include <odp/api/plat/packet_flag_inlines_api.h>
 
 #ifdef __cplusplus
 }

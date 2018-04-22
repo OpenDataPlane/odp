@@ -116,11 +116,6 @@ int odp_packet_has_ipopt(odp_packet_t pkt)
 	retflag(pkt, input_flags.ipopt);
 }
 
-int odp_packet_has_ipsec(odp_packet_t pkt)
-{
-	retflag(pkt, input_flags.ipsec);
-}
-
 int odp_packet_has_udp(odp_packet_t pkt)
 {
 	retflag(pkt, input_flags.udp);
