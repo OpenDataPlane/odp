@@ -101,7 +101,7 @@ static inline int _odp_packet_input_index(odp_packet_t pkt)
 {
 	odp_pktio_t pktio = _odp_packet_input(pkt);
 
-	return _odp_pktio_index(pktio);
+	return odp_pktio_index(pktio);
 }
 
 static inline int _odp_packet_num_segs(odp_packet_t pkt)

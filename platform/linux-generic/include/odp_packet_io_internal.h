@@ -260,7 +260,7 @@ static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 		return NULL;
 	}
 
-	idx = _odp_pktio_index(pktio);
+	idx = odp_pktio_index(pktio);
 
 	return pktio_entry_ptr[idx];
 }
