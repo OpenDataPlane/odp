@@ -39,8 +39,8 @@
 		tmp_a < tmp_b ? tmp_a : tmp_b; \
 	})
 
-#define LOCK(a)      _odp_ticketlock_lock(a)
-#define UNLOCK(a)    _odp_ticketlock_unlock(a)
+#define LOCK(a)      odp_ticketlock_lock(a)
+#define UNLOCK(a)    odp_ticketlock_unlock(a)
 #define LOCK_INIT(a) odp_ticketlock_init(a)
 
 extern __thread sched_scalable_thread_state_t *sched_ts;

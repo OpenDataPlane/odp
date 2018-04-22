@@ -25,8 +25,8 @@
 
 #include <odp/api/plat/pool_inline_types.h>
 #include <odp/api/plat/ticketlock_inlines.h>
-#define LOCK(a)      _odp_ticketlock_lock(a)
-#define UNLOCK(a)    _odp_ticketlock_unlock(a)
+#define LOCK(a)      odp_ticketlock_lock(a)
+#define UNLOCK(a)    odp_ticketlock_unlock(a)
 #define LOCK_INIT(a) odp_ticketlock_init(a)
 
 #define CACHE_BURST    32
