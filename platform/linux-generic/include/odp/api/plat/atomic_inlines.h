@@ -13,6 +13,79 @@
 #ifndef _ODP_PLAT_ATOMIC_INLINES_H_
 #define _ODP_PLAT_ATOMIC_INLINES_H_
 
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
+
+#ifndef _ODP_NO_INLINE
+	/* Inline functions by default */
+	#define _ODP_INLINE static inline
+	#define odp_atomic_init_u32 __odp_atomic_init_u32
+	#define odp_atomic_load_u32 __odp_atomic_load_u32
+	#define odp_atomic_store_u32 __odp_atomic_store_u32
+	#define odp_atomic_fetch_add_u32 __odp_atomic_fetch_add_u32
+	#define odp_atomic_add_u32 __odp_atomic_add_u32
+	#define odp_atomic_fetch_sub_u32 __odp_atomic_fetch_sub_u32
+	#define odp_atomic_sub_u32 __odp_atomic_sub_u32
+	#define odp_atomic_fetch_inc_u32 __odp_atomic_fetch_inc_u32
+	#define odp_atomic_inc_u32 __odp_atomic_inc_u32
+	#define odp_atomic_fetch_dec_u32 __odp_atomic_fetch_dec_u32
+	#define odp_atomic_dec_u32 __odp_atomic_dec_u32
+	#define odp_atomic_cas_u32 __odp_atomic_cas_u32
+	#define odp_atomic_xchg_u32 __odp_atomic_xchg_u32
+	#define odp_atomic_max_u32 __odp_atomic_max_u32
+	#define odp_atomic_min_u32 __odp_atomic_min_u32
+	#define odp_atomic_init_u64 __odp_atomic_init_u64
+	#define odp_atomic_load_u64 __odp_atomic_load_u64
+	#define odp_atomic_store_u64 __odp_atomic_store_u64
+	#define odp_atomic_fetch_add_u64 __odp_atomic_fetch_add_u64
+	#define odp_atomic_add_u64 __odp_atomic_add_u64
+	#define odp_atomic_fetch_sub_u64 __odp_atomic_fetch_sub_u64
+	#define odp_atomic_sub_u64 __odp_atomic_sub_u64
+	#define odp_atomic_fetch_inc_u64 __odp_atomic_fetch_inc_u64
+	#define odp_atomic_inc_u64 __odp_atomic_inc_u64
+	#define odp_atomic_fetch_dec_u64 __odp_atomic_fetch_dec_u64
+	#define odp_atomic_dec_u64 __odp_atomic_dec_u64
+	#define odp_atomic_cas_u64 __odp_atomic_cas_u64
+	#define odp_atomic_xchg_u64 __odp_atomic_xchg_u64
+	#define odp_atomic_load_acq_u64 __odp_atomic_load_acq_u64
+	#define odp_atomic_store_rel_u64 __odp_atomic_store_rel_u64
+	#define odp_atomic_add_rel_u64 __odp_atomic_add_rel_u64
+	#define odp_atomic_sub_rel_u64 __odp_atomic_sub_rel_u64
+	#define odp_atomic_cas_acq_u64 __odp_atomic_cas_acq_u64
+	#define odp_atomic_cas_rel_u64 __odp_atomic_cas_rel_u64
+	#define odp_atomic_cas_acq_rel_u64 __odp_atomic_cas_acq_rel_u64
+	#define odp_atomic_init_u64 __odp_atomic_init_u64
+	#define odp_atomic_load_u64 __odp_atomic_load_u64
+	#define odp_atomic_store_u64 __odp_atomic_store_u64
+	#define odp_atomic_fetch_add_u64 __odp_atomic_fetch_add_u64
+	#define odp_atomic_add_u64 __odp_atomic_add_u64
+	#define odp_atomic_fetch_sub_u64 __odp_atomic_fetch_sub_u64
+	#define odp_atomic_sub_u64 __odp_atomic_sub_u64
+	#define odp_atomic_fetch_inc_u64 __odp_atomic_fetch_inc_u64
+	#define odp_atomic_inc_u64 __odp_atomic_inc_u64
+	#define odp_atomic_fetch_dec_u64 __odp_atomic_fetch_dec_u64
+	#define odp_atomic_dec_u64 __odp_atomic_dec_u64
+	#define odp_atomic_cas_u64 __odp_atomic_cas_u64
+	#define odp_atomic_xchg_u64 __odp_atomic_xchg_u64
+	#define odp_atomic_load_acq_u64 __odp_atomic_load_acq_u64
+	#define odp_atomic_store_rel_u64 __odp_atomic_store_rel_u64
+	#define odp_atomic_add_rel_u64 __odp_atomic_add_rel_u64
+	#define odp_atomic_sub_rel_u64 __odp_atomic_sub_rel_u64
+	#define odp_atomic_cas_acq_u64 __odp_atomic_cas_acq_u64
+	#define odp_atomic_cas_rel_u64 __odp_atomic_cas_rel_u64
+	#define odp_atomic_cas_acq_rel_u64 __odp_atomic_cas_acq_rel_u64
+	#define odp_atomic_max_u64 __odp_atomic_max_u64
+	#define odp_atomic_min_u64 __odp_atomic_min_u64
+	#define odp_atomic_load_acq_u32 __odp_atomic_load_acq_u32
+	#define odp_atomic_store_rel_u32 __odp_atomic_store_rel_u32
+	#define odp_atomic_add_rel_u32 __odp_atomic_add_rel_u32
+	#define odp_atomic_sub_rel_u32 __odp_atomic_sub_rel_u32
+	#define odp_atomic_cas_acq_u32 __odp_atomic_cas_acq_u32
+	#define odp_atomic_cas_rel_u32 __odp_atomic_cas_rel_u32
+	#define odp_atomic_cas_acq_rel_u32 __odp_atomic_cas_acq_rel_u32
+#else
+	#define _ODP_INLINE
+#endif
+
 _ODP_INLINE void odp_atomic_init_u32(odp_atomic_u32_t *atom, uint32_t val)
 {
 	__atomic_store_n(&atom->v, val, __ATOMIC_RELAXED);
@@ -456,5 +529,7 @@ _ODP_INLINE int odp_atomic_cas_acq_rel_u32(odp_atomic_u32_t *atom,
 					   __ATOMIC_ACQ_REL,
 					   __ATOMIC_RELAXED);
 }
+
+/** @endcond */
 
 #endif
