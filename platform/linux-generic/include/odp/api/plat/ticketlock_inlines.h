@@ -15,12 +15,30 @@
 
 #include <odp/api/atomic.h>
 
+#ifndef _ODP_NO_INLINE
+	/* Inline functions by default */
+	#define _ODP_INLINE static inline
+	#define odp_ticketlock_init __odp_ticketlock_init
+	#define odp_ticketlock_lock __odp_ticketlock_lock
+	#define odp_ticketlock_trylock __odp_ticketlock_trylock
+	#define odp_ticketlock_unlock __odp_ticketlock_unlock
+	#define odp_ticketlock_is_locked __odp_ticketlock_is_locked
+#else
+	#define _ODP_INLINE
+#endif
+
+_ODP_INLINE void odp_ticketlock_init(odp_ticketlock_t *ticketlock)
+{
+	odp_atomic_init_u32(&ticketlock->next_ticket, 0);
+	odp_atomic_init_u32(&ticketlock->cur_ticket, 0);
+}
+
 /** @internal
  * Acquire ticket lock.
  *
  * @param ticketlock Pointer to a ticket lock
  */
-static inline void _odp_ticketlock_lock(odp_ticketlock_t *ticketlock)
+_ODP_INLINE void odp_ticketlock_lock(odp_ticketlock_t *ticketlock)
 {
 	uint32_t ticket;
 
@@ -43,7 +61,7 @@ static inline void _odp_ticketlock_lock(odp_ticketlock_t *ticketlock)
  * @retval 1 lock acquired
  * @retval 0 lock not acquired
  */
-static inline int _odp_ticketlock_trylock(odp_ticketlock_t *tklock)
+_ODP_INLINE int odp_ticketlock_trylock(odp_ticketlock_t *tklock)
 {
 	/* We read 'next_ticket' and 'cur_ticket' non-atomically which should
 	 * not be a problem as they are not independent of each other.
@@ -76,7 +94,7 @@ static inline int _odp_ticketlock_trylock(odp_ticketlock_t *tklock)
  *
  * @param ticketlock Pointer to a ticket lock
  */
-static inline void _odp_ticketlock_unlock(odp_ticketlock_t *ticketlock)
+_ODP_INLINE void odp_ticketlock_unlock(odp_ticketlock_t *ticketlock)
 {
 	/* Release the lock by incrementing 'cur_ticket'. As we are the
 	 * lock owner and thus the only thread that is allowed to write
@@ -96,7 +114,7 @@ static inline void _odp_ticketlock_unlock(odp_ticketlock_t *ticketlock)
  * @retval 1 the lock is busy (locked)
  * @retval 0 the lock is available (unlocked)
  */
-static inline int _odp_ticketlock_is_locked(odp_ticketlock_t *ticketlock)
+_ODP_INLINE int odp_ticketlock_is_locked(odp_ticketlock_t *ticketlock)
 {
 	/* Compare 'cur_ticket' with 'next_ticket'. Ideally we should read
 	 * both variables atomically but the information can become stale

@@ -39,8 +39,7 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/sync_inlines.h \
 		  include/odp/api/plat/thread_inlines.h \
 		  include/odp/api/plat/thread_inlines_api.h \
-		  include/odp/api/plat/ticketlock_inlines.h \
-		  include/odp/api/plat/ticketlock_inlines_api.h
+		  include/odp/api/plat/ticketlock_inlines.h
 
 odpapiabiarchincludedir = $(archincludedir)/odp/api/abi
 odpapiabiarchinclude_HEADERS = \
@@ -223,7 +222,7 @@ __LIB__libodp_linux_la_SOURCES += \
 			   odp_std_clib.c \
 			   odp_sync.c \
 			   odp_thread_api.c \
-			   odp_ticketlock.c
+			   odp_ticketlock_api.c
 endif
 
 if ARCH_IS_ARM
