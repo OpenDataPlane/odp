@@ -39,7 +39,6 @@
  */
 
 #include <odp_posix_extensions.h>
-#include <odp/api/spinlock.h>
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_fdserver_internal.h>
@@ -77,9 +76,6 @@
 		if (FD_ODP_DEBUG_PRINT == 1) \
 			ODP_DBG(fmt, ##__VA_ARGS__);\
 	} while (0)
-
-/* when accessing the client functions, clients should be mutexed: */
-static odp_spinlock_t *client_lock;
 
 /* define the tables of file descriptors handled by this server: */
 #define FDSERVER_MAX_ENTRIES 256
@@ -288,23 +284,18 @@ int _odp_fdserver_register_fd(fd_server_context_e context, uint64_t key,
 	int command;
 	int fd;
 
-	odp_spinlock_lock(client_lock);
-
 	FD_ODP_DBG("FD client register: pid=%d key=%" PRIu64 ", fd=%d\n",
 		   getpid(), key, fd_to_send);
 
 	s_sock = get_socket();
-	if (s_sock < 0) {
-		odp_spinlock_unlock(client_lock);
+	if (s_sock < 0)
 		return -1;
-	}
 
 	res =  send_fdserver_msg(s_sock, FD_REGISTER_REQ, context, key,
 				 fd_to_send);
 	if (res < 0) {
 		ODP_ERR("fd registration failure\n");
 		close(s_sock);
-		odp_spinlock_unlock(client_lock);
 		return -1;
 	}
 
@@ -313,13 +304,11 @@ int _odp_fdserver_register_fd(fd_server_context_e context, uint64_t key,
 	if ((res < 0) || (command != FD_REGISTER_ACK)) {
 		ODP_ERR("fd registration failure\n");
 		close(s_sock);
-		odp_spinlock_unlock(client_lock);
 		return -1;
 	}
 
 	close(s_sock);
 
-	odp_spinlock_unlock(client_lock);
 	return 0;
 }
 
@@ -334,22 +323,17 @@ int _odp_fdserver_deregister_fd(fd_server_context_e context, uint64_t key)
 	int command;
 	int fd;
 
-	odp_spinlock_lock(client_lock);
-
 	FD_ODP_DBG("FD client deregister: pid=%d key=%" PRIu64 "\n",
 		   getpid(), key);
 
 	s_sock = get_socket();
-	if (s_sock < 0) {
-		odp_spinlock_unlock(client_lock);
+	if (s_sock < 0)
 		return -1;
-	}
 
 	res =  send_fdserver_msg(s_sock, FD_DEREGISTER_REQ, context, key, -1);
 	if (res < 0) {
 		ODP_ERR("fd de-registration failure\n");
 		close(s_sock);
-		odp_spinlock_unlock(client_lock);
 		return -1;
 	}
 
@@ -358,13 +342,11 @@ int _odp_fdserver_deregister_fd(fd_server_context_e context, uint64_t key)
 	if ((res < 0) || (command != FD_DEREGISTER_ACK)) {
 		ODP_ERR("fd de-registration failure\n");
 		close(s_sock);
-		odp_spinlock_unlock(client_lock);
 		return -1;
 	}
 
 	close(s_sock);
 
-	odp_spinlock_unlock(client_lock);
 	return 0;
 }
 
@@ -380,19 +362,14 @@ int _odp_fdserver_lookup_fd(fd_server_context_e context, uint64_t key)
 	int command;
 	int fd;
 
-	odp_spinlock_lock(client_lock);
-
 	s_sock = get_socket();
-	if (s_sock < 0) {
-		odp_spinlock_unlock(client_lock);
+	if (s_sock < 0)
 		return -1;
-	}
 
 	res =  send_fdserver_msg(s_sock, FD_LOOKUP_REQ, context, key, -1);
 	if (res < 0) {
 		ODP_ERR("fd lookup failure\n");
 		close(s_sock);
-		odp_spinlock_unlock(client_lock);
 		return -1;
 	}
 
@@ -401,7 +378,6 @@ int _odp_fdserver_lookup_fd(fd_server_context_e context, uint64_t key)
 	if ((res < 0) || (command != FD_LOOKUP_ACK)) {
 		ODP_ERR("fd lookup failure\n");
 		close(s_sock);
-		odp_spinlock_unlock(client_lock);
 		return -1;
 	}
 
@@ -409,7 +385,6 @@ int _odp_fdserver_lookup_fd(fd_server_context_e context, uint64_t key)
 	ODP_DBG("FD client lookup: pid=%d, key=%" PRIu64 ", fd=%d\n",
 		getpid(), key, fd);
 
-	odp_spinlock_unlock(client_lock);
 	return fd;
 }
 
@@ -421,27 +396,21 @@ static int stop_server(void)
 	int s_sock; /* server socket */
 	int res;
 
-	odp_spinlock_lock(client_lock);
-
 	FD_ODP_DBG("FD sending server stop request\n");
 
 	s_sock = get_socket();
-	if (s_sock < 0) {
-		odp_spinlock_unlock(client_lock);
+	if (s_sock < 0)
 		return -1;
-	}
 
 	res =  send_fdserver_msg(s_sock, FD_SERVERSTOP_REQ, 0, 0, -1);
 	if (res < 0) {
 		ODP_ERR("fd stop request failure\n");
 		close(s_sock);
-		odp_spinlock_unlock(client_lock);
 		return -1;
 	}
 
 	close(s_sock);
 
-	odp_spinlock_unlock(client_lock);
 	return 0;
 }
 
@@ -594,12 +563,6 @@ int _odp_fdserver_init_global(void)
 	struct sockaddr_un local;
 	pid_t server_pid;
 	int res;
-
-	/* create the client spinlock that any client can see: */
-	client_lock = mmap(NULL, sizeof(odp_spinlock_t), PROT_READ | PROT_WRITE,
-			   MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-
-	odp_spinlock_init(client_lock);
 
 	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCKDIR_FORMAT,
 		 odp_global_data.shm_dir,
