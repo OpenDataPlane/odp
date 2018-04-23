@@ -187,6 +187,14 @@ typedef struct {
 	struct rusage ru_thread; /**< Rusage value for current thread */
 } time_record_t;
 
+/* Arguments for one test run */
+typedef struct test_run_arg_t {
+	crypto_args_t crypto_args;
+	crypto_alg_config_t *crypto_alg_config;
+	odp_crypto_capability_t crypto_capa;
+
+} test_run_arg_t;
+
 static void parse_args(int argc, char *argv[], crypto_args_t *cargs);
 static void usage(char *progname);
 
@@ -856,17 +864,105 @@ run_measure_one(crypto_args_t *cargs,
 	return rc < 0 ? rc : 0;
 }
 
+static int check_cipher_alg(odp_crypto_capability_t *capa,
+			    odp_cipher_alg_t alg)
+{
+	switch (alg) {
+	case ODP_CIPHER_ALG_NULL:
+		if (capa->ciphers.bit.null)
+			return 0;
+	case ODP_CIPHER_ALG_DES:
+		if (capa->ciphers.bit.des)
+			return 0;
+	case ODP_CIPHER_ALG_3DES_CBC:
+		if (capa->ciphers.bit.trides_cbc)
+			return 0;
+	case ODP_CIPHER_ALG_AES_CBC:
+		if (capa->ciphers.bit.aes_cbc)
+			return 0;
+	case ODP_CIPHER_ALG_AES_CTR:
+		if (capa->ciphers.bit.aes_ctr)
+			return 0;
+	case ODP_CIPHER_ALG_AES_GCM:
+		if (capa->ciphers.bit.aes_gcm)
+			return 0;
+	case ODP_CIPHER_ALG_AES_CCM:
+		if (capa->ciphers.bit.aes_ccm)
+			return 0;
+	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
+		if (capa->ciphers.bit.chacha20_poly1305)
+			return 0;
+	default:
+		return -1;
+	}
+}
+
+static int check_auth_alg(odp_crypto_capability_t *capa,
+			  odp_auth_alg_t alg)
+{
+	switch (alg) {
+	case ODP_AUTH_ALG_NULL:
+		if (capa->auths.bit.null)
+			return 0;
+	case ODP_AUTH_ALG_MD5_HMAC:
+		if (capa->auths.bit.md5_hmac)
+			return 0;
+	case ODP_AUTH_ALG_SHA1_HMAC:
+		if (capa->auths.bit.sha1_hmac)
+			return 0;
+	case ODP_AUTH_ALG_SHA256_HMAC:
+		if (capa->auths.bit.sha256_hmac)
+			return 0;
+	case ODP_AUTH_ALG_SHA384_HMAC:
+		if (capa->auths.bit.sha384_hmac)
+			return 0;
+	case ODP_AUTH_ALG_SHA512_HMAC:
+		if (capa->auths.bit.sha512_hmac)
+			return 0;
+	case ODP_AUTH_ALG_AES_GCM:
+		if (capa->auths.bit.aes_gcm)
+			return 0;
+	case ODP_AUTH_ALG_AES_GMAC:
+		if (capa->auths.bit.aes_gmac)
+			return 0;
+	case ODP_AUTH_ALG_AES_CCM:
+		if (capa->auths.bit.aes_ccm)
+			return 0;
+	case ODP_AUTH_ALG_CHACHA20_POLY1305:
+		if (capa->auths.bit.chacha20_poly1305)
+			return 0;
+	default:
+		return -1;
+	}
+}
+
 /**
  * Process one algorithm. Note if paload size is specicified it is
  * only one run. Or iterate over set of predefined payloads.
  */
-static int
-run_measure_one_config(crypto_args_t *cargs,
-		       crypto_alg_config_t *config)
+static int run_measure_one_config(test_run_arg_t *arg)
 {
 	crypto_run_result_t result;
 	odp_crypto_session_t session;
+	crypto_args_t *cargs = &arg->crypto_args;
+	crypto_alg_config_t *config = arg->crypto_alg_config;
+	odp_crypto_capability_t crypto_capa = arg->crypto_capa;
 	int rc = 0;
+
+	if (check_cipher_alg(&crypto_capa, config->session.cipher_alg)) {
+		printf("    Cipher algorithm not supported\n");
+		rc = 1;
+	}
+
+	if (check_auth_alg(&crypto_capa, config->session.auth_alg)) {
+		printf("    Auth algorithm not supported\n");
+		rc = 1;
+	}
+
+	if (rc) {
+		printf("    => %s skipped\n\n", config->name);
+		return 0;
+	}
 
 	if (create_session_from_config(&session, config, cargs))
 		return -1;
@@ -898,17 +994,9 @@ run_measure_one_config(crypto_args_t *cargs,
 	return rc;
 }
 
-typedef struct thr_arg {
-	crypto_args_t crypto_args;
-	crypto_alg_config_t *crypto_alg_config;
-} thr_arg_t;
-
 static int run_thr_func(void *arg)
 {
-	thr_arg_t *thr_args = (thr_arg_t *)arg;
-
-	run_measure_one_config(&thr_args->crypto_args,
-			       thr_args->crypto_alg_config);
+	run_measure_one_config((test_run_arg_t *)arg);
 	return 0;
 }
 
@@ -919,13 +1007,14 @@ int main(int argc, char *argv[])
 	odp_queue_param_t qparam;
 	odp_pool_param_t params;
 	odp_queue_t out_queue = ODP_QUEUE_INVALID;
-	thr_arg_t thr_arg;
+	test_run_arg_t test_run_arg;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	int num_workers = 1;
 	odph_odpthread_t thr[num_workers];
 	odp_instance_t instance;
-	odp_pool_capability_t capa;
+	odp_pool_capability_t pool_capa;
+	odp_crypto_capability_t crypto_capa;
 	uint32_t max_seg_len;
 	unsigned i;
 
@@ -943,12 +1032,17 @@ int main(int argc, char *argv[])
 	/* Init this thread */
 	odp_init_local(instance, ODP_THREAD_WORKER);
 
-	if (odp_pool_capability(&capa)) {
+	if (odp_crypto_capability(&crypto_capa)) {
+		app_err("Crypto capability request failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_pool_capability(&pool_capa)) {
 		app_err("Pool capability request failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	max_seg_len = capa.pkt.max_seg_len;
+	max_seg_len = pool_capa.pkt.max_seg_len;
 
 	for (i = 0; i < sizeof(payloads) / sizeof(unsigned int); i++) {
 		if (payloads[i] > max_seg_len)
@@ -991,9 +1085,6 @@ int main(int argc, char *argv[])
 
 	if (cargs.schedule) {
 		printf("Run in async scheduled mode\n");
-
-		thr_arg.crypto_args = cargs;
-		thr_arg.crypto_alg_config = cargs.alg_config;
 		num_workers = odp_cpumask_default_worker(&cpumask,
 							 num_workers);
 		(void)odp_cpumask_to_str(&cpumask, cpumaskstr,
@@ -1012,12 +1103,16 @@ int main(int argc, char *argv[])
 
 	memset(thr, 0, sizeof(thr));
 
+	test_run_arg.crypto_args       = cargs;
+	test_run_arg.crypto_alg_config = cargs.alg_config;
+	test_run_arg.crypto_capa       = crypto_capa;
+
 	if (cargs.alg_config) {
 		odph_odpthread_params_t thr_params;
 
 		memset(&thr_params, 0, sizeof(thr_params));
 		thr_params.start    = run_thr_func;
-		thr_params.arg      = &thr_arg;
+		thr_params.arg      = &test_run_arg;
 		thr_params.thr_type = ODP_THREAD_WORKER;
 		thr_params.instance = instance;
 
@@ -1025,7 +1120,7 @@ int main(int argc, char *argv[])
 			odph_odpthreads_create(&thr[0], &cpumask, &thr_params);
 			odph_odpthreads_join(&thr[0]);
 		} else {
-			run_measure_one_config(&cargs, cargs.alg_config);
+			run_measure_one_config(&test_run_arg);
 		}
 	} else {
 		unsigned int i;
@@ -1033,7 +1128,8 @@ int main(int argc, char *argv[])
 		for (i = 0;
 		     i < (sizeof(algs_config) / sizeof(crypto_alg_config_t));
 		     i++) {
-			run_measure_one_config(&cargs, algs_config + i);
+			test_run_arg.crypto_alg_config = algs_config + i;
+			run_measure_one_config(&test_run_arg);
 		}
 	}
 
