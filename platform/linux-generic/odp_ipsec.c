@@ -844,6 +844,7 @@ static int ipsec_out_tunnel_parse_ipv6(ipsec_state_t *state,
 	state->out_tunnel.ip_flabel = (ipv6hdr->ver_tc_flow &
 				       _ODP_IPV6HDR_FLOW_LABEL_MASK) >>
 		_ODP_IPV6HDR_FLOW_LABEL_SHIFT;
+	state->ip_next_hdr = ipv6hdr->next_hdr;
 
 	return 0;
 }
