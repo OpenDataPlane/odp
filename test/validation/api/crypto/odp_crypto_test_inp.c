@@ -79,6 +79,8 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 		return "ODP_CIPHER_ALG_3DES_CBC";
 	case ODP_CIPHER_ALG_AES_CBC:
 		return "ODP_CIPHER_ALG_AES_CBC";
+	case ODP_CIPHER_ALG_AES_CTR:
+		return "ODP_CIPHER_ALG_AES_CTR";
 	case ODP_CIPHER_ALG_AES_GCM:
 		return "ODP_CIPHER_ALG_AES_GCM";
 	case ODP_CIPHER_ALG_AES_CCM:
