@@ -144,6 +144,79 @@ static void timer_test_timeout_pool_free(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+static void timer_pool_create_destroy(void)
+{
+	odp_timer_capability_t timer_capa;
+	odp_timer_pool_param_t tparam;
+	odp_timer_pool_info_t info;
+	odp_timer_pool_t tp[2];
+	odp_timer_t tim;
+	odp_queue_t queue;
+	uint64_t res_ns;
+
+	queue = odp_queue_create("timer_queue", NULL);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	CU_ASSERT_FATAL(odp_timer_capability(ODP_CLOCK_CPU, &timer_capa) == 0);
+
+	res_ns = 10 * timer_capa.highest_res_ns;
+
+	memset(&tparam, 0, sizeof(odp_timer_pool_param_t));
+	tparam.res_ns     = res_ns;
+	tparam.min_tmo    = 5 * res_ns;
+	tparam.max_tmo    = 10000 * tparam.min_tmo;
+	tparam.num_timers = 100;
+	tparam.priv       = 0;
+	tparam.clk_src    = ODP_CLOCK_CPU;
+
+	tp[0] = odp_timer_pool_create("timer_pool_a", &tparam);
+	CU_ASSERT(tp[0] != ODP_TIMER_POOL_INVALID);
+
+	odp_timer_pool_start();
+
+	tim = odp_timer_alloc(tp[0], queue, USER_PTR);
+	CU_ASSERT(tim != ODP_TIMER_INVALID);
+	CU_ASSERT(odp_timer_free(tim) == ODP_EVENT_INVALID);
+
+	odp_timer_pool_destroy(tp[0]);
+
+	tp[0] = odp_timer_pool_create("timer_pool_b", &tparam);
+	CU_ASSERT(tp[0] != ODP_TIMER_POOL_INVALID);
+	tp[1] = odp_timer_pool_create("timer_pool_c", &tparam);
+	CU_ASSERT(tp[1] != ODP_TIMER_POOL_INVALID);
+
+	odp_timer_pool_start();
+
+	odp_timer_pool_destroy(tp[0]);
+
+	tp[0] = odp_timer_pool_create("timer_pool_d", &tparam);
+	CU_ASSERT(tp[0] != ODP_TIMER_POOL_INVALID);
+
+	odp_timer_pool_start();
+
+	memset(&info, 0, sizeof(odp_timer_pool_info_t));
+	CU_ASSERT(odp_timer_pool_info(tp[1], &info) == 0);
+	CU_ASSERT(strcmp(info.name, "timer_pool_c") == 0);
+
+	tim = odp_timer_alloc(tp[1], queue, USER_PTR);
+	CU_ASSERT(tim != ODP_TIMER_INVALID);
+	CU_ASSERT(odp_timer_free(tim) == ODP_EVENT_INVALID);
+
+	odp_timer_pool_destroy(tp[1]);
+
+	memset(&info, 0, sizeof(odp_timer_pool_info_t));
+	CU_ASSERT(odp_timer_pool_info(tp[0], &info) == 0);
+	CU_ASSERT(strcmp(info.name, "timer_pool_d") == 0);
+
+	tim = odp_timer_alloc(tp[0], queue, USER_PTR);
+	CU_ASSERT(tim != ODP_TIMER_INVALID);
+	CU_ASSERT(odp_timer_free(tim) == ODP_EVENT_INVALID);
+
+	odp_timer_pool_destroy(tp[0]);
+
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+}
+
 static void timer_test_queue_type(odp_queue_type_t queue_type)
 {
 	odp_pool_t pool;
@@ -815,6 +888,7 @@ static void timer_test_odp_timer_all(void)
 odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_test_timeout_pool_alloc),
 	ODP_TEST_INFO(timer_test_timeout_pool_free),
+	ODP_TEST_INFO(timer_pool_create_destroy),
 	ODP_TEST_INFO(timer_test_plain_queue),
 	ODP_TEST_INFO(timer_test_sched_queue),
 	ODP_TEST_INFO(timer_test_odp_timer_cancel),
