@@ -256,15 +256,17 @@ static void timer_test_queue_type(odp_queue_type_t queue_type)
 
 		if (ev != ODP_EVENT_INVALID) {
 			diff_period = odp_time_diff_ns(t2, t1);
-			t1 = odp_time_local();
+			t1 = t2;
 			tmo = odp_timeout_from_event(ev);
 			tim = odp_timeout_timer(tmo);
 			tick = odp_timeout_tick(tmo);
 
-			CU_ASSERT(diff_period > (period_ns - (2 * res_ns)));
-			CU_ASSERT(diff_period < (period_ns + (2 * res_ns)));
+			CU_ASSERT(diff_period > (period_ns - (4 * res_ns)));
+			CU_ASSERT(diff_period < (period_ns + (4 * res_ns)));
 
-			LOG_DBG("timeout tick %" PRIu64 "\n", tick);
+			LOG_DBG("timeout tick %" PRIu64 ", "
+				"timeout period %" PRIu64 "\n",
+				tick, diff_period);
 
 			odp_timeout_free(tmo);
 			CU_ASSERT(odp_timer_free(tim) == ODP_EVENT_INVALID);
@@ -274,9 +276,11 @@ static void timer_test_queue_type(odp_queue_type_t queue_type)
 
 	} while (diff_test < (2 * test_period) && num_tmo < num);
 
+	LOG_DBG("test period %" PRIu64 "\n", diff_test);
+
 	CU_ASSERT(num_tmo == num);
-	CU_ASSERT(diff_test > (test_period - tparam.min_tmo));
-	CU_ASSERT(diff_test < (test_period + tparam.min_tmo));
+	CU_ASSERT(diff_test > (test_period - period_ns));
+	CU_ASSERT(diff_test < (test_period + period_ns));
 
 	/* Scalable scheduler needs this pause sequence. Otherwise, it gets
 	 * stuck on terminate. */
