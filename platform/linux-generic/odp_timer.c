@@ -201,16 +201,24 @@ typedef struct timer_pool_s {
 #define INDEX_BITS 24
 #define TIMER_RES_TEST_LOOP_COUNT 10
 #define TIMER_RES_ROUNDUP_FACTOR 10
-static odp_atomic_u32_t num_timer_pools;
-static timer_pool_t *timer_pool[MAX_TIMER_POOLS];
+
+typedef struct timer_global_t {
+	odp_ticketlock_t lock;
+	int num_timer_pools;
+	uint8_t timer_pool_used[MAX_TIMER_POOLS];
+	timer_pool_t *timer_pool[MAX_TIMER_POOLS];
+
+} timer_global_t;
+
+static timer_global_t timer_global;
 
 static inline timer_pool_t *handle_to_tp(odp_timer_t hdl)
 {
 	uint32_t tp_idx = _odp_typeval(hdl) >> INDEX_BITS;
 	if (odp_likely(tp_idx < MAX_TIMER_POOLS)) {
-		timer_pool_t *tp = timer_pool[tp_idx];
+		timer_pool_t *tp = timer_global.timer_pool[tp_idx];
 		if (odp_likely(tp != NULL))
-			return timer_pool[tp_idx];
+			return timer_global.timer_pool[tp_idx];
 	}
 	ODP_ABORT("Invalid timer handle %#x\n", hdl);
 }
@@ -239,17 +247,32 @@ static void itimer_fini(timer_pool_t *tp);
 static odp_timer_pool_t timer_pool_new(const char *name,
 				       const odp_timer_pool_param_t *param)
 {
-	uint32_t tp_idx = odp_atomic_fetch_add_u32(&num_timer_pools, 1);
-	if (odp_unlikely(tp_idx >= MAX_TIMER_POOLS)) {
-		/* Restore the previous value */
-		odp_atomic_sub_u32(&num_timer_pools, 1);
-		__odp_errno = ENFILE; /* Table overflow */
+	uint32_t i, tp_idx;
+	size_t sz0, sz1, sz2;
+
+	odp_ticketlock_lock(&timer_global.lock);
+
+	if (timer_global.num_timer_pools >= MAX_TIMER_POOLS) {
+		odp_ticketlock_unlock(&timer_global.lock);
 		return ODP_TIMER_POOL_INVALID;
 	}
-	size_t sz0 = ROUNDUP_CACHE_LINE(sizeof(timer_pool_t));
-	size_t sz1 = ROUNDUP_CACHE_LINE(sizeof(tick_buf_t) * param->num_timers);
-	size_t sz2 = ROUNDUP_CACHE_LINE(sizeof(_odp_timer_t) *
-					param->num_timers);
+
+	for (i = 0; i < MAX_TIMER_POOLS; i++) {
+		if (timer_global.timer_pool_used[i] == 0) {
+			timer_global.timer_pool_used[i] = 1;
+			break;
+		}
+	}
+
+	tp_idx = i;
+	timer_global.num_timer_pools++;
+
+	odp_ticketlock_unlock(&timer_global.lock);
+
+	sz0 = ROUNDUP_CACHE_LINE(sizeof(timer_pool_t));
+	sz1 = ROUNDUP_CACHE_LINE(sizeof(tick_buf_t) * param->num_timers);
+	sz2 = ROUNDUP_CACHE_LINE(sizeof(_odp_timer_t) *
+				 param->num_timers);
 	odp_shm_t shm = odp_shm_reserve(name, sz0 + sz1 + sz2,
 			ODP_CACHE_LINE_SIZE, ODP_SHM_SW_ONLY);
 	if (odp_unlikely(shm == ODP_SHM_INVALID))
@@ -276,8 +299,8 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	tp->notify_overrun = 1;
 	tp->tick_buf = (void *)((char *)odp_shm_addr(shm) + sz0);
 	tp->timers = (void *)((char *)odp_shm_addr(shm) + sz0 + sz1);
+
 	/* Initialize all odp_timer entries */
-	uint32_t i;
 	for (i = 0; i < tp->param.num_timers; i++) {
 		tp->timers[i].queue = ODP_QUEUE_INVALID;
 		set_next_free(&tp->timers[i], i + 1);
@@ -291,7 +314,9 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	}
 	tp->tp_idx = tp_idx;
 	odp_spinlock_init(&tp->lock);
-	timer_pool[tp_idx] = tp;
+	odp_ticketlock_lock(&timer_global.lock);
+	timer_global.timer_pool[tp_idx] = tp;
+	odp_ticketlock_unlock(&timer_global.lock);
 	if (!inline_timers) {
 		if (tp->param.clk_src == ODP_CLOCK_CPU)
 			itimer_init(tp);
@@ -321,8 +346,10 @@ static void stop_timer_thread(timer_pool_t *tp)
 
 static void odp_timer_pool_del(timer_pool_t *tp)
 {
+	int rc;
+	odp_shm_t shm;
+
 	odp_spinlock_lock(&tp->lock);
-	timer_pool[tp->tp_idx] = NULL;
 
 	if (!inline_timers) {
 		/* Stop POSIX itimer signals */
@@ -335,13 +362,23 @@ static void odp_timer_pool_del(timer_pool_t *tp)
 	if (tp->num_alloc != 0) {
 		/* It's a programming error to attempt to destroy a */
 		/* timer pool which is still in use */
+		odp_spinlock_unlock(&tp->lock);
 		ODP_ABORT("%s: timers in use\n", tp->name);
 	}
-	int rc = odp_shm_free(tp->shm);
+
+	odp_spinlock_unlock(&tp->lock);
+
+	odp_ticketlock_lock(&timer_global.lock);
+	shm = tp->shm;
+	timer_global.timer_pool[tp->tp_idx] = NULL;
+	timer_global.timer_pool_used[tp->tp_idx] = 0;
+	timer_global.num_timer_pools--;
+	odp_ticketlock_unlock(&timer_global.lock);
+
+	rc = odp_shm_free(shm);
+
 	if (rc != 0)
 		ODP_ABORT("Failed to free shared memory (%d)\n", rc);
-
-	odp_atomic_sub_u32(&num_timer_pools, 1);
 }
 
 static inline odp_timer_t timer_alloc(timer_pool_t *tp,
@@ -758,7 +795,7 @@ static unsigned process_timer_pools(void)
 	unsigned nexp = 0;
 
 	for (size_t i = 0; i < MAX_TIMER_POOLS; i++) {
-		tp = timer_pool[i];
+		tp = timer_global.timer_pool[i];
 
 		if (tp == NULL)
 			continue;
@@ -803,7 +840,7 @@ unsigned _timer_run(void)
 		CONFIG_TIMER_RUN_RATELIMIT_ROUNDS;
 	odp_time_t now;
 
-	if (odp_atomic_load_u32(&num_timer_pools) == 0)
+	if (timer_global.num_timer_pools == 0)
 		return 0;
 
 	/* Rate limit how often this thread checks the timer pools. */
@@ -1245,6 +1282,9 @@ void odp_timeout_free(odp_timeout_t tmo)
 
 int odp_timer_init_global(const odp_init_t *params)
 {
+	memset(&timer_global, 0, sizeof(timer_global_t));
+	odp_ticketlock_init(&timer_global.lock);
+
 #ifndef ODP_ATOMIC_U128
 	uint32_t i;
 	for (i = 0; i < NUM_LOCKS; i++)
@@ -1252,7 +1292,6 @@ int odp_timer_init_global(const odp_init_t *params)
 #else
 	ODP_DBG("Using lock-less timer implementation\n");
 #endif
-	odp_atomic_init_u32(&num_timer_pools, 0);
 
 	if (params)
 		inline_timers =
