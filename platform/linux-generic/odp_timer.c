@@ -197,7 +197,9 @@ typedef struct timer_pool_s {
 	int timer_thread_exit; /* request to exit for timer thread */
 } timer_pool_t;
 
-#define MAX_TIMER_POOLS 255 /* Leave one for ODP_TIMER_INVALID */
+/* Timer pool index must fit into 8 bits with one index value reserved to
+ * ODP_TIMER_POOL_INVALID. */
+#define MAX_TIMER_POOLS 32
 #define INDEX_BITS 24
 #define TIMER_RES_TEST_LOOP_COUNT 10
 #define TIMER_RES_ROUNDUP_FACTOR 10
