@@ -49,7 +49,7 @@ env:
         # for individual commit validation. But you you want to track tests history
         # you need generated new one at https://codecov.io specific for your repo.
         - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
-        - DPDK_VERS="17.11"
+        - DPDK_VERS="17.11.2"
     matrix:
         - CONF=""
         - CONF="--disable-abi-compat"
@@ -154,12 +154,7 @@ install:
           fi
         - gem install asciidoctor
 
-        # DPDK pktio. Note that cache must be purged if dpdk version changes.
-        - |
-          CACHED_DPDK_VERS=`fgrep Version dpdk/pkg/dpdk.spec | cut -d " " -f 2`
-          if [ "${CACHED_DPDK_VERS}" != "${DPDK_VERS}" ]; then
-            rm -rf dpdk
-          fi
+        # DPDK pktio. Cache will be updated automatically to ${DPDK_VERS}
         - |
           case "$CROSS_ARCH" in
             "arm64")
@@ -193,8 +188,17 @@ install:
             LIBDPDKEXT=a
            fi
            DPDK_TARGET="${DPDK_TARGET}gcc"
+           CACHED_DPDK_VERS=`fgrep Version dpdk/pkg/dpdk.spec | cut -d " " -f 2`
+           if [ ! -d dpdk -o "${CACHED_DPDK_VERS}" != "${DPDK_VERS}" ]; then
+            rm -rf dpdk
+            mkdir dpdk
+            pushd dpdk
+            git init
+            git -c advice.detachedHead=false fetch -q --depth=1 http://dpdk.org/git/dpdk-stable v${DPDK_VERS}
+            git checkout -f FETCH_HEAD
+            popd
+           fi
            if [ ! -f "dpdk/${TARGET}/usr/local/lib/libdpdk.$LIBDPDKEXT" ]; then
-            git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=${DPDK_VERS} http://dpdk.org/git/dpdk-stable dpdk
             pushd dpdk
             git log --oneline --decorate
             # AArch64 && ARMv7 fixup
