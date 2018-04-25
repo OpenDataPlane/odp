@@ -50,7 +50,7 @@
 #include <rte_version.h>
 
 /* NUMA is not supported on all platforms */
-#ifdef RTE_EAL_NUMA_AWARE_HUGEPAGES
+#ifdef HAVE_NUMA_LIBRARY
 #include <numa.h>
 #else
 #define numa_num_configured_nodes() 1

@@ -40,6 +40,14 @@ then
       ;;
     esac
 
+    OLD_LIBS=$LIBS
+    LIBS="-lnuma"
+    AC_TRY_LINK_FUNC([numa_num_configured_nodes],
+		     [AC_DEFINE([HAVE_NUMA_LIBRARY], [1],
+				[Define to 1 if numa library is usable])
+		     AS_VAR_APPEND([DPDK_LIBS_LIBODP], [" -lnuma"])])
+    LIBS=$OLD_LIBS
+
     AC_DEFINE([ODP_PKTIO_DPDK], [1],
 	      [Define to 1 to enable DPDK packet I/O support])
     AC_DEFINE_UNQUOTED([ODP_DPDK_ZERO_COPY], [$zero_copy],
