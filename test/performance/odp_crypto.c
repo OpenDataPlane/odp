@@ -871,30 +871,40 @@ static int check_cipher_alg(odp_crypto_capability_t *capa,
 	case ODP_CIPHER_ALG_NULL:
 		if (capa->ciphers.bit.null)
 			return 0;
+		break;
 	case ODP_CIPHER_ALG_DES:
 		if (capa->ciphers.bit.des)
 			return 0;
+		break;
 	case ODP_CIPHER_ALG_3DES_CBC:
 		if (capa->ciphers.bit.trides_cbc)
 			return 0;
+		break;
 	case ODP_CIPHER_ALG_AES_CBC:
 		if (capa->ciphers.bit.aes_cbc)
 			return 0;
+		break;
 	case ODP_CIPHER_ALG_AES_CTR:
 		if (capa->ciphers.bit.aes_ctr)
 			return 0;
+		break;
 	case ODP_CIPHER_ALG_AES_GCM:
 		if (capa->ciphers.bit.aes_gcm)
 			return 0;
+		break;
 	case ODP_CIPHER_ALG_AES_CCM:
 		if (capa->ciphers.bit.aes_ccm)
 			return 0;
+		break;
 	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
 		if (capa->ciphers.bit.chacha20_poly1305)
 			return 0;
+		break;
 	default:
-		return -1;
+		break;
 	}
+
+	return -1;
 }
 
 static int check_auth_alg(odp_crypto_capability_t *capa,
@@ -904,36 +914,48 @@ static int check_auth_alg(odp_crypto_capability_t *capa,
 	case ODP_AUTH_ALG_NULL:
 		if (capa->auths.bit.null)
 			return 0;
+		break;
 	case ODP_AUTH_ALG_MD5_HMAC:
 		if (capa->auths.bit.md5_hmac)
 			return 0;
+		break;
 	case ODP_AUTH_ALG_SHA1_HMAC:
 		if (capa->auths.bit.sha1_hmac)
 			return 0;
+		break;
 	case ODP_AUTH_ALG_SHA256_HMAC:
 		if (capa->auths.bit.sha256_hmac)
 			return 0;
+		break;
 	case ODP_AUTH_ALG_SHA384_HMAC:
 		if (capa->auths.bit.sha384_hmac)
 			return 0;
+		break;
 	case ODP_AUTH_ALG_SHA512_HMAC:
 		if (capa->auths.bit.sha512_hmac)
 			return 0;
+		break;
 	case ODP_AUTH_ALG_AES_GCM:
 		if (capa->auths.bit.aes_gcm)
 			return 0;
+		break;
 	case ODP_AUTH_ALG_AES_GMAC:
 		if (capa->auths.bit.aes_gmac)
 			return 0;
+		break;
 	case ODP_AUTH_ALG_AES_CCM:
 		if (capa->auths.bit.aes_ccm)
 			return 0;
+		break;
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
 		if (capa->auths.bit.chacha20_poly1305)
 			return 0;
+		break;
 	default:
-		return -1;
+		break;
 	}
+
+	return -1;
 }
 
 /**
