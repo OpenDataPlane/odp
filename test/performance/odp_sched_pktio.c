@@ -43,6 +43,7 @@ typedef struct {
 	struct {
 		int num_worker;
 		int num_pktio;
+		int num_pktio_queue;
 		uint8_t collect_stat;
 	} opt;
 
@@ -55,9 +56,6 @@ typedef struct {
 	odp_pool_t pool;
 	uint32_t   pkt_len;
 	uint32_t   pkt_num;
-
-	unsigned int num_input_queues;
-	unsigned int num_output_queues;
 
 	struct {
 		char name[MAX_PKTIO_NAME + 1];
@@ -189,10 +187,11 @@ static void print_usage(const char *progname)
 	       "Usage: %s [options]\n"
 	       "\n"
 	       "OPTIONS:\n"
-	       "  -i, --interface <name>  Packet IO interfaces (comma-separated, no spaces)\n"
-	       "  -c, --count <number>    Worker thread count. Default: 1\n"
-	       "  -s, --stat              Collect statistics.\n"
-	       "  -h, --help              Display help and exit.\n\n",
+	       "  -i, --interface <name>   Packet IO interfaces (comma-separated, no spaces)\n"
+	       "  -c, --num_cpu <number>   Worker thread count. Default: 1\n"
+	       "  -q, --num_queue <number> Number of pktio queues. Default: Worker thread count\n"
+	       "  -s, --stat               Collect statistics.\n"
+	       "  -h, --help               Display help and exit.\n\n",
 	       NO_PATH(progname));
 }
 
@@ -203,15 +202,17 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 	int len, str_len;
 	const struct option longopts[] = {
 		{"interface", required_argument, NULL, 'i'},
-		{"count",     required_argument, NULL, 'c'},
+		{"num_cpu",   required_argument, NULL, 'c'},
+		{"num_queue", required_argument, NULL, 'q'},
 		{"stat",      no_argument,       NULL, 's'},
 		{"help",      no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+i:c:sh";
+	const char *shortopts =  "+i:c:q:sh";
 	int ret = 0;
 
 	test_global->opt.num_worker = 1;
+	test_global->opt.num_pktio_queue = 0;
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	odph_parse_options(argc, argv, shortopts, longopts);
@@ -257,6 +258,9 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 		case 'c':
 			test_global->opt.num_worker = atoi(optarg);
 			break;
+		case 'q':
+			test_global->opt.num_pktio_queue = atoi(optarg);
+			break;
 		case 's':
 			test_global->opt.collect_stat = 1;
 			break;
@@ -269,6 +273,9 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 			break;
 		}
 	}
+
+	if (test_global->opt.num_pktio_queue == 0)
+		test_global->opt.num_pktio_queue = test_global->opt.num_worker;
 
 	return ret;
 }
@@ -323,12 +330,6 @@ static int config_setup(test_global_t *test_global)
 	test_global->pkt_len = pkt_len;
 	test_global->pkt_num = pkt_num;
 
-	if (test_global->num_input_queues == 0)
-		test_global->num_input_queues = test_global->opt.num_worker;
-
-	if (test_global->num_output_queues == 0)
-		test_global->num_output_queues = test_global->opt.num_worker;
-
 	return 0;
 }
 
@@ -361,9 +362,8 @@ static void print_config(test_global_t *test_global)
 		printf(" %s", test_global->pktio[i].name);
 
 	printf("\n"
-	       "  num input queues:      %i\n"
-	       "  num output queues:     %i\n",
-	       test_global->num_input_queues, test_global->num_output_queues);
+	       "  queues per interface:  %i\n",
+	       test_global->opt.num_pktio_queue);
 
 	printf("  collect statistics:    %u\n", test_global->opt.collect_stat);
 
@@ -417,13 +417,12 @@ static int open_pktios(test_global_t *test_global)
 	odp_pktin_queue_param_t pktin_param;
 	odp_pktout_queue_param_t pktout_param;
 	odp_schedule_sync_t sched_sync;
-	unsigned int num_input, num_output;
+	unsigned int num_queue;
 	char *name;
 	int i, num_pktio, ret;
 
-	num_pktio  = test_global->opt.num_pktio;
-	num_input  = test_global->num_input_queues;
-	num_output = test_global->num_output_queues;
+	num_pktio = test_global->opt.num_pktio;
+	num_queue = test_global->opt.num_pktio_queue;
 
 	odp_pool_param_init(&pool_param);
 	pool_param.pkt.seg_len = MIN_PKT_SEG_LEN;
@@ -477,15 +476,15 @@ static int open_pktios(test_global_t *test_global)
 			return -1;
 		}
 
-		if (num_input > pktio_capa.max_input_queues) {
+		if (num_queue > pktio_capa.max_input_queues) {
 			printf("Error (%s): Too many input queues: %u\n",
-			       name, num_input);
+			       name, num_queue);
 			return -1;
 		}
 
-		if (num_output > pktio_capa.max_output_queues) {
+		if (num_queue > pktio_capa.max_output_queues) {
 			printf("Error (%s): Too many output queues: %u\n",
-			       name, num_output);
+			       name, num_queue);
 			return -1;
 		}
 
@@ -500,12 +499,12 @@ static int open_pktios(test_global_t *test_global)
 		pktin_param.queue_param.sched.sync  = sched_sync;
 		pktin_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 
-		if (num_input > 1) {
+		if (num_queue > 1) {
 			pktin_param.hash_enable = 1;
 			pktin_param.hash_proto.proto.ipv4_udp = 1;
 		}
 
-		pktin_param.num_queues = num_input;
+		pktin_param.num_queues = num_queue;
 
 		if (odp_pktin_queue_config(pktio, &pktin_param)) {
 			printf("Error (%s): Pktin config failed.\n", name);
@@ -514,13 +513,13 @@ static int open_pktios(test_global_t *test_global)
 
 		if (odp_pktin_event_queue(pktio,
 					  test_global->pktio[i].input_queue,
-					  num_input) != (int)num_input) {
+					  num_queue) != (int)num_queue) {
 			printf("Error (%s): Input queue query failed.\n", name);
 			return -1;
 		}
 
 		odp_pktout_queue_param_init(&pktout_param);
-		pktout_param.num_queues  = num_output;
+		pktout_param.num_queues  = num_queue;
 		pktout_param.op_mode     = ODP_PKTIO_OP_MT_UNSAFE;
 
 		if (odp_pktout_queue_config(pktio, &pktout_param)) {
@@ -530,7 +529,7 @@ static int open_pktios(test_global_t *test_global)
 
 		if (odp_pktout_queue(pktio,
 				     test_global->pktio[i].pktout,
-				     num_output) != (int)num_output) {
+				     num_queue) != (int)num_queue) {
 			printf("Error (%s): Output queue query failed.\n",
 			       name);
 			return -1;
