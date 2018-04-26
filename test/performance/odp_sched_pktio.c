@@ -26,6 +26,15 @@
 #define CHECK_PERIOD      10000
 #define TEST_PASSED_LIMIT 5000
 
+typedef struct test_options_t {
+	int num_worker;
+	int num_pktio;
+	int num_pktio_queue;
+	uint8_t collect_stat;
+	char pktio_name[MAX_PKTIOS][MAX_PKTIO_NAME + 1];
+
+} test_options_t;
+
 typedef struct {
 	int  worker_id;
 	void *test_global_ptr;
@@ -48,12 +57,7 @@ typedef struct {
 	volatile int  stop_workers;
 	odp_barrier_t worker_start;
 
-	struct {
-		int num_worker;
-		int num_pktio;
-		int num_pktio_queue;
-		uint8_t collect_stat;
-	} opt;
+	test_options_t opt;
 
 	int max_workers;
 	odp_cpumask_t cpumask;
@@ -66,7 +70,6 @@ typedef struct {
 	uint32_t   pkt_num;
 
 	struct {
-		char name[MAX_PKTIO_NAME + 1];
 		odp_pktio_t pktio;
 		int pktio_index;
 		int started;
@@ -212,7 +215,7 @@ static void print_usage(const char *progname)
 	       NO_PATH(progname));
 }
 
-static int parse_options(int argc, char *argv[], test_global_t *test_global)
+static int parse_options(int argc, char *argv[], test_options_t *test_options)
 {
 	int i, opt, long_index;
 	char *name, *str;
@@ -228,8 +231,10 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 	const char *shortopts =  "+i:c:q:sh";
 	int ret = 0;
 
-	test_global->opt.num_worker = 1;
-	test_global->opt.num_pktio_queue = 0;
+	memset(test_options, 0, sizeof(test_options_t));
+
+	test_options->num_worker = 1;
+	test_options->num_pktio_queue = 0;
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	odph_parse_options(argc, argv, shortopts, longopts);
@@ -263,23 +268,23 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 					break;
 				}
 
-				name = test_global->pktio[i].name;
+				name = test_options->pktio_name[i];
 				memcpy(name, str, len);
 				str += len + 1;
 				i++;
 			}
 
-			test_global->opt.num_pktio = i;
+			test_options->num_pktio = i;
 
 			break;
 		case 'c':
-			test_global->opt.num_worker = atoi(optarg);
+			test_options->num_worker = atoi(optarg);
 			break;
 		case 'q':
-			test_global->opt.num_pktio_queue = atoi(optarg);
+			test_options->num_pktio_queue = atoi(optarg);
 			break;
 		case 's':
-			test_global->opt.collect_stat = 1;
+			test_options->collect_stat = 1;
 			break;
 		case 'h':
 			print_usage(argv[0]);
@@ -291,8 +296,8 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 		}
 	}
 
-	if (test_global->opt.num_pktio_queue == 0)
-		test_global->opt.num_pktio_queue = test_global->opt.num_worker;
+	if (test_options->num_pktio_queue == 0)
+		test_options->num_pktio_queue = test_options->num_worker;
 
 	return ret;
 }
@@ -370,7 +375,7 @@ static void print_config(test_global_t *test_global)
 	       "  interface names:      ", test_global->opt.num_pktio);
 
 	for (i = 0; i < test_global->opt.num_pktio; i++)
-		printf(" %s", test_global->pktio[i].name);
+		printf(" %s", test_global->opt.pktio_name[i]);
 
 	printf("\n"
 	       "  queues per interface:  %i\n",
@@ -462,7 +467,7 @@ static int open_pktios(test_global_t *test_global)
 
 	/* Open and configure interfaces */
 	for (i = 0; i < num_pktio; i++) {
-		name  = test_global->pktio[i].name;
+		name  = test_global->opt.pktio_name[i];
 		pktio = odp_pktio_open(name, pool, &pktio_param);
 
 		if (pktio == ODP_PKTIO_INVALID) {
@@ -605,7 +610,7 @@ static int start_pktios(test_global_t *test_global)
 	for (i = 0; i < test_global->opt.num_pktio; i++) {
 		if (odp_pktio_start(test_global->pktio[i].pktio)) {
 			printf("Error (%s): Pktio start failed.\n",
-			       test_global->pktio[i].name);
+			       test_global->opt.pktio_name[i]);
 
 			return -1;
 		}
@@ -630,7 +635,7 @@ static int stop_pktios(test_global_t *test_global)
 
 		if (odp_pktio_stop(pktio)) {
 			printf("Error (%s): Pktio stop failed.\n",
-			       test_global->pktio[i].name);
+			       test_global->opt.pktio_name[i]);
 			ret = -1;
 		}
 	}
@@ -668,7 +673,7 @@ static int close_pktios(test_global_t *test_global)
 
 		if (odp_pktio_close(pktio)) {
 			printf("Error (%s): Pktio close failed.\n",
-			       test_global->pktio[i].name);
+			       test_global->opt.pktio_name[i]);
 			ret = -1;
 		}
 	}
@@ -727,9 +732,13 @@ int main(int argc, char *argv[])
 	odp_shm_t shm;
 	odp_time_t t1, t2;
 	odph_odpthread_t thread[MAX_WORKERS];
+	test_options_t test_options;
 	int ret = 0;
 
 	signal(SIGINT, sig_handler);
+
+	if (parse_options(argc, argv, &test_options))
+		return -1;
 
 	/* List features not to be used (may optimize performance) */
 	odp_init_param_init(&init);
@@ -766,8 +775,7 @@ int main(int argc, char *argv[])
 	test_global->instance = instance;
 	test_global->pool     = ODP_POOL_INVALID;
 
-	if (parse_options(argc, argv, test_global))
-		goto quit;
+	memcpy(&test_global->opt, &test_options, sizeof(test_options_t));
 
 	odp_sys_info_print();
 
