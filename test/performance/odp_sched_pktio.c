@@ -14,6 +14,7 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
+#define DEBUG_PRINT       0
 #define MAX_WORKERS       64
 #define MAX_PKTIOS        32
 #define MAX_PKTIO_NAME    31
@@ -23,7 +24,6 @@
 #define MIN_PKT_SEG_LEN   64
 #define BURST_SIZE        32
 #define CHECK_PERIOD      10000
-#define MAX_PKTIO_INDEXES 256
 #define TEST_PASSED_LIMIT 5000
 
 typedef struct {
@@ -35,6 +35,14 @@ typedef struct ODP_ALIGNED_CACHE {
 	uint64_t rx_pkt;
 	uint64_t tx_pkt;
 } worker_stat_t;
+
+typedef struct queue_context_t {
+	odp_pktout_queue_t dst_pktout;
+	uint8_t dst_pktio;
+	uint8_t dst_queue;
+	uint8_t src_pktio;
+	uint8_t src_queue;
+} queue_context_t;
 
 typedef struct {
 	volatile int  stop_workers;
@@ -65,13 +73,11 @@ typedef struct {
 		odph_ethaddr_t my_addr;
 		odp_queue_t input_queue[MAX_PKTIO_QUEUES];
 		odp_pktout_queue_t pktout[MAX_PKTIO_QUEUES];
+		queue_context_t queue_context[MAX_PKTIO_QUEUES];
 
 	} pktio[MAX_PKTIOS];
 
 	worker_arg_t worker_arg[MAX_WORKERS];
-
-	/* Maps pktio input index to pktio[] index for output */
-	uint8_t pktio_map[MAX_PKTIO_INDEXES];
 
 	worker_stat_t worker_stat[MAX_WORKERS];
 	uint64_t rx_pkt_sum;
@@ -108,8 +114,10 @@ static inline void fill_eth_addr(odp_packet_t pkt[], int num,
 static int worker_thread(void *arg)
 {
 	odp_event_t ev[BURST_SIZE];
-	int num, sent, drop, in, out;
+	int num, sent, drop, out;
 	odp_pktout_queue_t pktout;
+	odp_queue_t queue;
+	queue_context_t *queue_context;
 	worker_arg_t *worker_arg = arg;
 	test_global_t *test_global = worker_arg->test_global_ptr;
 	int worker_id = worker_arg->worker_id;
@@ -123,7 +131,7 @@ static int worker_thread(void *arg)
 	while (1) {
 		odp_packet_t pkt[BURST_SIZE];
 
-		num = odp_schedule_multi(NULL, ODP_SCHED_NO_WAIT,
+		num = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT,
 					 ev, BURST_SIZE);
 
 		polls++;
@@ -137,11 +145,20 @@ static int worker_thread(void *arg)
 		if (num <= 0)
 			continue;
 
+		queue_context = odp_queue_context(queue);
+
+		if (DEBUG_PRINT)
+			printf("worker %i: [%i/%i] -> [%i/%i], %i packets\n",
+			       worker_id,
+			       queue_context->src_pktio,
+			       queue_context->src_queue,
+			       queue_context->dst_pktio,
+			       queue_context->dst_queue, num);
+
 		odp_packet_from_event_multi(pkt, ev, num);
 
-		in     = odp_packet_input_index(pkt[0]);
-		out    = test_global->pktio_map[in];
-		pktout = test_global->pktio[out].pktout[worker_id];
+		pktout = queue_context->dst_pktout;
+		out    = queue_context->dst_pktio;
 
 		fill_eth_addr(pkt, num, test_global, out);
 
@@ -307,12 +324,6 @@ static int config_setup(test_global_t *test_global)
 		return -1;
 	}
 
-	if (MAX_PKTIO_INDEXES <= odp_pktio_max_index()) {
-		printf("Error: Larger pktio_map[] table needed: %u\n",
-		       odp_pktio_max_index());
-		return -1;
-	}
-
 	if (odp_pool_capability(&pool_capa)) {
 		printf("Error: Pool capability failed.\n");
 		return -1;
@@ -420,6 +431,7 @@ static int open_pktios(test_global_t *test_global)
 	unsigned int num_queue;
 	char *name;
 	int i, num_pktio, ret;
+	unsigned int j;
 
 	num_pktio = test_global->opt.num_pktio;
 	num_queue = test_global->opt.num_pktio_queue;
@@ -518,6 +530,21 @@ static int open_pktios(test_global_t *test_global)
 			return -1;
 		}
 
+		for (j = 0; j < num_queue; j++) {
+			odp_queue_t queue;
+			void *ctx;
+			uint32_t len = sizeof(queue_context_t);
+
+			queue = test_global->pktio[i].input_queue[j];
+			ctx = &test_global->pktio[i].queue_context[j];
+
+			if (odp_queue_context_set(queue, ctx, len)) {
+				printf("Error (%s): Queue ctx set failed.\n",
+				       name);
+				return -1;
+			}
+		}
+
 		odp_pktout_queue_param_init(&pktout_param);
 		pktout_param.num_queues  = num_queue;
 		pktout_param.op_mode     = ODP_PKTIO_OP_MT_UNSAFE;
@@ -542,20 +569,30 @@ static int open_pktios(test_global_t *test_global)
 static void link_pktios(test_global_t *test_global)
 {
 	int i, num_pktio, input, output;
+	int num_queue;
+	odp_pktout_queue_t pktout;
+	queue_context_t *ctx;
 
 	num_pktio = test_global->opt.num_pktio;
+	num_queue = test_global->opt.num_pktio_queue;
 
 	printf("Forwarding table (pktio indexes)\n");
 
 	/* If single interface loopback, otherwise forward to the next
 	 * interface. */
-	for (i = 0; i < num_pktio; i++) {
-		input  = test_global->pktio[i].pktio_index;
-		output = (i + 1) % num_pktio;
-		test_global->pktio_map[input] = output;
-		printf("  input %i, output %i\n",
-		       input,
-		       test_global->pktio[output].pktio_index);
+	for (input = 0; input < num_pktio; input++) {
+		output = (input + 1) % num_pktio;
+		printf("  input %i, output %i\n", input, output);
+
+		for (i = 0; i < num_queue; i++) {
+			ctx = &test_global->pktio[input].queue_context[i];
+			pktout = test_global->pktio[output].pktout[i];
+			ctx->dst_pktout = pktout;
+			ctx->dst_pktio  = output;
+			ctx->dst_queue  = i;
+			ctx->src_pktio  = input;
+			ctx->src_queue  = i;
+		}
 	}
 
 	printf("\n");
