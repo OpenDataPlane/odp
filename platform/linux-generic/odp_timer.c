@@ -76,7 +76,7 @@ static _odp_atomic_flag_t locks[NUM_LOCKS]; /* Multiple locks per cache line! */
 #endif
 
 /* Max timer resolution in nanoseconds */
-static uint64_t highest_res_ns;
+static uint64_t highest_res_ns = 500;
 static uint64_t min_res_ns = INT64_MAX;
 
 /******************************************************************************
@@ -1077,13 +1077,10 @@ int odp_timer_capability(odp_timer_clk_src_t clk_src,
 	return ret;
 }
 
-odp_timer_pool_t
-odp_timer_pool_create(const char *name,
-		      const odp_timer_pool_param_t *param)
+odp_timer_pool_t odp_timer_pool_create(const char *name,
+				       const odp_timer_pool_param_t *param)
 {
-	/* Verify that buffer pool can be used for timeouts */
-	/* Verify that we have a valid (non-zero) timer resolution */
-	if (param->res_ns == 0) {
+	if (param->res_ns < highest_res_ns) {
 		__odp_errno = EINVAL;
 		return ODP_TIMER_POOL_INVALID;
 	}
