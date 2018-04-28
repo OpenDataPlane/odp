@@ -13,4 +13,5 @@ SUFFIXES = .svg .msc .gv .html .adoc
 .adoc.html:
 	asciidoctor $(ASCIIDOC_FLAGS) --out-file=$@ $<
 
-ASCIIDOC_FLAGS =-a data-uri -b html5 -a icons=font -a toc2
+ASCIIDOC_FLAGS =-a data-uri -b html5 -a icons=font -a toc2 \
+	$(EXTRA_ASCIIDOC_FLAGS)
