@@ -420,7 +420,6 @@ MEMPOOL_REGISTER_OPS(ops_stack);
 
 #define IP4_CSUM_RESULT(m) (m->ol_flags & PKT_RX_IP_CKSUM_MASK)
 #define L4_CSUM_RESULT(m) (m->ol_flags & PKT_RX_L4_CKSUM_MASK)
-#define HAS_L4_PROTO(m, proto) ((m->packet_type & RTE_PTYPE_L4_MASK) == proto)
 #define UDP4_CSUM(_p) (((_odp_udphdr_t *)_odp_packet_l4_ptr(_p, NULL))->chksum)
 
 #define PKTIN_CSUM_BITS 0x1C
@@ -432,7 +431,7 @@ static inline int pkt_set_ol_rx(odp_pktin_config_opt_t *pktin_cfg,
 	uint64_t packet_csum_result;
 
 	if (pktin_cfg->bit.ipv4_chksum &&
-	    RTE_ETH_IS_IPV4_HDR(mbuf->packet_type)) {
+	    pkt_hdr->p.input_flags.ipv4) {
 		packet_csum_result = IP4_CSUM_RESULT(mbuf);
 
 		if (packet_csum_result == PKT_RX_IP_CKSUM_GOOD) {
@@ -448,7 +447,7 @@ static inline int pkt_set_ol_rx(odp_pktin_config_opt_t *pktin_cfg,
 	}
 
 	if (pktin_cfg->bit.udp_chksum &&
-	    HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_UDP)) {
+	    pkt_hdr->p.input_flags.udp) {
 		packet_csum_result = L4_CSUM_RESULT(mbuf);
 
 		if (packet_csum_result == PKT_RX_L4_CKSUM_GOOD) {
@@ -468,7 +467,7 @@ static inline int pkt_set_ol_rx(odp_pktin_config_opt_t *pktin_cfg,
 			pkt_hdr->p.flags.l4_chksum_err = 1;
 		}
 	} else if (pktin_cfg->bit.tcp_chksum &&
-		   HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_TCP)) {
+		   pkt_hdr->p.input_flags.tcp) {
 		packet_csum_result = L4_CSUM_RESULT(mbuf);
 
 		if (packet_csum_result == PKT_RX_L4_CKSUM_GOOD) {
@@ -530,10 +529,15 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		pkt_len = rte_pktmbuf_pkt_len(mbuf);
 
 		if (pktio_cls_enabled(pktio_entry)) {
+			packet_parse_reset(&parsed_hdr);
+			packet_set_len(&parsed_hdr, pkt_len);
+			dpdk_packet_parse_common(&parsed_hdr.p, data,
+						 pkt_len, pkt_len, mbuf,
+						 ODP_PROTO_LAYER_ALL);
 			if (cls_classify_packet(pktio_entry,
 						(const uint8_t *)data,
 						pkt_len, pkt_len, &pool,
-						&parsed_hdr, true))
+						&parsed_hdr, false))
 				goto fail;
 		}
 
@@ -549,7 +553,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry))
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 		else if (parse_layer != ODP_PROTO_LAYER_NONE)
-			packet_parse_layer(pkt_hdr, parse_layer);
+			dpdk_packet_parse_layer(pkt_hdr, mbuf, parse_layer);
 
 		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
 			packet_set_flow_hash(pkt_hdr, mbuf->hash.rss);
@@ -775,13 +779,19 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		pkt_hdr = packet_hdr(pkt);
 
 		if (pktio_cls_enabled(pktio_entry)) {
+			packet_parse_reset(&parsed_hdr);
+			packet_set_len(&parsed_hdr, pkt_len);
+			dpdk_packet_parse_common(&parsed_hdr.p, data,
+						 pkt_len, pkt_len, mbuf,
+						 ODP_PROTO_LAYER_ALL);
 			if (cls_classify_packet(pktio_entry,
 						(const uint8_t *)data,
 						pkt_len, pkt_len, &pool,
-						&parsed_hdr, true))
+						&parsed_hdr, false)) {
 				ODP_ERR("Unable to classify packet\n");
 				rte_pktmbuf_free(mbuf);
 				continue;
+			}
 		}
 
 		/* Init buffer segments. Currently, only single segment packets
@@ -794,7 +804,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry))
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 		else if (parse_layer != ODP_PROTO_LAYER_NONE)
-			packet_parse_layer(pkt_hdr, parse_layer);
+			dpdk_packet_parse_layer(pkt_hdr, mbuf, parse_layer);
 
 		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
 			packet_set_flow_hash(pkt_hdr, mbuf->hash.rss);
