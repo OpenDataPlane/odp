@@ -264,7 +264,7 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 	if (pktio_cls_enabled(pktio_entry)) {
 		if (cls_classify_packet(pktio_entry, data, len, len,
 					&pktio_entry->s.pkt_tap.pool,
-					&parsed_hdr)) {
+					&parsed_hdr, true)) {
 			return ODP_PACKET_INVALID;
 		}
 	}

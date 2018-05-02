@@ -705,7 +705,7 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry)) {
 			if (cls_classify_packet(pktio_entry,
 						(const uint8_t *)slot.buf, len,
-						len, &pool, &parsed_hdr))
+						len, &pool, &parsed_hdr, true))
 				goto fail;
 		}
 

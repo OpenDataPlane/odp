@@ -987,17 +987,19 @@ static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
  */
 int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 			uint16_t pkt_len, uint32_t seg_len, odp_pool_t *pool,
-			odp_packet_hdr_t *pkt_hdr)
+			odp_packet_hdr_t *pkt_hdr, odp_bool_t parse)
 {
 	cos_t *cos;
 	uint32_t tbl_index;
 	uint32_t hash;
 
-	packet_parse_reset(pkt_hdr);
-	packet_set_len(pkt_hdr, pkt_len);
+	if (parse) {
+		packet_parse_reset(pkt_hdr);
+		packet_set_len(pkt_hdr, pkt_len);
 
-	packet_parse_common(&pkt_hdr->p, base, pkt_len, seg_len,
-			    ODP_PROTO_LAYER_ALL);
+		packet_parse_common(&pkt_hdr->p, base, pkt_len, seg_len,
+				    ODP_PROTO_LAYER_ALL);
+	}
 	cos = cls_select_cos(entry, base, pkt_hdr);
 
 	if (cos == NULL)
