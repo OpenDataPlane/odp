@@ -198,6 +198,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_version.c \
 			   odp_weak.c \
 			   pktio/dpdk.c \
+			   pktio/dpdk_parse.c \
 			   pktio/ethtool.c \
 			   pktio/io_ops.c \
 			   pktio/ipc.c \
