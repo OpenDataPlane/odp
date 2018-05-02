@@ -533,7 +533,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 			if (cls_classify_packet(pktio_entry,
 						(const uint8_t *)data,
 						pkt_len, pkt_len, &pool,
-						&parsed_hdr))
+						&parsed_hdr, true))
 				goto fail;
 		}
 
@@ -778,7 +778,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 			if (cls_classify_packet(pktio_entry,
 						(const uint8_t *)data,
 						pkt_len, pkt_len, &pool,
-						&parsed_hdr))
+						&parsed_hdr, true))
 				ODP_ERR("Unable to classify packet\n");
 				rte_pktmbuf_free(mbuf);
 				continue;

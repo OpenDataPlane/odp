@@ -39,7 +39,7 @@ selects destination queue and packet pool based on selected PMR and CoS.
 **/
 int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 			uint16_t pkt_len, uint32_t seg_len, odp_pool_t *pool,
-			odp_packet_hdr_t *pkt_hdr);
+			odp_packet_hdr_t *pkt_hdr, odp_bool_t parse);
 
 /**
 Packet IO classifier init

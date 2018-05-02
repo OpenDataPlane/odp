@@ -655,7 +655,8 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				seg_len = msgvec[i].msg_hdr.msg_iov->iov_len;
 
 			if (cls_classify_packet(pktio_entry, base, pkt_len,
-						seg_len, &pool, pkt_hdr)) {
+						seg_len, &pool, pkt_hdr,
+						true)) {
 				ODP_ERR("cls_classify_packet failed");
 				odp_packet_free(pkt);
 				continue;
