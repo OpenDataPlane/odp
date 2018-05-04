@@ -475,8 +475,7 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 	 * external ref:
 	 */
 	if (flags & _ODP_ISHM_EXPORT) {
-		strncpy(new_block->filename, filename,
-			ISHM_FILENAME_MAXLEN - 1);
+		memcpy(new_block->filename, filename, ISHM_FILENAME_MAXLEN);
 		snprintf(new_block->exptname, ISHM_FILENAME_MAXLEN,
 			 ISHM_EXPTNAME_FORMAT,
 			 odp_global_data.shm_dir,
