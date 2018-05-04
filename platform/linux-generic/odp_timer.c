@@ -38,7 +38,6 @@
 #include <odp/api/atomic.h>
 #include <odp_atomic_internal.h>
 #include <odp/api/buffer.h>
-#include <odp_buffer_inlines.h>
 #include <odp/api/cpu.h>
 #include <odp/api/pool.h>
 #include <odp_pool_internal.h>

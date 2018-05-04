@@ -26,7 +26,6 @@
 #include <odp_ring_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_queue_internal.h>
-#include <odp_buffer_inlines.h>
 #include <odp_libconfig_internal.h>
 
 /* Number of priority levels  */

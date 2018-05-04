@@ -14,7 +14,6 @@
 
 #include <odp_pool_internal.h>
 #include <odp_internal.h>
-#include <odp_buffer_inlines.h>
 #include <odp_packet_internal.h>
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
