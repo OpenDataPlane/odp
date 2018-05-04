@@ -9,7 +9,6 @@
 #include <odp/api/buffer.h>
 #include <odp_pool_internal.h>
 #include <odp_buffer_internal.h>
-#include <odp_buffer_inlines.h>
 #include <odp_debug_internal.h>
 
 #include <string.h>
