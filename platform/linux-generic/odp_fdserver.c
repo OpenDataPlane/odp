@@ -588,7 +588,9 @@ int _odp_fdserver_init_global(void)
 
 	/* bind to new named socket: */
 	local.sun_family = AF_UNIX;
-	strncpy(local.sun_path, sockpath, sizeof(local.sun_path));
+	memcpy(local.sun_path, sockpath, sizeof(local.sun_path));
+	local.sun_path[sizeof(local.sun_path) - 1] = '\0';
+
 	res = bind(sock, (struct sockaddr *)&local, sizeof(struct sockaddr_un));
 	if (res == -1) {
 		ODP_ERR("_odp_fdserver_init_global: %s\n", strerror(errno));
