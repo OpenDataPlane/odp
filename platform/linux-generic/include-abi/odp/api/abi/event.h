@@ -43,6 +43,9 @@ typedef enum odp_event_subtype_t {
 	ODP_EVENT_PACKET_IPSEC = 3
 } odp_event_subtype_t;
 
+/* Inlined functions for non-ABI compat mode */
+#include <odp/api/plat/event_inlines.h>
+
 /**
  * @}
  */
