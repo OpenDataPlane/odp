@@ -347,6 +347,8 @@ static int ipc_pktio_open(odp_pktio_t id ODP_UNUSED,
 	pktio_entry->s.ipc.rx.cache = _ring_create("ipc_rx_cache",
 						   PKTIO_IPC_ENTRIES,
 						   _RING_NO_LIST);
+	if (!pktio_entry->s.ipc.rx.cache)
+		return -1;
 
 	/* Shared info about remote pktio */
 	if (sscanf(dev, "ipc:%d:%s", &pid, tail) == 2) {
@@ -355,12 +357,15 @@ static int ipc_pktio_open(odp_pktio_t id ODP_UNUSED,
 		snprintf(name, sizeof(name), "ipc:%s_info", tail);
 		IPC_ODP_DBG("lookup for name %s for pid %d\n", name, pid);
 		shm = odp_shm_import(name, pid, name);
-		if (ODP_SHM_INVALID == shm)
+		if (ODP_SHM_INVALID == shm) {
+			_ring_destroy("ipc_rx_cache");
 			return -1;
+		}
 		pinfo = odp_shm_addr(shm);
 
 		if (!pinfo->master.init_done) {
 			odp_shm_free(shm);
+			_ring_destroy("ipc_rx_cache");
 			return -1;
 		}
 		pktio_entry->s.ipc.pinfo = pinfo;
@@ -374,6 +379,7 @@ static int ipc_pktio_open(odp_pktio_t id ODP_UNUSED,
 				      ODP_CACHE_LINE_SIZE,
 				      _ODP_ISHM_EXPORT | _ODP_ISHM_LOCK);
 		if (ODP_SHM_INVALID == shm) {
+			_ring_destroy("ipc_rx_cache");
 			ODP_ERR("can not create shm %s\n", name);
 			return -1;
 		}
