@@ -24,8 +24,10 @@ if !ODP_ABI_COMPAT
 odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/atomic_inlines.h \
+		  include/odp/api/plat/buffer_inline_types.h \
 		  include/odp/api/plat/byteorder_inlines.h \
 		  include/odp/api/plat/byteorder_inlines_api.h \
+		  include/odp/api/plat/event_inlines.h \
 		  include/odp/api/plat/packet_flag_inlines.h \
 		  include/odp/api/plat/packet_flag_inlines_api.h \
 		  include/odp/api/plat/packet_inline_types.h \
@@ -213,6 +215,7 @@ if ODP_ABI_COMPAT
 __LIB__libodp_linux_la_SOURCES += \
 			   odp_atomic_api.c \
 			   odp_byteorder.c \
+			   odp_event_api.c \
 			   odp_packet_api.c \
 			   odp_packet_flags_api.c \
 			   odp_pktio_api.c \
