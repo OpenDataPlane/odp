@@ -16,6 +16,9 @@
 #include <odp/api/packet_io.h>
 #include <odp/api/plat/pktio_inlines.h>
 
+/* Inlined API functions */
+#include <odp/api/plat/event_inlines.h>
+
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 #include <protocols/tcp.h>

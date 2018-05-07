@@ -14,6 +14,9 @@
 #include <odp_ipsec_internal.h>
 #include <odp_pool_internal.h>
 
+/* Inlined API functions */
+#include <odp/api/plat/event_inlines.h>
+
 typedef struct {
 	/* common buffer header */
 	odp_buffer_hdr_t buf_hdr;

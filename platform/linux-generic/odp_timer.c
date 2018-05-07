@@ -56,6 +56,9 @@
 #include <odp_arch_time_internal.h>
 #include <odp_timer_internal.h>
 
+/* Inlined API functions */
+#include <odp/api/plat/event_inlines.h>
+
 #define TMO_UNUSED   ((uint64_t)0xFFFFFFFFFFFFFFFF)
 /* TMO_INACTIVE is or-ed with the expiration tick to indicate an expired timer.
  * The original expiration tick (63 bits) is still available so it can be used
