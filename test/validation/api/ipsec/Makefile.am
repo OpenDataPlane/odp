@@ -21,4 +21,4 @@ ipsec_async_SOURCES = ipsec_async.c
 ipsec_inline_in_SOURCES = ipsec_inline_in.c
 ipsec_inline_out_SOURCES = ipsec_inline_out.c
 
-LDADD += libtestipsec.la
+PRELDADD += libtestipsec.la
