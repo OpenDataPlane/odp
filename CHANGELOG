@@ -1,3 +1,127 @@
+== OpenDataPlane (1.19.0.1)
+=== Summary of Changes
+ODP v1.19.0.1 is the first service update for the Tiger Moth release. It
+incorporates a number of corrections and enhancements that improve the quality
+and testability of ODP.
+
+==== APIs
+There are no API changes in this release.
+
+==== DPDK Service Release Sync
+ODP is now paired with DPDK 17.11.2 for it's DPDK-related support. This is the
+current service level for the DPDK 17.11 LTS package used by ODP Tiger Moth
+and incorporates a number of important bug fixes.
+
+=== Implementation Improvements
+The ODP reference implementation has been improved in a number of areas.
+
+==== GCC 8 Support
+The GCC 8 series of compilers provides additional warnings about possible
+string truncation. A few ODP modules were changed to avoid misleading
+warnings when compiling with this level of GCC.
+
+==== Linking with `libnuma`
+The `libnuma` library is used for DPDK pktios to provide proper memory
+allocation on NUMA-aware systems. Linking with this library is improved to
+avoid extraneous error messages at build time.
+
+==== Packet metadata reorganization
+Packet metadata is reorganized to reduce the cache footprint used by the ODP
+reference implementation, resulting in performance improvements.
+
+==== Random split from crypto module
+The `odp_random_xxx()` family of APIs was moved to a separate module
+(`odp_random.c`) for modularity and better isolation from planned crypto
+enhancements.
+
+==== Shmem improvements
+Unnecessary locking is removed from the `odp_fdserver` module, streamlining
+operations on shared memory.
+
+==== Timer pools
+The default number of timer pools supported by the ODP reference
+implementation has been reduced from 255 to 32. This lower number remains
+generously adequate for most applications and meaningfully reduces memory
+footprint, giving better performance.
+
+==== Timer resolution
+During initialization ODP normally measures timer resolution to set the
+reported `highest_res_ns`. When such measurement is not able to be performed,
+this is not limited to 500ns to avoid bounds errors with overly precise
+resolutions.
+
+=== Validation Improvements
+The ODP validation test suite has been improved in a number of areas.
+
+==== Crypto validation test
+The validation test now correctly handles corner cases when the implementation
+under test fails to process any test packets. It also includes the
+previously missing `ODP_CIPHER_ALG_AES_CTR` name.
+
+Additionally, since individual implementations indicate which crypto/hash
+algorithms are supported via the `odp_crypto_capability()` API, the crypto
+validation test now properly uses this information and only tests those
+algorithms that the implementation reports as supported. The list of
+unsupported algorithms is also reported as part of the test results.
+
+==== `odp_sched_pktio` test improvements
+The number of input/output queues used by this test can now be specified,
+providing additional controls for test flexibility. In addition, pktout
+queues are now selected based on input queue rather than worker id, thus
+ensuring packet order flow is maintained.
+
+Finally, an inactivity timer is added that allows the test to report when
+packets were handled due to timeout rather than I/O activity.
+
+==== Timer validation test
+The validation test for the ODP timer APIs has been reorganized to better
+characterize an implementation's conformance to the ODP Timer API
+specification.  Since implementations can have widely differing timer accuracy
+levels, particularly when running in virtualized environments, the test also
+relaxes its bounds checking and enforcement somewhat to better avoid false
+negative test results.
+
+Additionally, a timer pool create/destroy test was added as this area was
+not adequately covered previously.
+
+=== Documentation Improvements
+The `EXTRA_ASCIIDOC_FLAGS` environment variable may now be used to supply
+additional build flags for Asciidoctor, which can be used to override
+icons and/or fonts for distribution or other needs.
+
+=== Bug Fixes
+==== https://bugs.linaro.org/show_bug.cgi?id=3657[Bug 3657]
+PktIO does not work with Mellanox Interfaces
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3685[Bug 3685]
+RX UDP checksum offload drops valid UDP packets with Niantic
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3686[Bug 3686]
+IP header checksum not inserted if L4 offset not set
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3690[Bug 3690]
+fdserver process interferes with signal handling
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3763[Bug 3763]
+tests should fail if odp_crypto_op/op_enq process 0 packets
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3764[Bug 3764]
+IPsec code can occasionally damage packets
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3772[Bug 3772]
+Timer segfaults when creating and destroying multiple timer pools
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3788[Bug 3788]
+linux-gen: ipc test fails to reserve memory
+
+=== Known Issues
+==== https://bugs.linaro.org/show_bug.cgi?id=3774[Bug 3774]
+Shmem validation test runs indefinitely with 1GB huge pages
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3787[Bug 3787]
+Timeout accuracy breaks down with odd resolution requests
+
+
 == OpenDataPlane (1.19.0.0)
 === Summary of Changes
 ODP v1.19.0.0 is the official Tiger Moth final release. It incorporates final
