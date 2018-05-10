@@ -418,73 +418,6 @@ static struct rte_mempool_ops ops_stack = {
 
 MEMPOOL_REGISTER_OPS(ops_stack);
 
-#define IP4_CSUM_RESULT(m) (m->ol_flags & PKT_RX_IP_CKSUM_MASK)
-#define L4_CSUM_RESULT(m) (m->ol_flags & PKT_RX_L4_CKSUM_MASK)
-#define UDP4_CSUM(_p) (((_odp_udphdr_t *)_odp_packet_l4_ptr(_p, NULL))->chksum)
-
-#define PKTIN_CSUM_BITS 0x1C
-
-static inline int pkt_set_ol_rx(odp_pktin_config_opt_t *pktin_cfg,
-				odp_packet_hdr_t *pkt_hdr,
-				struct rte_mbuf *mbuf)
-{
-	uint64_t packet_csum_result;
-
-	if (pktin_cfg->bit.ipv4_chksum &&
-	    pkt_hdr->p.input_flags.ipv4) {
-		packet_csum_result = IP4_CSUM_RESULT(mbuf);
-
-		if (packet_csum_result == PKT_RX_IP_CKSUM_GOOD) {
-			pkt_hdr->p.input_flags.l3_chksum_done = 1;
-		} else if (packet_csum_result != PKT_RX_IP_CKSUM_UNKNOWN) {
-			if (pktin_cfg->bit.drop_ipv4_err)
-				return -1;
-
-			pkt_hdr->p.input_flags.l3_chksum_done = 1;
-			pkt_hdr->p.flags.ip_err = 1;
-			pkt_hdr->p.flags.l3_chksum_err = 1;
-		}
-	}
-
-	if (pktin_cfg->bit.udp_chksum &&
-	    pkt_hdr->p.input_flags.udp) {
-		packet_csum_result = L4_CSUM_RESULT(mbuf);
-
-		if (packet_csum_result == PKT_RX_L4_CKSUM_GOOD) {
-			pkt_hdr->p.input_flags.l4_chksum_done = 1;
-		} else if (packet_csum_result != PKT_RX_L4_CKSUM_UNKNOWN) {
-			if (pkt_hdr->p.input_flags.ipv4 &&
-			    pkt_hdr->p.input_flags.udp &&
-			    !UDP4_CSUM(packet_handle(pkt_hdr))) {
-				pkt_hdr->p.input_flags.l4_chksum_done = 1;
-				return 0;
-			}
-			if (pktin_cfg->bit.drop_udp_err)
-				return -1;
-
-			pkt_hdr->p.input_flags.l4_chksum_done = 1;
-			pkt_hdr->p.flags.udp_err = 1;
-			pkt_hdr->p.flags.l4_chksum_err = 1;
-		}
-	} else if (pktin_cfg->bit.tcp_chksum &&
-		   pkt_hdr->p.input_flags.tcp) {
-		packet_csum_result = L4_CSUM_RESULT(mbuf);
-
-		if (packet_csum_result == PKT_RX_L4_CKSUM_GOOD) {
-			pkt_hdr->p.input_flags.l4_chksum_done = 1;
-		} else if (packet_csum_result != PKT_RX_L4_CKSUM_UNKNOWN) {
-			if (pktin_cfg->bit.drop_tcp_err)
-				return -1;
-
-			pkt_hdr->p.input_flags.l4_chksum_done = 1;
-			pkt_hdr->p.flags.tcp_err = 1;
-			pkt_hdr->p.flags.l4_chksum_err = 1;
-		}
-	}
-
-	return 0;
-}
-
 static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 			      odp_packet_t pkt_table[],
 			      struct rte_mbuf *mbuf_table[],
@@ -499,7 +432,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	int nb_pkts = 0;
 	int alloc_len, num;
 	odp_pool_t pool = pktio_entry->s.pkt_dpdk.pool;
-	odp_pktin_config_opt_t *pktin_cfg = &pktio_entry->s.config.pktin;
+	odp_pktin_config_opt_t pktin_cfg = pktio_entry->s.config.pktin;
 	odp_proto_layer_t parse_layer = pktio_entry->s.config.parser.layer;
 	odp_pktio_t input = pktio_entry->s.handle;
 
@@ -531,9 +464,14 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry)) {
 			packet_parse_reset(&parsed_hdr);
 			packet_set_len(&parsed_hdr, pkt_len);
-			dpdk_packet_parse_common(&parsed_hdr.p, data,
-						 pkt_len, pkt_len, mbuf,
-						 ODP_PROTO_LAYER_ALL);
+			if (dpdk_packet_parse_common(&parsed_hdr.p, data,
+						     pkt_len, pkt_len, mbuf,
+						     ODP_PROTO_LAYER_ALL,
+						     pktin_cfg)) {
+				odp_packet_free(pkt_table[i]);
+				rte_pktmbuf_free(mbuf);
+				continue;
+			}
 			if (cls_classify_packet(pktio_entry,
 						(const uint8_t *)data,
 						pkt_len, pkt_len, &pool,
@@ -553,20 +491,17 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry))
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 		else if (parse_layer != ODP_PROTO_LAYER_NONE)
-			dpdk_packet_parse_layer(pkt_hdr, mbuf, parse_layer);
+			if (dpdk_packet_parse_layer(pkt_hdr, mbuf, parse_layer,
+						    pktin_cfg)) {
+				odp_packet_free(pkt);
+				rte_pktmbuf_free(mbuf);
+				continue;
+			}
 
 		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
 			packet_set_flow_hash(pkt_hdr, mbuf->hash.rss);
 
 		packet_set_ts(pkt_hdr, ts);
-
-		if (pktin_cfg->all_bits & PKTIN_CSUM_BITS) {
-			if (pkt_set_ol_rx(pktin_cfg, pkt_hdr, mbuf)) {
-				odp_packet_free(pkt);
-				rte_pktmbuf_free(mbuf);
-				continue;
-			}
-		}
 
 		pkt_table[nb_pkts++] = pkt;
 
@@ -756,7 +691,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 	int i;
 	int nb_pkts = 0;
 	odp_pool_t pool = pktio_entry->s.pkt_dpdk.pool;
-	odp_pktin_config_opt_t *pktin_cfg = &pktio_entry->s.config.pktin;
+	odp_pktin_config_opt_t pktin_cfg = pktio_entry->s.config.pktin;
 	odp_proto_layer_t parse_layer = pktio_entry->s.config.parser.layer;
 	odp_pktio_t input = pktio_entry->s.handle;
 
@@ -781,9 +716,13 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry)) {
 			packet_parse_reset(&parsed_hdr);
 			packet_set_len(&parsed_hdr, pkt_len);
-			dpdk_packet_parse_common(&parsed_hdr.p, data,
-						 pkt_len, pkt_len, mbuf,
-						 ODP_PROTO_LAYER_ALL);
+			if (dpdk_packet_parse_common(&parsed_hdr.p, data,
+						     pkt_len, pkt_len, mbuf,
+						     ODP_PROTO_LAYER_ALL,
+						     pktin_cfg)) {
+				rte_pktmbuf_free(mbuf);
+				continue;
+			}
 			if (cls_classify_packet(pktio_entry,
 						(const uint8_t *)data,
 						pkt_len, pkt_len, &pool,
@@ -804,19 +743,16 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry))
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 		else if (parse_layer != ODP_PROTO_LAYER_NONE)
-			dpdk_packet_parse_layer(pkt_hdr, mbuf, parse_layer);
+			if (dpdk_packet_parse_layer(pkt_hdr, mbuf, parse_layer,
+						    pktin_cfg)) {
+				rte_pktmbuf_free(mbuf);
+				continue;
+			}
 
 		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
 			packet_set_flow_hash(pkt_hdr, mbuf->hash.rss);
 
 		packet_set_ts(pkt_hdr, ts);
-
-		if (pktin_cfg->all_bits & PKTIN_CSUM_BITS) {
-			if (pkt_set_ol_rx(pktin_cfg, pkt_hdr, mbuf)) {
-				rte_pktmbuf_free(mbuf);
-				continue;
-			}
-		}
 
 		pkt_table[nb_pkts++] = pkt;
 	}

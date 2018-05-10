@@ -20,6 +20,9 @@
 #include <rte_config.h>
 #include <rte_mbuf.h>
 
+#define IP4_CSUM_RESULT(ol_flags) (ol_flags & PKT_RX_IP_CKSUM_MASK)
+#define L4_CSUM_RESULT(ol_flags) (ol_flags & PKT_RX_L4_CKSUM_MASK)
+
 /** Parser helper function for Ethernet packets */
 static inline uint16_t dpdk_parse_eth(packet_parser_t *prs,
 				      const uint8_t **parseptr,
@@ -126,7 +129,9 @@ error:
 static inline uint8_t dpdk_parse_ipv4(packet_parser_t *prs,
 				      const uint8_t **parseptr,
 				      uint32_t *offset, uint32_t frame_len,
-				      uint32_t mbuf_packet_type)
+				      uint32_t mbuf_packet_type,
+				      uint64_t mbuf_ol,
+				      uint32_t do_csum)
 {
 	const _odp_ipv4hdr_t *ipv4 = (const _odp_ipv4hdr_t *)*parseptr;
 	uint32_t dstaddr = _odp_be_to_cpu_32(ipv4->dst_addr);
@@ -146,6 +151,18 @@ static inline uint8_t dpdk_parse_ipv4(packet_parser_t *prs,
 
 	*offset   += ihl * 4;
 	*parseptr += ihl * 4;
+
+	if (do_csum) {
+		uint64_t packet_csum_result = IP4_CSUM_RESULT(mbuf_ol);
+
+		if (packet_csum_result == PKT_RX_IP_CKSUM_GOOD) {
+			prs->input_flags.l3_chksum_done = 1;
+		} else if (packet_csum_result != PKT_RX_IP_CKSUM_UNKNOWN) {
+			prs->input_flags.l3_chksum_done = 1;
+			prs->flags.ip_err = 1;
+			prs->flags.l3_chksum_err = 1;
+		}
+	}
 
 	if (odp_unlikely(ihl > _ODP_IPV4HDR_IHL_MIN))
 		prs->input_flags.ipopt = 1;
@@ -252,13 +269,27 @@ static inline uint8_t dpdk_parse_ipv6(packet_parser_t *prs,
  * Parser helper function for TCP
  */
 static inline void dpdk_parse_tcp(packet_parser_t *prs,
-				  const uint8_t **parseptr)
+				  const uint8_t **parseptr,
+				  uint64_t mbuf_ol,
+				  uint32_t do_csum)
 {
 	const _odp_tcphdr_t *tcp = (const _odp_tcphdr_t *)*parseptr;
 	uint32_t len = tcp->hl * 4;
 
 	if (odp_unlikely(tcp->hl < sizeof(_odp_tcphdr_t) / sizeof(uint32_t)))
 		prs->flags.tcp_err = 1;
+
+	if (do_csum) {
+		uint64_t packet_csum_result = L4_CSUM_RESULT(mbuf_ol);
+
+		if (packet_csum_result == PKT_RX_L4_CKSUM_GOOD) {
+			prs->input_flags.l4_chksum_done = 1;
+		} else if (packet_csum_result != PKT_RX_L4_CKSUM_UNKNOWN) {
+			prs->input_flags.l4_chksum_done = 1;
+			prs->flags.tcp_err = 1;
+			prs->flags.l4_chksum_err = 1;
+		}
+	}
 
 	*parseptr += len;
 }
@@ -267,7 +298,9 @@ static inline void dpdk_parse_tcp(packet_parser_t *prs,
  * Parser helper function for UDP
  */
 static inline void dpdk_parse_udp(packet_parser_t *prs,
-				  const uint8_t **parseptr)
+				  const uint8_t **parseptr,
+				  uint64_t mbuf_ol,
+				  uint32_t do_csum)
 {
 	const _odp_udphdr_t *udp = (const _odp_udphdr_t *)*parseptr;
 	uint32_t udplen = _odp_be_to_cpu_16(udp->length);
@@ -275,6 +308,22 @@ static inline void dpdk_parse_udp(packet_parser_t *prs,
 
 	if (odp_unlikely(udplen < sizeof(_odp_udphdr_t)))
 		prs->flags.udp_err = 1;
+
+	if (do_csum) {
+		uint64_t packet_csum_result = L4_CSUM_RESULT(mbuf_ol);
+
+		if (packet_csum_result == PKT_RX_L4_CKSUM_GOOD) {
+			prs->input_flags.l4_chksum_done = 1;
+		} else if (packet_csum_result != PKT_RX_L4_CKSUM_UNKNOWN) {
+			if (prs->input_flags.ipv4 && !udp->chksum) {
+				prs->input_flags.l4_chksum_done = 1;
+			} else {
+				prs->input_flags.l4_chksum_done = 1;
+				prs->flags.udp_err = 1;
+				prs->flags.l4_chksum_err = 1;
+			}
+		}
+	}
 
 	if (odp_unlikely(ipsec_port == udp->dst_port && udplen > 4)) {
 		uint32_t val;
@@ -295,14 +344,16 @@ int dpdk_packet_parse_common_l3_l4(packet_parser_t *prs,
 				   uint32_t offset,
 				   uint32_t frame_len, uint32_t seg_len,
 				   int layer, uint16_t ethtype,
-				   uint32_t mbuf_packet_type)
+				   uint32_t mbuf_packet_type,
+				   uint64_t mbuf_ol,
+				   odp_pktin_config_opt_t pktin_cfg)
 {
 	uint8_t  ip_proto;
 
 	prs->l3_offset = offset;
 
 	if (odp_unlikely(layer <= ODP_PROTO_LAYER_L2))
-		return prs->flags.all.error != 0;
+		return 0;
 
 	/* Set l3 flag only for known ethtypes */
 	prs->input_flags.l3 = 1;
@@ -312,8 +363,11 @@ int dpdk_packet_parse_common_l3_l4(packet_parser_t *prs,
 	case _ODP_ETHTYPE_IPV4:
 		prs->input_flags.ipv4 = 1;
 		ip_proto = dpdk_parse_ipv4(prs, &parseptr, &offset, frame_len,
-					   mbuf_packet_type);
+					   mbuf_packet_type, mbuf_ol,
+					   pktin_cfg.bit.ipv4_chksum);
 		prs->l4_offset = offset;
+		if (prs->flags.ip_err && pktin_cfg.bit.drop_ipv4_err)
+			return -1; /* drop */
 		break;
 
 	case _ODP_ETHTYPE_IPV6:
@@ -321,6 +375,8 @@ int dpdk_packet_parse_common_l3_l4(packet_parser_t *prs,
 		ip_proto = dpdk_parse_ipv6(prs, &parseptr, &offset, frame_len,
 					   seg_len, mbuf_packet_type);
 		prs->l4_offset = offset;
+		if (prs->flags.ip_err && pktin_cfg.bit.drop_ipv6_err)
+			return -1; /* drop */
 		break;
 
 	case _ODP_ETHTYPE_ARP:
@@ -334,7 +390,7 @@ int dpdk_packet_parse_common_l3_l4(packet_parser_t *prs,
 	}
 
 	if (layer == ODP_PROTO_LAYER_L3)
-		return prs->flags.all.error != 0;
+		return 0;
 
 	/* Set l4 flag only for known ip_proto */
 	prs->input_flags.l4 = 1;
@@ -354,16 +410,22 @@ int dpdk_packet_parse_common_l3_l4(packet_parser_t *prs,
 
 	case _ODP_IPPROTO_TCP:
 		if (odp_unlikely(offset + _ODP_TCPHDR_LEN > seg_len))
-			return -1;
+			return -1; /* drop */
 		prs->input_flags.tcp = 1;
-		dpdk_parse_tcp(prs, &parseptr);
+		dpdk_parse_tcp(prs, &parseptr, mbuf_ol,
+			       pktin_cfg.bit.tcp_chksum);
+		if (prs->flags.tcp_err && pktin_cfg.bit.drop_tcp_err)
+			return -1; /* drop */
 		break;
 
 	case _ODP_IPPROTO_UDP:
 		if (odp_unlikely(offset + _ODP_UDPHDR_LEN > seg_len))
-			return -1;
+			return -1; /* drop */
 		prs->input_flags.udp = 1;
-		dpdk_parse_udp(prs, &parseptr);
+		dpdk_parse_udp(prs, &parseptr, mbuf_ol,
+			       pktin_cfg.bit.udp_chksum);
+		if (prs->flags.udp_err && pktin_cfg.bit.drop_udp_err)
+			return -1; /* drop */
 		break;
 
 	case _ODP_IPPROTO_AH:
@@ -389,7 +451,7 @@ int dpdk_packet_parse_common_l3_l4(packet_parser_t *prs,
 		break;
 	}
 
-	return prs->flags.all.error != 0;
+	return 0;
 }
 
 /**
@@ -397,12 +459,14 @@ int dpdk_packet_parse_common_l3_l4(packet_parser_t *prs,
  */
 int dpdk_packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 			     uint32_t frame_len, uint32_t seg_len,
-			     struct rte_mbuf *mbuf, int layer)
+			     struct rte_mbuf *mbuf, int layer,
+			     odp_pktin_config_opt_t pktin_cfg)
 {
 	uint32_t offset;
 	uint16_t ethtype;
 	const uint8_t *parseptr;
 	uint32_t mbuf_packet_type;
+	uint64_t mbuf_ol;
 
 	parseptr = ptr;
 	offset = 0;
@@ -411,6 +475,7 @@ int dpdk_packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 		return 0;
 
 	mbuf_packet_type = mbuf->packet_type;
+	mbuf_ol = mbuf->ol_flags;
 
 	/* Assume valid L2 header, no CRC/FCS check in SW */
 	prs->l2_offset = offset;
@@ -420,7 +485,8 @@ int dpdk_packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 
 	return dpdk_packet_parse_common_l3_l4(prs, parseptr, offset, frame_len,
 					      seg_len, layer, ethtype,
-					      mbuf_packet_type);
+					      mbuf_packet_type, mbuf_ol,
+					      pktin_cfg);
 }
 
 #endif /* ODP_PKTIO_DPDK */
