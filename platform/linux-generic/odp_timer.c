@@ -38,7 +38,6 @@
 #include <odp/api/atomic.h>
 #include <odp_atomic_internal.h>
 #include <odp/api/buffer.h>
-#include <odp_buffer_inlines.h>
 #include <odp/api/cpu.h>
 #include <odp/api/pool.h>
 #include <odp_pool_internal.h>
@@ -56,6 +55,9 @@
 #include <odp/api/timer.h>
 #include <odp_arch_time_internal.h>
 #include <odp_timer_internal.h>
+
+/* Inlined API functions */
+#include <odp/api/plat/event_inlines.h>
 
 #define TMO_UNUSED   ((uint64_t)0xFFFFFFFFFFFFFFFF)
 /* TMO_INACTIVE is or-ed with the expiration tick to indicate an expired timer.

@@ -9,12 +9,22 @@
 #include <odp/api/buffer.h>
 #include <odp_pool_internal.h>
 #include <odp_buffer_internal.h>
-#include <odp_buffer_inlines.h>
 #include <odp_debug_internal.h>
+#include <odp/api/plat/buffer_inline_types.h>
 
 #include <string.h>
 #include <stdio.h>
 #include <inttypes.h>
+
+#include <odp/visibility_begin.h>
+
+/* Fill in buffer header field offsets for inline functions */
+const _odp_buffer_inline_offset_t ODP_ALIGNED_CACHE
+_odp_buffer_inline_offset = {
+	.event_type = offsetof(odp_buffer_hdr_t, event_type)
+};
+
+#include <odp/visibility_end.h>
 
 odp_buffer_t odp_buffer_from_event(odp_event_t ev)
 {
