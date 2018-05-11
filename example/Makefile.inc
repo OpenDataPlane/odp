@@ -18,7 +18,11 @@ AM_CFLAGS = \
 	$(HELPER_INCLUDES)
 
 if STATIC_APPS
+if !CODE_INSTRUM
 AM_LDFLAGS = -L$(LIB) -static
+else
+AM_LDFLAGS =
+endif
 else
 AM_LDFLAGS =
 endif

@@ -249,6 +249,17 @@ install:
             EXTRA_CONF="$EXTRA_CONF --with-netmap-path=`pwd`/netmap"
           fi
 
+#      PAPI library
+        - |
+          if [ -z "$CROSS_ARCH" -a ! -f "$HOME/papi-install/lib/libpapi.so" ]; then
+            git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=papi-5-6-0-t https://bitbucket.org/icl/papi.git
+            pushd papi/src
+            ./configure --prefix=$HOME/papi-install
+            make
+            make install
+            popd
+          fi
+
 script:
         - ./bootstrap
         - ./configure --prefix=$HOME/odp-install
@@ -445,6 +456,17 @@ jobs:
                           - echo ${TRAVIS_COMMIT_RANGE};
                           - ODP_PATCHES=`echo ${TRAVIS_COMMIT_RANGE} | sed 's/\.//'`;
                           - ./scripts/ci-checkpatches.sh ${ODP_PATCHES};
+                - stage: test
+                  env: TEST=code_instrum
+                  compiler: gcc
+                  script:
+                          - ./bootstrap
+                          - ./configure --prefix=$HOME/odp-papi-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH --enable-code-instrum PAPI_CFLAGS="-I$HOME/papi-install/include" PAPI_LIBS="-L$HOME/papi-install/lib -lpapi"
+                          - make -j $(nproc)
+                          - make install
+                          - sudo $HOME/papi-install/bin/papi_avail
+                          - mkdir $HOME/store
+                          - sudo LD_LIBRARY_PATH="/usr/local/lib:$HOME/odp-papi-install/lib:$HOME/papi-install/lib:$LD_LIBRARY_PATH" ODP_INSTRUM_STORE_DIR=$HOME/store LD_PRELOAD=libinstrum.so.0.0.0 $HOME/odp-papi-install/bin/odp_generator -I lo --srcmac a0:36:9f:28:e2:57 --dstmac 00:0f:fe:c5:73:66 --srcip 192.168.150.1 --dstip 192.168.150.2 -m u -n 200
         allow_failures:
           - canfail: yes
 

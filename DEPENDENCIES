@@ -204,6 +204,96 @@ Prerequisites for building the OpenDataPlane (ODP) API
    1024MB of memory:
    $ sudo ODP_PKTIO_DPDK_PARAMS="-m 1024" ./test/performance/odp_l2fwd -i 0 -c 1
 
+3.5 Code instrumentation with PAPI library (optional)
+
+   ODP example library 'instrum' is using PAPI library to retrieve performance
+   counters associated with execution of ODP API.
+
+3.5.1 Installing PAPI library
+
+   PAPI library is available as package in a variety of Linux distributions. If available,
+   install PAPI from distro-provided package.
+
+   # apt-get install libpapi-dev
+
+   Alternatively, one may try to use the latest PAPI master branch commit for
+   the best performance and the latest bug fixes. PAPI library is currently at 5.6.0.
+
+   # Checkout PAPI code
+   $ git clone https://bitbucket.org/icl/papi.git
+   $ cd papi
+   $ git checkout papi-5-6-0-t (optional)
+
+   # Build PAPI
+   $ cd ./src/
+   $ ./configure --prefix=<papi_install_dir>
+   $ make clean
+   $ make
+   $ make install
+
+3.5.2 Building ODP with PAPI support
+
+   $ cd <odp_dir>
+   $ ./bootstrap
+   $ ./configure --enable-code-instrum
+   $ make clean
+   $ make
+
+   Note 1: When PAPI is built from sources and installed in a custom folder, it is mandatory to specify
+   at configuration time the path to package configuration file.
+
+   $ ./configure --enable-code-instrum PKG_CONFIG_PATH=<papi_install_dir>/lib/pkgconfig
+
+   Note 2: Building ODP with PAPI support forces dynamic linkage of ODP example applications with
+   ODP library.
+
+3.5.3 Configuration of instrumented API set
+
+   Instrumentation profile option can be applied at configure time to select API set to
+   be instrumented. By default, all ODP APIs stated in 'instrum' example are instrumented.
+
+   $ ./configure --enable-code-instrum --with-code-instrum-profile=<all|scheduler|pktio_direct>
+
+3.5.4 Running ODP application with code instrumentation
+
+   ODP example library 'instrum' is preloaded before execution of ODP application. ODP application
+   must link dynamically with ODP library.
+
+   # LD_PRELOAD=libinstrum.so.0.0.0 ./odp_application
+
+   Note 1: ODP and PAPI shared libraries must be accessible at runtime. Use LD_LIBRARY_PATH for
+   non-standard locations.
+
+   # export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<odp_install_dir>/lib:<papi_install_dir>/lib
+
+   Note 2: Avoid using code instrumentation with libtool (GNU libtool) wrapper scripts resulted from
+   build process of ODP example applications, as it will instantiate 'instrum' library several times.
+   Use the actual (binary) application instead.
+
+3.5.5 Retrieving performance counters
+
+   Performance counters are acquired per ODP worker and dumped in fix size sample chunks to CSV files.
+
+   CSV file name is composed as follows: profile_<ODP thread ID>_<sample chunk count>.csv
+
+   Default CSV files storage folder is '/tmp'. Use ODP_INSTRUM_STORE_DIR environment variable to
+   select a different folder.
+
+   # export ODP_INSTRUM_STORE_DIR=<store_dir>
+
+   CSV row contains the counters for execution of one API call: timestamp (ns) for the start of API call,
+   duration (cycles), API name and the differences between end and start for the list of PAPI counters.
+
+3.5.6 Selecting performance counters
+
+   By default, PAPI_BR_CN and PAPI_L2_DCM are acquired. Use ODP_INSTRUM_PAPI_EVENTS environment variable
+   to configure the list of PAPI counters (events).
+
+   # export ODP_INSTRUM_PAPI_EVENTS=PAPI_BR_CN,PAPI_L2_DCM,PAPI_BR_UCN
+
+   Note: Some PAPI counters may not be available for some architectures. Use papi tools 'papi_avail' and
+   'papi_native_avail' to retrieve the list of available counters.
+
 4.0 Packages needed to build API tests
 
    CUnit test framework version 2.1-3 is required
