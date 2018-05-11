@@ -7,7 +7,8 @@ SRC    = users-guide.adoc \
 	 users-guide-packet.adoc \
 	 users-guide-pktio.adoc \
 	 users-guide-timer.adoc \
-	 users-guide-tm.adoc
+	 users-guide-tm.adoc \
+	 users-guide-utilities-examples.adoc
 TARGET = users-guide.html
 IMAGES = $(IMAGES_DIR)/overview.svg \
 	 $(IMAGES_DIR)/atomic_queue.svg \

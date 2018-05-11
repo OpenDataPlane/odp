@@ -8,6 +8,7 @@ ODP_TIMER
 ODP_OPENSSL
 ODP_LIBCONFIG([linux-generic])
 m4_include([platform/linux-generic/m4/odp_pcap.m4])
+m4_include([platform/linux-generic/m4/odp_pcapng.m4])
 m4_include([platform/linux-generic/m4/odp_netmap.m4])
 m4_include([platform/linux-generic/m4/odp_dpdk.m4])
 ODP_SCHEDULER
