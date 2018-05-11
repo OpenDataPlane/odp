@@ -18,6 +18,8 @@ void papi_term(void);
 int papi_init_local(void);
 int papi_term_local(void);
 
+int papi_counters_cnt(void);
+
 int papi_sample_start(profiling_sample_t *spl);
 int papi_sample_end(profiling_sample_t *spl);
 

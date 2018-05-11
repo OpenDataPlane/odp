@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 #define SAMPLE_NAME_SIZE_MAX 20
-#define SAMPLE_COUNTER_TAB_SIZE 2
+#define SAMPLE_COUNTER_TAB_SIZE 10
 
 typedef struct {
 	char name[SAMPLE_NAME_SIZE_MAX];
