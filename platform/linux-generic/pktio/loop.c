@@ -131,7 +131,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 			ret = cls_classify_packet(pktio_entry, pkt_addr,
 						  pkt_len, seg_len,
-						  &new_pool, pkt_hdr);
+						  &new_pool, pkt_hdr, true);
 			if (ret) {
 				failed++;
 				odp_packet_free(pkt);
