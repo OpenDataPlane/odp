@@ -688,10 +688,9 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 
 int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 {
-	ring_t *ring;
-	uint32_t mask, i;
+	uint32_t i;
 	pool_cache_t *cache;
-	uint32_t cache_num, num_ch, num_deq, burst;
+	uint32_t cache_num, num_ch, num_deq;
 	odp_buffer_hdr_t *hdr;
 
 	cache = local.cache[pool->pool_idx];
@@ -699,15 +698,11 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 	cache_num = cache->num;
 	num_ch    = max_num;
 	num_deq   = 0;
-	burst     = CACHE_BURST;
 
 	if (odp_unlikely(cache_num < (uint32_t)max_num)) {
 		/* Cache does not have enough buffers */
 		num_ch  = cache_num;
 		num_deq = max_num - cache_num;
-
-		if (odp_unlikely(num_deq > CACHE_BURST))
-			burst = num_deq;
 	}
 
 	/* Get buffers from the cache */
@@ -717,36 +712,47 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 		buf_hdr[i] = buf_hdr_from_index(pool, cache->buf_index[j]);
 	}
 
-	/* Declare variable here to fix clang compilation bug */
-	uint32_t data[burst];
-
 	/* If needed, get more from the global pool */
 	if (odp_unlikely(num_deq)) {
 		/* Temporary copy to data[] needed since odp_buffer_t is
 		 * uintptr_t and not uint32_t. */
+		uint32_t data[CACHE_BURST];
+		uint32_t burst = 0;
+		uint32_t deq = 0;
+		uint32_t mask;
+		ring_t *ring;
+
 		ring      = &pool->ring->hdr;
 		mask      = pool->ring_mask;
-		burst     = ring_deq_multi(ring, mask, data, burst);
-		cache_num = burst - num_deq;
 
-		if (odp_unlikely(burst < num_deq)) {
-			num_deq   = burst;
-			cache_num = 0;
-		}
+		while (num_deq) {
+			burst = ring_deq_multi(ring, mask, data, CACHE_BURST);
+			if (num_deq > burst)
+				deq = burst;
+			else
+				deq = num_deq;
 
-		for (i = 0; i < num_deq; i++) {
-			uint32_t idx = num_ch + i;
+			for (i = 0; i < deq; i++) {
+				hdr = buf_hdr_from_index(pool, data[i]);
+				odp_prefetch(hdr);
+				buf_hdr[num_ch++] = hdr;
+			}
 
-			hdr = buf_hdr_from_index(pool, data[i]);
-			odp_prefetch(hdr);
-			buf_hdr[idx] = hdr;
+			num_deq -= deq;
+
+			/* ring exhausted */
+			if (odp_unlikely(burst < CACHE_BURST)) {
+				/* No more buffers to dequeue. */
+				num_deq = 0;
+				break;
+			}
 		}
 
 		/* Cache extra buffers. Cache is currently empty. */
-		for (i = 0; i < cache_num; i++)
-			cache->buf_index[i] = data[num_deq + i];
+		for (i = 0; i < burst - deq; i++)
+			cache->buf_index[i] = data[deq + i];
 
-		cache->num = cache_num;
+		cache->num = burst - deq;
 	} else {
 		cache->num = cache_num - num_ch;
 	}
