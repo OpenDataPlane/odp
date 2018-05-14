@@ -1132,7 +1132,7 @@ cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, const uint8_t *pkt_addr,
 	    packet_hdr_has_eth(hdr)) {
 		eth = (const _odp_ethhdr_t *)(pkt_addr + hdr->p.l2_offset);
 		vlan = (const _odp_vlanhdr_t *)(eth + 1);
-		qos = _odp_be_to_cpu_16(vlan->tci);
+		qos = odp_be_to_cpu_16(vlan->tci);
 		qos = ((qos >> 13) & 0x07);
 		cos = l2_cos->cos[qos];
 	}
