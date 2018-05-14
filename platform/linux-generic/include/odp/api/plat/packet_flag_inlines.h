@@ -17,10 +17,10 @@
 #include <odp/api/plat/packet_inline_types.h>
 #include <odp/api/hints.h>
 
-/** @internal Inline function offsets */
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
+
 extern const _odp_packet_inline_offset_t _odp_packet_inline;
 
-/** @internal Inline function @param pkt @return */
 static inline uint64_t _odp_packet_input_flags(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, uint64_t, input_flags);
@@ -39,7 +39,6 @@ static inline uint64_t _odp_packet_input_flags(odp_packet_t pkt)
 	#define _ODP_INLINE
 #endif
 
-/** @internal Inline function @param pkt @return */
 _ODP_INLINE int odp_packet_has_l2(odp_packet_t pkt)
 {
 	_odp_packet_input_flags_t flags;
@@ -48,7 +47,6 @@ _ODP_INLINE int odp_packet_has_l2(odp_packet_t pkt)
 	return flags.l2;
 }
 
-/** @internal Inline function @param pkt @return */
 _ODP_INLINE int odp_packet_has_eth(odp_packet_t pkt)
 {
 	_odp_packet_input_flags_t flags;
@@ -57,7 +55,6 @@ _ODP_INLINE int odp_packet_has_eth(odp_packet_t pkt)
 	return flags.eth;
 }
 
-/** @internal Inline function @param pkt @return */
 _ODP_INLINE int odp_packet_has_jumbo(odp_packet_t pkt)
 {
 	_odp_packet_input_flags_t flags;
@@ -66,7 +63,6 @@ _ODP_INLINE int odp_packet_has_jumbo(odp_packet_t pkt)
 	return flags.jumbo;
 }
 
-/** @internal Inline function @param pkt @return */
 _ODP_INLINE int odp_packet_has_flow_hash(odp_packet_t pkt)
 {
 	_odp_packet_input_flags_t flags;
@@ -75,7 +71,6 @@ _ODP_INLINE int odp_packet_has_flow_hash(odp_packet_t pkt)
 	return flags.flow_hash;
 }
 
-/** @internal Inline function @param pkt @return */
 _ODP_INLINE int odp_packet_has_ts(odp_packet_t pkt)
 {
 	_odp_packet_input_flags_t flags;
@@ -84,7 +79,6 @@ _ODP_INLINE int odp_packet_has_ts(odp_packet_t pkt)
 	return flags.timestamp;
 }
 
-/** @internal Inline function @param pkt @return */
 _ODP_INLINE int odp_packet_has_ipsec(odp_packet_t pkt)
 {
 	_odp_packet_input_flags_t flags;
@@ -92,5 +86,7 @@ _ODP_INLINE int odp_packet_has_ipsec(odp_packet_t pkt)
 	flags.all = _odp_packet_input_flags(pkt);
 	return flags.ipsec;
 }
+
+/** @endcond */
 
 #endif
