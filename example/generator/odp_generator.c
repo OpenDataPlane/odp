@@ -1492,7 +1492,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	static const char *shortopts = "+I:a:b:s:d:p:i:m:n:t:w:c:x:he:f:yr:z";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
-	odph_parse_options(argc, argv, shortopts, longopts);
+	argc = odph_parse_options(argc, argv);
 
 	appl_args->mode = -1; /* Invalid, must be changed by parsing */
 	appl_args->number = -1;
@@ -1505,8 +1505,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->dstport = 0;
 	appl_args->csum = 0;
 	appl_args->sched = 0;
-
-	opterr = 0; /* do not issue errors on helper options */
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);

@@ -1197,7 +1197,7 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 	static const char *shortopts = "+a:c:df:hi:m:nl:spr";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
-	odph_parse_options(argc, argv, shortopts, longopts);
+	argc = odph_parse_options(argc, argv);
 
 	cargs->in_place = 0;
 	cargs->in_flight = 1;
@@ -1207,8 +1207,6 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 	cargs->alg_config = NULL;
 	cargs->reuse_packet = 0;
 	cargs->schedule = 0;
-
-	opterr = 0; /* do not issue errors on helper options */
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);

@@ -394,5 +394,6 @@ int odp_cunit_register(odp_suiteinfo_t testsuites[])
 int odp_cunit_parse_options(int argc, char *argv[])
 {
 	progname = argv[0];
-	return odph_parse_options(argc, argv, NULL, NULL);
+	odph_parse_options(argc, argv);
+	return 0;
 }

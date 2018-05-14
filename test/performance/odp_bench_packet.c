@@ -1318,9 +1318,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	static const char *shortopts =  "b:i:h";
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
-	odph_parse_options(argc, argv, shortopts, longopts);
-
-	opterr = 0; /* Do not issue errors on helper options */
+	argc = odph_parse_options(argc, argv);
 
 	appl_args->bench_idx = 0; /* Run all benchmarks */
 	appl_args->burst_size = TEST_DEF_BURST;

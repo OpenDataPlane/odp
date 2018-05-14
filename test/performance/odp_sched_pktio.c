@@ -364,7 +364,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->num_pktio_queue = 0;
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
-	odph_parse_options(argc, argv, shortopts, longopts);
+	argc = odph_parse_options(argc, argv);
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);

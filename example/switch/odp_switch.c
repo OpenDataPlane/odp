@@ -760,12 +760,10 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	static const char *shortopts = "+c:+t:+a:i:h";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
-	odph_parse_options(argc, argv, shortopts, longopts);
+	argc = odph_parse_options(argc, argv);
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 10; /* get and print pps stats second */
-
-	opterr = 0; /* do not issue errors on helper options */
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);

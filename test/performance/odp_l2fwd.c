@@ -1184,7 +1184,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	static const char *shortopts =  "+c:+t:+a:i:m:o:r:d:s:e:k:g:vh";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
-	odph_parse_options(argc, argv, shortopts, longopts);
+	argc = odph_parse_options(argc, argv);
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1194,8 +1194,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->error_check = 0; /* don't check packet errors by default */
 	appl_args->verbose = 0;
 	appl_args->chksum = 0; /* don't use checksum offload by default */
-
-	opterr = 0; /* do not issue errors on helper options */
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);

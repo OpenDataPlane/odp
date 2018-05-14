@@ -137,36 +137,14 @@ int main(int argc, char **argv)
 	odph_odpthread_t thd[MAX_WORKERS];
 	odp_instance_t instance;
 	odph_odpthread_params_t thr_params;
-	int opt;
-	int long_index;
-
-	static const struct option longopts[] = { {NULL, 0, NULL, 0} };
-	static const char *shortopts = "";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
-	odph_parse_options(argc, argv, shortopts, longopts);
+	argc = odph_parse_options(argc, argv);
 
-	/*
-	 * parse own options: currentely none, but this will move optind
-	 * to the first non-option argument. (in case there where helprt args)
-	 */
-	opterr = 0; /* do not issue errors on helper options */
-	while (1) {
-		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
-		if (-1 == opt)
-			break;  /* No more options */
-	}
-
-	if (argc != optind + 4 ||
-	    odph_eth_addr_parse(&global.dst, argv[optind + 2]) != 0 ||
-	    odph_eth_addr_parse(&global.src, argv[optind + 3]) != 0) {
-		printf("Usage: odp_l2fwd_simple eth0 eth1 01:02:03:04:05:06"
-		       " 07:08:09:0a:0b:0c\n");
-		printf("Where eth0 and eth1 are the used interfaces"
-		       " (must have 2 of them)\n");
-		printf("And the hexadecimal numbers are destination MAC address"
-		       " and source MAC address\n");
-		exit(1);
+	if (argc < 3) {
+		printf("Too few arguments (%i).\n"
+		       "Two interface names needed as arguments.\n", argc);
+		exit(0);
 	}
 
 	if (odp_init_global(&instance, NULL, NULL)) {
@@ -193,10 +171,8 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	global.if0 = create_pktio(argv[optind], pool, &global.if0in,
-								&global.if0out);
-	global.if1 = create_pktio(argv[optind + 1], pool, &global.if1in,
-								&global.if1out);
+	global.if0 = create_pktio(argv[1], pool, &global.if0in, &global.if0out);
+	global.if1 = create_pktio(argv[2], pool, &global.if1in, &global.if1out);
 
 	odp_cpumask_default_worker(&cpumask, MAX_WORKERS);
 
