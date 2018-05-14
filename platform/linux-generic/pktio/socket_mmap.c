@@ -245,7 +245,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			continue;
 		}
 		hdr = packet_hdr(pkt_table[nb_rx]);
-		ret = _odp_packet_copy_from_mem(pkt_table[nb_rx], 0,
+		ret = odp_packet_copy_from_mem(pkt_table[nb_rx], 0,
 						pkt_len, pkt_buf);
 		if (ret != 0) {
 			odp_packet_free(pkt_table[nb_rx]);
@@ -348,7 +348,7 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 
 		buf = (uint8_t *)ppd.raw + TPACKET2_HDRLEN -
 		       sizeof(struct sockaddr_ll);
-		_odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, buf);
+		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, buf);
 
 		mmap_tx_user_ready(ppd.raw);
 

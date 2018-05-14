@@ -274,7 +274,7 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 	if (num != 1)
 		return ODP_PACKET_INVALID;
 
-	if (_odp_packet_copy_from_mem(pkt, 0, len, data) < 0) {
+	if (odp_packet_copy_from_mem(pkt, 0, len, data) < 0) {
 		ODP_ERR("failed to copy packet data\n");
 		odp_packet_free(pkt);
 		return ODP_PACKET_INVALID;
@@ -354,7 +354,7 @@ static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
 			break;
 		}
 
-		if (_odp_packet_copy_to_mem(pkts[i], 0, pkt_len, buf) < 0) {
+		if (odp_packet_copy_to_mem(pkts[i], 0, pkt_len, buf) < 0) {
 			ODP_ERR("failed to copy packet data\n");
 			break;
 		}

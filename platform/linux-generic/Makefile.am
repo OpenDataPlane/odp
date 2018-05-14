@@ -30,7 +30,6 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/packet_flag_inlines.h \
 		  include/odp/api/plat/packet_inline_types.h \
 		  include/odp/api/plat/packet_inlines.h \
-		  include/odp/api/plat/packet_inlines_api.h \
 		  include/odp/api/plat/pktio_inlines.h \
 		  include/odp/api/plat/pool_inline_types.h \
 		  include/odp/api/plat/std_clib_inlines.h \
