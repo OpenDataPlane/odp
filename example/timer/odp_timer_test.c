@@ -275,7 +275,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	static const char *shortopts = "+c:r:m:x:p:t:h";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
-	odph_parse_options(argc, argv, shortopts, longopts);
+	argc = odph_parse_options(argc, argv);
 
 	/* defaults */
 	odp_timer_capability(ODP_CLOCK_CPU, &timer_capa);
@@ -288,8 +288,6 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	args->max_us        = 10000000;
 	args->period_us     = 1000000;
 	args->tmo_count     = 30;
-
-	opterr = 0; /* do not issue errors on helper options */
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);

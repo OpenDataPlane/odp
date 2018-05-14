@@ -761,9 +761,8 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	static const char *shortopts = "+c:fh";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
-	odph_parse_options(argc, argv, shortopts, longopts);
+	argc = odph_parse_options(argc, argv);
 
-	opterr = 0; /* do not issue errors on helper options */
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 

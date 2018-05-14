@@ -259,7 +259,7 @@ int main(int argc, char *argv[])
 	odph_odpthread_params_t thr_params;
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
-	odph_parse_options(argc, argv, NULL, NULL);
+	argc = odph_parse_options(argc, argv);
 
 	printf("\nODP global time test starts\n");
 

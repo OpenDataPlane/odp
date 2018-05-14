@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
-	odph_parse_options(argc, argv, NULL, NULL);
+	argc = odph_parse_options(argc, argv);
 
 	if (odp_init_global(&odp_instance, NULL, NULL)) {
 		ODPH_ERR("Error: ODP global init failed.\n");

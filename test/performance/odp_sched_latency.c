@@ -550,7 +550,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	static const char *shortopts = "+c:s:l:t:m:n:o:p:rh";
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
-	odph_parse_options(argc, argv, shortopts, longopts);
+	argc = odph_parse_options(argc, argv);
 
 	args->sync_type = ODP_SCHED_SYNC_PARALLEL;
 	args->sample_per_prio = SAMPLE_EVENT_PER_PRIO;
@@ -561,7 +561,6 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	args->prio[LO_PRIO].events_per_queue = EVENTS_PER_LO_PRIO_QUEUE;
 	args->prio[HI_PRIO].events_per_queue = EVENTS_PER_HI_PRIO_QUEUE;
 
-	opterr = 0; /* Do not issue errors on helper options */
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 

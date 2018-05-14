@@ -1059,11 +1059,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	static const char *shortopts = "+c:i:h:lm:r:p:a:e:t:s:";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
-	odph_parse_options(argc, argv, shortopts, longopts);
+	argc = odph_parse_options(argc, argv);
 
 	printf("\nParsing command line options\n");
-
-	opterr = 0; /* do not issue errors on helper options */
 
 	while (!rc) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
