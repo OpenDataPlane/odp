@@ -4,16 +4,12 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-/**
- * @file
- *
- * Ticketlock inline functions
- */
-
 #ifndef _ODP_PLAT_TICKETLOCK_INLINES_H_
 #define _ODP_PLAT_TICKETLOCK_INLINES_H_
 
 #include <odp/api/atomic.h>
+
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #ifndef _ODP_NO_INLINE
 	/* Inline functions by default */
@@ -33,11 +29,6 @@ _ODP_INLINE void odp_ticketlock_init(odp_ticketlock_t *ticketlock)
 	odp_atomic_init_u32(&ticketlock->cur_ticket, 0);
 }
 
-/** @internal
- * Acquire ticket lock.
- *
- * @param ticketlock Pointer to a ticket lock
- */
 _ODP_INLINE void odp_ticketlock_lock(odp_ticketlock_t *ticketlock)
 {
 	uint32_t ticket;
@@ -53,14 +44,6 @@ _ODP_INLINE void odp_ticketlock_lock(odp_ticketlock_t *ticketlock)
 		odp_cpu_pause();
 }
 
-/** @internal
- * Try to acquire ticket lock.
- *
- * @param tklock Pointer to a ticket lock
- *
- * @retval 1 lock acquired
- * @retval 0 lock not acquired
- */
 _ODP_INLINE int odp_ticketlock_trylock(odp_ticketlock_t *tklock)
 {
 	/* We read 'next_ticket' and 'cur_ticket' non-atomically which should
@@ -89,11 +72,6 @@ _ODP_INLINE int odp_ticketlock_trylock(odp_ticketlock_t *tklock)
 	return 0;
 }
 
-/** @internal
- * Release ticket lock
- *
- * @param ticketlock Pointer to a ticket lock
- */
 _ODP_INLINE void odp_ticketlock_unlock(odp_ticketlock_t *ticketlock)
 {
 	/* Release the lock by incrementing 'cur_ticket'. As we are the
@@ -106,14 +84,6 @@ _ODP_INLINE void odp_ticketlock_unlock(odp_ticketlock_t *ticketlock)
 	odp_atomic_store_rel_u32(&ticketlock->cur_ticket, cur + 1);
 }
 
-/** @internal
- * Check if ticket lock is locked
- *
- * @param ticketlock Pointer to a ticket lock
- *
- * @retval 1 the lock is busy (locked)
- * @retval 0 the lock is available (unlocked)
- */
 _ODP_INLINE int odp_ticketlock_is_locked(odp_ticketlock_t *ticketlock)
 {
 	/* Compare 'cur_ticket' with 'next_ticket'. Ideally we should read
@@ -124,5 +94,7 @@ _ODP_INLINE int odp_ticketlock_is_locked(odp_ticketlock_t *ticketlock)
 	return odp_atomic_load_u32(&ticketlock->cur_ticket) !=
 		odp_atomic_load_u32(&ticketlock->next_ticket);
 }
+
+/** @endcond */
 
 #endif
