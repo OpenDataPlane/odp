@@ -1948,7 +1948,7 @@ static void egress_vlan_marking(tm_vlan_marking_t *vlan_marking,
 		vlan_hdr_ptr = &vlan_hdr;
 	}
 
-	old_tci = _odp_be_to_cpu_16(vlan_hdr_ptr->tci);
+	old_tci = odp_be_to_cpu_16(vlan_hdr_ptr->tci);
 	new_tci = old_tci;
 	if (vlan_marking->drop_eligible_enabled)
 		new_tci |= _ODP_VLANHDR_DEI_MASK;
@@ -1956,7 +1956,7 @@ static void egress_vlan_marking(tm_vlan_marking_t *vlan_marking,
 	if (new_tci == old_tci)
 		return;
 
-	vlan_hdr_ptr->tci = _odp_cpu_to_be_16(new_tci);
+	vlan_hdr_ptr->tci = odp_cpu_to_be_16(new_tci);
 	if (split_hdr)
 		_odp_packet_copy_from_mem(odp_pkt, _ODP_ETHHDR_LEN,
 					  _ODP_VLANHDR_LEN, &vlan_hdr);
@@ -2013,7 +2013,7 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 	 * in this specific case the carry out check does NOT need to be
 	 * repeated since it can be proven that the carry in sum cannot
 	 * cause another carry out. */
-	old_chksum     = (uint32_t)_odp_be_to_cpu_16(ipv4_hdr_ptr->chksum);
+	old_chksum     = (uint32_t)odp_be_to_cpu_16(ipv4_hdr_ptr->chksum);
 	ones_compl_sum = (~old_chksum) & 0xFFFF;
 	tos_diff       = ((uint32_t)new_tos) + ((~(uint32_t)old_tos) & 0xFFFF);
 	ones_compl_sum += tos_diff;
@@ -2022,7 +2022,7 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 				 (ones_compl_sum & 0xFFFF);
 
 	ipv4_hdr_ptr->tos    = new_tos;
-	ipv4_hdr_ptr->chksum = _odp_cpu_to_be_16((~ones_compl_sum) & 0xFFFF);
+	ipv4_hdr_ptr->chksum = odp_cpu_to_be_16((~ones_compl_sum) & 0xFFFF);
 	if (split_hdr)
 		_odp_packet_copy_from_mem(odp_pkt, l3_offset,
 					  _ODP_IPV4HDR_LEN, &ipv4_hdr);
@@ -2053,7 +2053,7 @@ static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 		ipv6_hdr_ptr = &ipv6_hdr;
 	}
 
-	old_ver_tc_flow = _odp_be_to_cpu_32(ipv6_hdr_ptr->ver_tc_flow);
+	old_ver_tc_flow = odp_be_to_cpu_32(ipv6_hdr_ptr->ver_tc_flow);
 	old_tc          = (old_ver_tc_flow & _ODP_IPV6HDR_TC_MASK)
 				>> _ODP_IPV6HDR_TC_SHIFT;
 	new_tc          = old_tc;
@@ -2074,7 +2074,7 @@ static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 
 	new_ver_tc_flow = (old_ver_tc_flow & ~_ODP_IPV6HDR_TC_MASK) |
 			  (new_tc << _ODP_IPV6HDR_TC_SHIFT);
-	ipv6_hdr_ptr->ver_tc_flow = _odp_cpu_to_be_32(new_ver_tc_flow);
+	ipv6_hdr_ptr->ver_tc_flow = odp_cpu_to_be_32(new_ver_tc_flow);
 
 	if (split_hdr)
 		_odp_packet_copy_from_mem(odp_pkt, l3_offset,

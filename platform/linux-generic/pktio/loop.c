@@ -188,7 +188,7 @@ static inline int check_proto(void *l3_hdr,
 
 	if (l3_proto_ver == _ODP_IPV4 && l3_len >= _ODP_IPV4HDR_LEN) {
 		_odp_ipv4hdr_t *ip = l3_hdr;
-		uint16_t frag_offset = _odp_be_to_cpu_16(ip->frag_offset);
+		uint16_t frag_offset = odp_be_to_cpu_16(ip->frag_offset);
 
 		*l3_proto_v4 = 1;
 		if (!_ODP_IPV4HDR_IS_FRAGMENT(frag_offset))
