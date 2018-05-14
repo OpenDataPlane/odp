@@ -90,8 +90,6 @@ typedef enum {
 #define ODP_NUM_PACKET_COLORS 3
 
 #include <odp/api/plat/packet_inlines.h>
-#define _ODP_INLINE static inline
-#include <odp/api/plat/packet_inlines_api.h>
 
 /**
  * @}

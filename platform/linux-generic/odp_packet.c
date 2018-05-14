@@ -1513,7 +1513,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 		return rc;
 
 	(void)odp_packet_move_data(*pkt, 0, shift,
-				   _odp_packet_len(*pkt) - shift);
+				   odp_packet_len(*pkt) - shift);
 
 	(void)odp_packet_trunc_tail(pkt, shift, NULL, NULL);
 	return 1;
@@ -1555,7 +1555,7 @@ int odp_packet_concat(odp_packet_t *dst, odp_packet_t src)
 
 int odp_packet_split(odp_packet_t *pkt, uint32_t len, odp_packet_t *tail)
 {
-	uint32_t pktlen = _odp_packet_len(*pkt);
+	uint32_t pktlen = odp_packet_len(*pkt);
 
 	if (len >= pktlen || tail == NULL)
 		return -1;
@@ -1598,7 +1598,7 @@ odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool)
 odp_packet_t odp_packet_copy_part(odp_packet_t pkt, uint32_t offset,
 				  uint32_t len, odp_pool_t pool)
 {
-	uint32_t pktlen = _odp_packet_len(pkt);
+	uint32_t pktlen = odp_packet_len(pkt);
 	odp_packet_t newpkt;
 
 	if (offset >= pktlen || offset + len > pktlen)

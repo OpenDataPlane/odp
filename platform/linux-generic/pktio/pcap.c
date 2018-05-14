@@ -250,7 +250,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		pkt_hdr = packet_hdr(pkt);
 
-		if (_odp_packet_copy_from_mem(pkt, 0, hdr->caplen, data) != 0) {
+		if (odp_packet_copy_from_mem(pkt, 0, hdr->caplen, data) != 0) {
 			ODP_ERR("failed to copy packet data\n");
 			break;
 		}
@@ -285,7 +285,7 @@ static int _pcapif_dump_pkt(pkt_pcap_t *pcap, odp_packet_t pkt)
 	hdr.len = hdr.caplen;
 	(void)gettimeofday(&hdr.ts, NULL);
 
-	if (_odp_packet_copy_to_mem(pkt, 0, hdr.len, pcap->buf) != 0)
+	if (odp_packet_copy_to_mem(pkt, 0, hdr.len, pcap->buf) != 0)
 		return -1;
 
 	pcap_dump(pcap->tx_dump, &hdr, pcap->buf);

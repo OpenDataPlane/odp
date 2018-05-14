@@ -7,7 +7,6 @@
 #include "config.h"
 
 #include <odp/api/packet.h>
-#include <odp/api/plat/packet_inlines.h>
 #include <odp_packet_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>
@@ -23,7 +22,9 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+/* Prevent this header from being included again later */
+#include <odp/api/plat/pktio_inlines.h>
+
 /* Include non-inlined versions of API functions */
-#undef _ODP_INLINE
-#define _ODP_INLINE
-#include <odp/api/plat/packet_inlines_api.h>
+#define _ODP_NO_INLINE
+#include <odp/api/plat/packet_inlines.h>

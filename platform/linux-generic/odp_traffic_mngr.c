@@ -1931,7 +1931,7 @@ static void egress_vlan_marking(tm_vlan_marking_t *vlan_marking,
 	uint32_t        hdr_len;
 	uint16_t        old_tci, new_tci;
 
-	ether_hdr_ptr = _odp_packet_l2_ptr(odp_pkt, &hdr_len);
+	ether_hdr_ptr = odp_packet_l2_ptr(odp_pkt, &hdr_len);
 	vlan_hdr_ptr  = (_odp_vlanhdr_t *)(ether_hdr_ptr + 1);
 
 	/* If the split_hdr variable below is TRUE, then this indicates that
@@ -1943,7 +1943,7 @@ static void egress_vlan_marking(tm_vlan_marking_t *vlan_marking,
 	 * correctness rather then performance. */
 	split_hdr = hdr_len < (_ODP_ETHHDR_LEN + _ODP_VLANHDR_LEN);
 	if (split_hdr) {
-		_odp_packet_copy_to_mem(odp_pkt, _ODP_ETHHDR_LEN,
+		odp_packet_copy_to_mem(odp_pkt, _ODP_ETHHDR_LEN,
 					_ODP_VLANHDR_LEN, &vlan_hdr);
 		vlan_hdr_ptr = &vlan_hdr;
 	}
@@ -1958,7 +1958,7 @@ static void egress_vlan_marking(tm_vlan_marking_t *vlan_marking,
 
 	vlan_hdr_ptr->tci = odp_cpu_to_be_16(new_tci);
 	if (split_hdr)
-		_odp_packet_copy_from_mem(odp_pkt, _ODP_ETHHDR_LEN,
+		odp_packet_copy_from_mem(odp_pkt, _ODP_ETHHDR_LEN,
 					  _ODP_VLANHDR_LEN, &vlan_hdr);
 }
 
@@ -1970,8 +1970,8 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 	uint32_t       hdr_len, l3_offset, old_chksum, ones_compl_sum, tos_diff;
 	uint8_t        old_tos, new_tos, ecn;
 
-	l3_offset    = _odp_packet_l3_offset(odp_pkt);
-	ipv4_hdr_ptr = _odp_packet_l3_ptr(odp_pkt, &hdr_len);
+	l3_offset    = odp_packet_l3_offset(odp_pkt);
+	ipv4_hdr_ptr = odp_packet_l3_ptr(odp_pkt, &hdr_len);
 
 	/* If the split_hdr variable below is TRUE, then this indicates that
 	 * for this odp (output) packet the IPv4 header is not all in the same
@@ -1982,7 +1982,7 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 	 * correctness rather then performance. */
 	split_hdr = hdr_len < 12;
 	if (split_hdr) {
-		_odp_packet_copy_to_mem(odp_pkt, l3_offset,
+		odp_packet_copy_to_mem(odp_pkt, l3_offset,
 					_ODP_IPV4HDR_LEN, &ipv4_hdr);
 		ipv4_hdr_ptr = &ipv4_hdr;
 	}
@@ -2024,7 +2024,7 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 	ipv4_hdr_ptr->tos    = new_tos;
 	ipv4_hdr_ptr->chksum = odp_cpu_to_be_16((~ones_compl_sum) & 0xFFFF);
 	if (split_hdr)
-		_odp_packet_copy_from_mem(odp_pkt, l3_offset,
+		odp_packet_copy_from_mem(odp_pkt, l3_offset,
 					  _ODP_IPV4HDR_LEN, &ipv4_hdr);
 }
 
@@ -2036,8 +2036,8 @@ static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 	uint32_t       hdr_len, old_ver_tc_flow, new_ver_tc_flow, l3_offset;
 	uint8_t        old_tc, new_tc, ecn;
 
-	l3_offset    = _odp_packet_l3_offset(odp_pkt);
-	ipv6_hdr_ptr = _odp_packet_l3_ptr(odp_pkt, &hdr_len);
+	l3_offset    = odp_packet_l3_offset(odp_pkt);
+	ipv6_hdr_ptr = odp_packet_l3_ptr(odp_pkt, &hdr_len);
 
 	/* If the split_hdr variable below is TRUE, then this indicates that
 	 * for this odp (output) packet the IPv6 header is not all in the same
@@ -2048,7 +2048,7 @@ static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 	 * correctness rather then performance. */
 	split_hdr = hdr_len < 4;
 	if (split_hdr) {
-		_odp_packet_copy_to_mem(odp_pkt, l3_offset,
+		odp_packet_copy_to_mem(odp_pkt, l3_offset,
 					_ODP_IPV6HDR_LEN, &ipv6_hdr);
 		ipv6_hdr_ptr = &ipv6_hdr;
 	}
@@ -2077,7 +2077,7 @@ static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 	ipv6_hdr_ptr->ver_tc_flow = odp_cpu_to_be_32(new_ver_tc_flow);
 
 	if (split_hdr)
-		_odp_packet_copy_from_mem(odp_pkt, l3_offset,
+		odp_packet_copy_from_mem(odp_pkt, l3_offset,
 					  _ODP_IPV6HDR_LEN, &ipv6_hdr);
 }
 

@@ -483,7 +483,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		pkt_hdr = packet_hdr(pkt);
 		pull_tail(pkt_hdr, alloc_len - pkt_len);
 
-		if (_odp_packet_copy_from_mem(pkt, 0, pkt_len, data) != 0)
+		if (odp_packet_copy_from_mem(pkt, 0, pkt_len, data) != 0)
 			goto fail;
 
 		pkt_hdr->input = input;
@@ -659,7 +659,7 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 		/* Packet always fits in mbuf */
 		data = rte_pktmbuf_append(mbuf_table[i], pkt_len);
 
-		_odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
+		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
 
 		if (odp_unlikely(pktio_entry->s.chksum_insert_ena)) {
 			odp_pktout_config_opt_t *pktout_capa =
@@ -788,7 +788,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 
 			if (odp_unlikely(pktio_entry->s.chksum_insert_ena))
 				pkt_set_ol_tx(pktout_cfg, pktout_capa, pkt_hdr,
-					      mbuf, _odp_packet_data(pkt));
+					      mbuf, odp_packet_data(pkt));
 		} else {
 			pool_t *pool_entry = pkt_hdr->buf_hdr.pool_ptr;
 
@@ -812,7 +812,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 				if (pktio_entry->s.chksum_insert_ena)
 					pkt_set_ol_tx(pktout_cfg, pktout_capa,
 						      pkt_hdr, mbuf,
-						      _odp_packet_data(pkt));
+						      odp_packet_data(pkt));
 			}
 		}
 		mbuf_table[i] = mbuf;
