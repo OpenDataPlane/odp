@@ -9,5 +9,5 @@
 #include <odp/api/sync.h>
 
 /* Include non-inlined versions of API functions */
-#define _ODP_INLINE
+#define _ODP_NO_INLINE
 #include <odp/api/plat/sync_inlines.h>

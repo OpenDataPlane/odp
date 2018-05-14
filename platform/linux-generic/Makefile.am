@@ -217,7 +217,7 @@ __LIB__libodp_linux_la_SOURCES += \
 			   odp_packet_flags_api.c \
 			   odp_pktio_api.c \
 			   odp_std_clib.c \
-			   odp_sync.c \
+			   odp_sync_api.c \
 			   odp_thread_api.c \
 			   odp_ticketlock_api.c
 endif
