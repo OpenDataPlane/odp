@@ -7,11 +7,19 @@
 #ifndef ODP_PLAT_STD_CLIB_INLINE_H_
 #define ODP_PLAT_STD_CLIB_INLINE_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+/** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #include <string.h>
+
+#ifndef _ODP_NO_INLINE
+	/* Inline functions by default */
+	#define _ODP_INLINE static inline
+	#define odp_memcpy __odp_memcpy
+	#define odp_memset __odp_memset
+	#define odp_memcmp __odp_memcmp
+#else
+	#define _ODP_INLINE
+#endif
 
 _ODP_INLINE void *odp_memcpy(void *dst, const void *src, size_t num)
 {
@@ -28,8 +36,6 @@ _ODP_INLINE int odp_memcmp(const void *ptr1, const void *ptr2, size_t num)
 	return memcmp(ptr1, ptr2, num);
 }
 
-#ifdef __cplusplus
-}
-#endif
+/** @endcond */
 
 #endif
