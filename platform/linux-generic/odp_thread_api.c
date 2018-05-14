@@ -8,8 +8,7 @@
 
 #include <odp/api/thread.h>
 #include <odp/api/cpu.h>
-#include <odp/api/plat/thread_inlines.h>
 
 /* Include non-inlined versions of API functions */
-#define _ODP_INLINE
-#include <odp/api/plat/thread_inlines_api.h>
+#define _ODP_NO_INLINE
+#include <odp/api/plat/thread_inlines.h>

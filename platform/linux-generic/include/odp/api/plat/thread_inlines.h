@@ -22,17 +22,27 @@ typedef struct {
 
 extern __thread _odp_thread_state_t *_odp_this_thread;
 
-static inline int _odp_thread_id(void)
+#ifndef _ODP_NO_INLINE
+	/* Inline functions by default */
+	#define _ODP_INLINE static inline
+	#define odp_thread_id __odp_thread_id
+	#define odp_thread_type __odp_thread_type
+	#define odp_cpu_id __odp_cpu_id
+#else
+	#define _ODP_INLINE
+#endif
+
+_ODP_INLINE int odp_thread_id(void)
 {
 	return _odp_this_thread->thr;
 }
 
-static inline odp_thread_type_t _odp_thread_type(void)
+_ODP_INLINE odp_thread_type_t odp_thread_type(void)
 {
 	return _odp_this_thread->type;
 }
 
-static inline int _odp_cpu_id(void)
+_ODP_INLINE int odp_cpu_id(void)
 {
 	return _odp_this_thread->cpu;
 }

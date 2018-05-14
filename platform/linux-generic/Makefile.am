@@ -37,7 +37,6 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/strong_types.h \
 		  include/odp/api/plat/sync_inlines.h \
 		  include/odp/api/plat/thread_inlines.h \
-		  include/odp/api/plat/thread_inlines_api.h \
 		  include/odp/api/plat/ticketlock_inlines.h
 
 odpapiabiarchincludedir = $(archincludedir)/odp/api/abi
