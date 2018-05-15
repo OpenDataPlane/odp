@@ -17,6 +17,7 @@
 #include <odp_buffer_internal.h>
 #include <odp_bitmap_internal.h>
 #include <odp/api/thread.h>
+#include <odp/api/plat/thread_inlines.h>
 #include <odp/api/time.h>
 #include <odp/api/rwlock.h>
 #include <odp/api/hints.h>

@@ -14,6 +14,7 @@
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/api/thread.h>
+#include <odp/api/plat/thread_inlines.h>
 #include <odp/api/time.h>
 #include <odp/api/spinlock.h>
 #include <odp/api/hints.h>

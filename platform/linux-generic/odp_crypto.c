@@ -18,6 +18,7 @@
 #include <odp/api/hints.h>
 #include <odp/api/random.h>
 #include <odp/api/plat/packet_inlines.h>
+#include <odp/api/plat/thread_inlines.h>
 #include <odp_packet_internal.h>
 
 /* Inlined API functions */

@@ -15,6 +15,7 @@
 #include <odp/api/shared_memory.h>
 #include <odp/api/sync.h>
 #include <odp/api/thread.h>
+#include <odp/api/plat/thread_inlines.h>
 #include <odp/api/thrmask.h>
 #include <odp/api/time.h>
 
