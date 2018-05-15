@@ -11,6 +11,7 @@
 #include <odp/api/align.h>
 #include <odp/api/ticketlock.h>
 #include <odp/api/system_info.h>
+#include <odp/api/plat/thread_inlines.h>
 
 #include <odp_pool_internal.h>
 #include <odp_internal.h>

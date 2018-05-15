@@ -9,6 +9,7 @@
 #include <string.h>
 #include <odp/api/ticketlock.h>
 #include <odp/api/thread.h>
+#include <odp/api/plat/thread_inlines.h>
 #include <odp/api/time.h>
 #include <odp/api/schedule.h>
 #include <odp/api/shared_memory.h>
