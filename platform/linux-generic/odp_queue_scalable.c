@@ -14,6 +14,7 @@
 #include <odp/api/schedule.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/sync.h>
+#include <odp/api/plat/sync_inlines.h>
 #include <odp/api/traffic_mngr.h>
 
 #include <odp_internal.h>
