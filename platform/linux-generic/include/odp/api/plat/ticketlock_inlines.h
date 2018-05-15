@@ -19,7 +19,10 @@
 	#define odp_ticketlock_trylock __odp_ticketlock_trylock
 	#define odp_ticketlock_unlock __odp_ticketlock_unlock
 	#define odp_ticketlock_is_locked __odp_ticketlock_is_locked
+	/* Inline atomic functions */
+	#include <odp/api/plat/atomic_inlines.h>
 #else
+	#undef _ODP_INLINE
 	#define _ODP_INLINE
 #endif
 
