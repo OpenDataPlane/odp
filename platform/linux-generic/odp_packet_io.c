@@ -12,6 +12,7 @@
 #include <odp/api/plat/pktio_inlines.h>
 #include <odp_packet_io_internal.h>
 #include <odp/api/packet.h>
+#include <odp/api/plat/packet_inlines.h>
 #include <odp_packet_internal.h>
 #include <odp_internal.h>
 #include <odp/api/spinlock.h>
