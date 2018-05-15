@@ -7,6 +7,7 @@
 #include "config.h"
 
 #include <odp/api/atomic.h>
+#include <odp/api/plat/atomic_inlines.h>
 #include <odp/api/ipsec.h>
 #include <odp/api/random.h>
 #include <odp/api/shared_memory.h>

@@ -8,6 +8,7 @@
 
 #include <stdbool.h>
 #include <odp/api/atomic.h>
+#include <odp/api/plat/atomic_inlines.h>
 #include <odp/api/rwlock.h>
 #include <odp/api/cpu.h>
 

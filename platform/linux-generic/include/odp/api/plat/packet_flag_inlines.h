@@ -36,6 +36,7 @@ static inline uint64_t _odp_packet_input_flags(odp_packet_t pkt)
 	#define odp_packet_has_ts __odp_packet_has_ts
 	#define odp_packet_has_ipsec __odp_packet_has_ipsec
 #else
+	#undef _ODP_INLINE
 	#define _ODP_INLINE
 #endif
 
