@@ -23,6 +23,7 @@
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>
 #include <odp/api/sync.h>
+#include <odp/api/plat/sync_inlines.h>
 #include <odp/api/traffic_mngr.h>
 #include <odp_libconfig_internal.h>
 

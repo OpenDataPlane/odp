@@ -11,6 +11,7 @@
 #include <odp/api/cpu.h>
 #include <odp/api/atomic.h>
 #include <odp/api/plat/atomic_inlines.h>
+#include <odp/api/plat/sync_inlines.h>
 
 void odp_barrier_init(odp_barrier_t *barrier, int count)
 {
