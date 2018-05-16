@@ -127,7 +127,7 @@ static inline void fill_eth_addr(odp_packet_t pkt[], int num,
 static int worker_thread(void *arg)
 {
 	odp_event_t ev[BURST_SIZE];
-	int num, sent, drop, out;
+	int num_pkt, sent, drop, out;
 	odp_pktout_queue_t pktout;
 	odp_queue_t queue;
 	queue_context_t *queue_context;
@@ -144,8 +144,8 @@ static int worker_thread(void *arg)
 	while (1) {
 		odp_packet_t pkt[BURST_SIZE];
 
-		num = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT,
-					 ev, BURST_SIZE);
+		num_pkt = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT,
+					     ev, BURST_SIZE);
 
 		polls++;
 
@@ -155,7 +155,7 @@ static int worker_thread(void *arg)
 				break;
 		}
 
-		if (num <= 0)
+		if (num_pkt <= 0)
 			continue;
 
 		queue_context = odp_queue_context(queue);
@@ -166,27 +166,27 @@ static int worker_thread(void *arg)
 			       queue_context->src_pktio,
 			       queue_context->src_queue,
 			       queue_context->dst_pktio,
-			       queue_context->dst_queue, num);
+			       queue_context->dst_queue, num_pkt);
 
-		odp_packet_from_event_multi(pkt, ev, num);
+		odp_packet_from_event_multi(pkt, ev, num_pkt);
 
 		pktout = queue_context->dst_pktout;
 		out    = queue_context->dst_pktio;
 
-		fill_eth_addr(pkt, num, test_global, out);
+		fill_eth_addr(pkt, num_pkt, test_global, out);
 
-		sent = odp_pktout_send(pktout, pkt, num);
+		sent = odp_pktout_send(pktout, pkt, num_pkt);
 
 		if (odp_unlikely(sent < 0))
 			sent = 0;
 
-		drop = num - sent;
+		drop = num_pkt - sent;
 
 		if (odp_unlikely(drop))
 			odp_packet_free_multi(&pkt[sent], drop);
 
 		if (odp_unlikely(test_global->opt.collect_stat)) {
-			test_global->worker_stat[worker_id].rx_pkt += num;
+			test_global->worker_stat[worker_id].rx_pkt += num_pkt;
 			test_global->worker_stat[worker_id].tx_pkt += sent;
 		}
 	}
@@ -199,7 +199,7 @@ static int worker_thread(void *arg)
 static int worker_thread_timers(void *arg)
 {
 	odp_event_t ev[BURST_SIZE];
-	int num, sent, drop, out, tmos, i, src_pktio, src_queue;
+	int num, num_pkt, sent, drop, out, tmos, i, src_pktio, src_queue;
 	odp_pktout_queue_t pktout;
 	odp_queue_t queue;
 	queue_context_t *queue_context;
@@ -274,7 +274,7 @@ static int worker_thread_timers(void *arg)
 			}
 		}
 
-		num = num - tmos;
+		num_pkt = num - tmos;
 
 		if (DEBUG_PRINT)
 			printf("worker %i: [%i/%i] -> [%i/%i], %i packets "
@@ -283,25 +283,28 @@ static int worker_thread_timers(void *arg)
 			       queue_context->src_pktio,
 			       queue_context->src_queue,
 			       queue_context->dst_pktio,
-			       queue_context->dst_queue, num, tmos);
+			       queue_context->dst_queue, num_pkt, tmos);
+
+		if (odp_unlikely(num_pkt == 0))
+			continue;
 
 		pktout = queue_context->dst_pktout;
 		out    = queue_context->dst_pktio;
 
-		fill_eth_addr(pkt, num, test_global, out);
+		fill_eth_addr(pkt, num_pkt, test_global, out);
 
-		sent = odp_pktout_send(pktout, pkt, num);
+		sent = odp_pktout_send(pktout, pkt, num_pkt);
 
 		if (odp_unlikely(sent < 0))
 			sent = 0;
 
-		drop = num - sent;
+		drop = num_pkt - sent;
 
 		if (odp_unlikely(drop))
 			odp_packet_free_multi(&pkt[sent], drop);
 
 		if (odp_unlikely(test_global->opt.collect_stat)) {
-			test_global->worker_stat[worker_id].rx_pkt += num;
+			test_global->worker_stat[worker_id].rx_pkt += num_pkt;
 			test_global->worker_stat[worker_id].tx_pkt += sent;
 		}
 	}
