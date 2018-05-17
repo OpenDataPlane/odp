@@ -246,8 +246,11 @@ static int worker_thread_timers(void *arg)
 				ret = odp_timer_set_rel(timer, tick, &ev[i]);
 
 				if (odp_unlikely(ret != ODP_TIMER_SUCCESS)) {
-					/* Should never happen */
-					printf("Expired timer reset failed\n");
+					/* Should never happen. Timeout event
+					 * has been received, timer should be
+					 * ready to be set again. */
+					printf("Expired timer reset failed "
+					       "%i\n", ret);
 					odp_event_free(ev[i]);
 				}
 
@@ -265,11 +268,12 @@ static int worker_thread_timers(void *arg)
 			ret = odp_timer_set_rel(timer, tick, NULL);
 
 			if (odp_unlikely(ret != ODP_TIMER_SUCCESS &&
-					 ret != ODP_TIMER_TOOEARLY)) {
-				/* Should never happen. Reset should either
-				 * succeed or be too close to timer expiration
-				 * in which case timeout event will be received
-				 * soon. */
+					 ret != ODP_TIMER_NOEVENT)) {
+				/* Tick period is too short or long. Normally,
+				 * reset either succeeds or fails due to timer
+				 * expiration, in which case timeout event will
+				 * be received soon and reset will be done
+				 * then. */
 				printf("Timer reset failed %i\n", ret);
 			}
 		}
