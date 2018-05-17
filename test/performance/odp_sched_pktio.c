@@ -45,6 +45,7 @@ typedef struct {
 typedef struct ODP_ALIGNED_CACHE {
 	uint64_t rx_pkt;
 	uint64_t tx_pkt;
+	uint64_t tmo;
 } worker_stat_t;
 
 typedef struct queue_context_t {
@@ -127,7 +128,7 @@ static inline void fill_eth_addr(odp_packet_t pkt[], int num,
 static int worker_thread(void *arg)
 {
 	odp_event_t ev[BURST_SIZE];
-	int num, sent, drop, out;
+	int num_pkt, sent, drop, out;
 	odp_pktout_queue_t pktout;
 	odp_queue_t queue;
 	queue_context_t *queue_context;
@@ -144,8 +145,8 @@ static int worker_thread(void *arg)
 	while (1) {
 		odp_packet_t pkt[BURST_SIZE];
 
-		num = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT,
-					 ev, BURST_SIZE);
+		num_pkt = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT,
+					     ev, BURST_SIZE);
 
 		polls++;
 
@@ -155,7 +156,7 @@ static int worker_thread(void *arg)
 				break;
 		}
 
-		if (num <= 0)
+		if (num_pkt <= 0)
 			continue;
 
 		queue_context = odp_queue_context(queue);
@@ -166,27 +167,27 @@ static int worker_thread(void *arg)
 			       queue_context->src_pktio,
 			       queue_context->src_queue,
 			       queue_context->dst_pktio,
-			       queue_context->dst_queue, num);
+			       queue_context->dst_queue, num_pkt);
 
-		odp_packet_from_event_multi(pkt, ev, num);
+		odp_packet_from_event_multi(pkt, ev, num_pkt);
 
 		pktout = queue_context->dst_pktout;
 		out    = queue_context->dst_pktio;
 
-		fill_eth_addr(pkt, num, test_global, out);
+		fill_eth_addr(pkt, num_pkt, test_global, out);
 
-		sent = odp_pktout_send(pktout, pkt, num);
+		sent = odp_pktout_send(pktout, pkt, num_pkt);
 
 		if (odp_unlikely(sent < 0))
 			sent = 0;
 
-		drop = num - sent;
+		drop = num_pkt - sent;
 
 		if (odp_unlikely(drop))
 			odp_packet_free_multi(&pkt[sent], drop);
 
 		if (odp_unlikely(test_global->opt.collect_stat)) {
-			test_global->worker_stat[worker_id].rx_pkt += num;
+			test_global->worker_stat[worker_id].rx_pkt += num_pkt;
 			test_global->worker_stat[worker_id].tx_pkt += sent;
 		}
 	}
@@ -199,7 +200,7 @@ static int worker_thread(void *arg)
 static int worker_thread_timers(void *arg)
 {
 	odp_event_t ev[BURST_SIZE];
-	int num, sent, drop, out, tmos, i, src_pktio, src_queue;
+	int num, num_pkt, sent, drop, out, tmos, i, src_pktio, src_queue;
 	odp_pktout_queue_t pktout;
 	odp_queue_t queue;
 	queue_context_t *queue_context;
@@ -246,8 +247,11 @@ static int worker_thread_timers(void *arg)
 				ret = odp_timer_set_rel(timer, tick, &ev[i]);
 
 				if (odp_unlikely(ret != ODP_TIMER_SUCCESS)) {
-					/* Should never happen */
-					printf("Expired timer reset failed\n");
+					/* Should never happen. Timeout event
+					 * has been received, timer should be
+					 * ready to be set again. */
+					printf("Expired timer reset failed "
+					       "%i\n", ret);
 					odp_event_free(ev[i]);
 				}
 
@@ -265,16 +269,17 @@ static int worker_thread_timers(void *arg)
 			ret = odp_timer_set_rel(timer, tick, NULL);
 
 			if (odp_unlikely(ret != ODP_TIMER_SUCCESS &&
-					 ret != ODP_TIMER_TOOEARLY)) {
-				/* Should never happen. Reset should either
-				 * succeed or be too close to timer expiration
-				 * in which case timeout event will be received
-				 * soon. */
+					 ret != ODP_TIMER_NOEVENT)) {
+				/* Tick period is too short or long. Normally,
+				 * reset either succeeds or fails due to timer
+				 * expiration, in which case timeout event will
+				 * be received soon and reset will be done
+				 * then. */
 				printf("Timer reset failed %i\n", ret);
 			}
 		}
 
-		num = num - tmos;
+		num_pkt = num - tmos;
 
 		if (DEBUG_PRINT)
 			printf("worker %i: [%i/%i] -> [%i/%i], %i packets "
@@ -283,25 +288,31 @@ static int worker_thread_timers(void *arg)
 			       queue_context->src_pktio,
 			       queue_context->src_queue,
 			       queue_context->dst_pktio,
-			       queue_context->dst_queue, num, tmos);
+			       queue_context->dst_queue, num_pkt, tmos);
+
+		if (odp_unlikely(test_global->opt.collect_stat && tmos))
+			test_global->worker_stat[worker_id].tmo += tmos;
+
+		if (odp_unlikely(num_pkt == 0))
+			continue;
 
 		pktout = queue_context->dst_pktout;
 		out    = queue_context->dst_pktio;
 
-		fill_eth_addr(pkt, num, test_global, out);
+		fill_eth_addr(pkt, num_pkt, test_global, out);
 
-		sent = odp_pktout_send(pktout, pkt, num);
+		sent = odp_pktout_send(pktout, pkt, num_pkt);
 
 		if (odp_unlikely(sent < 0))
 			sent = 0;
 
-		drop = num - sent;
+		drop = num_pkt - sent;
 
 		if (odp_unlikely(drop))
 			odp_packet_free_multi(&pkt[sent], drop);
 
 		if (odp_unlikely(test_global->opt.collect_stat)) {
-			test_global->worker_stat[worker_id].rx_pkt += num;
+			test_global->worker_stat[worker_id].rx_pkt += num_pkt;
 			test_global->worker_stat[worker_id].tx_pkt += sent;
 		}
 	}
@@ -520,37 +531,41 @@ static void print_config(test_global_t *test_global)
 static void print_stat(test_global_t *test_global, uint64_t nsec)
 {
 	int i;
-	uint64_t rx, tx, drop;
+	uint64_t rx, tx, drop, tmo;
 	uint64_t rx_sum = 0;
 	uint64_t tx_sum = 0;
+	uint64_t tmo_sum = 0;
 	double sec = 0.0;
 
 	printf("\nTest statistics\n");
-	printf("  worker           rx_pkt           tx_pkt          dropped\n");
+	printf("  worker           rx_pkt           tx_pkt          dropped              tmo\n");
 
 	for (i = 0; i < test_global->opt.num_worker; i++) {
 		rx = test_global->worker_stat[i].rx_pkt;
 		tx = test_global->worker_stat[i].tx_pkt;
+		tmo = test_global->worker_stat[i].tmo;
 		rx_sum += rx;
 		tx_sum += tx;
+		tmo_sum += tmo;
 
-		printf("  %6i %16" PRIu64 " %16" PRIu64 " %16" PRIu64 "\n",
-		       i, rx, tx, rx - tx);
+		printf("  %6i %16" PRIu64 " %16" PRIu64 " %16" PRIu64 " %16"
+		       PRIu64 "\n", i, rx, tx, rx - tx, tmo);
 	}
 
 	test_global->rx_pkt_sum = rx_sum;
 	test_global->tx_pkt_sum = tx_sum;
 	drop = rx_sum - tx_sum;
 
-	printf("         --------------------------------------------------\n");
-	printf("  total  %16" PRIu64 " %16" PRIu64 " %16" PRIu64 "\n\n",
-	       rx_sum, tx_sum, drop);
+	printf("         -------------------------------------------------------------------\n");
+	printf("  total  %16" PRIu64 " %16" PRIu64 " %16" PRIu64 " %16"
+	       PRIu64 "\n\n", rx_sum, tx_sum, drop, tmo_sum);
 
 	sec = nsec / 1000000000.0;
 	printf("  Total test time: %.2f sec\n", sec);
 	printf("  Rx packet rate:  %.2f pps\n", rx_sum / sec);
 	printf("  Tx packet rate:  %.2f pps\n", tx_sum / sec);
-	printf("  Drop rate:       %.2f pps\n\n", drop / sec);
+	printf("  Drop rate:       %.2f pps\n", drop / sec);
+	printf("  Timeout rate:    %.2f per sec\n\n", tmo_sum / sec);
 }
 
 static int open_pktios(test_global_t *test_global)
