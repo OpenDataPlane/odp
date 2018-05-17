@@ -45,6 +45,7 @@ typedef struct {
 typedef struct ODP_ALIGNED_CACHE {
 	uint64_t rx_pkt;
 	uint64_t tx_pkt;
+	uint64_t tmo;
 } worker_stat_t;
 
 typedef struct queue_context_t {
@@ -289,6 +290,9 @@ static int worker_thread_timers(void *arg)
 			       queue_context->dst_pktio,
 			       queue_context->dst_queue, num_pkt, tmos);
 
+		if (odp_unlikely(test_global->opt.collect_stat && tmos))
+			test_global->worker_stat[worker_id].tmo += tmos;
+
 		if (odp_unlikely(num_pkt == 0))
 			continue;
 
@@ -527,37 +531,41 @@ static void print_config(test_global_t *test_global)
 static void print_stat(test_global_t *test_global, uint64_t nsec)
 {
 	int i;
-	uint64_t rx, tx, drop;
+	uint64_t rx, tx, drop, tmo;
 	uint64_t rx_sum = 0;
 	uint64_t tx_sum = 0;
+	uint64_t tmo_sum = 0;
 	double sec = 0.0;
 
 	printf("\nTest statistics\n");
-	printf("  worker           rx_pkt           tx_pkt          dropped\n");
+	printf("  worker           rx_pkt           tx_pkt          dropped              tmo\n");
 
 	for (i = 0; i < test_global->opt.num_worker; i++) {
 		rx = test_global->worker_stat[i].rx_pkt;
 		tx = test_global->worker_stat[i].tx_pkt;
+		tmo = test_global->worker_stat[i].tmo;
 		rx_sum += rx;
 		tx_sum += tx;
+		tmo_sum += tmo;
 
-		printf("  %6i %16" PRIu64 " %16" PRIu64 " %16" PRIu64 "\n",
-		       i, rx, tx, rx - tx);
+		printf("  %6i %16" PRIu64 " %16" PRIu64 " %16" PRIu64 " %16"
+		       PRIu64 "\n", i, rx, tx, rx - tx, tmo);
 	}
 
 	test_global->rx_pkt_sum = rx_sum;
 	test_global->tx_pkt_sum = tx_sum;
 	drop = rx_sum - tx_sum;
 
-	printf("         --------------------------------------------------\n");
-	printf("  total  %16" PRIu64 " %16" PRIu64 " %16" PRIu64 "\n\n",
-	       rx_sum, tx_sum, drop);
+	printf("         -------------------------------------------------------------------\n");
+	printf("  total  %16" PRIu64 " %16" PRIu64 " %16" PRIu64 " %16"
+	       PRIu64 "\n\n", rx_sum, tx_sum, drop, tmo_sum);
 
 	sec = nsec / 1000000000.0;
 	printf("  Total test time: %.2f sec\n", sec);
 	printf("  Rx packet rate:  %.2f pps\n", rx_sum / sec);
 	printf("  Tx packet rate:  %.2f pps\n", tx_sum / sec);
-	printf("  Drop rate:       %.2f pps\n\n", drop / sec);
+	printf("  Drop rate:       %.2f pps\n", drop / sec);
+	printf("  Timeout rate:    %.2f per sec\n\n", tmo_sum / sec);
 }
 
 static int open_pktios(test_global_t *test_global)
