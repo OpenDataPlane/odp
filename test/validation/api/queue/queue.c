@@ -122,7 +122,6 @@ static void queue_test_capa(void)
 	CU_ASSERT(odp_queue_capability(&capa) == 0);
 
 	CU_ASSERT(capa.max_queues != 0);
-	CU_ASSERT(capa.max_ordered_locks != 0);
 	CU_ASSERT(capa.max_sched_groups != 0);
 	CU_ASSERT(capa.sched_prios != 0);
 	CU_ASSERT(capa.plain.max_num != 0);
@@ -432,10 +431,9 @@ static void queue_test_info(void)
 	param.sched.prio = ODP_SCHED_PRIO_NORMAL;
 	param.sched.sync = ODP_SCHED_SYNC_ORDERED;
 	param.sched.group = ODP_SCHED_GROUP_ALL;
-	if (capability.max_ordered_locks)
-		param.sched.lock_count = 1;
-	else
-		param.sched.lock_count = 0;
+	param.sched.lock_count = capability.max_ordered_locks;
+	if (param.sched.lock_count == 0)
+		printf("\n    Ordered locks NOT supported\n");
 	param.context = q_order_ctx;
 	q_order = odp_queue_create(nq_order, &param);
 	CU_ASSERT(ODP_QUEUE_INVALID != q_order);
@@ -461,7 +459,7 @@ static void queue_test_info(void)
 	CU_ASSERT(info.param.sched.sync == odp_queue_sched_type(q_order));
 	CU_ASSERT(info.param.sched.group == odp_queue_sched_group(q_order));
 	ret = odp_queue_lock_count(q_order);
-	CU_ASSERT(ret > 0);
+	CU_ASSERT(ret == param.sched.lock_count);
 	lock_count = ret;
 	CU_ASSERT(info.param.sched.lock_count == lock_count);
 
