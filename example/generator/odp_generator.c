@@ -74,7 +74,9 @@ typedef struct {
 	unsigned int srcip;	/**< src ip addr */
 	unsigned int dstip;	/**< dest ip addr */
 	uint16_t srcport;	/**< src udp port */
+	uint16_t srcport_end;	/**< src udp end port */
 	uint16_t dstport;	/**< dest udp port */
+	uint16_t dstport_end;	/**< dest udp end port */
 	int mode;		/**< work mode */
 	int number;		/**< packets number to be sent */
 	int payload;		/**< data len */
@@ -102,6 +104,17 @@ typedef struct {
 	uint64_t ctr_icmp_reply_rcv;	/**< icmp reply packets */
 } counters_t;
 
+/** UDP Packet processing function argument */
+typedef struct {
+	odp_bool_t multi_flow;
+	uint16_t srcport_crt;
+	uint16_t srcport_start;
+	uint16_t srcport_end;
+	uint16_t dstport_crt;
+	uint16_t dstport_start;
+	uint16_t dstport_end;
+} udp_args_t;
+
 /** * Thread specific arguments
  */
 typedef struct {
@@ -111,6 +124,7 @@ typedef struct {
 		struct {
 			odp_pktout_queue_t pktout; /**< Packet output queue */
 			odp_pktout_config_opt_t *pktout_cfg; /**< Packet output config*/
+			udp_args_t udp_param;  /**< UDP configuration */
 		} tx;
 		struct {
 			odp_pktin_queue_t pktin; /**< Packet input queue */
@@ -148,7 +162,7 @@ static odp_barrier_t barrier;
 typedef odp_packet_t (*setup_pkt_ref_fn_t)(odp_pool_t,
 					   odp_pktout_config_opt_t *);
 typedef int (*setup_pkt_fn_t)(odp_packet_t, odp_pktout_config_opt_t *,
-			      counters_t *);
+			      counters_t *, void *);
 
 /* helper funcs */
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
@@ -266,12 +280,14 @@ static int setup_pkt_array(odp_pktout_config_opt_t *pktout_cfg,
 			   odp_packet_t *pkt_ref_array,
 			   odp_packet_t  *pkt_array,
 			   int pkt_array_size,
-			   setup_pkt_fn_t setup_pkt)
+			   setup_pkt_fn_t setup_pkt,
+			   void *setup_pkt_arg)
 {
 	int i;
 
 	for (i = 0; i < pkt_array_size; i++) {
-		if ((*setup_pkt)(pkt_ref_array[i], pktout_cfg, counters))
+		if ((*setup_pkt)(pkt_ref_array[i], pktout_cfg, counters,
+				 setup_pkt_arg))
 			break;
 
 		pkt_array[i] = odp_packet_ref_static(pkt_ref_array[i]);
@@ -361,11 +377,12 @@ static odp_packet_t setup_udp_pkt_ref(odp_pool_t pool,
  * @retval 0 on success, -1 on fail
  */
 static int setup_udp_pkt(odp_packet_t pkt, odp_pktout_config_opt_t *pktout_cfg,
-			 counters_t *counters)
+			 counters_t *counters, void *arg)
 {
 	char *buf;
 	odph_ipv4hdr_t *ip;
 	unsigned short seq;
+	udp_args_t *udp_arg = (udp_args_t *)arg;
 
 	buf = (char *)odp_packet_data(pkt);
 
@@ -377,6 +394,28 @@ static int setup_udp_pkt(odp_packet_t pkt, odp_pktout_config_opt_t *pktout_cfg,
 	if (!pktout_cfg->bit.ipv4_chksum) {
 		ip->chksum = 0;
 		ip->chksum = ~odp_chksum_ones_comp16(ip, ODPH_IPV4HDR_LEN);
+	}
+
+	if (udp_arg->multi_flow) {
+		odph_udphdr_t *udp = (odph_udphdr_t *)(buf + ODPH_ETHHDR_LEN +
+						       ODPH_IPV4HDR_LEN);
+
+		if (udp_arg->srcport_start != udp_arg->srcport_end) {
+			udp->src_port = odp_cpu_to_be_16(udp_arg->srcport_crt);
+			if (udp_arg->srcport_crt >= udp_arg->srcport_end)
+				udp_arg->srcport_crt = udp_arg->srcport_start;
+			else
+				udp_arg->srcport_crt++;
+		}
+		if (udp_arg->dstport_start != udp_arg->dstport_end) {
+			udp->dst_port = odp_cpu_to_be_16(udp_arg->dstport_crt);
+			if (udp_arg->dstport_crt >= udp_arg->dstport_end)
+				udp_arg->dstport_crt = udp_arg->dstport_start;
+			else
+				udp_arg->dstport_crt++;
+		}
+
+		udp->chksum = 0;
 	}
 
 	if (pktout_cfg->bit.ipv4_chksum || pktout_cfg->bit.udp_chksum) {
@@ -458,7 +497,7 @@ static odp_packet_t setup_icmp_pkt_ref(odp_pool_t pool,
  */
 static int setup_icmp_pkt(odp_packet_t pkt,
 			  odp_pktout_config_opt_t *pktout_cfg,
-			  counters_t *counters)
+			  counters_t *counters, void *arg ODP_UNUSED)
 {
 	char *buf;
 	odph_ipv4hdr_t *ip;
@@ -676,6 +715,7 @@ static int gen_send_thread(void *arg)
 	int burst_start, burst_size;
 	setup_pkt_ref_fn_t setup_pkt_ref = NULL;
 	setup_pkt_fn_t setup_pkt = NULL;
+	void *setup_pkt_arg = NULL;
 	counters_t *counters;
 	uint64_t pkt_count_max = 0;
 
@@ -693,6 +733,7 @@ static int gen_send_thread(void *arg)
 		if (args->appl.number != -1)
 			pkt_count_max = args->appl.number / args->thread_cnt +
 				(args->appl.number % args->thread_cnt ? 1 : 0);
+		setup_pkt_arg = &thr_args->tx.udp_param;
 	} else if (args->appl.mode == APPL_MODE_PING) {
 		setup_pkt_ref = setup_icmp_pkt_ref;
 		setup_pkt = setup_icmp_pkt;
@@ -730,7 +771,7 @@ static int gen_send_thread(void *arg)
 		/* Setup TX burst*/
 		if (setup_pkt_array(pktout_cfg, counters,
 				    pkt_ref_array, pkt_array,
-				    pkt_array_size, setup_pkt)) {
+				    pkt_array_size, setup_pkt, setup_pkt_arg)) {
 			EXAMPLE_ERR("[%02i] Error: failed to setup packets\n",
 				    thr);
 			break;
@@ -1333,6 +1374,17 @@ int main(int argc, char *argv[])
 
 	} else {
 		int cpu = odp_cpumask_first(&cpumask);
+		udp_args_t *udp_param = NULL;
+		uint16_t sport_range = args->appl.srcport_end -
+			args->appl.srcport + 1;
+		uint16_t dport_range = args->appl.dstport_end -
+			args->appl.dstport + 1;
+		float sport_step = (float)(sport_range) / num_workers;
+		float dport_step = (float)(dport_range) / num_workers;
+		odp_bool_t multi_flow = false;
+
+		if (sport_range > 1 || dport_range > 1)
+			multi_flow = true;
 
 		for (i = 0; i < num_workers; ++i) {
 			odp_cpumask_t thd_mask;
@@ -1349,6 +1401,8 @@ int main(int argc, char *argv[])
 					args->thread[i].rx.pktin =
 						ifs[if_idx].pktin[pktq_idx];
 			} else {
+				udp_param = &args->thread[i].tx.udp_param;
+
 				pktq_idx = (i / args->appl.if_count) %
 					ifs[if_idx].pktout_count;
 				start_seq = i * args->tx_burst_size;
@@ -1357,6 +1411,22 @@ int main(int argc, char *argv[])
 					ifs[if_idx].pktout[pktq_idx];
 				args->thread[i].tx.pktout_cfg =
 					&ifs[if_idx].config.pktout;
+
+				udp_param->multi_flow = multi_flow;
+				udp_param->srcport_start = args->appl.srcport;
+				udp_param->srcport_end = args->appl.srcport_end;
+				udp_param->srcport_crt = args->appl.srcport;
+				if (sport_range > 1)
+					udp_param->srcport_crt +=
+						(uint16_t)(i * sport_step);
+
+				udp_param->dstport_start = args->appl.dstport;
+				udp_param->dstport_end = args->appl.dstport_end;
+				udp_param->dstport_crt = args->appl.dstport;
+				if (dport_range > 1)
+					udp_param->dstport_crt +=
+						(uint16_t)(i * dport_step);
+
 				args->thread[i].counters.ctr_seq = start_seq;
 			}
 			tq = odp_queue_create("", NULL);
@@ -1475,7 +1545,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"srcip", required_argument, NULL, 's'},
 		{"dstip", required_argument, NULL, 'd'},
 		{"srcport", required_argument, NULL, 'e'},
+		{"srcport_end", required_argument, NULL, 'j'},
 		{"dstport", required_argument, NULL, 'f'},
+		{"dstport_end", required_argument, NULL, 'k'},
 		{"packetsize", required_argument, NULL, 'p'},
 		{"mode", required_argument, NULL, 'm'},
 		{"count", required_argument, NULL, 'n'},
@@ -1489,7 +1561,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+I:a:b:s:d:p:i:m:n:t:w:c:x:he:f:yr:z";
+	static const char *shortopts = "+I:a:b:s:d:p:i:m:n:t:w:c:x:he:j:f:k"
+					":yr:z";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
@@ -1502,7 +1575,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->udp_tx_burst = DEFAULT_UDP_TX_BURST;
 	appl_args->rx_burst = DEFAULT_RX_BURST;
 	appl_args->srcport = 0;
+	appl_args->srcport_end = 0;
 	appl_args->dstport = 0;
+	appl_args->dstport_end = 0;
 	appl_args->csum = 0;
 	appl_args->sched = 0;
 
@@ -1612,8 +1687,14 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'e':
 			appl_args->srcport = (unsigned short)atoi(optarg);
 			break;
+		case 'j':
+			appl_args->srcport_end = (unsigned short)atoi(optarg);
+			break;
 		case 'f':
 			appl_args->dstport = (unsigned short)atoi(optarg);
+			break;
+		case 'k':
+			appl_args->dstport_end = (unsigned short)atoi(optarg);
 			break;
 		case 'p':
 			appl_args->payload = atoi(optarg);
@@ -1671,6 +1752,14 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
+
+	if ((appl_args->srcport != 0 && appl_args->srcport_end == 0) ||
+	    (appl_args->srcport_end < appl_args->srcport))
+		appl_args->srcport_end = appl_args->srcport;
+
+	if ((appl_args->dstport != 0 && appl_args->dstport_end == 0) ||
+	    (appl_args->dstport_end < appl_args->dstport))
+		appl_args->dstport_end = appl_args->dstport;
 
 	optind = 1;		/* reset 'extern optind' from the getopt lib */
 }
@@ -1732,8 +1821,14 @@ static void usage(char *progname)
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -h, --help       Display help and exit.\n"
-	       "  -e, --srcport src udp port\n"
-	       "  -f, --dstport dst udp port\n"
+	       "  -e, --srcport udp source port start value\n"
+	       "                 default is 0\n"
+	       "  -j, --srcport_end udp source port end value\n"
+	       "                 default is udp source port start value\n"
+	       "  -f, --dstport udp destination port start value\n"
+	       "                 default is 0\n"
+	       "  -k, --dstport_end udp destination port end value\n"
+	       "                 default is udp destination port start value\n"
 	       "  -p, --packetsize payload length of the packets\n"
 	       "  -t, --timeout only for ping mode, wait ICMP reply timeout seconds\n"
 	       "  -i, --interval wait interval ms between sending each packet\n"
