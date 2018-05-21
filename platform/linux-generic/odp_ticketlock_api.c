@@ -8,8 +8,5 @@
 
 #include <odp/api/ticketlock.h>
 
+#define _ODP_NO_INLINE
 #include <odp/api/plat/ticketlock_inlines.h>
-
-/* Include non-inlined versions of API functions */
-#define _ODP_INLINE
-#include <odp/api/plat/ticketlock_inlines_api.h>

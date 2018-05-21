@@ -47,16 +47,16 @@ static inline uint16_t dpdk_parse_eth(packet_parser_t *prs,
 		input_flags.jumbo = 1;
 
 	/* Handle Ethernet broadcast/multicast addresses */
-	macaddr0 = _odp_be_to_cpu_16(*((const uint16_t *)(const void *)eth));
+	macaddr0 = odp_be_to_cpu_16(*((const uint16_t *)(const void *)eth));
 	if (odp_unlikely((macaddr0 & 0x0100) == 0x0100))
 		input_flags.eth_mcast = 1;
 
 	if (odp_unlikely(macaddr0 == 0xffff)) {
 		macaddr2 =
-			_odp_be_to_cpu_16(*((const uint16_t *)
+			odp_be_to_cpu_16(*((const uint16_t *)
 					    (const void *)eth + 1));
 		macaddr4 =
-			_odp_be_to_cpu_16(*((const uint16_t *)
+			odp_be_to_cpu_16(*((const uint16_t *)
 					    (const void *)eth + 2));
 
 		if ((macaddr2 == 0xffff) && (macaddr4 == 0xffff))
@@ -72,13 +72,13 @@ static inline uint16_t dpdk_parse_eth(packet_parser_t *prs,
 		else if (RTE_ETH_IS_IPV6_HDR(mbuf_packet_type))
 			ethtype = _ODP_ETHTYPE_IPV6;
 		else
-			ethtype = _odp_be_to_cpu_16(eth->type);
+			ethtype = odp_be_to_cpu_16(eth->type);
 		break;
 	case RTE_PTYPE_L2_ETHER_VLAN:
 		ethtype = _ODP_ETHTYPE_VLAN;
 		break;
 	default:
-		ethtype = _odp_be_to_cpu_16(eth->type);
+		ethtype = odp_be_to_cpu_16(eth->type);
 	}
 
 	*offset += sizeof(*eth);
@@ -92,7 +92,7 @@ static inline uint16_t dpdk_parse_eth(packet_parser_t *prs,
 			ethtype = 0;
 			goto error;
 		}
-		ethtype = _odp_be_to_cpu_16(*((const uint16_t *)(uintptr_t)
+		ethtype = odp_be_to_cpu_16(*((const uint16_t *)(uintptr_t)
 					      (parseptr + 6)));
 		*offset   += 8;
 		*parseptr += 8;
@@ -104,7 +104,7 @@ static inline uint16_t dpdk_parse_eth(packet_parser_t *prs,
 		input_flags.vlan = 1;
 
 		vlan = (const _odp_vlanhdr_t *)*parseptr;
-		ethtype = _odp_be_to_cpu_16(vlan->type);
+		ethtype = odp_be_to_cpu_16(vlan->type);
 		*offset += sizeof(_odp_vlanhdr_t);
 		*parseptr += sizeof(_odp_vlanhdr_t);
 	}
@@ -112,7 +112,7 @@ static inline uint16_t dpdk_parse_eth(packet_parser_t *prs,
 	if (ethtype == _ODP_ETHTYPE_VLAN) {
 		input_flags.vlan = 1;
 		vlan = (const _odp_vlanhdr_t *)*parseptr;
-		ethtype = _odp_be_to_cpu_16(vlan->type);
+		ethtype = odp_be_to_cpu_16(vlan->type);
 		*offset += sizeof(_odp_vlanhdr_t);
 		*parseptr += sizeof(_odp_vlanhdr_t);
 	}
@@ -134,8 +134,8 @@ static inline uint8_t dpdk_parse_ipv4(packet_parser_t *prs,
 				      uint32_t do_csum)
 {
 	const _odp_ipv4hdr_t *ipv4 = (const _odp_ipv4hdr_t *)*parseptr;
-	uint32_t dstaddr = _odp_be_to_cpu_32(ipv4->dst_addr);
-	uint32_t l3_len = _odp_be_to_cpu_16(ipv4->tot_len);
+	uint32_t dstaddr = odp_be_to_cpu_32(ipv4->dst_addr);
+	uint32_t l3_len = odp_be_to_cpu_16(ipv4->tot_len);
 	uint8_t ver = _ODP_IPV4HDR_VER(ipv4->ver_ihl);
 	uint8_t ihl = _ODP_IPV4HDR_IHL(ipv4->ver_ihl);
 	uint32_t l4_packet_type = mbuf_packet_type & RTE_PTYPE_L4_MASK;
@@ -173,7 +173,7 @@ static inline uint8_t dpdk_parse_ipv4(packet_parser_t *prs,
 		proto = _ODP_IPPROTO_TCP;
 	} else {
 		proto = ipv4->proto;
-		frag_offset = _odp_be_to_cpu_16(ipv4->frag_offset);
+		frag_offset = odp_be_to_cpu_16(ipv4->frag_offset);
 
 		/* A packet is a fragment if:
 		*  "more fragments" flag is set (all fragments except the last)
@@ -205,13 +205,13 @@ static inline uint8_t dpdk_parse_ipv6(packet_parser_t *prs,
 {
 	const _odp_ipv6hdr_t *ipv6 = (const _odp_ipv6hdr_t *)*parseptr;
 	const _odp_ipv6hdr_ext_t *ipv6ext;
-	uint32_t dstaddr0 = _odp_be_to_cpu_32(ipv6->dst_addr.u8[0]);
-	uint32_t l3_len = _odp_be_to_cpu_16(ipv6->payload_len) +
+	uint32_t dstaddr0 = odp_be_to_cpu_32(ipv6->dst_addr.u8[0]);
+	uint32_t l3_len = odp_be_to_cpu_16(ipv6->payload_len) +
 			  _ODP_IPV6HDR_LEN;
 	uint32_t l4_packet_type = mbuf_packet_type & RTE_PTYPE_L4_MASK;
 
 	/* Basic sanity checks on IPv6 header */
-	if ((_odp_be_to_cpu_32(ipv6->ver_tc_flow) >> 28) != 6 ||
+	if ((odp_be_to_cpu_32(ipv6->ver_tc_flow) >> 28) != 6 ||
 	    l3_len > frame_len - *offset) {
 		prs->flags.ip_err = 1;
 		return 0;
@@ -246,7 +246,7 @@ static inline uint8_t dpdk_parse_ipv6(packet_parser_t *prs,
 			 *offset < seg_len);
 
 		if (*offset >= prs->l3_offset +
-		    _odp_be_to_cpu_16(ipv6->payload_len)) {
+		    odp_be_to_cpu_16(ipv6->payload_len)) {
 			prs->flags.ip_err = 1;
 			return 0;
 		}
@@ -303,8 +303,8 @@ static inline void dpdk_parse_udp(packet_parser_t *prs,
 				  uint32_t do_csum)
 {
 	const _odp_udphdr_t *udp = (const _odp_udphdr_t *)*parseptr;
-	uint32_t udplen = _odp_be_to_cpu_16(udp->length);
-	uint16_t ipsec_port = _odp_cpu_to_be_16(_ODP_UDP_IPSEC_PORT);
+	uint32_t udplen = odp_be_to_cpu_16(udp->length);
+	uint16_t ipsec_port = odp_cpu_to_be_16(_ODP_UDP_IPSEC_PORT);
 
 	if (odp_unlikely(udplen < sizeof(_odp_udphdr_t)))
 		prs->flags.udp_err = 1;

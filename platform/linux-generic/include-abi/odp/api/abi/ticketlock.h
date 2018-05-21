@@ -30,9 +30,7 @@ typedef struct odp_ticketlock_s {
 } odp_ticketlock_t;
 
 /* Include inlined versions of API functions */
-#define _ODP_INLINE static inline
 #include <odp/api/plat/ticketlock_inlines.h>
-#include <odp/api/plat/ticketlock_inlines_api.h>
 
 /**
  * @}

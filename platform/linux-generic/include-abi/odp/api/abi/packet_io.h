@@ -51,9 +51,7 @@ typedef struct odp_pktout_queue_t {
  * @}
  */
 
-#define _ODP_INLINE static inline
 #include <odp/api/plat/pktio_inlines.h>
-#include <odp/api/plat/pktio_inlines_api.h>
 
 #ifdef __cplusplus
 }

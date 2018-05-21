@@ -24,5 +24,6 @@
 #include <inttypes.h>
 
 /* Include non-inlined versions of API functions */
+#undef _ODP_INLINE
 #define _ODP_INLINE
 #include <odp/api/plat/packet_inlines_api.h>

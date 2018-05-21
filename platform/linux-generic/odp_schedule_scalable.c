@@ -36,8 +36,8 @@
 #include <string.h>
 
 #include <odp/api/plat/ticketlock_inlines.h>
-#define LOCK(a) _odp_ticketlock_lock((a))
-#define UNLOCK(a) _odp_ticketlock_unlock((a))
+#define LOCK(a) odp_ticketlock_lock((a))
+#define UNLOCK(a) odp_ticketlock_unlock((a))
 
 #define MAXTHREADS ATOM_BITSET_SIZE
 
