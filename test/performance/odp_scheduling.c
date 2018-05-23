@@ -68,6 +68,7 @@ typedef struct {
 	odp_spinlock_t   lock;
 	odp_pool_t       pool;
 	int              first_thr;
+	int              queues_per_prio;
 	test_args_t      args;
 	odp_queue_t      queue[NUM_PRIOS][QUEUES_PER_PRIO];
 	queue_context_t  queue_ctx[NUM_PRIOS][QUEUES_PER_PRIO];
@@ -85,7 +86,7 @@ static void print_stats(int prio, test_globals_t *globals)
 
 	printf("\nQueue fairness\n-----+--------\n");
 
-	for (j = 0; j < QUEUES_PER_PRIO;) {
+	for (j = 0; j < globals->queues_per_prio;) {
 		printf("  %2i | ", j);
 
 		for (k = 0; k < STATS_PER_LINE - 1; k++) {
@@ -432,7 +433,7 @@ static int test_schedule_many(const char *str, int thr,
 	uint32_t i;
 	uint32_t tot;
 
-	if (enqueue_events(thr, prio, QUEUES_PER_PRIO, 1, globals))
+	if (enqueue_events(thr, prio, globals->queues_per_prio, 1, globals))
 		return -1;
 
 	/* Start sched-enq loop */
@@ -503,7 +504,8 @@ static int test_schedule_multi(const char *str, int thr,
 	int num;
 	uint32_t tot = 0;
 
-	if (enqueue_events(thr, prio, QUEUES_PER_PRIO, MULTI_BUFS_MAX, globals))
+	if (enqueue_events(thr, prio, globals->queues_per_prio, MULTI_BUFS_MAX,
+			   globals))
 		return -1;
 
 	/* Start sched-enq loop */
@@ -808,6 +810,8 @@ int main(int argc, char *argv[])
 	int ret = 0;
 	odp_instance_t instance;
 	odph_odpthread_params_t thr_params;
+	odp_queue_capability_t capa;
+	uint32_t num_queues;
 
 	printf("\nODP example starts\n\n");
 
@@ -879,6 +883,27 @@ int main(int argc, char *argv[])
 
 	globals->pool = pool;
 
+	if (odp_queue_capability(&capa)) {
+		LOG_ERR("Fetching queue capabilities failed.\n");
+		return -1;
+	}
+
+	globals->queues_per_prio = QUEUES_PER_PRIO;
+	num_queues = globals->queues_per_prio * NUM_PRIOS;
+	if (num_queues > capa.sched.max_num)
+		globals->queues_per_prio = capa.sched.max_num / NUM_PRIOS;
+
+	/* One plain queue is also used */
+	num_queues = (globals->queues_per_prio *  NUM_PRIOS) + 1;
+	if (num_queues > capa.max_queues)
+		globals->queues_per_prio--;
+
+	if (globals->queues_per_prio <= 0) {
+		LOG_ERR("Not enough queues. At least 1 plain and %d scheduled "
+			"queues required.\n", NUM_PRIOS);
+		return -1;
+	}
+
 	/*
 	 * Create a queue for plain queue test
 	 */
@@ -890,7 +915,7 @@ int main(int argc, char *argv[])
 	}
 
 	/*
-	 * Create queues for schedule test. QUEUES_PER_PRIO per priority.
+	 * Create queues for schedule test.
 	 */
 	for (i = 0; i < NUM_PRIOS; i++) {
 		char name[] = "sched_XX_YY";
@@ -912,7 +937,7 @@ int main(int argc, char *argv[])
 		param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 		param.sched.group = ODP_SCHED_GROUP_ALL;
 
-		for (j = 0; j < QUEUES_PER_PRIO; j++) {
+		for (j = 0; j < globals->queues_per_prio; j++) {
 			name[9]  = '0' + j / 10;
 			name[10] = '0' + j - 10 * (j / 10);
 
@@ -962,7 +987,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < NUM_PRIOS; i++) {
 		odp_queue_t queue;
 
-		for (j = 0; j < QUEUES_PER_PRIO; j++) {
+		for (j = 0; j < globals->queues_per_prio; j++) {
 			queue = globals->queue[i][j];
 			ret += odp_queue_destroy(queue);
 		}
