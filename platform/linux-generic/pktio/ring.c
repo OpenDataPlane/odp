@@ -78,7 +78,7 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include <odp_packet_io_ring_internal.h>
-#include <odp_internal.h>
+#include <odp_errno_define.h>
 
 static TAILQ_HEAD(, _ring) odp_ring_list;
 

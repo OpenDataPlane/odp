@@ -17,6 +17,7 @@
 #include <odp_packet_netmap.h>
 #include <odp_packet_socket.h>
 #include <odp_debug_internal.h>
+#include <odp_errno_define.h>
 #include <protocols/eth.h>
 
 #include <sys/ioctl.h>

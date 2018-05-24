@@ -12,7 +12,6 @@
  */
 #include <odp_posix_extensions.h>
 #include <odp_config_internal.h>
-#include <odp_internal.h>
 #include <odp/api/align.h>
 #include <odp/api/system_info.h>
 #include <odp/api/debug.h>

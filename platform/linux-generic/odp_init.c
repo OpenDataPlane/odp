@@ -6,23 +6,16 @@
 
 #include "config.h"
 
+#include <odp_posix_extensions.h>
+
 #include <odp/api/init.h>
 #include <odp_debug_internal.h>
-#include <odp/api/debug.h>
-#include <unistd.h>
-#include <odp_internal.h>
+#include <odp_init_internal.h>
 #include <odp_schedule_if.h>
 #include <odp_libconfig_internal.h>
 #include <string.h>
 #include <stdio.h>
-#include <linux/limits.h>
-#include <dirent.h>
 #include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <pwd.h>
 
 enum init_stage {
 	NO_INIT = 0,    /* No init stages completed */

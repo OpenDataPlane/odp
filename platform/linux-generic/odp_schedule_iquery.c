@@ -11,7 +11,6 @@
 #include <odp/api/align.h>
 #include <odp/api/queue.h>
 #include <odp/api/shared_memory.h>
-#include <odp_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_ring_internal.h>
 #include <odp_buffer_internal.h>

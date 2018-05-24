@@ -11,12 +11,10 @@
 #include <libconfig.h>
 
 #include <odp/api/version.h>
-#include <odp_internal.h>
+#include <odp_global_data.h>
 #include <odp_debug_internal.h>
 #include <odp_libconfig_internal.h>
 #include <odp_libconfig_config.h>
-
-extern struct odp_global_data_s odp_global_data;
 
 int _odp_libconfig_init_global(void)
 {

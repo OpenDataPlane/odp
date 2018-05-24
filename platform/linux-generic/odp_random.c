@@ -7,7 +7,7 @@
 #include "config.h"
 
 #include <odp_posix_extensions.h>
-#include <odp_internal.h>
+#include <stdint.h>
 #include <odp/api/random.h>
 
 #include <openssl/rand.h>

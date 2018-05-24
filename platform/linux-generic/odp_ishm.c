@@ -49,11 +49,13 @@
  */
 #include <odp_posix_extensions.h>
 #include <odp_config_internal.h>
-#include <odp_internal.h>
+#include <odp_global_data.h>
 #include <odp/api/spinlock.h>
 #include <odp/api/align.h>
 #include <odp/api/system_info.h>
 #include <odp/api/debug.h>
+#include <odp_init_internal.h>
+#include <odp_errno_define.h>
 #include <odp_shm_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>

@@ -17,7 +17,9 @@
 
 #include <odp/api/system_info.h>
 #include <odp/api/version.h>
-#include <odp_internal.h>
+#include <odp_global_data.h>
+#include <odp_sysinfo_internal.h>
+#include <odp_init_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/api/align.h>
 #include <odp/api/cpu.h>
