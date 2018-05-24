@@ -368,3 +368,11 @@ int cpu_has_global_time(void)
 
 	return 0;
 }
+
+int cpu_flags_has_rdtsc(void)
+{
+	if (cpu_get_flag_enabled(RTE_CPUFLAG_TSC) > 0)
+		return 1;
+
+	return 0;
+}

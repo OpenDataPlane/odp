@@ -6,6 +6,10 @@
 
 #include <odp/api/cpu.h>
 
+#include "cpu_flags.h"
+#include <odp_init_internal.h>
+#include <odp_debug_internal.h>
+
 uint64_t odp_cpu_cycles(void)
 {
 	union {
@@ -31,4 +35,14 @@ uint64_t odp_cpu_cycles_max(void)
 uint64_t odp_cpu_cycles_resolution(void)
 {
 	return 1;
+}
+
+int _odp_cpu_cycles_init_global(void)
+{
+	if (cpu_flags_has_rdtsc() == 0) {
+		ODP_ERR("RDTSC instruction not supported\n");
+		return -1;
+	}
+
+	return 0;
 }
