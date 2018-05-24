@@ -80,6 +80,8 @@
 #include <odp_packet_io_ring_internal.h>
 #include <odp_errno_define.h>
 
+#include <odp/api/plat/cpu_inlines.h>
+
 static TAILQ_HEAD(, _ring) odp_ring_list;
 
 #define RING_VAL_IS_POWER_2(x) ((((x) - 1) & (x)) == 0)

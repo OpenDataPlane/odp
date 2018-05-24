@@ -15,6 +15,9 @@
 #include <odp_debug_internal.h>
 #include <odp_arch_time_internal.h>
 
+/* Inlined API functions */
+#include <odp/api/plat/cpu_inlines.h>
+
 uint64_t cpu_global_time(void)
 {
 	return odp_cpu_cycles();
