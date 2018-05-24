@@ -45,7 +45,8 @@
 #include <odp_debug_internal.h>
 #include <odp/api/event.h>
 #include <odp/api/hints.h>
-#include <odp_internal.h>
+#include <odp_init_internal.h>
+#include <odp_errno_define.h>
 #include <odp/api/queue.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/spinlock.h>

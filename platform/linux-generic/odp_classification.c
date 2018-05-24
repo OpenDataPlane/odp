@@ -10,7 +10,7 @@
 #include <odp/api/align.h>
 #include <odp/api/queue.h>
 #include <odp/api/debug.h>
-#include <odp_internal.h>
+#include <odp_init_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_internal.h>
 #include <odp/api/packet_io.h>

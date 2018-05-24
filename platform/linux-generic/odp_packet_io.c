@@ -14,7 +14,8 @@
 #include <odp/api/packet.h>
 #include <odp/api/plat/packet_inlines.h>
 #include <odp_packet_internal.h>
-#include <odp_internal.h>
+#include <odp_init_internal.h>
+#include <odp_errno_define.h>
 #include <odp/api/spinlock.h>
 #include <odp/api/ticketlock.h>
 #include <odp/api/shared_memory.h>

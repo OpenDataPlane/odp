@@ -17,7 +17,6 @@
 #include <odp/api/plat/sync_inlines.h>
 #include <odp/api/traffic_mngr.h>
 
-#include <odp_internal.h>
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
 

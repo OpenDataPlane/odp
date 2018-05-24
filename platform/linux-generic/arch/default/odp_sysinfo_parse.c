@@ -6,7 +6,7 @@
 
 #include "config.h"
 
-#include <odp_internal.h>
+#include <odp_sysinfo_internal.h>
 #include <odp_debug_internal.h>
 #include <string.h>
 

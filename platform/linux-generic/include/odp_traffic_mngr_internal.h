@@ -26,7 +26,6 @@ extern "C" {
 #include <odp_timer_wheel_internal.h>
 #include <odp_pkt_queue_internal.h>
 #include <odp_sorted_list_internal.h>
-#include <odp_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_buffer_internal.h>
 #include <odp_queue_if.h>

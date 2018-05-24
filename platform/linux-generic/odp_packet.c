@@ -10,6 +10,7 @@
 #include <odp/api/plat/packet_inlines.h>
 #include <odp_packet_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_errno_define.h>
 #include <odp/api/hints.h>
 #include <odp/api/byteorder.h>
 #include <odp/api/plat/byteorder_inlines.h>

@@ -19,6 +19,7 @@
 #include <test_debug.h>
 #include <odp_cunit_common.h>
 #include <odp_packet_io_ring_internal.h>
+#include <odp_errno_define.h>
 
 #include "ring_suites.h"
 

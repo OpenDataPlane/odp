@@ -39,7 +39,8 @@
  */
 
 #include <odp_posix_extensions.h>
-#include <odp_internal.h>
+#include <odp_global_data.h>
+#include <odp_init_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_fdserver_internal.h>
 #include <sys/prctl.h>

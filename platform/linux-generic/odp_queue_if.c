@@ -7,7 +7,7 @@
 #include "config.h"
 
 #include <odp_queue_if.h>
-#include <odp_internal.h>
+#include <odp_init_internal.h>
 #include <odp_debug_internal.h>
 
 #include <stdlib.h>

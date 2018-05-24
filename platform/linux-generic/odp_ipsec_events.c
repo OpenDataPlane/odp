@@ -9,6 +9,7 @@
 #include <odp/api/ipsec.h>
 #include <odp/api/shared_memory.h>
 
+#include <odp_init_internal.h>
 #include <odp_buffer_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_ipsec_internal.h>

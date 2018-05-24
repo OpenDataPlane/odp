@@ -11,7 +11,6 @@
 
 #include <odp/api/shared_memory.h>
 
-#include <odp_internal.h>
 #include <odp_align_internal.h>
 #include <odp_bitset.h>
 #include <odp_ishmpool_internal.h>

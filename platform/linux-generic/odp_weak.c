@@ -6,7 +6,6 @@
 
 #include "config.h"
 
-#include <odp_internal.h>
 #include <odp/api/debug.h>
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>

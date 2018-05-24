@@ -91,7 +91,8 @@ noinst_HEADERS = \
 		  include/odp_errno_define.h \
 		  include/odp_fdserver_internal.h \
 		  include/odp_forward_typedefs_internal.h \
-		  include/odp_internal.h \
+		  include/odp_global_data.h \
+		  include/odp_init_internal.h \
 		  include/odp_ipsec_internal.h \
 		  include/odp_ishm_internal.h \
 		  include/odp_ishmphy_internal.h \
@@ -125,6 +126,7 @@ noinst_HEADERS = \
 		  include/odp_schedule_scalable_ordered.h \
 		  include/odp_shm_internal.h \
 		  include/odp_sorted_list_internal.h \
+		  include/odp_sysinfo_internal.h \
 		  include/odp_timer_internal.h \
 		  include/odp_timer_wheel_internal.h \
 		  include/odp_traffic_mngr_internal.h \

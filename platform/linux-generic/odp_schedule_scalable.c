@@ -19,7 +19,6 @@
 #include <odp/api/thrmask.h>
 #include <odp/api/time.h>
 
-#include <odp_internal.h>
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_ishm_internal.h>

@@ -4,68 +4,15 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-/**
- * @file
- *
- * ODP HW system information
- */
-
-#ifndef ODP_INTERNAL_H_
-#define ODP_INTERNAL_H_
+#ifndef ODP_INIT_INTERNAL_H_
+#define ODP_INIT_INTERNAL_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <odp/api/init.h>
-#include <odp/api/cpumask.h>
 #include <odp/api/thread.h>
-#include <odp_errno_define.h>
-#include <stdio.h>
-#include <sys/types.h>
-#include <libconfig.h>
-#include <pthread.h>
-
-#define MAX_CPU_NUMBER 128
-#define UID_MAXLEN 30
-
-typedef struct {
-	uint64_t cpu_hz_max[MAX_CPU_NUMBER];
-	uint64_t page_size;
-	int      cache_line_size;
-	int      cpu_count;
-	char     cpu_arch_str[128];
-	char     model_str[MAX_CPU_NUMBER][128];
-} system_info_t;
-
-typedef struct {
-	uint64_t default_huge_page_size;
-	char     *default_huge_page_dir;
-} hugepage_info_t;
-
-struct odp_global_data_s {
-	char *shm_dir; /*< directory for odp mmaped files */
-	int   shm_dir_from_env; /*< overload default with env */
-	uint64_t shm_max_memory;
-	uint64_t shm_max_size;
-	pid_t main_pid;
-	char uid[UID_MAXLEN];
-	odp_log_func_t log_fn;
-	odp_abort_func_t abort_fn;
-	system_info_t system_info;
-	hugepage_info_t hugepage_info;
-	odp_cpumask_t control_cpus;
-	odp_cpumask_t worker_cpus;
-	int num_cpus_installed;
-	config_t libconfig_default;
-	config_t libconfig_runtime;
-	int inotify_pcapng_fd;
-	int inotify_watch_fd;
-	pthread_t inotify_thread;
-	int inotify_pcapng_is_running;
-};
-
-extern struct odp_global_data_s odp_global_data;
 
 int odp_cpumask_init_global(const odp_init_t *params);
 int odp_cpumask_term_global(void);
@@ -133,12 +80,6 @@ int _odp_ipsec_sad_term_global(void);
 
 int _odp_ipsec_events_init_global(void);
 int _odp_ipsec_events_term_global(void);
-
-int cpuinfo_parser(FILE *file, system_info_t *sysinfo);
-uint64_t odp_cpufreq_id(const char *filename, int id);
-uint64_t odp_cpu_hz_current(int id);
-uint64_t odp_cpu_arch_hz_current(int id);
-void sys_info_print_arch(void);
 
 #ifdef __cplusplus
 }
