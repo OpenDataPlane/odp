@@ -31,6 +31,7 @@
 #include <odp_schedule_if.h>
 #include <odp_bitset.h>
 #include <odp_packet_io_internal.h>
+#include <odp_timer_internal.h>
 
 #include <limits.h>
 #include <stdbool.h>
@@ -888,6 +889,8 @@ static int _schedule(odp_queue_t *from, odp_event_t ev[], int num_evts)
 
 	ts = sched_ts;
 	atomq = ts->atomq;
+
+	timer_run();
 
 	/* Once an atomic queue has been scheduled to a thread, it will stay
 	 * on that thread until empty or 'rotated' by WRR
