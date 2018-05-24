@@ -65,34 +65,7 @@ struct odp_global_data_s {
 	int inotify_pcapng_is_running;
 };
 
-enum init_stage {
-	NO_INIT = 0,    /* No init stages completed */
-	LIBCONFIG_INIT,
-	CPUMASK_INIT,
-	TIME_INIT,
-	SYSINFO_INIT,
-	ISHM_INIT,
-	FDSERVER_INIT,
-	THREAD_INIT,
-	POOL_INIT,
-	QUEUE_INIT,
-	SCHED_INIT,
-	PKTIO_INIT,
-	TIMER_INIT,
-	CRYPTO_INIT,
-	CLASSIFICATION_INIT,
-	TRAFFIC_MNGR_INIT,
-	NAME_TABLE_INIT,
-	IPSEC_EVENTS_INIT,
-	IPSEC_SAD_INIT,
-	IPSEC_INIT,
-	ALL_INIT      /* All init stages completed */
-};
-
 extern struct odp_global_data_s odp_global_data;
-
-int _odp_term_global(enum init_stage stage);
-int _odp_term_local(enum init_stage stage);
 
 int odp_cpumask_init_global(const odp_init_t *params);
 int odp_cpumask_term_global(void);
