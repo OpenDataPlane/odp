@@ -8,6 +8,7 @@
 #define _ODP_PLAT_TICKETLOCK_INLINES_H_
 
 #include <odp/api/atomic.h>
+#include <odp/api/cpu.h>
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
@@ -21,6 +22,7 @@
 	#define odp_ticketlock_is_locked __odp_ticketlock_is_locked
 	/* Inline atomic functions */
 	#include <odp/api/plat/atomic_inlines.h>
+	#include <odp/api/plat/cpu_inlines.h>
 #else
 	#undef _ODP_INLINE
 	#define _ODP_INLINE

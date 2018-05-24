@@ -8,6 +8,7 @@
 #include <config.h>
 
 #include <odp/api/shared_memory.h>
+#include <odp/api/plat/cpu_inlines.h>
 #include <odp_queue_scalable_internal.h>
 #include <odp_schedule_if.h>
 #include <odp_bitset.h>

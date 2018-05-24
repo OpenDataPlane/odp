@@ -10,6 +10,8 @@
 #include <odp/api/cpu.h>
 #include <odp_atomic_internal.h>
 
+#include <odp/api/plat/cpu_inlines.h>
+
 void odp_spinlock_init(odp_spinlock_t *spinlock)
 {
 	_odp_atomic_flag_init(&spinlock->lock, 0);

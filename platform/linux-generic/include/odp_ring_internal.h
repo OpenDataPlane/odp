@@ -15,6 +15,7 @@ extern "C" {
 #include <odp/api/hints.h>
 #include <odp_align_internal.h>
 #include <odp/api/plat/atomic_inlines.h>
+#include <odp/api/plat/cpu_inlines.h>
 
 /* Ring empty, not a valid data value. */
 #define RING_EMPTY ((uint32_t)-1)
