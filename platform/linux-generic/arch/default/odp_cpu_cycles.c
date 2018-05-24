@@ -13,6 +13,7 @@
 
 #include <odp/api/cpu.h>
 #include <odp_debug_internal.h>
+#include <odp_init_internal.h>
 
 #define GIGA 1000000000
 
@@ -45,4 +46,9 @@ uint64_t odp_cpu_cycles_max(void)
 uint64_t odp_cpu_cycles_resolution(void)
 {
 	return 1;
+}
+
+int _odp_cpu_cycles_init_global(void)
+{
+	return 0;
 }

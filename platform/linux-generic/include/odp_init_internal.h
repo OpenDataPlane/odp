@@ -81,6 +81,8 @@ int _odp_ipsec_sad_term_global(void);
 int _odp_ipsec_events_init_global(void);
 int _odp_ipsec_events_term_global(void);
 
+int _odp_cpu_cycles_init_global(void);
+
 #ifdef __cplusplus
 }
 #endif
