@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 #include <odp/api/atomic.h>
+#include <odp/api/cpu.h>
 #include <odp/api/hints.h>
 #include <odp_align_internal.h>
 #include <odp/api/plat/atomic_inlines.h>
