@@ -59,7 +59,6 @@
 #include <odp_shm_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
-#include <odp_fdserver_internal.h>
 #include <odp_ishm_internal.h>
 #include <odp_ishmphy_internal.h>
 #include <odp_ishmpool_internal.h>
@@ -78,6 +77,7 @@
 #include <libgen.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <fdserver.h>
 
 /*
  * Maximum number of internal shared memory blocks.
@@ -237,6 +237,8 @@ typedef struct {
 	ishm_fragment_t  *unused_fragmnts;
 } ishm_ftable_t;
 static ishm_ftable_t *ishm_ftbl;
+
+static fdserver_context_t *fdserver_ctx;
 
 #ifndef MAP_ANONYMOUS
 #define MAP_ANONYMOUS MAP_ANON
@@ -816,7 +818,7 @@ static int block_free_internal(int block_index, int close_fd, int deregister)
 
 	/* deregister the file descriptor from the file descriptor server. */
 	if (deregister)
-		ret = _odp_fdserver_deregister_fd(FD_SRV_CTX_ISHM, block_index);
+		ret = fdserver_deregister_fd(fdserver_ctx, block_index);
 
 	/* mark the block as free in the main block table: */
 	block->len = 0;
@@ -988,7 +990,7 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 	ishm_proctable->entry[new_proc_entry].fd = fd;
 
 	/* register the file descriptor to the file descriptor server. */
-	if (_odp_fdserver_register_fd(FD_SRV_CTX_ISHM, new_index, fd) == -1) {
+	if (fdserver_register_fd(fdserver_ctx, new_index, fd) == -1) {
 		block_free_internal(new_index, !new_block->external_fd, 0);
 		new_index = -1;
 	}
@@ -1197,7 +1199,7 @@ static void *block_lookup(int block_index)
 		return ishm_proctable->entry[proc_index].start;
 
 	/* this ishm is not known by this process, yet: we create the mapping.*/
-	fd = _odp_fdserver_lookup_fd(FD_SRV_CTX_ISHM, block_index);
+	fd = fdserver_lookup_fd(fdserver_ctx, block_index);
 	if (fd < 0) {
 		ODP_ERR("Could not find ishm file descriptor (BUG!)\n");
 		return NULL;
@@ -1459,6 +1461,9 @@ int _odp_ishm_init_global(const odp_init_t *init)
 	uint64_t max_memory = ODP_CONFIG_ISHM_VA_PREALLOC_SZ;
 	uint64_t internal   = ODP_CONFIG_ISHM_VA_PREALLOC_SZ / 8;
 
+	if (fdserver_new_context(&fdserver_ctx))
+		return -1;
+
 	/* user requested memory size + some extra for internal use */
 	if (init && init->shm.max_memory)
 		max_memory = init->shm.max_memory + internal;
@@ -1704,6 +1709,8 @@ int _odp_ishm_term_global(void)
 
 	if (!odp_global_data.shm_dir_from_env)
 		free(odp_global_data.shm_dir);
+
+	fdserver_del_context(&fdserver_ctx);
 
 	return ret;
 }
