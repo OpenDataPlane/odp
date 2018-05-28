@@ -7,7 +7,6 @@
 #include "config.h"
 
 #include <odp/api/errno.h>
-#include <odp_internal.h>
 #include <string.h>
 #include <stdio.h>
 #include <odp_debug_internal.h>

@@ -6,7 +6,7 @@
 
 #include "config.h"
 
-#include <odp_internal.h>
+#include <odp_sysinfo_internal.h>
 #include <string.h>
 
 int cpuinfo_parser(FILE *file, system_info_t *sysinfo)

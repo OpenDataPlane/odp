@@ -12,7 +12,8 @@
 #include <odp/api/shared_memory.h>
 #include <odp/api/plat/strong_types.h>
 #include <odp_ishm_internal.h>
-#include <odp_internal.h>
+#include <odp_init_internal.h>
+#include <odp_global_data.h>
 #include <string.h>
 
 ODP_STATIC_ASSERT(ODP_CONFIG_SHM_BLOCKS >= ODP_CONFIG_POOLS,

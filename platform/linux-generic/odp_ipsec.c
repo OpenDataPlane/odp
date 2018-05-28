@@ -13,6 +13,7 @@
 #include <odp/api/byteorder.h>
 #include <odp/api/plat/byteorder_inlines.h>
 
+#include <odp_init_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_ipsec_internal.h>

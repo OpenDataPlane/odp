@@ -44,7 +44,6 @@
 #include "config.h"
 
 #include <odp_posix_extensions.h>
-#include <odp_internal.h>
 #include <odp/api/spinlock.h>
 #include <odp/api/align.h>
 #include <odp/api/debug.h>

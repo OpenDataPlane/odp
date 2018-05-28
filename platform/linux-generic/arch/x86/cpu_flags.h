@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 void cpu_flags_print_all(void);
+int cpu_flags_has_rdtsc(void);
 
 #ifdef __cplusplus
 }

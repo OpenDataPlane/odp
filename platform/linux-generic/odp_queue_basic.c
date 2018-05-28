@@ -14,7 +14,7 @@
 #include <odp/api/buffer.h>
 #include <odp_buffer_internal.h>
 #include <odp_pool_internal.h>
-#include <odp_internal.h>
+#include <odp_init_internal.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/schedule.h>
 #include <odp_schedule_if.h>

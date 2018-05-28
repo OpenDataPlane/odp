@@ -25,6 +25,7 @@
 #include <odp_packet_dpdk.h>
 #include <odp_debug_internal.h>
 #include <odp_libconfig_internal.h>
+#include <odp_errno_define.h>
 
 #include <protocols/eth.h>
 #include <protocols/udp.h>

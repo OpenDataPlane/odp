@@ -13,11 +13,6 @@ extern "C" {
 
 #define ODP_CACHE_LINE_SIZE 64
 
-static inline void odp_cpu_pause(void)
-{
-	__asm__ __volatile__ ("pause");
-}
-
 #ifdef __cplusplus
 }
 #endif
