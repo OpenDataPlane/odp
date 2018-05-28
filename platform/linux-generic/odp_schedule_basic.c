@@ -798,7 +798,7 @@ static inline int poll_pktin(uint32_t qi, int stash)
 		return num;
 	}
 
-	q_int = queue_index_to_qint(qi);
+	q_int = qentry_from_index(qi);
 
 	ret = queue_fn->enq_multi(q_int, b_hdr, num);
 

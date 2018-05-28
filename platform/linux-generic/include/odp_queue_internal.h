@@ -74,19 +74,21 @@ typedef struct queue_global_t {
 
 extern queue_global_t *queue_glb;
 
-static inline void *queue_index_to_qint(uint32_t queue_id)
+static inline uint32_t queue_to_index(odp_queue_t handle)
+{
+	queue_entry_t *qentry = (queue_entry_t *)(uintptr_t)handle;
+
+	return qentry->s.index;
+}
+
+static inline queue_entry_t *qentry_from_index(uint32_t queue_id)
 {
 	return &queue_glb->queue[queue_id];
 }
 
-static inline uint32_t queue_to_index(odp_queue_t handle)
-{
-	return _odp_typeval(handle) - 1;
-}
-
 static inline odp_queue_t queue_from_index(uint32_t queue_id)
 {
-	return _odp_cast_scalar(odp_queue_t, queue_id + 1);
+	return (odp_queue_t)qentry_from_index(queue_id);
 }
 
 #ifdef __cplusplus
