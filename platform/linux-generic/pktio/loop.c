@@ -79,7 +79,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 {
 	int nbr, i;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	queue_t queue;
+	void *queue;
 	odp_packet_hdr_t *pkt_hdr;
 	odp_packet_t pkt;
 	odp_time_t ts_val;
@@ -260,7 +260,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			 const odp_packet_t pkt_tbl[], int num)
 {
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	queue_t queue;
+	void *queue;
 	int i;
 	int ret;
 	int nb_tx = 0;

@@ -108,7 +108,7 @@ static odp_bool_t tm_demote_pkt_desc(tm_system_t *tm_system,
 				     tm_shaper_obj_t *timer_shaper,
 				     pkt_desc_t *demoted_pkt_desc);
 
-static int queue_tm_reenq(queue_t queue, odp_buffer_hdr_t *buf_hdr)
+static int queue_tm_reenq(void *queue, odp_buffer_hdr_t *buf_hdr)
 {
 	odp_tm_queue_t tm_queue = MAKE_ODP_TM_QUEUE((uint8_t *)queue -
 						    offsetof(tm_queue_obj_t,
@@ -118,7 +118,7 @@ static int queue_tm_reenq(queue_t queue, odp_buffer_hdr_t *buf_hdr)
 	return odp_tm_enq(tm_queue, pkt);
 }
 
-static int queue_tm_reenq_multi(queue_t queue ODP_UNUSED,
+static int queue_tm_reenq_multi(void *queue ODP_UNUSED,
 				odp_buffer_hdr_t *buf[] ODP_UNUSED,
 				int num ODP_UNUSED)
 {
