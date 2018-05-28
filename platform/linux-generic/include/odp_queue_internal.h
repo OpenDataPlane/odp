@@ -89,16 +89,6 @@ static inline odp_queue_t queue_from_index(uint32_t queue_id)
 	return _odp_cast_scalar(odp_queue_t, queue_id + 1);
 }
 
-static inline queue_entry_t *qentry_from_int(void *q_int)
-{
-	return (queue_entry_t *)q_int;
-}
-
-static inline void *qentry_to_int(queue_entry_t *qentry)
-{
-	return qentry;
-}
-
 #ifdef __cplusplus
 }
 #endif

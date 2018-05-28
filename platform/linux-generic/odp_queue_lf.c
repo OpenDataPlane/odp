@@ -144,7 +144,7 @@ static int queue_lf_enq(void *q_int, odp_buffer_hdr_t *buf_hdr)
 	ring_lf_node_t *node;
 	uint64_t counter;
 
-	queue    = qentry_from_int(q_int);
+	queue    = q_int;
 	queue_lf = queue->s.queue_lf;
 
 	i_node = 0;
@@ -204,7 +204,7 @@ static odp_buffer_hdr_t *queue_lf_deq(void *q_int)
 	ring_lf_node_t *node, *old;
 	uint64_t lowest;
 
-	queue    = qentry_from_int(q_int);
+	queue    = q_int;
 	queue_lf = queue->s.queue_lf;
 	i_node   = 0;
 

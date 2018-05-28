@@ -1142,8 +1142,7 @@ static inline void ordered_stash_release(void)
 		buf_hdr = thread_local.ordered.stash[i].buf_hdr;
 		num = thread_local.ordered.stash[i].num;
 
-		num_enq = queue_fn->enq_multi(qentry_to_int(queue_entry),
-					      buf_hdr, num);
+		num_enq = queue_fn->enq_multi(queue_entry, buf_hdr, num);
 
 		if (odp_unlikely(num_enq < num)) {
 			if (odp_unlikely(num_enq < 0))
@@ -1208,7 +1207,7 @@ static int schedule_ord_enq_multi(void *q_int, void *buf_hdr[],
 {
 	int i;
 	uint32_t stash_num = thread_local.ordered.stash_num;
-	queue_entry_t *dst_queue = qentry_from_int(q_int);
+	queue_entry_t *dst_queue = q_int;
 	uint32_t src_queue = thread_local.ordered.src_queue;
 
 	if ((src_queue == NULL_INDEX) || thread_local.ordered.in_order)

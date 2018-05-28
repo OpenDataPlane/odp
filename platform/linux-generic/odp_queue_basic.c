@@ -495,7 +495,7 @@ static inline int enq_multi(void *q_int, odp_buffer_hdr_t *buf_hdr[],
 	ring_st_t *ring_st;
 	uint32_t buf_idx[num];
 
-	queue = qentry_from_int(q_int);
+	queue = q_int;
 	ring_st = &queue->s.ring_st;
 
 	if (sched_fn->ord_enq_multi(q_int, (void **)buf_hdr, num, &ret))
@@ -560,7 +560,7 @@ static int queue_enq_multi(odp_queue_t handle, const odp_event_t ev[], int num)
 	if (num > QUEUE_MULTI_MAX)
 		num = QUEUE_MULTI_MAX;
 
-	return queue->s.enqueue_multi(qentry_to_int(queue),
+	return queue->s.enqueue_multi(queue,
 				      (odp_buffer_hdr_t **)(uintptr_t)ev, num);
 }
 
@@ -568,7 +568,7 @@ static int queue_enq(odp_queue_t handle, odp_event_t ev)
 {
 	queue_entry_t *queue = handle_to_qentry(handle);
 
-	return queue->s.enqueue(qentry_to_int(queue),
+	return queue->s.enqueue(queue,
 				(odp_buffer_hdr_t *)(uintptr_t)ev);
 }
 
@@ -620,14 +620,14 @@ static inline int deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 static int queue_int_deq_multi(void *q_int, odp_buffer_hdr_t *buf_hdr[],
 			       int num)
 {
-	queue_entry_t *queue = qentry_from_int(q_int);
+	queue_entry_t *queue = q_int;
 
 	return deq_multi(queue, buf_hdr, num, 0);
 }
 
 static odp_buffer_hdr_t *queue_int_deq(void *q_int)
 {
-	queue_entry_t *queue = qentry_from_int(q_int);
+	queue_entry_t *queue = q_int;
 	odp_buffer_hdr_t *buf_hdr = NULL;
 	int ret;
 
@@ -646,7 +646,7 @@ static int queue_deq_multi(odp_queue_t handle, odp_event_t ev[], int num)
 	if (num > QUEUE_MULTI_MAX)
 		num = QUEUE_MULTI_MAX;
 
-	return queue->s.dequeue_multi(qentry_to_int(queue),
+	return queue->s.dequeue_multi(queue,
 				      (odp_buffer_hdr_t **)ev, num);
 }
 
@@ -654,7 +654,7 @@ static odp_event_t queue_deq(odp_queue_t handle)
 {
 	queue_entry_t *queue = handle_to_qentry(handle);
 
-	return (odp_event_t)queue->s.dequeue(qentry_to_int(queue));
+	return (odp_event_t)queue->s.dequeue(queue);
 }
 
 static int queue_init(queue_entry_t *queue, const char *name,
@@ -800,12 +800,14 @@ static uint64_t queue_to_u64(odp_queue_t hdl)
 
 static odp_pktout_queue_t queue_get_pktout(void *q_int)
 {
-	return qentry_from_int(q_int)->s.pktout;
+	queue_entry_t *qentry = q_int;
+
+	return qentry->s.pktout;
 }
 
 static void queue_set_pktout(void *q_int, odp_pktio_t pktio, int index)
 {
-	queue_entry_t *qentry = qentry_from_int(q_int);
+	queue_entry_t *qentry = q_int;
 
 	qentry->s.pktout.pktio = pktio;
 	qentry->s.pktout.index = index;
@@ -813,12 +815,14 @@ static void queue_set_pktout(void *q_int, odp_pktio_t pktio, int index)
 
 static odp_pktin_queue_t queue_get_pktin(void *q_int)
 {
-	return qentry_from_int(q_int)->s.pktin;
+	queue_entry_t *qentry = q_int;
+
+	return qentry->s.pktin;
 }
 
 static void queue_set_pktin(void *q_int, odp_pktio_t pktio, int index)
 {
-	queue_entry_t *qentry = qentry_from_int(q_int);
+	queue_entry_t *qentry = q_int;
 
 	qentry->s.pktin.pktio = pktio;
 	qentry->s.pktin.index = index;
@@ -830,7 +834,7 @@ static void queue_set_enq_deq_func(void *q_int,
 				   queue_deq_fn_t deq,
 				   queue_deq_multi_fn_t deq_multi)
 {
-	queue_entry_t *qentry = qentry_from_int(q_int);
+	queue_entry_t *qentry = q_int;
 
 	if (enq)
 		qentry->s.enqueue = enq;
@@ -847,12 +851,14 @@ static void queue_set_enq_deq_func(void *q_int,
 
 static void *queue_from_ext(odp_queue_t handle)
 {
-	return qentry_to_int(handle_to_qentry(handle));
+	return handle_to_qentry(handle);
 }
 
 static odp_queue_t queue_to_ext(void *q_int)
 {
-	return qentry_from_int(q_int)->s.handle;
+	queue_entry_t *qentry = q_int;
+
+	return qentry->s.handle;
 }
 
 /* API functions */
