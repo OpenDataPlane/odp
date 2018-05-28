@@ -1203,7 +1203,7 @@ static inline void schedule_release_context(void)
 		schedule_release_atomic();
 }
 
-static int schedule_ord_enq_multi(queue_t q_int, void *buf_hdr[],
+static int schedule_ord_enq_multi(void *q_int, void *buf_hdr[],
 				  int num, int *ret)
 {
 	int i;

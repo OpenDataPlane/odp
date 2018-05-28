@@ -714,7 +714,7 @@ static inline int copy_from_stash(odp_event_t out_ev[], unsigned int max)
 	return i;
 }
 
-static int schedule_ord_enq_multi(queue_t q_int, void *buf_hdr[],
+static int schedule_ord_enq_multi(void *q_int, void *buf_hdr[],
 				  int num, int *ret)
 {
 	int i;
@@ -766,7 +766,7 @@ static inline int poll_pktin(uint32_t qi, int stash)
 	odp_buffer_hdr_t *b_hdr[MAX_DEQ];
 	int pktio_index, pktin_index, num, num_pktin, i;
 	int ret;
-	queue_t qint;
+	void *q_int;
 
 	pktio_index = sched->queue[qi].pktio_index;
 	pktin_index = sched->queue[qi].pktin_index;
@@ -799,9 +799,9 @@ static inline int poll_pktin(uint32_t qi, int stash)
 		return num;
 	}
 
-	qint = queue_index_to_qint(qi);
+	q_int = queue_index_to_qint(qi);
 
-	ret = queue_fn->enq_multi(qint, b_hdr, num);
+	ret = queue_fn->enq_multi(q_int, b_hdr, num);
 
 	/* Drop packets that were not enqueued */
 	if (odp_unlikely(ret < num)) {
