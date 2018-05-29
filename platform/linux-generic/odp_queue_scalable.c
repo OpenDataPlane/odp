@@ -26,6 +26,7 @@
 #include <odp_schedule_if.h>
 #include <odp_ishm_internal.h>
 #include <odp_ishmpool_internal.h>
+#include <odp/api/plat/queue_inline_types.h>
 
 #include <string.h>
 #include <inttypes.h>
@@ -44,6 +45,7 @@
 #define LOCK_INIT(a) odp_ticketlock_init(a)
 
 extern __thread sched_scalable_thread_state_t *sched_ts;
+extern _odp_queue_inline_offset_t _odp_queue_inline_offset;
 
 typedef struct queue_table_t {
 	queue_entry_t  queue[ODP_CONFIG_QUEUES];
@@ -194,6 +196,12 @@ static int queue_init_global(void)
 	uint64_t max_alloc;
 
 	ODP_DBG("Queue init ... ");
+
+	/* Fill in queue entry field offsets for inline functions */
+	memset(&_odp_queue_inline_offset, 0,
+	       sizeof(_odp_queue_inline_offset_t));
+	_odp_queue_inline_offset.context = offsetof(queue_entry_t,
+						    s.param.context);
 
 	/* Attach to the pool if it exists */
 	queue_shm_pool = _odp_ishm_pool_lookup("queue_shm_pool");
@@ -463,11 +471,6 @@ static int queue_context_set(odp_queue_t handle, void *context,
 	qentry_from_ext(handle)->s.param.context = context;
 	odp_mb_full();
 	return 0;
-}
-
-static void *queue_context(odp_queue_t handle)
-{
-	return qentry_from_ext(handle)->s.param.context;
 }
 
 static odp_queue_t queue_lookup(const char *name)
@@ -964,7 +967,6 @@ queue_api_t queue_scalable_api = {
 	.queue_lookup = queue_lookup,
 	.queue_capability = queue_capability,
 	.queue_context_set = queue_context_set,
-	.queue_context = queue_context,
 	.queue_enq = queue_enq,
 	.queue_enq_multi = queue_enq_multi,
 	.queue_deq = queue_deq,

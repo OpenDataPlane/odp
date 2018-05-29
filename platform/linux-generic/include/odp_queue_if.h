@@ -27,7 +27,6 @@ typedef struct {
 	int (*queue_capability)(odp_queue_capability_t *capa);
 	int (*queue_context_set)(odp_queue_t queue, void *context,
 				 uint32_t len);
-	void *(*queue_context)(odp_queue_t queue);
 	int (*queue_enq)(odp_queue_t queue, odp_event_t ev);
 	int (*queue_enq_multi)(odp_queue_t queue, const odp_event_t events[],
 			       int num);

@@ -26,6 +26,7 @@
 #include <odp/api/plat/sync_inlines.h>
 #include <odp/api/traffic_mngr.h>
 #include <odp_libconfig_internal.h>
+#include <odp/api/plat/queue_inline_types.h>
 
 #define NUM_INTERNAL_QUEUES 64
 
@@ -44,6 +45,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 		      const odp_queue_param_t *param);
 
 queue_global_t *queue_glb;
+extern _odp_queue_inline_offset_t _odp_queue_inline_offset;
 
 static inline queue_entry_t *qentry_from_handle(odp_queue_t handle)
 {
@@ -128,6 +130,12 @@ static int queue_init_global(void)
 	uint64_t mem_size;
 
 	ODP_DBG("Starts...\n");
+
+	/* Fill in queue entry field offsets for inline functions */
+	memset(&_odp_queue_inline_offset, 0,
+	       sizeof(_odp_queue_inline_offset_t));
+	_odp_queue_inline_offset.context = offsetof(queue_entry_t,
+						    s.param.context);
 
 	shm = odp_shm_reserve("_odp_queue_gbl",
 			      sizeof(queue_global_t),
@@ -428,11 +436,6 @@ static int queue_context_set(odp_queue_t handle, void *context,
 	qentry_from_handle(handle)->s.param.context = context;
 	odp_mb_full();
 	return 0;
-}
-
-static void *queue_context(odp_queue_t handle)
-{
-	return qentry_from_handle(handle)->s.param.context;
 }
 
 static odp_queue_t queue_lookup(const char *name)
@@ -861,7 +864,6 @@ queue_api_t queue_basic_api = {
 	.queue_lookup = queue_lookup,
 	.queue_capability = queue_capability,
 	.queue_context_set = queue_context_set,
-	.queue_context = queue_context,
 	.queue_enq = queue_enq,
 	.queue_enq_multi = queue_enq_multi,
 	.queue_deq = queue_deq,

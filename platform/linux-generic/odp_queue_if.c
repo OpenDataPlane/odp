@@ -13,6 +13,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <odp/api/align.h>
+#include <odp/api/plat/queue_inline_types.h>
+
+#include <odp/visibility_begin.h>
+
+_odp_queue_inline_offset_t ODP_ALIGNED_CACHE _odp_queue_inline_offset;
+
+#include <odp/visibility_end.h>
+
 extern const queue_api_t queue_scalable_api;
 extern const queue_fn_t queue_scalable_fn;
 
@@ -45,11 +54,6 @@ int odp_queue_capability(odp_queue_capability_t *capa)
 int odp_queue_context_set(odp_queue_t queue, void *context, uint32_t len)
 {
 	return queue_api->queue_context_set(queue, context, len);
-}
-
-void *odp_queue_context(odp_queue_t queue)
-{
-	return queue_api->queue_context(queue);
 }
 
 int odp_queue_enq(odp_queue_t queue, odp_event_t ev)
