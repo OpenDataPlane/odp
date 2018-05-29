@@ -152,26 +152,6 @@ static inline uint64_t time_res(void)
 	return time_spec_res();
 }
 
-static inline int time_cmp(odp_time_t t2, odp_time_t t1)
-{
-	if (odp_likely(t2.u64 > t1.u64))
-		return 1;
-
-	if (t2.u64 < t1.u64)
-		return -1;
-
-	return 0;
-}
-
-static inline odp_time_t time_sum(odp_time_t t1, odp_time_t t2)
-{
-	odp_time_t time;
-
-	time.u64 = t1.u64 + t2.u64;
-
-	return time;
-}
-
 static inline uint64_t time_to_ns(odp_time_t time)
 {
 	if (_odp_time_glob.use_hw)
@@ -194,16 +174,7 @@ static inline void time_wait_until(odp_time_t time)
 
 	do {
 		cur = _odp_time_cur();
-	} while (time_cmp(time, cur) > 0);
-}
-
-odp_time_t odp_time_diff(odp_time_t t2, odp_time_t t1)
-{
-	odp_time_t time;
-
-	time.u64 = t2.u64 - t1.u64;
-
-	return time;
+	} while (odp_time_cmp(time, cur) > 0);
 }
 
 uint64_t odp_time_diff_ns(odp_time_t t2, odp_time_t t1)
@@ -230,16 +201,6 @@ odp_time_t odp_time_global_from_ns(uint64_t ns)
 	return time_from_ns(ns);
 }
 
-int odp_time_cmp(odp_time_t t2, odp_time_t t1)
-{
-	return time_cmp(t2, t1);
-}
-
-odp_time_t odp_time_sum(odp_time_t t1, odp_time_t t2)
-{
-	return time_sum(t1, t2);
-}
-
 uint64_t odp_time_local_res(void)
 {
 	return time_res();
@@ -254,7 +215,7 @@ void odp_time_wait_ns(uint64_t ns)
 {
 	odp_time_t cur = _odp_time_cur();
 	odp_time_t wait = time_from_ns(ns);
-	odp_time_t end_time = time_sum(cur, wait);
+	odp_time_t end_time = odp_time_sum(cur, wait);
 
 	time_wait_until(end_time);
 }
