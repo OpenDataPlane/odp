@@ -30,6 +30,9 @@ typedef ODP_HANDLE_T(odp_queue_t);
 
 #define ODP_QUEUE_NAME_LEN 32
 
+/* Inlined functions for non-ABI compat mode */
+#include <odp/api/plat/queue_inlines.h>
+
 /**
  * @}
  */
