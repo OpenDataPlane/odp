@@ -133,7 +133,7 @@ static inline int next_idx(int idx)
 	return next;
 }
 
-static int queue_lf_enq(queue_t q_int, odp_buffer_hdr_t *buf_hdr)
+static int queue_lf_enq(void *q_int, odp_buffer_hdr_t *buf_hdr)
 {
 	queue_entry_t *queue;
 	queue_lf_t *queue_lf;
@@ -144,7 +144,7 @@ static int queue_lf_enq(queue_t q_int, odp_buffer_hdr_t *buf_hdr)
 	ring_lf_node_t *node;
 	uint64_t counter;
 
-	queue    = qentry_from_int(q_int);
+	queue    = q_int;
 	queue_lf = queue->s.queue_lf;
 
 	i_node = 0;
@@ -183,7 +183,7 @@ static int queue_lf_enq(queue_t q_int, odp_buffer_hdr_t *buf_hdr)
 	return -1;
 }
 
-static int queue_lf_enq_multi(queue_t q_int, odp_buffer_hdr_t **buf_hdr,
+static int queue_lf_enq_multi(void *q_int, odp_buffer_hdr_t **buf_hdr,
 			      int num)
 {
 	(void)num;
@@ -194,7 +194,7 @@ static int queue_lf_enq_multi(queue_t q_int, odp_buffer_hdr_t **buf_hdr,
 	return 0;
 }
 
-static odp_buffer_hdr_t *queue_lf_deq(queue_t q_int)
+static odp_buffer_hdr_t *queue_lf_deq(void *q_int)
 {
 	queue_entry_t *queue;
 	queue_lf_t *queue_lf;
@@ -204,7 +204,7 @@ static odp_buffer_hdr_t *queue_lf_deq(queue_t q_int)
 	ring_lf_node_t *node, *old;
 	uint64_t lowest;
 
-	queue    = qentry_from_int(q_int);
+	queue    = q_int;
 	queue_lf = queue->s.queue_lf;
 	i_node   = 0;
 
@@ -243,7 +243,7 @@ static odp_buffer_hdr_t *queue_lf_deq(queue_t q_int)
 	return NULL;
 }
 
-static int queue_lf_deq_multi(queue_t q_int, odp_buffer_hdr_t **buf_hdr,
+static int queue_lf_deq_multi(void *q_int, odp_buffer_hdr_t **buf_hdr,
 			      int num)
 {
 	odp_buffer_hdr_t *buf;

@@ -282,7 +282,7 @@ struct tm_queue_obj_s {
 	uint8_t tm_idx;
 	uint8_t delayed_cnt;
 	uint8_t blocked_cnt;
-	queue_t tm_qentry;
+	void *tm_qentry;
 };
 
 struct tm_node_obj_s {

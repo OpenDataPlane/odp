@@ -638,8 +638,7 @@ static inline void ordered_stash_release(void)
 		buf_hdr = sched_local.ordered.stash[i].buf_hdr;
 		num = sched_local.ordered.stash[i].num;
 
-		num_enq = queue_fn->enq_multi(qentry_to_int(queue_entry),
-					      buf_hdr, num);
+		num_enq = queue_fn->enq_multi(queue_entry, buf_hdr, num);
 
 		/* Drop packets that were not enqueued */
 		if (odp_unlikely(num_enq < num)) {
@@ -714,12 +713,12 @@ static inline int copy_from_stash(odp_event_t out_ev[], unsigned int max)
 	return i;
 }
 
-static int schedule_ord_enq_multi(queue_t q_int, void *buf_hdr[],
+static int schedule_ord_enq_multi(void *q_int, void *buf_hdr[],
 				  int num, int *ret)
 {
 	int i;
 	uint32_t stash_num = sched_local.ordered.stash_num;
-	queue_entry_t *dst_queue = qentry_from_int(q_int);
+	queue_entry_t *dst_queue = q_int;
 	uint32_t src_queue = sched_local.ordered.src_queue;
 
 	if ((src_queue == NULL_INDEX) || sched_local.ordered.in_order)
@@ -766,7 +765,7 @@ static inline int poll_pktin(uint32_t qi, int stash)
 	odp_buffer_hdr_t *b_hdr[MAX_DEQ];
 	int pktio_index, pktin_index, num, num_pktin, i;
 	int ret;
-	queue_t qint;
+	void *q_int;
 
 	pktio_index = sched->queue[qi].pktio_index;
 	pktin_index = sched->queue[qi].pktin_index;
@@ -799,9 +798,9 @@ static inline int poll_pktin(uint32_t qi, int stash)
 		return num;
 	}
 
-	qint = queue_index_to_qint(qi);
+	q_int = qentry_from_index(qi);
 
-	ret = queue_fn->enq_multi(qint, b_hdr, num);
+	ret = queue_fn->enq_multi(q_int, b_hdr, num);
 
 	/* Drop packets that were not enqueued */
 	if (odp_unlikely(ret < num)) {
