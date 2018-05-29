@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <odp/api/align.h>
+#include <odp/api/hints.h>
 
 #include <odp/api/abi/cpu_time.h>
 
@@ -48,6 +49,10 @@ static inline odp_time_t _odp_time_cur(void)
 	#define _ODP_INLINE static inline
 	#define odp_time_local   __odp_time_local
 	#define odp_time_global  __odp_time_global
+	#define odp_time_cmp     __odp_time_cmp
+	#define odp_time_diff    __odp_time_diff
+	#define odp_time_sum     __odp_time_sum
+
 #else
 	#define _ODP_INLINE
 #endif
@@ -60,6 +65,35 @@ _ODP_INLINE odp_time_t odp_time_local(void)
 _ODP_INLINE odp_time_t odp_time_global(void)
 {
 	return _odp_time_cur();
+}
+
+_ODP_INLINE int odp_time_cmp(odp_time_t t2, odp_time_t t1)
+{
+	if (odp_likely(t2.u64 > t1.u64))
+		return 1;
+
+	if (t2.u64 < t1.u64)
+		return -1;
+
+	return 0;
+}
+
+_ODP_INLINE odp_time_t odp_time_diff(odp_time_t t2, odp_time_t t1)
+{
+	odp_time_t time;
+
+	time.u64 = t2.u64 - t1.u64;
+
+	return time;
+}
+
+_ODP_INLINE odp_time_t odp_time_sum(odp_time_t t1, odp_time_t t2)
+{
+	odp_time_t time;
+
+	time.u64 = t1.u64 + t2.u64;
+
+	return time;
 }
 
 /** @endcond */
