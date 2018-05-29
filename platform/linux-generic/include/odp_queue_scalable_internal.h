@@ -77,7 +77,7 @@ static inline void *shm_pool_alloc_align(_odp_ishm_pool_t *pool, uint32_t size)
 
 static inline uint32_t queue_to_id(odp_queue_t handle)
 {
-	return _odp_typeval(handle) - 1;
+	return qentry_from_ext(handle)->s.index;
 }
 
 static inline queue_entry_t *qentry_from_int(void *handle)
