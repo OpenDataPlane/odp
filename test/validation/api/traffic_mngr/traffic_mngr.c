@@ -2891,16 +2891,21 @@ static int set_queue_thresholds(odp_tm_queue_t             tm_queue,
 				odp_tm_threshold_params_t *threshold_params)
 {
 	odp_tm_threshold_t threshold_profile;
+	int ret;
 
 	/* First see if a threshold profile already exists with this name, in
 	 * which case we use that profile, else create a new one. */
 	threshold_profile = odp_tm_thresholds_lookup(threshold_name);
 	if (threshold_profile != ODP_TM_INVALID) {
-		odp_tm_thresholds_params_update(threshold_profile,
-						threshold_params);
+		ret = odp_tm_thresholds_params_update(threshold_profile,
+						      threshold_params);
+		if (ret)
+			return ret;
 	} else {
 		threshold_profile = odp_tm_threshold_create(threshold_name,
 							    threshold_params);
+		if (threshold_profile == ODP_TM_INVALID)
+			return -1;
 		threshold_profiles[num_threshold_profiles] = threshold_profile;
 		num_threshold_profiles++;
 	}
@@ -3138,6 +3143,7 @@ static int test_pkt_wred(const char      *wred_name,
 	odp_tm_queue_t            tm_queue;
 	pkt_info_t                pkt_info;
 	uint32_t                  num_fill_pkts, num_test_pkts, pkts_sent;
+	int ret;
 
 	/* Pick the tm_queue and set the tm_queue's wred profile to drop the
 	 * given percentage of traffic, then send 100 pkts and see how many
@@ -3154,8 +3160,10 @@ static int test_pkt_wred(const char      *wred_name,
 	odp_tm_threshold_params_init(&threshold_params);
 	threshold_params.max_pkts        = 1000;
 	threshold_params.enable_max_pkts = true;
-	if (set_queue_thresholds(tm_queue, threshold_name,
-				 &threshold_params) != 0) {
+
+	ret = set_queue_thresholds(tm_queue, threshold_name,
+				   &threshold_params);
+	if (ret) {
 		LOG_ERR("set_queue_thresholds failed\n");
 		return -1;
 	}
@@ -3185,8 +3193,12 @@ static int test_pkt_wred(const char      *wred_name,
 
 	/* Disable the shaper, so as to get the pkts out quicker. */
 	set_shaper(node_name, shaper_name, 0, 0);
-	num_rcv_pkts = receive_pkts(odp_tm_systems[0], rcv_pktin,
-				    num_fill_pkts + pkts_sent, 64 * 1000);
+	ret = receive_pkts(odp_tm_systems[0], rcv_pktin,
+			   num_fill_pkts + pkts_sent, 64 * 1000);
+	if (ret < 0)
+		return -1;
+
+	num_rcv_pkts = ret;
 
 	/* Search the EXPECTED_PKT_RCVD table to find a matching entry */
 	wred_pkt_cnts = search_expected_pkt_rcv_tbl(TM_PERCENT(99.9),
@@ -3197,12 +3209,15 @@ static int test_pkt_wred(const char      *wred_name,
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
 	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
 
-	if ((wred_pkt_cnts->min_cnt <= pkts_sent) &&
-	    (pkts_sent <= wred_pkt_cnts->max_cnt))
-		return 0;
+	if ((pkts_sent < wred_pkt_cnts->min_cnt) ||
+	    (pkts_sent > wred_pkt_cnts->max_cnt)) {
+		LOG_ERR("min_cnt %d <= pkts_sent %d <= max_cnt %d\n",
+			wred_pkt_cnts->min_cnt,
+			pkts_sent,
+			wred_pkt_cnts->max_cnt);
+		return -1;
+	}
 
-	CU_ASSERT((wred_pkt_cnts->min_cnt <= pkts_sent) &&
-		  (pkts_sent <= wred_pkt_cnts->max_cnt));
 	return 0;
 }
 

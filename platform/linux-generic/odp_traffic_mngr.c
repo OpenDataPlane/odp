@@ -626,8 +626,8 @@ static void tm_sched_config_set(tm_shaper_obj_t *shaper_obj,
 }
 
 /* Any locking required and validity checks must be done by the caller! */
-static void tm_threshold_config_set(tm_wred_node_t    *wred_node,
-				    odp_tm_threshold_t thresholds_profile)
+static int tm_threshold_config_set(tm_wred_node_t    *wred_node,
+				   odp_tm_threshold_t thresholds_profile)
 {
 	tm_queue_thresholds_t *threshold_params;
 
@@ -637,15 +637,18 @@ static void tm_threshold_config_set(tm_wred_node_t    *wred_node,
 	}
 
 	if (thresholds_profile == ODP_TM_INVALID)
-		return;
+		return 0;
 
 	threshold_params = tm_get_profile_params(thresholds_profile,
 						 TM_THRESHOLD_PROFILE);
-	if (threshold_params == NULL)
-		return;
+	if (threshold_params == NULL) {
+		ODP_DBG("threshold_params is NULL\n");
+		return -1;
+	}
 
 	threshold_params->ref_cnt++;
 	wred_node->threshold_params = threshold_params;
+	return 0;
 }
 
 /* Any locking required and validity checks must be done by the caller! */
@@ -4091,15 +4094,17 @@ int odp_tm_queue_threshold_config(odp_tm_queue_t tm_queue,
 				  odp_tm_threshold_t thresholds_profile)
 {
 	tm_queue_obj_t *tm_queue_obj;
+	int ret;
 
 	tm_queue_obj = GET_TM_QUEUE_OBJ(tm_queue);
 	if (!tm_queue_obj)
 		return -1;
 
 	odp_ticketlock_lock(&tm_profile_lock);
-	tm_threshold_config_set(tm_queue_obj->tm_wred_node, thresholds_profile);
+	ret = tm_threshold_config_set(tm_queue_obj->tm_wred_node,
+				      thresholds_profile);
 	odp_ticketlock_unlock(&tm_profile_lock);
-	return 0;
+	return ret;
 }
 
 int odp_tm_queue_wred_config(odp_tm_queue_t tm_queue,
