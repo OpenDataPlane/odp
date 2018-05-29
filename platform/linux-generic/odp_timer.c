@@ -53,8 +53,8 @@
 #include <odp/api/std_types.h>
 #include <odp/api/sync.h>
 #include <odp/api/time.h>
+#include <odp/api/plat/time_inlines.h>
 #include <odp/api/timer.h>
-#include <odp_arch_time_internal.h>
 #include <odp_timer_internal.h>
 
 /* Inlined API functions */

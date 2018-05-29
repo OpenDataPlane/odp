@@ -5,3 +5,6 @@
  */
 
 #include <odp/api/abi-default/time.h>
+
+/* Inlined functions for non-ABI compat mode */
+#include <odp/api/plat/time_inlines.h>

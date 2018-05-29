@@ -4,19 +4,23 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_arch_time_internal.h>
+#include <odp/api/abi/cpu_time.h>
 
-int cpu_has_global_time(void)
+#include <odp/visibility_begin.h>
+
+uint64_t _odp_cpu_global_time(void)
 {
 	return 0;
 }
 
-uint64_t cpu_global_time(void)
+#include <odp/visibility_end.h>
+
+int _odp_cpu_has_global_time(void)
 {
 	return 0;
 }
 
-uint64_t cpu_global_time_freq(void)
+uint64_t _odp_cpu_global_time_freq(void)
 {
 	return 0;
 }
