@@ -34,7 +34,6 @@ extern "C" {
 
 #define PKTIO_MAX_QUEUES 64
 #include <odp_packet_socket.h>
-#include <odp_packet_netmap.h>
 #include <odp_packet_tap.h>
 #include <odp_packet_null.h>
 #include <odp_packet_dpdk.h>
@@ -106,7 +105,11 @@ typedef	struct {
 					_ipc_map_remote_pool() */
 } _ipc_pktio_t;
 
+#if defined(ODP_NETMAP)
+#define PKTIO_PRIVATE_SIZE 74752
+#else
 #define PKTIO_PRIVATE_SIZE 384
+#endif
 
 struct pktio_entry {
 	const struct pktio_if_ops *ops; /**< Implementation specific methods */
@@ -117,7 +120,6 @@ struct pktio_entry {
 	uint8_t chksum_insert_ena;      /**< pktout checksum offload enabled */
 	odp_pktio_t handle;		/**< pktio handle */
 	union {
-		pkt_netmap_t pkt_nm;		/**< using netmap API for IO */
 		pkt_dpdk_t pkt_dpdk;		/**< using DPDK for IO */
 #ifdef HAVE_PCAP
 		pkt_pcap_t pkt_pcap;		/**< Using pcap for IO */
