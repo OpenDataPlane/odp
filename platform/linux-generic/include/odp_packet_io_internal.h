@@ -117,8 +117,6 @@ struct pktio_entry {
 	uint8_t chksum_insert_ena;      /**< pktout checksum offload enabled */
 	odp_pktio_t handle;		/**< pktio handle */
 	union {
-		pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap
-						 *   API for IO */
 		pkt_netmap_t pkt_nm;		/**< using netmap API for IO */
 		pkt_dpdk_t pkt_dpdk;		/**< using DPDK for IO */
 #ifdef HAVE_PCAP
