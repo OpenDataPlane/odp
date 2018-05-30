@@ -36,7 +36,6 @@ extern "C" {
 #include <odp_packet_socket.h>
 #include <odp_packet_tap.h>
 #include <odp_packet_null.h>
-#include <odp_packet_dpdk.h>
 
 #define PKTIO_NAME_LEN 256
 
@@ -107,6 +106,8 @@ typedef	struct {
 
 #if defined(ODP_NETMAP)
 #define PKTIO_PRIVATE_SIZE 74752
+#elif defined(ODP_PKTIO_DPDK)
+#define PKTIO_PRIVATE_SIZE 5632
 #else
 #define PKTIO_PRIVATE_SIZE 384
 #endif
@@ -120,7 +121,6 @@ struct pktio_entry {
 	uint8_t chksum_insert_ena;      /**< pktout checksum offload enabled */
 	odp_pktio_t handle;		/**< pktio handle */
 	union {
-		pkt_dpdk_t pkt_dpdk;		/**< using DPDK for IO */
 #ifdef HAVE_PCAP
 		pkt_pcap_t pkt_pcap;		/**< Using pcap for IO */
 #endif
