@@ -51,21 +51,6 @@ extern "C" {
 /* Forward declaration */
 struct pktio_if_ops;
 
-#ifdef HAVE_PCAP
-typedef struct {
-	char *fname_rx;		/**< name of pcap file for rx */
-	char *fname_tx;		/**< name of pcap file for tx */
-	void *rx;		/**< rx pcap handle */
-	void *tx;		/**< tx pcap handle */
-	void *tx_dump;		/**< tx pcap dumper handle */
-	odp_pool_t pool;	/**< rx pool */
-	unsigned char *buf;	/**< per-pktio temp buffer */
-	int loops;		/**< number of times to loop rx pcap */
-	int loop_cnt;		/**< number of loops completed */
-	odp_bool_t promisc;	/**< promiscuous mode state */
-} pkt_pcap_t;
-#endif
-
 typedef	struct {
 	/* TX */
 	struct  {
@@ -121,9 +106,6 @@ struct pktio_entry {
 	uint8_t chksum_insert_ena;      /**< pktout checksum offload enabled */
 	odp_pktio_t handle;		/**< pktio handle */
 	union {
-#ifdef HAVE_PCAP
-		pkt_pcap_t pkt_pcap;		/**< Using pcap for IO */
-#endif
 		pkt_tap_t pkt_tap;		/**< using TAP for IO */
 		_ipc_pktio_t ipc;		/**< IPC pktio data */
 		pkt_null_t pkt_null;		/**< using null for IO */
