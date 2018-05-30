@@ -34,7 +34,6 @@ extern "C" {
 
 #define PKTIO_MAX_QUEUES 64
 #include <odp_packet_socket.h>
-#include <odp_packet_null.h>
 
 #define PKTIO_NAME_LEN 256
 
@@ -67,7 +66,6 @@ struct pktio_entry {
 	uint8_t chksum_insert_ena;      /**< pktout checksum offload enabled */
 	odp_pktio_t handle;		/**< pktio handle */
 	union {
-		pkt_null_t pkt_null;		/**< using null for IO */
 		unsigned char ODP_ALIGNED_CACHE pkt_priv[PKTIO_PRIVATE_SIZE];
 	};
 	enum {
