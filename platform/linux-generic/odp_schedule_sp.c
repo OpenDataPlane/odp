@@ -11,6 +11,7 @@
 #include <odp/api/thread.h>
 #include <odp/api/plat/thread_inlines.h>
 #include <odp/api/time.h>
+#include <odp/api/plat/time_inlines.h>
 #include <odp/api/schedule.h>
 #include <odp/api/shared_memory.h>
 #include <odp_schedule_if.h>

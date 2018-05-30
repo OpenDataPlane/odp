@@ -18,6 +18,7 @@
 #include <odp/api/plat/thread_inlines.h>
 #include <odp/api/thrmask.h>
 #include <odp/api/time.h>
+#include <odp/api/plat/time_inlines.h>
 
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
