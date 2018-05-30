@@ -58,47 +58,61 @@
 #include <inttypes.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
+#include <fdserver.h>
 
 #define FDSERVER_SOCKPATH_MAXLEN 255
 #define FDSERVER_SOCK_FORMAT "%s/%s/odp-%d-fdserver"
 #define FDSERVER_SOCKDIR_FORMAT "%s/%s"
 #define FDSERVER_DEFAULT_DIR "/dev/shm"
 #define FDSERVER_BACKLOG 5
+static char fdserver_sockpath[FDSERVER_SOCKPATH_MAXLEN] = {'\0'};
 
 #ifndef MAP_ANONYMOUS
 #define MAP_ANONYMOUS MAP_ANON
 #endif
 
-#define FD_ODP_DEBUG_PRINT 0
+static pid_t fdserver_pid = (pid_t)-1;
 
-#define FD_ODP_DBG(fmt, ...) \
-	do { \
-		if (FD_ODP_DEBUG_PRINT == 1) \
-			ODP_DBG(fmt, ##__VA_ARGS__);\
-	} while (0)
+static pid_t start_fdserver_process(const char *sockpath)
+{
+	/* FIXME */
+	const char *binary =
+		"/tmp/build-odp/platform/linux-generic/fdserver/src/fdserver";
+	pid_t pid;
+
+	pid = fork();
+	if (pid == -1)
+		return -1;
+	if (pid == 0) {
+		execlp(binary, binary, "-H", "-p", sockpath, NULL);
+		ODP_PRINT("Failed to start fdserver\n");
+		exit(EXIT_FAILURE);
+	}
+
+	return pid;
+}
 
 /*
  * Spawn the fdserver daemon
  */
 int _odp_fdserver_init_global(void)
 {
-	char sockpath[FDSERVER_SOCKPATH_MAXLEN];
-
-	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCKDIR_FORMAT,
-		 odp_global_data.shm_dir,
-		 odp_global_data.uid);
-
-	mkdir(sockpath, 0744);
-
-	/* construct the server named socket path: */
-	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCK_FORMAT,
-		 odp_global_data.shm_dir,
-		 odp_global_data.uid,
+	snprintf(fdserver_sockpath, sizeof(fdserver_sockpath),
+		 "/tmp/odp-%d-fdserver",
 		 odp_global_data.main_pid);
 
-	ODP_PRINT("Socket path: %s\n", sockpath);
+	fdserver_pid = start_fdserver_process(fdserver_sockpath);
+	if (fdserver_pid == (pid_t)-1) {
+		ODP_ERR("Could not start fdserver\n");
+		return -1;
+	}
 
-	/* TODO: fork a server process: */
+	sleep(1); /* FIXME: give time the server to start */
+
+	if (fdserver_init(fdserver_sockpath) != 0) {
+		ODP_ERR("Could not initialize fdserver\n");
+		return -1;
+	}
 
 	/* parent */
 	return 0;
@@ -109,22 +123,11 @@ int _odp_fdserver_init_global(void)
  */
 int _odp_fdserver_term_global(void)
 {
-	char sockpath[FDSERVER_SOCKPATH_MAXLEN];
-
-	/* construct the server named socket path: */
-	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCK_FORMAT,
-		 odp_global_data.shm_dir,
-		 odp_global_data.uid,
-		 odp_global_data.main_pid);
+	if (fdserver_pid != -1)
+		kill(fdserver_pid, SIGHUP);
 
 	/* delete the UNIX domain socket: */
-	unlink(sockpath);
-
-	/* delete shm files directory */
-	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCKDIR_FORMAT,
-		 odp_global_data.shm_dir,
-		 odp_global_data.uid);
-	rmdir(sockpath);
+	unlink(fdserver_sockpath);
 
 	return 0;
 }

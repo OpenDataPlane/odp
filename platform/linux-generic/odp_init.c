@@ -25,8 +25,8 @@ enum init_stage {
 	HASH_INIT,
 	TIME_INIT,
 	SYSINFO_INIT,
-	ISHM_INIT,
 	FDSERVER_INIT,
+	ISHM_INIT,
 	THREAD_INIT,
 	POOL_INIT,
 	QUEUE_INIT,
@@ -147,16 +147,16 @@ static int term_global(enum init_stage stage)
 		}
 		/* Fall through */
 
-	case FDSERVER_INIT:
-		if (_odp_fdserver_term_global()) {
-			ODP_ERR("ODP fdserver term failed.\n");
+	case ISHM_INIT:
+		if (_odp_ishm_term_global()) {
+			ODP_ERR("ODP ishm term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */
 
-	case ISHM_INIT:
-		if (_odp_ishm_term_global()) {
-			ODP_ERR("ODP ishm term failed.\n");
+	case FDSERVER_INIT:
+		if (_odp_fdserver_term_global()) {
+			ODP_ERR("ODP fdserver term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */
@@ -254,17 +254,17 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = SYSINFO_INIT;
 
-	if (_odp_ishm_init_global(params)) {
-		ODP_ERR("ODP ishm init failed.\n");
-		goto init_failed;
-	}
-	stage = ISHM_INIT;
-
 	if (_odp_fdserver_init_global()) {
 		ODP_ERR("ODP fdserver init failed.\n");
 		goto init_failed;
 	}
 	stage = FDSERVER_INIT;
+
+	if (_odp_ishm_init_global(params)) {
+		ODP_ERR("ODP ishm init failed.\n");
+		goto init_failed;
+	}
+	stage = ISHM_INIT;
 
 	if (odp_thread_init_global()) {
 		ODP_ERR("ODP thread init failed.\n");
