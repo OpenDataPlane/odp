@@ -10,24 +10,15 @@
 
 #include <time.h>
 
-#include <odp/api/cpu.h>
 #include <odp/api/hints.h>
 #include <odp_debug_internal.h>
-#include <odp_arch_time_internal.h>
-
-/* Inlined API functions */
-#include <odp/api/plat/cpu_inlines.h>
-
-uint64_t cpu_global_time(void)
-{
-	return odp_cpu_cycles();
-}
+#include <odp/api/abi/cpu_time.h>
 
 #define SEC_IN_NS 1000000000ULL
 
 /* Measure TSC frequency. Frequency information registers are defined for x86,
  * but those are often not enumerated. */
-uint64_t cpu_global_time_freq(void)
+uint64_t _odp_cpu_global_time_freq(void)
 {
 	struct timespec sleep, ts1, ts2;
 	uint64_t t1, t2, ts_nsec, cycles, hz;
@@ -49,7 +40,7 @@ uint64_t cpu_global_time_freq(void)
 			return 0;
 		}
 
-		t1 = cpu_global_time();
+		t1 = _odp_cpu_global_time();
 
 		if (nanosleep(&sleep, NULL) < 0) {
 			ODP_DBG("nanosleep failed\n");
@@ -61,7 +52,7 @@ uint64_t cpu_global_time_freq(void)
 			return 0;
 		}
 
-		t2 = cpu_global_time();
+		t2 = _odp_cpu_global_time();
 
 		ts_nsec  = (ts2.tv_sec - ts1.tv_sec) * SEC_IN_NS;
 		ts_nsec += ts2.tv_nsec - ts1.tv_nsec;

@@ -15,6 +15,7 @@
 #include <odp/api/thread.h>
 #include <odp/api/plat/thread_inlines.h>
 #include <odp/api/time.h>
+#include <odp/api/plat/time_inlines.h>
 #include <odp/api/spinlock.h>
 #include <odp/api/hints.h>
 #include <odp/api/cpu.h>
