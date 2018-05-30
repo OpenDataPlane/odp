@@ -53,12 +53,6 @@ extern "C" {
 /* Forward declaration */
 struct pktio_if_ops;
 
-typedef struct {
-	odp_queue_t loopq;		/**< loopback queue for "loop" device */
-	odp_bool_t promisc;		/**< promiscuous mode state */
-	uint8_t idx;			/**< index of "loop" device */
-} pkt_loop_t;
-
 #ifdef HAVE_PCAP
 typedef struct {
 	char *fname_rx;		/**< name of pcap file for rx */
@@ -123,7 +117,6 @@ struct pktio_entry {
 	uint8_t chksum_insert_ena;      /**< pktout checksum offload enabled */
 	odp_pktio_t handle;		/**< pktio handle */
 	union {
-		pkt_loop_t pkt_loop;            /**< Using loopback for IO */
 		pkt_sock_t pkt_sock;		/**< using socket API for IO */
 		pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap
 						 *   API for IO */

@@ -30,6 +30,20 @@
 #define MAX_LOOP 16
 #define LOOP_MTU (64 * 1024)
 
+typedef struct {
+	odp_queue_t loopq;		/**< loopback queue for "loop" device */
+	odp_bool_t promisc;		/**< promiscuous mode state */
+	uint8_t idx;			/**< index of "loop" device */
+} pkt_loop_t;
+
+ODP_STATIC_ASSERT(PKTIO_PRIVATE_SIZE >= sizeof(pkt_loop_t),
+		  "PKTIO_PRIVATE_SIZE too small");
+
+static inline pkt_loop_t *pkt_priv(pktio_entry_t *pktio_entry)
+{
+	return (pkt_loop_t *)(uintptr_t)(pktio_entry->s.pkt_priv);
+}
+
 /* MAC address for the "loop" interface */
 static const char pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
 
@@ -56,11 +70,11 @@ static int loopback_open(odp_pktio_t id, pktio_entry_t *pktio_entry,
 
 	snprintf(loopq_name, sizeof(loopq_name), "%" PRIu64 "-pktio_loopq",
 		 odp_pktio_to_u64(id));
-	pktio_entry->s.pkt_loop.loopq =
+	pkt_priv(pktio_entry)->loopq =
 		odp_queue_create(loopq_name, NULL);
-	pktio_entry->s.pkt_loop.idx = idx;
+	pkt_priv(pktio_entry)->idx = idx;
 
-	if (pktio_entry->s.pkt_loop.loopq == ODP_QUEUE_INVALID)
+	if (pkt_priv(pktio_entry)->loopq == ODP_QUEUE_INVALID)
 		return -1;
 
 	loopback_stats_reset(pktio_entry);
@@ -71,7 +85,7 @@ static int loopback_open(odp_pktio_t id, pktio_entry_t *pktio_entry,
 
 static int loopback_close(pktio_entry_t *pktio_entry)
 {
-	return odp_queue_destroy(pktio_entry->s.pkt_loop.loopq);
+	return odp_queue_destroy(pkt_priv(pktio_entry)->loopq);
 }
 
 static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
@@ -92,7 +106,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
-	queue = queue_fn->from_ext(pktio_entry->s.pkt_loop.loopq);
+	queue = queue_fn->from_ext(pkt_priv(pktio_entry)->loopq);
 	nbr = queue_fn->deq_multi(queue, hdr_tbl, num);
 
 	if (pktio_entry->s.config.pktin.bit.ts_all ||
@@ -310,7 +324,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
-	queue = queue_fn->from_ext(pktio_entry->s.pkt_loop.loopq);
+	queue = queue_fn->from_ext(pkt_priv(pktio_entry)->loopq);
 	ret = queue_fn->enq_multi(queue, hdr_tbl, nb_tx);
 
 	if (ret > 0) {
@@ -335,7 +349,7 @@ static int loopback_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
 				 void *mac_addr)
 {
 	memcpy(mac_addr, pktio_loop_mac, ETH_ALEN);
-	((uint8_t *)mac_addr)[ETH_ALEN - 1] += pktio_entry->s.pkt_loop.idx;
+	((uint8_t *)mac_addr)[ETH_ALEN - 1] += pkt_priv(pktio_entry)->idx;
 	return ETH_ALEN;
 }
 
@@ -387,13 +401,13 @@ static int loopback_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 static int loopback_promisc_mode_set(pktio_entry_t *pktio_entry,
 				     odp_bool_t enable)
 {
-	pktio_entry->s.pkt_loop.promisc = enable;
+	pkt_priv(pktio_entry)->promisc = enable;
 	return 0;
 }
 
 static int loopback_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
-	return pktio_entry->s.pkt_loop.promisc ? 1 : 0;
+	return pkt_priv(pktio_entry)->promisc ? 1 : 0;
 }
 
 static int loopback_stats(pktio_entry_t *pktio_entry,
