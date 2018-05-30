@@ -112,6 +112,8 @@ typedef	struct {
 					_ipc_map_remote_pool() */
 } _ipc_pktio_t;
 
+#define PKTIO_PRIVATE_SIZE 384
+
 struct pktio_entry {
 	const struct pktio_if_ops *ops; /**< Implementation specific methods */
 	/* These two locks together lock the whole pktio device */
@@ -133,6 +135,7 @@ struct pktio_entry {
 		pkt_tap_t pkt_tap;		/**< using TAP for IO */
 		_ipc_pktio_t ipc;		/**< IPC pktio data */
 		pkt_null_t pkt_null;		/**< using null for IO */
+		unsigned char ODP_ALIGNED_CACHE pkt_priv[PKTIO_PRIVATE_SIZE];
 	};
 	enum {
 		/* Not allocated */
