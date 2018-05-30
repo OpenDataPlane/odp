@@ -28,6 +28,8 @@
 #include <odp_traffic_mngr_internal.h>
 #include <odp/api/plat/packet_inlines.h>
 #include <odp/api/plat/byteorder_inlines.h>
+#include <odp/api/time.h>
+#include <odp/api/plat/time_inlines.h>
 #include <odp_macros_internal.h>
 #include <odp_init_internal.h>
 #include <odp_errno_define.h>
