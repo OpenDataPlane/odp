@@ -52,6 +52,21 @@
 #define MAX_SEGS          CONFIG_PACKET_MAX_SEGS
 #define PACKET_JUMBO_LEN  (9 * 1024)
 
+typedef struct {
+	int sockfd; /**< socket descriptor */
+	odp_pool_t pool; /**< pool to alloc packets from */
+	uint32_t mtu;    /**< maximum transmission unit */
+	unsigned char if_mac[ETH_ALEN];	/**< IF eth mac addr */
+} pkt_sock_t;
+
+ODP_STATIC_ASSERT(PKTIO_PRIVATE_SIZE >= sizeof(pkt_sock_t),
+		  "PKTIO_PRIVATE_SIZE too small");
+
+static inline pkt_sock_t *pkt_priv(pktio_entry_t *pktio_entry)
+{
+	return (pkt_sock_t *)(uintptr_t)(pktio_entry->s.pkt_priv);
+}
+
 static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 
 static int sock_stats_reset(pktio_entry_t *pktio_entry);
@@ -458,7 +473,8 @@ void rss_conf_print(const odp_pktin_hash_proto_t *hash_proto)
  */
 static int sock_close(pktio_entry_t *pktio_entry)
 {
-	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
+	pkt_sock_t *pkt_sock = pkt_priv(pktio_entry);
+
 	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
 		__odp_errno = errno;
 		ODP_ERR("close(sockfd): %s\n", strerror(errno));
@@ -480,7 +496,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	struct ifreq ethreq;
 	struct sockaddr_ll sa_ll;
 	char shm_name[ODP_SHM_NAME_LEN];
-	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
+	pkt_sock_t *pkt_sock = pkt_priv(pktio_entry);
 	odp_pktio_stats_t cur_stats;
 
 	/* Init pktio entry */
@@ -533,7 +549,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 		goto error;
 	}
 
-	err = ethtool_stats_get_fd(pktio_entry->s.pkt_sock.sockfd,
+	err = ethtool_stats_get_fd(pkt_priv(pktio_entry)->sockfd,
 				   pktio_entry->s.name,
 				   &cur_stats);
 	if (err != 0) {
@@ -604,7 +620,7 @@ static uint32_t _rx_pkt_to_iovec(odp_packet_t pkt,
 static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  odp_packet_t pkt_table[], int num)
 {
-	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
+	pkt_sock_t *pkt_sock = pkt_priv(pktio_entry);
 	odp_pool_t pool = pkt_sock->pool;
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
@@ -704,7 +720,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 static int sock_fd_set(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		       fd_set *readfds)
 {
-	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
+	pkt_sock_t *pkt_sock = pkt_priv(pktio_entry);
 	const int sockfd = pkt_sock->sockfd;
 
 	FD_SET(sockfd, readfds);
@@ -807,7 +823,7 @@ static uint32_t _tx_pkt_to_iovec(odp_packet_t pkt,
 static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  const odp_packet_t pkt_table[], int num)
 {
-	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
+	pkt_sock_t *pkt_sock = pkt_priv(pktio_entry);
 	struct mmsghdr msgvec[num];
 	struct iovec iovecs[num][MAX_SEGS];
 	int ret;
@@ -853,7 +869,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
  */
 static uint32_t sock_mtu_get(pktio_entry_t *pktio_entry)
 {
-	return pktio_entry->s.pkt_sock.mtu;
+	return pkt_priv(pktio_entry)->mtu;
 }
 
 /*
@@ -862,7 +878,7 @@ static uint32_t sock_mtu_get(pktio_entry_t *pktio_entry)
 static int sock_mac_addr_get(pktio_entry_t *pktio_entry,
 			     void *mac_addr)
 {
-	memcpy(mac_addr, pktio_entry->s.pkt_sock.if_mac, ETH_ALEN);
+	memcpy(mac_addr, pkt_priv(pktio_entry)->if_mac, ETH_ALEN);
 	return ETH_ALEN;
 }
 
@@ -872,7 +888,7 @@ static int sock_mac_addr_get(pktio_entry_t *pktio_entry,
 static int sock_promisc_mode_set(pktio_entry_t *pktio_entry,
 				 odp_bool_t enable)
 {
-	return promisc_mode_set_fd(pktio_entry->s.pkt_sock.sockfd,
+	return promisc_mode_set_fd(pkt_priv(pktio_entry)->sockfd,
 				   pktio_entry->s.name, enable);
 }
 
@@ -881,13 +897,13 @@ static int sock_promisc_mode_set(pktio_entry_t *pktio_entry,
  */
 static int sock_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
-	return promisc_mode_get_fd(pktio_entry->s.pkt_sock.sockfd,
+	return promisc_mode_get_fd(pkt_priv(pktio_entry)->sockfd,
 				   pktio_entry->s.name);
 }
 
 static int sock_link_status(pktio_entry_t *pktio_entry)
 {
-	return link_status_fd(pktio_entry->s.pkt_sock.sockfd,
+	return link_status_fd(pkt_priv(pktio_entry)->sockfd,
 			      pktio_entry->s.name);
 }
 
@@ -916,7 +932,7 @@ static int sock_stats(pktio_entry_t *pktio_entry,
 
 	return sock_stats_fd(pktio_entry,
 			     stats,
-			     pktio_entry->s.pkt_sock.sockfd);
+			     pkt_priv(pktio_entry)->sockfd);
 }
 
 static int sock_stats_reset(pktio_entry_t *pktio_entry)
@@ -928,7 +944,7 @@ static int sock_stats_reset(pktio_entry_t *pktio_entry)
 	}
 
 	return sock_stats_reset_fd(pktio_entry,
-				   pktio_entry->s.pkt_sock.sockfd);
+				   pkt_priv(pktio_entry)->sockfd);
 }
 
 static int sock_init_global(void)
