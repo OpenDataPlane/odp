@@ -37,13 +37,6 @@
 #define PACKET_FANOUT_HASH	0
 #endif /* PACKET_FANOUT */
 
-typedef struct {
-	int sockfd; /**< socket descriptor */
-	odp_pool_t pool; /**< pool to alloc packets from */
-	uint32_t mtu;    /**< maximum transmission unit */
-	unsigned char if_mac[ETH_ALEN];	/**< IF eth mac addr */
-} pkt_sock_t;
-
 /** packet mmap ring */
 struct ring {
 	struct iovec *rd;
