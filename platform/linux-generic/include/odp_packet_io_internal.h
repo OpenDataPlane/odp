@@ -65,9 +65,7 @@ struct pktio_entry {
 	uint8_t cls_enabled;            /**< classifier enabled */
 	uint8_t chksum_insert_ena;      /**< pktout checksum offload enabled */
 	odp_pktio_t handle;		/**< pktio handle */
-	union {
-		unsigned char ODP_ALIGNED_CACHE pkt_priv[PKTIO_PRIVATE_SIZE];
-	};
+	unsigned char ODP_ALIGNED_CACHE pkt_priv[PKTIO_PRIVATE_SIZE];
 	enum {
 		/* Not allocated */
 		PKTIO_STATE_FREE = 0,
