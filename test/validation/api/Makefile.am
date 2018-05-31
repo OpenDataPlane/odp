@@ -58,7 +58,7 @@ TESTS = \
 	thread/thread_main$(EXEEXT) \
 	time/time_main$(EXEEXT) \
 	timer/timer_main$(EXEEXT) \
-	traffic_mngr/traffic_mngr.sh \
+	traffic_mngr/traffic_mngr_main$(EXEEXT) \
 	shmem/shmem_main$(EXEEXT) \
 	system/system_main$(EXEEXT)
 
