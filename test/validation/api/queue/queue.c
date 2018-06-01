@@ -238,8 +238,10 @@ static void queue_test_lockfree(void)
 
 	CU_ASSERT_FATAL(odp_queue_capability(&capa) == 0);
 
-	if (capa.plain.lockfree.max_num == 0)
+	if (capa.plain.lockfree.max_num == 0) {
+		printf("  NO LOCKFREE QUEUES. Test skipped.\n");
 		return;
+	}
 
 	max_burst = capa.plain.lockfree.max_size;
 
@@ -604,8 +606,10 @@ static void multithread_test(odp_nonblocking_t nonblocking)
 	max_size = capa.plain.max_size;
 
 	if (nonblocking == ODP_NONBLOCKING_LF) {
-		if (capa.plain.lockfree.max_num == 0)
+		if (capa.plain.lockfree.max_num == 0) {
+			printf("  NO LOCKFREE QUEUES. Test skipped.\n");
 			return;
+		}
 
 		max_size = capa.plain.lockfree.max_size;
 	}
