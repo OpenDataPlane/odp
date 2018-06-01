@@ -37,13 +37,6 @@
 #define PACKET_FANOUT_HASH	0
 #endif /* PACKET_FANOUT */
 
-typedef struct {
-	int sockfd; /**< socket descriptor */
-	odp_pool_t pool; /**< pool to alloc packets from */
-	uint32_t mtu;    /**< maximum transmission unit */
-	unsigned char if_mac[ETH_ALEN];	/**< IF eth mac addr */
-} pkt_sock_t;
-
 /** packet mmap ring */
 struct ring {
 	struct iovec *rd;
@@ -63,24 +56,6 @@ struct ring {
 
 ODP_STATIC_ASSERT(offsetof(struct ring, mm_space) <= ODP_CACHE_LINE_SIZE,
 		  "ERR_STRUCT_RING");
-
-/** Packet socket using mmap rings for both Rx and Tx */
-typedef struct {
-	/** Packet mmap ring for Rx */
-	struct ring ODP_ALIGNED_CACHE rx_ring;
-	/** Packet mmap ring for Tx */
-	struct ring ODP_ALIGNED_CACHE tx_ring;
-
-	int ODP_ALIGNED_CACHE sockfd;
-	odp_pool_t pool;
-	int mtu; /**< maximum transmission unit */
-	size_t frame_offset; /**< frame start offset from start of pkt buf */
-	uint8_t *mmap_base;
-	unsigned mmap_len;
-	unsigned char if_mac[ETH_ALEN];
-	struct sockaddr_ll ll;
-	int fanout;
-} pkt_sock_mmap_t;
 
 static inline void
 ethaddr_copy(unsigned char mac_dst[], unsigned char mac_src[])

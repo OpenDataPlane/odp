@@ -111,10 +111,7 @@ noinst_HEADERS = \
 		  include/odp_packet_io_internal.h \
 		  include/odp_packet_io_ipc_internal.h \
 		  include/odp_packet_io_ring_internal.h \
-		  include/odp_packet_netmap.h \
-		  include/odp_packet_null.h \
 		  include/odp_packet_socket.h \
-		  include/odp_packet_tap.h \
 		  include/odp_pcapng.h \
 		  include/odp_pkt_queue_internal.h \
 		  include/odp_pool_internal.h \
