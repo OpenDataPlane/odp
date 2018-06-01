@@ -96,7 +96,7 @@ void *_odp_ishmphy_map(int fd, void *start, uint64_t size,
 		       int flags)
 {
 	void *mapped_addr_tmp, *mapped_addr;
-	int mmap_flags = 0;
+	int mmap_flags = MAP_POPULATE;
 
 	if (flags & _ODP_ISHM_SINGLE_VA) {
 		if (!start) {
