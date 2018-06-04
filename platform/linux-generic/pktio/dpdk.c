@@ -24,6 +24,7 @@
 
 #include <odp_packet_io_internal.h>
 #include <odp_classification_internal.h>
+#include <odp_socket_common.h>
 #include <odp_packet_dpdk.h>
 #include <odp_debug_internal.h>
 #include <odp_libconfig_internal.h>

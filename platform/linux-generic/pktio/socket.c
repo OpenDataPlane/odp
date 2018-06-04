@@ -36,6 +36,7 @@
 
 #include <odp_api.h>
 #include <odp_packet_socket.h>
+#include <odp_socket_common.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_ethtool_stats.h>
@@ -116,125 +117,6 @@ int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
  */
 #define ETHBUF_ALIGN(buf_ptr) ((uint8_t *)ODP_ALIGN_ROUNDUP_PTR((buf_ptr), \
 				sizeof(uint32_t)) + ETHBUF_OFFSET)
-
-/**
- * ODP_PACKET_SOCKET_MMSG:
- * ODP_PACKET_SOCKET_MMAP:
- * ODP_PACKET_NETMAP:
- */
-int mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[])
-{
-	struct ifreq ethreq;
-	int ret;
-
-	memset(&ethreq, 0, sizeof(ethreq));
-	snprintf(ethreq.ifr_name, IF_NAMESIZE, "%s", name);
-	ret = ioctl(fd, SIOCGIFHWADDR, &ethreq);
-	if (ret != 0) {
-		__odp_errno = errno;
-		ODP_ERR("ioctl(SIOCGIFHWADDR): %s: \"%s\".\n", strerror(errno),
-			ethreq.ifr_name);
-		return -1;
-	}
-
-	memcpy(mac_dst, (unsigned char *)ethreq.ifr_ifru.ifru_hwaddr.sa_data,
-	       ETH_ALEN);
-	return 0;
-}
-
-/*
- * ODP_PACKET_SOCKET_MMSG:
- * ODP_PACKET_SOCKET_MMAP:
- * ODP_PACKET_NETMAP:
- */
-uint32_t mtu_get_fd(int fd, const char *name)
-{
-	struct ifreq ifr;
-	int ret;
-
-	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
-	ret = ioctl(fd, SIOCGIFMTU, &ifr);
-	if (ret < 0) {
-		__odp_errno = errno;
-		ODP_DBG("ioctl(SIOCGIFMTU): %s: \"%s\".\n", strerror(errno),
-			ifr.ifr_name);
-		return 0;
-	}
-	return ifr.ifr_mtu + _ODP_ETHHDR_LEN;
-}
-
-/*
- * ODP_PACKET_SOCKET_MMSG:
- * ODP_PACKET_SOCKET_MMAP:
- * ODP_PACKET_NETMAP:
- */
-int promisc_mode_set_fd(int fd, const char *name, int enable)
-{
-	struct ifreq ifr;
-	int ret;
-
-	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
-	ret = ioctl(fd, SIOCGIFFLAGS, &ifr);
-	if (ret < 0) {
-		__odp_errno = errno;
-		ODP_DBG("ioctl(SIOCGIFFLAGS): %s: \"%s\".\n", strerror(errno),
-			ifr.ifr_name);
-		return -1;
-	}
-
-	if (enable)
-		ifr.ifr_flags |= IFF_PROMISC;
-	else
-		ifr.ifr_flags &= ~(IFF_PROMISC);
-
-	ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
-	if (ret < 0) {
-		__odp_errno = errno;
-		ODP_DBG("ioctl(SIOCSIFFLAGS): %s: \"%s\".\n", strerror(errno),
-			ifr.ifr_name);
-		return -1;
-	}
-	return 0;
-}
-
-/*
- * ODP_PACKET_SOCKET_MMSG:
- * ODP_PACKET_SOCKET_MMAP:
- * ODP_PACKET_NETMAP:
- */
-int promisc_mode_get_fd(int fd, const char *name)
-{
-	struct ifreq ifr;
-	int ret;
-
-	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
-	ret = ioctl(fd, SIOCGIFFLAGS, &ifr);
-	if (ret < 0) {
-		__odp_errno = errno;
-		ODP_DBG("ioctl(SIOCGIFFLAGS): %s: \"%s\".\n", strerror(errno),
-			ifr.ifr_name);
-		return -1;
-	}
-
-	return !!(ifr.ifr_flags & IFF_PROMISC);
-}
-
-int link_status_fd(int fd, const char *name)
-{
-	struct ifreq ifr;
-	int ret;
-
-	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
-	ret = ioctl(fd, SIOCGIFFLAGS, &ifr);
-	if (ret < 0) {
-		__odp_errno = errno;
-		ODP_DBG("ioctl(SIOCGIFFLAGS): %s: \"%s\".\n", strerror(errno),
-			ifr.ifr_name);
-		return -1;
-	}
-
-	return !!(ifr.ifr_flags & IFF_RUNNING);
-}
 
 /*
  * ODP_PACKET_SOCKET_MMSG:
