@@ -12,7 +12,7 @@ echo "using PCAP_IN = ${PCAP_IN}"
 ./odp_l2fwd_simple${EXEEXT} pcap:in=${PCAP_IN} pcap:out=pcapout.pcap \
 	02:00:00:00:00:01 02:00:00:00:00:02 &
 
-sleep 1
+sleep 2
 kill -s SIGINT $!
 wait $!
 STATUS=$?
@@ -32,7 +32,7 @@ rm -f pcapout.pcap
 ./odp_l2fwd_simple${EXEEXT} null:0 null:1 \
 	02:00:00:00:00:01 02:00:00:00:00:02 &
 
-sleep 1
+sleep 2
 kill -s SIGINT $!
 wait $!
 STATUS=$?
