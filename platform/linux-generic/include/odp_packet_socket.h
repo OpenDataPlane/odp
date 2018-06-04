@@ -57,41 +57,4 @@ struct ring {
 ODP_STATIC_ASSERT(offsetof(struct ring, mm_space) <= ODP_CACHE_LINE_SIZE,
 		  "ERR_STRUCT_RING");
 
-static inline void
-ethaddr_copy(unsigned char mac_dst[], unsigned char mac_src[])
-{
-	memcpy(mac_dst, mac_src, ETH_ALEN);
-}
-
-static inline int
-ethaddrs_equal(unsigned char mac_a[], unsigned char mac_b[])
-{
-	return !memcmp(mac_a, mac_b, ETH_ALEN);
-}
-
-/**
- * Read the MAC address from a packet socket
- */
-int mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[]);
-
-/**
- * Read the MTU from a packet socket
- */
-uint32_t mtu_get_fd(int fd, const char *name);
-
-/**
- * Enable/Disable promisc mode for a packet socket
- */
-int promisc_mode_set_fd(int fd, const char *name, int enable);
-
-/**
- * Return promisc mode of a packet socket
- */
-int promisc_mode_get_fd(int fd, const char *name);
-
-/**
- * Return link status of a packet socket (up/down)
- */
-int link_status_fd(int fd, const char *name);
-
 #endif
