@@ -8,6 +8,7 @@
 #include "config.h"
 
 #include <odp_packet_io_internal.h>
+#include <odp_ethtool_stats.h>
 #include <odp_classification_internal.h>
 #include <errno.h>
 
