@@ -18,7 +18,7 @@
 #define MAX_WORKERS 1
 
 static int exit_thr;
-static int g_ret;
+static int wait_sec;
 
 struct {
 	odp_pktio_t if0, if1;
@@ -87,7 +87,6 @@ static int run_worker(void *arg ODP_UNUSED)
 {
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	int pkts, sent, tx_drops, i;
-	int total_pkts = 0;
 	uint64_t wait_time = odp_pktin_wait_time(ODP_TIME_SEC_IN_NS);
 
 	if (odp_pktio_start(global.if0)) {
@@ -106,8 +105,13 @@ static int run_worker(void *arg ODP_UNUSED)
 		pkts = odp_pktin_recv_tmo(global.if0in, pkt_tbl, MAX_PKT_BURST,
 					  wait_time);
 
-		if (odp_unlikely(pkts <= 0))
+		if (odp_unlikely(pkts <= 0)) {
+			if (wait_sec > 0)
+				if (!(--wait_sec))
+					break;
 			continue;
+		}
+
 		for (i = 0; i < pkts; i++) {
 			odp_packet_t pkt = pkt_tbl[i];
 			odph_ethhdr_t *eth;
@@ -123,14 +127,10 @@ static int run_worker(void *arg ODP_UNUSED)
 		sent = odp_pktout_send(global.if1out, pkt_tbl, pkts);
 		if (sent < 0)
 			sent = 0;
-		total_pkts += sent;
 		tx_drops = pkts - sent;
 		if (odp_unlikely(tx_drops))
 			odp_packet_free_multi(&pkt_tbl[sent], tx_drops);
 	}
-
-	if (total_pkts < 10)
-		g_ret = -1;
 
 	return 0;
 }
@@ -149,17 +149,22 @@ int main(int argc, char **argv)
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 
-	if (argc != 5 ||
+	if (argc > 7 ||
 	    odph_eth_addr_parse(&global.dst, argv[3]) != 0 ||
 	    odph_eth_addr_parse(&global.src, argv[4]) != 0) {
 		printf("Usage: odp_l2fwd_simple eth0 eth1 01:02:03:04:05:06"
-		       " 07:08:09:0a:0b:0c\n");
+		       " 07:08:09:0a:0b:0c [-t sec]\n");
 		printf("Where eth0 and eth1 are the used interfaces"
 		       " (must have 2 of them)\n");
 		printf("And the hexadecimal numbers are destination MAC address"
 		       " and source MAC address\n");
 		exit(1);
 	}
+	if (argc == 7 && !strncmp(argv[5], "-t", 2))
+		wait_sec = atoi(argv[6]);
+
+	if (wait_sec)
+		printf("running test for %d sec\n", wait_sec);
 
 	if (odp_init_global(&instance, NULL, NULL)) {
 		printf("Error: ODP global init failed.\n");
@@ -233,5 +238,5 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	return g_ret;
+	return 0;
 }
