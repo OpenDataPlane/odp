@@ -24,14 +24,55 @@
 
 typedef unsigned __int128 u128_t;
 
-static inline u128_t atomic_load_u128(u128_t *atomic)
-{
-	return __atomic_load_n(atomic, __ATOMIC_RELAXED);
-}
-
 static inline void atomic_zero_u128(u128_t *atomic)
 {
 	__atomic_store_n(atomic, 0, __ATOMIC_RELAXED);
+}
+
+#if defined(__aarch64__)
+/* ARMv8 has atomic load-acq/store-rel instructions for a pair of
+ * 64bit of data. GCC atomic built-in for 128bits does not utilize these
+ * instructions but uses locks instead. Override GCC built-in for ARMv8.
+ */
+#include <odp_cpu.h>
+
+static inline int atomic_cas_rel_u128(u128_t *atomic, u128_t old_val,
+				      u128_t new_val)
+{
+	return __lockfree_compare_exchange_16((__int128 *)atomic,
+					      (__int128 *)&old_val,
+					      new_val,
+					      0,
+					      __ATOMIC_RELEASE,
+					      __ATOMIC_RELAXED);
+}
+
+static inline int atomic_cas_acq_u128(u128_t *atomic, u128_t old_val,
+				      u128_t new_val)
+{
+	return __lockfree_compare_exchange_16((__int128 *)atomic,
+					      (__int128 *)&old_val,
+					      new_val,
+					      0,
+					      __ATOMIC_ACQUIRE,
+					      __ATOMIC_RELAXED);
+}
+
+static inline u128_t atomic_load_u128(u128_t *atomic)
+{
+	return __lockfree_load_16((__int128 *)atomic, __ATOMIC_RELAXED);
+}
+
+static inline int atomic_is_lockfree_u128(void)
+{
+	return 1;
+}
+
+#else
+
+static inline u128_t atomic_load_u128(u128_t *atomic)
+{
+	return __atomic_load_n(atomic, __ATOMIC_RELAXED);
 }
 
 static inline int atomic_cas_rel_u128(u128_t *atomic, u128_t old_val,
@@ -51,6 +92,13 @@ static inline int atomic_cas_acq_u128(u128_t *atomic, u128_t old_val,
 					   __ATOMIC_ACQUIRE,
 					   __ATOMIC_RELAXED);
 }
+
+static inline int atomic_is_lockfree_u128(void)
+{
+	return __atomic_is_lock_free(16, NULL);
+}
+
+#endif
 
 #else
 
@@ -84,6 +132,11 @@ static inline int atomic_cas_acq_u128(u128_t *atomic, u128_t old_val,
 				      u128_t new_val)
 {
 	return atomic_cas_rel_u128(atomic, old_val, new_val);
+}
+
+static inline int atomic_is_lockfree_u128(void)
+{
+	return 0;
 }
 
 #endif
@@ -263,12 +316,10 @@ uint32_t queue_lf_init_global(uint32_t *queue_lf_size,
 			      queue_lf_func_t *lf_func)
 {
 	odp_shm_t shm;
-	bool lockfree = 0;
+	int lockfree;
 
 	/* 16 byte lockfree CAS operation is needed. */
-#ifdef __SIZEOF_INT128__
-	lockfree = __atomic_is_lock_free(16, NULL);
-#endif
+	lockfree = atomic_is_lockfree_u128();
 
 	ODP_DBG("\nLock-free queue init\n");
 	ODP_DBG("  u128 lock-free: %i\n\n", lockfree);
