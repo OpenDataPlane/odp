@@ -16,7 +16,9 @@
 #include <odp/api/plat/time_inlines.h>
 
 #include <odp_packet_io_internal.h>
-#include <odp_packet_socket.h>
+#include <odp_ethtool_stats.h>
+#include <odp_ethtool_rss.h>
+#include <odp_socket_common.h>
 #include <odp_debug_internal.h>
 #include <odp_errno_define.h>
 #include <protocols/eth.h>
