@@ -11,6 +11,8 @@
 
 #define CRC32C_INIT 0xffffffff
 #define CRC32C_XOR  0xffffffff
+#define CRC32_INIT  0xffffffff
+#define CRC32_XOR   0xffffffff
 
 typedef struct hash_test_vector_t {
 	const uint8_t  *data;
@@ -144,6 +146,65 @@ static const hash_test_vector_t crc32c_test_vector[] = {
 	}
 };
 
+static const hash_test_vector_t crc32_test_vector[] = {
+	{ .data = test_data_0,
+	  .len = sizeof(test_data_0),
+	  .result.u8 = {0xad, 0x55, 0x0a, 0x19}
+	},
+	{ .data = test_data_1,
+	  .len = sizeof(test_data_1),
+	  .result.u8 = {0x0b, 0xab, 0x6c, 0xff}
+	},
+	{ .data = test_data_2,
+	  .len = sizeof(test_data_2),
+	  .result.u8 = {0x8a, 0x7e, 0x26, 0x91}
+	},
+	{ .data = test_data_3,
+	  .len = sizeof(test_data_3),
+	  .result.u8 = {0x72, 0xef, 0xb0, 0x9a}
+	},
+	{ .data = test_data_4,
+	  .len = sizeof(test_data_4),
+	  .result.u8 = {0x12, 0x74, 0xe1, 0x51}
+	},
+	{ .data = test_data_5,
+	  .len = sizeof(test_data_5) - 1,
+	  .result.u8 = {0x11, 0xcd, 0x82, 0xed}
+	},
+	{ .data = test_data_6,
+	  .len = sizeof(test_data_6) - 1,
+	  .result.u8 = {0x50, 0x2a, 0xef, 0xae}
+	},
+	{ .data = test_data_7,
+	  .len = sizeof(test_data_7) - 1,
+	  .result.u8 = {0xe9, 0x25, 0x90, 0x51}
+	},
+	{ .data = test_data_8,
+	  .len = sizeof(test_data_8) - 1,
+	  .result.u8 = {0x43, 0xbe, 0xb7, 0xe8}
+	},
+	{ .data = test_data_9,
+	  .len = sizeof(test_data_9) - 1,
+	  .result.u8 = {0x6d, 0x48, 0x83, 0x9e}
+	},
+	{ .data = test_data_10,
+	  .len = sizeof(test_data_10) - 1,
+	  .result.u8 = {0xc2, 0x41, 0x24, 0x35}
+	},
+	{ .data = test_data_11,
+	  .len = sizeof(test_data_11) - 1,
+	  .result.u8 = {0xa6, 0x6a, 0x2a, 0x31}
+	},
+	{ .data = test_data_12,
+	  .len = sizeof(test_data_12) - 1,
+	  .result.u8 = {0xcd, 0x2a, 0x91, 0xde}
+	},
+	{ .data = test_data_13,
+	  .len = sizeof(test_data_13) - 1,
+	  .result.u8 = {0x26, 0x39, 0xf4, 0xcb}
+	}
+};
+
 static void hash_test_crc32c(void)
 {
 	uint32_t ret, result;
@@ -160,8 +221,25 @@ static void hash_test_crc32c(void)
 	}
 }
 
+static void hash_test_crc32(void)
+{
+	uint32_t ret, result;
+	int i;
+	int num = sizeof(crc32_test_vector) / sizeof(hash_test_vector_t);
+
+	for (i = 0; i < num; i++) {
+		ret = odp_hash_crc32(crc32_test_vector[i].data,
+				     crc32_test_vector[i].len,
+				     CRC32_INIT);
+
+		result = CRC32_XOR ^ ret;
+		CU_ASSERT(result == crc32_test_vector[i].result.u32);
+	}
+}
+
 odp_testinfo_t hash_suite[] = {
 	ODP_TEST_INFO(hash_test_crc32c),
+	ODP_TEST_INFO(hash_test_crc32),
 	ODP_TEST_INFO_NULL,
 };
 
