@@ -59,6 +59,7 @@
 #include <sys/mman.h>
 #include <sys/wait.h>
 #include <fdserver.h>
+#include <odp_libconfig_internal.h>
 
 #define FDSERVER_SOCKPATH_MAXLEN 255
 #define FDSERVER_SOCK_FORMAT "%s/%s/odp-%d-fdserver"
@@ -92,22 +93,57 @@ static pid_t start_fdserver_process(const char *sockpath)
 	return pid;
 }
 
+static int socket_exists(const char *path)
+{
+	struct stat statbuf;
+
+	if (stat(path, &statbuf) != 0)
+		return 0;
+
+	if (S_ISSOCK(statbuf.st_mode)) {
+		ODP_DBG("fdserver: Socket exists at %s\n", path);
+		return 1;
+	}
+
+	ODP_DBG("fdserver: File %s exists but is not a socket\n", path);
+
+	/* if it exists but it is not a socket, delete. What, too drastic? */
+	unlink(path);
+
+	return 0;
+}
+
 /*
  * Spawn the fdserver daemon
  */
 int _odp_fdserver_init_global(void)
 {
-	snprintf(fdserver_sockpath, sizeof(fdserver_sockpath),
-		 "/tmp/odp-%d-fdserver",
-		 odp_global_data.main_pid);
+	const char *path = NULL;
 
-	fdserver_pid = start_fdserver_process(fdserver_sockpath);
-	if (fdserver_pid == (pid_t)-1) {
-		ODP_ERR("Could not start fdserver\n");
-		return -1;
+	_odp_libconfig_lookup_ext_str("fdserver", "", "socket_path", &path);
+
+	if (path == NULL) {
+		snprintf(fdserver_sockpath, sizeof(fdserver_sockpath),
+			 "/tmp/odp-%d-fdserver",
+			 odp_global_data.main_pid);
+	} else {
+		if (strlen(path) < sizeof(fdserver_sockpath))
+			strncpy(fdserver_sockpath, path,
+				sizeof(fdserver_sockpath));
+		else
+			return 1;
 	}
 
-	sleep(1); /* FIXME: give time the server to start */
+	/* start server if socket does not exist */
+	if (!socket_exists(fdserver_sockpath)) {
+		ODP_PRINT("Starting fdserver socket at: %s\n", fdserver_sockpath);
+		fdserver_pid = start_fdserver_process(fdserver_sockpath);
+		if (fdserver_pid == (pid_t)-1) {
+			ODP_ERR("Could not start fdserver\n");
+			return -1;
+		}
+		sleep(1); /* FIXME: give time the server to start */
+	}
 
 	if (fdserver_init(fdserver_sockpath) != 0) {
 		ODP_ERR("Could not initialize fdserver\n");
@@ -125,9 +161,6 @@ int _odp_fdserver_term_global(void)
 {
 	if (fdserver_pid != -1)
 		kill(fdserver_pid, SIGHUP);
-
-	/* delete the UNIX domain socket: */
-	unlink(fdserver_sockpath);
 
 	return 0;
 }
