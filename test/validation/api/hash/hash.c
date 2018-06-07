@@ -72,6 +72,19 @@ static const uint8_t test_data_6[] = "abcdefgh";
 static const uint8_t test_data_7[] =
 	"The quick brown fox jumps over the lazy dog.";
 
+static const uint8_t test_data_8[]  = "a";
+
+static const uint8_t test_data_9[]  = "ab";
+
+static const uint8_t test_data_10[] = "abc";
+
+static const uint8_t test_data_11[] = "abcdefg";
+
+static const uint8_t test_data_12[] = "The five boxing wizards jump quickly.";
+
+/* String of the common "check" value. */
+static const uint8_t test_data_13[] = "123456789";
+
 static const hash_test_vector_t crc32c_test_vector[] = {
 	{ .data = test_data_0,
 	  .len = sizeof(test_data_0),
@@ -104,6 +117,30 @@ static const hash_test_vector_t crc32c_test_vector[] = {
 	{ .data = test_data_7,
 	  .len = sizeof(test_data_7) - 1,
 	  .result.u8 = {0xb3, 0x97, 0x00, 0x19}
+	},
+	{ .data = test_data_8,
+	  .len = sizeof(test_data_8) - 1,
+	  .result.u8 = {0x30, 0x43, 0xd0, 0xc1}
+	},
+	{ .data = test_data_9,
+	  .len = sizeof(test_data_9) - 1,
+	  .result.u8 = {0x36, 0x29, 0xa2, 0xe2}
+	},
+	{ .data = test_data_10,
+	  .len = sizeof(test_data_10) - 1,
+	  .result.u8 = {0xb7, 0x3f, 0x4b, 0x36}
+	},
+	{ .data = test_data_11,
+	  .len = sizeof(test_data_11) - 1,
+	  .result.u8 = {0x41, 0xf4, 0x27, 0xe6}
+	},
+	{ .data = test_data_12,
+	  .len = sizeof(test_data_12) - 1,
+	  .result.u8 = {0x9a, 0x05, 0xd3, 0xde}
+	},
+	{ .data = test_data_13,
+	  .len = sizeof(test_data_13) - 1,
+	  .result.u8 = {0x83, 0x92, 0x06, 0xe3}
 	}
 };
 
