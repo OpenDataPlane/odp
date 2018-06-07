@@ -158,6 +158,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_event.c \
 			   odp_fdserver.c \
 			   odp_hash.c \
+			   odp_hash_crc32.c \
 			   odp_impl.c \
 			   odp_init.c \
 			   odp_ipsec.c \
@@ -323,6 +324,7 @@ __LIB__libodp_linux_la_LIBADD += $(LIBCONFIG_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(DPDK_LIBS_LIBODP)
 __LIB__libodp_linux_la_LIBADD += $(PTHREAD_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(TIMER_LIBS)
+__LIB__libodp_linux_la_LIBADD += $(ZLIB_LIBS)
 
 if HAVE_PCAP
 __LIB__libodp_linux_la_LIBADD += $(PCAP_LIBS)
