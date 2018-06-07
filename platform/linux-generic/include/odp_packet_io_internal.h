@@ -221,8 +221,6 @@ extern const pktio_if_ops_t null_pktio_ops;
 extern const pktio_if_ops_t ipc_pktio_ops;
 extern const pktio_if_ops_t * const pktio_if_ops[];
 
-int sysfs_stats(pktio_entry_t *pktio_entry,
-		odp_pktio_stats_t *stats);
 int sock_stats_fd(pktio_entry_t *pktio_entry,
 		  odp_pktio_stats_t *stats,
 		  int fd);

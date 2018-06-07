@@ -7,7 +7,7 @@
 #include "config.h"
 
 #include <odp_api.h>
-#include <odp_packet_io_internal.h>
+#include <odp_sysfs_stats.h>
 #include <odp_errno_define.h>
 #include <errno.h>
 #include <string.h>
