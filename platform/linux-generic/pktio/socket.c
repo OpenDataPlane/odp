@@ -40,6 +40,7 @@
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_ethtool_stats.h>
+#include <odp_sysfs_stats.h>
 #include <odp_align_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_errno_define.h>
