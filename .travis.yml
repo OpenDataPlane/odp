@@ -382,14 +382,14 @@ jobs:
                           - ./bootstrap
                           - ./configure --enable-helper-linux $CROSS
                           - make -j $(nproc)
-                - stage: "build only"
-                  env: CROSS_ARCH="arm64"
-                  compiler: gcc
-                  install: true
-                  script:
-                          - ./bootstrap
-                          - ./configure --enable-helper-linux $CROSS
-                          - make -j $(nproc)
+                #- stage: "build only"
+                #  env: CROSS_ARCH="arm64"
+                #  compiler: gcc
+                #  install: true
+                #  script:
+                #          - ./bootstrap
+                #          - ./configure --enable-helper-linux $CROSS
+                #          - make -j $(nproc)
                 - stage: test
                   compiler: gcc
                   env: CROSS_ARCH="arm64"
