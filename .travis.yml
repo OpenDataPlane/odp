@@ -10,7 +10,6 @@
 language: c
 sudo: required
 dist: trusty
-group: deprecated-2017Q2
 stages:
   - "build only"
   - test
@@ -249,6 +248,9 @@ install:
             sudo insmod ./netmap/LINUX/netmap.ko
             EXTRA_CONF="$EXTRA_CONF --with-netmap-path=`pwd`/netmap"
           fi
+
+#	Allow forwaring on virtual interfaces used for testing
+        - sudo iptables --policy FORWARD ACCEPT
 
 script:
         - ./bootstrap
