@@ -26,6 +26,7 @@ extern "C" {
 #include <odp_align_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_io_ring_internal.h>
+#include <odp_packet_io_stats_common.h>
 #include <odp_queue_if.h>
 
 #include <odp_config_internal.h>
@@ -89,11 +90,7 @@ struct pktio_entry {
 	classifier_t cls;		/**< classifier linked with this pktio*/
 	odp_pktio_stats_t stats;	/**< statistic counters for pktio */
 	odp_proto_chksums_t in_chksums; /**< Checksums validation settings */
-	enum {
-		STATS_SYSFS = 0,
-		STATS_ETHTOOL,
-		STATS_UNSUPPORTED
-	} stats_type;
+	pktio_stats_type_t stats_type;
 	char name[PKTIO_NAME_LEN];	/**< name of pktio provided to
 					   pktio_open() */
 
@@ -220,11 +217,6 @@ extern const pktio_if_ops_t tap_pktio_ops;
 extern const pktio_if_ops_t null_pktio_ops;
 extern const pktio_if_ops_t ipc_pktio_ops;
 extern const pktio_if_ops_t * const pktio_if_ops[];
-
-int sock_stats_fd(pktio_entry_t *pktio_entry,
-		  odp_pktio_stats_t *stats,
-		  int fd);
-int sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd);
 
 /**
  * Try interrupt-driven receive
