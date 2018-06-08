@@ -31,8 +31,7 @@
 #include <odp_socket_common.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
-#include <odp_ethtool_stats.h>
-#include <odp_sysfs_stats.h>
+#include <odp_packet_io_stats.h>
 #include <odp_debug_internal.h>
 #include <odp_errno_define.h>
 #include <odp_classification_datamodel.h>
@@ -587,7 +586,6 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 {
 	int if_idx;
 	int ret = 0;
-	odp_pktio_stats_t cur_stats;
 
 	if (disable_pktio)
 		return -1;
@@ -651,21 +649,10 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 			goto error;
 	}
 
-	ret = ethtool_stats_get_fd(pkt_priv(pktio_entry)->sockfd,
-				   pktio_entry->s.name,
-				   &cur_stats);
-	if (ret != 0) {
-		ret = sysfs_stats(pktio_entry, &cur_stats);
-		if (ret != 0) {
-			pktio_entry->s.stats_type = STATS_UNSUPPORTED;
-			ODP_DBG("pktio: %s unsupported stats\n",
-				pktio_entry->s.name);
-		} else {
-			pktio_entry->s.stats_type = STATS_SYSFS;
-		}
-	} else {
-		pktio_entry->s.stats_type = STATS_ETHTOOL;
-	}
+	pktio_entry->s.stats_type = sock_stats_type_fd(pktio_entry,
+						       pkt_sock->sockfd);
+	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED)
+		ODP_DBG("pktio: %s unsupported stats\n", pktio_entry->s.name);
 
 	ret = sock_stats_reset_fd(pktio_entry,
 				  pkt_priv(pktio_entry)->sockfd);

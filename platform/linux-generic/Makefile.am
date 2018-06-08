@@ -113,6 +113,8 @@ noinst_HEADERS = \
 		  include/odp_packet_io_ring_internal.h \
 		  include/odp_packet_socket.h \
 		  include/odp_socket_common.h \
+		  include/odp_packet_io_stats_common.h \
+		  include/odp_packet_io_stats.h \
 		  include/odp_sysfs_stats.h \
 		  include/odp_ethtool_stats.h \
 		  include/odp_ethtool_rss.h \
@@ -204,6 +206,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_weak.c \
 			   pktio/stats/ethtool_stats.c \
 			   pktio/stats/sysfs_stats.c \
+			   pktio/stats/packet_io_stats.c \
 			   pktio/dpdk.c \
 			   pktio/dpdk_parse.c \
 			   pktio/socket_common.c \
