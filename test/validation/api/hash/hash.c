@@ -90,118 +90,118 @@ static const uint8_t test_data_13[] = "123456789";
 static const hash_test_vector_t crc32c_test_vector[] = {
 	{ .data = test_data_0,
 	  .len = sizeof(test_data_0),
-	  .result.u8 = {0xaa, 0x36, 0x91, 0x8a}
+	  .result.u32 = 0x8a9136aa
 	},
 	{ .data = test_data_1,
 	  .len = sizeof(test_data_1),
-	  .result.u8 = {0x43, 0xab, 0xa8, 0x62}
+	  .result.u32 = 0x62a8ab43
 	},
 	{ .data = test_data_2,
 	  .len = sizeof(test_data_2),
-	  .result.u8 = {0x4e, 0x79, 0xdd, 0x46}
+	  .result.u32 = 0x46dd794e
 	},
 	{ .data = test_data_3,
 	  .len = sizeof(test_data_3),
-	  .result.u8 = {0x5c, 0xdb, 0x3f, 0x11}
+	  .result.u32 = 0x113fdb5c
 	},
 	{ .data = test_data_4,
 	  .len = sizeof(test_data_4),
-	  .result.u8 = {0x56, 0x3a, 0x96, 0xd9}
+	  .result.u32 = 0xd9963a56
 	},
 	{ .data = test_data_5,
 	  .len = sizeof(test_data_5) - 1,
-	  .result.u8 = {0x31, 0x0a, 0xc8, 0x92}
+	  .result.u32 = 0x92c80a31
 	},
 	{ .data = test_data_6,
 	  .len = sizeof(test_data_6) - 1,
-	  .result.u8 = {0xb7, 0x21, 0x94, 0x0a}
+	  .result.u32 = 0x0a9421b7
 	},
 	{ .data = test_data_7,
 	  .len = sizeof(test_data_7) - 1,
-	  .result.u8 = {0xb3, 0x97, 0x00, 0x19}
+	  .result.u32 = 0x190097b3
 	},
 	{ .data = test_data_8,
 	  .len = sizeof(test_data_8) - 1,
-	  .result.u8 = {0x30, 0x43, 0xd0, 0xc1}
+	  .result.u32 = 0xc1d04330
 	},
 	{ .data = test_data_9,
 	  .len = sizeof(test_data_9) - 1,
-	  .result.u8 = {0x36, 0x29, 0xa2, 0xe2}
+	  .result.u32 = 0xe2a22936
 	},
 	{ .data = test_data_10,
 	  .len = sizeof(test_data_10) - 1,
-	  .result.u8 = {0xb7, 0x3f, 0x4b, 0x36}
+	  .result.u32 = 0x364b3fb7
 	},
 	{ .data = test_data_11,
 	  .len = sizeof(test_data_11) - 1,
-	  .result.u8 = {0x41, 0xf4, 0x27, 0xe6}
+	  .result.u32 = 0xe627f441
 	},
 	{ .data = test_data_12,
 	  .len = sizeof(test_data_12) - 1,
-	  .result.u8 = {0x9a, 0x05, 0xd3, 0xde}
+	  .result.u32 = 0xded3059a
 	},
 	{ .data = test_data_13,
 	  .len = sizeof(test_data_13) - 1,
-	  .result.u8 = {0x83, 0x92, 0x06, 0xe3}
+	  .result.u32 = 0xe3069283
 	}
 };
 
 static const hash_test_vector_t crc32_test_vector[] = {
 	{ .data = test_data_0,
 	  .len = sizeof(test_data_0),
-	  .result.u8 = {0xad, 0x55, 0x0a, 0x19}
+	  .result.u32 = 0x190a55ad
 	},
 	{ .data = test_data_1,
 	  .len = sizeof(test_data_1),
-	  .result.u8 = {0x0b, 0xab, 0x6c, 0xff}
+	  .result.u32 = 0xff6cab0b
 	},
 	{ .data = test_data_2,
 	  .len = sizeof(test_data_2),
-	  .result.u8 = {0x8a, 0x7e, 0x26, 0x91}
+	  .result.u32 = 0x91267e8a
 	},
 	{ .data = test_data_3,
 	  .len = sizeof(test_data_3),
-	  .result.u8 = {0x72, 0xef, 0xb0, 0x9a}
+	  .result.u32 = 0x9ab0ef72
 	},
 	{ .data = test_data_4,
 	  .len = sizeof(test_data_4),
-	  .result.u8 = {0x12, 0x74, 0xe1, 0x51}
+	  .result.u32 = 0x51e17412
 	},
 	{ .data = test_data_5,
 	  .len = sizeof(test_data_5) - 1,
-	  .result.u8 = {0x11, 0xcd, 0x82, 0xed}
+	  .result.u32 = 0xed82cd11
 	},
 	{ .data = test_data_6,
 	  .len = sizeof(test_data_6) - 1,
-	  .result.u8 = {0x50, 0x2a, 0xef, 0xae}
+	  .result.u32 = 0xaeef2a50
 	},
 	{ .data = test_data_7,
 	  .len = sizeof(test_data_7) - 1,
-	  .result.u8 = {0xe9, 0x25, 0x90, 0x51}
+	  .result.u32 = 0x519025e9
 	},
 	{ .data = test_data_8,
 	  .len = sizeof(test_data_8) - 1,
-	  .result.u8 = {0x43, 0xbe, 0xb7, 0xe8}
+	  .result.u32 = 0xe8b7be43
 	},
 	{ .data = test_data_9,
 	  .len = sizeof(test_data_9) - 1,
-	  .result.u8 = {0x6d, 0x48, 0x83, 0x9e}
+	  .result.u32 = 0x9e83486d
 	},
 	{ .data = test_data_10,
 	  .len = sizeof(test_data_10) - 1,
-	  .result.u8 = {0xc2, 0x41, 0x24, 0x35}
+	  .result.u32 = 0x352441c2
 	},
 	{ .data = test_data_11,
 	  .len = sizeof(test_data_11) - 1,
-	  .result.u8 = {0xa6, 0x6a, 0x2a, 0x31}
+	  .result.u32 = 0x312a6aa6
 	},
 	{ .data = test_data_12,
 	  .len = sizeof(test_data_12) - 1,
-	  .result.u8 = {0xcd, 0x2a, 0x91, 0xde}
+	  .result.u32 = 0xde912acd
 	},
 	{ .data = test_data_13,
 	  .len = sizeof(test_data_13) - 1,
-	  .result.u8 = {0x26, 0x39, 0xf4, 0xcb}
+	  .result.u32 = 0xcbf43926
 	}
 };
 
