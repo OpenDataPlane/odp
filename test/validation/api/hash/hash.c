@@ -9,6 +9,10 @@
 #include <odp_api.h>
 #include <odp_cunit_common.h>
 
+/* Commonly used CRC check string */
+#define CHECK_STR   "123456789"
+#define CHECK_LEN   9
+
 #define CRC32C_INIT 0xffffffff
 #define CRC32C_XOR  0xffffffff
 #define CRC32_INIT  0xffffffff
@@ -84,8 +88,7 @@ static const uint8_t test_data_11[] = "abcdefg";
 
 static const uint8_t test_data_12[] = "The five boxing wizards jump quickly.";
 
-/* String of the common "check" value. */
-static const uint8_t test_data_13[] = "123456789";
+static const uint8_t test_data_13[] = CHECK_STR;
 
 static const hash_test_vector_t crc32c_test_vector[] = {
 	{ .data = test_data_0,
@@ -237,9 +240,421 @@ static void hash_test_crc32(void)
 	}
 }
 
+/*
+ * Test various commonly used 32 bit CRCs. Used CRC names, parameters and
+ * check values can be found e.g. here:
+ * http://reveng.sourceforge.net/crc-catalogue
+ */
+static void hash_test_crc32_generic(void)
+{
+	uint64_t result_u64;
+	uint32_t result_u32, result;
+	int i, num;
+	odp_hash_crc_param_t crc_param;
+
+	memset(&crc_param, 0, sizeof(odp_hash_crc_param_t));
+	crc_param.width       = 32;
+	crc_param.xor_out     = 0;
+
+	/* CRC-32 */
+	crc_param.poly        = 0x04c11db7;
+	crc_param.reflect_in  = 1;
+	crc_param.reflect_out = 1;
+	num = sizeof(crc32_test_vector) / sizeof(hash_test_vector_t);
+
+	for (i = 0; i < num; i++) {
+		if (odp_hash_crc_gen64(crc32_test_vector[i].data,
+				       crc32_test_vector[i].len,
+				       CRC32_INIT,
+				       &crc_param, &result_u64)) {
+			printf("CRC-32 not supported\n.");
+			break;
+		}
+
+		result_u32 = CRC32_XOR ^ result_u64;
+		CU_ASSERT(result_u32 == crc32_test_vector[i].result.u32);
+	}
+
+	/* CRC-32C */
+	crc_param.poly        = 0x1edc6f41;
+	crc_param.reflect_in  = 1;
+	crc_param.reflect_out = 1;
+	num = sizeof(crc32c_test_vector) / sizeof(hash_test_vector_t);
+
+	for (i = 0; i < num; i++) {
+		if (odp_hash_crc_gen64(crc32c_test_vector[i].data,
+				       crc32c_test_vector[i].len,
+				       CRC32C_INIT,
+				       &crc_param, &result_u64)) {
+			printf("CRC-32C not supported\n.");
+			break;
+		}
+
+		result_u32 = CRC32C_XOR ^ result_u64;
+		CU_ASSERT(result_u32 == crc32c_test_vector[i].result.u32);
+	}
+
+	/* CRC-32/AUTOSAR */
+	crc_param.poly        = 0xf4acfb13;
+	crc_param.reflect_in  = 1;
+	crc_param.reflect_out = 1;
+	result = 0x1697d06a;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0xffffffff,
+			       &crc_param, &result_u64) == 0) {
+		result_u32 = 0xffffffff ^ result_u64;
+		CU_ASSERT(result_u32 == result);
+	} else {
+		printf("CRC-32/AUTOSAR not supported\n.");
+	}
+
+	/* CRC-32/BZIP2 */
+	crc_param.poly        = 0x04c11db7;
+	crc_param.reflect_in  = 0;
+	crc_param.reflect_out = 0;
+	result = 0xfc891918;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0xffffffff,
+			       &crc_param, &result_u64) == 0) {
+		result_u32 = 0xffffffff ^ result_u64;
+		CU_ASSERT(result_u32 == result);
+	} else {
+		printf("CRC-32/BZIP2 not supported\n.");
+	}
+
+	/* CRC-32D */
+	crc_param.poly        = 0xa833982b;
+	crc_param.reflect_in  = 1;
+	crc_param.reflect_out = 1;
+	result = 0x87315576;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0xffffffff,
+			       &crc_param, &result_u64) == 0) {
+		result_u32 = 0xffffffff ^ result_u64;
+		CU_ASSERT(result_u32 == result);
+	} else {
+		printf("CRC-32D not supported\n.");
+	}
+
+	/* CRC-32/MPEG-2 */
+	crc_param.poly        = 0x04c11db7;
+	crc_param.reflect_in  = 0;
+	crc_param.reflect_out = 0;
+	result = 0x0376e6e7;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0xffffffff,
+			       &crc_param, &result_u64) == 0) {
+		result_u32 = 0x0 ^ result_u64;
+		CU_ASSERT(result_u32 == result);
+	} else {
+		printf("CRC-32/MPEG-2 not supported\n.");
+	}
+
+	/* CRC-32/POSIX */
+	crc_param.poly        = 0x04c11db7;
+	crc_param.reflect_in  = 0;
+	crc_param.reflect_out = 0;
+	result = 0x765e7680;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0x0,
+			       &crc_param, &result_u64) == 0) {
+		result_u32 = 0xffffffff ^ result_u64;
+		CU_ASSERT(result_u32 == result);
+	} else {
+		printf("CRC-32/POSIX not supported\n.");
+	}
+
+	/* CRC-32/POSIX - with XOR parameter used */
+	crc_param.xor_out = 0xffffffff;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0x0,
+			       &crc_param, &result_u64) == 0) {
+		result_u32 = result_u64;
+		CU_ASSERT(result_u32 == result);
+	} else {
+		printf("CRC-32/POSIX (with XOR) not supported\n.");
+	}
+
+	crc_param.xor_out = 0;
+
+	/* CRC-32Q */
+	crc_param.poly        = 0x814141ab;
+	crc_param.reflect_in  = 0;
+	crc_param.reflect_out = 0;
+	result = 0x3010bf7f;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0x0,
+			       &crc_param, &result_u64) == 0) {
+		result_u32 = 0x0 ^ result_u64;
+		CU_ASSERT(result_u32 == result);
+	} else {
+		printf("CRC-32Q not supported\n.");
+	}
+
+	/* CRC-32/JAMCRC */
+	crc_param.poly        = 0x04c11db7;
+	crc_param.reflect_in  = 1;
+	crc_param.reflect_out = 1;
+	result = 0x340bc6d9;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0xffffffff,
+			       &crc_param, &result_u64) == 0) {
+		result_u32 = 0x0 ^ result_u64;
+		CU_ASSERT(result_u32 == result);
+	} else {
+		printf("CRC-32/JAMCRC not supported\n.");
+	}
+
+	/* CRC-32/XFER */
+	crc_param.poly        = 0x000000af;
+	crc_param.reflect_in  = 0;
+	crc_param.reflect_out = 0;
+	result = 0xbd0be338;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0x0,
+			       &crc_param, &result_u64) == 0) {
+		result_u32 = 0x0 ^ result_u64;
+		CU_ASSERT(result_u32 == result);
+	} else {
+		printf("CRC-32/XFER not supported\n.");
+	}
+}
+
+static void hash_test_crc24_generic(void)
+{
+	uint64_t result_u64;
+	uint32_t result_u32, result;
+	odp_hash_crc_param_t crc_param;
+
+	memset(&crc_param, 0, sizeof(odp_hash_crc_param_t));
+	crc_param.width       = 24;
+	crc_param.xor_out     = 0;
+
+	/* CRC-24 */
+	crc_param.poly        = 0x864cfb;
+	crc_param.reflect_in  = 0;
+	crc_param.reflect_out = 0;
+	result = 0x21cf02;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0xb704ce,
+			       &crc_param, &result_u64) == 0) {
+		result_u32 = 0x0 ^ result_u64;
+		CU_ASSERT(result_u32 == result);
+	} else {
+		printf("CRC-24 not supported\n.");
+	}
+
+	/* CRC-24/FLEXRAY-A */
+	crc_param.poly        = 0x5d6dcb;
+	crc_param.reflect_in  = 0;
+	crc_param.reflect_out = 0;
+	result = 0x7979bd;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0xfedcba,
+			       &crc_param, &result_u64) == 0) {
+		result_u32 = 0x0 ^ result_u64;
+		CU_ASSERT(result_u32 == result);
+	} else {
+		printf("CRC-24/FLEXRAY-A not supported\n.");
+	}
+
+	/* CRC-24/FLEXRAY-B */
+	result = 0x1f23b8;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0xabcdef,
+			       &crc_param, &result_u64) == 0) {
+		result_u32 = 0x0 ^ result_u64;
+		CU_ASSERT(result_u32 == result);
+	} else {
+		printf("CRC-24/FLEXRAY-B not supported\n.");
+	}
+
+	/* CRC-24/INTERLAKEN */
+	crc_param.poly        = 0x328b63;
+	crc_param.reflect_in  = 0;
+	crc_param.reflect_out = 0;
+	result = 0xb4f3e6;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0xffffff,
+			       &crc_param, &result_u64) == 0) {
+		result_u32 = 0xffffff ^ result_u64;
+		CU_ASSERT(result_u32 == result);
+	} else {
+		printf("CRC-24/INTERLAKEN not supported\n.");
+	}
+
+	/* CRC-24/LTE-A */
+	crc_param.poly        = 0x864cfb;
+	crc_param.reflect_in  = 0;
+	crc_param.reflect_out = 0;
+	result = 0xcde703;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0x0,
+			       &crc_param, &result_u64) == 0) {
+		result_u32 = 0x0 ^ result_u64;
+		CU_ASSERT(result_u32 == result);
+	} else {
+		printf("CRC-24/LTE-A not supported\n.");
+	}
+
+	/* CRC-24/LTE-B */
+	crc_param.poly        = 0x800063;
+	crc_param.reflect_in  = 0;
+	crc_param.reflect_out = 0;
+	result = 0x23ef52;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0x0,
+			       &crc_param, &result_u64) == 0) {
+		result_u32 = 0x0 ^ result_u64;
+		CU_ASSERT(result_u32 == result);
+	} else {
+		printf("CRC-24/LTE-B not supported\n.");
+	}
+
+	/* CRC-24/BLE */
+	crc_param.poly        = 0x00065b;
+	crc_param.reflect_in  = 1;
+	crc_param.reflect_out = 1;
+	result = 0xc25a56;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0x555555,
+			       &crc_param, &result_u64) == 0) {
+		result_u32 = 0x0 ^ result_u64;
+		CU_ASSERT(result_u32 == result);
+	} else {
+		printf("CRC-24/BLE not supported\n.");
+	}
+}
+
+static void hash_test_crc16_generic(void)
+{
+	uint64_t result_u64;
+	uint16_t result_u16, result;
+	odp_hash_crc_param_t crc_param;
+
+	memset(&crc_param, 0, sizeof(odp_hash_crc_param_t));
+	crc_param.width       = 16;
+	crc_param.xor_out     = 0;
+
+	/* CRC-16/ARC */
+	crc_param.poly        = 0x8005;
+	crc_param.reflect_in  = 1;
+	crc_param.reflect_out = 1;
+	result = 0xbb3d;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0x0,
+			       &crc_param, &result_u64) == 0) {
+		result_u16 = 0x0 ^ result_u64;
+		CU_ASSERT(result_u16 == result);
+	} else {
+		printf("CRC-16/ARC not supported\n.");
+	}
+
+	/* CRC-16/UMTS */
+	crc_param.poly        = 0x8005;
+	crc_param.reflect_in  = 0;
+	crc_param.reflect_out = 0;
+	result = 0xfee8;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0x0,
+			       &crc_param, &result_u64) == 0) {
+		result_u16 = 0x0 ^ result_u64;
+		CU_ASSERT(result_u16 == result);
+	} else {
+		printf("CRC-16/UMTS not supported\n.");
+	}
+
+	/* CRC-16/CDMA2000 */
+	crc_param.poly        = 0xc867;
+	crc_param.reflect_in  = 0;
+	crc_param.reflect_out = 0;
+	result = 0x4c06;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0xffff,
+			       &crc_param, &result_u64) == 0) {
+		result_u16 = 0x0 ^ result_u64;
+		CU_ASSERT(result_u16 == result);
+	} else {
+		printf("CRC-16/CDMA2000 not supported\n.");
+	}
+
+	/* CRC-16/GENIBUS */
+	crc_param.poly        = 0x1021;
+	crc_param.reflect_in  = 0;
+	crc_param.reflect_out = 0;
+	result = 0xd64e;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0xffff,
+			       &crc_param, &result_u64) == 0) {
+		result_u16 = 0xffff ^ result_u64;
+		CU_ASSERT(result_u16 == result);
+	} else {
+		printf("CRC-16/GENIBUS not supported\n.");
+	}
+
+	/* CRC-16/T10-DIF */
+	crc_param.poly        = 0x8bb7;
+	crc_param.reflect_in  = 0;
+	crc_param.reflect_out = 0;
+	result = 0xd0db;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0x0,
+			       &crc_param, &result_u64) == 0) {
+		result_u16 = 0x0 ^ result_u64;
+		CU_ASSERT(result_u16 == result);
+	} else {
+		printf("CRC-16/T10-DIF not supported\n.");
+	}
+
+	/* CRC-16/USB */
+	crc_param.poly        = 0x8005;
+	crc_param.reflect_in  = 1;
+	crc_param.reflect_out = 1;
+	result = 0xb4c8;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0xffff,
+			       &crc_param, &result_u64) == 0) {
+		result_u16 = 0xffff ^ result_u64;
+		CU_ASSERT(result_u16 == result);
+	} else {
+		printf("CRC-16/USB not supported\n.");
+	}
+
+	/* CRC-16/CCITT */
+	crc_param.poly        = 0x1021;
+	crc_param.reflect_in  = 1;
+	crc_param.reflect_out = 1;
+	result = 0x2189;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0x0,
+			       &crc_param, &result_u64) == 0) {
+		result_u16 = 0x0 ^ result_u64;
+		CU_ASSERT(result_u16 == result);
+	} else {
+		printf("CRC-16/CCITT not supported\n.");
+	}
+
+	/* CRC-16/X-25 */
+	crc_param.poly        = 0x1021;
+	crc_param.reflect_in  = 1;
+	crc_param.reflect_out = 1;
+	result = 0x906e;
+
+	if (odp_hash_crc_gen64(CHECK_STR, CHECK_LEN, 0xffff,
+			       &crc_param, &result_u64) == 0) {
+		result_u16 = 0xffff ^ result_u64;
+		CU_ASSERT(result_u16 == result);
+	} else {
+		printf("CRC-16/X25 not supported\n.");
+	}
+}
+
 odp_testinfo_t hash_suite[] = {
 	ODP_TEST_INFO(hash_test_crc32c),
 	ODP_TEST_INFO(hash_test_crc32),
+	ODP_TEST_INFO(hash_test_crc32_generic),
+	ODP_TEST_INFO(hash_test_crc24_generic),
+	ODP_TEST_INFO(hash_test_crc16_generic),
 	ODP_TEST_INFO_NULL,
 };
 
