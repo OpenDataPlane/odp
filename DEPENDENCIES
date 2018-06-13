@@ -19,7 +19,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 3. Required packages
 
-   Libraries currently required to link: openssl, libatomic, libconfig, zlib
+   Libraries currently required to link: openssl, libatomic, libconfig
 
 3.1 OpenSSL native compile
 

@@ -11,7 +11,6 @@ m4_include([platform/linux-generic/m4/odp_pcap.m4])
 m4_include([platform/linux-generic/m4/odp_pcapng.m4])
 m4_include([platform/linux-generic/m4/odp_netmap.m4])
 m4_include([platform/linux-generic/m4/odp_dpdk.m4])
-m4_include([platform/linux-generic/m4/odp_zlib.m4])
 ODP_SCHEDULER
 
 m4_include([platform/linux-generic/m4/performance.m4])
