@@ -3,6 +3,7 @@ include $(top_srcdir)/test/Makefile.inc
 TESTS_ENVIRONMENT += TEST_DIR=${builddir}
 
 EXECUTABLES = odp_bench_packet \
+	      odp_cpu_bench \
 	      odp_crypto \
 	      odp_ipsec \
 	      odp_pktio_perf \
@@ -32,6 +33,7 @@ endif
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 
 odp_bench_packet_SOURCES = odp_bench_packet.c
+odp_cpu_bench_SOURCES = odp_cpu_bench.c
 odp_crypto_SOURCES = odp_crypto.c
 odp_ipsec_SOURCES = odp_ipsec.c
 odp_pktio_ordered_SOURCES = odp_pktio_ordered.c dummy_crc.h

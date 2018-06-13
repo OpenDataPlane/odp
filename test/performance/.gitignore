@@ -2,6 +2,7 @@
 *.trs
 odp_atomic
 odp_bench_packet
+odp_cpu_bench
 odp_crypto
 odp_ipsec
 odp_l2fwd
