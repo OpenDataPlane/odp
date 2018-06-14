@@ -81,17 +81,6 @@ AC_TYPE_INT32_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 
-#########################################################################
-# Get GCC version
-#########################################################################
-
-AX_COMPILER_VERSION
-CC_VERSION=$ax_cv_c_compiler_version
-
-CC_VERSION_MAJOR=$(echo $CC_VERSION | cut -d'.' -f1)
-CC_VERSION_MINOR=$(echo $CC_VERSION | cut -d'.' -f2)
-CC_VERSION_PATCH=$(echo $CC_VERSION | cut -d'.' -f3)
-
 ##########################################################################
 # Default warning setup
 ##########################################################################
@@ -122,13 +111,7 @@ ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
 ##########################################################################
 # Check if compiler supports cmpxchng16 on x86-based architectures
 ##########################################################################
-case "${host}" in
-  i?86* | x86*)
-  if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
-     ODP_CHECK_CFLAG([-mcx16])
-  fi
-  ;;
-esac
+ODP_CHECK_CFLAG([-mcx16])
 
 ##########################################################################
 # Allow valgrind suite to run against the defined tests
@@ -376,6 +359,8 @@ AC_SUBST([CPPFLAGS])
 AC_SUBST([CFLAGS])
 AC_SUBST([LDFLAGS])
 AC_SUBST([EXEEXT])
+
+CC_VERSION=$($CC --version | head -n 1)
 
 AC_OUTPUT
 AC_MSG_RESULT([
