@@ -127,6 +127,7 @@ noinst_HEADERS = \
 		  include/odp_queue_lf.h \
 		  include/odp_queue_scalable_internal.h \
 		  include/odp_ring_internal.h \
+		  include/odp_ring_spsc_internal.h \
 		  include/odp_ring_st_internal.h \
 		  include/odp_schedule_if.h \
 		  include/odp_schedule_scalable_config.h \
