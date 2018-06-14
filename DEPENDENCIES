@@ -8,14 +8,15 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
    automake
    autoconf
+   autoconf-archive
    libtool
    pkg-config
 
    On Debian/Ubuntu systems:
-   $ sudo apt-get install automake autoconf libtool pkg-config
+   $ sudo apt-get install automake autoconf libtool pkg-config autoconf-archive
 
    On CentOS/RedHat/Fedora systems:
-   $ sudo yum install automake autoconf libtool pkgconfig
+   $ sudo yum install automake autoconf libtool pkgconfig autoconf-archive
 
 3. Required packages
 

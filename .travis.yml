@@ -20,7 +20,7 @@ addons:
                 packages:
                         - gcc
                         - clang-3.8
-                        - automake autoconf libtool libssl-dev graphviz mscgen
+                        - automake autoconf autoconf-archive libtool libssl-dev graphviz mscgen
                         - libconfig-dev
                         - codespell
                         - libpcap-dev
