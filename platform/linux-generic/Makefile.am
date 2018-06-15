@@ -182,6 +182,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_queue_if.c \
 			   odp_queue_lf.c \
 			   odp_queue_scalable.c \
+			   odp_queue_spsc.c \
 			   odp_random.c \
 			   odp_rwlock.c \
 			   odp_rwlock_recursive.c \
