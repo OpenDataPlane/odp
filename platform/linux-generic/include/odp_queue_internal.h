@@ -23,6 +23,7 @@ extern "C" {
 #include <odp/api/ticketlock.h>
 #include <odp_config_internal.h>
 #include <odp_ring_st_internal.h>
+#include <odp_ring_spsc_internal.h>
 #include <odp_queue_lf.h>
 
 #define QUEUE_STATUS_FREE         0
@@ -33,7 +34,10 @@ extern "C" {
 
 struct queue_entry_s {
 	odp_ticketlock_t  ODP_ALIGNED_CACHE lock;
-	ring_st_t         ring_st;
+	union {
+		ring_st_t         ring_st;
+		ring_spsc_t       ring_spsc;
+	};
 	int               status;
 
 	queue_enq_fn_t       ODP_ALIGNED_CACHE enqueue;
@@ -48,6 +52,7 @@ struct queue_entry_s {
 	odp_pktin_queue_t pktin;
 	odp_pktout_queue_t pktout;
 	void             *queue_lf;
+	int               spsc;
 	char              name[ODP_QUEUE_NAME_LEN];
 };
 
@@ -90,6 +95,8 @@ static inline odp_queue_t queue_from_index(uint32_t queue_id)
 {
 	return (odp_queue_t)qentry_from_index(queue_id);
 }
+
+void queue_spsc_init(queue_entry_t *queue, uint32_t queue_size);
 
 #ifdef __cplusplus
 }
