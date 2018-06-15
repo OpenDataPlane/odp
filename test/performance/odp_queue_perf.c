@@ -18,6 +18,7 @@ typedef struct test_options_t {
 	uint32_t num_event;
 	uint32_t num_round;
 	odp_nonblocking_t nonblock;
+	int single;
 
 } test_options_t;
 
@@ -33,6 +34,7 @@ static void print_usage(void)
 	       "  -r, --num_round        Number of rounds\n"
 	       "  -l, --lockfree         Lockfree queues\n"
 	       "  -w, --waitfree         Waitfree queues\n"
+	       "  -s, --single           Single producer, single consumer\n"
 	       "  -h, --help             This help\n"
 	       "\n");
 }
@@ -49,16 +51,18 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"num_round", required_argument, NULL, 'r'},
 		{"lockfree",  no_argument,       NULL, 'l'},
 		{"waitfree",  no_argument,       NULL, 'w'},
+		{"single",    no_argument,       NULL, 's'},
 		{"help",      no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+q:e:r:lwh";
+	static const char *shortopts = "+q:e:r:lwsh";
 
 	test_options->num_queue = 1;
 	test_options->num_event = 1;
 	test_options->num_round = 1000;
 	test_options->nonblock  = ODP_BLOCKING;
+	test_options->single    = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -81,6 +85,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 'w':
 			test_options->nonblock = ODP_NONBLOCKING_WF;
+			break;
+		case 's':
+			test_options->single = 1;
 			break;
 		case 'h':
 			/* fall through */
@@ -209,6 +216,11 @@ static int test_queue(test_options_t *test_options)
 	queue_param.type        = ODP_QUEUE_TYPE_PLAIN;
 	queue_param.nonblocking = nonblock;
 	queue_param.size        = num_event;
+
+	if (test_options->single) {
+		queue_param.enq_mode = ODP_QUEUE_OP_MT_UNSAFE;
+		queue_param.deq_mode = ODP_QUEUE_OP_MT_UNSAFE;
+	}
 
 	for (i = 0; i < num_queue; i++) {
 		queue[i] = odp_queue_create(NULL, &queue_param);
