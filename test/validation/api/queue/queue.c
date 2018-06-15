@@ -224,7 +224,9 @@ static odp_event_t dequeue_event(odp_queue_t queue)
 	return ev;
 }
 
-static void queue_test_lockfree(void)
+static void test_burst(odp_nonblocking_t nonblocking,
+		       odp_queue_op_mode_t enq_mode,
+		       odp_queue_op_mode_t deq_mode)
 {
 	odp_queue_param_t param;
 	odp_queue_t queue;
@@ -237,12 +239,16 @@ static void queue_test_lockfree(void)
 
 	CU_ASSERT_FATAL(odp_queue_capability(&capa) == 0);
 
-	if (capa.plain.lockfree.max_num == 0) {
-		printf("  NO LOCKFREE QUEUES. Test skipped.\n");
-		return;
-	}
+	max_burst = capa.plain.max_size;
 
-	max_burst = capa.plain.lockfree.max_size;
+	if (nonblocking == ODP_NONBLOCKING_LF) {
+		if (capa.plain.lockfree.max_num == 0) {
+			printf("  NO LOCKFREE QUEUES. Test skipped.\n");
+			return;
+		}
+
+		max_burst = capa.plain.lockfree.max_size;
+	}
 
 	if (max_burst == 0 || max_burst > MAX_NUM_EVENT)
 		max_burst = MAX_NUM_EVENT;
@@ -252,10 +258,12 @@ static void queue_test_lockfree(void)
 
 	odp_queue_param_init(&param);
 	param.type        = ODP_QUEUE_TYPE_PLAIN;
-	param.nonblocking = ODP_NONBLOCKING_LF;
+	param.nonblocking = nonblocking;
 	param.size        = max_burst;
+	param.enq_mode    = enq_mode;
+	param.deq_mode    = deq_mode;
 
-	queue = odp_queue_create("lockfree_queue", &param);
+	queue = odp_queue_create("burst test", &param);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
 	CU_ASSERT(odp_queue_deq(queue) == ODP_EVENT_INVALID);
@@ -297,6 +305,48 @@ static void queue_test_lockfree(void)
 	}
 
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
+}
+
+static void queue_test_burst(void)
+{
+	test_burst(ODP_BLOCKING, ODP_QUEUE_OP_MT, ODP_QUEUE_OP_MT);
+}
+
+static void queue_test_burst_spmc(void)
+{
+	test_burst(ODP_BLOCKING, ODP_QUEUE_OP_MT_UNSAFE, ODP_QUEUE_OP_MT);
+}
+
+static void queue_test_burst_mpsc(void)
+{
+	test_burst(ODP_BLOCKING, ODP_QUEUE_OP_MT, ODP_QUEUE_OP_MT_UNSAFE);
+}
+
+static void queue_test_burst_spsc(void)
+{
+	test_burst(ODP_BLOCKING, ODP_QUEUE_OP_MT_UNSAFE,
+		   ODP_QUEUE_OP_MT_UNSAFE);
+}
+
+static void queue_test_burst_lf(void)
+{
+	test_burst(ODP_NONBLOCKING_LF, ODP_QUEUE_OP_MT, ODP_QUEUE_OP_MT);
+}
+
+static void queue_test_burst_lf_spmc(void)
+{
+	test_burst(ODP_NONBLOCKING_LF, ODP_QUEUE_OP_MT_UNSAFE, ODP_QUEUE_OP_MT);
+}
+
+static void queue_test_burst_lf_mpsc(void)
+{
+	test_burst(ODP_NONBLOCKING_LF, ODP_QUEUE_OP_MT, ODP_QUEUE_OP_MT_UNSAFE);
+}
+
+static void queue_test_burst_lf_spsc(void)
+{
+	test_burst(ODP_NONBLOCKING_LF, ODP_QUEUE_OP_MT_UNSAFE,
+		   ODP_QUEUE_OP_MT_UNSAFE);
 }
 
 static void queue_test_param(void)
@@ -669,7 +719,14 @@ static void queue_test_mt_plain_nonblock_lf(void)
 odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_capa),
 	ODP_TEST_INFO(queue_test_mode),
-	ODP_TEST_INFO(queue_test_lockfree),
+	ODP_TEST_INFO(queue_test_burst),
+	ODP_TEST_INFO(queue_test_burst_spmc),
+	ODP_TEST_INFO(queue_test_burst_mpsc),
+	ODP_TEST_INFO(queue_test_burst_spsc),
+	ODP_TEST_INFO(queue_test_burst_lf),
+	ODP_TEST_INFO(queue_test_burst_lf_spmc),
+	ODP_TEST_INFO(queue_test_burst_lf_mpsc),
+	ODP_TEST_INFO(queue_test_burst_lf_spsc),
 	ODP_TEST_INFO(queue_test_param),
 	ODP_TEST_INFO(queue_test_info),
 	ODP_TEST_INFO(queue_test_mt_plain_block),
