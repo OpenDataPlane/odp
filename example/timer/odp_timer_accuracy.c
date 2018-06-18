@@ -111,8 +111,8 @@ static int start_timers(test_global_t *test_global)
 	odp_timer_t timer;
 	odp_queue_t queue;
 	odp_queue_param_t queue_param;
-	uint64_t tick, first_tick, period_tick, offset_tick;
-	uint64_t period_ns, res_ns, first_ns, res_capa;
+	uint64_t tick, start_tick;
+	uint64_t period_ns, res_ns, start_ns, time_ns, res_capa;
 	odp_event_t event;
 	odp_timeout_t timeout;
 	odp_timer_set_t ret;
@@ -204,9 +204,6 @@ static int start_timers(test_global_t *test_global)
 	odp_timer_pool_start();
 
 	test_global->timer_pool = timer_pool;
-	first_tick  = 0;
-	offset_tick = odp_timer_ns_to_tick(timer_pool, START_OFFSET_NS);
-	period_tick = odp_timer_ns_to_tick(timer_pool, period_ns);
 
 	for (i = 0; i < num; i++) {
 		timer = odp_timer_alloc(timer_pool, queue, NULL);
@@ -218,6 +215,8 @@ static int start_timers(test_global_t *test_global)
 
 		test_global->timer[i] = timer;
 	}
+
+	start_tick = 0;
 
 	for (i = 0; i < num; i++) {
 		timer = test_global->timer[i];
@@ -231,13 +230,14 @@ static int start_timers(test_global_t *test_global)
 		event = odp_timeout_to_event(timeout);
 
 		if (i == 0) {
-			first_tick = odp_timer_current_tick(timer_pool);
+			start_tick = odp_timer_current_tick(timer_pool);
 			time       = odp_time_local();
-			first_ns   = odp_time_to_ns(time);
-			test_global->first_ns = first_ns + START_OFFSET_NS;
+			start_ns   = odp_time_to_ns(time);
+			test_global->first_ns = start_ns + START_OFFSET_NS;
 		}
 
-		tick = first_tick + offset_tick + (i * period_tick);
+		time_ns = test_global->first_ns + (i * period_ns);
+		tick = start_tick + odp_timer_ns_to_tick(timer_pool, time_ns);
 		ret = odp_timer_set_abs(timer, tick, &event);
 
 		if (ret != ODP_TIMER_SUCCESS) {
