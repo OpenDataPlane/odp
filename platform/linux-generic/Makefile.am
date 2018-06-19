@@ -163,6 +163,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_fdserver.c \
 			   odp_hash_crc32.c \
 			   odp_hash_crc32c.c \
+			   odp_hash_crc_gen.c \
 			   odp_impl.c \
 			   odp_init.c \
 			   odp_ipsec.c \
