@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <odp_api.h>
 #include "odp_cunit_common.h"
+#include "test_debug.h"
 #include <odp/helper/odph_api.h>
 
 #include <CUnit/TestDB.h>
@@ -27,6 +28,7 @@
 #endif
 
 /* Globals */
+static int allow_skip_result;
 static odph_odpthread_t thread_tbl[MAX_WORKERS];
 static odp_instance_t instance;
 static char *progname;
@@ -393,7 +395,21 @@ int odp_cunit_register(odp_suiteinfo_t testsuites[])
  */
 int odp_cunit_parse_options(int argc, char *argv[])
 {
+	const char *env = getenv("CI");
+
 	progname = argv[0];
 	odph_parse_options(argc, argv);
+
+	if (env && !strcmp(env, "true")) {
+		allow_skip_result = 1;
+		LOG_DBG("\nWARNING: test result can be used for code coverage only.\n"
+			"CI=true env variable is set!\n");
+	}
+
 	return 0;
+}
+
+int odp_cunit_ret(int val)
+{
+	return allow_skip_result ? 0 : val;
 }
