@@ -556,6 +556,21 @@ static void queue_test_pair_spsc(void)
 	test_pair(ODP_BLOCKING, ODP_QUEUE_OP_MT_UNSAFE, ODP_QUEUE_OP_MT_UNSAFE);
 }
 
+static void queue_test_pair_lf(void)
+{
+	test_pair(ODP_NONBLOCKING_LF, ODP_QUEUE_OP_MT, ODP_QUEUE_OP_MT);
+}
+
+static void queue_test_pair_lf_spmc(void)
+{
+	test_pair(ODP_NONBLOCKING_LF, ODP_QUEUE_OP_MT_UNSAFE, ODP_QUEUE_OP_MT);
+}
+
+static void queue_test_pair_lf_mpsc(void)
+{
+	test_pair(ODP_NONBLOCKING_LF, ODP_QUEUE_OP_MT, ODP_QUEUE_OP_MT_UNSAFE);
+}
+
 static void queue_test_pair_lf_spsc(void)
 {
 	test_pair(ODP_NONBLOCKING_LF, ODP_QUEUE_OP_MT_UNSAFE,
@@ -944,6 +959,9 @@ odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_pair_spmc),
 	ODP_TEST_INFO(queue_test_pair_mpsc),
 	ODP_TEST_INFO(queue_test_pair_spsc),
+	ODP_TEST_INFO(queue_test_pair_lf),
+	ODP_TEST_INFO(queue_test_pair_lf_spmc),
+	ODP_TEST_INFO(queue_test_pair_lf_mpsc),
 	ODP_TEST_INFO(queue_test_pair_lf_spsc),
 	ODP_TEST_INFO(queue_test_param),
 	ODP_TEST_INFO(queue_test_info),
