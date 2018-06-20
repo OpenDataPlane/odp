@@ -77,9 +77,12 @@ static pid_t fdserver_pid = (pid_t)-1;
 static pid_t start_fdserver_process(const char *sockpath)
 {
 	/* FIXME */
-	const char *binary =
-		"/tmp/build-odp/platform/linux-generic/fdserver/src/fdserver";
+	const char *binary = NULL;
 	pid_t pid;
+
+	_odp_libconfig_lookup_ext_str("fdserver", "", "binary_path", &binary);
+	if (binary == NULL)
+		return -1;
 
 	pid = fork();
 	if (pid == -1)
@@ -136,7 +139,8 @@ int _odp_fdserver_init_global(void)
 
 	/* start server if socket does not exist */
 	if (!socket_exists(fdserver_sockpath)) {
-		ODP_PRINT("Starting fdserver socket at: %s\n", fdserver_sockpath);
+		ODP_PRINT("Starting fdserver socket at: %s\n",
+			  fdserver_sockpath);
 		fdserver_pid = start_fdserver_process(fdserver_sockpath);
 		if (fdserver_pid == (pid_t)-1) {
 			ODP_ERR("Could not start fdserver\n");

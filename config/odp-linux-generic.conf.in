@@ -56,3 +56,8 @@ sched_basic: {
 	# value is the number of threads using the scheduler.
 	prio_spread = 4
 }
+
+fdserver: {
+	socket_path = "/tmp/fdserver_socket"
+	binary_path = "@bindir@/fdserver"
+}

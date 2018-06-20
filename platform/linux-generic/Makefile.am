@@ -21,6 +21,18 @@ AM_CPPFLAGS +=  $(NETMAP_CPPFLAGS)
 AM_CFLAGS +=  $(LIBCONFIG_CFLAGS)
 
 DISTCLEANFILES = include/odp_libconfig_config.h
+CLEANFILES = $(top_dir)/config/odp-$(with_platform).conf
+
+do_subst = $(SED) \
+	-e 's|[@]prefix[@]|$(prefix)|g' \
+	-e 's|[@]exec_prefix[@]|$(exec_prefix)|g' \
+	-e 's|[@]bindir[@]|$(bindir)|g' \
+	-e 's|[@]datarootdir[@]|$(datarootdir)|g' \
+	< "$<" > "$@"
+
+$(top_srcdir)/config/odp-$(with_platform).conf: $(top_srcdir)/config/odp-$(with_platform).conf.in
+	$(do_subst)
+
 include/odp_libconfig_config.h: $(top_srcdir)/config/odp-$(with_platform).conf $(top_builddir)/config.status
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 
