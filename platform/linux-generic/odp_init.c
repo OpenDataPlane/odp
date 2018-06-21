@@ -33,6 +33,7 @@ enum init_stage {
 	SCHED_INIT,
 	PKTIO_INIT,
 	TIMER_INIT,
+	RANDOM_INIT,
 	CRYPTO_INIT,
 	CLASSIFICATION_INIT,
 	TRAFFIC_MNGR_INIT,
@@ -103,6 +104,9 @@ static int term_global(enum init_stage stage)
 			ODP_ERR("ODP crypto term failed.\n");
 			rc = -1;
 		}
+		/* Fall through */
+
+	case RANDOM_INIT:
 		/* Fall through */
 
 	case TIMER_INIT:
@@ -302,6 +306,9 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = TIMER_INIT;
 
+	/* No init neeeded */
+	stage = RANDOM_INIT;
+
 	if (odp_crypto_init_global()) {
 		ODP_ERR("ODP crypto init failed.\n");
 		goto init_failed;
@@ -391,6 +398,13 @@ static int term_local(enum init_stage stage)
 		}
 		/* Fall through */
 
+	case RANDOM_INIT:
+		if (_odp_random_term_local()) {
+			ODP_ERR("ODP random local term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
 	case POOL_INIT:
 		if (odp_pool_term_local()) {
 			ODP_ERR("ODP buffer pool local term failed.\n");
@@ -449,6 +463,12 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 		goto init_fail;
 	}
 	stage = PKTIO_INIT;
+
+	if (_odp_random_init_local()) {
+		ODP_ERR("ODP random local init failed.\n");
+		goto init_fail;
+	}
+	stage = RANDOM_INIT;
 
 	if (_odp_crypto_init_local()) {
 		ODP_ERR("ODP crypto local init failed.\n");
