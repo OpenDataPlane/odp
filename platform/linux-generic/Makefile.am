@@ -157,7 +157,6 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_classification.c \
 			   odp_cpumask.c \
 			   odp_cpumask_task.c \
-			   odp_crypto.c \
 			   odp_errno.c \
 			   odp_event.c \
 			   odp_fdserver.c \
@@ -184,7 +183,6 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_queue_lf.c \
 			   odp_queue_scalable.c \
 			   odp_queue_spsc.c \
-			   odp_random.c \
 			   odp_rwlock.c \
 			   odp_rwlock_recursive.c \
 			   odp_schedule_basic.c \
@@ -224,6 +222,16 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pktio/socket.c \
 			   pktio/socket_mmap.c \
 			   pktio/tap.c
+
+if WITH_OPENSSL
+__LIB__libodp_linux_la_SOURCES += \
+			   odp_crypto_openssl.c \
+			   odp_random_openssl.c
+else
+__LIB__libodp_linux_la_SOURCES += \
+			   odp_crypto_null.c \
+			   odp_random_null.c
+endif
 if ODP_ABI_COMPAT
 __LIB__libodp_linux_la_SOURCES += \
 			   odp_atomic_api.c \
