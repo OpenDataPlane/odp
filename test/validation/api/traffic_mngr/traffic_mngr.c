@@ -2545,9 +2545,20 @@ static int test_shaper_bw(const char *shaper_name,
 			ret_code = 0;
 		}
 
-		CU_ASSERT((min_rcv_gap <= avg_rcv_gap) &&
-			  (avg_rcv_gap <= max_rcv_gap));
-		CU_ASSERT(rcv_stats.std_dev_gap <= expected_rcv_gap_us);
+		if ((avg_rcv_gap < min_rcv_gap) ||
+		    (avg_rcv_gap > max_rcv_gap)) {
+			LOG_ERR("agv_rcv_gap=%" PRIu32 " acceptable "
+			"rcv_gap range=%" PRIu32 "..%" PRIu32 "\n",
+			avg_rcv_gap, min_rcv_gap, max_rcv_gap);
+			ret_code = -1;
+		}
+
+		if (rcv_stats.std_dev_gap > expected_rcv_gap_us) {
+			LOG_ERR("std_dev_gap=%" PRIu32 " >  "
+				"expected_rcv_gap_us=%" PRIu64 "\n",
+			rcv_stats.std_dev_gap, expected_rcv_gap_us);
+			ret_code = -1;
+		}
 	}
 
 	/* Disable the shaper, so as to get the pkts out quicker. */
@@ -3836,11 +3847,26 @@ static void traffic_mngr_test_tm_create(void)
 
 static void traffic_mngr_test_shaper(void)
 {
-	CU_ASSERT(test_shaper_bw("bw1",   "node_1_1_1", 0, 1   * MBPS) == 0);
-	CU_ASSERT(test_shaper_bw("bw4",   "node_1_1_1", 1, 4   * MBPS) == 0);
-	CU_ASSERT(test_shaper_bw("bw10",  "node_1_1_1", 2, 10  * MBPS) == 0);
-	CU_ASSERT(test_shaper_bw("bw40",  "node_1_1_1", 3, 40  * MBPS) == 0);
-	CU_ASSERT(test_shaper_bw("bw100", "node_1_1_2", 0, 100 * MBPS) == 0);
+	CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw1",
+						"node_1_1_1",
+						0,
+						MBPS * 1)));
+	CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw4",
+						"node_1_1_1",
+						1,
+						4   * MBPS)));
+	CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw10",
+						"node_1_1_1",
+						2,
+						10  * MBPS)));
+	CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw40",
+						"node_1_1_1",
+						3,
+						40  * MBPS)));
+	CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw100",
+						"node_1_1_2",
+						0,
+						100 * MBPS)));
 }
 
 static void traffic_mngr_test_scheduler(void)
@@ -3896,14 +3922,6 @@ static void traffic_mngr_test_byte_wred(void)
 static void traffic_mngr_test_pkt_wred(void)
 {
 	int rc;
-	const char *env = getenv("CI");
-	int allow_skip_result = 0;
-
-	if (env && !strcmp(env, "true")) {
-		allow_skip_result = 1;
-		LOG_DBG("\nWARNING: test result can be used for code coverage only.\n"
-			"CI=true env variable is set!\n");
-	}
 
 	if (!tm_capabilities.tm_queue_wred_supported) {
 		LOG_DBG("\ntest_pkt_wred was not run because tm_capabilities "
@@ -3914,7 +3932,7 @@ static void traffic_mngr_test_pkt_wred(void)
 	rc = test_pkt_wred("pkt_wred_40G", "pkt_bw_40G",
 			   "pkt_thresh_40G", "node_1_3_2", 1,
 			   ODP_PACKET_GREEN, TM_PERCENT(30), false);
-	if (rc != 0 && !allow_skip_result)
+	if (odp_cunit_ret(rc) != 0)
 		CU_FAIL("40G test failed\n");
 
 	if (!tm_capabilities.tm_queue_dual_slope_supported) {
@@ -3926,20 +3944,19 @@ static void traffic_mngr_test_pkt_wred(void)
 	rc = test_pkt_wred("pkt_wred_30G", "pkt_bw_30G",
 			   "pkt_thresh_30G", "node_1_3_2", 1,
 			   ODP_PACKET_GREEN, TM_PERCENT(30), true);
-	if (rc != 0 && !allow_skip_result)
+	if (odp_cunit_ret(rc) != 0)
 		CU_FAIL("30G test failed\n");
 
 	rc = test_pkt_wred("pkt_wred_50Y", "pkt_bw_50Y",
 			   "pkt_thresh_50Y", "node_1_3_2", 2,
 			   ODP_PACKET_YELLOW, TM_PERCENT(50), true);
-	if (rc != 0 && !allow_skip_result)
+	if (odp_cunit_ret(rc) != 0)
 		CU_FAIL("50Y test failed\n");
-
 
 	rc = test_pkt_wred("pkt_wred_70R", "pkt_bw_70R",
 			   "pkt_thresh_70R", "node_1_3_2", 3,
 			   ODP_PACKET_RED,    TM_PERCENT(70), true);
-	if (rc != 0 && !allow_skip_result)
+	if (odp_cunit_ret(rc) != 0)
 		CU_FAIL("70Y test failed\n");
 }
 
