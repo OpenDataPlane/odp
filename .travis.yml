@@ -59,6 +59,7 @@ env:
         - CONF="--disable-host-optimization"
         - CONF="--disable-host-optimization --disable-abi-compat"
         - CONF="--enable-pcapng-support"
+        - CONF="--without-openssl"
         - DPDK_SHARED="y" CONF="--disable-static-applications"
 
 compiler:
