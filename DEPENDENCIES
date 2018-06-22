@@ -21,6 +21,12 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
    Libraries currently required to link: openssl, libatomic, libconfig
 
+   It is possible to build ODP without OpenSSL by passing flag
+   --without-openssl to configure script. However this will result in
+   ODP-generic not supporting any cryptography algorithm (except NULL) and any
+   strong random generation (only BASIC is supported and it is not
+   cryptographically secure). Use at your own risk!
+
 3.1 OpenSSL native compile
 
    For native compilation, simply load the necessary libraries using the appropriate
