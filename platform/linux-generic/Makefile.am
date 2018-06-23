@@ -1,6 +1,8 @@
 # Uncomment this if you need to change the CUSTOM_STR string
 #export CUSTOM_STR=https://github.com/Linaro/odp.git
 
+SUBDIRS = fdserver
+
 include $(top_srcdir)/platform/Makefile.inc
 
 AM_CPPFLAGS  =  $(ODP_INCLUDES)
@@ -9,6 +11,8 @@ AM_CPPFLAGS +=  -I$(top_builddir)/platform/$(with_platform)/include
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/@ARCH_DIR@
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/default
+AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/fdserver/include
+AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/fdserver/src/include
 
 AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
 AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
@@ -17,6 +21,18 @@ AM_CPPFLAGS +=  $(NETMAP_CPPFLAGS)
 AM_CFLAGS +=  $(LIBCONFIG_CFLAGS)
 
 DISTCLEANFILES = include/odp_libconfig_config.h
+CLEANFILES = $(top_dir)/config/odp-$(with_platform).conf
+
+do_subst = $(SED) \
+	-e 's|[@]prefix[@]|$(prefix)|g' \
+	-e 's|[@]exec_prefix[@]|$(exec_prefix)|g' \
+	-e 's|[@]bindir[@]|$(bindir)|g' \
+	-e 's|[@]datarootdir[@]|$(datarootdir)|g' \
+	< "$<" > "$@"
+
+$(top_srcdir)/config/odp-$(with_platform).conf: $(top_srcdir)/config/odp-$(with_platform).conf.in
+	$(do_subst)
+
 include/odp_libconfig_config.h: $(top_srcdir)/config/odp-$(with_platform).conf $(top_builddir)/config.status
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 
@@ -94,7 +110,6 @@ noinst_HEADERS = \
 		  include/odp_config_internal.h \
 		  include/odp_debug_internal.h \
 		  include/odp_errno_define.h \
-		  include/odp_fdserver_internal.h \
 		  include/odp_forward_typedefs_internal.h \
 		  include/odp_global_data.h \
 		  include/odp_init_internal.h \
@@ -223,7 +238,9 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pktio/ring.c \
 			   pktio/socket.c \
 			   pktio/socket_mmap.c \
-			   pktio/tap.c
+			   pktio/tap.c \
+			   fdserver/src/fdserver_lib.c
+
 if ODP_ABI_COMPAT
 __LIB__libodp_linux_la_SOURCES += \
 			   odp_atomic_api.c \

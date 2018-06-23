@@ -25,6 +25,7 @@ aclocal.m4
 autom4te.cache/
 ar-lib
 compile
+config/odp-*.conf
 config.guess
 config.log
 config.status
