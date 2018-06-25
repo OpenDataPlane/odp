@@ -383,6 +383,7 @@ void sched_cb_queue_set_status(uint32_t queue_index, int status)
 
 static int queue_destroy(odp_queue_t handle)
 {
+	int empty;
 	queue_entry_t *queue;
 	queue = qentry_from_handle(handle);
 
@@ -400,7 +401,13 @@ static int queue_destroy(odp_queue_t handle)
 		ODP_ERR("queue \"%s\" already destroyed\n", queue->s.name);
 		return -1;
 	}
-	if (ring_st_is_empty(&queue->s.ring_st) == 0) {
+
+	if (queue->s.spsc)
+		empty = ring_spsc_is_empty(&queue->s.ring_spsc);
+	else
+		empty = ring_st_is_empty(&queue->s.ring_st);
+
+	if (!empty) {
 		UNLOCK(queue);
 		ODP_ERR("queue \"%s\" not empty\n", queue->s.name);
 		return -1;

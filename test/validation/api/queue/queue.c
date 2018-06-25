@@ -428,7 +428,11 @@ static int queue_pair_work_loop(void *arg)
 		retry = 0;
 		buf = odp_buffer_from_event(ev);
 		data = odp_buffer_addr(buf);
-		CU_ASSERT(*data == i);
+		if (*data != i) {
+			printf("Seq error: expected %u, recv %u\n", i, *data);
+			CU_FAIL("Sequence number error");
+		}
+
 		i++;
 		if (i == burst)
 			i = 0;
@@ -458,7 +462,7 @@ static void test_pair(odp_nonblocking_t nonblocking,
 	odp_queue_param_t param;
 	odp_queue_t queue;
 	odp_queue_capability_t capa;
-	uint32_t max_burst;
+	uint32_t max_burst, num;
 	odp_pool_t pool;
 	odp_event_t ev;
 	odp_shm_t shm;
@@ -526,12 +530,21 @@ static void test_pair(odp_nonblocking_t nonblocking,
 	CU_ASSERT(globals->pair.passed_a);
 	CU_ASSERT(globals->pair.passed_b);
 
-	while ((ev = dequeue_event(globals->pair.queue_a)) != ODP_EVENT_INVALID)
-		odp_event_free(ev);
+	num = 0;
 
-	while ((ev = dequeue_event(globals->pair.queue_b)) != ODP_EVENT_INVALID)
+	while ((ev = dequeue_event(globals->pair.queue_a))
+	       != ODP_EVENT_INVALID) {
+		num++;
 		odp_event_free(ev);
+	}
 
+	while ((ev = dequeue_event(globals->pair.queue_b))
+	       != ODP_EVENT_INVALID) {
+		num++;
+		odp_event_free(ev);
+	}
+
+	CU_ASSERT(num == max_burst);
 	CU_ASSERT(odp_queue_destroy(globals->pair.queue_a) == 0);
 	CU_ASSERT(odp_queue_destroy(globals->pair.queue_b) == 0);
 }
@@ -554,6 +567,21 @@ static void queue_test_pair_mpsc(void)
 static void queue_test_pair_spsc(void)
 {
 	test_pair(ODP_BLOCKING, ODP_QUEUE_OP_MT_UNSAFE, ODP_QUEUE_OP_MT_UNSAFE);
+}
+
+static void queue_test_pair_lf(void)
+{
+	test_pair(ODP_NONBLOCKING_LF, ODP_QUEUE_OP_MT, ODP_QUEUE_OP_MT);
+}
+
+static void queue_test_pair_lf_spmc(void)
+{
+	test_pair(ODP_NONBLOCKING_LF, ODP_QUEUE_OP_MT_UNSAFE, ODP_QUEUE_OP_MT);
+}
+
+static void queue_test_pair_lf_mpsc(void)
+{
+	test_pair(ODP_NONBLOCKING_LF, ODP_QUEUE_OP_MT, ODP_QUEUE_OP_MT_UNSAFE);
 }
 
 static void queue_test_pair_lf_spsc(void)
@@ -944,6 +972,9 @@ odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_pair_spmc),
 	ODP_TEST_INFO(queue_test_pair_mpsc),
 	ODP_TEST_INFO(queue_test_pair_spsc),
+	ODP_TEST_INFO(queue_test_pair_lf),
+	ODP_TEST_INFO(queue_test_pair_lf_spmc),
+	ODP_TEST_INFO(queue_test_pair_lf_mpsc),
 	ODP_TEST_INFO(queue_test_pair_lf_spsc),
 	ODP_TEST_INFO(queue_test_param),
 	ODP_TEST_INFO(queue_test_info),
