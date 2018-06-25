@@ -11,8 +11,6 @@
 #include <odp_cunit_common.h>
 #include "test_vectors.h"
 
-#define MAX_ALG_CAPA 32
-
 #define PKT_POOL_NUM  64
 #define PKT_POOL_LEN  (1 * 1024)
 
@@ -466,14 +464,19 @@ static void check_alg(odp_crypto_op_t op,
 		      odp_bool_t ovr_iv)
 {
 	odp_crypto_capability_t capa;
-	odp_crypto_cipher_capability_t cipher_capa[MAX_ALG_CAPA];
-	odp_crypto_auth_capability_t   auth_capa[MAX_ALG_CAPA];
-	int rc, cipher_num, auth_num, i;
-	odp_bool_t cipher_tested[MAX_ALG_CAPA];
-	odp_bool_t auth_tested[MAX_ALG_CAPA];
+	int rc, i;
+	int cipher_num = odp_crypto_cipher_capability(cipher_alg, NULL, 0);
+	int auth_num = odp_crypto_auth_capability(auth_alg, NULL, 0);
+	odp_crypto_cipher_capability_t cipher_capa[cipher_num];
+	odp_crypto_auth_capability_t auth_capa[auth_num];
+	odp_bool_t cipher_tested[cipher_num];
+	odp_bool_t auth_tested[auth_num];
 	odp_bool_t cipher_ok = false;
 	odp_bool_t auth_ok = false;
 	size_t idx;
+
+	CU_ASSERT_FATAL(cipher_num > 0);
+	CU_ASSERT_FATAL(auth_num > 0);
 
 	rc = odp_crypto_capability(&capa);
 	CU_ASSERT(!rc);
@@ -546,21 +549,11 @@ static void check_alg(odp_crypto_op_t op,
 	CU_ASSERT(!rc);
 	CU_ASSERT((~capa.auths.all_bits & capa.hw_auths.all_bits) == 0);
 
-	cipher_num = odp_crypto_cipher_capability(cipher_alg, cipher_capa,
-						  MAX_ALG_CAPA);
+	rc = odp_crypto_cipher_capability(cipher_alg, cipher_capa, cipher_num);
+	CU_ASSERT_FATAL(rc == cipher_num);
 
-	CU_ASSERT(cipher_num > 0);
-	CU_ASSERT(cipher_num <= MAX_ALG_CAPA);
-	if (cipher_num > MAX_ALG_CAPA)
-		cipher_num = MAX_ALG_CAPA;
-
-	auth_num = odp_crypto_auth_capability(auth_alg, auth_capa,
-					      MAX_ALG_CAPA);
-
-	CU_ASSERT(auth_num > 0);
-	CU_ASSERT(auth_num <= MAX_ALG_CAPA);
-	if (auth_num > MAX_ALG_CAPA)
-		auth_num = MAX_ALG_CAPA;
+	rc = odp_crypto_auth_capability(auth_alg, auth_capa, auth_num);
+	CU_ASSERT_FATAL(rc == auth_num);
 
 	memset(cipher_tested, 0, sizeof(cipher_tested));
 	memset(auth_tested, 0, sizeof(auth_tested));
