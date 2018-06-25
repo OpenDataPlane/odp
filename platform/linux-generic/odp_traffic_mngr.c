@@ -7,10 +7,8 @@
  */
 
 #include "config.h"
+#include <odp_posix_extensions.h>
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
 #include <stdint.h>
 #include <string.h>
 #include <malloc.h>
