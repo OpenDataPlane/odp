@@ -3070,6 +3070,7 @@ static int test_byte_wred(const char      *wred_name,
 	odp_tm_queue_t            tm_queue;
 	pkt_info_t                pkt_info;
 	uint32_t                  num_fill_pkts, num_test_pkts, pkts_sent;
+	int ret;
 
 	/* Pick the tm_queue and set the tm_queue's wred profile to drop the
 	 * given percentage of traffic, then send 100 pkts and see how many
@@ -3131,13 +3132,13 @@ static int test_byte_wred(const char      *wred_name,
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
 	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
 
-	if ((wred_pkt_cnts->min_cnt <= pkts_sent) &&
-	    (pkts_sent <= wred_pkt_cnts->max_cnt))
-		return 0;
-
-	CU_ASSERT((wred_pkt_cnts->min_cnt <= pkts_sent) &&
-		  (pkts_sent <= wred_pkt_cnts->max_cnt));
-	return 0;
+	ret = !((wred_pkt_cnts->min_cnt <= pkts_sent) &&
+	      (pkts_sent <= wred_pkt_cnts->max_cnt));
+	if (ret)
+		LOG_DBG("min %" PRIu32 " pkts %" PRIu32" max %" PRIu32 "\n",
+			wred_pkt_cnts->min_cnt, pkts_sent,
+			wred_pkt_cnts->max_cnt);
+	return odp_cunit_ret(ret);
 }
 
 static int test_pkt_wred(const char      *wred_name,
