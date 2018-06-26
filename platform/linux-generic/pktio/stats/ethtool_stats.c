@@ -5,10 +5,8 @@
  */
 
 #include "config.h"
+#include <odp_posix_extensions.h>
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
 #include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <linux/sockios.h>
