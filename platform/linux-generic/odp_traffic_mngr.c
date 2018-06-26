@@ -180,7 +180,7 @@ static void tm_init_random_data(tm_random_data_t *tm_random_data)
 	byte_cnt = 0;
 	while (byte_cnt < 256)
 		byte_cnt += odp_random_data(&tm_random_data->buf[byte_cnt],
-					    256 - byte_cnt, 1);
+					    256 - byte_cnt, ODP_RANDOM_BASIC);
 
 	tm_random_data->next_random_byte = 0;
 }
