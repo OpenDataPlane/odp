@@ -13,7 +13,7 @@
 int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 {
 	char str[1024];
-	char *pos;
+	char *pos, *pos_end;
 	double ghz = 0.0;
 	uint64_t hz;
 	int id = 0;
@@ -22,17 +22,25 @@ int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 	while (fgets(str, sizeof(str), file) != NULL && id < CONFIG_NUM_CPU) {
 		pos = strstr(str, "model name");
 		if (pos) {
-			pos = strchr(str, ':');
-			strncpy(sysinfo->model_str[id], pos + 2,
-				sizeof(sysinfo->model_str[id]) - 1);
+			/* Copy model name between : and @ characters */
+			pos     = strchr(str, ':');
+			pos_end = strchr(str, '@');
+			if (pos == NULL || pos_end == NULL)
+				continue;
 
-			pos = strchr(sysinfo->model_str[id], '@');
-			if (pos) {
-				*(pos - 1) = '\0';
-				if (sscanf(pos, "@ %lfGHz", &ghz) == 1) {
-					hz = (uint64_t)(ghz * 1000000000.0);
-					sysinfo->cpu_hz_max[id] = hz;
-				}
+			*(pos_end - 1) = '\0';
+			strncpy(sysinfo->model_str[id], pos + 2,
+				MODEL_STR_SIZE - 1);
+
+			if (sysinfo->cpu_hz_max[id]) {
+				id++;
+				continue;
+			}
+
+			/* max frequency needs to be set */
+			if (sscanf(pos_end, "@ %lfGHz", &ghz) == 1) {
+				hz = (uint64_t)(ghz * 1000000000.0);
+				sysinfo->cpu_hz_max[id] = hz;
 			}
 			id++;
 		}
