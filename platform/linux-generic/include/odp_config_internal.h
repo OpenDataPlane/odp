@@ -14,7 +14,7 @@ extern "C" {
 /*
  * Maximum number of CPUs supported. Maximum CPU ID is CONFIG_NUM_CPU - 1.
  */
-#define CONFIG_NUM_CPU 128
+#define CONFIG_NUM_CPU 256
 
 /*
  * Maximum number of pools
