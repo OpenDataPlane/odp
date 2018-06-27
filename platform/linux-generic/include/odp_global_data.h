@@ -19,6 +19,7 @@ extern "C" {
 #include <libconfig.h>
 #include <odp_config_internal.h>
 
+#define MODEL_STR_SIZE 128
 #define UID_MAXLEN 30
 
 typedef struct {
@@ -27,7 +28,7 @@ typedef struct {
 	int      cache_line_size;
 	int      cpu_count;
 	char     cpu_arch_str[128];
-	char     model_str[CONFIG_NUM_CPU][128];
+	char     model_str[CONFIG_NUM_CPU][MODEL_STR_SIZE];
 } system_info_t;
 
 typedef struct {
