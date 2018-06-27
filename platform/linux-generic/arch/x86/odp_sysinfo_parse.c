@@ -19,7 +19,7 @@ int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 	int id = 0;
 
 	strcpy(sysinfo->cpu_arch_str, "x86");
-	while (fgets(str, sizeof(str), file) != NULL && id < MAX_CPU_NUMBER) {
+	while (fgets(str, sizeof(str), file) != NULL && id < CONFIG_NUM_CPU) {
 		pos = strstr(str, "model name");
 		if (pos) {
 			pos = strchr(str, ':');
