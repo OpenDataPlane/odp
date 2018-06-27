@@ -353,7 +353,7 @@ int odp_system_info_init(void)
 
 	fclose(file);
 
-	for (i = 0; i < MAX_CPU_NUMBER; i++) {
+	for (i = 0; i < CONFIG_NUM_CPU; i++) {
 		uint64_t cpu_hz_max = odp_cpufreq_id("cpuinfo_max_freq", i);
 
 		if (cpu_hz_max)
@@ -414,7 +414,7 @@ uint64_t odp_cpu_hz_max(void)
 
 uint64_t odp_cpu_hz_max_id(int id)
 {
-	if (id >= 0 && id < MAX_CPU_NUMBER)
+	if (id >= 0 && id < CONFIG_NUM_CPU)
 		return odp_global_data.system_info.cpu_hz_max[id];
 	else
 		return 0;
@@ -473,7 +473,7 @@ const char *odp_cpu_model_str(void)
 
 const char *odp_cpu_model_str_id(int id)
 {
-	if (id >= 0 && id < MAX_CPU_NUMBER)
+	if (id >= 0 && id < CONFIG_NUM_CPU)
 		return odp_global_data.system_info.model_str[id];
 	else
 		return NULL;
