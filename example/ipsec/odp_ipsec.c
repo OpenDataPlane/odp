@@ -41,7 +41,27 @@
 #include <odp_ipsec_sp_db.h>
 #include <odp_ipsec_fwd_db.h>
 #include <odp_ipsec_cache.h>
+
+#ifndef NO_OPENSSL
 #include <odp_ipsec_stream.h>
+#else
+static void init_stream_db(void) {}
+static void resolve_stream_db(void) {}
+static int create_stream_db_inputs(void)
+{
+	return 0;
+}
+
+static odp_bool_t verify_stream_db_outputs(void)
+{
+	return true;
+}
+
+static int create_stream_db_entry(char *input ODP_UNUSED)
+{
+	return -1;
+}
+#endif
 
 #define MAX_WORKERS     32   /**< maximum number of worker threads */
 
@@ -406,6 +426,7 @@ void ipsec_init_post(crypto_api_mode_e api_mode)
 	}
 }
 
+#ifndef NO_OPENSSL
 static
 int check_stream_db_out(const char *intf)
 {
@@ -419,6 +440,13 @@ int check_stream_db_out(const char *intf)
 
 	return 0;
 }
+#else
+static
+int check_stream_db_out(const char *intf ODP_UNUSED)
+{
+	return 0;
+}
+#endif
 
 /**
  * Initialize interface

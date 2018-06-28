@@ -71,7 +71,7 @@ static inline pkt_tap_t *pkt_priv(pktio_entry_t *pktio_entry)
 static int gen_random_mac(unsigned char *mac)
 {
 	mac[0] = 0x7a; /* not multicast and local assignment bit is set */
-	if (odp_random_data(mac + 1, 5, false) < 5) {
+	if (odp_random_data(mac + 1, 5, ODP_RANDOM_BASIC) < 5) {
 		ODP_ERR("odp_random_data failed.\n");
 		return -1;
 	}

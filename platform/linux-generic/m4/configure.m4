@@ -5,7 +5,14 @@ ODP_ATOMIC
 
 ODP_PTHREAD
 ODP_TIMER
-ODP_OPENSSL
+AC_ARG_WITH([openssl],
+	    [AS_HELP_STRING([--without-openssl],
+			    [compile without OpenSSL (results in disabled crypto and random support)])],
+	    [],
+	    [with_openssl=yes])
+AS_IF([test "$with_openssl" != "no"],
+      [ODP_OPENSSL])
+AM_CONDITIONAL([WITH_OPENSSL], [test x$with_openssl != xno])
 ODP_LIBCONFIG([linux-generic])
 m4_include([platform/linux-generic/m4/odp_pcap.m4])
 m4_include([platform/linux-generic/m4/odp_pcapng.m4])

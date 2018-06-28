@@ -9,6 +9,7 @@
 #include <odp_posix_extensions.h>
 #include <stdint.h>
 #include <odp/api/random.h>
+#include <odp_init_internal.h>
 
 #include <openssl/rand.h>
 
@@ -51,4 +52,14 @@ int32_t odp_random_test_data(uint8_t *buf, uint32_t len, uint64_t *seed)
 
 	*seed = seed32;
 	return len;
+}
+
+int _odp_random_init_local(void)
+{
+	return 0;
+}
+
+int _odp_random_term_local(void)
+{
+	return 0;
 }
