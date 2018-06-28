@@ -70,7 +70,7 @@
 
 /** Parsed command line application arguments */
 typedef struct {
-	int      cpu_count;	/* CPU count */
+	unsigned int cpu_count;	/* CPU count */
 	int      num_tx_workers;/* Number of CPUs to use for transmit */
 	int      duration;	/* Number of seconds to run each iteration
 				   of the test for */
@@ -918,8 +918,7 @@ static int test_term(void)
 static void usage(void)
 {
 	printf("\nUsage: odp_pktio_perf [options]\n\n");
-	printf("  -c, --count <number>   CPU count\n");
-	printf("                         default: all available\n");
+	printf("  -c, --count <number>   CPU count, 0=all available, default=2\n");
 	printf("  -t, --txcount <number> Number of CPUs to use for TX\n");
 	printf("                         default: cpu_count+1/2\n");
 	printf("  -b, --txbatch <length> Number of packets per TX batch\n");
@@ -963,7 +962,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 
-	args->cpu_count      = 0; /* all CPUs */
+	args->cpu_count      = 2;
 	args->num_tx_workers = 0; /* defaults to cpu_count+1/2 */
 	args->tx_batch_len   = BATCH_LEN_MAX;
 	args->rx_batch_len   = BATCH_LEN_MAX;

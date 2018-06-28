@@ -52,7 +52,7 @@ typedef union {
  * Parsed command line application arguments
  */
 typedef struct {
-	int cpu_count;	   /**< Number of CPUs to be used */
+	unsigned int cpu_count; /**< Number of CPUs to be used */
 	unsigned if_count; /**< Number of interfaces to be used */
 	int num_workers;   /**< Number of worker threads */
 	char **if_names;   /**< Array of pointers to interface names */
@@ -725,7 +725,7 @@ static void usage(char *progname)
 	       "                  Interface count min 2, max %i\n"
 	       "\n"
 	       "Optional OPTIONS:\n"
-	       "  -c, --count <number> CPU count.\n"
+	       "  -c, --count <number> CPU count, 0=all available, default=1\n"
 	       "  -t, --time  <number> Time in seconds to run.\n"
 	       "  -a, --accuracy <number> Statistics print interval in seconds\n"
 	       "                          (default is 10 second).\n"
@@ -762,6 +762,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 
+	appl_args->cpu_count = 1; /* use one worker by default */
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 10; /* get and print pps stats second */
 
@@ -916,9 +917,8 @@ int main(int argc, char **argv)
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &gbl_args->appl);
 
-	/* Default to system CPU count unless user specified */
 	num_workers = MAX_WORKERS;
-	if (gbl_args->appl.cpu_count)
+	if (gbl_args->appl.cpu_count && gbl_args->appl.cpu_count < MAX_WORKERS)
 		num_workers = gbl_args->appl.cpu_count;
 
 	/* Get default worker cpumask */

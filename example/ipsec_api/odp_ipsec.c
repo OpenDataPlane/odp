@@ -69,7 +69,7 @@ static int create_stream_db_entry(char *input ODP_UNUSED)
  * Parsed command line application arguments
  */
 typedef struct {
-	int cpu_count;
+	unsigned int cpu_count;
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
 	odp_ipsec_op_mode_t mode; /**< IPsec operation mode */
@@ -945,9 +945,8 @@ main(int argc, char *argv[])
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &args->appl);
 
-	/* Default to system CPU count unless user specified */
 	num_workers = MAX_WORKERS;
-	if (args->appl.cpu_count)
+	if (args->appl.cpu_count && args->appl.cpu_count < MAX_WORKERS)
 		num_workers = args->appl.cpu_count;
 
 	/* Get default worker cpumask */
@@ -1094,6 +1093,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
+
+	appl_args->cpu_count = 1; /* use one worker by default */
 
 	printf("\nParsing command line options\n");
 
@@ -1268,7 +1269,7 @@ static void usage(char *progname)
 	       "     -a 192.168.111.2:192.168.222.2:md5:201:a731649644c5dee92cbd9c2e7e188ee6\n"
 	       "\n"
 	       "Optional OPTIONS\n"
-	       "  -c, --count <number> CPU count.\n"
+	       "  -c, --count <number> CPU count, 0=all available, default=1\n"
 	       "  -h, --help           Display help and exit.\n"
 	       " environment variables: ODP_IPSEC_USE_POLL_QUEUES\n"
 	       " to enable use of poll queues instead of scheduled (default)\n"

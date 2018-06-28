@@ -134,7 +134,7 @@ typedef enum pktin_mode_t {
  * Parsed command line application arguments
  */
 typedef struct {
-	int cpu_count;		/**< CPU count */
+	unsigned int cpu_count; /**< CPU count */
 	int if_count;		/**< Number of interfaces to be used */
 	int addr_count;		/**< Number of dst addresses to be used */
 	int num_rx_q;		/**< Number of input queues per interface */
@@ -826,7 +826,7 @@ static void usage(char *progname)
 	       "  -r, --num_rx_q    Number of RX queues per interface\n"
 	       "  -f, --num_flows   Number of packet flows\n"
 	       "  -e, --extra_input <number>  Number of extra input processing rounds\n"
-	       "  -c, --count <number>        CPU count.\n"
+	       "  -c, --count <number>        CPU count, 0=all available, default=1\n"
 	       "  -t, --time  <number>        Time in seconds to run.\n"
 	       "  -a, --accuracy <number>     Statistics print interval in seconds\n"
 	       "                              (default is 1 second).\n"
@@ -872,6 +872,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = DEF_STATS_INT;
+	appl_args->cpu_count = 1; /* use one worker by default */
 	appl_args->num_rx_q = DEF_NUM_RX_QUEUES;
 	appl_args->num_flows = DEF_NUM_FLOWS;
 	appl_args->extra_rounds = DEF_EXTRA_ROUNDS;
@@ -995,12 +996,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		default:
 			break;
 		}
-	}
-
-	if (appl_args->cpu_count > MAX_WORKERS) {
-		printf("Too many workers requested %d, max: %d\n",
-		       appl_args->cpu_count, MAX_WORKERS);
-		exit(EXIT_FAILURE);
 	}
 
 	if (appl_args->num_flows > MAX_FLOWS) {
@@ -1136,9 +1131,8 @@ int main(int argc, char *argv[])
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &gbl_args->appl);
 
-	/* Default to system CPU count unless user specified */
 	num_workers = MAX_WORKERS;
-	if (gbl_args->appl.cpu_count)
+	if (gbl_args->appl.cpu_count && gbl_args->appl.cpu_count < MAX_WORKERS)
 		num_workers = gbl_args->appl.cpu_count;
 
 	/* Get default worker cpumask */

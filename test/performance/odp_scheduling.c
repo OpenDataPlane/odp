@@ -51,7 +51,7 @@ typedef struct {
 
 /** Test arguments */
 typedef struct {
-	int cpu_count;  /**< CPU count */
+	unsigned int cpu_count;  /**< CPU count */
 	int fairness;   /**< Check fairness */
 } test_args_t;
 
@@ -735,7 +735,7 @@ static void print_usage(void)
 {
 	printf("\n\nUsage: ./odp_example [options]\n");
 	printf("Options:\n");
-	printf("  -c, --count <number>    CPU count, 0=all available, default=0\n");
+	printf("  -c, --count <number>    CPU count, 0=all available, default=1\n");
 	printf("  -h, --help              this help\n");
 	printf("  -f, --fair              collect fairness statistics\n");
 	printf("\n\n");
@@ -764,6 +764,8 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
+
+	args->cpu_count = 1; /* use one worker by default */
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
