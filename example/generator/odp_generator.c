@@ -1169,9 +1169,7 @@ int main(int argc, char *argv[])
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &args->appl);
 
-	/* Default to max number of workers, unless user specified number of
-	 * workers or cpumask */
-	num_workers = MAX_WORKERS;
+	num_workers = 1;
 	num_workers = odp_cpumask_default_worker(&cpumask, num_workers);
 
 	if (args->appl.num_workers) {
@@ -1580,6 +1578,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->dstport_end = 0;
 	appl_args->csum = 0;
 	appl_args->sched = 0;
+	appl_args->num_workers = -1;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -1596,9 +1595,11 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			num_workers = odp_cpumask_default_worker(&cpumask, 0);
 			odp_cpumask_and(&cpumask_and, &cpumask_args, &cpumask);
 			if (odp_cpumask_count(&cpumask_and) <
-			    odp_cpumask_count(&cpumask_args)) {
+			    odp_cpumask_count(&cpumask_args) ||
+			    odp_cpumask_count(&cpumask_args) > MAX_WORKERS) {
 				EXAMPLE_ERR("Wrong cpu mask, max cpu's:%d\n",
-					    num_workers);
+					    num_workers < MAX_WORKERS ?
+					    num_workers : MAX_WORKERS);
 				exit(EXIT_FAILURE);
 			}
 			break;
@@ -1748,6 +1749,12 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		}
 	}
 
+	if (appl_args->num_workers < 0)
+		appl_args->num_workers = 0;
+	else if (appl_args->num_workers == 0 ||
+		 appl_args->num_workers > MAX_WORKERS)
+		appl_args->num_workers =  MAX_WORKERS;
+
 	if (appl_args->if_count == 0 || appl_args->mode == -1) {
 		usage(argv[0]);
 		exit(EXIT_FAILURE);
@@ -1834,7 +1841,7 @@ static void usage(char *progname)
 	       "  -i, --interval wait interval ms between sending each packet\n"
 	       "                 default is 1000ms. 0 for flood mode\n"
 	       "  -w, --workers specify number of workers need to be assigned to application\n"
-	       "	         default is to assign all\n"
+	       "	         default is 1, 0 for all available\n"
 	       "  -n, --count the number of packets to be send\n"
 	       "  -c, --cpumask to set on cores\n"
 	       "  -x, --udp_tx_burst size of UDP TX burst\n"

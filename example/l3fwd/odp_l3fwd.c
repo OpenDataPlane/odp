@@ -71,9 +71,9 @@ typedef struct {
 	char *if_names[MAX_NB_PKTIO];
 	int if_count;
 	char *route_str[MAX_NB_ROUTE];
-	int worker_count;
+	unsigned int worker_count;
 	struct l3fwd_qconf_s qconf_config[MAX_NB_QCONFS];
-	int qconf_count;
+	unsigned int qconf_count;
 	uint32_t duration; /* seconds to run */
 	uint8_t hash_mode; /* 1:hash, 0:lpm */
 	uint8_t dest_mac_changed[MAX_NB_PKTIO]; /* 1: dest mac from cmdline */
@@ -490,7 +490,7 @@ static void print_usage(char *progname)
 	       "  -d, --duration Seconds to run and print stats\n"
 	       "	optional, default as 0, run forever\n"
 	       "  -t, --thread Number of threads to do forwarding\n"
-	       "	optional, default as availbe worker cpu count\n"
+	       "	0=all available, default=1\n"
 	       "  -q, --queue  Configure rx queue(s) for port\n"
 	       "	optional, format: [(port, queue, thread),...]\n"
 	       "	for example: -q '(0, 0, 1),(1,0,2)'\n"
@@ -507,7 +507,8 @@ static void parse_cmdline_args(int argc, char *argv[], app_args_t *args)
 	int long_index;
 	char *token, *local;
 	size_t len, route_index = 0;
-	int i, mem_failure = 0;
+	int mem_failure = 0;
+	unsigned int i;
 
 	static struct option longopts[] = {
 		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
@@ -520,6 +521,8 @@ static void parse_cmdline_args(int argc, char *argv[], app_args_t *args)
 		{"help", no_argument, NULL, 'h'},		/* return 'h' */
 		{NULL, 0, NULL, 0}
 	};
+
+	args->worker_count = 1; /* use one worker by default */
 
 	while (1) {
 		opt = getopt_long(argc, argv, "+s:t:d:i:r:q:e:h",
@@ -679,8 +682,8 @@ static void print_info(char *progname, app_args_t *args)
  */
 static void setup_worker_qconf(app_args_t *args)
 {
-	int nb_worker, if_count, pktio;
-	int i, j, rxq_idx;
+	int j, rxq_idx, pktio;
+	unsigned int i, nb_worker, if_count;
 	struct thread_arg_s *arg;
 	struct l3fwd_pktio_s *port;
 	uint8_t queue_mask[MAX_NB_PKTIO][MAX_NB_QUEUE];
@@ -841,7 +844,8 @@ static void setup_worker_qconf(app_args_t *args)
 
 static void print_qconf_table(app_args_t *args)
 {
-	int i, j, k, qid, if_idx;
+	unsigned int i;
+	int j, k, qid, if_idx;
 	char buf[32];
 	struct thread_arg_s *thr_arg;
 
@@ -1038,9 +1042,8 @@ int main(int argc, char **argv)
 	setup_fwd_db();
 	dump_fwd_db();
 
-	/* Dicide available workers */
 	nb_worker = MAX_NB_WORKER;
-	if (args->worker_count)
+	if (args->worker_count && args->worker_count < MAX_NB_WORKER)
 		nb_worker = args->worker_count;
 	nb_worker = odp_cpumask_default_worker(&cpumask, nb_worker);
 	args->worker_count = nb_worker;

@@ -74,7 +74,7 @@ typedef struct {
 
 /** Test arguments */
 typedef struct {
-	int cpu_count;			/**< CPU count */
+	unsigned int cpu_count;	/**< CPU count */
 	odp_schedule_sync_t sync_type;	/**< Scheduler sync type */
 	struct {
 		int queues;	/**< Number of scheduling queues */
@@ -265,7 +265,7 @@ static void print_results(test_globals_t *globals)
 	test_stat_t total;
 	test_args_t *args;
 	uint64_t avg;
-	int i, j;
+	unsigned int i, j;
 
 	args = &globals->args;
 	stype = globals->args.sync_type;
@@ -500,7 +500,7 @@ static void usage(void)
 	       "\n"
 	       "Usage: ./odp_sched_latency [options]\n"
 	       "Optional OPTIONS:\n"
-	       "  -c, --count <number> CPU count\n"
+	       "  -c, --count <number> CPU count, 0=all available, default=1\n"
 	       "  -l, --lo-prio-queues <number> Number of low priority scheduled queues\n"
 	       "  -t, --hi-prio-queues <number> Number of high priority scheduled queues\n"
 	       "  -m, --lo-prio-events-per-queue <number> Number of events per low priority queue\n"
@@ -552,6 +552,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 
+	args->cpu_count = 1;
 	args->sync_type = ODP_SCHED_SYNC_PARALLEL;
 	args->sample_per_prio = SAMPLE_EVENT_PER_PRIO;
 	args->prio[LO_PRIO].queues = LO_PRIO_QUEUES;
