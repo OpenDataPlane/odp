@@ -200,7 +200,12 @@ static int pktio_run_loop(odp_pool_t pool)
 		}
 
 		/* 3. emulate that pkts packets were received  */
-		odp_random_data((uint8_t *)&pkts, sizeof(pkts), 0);
+		ret = odp_random_data((uint8_t *)&pkts, sizeof(pkts),
+				      ODP_RANDOM_BASIC);
+		if (ret != sizeof(pkts)) {
+			LOG_ABORT("random failed");
+			break;
+		}
 		pkts = ((pkts & 0xffff) % MAX_PKT_BURST) + 1;
 
 		for (i = 0; i < pkts; i++) {
