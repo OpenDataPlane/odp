@@ -1,3 +1,127 @@
+== OpenDataPlane (1.19.0.2)
+=== Summary of Changes
+ODP v1.19.0.2 is the second service update for the Tiger Moth release. It
+incorporates a number of corrections and enhancements that further improve the
+quality and testability of ODP.
+
+==== APIs
+There are no API changes in this release.
+
+==== DPDK Service Release Sync
+ODP is now paired with DPDK 17.11.3 for its DPDK-related support. This is the
+current service level for the DPDK 17.11 LTS package used by ODP Tiger Moth.
+
+=== Implementation Improvements
+This release incorporates several improvements in the `odp-linux` reference
+implementation of ODP.
+
+==== Enhanced Inlining
+ODP supports inlining of functions in embedded environments when ABI
+compatibility is not needed. ODP itself now makes use of inlined functions for
+all relevant internal use of its APIs, leading to improved performance.
+
+==== Completion of CRC API Implementation
+The `odp_hash_crc_gen64()` API is now properly implemented and appropriate
+validation tests added to support it.
+
+In addition, a streamlined table-based implementation of the basic CRC
+functions eliminates the previous dependency on `zlib`.
+
+==== PktIO-Specific Parsing
+To better integrate with DPDK parsing capabilities, ODP packet parsing has
+been restructured to operate at the PktIO level. This permits DPDK PktIO types
+to exploit the native DPDK packet parser and checksum facilities, leading
+to better integration.
+
+==== PktIO Internal Cleanup and Restructure
+The PktIO functions have been streamlined and refactored in a number of ways
+to provide better long-term maintainability of these functions. This includes
+moving per-PktIO data into individual files rather than sharing a common file,
+as well as better placement for I/O statistics.
+
+==== Checksum Validation Support
+Loop PktIO interfaces now add the capability to validate packet L3 and L4
+checksums as part of receive processing. The existing `odp_pktio_capability()`
+API now reports that checksum validation is available for these interfaces.
+
+==== Single Producer / Single Consumer Queue Performance Optimizations
+When defining lock free queues that have only a single producer and consumer,
+a streamlined implementation offers significant speedup.
+
+==== Fast PCAPng Packet Capture
+Fast pcap capture is now provided in `odp-linux` to capture packets on any
+interface. This is enabled via the `--enable-pcapng-support` configuration
+option. Once enabled, packets can be captured using a sequence such as:
+-----
+sudo mkdir /var/run/odp/
+start ODP application that reads/writes to the interface of interest
+start the ODP application
+sudo dd if=/var/run/odp/<pid>-<ifname>-flow-<queue#> of=~/test.pcap
+
+cntrl^c to end capture
+wireshark ~/test.pcap to view capture
+-----
+
+Interfaces of interest are identified by a string consisting of the
+application process ID, the interface name, and the queue number of interest,
+if the interface supports multiple queues.
+
+==== Removal of GPL M4 Macros
+A number of autotools/autoconf M4 macros used in configuring `odp-linux` have
+been rewritten to avoid potential GPL licensing concerns. These macros are
+used only during ODP configuration processing and have no role in ODP
+or ODP application use.
+
+=== Validation Test Improvements
+==== Queue Pair Validation Tests
+The validation test suite for queue API testing is enhanced to now test
+operation on queue pairs properly. This enables the various enqueue/dequeue
+modes defined by the ODP specification to be more fully exercised, leading
+to improved API conformance.
+
+==== Scheduling Test Improvements
+The scheduling validation tests now better use the various capability APIs to
+ensure that implementations are only tested for advertised capabilities.
+
+=== Crypto Test Improvements
+The crypto validation tests now better use the various capability APIs to
+ensure that implementations are tested across advertised crypto capabilities.
+
+=== Performance Test Improvements
+==== New Performance Test
+A new `odp_queue_perf` test has been added to test plain (non-scheduled)
+queue performance in various modes.
+
+=== Helper Changes
+* The `getopt` library calls are no longer used to avoid packaging conflicts
+that can arise with this use. There are no changes to helper functionality.
+This change simply improves packaging.
+
+=== Examples Improvements
+* The `odp_generator` example adds UDP port range support.
+
+==== CI Improvements
+Numerous changes to Travis integration are added to improve the quality and
+reliability of Continuous Integration (CI) testing.
+
+=== Bug Fixes
+==== https://bugs.linaro.org/show_bug.cgi?id=3787[Bug 3787]
+Timeout accuracy breaks down with odd resolution requests
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3867[Bug 3867]
+timer validation test fails when using 1GB huge pages
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3879[Bug 3879]
+example/l2fwd_simple fails on some systems when using 1GB huge pages
+
+=== Unnumbered Bug Fixes
+* Corrected the handling of timeout events in the scalable scheduler.
+* Fixed IPsec link order to streamline builds.
+
+=== Known Issues
+==== https://bugs.linaro.org/show_bug.cgi?id=3774[Bug 3774]
+Shmem validation test runs indefinitely with 1GB huge pages
+
 == OpenDataPlane (1.19.0.1)
 === Summary of Changes
 ODP v1.19.0.1 is the first service update for the Tiger Moth release. It
