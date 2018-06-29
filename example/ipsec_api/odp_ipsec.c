@@ -63,7 +63,8 @@ static int create_stream_db_entry(char *input ODP_UNUSED)
 }
 #endif
 
-#define MAX_WORKERS     32   /**< maximum number of worker threads */
+/* maximum number of worker threads */
+#define MAX_WORKERS     (ODP_THREAD_COUNT_MAX - 1)
 
 /**
  * Parsed command line application arguments

@@ -19,8 +19,8 @@
 /* GNU lib C */
 #include <getopt.h>
 
-
-#define MAX_WORKERS           32            /**< Max worker threads */
+/* Max worker threads */
+#define MAX_WORKERS           (ODP_THREAD_COUNT_MAX - 1)
 #define NUM_TMOS              10000         /**< Number of timers */
 #define WAIT_NUM	      10    /**< Max tries to rx last tmo per worker */
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
