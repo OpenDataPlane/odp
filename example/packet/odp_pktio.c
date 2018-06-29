@@ -18,7 +18,7 @@
 /** @def MAX_WORKERS
  * @brief Maximum number of worker threads
  */
-#define MAX_WORKERS            32
+#define MAX_WORKERS            (ODP_THREAD_COUNT_MAX - 1)
 
 /** @def SHM_PKT_POOL_SIZE
  * @brief Size of the shared memory block

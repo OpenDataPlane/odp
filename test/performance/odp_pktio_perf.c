@@ -39,7 +39,7 @@
 #define PKT_BUF_NUM       (32 * 1024)
 #define MAX_NUM_IFACES    2
 #define TEST_HDR_MAGIC    0x92749451
-#define MAX_WORKERS       128
+#define MAX_WORKERS       (ODP_THREAD_COUNT_MAX - 1)
 #define BATCH_LEN_MAX     32
 
 /* Packet rate at which to start when using binary search */

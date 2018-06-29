@@ -79,7 +79,7 @@
 #define MAX_NUM_PKT             (8 * 1024)
 
 /** Maximum number of worker threads */
-#define MAX_WORKERS		64
+#define MAX_WORKERS		(ODP_THREAD_COUNT_MAX - 1)
 
 /** Buffer size of the packet pool buffer in bytes*/
 #define PKT_POOL_BUF_SIZE	1856

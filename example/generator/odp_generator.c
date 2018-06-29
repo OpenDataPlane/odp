@@ -22,7 +22,8 @@
 
 #include <odp/helper/odph_api.h>
 
-#define MAX_WORKERS            32    /* Max number of workers */
+/* Max number of workers */
+#define MAX_WORKERS            (ODP_THREAD_COUNT_MAX - 1)
 #define POOL_NUM_PKT           2048  /* Number of packets in packet pool */
 #define POOL_PKT_LEN           1856  /* Max packet length */
 #define DEFAULT_PKT_INTERVAL   1000  /* Interval between each packet */

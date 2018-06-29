@@ -25,7 +25,7 @@
 #include <odp/helper/odph_api.h>
 
 /* Maximum number of worker threads */
-#define MAX_WORKERS            32
+#define MAX_WORKERS            (ODP_THREAD_COUNT_MAX - 1)
 
 /* Size of the shared memory block */
 #define POOL_PKT_NUM           (16 * 1024)

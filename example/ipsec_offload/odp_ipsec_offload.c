@@ -45,7 +45,8 @@
 #include <odp_ipsec_offload_fwd_db.h>
 #include <odp_ipsec_offload_cache.h>
 
-#define MAX_WORKERS     32   /**< maximum number of worker threads */
+/* maximum number of worker threads */
+#define MAX_WORKERS     (ODP_THREAD_COUNT_MAX - 1)
 
 /**
  * Parsed command line application arguments
