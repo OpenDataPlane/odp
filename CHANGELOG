@@ -117,10 +117,18 @@ example/l2fwd_simple fails on some systems when using 1GB huge pages
 === Unnumbered Bug Fixes
 * Corrected the handling of timeout events in the scalable scheduler.
 * Fixed IPsec link order to streamline builds.
+* Fixed scaling issues with scheduler support for large core count systems.
 
 === Known Issues
 ==== https://bugs.linaro.org/show_bug.cgi?id=3774[Bug 3774]
 Shmem validation test runs indefinitely with 1GB huge pages
+
+==== Running ODP on Systems with more than 64 Cores
+There are several issues that seem to arise when running ODP applications on
+platforms with more than 64 cores. While the most critical of these, which
+affected the scheduler, have been fixed in this release, there are others
+that are still under investigation. These will be addressed in the next
+release of ODP.
 
 == OpenDataPlane (1.19.0.1)
 === Summary of Changes
