@@ -308,10 +308,11 @@ jobs:
                             --enable-debug=full
                             --enable-helper-linux
                           - CCACHE_DISABLE=1 make -j $(nproc)
-                          - sudo CCACHE_DISABLE=1 ODP_SCHEDULER=basic LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make check
-                          - sudo CCACHE_DISABLE=1 ODP_SCHEDULER=sp LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make check
-                          - sudo CCACHE_DISABLE=1 ODP_SCHEDULER=iquery LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make check
-                          - sudo CCACHE_DISABLE=1 ODP_SCHEDULER=scalable LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make check
+                          - mkdir -p /dev/shm/odp
+                          - sudo CCACHE_DISABLE=1 ODP_SCHEDULER=basic ODP_SHM_DIR=/dev/shm/odp LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make check
+                          - sudo CCACHE_DISABLE=1 ODP_SCHEDULER=sp ODP_SHM_DIR=/dev/shm/odp LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make check
+                          - sudo CCACHE_DISABLE=1 ODP_SCHEDULER=iquery ODP_SHM_DIR=/dev/shm/odp LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make check
+                          - sudo CCACHE_DISABLE=1 ODP_SCHEDULER=scalable ODP_SHM_DIR=/dev/shm/odp LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make check
                           - bash <(curl -s https://codecov.io/bash) -X coveragepy
                 - stage: test
                   env: TEST=distcheck
