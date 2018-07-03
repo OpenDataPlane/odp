@@ -10,5 +10,6 @@ odp_pktio_perf
 odp_pool_perf
 odp_queue_perf
 odp_sched_latency
+odp_sched_perf
 odp_sched_pktio
 odp_scheduling
