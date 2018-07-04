@@ -762,17 +762,29 @@ static inline int queue_is_pktin(uint32_t queue_index)
 	return sched->queue[queue_index].poll_pktin;
 }
 
-static inline int poll_pktin(uint32_t qi, int stash)
+static inline int poll_pktin(uint32_t qi, int direct_recv,
+			     odp_event_t ev_tbl[], int max_num)
 {
-	odp_buffer_hdr_t *b_hdr[BURST_SIZE];
-	int pktio_index, pktin_index, num, num_pktin, i;
+	int pktio_index, pktin_index, num, num_pktin;
+	odp_buffer_hdr_t **hdr_tbl;
 	int ret;
 	void *q_int;
+	odp_buffer_hdr_t *b_hdr[BURST_SIZE];
+
+	hdr_tbl = (odp_buffer_hdr_t **)ev_tbl;
+
+	if (!direct_recv) {
+		hdr_tbl = b_hdr;
+
+		/* Limit burst to max queue enqueue size */
+		if (max_num > BURST_SIZE)
+			max_num = BURST_SIZE;
+	}
 
 	pktio_index = sched->queue[qi].pktio_index;
 	pktin_index = sched->queue[qi].pktin_index;
 
-	num = sched_cb_pktin_poll(pktio_index, pktin_index, b_hdr, BURST_SIZE);
+	num = sched_cb_pktin_poll(pktio_index, pktin_index, hdr_tbl, max_num);
 
 	if (num == 0)
 		return 0;
@@ -793,12 +805,8 @@ static inline int poll_pktin(uint32_t qi, int stash)
 		return num;
 	}
 
-	if (stash) {
-		for (i = 0; i < num; i++)
-			sched_local.stash_ev[i] = event_from_buf_hdr(b_hdr[i]);
-
+	if (direct_recv)
 		return num;
-	}
 
 	q_int = qentry_from_index(qi);
 
@@ -908,13 +916,16 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 				 * priorities. Stop scheduling queue when pktio
 				 * has been stopped. */
 				if (pktin) {
-					int stash = !ordered;
-					int num_pkt = poll_pktin(qi, stash);
+					int direct_recv = !ordered;
+					int num_pkt;
+
+					num_pkt = poll_pktin(qi, direct_recv,
+							     ev_tbl, max_deq);
 
 					if (odp_unlikely(num_pkt < 0))
 						continue;
 
-					if (num_pkt == 0 || !stash) {
+					if (num_pkt == 0 || !direct_recv) {
 						ring_enq(ring, ring_mask, qi);
 						break;
 					}
@@ -922,7 +933,6 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 					/* Process packets from an atomic or
 					 * parallel queue right away. */
 					num = num_pkt;
-					stashed = 1;
 				} else {
 					/* Remove empty queue from scheduling.
 					 * Continue scheduling the same priority
