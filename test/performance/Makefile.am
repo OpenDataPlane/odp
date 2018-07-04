@@ -6,7 +6,9 @@ EXECUTABLES = odp_bench_packet \
 	      odp_crypto \
 	      odp_ipsec \
 	      odp_pktio_perf \
-	      odp_queue_perf
+	      odp_pool_perf \
+	      odp_queue_perf \
+	      odp_sched_perf
 
 COMPILE_ONLY = odp_l2fwd \
 	       odp_pktio_ordered \
@@ -39,7 +41,9 @@ odp_sched_latency_SOURCES = odp_sched_latency.c
 odp_sched_pktio_SOURCES = odp_sched_pktio.c
 odp_scheduling_SOURCES = odp_scheduling.c
 odp_pktio_perf_SOURCES = odp_pktio_perf.c
+odp_pool_perf_SOURCES = odp_pool_perf.c
 odp_queue_perf_SOURCES = odp_queue_perf.c
+odp_sched_perf_SOURCES = odp_sched_perf.c
 
 # l2fwd test depends on generator example
 EXTRA_odp_l2fwd_DEPENDENCIES = example-generator
