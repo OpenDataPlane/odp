@@ -92,8 +92,9 @@ ODP_STATIC_ASSERT((8 * sizeof(pri_mask_t)) >= MAX_SPREAD,
 /* Start of named groups in group mask arrays */
 #define SCHED_GROUP_NAMED (ODP_SCHED_GROUP_CONTROL + 1)
 
-/* Maximum number of dequeues */
-#define MAX_DEQ CONFIG_BURST_SIZE
+/* Default burst size. Scheduler rounds up number of requested events up to
+ * this value. */
+#define BURST_SIZE CONFIG_BURST_SIZE
 
 /* Ordered stash size */
 #define MAX_ORDERED_STASH 512
@@ -123,7 +124,7 @@ typedef struct {
 	uint16_t spread_round;
 	uint32_t stash_qi;
 	odp_queue_t stash_queue;
-	odp_event_t stash_ev[MAX_DEQ];
+	odp_event_t stash_ev[BURST_SIZE];
 
 	uint32_t grp_epoch;
 	uint16_t num_grp;
@@ -763,7 +764,7 @@ static inline int queue_is_pktin(uint32_t queue_index)
 
 static inline int poll_pktin(uint32_t qi, int stash)
 {
-	odp_buffer_hdr_t *b_hdr[MAX_DEQ];
+	odp_buffer_hdr_t *b_hdr[BURST_SIZE];
 	int pktio_index, pktin_index, num, num_pktin, i;
 	int ret;
 	void *q_int;
@@ -771,7 +772,7 @@ static inline int poll_pktin(uint32_t qi, int stash)
 	pktio_index = sched->queue[qi].pktio_index;
 	pktin_index = sched->queue[qi].pktin_index;
 
-	num = sched_cb_pktin_poll(pktio_index, pktin_index, b_hdr, MAX_DEQ);
+	num = sched_cb_pktin_poll(pktio_index, pktin_index, b_hdr, BURST_SIZE);
 
 	if (num == 0)
 		return 0;
@@ -824,7 +825,6 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 	int ret;
 	int id;
 	uint32_t qi;
-	unsigned int max_deq = MAX_DEQ;
 	int num_spread = sched->config.num_spread;
 	uint32_t ring_mask = sched->ring_mask;
 
@@ -843,6 +843,9 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 			odp_queue_t handle;
 			ring_t *ring;
 			int pktin;
+			unsigned int max_deq = BURST_SIZE;
+			int stashed = 1;
+			odp_event_t *ev_tbl = sched_local.stash_ev;
 
 			if (id >= num_spread)
 				id = 0;
@@ -866,24 +869,30 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 				continue;
 			}
 
-			/* Low priorities have smaller batch size to limit
-			 * head of line blocking latency. */
-			if (odp_unlikely(MAX_DEQ > 1 &&
-					 prio > ODP_SCHED_PRIO_DEFAULT))
-				max_deq = MAX_DEQ / 2;
-
 			ordered = queue_is_ordered(qi);
 
-			/* Do not cache ordered events locally to improve
+			/* When application's array is larger than our burst
+			 * size, output all events directly there. Also, ordered
+			 * queues are not stashed locally to improve
 			 * parallelism. Ordered context can only be released
 			 * when the local cache is empty. */
-			if (ordered && max_num < MAX_DEQ)
+			if (max_num > BURST_SIZE || ordered) {
+				stashed = 0;
+				ev_tbl  = out_ev;
 				max_deq = max_num;
+			}
+
+			/* Low priorities have smaller burst size to limit
+			 * head of line blocking latency. */
+			if (BURST_SIZE > 1 &&
+			    odp_unlikely(prio > ODP_SCHED_PRIO_DEFAULT) &&
+			    max_deq > BURST_SIZE / 2)
+				max_deq = BURST_SIZE / 2;
 
 			pktin = queue_is_pktin(qi);
 
-			num = sched_cb_queue_deq_multi(qi, sched_local.stash_ev,
-						       max_deq, !pktin);
+			num = sched_cb_queue_deq_multi(qi, ev_tbl, max_deq,
+						       !pktin);
 
 			if (num < 0) {
 				/* Destroyed queue. Continue scheduling the same
@@ -913,6 +922,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 					/* Process packets from an atomic or
 					 * parallel queue right away. */
 					num = num_pkt;
+					stashed = 1;
 				} else {
 					/* Remove empty queue from scheduling.
 					 * Continue scheduling the same priority
@@ -943,10 +953,16 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 			}
 
 			handle = queue_from_index(qi);
-			sched_local.stash_num   = num;
-			sched_local.stash_index = 0;
-			sched_local.stash_queue = handle;
-			ret = copy_from_stash(out_ev, max_num);
+
+			if (stashed) {
+				sched_local.stash_num   = num;
+				sched_local.stash_index = 0;
+				sched_local.stash_queue = handle;
+				ret = copy_from_stash(out_ev, max_num);
+			} else {
+				sched_local.stash_num = 0;
+				ret = num;
+			}
 
 			/* Output the source queue handle */
 			if (out_queue)
