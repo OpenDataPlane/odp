@@ -133,8 +133,6 @@ typedef struct _ring {
 
 	/** @private Producer */
 	struct ODP_ALIGNED_CACHE _prod {
-		uint32_t watermark;      /* Maximum items */
-		uint32_t sp_enqueue;     /* True, if single producer. */
 		uint32_t size;           /* Size of ring. */
 		uint32_t mask;           /* Mask (size-1) of ring. */
 		volatile uint32_t head;  /* Producer head. */
@@ -143,7 +141,6 @@ typedef struct _ring {
 
 	/** @private Consumer */
 	struct ODP_ALIGNED_CACHE _cons {
-		uint32_t sc_dequeue;     /* True, if single consumer. */
 		uint32_t size;           /* Size of the ring. */
 		uint32_t mask;           /* Mask (size-1) of ring. */
 		volatile uint32_t head;  /* Consumer head. */
@@ -163,8 +160,6 @@ typedef struct _ring {
 #define _RING_SHM_PROC (1 << 2)
  /* Do not link ring to linked list. */
 #define _RING_NO_LIST  (1 << 3)
-/* Quota exceed for burst ops */
-#define _RING_QUOT_EXCEED (1 << 31)
 /* Ring size mask */
 #define _RING_SZ_MASK  (unsigned)(0x0fffffff)
 
@@ -172,9 +167,8 @@ typedef struct _ring {
  * Create a new ring named *name* in memory.
  *
  * This function uses odp_shm_reserve() to allocate memory. Its size is
- * set to *count*, which must be a power of two. Water marking is
- * disabled by default. Note that the real usable ring size is count-1
- * instead of count.
+ * set to *count*, which must be a power of two. Note that the real usable
+ * ring size is count-1 instead of count.
  *
  * @param name
  *   The name of the ring.
@@ -208,23 +202,6 @@ _ring_t *_ring_create(const char *name, unsigned count,
 int _ring_destroy(const char *name);
 
 /**
- * Change the high water mark.
- *
- * If *count* is 0, water marking is disabled. Otherwise, it is set to the
- * *count* value. The *count* value must be greater than 0 and less
- * than the ring size.
- *
- * This function can be called at any time (not necessarily at
- * initialization).
- *
- * @param r  Pointer to the ring structure.
- * @param count New water mark value.
- * @return 0: Success; water mark changed.
- *		-EINVAL: Invalid water mark value.
- */
-int _ring_set_water_mark(_ring_t *r, unsigned count);
-
-/**
  * Dump the status of the ring to the console.
  *
  * @param r A pointer to the ring structure.
@@ -250,39 +227,11 @@ void _ring_dump(const _ring_t *r);
  *   Depend on the behavior value
  *   if behavior = ODPH_RING_QUEUE_FIXED
  *   - 0: Success; objects enqueue.
- *   - -EDQUOT: Quota exceeded. The objects have been enqueued, but the
- *     high water mark is exceeded.
  *   - -ENOBUFS: Not enough room in the ring to enqueue, no object is enqueued.
  *   if behavior = ODPH_RING_QUEUE_VARIABLE
  *   - n: Actual number of objects enqueued.
  */
 int ___ring_mp_do_enqueue(_ring_t *r, void * const *obj_table,
-			  unsigned n,
-			  enum _ring_queue_behavior behavior);
-
-/**
- * Enqueue several objects on a ring (NOT multi-producers safe).
- *
- * @param r
- *   A pointer to the ring structure.
- * @param obj_table
- *   A pointer to a table of void * pointers (objects).
- * @param n
- *   The number of objects to add in the ring from the obj_table.
- * @param behavior
- *   ODPH_RING_QUEUE_FIXED:    Enqueue a fixed number of items from a ring
- *   ODPH_RING_QUEUE_VARIABLE: Enqueue as many items a possible from ring
- * @return
- *   Depend on the behavior value
- *   if behavior = ODPH_RING_QUEUE_FIXED
- *   - 0: Success; objects enqueue.
- *   - -EDQUOT: Quota exceeded. The objects have been enqueued, but the
- *     high water mark is exceeded.
- *   - -ENOBUFS: Not enough room in the ring to enqueue, no object is enqueued.
- *   if behavior = ODPH_RING_QUEUE_VARIABLE
- *   - n: Actual number of objects enqueued.
- */
-int ___ring_sp_do_enqueue(_ring_t *r, void * const *obj_table,
 			  unsigned n,
 			  enum _ring_queue_behavior behavior);
 
@@ -318,33 +267,6 @@ int ___ring_mc_do_dequeue(_ring_t *r, void **obj_table,
 			  enum _ring_queue_behavior behavior);
 
 /**
- * Dequeue several objects from a ring (NOT multi-consumers safe).
- * When the request objects are more than the available objects, only dequeue
- * the actual number of objects
- *
- * @param r
- *   A pointer to the ring structure.
- * @param obj_table
- *   A pointer to a table of void * pointers (objects) that will be filled.
- * @param n
- *   The number of objects to dequeue from the ring to the obj_table.
- * @param behavior
- *   ODPH_RING_QUEUE_FIXED:    Dequeue a fixed number of items from a ring
- *   ODPH_RING_QUEUE_VARIABLE: Dequeue as many items a possible from ring
- * @return
- *   Depend on the behavior value
- *   if behavior = ODPH_RING_QUEUE_FIXED
- *   - 0: Success; objects dequeued.
- *   - -ENOENT: Not enough entries in the ring to dequeue; no object is
- *     dequeued.
- *   if behavior = ODPH_RING_QUEUE_VARIABLE
- *   - n: Actual number of objects dequeued.
- */
-int ___ring_sc_do_dequeue(_ring_t *r, void **obj_table,
-			  unsigned n,
-			  enum _ring_queue_behavior behavior);
-
-/**
  * Enqueue several objects on the ring (multi-producers safe).
  *
  * This function uses a "compare and set" instruction to move the
@@ -366,24 +288,6 @@ int _ring_mp_enqueue_bulk(_ring_t *r, void * const *obj_table,
 			  unsigned n);
 
 /**
- * Enqueue several objects on a ring (NOT multi-producers safe).
- *
- * @param r
- *   A pointer to the ring structure.
- * @param obj_table
- *   A pointer to a table of void * pointers (objects).
- * @param n
- *   The number of objects to add in the ring from the obj_table.
- * @return
- *   - 0: Success; objects enqueued.
- *   - -EDQUOT: Quota exceeded. The objects have been enqueued, but the
- *     high water mark is exceeded.
- *   - -ENOBUFS: Not enough room in the ring to enqueue; no object is enqueued.
- */
-int _ring_sp_enqueue_bulk(_ring_t *r, void * const *obj_table,
-			  unsigned n);
-
-/**
  * Dequeue several objects from a ring (multi-consumers safe).
  *
  * This function uses a "compare and set" instruction to move the
@@ -401,23 +305,6 @@ int _ring_sp_enqueue_bulk(_ring_t *r, void * const *obj_table,
  *     dequeued.
  */
 int _ring_mc_dequeue_bulk(_ring_t *r, void **obj_table, unsigned n);
-
-/**
- * Dequeue several objects from a ring (NOT multi-consumers safe).
- *
- * @param r
- *   A pointer to the ring structure.
- * @param obj_table
- *   A pointer to a table of void * pointers (objects) that will be filled.
- * @param n
- *   The number of objects to dequeue from the ring to the obj_table,
- *   must be strictly positive.
- * @return
- *   - 0: Success; objects dequeued.
- *   - -ENOENT: Not enough entries in the ring to dequeue; no object is
- *     dequeued.
- */
-int _ring_sc_dequeue_bulk(_ring_t *r, void **obj_table, unsigned n);
 
 /**
  * Test if a ring is full.
@@ -487,39 +374,6 @@ int _ring_mp_enqueue_burst(_ring_t *r, void * const *obj_table,
 			   unsigned n);
 
 /**
- * Enqueue several objects on a ring (NOT multi-producers safe).
- *
- * @param r
- *   A pointer to the ring structure.
- * @param obj_table
- *   A pointer to a table of void * pointers (objects).
- * @param n
- *   The number of objects to add in the ring from the obj_table.
- * @return
- *   - n: Actual number of objects enqueued.
- */
-int _ring_sp_enqueue_burst(_ring_t *r, void * const *obj_table,
-			   unsigned n);
-/**
- * Enqueue several objects on a ring.
- *
- * This function calls the multi-producer or the single-producer
- * version depending on the default behavior that was specified at
- * ring creation time (see flags).
- *
- * @param r
- *   A pointer to the ring structure.
- * @param obj_table
- *   A pointer to a table of void * pointers (objects).
- * @param n
- *   The number of objects to add in the ring from the obj_table.
- * @return
- *   - n: Actual number of objects enqueued.
- */
-int _ring_enqueue_burst(_ring_t *r, void * const *obj_table,
-			unsigned n);
-
-/**
  * Dequeue several objects from a ring (multi-consumers safe). When the request
  * objects are more than the available objects, only dequeue the actual number
  * of objects
@@ -537,40 +391,6 @@ int _ring_enqueue_burst(_ring_t *r, void * const *obj_table,
  *   - n: Actual number of objects dequeued, 0 if ring is empty
  */
 int _ring_mc_dequeue_burst(_ring_t *r, void **obj_table, unsigned n);
-
-/**
- * Dequeue several objects from a ring (NOT multi-consumers safe).When the
- * request objects are more than the available objects, only dequeue the
- * actual number of objects
- *
- * @param r
- *   A pointer to the ring structure.
- * @param obj_table
- *   A pointer to a table of void * pointers (objects) that will be filled.
- * @param n
- *   The number of objects to dequeue from the ring to the obj_table.
- * @return
- *   - n: Actual number of objects dequeued, 0 if ring is empty
- */
-int _ring_sc_dequeue_burst(_ring_t *r, void **obj_table, unsigned n);
-
-/**
- * Dequeue multiple objects from a ring up to a maximum number.
- *
- * This function calls the multi-consumers or the single-consumer
- * version, depending on the default behaviour that was specified at
- * ring creation time (see flags).
- *
- * @param r
- *   A pointer to the ring structure.
- * @param obj_table
- *   A pointer to a table of void * pointers (objects) that will be filled.
- * @param n
- *   The number of objects to dequeue from the ring to the obj_table.
- * @return
- *   - Number of objects dequeued, or a negative error code on error
- */
-int _ring_dequeue_burst(_ring_t *r, void **obj_table, unsigned n);
 
 /**
  * dump the status of all rings on the console
