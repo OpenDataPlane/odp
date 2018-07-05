@@ -8,7 +8,7 @@
 #include <odp/api/atomic.h>
 #include <odp/api/plat/atomic_inlines.h>
 #include <odp/api/shared_memory.h>
-#include <odp_queue_internal.h>
+#include <odp_queue_basic_internal.h>
 #include <string.h>
 #include <stdio.h>
 

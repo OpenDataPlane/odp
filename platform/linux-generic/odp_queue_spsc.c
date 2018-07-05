@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <odp_queue_internal.h>
+#include <odp_queue_basic_internal.h>
 #include <odp_pool_internal.h>
 
 #include "config.h"

@@ -25,9 +25,7 @@
 #include <odp/api/packet_io.h>
 #include <odp_config_internal.h>
 #include <odp_timer_internal.h>
-
-/* Should remove this dependency */
-#include <odp_queue_internal.h>
+#include <odp_queue_basic_internal.h>
 
 /* Number of priority levels */
 #define NUM_SCHED_PRIO 8
