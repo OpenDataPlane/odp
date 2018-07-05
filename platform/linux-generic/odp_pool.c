@@ -904,7 +904,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	/* Packet pools */
 	capa->pkt.max_pools        = ODP_CONFIG_POOLS;
 	capa->pkt.max_len          = CONFIG_PACKET_MAX_LEN;
-	capa->pkt.max_num	   = CONFIG_POOL_MAX_NUM;
+	capa->pkt.max_num          = CONFIG_POOL_MAX_NUM;
 	capa->pkt.min_headroom     = CONFIG_PACKET_HEADROOM;
 	capa->pkt.max_headroom     = CONFIG_PACKET_HEADROOM;
 	capa->pkt.min_tailroom     = CONFIG_PACKET_TAILROOM;
