@@ -359,6 +359,19 @@ jobs:
                                true
                              fi
                 - stage: "build only"
+                  env: Ubuntu14.04_arm64 CONF="docker cross builds"
+                  compiler: gcc
+                  install: true
+                  script:
+                          - docker run  -i -t -v `pwd`:/odp -v /lib/modules:/lib/modules -v /usr/src:/usr/src maximuvarov/odp_ubuntu_14.04.5  /root/build_arm64.sh
+                - stage: "build only"
+                  env: Ubuntu14.04_armhf CONF="docker cross builds"
+                  compiler: gcc
+                  install: true
+                  script:
+                          - docker run  -i -t -v `pwd`:/odp -v /lib/modules:/lib/modules -v /usr/src:/usr/src maximuvarov/odp_ubuntu_14.04.5  /root/build_armhf.sh
+
+                - stage: "build only"
                   env: CONF=""
                   compiler: gcc
                   install: true
@@ -390,6 +403,18 @@ jobs:
                           - ./bootstrap
                           - ./configure --enable-helper-linux $CROSS
                           - make -j $(nproc)
+                - stage: test
+                  env: Ubunu18.04_x86_64 CONF=""
+                  install: true
+                  script:
+                          - sudo apt-get install linux-headers-`uname -r`
+                          - docker run --privileged -i -t -v `pwd`:/odp -v/lib/modules:/lib/modules -v/usr/src:/usr/src --shm-size 8G maximuvarov/odp_ubuntu_18.04 /odp/scripts/ci/build_x86_64.sh $CONF
+                - stage: test
+                  env: Ubunu18.04_x86_64 CONF="--disable-abi-compat"
+                  install: true
+                  script:
+                          - sudo apt-get install linux-headers-`uname -r`
+                          - docker run --privileged -i -t -v `pwd`:/odp -v/lib/modules:/lib/modules -v/usr/src:/usr/src --shm-size 8G maximuvarov/odp_ubuntu_18.04 /odp/scripts/ci/build_x86_64.sh $CONF
                 - stage: test
                   compiler: gcc
                   env: CROSS_ARCH="arm64"
