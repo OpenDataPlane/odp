@@ -363,7 +363,7 @@ static int schedule_init_global(void)
 
 static inline void queue_destroy_finalize(uint32_t qi)
 {
-	sched_cb_queue_destroy_finalize(qi);
+	sched_queue_destroy_finalize(qi);
 }
 
 static int schedule_term_global(void)
@@ -384,9 +384,7 @@ static int schedule_term_global(void)
 					odp_event_t events[1];
 					int num;
 
-					num = sched_cb_queue_deq_multi(qi,
-								       events,
-								       1, 1);
+					num = sched_queue_deq(qi, events, 1, 1);
 
 					if (num < 0)
 						queue_destroy_finalize(qi);
@@ -581,7 +579,7 @@ static void schedule_pktio_start(int pktio_index, int num_pktin,
 		ODP_ASSERT(pktin_idx[i] <= MAX_PKTIN_INDEX);
 
 		/* Start polling */
-		sched_cb_queue_set_status(qi, QUEUE_STATUS_SCHED);
+		sched_queue_set_status(qi, QUEUE_STATUS_SCHED);
 		schedule_sched_queue(qi);
 	}
 }
@@ -797,7 +795,7 @@ static inline int poll_pktin(uint32_t qi, int direct_recv,
 		num_pktin = sched->pktio[pktio_index].num_pktin;
 		odp_spinlock_unlock(&sched->pktio_lock);
 
-		sched_cb_queue_set_status(qi, QUEUE_STATUS_NOTSCHED);
+		sched_queue_set_status(qi, QUEUE_STATUS_NOTSCHED);
 
 		if (num_pktin == 0)
 			sched_cb_pktio_stop_finalize(pktio_index);
@@ -899,13 +897,12 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 			pktin = queue_is_pktin(qi);
 
-			num = sched_cb_queue_deq_multi(qi, ev_tbl, max_deq,
-						       !pktin);
+			num = sched_queue_deq(qi, ev_tbl, max_deq, !pktin);
 
 			if (num < 0) {
 				/* Destroyed queue. Continue scheduling the same
 				 * priority queue. */
-				sched_cb_queue_destroy_finalize(qi);
+				sched_queue_destroy_finalize(qi);
 				continue;
 			}
 

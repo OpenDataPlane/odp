@@ -82,12 +82,6 @@ int sched_cb_pktin_poll(int pktio_index, int pktin_index,
 int sched_cb_pktin_poll_old(int pktio_index, int num_queue, int index[]);
 int sched_cb_pktin_poll_one(int pktio_index, int rx_queue, odp_event_t evts[]);
 void sched_cb_pktio_stop_finalize(int pktio_index);
-odp_queue_t sched_cb_queue_handle(uint32_t queue_index);
-void sched_cb_queue_destroy_finalize(uint32_t queue_index);
-void sched_cb_queue_set_status(uint32_t queue_index, int status);
-int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num,
-			     int update_status);
-int sched_cb_queue_empty(uint32_t queue_index);
 
 /* API functions */
 typedef struct {
