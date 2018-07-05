@@ -25,7 +25,7 @@
 #include <odp/helper/odph_api.h>
 
 /* Maximum number of worker threads */
-#define MAX_WORKERS            32
+#define MAX_WORKERS            (ODP_THREAD_COUNT_MAX - 1)
 
 /* Size of the shared memory block */
 #define POOL_PKT_NUM           (16 * 1024)
@@ -75,7 +75,7 @@ static inline int sched_mode(pktin_mode_t in_mode)
  */
 typedef struct {
 	int extra_check;        /* Some extra checks have been enabled */
-	int cpu_count;
+	unsigned int cpu_count;
 	int if_count;		/* Number of interfaces to be used */
 	int addr_count;		/* Number of dst addresses to be used */
 	int num_workers;	/* Number of worker threads */
@@ -1125,7 +1125,7 @@ static void usage(char *progname)
 	       "  -o, --out_mode <arg>    Packet output mode\n"
 	       "                          0: Direct mode: PKTOUT_MODE_DIRECT (default)\n"
 	       "                          1: Queue mode:  PKTOUT_MODE_QUEUE\n"
-	       "  -c, --count <num>       CPU count.\n"
+	       "  -c, --count <num>       CPU count, 0=all available, default=1\n"
 	       "  -t, --time <sec>        Time in seconds to run.\n"
 	       "  -a, --accuracy <sec>    Time in seconds get print statistics\n"
 	       "                          (default is 1 second).\n"
@@ -1188,6 +1188,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
+	appl_args->cpu_count = 1; /* use one worker by default */
 	appl_args->dst_change = 1; /* change eth dst address by default */
 	appl_args->src_change = 1; /* change eth src address by default */
 	appl_args->num_groups = 0; /* use default group */
@@ -1492,9 +1493,8 @@ int main(int argc, char *argv[])
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &gbl_args->appl);
 
-	/* Default to system CPU count unless user specified */
 	num_workers = MAX_WORKERS;
-	if (gbl_args->appl.cpu_count)
+	if (gbl_args->appl.cpu_count && gbl_args->appl.cpu_count < MAX_WORKERS)
 		num_workers = gbl_args->appl.cpu_count;
 
 	/* Get default worker cpumask */

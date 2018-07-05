@@ -20,7 +20,7 @@
 /** @def MAX_WORKERS
  * @brief Maximum number of worker threads
  */
-#define MAX_WORKERS            32
+#define MAX_WORKERS            (ODP_THREAD_COUNT_MAX - 1)
 
 /** @def SHM_PKT_POOL_SIZE
  * @brief Size of the shared memory block
@@ -70,7 +70,7 @@ typedef struct {
 	int policy_count;	/**< global policy count */
 	int appl_mode;		/**< application mode */
 	odp_atomic_u64_t total_packets;	/**< total received packets */
-	int cpu_count;		/**< Number of CPUs to use */
+	unsigned int cpu_count; /**< Number of CPUs to use */
 	uint32_t time;		/**< Number of seconds to run */
 	char *if_name;		/**< pointer to interface names */
 } appl_args_t;
@@ -519,9 +519,8 @@ int main(int argc, char *argv[])
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), args);
 
-	/* Default to system CPU count unless user specified */
 	num_workers = MAX_WORKERS;
-	if (args->cpu_count)
+	if (args->cpu_count && args->cpu_count < MAX_WORKERS)
 		num_workers = args->cpu_count;
 
 	/* Get default worker cpumask */
@@ -807,6 +806,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 
+	appl_args->cpu_count = 1; /* Use one worker by default */
+
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts,
 				  longopts, &long_index);
@@ -919,8 +920,7 @@ static void usage(char *progname)
 			"<mask  bits>		PMR mask bits to be applied on the PMR term value\n"
 			"\n"
 			"Optional OPTIONS\n"
-			"  -c, --count <number> CPU count.\n"
-			"                       default: CPU core count.\n"
+			"  -c, --count <number> CPU count, 0=all available, default=1\n"
 			"\n"
 			"  -m, --mode		0: Packet Drop mode. Received packets will be dropped\n"
 			"			!0: Packet ICMP mode. Received packets will be sent back\n"

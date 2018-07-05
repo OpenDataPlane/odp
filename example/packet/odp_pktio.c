@@ -18,7 +18,7 @@
 /** @def MAX_WORKERS
  * @brief Maximum number of worker threads
  */
-#define MAX_WORKERS            32
+#define MAX_WORKERS            (ODP_THREAD_COUNT_MAX - 1)
 
 /** @def SHM_PKT_POOL_SIZE
  * @brief Size of the shared memory block
@@ -63,7 +63,7 @@
  * Parsed command line application arguments
  */
 typedef struct {
-	int cpu_count;		/**< Number of CPUs to use */
+	unsigned int cpu_count;	/**< Number of CPUs to use */
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
 	int mode;		/**< Packet IO mode */
@@ -376,9 +376,8 @@ int main(int argc, char *argv[])
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &args->appl);
 
-	/* Default to system CPU count unless user specified */
 	num_workers = MAX_WORKERS;
-	if (args->appl.cpu_count)
+	if (args->appl.cpu_count && args->appl.cpu_count < MAX_WORKERS)
 		num_workers = args->appl.cpu_count;
 
 	/* Get default worker cpumask */
@@ -572,6 +571,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 
+	appl_args->cpu_count = 1; /* use one worker by default */
 	appl_args->mode = APPL_MODE_PKT_SCHED;
 	appl_args->time = 0; /**< loop forever */
 
@@ -712,7 +712,7 @@ static void usage(char *progname)
 	       "  -i, --interface Eth interfaces (comma-separated, no spaces)\n"
 	       "\n"
 	       "Optional OPTIONS\n"
-	       "  -c, --count <number> CPU count.\n"
+	       "  -c, --count <number> CPU count, 0=all available, default=1\n"
 	       "  -t, --time <seconds> Number of seconds to run.\n"
 	       "  -m, --mode      0: Receive and send directly (no queues)\n"
 	       "                  1: Receive and send via queues.\n"

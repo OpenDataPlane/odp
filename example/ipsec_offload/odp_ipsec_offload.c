@@ -45,13 +45,14 @@
 #include <odp_ipsec_offload_fwd_db.h>
 #include <odp_ipsec_offload_cache.h>
 
-#define MAX_WORKERS     32   /**< maximum number of worker threads */
+/* maximum number of worker threads */
+#define MAX_WORKERS     (ODP_THREAD_COUNT_MAX - 1)
 
 /**
  * Parsed command line application arguments
  */
 typedef struct {
-	int cpu_count;
+	unsigned int cpu_count;
 	int flows;
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
@@ -558,9 +559,8 @@ main(int argc, char *argv[])
 	if (odp_ipsec_config(&config))
 		EXAMPLE_ABORT("Error: IPSec not configured.\n");
 
-	/* Default to system CPU count unless user specified */
 	num_workers = MAX_WORKERS;
-	if (args->appl.cpu_count && args->appl.cpu_count <= MAX_WORKERS)
+	if (args->appl.cpu_count && args->appl.cpu_count < MAX_WORKERS)
 		num_workers = args->appl.cpu_count;
 
 	/*
@@ -661,6 +661,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
+	appl_args->cpu_count = 1; /* use one worker by default */
 	appl_args->flows = 1;
 	appl_args->queue_type = ODP_SCHED_SYNC_ATOMIC;
 
@@ -842,7 +843,7 @@ static void usage(char *progname)
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -f, --flows <number> routes count.\n"
-	       "  -c, --count <number> CPU count.\n"
+	       "  -c, --count <number> CPU count, 0=all available, default=1\n"
 	       "  -q		specify the queue type\n"
 	       "		0:	ODP_SCHED_SYNC_PARALLEL\n"
 	       "		1:	ODP_SCHED_SYNC_ATOMIC\n"

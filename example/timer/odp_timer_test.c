@@ -19,15 +19,15 @@
 /* GNU lib C */
 #include <getopt.h>
 
-
-#define MAX_WORKERS           32            /**< Max worker threads */
+/* Max worker threads */
+#define MAX_WORKERS           (ODP_THREAD_COUNT_MAX - 1)
 #define NUM_TMOS              10000         /**< Number of timers */
 #define WAIT_NUM	      10    /**< Max tries to rx last tmo per worker */
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 /** Test arguments */
 typedef struct {
-	int cpu_count;     /**< CPU count*/
+	unsigned int cpu_count; /**< CPU count*/
 	int resolution_us; /**< Timeout resolution in usec*/
 	int min_us;        /**< Minimum timeout in usec*/
 	int max_us;        /**< Maximum timeout in usec*/
@@ -237,7 +237,7 @@ static void print_usage(void)
 {
 	printf("\n\nUsage: ./odp_example [options]\n");
 	printf("Options:\n");
-	printf("  -c, --count <number>    CPU count\n");
+	printf("  -c, --count <number>    CPU count, 0=all available, default=1\n");
 	printf("  -r, --resolution <us>   timeout resolution in usec\n");
 	printf("  -m, --min <us>          minimum timeout in usec\n");
 	printf("  -x, --max <us>          maximum timeout in usec\n");
@@ -280,7 +280,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	/* defaults */
 	odp_timer_capability(ODP_CLOCK_CPU, &timer_capa);
 
-	args->cpu_count     = 0; /* all CPU's */
+	args->cpu_count     = 1;
 	args->resolution_us = MAX(10000,
 				  timer_capa.highest_res_ns /
 					ODP_TIME_USEC_IN_NS);
@@ -391,9 +391,8 @@ int main(int argc, char *argv[])
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
-	/* Default to system CPU count unless user specified */
 	num_workers = MAX_WORKERS;
-	if (gbls->args.cpu_count)
+	if (gbls->args.cpu_count && gbls->args.cpu_count < MAX_WORKERS)
 		num_workers = gbls->args.cpu_count;
 
 	/* Get default worker cpumask */
