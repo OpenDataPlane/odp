@@ -94,7 +94,8 @@ ODP_STATIC_ASSERT((8 * sizeof(pri_mask_t)) >= MAX_SPREAD,
 
 /* Default burst size. Scheduler rounds up number of requested events up to
  * this value. */
-#define BURST_SIZE CONFIG_BURST_SIZE
+#define BURST_SIZE_MAX  CONFIG_BURST_SIZE
+#define BURST_SIZE_MIN  1
 
 /* Ordered stash size */
 #define MAX_ORDERED_STASH 512
@@ -124,7 +125,7 @@ typedef struct {
 	uint16_t spread_round;
 	uint32_t stash_qi;
 	odp_queue_t stash_queue;
-	odp_event_t stash_ev[BURST_SIZE];
+	odp_event_t stash_ev[BURST_SIZE_MAX];
 
 	uint32_t grp_epoch;
 	uint16_t num_grp;
@@ -179,6 +180,8 @@ typedef struct {
 
 	struct {
 		uint8_t num_spread;
+		uint8_t burst_hi;
+		uint8_t burst_low;
 	} config;
 
 	uint32_t       pri_count[NUM_PRIO][MAX_SPREAD];
@@ -252,6 +255,34 @@ static int read_config_file(sched_global_t *sched)
 	}
 
 	sched->config.num_spread = val;
+	ODP_PRINT("  %s: %i\n", str, val);
+
+	str = "sched_basic.burst_size_hi";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	if (val > BURST_SIZE_MAX || val < BURST_SIZE_MIN) {
+		ODP_ERR("Bad value %s = %u\n", str, val);
+		return -1;
+	}
+
+	sched->config.burst_hi = val;
+	ODP_PRINT("  %s: %i\n", str, val);
+
+	str = "sched_basic.burst_size_low";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	if (val > BURST_SIZE_MAX || val < BURST_SIZE_MIN) {
+		ODP_ERR("Bad value %s = %u\n", str, val);
+		return -1;
+	}
+
+	sched->config.burst_low = val;
 	ODP_PRINT("  %s: %i\n\n", str, val);
 
 	return 0;
@@ -767,7 +798,7 @@ static inline int poll_pktin(uint32_t qi, int direct_recv,
 	odp_buffer_hdr_t **hdr_tbl;
 	int ret;
 	void *q_int;
-	odp_buffer_hdr_t *b_hdr[BURST_SIZE];
+	odp_buffer_hdr_t *b_hdr[BURST_SIZE_MAX];
 
 	hdr_tbl = (odp_buffer_hdr_t **)ev_tbl;
 
@@ -775,8 +806,8 @@ static inline int poll_pktin(uint32_t qi, int direct_recv,
 		hdr_tbl = b_hdr;
 
 		/* Limit burst to max queue enqueue size */
-		if (max_num > BURST_SIZE)
-			max_num = BURST_SIZE;
+		if (max_num > BURST_SIZE_MAX)
+			max_num = BURST_SIZE_MAX;
 	}
 
 	pktio_index = sched->queue[qi].pktio_index;
@@ -831,6 +862,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 	int ret;
 	int id;
 	uint32_t qi;
+	unsigned int max_burst;
 	int num_spread = sched->config.num_spread;
 	uint32_t ring_mask = sched->ring_mask;
 
@@ -839,6 +871,10 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 		if (sched->pri_mask[prio] == 0)
 			continue;
+
+		max_burst = sched->config.burst_hi;
+		if (prio > ODP_SCHED_PRIO_DEFAULT)
+			max_burst = sched->config.burst_low;
 
 		/* Select the first ring based on weights */
 		id = first;
@@ -849,7 +885,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 			odp_queue_t handle;
 			ring_t *ring;
 			int pktin;
-			unsigned int max_deq = BURST_SIZE;
+			unsigned int max_deq = max_burst;
 			int stashed = 1;
 			odp_event_t *ev_tbl = sched_local.stash_ev;
 
@@ -877,23 +913,16 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 			ordered = queue_is_ordered(qi);
 
-			/* When application's array is larger than our burst
+			/* When application's array is larger than max burst
 			 * size, output all events directly there. Also, ordered
 			 * queues are not stashed locally to improve
 			 * parallelism. Ordered context can only be released
 			 * when the local cache is empty. */
-			if (max_num > BURST_SIZE || ordered) {
+			if (max_num > max_burst || ordered) {
 				stashed = 0;
 				ev_tbl  = out_ev;
 				max_deq = max_num;
 			}
-
-			/* Low priorities have smaller burst size to limit
-			 * head of line blocking latency. */
-			if (BURST_SIZE > 1 &&
-			    odp_unlikely(prio > ODP_SCHED_PRIO_DEFAULT) &&
-			    max_deq > BURST_SIZE / 2)
-				max_deq = BURST_SIZE / 2;
 
 			pktin = queue_is_pktin(qi);
 
