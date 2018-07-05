@@ -7,7 +7,7 @@
 #include "config.h"
 
 #include <odp/api/queue.h>
-#include <odp_queue_internal.h>
+#include <odp_queue_basic_internal.h>
 #include <odp_queue_if.h>
 #include <odp/api/std_types.h>
 #include <odp/api/align.h>
