@@ -250,7 +250,7 @@ int ___ring_mp_do_enqueue(_ring_t *r, void * const *obj_table,
 		/* Reset n to the initial burst count */
 		n = max;
 
-		prod_head = __atomic_load_n(&r->prod.head, __ATOMIC_RELAXED);
+		prod_head = __atomic_load_n(&r->prod.head, __ATOMIC_ACQUIRE);
 		cons_tail = __atomic_load_n(&r->cons.tail, __ATOMIC_ACQUIRE);
 		/* The subtraction is done between two unsigned 32bits value
 		 * (the result is always modulo 32 bits even if we have
@@ -313,7 +313,7 @@ int ___ring_mc_do_dequeue(_ring_t *r, void **obj_table,
 		/* Restore n as it may change every loop */
 		n = max;
 
-		cons_head = __atomic_load_n(&r->cons.head, __ATOMIC_RELAXED);
+		cons_head = __atomic_load_n(&r->cons.head, __ATOMIC_ACQUIRE);
 		prod_tail = __atomic_load_n(&r->prod.tail, __ATOMIC_ACQUIRE);
 		/* The subtraction is done between two unsigned 32bits value
 		 * (the result is always modulo 32 bits even if we have
