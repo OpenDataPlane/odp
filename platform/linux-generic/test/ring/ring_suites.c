@@ -36,7 +36,6 @@ static odp_testinfo_t ring_suite_basic[] = {
 	ODP_TEST_INFO(ring_test_basic_create),
 	ODP_TEST_INFO(ring_test_basic_burst),
 	ODP_TEST_INFO(ring_test_basic_bulk),
-	ODP_TEST_INFO(ring_test_basic_watermark),
 	ODP_TEST_INFO_NULL,
 };
 
