@@ -20,7 +20,7 @@ int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 	int id = 0;
 
 	strcpy(sysinfo->cpu_arch_str, "powerpc");
-	while (fgets(str, sizeof(str), file) != NULL && id < MAX_CPU_NUMBER) {
+	while (fgets(str, sizeof(str), file) != NULL && id < CONFIG_NUM_CPU) {
 		if (!mhz) {
 			pos = strstr(str, "clock");
 
@@ -40,7 +40,7 @@ int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 
 				pos = strchr(str, ':');
 				strncpy(sysinfo->model_str[id], pos + 2,
-					sizeof(sysinfo->model_str[id]) - 1);
+					MODEL_STR_SIZE - 1);
 				len = strlen(sysinfo->model_str[id]);
 				sysinfo->model_str[id][len - 1] = 0;
 				model = 1;

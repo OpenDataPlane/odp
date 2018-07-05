@@ -17,17 +17,18 @@ extern "C" {
 #include <pthread.h>
 #include <stdint.h>
 #include <libconfig.h>
+#include <odp_config_internal.h>
 
-#define MAX_CPU_NUMBER 128
+#define MODEL_STR_SIZE 128
 #define UID_MAXLEN 30
 
 typedef struct {
-	uint64_t cpu_hz_max[MAX_CPU_NUMBER];
+	uint64_t cpu_hz_max[CONFIG_NUM_CPU];
 	uint64_t page_size;
 	int      cache_line_size;
 	int      cpu_count;
 	char     cpu_arch_str[128];
-	char     model_str[MAX_CPU_NUMBER][128];
+	char     model_str[CONFIG_NUM_CPU][MODEL_STR_SIZE];
 } system_info_t;
 
 typedef struct {

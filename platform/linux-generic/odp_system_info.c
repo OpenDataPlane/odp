@@ -265,7 +265,7 @@ static char *get_hugepage_dir(uint64_t hugepage_sz)
 /*
  * Analysis of /sys/devices/system/cpu/cpu%d/cpufreq/ files
  */
-uint64_t odp_cpufreq_id(const char *filename, int id)
+static uint64_t read_cpufreq(const char *filename, int id)
 {
 	char path[256], buffer[256], *endptr = NULL;
 	FILE *file;
@@ -343,22 +343,24 @@ int odp_system_info_init(void)
 
 	odp_global_data.system_info.page_size = ODP_PAGE_SIZE;
 
+	/* By default, read max frequency from a cpufreq file */
+	for (i = 0; i < CONFIG_NUM_CPU; i++) {
+		uint64_t cpu_hz_max = read_cpufreq("cpuinfo_max_freq", i);
+
+		if (cpu_hz_max)
+			odp_global_data.system_info.cpu_hz_max[i] = cpu_hz_max;
+	}
+
 	file = fopen("/proc/cpuinfo", "rt");
 	if (file == NULL) {
 		ODP_ERR("Failed to open /proc/cpuinfo\n");
 		return -1;
 	}
 
+	/* Read CPU model, and set max cpu frequency if not set from cpufreq. */
 	cpuinfo_parser(file, &odp_global_data.system_info);
 
 	fclose(file);
-
-	for (i = 0; i < MAX_CPU_NUMBER; i++) {
-		uint64_t cpu_hz_max = odp_cpufreq_id("cpuinfo_max_freq", i);
-
-		if (cpu_hz_max)
-			odp_global_data.system_info.cpu_hz_max[i] = cpu_hz_max;
-	}
 
 	if (systemcpu(&odp_global_data.system_info)) {
 		ODP_ERR("systemcpu failed\n");
@@ -387,7 +389,7 @@ int odp_system_info_term(void)
  */
 uint64_t odp_cpu_hz_current(int id)
 {
-	uint64_t cur_hz = odp_cpufreq_id("cpuinfo_cur_freq", id);
+	uint64_t cur_hz = read_cpufreq("cpuinfo_cur_freq", id);
 
 	if (!cur_hz)
 		cur_hz = odp_cpu_arch_hz_current(id);
@@ -414,7 +416,7 @@ uint64_t odp_cpu_hz_max(void)
 
 uint64_t odp_cpu_hz_max_id(int id)
 {
-	if (id >= 0 && id < MAX_CPU_NUMBER)
+	if (id >= 0 && id < CONFIG_NUM_CPU)
 		return odp_global_data.system_info.cpu_hz_max[id];
 	else
 		return 0;
@@ -473,7 +475,7 @@ const char *odp_cpu_model_str(void)
 
 const char *odp_cpu_model_str_id(int id)
 {
-	if (id >= 0 && id < MAX_CPU_NUMBER)
+	if (id >= 0 && id < CONFIG_NUM_CPU)
 		return odp_global_data.system_info.model_str[id];
 	else
 		return NULL;

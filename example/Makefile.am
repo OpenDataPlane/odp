@@ -9,6 +9,7 @@ SUBDIRS = classifier \
 	  l3fwd \
 	  packet \
 	  switch \
+	  sysinfo \
 	  time \
 	  timer \
 	  traffic_mgmt
