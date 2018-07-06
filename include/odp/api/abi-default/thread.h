@@ -21,7 +21,7 @@ extern "C" {
  *  @{
  */
 
-#define ODP_THREAD_COUNT_MAX 128
+#define ODP_THREAD_COUNT_MAX 256
 
 /**
  * @}
