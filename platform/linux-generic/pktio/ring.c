@@ -195,9 +195,6 @@ _ring_create(const char *name, unsigned count, unsigned flags)
 		/* init the ring structure */
 		snprintf(r->name, sizeof(r->name), "%s", name);
 		r->flags = flags;
-		r->prod.watermark = count;
-		r->prod.sp_enqueue = !!(flags & _RING_F_SP_ENQ);
-		r->cons.sc_dequeue = !!(flags & _RING_F_SC_DEQ);
 		r->prod.size = count;
 		r->cons.size = count;
 		r->prod.mask = count - 1;
@@ -235,23 +232,6 @@ int _ring_destroy(const char *name)
 	return 0;
 }
 
-/*
- * change the high water mark. If *count* is 0, water marking is
- * disabled
- */
-int _ring_set_water_mark(_ring_t *r, unsigned count)
-{
-	if (count >= r->prod.size)
-		return -EINVAL;
-
-	/* if count is 0, disable the watermarking */
-	if (count == 0)
-		count = r->prod.size;
-
-	r->prod.watermark = count;
-	return 0;
-}
-
 /**
  * Enqueue several objects on the ring (multi-producers safe).
  */
@@ -264,14 +244,13 @@ int ___ring_mp_do_enqueue(_ring_t *r, void * const *obj_table,
 	int success;
 	unsigned i;
 	uint32_t mask = r->prod.mask;
-	int ret;
 
 	/* move prod.head atomically */
 	do {
 		/* Reset n to the initial burst count */
 		n = max;
 
-		prod_head = __atomic_load_n(&r->prod.head, __ATOMIC_RELAXED);
+		prod_head = __atomic_load_n(&r->prod.head, __ATOMIC_ACQUIRE);
 		cons_tail = __atomic_load_n(&r->cons.tail, __ATOMIC_ACQUIRE);
 		/* The subtraction is done between two unsigned 32bits value
 		 * (the result is always modulo 32 bits even if we have
@@ -302,14 +281,6 @@ int ___ring_mp_do_enqueue(_ring_t *r, void * const *obj_table,
 	/* write entries in ring */
 	ENQUEUE_PTRS();
 
-	/* if we exceed the watermark */
-	if (odp_unlikely(((mask + 1) - free_entries + n) > r->prod.watermark)) {
-		ret = (behavior == _RING_QUEUE_FIXED) ? -EDQUOT :
-				(int)(n | _RING_QUOT_EXCEED);
-	} else {
-		ret = (behavior == _RING_QUEUE_FIXED) ? 0 : n;
-	}
-
 	/*
 	 * If there are other enqueues in progress that preceded us,
 	 * we need to wait for them to complete
@@ -320,57 +291,7 @@ int ___ring_mp_do_enqueue(_ring_t *r, void * const *obj_table,
 
 	/* Release our entries and the memory they refer to */
 	__atomic_store_n(&r->prod.tail, prod_next, __ATOMIC_RELEASE);
-	return ret;
-}
-
-/**
- * Enqueue several objects on a ring (NOT multi-producers safe).
- */
-int ___ring_sp_do_enqueue(_ring_t *r, void * const *obj_table,
-			  unsigned n, enum _ring_queue_behavior behavior)
-{
-	uint32_t prod_head, cons_tail;
-	uint32_t prod_next, free_entries;
-	unsigned i;
-	uint32_t mask = r->prod.mask;
-	int ret;
-
-	prod_head = r->prod.head;
-	cons_tail = __atomic_load_n(&r->cons.tail, __ATOMIC_ACQUIRE);
-	/* The subtraction is done between two unsigned 32bits value
-	 * (the result is always modulo 32 bits even if we have
-	 * prod_head > cons_tail). So 'free_entries' is always between 0
-	 * and size(ring)-1. */
-	free_entries = mask + cons_tail - prod_head;
-
-	/* check that we have enough room in ring */
-	if (odp_unlikely(n > free_entries)) {
-		if (behavior == _RING_QUEUE_FIXED)
-			return -ENOBUFS;
-		/* No free entry available */
-		if (odp_unlikely(free_entries == 0))
-			return 0;
-
-		n = free_entries;
-	}
-
-	prod_next = prod_head + n;
-	r->prod.head = prod_next;
-
-	/* write entries in ring */
-	ENQUEUE_PTRS();
-
-	/* if we exceed the watermark */
-	if (odp_unlikely(((mask + 1) - free_entries + n) > r->prod.watermark)) {
-		ret = (behavior == _RING_QUEUE_FIXED) ? -EDQUOT :
-			(int)(n | _RING_QUOT_EXCEED);
-	} else {
-		ret = (behavior == _RING_QUEUE_FIXED) ? 0 : n;
-	}
-
-	/* Release our entries and the memory they refer to */
-	__atomic_store_n(&r->prod.tail, prod_next, __ATOMIC_RELEASE);
-	return ret;
+	return (behavior == _RING_QUEUE_FIXED) ? 0 : n;
 }
 
 /**
@@ -392,7 +313,7 @@ int ___ring_mc_do_dequeue(_ring_t *r, void **obj_table,
 		/* Restore n as it may change every loop */
 		n = max;
 
-		cons_head = __atomic_load_n(&r->cons.head, __ATOMIC_RELAXED);
+		cons_head = __atomic_load_n(&r->cons.head, __ATOMIC_ACQUIRE);
 		prod_tail = __atomic_load_n(&r->prod.tail, __ATOMIC_ACQUIRE);
 		/* The subtraction is done between two unsigned 32bits value
 		 * (the result is always modulo 32 bits even if we have
@@ -437,45 +358,6 @@ int ___ring_mc_do_dequeue(_ring_t *r, void **obj_table,
 }
 
 /**
- * Dequeue several objects from a ring (NOT multi-consumers safe).
- */
-int ___ring_sc_do_dequeue(_ring_t *r, void **obj_table,
-			  unsigned n, enum _ring_queue_behavior behavior)
-{
-	uint32_t cons_head, prod_tail;
-	uint32_t cons_next, entries;
-	unsigned i;
-	uint32_t mask = r->prod.mask;
-
-	cons_head = r->cons.head;
-	prod_tail = __atomic_load_n(&r->prod.tail, __ATOMIC_ACQUIRE);
-	/* The subtraction is done between two unsigned 32bits value
-	 * (the result is always modulo 32 bits even if we have
-	 * cons_head > prod_tail). So 'entries' is always between 0
-	 * and size(ring)-1. */
-	entries = prod_tail - cons_head;
-
-	if (n > entries) {
-		if (behavior == _RING_QUEUE_FIXED)
-			return -ENOENT;
-		if (odp_unlikely(entries == 0))
-			return 0;
-
-		n = entries;
-	}
-
-	cons_next = cons_head + n;
-	r->cons.head = cons_next;
-
-	/* Acquire the pointers and the memory they refer to */
-	/* copy in table */
-	DEQUEUE_PTRS();
-
-	__atomic_store_n(&r->cons.tail, cons_next, __ATOMIC_RELEASE);
-	return behavior == _RING_QUEUE_FIXED ? 0 : n;
-}
-
-/**
  * Enqueue several objects on the ring (multi-producers safe).
  */
 int _ring_mp_enqueue_bulk(_ring_t *r, void * const *obj_table,
@@ -486,30 +368,11 @@ int _ring_mp_enqueue_bulk(_ring_t *r, void * const *obj_table,
 }
 
 /**
- * Enqueue several objects on a ring (NOT multi-producers safe).
- */
-int _ring_sp_enqueue_bulk(_ring_t *r, void * const *obj_table,
-			  unsigned n)
-{
-	return ___ring_sp_do_enqueue(r, obj_table, n,
-					 _RING_QUEUE_FIXED);
-}
-
-/**
  * Dequeue several objects from a ring (multi-consumers safe).
  */
 int _ring_mc_dequeue_bulk(_ring_t *r, void **obj_table, unsigned n)
 {
 	return ___ring_mc_do_dequeue(r, obj_table, n,
-					 _RING_QUEUE_FIXED);
-}
-
-/**
- * Dequeue several objects from a ring (NOT multi-consumers safe).
- */
-int _ring_sc_dequeue_bulk(_ring_t *r, void **obj_table, unsigned n)
-{
-	return ___ring_sc_do_dequeue(r, obj_table, n,
 					 _RING_QUEUE_FIXED);
 }
 
@@ -569,10 +432,6 @@ void _ring_dump(const _ring_t *r)
 	ODP_DBG("  ph=%" PRIu32 "\n", r->prod.head);
 	ODP_DBG("  used=%u\n", _ring_count(r));
 	ODP_DBG("  avail=%u\n", _ring_free_count(r));
-	if (r->prod.watermark == r->prod.size)
-		ODP_DBG("  watermark=0\n");
-	else
-		ODP_DBG("  watermark=%" PRIu32 "\n", r->prod.watermark);
 }
 
 /* dump the status of all rings on the console */
@@ -615,52 +474,10 @@ int _ring_mp_enqueue_burst(_ring_t *r, void * const *obj_table,
 }
 
 /**
- * Enqueue several objects on a ring (NOT multi-producers safe).
- */
-int _ring_sp_enqueue_burst(_ring_t *r, void * const *obj_table,
-			   unsigned n)
-{
-	return ___ring_sp_do_enqueue(r, obj_table, n,
-					_RING_QUEUE_VARIABLE);
-}
-
-/**
- * Enqueue several objects on a ring.
- */
-int _ring_enqueue_burst(_ring_t *r, void * const *obj_table,
-			unsigned n)
-{
-	if (r->prod.sp_enqueue)
-		return _ring_sp_enqueue_burst(r, obj_table, n);
-	else
-		return _ring_mp_enqueue_burst(r, obj_table, n);
-}
-
-/**
  * Dequeue several objects from a ring (multi-consumers safe).
  */
 int _ring_mc_dequeue_burst(_ring_t *r, void **obj_table, unsigned n)
 {
 	return ___ring_mc_do_dequeue(r, obj_table, n,
 					_RING_QUEUE_VARIABLE);
-}
-
-/**
- * Dequeue several objects from a ring (NOT multi-consumers safe).
- */
-int _ring_sc_dequeue_burst(_ring_t *r, void **obj_table, unsigned n)
-{
-	return ___ring_sc_do_dequeue(r, obj_table, n,
-					 _RING_QUEUE_VARIABLE);
-}
-
-/**
- * Dequeue multiple objects from a ring up to a maximum number.
- */
-int _ring_dequeue_burst(_ring_t *r, void **obj_table, unsigned n)
-{
-	if (r->cons.sc_dequeue)
-		return _ring_sc_dequeue_burst(r, obj_table, n);
-	else
-		return _ring_mc_dequeue_burst(r, obj_table, n);
 }
