@@ -76,20 +76,22 @@ before_install:
                   CROSS_MULTIARCH=`dpkg-architecture -a"$CROSS_ARCH" -qDEB_HOST_MULTIARCH` ;
                   CROSS="--host="$CROSS_GNU_TYPE" --build="$BUILD_GNU_TYPE"" ;
                   sudo dpkg --add-architecture "$CROSS_ARCH" ;
-                  sudo -E apt-add-repository -y "deb http://ports.ubuntu.com trusty main" ;
-                  sudo -E apt-add-repository -y "deb http://ports.ubuntu.com trusty-updates main" ;
-                  sudo -E apt-get -y update || true ;
                   PKGS="build-essential libc6-dev:$CROSS_ARCH libssl-dev:$CROSS_ARCH zlib1g-dev:$CROSS_ARCH libconfig-dev:$CROSS_ARCH libstdc++-4.8-dev:$CROSS_ARCH libpcap0.8-dev:$CROSS_ARCH" ;
                   if [ "$CROSS_ARCH" = "i386" ] ;
                   then
                         PKGS="$PKGS g++-multilib" ;
                   else
                         PKGS="$PKGS g++-$CROSS_GNU_TYPE" ;
+                        sudo sed -e 's/^deb http/deb [arch=amd64] http/g' /etc/apt/sources.list -i ;
+                        sudo -E apt-add-repository -y "deb [arch=$CROSS_ARCH] http://ports.ubuntu.com trusty main" ;
+                        sudo -E apt-add-repository -y "deb [arch=$CROSS_ARCH] http://ports.ubuntu.com trusty-updates main" ;
                   fi ;
                   if [ "$CROSS_ARCH" != "armhf" ] ;
                   then
                         PKGS="$PKGS libnuma-dev:$CROSS_ARCH" ;
                   fi ;
+                  sudo cat /etc/apt/sources.list ;
+                  sudo -E apt-get -y update || true ;
                   sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install $PKGS || exit 1 ;
                   export PKG_CONFIG_PATH=/usr/lib/${CROSS_MULTIARCH}/pkgconfig:/usr/${CROSS_MULTIARCH}/lib/pkgconfig ;
           fi
