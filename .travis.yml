@@ -7,6 +7,12 @@
 # pushing to github/coverity_scan will also launch a static analysis
 # See https://scan.coverity.com/travis_ci
 
+#
+# Travis uses Docker images which mainained here:
+# 	https://github.com/Linaro/odp-docker-images
+# CI scirpts are maintained under ./scripts/ci/ directory
+# which passed into container during the test run.
+
 language: c
 sudo: required
 dist: trusty
@@ -53,7 +59,7 @@ env:
         - CONF=""
         - CONF="--disable-abi-compat"
         - CONF="--enable-deprecated"
-        - CONF="--enable-dpdk-zero-copy"
+        - CONF="--enable-dpdk-zero-copy --disable-static-applications"
         - CONF="--disable-static-applications"
         - CONF="--disable-host-optimization"
         - CONF="--disable-host-optimization --disable-abi-compat"
@@ -63,278 +69,55 @@ env:
 
 compiler:
         - gcc
-        - clang-3.8
-
-before_install:
-
-        # Install cross toolchains, etc
-        # apt-get update may fail thanks to Ubuntu removing Packages/indices while not removing relevant parts of Release file
-        - if [ -n "$CROSS_ARCH" ] ;
-          then
-                  BUILD_GNU_TYPE=`dpkg-architecture -a"$CROSS_ARCH" -qDEB_BUILD_GNU_TYPE` ;
-                  CROSS_GNU_TYPE=`dpkg-architecture -a"$CROSS_ARCH" -qDEB_HOST_GNU_TYPE` ;
-                  CROSS_MULTIARCH=`dpkg-architecture -a"$CROSS_ARCH" -qDEB_HOST_MULTIARCH` ;
-                  CROSS="--host="$CROSS_GNU_TYPE" --build="$BUILD_GNU_TYPE"" ;
-                  sudo dpkg --add-architecture "$CROSS_ARCH" ;
-                  PKGS="build-essential libc6-dev:$CROSS_ARCH libssl-dev:$CROSS_ARCH zlib1g-dev:$CROSS_ARCH libconfig-dev:$CROSS_ARCH libstdc++-4.8-dev:$CROSS_ARCH libpcap0.8-dev:$CROSS_ARCH" ;
-                  if [ "$CROSS_ARCH" = "i386" ] ;
-                  then
-                        PKGS="$PKGS g++-multilib" ;
-                  else
-                        PKGS="$PKGS g++-$CROSS_GNU_TYPE" ;
-                        sudo sed -e 's/^deb http/deb [arch=amd64] http/g' /etc/apt/sources.list -i ;
-                        sudo -E apt-add-repository -y "deb [arch=$CROSS_ARCH] http://ports.ubuntu.com trusty main" ;
-                        sudo -E apt-add-repository -y "deb [arch=$CROSS_ARCH] http://ports.ubuntu.com trusty-updates main" ;
-                  fi ;
-                  if [ "$CROSS_ARCH" != "armhf" ] ;
-                  then
-                        PKGS="$PKGS libnuma-dev:$CROSS_ARCH" ;
-                  fi ;
-                  sudo cat /etc/apt/sources.list ;
-                  sudo -E apt-get -y update || true ;
-                  sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install $PKGS || exit 1 ;
-                  export PKG_CONFIG_PATH=/usr/lib/${CROSS_MULTIARCH}/pkgconfig:/usr/${CROSS_MULTIARCH}/lib/pkgconfig ;
-          fi
-        - if [ "${CC#clang}" != "${CC}" ] ;
-          then
-                if [ -n "$CROSS_ARCH" ] ;
-                then
-                        export CC="${CC} --target=$CROSS_GNU_TYPE" ;
-                        if [ "$CROSS_ARCH" = "i386" ] ;
-                        then
-                                DPDK_CFLAGS="-m32" ;
-                        else
-                                DPDK_CROSS="$CROSS_GNU_TYPE-" ;
-                                DPDK_CFLAGS="--target=$CROSS_GNU_TYPE" ;
-                        fi
-                fi ;
-                export CXX="${CC/clang/clang++}";
-          elif [ "$CROSS_ARCH" = "i386" ] ;
-          then
-                export CC="gcc -m32" ;
-                export CXX="g++ -m32" ;
-                DPDK_CFLAGS="-m32" ;
-          elif [ -n "$CROSS_ARCH" ] ;
-          then
-                export CC="$CROSS_GNU_TYPE"-gcc ;
-                export CXX="$CROSS_GNU_TYPE"-g++ ;
-                DPDK_CROSS="$CROSS_GNU_TYPE-" ;
-          fi
-        - if test ! -L /usr/lib/ccache/${CC%% *} ; then sudo ln -s -t /usr/lib/ccache/ `which ${CC%% *}` ; fi
-        - ccache -s
-        # Install cunit for the validation tests because distro version is too old and fails C99 compile
-        - sudo apt-get remove libcunit1-dev libcunit1
-        - export LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH"
-        - |
-          if [ ! -f "$HOME/cunit-install/$CROSS_ARCH/lib/libcunit.a" ]; then
-            export CUNIT_VERSION=2.1-3
-            curl -sSOL https://github.com/Linaro/libcunit/releases/download/${CUNIT_VERSION}/CUnit-${CUNIT_VERSION}.tar.bz2
-            tar -jxf *.bz2
-            pushd CUnit*
-            libtoolize --force --copy
-            aclocal
-            autoheader
-            automake --add-missing --include-deps --copy
-            autoconf
-            ./configure --prefix=$HOME/cunit-install/$CROSS_ARCH --enable-debug --enable-automated --enable-basic --enable-console --enable-examples --enable-test $CROSS || cat config.log
-            make -j $(nproc)
-            sudo make install
-            popd
-          fi
-        - export PKG_CONFIG_PATH="$HOME/cunit-install/$CROSS_ARCH/lib/pkgconfig:${PKG_CONFIG_PATH}"
-        - find $HOME/cunit-install
-
-          # workaround for tap driver issues on recent Travis images
-          # Allow forwaring on virtual interfaces used for testing
-        - sudo iptables --policy FORWARD ACCEPT
-
+        - clang
 
 install:
-        - echo 1000 | sudo tee /proc/sys/vm/nr_hugepages
-        - sudo mkdir -p /mnt/huge
-        - sudo mount -t hugetlbfs nodev /mnt/huge
-
-        - if [ -z "$CROSS_ARCH" ] ;
-          then
-                sudo apt-get -qq update ;
-                sudo apt-get install linux-headers-`uname -r` ;
-          fi
-        - gem install asciidoctor
-
-        # DPDK pktio. Cache will be updated automatically to ${DPDK_VERS}
-        - |
-          case "$CROSS_ARCH" in
-            "arm64")
-              DPDK_TARGET="arm64-armv8a-linuxapp-"
-              ;;
-            "armhf")
-              DPDK_TARGET="arm-armv7a-linuxapp-"
-              ;;
-            "i386")
-              DPDK_TARGET="i686-native-linuxapp-"
-              ;;
-            "")
-              DPDK_TARGET="x86_64-native-linuxapp-"
-              DPDK_MACHINE=snb
-              ;;
-          esac
-        - |
-          if [ -n "$DPDK_TARGET" ] ; then
-           if [ "${CC#clang}" != "${CC}" ] ; then
-            DPDKCC=clang ;
-           else
-            DPDKCC=gcc ;
-           fi
-           if [ -n "$DPDK_SHARED" ] ; then
-            TARGET="${DPDK_TARGET}$DPDKCC"-shared
-            LIBDPDKEXT=so
-            export LD_LIBRARY_PATH="`pwd`/${TARGET}:$LD_LIBRARY_PATH"
-            echo $LD_LIBRARY_PATH
-           else
-            TARGET="${DPDK_TARGET}$DPDKCC"
-            LIBDPDKEXT=a
-           fi
-           DPDK_TARGET="${DPDK_TARGET}gcc"
-           CACHED_DPDK_VERS=`fgrep Version dpdk/pkg/dpdk.spec | cut -d " " -f 2`
-           if [ ! -d dpdk -o "${CACHED_DPDK_VERS}" != "${DPDK_VERS}" ]; then
-            rm -rf dpdk
-            mkdir dpdk
-            pushd dpdk
-            git init
-            git -c advice.detachedHead=false fetch -q --depth=1 http://dpdk.org/git/dpdk-stable v${DPDK_VERS}
-            git checkout -f FETCH_HEAD
-            popd
-           fi
-           if [ ! -f "dpdk/${TARGET}/usr/local/lib/libdpdk.$LIBDPDKEXT" ]; then
-            pushd dpdk
-            git log --oneline --decorate
-            # AArch64 && ARMv7 fixup
-            sed -i -e 's/40900/40800/g' lib/librte_eal/common/include/arch/arm/rte_vect.h
-            sed -i -e 's/!(/!(defined(__arm__) \&\& defined(__clang__) || /g' lib/librte_eal/common/include/arch/arm/rte_byteorder.h
-            sed -i -e 's/__GNUC__/defined(__arm__) \&\& defined(__clang__) || __GNUC__/' lib/librte_eal/common/include/generic/rte_byteorder.h
-            sed -i -e 's,\$(CC),\0 $(EXTRA_CFLAGS),g' lib/librte_acl/Makefile
-            make config T=${DPDK_TARGET} O=${TARGET}
-            pushd ${TARGET}
-            sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
-            # OCTEON TX driver includes ARM v8.1 instructions
-            sed -ri 's,(CONFIG_RTE_LIBRTE_OCTEONTX_PMD=).*,\1n,' .config
-            sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_OCTEONTX_SSOVF=).*,\1n,' .config
-            sed -ri 's,(CONFIG_RTE_LIBRTE_OCTEONTX_MEMPOOL=).*,\1n,' .config
-            if test -n "${DPDK_MACHINE}" ; then
-              sed -ri 's,(CONFIG_RTE_MACHINE=).*,\1"'${DPDK_MACHINE}'",' .config
-            fi
-            if test -n "${DPDK_SHARED}" ; then
-              sed -ri 's,(CONFIG_RTE_BUILD_SHARED_LIB=).*,\1y,' .config
-            fi
-            if test -n "$CROSS_ARCH" ; then
-              sed -ri -e 's,(CONFIG_RTE_EAL_IGB_UIO=).*,\1n,' .config
-              sed -ri -e 's,(CONFIG_RTE_KNI_KMOD=).*,\1n,' .config
-            fi
-            sed -ri -e 's,(CONFIG_RTE_TOOLCHAIN=).*,\1"'${DPDKCC}'",' .config
-            sed -ri -e '/CONFIG_RTE_TOOLCHAIN_.*/d' .config
-            echo CONFIG_RTE_TOOLCHAIN_${DPDKCC^^}=y >> .config
-            popd
-            make build O=${TARGET} EXTRA_CFLAGS="-fPIC $DPDK_CFLAGS" CROSS="$DPDK_CROSS" CC="$CC" HOSTCC=gcc -j $(nproc)
-            make install O=${TARGET} DESTDIR=${TARGET}
-            rm -r ./doc ./${TARGET}/app ./${TARGET}/build
-            popd
-           fi
-           EXTRA_CONF="$EXTRA_CONF --with-dpdk-path=`pwd`/dpdk/${TARGET}/usr/local"
-          fi
-
-#	Netmap pktio
-        - |
-          if [ -z "$CROSS_ARCH" ]; then
-            if [ ! -f "netmap/LINUX/netmap.ko" ]; then
-              git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git
-              pushd netmap/LINUX
-              ./configure
-              make -j $(nproc)
-              popd
-            fi
-            sudo insmod ./netmap/LINUX/netmap.ko
-            EXTRA_CONF="$EXTRA_CONF --with-netmap-path=`pwd`/netmap"
-          fi
-
+        - sudo apt-get install linux-headers-`uname -r`
 script:
-        - ./bootstrap
-        - ./configure --prefix=$HOME/odp-install
-          --enable-user-guides
-          --enable-debug=full
-          --enable-helper-linux
-          $CROSS $EXTRA_CONF $CONF
-        - make -j $(nproc)
-        - mkdir /dev/shm/odp
-        # Run all tests only for default configuration
-        - if [ -z "$CROSS_ARCH" ] ; then
-            if [ -n "$CONF" ] ; then
-              sudo ODP_CONFIG_FILE="`pwd`/config/odp-linux-generic.conf" LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
-            else
-              sudo ODP_SCHEDULER=basic LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
-              sudo ODP_SCHEDULER=sp LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
-              sudo ODP_SCHEDULER=iquery LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
-              sudo ODP_SCHEDULER=scalable LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check ;
-            fi
+        - if [ "${CC#clang}" != "${CC}" ] ; then LD="" CXX=clang++; fi
+        - if [ -n "${CROSS_ARCH}" ] ; then
+               docker run  -i -t -v `pwd`:/odp
+                 -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
+                 -e CONF="${CONF}" -e DPDK_SHARED="${DPDK_SHARED}"
+                 ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_14.04.05 /odp/scripts/ci/build_${CROSS_ARCH}.sh ;
+          else
+               echo "compilling netmap";
+               CDIR=`pwd` ;
+               git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git;
+               pushd netmap/LINUX;
+               ./configure;
+               make -j $(nproc);
+               popd;
+               sudo insmod ./netmap/LINUX/netmap.ko;
+               CONF="$CONF --with-netmap-path=/odp/netmap";
+               echo "Running test" ;
+               docker run --privileged -i -t
+                 -v `pwd`:/odp --shm-size 8g
+                 -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
+                 -e CONF="${CONF}" -e DPDK_SHARED="${DPDK_SHARED}"
+                 ${DOCKER_NAMESPACE}/travis-odp-lng-x86 /odp/scripts/ci/build_x86_64.sh ;
           fi
-        - make install
-
-        - echo "Checking linking and run from install..."
-        - pushd $HOME
-        - echo "Dynamic link.."
-        - ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_dynamic `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux`
-        - if [ -z "$CROSS_ARCH" ] ; then
-            LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst_dynamic ;
-          fi
-        - |
-          # it is not possible to do static linking if we only have shared DPDK library. Compiler complains about missing -ldpdk
-          if [ -z "$TARGET" -o -z "$DPDK_SHARED" ] ; then
-            echo "Static link.."
-            ${CC} ${CFLAGS} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst_static `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig:${PKG_CONFIG_PATH} pkg-config --cflags --libs libodp-linux --static` -static || exit 1
-            if [ -z "$CROSS_ARCH" ] ; then
-            ./odp_hello_inst_static;
-            fi
-          fi
-        - popd
-        - ccache -s
-
 jobs:
         include:
                 - stage: test
                   env: TEST=coverage
                   compiler: gcc
                   script:
-                          - sudo pip install coverage
-                          - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install
-                            --enable-user-guides
-                            --with-dpdk-path=`pwd`/dpdk/${TARGET}/usr/local
-                            --with-netmap-path=`pwd`/netmap CFLAGS="-O0 -coverage"
-                              CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
-                            --enable-debug=full
-                            --enable-helper-linux
-                          - CCACHE_DISABLE=1 make -j $(nproc)
-                          - mkdir -p /dev/shm/odp
-                          - sudo CCACHE_DISABLE=1 ODP_SCHEDULER=basic ODP_SHM_DIR=/dev/shm/odp LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make check
-                          - sudo CCACHE_DISABLE=1 ODP_SCHEDULER=sp ODP_SHM_DIR=/dev/shm/odp LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make check
-                          - sudo CCACHE_DISABLE=1 ODP_SCHEDULER=iquery ODP_SHM_DIR=/dev/shm/odp LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make check
-                          - sudo CCACHE_DISABLE=1 ODP_SCHEDULER=scalable ODP_SHM_DIR=/dev/shm/odp LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make check
-                          - bash <(curl -s https://codecov.io/bash) -X coveragepy
+                          - docker run --privileged -i -t
+                              -v `pwd`:/odp --shm-size 8g
+                              -e CODECOV_TOKEN="${CODECOV_TOKEN}"
+                              -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
+                              -e CONF="${CONF}"
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-x86 /odp/scripts/ci/coverage.sh
                 - stage: test
                   env: TEST=distcheck
                   compiler: gcc
                   script:
-                          - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install
-                            --enable-user-guides
-                          - sudo PATH="$PATH" LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make distcheck
-                - stage: test
-                  env: TEST=distcheck-non-abi
-                  compiler: gcc
-                  script:
-                          - ./bootstrap
-                          - ./configure --prefix=$HOME/odp-install
-                            --enable-user-guides
-                          - sudo PATH="$PATH" LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make distcheck DISTCHECK__CONFIGURE_FLAGS=--disable-abi-compat
+                          - docker run --privileged -i -t
+                              -v `pwd`:/odp --shm-size 8g
+                              -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
+                              -e CONF="${CONF}"
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-x86 /odp/scripts/ci/distcheck.sh
                 - stage: "build only"
                   env: TEST=doxygen
                   compiler: gcc
@@ -364,85 +147,82 @@ jobs:
                                true
                              fi
                 - stage: "build only"
-                  env: CONF=""
-                  compiler: gcc
-                  install: true
+                  env: Ubuntu14.04_arm64
                   script:
-                          - ./bootstrap
-                          - ./configure --enable-helper-linux
-                          - make -j $(nproc)
-                - stage: "build only"
-                  env: CONF=""
-                  compiler: clang-3.8
-                  install: true
-                  script:
-                          - ./bootstrap
-                          - ./configure --enable-helper-linux
-                          - make -j $(nproc)
-                - stage: "build only"
-                  env: CROSS_ARCH="i386"
-                  compiler: gcc
-                  install: true
-                  script:
-                          - ./bootstrap
-                          - ./configure --enable-helper-linux $CROSS
-                          - make -j $(nproc)
-                - stage: "build only"
-                  env: CROSS_ARCH="arm64"
-                  compiler: gcc
-                  install: true
-                  script:
-                          - ./bootstrap
-                          - ./configure --enable-helper-linux $CROSS
-                          - make -j $(nproc)
+                          - docker run  -i -t -v `pwd`:/odp
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_14.04.05 /odp/scripts/ci/build_arm64.sh
                 - stage: test
                   compiler: gcc
                   env: CROSS_ARCH="arm64"
                 - stage: test
-                  compiler: clang-3.8
+                  compiler: clang
                   env: CROSS_ARCH="arm64"
                 - stage: test
                   compiler: gcc
                   env: CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
                 - stage: test
-                  compiler: clang-3.8
+                  compiler: clang
                   env: CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
                 - stage: test
                   compiler: gcc
                   env: CROSS_ARCH="powerpc"
                 - stage: test
-                  compiler: clang-3.8
+                  compiler: clang
                   env: CROSS_ARCH="powerpc"
                 - stage: test
                   compiler: gcc
                   env: CROSS_ARCH="i386"
+                  script:
+                          - docker run --privileged -i -t
+                              -v `pwd`:/odp
+                              -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
+                              -e CONF="${CONF}"
+                             ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_14.04.05_i386 /odp/scripts/ci/build_${CROSS_ARCH}.sh ;
                 - stage: test
-                  compiler: clang-3.8
+                  compiler: clang
                   env: CROSS_ARCH="i386"
+                  script:
+                          - docker run --privileged -i -t
+                              -v `pwd`:/odp
+                              -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
+                              -e CONF="${CONF}"
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_14.04.05_i386 /odp/scripts/ci/build_${CROSS_ARCH}.sh ;
                 - stage: test
                   compiler: gcc
                   env: CROSS_ARCH="arm64" CONF="--disable-abi-compat"
                 - stage: test
-                  compiler: clang-3.8
+                  compiler: clang
                   env: CROSS_ARCH="arm64" CONF="--disable-abi-compat"
                 - stage: test
                   compiler: gcc
                   env: CROSS_ARCH="armhf" CFLAGS="-march=armv7-a" CONF="--disable-abi-compat"
                 - stage: test
-                  compiler: clang-3.8
+                  compiler: clang
                   env: CROSS_ARCH="armhf" CFLAGS="-march=armv7-a" CONF="--disable-abi-compat"
                 - stage: test
                   compiler: gcc
                   env: CROSS_ARCH="powerpc" CONF="--disable-abi-compat"
                 - stage: test
-                  compiler: clang-3.8
+                  compiler: clang
                   env: CROSS_ARCH="powerpc" CONF="--disable-abi-compat"
                 - stage: test
                   compiler: gcc
                   env: CROSS_ARCH="i386" CONF="--disable-abi-compat"
+                  script:
+                          - docker run --privileged -i -t
+                              -v `pwd`:/odp
+                              -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
+                              -e CONF="${CONF}"
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_14.04.05_i386 /odp/scripts/ci/build_${CROSS_ARCH}.sh ;
                 - stage: test
-                  compiler: clang-3.8
+                  compiler: clang
                   env: CROSS_ARCH="i386" CONF="--disable-abi-compat"
+                  script:
+                          - docker run --privileged -i -t
+                              -v `pwd`:/odp
+                              -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
+                              -e CONF="${CONF}"
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_14.04.05_i386 /odp/scripts/ci/build_${CROSS_ARCH}.sh ;
                 - stage: test
                   canfail: yes
                   env: TEST=checkpatch
