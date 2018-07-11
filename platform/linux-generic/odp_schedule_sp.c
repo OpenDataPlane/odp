@@ -20,7 +20,7 @@
 #include <odp_config_internal.h>
 #include <odp_ring_internal.h>
 #include <odp_timer_internal.h>
-#include <odp_queue_internal.h>
+#include <odp_queue_basic_internal.h>
 
 #define NUM_THREAD        ODP_THREAD_COUNT_MAX
 #define NUM_QUEUE         ODP_CONFIG_QUEUES
@@ -228,7 +228,7 @@ static int term_global(void)
 	for (qi = 0; qi < NUM_QUEUE; qi++) {
 		if (sched_global->queue_cmd[qi].s.init) {
 			/* todo: dequeue until empty ? */
-			sched_cb_queue_destroy_finalize(qi);
+			sched_queue_destroy_finalize(qi);
 		}
 	}
 
@@ -507,7 +507,7 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 
 	if (sched_local.cmd) {
 		/* Continue scheduling if queue is not empty */
-		if (sched_cb_queue_empty(sched_local.cmd->s.index) == 0)
+		if (sched_queue_empty(sched_local.cmd->s.index) == 0)
 			add_tail(sched_local.cmd);
 
 		sched_local.cmd = NULL;
@@ -562,7 +562,7 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 		}
 
 		qi  = cmd->s.index;
-		num = sched_cb_queue_deq_multi(qi, events, 1, 1);
+		num = sched_queue_deq(qi, events, 1, 1);
 
 		if (num > 0) {
 			sched_local.cmd = cmd;
@@ -575,7 +575,7 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 
 		if (num < 0) {
 			/* Destroyed queue */
-			sched_cb_queue_destroy_finalize(qi);
+			sched_queue_destroy_finalize(qi);
 			continue;
 		}
 

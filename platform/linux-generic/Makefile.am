@@ -123,7 +123,7 @@ noinst_HEADERS = \
 		  include/odp_pool_internal.h \
 		  include/odp_posix_extensions.h \
 		  include/odp_queue_if.h \
-		  include/odp_queue_internal.h \
+		  include/odp_queue_basic_internal.h \
 		  include/odp_queue_lf.h \
 		  include/odp_queue_scalable_internal.h \
 		  include/odp_ring_internal.h \

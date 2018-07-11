@@ -26,7 +26,7 @@
 #include <odp/api/packet_io.h>
 #include <odp_ring_internal.h>
 #include <odp_timer_internal.h>
-#include <odp_queue_internal.h>
+#include <odp_queue_basic_internal.h>
 #include <odp_libconfig_internal.h>
 
 /* Number of priority levels  */
@@ -92,8 +92,10 @@ ODP_STATIC_ASSERT((8 * sizeof(pri_mask_t)) >= MAX_SPREAD,
 /* Start of named groups in group mask arrays */
 #define SCHED_GROUP_NAMED (ODP_SCHED_GROUP_CONTROL + 1)
 
-/* Maximum number of dequeues */
-#define MAX_DEQ CONFIG_BURST_SIZE
+/* Default burst size. Scheduler rounds up number of requested events up to
+ * this value. */
+#define BURST_SIZE_MAX  CONFIG_BURST_SIZE
+#define BURST_SIZE_MIN  1
 
 /* Ordered stash size */
 #define MAX_ORDERED_STASH 512
@@ -123,7 +125,7 @@ typedef struct {
 	uint16_t spread_round;
 	uint32_t stash_qi;
 	odp_queue_t stash_queue;
-	odp_event_t stash_ev[MAX_DEQ];
+	odp_event_t stash_ev[BURST_SIZE_MAX];
 
 	uint32_t grp_epoch;
 	uint16_t num_grp;
@@ -178,6 +180,8 @@ typedef struct {
 
 	struct {
 		uint8_t num_spread;
+		uint8_t burst_hi;
+		uint8_t burst_low;
 	} config;
 
 	uint32_t       pri_count[NUM_PRIO][MAX_SPREAD];
@@ -251,6 +255,34 @@ static int read_config_file(sched_global_t *sched)
 	}
 
 	sched->config.num_spread = val;
+	ODP_PRINT("  %s: %i\n", str, val);
+
+	str = "sched_basic.burst_size_hi";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	if (val > BURST_SIZE_MAX || val < BURST_SIZE_MIN) {
+		ODP_ERR("Bad value %s = %u\n", str, val);
+		return -1;
+	}
+
+	sched->config.burst_hi = val;
+	ODP_PRINT("  %s: %i\n", str, val);
+
+	str = "sched_basic.burst_size_low";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	if (val > BURST_SIZE_MAX || val < BURST_SIZE_MIN) {
+		ODP_ERR("Bad value %s = %u\n", str, val);
+		return -1;
+	}
+
+	sched->config.burst_low = val;
 	ODP_PRINT("  %s: %i\n\n", str, val);
 
 	return 0;
@@ -362,7 +394,7 @@ static int schedule_init_global(void)
 
 static inline void queue_destroy_finalize(uint32_t qi)
 {
-	sched_cb_queue_destroy_finalize(qi);
+	sched_queue_destroy_finalize(qi);
 }
 
 static int schedule_term_global(void)
@@ -383,9 +415,7 @@ static int schedule_term_global(void)
 					odp_event_t events[1];
 					int num;
 
-					num = sched_cb_queue_deq_multi(qi,
-								       events,
-								       1, 1);
+					num = sched_queue_deq(qi, events, 1, 1);
 
 					if (num < 0)
 						queue_destroy_finalize(qi);
@@ -580,7 +610,7 @@ static void schedule_pktio_start(int pktio_index, int num_pktin,
 		ODP_ASSERT(pktin_idx[i] <= MAX_PKTIN_INDEX);
 
 		/* Start polling */
-		sched_cb_queue_set_status(qi, QUEUE_STATUS_SCHED);
+		sched_queue_set_status(qi, QUEUE_STATUS_SCHED);
 		schedule_sched_queue(qi);
 	}
 }
@@ -761,17 +791,29 @@ static inline int queue_is_pktin(uint32_t queue_index)
 	return sched->queue[queue_index].poll_pktin;
 }
 
-static inline int poll_pktin(uint32_t qi, int stash)
+static inline int poll_pktin(uint32_t qi, int direct_recv,
+			     odp_event_t ev_tbl[], int max_num)
 {
-	odp_buffer_hdr_t *b_hdr[MAX_DEQ];
-	int pktio_index, pktin_index, num, num_pktin, i;
+	int pktio_index, pktin_index, num, num_pktin;
+	odp_buffer_hdr_t **hdr_tbl;
 	int ret;
 	void *q_int;
+	odp_buffer_hdr_t *b_hdr[BURST_SIZE_MAX];
+
+	hdr_tbl = (odp_buffer_hdr_t **)ev_tbl;
+
+	if (!direct_recv) {
+		hdr_tbl = b_hdr;
+
+		/* Limit burst to max queue enqueue size */
+		if (max_num > BURST_SIZE_MAX)
+			max_num = BURST_SIZE_MAX;
+	}
 
 	pktio_index = sched->queue[qi].pktio_index;
 	pktin_index = sched->queue[qi].pktin_index;
 
-	num = sched_cb_pktin_poll(pktio_index, pktin_index, b_hdr, MAX_DEQ);
+	num = sched_cb_pktin_poll(pktio_index, pktin_index, hdr_tbl, max_num);
 
 	if (num == 0)
 		return 0;
@@ -784,7 +826,7 @@ static inline int poll_pktin(uint32_t qi, int stash)
 		num_pktin = sched->pktio[pktio_index].num_pktin;
 		odp_spinlock_unlock(&sched->pktio_lock);
 
-		sched_cb_queue_set_status(qi, QUEUE_STATUS_NOTSCHED);
+		sched_queue_set_status(qi, QUEUE_STATUS_NOTSCHED);
 
 		if (num_pktin == 0)
 			sched_cb_pktio_stop_finalize(pktio_index);
@@ -792,12 +834,8 @@ static inline int poll_pktin(uint32_t qi, int stash)
 		return num;
 	}
 
-	if (stash) {
-		for (i = 0; i < num; i++)
-			sched_local.stash_ev[i] = event_from_buf_hdr(b_hdr[i]);
-
+	if (direct_recv)
 		return num;
-	}
 
 	q_int = qentry_from_index(qi);
 
@@ -824,7 +862,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 	int ret;
 	int id;
 	uint32_t qi;
-	unsigned int max_deq = MAX_DEQ;
+	unsigned int max_burst;
 	int num_spread = sched->config.num_spread;
 	uint32_t ring_mask = sched->ring_mask;
 
@@ -833,6 +871,10 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 		if (sched->pri_mask[prio] == 0)
 			continue;
+
+		max_burst = sched->config.burst_hi;
+		if (prio > ODP_SCHED_PRIO_DEFAULT)
+			max_burst = sched->config.burst_low;
 
 		/* Select the first ring based on weights */
 		id = first;
@@ -843,6 +885,9 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 			odp_queue_t handle;
 			ring_t *ring;
 			int pktin;
+			unsigned int max_deq = max_burst;
+			int stashed = 1;
+			odp_event_t *ev_tbl = sched_local.stash_ev;
 
 			if (id >= num_spread)
 				id = 0;
@@ -866,29 +911,27 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 				continue;
 			}
 
-			/* Low priorities have smaller batch size to limit
-			 * head of line blocking latency. */
-			if (odp_unlikely(MAX_DEQ > 1 &&
-					 prio > ODP_SCHED_PRIO_DEFAULT))
-				max_deq = MAX_DEQ / 2;
-
 			ordered = queue_is_ordered(qi);
 
-			/* Do not cache ordered events locally to improve
+			/* When application's array is larger than max burst
+			 * size, output all events directly there. Also, ordered
+			 * queues are not stashed locally to improve
 			 * parallelism. Ordered context can only be released
 			 * when the local cache is empty. */
-			if (ordered && max_num < MAX_DEQ)
+			if (max_num > max_burst || ordered) {
+				stashed = 0;
+				ev_tbl  = out_ev;
 				max_deq = max_num;
+			}
 
 			pktin = queue_is_pktin(qi);
 
-			num = sched_cb_queue_deq_multi(qi, sched_local.stash_ev,
-						       max_deq, !pktin);
+			num = sched_queue_deq(qi, ev_tbl, max_deq, !pktin);
 
 			if (num < 0) {
 				/* Destroyed queue. Continue scheduling the same
 				 * priority queue. */
-				sched_cb_queue_destroy_finalize(qi);
+				sched_queue_destroy_finalize(qi);
 				continue;
 			}
 
@@ -899,13 +942,16 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 				 * priorities. Stop scheduling queue when pktio
 				 * has been stopped. */
 				if (pktin) {
-					int stash = !ordered;
-					int num_pkt = poll_pktin(qi, stash);
+					int direct_recv = !ordered;
+					int num_pkt;
+
+					num_pkt = poll_pktin(qi, direct_recv,
+							     ev_tbl, max_deq);
 
 					if (odp_unlikely(num_pkt < 0))
 						continue;
 
-					if (num_pkt == 0 || !stash) {
+					if (num_pkt == 0 || !direct_recv) {
 						ring_enq(ring, ring_mask, qi);
 						break;
 					}
@@ -943,10 +989,16 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 			}
 
 			handle = queue_from_index(qi);
-			sched_local.stash_num   = num;
-			sched_local.stash_index = 0;
-			sched_local.stash_queue = handle;
-			ret = copy_from_stash(out_ev, max_num);
+
+			if (stashed) {
+				sched_local.stash_num   = num;
+				sched_local.stash_index = 0;
+				sched_local.stash_queue = handle;
+				ret = copy_from_stash(out_ev, max_num);
+			} else {
+				sched_local.stash_num = 0;
+				ret = num;
+			}
 
 			/* Output the source queue handle */
 			if (out_queue)

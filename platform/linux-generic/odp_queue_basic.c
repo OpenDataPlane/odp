@@ -7,7 +7,7 @@
 #include "config.h"
 
 #include <odp/api/queue.h>
-#include <odp_queue_internal.h>
+#include <odp_queue_basic_internal.h>
 #include <odp_queue_if.h>
 #include <odp/api/std_types.h>
 #include <odp/api/align.h>
@@ -357,7 +357,7 @@ static odp_queue_t queue_create(const char *name,
 	return handle;
 }
 
-void sched_cb_queue_destroy_finalize(uint32_t queue_index)
+void sched_queue_destroy_finalize(uint32_t queue_index)
 {
 	queue_entry_t *queue = qentry_from_index(queue_index);
 
@@ -370,7 +370,7 @@ void sched_cb_queue_destroy_finalize(uint32_t queue_index)
 	UNLOCK(queue);
 }
 
-void sched_cb_queue_set_status(uint32_t queue_index, int status)
+void sched_queue_set_status(uint32_t queue_index, int status)
 {
 	queue_entry_t *queue = qentry_from_index(queue_index);
 
@@ -576,10 +576,9 @@ static int queue_enq(odp_queue_t handle, odp_event_t ev)
 				(odp_buffer_hdr_t *)(uintptr_t)ev);
 }
 
-static inline int deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
-			    int num, int update_status)
+static inline int plain_queue_deq(queue_entry_t *queue,
+				  odp_buffer_hdr_t *buf_hdr[], int num)
 {
-	int status_sync = sched_fn->status_sync;
 	int num_deq;
 	ring_st_t *ring_st;
 	uint32_t buf_idx[num];
@@ -589,32 +588,17 @@ static inline int deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 	LOCK(queue);
 
 	if (odp_unlikely(queue->s.status < QUEUE_STATUS_READY)) {
-		/* Bad queue, or queue has been destroyed.
-		 * Scheduler finalizes queue destroy after this. */
+		/* Bad queue, or queue has been destroyed. */
 		UNLOCK(queue);
 		return -1;
 	}
 
 	num_deq = ring_st_deq_multi(ring_st, buf_idx, num);
 
-	if (num_deq == 0) {
-		/* Already empty queue */
-		if (update_status && queue->s.status == QUEUE_STATUS_SCHED) {
-			queue->s.status = QUEUE_STATUS_NOTSCHED;
-
-			if (status_sync)
-				sched_fn->unsched_queue(queue->s.index);
-		}
-
-		UNLOCK(queue);
-
-		return 0;
-	}
-
-	if (status_sync && queue->s.type == ODP_QUEUE_TYPE_SCHED)
-		sched_fn->save_context(queue->s.index);
-
 	UNLOCK(queue);
+
+	if (num_deq == 0)
+		return 0;
 
 	buffer_index_to_buf(buf_hdr, buf_idx, num_deq);
 
@@ -626,7 +610,7 @@ static int queue_int_deq_multi(void *q_int, odp_buffer_hdr_t *buf_hdr[],
 {
 	queue_entry_t *queue = q_int;
 
-	return deq_multi(queue, buf_hdr, num, 0);
+	return plain_queue_deq(queue, buf_hdr, num);
 }
 
 static odp_buffer_hdr_t *queue_int_deq(void *q_int)
@@ -635,7 +619,7 @@ static odp_buffer_hdr_t *queue_int_deq(void *q_int)
 	odp_buffer_hdr_t *buf_hdr = NULL;
 	int ret;
 
-	ret = deq_multi(queue, &buf_hdr, 1, 0);
+	ret = plain_queue_deq(queue, &buf_hdr, 1);
 
 	if (ret == 1)
 		return buf_hdr;
@@ -777,15 +761,53 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 	return 0;
 }
 
-int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num,
-			     int update_status)
+int sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int max_num,
+		    int update_status)
 {
-	queue_entry_t *qe = qentry_from_index(queue_index);
+	int num_deq;
+	ring_st_t *ring_st;
+	queue_entry_t *queue = qentry_from_index(queue_index);
+	int status_sync = sched_fn->status_sync;
+	uint32_t buf_idx[max_num];
 
-	return deq_multi(qe, (odp_buffer_hdr_t **)ev, num, update_status);
+	ring_st = &queue->s.ring_st;
+
+	LOCK(queue);
+
+	if (odp_unlikely(queue->s.status < QUEUE_STATUS_READY)) {
+		/* Bad queue, or queue has been destroyed.
+		 * Scheduler finalizes queue destroy after this. */
+		UNLOCK(queue);
+		return -1;
+	}
+
+	num_deq = ring_st_deq_multi(ring_st, buf_idx, max_num);
+
+	if (num_deq == 0) {
+		/* Already empty queue */
+		if (update_status && queue->s.status == QUEUE_STATUS_SCHED) {
+			queue->s.status = QUEUE_STATUS_NOTSCHED;
+
+			if (status_sync)
+				sched_fn->unsched_queue(queue->s.index);
+		}
+
+		UNLOCK(queue);
+
+		return 0;
+	}
+
+	if (status_sync && queue->s.type == ODP_QUEUE_TYPE_SCHED)
+		sched_fn->save_context(queue->s.index);
+
+	UNLOCK(queue);
+
+	buffer_index_to_buf((odp_buffer_hdr_t **)ev, buf_idx, num_deq);
+
+	return num_deq;
 }
 
-int sched_cb_queue_empty(uint32_t queue_index)
+int sched_queue_empty(uint32_t queue_index)
 {
 	queue_entry_t *queue = qentry_from_index(queue_index);
 	int ret = 0;
