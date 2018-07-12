@@ -13,6 +13,7 @@ extern "C" {
 
 #include <odp/api/init.h>
 #include <odp/api/cpumask.h>
+#include <odp/api/random.h>
 #include <sys/types.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -58,6 +59,7 @@ struct odp_global_data_s {
 	int inotify_watch_fd;
 	pthread_t inotify_thread;
 	int inotify_pcapng_is_running;
+	odp_random_kind_t ipsec_rand_kind;
 };
 
 extern struct odp_global_data_s odp_global_data;
