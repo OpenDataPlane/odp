@@ -13,6 +13,7 @@
 #include <odp/api/byteorder.h>
 #include <odp/api/plat/byteorder_inlines.h>
 
+#include <odp_global_data.h>
 #include <odp_init_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_internal.h>
@@ -1003,7 +1004,7 @@ static int ipsec_out_iv(ipsec_state_t *state,
 		uint32_t len;
 
 		len = odp_random_data(state->iv, ipsec_sa->esp_iv_len,
-				      ODP_RANDOM_CRYPTO);
+				      odp_global_data.ipsec_rand_kind);
 
 		if (len != ipsec_sa->esp_iv_len)
 			return -1;
@@ -1891,6 +1892,10 @@ int _odp_ipsec_init_global(void)
 	odp_ipsec_config_init(&ipsec_config);
 
 	memset(&default_out_opt, 0, sizeof(default_out_opt));
+
+	odp_global_data.ipsec_rand_kind = ODP_RANDOM_CRYPTO;
+	if (odp_global_data.ipsec_rand_kind > odp_random_max_kind())
+		odp_global_data.ipsec_rand_kind = odp_random_max_kind();
 
 	return 0;
 }
