@@ -381,6 +381,7 @@ AC_MSG_RESULT([
 	includedir:		${includedir}
 	testdir:		${testdir}
 	WITH_ARCH:              ${WITH_ARCH}
+	with_openssl:           ${with_openssl}
 
 	cc:			${CC}
 	cc version:             ${CC_VERSION}
@@ -405,3 +406,7 @@ AC_MSG_RESULT([
 	user_guides:		${user_guides}
 	pcapng:			${have_pcapng}
 ])
+
+AS_IF([test "${with_openssl}" = "no"],
+      [AC_MSG_WARN([Strong cryptography is not available without OpenSSL])]
+      )
