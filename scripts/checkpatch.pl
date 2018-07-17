@@ -2487,7 +2487,7 @@ sub process {
 # Check the patch for a signoff:
 		if ($line =~ /^\s*signed-off-by:/i) {
 			$signoff++;
-			$in_commit_log = 0;
+			#$in_commit_log = 0;
 		}
 
 # Check if MAINTAINERS is being updated.  If so, there's probably no need to
@@ -2497,7 +2497,7 @@ sub process {
 		}
 
 # Check signature styles
-		if (!$in_header_lines &&
+		if (!$in_header_lines && $in_commit_log &&
 		    $line =~ /^(\s*)([a-z0-9_-]+by:|$signature_tags)(\s*)(.*)/i) {
 			my $space_before = $1;
 			my $sign_off = $2;
