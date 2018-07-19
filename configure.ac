@@ -387,6 +387,7 @@ AC_MSG_RESULT([
 	cc version:             ${CC_VERSION}
 	cppflags:		${CPPFLAGS}
 	cflags:			${CFLAGS}
+	ld:			${LD}
 	ldflags:		${LDFLAGS}
 	libs:			${LIBS}
 	defs:			${DEFS}
