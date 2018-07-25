@@ -38,7 +38,7 @@ typedef struct ODP_ALIGNED(sizeof(void *)) {
  * @Note this is not the same as a plain boolean type.
  * _odp_atomic_flag_t is guaranteed to be able to operate on atomically.
  */
-typedef char _odp_atomic_flag_t;
+typedef int _odp_atomic_flag_t;
 
 /**
  * Memory orderings supported by ODP.
@@ -642,6 +642,7 @@ static inline int _odp_atomic_ptr_cmp_xchg_strong(
 static inline void _odp_atomic_flag_init(_odp_atomic_flag_t *flag,
 		odp_bool_t val)
 {
+	*flag = 0;
 	__atomic_clear(flag, __ATOMIC_RELAXED);
 	if (val)
 		__atomic_test_and_set(flag, __ATOMIC_RELAXED);

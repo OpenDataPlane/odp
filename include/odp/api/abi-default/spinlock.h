@@ -19,7 +19,7 @@ extern "C" {
 
 /** @internal */
 typedef struct odp_spinlock_s {
-	char lock;  /**< lock flag, should match odp_atomic_flag_t */
+	int lock;  /**< lock flag, should match odp_atomic_flag_t */
 } odp_spinlock_t;
 
 #ifdef __cplusplus
