@@ -836,8 +836,10 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 			if (odp_likely(ring->slot[slot_id].len <= mtu)) {
 				slot_tbl[num_rx].buf = buf;
 				slot_tbl[num_rx].len = ring->slot[slot_id].len;
-				ODP_DBG("dropped oversized packet\n");
 				num_rx++;
+			} else {
+				ODP_DBG("Dropped oversized packet: %" PRIu16 " "
+					"B\n", ring->slot[slot_id].len);
 			}
 			ring->cur = nm_ring_next(ring, slot_id);
 		}
