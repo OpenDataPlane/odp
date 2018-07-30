@@ -262,7 +262,7 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 		return ODP_TIMER_POOL_INVALID;
 	}
 
-	for (i = 0; i < MAX_TIMER_POOLS; i++) {
+	for (i = 0; i < MAX_TIMER_POOLS - 1; i++) {
 		if (timer_global.timer_pool_used[i] == 0) {
 			timer_global.timer_pool_used[i] = 1;
 			break;
