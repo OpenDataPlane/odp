@@ -259,6 +259,7 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 
 	if (timer_global.num_timer_pools >= MAX_TIMER_POOLS) {
 		odp_ticketlock_unlock(&timer_global.lock);
+		ODP_DBG("No more free timer pools\n");
 		return ODP_TIMER_POOL_INVALID;
 	}
 
