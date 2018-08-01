@@ -1117,6 +1117,9 @@ int odp_timer_capability(odp_timer_clk_src_t clk_src,
 	int ret = 0;
 
 	if (clk_src == ODP_CLOCK_CPU) {
+		capa->max_pools_combined = MAX_TIMER_POOLS;
+		capa->max_pools = MAX_TIMER_POOLS;
+		capa->max_timers = 0;
 		capa->highest_res_ns = timer_global->highest_res_ns;
 	} else {
 		ODP_ERR("ODP timer system doesn't support external clock source currently\n");
