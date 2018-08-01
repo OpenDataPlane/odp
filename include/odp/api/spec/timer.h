@@ -135,6 +135,22 @@ typedef struct {
  * Timer capability
  */
 typedef struct {
+	/** Maximum number of timer pools over all clock sources
+	 *
+	 * The total number of timer pools that can be created combining
+	 * different clock sources.
+	 */
+	uint32_t max_pools_combined;
+
+	/** Maximum number of timer pools for the requested clock source */
+	uint32_t max_pools;
+
+	/** Maximum number of timers in a pool
+	 *
+	 * The value of zero means that limited only by the available
+	 * memory size for the pool. */
+	uint32_t max_timers;
+
 	/** Highest timer resolution in nanoseconds.
 	 *
 	 *  This defines the highest resolution supported by a timer.
