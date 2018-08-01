@@ -773,6 +773,7 @@ static void timer_test_odp_timer_all(void)
 	uint64_t ns, tick, ns2;
 	pthrd_arg thrdarg;
 	odp_timer_capability_t timer_capa;
+	uint32_t num_timers;
 
 	/* Reserve at least one core for running other processes so the timer
 	 * test hopefully can run undisturbed and thus get better timing
@@ -787,24 +788,26 @@ static void timer_test_odp_timer_all(void)
 	if (num_workers < 1)
 		num_workers = 1;
 
+	num_timers = num_workers * NTIMERS;
+	CU_ASSERT_FATAL(!odp_timer_capability(ODP_CLOCK_CPU, &timer_capa));
+	if (timer_capa.max_timers && timer_capa.max_timers < num_timers)
+		num_timers = timer_capa.max_timers;
+
 	/* Create timeout pools */
 	odp_pool_param_init(&params);
 	params.type    = ODP_POOL_TIMEOUT;
-	params.tmo.num = (NTIMERS + 1) * num_workers;
+	params.tmo.num = num_timers + num_workers;
 
 	tbp = odp_pool_create("tmo_pool", &params);
 	if (tbp == ODP_POOL_INVALID)
 		CU_FAIL_FATAL("Timeout pool create failed");
 
 	/* Create a timer pool */
-	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa))
-		CU_FAIL("Error: get timer capacity failed.\n");
-
 	resolution_ns = MAX(RES, timer_capa.highest_res_ns);
 	tparam.res_ns = resolution_ns;
 	tparam.min_tmo = MIN_TMO;
 	tparam.max_tmo = MAX_TMO;
-	tparam.num_timers = num_workers * NTIMERS;
+	tparam.num_timers = num_timers;
 	tparam.priv = 0;
 	tparam.clk_src = ODP_CLOCK_CPU;
 	tp = odp_timer_pool_create(NAME, &tparam);
@@ -827,9 +830,13 @@ static void timer_test_odp_timer_all(void)
 	LOG_DBG("Resolution:   %" PRIu64 "\n", tparam.res_ns);
 	LOG_DBG("Min timeout:  %" PRIu64 "\n", tparam.min_tmo);
 	LOG_DBG("Max timeout:  %" PRIu64 "\n", tparam.max_tmo);
-	LOG_DBG("Num timers..: %u\n", tparam.num_timers);
-	LOG_DBG("Tmo range: %u ms (%" PRIu64 " ticks)\n", RANGE_MS,
+	LOG_DBG("Num timers:   %u\n", tparam.num_timers);
+	LOG_DBG("Tmo range:    %u ms (%" PRIu64 " ticks)\n", RANGE_MS,
 		odp_timer_ns_to_tick(tp, 1000000ULL * RANGE_MS));
+	LOG_DBG("Max timers:   %" PRIu32 "\n", timer_capa.max_timers);
+	LOG_DBG("Max timer pools:       %" PRIu32 "\n", timer_capa.max_pools);
+	LOG_DBG("Max timer pools combined: %" PRIu32 "\n",
+		timer_capa.max_pools_combined);
 
 	tick = odp_timer_ns_to_tick(tp, 0);
 	CU_ASSERT(tick == 0);
@@ -875,7 +882,7 @@ static void timer_test_odp_timer_all(void)
 	/* Check some statistics after the test */
 	if (odp_timer_pool_info(tp, &tpinfo) != 0)
 		CU_FAIL("odp_timer_pool_info");
-	CU_ASSERT(tpinfo.param.num_timers == (unsigned)num_workers * NTIMERS);
+	CU_ASSERT(tpinfo.param.num_timers == num_timers);
 	CU_ASSERT(tpinfo.cur_timers == 0);
 	CU_ASSERT(tpinfo.hwm_timers == odp_atomic_load_u32(&timers_allocated));
 
