@@ -168,6 +168,8 @@ void refer_constructors(void)
 }
 #endif
 
+static int pool_alloc(struct rte_mempool *mp);
+
 static int lookup_opt(const char *opt_name, const char *drv_name, int *val)
 {
 	const char *base = "pktio_dpdk";
@@ -341,7 +343,7 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 
 	rte_pktmbuf_pool_init(mp, &mbp_priv);
 
-	if (rte_mempool_ops_alloc(mp)) {
+	if (pool_alloc(mp)) {
 		ODP_ERR("Failed allocating mempool\n");
 		return NULL;
 	}
