@@ -128,7 +128,7 @@ static int set_num_cpu(test_global_t *global)
 	ret = odp_cpumask_default_worker(&global->cpumask, num_cpu);
 
 	if (num_cpu && ret != num_cpu) {
-		printf("Error: Too many workers. Max supported %i\n.", ret);
+		printf("Error: Too many workers. Max supported %i.\n", ret);
 		return -1;
 	}
 
