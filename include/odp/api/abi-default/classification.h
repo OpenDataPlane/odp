@@ -25,7 +25,7 @@ typedef _odp_abi_cos_t *odp_cos_t;
 typedef _odp_abi_pmr_t *odp_pmr_t;
 
 #define ODP_COS_INVALID   ((odp_cos_t)0)
-#define ODP_PMR_INVAL     ((odp_pmr_t)~0)
+#define ODP_PMR_INVAL     ((odp_pmr_t)0)
 
 #define ODP_COS_NAME_LEN  32
 
