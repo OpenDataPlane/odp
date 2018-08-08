@@ -28,7 +28,7 @@ typedef ODP_HANDLE_T(odp_cos_t);
 #define ODP_COS_INVALID   _odp_cast_scalar(odp_cos_t, 0)
 
 typedef ODP_HANDLE_T(odp_pmr_t);
-#define ODP_PMR_INVALID   _odp_cast_scalar(odp_pmr_t, ~0)
+#define ODP_PMR_INVALID   _odp_cast_scalar(odp_pmr_t, 0)
 
 #if ODP_DEPRECATED_API
 #define ODP_PMR_INVAL     ODP_PMR_INVALID
