@@ -45,10 +45,20 @@ static const rss_key default_rss = {
 	}
 };
 
-static
-cos_t *get_cos_entry_internal(odp_cos_t cos_id)
+static inline uint32_t _odp_cos_to_ndx(odp_cos_t cos)
 {
-	return &cos_tbl->cos_entry[_odp_typeval(cos_id)];
+	return _odp_typeval(cos) - 1;
+}
+
+static inline odp_cos_t _odp_cos_from_ndx(uint32_t ndx)
+{
+	return _odp_cast_scalar(odp_cos_t, ndx + 1);
+}
+
+static
+cos_t *get_cos_entry_internal(odp_cos_t cos)
+{
+	return &cos_tbl->cos_entry[_odp_cos_to_ndx(cos)];
 }
 
 static
@@ -80,8 +90,7 @@ int odp_classification_init_global(void)
 	memset(cos_tbl, 0, sizeof(cos_tbl_t));
 	for (i = 0; i < CLS_COS_MAX_ENTRY; i++) {
 		/* init locks */
-		cos_t *cos =
-			get_cos_entry_internal(_odp_cast_scalar(odp_cos_t, i));
+		cos_t *cos = get_cos_entry_internal(_odp_cos_from_ndx(i));
 		LOCK_INIT(&cos->s.lock);
 	}
 
@@ -283,7 +292,7 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 			odp_atomic_init_u32(&cos->s.num_rule, 0);
 			cos->s.index = i;
 			UNLOCK(&cos->s.lock);
-			return _odp_cast_scalar(odp_cos_t, i);
+			return _odp_cos_from_ndx(i);
 		}
 		UNLOCK(&cos->s.lock);
 	}
@@ -317,14 +326,15 @@ odp_pmr_t alloc_pmr(pmr_t **pmr)
 }
 
 static
-cos_t *get_cos_entry(odp_cos_t cos_id)
+cos_t *get_cos_entry(odp_cos_t cos)
 {
-	if (_odp_typeval(cos_id) >= CLS_COS_MAX_ENTRY ||
-	    cos_id == ODP_COS_INVALID)
+	uint32_t cos_id = _odp_cos_to_ndx(cos);
+
+	if (cos_id >= CLS_COS_MAX_ENTRY || cos == ODP_COS_INVALID)
 		return NULL;
-	if (cos_tbl->cos_entry[_odp_typeval(cos_id)].s.valid == 0)
+	if (cos_tbl->cos_entry[cos_id].s.valid == 0)
 		return NULL;
-	return &cos_tbl->cos_entry[_odp_typeval(cos_id)];
+	return &cos_tbl->cos_entry[cos_id];
 }
 
 static
