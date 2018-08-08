@@ -743,6 +743,47 @@ static void signal_handler(int signal)
 	abort();
 }
 
+static int destroy_tm_queues(void)
+{
+	int i;
+	int class;
+	int ret;
+
+	for (i = 0; i < NUM_SVC_CLASSES; i++)
+		for (class = 0; class < TM_QUEUES_PER_CLASS; class++) {
+			odp_tm_queue_t tm_queue;
+			odp_tm_queue_info_t info;
+
+			tm_queue = queue_num_tbls[i][class + 1];
+
+			ret = odp_tm_queue_info(tm_queue, &info);
+			if (ret) {
+				printf("Err: odp_tm_queue_info %d\n", ret);
+				return -1;
+			}
+
+			ret = odp_tm_node_disconnect(info.next_tm_node);
+			if (ret) {
+				printf("Err: odp_tm_node_disconnect %d\n", ret);
+				return -1;
+			}
+
+			ret =  odp_tm_queue_disconnect(tm_queue);
+			if (ret) {
+				printf("odp_tm_queue_disconnect %d\n", ret);
+				return -1;
+			}
+
+			ret = odp_tm_queue_destroy(tm_queue);
+			if (ret) {
+				printf("odp_tm_queue_destroy %d\n", ret);
+				return -1;
+			}
+	}
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	struct sigaction signal_action;
@@ -796,6 +837,12 @@ int main(int argc, char *argv[])
 
 	odp_tm_stats_print(odp_tm_test);
 
+	rc = destroy_tm_queues();
+	if (rc != 0) {
+		printf("Error: destroy_tm_queues() failed, rc = %d\n", rc);
+		return -1;
+	}
+
 	rc = odp_pool_destroy(odp_pool);
 	if (rc != 0) {
 		printf("Error: odp_pool_destroy() failed, rc = %d\n", rc);
@@ -814,11 +861,11 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	/* Trying to keep this example as simple as possible we avoid
-	 * clean termination of TM queues. This will error on global
-	 * termination code
-	 */
-	(void)odp_term_global(instance);
+	rc = odp_term_global(instance);
+	if (rc != 0) {
+		printf("Error: odp_term_global() failed, rc = %d\n", rc);
+		return -1;
+	}
 
 	return 0;
 }
