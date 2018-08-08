@@ -55,6 +55,16 @@ static inline odp_cos_t _odp_cos_from_ndx(uint32_t ndx)
 	return _odp_cast_scalar(odp_cos_t, ndx + 1);
 }
 
+static inline uint32_t _odp_pmr_to_ndx(odp_pmr_t pmr)
+{
+	return _odp_typeval(pmr) - 1;
+}
+
+static inline odp_pmr_t _odp_pmr_from_ndx(uint32_t ndx)
+{
+	return _odp_cast_scalar(odp_pmr_t, ndx + 1);
+}
+
 static
 cos_t *get_cos_entry_internal(odp_cos_t cos)
 {
@@ -62,9 +72,9 @@ cos_t *get_cos_entry_internal(odp_cos_t cos)
 }
 
 static
-pmr_t *get_pmr_entry_internal(odp_pmr_t pmr_id)
+pmr_t *get_pmr_entry_internal(odp_pmr_t pmr)
 {
-	return &pmr_tbl->pmr[_odp_typeval(pmr_id)];
+	return &pmr_tbl->pmr[_odp_pmr_to_ndx(pmr)];
 }
 
 int odp_classification_init_global(void)
@@ -110,8 +120,7 @@ int odp_classification_init_global(void)
 	memset(pmr_tbl, 0, sizeof(pmr_tbl_t));
 	for (i = 0; i < CLS_PMR_MAX_ENTRY; i++) {
 		/* init locks */
-		pmr_t *pmr =
-			get_pmr_entry_internal(_odp_cast_scalar(odp_pmr_t, i));
+		pmr_t *pmr = get_pmr_entry_internal(_odp_pmr_from_ndx(i));
 		LOCK_INIT(&pmr->s.lock);
 	}
 
@@ -317,7 +326,7 @@ odp_pmr_t alloc_pmr(pmr_t **pmr)
 			pmr_tbl->pmr[i].s.num_pmr = 0;
 			*pmr = &pmr_tbl->pmr[i];
 			/* return as locked */
-			return _odp_cast_scalar(odp_pmr_t, i);
+			return _odp_pmr_from_ndx(i);
 		}
 		UNLOCK(&pmr_tbl->pmr[i].s.lock);
 	}
@@ -338,14 +347,15 @@ cos_t *get_cos_entry(odp_cos_t cos)
 }
 
 static
-pmr_t *get_pmr_entry(odp_pmr_t pmr_id)
+pmr_t *get_pmr_entry(odp_pmr_t pmr)
 {
-	if (_odp_typeval(pmr_id) >= CLS_PMR_MAX_ENTRY ||
-	    pmr_id == ODP_PMR_INVAL)
+	uint32_t pmr_id = _odp_pmr_to_ndx(pmr);
+
+	if (pmr_id >= CLS_PMR_MAX_ENTRY || pmr == ODP_PMR_INVAL)
 		return NULL;
-	if (pmr_tbl->pmr[_odp_typeval(pmr_id)].s.valid == 0)
+	if (pmr_tbl->pmr[pmr_id].s.valid == 0)
 		return NULL;
-	return &pmr_tbl->pmr[_odp_typeval(pmr_id)];
+	return &pmr_tbl->pmr[pmr_id];
 }
 
 int odp_cos_destroy(odp_cos_t cos_id)
