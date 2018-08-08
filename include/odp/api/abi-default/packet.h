@@ -27,7 +27,7 @@ typedef _odp_abi_packet_t *odp_packet_t;
 typedef _odp_abi_packet_seg_t *odp_packet_seg_t;
 
 #define ODP_PACKET_INVALID        ((odp_packet_t)0)
-#define ODP_PACKET_SEG_INVALID    ((odp_packet_seg_t)0xffffffff)
+#define ODP_PACKET_SEG_INVALID    ((odp_packet_seg_t)0)
 #define ODP_PACKET_OFFSET_INVALID 0xffff
 
 typedef uint8_t odp_proto_l2_type_t;
