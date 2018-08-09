@@ -224,6 +224,19 @@ typedef enum odp_packet_chksum_status_t {
 
 } odp_packet_chksum_status_t;
 
+/**
+ * Event subtype of a packet
+ *
+ * Returns the subtype of a packet event. Subtype tells if the packet contains
+ * only basic metadata (ODP_EVENT_PACKET_BASIC) or in addition to that some
+ * specific metadata (e.g. ODP_EVENT_PACKET_CRYPTO or ODP_EVENT_PACKET_IPSEC).
+ *
+ * @param      packet   Packet handle
+ *
+ * @return Packet subtype
+ */
+odp_event_subtype_t odp_packet_subtype(odp_packet_t packet);
+
 /*
  *
  * Alloc and free
