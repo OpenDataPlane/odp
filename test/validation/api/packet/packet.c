@@ -332,6 +332,7 @@ static void packet_test_alloc_free(void)
 	CU_ASSERT(odp_event_types(odp_packet_to_event(packet), &subtype) ==
 		  ODP_EVENT_PACKET);
 	CU_ASSERT(subtype == ODP_EVENT_PACKET_BASIC);
+	CU_ASSERT(odp_packet_subtype(packet) == ODP_EVENT_PACKET_BASIC);
 	CU_ASSERT(odp_packet_to_u64(packet) !=
 		  odp_packet_to_u64(ODP_PACKET_INVALID));
 
@@ -415,6 +416,8 @@ static void packet_test_alloc_free_multi(void)
 					  &subtype) ==
 			  ODP_EVENT_PACKET);
 		CU_ASSERT(subtype == ODP_EVENT_PACKET_BASIC);
+		CU_ASSERT(odp_packet_subtype(packet[i]) ==
+			  ODP_EVENT_PACKET_BASIC);
 		CU_ASSERT(odp_packet_to_u64(packet[i]) !=
 			  odp_packet_to_u64(ODP_PACKET_INVALID));
 
