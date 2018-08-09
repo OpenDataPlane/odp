@@ -38,12 +38,12 @@ static inline ipsec_sa_t *ipsec_sa_entry(uint32_t ipsec_sa_idx)
 
 static inline ipsec_sa_t *ipsec_sa_entry_from_hdl(odp_ipsec_sa_t ipsec_sa_hdl)
 {
-	return ipsec_sa_entry(_odp_typeval(ipsec_sa_hdl));
+	return ipsec_sa_entry(_odp_typeval(ipsec_sa_hdl) - 1);
 }
 
 static inline odp_ipsec_sa_t ipsec_sa_index_to_handle(uint32_t ipsec_sa_idx)
 {
-	return _odp_cast_scalar(odp_ipsec_sa_t, ipsec_sa_idx);
+	return _odp_cast_scalar(odp_ipsec_sa_t, ipsec_sa_idx + 1);
 }
 
 int _odp_ipsec_sad_init_global(void)
