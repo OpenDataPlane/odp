@@ -867,5 +867,6 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	printf("Quit\n");
 	return 0;
 }
