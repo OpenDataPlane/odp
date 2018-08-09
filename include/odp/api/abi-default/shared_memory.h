@@ -21,7 +21,6 @@ typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_shm_t;
 typedef _odp_abi_shm_t *odp_shm_t;
 
 #define ODP_SHM_INVALID   ((odp_shm_t)0)
-#define ODP_SHM_NULL      ODP_SHM_INVALID
 #define ODP_SHM_NAME_LEN  32
 
 /**
