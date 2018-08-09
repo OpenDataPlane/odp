@@ -231,7 +231,7 @@ static inline timer_pool_t *handle_to_tp(odp_timer_t hdl)
 static inline uint32_t handle_to_idx(odp_timer_t hdl,
 				     timer_pool_t *tp)
 {
-	uint32_t idx = _odp_typeval(hdl) & ((1U << INDEX_BITS) - 1U);
+	uint32_t idx = (_odp_typeval(hdl) & ((1U << INDEX_BITS) - 1U)) - 1;
 	__builtin_prefetch(&tp->tick_buf[idx], 0, 0);
 	if (odp_likely(idx < odp_atomic_load_u32(&tp->high_wm)))
 		return idx;
@@ -241,8 +241,9 @@ static inline uint32_t handle_to_idx(odp_timer_t hdl,
 static inline odp_timer_t tp_idx_to_handle(timer_pool_t *tp,
 					   uint32_t idx)
 {
-	ODP_ASSERT(idx < (1U << INDEX_BITS));
-	return _odp_cast_scalar(odp_timer_t, (tp->tp_idx << INDEX_BITS) | idx);
+	ODP_ASSERT((idx + 1) < (1U << INDEX_BITS));
+	return _odp_cast_scalar(odp_timer_t, (tp->tp_idx << INDEX_BITS) |
+				(idx + 1));
 }
 
 /* Forward declarations */

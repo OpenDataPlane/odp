@@ -96,7 +96,7 @@ static inline pool_t *pool_entry(uint32_t pool_idx)
 
 static inline pool_t *pool_entry_from_hdl(odp_pool_t pool_hdl)
 {
-	return &pool_tbl->pool[_odp_typeval(pool_hdl)];
+	return &pool_tbl->pool[_odp_typeval(pool_hdl) - 1];
 }
 
 static inline odp_buffer_hdr_t *buf_hdl_to_hdr(odp_buffer_t buf)

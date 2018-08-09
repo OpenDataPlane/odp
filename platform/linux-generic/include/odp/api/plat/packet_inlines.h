@@ -85,12 +85,12 @@ extern const _odp_pool_inline_offset_t   _odp_pool_inline;
 #include <odp/api/plat/strong_types.h>
 static inline uint32_t _odp_packet_seg_to_ndx(odp_packet_seg_t seg)
 {
-	return _odp_typeval(seg);
+	return _odp_typeval(seg) - 1;
 }
 
 static inline odp_packet_seg_t _odp_packet_seg_from_ndx(uint32_t ndx)
 {
-	return _odp_cast_scalar(odp_packet_seg_t, ndx);
+	return _odp_cast_scalar(odp_packet_seg_t, ndx + 1);
 }
 #endif
 

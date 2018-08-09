@@ -31,17 +31,17 @@ struct timer_pool_s; /**< Forward declaration */
 
 typedef struct timer_pool_s *odp_timer_pool_t;
 
-#define ODP_TIMER_POOL_INVALID NULL
+#define ODP_TIMER_POOL_INVALID  ((odp_timer_pool_t)0)
 
 #define ODP_TIMER_POOL_NAME_LEN  32
 
 typedef _odp_abi_timer_t *odp_timer_t;
 
-#define ODP_TIMER_INVALID ((odp_timer_t)0xffffffff)
+#define ODP_TIMER_INVALID ((odp_timer_t)0)
 
 typedef _odp_abi_timeout_t *odp_timeout_t;
 
-#define ODP_TIMEOUT_INVALID  ((odp_timeout_t)NULL)
+#define ODP_TIMEOUT_INVALID  ((odp_timeout_t)0)
 
 /**
  * @}
