@@ -225,6 +225,7 @@ static int alg_packet_op(odp_packet_t pkt,
 	CU_ASSERT(ODP_EVENT_PACKET ==
 		  odp_event_types(odp_packet_to_event(pkt), &subtype));
 	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == subtype);
+	CU_ASSERT(odp_packet_subtype(pkt) == ODP_EVENT_PACKET_CRYPTO);
 
 	rc = odp_crypto_result(&result, pkt);
 	if (rc < 0) {
@@ -298,6 +299,7 @@ static int alg_packet_op_enq(odp_packet_t pkt,
 	CU_ASSERT(ODP_EVENT_PACKET ==
 		  odp_event_types(odp_packet_to_event(pkt), &subtype));
 	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == subtype);
+	CU_ASSERT(odp_packet_subtype(pkt) == ODP_EVENT_PACKET_CRYPTO);
 
 	rc = odp_crypto_result(&result, pkt);
 	if (rc < 0) {
