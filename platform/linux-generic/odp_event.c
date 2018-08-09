@@ -19,6 +19,7 @@
 
 /* Inlined API functions */
 #include <odp/api/plat/event_inlines.h>
+#include <odp/api/plat/packet_inlines.h>
 
 odp_event_subtype_t odp_event_subtype(odp_event_t event)
 {
@@ -26,7 +27,7 @@ odp_event_subtype_t odp_event_subtype(odp_event_t event)
 			ODP_EVENT_PACKET)
 		return ODP_EVENT_NO_SUBTYPE;
 
-	return packet_subtype(odp_packet_from_event(event));
+	return odp_packet_subtype(odp_packet_from_event(event));
 }
 
 odp_event_type_t odp_event_types(odp_event_t event,
@@ -36,7 +37,7 @@ odp_event_type_t odp_event_types(odp_event_t event,
 	odp_event_type_t event_type = _odp_buffer_event_type(buf);
 
 	*subtype = event_type == ODP_EVENT_PACKET ?
-			packet_subtype(odp_packet_from_event(event)) :
+			odp_packet_subtype(odp_packet_from_event(event)) :
 			ODP_EVENT_NO_SUBTYPE;
 
 	return event_type;

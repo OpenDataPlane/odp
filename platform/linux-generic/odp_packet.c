@@ -50,7 +50,8 @@ const _odp_packet_inline_offset_t ODP_ALIGNED_CACHE _odp_packet_inline = {
 	.flow_hash      = offsetof(odp_packet_hdr_t, flow_hash),
 	.timestamp      = offsetof(odp_packet_hdr_t, timestamp),
 	.input_flags    = offsetof(odp_packet_hdr_t, p.input_flags),
-	.flags          = offsetof(odp_packet_hdr_t, p.flags)
+	.flags          = offsetof(odp_packet_hdr_t, p.flags),
+	.subtype        = offsetof(odp_packet_hdr_t, subtype)
 
 };
 

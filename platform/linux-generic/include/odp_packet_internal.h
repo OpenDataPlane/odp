@@ -155,11 +155,6 @@ static inline seg_entry_t *seg_entry_last(odp_packet_hdr_t *hdr)
 	return &last->buf_hdr.seg[last_seg];
 }
 
-static inline odp_event_subtype_t packet_subtype(odp_packet_t pkt)
-{
-	return packet_hdr(pkt)->subtype;
-}
-
 static inline void packet_subtype_set(odp_packet_t pkt, int ev)
 {
 	packet_hdr(pkt)->subtype = ev;
