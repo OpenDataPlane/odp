@@ -454,7 +454,7 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 
 		stats->pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos,
 						stats->cos);
-		if (stats->pmr == ODP_PMR_INVAL) {
+		if (stats->pmr == ODP_PMR_INVALID) {
 			EXAMPLE_ERR("odp_pktio_pmr_cos failed");
 			exit(EXIT_FAILURE);
 		}
