@@ -319,7 +319,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	for (i = 0; i < nb_tx; ++i) {
 		odp_ipsec_packet_result_t result;
 
-		if (packet_subtype(pkt_tbl[i]) ==
+		if (odp_packet_subtype(pkt_tbl[i]) ==
 				ODP_EVENT_PACKET_IPSEC &&
 		    pktio_entry->s.config.outbound_ipsec) {
 
