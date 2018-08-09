@@ -32,7 +32,7 @@ typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_timer_pool_t;
 
 typedef _odp_abi_timer_pool_t *odp_timer_pool_t;
 
-#define ODP_TIMER_POOL_INVALID NULL
+#define ODP_TIMER_POOL_INVALID  ((odp_timer_pool_t)0)
 
 #define ODP_TIMER_POOL_NAME_LEN  32
 
