@@ -36,11 +36,6 @@ extern "C" {
  */
 
 /**
- * @def ODP_SHM_NULL
- * Synonym for buffer pool use
- */
-
-/**
  * @def ODP_SHM_NAME_LEN
  * Maximum shared memory block name length in chars including null char
  */
