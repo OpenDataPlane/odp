@@ -230,7 +230,7 @@ static odp_tm_t odp_tm_test;
 
 static odp_pool_t odp_pool;
 
-static odp_tm_queue_t queue_num_tbls[NUM_SVC_CLASSES][TM_QUEUES_PER_CLASS + 1];
+static odp_tm_queue_t queue_num_tbls[NUM_SVC_CLASSES][TM_QUEUES_PER_CLASS];
 static uint32_t       next_queue_nums[NUM_SVC_CLASSES];
 
 static uint8_t  random_buf[RANDOM_BUF_LEN];
@@ -434,7 +434,7 @@ static int config_example_user(odp_tm_node_t cos_tm_node,
 				return rc;
 
 			svc_class_queue_num = next_queue_nums[svc_class]++;
-			queue_num_tbls[svc_class][svc_class_queue_num + 1] =
+			queue_num_tbls[svc_class][svc_class_queue_num] =
 				tm_queue;
 		}
 	}
@@ -633,7 +633,7 @@ static int traffic_generator(uint32_t pkts_to_send)
 	while (pkt_cnt < pkts_to_send) {
 		svc_class = pkt_service_class();
 		queue_num = random_16() & (TM_QUEUES_PER_CLASS - 1);
-		tm_queue  = queue_num_tbls[svc_class][queue_num + 1];
+		tm_queue  = queue_num_tbls[svc_class][queue_num];
 		pkt_len   = ((uint32_t)((random_8() & 0x7F) + 2)) * 32;
 		pkt_len   = MIN(pkt_len, 1500);
 		pkt       = make_odp_packet(pkt_len);
@@ -754,7 +754,7 @@ static int destroy_tm_queues(void)
 			odp_tm_queue_t tm_queue;
 			odp_tm_queue_info_t info;
 
-			tm_queue = queue_num_tbls[i][class + 1];
+			tm_queue = queue_num_tbls[i][class];
 
 			ret = odp_tm_queue_info(tm_queue, &info);
 			if (ret) {
