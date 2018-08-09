@@ -41,7 +41,7 @@ typedef _odp_abi_timer_t *odp_timer_t;
 
 typedef _odp_abi_timeout_t *odp_timeout_t;
 
-#define ODP_TIMEOUT_INVALID  ((odp_timeout_t)NULL)
+#define ODP_TIMEOUT_INVALID  ((odp_timeout_t)0)
 
 /**
  * @}
