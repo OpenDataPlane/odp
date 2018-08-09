@@ -22,7 +22,7 @@ typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_pool_t;
 
 typedef _odp_abi_pool_t *odp_pool_t;
 
-#define ODP_POOL_INVALID   ((odp_pool_t)0xffffffff)
+#define ODP_POOL_INVALID   ((odp_pool_t)0)
 
 #define ODP_POOL_NAME_LEN  32
 
