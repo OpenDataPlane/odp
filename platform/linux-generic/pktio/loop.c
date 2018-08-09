@@ -18,6 +18,7 @@
 #include <odp/api/hints.h>
 #include <odp/api/plat/byteorder_inlines.h>
 #include <odp_queue_if.h>
+#include <odp/api/plat/packet_inlines.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>
@@ -309,7 +310,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	for (i = 0; i < nb_tx; ++i) {
 		odp_ipsec_packet_result_t result;
 
-		if (packet_subtype(pkt_tbl[i]) ==
+		if (odp_packet_subtype(pkt_tbl[i]) ==
 				ODP_EVENT_PACKET_IPSEC &&
 		    pktio_entry->s.config.outbound_ipsec) {
 
