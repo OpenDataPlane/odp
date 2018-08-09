@@ -44,10 +44,15 @@ extern "C" {
  */
 
 /**
- * @def ODP_PMR_INVAL
+ * @def ODP_PMR_INVALID
  * Invalid odp_pmr_t value.
  * This value is returned from odp_cls_pmr_create()
  * function on failure.
+ */
+
+/**
+ * @def ODP_PMR_INVAL
+ * @deprecated Use ODP_PMR_INVALID instead
  */
 
 /**
@@ -558,7 +563,7 @@ void odp_cls_pmr_param_init(odp_pmr_param_t *param);
  * @param dst_cos      destination CoS handle
  *
  * @return Handle to the Packet Match Rule.
- * @retval ODP_PMR_INVAL on failure
+ * @retval ODP_PMR_INVALID on failure
  */
 odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 			     odp_cos_t src_cos, odp_cos_t dst_cos);

@@ -79,7 +79,7 @@ int classification_suite_init(void)
 		cos_list[i] = ODP_COS_INVALID;
 
 	for (i = 0; i < CLS_ENTRIES; i++)
-		pmr_list[i] = ODP_PMR_INVAL;
+		pmr_list[i] = ODP_PMR_INVALID;
 
 	for (i = 0; i < CLS_ENTRIES; i++)
 		queue_list[i] = ODP_QUEUE_INVALID;
@@ -211,7 +211,7 @@ void configure_cls_pmr_chain(void)
 	pmr_list[CLS_PMR_CHAIN_SRC] =
 	odp_cls_pmr_create(&pmr_param, 1, cos_list[CLS_DEFAULT],
 			   cos_list[CLS_PMR_CHAIN_SRC]);
-	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_SRC] != ODP_PMR_INVAL);
+	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_SRC] != ODP_PMR_INVALID);
 
 	val = CLS_PMR_CHAIN_PORT;
 	maskport = 0xffff;
@@ -223,7 +223,7 @@ void configure_cls_pmr_chain(void)
 	pmr_list[CLS_PMR_CHAIN_DST] =
 	odp_cls_pmr_create(&pmr_param, 1, cos_list[CLS_PMR_CHAIN_SRC],
 			   cos_list[CLS_PMR_CHAIN_DST]);
-	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_DST] != ODP_PMR_INVAL);
+	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_DST] != ODP_PMR_INVALID);
 }
 
 void test_cls_pmr_chain(void)
@@ -569,7 +569,7 @@ void configure_pmr_cos(void)
 	pmr_list[CLS_PMR] = odp_cls_pmr_create(&pmr_param, 1,
 					       cos_list[CLS_DEFAULT],
 					       cos_list[CLS_PMR]);
-	CU_ASSERT_FATAL(pmr_list[CLS_PMR] != ODP_PMR_INVAL);
+	CU_ASSERT_FATAL(pmr_list[CLS_PMR] != ODP_PMR_INVALID);
 }
 
 void test_pmr_cos(void)
@@ -652,7 +652,7 @@ void configure_pktio_pmr_composite(void)
 	pmr_list[CLS_PMR_SET] = odp_cls_pmr_create(pmr_params, num_terms,
 						   cos_list[CLS_DEFAULT],
 						   cos_list[CLS_PMR_SET]);
-	CU_ASSERT_FATAL(pmr_list[CLS_PMR_SET] != ODP_PMR_INVAL);
+	CU_ASSERT_FATAL(pmr_list[CLS_PMR_SET] != ODP_PMR_INVALID);
 }
 
 void test_pktio_pmr_composite_cos(void)
