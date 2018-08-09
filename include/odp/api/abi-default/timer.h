@@ -37,7 +37,7 @@ typedef struct timer_pool_s *odp_timer_pool_t;
 
 typedef _odp_abi_timer_t *odp_timer_t;
 
-#define ODP_TIMER_INVALID ((odp_timer_t)0xffffffff)
+#define ODP_TIMER_INVALID ((odp_timer_t)0)
 
 typedef _odp_abi_timeout_t *odp_timeout_t;
 

@@ -34,7 +34,7 @@ typedef struct timer_pool_s *odp_timer_pool_t;
 
 typedef ODP_HANDLE_T(odp_timer_t);
 
-#define ODP_TIMER_INVALID _odp_cast_scalar(odp_timer_t, 0xffffffff)
+#define ODP_TIMER_INVALID _odp_cast_scalar(odp_timer_t, 0)
 
 typedef ODP_HANDLE_T(odp_timeout_t);
 
