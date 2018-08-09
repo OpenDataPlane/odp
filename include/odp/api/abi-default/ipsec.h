@@ -28,7 +28,7 @@ typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_ipsec_sa_t;
 
 typedef _odp_abi_ipsec_sa_t *odp_ipsec_sa_t;
 
-#define ODP_IPSEC_SA_INVALID ((odp_ipsec_sa_t)0xffffffff)
+#define ODP_IPSEC_SA_INVALID ((odp_ipsec_sa_t)0)
 
 /**
  * @}
