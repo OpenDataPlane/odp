@@ -3306,6 +3306,114 @@ static void parse_eth_ipv4_rr_nop_icmp(void)
 	odp_packet_free_multi(pkt, num_pkt);
 }
 
+static void parse_result(void)
+{
+	odp_packet_parse_param_t parse;
+	int i;
+	int num_pkt = PARSE_TEST_NUM_PKT;
+	odp_packet_t pkt[num_pkt];
+	odp_packet_parse_result_t result[num_pkt];
+	odp_packet_parse_result_t *result_ptr[num_pkt];
+
+	/* Ethernet/VLAN/IPv6/UDP */
+	parse_test_alloc(pkt, test_packet_vlan_ipv6_udp,
+			 sizeof(test_packet_vlan_ipv6_udp), num_pkt);
+
+	parse.proto = ODP_PROTO_ETH;
+	parse.last_layer = ODP_PROTO_LAYER_ALL;
+	parse.chksums.all_chksum = 0;
+
+	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+					 num_pkt - 1, &parse) == (num_pkt - 1));
+
+	for (i = 0; i < num_pkt; i++) {
+		result_ptr[i] = &result[i];
+		memset(&result[i], 0, sizeof(odp_packet_parse_result_t));
+	}
+
+	odp_packet_parse_result(pkt[0], result_ptr[0]);
+	odp_packet_parse_result_multi(&pkt[1], &result_ptr[1], num_pkt - 1);
+
+	for (i = 0; i < num_pkt; i++) {
+		CU_ASSERT(odp_packet_has_eth(pkt[i]));
+		CU_ASSERT(odp_packet_has_vlan(pkt[i]));
+		CU_ASSERT(odp_packet_has_ipv6(pkt[i]));
+		CU_ASSERT(odp_packet_has_udp(pkt[i]));
+		CU_ASSERT(!odp_packet_has_ipv4(pkt[i]));
+		CU_ASSERT(!odp_packet_has_tcp(pkt[i]));
+		CU_ASSERT(odp_packet_l2_type(pkt[i]) == ODP_PROTO_L2_TYPE_ETH);
+		CU_ASSERT(odp_packet_l3_type(pkt[i]) == ODP_PROTO_L3_TYPE_IPV6);
+		CU_ASSERT(odp_packet_l4_type(pkt[i]) == ODP_PROTO_L4_TYPE_UDP);
+
+		CU_ASSERT(result[i].flag.all != 0);
+		CU_ASSERT(result[i].flag.has_error ==
+			  odp_packet_has_error(pkt[i]));
+		CU_ASSERT(result[i].flag.has_l2_error ==
+			  odp_packet_has_l2_error(pkt[i]));
+		CU_ASSERT(result[i].flag.has_l3_error ==
+			  odp_packet_has_l3_error(pkt[i]));
+		CU_ASSERT(result[i].flag.has_l4_error ==
+			  odp_packet_has_l4_error(pkt[i]));
+		CU_ASSERT(result[i].flag.has_l2 ==
+			  odp_packet_has_l2(pkt[i]));
+		CU_ASSERT(result[i].flag.has_l3 ==
+			  odp_packet_has_l3(pkt[i]));
+		CU_ASSERT(result[i].flag.has_l4 ==
+			  odp_packet_has_l4(pkt[i]));
+		CU_ASSERT(result[i].flag.has_eth ==
+			  odp_packet_has_eth(pkt[i]));
+		CU_ASSERT(result[i].flag.has_eth_bcast ==
+			  odp_packet_has_eth_bcast(pkt[i]));
+		CU_ASSERT(result[i].flag.has_eth_mcast ==
+			  odp_packet_has_eth_mcast(pkt[i]));
+		CU_ASSERT(result[i].flag.has_jumbo ==
+			  odp_packet_has_jumbo(pkt[i]));
+		CU_ASSERT(result[i].flag.has_vlan ==
+			  odp_packet_has_vlan(pkt[i]));
+		CU_ASSERT(result[i].flag.has_vlan_qinq ==
+			  odp_packet_has_vlan_qinq(pkt[i]));
+		CU_ASSERT(result[i].flag.has_arp ==
+			  odp_packet_has_arp(pkt[i]));
+		CU_ASSERT(result[i].flag.has_ipv4 ==
+			  odp_packet_has_ipv4(pkt[i]));
+		CU_ASSERT(result[i].flag.has_ipv6 ==
+			  odp_packet_has_ipv6(pkt[i]));
+		CU_ASSERT(result[i].flag.has_ip_bcast ==
+			  odp_packet_has_ip_bcast(pkt[i]));
+		CU_ASSERT(result[i].flag.has_ip_mcast ==
+			  odp_packet_has_ip_mcast(pkt[i]));
+		CU_ASSERT(result[i].flag.has_ipfrag ==
+			  odp_packet_has_ipfrag(pkt[i]));
+		CU_ASSERT(result[i].flag.has_ipopt ==
+			  odp_packet_has_ipopt(pkt[i]));
+		CU_ASSERT(result[i].flag.has_ipsec ==
+			  odp_packet_has_ipsec(pkt[i]));
+		CU_ASSERT(result[i].flag.has_udp ==
+			  odp_packet_has_udp(pkt[i]));
+		CU_ASSERT(result[i].flag.has_tcp ==
+			  odp_packet_has_tcp(pkt[i]));
+		CU_ASSERT(result[i].flag.has_sctp ==
+			  odp_packet_has_sctp(pkt[i]));
+		CU_ASSERT(result[i].flag.has_icmp ==
+			  odp_packet_has_icmp(pkt[i]));
+
+		CU_ASSERT(result[i].packet_len == odp_packet_len(pkt[i]));
+		CU_ASSERT(result[i].l2_offset == odp_packet_l2_offset(pkt[i]));
+		CU_ASSERT(result[i].l3_offset == odp_packet_l3_offset(pkt[i]));
+		CU_ASSERT(result[i].l4_offset == odp_packet_l4_offset(pkt[i]));
+		CU_ASSERT(result[i].l3_chksum_status ==
+			  odp_packet_l3_chksum_status(pkt[i]));
+		CU_ASSERT(result[i].l4_chksum_status ==
+			  odp_packet_l4_chksum_status(pkt[i]));
+		CU_ASSERT(result[i].l2_type == odp_packet_l2_type(pkt[i]));
+		CU_ASSERT(result[i].l3_type == odp_packet_l3_type(pkt[i]));
+		CU_ASSERT(result[i].l4_type == odp_packet_l4_type(pkt[i]));
+	}
+
+	odp_packet_free_multi(pkt, num_pkt);
+}
+
 odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_alloc_free),
 	ODP_TEST_INFO(packet_test_alloc_free_multi),
@@ -3363,6 +3471,7 @@ odp_testinfo_t packet_parse_suite[] = {
 	ODP_TEST_INFO(parse_eth_ipv4_udp_first_frag),
 	ODP_TEST_INFO(parse_eth_ipv4_udp_last_frag),
 	ODP_TEST_INFO(parse_eth_ipv4_rr_nop_icmp),
+	ODP_TEST_INFO(parse_result),
 	ODP_TEST_INFO_NULL,
 };
 
