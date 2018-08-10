@@ -2732,6 +2732,59 @@ int odp_packet_parse_multi(const odp_packet_t pkt[], const uint32_t offset[],
 	return num;
 }
 
+void odp_packet_parse_result(odp_packet_t pkt,
+			     odp_packet_parse_result_t *result)
+{
+	/* TODO: optimize to single word copy when packet header stores bits
+	 * directly into odp_packet_parse_result_flag_t */
+	result->flag.all           = 0;
+	result->flag.has_error     = odp_packet_has_error(pkt);
+	result->flag.has_l2_error  = odp_packet_has_l2_error(pkt);
+	result->flag.has_l3_error  = odp_packet_has_l3_error(pkt);
+	result->flag.has_l4_error  = odp_packet_has_l4_error(pkt);
+	result->flag.has_l2        = odp_packet_has_l2(pkt);
+	result->flag.has_l3        = odp_packet_has_l3(pkt);
+	result->flag.has_l4        = odp_packet_has_l4(pkt);
+	result->flag.has_eth       = odp_packet_has_eth(pkt);
+	result->flag.has_eth_bcast = odp_packet_has_eth_bcast(pkt);
+	result->flag.has_eth_mcast = odp_packet_has_eth_mcast(pkt);
+	result->flag.has_jumbo     = odp_packet_has_jumbo(pkt);
+	result->flag.has_vlan      = odp_packet_has_vlan(pkt);
+	result->flag.has_vlan_qinq = odp_packet_has_vlan_qinq(pkt);
+	result->flag.has_arp       = odp_packet_has_arp(pkt);
+	result->flag.has_ipv4      = odp_packet_has_ipv4(pkt);
+	result->flag.has_ipv6      = odp_packet_has_ipv6(pkt);
+	result->flag.has_ip_bcast  = odp_packet_has_ip_bcast(pkt);
+	result->flag.has_ip_mcast  = odp_packet_has_ip_mcast(pkt);
+	result->flag.has_ipfrag    = odp_packet_has_ipfrag(pkt);
+	result->flag.has_ipopt     = odp_packet_has_ipopt(pkt);
+	result->flag.has_ipsec     = odp_packet_has_ipsec(pkt);
+	result->flag.has_udp       = odp_packet_has_udp(pkt);
+	result->flag.has_tcp       = odp_packet_has_tcp(pkt);
+	result->flag.has_sctp      = odp_packet_has_sctp(pkt);
+	result->flag.has_icmp      = odp_packet_has_icmp(pkt);
+
+	result->packet_len       = odp_packet_len(pkt);
+	result->l2_offset        = odp_packet_l2_offset(pkt);
+	result->l3_offset        = odp_packet_l3_offset(pkt);
+	result->l4_offset        = odp_packet_l4_offset(pkt);
+	result->l3_chksum_status = odp_packet_l3_chksum_status(pkt);
+	result->l4_chksum_status = odp_packet_l4_chksum_status(pkt);
+	result->l2_type          = odp_packet_l2_type(pkt);
+	result->l3_type          = odp_packet_l3_type(pkt);
+	result->l4_type          = odp_packet_l4_type(pkt);
+}
+
+void odp_packet_parse_result_multi(const odp_packet_t pkt[],
+				   odp_packet_parse_result_t *result[],
+				   int num)
+{
+	int i;
+
+	for (i = 0; i < num; i++)
+		odp_packet_parse_result(pkt[i], result[i]);
+}
+
 uint64_t odp_packet_to_u64(odp_packet_t hdl)
 {
 	return _odp_pri(hdl);
