@@ -149,6 +149,17 @@ typedef enum odp_pktio_op_mode_t {
 } odp_pktio_op_mode_t;
 
 /**
+ * Packet input queue parameters override
+ */
+typedef struct odp_pktin_queue_param_ovr_t {
+	/** Override for schedule group in odp_schedule_param_t
+	  *
+	  * This parameter is considered only when queue type is
+	  * ODP_QUEUE_TYPE_SCHED. */
+	odp_schedule_group_t group;
+} odp_pktin_queue_param_ovr_t;
+
+/**
  * Packet input queue parameters
  */
 typedef struct odp_pktin_queue_param_t {
@@ -203,6 +214,18 @@ typedef struct odp_pktin_queue_param_t {
 	  * value is ignored. */
 	odp_queue_param_t queue_param;
 
+	/** Queue parameters override
+	  *
+	  * When the override array is defined, the same parameter value
+	  * in 'queue_param' is ignored and these per queue parameter
+	  * values are used instead. Array elements are used in order
+	  * (i.e. the first queue gets parameters from the first array
+	  * element, etc).
+	  * Must point to an array of num_queues elements or NULL to
+	  * disable queue parameters override. The default value is
+	  * NULL.
+	  */
+	odp_pktin_queue_param_ovr_t *queue_param_ovr;
 } odp_pktin_queue_param_t;
 
 /**
