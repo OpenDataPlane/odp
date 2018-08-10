@@ -1466,15 +1466,23 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 			odp_queue_param_t queue_param;
 			char name[ODP_QUEUE_NAME_LEN];
 			int pktio_id = odp_pktio_index(pktio);
+			odp_pktin_queue_param_ovr_t *queue_param_ovr = NULL;
+
+			if (param->queue_param_ovr)
+				queue_param_ovr = param->queue_param_ovr + i;
 
 			snprintf(name, sizeof(name), "odp-pktin-%i-%i",
 				 pktio_id, i);
 
-			if (param->classifier_enable)
+			if (param->classifier_enable) {
 				odp_queue_param_init(&queue_param);
-			else
+			} else {
 				memcpy(&queue_param, &param->queue_param,
 				       sizeof(odp_queue_param_t));
+				if (queue_param_ovr)
+					queue_param.sched.group =
+						queue_param_ovr->group;
+			}
 
 			queue_param.type = ODP_QUEUE_TYPE_PLAIN;
 
