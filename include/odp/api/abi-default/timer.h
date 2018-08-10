@@ -23,13 +23,14 @@ typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_timer_t;
 /** @internal Dummy type for strong typing */
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_timeout_t;
 
+/** @internal Dummy type for strong typing */
+typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_timer_pool_t;
+
 /** @addtogroup odp_timer
  *  @{
  **/
 
-struct timer_pool_s; /**< Forward declaration */
-
-typedef struct timer_pool_s *odp_timer_pool_t;
+typedef _odp_abi_timer_pool_t *odp_timer_pool_t;
 
 #define ODP_TIMER_POOL_INVALID NULL
 
