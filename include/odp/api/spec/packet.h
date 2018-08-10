@@ -1428,6 +1428,62 @@ int odp_packet_parse(odp_packet_t pkt, uint32_t offset,
 int odp_packet_parse_multi(const odp_packet_t pkt[], const uint32_t offset[],
 			   int num, const odp_packet_parse_param_t *param);
 
+/** Packet parse results */
+typedef struct odp_packet_parse_result_t {
+	/** Parse result flags */
+	odp_packet_parse_result_flag_t flag;
+
+	/** @see odp_packet_len() */
+	uint32_t packet_len;
+
+	/** @see odp_packet_l2_offset() */
+	uint32_t l2_offset;
+	/** @see odp_packet_l3_offset() */
+	uint32_t l3_offset;
+	/** @see odp_packet_l4_offset() */
+	uint32_t l4_offset;
+
+	/** @see odp_packet_l3_chksum_status() */
+	odp_packet_chksum_status_t l3_chksum_status;
+	/** @see odp_packet_l4_chksum_status() */
+	odp_packet_chksum_status_t l4_chksum_status;
+
+	/** @see odp_packet_l2_type() */
+	odp_proto_l2_type_t l2_type;
+	/** @see odp_packet_l3_type() */
+	odp_proto_l3_type_t l3_type;
+	/** @see odp_packet_l4_type() */
+	odp_proto_l4_type_t l4_type;
+
+} odp_packet_parse_result_t;
+
+/**
+ * Read parse results
+ *
+ * Read out the most commonly used packet parse results. The same information is
+ * available through individual function calls, but this call may be more
+ * efficient when reading multiple results from a packet.
+ *
+ * @param      pkt     Packet handle
+ * @param[out] result  Pointer for parse result output
+ */
+void odp_packet_parse_result(odp_packet_t pkt,
+			     odp_packet_parse_result_t *result);
+
+/**
+ * Read parse results from multiple packets
+ *
+ * Otherwise same functionality as odp_packet_parse_result() but handles
+ * multiple packets.
+ *
+ * @param      pkt     Packet handle array
+ * @param[out] result  Parse result array for output
+ * @param      num     Number of packets and results
+ */
+void odp_packet_parse_result_multi(const odp_packet_t pkt[],
+				   odp_packet_parse_result_t *result[],
+				   int num);
+
 /**
  * Packet pool
  *
