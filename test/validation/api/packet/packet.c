@@ -2638,10 +2638,9 @@ static int packet_parse_suite_term(void)
 }
 
 static void parse_test_alloc(odp_packet_t pkt[], const uint8_t test_packet[],
-			     uint32_t len)
+			     uint32_t len, int num_pkt)
 {
 	int ret, i;
-	int num_pkt = PARSE_TEST_NUM_PKT;
 
 	ret = odp_packet_alloc_multi(parse_test.pool, len, pkt, num_pkt);
 	CU_ASSERT_FATAL(ret == num_pkt);
@@ -2662,7 +2661,7 @@ static void parse_eth_ipv4_udp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_ipv4_udp,
-			 sizeof(test_packet_ipv4_udp));
+			 sizeof(test_packet_ipv4_udp), num_pkt);
 
 	for (i = 0; i < num_pkt; i++) {
 		chksum_status = odp_packet_l3_chksum_status(pkt[i]);
@@ -2706,7 +2705,7 @@ static void parse_ipv4_udp(void)
 	uint32_t offset[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_ipv4_udp,
-			 sizeof(test_packet_ipv4_udp));
+			 sizeof(test_packet_ipv4_udp), num_pkt);
 
 	for (i = 0; i < num_pkt; i++)
 		offset[i] = 14;
@@ -2742,7 +2741,7 @@ static void parse_eth_ipv4_tcp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_ipv4_tcp,
-			 sizeof(test_packet_ipv4_tcp));
+			 sizeof(test_packet_ipv4_tcp), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -2778,7 +2777,7 @@ static void parse_eth_ipv6_udp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_ipv6_udp,
-			 sizeof(test_packet_ipv6_udp));
+			 sizeof(test_packet_ipv6_udp), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -2808,7 +2807,7 @@ static void parse_eth_ipv6_tcp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_ipv6_tcp,
-			 sizeof(test_packet_ipv6_tcp));
+			 sizeof(test_packet_ipv6_tcp), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_ALL;
@@ -2838,7 +2837,7 @@ static void parse_eth_vlan_ipv4_udp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_vlan_ipv4_udp,
-			 sizeof(test_packet_vlan_ipv4_udp));
+			 sizeof(test_packet_vlan_ipv4_udp), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -2869,7 +2868,7 @@ static void parse_eth_vlan_ipv6_udp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_vlan_ipv6_udp,
-			 sizeof(test_packet_vlan_ipv6_udp));
+			 sizeof(test_packet_vlan_ipv6_udp), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -2906,7 +2905,7 @@ static void parse_eth_vlan_qinq_ipv4_udp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_vlan_qinq_ipv4_udp,
-			 sizeof(test_packet_vlan_qinq_ipv4_udp));
+			 sizeof(test_packet_vlan_qinq_ipv4_udp), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -2938,7 +2937,7 @@ static void parse_eth_arp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_arp,
-			 sizeof(test_packet_arp));
+			 sizeof(test_packet_arp), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -2970,7 +2969,7 @@ static void parse_eth_ipv4_icmp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_ipv4_icmp,
-			 sizeof(test_packet_ipv4_icmp));
+			 sizeof(test_packet_ipv4_icmp), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -3001,7 +3000,7 @@ static void parse_eth_ipv6_icmp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_ipv6_icmp,
-			 sizeof(test_packet_ipv6_icmp));
+			 sizeof(test_packet_ipv6_icmp), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -3032,7 +3031,7 @@ static void parse_eth_ipv4_sctp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_ipv4_sctp,
-			 sizeof(test_packet_ipv4_sctp));
+			 sizeof(test_packet_ipv4_sctp), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -3063,7 +3062,7 @@ static void parse_eth_ipv4_ipsec_ah(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_ipv4_ipsec_ah,
-			 sizeof(test_packet_ipv4_ipsec_ah));
+			 sizeof(test_packet_ipv4_ipsec_ah), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -3094,7 +3093,7 @@ static void parse_eth_ipv4_ipsec_esp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_ipv4_ipsec_esp,
-			 sizeof(test_packet_ipv4_ipsec_esp));
+			 sizeof(test_packet_ipv4_ipsec_esp), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -3125,7 +3124,7 @@ static void parse_eth_ipv6_ipsec_ah(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_ipv6_ipsec_ah,
-			 sizeof(test_packet_ipv6_ipsec_ah));
+			 sizeof(test_packet_ipv6_ipsec_ah), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -3162,7 +3161,7 @@ static void parse_eth_ipv6_ipsec_esp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_ipv6_ipsec_esp,
-			 sizeof(test_packet_ipv6_ipsec_esp));
+			 sizeof(test_packet_ipv6_ipsec_esp), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -3193,7 +3192,7 @@ static void parse_mcast_eth_ipv4_udp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_mcast_eth_ipv4_udp,
-			 sizeof(test_packet_mcast_eth_ipv4_udp));
+			 sizeof(test_packet_mcast_eth_ipv4_udp), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -3227,7 +3226,7 @@ static void parse_bcast_eth_ipv4_udp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_bcast_eth_ipv4_udp,
-			 sizeof(test_packet_bcast_eth_ipv4_udp));
+			 sizeof(test_packet_bcast_eth_ipv4_udp), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -3262,7 +3261,7 @@ static void parse_mcast_eth_ipv6_udp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_mcast_eth_ipv6_udp,
-			 sizeof(test_packet_mcast_eth_ipv6_udp));
+			 sizeof(test_packet_mcast_eth_ipv6_udp), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -3296,7 +3295,7 @@ static void parse_eth_ipv4_udp_first_frag(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_ipv4_udp_first_frag,
-			 sizeof(test_packet_ipv4_udp_first_frag));
+			 sizeof(test_packet_ipv4_udp_first_frag), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -3328,7 +3327,7 @@ static void parse_eth_ipv4_udp_last_frag(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_ipv4_udp_last_frag,
-			 sizeof(test_packet_ipv4_udp_last_frag));
+			 sizeof(test_packet_ipv4_udp_last_frag), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
@@ -3360,7 +3359,7 @@ static void parse_eth_ipv4_rr_nop_icmp(void)
 	odp_packet_t pkt[num_pkt];
 
 	parse_test_alloc(pkt, test_packet_ipv4_rr_nop_icmp,
-			 sizeof(test_packet_ipv4_rr_nop_icmp));
+			 sizeof(test_packet_ipv4_rr_nop_icmp), num_pkt);
 
 	parse.proto = ODP_PROTO_ETH;
 	parse.last_layer = ODP_PROTO_LAYER_L4;
