@@ -45,6 +45,7 @@ typedef struct _odp_packet_inline_offset_t {
 	uint16_t timestamp;
 	uint16_t input_flags;
 	uint16_t flags;
+	uint16_t subtype;
 
 } _odp_packet_inline_offset_t;
 

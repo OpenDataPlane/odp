@@ -502,6 +502,7 @@ static int ipsec_send_in_one(const ipsec_test_part *part,
 							    pkto, &num_out,
 							    &param));
 		CU_ASSERT_EQUAL(num_out, part->out_pkt);
+		CU_ASSERT(odp_packet_subtype(*pkto) == ODP_EVENT_PACKET_IPSEC);
 	} else if (ODP_IPSEC_OP_MODE_ASYNC == suite_context.inbound_op_mode) {
 		CU_ASSERT_EQUAL(1, odp_ipsec_in_enq(&pkt, 1, &param));
 
@@ -517,6 +518,8 @@ static int ipsec_send_in_one(const ipsec_test_part *part,
 					odp_event_types(event, &subtype));
 			CU_ASSERT_EQUAL(ODP_EVENT_PACKET_IPSEC, subtype);
 			pkto[i] = odp_ipsec_packet_from_event(event);
+			CU_ASSERT(odp_packet_subtype(pkto[i]) ==
+				  ODP_EVENT_PACKET_IPSEC);
 		}
 	} else {
 		odp_queue_t queue;
@@ -555,7 +558,10 @@ static int ipsec_send_in_one(const ipsec_test_part *part,
 						subtype);
 				CU_ASSERT(!part->out[i].status.error.sa_lookup);
 
-				pkto[i++] = odp_ipsec_packet_from_event(ev);
+				pkto[i] = odp_ipsec_packet_from_event(ev);
+				CU_ASSERT(odp_packet_subtype(pkto[i]) ==
+					  ODP_EVENT_PACKET_IPSEC);
+				i++;
 				continue;
 			}
 		}
@@ -586,6 +592,8 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 							     pkto, &num_out,
 							     &param));
 		CU_ASSERT_EQUAL(num_out, part->out_pkt);
+		CU_ASSERT(odp_packet_subtype(*pkto) ==
+			  ODP_EVENT_PACKET_IPSEC);
 	} else if (ODP_IPSEC_OP_MODE_ASYNC == suite_context.outbound_op_mode) {
 		CU_ASSERT_EQUAL(1, odp_ipsec_out_enq(&pkt, 1, &param));
 
@@ -601,6 +609,8 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 					odp_event_types(event, &subtype));
 			CU_ASSERT_EQUAL(ODP_EVENT_PACKET_IPSEC, subtype);
 			pkto[i] = odp_ipsec_packet_from_event(event);
+			CU_ASSERT(odp_packet_subtype(pkto[i]) ==
+				  ODP_EVENT_PACKET_IPSEC);
 		}
 	} else {
 		struct odp_ipsec_out_inline_param_t inline_param;
@@ -657,7 +667,10 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 						subtype);
 				CU_ASSERT(part->out[i].status.error.all);
 
-				pkto[i++] = odp_ipsec_packet_from_event(ev);
+				pkto[i] = odp_ipsec_packet_from_event(ev);
+				CU_ASSERT(odp_packet_subtype(pkto[i]) ==
+					  ODP_EVENT_PACKET_IPSEC);
+				i++;
 				continue;
 			}
 		}
