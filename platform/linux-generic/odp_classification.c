@@ -313,7 +313,7 @@ odp_pmr_t alloc_pmr(pmr_t **pmr)
 		UNLOCK(&pmr_tbl->pmr[i].s.lock);
 	}
 	ODP_ERR("CLS_PMR_MAX_ENTRY reached");
-	return ODP_PMR_INVAL;
+	return ODP_PMR_INVALID;
 }
 
 static
@@ -331,7 +331,7 @@ static
 pmr_t *get_pmr_entry(odp_pmr_t pmr_id)
 {
 	if (_odp_typeval(pmr_id) >= CLS_PMR_MAX_ENTRY ||
-	    pmr_id == ODP_PMR_INVAL)
+	    pmr_id == ODP_PMR_INVALID)
 		return NULL;
 	if (pmr_tbl->pmr[_odp_typeval(pmr_id)].s.valid == 0)
 		return NULL;
@@ -676,20 +676,20 @@ odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 
 	if (NULL == cos_src || NULL == cos_dst) {
 		ODP_ERR("Invalid input handle");
-		return ODP_PMR_INVAL;
+		return ODP_PMR_INVALID;
 	}
 
 	if (num_terms > CLS_PMRTERM_MAX) {
 		ODP_ERR("no of terms greater than supported CLS_PMRTERM_MAX");
-		return ODP_PMR_INVAL;
+		return ODP_PMR_INVALID;
 	}
 
 	if (CLS_PMR_PER_COS_MAX == odp_atomic_load_u32(&cos_src->s.num_rule))
-		return ODP_PMR_INVAL;
+		return ODP_PMR_INVALID;
 
 	id = alloc_pmr(&pmr);
 	/*if alloc_pmr is successful it returns with the acquired lock*/
-	if (id == ODP_PMR_INVAL)
+	if (id == ODP_PMR_INVALID)
 		return id;
 
 	pmr->s.num_pmr = num_terms;
@@ -697,12 +697,12 @@ odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 		val_sz = terms[i].val_sz;
 		if (val_sz > CLS_PMR_TERM_BYTES_MAX) {
 			pmr->s.valid = 0;
-			return ODP_PMR_INVAL;
+			return ODP_PMR_INVALID;
 		}
 		if (0 > odp_pmr_create_term(&pmr->s.pmr_term_value[i],
 					    &terms[i])) {
 			UNLOCK(&pmr->s.lock);
-			return ODP_PMR_INVAL;
+			return ODP_PMR_INVALID;
 		}
 	}
 

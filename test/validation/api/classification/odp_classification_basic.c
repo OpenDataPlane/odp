@@ -119,14 +119,14 @@ static void classification_test_create_pmr_match(void)
 	pmr_param.val_sz = sizeof(val);
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
-	CU_ASSERT(odp_pmr_to_u64(pmr) != odp_pmr_to_u64(ODP_PMR_INVAL));
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
+	CU_ASSERT(odp_pmr_to_u64(pmr) != odp_pmr_to_u64(ODP_PMR_INVALID));
 	/* destroy the created PMR */
 	retval = odp_cls_pmr_destroy(pmr);
 	CU_ASSERT(retval == 0);
 
 	/* destroy an INVALID PMR */
-	retval = odp_cls_pmr_destroy(ODP_PMR_INVAL);
+	retval = odp_cls_pmr_destroy(ODP_PMR_INVALID);
 	CU_ASSERT(retval < 0);
 
 	odp_queue_destroy(queue);
@@ -309,7 +309,7 @@ static void classification_test_pmr_composite_create(void)
 	pmr_composite = odp_cls_pmr_create(pmr_terms, PMR_SET_NUM,
 					   default_cos, cos);
 	CU_ASSERT(odp_pmr_to_u64(pmr_composite) !=
-		  odp_pmr_to_u64(ODP_PMR_INVAL));
+		  odp_pmr_to_u64(ODP_PMR_INVALID));
 
 	retval = odp_cls_pmr_destroy(pmr_composite);
 	CU_ASSERT(retval == 0);

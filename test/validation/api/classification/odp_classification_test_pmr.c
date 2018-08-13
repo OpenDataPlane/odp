@@ -146,7 +146,7 @@ static void classification_test_pktin_classifier_flag(void)
 	pmr_param.val_sz = sizeof(val);
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt = create_packet(default_pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -241,7 +241,7 @@ static void classification_test_pmr_term_tcp_dport(void)
 	pmr_param.val_sz = sizeof(val);
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt = create_packet(default_pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -355,7 +355,7 @@ static void classification_test_pmr_term_tcp_sport(void)
 	pmr_param.val_sz = sizeof(val);
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt = create_packet(default_pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -468,7 +468,7 @@ static void classification_test_pmr_term_udp_dport(void)
 	pmr_param.val_sz = sizeof(val);
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt_info = default_pkt_info;
 	pkt_info.udp = true;
@@ -584,7 +584,7 @@ static void classification_test_pmr_term_udp_sport(void)
 	pmr_param.val_sz = sizeof(val);
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt_info = default_pkt_info;
 	pkt_info.udp = true;
@@ -698,7 +698,7 @@ static void classification_test_pmr_term_ipproto(void)
 	pmr_param.val_sz = sizeof(val);
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt_info = default_pkt_info;
 	pkt_info.udp = true;
@@ -807,7 +807,7 @@ static void classification_test_pmr_term_dmac(void)
 	pmr_param.val_sz = ODPH_ETHADDR_LEN;
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt_info = default_pkt_info;
 	pkt_info.udp = true;
@@ -914,7 +914,7 @@ static void classification_test_pmr_term_packet_len(void)
 	pmr_param.val_sz = sizeof(val);
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	/* create packet of payload length 1024 */
 	pkt_info = default_pkt_info;
@@ -1026,7 +1026,7 @@ static void classification_test_pmr_term_vlan_id_0(void)
 	pmr_param.val_sz = sizeof(val);
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	/* create packet of payload length 1024 */
 	pkt_info = default_pkt_info;
@@ -1139,7 +1139,7 @@ static void classification_test_pmr_term_vlan_id_x(void)
 	pmr_param.val_sz = sizeof(val);
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	/* create packet of payload length 1024 */
 	pkt_info = default_pkt_info;
@@ -1252,7 +1252,7 @@ static void classification_test_pmr_term_eth_type_0(void)
 	pmr_param.val_sz = sizeof(val);
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt_info = default_pkt_info;
 	pkt_info.vlan = true;
@@ -1362,7 +1362,7 @@ static void classification_test_pmr_term_eth_type_x(void)
 	pmr_param.val_sz = sizeof(val);
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	/* create packet of payload length 1024 */
 	pkt_info = default_pkt_info;
@@ -1482,7 +1482,7 @@ static void classification_test_pmr_pool_set(void)
 	pmr_param.val_sz = sizeof(val);
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt_info = default_pkt_info;
 	pkt_info.udp = true;
@@ -1581,7 +1581,7 @@ static void classification_test_pmr_queue_set(void)
 	pmr_param.val_sz = sizeof(val);
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
 	pkt_info = default_pkt_info;
 	pkt_info.udp = true;
 	pkt = create_packet(pkt_info);
@@ -1667,7 +1667,7 @@ static void classification_test_pmr_term_daddr(void)
 	pmr_param.val_sz = sizeof(addr);
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT_FATAL(pmr != ODP_PMR_INVAL);
+	CU_ASSERT_FATAL(pmr != ODP_PMR_INVALID);
 
 	/* packet with dst ip address matching PMR rule to be
 	received in the CoS queue*/
@@ -1777,7 +1777,7 @@ static void classification_test_pmr_term_ipv6daddr(void)
 	pmr_param.val_sz = ODPH_IPV6ADDR_LEN;
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT_FATAL(pmr != ODP_PMR_INVAL);
+	CU_ASSERT_FATAL(pmr != ODP_PMR_INVALID);
 
 	/* packet with dst ip address matching PMR rule to be
 	received in the CoS queue*/
@@ -1887,7 +1887,7 @@ static void classification_test_pmr_term_ipv6saddr(void)
 	pmr_param.val_sz = ODPH_IPV6ADDR_LEN;
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
-	CU_ASSERT_FATAL(pmr != ODP_PMR_INVAL);
+	CU_ASSERT_FATAL(pmr != ODP_PMR_INVALID);
 
 	/* packet with dst ip address matching PMR rule to be
 	received in the CoS queue*/
