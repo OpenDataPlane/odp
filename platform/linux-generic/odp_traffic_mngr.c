@@ -108,20 +108,20 @@ static odp_bool_t tm_demote_pkt_desc(tm_system_t *tm_system,
 				     tm_shaper_obj_t *timer_shaper,
 				     pkt_desc_t *demoted_pkt_desc);
 
-static int queue_tm_reenq(void *queue, odp_buffer_hdr_t *buf_hdr)
+static int queue_tm_reenq(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr)
 {
-	odp_tm_queue_t tm_queue = MAKE_ODP_TM_QUEUE((uint8_t *)queue -
-						    offsetof(tm_queue_obj_t,
-							     tm_qentry));
+	odp_tm_queue_t tm_queue = MAKE_ODP_TM_QUEUE(odp_queue_context(queue));
 	odp_packet_t pkt = packet_from_buf_hdr(buf_hdr);
 
 	return odp_tm_enq(tm_queue, pkt);
 }
 
-static int queue_tm_reenq_multi(void *queue ODP_UNUSED,
-				odp_buffer_hdr_t *buf[] ODP_UNUSED,
-				int num ODP_UNUSED)
+static int queue_tm_reenq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf[],
+				int num)
 {
+	(void)queue;
+	(void)buf;
+	(void)num;
 	ODP_ABORT("Invalid call to queue_tm_reenq_multi()\n");
 	return 0;
 }
@@ -3936,8 +3936,10 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 		free(tm_queue_obj);
 		return ODP_TM_INVALID;
 	}
-	tm_queue_obj->tm_qentry = queue_fn->from_ext(queue);
-	queue_fn->set_enq_deq_fn(tm_queue_obj->tm_qentry,
+
+	tm_queue_obj->queue = queue;
+	odp_queue_context_set(queue, tm_queue_obj, sizeof(tm_queue_obj_t));
+	queue_fn->set_enq_deq_fn(queue,
 				 queue_tm_reenq, queue_tm_reenq_multi,
 				 NULL, NULL);
 
@@ -4011,7 +4013,7 @@ int odp_tm_queue_destroy(odp_tm_queue_t tm_queue)
 	odp_ticketlock_lock(&tm_system->tm_system_lock);
 	tm_system->queue_num_tbl[tm_queue_obj->queue_num - 1] = NULL;
 
-	odp_queue_destroy(queue_fn->to_ext(tm_queue_obj->tm_qentry));
+	odp_queue_destroy(tm_queue_obj->queue);
 
 	/* First delete any associated tm_wred_node and then the tm_queue_obj
 	 * itself */

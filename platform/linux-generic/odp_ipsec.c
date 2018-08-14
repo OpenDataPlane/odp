@@ -1745,7 +1745,7 @@ int _odp_ipsec_try_inline(odp_packet_t *pkt)
 
 	pkt_hdr = packet_hdr(*pkt);
 	pkt_hdr->p.input_flags.dst_queue = 1;
-	pkt_hdr->dst_queue = queue_fn->from_ext(ipsec_sa->queue);
+	pkt_hdr->dst_queue = ipsec_sa->queue;
 
 	/* Last thing */
 	_odp_ipsec_sa_unuse(ipsec_sa);
