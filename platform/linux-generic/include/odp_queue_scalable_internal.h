@@ -80,14 +80,14 @@ static inline uint32_t queue_to_id(odp_queue_t handle)
 	return qentry_from_ext(handle)->s.index;
 }
 
-static inline queue_entry_t *qentry_from_int(void *handle)
+static inline queue_entry_t *qentry_from_int(odp_queue_t handle)
 {
-	return (queue_entry_t *)handle;
+	return (queue_entry_t *)(uintptr_t)handle;
 }
 
-static inline void *qentry_to_int(queue_entry_t *qentry)
+static inline odp_queue_t qentry_to_int(queue_entry_t *qentry)
 {
-	return qentry;
+	return (odp_queue_t)qentry;
 }
 
 static inline odp_queue_t queue_get_handle(queue_entry_t *queue)

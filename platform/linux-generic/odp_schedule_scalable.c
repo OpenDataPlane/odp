@@ -2007,7 +2007,7 @@ static int sched_queue(uint32_t queue_index)
 	return 0;
 }
 
-static int ord_enq_multi(void *handle, void *buf_hdr[], int num,
+static int ord_enq_multi(odp_queue_t handle, void *buf_hdr[], int num,
 			 int *ret)
 
 {

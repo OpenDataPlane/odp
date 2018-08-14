@@ -105,7 +105,6 @@ struct pktio_entry {
 
 	struct {
 		odp_queue_t        queue;
-		void              *queue_int;
 		odp_pktin_queue_t  pktin;
 	} in_queue[PKTIO_MAX_QUEUES];
 

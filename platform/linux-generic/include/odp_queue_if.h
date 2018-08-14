@@ -22,19 +22,19 @@ typedef int (*queue_init_global_fn_t)(void);
 typedef int (*queue_term_global_fn_t)(void);
 typedef int (*queue_init_local_fn_t)(void);
 typedef int (*queue_term_local_fn_t)(void);
-typedef void *(*queue_from_ext_fn_t)(odp_queue_t handle);
-typedef odp_queue_t (*queue_to_ext_fn_t)(void *q_int);
-typedef int (*queue_enq_fn_t)(void *q_int, odp_buffer_hdr_t *);
-typedef int (*queue_enq_multi_fn_t)(void *q_int, odp_buffer_hdr_t **, int);
-typedef odp_buffer_hdr_t *(*queue_deq_fn_t)(void *q_int);
-typedef int (*queue_deq_multi_fn_t)(void *q_int, odp_buffer_hdr_t **, int);
-typedef odp_pktout_queue_t (*queue_get_pktout_fn_t)(void *q_int);
-typedef void (*queue_set_pktout_fn_t)(void *q_int, odp_pktio_t pktio,
+typedef int (*queue_enq_fn_t)(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr);
+typedef int (*queue_enq_multi_fn_t)(odp_queue_t queue,
+				    odp_buffer_hdr_t **buf_hdr, int num);
+typedef odp_buffer_hdr_t *(*queue_deq_fn_t)(odp_queue_t queue);
+typedef int (*queue_deq_multi_fn_t)(odp_queue_t queue,
+				    odp_buffer_hdr_t **buf_hdr, int num);
+typedef odp_pktout_queue_t (*queue_get_pktout_fn_t)(odp_queue_t queue);
+typedef void (*queue_set_pktout_fn_t)(odp_queue_t queue, odp_pktio_t pktio,
 				      int index);
-typedef odp_pktin_queue_t (*queue_get_pktin_fn_t)(void *q_int);
-typedef void (*queue_set_pktin_fn_t)(void *q_int, odp_pktio_t pktio,
+typedef odp_pktin_queue_t (*queue_get_pktin_fn_t)(odp_queue_t queue);
+typedef void (*queue_set_pktin_fn_t)(odp_queue_t queue, odp_pktio_t pktio,
 				     int index);
-typedef void (*queue_set_enq_deq_fn_t)(void *q_int,
+typedef void (*queue_set_enq_deq_fn_t)(odp_queue_t queue,
 				       queue_enq_fn_t enq,
 				       queue_enq_multi_fn_t enq_multi,
 				       queue_deq_fn_t deq,
@@ -46,8 +46,6 @@ typedef struct {
 	queue_term_global_fn_t term_global;
 	queue_init_local_fn_t init_local;
 	queue_term_local_fn_t term_local;
-	queue_from_ext_fn_t from_ext;
-	queue_to_ext_fn_t to_ext;
 	queue_enq_fn_t enq;
 	queue_enq_multi_fn_t enq_multi;
 	queue_deq_fn_t deq;

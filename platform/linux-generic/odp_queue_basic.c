@@ -47,11 +47,6 @@ static int queue_init(queue_entry_t *queue, const char *name,
 queue_global_t *queue_glb;
 extern _odp_queue_inline_offset_t _odp_queue_inline_offset;
 
-static inline queue_entry_t *qentry_from_handle(odp_queue_t handle)
-{
-	return (queue_entry_t *)(uintptr_t)handle;
-}
-
 static int queue_capa(odp_queue_capability_t *capa, int sched)
 {
 	memset(capa, 0, sizeof(odp_queue_capability_t));
@@ -489,7 +484,7 @@ static inline void buffer_index_to_buf(odp_buffer_hdr_t *buf_hdr[],
 	}
 }
 
-static inline int enq_multi(void *q_int, odp_buffer_hdr_t *buf_hdr[],
+static inline int enq_multi(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr[],
 			    int num)
 {
 	int sched = 0;
@@ -499,10 +494,10 @@ static inline int enq_multi(void *q_int, odp_buffer_hdr_t *buf_hdr[],
 	ring_st_t *ring_st;
 	uint32_t buf_idx[num];
 
-	queue = q_int;
+	queue = qentry_from_handle(handle);
 	ring_st = &queue->s.ring_st;
 
-	if (sched_fn->ord_enq_multi(q_int, (void **)buf_hdr, num, &ret))
+	if (sched_fn->ord_enq_multi(handle, (void **)buf_hdr, num, &ret))
 		return ret;
 
 	buffer_index_from_buf(buf_idx, buf_hdr, num);
@@ -536,17 +531,17 @@ static inline int enq_multi(void *q_int, odp_buffer_hdr_t *buf_hdr[],
 	return num_enq;
 }
 
-static int queue_int_enq_multi(void *q_int, odp_buffer_hdr_t *buf_hdr[],
+static int queue_int_enq_multi(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr[],
 			       int num)
 {
-	return enq_multi(q_int, buf_hdr, num);
+	return enq_multi(handle, buf_hdr, num);
 }
 
-static int queue_int_enq(void *q_int, odp_buffer_hdr_t *buf_hdr)
+static int queue_int_enq(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr)
 {
 	int ret;
 
-	ret = enq_multi(q_int, &buf_hdr, 1);
+	ret = enq_multi(handle, &buf_hdr, 1);
 
 	if (ret == 1)
 		return 0;
@@ -564,7 +559,7 @@ static int queue_enq_multi(odp_queue_t handle, const odp_event_t ev[], int num)
 	if (num > QUEUE_MULTI_MAX)
 		num = QUEUE_MULTI_MAX;
 
-	return queue->s.enqueue_multi(queue,
+	return queue->s.enqueue_multi(handle,
 				      (odp_buffer_hdr_t **)(uintptr_t)ev, num);
 }
 
@@ -572,17 +567,19 @@ static int queue_enq(odp_queue_t handle, odp_event_t ev)
 {
 	queue_entry_t *queue = qentry_from_handle(handle);
 
-	return queue->s.enqueue(queue,
+	return queue->s.enqueue(handle,
 				(odp_buffer_hdr_t *)(uintptr_t)ev);
 }
 
-static inline int plain_queue_deq(queue_entry_t *queue,
+static inline int plain_queue_deq(odp_queue_t handle,
 				  odp_buffer_hdr_t *buf_hdr[], int num)
 {
 	int num_deq;
+	queue_entry_t *queue;
 	ring_st_t *ring_st;
 	uint32_t buf_idx[num];
 
+	queue = qentry_from_handle(handle);
 	ring_st = &queue->s.ring_st;
 
 	LOCK(queue);
@@ -605,21 +602,18 @@ static inline int plain_queue_deq(queue_entry_t *queue,
 	return num_deq;
 }
 
-static int queue_int_deq_multi(void *q_int, odp_buffer_hdr_t *buf_hdr[],
+static int queue_int_deq_multi(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr[],
 			       int num)
 {
-	queue_entry_t *queue = q_int;
-
-	return plain_queue_deq(queue, buf_hdr, num);
+	return plain_queue_deq(handle, buf_hdr, num);
 }
 
-static odp_buffer_hdr_t *queue_int_deq(void *q_int)
+static odp_buffer_hdr_t *queue_int_deq(odp_queue_t handle)
 {
-	queue_entry_t *queue = q_int;
 	odp_buffer_hdr_t *buf_hdr = NULL;
 	int ret;
 
-	ret = plain_queue_deq(queue, &buf_hdr, 1);
+	ret = plain_queue_deq(handle, &buf_hdr, 1);
 
 	if (ret == 1)
 		return buf_hdr;
@@ -634,7 +628,7 @@ static int queue_deq_multi(odp_queue_t handle, odp_event_t ev[], int num)
 	if (num > QUEUE_MULTI_MAX)
 		num = QUEUE_MULTI_MAX;
 
-	return queue->s.dequeue_multi(queue,
+	return queue->s.dequeue_multi(handle,
 				      (odp_buffer_hdr_t **)ev, num);
 }
 
@@ -642,7 +636,7 @@ static odp_event_t queue_deq(odp_queue_t handle)
 {
 	queue_entry_t *queue = qentry_from_handle(handle);
 
-	return (odp_event_t)queue->s.dequeue(queue);
+	return (odp_event_t)queue->s.dequeue(handle);
 }
 
 static int queue_init(queue_entry_t *queue, const char *name,
@@ -838,43 +832,43 @@ static uint64_t queue_to_u64(odp_queue_t hdl)
 	return _odp_pri(hdl);
 }
 
-static odp_pktout_queue_t queue_get_pktout(void *q_int)
+static odp_pktout_queue_t queue_get_pktout(odp_queue_t handle)
 {
-	queue_entry_t *qentry = q_int;
+	queue_entry_t *qentry = qentry_from_handle(handle);
 
 	return qentry->s.pktout;
 }
 
-static void queue_set_pktout(void *q_int, odp_pktio_t pktio, int index)
+static void queue_set_pktout(odp_queue_t handle, odp_pktio_t pktio, int index)
 {
-	queue_entry_t *qentry = q_int;
+	queue_entry_t *qentry = qentry_from_handle(handle);
 
 	qentry->s.pktout.pktio = pktio;
 	qentry->s.pktout.index = index;
 }
 
-static odp_pktin_queue_t queue_get_pktin(void *q_int)
+static odp_pktin_queue_t queue_get_pktin(odp_queue_t handle)
 {
-	queue_entry_t *qentry = q_int;
+	queue_entry_t *qentry = qentry_from_handle(handle);
 
 	return qentry->s.pktin;
 }
 
-static void queue_set_pktin(void *q_int, odp_pktio_t pktio, int index)
+static void queue_set_pktin(odp_queue_t handle, odp_pktio_t pktio, int index)
 {
-	queue_entry_t *qentry = q_int;
+	queue_entry_t *qentry = qentry_from_handle(handle);
 
 	qentry->s.pktin.pktio = pktio;
 	qentry->s.pktin.index = index;
 }
 
-static void queue_set_enq_deq_func(void *q_int,
+static void queue_set_enq_deq_func(odp_queue_t handle,
 				   queue_enq_fn_t enq,
 				   queue_enq_multi_fn_t enq_multi,
 				   queue_deq_fn_t deq,
 				   queue_deq_multi_fn_t deq_multi)
 {
-	queue_entry_t *qentry = q_int;
+	queue_entry_t *qentry = qentry_from_handle(handle);
 
 	if (enq)
 		qentry->s.enqueue = enq;
@@ -887,18 +881,6 @@ static void queue_set_enq_deq_func(void *q_int,
 
 	if (deq_multi)
 		qentry->s.dequeue_multi = deq_multi;
-}
-
-static void *queue_from_ext(odp_queue_t handle)
-{
-	return qentry_from_handle(handle);
-}
-
-static odp_queue_t queue_to_ext(void *q_int)
-{
-	queue_entry_t *qentry = q_int;
-
-	return qentry->s.handle;
 }
 
 /* API functions */
@@ -928,8 +910,6 @@ queue_fn_t queue_basic_fn = {
 	.term_global = queue_term_global,
 	.init_local = queue_init_local,
 	.term_local = queue_term_local,
-	.from_ext = queue_from_ext,
-	.to_ext = queue_to_ext,
 	.enq = queue_int_enq,
 	.enq_multi = queue_int_enq_multi,
 	.deq = queue_int_deq,
