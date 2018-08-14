@@ -230,7 +230,7 @@ static odp_tm_t odp_tm_test;
 
 static odp_pool_t odp_pool;
 
-static odp_tm_queue_t queue_num_tbls[NUM_SVC_CLASSES][TM_QUEUES_PER_CLASS + 1];
+static odp_tm_queue_t queue_num_tbls[NUM_SVC_CLASSES][TM_QUEUES_PER_CLASS];
 static uint32_t       next_queue_nums[NUM_SVC_CLASSES];
 
 static uint8_t  random_buf[RANDOM_BUF_LEN];
@@ -434,7 +434,7 @@ static int config_example_user(odp_tm_node_t cos_tm_node,
 				return rc;
 
 			svc_class_queue_num = next_queue_nums[svc_class]++;
-			queue_num_tbls[svc_class][svc_class_queue_num + 1] =
+			queue_num_tbls[svc_class][svc_class_queue_num] =
 				tm_queue;
 		}
 	}
@@ -633,7 +633,7 @@ static int traffic_generator(uint32_t pkts_to_send)
 	while (pkt_cnt < pkts_to_send) {
 		svc_class = pkt_service_class();
 		queue_num = random_16() & (TM_QUEUES_PER_CLASS - 1);
-		tm_queue  = queue_num_tbls[svc_class][queue_num + 1];
+		tm_queue  = queue_num_tbls[svc_class][queue_num];
 		pkt_len   = ((uint32_t)((random_8() & 0x7F) + 2)) * 32;
 		pkt_len   = MIN(pkt_len, 1500);
 		pkt       = make_odp_packet(pkt_len);
@@ -743,6 +743,47 @@ static void signal_handler(int signal)
 	abort();
 }
 
+static int destroy_tm_queues(void)
+{
+	int i;
+	int class;
+	int ret;
+
+	for (i = 0; i < NUM_SVC_CLASSES; i++)
+		for (class = 0; class < TM_QUEUES_PER_CLASS; class++) {
+			odp_tm_queue_t tm_queue;
+			odp_tm_queue_info_t info;
+
+			tm_queue = queue_num_tbls[i][class];
+
+			ret = odp_tm_queue_info(tm_queue, &info);
+			if (ret) {
+				printf("Err: odp_tm_queue_info %d\n", ret);
+				return -1;
+			}
+
+			ret = odp_tm_node_disconnect(info.next_tm_node);
+			if (ret) {
+				printf("Err: odp_tm_node_disconnect %d\n", ret);
+				return -1;
+			}
+
+			ret =  odp_tm_queue_disconnect(tm_queue);
+			if (ret) {
+				printf("odp_tm_queue_disconnect %d\n", ret);
+				return -1;
+			}
+
+			ret = odp_tm_queue_destroy(tm_queue);
+			if (ret) {
+				printf("odp_tm_queue_destroy %d\n", ret);
+				return -1;
+			}
+	}
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	struct sigaction signal_action;
@@ -796,6 +837,12 @@ int main(int argc, char *argv[])
 
 	odp_tm_stats_print(odp_tm_test);
 
+	rc = destroy_tm_queues();
+	if (rc != 0) {
+		printf("Error: destroy_tm_queues() failed, rc = %d\n", rc);
+		return -1;
+	}
+
 	rc = odp_pool_destroy(odp_pool);
 	if (rc != 0) {
 		printf("Error: odp_pool_destroy() failed, rc = %d\n", rc);
@@ -814,11 +861,12 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	/* Trying to keep this example as simple as possible we avoid
-	 * clean termination of TM queues. This will error on global
-	 * termination code
-	 */
-	(void)odp_term_global(instance);
+	rc = odp_term_global(instance);
+	if (rc != 0) {
+		printf("Error: odp_term_global() failed, rc = %d\n", rc);
+		return -1;
+	}
 
+	printf("Quit\n");
 	return 0;
 }

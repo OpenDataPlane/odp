@@ -3967,12 +3967,9 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 
 int odp_tm_queue_destroy(odp_tm_queue_t tm_queue)
 {
-	tm_wred_params_t *wred_params;
 	tm_shaper_obj_t  *shaper_obj;
 	tm_queue_obj_t   *tm_queue_obj;
-	tm_wred_node_t   *tm_wred_node;
 	tm_system_t      *tm_system;
-	uint32_t          color;
 
 	/* First lookup tm_queue. */
 	tm_queue_obj = GET_TM_QUEUE_OBJ(tm_queue);
@@ -3989,23 +3986,6 @@ int odp_tm_queue_destroy(odp_tm_queue_t tm_queue)
 	if ((shaper_obj->next_tm_node != NULL) ||
 	    (tm_queue_obj->pkt        != ODP_PACKET_INVALID))
 		return -1;
-
-	/* Check that there is no shaper profile, threshold profile or wred
-	 * profile currently associated with this tm_queue. */
-	if (shaper_obj->shaper_params != NULL)
-		return -1;
-
-	tm_wred_node = tm_queue_obj->tm_wred_node;
-	if (tm_wred_node != NULL) {
-		if (tm_wred_node->threshold_params != NULL)
-			return -1;
-
-		for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
-			wred_params = tm_wred_node->wred_params[color];
-			if (wred_params != NULL)
-				return -1;
-		}
-	}
 
 	/* Now that all of the checks are done, time to so some freeing. */
 	odp_ticketlock_lock(&tm_system->tm_system_lock);
