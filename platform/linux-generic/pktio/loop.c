@@ -93,7 +93,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 {
 	int nbr, i;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	void *queue;
+	odp_queue_t queue;
 	odp_packet_hdr_t *pkt_hdr;
 	odp_packet_t pkt;
 	odp_time_t ts_val;
@@ -106,7 +106,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
-	queue = queue_fn->from_ext(pkt_priv(pktio_entry)->loopq);
+	queue = pkt_priv(pktio_entry)->loopq;
 	nbr = queue_fn->deq_multi(queue, hdr_tbl, num);
 
 	if (pktio_entry->s.config.pktin.bit.ts_all ||
@@ -274,7 +274,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			 const odp_packet_t pkt_tbl[], int num)
 {
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	void *queue;
+	odp_queue_t queue;
 	int i;
 	int ret;
 	int nb_tx = 0;
@@ -324,7 +324,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
-	queue = queue_fn->from_ext(pkt_priv(pktio_entry)->loopq);
+	queue = pkt_priv(pktio_entry)->loopq;
 	ret = queue_fn->enq_multi(queue, hdr_tbl, nb_tx);
 
 	if (ret > 0) {

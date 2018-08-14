@@ -171,7 +171,7 @@ typedef struct {
 /* Storage for stashed enqueue operation arguments */
 typedef struct {
 	odp_buffer_hdr_t *buf_hdr[QUEUE_MULTI_MAX];
-	queue_entry_t *queue_entry;
+	odp_queue_t queue;
 	int num;
 } ordered_stash_t;
 
@@ -1132,15 +1132,15 @@ static inline void ordered_stash_release(void)
 	int i;
 
 	for (i = 0; i < thread_local.ordered.stash_num; i++) {
-		queue_entry_t *queue_entry;
+		odp_queue_t queue;
 		odp_buffer_hdr_t **buf_hdr;
 		int num, num_enq;
 
-		queue_entry = thread_local.ordered.stash[i].queue_entry;
+		queue = thread_local.ordered.stash[i].queue;
 		buf_hdr = thread_local.ordered.stash[i].buf_hdr;
 		num = thread_local.ordered.stash[i].num;
 
-		num_enq = queue_fn->enq_multi(queue_entry, buf_hdr, num);
+		num_enq = queue_fn->enq_multi(queue, buf_hdr, num);
 
 		if (odp_unlikely(num_enq < num)) {
 			if (odp_unlikely(num_enq < 0))
@@ -1200,12 +1200,12 @@ static inline void schedule_release_context(void)
 		schedule_release_atomic();
 }
 
-static int schedule_ord_enq_multi(void *q_int, void *buf_hdr[],
+static int schedule_ord_enq_multi(odp_queue_t dst_queue, void *buf_hdr[],
 				  int num, int *ret)
 {
 	int i;
 	uint32_t stash_num = thread_local.ordered.stash_num;
-	queue_entry_t *dst_queue = q_int;
+	queue_entry_t *dst_qentry = qentry_from_handle(dst_queue);
 	uint32_t src_queue = thread_local.ordered.src_queue;
 
 	if ((src_queue == NULL_INDEX) || thread_local.ordered.in_order)
@@ -1219,7 +1219,7 @@ static int schedule_ord_enq_multi(void *q_int, void *buf_hdr[],
 	}
 
 	/* Pktout may drop packets, so the operation cannot be stashed. */
-	if (dst_queue->s.pktout.pktio != ODP_PKTIO_INVALID ||
+	if (dst_qentry->s.pktout.pktio != ODP_PKTIO_INVALID ||
 	    odp_unlikely(stash_num >=  MAX_ORDERED_STASH)) {
 		/* If the local stash is full, wait until it is our turn and
 		 * then release the stash and do enqueue directly. */
@@ -1231,7 +1231,7 @@ static int schedule_ord_enq_multi(void *q_int, void *buf_hdr[],
 		return 0;
 	}
 
-	thread_local.ordered.stash[stash_num].queue_entry = dst_queue;
+	thread_local.ordered.stash[stash_num].queue = dst_queue;
 	thread_local.ordered.stash[stash_num].num = num;
 	for (i = 0; i < num; i++)
 		thread_local.ordered.stash[stash_num].buf_hdr[i] = buf_hdr[i];
