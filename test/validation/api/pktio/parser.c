@@ -301,6 +301,7 @@ static void parser_test_ipv4_icmp(void)
 	CU_ASSERT(!odp_packet_has_ipv6(pkt));
 	CU_ASSERT(!odp_packet_has_tcp(pkt));
 	CU_ASSERT(!odp_packet_has_udp(pkt));
+	CU_ASSERT(!odp_packet_has_sctp(pkt));
 
 	odp_packet_free(pkt);
 }
@@ -318,6 +319,7 @@ static void parser_test_ipv4_tcp(void)
 
 	CU_ASSERT(!odp_packet_has_ipv6(pkt));
 	CU_ASSERT(!odp_packet_has_udp(pkt));
+	CU_ASSERT(!odp_packet_has_sctp(pkt));
 
 	odp_packet_free(pkt);
 }
@@ -335,6 +337,7 @@ static void parser_test_ipv4_udp(void)
 
 	CU_ASSERT(!odp_packet_has_ipv6(pkt));
 	CU_ASSERT(!odp_packet_has_tcp(pkt));
+	CU_ASSERT(!odp_packet_has_sctp(pkt));
 
 	odp_packet_free(pkt);
 }
@@ -353,6 +356,7 @@ static void parser_test_vlan_ipv4_udp(void)
 
 	CU_ASSERT(!odp_packet_has_ipv6(pkt));
 	CU_ASSERT(!odp_packet_has_tcp(pkt));
+	CU_ASSERT(!odp_packet_has_sctp(pkt));
 
 	odp_packet_free(pkt);
 }
@@ -372,6 +376,7 @@ static void parser_test_vlan_qinq_ipv4_udp(void)
 
 	CU_ASSERT(!odp_packet_has_ipv6(pkt));
 	CU_ASSERT(!odp_packet_has_tcp(pkt));
+	CU_ASSERT(!odp_packet_has_sctp(pkt));
 
 	odp_packet_free(pkt);
 }
@@ -390,6 +395,7 @@ static void parser_test_ipv6_icmp(void)
 	CU_ASSERT(!odp_packet_has_ipv4(pkt));
 	CU_ASSERT(!odp_packet_has_tcp(pkt));
 	CU_ASSERT(!odp_packet_has_udp(pkt));
+	CU_ASSERT(!odp_packet_has_sctp(pkt));
 
 	odp_packet_free(pkt);
 }
@@ -407,6 +413,7 @@ static void parser_test_ipv6_tcp(void)
 
 	CU_ASSERT(!odp_packet_has_ipv4(pkt));
 	CU_ASSERT(!odp_packet_has_udp(pkt));
+	CU_ASSERT(!odp_packet_has_sctp(pkt));
 
 	odp_packet_free(pkt);
 }
@@ -424,6 +431,7 @@ static void parser_test_ipv6_udp(void)
 
 	CU_ASSERT(!odp_packet_has_ipv4(pkt));
 	CU_ASSERT(!odp_packet_has_tcp(pkt));
+	CU_ASSERT(!odp_packet_has_sctp(pkt));
 
 	odp_packet_free(pkt);
 }
@@ -442,6 +450,7 @@ static void parser_test_vlan_ipv6_udp(void)
 
 	CU_ASSERT(!odp_packet_has_ipv4(pkt));
 	CU_ASSERT(!odp_packet_has_tcp(pkt));
+	CU_ASSERT(!odp_packet_has_sctp(pkt));
 
 	odp_packet_free(pkt);
 }
