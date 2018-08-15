@@ -1958,7 +1958,14 @@ static void pktio_test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 
 	ret = create_packets_cs(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx,
 				pktio_rx, false);
-	CU_ASSERT_FATAL(ret == TX_BATCH_LEN);
+	CU_ASSERT(ret == TX_BATCH_LEN);
+	if (ret != TX_BATCH_LEN) {
+		for (i = 0; i < num_ifaces; i++) {
+			CU_ASSERT_FATAL(odp_pktio_stop(pktio[i]) == 0);
+			CU_ASSERT_FATAL(odp_pktio_close(pktio[i]) == 0);
+		}
+		return;
+	}
 
 	ret = odp_pktout_queue(pktio_tx, &pktout_queue, 1);
 	CU_ASSERT_FATAL(ret > 0);
@@ -2296,8 +2303,10 @@ static void pktio_test_chksum_out_udp_ovr_test(odp_packet_t pkt)
 	odph_udphdr_t *udp = odp_packet_l4_ptr(pkt, NULL);
 
 	CU_ASSERT(udp != NULL);
-	if (udp != NULL)
+	if (udp != NULL) {
 		CU_ASSERT(udp->chksum != 0);
+		CU_ASSERT(!odph_udp_chksum_verify(pkt));
+	}
 }
 
 static void pktio_test_chksum_out_udp_ovr(void)
