@@ -381,6 +381,24 @@ static void parser_test_vlan_qinq_ipv4_udp(void)
 	odp_packet_free(pkt);
 }
 
+static void parser_test_ipv4_sctp(void)
+{
+	odp_packet_t pkt;
+
+	pkt = loopback_packet(pktio_a, pktio_b, test_packet_ipv4_sctp,
+			      sizeof(test_packet_ipv4_sctp));
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(odp_packet_has_eth(pkt));
+	CU_ASSERT(odp_packet_has_ipv4(pkt));
+	CU_ASSERT(odp_packet_has_sctp(pkt));
+
+	CU_ASSERT(!odp_packet_has_ipv6(pkt));
+	CU_ASSERT(!odp_packet_has_tcp(pkt));
+	CU_ASSERT(!odp_packet_has_udp(pkt));
+
+	odp_packet_free(pkt);
+}
+
 static void parser_test_ipv6_icmp(void)
 {
 	odp_packet_t pkt;
@@ -451,6 +469,24 @@ static void parser_test_vlan_ipv6_udp(void)
 	CU_ASSERT(!odp_packet_has_ipv4(pkt));
 	CU_ASSERT(!odp_packet_has_tcp(pkt));
 	CU_ASSERT(!odp_packet_has_sctp(pkt));
+
+	odp_packet_free(pkt);
+}
+
+static void parser_test_ipv6_sctp(void)
+{
+	odp_packet_t pkt;
+
+	pkt = loopback_packet(pktio_a, pktio_b, test_packet_ipv6_sctp,
+			      sizeof(test_packet_ipv6_sctp));
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(odp_packet_has_eth(pkt));
+	CU_ASSERT(odp_packet_has_ipv6(pkt));
+	CU_ASSERT(odp_packet_has_sctp(pkt));
+
+	CU_ASSERT(!odp_packet_has_ipv4(pkt));
+	CU_ASSERT(!odp_packet_has_tcp(pkt));
+	CU_ASSERT(!odp_packet_has_udp(pkt));
 
 	odp_packet_free(pkt);
 }
@@ -564,9 +600,11 @@ odp_testinfo_t parser_suite[] = {
 	ODP_TEST_INFO(parser_test_ipv4_udp),
 	ODP_TEST_INFO_CONDITIONAL(parser_test_vlan_ipv4_udp, loop_pktio),
 	ODP_TEST_INFO_CONDITIONAL(parser_test_vlan_qinq_ipv4_udp, loop_pktio),
+	ODP_TEST_INFO(parser_test_ipv4_sctp),
 	ODP_TEST_INFO(parser_test_ipv6_icmp),
 	ODP_TEST_INFO(parser_test_ipv6_tcp),
 	ODP_TEST_INFO(parser_test_ipv6_udp),
 	ODP_TEST_INFO_CONDITIONAL(parser_test_vlan_ipv6_udp, loop_pktio),
+	ODP_TEST_INFO(parser_test_ipv6_sctp),
 	ODP_TEST_INFO_NULL
 };
