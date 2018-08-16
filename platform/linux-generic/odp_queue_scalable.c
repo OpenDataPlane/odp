@@ -961,7 +961,7 @@ static odp_queue_t queue_to_ext(void *handle)
 }
 
 /* API functions */
-queue_api_t queue_scalable_api = {
+_odp_queue_api_fn_t queue_scalable_api = {
 	.queue_create = queue_create,
 	.queue_destroy = queue_destroy,
 	.queue_lookup = queue_lookup,
