@@ -236,7 +236,8 @@ static inline void loopback_fix_checksums(odp_packet_t pkt,
 	uint8_t l4_proto;
 	void *l3_hdr;
 	uint32_t l3_len;
-	odp_bool_t ipv4_chksum_pkt, udp_chksum_pkt, tcp_chksum_pkt;
+	odp_bool_t ipv4_chksum_pkt, udp_chksum_pkt, tcp_chksum_pkt,
+		   sctp_chksum_pkt;
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
 	l3_hdr = odp_packet_l3_ptr(pkt, &l3_len);
@@ -260,6 +261,11 @@ static inline void loopback_fix_checksums(odp_packet_t pkt,
 					   l4_proto == _ODP_IPPROTO_TCP,
 					   pkt_hdr->p.flags.l4_chksum_set,
 					   pkt_hdr->p.flags.l4_chksum);
+	sctp_chksum_pkt =  OL_TX_CHKSUM_PKT(pktout_cfg->bit.sctp_chksum,
+					    pktout_capa->bit.sctp_chksum,
+					    l4_proto == _ODP_IPPROTO_SCTP,
+					    pkt_hdr->p.flags.l4_chksum_set,
+					    pkt_hdr->p.flags.l4_chksum);
 
 	if (ipv4_chksum_pkt)
 		_odp_packet_ipv4_chksum_insert(pkt);
@@ -269,6 +275,9 @@ static inline void loopback_fix_checksums(odp_packet_t pkt,
 
 	if (udp_chksum_pkt)
 		_odp_packet_udp_chksum_insert(pkt);
+
+	if (sctp_chksum_pkt)
+		_odp_packet_sctp_chksum_insert(pkt);
 }
 
 static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
@@ -376,9 +385,11 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 	capa->config.pktin.bit.ipv4_chksum = 1;
 	capa->config.pktin.bit.tcp_chksum = 1;
 	capa->config.pktin.bit.udp_chksum = 1;
+	capa->config.pktin.bit.sctp_chksum = 1;
 	capa->config.pktout.bit.ipv4_chksum = 1;
 	capa->config.pktout.bit.tcp_chksum = 1;
 	capa->config.pktout.bit.udp_chksum = 1;
+	capa->config.pktout.bit.sctp_chksum = 1;
 	capa->config.inbound_ipsec = 1;
 	capa->config.outbound_ipsec = 1;
 
@@ -388,6 +399,8 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 		capa->config.pktout.bit.udp_chksum;
 	capa->config.pktout.bit.tcp_chksum_ena =
 		capa->config.pktout.bit.tcp_chksum;
+	capa->config.pktout.bit.sctp_chksum_ena =
+		capa->config.pktout.bit.sctp_chksum;
 
 	return 0;
 }
