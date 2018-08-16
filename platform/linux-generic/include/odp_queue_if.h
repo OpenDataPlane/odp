@@ -18,31 +18,6 @@ extern "C" {
 
 #define QUEUE_MULTI_MAX CONFIG_BURST_SIZE
 
-/* Queue API functions */
-typedef struct {
-	odp_queue_t (*queue_create)(const char *name,
-				    const odp_queue_param_t *param);
-	int (*queue_destroy)(odp_queue_t queue);
-	odp_queue_t (*queue_lookup)(const char *name);
-	int (*queue_capability)(odp_queue_capability_t *capa);
-	int (*queue_context_set)(odp_queue_t queue, void *context,
-				 uint32_t len);
-	int (*queue_enq)(odp_queue_t queue, odp_event_t ev);
-	int (*queue_enq_multi)(odp_queue_t queue, const odp_event_t events[],
-			       int num);
-	odp_event_t (*queue_deq)(odp_queue_t queue);
-	int (*queue_deq_multi)(odp_queue_t queue, odp_event_t events[],
-			       int num);
-	odp_queue_type_t (*queue_type)(odp_queue_t queue);
-	odp_schedule_sync_t (*queue_sched_type)(odp_queue_t queue);
-	odp_schedule_prio_t (*queue_sched_prio)(odp_queue_t queue);
-	odp_schedule_group_t (*queue_sched_group)(odp_queue_t queue);
-	uint32_t (*queue_lock_count)(odp_queue_t queue);
-	uint64_t (*queue_to_u64)(odp_queue_t hdl);
-	void (*queue_param_init)(odp_queue_param_t *param);
-	int (*queue_info)(odp_queue_t queue, odp_queue_info_t *info);
-} queue_api_t;
-
 typedef int (*queue_init_global_fn_t)(void);
 typedef int (*queue_term_global_fn_t)(void);
 typedef int (*queue_init_local_fn_t)(void);
