@@ -22,6 +22,7 @@
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>
+#include <protocols/sctp.h>
 #include <protocols/tcp.h>
 #include <protocols/udp.h>
 
@@ -2298,6 +2299,34 @@ static inline void parse_udp(packet_parser_t *prs, const uint8_t **parseptr,
 	*parseptr += sizeof(_odp_udphdr_t);
 }
 
+/**
+ * Parser helper function for SCTP
+ */
+static inline void parse_sctp(packet_parser_t *prs, const uint8_t **parseptr,
+			      uint16_t sctp_len,
+			      odp_proto_chksums_t chksums,
+			      uint32_t *l4_part_sum)
+{
+	if (odp_unlikely(sctp_len < sizeof(_odp_sctphdr_t))) {
+		prs->flags.sctp_err = 1;
+		return;
+	}
+
+	if (chksums.chksum.sctp &&
+	    !prs->input_flags.ipfrag) {
+		const _odp_sctphdr_t *sctp =
+			(const _odp_sctphdr_t *)*parseptr;
+		uint32_t crc = ~0;
+		uint32_t zero = 0;
+
+		crc = odp_hash_crc32c(sctp, sizeof(*sctp) - 4, crc);
+		crc = odp_hash_crc32c(&zero, 4, crc);
+		*l4_part_sum = crc;
+	}
+
+	*parseptr += sizeof(_odp_sctphdr_t);
+}
+
 static inline
 int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 			      uint32_t offset,
@@ -2388,6 +2417,8 @@ int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
 
 	case _ODP_IPPROTO_SCTP:
 		prs->input_flags.sctp = 1;
+		parse_sctp(prs, &parseptr, frame_len - prs->l4_offset, chksums,
+			   l4_part_sum);
 		break;
 
 	case _ODP_IPPROTO_NO_NEXT:
@@ -2623,6 +2654,29 @@ static int packet_l4_chksum(odp_packet_hdr_t *pkt_hdr,
 			pkt_hdr->p.flags.l4_chksum_err = 1;
 			pkt_hdr->p.flags.tcp_err = 1;
 			ODP_DBG("TCP chksum fail (%x)!\n", sum);
+		}
+	}
+
+	if (chksums.chksum.sctp &&
+	    pkt_hdr->p.input_flags.sctp &&
+	    !pkt_hdr->p.input_flags.ipfrag) {
+		uint32_t sum = ~packet_sum_crc32c(pkt_hdr,
+						 pkt_hdr->p.l4_offset +
+						 _ODP_SCTPHDR_LEN,
+						 pkt_hdr->frame_len -
+						 pkt_hdr->p.l4_offset -
+						 _ODP_SCTPHDR_LEN,
+						 l4_part_sum);
+		_odp_sctphdr_t *sctp = packet_map(pkt_hdr,
+						  pkt_hdr->p.l4_offset,
+						  NULL, NULL);
+
+		pkt_hdr->p.input_flags.l4_chksum_done = 1;
+		if (sum != sctp->chksum) {
+			pkt_hdr->p.flags.l4_chksum_err = 1;
+			pkt_hdr->p.flags.sctp_err = 1;
+			ODP_DBG("SCTP chksum fail (%x/%x)!\n", sum,
+				sctp->chksum);
 		}
 	}
 
