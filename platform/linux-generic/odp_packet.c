@@ -2018,6 +2018,31 @@ static uint16_t packet_sum_ones_comp16(odp_packet_hdr_t *pkt_hdr,
 	return sum;
 }
 
+static uint32_t packet_sum_crc32c(odp_packet_hdr_t *pkt_hdr,
+				  uint32_t offset,
+				  uint32_t len,
+				  uint32_t init_val)
+{
+	uint32_t sum = init_val;
+
+	if (offset + len > pkt_hdr->frame_len)
+		return sum;
+
+	while (len > 0) {
+		uint32_t seglen = 0; /* GCC */
+		void *mapaddr = packet_map(pkt_hdr, offset, &seglen, NULL);
+
+		if (seglen > len)
+			seglen = len;
+
+		sum = odp_hash_crc32c(mapaddr, seglen, sum);
+		len -= seglen;
+		offset += seglen;
+	}
+
+	return sum;
+}
+
 /** Parser helper function for Ethernet packets */
 static inline uint16_t parse_eth(packet_parser_t *prs, const uint8_t **parseptr,
 				 uint32_t *offset, uint32_t frame_len)
@@ -2616,6 +2641,30 @@ int _odp_packet_tcp_chksum_insert(odp_packet_t pkt)
 int _odp_packet_udp_chksum_insert(odp_packet_t pkt)
 {
 	return _odp_packet_tcp_udp_chksum_insert(pkt, _ODP_IPPROTO_UDP);
+}
+
+/**
+ * Calculate and fill in SCTP checksum
+ *
+ * @param pkt  ODP packet
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int _odp_packet_sctp_chksum_insert(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+	uint32_t sum;
+
+	if (pkt_hdr->p.l4_offset == ODP_PACKET_OFFSET_INVALID)
+		return -1;
+
+	sum = 0;
+	odp_packet_copy_from_mem(pkt, pkt_hdr->p.l4_offset + 8, 4, &sum);
+	sum = ~packet_sum_crc32c(pkt_hdr, pkt_hdr->p.l4_offset,
+				 pkt_hdr->frame_len - pkt_hdr->p.l4_offset,
+				 ~0);
+	return odp_packet_copy_from_mem(pkt, pkt_hdr->p.l4_offset + 8, 4, &sum);
 }
 
 static int packet_l4_chksum(odp_packet_hdr_t *pkt_hdr,
