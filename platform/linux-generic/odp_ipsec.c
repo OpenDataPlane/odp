@@ -18,6 +18,7 @@
 #include <odp_debug_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_ipsec_internal.h>
+#include <odp/api/plat/queue_inlines.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>

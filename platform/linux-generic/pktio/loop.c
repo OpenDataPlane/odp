@@ -18,6 +18,7 @@
 #include <odp/api/hints.h>
 #include <odp/api/plat/byteorder_inlines.h>
 #include <odp_queue_if.h>
+#include <odp/api/plat/queue_inlines.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>
@@ -107,7 +108,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
 	queue = pkt_priv(pktio_entry)->loopq;
-	nbr = queue_fn->deq_multi(queue, hdr_tbl, num);
+	nbr = odp_queue_deq_multi(queue, (odp_event_t *)hdr_tbl, num);
 
 	if (pktio_entry->s.config.pktin.bit.ts_all ||
 	    pktio_entry->s.config.pktin.bit.ts_ptp) {
@@ -325,7 +326,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
 	queue = pkt_priv(pktio_entry)->loopq;
-	ret = queue_fn->enq_multi(queue, hdr_tbl, nb_tx);
+	ret = odp_queue_enq_multi(queue, (odp_event_t *)hdr_tbl, nb_tx);
 
 	if (ret > 0) {
 		pktio_entry->s.stats.out_ucast_pkts += ret;

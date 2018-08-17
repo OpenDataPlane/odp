@@ -28,6 +28,7 @@
 #include <odp/api/time.h>
 #include <odp/api/plat/time_inlines.h>
 #include <odp_pcapng.h>
+#include <odp/api/plat/queue_inlines.h>
 
 #include <string.h>
 #include <inttypes.h>
@@ -625,7 +626,8 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 		if (pkt_hdr->p.input_flags.dst_queue) {
 			int ret;
 
-			ret = queue_fn->enq(pkt_hdr->dst_queue, buf_hdr);
+			ret = odp_queue_enq(pkt_hdr->dst_queue,
+					    odp_packet_to_event(pkt));
 			if (ret < 0)
 				odp_packet_free(pkt);
 			continue;
@@ -675,8 +677,7 @@ static odp_buffer_hdr_t *pktin_dequeue(odp_queue_t queue)
 	int pktin_index   = pktin_queue.index;
 	pktio_entry_t *entry = get_pktio_entry(pktio);
 
-	buf_hdr = queue_fn->deq(queue);
-	if (buf_hdr != NULL)
+	if (queue_fn->orig_deq_multi(queue, &buf_hdr, 1) == 1)
 		return buf_hdr;
 
 	pkts = pktin_recv_buf(entry, pktin_index, hdr_tbl, QUEUE_MULTI_MAX);
@@ -688,7 +689,8 @@ static odp_buffer_hdr_t *pktin_dequeue(odp_queue_t queue)
 		int num_enq;
 		int num = pkts - 1;
 
-		num_enq = queue_fn->enq_multi(queue, &hdr_tbl[1], num);
+		num_enq = odp_queue_enq_multi(queue,
+					      (odp_event_t *)&hdr_tbl[1], num);
 
 		if (odp_unlikely(num_enq < num)) {
 			if (odp_unlikely(num_enq < 0))
@@ -715,7 +717,7 @@ static int pktin_deq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
 	int pktin_index   = pktin_queue.index;
 	pktio_entry_t *entry = get_pktio_entry(pktio);
 
-	nbr = queue_fn->deq_multi(queue, buf_hdr, num);
+	nbr = queue_fn->orig_deq_multi(queue, buf_hdr, num);
 	if (odp_unlikely(nbr > num))
 		ODP_ABORT("queue_deq_multi req: %d, returned %d\n", num, nbr);
 
@@ -740,7 +742,7 @@ static int pktin_deq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
 	if (j) {
 		int num_enq;
 
-		num_enq = queue_fn->enq_multi(queue, hdr_tbl, j);
+		num_enq = odp_queue_enq_multi(queue, (odp_event_t *)hdr_tbl, j);
 
 		if (odp_unlikely(num_enq < j)) {
 			if (odp_unlikely(num_enq < 0))
@@ -785,9 +787,14 @@ int sched_cb_pktin_poll_one(int pktio_index,
 		pkt = packets[i];
 		pkt_hdr = packet_hdr(pkt);
 		if (odp_unlikely(pkt_hdr->p.input_flags.dst_queue)) {
+			int num_enq;
+
 			queue = pkt_hdr->dst_queue;
 			buf_hdr = packet_to_buf_hdr(pkt);
-			if (queue_fn->enq_multi(queue, &buf_hdr, 1) < 0) {
+			num_enq = odp_queue_enq_multi(queue,
+						      (odp_event_t *)&buf_hdr,
+						      1);
+			if (num_enq < 0) {
 				/* Queue full? */
 				odp_packet_free(pkt);
 				__atomic_fetch_add(&entry->s.stats.in_discards,
@@ -851,7 +858,8 @@ int sched_cb_pktin_poll_old(int pktio_index, int num_queue, int index[])
 		}
 
 		queue = entry->s.in_queue[index[idx]].queue;
-		num_enq = queue_fn->enq_multi(queue, hdr_tbl, num);
+		num_enq = odp_queue_enq_multi(queue,
+					      (odp_event_t *)hdr_tbl, num);
 
 		if (odp_unlikely(num_enq < num)) {
 			if (odp_unlikely(num_enq < 0))
@@ -1371,41 +1379,6 @@ int odp_pktio_stats_reset(odp_pktio_t pktio)
 	return ret;
 }
 
-static int abort_pktin_enqueue(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr)
-{
-	(void)queue;
-	(void)buf_hdr;
-	ODP_ABORT("attempted enqueue to a pktin queue");
-	return -1;
-}
-
-static int abort_pktin_enq_multi(odp_queue_t queue,
-				 odp_buffer_hdr_t *buf_hdr[], int num)
-{
-	(void)queue;
-	(void)buf_hdr;
-	(void)num;
-	ODP_ABORT("attempted enqueue to a pktin queue");
-	return 0;
-}
-
-static odp_buffer_hdr_t *abort_pktout_dequeue(odp_queue_t queue)
-{
-	(void)queue;
-	ODP_ABORT("attempted dequeue from a pktout queue");
-	return NULL;
-}
-
-static int abort_pktout_deq_multi(odp_queue_t queue,
-				  odp_buffer_hdr_t *buf_hdr[], int num)
-{
-	(void)queue;
-	(void)buf_hdr;
-	(void)num;
-	ODP_ABORT("attempted dequeue from a pktout queue");
-	return 0;
-}
-
 int odp_pktin_queue_config(odp_pktio_t pktio,
 			   const odp_pktin_queue_param_t *param)
 {
@@ -1498,8 +1471,8 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 			if (mode == ODP_PKTIN_MODE_QUEUE) {
 				queue_fn->set_pktin(queue, pktio, i);
 				queue_fn->set_enq_deq_fn(queue,
-							 abort_pktin_enqueue,
-							 abort_pktin_enq_multi,
+							 NULL,
+							 NULL,
 							 pktin_dequeue,
 							 pktin_deq_multi);
 			}
@@ -1624,8 +1597,8 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 			queue_fn->set_enq_deq_fn(queue,
 						 pktout_enqueue,
 						 pktout_enq_multi,
-						 abort_pktout_dequeue,
-						 abort_pktout_deq_multi);
+						 NULL,
+						 NULL);
 
 			entry->s.out_queue[i].queue = queue;
 		}

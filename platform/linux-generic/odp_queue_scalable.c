@@ -128,6 +128,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 	queue->s.dequeue = _queue_deq;
 	queue->s.enqueue_multi = _queue_enq_multi;
 	queue->s.dequeue_multi = _queue_deq_multi;
+	queue->s.orig_dequeue_multi = _queue_deq_multi;
 	queue->s.pktin = PKTIN_INVALID;
 
 	sched_elem->node.next = NULL;
@@ -949,6 +950,13 @@ static void queue_set_enq_deq_func(odp_queue_t handle,
 		qentry_from_int(handle)->s.dequeue_multi = deq_multi;
 }
 
+static int queue_orig_multi(odp_queue_t handle,
+			    odp_buffer_hdr_t **buf_hdr, int num)
+{
+	return qentry_from_int(handle)->s.orig_dequeue_multi(handle,
+							     buf_hdr, num);
+}
+
 /* API functions */
 _odp_queue_api_fn_t queue_scalable_api = {
 	.queue_create = queue_create,
@@ -976,13 +984,10 @@ queue_fn_t queue_scalable_fn = {
 	.term_global = queue_term_global,
 	.init_local = queue_init_local,
 	.term_local = queue_term_local,
-	.enq = _queue_enq,
-	.enq_multi = _queue_enq_multi,
-	.deq = _queue_deq,
-	.deq_multi = _queue_deq_multi,
 	.get_pktout = queue_get_pktout,
 	.set_pktout = queue_set_pktout,
 	.get_pktin = queue_get_pktin,
 	.set_pktin = queue_set_pktin,
-	.set_enq_deq_fn = queue_set_enq_deq_func
+	.set_enq_deq_fn = queue_set_enq_deq_func,
+	.orig_deq_multi = queue_orig_multi
 };

@@ -305,9 +305,9 @@ static odp_queue_t queue_create(const char *name,
 
 			if (!queue->s.spsc &&
 			    param->nonblocking == ODP_NONBLOCKING_LF) {
-				queue_lf_func_t *lf_func;
+				queue_lf_func_t *lf_fn;
 
-				lf_func = &queue_glb->queue_lf_func;
+				lf_fn = &queue_glb->queue_lf_func;
 
 				queue_lf = queue_lf_create(queue);
 
@@ -317,10 +317,11 @@ static odp_queue_t queue_create(const char *name,
 				}
 				queue->s.queue_lf = queue_lf;
 
-				queue->s.enqueue       = lf_func->enq;
-				queue->s.enqueue_multi = lf_func->enq_multi;
-				queue->s.dequeue       = lf_func->deq;
-				queue->s.dequeue_multi = lf_func->deq_multi;
+				queue->s.enqueue       = lf_fn->enq;
+				queue->s.enqueue_multi = lf_fn->enq_multi;
+				queue->s.dequeue       = lf_fn->deq;
+				queue->s.dequeue_multi = lf_fn->deq_multi;
+				queue->s.orig_dequeue_multi = lf_fn->deq_multi;
 			}
 
 			type = queue->s.type;
@@ -697,6 +698,8 @@ static int queue_init(queue_entry_t *queue, const char *name,
 		queue->s.enqueue_multi = queue_int_enq_multi;
 		queue->s.dequeue_multi = queue_int_deq_multi;
 
+		queue->s.orig_dequeue_multi = queue_int_deq_multi;
+
 		ring_st_init(&queue->s.ring_st, &queue_glb->ring_data[offset],
 			     queue_size);
 	}
@@ -883,6 +886,14 @@ static void queue_set_enq_deq_func(odp_queue_t handle,
 		qentry->s.dequeue_multi = deq_multi;
 }
 
+static int queue_orig_multi(odp_queue_t handle,
+			    odp_buffer_hdr_t **buf_hdr, int num)
+{
+	queue_entry_t *queue = qentry_from_handle(handle);
+
+	return queue->s.orig_dequeue_multi(handle, buf_hdr, num);
+}
+
 /* API functions */
 _odp_queue_api_fn_t queue_basic_api = {
 	.queue_create = queue_create,
@@ -910,13 +921,10 @@ queue_fn_t queue_basic_fn = {
 	.term_global = queue_term_global,
 	.init_local = queue_init_local,
 	.term_local = queue_term_local,
-	.enq = queue_int_enq,
-	.enq_multi = queue_int_enq_multi,
-	.deq = queue_int_deq,
-	.deq_multi = queue_int_deq_multi,
 	.get_pktout = queue_get_pktout,
 	.set_pktout = queue_set_pktout,
 	.get_pktin = queue_get_pktin,
 	.set_pktin = queue_set_pktin,
-	.set_enq_deq_fn = queue_set_enq_deq_func
+	.set_enq_deq_fn = queue_set_enq_deq_func,
+	.orig_deq_multi = queue_orig_multi
 };
