@@ -56,6 +56,7 @@
 #include <odp/api/plat/time_inlines.h>
 #include <odp/api/timer.h>
 #include <odp_timer_internal.h>
+#include <odp/api/plat/queue_inlines.h>
 
 /* Inlined API functions */
 #include <odp/api/plat/event_inlines.h>

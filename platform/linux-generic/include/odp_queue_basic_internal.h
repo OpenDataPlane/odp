@@ -44,6 +44,7 @@ struct queue_entry_s {
 	queue_deq_fn_t       dequeue;
 	queue_enq_multi_fn_t enqueue_multi;
 	queue_deq_multi_fn_t dequeue_multi;
+	queue_deq_multi_fn_t orig_dequeue_multi;
 
 	uint32_t          index;
 	odp_queue_t       handle;
