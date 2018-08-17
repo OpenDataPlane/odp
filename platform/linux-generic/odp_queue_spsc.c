@@ -123,6 +123,7 @@ void queue_spsc_init(queue_entry_t *queue, uint32_t queue_size)
 	queue->s.dequeue = queue_spsc_deq;
 	queue->s.enqueue_multi = queue_spsc_enq_multi;
 	queue->s.dequeue_multi = queue_spsc_deq_multi;
+	queue->s.orig_dequeue_multi = queue_spsc_deq_multi;
 
 	offset = queue->s.index * (uint64_t)queue_glb->config.max_queue_size;
 

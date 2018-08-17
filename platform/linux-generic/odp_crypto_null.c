@@ -20,6 +20,7 @@
 #include <odp/api/plat/packet_inlines.h>
 #include <odp/api/plat/thread_inlines.h>
 #include <odp_packet_internal.h>
+#include <odp/api/plat/queue_inlines.h>
 
 /* Inlined API functions */
 #include <odp/api/plat/event_inlines.h>

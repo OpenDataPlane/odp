@@ -28,6 +28,7 @@
 #include <odp_timer_internal.h>
 #include <odp_queue_basic_internal.h>
 #include <odp_libconfig_internal.h>
+#include <odp/api/plat/queue_inlines.h>
 
 /* Number of priority levels  */
 #define NUM_PRIO 8
@@ -669,7 +670,8 @@ static inline void ordered_stash_release(void)
 		buf_hdr = sched_local.ordered.stash[i].buf_hdr;
 		num = sched_local.ordered.stash[i].num;
 
-		num_enq = queue_fn->enq_multi(queue, buf_hdr, num);
+		num_enq = odp_queue_enq_multi(queue,
+					      (odp_event_t *)buf_hdr, num);
 
 		/* Drop packets that were not enqueued */
 		if (odp_unlikely(num_enq < num)) {
@@ -839,7 +841,7 @@ static inline int poll_pktin(uint32_t qi, int direct_recv,
 
 	q_int = qentry_from_index(qi);
 
-	ret = queue_fn->enq_multi(q_int, b_hdr, num);
+	ret = odp_queue_enq_multi(q_int, (odp_event_t *)b_hdr, num);
 
 	/* Drop packets that were not enqueued */
 	if (odp_unlikely(ret < num)) {

@@ -17,6 +17,7 @@
 
 /* Inlined API functions */
 #include <odp/api/plat/event_inlines.h>
+#include <odp/api/plat/queue_inlines.h>
 
 typedef struct {
 	/* common buffer header */
