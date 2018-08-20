@@ -1036,7 +1036,7 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	pkt_hdr->p.input_flags.dst_queue = 1;
 
 	if (!cos->s.queue_group) {
-		pkt_hdr->dst_queue = queue_fn->from_ext(cos->s.queue);
+		pkt_hdr->dst_queue = cos->s.queue;
 		return 0;
 	}
 
@@ -1045,8 +1045,7 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	hash = hash & (CLS_COS_QUEUE_MAX - 1);
 	tbl_index = (cos->s.index * CLS_COS_QUEUE_MAX) + (hash %
 							  cos->s.num_queue);
-	pkt_hdr->dst_queue = queue_fn->from_ext(queue_grp_tbl->
-						s.queue[tbl_index]);
+	pkt_hdr->dst_queue = queue_grp_tbl->s.queue[tbl_index];
 	return 0;
 }
 

@@ -44,6 +44,7 @@ struct queue_entry_s {
 	queue_deq_fn_t       dequeue;
 	queue_enq_multi_fn_t enqueue_multi;
 	queue_deq_multi_fn_t dequeue_multi;
+	queue_deq_multi_fn_t orig_dequeue_multi;
 
 	uint32_t          index;
 	odp_queue_t       handle;
@@ -94,6 +95,11 @@ static inline queue_entry_t *qentry_from_index(uint32_t queue_id)
 static inline odp_queue_t queue_from_index(uint32_t queue_id)
 {
 	return (odp_queue_t)qentry_from_index(queue_id);
+}
+
+static inline queue_entry_t *qentry_from_handle(odp_queue_t handle)
+{
+	return (queue_entry_t *)(uintptr_t)handle;
 }
 
 void queue_spsc_init(queue_entry_t *queue, uint32_t queue_size);

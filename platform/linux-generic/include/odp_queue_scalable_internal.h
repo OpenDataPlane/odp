@@ -41,6 +41,7 @@ struct queue_entry_s {
 	queue_deq_fn_t       dequeue;
 	queue_enq_multi_fn_t enqueue_multi;
 	queue_deq_multi_fn_t dequeue_multi;
+	queue_deq_multi_fn_t orig_dequeue_multi;
 
 	uint32_t           index;
 	odp_queue_t        handle;
@@ -80,14 +81,14 @@ static inline uint32_t queue_to_id(odp_queue_t handle)
 	return qentry_from_ext(handle)->s.index;
 }
 
-static inline queue_entry_t *qentry_from_int(void *handle)
+static inline queue_entry_t *qentry_from_int(odp_queue_t handle)
 {
-	return (queue_entry_t *)handle;
+	return (queue_entry_t *)(uintptr_t)handle;
 }
 
-static inline void *qentry_to_int(queue_entry_t *qentry)
+static inline odp_queue_t qentry_to_int(queue_entry_t *qentry)
 {
-	return qentry;
+	return (odp_queue_t)qentry;
 }
 
 static inline odp_queue_t queue_get_handle(queue_entry_t *queue)
