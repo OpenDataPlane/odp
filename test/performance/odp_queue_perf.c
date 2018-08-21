@@ -110,6 +110,7 @@ static int test_queue(test_options_t *test_options)
 	odp_pool_t pool;
 	odp_event_t ev;
 	uint32_t i, j, rounds;
+	uint32_t max_size;
 	uint64_t c1, c2, diff, ops, nsec;
 	odp_time_t t1, t2;
 	uint64_t num_retry = 0;
@@ -152,9 +153,9 @@ static int test_queue(test_options_t *test_options)
 			return -1;
 		}
 
-		if (num_event > queue_capa.plain.max_size) {
-			printf("Max queue size supported %u\n",
-			       queue_capa.plain.max_size);
+		max_size = queue_capa.plain.max_size;
+		if (max_size && num_event > max_size) {
+			printf("Max queue size supported %u\n", max_size);
 			return -1;
 		}
 	} else if (nonblock == ODP_NONBLOCKING_LF) {
@@ -169,9 +170,10 @@ static int test_queue(test_options_t *test_options)
 			return -1;
 		}
 
-		if (num_event > queue_capa.plain.lockfree.max_size) {
+		max_size = queue_capa.plain.lockfree.max_size;
+		if (max_size && num_event > max_size) {
 			printf("Max lockfree queue size supported %u\n",
-			       queue_capa.plain.lockfree.max_size);
+			       max_size);
 			return -1;
 		}
 	} else if (nonblock == ODP_NONBLOCKING_WF) {
@@ -186,9 +188,10 @@ static int test_queue(test_options_t *test_options)
 			return -1;
 		}
 
-		if (num_event > queue_capa.plain.waitfree.max_size) {
+		max_size = queue_capa.plain.waitfree.max_size;
+		if (max_size && num_event > max_size) {
 			printf("Max waitfree queue size supported %u\n",
-			       queue_capa.plain.waitfree.max_size);
+			       max_size);
 			return -1;
 		}
 	} else {
