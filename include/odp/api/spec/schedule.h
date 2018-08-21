@@ -24,6 +24,7 @@ extern "C" {
 #include <odp/api/queue.h>
 #include <odp/api/schedule_types.h>
 #include <odp/api/thrmask.h>
+#include <odp/api/support.h>
 
 /** @defgroup odp_scheduler ODP SCHEDULER
  *  Operations on the scheduler.
@@ -44,6 +45,98 @@ extern "C" {
  * @def ODP_SCHED_GROUP_NAME_LEN
  * Maximum schedule group name length in chars including null char
  */
+
+/**
+ * Schedule configuration
+ * When schedule configuration is not called by the application, the scheduler
+ * behaves in flow-unaware mode and event flow hash values are ignored
+ */
+typedef struct odp_schedule_config_t {
+
+	/* Number of flows per queue to be supported
+	 * Scheduler enables flow aware mode when flow count is configured
+	 * greater than 1.
+	 * Flows are lightweight entities and packets can be assigned to specific
+	 * flows by the application using odp_event_flow_hash_set() before
+	 * enqueuing the packet into the scheduler. This value is ignored unless
+	 * scheduler supports flow aware mode
+	 * Depening on the implementation this number might be rounded-off to
+	 * nearest supported value (e.g power of 2)
+	 * This number should be less than maximum flow supported by the
+	 * implementation.
+	 * @see odp_schedule_capability_t
+	 */
+	uint32_t flow_count;
+
+	/* Maximum number of schedule queues to be supported
+	 * Application configures the maximum number of schedule queues to be
+	 * supported by the implementation.
+	 * @see odp_queue_capability_t
+	 */
+	uint32_t queue_count;
+
+	/* Maximum number of events required to be stored simultaneously in
+	 * schedule queue. This number should be less than 'max_queue_size'
+	 * supported by the implementation.
+	 * A value of 0 configures default queue size supported by the
+	 * implementation.
+	 */
+	uint32_t queue_size;
+} odp_schedule_config_t;
+
+typedef struct odp_schedule_capability_t {
+
+	/* Maximum supported flows per queue
+	 * Specifies the maximum number of flows per queue supported by the
+	 * implementation.
+	 * A value of 0 indicates flow aware mode is not supported.
+	 */
+	uint32_t max_flow_count;
+
+	/* Maximum supported queues
+	 * Specifies the maximum number of queues supported by the
+	 * implementation.
+	 */
+	uint32_t max_queue_count;
+
+	/* Maximum number of events a schedule queue can store simultaneoulsy.
+	 * A value of 0 indicates the implementation does not restrict the
+	 * queue size
+	 */
+	uint32_t max_queue_size;
+} odp_schedule_capability_t;
+
+/**
+ * Start scheduler operation
+ *
+ * Activate scheduler module to schedule packets across different schedule
+ * queues. The scheduler module should be started before creating any odp
+ * queues. The scheduler module can be stopped usinig odp_schedule_stop().
+ *
+ * The initialization sequeunce should be,
+ * odp_schedule_capability()
+ * odp_schedule_config_init()
+ * odp_schedule_config()
+ * odp_schedule_start()
+ * odp_schedule()
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ *
+ * @odp_schedule_stop()
+ */
+int odp_schedule_start(void);
+
+/**
+ * Stop scheduler operations
+ *
+ * Stop scheduler module. The application should make sure there are no further
+ * events in the scheduler before calling odp_schedule_stop.
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_schedule_stop(void);
 
 /**
  * Schedule wait time
@@ -186,6 +279,42 @@ void odp_schedule_prefetch(int num);
  * @return Number of scheduling priorities
  */
 int odp_schedule_num_prio(void);
+
+/**
+ * Initialize schedule configuration options
+ *
+ * Initialize an odp_schedule_config_t to its default values.
+ *
+ * @param[out] config  Pointer to schedule configuration structure
+ */
+void odp_schedule_config_init(odp_schedule_config_t *config);
+
+
+/**
+ * Global schedule configuration
+ *
+ * Initialize and configure scheduler with global configuration options.
+ *
+ * @param config   Pointer to scheduler configuration structure
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ *
+ * @see odp_schedule_capability(), odp_schedule_config_init()
+ */
+int odp_schedule_config(const odp_schedule_config_t *config);
+
+/**
+ * Query scheduler capabilities
+ *
+ * Outputs schedule capabilities on success.
+ *
+ * @param[out] capa   Pointer to capability structure for output
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_schedule_capability(odp_schedule_capability_t *capa);
 
 /**
  * Schedule group create

@@ -79,6 +79,9 @@ extern "C" {
  * requests another event from the scheduler, which implicitly releases the
  * context. User may allow the scheduler to release the context earlier than
  * that by calling odp_schedule_release_atomic().
+ * When scheduler is enabled as flow-aware, the event flow hash value affects
+ * scheduling of the event and synchronization is maintained per flow within
+ * each queue.
  */
 
 /**
@@ -105,6 +108,9 @@ extern "C" {
  * (e.g. freed or stored) within the context are considered missing from
  * reordering and are skipped at this time (but can be ordered again within
  * another context).
+ * When scheduler is enabled as flow-aware, the event flow hash value affects
+ * scheduling of the event and synchronization is maintained per flow within
+ * each queue.
  */
 
 /**
