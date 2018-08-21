@@ -489,12 +489,15 @@ static inline int _plain_queue_enq_multi(odp_queue_t handle,
 					 odp_buffer_hdr_t *buf_hdr[], int num)
 {
 	queue_entry_t *queue;
-	int num_enq;
+	int ret, num_enq;
 	ring_st_t *ring_st;
 	uint32_t buf_idx[num];
 
 	queue = qentry_from_handle(handle);
 	ring_st = &queue->s.ring_st;
+
+	if (sched_fn->ord_enq_multi(handle, (void **)buf_hdr, num, &ret))
+		return ret;
 
 	buffer_index_from_buf(buf_idx, buf_hdr, num);
 
