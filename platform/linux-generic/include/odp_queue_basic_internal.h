@@ -22,6 +22,7 @@ extern "C" {
 #include <odp/api/hints.h>
 #include <odp/api/ticketlock.h>
 #include <odp_config_internal.h>
+#include <odp_ring_mpmc_internal.h>
 #include <odp_ring_st_internal.h>
 #include <odp_ring_spsc_internal.h>
 #include <odp_queue_lf.h>
@@ -33,22 +34,29 @@ extern "C" {
 #define QUEUE_STATUS_SCHED        4
 
 struct queue_entry_s {
-	odp_ticketlock_t  ODP_ALIGNED_CACHE lock;
-	union {
-		ring_st_t         ring_st;
-		ring_spsc_t       ring_spsc;
-	};
-	int               status;
-
+	/* The first cache line is read only */
 	queue_enq_fn_t       ODP_ALIGNED_CACHE enqueue;
 	queue_deq_fn_t       dequeue;
 	queue_enq_multi_fn_t enqueue_multi;
 	queue_deq_multi_fn_t dequeue_multi;
-	queue_deq_multi_fn_t orig_dequeue_multi;
+	uint32_t             *ring_data;
+	uint32_t             ring_mask;
+	uint32_t             index;
+	odp_queue_t          handle;
+	odp_queue_type_t     type;
 
-	uint32_t          index;
-	odp_queue_t       handle;
-	odp_queue_type_t  type;
+	/* MPMC ring (2 cache lines). */
+	ring_mpmc_t          ring_mpmc;
+
+	odp_ticketlock_t     lock;
+	union {
+		ring_st_t    ring_st;
+		ring_spsc_t  ring_spsc;
+	};
+
+	int                  status;
+
+	queue_deq_multi_fn_t orig_dequeue_multi;
 	odp_queue_param_t param;
 	odp_pktin_queue_t pktin;
 	odp_pktout_queue_t pktout;
