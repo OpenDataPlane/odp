@@ -26,6 +26,15 @@ typedef struct test_options_t {
 
 } test_options_t;
 
+typedef struct test_stat_t {
+	uint64_t rounds;
+	uint64_t events;
+	uint64_t nsec;
+	uint64_t cycles;
+	uint64_t deq_retry;
+
+} test_stat_t;
+
 typedef struct test_global_t {
 	odp_barrier_t    barrier;
 	test_options_t   options;
@@ -34,6 +43,7 @@ typedef struct test_global_t {
 	odp_pool_t       pool;
 	odp_queue_t      queue[MAX_QUEUES];
 	odph_odpthread_t thread_tbl[ODP_THREAD_COUNT_MAX];
+	test_stat_t      stat[ODP_THREAD_COUNT_MAX];
 
 } test_global_t;
 
@@ -46,8 +56,9 @@ static void print_usage(void)
 	       "\n"
 	       "Usage: odp_queue_perf [options]\n"
 	       "\n"
-	       "  -q, --num_queue        Number of queues\n"
-	       "  -e, --num_event        Number of events per queue\n"
+	       "  -c, --num_cpu          Number of worker threads. Default: 1\n"
+	       "  -q, --num_queue        Number of queues. Default: 1\n"
+	       "  -e, --num_event        Number of events per queue. Default: 1\n"
 	       "  -r, --num_round        Number of rounds\n"
 	       "  -l, --lockfree         Lockfree queues\n"
 	       "  -w, --waitfree         Waitfree queues\n"
@@ -63,6 +74,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	int ret = 0;
 
 	static const struct option longopts[] = {
+		{"num_cpu",   required_argument, NULL, 'c'},
 		{"num_queue", required_argument, NULL, 'q'},
 		{"num_event", required_argument, NULL, 'e'},
 		{"num_round", required_argument, NULL, 'r'},
@@ -73,7 +85,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+q:e:r:lwsh";
+	static const char *shortopts = "+c:q:e:r:lwsh";
 
 	test_options->num_cpu   = 1;
 	test_options->num_queue = 1;
@@ -89,6 +101,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 
 		switch (opt) {
+		case 'c':
+			test_options->num_cpu = atoi(optarg);
+			break;
 		case 'q':
 			test_options->num_queue = atoi(optarg);
 			break;
@@ -333,67 +348,66 @@ static int destroy_queues(test_global_t *global)
 
 static int run_test(void *arg)
 {
-	uint64_t c1, c2, diff, ops, nsec;
+	uint64_t c1, c2, cycles, nsec;
 	odp_time_t t1, t2;
 	odp_event_t ev;
-	uint32_t i, rounds;
+	uint32_t rounds;
+	test_stat_t *stat;
 	test_global_t *global = arg;
 	test_options_t *test_options = &global->options;
-	odp_queue_t *queue = global->queue;
+	odp_queue_t queue;
 	uint64_t num_retry = 0;
+	uint64_t events = 0;
 	uint32_t num_queue = test_options->num_queue;
 	uint32_t num_round = test_options->num_round;
+	int thr = odp_thread_id();
 	int ret = 0;
+	uint32_t i = 0;
+
+	stat = &global->stat[thr];
+
+	/* Start all workers at the same time */
+	odp_barrier_wait(&global->barrier);
 
 	t1 = odp_time_local();
 	c1 = odp_cpu_cycles();
 
 	for (rounds = 0; rounds < num_round; rounds++) {
-		int retry = 0;
+		do {
+			queue = global->queue[i++];
 
-		for (i = 0; i < num_queue; i++) {
-			ev = odp_queue_deq(queue[i]);
+			if (i == num_queue)
+				i = 0;
 
-			if (ev == ODP_EVENT_INVALID) {
-				if (retry < 5) {
-					retry++;
-					num_retry++;
-					continue;
-				}
+			ev = odp_queue_deq(queue);
 
-				printf("Error: Queue deq failed %u\n", i);
-				ret = -1;
-				goto error;
-			}
+			if (odp_unlikely(ev == ODP_EVENT_INVALID))
+				num_retry++;
 
-			retry = 0;
+		} while (ev == ODP_EVENT_INVALID);
 
-			if (odp_queue_enq(queue[i], ev)) {
-				printf("Error: Queue enq failed %u\n", i);
-				ret = -1;
-				goto error;
-			}
+		if (odp_queue_enq(queue, ev)) {
+			printf("Error: Queue enq failed %u\n", i);
+			ret = -1;
+			goto error;
 		}
+
+		events++;
 	}
 
 	c2 = odp_cpu_cycles();
 	t2 = odp_time_local();
 
-	nsec = odp_time_diff_ns(t2, t1);
-	diff = odp_cpu_cycles_diff(c2, c1);
-	ops = num_round * num_queue;
+	nsec   = odp_time_diff_ns(t2, t1);
+	cycles = odp_cpu_cycles_diff(c2, c1);
 
-	printf("RESULT:\n");
-	printf("  num deq + enq operations: %" PRIu64 "\n", ops);
-	printf("  num events:               %" PRIu64 "\n", ops);
-	printf("  duration (nsec):          %" PRIu64 "\n", nsec);
-	printf("  num cycles:               %" PRIu64 "\n", diff);
-	printf("  cycles per deq + enq:     %.3f\n", (double)diff / ops);
-	printf("  events per sec:           %.3f M\n", (1000.0 * ops) / nsec);
-	printf("  num retries:              %" PRIu64 "\n\n", num_retry);
+	stat->rounds = rounds;
+	stat->events = events;
+	stat->nsec   = nsec;
+	stat->cycles = cycles;
+	stat->deq_retry = num_retry;
 
 error:
-
 	return ret;
 }
 
@@ -433,6 +447,69 @@ static int start_workers(test_global_t *global)
 		return -1;
 
 	return 0;
+}
+
+static void print_stat(test_global_t *global)
+{
+	int i, num;
+	double events_ave, nsec_ave, cycles_ave, retry_ave;
+	test_options_t *test_options = &global->options;
+	int num_cpu = test_options->num_cpu;
+	uint64_t rounds_sum = 0;
+	uint64_t events_sum = 0;
+	uint64_t nsec_sum = 0;
+	uint64_t cycles_sum = 0;
+	uint64_t retry_sum = 0;
+
+	/* Averages */
+	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
+		rounds_sum   += global->stat[i].rounds;
+		events_sum   += global->stat[i].events;
+		nsec_sum     += global->stat[i].nsec;
+		cycles_sum   += global->stat[i].cycles;
+		retry_sum    += global->stat[i].deq_retry;
+	}
+
+	if (rounds_sum == 0) {
+		printf("No results.\n");
+		return;
+	}
+
+	events_ave   = events_sum / num_cpu;
+	nsec_ave     = nsec_sum / num_cpu;
+	cycles_ave   = cycles_sum / num_cpu;
+	retry_ave    = retry_sum / num_cpu;
+	num = 0;
+
+	printf("RESULTS - per thread (Million events per sec):\n");
+	printf("----------------------------------------------\n");
+	printf("        1      2      3      4      5      6      7      8      9     10");
+
+	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
+		if (global->stat[i].rounds) {
+			if ((num % 10) == 0)
+				printf("\n   ");
+
+			printf("%6.1f ", (1000.0 * global->stat[i].events) /
+			       global->stat[i].nsec);
+			num++;
+		}
+	}
+	printf("\n\n");
+
+	printf("RESULTS - per thread average (%i threads):\n", num_cpu);
+	printf("------------------------------------------\n");
+	printf("  duration:                 %.3f msec\n", nsec_ave / 1000000);
+	printf("  num cycles:               %.3f M\n", cycles_ave / 1000000);
+	printf("  cycles per event:         %.3f\n",
+	       cycles_ave / events_ave);
+	printf("  deq retries per sec:      %.3f k\n",
+	       (1000000.0 * retry_ave) / nsec_ave);
+	printf("  events per sec:           %.3f M\n\n",
+	       (1000.0 * events_ave) / nsec_ave);
+
+	printf("TOTAL events per sec:       %.3f M\n\n",
+	       (1000.0 * events_sum) / nsec_ave);
 }
 
 int main(int argc, char **argv)
@@ -482,6 +559,8 @@ int main(int argc, char **argv)
 
 	/* Wait workers to exit */
 	odph_odpthreads_join(global->thread_tbl);
+
+	print_stat(global);
 
 destroy:
 	if (destroy_queues(global)) {
