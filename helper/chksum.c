@@ -9,6 +9,7 @@
 #include <odp.h>
 #include <odp/helper/ip.h>
 #include <odp/helper/udp.h>
+#include <odp/helper/sctp.h>
 #include <odp/helper/tcp.h>
 #include <odp/helper/chksum.h>
 #include <stddef.h>
@@ -350,4 +351,78 @@ int odph_udp_tcp_chksum(odp_packet_t     odp_pkt,
 		*chksum_ptr = chksum;
 
 	return ret_code;
+}
+
+static uint32_t odph_packet_crc32c(odp_packet_t pkt,
+				   uint32_t offset,
+				   uint32_t length,
+				   uint32_t init_val)
+{
+	uint32_t sum = init_val;
+
+	if (offset + length > odp_packet_len(pkt))
+		return sum;
+
+	while (length > 0) {
+		uint32_t seg_len;
+		void *data = odp_packet_offset(pkt, offset, &seg_len, NULL);
+
+		if (seg_len > length)
+			seg_len = length;
+
+		sum = odp_hash_crc32c(data, seg_len, sum);
+		length -= seg_len;
+		offset += seg_len;
+	}
+
+	return sum;
+}
+
+int odph_sctp_chksum_set(odp_packet_t pkt)
+{
+	uint32_t l4_offset = odp_packet_l4_offset(pkt);
+	uint32_t sum = 0;
+
+	if (!odp_packet_has_sctp(pkt))
+		return -1;
+
+	if (l4_offset == ODP_PACKET_OFFSET_INVALID)
+		return -1;
+
+	odp_packet_copy_from_mem(pkt,
+				 l4_offset + ODPH_SCTPHDR_LEN - 4,
+				 4,
+				 &sum);
+
+	sum = ~odph_packet_crc32c(pkt, l4_offset,
+				  odp_packet_len(pkt) - l4_offset,
+				  ~0);
+	return odp_packet_copy_from_mem(pkt,
+					l4_offset + ODPH_SCTPHDR_LEN - 4,
+					4,
+					&sum);
+}
+
+int odph_sctp_chksum_verify(odp_packet_t pkt)
+{
+	uint32_t l4_offset = odp_packet_l4_offset(pkt);
+	uint32_t sum;
+	uint32_t temp = 0;
+
+	if (!odp_packet_has_sctp(pkt))
+		return -1;
+
+	sum = odph_packet_crc32c(pkt, l4_offset,
+				 ODPH_SCTPHDR_LEN - 4,
+				 ~0);
+	sum = odp_hash_crc32c(&temp, 4, sum);
+	sum = ~odph_packet_crc32c(pkt, l4_offset + ODPH_SCTPHDR_LEN,
+				  odp_packet_len(pkt) - l4_offset -
+				  ODPH_SCTPHDR_LEN,
+				  sum);
+
+	odp_packet_copy_to_mem(pkt, l4_offset + ODPH_SCTPHDR_LEN - 4,
+			       4, &temp);
+
+	return (temp == sum) ? 0 : 2;
 }

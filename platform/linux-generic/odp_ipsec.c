@@ -1306,7 +1306,8 @@ static void ipsec_out_ah_post(ipsec_state_t *state, odp_packet_t pkt)
 static void ipsec_out_checksums(odp_packet_t pkt,
 				ipsec_state_t *state)
 {
-	odp_bool_t ipv4_chksum_pkt, udp_chksum_pkt, tcp_chksum_pkt;
+	odp_bool_t ipv4_chksum_pkt, udp_chksum_pkt, tcp_chksum_pkt,
+		   sctp_chksum_pkt;
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 	odp_ipsec_outbound_config_t outbound = ipsec_config.outbound;
 
@@ -1325,6 +1326,12 @@ static void ipsec_out_checksums(odp_packet_t pkt,
 					   pkt_hdr->p.flags.l4_chksum_set,
 					   pkt_hdr->p.flags.l4_chksum);
 
+	sctp_chksum_pkt =  OL_TX_CHKSUM_PKT(outbound.chksum.inner_sctp,
+					    state->ip_next_hdr ==
+					    _ODP_IPPROTO_SCTP,
+					    pkt_hdr->p.flags.l4_chksum_set,
+					    pkt_hdr->p.flags.l4_chksum);
+
 	if (ipv4_chksum_pkt)
 		_odp_packet_ipv4_chksum_insert(pkt);
 
@@ -1333,6 +1340,9 @@ static void ipsec_out_checksums(odp_packet_t pkt,
 
 	if (udp_chksum_pkt)
 		_odp_packet_udp_chksum_insert(pkt);
+
+	if (sctp_chksum_pkt)
+		_odp_packet_sctp_chksum_insert(pkt);
 }
 
 static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,

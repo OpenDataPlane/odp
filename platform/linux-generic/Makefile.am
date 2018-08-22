@@ -142,6 +142,7 @@ noinst_HEADERS = \
 		  include/protocols/eth.h \
 		  include/protocols/ip.h \
 		  include/protocols/ipsec.h \
+		  include/protocols/sctp.h \
 		  include/protocols/tcp.h \
 		  include/protocols/thash.h \
 		  include/protocols/udp.h
