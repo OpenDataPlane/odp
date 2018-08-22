@@ -104,6 +104,12 @@ typedef struct odp_schedule_capability_t {
 	 * queue size
 	 */
 	uint32_t max_queue_size;
+
+	/* Maximum schedule group
+	 * Specifies the maximum number of schedule group supported by the
+	 * implementation.
+	 */
+	uint32_t max_schedule_group;
 } odp_schedule_capability_t;
 
 /**
