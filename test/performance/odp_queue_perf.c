@@ -20,6 +20,7 @@ typedef struct test_options_t {
 	uint32_t num_queue;
 	uint32_t num_event;
 	uint32_t num_round;
+	uint32_t max_burst;
 	odp_nonblocking_t nonblock;
 	int single;
 	int num_cpu;
@@ -59,6 +60,7 @@ static void print_usage(void)
 	       "  -c, --num_cpu          Number of worker threads. Default: 1\n"
 	       "  -q, --num_queue        Number of queues. Default: 1\n"
 	       "  -e, --num_event        Number of events per queue. Default: 1\n"
+	       "  -b, --burst_size       Maximum number of events per operation. Default: 1\n"
 	       "  -r, --num_round        Number of rounds\n"
 	       "  -l, --lockfree         Lockfree queues\n"
 	       "  -w, --waitfree         Waitfree queues\n"
@@ -74,22 +76,24 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	int ret = 0;
 
 	static const struct option longopts[] = {
-		{"num_cpu",   required_argument, NULL, 'c'},
-		{"num_queue", required_argument, NULL, 'q'},
-		{"num_event", required_argument, NULL, 'e'},
-		{"num_round", required_argument, NULL, 'r'},
-		{"lockfree",  no_argument,       NULL, 'l'},
-		{"waitfree",  no_argument,       NULL, 'w'},
-		{"single",    no_argument,       NULL, 's'},
-		{"help",      no_argument,       NULL, 'h'},
+		{"num_cpu",    required_argument, NULL, 'c'},
+		{"num_queue",  required_argument, NULL, 'q'},
+		{"num_event",  required_argument, NULL, 'e'},
+		{"burst_size", required_argument, NULL, 'b'},
+		{"num_round",  required_argument, NULL, 'r'},
+		{"lockfree",   no_argument,       NULL, 'l'},
+		{"waitfree",   no_argument,       NULL, 'w'},
+		{"single",     no_argument,       NULL, 's'},
+		{"help",       no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:q:e:r:lwsh";
+	static const char *shortopts = "+c:q:e:b:r:lwsh";
 
 	test_options->num_cpu   = 1;
 	test_options->num_queue = 1;
 	test_options->num_event = 1;
+	test_options->max_burst = 1;
 	test_options->num_round = 1000;
 	test_options->nonblock  = ODP_BLOCKING;
 	test_options->single    = 0;
@@ -109,6 +113,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 'e':
 			test_options->num_event = atoi(optarg);
+			break;
+		case 'b':
+			test_options->max_burst = atoi(optarg);
 			break;
 		case 'r':
 			test_options->num_round = atoi(optarg);
@@ -165,6 +172,7 @@ static int create_queues(test_global_t *global)
 	printf("  num rounds           %u\n", num_round);
 	printf("  num queues           %u\n", num_queue);
 	printf("  num events per queue %u\n", num_event);
+	printf("  max burst size       %u\n", test_options->max_burst);
 
 	for (i = 0; i < num_queue; i++)
 		queue[i] = ODP_QUEUE_INVALID;
@@ -350,8 +358,8 @@ static int run_test(void *arg)
 {
 	uint64_t c1, c2, cycles, nsec;
 	odp_time_t t1, t2;
-	odp_event_t ev;
 	uint32_t rounds;
+	int num_ev;
 	test_stat_t *stat;
 	test_global_t *global = arg;
 	test_options_t *test_options = &global->options;
@@ -363,6 +371,8 @@ static int run_test(void *arg)
 	int thr = odp_thread_id();
 	int ret = 0;
 	uint32_t i = 0;
+	uint32_t max_burst = test_options->max_burst;
+	odp_event_t ev[max_burst];
 
 	stat = &global->stat[thr];
 
@@ -379,20 +389,20 @@ static int run_test(void *arg)
 			if (i == num_queue)
 				i = 0;
 
-			ev = odp_queue_deq(queue);
+			num_ev = odp_queue_deq_multi(queue, ev, max_burst);
 
-			if (odp_unlikely(ev == ODP_EVENT_INVALID))
+			if (odp_unlikely(num_ev <= 0))
 				num_retry++;
 
-		} while (ev == ODP_EVENT_INVALID);
+		} while (num_ev <= 0);
 
-		if (odp_queue_enq(queue, ev)) {
+		if (odp_queue_enq_multi(queue, ev, num_ev) != num_ev) {
 			printf("Error: Queue enq failed %u\n", i);
 			ret = -1;
 			goto error;
 		}
 
-		events++;
+		events += num_ev;
 	}
 
 	c2 = odp_cpu_cycles();
@@ -452,7 +462,7 @@ static int start_workers(test_global_t *global)
 static void print_stat(test_global_t *global)
 {
 	int i, num;
-	double events_ave, nsec_ave, cycles_ave, retry_ave;
+	double rounds_ave, events_ave, nsec_ave, cycles_ave, retry_ave;
 	test_options_t *test_options = &global->options;
 	int num_cpu = test_options->num_cpu;
 	uint64_t rounds_sum = 0;
@@ -475,6 +485,7 @@ static void print_stat(test_global_t *global)
 		return;
 	}
 
+	rounds_ave   = rounds_sum / num_cpu;
 	events_ave   = events_sum / num_cpu;
 	nsec_ave     = nsec_sum / num_cpu;
 	cycles_ave   = cycles_sum / num_cpu;
@@ -501,6 +512,8 @@ static void print_stat(test_global_t *global)
 	printf("------------------------------------------\n");
 	printf("  duration:                 %.3f msec\n", nsec_ave / 1000000);
 	printf("  num cycles:               %.3f M\n", cycles_ave / 1000000);
+	printf("  evenst per dequeue:       %.3f\n",
+	       events_ave / rounds_ave);
 	printf("  cycles per event:         %.3f\n",
 	       cycles_ave / events_ave);
 	printf("  deq retries per sec:      %.3f k\n",
