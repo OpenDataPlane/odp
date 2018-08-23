@@ -55,6 +55,7 @@ env:
         # you need generated new one at https://codecov.io specific for your repo.
         - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
         - DPDK_VERS="17.11.3"
+        - if [ -z "${DOCKER_NAMESPACE} ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
     matrix:
         - CONF=""
         - CONF="--disable-abi-compat"
