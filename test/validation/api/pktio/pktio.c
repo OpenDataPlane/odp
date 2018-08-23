@@ -1482,6 +1482,42 @@ static void pktio_test_pktin_queue_config_sched(void)
 	CU_ASSERT_FATAL(odp_pktio_close(pktio) == 0);
 }
 
+static void pktio_test_pktin_queue_config_multi_sched(void)
+{
+	odp_pktio_t pktio;
+	odp_pktio_capability_t capa;
+	odp_pktin_queue_param_t queue_param;
+	odp_queue_t in_queues[MAX_QUEUES];
+	odp_pktin_queue_param_ovr_t queue_param_ovr[MAX_QUEUES];
+	int num_queues, i;
+
+	pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED, ODP_PKTOUT_MODE_DIRECT);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+
+	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0 &&
+			capa.max_input_queues > 0);
+	num_queues = (capa.max_input_queues < MAX_QUEUES) ?
+		capa.max_input_queues : MAX_QUEUES;
+
+	odp_pktin_queue_param_init(&queue_param);
+
+	queue_param.hash_enable = 0;
+	queue_param.num_queues = num_queues;
+	queue_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+	queue_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+
+	for (i = 0; i < num_queues; i++)
+		queue_param_ovr[i].group = ODP_SCHED_GROUP_ALL;
+	queue_param.queue_param_ovr = queue_param_ovr;
+
+	CU_ASSERT_FATAL(odp_pktin_queue_config(pktio, &queue_param) == 0);
+
+	CU_ASSERT(odp_pktin_event_queue(pktio, in_queues, MAX_QUEUES)
+		  == num_queues);
+
+	CU_ASSERT_FATAL(odp_pktio_close(pktio) == 0);
+}
+
 static void pktio_test_pktin_queue_config_queue(void)
 {
 	odp_pktio_t pktio;
@@ -2794,6 +2830,7 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_info),
 	ODP_TEST_INFO(pktio_test_pktin_queue_config_direct),
 	ODP_TEST_INFO(pktio_test_pktin_queue_config_sched),
+	ODP_TEST_INFO(pktio_test_pktin_queue_config_multi_sched),
 	ODP_TEST_INFO(pktio_test_pktin_queue_config_queue),
 	ODP_TEST_INFO(pktio_test_pktout_queue_config),
 	ODP_TEST_INFO(pktio_test_plain_queue),
