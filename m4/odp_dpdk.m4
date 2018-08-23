@@ -121,9 +121,9 @@ AC_DEFUN([ODP_DPDK], [dnl
 AS_IF([test "x$1" = "xsystem"], [dnl
     DPDK_CPPFLAGS="-isystem /usr/include/dpdk"
     DPDK_LDFLAGS=""
-    DPDK_LIB_PATH="`$CC --print-file-name=libdpdk.so`"
+    DPDK_LIB_PATH="`$CC $CFLAGS $LDFLAGS --print-file-name=libdpdk.so`"
     if test "$DPDK_LIB_PATH" = "libdpdk.so" ; then
-	DPDK_LIB_PATH="`$CC --print-file-name=libdpdk.a`"
+	DPDK_LIB_PATH="`$CC $CFLAGS $LDFLAGS --print-file-name=libdpdk.a`"
         AS_IF([test "$DPDK_LIB_PATH" = "libdpdk.a"],
            [AC_MSG_FAILURE([Could not locate system DPDK library directory])])
     else
