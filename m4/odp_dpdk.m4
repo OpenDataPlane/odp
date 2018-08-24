@@ -9,9 +9,9 @@ cur_driver=`basename "$filename" .a | sed -e 's/^lib//'`
 AS_VAR_APPEND([DPDK_PMDS], [-l$cur_driver,])
 AS_CASE([$cur_driver],
     [rte_pmd_nfp], [AS_VAR_APPEND([DPDK_LIBS], [" -lm"])],
-    [rte_pmd_mlx4], [AS_VAR_APPEND([DPDK_LIBS], [" -lmlx4 -libverbs"])],
-    [rte_pmd_mlx5], [AS_VAR_APPEND([DPDK_LIBS], [" -lmlx5 -libverbs"])],
-    [rte_pmd_pcap], [AS_VAR_APPEND([DPDK_LIBS], [" -lpcap"])],
+    [rte_pmd_mlx4], [AS_VAR_APPEND([DPDK_LIBS], [" -l$cur_driver"])],
+    [rte_pmd_mlx5], [AS_VAR_APPEND([DPDK_LIBS], [" -l$cur_driver"])],
+    [rte_pmd_pcap], [AS_VAR_APPEND([DPDK_LIBS], [" -l$cur_driver -lpcap"])],
     [rte_pmd_aesni_gcm], [AS_VAR_APPEND([DPDK_LIBS], [" -lIPSec_MB"])],
     [rte_pmd_aesni_mb], [AS_VAR_APPEND([DPDK_LIBS], [" -lIPSec_MB"])],
     [rte_pmd_kasumi], [AS_VAR_APPEND([DPDK_LIBS], [" -lsso_kasumi"])],
