@@ -49,7 +49,8 @@ static inline int spsc_enq_multi(odp_queue_t handle,
 		return -1;
 	}
 
-	return ring_spsc_enq_multi(ring_spsc, buf_idx, num);
+	return ring_spsc_enq_multi(ring_spsc, queue->s.ring_data,
+				   queue->s.ring_mask, buf_idx, num);
 }
 
 static inline int spsc_deq_multi(odp_queue_t handle,
@@ -68,7 +69,8 @@ static inline int spsc_deq_multi(odp_queue_t handle,
 		return -1;
 	}
 
-	num_deq = ring_spsc_deq_multi(ring_spsc, buf_idx, num);
+	num_deq = ring_spsc_deq_multi(ring_spsc, queue->s.ring_data,
+				      queue->s.ring_mask, buf_idx, num);
 
 	if (num_deq == 0)
 		return 0;
@@ -127,6 +129,7 @@ void queue_spsc_init(queue_entry_t *queue, uint32_t queue_size)
 
 	offset = queue->s.index * (uint64_t)queue_glb->config.max_queue_size;
 
-	ring_spsc_init(&queue->s.ring_spsc, &queue_glb->ring_data[offset],
-		       queue_size);
+	queue->s.ring_data = &queue_glb->ring_data[offset];
+	queue->s.ring_mask = queue_size - 1;
+	ring_spsc_init(&queue->s.ring_spsc);
 }
