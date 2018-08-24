@@ -687,7 +687,8 @@ static inline int _sched_queue_enq_multi(odp_queue_t handle,
 		return -1;
 	}
 
-	num_enq = ring_st_enq_multi(ring_st, buf_idx, num);
+	num_enq = ring_st_enq_multi(ring_st, queue->s.ring_data,
+				    queue->s.ring_mask, buf_idx, num);
 
 	if (odp_unlikely(num_enq == 0)) {
 		UNLOCK(queue);
@@ -728,7 +729,8 @@ int sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int max_num,
 		return -1;
 	}
 
-	num_deq = ring_st_deq_multi(ring_st, buf_idx, max_num);
+	num_deq = ring_st_deq_multi(ring_st, queue->s.ring_data,
+				    queue->s.ring_mask, buf_idx, max_num);
 
 	if (num_deq == 0) {
 		/* Already empty queue */
@@ -875,8 +877,10 @@ static int queue_init(queue_entry_t *queue, const char *name,
 		} else {
 			queue->s.enqueue            = sched_queue_enq;
 			queue->s.enqueue_multi      = sched_queue_enq_multi;
-			ring_st_init(&queue->s.ring_st,
-				     &queue_glb->ring_data[offset], queue_size);
+
+			queue->s.ring_data = &queue_glb->ring_data[offset];
+			queue->s.ring_mask = queue_size - 1;
+			ring_st_init(&queue->s.ring_st);
 		}
 	}
 
