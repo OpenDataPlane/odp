@@ -55,7 +55,6 @@ env:
         # you need generated new one at https://codecov.io specific for your repo.
         - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
         - DPDK_VERS="17.11.3"
-        - if [ -z "${DOCKER_NAMESPACE} ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
     matrix:
         - CONF=""
         - CONF="--disable-abi-compat"
@@ -75,6 +74,7 @@ compiler:
 install:
         - sudo apt-get install linux-headers-`uname -r`
 script:
+        - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
         - if [ "${CC#clang}" != "${CC}" ] ; then LD="" CXX=clang++; fi
         - if [ -n "${CROSS_ARCH}" ] ; then
                docker run  -i -t -v `pwd`:/odp
@@ -104,6 +104,7 @@ jobs:
                   env: TEST=coverage
                   compiler: gcc
                   script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
                           - docker run --privileged -i -t
                               -v `pwd`:/odp --shm-size 8g
                               -e CODECOV_TOKEN="${CODECOV_TOKEN}"
@@ -114,6 +115,7 @@ jobs:
                   env: TEST=distcheck
                   compiler: gcc
                   script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
                           - docker run --privileged -i -t
                               -v `pwd`:/odp --shm-size 8g
                               -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
@@ -150,6 +152,7 @@ jobs:
                 - stage: "build only"
                   env: Ubuntu14.04_arm64
                   script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
                           - docker run  -i -t -v `pwd`:/odp
                               ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_14.04.05 /odp/scripts/ci/build_arm64.sh
                 - stage: test
@@ -174,6 +177,7 @@ jobs:
                   compiler: gcc
                   env: CROSS_ARCH="i386"
                   script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
                           - docker run --privileged -i -t
                               -v `pwd`:/odp
                               -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
@@ -183,6 +187,7 @@ jobs:
                   compiler: clang
                   env: CROSS_ARCH="i386"
                   script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
                           - docker run --privileged -i -t
                               -v `pwd`:/odp
                               -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
@@ -210,6 +215,7 @@ jobs:
                   compiler: gcc
                   env: CROSS_ARCH="i386" CONF="--disable-abi-compat"
                   script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
                           - docker run --privileged -i -t
                               -v `pwd`:/odp
                               -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
@@ -219,6 +225,7 @@ jobs:
                   compiler: clang
                   env: CROSS_ARCH="i386" CONF="--disable-abi-compat"
                   script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
                           - docker run --privileged -i -t
                               -v `pwd`:/odp
                               -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
