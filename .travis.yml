@@ -92,7 +92,7 @@ script:
                  -v `pwd`:/odp --shm-size 8g
                  -e CC="${CC}"
                  -e CONF="${CONF}"
-                 ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_x86_64.sh ;
+                 ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/check.sh ;
           fi
 jobs:
         include:
@@ -152,12 +152,41 @@ jobs:
                                true
                              fi
                 - stage: "build only"
-                  env: Ubuntu16.04_arm64
+                  env: ARCH=x86_64
+                  install:
+                          - true
                   script:
                           - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
                           - docker run  -i -t -v `pwd`:/odp
                               -e CC="${CC}"
-                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_arm64.sh
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${ARCH}.sh
+                - stage: "build only"
+                  env: ARCH=x86_64 CC=clang
+                  install:
+                          - true
+                  script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
+                          - docker run  -i -t -v `pwd`:/odp
+                              -e CC="${CC}"
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${ARCH}.sh
+                - stage: "build only"
+                  env: ARCH=arm64
+                  install:
+                          - true
+                  script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
+                          - docker run  -i -t -v `pwd`:/odp
+                              -e CC="${CC}"
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${ARCH}.sh
+                - stage: "build only"
+                  env: ARCH=i386
+                  install:
+                          - true
+                  script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
+                          - docker run  -i -t -v `pwd`:/odp
+                              -e CC="${CC}"
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${ARCH}.sh
                 - stage: test
                   canfail: yes
                   env: TEST=checkpatch
