@@ -1,21 +1,11 @@
 #!/bin/bash
 set -e
 
-# CC LD AR CXX has to be predifubed
-#
+if [ "${CC#clang}" != "${CC}" ] ; then
+	export CXX="clang++"
+fi
 
-export PKG_CONFIG_PATH="$HOME/cunit-install/x86_64/lib/pkgconfig:${PKG_CONFIG_PATH}"
-
-CWD=$(dirname "$0")
-TDIR=`mktemp -d -p ~`
-
-cd ${TDIR}
-echo 1000 | tee /proc/sys/vm/nr_hugepages
-mkdir -p /mnt/huge
-mount -t hugetlbfs nodev /mnt/huge
-
-git clone ${CWD}/../../ odp
-cd ./odp
+cd "$(dirname "$0")"/../..
 ./bootstrap
 ./configure \
 	CFLAGS="-O0 -coverage $CLFAGS" CXXFLAGS="-O0 -coverage $CXXFLAGS" LDFLAGS="--coverage $LDFLAGS" \
@@ -23,7 +13,11 @@ cd ./odp
 export CCACHE_DISABLE=1
 make -j $(nproc)
 
-# ignore possible failures there because these tests depends on measurements
+echo 1000 | tee /proc/sys/vm/nr_hugepages
+mkdir -p /mnt/huge
+mount -t hugetlbfs nodev /mnt/huge
+
+# Ignore possible failures there because these tests depends on measurements
 # and systems might differ in performance.
 export CI="true"
 
@@ -49,8 +43,5 @@ fi
 
 
 bash <(curl -s https://codecov.io/bash) -X coveragepy
-
-cd ~
-rm -rf ${TDIR}
 
 umount /mnt/huge
