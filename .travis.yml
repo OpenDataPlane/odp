@@ -20,16 +20,7 @@ stages:
   - "build only"
   - test
 
-addons:
-        apt:
-                packages:
-                        - gcc
-                        - clang-3.8
-                        - automake autoconf libtool libssl-dev graphviz mscgen
-                        - libconfig-dev
-                        - codespell
-                        - libpcap-dev
-                        - libnuma-dev
+#addons:
 #        coverity_scan:
 #                project:
 #                        name: "$TRAVIS_REPO_SLUG"
@@ -42,9 +33,7 @@ cache:
         ccache: true
         pip: true
         directories:
-                - dpdk
                 - netmap
-                - $HOME/cunit-install
                 - $HOME/doxygen-install
 
 env:
@@ -54,11 +43,17 @@ env:
         # for individual commit validation. But you you want to track tests history
         # you need generated new one at https://codecov.io specific for your repo.
         - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
-        - DPDK_VERS="17.11.3"
-        - if [ -z "${DOCKER_NAMESPACE} ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
     matrix:
         - CONF=""
         - CONF="--disable-abi-compat"
+        - CROSS_ARCH="arm64"
+        - CROSS_ARCH="armhf"
+        - CROSS_ARCH="powerpc"
+        - CROSS_ARCH="i386"
+        - CROSS_ARCH="arm64" CONF="--disable-abi-compat"
+        - CROSS_ARCH="armhf" CONF="--disable-abi-compat"
+        - CROSS_ARCH="powerpc" CONF="--disable-abi-compat"
+        - CROSS_ARCH="i386" CONF="--disable-abi-compat"
         - CONF="--enable-deprecated"
         - CONF="--enable-dpdk-zero-copy --disable-static-applications"
         - CONF="--disable-static-applications"
@@ -66,7 +61,6 @@ env:
         - CONF="--disable-host-optimization --disable-abi-compat"
         - CONF="--enable-pcapng-support"
         - CONF="--without-openssl"
-        - DPDK_SHARED="y" CONF="--disable-static-applications"
 
 compiler:
         - gcc
@@ -74,14 +68,7 @@ compiler:
 
 install:
         - sudo apt-get install linux-headers-`uname -r`
-script:
-        - if [ "${CC#clang}" != "${CC}" ] ; then LD="" CXX=clang++; fi
-        - if [ -n "${CROSS_ARCH}" ] ; then
-               docker run  -i -t -v `pwd`:/odp
-                 -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
-                 -e CONF="${CONF}" -e DPDK_SHARED="${DPDK_SHARED}"
-                 ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_14.04.05 /odp/scripts/ci/build_${CROSS_ARCH}.sh ;
-          else
+        - if [ -z "${CROSS_ARCH}" ] ; then
                echo "compilling netmap";
                CDIR=`pwd` ;
                git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git;
@@ -91,12 +78,21 @@ script:
                popd;
                sudo insmod ./netmap/LINUX/netmap.ko;
                CONF="$CONF --with-netmap-path=/odp/netmap";
+          fi
+script:
+        - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
+        - if [ -n "${CROSS_ARCH}" ] ; then
+               docker run  -i -t -v `pwd`:/odp
+                 -e CC="${CC}"
+                 -e CONF="${CONF}"
+                 ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${CROSS_ARCH}.sh ;
+          else
                echo "Running test" ;
                docker run --privileged -i -t
                  -v `pwd`:/odp --shm-size 8g
-                 -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
-                 -e CONF="${CONF}" -e DPDK_SHARED="${DPDK_SHARED}"
-                 ${DOCKER_NAMESPACE}/travis-odp-lng-x86 /odp/scripts/ci/build_x86_64.sh ;
+                 -e CC="${CC}"
+                 -e CONF="${CONF}"
+                 ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/check.sh ;
           fi
 jobs:
         include:
@@ -104,24 +100,32 @@ jobs:
                   env: TEST=coverage
                   compiler: gcc
                   script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
                           - docker run --privileged -i -t
                               -v `pwd`:/odp --shm-size 8g
                               -e CODECOV_TOKEN="${CODECOV_TOKEN}"
-                              -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
+                              -e CC="${CC}"
                               -e CONF="${CONF}"
-                              ${DOCKER_NAMESPACE}/travis-odp-lng-x86 /odp/scripts/ci/coverage.sh
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/coverage.sh
                 - stage: test
                   env: TEST=distcheck
                   compiler: gcc
                   script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
                           - docker run --privileged -i -t
                               -v `pwd`:/odp --shm-size 8g
-                              -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
+                              -e CC="${CC}"
                               -e CONF="${CONF}"
-                              ${DOCKER_NAMESPACE}/travis-odp-lng-x86 /odp/scripts/ci/distcheck.sh
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/distcheck.sh
                 - stage: "build only"
                   env: TEST=doxygen
                   compiler: gcc
+                  addons:
+                          apt:
+                                  packages:
+                                          - libconfig-dev
+                                          - libssl-dev
+                                          - cmake
                   install:
                           # Updated Doxygen
                         - |
@@ -148,82 +152,41 @@ jobs:
                                true
                              fi
                 - stage: "build only"
-                  env: Ubuntu14.04_arm64
+                  env: ARCH=x86_64
+                  install:
+                          - true
                   script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
                           - docker run  -i -t -v `pwd`:/odp
-                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_14.04.05 /odp/scripts/ci/build_arm64.sh
-                - stage: test
-                  compiler: gcc
-                  env: CROSS_ARCH="arm64"
-                - stage: test
-                  compiler: clang
-                  env: CROSS_ARCH="arm64"
-                - stage: test
-                  compiler: gcc
-                  env: CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
-                - stage: test
-                  compiler: clang
-                  env: CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
-                - stage: test
-                  compiler: gcc
-                  env: CROSS_ARCH="powerpc"
-                - stage: test
-                  compiler: clang
-                  env: CROSS_ARCH="powerpc"
-                - stage: test
-                  compiler: gcc
-                  env: CROSS_ARCH="i386"
+                              -e CC="${CC}"
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${ARCH}.sh
+                - stage: "build only"
+                  env: ARCH=x86_64 CC=clang
+                  install:
+                          - true
                   script:
-                          - docker run --privileged -i -t
-                              -v `pwd`:/odp
-                              -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
-                              -e CONF="${CONF}"
-                             ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_14.04.05_i386 /odp/scripts/ci/build_${CROSS_ARCH}.sh ;
-                - stage: test
-                  compiler: clang
-                  env: CROSS_ARCH="i386"
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
+                          - docker run  -i -t -v `pwd`:/odp
+                              -e CC="${CC}"
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${ARCH}.sh
+                - stage: "build only"
+                  env: ARCH=arm64
+                  install:
+                          - true
                   script:
-                          - docker run --privileged -i -t
-                              -v `pwd`:/odp
-                              -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
-                              -e CONF="${CONF}"
-                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_14.04.05_i386 /odp/scripts/ci/build_${CROSS_ARCH}.sh ;
-                - stage: test
-                  compiler: gcc
-                  env: CROSS_ARCH="arm64" CONF="--disable-abi-compat"
-                - stage: test
-                  compiler: clang
-                  env: CROSS_ARCH="arm64" CONF="--disable-abi-compat"
-                - stage: test
-                  compiler: gcc
-                  env: CROSS_ARCH="armhf" CFLAGS="-march=armv7-a" CONF="--disable-abi-compat"
-                - stage: test
-                  compiler: clang
-                  env: CROSS_ARCH="armhf" CFLAGS="-march=armv7-a" CONF="--disable-abi-compat"
-                - stage: test
-                  compiler: gcc
-                  env: CROSS_ARCH="powerpc" CONF="--disable-abi-compat"
-                - stage: test
-                  compiler: clang
-                  env: CROSS_ARCH="powerpc" CONF="--disable-abi-compat"
-                - stage: test
-                  compiler: gcc
-                  env: CROSS_ARCH="i386" CONF="--disable-abi-compat"
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
+                          - docker run  -i -t -v `pwd`:/odp
+                              -e CC="${CC}"
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${ARCH}.sh
+                - stage: "build only"
+                  env: ARCH=i386
+                  install:
+                          - true
                   script:
-                          - docker run --privileged -i -t
-                              -v `pwd`:/odp
-                              -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
-                              -e CONF="${CONF}"
-                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_14.04.05_i386 /odp/scripts/ci/build_${CROSS_ARCH}.sh ;
-                - stage: test
-                  compiler: clang
-                  env: CROSS_ARCH="i386" CONF="--disable-abi-compat"
-                  script:
-                          - docker run --privileged -i -t
-                              -v `pwd`:/odp
-                              -e CC="${CC}" -e LD="${LD}" -e CXX="${CXX}"
-                              -e CONF="${CONF}"
-                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_14.04.05_i386 /odp/scripts/ci/build_${CROSS_ARCH}.sh ;
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
+                          - docker run  -i -t -v `pwd`:/odp
+                              -e CC="${CC}"
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${ARCH}.sh
                 - stage: test
                   canfail: yes
                   env: TEST=checkpatch
