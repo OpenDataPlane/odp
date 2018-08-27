@@ -68,14 +68,7 @@ compiler:
 
 install:
         - sudo apt-get install linux-headers-`uname -r`
-script:
-        - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
-        - if [ -n "${CROSS_ARCH}" ] ; then
-               docker run  -i -t -v `pwd`:/odp
-                 -e CC="${CC}"
-                 -e CONF="${CONF}"
-                 ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${CROSS_ARCH}.sh ;
-          else
+        - if [ -z "${CROSS_ARCH}" ] ; then
                echo "compilling netmap";
                CDIR=`pwd` ;
                git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git;
@@ -85,6 +78,15 @@ script:
                popd;
                sudo insmod ./netmap/LINUX/netmap.ko;
                CONF="$CONF --with-netmap-path=/odp/netmap";
+          fi
+script:
+        - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
+        - if [ -n "${CROSS_ARCH}" ] ; then
+               docker run  -i -t -v `pwd`:/odp
+                 -e CC="${CC}"
+                 -e CONF="${CONF}"
+                 ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${CROSS_ARCH}.sh ;
+          else
                echo "Running test" ;
                docker run --privileged -i -t
                  -v `pwd`:/odp --shm-size 8g
