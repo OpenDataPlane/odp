@@ -14,12 +14,12 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
-#define MAX_QUEUES_PER_CPU  1024
-#define MAX_QUEUES          (ODP_THREAD_COUNT_MAX * MAX_QUEUES_PER_CPU)
+#define MAX_QUEUES  (256 * 1024)
 
 typedef struct test_options_t {
 	uint32_t num_cpu;
 	uint32_t num_queue;
+	uint32_t num_dummy;
 	uint32_t num_event;
 	uint32_t num_round;
 	uint32_t max_burst;
@@ -60,10 +60,11 @@ static void print_usage(void)
 	       "Usage: odp_sched_perf [options]\n"
 	       "\n"
 	       "  -c, --num_cpu          Number of CPUs (worker threads). 0: all available CPUs. Default: 1.\n"
-	       "  -q, --num_queue        Number of queues per CPU. Default: 1.\n"
-	       "  -e, --num_event        Number of events per queue\n"
+	       "  -q, --num_queue        Number of queues. Default: 1.\n"
+	       "  -d, --num_dummy        Number of empty queues. Default: 0.\n"
+	       "  -e, --num_event        Number of events per queue. Default: 100.\n"
 	       "  -r, --num_round        Number of rounds\n"
-	       "  -b, --burst            Maximum number of events per operation\n"
+	       "  -b, --burst            Maximum number of events per operation. Default: 100.\n"
 	       "  -t, --type             Queue type. 0: parallel, 1: atomic, 2: ordered. Default: 0.\n"
 	       "  -h, --help             This help\n"
 	       "\n");
@@ -78,6 +79,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	static const struct option longopts[] = {
 		{"num_cpu",   required_argument, NULL, 'c'},
 		{"num_queue", required_argument, NULL, 'q'},
+		{"num_dummy", required_argument, NULL, 'd'},
 		{"num_event", required_argument, NULL, 'e'},
 		{"num_round", required_argument, NULL, 'r'},
 		{"burst",     required_argument, NULL, 'b'},
@@ -86,10 +88,11 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:q:e:r:b:t:h";
+	static const char *shortopts = "+c:q:d:e:r:b:t:h";
 
 	test_options->num_cpu    = 1;
 	test_options->num_queue  = 1;
+	test_options->num_dummy  = 0;
 	test_options->num_event  = 100;
 	test_options->num_round  = 100000;
 	test_options->max_burst  = 100;
@@ -107,6 +110,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 'q':
 			test_options->num_queue = atoi(optarg);
+			break;
+		case 'd':
+			test_options->num_dummy = atoi(optarg);
 			break;
 		case 'e':
 			test_options->num_event = atoi(optarg);
@@ -129,15 +135,15 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		}
 	}
 
-	if (test_options->num_queue > MAX_QUEUES_PER_CPU) {
-		printf("Error: Too many queues per worker. Max supported %i\n.",
-		       MAX_QUEUES_PER_CPU);
+	if ((test_options->num_queue + test_options->num_dummy) > MAX_QUEUES) {
+		printf("Error: Too many queues. Max supported %i\n.",
+		       MAX_QUEUES);
 		ret = -1;
 	}
 
-	test_options->tot_queue = test_options->num_queue *
-				  test_options->num_cpu;
-	test_options->tot_event = test_options->tot_queue *
+	test_options->tot_queue = test_options->num_queue +
+				  test_options->num_dummy;
+	test_options->tot_event = test_options->num_queue *
 				  test_options->num_event;
 
 	return ret;
@@ -182,6 +188,7 @@ static int create_pool(test_global_t *global)
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_cpu   = test_options->num_cpu;
 	uint32_t num_queue = test_options->num_queue;
+	uint32_t num_dummy = test_options->num_dummy;
 	uint32_t num_event = test_options->num_event;
 	uint32_t num_round = test_options->num_round;
 	uint32_t max_burst = test_options->max_burst;
@@ -190,11 +197,12 @@ static int create_pool(test_global_t *global)
 
 	printf("\nScheduler performance test\n");
 	printf("  num cpu          %u\n", num_cpu);
-	printf("  queues per cpu   %u\n", num_queue);
+	printf("  num queues       %u\n", num_queue);
+	printf("  num empty queues %u\n", num_dummy);
+	printf("  total queues     %u\n", tot_queue);
 	printf("  events per queue %u\n", num_event);
 	printf("  max burst size   %u\n", max_burst);
-	printf("  num queues       %u\n", tot_queue);
-	printf("  num events       %u\n", tot_event);
+	printf("  total events     %u\n", tot_event);
 	printf("  num rounds       %u\n", num_round);
 
 	if (odp_pool_capability(&pool_capa)) {
@@ -234,6 +242,7 @@ static int create_queues(test_global_t *global)
 	uint32_t i, j;
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_event = test_options->num_event;
+	uint32_t num_queue = test_options->num_queue;
 	uint32_t tot_queue = test_options->tot_queue;
 	int type = test_options->queue_type;
 	odp_pool_t pool = global->pool;
@@ -285,7 +294,8 @@ static int create_queues(test_global_t *global)
 		}
 	}
 
-	for (i = 0; i < tot_queue; i++) {
+	/* Store events into queues. Dummy queues are left empty. */
+	for (i = 0; i < num_queue; i++) {
 		queue = global->queue[i];
 
 		for (j = 0; j < num_event; j++) {
