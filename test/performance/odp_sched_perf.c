@@ -24,6 +24,8 @@ typedef struct test_options_t {
 	uint32_t num_round;
 	uint32_t max_burst;
 	int      queue_type;
+	int      forward;
+	uint32_t queue_size;
 	uint32_t tot_queue;
 	uint32_t tot_event;
 
@@ -66,6 +68,7 @@ static void print_usage(void)
 	       "  -r, --num_round        Number of rounds\n"
 	       "  -b, --burst            Maximum number of events per operation. Default: 100.\n"
 	       "  -t, --type             Queue type. 0: parallel, 1: atomic, 2: ordered. Default: 0.\n"
+	       "  -f, --forward          0: Keep event in the original queue, 1: Forward event to the next queue. Default: 0.\n"
 	       "  -h, --help             This help\n"
 	       "\n");
 }
@@ -84,11 +87,12 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"num_round", required_argument, NULL, 'r'},
 		{"burst",     required_argument, NULL, 'b'},
 		{"type",      required_argument, NULL, 't'},
+		{"forward",   required_argument, NULL, 'f'},
 		{"help",      no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:q:d:e:r:b:t:h";
+	static const char *shortopts = "+c:q:d:e:r:b:t:f:h";
 
 	test_options->num_cpu    = 1;
 	test_options->num_queue  = 1;
@@ -97,6 +101,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->num_round  = 100000;
 	test_options->max_burst  = 100;
 	test_options->queue_type = 0;
+	test_options->forward    = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -126,6 +131,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		case 't':
 			test_options->queue_type = atoi(optarg);
 			break;
+		case 'f':
+			test_options->forward = atoi(optarg);
+			break;
 		case 'h':
 			/* fall through */
 		default:
@@ -145,6 +153,12 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 				  test_options->num_dummy;
 	test_options->tot_event = test_options->num_queue *
 				  test_options->num_event;
+
+	test_options->queue_size = test_options->num_event;
+
+	/* When forwarding, all events may end up into a single queue. */
+	if (test_options->forward)
+		test_options->queue_size = test_options->tot_event;
 
 	return ret;
 }
@@ -194,6 +208,8 @@ static int create_pool(test_global_t *global)
 	uint32_t max_burst = test_options->max_burst;
 	uint32_t tot_queue = test_options->tot_queue;
 	uint32_t tot_event = test_options->tot_event;
+	uint32_t queue_size = test_options->queue_size;
+	int      forward   = test_options->forward;
 
 	printf("\nScheduler performance test\n");
 	printf("  num cpu          %u\n", num_cpu);
@@ -201,9 +217,11 @@ static int create_pool(test_global_t *global)
 	printf("  num empty queues %u\n", num_dummy);
 	printf("  total queues     %u\n", tot_queue);
 	printf("  events per queue %u\n", num_event);
+	printf("  queue size       %u\n", queue_size);
 	printf("  max burst size   %u\n", max_burst);
 	printf("  total events     %u\n", tot_event);
 	printf("  num rounds       %u\n", num_round);
+	printf("  forward events   %i\n", forward ? 1 : 0);
 
 	if (odp_pool_capability(&pool_capa)) {
 		printf("Error: Pool capa failed.\n");
@@ -242,6 +260,7 @@ static int create_queues(test_global_t *global)
 	uint32_t i, j;
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_event = test_options->num_event;
+	uint32_t queue_size = test_options->queue_size;
 	uint32_t num_queue = test_options->num_queue;
 	uint32_t tot_queue = test_options->tot_queue;
 	int type = test_options->queue_type;
@@ -271,8 +290,8 @@ static int create_queues(test_global_t *global)
 	}
 
 	if (queue_capa.sched.max_size &&
-	    num_event > queue_capa.sched.max_size) {
-		printf("Max events per queue %u\n", queue_capa.sched.max_size);
+	    queue_size > queue_capa.sched.max_size) {
+		printf("Max queue size %u\n", queue_capa.sched.max_size);
 		return -1;
 	}
 
@@ -281,7 +300,7 @@ static int create_queues(test_global_t *global)
 	queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	queue_param.sched.sync  = sync;
 	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
-	queue_param.size = num_event;
+	queue_param.size = queue_size;
 
 	for (i = 0; i < tot_queue; i++) {
 		queue = odp_queue_create(NULL, &queue_param);
@@ -297,6 +316,19 @@ static int create_queues(test_global_t *global)
 	/* Store events into queues. Dummy queues are left empty. */
 	for (i = 0; i < num_queue; i++) {
 		queue = global->queue[i];
+
+		if (test_options->forward) {
+			uint32_t next = i + 1;
+
+			if (next == num_queue)
+				next = 0;
+
+			if (odp_queue_context_set(queue, &global->queue[next],
+						  sizeof(odp_queue_t))) {
+				printf("Error: Context set failed %u\n", i);
+				return -1;
+			}
+		}
 
 		for (j = 0; j < num_event; j++) {
 			buf = odp_buffer_alloc(pool);
@@ -349,10 +381,12 @@ static int test_sched(void *arg)
 	uint64_t events, enqueues;
 	odp_time_t t1, t2;
 	odp_queue_t queue;
+	odp_queue_t *next;
 	test_global_t *global = arg;
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_round = test_options->num_round;
 	uint32_t max_burst = test_options->max_burst;
+	int forward = test_options->forward;
 	odp_event_t ev[max_burst];
 
 	thr = odp_thread_id();
@@ -377,6 +411,11 @@ static int test_sched(void *arg)
 		if (odp_likely(num > 0)) {
 			events += num;
 			i = 0;
+
+			if (odp_unlikely(forward)) {
+				next  = odp_queue_context(queue);
+				queue = *next;
+			}
 
 			while (num) {
 				num_enq = odp_queue_enq_multi(queue, &ev[i],
@@ -429,6 +468,11 @@ static int test_sched(void *arg)
 
 		if (ev[0] == ODP_EVENT_INVALID)
 			break;
+
+		if (odp_unlikely(forward)) {
+			next  = odp_queue_context(queue);
+			queue = *next;
+		}
 
 		odp_queue_enq(queue, ev[0]);
 	}
