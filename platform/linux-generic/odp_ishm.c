@@ -1730,6 +1730,8 @@ int _odp_ishm_status(const char *title)
 	int nb_blocks = 0;
 	int single_va_blocks = 0;
 	int max_name_len = 0;
+	uint64_t lost_total = 0; /* statistics for total unused memory */
+	uint64_t len_total = 0;  /* statistics for total allocated memory */
 
 	odp_spinlock_lock(&ishm_tbl->lock);
 	procsync();
@@ -1747,10 +1749,10 @@ int _odp_ishm_status(const char *title)
 			max_name_len = str_len;
 	}
 
-	ODP_PRINT("ishm blocks allocated at: %s\n", title);
-
-	ODP_PRINT("    %-*s flag len        user_len seq ref start        fd"
-		  "  file\n", max_name_len, "name");
+	ODP_PRINT("%s\n", title);
+	ODP_PRINT("    %-*s flag %-29s %-08s   %-08s %-3s %-3s %-3s file\n",
+		  max_name_len, "name", "range", "user_len", "unused",
+		  "seq", "ref", "fd");
 
 	/* display block table: 1 line per entry +1 extra line if mapped here */
 	for (i = 0; i < ISHM_MAX_NB_BLOCKS; i++) {
@@ -1780,23 +1782,36 @@ int _odp_ishm_status(const char *title)
 			huge = '?';
 		}
 		proc_index = procfind_block(i);
-		ODP_PRINT("%2i  %-*s %s%c  0x%-08lx %-8lu %-3lu %-3lu",
+		lost_total += ishm_tbl->block[i].len -
+			      ishm_tbl->block[i].user_len;
+		len_total += ishm_tbl->block[i].len;
+		ODP_PRINT("%2i  %-*s %s%c  0x%-08lx-0x%08lx %-08ld   %-08ld %-3lu %-3lu",
 			  i, max_name_len, ishm_tbl->block[i].name,
 			  flags, huge,
-			  ishm_tbl->block[i].len,
+			  ishm_proctable->entry[proc_index].start,
+			  (uintptr_t)ishm_proctable->entry[proc_index].start +
+				ishm_tbl->block[i].len,
 			  ishm_tbl->block[i].user_len,
+			  ishm_tbl->block[i].len - ishm_tbl->block[i].user_len,
 			  ishm_tbl->block[i].seq,
 			  ishm_tbl->block[i].refcnt);
 
 		if (proc_index < 0)
 			continue;
 
-		ODP_PRINT("%-08lx %-3d",
-			  ishm_proctable->entry[proc_index].start,
+		ODP_PRINT(" %-3d",
 			  ishm_proctable->entry[proc_index].fd);
 
-		ODP_PRINT("%s\n", ishm_tbl->block[i].filename);
+		ODP_PRINT("%s\n", ishm_tbl->block[i].filename[0] ?
+			  ishm_tbl->block[i].filename : "(none)");
 	}
+	ODP_PRINT("TOTAL: %58s%-08ld %2s%-08ld\n",
+		  "", len_total,
+		  "", lost_total);
+	ODP_PRINT("%65s(%dMB) %4s(%dMB)\n",
+		  "", len_total / 1024 / 1024,
+		  "", lost_total / 1024 / 1024);
+
 
 	/* display the virtual space allocations... : */
 	ODP_PRINT("\nishm virtual space:\n");
