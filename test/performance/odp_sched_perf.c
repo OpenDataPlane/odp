@@ -564,6 +564,9 @@ static void print_stat(test_global_t *global)
 	       (1000.0 * rounds_ave) / nsec_ave);
 	printf("  events per sec:           %.3f M\n\n",
 	       (1000.0 * events_ave) / nsec_ave);
+
+	printf("TOTAL events per sec:       %.3f M\n\n",
+	       (1000.0 * events_sum) / nsec_ave);
 }
 
 int main(int argc, char **argv)
