@@ -14,4 +14,8 @@ make distcheck
 
 make clean
 
+# Ignore possible failures there because these tests depends on measurements
+# and systems might differ in performance.
+export CI="true"
+
 make distcheck DISTCHECK__CONFIGURE_FLAGS=--disable-abi-compat
