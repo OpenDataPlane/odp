@@ -22,25 +22,9 @@ mount -t hugetlbfs nodev /mnt/huge
 export CI="true"
 
 ODP_SCHEDULER=basic    make check
-if [ $? -ne 0 ]; then
-  find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
-fi
-
 ODP_SCHEDULER=sp       make check
-if [ $? -ne 0 ]; then
-  find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
-fi
-
 ODP_SCHEDULER=iquery   make check
-if [ $? -ne 0 ]; then
-  find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
-fi
-
 ODP_SCHEDULER=scalable make check
-if [ $? -ne 0 ]; then
-  find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
-fi
-
 
 bash <(curl -s https://codecov.io/bash) -X coveragepy
 
