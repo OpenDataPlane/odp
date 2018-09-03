@@ -1,3 +1,5 @@
+:imagesdir: ../images
+
 == IPsec services
 
 In addition to general cryptographic services, ODP offers offload support for
