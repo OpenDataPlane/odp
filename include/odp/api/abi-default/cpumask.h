@@ -23,8 +23,9 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 #include <odp/api/align.h>
+#include <sched.h>
 
-#define ODP_CPUMASK_SIZE 1024
+#define ODP_CPUMASK_SIZE (sizeof(cpu_set_t) * 8)
 
 #define ODP_CPUMASK_STR_SIZE ((ODP_CPUMASK_SIZE + 3) / 4 + 3)
 
