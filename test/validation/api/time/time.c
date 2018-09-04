@@ -14,7 +14,7 @@
 #define BUSY_LOOP_CNT_LONG	6000000000  /* used for t > 4 sec */
 #define MIN_TIME_RATE		32000
 #define MAX_TIME_RATE		15000000000
-#define DELAY_TOLERANCE		20000000	    /* deviation for delay */
+#define DELAY_TOLERANCE		40000000	    /* deviation for delay */
 #define WAIT_SECONDS            3
 
 static uint64_t local_res;
