@@ -442,8 +442,9 @@ int odp_sys_huge_page_size_all(uint64_t size[], int num)
 	/* See: kernel.org: hugetlbpage.txt */
 	dir = opendir("/sys/kernel/mm/hugepages");
 	if (!dir) {
-		ODP_ERR("Failed to open huge page directory\n");
-		return -1;
+		ODP_PRINT("Failed to open /sys/kernel/mm/hugepages: %s\n",
+			  strerror(errno));
+		return 0;
 	}
 
 	while ((entry = readdir(dir)) != NULL) {
