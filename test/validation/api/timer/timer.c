@@ -334,8 +334,8 @@ static void timer_test_queue_type(odp_queue_type_t queue_type)
 			tim = odp_timeout_timer(tmo);
 			tick = odp_timeout_tick(tmo);
 
-			CU_ASSERT(diff_period > (period_ns - (4 * res_ns)));
-			CU_ASSERT(diff_period < (period_ns + (4 * res_ns)));
+			CU_ASSERT(diff_period > (period_ns - (5 * res_ns)));
+			CU_ASSERT(diff_period < (period_ns + (5 * res_ns)));
 
 			LOG_DBG("timeout tick %" PRIu64 ", "
 				"timeout period %" PRIu64 "\n",
