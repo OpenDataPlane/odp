@@ -185,8 +185,19 @@ static void scheduler_test_wait_time(void)
 	upper_limit = odp_time_local_from_ns(5 * ODP_TIME_SEC_IN_NS +
 							ODP_WAIT_TOLERANCE);
 
-	CU_ASSERT(odp_time_cmp(diff, lower_limit) >= 0);
-	CU_ASSERT(odp_time_cmp(diff, upper_limit) <= 0);
+	if (odp_time_cmp(diff, lower_limit) <= 0) {
+		fprintf(stderr, "Exceed lower limit: "
+			"diff is %" PRIu64 ", lower_limit %" PRIu64 "\n",
+			odp_time_to_ns(diff), odp_time_to_ns(lower_limit));
+		CU_FAIL("Exceed lower limit\n");
+	}
+
+	if (odp_time_cmp(diff, upper_limit) >= 0) {
+		fprintf(stderr, "Exceed upper limit: "
+			"diff is %" PRIu64 ", upper_limit %" PRIu64 "\n",
+			odp_time_to_ns(diff), odp_time_to_ns(upper_limit));
+		CU_FAIL("Exceed upper limit\n");
+	}
 
 	CU_ASSERT_FATAL(odp_queue_destroy(queue) == 0);
 }
