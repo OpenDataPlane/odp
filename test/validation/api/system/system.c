@@ -216,7 +216,11 @@ static void system_test_odp_sys_huge_page_size(void)
 	uint64_t page;
 
 	page = odp_sys_huge_page_size();
-	CU_ASSERT(0 < page);
+	if (page == 0)
+		/* Not an error, but just to be sure to hit logs */
+		LOG_ERR("Huge pages do not seem to be supported\n");
+	else
+		CU_ASSERT(page % ODP_PAGE_SIZE == 0);
 }
 
 static void system_test_odp_sys_huge_page_size_all(void)
