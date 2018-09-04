@@ -5,4 +5,5 @@
  */
 
 #define _ODP_NEED_GENERIC_CPU_PAUSE
+#define ODP_CACHE_LINE_SIZE 128
 #include <odp/api/abi-default/cpu.h>
