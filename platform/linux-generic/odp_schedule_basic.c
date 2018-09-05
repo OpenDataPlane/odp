@@ -137,6 +137,7 @@ typedef struct ODP_ALIGNED_CACHE {
 		uint16_t    ev_index;
 		uint32_t    qi;
 		odp_queue_t queue;
+		ring_t      *ring;
 		odp_event_t ev[BURST_SIZE_MAX];
 	} stash;
 
@@ -604,10 +605,7 @@ static void schedule_pktio_start(int pktio_index, int num_pktin,
 static inline void release_atomic(void)
 {
 	uint32_t qi  = sched_local.stash.qi;
-	int grp      = sched->queue[qi].grp;
-	int prio     = sched->queue[qi].prio;
-	int spread   = sched->queue[qi].spread;
-	ring_t *ring = &sched->prio_q[grp][prio][spread].ring;
+	ring_t *ring = sched_local.stash.ring;
 
 	/* Release current atomic queue */
 	ring_enq(ring, sched->ring_mask, qi);
@@ -990,8 +988,9 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 			} else if (sync_ctx == ODP_SCHED_SYNC_ATOMIC) {
 				/* Hold queue during atomic access */
-				sched_local.stash.qi = qi;
-				sched_local.sync_ctx = sync_ctx;
+				sched_local.stash.qi   = qi;
+				sched_local.stash.ring = ring;
+				sched_local.sync_ctx   = sync_ctx;
 			} else {
 				/* Continue scheduling the queue */
 				ring_enq(ring, ring_mask, qi);
