@@ -402,11 +402,6 @@ static int schedule_init_global(void)
 	return 0;
 }
 
-static inline void queue_destroy_finalize(uint32_t qi)
-{
-	sched_queue_destroy_finalize(qi);
-}
-
 static int schedule_term_global(void)
 {
 	int ret = 0;
@@ -426,9 +421,6 @@ static int schedule_term_global(void)
 					int num;
 
 					num = sched_queue_deq(qi, events, 1, 1);
-
-					if (num < 0)
-						queue_destroy_finalize(qi);
 
 					if (num > 0)
 						ODP_ERR("Queue not empty\n");
@@ -944,10 +936,9 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 			num = sched_queue_deq(qi, ev_tbl, max_deq, !pktin);
 
-			if (num < 0) {
+			if (odp_unlikely(num < 0)) {
 				/* Destroyed queue. Continue scheduling the same
 				 * priority queue. */
-				sched_queue_destroy_finalize(qi);
 				continue;
 			}
 

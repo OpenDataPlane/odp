@@ -353,19 +353,6 @@ static odp_queue_t queue_create(const char *name,
 	return handle;
 }
 
-void sched_queue_destroy_finalize(uint32_t queue_index)
-{
-	queue_entry_t *queue = qentry_from_index(queue_index);
-
-	LOCK(queue);
-
-	if (queue->s.status == QUEUE_STATUS_DESTROYED) {
-		queue->s.status = QUEUE_STATUS_FREE;
-		sched_fn->destroy_queue(queue_index);
-	}
-	UNLOCK(queue);
-}
-
 void sched_queue_set_status(uint32_t queue_index, int status)
 {
 	queue_entry_t *queue = qentry_from_index(queue_index);
@@ -720,7 +707,12 @@ int sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int max_num,
 
 	if (odp_unlikely(status < QUEUE_STATUS_READY)) {
 		/* Bad queue, or queue has been destroyed.
-		 * Scheduler finalizes queue destroy after this. */
+		 * Inform scheduler about a destroyed queue. */
+		if (queue->s.status == QUEUE_STATUS_DESTROYED) {
+			queue->s.status = QUEUE_STATUS_FREE;
+			sched_fn->destroy_queue(queue_index);
+		}
+
 		UNLOCK(queue);
 		return -1;
 	}
