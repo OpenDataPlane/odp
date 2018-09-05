@@ -47,7 +47,7 @@
 #define CHAOS_PTR_TO_NDX(p) ((uint64_t)(uint32_t)(uintptr_t)p)
 #define CHAOS_NDX_TO_PTR(n) ((void *)(uintptr_t)n)
 
-#define ODP_WAIT_TOLERANCE	(60 * ODP_TIME_MSEC_IN_NS)
+#define ODP_WAIT_TOLERANCE	(150 * ODP_TIME_MSEC_IN_NS)
 
 /* Test global variables */
 typedef struct {
