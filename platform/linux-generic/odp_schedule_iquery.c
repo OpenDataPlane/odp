@@ -209,6 +209,7 @@ struct sched_thread_local {
 	 * in the same priority level.
 	 */
 	odp_rwlock_t lock;
+	int r_locked;
 	queue_index_sparse_t indexes[NUM_SCHED_PRIO];
 	sparse_bitmap_iterator_t iterators[NUM_SCHED_PRIO];
 
@@ -292,9 +293,7 @@ static int schedule_term_global(void)
 		if (sched->availables[i])
 			count = sched_queue_deq(i, events, 1, 1);
 
-		if (count < 0)
-			sched_queue_destroy_finalize(i);
-		else if (count > 0)
+		if (count > 0)
 			ODP_ERR("Queue (%d) not empty\n", i);
 	}
 
@@ -526,7 +525,14 @@ static void destroy_sched_queue(uint32_t queue_index)
 		return;
 	}
 
+	if (thread_local.r_locked)
+		odp_rwlock_read_unlock(&thread_local.lock);
+
 	__destroy_sched_queue(G, queue_index);
+
+	if (thread_local.r_locked)
+		odp_rwlock_read_lock(&thread_local.lock);
+
 	odp_rwlock_write_unlock(&G->lock);
 
 	if (sched->queues[queue_index].sync == ODP_SCHED_SYNC_ORDERED &&
@@ -613,9 +619,6 @@ static int schedule_pktio_stop(int pktio, int pktin ODP_UNUSED)
 	odp_rwlock_write_unlock(&sched->pktio_poll.lock);
 	return remains;
 }
-
-#define DO_SCHED_LOCK() odp_rwlock_read_lock(&thread_local.lock)
-#define DO_SCHED_UNLOCK() odp_rwlock_read_unlock(&thread_local.lock)
 
 static inline bool do_schedule_prio(int prio);
 
@@ -720,7 +723,9 @@ static int do_schedule(odp_queue_t *out_queue,
 	if (odp_unlikely(thread_local.pause))
 		return count;
 
-	DO_SCHED_LOCK();
+	odp_rwlock_read_lock(&thread_local.lock);
+	thread_local.r_locked = 1;
+
 	/* Schedule events */
 	for (prio = 0; prio < NUM_SCHED_PRIO; prio++) {
 		/* Round robin iterate the interested queue
@@ -732,11 +737,14 @@ static int do_schedule(odp_queue_t *out_queue,
 
 		count = pop_cache_events(out_ev, max_num);
 		assign_queue_handle(out_queue);
-		DO_SCHED_UNLOCK();
+
+		odp_rwlock_read_unlock(&thread_local.lock);
+		thread_local.r_locked = 0;
 		return count;
 	}
 
-	DO_SCHED_UNLOCK();
+	odp_rwlock_read_unlock(&thread_local.lock);
+	thread_local.r_locked = 0;
 
 	/* Poll packet input when there are no events */
 	pktio_poll_input();
@@ -1536,14 +1544,7 @@ static inline int consume_queue(int prio, unsigned int queue_index)
 
 	count = sched_queue_deq(queue_index, cache->stash, max, 1);
 
-	if (count < 0) {
-		DO_SCHED_UNLOCK();
-		sched_queue_destroy_finalize(queue_index);
-		DO_SCHED_LOCK();
-		return 0;
-	}
-
-	if (count == 0)
+	if (count <= 0)
 		return 0;
 
 	cache->top = &cache->stash[0];

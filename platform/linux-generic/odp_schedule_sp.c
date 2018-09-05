@@ -223,12 +223,21 @@ static int init_local(void)
 
 static int term_global(void)
 {
+	odp_event_t event;
 	int qi, ret = 0;
 
 	for (qi = 0; qi < NUM_QUEUE; qi++) {
+		int report = 1;
+
 		if (sched_global->queue_cmd[qi].s.init) {
-			/* todo: dequeue until empty ? */
-			sched_queue_destroy_finalize(qi);
+			while (sched_queue_deq(qi, &event, 1, 1) > 0) {
+				if (report) {
+					ODP_ERR("Queue not empty\n");
+					report = 0;
+				}
+				odp_event_free(event);
+			}
+
 		}
 	}
 
@@ -564,28 +573,20 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 		qi  = cmd->s.index;
 		num = sched_queue_deq(qi, events, 1, 1);
 
-		if (num > 0) {
-			sched_local.cmd = cmd;
-
-			if (from)
-				*from = queue_from_index(qi);
-
-			return num;
-		}
-
-		if (num < 0) {
-			/* Destroyed queue */
-			sched_queue_destroy_finalize(qi);
+		if (num <= 0) {
+			/* Destroyed or empty queue. Remove empty queue from
+			 * scheduling. A dequeue operation to on an already
+			 * empty queue moves it to NOTSCHED state and
+			 * sched_queue() will be called on next enqueue. */
 			continue;
 		}
 
-		if (num == 0) {
-			/* Remove empty queue from scheduling. A dequeue
-			 * operation to on an already empty queue moves
-			 * it to NOTSCHED state and sched_queue() will
-			 * be called on next enqueue. */
-			continue;
-		}
+		sched_local.cmd = cmd;
+
+		if (from)
+			*from = queue_from_index(qi);
+
+		return num;
 	}
 }
 
