@@ -239,15 +239,15 @@ typedef struct {
 } ishm_ftable_t;
 static ishm_ftable_t *ishm_ftbl;
 
-#define HP_CACHE_SIZE 64
 struct huge_page_cache {
 	uint64_t len;
+	int max_fds; /* maximum amount requested of pre-allocated huge pages */
 	int total;   /* amount of actually pre-allocated huge pages */
 	int idx;     /* retrieve fd[idx] to get a free file descriptor */
-	int fd[HP_CACHE_SIZE]; /* list of file descriptors */
+	int fd[];    /* list of file descriptors */
 };
 
-static struct huge_page_cache hpc;
+static struct huge_page_cache *hpc;
 
 #ifndef MAP_ANONYMOUS
 #define MAP_ANONYMOUS MAP_ANON
@@ -301,19 +301,14 @@ static void hp_init(void)
 	char filename[ISHM_FILENAME_MAXLEN];
 	char dir[ISHM_FILENAME_MAXLEN];
 	int count;
-
-	hpc.total = 0;
-	hpc.idx = -1;
-	hpc.len = odp_sys_huge_page_size();
+	void *addr;
 
 	if (!_odp_libconfig_lookup_ext_int("shm", NULL, "num_cached_hp",
 					   &count)) {
 		return;
 	}
 
-	if (count > HP_CACHE_SIZE)
-		count = HP_CACHE_SIZE;
-	else if (count <= 0)
+	if (count <= 0)
 		return;
 
 	ODP_DBG("Init HP cache with up to %d pages\n", count);
@@ -339,55 +334,77 @@ static void hp_init(void)
 		 dir,
 		 odp_global_data.main_pid);
 
+	addr = mmap(NULL,
+		    sizeof(struct huge_page_cache) + sizeof(int) * count,
+		    PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+	if (addr == MAP_FAILED) {
+		ODP_ERR("Unable to mmap memory for huge page cache\n.");
+		return;
+	}
+
+	hpc = addr;
+
+	hpc->max_fds = count;
+	hpc->total = 0;
+	hpc->idx = -1;
+	hpc->len = odp_sys_huge_page_size();
+
 	for (int i = 0; i < count; ++i) {
 		int fd;
 
-		fd = hp_create_file(hpc.len, filename);
-		if (fd == -1)
+		fd = hp_create_file(hpc->len, filename);
+		if (fd == -1) {
+			do {
+				hpc->fd[i++] = -1;
+			} while (i < count);
 			break;
-		hpc.total++;
-		hpc.fd[i] = fd;
+		}
+		hpc->total++;
+		hpc->fd[i] = fd;
 	}
-	hpc.idx = hpc.total - 1;
+	hpc->idx = hpc->total - 1;
 
 	ODP_DBG("HP cache has %d huge pages of size 0x%08" PRIx64 "\n",
-		hpc.total, hpc.len);
+		hpc->total, hpc->len);
 }
 
 static void hp_term(void)
 {
-	for (int i = 0; i < hpc.total; i++) {
-		if (hpc.fd[i] != -1)
-			close(hpc.fd[i]);
+	if (NULL == hpc)
+		return;
+
+	for (int i = 0; i < hpc->total; i++) {
+		if (hpc->fd[i] != -1)
+			close(hpc->fd[i]);
 	}
 
-	hpc.total = 0;
-	hpc.idx = -1;
-	hpc.len = 0;
+	hpc->total = 0;
+	hpc->idx = -1;
+	hpc->len = 0;
 }
 
 static int hp_get_cached(uint64_t len)
 {
 	int fd;
 
-	if (hpc.idx < 0 || len != hpc.len)
+	if (NULL == hpc || hpc->idx < 0 || len != hpc->len)
 		return -1;
 
-	fd = hpc.fd[hpc.idx];
-	hpc.fd[hpc.idx--] = -1;
+	fd = hpc->fd[hpc->idx];
+	hpc->fd[hpc->idx--] = -1;
 
 	return fd;
 }
 
 static int hp_put_cached(int fd)
 {
-	if (odp_unlikely(++hpc.idx >= hpc.total)) {
-		hpc.idx--;
+	if (NULL == hpc || odp_unlikely(++hpc->idx >= hpc->total)) {
+		hpc->idx--;
 		ODP_ERR("Trying to put more FD than allowed: %d\n", fd);
 		return -1;
 	}
 
-	hpc.fd[hpc.idx] = fd;
+	hpc->fd[hpc->idx] = fd;
 
 	return 0;
 }
