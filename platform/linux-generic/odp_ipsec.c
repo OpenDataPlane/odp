@@ -976,6 +976,31 @@ static int ipsec_out_tunnel_ipv6(odp_packet_t *pkt,
 	return 0;
 }
 
+#define IPSEC_RANDOM_BUF_SIZE 256
+
+static int ipsec_random_data(uint8_t *data, uint32_t len)
+{
+	static __thread uint8_t buffer[IPSEC_RANDOM_BUF_SIZE];
+	static __thread uint32_t buffer_used = IPSEC_RANDOM_BUF_SIZE;
+
+	if (odp_likely(buffer_used + len <= IPSEC_RANDOM_BUF_SIZE)) {
+		memcpy(data, &buffer[buffer_used], len);
+		buffer_used += len;
+	} else if (odp_likely(len <= IPSEC_RANDOM_BUF_SIZE)) {
+		uint32_t rnd_len;
+
+		rnd_len = odp_random_data(buffer, IPSEC_RANDOM_BUF_SIZE,
+					  odp_global_ro.ipsec_rand_kind);
+		if (odp_unlikely(rnd_len != IPSEC_RANDOM_BUF_SIZE))
+			return -1;
+		memcpy(data, &buffer[0], len);
+		buffer_used = len;
+	} else {
+		return -1;
+	}
+	return 0;
+}
+
 static int ipsec_out_iv(ipsec_state_t *state,
 			ipsec_sa_t *ipsec_sa)
 {
@@ -1002,12 +1027,7 @@ static int ipsec_out_iv(ipsec_state_t *state,
 			state->iv[15] = 1;
 		}
 	} else if (ipsec_sa->esp_iv_len) {
-		uint32_t len;
-
-		len = odp_random_data(state->iv, ipsec_sa->esp_iv_len,
-				      odp_global_ro.ipsec_rand_kind);
-
-		if (len != ipsec_sa->esp_iv_len)
+		if (ipsec_random_data(state->iv, ipsec_sa->esp_iv_len))
 			return -1;
 	}
 
