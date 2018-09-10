@@ -401,9 +401,8 @@ static inline sched_cmd_t *rem_head(int group, int prio)
 	int pktio;
 
 	prio_queue = &sched_global->prio_queue[group][prio];
-	ring_idx = ring_deq(&prio_queue->ring, RING_MASK);
 
-	if (ring_idx == RING_EMPTY)
+	if (ring_deq(&prio_queue->ring, RING_MASK, &ring_idx) == 0)
 		return NULL;
 
 	pktio = index_from_ring_idx(&index, ring_idx);

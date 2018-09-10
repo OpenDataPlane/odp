@@ -271,7 +271,7 @@ static int schedule_init_global(void)
 		ring_init(&queue->ring);
 
 		for (k = 0; k < PKTIO_RING_SIZE; k++)
-			queue->cmd_index[k] = RING_EMPTY;
+			queue->cmd_index[k] = -1;
 	}
 
 	for (i = 0; i < NUM_PKTIO_CMD; i++)
@@ -668,9 +668,8 @@ static inline void pktio_poll_input(void)
 	for (i = 0; i < PKTIO_CMD_QUEUES; i++,
 	     hash = (hash + 1) % PKTIO_CMD_QUEUES) {
 		ring = &sched->pktio_poll.queues[hash].ring;
-		index = ring_deq(ring, PKTIO_RING_MASK);
 
-		if (odp_unlikely(index == RING_EMPTY))
+		if (odp_unlikely(ring_deq(ring, PKTIO_RING_MASK, &index) == 0))
 			continue;
 
 		cmd = &sched->pktio_poll.commands[index];

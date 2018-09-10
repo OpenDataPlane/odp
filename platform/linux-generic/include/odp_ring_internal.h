@@ -18,9 +18,6 @@ extern "C" {
 #include <odp/api/plat/atomic_inlines.h>
 #include <odp/api/plat/cpu_inlines.h>
 
-/* Ring empty, not a valid data value. */
-#define RING_EMPTY ((uint32_t)-1)
-
 /* Ring of uint32_t data
  *
  * Ring stores head and tail counters. Ring indexes are formed from these
@@ -59,7 +56,7 @@ static inline void ring_init(ring_t *ring)
 }
 
 /* Dequeue data from the ring head */
-static inline uint32_t ring_deq(ring_t *ring, uint32_t mask)
+static inline uint32_t ring_deq(ring_t *ring, uint32_t mask, uint32_t *data)
 {
 	uint32_t head, tail, new_head;
 
@@ -73,7 +70,7 @@ static inline uint32_t ring_deq(ring_t *ring, uint32_t mask)
 		tail = odp_atomic_load_acq_u32(&ring->w_tail);
 
 		if (head == tail)
-			return RING_EMPTY;
+			return 0;
 
 		new_head = head + 1;
 
@@ -83,7 +80,8 @@ static inline uint32_t ring_deq(ring_t *ring, uint32_t mask)
 
 	/* Read data. CAS acquire-release ensures that data read
 	 * does not move above from here. */
-	return ring->data[new_head & mask];
+	*data = ring->data[new_head & mask];
+	return 1;
 }
 
 /* Dequeue multiple data from the ring head. Num is smaller than ring size. */
