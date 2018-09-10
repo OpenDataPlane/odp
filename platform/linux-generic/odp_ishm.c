@@ -17,7 +17,7 @@
  * Internal shared memory is mainly meant to be used internaly within ODP
  * (hence its name), but may also be allocated by odp applications and drivers,
  * in the future (through these interfaces).
- * To guarrentee this full pointer shareability (when reserved with the
+ * To guarantee this full pointer shareability (when reserved with the
  * _ODP_ISHM_SINGLE_VA flag) internal shared memory is handled as follows:
  * At global_init time, a huge virtual address space reservation is performed.
  * Note that this is just reserving virtual space, not physical memory.
@@ -84,7 +84,7 @@
  *
  * This is the number of separate ISHM areas that can be reserved concurrently
  * (Note that freeing such blocks may take time, or possibly never happen
- * if some of the block ownwers never procsync() after free). This number
+ * if some of the block owners never procsync() after free). This number
  * should take that into account)
  */
 #define ISHM_MAX_NB_BLOCKS 128
