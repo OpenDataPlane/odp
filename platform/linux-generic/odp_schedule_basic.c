@@ -416,8 +416,7 @@ static int schedule_term_global(void)
 				ring_t *ring = &sched->prio_q[grp][i][j].ring;
 				uint32_t qi;
 
-				while ((qi = ring_deq(ring, ring_mask)) !=
-				       RING_EMPTY) {
+				while (ring_deq(ring, ring_mask, &qi)) {
 					odp_event_t events[1];
 					int num;
 
@@ -907,10 +906,9 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 			/* Get queue index from the priority queue */
 			ring = &sched->prio_q[grp][prio][id].ring;
-			qi   = ring_deq(ring, ring_mask);
 
-			/* Priority queue empty */
-			if (qi == RING_EMPTY) {
+			if (ring_deq(ring, ring_mask, &qi) == 0) {
+				/* Priority queue empty */
 				i++;
 				id++;
 				continue;
