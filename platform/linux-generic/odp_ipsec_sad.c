@@ -42,7 +42,42 @@
 #warning IPV4_ID_RING_SIZE is too small for the maximum number of threads.
 #endif
 
+/*
+ * To avoid checking and updating the packet and byte counters in the
+ * SA for every packet, we increment the global counters once for several
+ * packets. We decrement a preallocated thread-local quota for every
+ * packet. When the quota runs out, we get a new quota by incementing the
+ * global counter.
+ *
+ * This improves performance but the looser synchronization between
+ * threads makes life time warnings and errors somewhat inaccurate.
+ * The warnings and errors may get triggered a bit too early since
+ * some threads may still have unused quota when the first thread
+ * hits the limit.
+ */
+#define SA_LIFE_PACKETS_PREALLOC  64
+#define SA_LIFE_BYTES_PREALLOC    4000
+
+typedef struct sa_thread_local_s {
+	/*
+	 * Packets that can be processed in this thread before looking at
+	 * the SA-global packet counter and checking hard and soft limits.
+	 */
+	uint32_t packet_quota;
+	/*
+	 * Bytes that can be processed in this thread before looking at
+	 * at the SA-global byte counter and checking hard and soft limits.
+	 */
+	uint32_t byte_quota;
+	/*
+	 * Life time status when this thread last checked the global
+	 * counter(s).
+	 */
+	odp_ipsec_op_status_t lifetime_status;
+} sa_thread_local_t;
+
 typedef struct ODP_ALIGNED_CACHE ipsec_thread_local_s {
+	sa_thread_local_t sa[ODP_CONFIG_IPSEC_SAS];
 	uint16_t first_ipv4_id; /* first ID of current block of IDs */
 	uint16_t next_ipv4_id;  /* next ID to be used */
 } ipsec_thread_local_t;
@@ -78,6 +113,24 @@ ipsec_sa_t *_odp_ipsec_sa_entry_from_hdl(odp_ipsec_sa_t sa)
 {
 	ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 	return ipsec_sa_entry_from_hdl(sa);
+}
+
+static inline sa_thread_local_t *ipsec_sa_thread_local(ipsec_sa_t *sa)
+{
+	return &ipsec_sa_tbl->per_thread[odp_thread_id()].sa[sa->ipsec_sa_idx];
+}
+
+static void init_sa_thread_local(ipsec_sa_t *sa)
+{
+	sa_thread_local_t *sa_tl;
+	int n;
+
+	for (n = 0; n < ODP_THREAD_COUNT_MAX; n++) {
+		sa_tl = &ipsec_sa_tbl->per_thread[n].sa[sa->ipsec_sa_idx];
+		sa_tl->packet_quota = 0;
+		sa_tl->byte_quota = 0;
+		sa_tl->lifetime_status.all = 0;
+	}
 }
 
 int _odp_ipsec_sad_init_global(void)
@@ -540,6 +593,8 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 				      &ses_create_rc))
 		goto error;
 
+	init_sa_thread_local(ipsec_sa);
+
 	ipsec_sa_publish(ipsec_sa);
 
 	return ipsec_sa->ipsec_sa_hdl;
@@ -681,17 +736,11 @@ int _odp_ipsec_sa_stats_precheck(ipsec_sa_t *ipsec_sa,
 				 odp_ipsec_op_status_t *status)
 {
 	int rc = 0;
+	sa_thread_local_t *sa_tl = ipsec_sa_thread_local(ipsec_sa);
 
-	if (ipsec_sa->hard_limit_bytes > 0 &&
-	    odp_atomic_load_u64(&ipsec_sa->hot.bytes) >
-	    ipsec_sa->hard_limit_bytes) {
-		status->error.hard_exp_bytes = 1;
-		rc = -1;
-	}
-	if (ipsec_sa->hard_limit_packets > 0 &&
-	    odp_atomic_load_u64(&ipsec_sa->hot.packets) >
-	    ipsec_sa->hard_limit_packets) {
-		status->error.hard_exp_packets = 1;
+	if (sa_tl->lifetime_status.error.hard_exp_packets ||
+	    sa_tl->lifetime_status.error.hard_exp_bytes) {
+		status->all |= sa_tl->lifetime_status.all;
 		rc = -1;
 	}
 
@@ -701,30 +750,47 @@ int _odp_ipsec_sa_stats_precheck(ipsec_sa_t *ipsec_sa,
 int _odp_ipsec_sa_stats_update(ipsec_sa_t *ipsec_sa, uint32_t len,
 			       odp_ipsec_op_status_t *status)
 {
-	uint64_t bytes = odp_atomic_fetch_add_u64(&ipsec_sa->hot.bytes, len) + len;
-	uint64_t packets = odp_atomic_fetch_add_u64(&ipsec_sa->hot.packets, 1) + 1;
-	int rc = 0;
+	sa_thread_local_t *sa_tl = ipsec_sa_thread_local(ipsec_sa);
+	uint64_t packets, bytes;
 
-	if (ipsec_sa->soft_limit_bytes > 0 &&
-	    bytes > ipsec_sa->soft_limit_bytes)
-		status->warn.soft_exp_bytes = 1;
+	if (odp_unlikely(sa_tl->packet_quota == 0)) {
+		packets = odp_atomic_fetch_add_u64(&ipsec_sa->hot.packets,
+						   SA_LIFE_PACKETS_PREALLOC);
+		packets += SA_LIFE_PACKETS_PREALLOC;
+		sa_tl->packet_quota += SA_LIFE_PACKETS_PREALLOC;
 
-	if (ipsec_sa->soft_limit_packets > 0 &&
-	    packets > ipsec_sa->soft_limit_packets)
-		status->warn.soft_exp_packets = 1;
+		if (ipsec_sa->soft_limit_packets > 0 &&
+		    packets >= ipsec_sa->soft_limit_packets)
+			sa_tl->lifetime_status.warn.soft_exp_packets = 1;
 
-	if (ipsec_sa->hard_limit_bytes > 0 &&
-	    bytes > ipsec_sa->hard_limit_bytes) {
-		status->error.hard_exp_bytes = 1;
-		rc = -1;
+		if (ipsec_sa->hard_limit_packets > 0 &&
+		    packets >= ipsec_sa->hard_limit_packets)
+			sa_tl->lifetime_status.error.hard_exp_packets = 1;
 	}
-	if (ipsec_sa->hard_limit_packets > 0 &&
-	    packets > ipsec_sa->hard_limit_packets) {
-		status->error.hard_exp_packets = 1;
-		rc = -1;
-	}
+	sa_tl->packet_quota--;
 
-	return rc;
+	if (odp_unlikely(sa_tl->byte_quota < len)) {
+		bytes = odp_atomic_fetch_add_u64(&ipsec_sa->hot.bytes,
+						 len + SA_LIFE_BYTES_PREALLOC);
+		bytes += len + SA_LIFE_BYTES_PREALLOC;
+		sa_tl->byte_quota += len + SA_LIFE_BYTES_PREALLOC;
+
+		if (ipsec_sa->soft_limit_bytes > 0 &&
+		    bytes >= ipsec_sa->soft_limit_bytes)
+			sa_tl->lifetime_status.warn.soft_exp_bytes = 1;
+
+		if (ipsec_sa->hard_limit_bytes > 0 &&
+		    bytes >= ipsec_sa->hard_limit_bytes)
+			sa_tl->lifetime_status.error.hard_exp_bytes = 1;
+	}
+	sa_tl->byte_quota -= len;
+
+	status->all |= sa_tl->lifetime_status.all;
+
+	if (sa_tl->lifetime_status.error.hard_exp_packets ||
+	    sa_tl->lifetime_status.error.hard_exp_bytes)
+		return -1;
+	return 0;
 }
 
 int _odp_ipsec_sa_replay_precheck(ipsec_sa_t *ipsec_sa, uint32_t seq,
