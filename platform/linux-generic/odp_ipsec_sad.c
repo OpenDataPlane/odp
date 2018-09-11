@@ -701,18 +701,17 @@ int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
 		if (seq + IPSEC_ANTIREPLAY_WS <= max_seq) {
 			status->error.antireplay = 1;
 			return -1;
-		}
-
-		if (seq > max_seq) {
+		} else if (seq >= max_seq + IPSEC_ANTIREPLAY_WS) {
+			mask = 1;
+			max_seq = seq;
+		} else if (seq > max_seq) {
 			mask <<= seq - max_seq;
 			mask |= 1;
 			max_seq = seq;
+		} else if (mask & (1U << (max_seq - seq))) {
+			status->error.antireplay = 1;
+			return -1;
 		} else {
-			if (mask & (1U << (max_seq - seq))) {
-				status->error.antireplay = 1;
-				return -1;
-			}
-
 			mask |= (1U << (max_seq - seq));
 		}
 
