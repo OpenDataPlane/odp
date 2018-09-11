@@ -94,6 +94,27 @@ int _odp_ipsec_status_send(odp_queue_t queue,
 struct ipsec_sa_s {
 	odp_atomic_u32_t ODP_ALIGNED_CACHE state;
 
+	/*
+	 * State that gets updated very frequently. Grouped separately
+	 * to avoid false cache line sharing with other data.
+	 */
+	struct ODP_ALIGNED_CACHE {
+		/* Statistics for soft/hard expiration */
+		odp_atomic_u64_t bytes;
+		odp_atomic_u64_t packets;
+
+		union {
+			struct {
+				odp_atomic_u64_t antireplay;
+			} in;
+
+			struct {
+				odp_atomic_u64_t counter; /* for CTR/GCM */
+				odp_atomic_u32_t seq;
+			} out;
+		};
+	} hot;
+
 	uint32_t	ipsec_sa_idx;
 	odp_ipsec_sa_t	ipsec_sa_hdl;
 
@@ -107,10 +128,6 @@ struct ipsec_sa_s {
 	uint64_t soft_limit_packets;
 	uint64_t hard_limit_bytes;
 	uint64_t hard_limit_packets;
-
-	/* Statistics for soft/hard expiration */
-	odp_atomic_u64_t bytes;
-	odp_atomic_u64_t packets;
 
 	odp_crypto_session_t session;
 	void		*context;
@@ -150,12 +167,9 @@ struct ipsec_sa_s {
 				odp_u32be_t	lookup_dst_ipv4;
 				uint8_t lookup_dst_ipv6[_ODP_IPV6ADDR_LEN];
 			};
-			odp_atomic_u64_t antireplay;
 		} in;
 
 		struct {
-			odp_atomic_u64_t counter; /* for CTR/GCM */
-			odp_atomic_u32_t seq;
 			odp_ipsec_frag_mode_t frag_mode;
 			uint32_t mtu;
 
