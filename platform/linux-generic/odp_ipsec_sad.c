@@ -289,6 +289,10 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	ipsec_sa->queue = param->dest_queue;
 	ipsec_sa->mode = param->mode;
 	ipsec_sa->flags = 0;
+	if (param->opt.esn) {
+		ODP_ERR("ESN is not supported!\n");
+		return ODP_IPSEC_SA_INVALID;
+	}
 	if (ODP_IPSEC_DIR_INBOUND == param->dir) {
 		ipsec_sa->lookup_mode = param->inbound.lookup_mode;
 		if (ODP_IPSEC_LOOKUP_DSTADDR_SPI == ipsec_sa->lookup_mode) {
