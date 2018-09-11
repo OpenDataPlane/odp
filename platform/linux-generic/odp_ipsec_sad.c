@@ -74,8 +74,8 @@ int _odp_ipsec_sad_init_global(void)
 		ipsec_sa->ipsec_sa_hdl = ipsec_sa_index_to_handle(i);
 		ipsec_sa->ipsec_sa_idx = i;
 		odp_atomic_init_u32(&ipsec_sa->state, IPSEC_SA_STATE_FREE);
-		odp_atomic_init_u64(&ipsec_sa->bytes, 0);
-		odp_atomic_init_u64(&ipsec_sa->packets, 0);
+		odp_atomic_init_u64(&ipsec_sa->hot.bytes, 0);
+		odp_atomic_init_u64(&ipsec_sa->hot.packets, 0);
 	}
 
 	return 0;
@@ -317,10 +317,10 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		if (param->inbound.antireplay_ws > IPSEC_ANTIREPLAY_WS)
 			goto error;
 		ipsec_sa->antireplay = (param->inbound.antireplay_ws != 0);
-		odp_atomic_init_u64(&ipsec_sa->in.antireplay, 0);
+		odp_atomic_init_u64(&ipsec_sa->hot.in.antireplay, 0);
 	} else {
 		ipsec_sa->lookup_mode = ODP_IPSEC_LOOKUP_DISABLED;
-		odp_atomic_store_u32(&ipsec_sa->out.seq, 1);
+		odp_atomic_store_u32(&ipsec_sa->hot.out.seq, 1);
 		ipsec_sa->out.frag_mode = param->outbound.frag_mode;
 		ipsec_sa->out.mtu = param->outbound.mtu;
 	}
@@ -330,8 +330,8 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	ipsec_sa->copy_flabel = param->opt.copy_flabel;
 	ipsec_sa->udp_encap = param->opt.udp_encap;
 
-	odp_atomic_store_u64(&ipsec_sa->bytes, 0);
-	odp_atomic_store_u64(&ipsec_sa->packets, 0);
+	odp_atomic_store_u64(&ipsec_sa->hot.bytes, 0);
+	odp_atomic_store_u64(&ipsec_sa->hot.packets, 0);
 	ipsec_sa->soft_limit_bytes = param->lifetime.soft_limit.bytes;
 	ipsec_sa->soft_limit_packets = param->lifetime.soft_limit.packets;
 	ipsec_sa->hard_limit_bytes = param->lifetime.hard_limit.bytes;
@@ -471,7 +471,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 
 	if (1 == ipsec_sa->use_counter_iv &&
 	    ODP_IPSEC_DIR_OUTBOUND == param->dir)
-		odp_atomic_init_u64(&ipsec_sa->out.counter, 1);
+		odp_atomic_init_u64(&ipsec_sa->hot.out.counter, 1);
 
 	ipsec_sa->icv_len = crypto_param.auth_digest_len;
 
@@ -635,13 +635,13 @@ int _odp_ipsec_sa_stats_precheck(ipsec_sa_t *ipsec_sa,
 	int rc = 0;
 
 	if (ipsec_sa->hard_limit_bytes > 0 &&
-	    odp_atomic_load_u64(&ipsec_sa->bytes) >
+	    odp_atomic_load_u64(&ipsec_sa->hot.bytes) >
 	    ipsec_sa->hard_limit_bytes) {
 		status->error.hard_exp_bytes = 1;
 		rc = -1;
 	}
 	if (ipsec_sa->hard_limit_packets > 0 &&
-	    odp_atomic_load_u64(&ipsec_sa->packets) >
+	    odp_atomic_load_u64(&ipsec_sa->hot.packets) >
 	    ipsec_sa->hard_limit_packets) {
 		status->error.hard_exp_packets = 1;
 		rc = -1;
@@ -653,8 +653,8 @@ int _odp_ipsec_sa_stats_precheck(ipsec_sa_t *ipsec_sa,
 int _odp_ipsec_sa_stats_update(ipsec_sa_t *ipsec_sa, uint32_t len,
 			       odp_ipsec_op_status_t *status)
 {
-	uint64_t bytes = odp_atomic_fetch_add_u64(&ipsec_sa->bytes, len) + len;
-	uint64_t packets = odp_atomic_fetch_add_u64(&ipsec_sa->packets, 1) + 1;
+	uint64_t bytes = odp_atomic_fetch_add_u64(&ipsec_sa->hot.bytes, len) + len;
+	uint64_t packets = odp_atomic_fetch_add_u64(&ipsec_sa->hot.packets, 1) + 1;
 	int rc = 0;
 
 	if (ipsec_sa->soft_limit_bytes > 0 &&
@@ -685,7 +685,7 @@ int _odp_ipsec_sa_replay_precheck(ipsec_sa_t *ipsec_sa, uint32_t seq,
 	/* Try to be as quick as possible, we will discard packets later */
 	if (ipsec_sa->antireplay &&
 	    seq + IPSEC_ANTIREPLAY_WS <=
-	    (odp_atomic_load_u64(&ipsec_sa->in.antireplay) & 0xffffffff)) {
+	    (odp_atomic_load_u64(&ipsec_sa->hot.in.antireplay) & 0xffffffff)) {
 		status->error.antireplay = 1;
 		return -1;
 	}
@@ -702,7 +702,7 @@ int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
 	if (!ipsec_sa->antireplay)
 		return 0;
 
-	state = odp_atomic_load_u64(&ipsec_sa->in.antireplay);
+	state = odp_atomic_load_u64(&ipsec_sa->hot.in.antireplay);
 
 	while (0 == cas) {
 		uint32_t max_seq = state & 0xffffffff;
@@ -727,7 +727,7 @@ int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
 
 		new_state = (((uint64_t)mask) << 32) | max_seq;
 
-		cas = odp_atomic_cas_acq_rel_u64(&ipsec_sa->in.antireplay,
+		cas = odp_atomic_cas_acq_rel_u64(&ipsec_sa->hot.in.antireplay,
 						 &state, new_state);
 	}
 
