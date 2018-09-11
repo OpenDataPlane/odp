@@ -585,24 +585,25 @@ prefix_insert_into_lx(
 		odph_iplookup_table_impl *tbl, prefix_entry_t *entry,
 		uint8_t cidr, odp_buffer_t nexthop, uint8_t level)
 {
-	uint8_t ret = 0;
+	int ret = 0;
 	uint32_t i = 0, limit = (1 << (level - cidr));
 	prefix_entry_t *e = entry, *ne = NULL;
 
 	for (i = 0; i < limit; i++, e++) {
-		if (e->child == 1) {
-			if (e->cidr > cidr)
-				continue;
+		if (e->cidr > cidr)
+			continue;
 
+		if (e->child == 1) {
 			e->cidr = cidr;
 			/* push to next level */
 			ne = (prefix_entry_t *)e->ptr;
 			ret = prefix_insert_into_lx(
 					tbl, ne, cidr, nexthop, cidr + 8);
+			if (ret == -1)
+				return -1;
+			if (ret == 0)
+				return ret;
 		} else {
-			if (e->cidr > cidr)
-				continue;
-
 			e->child = 0;
 			e->cidr = cidr;
 			e->nexthop = nexthop;
@@ -678,8 +679,9 @@ odph_iplookup_table_put_value(odph_table_t tbl, void *key, void *value)
 
 	nexthop = *((odp_buffer_t *)value);
 
-	if (prefix->cidr == 0)
+	if (prefix->cidr == 0 || prefix->cidr == 255)
 		return -1;
+
 	prefix->ip = prefix->ip & (0xffffffff << (IP_LENGTH - prefix->cidr));
 
 	/* insert into trie */
