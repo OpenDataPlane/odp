@@ -353,19 +353,6 @@ static odp_queue_t queue_create(const char *name,
 	return handle;
 }
 
-void sched_queue_destroy_finalize(uint32_t queue_index)
-{
-	queue_entry_t *queue = qentry_from_index(queue_index);
-
-	LOCK(queue);
-
-	if (queue->s.status == QUEUE_STATUS_DESTROYED) {
-		queue->s.status = QUEUE_STATUS_FREE;
-		sched_fn->destroy_queue(queue_index);
-	}
-	UNLOCK(queue);
-}
-
 void sched_queue_set_status(uint32_t queue_index, int status)
 {
 	queue_entry_t *queue = qentry_from_index(queue_index);
@@ -681,12 +668,6 @@ static inline int _sched_queue_enq_multi(odp_queue_t handle,
 
 	LOCK(queue);
 
-	if (odp_unlikely(queue->s.status < QUEUE_STATUS_READY)) {
-		UNLOCK(queue);
-		ODP_ERR("Bad queue status\n");
-		return -1;
-	}
-
 	num_enq = ring_st_enq_multi(ring_st, queue->s.ring_data,
 				    queue->s.ring_mask, buf_idx, num);
 
@@ -712,7 +693,7 @@ static inline int _sched_queue_enq_multi(odp_queue_t handle,
 int sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int max_num,
 		    int update_status)
 {
-	int num_deq;
+	int num_deq, status;
 	ring_st_t *ring_st;
 	queue_entry_t *queue = qentry_from_index(queue_index);
 	int status_sync = sched_fn->status_sync;
@@ -722,9 +703,16 @@ int sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int max_num,
 
 	LOCK(queue);
 
-	if (odp_unlikely(queue->s.status < QUEUE_STATUS_READY)) {
+	status = queue->s.status;
+
+	if (odp_unlikely(status < QUEUE_STATUS_READY)) {
 		/* Bad queue, or queue has been destroyed.
-		 * Scheduler finalizes queue destroy after this. */
+		 * Inform scheduler about a destroyed queue. */
+		if (queue->s.status == QUEUE_STATUS_DESTROYED) {
+			queue->s.status = QUEUE_STATUS_FREE;
+			sched_fn->destroy_queue(queue_index);
+		}
+
 		UNLOCK(queue);
 		return -1;
 	}
@@ -734,10 +722,10 @@ int sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int max_num,
 
 	if (num_deq == 0) {
 		/* Already empty queue */
-		if (update_status && queue->s.status == QUEUE_STATUS_SCHED) {
+		if (update_status && status == QUEUE_STATUS_SCHED) {
 			queue->s.status = QUEUE_STATUS_NOTSCHED;
 
-			if (status_sync)
+			if (odp_unlikely(status_sync))
 				sched_fn->unsched_queue(queue->s.index);
 		}
 
@@ -746,7 +734,7 @@ int sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int max_num,
 		return 0;
 	}
 
-	if (status_sync && queue->s.type == ODP_QUEUE_TYPE_SCHED)
+	if (odp_unlikely(status_sync))
 		sched_fn->save_context(queue->s.index);
 
 	UNLOCK(queue);
