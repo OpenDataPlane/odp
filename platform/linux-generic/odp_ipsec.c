@@ -813,7 +813,7 @@ err:
 static inline
 uint32_t ipsec_seq_no(ipsec_sa_t *ipsec_sa)
 {
-	return odp_atomic_fetch_add_u32(&ipsec_sa->out.seq, 1);
+	return odp_atomic_fetch_add_u32(&ipsec_sa->hot.out.seq, 1);
 }
 
 /* Helper for calculating encode length using data length and block size */
@@ -1010,7 +1010,7 @@ static int ipsec_out_iv(ipsec_state_t *state,
 		/* Both GCM and CTR use 8-bit counters */
 		ODP_ASSERT(sizeof(ctr) == ipsec_sa->esp_iv_len);
 
-		ctr = odp_atomic_fetch_add_u64(&ipsec_sa->out.counter,
+		ctr = odp_atomic_fetch_add_u64(&ipsec_sa->hot.out.counter,
 					       1);
 		/* Check for overrun */
 		if (ctr == 0)
