@@ -40,6 +40,8 @@ int _odp_libconfig_init_global(void)
 	if (filename == NULL)
 		return 0;
 
+	ODP_PRINT("CONFIG FILE: %s\n", filename);
+
 	if (!config_read_file(config_rt, filename)) {
 		ODP_ERR("Failed to read config file: %s(%d): %s\n",
 			config_error_file(config_rt),
