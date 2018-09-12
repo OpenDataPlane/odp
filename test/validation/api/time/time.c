@@ -14,7 +14,7 @@
 #define BUSY_LOOP_CNT_LONG	6000000000  /* used for t > 4 sec */
 #define MIN_TIME_RATE		32000
 #define MAX_TIME_RATE		15000000000
-#define DELAY_TOLERANCE		20000000	    /* deviation for delay */
+#define DELAY_TOLERANCE		40000000	    /* deviation for delay */
 #define WAIT_SECONDS            3
 
 static uint64_t local_res;
@@ -413,7 +413,7 @@ static void time_test_wait_ns(void)
 	if (odp_time_cmp(diff, upper_limit) > 0) {
 		fprintf(stderr, "Exceed upper limit: "
 			"diff is %" PRIu64 ", upper_limit %" PRIu64 "\n",
-			odp_time_to_ns(diff), odp_time_to_ns(lower_limit));
+			odp_time_to_ns(diff), odp_time_to_ns(upper_limit));
 		CU_FAIL("Exceed upper limit\n");
 	}
 }
