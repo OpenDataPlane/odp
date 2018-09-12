@@ -96,6 +96,45 @@ int _odp_libconfig_lookup_int(const char *path, int *value)
 	return  (ret_def == CONFIG_TRUE || ret_rt == CONFIG_TRUE) ? 1 : 0;
 }
 
+int _odp_libconfig_lookup_array(const char *path, int value[], int max_num)
+{
+	const config_t *config;
+	config_setting_t *setting;
+	int num, i, j;
+	int num_out = 0;
+
+	for (j = 0; j < 2; j++) {
+		if (j == 0)
+			config = &odp_global_data.libconfig_default;
+		else
+			config = &odp_global_data.libconfig_runtime;
+
+		setting = config_lookup(config, path);
+
+		/* Runtime config may not define the array, whereas
+		 * the default config has it always defined. When the array
+		 * is defined, it must be correctly formatted. */
+		if (setting == NULL)
+			continue;
+
+		if (config_setting_is_array(setting) == CONFIG_FALSE)
+			return 0;
+
+		num = config_setting_length(setting);
+
+		if (num <= 0 || num > max_num)
+			return 0;
+
+		for (i = 0; i < num; i++)
+			value[i] = config_setting_get_int_elem(setting, i);
+
+		num_out = num;
+	}
+
+	/* Number of elements copied */
+	return num_out;
+}
+
 static int lookup_int(config_t *cfg,
 		      const char *base_path,
 		      const char *local_path,
