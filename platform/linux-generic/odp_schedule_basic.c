@@ -183,32 +183,18 @@ typedef struct ODP_ALIGNED_CACHE {
 } order_context_t;
 
 typedef struct {
-	pri_mask_t     pri_mask[NUM_PRIO];
-	odp_spinlock_t mask_lock;
-
-	prio_queue_t   prio_q[NUM_SCHED_GRPS][NUM_PRIO][MAX_SPREAD];
-
-	odp_shm_t      shm;
-
 	struct {
-		uint8_t num_spread;
 		uint8_t burst_default[NUM_PRIO];
 		uint8_t burst_max[NUM_PRIO];
+		uint8_t num_spread;
 	} config;
 
-	uint32_t       pri_count[NUM_PRIO][MAX_SPREAD];
-
-	odp_thrmask_t    mask_all;
-	odp_spinlock_t   grp_lock;
-	odp_atomic_u32_t grp_epoch;
-	uint32_t         ring_mask;
 	uint16_t         max_spread;
-
-	struct {
-		char           name[ODP_SCHED_GROUP_NAME_LEN];
-		odp_thrmask_t  mask;
-		int	       allocated;
-	} sched_grp[NUM_SCHED_GRPS];
+	uint32_t         ring_mask;
+	pri_mask_t       pri_mask[NUM_PRIO];
+	odp_spinlock_t   mask_lock;
+	odp_atomic_u32_t grp_epoch;
+	odp_shm_t        shm;
 
 	struct {
 		uint8_t grp;
@@ -220,6 +206,20 @@ typedef struct {
 		uint8_t pktio_index;
 		uint8_t pktin_index;
 	} queue[ODP_CONFIG_QUEUES];
+
+	/* Scheduler priority queues */
+	prio_queue_t prio_q[NUM_SCHED_GRPS][NUM_PRIO][MAX_SPREAD];
+
+	uint32_t pri_count[NUM_PRIO][MAX_SPREAD];
+
+	odp_thrmask_t  mask_all;
+	odp_spinlock_t grp_lock;
+
+	struct {
+		char           name[ODP_SCHED_GROUP_NAME_LEN];
+		odp_thrmask_t  mask;
+		int	       allocated;
+	} sched_grp[NUM_SCHED_GRPS];
 
 	struct {
 		int num_pktin;
