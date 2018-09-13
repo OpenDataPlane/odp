@@ -54,7 +54,7 @@ int odp_thread_init_global(void)
 {
 	odp_shm_t shm;
 
-	shm = odp_shm_reserve("odp_thread_globals",
+	shm = odp_shm_reserve("_odp_thread_globals",
 			      sizeof(thread_globals_t),
 			      ODP_CACHE_LINE_SIZE, 0);
 
@@ -73,9 +73,9 @@ int odp_thread_term_global(void)
 {
 	int ret;
 
-	ret = odp_shm_free(odp_shm_lookup("odp_thread_globals"));
+	ret = odp_shm_free(odp_shm_lookup("_odp_thread_globals"));
 	if (ret < 0)
-		ODP_ERR("shm free failed for odp_thread_globals");
+		ODP_ERR("shm free failed for _odp_thread_globals");
 
 	return ret;
 }
