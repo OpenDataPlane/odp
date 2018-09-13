@@ -1036,7 +1036,8 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 
 	/* Get system page sizes: page_hp_size is 0 if no huge page available*/
 	page_sz      = odp_sys_page_size();
-	page_hp_size = odp_sys_huge_page_size();
+	page_hp_size = user_flags & _ODP_SHM_NO_HP ?
+		       0 : odp_sys_huge_page_size();
 
 	/* grab a new entry: */
 	for (new_index = 0; new_index < ISHM_MAX_NB_BLOCKS; new_index++) {
