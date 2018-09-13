@@ -19,6 +19,7 @@
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_ring_internal.h>
+#include <odp_ishm_internal.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -87,7 +88,8 @@ int odp_pool_init_global(void)
 
 	shm = odp_shm_reserve("_odp_pool_table",
 			      sizeof(pool_table_t),
-			      ODP_CACHE_LINE_SIZE, 0);
+			      ODP_CACHE_LINE_SIZE,
+			      _ODP_ISHM_NO_HP);
 
 	pool_tbl = odp_shm_addr(shm);
 
@@ -199,7 +201,7 @@ static pool_t *reserve_pool(void)
 		if (pool->reserved == 0) {
 			pool->reserved = 1;
 			UNLOCK(&pool->lock);
-			sprintf(ring_name, "pool_ring_%d", i);
+			sprintf(ring_name, "_odp_pool_ring_%d", i);
 			pool->ring_shm =
 				odp_shm_reserve(ring_name,
 						sizeof(pool_ring_t),

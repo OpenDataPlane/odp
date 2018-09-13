@@ -29,6 +29,7 @@
 #include <odp/api/plat/time_inlines.h>
 #include <odp_pcapng.h>
 #include <odp/api/plat/queue_inlines.h>
+#include <odp_ishm_internal.h>
 
 #include <string.h>
 #include <inttypes.h>
@@ -65,9 +66,10 @@ int odp_pktio_init_global(void)
 	odp_shm_t shm;
 	int pktio_if;
 
-	shm = odp_shm_reserve("odp_pktio_entries",
+	shm = odp_shm_reserve("_odp_pktio_entries",
 			      sizeof(pktio_table_t),
-			      sizeof(pktio_entry_t), 0);
+			      sizeof(pktio_entry_t),
+			      _ODP_ISHM_NO_HP);
 	if (shm == ODP_SHM_INVALID)
 		return -1;
 
@@ -1280,9 +1282,9 @@ int odp_pktio_term_global(void)
 					  pktio_if);
 	}
 
-	ret = odp_shm_free(odp_shm_lookup("odp_pktio_entries"));
+	ret = odp_shm_free(odp_shm_lookup("_odp_pktio_entries"));
 	if (ret != 0)
-		ODP_ERR("shm free failed for odp_pktio_entries");
+		ODP_ERR("shm free failed for _odp_pktio_entries");
 
 	return ret;
 }
