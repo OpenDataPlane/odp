@@ -147,10 +147,8 @@ void *_odp_ishmphy_map(int fd, void *start, uint64_t size,
 		}
 	}
 
-	if (mapped_addr == MAP_FAILED) {
-		ODP_ERR("mmap failed:%s\n", strerror(errno));
+	if (mapped_addr == MAP_FAILED)
 		return NULL;
-	}
 
 	/* if locking is requested, lock it...*/
 	if (flags & _ODP_ISHM_LOCK) {
