@@ -59,7 +59,7 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 			  uint32_t flags)
 {
 	int block_index;
-	int flgs = 0; /* internal ishm flags */
+	uint32_t flgs = 0; /* internal ishm flags */
 
 	flgs = get_ishm_flags(flags);
 

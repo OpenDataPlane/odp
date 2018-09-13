@@ -14,6 +14,7 @@
 #include <odp_init_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_ipsec_internal.h>
+#include <odp_shm_internal.h>
 
 #include <odp/api/plat/atomic_inlines.h>
 #include <odp/api/plat/cpu_inlines.h>
@@ -51,14 +52,14 @@ int _odp_ipsec_sad_init_global(void)
 	odp_shm_t shm;
 	unsigned i;
 
-	shm = odp_shm_reserve("ipsec_sa_table",
+	shm = odp_shm_reserve("_odp_ipsec_sa_table",
 			      sizeof(ipsec_sa_table_t),
-			      ODP_CACHE_LINE_SIZE, 0);
-
-	ipsec_sa_tbl = odp_shm_addr(shm);
-	if (ipsec_sa_tbl == NULL)
+			      ODP_CACHE_LINE_SIZE,
+			      _ODP_SHM_NO_HP);
+	if (shm == ODP_SHM_INVALID)
 		return -1;
 
+	ipsec_sa_tbl = odp_shm_addr(shm);
 	memset(ipsec_sa_tbl, 0, sizeof(ipsec_sa_table_t));
 	ipsec_sa_tbl->shm = shm;
 

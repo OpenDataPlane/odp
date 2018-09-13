@@ -15,6 +15,7 @@
 #include <odp_buffer_internal.h>
 #include <odp_pool_internal.h>
 #include <odp_init_internal.h>
+#include <odp_shm_internal.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/schedule.h>
 #include <odp_schedule_if.h>
@@ -134,12 +135,12 @@ static int queue_init_global(void)
 
 	shm = odp_shm_reserve("_odp_queue_gbl",
 			      sizeof(queue_global_t),
-			      sizeof(queue_entry_t), 0);
+			      sizeof(queue_entry_t),
+			      _ODP_SHM_NO_HP);
+	if (shm == ODP_SHM_INVALID)
+		return -1;
 
 	queue_glb = odp_shm_addr(shm);
-
-	if (queue_glb == NULL)
-		return -1;
 
 	memset(queue_glb, 0, sizeof(queue_global_t));
 
@@ -161,7 +162,8 @@ static int queue_init_global(void)
 		   (uint64_t)queue_glb->config.max_queue_size;
 
 	shm = odp_shm_reserve("_odp_queue_rings", mem_size,
-			      ODP_CACHE_LINE_SIZE, 0);
+			      ODP_CACHE_LINE_SIZE,
+			      _ODP_SHM_NO_HP);
 
 	if (shm == ODP_SHM_INVALID) {
 		odp_shm_free(queue_glb->queue_gbl_shm);

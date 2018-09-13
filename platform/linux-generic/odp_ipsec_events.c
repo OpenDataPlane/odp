@@ -41,7 +41,7 @@ int _odp_ipsec_events_init_global(void)
 	param.buf.num   = IPSEC_EVENTS_POOL_BUF_COUNT;
 	param.type      = ODP_POOL_BUFFER;
 
-	ipsec_status_pool = odp_pool_create("ipsec_status_pool", &param);
+	ipsec_status_pool = odp_pool_create("_odp_ipsec_status_pool", &param);
 	if (ODP_POOL_INVALID == ipsec_status_pool) {
 		ODP_ERR("Error: status pool create failed.\n");
 		goto err_status;
@@ -55,16 +55,15 @@ err_status:
 
 int _odp_ipsec_events_term_global(void)
 {
-	int ret = 0;
-	int rc = 0;
+	int ret;
 
 	ret = odp_pool_destroy(ipsec_status_pool);
 	if (ret < 0) {
 		ODP_ERR("status pool destroy failed");
-		rc = -1;
+		return -1;
 	}
 
-	return rc;
+	return 0;
 }
 
 ipsec_status_t _odp_ipsec_status_from_event(odp_event_t ev)
