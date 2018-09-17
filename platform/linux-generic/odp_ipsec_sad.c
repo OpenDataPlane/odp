@@ -47,6 +47,12 @@ static inline odp_ipsec_sa_t ipsec_sa_index_to_handle(uint32_t ipsec_sa_idx)
 	return _odp_cast_scalar(odp_ipsec_sa_t, ipsec_sa_idx + 1);
 }
 
+ipsec_sa_t *_odp_ipsec_sa_entry_from_hdl(odp_ipsec_sa_t sa)
+{
+	ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
+	return ipsec_sa_entry_from_hdl(sa);
+}
+
 int _odp_ipsec_sad_init_global(void)
 {
 	odp_shm_t shm;
