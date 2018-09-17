@@ -207,6 +207,11 @@ uint32_t _odp_ipsec_cipher_iv_len(odp_cipher_alg_t cipher);
 /* Return digest length required for the cipher for IPsec use */
 uint32_t _odp_ipsec_auth_digest_len(odp_auth_alg_t auth);
 
+/*
+ * Get SA entry from handle without obtaining a reference
+ */
+ipsec_sa_t *_odp_ipsec_sa_entry_from_hdl(odp_ipsec_sa_t sa);
+
 /**
  * Obtain SA reference
  */
