@@ -1380,7 +1380,14 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	odp_ipsec_frag_mode_t frag_mode;
 	uint32_t mtu;
 
-	ipsec_sa = _odp_ipsec_sa_use(sa);
+	/*
+	 * No need to do _odp_ipsec_sa_use() here since an ODP application
+	 * is not allowed to do call IPsec output before SA creation has
+	 * completed nor call odp_ipsec_sa_disable() before IPsec output
+	 * has completed. IOW, the needed sychronization between threads
+	 * is done by the application.
+	 */
+	ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
 	ODP_ASSERT(NULL != ipsec_sa);
 
 	if (opt->flag.tfc_dummy) {
@@ -1482,6 +1489,18 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 
 	param.session = ipsec_sa->session;
 
+	/*
+	 * NOTE: Do not change to an asynchronous design without thinking
+	 * concurrency and what changes are required to guarantee that
+	 * used SAs are not destroyed when asynchronous operations are in
+	 * progress.
+	 *
+	 * The containing code does not hold a reference to the SA but
+	 * completes outbound processing synchronously and makes use of
+	 * the fact that the application may not disable (and then destroy)
+	 * the SA before this output routine returns (and all its side
+	 * effects are visible to the disabling thread).
+	 */
 	rc = odp_crypto_op(&pkt, &pkt, &param, 1);
 	if (rc < 0) {
 		ODP_DBG("Crypto failed\n");
@@ -1632,9 +1651,6 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
 		out_pkt++;
 		sa_idx += sa_inc;
 		opt_idx += opt_inc;
-
-		/* Last thing */
-		_odp_ipsec_sa_unuse(ipsec_sa);
 	}
 
 	*num_out = out_pkt;
@@ -1742,9 +1758,6 @@ int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in,
 		in_pkt++;
 		sa_idx += sa_inc;
 		opt_idx += opt_inc;
-
-		/* Last thing */
-		_odp_ipsec_sa_unuse(ipsec_sa);
 	}
 
 	return in_pkt;
@@ -1884,9 +1897,6 @@ err:
 		in_pkt++;
 		sa_idx += sa_inc;
 		opt_idx += opt_inc;
-
-		/* Last thing */
-		_odp_ipsec_sa_unuse(ipsec_sa);
 	}
 
 	return in_pkt;
