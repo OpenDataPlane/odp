@@ -76,8 +76,7 @@ odp_bool_t inline_timers = false;
 
 #ifndef ODP_ATOMIC_U128
 #define NUM_LOCKS 1024
-static _odp_atomic_flag_t locks[NUM_LOCKS]; /* Multiple locks per cache line! */
-#define IDX2LOCK(idx) (&locks[(idx) % NUM_LOCKS])
+#define IDX2LOCK(idx) (&timer_global->locks[(idx) % NUM_LOCKS])
 #endif
 
 /* Max timer resolution in nanoseconds */
@@ -215,6 +214,10 @@ typedef struct timer_global_t {
 	int num_timer_pools;
 	uint8_t timer_pool_used[MAX_TIMER_POOLS];
 	timer_pool_t *timer_pool[MAX_TIMER_POOLS];
+#ifndef ODP_ATOMIC_U128
+	/* Multiple locks per cache line! */
+	_odp_atomic_flag_t ODP_ALIGNED_CACHE locks[NUM_LOCKS];
+#endif
 
 } timer_global_t;
 
@@ -1312,7 +1315,7 @@ int odp_timer_init_global(const odp_init_t *params)
 #ifndef ODP_ATOMIC_U128
 	uint32_t i;
 	for (i = 0; i < NUM_LOCKS; i++)
-		_odp_atomic_flag_clear(&locks[i]);
+		_odp_atomic_flag_clear(&timer_global->locks[i]);
 #else
 	ODP_DBG("Using lock-less timer implementation\n");
 #endif
