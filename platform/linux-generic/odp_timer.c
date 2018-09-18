@@ -79,10 +79,6 @@ odp_bool_t inline_timers = false;
 #define IDX2LOCK(idx) (&timer_global->locks[(idx) % NUM_LOCKS])
 #endif
 
-/* Max timer resolution in nanoseconds */
-static uint64_t highest_res_ns = 500;
-static uint64_t min_res_ns = INT64_MAX;
-
 /******************************************************************************
  * Translation between timeout buffer and timeout header
  *****************************************************************************/
@@ -211,6 +207,10 @@ typedef struct timer_pool_s {
 typedef struct timer_global_t {
 	odp_ticketlock_t lock;
 	odp_shm_t shm;
+	/* Max timer resolution in nanoseconds */
+	uint64_t highest_res_ns;
+	uint64_t min_res_ns;
+	odp_time_t time_per_ratelimit_period;
 	int num_timer_pools;
 	uint8_t timer_pool_used[MAX_TIMER_POOLS];
 	timer_pool_t *timer_pool[MAX_TIMER_POOLS];
@@ -862,8 +862,6 @@ static unsigned process_timer_pools(void)
 	return nexp;
 }
 
-static odp_time_t time_per_ratelimit_period;
-
 unsigned _timer_run(void)
 {
 	static __thread odp_time_t last_timer_run;
@@ -884,7 +882,7 @@ unsigned _timer_run(void)
 
 	now = odp_time_global();
 	if (odp_time_cmp(odp_time_diff(now, last_timer_run),
-			 time_per_ratelimit_period) == -1)
+			 timer_global->time_per_ratelimit_period) == -1)
 		return 0;
 	last_timer_run = now;
 
@@ -987,7 +985,7 @@ static int timer_res_init(void)
 	/* Timer resolution start from 1ms */
 	res = ODP_TIME_MSEC_IN_NS;
 	/* Set initial value of timer_res */
-	highest_res_ns = res;
+	timer_global->highest_res_ns = res;
 	sigemptyset(&sigset);
 	/* Add SIGUSR1 to sigset */
 	sigaddset(&sigset, SIGUSR1);
@@ -1020,13 +1018,13 @@ static int timer_res_init(void)
 			}
 		}
 		/* Set timer_res */
-		highest_res_ns = res;
+		timer_global->highest_res_ns = res;
 		/* Test the next timer resolution candidate */
 		res /= 10;
 	}
 
 timer_res_init_done:
-	highest_res_ns *= TIMER_RES_ROUNDUP_FACTOR;
+	timer_global->highest_res_ns *= TIMER_RES_ROUNDUP_FACTOR;
 	if (timer_delete(timerid) != 0)
 		ODP_ABORT("timer_delete() returned error %s\n",
 			  strerror(errno));
@@ -1101,7 +1099,7 @@ int odp_timer_capability(odp_timer_clk_src_t clk_src,
 		capa->max_pools_combined = MAX_TIMER_POOLS;
 		capa->max_pools = MAX_TIMER_POOLS;
 		capa->max_timers = 0;
-		capa->highest_res_ns = highest_res_ns;
+		capa->highest_res_ns = timer_global->highest_res_ns;
 	} else {
 		ODP_ERR("ODP timer system doesn't support external clock source currently\n");
 		ret = -1;
@@ -1112,15 +1110,15 @@ int odp_timer_capability(odp_timer_clk_src_t clk_src,
 odp_timer_pool_t odp_timer_pool_create(const char *name,
 				       const odp_timer_pool_param_t *param)
 {
-	if (param->res_ns < highest_res_ns) {
+	if (param->res_ns < timer_global->highest_res_ns) {
 		__odp_errno = EINVAL;
 		return ODP_TIMER_POOL_INVALID;
 	}
 
-	if (min_res_ns > param->res_ns) {
-		min_res_ns = param->res_ns;
-		time_per_ratelimit_period =
-			odp_time_global_from_ns(min_res_ns / 2);
+	if (timer_global->min_res_ns > param->res_ns) {
+		timer_global->min_res_ns = param->res_ns;
+		timer_global->time_per_ratelimit_period =
+			odp_time_global_from_ns(timer_global->min_res_ns / 2);
 	}
 
 	return timer_pool_new(name, param);
@@ -1338,6 +1336,8 @@ int odp_timer_init_global(const odp_init_t *params)
 	memset(timer_global, 0, sizeof(timer_global_t));
 	odp_ticketlock_init(&timer_global->lock);
 	timer_global->shm = shm;
+	timer_global->highest_res_ns = 500;
+	timer_global->min_res_ns = INT64_MAX;
 
 #ifndef ODP_ATOMIC_U128
 	uint32_t i;
@@ -1352,8 +1352,8 @@ int odp_timer_init_global(const odp_init_t *params)
 			!params->not_used.feat.schedule &&
 			!params->not_used.feat.timer;
 
-	time_per_ratelimit_period =
-		odp_time_global_from_ns(min_res_ns / 2);
+	timer_global->time_per_ratelimit_period =
+		odp_time_global_from_ns(timer_global->min_res_ns / 2);
 
 	if (!inline_timers) {
 		timer_res_init();
