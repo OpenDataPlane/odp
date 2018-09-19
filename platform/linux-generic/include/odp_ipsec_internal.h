@@ -109,8 +109,11 @@ struct ipsec_sa_s {
 			} in;
 
 			struct {
-				odp_atomic_u64_t counter; /* for CTR/GCM */
-				odp_atomic_u32_t seq;
+				/*
+				 * 64-bit sequence number that is also used as
+				 * CTR/GCM IV
+				 */
+				odp_atomic_u64_t seq;
 			} out;
 		};
 	} hot;

@@ -320,7 +320,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		odp_atomic_init_u64(&ipsec_sa->hot.in.antireplay, 0);
 	} else {
 		ipsec_sa->lookup_mode = ODP_IPSEC_LOOKUP_DISABLED;
-		odp_atomic_store_u32(&ipsec_sa->hot.out.seq, 1);
+		odp_atomic_store_u64(&ipsec_sa->hot.out.seq, 1);
 		ipsec_sa->out.frag_mode = param->outbound.frag_mode;
 		ipsec_sa->out.mtu = param->outbound.mtu;
 	}
@@ -468,10 +468,6 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	default:
 		break;
 	}
-
-	if (1 == ipsec_sa->use_counter_iv &&
-	    ODP_IPSEC_DIR_OUTBOUND == param->dir)
-		odp_atomic_init_u64(&ipsec_sa->hot.out.counter, 1);
 
 	ipsec_sa->icv_len = crypto_param.auth_digest_len;
 
