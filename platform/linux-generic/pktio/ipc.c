@@ -423,7 +423,7 @@ static int ipc_pktio_open(odp_pktio_t id ODP_UNUSED,
 		snprintf(name, sizeof(name), "%s_info", dev);
 		shm = odp_shm_reserve(name, sizeof(struct pktio_info),
 				      ODP_CACHE_LINE_SIZE,
-				      _ODP_ISHM_EXPORT | _ODP_ISHM_LOCK);
+				      ODP_SHM_EXPORT | ODP_SHM_SINGLE_VA);
 		if (ODP_SHM_INVALID == shm) {
 			_ring_destroy("ipc_rx_cache");
 			ODP_ERR("can not create shm %s\n", name);

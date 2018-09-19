@@ -19,6 +19,7 @@
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_ring_internal.h>
+#include <odp_global_data.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -186,7 +187,7 @@ int odp_pool_term_local(void)
 	return 0;
 }
 
-static pool_t *reserve_pool(void)
+static pool_t *reserve_pool(uint32_t shmflags)
 {
 	int i;
 	pool_t *pool;
@@ -203,7 +204,7 @@ static pool_t *reserve_pool(void)
 			pool->ring_shm =
 				odp_shm_reserve(ring_name,
 						sizeof(pool_ring_t),
-						ODP_CACHE_LINE_SIZE, 0);
+						ODP_CACHE_LINE_SIZE, shmflags);
 			if (odp_unlikely(pool->ring_shm == ODP_SHM_INVALID)) {
 				ODP_ERR("Unable to alloc pool ring %d\n", i);
 				LOCK(&pool->lock);
@@ -415,7 +416,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	if (uarea_size)
 		uarea_size = ROUNDUP_CACHE_LINE(uarea_size);
 
-	pool = reserve_pool();
+	pool = reserve_pool(shmflags);
 
 	if (pool == NULL) {
 		ODP_ERR("No more free pools");
@@ -594,6 +595,8 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 
 	if (params->type == ODP_POOL_PACKET)
 		shm_flags = ODP_SHM_PROC;
+	if (odp_global_data.shm_single_va)
+		shm_flags |= ODP_SHM_SINGLE_VA;
 
 	return pool_create(name, params, shm_flags);
 }
