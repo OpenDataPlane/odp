@@ -44,6 +44,7 @@ struct odp_global_data_s {
 	int   shm_dir_from_env;
 	uint64_t shm_max_memory;
 	uint64_t shm_max_size;
+	int shm_single_va;
 	pid_t main_pid;
 	char uid[UID_MAXLEN];
 	odp_log_func_t log_fn;
