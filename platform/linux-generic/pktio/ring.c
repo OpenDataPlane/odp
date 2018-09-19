@@ -79,6 +79,7 @@
 #include <inttypes.h>
 #include <odp_packet_io_ring_internal.h>
 #include <odp_errno_define.h>
+#include <odp_global_data.h>
 
 #include <odp/api/plat/cpu_inlines.h>
 
@@ -171,6 +172,8 @@ _ring_create(const char *name, unsigned count, unsigned flags)
 		shm_flag = ODP_SHM_PROC | ODP_SHM_EXPORT;
 	else
 		shm_flag = 0;
+	if (odp_global_data.shm_single_va)
+		shm_flag |= ODP_SHM_SINGLE_VA;
 
 	/* count must be a power of 2 */
 	if (!RING_VAL_IS_POWER_2(count) || (count > _RING_SZ_MASK)) {
