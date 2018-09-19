@@ -27,6 +27,8 @@
 
 #include <string.h>
 
+static odp_ipsec_config_t *ipsec_config;
+
 int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 {
 	int rc;
@@ -145,14 +147,12 @@ void odp_ipsec_config_init(odp_ipsec_config_t *config)
 	config->inbound.lookup.max_spi = UINT32_MAX;
 }
 
-static odp_ipsec_config_t ipsec_config;
-
 int odp_ipsec_config(const odp_ipsec_config_t *config)
 {
 	if (ODP_CONFIG_IPSEC_SAS > config->max_num_sa)
 		return -1;
 
-	ipsec_config = *config;
+	*ipsec_config = *config;
 
 	return 0;
 }
@@ -788,8 +788,8 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		parse_param.proto = state.is_ipv4 ? ODP_PROTO_IPV4 :
 			state.is_ipv6 ? ODP_PROTO_IPV6 :
 			ODP_PROTO_NONE;
-		parse_param.last_layer = ipsec_config.inbound.parse_level;
-		parse_param.chksums = ipsec_config.inbound.chksums;
+		parse_param.last_layer = ipsec_config->inbound.parse_level;
+		parse_param.chksums = ipsec_config->inbound.chksums;
 
 		/* We do not care about return code here.
 		 * Parsing error should not result in IPsec error. */
@@ -1309,7 +1309,7 @@ static void ipsec_out_checksums(odp_packet_t pkt,
 	odp_bool_t ipv4_chksum_pkt, udp_chksum_pkt, tcp_chksum_pkt,
 		   sctp_chksum_pkt;
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-	odp_ipsec_outbound_config_t outbound = ipsec_config.outbound;
+	odp_ipsec_outbound_config_t outbound = ipsec_config->outbound;
 
 	ipv4_chksum_pkt = OL_TX_CHKSUM_PKT(outbound.chksum.inner_ipv4,
 					   state->is_ipv4,
@@ -1657,7 +1657,7 @@ int odp_ipsec_in_enq(const odp_packet_t pkt_in[], int num_in,
 			queue = ipsec_sa->queue;
 		} else {
 			result->sa = ODP_IPSEC_SA_INVALID;
-			queue = ipsec_config.inbound.default_queue;
+			queue = ipsec_config->inbound.default_queue;
 		}
 
 		if (odp_queue_enq(queue, odp_ipsec_packet_to_event(pkt))) {
@@ -1900,7 +1900,19 @@ odp_event_t odp_ipsec_packet_to_event(odp_packet_t pkt)
 
 int _odp_ipsec_init_global(void)
 {
-	odp_ipsec_config_init(&ipsec_config);
+	odp_shm_t shm;
+
+	shm = odp_shm_reserve("_odp_ipsec", sizeof(odp_ipsec_config_t),
+			      ODP_CACHE_LINE_SIZE, 0);
+
+	ipsec_config = odp_shm_addr(shm);
+
+	if (ipsec_config == NULL) {
+		ODP_ERR("Shm reserve failed for odp_ipsec\n");
+		return -1;
+	}
+
+	odp_ipsec_config_init(ipsec_config);
 
 	memset(&default_out_opt, 0, sizeof(default_out_opt));
 
@@ -1913,6 +1925,12 @@ int _odp_ipsec_init_global(void)
 
 int _odp_ipsec_term_global(void)
 {
-	/* Do nothing for now */
+	odp_shm_t shm = odp_shm_lookup("_odp_ipsec");
+
+	if (shm == ODP_SHM_INVALID || odp_shm_free(shm)) {
+		ODP_ERR("Shm free failed for odp_ipsec");
+		return -1;
+	}
+
 	return 0;
 }
