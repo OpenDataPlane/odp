@@ -23,12 +23,12 @@ enum init_stage {
 	LIBCONFIG_INIT,
 	CPUMASK_INIT,
 	CPU_CYCLES_INIT,
-	HASH_INIT,
 	TIME_INIT,
 	SYSINFO_INIT,
 	ISHM_INIT,
 	FDSERVER_INIT,
 	GLOBAL_RW_DATA_INIT,
+	HASH_INIT,
 	THREAD_INIT,
 	POOL_INIT,
 	QUEUE_INIT,
@@ -191,6 +191,13 @@ static int term_global(enum init_stage stage)
 		}
 		/* Fall through */
 
+	case HASH_INIT:
+		if (_odp_hash_term_global()) {
+			ODP_ERR("ODP hash term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
 	case GLOBAL_RW_DATA_INIT:
 		if (global_rw_data_term()) {
 			ODP_ERR("ODP global RW data term failed.\n");
@@ -226,8 +233,6 @@ static int term_global(enum init_stage stage)
 		}
 		/* Fall through */
 
-	case HASH_INIT:
-		/* Fall through */
 	case CPU_CYCLES_INIT:
 		/* Fall through */
 	case CPUMASK_INIT:
@@ -287,12 +292,6 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = CPU_CYCLES_INIT;
 
-	if (_odp_hash_init_global()) {
-		ODP_ERR("ODP hash init failed.\n");
-		goto init_failed;
-	}
-	stage = HASH_INIT;
-
 	if (odp_time_init_global()) {
 		ODP_ERR("ODP time init failed.\n");
 		goto init_failed;
@@ -322,6 +321,12 @@ int odp_init_global(odp_instance_t *instance,
 		goto init_failed;
 	}
 	stage = GLOBAL_RW_DATA_INIT;
+
+	if (_odp_hash_init_global()) {
+		ODP_ERR("ODP hash init failed.\n");
+		goto init_failed;
+	}
+	stage = HASH_INIT;
 
 	if (odp_thread_init_global()) {
 		ODP_ERR("ODP thread init failed.\n");
