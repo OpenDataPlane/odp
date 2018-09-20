@@ -12,6 +12,7 @@
 #include <odp/api/hash.h>
 #include <odp/api/hints.h>
 #include <odp/api/rwlock.h>
+#include <odp/api/shared_memory.h>
 
 #include <odp_debug_internal.h>
 #include <odp_init_internal.h>
@@ -22,16 +23,40 @@ typedef struct crc_table_t {
 	uint32_t poly;
 	int      reflect;
 	odp_rwlock_t rwlock;
+	odp_shm_t shm;
 
 } crc_table_t;
 
-static crc_table_t crc_table;
+static crc_table_t *crc_table;
 
 int _odp_hash_init_global(void)
 {
-	memset(&crc_table, 0, sizeof(crc_table_t));
+	odp_shm_t shm;
 
-	odp_rwlock_init(&crc_table.rwlock);
+	shm = odp_shm_reserve("_odp_hash_crc_gen", sizeof(crc_table_t),
+			      ODP_CACHE_LINE_SIZE, 0);
+
+	crc_table = odp_shm_addr(shm);
+
+	if (crc_table == NULL) {
+		ODP_ERR("Shm reserve failed for odp_hash_crc_gen\n");
+		return -1;
+	}
+
+	memset(crc_table, 0, sizeof(crc_table_t));
+
+	crc_table->shm = shm;
+	odp_rwlock_init(&crc_table->rwlock);
+
+	return 0;
+}
+
+int _odp_hash_term_global(void)
+{
+	if (odp_shm_free(crc_table->shm)) {
+		ODP_ERR("Shm free failed for odp_hash_crc_gen\n");
+		return -1;
+	}
 
 	return 0;
 }
@@ -98,9 +123,9 @@ static inline void crc_table_gen(uint32_t poly, int reflect, int width)
 {
 	uint32_t i, crc, bit, shift, msb, mask;
 
-	crc_table.width   = width;
-	crc_table.poly    = poly;
-	crc_table.reflect = reflect;
+	crc_table->width   = width;
+	crc_table->poly    = poly;
+	crc_table->reflect = reflect;
 
 	shift = width - 8;
 	mask  = 0xffffffff >> (32 - width);
@@ -136,7 +161,7 @@ static inline void crc_table_gen(uint32_t poly, int reflect, int width)
 			}
 		}
 
-		crc_table.crc[i] = crc & mask;
+		crc_table->crc[i] = crc & mask;
 	}
 }
 
@@ -156,9 +181,10 @@ static inline uint32_t crc_calc(const uint8_t *data, uint32_t data_len,
 		byte = data[i];
 
 		if (reflect) {
-			crc = crc_table.crc[(crc ^ byte) & 0xff] ^ (crc >> 8);
+			crc = crc_table->crc[(crc ^ byte) & 0xff] ^ (crc >> 8);
 		} else {
-			crc = crc_table.crc[(crc >> shift) ^ byte] ^ (crc << 8);
+			crc = crc_table->crc[(crc >> shift) ^ byte] ^
+					(crc << 8);
 			crc = crc & mask;
 		}
 	}
@@ -192,16 +218,16 @@ int odp_hash_crc_gen64(const void *data_ptr, uint32_t data_len,
 		return -1;
 	}
 
-	odp_rwlock_read_lock(&crc_table.rwlock);
+	odp_rwlock_read_lock(&crc_table->rwlock);
 
-	update_table = (crc_table.width != width) ||
-		       (crc_table.poly != poly) ||
-		       (crc_table.reflect != reflect);
+	update_table = (crc_table->width != width) ||
+		       (crc_table->poly != poly) ||
+		       (crc_table->reflect != reflect);
 
 	/* Generate CRC table if not yet generated. */
 	if (odp_unlikely(update_table)) {
-		odp_rwlock_read_unlock(&crc_table.rwlock);
-		odp_rwlock_write_lock(&crc_table.rwlock);
+		odp_rwlock_read_unlock(&crc_table->rwlock);
+		odp_rwlock_write_lock(&crc_table->rwlock);
 
 		crc_table_gen(poly, reflect, width);
 	}
@@ -209,9 +235,9 @@ int odp_hash_crc_gen64(const void *data_ptr, uint32_t data_len,
 	crc = crc_calc(data_ptr, data_len, init_val, reflect, width);
 
 	if (odp_unlikely(update_table))
-		odp_rwlock_write_unlock(&crc_table.rwlock);
+		odp_rwlock_write_unlock(&crc_table->rwlock);
 	else
-		odp_rwlock_read_unlock(&crc_table.rwlock);
+		odp_rwlock_read_unlock(&crc_table->rwlock);
 
 	if (crc_param->xor_out)
 		crc = crc ^ (uint32_t)crc_param->xor_out;
