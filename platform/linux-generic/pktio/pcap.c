@@ -56,7 +56,6 @@ typedef struct {
 	void *tx;		/**< tx pcap handle */
 	void *tx_dump;		/**< tx pcap dumper handle */
 	odp_pool_t pool;	/**< rx pool */
-	unsigned char *buf;	/**< per-pktio temp buffer */
 	int loops;		/**< number of times to loop rx pcap */
 	int loop_cnt;		/**< number of loops completed */
 	odp_bool_t promisc;	/**< promiscuous mode state */
@@ -141,12 +140,6 @@ static int _pcapif_init_tx(pkt_pcap_t *pcap)
 		pcap->tx = tx;
 	}
 
-	pcap->buf = malloc(PKTIO_PCAP_MTU);
-	if (!pcap->buf) {
-		ODP_ERR("failed to malloc temp buffer\n");
-		return -1;
-	}
-
 	pcap->tx_dump = pcap_dump_open(tx, pcap->fname_tx);
 	if (!pcap->tx_dump) {
 		ODP_ERR("failed to open dump file %s (%s)\n",
@@ -198,7 +191,6 @@ static int pcapif_close(pktio_entry_t *pktio_entry)
 	if (pcap->rx)
 		pcap_close(pcap->rx);
 
-	free(pcap->buf);
 	free(pcap->fname_rx);
 	free(pcap->fname_tx);
 
@@ -298,6 +290,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 static int _pcapif_dump_pkt(pkt_pcap_t *pcap, odp_packet_t pkt)
 {
 	struct pcap_pkthdr hdr;
+	uint8_t tx_buf[PKTIO_PCAP_MTU];
 
 	if (!pcap->tx_dump)
 		return 0;
@@ -306,10 +299,10 @@ static int _pcapif_dump_pkt(pkt_pcap_t *pcap, odp_packet_t pkt)
 	hdr.len = hdr.caplen;
 	(void)gettimeofday(&hdr.ts, NULL);
 
-	if (odp_packet_copy_to_mem(pkt, 0, hdr.len, pcap->buf) != 0)
+	if (odp_packet_copy_to_mem(pkt, 0, hdr.len, tx_buf) != 0)
 		return -1;
 
-	pcap_dump(pcap->tx_dump, &hdr, pcap->buf);
+	pcap_dump(pcap->tx_dump, &hdr, tx_buf);
 	(void)pcap_dump_flush(pcap->tx_dump);
 
 	return 0;
