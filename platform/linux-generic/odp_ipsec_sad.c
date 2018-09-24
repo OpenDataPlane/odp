@@ -26,6 +26,9 @@
 
 typedef struct ipsec_sa_table_t {
 	ipsec_sa_t ipsec_sa[ODP_CONFIG_IPSEC_SAS];
+	struct ODP_ALIGNED_CACHE {
+		odp_atomic_u32_t ipv4_id;
+	} hot;
 	odp_shm_t shm;
 } ipsec_sa_table_t;
 
@@ -67,6 +70,7 @@ int _odp_ipsec_sad_init_global(void)
 
 	memset(ipsec_sa_tbl, 0, sizeof(ipsec_sa_table_t));
 	ipsec_sa_tbl->shm = shm;
+	odp_atomic_init_u32(&ipsec_sa_tbl->hot.ipv4_id, 0);
 
 	for (i = 0; i < ODP_CONFIG_IPSEC_SAS; i++) {
 		ipsec_sa_t *ipsec_sa = ipsec_sa_entry(i);
@@ -347,7 +351,6 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 			memcpy(&ipsec_sa->out.tun_ipv4.dst_ip,
 			       param->outbound.tunnel.ipv4.dst_addr,
 			       sizeof(ipsec_sa->out.tun_ipv4.dst_ip));
-			odp_atomic_init_u32(&ipsec_sa->out.tun_ipv4.hdr_id, 0);
 			ipsec_sa->out.tun_ipv4.param.src_addr =
 				&ipsec_sa->out.tun_ipv4.src_ip;
 			ipsec_sa->out.tun_ipv4.param.dst_addr =
@@ -728,4 +731,13 @@ int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
 	}
 
 	return 0;
+}
+
+uint16_t _odp_ipsec_sa_alloc_ipv4_id(ipsec_sa_t *ipsec_sa)
+{
+	(void) ipsec_sa;
+
+	/* No need to convert to BE: ID just should not be duplicated */
+	return odp_atomic_fetch_add_u32(&ipsec_sa_tbl->hot.ipv4_id, 1)
+		& 0xffff;
 }
