@@ -872,14 +872,18 @@ static int ipsec_out_tunnel_ipv4(odp_packet_t *pkt,
 	state->ip_tot_len += _ODP_IPV4HDR_LEN;
 
 	out_ip.tot_len = odp_cpu_to_be_16(state->ip_tot_len);
-	/* No need to convert to BE: ID just should not be duplicated */
-	out_ip.id = odp_atomic_fetch_add_u32(&ipsec_sa->out.tun_ipv4.hdr_id,
-					     1);
 	if (ipsec_sa->copy_df)
 		flags = state->out_tunnel.ip_df;
 	else
 		flags = ((uint16_t)ipv4_param->df) << 14;
 	out_ip.frag_offset = odp_cpu_to_be_16(flags);
+
+	/* Allocate unique IP ID only for non-atomic datagrams */
+	if (out_ip.frag_offset == 0)
+		out_ip.id = _odp_ipsec_sa_alloc_ipv4_id(ipsec_sa);
+	else
+		out_ip.id = 0;
+
 	out_ip.ttl = ipv4_param->ttl;
 	/* Will be filled later by packet checksum update */
 	out_ip.chksum = 0;

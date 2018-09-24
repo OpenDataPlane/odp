@@ -181,9 +181,6 @@ struct ipsec_sa_s {
 				odp_ipsec_ipv4_param_t param;
 				odp_u32be_t	src_ip;
 				odp_u32be_t	dst_ip;
-
-				/* 32-bit from which low 16 are used */
-				odp_atomic_u32_t hdr_id;
 			} tun_ipv4;
 			struct {
 				odp_ipsec_ipv6_param_t param;
@@ -273,6 +270,12 @@ int _odp_ipsec_sa_replay_precheck(ipsec_sa_t *ipsec_sa, uint32_t seq,
  */
 int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
 				odp_ipsec_op_status_t *status);
+
+/**
+  * Allocate an IPv4 ID for an outgoing packet.
+  */
+uint16_t _odp_ipsec_sa_alloc_ipv4_id(ipsec_sa_t *ipsec_sa);
+
 /**
  * Try inline IPsec processing of provided packet.
  *
