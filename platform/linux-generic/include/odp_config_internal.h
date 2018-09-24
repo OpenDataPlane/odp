@@ -141,7 +141,7 @@ extern "C" {
  * all ODP threads (when the _ODP_ISHM_SINGLE_VA flag is used).
  * In bytes.
  */
-#define ODP_CONFIG_ISHM_VA_PREALLOC_SZ (536870912L)
+#define ODP_CONFIG_ISHM_VA_PREALLOC_SZ (1024 * 1024 * 1024L)
 
 /*
  * Maximum event burst size
