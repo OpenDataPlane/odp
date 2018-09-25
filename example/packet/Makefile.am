@@ -1,6 +1,9 @@
 include $(top_srcdir)/example/Makefile.inc
 
-bin_PROGRAMS = odp_pktio
+bin_PROGRAMS = odp_packet_dump \
+	       odp_pktio
+
+odp_packet_dump_SOURCES = odp_packet_dump.c
 
 odp_pktio_SOURCES = odp_pktio.c
 
