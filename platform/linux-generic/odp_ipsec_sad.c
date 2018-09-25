@@ -14,6 +14,7 @@
 #include <odp_init_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_ipsec_internal.h>
+#include <odp_ring_mpmc_internal.h>
 
 #include <odp/api/plat/atomic_inlines.h>
 #include <odp/api/plat/cpu_inlines.h>
@@ -24,10 +25,33 @@
 #define IPSEC_SA_STATE_FREE	0xc0000000
 #define IPSEC_SA_STATE_RESERVED	0x80000000
 
+/*
+ * We do not have global IPv4 ID counter that is accessed for every outbound
+ * packet. Instead, we split IPv4 ID space to fixed size blocks that we
+ * allocate to threads on demand. When a thread has used its block of IDs,
+ * it frees it and allocates a new block. Free blocks are kept in a ring so
+ * that the block last freed is the one to be allocated last to maximize
+ * the time before IPv4 ID reuse.
+ */
+#define IPV4_ID_BLOCK_SIZE 64 /* must be power of 2 */
+#define IPV4_ID_RING_SIZE (UINT16_MAX / IPV4_ID_BLOCK_SIZE)
+#define IPV4_ID_RING_MASK (IPV4_ID_RING_SIZE - 1)
+
+#if IPV4_ID_RING_SIZE <= ODP_THREAD_COUNT_MAX
+#warning IPV4_ID_RING_SIZE is too small for the maximum number of threads.
+#endif
+
+typedef struct ODP_ALIGNED_CACHE ipsec_thread_local_s {
+	uint16_t first_ipv4_id; /* first ID of current block of IDs */
+	uint16_t next_ipv4_id;  /* next ID to be used */
+} ipsec_thread_local_t;
+
 typedef struct ipsec_sa_table_t {
 	ipsec_sa_t ipsec_sa[ODP_CONFIG_IPSEC_SAS];
+	ipsec_thread_local_t per_thread[ODP_THREAD_COUNT_MAX];
 	struct ODP_ALIGNED_CACHE {
-		odp_atomic_u32_t ipv4_id;
+		ring_mpmc_t ipv4_id_ring;
+		uint32_t ODP_ALIGNED_CACHE ipv4_id_data[IPV4_ID_RING_SIZE];
 	} hot;
 	odp_shm_t shm;
 } ipsec_sa_table_t;
@@ -70,7 +94,31 @@ int _odp_ipsec_sad_init_global(void)
 
 	memset(ipsec_sa_tbl, 0, sizeof(ipsec_sa_table_t));
 	ipsec_sa_tbl->shm = shm;
-	odp_atomic_init_u32(&ipsec_sa_tbl->hot.ipv4_id, 0);
+
+	ring_mpmc_init(&ipsec_sa_tbl->hot.ipv4_id_ring);
+	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
+		/*
+		 * Make the current ID block fully used, forcing allocation
+		 * of a fresh block at first use.
+		 */
+		ipsec_sa_tbl->per_thread[i].first_ipv4_id = 0;
+		ipsec_sa_tbl->per_thread[i].next_ipv4_id = IPV4_ID_BLOCK_SIZE;
+	}
+	/*
+	 * Initialize IPv4 ID ring with ID blocks.
+	 *
+	 * The last ID block is left unused since the ring can hold
+	 * only IPV4_ID_RING_SIZE - 1 entries.
+	 */
+	for (i = 0; i < IPV4_ID_RING_SIZE - 1; i++) {
+		uint32_t data = i * IPV4_ID_BLOCK_SIZE;
+
+		ring_mpmc_enq_multi(&ipsec_sa_tbl->hot.ipv4_id_ring,
+				    ipsec_sa_tbl->hot.ipv4_id_data,
+				    IPV4_ID_RING_MASK,
+				    &data,
+				    1);
+	}
 
 	for (i = 0; i < ODP_CONFIG_IPSEC_SAS; i++) {
 		ipsec_sa_t *ipsec_sa = ipsec_sa_entry(i);
@@ -736,8 +784,28 @@ int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
 uint16_t _odp_ipsec_sa_alloc_ipv4_id(ipsec_sa_t *ipsec_sa)
 {
 	(void) ipsec_sa;
+	ipsec_thread_local_t *tl = &ipsec_sa_tbl->per_thread[odp_thread_id()];
+	uint32_t data;
+
+	if (odp_unlikely(tl->next_ipv4_id ==
+			 tl->first_ipv4_id + IPV4_ID_BLOCK_SIZE)) {
+		/* Return used ID block to the ring */
+		data = tl->first_ipv4_id;
+		ring_mpmc_enq_multi(&ipsec_sa_tbl->hot.ipv4_id_ring,
+				    ipsec_sa_tbl->hot.ipv4_id_data,
+				    IPV4_ID_RING_MASK,
+				    &data,
+				    1);
+		/* Get new ID block */
+		ring_mpmc_deq_multi(&ipsec_sa_tbl->hot.ipv4_id_ring,
+				    ipsec_sa_tbl->hot.ipv4_id_data,
+				    IPV4_ID_RING_MASK,
+				    &data,
+				    1);
+		tl->first_ipv4_id = data;
+		tl->next_ipv4_id = data;
+	}
 
 	/* No need to convert to BE: ID just should not be duplicated */
-	return odp_atomic_fetch_add_u32(&ipsec_sa_tbl->hot.ipv4_id, 1)
-		& 0xffff;
+	return tl->next_ipv4_id++;
 }
