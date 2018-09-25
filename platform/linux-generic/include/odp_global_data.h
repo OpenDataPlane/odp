@@ -68,6 +68,7 @@ struct odp_global_data_rw_t {
 	int inotify_watch_fd;
 	pthread_t inotify_thread;
 	int inotify_pcapng_is_running;
+	odp_bool_t dpdk_initialized;
 };
 
 extern struct odp_global_data_ro_t odp_global_ro;

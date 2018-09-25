@@ -139,9 +139,6 @@ static inline pkt_dpdk_t *pkt_priv(pktio_entry_t *pktio_entry)
 
 static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 
-/* Has dpdk_pktio_init() been called */
-static odp_bool_t dpdk_initialized;
-
 #ifndef RTE_BUILD_SHARED_LIB
 #define MEMPOOL_OPS(hdl) \
 extern void mp_hdlr_init_##hdl(void)
@@ -1260,7 +1257,7 @@ static void dpdk_mempool_free(struct rte_mempool *mp, void *arg ODP_UNUSED)
 
 static int dpdk_pktio_term(void)
 {
-	if (!dpdk_initialized)
+	if (!odp_global_rw->dpdk_initialized)
 		return 0;
 
 #if RTE_VERSION >= RTE_VERSION_NUM(17, 8, 0, 0)
@@ -1433,9 +1430,9 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 
 	/* Initialize DPDK here instead of odp_init_global() to enable running
 	 * 'make check' without root privileges */
-	if (dpdk_initialized == 0) {
+	if (odp_global_rw->dpdk_initialized == 0) {
 		dpdk_pktio_init();
-		dpdk_initialized = 1;
+		odp_global_rw->dpdk_initialized = 1;
 	}
 
 	/* Init pktio entry */
