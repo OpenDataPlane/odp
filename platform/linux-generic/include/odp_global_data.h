@@ -58,17 +58,16 @@ struct odp_global_data_ro_t {
 	int num_cpus_installed;
 	config_t libconfig_default;
 	config_t libconfig_runtime;
-	int inotify_pcapng_fd;
-	int inotify_watch_fd;
-	pthread_t inotify_thread;
-	int inotify_pcapng_is_running;
 	odp_random_kind_t ipsec_rand_kind;
 };
 
 /* Modifiable global data. Memory region is shared and synchronized amongst all
  * worker processes. */
 struct odp_global_data_rw_t {
-	int dummy;
+	int inotify_pcapng_fd;
+	int inotify_watch_fd;
+	pthread_t inotify_thread;
+	int inotify_pcapng_is_running;
 };
 
 extern struct odp_global_data_ro_t odp_global_ro;

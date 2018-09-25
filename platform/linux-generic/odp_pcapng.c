@@ -120,13 +120,13 @@ static void *inotify_update(void *arg)
 	while (1) {
 		offset = 0;
 		FD_ZERO(&rfds);
-		FD_SET(odp_global_ro.inotify_pcapng_fd, &rfds);
+		FD_SET(odp_global_rw->inotify_pcapng_fd, &rfds);
 		time.tv_sec = 2;
 		time.tv_usec = 0;
-		select(odp_global_ro.inotify_pcapng_fd + 1, &rfds, NULL,
+		select(odp_global_rw->inotify_pcapng_fd + 1, &rfds, NULL,
 		       NULL, &time);
-		if (FD_ISSET(odp_global_ro.inotify_pcapng_fd, &rfds)) {
-			rdlen = read(odp_global_ro.inotify_pcapng_fd,
+		if (FD_ISSET(odp_global_rw->inotify_pcapng_fd, &rfds)) {
+			rdlen = read(odp_global_rw->inotify_pcapng_fd,
 				     buffer, INOTIFY_BUF_LEN);
 			while (offset < rdlen) {
 				int qidx;
@@ -219,23 +219,23 @@ int pcapng_prepare(pktio_entry_t *entry)
 	}
 
 	/* already running from a previous pktio */
-	if (odp_global_ro.inotify_pcapng_is_running == 1)
+	if (odp_global_rw->inotify_pcapng_is_running == 1)
 		return 0;
 
-	odp_global_ro.inotify_pcapng_fd = -1;
-	odp_global_ro.inotify_watch_fd = -1;
+	odp_global_rw->inotify_pcapng_fd = -1;
+	odp_global_rw->inotify_watch_fd = -1;
 
-	odp_global_ro.inotify_pcapng_fd = inotify_init();
-	if (odp_global_ro.inotify_pcapng_fd == -1) {
+	odp_global_rw->inotify_pcapng_fd = inotify_init();
+	if (odp_global_rw->inotify_pcapng_fd == -1) {
 		ODP_ERR("can't init inotify. pcap disabled\n");
 		goto out_destroy;
 	}
 
-	odp_global_ro.inotify_watch_fd =
-		inotify_add_watch(odp_global_ro.inotify_pcapng_fd,
+	odp_global_rw->inotify_watch_fd =
+		inotify_add_watch(odp_global_rw->inotify_pcapng_fd,
 				  PCAPNG_WATCH_DIR, IN_CLOSE | IN_OPEN);
 
-	if (odp_global_ro.inotify_watch_fd == -1) {
+	if (odp_global_rw->inotify_watch_fd == -1) {
 		ODP_ERR("can't register inotify for %s. pcap disabled\n",
 			strerror(errno));
 		goto out_destroy;
@@ -243,12 +243,12 @@ int pcapng_prepare(pktio_entry_t *entry)
 
 	/* create a thread to poll inotify triggers */
 	pthread_attr_init(&attr);
-	ret = pthread_create(&odp_global_ro.inotify_thread, &attr,
+	ret = pthread_create(&odp_global_rw->inotify_thread, &attr,
 			     inotify_update, entry);
 	if (ret)
 		ODP_ERR("can't start inotify thread. pcap disabled\n");
 	else
-		odp_global_ro.inotify_pcapng_is_running = 1;
+		odp_global_rw->inotify_pcapng_is_running = 1;
 
 	return ret;
 
@@ -265,24 +265,24 @@ void pcapng_destroy(pktio_entry_t *entry)
 	unsigned int max_queue =
 		MAX(entry->s.num_in_queue, entry->s.num_out_queue);
 
-	if (odp_global_ro.inotify_pcapng_is_running == 1) {
-		ret = pthread_cancel(odp_global_ro.inotify_thread);
+	if (odp_global_rw->inotify_pcapng_is_running == 1) {
+		ret = pthread_cancel(odp_global_rw->inotify_thread);
 		if (ret)
 			ODP_ERR("can't cancel inotify thread %s\n",
 				strerror(errno));
 	}
 
 	/* fd's will be -1 in case of any failure */
-	ret = inotify_rm_watch(odp_global_ro.inotify_pcapng_fd,
-			       odp_global_ro.inotify_watch_fd);
+	ret = inotify_rm_watch(odp_global_rw->inotify_pcapng_fd,
+			       odp_global_rw->inotify_watch_fd);
 	if (ret)
 		ODP_ERR("can't deregister inotify %s\n", strerror(errno));
 
-	if (odp_global_ro.inotify_pcapng_fd != -1)
-		close(odp_global_ro.inotify_pcapng_fd);
+	if (odp_global_rw->inotify_pcapng_fd != -1)
+		close(odp_global_rw->inotify_pcapng_fd);
 
-	if (odp_global_ro.inotify_watch_fd != -1)
-		close(odp_global_ro.inotify_watch_fd);
+	if (odp_global_rw->inotify_watch_fd != -1)
+		close(odp_global_rw->inotify_watch_fd);
 
 	for (i = 0; i < max_queue; i++) {
 		char pcapng_name[128];
