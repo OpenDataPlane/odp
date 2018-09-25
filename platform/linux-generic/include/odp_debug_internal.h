@@ -34,14 +34,14 @@ extern "C" {
 #define ODP_ASSERT(cond) \
 	do { if ((ODP_DEBUG == 1) && (!(cond))) { \
 		ODP_ERR("%s\n", #cond); \
-		odp_global_data.abort_fn(); } \
+		odp_global_ro.abort_fn(); } \
 	} while (0)
 
 /**
  * This macro is used to indicate when a given function is not implemented
  */
 #define ODP_UNIMPLEMENTED() \
-		odp_global_data.log_fn(ODP_LOG_UNIMPLEMENTED, \
+		odp_global_ro.log_fn(ODP_LOG_UNIMPLEMENTED, \
 			"%s:%d:The function %s() is not implemented\n", \
 			__FILE__, __LINE__, __func__)
 /**
@@ -66,14 +66,14 @@ extern "C" {
 #define ODP_ABORT(fmt, ...) \
 	do { \
 		ODP_LOG(ODP_LOG_ABORT, fmt, ##__VA_ARGS__); \
-		odp_global_data.abort_fn(); \
+		odp_global_ro.abort_fn(); \
 	} while (0)
 
 /**
  * ODP LOG macro.
  */
 #define ODP_LOG(level, fmt, ...) \
-	odp_global_data.log_fn(level, "%s:%d:%s():" fmt, __FILE__, \
+	odp_global_ro.log_fn(level, "%s:%d:%s():" fmt, __FILE__, \
 	__LINE__, __func__, ##__VA_ARGS__)
 
 /**
@@ -81,7 +81,7 @@ extern "C" {
  * specifically for dumping internal data.
  */
 #define ODP_PRINT(fmt, ...) \
-	odp_global_data.log_fn(ODP_LOG_PRINT, fmt, ##__VA_ARGS__)
+	odp_global_ro.log_fn(ODP_LOG_PRINT, fmt, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 }

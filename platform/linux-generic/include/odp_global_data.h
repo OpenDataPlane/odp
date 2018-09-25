@@ -37,7 +37,9 @@ typedef struct {
 	char     *default_huge_page_dir;
 } hugepage_info_t;
 
-struct odp_global_data_s {
+/* Read-only global data. Members should not be modified after global init
+ * to enable process more support. */
+struct odp_global_data_ro_t {
 	/* directory for odp mmaped files */
 	char *shm_dir;
 	/* overload default with env */
@@ -63,7 +65,14 @@ struct odp_global_data_s {
 	odp_random_kind_t ipsec_rand_kind;
 };
 
-extern struct odp_global_data_s odp_global_data;
+/* Modifiable global data. Memory region is shared and synchronized amongst all
+ * worker processes. */
+struct odp_global_data_rw_t {
+	int dummy;
+};
+
+extern struct odp_global_data_ro_t odp_global_ro;
+extern struct odp_global_data_rw_t *odp_global_rw;
 
 #ifdef __cplusplus
 }

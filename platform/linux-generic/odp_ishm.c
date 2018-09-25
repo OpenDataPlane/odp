@@ -306,8 +306,8 @@ static void hp_init(void)
 
 	if (_odp_libconfig_lookup_ext_int("shm", NULL, "single_va",
 					  &single_va)) {
-		odp_global_data.shm_single_va = single_va;
-		ODP_DBG("Shm single VA: %d\n", odp_global_data.shm_single_va);
+		odp_global_ro.shm_single_va = single_va;
+		ODP_DBG("Shm single VA: %d\n", odp_global_ro.shm_single_va);
 	}
 
 	if (!_odp_libconfig_lookup_ext_int("shm", NULL, "num_cached_hp",
@@ -320,14 +320,14 @@ static void hp_init(void)
 
 	ODP_DBG("Init HP cache with up to %d pages\n", count);
 
-	if (!odp_global_data.hugepage_info.default_huge_page_dir) {
+	if (!odp_global_ro.hugepage_info.default_huge_page_dir) {
 		ODP_ERR("No huge page dir\n");
 		return;
 	}
 
 	snprintf(dir, ISHM_FILENAME_MAXLEN, "%s/%s",
-		 odp_global_data.hugepage_info.default_huge_page_dir,
-		 odp_global_data.uid);
+		 odp_global_ro.hugepage_info.default_huge_page_dir,
+		 odp_global_ro.uid);
 
 	if (mkdir(dir, 0744) != 0) {
 		if (errno != EEXIST) {
@@ -339,7 +339,7 @@ static void hp_init(void)
 	snprintf(filename, ISHM_FILENAME_MAXLEN,
 		 "%s/odp-%d-ishm_cached",
 		 dir,
-		 odp_global_data.main_pid);
+		 odp_global_ro.main_pid);
 
 	addr = mmap(NULL,
 		    sizeof(struct huge_page_cache) + sizeof(int) * count,
@@ -431,7 +431,7 @@ static void *alloc_fragment(uintptr_t size, int block_index, intptr_t align,
 	ishm_fragment_t *rem_fragmnt;
 	uintptr_t border;/* possible start of new fragment (next alignement)  */
 	intptr_t left;	 /* room remaining after, if the segment is allocated */
-	uintptr_t remainder = odp_global_data.shm_max_memory;
+	uintptr_t remainder = odp_global_ro.shm_max_memory;
 
 	/*
 	 * search for the best bit, i.e. search for the unallocated fragment
@@ -607,22 +607,22 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 
 	/* huge dir must be known to create files there!: */
 	if ((huge == HUGE) &&
-	    (!odp_global_data.hugepage_info.default_huge_page_dir))
+	    (!odp_global_ro.hugepage_info.default_huge_page_dir))
 		return -1;
 
 	if (huge == HUGE)
 		snprintf(dir, ISHM_FILENAME_MAXLEN, "%s/%s",
-			 odp_global_data.hugepage_info.default_huge_page_dir,
-			 odp_global_data.uid);
+			 odp_global_ro.hugepage_info.default_huge_page_dir,
+			 odp_global_ro.uid);
 	else
 		snprintf(dir, ISHM_FILENAME_MAXLEN, "%s/%s",
-			 odp_global_data.shm_dir,
-			 odp_global_data.uid);
+			 odp_global_ro.shm_dir,
+			 odp_global_ro.uid);
 
 	snprintf(filename, ISHM_FILENAME_MAXLEN,
 		 ISHM_FILENAME_FORMAT,
 		 dir,
-		 odp_global_data.main_pid,
+		 odp_global_ro.main_pid,
 		 (name && name[0]) ? name : seq_string);
 
 	mkdir(dir, 0744);
@@ -651,9 +651,9 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 		memcpy(new_block->filename, filename, ISHM_FILENAME_MAXLEN);
 		snprintf(new_block->exptname, ISHM_FILENAME_MAXLEN,
 			 ISHM_EXPTNAME_FORMAT,
-			 odp_global_data.shm_dir,
-			 odp_global_data.uid,
-			 odp_global_data.main_pid,
+			 odp_global_ro.shm_dir,
+			 odp_global_ro.uid,
+			 odp_global_ro.main_pid,
 			 (name && name[0]) ? name : seq_string);
 		export_file = fopen(new_block->exptname, "w");
 		if (export_file == NULL) {
@@ -1223,8 +1223,8 @@ int _odp_ishm_find_exported(const char *remote_name, pid_t external_odp_pid,
 	/* try to read the block description file: */
 	snprintf(export_filename, ISHM_FILENAME_MAXLEN,
 		 ISHM_EXPTNAME_FORMAT,
-		 odp_global_data.shm_dir,
-		 odp_global_data.uid,
+		 odp_global_ro.shm_dir,
+		 odp_global_ro.uid,
 		 external_odp_pid,
 		 remote_name);
 
@@ -1618,7 +1618,7 @@ int _odp_ishm_cleanup_files(const char *dirpath)
 	int p_len;
 	int f_len;
 
-	snprintf(userdir, PATH_MAX, "%s/%s", dirpath, odp_global_data.uid);
+	snprintf(userdir, PATH_MAX, "%s/%s", dirpath, odp_global_ro.uid);
 
 	dir = opendir(userdir);
 	if (!dir) {
@@ -1627,7 +1627,7 @@ int _odp_ishm_cleanup_files(const char *dirpath)
 			dirpath, strerror(errno));
 		return 0;
 	}
-	snprintf(prefix, PATH_MAX, _ODP_FILES_FMT, odp_global_data.main_pid);
+	snprintf(prefix, PATH_MAX, _ODP_FILES_FMT, odp_global_ro.main_pid);
 	p_len = strlen(prefix);
 	while ((e = readdir(dir)) != NULL) {
 		if (strncmp(e->d_name, prefix, p_len) == 0) {
@@ -1657,7 +1657,7 @@ int _odp_ishm_init_global(const odp_init_t *init)
 	void *spce_addr;
 	int i;
 	uid_t uid;
-	char *hp_dir = odp_global_data.hugepage_info.default_huge_page_dir;
+	char *hp_dir = odp_global_ro.hugepage_info.default_huge_page_dir;
 	uint64_t align;
 	uint64_t max_memory = ODP_CONFIG_ISHM_VA_PREALLOC_SZ;
 	uint64_t internal   = ODP_CONFIG_ISHM_VA_PREALLOC_SZ / 8;
@@ -1666,27 +1666,27 @@ int _odp_ishm_init_global(const odp_init_t *init)
 	if (init && init->shm.max_memory)
 		max_memory = init->shm.max_memory + internal;
 
-	odp_global_data.shm_max_memory = max_memory;
-	odp_global_data.shm_max_size   = max_memory - internal;
-	odp_global_data.main_pid = getpid();
-	odp_global_data.shm_dir = getenv("ODP_SHM_DIR");
-	if (odp_global_data.shm_dir) {
-		odp_global_data.shm_dir_from_env = 1;
+	odp_global_ro.shm_max_memory = max_memory;
+	odp_global_ro.shm_max_size   = max_memory - internal;
+	odp_global_ro.main_pid = getpid();
+	odp_global_ro.shm_dir = getenv("ODP_SHM_DIR");
+	if (odp_global_ro.shm_dir) {
+		odp_global_ro.shm_dir_from_env = 1;
 	} else {
-		odp_global_data.shm_dir =
+		odp_global_ro.shm_dir =
 			calloc(1, sizeof(ISHM_FILENAME_NORMAL_PAGE_DIR));
-		sprintf(odp_global_data.shm_dir, "%s",
+		sprintf(odp_global_ro.shm_dir, "%s",
 			ISHM_FILENAME_NORMAL_PAGE_DIR);
-		odp_global_data.shm_dir_from_env = 0;
+		odp_global_ro.shm_dir_from_env = 0;
 	}
 
-	ODP_DBG("ishm: using dir %s\n", odp_global_data.shm_dir);
+	ODP_DBG("ishm: using dir %s\n", odp_global_ro.shm_dir);
 
 	uid = getuid();
-	snprintf(odp_global_data.uid, UID_MAXLEN, "%d",
+	snprintf(odp_global_ro.uid, UID_MAXLEN, "%d",
 		 uid);
 
-	if ((syscall(SYS_gettid)) != odp_global_data.main_pid) {
+	if ((syscall(SYS_gettid)) != odp_global_ro.main_pid) {
 		ODP_ERR("ishm init must be performed by the main "
 			"ODP process!\n.");
 		return -1;
@@ -1701,7 +1701,7 @@ int _odp_ishm_init_global(const odp_init_t *init)
 		align = odp_sys_huge_page_size();
 	}
 
-	_odp_ishm_cleanup_files(odp_global_data.shm_dir);
+	_odp_ishm_cleanup_files(odp_global_ro.shm_dir);
 
 	/* allocate space for the internal shared mem block table: */
 	addr = mmap(NULL, sizeof(ishm_table_t),
@@ -1791,7 +1791,7 @@ int _odp_ishm_init_local(void)
 	 * Do not re-run this for the main ODP process, as it has already
 	 * been done in advance at _odp_ishm_init_global() time:
 	 */
-	if ((getpid() == odp_global_data.main_pid) &&
+	if ((getpid() == odp_global_ro.main_pid) &&
 	    (syscall(SYS_gettid) == getpid()))
 		return 0;
 
@@ -1874,7 +1874,7 @@ int _odp_ishm_term_global(void)
 	int index;
 	ishm_block_t *block;
 
-	if ((getpid() != odp_global_data.main_pid) ||
+	if ((getpid() != odp_global_ro.main_pid) ||
 	    (syscall(SYS_gettid) != getpid()))
 		ODP_ERR("odp_term_global() must be performed by the main "
 			"ODP process!\n.");
@@ -1908,8 +1908,8 @@ int _odp_ishm_term_global(void)
 	if (_odp_ishmphy_unbook_va())
 		ret |= -1;
 
-	if (!odp_global_data.shm_dir_from_env)
-		free(odp_global_data.shm_dir);
+	if (!odp_global_ro.shm_dir_from_env)
+		free(odp_global_ro.shm_dir);
 
 	hp_term();
 

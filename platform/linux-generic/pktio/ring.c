@@ -172,7 +172,7 @@ _ring_create(const char *name, unsigned count, unsigned flags)
 		shm_flag = ODP_SHM_PROC | ODP_SHM_EXPORT;
 	else
 		shm_flag = 0;
-	if (odp_global_data.shm_single_va)
+	if (odp_global_ro.shm_single_va)
 		shm_flag |= ODP_SHM_SINGLE_VA;
 
 	/* count must be a power of 2 */

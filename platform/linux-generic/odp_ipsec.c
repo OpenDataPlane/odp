@@ -1005,7 +1005,7 @@ static int ipsec_out_iv(ipsec_state_t *state,
 		uint32_t len;
 
 		len = odp_random_data(state->iv, ipsec_sa->esp_iv_len,
-				      odp_global_data.ipsec_rand_kind);
+				      odp_global_ro.ipsec_rand_kind);
 
 		if (len != ipsec_sa->esp_iv_len)
 			return -1;
@@ -1904,9 +1904,9 @@ int _odp_ipsec_init_global(void)
 
 	memset(&default_out_opt, 0, sizeof(default_out_opt));
 
-	odp_global_data.ipsec_rand_kind = ODP_RANDOM_CRYPTO;
-	if (odp_global_data.ipsec_rand_kind > odp_random_max_kind())
-		odp_global_data.ipsec_rand_kind = odp_random_max_kind();
+	odp_global_ro.ipsec_rand_kind = ODP_RANDOM_CRYPTO;
+	if (odp_global_ro.ipsec_rand_kind > odp_random_max_kind())
+		odp_global_ro.ipsec_rand_kind = odp_random_max_kind();
 
 	return 0;
 }

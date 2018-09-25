@@ -595,7 +595,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 
 	if (params->type == ODP_POOL_PACKET)
 		shm_flags = ODP_SHM_PROC;
-	if (odp_global_data.shm_single_va)
+	if (odp_global_ro.shm_single_va)
 		shm_flags |= ODP_SHM_SINGLE_VA;
 
 	return pool_create(name, params, shm_flags);
