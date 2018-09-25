@@ -249,9 +249,9 @@ static int get_socket(void)
 
 	/* construct the named socket path: */
 	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCK_FORMAT,
-		 odp_global_data.shm_dir,
-		 odp_global_data.uid,
-		 odp_global_data.main_pid);
+		 odp_global_ro.shm_dir,
+		 odp_global_ro.uid,
+		 odp_global_ro.main_pid);
 
 	s_sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (s_sock == -1) {
@@ -566,16 +566,16 @@ int _odp_fdserver_init_global(void)
 	int res;
 
 	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCKDIR_FORMAT,
-		 odp_global_data.shm_dir,
-		 odp_global_data.uid);
+		 odp_global_ro.shm_dir,
+		 odp_global_ro.uid);
 
 	mkdir(sockpath, 0744);
 
 	/* construct the server named socket path: */
 	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCK_FORMAT,
-		 odp_global_data.shm_dir,
-		 odp_global_data.uid,
-		 odp_global_data.main_pid);
+		 odp_global_ro.shm_dir,
+		 odp_global_ro.uid,
+		 odp_global_ro.main_pid);
 
 	/* create UNIX domain socket: */
 	sock = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -692,17 +692,17 @@ int _odp_fdserver_term_global(void)
 
 	/* construct the server named socket path: */
 	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCK_FORMAT,
-		 odp_global_data.shm_dir,
-		 odp_global_data.uid,
-		 odp_global_data.main_pid);
+		 odp_global_ro.shm_dir,
+		 odp_global_ro.uid,
+		 odp_global_ro.main_pid);
 
 	/* delete the UNIX domain socket: */
 	unlink(sockpath);
 
 	/* delete shm files directory */
 	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCKDIR_FORMAT,
-		 odp_global_data.shm_dir,
-		 odp_global_data.uid);
+		 odp_global_ro.shm_dir,
+		 odp_global_ro.uid);
 	rmdir(sockpath);
 
 	return 0;

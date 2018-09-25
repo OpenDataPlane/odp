@@ -23,8 +23,8 @@ int _odp_libconfig_init_global(void)
 	const char *vers_rt;
 	const char *ipml;
 	const char *ipml_rt;
-	config_t *config = &odp_global_data.libconfig_default;
-	config_t *config_rt = &odp_global_data.libconfig_runtime;
+	config_t *config = &odp_global_ro.libconfig_default;
+	config_t *config_rt = &odp_global_ro.libconfig_runtime;
 
 	config_init(config);
 	config_init(config_rt);
@@ -75,8 +75,8 @@ fail:
 
 int _odp_libconfig_term_global(void)
 {
-	config_destroy(&odp_global_data.libconfig_default);
-	config_destroy(&odp_global_data.libconfig_runtime);
+	config_destroy(&odp_global_ro.libconfig_default);
+	config_destroy(&odp_global_ro.libconfig_runtime);
 
 	return 0;
 }
@@ -86,11 +86,11 @@ int _odp_libconfig_lookup_int(const char *path, int *value)
 	int ret_def = CONFIG_FALSE;
 	int ret_rt = CONFIG_FALSE;
 
-	ret_def = config_lookup_int(&odp_global_data.libconfig_default, path,
+	ret_def = config_lookup_int(&odp_global_ro.libconfig_default, path,
 				    value);
 
 	/* Runtime option overrides default value */
-	ret_rt = config_lookup_int(&odp_global_data.libconfig_runtime, path,
+	ret_rt = config_lookup_int(&odp_global_ro.libconfig_runtime, path,
 				   value);
 
 	return  (ret_def == CONFIG_TRUE || ret_rt == CONFIG_TRUE) ? 1 : 0;
@@ -105,9 +105,9 @@ int _odp_libconfig_lookup_array(const char *path, int value[], int max_num)
 
 	for (j = 0; j < 2; j++) {
 		if (j == 0)
-			config = &odp_global_data.libconfig_default;
+			config = &odp_global_ro.libconfig_default;
 		else
-			config = &odp_global_data.libconfig_runtime;
+			config = &odp_global_ro.libconfig_runtime;
 
 		setting = config_lookup(config, path);
 
@@ -162,11 +162,11 @@ int _odp_libconfig_lookup_ext_int(const char *base_path,
 				  const char *name,
 				  int *value)
 {
-	if (lookup_int(&odp_global_data.libconfig_runtime,
+	if (lookup_int(&odp_global_ro.libconfig_runtime,
 		       base_path, local_path, name, value))
 		return 1;
 
-	if (lookup_int(&odp_global_data.libconfig_default,
+	if (lookup_int(&odp_global_ro.libconfig_default,
 		       base_path, local_path, name, value))
 		return 1;
 

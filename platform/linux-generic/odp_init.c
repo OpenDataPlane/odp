@@ -9,6 +9,7 @@
 #include <odp_posix_extensions.h>
 
 #include <odp/api/init.h>
+#include <odp/api/shared_memory.h>
 #include <odp_debug_internal.h>
 #include <odp_init_internal.h>
 #include <odp_schedule_if.h>
@@ -27,6 +28,7 @@ enum init_stage {
 	SYSINFO_INIT,
 	ISHM_INIT,
 	FDSERVER_INIT,
+	GLOBAL_RW_DATA_INIT,
 	THREAD_INIT,
 	POOL_INIT,
 	QUEUE_INIT,
@@ -44,11 +46,49 @@ enum init_stage {
 	ALL_INIT      /* All init stages completed */
 };
 
-struct odp_global_data_s odp_global_data;
+struct odp_global_data_ro_t odp_global_ro;
+struct odp_global_data_rw_t *odp_global_rw;
 
 void odp_init_param_init(odp_init_t *param)
 {
 	memset(param, 0, sizeof(odp_init_t));
+}
+
+static int global_rw_data_init(void)
+{
+	odp_shm_t shm;
+
+	shm = odp_shm_reserve("_odp_global_rw_data",
+			      sizeof(struct odp_global_data_rw_t),
+			      ODP_CACHE_LINE_SIZE, 0);
+
+	odp_global_rw = odp_shm_addr(shm);
+	if (odp_global_rw == NULL) {
+		ODP_ERR("Global RW data shm reserve failed.\n");
+		return -1;
+	}
+
+	memset(odp_global_rw, 0, sizeof(struct odp_global_data_rw_t));
+
+	return 0;
+}
+
+static int global_rw_data_term(void)
+{
+	odp_shm_t shm;
+
+	shm = odp_shm_lookup("_odp_global_rw_data");
+	if (shm == ODP_SHM_INVALID) {
+		ODP_ERR("Unable to find global RW data shm.\n");
+		return -1;
+	}
+
+	if (odp_shm_free(shm)) {
+		ODP_ERR("Global RW data shm free failed.\n");
+		return -1;
+	}
+
+	return 0;
 }
 
 static int term_global(enum init_stage stage)
@@ -151,6 +191,13 @@ static int term_global(enum init_stage stage)
 		}
 		/* Fall through */
 
+	case GLOBAL_RW_DATA_INIT:
+		if (global_rw_data_term()) {
+			ODP_ERR("ODP global RW data term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
 	case FDSERVER_INIT:
 		if (_odp_fdserver_term_global()) {
 			ODP_ERR("ODP fdserver term failed.\n");
@@ -208,18 +255,18 @@ int odp_init_global(odp_instance_t *instance,
 		    const odp_init_t *params,
 		    const odp_platform_init_t *platform_params ODP_UNUSED)
 {
-	memset(&odp_global_data, 0, sizeof(struct odp_global_data_s));
-	odp_global_data.main_pid = getpid();
+	memset(&odp_global_ro, 0, sizeof(struct odp_global_data_ro_t));
+	odp_global_ro.main_pid = getpid();
 
 	enum init_stage stage = NO_INIT;
-	odp_global_data.log_fn = odp_override_log;
-	odp_global_data.abort_fn = odp_override_abort;
+	odp_global_ro.log_fn = odp_override_log;
+	odp_global_ro.abort_fn = odp_override_abort;
 
 	if (params != NULL) {
 		if (params->log_fn != NULL)
-			odp_global_data.log_fn = params->log_fn;
+			odp_global_ro.log_fn = params->log_fn;
 		if (params->abort_fn != NULL)
-			odp_global_data.abort_fn = params->abort_fn;
+			odp_global_ro.abort_fn = params->abort_fn;
 	}
 
 	if (_odp_libconfig_init_global()) {
@@ -269,6 +316,12 @@ int odp_init_global(odp_instance_t *instance,
 		goto init_failed;
 	}
 	stage = FDSERVER_INIT;
+
+	if (global_rw_data_init()) {
+		ODP_ERR("ODP global RW data init failed.\n");
+		goto init_failed;
+	}
+	stage = GLOBAL_RW_DATA_INIT;
 
 	if (odp_thread_init_global()) {
 		ODP_ERR("ODP thread init failed.\n");
@@ -351,7 +404,7 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = IPSEC_INIT;
 
-	*instance = (odp_instance_t)odp_global_data.main_pid;
+	*instance = (odp_instance_t)odp_global_ro.main_pid;
 
 	return 0;
 
@@ -362,7 +415,7 @@ init_failed:
 
 int odp_term_global(odp_instance_t instance)
 {
-	if (instance != (odp_instance_t)odp_global_data.main_pid) {
+	if (instance != (odp_instance_t)odp_global_ro.main_pid) {
 		ODP_ERR("Bad instance.\n");
 		return -1;
 	}
@@ -441,7 +494,7 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 {
 	enum init_stage stage = NO_INIT;
 
-	if (instance != (odp_instance_t)odp_global_data.main_pid) {
+	if (instance != (odp_instance_t)odp_global_ro.main_pid) {
 		ODP_ERR("Bad instance.\n");
 		goto init_fail;
 	}

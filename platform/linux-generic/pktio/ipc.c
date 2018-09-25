@@ -233,7 +233,7 @@ static void _ipc_export_pool(struct pktio_info *pinfo,
 
 	snprintf(pinfo->slave.pool_name, ODP_POOL_NAME_LEN, "%s",
 		 _ipc_odp_buffer_pool_shm_name(pool_hdl));
-	pinfo->slave.pid = odp_global_data.main_pid;
+	pinfo->slave.pid = odp_global_ro.main_pid;
 	pinfo->slave.block_size = pool->block_size;
 	pinfo->slave.base_addr = pool->base_addr;
 }
