@@ -49,7 +49,7 @@ int odp_shm_capability(odp_shm_capability_t *capa)
 	memset(capa, 0, sizeof(odp_shm_capability_t));
 
 	capa->max_blocks = ODP_CONFIG_SHM_BLOCKS;
-	capa->max_size = odp_global_data.shm_max_size;
+	capa->max_size = odp_global_ro.shm_max_size;
 	capa->max_align = 0;
 
 	return 0;

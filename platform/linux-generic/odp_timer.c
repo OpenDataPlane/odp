@@ -269,7 +269,7 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	size_t sz0, sz1, sz2;
 	uint32_t flags = ODP_SHM_SW_ONLY;
 
-	if (odp_global_data.shm_single_va)
+	if (odp_global_ro.shm_single_va)
 		flags |= ODP_SHM_SINGLE_VA;
 
 	odp_ticketlock_lock(&timer_global.lock);
