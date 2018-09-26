@@ -11,9 +11,65 @@
 #include <mask_common.h>
 #include <test_debug.h>
 
-/* Test thread entry and exit synchronization barriers */
-odp_barrier_t bar_entry;
-odp_barrier_t bar_exit;
+#define GLOBAL_SHM_NAME		"GlobalThreadTest"
+
+typedef struct {
+	/* Test thread entry and exit synchronization barriers */
+	odp_barrier_t bar_entry;
+	odp_barrier_t bar_exit;
+} global_shared_mem_t;
+
+static global_shared_mem_t *global_mem;
+
+static int thread_global_init(odp_instance_t *inst)
+{
+	odp_shm_t global_shm;
+
+	if (0 != odp_init_global(inst, NULL, NULL)) {
+		fprintf(stderr, "error: odp_init_global() failed.\n");
+		return -1;
+	}
+	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
+		fprintf(stderr, "error: odp_init_local() failed.\n");
+		return -1;
+	}
+
+	global_shm = odp_shm_reserve(GLOBAL_SHM_NAME,
+				     sizeof(global_shared_mem_t),
+				     ODP_CACHE_LINE_SIZE, ODP_SHM_SW_ONLY);
+	if (global_shm == ODP_SHM_INVALID) {
+		fprintf(stderr, "Unable reserve memory for global_shm\n");
+		return -1;
+	}
+
+	global_mem = odp_shm_addr(global_shm);
+	memset(global_mem, 0, sizeof(global_shared_mem_t));
+
+	return 0;
+}
+
+static int thread_global_term(odp_instance_t inst)
+{
+	odp_shm_t shm;
+
+	shm = odp_shm_lookup(GLOBAL_SHM_NAME);
+	if (0 != odp_shm_free(shm)) {
+		fprintf(stderr, "error: odp_shm_free() failed.\n");
+		return -1;
+	}
+
+	if (0 != odp_term_local()) {
+		fprintf(stderr, "error: odp_term_local() failed.\n");
+		return -1;
+	}
+
+	if (0 != odp_term_global(inst)) {
+		fprintf(stderr, "error: odp_term_global() failed.\n");
+		return -1;
+	}
+
+	return 0;
+}
 
 static void thread_test_odp_cpu_id(void)
 {
@@ -36,12 +92,12 @@ static void thread_test_odp_thread_count(void)
 static int thread_func(void *arg TEST_UNUSED)
 {
 	/* indicate that thread has started */
-	odp_barrier_wait(&bar_entry);
+	odp_barrier_wait(&global_mem->bar_entry);
 
 	CU_ASSERT(odp_thread_type() == ODP_THREAD_WORKER);
 
 	/* wait for indication that we can exit */
-	odp_barrier_wait(&bar_exit);
+	odp_barrier_wait(&global_mem->bar_exit);
 
 	return CU_get_number_of_failures();
 }
@@ -54,8 +110,8 @@ static void thread_test_odp_thrmask_worker(void)
 
 	CU_ASSERT_FATAL(odp_thread_type() == ODP_THREAD_CONTROL);
 
-	odp_barrier_init(&bar_entry, args.numthrds + 1);
-	odp_barrier_init(&bar_exit,  args.numthrds + 1);
+	odp_barrier_init(&global_mem->bar_entry, args.numthrds + 1);
+	odp_barrier_init(&global_mem->bar_exit,  args.numthrds + 1);
 
 	/* should start out with 0 worker threads */
 	ret = odp_thrmask_worker(&mask);
@@ -70,7 +126,7 @@ static void thread_test_odp_thrmask_worker(void)
 		return;
 
 	/* wait for thread(s) to start */
-	odp_barrier_wait(&bar_entry);
+	odp_barrier_wait(&global_mem->bar_entry);
 
 	ret = odp_thrmask_worker(&mask);
 	CU_ASSERT(ret == odp_thrmask_count(&mask));
@@ -78,7 +134,7 @@ static void thread_test_odp_thrmask_worker(void)
 	CU_ASSERT(ret <= odp_thread_count_max());
 
 	/* allow thread(s) to exit */
-	odp_barrier_wait(&bar_exit);
+	odp_barrier_wait(&global_mem->bar_exit);
 
 	odp_cunit_thread_exit(&args);
 }
@@ -131,6 +187,9 @@ int main(int argc, char *argv[])
 	/* parse common options: */
 	if (odp_cunit_parse_options(argc, argv))
 		return -1;
+
+	odp_cunit_register_global_init(thread_global_init);
+	odp_cunit_register_global_term(thread_global_term);
 
 	ret = odp_cunit_register(thread_suites);
 
