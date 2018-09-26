@@ -10,6 +10,7 @@
 #define _GNU_SOURCE
 #endif
 #include <sched.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -332,9 +333,17 @@ int odph_odpthread_getaffinity(void)
 
 int odph_parse_options(int argc, char *argv[])
 {
+	char *env;
 	int i, j;
 
 	helper_options.proc = 0;
+
+	/* Enable process mode using environment variable. Setting environment
+	 * variable is easier for CI testing compared to command line
+	 * argument. */
+	env = getenv("ODPH_PROC_MODE");
+	if (env && atoi(env))
+		helper_options.proc = 1;
 
 	/* Find and remove option */
 	for (i = 0; i < argc;) {
