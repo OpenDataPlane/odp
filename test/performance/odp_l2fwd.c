@@ -95,13 +95,6 @@ typedef struct {
 	int verbose;		/* Verbose output */
 } appl_args_t;
 
-static int exit_threads;	/* Break workers loop if set to 1 */
-
-static void sig_handler(int signo ODP_UNUSED)
-{
-	exit_threads = 1;
-}
-
 /* Statistics */
 typedef union ODP_ALIGNED_CACHE {
 	struct {
@@ -175,11 +168,18 @@ typedef struct {
 	 * Table index is pktio_index of the API. This is used by the sched
 	 * mode. */
 	uint8_t dst_port_from_idx[MAX_PKTIO_INDEXES];
+	/* Break workers loop if set to 1 */
+	int exit_threads;
 
 } args_t;
 
 /* Global pointer to args */
 static args_t *gbl_args;
+
+static void sig_handler(int signo ODP_UNUSED)
+{
+	gbl_args->exit_threads = 1;
+}
 
 /*
  * Drop packets which input parsing marked as containing errors.
@@ -336,7 +336,7 @@ static int run_worker_sched_mode(void *arg)
 	odp_barrier_wait(&gbl_args->init_barrier);
 
 	/* Loop packets */
-	while (!exit_threads) {
+	while (!gbl_args->exit_threads) {
 		odp_event_t  ev_tbl[MAX_PKT_BURST];
 		odp_packet_t pkt_tbl[MAX_PKT_BURST];
 		int sent;
@@ -453,7 +453,7 @@ static int run_worker_plain_queue_mode(void *arg)
 	odp_barrier_wait(&gbl_args->init_barrier);
 
 	/* Loop packets */
-	while (!exit_threads) {
+	while (!gbl_args->exit_threads) {
 		int sent;
 		unsigned tx_drops;
 		odp_event_t event[MAX_PKT_BURST];
@@ -579,7 +579,7 @@ static int run_worker_direct_mode(void *arg)
 	odp_barrier_wait(&gbl_args->init_barrier);
 
 	/* Loop packets */
-	while (!exit_threads) {
+	while (!gbl_args->exit_threads) {
 		int sent;
 		unsigned tx_drops;
 
@@ -867,7 +867,8 @@ static int print_speed_stats(int num_workers, stats_t **thr_stats,
 			pkts_prev = pkts;
 		}
 		elapsed += timeout;
-	} while (!exit_threads && (loop_forever || (elapsed < duration)));
+	} while (!gbl_args->exit_threads && (loop_forever ||
+		 (elapsed < duration)));
 
 	if (stats_enabled)
 		printf("TEST RESULT: %" PRIu64 " maximum packets per second.\n",
@@ -1682,7 +1683,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	exit_threads = 1;
+	gbl_args->exit_threads = 1;
 	if (gbl_args->appl.in_mode != DIRECT_RECV)
 		odp_barrier_wait(&gbl_args->term_barrier);
 
