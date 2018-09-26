@@ -17,6 +17,8 @@
 #include "odp_cunit_common.h"
 #include "test_debug.h"
 
+#define GLOBAL_SHM_NAME	"GlobalTimerTest"
+
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 /* Timeout range in milliseconds (ms) */
@@ -32,25 +34,6 @@
 #define USER_PTR ((void *)0xdead)
 #define TICK_INVALID (~(uint64_t)0)
 
-/* Barrier for thread synchronisation */
-static odp_barrier_t test_barrier;
-
-/* Timeout pool handle used by all threads */
-static odp_pool_t tbp;
-
-/* Timer pool handle used by all threads */
-static odp_timer_pool_t tp;
-
-/* Count of timeouts delivered too late */
-static odp_atomic_u32_t ndelivtoolate;
-
-/* Sum of all allocated timers from all threads. Thread-local
- * caches may make this number lower than the capacity of the pool  */
-static odp_atomic_u32_t timers_allocated;
-
-/* Timer resolution in nsec */
-static uint64_t resolution_ns;
-
 /* Timer helper structure */
 struct test_timer {
 	odp_timer_t tim; /* Timer handle */
@@ -58,6 +41,72 @@ struct test_timer {
 	odp_event_t ev2; /* Copy of event handle */
 	uint64_t tick; /* Expiration tick or TICK_INVALID */
 };
+
+typedef struct {
+	/* Timeout pool handle used by all threads */
+	odp_pool_t tbp;
+	/* Timer pool handle used by all threads */
+	odp_timer_pool_t tp;
+	/* Barrier for thread synchronization */
+	odp_barrier_t test_barrier;
+	/* Count of timeouts delivered too late */
+	odp_atomic_u32_t ndelivtoolate;
+	/* Sum of all allocated timers from all threads. Thread-local
+	 * caches may make this number lower than the capacity of the pool */
+	odp_atomic_u32_t timers_allocated;
+} global_shared_mem_t;
+
+static global_shared_mem_t *global_mem;
+
+static int timer_global_init(odp_instance_t *inst)
+{
+	odp_shm_t global_shm;
+
+	if (0 != odp_init_global(inst, NULL, NULL)) {
+		fprintf(stderr, "error: odp_init_global() failed.\n");
+		return -1;
+	}
+	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
+		fprintf(stderr, "error: odp_init_local() failed.\n");
+		return -1;
+	}
+
+	global_shm = odp_shm_reserve(GLOBAL_SHM_NAME,
+				     sizeof(global_shared_mem_t),
+				     ODP_CACHE_LINE_SIZE, ODP_SHM_SW_ONLY);
+	if (global_shm == ODP_SHM_INVALID) {
+		fprintf(stderr, "Unable reserve memory for global_shm\n");
+		return -1;
+	}
+
+	global_mem = odp_shm_addr(global_shm);
+	memset(global_mem, 0, sizeof(global_shared_mem_t));
+
+	return 0;
+}
+
+static int timer_global_term(odp_instance_t inst)
+{
+	odp_shm_t shm;
+
+	shm = odp_shm_lookup(GLOBAL_SHM_NAME);
+	if (0 != odp_shm_free(shm)) {
+		fprintf(stderr, "error: odp_shm_free() failed.\n");
+		return -1;
+	}
+
+	if (0 != odp_term_local()) {
+		fprintf(stderr, "error: odp_term_local() failed.\n");
+		return -1;
+	}
+
+	if (0 != odp_term_global(inst)) {
+		fprintf(stderr, "error: odp_term_global() failed.\n");
+		return -1;
+	}
+
+	return 0;
+}
 
 static void timer_test_timeout_pool_alloc(void)
 {
@@ -540,7 +589,7 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 			CU_FAIL("odp_timeout_tick() too small tick");
 		}
 
-		if (tick > odp_timer_current_tick(tp))
+		if (tick > odp_timer_current_tick(global_mem->tp))
 			CU_FAIL("Timeout delivered early");
 
 		if (tick < prev_tick) {
@@ -548,7 +597,7 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 				" prev_tick %" PRIu64"\n",
 				tick, prev_tick);
 			/* We don't report late timeouts using CU_FAIL */
-			odp_atomic_inc_u32(&ndelivtoolate);
+			odp_atomic_inc_u32(&global_mem->ndelivtoolate);
 		}
 	}
 
@@ -579,6 +628,8 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 	struct timespec ts;
 	uint32_t nstale;
 	odp_timer_set_t timer_rc;
+	odp_timer_pool_t tp = global_mem->tp;
+	odp_pool_t tbp = global_mem->tbp;
 
 	queue = odp_queue_create("timer_queue", NULL);
 	if (queue == ODP_QUEUE_INVALID)
@@ -609,9 +660,9 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 	allocated = i;
 	if (allocated == 0)
 		CU_FAIL_FATAL("unable to alloc a timer");
-	odp_atomic_fetch_add_u32(&timers_allocated, allocated);
+	odp_atomic_fetch_add_u32(&global_mem->timers_allocated, allocated);
 
-	odp_barrier_wait(&test_barrier);
+	odp_barrier_wait(&global_mem->test_barrier);
 
 	/* Initial set all timers with a random expiration time */
 	nset = 0;
@@ -771,8 +822,12 @@ static void timer_test_odp_timer_all(void)
 	odp_cpumask_t unused;
 	odp_timer_pool_info_t tpinfo;
 	uint64_t ns, tick, ns2;
+	uint64_t resolution_ns;
+	uint32_t timers_allocated;
 	pthrd_arg thrdarg;
 	odp_timer_capability_t timer_capa;
+	odp_pool_t tbp;
+	odp_timer_pool_t tp;
 
 	/* Reserve at least one core for running other processes so the timer
 	 * test hopefully can run undisturbed and thus get better timing
@@ -792,9 +847,10 @@ static void timer_test_odp_timer_all(void)
 	params.type    = ODP_POOL_TIMEOUT;
 	params.tmo.num = (NTIMERS + 1) * num_workers;
 
-	tbp = odp_pool_create("tmo_pool", &params);
-	if (tbp == ODP_POOL_INVALID)
+	global_mem->tbp = odp_pool_create("tmo_pool", &params);
+	if (global_mem->tbp == ODP_POOL_INVALID)
 		CU_FAIL_FATAL("Timeout pool create failed");
+	tbp = global_mem->tbp;
 
 	/* Create a timer pool */
 	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa))
@@ -807,9 +863,10 @@ static void timer_test_odp_timer_all(void)
 	tparam.num_timers = num_workers * NTIMERS;
 	tparam.priv = 0;
 	tparam.clk_src = ODP_CLOCK_CPU;
-	tp = odp_timer_pool_create(NAME, &tparam);
-	if (tp == ODP_TIMER_POOL_INVALID)
+	global_mem->tp = odp_timer_pool_create(NAME, &tparam);
+	if (global_mem->tp == ODP_TIMER_POOL_INVALID)
 		CU_FAIL_FATAL("Timer pool create failed");
+	tp = global_mem->tp;
 
 	/* Start all created timer pools */
 	odp_timer_pool_start();
@@ -854,13 +911,13 @@ static void timer_test_odp_timer_all(void)
 	}
 
 	/* Initialize barrier used by worker threads for synchronization */
-	odp_barrier_init(&test_barrier, num_workers);
+	odp_barrier_init(&global_mem->test_barrier, num_workers);
 
 	/* Initialize the shared timeout counter */
-	odp_atomic_init_u32(&ndelivtoolate, 0);
+	odp_atomic_init_u32(&global_mem->ndelivtoolate, 0);
 
 	/* Initialize the number of finally allocated elements */
-	odp_atomic_init_u32(&timers_allocated, 0);
+	odp_atomic_init_u32(&global_mem->timers_allocated, 0);
 
 	/* Create and start worker threads */
 	thrdarg.testcase = 0;
@@ -870,14 +927,15 @@ static void timer_test_odp_timer_all(void)
 	/* Wait for worker threads to exit */
 	odp_cunit_thread_exit(&thrdarg);
 	LOG_DBG("Number of timeouts delivered/received too late: %" PRIu32 "\n",
-		odp_atomic_load_u32(&ndelivtoolate));
+		odp_atomic_load_u32(&global_mem->ndelivtoolate));
 
 	/* Check some statistics after the test */
 	if (odp_timer_pool_info(tp, &tpinfo) != 0)
 		CU_FAIL("odp_timer_pool_info");
 	CU_ASSERT(tpinfo.param.num_timers == (unsigned)num_workers * NTIMERS);
 	CU_ASSERT(tpinfo.cur_timers == 0);
-	CU_ASSERT(tpinfo.hwm_timers == odp_atomic_load_u32(&timers_allocated));
+	timers_allocated = odp_atomic_load_u32(&global_mem->timers_allocated);
+	CU_ASSERT(tpinfo.hwm_timers == timers_allocated);
 
 	/* Destroy timer pool, all timers must have been freed */
 	odp_timer_pool_destroy(tp);
@@ -910,6 +968,9 @@ int main(int argc, char *argv[])
 	/* parse common options: */
 	if (odp_cunit_parse_options(argc, argv))
 		return -1;
+
+	odp_cunit_register_global_init(timer_global_init);
+	odp_cunit_register_global_term(timer_global_term);
 
 	int ret = odp_cunit_register(timer_suites);
 
