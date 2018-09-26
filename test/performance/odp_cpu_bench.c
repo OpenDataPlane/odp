@@ -95,12 +95,12 @@ typedef struct {
 	odp_queue_t queue[MAX_GROUPS][QUEUES_PER_GROUP];
 	/* Test lookup table */
 	lookup_entry_t *lookup_tbl;
+	/* Break workers loop if set to 1 */
+	int exit_threads;
 } args_t;
 
 /* Global pointer to args */
 static args_t *gbl_args;
-
-static volatile int exit_threads; /* Break workers loop if set to 1 */
 
 static const uint8_t test_udp_packet[] = {
 	0x00, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x00, 0x01,
@@ -177,7 +177,7 @@ static const uint8_t test_udp_packet[] = {
 
 static void sig_handler(int signo ODP_UNUSED)
 {
-	exit_threads = 1;
+	gbl_args->exit_threads = 1;
 }
 
 static inline void init_packet(odp_packet_t pkt, uint32_t seq, uint16_t group)
@@ -280,7 +280,7 @@ static int run_thread(void *arg)
 	c1 = odp_cpu_cycles();
 	t1 = odp_time_local();
 
-	while (!exit_threads) {
+	while (!gbl_args->exit_threads) {
 		odp_event_t  event_tbl[MAX_EVENT_BURST];
 		odp_queue_t dst_queue;
 		int num_events;
@@ -474,9 +474,10 @@ static int print_stats(int num_workers, stats_t **thr_stats, int duration,
 
 		pkts_prev = pkts;
 		elapsed += accuracy;
-	} while (!exit_threads && (loop_forever || (elapsed < duration)));
+	} while (!gbl_args->exit_threads &&
+		 (loop_forever || (elapsed < duration)));
 
-	exit_threads = 1;
+	gbl_args->exit_threads = 1;
 	odp_barrier_wait(&gbl_args->term_barrier);
 
 	pkts = 0;

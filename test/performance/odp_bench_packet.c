@@ -130,6 +130,8 @@ typedef struct {
 	bench_info_t *bench;
 	/** Number of benchmark functions */
 	int num_bench;
+	/** Break worker loop if set to 1 */
+	int exit_thread;
 	struct {
 		/** Test packet length */
 		uint32_t len;
@@ -166,14 +168,10 @@ typedef struct {
 
 /** Global pointer to args */
 static args_t *gbl_args;
-/** Global barrier to synchronize main and worker */
-static odp_barrier_t barrier;
-/** Break worker loop if set to 1 */
-static int exit_thread;
 
 static void sig_handler(int signo ODP_UNUSED)
 {
-	exit_thread = 1;
+	gbl_args->exit_thread = 1;
 }
 
 /**
@@ -188,7 +186,7 @@ static void run_indef(args_t *args, int idx)
 
 	printf("Running %s() indefinitely\n", desc);
 
-	while (!exit_thread) {
+	while (!gbl_args->exit_thread) {
 		int ret;
 
 		if (args->bench[idx].init != NULL)
@@ -1622,8 +1620,6 @@ int main(int argc, char *argv[])
 	odp_pool_print(gbl_args->pool);
 
 	memset(&worker_thread, 0, sizeof(odph_odpthread_t));
-
-	odp_barrier_init(&barrier, 1 + 1);
 
 	signal(SIGINT, sig_handler);
 
