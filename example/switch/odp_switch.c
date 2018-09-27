@@ -61,8 +61,6 @@ typedef struct {
 	char *if_str;	   /**< Storage for interface names */
 } appl_args_t;
 
-static int exit_threads;   /**< Break workers loop if set to 1 */
-
 /**
  * Statistics
  */
@@ -118,6 +116,10 @@ typedef struct {
 	appl_args_t appl;		   /**< Parsed application arguments */
 	thread_args_t thread[MAX_WORKERS]; /**< Thread specific arguments */
 	odp_pool_t pool;		   /**< Packet pool */
+	/** Global barrier to synchronize main and workers */
+	odp_barrier_t barrier;
+	/** Break workers loop if set to 1 */
+	int exit_threads;
 	/** Table of pktio handles */
 	struct {
 		odp_pktio_t pktio;
@@ -135,9 +137,6 @@ typedef struct {
 
 /** Global pointer to args */
 static args_t *gbl_args;
-
-/** Global barrier to synchronize main and workers */
-static odp_barrier_t barrier;
 
 /**
  * Calculate MAC table index using Ethernet address hash
@@ -333,7 +332,7 @@ static int print_speed_stats(int num_workers, stats_t (*thr_stats)[MAX_PKTIOS],
 		timeout = 1;
 	}
 	/* Wait for all threads to be ready*/
-	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&gbl_args->barrier);
 
 	do {
 		uint64_t rx_pkts[MAX_PKTIOS] = {0};
@@ -595,9 +594,9 @@ static int run_worker(void *arg)
 	pktin     = thr_args->rx_pktio[pktio].pktin;
 	port_in  = thr_args->rx_pktio[pktio].port_idx;
 
-	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&gbl_args->barrier);
 
-	while (!exit_threads) {
+	while (!gbl_args->exit_threads) {
 		int sent;
 		unsigned drops;
 
@@ -974,7 +973,7 @@ int main(int argc, char **argv)
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
-	odp_barrier_init(&barrier, num_workers + 1);
+	odp_barrier_init(&gbl_args->barrier, num_workers + 1);
 
 	stats = gbl_args->stats;
 
@@ -1014,7 +1013,7 @@ int main(int argc, char **argv)
 
 	ret = print_speed_stats(num_workers, gbl_args->stats,
 				gbl_args->appl.time, gbl_args->appl.accuracy);
-	exit_threads = 1;
+	gbl_args->exit_threads = 1;
 
 	/* Master thread waits for other threads to exit */
 	for (i = 0; i < num_workers; ++i)

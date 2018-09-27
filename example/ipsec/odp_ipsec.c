@@ -66,6 +66,8 @@ static int create_stream_db_entry(char *input ODP_UNUSED)
 /* maximum number of worker threads */
 #define MAX_WORKERS     (ODP_THREAD_COUNT_MAX - 1)
 
+#define MAX_POLL_QUEUES 256
+
 /**
  * Parsed command line application arguments
  */
@@ -79,20 +81,29 @@ typedef struct {
 } appl_args_t;
 
 /**
- * Grouping of both parsed CL args and thread specific args - alloc together
+ * Grouping of both parsed CL args and global application data
  */
 typedef struct {
 	/** Application (parsed) arguments */
 	appl_args_t appl;
-} args_t;
+	odp_shm_t shm;
+	odp_pool_t ctx_pool;
+	odp_pool_t out_pool;
+	odp_pool_t pkt_pool;
+	/** ATOMIC queue for IPsec sequence number assignment */
+	odp_queue_t seqnumq;
+	/** ORDERED queue for per packet crypto API completion events */
+	odp_queue_t completionq;
+	/** Synchronize threads before packet processing begins */
+	odp_barrier_t sync_barrier;
+	odp_queue_t poll_queues[MAX_POLL_QUEUES];
+	int num_polled_queues;
+} global_data_t;
 
 /* helper funcs */
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
-
-/** Global pointer to args */
-static args_t *args;
 
 /**
  * Buffer pool for packet IO
@@ -101,25 +112,12 @@ static args_t *args;
 #define SHM_PKT_POOL_BUF_SIZE  4096
 #define SHM_PKT_POOL_SIZE      (SHM_PKT_POOL_BUF_COUNT * SHM_PKT_POOL_BUF_SIZE)
 
-static odp_pool_t pkt_pool = ODP_POOL_INVALID;
-
 /**
  * Buffer pool for crypto session output packets
  */
 #define SHM_OUT_POOL_BUF_COUNT 1024
 #define SHM_OUT_POOL_BUF_SIZE  4096
 #define SHM_OUT_POOL_SIZE      (SHM_OUT_POOL_BUF_COUNT * SHM_OUT_POOL_BUF_SIZE)
-
-static odp_pool_t out_pool = ODP_POOL_INVALID;
-
-/** ATOMIC queue for IPsec sequence number assignment */
-static odp_queue_t seqnumq;
-
-/** ORDERED queue (eventually) for per packet crypto API completion events */
-static odp_queue_t completionq;
-
-/** Synchronize threads before packet processing begins */
-static odp_barrier_t sync_barrier;
 
 /**
  * Packet processing states/steps
@@ -184,7 +182,7 @@ typedef struct {
 #define SHM_CTX_POOL_BUF_COUNT (SHM_PKT_POOL_BUF_COUNT + SHM_OUT_POOL_BUF_COUNT)
 #define SHM_CTX_POOL_SIZE      (SHM_CTX_POOL_BUF_COUNT * SHM_CTX_POOL_BUF_SIZE)
 
-static odp_pool_t ctx_pool = ODP_POOL_INVALID;
+static global_data_t *global;
 
 /**
  * Get per packet processing context from packet buffer
@@ -210,7 +208,7 @@ pkt_ctx_t *get_pkt_ctx_from_pkt(odp_packet_t pkt)
 static
 pkt_ctx_t *alloc_pkt_ctx(odp_packet_t pkt)
 {
-	odp_buffer_t ctx_buf = odp_buffer_alloc(ctx_pool);
+	odp_buffer_t ctx_buf = odp_buffer_alloc(global->ctx_pool);
 	pkt_ctx_t *ctx;
 
 	if (odp_unlikely(ODP_BUFFER_INVALID == ctx_buf))
@@ -245,11 +243,6 @@ typedef odp_event_t (*schedule_func_t) (odp_queue_t *);
 static queue_create_func_t queue_create;
 static schedule_func_t schedule;
 
-#define MAX_POLL_QUEUES 256
-
-static odp_queue_t poll_queues[MAX_POLL_QUEUES];
-static int num_polled_queues;
-
 /**
  * odp_queue_create wrapper to enable polling versus scheduling
  */
@@ -275,7 +268,7 @@ odp_queue_t polled_odp_queue_create(const char *name,
 	my_queue = odp_queue_create(name, &qp);
 
 	if (ODP_QUEUE_TYPE_SCHED == type) {
-		poll_queues[num_polled_queues++] = my_queue;
+		global->poll_queues[global->num_polled_queues++] = my_queue;
 		printf("%s: adding %"PRIu64"\n", __func__,
 		       odp_queue_to_u64(my_queue));
 	}
@@ -298,10 +291,10 @@ odp_event_t polled_odp_schedule_cb(odp_queue_t *from)
 	int idx = 0;
 
 	while (1) {
-		if (idx >= num_polled_queues)
+		if (idx >= global->num_polled_queues)
 			idx = 0;
 
-		odp_queue_t queue = poll_queues[idx++];
+		odp_queue_t queue = global->poll_queues[idx++];
 		odp_event_t buf;
 
 		buf = odp_queue_deq(queue);
@@ -337,8 +330,8 @@ void ipsec_init_pre(void)
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
-	completionq = queue_create("completion", &qparam);
-	if (ODP_QUEUE_INVALID == completionq) {
+	global->completionq = queue_create("completion", &qparam);
+	if (ODP_QUEUE_INVALID == global->completionq) {
 		EXAMPLE_ERR("Error: completion queue creation failed\n");
 		exit(EXIT_FAILURE);
 	}
@@ -348,8 +341,8 @@ void ipsec_init_pre(void)
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
-	seqnumq = queue_create("seqnum", &qparam);
-	if (ODP_QUEUE_INVALID == seqnumq) {
+	global->seqnumq = queue_create("seqnum", &qparam);
+	if (ODP_QUEUE_INVALID == global->seqnumq) {
 		EXAMPLE_ERR("Error: sequence number queue creation failed\n");
 		exit(EXIT_FAILURE);
 	}
@@ -361,9 +354,9 @@ void ipsec_init_pre(void)
 	params.pkt.num     = SHM_PKT_POOL_BUF_COUNT;
 	params.type        = ODP_POOL_PACKET;
 
-	out_pool = odp_pool_create("out_pool", &params);
+	global->out_pool = odp_pool_create("out_pool", &params);
 
-	if (ODP_POOL_INVALID == out_pool) {
+	if (ODP_POOL_INVALID == global->out_pool) {
 		EXAMPLE_ERR("Error: message pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -414,8 +407,8 @@ void ipsec_init_post(crypto_api_mode_e api_mode)
 						     tun,
 						     api_mode,
 						     entry->input,
-						     completionq,
-						     out_pool)) {
+						     global->completionq,
+						     global->out_pool)) {
 				EXAMPLE_ERR("Error: IPSec cache entry failed.\n"
 						);
 				exit(EXIT_FAILURE);
@@ -480,7 +473,7 @@ void initialize_intf(char *intf)
 	/*
 	 * Open a packet IO instance for thread and get default output queue
 	 */
-	pktio = odp_pktio_open(intf, pkt_pool, &pktio_param);
+	pktio = odp_pktio_open(intf, global->pkt_pool, &pktio_param);
 	if (ODP_PKTIO_INVALID == pktio) {
 		EXAMPLE_ERR("Error: pktio create failed for %s\n", intf);
 		exit(EXIT_FAILURE);
@@ -1052,7 +1045,7 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 
 	printf("Pktio thread [%02i] starts\n", thr);
 
-	odp_barrier_wait(&sync_barrier);
+	odp_barrier_wait(&global->sync_barrier);
 
 	/* Loop packets */
 	for (;;) {
@@ -1067,7 +1060,8 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 		/* Determine new work versus completion or sequence number */
 		if (ODP_EVENT_PACKET == odp_event_types(ev, &subtype)) {
 			pkt = odp_packet_from_event(ev);
-			if (seqnumq == dispatchq || completionq == dispatchq) {
+			if (global->seqnumq == dispatchq ||
+			    global->completionq == dispatchq) {
 				ctx = get_pkt_ctx_from_pkt(pkt);
 			} else {
 				ctx = alloc_pkt_ctx(pkt);
@@ -1132,7 +1126,7 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 					ctx->state = PKT_STATE_TRANSMIT;
 				} else {
 					ctx->state = PKT_STATE_IPSEC_OUT_SEQ;
-					if (odp_queue_enq(seqnumq, ev))
+					if (odp_queue_enq(global->seqnumq, ev))
 						rc = PKT_DROP;
 				}
 				break;
@@ -1226,16 +1220,17 @@ main(int argc, char *argv[])
 	}
 
 	/* Reserve memory for args from shared mem */
-	shm = odp_shm_reserve("shm_args", sizeof(args_t), ODP_CACHE_LINE_SIZE,
-			      0);
+	shm = odp_shm_reserve("shm_args", sizeof(global_data_t),
+			      ODP_CACHE_LINE_SIZE, 0);
 
-	args = odp_shm_addr(shm);
+	global = odp_shm_addr(shm);
 
-	if (NULL == args) {
+	if (NULL == global) {
 		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
-	memset(args, 0, sizeof(*args));
+	memset(global, 0, sizeof(global_data_t));
+	global->shm = shm;
 
 	/* Must init our databases before parsing args */
 	ipsec_init_pre();
@@ -1243,14 +1238,14 @@ main(int argc, char *argv[])
 	init_stream_db();
 
 	/* Parse and store the application arguments */
-	parse_args(argc, argv, &args->appl);
+	parse_args(argc, argv, &global->appl);
 
 	/* Print both system and application information */
-	print_info(NO_PATH(argv[0]), &args->appl);
+	print_info(NO_PATH(argv[0]), &global->appl);
 
 	num_workers = MAX_WORKERS;
-	if (args->appl.cpu_count && args->appl.cpu_count < MAX_WORKERS)
-		num_workers = args->appl.cpu_count;
+	if (global->appl.cpu_count && global->appl.cpu_count < MAX_WORKERS)
+		num_workers = global->appl.cpu_count;
 
 	/* Get default worker cpumask */
 	num_workers = odp_cpumask_default_worker(&cpumask, num_workers);
@@ -1261,7 +1256,7 @@ main(int argc, char *argv[])
 	printf("cpu mask:           %s\n", cpumaskstr);
 
 	/* Create a barrier to synchronize thread startup */
-	odp_barrier_init(&sync_barrier, num_workers);
+	odp_barrier_init(&global->sync_barrier, num_workers);
 
 	/* Create packet buffer pool */
 	odp_pool_param_init(&params);
@@ -1270,9 +1265,9 @@ main(int argc, char *argv[])
 	params.pkt.num     = SHM_PKT_POOL_BUF_COUNT;
 	params.type        = ODP_POOL_PACKET;
 
-	pkt_pool = odp_pool_create("packet_pool", &params);
+	global->pkt_pool = odp_pool_create("packet_pool", &params);
 
-	if (ODP_POOL_INVALID == pkt_pool) {
+	if (ODP_POOL_INVALID == global->pkt_pool) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -1283,24 +1278,23 @@ main(int argc, char *argv[])
 	params.buf.num   = SHM_CTX_POOL_BUF_COUNT;
 	params.type      = ODP_POOL_BUFFER;
 
-	ctx_pool = odp_pool_create("ctx_pool", &params);
+	global->ctx_pool = odp_pool_create("ctx_pool", &params);
 
-	if (ODP_POOL_INVALID == ctx_pool) {
+	if (ODP_POOL_INVALID == global->ctx_pool) {
 		EXAMPLE_ERR("Error: context pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Populate our IPsec cache */
 	printf("Using %s mode for crypto API\n\n",
-	       (CRYPTO_API_SYNC == args->appl.mode) ? "SYNC" :
-	       (CRYPTO_API_ASYNC_IN_PLACE == args->appl.mode) ?
+	       (CRYPTO_API_SYNC == global->appl.mode) ? "SYNC" :
+	       (CRYPTO_API_ASYNC_IN_PLACE == global->appl.mode) ?
 	       "ASYNC_IN_PLACE" : "ASYNC_NEW_BUFFER");
-	ipsec_init_post(args->appl.mode);
+	ipsec_init_post(global->appl.mode);
 
 	/* Initialize interfaces (which resolves FWD DB entries */
-	for (i = 0; i < args->appl.if_count; i++) {
-		initialize_intf(args->appl.if_names[i]);
-	}
+	for (i = 0; i < global->appl.if_count; i++)
+		initialize_intf(global->appl.if_names[i]);
 
 	/* If we have test streams build them before starting workers */
 	resolve_stream_db();
@@ -1331,12 +1325,9 @@ main(int argc, char *argv[])
 		odph_odpthreads_join(thread_tbl);
 	}
 
-	free(args->appl.if_names);
-	free(args->appl.if_str);
+	free(global->appl.if_names);
+	free(global->appl.if_str);
 
-	shm = odp_shm_lookup("shm_args");
-	if (odp_shm_free(shm) != 0)
-		EXAMPLE_ERR("Error: shm free shm_args failed\n");
 	shm = odp_shm_lookup("shm_ipsec_cache");
 	if (odp_shm_free(shm) != 0)
 		EXAMPLE_ERR("Error: shm free shm_ipsec_cache failed\n");
@@ -1355,6 +1346,10 @@ main(int argc, char *argv[])
 	shm = odp_shm_lookup("stream_db");
 	if (odp_shm_free(shm) != 0)
 		EXAMPLE_ERR("Error: shm free stream_db failed\n");
+	if (odp_shm_free(global->shm)) {
+		EXAMPLE_ERR("Error: shm free global data failed\n");
+		exit(EXIT_FAILURE);
+	}
 
 	printf("Exit\n\n");
 
