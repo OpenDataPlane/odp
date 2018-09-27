@@ -559,7 +559,7 @@ static int error_enqueue(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr)
 {
 	(void)buf_hdr;
 
-	ODP_ERR("Enqueue not supported (" PRIu64 ")\n",
+	ODP_ERR("Enqueue not supported (0x%" PRIx64 ")\n",
 		odp_queue_to_u64(handle));
 
 	return -1;
@@ -571,7 +571,7 @@ static int error_enqueue_multi(odp_queue_t handle,
 	(void)buf_hdr;
 	(void)num;
 
-	ODP_ERR("Enqueue multi not supported (" PRIu64 ")\n",
+	ODP_ERR("Enqueue multi not supported (0x%" PRIx64 ")\n",
 		odp_queue_to_u64(handle));
 
 	return -1;
@@ -579,7 +579,7 @@ static int error_enqueue_multi(odp_queue_t handle,
 
 static odp_buffer_hdr_t *error_dequeue(odp_queue_t handle)
 {
-	ODP_ERR("Dequeue not supported (" PRIu64 ")\n",
+	ODP_ERR("Dequeue not supported (0x%" PRIx64 ")\n",
 		odp_queue_to_u64(handle));
 
 	return NULL;
@@ -591,7 +591,7 @@ static int error_dequeue_multi(odp_queue_t handle,
 	(void)buf_hdr;
 	(void)num;
 
-	ODP_ERR("Dequeue multi not supported (" PRIu64 ")\n",
+	ODP_ERR("Dequeue multi not supported (0x%" PRIx64 ")\n",
 		odp_queue_to_u64(handle));
 
 	return -1;
@@ -623,7 +623,7 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 	queue_id = queue_to_index(handle);
 
 	if (odp_unlikely(queue_id >= ODP_CONFIG_QUEUES)) {
-		ODP_ERR("Invalid queue handle:%" PRIu64 "\n",
+		ODP_ERR("Invalid queue handle: 0x%" PRIx64 "\n",
 			odp_queue_to_u64(handle));
 		return -1;
 	}
