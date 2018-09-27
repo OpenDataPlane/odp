@@ -151,13 +151,12 @@ typedef struct {
 	int thread_cnt;
 	int tx_burst_size;
 	int rx_burst_size;
+	/** Barrier to sync threads execution */
+	odp_barrier_t barrier;
 } args_t;
 
 /** Global pointer to args */
 static args_t *args;
-
-/** Barrier to sync threads execution */
-static odp_barrier_t barrier;
 
 /** Packet processing function types */
 typedef odp_packet_t (*setup_pkt_ref_fn_t)(odp_pool_t,
@@ -758,7 +757,7 @@ static int gen_send_thread(void *arg)
 
 	printf("  [%02i] created mode: SEND\n", thr);
 
-	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&args->barrier);
 
 	for (;;) {
 		if (thr_args->stop)
@@ -929,7 +928,7 @@ static int gen_recv_thread(void *arg)
 	burst_size = args->rx_burst_size;
 
 	printf("  [%02i] created mode: RECEIVE SCHEDULER\n", thr);
-	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&args->barrier);
 
 	for (;;) {
 		if (thr_args->stop)
@@ -980,7 +979,7 @@ static int gen_recv_direct_thread(void *arg)
 	burst_size = args->rx_burst_size;
 
 	printf("  [%02i] created mode: RECEIVE\n", thr);
-	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&args->barrier);
 
 	for (;;) {
 		if (thr_args->stop)
@@ -1046,7 +1045,7 @@ static void print_global_stats(int num_workers)
 	int verbose_interval = 20, i;
 	odp_thrmask_t thrd_mask;
 
-	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&args->barrier);
 
 	wait = odp_time_local_from_ns(verbose_interval * ODP_TIME_SEC_IN_NS);
 	next = odp_time_sum(odp_time_local(), wait);
@@ -1293,7 +1292,7 @@ int main(int argc, char *argv[])
 	thr_params.instance = instance;
 
 	/* num workers + print thread */
-	odp_barrier_init(&barrier, num_workers + 1);
+	odp_barrier_init(&args->barrier, num_workers + 1);
 
 	if (args->appl.mode == APPL_MODE_PING) {
 		odp_cpumask_t cpu_mask;

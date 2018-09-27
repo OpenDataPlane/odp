@@ -80,20 +80,24 @@ typedef struct {
 	int error_check; /* Check packets for errors */
 } app_args_t;
 
-struct {
+typedef struct {
 	app_args_t		cmd_args;
 	struct l3fwd_pktio_s	l3fwd_pktios[MAX_NB_PKTIO];
 	odph_odpthread_t	l3fwd_workers[MAX_NB_WORKER];
 	struct thread_arg_s	worker_args[MAX_NB_WORKER];
 	odph_ethaddr_t		eth_dest_mac[MAX_NB_PKTIO];
+	/** Global barrier to synchronize main and workers */
+	odp_barrier_t barrier;
+	/** Shm for storing global data */
+	odp_shm_t shm;
+	/** Break workers loop if set to 1 */
+	int exit_threads;
 
 	/* forward func, hash or lpm */
 	int (*fwd_func)(odp_packet_t pkt, int sif);
-} global;
+} global_data_t;
 
-/** Global barrier to synchronize main and workers */
-static odp_barrier_t barrier;
-static int exit_threads;	/**< Break workers loop if set to 1 */
+static global_data_t *global;
 
 static int create_pktio(const char *name, odp_pool_t pool,
 			struct l3fwd_pktio_s *fwd_pktio)
@@ -122,7 +126,7 @@ static int create_pktio(const char *name, odp_pool_t pool,
 	}
 
 	odp_pktio_config_init(&config);
-	config.parser.layer = global.cmd_args.error_check ?
+	config.parser.layer = global->cmd_args.error_check ?
 			ODP_PROTO_LAYER_ALL :
 			ODP_PROTO_LAYER_L4;
 	odp_pktio_config(pktio, &config);
@@ -145,7 +149,7 @@ static void setup_fwd_db(void)
 	int if_idx;
 	app_args_t *args;
 
-	args = &global.cmd_args;
+	args = &global->cmd_args;
 	if (args->hash_mode)
 		init_fwd_hash_cache();
 	else
@@ -157,9 +161,9 @@ static void setup_fwd_db(void)
 			fib_tbl_insert(entry->subnet.addr, if_idx,
 				       entry->subnet.depth);
 		if (args->dest_mac_changed[if_idx])
-			global.eth_dest_mac[if_idx] = entry->dst_mac;
+			global->eth_dest_mac[if_idx] = entry->dst_mac;
 		else
-			entry->dst_mac = global.eth_dest_mac[if_idx];
+			entry->dst_mac = global->eth_dest_mac[if_idx];
 	}
 }
 
@@ -237,8 +241,8 @@ static inline int l3fwd_pkt_lpm(odp_packet_t pkt, int sif)
 	if (ret)
 		dif = sif;
 
-	eth->dst = global.eth_dest_mac[dif];
-	eth->src = global.l3fwd_pktios[dif].mac_addr;
+	eth->dst = global->eth_dest_mac[dif];
+	eth->src = global->l3fwd_pktios[dif].mac_addr;
 
 	return dif;
 }
@@ -265,7 +269,7 @@ static inline int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned num)
 		pkt = pkt_tbl[i];
 		err = 0;
 
-		if (global.cmd_args.error_check)
+		if (global->cmd_args.error_check)
 			err = odp_packet_has_error(pkt);
 
 		if (odp_unlikely(err || !odp_packet_has_ipv4(pkt))) {
@@ -286,7 +290,7 @@ static int run_worker(void *arg)
 	odp_pktin_queue_t inq;
 	int input_ifs[thr_arg->nb_pktio];
 	odp_pktin_queue_t input_queues[thr_arg->nb_pktio];
-	odp_pktout_queue_t output_queues[global.cmd_args.if_count];
+	odp_pktout_queue_t output_queues[global->cmd_args.if_count];
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	odp_packet_t *tbl;
 	int pkts, drop, sent;
@@ -296,16 +300,16 @@ static int run_worker(void *arg)
 	int num_pktio = 0;
 
 	/* Copy all required handles to local memory */
-	for (i = 0; i < global.cmd_args.if_count; i++) {
+	for (i = 0; i < global->cmd_args.if_count; i++) {
 		int txq_idx = thr_arg->pktio[i].txq_idx;
 
-		output_queues[i] =  global.l3fwd_pktios[i].ifout[txq_idx];
+		output_queues[i] =  global->l3fwd_pktios[i].ifout[txq_idx];
 
 		if_idx = thr_arg->pktio[i].if_idx;
 		for (j = 0; j < thr_arg->pktio[i].nb_rxq; j++) {
 			int rxq_idx = thr_arg->pktio[i].rxq[j];
 
-			inq = global.l3fwd_pktios[if_idx].ifin[rxq_idx];
+			inq = global->l3fwd_pktios[if_idx].ifin[rxq_idx];
 			input_ifs[num_pktio] = if_idx;
 			input_queues[num_pktio] = inq;
 			num_pktio++;
@@ -318,9 +322,9 @@ static int run_worker(void *arg)
 	if_idx = input_ifs[pktio];
 	inq = input_queues[pktio];
 
-	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&global->barrier);
 
-	while (!exit_threads) {
+	while (!global->exit_threads) {
 		if (num_pktio > 1) {
 			if_idx = input_ifs[pktio];
 			inq = input_queues[pktio];
@@ -340,12 +344,12 @@ static int run_worker(void *arg)
 		if (odp_unlikely(pkts < 1))
 			continue;
 
-		dif = global.fwd_func(pkt_tbl[0], if_idx);
+		dif = global->fwd_func(pkt_tbl[0], if_idx);
 		tbl = &pkt_tbl[0];
 		while (pkts) {
 			dst_port = dif;
 			for (i = 1; i < pkts; i++) {
-				dif = global.fwd_func(tbl[i], if_idx);
+				dif = global->fwd_func(tbl[i], if_idx);
 				if (dif != dst_port)
 					break;
 			}
@@ -695,10 +699,10 @@ static void setup_worker_qconf(app_args_t *args)
 	if (!args->qconf_count) {
 		if (nb_worker > if_count) {
 			for (i = 0; i < nb_worker; i++) {
-				arg = &global.worker_args[i];
+				arg = &global->worker_args[i];
 				arg->thr_idx = i;
 				j = i % if_count;
-				port = &global.l3fwd_pktios[j];
+				port = &global->l3fwd_pktios[j];
 				arg->pktio[0].rxq[0] =
 					port->rxq_idx % port->nb_rxq;
 				arg->pktio[0].nb_rxq = 1;
@@ -709,9 +713,9 @@ static void setup_worker_qconf(app_args_t *args)
 		} else {
 			for (i = 0; i < if_count; i++) {
 				j = i % nb_worker;
-				arg = &global.worker_args[j];
+				arg = &global->worker_args[j];
 				arg->thr_idx = j;
-				port = &global.l3fwd_pktios[i];
+				port = &global->l3fwd_pktios[i];
 				rxq_idx = arg->pktio[i].nb_rxq;
 				pktio = arg->nb_pktio;
 				arg->pktio[pktio].rxq[rxq_idx] =
@@ -744,7 +748,7 @@ static void setup_worker_qconf(app_args_t *args)
 				      q->if_idx, q->rxq_idx, q->core_idx);
 		queue_mask[q->if_idx][q->rxq_idx] = 1;
 
-		port = &global.l3fwd_pktios[q->if_idx];
+		port = &global->l3fwd_pktios[q->if_idx];
 		if (port->rxq_idx < q->rxq_idx)
 			EXAMPLE_ABORT("Error queue (%d, %d, %d), queue should"
 				      " be in sequence and start from 0, queue"
@@ -760,7 +764,7 @@ static void setup_worker_qconf(app_args_t *args)
 		port->rxq_idx = q->rxq_idx + 1;
 
 		/* put the queue into worker_args */
-		arg = &global.worker_args[q->core_idx];
+		arg = &global->worker_args[q->core_idx];
 
 		/* Check if interface already has queues configured */
 		for (j = 0; j < args->if_count; j++) {
@@ -778,9 +782,9 @@ static void setup_worker_qconf(app_args_t *args)
 	}
 	/* distribute tx queues among threads */
 	for (i = 0; i < args->worker_count; i++) {
-		arg = &global.worker_args[i];
+		arg = &global->worker_args[i];
 		for (j = 0; j < args->if_count; j++) {
-			port = &global.l3fwd_pktios[j];
+			port = &global->l3fwd_pktios[j];
 			arg->pktio[j].txq_idx =
 				port->txq_idx % port->nb_txq;
 			port->txq_idx++;
@@ -796,7 +800,7 @@ static void setup_worker_qconf(app_args_t *args)
 		const char *name;
 		int nb_rxq, nb_txq;
 
-		port = &global.l3fwd_pktios[i];
+		port = &global->l3fwd_pktios[i];
 		name = args->if_names[i];
 		odp_pktin_queue_param_init(&in_queue_param);
 		odp_pktout_queue_param_init(&out_queue_param);
@@ -855,7 +859,7 @@ static void print_qconf_table(app_args_t *args)
 	       "port/id", "rxq", "thread");
 
 	for (i = 0; i < args->worker_count; i++) {
-		thr_arg = &global.worker_args[i];
+		thr_arg = &global->worker_args[i];
 		for (j = 0; j < args->if_count; j++) {
 			if (!thr_arg->pktio[j].nb_rxq)
 				continue;
@@ -900,7 +904,7 @@ static int print_speed_stats(int num_workers, int duration, int timeout)
 		timeout = 1;
 	}
 	/* Wait for all threads to be ready*/
-	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&global->barrier);
 
 	do {
 		pkts = 0;
@@ -909,9 +913,9 @@ static int print_speed_stats(int num_workers, int duration, int timeout)
 		sleep(timeout);
 
 		for (i = 0; i < num_workers; i++) {
-			pkts += global.worker_args[i].packets;
-			rx_drops += global.worker_args[i].rx_drops;
-			tx_drops += global.worker_args[i].tx_drops;
+			pkts += global->worker_args[i].packets;
+			rx_drops += global->worker_args[i].rx_drops;
+			tx_drops += global->worker_args[i].tx_drops;
 		}
 		if (stats_enabled) {
 			pps = (pkts - pkts_prev) / timeout;
@@ -961,17 +965,28 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	/* Clear global argument and initialize the dest mac as 2:0:0:0:0:x */
-	memset(&global, 0, sizeof(global));
+	/* Reserve memory for args from shared mem */
+	shm = odp_shm_reserve("_appl_global_data", sizeof(global_data_t),
+			      ODP_CACHE_LINE_SIZE, 0);
+	global = odp_shm_addr(shm);
+	if (global == NULL) {
+		printf("Error: shared mem alloc failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	memset(global, 0, sizeof(global_data_t));
+	global->shm = shm;
+
+	/* Initialize the dest mac as 2:0:0:0:0:x */
 	mac[0] = 2;
 	for (i = 0; i < MAX_NB_PKTIO; i++) {
 		mac[ODPH_ETHADDR_LEN - 1] = (uint8_t)i;
-		memcpy(global.eth_dest_mac[i].addr, mac, ODPH_ETHADDR_LEN);
+		memcpy(global->eth_dest_mac[i].addr, mac, ODPH_ETHADDR_LEN);
 	}
 
 	/* Initialize the thread arguments */
 	for (i = 0; i < MAX_NB_WORKER; i++) {
-		thr_arg = &global.worker_args[i];
+		thr_arg = &global->worker_args[i];
 		for (j = 0; j < MAX_NB_PKTIO; j++) {
 			thr_arg->thr_idx = INVALID_ID;
 			thr_arg->pktio[j].txq_idx = INVALID_ID;
@@ -982,7 +997,7 @@ int main(int argc, char **argv)
 	}
 
 	/* Parse cmdline arguments */
-	args = &global.cmd_args;
+	args = &global->cmd_args;
 	parse_cmdline_args(argc, argv, args);
 
 	/* Init l3fwd table */
@@ -1030,7 +1045,7 @@ int main(int argc, char **argv)
 		char *if_name;
 
 		if_name = args->if_names[i];
-		port = &global.l3fwd_pktios[i];
+		port = &global->l3fwd_pktios[i];
 		if (create_pktio(if_name, pool, port)) {
 			printf("Error: create pktio %s\n", if_name);
 			exit(1);
@@ -1054,9 +1069,9 @@ int main(int argc, char **argv)
 
 	/* Decide ip lookup method */
 	if (args->hash_mode)
-		global.fwd_func = l3fwd_pkt_hash;
+		global->fwd_func = l3fwd_pkt_hash;
 	else
-		global.fwd_func = l3fwd_pkt_lpm;
+		global->fwd_func = l3fwd_pkt_lpm;
 
 	/* Start all the available ports */
 	for (i = 0; i < args->if_count; i++) {
@@ -1065,7 +1080,7 @@ int main(int argc, char **argv)
 		char buf[32];
 
 		if_name = args->if_names[i];
-		port = &global.l3fwd_pktios[i];
+		port = &global->l3fwd_pktios[i];
 		/* start pktio */
 		if (odp_pktio_start(port->pktio)) {
 			printf("unable to start pktio: %s\n", if_name);
@@ -1082,7 +1097,7 @@ int main(int argc, char **argv)
 		printf("start pktio: %s, mac %s\n", if_name, buf);
 	}
 
-	odp_barrier_init(&barrier, nb_worker + 1);
+	odp_barrier_init(&global->barrier, nb_worker + 1);
 
 	memset(&thr_params, 0, sizeof(thr_params));
 	thr_params.start    = run_worker;
@@ -1095,7 +1110,7 @@ int main(int argc, char **argv)
 		struct thread_arg_s *arg;
 		odp_cpumask_t thr_mask;
 
-		arg = &global.worker_args[i];
+		arg = &global->worker_args[i];
 		odp_cpumask_zero(&thr_mask);
 		odp_cpumask_set(&thr_mask, cpu);
 		thr_params.arg = arg;
@@ -1105,7 +1120,7 @@ int main(int argc, char **argv)
 	}
 
 	print_speed_stats(nb_worker, args->duration, PRINT_INTERVAL);
-	exit_threads = 1;
+	global->exit_threads = 1;
 
 	/* wait for other threads to join */
 	for (i = 0; i < nb_worker; i++)
@@ -1135,6 +1150,11 @@ int main(int argc, char **argv)
 
 	if (odp_pool_destroy(pool)) {
 		printf("Error: pool destroy\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_shm_free(global->shm)) {
+		printf("Error: shm free global data\n");
 		exit(EXIT_FAILURE);
 	}
 

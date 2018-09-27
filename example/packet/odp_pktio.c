@@ -85,6 +85,8 @@ typedef struct {
 typedef struct {
 	/** Application (parsed) arguments */
 	appl_args_t appl;
+	/** Shm for global data */
+	odp_shm_t shm;
 	/** Thread specific arguments */
 	thread_args_t thread[MAX_WORKERS];
 	/** Flag to exit worker threads */
@@ -351,15 +353,7 @@ int main(int argc, char *argv[])
 	odp_pool_param_t params;
 	odp_instance_t instance;
 	odph_odpthread_params_t thr_params;
-
-	args = calloc(1, sizeof(args_t));
-	if (args == NULL) {
-		EXAMPLE_ERR("Error: args mem alloc failed.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	/* Parse and store the application arguments */
-	parse_args(argc, argv, &args->appl);
+	odp_shm_t shm;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, NULL, NULL)) {
@@ -372,6 +366,21 @@ int main(int argc, char *argv[])
 		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
+
+	/* Reserve memory for args from shared mem */
+	shm = odp_shm_reserve("_appl_global_data", sizeof(args_t),
+			      ODP_CACHE_LINE_SIZE, 0);
+	args = odp_shm_addr(shm);
+	if (args == NULL) {
+		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	memset(args, 0, sizeof(args_t));
+	args->shm = shm;
+
+	/* Parse and store the application arguments */
+	parse_args(argc, argv, &args->appl);
 
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &args->appl);
@@ -467,9 +476,14 @@ int main(int argc, char *argv[])
 
 	free(args->appl.if_names);
 	free(args->appl.if_str);
-	free(args);
 
 	odp_pool_destroy(pool);
+
+	if (odp_shm_free(args->shm)) {
+		EXAMPLE_ERR("Error: shm free global data\n");
+		exit(EXIT_FAILURE);
+	}
+
 	odp_term_local();
 	return odp_term_global(instance);
 }
