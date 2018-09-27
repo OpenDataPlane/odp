@@ -15,8 +15,11 @@ SUBDIRS = \
 	  test \
 	  $(PLATFORM_TEST_DIR) \
 	  helper/test \
-	  doc \
-	  example
+	  doc
+
+if WITH_EXAMPLES
+SUBDIRS += example
+endif
 
 @DX_RULES@
 
