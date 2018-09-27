@@ -34,12 +34,6 @@
 #define NUM_BULK_OP ((RING_SIZE / PIECE_BULK) * 100)
 
 /*
- * Since cunit framework cannot work with multi-threading, ask workers
- * to save their results for delayed assertion after thread collection.
- */
-static int worker_results[MAX_WORKERS];
-
-/*
  * Note : make sure that both enqueue and dequeue
  * operation starts at same time so to avoid data corruption
  * Its because atomic lock will protect only indexes, but if order of
@@ -54,18 +48,42 @@ typedef enum {
 	STRESS_N_M_PRODUCER_CONSUMER
 } stress_case_t;
 
+#define GLOBAL_SHM_NAME "RingGlobalShm"
+
 /* worker function declarations */
 static int stress_worker(void *_data);
 
 /* global name for later look up in workers' context */
 static const char *ring_name = "stress_ring";
 
-/* barrier to run threads at the same time */
-static odp_barrier_t barrier;
+typedef struct {
+	odp_shm_t shm;
+	/* Barrier to run threads at the same time */
+	odp_barrier_t barrier;
+	/*
+	 * Since cunit framework cannot work with multi-threading, ask workers
+	 * to save their results for delayed assertion after thread collection.
+	 */
+	int worker_results[MAX_WORKERS];
+} global_shared_mem_t;
+
+static global_shared_mem_t *global_mem;
 
 int ring_test_stress_start(void)
 {
 	_ring_t *r_stress = NULL;
+	odp_shm_t shm;
+
+	shm = odp_shm_reserve(GLOBAL_SHM_NAME, sizeof(global_shared_mem_t), 64,
+			      ODP_SHM_SW_ONLY);
+	if (shm == ODP_SHM_INVALID) {
+		fprintf(stderr, "Unable reserve memory for global_shm\n");
+		return -1;
+	}
+
+	global_mem = odp_shm_addr(shm);
+	memset(global_mem, 0, sizeof(global_shared_mem_t));
+	global_mem->shm = shm;
 
 	/* multiple thread usage scenario, thread or process sharable */
 	r_stress = _ring_create(ring_name, RING_SIZE, _RING_SHM_PROC);
@@ -79,7 +97,11 @@ int ring_test_stress_start(void)
 
 int ring_test_stress_end(void)
 {
-	_ring_destroy(ring_name);
+	if (odp_shm_free(global_mem->shm)) {
+		fprintf(stderr, "error: odp_shm_free() failed.\n");
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -90,7 +112,8 @@ void ring_test_stress_1_1_producer_consumer(void)
 	pthrd_arg worker_param;
 
 	/* reset results for delayed assertion */
-	memset(worker_results, 0, sizeof(worker_results));
+	memset(global_mem->worker_results, 0,
+	       sizeof(global_mem->worker_results));
 
 	/* request 2 threads to run 1:1 stress */
 	worker_param.numthrds = odp_cpumask_default_worker(&cpus, 2);
@@ -103,7 +126,7 @@ void ring_test_stress_1_1_producer_consumer(void)
 		return;
 	}
 
-	odp_barrier_init(&barrier, 2);
+	odp_barrier_init(&global_mem->barrier, 2);
 
 	/* kick the workers */
 	odp_cunit_thread_create(stress_worker, &worker_param);
@@ -113,7 +136,7 @@ void ring_test_stress_1_1_producer_consumer(void)
 
 	/* delayed assertion due to cunit limitation */
 	for (i = 0; i < worker_param.numthrds; i++)
-		CU_ASSERT(0 == worker_results[i]);
+		CU_ASSERT(0 == global_mem->worker_results[i]);
 }
 
 void ring_test_stress_N_M_producer_consumer(void)
@@ -123,7 +146,8 @@ void ring_test_stress_N_M_producer_consumer(void)
 	pthrd_arg worker_param;
 
 	/* reset results for delayed assertion */
-	memset(worker_results, 0, sizeof(worker_results));
+	memset(global_mem->worker_results, 0,
+	       sizeof(global_mem->worker_results));
 
 	/* request MAX_WORKERS threads to run N:M stress */
 	worker_param.numthrds =
@@ -141,7 +165,7 @@ void ring_test_stress_N_M_producer_consumer(void)
 	if (worker_param.numthrds & 0x1)
 		worker_param.numthrds -= 1;
 
-	odp_barrier_init(&barrier, worker_param.numthrds);
+	odp_barrier_init(&global_mem->barrier, worker_param.numthrds);
 
 	/* kick the workers */
 	odp_cunit_thread_create(stress_worker, &worker_param);
@@ -151,7 +175,7 @@ void ring_test_stress_N_M_producer_consumer(void)
 
 	/* delayed assertion due to cunit limitation */
 	for (i = 0; i < worker_param.numthrds; i++)
-		CU_ASSERT(0 == worker_results[i]);
+		CU_ASSERT(0 == global_mem->worker_results[i]);
 }
 
 void ring_test_stress_1_N_producer_consumer(void)
@@ -214,7 +238,8 @@ static int stress_worker(void *_data)
 	int worker_id = odp_thread_id();
 
 	/* save the worker result for delayed assertion */
-	result = &worker_results[(worker_id % worker_param->numthrds)];
+	result = &global_mem->worker_results[(worker_id %
+					      worker_param->numthrds)];
 
 	/* verify ring lookup in worker context */
 	r_stress = _ring_lookup(ring_name);
@@ -223,7 +248,7 @@ static int stress_worker(void *_data)
 		return (*result = -1);
 	}
 
-	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&global_mem->barrier);
 
 	switch (worker_param->testcase) {
 	case STRESS_1_1_PRODUCER_CONSUMER:
@@ -242,7 +267,7 @@ static int stress_worker(void *_data)
 		break;
 	}
 
-	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&global_mem->barrier);
 
 	return 0;
 }
