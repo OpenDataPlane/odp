@@ -73,14 +73,13 @@ typedef struct {
 	unsigned int cpu_count; /**< Number of CPUs to use */
 	uint32_t time;		/**< Number of seconds to run */
 	char *if_name;		/**< pointer to interface names */
+	int shutdown;		/**< Shutdown threads if !0 */
 } appl_args_t;
 
 enum packet_mode {
 	APPL_MODE_DROP,		/**< Packet is dropped */
 	APPL_MODE_REPLY		/**< Packet is sent back */
 };
-
-static int shutdown; /**< Shutdown threads if !0 */
 
 /* helper funcs */
 static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len);
@@ -272,7 +271,7 @@ static int pktio_receive_thread(void *arg)
 	for (;;) {
 		odp_pktio_t pktio_tmp;
 
-		if (shutdown)
+		if (appl->shutdown)
 			break;
 
 		/* Use schedule to get buf from any input queue */
@@ -574,7 +573,7 @@ int main(int argc, char *argv[])
 	print_cls_statistics(args);
 
 	odp_pktio_stop(pktio);
-	shutdown = 1;
+	args->shutdown = 1;
 	odph_odpthreads_join(thread_tbl);
 
 	for (i = 0; i < args->policy_count; i++) {
