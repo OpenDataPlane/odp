@@ -97,6 +97,9 @@ static int ipc_second_process(int master_pid)
 		ret = odp_pktio_start(ipc_pktio);
 		if (!ret)
 			break;
+
+		/* Reduce polling frequency to once per 50ms */
+		odp_time_wait_ns(50 * ODP_TIME_MSEC_IN_NS);
 	}
 
 	for (;;) {

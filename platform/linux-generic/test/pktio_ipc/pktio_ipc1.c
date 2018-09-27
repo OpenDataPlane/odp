@@ -96,6 +96,9 @@ static int pktio_run_loop(odp_pool_t pool)
 		ret = odp_pktio_start(ipc_pktio);
 		if (!ret)
 			break;
+
+		/* Reduce polling frequency to once per 50ms */
+		odp_time_wait_ns(50 * ODP_TIME_MSEC_IN_NS);
 	}
 
 	/* packets loop */
