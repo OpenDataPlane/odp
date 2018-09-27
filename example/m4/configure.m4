@@ -1,5 +1,15 @@
 ##########################################################################
-# Enable/disable test-example
+# Build and install example applications
+##########################################################################
+AC_ARG_WITH([examples],
+	    [AS_HELP_STRING([--without-examples],
+			    [don't build and install example applications])],
+	    [],
+	    [with_examples=yes])
+AM_CONDITIONAL([WITH_EXAMPLES], [test x$with_examples != xno])
+
+##########################################################################
+# Test examples during 'make check'
 ##########################################################################
 AC_ARG_ENABLE([test-example],
     [AS_HELP_STRING([--enable-test-example], [run basic test against examples])],
