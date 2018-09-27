@@ -1,3 +1,13 @@
+##########################################################################
+# Build and install test applications
+##########################################################################
+AC_ARG_WITH([tests],
+	    [AS_HELP_STRING([--without-tests],
+			    [don't build and install test applications])],
+	    [],
+	    [with_tests=yes])
+AM_CONDITIONAL([WITH_TESTS], [test x$with_tests != xno])
+
 m4_include([test/m4/miscellaneous.m4])
 m4_include([test/m4/performance.m4])
 m4_include([test/m4/validation.m4])

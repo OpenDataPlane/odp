@@ -399,6 +399,7 @@ AC_MSG_RESULT([
 	cunit:			${cunit_support}
 	static tests linkage:	${enable_static_applications}
 	with_examples:		${with_examples}
+	with_tests:		${with_tests}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}
 	test_perf_proc:		${test_perf_proc}
