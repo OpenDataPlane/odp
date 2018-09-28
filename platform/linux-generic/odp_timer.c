@@ -57,6 +57,7 @@
 #include <odp/api/timer.h>
 #include <odp_timer_internal.h>
 #include <odp/api/plat/queue_inlines.h>
+#include <odp_global_data.h>
 
 /* Inlined API functions */
 #include <odp/api/plat/event_inlines.h>
@@ -256,6 +257,10 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 {
 	uint32_t i, tp_idx;
 	size_t sz0, sz1, sz2;
+	uint32_t flags = ODP_SHM_SW_ONLY;
+
+	if (odp_global_data.shm_single_va)
+		flags |= ODP_SHM_SINGLE_VA;
 
 	odp_ticketlock_lock(&timer_global.lock);
 
@@ -282,7 +287,7 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	sz2 = ROUNDUP_CACHE_LINE(sizeof(_odp_timer_t) *
 				 param->num_timers);
 	odp_shm_t shm = odp_shm_reserve(name, sz0 + sz1 + sz2,
-			ODP_CACHE_LINE_SIZE, ODP_SHM_SW_ONLY);
+			ODP_CACHE_LINE_SIZE, flags);
 	if (odp_unlikely(shm == ODP_SHM_INVALID))
 		ODP_ABORT("%s: timer pool shm-alloc(%zuKB) failed\n",
 			  name, (sz0 + sz1 + sz2) / 1024);
