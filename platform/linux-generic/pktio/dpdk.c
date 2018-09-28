@@ -746,6 +746,14 @@ fail:
 	return i;
 }
 
+static inline void prefetch_pkt(struct rte_mbuf *mbuf)
+{
+	odp_packet_hdr_t *pkt_hdr = mbuf->userdata;
+
+	odp_prefetch(pkt_hdr);
+	odp_prefetch(&pkt_hdr->p);
+}
+
 static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 				   odp_packet_t pkt_table[],
 				   struct rte_mbuf *mbuf_table[],
@@ -756,15 +764,28 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 	uint16_t pkt_len;
 	struct rte_mbuf *mbuf;
 	void *data;
-	int i;
-	int nb_pkts = 0;
-	odp_pool_t pool = pkt_priv(pktio_entry)->pool;
-	odp_pktin_config_opt_t pktin_cfg = pktio_entry->s.config.pktin;
-	odp_proto_layer_t parse_layer = pktio_entry->s.config.parser.layer;
-	odp_pktio_t input = pktio_entry->s.handle;
+	int i, nb_pkts;
+	odp_pool_t pool;
+	odp_pktin_config_opt_t pktin_cfg;
+	odp_proto_layer_t parse_layer;
+	odp_pktio_t input;
+
+	prefetch_pkt(mbuf_table[0]);
+
+	nb_pkts = 0;
+	pool = pkt_priv(pktio_entry)->pool;
+	pktin_cfg = pktio_entry->s.config.pktin;
+	parse_layer = pktio_entry->s.config.parser.layer;
+	input = pktio_entry->s.handle;
+
+	if (odp_likely(mbuf_num > 1))
+		prefetch_pkt(mbuf_table[1]);
 
 	for (i = 0; i < mbuf_num; i++) {
 		odp_packet_hdr_t parsed_hdr;
+
+		if (odp_likely((i + 2) < mbuf_num))
+			prefetch_pkt(mbuf_table[i + 2]);
 
 		mbuf = mbuf_table[i];
 		if (odp_unlikely(mbuf->nb_segs != 1)) {
