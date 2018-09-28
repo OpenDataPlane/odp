@@ -19,14 +19,15 @@
 #define MAX_PKT_BURST 32
 #define MAX_WORKERS 1
 
-static int g_ret;
-
-struct {
+typedef struct {
 	odp_pktio_t if0, if1;
 	odp_pktin_queue_t if0in, if1in;
 	odp_pktout_queue_t if0out, if1out;
 	odph_ethaddr_t src, dst;
-} global;
+	int g_ret;
+} global_data_t;
+
+static global_data_t *global;
 
 static odp_pktio_t create_pktio(const char *name, odp_pool_t pool,
 				odp_pktin_queue_t *pktin,
@@ -80,12 +81,12 @@ static int run_worker(void *arg ODP_UNUSED)
 	int total_pkts = 0;
 	uint64_t wait_time = odp_pktin_wait_time(2 * ODP_TIME_SEC_IN_NS);
 
-	if (odp_pktio_start(global.if0)) {
+	if (odp_pktio_start(global->if0)) {
 		printf("unable to start input interface\n");
 		exit(1);
 	}
 	printf("started input interface\n");
-	if (odp_pktio_start(global.if1)) {
+	if (odp_pktio_start(global->if1)) {
 		printf("unable to start output interface\n");
 		exit(1);
 	}
@@ -93,7 +94,7 @@ static int run_worker(void *arg ODP_UNUSED)
 	printf("started all\n");
 
 	while (1) {
-		pkts = odp_pktin_recv_tmo(global.if0in, pkt_tbl, MAX_PKT_BURST,
+		pkts = odp_pktin_recv_tmo(global->if0in, pkt_tbl, MAX_PKT_BURST,
 					  wait_time);
 		if (odp_unlikely(pkts <= 0)) {
 			printf("recv tmo!\n");
@@ -109,10 +110,10 @@ static int run_worker(void *arg ODP_UNUSED)
 				return 0;
 			}
 			eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-			eth->src = global.src;
-			eth->dst = global.dst;
+			eth->src = global->src;
+			eth->dst = global->dst;
 		}
-		sent = odp_pktout_send(global.if1out, pkt_tbl, pkts);
+		sent = odp_pktout_send(global->if1out, pkt_tbl, pkts);
 		if (sent < 0)
 			sent = 0;
 		total_pkts += sent;
@@ -124,7 +125,7 @@ static int run_worker(void *arg ODP_UNUSED)
 	printf("Total send packets: %d\n", total_pkts);
 
 	if (total_pkts < 10)
-		g_ret = -1;
+		global->g_ret = -1;
 
 	return 0;
 }
@@ -137,6 +138,8 @@ int main(int argc, char **argv)
 	odph_odpthread_t thd[MAX_WORKERS];
 	odp_instance_t instance;
 	odph_odpthread_params_t thr_params;
+	odp_shm_t shm;
+	int ret;
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
@@ -157,6 +160,17 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
+	/* Reserve memory for args from shared mem */
+	shm = odp_shm_reserve("_appl_global_data", sizeof(global_data_t),
+			      ODP_CACHE_LINE_SIZE, 0);
+	global = odp_shm_addr(shm);
+	if (global == NULL) {
+		printf("Error: shared mem alloc failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	memset(global, 0, sizeof(global_data_t));
+
 	/* Create packet pool */
 	odp_pool_param_init(&params);
 	params.pkt.seg_len = POOL_SEG_LEN;
@@ -171,8 +185,10 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	global.if0 = create_pktio(argv[1], pool, &global.if0in, &global.if0out);
-	global.if1 = create_pktio(argv[2], pool, &global.if1in, &global.if1out);
+	global->if0 = create_pktio(argv[1], pool, &global->if0in,
+				   &global->if0out);
+	global->if1 = create_pktio(argv[2], pool, &global->if1in,
+				   &global->if1out);
 
 	odp_cpumask_default_worker(&cpumask, MAX_WORKERS);
 
@@ -185,8 +201,15 @@ int main(int argc, char **argv)
 	odph_odpthreads_create(thd, &cpumask, &thr_params);
 	odph_odpthreads_join(thd);
 
+	ret = global->g_ret;
+
 	if (odp_pool_destroy(pool)) {
 		printf("Error: pool destroy\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_shm_free(shm)) {
+		printf("Error: shm free global data\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -200,5 +223,5 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	return g_ret;
+	return ret;
 }
