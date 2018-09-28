@@ -17,6 +17,7 @@ extern "C" {
 #define _ODP_ISHM_SINGLE_VA		1
 #define _ODP_ISHM_LOCK			2
 #define _ODP_ISHM_EXPORT		4 /*create export descr file in /tmp */
+#define _ODP_ISHM_NO_HP			5 /* do not use huge pages */
 
 /**
  * Shared memory block info
