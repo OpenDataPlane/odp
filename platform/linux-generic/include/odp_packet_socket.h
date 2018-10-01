@@ -20,6 +20,7 @@
 #include <odp/api/pool.h>
 #include <odp/api/packet.h>
 #include <odp/api/packet_io.h>
+#include <odp/api/shared_memory.h>
 
 #include <linux/version.h>
 
@@ -43,6 +44,7 @@ struct ring {
 	unsigned frame_num;
 	int rd_num;
 
+	odp_shm_t shm;
 	int sock;
 	int type;
 	int version;
