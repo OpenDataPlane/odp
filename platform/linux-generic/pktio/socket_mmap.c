@@ -38,6 +38,7 @@
 #include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
 #include <odp/api/hints.h>
+#include <odp_global_data.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>
@@ -462,6 +463,8 @@ static int mmap_setup_ring(int sock, struct ring *ring, int type,
 			   odp_pool_t pool_hdl, int fanout)
 {
 	int ret = 0;
+	int flags = 0;
+	odp_shm_t shm;
 
 	ring->sock = sock;
 	ring->type = type;
@@ -477,10 +480,21 @@ static int mmap_setup_ring(int sock, struct ring *ring, int type,
 	}
 
 	ring->rd_len = ring->rd_num * sizeof(*ring->rd);
-	ring->rd = malloc(ring->rd_len);
+
+	if (odp_global_ro.shm_single_va)
+		flags += ODP_SHM_SINGLE_VA;
+
+	shm = odp_shm_reserve(NULL, ring->rd_len, ODP_CACHE_LINE_SIZE, flags);
+
+	if (shm == ODP_SHM_INVALID) {
+		ODP_ERR("Reserving shm failed\n");
+		return -1;
+	}
+	ring->shm = shm;
+
+	ring->rd = odp_shm_addr(shm);
 	if (!ring->rd) {
-		__odp_errno = errno;
-		ODP_ERR("malloc(): %s\n", strerror(errno));
+		ODP_ERR("Reading shm addr failed\n");
 		return -1;
 	}
 
@@ -533,8 +547,10 @@ static int mmap_sock(pkt_sock_mmap_t *pkt_sock)
 
 static int mmap_unmap_sock(pkt_sock_mmap_t *pkt_sock)
 {
-	free(pkt_sock->rx_ring.rd);
-	free(pkt_sock->tx_ring.rd);
+	if (pkt_sock->rx_ring.shm != ODP_SHM_INVALID)
+		odp_shm_free(pkt_sock->rx_ring.shm);
+	if (pkt_sock->tx_ring.shm != ODP_SHM_INVALID)
+		odp_shm_free(pkt_sock->tx_ring.shm);
 	return munmap(pkt_sock->mmap_base, pkt_sock->mmap_len);
 }
 
@@ -605,6 +621,8 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 	pkt_sock->frame_offset = 0;
 
 	pkt_sock->pool = pool;
+	pkt_sock->rx_ring.shm = ODP_SHM_INVALID;
+	pkt_sock->tx_ring.shm = ODP_SHM_INVALID;
 	pkt_sock->sockfd = mmap_pkt_socket();
 	if (pkt_sock->sockfd == -1)
 		goto error;
