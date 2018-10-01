@@ -749,9 +749,11 @@ fail:
 static inline void prefetch_pkt(struct rte_mbuf *mbuf)
 {
 	odp_packet_hdr_t *pkt_hdr = mbuf->userdata;
+	void *data = rte_pktmbuf_mtod(mbuf, char *);
 
 	odp_prefetch(pkt_hdr);
 	odp_prefetch(&pkt_hdr->p);
+	odp_prefetch(data);
 }
 
 static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
@@ -795,8 +797,6 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		}
 
 		data = rte_pktmbuf_mtod(mbuf, char *);
-		odp_prefetch(data);
-
 		pkt_len = rte_pktmbuf_pkt_len(mbuf);
 
 		pkt = (odp_packet_t)mbuf->userdata;
