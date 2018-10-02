@@ -35,6 +35,7 @@ struct queue_entry_s {
 	sched_elem_t     sched_elem;
 
 	odp_ticketlock_t ODP_ALIGNED_CACHE lock;
+	odp_atomic_u64_t num_timers;
 	int              status;
 
 	queue_enq_fn_t       ODP_ALIGNED_CACHE enqueue;
