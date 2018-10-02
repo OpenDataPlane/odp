@@ -826,9 +826,13 @@ static int ipc_close(pktio_entry_t *pktio_entry)
 
 static int ipc_pktio_init_global(void)
 {
-	_ring_tailq_init();
-	ODP_PRINT("PKTIO: initialized ipc interface.\n");
-	return 0;
+	ODP_DBG("PKTIO: initializing ipc interface.\n");
+	return _ring_tailq_init();
+}
+
+static int ipc_pktio_term_global(void)
+{
+	return _ring_tailq_term();
 }
 
 const pktio_if_ops_t ipc_pktio_ops = {
@@ -836,7 +840,7 @@ const pktio_if_ops_t ipc_pktio_ops = {
 	.print = NULL,
 	.init_global = ipc_pktio_init_global,
 	.init_local = NULL,
-	.term = NULL,
+	.term = ipc_pktio_term_global,
 	.open = ipc_pktio_open,
 	.close = ipc_close,
 	.recv =  ipc_pktio_recv,

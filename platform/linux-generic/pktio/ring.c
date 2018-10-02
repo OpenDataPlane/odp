@@ -80,12 +80,20 @@
 #include <odp_packet_io_ring_internal.h>
 #include <odp_errno_define.h>
 #include <odp_global_data.h>
+#include <odp_shm_internal.h>
 
 #include <odp/api/plat/cpu_inlines.h>
 
-static TAILQ_HEAD(, _ring) odp_ring_list;
-
 #define RING_VAL_IS_POWER_2(x) ((((x) - 1) & (x)) == 0)
+
+typedef struct {
+	TAILQ_HEAD(, _ring) ring_list;
+	/* Rings tailq lock */
+	odp_rwlock_t qlock;
+	odp_shm_t shm;
+} global_data_t;
+
+static global_data_t *global;
 
 /*
  * the enqueue of pointers on the ring.
@@ -149,13 +157,37 @@ static TAILQ_HEAD(, _ring) odp_ring_list;
 	} \
 } while (0)
 
-static odp_rwlock_t	qlock;	/* rings tailq lock */
 
-/* init tailq_ring */
-void _ring_tailq_init(void)
+/* Initialize tailq_ring */
+int _ring_tailq_init(void)
+{	odp_shm_t shm;
+
+	/* Allocate globally shared memory */
+	shm = odp_shm_reserve("_odp_ring_global", sizeof(global_data_t),
+			      ODP_CACHE_LINE_SIZE, _ODP_SHM_NO_HP);
+	if (ODP_SHM_INVALID == shm) {
+		ODP_ERR("Shm reserve failed for pktio ring\n");
+		return -1;
+	}
+
+	global = odp_shm_addr(shm);
+	memset(global, 0, sizeof(global_data_t));
+	global->shm = shm;
+
+	TAILQ_INIT(&global->ring_list);
+	odp_rwlock_init(&global->qlock);
+
+	return 0;
+}
+
+/* Terminate tailq_ring */
+int _ring_tailq_term(void)
 {
-	TAILQ_INIT(&odp_ring_list);
-	odp_rwlock_init(&qlock);
+	if (odp_shm_free(global->shm)) {
+		ODP_ERR("Shm free failed for pktio ring\n");
+		return -1;
+	}
+	return 0;
 }
 
 /* create the ring */
@@ -187,7 +219,7 @@ _ring_create(const char *name, unsigned count, unsigned flags)
 	snprintf(ring_name, sizeof(ring_name), "%s", name);
 	ring_size = count * sizeof(void *) + sizeof(_ring_t);
 
-	odp_rwlock_write_lock(&qlock);
+	odp_rwlock_write_lock(&global->qlock);
 	/* reserve a memory zone for this ring.*/
 	shm = odp_shm_reserve(ring_name, ring_size, ODP_CACHE_LINE_SIZE,
 			      shm_flag);
@@ -208,13 +240,13 @@ _ring_create(const char *name, unsigned count, unsigned flags)
 		r->cons.tail = 0;
 
 		if (!(flags & _RING_NO_LIST))
-			TAILQ_INSERT_TAIL(&odp_ring_list, r, next);
+			TAILQ_INSERT_TAIL(&global->ring_list, r, next);
 	} else {
 		__odp_errno = ENOMEM;
 		ODP_ERR("Cannot reserve memory\n");
 	}
 
-	odp_rwlock_write_unlock(&qlock);
+	odp_rwlock_write_unlock(&global->qlock);
 	return r;
 }
 
@@ -225,10 +257,10 @@ int _ring_destroy(const char *name)
 	if (shm != ODP_SHM_INVALID) {
 		_ring_t *r = odp_shm_addr(shm);
 
-		odp_rwlock_write_lock(&qlock);
+		odp_rwlock_write_lock(&global->qlock);
 		if (!(r->flags & _RING_NO_LIST))
-			TAILQ_REMOVE(&odp_ring_list, r, next);
-		odp_rwlock_write_unlock(&qlock);
+			TAILQ_REMOVE(&global->ring_list, r, next);
+		odp_rwlock_write_unlock(&global->qlock);
 
 		return odp_shm_free(shm);
 	}
@@ -442,13 +474,13 @@ void _ring_list_dump(void)
 {
 	const _ring_t *mp = NULL;
 
-	odp_rwlock_read_lock(&qlock);
+	odp_rwlock_read_lock(&global->qlock);
 
-	TAILQ_FOREACH(mp, &odp_ring_list, next) {
+	TAILQ_FOREACH(mp, &global->ring_list, next) {
 		_ring_dump(mp);
 	}
 
-	odp_rwlock_read_unlock(&qlock);
+	odp_rwlock_read_unlock(&global->qlock);
 }
 
 /* search a ring from its name */
@@ -456,12 +488,12 @@ _ring_t *_ring_lookup(const char *name)
 {
 	_ring_t *r;
 
-	odp_rwlock_read_lock(&qlock);
-	TAILQ_FOREACH(r, &odp_ring_list, next) {
+	odp_rwlock_read_lock(&global->qlock);
+	TAILQ_FOREACH(r, &global->ring_list, next) {
 		if (strncmp(name, r->name, _RING_NAMESIZE) == 0)
 			break;
 	}
-	odp_rwlock_read_unlock(&qlock);
+	odp_rwlock_read_unlock(&global->qlock);
 
 	return r;
 }

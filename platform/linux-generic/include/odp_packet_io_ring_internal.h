@@ -398,9 +398,14 @@ int _ring_mc_dequeue_burst(_ring_t *r, void **obj_table, unsigned n);
 void _ring_list_dump(void);
 
 /**
- * initialise ring tailq
+ * Initialize ring tailq
  */
-void _ring_tailq_init(void);
+int _ring_tailq_init(void);
+
+/**
+ * Terminate ring tailq
+ */
+int _ring_tailq_term(void);
 
 #ifdef __cplusplus
 }
