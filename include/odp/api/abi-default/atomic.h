@@ -54,7 +54,7 @@ struct odp_atomic_u64_s {
 	uint64_t v; /**< Actual storage for the atomic variable */
 	/* Some architectures do not support lock-free operations on 64-bit
 	 * data types. We use a spin lock to ensure atomicity. */
-	char lock; /**< Spin lock (if needed) used to ensure atomic access */
+	int lock; /**< Spin lock (if needed) used to ensure atomic access */
 } ODP_ALIGNED(sizeof(uint64_t)); /* Enforce alignment! */
 
 #endif
