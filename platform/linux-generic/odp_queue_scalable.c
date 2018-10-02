@@ -124,6 +124,8 @@ static int queue_init(queue_entry_t *queue, const char *name,
 		ring[ring_idx] = NULL;
 
 	queue->s.type = queue->s.param.type;
+	odp_atomic_init_u64(&queue->s.num_timers, 0);
+
 	queue->s.enqueue = _queue_enq;
 	queue->s.dequeue = _queue_deq;
 	queue->s.enqueue_multi = _queue_enq_multi;
@@ -958,6 +960,20 @@ static int queue_orig_multi(odp_queue_t handle,
 							     buf_hdr, num);
 }
 
+static void queue_timer_add(odp_queue_t handle)
+{
+	queue_entry_t *queue = qentry_from_ext(handle);
+
+	odp_atomic_inc_u64(&queue->s.num_timers);
+}
+
+static void queue_timer_rem(odp_queue_t handle)
+{
+	queue_entry_t *queue = qentry_from_ext(handle);
+
+	odp_atomic_dec_u64(&queue->s.num_timers);
+}
+
 /* API functions */
 _odp_queue_api_fn_t queue_scalable_api = {
 	.queue_create = queue_create,
@@ -990,5 +1006,7 @@ queue_fn_t queue_scalable_fn = {
 	.get_pktin = queue_get_pktin,
 	.set_pktin = queue_set_pktin,
 	.set_enq_deq_fn = queue_set_enq_deq_func,
-	.orig_deq_multi = queue_orig_multi
+	.orig_deq_multi = queue_orig_multi,
+	.timer_add = queue_timer_add,
+	.timer_rem = queue_timer_rem
 };

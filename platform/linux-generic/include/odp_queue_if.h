@@ -39,6 +39,8 @@ typedef void (*queue_set_enq_deq_fn_t)(odp_queue_t queue,
 				       queue_enq_multi_fn_t enq_multi,
 				       queue_deq_fn_t deq,
 				       queue_deq_multi_fn_t deq_multi);
+typedef void (*queue_timer_add_fn_t)(odp_queue_t queue);
+typedef void (*queue_timer_rem_fn_t)(odp_queue_t queue);
 
 /* Queue functions towards other internal components */
 typedef struct {
@@ -51,6 +53,8 @@ typedef struct {
 	queue_get_pktin_fn_t get_pktin;
 	queue_set_pktin_fn_t set_pktin;
 	queue_set_enq_deq_fn_t set_enq_deq_fn;
+	queue_timer_add_fn_t timer_add;
+	queue_timer_rem_fn_t timer_rem;
 
 	/* Original queue dequeue multi function (before override). May be used
 	 * by an overriding dequeue function. */
