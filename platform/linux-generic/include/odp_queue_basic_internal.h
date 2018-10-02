@@ -54,6 +54,7 @@ struct queue_entry_s {
 		ring_spsc_t  ring_spsc;
 	};
 
+	odp_atomic_u64_t     num_timers;
 	int                  status;
 
 	queue_deq_multi_fn_t orig_dequeue_multi;
