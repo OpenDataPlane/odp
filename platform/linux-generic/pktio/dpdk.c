@@ -68,8 +68,6 @@
 #if ODP_DPDK_ZERO_COPY
 ODP_STATIC_ASSERT(CONFIG_PACKET_HEADROOM == RTE_PKTMBUF_HEADROOM,
 		  "ODP and DPDK headroom sizes not matching!");
-ODP_STATIC_ASSERT(PKT_EXTRA_LEN >= sizeof(struct rte_mbuf),
-		  "DPDK rte_mbuf won't fit in odp_packet_hdr_t.extra!");
 #endif
 
 /* DPDK poll mode drivers requiring minimum RX burst size DPDK_MIN_RX_BURST */
@@ -80,6 +78,8 @@ ODP_STATIC_ASSERT(PKT_EXTRA_LEN >= sizeof(struct rte_mbuf),
 #define DPDK_NB_MBUF 16384
 #define DPDK_MBUF_BUF_SIZE RTE_MBUF_DEFAULT_BUF_SIZE
 #define DPDK_MEMPOOL_CACHE_SIZE 64
+
+#define MBUF_OFFSET (ROUNDUP_CACHE_LINE(sizeof(struct rte_mbuf)))
 
 ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
 		  (DPDK_MEMPOOL_CACHE_SIZE <= RTE_MEMPOOL_CACHE_MAX_SIZE) &&
@@ -164,6 +164,8 @@ void refer_constructors(void)
 	mp_hdlr_init_ops_stack();
 }
 #endif
+
+static int dpdk_pktio_init(void);
 
 static int pool_alloc(struct rte_mempool *mp);
 
@@ -272,34 +274,39 @@ static inline void mbuf_update(struct rte_mbuf *mbuf, odp_packet_hdr_t *pkt_hdr,
 }
 
 /**
- * Initialize mbuf
- *
- * Called once per ODP packet.
+ * Initialize packet mbuf. Modified version of standard rte_pktmbuf_init()
+ * function.
  */
-static void mbuf_init(struct rte_mempool *mp, struct rte_mbuf *mbuf,
-		      odp_packet_hdr_t *pkt_hdr)
+static void pktmbuf_init(struct rte_mempool *mp, void *opaque_arg ODP_UNUSED,
+			 void *_m, unsigned i ODP_UNUSED)
 {
-	void *buf_addr = pkt_hdr->buf_hdr.base_data - RTE_PKTMBUF_HEADROOM;
+	struct rte_mbuf *m = _m;
+	uint32_t mbuf_size, buf_len;
+	odp_packet_hdr_t *pkt_hdr;
+	void *buf_addr;
 
-	memset(mbuf, 0, sizeof(struct rte_mbuf));
+	pkt_hdr = (odp_packet_hdr_t *)(uintptr_t)((uint8_t *)m + MBUF_OFFSET);
+	buf_addr = pkt_hdr->buf_hdr.base_data - RTE_PKTMBUF_HEADROOM;
 
-	mbuf->priv_size = 0;
-	mbuf->buf_addr = buf_addr;
-	mbuf->buf_physaddr = rte_mem_virt2phy(buf_addr);
-	if (odp_unlikely(mbuf->buf_physaddr == RTE_BAD_PHYS_ADDR ||
-			 mbuf->buf_physaddr == 0))
-		ODP_ABORT("Failed to map virt addr to phy");
+	mbuf_size = sizeof(struct rte_mbuf);
+	buf_len = rte_pktmbuf_data_room_size(mp);
 
-	mbuf->buf_len = (uint16_t)rte_pktmbuf_data_room_size(mp);
-	mbuf->data_off = RTE_PKTMBUF_HEADROOM;
-	mbuf->pool = mp;
-	mbuf->refcnt = 1;
-	mbuf->nb_segs = 1;
-	mbuf->port = 0xff;
+	memset(m, 0, mbuf_size);
+	m->priv_size = 0;
+	m->buf_addr = buf_addr;
+	m->buf_iova = rte_mem_virt2iova(buf_addr);
+	m->buf_len = (uint16_t)buf_len;
+	m->data_off = RTE_PKTMBUF_HEADROOM;
 
-	/* Store ODP packet handle inside rte_mbuf */
-	mbuf->userdata = packet_handle(pkt_hdr);
-	pkt_hdr->extra_type = PKT_EXTRA_TYPE_DPDK;
+	if (odp_unlikely(m->buf_iova == RTE_BAD_IOVA || m->buf_iova == 0))
+		ODP_ABORT("Failed to map virt addr to iova\n");
+
+	/* Init some constant fields */
+	m->pool = mp;
+	m->nb_segs = 1;
+	m->port = MBUF_INVALID_PORT;
+	rte_mbuf_refcnt_set(m, 1);
+	m->next = NULL;
 }
 
 /**
@@ -308,60 +315,87 @@ static void mbuf_init(struct rte_mempool *mp, struct rte_mbuf *mbuf,
 static struct rte_mempool *mbuf_pool_create(const char *name,
 					    pool_t *pool_entry)
 {
-	struct rte_mempool *mp;
+	struct rte_mempool *mp = NULL;
 	struct rte_pktmbuf_pool_private mbp_priv;
-	unsigned elt_size;
-	unsigned num;
-	uint16_t data_room_size;
+	struct rte_mempool_objsz sz;
+	unsigned int elt_size = pool_entry->dpdk_elt_size;
+	unsigned int num = pool_entry->num;
+	uint32_t total_size;
 
 	if (!(pool_entry->mem_from_huge_pages)) {
 		ODP_ERR("DPDK requires memory is allocated from huge pages\n");
-		return NULL;
+		goto fail;
 	}
 
-	num = pool_entry->num;
-	data_room_size = pool_entry->seg_len + CONFIG_PACKET_HEADROOM;
-	elt_size = sizeof(struct rte_mbuf) + (unsigned)data_room_size;
-	mbp_priv.mbuf_data_room_size = data_room_size;
-	mbp_priv.mbuf_priv_size = 0;
+	total_size = rte_mempool_calc_obj_size(elt_size, MEMPOOL_F_NO_SPREAD,
+					       &sz);
+	if (total_size != pool_entry->block_size) {
+		ODP_ERR("DPDK pool block size not matching to ODP pool: "
+			"%" PRIu32 "/%" PRIu32 "\n", total_size,
+			pool_entry->block_size);
+		goto fail;
+	}
 
-	mp = rte_mempool_create_empty(name, num, elt_size, cache_size(num),
+	/* Skipped buffers have to be taken into account to populate pool
+	 * properly. */
+	mp = rte_mempool_create_empty(name, num + pool_entry->skipped_blocks,
+				      elt_size, cache_size(num),
 				      sizeof(struct rte_pktmbuf_pool_private),
-				      rte_socket_id(), 0);
+				      rte_socket_id(), MEMPOOL_F_NO_SPREAD);
 	if (mp == NULL) {
 		ODP_ERR("Failed to create empty DPDK packet pool\n");
-		return NULL;
+		goto fail;
 	}
 
 	if (rte_mempool_set_ops_byname(mp, "odp_pool", pool_entry)) {
 		ODP_ERR("Failed setting mempool operations\n");
-		return NULL;
+		goto fail;
 	}
 
+	mbp_priv.mbuf_data_room_size = pool_entry->seg_len;
+	mbp_priv.mbuf_priv_size = 0;
 	rte_pktmbuf_pool_init(mp, &mbp_priv);
 
 	if (pool_alloc(mp)) {
 		ODP_ERR("Failed allocating mempool\n");
-		return NULL;
+		goto fail;
 	}
 
+	num = rte_mempool_populate_iova(mp, (char *)pool_entry->base_addr,
+					RTE_BAD_IOVA, pool_entry->shm_size,
+					NULL, NULL);
+	if (num <= 0) {
+		ODP_ERR("Failed to populate mempool: %d\n", num);
+		goto fail;
+	}
+
+	rte_mempool_obj_iter(mp, pktmbuf_init, NULL);
+
 	return mp;
+
+fail:
+	if (mp)
+		rte_mempool_free(mp);
+	return NULL;
 }
 
 /* DPDK external memory pool operations */
 
-static int pool_enqueue(struct rte_mempool *mp ODP_UNUSED,
+static int pool_enqueue(struct rte_mempool *mp,
 			void * const *obj_table, unsigned num)
 {
 	odp_packet_t pkt_tbl[num];
+	pool_t *pool_entry = (pool_t *)mp->pool_config;
 	unsigned i;
 
-	if (odp_unlikely(num == 0))
+	if (odp_unlikely(num == 0 || !pool_entry->pool_in_use))
 		return 0;
 
-	for (i = 0; i < num; i++)
-		pkt_tbl[i] = (odp_packet_t)((struct rte_mbuf *)
-				obj_table[i])->userdata;
+	for (i = 0; i < num; i++) {
+		odp_packet_hdr_t *pkt_hdr = (odp_packet_hdr_t *)(uintptr_t)
+				((uint8_t *)obj_table[i] + MBUF_OFFSET);
+		pkt_tbl[i] = packet_handle(pkt_hdr);
+	}
 
 	odp_packet_free_multi(pkt_tbl, num);
 
@@ -387,13 +421,10 @@ static int pool_dequeue_bulk(struct rte_mempool *mp, void **obj_table,
 	}
 
 	for (i = 0; i < pkts; i++) {
-		odp_packet_t pkt = packet_tbl[i];
-		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-		struct rte_mbuf *mbuf = (struct rte_mbuf *)
-					(uintptr_t)pkt_hdr->extra;
-		if (pkt_hdr->extra_type != PKT_EXTRA_TYPE_DPDK)
-			mbuf_init(mp, mbuf, pkt_hdr);
-		obj_table[i] = mbuf;
+		odp_packet_hdr_t *pkt_hdr = packet_hdr(packet_tbl[i]);
+
+		obj_table[i] = (struct rte_mbuf *)(uintptr_t)
+				((uint8_t *)pkt_hdr - MBUF_OFFSET);
 	}
 
 	return 0;
@@ -438,21 +469,23 @@ static void pool_destroy(void *pool)
 {
 	struct rte_mempool *mp = (struct rte_mempool *)pool;
 
-	if (mp != NULL)
+	if (mp != NULL) {
+		pool_t *pool_entry = (pool_t *)mp->pool_config;
+
+		pool_entry->pool_in_use = 0;
 		rte_mempool_free(mp);
+	}
 }
 
-static struct rte_mempool *pool_create(pool_t *pool)
+int _odp_dpdk_pool_create(pool_t *pool)
 {
 	struct rte_mempool *pkt_pool;
 	char pool_name[RTE_MEMPOOL_NAMESIZE];
 
-	odp_ticketlock_lock(&pool->lock);
+	if (!ODP_DPDK_ZERO_COPY)
+		return 0;
 
-	if (pool->ext_desc != NULL) {
-		odp_ticketlock_unlock(&pool->lock);
-		return (struct rte_mempool *)pool->ext_desc;
-	}
+	pool->pool_in_use = 0;
 
 	snprintf(pool_name, sizeof(pool_name),
 		 "dpdk_pktpool_%" PRIu32 "_%" PRIu32 "", odp_global_ro.main_pid,
@@ -460,17 +493,41 @@ static struct rte_mempool *pool_create(pool_t *pool)
 	pkt_pool = mbuf_pool_create(pool_name, pool);
 
 	if (pkt_pool == NULL) {
-		odp_ticketlock_unlock(&pool->lock);
 		ODP_ERR("Creating external DPDK pool failed\n");
-		return NULL;
+		return -1;
 	}
 
 	pool->ext_desc = pkt_pool;
 	pool->ext_destroy = pool_destroy;
+	pool->pool_in_use = 1;
 
-	odp_ticketlock_unlock(&pool->lock);
+	return 0;
+}
 
-	return pkt_pool;
+uint32_t _odp_dpdk_pool_obj_size(pool_t *pool, uint32_t block_size)
+{
+	struct rte_mempool_objsz sz;
+	uint32_t total_size;
+
+	if (!ODP_DPDK_ZERO_COPY)
+		return block_size;
+
+	if (odp_global_rw->dpdk_initialized == 0) {
+		if (dpdk_pktio_init()) {
+			ODP_ERR("Initializing DPDK failed\n");
+			return 0;
+		}
+		odp_global_rw->dpdk_initialized = 1;
+	}
+
+	block_size += MBUF_OFFSET;
+	total_size = rte_mempool_calc_obj_size(block_size, MEMPOOL_F_NO_SPREAD,
+					       &sz);
+
+	pool->dpdk_elt_size = sz.elt_size;
+	pool->block_offset = sz.header_size + MBUF_OFFSET;
+
+	return total_size;
 }
 
 static struct rte_mempool_ops ops_stack = {
@@ -748,7 +805,8 @@ fail:
 
 static inline void prefetch_pkt(struct rte_mbuf *mbuf)
 {
-	odp_packet_hdr_t *pkt_hdr = mbuf->userdata;
+	odp_packet_hdr_t *pkt_hdr = (odp_packet_hdr_t *)(uintptr_t)
+			((uint8_t *)mbuf + MBUF_OFFSET);
 	void *data = rte_pktmbuf_mtod(mbuf, char *);
 
 	odp_prefetch(pkt_hdr);
@@ -761,7 +819,6 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 				   struct rte_mbuf *mbuf_table[],
 				   uint16_t mbuf_num, odp_time_t *ts)
 {
-	odp_packet_t pkt;
 	odp_packet_hdr_t *pkt_hdr;
 	uint16_t pkt_len;
 	struct rte_mbuf *mbuf;
@@ -799,8 +856,8 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		data = rte_pktmbuf_mtod(mbuf, char *);
 		pkt_len = rte_pktmbuf_pkt_len(mbuf);
 
-		pkt = (odp_packet_t)mbuf->userdata;
-		pkt_hdr = packet_hdr(pkt);
+		pkt_hdr = (odp_packet_hdr_t *)(uintptr_t)((uint8_t *)mbuf +
+				MBUF_OFFSET);
 
 		if (pktio_cls_enabled(pktio_entry)) {
 			packet_parse_reset(&parsed_hdr);
@@ -845,7 +902,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 
 		packet_set_ts(pkt_hdr, ts);
 
-		pkt_table[nb_pkts++] = pkt;
+		pkt_table[nb_pkts++] = packet_handle(pkt_hdr);
 	}
 
 	return nb_pkts;
@@ -866,45 +923,25 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 	for (i = 0; i < num; i++) {
 		odp_packet_t pkt = pkt_table[i];
 		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-		struct rte_mbuf *mbuf = (struct rte_mbuf *)
-					(uintptr_t)pkt_hdr->extra;
+		struct rte_mbuf *mbuf = (struct rte_mbuf *)(uintptr_t)
+				((uint8_t *)pkt_hdr - MBUF_OFFSET);
 		uint16_t pkt_len = odp_packet_len(pkt);
 
 		if (odp_unlikely(pkt_len > pkt_dpdk->mtu))
 			goto fail;
 
-		if (odp_likely(pkt_hdr->buf_hdr.segcount == 1 &&
-			       pkt_hdr->extra_type == PKT_EXTRA_TYPE_DPDK)) {
+		if (odp_likely(pkt_hdr->buf_hdr.segcount == 1)) {
 			mbuf_update(mbuf, pkt_hdr, pkt_len);
 
 			if (odp_unlikely(pktio_entry->s.chksum_insert_ena))
 				pkt_set_ol_tx(pktout_cfg, pktout_capa, pkt_hdr,
 					      mbuf, odp_packet_data(pkt));
 		} else {
-			pool_t *pool_entry = pkt_hdr->buf_hdr.pool_ptr;
-
-			if (odp_unlikely(pool_entry->ext_desc == NULL)) {
-				if (pool_create(pool_entry) == NULL)
-					ODP_ABORT("Creating DPDK pool failed");
-			}
-
-			if (pkt_hdr->buf_hdr.segcount != 1 ||
-			    !pool_entry->mem_from_huge_pages) {
-				/* Fall back to packet copy */
-				if (odp_unlikely(pkt_to_mbuf(pktio_entry, &mbuf,
-							     &pkt, 1) != 1))
-					goto fail;
-				(*copy_count)++;
-
-			} else {
-				mbuf_init((struct rte_mempool *)
-					  pool_entry->ext_desc, mbuf, pkt_hdr);
-				mbuf_update(mbuf, pkt_hdr, pkt_len);
-				if (pktio_entry->s.chksum_insert_ena)
-					pkt_set_ol_tx(pktout_cfg, pktout_capa,
-						      pkt_hdr, mbuf,
-						      odp_packet_data(pkt));
-			}
+			/* Fall back to packet copy */
+			if (odp_unlikely(pkt_to_mbuf(pktio_entry, &mbuf,
+						     &pkt, 1) != 1))
+				goto fail;
+			(*copy_count)++;
 		}
 		mbuf_table[i] = mbuf;
 	}
@@ -1486,10 +1523,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		pkt_dpdk->min_rx_burst = 0;
 
 	if (ODP_DPDK_ZERO_COPY) {
-		if (pool_entry->ext_desc != NULL)
-			pkt_pool = (struct rte_mempool *)pool_entry->ext_desc;
-		else
-			pkt_pool = pool_create(pool_entry);
+		pkt_pool = (struct rte_mempool *)pool_entry->ext_desc;
 	} else {
 		snprintf(pool_name, sizeof(pool_name), "pktpool_%s", netdev);
 		/* Check if the pool exists already */
@@ -1878,5 +1912,28 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.input_queues_config = dpdk_input_queues_config,
 	.output_queues_config = dpdk_output_queues_config
 };
+
+#else
+
+#include <stdint.h>
+
+#include <odp/api/hints.h>
+
+#include <odp_packet_dpdk.h>
+#include <odp_pool_internal.h>
+
+/*
+ * Dummy functions for pool_create()
+ */
+
+uint32_t _odp_dpdk_pool_obj_size(pool_t *pool ODP_UNUSED, uint32_t block_size)
+{
+	return block_size;
+}
+
+int _odp_dpdk_pool_create(pool_t *pool ODP_UNUSED)
+{
+	return 0;
+}
 
 #endif /* ODP_PKTIO_DPDK */
