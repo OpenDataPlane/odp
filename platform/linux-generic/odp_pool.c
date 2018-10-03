@@ -16,6 +16,7 @@
 #include <odp_pool_internal.h>
 #include <odp_init_internal.h>
 #include <odp_packet_internal.h>
+#include <odp_packet_dpdk.h>
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_ring_internal.h>
@@ -248,7 +249,10 @@ static void init_buffers(pool_t *pool)
 	type = pool->params.type;
 
 	for (i = 0; i < pool->num + skipped_blocks ; i++) {
-		addr    = &pool->base_addr[i * pool->block_size];
+		int skip = 0;
+
+		addr    = &pool->base_addr[(i * pool->block_size) +
+					   pool->block_offset];
 		buf_hdr = addr;
 		pkt_hdr = addr;
 		/* Skip packet buffers which cross huge page boundaries. Some
@@ -265,7 +269,7 @@ static void init_buffers(pool_t *pool)
 					~(page_size - 1));
 			if (last_page != first_page) {
 				skipped_blocks++;
-				continue;
+				skip = 1;
 			}
 		}
 		if (pool->uarea_size)
@@ -310,8 +314,10 @@ static void init_buffers(pool_t *pool)
 				     pool->tailroom];
 
 		/* Store buffer index into the global pool */
-		ring_enq(ring, mask, i);
+		if (!skip)
+			ring_enq(ring, mask, i);
 	}
+	pool->skipped_blocks = skipped_blocks;
 }
 
 static bool shm_is_from_huge_pages(odp_shm_t shm)
@@ -445,6 +451,17 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	block_size = ROUNDUP_CACHE_LINE(hdr_size + align + headroom + seg_len +
 					tailroom);
 
+	/* Calculate extra space required for storing DPDK objects and mbuf
+	 * headers. NOP if zero-copy is disabled. */
+	pool->block_offset = 0;
+	if (params->type == ODP_POOL_PACKET) {
+		block_size = _odp_dpdk_pool_obj_size(pool, block_size);
+		if (!block_size) {
+			ODP_ERR("Calculating DPDK mempool obj size failed\n");
+			return ODP_POOL_INVALID;
+		}
+	}
+
 	/* Allocate extra memory for skipping packet buffers which cross huge
 	 * page boundaries. */
 	if (params->type == ODP_POOL_PACKET) {
@@ -505,6 +522,12 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 
 	ring_init(&pool->ring->hdr);
 	init_buffers(pool);
+
+	/* Create zero-copy DPDK memory pool. NOP if zero-copy is disabled. */
+	if (params->type == ODP_POOL_PACKET && _odp_dpdk_pool_create(pool)) {
+		ODP_ERR("Creating DPDK packet pool failed\n");
+		goto error;
+	}
 
 	return pool->pool_hdl;
 
