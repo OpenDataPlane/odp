@@ -1711,7 +1711,6 @@ int _odp_ishm_init_global(const odp_init_t *init)
 		goto init_glob_err1;
 	}
 	ishm_tbl = addr;
-	memset(ishm_tbl, 0, sizeof(ishm_table_t));
 	ishm_tbl->dev_seq = 0;
 	ishm_tbl->odpthread_cnt = 0;
 	odp_spinlock_init(&ishm_tbl->lock);
@@ -1724,7 +1723,6 @@ int _odp_ishm_init_global(const odp_init_t *init)
 		goto init_glob_err2;
 	}
 	ishm_ftbl = addr;
-	memset(ishm_ftbl, 0, sizeof(ishm_ftable_t));
 
 	/*
 	 *reserve the address space for _ODP_ISHM_SINGLE_VA reserved blocks,
