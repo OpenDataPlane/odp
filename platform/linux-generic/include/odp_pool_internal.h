@@ -67,11 +67,15 @@ typedef struct pool_t {
 	uint32_t         max_len;
 	uint32_t         uarea_size;
 	uint32_t         block_size;
+	uint32_t         block_offset;
 	uint8_t         *base_addr;
 	uint8_t         *uarea_base_addr;
 
 	/* Used by DPDK zero-copy pktio */
-	uint8_t		mem_from_huge_pages;
+	uint32_t         dpdk_elt_size;
+	uint32_t         skipped_blocks;
+	uint8_t          pool_in_use;
+	uint8_t          mem_from_huge_pages;
 	pool_destroy_cb_fn ext_destroy;
 	void            *ext_desc;
 
@@ -110,7 +114,8 @@ static inline odp_buffer_hdr_t *buf_hdr_from_index(pool_t *pool,
 	uint64_t block_offset;
 	odp_buffer_hdr_t *buf_hdr;
 
-	block_offset = buffer_idx * (uint64_t)pool->block_size;
+	block_offset = (buffer_idx * (uint64_t)pool->block_size) +
+			pool->block_offset;
 
 	/* clang requires cast to uintptr_t */
 	buf_hdr = (odp_buffer_hdr_t *)(uintptr_t)&pool->base_addr[block_offset];
