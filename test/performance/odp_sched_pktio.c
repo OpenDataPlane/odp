@@ -22,7 +22,7 @@
 #define MAX_PIPE_STAGES   64
 #define MAX_PIPE_QUEUES   1024
 #define MAX_PKT_LEN       1514
-#define MAX_PKT_NUM       (16 * 1024)
+#define MAX_PKT_NUM       (128 * 1024)
 #define MIN_PKT_SEG_LEN   64
 #define BURST_SIZE        32
 #define CHECK_PERIOD      10000
@@ -40,6 +40,7 @@ typedef struct test_options_t {
 	int num_pktio_queue;
 	int pipe_stages;
 	int pipe_queues;
+	uint32_t pipe_queue_size;
 	uint8_t collect_stat;
 	char pktio_name[MAX_PKTIOS][MAX_PKTIO_NAME + 1];
 
@@ -536,6 +537,7 @@ static void print_usage(const char *progname)
 	       "  -t, --timeout <number>    Flow inactivity timeout (in usec) per packet. Default: 0 (don't use timers)\n"
 	       "  --pipe-stages <number>    Number of pipeline stages per interface\n"
 	       "  --pipe-queues <number>    Number of queues per pipeline stage\n"
+	       "  --pipe-queue-size <num>   Number of events a pipeline queue must be able to store. Default 256.\n"
 	       "  -m, --sched_mode <mode>   Scheduler synchronization mode for all queues. 1: parallel, 2: atomic, 3: ordered. Default: 2\n"
 	       "  -s, --stat                Collect statistics.\n"
 	       "  -h, --help                Display help and exit.\n\n",
@@ -555,6 +557,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"sched_mode",  required_argument, NULL, 'm'},
 		{"pipe-stages", required_argument, NULL,  0},
 		{"pipe-queues", required_argument, NULL,  1},
+		{"pipe-queue-size", required_argument, NULL,  2},
 		{"stat",        no_argument,       NULL, 's'},
 		{"help",        no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
@@ -567,6 +570,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->sched_mode = SCHED_MODE_ATOMIC;
 	test_options->num_worker = 1;
 	test_options->num_pktio_queue = 0;
+	test_options->pipe_queue_size = 256;
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
@@ -583,6 +587,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 1:
 			test_options->pipe_queues = atoi(optarg);
+			break;
+		case 2:
+			test_options->pipe_queue_size = atoi(optarg);
 			break;
 		case 'i':
 			i = 0;
@@ -721,8 +728,10 @@ static int config_setup(test_global_t *test_global)
 	if (pool_capa.pkt.max_len && pkt_len > pool_capa.pkt.max_len)
 		pkt_len = pool_capa.pkt.max_len;
 
-	if (pool_capa.pkt.max_num && pkt_num > pool_capa.pkt.max_num)
+	if (pool_capa.pkt.max_num && pkt_num > pool_capa.pkt.max_num) {
 		pkt_num = pool_capa.pkt.max_num;
+		printf("Warning: Pool size rounded down to %u\n", pkt_num);
+	}
 
 	test_global->pkt_len = pkt_len;
 	test_global->pkt_num = pkt_num;
@@ -1093,8 +1102,14 @@ static int create_pipeline_queues(test_global_t *test_global)
 	int i, j, k, num_pktio, stages, queues, ctx_size;
 	pipe_queue_context_t *ctx;
 	odp_queue_param_t queue_param;
+	odp_queue_capability_t queue_capa;
 	odp_schedule_sync_t sched_sync;
 	int ret = 0;
+
+	if (odp_queue_capability(&queue_capa)) {
+		printf("Error: Queue capability failed\n");
+		return -1;
+	}
 
 	num_pktio = test_global->opt.num_pktio;
 	stages = test_global->opt.pipe_stages;
@@ -1106,6 +1121,14 @@ static int create_pipeline_queues(test_global_t *test_global)
 	queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	queue_param.sched.sync  = sched_sync;
 	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+
+	queue_param.size = test_global->opt.pipe_queue_size;
+	if (queue_capa.sched.max_size &&
+	    queue_param.size > queue_capa.sched.max_size) {
+		printf("Error: Pipeline queue max size is %u\n",
+		       queue_capa.sched.max_size);
+		return -1;
+	}
 
 	ctx_size = sizeof(pipe_queue_context_t);
 
