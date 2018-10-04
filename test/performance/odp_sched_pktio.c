@@ -28,9 +28,13 @@
 #define CHECK_PERIOD      10000
 #define TEST_PASSED_LIMIT 5000
 #define TIMEOUT_OFFSET_NS 1000000
+#define SCHED_MODE_PARAL  1
+#define SCHED_MODE_ATOMIC 2
+#define SCHED_MODE_ORDER  3
 
 typedef struct test_options_t {
 	long int timeout_us;
+	int sched_mode;
 	int num_worker;
 	int num_pktio;
 	int num_pktio_queue;
@@ -532,6 +536,7 @@ static void print_usage(const char *progname)
 	       "  -t, --timeout <number>    Flow inactivity timeout (in usec) per packet. Default: 0 (don't use timers)\n"
 	       "  --pipe-stages <number>    Number of pipeline stages per interface\n"
 	       "  --pipe-queues <number>    Number of queues per pipeline stage\n"
+	       "  -m, --sched_mode <mode>   Scheduler synchronization mode for all queues. 1: parallel, 2: atomic, 3: ordered. Default: 2\n"
 	       "  -s, --stat                Collect statistics.\n"
 	       "  -h, --help                Display help and exit.\n\n",
 	       NO_PATH(progname));
@@ -541,23 +546,25 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 {
 	int i, opt, long_index;
 	char *name, *str;
-	int len, str_len;
+	int len, str_len, sched_mode;
 	const struct option longopts[] = {
 		{"interface",   required_argument, NULL, 'i'},
 		{"num_cpu",     required_argument, NULL, 'c'},
 		{"num_queue",   required_argument, NULL, 'q'},
 		{"timeout",     required_argument, NULL, 't'},
+		{"sched_mode",  required_argument, NULL, 'm'},
 		{"pipe-stages", required_argument, NULL,  0},
 		{"pipe-queues", required_argument, NULL,  1},
 		{"stat",        no_argument,       NULL, 's'},
 		{"help",        no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+i:c:q:t:sh";
+	const char *shortopts =  "+i:c:q:t:m:sh";
 	int ret = 0;
 
 	memset(test_options, 0, sizeof(test_options_t));
 
+	test_options->sched_mode = SCHED_MODE_ATOMIC;
 	test_options->num_worker = 1;
 	test_options->num_pktio_queue = 0;
 
@@ -617,6 +624,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		case 't':
 			test_options->timeout_us = atol(optarg);
 			break;
+		case 'm':
+			test_options->sched_mode = atoi(optarg);
+			break;
 		case 's':
 			test_options->collect_stat = 1;
 			break;
@@ -650,10 +660,32 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		ret = -1;
 	}
 
+	sched_mode = test_options->sched_mode;
+	if (sched_mode != SCHED_MODE_PARAL &&
+	    sched_mode != SCHED_MODE_ATOMIC &&
+	    sched_mode != SCHED_MODE_ORDER) {
+		printf("Error: Bad scheduler mode: %i\n", sched_mode);
+		ret = -1;
+	}
+
 	if (test_options->num_pktio_queue == 0)
 		test_options->num_pktio_queue = test_options->num_worker;
 
 	return ret;
+}
+
+static odp_schedule_sync_t sched_sync_mode(test_global_t *test_global)
+{
+	switch (test_global->opt.sched_mode) {
+	case SCHED_MODE_PARAL:
+		return ODP_SCHED_SYNC_PARALLEL;
+	case SCHED_MODE_ATOMIC:
+		return ODP_SCHED_SYNC_ATOMIC;
+	case SCHED_MODE_ORDER:
+		return ODP_SCHED_SYNC_ORDERED;
+	default:
+		return -1;
+	}
 }
 
 static int config_setup(test_global_t *test_global)
@@ -820,7 +852,7 @@ static int open_pktios(test_global_t *test_global)
 	pktio_param.in_mode  = ODP_PKTIN_MODE_SCHED;
 	pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
 
-	sched_sync = ODP_SCHED_SYNC_ATOMIC;
+	sched_sync = sched_sync_mode(test_global);
 
 	for (i = 0; i < num_pktio; i++)
 		test_global->pktio[i].pktio = ODP_PKTIO_INVALID;
@@ -1067,7 +1099,7 @@ static int create_pipeline_queues(test_global_t *test_global)
 	num_pktio = test_global->opt.num_pktio;
 	stages = test_global->opt.pipe_stages;
 	queues = test_global->opt.pipe_queues;
-	sched_sync = ODP_SCHED_SYNC_ATOMIC;
+	sched_sync = sched_sync_mode(test_global);
 
 	odp_queue_param_init(&queue_param);
 	queue_param.type = ODP_QUEUE_TYPE_SCHED;
