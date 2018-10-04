@@ -38,7 +38,7 @@
 #include <string.h>
 #include <inttypes.h>
 
-#define MIN_QUEUE_SIZE 8
+#define MIN_QUEUE_SIZE 32
 #define MAX_QUEUE_SIZE (1 * 1024 * 1024)
 
 static int queue_init(queue_entry_t *queue, const char *name,
@@ -816,11 +816,12 @@ static int queue_init(queue_entry_t *queue, const char *name,
 	queue->s.pktin = PKTIN_INVALID;
 	queue->s.pktout = PKTOUT_INVALID;
 
-	/* Use default size for all small queues to quarantee performance
-	 * level. */
-	queue_size = queue_glb->config.default_queue_size;
-	if (param->size > queue_glb->config.default_queue_size)
-		queue_size = param->size;
+	queue_size = param->size;
+	if (queue_size == 0)
+		queue_size = queue_glb->config.default_queue_size;
+
+	if (queue_size < MIN_QUEUE_SIZE)
+		queue_size = MIN_QUEUE_SIZE;
 
 	/* Round up if not already a power of two */
 	queue_size = ROUNDUP_POWER2_U32(queue_size);
