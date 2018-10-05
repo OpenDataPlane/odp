@@ -21,6 +21,8 @@
 #define NUM_BUFS_BEFORE_PAUSE	10
 #define NUM_GROUPS              2
 
+#define TEST_QUEUE_SIZE_NUM_EV  50
+
 #define GLOBALS_SHM_NAME	"test_globals"
 #define MSG_POOL_NAME		"msg_pool"
 #define QUEUE_CTX_POOL_NAME     "queue_ctx_pool"
@@ -275,6 +277,91 @@ static void scheduler_test_queue_destroy(void)
 	}
 
 	CU_ASSERT_FATAL(odp_pool_destroy(p) == 0);
+}
+
+static void scheduler_test_queue_size(void)
+{
+	odp_queue_capability_t queue_capa;
+	odp_pool_t pool;
+	odp_pool_param_t pool_param;
+	odp_queue_param_t queue_param;
+	odp_queue_t queue, from;
+	odp_event_t ev;
+	odp_buffer_t buf;
+	uint32_t i, j, queue_size, num;
+	int ret;
+	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_PARALLEL,
+				      ODP_SCHED_SYNC_ATOMIC,
+				      ODP_SCHED_SYNC_ORDERED};
+
+	CU_ASSERT_FATAL(odp_queue_capability(&queue_capa) == 0);
+	queue_size = TEST_QUEUE_SIZE_NUM_EV;
+	if (queue_capa.sched.max_size &&
+	    queue_size > queue_capa.sched.max_size)
+		queue_size = queue_capa.sched.max_size;
+
+	odp_pool_param_init(&pool_param);
+	pool_param.buf.size  = 100;
+	pool_param.buf.align = 0;
+	pool_param.buf.num   = TEST_QUEUE_SIZE_NUM_EV;
+	pool_param.type      = ODP_POOL_BUFFER;
+
+	pool = odp_pool_create("test_queue_size", &pool_param);
+
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	for (i = 0; i < 3; i++) {
+		/* Ensure that scheduler is empty */
+		for (j = 0; j < 10;) {
+			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+			CU_ASSERT(ev == ODP_EVENT_INVALID);
+
+			if (ev != ODP_EVENT_INVALID)
+				odp_event_free(ev);
+			else
+				j++;
+		}
+
+		odp_queue_param_init(&queue_param);
+		queue_param.type = ODP_QUEUE_TYPE_SCHED;
+		queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+		queue_param.sched.sync  = sync[i];
+		queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+		queue_param.size = queue_size;
+
+		queue = odp_queue_create("test_queue_size", &queue_param);
+
+		CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+		for (j = 0; j < queue_size; j++) {
+			buf = odp_buffer_alloc(pool);
+			CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+
+			ev = odp_buffer_to_event(buf);
+			ret = odp_queue_enq(queue, ev);
+			CU_ASSERT(ret == 0);
+
+			if (ret)
+				odp_event_free(ev);
+		}
+
+		num = 0;
+		for (j = 0; j < 100 * TEST_QUEUE_SIZE_NUM_EV; j++) {
+			ev = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+
+			if (ev == ODP_EVENT_INVALID)
+				continue;
+
+			CU_ASSERT(from == queue);
+			odp_event_free(ev);
+			num++;
+		}
+
+		CU_ASSERT(num == queue_size);
+		CU_ASSERT_FATAL(odp_queue_destroy(queue) == 0);
+	}
+
+	CU_ASSERT_FATAL(odp_pool_destroy(pool) == 0);
 }
 
 static void scheduler_test_groups(void)
@@ -1745,6 +1832,7 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_wait_time),
 	ODP_TEST_INFO(scheduler_test_num_prio),
 	ODP_TEST_INFO(scheduler_test_queue_destroy),
+	ODP_TEST_INFO(scheduler_test_queue_size),
 	ODP_TEST_INFO(scheduler_test_groups),
 	ODP_TEST_INFO(scheduler_test_pause_resume),
 	ODP_TEST_INFO(scheduler_test_ordered_lock),
