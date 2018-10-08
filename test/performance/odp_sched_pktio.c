@@ -19,19 +19,28 @@
 #define MAX_PKTIOS        32
 #define MAX_PKTIO_NAME    31
 #define MAX_PKTIO_QUEUES  MAX_WORKERS
+#define MAX_PIPE_STAGES   64
+#define MAX_PIPE_QUEUES   1024
 #define MAX_PKT_LEN       1514
-#define MAX_PKT_NUM       (16 * 1024)
+#define MAX_PKT_NUM       (128 * 1024)
 #define MIN_PKT_SEG_LEN   64
 #define BURST_SIZE        32
 #define CHECK_PERIOD      10000
 #define TEST_PASSED_LIMIT 5000
 #define TIMEOUT_OFFSET_NS 1000000
+#define SCHED_MODE_PARAL  1
+#define SCHED_MODE_ATOMIC 2
+#define SCHED_MODE_ORDER  3
 
 typedef struct test_options_t {
 	long int timeout_us;
+	int sched_mode;
 	int num_worker;
 	int num_pktio;
 	int num_pktio_queue;
+	int pipe_stages;
+	int pipe_queues;
+	uint32_t pipe_queue_size;
 	uint8_t collect_stat;
 	char pktio_name[MAX_PKTIOS][MAX_PKTIO_NAME + 1];
 
@@ -45,16 +54,29 @@ typedef struct {
 typedef struct ODP_ALIGNED_CACHE {
 	uint64_t rx_pkt;
 	uint64_t tx_pkt;
+	uint64_t pipe_pkt;
+	uint64_t tx_drop;
+	uint64_t pipe_drop;
 	uint64_t tmo;
 } worker_stat_t;
 
-typedef struct queue_context_t {
+typedef struct pktin_queue_context_t {
+	/* Queue context must start with stage and idx */
+	uint16_t stage;
+	uint16_t queue_idx;
+
+	uint8_t  dst_pktio;
+	uint8_t  dst_queue;
+	uint8_t  src_pktio;
+	uint8_t  src_queue;
 	odp_pktout_queue_t dst_pktout;
-	uint8_t dst_pktio;
-	uint8_t dst_queue;
-	uint8_t src_pktio;
-	uint8_t src_queue;
-} queue_context_t;
+} pktin_queue_context_t;
+
+typedef struct pipe_queue_context_t {
+	/* Queue context must start with stage and idx. */
+	uint16_t stage;
+	uint16_t queue_idx;
+} pipe_queue_context_t;
 
 typedef struct {
 	volatile int  stop_workers;
@@ -79,7 +101,7 @@ typedef struct {
 		odph_ethaddr_t my_addr;
 		odp_queue_t input_queue[MAX_PKTIO_QUEUES];
 		odp_pktout_queue_t pktout[MAX_PKTIO_QUEUES];
-		queue_context_t queue_context[MAX_PKTIO_QUEUES];
+		pktin_queue_context_t queue_context[MAX_PKTIO_QUEUES];
 
 	} pktio[MAX_PKTIOS];
 
@@ -90,6 +112,14 @@ typedef struct {
 		odp_timer_t      timer[MAX_PKTIOS][MAX_PKTIO_QUEUES];
 
 	} timer;
+
+	struct {
+		odp_queue_t queue[MAX_PIPE_QUEUES];
+	} pipe_queue[MAX_PKTIOS][MAX_PIPE_STAGES];
+
+	struct {
+		pipe_queue_context_t ctx;
+	} pipe_queue_ctx[MAX_PIPE_STAGES][MAX_PIPE_QUEUES];
 
 	worker_arg_t worker_arg[MAX_WORKERS];
 
@@ -125,13 +155,38 @@ static inline void fill_eth_addr(odp_packet_t pkt[], int num,
 	}
 }
 
-static int worker_thread(void *arg)
+static inline void send_packets(test_global_t *test_global,
+				odp_packet_t pkt[], int num_pkt,
+				int output, odp_pktout_queue_t pktout,
+				int worker_id)
+{
+	int sent, drop;
+
+	fill_eth_addr(pkt, num_pkt, test_global, output);
+
+	sent = odp_pktout_send(pktout, pkt, num_pkt);
+
+	if (odp_unlikely(sent < 0))
+		sent = 0;
+
+	drop = num_pkt - sent;
+
+	if (odp_unlikely(drop))
+		odp_packet_free_multi(&pkt[sent], drop);
+
+	if (odp_unlikely(test_global->opt.collect_stat)) {
+		test_global->worker_stat[worker_id].tx_pkt += sent;
+		test_global->worker_stat[worker_id].tx_drop += drop;
+	}
+}
+
+static int worker_thread_direct(void *arg)
 {
 	odp_event_t ev[BURST_SIZE];
-	int num_pkt, sent, drop, out;
+	int num_pkt, out;
 	odp_pktout_queue_t pktout;
 	odp_queue_t queue;
-	queue_context_t *queue_context;
+	pktin_queue_context_t *queue_context;
 	worker_arg_t *worker_arg = arg;
 	test_global_t *test_global = worker_arg->test_global_ptr;
 	int worker_id = worker_arg->worker_id;
@@ -174,22 +229,167 @@ static int worker_thread(void *arg)
 		pktout = queue_context->dst_pktout;
 		out    = queue_context->dst_pktio;
 
-		fill_eth_addr(pkt, num_pkt, test_global, out);
+		send_packets(test_global, pkt, num_pkt, out, pktout, worker_id);
 
-		sent = odp_pktout_send(pktout, pkt, num_pkt);
-
-		if (odp_unlikely(sent < 0))
-			sent = 0;
-
-		drop = num_pkt - sent;
-
-		if (odp_unlikely(drop))
-			odp_packet_free_multi(&pkt[sent], drop);
-
-		if (odp_unlikely(test_global->opt.collect_stat)) {
+		if (odp_unlikely(test_global->opt.collect_stat))
 			test_global->worker_stat[worker_id].rx_pkt += num_pkt;
-			test_global->worker_stat[worker_id].tx_pkt += sent;
+	}
+
+	printf("Worker %i stopped\n", worker_id);
+
+	return 0;
+}
+
+static inline void enqueue_events(odp_queue_t dst_queue, odp_event_t ev[],
+				  int num, int worker_id)
+{
+	int sent, drop;
+
+	sent = odp_queue_enq_multi(dst_queue, ev, num);
+
+	if (odp_unlikely(sent < 0))
+		sent = 0;
+
+	drop = num - sent;
+
+	if (odp_unlikely(drop))
+		odp_event_free_multi(&ev[sent], drop);
+
+	if (odp_unlikely(test_global->opt.collect_stat))
+		test_global->worker_stat[worker_id].pipe_drop += drop;
+}
+
+static inline odp_queue_t next_queue(test_global_t *test_global, int input,
+				     uint16_t stage, uint16_t queue_idx)
+{
+	return test_global->pipe_queue[input][stage].queue[queue_idx];
+}
+
+static int worker_thread_pipeline(void *arg)
+{
+	odp_event_t ev[BURST_SIZE];
+	int i, num_pkt, input, output, output_queue;
+	odp_queue_t queue, dst_queue;
+	odp_pktout_queue_t pktout;
+	pipe_queue_context_t *pipe_context;
+	uint16_t stage, queue_idx;
+	worker_arg_t *worker_arg = arg;
+	test_global_t *test_global = worker_arg->test_global_ptr;
+	int worker_id = worker_arg->worker_id;
+	int pipe_stages = test_global->opt.pipe_stages;
+	int pipe_queues = test_global->opt.pipe_queues;
+	int num_pktio = test_global->opt.num_pktio;
+	int num_pktio_queue = test_global->opt.num_pktio_queue;
+	uint32_t polls = 0;
+
+	printf("Worker %i started\n", worker_id);
+
+	/* Wait for other workers to start */
+	odp_barrier_wait(&test_global->worker_start);
+
+	while (1) {
+		odp_packet_t pkt[BURST_SIZE];
+
+		num_pkt = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT,
+					     ev, BURST_SIZE);
+
+		polls++;
+
+		if (polls == CHECK_PERIOD) {
+			polls = 0;
+			if (test_global->stop_workers)
+				break;
 		}
+
+		if (num_pkt <= 0)
+			continue;
+
+		pipe_context = odp_queue_context(queue);
+		stage = pipe_context->stage;
+		queue_idx = pipe_context->queue_idx;
+
+		/* A queue is connected to a single input interface. All
+		 * packets from a queue are from the same interface. */
+		input = odp_packet_input_index(odp_packet_from_event(ev[0]));
+
+		if (DEBUG_PRINT)
+			printf("worker %i: stage %u, idx %u, %i packets\n",
+			       worker_id, stage, queue_idx, num_pkt);
+
+		if (stage == 0) {
+			if (odp_unlikely(test_global->opt.collect_stat))
+				test_global->worker_stat[worker_id].rx_pkt +=
+					num_pkt;
+
+			/* The first stage (packet input). Forward packet flows
+			 * into first pipeline queues. */
+			if (pipe_queues > num_pktio_queue) {
+				/* More pipeline queues than input queues.
+				 * Use flow hash to spread flows into pipeline
+				 * queues. */
+				odp_packet_t p;
+				worker_stat_t *stat;
+				uint32_t hash;
+				uint16_t idx;
+				int drop = 0;
+
+				stat = &test_global->worker_stat[worker_id];
+
+				for (i = 0; i < num_pkt; i++) {
+					p = odp_packet_from_event(ev[i]);
+					hash = odp_packet_flow_hash(p);
+					idx = queue_idx;
+
+					if (odp_packet_has_flow_hash(p))
+						idx = hash % pipe_queues;
+
+					dst_queue = next_queue(test_global,
+							       input, stage,
+							       idx);
+
+					if (odp_queue_enq(dst_queue, ev[i])) {
+						odp_event_free(ev[i]);
+						drop++;
+					}
+				}
+
+				if (odp_unlikely(test_global->opt.collect_stat))
+					stat->pipe_drop += drop;
+			} else {
+				queue_idx = queue_idx % pipe_queues;
+				dst_queue = next_queue(test_global, input,
+						       stage, queue_idx);
+
+				enqueue_events(dst_queue, ev, num_pkt,
+					       worker_id);
+			}
+			continue;
+		}
+
+		if (stage < pipe_stages) {
+			/* Middle stages */
+			dst_queue = next_queue(test_global, input, stage,
+					       queue_idx);
+			enqueue_events(dst_queue, ev, num_pkt, worker_id);
+
+			if (odp_unlikely(test_global->opt.collect_stat))
+				test_global->worker_stat[worker_id].pipe_pkt +=
+					num_pkt;
+
+			continue;
+		}
+
+		/* The last stage, send packets out */
+		odp_packet_from_event_multi(pkt, ev, num_pkt);
+
+		/* If single interface loopback, otherwise forward to the next
+		 * interface. */
+		output = (input + 1) % num_pktio;
+		output_queue = queue_idx % num_pktio_queue;
+		pktout = test_global->pktio[output].pktout[output_queue];
+
+		send_packets(test_global, pkt, num_pkt, output, pktout,
+			     worker_id);
 	}
 
 	printf("Worker %i stopped\n", worker_id);
@@ -200,10 +400,10 @@ static int worker_thread(void *arg)
 static int worker_thread_timers(void *arg)
 {
 	odp_event_t ev[BURST_SIZE];
-	int num, num_pkt, sent, drop, out, tmos, i, src_pktio, src_queue;
+	int num, num_pkt, out, tmos, i, src_pktio, src_queue;
 	odp_pktout_queue_t pktout;
 	odp_queue_t queue;
-	queue_context_t *queue_context;
+	pktin_queue_context_t *queue_context;
 	odp_timer_t timer;
 	odp_timer_set_t ret;
 	worker_arg_t *worker_arg = arg;
@@ -299,22 +499,10 @@ static int worker_thread_timers(void *arg)
 		pktout = queue_context->dst_pktout;
 		out    = queue_context->dst_pktio;
 
-		fill_eth_addr(pkt, num_pkt, test_global, out);
+		send_packets(test_global, pkt, num_pkt, out, pktout, worker_id);
 
-		sent = odp_pktout_send(pktout, pkt, num_pkt);
-
-		if (odp_unlikely(sent < 0))
-			sent = 0;
-
-		drop = num_pkt - sent;
-
-		if (odp_unlikely(drop))
-			odp_packet_free_multi(&pkt[sent], drop);
-
-		if (odp_unlikely(test_global->opt.collect_stat)) {
+		if (odp_unlikely(test_global->opt.collect_stat))
 			test_global->worker_stat[worker_id].rx_pkt += num_pkt;
-			test_global->worker_stat[worker_id].tx_pkt += sent;
-		}
 	}
 
 	printf("Worker %i stopped\n", worker_id);
@@ -343,12 +531,16 @@ static void print_usage(const char *progname)
 	       "Usage: %s [options]\n"
 	       "\n"
 	       "OPTIONS:\n"
-	       "  -i, --interface <name>   Packet IO interfaces (comma-separated, no spaces)\n"
-	       "  -c, --num_cpu <number>   Worker thread count. Default: 1\n"
-	       "  -q, --num_queue <number> Number of pktio queues. Default: Worker thread count\n"
-	       "  -t, --timeout <number>   Flow inactivity timeout (in usec) per packet. Default: 0 (don't use timers)\n"
-	       "  -s, --stat               Collect statistics.\n"
-	       "  -h, --help               Display help and exit.\n\n",
+	       "  -i, --interface <name>    Packet IO interfaces (comma-separated, no spaces)\n"
+	       "  -c, --num_cpu <number>    Worker thread count. Default: 1\n"
+	       "  -q, --num_queue <number>  Number of pktio queues. Default: Worker thread count\n"
+	       "  -t, --timeout <number>    Flow inactivity timeout (in usec) per packet. Default: 0 (don't use timers)\n"
+	       "  --pipe-stages <number>    Number of pipeline stages per interface\n"
+	       "  --pipe-queues <number>    Number of queues per pipeline stage\n"
+	       "  --pipe-queue-size <num>   Number of events a pipeline queue must be able to store. Default 256.\n"
+	       "  -m, --sched_mode <mode>   Scheduler synchronization mode for all queues. 1: parallel, 2: atomic, 3: ordered. Default: 2\n"
+	       "  -s, --stat                Collect statistics.\n"
+	       "  -h, --help                Display help and exit.\n\n",
 	       NO_PATH(progname));
 }
 
@@ -356,23 +548,29 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 {
 	int i, opt, long_index;
 	char *name, *str;
-	int len, str_len;
+	int len, str_len, sched_mode;
 	const struct option longopts[] = {
-		{"interface", required_argument, NULL, 'i'},
-		{"num_cpu",   required_argument, NULL, 'c'},
-		{"num_queue", required_argument, NULL, 'q'},
-		{"timeout",   required_argument, NULL, 't'},
-		{"stat",      no_argument,       NULL, 's'},
-		{"help",      no_argument,       NULL, 'h'},
+		{"interface",   required_argument, NULL, 'i'},
+		{"num_cpu",     required_argument, NULL, 'c'},
+		{"num_queue",   required_argument, NULL, 'q'},
+		{"timeout",     required_argument, NULL, 't'},
+		{"sched_mode",  required_argument, NULL, 'm'},
+		{"pipe-stages", required_argument, NULL,  0},
+		{"pipe-queues", required_argument, NULL,  1},
+		{"pipe-queue-size", required_argument, NULL,  2},
+		{"stat",        no_argument,       NULL, 's'},
+		{"help",        no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+i:c:q:t:sh";
+	const char *shortopts =  "+i:c:q:t:m:sh";
 	int ret = 0;
 
 	memset(test_options, 0, sizeof(test_options_t));
 
+	test_options->sched_mode = SCHED_MODE_ATOMIC;
 	test_options->num_worker = 1;
 	test_options->num_pktio_queue = 0;
+	test_options->pipe_queue_size = 256;
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
@@ -384,6 +582,15 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;	/* No more options */
 
 		switch (opt) {
+		case 0:
+			test_options->pipe_stages = atoi(optarg);
+			break;
+		case 1:
+			test_options->pipe_queues = atoi(optarg);
+			break;
+		case 2:
+			test_options->pipe_queue_size = atoi(optarg);
+			break;
 		case 'i':
 			i = 0;
 			str = optarg;
@@ -424,6 +631,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		case 't':
 			test_options->timeout_us = atol(optarg);
 			break;
+		case 'm':
+			test_options->sched_mode = atoi(optarg);
+			break;
 		case 's':
 			test_options->collect_stat = 1;
 			break;
@@ -437,10 +647,52 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		}
 	}
 
+	if (test_options->timeout_us && test_options->pipe_stages) {
+		printf("Error: Cannot run timeout and pipeline tests simultaneously\n");
+		ret = -1;
+	}
+
+	if (test_options->pipe_stages > MAX_PIPE_STAGES) {
+		printf("Error: Too many pipeline stages\n");
+		ret = -1;
+	}
+
+	if (test_options->pipe_queues > MAX_PIPE_QUEUES) {
+		printf("Error: Too many queues per pipeline stage\n");
+		ret = -1;
+	}
+
+	if (test_options->num_pktio == 0) {
+		printf("Error: At least one pktio interface needed.\n");
+		ret = -1;
+	}
+
+	sched_mode = test_options->sched_mode;
+	if (sched_mode != SCHED_MODE_PARAL &&
+	    sched_mode != SCHED_MODE_ATOMIC &&
+	    sched_mode != SCHED_MODE_ORDER) {
+		printf("Error: Bad scheduler mode: %i\n", sched_mode);
+		ret = -1;
+	}
+
 	if (test_options->num_pktio_queue == 0)
 		test_options->num_pktio_queue = test_options->num_worker;
 
 	return ret;
+}
+
+static odp_schedule_sync_t sched_sync_mode(test_global_t *test_global)
+{
+	switch (test_global->opt.sched_mode) {
+	case SCHED_MODE_PARAL:
+		return ODP_SCHED_SYNC_PARALLEL;
+	case SCHED_MODE_ATOMIC:
+		return ODP_SCHED_SYNC_ATOMIC;
+	case SCHED_MODE_ORDER:
+		return ODP_SCHED_SYNC_ORDERED;
+	default:
+		return -1;
+	}
 }
 
 static int config_setup(test_global_t *test_global)
@@ -465,11 +717,6 @@ static int config_setup(test_global_t *test_global)
 		cpu = odp_cpumask_next(cpumask, cpu);
 	}
 
-	if (test_global->opt.num_pktio == 0) {
-		printf("Error: At least one pktio interface needed.\n");
-		return -1;
-	}
-
 	if (odp_pool_capability(&pool_capa)) {
 		printf("Error: Pool capability failed.\n");
 		return -1;
@@ -481,8 +728,10 @@ static int config_setup(test_global_t *test_global)
 	if (pool_capa.pkt.max_len && pkt_len > pool_capa.pkt.max_len)
 		pkt_len = pool_capa.pkt.max_len;
 
-	if (pool_capa.pkt.max_num && pkt_num > pool_capa.pkt.max_num)
+	if (pool_capa.pkt.max_num && pkt_num > pool_capa.pkt.max_num) {
 		pkt_num = pool_capa.pkt.max_num;
+		printf("Warning: Pool size rounded down to %u\n", pkt_num);
+	}
 
 	test_global->pkt_len = pkt_len;
 	test_global->pkt_num = pkt_num;
@@ -531,34 +780,40 @@ static void print_config(test_global_t *test_global)
 static void print_stat(test_global_t *test_global, uint64_t nsec)
 {
 	int i;
-	uint64_t rx, tx, drop, tmo;
+	uint64_t rx, tx, pipe, drop, tmo;
 	uint64_t rx_sum = 0;
 	uint64_t tx_sum = 0;
+	uint64_t pipe_sum = 0;
 	uint64_t tmo_sum = 0;
 	double sec = 0.0;
 
 	printf("\nTest statistics\n");
-	printf("  worker           rx_pkt           tx_pkt          dropped              tmo\n");
+	printf("  worker           rx_pkt           tx_pkt             pipe          dropped              tmo\n");
 
 	for (i = 0; i < test_global->opt.num_worker; i++) {
 		rx = test_global->worker_stat[i].rx_pkt;
 		tx = test_global->worker_stat[i].tx_pkt;
+		pipe = test_global->worker_stat[i].pipe_pkt;
 		tmo = test_global->worker_stat[i].tmo;
 		rx_sum += rx;
 		tx_sum += tx;
+		pipe_sum += pipe;
 		tmo_sum += tmo;
+		drop = test_global->worker_stat[i].tx_drop +
+		       test_global->worker_stat[i].pipe_drop;
 
 		printf("  %6i %16" PRIu64 " %16" PRIu64 " %16" PRIu64 " %16"
-		       PRIu64 "\n", i, rx, tx, rx - tx, tmo);
+		       PRIu64 " %16" PRIu64 "\n", i, rx, tx, pipe, drop, tmo);
 	}
 
 	test_global->rx_pkt_sum = rx_sum;
 	test_global->tx_pkt_sum = tx_sum;
 	drop = rx_sum - tx_sum;
 
-	printf("         -------------------------------------------------------------------\n");
+	printf("         ------------------------------------------------------------------------------------\n");
 	printf("  total  %16" PRIu64 " %16" PRIu64 " %16" PRIu64 " %16"
-	       PRIu64 "\n\n", rx_sum, tx_sum, drop, tmo_sum);
+	       PRIu64 " %16" PRIu64 "\n\n", rx_sum, tx_sum, pipe_sum, drop,
+	       tmo_sum);
 
 	sec = nsec / 1000000000.0;
 	printf("  Total test time: %.2f sec\n", sec);
@@ -606,7 +861,7 @@ static int open_pktios(test_global_t *test_global)
 	pktio_param.in_mode  = ODP_PKTIN_MODE_SCHED;
 	pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
 
-	sched_sync = ODP_SCHED_SYNC_ATOMIC;
+	sched_sync = sched_sync_mode(test_global);
 
 	for (i = 0; i < num_pktio; i++)
 		test_global->pktio[i].pktio = ODP_PKTIO_INVALID;
@@ -684,7 +939,7 @@ static int open_pktios(test_global_t *test_global)
 		for (j = 0; j < num_queue; j++) {
 			odp_queue_t queue;
 			void *ctx;
-			uint32_t len = sizeof(queue_context_t);
+			uint32_t len = sizeof(pktin_queue_context_t);
 
 			queue = test_global->pktio[i].input_queue[j];
 			ctx = &test_global->pktio[i].queue_context[j];
@@ -699,6 +954,9 @@ static int open_pktios(test_global_t *test_global)
 		odp_pktout_queue_param_init(&pktout_param);
 		pktout_param.num_queues  = num_queue;
 		pktout_param.op_mode     = ODP_PKTIO_OP_MT_UNSAFE;
+
+		if (test_global->opt.pipe_stages)
+			pktout_param.op_mode = ODP_PKTIO_OP_MT;
 
 		if (odp_pktout_queue_config(pktio, &pktout_param)) {
 			printf("Error (%s): Pktout config failed.\n", name);
@@ -722,7 +980,7 @@ static void link_pktios(test_global_t *test_global)
 	int i, num_pktio, input, output;
 	int num_queue;
 	odp_pktout_queue_t pktout;
-	queue_context_t *ctx;
+	pktin_queue_context_t *ctx;
 
 	num_pktio = test_global->opt.num_pktio;
 	num_queue = test_global->opt.num_pktio_queue;
@@ -738,6 +996,8 @@ static void link_pktios(test_global_t *test_global)
 		for (i = 0; i < num_queue; i++) {
 			ctx = &test_global->pktio[input].queue_context[i];
 			pktout = test_global->pktio[output].pktout[i];
+			ctx->stage      = 0;
+			ctx->queue_idx  = i;
 			ctx->dst_pktout = pktout;
 			ctx->dst_pktio  = output;
 			ctx->dst_queue  = i;
@@ -835,6 +1095,111 @@ static int close_pktios(test_global_t *test_global)
 	}
 
 	return ret;
+}
+
+static int create_pipeline_queues(test_global_t *test_global)
+{
+	int i, j, k, num_pktio, stages, queues, ctx_size;
+	pipe_queue_context_t *ctx;
+	odp_queue_param_t queue_param;
+	odp_queue_capability_t queue_capa;
+	odp_schedule_sync_t sched_sync;
+	int ret = 0;
+
+	if (odp_queue_capability(&queue_capa)) {
+		printf("Error: Queue capability failed\n");
+		return -1;
+	}
+
+	num_pktio = test_global->opt.num_pktio;
+	stages = test_global->opt.pipe_stages;
+	queues = test_global->opt.pipe_queues;
+	sched_sync = sched_sync_mode(test_global);
+
+	odp_queue_param_init(&queue_param);
+	queue_param.type = ODP_QUEUE_TYPE_SCHED;
+	queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	queue_param.sched.sync  = sched_sync;
+	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+
+	queue_param.size = test_global->opt.pipe_queue_size;
+	if (queue_capa.sched.max_size &&
+	    queue_param.size > queue_capa.sched.max_size) {
+		printf("Error: Pipeline queue max size is %u\n",
+		       queue_capa.sched.max_size);
+		return -1;
+	}
+
+	ctx_size = sizeof(pipe_queue_context_t);
+
+	for (i = 0; i < stages; i++) {
+		for (j = 0; j < queues; j++) {
+			ctx = &test_global->pipe_queue_ctx[i][j].ctx;
+
+			/* packet input is stage 0 */
+			ctx->stage = i + 1;
+			ctx->queue_idx = j;
+		}
+	}
+
+	for (k = 0; k < num_pktio; k++) {
+		for (i = 0; i < stages; i++) {
+			for (j = 0; j < queues; j++) {
+				odp_queue_t q;
+
+				q = odp_queue_create(NULL, &queue_param);
+				test_global->pipe_queue[k][i].queue[j] = q;
+
+				if (q == ODP_QUEUE_INVALID) {
+					printf("Error: Queue create failed [%i] %i/%i\n",
+					       k, i, j);
+					ret = -1;
+					break;
+				}
+
+				ctx = &test_global->pipe_queue_ctx[i][j].ctx;
+
+				if (odp_queue_context_set(q, ctx, ctx_size)) {
+					printf("Error: Queue ctx set failed [%i] %i/%i\n",
+					       k, i, j);
+					ret = -1;
+					break;
+				}
+			}
+		}
+	}
+
+	return ret;
+}
+
+static void destroy_pipeline_queues(test_global_t *test_global)
+{
+	int i, j, k, num_pktio, stages, queues;
+	odp_queue_t queue;
+
+	num_pktio = test_global->opt.num_pktio;
+	stages = test_global->opt.pipe_stages;
+	queues = test_global->opt.pipe_queues;
+
+	for (k = 0; k < num_pktio; k++) {
+		for (i = 0; i < stages; i++) {
+			for (j = 0; j < queues; j++) {
+				queue = test_global->pipe_queue[k][i].queue[j];
+
+				if (queue == ODP_QUEUE_INVALID) {
+					printf("Error: Bad queue handle [%i] %i/%i\n",
+					       k, i, j);
+					return;
+				}
+
+				if (odp_queue_destroy(queue)) {
+					printf("Error: Queue destroy failed [%i] %i/%i\n",
+					       k, i, j);
+					return;
+				}
+			}
+		}
+	}
 }
 
 static int create_timers(test_global_t *test_global)
@@ -1021,8 +1386,10 @@ static void start_workers(odph_odpthread_t thread[],
 
 	if (test_global->opt.timeout_us)
 		param.start = worker_thread_timers;
+	else if (test_global->opt.pipe_stages)
+		param.start = worker_thread_pipeline;
 	else
-		param.start = worker_thread;
+		param.start = worker_thread_direct;
 
 	param.thr_type = ODP_THREAD_WORKER;
 	param.instance = test_global->instance;
@@ -1115,6 +1482,9 @@ int main(int argc, char *argv[])
 
 	link_pktios(test_global);
 
+	if (create_pipeline_queues(test_global))
+		goto quit;
+
 	if (create_timers(test_global))
 		goto quit;
 
@@ -1145,6 +1515,7 @@ quit:
 	stop_pktios(test_global);
 	empty_queues();
 	close_pktios(test_global);
+	destroy_pipeline_queues(test_global);
 	destroy_timers(test_global);
 
 	if (test_global->opt.collect_stat) {
