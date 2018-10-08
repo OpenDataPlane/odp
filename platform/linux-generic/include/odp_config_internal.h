@@ -125,7 +125,9 @@ extern "C" {
  * defined segment length (seg_len in odp_pool_param_t) will be rounded up into
  * this value.
  */
-#define CONFIG_PACKET_SEG_LEN_MIN CONFIG_PACKET_MAX_SEG_LEN
+#define CONFIG_PACKET_SEG_LEN_MIN ((2 * 1024) - \
+				   CONFIG_PACKET_HEADROOM - \
+				   CONFIG_PACKET_TAILROOM)
 
 /* Maximum number of shared memory blocks.
  *
