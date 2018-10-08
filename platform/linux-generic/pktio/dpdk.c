@@ -455,7 +455,8 @@ static struct rte_mempool *pool_create(pool_t *pool)
 	}
 
 	snprintf(pool_name, sizeof(pool_name),
-		 "dpdk_pktpool_%" PRIu32 "", pool->pool_idx);
+		 "dpdk_pktpool_%" PRIu32 "_%" PRIu32 "", odp_global_ro.main_pid,
+		 pool->pool_idx);
 	pkt_pool = mbuf_pool_create(pool_name, pool);
 
 	if (pkt_pool == NULL) {
@@ -1174,15 +1175,17 @@ static int dpdk_pktio_init(void)
 		cmdline = "";
 
 	/* masklen includes the terminating null as well */
-	cmd_len = strlen("odpdpdk -c --socket-mem ") + masklen +
-			 strlen(mem_str) + strlen(cmdline) + strlen("  ");
+	cmd_len = snprintf(NULL, 0, "odpdpdk --file-prefix %" PRIu32 "_ "
+			   "--proc-type auto -c %s --socket-mem %s %s ",
+			   odp_global_ro.main_pid, mask_str, mem_str, cmdline);
 
 	char full_cmd[cmd_len];
 
 	/* first argument is facility log, simply bind it to odpdpdk for now.*/
 	cmd_len = snprintf(full_cmd, cmd_len,
-			   "odpdpdk -c %s --socket-mem %s %s", mask_str,
-			   mem_str, cmdline);
+			   "odpdpdk --file-prefix %" PRIu32 "_ "
+			   "--proc-type auto -c %s --socket-mem %s %s ",
+			   odp_global_ro.main_pid, mask_str, mem_str, cmdline);
 
 	for (i = 0, dpdk_argc = 1; i < cmd_len; ++i) {
 		if (isspace(full_cmd[i]))
