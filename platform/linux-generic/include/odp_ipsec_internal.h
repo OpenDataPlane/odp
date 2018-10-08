@@ -94,6 +94,30 @@ int _odp_ipsec_status_send(odp_queue_t queue,
 struct ipsec_sa_s {
 	odp_atomic_u32_t ODP_ALIGNED_CACHE state;
 
+	/*
+	 * State that gets updated very frequently. Grouped separately
+	 * to avoid false cache line sharing with other data.
+	 */
+	struct ODP_ALIGNED_CACHE {
+		/* Statistics for soft/hard expiration */
+		odp_atomic_u64_t bytes;
+		odp_atomic_u64_t packets;
+
+		union {
+			struct {
+				odp_atomic_u64_t antireplay;
+			} in;
+
+			struct {
+				/*
+				 * 64-bit sequence number that is also used as
+				 * CTR/GCM IV
+				 */
+				odp_atomic_u64_t seq;
+			} out;
+		};
+	} hot;
+
 	uint32_t	ipsec_sa_idx;
 	odp_ipsec_sa_t	ipsec_sa_hdl;
 
@@ -107,10 +131,6 @@ struct ipsec_sa_s {
 	uint64_t soft_limit_packets;
 	uint64_t hard_limit_bytes;
 	uint64_t hard_limit_packets;
-
-	/* Statistics for soft/hard expiration */
-	odp_atomic_u64_t bytes;
-	odp_atomic_u64_t packets;
 
 	odp_crypto_session_t session;
 	void		*context;
@@ -150,12 +170,9 @@ struct ipsec_sa_s {
 				odp_u32be_t	lookup_dst_ipv4;
 				uint8_t lookup_dst_ipv6[_ODP_IPV6ADDR_LEN];
 			};
-			odp_atomic_u64_t antireplay;
 		} in;
 
 		struct {
-			odp_atomic_u64_t counter; /* for CTR/GCM */
-			odp_atomic_u32_t seq;
 			odp_ipsec_frag_mode_t frag_mode;
 			uint32_t mtu;
 
@@ -164,9 +181,6 @@ struct ipsec_sa_s {
 				odp_ipsec_ipv4_param_t param;
 				odp_u32be_t	src_ip;
 				odp_u32be_t	dst_ip;
-
-				/* 32-bit from which low 16 are used */
-				odp_atomic_u32_t hdr_id;
 			} tun_ipv4;
 			struct {
 				odp_ipsec_ipv6_param_t param;
@@ -206,6 +220,11 @@ uint32_t _odp_ipsec_cipher_iv_len(odp_cipher_alg_t cipher);
 
 /* Return digest length required for the cipher for IPsec use */
 uint32_t _odp_ipsec_auth_digest_len(odp_auth_alg_t auth);
+
+/*
+ * Get SA entry from handle without obtaining a reference
+ */
+ipsec_sa_t *_odp_ipsec_sa_entry_from_hdl(odp_ipsec_sa_t sa);
 
 /**
  * Obtain SA reference
@@ -251,6 +270,12 @@ int _odp_ipsec_sa_replay_precheck(ipsec_sa_t *ipsec_sa, uint32_t seq,
  */
 int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
 				odp_ipsec_op_status_t *status);
+
+/**
+  * Allocate an IPv4 ID for an outgoing packet.
+  */
+uint16_t _odp_ipsec_sa_alloc_ipv4_id(ipsec_sa_t *ipsec_sa);
+
 /**
  * Try inline IPsec processing of provided packet.
  *

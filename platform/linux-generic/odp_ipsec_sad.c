@@ -14,6 +14,7 @@
 #include <odp_init_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_ipsec_internal.h>
+#include <odp_ring_mpmc_internal.h>
 
 #include <odp/api/plat/atomic_inlines.h>
 #include <odp/api/plat/cpu_inlines.h>
@@ -24,8 +25,34 @@
 #define IPSEC_SA_STATE_FREE	0xc0000000
 #define IPSEC_SA_STATE_RESERVED	0x80000000
 
+/*
+ * We do not have global IPv4 ID counter that is accessed for every outbound
+ * packet. Instead, we split IPv4 ID space to fixed size blocks that we
+ * allocate to threads on demand. When a thread has used its block of IDs,
+ * it frees it and allocates a new block. Free blocks are kept in a ring so
+ * that the block last freed is the one to be allocated last to maximize
+ * the time before IPv4 ID reuse.
+ */
+#define IPV4_ID_BLOCK_SIZE 64 /* must be power of 2 */
+#define IPV4_ID_RING_SIZE (UINT16_MAX / IPV4_ID_BLOCK_SIZE)
+#define IPV4_ID_RING_MASK (IPV4_ID_RING_SIZE - 1)
+
+#if IPV4_ID_RING_SIZE <= ODP_THREAD_COUNT_MAX
+#warning IPV4_ID_RING_SIZE is too small for the maximum number of threads.
+#endif
+
+typedef struct ODP_ALIGNED_CACHE ipsec_thread_local_s {
+	uint16_t first_ipv4_id; /* first ID of current block of IDs */
+	uint16_t next_ipv4_id;  /* next ID to be used */
+} ipsec_thread_local_t;
+
 typedef struct ipsec_sa_table_t {
 	ipsec_sa_t ipsec_sa[ODP_CONFIG_IPSEC_SAS];
+	ipsec_thread_local_t per_thread[ODP_THREAD_COUNT_MAX];
+	struct ODP_ALIGNED_CACHE {
+		ring_mpmc_t ipv4_id_ring;
+		uint32_t ODP_ALIGNED_CACHE ipv4_id_data[IPV4_ID_RING_SIZE];
+	} hot;
 	odp_shm_t shm;
 } ipsec_sa_table_t;
 
@@ -46,6 +73,12 @@ static inline odp_ipsec_sa_t ipsec_sa_index_to_handle(uint32_t ipsec_sa_idx)
 	return _odp_cast_scalar(odp_ipsec_sa_t, ipsec_sa_idx + 1);
 }
 
+ipsec_sa_t *_odp_ipsec_sa_entry_from_hdl(odp_ipsec_sa_t sa)
+{
+	ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
+	return ipsec_sa_entry_from_hdl(sa);
+}
+
 int _odp_ipsec_sad_init_global(void)
 {
 	odp_shm_t shm;
@@ -62,14 +95,39 @@ int _odp_ipsec_sad_init_global(void)
 	memset(ipsec_sa_tbl, 0, sizeof(ipsec_sa_table_t));
 	ipsec_sa_tbl->shm = shm;
 
+	ring_mpmc_init(&ipsec_sa_tbl->hot.ipv4_id_ring);
+	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
+		/*
+		 * Make the current ID block fully used, forcing allocation
+		 * of a fresh block at first use.
+		 */
+		ipsec_sa_tbl->per_thread[i].first_ipv4_id = 0;
+		ipsec_sa_tbl->per_thread[i].next_ipv4_id = IPV4_ID_BLOCK_SIZE;
+	}
+	/*
+	 * Initialize IPv4 ID ring with ID blocks.
+	 *
+	 * The last ID block is left unused since the ring can hold
+	 * only IPV4_ID_RING_SIZE - 1 entries.
+	 */
+	for (i = 0; i < IPV4_ID_RING_SIZE - 1; i++) {
+		uint32_t data = i * IPV4_ID_BLOCK_SIZE;
+
+		ring_mpmc_enq_multi(&ipsec_sa_tbl->hot.ipv4_id_ring,
+				    ipsec_sa_tbl->hot.ipv4_id_data,
+				    IPV4_ID_RING_MASK,
+				    &data,
+				    1);
+	}
+
 	for (i = 0; i < ODP_CONFIG_IPSEC_SAS; i++) {
 		ipsec_sa_t *ipsec_sa = ipsec_sa_entry(i);
 
 		ipsec_sa->ipsec_sa_hdl = ipsec_sa_index_to_handle(i);
 		ipsec_sa->ipsec_sa_idx = i;
 		odp_atomic_init_u32(&ipsec_sa->state, IPSEC_SA_STATE_FREE);
-		odp_atomic_init_u64(&ipsec_sa->bytes, 0);
-		odp_atomic_init_u64(&ipsec_sa->packets, 0);
+		odp_atomic_init_u64(&ipsec_sa->hot.bytes, 0);
+		odp_atomic_init_u64(&ipsec_sa->hot.packets, 0);
 	}
 
 	return 0;
@@ -311,10 +369,10 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		if (param->inbound.antireplay_ws > IPSEC_ANTIREPLAY_WS)
 			goto error;
 		ipsec_sa->antireplay = (param->inbound.antireplay_ws != 0);
-		odp_atomic_init_u64(&ipsec_sa->in.antireplay, 0);
+		odp_atomic_init_u64(&ipsec_sa->hot.in.antireplay, 0);
 	} else {
 		ipsec_sa->lookup_mode = ODP_IPSEC_LOOKUP_DISABLED;
-		odp_atomic_store_u32(&ipsec_sa->out.seq, 1);
+		odp_atomic_store_u64(&ipsec_sa->hot.out.seq, 1);
 		ipsec_sa->out.frag_mode = param->outbound.frag_mode;
 		ipsec_sa->out.mtu = param->outbound.mtu;
 	}
@@ -324,8 +382,8 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	ipsec_sa->copy_flabel = param->opt.copy_flabel;
 	ipsec_sa->udp_encap = param->opt.udp_encap;
 
-	odp_atomic_store_u64(&ipsec_sa->bytes, 0);
-	odp_atomic_store_u64(&ipsec_sa->packets, 0);
+	odp_atomic_store_u64(&ipsec_sa->hot.bytes, 0);
+	odp_atomic_store_u64(&ipsec_sa->hot.packets, 0);
 	ipsec_sa->soft_limit_bytes = param->lifetime.soft_limit.bytes;
 	ipsec_sa->soft_limit_packets = param->lifetime.soft_limit.packets;
 	ipsec_sa->hard_limit_bytes = param->lifetime.hard_limit.bytes;
@@ -341,7 +399,6 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 			memcpy(&ipsec_sa->out.tun_ipv4.dst_ip,
 			       param->outbound.tunnel.ipv4.dst_addr,
 			       sizeof(ipsec_sa->out.tun_ipv4.dst_ip));
-			odp_atomic_init_u32(&ipsec_sa->out.tun_ipv4.hdr_id, 0);
 			ipsec_sa->out.tun_ipv4.param.src_addr =
 				&ipsec_sa->out.tun_ipv4.src_ip;
 			ipsec_sa->out.tun_ipv4.param.dst_addr =
@@ -462,10 +519,6 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	default:
 		break;
 	}
-
-	if (1 == ipsec_sa->use_counter_iv &&
-	    ODP_IPSEC_DIR_OUTBOUND == param->dir)
-		odp_atomic_init_u64(&ipsec_sa->out.counter, 1);
 
 	ipsec_sa->icv_len = crypto_param.auth_digest_len;
 
@@ -629,13 +682,13 @@ int _odp_ipsec_sa_stats_precheck(ipsec_sa_t *ipsec_sa,
 	int rc = 0;
 
 	if (ipsec_sa->hard_limit_bytes > 0 &&
-	    odp_atomic_load_u64(&ipsec_sa->bytes) >
+	    odp_atomic_load_u64(&ipsec_sa->hot.bytes) >
 	    ipsec_sa->hard_limit_bytes) {
 		status->error.hard_exp_bytes = 1;
 		rc = -1;
 	}
 	if (ipsec_sa->hard_limit_packets > 0 &&
-	    odp_atomic_load_u64(&ipsec_sa->packets) >
+	    odp_atomic_load_u64(&ipsec_sa->hot.packets) >
 	    ipsec_sa->hard_limit_packets) {
 		status->error.hard_exp_packets = 1;
 		rc = -1;
@@ -647,8 +700,8 @@ int _odp_ipsec_sa_stats_precheck(ipsec_sa_t *ipsec_sa,
 int _odp_ipsec_sa_stats_update(ipsec_sa_t *ipsec_sa, uint32_t len,
 			       odp_ipsec_op_status_t *status)
 {
-	uint64_t bytes = odp_atomic_fetch_add_u64(&ipsec_sa->bytes, len) + len;
-	uint64_t packets = odp_atomic_fetch_add_u64(&ipsec_sa->packets, 1) + 1;
+	uint64_t bytes = odp_atomic_fetch_add_u64(&ipsec_sa->hot.bytes, len) + len;
+	uint64_t packets = odp_atomic_fetch_add_u64(&ipsec_sa->hot.packets, 1) + 1;
 	int rc = 0;
 
 	if (ipsec_sa->soft_limit_bytes > 0 &&
@@ -679,7 +732,7 @@ int _odp_ipsec_sa_replay_precheck(ipsec_sa_t *ipsec_sa, uint32_t seq,
 	/* Try to be as quick as possible, we will discard packets later */
 	if (ipsec_sa->antireplay &&
 	    seq + IPSEC_ANTIREPLAY_WS <=
-	    (odp_atomic_load_u64(&ipsec_sa->in.antireplay) & 0xffffffff)) {
+	    (odp_atomic_load_u64(&ipsec_sa->hot.in.antireplay) & 0xffffffff)) {
 		status->error.antireplay = 1;
 		return -1;
 	}
@@ -696,7 +749,7 @@ int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
 	if (!ipsec_sa->antireplay)
 		return 0;
 
-	state = odp_atomic_load_u64(&ipsec_sa->in.antireplay);
+	state = odp_atomic_load_u64(&ipsec_sa->hot.in.antireplay);
 
 	while (0 == cas) {
 		uint32_t max_seq = state & 0xffffffff;
@@ -721,9 +774,38 @@ int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
 
 		new_state = (((uint64_t)mask) << 32) | max_seq;
 
-		cas = odp_atomic_cas_acq_rel_u64(&ipsec_sa->in.antireplay,
+		cas = odp_atomic_cas_acq_rel_u64(&ipsec_sa->hot.in.antireplay,
 						 &state, new_state);
 	}
 
 	return 0;
+}
+
+uint16_t _odp_ipsec_sa_alloc_ipv4_id(ipsec_sa_t *ipsec_sa)
+{
+	(void) ipsec_sa;
+	ipsec_thread_local_t *tl = &ipsec_sa_tbl->per_thread[odp_thread_id()];
+	uint32_t data;
+
+	if (odp_unlikely(tl->next_ipv4_id ==
+			 tl->first_ipv4_id + IPV4_ID_BLOCK_SIZE)) {
+		/* Return used ID block to the ring */
+		data = tl->first_ipv4_id;
+		ring_mpmc_enq_multi(&ipsec_sa_tbl->hot.ipv4_id_ring,
+				    ipsec_sa_tbl->hot.ipv4_id_data,
+				    IPV4_ID_RING_MASK,
+				    &data,
+				    1);
+		/* Get new ID block */
+		ring_mpmc_deq_multi(&ipsec_sa_tbl->hot.ipv4_id_ring,
+				    ipsec_sa_tbl->hot.ipv4_id_data,
+				    IPV4_ID_RING_MASK,
+				    &data,
+				    1);
+		tl->first_ipv4_id = data;
+		tl->next_ipv4_id = data;
+	}
+
+	/* No need to convert to BE: ID just should not be duplicated */
+	return tl->next_ipv4_id++;
 }

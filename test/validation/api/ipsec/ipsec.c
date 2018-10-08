@@ -9,6 +9,7 @@
 #include <odp_api.h>
 #include <odp_cunit_common.h>
 #include <unistd.h>
+#include <odp/helper/odph_api.h>
 
 #include "ipsec.h"
 
@@ -438,11 +439,14 @@ odp_packet_t ipsec_packet(const ipsec_test_packet *itp)
 /*
  * Compare packages ignoring everything before L3 header
  */
-static void ipsec_check_packet(const ipsec_test_packet *itp, odp_packet_t pkt)
+static void ipsec_check_packet(const ipsec_test_packet *itp, odp_packet_t pkt,
+			       odp_bool_t is_outbound)
 {
 	uint32_t len = (ODP_PACKET_INVALID == pkt) ? 1 : odp_packet_len(pkt);
 	uint32_t l3, l4;
 	uint8_t data[len];
+	const odph_ipv4hdr_t *itp_ip;
+	odph_ipv4hdr_t *ip;
 
 	if (NULL == itp)
 		return;
@@ -471,6 +475,38 @@ static void ipsec_check_packet(const ipsec_test_packet *itp, odp_packet_t pkt)
 	CU_ASSERT_EQUAL(l4 - l3, itp->l4_offset - itp->l3_offset);
 	if (l4 - l3 != itp->l4_offset - itp->l3_offset)
 		return;
+
+	ip = (odph_ipv4hdr_t *) &data[l3];
+	itp_ip = (const odph_ipv4hdr_t *) &itp->data[itp->l3_offset];
+	if (ODPH_IPV4HDR_VER(ip->ver_ihl) == ODPH_IPV4 &&
+	    is_outbound &&
+	    ip->id != itp_ip->id) {
+		/*
+		 * IP ID value chosen by the implementation differs
+		 * from the IP value in our test vector. This requires
+		 * special handling in outbound checks.
+		 */
+		/*
+		 * Let's change IP ID and header checksum to same values
+		 * as in the test vector to facilitate packet comparison.
+		 */
+		CU_ASSERT(odph_ipv4_csum_valid(pkt));
+		ip->id = itp_ip->id;
+		ip->chksum = itp_ip->chksum;
+
+		if (ip->proto == ODPH_IPPROTO_AH) {
+			/*
+			 * ID field is included in the authentication so
+			 * we cannot check ICV against our test vector.
+			 * Check packet data before the first possible
+			 * location of the AH ICV field.
+			 */
+			CU_ASSERT_EQUAL(0, memcmp(data + l3,
+						  itp->data + itp->l3_offset,
+						  ODPH_IPV4HDR_LEN + 12));
+			return;
+		}
+	}
 
 	CU_ASSERT_EQUAL(0, memcmp(data + l3,
 				  itp->data + itp->l3_offset,
@@ -701,7 +737,8 @@ void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 						odp_ipsec_sa_context(sa));
 		}
 		ipsec_check_packet(part->out[i].pkt_out,
-				   pkto[i]);
+				   pkto[i],
+				   false);
 		if (part->out[i].pkt_out != NULL &&
 		    part->out[i].l3_type != _ODP_PROTO_L3_TYPE_UNDEF)
 			CU_ASSERT_EQUAL(part->out[i].l3_type,
@@ -746,7 +783,8 @@ void ipsec_check_out_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 					odp_ipsec_sa_context(sa));
 		}
 		ipsec_check_packet(part->out[i].pkt_out,
-				   pkto[i]);
+				   pkto[i],
+				   true);
 		odp_packet_free(pkto[i]);
 	}
 }
