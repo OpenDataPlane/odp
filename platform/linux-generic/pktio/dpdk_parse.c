@@ -457,10 +457,10 @@ int dpdk_packet_parse_common_l3_l4(packet_parser_t *prs,
 /**
  * DPDK packet parser
  */
-int dpdk_packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
-			     uint32_t frame_len, uint32_t seg_len,
-			     struct rte_mbuf *mbuf, int layer,
-			     odp_pktin_config_opt_t pktin_cfg)
+int _odp_dpdk_packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
+				  uint32_t frame_len, uint32_t seg_len,
+				  struct rte_mbuf *mbuf, int layer,
+				  odp_pktin_config_opt_t pktin_cfg)
 {
 	uint32_t offset;
 	uint16_t ethtype;
