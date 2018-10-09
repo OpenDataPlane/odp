@@ -530,10 +530,11 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry)) {
 			packet_parse_reset(&parsed_hdr);
 			packet_set_len(&parsed_hdr, pkt_len);
-			if (dpdk_packet_parse_common(&parsed_hdr.p, data,
-						     pkt_len, pkt_len, mbuf,
-						     ODP_PROTO_LAYER_ALL,
-						     pktin_cfg)) {
+			if (_odp_dpdk_packet_parse_common(&parsed_hdr.p, data,
+							  pkt_len, pkt_len,
+							  mbuf,
+							  ODP_PROTO_LAYER_ALL,
+							  pktin_cfg)) {
 				odp_packet_free(pkt_table[i]);
 				rte_pktmbuf_free(mbuf);
 				continue;
@@ -557,8 +558,9 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry))
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 		else if (parse_layer != ODP_PROTO_LAYER_NONE)
-			if (dpdk_packet_parse_layer(pkt_hdr, mbuf, parse_layer,
-						    pktin_cfg)) {
+			if (_odp_dpdk_packet_parse_layer(pkt_hdr, mbuf,
+							 parse_layer,
+							 pktin_cfg)) {
 				odp_packet_free(pkt);
 				rte_pktmbuf_free(mbuf);
 				continue;
@@ -803,10 +805,11 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry)) {
 			packet_parse_reset(&parsed_hdr);
 			packet_set_len(&parsed_hdr, pkt_len);
-			if (dpdk_packet_parse_common(&parsed_hdr.p, data,
-						     pkt_len, pkt_len, mbuf,
-						     ODP_PROTO_LAYER_ALL,
-						     pktin_cfg)) {
+			if (_odp_dpdk_packet_parse_common(&parsed_hdr.p, data,
+							  pkt_len, pkt_len,
+							  mbuf,
+							  ODP_PROTO_LAYER_ALL,
+							  pktin_cfg)) {
 				rte_pktmbuf_free(mbuf);
 				continue;
 			}
@@ -830,8 +833,9 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry))
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 		else if (parse_layer != ODP_PROTO_LAYER_NONE)
-			if (dpdk_packet_parse_layer(pkt_hdr, mbuf, parse_layer,
-						    pktin_cfg)) {
+			if (_odp_dpdk_packet_parse_layer(pkt_hdr, mbuf,
+							 parse_layer,
+							 pktin_cfg)) {
 				rte_pktmbuf_free(mbuf);
 				continue;
 			}
