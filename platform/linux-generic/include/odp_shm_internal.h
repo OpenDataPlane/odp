@@ -16,8 +16,9 @@ extern "C" {
 #define SHM_DEVNAME_MAXLEN (ODP_SHM_NAME_LEN + 16)
 #define SHM_DEVNAME_FORMAT "/odp-%d-%s" /* /dev/shm/odp-<pid>-<name> */
 
-#define _ODP_SHM_PROC_NOCREAT 0x40  /**< Do not create shm if not exist */
-#define _ODP_SHM_O_EXCL	      0x80  /**< Do not create shm if exist */
+#define _ODP_SHM_PROC_NOCREAT (1 << 6)  /**< Do not create shm if not exist */
+#define _ODP_SHM_O_EXCL	      (1 << 7)  /**< Do not create shm if exist */
+#define _ODP_SHM_NO_HP	      (1 << 8)  /**< Do not use huge pages */
 
 #ifdef __cplusplus
 }
