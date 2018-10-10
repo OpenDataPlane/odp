@@ -191,7 +191,7 @@ static void _classification_test_pmr_term_tcp_dport(int num_pkt)
 	uint32_t seqno[num_pkt];
 	uint16_t val;
 	uint16_t mask;
-	int retval, i, num_queue, num_default;
+	int retval, i, sent_queue, recv_queue, sent_default, recv_default;
 	odp_pktio_t pktio;
 	odp_queue_t queue;
 	odp_queue_t retqueue;
@@ -295,6 +295,9 @@ static void _classification_test_pmr_term_tcp_dport(int num_pkt)
 		odp_packet_free(pkt);
 	}
 
+	sent_queue = 0;
+	sent_default = 0;
+
 	/* Both queues simultaneously */
 	for (i = 0; i < 2 * num_pkt; i++) {
 		pkt = create_packet(default_pkt_info);
@@ -305,32 +308,41 @@ static void _classification_test_pmr_term_tcp_dport(int num_pkt)
 
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 
-		if (i < num_pkt)
+		if ((i % 5) < 2) {
+			sent_queue++;
 			tcp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
-		else
+		} else {
+			sent_default++;
 			tcp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT + 1);
+		}
 
 		enqueue_pktio_interface(pkt, pktio);
 	}
 
-	num_queue = 0;
-	num_default = 0;
+	recv_queue = 0;
+	recv_default = 0;
 
 	for (i = 0; i < 2 * num_pkt; i++) {
 		pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 		CU_ASSERT(retqueue == queue || retqueue == default_queue);
 
-		if (retqueue == queue)
-			num_queue++;
-		else if (retqueue == default_queue)
-			num_default++;
+		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 
+		if (retqueue == queue) {
+			recv_queue++;
+			CU_ASSERT(tcp->dst_port ==
+				  odp_cpu_to_be_16(CLS_DEFAULT_DPORT));
+		} else if (retqueue == default_queue) {
+			recv_default++;
+			CU_ASSERT(tcp->dst_port ==
+				  odp_cpu_to_be_16(CLS_DEFAULT_DPORT + 1));
+		}
 		odp_packet_free(pkt);
 	}
 
-	CU_ASSERT(num_queue == num_pkt);
-	CU_ASSERT(num_default == num_pkt);
+	CU_ASSERT(sent_queue == recv_queue);
+	CU_ASSERT(sent_default == recv_default);
 
 	odp_cos_destroy(cos);
 	odp_cos_destroy(default_cos);
@@ -1988,7 +2000,7 @@ static void classification_test_pmr_term_ipv6saddr(void)
 
 static void classification_test_pmr_term_tcp_dport(void)
 {
-	_classification_test_pmr_term_tcp_dport(1);
+	_classification_test_pmr_term_tcp_dport(2);
 }
 
 static void classification_test_pmr_term_tcp_dport_multi(void)
