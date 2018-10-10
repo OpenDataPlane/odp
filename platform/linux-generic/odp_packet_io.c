@@ -614,7 +614,7 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 	odp_packet_t packets[num];
 	odp_packet_hdr_t *pkt_hdr;
 	odp_buffer_hdr_t *buf_hdr;
-	int i, pkts, num_rx, num_ev, num_dst, num_cur, cur_dst;
+	int i, pkts, num_rx, num_ev, num_dst;
 	odp_queue_t cur_queue;
 	odp_event_t ev[num];
 	odp_queue_t dst[num];
@@ -622,6 +622,10 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 
 	num_rx = 0;
 	num_dst = 0;
+	num_ev = 0;
+
+	/* Some compilers need this dummy initialization */
+	cur_queue = ODP_QUEUE_INVALID;
 
 	pkts = entry->s.ops->recv(entry, pktin_index, packets, num);
 
@@ -632,29 +636,23 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 
 		if (odp_unlikely(pkt_hdr->p.input_flags.dst_queue)) {
 			/* Sort events for enqueue multi operation(s) */
-			if (num_dst == 0) {
-				num_ev  = 0;
+			if (odp_unlikely(num_dst == 0)) {
 				num_dst = 1;
-				num_cur = 0;
 				cur_queue = pkt_hdr->dst_queue;
 				dst[0] = cur_queue;
 				dst_idx[0] = 0;
 			}
 
 			ev[num_ev] = odp_packet_to_event(pkt);
-			num_ev++;
 
 			if (cur_queue != pkt_hdr->dst_queue) {
-				cur_dst = num_dst;
-				num_dst++;
 				cur_queue = pkt_hdr->dst_queue;
-				dst[cur_dst] = cur_queue;
-				dst_idx[cur_dst] = num_cur;
-				num_cur = 0;
+				dst[num_dst] = cur_queue;
+				dst_idx[num_dst] = num_ev;
+				num_dst++;
 			}
 
-			num_cur++;
-
+			num_ev++;
 			continue;
 		}
 		buffer_hdrs[num_rx++] = buf_hdr;
