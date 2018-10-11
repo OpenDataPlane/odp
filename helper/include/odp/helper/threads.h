@@ -54,13 +54,6 @@ typedef struct {
 	int   status;   /**< Process state change status */
 } odph_linux_process_t;
 
-/** odpthread linux type: whether an ODP thread is a linux thread or process */
-typedef enum odph_odpthread_linuxtype_e {
-	ODPTHREAD_NOT_STARTED = 0,
-	ODPTHREAD_PROCESS,
-	ODPTHREAD_PTHREAD
-} odph_odpthread_linuxtype_t;
-
 /** odpthread parameters for odp threads (pthreads and processes) */
 typedef struct {
 	int (*start)(void *);       /**< Thread entry point function */
@@ -71,7 +64,7 @@ typedef struct {
 
 /** The odpthread starting arguments, used both in process or thread mode */
 typedef struct {
-	odph_odpthread_linuxtype_t linuxtype; /**< process or pthread */
+	odp_mem_model_t mem_model;          /**< process or thread */
 	odph_odpthread_params_t thr_params; /**< odpthread start parameters */
 } odph_odpthread_start_args_t;
 
