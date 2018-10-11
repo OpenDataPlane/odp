@@ -69,16 +69,10 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 /* Maximum pktin index. Needs to fit into 8 bits. */
 #define MAX_PKTIN_INDEX 255
 
-/* Not a valid index */
-#define NULL_INDEX ((uint32_t)-1)
-
 /* Maximum priority queue ring size. A ring must be large enough to store all
  * queues in the worst case (all queues are scheduled, have the same priority
  * and no spreading). */
 #define MAX_RING_SIZE ODP_CONFIG_QUEUES
-
-/* Priority queue empty, not a valid queue index. */
-#define PRIO_QUEUE_EMPTY NULL_INDEX
 
 /* For best performance, the number of queues should be a power of two. */
 ODP_STATIC_ASSERT(CHECK_IS_POWER2(ODP_CONFIG_QUEUES),
@@ -329,8 +323,6 @@ static void sched_local_init(void)
 	sched_local.thr         = odp_thread_id();
 	sched_local.sync_ctx    = NO_SYNC_CONTEXT;
 	sched_local.stash.queue = ODP_QUEUE_INVALID;
-	sched_local.stash.qi    = PRIO_QUEUE_EMPTY;
-	sched_local.ordered.src_queue = NULL_INDEX;
 
 	spread = prio_spread_index(sched_local.thr);
 
@@ -380,15 +372,9 @@ static int schedule_init_global(void)
 		for (i = 0; i < NUM_PRIO; i++) {
 			for (j = 0; j < MAX_SPREAD; j++) {
 				prio_queue_t *prio_q;
-				int k;
 
 				prio_q = &sched->prio_q[grp][i][j];
 				ring_init(&prio_q->ring);
-
-				for (k = 0; k < MAX_RING_SIZE; k++) {
-					prio_q->queue_index[k] =
-					PRIO_QUEUE_EMPTY;
-				}
 			}
 		}
 	}
@@ -1177,8 +1163,7 @@ static void schedule_order_lock(uint32_t lock_index)
 
 	queue_index = sched_local.ordered.src_queue;
 
-	ODP_ASSERT(queue_index != NULL_INDEX &&
-		   lock_index <= sched->queue[queue_index].order_lock_count &&
+	ODP_ASSERT(lock_index <= sched->queue[queue_index].order_lock_count &&
 		   !sched_local.ordered.lock_called.u8[lock_index]);
 
 	ord_lock = &sched->order[queue_index].lock[lock_index];
@@ -1207,8 +1192,7 @@ static void schedule_order_unlock(uint32_t lock_index)
 
 	queue_index = sched_local.ordered.src_queue;
 
-	ODP_ASSERT(queue_index != NULL_INDEX &&
-		   lock_index <= sched->queue[queue_index].order_lock_count);
+	ODP_ASSERT(lock_index <= sched->queue[queue_index].order_lock_count);
 
 	ord_lock = &sched->order[queue_index].lock[lock_index];
 
