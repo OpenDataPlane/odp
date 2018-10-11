@@ -21,6 +21,8 @@
 #include <odp/helper/threads.h>
 #include "odph_debug.h"
 
+#define FAILED_CPU -1
+
 static struct {
 	int proc; /* true when process mode is required, false otherwise */
 } helper_options;
@@ -42,7 +44,7 @@ static void *_odph_thread_run_start_routine(void *arg)
 	/* ODP thread local init */
 	if (odp_init_local(thr_params->instance, thr_params->thr_type)) {
 		ODPH_ERR("Local init failed\n");
-		if (start_args->linuxtype == ODPTHREAD_PROCESS)
+		if (start_args->mem_model == ODP_MEM_MODEL_PROCESS)
 			_exit(EXIT_FAILURE);
 		return (void *)-1;
 	}
@@ -50,7 +52,7 @@ static void *_odph_thread_run_start_routine(void *arg)
 	ODPH_DBG("helper: ODP %s thread started as linux %s. (pid=%d)\n",
 		 thr_params->thr_type == ODP_THREAD_WORKER ?
 		 "worker" : "control",
-		 (start_args->linuxtype == ODPTHREAD_PTHREAD) ?
+		 (start_args->mem_model == ODP_MEM_MODEL_THREAD) ?
 		 "pthread" : "process",
 		 (int)getpid());
 
@@ -61,7 +63,7 @@ static void *_odph_thread_run_start_routine(void *arg)
 		ODPH_ERR("Local term failed\n");
 
 	/* for process implementation of odp threads, just return status... */
-	if (start_args->linuxtype == ODPTHREAD_PROCESS)
+	if (start_args->mem_model == ODP_MEM_MODEL_PROCESS)
 		_exit(status);
 
 	/* threads implementation return void* pointers: cast status to that. */
@@ -81,14 +83,14 @@ static int _odph_linux_process_create(odph_odpthread_t *thread_tbl,
 	CPU_ZERO(&cpu_set);
 	CPU_SET(cpu, &cpu_set);
 
-	thread_tbl->start_args.thr_params    = *thr_params; /* copy */
-	thread_tbl->start_args.linuxtype     = ODPTHREAD_PROCESS;
+	thread_tbl->start_args.thr_params = *thr_params; /* copy */
+	thread_tbl->start_args.mem_model = ODP_MEM_MODEL_PROCESS;
 	thread_tbl->cpu = cpu;
 
 	pid = fork();
 	if (pid < 0) {
 		ODPH_ERR("fork() failed\n");
-		thread_tbl->start_args.linuxtype = ODPTHREAD_NOT_STARTED;
+		thread_tbl->cpu = FAILED_CPU;
 		return -1;
 	}
 
@@ -136,8 +138,8 @@ static int odph_linux_thread_create(odph_odpthread_t *thread_tbl,
 	pthread_attr_setaffinity_np(&thread_tbl->thread.attr,
 				    sizeof(cpu_set_t), &cpu_set);
 
-	thread_tbl->start_args.thr_params    = *thr_params; /* copy */
-	thread_tbl->start_args.linuxtype     = ODPTHREAD_PTHREAD;
+	thread_tbl->start_args.thr_params = *thr_params; /* copy */
+	thread_tbl->start_args.mem_model = ODP_MEM_MODEL_THREAD;
 
 	ret = pthread_create(&thread_tbl->thread.thread_id,
 			     &thread_tbl->thread.attr,
@@ -145,7 +147,7 @@ static int odph_linux_thread_create(odph_odpthread_t *thread_tbl,
 			     &thread_tbl->start_args);
 	if (ret != 0) {
 		ODPH_ERR("Failed to start thread on cpu #%d\n", cpu);
-		thread_tbl->start_args.linuxtype = ODPTHREAD_NOT_STARTED;
+		thread_tbl->cpu = FAILED_CPU;
 		return ret;
 	}
 
@@ -215,9 +217,13 @@ int odph_odpthreads_join(odph_odpthread_t *thread_tbl)
 
 	/* joins linux threads or wait for processes */
 	do {
+		if (thread_tbl[i].cpu == FAILED_CPU) {
+			ODPH_DBG("ODP thread %d not started.\n", i);
+			continue;
+		}
 		/* pthreads: */
-		switch (thread_tbl[i].start_args.linuxtype) {
-		case ODPTHREAD_PTHREAD:
+		if (thread_tbl[i].start_args.mem_model ==
+				ODP_MEM_MODEL_THREAD) {
 			/* Wait thread to exit */
 			ret = pthread_join(thread_tbl[i].thread.thread_id,
 					   &thread_ret);
@@ -234,10 +240,7 @@ int odph_odpthreads_join(odph_odpthread_t *thread_tbl)
 				}
 			}
 			pthread_attr_destroy(&thread_tbl[i].thread.attr);
-			break;
-
-		case ODPTHREAD_PROCESS:
-
+		} else {
 			/* processes: */
 			pid = waitpid(thread_tbl[i].proc.pid, &status, 0);
 
@@ -263,16 +266,7 @@ int odph_odpthreads_join(odph_odpthread_t *thread_tbl)
 					 signo, strsignal(signo), (int)pid);
 				retval = -1;
 			}
-			break;
-
-		case ODPTHREAD_NOT_STARTED:
-			ODPH_DBG("No join done on not started ODPthread.\n");
-			break;
-		default:
-			ODPH_DBG("Invalid case statement value!\n");
-			break;
 		}
-
 	} while (!thread_tbl[i++].last);
 
 	return (retval < 0) ? retval : terminated;
