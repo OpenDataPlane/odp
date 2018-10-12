@@ -157,7 +157,7 @@ extern "C" {
  * Maximum number of events in a pool. Power of two minus one results optimal
  * memory usage for the ring.
  */
-#define CONFIG_POOL_MAX_NUM ((1 * 1024 * 1024) - 1)
+#define CONFIG_POOL_MAX_NUM ((256 * 1024) - 1)
 
 /*
  * Maximum number of events in a thread local pool cache
