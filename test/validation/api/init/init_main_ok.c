@@ -14,8 +14,12 @@ static void init_test_odp_init_global(void)
 {
 	int status;
 	odp_instance_t instance;
+	odp_init_t init_data;
 
-	status = odp_init_global(&instance, NULL, NULL);
+	odp_init_param_init(&init_data);
+	init_data.mem_model = ODP_MEM_MODEL_THREAD;
+
+	status = odp_init_global(&instance, &init_data, NULL);
 	CU_ASSERT_FATAL(status == 0);
 
 	status = odp_term_global(instance);
