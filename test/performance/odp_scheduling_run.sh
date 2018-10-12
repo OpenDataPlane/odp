@@ -17,7 +17,12 @@ run()
 	echo odp_scheduling_run starts requesting $1 worker threads
 	echo ===============================================
 
-	$TEST_DIR/odp_scheduling${EXEEXT} -c $1 || ret=1
+	$TEST_DIR/odp_scheduling${EXEEXT} -c $1
+
+	if [ $? -ne 0 ]; then
+		echo odp_scheduling FAILED
+		exit $?
+	fi
 }
 
 run 1
@@ -26,4 +31,4 @@ run 8
 run 11
 run $ALL
 
-exit $ret
+exit 0
