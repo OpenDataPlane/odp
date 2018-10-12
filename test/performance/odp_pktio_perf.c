@@ -957,9 +957,6 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 
 	static const char *shortopts = "+c:t:b:pR:l:r:i:d:vh";
 
-	/* let helper collect its own arguments (e.g. --odph_proc) */
-	argc = odph_parse_options(argc, argv);
-
 	args->cpu_count      = 2;
 	args->num_tx_workers = 0; /* defaults to cpu_count+1/2 */
 	args->tx_batch_len   = BATCH_LEN_MAX;
@@ -1040,9 +1037,22 @@ int main(int argc, char **argv)
 	int ret;
 	odp_shm_t shm;
 	int max_thrs;
+	odph_helper_options_t helper_options;
 	odp_instance_t instance;
+	odp_init_t init_param;
 
-	if (odp_init_global(&instance, NULL, NULL) != 0)
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		LOG_ERR("Error: reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	odp_init_param_init(&init_param);
+	if (helper_options.linux_thr_type == ODPH_THREAD_PROCESS)
+		init_param.use_single_va = true;
+
+	if (odp_init_global(&instance, &init_param, NULL) != 0)
 		LOG_ABORT("Failed global init.\n");
 
 	if (odp_init_local(instance, ODP_THREAD_CONTROL) != 0)

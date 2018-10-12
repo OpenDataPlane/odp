@@ -382,9 +382,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 	static const char *shortopts = "+a:+c:+l:+t:h";
 
-	/* Let helper collect its own arguments (e.g. --odph_proc) */
-	argc = odph_parse_options(argc, argv);
-
 	appl_args->accuracy = 1; /* Get and print pps stats second */
 	appl_args->cpu_count = 1;
 	appl_args->lookup_tbl_size = DEF_LOOKUP_TBL_SIZE;
@@ -524,6 +521,7 @@ static void gbl_args_init(args_t *args)
 int main(int argc, char *argv[])
 {
 	stats_t *stats[MAX_WORKERS];
+	odph_helper_options_t helper_options;
 	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	odp_cpumask_t cpumask;
 	odp_pool_capability_t pool_capa;
@@ -546,6 +544,13 @@ int main(int argc, char *argv[])
 	int cpu;
 	int ret = 0;
 
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		LOG_ERR("Error: reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
 	odp_init_param_init(&init);
 
 	/* List features not to be used (may optimize performance) */
@@ -554,6 +559,9 @@ int main(int argc, char *argv[])
 	init.not_used.feat.ipsec  = 1;
 	init.not_used.feat.timer  = 1;
 	init.not_used.feat.tm     = 1;
+
+	if (helper_options.linux_thr_type == ODPH_THREAD_PROCESS)
+		init.use_single_va = true;
 
 	/* Signal handler has to be registered before global init in case ODP
 	 * implementation creates internal threads/processes. */
