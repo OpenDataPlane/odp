@@ -1186,6 +1186,7 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 int
 main(int argc, char *argv[])
 {
+	odph_helper_options_t helper_options;
 	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	int num_workers;
 	int i;
@@ -1195,6 +1196,7 @@ main(int argc, char *argv[])
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_pool_param_t params;
 	odp_instance_t instance;
+	odp_init_t init_param;
 	odph_odpthread_params_t thr_params;
 
 	/* create by default scheduled queues */
@@ -1207,8 +1209,18 @@ main(int argc, char *argv[])
 		schedule = polled_odp_schedule_cb;
 	}
 
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		EXAMPLE_ERR("Error: reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	odp_init_param_init(&init_param);
+	init_param.mem_model = helper_options.mem_model;
+
 	/* Init ODP before calling anything else */
-	if (odp_init_global(&instance, NULL, NULL)) {
+	if (odp_init_global(&instance, &init_param, NULL)) {
 		EXAMPLE_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -1401,9 +1413,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	};
 
 	static const char *shortopts = "+c:i:m:h:r:p:a:e:t:s:";
-
-	/* let helper collect its own arguments (e.g. --odph_proc) */
-	argc = odph_parse_options(argc, argv);
 
 	printf("\nParsing command line options\n");
 

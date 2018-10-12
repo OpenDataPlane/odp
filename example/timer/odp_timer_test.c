@@ -274,9 +274,6 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 
 	static const char *shortopts = "+c:r:m:x:p:t:h";
 
-	/* let helper collect its own arguments (e.g. --odph_proc) */
-	argc = odph_parse_options(argc, argv);
-
 	/* defaults */
 	odp_timer_capability(ODP_CLOCK_CPU, &timer_capa);
 
@@ -334,6 +331,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
  */
 int main(int argc, char *argv[])
 {
+	odph_helper_options_t helper_options;
 	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	int num_workers;
 	odp_queue_t queue;
@@ -345,6 +343,7 @@ int main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_instance_t instance;
+	odp_init_t init_param;
 	odph_odpthread_params_t thr_params;
 	odp_shm_t shm = ODP_SHM_INVALID;
 	test_globals_t *gbls = NULL;
@@ -352,7 +351,17 @@ int main(int argc, char *argv[])
 
 	printf("\nODP timer example starts\n");
 
-	if (odp_init_global(&instance, NULL, NULL)) {
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		EXAMPLE_ERR("Error: reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	odp_init_param_init(&init_param);
+	init_param.mem_model = helper_options.mem_model;
+
+	if (odp_init_global(&instance, &init_param, NULL)) {
 		err = 1;
 		printf("ODP global init failed.\n");
 		goto err_global;
