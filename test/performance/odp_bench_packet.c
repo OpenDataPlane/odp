@@ -1315,9 +1315,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 	static const char *shortopts =  "b:i:h";
 
-	/* Let helper collect its own arguments (e.g. --odph_proc) */
-	argc = odph_parse_options(argc, argv);
-
 	appl_args->bench_idx = 0; /* Run all benchmarks */
 	appl_args->burst_size = TEST_DEF_BURST;
 
@@ -1511,6 +1508,7 @@ bench_info_t test_suite[] = {
  */
 int main(int argc, char *argv[])
 {
+	odph_helper_options_t helper_options;
 	odph_odpthread_t worker_thread;
 	int cpu;
 	odp_shm_t shm;
@@ -1519,11 +1517,22 @@ int main(int argc, char *argv[])
 	odp_pool_capability_t capa;
 	odp_pool_param_t params;
 	odp_instance_t instance;
+	odp_init_t init_param;
 	uint32_t pkt_num;
 	uint8_t ret;
 
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		LOG_ERR("Error: reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	odp_init_param_init(&init_param);
+	init_param.mem_model = helper_options.mem_model;
+
 	/* Init ODP before calling anything else */
-	if (odp_init_global(&instance, NULL, NULL)) {
+	if (odp_init_global(&instance, &init_param, NULL)) {
 		LOG_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
