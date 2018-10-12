@@ -107,6 +107,32 @@ typedef int (*odp_log_func_t)(odp_log_level_t level, const char *fmt, ...);
 typedef void (*odp_abort_func_t)(void) ODP_NORETURN;
 
 /**
+ * Application memory model
+ */
+typedef enum {
+	/** Thread memory model: by default all memory is shareable between
+	 *  threads.
+	 *
+	 *  Within a single ODP instance all ODP handles and pointers to ODP
+	 *  allocated data may be shared amongst threads independent of data
+	 *  allocation time (e.g. before or after thread creation). */
+	ODP_MEM_MODEL_THREAD = 0,
+
+	/** Process memory model: by default all memory is not shareable between
+	 *  processes.
+	 *
+	 *  Within a single ODP instance all ODP handles and pointers to ODP
+	 *  allocated data (excluding non-single VA SHM blocks) may be shared
+	 *  amongst processes independent of data allocation time (e.g. before
+	 *  or after fork).
+	 *
+	 * @see ODP_SHM_SINGLE_VA
+	 */
+	ODP_MEM_MODEL_PROCESS
+
+} odp_mem_model_t;
+
+/**
  * Global initialization parameters
  *
  * These parameters may be used at global initialization time to configure and
@@ -171,6 +197,12 @@ typedef struct odp_init_t {
 	 * that a feature will not be used and it is used anyway.
 	 */
 	odp_feature_t not_used;
+
+	/** Application memory model. The main application thread has to call
+	 *  odp_init_global() and odp_init_local() before creating threads that
+	 *  share ODP data. The default value is ODP_MEM_MODEL_THREAD.
+	 */
+	odp_mem_model_t mem_model;
 
 	/** Shared memory parameters */
 	struct {
