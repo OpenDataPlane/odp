@@ -866,9 +866,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 	static const char *shortopts =  "+c:+t:+a:i:m:d:r:f:e:h";
 
-	/* let helper collect its own arguments (e.g. --odph_proc) */
-	argc = odph_parse_options(argc, argv);
-
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = DEF_STATS_INT;
 	appl_args->cpu_count = 1; /* use one worker by default */
@@ -1060,12 +1057,14 @@ int main(int argc, char *argv[])
 {
 	odp_cpumask_t cpumask;
 	odp_instance_t instance;
+	odp_init_t init_param;
 	odp_pool_t pool;
 	odp_pool_param_t params;
 	odp_shm_t shm;
 	odp_queue_capability_t queue_capa;
 	odp_pool_capability_t pool_capa;
 	odph_ethaddr_t new_addr;
+	odph_helper_options_t helper_options;
 	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	stats_t *stats;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
@@ -1077,8 +1076,18 @@ int main(int argc, char *argv[])
 	int in_mode;
 	uint32_t queue_size, pool_size;
 
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		LOG_ERR("Error: reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	odp_init_param_init(&init_param);
+	init_param.mem_model = helper_options.mem_model;
+
 	/* Init ODP before calling anything else */
-	if (odp_init_global(&instance, NULL, NULL)) {
+	if (odp_init_global(&instance, &init_param, NULL)) {
 		LOG_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
