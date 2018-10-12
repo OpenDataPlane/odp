@@ -578,9 +578,6 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->burst_size = 32;
 	test_options->pipe_queue_size = 256;
 
-	/* let helper collect its own arguments (e.g. --odph_proc) */
-	argc = odph_parse_options(argc, argv);
-
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 
@@ -1431,9 +1428,17 @@ int main(int argc, char *argv[])
 	odp_init_t init;
 	odp_shm_t shm;
 	odp_time_t t1, t2;
+	odph_helper_options_t helper_options;
 	odph_odpthread_t thread[MAX_WORKERS];
 	test_options_t test_options;
 	int ret = 0;
+
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		printf("Error: reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	signal(SIGINT, sig_handler);
 
@@ -1450,6 +1455,8 @@ int main(int argc, char *argv[])
 
 	if (test_options.timeout_us)
 		init.not_used.feat.timer = 0;
+
+	init.mem_model = helper_options.mem_model;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init, NULL)) {

@@ -936,9 +936,6 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 
 	static const char *shortopts = "+a:c:df:hi:m:nl:sptu";
 
-	/* let helper collect its own arguments (e.g. --odph_proc) */
-	argc = odph_parse_options(argc, argv);
-
 	cargs->in_place = 0;
 	cargs->in_flight = 1;
 	cargs->debug_packets = 0;
@@ -1020,12 +1017,24 @@ int main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	int num_workers = 1;
+	odph_helper_options_t helper_options;
 	odph_odpthread_t thr[num_workers];
 	odp_instance_t instance;
+	odp_init_t init_param;
 	odp_pool_capability_t capa;
 	odp_ipsec_config_t config;
 	uint32_t max_seg_len;
 	unsigned int i;
+
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		app_err("Reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	odp_init_param_init(&init_param);
+	init_param.mem_model = helper_options.mem_model;
 
 	memset(&cargs, 0, sizeof(cargs));
 
@@ -1033,7 +1042,7 @@ int main(int argc, char *argv[])
 	parse_args(argc, argv, &cargs);
 
 	/* Init ODP before calling anything else */
-	if (odp_init_global(&instance, NULL, NULL)) {
+	if (odp_init_global(&instance, &init_param, NULL)) {
 		app_err("ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}

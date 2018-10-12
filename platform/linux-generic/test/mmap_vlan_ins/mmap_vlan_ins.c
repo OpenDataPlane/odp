@@ -135,14 +135,20 @@ int main(int argc, char **argv)
 	odp_pool_t pool;
 	odp_pool_param_t params;
 	odp_cpumask_t cpumask;
+	odph_helper_options_t helper_options;
 	odph_odpthread_t thd[MAX_WORKERS];
 	odp_instance_t instance;
+	odp_init_t init_param;
 	odph_odpthread_params_t thr_params;
 	odp_shm_t shm;
 	int ret;
 
-	/* let helper collect its own arguments (e.g. --odph_proc) */
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		printf("Error: reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	if (argc < 3) {
 		printf("Too few arguments (%i).\n"
@@ -150,7 +156,10 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
-	if (odp_init_global(&instance, NULL, NULL)) {
+	odp_init_param_init(&init_param);
+	init_param.mem_model = helper_options.mem_model;
+
+	if (odp_init_global(&instance, &init_param, NULL)) {
 		printf("Error: ODP global init failed.\n");
 		exit(1);
 	}
