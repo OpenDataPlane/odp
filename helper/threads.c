@@ -23,9 +23,7 @@
 
 #define FAILED_CPU -1
 
-static struct {
-	int proc; /* true when process mode is required, false otherwise */
-} helper_options;
+static odph_helper_options_t helper_options;
 
 /*
  * wrapper for odpthreads, either implemented as linux threads or processes.
@@ -181,7 +179,7 @@ int odph_odpthreads_create(odph_odpthread_t *thread_tbl,
 
 	cpu = odp_cpumask_first(mask);
 	for (i = 0; i < num; i++) {
-		if (!helper_options.proc) {
+		if (helper_options.mem_model == ODP_MEM_MODEL_THREAD) {
 			if (odph_linux_thread_create(&thread_tbl[i],
 						     cpu,
 						     thr_params))
@@ -330,19 +328,19 @@ int odph_parse_options(int argc, char *argv[])
 	char *env;
 	int i, j;
 
-	helper_options.proc = 0;
+	helper_options.mem_model = ODP_MEM_MODEL_THREAD;
 
 	/* Enable process mode using environment variable. Setting environment
 	 * variable is easier for CI testing compared to command line
 	 * argument. */
 	env = getenv("ODPH_PROC_MODE");
 	if (env && atoi(env))
-		helper_options.proc = 1;
+		helper_options.mem_model = ODP_MEM_MODEL_PROCESS;
 
 	/* Find and remove option */
 	for (i = 0; i < argc;) {
 		if (strcmp(argv[i], "--odph_proc") == 0) {
-			helper_options.proc = 1;
+			helper_options.mem_model = ODP_MEM_MODEL_PROCESS;
 
 			for (j = i; j < argc - 1; j++)
 				argv[j] = argv[j + 1];
@@ -355,4 +353,13 @@ int odph_parse_options(int argc, char *argv[])
 	}
 
 	return argc;
+}
+
+int odph_options(odph_helper_options_t *options)
+{
+	memset(options, 0, sizeof(odph_helper_options_t));
+
+	options->mem_model = helper_options.mem_model;
+
+	return 0;
 }
