@@ -172,6 +172,15 @@ typedef struct odp_init_t {
 	 */
 	odp_feature_t not_used;
 
+	/** Use single virtual address space for all ODP implementation internal
+	 * shared memory allocations. This guarantees that all ODP threads will
+	 * see the memory at the same address - regardless of ODP thread type
+	 * (e.g. pthread vs. process).
+	 *
+	 * @see ODP_SHM_SINGLE_VA
+	 */
+	odp_bool_t use_single_va;
+
 	/** Shared memory parameters */
 	struct {
 		/** Maximum memory usage in bytes. This is the maximum
