@@ -274,6 +274,8 @@ int odp_init_global(odp_instance_t *instance,
 			odp_global_ro.log_fn = params->log_fn;
 		if (params->abort_fn != NULL)
 			odp_global_ro.abort_fn = params->abort_fn;
+		if (params->use_single_va)
+			odp_global_ro.shm_single_va = 1;
 	}
 
 	if (_odp_libconfig_init_global()) {
