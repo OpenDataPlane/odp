@@ -94,6 +94,11 @@ typedef struct {
 	};
 } odph_odpthread_t;
 
+/** Linux helper options */
+typedef struct {
+	odph_linux_thread_type_t linux_thr_type; /**< Process or pthread */
+} odph_helper_options_t;
+
 /**
  * Creates and launches odpthreads (as linux threads or processes)
  *
@@ -158,6 +163,18 @@ int odph_odpthread_getaffinity(void);
  *         the number of removed helper options.
  */
 int odph_parse_options(int argc, char *argv[]);
+
+/**
+ * Get linux helper options
+ *
+ * Return used ODP helper options. odph_parse_options() must be called before
+ * using this function.
+ *
+ * @param[out] options  ODP helper options
+ *
+ * @return 0 on success, -1 on failure
+ */
+int odph_options(odph_helper_options_t *options);
 
 /**
  * @}
