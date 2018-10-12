@@ -64,18 +64,28 @@ static int worker_fn(void *arg ODPH_UNUSED)
 /* Create additional dataplane opdthreads */
 int main(int argc, char *argv[])
 {
+	odph_helper_options_t helper_options;
 	odph_odpthread_params_t thr_params;
 	odph_odpthread_t thread_tbl[NUMBER_WORKERS];
 	odp_cpumask_t cpu_mask;
+	odp_init_t init_param;
 	int num_workers;
 	int cpu, affinity;
 	int ret;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 
-	/* let helper collect its own arguments (e.g. --odph_proc) */
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		ODPH_ERR("Error: reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
-	if (odp_init_global(&odp_instance, NULL, NULL)) {
+	odp_init_param_init(&init_param);
+	if (helper_options.linux_thr_type == ODPH_THREAD_PROCESS)
+		init_param.use_single_va = true;
+
+	if (odp_init_global(&odp_instance, &init_param, NULL)) {
 		ODPH_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
