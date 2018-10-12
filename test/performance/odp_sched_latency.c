@@ -641,11 +641,13 @@ int main(int argc, char *argv[])
 	odph_odpthread_params_t thr_params;
 	odp_cpumask_t cpumask;
 	odp_pool_t pool;
+	odp_pool_capability_t pool_capa;
 	odp_pool_param_t params;
 	odp_shm_t shm;
 	test_globals_t *globals;
 	test_args_t args;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
+	uint32_t pool_size;
 	int i, j;
 	int ret = 0;
 	int num_workers = 0;
@@ -706,10 +708,19 @@ int main(int argc, char *argv[])
 	/*
 	 * Create event pool
 	 */
+	if (odp_pool_capability(&pool_capa)) {
+		LOG_ERR("pool capa failed\n");
+		return -1;
+	}
+
+	pool_size = EVENT_POOL_SIZE;
+	if (pool_capa.buf.max_num && pool_capa.buf.max_num < EVENT_POOL_SIZE)
+		pool_size = pool_capa.buf.max_num;
+
 	odp_pool_param_init(&params);
 	params.buf.size  = sizeof(test_event_t);
 	params.buf.align = 0;
-	params.buf.num   = EVENT_POOL_SIZE;
+	params.buf.num   = pool_size;
 	params.type      = ODP_POOL_BUFFER;
 
 	pool = odp_pool_create("event_pool", &params);

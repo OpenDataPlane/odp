@@ -38,7 +38,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	ring_t   hdr;
 
 	/* Ring data: buffer handles */
-	uint32_t buf[CONFIG_POOL_MAX_NUM];
+	uint32_t buf[CONFIG_POOL_MAX_NUM + 1];
 
 } pool_ring_t;
 

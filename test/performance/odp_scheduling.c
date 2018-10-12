@@ -30,7 +30,7 @@
 /* GNU lib C */
 #include <getopt.h>
 
-#define NUM_MSG              (512 * 1024)   /**< Number of msg in pool */
+#define MAX_BUF              (512 * 1024)   /**< Maximum pool size */
 #define MAX_ALLOCS            32            /**< Alloc burst size */
 #define QUEUES_PER_PRIO       64            /**< Queue per priority */
 #define NUM_PRIOS             2             /**< Number of tested priorities */
@@ -813,7 +813,8 @@ int main(int argc, char *argv[])
 	odp_instance_t instance;
 	odph_odpthread_params_t thr_params;
 	odp_queue_capability_t capa;
-	uint32_t num_queues;
+	odp_pool_capability_t pool_capa;
+	uint32_t num_queues, num_buf;
 
 	printf("\nODP example starts\n\n");
 
@@ -869,11 +870,19 @@ int main(int argc, char *argv[])
 	/*
 	 * Create message pool
 	 */
+	if (odp_pool_capability(&pool_capa)) {
+		LOG_ERR("Pool capabilities failed.\n");
+		return -1;
+	}
+
+	num_buf = MAX_BUF;
+	if (pool_capa.buf.max_num && pool_capa.buf.max_num < MAX_BUF)
+		num_buf = pool_capa.buf.max_num;
 
 	odp_pool_param_init(&params);
 	params.buf.size  = sizeof(test_message_t);
 	params.buf.align = 0;
-	params.buf.num   = NUM_MSG;
+	params.buf.num   = num_buf;
 	params.type      = ODP_POOL_BUFFER;
 
 	pool = odp_pool_create("msg_pool", &params);

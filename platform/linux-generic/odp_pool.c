@@ -471,10 +471,11 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 				FIRST_HP_SIZE - 1) / FIRST_HP_SIZE);
 	}
 
-	if (num <= RING_SIZE_MIN)
+	/* Ring size must be larger than the number of items stored */
+	if (num + 1 <= RING_SIZE_MIN)
 		ring_size = RING_SIZE_MIN;
 	else
-		ring_size = ROUNDUP_POWER2_U32(num);
+		ring_size = ROUNDUP_POWER2_U32(num + 1);
 
 	pool->ring_mask      = ring_size - 1;
 	pool->num            = num;
