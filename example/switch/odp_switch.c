@@ -758,9 +758,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 	static const char *shortopts = "+c:+t:+a:i:h";
 
-	/* let helper collect its own arguments (e.g. --odph_proc) */
-	argc = odph_parse_options(argc, argv);
-
 	appl_args->cpu_count = 1; /* use one worker by default */
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 10; /* get and print pps stats second */
@@ -870,6 +867,7 @@ static void gbl_args_init(args_t *args)
 
 int main(int argc, char **argv)
 {
+	odph_helper_options_t helper_options;
 	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	int i, j;
 	int cpu;
@@ -882,10 +880,22 @@ int main(int argc, char **argv)
 	stats_t (*stats)[MAX_PKTIOS];
 	int if_count;
 	odp_instance_t instance;
+	odp_init_t init_param;
 	odph_odpthread_params_t thr_params;
 
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		printf("Error: reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	odp_init_param_init(&init_param);
+	if (helper_options.linux_thr_type == ODPH_THREAD_PROCESS)
+		init_param.use_single_va = true;
+
 	/* Init ODP before calling anything else */
-	if (odp_init_global(&instance, NULL, NULL)) {
+	if (odp_init_global(&instance, &init_param, NULL)) {
 		printf("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}

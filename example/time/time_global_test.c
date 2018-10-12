@@ -254,16 +254,26 @@ int main(int argc, char *argv[])
 	odp_shm_t shm_glbls = ODP_SHM_INVALID;
 	odp_shm_t shm_log = ODP_SHM_INVALID;
 	int log_size, log_enries_num;
+	odph_helper_options_t helper_options;
 	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	odp_instance_t instance;
+	odp_init_t init_param;
 	odph_odpthread_params_t thr_params;
-
-	/* let helper collect its own arguments (e.g. --odph_proc) */
-	argc = odph_parse_options(argc, argv);
 
 	printf("\nODP global time test starts\n");
 
-	if (odp_init_global(&instance, NULL, NULL)) {
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		EXAMPLE_ERR("Error: reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	odp_init_param_init(&init_param);
+	if (helper_options.linux_thr_type == ODPH_THREAD_PROCESS)
+		init_param.use_single_va = true;
+
+	if (odp_init_global(&instance, &init_param, NULL)) {
 		err = 1;
 		EXAMPLE_ERR("ODP global init failed.\n");
 		goto end;

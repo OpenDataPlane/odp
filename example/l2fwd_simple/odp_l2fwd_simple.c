@@ -139,17 +139,29 @@ static int run_worker(void *arg ODP_UNUSED)
 
 int main(int argc, char **argv)
 {
+	odph_helper_options_t helper_options;
 	odp_pool_t pool;
 	odp_pool_param_t params;
 	odp_cpumask_t cpumask;
 	odph_odpthread_t thd[MAX_WORKERS];
 	odp_instance_t instance;
+	odp_init_t init_param;
 	odph_odpthread_params_t thr_params;
 	odph_ethaddr_t correct_src;
 	uint32_t mtu1, mtu2;
 	odp_shm_t shm;
 
-	if (odp_init_global(&instance, NULL, NULL)) {
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		printf("Error: reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	odp_init_param_init(&init_param);
+	if (helper_options.linux_thr_type == ODPH_THREAD_PROCESS)
+		init_param.use_single_va = true;
+	if (odp_init_global(&instance, &init_param, NULL)) {
 		printf("Error: ODP global init failed.\n");
 		exit(1);
 	}
@@ -170,9 +182,6 @@ int main(int argc, char **argv)
 
 	memset(global, 0, sizeof(global_data_t));
 	global->shm = shm;
-
-	/* let helper collect its own arguments (e.g. --odph_proc) */
-	argc = odph_parse_options(argc, argv);
 
 	if (argc > 7 ||
 	    odph_eth_addr_parse(&global->dst, argv[3]) != 0 ||
