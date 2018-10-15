@@ -298,14 +298,7 @@ static void hp_init(void)
 	char filename[ISHM_FILENAME_MAXLEN];
 	char dir[ISHM_FILENAME_MAXLEN];
 	int count;
-	int single_va = 0;
 	void *addr;
-
-	if (_odp_libconfig_lookup_ext_int("shm", NULL, "single_va",
-					  &single_va)) {
-		odp_global_ro.shm_single_va = single_va;
-		ODP_DBG("Shm single VA: %d\n", odp_global_ro.shm_single_va);
-	}
 
 	if (!_odp_libconfig_lookup_ext_int("shm", NULL, "num_cached_hp",
 					   &count)) {
