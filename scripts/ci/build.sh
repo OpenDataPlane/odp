@@ -9,7 +9,7 @@ cd "$(dirname "$0")"/../..
 	--prefix=/opt/odp \
 	${CONF}
 
-make -j 8
+make -j $(nproc)
 
 make install
 
