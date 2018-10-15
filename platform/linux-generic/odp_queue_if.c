@@ -103,9 +103,7 @@ int _odp_queue_init_global(void)
 	if (sched == NULL || !strcmp(sched, "default"))
 		sched = ODP_SCHEDULE_DEFAULT;
 
-	if (!strcmp(sched, "basic") ||
-	    !strcmp(sched, "sp") ||
-	    !strcmp(sched, "iquery")) {
+	if (!strcmp(sched, "basic") || !strcmp(sched, "sp")) {
 		queue_fn = &queue_basic_fn;
 		_odp_queue_api = &queue_basic_api;
 	} else if (!strcmp(sched, "scalable")) {
