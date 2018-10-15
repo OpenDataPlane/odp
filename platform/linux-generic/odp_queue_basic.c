@@ -698,7 +698,6 @@ int sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int max_num,
 	int num_deq, status;
 	ring_st_t *ring_st;
 	queue_entry_t *queue = qentry_from_index(queue_index);
-	int status_sync = sched_fn->status_sync;
 	uint32_t buf_idx[max_num];
 
 	ring_st = &queue->s.ring_st;
@@ -724,20 +723,13 @@ int sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int max_num,
 
 	if (num_deq == 0) {
 		/* Already empty queue */
-		if (update_status && status == QUEUE_STATUS_SCHED) {
+		if (update_status && status == QUEUE_STATUS_SCHED)
 			queue->s.status = QUEUE_STATUS_NOTSCHED;
-
-			if (odp_unlikely(status_sync))
-				sched_fn->unsched_queue(queue->s.index);
-		}
 
 		UNLOCK(queue);
 
 		return 0;
 	}
-
-	if (odp_unlikely(status_sync))
-		sched_fn->save_context(queue->s.index);
 
 	UNLOCK(queue);
 
