@@ -47,7 +47,6 @@ typedef uint32_t (*schedule_max_ordered_locks_fn_t)(void);
 typedef void (*schedule_save_context_fn_t)(uint32_t queue_index);
 
 typedef struct schedule_fn_t {
-	int                         status_sync;
 	schedule_pktio_start_fn_t   pktio_start;
 	schedule_thr_add_fn_t       thr_add;
 	schedule_thr_rem_fn_t       thr_rem;
@@ -66,10 +65,6 @@ typedef struct schedule_fn_t {
 	schedule_order_lock_wait_fn_t	wait_order_lock;
 	schedule_order_unlock_lock_fn_t  order_unlock_lock;
 	schedule_max_ordered_locks_fn_t max_ordered_locks;
-
-	/* Called only when status_sync is set */
-	schedule_unsched_queue_fn_t unsched_queue;
-	schedule_save_context_fn_t  save_context;
 
 } schedule_fn_t;
 

@@ -853,7 +853,6 @@ static void order_unlock(void)
 
 /* Fill in scheduler interface */
 const schedule_fn_t schedule_sp_fn = {
-	.status_sync   = 0,
 	.pktio_start   = pktio_start,
 	.thr_add       = thr_add,
 	.thr_rem       = thr_rem,
@@ -868,9 +867,7 @@ const schedule_fn_t schedule_sp_fn = {
 	.term_local    = term_local,
 	.order_lock    = order_lock,
 	.order_unlock  = order_unlock,
-	.max_ordered_locks = max_ordered_locks,
-	.unsched_queue = NULL,
-	.save_context  = NULL
+	.max_ordered_locks = max_ordered_locks
 };
 
 /* Fill in scheduler API calls */

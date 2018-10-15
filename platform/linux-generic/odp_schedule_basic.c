@@ -1469,7 +1469,6 @@ static int schedule_num_grps(void)
 
 /* Fill in scheduler interface */
 const schedule_fn_t schedule_basic_fn = {
-	.status_sync = 0,
 	.pktio_start = schedule_pktio_start,
 	.thr_add = schedule_thr_add,
 	.thr_rem = schedule_thr_rem,
@@ -1484,9 +1483,7 @@ const schedule_fn_t schedule_basic_fn = {
 	.term_local  = schedule_term_local,
 	.order_lock = order_lock,
 	.order_unlock = order_unlock,
-	.max_ordered_locks = schedule_max_ordered_locks,
-	.unsched_queue = NULL,
-	.save_context = NULL
+	.max_ordered_locks = schedule_max_ordered_locks
 };
 
 /* Fill in scheduler API calls */
