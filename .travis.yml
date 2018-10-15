@@ -36,6 +36,10 @@ cache:
                 - netmap
                 - $HOME/doxygen-install
 
+compiler:
+        - gcc
+        - clang
+
 env:
     global:
         #
@@ -73,10 +77,6 @@ matrix:
     env: BUILD_ONLY=1 ARCH="arm64"
   - compiler: gcc
     env: BUILD_ONLY=1 ARCH="i386"
-
-compiler:
-        - gcc
-        - clang
 
 install:
         - if [ ${NETMAP} -eq 1 ] ; then
