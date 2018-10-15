@@ -906,8 +906,18 @@ int ipsec_init(odp_instance_t *inst)
 	odp_queue_t out_queue;
 	odp_pool_capability_t pool_capa;
 	odp_pktio_t pktio;
+	odp_init_t init_param;
+	odph_helper_options_t helper_options;
 
-	if (0 != odp_init_global(inst, NULL, NULL)) {
+	if (odph_options(&helper_options)) {
+		fprintf(stderr, "error: odph_options() failed.\n");
+		return -1;
+	}
+
+	odp_init_param_init(&init_param);
+	init_param.mem_model = helper_options.mem_model;
+
+	if (0 != odp_init_global(inst, &init_param, NULL)) {
 		fprintf(stderr, "error: odp_init_global() failed.\n");
 		return -1;
 	}
