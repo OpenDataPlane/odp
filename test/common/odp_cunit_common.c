@@ -79,7 +79,19 @@ int odp_cunit_thread_exit(pthrd_arg *arg)
 
 static int tests_global_init(odp_instance_t *inst)
 {
-	if (0 != odp_init_global(inst, NULL, NULL)) {
+	odp_init_t init_param;
+	odph_helper_options_t helper_options;
+
+	if (odph_options(&helper_options)) {
+		fprintf(stderr, "error: odph_options() failed.\n");
+		return -1;
+	}
+
+	odp_init_param_init(&init_param);
+	if (helper_options.linux_thr_type == ODPH_THREAD_PROCESS)
+		init_param.use_single_va = true;
+
+	if (0 != odp_init_global(inst, &init_param, NULL)) {
 		fprintf(stderr, "error: odp_init_global() failed.\n");
 		return -1;
 	}
