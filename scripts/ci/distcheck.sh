@@ -7,15 +7,13 @@ fi
 
 cd "$(dirname "$0")"/../..
 ./bootstrap
-./configure \
-	--enable-user-guides
+./configure ${CONF}
 
 # Ignore possible failures there because these tests depends on measurements
 # and systems might differ in performance.
 export CI="true"
 
+# Additional configure flags for distcheck
+export DISTCHECK_CONFIGURE_FLAGS="${CONF}"
+
 make distcheck
-
-make clean
-
-make distcheck DISTCHECK__CONFIGURE_FLAGS=--disable-abi-compat
