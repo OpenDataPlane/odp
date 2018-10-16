@@ -61,7 +61,7 @@ env:
         - CONF="--disable-static-applications"
         - CONF="--disable-host-optimization"
         - CONF="--disable-host-optimization --disable-abi-compat"
-        - CONF="--enable-pcapng-support"
+        - BUILD_ONLY=1 ARCH="x86_64" CONF="--enable-pcapng-support"
         - CONF="--without-openssl"
         - CONF="" UBUNTU_VERS="18.04"
 
@@ -85,7 +85,7 @@ install:
 script:
         - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
         - if [ ${BUILD_ONLY} -eq 1 ] ; then
-               docker run  -i -t -v `pwd`:/odp
+               docker run  -i -t -v `pwd`:/odp --shm-size 8g
                  -e CC="${CC}"
                  -e CONF="${CONF}"
                  ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_${UBUNTU_VERS} /odp/scripts/ci/build_${ARCH}.sh ;
