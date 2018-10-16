@@ -44,17 +44,18 @@ env:
         # you need generated new one at https://codecov.io specific for your repo.
         - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
         - UBUNTU_VERS="16.04"
+        - BUILD_ONLY=0
     matrix:
         - CONF=""
         - CONF="--disable-abi-compat"
-        - CROSS_ARCH="arm64"
-        - CROSS_ARCH="armhf"
-        - CROSS_ARCH="powerpc"
-        - CROSS_ARCH="i386"
-        - CROSS_ARCH="arm64" CONF="--disable-abi-compat"
-        - CROSS_ARCH="armhf" CONF="--disable-abi-compat"
-        - CROSS_ARCH="powerpc" CONF="--disable-abi-compat"
-        - CROSS_ARCH="i386" CONF="--disable-abi-compat"
+        - BUILD_ONLY=1 ARCH="arm64"
+        - BUILD_ONLY=1 ARCH="armhf"
+        - BUILD_ONLY=1 ARCH="powerpc"
+        - BUILD_ONLY=1 ARCH="i386"
+        - BUILD_ONLY=1 ARCH="arm64" CONF="--disable-abi-compat"
+        - BUILD_ONLY=1 ARCH="armhf" CONF="--disable-abi-compat"
+        - BUILD_ONLY=1 ARCH="powerpc" CONF="--disable-abi-compat"
+        - BUILD_ONLY=1 ARCH="i386" CONF="--disable-abi-compat"
         - CONF="--enable-deprecated"
         - CONF="--enable-dpdk-zero-copy --disable-static-applications"
         - CONF="--disable-static-applications"
@@ -70,7 +71,7 @@ compiler:
 
 install:
         - sudo apt-get install linux-headers-`uname -r`
-        - if [ -z "${CROSS_ARCH}" ] ; then
+        - if [ -z "${ARCH}" -o "${ARCH}" == "x86_64" ] ; then
                echo "compilling netmap";
                CDIR=`pwd` ;
                git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git;
@@ -83,11 +84,11 @@ install:
           fi
 script:
         - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
-        - if [ -n "${CROSS_ARCH}" ] ; then
+        - if [ ${BUILD_ONLY} -eq 1 ] ; then
                docker run  -i -t -v `pwd`:/odp
                  -e CC="${CC}"
                  -e CONF="${CONF}"
-                 ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_${UBUNTU_VERS} /odp/scripts/ci/build_${CROSS_ARCH}.sh ;
+                 ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_${UBUNTU_VERS} /odp/scripts/ci/build_${ARCH}.sh ;
           else
                echo "Running test" ;
                docker run --privileged -i -t
