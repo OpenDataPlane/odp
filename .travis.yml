@@ -107,6 +107,16 @@ script:
 jobs:
         include:
                 - stage: test
+                  env: TEST=coverage
+                  compiler: gcc
+                  script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
+                          - docker run --privileged -i -t
+                              -v `pwd`:/odp --shm-size 8g
+                              -e CODECOV_TOKEN="${CODECOV_TOKEN}"
+                              -e CC="${CC}"
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/coverage.sh
+                - stage: test
                   env: TEST=scheduler_sp
                   compiler: gcc
                   script:
@@ -142,17 +152,6 @@ jobs:
                               -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/process-mode.conf
                               -e ODPH_PROC_MODE=1
                               ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/check.sh
-                - stage: test
-                  env: TEST=coverage
-                  compiler: gcc
-                  script:
-                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
-                          - docker run --privileged -i -t
-                              -v `pwd`:/odp --shm-size 8g
-                              -e CODECOV_TOKEN="${CODECOV_TOKEN}"
-                              -e CC="${CC}"
-                              -e CONF="${CONF}"
-                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/coverage.sh
                 - stage: test
                   env: TEST=distcheck
                   compiler: gcc
