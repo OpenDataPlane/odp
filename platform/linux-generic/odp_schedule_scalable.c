@@ -32,6 +32,7 @@
 #include <odp_schedule_if.h>
 #include <odp_bitset.h>
 #include <odp_packet_io_internal.h>
+#include <odp_shm_internal.h>
 #include <odp_timer_internal.h>
 
 #include <limits.h>
@@ -46,8 +47,6 @@
 
 #define FLAG_PKTIN 0x80
 
-static _odp_ishm_pool_t *sched_shm_pool;
-
 ODP_STATIC_ASSERT(ODP_SCHED_PRIO_LOWEST == (ODP_SCHED_PRIO_NUM - 2),
 		  "lowest_prio_does_not_match_with_num_prios");
 
@@ -58,22 +57,24 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 ODP_STATIC_ASSERT(CHECK_IS_POWER2(ODP_CONFIG_QUEUES),
 		  "Number_of_queues_is_not_power_of_two");
 
-/*
- * Scheduler group related variables.
- */
-/* Currently used scheduler groups */
-static sched_group_mask_t sg_free;
-static sched_group_t *sg_vec[MAX_SCHED_GROUP];
-/* Group lock for MT-safe APIs */
-static odp_spinlock_t sched_grp_lock;
-
 #define SCHED_GROUP_JOIN 0
 #define SCHED_GROUP_LEAVE 1
 
-/*
- * Per thread state
- */
-static sched_scalable_thread_state_t thread_state[MAXTHREADS];
+typedef struct {
+	odp_shm_t shm;
+	_odp_ishm_pool_t *sched_shm_pool;
+	/** Currently used scheduler groups */
+	sched_group_mask_t sg_free;
+	sched_group_t *sg_vec[MAX_SCHED_GROUP];
+	/** Group lock for MT-safe APIs */
+	odp_spinlock_t sched_grp_lock;
+	/** Per thread state */
+	sched_scalable_thread_state_t thread_state[MAXTHREADS];
+	uint16_t poll_count[ODP_CONFIG_PKTIO_ENTRIES];
+} sched_global_t;
+
+static sched_global_t *global;
+
 __thread sched_scalable_thread_state_t *sched_ts;
 
 static int thread_state_init(int tidx)
@@ -82,7 +83,7 @@ static int thread_state_init(int tidx)
 	uint32_t i;
 
 	ODP_ASSERT(tidx < MAXTHREADS);
-	ts = &thread_state[tidx];
+	ts = &global->thread_state[tidx];
 	ts->atomq = NULL;
 	ts->src_schedq = NULL;
 	ts->rctx = NULL;
@@ -523,9 +524,9 @@ static void signal_threads_add(sched_group_t *sg, uint32_t sgi, uint32_t prio)
 		/* Notify the thread about membership in this
 		 * group/priority.
 		 */
-		atom_bitset_set(&thread_state[thr].sg_wanted[prio],
+		atom_bitset_set(&global->thread_state[thr].sg_wanted[prio],
 				sgi, __ATOMIC_RELEASE);
-		__atomic_store_n(&thread_state[thr].sg_sem, 1,
+		__atomic_store_n(&global->thread_state[thr].sg_sem, 1,
 				 __ATOMIC_RELEASE);
 	}
 }
@@ -537,11 +538,11 @@ sched_queue_t *sched_queue_add(odp_schedule_group_t grp, uint32_t prio)
 	uint32_t x;
 
 	ODP_ASSERT(grp >= 0 && grp < (odp_schedule_group_t)MAX_SCHED_GROUP);
-	ODP_ASSERT((sg_free & (1ULL << grp)) == 0);
+	ODP_ASSERT((global->sg_free & (1ULL << grp)) == 0);
 	ODP_ASSERT(prio < ODP_SCHED_PRIO_NUM);
 
 	sgi = grp;
-	sg = sg_vec[sgi];
+	sg = global->sg_vec[sgi];
 
 	/* Use xcount to spread queues over the xfactor schedq's
 	 * per priority.
@@ -563,11 +564,11 @@ static uint32_t sched_pktin_add(odp_schedule_group_t grp, uint32_t prio)
 	sched_group_t *sg;
 
 	ODP_ASSERT(grp >= 0 && grp < (odp_schedule_group_t)MAX_SCHED_GROUP);
-	ODP_ASSERT((sg_free & (1ULL << grp)) == 0);
+	ODP_ASSERT((global->sg_free & (1ULL << grp)) == 0);
 	ODP_ASSERT(prio < ODP_SCHED_PRIO_NUM);
 
 	sgi = grp;
-	sg = sg_vec[sgi];
+	sg = global->sg_vec[sgi];
 
 	(void)sched_queue_add(grp, ODP_SCHED_PRIO_PKTIN);
 	return (ODP_SCHED_PRIO_PKTIN - prio) * sg->xfactor;
@@ -584,9 +585,9 @@ static void signal_threads_rem(sched_group_t *sg, uint32_t sgi, uint32_t prio)
 		/* Notify the thread about membership in this
 		 * group/priority.
 		 */
-		atom_bitset_clr(&thread_state[thr].sg_wanted[prio],
+		atom_bitset_clr(&global->thread_state[thr].sg_wanted[prio],
 				sgi, __ATOMIC_RELEASE);
-		__atomic_store_n(&thread_state[thr].sg_sem, 1,
+		__atomic_store_n(&global->thread_state[thr].sg_sem, 1,
 				 __ATOMIC_RELEASE);
 	}
 }
@@ -598,11 +599,11 @@ void sched_queue_rem(odp_schedule_group_t grp, uint32_t prio)
 	uint32_t x;
 
 	ODP_ASSERT(grp >= 0 && grp < (odp_schedule_group_t)MAX_SCHED_GROUP);
-	ODP_ASSERT((sg_free & (1ULL << grp)) == 0);
+	ODP_ASSERT((global->sg_free & (1ULL << grp)) == 0);
 	ODP_ASSERT(prio < ODP_SCHED_PRIO_NUM);
 
 	sgi = grp;
-	sg = sg_vec[sgi];
+	sg = global->sg_vec[sgi];
 
 	x = __atomic_sub_fetch(&sg->xcount[prio], 1, __ATOMIC_RELAXED);
 	if (x == 0) {
@@ -631,7 +632,7 @@ static void update_sg_add(sched_scalable_thread_state_t *ts,
 	added = bitset_andn(sg_wanted, ts->sg_actual[p]);
 	while (!bitset_is_null(added)) {
 		sgi = bitset_ffs(added) - 1;
-		sg = sg_vec[sgi];
+		sg = global->sg_vec[sgi];
 		for (x = 0; x < sg->xfactor; x++) {
 			/* Include our thread index to shift
 			 * (rotate) the order of schedq's
@@ -657,7 +658,7 @@ static void update_sg_rem(sched_scalable_thread_state_t *ts,
 	removed = bitset_andn(ts->sg_actual[p], sg_wanted);
 	while (!bitset_is_null(removed)) {
 		sgi = bitset_ffs(removed) - 1;
-		sg = sg_vec[sgi];
+		sg = global->sg_vec[sgi];
 		for (x = 0; x < sg->xfactor; x++) {
 			remove_schedq_from_list(ts,
 						&sg->schedq[p *
@@ -710,8 +711,6 @@ static inline void _schedule_release_ordered(sched_scalable_thread_state_t *ts)
 	ts->rctx = NULL;
 }
 
-static uint16_t poll_count[ODP_CONFIG_PKTIO_ENTRIES];
-
 static void pktio_start(int pktio_idx,
 			int num_in_queue,
 			int in_queue_idx[],
@@ -725,7 +724,8 @@ static void pktio_start(int pktio_idx,
 	for (i = 0; i < num_in_queue; i++) {
 		rxq = in_queue_idx[i];
 		ODP_ASSERT(rxq < PKTIO_MAX_QUEUES);
-		__atomic_fetch_add(&poll_count[pktio_idx], 1, __ATOMIC_RELAXED);
+		__atomic_fetch_add(&global->poll_count[pktio_idx], 1,
+				   __ATOMIC_RELAXED);
 		qentry = qentry_from_ext(odpq[i]);
 		elem = &qentry->s.sched_elem;
 		elem->cons_type |= FLAG_PKTIN; /* Set pktin queue flag */
@@ -742,7 +742,7 @@ static void pktio_stop(sched_elem_t *elem)
 {
 	elem->cons_type &= ~FLAG_PKTIN; /* Clear pktin queue flag */
 	sched_pktin_rem(elem->sched_grp);
-	if (__atomic_sub_fetch(&poll_count[elem->pktio_idx],
+	if (__atomic_sub_fetch(&global->poll_count[elem->pktio_idx],
 			       1, __ATOMIC_RELAXED) == 0) {
 		/* Call stop_finalize when all queues
 		 * of the pktio have been removed */
@@ -1389,22 +1389,21 @@ static int schedule_group_update(sched_group_t *sg,
 			atom_bitset_clr(&sg->thr_wanted, thr, __ATOMIC_RELAXED);
 		for (p = 0; p < ODP_SCHED_PRIO_NUM; p++) {
 			if (sg->xcount[p] != 0) {
+				sched_scalable_thread_state_t *state;
+
+				state = &global->thread_state[thr];
+
 				/* This priority level has ODP queues
 				 * Notify the thread about membership in
 				 * this group/priority
 				 */
 				if (join_leave == SCHED_GROUP_JOIN)
-					atom_bitset_set(
-						&thread_state[thr].sg_wanted[p],
-						sgi,
-						__ATOMIC_RELEASE);
+					atom_bitset_set(&state->sg_wanted[p],
+							sgi, __ATOMIC_RELEASE);
 				else
-					atom_bitset_clr(
-						&thread_state[thr].sg_wanted[p],
-						sgi,
-						__ATOMIC_RELEASE);
-				__atomic_store_n(&thread_state[thr].sg_sem,
-						 1,
+					atom_bitset_clr(&state->sg_wanted[p],
+							sgi, __ATOMIC_RELEASE);
+				__atomic_store_n(&state->sg_sem, 1,
 						 __ATOMIC_RELEASE);
 			}
 		}
@@ -1447,10 +1446,10 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 	if (mask == NULL)
 		ODP_ABORT("mask is NULL\n");
 
-	odp_spinlock_lock(&sched_grp_lock);
+	odp_spinlock_lock(&global->sched_grp_lock);
 
 	/* Allocate a scheduler group */
-	free = atom_bitset_load(&sg_free, __ATOMIC_RELAXED);
+	free = atom_bitset_load(&global->sg_free, __ATOMIC_RELAXED);
 	do {
 		/* All sched_groups in use */
 		if (bitset_is_null(free))
@@ -1460,7 +1459,7 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 		/* All sched_groups in use */
 		if (sgi >= MAX_SCHED_GROUP)
 			goto no_free_sched_group;
-	} while (!atom_bitset_cmpxchg(&sg_free,
+	} while (!atom_bitset_cmpxchg(&global->sg_free,
 				      &free,
 				      bitset_clr(free, sgi),
 				      true,
@@ -1477,12 +1476,13 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 
 	size = sizeof(sched_group_t) +
 	       (ODP_SCHED_PRIO_NUM * xfactor - 1) * sizeof(sched_queue_t);
-	sg = (sched_group_t *)shm_pool_alloc_align(sched_shm_pool, size);
+	sg = (sched_group_t *)shm_pool_alloc_align(global->sched_shm_pool,
+						   size);
 	if (sg == NULL)
 		goto shm_pool_alloc_failed;
 
 	strncpy(sg->name, name ? name : "", ODP_SCHED_GROUP_NAME_LEN - 1);
-	sg_vec[sgi] = sg;
+	global->sg_vec[sgi] = sg;
 	memset(sg->thr_actual, 0, sizeof(sg->thr_actual));
 	sg->thr_wanted = bitset_null();
 	sg->xfactor = xfactor;
@@ -1494,16 +1494,16 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 	if (odp_thrmask_count(mask) != 0)
 		schedule_group_update(sg, sgi, mask, SCHED_GROUP_JOIN);
 
-	odp_spinlock_unlock(&sched_grp_lock);
+	odp_spinlock_unlock(&global->sched_grp_lock);
 
 	return (odp_schedule_group_t)(sgi);
 
 shm_pool_alloc_failed:
 	/* Free the allocated group index */
-	atom_bitset_set(&sg_free, sgi, __ATOMIC_RELAXED);
+	atom_bitset_set(&global->sg_free, sgi, __ATOMIC_RELAXED);
 
 no_free_sched_group:
-	odp_spinlock_unlock(&sched_grp_lock);
+	odp_spinlock_unlock(&global->sched_grp_lock);
 
 	return ODP_SCHED_GROUP_INVALID;
 }
@@ -1529,15 +1529,15 @@ static int schedule_group_destroy(odp_schedule_group_t group)
 		sched_ts->sg_sem = 0;
 		update_sg_membership(sched_ts);
 	}
-	odp_spinlock_lock(&sched_grp_lock);
+	odp_spinlock_lock(&global->sched_grp_lock);
 
 	sgi = (uint32_t)group;
-	if (bitset_is_set(sg_free, sgi)) {
+	if (bitset_is_set(global->sg_free, sgi)) {
 		ret = -1;
 		goto group_not_found;
 	}
 
-	sg = sg_vec[sgi];
+	sg = global->sg_vec[sgi];
 	/* First ensure all threads have processed group_join/group_leave
 	 * requests.
 	 */
@@ -1570,18 +1570,18 @@ static int schedule_group_destroy(odp_schedule_group_t group)
 		}
 	}
 
-	_odp_ishm_pool_free(sched_shm_pool, sg);
-	sg_vec[sgi] = NULL;
-	atom_bitset_set(&sg_free, sgi, __ATOMIC_RELEASE);
+	_odp_ishm_pool_free(global->sched_shm_pool, sg);
+	global->sg_vec[sgi] = NULL;
+	atom_bitset_set(&global->sg_free, sgi, __ATOMIC_RELEASE);
 
-	odp_spinlock_unlock(&sched_grp_lock);
+	odp_spinlock_unlock(&global->sched_grp_lock);
 
 	return ret;
 
 thrd_q_present_in_group:
 
 group_not_found:
-	odp_spinlock_unlock(&sched_grp_lock);
+	odp_spinlock_unlock(&global->sched_grp_lock);
 
 invalid_group:
 
@@ -1599,19 +1599,19 @@ static odp_schedule_group_t schedule_group_lookup(const char *name)
 
 	group = ODP_SCHED_GROUP_INVALID;
 
-	odp_spinlock_lock(&sched_grp_lock);
+	odp_spinlock_lock(&global->sched_grp_lock);
 
 	/* Scan through the schedule group array */
 	for (sgi = 0; sgi < MAX_SCHED_GROUP; sgi++) {
-		if ((sg_vec[sgi] != NULL) &&
-		    (strncmp(name, sg_vec[sgi]->name,
+		if ((global->sg_vec[sgi] != NULL) &&
+		    (strncmp(name, global->sg_vec[sgi]->name,
 			     ODP_SCHED_GROUP_NAME_LEN) == 0)) {
 			group = (odp_schedule_group_t)sgi;
 			break;
 		}
 	}
 
-	odp_spinlock_unlock(&sched_grp_lock);
+	odp_spinlock_unlock(&global->sched_grp_lock);
 
 	return group;
 }
@@ -1630,18 +1630,18 @@ static int schedule_group_join(odp_schedule_group_t group,
 	if (mask == NULL)
 		ODP_ABORT("name or mask is NULL\n");
 
-	odp_spinlock_lock(&sched_grp_lock);
+	odp_spinlock_lock(&global->sched_grp_lock);
 
 	sgi = (uint32_t)group;
-	if (bitset_is_set(sg_free, sgi)) {
-		odp_spinlock_unlock(&sched_grp_lock);
+	if (bitset_is_set(global->sg_free, sgi)) {
+		odp_spinlock_unlock(&global->sched_grp_lock);
 		return -1;
 	}
 
-	sg = sg_vec[sgi];
+	sg = global->sg_vec[sgi];
 	ret = schedule_group_update(sg, sgi, mask, SCHED_GROUP_JOIN);
 
-	odp_spinlock_unlock(&sched_grp_lock);
+	odp_spinlock_unlock(&global->sched_grp_lock);
 
 	return ret;
 }
@@ -1662,24 +1662,24 @@ static int schedule_group_leave(odp_schedule_group_t group,
 	if (mask == NULL)
 		ODP_ABORT("name or mask is NULL\n");
 
-	odp_spinlock_lock(&sched_grp_lock);
+	odp_spinlock_lock(&global->sched_grp_lock);
 
 	sgi = (uint32_t)group;
-	if (bitset_is_set(sg_free, sgi)) {
+	if (bitset_is_set(global->sg_free, sgi)) {
 		ret = -1;
 		goto group_not_found;
 	}
 
-	sg = sg_vec[sgi];
+	sg = global->sg_vec[sgi];
 
 	ret = schedule_group_update(sg, sgi, mask, SCHED_GROUP_LEAVE);
 
-	odp_spinlock_unlock(&sched_grp_lock);
+	odp_spinlock_unlock(&global->sched_grp_lock);
 
 	return ret;
 
 group_not_found:
-	odp_spinlock_unlock(&sched_grp_lock);
+	odp_spinlock_unlock(&global->sched_grp_lock);
 
 invalid_group:
 	return ret;
@@ -1701,23 +1701,23 @@ static int schedule_group_thrmask(odp_schedule_group_t group,
 	if (mask == NULL)
 		ODP_ABORT("name or mask is NULL\n");
 
-	odp_spinlock_lock(&sched_grp_lock);
+	odp_spinlock_lock(&global->sched_grp_lock);
 
 	sgi = (uint32_t)group;
-	if (bitset_is_set(sg_free, sgi)) {
+	if (bitset_is_set(global->sg_free, sgi)) {
 		ret = -1;
 		goto group_not_found;
 	}
 
-	sg = sg_vec[sgi];
+	sg = global->sg_vec[sgi];
 	ret = _schedule_group_thrmask(sg, mask);
 
-	odp_spinlock_unlock(&sched_grp_lock);
+	odp_spinlock_unlock(&global->sched_grp_lock);
 
 	return ret;
 
 group_not_found:
-	odp_spinlock_unlock(&sched_grp_lock);
+	odp_spinlock_unlock(&global->sched_grp_lock);
 
 invalid_group:
 	return ret;
@@ -1739,26 +1739,26 @@ static int schedule_group_info(odp_schedule_group_t group,
 	if (info == NULL)
 		ODP_ABORT("name or mask is NULL\n");
 
-	odp_spinlock_lock(&sched_grp_lock);
+	odp_spinlock_lock(&global->sched_grp_lock);
 
 	sgi = (uint32_t)group;
-	if (bitset_is_set(sg_free, sgi)) {
+	if (bitset_is_set(global->sg_free, sgi)) {
 		ret = -1;
 		goto group_not_found;
 	}
 
-	sg = sg_vec[sgi];
+	sg = global->sg_vec[sgi];
 
 	ret = _schedule_group_thrmask(sg, &info->thrmask);
 
 	info->name = sg->name;
 
-	odp_spinlock_unlock(&sched_grp_lock);
+	odp_spinlock_unlock(&global->sched_grp_lock);
 
 	return ret;
 
 group_not_found:
-	odp_spinlock_unlock(&sched_grp_lock);
+	odp_spinlock_unlock(&global->sched_grp_lock);
 
 invalid_group:
 	return ret;
@@ -1770,14 +1770,30 @@ static int schedule_init_global(void)
 	odp_schedule_group_t tmp_all;
 	odp_schedule_group_t tmp_wrkr;
 	odp_schedule_group_t tmp_ctrl;
+	odp_shm_t shm;
 	uint32_t bits;
 	uint32_t pool_size;
 	uint64_t min_alloc;
 	uint64_t max_alloc;
 
+	shm = odp_shm_reserve("_odp_sched_scalable",
+			      sizeof(sched_global_t),
+			      ODP_CACHE_LINE_SIZE, _ODP_SHM_NO_HP);
+
+	global = odp_shm_addr(shm);
+	if (global == NULL) {
+		ODP_ERR("Schedule init: Shm reserve failed.\n");
+		return -1;
+	}
+
+	memset(global, 0, sizeof(sched_global_t));
+	global->shm = shm;
+
 	/* Attach to the pool if it exists */
-	sched_shm_pool = _odp_ishm_pool_lookup("sched_shm_pool");
-	if (sched_shm_pool == NULL) {
+	global->sched_shm_pool = _odp_ishm_pool_lookup("_odp_sched_shm_pool");
+	if (global->sched_shm_pool == NULL) {
+		_odp_ishm_pool_t *pool;
+
 		/* Add storage required for sched groups. Assume worst case
 		 * xfactor of MAXTHREADS.
 		 */
@@ -1791,31 +1807,31 @@ static int schedule_init_global(void)
 			    (ODP_SCHED_PRIO_NUM * MAXTHREADS - 1) *
 			    sizeof(sched_queue_t);
 		max_alloc = min_alloc;
-		sched_shm_pool = _odp_ishm_pool_create("sched_shm_pool",
-						       pool_size,
-						       min_alloc, max_alloc,
-						       _ODP_ISHM_SINGLE_VA);
-		if (sched_shm_pool == NULL) {
+		pool = _odp_ishm_pool_create("_odp_sched_shm_pool", pool_size,
+					     min_alloc, max_alloc,
+					     _ODP_ISHM_SINGLE_VA);
+		if (pool == NULL) {
 			ODP_ERR("Failed to allocate shared memory pool "
 				"for sched\n");
 			goto failed_sched_shm_pool_create;
 		}
+		global->sched_shm_pool = pool;
 	}
 
-	odp_spinlock_init(&sched_grp_lock);
+	odp_spinlock_init(&global->sched_grp_lock);
 
 	bits = MAX_SCHED_GROUP;
-	if (MAX_SCHED_GROUP == sizeof(sg_free) * CHAR_BIT)
-		sg_free = ~0;
+	if (MAX_SCHED_GROUP == sizeof(global->sg_free) * CHAR_BIT)
+		global->sg_free = ~0;
 	else
-		sg_free = (1 << bits) - 1;
+		global->sg_free = (1 << bits) - 1;
 
 	for (uint32_t i = 0; i < MAX_SCHED_GROUP; i++)
-		sg_vec[i] = NULL;
+		global->sg_vec[i] = NULL;
 	for (uint32_t i = 0; i < MAXTHREADS; i++) {
-		thread_state[i].sg_sem = 0;
+		global->thread_state[i].sg_sem = 0;
 		for (uint32_t j = 0; j < ODP_SCHED_PRIO_NUM; j++)
-			thread_state[i].sg_wanted[j] = bitset_null();
+			global->thread_state[i].sg_wanted[j] = bitset_null();
 	}
 
 	/* Create sched groups for default GROUP_ALL, GROUP_WORKER and
@@ -1871,7 +1887,12 @@ static int schedule_term_global(void)
 	if (odp_schedule_group_destroy(ODP_SCHED_GROUP_CONTROL) != 0)
 		ODP_ERR("Failed to destroy ODP_SCHED_GROUP_CONTROL\n");
 
-	_odp_ishm_pool_destroy(sched_shm_pool);
+	_odp_ishm_pool_destroy(global->sched_shm_pool);
+
+	if (odp_shm_free(global->shm)) {
+		ODP_ERR("Shm free failed for scalable scheduler");
+		return -1;
+	}
 
 	return 0;
 }
