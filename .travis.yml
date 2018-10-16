@@ -65,6 +65,13 @@ env:
         - CONF="--without-openssl"
         - CONF="" UBUNTU_VERS="18.04"
 
+matrix:
+  exclude:
+  - compiler: gcc
+    env: BUILD_ONLY=1 ARCH="arm64"
+  - compiler: gcc
+    env: BUILD_ONLY=1 ARCH="i386"
+
 compiler:
         - gcc
         - clang
