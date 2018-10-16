@@ -19,9 +19,6 @@ extern const schedule_api_t schedule_sp_api;
 extern const schedule_fn_t schedule_basic_fn;
 extern const schedule_api_t schedule_basic_api;
 
-extern const schedule_fn_t schedule_iquery_fn;
-extern const schedule_api_t schedule_iquery_api;
-
 extern const schedule_fn_t  schedule_scalable_fn;
 extern const schedule_api_t schedule_scalable_api;
 
@@ -154,9 +151,6 @@ int _odp_schedule_init_global(void)
 	} else if (!strcmp(sched, "sp")) {
 		sched_fn = &schedule_sp_fn;
 		sched_api = &schedule_sp_api;
-	} else if (!strcmp(sched, "iquery")) {
-		sched_fn = &schedule_iquery_fn;
-		sched_api = &schedule_iquery_api;
 	} else if (!strcmp(sched, "scalable")) {
 		sched_fn = &schedule_scalable_fn;
 		sched_api = &schedule_scalable_api;

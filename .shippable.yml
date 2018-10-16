@@ -7,8 +7,6 @@ compiler:
 env:
     - CONF="--disable-test-perf --disable-test-perf-proc"
     - CONF="--disable-abi-compat --disable-test-perf --disable-test-perf-proc"
-    # - CONF="--enable-schedule-sp"
-    # - CONF="--enable-schedule-iquery"
     # - CONF="--enable-dpdk-zero-copy"
     # - CROSS_ARCH="arm64"
     # - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
@@ -39,8 +37,6 @@ build:
     - ./scripts/shippable-post.sh basic
     - ODP_SCHEDULER=sp make check
     - ./scripts/shippable-post.sh sp
-    - ODP_SCHEDULER=iquery make check
-    - ./scripts/shippable-post.sh iquery
     - ODP_SCHEDULER=scalable make check
     - ./scripts/shippable-post.sh scalable
     - rm -rf $HOME/odp-shmdir

@@ -189,7 +189,6 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_rwlock_recursive.c \
 			   odp_schedule_basic.c \
 			   odp_schedule_if.c \
-			   odp_schedule_iquery.c \
 			   odp_schedule_scalable.c \
 			   odp_schedule_scalable_ordered.c \
 			   odp_schedule_sp.c \
