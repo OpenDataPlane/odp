@@ -45,9 +45,11 @@ env:
         - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
         - UBUNTU_VERS="16.04"
         - BUILD_ONLY=0
+        - NETMAP=0
     matrix:
         - CONF=""
         - CONF="--disable-abi-compat"
+        - NETMAP=1 CONF=""
         - BUILD_ONLY=1 ARCH="arm64"
         - BUILD_ONLY=1 ARCH="armhf"
         - BUILD_ONLY=1 ARCH="powerpc"
@@ -58,7 +60,7 @@ env:
         - BUILD_ONLY=1 ARCH="i386" CONF="--disable-abi-compat"
         - CONF="--enable-deprecated"
         - CONF="--enable-dpdk-zero-copy --disable-static-applications"
-        - CONF="--disable-static-applications"
+        - NETMAP=1 CONF="--disable-static-applications"
         - CONF="--disable-host-optimization"
         - CONF="--disable-host-optimization --disable-abi-compat"
         - BUILD_ONLY=1 ARCH="x86_64" CONF="--enable-pcapng-support"
@@ -77,13 +79,13 @@ compiler:
         - clang
 
 install:
-        - sudo apt-get install linux-headers-`uname -r`
-        - if [ -z "${ARCH}" -o "${ARCH}" == "x86_64" ] ; then
-               echo "compilling netmap";
+        - if [ ${NETMAP} -eq 1 ] ; then
+               echo "Installing NETMAP";
+               sudo apt-get install linux-headers-`uname -r` ;
                CDIR=`pwd` ;
                git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git;
                pushd netmap/LINUX;
-               ./configure;
+               ./configure --drivers= ;
                make -j $(nproc);
                popd;
                sudo insmod ./netmap/LINUX/netmap.ko;
