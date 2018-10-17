@@ -1126,6 +1126,16 @@ int main(int argc, char **argv)
 	for (i = 0; i < nb_worker; i++)
 		odph_odpthreads_join(&thread_tbl[i]);
 
+	/* Stop and close used pktio devices */
+	for (i = 0; i < args->if_count; i++) {
+		odp_pktio_t pktio = global->l3fwd_pktios[i].pktio;
+
+		if (odp_pktio_stop(pktio) || odp_pktio_close(pktio)) {
+			printf("Error: failed to close pktio\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	/* if_names share a single buffer, so only one free */
 	free(args->if_names[0]);
 

@@ -203,6 +203,15 @@ int main(int argc, char **argv)
 
 	ret = global->g_ret;
 
+	if (odp_pktio_stop(global->if0) || odp_pktio_close(global->if0)) {
+		printf("Error: failed to close interface %s\n", argv[1]);
+		exit(EXIT_FAILURE);
+	}
+	if (odp_pktio_stop(global->if1) || odp_pktio_close(global->if1)) {
+		printf("Error: failed to close interface %s\n", argv[2]);
+		exit(EXIT_FAILURE);
+	}
+
 	if (odp_pool_destroy(pool)) {
 		printf("Error: pool destroy\n");
 		exit(EXIT_FAILURE);
