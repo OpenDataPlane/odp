@@ -89,6 +89,11 @@ typedef struct pool_t {
 typedef struct pool_table_t {
 	pool_t    pool[ODP_CONFIG_POOLS];
 	odp_shm_t shm;
+
+	struct {
+		uint32_t pkt_max_num;
+	} config;
+
 } pool_table_t;
 
 extern pool_table_t *pool_tbl;
