@@ -40,6 +40,7 @@ typedef struct {
 /* Read-only global data. Members should not be modified after global init
  * to enable process more support. */
 struct odp_global_data_ro_t {
+	odp_init_t init_param;
 	/* directory for odp mmaped files */
 	char *shm_dir;
 	/* overload default with env */
@@ -69,6 +70,7 @@ struct odp_global_data_rw_t {
 	pthread_t inotify_thread;
 	int inotify_pcapng_is_running;
 	odp_bool_t dpdk_initialized;
+	odp_bool_t inline_timers;
 };
 
 extern struct odp_global_data_ro_t odp_global_ro;
