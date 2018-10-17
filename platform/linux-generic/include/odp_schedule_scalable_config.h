@@ -9,6 +9,9 @@
 #ifndef ODP_SCHEDULE_SCALABLE_CONFIG_H_
 #define ODP_SCHEDULE_SCALABLE_CONFIG_H_
 
+/* Maximum number of events that can be stored in a queue */
+#define CONFIG_SCAL_QUEUE_SIZE 4096
+
 /*
  * Default scaling factor for the scheduler group
  *
