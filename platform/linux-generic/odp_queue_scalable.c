@@ -110,7 +110,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 
 	sched_elem = &queue->s.sched_elem;
 	ring_size = param->size > 0 ?
-		ROUNDUP_POWER2_U32(param->size) : CONFIG_QUEUE_SIZE;
+		ROUNDUP_POWER2_U32(param->size) : CONFIG_SCAL_QUEUE_SIZE;
 	strncpy(queue->s.name, name ? name : "", ODP_QUEUE_NAME_LEN - 1);
 	queue->s.name[ODP_QUEUE_NAME_LEN - 1] = 0;
 	memcpy(&queue->s.param, param, sizeof(odp_queue_param_t));
@@ -212,15 +212,16 @@ static int queue_init_global(void)
 		/* Add size of the array holding the queues */
 		pool_size = sizeof(queue_table_t);
 		/* Add storage required for queues */
-		pool_size += (CONFIG_QUEUE_SIZE * sizeof(odp_buffer_hdr_t *)) *
-			     ODP_CONFIG_QUEUES;
+		pool_size += (CONFIG_SCAL_QUEUE_SIZE *
+			      sizeof(odp_buffer_hdr_t *)) * ODP_CONFIG_QUEUES;
+
 		/* Add the reorder window size */
 		pool_size += sizeof(reorder_window_t) * ODP_CONFIG_QUEUES;
 		/* Choose min_alloc and max_alloc such that buddy allocator is
 		 * is selected.
 		 */
 		min_alloc = 0;
-		max_alloc = CONFIG_QUEUE_SIZE * sizeof(odp_buffer_hdr_t *);
+		max_alloc = CONFIG_SCAL_QUEUE_SIZE * sizeof(odp_buffer_hdr_t *);
 		queue_shm_pool = _odp_ishm_pool_create("queue_shm_pool",
 						       pool_size,
 						       min_alloc, max_alloc,
