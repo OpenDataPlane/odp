@@ -68,8 +68,6 @@
  * for checking the freshness of received timeouts */
 #define TMO_INACTIVE ((uint64_t)0x8000000000000000)
 
-odp_bool_t inline_timers = false;
-
 /******************************************************************************
  * Mutual exclusion in the absence of CAS16
  *****************************************************************************/
@@ -345,8 +343,26 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	odp_spinlock_init(&tp->lock);
 	odp_ticketlock_lock(&timer_global->lock);
 	timer_global->timer_pool[tp_idx] = tp;
+
+	if (timer_global->num_timer_pools == 1) {
+		odp_bool_t inline_tim;
+
+		/*
+		 * Whether to run timer pool processing 'inline' (on worker
+		 * cores) or in background threads (thread-per-timerpool).
+		 *
+		 * If the application will use scheduler this flag is set to
+		 * true, otherwise false. This application conveys this
+		 * information via the 'not_used' bits in odp_init_t which are
+		 * passed to odp_global_init().
+		 */
+		inline_tim = !odp_global_ro.init_param.not_used.feat.schedule;
+
+		odp_global_rw->inline_timers = inline_tim;
+	}
+
 	odp_ticketlock_unlock(&timer_global->lock);
-	if (!inline_timers) {
+	if (!odp_global_rw->inline_timers) {
 		if (tp->param.clk_src == ODP_CLOCK_CPU)
 			itimer_init(tp);
 	}
@@ -380,7 +396,7 @@ static void odp_timer_pool_del(timer_pool_t *tp)
 
 	odp_spinlock_lock(&tp->lock);
 
-	if (!inline_timers) {
+	if (!odp_global_rw->inline_timers) {
 		/* Stop POSIX itimer signals */
 		if (tp->param.clk_src == ODP_CLOCK_CPU)
 			itimer_fini(tp);
@@ -402,6 +418,11 @@ static void odp_timer_pool_del(timer_pool_t *tp)
 	timer_global->timer_pool[tp->tp_idx] = NULL;
 	timer_global->timer_pool_used[tp->tp_idx] = 0;
 	timer_global->num_timer_pools--;
+
+	/* Disable inline timer polling */
+	if (timer_global->num_timer_pools == 0)
+		odp_global_rw->inline_timers = false;
+
 	odp_ticketlock_unlock(&timer_global->lock);
 
 	rc = odp_shm_free(shm);
@@ -1110,6 +1131,11 @@ int odp_timer_capability(odp_timer_clk_src_t clk_src,
 odp_timer_pool_t odp_timer_pool_create(const char *name,
 				       const odp_timer_pool_param_t *param)
 {
+	if (odp_global_ro.init_param.not_used.feat.timer) {
+		ODP_ERR("Trying to use disabled ODP feature.\n");
+		return ODP_TIMER_POOL_INVALID;
+	}
+
 	if (param->res_ns < timer_global->highest_res_ns) {
 		__odp_errno = EINVAL;
 		return ODP_TIMER_POOL_INVALID;
@@ -1322,6 +1348,7 @@ void odp_timeout_free(odp_timeout_t tmo)
 int odp_timer_init_global(const odp_init_t *params)
 {
 	odp_shm_t shm;
+	odp_bool_t inline_timers = false;
 
 	shm = odp_shm_reserve("_odp_timer", sizeof(timer_global_t),
 			      ODP_CACHE_LINE_SIZE, 0);
