@@ -627,6 +627,20 @@ main(int argc, char *argv[])
 			       &thr_params);
 	odph_odpthreads_join(thread_tbl);
 
+	/* Stop and close used pktio devices */
+	for (i = 0; i < global->appl.if_count; i++) {
+		odp_pktio_t pktio = odp_pktio_lookup(global->appl.if_names[i]);
+
+		if (pktio == ODP_PKTIO_INVALID)
+			continue;
+
+		if (odp_pktio_stop(pktio) || odp_pktio_close(pktio)) {
+			EXAMPLE_ERR("Error: failed to close pktio %s\n",
+				    global->appl.if_names[i]);
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	free(global->appl.if_names);
 	free(global->appl.if_str);
 
