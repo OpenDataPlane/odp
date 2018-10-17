@@ -27,13 +27,6 @@ extern "C" {
 #define ODP_CONFIG_QUEUES 1024
 
 /*
- * Maximum queue depth. Maximum number of elements that can be stored in a
- * queue. This value is used only when the size is not explicitly provided
- * during queue creation.
- */
-#define CONFIG_QUEUE_SIZE 4096
-
-/*
  * Maximum number of ordered locks per queue
  */
 #define CONFIG_QUEUE_MAX_ORD_LOCKS 2
