@@ -572,6 +572,17 @@ static int check_params(odp_pool_param_t *params)
 		break;
 
 	case ODP_POOL_PACKET:
+		if (params->pkt.num > capa.pkt.max_num) {
+			ODP_ERR("pkt.num too large %u\n", params->pkt.num);
+			return -1;
+		}
+
+		if (params->pkt.max_num > capa.pkt.max_num) {
+			ODP_ERR("pkt.max_num too large %u\n",
+				params->pkt.max_num);
+			return -1;
+		}
+
 		if (params->pkt.len > capa.pkt.max_len) {
 			ODP_ERR("pkt.len too large %u\n", params->pkt.len);
 			return -1;
@@ -592,6 +603,12 @@ static int check_params(odp_pool_param_t *params)
 		if (params->pkt.uarea_size > capa.pkt.max_uarea_size) {
 			ODP_ERR("pkt.uarea_size too large %u\n",
 				params->pkt.uarea_size);
+			return -1;
+		}
+
+		if (params->pkt.headroom > capa.pkt.max_headroom) {
+			ODP_ERR("pkt.headroom too large %u\n",
+				params->pkt.headroom);
 			return -1;
 		}
 
