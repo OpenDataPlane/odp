@@ -1019,6 +1019,16 @@ int main(int argc, char **argv)
 	for (i = 0; i < num_workers; ++i)
 		odph_odpthreads_join(&thread_tbl[i]);
 
+	/* Stop and close used pktio devices */
+	for (i = 0; i < if_count; i++) {
+		odp_pktio_t pktio = gbl_args->pktios[i].pktio;
+
+		if (odp_pktio_stop(pktio) || odp_pktio_close(pktio)) {
+			printf("Error: failed to close pktio\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	free(gbl_args->appl.if_names);
 	free(gbl_args->appl.if_str);
 
