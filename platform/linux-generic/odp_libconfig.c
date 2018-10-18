@@ -21,10 +21,12 @@ int _odp_libconfig_init_global(void)
 	const char *filename;
 	const char *vers;
 	const char *vers_rt;
-	const char *ipml;
-	const char *ipml_rt;
+	const char *impl;
+	const char *impl_rt;
 	config_t *config = &odp_global_ro.libconfig_default;
 	config_t *config_rt = &odp_global_ro.libconfig_runtime;
+	const char *impl_field = "odp_implementation";
+	const char *vers_field = "config_file_version";
 
 	config_init(config);
 	config_init(config_rt);
@@ -40,34 +42,45 @@ int _odp_libconfig_init_global(void)
 	if (filename == NULL)
 		return 0;
 
-	ODP_PRINT("CONFIG FILE: %s\n", filename);
+	ODP_PRINT("ODP CONFIG FILE: %s\n", filename);
 
 	if (!config_read_file(config_rt, filename)) {
-		ODP_ERR("Failed to read config file: %s(%d): %s\n",
-			config_error_file(config_rt),
-			config_error_line(config_rt),
-			config_error_text(config_rt));
+		ODP_PRINT("  ERROR: failed to read config file: %s(%d): %s\n\n",
+			  config_error_file(config_rt),
+			  config_error_line(config_rt),
+			  config_error_text(config_rt));
 		goto fail;
 	}
 
 	/* Check runtime configuration's implementation name and version */
-	if (!config_lookup_string(config, "odp_implementation", &ipml) ||
-	    !config_lookup_string(config_rt, "odp_implementation", &ipml_rt)) {
-		ODP_ERR("Configuration missing 'odp_implementation' field\n");
+	if (!config_lookup_string(config, impl_field, &impl) ||
+	    !config_lookup_string(config_rt, impl_field, &impl_rt)) {
+		ODP_PRINT("  ERROR: missing mandatory field: %s\n\n",
+			  impl_field);
 		goto fail;
 	}
-	if (!config_lookup_string(config, "config_file_version", &vers) ||
-	    !config_lookup_string(config_rt, "config_file_version", &vers_rt)) {
-		ODP_ERR("Configuration missing 'config_file_version' field\n");
+	if (!config_lookup_string(config, vers_field, &vers) ||
+	    !config_lookup_string(config_rt, vers_field, &vers_rt)) {
+		ODP_PRINT("  ERROR: missing mandatory field: %s\n\n",
+			  vers_field);
 		goto fail;
 	}
-	if (strcmp(vers, vers_rt) || strcmp(ipml, ipml_rt)) {
-		ODP_ERR("Runtime configuration mismatch\n");
+	if (strcmp(impl, impl_rt)) {
+		ODP_PRINT("  ERROR: ODP implementation name mismatch:\n"
+			  "    Expected: \"%s\"\n"
+			  "    Found:    \"%s\"\n\n", impl, impl_rt);
+		goto fail;
+	}
+	if (strcmp(vers, vers_rt)) {
+		ODP_PRINT("  ERROR: config file version number mismatch:\n"
+			  "    Expected: \"%s\"\n"
+			  "    Found:    \"%s\"\n\n", vers, vers_rt);
 		goto fail;
 	}
 
 	return 0;
 fail:
+	ODP_ERR("Config file failure\n");
 	config_destroy(config);
 	config_destroy(config_rt);
 	return -1;
