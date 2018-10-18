@@ -31,6 +31,7 @@
 #define MAX_UDP_TX_BURST	512
 #define DEFAULT_RX_BURST	32
 #define MAX_RX_BURST		512
+#define STATS_INTERVAL		10   /* Interval between stats prints (sec) */
 
 #define APPL_MODE_UDP    0			/**< UDP mode */
 #define APPL_MODE_PING   1			/**< ping mode */
@@ -132,10 +133,6 @@ typedef struct {
 		} rx;
 	};
 	odp_pool_t pool;	/**< Pool for packet IO */
-	odp_timer_pool_t tp;	/**< Timer pool handle */
-	odp_queue_t tq;		/**< Queue for timeouts */
-	odp_timer_t tim;	/**< Timer handle */
-	odp_timeout_t tmo_ev;	/**< Timeout event */
 	int mode;		/**< Thread mode */
 } thread_args_t;
 
@@ -170,27 +167,6 @@ static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
 static int scan_ip(char *buf, unsigned int *paddr);
 static void print_global_stats(int num_workers);
-
-/**
- * Sleep for the specified amount of milliseconds
- * Use ODP timer, busy wait until timer expired and timeout event received
- */
-static void millisleep(uint32_t ms,
-		       odp_timer_pool_t tp,
-		       odp_timer_t tim,
-		       odp_queue_t q,
-		       odp_timeout_t tmo)
-{
-	uint64_t ticks = odp_timer_ns_to_tick(tp, 1000000ULL * ms);
-	odp_event_t ev = odp_timeout_to_event(tmo);
-	int rc = odp_timer_set_rel(tim, ticks, &ev);
-
-	if (rc != ODP_TIMER_SUCCESS)
-		EXAMPLE_ABORT("odp_timer_set_rel() failed\n");
-	/* Spin waiting for timeout event */
-	while ((ev = odp_queue_deq(q)) == ODP_EVENT_INVALID)
-		(void)0;
-}
 
 /**
  * Scan ip
@@ -800,17 +776,9 @@ static int gen_send_thread(void *arg)
 
 		counters->ctr_pkt_snd += pkt_array_size - burst_size;
 
-		if (args->appl.interval != 0) {
-			printf("  [%02i] send pkt no:%ju seq %ju\n",
-			       thr,
-			       counters->ctr_seq,
-			       counters->ctr_seq % 0xffff);
-			millisleep(args->appl.interval,
-				   thr_args->tp,
-				   thr_args->tim,
-				   thr_args->tq,
-				   thr_args->tmo_ev);
-		}
+		if (args->appl.interval != 0)
+			odp_time_wait_ns((uint64_t)args->appl.interval *
+					 ODP_TIME_MSEC_IN_NS);
 		counters->ctr_seq += seq_step;
 	}
 
@@ -1042,7 +1010,7 @@ static void print_global_stats(int num_workers)
 	uint64_t pkts_rcv = 0, pkts_rcv_prev = 0;
 	uint64_t pps_rcv = 0, maximum_pps_rcv = 0;
 	uint64_t stall, pkts_snd_drop;
-	int verbose_interval = 20, i;
+	int verbose_interval = STATS_INTERVAL, i;
 	odp_thrmask_t thrd_mask;
 
 	odp_barrier_wait(&args->barrier);
@@ -1131,15 +1099,9 @@ int main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_pool_param_t params;
-	odp_timer_pool_param_t tparams;
-	odp_timer_pool_t tp;
-	odp_pool_t tmop;
-	odp_queue_t tq;
-	odp_event_t ev;
 	interface_t *ifs;
 	odp_instance_t instance;
 	odph_odpthread_params_t thr_params;
-	odp_timer_capability_t timer_capa;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, NULL, NULL)) {
@@ -1227,36 +1189,6 @@ int main(int argc, char *argv[])
 	}
 	odp_pool_print(pool);
 
-	/* Create timer pool */
-	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa)) {
-		EXAMPLE_ERR("Error: get timer capacity failed.\n");
-		exit(EXIT_FAILURE);
-	}
-	tparams.res_ns = MAX(1 * ODP_TIME_MSEC_IN_NS,
-			     timer_capa.highest_res_ns);
-	tparams.min_tmo = 0;
-	tparams.max_tmo = 10000 * ODP_TIME_SEC_IN_NS;
-	tparams.num_timers = num_workers; /* One timer per worker */
-	tparams.priv = 0; /* Shared */
-	tparams.clk_src = ODP_CLOCK_CPU;
-	tp = odp_timer_pool_create("timer_pool", &tparams);
-	if (tp == ODP_TIMER_POOL_INVALID) {
-		EXAMPLE_ERR("Timer pool create failed.\n");
-		exit(EXIT_FAILURE);
-	}
-	odp_timer_pool_start();
-
-	/* Create timeout pool */
-	odp_pool_param_init(&params);
-	params.tmo.num     = tparams.num_timers; /* One timeout per timer */
-	params.type	   = ODP_POOL_TIMEOUT;
-
-	tmop = odp_pool_create("timeout_pool", &params);
-	if (tmop == ODP_POOL_INVALID) {
-		EXAMPLE_ERR("Error: timeout pool create failed.\n");
-		exit(EXIT_FAILURE);
-	}
-
 	ifs = malloc(sizeof(interface_t) * args->appl.if_count);
 
 	for (i = 0; i < args->appl.if_count; ++i) {
@@ -1303,27 +1235,10 @@ int main(int argc, char *argv[])
 		cpu_first = odp_cpumask_first(&cpumask);
 		odp_cpumask_set(&cpu_mask, cpu_first);
 
-		tq = odp_queue_create("", NULL);
-		if (tq == ODP_QUEUE_INVALID) {
-			EXAMPLE_ERR("queue_create failed\n");
-			abort();
-		}
 		thr_args = &args->thread[PING_THR_RX];
 		if (!args->appl.sched)
 			thr_args->rx.pktin = ifs[0].pktin[0];
 		thr_args->pool = pool;
-		thr_args->tp = tp;
-		thr_args->tq = tq;
-		thr_args->tim = odp_timer_alloc(tp, tq, NULL);
-		if (thr_args->tim == ODP_TIMER_INVALID) {
-			EXAMPLE_ERR("timer_alloc failed\n");
-			abort();
-		}
-		thr_args->tmo_ev = odp_timeout_alloc(tmop);
-		if (thr_args->tmo_ev == ODP_TIMEOUT_INVALID) {
-			EXAMPLE_ERR("timeout_alloc failed\n");
-			abort();
-		}
 		thr_args->mode = args->appl.mode;
 
 		memset(&thr_params, 0, sizeof(thr_params));
@@ -1338,27 +1253,10 @@ int main(int argc, char *argv[])
 		odph_odpthreads_create(&thread_tbl[PING_THR_RX],
 				       &cpu_mask, &thr_params);
 
-		tq = odp_queue_create("", NULL);
-		if (tq == ODP_QUEUE_INVALID) {
-			EXAMPLE_ERR("queue_create failed\n");
-			abort();
-		}
 		thr_args = &args->thread[PING_THR_TX];
 		thr_args->tx.pktout = ifs[0].pktout[0];
 		thr_args->tx.pktout_cfg = &ifs[0].config.pktout;
 		thr_args->pool = pool;
-		thr_args->tp = tp;
-		thr_args->tq = tq;
-		thr_args->tim = odp_timer_alloc(tp, tq, NULL);
-		if (thr_args->tim == ODP_TIMER_INVALID) {
-			EXAMPLE_ERR("timer_alloc failed\n");
-			abort();
-		}
-		thr_args->tmo_ev = odp_timeout_alloc(tmop);
-		if (thr_args->tmo_ev == ODP_TIMEOUT_INVALID) {
-			EXAMPLE_ERR("timeout_alloc failed\n");
-			abort();
-		}
 		thr_args->mode = args->appl.mode;
 		cpu_next = odp_cpumask_next(&cpumask, cpu_first);
 		odp_cpumask_zero(&cpu_mask);
@@ -1427,24 +1325,7 @@ int main(int argc, char *argv[])
 
 				args->thread[i].counters.ctr_seq = start_seq;
 			}
-			tq = odp_queue_create("", NULL);
-			if (tq == ODP_QUEUE_INVALID) {
-				EXAMPLE_ERR("queue_create failed\n");
-				abort();
-			}
 			args->thread[i].pool = pool;
-			args->thread[i].tp = tp;
-			args->thread[i].tq = tq;
-			args->thread[i].tim = odp_timer_alloc(tp, tq, NULL);
-			if (args->thread[i].tim == ODP_TIMER_INVALID) {
-				EXAMPLE_ERR("timer_alloc failed\n");
-				abort();
-			}
-			args->thread[i].tmo_ev = odp_timeout_alloc(tmop);
-			if (args->thread[i].tmo_ev == ODP_TIMEOUT_INVALID) {
-				EXAMPLE_ERR("timeout_alloc failed\n");
-				abort();
-			}
 			args->thread[i].mode = args->appl.mode;
 
 			if (args->appl.mode == APPL_MODE_UDP) {
@@ -1484,22 +1365,6 @@ int main(int argc, char *argv[])
 	for (i = 0; i < args->appl.if_count; ++i)
 		odp_pktio_stop(ifs[i].pktio);
 
-	for (i = 0; i < num_workers; ++i) {
-		odp_timer_cancel(args->thread[i].tim, &ev);
-		odp_timer_free(args->thread[i].tim);
-		odp_timeout_free(args->thread[i].tmo_ev);
-	}
-
-	for (i = 0; i < num_workers; ++i) {
-		while (1) {
-			ev = odp_queue_deq(args->thread[i].tq);
-			if (ev == ODP_EVENT_INVALID)
-				break;
-			odp_event_free(ev);
-		}
-		odp_queue_destroy(args->thread[i].tq);
-	}
-
 	for (i = 0; i < args->appl.if_count; ++i)
 		odp_pktio_close(ifs[i].pktio);
 	free(ifs);
@@ -1507,9 +1372,6 @@ int main(int argc, char *argv[])
 	free(args->appl.if_str);
 	if (0 != odp_pool_destroy(pool))
 		fprintf(stderr, "unable to destroy pool \"pool\"\n");
-	odp_timer_pool_destroy(tp);
-	if (0 != odp_pool_destroy(tmop))
-		fprintf(stderr, "unable to destroy pool \"tmop\"\n");
 	if (0 != odp_shm_free(shm))
 		fprintf(stderr, "unable to free \"shm\"\n");
 	odp_term_local();
