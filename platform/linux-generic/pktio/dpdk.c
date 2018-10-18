@@ -327,6 +327,13 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 		goto fail;
 	}
 
+	if (pool_entry->seg_len < RTE_MBUF_DEFAULT_BUF_SIZE) {
+		ODP_ERR("Some NICs need at least %dB buffers to not segment "
+			 "standard ethernet frames. Increase pool seg_len.\n",
+			 RTE_MBUF_DEFAULT_BUF_SIZE);
+		goto fail;
+	}
+
 	total_size = rte_mempool_calc_obj_size(elt_size, MEMPOOL_F_NO_SPREAD,
 					       &sz);
 	if (total_size != pool_entry->block_size) {
