@@ -31,6 +31,7 @@
 #define MAX_UDP_TX_BURST	512
 #define DEFAULT_RX_BURST	32
 #define MAX_RX_BURST		512
+#define STATS_INTERVAL		10   /* Interval between stats prints (sec) */
 
 #define APPL_MODE_UDP    0			/**< UDP mode */
 #define APPL_MODE_PING   1			/**< ping mode */
@@ -775,14 +776,9 @@ static int gen_send_thread(void *arg)
 
 		counters->ctr_pkt_snd += pkt_array_size - burst_size;
 
-		if (args->appl.interval != 0) {
-			printf("  [%02i] send pkt no:%ju seq %ju\n",
-			       thr,
-			       counters->ctr_seq,
-			       counters->ctr_seq % 0xffff);
+		if (args->appl.interval != 0)
 			odp_time_wait_ns((uint64_t)args->appl.interval *
 					 ODP_TIME_MSEC_IN_NS);
-		}
 		counters->ctr_seq += seq_step;
 	}
 
@@ -1014,7 +1010,7 @@ static void print_global_stats(int num_workers)
 	uint64_t pkts_rcv = 0, pkts_rcv_prev = 0;
 	uint64_t pps_rcv = 0, maximum_pps_rcv = 0;
 	uint64_t stall, pkts_snd_drop;
-	int verbose_interval = 20, i;
+	int verbose_interval = STATS_INTERVAL, i;
 	odp_thrmask_t thrd_mask;
 
 	odp_barrier_wait(&args->barrier);
