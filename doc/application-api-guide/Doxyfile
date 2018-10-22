@@ -4,6 +4,7 @@ PROJECT_NAME = "API Reference Manual"
 PROJECT_NUMBER = $(VERSION)
 PROJECT_LOGO = $(SRCDIR)/doc/images/ODP-Logo-HQ.svg
 INPUT = $(SRCDIR)/doc/application-api-guide \
+	include \
 	$(SRCDIR)/include
 EXAMPLE_PATH = $(SRCDIR)/example $(SRCDIR)
 WARNINGS = NO

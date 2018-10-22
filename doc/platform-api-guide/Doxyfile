@@ -5,8 +5,8 @@ PROJECT_NUMBER = $(VERSION)
 PROJECT_LOGO = $(SRCDIR)/doc/images/ODP-Logo-HQ.svg
 INPUT = $(SRCDIR)/doc/application-api-guide \
 	$(SRCDIR)/doc/platform-api-guide \
+	include/odp/api \
 	$(SRCDIR)/include/odp/api \
 	$(SRCDIR)/platform/$(WITH_PLATFORM)/doc \
-	$(SRCDIR)/platform/$(WITH_PLATFORM)/include/odp/api \
-	$(SRCDIR)/platform/$(WITH_PLATFORM)/arch/$(WITH_ARCH)
+	$(SRCDIR)/platform/$(WITH_PLATFORM)/include/odp/api
 EXAMPLE_PATH = $(SRCDIR)/example $(SRCDIR)/platform $(SRCDIR)
