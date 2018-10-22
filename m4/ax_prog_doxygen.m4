@@ -1,5 +1,5 @@
 # ===========================================================================
-#      http://www.gnu.org/software/autoconf-archive/ax_prog_doxygen.html
+#     https://www.gnu.org/software/autoconf-archive/ax_prog_doxygen.html
 # ===========================================================================
 #
 # SYNOPSIS
@@ -21,7 +21,7 @@
 #   The DX_*_FEATURE macros control the default setting for the given
 #   Doxygen feature. Supported features are 'DOXYGEN' itself, 'DOT' for
 #   generating graphics, 'HTML' for plain HTML, 'CHM' for compressed HTML
-#   help (for MS users), 'CHI' for generating a seperate .chi file by the
+#   help (for MS users), 'CHI' for generating a separate .chi file by the
 #   .chm file, and 'MAN', 'RTF', 'XML', 'PDF' and 'PS' for the appropriate
 #   output formats. The environment variable DOXYGEN_PAPER_SIZE may be
 #   specified to override the default 'a4wide' paper size.
@@ -97,7 +97,7 @@
 #   and this notice are preserved. This file is offered as-is, without any
 #   warranty.
 
-#serial 18
+#serial 24
 
 ## ----------##
 ## Defaults. ##
@@ -164,7 +164,7 @@ AC_DEFUN([DX_TEST_FEATURE], [test "$DX_FLAG_$1" = 1])
 AC_DEFUN([DX_CHECK_DEPEND], [
 test "$DX_FLAG_$1" = "$2" \
 || AC_MSG_ERROR([doxygen-DX_CURRENT_FEATURE ifelse([$2], 1,
-                            requires, contradicts) doxygen-DX_CURRENT_FEATURE])
+                            requires, contradicts) doxygen-$1])
 ])
 
 # DX_CLEAR_DEPEND(FEATURE, REQUIRED_FEATURE, REQUIRED_STATE)
@@ -265,14 +265,10 @@ m4_define([DX_loop], m4_dquote(m4_if(m4_eval(3 < m4_count($@)), 1,
           [m4_for([DX_i], 4, m4_count($@), 2, [, m4_eval(DX_i[/2])])],
           [])))dnl
 
-# Environment variables used inside Doxyfile:
+# Environment variables used inside doxygen.cfg:
 DX_ENV_APPEND(SRCDIR, $srcdir)
-DX_ENV_APPEND(BUILDDIR, $builddir)
-DX_ENV_APPEND(VERSION, $VERSION)
-DX_ENV_APPEND(WITH_PLATFORM, $with_platform)
 DX_ENV_APPEND(PROJECT, $DX_PROJECT)
 DX_ENV_APPEND(VERSION, $PACKAGE_VERSION)
-DX_ENV_APPEND(WITH_ARCH, $ARCH_DIR)
 
 # Doxygen itself:
 DX_ARG_ABLE(doc, [generate any doxygen documentation],
@@ -325,8 +321,8 @@ DX_ARG_ABLE(chm, [generate doxygen compressed HTML help documentation],
              DX_ENV_APPEND(GENERATE_HTMLHELP, YES)],
             [DX_ENV_APPEND(GENERATE_HTMLHELP, NO)])
 
-# Seperate CHI file generation.
-DX_ARG_ABLE(chi, [generate doxygen seperate compressed HTML help index file],
+# Separate CHI file generation.
+DX_ARG_ABLE(chi, [generate doxygen separate compressed HTML help index file],
             [DX_CHECK_DEPEND(chm, 1)],
             [DX_CLEAR_DEPEND(chm, 1)],
             [],
@@ -382,94 +378,82 @@ a4wide|a4|letter|legal|executive)
 esac
 
 # Rules:
-if test $DX_FLAG_html -eq 1; then
-    DX_SNIPPET_html="## ------------------------------- ##
+AS_IF([[test $DX_FLAG_html -eq 1]],
+[[DX_SNIPPET_html="## ------------------------------- ##
 ## Rules specific for HTML output. ##
 ## ------------------------------- ##
 
-DX_CLEAN_HTML = \$(DX_DOCDIR)/html[]dnl
+DX_CLEAN_HTML = \$(DX_DOCDIR)/html]dnl
 m4_foreach([DX_i], [m4_shift(DX_loop)], [[\\
-                \$(DX_DOCDIR]DX_i[)/html]])
+                \$(DX_DOCDIR]DX_i[)/html]])[
 
-"
-else
-    DX_SNIPPET_html=""
-fi
-if test $DX_FLAG_chi -eq 1; then
-    DX_SNIPPET_chi="
-DX_CLEAN_CHI = \$(DX_DOCDIR)/\$(PACKAGE).chi[]dnl
+"]],
+[[DX_SNIPPET_html=""]])
+AS_IF([[test $DX_FLAG_chi -eq 1]],
+[[DX_SNIPPET_chi="
+DX_CLEAN_CHI = \$(DX_DOCDIR)/\$(PACKAGE).chi]dnl
 m4_foreach([DX_i], [m4_shift(DX_loop)], [[\\
-               \$(DX_DOCDIR]DX_i[)/\$(PACKAGE).chi]])"
-else
-    DX_SNIPPET_chi=""
-fi
-if test $DX_FLAG_chm -eq 1; then
-    DX_SNIPPET_chm="## ------------------------------ ##
+               \$(DX_DOCDIR]DX_i[)/\$(PACKAGE).chi]])["]],
+[[DX_SNIPPET_chi=""]])
+AS_IF([[test $DX_FLAG_chm -eq 1]],
+[[DX_SNIPPET_chm="## ------------------------------ ##
 ## Rules specific for CHM output. ##
 ## ------------------------------ ##
 
-DX_CLEAN_CHM = \$(DX_DOCDIR)/chm[]dnl
+DX_CLEAN_CHM = \$(DX_DOCDIR)/chm]dnl
 m4_foreach([DX_i], [m4_shift(DX_loop)], [[\\
-               \$(DX_DOCDIR]DX_i[)/chm]])\
+               \$(DX_DOCDIR]DX_i[)/chm]])[\
 ${DX_SNIPPET_chi}
 
-"
-else
-    DX_SNIPPET_chm=""
-fi
-if test $DX_FLAG_man -eq 1; then
-    DX_SNIPPET_man="## ------------------------------ ##
+"]],
+[[DX_SNIPPET_chm=""]])
+AS_IF([[test $DX_FLAG_man -eq 1]],
+[[DX_SNIPPET_man="## ------------------------------ ##
 ## Rules specific for MAN output. ##
 ## ------------------------------ ##
 
-DX_CLEAN_MAN = \$(DX_DOCDIR)/man[]dnl
+DX_CLEAN_MAN = \$(DX_DOCDIR)/man]dnl
 m4_foreach([DX_i], [m4_shift(DX_loop)], [[\\
-               \$(DX_DOCDIR]DX_i[)/man]])
+               \$(DX_DOCDIR]DX_i[)/man]])[
 
-"
-else
-    DX_SNIPPET_man=""
-fi
-if test $DX_FLAG_rtf -eq 1; then
-    DX_SNIPPET_rtf="## ------------------------------ ##
+"]],
+[[DX_SNIPPET_man=""]])
+AS_IF([[test $DX_FLAG_rtf -eq 1]],
+[[DX_SNIPPET_rtf="## ------------------------------ ##
 ## Rules specific for RTF output. ##
 ## ------------------------------ ##
 
-DX_CLEAN_RTF = \$(DX_DOCDIR)/rtf[]dnl
+DX_CLEAN_RTF = \$(DX_DOCDIR)/rtf]dnl
 m4_foreach([DX_i], [m4_shift(DX_loop)], [[\\
-               \$(DX_DOCDIR]DX_i[)/rtf]])
+               \$(DX_DOCDIR]DX_i[)/rtf]])[
 
-"
-else
-    DX_SNIPPET_rtf=""
-fi
-if test $DX_FLAG_xml -eq 1; then
-    DX_SNIPPET_xml="## ------------------------------ ##
+"]],
+[[DX_SNIPPET_rtf=""]])
+AS_IF([[test $DX_FLAG_xml -eq 1]],
+[[DX_SNIPPET_xml="## ------------------------------ ##
 ## Rules specific for XML output. ##
 ## ------------------------------ ##
 
-DX_CLEAN_XML = \$(DX_DOCDIR)/xml[]dnl
+DX_CLEAN_XML = \$(DX_DOCDIR)/xml]dnl
 m4_foreach([DX_i], [m4_shift(DX_loop)], [[\\
-               \$(DX_DOCDIR]DX_i[)/xml]])
+               \$(DX_DOCDIR]DX_i[)/xml]])[
 
-"
-else
-    DX_SNIPPET_xml=""
-fi
-if test $DX_FLAG_ps -eq 1; then
-    DX_SNIPPET_ps="## ----------------------------- ##
+"]],
+[[DX_SNIPPET_xml=""]])
+AS_IF([[test $DX_FLAG_ps -eq 1]],
+[[DX_SNIPPET_ps="## ----------------------------- ##
 ## Rules specific for PS output. ##
 ## ----------------------------- ##
 
-DX_CLEAN_PS = \$(DX_DOCDIR)/\$(PACKAGE).ps[]dnl
+DX_CLEAN_PS = \$(DX_DOCDIR)/\$(PACKAGE).ps]dnl
 m4_foreach([DX_i], [m4_shift(DX_loop)], [[\\
-              \$(DX_DOCDIR]DX_i[)/\$(PACKAGE).ps]])
+              \$(DX_DOCDIR]DX_i[)/\$(PACKAGE).ps]])[
 
 DX_PS_GOAL = doxygen-ps
 
 doxygen-ps: \$(DX_CLEAN_PS)
 
-m4_foreach([DX_i], [DX_loop],
+]m4_foreach([DX_i], [DX_loop],
 [[\$(DX_DOCDIR]DX_i[)/\$(PACKAGE).ps: \$(DX_DOCDIR]DX_i[)/\$(PACKAGE).tag
 	\$(DX_V_LATEX)cd \$(DX_DOCDIR]DX_i[)/latex; \\
 	rm -f *.aux *.toc *.idx *.ind *.ilg *.log *.out; \\
@@ -485,25 +469,22 @@ m4_foreach([DX_i], [DX_loop],
 	done; \\
 	\$(DX_DVIPS) -o ../\$(PACKAGE).ps refman.dvi
 
-]])dnl
-"
-else
-    DX_SNIPPET_ps=""
-fi
-if test $DX_FLAG_pdf -eq 1; then
-    DX_SNIPPET_pdf="## ------------------------------ ##
+]])["]],
+[[DX_SNIPPET_ps=""]])
+AS_IF([[test $DX_FLAG_pdf -eq 1]],
+[[DX_SNIPPET_pdf="## ------------------------------ ##
 ## Rules specific for PDF output. ##
 ## ------------------------------ ##
 
-DX_CLEAN_PDF = \$(DX_DOCDIR)/\$(PACKAGE).pdf[]dnl
+DX_CLEAN_PDF = \$(DX_DOCDIR)/\$(PACKAGE).pdf]dnl
 m4_foreach([DX_i], [m4_shift(DX_loop)], [[\\
-               \$(DX_DOCDIR]DX_i[)/\$(PACKAGE).pdf]])
+               \$(DX_DOCDIR]DX_i[)/\$(PACKAGE).pdf]])[
 
 DX_PDF_GOAL = doxygen-pdf
 
 doxygen-pdf: \$(DX_CLEAN_PDF)
 
-m4_foreach([DX_i], [DX_loop],
+]m4_foreach([DX_i], [DX_loop],
 [[\$(DX_DOCDIR]DX_i[)/\$(PACKAGE).pdf: \$(DX_DOCDIR]DX_i[)/\$(PACKAGE).tag
 	\$(DX_V_LATEX)cd \$(DX_DOCDIR]DX_i[)/latex; \\
 	rm -f *.aux *.toc *.idx *.ind *.ilg *.log *.out; \\
@@ -519,31 +500,26 @@ m4_foreach([DX_i], [DX_loop],
 	done; \\
 	mv refman.pdf ../\$(PACKAGE).pdf
 
-]])dnl
-"
-else
-    DX_SNIPPET_pdf=""
-fi
-if test $DX_FLAG_ps -eq 1 -o $DX_FLAG_pdf -eq 1; then
-    DX_SNIPPET_latex="## ------------------------------------------------- ##
+]])["]],
+[[DX_SNIPPET_pdf=""]])
+AS_IF([[test $DX_FLAG_ps -eq 1 -o $DX_FLAG_pdf -eq 1]],
+[[DX_SNIPPET_latex="## ------------------------------------------------- ##
 ## Rules specific for LaTeX (shared for PS and PDF). ##
 ## ------------------------------------------------- ##
 
 DX_V_LATEX = \$(_DX_v_LATEX_\$(V))
 _DX_v_LATEX_ = \$(_DX_v_LATEX_\$(AM_DEFAULT_VERBOSITY))
-_DX_v_LATEX_0 = @echo \"  LATEX \" \$[]][[]@;
+_DX_v_LATEX_0 = @echo \"  LATEX \" \$][@;
 
-DX_CLEAN_LATEX = \$(DX_DOCDIR)/latex[]dnl
+DX_CLEAN_LATEX = \$(DX_DOCDIR)/latex]dnl
 m4_foreach([DX_i], [m4_shift(DX_loop)], [[\\
-                 \$(DX_DOCDIR]DX_i[)/latex]])
+                 \$(DX_DOCDIR]DX_i[)/latex]])[
 
-"
-else
-    DX_SNIPPET_latex=""
-fi
+"]],
+[[DX_SNIPPET_latex=""]])
 
-if test $DX_FLAG_doc -eq 1; then
-    DX_SNIPPET_doc="## --------------------------------- ##
+AS_IF([[test $DX_FLAG_doc -eq 1]],
+[[DX_SNIPPET_doc="## --------------------------------- ##
 ## Format-independent Doxygen rules. ##
 ## --------------------------------- ##
 
@@ -563,23 +539,24 @@ _DX_v_DXGEN_0 = @echo \"  DXGEN \" \$<;
 
 .INTERMEDIATE: doxygen-run \$(DX_PS_GOAL) \$(DX_PDF_GOAL)
 
-doxygen-run:[]m4_foreach([DX_i], [DX_loop],
-                         [[ \$(DX_DOCDIR]DX_i[)/\$(PACKAGE).tag]])
+doxygen-run:]m4_foreach([DX_i], [DX_loop],
+                         [[ \$(DX_DOCDIR]DX_i[)/\$(PACKAGE).tag]])[
 
 doxygen-doc: doxygen-run \$(DX_PS_GOAL) \$(DX_PDF_GOAL)
 
-m4_foreach([DX_i], [DX_loop],
+]m4_foreach([DX_i], [DX_loop],
 [[\$(DX_DOCDIR]DX_i[)/\$(PACKAGE).tag: \$(DX_CONFIG]DX_i[) \$(pkginclude_HEADERS)
 	\$(A""M_V_at)rm -rf \$(DX_DOCDIR]DX_i[)
 	\$(DX_V_DXGEN)\$(DX_ENV) DOCDIR=\$(DX_DOCDIR]DX_i[) \$(DX_DOXYGEN) \$(DX_CONFIG]DX_i[)
 	\$(A""M_V_at)echo Timestamp >\$][@
 
 ]])dnl
-DX_CLEANFILES = \\
+[DX_CLEANFILES = \\]
 m4_foreach([DX_i], [DX_loop],
-[[	\$(DX_DOCDIR]DX_i[)/\$(PACKAGE).tag \\
+[[	\$(DX_DOCDIR]DX_i[)/doxygen_sqlite3.db \\
+	\$(DX_DOCDIR]DX_i[)/\$(PACKAGE).tag \\
 ]])dnl
-	-r \\
+[	-r \\
 	\$(DX_CLEAN_HTML) \\
 	\$(DX_CLEAN_CHM) \\
 	\$(DX_CLEAN_CHI) \\
@@ -588,19 +565,17 @@ m4_foreach([DX_i], [DX_loop],
 	\$(DX_CLEAN_XML) \\
 	\$(DX_CLEAN_PS) \\
 	\$(DX_CLEAN_PDF) \\
-	\$(DX_CLEAN_LATEX)"
-else
-    DX_SNIPPET_doc=""
-fi
+	\$(DX_CLEAN_LATEX)"]],
+[[DX_SNIPPET_doc=""]])
 AC_SUBST([DX_RULES],
 ["${DX_SNIPPET_doc}"])dnl
 AM_SUBST_NOTMAKE([DX_RULES])
 
 #For debugging:
-echo DX_FLAG_doc=$DX_FLAG_doc
+#echo DX_FLAG_doc=$DX_FLAG_doc
 #echo DX_FLAG_dot=$DX_FLAG_dot
 #echo DX_FLAG_man=$DX_FLAG_man
-echo DX_FLAG_html=$DX_FLAG_html
+#echo DX_FLAG_html=$DX_FLAG_html
 #echo DX_FLAG_chm=$DX_FLAG_chm
 #echo DX_FLAG_chi=$DX_FLAG_chi
 #echo DX_FLAG_rtf=$DX_FLAG_rtf
