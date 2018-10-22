@@ -283,6 +283,8 @@ AM_CONDITIONAL([ARCH_IS_X86_64], [test "x${ARCH_ABI}" = "xx86_64-linux"])
 DX_HTML_FEATURE(ON)
 DX_PDF_FEATURE(OFF)
 DX_PS_FEATURE(OFF)
+DX_ENV_APPEND(WITH_PLATFORM, $with_platform)
+
 DX_INIT_DOXYGEN($PACKAGE_NAME,
 		${srcdir}/doc/application-api-guide/Doxyfile,
 		${builddir}/doc/application-api-guide/output,
