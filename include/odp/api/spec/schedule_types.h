@@ -166,6 +166,21 @@ typedef	struct odp_schedule_param_t {
 } odp_schedule_param_t;
 
 /**
+ * Scheduler capabilities
+ */
+typedef struct odp_schedule_capability_t {
+	/** Maximum number of ordered locks per queue */
+	uint32_t max_ordered_locks;
+
+	/** Maximum number of scheduling groups */
+	uint32_t max_groups;
+
+	/** Number of scheduling priorities */
+	uint32_t max_prios;
+
+} odp_schedule_capability_t;
+
+/**
  * @}
  */
 
