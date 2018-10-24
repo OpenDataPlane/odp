@@ -223,7 +223,7 @@ static pool_t *_odp_ishmbud_pool_create(const char *pool_name, int store_idx,
 
 	/* allocate required memory: */
 	blk_idx = _odp_ishm_reserve(pool_name, total_sz, -1,
-				    ODP_CACHE_LINE_SIZE, flags, 0);
+				    ODP_CACHE_LINE_SIZE, 0, flags, 0);
 	if (blk_idx < 0) {
 		ODP_ERR("_odp_ishm_reserve failed.");
 		return NULL;
@@ -558,7 +558,7 @@ static pool_t *_odp_ishmslab_pool_create(const char *pool_name, int store_idx,
 
 	/* allocate required memory: */
 	blk_idx = _odp_ishm_reserve(pool_name, total_sz, -1,
-				    ODP_CACHE_LINE_SIZE, flags, 0);
+				    ODP_CACHE_LINE_SIZE, 0, flags, 0);
 	if (blk_idx < 0) {
 		ODP_ERR("_odp_ishm_reserve failed.");
 		return NULL;

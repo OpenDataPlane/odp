@@ -110,7 +110,8 @@
 static int read_shmem_attribues(uint64_t ext_odp_pid, const char *blockname,
 				char *filename, uint64_t *len,
 				uint32_t *flags, uint64_t *user_len,
-				uint32_t *user_flags, uint32_t *align)
+				uint32_t *user_flags, uint32_t *align,
+				uint64_t *offset)
 {
 	char shm_attr_filename[PATH_MAX];
 	FILE *export_file;
@@ -149,6 +150,9 @@ static int read_shmem_attribues(uint64_t ext_odp_pid, const char *blockname,
 		goto export_file_read_err;
 
 	if (fscanf(export_file, "align: %" PRIu32 " ", align) != 1)
+		goto export_file_read_err;
+
+	if (fscanf(export_file, "offset: %" PRIu64 " ", offset) != 1)
 		goto export_file_read_err;
 
 	fclose(export_file);
@@ -209,6 +213,7 @@ int main(int argc __attribute__((unused)), char *argv[])
 	int fifo_fd = -1;
 	char shm_filename[PATH_MAX];/* shared mem device name, under /dev/shm */
 	uint64_t len;
+	uint64_t offset;
 	uint32_t flags;
 	uint64_t user_len;
 	uint32_t user_flags;
@@ -260,8 +265,9 @@ int main(int argc __attribute__((unused)), char *argv[])
 	/* read the shared memory attributes (includes the shm filename): */
 	if (read_shmem_attribues(odp_app1, SHM_NAME,
 				 shm_filename, &len, &flags,
-				 &user_len, &user_flags, &align) != 0) {
-		printf("erorr read_shmem_attribues\n");
+				 &user_len, &user_flags, &align,
+				 &offset) != 0) {
+		printf("error read_shmem_attribues\n");
 		test_failure(fifo_name, fifo_fd, odp_app1);
 	}
 
@@ -281,9 +287,10 @@ int main(int argc __attribute__((unused)), char *argv[])
 	 */
 	size = sizeof(test_shared_linux_data_t);
 
-	addr = mmap(NULL, size, PROT_READ, MAP_SHARED, shm_fd, 0);
+	addr = mmap(NULL, size, PROT_READ, MAP_SHARED, shm_fd, offset);
 	if (addr == MAP_FAILED) {
-		fprintf(stderr, "shmem_linux: map failed!\n");
+		fprintf(stderr, "shmem_linux: mmap failed: %s\n",
+			strerror(errno));
 		test_failure(fifo_name, fifo_fd, odp_app1);
 	}
 
