@@ -14,6 +14,8 @@
 #define ODP_API_SPEC_SCHEDULE_TYPES_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/support.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -177,6 +179,24 @@ typedef struct odp_schedule_capability_t {
 
 	/** Number of scheduling priorities */
 	uint32_t max_prios;
+
+	/** Maximum number of scheduled (ODP_BLOCKING) queues of the default
+	 * size. */
+	uint32_t max_queues;
+
+	/** Maximum number of events a scheduled (ODP_BLOCKING) queue can store
+	 * simultaneously. The value of zero means that scheduled queues do not
+	 * have a size limit, but a single queue can store all available
+	 * events. */
+	uint32_t max_queue_size;
+
+	/** Lock-free (ODP_NONBLOCKING_LF) queues support.
+	 * The specification is the same as for the blocking implementation. */
+	odp_support_t lockfree_queues;
+
+	/** Wait-free (ODP_NONBLOCKING_WF) queues support.
+	 * The specification is the same as for the blocking implementation. */
+	odp_support_t waitfree_queues;
 
 } odp_schedule_capability_t;
 
