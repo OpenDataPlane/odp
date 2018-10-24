@@ -58,7 +58,7 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 
 /* A thread polls a non preferred sched queue every this many polls
  * of the prefer queue. */
-#define MAX_PREFER_WEIGHT 63
+#define MAX_PREFER_WEIGHT 127
 #define MIN_PREFER_WEIGHT 1
 #define MAX_PREFER_RATIO  (MAX_PREFER_WEIGHT + 1)
 
