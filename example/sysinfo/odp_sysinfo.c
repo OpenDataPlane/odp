@@ -238,6 +238,7 @@ int main(void)
 	odp_queue_capability_t queue_capa;
 	odp_timer_capability_t timer_capa;
 	odp_crypto_capability_t crypto_capa;
+	odp_schedule_capability_t schedule_capa;
 	uint64_t huge_page[MAX_HUGE_PAGES];
 	char ava_mask_str[ODP_CPUMASK_STR_SIZE];
 	char work_mask_str[ODP_CPUMASK_STR_SIZE];
@@ -290,6 +291,11 @@ int main(void)
 
 	if (odp_queue_capability(&queue_capa)) {
 		printf("queue capability failed\n");
+		return -1;
+	}
+
+	if (odp_schedule_capability(&schedule_capa)) {
+		printf("schedule capability failed\n");
 		return -1;
 	}
 
@@ -393,9 +399,9 @@ int main(void)
 	printf("\n");
 	printf("  SCHEDULER\n");
 	printf("    max ordered locks:    %" PRIu32 "\n",
-	       queue_capa.max_ordered_locks);
-	printf("    max groups:           %u\n", queue_capa.max_sched_groups);
-	printf("    priorities:           %u\n", queue_capa.sched_prios);
+	       schedule_capa.max_ordered_locks);
+	printf("    max groups:           %u\n", schedule_capa.max_groups);
+	printf("    priorities:           %u\n", schedule_capa.prios);
 	printf("    sched.max_num:        %" PRIu32 "\n",
 	       queue_capa.sched.max_num);
 	printf("    sched.max_size:       %" PRIu32 "\n",
