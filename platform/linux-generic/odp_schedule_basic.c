@@ -333,7 +333,7 @@ static inline uint8_t prio_spread_index(uint32_t index)
 static void sched_local_init(void)
 {
 	int i;
-	uint8_t spread;
+	uint8_t spread, prefer_ratio;
 	uint8_t num_spread = sched->config.num_spread;
 	uint8_t offset = 1;
 
@@ -344,11 +344,12 @@ static void sched_local_init(void)
 	sched_local.stash.queue = ODP_QUEUE_INVALID;
 
 	spread = prio_spread_index(sched_local.thr);
+	prefer_ratio = sched->config.prefer_ratio;
 
 	for (i = 0; i < SPREAD_TBL_SIZE; i++) {
 		sched_local.spread_tbl[i] = spread;
 
-		if (num_spread > 1 && (i % MAX_PREFER_RATIO) == 0) {
+		if (num_spread > 1 && (i % prefer_ratio) == 0) {
 			sched_local.spread_tbl[i] = prio_spread_index(spread +
 								      offset);
 			offset++;
@@ -362,6 +363,7 @@ static int schedule_init_global(void)
 {
 	odp_shm_t shm;
 	int i, j, grp;
+	int prefer_ratio;
 
 	ODP_DBG("Schedule init ... ");
 
@@ -382,8 +384,10 @@ static int schedule_init_global(void)
 		return -1;
 	}
 
+	prefer_ratio = sched->config.prefer_ratio;
+
 	/* When num_spread == 1, only spread_tbl[0] is used. */
-	sched->max_spread = (sched->config.num_spread - 1) * MAX_PREFER_RATIO;
+	sched->max_spread = (sched->config.num_spread - 1) * prefer_ratio;
 	sched->shm  = shm;
 	odp_spinlock_init(&sched->mask_lock);
 
