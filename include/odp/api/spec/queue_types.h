@@ -139,7 +139,8 @@ typedef struct odp_queue_capability_t {
 	 * instead */
 	unsigned int ODP_DEPRECATE(max_sched_groups);
 
-	/** @deprecated Use prios field of odp_schedule_capability_t instead */
+	/** @deprecated Use max_prios field of odp_schedule_capability_t
+	 * instead */
 	unsigned int ODP_DEPRECATE(sched_prios);
 
 	/** Plain queue capabilities */
@@ -182,7 +183,8 @@ typedef struct odp_queue_capability_t {
 
 	} plain;
 
-	/** Scheduled queue capabilities */
+	/** @deprecated Use queue capabilities in odp_schedule_capability_t
+	 * instead */
 	struct {
 		/** Maximum number of scheduled (ODP_BLOCKING) queues of the
 		  * default size. */
@@ -220,7 +222,7 @@ typedef struct odp_queue_capability_t {
 
 		} waitfree;
 
-	} sched;
+	} ODP_DEPRECATE(sched);
 
 } odp_queue_capability_t;
 
