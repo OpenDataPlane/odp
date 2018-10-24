@@ -13,9 +13,9 @@ extern "C" {
 
 #include <stdint.h>
 
-void *_odp_ishmphy_book_va(uintptr_t len, intptr_t align);
-int   _odp_ishmphy_unbook_va(void);
-void *_odp_ishmphy_map(int fd, void *start, uint64_t size, int flags);
+void *_odp_ishmphy_reserve_single_va(uint64_t len, int fd);
+int   _odp_ishmphy_free_single_va(void);
+void *_odp_ishmphy_map(int fd, uint64_t size, uint64_t offset, int flags);
 int   _odp_ishmphy_unmap(void *start, uint64_t len, int flags);
 
 #ifdef __cplusplus

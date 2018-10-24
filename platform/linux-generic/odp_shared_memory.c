@@ -53,7 +53,7 @@ odp_shm_t _odp_shm_reserve(const char *name, uint64_t size, uint32_t align,
 	flgs = get_ishm_flags(flags);
 	flgs |= extra_flags;
 
-	block_index = _odp_ishm_reserve(name, size, -1, align, flgs, flags);
+	block_index = _odp_ishm_reserve(name, size, -1, align, 0, flgs, flags);
 	if (block_index >= 0)
 		return to_handle(block_index);
 	else
