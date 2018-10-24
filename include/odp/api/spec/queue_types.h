@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 #include <odp/api/schedule_types.h>
+#include <odp/api/deprecated.h>
 
 /** @addtogroup odp_queue
  *  @{
@@ -130,14 +131,16 @@ typedef struct odp_queue_capability_t {
 	  * types are used simultaneously. */
 	uint32_t max_queues;
 
-	/** Maximum number of ordered locks per queue */
-	uint32_t max_ordered_locks;
+	/** @deprecated Use max_ordered_locks field of
+	 * odp_schedule_capability_t instead */
+	uint32_t ODP_DEPRECATE(max_ordered_locks);
 
-	/** Maximum number of scheduling groups */
-	unsigned max_sched_groups;
+	/** @deprecated Use max_groups field of odp_schedule_capability_t
+	 * instead */
+	unsigned int ODP_DEPRECATE(max_sched_groups);
 
-	/** Number of scheduling priorities */
-	unsigned sched_prios;
+	/** @deprecated Use prios field of odp_schedule_capability_t instead */
+	unsigned int ODP_DEPRECATE(sched_prios);
 
 	/** Plain queue capabilities */
 	struct {

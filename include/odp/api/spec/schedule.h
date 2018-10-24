@@ -258,6 +258,18 @@ int odp_schedule_default_prio(void);
 int odp_schedule_num_prio(void);
 
 /**
+ * Query scheduler capabilities
+ *
+ * Outputs schedule capabilities on success.
+ *
+ * @param[out] capa   Pointer to capability structure for output
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_schedule_capability(odp_schedule_capability_t *capa);
+
+/**
  * Schedule group create
  *
  * Creates a schedule group with the thread mask. Only threads in the
