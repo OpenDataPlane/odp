@@ -214,7 +214,7 @@ jobs:
                           - true
                   script:
                           - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
-                          - docker run  -i -t -v `pwd`:/odp
+                          - docker run -i -t -v `pwd`:/odp --shm-size 8g
                               -e CC="${CC}"
                               ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${ARCH}.sh
                 - stage: "build only"
@@ -223,7 +223,7 @@ jobs:
                           - true
                   script:
                           - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
-                          - docker run  -i -t -v `pwd`:/odp
+                          - docker run -i -t -v `pwd`:/odp --shm-size 8g
                               -e CC="${CC}"
                               ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${ARCH}.sh
                 - stage: "build only"
@@ -232,7 +232,7 @@ jobs:
                           - true
                   script:
                           - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
-                          - docker run  -i -t -v `pwd`:/odp
+                          - docker run -i -t -v `pwd`:/odp
                               -e CC="${CC}"
                               ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${ARCH}.sh
                 - stage: "build only"
@@ -241,7 +241,7 @@ jobs:
                           - true
                   script:
                           - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
-                          - docker run  -i -t -v `pwd`:/odp
+                          - docker run -i -t -v `pwd`:/odp --shm-size 8g
                               -e CC="${CC}"
                               ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${ARCH}.sh
                 - stage: test

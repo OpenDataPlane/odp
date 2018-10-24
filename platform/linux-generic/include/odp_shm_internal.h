@@ -38,7 +38,7 @@ odp_shm_t _odp_shm_reserve(const char *name, uint64_t size, uint32_t align,
 			   uint32_t flags, uint32_t extra_flags);
 
 int   _odp_ishm_reserve(const char *name, uint64_t size, int fd, uint32_t align,
-			uint32_t flags, uint32_t user_flags);
+			uint64_t offset, uint32_t flags, uint32_t user_flags);
 int   _odp_ishm_free_by_index(int block_index);
 int   _odp_ishm_lookup_by_name(const char *name);
 int   _odp_ishm_find_exported(const char *remote_name,
