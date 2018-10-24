@@ -58,10 +58,12 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 
 /* A thread polls a non preferred sched queue every this many polls
  * of the prefer queue. */
-#define PREFER_RATIO 64
+#define MAX_PREFER_WEIGHT 63
+#define MIN_PREFER_WEIGHT 1
+#define MAX_PREFER_RATIO  (MAX_PREFER_WEIGHT + 1)
 
 /* Spread weight table */
-#define SPREAD_TBL_SIZE ((MAX_SPREAD - 1) * PREFER_RATIO)
+#define SPREAD_TBL_SIZE ((MAX_SPREAD - 1) * MAX_PREFER_RATIO)
 
 /* Maximum number of packet IO interfaces */
 #define NUM_PKTIO ODP_CONFIG_PKTIO_ENTRIES
@@ -182,6 +184,7 @@ typedef struct {
 		uint8_t burst_default[NUM_PRIO];
 		uint8_t burst_max[NUM_PRIO];
 		uint8_t num_spread;
+		uint8_t prefer_ratio;
 	} config;
 
 	uint16_t         max_spread;
@@ -256,11 +259,27 @@ static int read_config_file(sched_global_t *sched)
 	}
 
 	if (val > MAX_SPREAD || val < MIN_SPREAD) {
-		ODP_ERR("Bad value %s = %u\n", str, val);
+		ODP_ERR("Bad value %s = %u [min: %u, max: %u]\n", str, val,
+			MIN_SPREAD, MAX_SPREAD);
 		return -1;
 	}
 
 	sched->config.num_spread = val;
+	ODP_PRINT("  %s: %i\n", str, val);
+
+	str = "sched_basic.prio_spread_weight";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	if (val > MAX_PREFER_WEIGHT || val < MIN_PREFER_WEIGHT) {
+		ODP_ERR("Bad value %s = %u [min: %u, max: %u]\n", str, val,
+			MIN_PREFER_WEIGHT, MAX_PREFER_WEIGHT);
+		return -1;
+	}
+
+	sched->config.prefer_ratio = val + 1;
 	ODP_PRINT("  %s: %i\n", str, val);
 
 	str = "sched_basic.burst_size_default";
@@ -329,7 +348,7 @@ static void sched_local_init(void)
 	for (i = 0; i < SPREAD_TBL_SIZE; i++) {
 		sched_local.spread_tbl[i] = spread;
 
-		if (num_spread > 1 && (i % PREFER_RATIO) == 0) {
+		if (num_spread > 1 && (i % MAX_PREFER_RATIO) == 0) {
 			sched_local.spread_tbl[i] = prio_spread_index(spread +
 								      offset);
 			offset++;
@@ -364,7 +383,7 @@ static int schedule_init_global(void)
 	}
 
 	/* When num_spread == 1, only spread_tbl[0] is used. */
-	sched->max_spread = (sched->config.num_spread - 1) * PREFER_RATIO;
+	sched->max_spread = (sched->config.num_spread - 1) * MAX_PREFER_RATIO;
 	sched->shm  = shm;
 	odp_spinlock_init(&sched->mask_lock);
 
