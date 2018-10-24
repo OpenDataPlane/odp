@@ -152,16 +152,16 @@ void configure_cls_pmr_chain(void)
 	uint32_t addr;
 	uint32_t mask;
 	odp_pmr_param_t pmr_param;
-	odp_queue_capability_t queue_capa;
+	odp_schedule_capability_t schedule_capa;
 
-	CU_ASSERT_FATAL(odp_queue_capability(&queue_capa) == 0);
+	CU_ASSERT_FATAL(odp_schedule_capability(&schedule_capa) == 0);
 
 	odp_queue_param_init(&qparam);
 	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = odp_schedule_default_prio();
 	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
-	qparam.sched.lock_count = queue_capa.max_ordered_locks;
+	qparam.sched.lock_count = schedule_capa.max_ordered_locks;
 	sprintf(queuename, "%s", "SrcQueue");
 
 	queue_list[CLS_PMR_CHAIN_SRC] = odp_queue_create(queuename, &qparam);
