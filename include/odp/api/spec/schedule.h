@@ -258,6 +258,44 @@ int odp_schedule_default_prio(void);
 int odp_schedule_num_prio(void);
 
 /**
+ * Initialize schedule configuration options
+ *
+ * Initialize an odp_schedule_config_t to its default values.
+ *
+ * @param[out] config  Pointer to schedule configuration structure
+ */
+void odp_schedule_config_init(odp_schedule_config_t *config);
+
+/**
+ * Global schedule configuration
+ *
+ * Initialize and configure scheduler with global configuration options
+ * to schedule events across different scheduled queues.
+ * This function must be called before scheduler is used (any other scheduler
+ * function is called except odp_schedule_capability() and
+ * odp_schedule_config_init()) or any queues are created (by application itself
+ * or by other ODP modules).
+ * An application can pass NULL value to use default configuration. It will
+ * have the same result as filling the structure with
+ * odp_schedule_config_init() and then passing it to odp_schedule_config().
+ *
+ * The initialization sequeunce should be,
+ * odp_schedule_capability()
+ * odp_schedule_config_init()
+ * odp_schedule_config()
+ * odp_schedule()
+ *
+ * @param config   Pointer to scheduler configuration structure or NULL for the
+ *                 default configuration
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ *
+ * @see odp_schedule_capability(), odp_schedule_config_init()
+ */
+int odp_schedule_config(const odp_schedule_config_t *config);
+
+/**
  * Query scheduler capabilities
  *
  * Outputs schedule capabilities on success.

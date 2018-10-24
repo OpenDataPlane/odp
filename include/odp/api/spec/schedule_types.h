@@ -201,6 +201,25 @@ typedef struct odp_schedule_capability_t {
 } odp_schedule_capability_t;
 
 /**
+ * Schedule configuration
+ */
+typedef struct odp_schedule_config_t {
+	/** Maximum number of scheduled queues to be supported.
+	 *
+	 * @see odp_schedule_capability_t
+	 */
+	uint32_t num_queues;
+
+	/** Maximum number of events required to be stored simultaneously in
+	 * scheduled queue. This number must not exceed 'max_queue_size'
+	 * capability.  A value of 0 configures default queue size supported by
+	 * the implementation.
+	 */
+	uint32_t queue_size;
+
+} odp_schedule_config_t;
+
+/**
  * @}
  */
 
