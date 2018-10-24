@@ -141,6 +141,17 @@ static void release_context(odp_schedule_sync_t sync)
 		odp_schedule_release_ordered();
 }
 
+static void scheduler_test_capa(void)
+{
+	odp_schedule_capability_t capa;
+
+	memset(&capa, 0, sizeof(odp_schedule_capability_t));
+	CU_ASSERT_FATAL(odp_schedule_capability(&capa) == 0);
+
+	CU_ASSERT(capa.max_groups != 0);
+	CU_ASSERT(capa.max_prios != 0);
+}
+
 static void scheduler_test_wait_time(void)
 {
 	int i;
@@ -1643,6 +1654,7 @@ static int create_queues(test_globals_t *globals)
 {
 	int i, j, prios, rc;
 	odp_queue_capability_t capa;
+	odp_schedule_capability_t sched_capa;
 	odp_pool_t queue_ctx_pool;
 	odp_pool_param_t params;
 	odp_buffer_t queue_ctx_buf;
@@ -1659,11 +1671,16 @@ static int create_queues(test_globals_t *globals)
 		return -1;
 	}
 
+	if (odp_schedule_capability(&sched_capa) < 0) {
+		printf("Queue capability query failed\n");
+		return -1;
+	}
+
 	/* Limit to test maximum */
-	if (capa.max_ordered_locks > MAX_ORDERED_LOCKS) {
-		capa.max_ordered_locks = MAX_ORDERED_LOCKS;
+	if (sched_capa.max_ordered_locks > MAX_ORDERED_LOCKS) {
+		sched_capa.max_ordered_locks = MAX_ORDERED_LOCKS;
 		printf("Testing only %u ordered locks\n",
-		       capa.max_ordered_locks);
+		       sched_capa.max_ordered_locks);
 	}
 
 	globals->max_sched_queue_size = BUFS_PER_QUEUE_EXCL;
@@ -1764,7 +1781,7 @@ static int create_queues(test_globals_t *globals)
 
 			snprintf(name, sizeof(name), "sched_%d_%d_o", i, j);
 			p.sched.sync = ODP_SCHED_SYNC_ORDERED;
-			p.sched.lock_count = capa.max_ordered_locks;
+			p.sched.lock_count = sched_capa.max_ordered_locks;
 			p.size = 0;
 			q = odp_queue_create(name, &p);
 
@@ -1773,12 +1790,12 @@ static int create_queues(test_globals_t *globals)
 				return -1;
 			}
 			if (odp_queue_lock_count(q) !=
-			    capa.max_ordered_locks) {
+			    sched_capa.max_ordered_locks) {
 				printf("Queue %" PRIu64 " created with "
 				       "%d locks instead of expected %d\n",
 				       odp_queue_to_u64(q),
 				       odp_queue_lock_count(q),
-				       capa.max_ordered_locks);
+				       sched_capa.max_ordered_locks);
 				return -1;
 			}
 
@@ -1795,7 +1812,7 @@ static int create_queues(test_globals_t *globals)
 			qctx->sequence = 0;
 
 			for (ndx = 0;
-			     ndx < capa.max_ordered_locks;
+			     ndx < sched_capa.max_ordered_locks;
 			     ndx++) {
 				qctx->lock_sequence[ndx] = 0;
 			}
@@ -1949,6 +1966,7 @@ static int scheduler_suite_term(void)
 }
 
 odp_testinfo_t scheduler_suite[] = {
+	ODP_TEST_INFO(scheduler_test_capa),
 	ODP_TEST_INFO(scheduler_test_wait_time),
 	ODP_TEST_INFO(scheduler_test_num_prio),
 	ODP_TEST_INFO(scheduler_test_queue_destroy),
