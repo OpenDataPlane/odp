@@ -33,8 +33,6 @@
 #include <string.h>
 #include <inttypes.h>
 
-#define NUM_INTERNAL_QUEUES 64
-
 #define MIN(a, b) \
 	({ \
 		__typeof__(a) tmp_a = (a); \
