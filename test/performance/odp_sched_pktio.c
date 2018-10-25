@@ -24,7 +24,6 @@
 #define MAX_PKT_LEN       1514
 #define MAX_PKT_NUM       (128 * 1024)
 #define MIN_PKT_SEG_LEN   64
-#define BURST_SIZE        32
 #define CHECK_PERIOD      10000
 #define TEST_PASSED_LIMIT 5000
 #define TIMEOUT_OFFSET_NS 1000000
@@ -38,6 +37,7 @@ typedef struct test_options_t {
 	int num_worker;
 	int num_pktio;
 	int num_pktio_queue;
+	int burst_size;
 	int pipe_stages;
 	int pipe_queues;
 	uint32_t pipe_queue_size;
@@ -182,7 +182,6 @@ static inline void send_packets(test_global_t *test_global,
 
 static int worker_thread_direct(void *arg)
 {
-	odp_event_t ev[BURST_SIZE];
 	int num_pkt, out;
 	odp_pktout_queue_t pktout;
 	odp_queue_t queue;
@@ -191,6 +190,7 @@ static int worker_thread_direct(void *arg)
 	test_global_t *test_global = worker_arg->test_global_ptr;
 	int worker_id = worker_arg->worker_id;
 	uint32_t polls = 0;
+	int burst_size = test_global->opt.burst_size;
 
 	printf("Worker %i started\n", worker_id);
 
@@ -198,10 +198,11 @@ static int worker_thread_direct(void *arg)
 	odp_barrier_wait(&test_global->worker_start);
 
 	while (1) {
-		odp_packet_t pkt[BURST_SIZE];
+		odp_event_t ev[burst_size];
+		odp_packet_t pkt[burst_size];
 
 		num_pkt = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT,
-					     ev, BURST_SIZE);
+					     ev, burst_size);
 
 		polls++;
 
@@ -267,7 +268,6 @@ static inline odp_queue_t next_queue(test_global_t *test_global, int input,
 
 static int worker_thread_pipeline(void *arg)
 {
-	odp_event_t ev[BURST_SIZE];
 	int i, num_pkt, input, output, output_queue;
 	odp_queue_t queue, dst_queue;
 	odp_pktout_queue_t pktout;
@@ -281,6 +281,7 @@ static int worker_thread_pipeline(void *arg)
 	int num_pktio = test_global->opt.num_pktio;
 	int num_pktio_queue = test_global->opt.num_pktio_queue;
 	uint32_t polls = 0;
+	int burst_size = test_global->opt.burst_size;
 
 	printf("Worker %i started\n", worker_id);
 
@@ -288,10 +289,11 @@ static int worker_thread_pipeline(void *arg)
 	odp_barrier_wait(&test_global->worker_start);
 
 	while (1) {
-		odp_packet_t pkt[BURST_SIZE];
+		odp_event_t ev[burst_size];
+		odp_packet_t pkt[burst_size];
 
 		num_pkt = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT,
-					     ev, BURST_SIZE);
+					     ev, burst_size);
 
 		polls++;
 
@@ -399,7 +401,6 @@ static int worker_thread_pipeline(void *arg)
 
 static int worker_thread_timers(void *arg)
 {
-	odp_event_t ev[BURST_SIZE];
 	int num, num_pkt, out, tmos, i, src_pktio, src_queue;
 	odp_pktout_queue_t pktout;
 	odp_queue_t queue;
@@ -410,6 +411,7 @@ static int worker_thread_timers(void *arg)
 	test_global_t *test_global = worker_arg->test_global_ptr;
 	int worker_id = worker_arg->worker_id;
 	uint32_t polls = 0;
+	int burst_size = test_global->opt.burst_size;
 	uint64_t tick = test_global->timer.timeout_tick;
 
 	printf("Worker (timers) %i started\n", worker_id);
@@ -418,10 +420,11 @@ static int worker_thread_timers(void *arg)
 	odp_barrier_wait(&test_global->worker_start);
 
 	while (1) {
-		odp_packet_t pkt[BURST_SIZE];
+		odp_event_t ev[burst_size];
+		odp_packet_t pkt[burst_size];
 
 		num = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT,
-					 ev, BURST_SIZE);
+					 ev, burst_size);
 
 		polls++;
 
@@ -534,6 +537,7 @@ static void print_usage(const char *progname)
 	       "  -i, --interface <name>    Packet IO interfaces (comma-separated, no spaces)\n"
 	       "  -c, --num_cpu <number>    Worker thread count. Default: 1\n"
 	       "  -q, --num_queue <number>  Number of pktio queues. Default: Worker thread count\n"
+	       "  -b, --burst <number>      Maximum number of events requested from scheduler. Default: 32\n"
 	       "  -t, --timeout <number>    Flow inactivity timeout (in usec) per packet. Default: 0 (don't use timers)\n"
 	       "  --pipe-stages <number>    Number of pipeline stages per interface\n"
 	       "  --pipe-queues <number>    Number of queues per pipeline stage\n"
@@ -553,6 +557,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"interface",   required_argument, NULL, 'i'},
 		{"num_cpu",     required_argument, NULL, 'c'},
 		{"num_queue",   required_argument, NULL, 'q'},
+		{"burst",       required_argument, NULL, 'b'},
 		{"timeout",     required_argument, NULL, 't'},
 		{"sched_mode",  required_argument, NULL, 'm'},
 		{"pipe-stages", required_argument, NULL,  0},
@@ -562,7 +567,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"help",        no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+i:c:q:t:m:sh";
+	const char *shortopts =  "+i:c:q:b:t:m:sh";
 	int ret = 0;
 
 	memset(test_options, 0, sizeof(test_options_t));
@@ -570,6 +575,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->sched_mode = SCHED_MODE_ATOMIC;
 	test_options->num_worker = 1;
 	test_options->num_pktio_queue = 0;
+	test_options->burst_size = 32;
 	test_options->pipe_queue_size = 256;
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
@@ -627,6 +633,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 'q':
 			test_options->num_pktio_queue = atoi(optarg);
+			break;
+		case 'b':
+			test_options->burst_size = atoi(optarg);
 			break;
 		case 't':
 			test_options->timeout_us = atol(optarg);
@@ -771,6 +780,7 @@ static void print_config(test_global_t *test_global)
 	       "  queues per interface:  %i\n",
 	       test_global->opt.num_pktio_queue);
 
+	printf("  burst size:            %u\n", test_global->opt.burst_size);
 	printf("  collect statistics:    %u\n", test_global->opt.collect_stat);
 	printf("  timeout usec:          %li\n", test_global->opt.timeout_us);
 
