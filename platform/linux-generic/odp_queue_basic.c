@@ -30,8 +30,6 @@
 #include <odp/api/plat/queue_inline_types.h>
 #include <odp_global_data.h>
 
-#define NUM_INTERNAL_QUEUES 64
-
 #include <odp/api/plat/ticketlock_inlines.h>
 #define LOCK(queue_ptr)      odp_ticketlock_lock(&((queue_ptr)->s.lock))
 #define UNLOCK(queue_ptr)    odp_ticketlock_unlock(&((queue_ptr)->s.lock))
