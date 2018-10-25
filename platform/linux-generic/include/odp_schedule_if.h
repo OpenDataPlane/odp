@@ -19,6 +19,15 @@ extern "C" {
 /* Number of ordered locks per queue */
 #define SCHEDULE_ORDERED_LOCKS_PER_QUEUE 2
 
+typedef struct schedule_config_t {
+	struct {
+		int all;
+		int worker;
+		int control;
+	} group_enable;
+
+} schedule_config_t;
+
 typedef void (*schedule_pktio_start_fn_t)(int pktio_index,
 					 int num_in_queue,
 					 int in_queue_idx[],
@@ -44,7 +53,7 @@ typedef void (*schedule_order_unlock_lock_fn_t)(void);
 typedef void (*schedule_order_lock_start_fn_t)(void);
 typedef void (*schedule_order_lock_wait_fn_t)(void);
 typedef uint32_t (*schedule_max_ordered_locks_fn_t)(void);
-typedef void (*schedule_save_context_fn_t)(uint32_t queue_index);
+typedef void (*schedule_config_fn_t)(schedule_config_t *config);
 
 typedef struct schedule_fn_t {
 	schedule_pktio_start_fn_t   pktio_start;
@@ -65,6 +74,7 @@ typedef struct schedule_fn_t {
 	schedule_order_lock_wait_fn_t	wait_order_lock;
 	schedule_order_unlock_lock_fn_t  order_unlock_lock;
 	schedule_max_ordered_locks_fn_t max_ordered_locks;
+	schedule_config_fn_t        config;
 
 } schedule_fn_t;
 
