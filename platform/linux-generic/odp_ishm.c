@@ -1328,9 +1328,8 @@ static void *block_lookup(int block_index)
 
 /*
  * Lookup for an ishm shared memory, identified by its block name.
- * Map this ishm area in the process VA (if not already present).
- * Return the block index, or -1  if the index
- * does not match any known ishm blocks.
+ * Return the block index, or -1  if the index does not match any known ishm
+ * blocks.
  */
 int _odp_ishm_lookup_by_name(const char *name)
 {
@@ -1341,42 +1340,25 @@ int _odp_ishm_lookup_by_name(const char *name)
 
 	/* search the block in main ishm table: return -1 if not found: */
 	block_index = find_block_by_name(name);
-	if ((block_index < 0) || (!block_lookup(block_index))) {
-		odp_spinlock_unlock(&ishm_tbl->lock);
-		return -1;
-	}
 
 	odp_spinlock_unlock(&ishm_tbl->lock);
 	return block_index;
 }
 
 /*
- * Returns the VA address of a given block (which has to be known in the current
- * process). Returns NULL if the block is unknown.
+ * Returns the VA address of a given block. Maps this ishm area in the process
+ * VA (if not already present).
+ * Returns NULL if the block is unknown.
  */
 void *_odp_ishm_address(int block_index)
 {
-	int proc_index;
 	void *addr;
 
 	odp_spinlock_lock(&ishm_tbl->lock);
 	procsync();
 
-	if ((block_index < 0) ||
-	    (block_index >= ISHM_MAX_NB_BLOCKS) ||
-	    (ishm_tbl->block[block_index].len == 0)) {
-		ODP_ERR("Request for address on an invalid block\n");
-		odp_spinlock_unlock(&ishm_tbl->lock);
-		return NULL;
-	}
+	addr = block_lookup(block_index);
 
-	proc_index = procfind_block(block_index);
-	if (proc_index < 0) {
-		odp_spinlock_unlock(&ishm_tbl->lock);
-		return NULL;
-	}
-
-	addr = ishm_proctable->entry[proc_index].start;
 	odp_spinlock_unlock(&ishm_tbl->lock);
 	return addr;
 }
