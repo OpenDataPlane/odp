@@ -226,6 +226,9 @@ typedef struct {
 
 	order_context_t order[ODP_CONFIG_QUEUES];
 
+	/* Scheduler interface config options (not used in fast path) */
+	schedule_config_t config_if;
+
 } sched_global_t;
 
 /* Check that queue[] variables are large enough */
@@ -320,7 +323,37 @@ static int read_config_file(sched_global_t *sched)
 			return -1;
 		}
 	}
-	ODP_PRINT("\n\n");
+
+	ODP_PRINT("\n");
+
+	str = "sched_basic.group_enable.all";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	sched->config_if.group_enable.all = val;
+	ODP_PRINT("  %s: %i\n", str, val);
+
+	str = "sched_basic.group_enable.worker";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	sched->config_if.group_enable.worker = val;
+	ODP_PRINT("  %s: %i\n", str, val);
+
+	str = "sched_basic.group_enable.control";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	sched->config_if.group_enable.control = val;
+	ODP_PRINT("  %s: %i\n", str, val);
+
+	ODP_PRINT("\n");
 
 	return 0;
 }
@@ -1474,6 +1507,11 @@ static int schedule_num_grps(void)
 	return NUM_SCHED_GRPS;
 }
 
+static void schedule_config(schedule_config_t *config)
+{
+	*config = *(&sched->config_if);
+}
+
 /* Fill in scheduler interface */
 const schedule_fn_t schedule_basic_fn = {
 	.pktio_start = schedule_pktio_start,
@@ -1490,7 +1528,8 @@ const schedule_fn_t schedule_basic_fn = {
 	.term_local  = schedule_term_local,
 	.order_lock = order_lock,
 	.order_unlock = order_unlock,
-	.max_ordered_locks = schedule_max_ordered_locks
+	.max_ordered_locks = schedule_max_ordered_locks,
+	.config = schedule_config
 };
 
 /* Fill in scheduler API calls */
