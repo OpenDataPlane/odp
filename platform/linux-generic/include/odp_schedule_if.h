@@ -90,6 +90,7 @@ void sched_cb_pktio_stop_finalize(int pktio_index);
 /* API functions */
 typedef struct {
 	uint64_t (*schedule_wait_time)(uint64_t ns);
+	int (*schedule_capability)(odp_schedule_capability_t *capa);
 	odp_event_t (*schedule)(odp_queue_t *from, uint64_t wait);
 	int (*schedule_multi)(odp_queue_t *from, uint64_t wait,
 			      odp_event_t events[], int num);
