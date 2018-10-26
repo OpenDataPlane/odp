@@ -1770,6 +1770,7 @@ static int schedule_init_global(void)
 	odp_schedule_group_t tmp_wrkr;
 	odp_schedule_group_t tmp_ctrl;
 	odp_shm_t shm;
+	_odp_ishm_pool_t *pool;
 	uint32_t bits;
 	uint32_t pool_size;
 	uint64_t min_alloc;
@@ -1788,34 +1789,28 @@ static int schedule_init_global(void)
 	memset(global, 0, sizeof(sched_global_t));
 	global->shm = shm;
 
-	/* Attach to the pool if it exists */
-	global->sched_shm_pool = _odp_ishm_pool_lookup("sched_shm_pool");
-	if (global->sched_shm_pool == NULL) {
-		_odp_ishm_pool_t *pool;
-
-		/* Add storage required for sched groups. Assume worst case
-		 * xfactor of MAXTHREADS.
-		 */
-		pool_size = (sizeof(sched_group_t) +
-			     (ODP_SCHED_PRIO_NUM * MAXTHREADS - 1) *
-			     sizeof(sched_queue_t)) * MAX_SCHED_GROUP;
-		/* Choose min_alloc and max_alloc such that slab allocator
-		 * is selected.
-		 */
-		min_alloc = sizeof(sched_group_t) +
-			    (ODP_SCHED_PRIO_NUM * MAXTHREADS - 1) *
-			    sizeof(sched_queue_t);
-		max_alloc = min_alloc;
-		pool = _odp_ishm_pool_create("sched_shm_pool", pool_size,
-					     min_alloc, max_alloc,
-					     _ODP_ISHM_SINGLE_VA);
-		if (pool == NULL) {
-			ODP_ERR("Failed to allocate shared memory pool "
-				"for sched\n");
-			goto failed_sched_shm_pool_create;
-		}
-		global->sched_shm_pool = pool;
+	/* Add storage required for sched groups. Assume worst case
+	 * xfactor of MAXTHREADS.
+	 */
+	pool_size = (sizeof(sched_group_t) +
+		     (ODP_SCHED_PRIO_NUM * MAXTHREADS - 1) *
+		     sizeof(sched_queue_t)) * MAX_SCHED_GROUP;
+	/* Choose min_alloc and max_alloc such that slab allocator
+	 * is selected.
+	 */
+	min_alloc = sizeof(sched_group_t) +
+		    (ODP_SCHED_PRIO_NUM * MAXTHREADS - 1) *
+		    sizeof(sched_queue_t);
+	max_alloc = min_alloc;
+	pool = _odp_ishm_pool_create("sched_shm_pool", pool_size,
+				     min_alloc, max_alloc,
+				     _ODP_ISHM_SINGLE_VA);
+	if (pool == NULL) {
+		ODP_ERR("Failed to allocate shared memory pool "
+			"for sched\n");
+		goto failed_sched_shm_pool_create;
 	}
+	global->sched_shm_pool = pool;
 
 	odp_spinlock_init(&global->sched_grp_lock);
 
