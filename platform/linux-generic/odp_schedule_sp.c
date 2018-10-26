@@ -923,6 +923,17 @@ static void order_unlock(void)
 {
 }
 
+static int schedule_capability(odp_schedule_capability_t *capa)
+{
+	memset(capa, 0, sizeof(odp_schedule_capability_t));
+
+	capa->max_ordered_locks = max_ordered_locks();
+	capa->max_groups = num_grps();
+	capa->max_prios = schedule_num_prio();
+
+	return 0;
+}
+
 /* Fill in scheduler interface */
 const schedule_fn_t schedule_sp_fn = {
 	.pktio_start   = pktio_start,
@@ -945,6 +956,7 @@ const schedule_fn_t schedule_sp_fn = {
 /* Fill in scheduler API calls */
 const schedule_api_t schedule_sp_api = {
 	.schedule_wait_time       = schedule_wait_time,
+	.schedule_capability      = schedule_capability,
 	.schedule                 = schedule,
 	.schedule_multi           = schedule_multi,
 	.schedule_multi_wait      = schedule_multi_wait,
