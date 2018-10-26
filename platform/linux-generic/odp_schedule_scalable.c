@@ -2107,6 +2107,17 @@ static uint32_t schedule_max_ordered_locks(void)
 	return CONFIG_QUEUE_MAX_ORD_LOCKS;
 }
 
+static int schedule_capability(odp_schedule_capability_t *capa)
+{
+	memset(capa, 0, sizeof(odp_schedule_capability_t));
+
+	capa->max_ordered_locks = schedule_max_ordered_locks();
+	capa->max_groups = num_grps();
+	capa->max_prios = schedule_num_prio();
+
+	return 0;
+}
+
 const schedule_fn_t schedule_scalable_fn = {
 	.pktio_start	= pktio_start,
 	.thr_add	= thr_add,
@@ -2127,6 +2138,7 @@ const schedule_fn_t schedule_scalable_fn = {
 
 const schedule_api_t schedule_scalable_api = {
 	.schedule_wait_time		= schedule_wait_time,
+	.schedule_capability            = schedule_capability,
 	.schedule			= schedule,
 	.schedule_multi			= schedule_multi,
 	.schedule_multi_wait            = schedule_multi_wait,
