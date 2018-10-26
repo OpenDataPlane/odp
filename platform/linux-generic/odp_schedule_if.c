@@ -30,6 +30,11 @@ uint64_t odp_schedule_wait_time(uint64_t ns)
 	return sched_api->schedule_wait_time(ns);
 }
 
+int odp_schedule_capability(odp_schedule_capability_t *capa)
+{
+	return sched_api->schedule_capability(capa);
+}
+
 odp_event_t odp_schedule(odp_queue_t *from, uint64_t wait)
 {
 	return sched_api->schedule(from, wait);

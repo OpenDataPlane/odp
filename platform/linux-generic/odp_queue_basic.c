@@ -48,7 +48,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 queue_global_t *queue_glb;
 extern _odp_queue_inline_offset_t _odp_queue_inline_offset;
 
-static int queue_capa(odp_queue_capability_t *capa, int sched)
+static int queue_capa(odp_queue_capability_t *capa, int sched ODP_UNUSED)
 {
 	memset(capa, 0, sizeof(odp_queue_capability_t));
 
@@ -61,11 +61,13 @@ static int queue_capa(odp_queue_capability_t *capa, int sched)
 	capa->sched.max_num     = capa->max_queues;
 	capa->sched.max_size    = queue_glb->config.max_queue_size;
 
+#if ODP_DEPRECATED_API
 	if (sched) {
 		capa->max_ordered_locks = sched_fn->max_ordered_locks();
 		capa->max_sched_groups  = sched_fn->num_grps();
 		capa->sched_prios       = odp_schedule_num_prio();
 	}
+#endif
 
 	return 0;
 }
