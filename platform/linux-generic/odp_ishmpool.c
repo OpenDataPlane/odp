@@ -784,23 +784,3 @@ void _odp_ishm_pool_init(void)
 	for (i = 0; i < MAX_NB_POOL; i++)
 		pool_blk_idx[i] = -1;
 }
-
-_odp_ishm_pool_t *_odp_ishm_pool_lookup(const char *pool_name)
-{
-	int block_idx;
-	int store_idx;
-
-	/* search for a _ishm block with the given name */
-	block_idx = _odp_ishm_lookup_by_name(pool_name);
-	if (block_idx < 0)
-		return NULL;
-
-	/* a block with that name exists: make sure it is within
-	 * the registered pools */
-	for (store_idx = 0; store_idx < MAX_NB_POOL; store_idx++) {
-		if (pool_blk_idx[store_idx] == block_idx)
-			return  _odp_ishm_address(block_idx);
-	}
-
-	return NULL;
-}

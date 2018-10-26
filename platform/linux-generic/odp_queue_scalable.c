@@ -207,34 +207,30 @@ static int queue_init_global(void)
 	_odp_queue_inline_offset.context = offsetof(queue_entry_t,
 						    s.param.context);
 
-	/* Attach to the pool if it exists */
-	queue_shm_pool = _odp_ishm_pool_lookup("queue_shm_pool");
-	if (queue_shm_pool == NULL) {
-		/* Create shared memory pool to allocate shared memory for the
-		 * queues. Use the default queue size.
-		 */
-		/* Add size of the array holding the queues */
-		pool_size = sizeof(queue_table_t);
-		/* Add storage required for queues */
-		pool_size += (CONFIG_SCAL_QUEUE_SIZE *
-			      sizeof(odp_buffer_hdr_t *)) * ODP_CONFIG_QUEUES;
+	/* Create shared memory pool to allocate shared memory for the
+	 * queues. Use the default queue size.
+	 */
+	/* Add size of the array holding the queues */
+	pool_size = sizeof(queue_table_t);
+	/* Add storage required for queues */
+	pool_size += (CONFIG_SCAL_QUEUE_SIZE *
+		      sizeof(odp_buffer_hdr_t *)) * ODP_CONFIG_QUEUES;
 
-		/* Add the reorder window size */
-		pool_size += sizeof(reorder_window_t) * ODP_CONFIG_QUEUES;
-		/* Choose min_alloc and max_alloc such that buddy allocator is
-		 * is selected.
-		 */
-		min_alloc = 0;
-		max_alloc = CONFIG_SCAL_QUEUE_SIZE * sizeof(odp_buffer_hdr_t *);
-		queue_shm_pool = _odp_ishm_pool_create("queue_shm_pool",
-						       pool_size,
-						       min_alloc, max_alloc,
-						       _ODP_ISHM_SINGLE_VA);
-		if (queue_shm_pool == NULL) {
-			ODP_ERR("Failed to allocate shared memory pool for"
-				" queues\n");
-			goto queue_shm_pool_create_failed;
-		}
+	/* Add the reorder window size */
+	pool_size += sizeof(reorder_window_t) * ODP_CONFIG_QUEUES;
+	/* Choose min_alloc and max_alloc such that buddy allocator is
+	 * is selected.
+	 */
+	min_alloc = 0;
+	max_alloc = CONFIG_SCAL_QUEUE_SIZE * sizeof(odp_buffer_hdr_t *);
+	queue_shm_pool = _odp_ishm_pool_create("queue_shm_pool",
+					       pool_size,
+					       min_alloc, max_alloc,
+					       _ODP_ISHM_SINGLE_VA);
+	if (queue_shm_pool == NULL) {
+		ODP_ERR("Failed to allocate shared memory pool for"
+			" queues\n");
+		goto queue_shm_pool_create_failed;
 	}
 
 	queue_tbl = (queue_table_t *)
