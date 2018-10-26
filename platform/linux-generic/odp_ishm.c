@@ -847,56 +847,6 @@ static int find_block_by_name(const char *name)
 }
 
 /*
- * Search for a block by address (only works when flag _ODP_ISHM_SINGLE_VA
- * was set at reserve() time, or if the block is already known by this
- * process).
- * Search is performed in the process table and in the global ishm table.
- * The provided address does not have to be at start: any address
- * within the fragment is OK.
- * Returns the index to the found block (if any) or -1 if none.
- * Mutex must be assured by the caller.
- */
-static int find_block_by_address(void *addr)
-{
-	int block_index;
-	int i;
-	ishm_fragment_t *fragmnt;
-
-	/*
-	 * first check if there is already a process known block for this
-	 * address
-	 */
-	for (i = 0; i < ishm_proctable->nb_entries; i++) {
-		block_index = ishm_proctable->entry[i].block_index;
-		if ((addr > ishm_proctable->entry[i].start) &&
-		    ((char *)addr < ((char *)ishm_proctable->entry[i].start +
-				     ishm_tbl->block[block_index].len)))
-			return block_index;
-	}
-
-	/*
-	 * then check if there is a existing single VA block known by some other
-	 * process and containing the given address
-	 */
-	for (i = 0; i < ISHM_MAX_NB_BLOCKS; i++) {
-		if ((!ishm_tbl->block[i].len) ||
-		    (!(ishm_tbl->block[i].flags & _ODP_ISHM_SINGLE_VA)))
-			continue;
-		fragmnt = ishm_tbl->block[i].fragment;
-		if (!fragmnt) {
-			ODP_ERR("find_fragment: invalid NULL fragment\n");
-			return -1;
-		}
-		if ((addr >= fragmnt->start) &&
-		    ((char *)addr < ((char *)fragmnt->start + fragmnt->len)))
-			return i;
-	}
-
-	/* address does not belong to any accessible block: */
-	return -1;
-}
-
-/*
  * Search a given ishm block in the process local table. Return its index
  * in the process table or -1 if not found (meaning that the ishm table
  * block index was not referenced in the process local table, i.e. the
@@ -1328,59 +1278,6 @@ int _odp_ishm_free_by_index(int block_index)
 }
 
 /*
- * free and unmap internal shared memory, identified by its block name:
- * return -1 on error. 0 if OK.
- */
-int _odp_ishm_free_by_name(const char *name)
-{
-	int block_index;
-	int ret;
-
-	odp_spinlock_lock(&ishm_tbl->lock);
-	procsync();
-
-	/* search the block in main ishm table */
-	block_index = find_block_by_name(name);
-	if (block_index < 0) {
-		ODP_ERR("Request to free an non existing block..."
-			" (double free?)\n");
-		odp_spinlock_unlock(&ishm_tbl->lock);
-		return -1;
-	}
-
-	ret = block_free(block_index);
-	odp_spinlock_unlock(&ishm_tbl->lock);
-	return ret;
-}
-
-/*
- * Free and unmap internal shared memory identified by address:
- * return -1 on error. 0 if OK.
- */
-int _odp_ishm_free_by_address(void *addr)
-{
-	int block_index;
-	int ret;
-
-	odp_spinlock_lock(&ishm_tbl->lock);
-	procsync();
-
-	/* search the block in main ishm table */
-	block_index = find_block_by_address(addr);
-	if (block_index < 0) {
-		ODP_ERR("Request to free an non existing block..."
-			" (double free?)\n");
-		odp_spinlock_unlock(&ishm_tbl->lock);
-		return -1;
-	}
-
-	ret = block_free(block_index);
-
-	odp_spinlock_unlock(&ishm_tbl->lock);
-	return ret;
-}
-
-/*
  * Lookup for an ishm shared memory, identified by its block index
  * in the main ishm block table.
  * Map this ishm area in the process VA (if not already present).
@@ -1437,24 +1334,6 @@ static void *block_lookup(int block_index)
 }
 
 /*
- * Lookup for an ishm shared memory, identified by its block_index.
- * Maps this ishmem area in the process VA (if not already present).
- * Returns the block user address, or NULL  if the index
- * does not match any known ishm blocks.
- */
-void *_odp_ishm_lookup_by_index(int block_index)
-{
-	void *ret;
-
-	odp_spinlock_lock(&ishm_tbl->lock);
-	procsync();
-
-	ret = block_lookup(block_index);
-	odp_spinlock_unlock(&ishm_tbl->lock);
-	return ret;
-}
-
-/*
  * Lookup for an ishm shared memory, identified by its block name.
  * Map this ishm area in the process VA (if not already present).
  * Return the block index, or -1  if the index
@@ -1469,32 +1348,6 @@ int _odp_ishm_lookup_by_name(const char *name)
 
 	/* search the block in main ishm table: return -1 if not found: */
 	block_index = find_block_by_name(name);
-	if ((block_index < 0) || (!block_lookup(block_index))) {
-		odp_spinlock_unlock(&ishm_tbl->lock);
-		return -1;
-	}
-
-	odp_spinlock_unlock(&ishm_tbl->lock);
-	return block_index;
-}
-
-/*
- * Lookup for an ishm shared memory block, identified by its VA address.
- * This works only if the block has already been looked-up (mapped) by the
- * current process or it it was created with the _ODP_ISHM_SINGLE_VA flag.
- * Map this ishm area in the process VA (if not already present).
- * Return the block index, or -1  if the address
- * does not match any known ishm blocks.
- */
-int _odp_ishm_lookup_by_address(void *addr)
-{
-	int block_index;
-
-	odp_spinlock_lock(&ishm_tbl->lock);
-	procsync();
-
-	/* search the block in main ishm table: return -1 if not found: */
-	block_index = find_block_by_address(addr);
 	if ((block_index < 0) || (!block_lookup(block_index))) {
 		odp_spinlock_unlock(&ishm_tbl->lock);
 		return -1;
