@@ -5,12 +5,14 @@ AM_DISTCHECK_CONFIGURE_FLAGS = --enable-user-guides	\
 
 if PLATFORM_IS_LINUX_GENERIC
 PLATFORM_DIR = platform/linux-generic
+PLATFORM_DUMPCONF_DIR = platform/linux-generic/dumpconfig
 PLATFORM_TEST_DIR = platform/linux-generic/test
 endif
 
 SUBDIRS = \
 	  include \
 	  $(PLATFORM_DIR) \
+	  $(PLATFORM_DUMPCONF_DIR) \
 	  helper \
 	  doc
 
