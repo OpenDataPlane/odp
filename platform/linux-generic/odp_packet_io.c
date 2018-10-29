@@ -872,54 +872,6 @@ int sched_cb_pktin_poll(int pktio_index, int pktin_index,
 	return pktin_recv_buf(entry, pktin_index, hdr_tbl, num);
 }
 
-int sched_cb_pktin_poll_old(int pktio_index, int num_queue, int index[])
-{
-	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	int num, idx;
-	pktio_entry_t *entry = pktio_entry_by_index(pktio_index);
-	int state = entry->s.state;
-
-	if (odp_unlikely(state != PKTIO_STATE_STARTED)) {
-		if (state < PKTIO_STATE_ACTIVE ||
-		    state == PKTIO_STATE_STOP_PENDING)
-			return -1;
-
-		ODP_DBG("interface not started\n");
-		return 0;
-	}
-
-	for (idx = 0; idx < num_queue; idx++) {
-		odp_queue_t queue;
-		int num_enq;
-
-		num = pktin_recv_buf(entry, index[idx], hdr_tbl,
-				     QUEUE_MULTI_MAX);
-
-		if (num == 0)
-			continue;
-
-		if (num < 0) {
-			ODP_ERR("Packet recv error\n");
-			return -1;
-		}
-
-		queue = entry->s.in_queue[index[idx]].queue;
-		num_enq = odp_queue_enq_multi(queue,
-					      (odp_event_t *)hdr_tbl, num);
-
-		if (odp_unlikely(num_enq < num)) {
-			if (odp_unlikely(num_enq < 0))
-				num_enq = 0;
-
-			ODP_DBG("Interface %s dropped %i packets\n",
-				entry->s.name, num - num_enq);
-			buffer_free_multi(&hdr_tbl[num_enq], num - num_enq);
-		}
-	}
-
-	return 0;
-}
-
 void sched_cb_pktio_stop_finalize(int pktio_index)
 {
 	int state;
