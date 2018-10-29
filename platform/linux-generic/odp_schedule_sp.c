@@ -62,6 +62,7 @@ struct sched_cmd_s {
 	int                init;
 	int                num_pktin;
 	int                pktin_idx[NUM_PKTIN];
+	odp_queue_t        queue[NUM_PKTIN];
 };
 
 typedef struct ODP_ALIGNED_CACHE sched_cmd_t {
@@ -438,7 +439,7 @@ static int ord_enq_multi(odp_queue_t queue, void *buf_hdr[], int num,
 static void pktio_start(int pktio_index,
 			int num,
 			int pktin_idx[],
-			odp_queue_t odpq[] ODP_UNUSED)
+			odp_queue_t queue[])
 {
 	int i;
 	sched_cmd_t *cmd;
@@ -452,8 +453,10 @@ static void pktio_start(int pktio_index,
 		ODP_ABORT("Supports only %i pktin queues per interface\n",
 			  NUM_PKTIN);
 
-	for (i = 0; i < num; i++)
+	for (i = 0; i < num; i++) {
 		cmd->s.pktin_idx[i] = pktin_idx[i];
+		cmd->s.queue[i]     = queue[i];
+	}
 
 	cmd->s.num_pktin = num;
 
@@ -507,6 +510,26 @@ static uint64_t schedule_wait_time(uint64_t ns)
 	return ns;
 }
 
+static inline void enqueue_packets(odp_queue_t queue,
+				   odp_buffer_hdr_t *hdr_tbl[], int num_pkt)
+{
+	int num_enq, num_drop;
+
+	num_enq = odp_queue_enq_multi(queue, (odp_event_t *)hdr_tbl,
+				      num_pkt);
+
+	if (num_enq < 0)
+		num_enq = 0;
+
+	if (num_enq < num_pkt) {
+		num_drop = num_pkt - num_enq;
+
+		ODP_DBG("Dropped %i packets\n", num_drop);
+		odp_packet_free_multi((odp_packet_t *)&hdr_tbl[num_enq],
+				      num_drop);
+	}
+}
+
 static int schedule_multi(odp_queue_t *from, uint64_t wait,
 			  odp_event_t events[], int max_events ODP_UNUSED)
 {
@@ -534,12 +557,33 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 		cmd = sched_cmd();
 
 		if (cmd && cmd->s.type == CMD_PKTIO) {
-			if (sched_cb_pktin_poll_old(cmd->s.index,
-						    cmd->s.num_pktin,
-						    cmd->s.pktin_idx)) {
-				/* Pktio stopped or closed. */
-				sched_cb_pktio_stop_finalize(cmd->s.index);
-			} else {
+			odp_buffer_hdr_t *hdr_tbl[CONFIG_BURST_SIZE];
+			int i;
+			int num_pkt = 0;
+			int max_num = CONFIG_BURST_SIZE;
+			int pktio_idx = cmd->s.index;
+			int num_pktin = cmd->s.num_pktin;
+			int *pktin_idx = cmd->s.pktin_idx;
+			odp_queue_t *queue = cmd->s.queue;
+
+			for (i = 0; i < num_pktin; i++) {
+				num_pkt = sched_cb_pktin_poll(pktio_idx,
+							      pktin_idx[i],
+							      hdr_tbl, max_num);
+
+				if (num_pkt < 0) {
+					/* Pktio stopped or closed. */
+					sched_cb_pktio_stop_finalize(pktio_idx);
+					break;
+				}
+
+				if (num_pkt == 0)
+					continue;
+
+				enqueue_packets(queue[i], hdr_tbl, num_pkt);
+			}
+
+			if (num_pkt >= 0) {
 				/* Continue polling pktio. */
 				add_tail(cmd);
 			}
