@@ -23,11 +23,6 @@ extern "C" {
  */
 
 /**
- * @typedef odp_schedule_prio_t
- * Scheduler priority level
- */
-
-/**
  * @def ODP_SCHED_PRIO_HIGHEST
  * Highest scheduling priority
  */
@@ -135,6 +130,15 @@ extern "C" {
  * @def ODP_SCHED_GROUP_CONTROL
  * Predefined scheduler group of all control threads
  */
+
+/**
+ * Scheduling priority level
+ *
+ * Priority level is an integer value between odp_schedule_min_prio() and
+ * odp_schedule_max_prio(). Queues with a higher priority value are served with
+ * higher priority than queues with a lower priority value.
+ */
+typedef int odp_schedule_prio_t;
 
 /** Scheduler parameters */
 typedef	struct odp_schedule_param_t {
