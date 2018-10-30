@@ -206,12 +206,24 @@ static void scheduler_test_wait_time(void)
 
 static void scheduler_test_num_prio(void)
 {
-	int prio;
+	int num_prio, min_prio, max_prio, default_prio;
 
-	prio = odp_schedule_num_prio();
+	num_prio = odp_schedule_num_prio();
+	CU_ASSERT(num_prio > 0);
 
-	CU_ASSERT(prio > 0);
-	CU_ASSERT(prio == odp_schedule_num_prio());
+	min_prio = odp_schedule_min_prio();
+	max_prio = odp_schedule_max_prio();
+	default_prio = odp_schedule_default_prio();
+
+	CU_ASSERT(min_prio <= max_prio);
+	CU_ASSERT(min_prio <= default_prio);
+	CU_ASSERT(default_prio <= max_prio);
+	CU_ASSERT(num_prio == (max_prio - min_prio + 1));
+
+	CU_ASSERT(min_prio == ODP_SCHED_PRIO_LOWEST);
+	CU_ASSERT(max_prio == ODP_SCHED_PRIO_HIGHEST);
+	CU_ASSERT(default_prio == ODP_SCHED_PRIO_DEFAULT);
+	CU_ASSERT(default_prio == ODP_SCHED_PRIO_NORMAL);
 }
 
 static void scheduler_test_queue_destroy(void)
