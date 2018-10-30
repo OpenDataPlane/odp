@@ -158,7 +158,7 @@ static void scheduler_test_wait_time(void)
 	odp_queue_param_init(&qp);
 	qp.type        = ODP_QUEUE_TYPE_SCHED;
 	qp.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
-	qp.sched.prio  = ODP_SCHED_PRIO_NORMAL;
+	qp.sched.prio  = odp_schedule_default_prio();
 	qp.sched.group = ODP_SCHED_GROUP_ALL;
 	queue = odp_queue_create("dummy_queue", &qp);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
@@ -241,7 +241,7 @@ static void scheduler_test_queue_destroy(void)
 
 	for (i = 0; i < 3; i++) {
 		qp.type        = ODP_QUEUE_TYPE_SCHED;
-		qp.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+		qp.sched.prio  = odp_schedule_default_prio();
 		qp.sched.sync  = sync[i];
 		qp.sched.group = ODP_SCHED_GROUP_ALL;
 
@@ -324,7 +324,7 @@ static void scheduler_test_queue_size(void)
 
 		odp_queue_param_init(&queue_param);
 		queue_param.type = ODP_QUEUE_TYPE_SCHED;
-		queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+		queue_param.sched.prio  = odp_schedule_default_prio();
 		queue_param.sched.sync  = sync[i];
 		queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 		queue_param.size = queue_size;
@@ -483,7 +483,7 @@ static void scheduler_test_groups(void)
 
 		odp_queue_param_init(&qp);
 		qp.type        = ODP_QUEUE_TYPE_SCHED;
-		qp.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+		qp.sched.prio  = odp_schedule_default_prio();
 		qp.sched.sync  = sync[i];
 		qp.sched.group = mygrp1;
 
@@ -701,7 +701,7 @@ static void chaos_run(unsigned int qtype)
 	pool = odp_pool_create("sched_chaos_pool", &params);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 	qp.type        = ODP_QUEUE_TYPE_SCHED;
-	qp.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	qp.sched.prio  = odp_schedule_default_prio();
 	qp.sched.group = ODP_SCHED_GROUP_ALL;
 
 	for (i = 0; i < CHAOS_NUM_QUEUES; i++) {
