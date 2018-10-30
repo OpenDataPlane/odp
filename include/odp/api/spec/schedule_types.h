@@ -24,24 +24,26 @@ extern "C" {
 
 /**
  * @def ODP_SCHED_PRIO_HIGHEST
- * Highest scheduling priority
+ * This macro is equivalent of calling odp_schedule_max_prio() and will be
+ * deprecated. Use direct function call instead.
  */
 
 /**
  * @def ODP_SCHED_PRIO_NORMAL
- * Normal scheduling priority
+ * This macro is equivalent of calling odp_schedule_default_prio() and will be
+ * deprecated. Use direct function call instead.
  */
 
 /**
  * @def ODP_SCHED_PRIO_LOWEST
- * Lowest scheduling priority
+ * This macro is equivalent of calling odp_schedule_min_prio() and will be
+ * deprecated. Use direct function call instead.
  */
 
 /**
  * @def ODP_SCHED_PRIO_DEFAULT
- * Default scheduling priority. User does not care about the selected priority
- * level - throughput, load balancing and synchronization features are more
- * important than priority scheduling.
+ * This macro is equivalent of calling odp_schedule_default_prio() and will be
+ * deprecated. Use direct function call instead.
  */
 
 /**
@@ -144,7 +146,7 @@ typedef int odp_schedule_prio_t;
 typedef	struct odp_schedule_param_t {
 	/** Priority level
 	  *
-	  * Default value is ODP_SCHED_PRIO_DEFAULT. */
+	  * Default value is returned by odp_schedule_default_prio(). */
 	odp_schedule_prio_t  prio;
 
 	/** Synchronization method
