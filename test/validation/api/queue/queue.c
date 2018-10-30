@@ -605,8 +605,21 @@ static void queue_test_param(void)
 	odp_queue_param_t qparams;
 	odp_buffer_t enbuf;
 
-	/* Schedule type queue */
+	/* Defaults */
 	odp_queue_param_init(&qparams);
+	CU_ASSERT(qparams.type == ODP_QUEUE_TYPE_PLAIN);
+	CU_ASSERT(qparams.enq_mode == ODP_QUEUE_OP_MT);
+	CU_ASSERT(qparams.deq_mode == ODP_QUEUE_OP_MT);
+	CU_ASSERT(qparams.sched.prio == odp_schedule_default_prio());
+	CU_ASSERT(qparams.sched.sync == ODP_SCHED_SYNC_PARALLEL);
+	CU_ASSERT(qparams.sched.group == ODP_SCHED_GROUP_ALL);
+	CU_ASSERT(qparams.sched.lock_count == 0);
+	CU_ASSERT(qparams.nonblocking == ODP_BLOCKING);
+	CU_ASSERT(qparams.context == NULL);
+	CU_ASSERT(qparams.context_len == 0);
+	CU_ASSERT(qparams.size == 0);
+
+	/* Schedule type queue */
 	qparams.type       = ODP_QUEUE_TYPE_SCHED;
 	qparams.sched.prio = odp_schedule_min_prio();
 	qparams.sched.sync = ODP_SCHED_SYNC_PARALLEL;
