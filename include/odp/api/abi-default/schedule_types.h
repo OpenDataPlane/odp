@@ -21,8 +21,6 @@ extern "C" {
  *  @{
  */
 
-typedef int odp_schedule_prio_t;
-
 #define ODP_SCHED_PRIO_HIGHEST  0
 
 #define ODP_SCHED_PRIO_NORMAL   4
