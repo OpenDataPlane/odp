@@ -321,7 +321,6 @@ static void timer_test_queue_type(odp_queue_type_t queue_type)
 	odp_queue_param_init(&queue_param);
 	if (queue_type == ODP_QUEUE_TYPE_SCHED) {
 		queue_param.type = ODP_QUEUE_TYPE_SCHED;
-		queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 		queue_param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 		queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 	}
