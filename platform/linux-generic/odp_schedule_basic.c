@@ -36,13 +36,6 @@
 /* Number of priority levels  */
 #define NUM_PRIO 8
 
-ODP_STATIC_ASSERT(ODP_SCHED_PRIO_LOWEST == (NUM_PRIO - 1),
-		  "lowest_prio_does_not_match_with_num_prios");
-
-ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
-		  (ODP_SCHED_PRIO_NORMAL < (NUM_PRIO - 1)),
-		  "normal_prio_is_not_between_highest_and_lowest");
-
 /* Number of scheduling groups */
 #define NUM_SCHED_GRPS 32
 
@@ -195,6 +188,7 @@ typedef struct {
 
 	struct {
 		uint8_t grp;
+		/* Inverted prio value (max = 0) vs API (min = 0)*/
 		uint8_t prio;
 		uint8_t spread;
 		uint8_t sync;
@@ -537,6 +531,31 @@ static uint32_t schedule_max_ordered_locks(void)
 	return CONFIG_QUEUE_MAX_ORD_LOCKS;
 }
 
+static int schedule_min_prio(void)
+{
+	return 0;
+}
+
+static int schedule_max_prio(void)
+{
+	return NUM_PRIO - 1;
+}
+
+static int schedule_default_prio(void)
+{
+	return schedule_max_prio() / 2;
+}
+
+static int schedule_num_prio(void)
+{
+	return NUM_PRIO;
+}
+
+static inline int prio_level_from_api(int api_prio)
+{
+	return schedule_max_prio() - api_prio;
+}
+
 static void pri_set(int id, int prio)
 {
 	odp_spinlock_lock(&sched->mask_lock);
@@ -576,7 +595,7 @@ static int schedule_init_queue(uint32_t queue_index,
 {
 	uint32_t ring_size;
 	int i;
-	int prio = sched_param->prio;
+	int prio = prio_level_from_api(sched_param->prio);
 
 	pri_set_queue(queue_index, prio);
 	sched->queue[queue_index].grp  = sched_param->group;
@@ -1289,11 +1308,6 @@ static uint64_t schedule_wait_time(uint64_t ns)
 	return ns;
 }
 
-static int schedule_num_prio(void)
-{
-	return NUM_PRIO;
-}
-
 static odp_schedule_group_t schedule_group_create(const char *name,
 						  const odp_thrmask_t *mask)
 {
@@ -1542,6 +1556,9 @@ const schedule_api_t schedule_basic_api = {
 	.schedule_release_atomic  = schedule_release_atomic,
 	.schedule_release_ordered = schedule_release_ordered,
 	.schedule_prefetch        = schedule_prefetch,
+	.schedule_min_prio        = schedule_min_prio,
+	.schedule_max_prio        = schedule_max_prio,
+	.schedule_default_prio    = schedule_default_prio,
 	.schedule_num_prio        = schedule_num_prio,
 	.schedule_group_create    = schedule_group_create,
 	.schedule_group_destroy   = schedule_group_destroy,
