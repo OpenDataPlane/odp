@@ -88,6 +88,9 @@ typedef struct {
 	void (*schedule_release_atomic)(void);
 	void (*schedule_release_ordered)(void);
 	void (*schedule_prefetch)(int);
+	int (*schedule_min_prio)(void);
+	int (*schedule_max_prio)(void);
+	int (*schedule_default_prio)(void);
 	int (*schedule_num_prio)(void);
 	odp_schedule_group_t (*schedule_group_create)(const char *,
 						      const odp_thrmask_t *);

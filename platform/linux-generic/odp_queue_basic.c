@@ -269,13 +269,23 @@ static odp_queue_t queue_create(const char *name,
 	uint32_t i;
 	queue_entry_t *queue;
 	void *queue_lf;
-	odp_queue_t handle = ODP_QUEUE_INVALID;
-	odp_queue_type_t type = ODP_QUEUE_TYPE_PLAIN;
+	odp_queue_type_t type;
 	odp_queue_param_t default_param;
+	odp_queue_t handle = ODP_QUEUE_INVALID;
 
 	if (param == NULL) {
 		odp_queue_param_init(&default_param);
 		param = &default_param;
+	}
+
+	type = param->type;
+
+	if (type == ODP_QUEUE_TYPE_SCHED) {
+		if (param->sched.prio < odp_schedule_min_prio() ||
+		    param->sched.prio > odp_schedule_max_prio()) {
+			ODP_ERR("Bad queue priority: %i\n", param->sched.prio);
+			return ODP_QUEUE_INVALID;
+		}
 	}
 
 	if (param->nonblocking == ODP_BLOCKING) {
@@ -283,7 +293,7 @@ static odp_queue_t queue_create(const char *name,
 			return ODP_QUEUE_INVALID;
 	} else if (param->nonblocking == ODP_NONBLOCKING_LF) {
 		/* Only plain type lock-free queues supported */
-		if (param->type != ODP_QUEUE_TYPE_PLAIN)
+		if (type != ODP_QUEUE_TYPE_PLAIN)
 			return ODP_QUEUE_INVALID;
 		if (param->size > queue_glb->queue_lf_size)
 			return ODP_QUEUE_INVALID;
@@ -325,8 +335,6 @@ static odp_queue_t queue_create(const char *name,
 				queue->s.dequeue_multi = lf_fn->deq_multi;
 				queue->s.orig_dequeue_multi = lf_fn->deq_multi;
 			}
-
-			type = queue->s.type;
 
 			if (type == ODP_QUEUE_TYPE_SCHED)
 				queue->s.status = QUEUE_STATUS_NOTSCHED;
@@ -606,7 +614,7 @@ static void queue_param_init(odp_queue_param_t *params)
 	params->enq_mode = ODP_QUEUE_OP_MT;
 	params->deq_mode = ODP_QUEUE_OP_MT;
 	params->nonblocking = ODP_BLOCKING;
-	params->sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	params->sched.prio  = odp_schedule_default_prio();
 	params->sched.sync  = ODP_SCHED_SYNC_PARALLEL;
 	params->sched.group = ODP_SCHED_GROUP_ALL;
 }

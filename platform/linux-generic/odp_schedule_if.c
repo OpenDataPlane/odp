@@ -66,6 +66,21 @@ void odp_schedule_prefetch(int num)
 	return sched_api->schedule_prefetch(num);
 }
 
+int odp_schedule_min_prio(void)
+{
+	return sched_api->schedule_min_prio();
+}
+
+int odp_schedule_max_prio(void)
+{
+	return sched_api->schedule_max_prio();
+}
+
+int odp_schedule_default_prio(void)
+{
+	return sched_api->schedule_default_prio();
+}
+
 int odp_schedule_num_prio(void)
 {
 	return sched_api->schedule_num_prio();
