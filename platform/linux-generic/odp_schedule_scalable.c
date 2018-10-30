@@ -47,13 +47,6 @@
 
 #define FLAG_PKTIN 0x80
 
-ODP_STATIC_ASSERT(ODP_SCHED_PRIO_LOWEST == (ODP_SCHED_PRIO_NUM - 2),
-		  "lowest_prio_does_not_match_with_num_prios");
-
-ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
-		  (ODP_SCHED_PRIO_NORMAL < (ODP_SCHED_PRIO_NUM - 2)),
-		  "normal_prio_is_not_between_highest_and_lowest");
-
 ODP_STATIC_ASSERT(CHECK_IS_POWER2(ODP_CONFIG_QUEUES),
 		  "Number_of_queues_is_not_power_of_two");
 
@@ -1369,6 +1362,21 @@ static int schedule_num_prio(void)
 	return ODP_SCHED_PRIO_NUM - 1; /* Discount the pktin priority level */
 }
 
+static int schedule_min_prio(void)
+{
+	return 0;
+}
+
+static int schedule_max_prio(void)
+{
+	return schedule_num_prio() - 1;
+}
+
+static int schedule_default_prio(void)
+{
+	return schedule_max_prio() / 2;
+}
+
 static int schedule_group_update(sched_group_t *sg,
 				 uint32_t sgi,
 				 const odp_thrmask_t *mask,
@@ -2120,6 +2128,9 @@ const schedule_api_t schedule_scalable_api = {
 	.schedule_release_atomic	= schedule_release_atomic,
 	.schedule_release_ordered	= schedule_release_ordered,
 	.schedule_prefetch		= schedule_prefetch,
+	.schedule_min_prio		= schedule_min_prio,
+	.schedule_max_prio		= schedule_max_prio,
+	.schedule_default_prio		= schedule_default_prio,
 	.schedule_num_prio		= schedule_num_prio,
 	.schedule_group_create		= schedule_group_create,
 	.schedule_group_destroy		= schedule_group_destroy,

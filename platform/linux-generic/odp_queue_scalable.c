@@ -167,6 +167,8 @@ static int queue_init(queue_entry_t *queue, const char *name,
 
 	/* Queue initialized successfully, add it to the sched group */
 	if (queue->s.type == ODP_QUEUE_TYPE_SCHED) {
+		int prio = odp_schedule_max_prio() - param->sched.prio;
+
 		if (queue->s.param.sched.sync == ODP_SCHED_SYNC_ORDERED) {
 			sched_elem->rwin =
 				rwin_alloc(queue_shm_pool,
@@ -177,9 +179,9 @@ static int queue_init(queue_entry_t *queue, const char *name,
 			}
 		}
 		sched_elem->sched_grp = param->sched.group;
-		sched_elem->sched_prio = param->sched.prio;
+		sched_elem->sched_prio = prio;
 		sched_elem->schedq =
-			sched_queue_add(param->sched.group, param->sched.prio);
+			sched_queue_add(param->sched.group, prio);
 		ODP_ASSERT(sched_elem->schedq != NULL);
 
 	}
@@ -361,13 +363,24 @@ static odp_queue_t queue_create(const char *name,
 				const odp_queue_param_t *param)
 {
 	int queue_idx;
-	odp_queue_t handle = ODP_QUEUE_INVALID;
 	queue_entry_t *queue;
+	odp_queue_type_t type;
 	odp_queue_param_t default_param;
+	odp_queue_t handle = ODP_QUEUE_INVALID;
 
 	if (param == NULL) {
 		odp_queue_param_init(&default_param);
 		param = &default_param;
+	}
+
+	type = param->type;
+
+	if (type == ODP_QUEUE_TYPE_SCHED) {
+		if (param->sched.prio < odp_schedule_min_prio() ||
+		    param->sched.prio > odp_schedule_max_prio()) {
+			ODP_ERR("Bad queue priority: %i\n", param->sched.prio);
+			return ODP_QUEUE_INVALID;
+		}
 	}
 
 	for (queue_idx = 0; queue_idx < ODP_CONFIG_QUEUES; queue_idx++) {
@@ -875,7 +888,7 @@ static void queue_param_init(odp_queue_param_t *params)
 	params->enq_mode = ODP_QUEUE_OP_MT;
 	params->deq_mode = ODP_QUEUE_OP_MT;
 	params->nonblocking = ODP_BLOCKING;
-	params->sched.prio = ODP_SCHED_PRIO_DEFAULT;
+	params->sched.prio = odp_schedule_default_prio();
 	params->sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	params->sched.group = ODP_SCHED_GROUP_ALL;
 }

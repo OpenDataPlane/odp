@@ -18,6 +18,7 @@ static odp_pool_t pool_list[CLS_ENTRIES];
 static odp_pool_t pool_default;
 static odp_pktio_t pktio_loop;
 static odp_cls_testcase_u tc;
+static int global_num_l2_qos;
 
 #define NUM_COS_PMR_CHAIN	2
 #define NUM_COS_DEFAULT	1
@@ -457,12 +458,17 @@ void configure_cos_with_l2_priority(void)
 	for (i = 0; i < CLS_L2_QOS_MAX; i++)
 		qos_tbl[i] = 0;
 
+	if (odp_schedule_num_prio() < num_qos)
+		num_qos = odp_schedule_num_prio();
+
+	global_num_l2_qos = num_qos;
+
 	odp_queue_param_init(&qparam);
 	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	for (i = 0; i < num_qos; i++) {
-		qparam.sched.prio = ODP_SCHED_PRIO_LOWEST - i;
+		qparam.sched.prio = ODP_SCHED_PRIO_LOWEST + i;
 		sprintf(queuename, "%s_%d", "L2_Queue", i);
 		queue_tbl[i] = odp_queue_create(queuename, &qparam);
 		CU_ASSERT_FATAL(queue_tbl[i] != ODP_QUEUE_INVALID);
@@ -506,7 +512,7 @@ void test_cos_with_l2_priority(void)
 	pkt_info.udp = true;
 	pkt_info.vlan = true;
 
-	for (i = 0; i < CLS_L2_QOS_MAX; i++) {
+	for (i = 0; i < global_num_l2_qos; i++) {
 		pkt = create_packet(pkt_info);
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 		seqno = cls_pkt_get_seq(pkt);

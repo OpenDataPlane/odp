@@ -26,11 +26,12 @@
 #define NUM_QUEUE         ODP_CONFIG_QUEUES
 #define NUM_PKTIO         ODP_CONFIG_PKTIO_ENTRIES
 #define NUM_ORDERED_LOCKS 1
-#define NUM_PRIO          3
 #define NUM_STATIC_GROUP  3
 #define NUM_GROUP         (NUM_STATIC_GROUP + 9)
 #define NUM_PKTIN         32
-#define LOWEST_QUEUE_PRIO (NUM_PRIO - 2)
+#define NUM_PRIO          3
+#define MAX_API_PRIO      (NUM_PRIO - 2)
+/* Lowest internal priority */
 #define PKTIN_PRIO        (NUM_PRIO - 1)
 #define CMD_QUEUE         0
 #define CMD_PKTIO         1
@@ -367,8 +368,8 @@ static int init_queue(uint32_t qi, const odp_schedule_param_t *sched_param)
 	if (!sched_group->s.group[group].allocated)
 		return -1;
 
-	if (sched_param->prio > 0)
-		prio = LOWEST_QUEUE_PRIO;
+	/* Inverted prio value (max = 0) vs API */
+	prio = MAX_API_PRIO - sched_param->prio;
 
 	sched_global->queue_cmd[qi].s.prio  = prio;
 	sched_global->queue_cmd[qi].s.group = group;
@@ -666,6 +667,21 @@ static void schedule_prefetch(int num)
 	(void)num;
 }
 
+static int schedule_min_prio(void)
+{
+	return 0;
+}
+
+static int schedule_max_prio(void)
+{
+	return MAX_API_PRIO;
+}
+
+static int schedule_default_prio(void)
+{
+	return schedule_max_prio() / 2;
+}
+
 static int schedule_num_prio(void)
 {
 	/* Lowest priority is used for pktin polling and is internal
@@ -924,6 +940,9 @@ const schedule_api_t schedule_sp_api = {
 	.schedule_release_atomic  = schedule_release_atomic,
 	.schedule_release_ordered = schedule_release_ordered,
 	.schedule_prefetch        = schedule_prefetch,
+	.schedule_min_prio        = schedule_min_prio,
+	.schedule_max_prio        = schedule_max_prio,
+	.schedule_default_prio    = schedule_default_prio,
 	.schedule_num_prio        = schedule_num_prio,
 	.schedule_group_create    = schedule_group_create,
 	.schedule_group_destroy   = schedule_group_destroy,
