@@ -2114,6 +2114,8 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	capa->max_ordered_locks = schedule_max_ordered_locks();
 	capa->max_groups = num_grps();
 	capa->max_prios = schedule_num_prio();
+	capa->max_queues = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
+	capa->max_queue_size = 0;
 
 	return 0;
 }
