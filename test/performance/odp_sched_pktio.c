@@ -1112,12 +1112,12 @@ static int create_pipeline_queues(test_global_t *test_global)
 	int i, j, k, num_pktio, stages, queues, ctx_size;
 	pipe_queue_context_t *ctx;
 	odp_queue_param_t queue_param;
-	odp_queue_capability_t queue_capa;
+	odp_schedule_capability_t schedule_capa;
 	odp_schedule_sync_t sched_sync;
 	int ret = 0;
 
-	if (odp_queue_capability(&queue_capa)) {
-		printf("Error: Queue capability failed\n");
+	if (odp_schedule_capability(&schedule_capa)) {
+		printf("Error: Schedule capa failed.\n");
 		return -1;
 	}
 
@@ -1133,10 +1133,10 @@ static int create_pipeline_queues(test_global_t *test_global)
 	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 
 	queue_param.size = test_global->opt.pipe_queue_size;
-	if (queue_capa.sched.max_size &&
-	    queue_param.size > queue_capa.sched.max_size) {
+	if (schedule_capa.max_queue_size &&
+	    queue_param.size > schedule_capa.max_queue_size) {
 		printf("Error: Pipeline queue max size is %u\n",
-		       queue_capa.sched.max_size);
+		       schedule_capa.max_queue_size);
 		return -1;
 	}
 

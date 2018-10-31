@@ -401,19 +401,15 @@ int main(void)
 	printf("    max ordered locks:    %" PRIu32 "\n",
 	       schedule_capa.max_ordered_locks);
 	printf("    max groups:           %u\n", schedule_capa.max_groups);
-	printf("    priorities:           %u\n", schedule_capa.prios);
-	printf("    sched.max_num:        %" PRIu32 "\n",
-	       queue_capa.sched.max_num);
-	printf("    sched.max_size:       %" PRIu32 "\n",
-	       queue_capa.sched.max_size);
-	printf("    sched.lf.max_num:     %" PRIu32 "\n",
-	       queue_capa.sched.lockfree.max_num);
-	printf("    sched.lf.max_size:    %" PRIu32 "\n",
-	       queue_capa.sched.lockfree.max_size);
-	printf("    sched.wf.max_num:     %" PRIu32 "\n",
-	       queue_capa.sched.waitfree.max_num);
-	printf("    sched.wf.max_size:    %" PRIu32 "\n",
-	       queue_capa.sched.waitfree.max_size);
+	printf("    priorities:           %u\n", schedule_capa.max_prios);
+	printf("    sched.max_queues:     %" PRIu32 "\n",
+	       schedule_capa.max_queues);
+	printf("    sched.max_queue_size: %" PRIu32 "\n",
+	       schedule_capa.max_queue_size);
+	printf("    sched.lf_queues:      %ssupported\n",
+	       schedule_capa.lockfree_queues ? "" : "not ");
+	printf("    sched.wf_queues:      %ssupported\n",
+	       schedule_capa.waitfree_queues ? "" : "not ");
 
 	printf("\n");
 	printf("  TIMER\n");
