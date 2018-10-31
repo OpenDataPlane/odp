@@ -251,7 +251,7 @@ static int create_pool(test_global_t *global)
 
 static int create_queues(test_global_t *global)
 {
-	odp_queue_capability_t queue_capa;
+	odp_schedule_capability_t schedule_capa;
 	odp_queue_param_t queue_param;
 	odp_queue_t queue;
 	odp_buffer_t buf;
@@ -279,19 +279,20 @@ static int create_queues(test_global_t *global)
 
 	printf("  queue type       %s\n\n", type_str);
 
-	if (odp_queue_capability(&queue_capa)) {
-		printf("Error: Queue capa failed.\n");
+	if (odp_schedule_capability(&schedule_capa)) {
+		printf("Error: Schedule capa failed.\n");
 		return -1;
 	}
 
-	if (tot_queue > queue_capa.sched.max_num) {
-		printf("Max queues supported %u\n", queue_capa.sched.max_num);
+	if (tot_queue > schedule_capa.max_queues) {
+		printf("Max queues supported %u\n",
+		       schedule_capa.max_queues);
 		return -1;
 	}
 
-	if (queue_capa.sched.max_size &&
-	    queue_size > queue_capa.sched.max_size) {
-		printf("Max queue size %u\n", queue_capa.sched.max_size);
+	if (schedule_capa.max_queue_size &&
+	    queue_size > schedule_capa.max_queue_size) {
+		printf("Max queue size %u\n", schedule_capa.max_queue_size);
 		return -1;
 	}
 

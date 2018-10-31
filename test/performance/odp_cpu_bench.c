@@ -528,7 +528,7 @@ int main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	odp_pool_capability_t pool_capa;
 	odp_pool_t pool;
-	odp_queue_capability_t queue_capa;
+	odp_schedule_capability_t schedule_capa;
 	odp_shm_t shm;
 	odp_shm_t lookup_tbl_shm;
 	odp_pool_param_t params;
@@ -607,27 +607,26 @@ int main(int argc, char *argv[])
 	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
 	printf("cpu mask:           %s\n", cpumaskstr);
 
-	/* Create application queues */
-	if (odp_queue_capability(&queue_capa)) {
-		LOG_ERR("Error: odp_queue_capability() failed\n");
-		exit(EXIT_FAILURE);
+	if (odp_schedule_capability(&schedule_capa)) {
+		printf("Error: Schedule capa failed.\n");
+		return -1;
 	}
 
 	/* Make sure a single queue can store all the packets in a group */
 	pkts_per_group = QUEUES_PER_GROUP * PKTS_PER_QUEUE;
-	if (queue_capa.sched.max_size  &&
-	    queue_capa.sched.max_size < pkts_per_group)
-		pkts_per_group = queue_capa.sched.max_size;
+	if (schedule_capa.max_queue_size  &&
+	    schedule_capa.max_queue_size < pkts_per_group)
+		pkts_per_group = schedule_capa.max_queue_size;
 
 	/* Divide queues evenly into groups */
-	if (queue_capa.sched.max_num < QUEUES_PER_GROUP) {
+	if (schedule_capa.max_queues < QUEUES_PER_GROUP) {
 		LOG_ERR("Error: min %d queues required\n", QUEUES_PER_GROUP);
 		return -1;
 	}
-	num_queues = num_workers > queue_capa.sched.max_num ?
-			queue_capa.sched.max_num : num_workers;
+	num_queues = num_workers > schedule_capa.max_queues ?
+			schedule_capa.max_queues : num_workers;
 	num_groups = (num_queues + QUEUES_PER_GROUP - 1) / QUEUES_PER_GROUP;
-	if (num_groups * QUEUES_PER_GROUP > queue_capa.sched.max_num)
+	if (num_groups * QUEUES_PER_GROUP > schedule_capa.max_queues)
 		num_groups--;
 	num_queues = num_groups * QUEUES_PER_GROUP;
 
