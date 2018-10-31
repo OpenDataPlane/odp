@@ -20,6 +20,7 @@
 #define NUM_BUFS_PAUSE		1000
 #define NUM_BUFS_BEFORE_PAUSE	10
 #define NUM_GROUPS              2
+#define MAX_QUEUES              (64 * 1024)
 
 #define TEST_QUEUE_SIZE_NUM_EV  50
 
@@ -144,12 +145,16 @@ static void release_context(odp_schedule_sync_t sync)
 static void scheduler_test_capa(void)
 {
 	odp_schedule_capability_t capa;
+	odp_queue_capability_t queue_capa;
 
 	memset(&capa, 0, sizeof(odp_schedule_capability_t));
 	CU_ASSERT_FATAL(odp_schedule_capability(&capa) == 0);
+	CU_ASSERT_FATAL(odp_queue_capability(&queue_capa) == 0);
 
 	CU_ASSERT(capa.max_groups != 0);
 	CU_ASSERT(capa.max_prios != 0);
+	CU_ASSERT(capa.max_queues != 0);
+	CU_ASSERT(queue_capa.max_queues >= capa.max_queues);
 }
 
 static void scheduler_test_wait_time(void)
@@ -413,6 +418,7 @@ static void scheduler_test_wait(void)
 static void scheduler_test_queue_size(void)
 {
 	odp_queue_capability_t queue_capa;
+	odp_scheduler_config_t default_config;
 	odp_pool_t pool;
 	odp_pool_param_t pool_param;
 	odp_queue_param_t queue_param;
@@ -426,10 +432,11 @@ static void scheduler_test_queue_size(void)
 				      ODP_SCHED_SYNC_ORDERED};
 
 	CU_ASSERT_FATAL(odp_queue_capability(&queue_capa) == 0);
+	odp_scheduler_config_init(&default_config);
 	queue_size = TEST_QUEUE_SIZE_NUM_EV;
-	if (queue_capa.sched.max_size &&
-	    queue_size > queue_capa.sched.max_size)
-		queue_size = queue_capa.sched.max_size;
+	if (default_config.queue_size &&
+	    queue_size > default_config.queue_size)
+		queue_size = default_config.queue_size;
 
 	odp_pool_param_init(&pool_param);
 	pool_param.buf.size  = 100;
@@ -1684,9 +1691,10 @@ static int create_queues(test_globals_t *globals)
 	}
 
 	globals->max_sched_queue_size = BUFS_PER_QUEUE_EXCL;
-	if (capa.sched.max_size && capa.sched.max_size < BUFS_PER_QUEUE_EXCL) {
-		printf("Max sched queue size %u\n", capa.sched.max_size);
-		globals->max_sched_queue_size = capa.sched.max_size;
+	if (sched_capa.max_queue_size && sched_capa.max_queue_size <
+			BUFS_PER_QUEUE_EXCL) {
+		printf("Max sched queue size %u\n", sched_capa.max_queue_size);
+		globals->max_sched_queue_size = sched_capa.max_queue_size;
 	}
 
 	prios = odp_schedule_num_prio();
@@ -1696,7 +1704,7 @@ static int create_queues(test_globals_t *globals)
 	queues_per_prio = QUEUES_PER_PRIO;
 	num_sched = (prios * queues_per_prio * sched_types) + CHAOS_NUM_QUEUES;
 	num_plain = (prios * queues_per_prio);
-	while ((num_sched > capa.sched.max_num ||
+	while ((num_sched > sched_capa.max_queues ||
 		num_plain > capa.plain.max_num ||
 		num_sched + num_plain > capa.max_queues) && queues_per_prio) {
 		queues_per_prio--;
