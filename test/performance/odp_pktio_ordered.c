@@ -1061,7 +1061,6 @@ int main(int argc, char *argv[])
 	odp_pool_t pool;
 	odp_pool_param_t params;
 	odp_shm_t shm;
-	odp_queue_capability_t queue_capa;
 	odp_schedule_capability_t schedule_capa;
 	odp_pool_capability_t pool_capa;
 	odph_ethaddr_t new_addr;
@@ -1096,11 +1095,6 @@ int main(int argc, char *argv[])
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		LOG_ERR("Error: ODP local init failed.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	if (odp_queue_capability(&queue_capa)) {
-		LOG_ERR("Error: Queue capa failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1164,9 +1158,9 @@ int main(int argc, char *argv[])
 		pool_size = pool_capa.pkt.max_num;
 
 	queue_size = MAX_NUM_PKT;
-	if (queue_capa.sched.max_size &&
-	    queue_capa.sched.max_size < MAX_NUM_PKT)
-		queue_size = queue_capa.sched.max_size;
+	if (schedule_capa.max_queue_size &&
+	    schedule_capa.max_queue_size < MAX_NUM_PKT)
+		queue_size = schedule_capa.max_queue_size;
 
 	/* Pool should not be larger than queue, otherwise queue enqueues at
 	 * packet input may fail. */
