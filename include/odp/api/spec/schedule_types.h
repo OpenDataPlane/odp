@@ -78,6 +78,9 @@ extern "C" {
  * requests another event from the scheduler, which implicitly releases the
  * context. User may allow the scheduler to release the context earlier than
  * that by calling odp_schedule_release_atomic().
+ * When scheduler is enabled as flow-aware, the event flow id value affects
+ * scheduling of the event and synchronization is maintained per flow within
+ * each queue.
  */
 
 /**
@@ -104,6 +107,9 @@ extern "C" {
  * (e.g. freed or stored) within the context are considered missing from
  * reordering and are skipped at this time (but can be ordered again within
  * another context).
+ * When scheduler is enabled as flow-aware, the event flow id value affects
+ * scheduling of the event and synchronization is maintained per flow within
+ * each queue.
  */
 
 /**
@@ -190,6 +196,13 @@ typedef struct odp_schedule_capability_t {
 	 * events. */
 	uint32_t max_queue_size;
 
+	/** Maximum supported flows per queue.
+	 * Specifies the maximum number of flows per queue supported by the
+	 * implementation.  A value of 0 indicates flow aware mode is not
+	 * supported.
+	 */
+	uint32_t max_flows;
+
 	/** Lock-free (ODP_NONBLOCKING_LF) queues support.
 	 * The specification is the same as for the blocking implementation. */
 	odp_support_t lockfree_queues;
@@ -216,6 +229,22 @@ typedef struct odp_schedule_config_t {
 	 * the implementation.
 	 */
 	uint32_t queue_size;
+
+	/** Number of flows per queue to be supported.  Scheduler enables flow
+	 * aware mode when flow count is configured greater than 1 (up to
+	 * 'max_flows' capability).
+	 *
+	 * Flows are lightweight entities and events can be assigned to
+	 * specific flows by the application using odp_event_flow_id_set()
+	 * before enqueuing the event into the scheduler. This value is ignored
+	 * unless scheduler supports flow aware mode.
+	 *
+	 * This number should be less than maximum flow supported by the
+	 * implementation. The default value is zero.
+	 *
+	 * @see odp_schedule_capability_t
+	 */
+	uint32_t num_flows;
 
 } odp_schedule_config_t;
 
