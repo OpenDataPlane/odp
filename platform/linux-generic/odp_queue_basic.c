@@ -58,10 +58,10 @@ static int queue_capa(odp_queue_capability_t *capa, int sched ODP_UNUSED)
 	capa->plain.max_size    = queue_glb->config.max_queue_size;
 	capa->plain.lockfree.max_num  = queue_glb->queue_lf_num;
 	capa->plain.lockfree.max_size = queue_glb->queue_lf_size;
+#if ODP_DEPRECATED_API
 	capa->sched.max_num     = capa->max_queues;
 	capa->sched.max_size    = queue_glb->config.max_queue_size;
 
-#if ODP_DEPRECATED_API
 	if (sched) {
 		capa->max_ordered_locks = sched_fn->max_ordered_locks();
 		capa->max_sched_groups  = sched_fn->num_grps();
