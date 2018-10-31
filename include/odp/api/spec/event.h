@@ -210,6 +210,44 @@ void odp_event_free_multi(const odp_event_t event[], int num);
 void odp_event_free_sp(const odp_event_t event[], int num);
 
 /**
+ * Event flow id value
+ *
+ * Returns the flow id value set in the event.
+ * Usage of flow id enables scheduler to maintain multiple synchronization
+ * contexts per single queue. For example, when multiple flows are assigned to
+ * an atomic queue, events of a single flow (events from the same queue with
+ * the same flow id value) are guaranteed to be processed by only single thread
+ * at a time.  For packets received through packet input initial
+ * event flow id will be same as flow hash generated for packets. The hash
+ * algorithm and therefore the resulting flow id value is implementation
+ * specific. Use pktio API configuration options to select the fields used for
+ * initial flow id calculation. For all other events initial flow id is zero
+ * An application can change event flow id using odp_event_flow_id_set().
+ *
+ * @param	event	Event handle
+ *
+ * @return		Flow id of the event
+ *
+ */
+uint32_t odp_event_flow_id(odp_event_t event);
+
+/**
+ * Set event flow id value
+ *
+ * Store the event flow id for the event and sets the flow id flag.
+ * When scheduler is configured as flow aware, scheduled queue synchronization
+ * will be based on this id within each queue.
+ * When scheduler is configured as flow unaware, event flow id is ignored by
+ * the implementation.
+ * The value of flow id must be less than the number of flows configured in the
+ * scheduler.
+ *
+ * @param      event		Event handle
+ * @param      flow_id          Flow event id to be set.
+ */
+void odp_event_flow_id_set(odp_event_t event, uint32_t flow_id);
+
+/**
  * @}
  */
 
