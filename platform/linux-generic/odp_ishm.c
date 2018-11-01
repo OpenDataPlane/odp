@@ -1492,11 +1492,23 @@ int _odp_ishm_init_global(const odp_init_t *init)
 	void *addr;
 	void *spce_addr;
 	int i;
+	int single_va_size_kb = 0;
 	uid_t uid;
 	char *hp_dir = odp_global_ro.hugepage_info.default_huge_page_dir;
 	uint64_t align;
-	uint64_t max_memory = ODP_CONFIG_ISHM_VA_PREALLOC_SZ;
-	uint64_t internal   = ODP_CONFIG_ISHM_VA_PREALLOC_SZ / 8;
+	uint64_t max_memory;
+	uint64_t internal;
+
+	if (!_odp_libconfig_lookup_ext_int("shm", NULL, "single_va_size_kb",
+					   &single_va_size_kb)) {
+		ODP_ERR("Unable to read single VA size from config\n");
+		return -1;
+	}
+
+	ODP_DBG("Shm single VA size: %dkB\n", single_va_size_kb);
+
+	max_memory = single_va_size_kb * 1024;
+	internal   = max_memory / 8;
 
 	/* user requested memory size + some extra for internal use */
 	if (init && init->shm.max_memory)
