@@ -364,26 +364,64 @@ typedef enum odp_ipsec_tunnel_type_t {
  * IPSEC crypto parameters
  */
 typedef struct odp_ipsec_crypto_param_t {
-	/** Cipher algorithm */
+	/** Cipher algorithm
+	 *
+	 *  Select cipher algorithm to be used. ODP_CIPHER_ALG_NULL indicates
+	 *  that ciphering is disabled. See 'ciphers' field of
+	 *  odp_ipsec_capability_t for supported cipher algorithms. Algorithm
+	 *  descriptions can be found from odp_cipher_alg_t documentation. Note
+	 *  that some algorithms restrict choice of the pairing authentication
+	 *  algorithm. When ciphering is enabled, cipher key and potential extra
+	 *  key material (cipher_key_extra) need to be set. The default value
+	 *  is ODP_CIPHER_ALG_NULL.
+	 */
 	odp_cipher_alg_t cipher_alg;
 
 	/** Cipher key */
 	odp_crypto_key_t cipher_key;
 
-	/** Extra keying material for cipher key
+	/** Extra keying material for cipher algorithm
 	 *
 	 *  Additional data used as salt or nonce if the algorithm requires it,
 	 *  other algorithms ignore this field. These algorithms require this
-	 *  field set:
-	 *  - AES_GCM: 4 bytes of salt
-	 **/
+	 *  field to be set:
+	 *  - ODP_CIPHER_ALG_AES_CTR: 4 bytes of nonce
+	 *  - ODP_CIPHER_ALG_AES_GCM: 4 bytes of salt
+	 *  - ODP_CIPHER_ALG_AES_CCM: 3 bytes of salt
+	 *  - ODP_CIPHER_ALG_CHACHA20_POLY1305: 4 bytes of salt
+	 */
 	odp_crypto_key_t cipher_key_extra;
 
-	/** Authentication algorithm */
+	/** Authentication algorithm
+	 *
+	 *  Select authentication algorithm to be used. ODP_AUTH_ALG_NULL
+	 *  indicates that authentication is disabled. See 'auths' field of
+	 *  odp_ipsec_capability_t for supported authentication algorithms.
+	 *  Algorithm descriptions can be found from odp_auth_alg_t
+	 *  documentation. Note that some algorithms restrict choice of the
+	 *  pairing cipher algorithm. When single algorithm provides both
+	 *  ciphering and authentication (i.e. Authenticated Encryption),
+	 *  authentication side key information ('auth_key' and
+	 *  'auth_key_extra') is ignored, and cipher side values are
+	 *  used instead. These algorithms ignore authentication side key
+	 *  information: ODP_AUTH_ALG_AES_GCM, ODP_AUTH_ALG_AES_CCM and
+	 *  ODP_AUTH_ALG_CHACHA20_POLY1305. Otherwise, authentication side
+	 *  parameters must be set when authentication is enabled. The default
+	 *  value is ODP_AUTH_ALG_NULL.
+	 */
 	odp_auth_alg_t auth_alg;
 
 	/** Authentication key */
 	odp_crypto_key_t auth_key;
+
+	/** Extra keying material for authentication algorithm
+	 *
+	 *  Additional data used as salt or nonce if the algorithm requires it,
+	 *  other algorithms ignore this field. These algorithms require this
+	 *  field to be set:
+	 *  - ODP_AUTH_ALG_AES_GMAC: 4 bytes of salt
+	 */
+	odp_crypto_key_t auth_key_extra;
 
 } odp_ipsec_crypto_param_t;
 
