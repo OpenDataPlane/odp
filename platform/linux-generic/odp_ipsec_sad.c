@@ -335,6 +335,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	ipsec_sa_t *ipsec_sa;
 	odp_crypto_session_param_t crypto_param;
 	odp_crypto_ses_create_err_t ses_create_rc;
+	const odp_crypto_key_t *salt_param = NULL;
 
 	ipsec_sa = ipsec_sa_reserve();
 	if (NULL == ipsec_sa) {
@@ -458,6 +459,8 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	    (uint32_t)-1 == crypto_param.auth_digest_len)
 		goto error;
 
+	ipsec_sa->salt_length = 0;
+
 	switch (crypto_param.cipher_alg) {
 	case ODP_CIPHER_ALG_NULL:
 		ipsec_sa->esp_iv_len = 0;
@@ -480,20 +483,33 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->aes_ctr_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 1;
+		/* 4 byte nonse */
+		ipsec_sa->salt_length = 4;
+		salt_param = &param->crypto.cipher_key_extra;
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_GCM:
 #endif
 	case ODP_CIPHER_ALG_AES_GCM:
+		ipsec_sa->use_counter_iv = 1;
+		ipsec_sa->esp_iv_len = 8;
+		ipsec_sa->esp_block_len = 16;
+		ipsec_sa->salt_length = 4;
+		salt_param = &param->crypto.cipher_key_extra;
+		break;
 	case ODP_CIPHER_ALG_AES_CCM:
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 16;
+		ipsec_sa->salt_length = 3;
+		salt_param = &param->crypto.cipher_key_extra;
 		break;
 	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 1;
+		ipsec_sa->salt_length = 4;
+		salt_param = &param->crypto.cipher_key_extra;
 		break;
 	default:
 		goto error;
@@ -513,6 +529,8 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_block_len = 16;
 		crypto_param.auth_iv.length = 12;
+		ipsec_sa->salt_length = 4;
+		salt_param = &param->crypto.cipher_key_extra;
 		break;
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
 		crypto_param.auth_aad_len = sizeof(ipsec_aad_t);
@@ -523,17 +541,19 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 
 	ipsec_sa->icv_len = crypto_param.auth_digest_len;
 
-	if (param->crypto.cipher_key_extra.length) {
-		if (param->crypto.cipher_key_extra.length >
-		    IPSEC_MAX_SALT_LEN)
+	if (ipsec_sa->salt_length) {
+		if (ipsec_sa->salt_length > IPSEC_MAX_SALT_LEN) {
+			ODP_ERR("IPSEC_MAX_SALT_LEN too small\n");
 			goto error;
+		}
 
-		ipsec_sa->salt_length = param->crypto.cipher_key_extra.length;
-		memcpy(ipsec_sa->salt,
-		       param->crypto.cipher_key_extra.data,
-		       param->crypto.cipher_key_extra.length);
-	} else {
-		ipsec_sa->salt_length = 0;
+		if (ipsec_sa->salt_length != salt_param->length) {
+			ODP_ERR("Bad extra keying material length: %i\n",
+				salt_param->length);
+			goto error;
+		}
+
+		memcpy(ipsec_sa->salt, salt_param->data, ipsec_sa->salt_length);
 	}
 
 	if (odp_crypto_session_create(&crypto_param, &ipsec_sa->session,
