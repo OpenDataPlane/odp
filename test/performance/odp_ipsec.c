@@ -277,6 +277,10 @@ static ipsec_alg_config_t algs_config[] = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
 			},
+			.cipher_key_extra = {
+				.data = test_salt,
+				.length = 4,
+			},
 			.auth_alg = ODP_AUTH_ALG_NULL
 		},
 	},
@@ -287,6 +291,10 @@ static ipsec_alg_config_t algs_config[] = {
 			.cipher_key = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
+			},
+			.cipher_key_extra = {
+				.data = test_salt,
+				.length = 4,
 			},
 			.auth_alg = ODP_AUTH_ALG_SHA1_HMAC,
 			.auth_key = {
