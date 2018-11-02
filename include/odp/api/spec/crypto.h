@@ -422,7 +422,10 @@ typedef odp_packet_data_range_t ODP_DEPRECATE(odp_crypto_data_range_t);
  * Crypto API session creation parameters
  */
 typedef struct odp_crypto_session_param_t {
-	/** Encode vs. decode operation */
+	/** Encode vs. decode operation
+	 *
+	 *  The default value is ODP_CRYPTO_OP_ENCODE.
+	 */
 	odp_crypto_op_t op;
 
 	/** Authenticate cipher vs. plain text
@@ -435,18 +438,31 @@ typedef struct odp_crypto_session_param_t {
 	 *
 	 *  true:  Authenticate cipher text
 	 *  false: Authenticate plain text
+	 *
+	 *  The default value is false.
 	 */
 	odp_bool_t auth_cipher_text;
 
-	/** Preferred sync vs. async for odp_crypto_operation() */
+	/** Preferred sync vs. async for odp_crypto_operation()
+	 *
+	 *  The default value is ODP_CRYPTO_SYNC.
+	 */
 	odp_crypto_op_mode_t pref_mode;
 
-	/** Operation mode when using packet interface: sync or async */
+	/** Operation mode when using packet interface: sync or async
+	 *
+	 *  The default value is ODP_CRYPTO_SYNC.
+	 */
 	odp_crypto_op_mode_t op_mode;
 
 	/** Cipher algorithm
 	 *
-	 *  Use odp_crypto_capability() for supported algorithms.
+	 *  Select cipher algorithm to be used. ODP_CIPHER_ALG_NULL indicates
+	 *  that ciphering is disabled. Use odp_crypto_capability() for
+	 *  supported algorithms. Note that some algorithms restrict choice of
+	 *  the pairing authentication algorithm. When ciphering is enabled
+	 *  cipher key and IV need to be set. The default value is
+	 *  ODP_CIPHER_ALG_NULL.
 	 */
 	odp_cipher_alg_t cipher_alg;
 
@@ -467,7 +483,18 @@ typedef struct odp_crypto_session_param_t {
 
 	/** Authentication algorithm
 	 *
-	 *  Use odp_crypto_capability() for supported algorithms.
+	 *  Select authentication algorithm to be used. ODP_AUTH_ALG_NULL
+	 *  indicates that authentication is disabled. Use
+	 *  odp_crypto_capability() for supported algorithms. Note that some
+	 *  algorithms restrict choice of the pairing cipher algorithm. When
+	 *  single algorithm provides both ciphering and authentication
+	 *  (i.e. Authenticated Encryption), authentication side key
+	 *  (auth_key) and IV (auth_iv) are ignored, and cipher side values are
+	 *  used instead. These algorithms ignore authentication side key
+	 *  and IV: ODP_AUTH_ALG_AES_GCM, ODP_AUTH_ALG_AES_CCM and
+	 *  ODP_AUTH_ALG_CHACHA20_POLY1305. Otherwise, all authentication side
+	 *  parameters must be set when authentication is enabled. The default
+	 *  value is ODP_AUTH_ALG_NULL.
 	 */
 	odp_auth_alg_t auth_alg;
 
