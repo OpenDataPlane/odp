@@ -225,8 +225,7 @@ static int queue_init_global(void)
 	max_alloc = CONFIG_SCAL_QUEUE_SIZE * sizeof(odp_buffer_hdr_t *);
 	queue_shm_pool = _odp_ishm_pool_create("queue_shm_pool",
 					       pool_size,
-					       min_alloc, max_alloc,
-					       _ODP_ISHM_SINGLE_VA);
+					       min_alloc, max_alloc, 0);
 	if (queue_shm_pool == NULL) {
 		ODP_ERR("Failed to allocate shared memory pool for"
 			" queues\n");
