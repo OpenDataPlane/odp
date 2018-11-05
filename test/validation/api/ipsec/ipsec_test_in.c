@@ -19,7 +19,7 @@ static void test_in_ipv4_ah_sha256(void)
 			    true, true, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -52,7 +52,7 @@ static void test_in_ipv4_ah_sha256_tun_ipv4(void)
 			    true, true, 123, &tunnel,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -85,7 +85,7 @@ static void test_in_ipv4_ah_sha256_tun_ipv6(void)
 			    true, true, 123, &tunnel,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -117,7 +117,7 @@ static void test_in_ipv4_ah_sha256_tun_ipv4_notun(void)
 			    true, true, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -150,7 +150,7 @@ static void test_in_ipv4_esp_null_sha256(void)
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -182,7 +182,7 @@ static void test_in_ipv4_esp_aes_cbc_null(void)
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
 			    ODP_AUTH_ALG_NULL, NULL,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -214,7 +214,7 @@ static void test_in_ipv4_esp_aes_cbc_sha256(void)
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -246,7 +246,7 @@ static void test_in_ipv4_esp_aes_ctr_null(void)
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_AES_CTR, &key_a5_128,
 			    ODP_AUTH_ALG_NULL, NULL,
-			    &key_mcgrew_gcm_salt_3);
+			    &key_mcgrew_gcm_salt_3, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -278,7 +278,7 @@ static void test_in_ipv4_ah_sha256_lookup(void)
 			    true, true, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -311,7 +311,7 @@ static void test_in_ipv4_esp_null_sha256_lookup(void)
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -345,7 +345,7 @@ static void test_in_ipv4_esp_null_sha256_tun_ipv4(void)
 			    true, false, 123, &tunnel,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -378,7 +378,7 @@ static void test_in_ipv4_esp_null_sha256_tun_ipv6(void)
 			    true, false, 123, &tunnel,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -410,7 +410,7 @@ static void test_in_ipv4_esp_udp_null_sha256(void)
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 	param.opt.udp_encap = 1;
 
 	sa = odp_ipsec_sa_create(&param);
@@ -443,7 +443,7 @@ static void test_in_ipv4_esp_udp_null_sha256_lookup(void)
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 	param.opt.udp_encap = 1;
 
 	sa = odp_ipsec_sa_create(&param);
@@ -477,7 +477,7 @@ static void test_in_ipv4_ah_sha256_noreplay(void)
 			    true, true, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 	param.inbound.antireplay_ws = 0;
 
 	sa = odp_ipsec_sa_create(&param);
@@ -525,7 +525,7 @@ static void test_in_ipv4_ah_sha256_replay(void)
 			    true, true, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 	param.inbound.antireplay_ws = 32;
 
 	sa = odp_ipsec_sa_create(&param);
@@ -583,7 +583,7 @@ static void test_in_ipv4_esp_null_sha256_noreplay(void)
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 	param.inbound.antireplay_ws = 0;
 
 	sa = odp_ipsec_sa_create(&param);
@@ -631,7 +631,7 @@ static void test_in_ipv4_esp_null_sha256_replay(void)
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 	param.inbound.antireplay_ws = 32;
 
 	sa = odp_ipsec_sa_create(&param);
@@ -694,7 +694,7 @@ static void test_in_ipv4_ah_esp_pkt(void)
 			    true, true, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -729,7 +729,7 @@ static void test_in_ipv4_esp_ah_pkt(void)
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -759,7 +759,7 @@ static void test_in_ipv4_ah_esp_pkt_lookup(void)
 			    true, true, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -790,7 +790,7 @@ static void test_in_ipv4_esp_ah_pkt_lookup(void)
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -821,7 +821,7 @@ static void test_in_ipv4_ah_sha256_bad1(void)
 			    true, true, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -851,7 +851,7 @@ static void test_in_ipv4_ah_sha256_bad2(void)
 			    true, true, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -881,7 +881,7 @@ static void test_in_ipv4_esp_null_sha256_bad1(void)
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -911,7 +911,7 @@ static void test_in_ipv4_rfc3602_5_esp(void)
 			    true, false, 0x4321, NULL,
 			    ODP_CIPHER_ALG_AES_CBC, &key_rfc3602,
 			    ODP_AUTH_ALG_NULL, NULL,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -943,7 +943,7 @@ static void test_in_ipv4_rfc3602_6_esp(void)
 			    true, false, 0x4321, NULL,
 			    ODP_CIPHER_ALG_AES_CBC, &key_rfc3602,
 			    ODP_AUTH_ALG_NULL, NULL,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -976,7 +976,7 @@ static void test_in_ipv4_rfc3602_7_esp(void)
 			    true, false, 0x8765, &tunnel,
 			    ODP_CIPHER_ALG_AES_CBC, &key_rfc3602_2,
 			    ODP_AUTH_ALG_NULL, NULL,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1009,7 +1009,7 @@ static void test_in_ipv4_rfc3602_8_esp(void)
 			    true, false, 0x8765, &tunnel,
 			    ODP_CIPHER_ALG_AES_CBC, &key_rfc3602_2,
 			    ODP_AUTH_ALG_NULL, NULL,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1042,7 +1042,7 @@ static void test_in_ipv4_mcgrew_gcm_2_esp(void)
 			    true, false, 0xa5f8, &tunnel,
 			    ODP_CIPHER_ALG_AES_GCM, &key_mcgrew_gcm_2,
 			    ODP_AUTH_ALG_AES_GCM, NULL,
-			    &key_mcgrew_gcm_salt_2);
+			    &key_mcgrew_gcm_salt_2, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1075,7 +1075,7 @@ static void test_in_ipv4_mcgrew_gcm_3_esp(void)
 			    true, false, 0x4a2cbfe3, &tunnel,
 			    ODP_CIPHER_ALG_AES_GCM, &key_mcgrew_gcm_3,
 			    ODP_AUTH_ALG_AES_GCM, NULL,
-			    &key_mcgrew_gcm_salt_3);
+			    &key_mcgrew_gcm_salt_3, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1108,7 +1108,7 @@ static void test_in_ipv4_mcgrew_gcm_4_esp(void)
 			    true, false, 0x00000000, &tunnel,
 			    ODP_CIPHER_ALG_AES_GCM, &key_mcgrew_gcm_4,
 			    ODP_AUTH_ALG_AES_GCM, NULL,
-			    &key_mcgrew_gcm_salt_4);
+			    &key_mcgrew_gcm_salt_4, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1146,7 +1146,7 @@ static void test_in_ipv4_mcgrew_gcm_12_esp(void)
 			    true, false, 0x335467ae, &tunnel,
 			    ODP_CIPHER_ALG_AES_GCM, &key_mcgrew_gcm_12,
 			    ODP_AUTH_ALG_AES_GCM, NULL,
-			    &key_mcgrew_gcm_salt_12);
+			    &key_mcgrew_gcm_salt_12, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1178,7 +1178,7 @@ static void test_in_ipv4_mcgrew_gcm_12_esp_notun(void)
 			    true, false, 0x335467ae, NULL,
 			    ODP_CIPHER_ALG_AES_GCM, &key_mcgrew_gcm_12,
 			    ODP_AUTH_ALG_AES_GCM, NULL,
-			    &key_mcgrew_gcm_salt_12);
+			    &key_mcgrew_gcm_salt_12, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1211,7 +1211,7 @@ static void test_in_ipv4_mcgrew_gcm_15_esp(void)
 			    true, false, 0x00004321, &tunnel,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_AES_GMAC, &key_mcgrew_gcm_15,
-			    &key_mcgrew_gcm_salt_15);
+			    NULL, &key_mcgrew_gcm_salt_15);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1244,7 +1244,7 @@ static void test_in_ipv4_rfc7634_chacha(void)
 			    true, false, 0x01020304, &tunnel,
 			    ODP_CIPHER_ALG_CHACHA20_POLY1305, &key_rfc7634,
 			    ODP_AUTH_ALG_CHACHA20_POLY1305, NULL,
-			    &key_rfc7634_salt);
+			    &key_rfc7634_salt, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1276,7 +1276,7 @@ static void test_in_ipv4_ah_aes_gmac_128(void)
 			    true, true, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_AES_GMAC, &key_a5_128,
-			    &key_mcgrew_gcm_salt_2);
+			    NULL, &key_mcgrew_gcm_salt_2);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1308,7 +1308,7 @@ static void test_in_ipv4_esp_null_aes_gmac_128(void)
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_AES_GMAC, &key_a5_128,
-			    &key_mcgrew_gcm_salt_2);
+			    NULL, &key_mcgrew_gcm_salt_2);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1340,7 +1340,7 @@ static void test_in_ipv6_ah_sha256(void)
 			    true, true, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1373,7 +1373,7 @@ static void test_in_ipv6_ah_sha256_tun_ipv4(void)
 			    true, true, 123, &tunnel,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1406,7 +1406,7 @@ static void test_in_ipv6_ah_sha256_tun_ipv6(void)
 			    true, true, 123, &tunnel,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1438,7 +1438,7 @@ static void test_in_ipv6_esp_null_sha256(void)
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1471,7 +1471,7 @@ static void test_in_ipv6_esp_null_sha256_tun_ipv4(void)
 			    true, false, 123, &tunnel,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1504,7 +1504,7 @@ static void test_in_ipv6_esp_null_sha256_tun_ipv6(void)
 			    true, false, 123, &tunnel,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
 
@@ -1536,7 +1536,7 @@ static void test_in_ipv6_esp_udp_null_sha256(void)
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 	param.opt.udp_encap = 1;
 
 	sa = odp_ipsec_sa_create(&param);
@@ -1569,7 +1569,7 @@ static void test_in_ipv6_esp_udp_null_sha256_lookup(void)
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_NULL, NULL,
 			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL);
+			    NULL, NULL);
 	param.opt.udp_encap = 1;
 
 	sa = odp_ipsec_sa_create(&param);
