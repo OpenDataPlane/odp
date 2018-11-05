@@ -468,7 +468,7 @@ static int run_test_singleva_after_fork(void *arg ODP_UNUSED)
 		size = sizeof(shared_test_data_small_t);
 		shm = odp_shm_reserve(glob_data->name[thr_index], size,
 				      0, ODP_SHM_SINGLE_VA);
-		CU_ASSERT(ODP_SHM_INVALID != shm);
+		CU_ASSERT_FATAL(ODP_SHM_INVALID != shm);
 		glob_data->shm[thr_index] = shm;
 		pattern_small = odp_shm_addr(shm);
 		CU_ASSERT_PTR_NOT_NULL(pattern_small);
@@ -480,7 +480,7 @@ static int run_test_singleva_after_fork(void *arg ODP_UNUSED)
 		size = sizeof(shared_test_data_medium_t);
 		shm = odp_shm_reserve(glob_data->name[thr_index], size,
 				      0, ODP_SHM_SINGLE_VA);
-		CU_ASSERT(ODP_SHM_INVALID != shm);
+		CU_ASSERT_FATAL(ODP_SHM_INVALID != shm);
 		glob_data->shm[thr_index] = shm;
 		pattern_medium = odp_shm_addr(shm);
 		CU_ASSERT_PTR_NOT_NULL(pattern_medium);
@@ -492,7 +492,7 @@ static int run_test_singleva_after_fork(void *arg ODP_UNUSED)
 		size = sizeof(shared_test_data_big_t);
 		shm = odp_shm_reserve(glob_data->name[thr_index], size,
 				      0, ODP_SHM_SINGLE_VA);
-		CU_ASSERT(ODP_SHM_INVALID != shm);
+		CU_ASSERT_FATAL(ODP_SHM_INVALID != shm);
 		glob_data->shm[thr_index] = shm;
 		pattern_big = odp_shm_addr(shm);
 		CU_ASSERT_PTR_NOT_NULL(pattern_big);
@@ -550,7 +550,7 @@ static void shmem_test_singleva_after_fork(void)
 	glob_data = odp_shm_addr(shm);
 	CU_ASSERT_PTR_NOT_NULL(glob_data);
 
-	thrdarg.numthrds = odp_cpumask_default_worker(&unused, 0);
+	thrdarg.numthrds = odp_cpumask_default_worker(&unused, 3);
 	if (thrdarg.numthrds > MAX_WORKERS)
 		thrdarg.numthrds = MAX_WORKERS;
 
@@ -578,21 +578,21 @@ static void shmem_test_singleva_after_fork(void)
 		case 0:
 			pattern_small =
 				odp_shm_addr(glob_data->shm[thr_index]);
-			CU_ASSERT_PTR_NOT_NULL(pattern_small);
+			CU_ASSERT_PTR_NOT_NULL_FATAL(pattern_small);
 			for (i = 0; i < SMALL_MEM; i++)
 				CU_ASSERT(pattern_small->data[i] == i);
 			break;
 		case 1:
 			pattern_medium =
 				odp_shm_addr(glob_data->shm[thr_index]);
-			CU_ASSERT_PTR_NOT_NULL(pattern_medium);
+			CU_ASSERT_PTR_NOT_NULL_FATAL(pattern_medium);
 			for (i = 0; i < MEDIUM_MEM; i++)
 				CU_ASSERT(pattern_medium->data[i] == (i << 2));
 			break;
 		case 2:
 			pattern_big =
 				odp_shm_addr(glob_data->shm[thr_index]);
-			CU_ASSERT_PTR_NOT_NULL(pattern_big);
+			CU_ASSERT_PTR_NOT_NULL_FATAL(pattern_big);
 			for (i = 0; i < BIG_MEM; i++)
 				CU_ASSERT(pattern_big->data[i] == (i >> 2));
 			break;
