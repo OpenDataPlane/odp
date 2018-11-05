@@ -345,7 +345,8 @@ void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
 			 const odp_crypto_key_t *cipher_key,
 			 odp_auth_alg_t auth_alg,
 			 const odp_crypto_key_t *auth_key,
-			 const odp_crypto_key_t *extra_key)
+			 const odp_crypto_key_t *cipher_key_extra,
+			 const odp_crypto_key_t *auth_key_extra)
 {
 	odp_ipsec_sa_param_init(param);
 	param->dir = in ? ODP_IPSEC_DIR_INBOUND :
@@ -378,8 +379,11 @@ void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
 	if (auth_key)
 		param->crypto.auth_key = *auth_key;
 
-	if (extra_key)
-		param->crypto.cipher_key_extra = *extra_key;
+	if (cipher_key_extra)
+		param->crypto.cipher_key_extra = *cipher_key_extra;
+
+	if (auth_key_extra)
+		param->crypto.auth_key_extra = *auth_key_extra;
 }
 
 void ipsec_sa_destroy(odp_ipsec_sa_t sa)
