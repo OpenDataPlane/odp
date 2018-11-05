@@ -530,7 +530,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->esp_block_len = 16;
 		crypto_param.auth_iv.length = 12;
 		ipsec_sa->salt_length = 4;
-		salt_param = &param->crypto.cipher_key_extra;
+		salt_param = &param->crypto.auth_key_extra;
 		break;
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
 		crypto_param.auth_aad_len = sizeof(ipsec_aad_t);
