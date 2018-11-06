@@ -41,6 +41,16 @@ int odp_schedule_multi(odp_queue_t *from, uint64_t wait, odp_event_t events[],
 	return sched_api->schedule_multi(from, wait, events, num);
 }
 
+int odp_schedule_multi_wait(odp_queue_t *from, odp_event_t events[], int num)
+{
+	return sched_api->schedule_multi_wait(from, events, num);
+}
+
+int odp_schedule_multi_no_wait(odp_queue_t *from, odp_event_t events[], int num)
+{
+	return sched_api->schedule_multi_no_wait(from, events, num);
+}
+
 void odp_schedule_pause(void)
 {
 	return sched_api->schedule_pause();

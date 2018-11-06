@@ -1164,6 +1164,14 @@ static inline int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 	return 0;
 }
 
+static inline int schedule_run(odp_queue_t *out_queue, odp_event_t out_ev[],
+			       unsigned int max_num)
+{
+	timer_run();
+
+	return do_schedule(out_queue, out_ev, max_num);
+}
+
 static inline int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 				odp_event_t out_ev[], unsigned int max_num)
 {
@@ -1172,9 +1180,7 @@ static inline int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 	int ret;
 
 	while (1) {
-		timer_run();
-
-		ret = do_schedule(out_queue, out_ev, max_num);
+		ret = schedule_run(out_queue, out_ev, max_num);
 
 		if (ret)
 			break;
@@ -1214,6 +1220,24 @@ static int schedule_multi(odp_queue_t *out_queue, uint64_t wait,
 			  odp_event_t events[], int num)
 {
 	return schedule_loop(out_queue, wait, events, num);
+}
+
+static int schedule_multi_no_wait(odp_queue_t *out_queue, odp_event_t events[],
+				  int num)
+{
+	return schedule_run(out_queue, events, num);
+}
+
+static int schedule_multi_wait(odp_queue_t *out_queue, odp_event_t events[],
+			       int num)
+{
+	int ret;
+
+	do {
+		ret = schedule_run(out_queue, events, num);
+	} while (ret == 0);
+
+	return ret;
 }
 
 static inline void order_lock(void)
@@ -1551,6 +1575,8 @@ const schedule_api_t schedule_basic_api = {
 	.schedule_wait_time       = schedule_wait_time,
 	.schedule                 = schedule,
 	.schedule_multi           = schedule_multi,
+	.schedule_multi_wait      = schedule_multi_wait,
+	.schedule_multi_no_wait   = schedule_multi_no_wait,
 	.schedule_pause           = schedule_pause,
 	.schedule_resume          = schedule_resume,
 	.schedule_release_atomic  = schedule_release_atomic,

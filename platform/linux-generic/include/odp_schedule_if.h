@@ -89,9 +89,14 @@ void sched_cb_pktio_stop_finalize(int pktio_index);
 
 /* API functions */
 typedef struct {
-	uint64_t (*schedule_wait_time)(uint64_t);
-	odp_event_t (*schedule)(odp_queue_t *, uint64_t);
-	int (*schedule_multi)(odp_queue_t *, uint64_t, odp_event_t [], int);
+	uint64_t (*schedule_wait_time)(uint64_t ns);
+	odp_event_t (*schedule)(odp_queue_t *from, uint64_t wait);
+	int (*schedule_multi)(odp_queue_t *from, uint64_t wait,
+			      odp_event_t events[], int num);
+	int (*schedule_multi_wait)(odp_queue_t *from, odp_event_t events[],
+				   int num);
+	int (*schedule_multi_no_wait)(odp_queue_t *from, odp_event_t events[],
+				      int num);
 	void (*schedule_pause)(void);
 	void (*schedule_resume)(void);
 	void (*schedule_release_atomic)(void);

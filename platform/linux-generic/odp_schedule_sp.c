@@ -644,6 +644,18 @@ static odp_event_t schedule(odp_queue_t *from, uint64_t wait)
 	return ODP_EVENT_INVALID;
 }
 
+static int schedule_multi_wait(odp_queue_t *from, odp_event_t events[],
+			       int max_num)
+{
+	return schedule_multi(from, ODP_SCHED_WAIT, events, max_num);
+}
+
+static int schedule_multi_no_wait(odp_queue_t *from, odp_event_t events[],
+				  int max_num)
+{
+	return schedule_multi(from, ODP_SCHED_NO_WAIT, events, max_num);
+}
+
 static void schedule_pause(void)
 {
 	sched_local.pause = 1;
@@ -935,6 +947,8 @@ const schedule_api_t schedule_sp_api = {
 	.schedule_wait_time       = schedule_wait_time,
 	.schedule                 = schedule,
 	.schedule_multi           = schedule_multi,
+	.schedule_multi_wait      = schedule_multi_wait,
+	.schedule_multi_no_wait   = schedule_multi_no_wait,
 	.schedule_pause           = schedule_pause,
 	.schedule_resume          = schedule_resume,
 	.schedule_release_atomic  = schedule_release_atomic,
