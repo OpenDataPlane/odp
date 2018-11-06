@@ -113,6 +113,35 @@ int odp_schedule_multi(odp_queue_t *from, uint64_t wait, odp_event_t events[],
 		       int num);
 
 /**
+ * Schedule, wait for events
+ *
+ * Like odp_schedule_multi(), but waits infinitely for events.
+ *
+ * @param[out] from    Output parameter for the source queue (where the event
+ *                     was dequeued from). Ignored if NULL.
+ * @param[out] events  Event array for output
+ * @param      num     Maximum number of events to output
+ *
+ * @return Number of events outputted (1 ... num)
+ */
+int odp_schedule_multi_wait(odp_queue_t *from, odp_event_t events[], int num);
+
+/**
+ * Schedule, do not wait for events
+ *
+ * Like odp_schedule_multi(), but does not wait for events.
+ *
+ * @param[out] from    Output parameter for the source queue (where the event
+ *                     was dequeued from). Ignored if NULL.
+ * @param[out] events  Event array for output
+ * @param      num     Maximum number of events to output
+ *
+ * @return Number of events outputted (0 ... num)
+ */
+int odp_schedule_multi_no_wait(odp_queue_t *from, odp_event_t events[],
+			       int num);
+
+/**
  * Pause scheduling
  *
  * Pause global scheduling for this thread. After this call, all schedule calls
