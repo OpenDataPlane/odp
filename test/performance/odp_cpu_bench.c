@@ -526,7 +526,7 @@ int main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	odp_pool_capability_t pool_capa;
 	odp_pool_t pool;
-	odp_schedule_capability_t schedule_capa;
+	odp_schedule_config_t schedule_config;
 	odp_shm_t shm;
 	odp_shm_t lookup_tbl_shm;
 	odp_pool_param_t params;
@@ -614,26 +614,24 @@ int main(int argc, char *argv[])
 	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
 	printf("cpu mask:           %s\n", cpumaskstr);
 
-	if (odp_schedule_capability(&schedule_capa)) {
-		printf("Error: Schedule capa failed.\n");
-		return -1;
-	}
+	odp_schedule_config_init(&schedule_config);
+	odp_schedule_config(&schedule_config);
 
 	/* Make sure a single queue can store all the packets in a group */
 	pkts_per_group = QUEUES_PER_GROUP * PKTS_PER_QUEUE;
-	if (schedule_capa.max_queue_size  &&
-	    schedule_capa.max_queue_size < pkts_per_group)
-		pkts_per_group = schedule_capa.max_queue_size;
+	if (schedule_config.queue_size  &&
+	    schedule_config.queue_size < pkts_per_group)
+		pkts_per_group = schedule_config.queue_size;
 
 	/* Divide queues evenly into groups */
-	if (schedule_capa.max_queues < QUEUES_PER_GROUP) {
+	if (schedule_config.num_queues < QUEUES_PER_GROUP) {
 		LOG_ERR("Error: min %d queues required\n", QUEUES_PER_GROUP);
 		return -1;
 	}
-	num_queues = num_workers > schedule_capa.max_queues ?
-			schedule_capa.max_queues : num_workers;
+	num_queues = num_workers > schedule_config.num_queues ?
+			schedule_config.num_queues : num_workers;
 	num_groups = (num_queues + QUEUES_PER_GROUP - 1) / QUEUES_PER_GROUP;
-	if (num_groups * QUEUES_PER_GROUP > schedule_capa.max_queues)
+	if (num_groups * QUEUES_PER_GROUP > schedule_config.num_queues)
 		num_groups--;
 	num_queues = num_groups * QUEUES_PER_GROUP;
 
