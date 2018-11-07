@@ -142,10 +142,10 @@ int odp_thread_init_local(odp_thread_type_t type)
 	group_worker = 1;
 	group_control = 1;
 
-	if (sched_fn->config) {
+	if (sched_fn->get_config) {
 		schedule_config_t schedule_config;
 
-		sched_fn->config(&schedule_config);
+		sched_fn->get_config(&schedule_config);
 		group_all = schedule_config.group_enable.all;
 		group_worker = schedule_config.group_enable.worker;
 		group_control = schedule_config.group_enable.control;
@@ -196,10 +196,10 @@ int odp_thread_term_local(void)
 	group_worker = 1;
 	group_control = 1;
 
-	if (sched_fn->config) {
+	if (sched_fn->get_config) {
 		schedule_config_t schedule_config;
 
-		sched_fn->config(&schedule_config);
+		sched_fn->get_config(&schedule_config);
 		group_all = schedule_config.group_enable.all;
 		group_worker = schedule_config.group_enable.worker;
 		group_control = schedule_config.group_enable.control;
