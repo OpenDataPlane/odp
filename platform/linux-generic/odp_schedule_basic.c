@@ -1545,7 +1545,7 @@ static int schedule_num_grps(void)
 	return NUM_SCHED_GRPS;
 }
 
-static void schedule_config(schedule_config_t *config)
+static void schedule_get_config(schedule_config_t *config)
 {
 	*config = *(&sched->config_if);
 };
@@ -1580,7 +1580,7 @@ const schedule_fn_t schedule_basic_fn = {
 	.order_lock = order_lock,
 	.order_unlock = order_unlock,
 	.max_ordered_locks = schedule_max_ordered_locks,
-	.config = schedule_config
+	.get_config = schedule_get_config
 };
 
 /* Fill in scheduler API calls */
