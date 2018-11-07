@@ -1561,6 +1561,8 @@ int main(int argc, char *argv[])
 
 	bind_workers();
 
+	odp_schedule_config(NULL);
+
 	/* Default */
 	if (num_groups == 0) {
 		group[0]   = ODP_SCHED_GROUP_ALL;

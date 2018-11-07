@@ -43,6 +43,7 @@ typedef struct test_stat_t {
 typedef struct test_global_t {
 	test_options_t test_options;
 
+	odp_schedule_config_t schedule_config;
 	odp_barrier_t barrier;
 	odp_pool_t pool;
 	odp_cpumask_t cpumask;
@@ -251,7 +252,6 @@ static int create_pool(test_global_t *global)
 
 static int create_queues(test_global_t *global)
 {
-	odp_schedule_capability_t schedule_capa;
 	odp_queue_param_t queue_param;
 	odp_queue_t queue;
 	odp_buffer_t buf;
@@ -279,20 +279,16 @@ static int create_queues(test_global_t *global)
 
 	printf("  queue type       %s\n\n", type_str);
 
-	if (odp_schedule_capability(&schedule_capa)) {
-		printf("Error: Schedule capa failed.\n");
-		return -1;
-	}
-
-	if (tot_queue > schedule_capa.max_queues) {
+	if (tot_queue > global->schedule_config.num_queues) {
 		printf("Max queues supported %u\n",
-		       schedule_capa.max_queues);
+		       global->schedule_config.num_queues);
 		return -1;
 	}
 
-	if (schedule_capa.max_queue_size &&
-	    queue_size > schedule_capa.max_queue_size) {
-		printf("Max queue size %u\n", schedule_capa.max_queue_size);
+	if (global->schedule_config.queue_size &&
+	    queue_size > global->schedule_config.queue_size) {
+		printf("Max queue size %u\n",
+		       global->schedule_config.queue_size);
 		return -1;
 	}
 
@@ -602,6 +598,9 @@ int main(int argc, char **argv)
 		printf("Error: Local init failed.\n");
 		return -1;
 	}
+
+	odp_schedule_config_init(&global->schedule_config);
+	odp_schedule_config(&global->schedule_config);
 
 	if (set_num_cpu(global))
 		return -1;
