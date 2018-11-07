@@ -412,6 +412,9 @@ int main(int argc, char *argv[])
 	}
 	odp_pool_print(pool);
 
+	/* Config and start scheduler */
+	odp_schedule_config(NULL);
+
 	/* Create a pktio instance for each interface */
 	for (i = 0; i < args->appl.if_count; ++i)
 		create_pktio(args->appl.if_names[i], pool, args->appl.mode);

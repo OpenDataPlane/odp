@@ -606,6 +606,9 @@ main(int argc, char *argv[])
 
 	ipsec_init_post();
 
+	/* Configure scheduler */
+	odp_schedule_config(NULL);
+
 	/* Initialize interfaces (which resolves FWD DB entries */
 	for (i = 0; i < global->appl.if_count; i++)
 		initialize_intf(global->appl.if_names[i],
