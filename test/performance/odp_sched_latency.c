@@ -714,6 +714,8 @@ int main(int argc, char *argv[])
 	memset(globals, 0, sizeof(test_globals_t));
 	memcpy(&globals->args, &args, sizeof(test_args_t));
 
+	odp_schedule_config(NULL);
+
 	/*
 	 * Create event pool
 	 */
