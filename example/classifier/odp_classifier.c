@@ -556,6 +556,9 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	/* Configure scheduler */
+	odp_schedule_config(NULL);
+
 	/* odp_pool_print(pool); */
 	odp_atomic_init_u64(&args->total_packets, 0);
 

@@ -996,6 +996,9 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	/* Configure scheduler */
+	odp_schedule_config(NULL);
+
 	/* Populate our IPsec cache */
 	printf("Using %s mode for IPsec API\n\n",
 	       (ODP_IPSEC_OP_MODE_SYNC == global->appl.mode) ? "SYNC" :
