@@ -81,6 +81,9 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 		goto err;
 	}
 
+	/* Configure scheduler */
+	odp_schedule_config(NULL);
+
 	/*
 	 * Create a queue for timer test
 	 */

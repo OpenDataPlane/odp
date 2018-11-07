@@ -1297,6 +1297,9 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	/* Configure scheduler */
+	odp_schedule_config(NULL);
+
 	/* Populate our IPsec cache */
 	printf("Using %s mode for crypto API\n\n",
 	       (CRYPTO_API_SYNC == global->appl.mode) ? "SYNC" :
