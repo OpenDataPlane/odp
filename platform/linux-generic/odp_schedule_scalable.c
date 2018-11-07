@@ -1994,6 +1994,19 @@ static int schedule_term_local(void)
 	return rc;
 }
 
+static void schedule_config_init(odp_schedule_config_t *config)
+{
+	config->num_queues = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
+	config->queue_size = 0; /* FIXME ? */
+}
+
+static int schedule_config(const odp_schedule_config_t *config)
+{
+	(void)config;
+
+	return 0;
+}
+
 static int num_grps(void)
 {
 	return MAX_SCHED_GROUP;
@@ -2141,6 +2154,8 @@ const schedule_fn_t schedule_scalable_fn = {
 const schedule_api_t schedule_scalable_api = {
 	.schedule_wait_time		= schedule_wait_time,
 	.schedule_capability            = schedule_capability,
+	.schedule_config_init		= schedule_config_init,
+	.schedule_config		= schedule_config,
 	.schedule			= schedule,
 	.schedule_multi			= schedule_multi,
 	.schedule_multi_wait            = schedule_multi_wait,
