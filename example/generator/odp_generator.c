@@ -1199,6 +1199,9 @@ int main(int argc, char *argv[])
 		args->rx_burst_size = args->appl.rx_burst;
 	}
 
+	/* Configure scheduler */
+	odp_schedule_config(NULL);
+
 	/* Create packet pool */
 	odp_pool_param_init(&params);
 	params.pkt.seg_len = POOL_PKT_LEN;

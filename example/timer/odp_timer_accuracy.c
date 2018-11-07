@@ -426,6 +426,9 @@ int main(int argc, char *argv[])
 
 	odp_sys_info_print();
 
+	/* Configure scheduler */
+	odp_schedule_config(NULL);
+
 	num = test_global.opt.num;
 
 	test_global.timer = calloc(num, sizeof(odp_timer_t));
