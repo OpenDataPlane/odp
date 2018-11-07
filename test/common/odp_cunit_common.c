@@ -87,6 +87,10 @@ static int tests_global_init(odp_instance_t *inst)
 		fprintf(stderr, "error: odp_init_local() failed.\n");
 		return -1;
 	}
+	if (0 != odp_schedule_config(NULL)) {
+		fprintf(stderr, "error: odp_schedule_config(NULL) failed.\n");
+		return -1;
+	}
 
 	return 0;
 }

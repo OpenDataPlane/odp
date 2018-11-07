@@ -82,6 +82,9 @@ static int timer_global_init(odp_instance_t *inst)
 	global_mem = odp_shm_addr(global_shm);
 	memset(global_mem, 0, sizeof(global_shared_mem_t));
 
+	/* Configure scheduler */
+	odp_schedule_config(NULL);
+
 	return 0;
 }
 
