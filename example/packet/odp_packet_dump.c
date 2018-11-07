@@ -640,6 +640,8 @@ int main(int argc, char *argv[])
 
 	global->pool = ODP_POOL_INVALID;
 
+	odp_schedule_config(NULL);
+
 	odp_sys_info_print();
 
 	if (open_pktios(global)) {

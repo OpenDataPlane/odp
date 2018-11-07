@@ -409,6 +409,9 @@ int main(int argc, char *argv[])
 	printf("period:             %i usec\n", gbls->args.period_us);
 	printf("timeouts:           %i\n", gbls->args.tmo_count);
 
+	/* Configure scheduler */
+	odp_schedule_config(NULL);
+
 	/*
 	 * Create pool for timeouts
 	 */
