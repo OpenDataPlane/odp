@@ -1089,6 +1089,7 @@ int main(int argc, char *argv[])
 
 	odp_queue_param_init(&qparam);
 	if (cargs.schedule) {
+		odp_schedule_config(NULL);
 		qparam.type = ODP_QUEUE_TYPE_SCHED;
 		qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 		qparam.sched.sync  = ODP_SCHED_SYNC_PARALLEL;

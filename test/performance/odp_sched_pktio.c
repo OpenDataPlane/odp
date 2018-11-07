@@ -127,6 +127,8 @@ typedef struct {
 	uint64_t rx_pkt_sum;
 	uint64_t tx_pkt_sum;
 
+	odp_schedule_config_t schedule_config;
+
 } test_global_t;
 
 static test_global_t *test_global;
@@ -726,6 +728,9 @@ static int config_setup(test_global_t *test_global)
 		cpu = odp_cpumask_next(cpumask, cpu);
 	}
 
+	odp_schedule_config_init(&test_global->schedule_config);
+	odp_schedule_config(&test_global->schedule_config);
+
 	if (odp_pool_capability(&pool_capa)) {
 		printf("Error: Pool capability failed.\n");
 		return -1;
@@ -1112,14 +1117,8 @@ static int create_pipeline_queues(test_global_t *test_global)
 	int i, j, k, num_pktio, stages, queues, ctx_size;
 	pipe_queue_context_t *ctx;
 	odp_queue_param_t queue_param;
-	odp_schedule_capability_t schedule_capa;
 	odp_schedule_sync_t sched_sync;
 	int ret = 0;
-
-	if (odp_schedule_capability(&schedule_capa)) {
-		printf("Error: Schedule capa failed.\n");
-		return -1;
-	}
 
 	num_pktio = test_global->opt.num_pktio;
 	stages = test_global->opt.pipe_stages;
@@ -1133,10 +1132,10 @@ static int create_pipeline_queues(test_global_t *test_global)
 	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 
 	queue_param.size = test_global->opt.pipe_queue_size;
-	if (schedule_capa.max_queue_size &&
-	    queue_param.size > schedule_capa.max_queue_size) {
+	if (test_global->schedule_config.queue_size &&
+	    queue_param.size > test_global->schedule_config.queue_size) {
 		printf("Error: Pipeline queue max size is %u\n",
-		       schedule_capa.max_queue_size);
+		       test_global->schedule_config.queue_size);
 		return -1;
 	}
 

@@ -759,6 +759,9 @@ static int test_init(void)
 	iface    = gbl_args->args.ifaces[0];
 	schedule = gbl_args->args.schedule;
 
+	if (schedule)
+		odp_schedule_config(NULL);
+
 	/* create pktios and associate input/output queues */
 	gbl_args->pktio_tx = create_pktio(iface, schedule);
 	if (gbl_args->args.num_ifaces > 1) {
