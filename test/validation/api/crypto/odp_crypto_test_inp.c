@@ -696,8 +696,11 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 {
 	odp_crypto_capability_t capability;
 
-	if (odp_crypto_capability(&capability))
+	memset(&capability, 0, sizeof(odp_crypto_capability_t));
+	if (odp_crypto_capability(&capability)) {
+		fprintf(stderr, "odp_crypto_capability() failed\n");
 		return ODP_TEST_INACTIVE;
+	}
 
 	if (suite_context.packet) {
 		if (suite_context.op_mode == ODP_CRYPTO_SYNC &&
@@ -2030,6 +2033,7 @@ static int crypto_init(odp_instance_t *inst)
 	odp_pool_t pool;
 	odp_queue_t out_queue;
 	odp_pool_capability_t pool_capa;
+	odp_crypto_capability_t crypto_capa;
 	odp_init_t init_param;
 	odph_helper_options_t helper_options;
 
@@ -2048,6 +2052,11 @@ static int crypto_init(odp_instance_t *inst)
 
 	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
 		fprintf(stderr, "error: odp_init_local() failed.\n");
+		return -1;
+	}
+
+	if (odp_crypto_capability(&crypto_capa)) {
+		fprintf(stderr, "error: odp_crypto_capability() failed.\n");
 		return -1;
 	}
 
