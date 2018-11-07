@@ -53,7 +53,7 @@ typedef void (*schedule_order_unlock_lock_fn_t)(void);
 typedef void (*schedule_order_lock_start_fn_t)(void);
 typedef void (*schedule_order_lock_wait_fn_t)(void);
 typedef uint32_t (*schedule_max_ordered_locks_fn_t)(void);
-typedef void (*schedule_config_fn_t)(schedule_config_t *config);
+typedef void (*schedule_get_config_fn_t)(schedule_config_t *config);
 
 typedef struct schedule_fn_t {
 	schedule_pktio_start_fn_t   pktio_start;
@@ -74,7 +74,7 @@ typedef struct schedule_fn_t {
 	schedule_order_lock_wait_fn_t	wait_order_lock;
 	schedule_order_unlock_lock_fn_t  order_unlock_lock;
 	schedule_max_ordered_locks_fn_t max_ordered_locks;
-	schedule_config_fn_t        config;
+	schedule_get_config_fn_t        get_config;
 
 } schedule_fn_t;
 
