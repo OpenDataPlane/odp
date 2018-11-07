@@ -598,6 +598,8 @@ static int schedule_init_queue(uint32_t queue_index,
 	int i;
 	int prio = prio_level_from_api(sched_param->prio);
 
+	ODP_ASSERT(_odp_schedule_configured);
+
 	pri_set_queue(queue_index, prio);
 	sched->queue[queue_index].grp  = sched_param->group;
 	sched->queue[queue_index].prio = prio;
@@ -794,6 +796,19 @@ static int schedule_term_local(void)
 		schedule_release_atomic();
 	else if (sched_local.sync_ctx == ODP_SCHED_SYNC_ORDERED)
 		schedule_release_ordered();
+
+	return 0;
+}
+
+static void schedule_config_init(odp_schedule_config_t *config)
+{
+	config->num_queues = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
+	config->queue_size = queue_glb->config.max_queue_size;
+}
+
+static int schedule_config(const odp_schedule_config_t *config)
+{
+	(void)config;
 
 	return 0;
 }
@@ -1587,6 +1602,8 @@ const schedule_fn_t schedule_basic_fn = {
 const schedule_api_t schedule_basic_api = {
 	.schedule_wait_time       = schedule_wait_time,
 	.schedule_capability      = schedule_capability,
+	.schedule_config_init     = schedule_config_init,
+	.schedule_config          = schedule_config,
 	.schedule                 = schedule,
 	.schedule_multi           = schedule_multi,
 	.schedule_multi_wait      = schedule_multi_wait,

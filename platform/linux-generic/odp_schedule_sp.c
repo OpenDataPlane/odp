@@ -257,6 +257,19 @@ static int term_local(void)
 	return 0;
 }
 
+static void schedule_config_init(odp_schedule_config_t *config)
+{
+	config->num_queues = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
+	config->queue_size = queue_glb->config.max_queue_size;
+}
+
+static int schedule_config(const odp_schedule_config_t *config)
+{
+	(void)config;
+
+	return 0;
+}
+
 static uint32_t max_ordered_locks(void)
 {
 	return NUM_ORDERED_LOCKS;
@@ -361,6 +374,11 @@ static int init_queue(uint32_t qi, const odp_schedule_param_t *sched_param)
 	sched_group_t *sched_group = &sched_global->sched_group;
 	odp_schedule_group_t group = sched_param->group;
 	int prio = 0;
+
+#ifdef ODP_DEBUG
+	if (!_odp_schedule_configured)
+		ODP_ABORT("Scheduler not configured!\n");
+#endif
 
 	if (group < 0 || group >= NUM_GROUP)
 		return -1;
@@ -959,6 +977,8 @@ const schedule_fn_t schedule_sp_fn = {
 const schedule_api_t schedule_sp_api = {
 	.schedule_wait_time       = schedule_wait_time,
 	.schedule_capability      = schedule_capability,
+	.schedule_config_init     = schedule_config_init,
+	.schedule_config          = schedule_config,
 	.schedule                 = schedule,
 	.schedule_multi           = schedule_multi,
 	.schedule_multi_wait      = schedule_multi_wait,
