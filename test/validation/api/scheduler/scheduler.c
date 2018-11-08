@@ -291,6 +291,114 @@ static void scheduler_test_queue_destroy(void)
 	CU_ASSERT_FATAL(odp_pool_destroy(p) == 0);
 }
 
+static void scheduler_test_wait(void)
+{
+	odp_pool_t p;
+	odp_pool_param_t pool_param;
+	odp_queue_param_t queue_param;
+	odp_queue_t queue, from;
+	odp_buffer_t buf;
+	odp_event_t ev;
+	uint32_t *u32;
+	uint32_t i, j, num_enq, retry;
+	int ret;
+	uint32_t num_ev = 50;
+	uint32_t num_retry = 1000;
+
+	odp_pool_param_init(&pool_param);
+	pool_param.buf.size  = 10;
+	pool_param.buf.num   = num_ev;
+	pool_param.type      = ODP_POOL_BUFFER;
+
+	p = odp_pool_create("sched_test_wait", &pool_param);
+
+	CU_ASSERT_FATAL(p != ODP_POOL_INVALID);
+
+	odp_queue_param_init(&queue_param);
+	queue_param.type        = ODP_QUEUE_TYPE_SCHED;
+	queue_param.sched.prio  = odp_schedule_default_prio();
+	queue_param.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
+	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+
+	queue = odp_queue_create("sched_test_wait", &queue_param);
+
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	for (i = 0; i < 4; i++) {
+		num_enq = 0;
+
+		for (j = 0; j < num_ev; j++) {
+			buf = odp_buffer_alloc(p);
+
+			CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+
+			u32 = odp_buffer_addr(buf);
+			u32[0] = MAGIC;
+
+			ev = odp_buffer_to_event(buf);
+			if (!(CU_ASSERT(odp_queue_enq(queue, ev) == 0))) {
+				odp_buffer_free(buf);
+				continue;
+			}
+
+			num_enq++;
+		}
+
+		CU_ASSERT(num_enq == num_ev);
+
+		for (j = 0; j < num_enq; j++) {
+			if (i == 0) {
+				ev = odp_schedule(&from, ODP_SCHED_WAIT);
+			} else if (i == 1) {
+				ret = odp_schedule_multi_wait(&from, &ev, 1);
+				CU_ASSERT_FATAL(ret == 1);
+			} else if (i == 2) {
+				retry = 0;
+				do {
+					ev = odp_schedule(&from,
+							  ODP_SCHED_NO_WAIT);
+					retry++;
+				} while (ev == ODP_EVENT_INVALID &&
+					 retry < num_retry);
+			} else {
+				retry = 0;
+				do {
+					ret = odp_schedule_multi_no_wait(&from,
+									 &ev,
+									 1);
+					retry++;
+				} while (ret == 0 && retry < num_retry);
+				CU_ASSERT_FATAL(ret == 1);
+			}
+
+			CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+			CU_ASSERT(from == queue);
+
+			buf = odp_buffer_from_event(ev);
+			u32 = odp_buffer_addr(buf);
+
+			CU_ASSERT(u32[0] == MAGIC);
+
+			odp_buffer_free(buf);
+		}
+	}
+
+	/* Make sure that scheduler is empty */
+	retry = 0;
+	do {
+		ret = odp_schedule_multi_no_wait(NULL, &ev, 1);
+		CU_ASSERT(ret == 0 || ret == 1);
+
+		if (ret)
+			odp_event_free(ev);
+		else
+			retry++;
+	} while (ret || retry < num_retry);
+
+	CU_ASSERT_FATAL(odp_queue_destroy(queue) == 0);
+	CU_ASSERT_FATAL(odp_pool_destroy(p) == 0);
+}
+
 static void scheduler_test_queue_size(void)
 {
 	odp_queue_capability_t queue_capa;
@@ -1844,6 +1952,7 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_wait_time),
 	ODP_TEST_INFO(scheduler_test_num_prio),
 	ODP_TEST_INFO(scheduler_test_queue_destroy),
+	ODP_TEST_INFO(scheduler_test_wait),
 	ODP_TEST_INFO(scheduler_test_queue_size),
 	ODP_TEST_INFO(scheduler_test_groups),
 	ODP_TEST_INFO(scheduler_test_pause_resume),
