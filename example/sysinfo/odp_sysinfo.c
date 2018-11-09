@@ -430,6 +430,10 @@ int main(void)
 	print_auth_algos(crypto_capa.auths);
 	printf("\n");
 	print_auth_caps(crypto_capa.auths);
+	printf("\n");
+
+	printf("  SHM MEMORY BLOCKS:\n");
+	odp_shm_print_all();
 
 	printf("\n");
 	printf("***********************************************************\n");
