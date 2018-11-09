@@ -122,7 +122,7 @@ int odp_shm_info(odp_shm_t shm, odp_shm_info_t *info)
 
 void odp_shm_print_all(void)
 {
-	_odp_ishm_status("Memory allocation status:");
+	_odp_ishm_status("ODP shared memory allocation status:");
 }
 
 void odp_shm_print(odp_shm_t shm)
