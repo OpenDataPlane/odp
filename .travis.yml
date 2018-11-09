@@ -196,6 +196,7 @@ jobs:
                                           - libconfig-dev
                                           - libssl-dev
                                           - cmake
+                                          - graphviz
                   install:
                           # Updated Doxygen
                         - |
