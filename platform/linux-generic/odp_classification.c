@@ -11,7 +11,6 @@
 #include <odp/api/queue.h>
 #include <odp/api/debug.h>
 #include <odp_init_internal.h>
-#include <odp_shm_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_internal.h>
 #include <odp/api/packet_io.h>
@@ -88,7 +87,7 @@ int odp_classification_init_global(void)
 	cos_shm = odp_shm_reserve("_odp_shm_odp_cos_tbl",
 				  sizeof(cos_tbl_t),
 				  sizeof(cos_t),
-				  _ODP_SHM_NO_HP);
+				  0);
 
 	if (cos_shm == ODP_SHM_INVALID) {
 		ODP_ERR("shm allocation failed for shm_odp_cos_tbl");
@@ -109,7 +108,7 @@ int odp_classification_init_global(void)
 	pmr_shm = odp_shm_reserve("_odp_shm_odp_pmr_tbl",
 				  sizeof(pmr_tbl_t),
 				  sizeof(pmr_t),
-				  _ODP_SHM_NO_HP);
+				  0);
 
 	if (pmr_shm == ODP_SHM_INVALID) {
 		ODP_ERR("shm allocation failed for shm_odp_pmr_tbl");
@@ -130,7 +129,7 @@ int odp_classification_init_global(void)
 	queue_grp_shm = odp_shm_reserve("_odp_shm_cls_queue_grp_tbl",
 					sizeof(_cls_queue_grp_tbl_t),
 					sizeof(queue_entry_t *),
-					_ODP_SHM_NO_HP);
+					0);
 
 	if (queue_grp_shm == ODP_SHM_INVALID) {
 		ODP_ERR("shm allocation failed for queue_grp_tbl");

@@ -32,7 +32,6 @@
 #include <odp_schedule_if.h>
 #include <odp_bitset.h>
 #include <odp_packet_io_internal.h>
-#include <odp_shm_internal.h>
 #include <odp_timer_internal.h>
 
 #include <limits.h>
@@ -1778,7 +1777,7 @@ static int schedule_init_global(void)
 
 	shm = odp_shm_reserve("_odp_sched_scalable",
 			      sizeof(sched_global_t),
-			      ODP_CACHE_LINE_SIZE, _ODP_SHM_NO_HP);
+			      ODP_CACHE_LINE_SIZE, 0);
 
 	global = odp_shm_addr(shm);
 	if (global == NULL) {

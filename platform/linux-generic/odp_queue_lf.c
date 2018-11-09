@@ -9,7 +9,6 @@
 #include <odp/api/plat/atomic_inlines.h>
 #include <odp/api/shared_memory.h>
 #include <odp_queue_basic_internal.h>
-#include <odp_shm_internal.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -321,7 +320,7 @@ uint32_t queue_lf_init_global(uint32_t *queue_lf_size,
 
 	shm = odp_shm_reserve("_odp_queues_lf", sizeof(queue_lf_global_t),
 			      ODP_CACHE_LINE_SIZE,
-			      _ODP_SHM_NO_HP);
+			      0);
 	if (shm == ODP_SHM_INVALID)
 		return 0;
 
