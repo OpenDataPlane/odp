@@ -20,7 +20,6 @@
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_ring_internal.h>
-#include <odp_shm_internal.h>
 #include <odp_global_data.h>
 #include <odp_libconfig_internal.h>
 
@@ -119,7 +118,7 @@ int odp_pool_init_global(void)
 	shm = odp_shm_reserve("_odp_pool_table",
 			      sizeof(pool_table_t),
 			      ODP_CACHE_LINE_SIZE,
-			      _ODP_SHM_NO_HP);
+			      0);
 
 	pool_tbl = odp_shm_addr(shm);
 

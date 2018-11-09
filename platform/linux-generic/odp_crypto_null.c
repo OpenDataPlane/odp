@@ -21,7 +21,6 @@
 #include <odp/api/plat/thread_inlines.h>
 #include <odp_packet_internal.h>
 #include <odp/api/plat/queue_inlines.h>
-#include <odp_shm_internal.h>
 
 /* Inlined API functions */
 #include <odp/api/plat/event_inlines.h>
@@ -319,7 +318,7 @@ odp_crypto_init_global(void)
 	/* Allocate our globally shared memory */
 	shm = odp_shm_reserve("_odp_crypto_pool_null", mem_size,
 			      ODP_CACHE_LINE_SIZE,
-			      _ODP_SHM_NO_HP);
+			      0);
 	if (ODP_SHM_INVALID == shm) {
 		ODP_ERR("unable to allocate crypto pool\n");
 		return -1;
