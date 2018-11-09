@@ -126,6 +126,13 @@
 #define ISHM_NB_FRAGMNTS (ISHM_MAX_NB_BLOCKS * 2 + 1)
 
 /*
+ * Memory reservations larger than ISHM_HUGE_PAGE_LIMIT (bytes) are allocated
+ * using huge pages (if available). Smaller reservations are done using normal
+ * pages to conserve memory.
+ */
+#define ISHM_HUGE_PAGE_LIMIT (64 * 1024)
+
+/*
  * when a memory block is to be exported outside its ODP instance,
  * an block 'attribute file' is created in /dev/shm/odp-<pid>-shm-<name>.
  * The information given in this file is according to the following:
@@ -1092,7 +1099,7 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 
 	/* Otherwise, Try first huge pages when possible and needed: */
 	if ((fd < 0) && page_hp_size && ((flags &  _ODP_ISHM_USE_HP) ||
-					 size > page_sz)) {
+					 size > ISHM_HUGE_PAGE_LIMIT)) {
 		/* at least, alignment in VA should match page size, but user
 		 * can request more: If the user requirement exceeds the page
 		 * size then we have to make sure the block will be mapped at
