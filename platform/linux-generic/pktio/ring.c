@@ -80,7 +80,6 @@
 #include <odp_packet_io_ring_internal.h>
 #include <odp_errno_define.h>
 #include <odp_global_data.h>
-#include <odp_shm_internal.h>
 
 #include <odp/api/plat/cpu_inlines.h>
 
@@ -164,7 +163,7 @@ int _ring_tailq_init(void)
 
 	/* Allocate globally shared memory */
 	shm = odp_shm_reserve("_odp_ring_global", sizeof(global_data_t),
-			      ODP_CACHE_LINE_SIZE, _ODP_SHM_NO_HP);
+			      ODP_CACHE_LINE_SIZE, 0);
 	if (ODP_SHM_INVALID == shm) {
 		ODP_ERR("Shm reserve failed for pktio ring\n");
 		return -1;

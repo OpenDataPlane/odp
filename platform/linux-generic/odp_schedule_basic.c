@@ -29,7 +29,6 @@
 #include <odp_queue_basic_internal.h>
 #include <odp_libconfig_internal.h>
 #include <odp/api/plat/queue_inlines.h>
-#include <odp_shm_internal.h>
 
 /* No synchronization context */
 #define NO_SYNC_CONTEXT ODP_SCHED_SYNC_PARALLEL
@@ -397,7 +396,7 @@ static int schedule_init_global(void)
 	shm = odp_shm_reserve("_odp_scheduler",
 			      sizeof(sched_global_t),
 			      ODP_CACHE_LINE_SIZE,
-			      _ODP_SHM_NO_HP);
+			      0);
 	if (shm == ODP_SHM_INVALID) {
 		ODP_ERR("Schedule init: Shm reserve failed.\n");
 		return -1;
