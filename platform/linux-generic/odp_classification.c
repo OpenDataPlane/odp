@@ -94,6 +94,7 @@ int odp_classification_init_global(void)
 
 	shm = odp_shm_reserve("_odp_cls_global", sizeof(cls_global_t),
 			      ODP_CACHE_LINE_SIZE, 0);
+
 	if (shm == ODP_SHM_INVALID)
 		return -1;
 
