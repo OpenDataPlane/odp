@@ -50,7 +50,7 @@
 #include <odp_shm_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
-#include <odp_ishm_internal.h>
+#include <odp_shm_internal.h>
 #include <odp_ishmpool_internal.h>
 #include <stdlib.h>
 #include <stdio.h>

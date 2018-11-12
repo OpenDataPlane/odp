@@ -17,7 +17,7 @@
 #include <odp/api/debug.h>
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
-#include <odp_ishm_internal.h>
+#include <odp_shm_internal.h>
 #include <odp_ishmphy_internal.h>
 
 #include <stdlib.h>

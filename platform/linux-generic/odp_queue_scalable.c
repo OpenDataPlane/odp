@@ -25,7 +25,7 @@
 #include <odp_queue_scalable_internal.h>
 #include <odp_schedule_if.h>
 #include <odp_timer_internal.h>
-#include <odp_ishm_internal.h>
+#include <odp_shm_internal.h>
 #include <odp_ishmpool_internal.h>
 #include <odp/api/plat/queue_inline_types.h>
 #include <odp_global_data.h>
