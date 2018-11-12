@@ -99,7 +99,6 @@ noinst_HEADERS = \
 		  include/odp_global_data.h \
 		  include/odp_init_internal.h \
 		  include/odp_ipsec_internal.h \
-		  include/odp_ishm_internal.h \
 		  include/odp_ishmphy_internal.h \
 		  include/odp_ishmpool_internal.h \
 		  include/odp_libconfig_internal.h \
