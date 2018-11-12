@@ -22,6 +22,7 @@
 #include <odp_ring_internal.h>
 #include <odp_global_data.h>
 #include <odp_libconfig_internal.h>
+#include <odp_shm_internal.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -378,6 +379,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	uint32_t max_len;
 	uint32_t ring_size;
 	uint32_t num_extra = 0;
+	uint32_t extra_shm_flags = 0;
 	int name_len;
 	const char *postfix = "_uarea";
 	char uarea_name[ODP_POOL_NAME_LEN + sizeof(postfix)];
@@ -487,11 +489,16 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	 * headers. NOP if zero-copy is disabled. */
 	pool->block_offset = 0;
 	if (params->type == ODP_POOL_PACKET) {
-		block_size = _odp_dpdk_pool_obj_size(pool, block_size);
-		if (!block_size) {
+		uint32_t dpdk_obj_size;
+
+		dpdk_obj_size = _odp_dpdk_pool_obj_size(pool, block_size);
+		if (!dpdk_obj_size) {
 			ODP_ERR("Calculating DPDK mempool obj size failed\n");
 			return ODP_POOL_INVALID;
 		}
+		if (dpdk_obj_size != block_size)
+			extra_shm_flags |= _ODP_ISHM_USE_HP;
+		block_size = dpdk_obj_size;
 	}
 
 	/* Allocate extra memory for skipping packet buffers which cross huge
@@ -524,8 +531,8 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	pool->ext_desc       = NULL;
 	pool->ext_destroy    = NULL;
 
-	shm = odp_shm_reserve(pool->name, pool->shm_size,
-			      ODP_PAGE_SIZE, shmflags);
+	shm = _odp_shm_reserve(pool->name, pool->shm_size,
+			       ODP_PAGE_SIZE, shmflags, extra_shm_flags);
 
 	pool->shm = shm;
 
