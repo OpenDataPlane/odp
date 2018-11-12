@@ -44,6 +44,22 @@ static uint32_t get_ishm_flags(uint32_t flags)
 	return f;
 }
 
+odp_shm_t _odp_shm_reserve(const char *name, uint64_t size, uint32_t align,
+			   uint32_t flags, uint32_t extra_flags)
+{
+	int block_index;
+	uint32_t flgs = 0; /* internal ishm flags */
+
+	flgs = get_ishm_flags(flags);
+	flgs |= extra_flags;
+
+	block_index = _odp_ishm_reserve(name, size, -1, align, flgs, flags);
+	if (block_index >= 0)
+		return to_handle(block_index);
+	else
+		return ODP_SHM_INVALID;
+}
+
 int odp_shm_capability(odp_shm_capability_t *capa)
 {
 	memset(capa, 0, sizeof(odp_shm_capability_t));
@@ -58,16 +74,7 @@ int odp_shm_capability(odp_shm_capability_t *capa)
 odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 			  uint32_t flags)
 {
-	int block_index;
-	uint32_t flgs = 0; /* internal ishm flags */
-
-	flgs = get_ishm_flags(flags);
-
-	block_index = _odp_ishm_reserve(name, size, -1, align, flgs, flags);
-	if (block_index >= 0)
-		return to_handle(block_index);
-	else
-		return ODP_SHM_INVALID;
+	return  _odp_shm_reserve(name, size, align, flags, 0);
 }
 
 odp_shm_t odp_shm_import(const char *remote_name,

@@ -1016,7 +1016,7 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 	uint64_t page_sz;		      /* normal page size. usually 4K*/
 	uint64_t page_hp_size;		      /* huge page size */
 	uint32_t hp_align;
-	uint64_t len;			      /* mapped length */
+	uint64_t len = 0;		      /* mapped length */
 	void *addr = NULL;		      /* mapping address */
 	int new_proc_entry;
 	struct stat statbuf;
@@ -1084,7 +1084,8 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 	}
 
 	/* Otherwise, Try first huge pages when possible and needed: */
-	if ((fd < 0) && page_hp_size && (size > page_sz)) {
+	if ((fd < 0) && page_hp_size && ((flags &  _ODP_ISHM_USE_HP) ||
+					 size > page_sz)) {
 		/* at least, alignment in VA should match page size, but user
 		 * can request more: If the user requirement exceeds the page
 		 * size then we have to make sure the block will be mapped at
