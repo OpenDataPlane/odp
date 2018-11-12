@@ -205,7 +205,7 @@ static int create_queues(test_global_t *global)
 	} else if (nonblock == ODP_NONBLOCKING_LF) {
 		if (queue_capa.plain.lockfree.max_num == 0) {
 			printf("Lockfree queues not supported\n");
-			return 0;
+			return -1;
 		}
 
 		if (num_queue > queue_capa.plain.lockfree.max_num) {
@@ -223,7 +223,7 @@ static int create_queues(test_global_t *global)
 	} else if (nonblock == ODP_NONBLOCKING_WF) {
 		if (queue_capa.plain.waitfree.max_num == 0) {
 			printf("Waitfree queues not supported\n");
-			return 0;
+			return -1;
 		}
 
 		if (num_queue > queue_capa.plain.waitfree.max_num) {
@@ -327,8 +327,7 @@ static int destroy_queues(test_global_t *global)
 
 	for (i = 0; i < num_queue; i++) {
 		if (queue[i] == ODP_QUEUE_INVALID) {
-			printf("Error: Invalid queue handle %u.\n", i);
-			ret = -1;
+			printf("Error: Invalid queue handle (i: %u).\n", i);
 			break;
 		}
 
@@ -346,7 +345,7 @@ static int destroy_queues(test_global_t *global)
 		}
 	}
 
-	if (odp_pool_destroy(pool)) {
+	if (pool != ODP_POOL_INVALID && odp_pool_destroy(pool)) {
 		printf("Error: Pool destroy failed.\n");
 		ret = -1;
 	}
