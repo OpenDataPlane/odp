@@ -14,10 +14,13 @@ extern "C" {
 #include <sys/types.h>
 #include <inttypes.h>
 
+#include <odp/api/shared_memory.h>
+
 /* flags available at ishm_reserve: */
 #define _ODP_ISHM_SINGLE_VA		1
 #define _ODP_ISHM_LOCK			2
-#define _ODP_ISHM_EXPORT		4 /*create export descr file in /tmp */
+#define _ODP_ISHM_EXPORT		4 /* create export descr file in /tmp */
+#define _ODP_ISHM_USE_HP		8 /* allocate memory from huge pages */
 
 /**
  * Shared memory block info
@@ -30,6 +33,9 @@ typedef struct _odp_ishm_info_t {
 	uint32_t    flags;     /**< _ODP_ISHM_* flags */
 	uint32_t    user_flags;/**< user specific flags */
 } _odp_ishm_info_t;
+
+odp_shm_t _odp_shm_reserve(const char *name, uint64_t size, uint32_t align,
+			   uint32_t flags, uint32_t extra_flags);
 
 int   _odp_ishm_reserve(const char *name, uint64_t size, int fd, uint32_t align,
 			uint32_t flags, uint32_t user_flags);
