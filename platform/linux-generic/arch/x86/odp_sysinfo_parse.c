@@ -83,6 +83,8 @@ uint64_t odp_cpu_arch_hz_current(int id)
 	double mhz = 0.0;
 
 	file = fopen("/proc/cpuinfo", "rt");
+	if (!file)
+		return 0;
 
 	/* find the correct processor instance */
 	while (fgets(str, sizeof(str), file) != NULL) {
