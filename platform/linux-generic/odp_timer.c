@@ -219,6 +219,7 @@ typedef struct timer_global_t {
 	_odp_atomic_flag_t ODP_ALIGNED_CACHE locks[NUM_LOCKS];
 #endif
 	odp_bool_t use_inline_timers;
+	int inline_poll_interval;
 } timer_global_t;
 
 static timer_global_t *timer_global;
@@ -871,8 +872,7 @@ static unsigned process_timer_pools(void)
 unsigned _timer_run(void)
 {
 	static __thread odp_time_t last_timer_run;
-	static __thread unsigned timer_run_cnt =
-		CONFIG_TIMER_RUN_RATELIMIT_ROUNDS;
+	static __thread unsigned timer_run_cnt = 1;
 	odp_time_t now;
 
 	if (timer_global->num_timer_pools == 0)
@@ -880,10 +880,10 @@ unsigned _timer_run(void)
 
 	/* Rate limit how often this thread checks the timer pools. */
 
-	if (CONFIG_TIMER_RUN_RATELIMIT_ROUNDS > 1) {
+	if (timer_global->inline_poll_interval > 1) {
 		if (--timer_run_cnt)
 			return 0;
-		timer_run_cnt = CONFIG_TIMER_RUN_RATELIMIT_ROUNDS;
+		timer_run_cnt = timer_global->inline_poll_interval;
 	}
 
 	now = odp_time_global();
@@ -1353,6 +1353,14 @@ int odp_timer_init_global(const odp_init_t *params)
 		return -1;
 	}
 	timer_global->use_inline_timers = val;
+
+	conf_str =  "timer.inline_poll_interval";
+	if (!_odp_libconfig_lookup_int(conf_str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", conf_str);
+		odp_shm_free(shm);
+		return -1;
+	}
+	timer_global->inline_poll_interval = val;
 
 	if (params && params->not_used.feat.timer)
 		timer_global->use_inline_timers = false;
