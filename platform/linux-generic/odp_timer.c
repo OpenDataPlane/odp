@@ -55,6 +55,7 @@
 #include <odp/api/time.h>
 #include <odp/api/plat/time_inlines.h>
 #include <odp/api/timer.h>
+#include <odp_libconfig_internal.h>
 #include <odp_queue_if.h>
 #include <odp_timer_internal.h>
 #include <odp/api/plat/queue_inlines.h>
@@ -217,7 +218,7 @@ typedef struct timer_global_t {
 	/* Multiple locks per cache line! */
 	_odp_atomic_flag_t ODP_ALIGNED_CACHE locks[NUM_LOCKS];
 #endif
-
+	odp_bool_t use_inline_timers;
 } timer_global_t;
 
 static timer_global_t *timer_global;
@@ -351,22 +352,8 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	odp_ticketlock_lock(&timer_global->lock);
 	timer_global->timer_pool[tp_idx] = tp;
 
-	if (timer_global->num_timer_pools == 1) {
-		odp_bool_t inline_tim;
-
-		/*
-		 * Whether to run timer pool processing 'inline' (on worker
-		 * cores) or in background threads (thread-per-timerpool).
-		 *
-		 * If the application will use scheduler this flag is set to
-		 * true, otherwise false. This application conveys this
-		 * information via the 'not_used' bits in odp_init_t which are
-		 * passed to odp_global_init().
-		 */
-		inline_tim = !odp_global_ro.init_param.not_used.feat.schedule;
-
-		odp_global_rw->inline_timers = inline_tim;
-	}
+	if (timer_global->num_timer_pools == 1)
+		odp_global_rw->inline_timers = timer_global->use_inline_timers;
 
 	odp_ticketlock_unlock(&timer_global->lock);
 	if (!odp_global_rw->inline_timers) {
@@ -1360,7 +1347,8 @@ void odp_timeout_free(odp_timeout_t tmo)
 int odp_timer_init_global(const odp_init_t *params)
 {
 	odp_shm_t shm;
-	odp_bool_t inline_timers = false;
+	const char *conf_str;
+	int val = 0;
 
 	shm = odp_shm_reserve("_odp_timer", sizeof(timer_global_t),
 			      ODP_CACHE_LINE_SIZE, 0);
@@ -1385,16 +1373,21 @@ int odp_timer_init_global(const odp_init_t *params)
 #else
 	ODP_DBG("Using lock-less timer implementation\n");
 #endif
+	conf_str =  "timer.inline";
+	if (!_odp_libconfig_lookup_int(conf_str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", conf_str);
+		odp_shm_free(shm);
+		return -1;
+	}
+	timer_global->use_inline_timers = val;
 
-	if (params)
-		inline_timers =
-			!params->not_used.feat.schedule &&
-			!params->not_used.feat.timer;
+	if (params && params->not_used.feat.timer)
+		timer_global->use_inline_timers = false;
 
 	timer_global->time_per_ratelimit_period =
 		odp_time_global_from_ns(timer_global->min_res_ns / 2);
 
-	if (!inline_timers) {
+	if (!timer_global->use_inline_timers) {
 		timer_res_init();
 		block_sigalarm();
 	}
