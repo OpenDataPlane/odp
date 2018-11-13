@@ -21,9 +21,6 @@
 #include <odp/api/timer.h>
 #include <odp_global_data.h>
 
-/* Minimum number of scheduling rounds between checking timer pools. */
-#define CONFIG_TIMER_RUN_RATELIMIT_ROUNDS 1
-
 /**
  * Internal Timeout header
  */
