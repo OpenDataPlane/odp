@@ -201,6 +201,76 @@ int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 
 void sys_info_print_arch(void)
 {
+	const char *ndef = "n/a";
+
+	/* Avoid compiler warning about unused variable */
+	(void)ndef;
+
+	/* See ARM C Language Extensions documentation for details */
+	printf("ARM FEATURES:\n");
+
+	printf("  __ARM_ARCH           ");
+#ifdef __ARM_ARCH
+	printf("%i\n", __ARM_ARCH);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_ARCH_ISA_A64   ");
+#ifdef __ARM_ARCH_ISA_A64
+	printf("%i\n", __ARM_ARCH_ISA_A64);
+#else
+	printf("%s\n", ndef);
+#endif
+
+#if defined(__ARM_ARCH) && __ARM_ARCH >= 8
+	/* Actually, this checks for new NEON instructions in
+	 * v8.1, but is currently the only way to distinguish
+	 * v8.0 and >=v8.1. */
+	printf("    ARMv8 ISA version  ");
+#ifdef __ARM_FEATURE_QRDMX
+	printf("v8.1 or higher\n");
+#else
+	printf("v8.0\n");
+#endif
+#endif
+
+#ifdef __ARM_FEATURE_QRDMX
+	/* Actually, this checks for new NEON instructions in
+	 * v8.1, but is currently the only way to distinguish
+	 * v8.0 and >=v8.1. */
+	printf("    ARMv8.1 instructions\n");
+#endif
+
+	printf("  __ARM_NEON           ");
+#ifdef __ARM_NEON
+	printf("%i\n", __ARM_NEON);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_IDIV   ");
+#ifdef __ARM_FEATURE_IDIV
+	printf("%i\n", __ARM_FEATURE_IDIV);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_CRYPTO ");
+#ifdef __ARM_FEATURE_CRYPTO
+	printf("%i\n", __ARM_FEATURE_CRYPTO);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_CRC32  ");
+#ifdef __ARM_FEATURE_CRC32
+	printf("%i\n", __ARM_FEATURE_CRC32);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("\n");
 }
 
 uint64_t odp_cpu_arch_hz_current(int id)
