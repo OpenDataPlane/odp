@@ -96,6 +96,8 @@ static uint64_t default_huge_page_size(void)
 	FILE *file;
 
 	file = fopen("/proc/meminfo", "rt");
+	if (!file)
+		return 0;
 
 	while (fgets(str, sizeof(str), file) != NULL) {
 		if (sscanf(str, "Hugepagesize:   %8lu kB", &sz) == 1) {
@@ -352,15 +354,14 @@ int odp_system_info_init(void)
 	}
 
 	file = fopen("/proc/cpuinfo", "rt");
-	if (file == NULL) {
-		ODP_ERR("Failed to open /proc/cpuinfo\n");
-		return -1;
+	if (file != NULL) {
+		/* Read CPU model, and set max cpu frequency
+		 * if not set from cpufreq. */
+		cpuinfo_parser(file, &odp_global_ro.system_info);
+		fclose(file);
+	} else {
+		_odp_dummy_cpuinfo(&odp_global_ro.system_info);
 	}
-
-	/* Read CPU model, and set max cpu frequency if not set from cpufreq. */
-	cpuinfo_parser(file, &odp_global_ro.system_info);
-
-	fclose(file);
 
 	if (systemcpu(&odp_global_ro.system_info)) {
 		ODP_ERR("systemcpu failed\n");
