@@ -869,10 +869,10 @@ static unsigned process_timer_pools(void)
 	return nexp;
 }
 
-unsigned _timer_run(void)
+unsigned int _timer_run(int dec)
 {
 	static __thread odp_time_t last_timer_run;
-	static __thread unsigned timer_run_cnt = 1;
+	static __thread int timer_run_cnt = 1;
 	odp_time_t now;
 
 	if (timer_global->num_timer_pools == 0)
@@ -881,7 +881,8 @@ unsigned _timer_run(void)
 	/* Rate limit how often this thread checks the timer pools. */
 
 	if (timer_global->inline_poll_interval > 1) {
-		if (--timer_run_cnt)
+		timer_run_cnt -= dec;
+		if (timer_run_cnt > 0)
 			return 0;
 		timer_run_cnt = timer_global->inline_poll_interval;
 	}

@@ -976,27 +976,30 @@ static int queue_api_enq(odp_queue_t handle, odp_event_t ev)
 static int queue_api_deq_multi(odp_queue_t handle, odp_event_t ev[], int num)
 {
 	queue_entry_t *queue = qentry_from_handle(handle);
-
-	if (odp_global_rw->inline_timers &&
-	    odp_atomic_load_u64(&queue->s.num_timers))
-		timer_run();
+	int ret;
 
 	if (num > QUEUE_MULTI_MAX)
 		num = QUEUE_MULTI_MAX;
 
-	return queue->s.dequeue_multi(handle,
-				      (odp_buffer_hdr_t **)ev, num);
+	ret = queue->s.dequeue_multi(handle, (odp_buffer_hdr_t **)ev, num);
+
+	if (odp_global_rw->inline_timers &&
+	    odp_atomic_load_u64(&queue->s.num_timers))
+		timer_run(ret ? 2 : 1);
+
+	return ret;
 }
 
 static odp_event_t queue_api_deq(odp_queue_t handle)
 {
 	queue_entry_t *queue = qentry_from_handle(handle);
+	odp_event_t ev = (odp_event_t)queue->s.dequeue(handle);
 
 	if (odp_global_rw->inline_timers &&
 	    odp_atomic_load_u64(&queue->s.num_timers))
-		timer_run();
+		timer_run(ev != ODP_EVENT_INVALID ? 2 : 1);
 
-	return (odp_event_t)queue->s.dequeue(handle);
+	return ev;
 }
 
 /* API functions */

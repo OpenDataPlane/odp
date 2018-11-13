@@ -1152,12 +1152,13 @@ static inline int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 	int ret;
 
 	while (1) {
-		timer_run();
 
 		ret = do_schedule(out_queue, out_ev, max_num);
-
-		if (ret)
+		if (ret) {
+			timer_run(2);
 			break;
+		}
+		timer_run(1);
 
 		if (wait == ODP_SCHED_WAIT)
 			continue;

@@ -890,7 +890,7 @@ static int _schedule(odp_queue_t *from, odp_event_t ev[], int num_evts)
 	ts = sched_ts;
 	atomq = ts->atomq;
 
-	timer_run();
+	timer_run(1);
 
 	/* Once an atomic queue has been scheduled to a thread, it will stay
 	 * on that thread until empty or 'rotated' by WRR
