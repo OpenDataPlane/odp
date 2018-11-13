@@ -36,12 +36,14 @@ typedef struct {
 	odp_timer_t timer;
 } odp_timeout_hdr_t;
 
-unsigned _timer_run(void);
+/* A larger decrement value should be used after receiving events compared to
+ * an 'empty' call. */
+unsigned int _timer_run(int dec);
 
 /* Static inline wrapper to minimize modification of schedulers. */
-static inline unsigned timer_run(void)
+static inline unsigned int timer_run(int dec)
 {
-	return odp_global_rw->inline_timers ? _timer_run() : 0;
+	return odp_global_rw->inline_timers ? _timer_run(dec) : 0;
 }
 
 #endif

@@ -1181,7 +1181,7 @@ static inline int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 static inline int schedule_run(odp_queue_t *out_queue, odp_event_t out_ev[],
 			       unsigned int max_num)
 {
-	timer_run();
+	timer_run(1);
 
 	return do_schedule(out_queue, out_ev, max_num);
 }
@@ -1194,10 +1194,13 @@ static inline int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 	int ret;
 
 	while (1) {
-		ret = schedule_run(out_queue, out_ev, max_num);
 
-		if (ret)
+		ret = do_schedule(out_queue, out_ev, max_num);
+		if (ret) {
+			timer_run(2);
 			break;
+		}
+		timer_run(1);
 
 		if (wait == ODP_SCHED_WAIT)
 			continue;

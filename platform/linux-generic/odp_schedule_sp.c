@@ -571,8 +571,6 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 		uint32_t qi;
 		int num;
 
-		timer_run();
-
 		cmd = sched_cmd();
 
 		if (cmd && cmd->s.type == CMD_PKTIO) {
@@ -612,6 +610,7 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 		}
 
 		if (cmd == NULL) {
+			timer_run(1);
 			/* All priority queues are empty */
 			if (wait == ODP_SCHED_NO_WAIT)
 				return 0;
@@ -636,12 +635,15 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 		num = sched_queue_deq(qi, events, 1, 1);
 
 		if (num <= 0) {
+			timer_run(1);
 			/* Destroyed or empty queue. Remove empty queue from
 			 * scheduling. A dequeue operation to on an already
 			 * empty queue moves it to NOTSCHED state and
 			 * sched_queue() will be called on next enqueue. */
 			continue;
 		}
+
+		timer_run(2);
 
 		sched_local.cmd = cmd;
 
