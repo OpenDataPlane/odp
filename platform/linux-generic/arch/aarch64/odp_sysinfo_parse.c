@@ -12,7 +12,6 @@
 #include <odp_sysinfo_internal.h>
 #include <odp_debug_internal.h>
 
-#define DUMMY_MAX_MHZ 1000
 #define TMP_STR_LEN   64
 
 static void aarch64_impl_str(char *str, int maxlen, int implementer)
