@@ -200,6 +200,7 @@ AC_ARG_ENABLE([abi-compat],
 	abi_compat=no
 	#if there is no ABI compatibility the .so numbers are meaningless
 	ODP_LIBSO_VERSION=0:0:0
+	ODP_CHECK_CFLAG([-march=native])
     fi])
 AM_CONDITIONAL(ODP_ABI_COMPAT, [test "x$ODP_ABI_COMPAT" = "x1"])
 
