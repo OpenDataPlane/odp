@@ -108,32 +108,45 @@ static inline __int128 __lockfree_fetch_or_16(__int128 *var, __int128 mask,
 
 #else
 
-static inline __int128 casp(__int128 *var, __int128 old, __int128 neu, int mo)
+static inline __int128_t cas_u128(__int128_t *ptr, __int128_t old_val,
+				  __int128_t new_val, int mo)
 {
+	/* CASP instructions require that the first register number is paired */
+	register uint64_t old0 __asm__ ("x0");
+	register uint64_t old1 __asm__ ("x1");
+	register uint64_t new0 __asm__ ("x2");
+	register uint64_t new1 __asm__ ("x3");
+
+	old0 = (uint64_t)old_val;
+	old1 = (uint64_t)(old_val >> 64);
+	new0 = (uint64_t)new_val;
+	new1 = (uint64_t)(new_val >> 64);
+
 	if (mo == __ATOMIC_RELAXED) {
-		__asm__ volatile("casp %0, %H0, %1, %H1, [%2]"
-				 : "+r" (old)
-				 : "r" (neu), "r" (var)
+		__asm__ volatile("casp %[old0], %[old1], %[new0], %[new1], [%[ptr]]"
+				 : [old0] "+r" (old0), [old1] "+r" (old1)
+				 : [new0] "r"  (new0), [new1] "r"  (new1), [ptr] "r" (ptr)
 				 : "memory");
 	} else if (mo == __ATOMIC_ACQUIRE) {
-		__asm__ volatile("caspa %0, %H0, %1, %H1, [%2]"
-				 : "+r" (old)
-				 : "r" (neu), "r" (var)
+		__asm__ volatile("caspa %[old0], %[old1], %[new0], %[new1], [%[ptr]]"
+				 : [old0] "+r" (old0), [old1] "+r" (old1)
+				 : [new0] "r"  (new0), [new1] "r"  (new1), [ptr] "r" (ptr)
 				 : "memory");
 	} else if (mo == __ATOMIC_ACQ_REL) {
-		__asm__ volatile("caspal %0, %H0, %1, %H1, [%2]"
-				 : "+r" (old)
-				 : "r" (neu), "r" (var)
+		__asm__ volatile("caspal %[old0], %[old1], %[new0], %[new1], [%[ptr]]"
+				 : [old0] "+r" (old0), [old1] "+r" (old1)
+				 : [new0] "r"  (new0), [new1] "r"  (new1), [ptr] "r" (ptr)
 				 : "memory");
 	} else if (mo == __ATOMIC_RELEASE) {
-		__asm__ volatile("caspl %0, %H0, %1, %H1, [%2]"
-				 : "+r" (old)
-				 : "r" (neu), "r" (var)
+		__asm__ volatile("caspl %[old0], %[old1], %[new0], %[new1], [%[ptr]]"
+				 : [old0] "+r" (old0), [old1] "+r" (old1)
+				 : [new0] "r"  (new0), [new1] "r"  (new1), [ptr] "r" (ptr)
 				 : "memory");
 	} else {
 		abort();
 	}
-	return old;
+
+	return ((__int128)old0) | (((__int128)old1) << 64);
 }
 
 static inline bool
@@ -147,7 +160,7 @@ __lockfree_compare_exchange_16(register __int128 *var, __int128 *exp,
 	__int128 expected;
 
 	expected = *exp;
-	old = casp(var, expected, neu, mo_success);
+	old = cas_u128(var, expected, neu, mo_success);
 	*exp = old; /* Always update, atomically read value */
 	return old == expected;
 }
@@ -160,7 +173,7 @@ static inline __int128 __lockfree_exchange_16(__int128 *var, __int128 neu,
 
 	do {
 		expected = *var;
-		old = casp(var, expected, neu, mo);
+		old = cas_u128(var, expected, neu, mo);
 	} while (old != expected);
 	return old;
 }
@@ -173,7 +186,7 @@ static inline __int128 __lockfree_fetch_and_16(__int128 *var, __int128 mask,
 
 	do {
 		expected = *var;
-		old = casp(var, expected, expected & mask, mo);
+		old = cas_u128(var, expected, expected & mask, mo);
 	} while (old != expected);
 	return old;
 }
@@ -186,7 +199,7 @@ static inline __int128 __lockfree_fetch_or_16(__int128 *var, __int128 mask,
 
 	do {
 		expected = *var;
-		old = casp(var, expected, expected | mask, mo);
+		old = cas_u128(var, expected, expected | mask, mo);
 	} while (old != expected);
 	return old;
 }
