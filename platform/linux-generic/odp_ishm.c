@@ -114,13 +114,6 @@
 #define ISHM_NB_FRAGMNTS (ISHM_MAX_NB_BLOCKS * 2 + 1)
 
 /*
- * Memory reservations larger than ISHM_HUGE_PAGE_LIMIT (bytes) are allocated
- * using huge pages (if available). Smaller reservations are done using normal
- * pages to conserve memory.
- */
-#define ISHM_HUGE_PAGE_LIMIT (64 * 1024)
-
-/*
  * when a memory block is to be exported outside its ODP instance,
  * an block 'attribute file' is created in /dev/shm/odp-<pid>-shm-<name>.
  * The information given in this file is according to the following:
@@ -190,6 +183,8 @@ typedef struct ishm_block {
 typedef struct {
 	odp_spinlock_t  lock;
 	uint64_t dev_seq;	/* used when creating device names */
+	/* limit for reserving memory using huge pages */
+	uint64_t huge_page_limit;
 	uint32_t odpthread_cnt;	/* number of running ODP threads   */
 	ishm_block_t  block[ISHM_MAX_NB_BLOCKS];
 	void *single_va_start;	/* start of single VA memory */
@@ -1108,7 +1103,7 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 
 	/* Otherwise, Try first huge pages when possible and needed: */
 	if ((fd < 0) && page_hp_size && ((flags &  _ODP_ISHM_USE_HP) ||
-					 size > ISHM_HUGE_PAGE_LIMIT)) {
+					 size > ishm_tbl->huge_page_limit)) {
 		/* at least, alignment in VA should match page size, but user
 		 * can request more: If the user requirement exceeds the page
 		 * size then we have to make sure the block will be mapped at
@@ -1643,22 +1638,32 @@ int _odp_ishm_init_global(const odp_init_t *init)
 	void *addr;
 	void *spce_addr = NULL;
 	int i;
-	int single_va_size_kb = 0;
+	int val_kb;
 	uid_t uid;
 	char *hp_dir = odp_global_ro.hugepage_info.default_huge_page_dir;
 	uint64_t max_memory;
 	uint64_t internal;
+	uint64_t huge_page_limit;
 
 	if (!_odp_libconfig_lookup_ext_int("shm", NULL, "single_va_size_kb",
-					   &single_va_size_kb)) {
+					   &val_kb)) {
 		ODP_ERR("Unable to read single VA size from config\n");
 		return -1;
 	}
 
-	ODP_DBG("Shm single VA size: %dkB\n", single_va_size_kb);
+	ODP_DBG("Shm single VA size: %dkB\n", val_kb);
 
-	max_memory = single_va_size_kb * 1024;
+	max_memory = val_kb * 1024;
 	internal   = max_memory / 8;
+
+	if (!_odp_libconfig_lookup_ext_int("shm", NULL, "huge_page_limit_kb",
+					   &val_kb)) {
+		ODP_ERR("Unable to read huge page usage limit from config\n");
+		return -1;
+	}
+	huge_page_limit = (uint64_t)val_kb * 1024;
+
+	ODP_DBG("Shm huge page usage limit: %dkB\n", val_kb);
 
 	/* user requested memory size + some extra for internal use */
 	if (init && init->shm.max_memory)
@@ -1710,6 +1715,7 @@ int _odp_ishm_init_global(const odp_init_t *init)
 	memset(ishm_tbl, 0, sizeof(ishm_table_t));
 	ishm_tbl->dev_seq = 0;
 	ishm_tbl->odpthread_cnt = 0;
+	ishm_tbl->huge_page_limit = huge_page_limit;
 	odp_spinlock_init(&ishm_tbl->lock);
 
 	/* allocate space for the internal shared mem fragment table: */
