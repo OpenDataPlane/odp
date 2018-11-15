@@ -418,7 +418,7 @@ static void scheduler_test_wait(void)
 static void scheduler_test_queue_size(void)
 {
 	odp_queue_capability_t queue_capa;
-	odp_scheduler_config_t default_config;
+	odp_schedule_config_t default_config;
 	odp_pool_t pool;
 	odp_pool_param_t pool_param;
 	odp_queue_param_t queue_param;
@@ -432,8 +432,8 @@ static void scheduler_test_queue_size(void)
 				      ODP_SCHED_SYNC_ORDERED};
 
 	CU_ASSERT_FATAL(odp_queue_capability(&queue_capa) == 0);
-	odp_scheduler_config_init(&default_config);
 	queue_size = TEST_QUEUE_SIZE_NUM_EV;
+	odp_schedule_config_init(&default_config);
 	if (default_config.queue_size &&
 	    queue_size > default_config.queue_size)
 		queue_size = default_config.queue_size;
@@ -1662,6 +1662,7 @@ static int create_queues(test_globals_t *globals)
 	int i, j, prios, rc;
 	odp_queue_capability_t capa;
 	odp_schedule_capability_t sched_capa;
+	odp_schedule_config_t default_config;
 	odp_pool_t queue_ctx_pool;
 	odp_pool_param_t params;
 	odp_buffer_t queue_ctx_buf;
@@ -1691,10 +1692,11 @@ static int create_queues(test_globals_t *globals)
 	}
 
 	globals->max_sched_queue_size = BUFS_PER_QUEUE_EXCL;
-	if (sched_capa.max_queue_size && sched_capa.max_queue_size <
-			BUFS_PER_QUEUE_EXCL) {
-		printf("Max sched queue size %u\n", sched_capa.max_queue_size);
-		globals->max_sched_queue_size = sched_capa.max_queue_size;
+	odp_schedule_config_init(&default_config);
+	if (default_config.queue_size &&
+	    globals->max_sched_queue_size > default_config.queue_size) {
+		printf("Max sched queue size %u\n", default_config.queue_size);
+		globals->max_sched_queue_size = default_config.queue_size;
 	}
 
 	prios = odp_schedule_num_prio();
@@ -1704,7 +1706,7 @@ static int create_queues(test_globals_t *globals)
 	queues_per_prio = QUEUES_PER_PRIO;
 	num_sched = (prios * queues_per_prio * sched_types) + CHAOS_NUM_QUEUES;
 	num_plain = (prios * queues_per_prio);
-	while ((num_sched > sched_capa.max_queues ||
+	while ((num_sched > default_config.num_queues ||
 		num_plain > capa.plain.max_num ||
 		num_sched + num_plain > capa.max_queues) && queues_per_prio) {
 		queues_per_prio--;
