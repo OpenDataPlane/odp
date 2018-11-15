@@ -260,6 +260,7 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 {
 	uint32_t i, tp_idx;
 	size_t sz0, sz1, sz2;
+	uint64_t tp_size;
 	uint32_t flags = ODP_SHM_SW_ONLY;
 
 	if (odp_global_ro.shm_single_va)
@@ -289,12 +290,17 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	sz1 = ROUNDUP_CACHE_LINE(sizeof(tick_buf_t) * param->num_timers);
 	sz2 = ROUNDUP_CACHE_LINE(sizeof(_odp_timer_t) *
 				 param->num_timers);
-	odp_shm_t shm = odp_shm_reserve(name, sz0 + sz1 + sz2,
-			ODP_CACHE_LINE_SIZE, flags);
+	tp_size = sz0 + sz1 + sz2;
+
+	odp_shm_t shm = odp_shm_reserve(name, tp_size, ODP_CACHE_LINE_SIZE,
+					flags);
 	if (odp_unlikely(shm == ODP_SHM_INVALID))
 		ODP_ABORT("%s: timer pool shm-alloc(%zuKB) failed\n",
 			  name, (sz0 + sz1 + sz2) / 1024);
 	timer_pool_t *tp = (timer_pool_t *)odp_shm_addr(shm);
+
+	memset(tp, 0, tp_size);
+
 	tp->prev_scan = odp_time_global();
 	tp->time_per_tick = odp_time_global_from_ns(param->res_ns);
 	odp_atomic_init_u64(&tp->cur_tick, 0);
