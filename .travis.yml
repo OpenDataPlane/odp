@@ -232,7 +232,8 @@ jobs:
                               -e CC="${CC}"
                               ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${ARCH}.sh
                 - stage: "build only"
-                  env: ARCH=x86_64 CC=clang
+                  env: ARCH=x86_64
+                  compiler: clang
                   install:
                           - true
                   script:
