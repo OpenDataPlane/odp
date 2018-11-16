@@ -14,18 +14,9 @@ env:
     # - CROSS_ARCH="i386"
 
 build:
-  pre_ci:
-    # use Dockerfile to install additional CI dependencies
-    - docker build -t=odp/dev ./scripts
-
-  # use image built in 'pre_ci' for CI job
-  pre_ci_boot:
-    image_name: odp/dev
-    image_tag: latest
-    pull: false
-    options:
-
   ci:
+    - apt-get update
+    - apt-get install --no-install-recommends -yy asciidoctor autoconf automake build-essential ccache clang doxygen gcc graphviz libconfig-dev libcunit1-dev libnuma-dev libpcap-dev libssl-dev libtool mscgen xsltproc
     - mkdir -p $HOME/odp-shmdir
     - export CI=true ODP_SHM_DIR=$HOME/odp-shmdir ODP_TEST_OUT_XML=yes
     - ./bootstrap
