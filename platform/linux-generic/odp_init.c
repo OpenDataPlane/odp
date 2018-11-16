@@ -267,6 +267,7 @@ int odp_init_global(odp_instance_t *instance,
 	odp_global_ro.log_fn = odp_override_log;
 	odp_global_ro.abort_fn = odp_override_abort;
 
+	odp_init_param_init(&odp_global_ro.init_param);
 	if (params != NULL) {
 		odp_global_ro.init_param  = *params;
 
