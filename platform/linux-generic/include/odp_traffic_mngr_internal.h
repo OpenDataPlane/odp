@@ -99,6 +99,11 @@ typedef enum {
 	TM_WRED_PROFILE
 } profile_kind_t;
 
+typedef enum {
+	TM_STATUS_FREE = 0,
+	TM_STATUS_RESERVED
+} tm_status_t;
+
 typedef struct tm_queue_obj_s tm_queue_obj_t;
 typedef struct tm_node_obj_s tm_node_obj_t;
 
@@ -396,6 +401,7 @@ struct tm_system_s {
 	uint8_t    tm_idx;
 	uint8_t    first_enq;
 	odp_bool_t is_idle;
+	tm_status_t status;
 
 	uint64_t shaper_green_cnt;
 	uint64_t shaper_yellow_cnt;

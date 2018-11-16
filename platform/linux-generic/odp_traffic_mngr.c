@@ -85,7 +85,7 @@ static tm_prop_t basic_prop_tbl[MAX_PRIORITIES][NUM_SHAPER_COLORS] = {
 static dynamic_tbl_t odp_tm_profile_tbls[ODP_TM_NUM_PROFILES];
 
 /* TM systems table. */
-static tm_system_t *odp_tm_systems[ODP_TM_MAX_NUM_SYSTEMS];
+static tm_system_t odp_tm_systems[ODP_TM_MAX_NUM_SYSTEMS];
 
 static tm_system_group_t *tm_group_list;
 
@@ -363,11 +363,11 @@ static tm_system_t *tm_system_alloc(void)
 
 	/* Find an open slot in the odp_tm_systems array. */
 	for (tm_idx = 0; tm_idx < ODP_TM_MAX_NUM_SYSTEMS; tm_idx++) {
-		if (!odp_tm_systems[tm_idx]) {
-			tm_system = malloc(sizeof(tm_system_t));
+		if (odp_tm_systems[tm_idx].status == TM_STATUS_FREE) {
+			tm_system = &odp_tm_systems[tm_idx];
 			memset(tm_system, 0, sizeof(tm_system_t));
-			odp_tm_systems[tm_idx] = tm_system;
 			tm_system->tm_idx = tm_idx;
+			tm_system->status = TM_STATUS_RESERVED;
 			return tm_system;
 		}
 	}
@@ -383,8 +383,7 @@ static void tm_system_free(tm_system_t *tm_system)
 	if (tm_system->queue_num_tbl)
 		free(tm_system->queue_num_tbl);
 
-	odp_tm_systems[tm_system->tm_idx] = NULL;
-	free(tm_system);
+	odp_tm_systems[tm_system->tm_idx].status = TM_STATUS_FREE;
 }
 
 static void *tm_common_profile_create(const char      *name,
@@ -3702,7 +3701,7 @@ int odp_tm_node_destroy(odp_tm_node_t tm_node)
 	if (!tm_node_obj)
 		return -1;
 
-	tm_system = odp_tm_systems[tm_node_obj->tm_idx];
+	tm_system = &odp_tm_systems[tm_node_obj->tm_idx];
 	if (!tm_system)
 		return -1;
 
@@ -3770,7 +3769,7 @@ int odp_tm_node_shaper_config(odp_tm_node_t tm_node,
 	if (!tm_node_obj)
 		return -1;
 
-	tm_system = odp_tm_systems[tm_node_obj->tm_idx];
+	tm_system = &odp_tm_systems[tm_node_obj->tm_idx];
 	if (!tm_system)
 		return -1;
 
@@ -3978,7 +3977,7 @@ int odp_tm_queue_destroy(odp_tm_queue_t tm_queue)
 	if (!tm_queue_obj)
 		return -1;
 
-	tm_system = odp_tm_systems[tm_queue_obj->tm_idx];
+	tm_system = &odp_tm_systems[tm_queue_obj->tm_idx];
 	if (!tm_system)
 		return -1;
 
@@ -4036,7 +4035,7 @@ int odp_tm_queue_shaper_config(odp_tm_queue_t tm_queue,
 	if (!tm_queue_obj)
 		return -1;
 
-	tm_system = odp_tm_systems[tm_queue_obj->tm_idx];
+	tm_system = &odp_tm_systems[tm_queue_obj->tm_idx];
 	if (!tm_system)
 		return -1;
 
@@ -4178,7 +4177,7 @@ int odp_tm_node_connect(odp_tm_node_t src_tm_node, odp_tm_node_t dst_tm_node)
 	if ((!src_tm_node_obj) || src_tm_node_obj->is_root_node)
 		return -1;
 
-	tm_system = odp_tm_systems[src_tm_node_obj->tm_idx];
+	tm_system = &odp_tm_systems[src_tm_node_obj->tm_idx];
 	if (!tm_system)
 		return -1;
 
@@ -4247,7 +4246,7 @@ int odp_tm_queue_connect(odp_tm_queue_t tm_queue, odp_tm_node_t dst_tm_node)
 	if (!src_tm_queue_obj)
 		return -1;
 
-	tm_system = odp_tm_systems[src_tm_queue_obj->tm_idx];
+	tm_system = &odp_tm_systems[src_tm_queue_obj->tm_idx];
 	if (!tm_system)
 		return -1;
 
@@ -4312,7 +4311,7 @@ int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt)
 	if (!tm_queue_obj)
 		return -1;
 
-	tm_system = odp_tm_systems[tm_queue_obj->tm_idx];
+	tm_system = &odp_tm_systems[tm_queue_obj->tm_idx];
 	if (!tm_system)
 		return -1;
 
@@ -4333,7 +4332,7 @@ int odp_tm_enq_with_cnt(odp_tm_queue_t tm_queue, odp_packet_t pkt)
 	if (!tm_queue_obj)
 		return -1;
 
-	tm_system = odp_tm_systems[tm_queue_obj->tm_idx];
+	tm_system = &odp_tm_systems[tm_queue_obj->tm_idx];
 	if (!tm_system)
 		return -1;
 
