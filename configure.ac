@@ -200,7 +200,12 @@ AC_ARG_ENABLE([abi-compat],
 	abi_compat=no
 	#if there is no ABI compatibility the .so numbers are meaningless
 	ODP_LIBSO_VERSION=0:0:0
-	ODP_CHECK_CFLAG([-march=native])
+	# do not try -march=native for clang due to possible failures on
+	# clang optimizations
+	$CC --version | grep -q clang
+	if test $? -ne 0; then
+		ODP_CHECK_CFLAG([-march=native])
+	fi
     fi])
 AM_CONDITIONAL(ODP_ABI_COMPAT, [test "x$ODP_ABI_COMPAT" = "x1"])
 
