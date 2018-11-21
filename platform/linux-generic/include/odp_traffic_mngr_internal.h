@@ -269,7 +269,7 @@ struct tm_queue_obj_s {
 	uint32_t pkts_dequeued_cnt;
 	uint32_t pkts_consumed_cnt;
 	_odp_int_pkt_queue_t _odp_int_pkt_queue;
-	tm_wred_node_t *tm_wred_node;
+	tm_wred_node_t tm_wred_node;
 	odp_packet_t pkt;
 	odp_packet_t sent_pkt;
 	uint32_t timer_seq;
