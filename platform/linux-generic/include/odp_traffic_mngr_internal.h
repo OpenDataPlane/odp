@@ -415,15 +415,13 @@ struct tm_system_s {
  * while the input work queue is shared - timers are not. */
 
 struct tm_system_group_s {
-	tm_system_group_t *prev;
-	tm_system_group_t *next;
-
 	odp_barrier_t  tm_group_barrier;
 	tm_system_t   *first_tm_system;
 	uint32_t       num_tm_systems;
 	uint32_t       first_enq;
 	pthread_t      thread;
 	pthread_attr_t attr;
+	tm_status_t    status;
 };
 
 #ifdef __cplusplus
