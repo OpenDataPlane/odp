@@ -28,7 +28,7 @@ extern "C" {
  * systems that may be created.  On some platforms this might be much more
  * limited to as little as one hardware TM system.
  */
-#define ODP_TM_MAX_NUM_SYSTEMS   64
+#define ODP_TM_MAX_NUM_SYSTEMS   8
 
 /** The ODP_TM_MAX_PRIORITIES constant specifies the largest range of
  * priorities that any TM system can support.  All strict priority values MUST
@@ -57,7 +57,7 @@ extern "C" {
 /** The ODP_TM_MAX_TM_QUEUES constant is the largest number of tm_queues
  * that can be handled by any one TM system.
  */
-#define ODP_TM_MAX_TM_QUEUES  (16 * 1024 * 1024)
+#define ODP_TM_MAX_TM_QUEUES  (4 * 1024)
 
 /** The ODP_TM_MAX_NUM_OUTPUTS constant is the largest number of outputs that
  * can be configured for any one TM system.
@@ -67,13 +67,13 @@ extern "C" {
 /** The ODP_TM_MAX_NUM_TM_NODES constant is the largest number of tm_nodes that
  * can be in existence for any one TM system.
  */
-#define ODP_TM_MAX_NUM_TM_NODES  (1024 * 1024)
+#define ODP_TM_MAX_NUM_TM_NODES  (4 * 1024)
 
 /** The ODP_TM_MAX_TM_NODE_FANIN constant is the largest number of fan-in
  * "inputs" that can be simultaneously connected to a single tm_node.
  * *TBD* Does this need to be as large as ODP_TM_MAX_TM_QUEUES? *TBD*
  */
-#define ODP_TM_MAX_TM_NODE_FANIN  (1024 * 1024)
+#define ODP_TM_MAX_TM_NODE_FANIN  (4 * 1024)
 
 /** The ODP_TM_MIN_SHAPER_BW constant is the smallest amount of bandwidth that
  * can a shaper's peak or commit rate can be set to.  It is in units of
