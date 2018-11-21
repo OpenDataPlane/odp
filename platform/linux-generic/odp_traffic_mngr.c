@@ -83,6 +83,10 @@ static tm_prop_t basic_prop_tbl[MAX_PRIORITIES][NUM_SHAPER_COLORS] = {
 
 typedef struct {
 	struct {
+		tm_system_group_t group[ODP_TM_MAX_NUM_SYSTEMS];
+		odp_ticketlock_t lock;
+	} system_group;
+	struct {
 		tm_queue_obj_t obj[ODP_TM_MAX_TM_QUEUES];
 		odp_ticketlock_t lock;
 	} queue_obj;
@@ -97,8 +101,6 @@ static dynamic_tbl_t odp_tm_profile_tbls[ODP_TM_NUM_PROFILES];
 
 /* TM systems table. */
 static tm_system_t odp_tm_systems[ODP_TM_MAX_NUM_SYSTEMS];
-
-static tm_system_group_t *tm_group_list;
 
 static odp_ticketlock_t tm_create_lock;
 static odp_ticketlock_t tm_profile_lock;
@@ -2663,35 +2665,9 @@ static int tm_thread_create(tm_system_group_t *tm_group)
 
 	return rc;
 }
-
-static _odp_tm_group_t _odp_tm_group_create(const char *name ODP_UNUSED)
-{
-	tm_system_group_t *tm_group, *first_tm_group, *second_tm_group;
-
-	tm_group = malloc(sizeof(tm_system_group_t));
-	memset(tm_group, 0, sizeof(tm_system_group_t));
-	odp_barrier_init(&tm_group->tm_group_barrier, 2);
-
-	/* Add this group to the tm_group_list linked list. */
-	if (tm_group_list == NULL) {
-		tm_group_list  = tm_group;
-		tm_group->next = tm_group;
-		tm_group->prev = tm_group;
-	} else {
-		first_tm_group        = tm_group_list;
-		second_tm_group       = first_tm_group->next;
-		first_tm_group->next  = tm_group;
-		second_tm_group->prev = tm_group;
-		tm_group->next        = second_tm_group;
-		tm_group->prev        = first_tm_group;
-	}
-
-	return MAKE_ODP_TM_SYSTEM_GROUP(tm_group);
-}
-
 static void _odp_tm_group_destroy(_odp_tm_group_t odp_tm_group)
 {
-	tm_system_group_t *tm_group, *prev_tm_group, *next_tm_group;
+	tm_system_group_t *tm_group;
 	int                rc;
 
 	tm_group = GET_TM_GROUP(odp_tm_group);
@@ -2704,23 +2680,9 @@ static void _odp_tm_group_destroy(_odp_tm_group_t odp_tm_group)
 	if (g_tm_cpu_num > 0)
 		g_tm_cpu_num--;
 
-	/* Remove this group from the tm_group_list linked list. Special case
-	 * when this is the last tm_group in the linked list. */
-	prev_tm_group = tm_group->prev;
-	next_tm_group = tm_group->next;
-	if (prev_tm_group == next_tm_group) {
-		ODP_ASSERT(tm_group_list == tm_group);
-		tm_group_list = NULL;
-	} else {
-		prev_tm_group->next = next_tm_group;
-		next_tm_group->prev = prev_tm_group;
-		if (tm_group_list == tm_group)
-			tm_group_list = next_tm_group;
-	}
-
-	tm_group->prev = NULL;
-	tm_group->next = NULL;
-	free(tm_group);
+	odp_ticketlock_lock(&tm_glb->system_group.lock);
+	tm_group->status = TM_STATUS_FREE;
+	odp_ticketlock_unlock(&tm_glb->system_group.lock);
 }
 
 static int _odp_tm_group_add(_odp_tm_group_t odp_tm_group, odp_tm_t odp_tm)
@@ -2792,12 +2754,21 @@ static int _odp_tm_group_remove(_odp_tm_group_t odp_tm_group, odp_tm_t odp_tm)
 	return 0;
 }
 
+static void _odp_tm_init_tm_group(tm_system_group_t *tm_group)
+{
+	memset(tm_group, 0, sizeof(tm_system_group_t));
+
+	tm_group->status = TM_STATUS_RESERVED;
+	odp_barrier_init(&tm_group->tm_group_barrier, 2);
+}
+
 static int tm_group_attach(odp_tm_t odp_tm)
 {
 	tm_system_group_t *tm_group, *min_tm_group;
 	_odp_tm_group_t    odp_tm_group;
 	odp_cpumask_t      all_cpus, worker_cpus;
 	uint32_t           total_cpus, avail_cpus;
+	uint32_t           i;
 
 	/* If this platform has a small number of cpu's then allocate one
 	 * tm_group and assign all tm_system's to this tm_group.  Otherwise in
@@ -2811,34 +2782,37 @@ static int tm_group_attach(odp_tm_t odp_tm)
 	avail_cpus = odp_cpumask_count(&worker_cpus);
 
 	if (total_cpus < 24) {
-		tm_group     = tm_group_list;
+		tm_group     = &tm_glb->system_group.group[0];
+
+		odp_ticketlock_lock(&tm_glb->system_group.lock);
+		if (tm_group->status == TM_STATUS_FREE)
+			_odp_tm_init_tm_group(tm_group);
+		odp_ticketlock_unlock(&tm_glb->system_group.lock);
+
 		odp_tm_group = MAKE_ODP_TM_SYSTEM_GROUP(tm_group);
-		if (tm_group == NULL)
-			odp_tm_group = _odp_tm_group_create("");
-
-		_odp_tm_group_add(odp_tm_group, odp_tm);
-		return 0;
-	}
-
-	/* Manycore case. */
-	if ((tm_group_list == NULL) || (avail_cpus > 1)) {
-		odp_tm_group = _odp_tm_group_create("");
 		_odp_tm_group_add(odp_tm_group, odp_tm);
 		return 0;
 	}
 
 	/* Pick a tm_group according to the smallest number of tm_systems. */
-	tm_group     = tm_group_list;
 	min_tm_group = NULL;
-	while (tm_group != NULL) {
+	odp_ticketlock_lock(&tm_glb->system_group.lock);
+	for (i = 0; i < ODP_TM_MAX_NUM_SYSTEMS && i < avail_cpus; i++) {
+		tm_group = &tm_glb->system_group.group[i];
+
+		if (tm_group->status == TM_STATUS_FREE) {
+			_odp_tm_init_tm_group(tm_group);
+			min_tm_group = tm_group;
+			break;
+		}
+
 		if (min_tm_group == NULL)
 			min_tm_group = tm_group;
 		else if (tm_group->num_tm_systems <
 			 min_tm_group->num_tm_systems)
 			min_tm_group = tm_group;
-
-		tm_group = tm_group->next;
 	}
+	odp_ticketlock_unlock(&tm_glb->system_group.lock);
 
 	if (min_tm_group == NULL)
 		return -1;
@@ -4703,6 +4677,7 @@ int odp_tm_init_global(void)
 	tm_glb->shm = shm;
 
 	odp_ticketlock_init(&tm_glb->queue_obj.lock);
+	odp_ticketlock_init(&tm_glb->system_group.lock);
 	odp_ticketlock_init(&tm_create_lock);
 	odp_ticketlock_init(&tm_profile_lock);
 	odp_barrier_init(&tm_first_enq, 2);
