@@ -287,6 +287,7 @@ struct tm_queue_obj_s {
 	uint8_t tm_idx;
 	uint8_t delayed_cnt;
 	uint8_t blocked_cnt;
+	tm_status_t status;
 	odp_queue_t queue;
 };
 
