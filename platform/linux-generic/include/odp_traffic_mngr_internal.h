@@ -307,6 +307,7 @@ struct tm_node_obj_s {
 	uint8_t              level;   /* Primarily for debugging */
 	uint8_t              tm_idx;
 	uint8_t              marked;
+	tm_status_t          status;
 };
 
 typedef struct {

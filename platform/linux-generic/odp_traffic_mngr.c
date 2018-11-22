@@ -90,6 +90,10 @@ typedef struct {
 		tm_queue_obj_t obj[ODP_TM_MAX_TM_QUEUES];
 		odp_ticketlock_t lock;
 	} queue_obj;
+	struct {
+		tm_node_obj_t obj[ODP_TM_MAX_NUM_TM_NODES];
+		odp_ticketlock_t lock;
+	} node_obj;
 
 	odp_shm_t shm;
 } tm_global_t;
@@ -124,6 +128,11 @@ static odp_bool_t tm_demote_pkt_desc(tm_system_t *tm_system,
 static inline tm_queue_obj_t *tm_qobj_from_index(uint32_t queue_id)
 {
 	return &tm_glb->queue_obj.obj[queue_id];
+}
+
+static inline tm_node_obj_t *tm_nobj_from_index(uint32_t node_id)
+{
+	return &tm_glb->node_obj.obj[node_id];
 }
 
 static int queue_tm_reenq(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr)
@@ -3582,34 +3591,50 @@ odp_tm_node_t odp_tm_node_create(odp_tm_t             odp_tm,
 	tm_schedulers_obj_t *schedulers_obj;
 	_odp_int_name_t name_tbl_id;
 	tm_wred_node_t *tm_wred_node;
-	tm_node_obj_t *tm_node_obj;
+	tm_node_obj_t *tm_node_obj = NULL;
 	odp_tm_node_t odp_tm_node;
 	odp_tm_wred_t wred_profile;
 	tm_system_t *tm_system;
 	uint32_t level, num_priorities, priority, color;
+	uint32_t i;
 
 	/* Allocate a tm_node_obj_t record. */
 	tm_system = GET_TM_SYSTEM(odp_tm);
-	tm_node_obj = malloc(sizeof(tm_node_obj_t));
+
+	odp_ticketlock_lock(&tm_glb->node_obj.lock);
+
+	for (i = 0; i < ODP_TM_MAX_NUM_TM_NODES; i++) {
+		tm_node_obj_t *cur_node_obj = tm_nobj_from_index(i);
+
+		if (cur_node_obj->status != TM_STATUS_FREE)
+			continue;
+
+		level = params->level;
+		requirements = &tm_system->requirements.per_level[level];
+		num_priorities = requirements->max_priority + 1;
+
+		odp_tm_node = MAKE_ODP_TM_NODE(cur_node_obj);
+		name_tbl_id = ODP_INVALID_NAME;
+		if ((name) && (name[0] != '\0')) {
+			name_tbl_id = _odp_int_name_tbl_add(name,
+							    ODP_TM_NODE_HANDLE,
+							    odp_tm_node);
+			if (name_tbl_id == ODP_INVALID_NAME)
+				break;
+		}
+		tm_node_obj = cur_node_obj;
+
+		memset(tm_node_obj, 0, sizeof(tm_node_obj_t));
+		tm_node_obj->status = TM_STATUS_RESERVED;
+
+		break;
+	}
+
+	odp_ticketlock_unlock(&tm_glb->node_obj.lock);
+
 	if (!tm_node_obj)
 		return ODP_TM_INVALID;
 
-	level              = params->level;
-	requirements       = &tm_system->requirements.per_level[level];
-	num_priorities     = requirements->max_priority + 1;
-
-	odp_tm_node = MAKE_ODP_TM_NODE(tm_node_obj);
-	name_tbl_id = ODP_INVALID_NAME;
-	if ((name) && (name[0] != '\0')) {
-		name_tbl_id = _odp_int_name_tbl_add(name, ODP_TM_NODE_HANDLE,
-						    odp_tm_node);
-		if (name_tbl_id == ODP_INVALID_NAME) {
-			free(tm_node_obj);
-			return ODP_TM_INVALID;
-		}
-	}
-
-	memset(tm_node_obj, 0, sizeof(tm_node_obj_t));
 	tm_node_obj->user_context = params->user_context;
 	tm_node_obj->name_tbl_id = name_tbl_id;
 	tm_node_obj->max_fanin = params->max_fanin;
@@ -3718,7 +3743,10 @@ int odp_tm_node_destroy(odp_tm_node_t tm_node)
 			return rc;
 	}
 
-	free(tm_node_obj);
+	odp_ticketlock_lock(&tm_glb->node_obj.lock);
+	tm_node_obj->status = TM_STATUS_FREE;
+	odp_ticketlock_unlock(&tm_glb->node_obj.lock);
+
 	odp_ticketlock_unlock(&tm_system->tm_system_lock);
 	return 0;
 }
@@ -4645,6 +4673,7 @@ int odp_tm_init_global(void)
 	tm_glb->shm = shm;
 
 	odp_ticketlock_init(&tm_glb->queue_obj.lock);
+	odp_ticketlock_init(&tm_glb->node_obj.lock);
 	odp_ticketlock_init(&tm_glb->system_group.lock);
 	odp_ticketlock_init(&tm_create_lock);
 	odp_ticketlock_init(&tm_profile_lock);
