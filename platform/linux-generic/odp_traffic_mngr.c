@@ -404,9 +404,6 @@ static tm_system_t *tm_system_alloc(void)
 
 static void tm_system_free(tm_system_t *tm_system)
 {
-	if (tm_system->root_node)
-		free(tm_system->root_node);
-
 	odp_tm_systems[tm_system->tm_idx].status = TM_STATUS_FREE;
 }
 
@@ -2456,19 +2453,6 @@ void odp_tm_egress_init(odp_tm_egress_t *egress)
 	memset(egress, 0, sizeof(odp_tm_egress_t));
 }
 
-static tm_node_obj_t *create_dummy_root_node(void)
-{
-	tm_node_obj_t *tm_node_obj;
-
-	tm_node_obj = malloc(sizeof(tm_node_obj_t));
-	if (!tm_node_obj)
-		return NULL;
-
-	memset(tm_node_obj, 0, sizeof(tm_node_obj_t));
-	tm_node_obj->is_root_node = true;
-	return tm_node_obj;
-}
-
 int odp_tm_capabilities(odp_tm_capabilities_t capabilities[] ODP_UNUSED,
 			uint32_t              capabilities_size)
 {
@@ -2877,6 +2861,7 @@ odp_tm_t odp_tm_create(const char            *name,
 				   &tm_system->requirements);
 
 	tm_system->next_queue_num = 1;
+	tm_system->root_node.is_root_node = true;
 
 	tm_init_random_data(&tm_system->tm_random_data);
 
@@ -2910,11 +2895,6 @@ odp_tm_t odp_tm_create(const char            *name,
 			max_timers, tm_system);
 		create_fail |= tm_system->_odp_int_timer_wheel
 			== _ODP_INT_TIMER_WHEEL_INVALID;
-	}
-
-	if (create_fail == 0) {
-		tm_system->root_node = create_dummy_root_node();
-		create_fail |= tm_system->root_node == NULL;
 	}
 
 	if (create_fail == 0) {
@@ -4173,7 +4153,9 @@ int odp_tm_node_connect(odp_tm_node_t src_tm_node, odp_tm_node_t dst_tm_node)
 
 	src_tm_wred_node = &src_tm_node_obj->tm_wred_node;
 	if (dst_tm_node == ODP_TM_ROOT) {
-		src_tm_node_obj->shaper_obj.next_tm_node = tm_system->root_node;
+		tm_node_obj_t  *root_node = &tm_system->root_node;
+
+		src_tm_node_obj->shaper_obj.next_tm_node = root_node;
 		src_tm_wred_node->next_tm_wred_node = NULL;
 		return 0;
 	}
@@ -4241,7 +4223,7 @@ int odp_tm_queue_connect(odp_tm_queue_t tm_queue, odp_tm_node_t dst_tm_node)
 
 	src_tm_wred_node = &src_tm_queue_obj->tm_wred_node;
 	if (dst_tm_node == ODP_TM_ROOT) {
-		root_node = tm_system->root_node;
+		root_node = &tm_system->root_node;
 		src_tm_queue_obj->shaper_obj.next_tm_node = root_node;
 		src_tm_wred_node->next_tm_wred_node = NULL;
 		return 0;

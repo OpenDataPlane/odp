@@ -386,7 +386,7 @@ struct tm_system_s {
 	_odp_timer_wheel_t     _odp_int_timer_wheel;
 	_odp_int_sorted_pool_t _odp_int_sorted_pool;
 
-	tm_node_obj_t        *root_node;
+	tm_node_obj_t         root_node;
 	odp_tm_egress_t       egress;
 	odp_tm_requirements_t requirements;
 	odp_tm_capabilities_t capabilities;
