@@ -1332,7 +1332,7 @@ static odp_bool_t tm_propagate_pkt_desc(tm_system_t     *tm_system,
 		if (!shaper_change)
 			return false;
 
-		schedulers_obj  = tm_node_obj->schedulers_obj;
+		schedulers_obj  = &tm_node_obj->schedulers_obj;
 		prev_sched_pkt  = schedulers_obj->out_pkt_desc;
 		sched_was_empty = prev_sched_pkt.queue_num == 0;
 		sched_change    = false;
@@ -1426,7 +1426,7 @@ static odp_bool_t tm_demote_pkt_desc(tm_system_t         *tm_system,
 	if ((!blocked_scheduler) && (!timer_shaper))
 		return false;
 
-	if (tm_node_obj->schedulers_obj == blocked_scheduler)
+	if (&tm_node_obj->schedulers_obj == blocked_scheduler)
 		return false;
 
 	/* See if this first shaper_obj is delaying the demoted_pkt_desc */
@@ -1452,7 +1452,7 @@ static odp_bool_t tm_demote_pkt_desc(tm_system_t         *tm_system,
 		if ((!demoted_pkt_desc) && (!shaper_change))
 			return false;
 
-		schedulers_obj  = tm_node_obj->schedulers_obj;
+		schedulers_obj  = &tm_node_obj->schedulers_obj;
 		prev_sched_pkt  = schedulers_obj->out_pkt_desc;
 		sched_was_empty = prev_sched_pkt.queue_num == 0;
 		sched_change    = false;
@@ -1569,7 +1569,7 @@ static odp_bool_t tm_consume_pkt_desc(tm_system_t     *tm_system,
 
 	tm_node_obj = shaper_obj->next_tm_node;
 	while (!tm_node_obj->is_root_node) { /* not at egress */
-		schedulers_obj = tm_node_obj->schedulers_obj;
+		schedulers_obj = &tm_node_obj->schedulers_obj;
 		prev_sched_pkt = schedulers_obj->out_pkt_desc;
 		sent_priority  = schedulers_obj->highest_priority;
 
@@ -3586,7 +3586,7 @@ odp_tm_node_t odp_tm_node_create(odp_tm_t             odp_tm,
 	odp_tm_node_t odp_tm_node;
 	odp_tm_wred_t wred_profile;
 	tm_system_t *tm_system;
-	uint32_t level, num_priorities, priority, schedulers_obj_len, color;
+	uint32_t level, num_priorities, priority, color;
 
 	/* Allocate a tm_node_obj_t record. */
 	tm_system = GET_TM_SYSTEM(odp_tm);
@@ -3603,23 +3603,13 @@ odp_tm_node_t odp_tm_node_create(odp_tm_t             odp_tm,
 	level              = params->level;
 	requirements       = &tm_system->requirements.per_level[level];
 	num_priorities     = requirements->max_priority + 1;
-	schedulers_obj_len = sizeof(tm_schedulers_obj_t)
-		+ (sizeof(tm_sched_state_t) * num_priorities);
-	schedulers_obj = malloc(schedulers_obj_len);
-	if (!schedulers_obj) {
-		free(tm_wred_node);
-		free(tm_node_obj);
-		return ODP_TM_INVALID;
-	}
 
-	memset(schedulers_obj, 0, schedulers_obj_len);
 	odp_tm_node = MAKE_ODP_TM_NODE(tm_node_obj);
 	name_tbl_id = ODP_INVALID_NAME;
 	if ((name) && (name[0] != '\0')) {
 		name_tbl_id = _odp_int_name_tbl_add(name, ODP_TM_NODE_HANDLE,
 						    odp_tm_node);
 		if (name_tbl_id == ODP_INVALID_NAME) {
-			free(schedulers_obj);
 			free(tm_wred_node);
 			free(tm_node_obj);
 			return ODP_TM_INVALID;
@@ -3628,7 +3618,6 @@ odp_tm_node_t odp_tm_node_create(odp_tm_t             odp_tm,
 
 	memset(tm_node_obj, 0, sizeof(tm_node_obj_t));
 	memset(tm_wred_node, 0, sizeof(tm_wred_node_t));
-	memset(schedulers_obj, 0, schedulers_obj_len);
 	tm_node_obj->user_context = params->user_context;
 	tm_node_obj->name_tbl_id = name_tbl_id;
 	tm_node_obj->max_fanin = params->max_fanin;
@@ -3636,9 +3625,9 @@ odp_tm_node_t odp_tm_node_create(odp_tm_t             odp_tm,
 	tm_node_obj->level = params->level;
 	tm_node_obj->tm_idx = tm_system->tm_idx;
 	tm_node_obj->tm_wred_node = tm_wred_node;
-	tm_node_obj->schedulers_obj = schedulers_obj;
 	odp_ticketlock_init(&tm_wred_node->tm_wred_node_lock);
 
+	schedulers_obj = &tm_node_obj->schedulers_obj;
 	schedulers_obj->num_priorities = num_priorities;
 	for (priority = 0; priority < num_priorities; priority++) {
 		sorted_list = _odp_sorted_list_create(
@@ -3666,7 +3655,7 @@ odp_tm_node_t odp_tm_node_create(odp_tm_t             odp_tm,
 	tm_node_obj->magic_num = TM_NODE_MAGIC_NUM;
 	tm_node_obj->shaper_obj.enclosing_entity = tm_node_obj;
 	tm_node_obj->shaper_obj.in_tm_node_obj = 1;
-	tm_node_obj->schedulers_obj->enclosing_entity = tm_node_obj;
+	tm_node_obj->schedulers_obj.enclosing_entity = tm_node_obj;
 
 	odp_ticketlock_unlock(&tm_system->tm_system_lock);
 	return odp_tm_node;
@@ -3729,21 +3718,18 @@ int odp_tm_node_destroy(odp_tm_node_t tm_node)
 	if (tm_node_obj->tm_wred_node != NULL)
 		free(tm_node_obj->tm_wred_node);
 
-	schedulers_obj = tm_node_obj->schedulers_obj;
-	if (schedulers_obj != NULL) {
-		num_priorities = schedulers_obj->num_priorities;
-		for (priority = 0; priority < num_priorities; priority++) {
-			sched_state = &schedulers_obj->sched_states[priority];
-			sorted_list = sched_state->sorted_list;
-			sorted_pool = tm_system->_odp_int_sorted_pool;
-			rc          = _odp_sorted_list_destroy(sorted_pool,
-							       sorted_list);
-			if (rc != 0)
-				return rc;
-		}
+	schedulers_obj = &tm_node_obj->schedulers_obj;
+	num_priorities = schedulers_obj->num_priorities;
+	for (priority = 0; priority < num_priorities; priority++) {
+		sched_state = &schedulers_obj->sched_states[priority];
+		sorted_list = sched_state->sorted_list;
+		sorted_pool = tm_system->_odp_int_sorted_pool;
+		rc          = _odp_sorted_list_destroy(sorted_pool,
+						       sorted_list);
+		if (rc != 0)
+			return rc;
 	}
 
-	free(schedulers_obj);
 	free(tm_node_obj);
 	odp_ticketlock_unlock(&tm_system->tm_system_lock);
 	return 0;

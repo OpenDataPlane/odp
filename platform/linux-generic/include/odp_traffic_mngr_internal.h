@@ -258,7 +258,7 @@ typedef struct {
 	uint8_t num_priorities;
 	uint8_t highest_priority;
 	uint8_t locked;
-	tm_sched_state_t sched_states[0];
+	tm_sched_state_t sched_states[ODP_TM_MAX_PRIORITIES];
 } tm_schedulers_obj_t;
 
 struct tm_queue_obj_s {
@@ -294,7 +294,7 @@ struct tm_queue_obj_s {
 struct tm_node_obj_s {
 	void                *user_context;
 	tm_wred_node_t      *tm_wred_node;
-	tm_schedulers_obj_t *schedulers_obj;
+	tm_schedulers_obj_t  schedulers_obj;
 	tm_shaper_obj_t     *fanin_list_head;
 	tm_shaper_obj_t     *fanin_list_tail;
 	tm_shaper_obj_t      shaper_obj;
