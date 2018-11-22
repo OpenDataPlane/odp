@@ -293,7 +293,7 @@ struct tm_queue_obj_s {
 
 struct tm_node_obj_s {
 	void                *user_context;
-	tm_wred_node_t      *tm_wred_node;
+	tm_wred_node_t       tm_wred_node;
 	tm_schedulers_obj_t  schedulers_obj;
 	tm_shaper_obj_t     *fanin_list_head;
 	tm_shaper_obj_t     *fanin_list_tail;

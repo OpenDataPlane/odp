@@ -3594,12 +3594,6 @@ odp_tm_node_t odp_tm_node_create(odp_tm_t             odp_tm,
 	if (!tm_node_obj)
 		return ODP_TM_INVALID;
 
-	tm_wred_node = malloc(sizeof(tm_wred_node_t));
-	if (!tm_wred_node) {
-		free(tm_node_obj);
-		return ODP_TM_INVALID;
-	}
-
 	level              = params->level;
 	requirements       = &tm_system->requirements.per_level[level];
 	num_priorities     = requirements->max_priority + 1;
@@ -3610,21 +3604,20 @@ odp_tm_node_t odp_tm_node_create(odp_tm_t             odp_tm,
 		name_tbl_id = _odp_int_name_tbl_add(name, ODP_TM_NODE_HANDLE,
 						    odp_tm_node);
 		if (name_tbl_id == ODP_INVALID_NAME) {
-			free(tm_wred_node);
 			free(tm_node_obj);
 			return ODP_TM_INVALID;
 		}
 	}
 
 	memset(tm_node_obj, 0, sizeof(tm_node_obj_t));
-	memset(tm_wred_node, 0, sizeof(tm_wred_node_t));
 	tm_node_obj->user_context = params->user_context;
 	tm_node_obj->name_tbl_id = name_tbl_id;
 	tm_node_obj->max_fanin = params->max_fanin;
 	tm_node_obj->is_root_node = false;
 	tm_node_obj->level = params->level;
 	tm_node_obj->tm_idx = tm_system->tm_idx;
-	tm_node_obj->tm_wred_node = tm_wred_node;
+
+	tm_wred_node = &tm_node_obj->tm_wred_node;
 	odp_ticketlock_init(&tm_wred_node->tm_wred_node_lock);
 
 	schedulers_obj = &tm_node_obj->schedulers_obj;
@@ -3698,25 +3691,20 @@ int odp_tm_node_destroy(odp_tm_node_t tm_node)
 	if (shaper_obj->shaper_params != NULL)
 		return -1;
 
-	tm_wred_node = tm_node_obj->tm_wred_node;
-	if (tm_wred_node != NULL) {
-		if (tm_wred_node->threshold_params != NULL)
-			return -1;
+	tm_wred_node = &tm_node_obj->tm_wred_node;
+	if (tm_wred_node->threshold_params != NULL)
+		return -1;
 
-		for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
-			wred_params = tm_wred_node->wred_params[color];
-			if (wred_params != NULL)
-				return -1;
-		}
+	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
+		wred_params = tm_wred_node->wred_params[color];
+		if (wred_params != NULL)
+			return -1;
 	}
 
 	/* Now that all of the checks are done, time to so some freeing. */
 	odp_ticketlock_lock(&tm_system->tm_system_lock);
 	if (tm_node_obj->name_tbl_id != ODP_INVALID_NAME)
 		_odp_int_name_tbl_delete(tm_node_obj->name_tbl_id);
-
-	if (tm_node_obj->tm_wred_node != NULL)
-		free(tm_node_obj->tm_wred_node);
 
 	schedulers_obj = &tm_node_obj->schedulers_obj;
 	num_priorities = schedulers_obj->num_priorities;
@@ -3784,11 +3772,11 @@ int odp_tm_node_threshold_config(odp_tm_node_t tm_node,
 	tm_node_obj_t *tm_node_obj;
 
 	tm_node_obj = GET_TM_NODE_OBJ(tm_node);
-	if ((!tm_node_obj) || (!tm_node_obj->tm_wred_node))
+	if (!tm_node_obj)
 		return -1;
 
 	odp_ticketlock_lock(&tm_profile_lock);
-	tm_threshold_config_set(tm_node_obj->tm_wred_node, thresholds_profile);
+	tm_threshold_config_set(&tm_node_obj->tm_wred_node, thresholds_profile);
 	odp_ticketlock_unlock(&tm_profile_lock);
 	return 0;
 }
@@ -3806,7 +3794,7 @@ int odp_tm_node_wred_config(odp_tm_node_t      tm_node,
 	if (!tm_node_obj)
 		return -1;
 
-	wred_node = tm_node_obj->tm_wred_node;
+	wred_node = &tm_node_obj->tm_wred_node;
 
 	odp_ticketlock_lock(&tm_profile_lock);
 	rc = 0;
@@ -4161,7 +4149,7 @@ int odp_tm_node_connect(odp_tm_node_t src_tm_node, odp_tm_node_t dst_tm_node)
 	if (!tm_system)
 		return -1;
 
-	src_tm_wred_node = src_tm_node_obj->tm_wred_node;
+	src_tm_wred_node = &src_tm_node_obj->tm_wred_node;
 	if (dst_tm_node == ODP_TM_ROOT) {
 		src_tm_node_obj->shaper_obj.next_tm_node = tm_system->root_node;
 		src_tm_wred_node->next_tm_wred_node = NULL;
@@ -4172,7 +4160,7 @@ int odp_tm_node_connect(odp_tm_node_t src_tm_node, odp_tm_node_t dst_tm_node)
 	if ((!dst_tm_node_obj) || dst_tm_node_obj->is_root_node)
 		return -1;
 
-	dst_tm_wred_node = dst_tm_node_obj->tm_wred_node;
+	dst_tm_wred_node = &dst_tm_node_obj->tm_wred_node;
 	if (src_tm_node_obj->tm_idx != dst_tm_node_obj->tm_idx)
 		return -1;
 
@@ -4203,9 +4191,8 @@ int odp_tm_node_disconnect(odp_tm_node_t src_tm_node)
 			dst_tm_node_obj->current_tm_node_fanin--;
 	}
 
-	src_tm_wred_node = src_tm_node_obj->tm_wred_node;
-	if (src_tm_wred_node != NULL)
-		src_tm_wred_node->next_tm_wred_node = NULL;
+	src_tm_wred_node = &src_tm_node_obj->tm_wred_node;
+	src_tm_wred_node->next_tm_wred_node = NULL;
 
 	src_tm_node_obj->shaper_obj.next_tm_node = NULL;
 	return 0;
@@ -4242,7 +4229,7 @@ int odp_tm_queue_connect(odp_tm_queue_t tm_queue, odp_tm_node_t dst_tm_node)
 	if ((!dst_tm_node_obj) || dst_tm_node_obj->is_root_node)
 		return -1;
 
-	dst_tm_wred_node = dst_tm_node_obj->tm_wred_node;
+	dst_tm_wred_node = &dst_tm_node_obj->tm_wred_node;
 	if (src_tm_queue_obj->tm_idx != dst_tm_node_obj->tm_idx)
 		return -1;
 
@@ -4275,8 +4262,7 @@ int odp_tm_queue_disconnect(odp_tm_queue_t tm_queue)
 	}
 
 	src_tm_wred_node = &src_tm_queue_obj->tm_wred_node;
-	if (src_tm_wred_node != NULL)
-		src_tm_wred_node->next_tm_wred_node = NULL;
+	src_tm_wred_node->next_tm_wred_node = NULL;
 
 	src_tm_queue_obj->shaper_obj.next_tm_node = NULL;
 	return 0;
@@ -4362,19 +4348,17 @@ int odp_tm_node_info(odp_tm_node_t tm_node, odp_tm_node_info_t *info)
 	if (shaper_params != NULL)
 		info->shaper_profile = shaper_params->shaper_profile;
 
-	tm_wred_node = tm_node_obj->tm_wred_node;
-	if (tm_wred_node != NULL) {
-		threshold_params = tm_wred_node->threshold_params;
-		if (threshold_params != NULL)
-			info->threshold_profile =
-				threshold_params->thresholds_profile;
+	tm_wred_node = &tm_node_obj->tm_wred_node;
+	threshold_params = tm_wred_node->threshold_params;
+	if (threshold_params != NULL)
+		info->threshold_profile =
+			threshold_params->thresholds_profile;
 
-		for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
-			wred_params = tm_wred_node->wred_params[color];
-			if (wred_params != NULL)
-				info->wred_profile[color] =
-					wred_params->wred_profile;
-		}
+	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
+		wred_params = tm_wred_node->wred_params[color];
+		if (wred_params != NULL)
+			info->wred_profile[color] =
+				wred_params->wred_profile;
 	}
 
 	return 0;
@@ -4538,8 +4522,6 @@ int odp_tm_queue_query(odp_tm_queue_t       tm_queue,
 		return -1;
 
 	tm_wred_node = &tm_queue_obj->tm_wred_node;
-	if (!tm_wred_node)
-		return -1;
 
 	/* **TBD** Where do we get the queue_info from. */
 	queue_info.threshold_params = tm_wred_node->threshold_params;
