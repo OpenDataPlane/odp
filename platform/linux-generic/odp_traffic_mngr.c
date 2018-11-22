@@ -304,15 +304,11 @@ static void free_dynamic_tbl_entry(dynamic_tbl_t *dynamic_tbl,
 	}
 }
 
-static input_work_queue_t *input_work_queue_create(void)
+static void input_work_queue_init(input_work_queue_t *input_work_queue)
 {
-	input_work_queue_t *input_work_queue;
-
-	input_work_queue = malloc(sizeof(input_work_queue_t));
 	memset(input_work_queue, 0, sizeof(input_work_queue_t));
 	odp_atomic_init_u64(&input_work_queue->queue_cnt, 0);
 	odp_ticketlock_init(&input_work_queue->lock);
-	return input_work_queue;
 }
 
 static void input_work_queue_destroy(input_work_queue_t *input_work_queue)
@@ -322,7 +318,7 @@ static void input_work_queue_destroy(input_work_queue_t *input_work_queue)
 	* stopped new tm_enq() (et al) calls from succeeding.
 	*/
 	odp_ticketlock_lock(&input_work_queue->lock);
-	free(input_work_queue);
+	memset(input_work_queue, 0, sizeof(input_work_queue_t));
 }
 
 static int input_work_queue_append(tm_system_t *tm_system,
@@ -332,7 +328,7 @@ static int input_work_queue_append(tm_system_t *tm_system,
 	input_work_item_t *entry_ptr;
 	uint32_t queue_cnt, tail_idx;
 
-	input_work_queue = tm_system->input_work_queue;
+	input_work_queue = &tm_system->input_work_queue;
 	queue_cnt = odp_atomic_load_u64(&input_work_queue->queue_cnt);
 	if (INPUT_WORK_RING_SIZE <= queue_cnt) {
 		input_work_queue->enqueue_fail_cnt++;
@@ -2373,7 +2369,7 @@ static void *tm_system_thread(void *arg)
 
 	tm_system = tm_group->first_tm_system;
 	_odp_int_timer_wheel = tm_system->_odp_int_timer_wheel;
-	input_work_queue = tm_system->input_work_queue;
+	input_work_queue = &tm_system->input_work_queue;
 
 	/* Wait here until we have seen the first enqueue operation. */
 	odp_barrier_wait(&tm_group->tm_group_barrier);
@@ -2427,7 +2423,7 @@ static void *tm_system_thread(void *arg)
 		/* Advance to the next tm_system in the tm_system_group. */
 		tm_system = tm_system->next;
 		_odp_int_timer_wheel = tm_system->_odp_int_timer_wheel;
-		input_work_queue = tm_system->input_work_queue;
+		input_work_queue = &tm_system->input_work_queue;
 	}
 
 	odp_barrier_wait(&tm_system->tm_system_destroy_barrier);
@@ -2897,10 +2893,7 @@ odp_tm_t odp_tm_create(const char            *name,
 			== _ODP_INT_TIMER_WHEEL_INVALID;
 	}
 
-	if (create_fail == 0) {
-		tm_system->input_work_queue = input_work_queue_create();
-		create_fail |= !tm_system->input_work_queue;
-	}
+	input_work_queue_init(&tm_system->input_work_queue);
 
 	if (create_fail == 0) {
 		/* Pass any odp_groups or hints to tm_group_attach here. */
@@ -2911,8 +2904,6 @@ odp_tm_t odp_tm_create(const char            *name,
 
 	if (create_fail) {
 		_odp_int_name_tbl_delete(name_tbl_id);
-		if (tm_system->input_work_queue)
-			input_work_queue_destroy(tm_system->input_work_queue);
 
 		if (tm_system->_odp_int_sorted_pool
 		    != _ODP_INT_SORTED_POOL_INVALID)
@@ -2980,7 +2971,7 @@ int odp_tm_destroy(odp_tm_t odp_tm)
 	 * allocated by this group. */
 	_odp_tm_group_remove(tm_system->odp_tm_group, odp_tm);
 
-	input_work_queue_destroy(tm_system->input_work_queue);
+	input_work_queue_destroy(&tm_system->input_work_queue);
 	_odp_sorted_pool_destroy(tm_system->_odp_int_sorted_pool);
 	_odp_queue_pool_destroy(tm_system->_odp_int_queue_pool);
 	_odp_timer_wheel_destroy(tm_system->_odp_int_timer_wheel);
@@ -4600,7 +4591,7 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 	uint32_t queue_num, max_queue_num;
 
 	tm_system = GET_TM_SYSTEM(odp_tm);
-	input_work_queue = tm_system->input_work_queue;
+	input_work_queue = &tm_system->input_work_queue;
 
 	ODP_PRINT("odp_tm_stats_print - tm_system=0x%" PRIX64 " tm_idx=%u\n",
 		  odp_tm, tm_system->tm_idx);
