@@ -81,6 +81,17 @@ static tm_prop_t basic_prop_tbl[MAX_PRIORITIES][NUM_SHAPER_COLORS] = {
 		[ODP_TM_SHAPER_RED] = { 7, DELAY_PKT } }
 };
 
+typedef struct {
+	struct {
+		tm_queue_obj_t obj[ODP_TM_MAX_TM_QUEUES];
+		odp_ticketlock_t lock;
+	} queue_obj;
+
+	odp_shm_t shm;
+} tm_global_t;
+
+static tm_global_t *tm_glb;
+
 /* Profile tables. */
 static dynamic_tbl_t odp_tm_profile_tbls[ODP_TM_NUM_PROFILES];
 
@@ -107,6 +118,11 @@ static odp_bool_t tm_demote_pkt_desc(tm_system_t *tm_system,
 				     tm_schedulers_obj_t *blocked_scheduler,
 				     tm_shaper_obj_t *timer_shaper,
 				     pkt_desc_t *demoted_pkt_desc);
+
+static inline tm_queue_obj_t *tm_qobj_from_index(uint32_t queue_id)
+{
+	return &tm_glb->queue_obj.obj[queue_id];
+}
 
 static int queue_tm_reenq(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr)
 {
@@ -3889,70 +3905,84 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 				   odp_tm_queue_params_t *params)
 {
 	_odp_int_pkt_queue_t _odp_int_pkt_queue;
-	tm_queue_obj_t *tm_queue_obj;
-	odp_tm_queue_t odp_tm_queue;
+	tm_queue_obj_t *queue_obj;
+	odp_tm_queue_t odp_tm_queue = ODP_TM_INVALID;
 	odp_queue_t queue;
 	odp_tm_wred_t wred_profile;
 	tm_system_t *tm_system;
 	uint32_t color;
+	uint32_t i;
 
 	/* Allocate a tm_queue_obj_t record. */
 	tm_system = GET_TM_SYSTEM(odp_tm);
-	tm_queue_obj = malloc(sizeof(tm_queue_obj_t));
-	if (!tm_queue_obj)
-		return ODP_TM_INVALID;
 
-	_odp_int_pkt_queue = _odp_pkt_queue_create(
-		tm_system->_odp_int_queue_pool);
-	if (_odp_int_pkt_queue == _ODP_INT_PKT_QUEUE_INVALID) {
-		free(tm_queue_obj);
-		return ODP_TM_INVALID;
+	odp_ticketlock_lock(&tm_glb->queue_obj.lock);
+
+	for (i = 0; i < ODP_TM_MAX_TM_QUEUES; i++) {
+		_odp_int_queue_pool_t  int_queue_pool;
+
+		queue_obj = tm_qobj_from_index(i);
+
+		if (queue_obj->status != TM_STATUS_FREE)
+			continue;
+
+		int_queue_pool = tm_system->_odp_int_queue_pool;
+		_odp_int_pkt_queue = _odp_pkt_queue_create(int_queue_pool);
+		if (_odp_int_pkt_queue == _ODP_INT_PKT_QUEUE_INVALID)
+			continue;
+
+		odp_tm_queue = MAKE_ODP_TM_QUEUE(queue_obj);
+		memset(queue_obj, 0, sizeof(tm_queue_obj_t));
+		queue_obj->user_context = params->user_context;
+		queue_obj->priority = params->priority;
+		queue_obj->tm_idx = tm_system->tm_idx;
+		queue_obj->queue_num = tm_system->next_queue_num++;
+		queue_obj->_odp_int_pkt_queue = _odp_int_pkt_queue;
+		queue_obj->pkt = ODP_PACKET_INVALID;
+		odp_ticketlock_init(&queue_obj->tm_wred_node.tm_wred_node_lock);
+
+		queue = odp_queue_create(NULL, NULL);
+		if (queue == ODP_QUEUE_INVALID) {
+			odp_tm_queue = ODP_TM_INVALID;
+			continue;
+		}
+
+		queue_obj->queue = queue;
+		odp_queue_context_set(queue, queue_obj, sizeof(tm_queue_obj_t));
+		queue_fn->set_enq_deq_fn(queue, queue_tm_reenq,
+					 queue_tm_reenq_multi, NULL, NULL);
+
+		tm_system->queue_num_tbl[queue_obj->queue_num - 1] = queue_obj;
+
+		odp_ticketlock_lock(&tm_system->tm_system_lock);
+
+		if (params->shaper_profile != ODP_TM_INVALID)
+			tm_shaper_config_set(tm_system, params->shaper_profile,
+					     &queue_obj->shaper_obj);
+
+		if (params->threshold_profile != ODP_TM_INVALID)
+			tm_threshold_config_set(&queue_obj->tm_wred_node,
+						params->threshold_profile);
+
+		for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
+			wred_profile = params->wred_profile[color];
+			if (wred_profile != ODP_TM_INVALID)
+				tm_wred_config_set(&queue_obj->tm_wred_node,
+						   color, wred_profile);
+		}
+
+		queue_obj->magic_num = TM_QUEUE_MAGIC_NUM;
+		queue_obj->shaper_obj.enclosing_entity = queue_obj;
+		queue_obj->shaper_obj.in_tm_node_obj = 0;
+
+		odp_ticketlock_unlock(&tm_system->tm_system_lock);
+
+		queue_obj->status = TM_STATUS_RESERVED;
+		break;
 	}
 
-	odp_tm_queue = MAKE_ODP_TM_QUEUE(tm_queue_obj);
-	memset(tm_queue_obj, 0, sizeof(tm_queue_obj_t));
-	tm_queue_obj->user_context = params->user_context;
-	tm_queue_obj->priority = params->priority;
-	tm_queue_obj->tm_idx = tm_system->tm_idx;
-	tm_queue_obj->queue_num = tm_system->next_queue_num++;
-	tm_queue_obj->_odp_int_pkt_queue = _odp_int_pkt_queue;
-	tm_queue_obj->pkt = ODP_PACKET_INVALID;
-	odp_ticketlock_init(&tm_queue_obj->tm_wred_node.tm_wred_node_lock);
+	odp_ticketlock_unlock(&tm_glb->queue_obj.lock);
 
-	queue = odp_queue_create(NULL, NULL);
-	if (queue == ODP_QUEUE_INVALID) {
-		free(tm_queue_obj);
-		return ODP_TM_INVALID;
-	}
-
-	tm_queue_obj->queue = queue;
-	odp_queue_context_set(queue, tm_queue_obj, sizeof(tm_queue_obj_t));
-	queue_fn->set_enq_deq_fn(queue,
-				 queue_tm_reenq, queue_tm_reenq_multi,
-				 NULL, NULL);
-
-	tm_system->queue_num_tbl[tm_queue_obj->queue_num - 1] = tm_queue_obj;
-	odp_ticketlock_lock(&tm_system->tm_system_lock);
-	if (params->shaper_profile != ODP_TM_INVALID)
-		tm_shaper_config_set(tm_system, params->shaper_profile,
-				     &tm_queue_obj->shaper_obj);
-
-	if (params->threshold_profile != ODP_TM_INVALID)
-		tm_threshold_config_set(&tm_queue_obj->tm_wred_node,
-					params->threshold_profile);
-
-	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
-		wred_profile = params->wred_profile[color];
-		if (wred_profile != ODP_TM_INVALID)
-			tm_wred_config_set(&tm_queue_obj->tm_wred_node, color,
-					   wred_profile);
-	}
-
-	tm_queue_obj->magic_num = TM_QUEUE_MAGIC_NUM;
-	tm_queue_obj->shaper_obj.enclosing_entity = tm_queue_obj;
-	tm_queue_obj->shaper_obj.in_tm_node_obj = 0;
-
-	odp_ticketlock_unlock(&tm_system->tm_system_lock);
 	return odp_tm_queue;
 }
 
@@ -3984,9 +4014,10 @@ int odp_tm_queue_destroy(odp_tm_queue_t tm_queue)
 
 	odp_queue_destroy(tm_queue_obj->queue);
 
-	/* First delete any associated tm_wred_node and then the tm_queue_obj
-	 * itself */
-	free(tm_queue_obj);
+	odp_ticketlock_lock(&tm_glb->queue_obj.lock);
+	tm_queue_obj->status = TM_STATUS_FREE;
+	odp_ticketlock_unlock(&tm_glb->queue_obj.lock);
+
 	odp_ticketlock_unlock(&tm_system->tm_system_lock);
 	return 0;
 }
@@ -4660,6 +4691,18 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 
 int odp_tm_init_global(void)
 {
+	odp_shm_t shm;
+
+	shm = odp_shm_reserve("_odp_traffic_mng", sizeof(tm_global_t), 0, 0);
+	if (shm == ODP_SHM_INVALID)
+		return -1;
+
+	tm_glb = odp_shm_addr(shm);
+	memset(tm_glb, 0, sizeof(tm_global_t));
+
+	tm_glb->shm = shm;
+
+	odp_ticketlock_init(&tm_glb->queue_obj.lock);
 	odp_ticketlock_init(&tm_create_lock);
 	odp_ticketlock_init(&tm_profile_lock);
 	odp_barrier_init(&tm_first_enq, 2);
@@ -4672,5 +4715,9 @@ int odp_tm_init_global(void)
 
 int odp_tm_term_global(void)
 {
+	if (odp_shm_free(tm_glb->shm)) {
+		ODP_ERR("shm free failed\n");
+		return -1;
+	}
 	return 0;
 }
