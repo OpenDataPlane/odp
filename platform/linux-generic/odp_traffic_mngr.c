@@ -407,9 +407,6 @@ static void tm_system_free(tm_system_t *tm_system)
 	if (tm_system->root_node)
 		free(tm_system->root_node);
 
-	if (tm_system->queue_num_tbl)
-		free(tm_system->queue_num_tbl);
-
 	odp_tm_systems[tm_system->tm_idx].status = TM_STATUS_FREE;
 }
 
@@ -2840,7 +2837,7 @@ odp_tm_t odp_tm_create(const char            *name,
 	odp_bool_t create_fail;
 	odp_tm_t odp_tm;
 	odp_pktout_queue_t pktout;
-	uint32_t malloc_len, max_num_queues, max_queued_pkts, max_timers;
+	uint32_t max_num_queues, max_queued_pkts, max_timers;
 	uint32_t max_tm_queues, max_sorted_lists;
 	int rc;
 
@@ -2879,9 +2876,6 @@ odp_tm_t odp_tm_create(const char            *name,
 	tm_system_capabilities_set(&tm_system->capabilities,
 				   &tm_system->requirements);
 
-	malloc_len = max_tm_queues * sizeof(tm_queue_obj_t *);
-	tm_system->queue_num_tbl = malloc(malloc_len);
-	memset(tm_system->queue_num_tbl, 0, malloc_len);
 	tm_system->next_queue_num = 1;
 
 	tm_init_random_data(&tm_system->tm_random_data);

@@ -376,7 +376,7 @@ struct tm_system_s {
 
 	void               *trace_buffer;
 	uint32_t            next_queue_num;
-	tm_queue_obj_t    **queue_num_tbl;
+	tm_queue_obj_t     *queue_num_tbl[ODP_TM_MAX_TM_QUEUES];
 	input_work_queue_t *input_work_queue;
 	tm_queue_cnts_t     priority_queue_cnts;
 	tm_queue_cnts_t     total_queue_cnts;
