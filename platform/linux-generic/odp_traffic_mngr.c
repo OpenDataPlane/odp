@@ -81,6 +81,30 @@ static tm_prop_t basic_prop_tbl[MAX_PRIORITIES][NUM_SHAPER_COLORS] = {
 		[ODP_TM_SHAPER_RED] = { 7, DELAY_PKT } }
 };
 
+#define MAX_SHAPER_PROFILES 128
+#define MAX_SCHED_PROFILES 128
+#define MAX_THRESHOLD_PROFILES 128
+#define MAX_WRED_PROFILES 128
+
+typedef struct {
+	struct {
+		tm_shaper_params_t profile[MAX_SHAPER_PROFILES];
+		odp_ticketlock_t lock;
+	} shaper;
+	struct {
+		tm_sched_params_t profile[MAX_SCHED_PROFILES];
+		odp_ticketlock_t lock;
+	} sched;
+	struct {
+		tm_queue_thresholds_t profile[MAX_THRESHOLD_PROFILES];
+		odp_ticketlock_t lock;
+	} threshold;
+	struct {
+		tm_wred_params_t profile[MAX_WRED_PROFILES];
+		odp_ticketlock_t lock;
+	} wred;
+} profile_tbl_t;
+
 typedef struct {
 	struct {
 		tm_system_group_t group[ODP_TM_MAX_NUM_SYSTEMS];
@@ -95,13 +119,12 @@ typedef struct {
 		odp_ticketlock_t lock;
 	} node_obj;
 
+	profile_tbl_t profile_tbl;
+
 	odp_shm_t shm;
 } tm_global_t;
 
 static tm_global_t *tm_glb;
-
-/* Profile tables. */
-static dynamic_tbl_t odp_tm_profile_tbls[ODP_TM_NUM_PROFILES];
 
 /* TM systems table. */
 static tm_system_t odp_tm_systems[ODP_TM_MAX_NUM_SYSTEMS];
@@ -245,62 +268,125 @@ static odp_bool_t tm_random_drop(tm_random_data_t *tm_random_data,
 	return drop;
 }
 
-static void *alloc_entry_in_dynamic_tbl(dynamic_tbl_t *dynamic_tbl,
-					uint32_t record_size,
-					uint32_t *dynamic_idx_ptr)
+static void *alloc_entry_in_tbl(profile_tbl_t *profile_tbl,
+				profile_kind_t profile_kind,
+				uint32_t *idx)
 {
-	uint32_t num_allocd, new_num_allocd, idx;
-	void **new_array_ptrs, *new_record;
+	uint32_t i;
 
-	num_allocd = dynamic_tbl->num_allocd;
-	if (num_allocd <= dynamic_tbl->num_used) {
-		/* Need to alloc or realloc the array of ptrs. */
-		if (num_allocd <= 32)
-			new_num_allocd = 64;
-		else
-			new_num_allocd = 4 * num_allocd;
+	switch (profile_kind) {
+	case TM_SHAPER_PROFILE: {
+		tm_shaper_params_t *profile = NULL;
 
-		new_array_ptrs = malloc(new_num_allocd * sizeof(void *));
-		memset(new_array_ptrs, 0, new_num_allocd * sizeof(void *));
+		odp_ticketlock_lock(&profile_tbl->shaper.lock);
+		for (i = 0; i < MAX_SHAPER_PROFILES; i++) {
+			if (profile_tbl->shaper.profile[i].status !=
+					TM_STATUS_FREE)
+				continue;
 
-		if (dynamic_tbl->num_used != 0)
-			memcpy(new_array_ptrs, dynamic_tbl->array_ptrs,
-			       dynamic_tbl->num_used * sizeof(void *));
-
-		if (dynamic_tbl->array_ptrs)
-			free(dynamic_tbl->array_ptrs);
-
-		dynamic_tbl->num_allocd = new_num_allocd;
-		dynamic_tbl->array_ptrs = new_array_ptrs;
+			profile = &profile_tbl->shaper.profile[i];
+			memset(profile, 0, sizeof(tm_shaper_params_t));
+			profile->status = TM_STATUS_RESERVED;
+			*idx = i;
+			break;
+		}
+		odp_ticketlock_unlock(&profile_tbl->shaper.lock);
+		return profile;
 	}
+	case TM_SCHED_PROFILE: {
+		tm_sched_params_t *profile = NULL;
 
-	idx = dynamic_tbl->num_used;
-	new_record = malloc(record_size);
-	memset(new_record, 0, record_size);
+		odp_ticketlock_lock(&profile_tbl->sched.lock);
+		for (i = 0; i < MAX_SCHED_PROFILES; i++) {
+			if (profile_tbl->sched.profile[i].status !=
+					TM_STATUS_FREE)
+				continue;
 
-	dynamic_tbl->array_ptrs[idx] = new_record;
-	dynamic_tbl->num_used++;
-	if (dynamic_idx_ptr)
-		*dynamic_idx_ptr = idx;
+			profile = &profile_tbl->sched.profile[i];
+			memset(profile, 0, sizeof(tm_sched_params_t));
+			profile->status = TM_STATUS_RESERVED;
+			*idx = i;
+			break;
+		}
+		odp_ticketlock_unlock(&profile_tbl->sched.lock);
+		return profile;
+	}
+	case TM_THRESHOLD_PROFILE: {
+		tm_queue_thresholds_t *profile = NULL;
 
-	return new_record;
+		odp_ticketlock_lock(&profile_tbl->threshold.lock);
+		for (i = 0; i < MAX_THRESHOLD_PROFILES; i++) {
+			if (profile_tbl->threshold.profile[i].status !=
+					TM_STATUS_FREE)
+				continue;
+
+			profile = &profile_tbl->threshold.profile[i];
+			memset(profile, 0, sizeof(tm_queue_thresholds_t));
+			profile->status = TM_STATUS_RESERVED;
+			*idx = i;
+			break;
+		}
+		odp_ticketlock_unlock(&profile_tbl->threshold.lock);
+		return profile;
+	}
+	case TM_WRED_PROFILE: {
+		tm_wred_params_t *profile = NULL;
+
+		odp_ticketlock_lock(&profile_tbl->wred.lock);
+		for (i = 0; i < MAX_WRED_PROFILES; i++) {
+			if (profile_tbl->wred.profile[i].status !=
+					TM_STATUS_FREE)
+				continue;
+
+			profile = &profile_tbl->wred.profile[i];
+			memset(profile, 0, sizeof(tm_wred_params_t));
+			profile->status = TM_STATUS_RESERVED;
+			*idx = i;
+			break;
+		}
+		odp_ticketlock_unlock(&profile_tbl->wred.lock);
+		return profile;
+	}
+	default:
+		ODP_ERR("Invalid TM profile\n");
+		return NULL;
+
+	}
 }
 
-static void free_dynamic_tbl_entry(dynamic_tbl_t *dynamic_tbl,
-				   uint32_t record_size ODP_UNUSED,
-				   uint32_t dynamic_idx)
+static void free_tbl_entry(profile_tbl_t *profile_tbl,
+			   profile_kind_t profile_kind,
+			   uint32_t idx)
 {
-	void *record;
+	switch (profile_kind) {
+	case TM_SHAPER_PROFILE:
+		odp_ticketlock_lock(&profile_tbl->shaper.lock);
+		profile_tbl->shaper.profile[idx].status = TM_STATUS_RESERVED;
+		odp_ticketlock_unlock(&profile_tbl->shaper.lock);
+		return;
 
-	record = dynamic_tbl->array_ptrs[dynamic_idx];
-	if (record) {
-		free(record);
-		dynamic_tbl->array_ptrs[dynamic_idx] = NULL;
-		dynamic_tbl->num_freed++;
-		if (dynamic_tbl->num_freed == dynamic_tbl->num_used) {
-			free(dynamic_tbl->array_ptrs);
-			memset(dynamic_tbl, 0, sizeof(dynamic_tbl_t));
-		}
+	case TM_SCHED_PROFILE:
+		odp_ticketlock_lock(&profile_tbl->sched.lock);
+		profile_tbl->sched.profile[idx].status = TM_STATUS_RESERVED;
+		odp_ticketlock_unlock(&profile_tbl->sched.lock);
+		return;
+
+	case TM_THRESHOLD_PROFILE:
+		odp_ticketlock_lock(&profile_tbl->threshold.lock);
+		profile_tbl->threshold.profile[idx].status = TM_STATUS_RESERVED;
+		odp_ticketlock_unlock(&profile_tbl->threshold.lock);
+		return;
+
+	case TM_WRED_PROFILE:
+		odp_ticketlock_lock(&profile_tbl->wred.lock);
+		profile_tbl->wred.profile[idx].status = TM_STATUS_RESERVED;
+		odp_ticketlock_unlock(&profile_tbl->wred.lock);
+		return;
+
+	default:
+		ODP_ERR("Invalid TM profile\n");
+		return;
+
 	}
 }
 
@@ -405,35 +491,33 @@ static void tm_system_free(tm_system_t *tm_system)
 
 static void *tm_common_profile_create(const char      *name,
 				      profile_kind_t   profile_kind,
-				      uint32_t         object_size,
 				      tm_handle_t     *profile_handle_ptr,
 				      _odp_int_name_t *name_tbl_id_ptr)
 {
 	_odp_int_name_kind_t handle_kind;
 	_odp_int_name_t      name_tbl_id;
-	dynamic_tbl_t       *dynamic_tbl;
 	tm_handle_t          profile_handle;
-	uint32_t             dynamic_tbl_idx;
+	uint32_t             idx;
 	void                *object_ptr;
 
-	/* Note that alloc_entry_in_dynamic_tbl will zero out all of the memory
-	 * that it allocates, so an additional memset here is unnnecessary. */
-	dynamic_tbl = &odp_tm_profile_tbls[profile_kind];
-	object_ptr  = alloc_entry_in_dynamic_tbl(dynamic_tbl, object_size,
-						 &dynamic_tbl_idx);
-	if (!object_ptr)
+	/* Note that alloc_entry_in_tbl will zero out all of the memory that it
+	 * allocates, so an additional memset here is unnecessary. */
+	object_ptr  = alloc_entry_in_tbl(&tm_glb->profile_tbl, profile_kind,
+					 &idx);
+	if (!object_ptr) {
+		ODP_ERR("No free profiles left\n");
 		return NULL;
+	}
 
 	handle_kind    = PROFILE_TO_HANDLE_KIND[profile_kind];
-	profile_handle = MAKE_PROFILE_HANDLE(profile_kind, dynamic_tbl_idx);
+	profile_handle = MAKE_PROFILE_HANDLE(profile_kind, idx);
 	name_tbl_id    = ODP_INVALID_NAME;
 
 	if ((name != NULL) && (name[0] != '\0')) {
 		name_tbl_id = _odp_int_name_tbl_add(name, handle_kind,
 						    profile_handle);
 		if (name_tbl_id == ODP_INVALID_NAME) {
-			free_dynamic_tbl_entry(dynamic_tbl, object_size,
-					       dynamic_tbl_idx);
+			free_tbl_entry(&tm_glb->profile_tbl, profile_kind, idx);
 			return NULL;
 		}
 	}
@@ -445,20 +529,18 @@ static void *tm_common_profile_create(const char      *name,
 }
 
 static int tm_common_profile_destroy(tm_handle_t profile_handle,
-				     uint32_t object_size,
 				     _odp_int_name_t name_tbl_id)
 {
 	profile_kind_t profile_kind;
-	dynamic_tbl_t *dynamic_tbl;
-	uint32_t dynamic_tbl_idx;
+	uint32_t idx;
 
 	if (name_tbl_id != ODP_INVALID_NAME)
 		_odp_int_name_tbl_delete(name_tbl_id);
 
-	profile_kind    = GET_PROFILE_KIND(profile_handle);
-	dynamic_tbl     = &odp_tm_profile_tbls[profile_kind];
-	dynamic_tbl_idx = GET_TBL_IDX(profile_handle);
-	free_dynamic_tbl_entry(dynamic_tbl, object_size, dynamic_tbl_idx);
+	profile_kind = GET_PROFILE_KIND(profile_handle);
+	idx = GET_TBL_IDX(profile_handle);
+	free_tbl_entry(&tm_glb->profile_tbl, profile_kind, idx);
+
 	return 0;
 }
 
@@ -466,16 +548,31 @@ static void *tm_get_profile_params(tm_handle_t profile_handle,
 				   profile_kind_t expected_profile_kind)
 {
 	profile_kind_t profile_kind;
-	dynamic_tbl_t *dynamic_tbl;
-	uint32_t dynamic_tbl_idx;
+	uint32_t idx;
 
 	profile_kind = GET_PROFILE_KIND(profile_handle);
 	if (profile_kind != expected_profile_kind)
 		return NULL;
 
-	dynamic_tbl = &odp_tm_profile_tbls[profile_kind];
-	dynamic_tbl_idx = GET_TBL_IDX(profile_handle);
-	return dynamic_tbl->array_ptrs[dynamic_tbl_idx];
+	idx = GET_TBL_IDX(profile_handle);
+
+	switch (profile_kind) {
+	case TM_SHAPER_PROFILE:
+		return &tm_glb->profile_tbl.shaper.profile[idx];
+
+	case TM_SCHED_PROFILE:
+		return &tm_glb->profile_tbl.sched.profile[idx];
+
+	case TM_THRESHOLD_PROFILE:
+		return &tm_glb->profile_tbl.threshold.profile[idx];
+
+	case TM_WRED_PROFILE:
+		return &tm_glb->profile_tbl.wred.profile[idx];
+
+	default:
+		ODP_ERR("Invalid TM profile\n");
+		return NULL;
+	}
 }
 
 static uint64_t tm_bps_to_rate(uint64_t bps)
@@ -3116,7 +3213,6 @@ odp_tm_shaper_t odp_tm_shaper_create(const char *name,
 	_odp_int_name_t     name_tbl_id;
 
 	profile_obj = tm_common_profile_create(name, TM_SHAPER_PROFILE,
-					       sizeof(tm_shaper_params_t),
 					       &shaper_handle, &name_tbl_id);
 	if (!profile_obj)
 		return ODP_TM_INVALID;
@@ -3142,7 +3238,6 @@ int odp_tm_shaper_destroy(odp_tm_shaper_t shaper_profile)
 		return -1;
 
 	return tm_common_profile_destroy(shaper_profile,
-					 sizeof(tm_shaper_params_t),
 					 profile_obj->name_tbl_id);
 }
 
@@ -3243,7 +3338,6 @@ odp_tm_sched_t odp_tm_sched_create(const char *name,
 	odp_tm_sched_t     sched_handle;
 
 	profile_obj = tm_common_profile_create(name, TM_SCHED_PROFILE,
-					       sizeof(tm_sched_params_t),
 					       &sched_handle, &name_tbl_id);
 	if (!profile_obj)
 		return ODP_TM_INVALID;
@@ -3269,7 +3363,6 @@ int odp_tm_sched_destroy(odp_tm_sched_t sched_profile)
 		return -1;
 
 	return tm_common_profile_destroy(sched_profile,
-					 sizeof(tm_sched_params_t),
 					 profile_obj->name_tbl_id);
 }
 
@@ -3335,7 +3428,6 @@ odp_tm_threshold_t odp_tm_threshold_create(const char *name,
 	_odp_int_name_t        name_tbl_id;
 
 	profile_obj = tm_common_profile_create(name, TM_THRESHOLD_PROFILE,
-					       sizeof(tm_queue_thresholds_t),
 					       &threshold_handle, &name_tbl_id);
 	if (!profile_obj)
 		return ODP_TM_INVALID;
@@ -3364,7 +3456,6 @@ int odp_tm_threshold_destroy(odp_tm_threshold_t threshold_profile)
 		return -1;
 
 	return tm_common_profile_destroy(threshold_profile,
-					 sizeof(odp_tm_threshold_params_t),
 					 threshold_params->name_tbl_id);
 }
 
@@ -3462,7 +3553,6 @@ odp_tm_wred_t odp_tm_wred_create(const char *name, odp_tm_wred_params_t *params)
 	_odp_int_name_t   name_tbl_id;
 
 	profile_obj = tm_common_profile_create(name, TM_WRED_PROFILE,
-					       sizeof(tm_wred_params_t),
 					       &wred_handle, &name_tbl_id);
 
 	if (!profile_obj)
@@ -3489,7 +3579,6 @@ int odp_tm_wred_destroy(odp_tm_wred_t wred_profile)
 		return -1;
 
 	return tm_common_profile_destroy(wred_profile,
-					 sizeof(tm_wred_params_t),
 					 ODP_INVALID_NAME);
 }
 
@@ -4644,6 +4733,10 @@ int odp_tm_init_global(void)
 	odp_ticketlock_init(&tm_glb->system_group.lock);
 	odp_ticketlock_init(&tm_create_lock);
 	odp_ticketlock_init(&tm_profile_lock);
+	odp_ticketlock_init(&tm_glb->profile_tbl.sched.lock);
+	odp_ticketlock_init(&tm_glb->profile_tbl.shaper.lock);
+	odp_ticketlock_init(&tm_glb->profile_tbl.threshold.lock);
+	odp_ticketlock_init(&tm_glb->profile_tbl.wred.lock);
 	odp_barrier_init(&tm_first_enq, 2);
 
 	odp_atomic_init_u64(&atomic_request_cnt, 0);

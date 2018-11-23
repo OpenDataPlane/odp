@@ -83,13 +83,6 @@ typedef uint64_t tm_handle_t;
 #define PF_REACHED_EGRESS   0x40
 #define PF_ERROR            0x80
 
-typedef struct {
-	uint32_t num_allocd;
-	uint32_t num_used;
-	uint32_t num_freed;
-	void **array_ptrs; /* Ptr to an array of num_allocd void * ptrs. */
-} dynamic_tbl_t;
-
 #define ODP_TM_NUM_PROFILES  4
 
 typedef enum {
@@ -115,6 +108,7 @@ typedef struct {
 	_odp_int_name_t    name_tbl_id;
 	odp_tm_threshold_t thresholds_profile;
 	uint32_t           ref_cnt;
+	tm_status_t        status;
 } tm_queue_thresholds_t;
 
 typedef struct {
@@ -127,6 +121,7 @@ typedef struct {
 	odp_tm_percent_t max_drop_prob;
 	odp_bool_t       enable_wred;
 	odp_bool_t       use_byte_fullness;
+	tm_status_t      status;
 } tm_wred_params_t;
 
 typedef struct {
@@ -165,6 +160,7 @@ typedef struct {
 	uint32_t            ref_cnt;
 	odp_tm_sched_mode_t sched_modes[ODP_TM_MAX_PRIORITIES];
 	uint16_t            inverted_weights[ODP_TM_MAX_PRIORITIES];
+	tm_status_t         status;
 } tm_sched_params_t;
 
 typedef enum {
@@ -200,6 +196,7 @@ typedef struct {
 	int8_t          len_adjust;
 	odp_bool_t      dual_rate;
 	odp_bool_t      enabled;
+	tm_status_t     status;
 } tm_shaper_params_t;
 
 typedef enum { NO_CALLBACK, UNDELAY_PKT } tm_shaper_callback_reason_t;
