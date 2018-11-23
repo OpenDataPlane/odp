@@ -2918,6 +2918,11 @@ odp_tm_t odp_tm_create(const char            *name,
 	uint32_t max_tm_queues, max_sorted_lists;
 	int rc;
 
+	if (odp_global_ro.init_param.not_used.feat.tm) {
+		ODP_ERR("TM has been disabled\n");
+		return ODP_TM_INVALID;
+	}
+
 	/* If we are using pktio output (usual case) get the first associated
 	 * pktout_queue for this pktio and fail if there isn't one.
 	 */
@@ -4719,6 +4724,11 @@ int odp_tm_init_global(void)
 {
 	odp_shm_t shm;
 
+	if (odp_global_ro.init_param.not_used.feat.tm) {
+		ODP_DBG("TM disabled\n");
+		return 0;
+	}
+
 	shm = odp_shm_reserve("_odp_traffic_mng", sizeof(tm_global_t), 0, 0);
 	if (shm == ODP_SHM_INVALID)
 		return -1;
@@ -4747,6 +4757,9 @@ int odp_tm_init_global(void)
 
 int odp_tm_term_global(void)
 {
+	if (odp_global_ro.init_param.not_used.feat.tm)
+		return 0;
+
 	if (odp_shm_free(tm_glb->shm)) {
 		ODP_ERR("shm free failed\n");
 		return -1;
