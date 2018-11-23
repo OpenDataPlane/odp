@@ -46,7 +46,7 @@ static const pkt_desc_t EMPTY_PKT_DESC = { .word = 0 };
 #define MAX_PRIORITIES ODP_TM_MAX_PRIORITIES
 #define NUM_SHAPER_COLORS ODP_NUM_SHAPER_COLORS
 
-static tm_prop_t basic_prop_tbl[MAX_PRIORITIES][NUM_SHAPER_COLORS] = {
+static const tm_prop_t basic_prop_tbl[MAX_PRIORITIES][NUM_SHAPER_COLORS] = {
 	[0] = {
 		[ODP_TM_SHAPER_GREEN] = { 0, DECR_BOTH },
 		[ODP_TM_SHAPER_YELLOW] = { 0, DECR_BOTH },
@@ -106,6 +106,8 @@ typedef struct {
 } profile_tbl_t;
 
 typedef struct {
+	tm_system_t system[ODP_TM_MAX_NUM_SYSTEMS];
+
 	struct {
 		tm_system_group_t group[ODP_TM_MAX_NUM_SYSTEMS];
 		odp_ticketlock_t lock;
@@ -121,20 +123,24 @@ typedef struct {
 
 	profile_tbl_t profile_tbl;
 
+	odp_ticketlock_t create_lock;
+	odp_ticketlock_t profile_lock;
+	odp_barrier_t first_enq;
+
+	int main_thread_cpu;
+	int cpu_num;
+
+	/* Service threads */
+	uint64_t         busy_wait_counter;
+	odp_bool_t       main_loop_running;
+	odp_atomic_u64_t atomic_request_cnt;
+	odp_atomic_u64_t currently_serving_cnt;
+	odp_atomic_u64_t atomic_done_cnt;
+
 	odp_shm_t shm;
 } tm_global_t;
 
 static tm_global_t *tm_glb;
-
-/* TM systems table. */
-static tm_system_t odp_tm_systems[ODP_TM_MAX_NUM_SYSTEMS];
-
-static odp_ticketlock_t tm_create_lock;
-static odp_ticketlock_t tm_profile_lock;
-static odp_barrier_t tm_first_enq;
-
-static int g_main_thread_cpu = -1;
-static int g_tm_cpu_num;
 
 /* Forward function declarations. */
 static void tm_queue_cnts_decrement(tm_system_t *tm_system,
@@ -472,8 +478,8 @@ static tm_system_t *tm_system_alloc(void)
 
 	/* Find an open slot in the odp_tm_systems array. */
 	for (tm_idx = 0; tm_idx < ODP_TM_MAX_NUM_SYSTEMS; tm_idx++) {
-		if (odp_tm_systems[tm_idx].status == TM_STATUS_FREE) {
-			tm_system = &odp_tm_systems[tm_idx];
+		if (tm_glb->system[tm_idx].status == TM_STATUS_FREE) {
+			tm_system = &tm_glb->system[tm_idx];
 			memset(tm_system, 0, sizeof(tm_system_t));
 			tm_system->tm_idx = tm_idx;
 			tm_system->status = TM_STATUS_RESERVED;
@@ -486,7 +492,7 @@ static tm_system_t *tm_system_alloc(void)
 
 static void tm_system_free(tm_system_t *tm_system)
 {
-	odp_tm_systems[tm_system->tm_idx].status = TM_STATUS_FREE;
+	tm_glb->system[tm_system->tm_idx].status = TM_STATUS_FREE;
 }
 
 static void *tm_common_profile_create(const char      *name,
@@ -2373,31 +2379,24 @@ static int tm_process_expired_timers(tm_system_t *tm_system,
 	return work_done;
 }
 
-static volatile uint64_t busy_wait_counter;
-
-static odp_bool_t       main_loop_running;
-static odp_atomic_u64_t atomic_request_cnt;
-static odp_atomic_u64_t currently_serving_cnt;
-static odp_atomic_u64_t atomic_done_cnt;
-
 static void busy_wait(uint32_t iterations)
 {
 	uint32_t cnt;
 
 	for (cnt = 1; cnt <= iterations; cnt++)
-		busy_wait_counter++;
+		tm_glb->busy_wait_counter++;
 }
 
 static void signal_request(void)
 {
-	uint64_t my_request_num, serving_cnt;
+	uint64_t request_num, serving;
 
-	my_request_num = odp_atomic_fetch_inc_u64(&atomic_request_cnt) + 1;
+	request_num = odp_atomic_fetch_inc_u64(&tm_glb->atomic_request_cnt) + 1;
 
-	serving_cnt = odp_atomic_load_u64(&currently_serving_cnt);
-	while (serving_cnt != my_request_num) {
+	serving = odp_atomic_load_u64(&tm_glb->currently_serving_cnt);
+	while (serving != request_num) {
 		busy_wait(100);
-		serving_cnt = odp_atomic_load_u64(&currently_serving_cnt);
+		serving = odp_atomic_load_u64(&tm_glb->currently_serving_cnt);
 	}
 }
 
@@ -2405,26 +2404,26 @@ static void check_for_request(void)
 {
 	uint64_t request_num, serving_cnt, done_cnt;
 
-	request_num = odp_atomic_load_u64(&atomic_request_cnt);
-	serving_cnt = odp_atomic_load_u64(&currently_serving_cnt);
+	request_num = odp_atomic_load_u64(&tm_glb->atomic_request_cnt);
+	serving_cnt = odp_atomic_load_u64(&tm_glb->currently_serving_cnt);
 	if (serving_cnt == request_num)
 		return;
 
 	/* Signal the other requesting thread to proceed and then
 	 * wait for their done indication */
-	odp_atomic_inc_u64(&currently_serving_cnt);
+	odp_atomic_inc_u64(&tm_glb->currently_serving_cnt);
 	busy_wait(100);
 
-	done_cnt = odp_atomic_load_u64(&atomic_done_cnt);
+	done_cnt = odp_atomic_load_u64(&tm_glb->atomic_done_cnt);
 	while (done_cnt != request_num) {
 		busy_wait(100);
-		done_cnt = odp_atomic_load_u64(&atomic_done_cnt);
+		done_cnt = odp_atomic_load_u64(&tm_glb->atomic_done_cnt);
 	}
 }
 
 static void signal_request_done(void)
 {
-	odp_atomic_inc_u64(&atomic_done_cnt);
+	odp_atomic_inc_u64(&tm_glb->atomic_done_cnt);
 }
 
 static int thread_affinity_get(odp_cpumask_t *odp_cpu_mask)
@@ -2470,7 +2469,7 @@ static void *tm_system_thread(void *arg)
 
 	/* Wait here until we have seen the first enqueue operation. */
 	odp_barrier_wait(&tm_group->tm_group_barrier);
-	main_loop_running = true;
+	tm_glb->main_loop_running = true;
 
 	destroying = odp_atomic_load_u64(&tm_system->destroying);
 
@@ -2674,7 +2673,7 @@ static int affinitize_main_thread(void)
 	 * just record this value and return. */
 	cpu_count = odp_cpumask_count(&odp_cpu_mask);
 	if (cpu_count == 1) {
-		g_main_thread_cpu = odp_cpumask_first(&odp_cpu_mask);
+		tm_glb->main_thread_cpu = odp_cpumask_first(&odp_cpu_mask);
 		return 0;
 	} else if (cpu_count == 0) {
 		return -1;
@@ -2686,7 +2685,7 @@ static int affinitize_main_thread(void)
 	CPU_SET(cpu_num, &linux_cpu_set);
 	rc = sched_setaffinity(0, sizeof(cpu_set_t), &linux_cpu_set);
 	if (rc == 0)
-		g_main_thread_cpu = cpu_num;
+		tm_glb->main_thread_cpu = cpu_num;
 	else
 		ODP_DBG("%s sched_setaffinity failed with rc=%d\n",
 			__func__, rc);
@@ -2699,32 +2698,32 @@ static uint32_t tm_thread_cpu_select(void)
 	int           cpu_count, cpu;
 
 	odp_cpumask_default_worker(&odp_cpu_mask, 0);
-	if ((g_main_thread_cpu != -1) &&
-	    odp_cpumask_isset(&odp_cpu_mask, g_main_thread_cpu))
-		odp_cpumask_clr(&odp_cpu_mask, g_main_thread_cpu);
+	if ((tm_glb->main_thread_cpu != -1) &&
+	    odp_cpumask_isset(&odp_cpu_mask, tm_glb->main_thread_cpu))
+		odp_cpumask_clr(&odp_cpu_mask, tm_glb->main_thread_cpu);
 
 	cpu_count = odp_cpumask_count(&odp_cpu_mask);
 	if (cpu_count < 1) {
 		odp_cpumask_all_available(&odp_cpu_mask);
-		if ((g_main_thread_cpu != -1) &&
-		    odp_cpumask_isset(&odp_cpu_mask, g_main_thread_cpu))
+		if ((tm_glb->main_thread_cpu != -1) &&
+		    odp_cpumask_isset(&odp_cpu_mask, tm_glb->main_thread_cpu))
 			cpu_count = odp_cpumask_count(&odp_cpu_mask);
 
 		if (cpu_count < 1)
 			odp_cpumask_all_available(&odp_cpu_mask);
 	}
 
-	if (g_tm_cpu_num == 0) {
+	if (tm_glb->cpu_num == 0) {
 		cpu = odp_cpumask_first(&odp_cpu_mask);
 	} else {
-		cpu = odp_cpumask_next(&odp_cpu_mask, g_tm_cpu_num);
+		cpu = odp_cpumask_next(&odp_cpu_mask, tm_glb->cpu_num);
 		if (cpu == -1) {
-			g_tm_cpu_num = 0;
+			tm_glb->cpu_num = 0;
 			cpu = odp_cpumask_first(&odp_cpu_mask);
 		}
 	}
 
-	g_tm_cpu_num++;
+	tm_glb->cpu_num++;
 	return cpu;
 }
 
@@ -2760,8 +2759,8 @@ static void _odp_tm_group_destroy(_odp_tm_group_t odp_tm_group)
 	rc = pthread_join(tm_group->thread, NULL);
 	ODP_ASSERT(rc == 0);
 	pthread_attr_destroy(&tm_group->attr);
-	if (g_tm_cpu_num > 0)
-		g_tm_cpu_num--;
+	if (tm_glb->cpu_num > 0)
+		tm_glb->cpu_num--;
 
 	odp_ticketlock_lock(&tm_glb->system_group.lock);
 	tm_group->status = TM_STATUS_FREE;
@@ -2931,10 +2930,10 @@ odp_tm_t odp_tm_create(const char            *name,
 		return ODP_TM_INVALID;
 
 	/* Allocate tm_system_t record. */
-	odp_ticketlock_lock(&tm_create_lock);
+	odp_ticketlock_lock(&tm_glb->create_lock);
 	tm_system = tm_system_alloc();
 	if (!tm_system) {
-		odp_ticketlock_unlock(&tm_create_lock);
+		odp_ticketlock_unlock(&tm_glb->create_lock);
 		return ODP_TM_INVALID;
 	}
 
@@ -2942,7 +2941,7 @@ odp_tm_t odp_tm_create(const char            *name,
 	name_tbl_id = _odp_int_name_tbl_add(name, ODP_TM_HANDLE, odp_tm);
 	if (name_tbl_id == ODP_INVALID_NAME) {
 		tm_system_free(tm_system);
-		odp_ticketlock_unlock(&tm_create_lock);
+		odp_ticketlock_unlock(&tm_glb->create_lock);
 		return ODP_TM_INVALID;
 	}
 
@@ -3023,11 +3022,11 @@ odp_tm_t odp_tm_create(const char            *name,
 				tm_system->_odp_int_timer_wheel);
 
 		tm_system_free(tm_system);
-		odp_ticketlock_unlock(&tm_create_lock);
+		odp_ticketlock_unlock(&tm_glb->create_lock);
 		return ODP_TM_INVALID;
 	}
 
-	odp_ticketlock_unlock(&tm_create_lock);
+	odp_ticketlock_unlock(&tm_glb->create_lock);
 	return odp_tm;
 }
 
@@ -3274,7 +3273,7 @@ int odp_tm_shaper_params_update(odp_tm_shaper_t shaper_profile,
 	if (!profile_obj)
 		return -1;
 
-	if (!main_loop_running) {
+	if (!tm_glb->main_loop_running) {
 		tm_shaper_params_cvt_to(params, profile_obj);
 		return 0;
 	}
@@ -3399,7 +3398,7 @@ int odp_tm_sched_params_update(odp_tm_sched_t sched_profile,
 	if (!profile_obj)
 		return -1;
 
-	if (!main_loop_running) {
+	if (!tm_glb->main_loop_running) {
 		tm_sched_params_cvt_to(params, profile_obj);
 		return 0;
 	}
@@ -3497,7 +3496,7 @@ int odp_tm_thresholds_params_update(odp_tm_threshold_t threshold_profile,
 	if (!profile_obj)
 		return -1;
 
-	if (!main_loop_running) {
+	if (!tm_glb->main_loop_running) {
 		profile_obj->max_pkts =
 			params->enable_max_pkts ? params->max_pkts : 0;
 		profile_obj->max_bytes =
@@ -3615,7 +3614,7 @@ int odp_tm_wred_params_update(odp_tm_wred_t wred_profile,
 	if (!wred_params)
 		return -1;
 
-	if (!main_loop_running) {
+	if (!tm_glb->main_loop_running) {
 		tm_wred_params_cvt_to(params, wred_params);
 		return 0;
 	}
@@ -3757,7 +3756,7 @@ int odp_tm_node_destroy(odp_tm_node_t tm_node)
 	if (!tm_node_obj)
 		return -1;
 
-	tm_system = &odp_tm_systems[tm_node_obj->tm_idx];
+	tm_system = &tm_glb->system[tm_node_obj->tm_idx];
 	if (!tm_system)
 		return -1;
 
@@ -3820,14 +3819,14 @@ int odp_tm_node_shaper_config(odp_tm_node_t tm_node,
 	if (!tm_node_obj)
 		return -1;
 
-	tm_system = &odp_tm_systems[tm_node_obj->tm_idx];
+	tm_system = &tm_glb->system[tm_node_obj->tm_idx];
 	if (!tm_system)
 		return -1;
 
-	odp_ticketlock_lock(&tm_profile_lock);
+	odp_ticketlock_lock(&tm_glb->profile_lock);
 	tm_shaper_config_set(tm_system, shaper_profile,
 			     &tm_node_obj->shaper_obj);
-	odp_ticketlock_unlock(&tm_profile_lock);
+	odp_ticketlock_unlock(&tm_glb->profile_lock);
 	return 0;
 }
 
@@ -3846,10 +3845,10 @@ int odp_tm_node_sched_config(odp_tm_node_t tm_node,
 	if (!child_tm_node_obj)
 		return -1;
 
-	odp_ticketlock_lock(&tm_profile_lock);
+	odp_ticketlock_lock(&tm_glb->profile_lock);
 	child_shaper_obj = &child_tm_node_obj->shaper_obj;
 	tm_sched_config_set(child_shaper_obj, sched_profile);
-	odp_ticketlock_unlock(&tm_profile_lock);
+	odp_ticketlock_unlock(&tm_glb->profile_lock);
 	return 0;
 }
 
@@ -3862,9 +3861,9 @@ int odp_tm_node_threshold_config(odp_tm_node_t tm_node,
 	if (!tm_node_obj)
 		return -1;
 
-	odp_ticketlock_lock(&tm_profile_lock);
+	odp_ticketlock_lock(&tm_glb->profile_lock);
 	tm_threshold_config_set(&tm_node_obj->tm_wred_node, thresholds_profile);
-	odp_ticketlock_unlock(&tm_profile_lock);
+	odp_ticketlock_unlock(&tm_glb->profile_lock);
 	return 0;
 }
 
@@ -3883,7 +3882,7 @@ int odp_tm_node_wred_config(odp_tm_node_t      tm_node,
 
 	wred_node = &tm_node_obj->tm_wred_node;
 
-	odp_ticketlock_lock(&tm_profile_lock);
+	odp_ticketlock_lock(&tm_glb->profile_lock);
 	rc = 0;
 	if (pkt_color == ODP_PACKET_ALL_COLORS) {
 		for (color = 0; color < ODP_NUM_PACKET_COLORS; color++)
@@ -3894,7 +3893,7 @@ int odp_tm_node_wred_config(odp_tm_node_t      tm_node,
 		rc = -1;
 	}
 
-	odp_ticketlock_unlock(&tm_profile_lock);
+	odp_ticketlock_unlock(&tm_glb->profile_lock);
 	return rc;
 }
 
@@ -4032,7 +4031,7 @@ int odp_tm_queue_destroy(odp_tm_queue_t tm_queue)
 	if (!tm_queue_obj)
 		return -1;
 
-	tm_system = &odp_tm_systems[tm_queue_obj->tm_idx];
+	tm_system = &tm_glb->system[tm_queue_obj->tm_idx];
 	if (!tm_system)
 		return -1;
 
@@ -4090,14 +4089,14 @@ int odp_tm_queue_shaper_config(odp_tm_queue_t tm_queue,
 	if (!tm_queue_obj)
 		return -1;
 
-	tm_system = &odp_tm_systems[tm_queue_obj->tm_idx];
+	tm_system = &tm_glb->system[tm_queue_obj->tm_idx];
 	if (!tm_system)
 		return -1;
 
-	odp_ticketlock_lock(&tm_profile_lock);
+	odp_ticketlock_lock(&tm_glb->profile_lock);
 	tm_shaper_config_set(tm_system, shaper_profile,
 			     &tm_queue_obj->shaper_obj);
-	odp_ticketlock_unlock(&tm_profile_lock);
+	odp_ticketlock_unlock(&tm_glb->profile_lock);
 	return 0;
 }
 
@@ -4117,10 +4116,10 @@ int odp_tm_queue_sched_config(odp_tm_node_t tm_node,
 	if (!child_tm_queue_obj)
 		return -1;
 
-	odp_ticketlock_lock(&tm_profile_lock);
+	odp_ticketlock_lock(&tm_glb->profile_lock);
 	child_shaper_obj = &child_tm_queue_obj->shaper_obj;
 	tm_sched_config_set(child_shaper_obj, sched_profile);
-	odp_ticketlock_unlock(&tm_profile_lock);
+	odp_ticketlock_unlock(&tm_glb->profile_lock);
 	return 0;
 }
 
@@ -4134,10 +4133,10 @@ int odp_tm_queue_threshold_config(odp_tm_queue_t tm_queue,
 	if (!tm_queue_obj)
 		return -1;
 
-	odp_ticketlock_lock(&tm_profile_lock);
+	odp_ticketlock_lock(&tm_glb->profile_lock);
 	ret = tm_threshold_config_set(&tm_queue_obj->tm_wred_node,
 				      thresholds_profile);
-	odp_ticketlock_unlock(&tm_profile_lock);
+	odp_ticketlock_unlock(&tm_glb->profile_lock);
 	return ret;
 }
 
@@ -4156,7 +4155,7 @@ int odp_tm_queue_wred_config(odp_tm_queue_t tm_queue,
 
 	wred_node = &tm_queue_obj->tm_wred_node;
 
-	odp_ticketlock_lock(&tm_profile_lock);
+	odp_ticketlock_lock(&tm_glb->profile_lock);
 	rc = 0;
 	if (pkt_color == ODP_PACKET_ALL_COLORS) {
 		for (color = 0; color < ODP_NUM_PACKET_COLORS; color++)
@@ -4167,7 +4166,7 @@ int odp_tm_queue_wred_config(odp_tm_queue_t tm_queue,
 		rc = -1;
 	}
 
-	odp_ticketlock_unlock(&tm_profile_lock);
+	odp_ticketlock_unlock(&tm_glb->profile_lock);
 	return rc;
 }
 
@@ -4232,7 +4231,7 @@ int odp_tm_node_connect(odp_tm_node_t src_tm_node, odp_tm_node_t dst_tm_node)
 	if ((!src_tm_node_obj) || src_tm_node_obj->is_root_node)
 		return -1;
 
-	tm_system = &odp_tm_systems[src_tm_node_obj->tm_idx];
+	tm_system = &tm_glb->system[src_tm_node_obj->tm_idx];
 	if (!tm_system)
 		return -1;
 
@@ -4302,7 +4301,7 @@ int odp_tm_queue_connect(odp_tm_queue_t tm_queue, odp_tm_node_t dst_tm_node)
 	if (!src_tm_queue_obj)
 		return -1;
 
-	tm_system = &odp_tm_systems[src_tm_queue_obj->tm_idx];
+	tm_system = &tm_glb->system[src_tm_queue_obj->tm_idx];
 	if (!tm_system)
 		return -1;
 
@@ -4366,7 +4365,7 @@ int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt)
 	if (!tm_queue_obj)
 		return -1;
 
-	tm_system = &odp_tm_systems[tm_queue_obj->tm_idx];
+	tm_system = &tm_glb->system[tm_queue_obj->tm_idx];
 	if (!tm_system)
 		return -1;
 
@@ -4387,7 +4386,7 @@ int odp_tm_enq_with_cnt(odp_tm_queue_t tm_queue, odp_packet_t pkt)
 	if (!tm_queue_obj)
 		return -1;
 
-	tm_system = &odp_tm_systems[tm_queue_obj->tm_idx];
+	tm_system = &tm_glb->system[tm_queue_obj->tm_idx];
 	if (!tm_system)
 		return -1;
 
@@ -4653,11 +4652,11 @@ int odp_tm_priority_threshold_config(odp_tm_t           odp_tm,
 	if (thresholds_profile == ODP_TM_INVALID)
 		return -1;
 
-	odp_ticketlock_lock(&tm_profile_lock);
+	odp_ticketlock_lock(&tm_glb->profile_lock);
 	tm_system->priority_info[priority].threshold_params =
 		tm_get_profile_params(thresholds_profile,
 				      TM_THRESHOLD_PROFILE);
-	odp_ticketlock_unlock(&tm_profile_lock);
+	odp_ticketlock_unlock(&tm_glb->profile_lock);
 	return 0;
 }
 
@@ -4670,10 +4669,10 @@ int odp_tm_total_threshold_config(odp_tm_t odp_tm,
 	if (thresholds_profile == ODP_TM_INVALID)
 		return -1;
 
-	odp_ticketlock_lock(&tm_profile_lock);
+	odp_ticketlock_lock(&tm_glb->profile_lock);
 	tm_system->total_info.threshold_params = tm_get_profile_params(
 		thresholds_profile, TM_THRESHOLD_PROFILE);
-	odp_ticketlock_unlock(&tm_profile_lock);
+	odp_ticketlock_unlock(&tm_glb->profile_lock);
 	return 0;
 }
 
@@ -4737,21 +4736,22 @@ int odp_tm_init_global(void)
 	memset(tm_glb, 0, sizeof(tm_global_t));
 
 	tm_glb->shm = shm;
+	tm_glb->main_thread_cpu = -1;
 
 	odp_ticketlock_init(&tm_glb->queue_obj.lock);
 	odp_ticketlock_init(&tm_glb->node_obj.lock);
 	odp_ticketlock_init(&tm_glb->system_group.lock);
-	odp_ticketlock_init(&tm_create_lock);
-	odp_ticketlock_init(&tm_profile_lock);
+	odp_ticketlock_init(&tm_glb->create_lock);
+	odp_ticketlock_init(&tm_glb->profile_lock);
 	odp_ticketlock_init(&tm_glb->profile_tbl.sched.lock);
 	odp_ticketlock_init(&tm_glb->profile_tbl.shaper.lock);
 	odp_ticketlock_init(&tm_glb->profile_tbl.threshold.lock);
 	odp_ticketlock_init(&tm_glb->profile_tbl.wred.lock);
-	odp_barrier_init(&tm_first_enq, 2);
+	odp_barrier_init(&tm_glb->first_enq, 2);
 
-	odp_atomic_init_u64(&atomic_request_cnt, 0);
-	odp_atomic_init_u64(&currently_serving_cnt, 0);
-	odp_atomic_init_u64(&atomic_done_cnt, 0);
+	odp_atomic_init_u64(&tm_glb->atomic_request_cnt, 0);
+	odp_atomic_init_u64(&tm_glb->currently_serving_cnt, 0);
+	odp_atomic_init_u64(&tm_glb->atomic_done_cnt, 0);
 	return 0;
 }
 
