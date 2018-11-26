@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <inttypes.h>
 #include <sys/time.h>
+#include <signal.h>
 
 #include <example_debug.h>
 
@@ -167,6 +168,14 @@ static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
 static int scan_ip(char *buf, unsigned int *paddr);
 static void print_global_stats(int num_workers);
+
+static void sig_handler(int signo ODP_UNUSED)
+{
+	int i;
+
+	for (i = 0; i < args->thread_cnt; i++)
+		args->thread[i].stop = 1;
+}
 
 /**
  * Scan ip
@@ -1104,6 +1113,10 @@ int main(int argc, char *argv[])
 	odp_instance_t instance;
 	odp_init_t init_param;
 	odph_odpthread_params_t thr_params;
+
+	/* Signal handler has to be registered before global init in case ODP
+	 * implementation creates internal threads/processes. */
+	signal(SIGINT, sig_handler);
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
