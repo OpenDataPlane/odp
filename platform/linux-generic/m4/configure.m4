@@ -33,6 +33,5 @@ AC_CONFIG_FILES([platform/linux-generic/Makefile
 		 platform/linux-generic/test/validation/api/pktio/Makefile
 		 platform/linux-generic/test/mmap_vlan_ins/Makefile
 		 platform/linux-generic/test/pktio_ipc/Makefile
-		 platform/linux-generic/test/ring/Makefile
-		 platform/linux-generic/test/performance/Makefile])
+		 platform/linux-generic/test/ring/Makefile])
 ])

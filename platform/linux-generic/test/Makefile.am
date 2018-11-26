@@ -1,7 +1,7 @@
 include $(top_srcdir)/test/Makefile.inc
 TESTS_ENVIRONMENT += TEST_DIR=${top_builddir}/test/validation
 
-SUBDIRS = performance
+SUBDIRS =
 
 if test_vald
 TESTS = validation/api/pktio/pktio_run.sh \
@@ -9,10 +9,10 @@ TESTS = validation/api/pktio/pktio_run.sh \
 	validation/api/shmem/shmem_linux$(EXEEXT)
 
 SUBDIRS += validation/api/pktio\
-	   validation/api/shmem\
-	   mmap_vlan_ins\
-	   pktio_ipc\
-	   ring
+	  validation/api/shmem\
+	  mmap_vlan_ins\
+	  pktio_ipc\
+	  ring
 
 if HAVE_PCAP
 TESTS += validation/api/pktio/pktio_run_pcap.sh
