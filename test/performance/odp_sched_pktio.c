@@ -1548,17 +1548,17 @@ quit:
 
 	if (odp_shm_free(shm)) {
 		printf("Error: shm free failed.\n");
-		return -1;
+		ret = -1;
 	}
 
 	if (odp_term_local()) {
 		printf("Error: term local failed.\n");
-		return -1;
+		ret = -1;
 	}
 
 	if (odp_term_global(instance)) {
 		printf("Error: term global failed.\n");
-		return -1;
+		ret = -1;
 	}
 
 	return ret;
