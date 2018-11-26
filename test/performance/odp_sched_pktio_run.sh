@@ -72,7 +72,7 @@ run_sched_pktio()
 	# Run test for 5 sec
 	sleep 5
 
-	kill ${GEN_PID}
+	kill -2 ${GEN_PID}
 	wait ${GEN_PID}
 
 	# Kill with SIGINT to output statistics
