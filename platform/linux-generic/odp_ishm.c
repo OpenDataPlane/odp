@@ -1646,7 +1646,7 @@ int _odp_ishm_init_global(const odp_init_t *init)
 
 	ODP_DBG("Shm single VA size: %dkB\n", val_kb);
 
-	max_memory = val_kb * 1024;
+	max_memory = (uint64_t)val_kb * 1024;
 	internal   = max_memory / 8;
 
 	if (!_odp_libconfig_lookup_ext_int("shm", NULL, "huge_page_limit_kb",
