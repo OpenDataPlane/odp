@@ -23,6 +23,7 @@
 #include <odp_global_data.h>
 #include <odp_libconfig_internal.h>
 #include <odp_shm_internal.h>
+#include <odp_timer_internal.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -479,11 +480,16 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 
 	pool->params = *params;
 
-	hdr_size = sizeof(odp_packet_hdr_t);
-	hdr_size = ROUNDUP_CACHE_LINE(hdr_size);
-
-	block_size = ROUNDUP_CACHE_LINE(hdr_size + align + headroom + seg_len +
-					tailroom);
+	if (params->type == ODP_POOL_PACKET) {
+		hdr_size = ROUNDUP_CACHE_LINE(sizeof(odp_packet_hdr_t));
+		block_size = ROUNDUP_CACHE_LINE(hdr_size + align + headroom +
+						seg_len + tailroom);
+	} else {
+		hdr_size =  (params->type == ODP_POOL_BUFFER) ?
+				ROUNDUP_CACHE_LINE(sizeof(odp_buffer_hdr_t)) :
+				ROUNDUP_CACHE_LINE(sizeof(odp_timeout_hdr_t));
+		block_size = ROUNDUP_CACHE_LINE(hdr_size + align + seg_len);
+	}
 
 	/* Calculate extra space required for storing DPDK objects and mbuf
 	 * headers. NOP if zero-copy is disabled. */
