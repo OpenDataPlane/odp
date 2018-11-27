@@ -37,14 +37,6 @@ extern "C" {
 #define ODP_CONFIG_PKTIO_ENTRIES 64
 
 /*
- * Minimum buffer alignment
- *
- * This defines the minimum supported buffer alignment. Requests for values
- * below this will be rounded up to this value.
- */
-#define ODP_CONFIG_BUFFER_ALIGN_MIN 64
-
-/*
  * Maximum buffer alignment
  *
  * This defines the maximum supported buffer alignment. Requests for values
