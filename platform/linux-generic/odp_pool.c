@@ -489,10 +489,17 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 		block_size = ROUNDUP_CACHE_LINE(hdr_size + align + headroom +
 						seg_len + tailroom);
 	} else {
+		/* Header size is rounded up to cache line size, so the
+		 * following data can be cache line aligned without extra
+		 * padding. */
+		uint32_t align_pad = (align > ODP_CACHE_LINE_SIZE) ?
+				align - ODP_CACHE_LINE_SIZE : 0;
+
 		hdr_size =  (params->type == ODP_POOL_BUFFER) ?
 				ROUNDUP_CACHE_LINE(sizeof(odp_buffer_hdr_t)) :
 				ROUNDUP_CACHE_LINE(sizeof(odp_timeout_hdr_t));
-		block_size = ROUNDUP_CACHE_LINE(hdr_size + align + seg_len);
+
+		block_size = ROUNDUP_CACHE_LINE(hdr_size + align_pad + seg_len);
 	}
 
 	/* Calculate extra space required for storing DPDK objects and mbuf
