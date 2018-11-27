@@ -20,8 +20,6 @@ m4_include([platform/linux-generic/m4/odp_netmap.m4])
 m4_include([platform/linux-generic/m4/odp_dpdk.m4])
 ODP_SCHEDULER
 
-m4_include([platform/linux-generic/m4/performance.m4])
-
 AC_CONFIG_COMMANDS_PRE([dnl
 AM_CONDITIONAL([PLATFORM_IS_LINUX_GENERIC],
 	       [test "${with_platform}" = "linux-generic"])

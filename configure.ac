@@ -410,7 +410,6 @@ AC_MSG_RESULT([
 	with_tests:		${with_tests}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}
-	test_perf_proc:		${test_perf_proc}
 	test_cpp:		${test_cpp}
 	test_helper:		${test_helper}
 	test_example:		${test_example}
