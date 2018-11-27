@@ -46,6 +46,10 @@
 /* Define a practical limit for contiguous memory allocations */
 #define MAX_SIZE   (10 * 1024 * 1024)
 
+/* Minimum supported buffer alignment. Requests for values below this will be
+ * rounded up to this value. */
+#define BUFFER_ALIGN_MIN ODP_CACHE_LINE_SIZE
+
 ODP_STATIC_ASSERT(CONFIG_POOL_CACHE_SIZE > (2 * CACHE_BURST),
 		  "cache_burst_size_too_large_compared_to_cache_size");
 
@@ -390,8 +394,8 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	if (params->type == ODP_POOL_BUFFER)
 		align = params->buf.align;
 
-	if (align < ODP_CONFIG_BUFFER_ALIGN_MIN)
-		align = ODP_CONFIG_BUFFER_ALIGN_MIN;
+	if (align < BUFFER_ALIGN_MIN)
+		align = BUFFER_ALIGN_MIN;
 
 	/* Validate requested buffer alignment */
 	if (align > ODP_CONFIG_BUFFER_ALIGN_MAX ||
