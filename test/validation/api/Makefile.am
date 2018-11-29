@@ -3,6 +3,7 @@ ODP_MODULES = atomic \
 	      buffer \
 	      chksum \
 	      classification \
+	      comp \
 	      cpumask \
 	      crypto \
 	      errno \
@@ -36,6 +37,7 @@ TESTS = \
 	buffer/buffer_main$(EXEEXT) \
 	chksum/chksum_main$(EXEEXT) \
 	classification/classification_main$(EXEEXT) \
+	comp/comp_main$(EXEEXT) \
 	cpumask/cpumask_main$(EXEEXT) \
 	crypto/crypto_main$(EXEEXT) \
 	errno/errno_main$(EXEEXT) \
