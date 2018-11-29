@@ -16,6 +16,7 @@ odpapiinclude_HEADERS = \
 	odp/api/byteorder.h \
 	odp/api/chksum.h \
 	odp/api/classification.h \
+	odp/api/comp.h \
 	odp/api/cpu.h \
 	odp/api/cpumask.h \
 	odp/api/crypto.h \
@@ -65,6 +66,7 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/byteorder.h \
 		  odp/api/spec/chksum.h \
 		  odp/api/spec/classification.h \
+		  odp/api/spec/comp.h \
 		  odp/api/spec/cpu.h \
 		  odp/api/spec/cpumask.h \
 		  odp/api/spec/crypto.h \
@@ -117,6 +119,7 @@ odpapiabidefaultinclude_HEADERS = \
 	odp/api/abi-default/buffer.h \
 	odp/api/abi-default/byteorder.h \
 	odp/api/abi-default/classification.h \
+	odp/api/abi-default/comp.h \
 	odp/api/abi-default/cpu.h \
 	odp/api/abi-default/cpumask.h \
 	odp/api/abi-default/crypto.h \
@@ -159,6 +162,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm32-linux/odp/api/abi/buffer.h \
 	odp/arch/arm32-linux/odp/api/abi/byteorder.h \
 	odp/arch/arm32-linux/odp/api/abi/classification.h \
+	odp/arch/arm32-linux/odp/api/abi/comp.h \
 	odp/arch/arm32-linux/odp/api/abi/cpu.h \
 	odp/arch/arm32-linux/odp/api/abi/cpumask.h \
 	odp/arch/arm32-linux/odp/api/abi/crypto.h \
@@ -197,6 +201,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm64-linux/odp/api/abi/buffer.h \
 	odp/arch/arm64-linux/odp/api/abi/byteorder.h \
 	odp/arch/arm64-linux/odp/api/abi/classification.h \
+	odp/arch/arm64-linux/odp/api/abi/comp.h \
 	odp/arch/arm64-linux/odp/api/abi/cpu.h \
 	odp/arch/arm64-linux/odp/api/abi/cpumask.h \
 	odp/arch/arm64-linux/odp/api/abi/crypto.h \
@@ -235,6 +240,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/default-linux/odp/api/abi/buffer.h \
 	odp/arch/default-linux/odp/api/abi/byteorder.h \
 	odp/arch/default-linux/odp/api/abi/classification.h \
+	odp/arch/default-linux/odp/api/abi/comp.h \
 	odp/arch/default-linux/odp/api/abi/cpu.h \
 	odp/arch/default-linux/odp/api/abi/cpumask.h \
 	odp/arch/default-linux/odp/api/abi/crypto.h \
@@ -273,6 +279,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/mips64-linux/odp/api/abi/buffer.h \
 	odp/arch/mips64-linux/odp/api/abi/byteorder.h \
 	odp/arch/mips64-linux/odp/api/abi/classification.h \
+	odp/arch/mips64-linux/odp/api/abi/comp.h \
 	odp/arch/mips64-linux/odp/api/abi/cpu.h \
 	odp/arch/mips64-linux/odp/api/abi/cpumask.h \
 	odp/arch/mips64-linux/odp/api/abi/crypto.h \
@@ -311,6 +318,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/power64-linux/odp/api/abi/buffer.h \
 	odp/arch/power64-linux/odp/api/abi/byteorder.h \
 	odp/arch/power64-linux/odp/api/abi/classification.h \
+	odp/arch/power64-linux/odp/api/abi/comp.h \
 	odp/arch/power64-linux/odp/api/abi/cpu.h \
 	odp/arch/power64-linux/odp/api/abi/cpumask.h \
 	odp/arch/power64-linux/odp/api/abi/crypto.h \
@@ -349,6 +357,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_32-linux/odp/api/abi/buffer.h \
 	odp/arch/x86_32-linux/odp/api/abi/byteorder.h \
 	odp/arch/x86_32-linux/odp/api/abi/classification.h \
+	odp/arch/x86_32-linux/odp/api/abi/comp.h \
 	odp/arch/x86_32-linux/odp/api/abi/cpu.h \
 	odp/arch/x86_32-linux/odp/api/abi/cpumask.h \
 	odp/arch/x86_32-linux/odp/api/abi/crypto.h \
@@ -387,6 +396,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_64-linux/odp/api/abi/buffer.h \
 	odp/arch/x86_64-linux/odp/api/abi/byteorder.h \
 	odp/arch/x86_64-linux/odp/api/abi/classification.h \
+	odp/arch/x86_64-linux/odp/api/abi/comp.h \
 	odp/arch/x86_64-linux/odp/api/abi/cpu.h \
 	odp/arch/x86_64-linux/odp/api/abi/cpumask.h \
 	odp/arch/x86_64-linux/odp/api/abi/crypto.h \

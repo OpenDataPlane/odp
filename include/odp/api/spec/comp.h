@@ -10,8 +10,8 @@
  * ODP Compression
  */
 
-#ifndef ODP_API_COMP_H_
-#define ODP_API_COMP_H_
+#ifndef ODP_API_SPEC_COMP_H_
+#define ODP_API_SPEC_COMP_H_
 
 #include <odp/visibility_begin.h>
 #include <odp/api/support.h>
@@ -121,7 +121,7 @@ typedef union odp_comp_hash_algos_t {
 	/** hash algorithms */
 	struct {
 		/** ODP_COMP_HASH_ALG_NONE */
-		uint32_t none	: 1,
+		uint32_t none	: 1;
 
 		/** ODP_COMP_HASH_ALG_SHA1 */
 		uint32_t sha1	: 1;
@@ -181,7 +181,7 @@ typedef struct odp_comp_capability_t {
 	/** Synchronous compression mode support (ODP_COMP_OP_MODE_SYNC) */
 	odp_support_t sync;
 
-	/** Aynchronous compression mode support (ODP_COMP_OP_MODE_SSYNC) */
+	/** Aynchronous compression mode support (ODP_COMP_OP_MODE_ASYNC) */
 	odp_support_t async;
 } odp_comp_capability_t;
 
@@ -343,7 +343,7 @@ typedef struct odp_comp_packet_result_t {
 	/** Output packet data range
 	 * Specifies offset and length of data resulting from compression
 	 * operation. When hashing is configured output_data_range.len equals
-	 * length of output data + 'digest+len'
+	 * length of output data + length of digest.
 	 */
 	odp_packet_data_range_t output_data_range;
 } odp_comp_packet_result_t;
