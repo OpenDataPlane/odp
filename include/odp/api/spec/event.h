@@ -79,7 +79,7 @@ extern "C" {
  * - ODP_EVENT_PACKET_BASIC
  *     - Packet event (odp_packet_t) with basic packet metadata
  * - ODP_EVENT_PACKET_COMP
- *     - Packet event (odp_packet_t) generated as a result of an compression/
+ *     - Packet event (odp_packet_t) generated as a result of a compression/
  *       decompression operation. It contains compression specific metadata in
  *       addition to the basic packet metadata.
  * - ODP_EVENT_PACKET_CRYPTO
