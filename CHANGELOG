@@ -1,3 +1,315 @@
+== OpenDataPlane (1.20.0.0)
+=== Summary of Changes
+ODP v1.20.0.0 is a refresh of ODP, incorporating significant configurability
+and performance improvements as well as new APIs and API restructures.
+
+==== APIs
+===== Symbol `ODP_SHM_NULL` Removed.
+An invalid `odp_shm_t` has the value `ODP_SHM_INVALID`, consistent with other
+ODP types. The legacy synonym `ODP_SHM_NULL` is now removed for consistency.
+
+===== New 3GPP Crypto Algorithm Support
+New support for 3GPP crypto algorithms is added by defining symbols for
+
+* `ODP_CIPHER_ALG_KASUMI_F8`
+* `ODP_CIPHER_ALG_SNOW3G_UEA2`
+* `ODP_CIPHER_ALG_ZUC_EEA3`
+
+In addition new authentication algorithm symbols are defined for
+
+* `ODP_AUTH_ALG_KASUMI_F9`
+* `ODP_AUTH_ALG_SNOW3G_UIA2`
+* `ODP_AUTH_ALG_ZUC_EIA3`
+
+These values are returned as ODP capabilities as well as being accepted in
+crypto session creation for implementations that indicate support for them.
+
+===== Crypto Capability for Bitwise Operation
+The new `bit_mode` capability Boolean is added to the
+`odp_crypto_cipher_capability_t` struct to indicate that an implementation
+supports operating in bit mode. When operating in bit
+mode, field offsets and lengths are expressed in terms of bits rather than
+bytes. However, such lengths must always be specified in multiples of 8.
+
+===== Improved Crypto Spec Documentation
+The ODP crypto API specification is tightened to specify default values for
+cipher and authentication algorithms. Also documented when key and IV
+parameters need to be set.
+
+===== IPsec Extensions
+IPsec requires "salt" (extra keying material) when the GMAC authentication
+algorithm is used. To accommodate this the `auth_key_extra` field is added to
+the `odp_ipsec_crypto_param_t` struct and documentation is added clarifying
+when this field is needed and how it should be used.
+
+===== Classifier Type Rename
+The `odp_pmr_t` type name for an invalid value is renamed from `ODP_PMR_INVAL`
+to `ODP_PMR_INVALID` for consistency with the rest of ODP type names. The old
+symbol is still available when ODP is configured with
+`--enable-deprecated`.
+
+===== New API for Packet Event Subtypes
+The `odp_packet_subtype()` API is added that returns the subtype of a packet
+event directly.
+
+===== Streamlined Packet Parsing Results
+The `odp_packet_parse_result()` API is added that returns the result of
+packet parsing as a single `odp_packet_parse_result_t` struct. This can
+offer efficiency improvements for applications that need all parse results
+rather than making individual parse result calls.
+
+===== PktIO Extensions to Support per-Queue Configuration
+PktIO interfaces support multiple input queues to enable increased parallelism
+in I/O processing. Previously, all of these input queues were required to
+belong to the same scheduler group. The `odp_pktin_queue_param_t` struct is
+now extended with an optional `odp_pktin_queue_param_ovr_t` struct that
+permits individual pktin queues to be assigned to separate scheduler groups.
+This may permit improved performance for advanced application use cases.
+
+===== Timer Pool Capabilities
+The `odp_timer_capability_t` struct is extended to return three additional
+pieces of information:
+
+`max_pools_combined`::
+The total number of timer pools that can be created combining different
+clock sources
+
+`max_pools`::
+The maximum number of timer pools for a given clock source.
+
+`max_timers`::
+The maximum number of timers in a single pool. A zero value means number is
+limited only by available memory.
+
+===== Add Scheduler mix/max/default Priority Functions
+Three new APIs: `odp_schedule_max_prio()`, `odp_schedule_min_prio()`, and
+`odp_schedule_default_prio()` are added that return the min, max, and default
+values specified for the `prio` field in the `odp_schedule_param_t` struct.
+
+With the introduction of these scheduling priority functions the previously
+defined macros (`ODP_SCHED_PRIO_HIGHEST`, `ODP_SCHED_PRIO_NORMAL`, and
+`ODP_SCHED_PRIO_LOWEST`) are now deprecated and should no longer be used.
+
+===== Specification of `odp_schedule_prio_t` as an `int`
+Previously, the `odp_schedule_prio_t` type definition was left to each
+implementation. With the addition of explicit schedule priority ranges, this
+type is now specified to be an `int` to permit efficient implementation
+(including inlining) of these functions.
+
+====== New Scheduler APIs
+The new scheduler APIs `odp_schedule_multi_wait()` and
+`odp_schedule_multi_no_wait()` are added to provide more efficiently
+implementable versions of these functions. The existing scheduler APIs remain
+unchanged. These new APIs can simply provide a fastpath for some
+applications/implementations as an alternative to specifying a parameter on
+`odp_schedule_multi()`.
+
+===== Memory Model in `odp_init_global()`
+The `odp_init_t` parameter passed to `odp_init_global()` is extended to
+add the `mem_model` field. This field is defined by the new `odp_mem_model_t`
+struct and is used to specify whether the application will be using a
+thread (`ODP_MEM_MODEL_THREAD`) or process (`ODP_MEM_MODEL_PROCESS`)
+memory model. The default is a thread model is used for compatibility with
+previous levels of ODP.
+
+==== ABI Changes
+A number of changes to the ODP ABI have also been made in this release to
+improve application binary portability.
+
+===== Strong Typing for Timer Pools
+The `odp_timer_pool_t` is now strongly typed.
+
+===== Consistent Initialization
+The values of the various `ODP_xxx_INVALID` symbols for ODP abstract types in
+the `odp-linux` reference implementation are now consistently zeros. This
+reduces errors and improves portability.
+
+=== Implementation Improvements
+==== Configuration File
+A new configuration file mechanism is introduced that makes use of
+https://www.hyperrealm.com/libconfig/libconfig_manual.html[libconfig] to
+enable various runtime ODP parameters to be specified dynamically.
+
+Default configuration values for the `odp-linux` reference implementation are
+contained in the `config/odp-linux-generic.conf` file. Users may override
+these default values by supplying their own configuration file. At
+`odp_init_global()` time, if the `ODP_CONFIG_FILE` environment variable is set,
+this is used to locate the path to the override configuration file.
+
+==== Process Mode Support
+The `odp-linux` reference implementation now supports applications that run in
+process mode (`mem_model` = `ODP_MEM_MODEL_PROCESS`) as well as the default
+thread mode. This support only applies within a single ODP instance, so any
+`fork()` calls must be done only _after_ `odp_init_global()` has been called
+to initialize ODP on a root process.
+
+==== Removal of `iQuery` Scheduler
+The `iQuery` scheduler is removed from the `odp-linux` reference
+implementation, as it offers no performance advantages and has not seen
+application use.
+
+==== Number of CPUs
+The `odp-linux` reference implementation now supports up to 256 CPUs by
+default (increased from 128).
+
+==== Support for Large Burst Sizes
+The `odp-linux` reference implementation now supports large burst sizes for
+both I/O and non-I/O scheduled events. Large bursts (when available) are
+received directly to the application without any stashing for improved
+throughput. Burst sizes are configurable via the new configuration file
+mechanism, as described above.
+
+==== `--without-openssl` Warnings
+When building `odp-linux` using `--without-openssl` a warning will be issued
+cautioning that strong cryptography will not be available.
+
+==== Inline Queue Enq/Deq APIs
+The various enq/deq APIs are now subject to inlining when `odp-linux` is
+built with `--disable-abi-compat`.
+
+==== Configurable Timer Controls
+Inline timers are now controlled via a config file option. Timer polling
+frequency is similarly controlled via the config file.
+
+==== Huge Page Configuration
+The config file is now used to specify the huge page usage limit.
+
+==== Single and Multi-Consumer/Producer Rings
+The queue implementation in `odp-linux` now automatically makes use of
+optimized single and multi-consumer/producer rings to significantly speed
+up enq/deq processing.
+
+==== `odp_shm_print_all()` Improvements
+The output from `odp_shm_print_all()` is reworked to provide more useful
+and comprehensive shared memory usage information in `odp-linux`.
+
+==== IPsec Improvements
+SA lifetime checking is now more scalable to multiple threads. This
+significantly reduces overhead for multithreaded IPsec applications.
+
+==== Native Builds
+When running in non-ABI compatibility mode, `odp-linux` now enables
+native machine-specific optimizations for the CPU architecture of the
+local machine.
+
+=== Validation Test Improvements
+==== SCTP Test Packets
+SCTP test packets are now used in parser testing. SCTP headers are added to
+ODP and ODP helpers and SCTP checksums are now inserted and verified as part
+of validation testing.
+
+==== `odp_packet_reset()` Test
+The packet validation test suite now properly tests `odp_packet_reset()`.
+
+=== Helper Changes
+In support of process mode, ODP helper functions have been changed to
+better match these new capabilities
+
+==== New `enum`
+The `odph_linux_thread_type_t enum` has been replaced with the new
+`odp_mem_model_t` type.
+
+==== Helper Options
+The new `odph_options()` getter function is added that returns
+applicable options in effect via the new `odph_helper_options_t` struct.
+This currently includes the memory model (thread or process) that is in use.
+
+==== SCTP Helpers
+The new helper APIs `odph_sctp_chksum_set()` and `odph_sctp_chksum_verify()`
+are added to facilitate working with SCTP packet checksums.
+
+=== Performance Test Improvements
+==== Pool Performance
+A new `odp_pool_perf` test has been added that stress-tests ODP pool
+functions in a multithreaded environment to generate performance statistics.
+
+==== Scheduler Performance
+A new `odp_sched_perf` test has been added that stress-tests the scheduler
+in a multithreaded environment.
+
+==== CPU Performance
+A new `odp_cpu_bench` performance test has been added that runs
+compute-intensive packet operations in a multithreaded environment and prints
+the observed maximum throughput for each thread.
+
+=== Example Improvements
+==== Classifier Example changes
+The `odp_classifier` example program now uses a reduced number of threads by
+default to reduce elapsed run time. `ODP_THREAD_COUNT_MAX` is also now used as
+the max worker count.
+
+==== Generator Improvements
+The `odp_generator` example has numerous cleanups and performance improvements.
+
+==== IPsec Example
+The `odp_ipsec` example now properly stops and closes pktio devices on exit.
+
+==== Packet Dumping
+A new `odp_packet_dump` example is added that prints received packets to the
+terminal. This is useful for debugging packet I/O interfaces.
+
+==== Sysinfo Example
+A new `odp_sysinfo` example is provided that prints system information. Useful
+for checking the ODP environment during debugging. This includes providing
+detailed information about the various crypto facilities supported, as well
+as the feature flags used at build time (_e.g.,_ if the binary was built with
+ARMv8.0 or ARMv8.1 instructions).
+
+==== Traffic Manager Example
+The traffic manager example now properly destroys all TM queues it creates
+for improved reliability. It also now always prints a proper termination
+summary message.
+
+=== Bug Fixes
+==== Numbered Bugs/Issues
+===== https://bugs.linaro.org/show_bug.cgi?id=3983[Bug 3983]
+Compile fails on OpenSuSE 42.2 Leap with error: negative width in bit field
+'__error_if_negative'
+
+===== https://bugs.linaro.org/show_bug.cgi?id=3989[Bug 3989]
+odp_system_info_init() issues
+
+===== https://bugs.linaro.org/show_bug.cgi?id=3999[Bug 3999]
+IPsec antireplay check drops packets when sequence number jumps.
+
+===== https://bugs.linaro.org/show_bug.cgi?id=4002[Bug 4002]
+IPsec SA creation must fail for ESN-enabled SAs
+
+===== https://bugs.linaro.org/show_bug.cgi?id=4013[Bug 4013]
+Per-SA IPv4 ID allocation may cause duplicate IDs.
+
+===== https://bugs.linaro.org/show_bug.cgi?id=4017[Bug 4017]
+Unexpected IP ID causes IPsec API validation to fail
+
+===== https://github.com/Linaro/odp/issues/662[Issue 662]
+rte_mempool_ops_alloc() is not dpdk api
+
+==== Unnumbered Bugs/Issues
+* Fixed enq/deq issues encountered on architectures with weak memory ordering.
+* Return 0 from `odp_sys_huge_page_size_all()` if hugepages are not
+supported/detected. Tests modified to not treat this as an error.
+* Set `ODP_CACHE_LINE_SIZE` to 128 on ppc64le systems.
+* iplookuptable fix putting values into table
+* DPDK pktio support now works properly across multiple ODP instances.
+* Zero timer pool memory on reserve (fixes timer failures due to uninitialized
+variables).
+* `-march=native` disabled for `clang`. This fixes a known issue with recent
+levels of clang.
+
+=== Known Issues
+==== https://bugs.linaro.org/show_bug.cgi?id=3998[Bug 3998]
+IPsec extended sequence number support is missing
+
+==== https://bugs.linaro.org/show_bug.cgi?id=4014[Bug 4014]
+Separate IP ID allocation for transport and tunnel mode SAs may cause
+duplicate IDs
+
+==== https://bugs.linaro.org/show_bug.cgi?id=4018[Bug 4018]
+Unexpected IV causes IPsec API validation to fail
+
+==== https://bugs.linaro.org/show_bug.cgi?id=4040[Bug 4040]
+Clang build fails on Ubuntu 18.04
+
 == OpenDataPlane (1.19.0.2)
 === Summary of Changes
 ODP v1.19.0.2 is the second service update for the Tiger Moth release. It
