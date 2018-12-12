@@ -842,8 +842,8 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 					"B\n", ring->slot[slot_id].len);
 			}
 			ring->cur = nm_ring_next(ring, slot_id);
+			ring->head = ring->cur;
 		}
-		ring->head = ring->cur;
 		ring_id++;
 	}
 	desc->cur_rx_ring = ring_id;
