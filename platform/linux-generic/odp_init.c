@@ -37,6 +37,7 @@ enum init_stage {
 	TIMER_INIT,
 	RANDOM_INIT,
 	CRYPTO_INIT,
+	COMP_INIT,
 	CLASSIFICATION_INIT,
 	TRAFFIC_MNGR_INIT,
 	NAME_TABLE_INIT,
@@ -135,6 +136,13 @@ static int term_global(enum init_stage stage)
 	case CLASSIFICATION_INIT:
 		if (odp_classification_term_global()) {
 			ODP_ERR("ODP classification term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
+	case COMP_INIT:
+		if (_odp_comp_term_global()) {
+			ODP_ERR("ODP comp term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */
@@ -377,6 +385,12 @@ int odp_init_global(odp_instance_t *instance,
 		goto init_failed;
 	}
 	stage = CRYPTO_INIT;
+
+	if (_odp_comp_init_global()) {
+		ODP_ERR("ODP comp init failed.\n");
+		goto init_failed;
+	}
+	stage = COMP_INIT;
 
 	if (odp_classification_init_global()) {
 		ODP_ERR("ODP classification init failed.\n");

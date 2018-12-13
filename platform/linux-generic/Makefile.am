@@ -158,6 +158,9 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_chksum.c \
 			   odp_classification.c \
 			   odp_comp.c \
+			   miniz/miniz.c miniz/miniz.h miniz/miniz_common.h \
+			   miniz/miniz_tdef.c miniz/miniz_tdef.h \
+			   miniz/miniz_tinfl.c miniz/miniz_tinfl.h \
 			   odp_cpumask.c \
 			   odp_cpumask_task.c \
 			   odp_errno.c \
