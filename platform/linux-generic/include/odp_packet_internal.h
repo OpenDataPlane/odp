@@ -25,6 +25,7 @@ extern "C" {
 #include <odp/api/plat/packet_inline_types.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/crypto.h>
+#include <odp/api/comp.h>
 #include <odp_ipsec_internal.h>
 #include <odp/api/abi/packet.h>
 #include <odp_queue_if.h>
@@ -104,11 +105,19 @@ typedef struct {
 	/* Classifier destination queue */
 	odp_queue_t dst_queue;
 
-	/* Result for crypto packet op */
-	odp_crypto_packet_result_t crypto_op_result;
 
-	/* Context for IPsec */
-	odp_ipsec_packet_result_t ipsec_ctx;
+	union {
+		struct {
+			/* Result for crypto packet op */
+			odp_crypto_packet_result_t crypto_op_result;
+
+			/* Context for IPsec */
+			odp_ipsec_packet_result_t ipsec_ctx;
+		};
+
+		/* Result for comp packet op */
+		odp_comp_packet_result_t comp_op_result;
+	};
 
 	/* Packet data storage */
 	uint8_t data[0];

@@ -54,6 +54,9 @@ int odp_crypto_term_global(void);
 int _odp_crypto_init_local(void);
 int _odp_crypto_term_local(void);
 
+int _odp_comp_init_global(void);
+int _odp_comp_term_global(void);
+
 int odp_timer_init_global(const odp_init_t *params);
 int odp_timer_term_global(void);
 int odp_timer_disarm_all(void);
