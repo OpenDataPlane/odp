@@ -196,12 +196,13 @@ typedef struct odp_schedule_capability_t {
 	 * events. */
 	uint32_t max_queue_size;
 
-	/** Maximum supported flows per queue.
-	 * Specifies the maximum number of flows per queue supported by the
-	 * implementation.  A value of 0 indicates flow aware mode is not
-	 * supported.
-	 */
-	uint32_t max_flows;
+	/** Maximum flow ID per queue
+	 *
+	 *  Valid flow ID range in flow aware mode of scheduling is from 0 to
+	 *  this maximum value. So, maximum number of flows per queue is this
+	 *  value plus one. A value of 0 indicates that flow aware mode is not
+	 *  supported. */
+	uint32_t max_flow_id;
 
 	/** Lock-free (ODP_NONBLOCKING_LF) queues support.
 	 * The specification is the same as for the blocking implementation. */
@@ -230,21 +231,24 @@ typedef struct odp_schedule_config_t {
 	 */
 	uint32_t queue_size;
 
-	/** Number of flows per queue to be supported.  Scheduler enables flow
-	 * aware mode when flow count is configured greater than 1 (up to
-	 * 'max_flows' capability).
+	/** Maximum flow ID per queue
 	 *
-	 * Flows are lightweight entities and events can be assigned to
-	 * specific flows by the application using odp_event_flow_id_set()
-	 * before enqueuing the event into the scheduler. This value is ignored
-	 * unless scheduler supports flow aware mode.
+	 *  This value must not exceed 'max_flow_id' capability. Flow aware
+	 *  mode of scheduling is enabled when the value is greater than 0.
+	 *  The default value is 0.
 	 *
-	 * This number should be less than maximum flow supported by the
-	 * implementation. The default value is zero.
+	 *  Application can assign events to specific flows by calling
+	 *  odp_event_flow_id_set() before enqueuing events into a scheduled
+	 *  queue. When in flow aware mode, the event flow id value affects
+	 *  scheduling of the event and synchronization is maintained per flow
+	 *  within each queue.
 	 *
-	 * @see odp_schedule_capability_t
+	 *  Depeding on implementation, there may be much more flows supported
+	 *  than queues, as flows are lightweight entities.
+	 *
+	 *  @see odp_schedule_capability_t, odp_event_flow_id()
 	 */
-	uint32_t num_flows;
+	uint32_t max_flow_id;
 
 } odp_schedule_config_t;
 
