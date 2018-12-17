@@ -271,8 +271,8 @@ void odp_schedule_config_init(odp_schedule_config_t *config);
  *
  * Initialize and configure scheduler with global configuration options
  * to schedule events across different scheduled queues.
- * This function must be called before scheduler is used (any other scheduler
- * function is called except odp_schedule_capability() and
+ * This function must be called only once and before scheduler is used
+ * (any other scheduler function is called except odp_schedule_capability() and
  * odp_schedule_config_init()) or any queues are created (by application itself
  * or by other ODP modules).
  * An application can pass NULL value to use default configuration. It will
