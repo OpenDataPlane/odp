@@ -59,17 +59,14 @@ int odp_event_type_multi(const odp_event_t event[], int num,
 	return i;
 }
 
-/* For now ODP generic does not support flow awareness,
- * so all flow ids are zero. */
-uint32_t odp_event_flow_id(odp_event_t event ODP_UNUSED)
+uint32_t odp_event_flow_id(odp_event_t event)
 {
-	return 0;
+	return event_flow_id(event);
 }
 
-void odp_event_flow_id_set(odp_event_t event ODP_UNUSED,
-			   uint32_t flow_id ODP_UNUSED)
+void odp_event_flow_id_set(odp_event_t event, uint32_t flow_id)
 {
-	/* Do nothing */
+	event_flow_id_set(event, flow_id);
 }
 
 void odp_event_free(odp_event_t event)

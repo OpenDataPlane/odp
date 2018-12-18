@@ -1579,6 +1579,7 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	capa->max_prios = schedule_num_prio();
 	capa->max_queues = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
 	capa->max_queue_size = queue_glb->config.max_queue_size;
+	capa->max_flow_id = BUF_HDR_MAX_FLOW_ID;
 
 	return 0;
 }
