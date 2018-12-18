@@ -24,10 +24,7 @@ extern const schedule_api_t schedule_scalable_api;
 
 const schedule_fn_t *sched_fn;
 const schedule_api_t *sched_api;
-
-#ifdef ODP_DEBUG
 int _odp_schedule_configured;
-#endif
 
 uint64_t odp_schedule_wait_time(uint64_t ns)
 {
@@ -51,7 +48,10 @@ int odp_schedule_config(const odp_schedule_config_t *config)
 	int ret;
 	odp_schedule_config_t defconfig;
 
-	ODP_ASSERT(!_odp_schedule_configured);
+	if (_odp_schedule_configured) {
+		ODP_ERR("Scheduler has been configured already\n");
+		return -1;
+	}
 
 	if (!config) {
 		odp_schedule_config_init(&defconfig);
@@ -59,10 +59,9 @@ int odp_schedule_config(const odp_schedule_config_t *config)
 	}
 
 	ret = sched_api->schedule_config(config);
-#ifdef ODP_DEBUG
+
 	if (ret >= 0)
 		_odp_schedule_configured = 1;
-#endif
 
 	return ret;
 }
