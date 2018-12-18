@@ -54,6 +54,9 @@ ODP_STATIC_ASSERT(ODP_CONFIG_POOLS    <= (0xFF + 1), "TOO_MANY_POOLS");
 /* Check that buffer index fit into bit field */
 ODP_STATIC_ASSERT(CONFIG_POOL_MAX_NUM <= (0xFFFFFF + 1), "TOO_LARGE_POOL");
 
+/* Type size limits number of flow IDs supported */
+#define BUF_HDR_MAX_FLOW_ID 255
+
 /* Common buffer header */
 struct ODP_ALIGNED_CACHE odp_buffer_hdr_t {
 	/* Combined pool and buffer index */
@@ -94,6 +97,9 @@ struct ODP_ALIGNED_CACHE odp_buffer_hdr_t {
 	/* Event type. Maybe different than pool type (crypto compl event) */
 	int8_t    event_type;
 
+	/* Event flow id */
+	uint8_t   flow_id;
+
 	/* Initial buffer tail pointer */
 	uint8_t  *buf_end;
 
@@ -118,6 +124,20 @@ int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf);
 static inline odp_buffer_t buf_from_buf_hdr(odp_buffer_hdr_t *hdr)
 {
 	return (odp_buffer_t)hdr;
+}
+
+static inline uint32_t event_flow_id(odp_event_t ev)
+{
+	odp_buffer_hdr_t *buf_hdr = (odp_buffer_hdr_t *)(uintptr_t)ev;
+
+	return buf_hdr->flow_id;
+}
+
+static inline void event_flow_id_set(odp_event_t ev, uint32_t flow_id)
+{
+	odp_buffer_hdr_t *buf_hdr = (odp_buffer_hdr_t *)(uintptr_t)ev;
+
+	buf_hdr->flow_id = flow_id;
 }
 
 #ifdef __cplusplus
