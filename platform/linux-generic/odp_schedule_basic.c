@@ -597,7 +597,10 @@ static int schedule_init_queue(uint32_t queue_index,
 	int i;
 	int prio = prio_level_from_api(sched_param->prio);
 
-	ODP_ASSERT(_odp_schedule_configured);
+	if (_odp_schedule_configured == 0) {
+		ODP_ERR("Scheduler has not been configured\n");
+		return -1;
+	}
 
 	pri_set_queue(queue_index, prio);
 	sched->queue[queue_index].grp  = sched_param->group;
