@@ -8,6 +8,7 @@
 
 #include <odp_api.h>
 #include "odp_cunit_common.h"
+#include <odp/helper/odph_api.h>
 
 #define MAX_WORKERS_THREADS	32
 #define MAX_ORDERED_LOCKS       2
@@ -23,6 +24,9 @@
 #define MAX_QUEUES              (64 * 1024)
 
 #define TEST_QUEUE_SIZE_NUM_EV  50
+
+#define MAX_FLOWS               16
+#define FLOW_TEST_NUM_EV        (10 * MAX_FLOWS)
 
 #define GLOBALS_SHM_NAME	"test_globals"
 #define MSG_POOL_NAME		"msg_pool"
@@ -62,6 +66,7 @@ typedef struct {
 	odp_pool_t pool;
 	odp_pool_t queue_ctx_pool;
 	uint32_t max_sched_queue_size;
+	uint64_t num_flows;
 	odp_ticketlock_t lock;
 	odp_spinlock_t atomic_lock;
 	struct {
@@ -1846,6 +1851,32 @@ static int scheduler_suite_init(void)
 	odp_pool_t pool;
 	thread_args_t *args;
 	odp_pool_param_t params;
+	uint64_t num_flows;
+	odp_schedule_capability_t sched_capa;
+	odp_schedule_config_t sched_config;
+
+	if (odp_schedule_capability(&sched_capa)) {
+		printf("odp_schedule_capability() failed\n");
+		return -1;
+	}
+
+	num_flows = 0;
+	odp_schedule_config_init(&sched_config);
+
+	/* Enable flow aware scheduling */
+	if (sched_capa.max_flow_id > 0) {
+		num_flows = MAX_FLOWS;
+		if ((MAX_FLOWS - 1) > sched_capa.max_flow_id)
+			num_flows = sched_capa.max_flow_id + 1;
+
+		sched_config.max_flow_id = num_flows - 1;
+	}
+
+	/* Configure the scheduler. All test cases share the config. */
+	if (odp_schedule_config(&sched_config)) {
+		printf("odp_schedule_config() failed.\n");
+		return -1;
+	}
 
 	odp_pool_param_init(&params);
 	params.buf.size  = BUF_SIZE;
@@ -1871,6 +1902,8 @@ static int scheduler_suite_init(void)
 	}
 
 	memset(globals, 0, sizeof(test_globals_t));
+
+	globals->num_flows = num_flows;
 
 	globals->num_workers = odp_cpumask_default_worker(&mask, 0);
 	if (globals->num_workers > MAX_WORKERS)
@@ -1975,6 +2008,127 @@ static int scheduler_suite_term(void)
 	return 0;
 }
 
+static int check_flow_aware_support(void)
+{
+	if (globals->num_flows == 0) {
+		printf("\nTest: scheduler_test_flow_aware: SKIPPED\n");
+		return ODP_TEST_INACTIVE;
+	}
+
+	return ODP_TEST_ACTIVE;
+}
+
+static void scheduler_test_flow_aware(void)
+{
+	odp_schedule_capability_t sched_capa;
+	odp_schedule_config_t sched_config;
+	odp_pool_param_t pool_param;
+	odp_pool_t pool;
+	odp_queue_param_t queue_param;
+	odp_queue_t queue, from;
+	uint32_t j, queue_size, num, num_flows, flow_id;
+	odp_buffer_t buf;
+	odp_event_t ev;
+	int i, ret;
+	uint32_t flow_stat[MAX_FLOWS];
+	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_PARALLEL,
+				      ODP_SCHED_SYNC_ATOMIC,
+				      ODP_SCHED_SYNC_ORDERED};
+
+	/* Test should be skipped when no flows */
+	CU_ASSERT_FATAL(globals->num_flows);
+	CU_ASSERT_FATAL(odp_schedule_capability(&sched_capa) == 0);
+
+	num_flows = globals->num_flows;
+
+	queue_size = FLOW_TEST_NUM_EV;
+	odp_schedule_config_init(&sched_config);
+	if (sched_config.queue_size &&
+	    queue_size > sched_config.queue_size)
+		queue_size = sched_config.queue_size;
+
+	odp_pool_param_init(&pool_param);
+	pool_param.buf.size  = 100;
+	pool_param.buf.align = 0;
+	pool_param.buf.num   = FLOW_TEST_NUM_EV;
+	pool_param.type      = ODP_POOL_BUFFER;
+
+	pool = odp_pool_create("test_flow_aware", &pool_param);
+
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	for (i = 0; i < 3; i++) {
+		memset(flow_stat, 0, sizeof(flow_stat));
+		flow_id = 0;
+
+		odp_queue_param_init(&queue_param);
+		queue_param.type = ODP_QUEUE_TYPE_SCHED;
+		queue_param.sched.prio  = odp_schedule_default_prio();
+		queue_param.sched.sync  = sync[i];
+		queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+		queue_param.size = queue_size;
+
+		queue = odp_queue_create("test_flow_aware", &queue_param);
+
+		CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+		for (j = 0; j < queue_size; j++) {
+			buf = odp_buffer_alloc(pool);
+			CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+
+			ev = odp_buffer_to_event(buf);
+
+			odp_event_flow_id_set(ev, flow_id);
+			CU_ASSERT(odp_event_flow_id(ev) == flow_id);
+
+			ret = odp_queue_enq(queue, ev);
+			CU_ASSERT(ret == 0);
+
+			if (ret) {
+				odp_event_free(ev);
+				continue;
+			}
+
+			flow_stat[flow_id]++;
+
+			flow_id++;
+			if (flow_id == num_flows)
+				flow_id = 0;
+		}
+
+		num = 0;
+		for (j = 0; j < 100 * FLOW_TEST_NUM_EV; j++) {
+			ev = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+
+			if (ev == ODP_EVENT_INVALID)
+				continue;
+
+			CU_ASSERT(from == queue);
+
+			flow_id = odp_event_flow_id(ev);
+			flow_stat[flow_id]--;
+
+			odp_event_free(ev);
+			num++;
+		}
+
+		CU_ASSERT(num == queue_size);
+
+		for (j = 0; j < num_flows; j++) {
+			CU_ASSERT(flow_stat[j] == 0);
+			if (flow_stat[j])
+				printf("flow id %" PRIu32 ", missing %" PRIi32
+				       " events\n", j, flow_stat[j]);
+		}
+
+		drain_queues();
+		CU_ASSERT_FATAL(odp_queue_destroy(queue) == 0);
+	}
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+/* Default scheduler config */
 odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_capa),
 	ODP_TEST_INFO(scheduler_test_wait_time),
@@ -1985,6 +2139,8 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_groups),
 	ODP_TEST_INFO(scheduler_test_pause_resume),
 	ODP_TEST_INFO(scheduler_test_ordered_lock),
+	ODP_TEST_INFO_CONDITIONAL(scheduler_test_flow_aware,
+				  check_flow_aware_support),
 	ODP_TEST_INFO(scheduler_test_parallel),
 	ODP_TEST_INFO(scheduler_test_atomic),
 	ODP_TEST_INFO(scheduler_test_ordered),
@@ -2025,6 +2181,32 @@ odp_suiteinfo_t scheduler_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
+static int global_init(odp_instance_t *inst)
+{
+	odp_init_t init_param;
+	odph_helper_options_t helper_options;
+
+	if (odph_options(&helper_options)) {
+		fprintf(stderr, "error: odph_options() failed.\n");
+		return -1;
+	}
+
+	odp_init_param_init(&init_param);
+	init_param.mem_model = helper_options.mem_model;
+
+	if (0 != odp_init_global(inst, &init_param, NULL)) {
+		fprintf(stderr, "error: odp_init_global() failed.\n");
+		return -1;
+	}
+
+	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
+		fprintf(stderr, "error: odp_init_local() failed.\n");
+		return -1;
+	}
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
@@ -2033,6 +2215,7 @@ int main(int argc, char *argv[])
 	if (odp_cunit_parse_options(argc, argv))
 		return -1;
 
+	odp_cunit_register_global_init(global_init);
 	ret = odp_cunit_register(scheduler_suites);
 
 	if (ret == 0)
