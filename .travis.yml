@@ -47,7 +47,7 @@ env:
         # for individual commit validation. But you you want to track tests history
         # you need generated new one at https://codecov.io specific for your repo.
         - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
-        - UBUNTU_VERS="16.04"
+        - OS="ubuntu_16.04"
         - BUILD_ONLY=0
         - NETMAP=0
     matrix:
@@ -68,8 +68,9 @@ env:
         - CONF="--disable-host-optimization"
         - CONF="--disable-host-optimization --disable-abi-compat"
         - BUILD_ONLY=1 ARCH="x86_64" CONF="--enable-pcapng-support"
+        - BUILD_ONLY=1 ARCH="x86_64" OS="centos_7"
         - CONF="--without-openssl"
-        - CONF="" UBUNTU_VERS="18.04"
+        - OS="ubuntu_18.04"
 
 matrix:
   exclude:
@@ -97,14 +98,14 @@ script:
                docker run  -i -t -v `pwd`:/odp --shm-size 8g
                  -e CC="${CC}"
                  -e CONF="${CONF}"
-                 ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_${UBUNTU_VERS} /odp/scripts/ci/build_${ARCH}.sh ;
+                 ${DOCKER_NAMESPACE}/travis-odp-lng-${OS} /odp/scripts/ci/build_${ARCH}.sh ;
           else
                echo "Running test" ;
                docker run --privileged -i -t
                  -v `pwd`:/odp --shm-size 8g
                  -e CC="${CC}"
                  -e CONF="${CONF}"
-                 ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_${UBUNTU_VERS} /odp/scripts/ci/check.sh ;
+                 ${DOCKER_NAMESPACE}/travis-odp-lng-${OS} /odp/scripts/ci/check.sh ;
           fi
 jobs:
         include:
