@@ -965,7 +965,7 @@ same value on all ODP threads, for a given memory block, in this case)
 Note that ODP implementations may have restrictions of the amount of memory
 which can be allocated with this flag.
 
-== Queues
+== Queues and the Scheduler
 Queues are the fundamental event sequencing mechanism provided by ODP and all
 ODP applications make use of them either explicitly or implicitly. Queues are
 created via the 'odp_queue_create()' API that returns a handle of type
@@ -1184,11 +1184,179 @@ until the locking order for this lock for all prior events has been resolved
 and then enters the critical section. The *odp_schedule_order_unlock()* call
 releases the critical section and allows the next order to enter it.
 
+=== Scheduler Capabilities and Configuration
+As with other ODP components, the ODP scheduler offers a range of capabilities
+and configuration options that are used by applications to control its
+behavior.
+
+The sequence of API calls used by applications that make use of the scheduler
+is as follows:
+
+.ODP API Scheduler Usage
+[source,c]
+-----
+odp_schedule_capability()
+odp_schedule_config_init()
+odp_schedule_config()
+odp_schedule()
+-----
+The `odp_schedule_capability()` API returns an `odp_schedule_capability_t`
+struct that defines various limits and capabilities offered by this
+implementation of the ODP scheduler:
+
+.ODP Scheduler Capabilities
+[source,c]
+-----
+/**
+ * Scheduler capabilities
+ */
+typedef struct odp_schedule_capability_t {
+	/** Maximum number of ordered locks per queue */
+	uint32_t max_ordered_locks;
+
+	/** Maximum number of scheduling groups */
+	uint32_t max_groups;
+
+	/** Number of scheduling priorities */
+	uint32_t max_prios;
+
+	/** Maximum number of scheduled (ODP_BLOCKING) queues of the default
+	 * size. */
+	uint32_t max_queues;
+
+	/** Maximum number of events a scheduled (ODP_BLOCKING) queue can store
+	 * simultaneously. The value of zero means that scheduled queues do not
+	 * have a size limit, but a single queue can store all available
+	 * events. */
+	uint32_t max_queue_size;
+
+	/** Maximum flow ID per queue
+	 *
+	 *  Valid flow ID range in flow aware mode of scheduling is from 0 to
+	 *  this maximum value. So, maximum number of flows per queue is this
+	 *  value plus one. A value of 0 indicates that flow aware mode is not
+	 *  supported. */
+	uint32_t max_flow_id;
+
+	/** Lock-free (ODP_NONBLOCKING_LF) queues support.
+	 * The specification is the same as for the blocking implementation. */
+	odp_support_t lockfree_queues;
+
+	/** Wait-free (ODP_NONBLOCKING_WF) queues support.
+	 * The specification is the same as for the blocking implementation. */
+	odp_support_t waitfree_queues;
+
+} odp_schedule_capability_t;
+-----
+This struct indicates the various scheduling limits supported by this ODP
+implementation. Of note is the `max_flow_id` capability, which indicates
+whether this implementation is able to operate in _flow aware mode_.
+
+==== Flow Aware Scheduling
+A _flow_ is a sequence of events that share some application-specific meaning
+and context. A good example of a flow might be a TCP connection. Various
+events associated with that connection, such as packets containing
+connection data, as well as associated timeout events used for transmission
+control, are logically connected and meaningful to the application processing
+that TCP connection.
+
+Normally a single flow is associated with an ODP queue. That is, all events
+on a given queue belong to the same flow. So the queue id is synonymous with
+the flow id for those events. However, this is not without drawbacks. Queues
+are relatively heavyweight objects and provide both synchronization as well as
+user contexts. The number of queues supported by a given implementation
+(`max_queues`) may be less than the number of flows an application needs to
+be able to process.
+
+To address these needs, ODP allows schedulers to operate in flow aware mode
+in which flow id is maintained separately as part of each event. Two new
+APIs:
+
+* `odp_event_flow_id()`
+* `odp_event_flow_id_set()`
+
+are used to query and set a 32-bit flow id associated with individual events.
+The assignment and interpretation of individual flow ids is under application
+control.
+
+When operating in flow aware mode, it is the combination of flow id and
+queue id that is used by the scheduler in making scheduling decisions. So,
+for example, an Atomic queue would normally be able to dispatch events only a
+single thread at a time. When operating in flow aware mode, however, the
+scheduler will provide this exclusion only when two events on the same atomic
+queue have the same flow id. If they have different flow ids, then they can be
+scheduled concurrently to different threads.
+
+Note that when operating in this mode, any sharing of queue context must be
+done with application-provided synchronization controls (similar to how
+parallel queues behave).
+
+==== Scheduler Configuration
+After determining the scheduler's capabilities, but before starting to use
+the scheduler to process events, applications must configure the scheduler
+by calling `odp_schedule_config()`.
+
+The argument to this call is the `odp_schedule_config_t` struct:
+
+.ODP Scheduler Configuration
+[source,c]
+-----
+/**
+ * Schedule configuration
+ */
+typedef struct odp_schedule_config_t {
+	/** Maximum number of scheduled queues to be supported.
+	 *
+	 * @see odp_schedule_capability_t
+	 */
+	uint32_t num_queues;
+
+	/** Maximum number of events required to be stored simultaneously in
+	 * scheduled queue. This number must not exceed 'max_queue_size'
+	 * capability.  A value of 0 configures default queue size supported by
+	 * the implementation.
+	 */
+	uint32_t queue_size;
+
+	/** Maximum flow ID per queue
+	 *
+	 *  This value must not exceed 'max_flow_id' capability. Flow aware
+	 *  mode of scheduling is enabled when the value is greater than 0.
+	 *  The default value is 0.
+	 *
+	 *  Application can assign events to specific flows by calling
+	 *  odp_event_flow_id_set() before enqueuing events into a scheduled
+	 *  queue. When in flow aware mode, the event flow id value affects
+	 *  scheduling of the event and synchronization is maintained per flow
+	 *  within each queue.
+	 *
+	 *  Depeding on implementation, there may be much more flows supported
+	 *  than queues, as flows are lightweight entities.
+	 *
+	 *  @see odp_schedule_capability_t, odp_event_flow_id()
+	 */
+	uint32_t max_flow_id;
+
+} odp_schedule_config_t;
+-----
+The `odp_schedule_config_init()` API should be used to initialize this
+struct to its default values. The application then sets whatever
+overrides it needs prior to calling `odp_schedule_config()` to activate
+them. Note that `NULL` may be passed as the argument to `odp_schedule_config()`
+if the application simply wants to use the implementation-defined default
+configuration. In the default configuration, the scheduler does not operate in
+flow aware mode.
+
+Once configured, `odp_schedule()` calls can be made to get events. It is
+a programming error to attempt to use the scheduler before it has been
+configured.
+
 === Queue Scheduling Summary
 
 NOTE: Both ordered and parallel queues improve throughput over atomic queues
 due to parallel event processing, but require that the application take
-steps to ensure context data synchronization if needed.
+steps to ensure context data synchronization if needed. The same is true for
+atomic queues when the scheduler is operating in flow aware mode.
 
 include::users-guide-packet.adoc[]
 
