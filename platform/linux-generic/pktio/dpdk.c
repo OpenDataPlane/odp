@@ -1071,8 +1071,6 @@ static int dpdk_vdev_promisc_mode_set(uint16_t port_id, int enable)
 static void rss_conf_to_hash_proto(struct rte_eth_rss_conf *rss_conf,
 				   const odp_pktin_hash_proto_t *hash_proto)
 {
-	memset(rss_conf, 0, sizeof(struct rte_eth_rss_conf));
-
 	if (hash_proto->proto.ipv4_udp)
 		rss_conf->rss_hf |= ETH_RSS_NONFRAG_IPV4_UDP;
 	if (hash_proto->proto.ipv4_tcp)
@@ -1093,47 +1091,36 @@ static void rss_conf_to_hash_proto(struct rte_eth_rss_conf *rss_conf,
 	rss_conf->rss_key = NULL;
 }
 
-static int dpdk_setup_port(pktio_entry_t *pktio_entry)
+static int dpdk_setup_eth_dev(pktio_entry_t *pktio_entry,
+			      const struct rte_eth_dev_info *dev_info)
 {
 	int ret;
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	struct rte_eth_rss_conf rss_conf;
-	uint16_t hw_ip_checksum = 0;
+	struct rte_eth_conf eth_conf;
+	uint64_t rss_hf_capa = dev_info->flow_type_rss_offloads;
 
-	/* Always set some hash functions to enable DPDK RSS hash calculation */
-	if (pkt_dpdk->hash.all_bits == 0) {
-		memset(&rss_conf, 0, sizeof(struct rte_eth_rss_conf));
+	memset(&rss_conf, 0, sizeof(struct rte_eth_rss_conf));
+
+	/* Always set some hash functions to enable DPDK RSS hash calculation.
+	 * Hash capability has been checked in pktin config. */
+	if (pkt_dpdk->hash.all_bits == 0)
 		rss_conf.rss_hf = ETH_RSS_IP | ETH_RSS_TCP | ETH_RSS_UDP;
-	} else {
+	else
 		rss_conf_to_hash_proto(&rss_conf, &pkt_dpdk->hash);
-	}
 
-	if (pktio_entry->s.config.pktin.bit.ipv4_chksum ||
-	    pktio_entry->s.config.pktin.bit.udp_chksum ||
-	    pktio_entry->s.config.pktin.bit.tcp_chksum)
-		hw_ip_checksum = 1;
+	/* Filter out unsupported flags */
+	rss_conf.rss_hf &= rss_hf_capa;
 
-	struct rte_eth_conf port_conf = {
-		.rxmode = {
-			.mq_mode = ETH_MQ_RX_RSS,
-			.split_hdr_size = 0,
-			.header_split   = 0,
-			.hw_ip_checksum = hw_ip_checksum,
-			.hw_vlan_filter = 0,
-			.hw_strip_crc   = 0,
-			.enable_scatter = 0,
-		},
-		.rx_adv_conf = {
-			.rss_conf = rss_conf,
-		},
-		.txmode = {
-			.mq_mode = ETH_MQ_TX_NONE,
-		},
-	};
+	memset(&eth_conf, 0, sizeof(eth_conf));
+
+	eth_conf.rxmode.mq_mode = ETH_MQ_RX_RSS;
+	eth_conf.txmode.mq_mode = ETH_MQ_TX_NONE;
+	eth_conf.rx_adv_conf.rss_conf = rss_conf;
 
 	ret = rte_eth_dev_configure(pkt_dpdk->port_id,
 				    pktio_entry->s.num_in_queue,
-				    pktio_entry->s.num_out_queue, &port_conf);
+				    pktio_entry->s.num_out_queue, &eth_conf);
 	if (ret < 0) {
 		ODP_ERR("Failed to setup device: err=%d, port=%" PRIu8 "\n",
 			ret, pkt_dpdk->port_id);
@@ -1306,15 +1293,27 @@ static void dpdk_mempool_free(struct rte_mempool *mp, void *arg ODP_UNUSED)
 	rte_mempool_free(mp);
 }
 
+/* RTE_ETH_FOREACH_DEV was introduced in v17.8, but causes a build error in
+ * v18.2 (only a warning, but our build system treats warnings as errors). */
+#if (RTE_VERSION >= RTE_VERSION_NUM(18, 2, 0, 0)) && \
+	(RTE_VERSION < RTE_VERSION_NUM(18, 5, 0, 0))
+	#define ETH_FOREACH_DEV(p)					\
+		for (p = rte_eth_find_next(0);				\
+		     (unsigned int)p < (unsigned int)RTE_MAX_ETHPORTS;	\
+		     p = rte_eth_find_next(p + 1))
+#elif RTE_VERSION >= RTE_VERSION_NUM(17, 8, 0, 0)
+	#define ETH_FOREACH_DEV(p) RTE_ETH_FOREACH_DEV(p)
+#endif
+
 static int dpdk_pktio_term(void)
 {
+	uint16_t port_id;
+
 	if (!odp_global_rw->dpdk_initialized)
 		return 0;
 
 #if RTE_VERSION >= RTE_VERSION_NUM(17, 8, 0, 0)
-	uint16_t port_id;
-
-	RTE_ETH_FOREACH_DEV(port_id) {
+	ETH_FOREACH_DEV(port_id) {
 		rte_eth_dev_close(port_id);
 	}
 #endif
@@ -1325,11 +1324,69 @@ static int dpdk_pktio_term(void)
 	return 0;
 }
 
+static int check_hash_proto(pktio_entry_t *pktio_entry,
+			    const odp_pktin_queue_param_t *p)
+{
+	struct rte_eth_dev_info dev_info;
+	uint64_t rss_hf_capa;
+	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
+	uint16_t port_id = pkt_dpdk->port_id;
+
+	rte_eth_dev_info_get(port_id, &dev_info);
+	rss_hf_capa = dev_info.flow_type_rss_offloads;
+
+	if (p->hash_proto.proto.ipv4 &&
+	    ((rss_hf_capa & ETH_RSS_IPV4) == 0)) {
+		ODP_ERR("hash_proto.ipv4 not supported\n");
+		return -1;
+	}
+
+	if (p->hash_proto.proto.ipv4_udp &&
+	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV4_UDP) == 0)) {
+		ODP_ERR("hash_proto.ipv4_udp not supported. "
+			"rss_hf_capa 0x%" PRIx64 "\n", rss_hf_capa);
+		return -1;
+	}
+
+	if (p->hash_proto.proto.ipv4_tcp &&
+	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV4_TCP) == 0)) {
+		ODP_ERR("hash_proto.ipv4_tcp not supported. "
+			"rss_hf_capa 0x%" PRIx64 "\n", rss_hf_capa);
+		return -1;
+	}
+
+	if (p->hash_proto.proto.ipv6 &&
+	    ((rss_hf_capa & ETH_RSS_IPV6) == 0)) {
+		ODP_ERR("hash_proto.ipv6 not supported. "
+			"rss_hf_capa 0x%" PRIx64 "\n", rss_hf_capa);
+		return -1;
+	}
+
+	if (p->hash_proto.proto.ipv6_udp &&
+	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV6_UDP) == 0)) {
+		ODP_ERR("hash_proto.ipv6_udp not supported. "
+			"rss_hf_capa 0x%" PRIx64 "\n", rss_hf_capa);
+		return -1;
+	}
+
+	if (p->hash_proto.proto.ipv6_tcp &&
+	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV6_TCP) == 0)) {
+		ODP_ERR("hash_proto.ipv6_tcp not supported. "
+			"rss_hf_capa 0x%" PRIx64 "\n", rss_hf_capa);
+		return -1;
+	}
+
+	return 0;
+}
+
 static int dpdk_input_queues_config(pktio_entry_t *pktio_entry,
 				    const odp_pktin_queue_param_t *p)
 {
 	odp_pktin_mode_t mode = pktio_entry->s.param.in_mode;
 	uint8_t lockless;
+
+	if (p->hash_enable && check_hash_proto(pktio_entry, p))
+		return -1;
 
 	/**
 	 * Scheduler synchronizes input queue polls. Only single thread
@@ -1492,7 +1549,12 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	pkt_dpdk->pool = pool;
 	pkt_dpdk->port_id = atoi(netdev);
 
+	/* rte_eth_dev_count() was removed in v18.05 */
+#if RTE_VERSION < RTE_VERSION_NUM(18, 5, 0, 0)
 	if (rte_eth_dev_count() == 0) {
+#else
+	if (rte_eth_dev_count_avail() == 0) {
+#endif
 		ODP_ERR("No DPDK ports found\n");
 		return -1;
 	}
@@ -1569,14 +1631,99 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	return 0;
 }
 
+static int dpdk_setup_eth_tx(pktio_entry_t *pktio_entry,
+			     const pkt_dpdk_t *pkt_dpdk,
+			     const struct rte_eth_dev_info *dev_info)
+{
+	struct rte_eth_txconf txconf;
+	uint64_t tx_offloads;
+	uint32_t i;
+	int ret;
+	uint16_t port_id = pkt_dpdk->port_id;
+
+	txconf = dev_info->default_txconf;
+
+	tx_offloads = 0;
+	if (pktio_entry->s.config.pktout.bit.ipv4_chksum_ena)
+		tx_offloads |= DEV_TX_OFFLOAD_IPV4_CKSUM;
+
+	if (pktio_entry->s.config.pktout.bit.udp_chksum_ena)
+		tx_offloads |= DEV_TX_OFFLOAD_UDP_CKSUM;
+
+	if (pktio_entry->s.config.pktout.bit.tcp_chksum_ena)
+		tx_offloads |= DEV_TX_OFFLOAD_TCP_CKSUM;
+
+	if (pktio_entry->s.config.pktout.bit.sctp_chksum_ena)
+		tx_offloads |= DEV_TX_OFFLOAD_SCTP_CKSUM;
+
+	txconf.offloads = tx_offloads;
+
+	if (tx_offloads)
+		pktio_entry->s.chksum_insert_ena = 1;
+
+	for (i = 0; i < pktio_entry->s.num_out_queue; i++) {
+
+		ret = rte_eth_tx_queue_setup(port_id, i,
+					     pkt_dpdk->opt.num_tx_desc,
+					     rte_eth_dev_socket_id(port_id),
+					     &txconf);
+		if (ret < 0) {
+			ODP_ERR("Queue setup failed: err=%d, port=%" PRIu8 "\n",
+				ret, port_id);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+static int dpdk_setup_eth_rx(const pktio_entry_t *pktio_entry,
+			     const pkt_dpdk_t *pkt_dpdk,
+			     const struct rte_eth_dev_info *dev_info)
+{
+	struct rte_eth_rxconf rxconf;
+	uint64_t rx_offloads;
+	uint32_t i;
+	int ret;
+	uint16_t port_id = pkt_dpdk->port_id;
+
+	rxconf = dev_info->default_rxconf;
+
+	rxconf.rx_drop_en = pkt_dpdk->opt.rx_drop_en;
+
+	rx_offloads = 0;
+	if (pktio_entry->s.config.pktin.bit.ipv4_chksum)
+		rx_offloads |= DEV_RX_OFFLOAD_IPV4_CKSUM;
+
+	if (pktio_entry->s.config.pktin.bit.udp_chksum)
+		rx_offloads |= DEV_RX_OFFLOAD_UDP_CKSUM;
+
+	if (pktio_entry->s.config.pktin.bit.tcp_chksum)
+		rx_offloads |= DEV_RX_OFFLOAD_TCP_CKSUM;
+
+	rxconf.offloads = rx_offloads;
+
+	for (i = 0; i < pktio_entry->s.num_in_queue; i++) {
+		ret = rte_eth_rx_queue_setup(port_id, i,
+					     pkt_dpdk->opt.num_rx_desc,
+					     rte_eth_dev_socket_id(port_id),
+					     &rxconf, pkt_dpdk->pkt_pool);
+		if (ret < 0) {
+			ODP_ERR("Queue setup failed: err=%d, port=%" PRIu8 "\n",
+				ret, port_id);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
 static int dpdk_start(pktio_entry_t *pktio_entry)
 {
 	struct rte_eth_dev_info dev_info;
-	struct rte_eth_rxconf *rxconf;
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	uint16_t port_id = pkt_dpdk->port_id;
 	int ret;
-	unsigned i;
 
 	/* DPDK doesn't support nb_rx_q/nb_tx_q being 0 */
 	if (!pktio_entry->s.num_in_queue)
@@ -1584,76 +1731,22 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 	if (!pktio_entry->s.num_out_queue)
 		pktio_entry->s.num_out_queue = 1;
 
-	/* init port */
-	if (dpdk_setup_port(pktio_entry)) {
+	rte_eth_dev_info_get(port_id, &dev_info);
+
+	/* Setup device */
+	if (dpdk_setup_eth_dev(pktio_entry, &dev_info)) {
 		ODP_ERR("Failed to configure device\n");
 		return -1;
 	}
-	/* Init TX queues */
-	for (i = 0; i < pktio_entry->s.num_out_queue; i++) {
-		const struct rte_eth_txconf *txconf = NULL;
-		int ip_ena  = pktio_entry->s.config.pktout.bit.ipv4_chksum_ena;
-		int udp_ena = pktio_entry->s.config.pktout.bit.udp_chksum_ena;
-		int tcp_ena = pktio_entry->s.config.pktout.bit.tcp_chksum_ena;
-		int sctp_ena = pktio_entry->s.config.pktout.bit.sctp_chksum_ena;
-		int chksum_ena = ip_ena | udp_ena | tcp_ena | sctp_ena;
 
-		if (chksum_ena) {
-			/* Enable UDP, TCP, STCP checksum offload */
-			uint32_t txq_flags = 0;
+	/* Setup TX queues */
+	if (dpdk_setup_eth_tx(pktio_entry, pkt_dpdk, &dev_info))
+		return -1;
 
-			if (udp_ena == 0)
-				txq_flags |= ETH_TXQ_FLAGS_NOXSUMUDP;
+	/* Setup RX queues */
+	if (dpdk_setup_eth_rx(pktio_entry, pkt_dpdk, &dev_info))
+		return -1;
 
-			if (tcp_ena == 0)
-				txq_flags |= ETH_TXQ_FLAGS_NOXSUMTCP;
-
-			if (sctp_ena == 0)
-				txq_flags |= ETH_TXQ_FLAGS_NOXSUMSCTP;
-
-			/* When IP checksum is requested alone, enable UDP
-			 * offload. DPDK IP checksum offload is enabled only
-			 * when one of the L4 checksum offloads is requested.*/
-			if ((udp_ena == 0) && (tcp_ena == 0) && (sctp_ena == 0))
-				txq_flags = ETH_TXQ_FLAGS_NOXSUMTCP |
-					    ETH_TXQ_FLAGS_NOXSUMSCTP;
-
-			txq_flags |= ETH_TXQ_FLAGS_NOMULTSEGS |
-				     ETH_TXQ_FLAGS_NOREFCOUNT |
-				     ETH_TXQ_FLAGS_NOMULTMEMP |
-				     ETH_TXQ_FLAGS_NOVLANOFFL;
-
-			rte_eth_dev_info_get(port_id, &dev_info);
-			dev_info.default_txconf.txq_flags = txq_flags;
-			txconf = &dev_info.default_txconf;
-			pktio_entry->s.chksum_insert_ena = 1;
-		}
-
-		ret = rte_eth_tx_queue_setup(port_id, i,
-					     pkt_dpdk->opt.num_tx_desc,
-					     rte_eth_dev_socket_id(port_id),
-					     txconf);
-		if (ret < 0) {
-			ODP_ERR("Queue setup failed: err=%d, port=%" PRIu8 "\n",
-				ret, port_id);
-			return -1;
-		}
-	}
-	/* Init RX queues */
-	rte_eth_dev_info_get(port_id, &dev_info);
-	rxconf = &dev_info.default_rxconf;
-	rxconf->rx_drop_en = pkt_dpdk->opt.rx_drop_en;
-	for (i = 0; i < pktio_entry->s.num_in_queue; i++) {
-		ret = rte_eth_rx_queue_setup(port_id, i,
-					     pkt_dpdk->opt.num_rx_desc,
-					     rte_eth_dev_socket_id(port_id),
-					     rxconf, pkt_dpdk->pkt_pool);
-		if (ret < 0) {
-			ODP_ERR("Queue setup failed: err=%d, port=%" PRIu8 "\n",
-				ret, port_id);
-			return -1;
-		}
-	}
 	/* Start device */
 	ret = rte_eth_dev_start(port_id);
 	if (ret < 0) {

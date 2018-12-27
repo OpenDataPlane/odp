@@ -47,36 +47,37 @@ env:
         # for individual commit validation. But you you want to track tests history
         # you need generated new one at https://codecov.io specific for your repo.
         - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
-        - UBUNTU_VERS="16.04"
-        - BUILD_ONLY=0
+        - OS="ubuntu_16.04"
+        - CHECK=1
         - NETMAP=0
     matrix:
         - CONF=""
         - CONF="--disable-abi-compat"
         - NETMAP=1 CONF=""
-        - BUILD_ONLY=1 ARCH="arm64"
-        - BUILD_ONLY=1 ARCH="armhf"
-        - BUILD_ONLY=1 ARCH="powerpc"
-        - BUILD_ONLY=1 ARCH="i386"
-        - BUILD_ONLY=1 ARCH="arm64" CONF="--disable-abi-compat"
-        - BUILD_ONLY=1 ARCH="armhf" CONF="--disable-abi-compat"
-        - BUILD_ONLY=1 ARCH="powerpc" CONF="--disable-abi-compat"
-        - BUILD_ONLY=1 ARCH="i386" CONF="--disable-abi-compat"
+        - CHECK=0 ARCH="arm64"
+        - CHECK=0 ARCH="armhf"
+        - CHECK=0 ARCH="powerpc"
+        - CHECK=0 ARCH="i386"
+        - CHECK=0 ARCH="arm64" CONF="--disable-abi-compat"
+        - CHECK=0 ARCH="armhf" CONF="--disable-abi-compat"
+        - CHECK=0 ARCH="powerpc" CONF="--disable-abi-compat"
+        - CHECK=0 ARCH="i386" CONF="--disable-abi-compat"
         - CONF="--enable-deprecated"
         - CONF="--enable-dpdk-zero-copy --disable-static-applications"
         - NETMAP=1 CONF="--disable-static-applications"
         - CONF="--disable-host-optimization"
         - CONF="--disable-host-optimization --disable-abi-compat"
-        - BUILD_ONLY=1 ARCH="x86_64" CONF="--enable-pcapng-support"
+        - CHECK=0 ARCH="x86_64" CONF="--enable-pcapng-support"
+        - CHECK=0 ARCH="x86_64" OS="centos_7"
         - CONF="--without-openssl"
-        - CONF="" UBUNTU_VERS="18.04"
+        - OS="ubuntu_18.04"
 
 matrix:
   exclude:
   - compiler: gcc
-    env: BUILD_ONLY=1 ARCH="arm64"
+    env: CHECK=0 ARCH="arm64"
   - compiler: gcc
-    env: BUILD_ONLY=1 ARCH="i386"
+    env: CHECK=0 ARCH="i386"
 
 install:
         - if [ ${NETMAP} -eq 1 ] ; then
@@ -93,18 +94,18 @@ install:
           fi
 script:
         - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
-        - if [ ${BUILD_ONLY} -eq 1 ] ; then
+        - if [ ${CHECK} -eq 0 ] ; then
                docker run  -i -t -v `pwd`:/odp --shm-size 8g
                  -e CC="${CC}"
                  -e CONF="${CONF}"
-                 ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_${UBUNTU_VERS} /odp/scripts/ci/build_${ARCH}.sh ;
+                 ${DOCKER_NAMESPACE}/travis-odp-lng-${OS} /odp/scripts/ci/build_${ARCH}.sh ;
           else
                echo "Running test" ;
                docker run --privileged -i -t
                  -v `pwd`:/odp --shm-size 8g
                  -e CC="${CC}"
                  -e CONF="${CONF}"
-                 ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_${UBUNTU_VERS} /odp/scripts/ci/check.sh ;
+                 ${DOCKER_NAMESPACE}/travis-odp-lng-${OS} /odp/scripts/ci/check.sh ;
           fi
 jobs:
         include:

@@ -6,6 +6,10 @@ AC_DEFUN([ODP_DPDK_PMDS], [dnl
 AS_VAR_SET([DPDK_PMDS], ["-Wl,--whole-archive,"])
 for filename in "$1"/librte_pmd_*.a; do
 cur_driver=`basename "$filename" .a | sed -e 's/^lib//'`
+
+# Match pattern is filled to 'filename' once if no matches are found
+AS_IF([test "x$cur_driver" = "xrte_pmd_*"], [break])
+
 AS_VAR_APPEND([DPDK_PMDS], [-l$cur_driver,])
 AS_CASE([$cur_driver],
     [rte_pmd_nfp], [AS_VAR_APPEND([DPDK_LIBS], [" -lm"])],
