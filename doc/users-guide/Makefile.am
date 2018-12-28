@@ -2,6 +2,7 @@ include ../Makefile.inc
 
 SRC    = users-guide.adoc \
 	 users-guide-cls.adoc \
+	 users-guide-comp.adoc \
 	 users-guide-crypto.adoc \
 	 users-guide-ipsec.adoc \
 	 users-guide-packet.adoc \
