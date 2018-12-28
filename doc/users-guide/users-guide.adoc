@@ -1200,6 +1200,8 @@ include::users-guide-crypto.adoc[]
 
 include::users-guide-ipsec.adoc[]
 
+include::users-guide-comp.adoc[]
+
 include::users-guide-tm.adoc[]
 
 include::users-guide-cls.adoc[]
