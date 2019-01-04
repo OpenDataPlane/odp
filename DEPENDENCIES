@@ -19,7 +19,13 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 3. Required packages
 
-   Libraries currently required to link: openssl, libatomic, libconfig
+   Libraries currently required to link: libconfig, openssl, libatomic
+
+   On Debian/Ubuntu systems:
+   $ sudo apt-get install libconfig-dev
+
+   On CentOS/RedHat/Fedora systems:
+   $ sudo yum install libconfig-devel
 
    It is possible to build ODP without OpenSSL by passing flag
    --without-openssl to configure script. However this will result in
