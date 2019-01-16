@@ -1130,7 +1130,8 @@ int main(int argc, char *argv[])
 	/* Parse and store the application arguments */
 	parse_args(argc, argv, &gbl_args->appl);
 
-	odp_schedule_config(NULL);
+	odp_schedule_config_init(&schedule_config);
+	odp_schedule_config(&schedule_config);
 
 	if (gbl_args->appl.in_mode == SCHED_ORDERED) {
 		/* At least one ordered lock required  */
