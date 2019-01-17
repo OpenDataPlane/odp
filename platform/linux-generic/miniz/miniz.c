@@ -347,15 +347,6 @@ mz_ulong mz_compressBound(mz_ulong source_len)
     return mz_deflateBound(NULL, source_len);
 }
 
-typedef struct
-{
-    tinfl_decompressor m_decomp;
-    mz_uint m_dict_ofs, m_dict_avail, m_first_call, m_has_flushed;
-    int m_window_bits;
-    mz_uint8 m_dict[TINFL_LZ_DICT_SIZE];
-    tinfl_status m_last_status;
-} inflate_state;
-
 int mz_inflateInit2(mz_streamp pStream, int window_bits)
 {
     inflate_state *pDecomp;
