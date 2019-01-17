@@ -1197,7 +1197,11 @@ static int dpdk_pktio_init(void)
 	}
 
 	mem_str_len = snprintf(NULL, 0, "%d,", DPDK_MEMORY_MB);
+
+	/* numa_num_configured_nodes() may return 0 on some platforms */
 	numa_nodes = numa_num_configured_nodes();
+	if (numa_nodes <= 0)
+		numa_nodes = 1;
 
 	char mem_str[mem_str_len * numa_nodes];
 
