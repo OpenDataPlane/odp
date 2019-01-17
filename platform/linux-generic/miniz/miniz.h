@@ -134,13 +134,9 @@
 #define MINIZ_LITTLE_ENDIAN 0
 #endif
 
-#if MINIZ_X86_OR_X64_CPU
 /* Set MINIZ_USE_UNALIGNED_LOADS_AND_STORES to 1 on CPU's that permit efficient integer loads and stores from unaligned addresses. */
-#define MINIZ_USE_UNALIGNED_LOADS_AND_STORES 1
-#define MINIZ_UNALIGNED_USE_MEMCPY
-#else
 #define MINIZ_USE_UNALIGNED_LOADS_AND_STORES 0
-#endif
+/* #define MINIZ_UNALIGNED_USE_MEMCPY */
 
 #if defined(_M_X64) || defined(_WIN64) || defined(__MINGW64__) || defined(_LP64) || defined(__LP64__) || defined(__ia64__) || defined(__x86_64__) || defined (__arch64__)
 /* Set MINIZ_HAS_64BIT_REGISTERS to 1 if operations on 64-bit integers are reasonably fast (and don't involve compiler generated calls to helper functions). */
