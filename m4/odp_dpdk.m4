@@ -52,6 +52,15 @@ AS_IF([test "x$DPDK_SHARED" = "xyes"], [dnl
     # link libodp-linux with libtool linking flags
     DPDK_LIBS_LIBODP="$DPDK_LIBS_LT"
 ])
+
+OLD_LIBS=$LIBS
+LIBS="-lnuma"
+AC_TRY_LINK_FUNC([numa_num_configured_nodes],
+		 [AC_DEFINE([HAVE_NUMA_LIBRARY], [1],
+			    [Define to 1 if numa library is usable])
+		 AS_VAR_APPEND([DPDK_LIBS_LIBODP], [" -lnuma"])])
+LIBS=$OLD_LIBS
+
 AC_SUBST([DPDK_LIBS])
 AC_SUBST([DPDK_LIBS_LIBODP])
 AC_SUBST([DPDK_LIBS_LT])
