@@ -174,6 +174,15 @@ AC_DEFUN([_ODP_DPDK_LEGACY], [dnl
     AC_SUBST([DPDK_PKG])
 ])
 
+m4_ifndef([PKG_CHECK_MODULES_STATIC],
+[m4_define([PKG_CHECK_MODULES_STATIC],
+[AC_REQUIRE([PKG_PROG_PKG_CONFIG])dnl
+_save_PKG_CONFIG=$PKG_CONFIG
+PKG_CONFIG="$PKG_CONFIG --static"
+PKG_CHECK_MODULES($@)
+PKG_CONFIG=$_save_PKG_CONFIG[]dnl
+])])dnl PKG_CHECK_MODULES_STATIC
+
 # _ODP_DPDK_PKGCONFIG
 # -----------------------------------------------------------------------
 # Configure DPDK using pkg-config information
