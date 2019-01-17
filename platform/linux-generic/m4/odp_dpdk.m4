@@ -40,6 +40,7 @@ then
       ;;
     esac
 
+    ODP_CHECK_CFLAG([-Wno-error=cast-align])
     AC_DEFINE([ODP_PKTIO_DPDK], [1],
 	      [Define to 1 to enable DPDK packet I/O support])
     AC_DEFINE_UNQUOTED([ODP_DPDK_ZERO_COPY], [$zero_copy],
