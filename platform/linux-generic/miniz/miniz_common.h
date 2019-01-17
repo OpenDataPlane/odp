@@ -24,34 +24,11 @@ typedef int mz_bool;
 #define MZ_MACRO_END while (0)
 #endif
 
-#ifdef MINIZ_NO_STDIO
-#define MZ_FILE void *
-#else
-#include <stdio.h>
-#define MZ_FILE FILE
-#endif /* #ifdef MINIZ_NO_STDIO */
-
-#ifdef MINIZ_NO_TIME
-typedef struct mz_dummy_time_t_tag
-{
-    int m_dummy;
-} mz_dummy_time_t;
-#define MZ_TIME_T mz_dummy_time_t
-#else
-#define MZ_TIME_T time_t
-#endif
-
 #define MZ_ASSERT(x) assert(x)
 
-#ifdef MINIZ_NO_MALLOC
 #define MZ_MALLOC(x) NULL
 #define MZ_FREE(x) (void)x, ((void)0)
 #define MZ_REALLOC(p, x) NULL
-#else
-#define MZ_MALLOC(x) malloc(x)
-#define MZ_FREE(x) free(x)
-#define MZ_REALLOC(p, x) realloc(p, x)
-#endif
 
 #define MZ_MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MZ_MIN(a, b) (((a) < (b)) ? (a) : (b))

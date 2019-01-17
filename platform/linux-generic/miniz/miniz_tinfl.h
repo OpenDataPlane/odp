@@ -1,4 +1,5 @@
 #pragma once
+#include "miniz.h"
 #include "miniz_common.h"
 /* ------------------- Low-level Decompression API Definitions */
 
@@ -40,13 +41,6 @@ int tinfl_decompress_mem_to_callback(const void *pIn_buf, size_t *pIn_buf_size, 
 
 struct tinfl_decompressor_tag;
 typedef struct tinfl_decompressor_tag tinfl_decompressor;
-
-/* Allocate the tinfl_decompressor structure in C so that */
-/* non-C language bindings to tinfl_ API don't need to worry about */
-/* structure size and allocation mechanism. */
-
-tinfl_decompressor *tinfl_decompressor_alloc();
-void tinfl_decompressor_free(tinfl_decompressor *pDecomp);
 
 /* Max size of LZ dictionary. */
 #define TINFL_LZ_DICT_SIZE 32768
@@ -137,6 +131,15 @@ struct tinfl_decompressor_tag
     tinfl_huff_table m_tables[TINFL_MAX_HUFF_TABLES];
     mz_uint8 m_raw_header[4], m_len_codes[TINFL_MAX_HUFF_SYMBOLS_0 + TINFL_MAX_HUFF_SYMBOLS_1 + 137];
 };
+
+typedef struct
+{
+    tinfl_decompressor m_decomp;
+    mz_uint m_dict_ofs, m_dict_avail, m_first_call, m_has_flushed;
+    int m_window_bits;
+    mz_uint8 m_dict[TINFL_LZ_DICT_SIZE];
+    tinfl_status m_last_status;
+} inflate_state;
 
 #ifdef __cplusplus
 }
