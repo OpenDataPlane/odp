@@ -11,9 +11,9 @@ AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/@ARCH_DIR@
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/default
 
 AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
-AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
 AM_CPPFLAGS +=  $(NETMAP_CPPFLAGS)
 
+AM_CFLAGS +=  $(DPDK_CFLAGS)
 AM_CFLAGS +=  $(LIBCONFIG_CFLAGS)
 
 DISTCLEANFILES = include/odp_libconfig_config.h

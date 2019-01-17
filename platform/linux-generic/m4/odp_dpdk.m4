@@ -36,7 +36,7 @@ then
 
     case "${host}" in
       i?86* | x86*)
-	DPDK_CPPFLAGS="${DPDK_CPPFLAGS} -msse4.2"
+	DPDK_CFLAGS="${DPDK_CFLAGS} -msse4.2"
       ;;
     esac
 
