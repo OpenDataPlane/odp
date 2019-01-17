@@ -4,6 +4,7 @@
 # Updated DPDK_LIBS to include dependencies.
 AC_DEFUN([ODP_DPDK_PMDS], [dnl
 AS_VAR_SET([DPDK_PMDS], ["-Wl,--whole-archive,"])
+AC_MSG_NOTICE([Looking for DPDK PMDs at $1])
 for filename in "$1"/librte_pmd_*.a; do
 cur_driver=`basename "$filename" .a | sed -e 's/^lib//'`
 
@@ -117,9 +118,9 @@ AS_IF([test "x$DPDK_LIBS" = "x"],
       [dpdk_check_ok=no])
 AS_IF([test "x$dpdk_check_ok" != "xno"],
       [_ODP_DPDK_SET_LIBS
-       AC_SUBST([DPDK_CPPFLAGS])
-       m4_default([$3], [:])],
-      [m4_default([$4], [:])])
+       AC_SUBST([DPDK_CFLAGS])
+       $3],
+      [$4])
 
 ##########################################################################
 # Restore old saved variables
@@ -127,12 +128,11 @@ AS_IF([test "x$dpdk_check_ok" != "xno"],
 CPPFLAGS=$OLD_CPPFLAGS
 ])
 
-# ODP_DPDK(DPDK_PATH, [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])
-# -----------------------------------------------------------------------
-# Check for DPDK availability
-AC_DEFUN([ODP_DPDK], [dnl
-AS_IF([test "x$1" = "xsystem"], [dnl
-    DPDK_CPPFLAGS="-isystem /usr/include/dpdk"
+# _ODP_DPDK_LEGACY_SYSTEM(ACTION-IF-FOUND, ACTION-IF-NOT-FOUND)
+# ------------------------------------------------------------------------
+# Locate DPDK installation
+AC_DEFUN([_ODP_DPDK_LEGACY_SYSTEM], [dnl
+    DPDK_CFLAGS="-isystem /usr/include/dpdk"
     DPDK_LDFLAGS=""
     DPDK_LIB_PATH="`$CC $CFLAGS $LDFLAGS --print-file-name=libdpdk.so`"
     if test "$DPDK_LIB_PATH" = "libdpdk.so" ; then
@@ -143,21 +143,63 @@ AS_IF([test "x$1" = "xsystem"], [dnl
 	DPDK_SHARED=yes
     fi
     DPDK_LIB_PATH=`AS_DIRNAME(["$DPDK_LIB_PATH"])`
-], [dnl
-    DPDK_CPPFLAGS="-isystem $1/include/dpdk"
+    DPDK_PMD_PATH="$DPDK_LIB_PATH"
+    AS_IF([test "x$DPDK_SHARED" = "xyes"],
+	    [AC_MSG_NOTICE([Using shared DPDK library found at $DPDK_LIB_PATH])],
+	    [AC_MSG_NOTICE([Using static DPDK library found at $DPDK_LIB_PATH])])
+    _ODP_DPDK_CHECK([$DPDK_CFLAGS], [$DPDK_LDFLAGS], [$1], [$2])
+    DPDK_PKG=""
+    AC_SUBST([DPDK_PKG])
+])
+
+# _ODP_DPDK_LEGACY(PATH, ACTION-IF-FOUND, ACTION-IF-NOT-FOUND)
+# ------------------------------------------------------------------------
+# Locate DPDK installation
+AC_DEFUN([_ODP_DPDK_LEGACY], [dnl
+    DPDK_CFLAGS="-isystem $1/include/dpdk"
     DPDK_LIB_PATH="$1/lib"
     DPDK_LDFLAGS="-L$DPDK_LIB_PATH"
-    if test -r "$DPDK_LIB_PATH"/libdpdk.so ; then
+    AS_IF([test -r "$DPDK_LIB_PATH"/libdpdk.so], [dnl
 	DPDK_RPATH="-Wl,-rpath,$DPDK_LIB_PATH"
 	DPDK_RPATH_LT="-R$DPDK_LIB_PATH"
-	DPDK_SHARED=yes
-    elif test ! -r "$DPDK_LIB_PATH"/libdpdk.a ; then
-        AC_MSG_FAILURE([Could not find DPDK])
-    fi
+	DPDK_SHARED=yes],
+	[test ! -r "$DPDK_LIB_PATH"/libdpdk.a], [dnl
+        AC_MSG_FAILURE([Could not find DPDK])])
+    DPDK_PMD_PATH="$DPDK_LIB_PATH"
+    AS_IF([test "x$DPDK_SHARED" = "xyes"],
+	    [AC_MSG_NOTICE([Using shared DPDK library found at $DPDK_LIB_PATH])],
+	    [AC_MSG_NOTICE([Using static DPDK library found at $DPDK_LIB_PATH])])
+    _ODP_DPDK_CHECK([$DPDK_CFLAGS], [$DPDK_LDFLAGS], [$2], [$3])
+    DPDK_PKG=""
+    AC_SUBST([DPDK_PKG])
 ])
-DPDK_PMD_PATH="$DPDK_LIB_PATH"
-AS_IF([test "x$DPDK_SHARED" = "xyes"],
-      [AC_MSG_NOTICE([Using shared DPDK library found at $DPDK_LIB_PATH])],
-      [AC_MSG_NOTICE([Using static DPDK library found at $DPDK_LIB_PATH])])
-_ODP_DPDK_CHECK([$DPDK_CPPFLAGS], [$DPDK_LDFLAGS], [$2], [$3])
+
+# _ODP_DPDK_PKGCONFIG
+# -----------------------------------------------------------------------
+# Configure DPDK using pkg-config information
+AC_DEFUN([_ODP_DPDK_PKGCONFIG], [dnl
+PKG_CHECK_MODULES_STATIC([DPDK_STATIC], [libdpdk])
+DPDK_PKG=", libdpdk"
+AC_SUBST([DPDK_PKG])
+# applications don't need to be linked to anything, just rpath
+DPDK_LIBS_LT=""
+# compile all static flags into single argument to fool libtool
+DPDK_LIBS_LT_STATIC="-pthread -Wl,`echo $DPDK_STATIC_LIBS | sed -e 's/-pthread//g' -e 's/ \+/,/g' -e 's/-Wl,//g'`"
+# FIXME: this might need to be changed to DPDK_LIBS_STATIC
+DPDK_LIBS_LIBODP="$DPDK_LIBS"
+DPDK_LIBS=""
 ])
+
+# ODP_DPDK(DPDK_PATH, [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])
+# -----------------------------------------------------------------------
+# Check for DPDK availability
+AC_DEFUN([ODP_DPDK], [dnl
+AS_IF([test "x$1" = "xsystem"],
+      [PKG_CHECK_MODULES([DPDK], [libdpdk],
+			 [AC_MSG_NOTICE([Using DPDK detected via pkg-config])
+			 _ODP_DPDK_PKGCONFIG
+			 m4_default([$2], [:])],
+			 [_ODP_DPDK_LEGACY_SYSTEM([m4_default([$2], [:])],
+						  [m4_default([$3], [:])])])],
+      [_ODP_DPDK_LEGACY($1, [m4_default([$2], [:])], [m4_default([$3], [:])])]
+      )])
