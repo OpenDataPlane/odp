@@ -1,4 +1,5 @@
 #pragma once
+#include "miniz.h"
 #include "miniz_common.h"
 
 #ifdef __cplusplus
@@ -176,12 +177,6 @@ mz_uint32 tdefl_get_adler32(tdefl_compressor *d);
 /* window_bits may be -15 (raw deflate) or 15 (zlib) */
 /* strategy may be either MZ_DEFAULT_STRATEGY, MZ_FILTERED, MZ_HUFFMAN_ONLY, MZ_RLE, or MZ_FIXED */
 mz_uint tdefl_create_comp_flags_from_zip_params(int level, int window_bits, int strategy);
-
-/* Allocate the tdefl_compressor structure in C so that */
-/* non-C language bindings to tdefl_ API don't need to worry about */
-/* structure size and allocation mechanism. */
-tdefl_compressor *tdefl_compressor_alloc();
-void tdefl_compressor_free(tdefl_compressor *pComp);
 
 #ifdef __cplusplus
 }

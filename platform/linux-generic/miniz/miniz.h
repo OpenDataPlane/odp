@@ -112,49 +112,13 @@
 */
 #pragma once
 
-#include "miniz_common.h"
-#include "miniz_tdef.h"
-#include "miniz_tinfl.h"
-
 /* Defines to completely disable specific portions of miniz.c: 
    If all macros here are defined the only functionality remaining will be CRC-32, adler-32, tinfl, and tdefl. */
-
-/* Define MINIZ_NO_STDIO to disable all usage and any functions which rely on stdio for file I/O. */
-/*#define MINIZ_NO_STDIO */
-
-/* If MINIZ_NO_TIME is specified then the ZIP archive functions will not be able to get the current time, or */
-/* get/set file times, and the C run-time funcs that get/set times won't be called. */
-/* The current downside is the times written to your archives will be from 1979. */
-/*#define MINIZ_NO_TIME */
-
-/* Define MINIZ_NO_ARCHIVE_APIS to disable all ZIP archive API's. */
-/*#define MINIZ_NO_ARCHIVE_APIS */
-
-/* Define MINIZ_NO_ARCHIVE_WRITING_APIS to disable all writing related ZIP archive API's. */
-/*#define MINIZ_NO_ARCHIVE_WRITING_APIS */
 
 /* Define MINIZ_NO_ZLIB_APIS to remove all ZLIB-style compression/decompression API's. */
 /*#define MINIZ_NO_ZLIB_APIS */
 
-/* Define MINIZ_NO_ZLIB_COMPATIBLE_NAME to disable zlib names, to prevent conflicts against stock zlib. */
-/*#define MINIZ_NO_ZLIB_COMPATIBLE_NAMES */
-
-/* Define MINIZ_NO_MALLOC to disable all calls to malloc, free, and realloc. 
-   Note if MINIZ_NO_MALLOC is defined then the user must always provide custom user alloc/free/realloc
-   callbacks to the zlib and archive API's, and a few stand-alone helper API's which don't provide custom user
-   functions (such as tdefl_compress_mem_to_heap() and tinfl_decompress_mem_to_heap()) won't work. */
-/*#define MINIZ_NO_MALLOC */
-
-#if defined(__TINYC__) && (defined(__linux) || defined(__linux__))
-/* TODO: Work around "error: include file 'sys\utime.h' when compiling with tcc on Linux */
-#define MINIZ_NO_TIME
-#endif
-
 #include <stddef.h>
-
-#if !defined(MINIZ_NO_TIME) && !defined(MINIZ_NO_ARCHIVE_APIS)
-#include <time.h>
-#endif
 
 #if defined(_M_IX86) || defined(_M_X64) || defined(__i386__) || defined(__i386) || defined(__i486__) || defined(__i486) || defined(i386) || defined(__ia64__) || defined(__x86_64__)
 /* MINIZ_X86_OR_X64_CPU is only used to help set the below macros. */
@@ -178,12 +142,17 @@
 #define MINIZ_USE_UNALIGNED_LOADS_AND_STORES 0
 #endif
 
-#if defined(_M_X64) || defined(_WIN64) || defined(__MINGW64__) || defined(_LP64) || defined(__LP64__) || defined(__ia64__) || defined(__x86_64__)
+#if defined(_M_X64) || defined(_WIN64) || defined(__MINGW64__) || defined(_LP64) || defined(__LP64__) || defined(__ia64__) || defined(__x86_64__) || defined (__arch64__)
 /* Set MINIZ_HAS_64BIT_REGISTERS to 1 if operations on 64-bit integers are reasonably fast (and don't involve compiler generated calls to helper functions). */
 #define MINIZ_HAS_64BIT_REGISTERS 1
 #else
 #define MINIZ_HAS_64BIT_REGISTERS 0
 #endif
+
+#include "miniz_common.h"
+#include "miniz_tdef.h"
+#include "miniz_tinfl.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -390,82 +359,6 @@ int mz_uncompress(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char
 
 /* Returns a string description of the specified error code, or NULL if the error code is invalid. */
 const char *mz_error(int err);
-
-/* Redefine zlib-compatible names to miniz equivalents, so miniz.c can be used as a drop-in replacement for the subset of zlib that miniz.c supports. */
-/* Define MINIZ_NO_ZLIB_COMPATIBLE_NAMES to disable zlib-compatibility if you use zlib in the same project. */
-#ifndef MINIZ_NO_ZLIB_COMPATIBLE_NAMES
-typedef unsigned char Byte;
-typedef unsigned int uInt;
-typedef mz_ulong uLong;
-typedef Byte Bytef;
-typedef uInt uIntf;
-typedef char charf;
-typedef int intf;
-typedef void *voidpf;
-typedef uLong uLongf;
-typedef void *voidp;
-typedef void *const voidpc;
-#define Z_NULL 0
-#define Z_NO_FLUSH MZ_NO_FLUSH
-#define Z_PARTIAL_FLUSH MZ_PARTIAL_FLUSH
-#define Z_SYNC_FLUSH MZ_SYNC_FLUSH
-#define Z_FULL_FLUSH MZ_FULL_FLUSH
-#define Z_FINISH MZ_FINISH
-#define Z_BLOCK MZ_BLOCK
-#define Z_OK MZ_OK
-#define Z_STREAM_END MZ_STREAM_END
-#define Z_NEED_DICT MZ_NEED_DICT
-#define Z_ERRNO MZ_ERRNO
-#define Z_STREAM_ERROR MZ_STREAM_ERROR
-#define Z_DATA_ERROR MZ_DATA_ERROR
-#define Z_MEM_ERROR MZ_MEM_ERROR
-#define Z_BUF_ERROR MZ_BUF_ERROR
-#define Z_VERSION_ERROR MZ_VERSION_ERROR
-#define Z_PARAM_ERROR MZ_PARAM_ERROR
-#define Z_NO_COMPRESSION MZ_NO_COMPRESSION
-#define Z_BEST_SPEED MZ_BEST_SPEED
-#define Z_BEST_COMPRESSION MZ_BEST_COMPRESSION
-#define Z_DEFAULT_COMPRESSION MZ_DEFAULT_COMPRESSION
-#define Z_DEFAULT_STRATEGY MZ_DEFAULT_STRATEGY
-#define Z_FILTERED MZ_FILTERED
-#define Z_HUFFMAN_ONLY MZ_HUFFMAN_ONLY
-#define Z_RLE MZ_RLE
-#define Z_FIXED MZ_FIXED
-#define Z_DEFLATED MZ_DEFLATED
-#define Z_DEFAULT_WINDOW_BITS MZ_DEFAULT_WINDOW_BITS
-#define alloc_func mz_alloc_func
-#define free_func mz_free_func
-#define internal_state mz_internal_state
-#define z_stream mz_stream
-#define deflateInit mz_deflateInit
-#define deflateInit2 mz_deflateInit2
-#define deflateReset mz_deflateReset
-#define deflate mz_deflate
-#define deflateEnd mz_deflateEnd
-#define deflateBound mz_deflateBound
-#define compress mz_compress
-#define compress2 mz_compress2
-#define compressBound mz_compressBound
-#define inflateInit mz_inflateInit
-#define inflateInit2 mz_inflateInit2
-#define inflateReset mz_inflateReset
-#define inflate mz_inflate
-#define inflateEnd mz_inflateEnd
-#define uncompress mz_uncompress
-#define crc32 mz_crc32
-#define adler32 mz_adler32
-#define MAX_WBITS 15
-#define MAX_MEM_LEVEL 9
-#define zError mz_error
-#define ZLIB_VERSION MZ_VERSION
-#define ZLIB_VERNUM MZ_VERNUM
-#define ZLIB_VER_MAJOR MZ_VER_MAJOR
-#define ZLIB_VER_MINOR MZ_VER_MINOR
-#define ZLIB_VER_REVISION MZ_VER_REVISION
-#define ZLIB_VER_SUBREVISION MZ_VER_SUBREVISION
-#define zlibVersion mz_version
-#define zlib_version mz_version()
-#endif /* #ifndef MINIZ_NO_ZLIB_COMPATIBLE_NAMES */
 
 #endif /* MINIZ_NO_ZLIB_APIS */
 
