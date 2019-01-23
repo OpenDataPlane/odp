@@ -1,3 +1,105 @@
+== OpenDataPlane (1.21.0.0)
+=== Summary of Changes
+ODP v1.21.0.0 adds two new API families as well as several small improvements.
+
+==== APIs
+===== Compression Support
+A new family of APIs is added that provides for session-oriented support for
+packet data compression and decompression. Compression sessions define the
+parameters used to control compression operations and their associated
+integrity hashes.  Once created, sessions are input parameters to the new
+`odp_comp_op()` and `odp_comp_op_enq()` APIs that provide access to
+synchronous and asynchronous compression services on packets.
+
+Associated with the completion of asynchronous compression operations, a new
+packet subtype, `ODP_EVENT_PACKET_COMP` is defined. This subtype indicates
+that the packet includes additional metadata (retrievable via
+`odp_comp_result()`) that provides the result of the requested operation.
+
+A number of different compression and associated hash algorithms are defined,
+which are communicated with three new capability APIs:
+
+`odp_comp_capability()`::
+Provides information about general compression related capabilities
+offered by this implementation
+
+`odp_comp_alg_capability()`::
+Provides details about the capabilities of individual compression algorithms
+supported.
+
+`odp_comp_hash_alg_capability()`::
+Provides details about the capabilities of individual hash algorithms
+supported for use with compression.
+
+===== Flow Aware Scheduler Support
+A new capability for flow aware scheduling is added. As part of this, the
+scheduler now supports capabilities and configurability. As a result, the
+initialization sequence for applications that make use of the ODP scheduler
+has changed slightly. The new API call sequence is:
+[source,c]
+-----
+odp_schedule_capability()
+odp_schedule_config_init()
+odp_schedule_config()
+odp_schedule()
+-----
+It is a programming error to call `odp_schedule()` (or its variants) without
+having first initialized the scheduler with an `odp_schedule_config()` call.
+This call may only be issued once per ODP instance as scheduler configuration
+is global.
+
+By default the scheduler operates as before. When configured to operate in
+flow aware mode, the scheduler will now respect event flow ids (managed by the
+new `odp_event_flow_id()` and `odp_event_flow_id_set()` APIs) when making
+scheduling decisions. This means that flow identification is a combination of
+event flow id and queue id. For example, when operating in flow aware mode the
+scheduler may dispatch events from an atomic queue to multiple threads
+concurrently, as long as those events have different flow ids. For
+applications that process large numbers of lightweight flows that have limited
+context needs, this can lead to throughput improvements as well as reduced
+implementation memory footprint.
+
+==== DPDK v18.11 Support
+The latest LTS release of DPDK (v18.11) is now supported by ODP. Support for
+the previous LTS release (v17.11) is retained. Prior versions of DPDK are
+no longer supported.
+
+==== Queue Capabilities Moved to Scheduler
+As part of the introduction of flow-aware scheduling, capabilities associated
+with `SCHED` queues have been moved from the `odp_queue_capabilities_t` struct
+returned by `odp_queue_capabilities()` to the new `odp_sched_capabilities_t`
+struct returned by `odp_sched_capabilities()`.
+
+Capabilities moved include `max_ordered_locks`, `max_sched_groups`, and
+`sched_prios`. The `max_sched_groups` capability is renamed `max_groups`. In
+addition, `max_queues`, `max_queue_size`, and the support capabilities for
+lock free and wait free non blocking queues is now part of the scheduler
+capabilities.
+
+In support of flow aware scheduling mode, the `max_flows` scheduler capability
+is renamed `max_flow_id`. A value of 0 indicates that flow aware mode
+scheduling is not available in this ODP implementation.
+
+=== Test/Validation Improvements
+==== Travis readability improvement
+The "BUILD_ONLY` environment variable has been renamed `CHECK` for improved
+output readability.
+
+==== Flow aware scheduler testing
+As part of flow aware mode, scheduler validation tests will now test this mode
+if `odp_schedule_capability()` indicates that flow-aware mode is supported.
+
+=== Bug Fixes
+==== Unnumbered Bugs/Issues
+
+* Latest version of netmap `nm_ring_empty()` implementation has changed.
+PktIO netmap support updated to support this as well as previous releases.
+
+* Improved compatibility of PktIO socket support with latest versions
+of the clang compiler.
+
+* Add match pattern for missing DPDK PMD drivers for improved compatibility.
+
 == OpenDataPlane (1.20.0.0)
 === Summary of Changes
 ODP v1.20.0.0 is a refresh of ODP, incorporating significant configurability
