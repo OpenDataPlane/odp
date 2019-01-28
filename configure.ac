@@ -3,7 +3,7 @@ AC_PREREQ([2.5])
 # Set correct API version
 ##########################################################################
 m4_define([odpapi_generation_version], [1])
-m4_define([odpapi_major_version], [20])
+m4_define([odpapi_major_version], [21])
 m4_define([odpapi_minor_version], [0])
 m4_define([odpapi_point_version], [0])
 m4_define([odpapi_version],
