@@ -9,7 +9,7 @@
 
 #
 # Travis uses Docker images which mainained here:
-# 	https://github.com/Linaro/odp-docker-images
+# 	https://github.com/OpenDataPlane/odp-docker-images
 # CI scirpts are maintained under ./scripts/ci/ directory
 # which passed into container during the test run.
 

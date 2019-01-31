@@ -75,7 +75,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ make install
 
    # You may now build either 32 or 64 bit ODP
-   $ git clone https://github.com/Linaro/odp.git odp
+   $ git clone https://github.com/OpenDataPlane/odp.git odp
    $ cd odp
    $ ./bootstrap
 
@@ -174,7 +174,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    v18.02, v18.05 and v18.11.
 
    Note: only packet I/O is accelerated with DPDK. Use
-        https://github.com/Linaro/odp-dpdk.git
+        https://github.com/OpenDataPlane/odp-dpdk.git
    for fully accelerated odp dpdk platform.
 
 3.4.1 DPDK pktio requirements
