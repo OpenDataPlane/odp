@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -1224,10 +1223,18 @@ int odp_pktio_link_status(odp_pktio_t pktio);
  * Packet IO information
  */
 typedef struct odp_pktio_info_t {
-	const char       *name;  /**< Packet IO device name */
-	const char       *drv_name; /**< Packet IO driver name (implementation specific) */
-	odp_pool_t        pool;  /**< Packet pool */
-	odp_pktio_param_t param; /**< Packet IO parameters */
+	/** Packet IO device name */
+	const char       *name;
+
+	/** Packet IO driver name (implementation specific) */
+	const char       *drv_name;
+
+	/** Packet pool */
+	odp_pool_t        pool;
+
+	/** Packet IO parameters */
+	odp_pktio_param_t param;
+
 } odp_pktio_info_t;
 
 /**

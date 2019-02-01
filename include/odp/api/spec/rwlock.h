@@ -36,7 +36,6 @@ extern "C" {
  * ODP reader/writer lock
  */
 
-
 /**
  * Initialize a reader/writer lock.
  *

@@ -56,8 +56,8 @@ typedef struct odp_pktio_stats_t {
 	uint64_t in_discards;
 
 	/**
-	 * The sum for this interface of AlignmentErrors, FCSErrors, FrameTooLongs,
-	 * InternalMacReceiveErrors. See ifInErrors in RFC 3635.
+	 * The sum for this interface of AlignmentErrors, FCSErrors,
+	 * FrameTooLongs, InternalMacReceiveErrors. See ifInErrors in RFC 3635.
 	 */
 	uint64_t in_errors;
 

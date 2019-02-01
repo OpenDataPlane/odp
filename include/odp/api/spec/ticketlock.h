@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -44,7 +43,6 @@ extern "C" {
  */
 void odp_ticketlock_init(odp_ticketlock_t *tklock);
 
-
 /**
  * Acquire ticket lock.
  *
@@ -68,7 +66,6 @@ int odp_ticketlock_trylock(odp_ticketlock_t *tklock);
  * @param tklock Pointer to a ticket lock
  */
 void odp_ticketlock_unlock(odp_ticketlock_t *tklock);
-
 
 /**
  * Check if ticket lock is locked.

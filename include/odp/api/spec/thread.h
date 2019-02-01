@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -72,7 +71,6 @@ int odp_thread_count_max(void);
  * @return Thread type
  */
 odp_thread_type_t odp_thread_type(void);
-
 
 /**
  * @}
