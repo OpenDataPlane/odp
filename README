@@ -1,51 +1,54 @@
-Copyright (c) 2013-2018, Linaro Limited
+Copyright (c) 2013-2019, Linaro Limited
 All rights reserved.
 
 SPDX-License-Identifier:        BSD-3-Clause
 
-OpenDataPlane (ODP) project source code.
-    http://www.opendataplane.org/
+OpenDataPlane (ODP) project web page:
+    http://www.opendataplane.org
+
+ODP project in GitHub:
+    https://github.com/OpenDataPlane
 
 Main git repository:
-    https://github.com/Linaro/odp.git
+    https://github.com/OpenDataPlane/odp.git
 
-    How to build:
-    Look in platform/linux-*/README for more detail how to build.
-    Directory test contains test applications for ODP API calls and features support.
+How to build:
+    See DEPENDENCIES file about system requirements and dependencies to external
+    libraries/packages. It contains also some more detailed build instructions.
 
-    For a list of build dependencies, read DEPENDENCIES.
-    In general you can build:
-    ./bootstrap
-    ./configure
-    Use 'make' to build ODP library and samples and 'make doxygen-doc' to build
-    ODP API documentation. 'make install' will copy all required headers and
-    binary files to the install directory.
-
-    Configure options:
-        ./configure --help
-
-    To execute all the testcases, assuming CUnit is installed for the validation tests:
+    Generally, ODP and test applications are built with these three steps:
         ./bootstrap
         ./configure
+        make
+
+    See help on configure options:
+        ./configure --help
+
+    ODP header files and libraries can be installed with:
+        make install
+
+    ODP API documentation can be built with (requires Doxygen):
+        make doxygen-doc
+
+    Validation tests (requires CUnit) and other test applications can be
+    executed with:
         make check
 
-    To generate the users guides:
+    Users guides can be generated with:
         ./bootstrap
         ./configure --enable-user-guides
         make
 
-Patches tracking system:
-    Patchwork:
-      http://patches.opendataplane.org/project/lng-odp/list/
-    Github pull requests:
-      https://github.com/Linaro/odp/pulls
+Licensing:
+    ODP project uses BSD-3-Clause license as the default license. See LICENSE
+    file for details.
 
 Mailing list:
     lng-odp@lists.linaro.org
 
-    Please read CONTRIBUTING file before submitting patches.
-    Email prefixes:
-        [PATCH] means patch is for odp.git
+Contributing:
+    Please read CONTRIBUTING file before submitting patches. ODP project follows
+    Linux kernel coding style.
 
 Bug tracking:
-    https://bugs.linaro.org/describecomponents.cgi?product=OpenDataPlane%20-%20linux-%20generic%20reference
+    https://github.com/OpenDataPlane/odp/issues
