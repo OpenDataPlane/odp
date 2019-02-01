@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -232,7 +231,6 @@ void odp_init_param_init(odp_init_t *param);
  * passing any required platform specific data.
  */
 
-
 /**
  * Global ODP initialization
  *
@@ -288,7 +286,7 @@ int odp_init_global(odp_instance_t *instance,
  * @retval <0 on failure
  *
  * @warning The unwinding of HW resources to allow them to be reused without
- * reseting the device is a complex task that the application is expected to
+ * resetting the device is a complex task that the application is expected to
  * coordinate. This api may have platform dependent implications.
  *
  * @see odp_init_global()
@@ -328,7 +326,7 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type);
  * @retval <0 on failure
  *
  * @warning The unwinding of HW resources to allow them to be reused without
- * reseting the device is a complex task that the application is expected
+ * resetting the device is a complex task that the application is expected
  * to coordinate.
  *
  * @see odp_init_local()

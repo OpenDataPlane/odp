@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -24,7 +23,6 @@ extern "C" {
 /** @defgroup odp_cpu ODP CPU
  *  @{
  */
-
 
 /**
  * CPU identifier

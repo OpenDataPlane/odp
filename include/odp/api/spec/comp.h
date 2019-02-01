@@ -197,7 +197,6 @@ typedef struct odp_comp_hash_alg_capability_t {
  * Compression algorithm capabilities
  */
 typedef struct odp_comp_alg_capability_t {
-
 	/** Maximum compression level supported by implementation of this
 	 * algorithm. Indicates number of compression levels supported by
 	 * implementation. Valid range from (1 ... max_level)
@@ -248,10 +247,10 @@ typedef struct odp_comp_deflate_param {
 	 * level supported by the implementation.
 	 *
 	 * where,
-	 * 0 - implemention default
+	 * 0 - implementation default
 	 *
- 	 * 1 - fastest compression i.e. output produced at
- 	 * best possible speed at the expense of compression quality
+	 * 1 - fastest compression i.e. output produced at
+	 * best possible speed at the expense of compression quality
 	 *
 	 * max_level - High quality compression
 	 *
@@ -456,12 +455,12 @@ int odp_comp_session_destroy(odp_comp_session_t session);
 /**
  * Synchronous packet compression operation
  *
- * This operation does packet compression in synchronous mode. A successful operation
- * returns the number of successfully processed input packets and updates the
- * results in the corresponding output packets. Outputted packets contain
- * compression results metadata (odp_comp_packet_result_t), which should be
- * checked for operation status. Length of outputted data can be got from
- * output_data_range.len.
+ * This operation does packet compression in synchronous mode. A successful
+ * operation returns the number of successfully processed input packets and
+ * updates the results in the corresponding output packets. Outputted packets
+ * contain compression results metadata (odp_comp_packet_result_t), which
+ * should be checked for operation status. Length of outputted data can be got
+ * from output_data_range.len.
  *
  * When hashing is configured along with compression operation the
  * result is appended at the end of the output data, output_data_range.len
