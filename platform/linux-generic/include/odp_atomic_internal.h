@@ -85,7 +85,7 @@ typedef enum {
  * @return Value of the variable
  */
 static inline uint32_t _odp_atomic_u32_load_mm(const odp_atomic_u32_t *atom,
-		_odp_memmodel_t mmodel)
+					       _odp_memmodel_t mmodel)
 {
 	return __atomic_load_n(&atom->v, mmodel);
 }
@@ -98,8 +98,8 @@ static inline uint32_t _odp_atomic_u32_load_mm(const odp_atomic_u32_t *atom,
  * @param mmodel Memory order associated with the store operation
  */
 static inline void _odp_atomic_u32_store_mm(odp_atomic_u32_t *atom,
-		uint32_t val,
-		_odp_memmodel_t mmodel)
+					    uint32_t val,
+					    _odp_memmodel_t mmodel)
 {
 	__atomic_store_n(&atom->v, val, mmodel);
 }
@@ -114,8 +114,8 @@ static inline void _odp_atomic_u32_store_mm(odp_atomic_u32_t *atom,
  * @return Old value of the variable
  */
 static inline uint32_t _odp_atomic_u32_xchg_mm(odp_atomic_u32_t *atom,
-		uint32_t val,
-		_odp_memmodel_t mmodel)
+					       uint32_t val,
+					       _odp_memmodel_t mmodel)
 
 {
 	return __atomic_exchange_n(&atom->v, val, mmodel);
@@ -136,12 +136,11 @@ static inline uint32_t _odp_atomic_u32_xchg_mm(odp_atomic_u32_t *atom,
  * @retval 1 exchange successul
  * @retval 0 exchange failed and '*exp' updated with current value
  */
-static inline int _odp_atomic_u32_cmp_xchg_strong_mm(
-		odp_atomic_u32_t *atom,
-		uint32_t *exp,
-		uint32_t val,
-		_odp_memmodel_t success,
-		_odp_memmodel_t failure)
+static inline int _odp_atomic_u32_cmp_xchg_strong_mm(odp_atomic_u32_t *atom,
+						     uint32_t *exp,
+						     uint32_t val,
+						     _odp_memmodel_t success,
+						     _odp_memmodel_t failure)
 {
 	return __atomic_compare_exchange_n(&atom->v, exp, val,
 			false/*strong*/, success, failure);
@@ -157,8 +156,8 @@ static inline int _odp_atomic_u32_cmp_xchg_strong_mm(
  * @return Value of the atomic variable before the addition
  */
 static inline uint32_t _odp_atomic_u32_fetch_add_mm(odp_atomic_u32_t *atom,
-		uint32_t val,
-		_odp_memmodel_t mmodel)
+						    uint32_t val,
+						    _odp_memmodel_t mmodel)
 {
 	return __atomic_fetch_add(&atom->v, val, mmodel);
 }
@@ -170,9 +169,8 @@ static inline uint32_t _odp_atomic_u32_fetch_add_mm(odp_atomic_u32_t *atom,
  * @param val Value to add to the atomic variable
  * @param mmodel Memory order associated with the add operation
  */
-static inline void _odp_atomic_u32_add_mm(odp_atomic_u32_t *atom,
-		uint32_t val,
-		_odp_memmodel_t mmodel)
+static inline void _odp_atomic_u32_add_mm(odp_atomic_u32_t *atom, uint32_t val,
+					  _odp_memmodel_t mmodel)
 
 {
 	(void)__atomic_fetch_add(&atom->v, val, mmodel);
@@ -188,8 +186,8 @@ static inline void _odp_atomic_u32_add_mm(odp_atomic_u32_t *atom,
  * @return Value of the atomic variable before the subtraction
  */
 static inline uint32_t _odp_atomic_u32_fetch_sub_mm(odp_atomic_u32_t *atom,
-		uint32_t val,
-		_odp_memmodel_t mmodel)
+						    uint32_t val,
+						    _odp_memmodel_t mmodel)
 {
 	return __atomic_fetch_sub(&atom->v, val, mmodel);
 }
@@ -201,9 +199,8 @@ static inline uint32_t _odp_atomic_u32_fetch_sub_mm(odp_atomic_u32_t *atom,
  * @param val Value to subtract from the atomic variable
  * @param mmodel Memory order associated with the subtract operation
  */
-static inline void _odp_atomic_u32_sub_mm(odp_atomic_u32_t *atom,
-		uint32_t val,
-		_odp_memmodel_t mmodel)
+static inline void _odp_atomic_u32_sub_mm(odp_atomic_u32_t *atom, uint32_t val,
+					  _odp_memmodel_t mmodel)
 
 {
 	(void)__atomic_fetch_sub(&atom->v, val, mmodel);
@@ -233,18 +230,18 @@ static inline void _odp_atomic_u32_sub_mm(odp_atomic_u32_t *atom,
  */
 #define ATOMIC_OP_MM(atom, expr, mm) \
 ({ \
-	 uint64_t old_val; \
-	 /* Loop while lock is already taken, stop when lock becomes clear */ \
-	 while (__atomic_test_and_set(&(atom)->lock, \
-		(mm) == _ODP_MEMMODEL_SC ? \
-		__ATOMIC_SEQ_CST : __ATOMIC_ACQUIRE)) \
+	uint64_t old_val; \
+	/* Loop while lock is already taken, stop when lock becomes clear */ \
+	while (__atomic_test_and_set(&(atom)->lock, \
+				     (mm) == _ODP_MEMMODEL_SC ? \
+					__ATOMIC_SEQ_CST : __ATOMIC_ACQUIRE)) \
 		(void)0; \
-	 old_val = (atom)->v; \
-	 (expr); /* Perform whatever update is desired */ \
-	 __atomic_clear(&(atom)->lock, \
-		 (mm) == _ODP_MEMMODEL_SC ? \
-		 __ATOMIC_SEQ_CST : __ATOMIC_RELEASE); \
-	 old_val; /* Return old value */ \
+	old_val = (atom)->v; \
+	(expr); /* Perform whatever update is desired */ \
+	__atomic_clear(&(atom)->lock, \
+		(mm) == _ODP_MEMMODEL_SC ? \
+		__ATOMIC_SEQ_CST : __ATOMIC_RELEASE); \
+	old_val; /* Return old value */ \
 })
 
 /**
@@ -317,8 +314,8 @@ static inline int _odp_atomic_u64_cmp_xchg_strong_mm(odp_atomic_u64_t *atom,
 	odp_bool_t ret_succ;
 	/* Loop while lock is already taken, stop when lock becomes clear */
 	while (__atomic_test_and_set(&(atom)->lock,
-		(success) == _ODP_MEMMODEL_SC ?
-		__ATOMIC_SEQ_CST : __ATOMIC_ACQUIRE))
+				     (success) == _ODP_MEMMODEL_SC ?
+					__ATOMIC_SEQ_CST : __ATOMIC_ACQUIRE))
 		(void)0;
 	if (atom->v == *exp) {
 		atom->v = val;
@@ -561,7 +558,7 @@ static inline void _odp_atomic_ptr_init(_odp_atomic_ptr_t *atom, void *val)
  * @return Value of the variable
  */
 static inline void *_odp_atomic_ptr_load(const _odp_atomic_ptr_t *atom,
-		_odp_memmodel_t mmodel)
+					 _odp_memmodel_t mmodel)
 {
 	return __atomic_load_n(&atom->v, mmodel);
 }
@@ -573,9 +570,8 @@ static inline void *_odp_atomic_ptr_load(const _odp_atomic_ptr_t *atom,
  * @param val  Value to write to the atomic variable
  * @param mmodel Memory order associated with the store operation
  */
-static inline void _odp_atomic_ptr_store(_odp_atomic_ptr_t *atom,
-		void *val,
-		_odp_memmodel_t mmodel)
+static inline void _odp_atomic_ptr_store(_odp_atomic_ptr_t *atom, void *val,
+					 _odp_memmodel_t mmodel)
 {
 	__atomic_store_n(&atom->v, val, mmodel);
 }
@@ -589,9 +585,8 @@ static inline void _odp_atomic_ptr_store(_odp_atomic_ptr_t *atom,
  *
  * @return Old value of variable
  */
-static inline void *_odp_atomic_ptr_xchg(_odp_atomic_ptr_t *atom,
-		void *val,
-		_odp_memmodel_t mmodel)
+static inline void *_odp_atomic_ptr_xchg(_odp_atomic_ptr_t *atom, void *val,
+					 _odp_memmodel_t mmodel)
 {
 	return __atomic_exchange_n(&atom->v, val, mmodel);
 }
@@ -611,12 +606,10 @@ static inline void *_odp_atomic_ptr_xchg(_odp_atomic_ptr_t *atom,
  * @retval 1 exchange successful
  * @retval 0 exchange failed and '*exp' updated with current value
  */
-static inline int _odp_atomic_ptr_cmp_xchg_strong(
-		_odp_atomic_ptr_t *atom,
-		void **exp,
-		void *val,
-		_odp_memmodel_t success,
-		_odp_memmodel_t failure)
+static inline int _odp_atomic_ptr_cmp_xchg_strong(_odp_atomic_ptr_t *atom,
+						  void **exp, void *val,
+						  _odp_memmodel_t success,
+						  _odp_memmodel_t failure)
 {
 	return __atomic_compare_exchange_n(&atom->v, exp, val,
 			false/*strong*/, success, failure);
@@ -640,7 +633,7 @@ static inline int _odp_atomic_ptr_cmp_xchg_strong(
  * @param val The initial value of the variable
  */
 static inline void _odp_atomic_flag_init(_odp_atomic_flag_t *flag,
-		odp_bool_t val)
+					 odp_bool_t val)
 {
 	__atomic_clear(flag, __ATOMIC_RELAXED);
 	if (val)

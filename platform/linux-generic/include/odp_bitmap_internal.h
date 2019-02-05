@@ -278,8 +278,8 @@ void raw_bitmap_clear(unsigned long *map, unsigned int bit);
  * It will enter infinite loop incase that all bits are zero,
  * so please make sure the bitmap at least has one set.
  */
-static inline int __bitmap_wraparound_next(
-	unsigned long *addr, unsigned int nbits, int start)
+static inline int __bitmap_wraparound_next(unsigned long *addr,
+					   unsigned int nbits, int start)
 {
 	unsigned long tmp;
 

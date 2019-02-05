@@ -165,11 +165,11 @@ static inline bitset_t atom_bitset_cmpxchg(bitset_t *bs, bitset_t *old,
 					   int mo_success, int mo_failure)
 {
 #ifdef LOCKFREE16
-	return __lockfree_compare_exchange_16(
-		bs, old, neu, weak, mo_success, mo_failure);
+	return __lockfree_compare_exchange_16(bs, old, neu, weak, mo_success,
+					      mo_failure);
 #else
-	return __atomic_compare_exchange_n(
-		bs, old, neu, weak, mo_success, mo_failure);
+	return __atomic_compare_exchange_n(bs, old, neu, weak, mo_success,
+					   mo_failure);
 #endif
 }
 

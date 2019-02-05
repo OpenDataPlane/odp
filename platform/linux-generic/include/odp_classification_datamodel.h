@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -122,7 +121,6 @@ typedef union cos_u {
 	struct cos_s s;
 	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct cos_s))];
 } cos_t;
-
 
 /**
 Packet Matching Rule

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -51,6 +50,7 @@ static inline int verify_pmr_ip_proto(const uint8_t *pkt_addr,
 {
 	const _odp_ipv4hdr_t *ip;
 	uint8_t proto;
+
 	if (!pkt_hdr->p.input_flags.ipv4)
 		return 0;
 	ip = (const _odp_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
@@ -67,6 +67,7 @@ static inline int verify_pmr_ipv4_saddr(const uint8_t *pkt_addr,
 {
 	const _odp_ipv4hdr_t *ip;
 	uint32_t ipaddr;
+
 	if (!pkt_hdr->p.input_flags.ipv4)
 		return 0;
 	ip = (const _odp_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
@@ -83,6 +84,7 @@ static inline int verify_pmr_ipv4_daddr(const uint8_t *pkt_addr,
 {
 	const _odp_ipv4hdr_t *ip;
 	uint32_t ipaddr;
+
 	if (!pkt_hdr->p.input_flags.ipv4)
 		return 0;
 	ip = (const _odp_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
@@ -99,6 +101,7 @@ static inline int verify_pmr_tcp_sport(const uint8_t *pkt_addr,
 {
 	uint16_t sport;
 	const _odp_tcphdr_t *tcp;
+
 	if (!pkt_hdr->p.input_flags.tcp)
 		return 0;
 	tcp = (const _odp_tcphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
@@ -115,6 +118,7 @@ static inline int verify_pmr_tcp_dport(const uint8_t *pkt_addr,
 {
 	uint16_t dport;
 	const _odp_tcphdr_t *tcp;
+
 	if (!pkt_hdr->p.input_flags.tcp)
 		return 0;
 	tcp = (const _odp_tcphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
@@ -131,12 +135,13 @@ static inline int verify_pmr_udp_dport(const uint8_t *pkt_addr,
 {
 	uint16_t dport;
 	const _odp_udphdr_t *udp;
+
 	if (!pkt_hdr->p.input_flags.udp)
 		return 0;
 	udp = (const _odp_udphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
 	dport = odp_be_to_cpu_16(udp->dst_port);
 	if (term_value->match.value == (dport & term_value->match.mask))
-			return 1;
+		return 1;
 
 	return 0;
 }
@@ -373,6 +378,7 @@ static inline int verify_pmr_eth_type_x(const uint8_t *pkt_addr,
 
 	return 0;
 }
+
 #ifdef __cplusplus
 }
 #endif

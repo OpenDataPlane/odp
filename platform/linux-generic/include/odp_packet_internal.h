@@ -105,7 +105,6 @@ typedef struct {
 	/* Classifier destination queue */
 	odp_queue_t dst_queue;
 
-
 	union {
 		struct {
 			/* Result for crypto packet op */
@@ -305,7 +304,6 @@ int _odp_packet_ipv4_chksum_insert(odp_packet_t pkt);
 int _odp_packet_tcp_chksum_insert(odp_packet_t pkt);
 int _odp_packet_udp_chksum_insert(odp_packet_t pkt);
 int _odp_packet_sctp_chksum_insert(odp_packet_t pkt);
-
 
 #ifdef __cplusplus
 }

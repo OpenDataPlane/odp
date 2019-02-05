@@ -109,26 +109,29 @@ typedef struct {
 	void (*schedule_resume)(void);
 	void (*schedule_release_atomic)(void);
 	void (*schedule_release_ordered)(void);
-	void (*schedule_prefetch)(int);
+	void (*schedule_prefetch)(int num);
 	int (*schedule_min_prio)(void);
 	int (*schedule_max_prio)(void);
 	int (*schedule_default_prio)(void);
 	int (*schedule_num_prio)(void);
-	odp_schedule_group_t (*schedule_group_create)(const char *,
-						      const odp_thrmask_t *);
-	int (*schedule_group_destroy)(odp_schedule_group_t);
-	odp_schedule_group_t (*schedule_group_lookup)(const char *);
-	int (*schedule_group_join)(odp_schedule_group_t, const odp_thrmask_t *);
-	int (*schedule_group_leave)(odp_schedule_group_t,
-				    const odp_thrmask_t *);
-	int (*schedule_group_thrmask)(odp_schedule_group_t, odp_thrmask_t *);
-	int (*schedule_group_info)(odp_schedule_group_t,
-				   odp_schedule_group_info_t *);
-	void (*schedule_order_lock)(uint32_t);
-	void (*schedule_order_unlock)(uint32_t);
-	void (*schedule_order_unlock_lock)(uint32_t, uint32_t);
-	void (*schedule_order_lock_start)(uint32_t);
-	void (*schedule_order_lock_wait)(uint32_t);
+	odp_schedule_group_t (*schedule_group_create)
+		(const char *name, const odp_thrmask_t *mask);
+	int (*schedule_group_destroy)(odp_schedule_group_t group);
+	odp_schedule_group_t (*schedule_group_lookup)(const char *name);
+	int (*schedule_group_join)(odp_schedule_group_t group,
+				   const odp_thrmask_t *mask);
+	int (*schedule_group_leave)(odp_schedule_group_t group,
+				    const odp_thrmask_t *mask);
+	int (*schedule_group_thrmask)(odp_schedule_group_t group,
+				      odp_thrmask_t *mask);
+	int (*schedule_group_info)(odp_schedule_group_t group,
+				   odp_schedule_group_info_t *info);
+	void (*schedule_order_lock)(uint32_t lock_index);
+	void (*schedule_order_unlock)(uint32_t lock_index);
+	void (*schedule_order_unlock_lock)(uint32_t unlock_index,
+					   uint32_t lock_index);
+	void (*schedule_order_lock_start)(uint32_t lock_index);
+	void (*schedule_order_lock_wait)(uint32_t lock_index);
 
 } schedule_api_t;
 
