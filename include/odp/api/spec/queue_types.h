@@ -123,6 +123,37 @@ typedef enum odp_nonblocking_t {
 } odp_nonblocking_t;
 
 /**
+ * Original event order maintenance options
+ *
+ * Options to keep or ignore the original event order of a source queue. This
+ * option is relevant for (plain or parallel scheduled) queues that are
+ * destinations for events enqueued while holding an ordered queue
+ * synchronization context. By default, an ordered context maintains original
+ * event order regardless of the destination queue type. Event re-ordering may
+ * cause extra synchronization effort for implementation and a long delay before
+ * application can receive a re-ordered event from the destination queue. This
+ * is wasteful and in some cases the extra delay is not acceptable for those
+ * destination queues that do not need to maintain the original event order.
+ * Application can use ODP_QUEUE_ORDER_IGNORE option to prevent implementation
+ * from performing unnecessary event re-ordering and negative side-effects of
+ * that.
+ */
+typedef enum odp_queue_order_t {
+	/** Keep original event order. Events enqueued into this queue while
+	 *  holding an ordered queue synchronization context maintain the
+	 *  original event order of the source queue.
+	 */
+	ODP_QUEUE_ORDER_KEEP = 0,
+
+	/** Ignore original event order. Events enqueued into this queue do not
+	 *  need to maintain the original event order of the source queue.
+	 *  Implementation must avoid significant event re-ordering delays.
+	 */
+	ODP_QUEUE_ORDER_IGNORE
+
+} odp_queue_order_t;
+
+/**
  * Queue capabilities
  */
 typedef struct odp_queue_capability_t {
@@ -261,6 +292,12 @@ typedef struct odp_queue_param_t {
 	  * These parameters are considered only when queue type is
 	  * ODP_QUEUE_TYPE_SCHED. */
 	odp_schedule_param_t sched;
+
+	/** Original event order maintenance
+	  *
+	  * Keep or ignore the original event order of a source queue.
+	  * The default value is ODP_QUEUE_ORDER_KEEP. */
+	odp_queue_order_t order;
 
 	/** Non-blocking level
 	  *
