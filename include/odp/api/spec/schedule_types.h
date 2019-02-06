@@ -77,7 +77,10 @@ extern "C" {
  * The atomic queue synchronization context is dedicated to the thread until it
  * requests another event from the scheduler, which implicitly releases the
  * context. User may allow the scheduler to release the context earlier than
- * that by calling odp_schedule_release_atomic().
+ * that by calling odp_schedule_release_atomic(). However, this call is just
+ * a hint to the implementation and the context may be held until the next
+ * schedule call.
+ *
  * When scheduler is enabled as flow-aware, the event flow id value affects
  * scheduling of the event and synchronization is maintained per flow within
  * each queue.
@@ -97,7 +100,9 @@ extern "C" {
  * queue synchronization context. A thread holds the context until it
  * requests another event from the scheduler, which implicitly releases the
  * context. User may allow the scheduler to release the context earlier than
- * that by calling odp_schedule_release_ordered().
+ * that by calling odp_schedule_release_ordered(). However, this call is just
+ * a hint to the implementation and the context may be held until the next
+ * schedule call.
  *
  * Events from the same (source) queue appear in their original order
  * when dequeued from a destination queue. The destination queue can have any
@@ -107,6 +112,11 @@ extern "C" {
  * (e.g. freed or stored) within the context are considered missing from
  * reordering and are skipped at this time (but can be ordered again within
  * another context).
+ *
+ * Unnecessary event re-ordering may be avoided for those destination queues
+ * that do not need to maintain the original event order by setting 'order'
+ * queue parameter to ODP_QUEUE_ORDER_IGNORE.
+ *
  * When scheduler is enabled as flow-aware, the event flow id value affects
  * scheduling of the event and synchronization is maintained per flow within
  * each queue.
