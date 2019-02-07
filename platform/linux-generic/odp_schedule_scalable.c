@@ -2064,8 +2064,9 @@ static int ord_enq_multi(odp_queue_t handle, void *buf_hdr[], int num,
 	int actual;
 
 	ts = sched_ts;
-	if (ts && odp_unlikely(ts->out_of_order)) {
-		queue = qentry_from_int(handle);
+	queue = qentry_from_int(handle);
+	if (ts && odp_unlikely(ts->out_of_order) &&
+	    (queue->s.param.order == ODP_QUEUE_ORDER_KEEP)) {
 		actual = rctx_save(queue, (odp_buffer_hdr_t **)buf_hdr, num);
 		*ret = actual;
 		return 1;

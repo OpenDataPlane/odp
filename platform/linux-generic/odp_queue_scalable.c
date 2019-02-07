@@ -632,7 +632,8 @@ static int _queue_enq_multi(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr[],
 
 	queue = qentry_from_int(handle);
 	ts = sched_ts;
-	if (ts && odp_unlikely(ts->out_of_order)) {
+	if (ts && odp_unlikely(ts->out_of_order) &&
+	    (queue->s.param.order == ODP_QUEUE_ORDER_KEEP)) {
 		actual = rctx_save(queue, buf_hdr, num);
 		return actual;
 	}
@@ -888,6 +889,7 @@ static void queue_param_init(odp_queue_param_t *params)
 	params->sched.prio = odp_schedule_default_prio();
 	params->sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	params->sched.group = ODP_SCHED_GROUP_ALL;
+	params->order = ODP_QUEUE_ORDER_KEEP;
 }
 
 static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
