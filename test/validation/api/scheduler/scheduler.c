@@ -149,17 +149,17 @@ static void release_context(odp_schedule_sync_t sync)
 
 static void scheduler_test_capa(void)
 {
-	odp_schedule_capability_t capa;
+	odp_schedule_capability_t sched_capa;
 	odp_queue_capability_t queue_capa;
 
-	memset(&capa, 0, sizeof(odp_schedule_capability_t));
-	CU_ASSERT_FATAL(odp_schedule_capability(&capa) == 0);
+	memset(&sched_capa, 0, sizeof(odp_schedule_capability_t));
+	CU_ASSERT_FATAL(odp_schedule_capability(&sched_capa) == 0);
 	CU_ASSERT_FATAL(odp_queue_capability(&queue_capa) == 0);
 
-	CU_ASSERT(capa.max_groups != 0);
-	CU_ASSERT(capa.max_prios != 0);
-	CU_ASSERT(capa.max_queues != 0);
-	CU_ASSERT(queue_capa.max_queues >= capa.max_queues);
+	CU_ASSERT(sched_capa.max_groups != 0);
+	CU_ASSERT(sched_capa.max_prios != 0);
+	CU_ASSERT(sched_capa.max_queues != 0);
+	CU_ASSERT(queue_capa.max_queues >= sched_capa.max_queues);
 }
 
 static void scheduler_test_wait_time(void)
@@ -422,7 +422,6 @@ static void scheduler_test_wait(void)
 
 static void scheduler_test_queue_size(void)
 {
-	odp_queue_capability_t queue_capa;
 	odp_schedule_config_t default_config;
 	odp_pool_t pool;
 	odp_pool_param_t pool_param;
@@ -436,8 +435,10 @@ static void scheduler_test_queue_size(void)
 				      ODP_SCHED_SYNC_ATOMIC,
 				      ODP_SCHED_SYNC_ORDERED};
 
-	CU_ASSERT_FATAL(odp_queue_capability(&queue_capa) == 0);
 	queue_size = DEFAULT_NUM_EV;
+
+	/* Scheduler has been already configured. Use default config as max
+	 * queue size. */
 	odp_schedule_config_init(&default_config);
 	if (default_config.queue_size &&
 	    queue_size > default_config.queue_size)
@@ -1779,7 +1780,7 @@ static void scheduler_test_ordered_lock(void)
 static int create_queues(test_globals_t *globals)
 {
 	int i, j, prios, rc;
-	odp_queue_capability_t capa;
+	odp_queue_capability_t queue_capa;
 	odp_schedule_capability_t sched_capa;
 	odp_schedule_config_t default_config;
 	odp_pool_t queue_ctx_pool;
@@ -1793,7 +1794,7 @@ static int create_queues(test_globals_t *globals)
 	int queues_per_prio;
 	int sched_types;
 
-	if (odp_queue_capability(&capa) < 0) {
+	if (odp_queue_capability(&queue_capa) < 0) {
 		printf("Queue capability query failed\n");
 		return -1;
 	}
@@ -1826,8 +1827,9 @@ static int create_queues(test_globals_t *globals)
 	num_sched = (prios * queues_per_prio * sched_types) + CHAOS_NUM_QUEUES;
 	num_plain = (prios * queues_per_prio);
 	while ((num_sched > default_config.num_queues ||
-		num_plain > capa.plain.max_num ||
-		num_sched + num_plain > capa.max_queues) && queues_per_prio) {
+		num_plain > queue_capa.plain.max_num ||
+		num_sched + num_plain > queue_capa.max_queues) &&
+		queues_per_prio) {
 		queues_per_prio--;
 		num_sched = (prios * queues_per_prio * sched_types) +
 				CHAOS_NUM_QUEUES;
