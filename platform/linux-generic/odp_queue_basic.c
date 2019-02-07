@@ -615,6 +615,7 @@ static void queue_param_init(odp_queue_param_t *params)
 	params->enq_mode = ODP_QUEUE_OP_MT;
 	params->deq_mode = ODP_QUEUE_OP_MT;
 	params->nonblocking = ODP_BLOCKING;
+	params->order = ODP_QUEUE_ORDER_KEEP;
 	params->sched.prio  = odp_schedule_default_prio();
 	params->sched.sync  = ODP_SCHED_SYNC_PARALLEL;
 	params->sched.group = ODP_SCHED_GROUP_ALL;
