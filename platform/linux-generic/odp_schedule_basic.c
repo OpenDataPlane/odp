@@ -846,9 +846,13 @@ static int schedule_ord_enq_multi(odp_queue_t dst_queue, void *buf_hdr[],
 	if (sched_local.ordered.in_order)
 		return 0;
 
+	dst_qentry = qentry_from_handle(dst_queue);
+
+	if (dst_qentry->s.param.order == ODP_QUEUE_ORDER_IGNORE)
+		return 0;
+
 	src_queue  = sched_local.ordered.src_queue;
 	stash_num  = sched_local.ordered.stash_num;
-	dst_qentry = qentry_from_handle(dst_queue);
 
 	if (ordered_own_turn(src_queue)) {
 		/* Own turn, so can do enqueue directly. */
