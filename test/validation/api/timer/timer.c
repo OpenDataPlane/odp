@@ -27,6 +27,9 @@
 /* Number of timers per thread */
 #define NTIMERS 2000
 
+/* Number of extra timers per thread */
+#define EXTRA_TIMERS 256
+
 #define NAME "timer_pool"
 #define RES (10 * ODP_TIME_MSEC_IN_NS / 3)
 #define MIN_TMO (10 * ODP_TIME_MSEC_IN_NS / 3)
@@ -54,6 +57,8 @@ typedef struct {
 	/* Sum of all allocated timers from all threads. Thread-local
 	 * caches may make this number lower than the capacity of the pool */
 	odp_atomic_u32_t timers_allocated;
+	/* Number of timers allocated per thread */
+	uint32_t timers_per_thread;
 } global_shared_mem_t;
 
 static global_shared_mem_t *global_mem;
@@ -642,27 +647,28 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 	odp_timer_set_t timer_rc;
 	odp_timer_pool_t tp = global_mem->tp;
 	odp_pool_t tbp = global_mem->tbp;
+	uint32_t num_timers = global_mem->timers_per_thread;
 
 	queue = odp_queue_create("timer_queue", NULL);
 	if (queue == ODP_QUEUE_INVALID)
 		CU_FAIL_FATAL("Queue create failed");
 
-	tt = malloc(sizeof(struct test_timer) * NTIMERS);
+	tt = malloc(sizeof(struct test_timer) * num_timers);
 	if (!tt)
 		CU_FAIL_FATAL("malloc failed");
 
 	/* Prepare all timers */
-	for (i = 0; i < NTIMERS; i++) {
+	for (i = 0; i < num_timers; i++) {
 		tt[i].ev = odp_timeout_to_event(odp_timeout_alloc(tbp));
 		if (tt[i].ev == ODP_EVENT_INVALID) {
 			LOG_DBG("Failed to allocate timeout (%" PRIu32 "/%d)\n",
-				i, NTIMERS);
+				i, num_timers);
 			break;
 		}
 		tt[i].tim = odp_timer_alloc(tp, queue, &tt[i]);
 		if (tt[i].tim == ODP_TIMER_INVALID) {
 			LOG_DBG("Failed to allocate timer (%" PRIu32 "/%d)\n",
-				i, NTIMERS);
+				i, num_timers);
 			odp_event_free(tt[i].ev);
 			break;
 		}
@@ -837,10 +843,12 @@ static void timer_test_odp_timer_all(void)
 	uint64_t resolution_ns;
 	uint32_t timers_allocated;
 	pthrd_arg thrdarg;
+	odp_pool_capability_t pool_capa;
 	odp_timer_capability_t timer_capa;
 	odp_pool_t tbp;
 	odp_timer_pool_t tp;
 	uint32_t num_timers;
+	int timers_per_thread;
 
 	/* Reserve at least one core for running other processes so the timer
 	 * test hopefully can run undisturbed and thus get better timing
@@ -860,10 +868,18 @@ static void timer_test_odp_timer_all(void)
 	if (timer_capa.max_timers && timer_capa.max_timers < num_timers)
 		num_timers = timer_capa.max_timers;
 
+	CU_ASSERT_FATAL(!odp_pool_capability(&pool_capa));
+	if (pool_capa.tmo.max_num && num_timers > pool_capa.tmo.max_num)
+		num_timers = pool_capa.tmo.max_num;
+
 	/* Create timeout pools */
 	odp_pool_param_init(&params);
 	params.type    = ODP_POOL_TIMEOUT;
-	params.tmo.num = num_timers + num_workers;
+	params.tmo.num = num_timers;
+
+	timers_per_thread = (num_timers / num_workers) - EXTRA_TIMERS;
+	global_mem->timers_per_thread = timers_per_thread > 1 ?
+						timers_per_thread : 1;
 
 	global_mem->tbp = odp_pool_create("tmo_pool", &params);
 	if (global_mem->tbp == ODP_POOL_INVALID)
