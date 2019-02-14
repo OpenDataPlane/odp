@@ -256,6 +256,7 @@ static void procsync(void);
 static int hp_create_file(uint64_t len, const char *filename)
 {
 	int fd;
+	int ret;
 	void *addr;
 
 	if (len <= 0) {
@@ -273,10 +274,19 @@ static int hp_create_file(uint64_t len, const char *filename)
 	/* remove file from file system */
 	unlink(filename);
 
-	if (ftruncate(fd, len) == -1) {
-		ODP_ERR("Could not truncate file: %s\n", strerror(errno));
-		close(fd);
-		return -1;
+	ret = fallocate(fd, 0, 0, len);
+	if (ret == -1) {
+		if (errno == ENOTSUP) {
+			ODP_DBG("fallocate() not supported\n");
+			ret = ftruncate(fd, len);
+		}
+
+		if (ret == -1) {
+			ODP_ERR("memory allocation failed: fd=%d, err=%s.\n",
+				fd, strerror(errno));
+			close(fd);
+			return -1;
+		}
 	}
 
 	/* commit huge page */
@@ -637,6 +647,7 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 					      *		    /mnt/huge */
 	int  oflag = O_RDWR | O_CREAT | O_TRUNC; /* flags for open	      */
 	char dir[ISHM_FILENAME_MAXLEN];
+	int ret;
 
 	/* No ishm_block_t for the master single VA memory file */
 	if (single_va) {
@@ -676,12 +687,20 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 		return -1;
 	}
 
-	if (ftruncate(fd, len) == -1) {
-		ODP_ERR("ftruncate failed: fd=%d, err=%s.\n",
-			fd, strerror(errno));
-		close(fd);
-		unlink(filename);
-		return -1;
+	ret = fallocate(fd, 0, 0, len);
+	if (ret == -1) {
+		if (errno == ENOTSUP) {
+			ODP_DBG("fallocate() not supported\n");
+			ret = ftruncate(fd, len);
+		}
+
+		if (ret == -1) {
+			ODP_ERR("memory allocation failed: fd=%d, err=%s.\n",
+				fd, strerror(errno));
+			close(fd);
+			unlink(filename);
+			return -1;
+		}
 	}
 
 	/* No export file is created since this is only for internal use.*/
