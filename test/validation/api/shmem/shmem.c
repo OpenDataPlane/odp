@@ -1,4 +1,5 @@
-/* Copyright (c) 2014-2018, Linaro Limited
+/* Copyright (c) 2019, Nokia
+ * Copyright (c) 2014-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -211,6 +212,45 @@ static void shmem_test_basic(void)
 	odp_shm_print(shm);
 
 	CU_ASSERT(0 == odp_shm_free(shm));
+}
+
+/*
+ * test reserving memory from huge pages
+ */
+static void shmem_test_hp(void)
+{
+	odp_shm_t shm;
+	odp_shm_info_t info;
+	int i;
+	int num_sizes = odp_sys_huge_page_size_all(NULL, 0);
+
+	CU_ASSERT_FATAL(num_sizes >= 0);
+
+	shm = odp_shm_reserve(MEM_NAME, sizeof(shared_test_data_t),
+			      ALIGN_SIZE, ODP_SHM_HP);
+	if (shm == ODP_SHM_INVALID) {
+		printf("    No huge pages available\n");
+		return;
+	}
+
+	/* Make sure that the memory is reserved from huge pages */
+
+	CU_ASSERT_FATAL(num_sizes > 0);
+	CU_ASSERT_FATAL(odp_shm_info(shm, &info) == 0);
+
+	uint64_t hp_sizes[num_sizes];
+
+	CU_ASSERT_FATAL(odp_sys_huge_page_size_all(hp_sizes, num_sizes) ==
+				num_sizes);
+
+	for (i = 0; i < num_sizes; i++) {
+		if (hp_sizes[i] == info.page_size)
+			break;
+	}
+
+	CU_ASSERT(i < num_sizes);
+
+	CU_ASSERT(odp_shm_free(shm) == 0);
 }
 
 /*
@@ -821,6 +861,7 @@ static void shmem_test_stress(void)
 
 odp_testinfo_t shmem_suite[] = {
 	ODP_TEST_INFO(shmem_test_basic),
+	ODP_TEST_INFO(shmem_test_hp),
 	ODP_TEST_INFO(shmem_test_max_reserve),
 	ODP_TEST_INFO(shmem_test_reserve_after_fork),
 	ODP_TEST_INFO(shmem_test_singleva_after_fork),
