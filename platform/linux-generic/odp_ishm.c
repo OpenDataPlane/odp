@@ -1,4 +1,5 @@
-/* Copyright (c) 2016-2018, Linaro Limited
+/* Copyright (c) 2019, Nokia
+ * Copyright (c) 2016-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -1114,7 +1115,7 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 	}
 
 	/* Otherwise, Try first huge pages when possible and needed: */
-	if ((fd < 0) && page_hp_size && ((flags &  _ODP_ISHM_USE_HP) ||
+	if ((fd < 0) && page_hp_size && ((user_flags &  ODP_SHM_HP) ||
 					 size > ishm_tbl->huge_page_limit)) {
 		/* at least, alignment in VA should match page size, but user
 		 * can request more: If the user requirement exceeds the page
@@ -1168,6 +1169,11 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 
 	/* Try normal pages if huge pages failed */
 	if (fd < 0) {
+		if (user_flags & ODP_SHM_HP) {
+			odp_spinlock_unlock(&ishm_tbl->lock);
+			ODP_ERR("Unable to allocate memory from huge pages\n");
+			return -1;
+		}
 		/* at least, alignment in VA should match page size, but user
 		 * can request more: If the user requirement exceeds the page
 		 * size then we have to make sure the block will be mapped at
