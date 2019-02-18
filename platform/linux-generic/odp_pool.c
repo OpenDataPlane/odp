@@ -1,4 +1,5 @@
-/* Copyright (c) 2013-2018, Linaro Limited
+/* Copyright (c) 2019, Nokia
+ * Copyright (c) 2013-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -384,7 +385,6 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	uint32_t max_len;
 	uint32_t ring_size;
 	uint32_t num_extra = 0;
-	uint32_t extra_shm_flags = 0;
 	int name_len;
 	const char *postfix = "_uarea";
 	char uarea_name[ODP_POOL_NAME_LEN + sizeof(postfix)];
@@ -514,7 +514,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 			return ODP_POOL_INVALID;
 		}
 		if (dpdk_obj_size != block_size)
-			extra_shm_flags |= _ODP_ISHM_USE_HP;
+			shmflags |= ODP_SHM_HP;
 		block_size = dpdk_obj_size;
 	}
 
@@ -548,8 +548,8 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	pool->ext_desc       = NULL;
 	pool->ext_destroy    = NULL;
 
-	shm = _odp_shm_reserve(pool->name, pool->shm_size,
-			       ODP_PAGE_SIZE, shmflags, extra_shm_flags);
+	shm = odp_shm_reserve(pool->name, pool->shm_size, ODP_PAGE_SIZE,
+			      shmflags);
 
 	pool->shm = shm;
 

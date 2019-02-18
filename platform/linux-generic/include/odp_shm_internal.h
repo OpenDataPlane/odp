@@ -1,4 +1,5 @@
-/* Copyright (c) 2016-2018, Linaro Limited
+/* Copyright (c) 2019, Nokia
+ * Copyright (c) 2016-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -20,7 +21,6 @@ extern "C" {
 #define _ODP_ISHM_SINGLE_VA		1
 #define _ODP_ISHM_LOCK			2
 #define _ODP_ISHM_EXPORT		4 /* create export descr file in /tmp */
-#define _ODP_ISHM_USE_HP		8 /* allocate memory from huge pages */
 
 /**
  * Shared memory block info
@@ -33,9 +33,6 @@ typedef struct _odp_ishm_info_t {
 	uint32_t    flags;     /**< _ODP_ISHM_* flags */
 	uint32_t    user_flags;/**< user specific flags */
 } _odp_ishm_info_t;
-
-odp_shm_t _odp_shm_reserve(const char *name, uint64_t size, uint32_t align,
-			   uint32_t flags, uint32_t extra_flags);
 
 int   _odp_ishm_reserve(const char *name, uint64_t size, int fd, uint32_t align,
 			uint64_t offset, uint32_t flags, uint32_t user_flags);
