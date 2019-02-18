@@ -1,4 +1,5 @@
-/* Copyright (c) 2013-2018, Linaro Limited
+/* Copyright (c) 2019, Nokia
+ * Copyright (c) 2013-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -39,11 +40,17 @@ extern "C" {
  * Maximum shared memory block name length in chars including null char
  */
 
-/*
- * Shared memory flags:
+ /* Shared memory flags */
+
+/**
+ * Application SW only, no HW access
  */
-#define ODP_SHM_SW_ONLY		0x1 /**< Application SW only, no HW access   */
-#define ODP_SHM_PROC		0x2 /**< Share with external processes       */
+#define ODP_SHM_SW_ONLY		0x1
+
+/**
+ * Share with external processes
+ */
+#define ODP_SHM_PROC		0x2
 
 /**
  * Single virtual address
@@ -61,6 +68,15 @@ extern "C" {
  * through odp_shm_import().
  */
 #define ODP_SHM_EXPORT		0x08
+
+/**
+ * Use huge pages
+ *
+ * When set, this flag guarantees that the memory reserved by odp_shm_reserve()
+ * is allocated from huge pages. The reserve call will return failure if enough
+ * huge page memory is not available.
+ */
+#define ODP_SHM_HP		0x10
 
 /**
  * Shared memory block info
