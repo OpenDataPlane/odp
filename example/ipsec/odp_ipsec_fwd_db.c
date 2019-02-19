@@ -30,6 +30,11 @@ void init_fwd_db(void)
 			      ODP_CACHE_LINE_SIZE,
 			      0);
 
+	if (shm == ODP_SHM_INVALID) {
+		EXAMPLE_ERR("Error: shared mem reserve failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
 	fwd_db = odp_shm_addr(shm);
 
 	if (fwd_db == NULL) {

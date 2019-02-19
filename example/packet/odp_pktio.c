@@ -382,6 +382,11 @@ int main(int argc, char *argv[])
 	/* Reserve memory for args from shared mem */
 	shm = odp_shm_reserve("_appl_global_data", sizeof(args_t),
 			      ODP_CACHE_LINE_SIZE, 0);
+	if (shm == ODP_SHM_INVALID) {
+		EXAMPLE_ERR("Error: shared mem reserve failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
 	args = odp_shm_addr(shm);
 	if (args == NULL) {
 		EXAMPLE_ERR("Error: shared mem alloc failed.\n");

@@ -48,6 +48,11 @@ void init_stream_db(void)
 			      ODP_CACHE_LINE_SIZE,
 			      0);
 
+	if (shm == ODP_SHM_INVALID) {
+		EXAMPLE_ERR("Error: shared mem reserve failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
 	stream_db = odp_shm_addr(shm);
 
 	if (stream_db == NULL) {
