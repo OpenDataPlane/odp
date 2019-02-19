@@ -1062,6 +1062,9 @@ int main(int argc, char **argv)
 
 	shm = odp_shm_reserve("test_globals",
 			      sizeof(test_globals_t), ODP_CACHE_LINE_SIZE, 0);
+	if (shm == ODP_SHM_INVALID)
+		LOG_ABORT("Shared memory reserve failed.\n");
+
 	gbl_args = odp_shm_addr(shm);
 	if (gbl_args == NULL)
 		LOG_ABORT("Shared memory reserve failed.\n");
@@ -1076,6 +1079,8 @@ int main(int argc, char **argv)
 	shm = odp_shm_reserve("test_globals.rx_stats",
 			      gbl_args->rx_stats_size,
 			      ODP_CACHE_LINE_SIZE, 0);
+	if (shm == ODP_SHM_INVALID)
+		LOG_ABORT("Shared memory reserve failed.\n");
 
 	gbl_args->rx_stats = odp_shm_addr(shm);
 
@@ -1087,6 +1092,8 @@ int main(int argc, char **argv)
 	shm = odp_shm_reserve("test_globals.tx_stats",
 			      gbl_args->tx_stats_size,
 			      ODP_CACHE_LINE_SIZE, 0);
+	if (shm == ODP_SHM_INVALID)
+		LOG_ABORT("Shared memory reserve failed.\n");
 
 	gbl_args->tx_stats = odp_shm_addr(shm);
 

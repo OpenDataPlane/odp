@@ -578,6 +578,11 @@ int main(int argc, char *argv[])
 
 	shm = odp_shm_reserve("shm_args", sizeof(args_t), ODP_CACHE_LINE_SIZE,
 			      0);
+	if (shm == ODP_SHM_INVALID) {
+		LOG_ERR("Error: shared mem reserve failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
 	gbl_args = odp_shm_addr(shm);
 	if (gbl_args == NULL) {
 		LOG_ERR("Error: shared mem alloc failed\n");
@@ -592,6 +597,11 @@ int main(int argc, char *argv[])
 					 sizeof(lookup_entry_t) *
 					 gbl_args->appl.lookup_tbl_size,
 					 ODP_CACHE_LINE_SIZE, 0);
+	if (lookup_tbl_shm == ODP_SHM_INVALID) {
+		LOG_ERR("Error: shared mem reserve failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
 	gbl_args->lookup_tbl = odp_shm_addr(lookup_tbl_shm);
 	if (gbl_args->lookup_tbl == NULL) {
 		LOG_ERR("Error: lookup table mem alloc failed\n");
