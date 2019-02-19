@@ -2010,6 +2010,11 @@ static int scheduler_suite_init(void)
 	shm = odp_shm_reserve(GLOBALS_SHM_NAME,
 			      sizeof(test_globals_t), ODP_CACHE_LINE_SIZE, 0);
 
+	if (shm == ODP_SHM_INVALID) {
+		printf("Shared memory reserve failed (globals).\n");
+		return -1;
+	}
+
 	globals = odp_shm_addr(shm);
 
 	if (!globals) {
@@ -2027,6 +2032,12 @@ static int scheduler_suite_init(void)
 
 	shm = odp_shm_reserve(SHM_THR_ARGS_NAME, sizeof(thread_args_t),
 			      ODP_CACHE_LINE_SIZE, 0);
+
+	if (shm == ODP_SHM_INVALID) {
+		printf("Shared memory reserve failed (args).\n");
+		return -1;
+	}
+
 	args = odp_shm_addr(shm);
 
 	if (!args) {
