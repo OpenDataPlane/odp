@@ -968,6 +968,11 @@ int main(int argc, char **argv)
 	/* Reserve memory for args from shared mem */
 	shm = odp_shm_reserve("_appl_global_data", sizeof(global_data_t),
 			      ODP_CACHE_LINE_SIZE, 0);
+	if (shm == ODP_SHM_INVALID) {
+		printf("Error: shared mem reserve failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
 	global = odp_shm_addr(shm);
 	if (global == NULL) {
 		printf("Error: shared mem alloc failed.\n");

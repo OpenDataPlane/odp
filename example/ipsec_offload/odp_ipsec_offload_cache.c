@@ -33,6 +33,9 @@ void init_ipsec_cache(void)
 			      ODP_CACHE_LINE_SIZE,
 			      0);
 
+	if (shm == ODP_SHM_INVALID)
+		EXAMPLE_ABORT("Error: shared mem reserve failed.\n");
+
 	ipsec_cache = odp_shm_addr(shm);
 
 	if (ipsec_cache == NULL)

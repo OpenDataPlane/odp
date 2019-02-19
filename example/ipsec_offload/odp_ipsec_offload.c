@@ -524,6 +524,10 @@ main(int argc, char *argv[])
 	/* Reserve memory for arguments from shared memory */
 	shm = odp_shm_reserve("shm_args", sizeof(global_data_t),
 			      ODP_CACHE_LINE_SIZE, 0);
+
+	if (shm == ODP_SHM_INVALID)
+		EXAMPLE_ABORT("Error: shared mem reserve failed.\n");
+
 	global = odp_shm_addr(shm);
 
 	if (NULL == global)

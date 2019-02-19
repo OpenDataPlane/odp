@@ -934,6 +934,11 @@ main(int argc, char *argv[])
 	shm = odp_shm_reserve("shm_args", sizeof(global_data_t),
 			      ODP_CACHE_LINE_SIZE, 0);
 
+	if (shm == ODP_SHM_INVALID) {
+		EXAMPLE_ERR("Error: shared mem reserve failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
 	global = odp_shm_addr(shm);
 
 	if (NULL == global) {

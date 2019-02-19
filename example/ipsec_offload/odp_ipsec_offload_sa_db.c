@@ -31,6 +31,9 @@ void init_sa_db(void)
 			      ODP_CACHE_LINE_SIZE,
 			      0);
 
+	if (shm == ODP_SHM_INVALID)
+		EXAMPLE_ABORT("Error: shared mem reserve failed.\n");
+
 	sa_db = odp_shm_addr(shm);
 
 	if (sa_db == NULL)
@@ -46,6 +49,10 @@ void init_tun_db(void)
 			      sizeof(tun_db_t),
 			      ODP_CACHE_LINE_SIZE,
 			      0);
+
+	if (shm == ODP_SHM_INVALID)
+		EXAMPLE_ABORT("Error: shared mem reserve failed.\n");
+
 	tun_db = odp_shm_addr(shm);
 
 	if (!tun_db)
