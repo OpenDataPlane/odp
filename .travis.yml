@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2018, Linaro Limited
+# Copyright (c) 2016-2019, Linaro Limited
 # All rights reserved.
 # SPDX-License-Identifier:     BSD-3-Clause
 #
@@ -235,6 +235,14 @@ jobs:
                              else
                                true
                              fi
+                  deploy:
+                          provider: pages
+                          skip_cleanup: true
+                          local_dir: doc/application-api-guide/output/html
+                          github_token: $GH_REPO_TOKEN
+                          on:
+                                  branch: master
+                                  condition: "x$GH_REPO_TOKEN != x"
                 - stage: "build only"
                   env: ARCH=x86_64
                   install:
