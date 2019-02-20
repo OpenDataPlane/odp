@@ -9,12 +9,12 @@
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    id="Layer_1"
    data-name="Layer 1"
-   viewBox="0 0 190 49"
+   viewBox="0 0 200 50"
    version="1.1"
-   inkscape:version="0.91 r13725"
+   inkscape:version="0.92.3 (2405546, 2018-03-11)"
    sodipodi:docname="ODP-Logo-HQ.svg"
-   width="190"
-   height="49">
+   width="200"
+   height="50">
   <metadata
      id="metadata71">
     <rdf:RDF>
@@ -36,21 +36,22 @@
      guidetolerance="10"
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
-     inkscape:window-width="2511"
-     inkscape:window-height="1416"
+     inkscape:window-width="1800"
+     inkscape:window-height="991"
      id="namedview69"
      showgrid="false"
-     inkscape:zoom="2.253318"
-     inkscape:cx="297.0423"
-     inkscape:cy="74.997335"
-     inkscape:window-x="1969"
-     inkscape:window-y="24"
+     inkscape:zoom="5.2958056"
+     inkscape:cx="108.40047"
+     inkscape:cy="24.5"
+     inkscape:window-x="0"
+     inkscape:window-y="31"
      inkscape:window-maximized="1"
-     inkscape:current-layer="Layer_1"
+     inkscape:current-layer="g4462"
      fit-margin-top="0"
      fit-margin-left="0"
      fit-margin-right="0"
-     fit-margin-bottom="0" />
+     fit-margin-bottom="0"
+     inkscape:snap-page="false" />
   <defs
      id="defs3">
     <style
@@ -60,150 +61,128 @@
      id="title7">OpenDataPlane-branding_ODP Logo</title>
   <g
      id="g4462"
-     transform="matrix(0.32035335,0,0,0.32660788,-0.15849903,0.00353742)">
-    <text
-       transform="translate(531.29,127.66)"
-       id="text9"
-       class="cls-1"
-       style="font-size:44.31000137px;font-family:'Squada One';fill:#808080">.org</text>
+     transform="matrix(0.26109597,0,0,0.26619358,1.0037914,4.7794569)">
     <rect
        id="rect11"
-       transform="matrix(0.70710678,-0.70710678,0.70710678,0.70710678,-70.58,74.14)"
+       transform="rotate(-45)"
        ry="14.91"
        rx="14.91"
        height="114.8"
        width="114.8"
-       y="46.509998"
-       x="45.290001"
+       y="50.883595"
+       x="-53.179798"
        class="cls-2"
        style="fill:#333333" />
     <path
-       transform="translate(-27.18,-28.91)"
        id="path13"
-       d="m 102.15,104 0,74.9 0.14,0 c 3.61,-0.15 8.18,-1.58 10.93,-4.34 l 60.1,-60.09 a 14.84,14.84 0 0 0 4.34,-9.92 l 0,-0.53 -75.51,0 z"
+       d="m 79.013941,73.671268 v 74.900002 h 0.14 c 3.61,-0.15 8.18,-1.58 10.93,-4.34 L 150.18395,84.141268 a 14.84,14.84 0 0 0 4.34,-9.92 v -0.53 H 79.013941 Z"
        class="cls-2"
        inkscape:connector-curvature="0"
        style="fill:#333333" />
     <path
-       transform="translate(-27.18,-28.91)"
        style="fill:#00ffff"
        id="path15"
-       d="m 102.15,104 0,-75 0.14,0 c 3.61,0.15 8.18,1.58 10.93,4.34 l 60.1,60.09 a 15,15 0 0 1 4.34,10 l 0,0.58 -75.51,0 z"
+       d="M 79.013941,73.671268 V -1.3287319 h 0.14 c 3.61,0.15 8.18,1.58 10.93,4.34 L 150.18395,63.101268 a 15,15 0 0 1 4.34,10 v 0.58 H 79.013941 Z"
        inkscape:connector-curvature="0" />
     <path
-       transform="translate(-27.18,-28.91)"
        style="fill:#00ffff"
        id="path17"
-       d="m 102.15,104 0,74.9 0.15,0 c -3.61,-0.15 -8,-1.58 -10.79,-4.34 l -60,-60.09"
+       d="m 79.013941,73.671268 v 74.900002 h 0.15 c -3.61,-0.15 -8,-1.58 -10.79,-4.34 L 8.3739406,84.141268"
        inkscape:connector-curvature="0" />
     <path
-       transform="translate(-27.18,-28.91)"
        id="path19"
-       d="m 102.15,104 0,-75 0.15,0 c -3.61,0.15 -8,1.58 -10.79,4.34 l -60,60.09"
+       d="M 79.013941,73.671268 V -1.3287319 h 0.15 c -3.61,0.15 -8,1.58 -10.79,4.34 L 8.3739406,63.101268"
        class="cls-2"
        inkscape:connector-curvature="0"
        style="fill:#333333" />
     <path
-       transform="translate(-27.18,-28.91)"
        id="path23"
-       d="M 102.23,49.19 48.4,103.54 102.75,157.37 156.58,103 Z m 0.38,78.91 -25.12,-24.88 24.88,-25.12 25.12,24.9 z"
+       d="m 79.093941,18.861268 -53.83,54.35 54.35,53.830002 53.830009,-54.370002 z m 0.38,78.91 -25.12,-24.88 24.88,-25.12 25.119999,24.9 z"
        class="cls-4"
        inkscape:connector-curvature="0"
        style="fill:#333333;stroke:#ffe817;stroke-width:4px;stroke-miterlimit:10" />
     <rect
        id="rect25"
-       transform="matrix(0.70364278,-0.7105539,0.7105539,0.70364278,-70.07,74.46)"
+       transform="rotate(-45.28)"
        height="35.360001"
        width="35.360001"
-       y="85.419998"
-       x="84.809998"
+       y="89.899895"
+       x="-13.548523"
        class="cls-5"
        style="fill:none;stroke:#ffe817;stroke-width:4px;stroke-miterlimit:10" />
-    <text
-       transform="translate(531.29,127.66)"
-       id="text27"
-       class="cls-1"
-       style="font-size:44.31000137px;font-family:'Squada One';fill:#808080">.org</text>
     <rect
        id="rect29"
-       transform="matrix(0.70710678,-0.70710678,0.70710678,0.70710678,-70.58,74.14)"
+       transform="rotate(-45)"
        ry="14.91"
        rx="14.91"
        height="114.8"
        width="114.8"
-       y="46.509998"
-       x="45.290001"
+       y="50.883595"
+       x="-53.179798"
        class="cls-2"
        style="fill:#333333" />
     <path
-       transform="translate(-27.18,-28.91)"
        id="path31"
-       d="m 102.15,104 0,74.9 0.14,0 c 3.61,-0.15 8.18,-1.58 10.93,-4.34 l 60.1,-60.09 a 14.84,14.84 0 0 0 4.34,-9.92 l 0,-0.53 -75.51,0 z"
+       d="m 79.013941,73.671268 v 74.900002 h 0.14 c 3.61,-0.15 8.18,-1.58 10.93,-4.34 L 150.18395,84.141268 a 14.84,14.84 0 0 0 4.34,-9.92 v -0.53 H 79.013941 Z"
        class="cls-6"
        inkscape:connector-curvature="0"
        style="fill:#666666" />
     <path
-       transform="translate(-27.18,-28.91)"
        id="path33"
-       d="m 102.15,104 0,-75 0.14,0 c 3.61,0.15 8.18,1.58 10.93,4.34 l 60.1,60.09 a 15,15 0 0 1 4.34,10 l 0,0.58 -75.51,0 z"
+       d="M 79.013941,73.671268 V -1.3287319 h 0.14 c 3.61,0.15 8.18,1.58 10.93,4.34 L 150.18395,63.101268 a 15,15 0 0 1 4.34,10 v 0.58 H 79.013941 Z"
        class="cls-7"
        inkscape:connector-curvature="0"
        style="fill:#1a1a1a" />
     <path
-       transform="translate(-27.18,-28.91)"
        id="path35"
-       d="m 102.15,104 0,74.9 0.15,0 c -3.61,-0.15 -8,-1.58 -10.79,-4.34 l -60,-60.09"
+       d="m 79.013941,73.671268 v 74.900002 h 0.15 c -3.61,-0.15 -8,-1.58 -10.79,-4.34 L 8.3739406,84.141268"
        class="cls-7"
        inkscape:connector-curvature="0"
        style="fill:#1a1a1a" />
     <path
-       transform="translate(-27.18,-28.91)"
        id="path37"
-       d="m 102.15,104 0,-75 0.15,0 c -3.61,0.15 -8,1.58 -10.79,4.34 l -60,60.09"
+       d="M 79.013941,73.671268 V -1.3287319 h 0.15 c -3.61,0.15 -8,1.58 -10.79,4.34 L 8.3739406,63.101268"
        class="cls-6"
        inkscape:connector-curvature="0"
        style="fill:#666666" />
     <path
-       transform="translate(-27.18,-28.91)"
        style="fill:#000000;fill-opacity:0"
        id="path39"
-       d="m 235.1,86.13 0,30.75 q 0,10.07 -9.46,10.07 l -10.15,0 Q 206,127 206,116.89 l 0,-30.76 q 0,-10.07 9.46,-10.07 l 10.15,0 q 9.49,0 9.49,10.07 z m -10.68,32 0,-33.3"
+       d="m 207.92,57.219998 v 30.75 q 0,10.07 -9.46,10.07 h -10.15 q -9.49,0.05 -9.49,-10.06 v -30.76 q 0,-10.07 9.46,-10.07 h 10.15 q 9.49,0 9.49,10.07 z m -10.68,32 v -33.3"
        class="cls-8"
        inkscape:connector-curvature="0" />
     <path
-       transform="translate(-27.18,-28.91)"
        id="path41"
-       d="m 260.67,127 -1.6,0"
+       d="m 233.49,98.089998 h -1.6"
        class="cls-8"
        inkscape:connector-curvature="0"
        style="fill:#009645" />
     <path
-       transform="translate(-27.18,-28.91)"
        id="path65"
-       d="M 102.23,49.19 48.4,103.54 102.75,157.37 156.58,103 Z m 0.38,78.91 -25.12,-24.88 24.88,-25.12 25.12,24.9 z"
+       d="m 79.093941,18.861268 -53.83,54.35 54.35,53.830002 53.830009,-54.370002 z m 0.38,78.91 -25.12,-24.88 24.88,-25.12 25.119999,24.9 z"
        class="cls-9"
        inkscape:connector-curvature="0"
        style="fill:#666666;stroke:#ffe817;stroke-width:4px;stroke-miterlimit:10" />
     <rect
        id="rect67"
-       transform="matrix(0.70364278,-0.7105539,0.7105539,0.70364278,-70.07,74.46)"
+       transform="rotate(-45.28)"
        height="35.360001"
        width="35.360001"
-       y="85.419998"
-       x="84.809998"
+       y="89.899895"
+       x="-13.548523"
        class="cls-5"
        style="fill:none;stroke:#ffe817;stroke-width:4px;stroke-miterlimit:10" />
     <text
-       transform="scale(0.92486289,1.0812414)"
-       sodipodi:linespacing="125%"
+       transform="scale(0.92486285,1.0812414)"
        id="text4199"
-       y="81.79998"
-       x="174.92181"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:83.23766327px;line-height:125%;font-family:'Squada One';-inkscape-font-specification:'Squada One, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#009645;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       y="91.752487"
+       x="174.00948"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:73.42362213px;line-height:0%;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#009645;fill-opacity:1;stroke:none;stroke-width:1.03697407px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
        xml:space="preserve"><tspan
-         y="81.79998"
-         x="174.92181"
+         y="91.752487"
+         x="174.00948"
          id="tspan4201"
-         sodipodi:role="line">OpenDataPlane</tspan></text>
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:73.42362213px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.03697407px">OpenDataPlane</tspan></text>
   </g>
 </svg>
