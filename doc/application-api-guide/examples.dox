@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018, Linaro Limited
+/* Copyright (c) 2015-2019, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -6,30 +6,80 @@
 
 /**
  * @example odp_classifier.c
- * ODP classifier example application
+ * Classifier example application
  */
 
 /**
  * @example odp_generator.c
- * ODP loopback demo application
+ * Traffic generator and loopback demo application
+ */
+
+/**
+ * @example odp_hello.c
+ * Minimal example application
+ */
+
+/**
+ * @example odp_ipfragreass.c
+ * IPv4 lock-free fragmentation and reassembly example application
+ */
+
+ /**
+ * @example ipsec/odp_ipsec.c
+ * IPsec example application using crypto API
+ */
+
+/**
+ * @example ipsec_api/odp_ipsec.c
+ * IPsec example application using IPsec API
+ */
+
+/**
+ * @example ipsec_offload/odp_ipsec_offload.c
+ * IPsec offload example application
  */
 
 /**
  * @example odp_l2fwd.c
- * ODP l2fwd example application
+ * L2 forwarding example application
+ */
+
+/**
+ * @example odp_l2fwd_simple.c
+ * Minimal L2 forwarding example application
+ */
+
+/**
+ * @example odp_l3fwd.c
+ * L3 forwarding example application
  */
 
 /**
  *@example odp_pktio.c
- * ODP basic packet IO loopback test application
+ * Basic packet IO loopback test application
+ */
+
+/**
+ * @example odp_switch.c
+ * Minimal learning Ethernet switch example application
+ */
+
+ /**
+ * @example odp_sysinfo.c
+ * System information example application
+ */
+
+/**
+ * @example time_global_test.c
+ * Time example application
  */
 
 /**
  * @example odp_timer_test.c
- * ODP timer example application
+ * Timer example application
  */
 
  /**
-  * @example odp_ipfragreass.c
-  * ODP IPv4 lock-free fragmentation and reassembly example application
-  */
+ * @example odp_traffic_mgmt.c
+ * Traffic manager example application
+ */
