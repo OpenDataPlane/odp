@@ -201,13 +201,15 @@ jobs:
                               -e CONF="--enable-user-guides --disable-abi-compat"
                               ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/distcheck.sh
                 - stage: "build only"
-                  env: TEST=doxygen
+                  env: TEST=documentation
                   compiler: gcc
                   addons:
                           apt:
                                   packages:
+                                          - asciidoctor
                                           - libconfig-dev
                                           - libssl-dev
+                                          - mscgen
                                           - cmake
                                           - graphviz
                   install:
@@ -223,9 +225,13 @@ jobs:
                                 popd
                           fi
                         - export PATH=$HOME/doxygen-install/bin:$PATH
+                        - gem install asciidoctor
                   script:
                           - ./bootstrap
-                          - ./configure
+                          - ./configure --enable-user-guides
+                          - pushd doc
+                          - make
+                          - popd
                           # doxygen does not trap on warnings, check for them here.
                           - make doxygen-doc 2>&1 |tee doxygen.log
                           - |
@@ -235,10 +241,23 @@ jobs:
                              else
                                true
                              fi
+                  before_deploy:
+                          - pushd doc
+                          - mkdir gh-pages
+                          - cp -r application-api-guide/output/html/* gh-pages/
+                          - cp -r platform-api-guide/output/html/ gh-pages/platform-api-guide
+                          - cp -r helper-guide/output/html/ gh-pages/helper-guide
+                          - mkdir gh-pages/implementers-guide
+                          - cp implementers-guide/implementers-guide.html gh-pages/implementers-guide/index.html
+                          - mkdir gh-pages/users-guide
+                          - cp users-guide/users-guide.html gh-pages/users-guide/index.html
+                          - mkdir gh-pages/process-guide
+                          - cp process-guide/*.html gh-pages/process-guide/
+                          - popd
                   deploy:
                           provider: pages
                           skip_cleanup: true
-                          local_dir: doc/application-api-guide/output/html
+                          local_dir: doc/gh-pages
                           github_token: $GH_REPO_TOKEN
                           on:
                                   branch: master
