@@ -4,7 +4,7 @@ All rights reserved.
 SPDX-License-Identifier:        BSD-3-Clause
 
 OpenDataPlane (ODP) project web page:
-    http://www.opendataplane.org
+    https://www.opendataplane.org
 
 ODP project in GitHub:
     https://github.com/OpenDataPlane
@@ -44,7 +44,7 @@ Licensing:
     file for details.
 
 Mailing list:
-    lng-odp@lists.linaro.org
+    odp@lists.opendataplane.org
 
 Contributing:
     Please read CONTRIBUTING file before submitting patches. ODP project follows
