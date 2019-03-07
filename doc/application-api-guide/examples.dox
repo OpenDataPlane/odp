@@ -59,6 +59,11 @@
  * Basic packet IO loopback test application
  */
 
+ /**
+ *@example odp_simple_pipeline.c
+ * Simple pipeline example application
+ */
+
 /**
  * @example odp_switch.c
  * Minimal learning Ethernet switch example application

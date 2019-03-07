@@ -8,6 +8,7 @@ SUBDIRS = classifier \
 	  l2fwd_simple \
 	  l3fwd \
 	  packet \
+	  simple_pipeline \
 	  switch \
 	  sysinfo \
 	  time \
