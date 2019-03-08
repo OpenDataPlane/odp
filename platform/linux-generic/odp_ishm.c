@@ -1988,6 +1988,10 @@ int _odp_ishm_status(const char *title)
 
 	/* display block table: 1 line per entry +1 extra line if mapped here */
 	for (i = 0; i < ISHM_MAX_NB_BLOCKS; i++) {
+		void *start_addr = NULL;
+		void *end_addr = NULL;
+		int entry_fd = -1;
+
 		if (ishm_tbl->block[i].len <= 0)
 			continue; /* unused block */
 
@@ -2020,25 +2024,25 @@ int _odp_ishm_status(const char *title)
 		lost_total += ishm_tbl->block[i].len -
 			      ishm_tbl->block[i].user_len;
 		len_total += ishm_tbl->block[i].len;
-		ODP_PRINT("%2i  %-*s %s%c  0x%-08lx-0x%08lx %-08ld   %-08ld %-3lu %-3lu",
+
+		if (proc_index >= 0) {
+			start_addr = ishm_proctable->entry[proc_index].start;
+			end_addr = (void *)(uintptr_t)((uintptr_t)start_addr +
+					ishm_tbl->block[i].len);
+			entry_fd = ishm_proctable->entry[proc_index].fd;
+		}
+
+		ODP_PRINT("%2i  %-*s %s%c  0x%-08lx-0x%08lx %-08ld   %-08ld %-3lu %-3lu %-3d %s\n",
 			  i, max_name_len, ishm_tbl->block[i].name,
-			  flags, huge,
-			  ishm_proctable->entry[proc_index].start,
-			  (uintptr_t)ishm_proctable->entry[proc_index].start +
-				ishm_tbl->block[i].len,
+			  flags, huge, start_addr, end_addr,
 			  ishm_tbl->block[i].user_len,
 			  ishm_tbl->block[i].len - ishm_tbl->block[i].user_len,
 			  ishm_tbl->block[i].seq,
-			  ishm_tbl->block[i].refcnt);
-
-		if (proc_index < 0)
-			continue;
-
-		ODP_PRINT(" %-3d",
-			  ishm_proctable->entry[proc_index].fd);
-
-		ODP_PRINT("%s\n", ishm_tbl->block[i].filename[0] ?
-			  ishm_tbl->block[i].filename : "(none)");
+			  ishm_tbl->block[i].refcnt,
+			  entry_fd,
+			  ishm_tbl->block[i].filename[0] ?
+					  ishm_tbl->block[i].filename :
+					  "(none)");
 	}
 	ODP_PRINT("TOTAL: %58s%-08ld %2s%-08ld\n",
 		  "", len_total,
