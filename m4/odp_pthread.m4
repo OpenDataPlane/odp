@@ -11,7 +11,7 @@ AC_DEFUN([ODP_PTHREAD], [
 	AC_LANG_PUSH([C])
 	PTHEAD_CFLAGS="-pthread"
 	CFLAGS="$CFLAGS $PTHEAD_CFLAGS"
-	PTHEAD_LIBS="-pthread"
+	PTHREAD_LIBS="-pthread"
 	LDFLAGS="$LDFLAGS $PTHREAD_LIBS"
 	AC_TRY_LINK_FUNC([pthread_create], [pthread=yes])
 	if test x"$pthread" != "xyes"; then
@@ -19,6 +19,6 @@ AC_DEFUN([ODP_PTHREAD], [
 	fi
 	AC_MSG_RESULT([yes])
 	AC_LANG_POP([C])
+	AC_SUBST([PTHREAD_LIBS])
+	AC_SUBST([PTHREAD_CFLAGS])
 ])
-AC_SUBST([PTHREAD_LIBS])
-AC_SUBST([PTHREAD_CFLAGS])
