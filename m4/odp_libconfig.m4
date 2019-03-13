@@ -14,6 +14,7 @@ AC_CHECK_PROGS([OD], [od])
 AC_PROG_SED
 AS_IF([test -z "$OD"], [AC_MSG_ERROR([Could not find 'od'])])
 
+odp_use_config=true
 ##########################################################################
 # Create a header file odp_libconfig_config.h which containins null
 # terminated hex dump of odp-linux.conf
