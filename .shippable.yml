@@ -5,13 +5,8 @@ compiler:
   - clang
 
 env:
-    - CONF="--disable-test-perf --disable-test-perf-proc"
-    - CONF="--disable-abi-compat --disable-test-perf --disable-test-perf-proc"
-    # - CONF="--enable-dpdk-zero-copy"
-    # - CROSS_ARCH="arm64"
-    # - CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
-    # - CROSS_ARCH="powerpc"
-    # - CROSS_ARCH="i386"
+    - CONF="--disable-test-perf"
+    - CONF="--disable-abi-compat --disable-test-perf"
 
 build:
   ci:

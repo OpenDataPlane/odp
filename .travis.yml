@@ -25,7 +25,7 @@ stages:
 #                project:
 #                        name: "$TRAVIS_REPO_SLUG"
 #                        notification_email: xxxx
-#                        build_command_prepend: "./bootstrap && ./configure --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example"
+#                        build_command_prepend: "./bootstrap && ./configure --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-example"
 #                        build_command:   "make"
 #                        branch_pattern: coverity_scan
 
