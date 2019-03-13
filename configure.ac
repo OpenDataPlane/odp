@@ -231,6 +231,8 @@ AS_IF([test "${with_platform}" = "linux-generic"],
 AC_DEFINE_UNQUOTED([ODP_IMPLEMENTATION_NAME], ["$ODP_IMPLEMENTATION_NAME"],
 		   [Define to the name of the implementation])
 
+AM_CONDITIONAL([ODP_USE_CONFIG], [test "x$odp_use_config" = "xtrue"])
+
 ##########################################################################
 # Build examples/tests dynamically
 ##########################################################################

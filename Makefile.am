@@ -28,7 +28,7 @@ endif
 
 @DX_RULES@
 
-EXTRA_DIST = bootstrap CHANGELOG config/README config/odp-$(with_platform).conf
+EXTRA_DIST = bootstrap CHANGELOG config/README
 
 distcheck-hook:
 	if test -n "$(DX_CLEANFILES)" ; \
