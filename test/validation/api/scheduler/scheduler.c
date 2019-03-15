@@ -55,6 +55,7 @@
 #define CHAOS_NDX_TO_PTR(n) ((void *)(uintptr_t)n)
 
 #define ODP_WAIT_TOLERANCE	(150 * ODP_TIME_MSEC_IN_NS)
+#define WAIT_1MS_RETRIES 1000
 
 /* Test global variables */
 typedef struct {
@@ -737,7 +738,9 @@ static void scheduler_test_groups(void)
 		odp_queue_t queue, from;
 		odp_schedule_group_t mygrp[NUM_GROUPS];
 		odp_queue_t queue_grp[NUM_GROUPS];
+		uint64_t wait_time;
 		int num = NUM_GROUPS;
+		int schedule_retries;
 
 		odp_queue_param_init(&qp);
 		qp.type        = ODP_QUEUE_TYPE_SCHED;
@@ -795,21 +798,19 @@ static void scheduler_test_groups(void)
 		odp_schedule_group_leave(mygrp2, &mymask);
 		odp_schedule_group_join(mygrp1, &mymask);
 
+		wait_time = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS);
+		schedule_retries = 0;
 		while (num) {
 			queue = queue_grp[j];
-			ev    = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+			ev    = odp_schedule(&from, wait_time);
 
 			if (ev == ODP_EVENT_INVALID) {
-				/* change group */
-				rc = odp_schedule_group_leave(mygrp[j],
-							      &mymask);
-				CU_ASSERT_FATAL(rc == 0);
-
-				j = (j + 1) % NUM_GROUPS;
-				rc = odp_schedule_group_join(mygrp[j],
-							     &mymask);
-				CU_ASSERT_FATAL(rc == 0);
+				CU_ASSERT_FATAL(schedule_retries <
+						WAIT_1MS_RETRIES);
+				schedule_retries++;
 				continue;
+			} else {
+				schedule_retries = 0;
 			}
 
 			CU_ASSERT_FATAL(from == queue);
@@ -825,6 +826,14 @@ static void scheduler_test_groups(void)
 			}
 
 			odp_buffer_free(buf);
+
+			/* Change group */
+			rc = odp_schedule_group_leave(mygrp[j], &mymask);
+			CU_ASSERT_FATAL(rc == 0);
+
+			j = (j + 1) % NUM_GROUPS;
+			rc = odp_schedule_group_join(mygrp[j], &mymask);
+			CU_ASSERT_FATAL(rc == 0);
 
 			/* Tell scheduler we're about to request an event.
 			 * Not needed, but a convenient place to test this API.
