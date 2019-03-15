@@ -54,7 +54,7 @@
 #define CHAOS_PTR_TO_NDX(p) ((uint64_t)(uint32_t)(uintptr_t)p)
 #define CHAOS_NDX_TO_PTR(n) ((void *)(uintptr_t)n)
 
-#define ODP_WAIT_TOLERANCE	(150 * ODP_TIME_MSEC_IN_NS)
+#define WAIT_TOLERANCE (150 * ODP_TIME_MSEC_IN_NS)
 #define WAIT_1MS_RETRIES 1000
 
 /* Test global variables */
@@ -192,7 +192,7 @@ static void scheduler_test_wait_time(void)
 
 	diff = odp_time_diff(end_time, start_time);
 	lower_limit = ODP_TIME_NULL;
-	upper_limit = odp_time_local_from_ns(ODP_WAIT_TOLERANCE);
+	upper_limit = odp_time_local_from_ns(WAIT_TOLERANCE);
 
 	CU_ASSERT(odp_time_cmp(diff, lower_limit) >= 0);
 	CU_ASSERT(odp_time_cmp(diff, upper_limit) <= 0);
@@ -205,9 +205,9 @@ static void scheduler_test_wait_time(void)
 
 	diff = odp_time_diff(end_time, start_time);
 	lower_limit = odp_time_local_from_ns(5 * ODP_TIME_SEC_IN_NS -
-							ODP_WAIT_TOLERANCE);
+					     WAIT_TOLERANCE);
 	upper_limit = odp_time_local_from_ns(5 * ODP_TIME_SEC_IN_NS +
-							ODP_WAIT_TOLERANCE);
+					     WAIT_TOLERANCE);
 
 	if (odp_time_cmp(diff, lower_limit) <= 0) {
 		fprintf(stderr, "Exceed lower limit: "
