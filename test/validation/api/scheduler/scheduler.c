@@ -1671,10 +1671,7 @@ static void scheduler_test_pause_resume(void)
 		CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
 		ev = odp_buffer_to_event(buf);
 		ret = odp_queue_enq(queue, ev);
-		CU_ASSERT(ret == 0);
-
-		if (ret)
-			odp_buffer_free(buf);
+		CU_ASSERT_FATAL(ret == 0);
 	}
 
 	for (i = 0; i < NUM_BUFS_BEFORE_PAUSE; i++) {
@@ -1699,7 +1696,7 @@ static void scheduler_test_pause_resume(void)
 		local_bufs++;
 	}
 
-	CU_ASSERT(local_bufs < NUM_BUFS_PAUSE - NUM_BUFS_BEFORE_PAUSE);
+	CU_ASSERT(local_bufs <= NUM_BUFS_PAUSE - NUM_BUFS_BEFORE_PAUSE);
 
 	odp_schedule_resume();
 
