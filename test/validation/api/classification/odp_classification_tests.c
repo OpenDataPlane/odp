@@ -119,17 +119,25 @@ int classification_suite_term(void)
 		retcode = -1;
 	}
 
-	for (i = 0; i < CLS_ENTRIES; i++)
-		odp_cos_destroy(cos_list[i]);
+	for (i = 0; i < CLS_ENTRIES; i++) {
+		if (cos_list[i] != ODP_COS_INVALID)
+			odp_cos_destroy(cos_list[i]);
+	}
 
-	for (i = 0; i < CLS_ENTRIES; i++)
-		odp_cls_pmr_destroy(pmr_list[i]);
+	for (i = 0; i < CLS_ENTRIES; i++) {
+		if (pmr_list[i] != ODP_PMR_INVALID)
+			odp_cls_pmr_destroy(pmr_list[i]);
+	}
 
-	for (i = 0; i < CLS_ENTRIES; i++)
-		odp_queue_destroy(queue_list[i]);
+	for (i = 0; i < CLS_ENTRIES; i++) {
+		if (queue_list[i] != ODP_QUEUE_INVALID)
+			odp_queue_destroy(queue_list[i]);
+	}
 
-	for (i = 0; i < CLS_ENTRIES; i++)
-		odp_pool_destroy(pool_list[i]);
+	for (i = 0; i < CLS_ENTRIES; i++) {
+		if (pool_list[i] != ODP_POOL_INVALID)
+			odp_pool_destroy(pool_list[i]);
+	}
 
 	return retcode;
 }
