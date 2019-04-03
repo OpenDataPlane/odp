@@ -1828,6 +1828,7 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 	return 0;
 }
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 static void ODP_UNUSED openssl_thread_id(CRYPTO_THREADID ODP_UNUSED *id)
 {
 	CRYPTO_THREADID_set_numeric(id, odp_thread_id());
@@ -1842,6 +1843,7 @@ static void ODP_UNUSED openssl_lock(int mode, int n,
 	else
 		odp_ticketlock_unlock(&global->openssl_lock[n]);
 }
+#endif
 
 int
 odp_crypto_init_global(void)
@@ -1880,8 +1882,10 @@ odp_crypto_init_global(void)
 		for (idx = 0; idx < nlocks; idx++)
 			odp_ticketlock_init(&global->openssl_lock[idx]);
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 		CRYPTO_THREADID_set_callback(openssl_thread_id);
 		CRYPTO_set_locking_callback(openssl_lock);
+#endif
 	}
 
 	return 0;
@@ -1901,8 +1905,10 @@ int odp_crypto_term_global(void)
 		rc = -1;
 	}
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	CRYPTO_set_locking_callback(NULL);
 	CRYPTO_set_id_callback(NULL);
+#endif
 
 	ret = odp_shm_free(odp_shm_lookup("_odp_crypto_pool_ssl"));
 	if (ret < 0) {
