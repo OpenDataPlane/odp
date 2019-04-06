@@ -17,6 +17,9 @@
 #define TDES_CBC_KEY_LEN        24
 #define TDES_CBC_IV_LEN         8
 
+/* TDES-ECB */
+#define TDES_ECB_KEY_LEN        24
+
 /* AES common */
 
 #define AES128_KEY_LEN        16
