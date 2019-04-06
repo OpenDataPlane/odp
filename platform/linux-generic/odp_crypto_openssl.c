@@ -53,6 +53,9 @@ static const odp_crypto_cipher_capability_t cipher_capa_null[] = {
 static const odp_crypto_cipher_capability_t cipher_capa_trides_cbc[] = {
 {.key_len = 24, .iv_len = 8} };
 
+static const odp_crypto_cipher_capability_t cipher_capa_trides_ecb[] = {
+{.key_len = 24} };
+
 static const odp_crypto_cipher_capability_t cipher_capa_aes_cbc[] = {
 {.key_len = 16, .iv_len = 16},
 {.key_len = 24, .iv_len = 16},
@@ -1343,6 +1346,7 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 
 	capa->ciphers.bit.null       = 1;
 	capa->ciphers.bit.trides_cbc = 1;
+	capa->ciphers.bit.trides_ecb = 1;
 	capa->ciphers.bit.aes_cbc    = 1;
 	capa->ciphers.bit.aes_ctr    = 1;
 	capa->ciphers.bit.aes_gcm    = 1;
@@ -1395,6 +1399,10 @@ int odp_crypto_cipher_capability(odp_cipher_alg_t cipher,
 	case ODP_CIPHER_ALG_3DES_CBC:
 		src = cipher_capa_trides_cbc;
 		num = sizeof(cipher_capa_trides_cbc) / size;
+		break;
+	case ODP_CIPHER_ALG_3DES_ECB:
+		src = cipher_capa_trides_ecb;
+		num = sizeof(cipher_capa_trides_ecb) / size;
 		break;
 	case ODP_CIPHER_ALG_AES_CBC:
 		src = cipher_capa_aes_cbc;
@@ -1555,6 +1563,9 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 		break;
 	case ODP_CIPHER_ALG_3DES_CBC:
 		rc = process_cipher_param(session, EVP_des_ede3_cbc());
+		break;
+	case ODP_CIPHER_ALG_3DES_ECB:
+		rc = process_cipher_param(session, EVP_des_ede3_ecb());
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_CBC:
