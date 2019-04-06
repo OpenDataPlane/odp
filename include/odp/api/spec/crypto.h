@@ -76,6 +76,9 @@ typedef enum {
 	/** Triple DES with cipher block chaining */
 	ODP_CIPHER_ALG_3DES_CBC,
 
+	/** Triple DES with Electronic Codebook */
+	ODP_CIPHER_ALG_3DES_ECB,
+
 	/** AES with cipher block chaining */
 	ODP_CIPHER_ALG_AES_CBC,
 
@@ -277,6 +280,9 @@ typedef union odp_crypto_cipher_algos_t {
 
 		/** ODP_CIPHER_ALG_3DES_CBC */
 		uint32_t trides_cbc  : 1;
+
+		/** ODP_CIPHER_ALG_3DES_ECB */
+		uint32_t trides_ecb : 1;
 
 		/** ODP_CIPHER_ALG_AES_CBC */
 		uint32_t aes_cbc     : 1;
