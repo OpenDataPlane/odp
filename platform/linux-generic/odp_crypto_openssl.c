@@ -621,7 +621,8 @@ odp_crypto_alg_err_t auth_cmac_check(odp_packet_t pkt,
 static
 int internal_aad(EVP_CIPHER_CTX *ctx,
 		 odp_packet_t pkt,
-		 const odp_crypto_packet_op_param_t *param)
+		 const odp_crypto_packet_op_param_t *param,
+		 odp_bool_t encrypt)
 {
 	uint32_t offset = param->auth_range.offset;
 	uint32_t len   = param->auth_range.length;
@@ -635,12 +636,18 @@ int internal_aad(EVP_CIPHER_CTX *ctx,
 		void *mapaddr = odp_packet_offset(pkt, offset, &seglen, NULL);
 		uint32_t maclen = len > seglen ? seglen : len;
 
-		EVP_EncryptUpdate(ctx, NULL, &dummy_len, mapaddr, maclen);
+		if (encrypt)
+			EVP_EncryptUpdate(ctx, NULL, &dummy_len, mapaddr, maclen);
+		else
+			EVP_DecryptUpdate(ctx, NULL, &dummy_len, mapaddr, maclen);
 		offset  += maclen;
 		len     -= maclen;
 	}
 
-	ret = EVP_EncryptFinal_ex(ctx, NULL, &dummy_len);
+	if (encrypt)
+		ret = EVP_EncryptFinal_ex(ctx, NULL, &dummy_len);
+	else
+		ret = EVP_DecryptFinal_ex(ctx, NULL, &dummy_len);
 
 	return ret;
 }
@@ -1019,7 +1026,7 @@ odp_crypto_alg_err_t aes_gmac_gen(odp_packet_t pkt,
 
 	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
 
-	ret = internal_aad(ctx, pkt, param);
+	ret = internal_aad(ctx, pkt, param, true);
 
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG,
 			    session->p.auth_digest_len, block);
@@ -1068,7 +1075,7 @@ odp_crypto_alg_err_t aes_gmac_check(odp_packet_t pkt,
 	_odp_packet_set_data(pkt, param->hash_result_offset,
 			     0, session->p.auth_digest_len);
 
-	ret = internal_aad(ctx, pkt, param);
+	ret = internal_aad(ctx, pkt, param, false);
 
 	return ret <= 0 ? ODP_CRYPTO_ALG_ERR_ICV_CHECK :
 			  ODP_CRYPTO_ALG_ERR_NONE;
