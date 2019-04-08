@@ -1,4 +1,5 @@
-/* Copyright (c) 2013-2018, Linaro Limited
+/* Copyright (c) 2019, Nokia
+ * Copyright (c) 2013-2018, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -26,8 +27,8 @@ extern "C" {
 #include <odp/api/plat/strong_types.h>
 
 typedef struct ODP_ALIGNED_CACHE pool_cache_t {
-	uint32_t num;
-	uint32_t buf_index[CONFIG_POOL_CACHE_SIZE];
+	uint32_t num; /* Number of buffers in cache */
+	odp_buffer_hdr_t *buf_hdr[CONFIG_POOL_CACHE_SIZE]; /* Cached buffers */
 
 } pool_cache_t;
 
