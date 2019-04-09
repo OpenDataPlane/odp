@@ -36,8 +36,7 @@
 #define UNLOCK(a)    odp_ticketlock_unlock(a)
 #define LOCK_INIT(a) odp_ticketlock_init(a)
 
-#define CACHE_BURST       32
-#define RING_SIZE_MIN     (2 * CACHE_BURST)
+#define RING_SIZE_MIN     64
 #define POOL_MAX_NUM_MIN  RING_SIZE_MIN
 
 /* Make sure packet buffers don't cross huge page boundaries starting from this
@@ -50,9 +49,6 @@
 /* Minimum supported buffer alignment. Requests for values below this will be
  * rounded up to this value. */
 #define BUFFER_ALIGN_MIN ODP_CACHE_LINE_SIZE
-
-ODP_STATIC_ASSERT(CONFIG_POOL_CACHE_SIZE > (2 * CACHE_BURST),
-		  "cache_burst_size_too_large_compared_to_cache_size");
 
 ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_LEN_MIN >= 256,
 		  "ODP Segment size must be a minimum of 256 bytes");
@@ -94,6 +90,9 @@ static inline pool_t *pool_from_buf(odp_buffer_t buf)
 static inline void cache_init(pool_cache_t *cache)
 {
 	memset(cache, 0, sizeof(pool_cache_t));
+
+	cache->size = pool_tbl->config.local_cache_size;
+	cache->burst_size = pool_tbl->config.burst_size;
 }
 
 static inline uint32_t cache_pop(pool_cache_t *cache,
@@ -149,6 +148,48 @@ static int read_config_file(pool_table_t *pool_tbl)
 	int val = 0;
 
 	ODP_PRINT("Pool config:\n");
+
+	str = "pool.local_cache_size";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	if (val > CONFIG_POOL_CACHE_MAX_SIZE || val < 0) {
+		ODP_ERR("Bad value %s = %u, max %d\n", str, val,
+			CONFIG_POOL_CACHE_MAX_SIZE);
+		return -1;
+	}
+
+	pool_tbl->config.local_cache_size = val;
+	ODP_PRINT("  %s: %i\n", str, val);
+
+	str = "pool.burst_size";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	if (val <= 0) {
+		ODP_ERR("Bad value %s = %u\n", str, val);
+		return -1;
+	}
+
+	pool_tbl->config.burst_size = val;
+	ODP_PRINT("  %s: %i\n", str, val);
+
+	/* Check local cache size and burst size relation */
+	if (pool_tbl->config.local_cache_size % pool_tbl->config.burst_size) {
+		ODP_ERR("Pool cache size not multiple of burst size\n");
+		return -1;
+	}
+
+	if (pool_tbl->config.local_cache_size &&
+	    (pool_tbl->config.local_cache_size /
+	     pool_tbl->config.burst_size < 2)) {
+		ODP_ERR("Cache burst size too large compared to cache size\n");
+		return -1;
+	}
 
 	str = "pool.pkt.max_num";
 	if (!_odp_libconfig_lookup_int(str, &val)) {
@@ -832,17 +873,18 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 	odp_buffer_hdr_t *hdr;
 	uint32_t mask, num_ch, i;
 	uint32_t num_deq = 0;
+	uint32_t burst_size = cache->burst_size;
 
 	/* First pull packets from local cache */
 	num_ch = cache_pop(cache, buf_hdr, max_num);
 
 	/* If needed, get more from the global pool */
 	if (odp_unlikely(num_ch != (uint32_t)max_num)) {
-		uint32_t burst = CACHE_BURST;
+		uint32_t burst = burst_size;
 		uint32_t cache_num;
 
 		num_deq = max_num - num_ch;
-		if (odp_unlikely(num_deq > CACHE_BURST))
+		if (odp_unlikely(num_deq > burst_size))
 			burst = num_deq;
 
 		uint32_t data[burst];
@@ -891,10 +933,11 @@ static inline void buffer_free_to_pool(pool_t *pool,
 	ring_t *ring;
 	int i;
 	uint32_t cache_num, mask;
+	uint32_t cache_size = cache->size;
 
 	/* Special case of a very large free. Move directly to
 	 * the global pool. */
-	if (odp_unlikely(num > CONFIG_POOL_CACHE_SIZE)) {
+	if (odp_unlikely(num > (int)cache_size)) {
 		uint32_t buf_index[num];
 
 		ring  = &pool->ring->hdr;
@@ -911,13 +954,13 @@ static inline void buffer_free_to_pool(pool_t *pool,
 	 * transfer. */
 	cache_num = cache->num;
 
-	if (odp_unlikely((int)(CONFIG_POOL_CACHE_SIZE - cache_num) < num)) {
-		int burst = CACHE_BURST;
+	if (odp_unlikely((int)(cache_size - cache_num) < num)) {
+		int burst = cache->burst_size;
 
 		ring  = &pool->ring->hdr;
 		mask  = pool->ring_mask;
 
-		if (odp_unlikely(num > CACHE_BURST))
+		if (odp_unlikely(num > burst))
 			burst = num;
 		if (odp_unlikely((uint32_t)num > cache_num))
 			burst = cache_num;

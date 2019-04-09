@@ -27,8 +27,11 @@ extern "C" {
 #include <odp/api/plat/strong_types.h>
 
 typedef struct ODP_ALIGNED_CACHE pool_cache_t {
+	uint32_t size; /* Size of cache */
+	uint32_t burst_size; /* Cache burst size */
 	uint32_t num; /* Number of buffers in cache */
-	odp_buffer_hdr_t *buf_hdr[CONFIG_POOL_CACHE_SIZE]; /* Cached buffers */
+	/* Cached buffers */
+	odp_buffer_hdr_t *buf_hdr[CONFIG_POOL_CACHE_MAX_SIZE];
 
 } pool_cache_t;
 
@@ -92,6 +95,8 @@ typedef struct pool_table_t {
 
 	struct {
 		uint32_t pkt_max_num;
+		uint32_t local_cache_size;
+		uint32_t burst_size;
 	} config;
 
 } pool_table_t;
