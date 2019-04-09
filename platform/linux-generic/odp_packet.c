@@ -1736,6 +1736,40 @@ int _odp_packet_cmp_data(odp_packet_t pkt, uint32_t offset,
  * ********************************************************
  *
  */
+static int packet_print_input_flags(odp_packet_hdr_t *hdr, char *str, int max)
+{
+	int len = 0;
+
+	if (hdr->p.input_flags.l2)
+		len += snprintf(&str[len], max - len, "l2 ");
+	if (hdr->p.input_flags.l3)
+		len += snprintf(&str[len], max - len, "l3 ");
+	if (hdr->p.input_flags.l4)
+		len += snprintf(&str[len], max - len, "l4 ");
+	if (hdr->p.input_flags.eth)
+		len += snprintf(&str[len], max - len, "eth ");
+	if (hdr->p.input_flags.vlan)
+		len += snprintf(&str[len], max - len, "vlan ");
+	if (hdr->p.input_flags.arp)
+		len += snprintf(&str[len], max - len, "arp ");
+	if (hdr->p.input_flags.ipv4)
+		len += snprintf(&str[len], max - len, "ipv4 ");
+	if (hdr->p.input_flags.ipv6)
+		len += snprintf(&str[len], max - len, "ipv6 ");
+	if (hdr->p.input_flags.ipsec)
+		len += snprintf(&str[len], max - len, "ipsec ");
+	if (hdr->p.input_flags.udp)
+		len += snprintf(&str[len], max - len, "udp ");
+	if (hdr->p.input_flags.tcp)
+		len += snprintf(&str[len], max - len, "tcp ");
+	if (hdr->p.input_flags.sctp)
+		len += snprintf(&str[len], max - len, "sctp ");
+	if (hdr->p.input_flags.icmp)
+		len += snprintf(&str[len], max - len, "icmp ");
+
+	return len;
+}
+
 void odp_packet_print(odp_packet_t pkt)
 {
 	odp_packet_seg_t seg;
@@ -1753,7 +1787,12 @@ void odp_packet_print(odp_packet_t pkt)
 	len += odp_buffer_snprint(&str[len], n - len, buf);
 	len += snprintf(&str[len], n - len, "  input_flags  0x%" PRIx64 "\n",
 			hdr->p.input_flags.all);
-	len += snprintf(&str[len], n - len, "  flags  0x%" PRIx32 "\n",
+	if (hdr->p.input_flags.all) {
+		len += snprintf(&str[len], n - len, "               ");
+		len += packet_print_input_flags(hdr, &str[len], n - len);
+		len += snprintf(&str[len], n - len, "\n");
+	}
+	len += snprintf(&str[len], n - len, "  flags        0x%" PRIx32 "\n",
 			hdr->p.flags.all_flags);
 	len += snprintf(&str[len], n - len,
 			"  l2_offset    %" PRIu32 "\n", hdr->p.l2_offset);
