@@ -681,12 +681,22 @@ error:
 static int check_params(odp_pool_param_t *params)
 {
 	odp_pool_capability_t capa;
+	odp_bool_t cache_warning = false;
+	uint32_t cache_size = pool_tbl->config.local_cache_size;
+	int num_threads = odp_global_ro.init_param.num_control +
+				odp_global_ro.init_param.num_worker;
 
 	if (!params || odp_pool_capability(&capa) < 0)
 		return -1;
 
+	if (num_threads)
+		cache_size = num_threads * pool_tbl->config.local_cache_size;
+
 	switch (params->type) {
 	case ODP_POOL_BUFFER:
+		if (params->buf.num <= cache_size)
+			cache_warning = true;
+
 		if (params->buf.num > capa.buf.max_num) {
 			ODP_ERR("buf.num too large %u\n", params->buf.num);
 			return -1;
@@ -705,6 +715,9 @@ static int check_params(odp_pool_param_t *params)
 		break;
 
 	case ODP_POOL_PACKET:
+		if (params->pkt.num <= cache_size)
+			cache_warning = true;
+
 		if (params->pkt.num > capa.pkt.max_num) {
 			ODP_ERR("pkt.num too large %u\n", params->pkt.num);
 			return -1;
@@ -748,6 +761,9 @@ static int check_params(odp_pool_param_t *params)
 		break;
 
 	case ODP_POOL_TIMEOUT:
+		if (params->tmo.num <= cache_size)
+			cache_warning = true;
+
 		if (params->tmo.num > capa.tmo.max_num) {
 			ODP_ERR("tmo.num too large %u\n", params->tmo.num);
 			return -1;
@@ -758,6 +774,11 @@ static int check_params(odp_pool_param_t *params)
 		ODP_ERR("bad pool type %i\n", params->type);
 		return -1;
 	}
+
+	if (cache_warning)
+		ODP_DBG("Entire pool fits into thread local caches. Pool "
+			"starvation may occur if the pool is used by multiple "
+			"threads.\n");
 
 	return 0;
 }
