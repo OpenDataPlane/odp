@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -24,7 +25,7 @@
 #include <odp_align_internal.h>
 #include <odp/api/sync.h>
 #include <odp/api/packet_io.h>
-#include <odp_ring_internal.h>
+#include <odp_ring_u32_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_queue_basic_internal.h>
 #include <odp_libconfig_internal.h>
@@ -125,7 +126,7 @@ typedef struct ODP_ALIGNED_CACHE {
 		uint16_t    ev_index;
 		uint32_t    qi;
 		odp_queue_t queue;
-		ring_t      *ring;
+		ring_u32_t   *ring;
 		odp_event_t ev[STASH_SIZE];
 	} stash;
 
@@ -151,7 +152,7 @@ typedef struct ODP_ALIGNED_CACHE {
 /* Priority queue */
 typedef struct ODP_ALIGNED_CACHE {
 	/* Ring header */
-	ring_t ring;
+	ring_u32_t ring;
 
 	/* Ring data: queue indexes */
 	uint32_t queue_index[MAX_RING_SIZE];
@@ -423,7 +424,7 @@ static int schedule_init_global(void)
 				prio_queue_t *prio_q;
 
 				prio_q = &sched->prio_q[grp][i][j];
-				ring_init(&prio_q->ring);
+				ring_u32_init(&prio_q->ring);
 			}
 		}
 	}
@@ -461,10 +462,12 @@ static int schedule_term_global(void)
 	for (grp = 0; grp < NUM_SCHED_GRPS; grp++) {
 		for (i = 0; i < NUM_PRIO; i++) {
 			for (j = 0; j < MAX_SPREAD; j++) {
-				ring_t *ring = &sched->prio_q[grp][i][j].ring;
+				ring_u32_t *ring;
 				uint32_t qi;
 
-				while (ring_deq(ring, ring_mask, &qi)) {
+				ring = &sched->prio_q[grp][i][j].ring;
+
+				while (ring_u32_deq(ring, ring_mask, &qi)) {
 					odp_event_t events[1];
 					int num;
 
@@ -651,9 +654,9 @@ static int schedule_sched_queue(uint32_t queue_index)
 	int grp      = sched->queue[queue_index].grp;
 	int prio     = sched->queue[queue_index].prio;
 	int spread   = sched->queue[queue_index].spread;
-	ring_t *ring = &sched->prio_q[grp][prio][spread].ring;
+	ring_u32_t *ring = &sched->prio_q[grp][prio][spread].ring;
 
-	ring_enq(ring, sched->ring_mask, queue_index);
+	ring_u32_enq(ring, sched->ring_mask, queue_index);
 	return 0;
 }
 
@@ -682,10 +685,10 @@ static void schedule_pktio_start(int pktio_index, int num_pktin,
 static inline void release_atomic(void)
 {
 	uint32_t qi  = sched_local.stash.qi;
-	ring_t *ring = sched_local.stash.ring;
+	ring_u32_t *ring = sched_local.stash.ring;
 
 	/* Release current atomic queue */
-	ring_enq(ring, sched->ring_mask, qi);
+	ring_u32_enq(ring, sched->ring_mask, qi);
 
 	/* We don't hold sync context anymore */
 	sched_local.sync_ctx = NO_SYNC_CONTEXT;
@@ -980,7 +983,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 			int num;
 			uint8_t sync_ctx, ordered;
 			odp_queue_t handle;
-			ring_t *ring;
+			ring_u32_t *ring;
 			int pktin;
 			uint16_t max_deq = burst_def;
 			int stashed = 1;
@@ -1000,7 +1003,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 			/* Get queue index from the priority queue */
 			ring = &sched->prio_q[grp][prio][id].ring;
 
-			if (ring_deq(ring, ring_mask, &qi) == 0) {
+			if (ring_u32_deq(ring, ring_mask, &qi) == 0) {
 				/* Priority queue empty */
 				i++;
 				id++;
@@ -1053,7 +1056,8 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 						continue;
 
 					if (num_pkt == 0 || !direct_recv) {
-						ring_enq(ring, ring_mask, qi);
+						ring_u32_enq(ring, ring_mask,
+							     qi);
 						break;
 					}
 
@@ -1079,7 +1083,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 				sched_local.ordered.src_queue = qi;
 
 				/* Continue scheduling ordered queues */
-				ring_enq(ring, ring_mask, qi);
+				ring_u32_enq(ring, ring_mask, qi);
 				sched_local.sync_ctx = sync_ctx;
 
 			} else if (sync_ctx == ODP_SCHED_SYNC_ATOMIC) {
@@ -1089,7 +1093,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 				sched_local.sync_ctx   = sync_ctx;
 			} else {
 				/* Continue scheduling the queue */
-				ring_enq(ring, ring_mask, qi);
+				ring_u32_enq(ring, ring_mask, qi);
 			}
 
 			handle = queue_from_index(qi);

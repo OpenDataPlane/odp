@@ -20,7 +20,7 @@
 #include <odp_packet_dpdk.h>
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_ring_internal.h>
+#include <odp_ring_u32_internal.h>
 #include <odp_global_data.h>
 #include <odp_libconfig_internal.h>
 #include <odp_shm_internal.h>
@@ -132,14 +132,14 @@ static inline void cache_push(pool_cache_t *cache, odp_buffer_hdr_t *buf_hdr[],
 static void cache_flush(pool_cache_t *cache, pool_t *pool)
 {
 	odp_buffer_hdr_t *buf_hdr;
-	ring_t *ring;
+	ring_u32_t *ring;
 	uint32_t mask;
 
 	ring = &pool->ring->hdr;
 	mask = pool->ring_mask;
 
 	while (cache_pop(cache, &buf_hdr, 1))
-		ring_enq(ring, mask, buf_hdr->index.buffer);
+		ring_u32_enq(ring, mask, buf_hdr->index.buffer);
 }
 
 static int read_config_file(pool_table_t *pool_tbl)
@@ -350,7 +350,7 @@ static void init_buffers(pool_t *pool)
 	void *uarea = NULL;
 	uint8_t *data;
 	uint32_t offset;
-	ring_t *ring;
+	ring_u32_t *ring;
 	uint32_t mask;
 	int type;
 	uint64_t page_size;
@@ -431,7 +431,7 @@ static void init_buffers(pool_t *pool)
 
 		/* Store buffer index into the global pool */
 		if (!skip)
-			ring_enq(ring, mask, i);
+			ring_u32_enq(ring, mask, i);
 	}
 	pool->skipped_blocks = skipped_blocks;
 }
@@ -654,7 +654,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 		pool->uarea_base_addr = odp_shm_addr(pool->uarea_shm);
 	}
 
-	ring_init(&pool->ring->hdr);
+	ring_u32_init(&pool->ring->hdr);
 	init_buffers(pool);
 
 	/* Create zero-copy DPDK memory pool. NOP if zero-copy is disabled. */
@@ -890,7 +890,7 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 {
 	pool_cache_t *cache = local.cache[pool->pool_idx];
-	ring_t *ring;
+	ring_u32_t *ring;
 	odp_buffer_hdr_t *hdr;
 	uint32_t mask, num_ch, i;
 	uint32_t num_deq = 0;
@@ -914,7 +914,7 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 		 * uintptr_t and not uint32_t. */
 		ring      = &pool->ring->hdr;
 		mask      = pool->ring_mask;
-		burst     = ring_deq_multi(ring, mask, data, burst);
+		burst     = ring_u32_deq_multi(ring, mask, data, burst);
 		cache_num = burst - num_deq;
 
 		if (odp_unlikely(burst < num_deq)) {
@@ -951,7 +951,7 @@ static inline void buffer_free_to_pool(pool_t *pool,
 				       odp_buffer_hdr_t *buf_hdr[], int num)
 {
 	pool_cache_t *cache = local.cache[pool->pool_idx];
-	ring_t *ring;
+	ring_u32_t *ring;
 	int i;
 	uint32_t cache_num, mask;
 	uint32_t cache_size = cache->size;
@@ -966,7 +966,7 @@ static inline void buffer_free_to_pool(pool_t *pool,
 		for (i = 0; i < num; i++)
 			buf_index[i] = buf_hdr[i]->index.buffer;
 
-		ring_enq_multi(ring, mask, buf_index, num);
+		ring_u32_enq_multi(ring, mask, buf_index, num);
 
 		return;
 	}
@@ -996,7 +996,7 @@ static inline void buffer_free_to_pool(pool_t *pool,
 		for (i = 0; i < burst; i++)
 			data[i] = buf_hdr[i]->index.buffer;
 
-		ring_enq_multi(ring, mask, data, burst);
+		ring_u32_enq_multi(ring, mask, data, burst);
 	}
 
 	cache_push(cache, buf_hdr, num);

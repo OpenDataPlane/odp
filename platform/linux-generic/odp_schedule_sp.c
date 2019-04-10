@@ -1,4 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -18,7 +19,7 @@
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
 #include <odp_config_internal.h>
-#include <odp_ring_internal.h>
+#include <odp_ring_u32_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_queue_basic_internal.h>
 
@@ -74,7 +75,7 @@ typedef struct ODP_ALIGNED_CACHE sched_cmd_t {
 
 typedef struct ODP_ALIGNED_CACHE {
 	/* Ring header */
-	ring_t ring;
+	ring_u32_t ring;
 
 	/* Ring data: queue indexes */
 	uint32_t ring_idx[RING_SIZE];
@@ -189,7 +190,7 @@ static int init_global(void)
 
 	for (i = 0; i < NUM_GROUP; i++)
 		for (j = 0; j < NUM_PRIO; j++)
-			ring_init(&sched_global->prio_queue[i][j].ring);
+			ring_u32_init(&sched_global->prio_queue[i][j].ring);
 
 	sched_group = &sched_global->sched_group;
 	odp_ticketlock_init(&sched_group->s.lock);
@@ -411,7 +412,7 @@ static inline void add_tail(sched_cmd_t *cmd)
 	uint32_t idx = cmd->s.ring_idx;
 
 	prio_queue = &sched_global->prio_queue[group][prio];
-	ring_enq(&prio_queue->ring, RING_MASK, idx);
+	ring_u32_enq(&prio_queue->ring, RING_MASK, idx);
 }
 
 static inline sched_cmd_t *rem_head(int group, int prio)
@@ -422,7 +423,7 @@ static inline sched_cmd_t *rem_head(int group, int prio)
 
 	prio_queue = &sched_global->prio_queue[group][prio];
 
-	if (ring_deq(&prio_queue->ring, RING_MASK, &ring_idx) == 0)
+	if (ring_u32_deq(&prio_queue->ring, RING_MASK, &ring_idx) == 0)
 		return NULL;
 
 	pktio = index_from_ring_idx(&index, ring_idx);
