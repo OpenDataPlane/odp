@@ -219,8 +219,9 @@ static uint32_t pktio_pkt_seq_hdr(odp_packet_t pkt, size_t l4_hdr_len)
 	}
 
 	if (head.magic != TEST_SEQ_MAGIC) {
-		fprintf(stderr, "error: header magic invalid %" PRIu32 "\n",
+		fprintf(stderr, "error: header magic invalid 0x%" PRIx32 "\n",
 			head.magic);
+		odp_packet_print(pkt);
 		return TEST_SEQ_INVALID;
 	}
 
@@ -237,7 +238,7 @@ static uint32_t pktio_pkt_seq_hdr(odp_packet_t pkt, size_t l4_hdr_len)
 			CU_ASSERT(seq != TEST_SEQ_INVALID);
 		} else {
 			fprintf(stderr,
-				"error: tail magic invalid %" PRIu32 "\n",
+				"error: tail magic invalid 0x%" PRIx32 "\n",
 				tail.magic);
 		}
 	} else {
@@ -592,19 +593,23 @@ static int wait_for_packets_hdr(pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
 				uint32_t seq_tbl[], int num, txrx_mode_e mode,
 				uint64_t ns, size_t l4_hdr_len)
 {
-	odp_time_t wait_time, end;
+	odp_time_t wait_time, end, start;
 	int num_rx = 0;
 	int i;
 	odp_packet_t pkt_tmp[num];
 
 	wait_time = odp_time_local_from_ns(ns);
-	end = odp_time_sum(odp_time_local(), wait_time);
+	start     = odp_time_local();
+	end       = odp_time_sum(start, wait_time);
 
-	do {
+	while (num_rx < num && odp_time_cmp(end, odp_time_local()) > 0) {
 		int n = get_packets(pktio_rx, pkt_tmp, num - num_rx, mode);
 
 		if (n < 0)
 			break;
+
+		if (n == 0)
+			continue;
 
 		for (i = 0; i < n; ++i) {
 			if (pktio_pkt_seq_hdr(pkt_tmp[i], l4_hdr_len) ==
@@ -613,7 +618,7 @@ static int wait_for_packets_hdr(pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
 			else
 				odp_packet_free(pkt_tmp[i]);
 		}
-	} while (num_rx < num && odp_time_cmp(end, odp_time_local()) > 0);
+	}
 
 	return num_rx;
 }
@@ -795,6 +800,10 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 	num_rx = wait_for_packets(pktio_b, rx_pkt, tx_seq,
 				  num_pkts, mode, ODP_TIME_SEC_IN_NS);
 	CU_ASSERT(num_rx == num_pkts);
+	if (num_rx != num_pkts) {
+		fprintf(stderr, "error: received %i, out of %i packets\n",
+			num_rx, num_pkts);
+	}
 
 	for (i = 0; i < num_rx; ++i) {
 		odp_packet_data_range_t range;
