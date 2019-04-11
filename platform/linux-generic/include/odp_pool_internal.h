@@ -23,7 +23,7 @@ extern "C" {
 
 #include <odp_buffer_internal.h>
 #include <odp_config_internal.h>
-#include <odp_ring_u32_internal.h>
+#include <odp_ring_ptr_internal.h>
 #include <odp/api/plat/strong_types.h>
 
 typedef struct ODP_ALIGNED_CACHE pool_cache_t {
@@ -38,10 +38,10 @@ typedef struct ODP_ALIGNED_CACHE pool_cache_t {
 /* Buffer header ring */
 typedef struct ODP_ALIGNED_CACHE {
 	/* Ring header */
-	ring_u32_t hdr;
+	ring_ptr_t hdr;
 
 	/* Ring data: buffer handles */
-	uint32_t buf[CONFIG_POOL_MAX_NUM + 1];
+	odp_buffer_hdr_t *buf_hdr[CONFIG_POOL_MAX_NUM + 1];
 
 } pool_ring_t;
 
