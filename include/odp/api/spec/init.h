@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -6,16 +7,6 @@
 
 /**
  * @file
- *
- * ODP initialization.
- * ODP requires a global level init for the process and a local init per
- * thread before the other ODP APIs may be called.
- * - odp_init_global()
- * - odp_init_local()
- *
- * For a graceful termination the matching termination APIs exit
- * - odp_term_global()
- * - odp_term_local()
  */
 
 #ifndef ODP_API_SPEC_INIT_H_
@@ -234,13 +225,25 @@ void odp_init_param_init(odp_init_t *param);
 /**
  * Global ODP initialization
  *
- * This function must be called once (per instance) before calling any other
- * ODP API functions. A successful call creates a new ODP instance into the
- * system and outputs a handle for it. The handle is used in other calls
- * (e.g. odp_init_local()) as a reference to the instance. When user provides
- * configuration parameters, the platform may configure and optimize the
- * instance to match user requirements. A failure is returned if requirements
- * cannot be met.
+ * An ODP instance is created with an odp_init_global() call. By default, each
+ * thread of the instance must call odp_init_local() before calling any other
+ * ODP API functions. Exceptions to this are functions that are needed for
+ * setting up parameters for odp_init_global() and odp_init_local() calls:
+ * - odp_init_param_init()
+ * - odp_cpumask_zero(), odp_cpumask_set(), etc functions to format
+ *   odp_cpumask_t. However, these cpumask functions are excluded as their
+ *   behaviour depend on global initialization parameters:
+ *   odp_cpumask_default_worker(), odp_cpumask_default_control() and
+ *   odp_cpumask_all_available()
+ *
+ * A successful odp_init_global() call outputs a handle for the new instance.
+ * The handle is used in other initialization and termination calls.
+ * For a graceful termination, odp_term_local() must be called first on each
+ * thread and then odp_term_global() only once.
+ *
+ * When user provides configuration parameters, the platform may configure and
+ * optimize the instance to match user requirements. A failure is returned if
+ * requirements cannot be met.
  *
  * Configuration parameters are divided into standard and platform specific
  * parts. Standard parameters are supported by any ODP platform, where as
@@ -260,46 +263,25 @@ void odp_init_param_init(odp_init_t *param);
  * @retval 0 on success
  * @retval <0 on failure
  *
- * @see odp_term_global()
- * @see odp_init_local() which is required per thread before use.
+ * @see odp_init_local(), odp_term_global(), odp_init_param_init()
  */
 int odp_init_global(odp_instance_t *instance,
 		    const odp_init_t *params,
 		    const odp_platform_init_t *platform_params);
 
 /**
- * Global ODP termination
- *
- * This function is the final ODP call made when terminating
- * an ODP application in a controlled way. It cannot handle exceptional
- * circumstances. In general it calls the API modules terminate functions in
- * the reverse order to that which the module init functions were called
- * during odp_init_global().
- *
- * This function must be called only after all threads of the instance have
- * executed odp_term_local(). To simplify synchronization between threads
- * odp_term_local() identifies which one is the last thread of an instance.
- *
- * @param instance        Instance handle
- *
- * @retval 0 on success
- * @retval <0 on failure
- *
- * @warning The unwinding of HW resources to allow them to be reused without
- * resetting the device is a complex task that the application is expected to
- * coordinate. This api may have platform dependent implications.
- *
- * @see odp_init_global()
- * @see odp_term_local() which must have been called prior to this.
- */
-int odp_term_global(odp_instance_t instance);
-
-/**
  * Thread local ODP initialization
  *
  * All threads must call this function before calling any other ODP API
- * functions. The instance parameter specifies which ODP instance the thread
- * joins. A thread may be simultaneously part of single ODP instance only.
+ * functions. See odp_init_global() documentation for exceptions to this rule.
+ * Global initialization (odp_init_global()) must have completed prior calling
+ * this function.
+ *
+ * The instance parameter specifies which ODP instance the thread joins.
+ * A thread may only join a single ODP instance at a time. The thread
+ * type parameter indicates if the thread does most part of application
+ * processing (ODP_THREAD_WORKER), or if it performs mostly background
+ * tasks (ODP_THREAD_CONTROL).
  *
  * @param instance        Instance handle
  * @param thr_type        Thread type
@@ -307,8 +289,7 @@ int odp_term_global(odp_instance_t instance);
  * @retval 0 on success
  * @retval <0 on failure
  *
- * @see odp_term_local()
- * @see odp_init_global() which must have been called prior to this.
+ * @see odp_init_global(), odp_term_local()
  */
 int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type);
 
@@ -317,23 +298,39 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type);
  *
  * This function is the second to final ODP call made when terminating
  * an ODP application in a controlled way. It cannot handle exceptional
- * circumstances. In general it calls the API modules per thread terminate
- * functions in the reverse order to that which the module init functions were
- * called during odp_init_local().
+ * circumstances. It is recommended that all ODP resources are freed before
+ * the last thread (of the instance) calls this function. This helps ODP
+ * to avoid memory and other resource leaks.
+ *
+ * odp_term_global() may be called only after all threads of the instance have
+ * executed odp_term_local(). To simplify synchronization between threads
+ * a return value identifies which one is the last thread of an instance.
  *
  * @retval 1 on success and more ODP threads exist
  * @retval 0 on success and this is the last ODP thread
  * @retval <0 on failure
  *
- * @warning The unwinding of HW resources to allow them to be reused without
- * resetting the device is a complex task that the application is expected
- * to coordinate.
- *
- * @see odp_init_local()
- * @see odp_term_global() should be called by the last ODP thread before exit
- * of an application.
+ * @see odp_init_local(), odp_term_global()
  */
 int odp_term_local(void);
+
+/**
+ * Global ODP termination
+ *
+ * This function is the final ODP call made when terminating an ODP application
+ * in a controlled way. It cannot handle exceptional circumstances.
+ *
+ * This function must be called only after all threads of the instance have
+ * executed odp_term_local().
+ *
+ * @param instance        Instance handle
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ *
+ * @see odp_init_global(), odp_term_local()
+ */
+int odp_term_global(odp_instance_t instance);
 
 /**
  * @}
