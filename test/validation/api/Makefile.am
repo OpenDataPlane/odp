@@ -46,6 +46,7 @@ TESTS = \
 	init/init_defaults$(EXEEXT) \
 	init/init_abort$(EXEEXT) \
 	init/init_log$(EXEEXT) \
+	init/init_num_thr$(EXEEXT) \
 	ipsec/ipsec_sync$(EXEEXT) \
 	ipsec/ipsec_async$(EXEEXT) \
 	ipsec/ipsec_inline_in$(EXEEXT) \
