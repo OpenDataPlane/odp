@@ -85,6 +85,9 @@ typedef enum {
 	/** AES with counter mode */
 	ODP_CIPHER_ALG_AES_CTR,
 
+	/** AES with electronic codebook */
+	ODP_CIPHER_ALG_AES_ECB,
+
 	/** AES-GCM
 	 *
 	 *  AES in Galois/Counter Mode (GCM) algorithm. GCM provides both
@@ -313,6 +316,9 @@ typedef union odp_crypto_cipher_algos_t {
 
 		/** ODP_CIPHER_ALG_AES_CTR */
 		uint32_t aes_ctr     : 1;
+
+		/** ODP_CIPHER_ALG_AES_ECB */
+		uint32_t aes_ecb     : 1;
 
 		/** ODP_CIPHER_ALG_AES_GCM */
 		uint32_t aes_gcm     : 1;
