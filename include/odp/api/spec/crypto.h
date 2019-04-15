@@ -261,6 +261,24 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_ZUC_EIA3,
 
+	/** MD5 algorithm */
+	ODP_AUTH_ALG_MD5,
+
+	/** SHA1 algorithm */
+	ODP_AUTH_ALG_SHA1,
+
+	/** 224 bit SHA2 algorithm */
+	ODP_AUTH_ALG_SHA224,
+
+	/** 256 bit SHA2 algorithm */
+	ODP_AUTH_ALG_SHA256,
+
+	/** 384 bit SHA2 algorithm */
+	ODP_AUTH_ALG_SHA384,
+
+	/** 512 bit SHA2 algorithm */
+	ODP_AUTH_ALG_SHA512,
+
 	/** @deprecated  Use ODP_AUTH_ALG_MD5_HMAC instead */
 	ODP_DEPRECATE(ODP_AUTH_ALG_MD5_96),
 
@@ -382,6 +400,24 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_ZUC_EIA3 */
 		uint32_t zuc_eia3    : 1;
+
+		/** ODP_AUTH_ALG_MD5 */
+		uint32_t md5 : 1;
+
+		/** ODP_AUTH_ALG_SHA1 */
+		uint32_t sha1 : 1;
+
+		/** ODP_AUTH_ALG_SHA224 */
+		uint32_t sha224 : 1;
+
+		/** ODP_AUTH_ALG_SHA256 */
+		uint32_t sha256 : 1;
+
+		/** ODP_AUTH_ALG_SHA384 */
+		uint32_t sha384 : 1;
+
+		/** ODP_AUTH_ALG_SHA512 */
+		uint32_t sha512 : 1;
 
 		/** @deprecated  Use md5_hmac instead */
 		uint32_t ODP_DEPRECATE(md5_96)     : 1;
