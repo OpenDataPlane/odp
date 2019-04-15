@@ -9,7 +9,7 @@
 /* Maximum */
 #define MAX_KEY_LEN         64
 #define MAX_IV_LEN          16
-#define MAX_DATA_LEN        270
+#define MAX_DATA_LEN        528
 #define MAX_AAD_LEN         12
 #define MAX_DIGEST_LEN      64
 
