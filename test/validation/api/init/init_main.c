@@ -99,10 +99,37 @@ static void init_test_log(void)
 	CU_ASSERT(ret == 0);
 }
 
+static void init_test_num_thr(void)
+{
+	int ret;
+	odp_instance_t instance;
+	odp_init_t param;
+
+	odp_init_param_init(&param);
+	param.mem_model    = ODP_MEM_MODEL_THREAD;
+	param.num_worker   = 1;
+	param.num_control  = 1;
+	param.worker_cpus  = NULL;
+	param.control_cpus = NULL;
+
+	ret = odp_init_global(&instance, &param, NULL);
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_init_local(instance, ODP_THREAD_WORKER);
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_term_local();
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_term_global(instance);
+	CU_ASSERT(ret == 0);
+}
+
 odp_testinfo_t testinfo[] = {
 	ODP_TEST_INFO(init_test_defaults),
 	ODP_TEST_INFO(init_test_abort),
 	ODP_TEST_INFO(init_test_log),
+	ODP_TEST_INFO(init_test_num_thr)
 };
 
 odp_testinfo_t init_suite[] = {
