@@ -320,9 +320,7 @@ TESTS = validation/api/pktio/pktio_run.sh \
 	$(ALL_API_VALIDATION)/crypto/crypto_main$(EXEEXT) \
 	$(ALL_API_VALIDATION)/errno/errno_main$(EXEEXT) \
 	$(ALL_API_VALIDATION)/hash/hash_main$(EXEEXT) \
-	$(ALL_API_VALIDATION)/init/init_main_ok$(EXEEXT) \
-	$(ALL_API_VALIDATION)/init/init_main_abort$(EXEEXT) \
-	$(ALL_API_VALIDATION)/init/init_main_log$(EXEEXT) \
+	$(ALL_API_VALIDATION)/init/init_defaults$(EXEEXT) \
 	$(ALL_API_VALIDATION)/lock/lock_main$(EXEEXT) \
 	$(ALL_API_VALIDATION)/packet/packet_main$(EXEEXT) \
 	$(ALL_API_VALIDATION)/pool/pool_main$(EXEEXT) \
