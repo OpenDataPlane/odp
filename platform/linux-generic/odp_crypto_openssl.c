@@ -76,6 +76,10 @@ static const odp_crypto_cipher_capability_t cipher_capa_aes_cfb128[] = {
 {.key_len = 24, .iv_len = 16},
 {.key_len = 32, .iv_len = 16} };
 
+static const odp_crypto_cipher_capability_t cipher_capa_aes_xts[] = {
+{.key_len = 32, .iv_len = 16},
+{.key_len = 64, .iv_len = 16} };
+
 static const odp_crypto_cipher_capability_t cipher_capa_aes_gcm[] = {
 {.key_len = 16, .iv_len = 12},
 {.key_len = 24, .iv_len = 12},
@@ -1387,6 +1391,110 @@ static int process_aes_ccm_param(odp_crypto_generic_session_t *session,
 	return 0;
 }
 
+static
+odp_crypto_alg_err_t xts_encrypt(odp_packet_t pkt,
+				 const odp_crypto_packet_op_param_t *param,
+				 odp_crypto_generic_session_t *session)
+{
+	EVP_CIPHER_CTX *ctx = local.cipher_ctx[session->idx];
+	void *iv_ptr;
+	int dummy_len = 0;
+	int cipher_len;
+	uint32_t in_len = param->cipher_range.length;
+	uint8_t data[in_len];
+	int ret;
+
+	if (param->cipher_iv_ptr)
+		iv_ptr = param->cipher_iv_ptr;
+	else if (session->p.cipher_iv.data)
+		iv_ptr = session->cipher.iv_data;
+	else
+		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
+
+	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+
+	odp_packet_copy_to_mem(pkt, param->cipher_range.offset, in_len,
+			       data);
+
+	EVP_EncryptUpdate(ctx, data, &cipher_len, data, in_len);
+
+	ret = EVP_EncryptFinal_ex(ctx, data + cipher_len, &dummy_len);
+	cipher_len += dummy_len;
+
+	odp_packet_copy_from_mem(pkt, param->cipher_range.offset, in_len,
+				 data);
+
+	return ret <= 0 ? ODP_CRYPTO_ALG_ERR_DATA_SIZE :
+			  ODP_CRYPTO_ALG_ERR_NONE;
+}
+
+static
+odp_crypto_alg_err_t xts_decrypt(odp_packet_t pkt,
+				 const odp_crypto_packet_op_param_t *param,
+				 odp_crypto_generic_session_t *session)
+{
+	EVP_CIPHER_CTX *ctx = local.cipher_ctx[session->idx];
+	void *iv_ptr;
+	int dummy_len = 0;
+	int cipher_len;
+	uint32_t in_len = param->cipher_range.length;
+	uint8_t data[in_len];
+	int ret;
+
+	if (param->cipher_iv_ptr)
+		iv_ptr = param->cipher_iv_ptr;
+	else if (session->p.cipher_iv.data)
+		iv_ptr = session->cipher.iv_data;
+	else
+		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
+
+	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+
+	odp_packet_copy_to_mem(pkt, param->cipher_range.offset, in_len,
+			       data);
+
+	EVP_DecryptUpdate(ctx, data, &cipher_len, data, in_len);
+
+	ret = EVP_DecryptFinal_ex(ctx, data + cipher_len, &dummy_len);
+	cipher_len += dummy_len;
+
+	odp_packet_copy_from_mem(pkt, param->cipher_range.offset, in_len,
+				 data);
+
+	return ret <= 0 ? ODP_CRYPTO_ALG_ERR_DATA_SIZE :
+			  ODP_CRYPTO_ALG_ERR_NONE;
+}
+
+static int process_xts_param(odp_crypto_generic_session_t *session,
+			     const EVP_CIPHER *cipher)
+{
+	/* Verify Key len is valid */
+	if ((uint32_t)EVP_CIPHER_key_length(cipher) !=
+	    session->p.cipher_key.length)
+		return -1;
+
+	/* Verify IV len is correct */
+	if ((uint32_t)EVP_CIPHER_iv_length(cipher) !=
+	       session->p.cipher_iv.length)
+		return -1;
+
+	session->cipher.evp_cipher = cipher;
+
+	memcpy(session->cipher.key_data, session->p.cipher_key.data,
+	       session->p.cipher_key.length);
+
+	/* Set function */
+	if (ODP_CRYPTO_OP_ENCODE == session->p.op) {
+		session->cipher.func = xts_encrypt;
+		session->cipher.init = cipher_encrypt_init;
+	} else {
+		session->cipher.func = xts_decrypt;
+		session->cipher.init = cipher_decrypt_init;
+	}
+
+	return 0;
+}
+
 static int process_auth_hmac_param(odp_crypto_generic_session_t *session,
 				   const EVP_MD *evp_md)
 {
@@ -1484,6 +1592,7 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->ciphers.bit.aes_ctr    = 1;
 	capa->ciphers.bit.aes_ecb    = 1;
 	capa->ciphers.bit.aes_cfb128 = 1;
+	capa->ciphers.bit.aes_xts    = 1;
 	capa->ciphers.bit.aes_gcm    = 1;
 	capa->ciphers.bit.aes_ccm    = 1;
 #if _ODP_HAVE_CHACHA20_POLY1305
@@ -1562,6 +1671,10 @@ int odp_crypto_cipher_capability(odp_cipher_alg_t cipher,
 	case ODP_CIPHER_ALG_AES_CFB128:
 		src = cipher_capa_aes_cfb128;
 		num = sizeof(cipher_capa_aes_cfb128) / size;
+		break;
+	case ODP_CIPHER_ALG_AES_XTS:
+		src = cipher_capa_aes_xts;
+		num = sizeof(cipher_capa_aes_xts) / size;
 		break;
 	case ODP_CIPHER_ALG_AES_GCM:
 		src = cipher_capa_aes_gcm;
@@ -1794,6 +1907,14 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 		else if (param->cipher_key.length == 32)
 			rc = process_cipher_param(session,
 						  EVP_aes_256_cfb128());
+		else
+			rc = -1;
+		break;
+	case ODP_CIPHER_ALG_AES_XTS:
+		if (param->cipher_key.length == 32)
+			rc = process_xts_param(session, EVP_aes_128_xts());
+		else if (param->cipher_key.length == 64)
+			rc = process_xts_param(session, EVP_aes_256_xts());
 		else
 			rc = -1;
 		break;
