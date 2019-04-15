@@ -43,15 +43,19 @@
 #define HMAC_MD5_96_CHECK_LEN   12
 #define HMAC_MD5_CHECK_LEN      16
 
-/* HMAC-SHA256 */
-#define HMAC_SHA256_KEY_LEN        32
-#define HMAC_SHA256_128_CHECK_LEN  16
-#define HMAC_SHA256_CHECK_LEN      32
-
 /* HMAC-SHA1 */
 #define HMAC_SHA1_KEY_LEN        20
 #define HMAC_SHA1_96_CHECK_LEN   12
 #define HMAC_SHA1_CHECK_LEN      20
+
+/* HMAC-SHA224 */
+#define HMAC_SHA224_KEY_LEN        28
+#define HMAC_SHA224_CHECK_LEN      28
+
+/* HMAC-SHA256 */
+#define HMAC_SHA256_KEY_LEN        32
+#define HMAC_SHA256_128_CHECK_LEN  16
+#define HMAC_SHA256_CHECK_LEN      32
 
 /* HMAC-SHA384 */
 #define HMAC_SHA384_KEY_LEN        48

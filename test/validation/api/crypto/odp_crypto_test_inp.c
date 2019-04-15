@@ -44,6 +44,8 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 		return "ODP_AUTH_ALG_MD5_HMAC";
 	case ODP_AUTH_ALG_SHA1_HMAC:
 		return "ODP_AUTH_ALG_SHA1_HMAC";
+	case ODP_AUTH_ALG_SHA224_HMAC:
+		return "ODP_AUTH_ALG_SHA224_HMAC";
 	case ODP_AUTH_ALG_SHA256_HMAC:
 		return "ODP_AUTH_ALG_SHA256_HMAC";
 	case ODP_AUTH_ALG_SHA384_HMAC:
@@ -579,6 +581,9 @@ static void check_alg(odp_crypto_op_t op,
 	if (auth_alg == ODP_AUTH_ALG_SHA1_HMAC &&
 	    !(capa.auths.bit.sha1_hmac))
 		rc = -1;
+	if (auth_alg == ODP_AUTH_ALG_SHA224_HMAC &&
+	    !(capa.auths.bit.sha224_hmac))
+		rc = -1;
 	if (auth_alg == ODP_AUTH_ALG_SHA256_HMAC &&
 	    !(capa.auths.bit.sha256_hmac))
 		rc = -1;
@@ -783,6 +788,10 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		break;
 	case ODP_AUTH_ALG_SHA1_HMAC:
 		if (!capability.auths.bit.sha1_hmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SHA224_HMAC:
+		if (!capability.auths.bit.sha224_hmac)
 			return ODP_TEST_INACTIVE;
 		break;
 	case ODP_AUTH_ALG_SHA256_HMAC:
@@ -1482,6 +1491,33 @@ static void crypto_test_check_alg_hmac_sha1(void)
 		  false);
 }
 
+static int check_alg_hmac_sha224(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA224_HMAC);
+}
+
+static void crypto_test_gen_alg_hmac_sha224(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_NULL,
+		  ODP_AUTH_ALG_SHA224_HMAC,
+		  hmac_sha224_reference,
+		  ARRAY_SIZE(hmac_sha224_reference),
+		  false,
+		  false);
+}
+
+static void crypto_test_check_alg_hmac_sha224(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_NULL,
+		  ODP_AUTH_ALG_SHA224_HMAC,
+		  hmac_sha224_reference,
+		  ARRAY_SIZE(hmac_sha224_reference),
+		  false,
+		  false);
+}
+
 static int check_alg_hmac_sha256(void)
 {
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA256_HMAC);
@@ -1983,6 +2019,10 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_hmac_sha1),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_hmac_sha1,
 				  check_alg_hmac_sha1),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_hmac_sha224,
+				  check_alg_hmac_sha224),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_hmac_sha224,
+				  check_alg_hmac_sha224),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_hmac_sha256,
 				  check_alg_hmac_sha256),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_hmac_sha256,
