@@ -104,6 +104,8 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 		return "ODP_CIPHER_ALG_AES_CTR";
 	case ODP_CIPHER_ALG_AES_ECB:
 		return "ODP_CIPHER_ALG_AES_ECB";
+	case ODP_CIPHER_ALG_AES_CFB128:
+		return "ODP_CIPHER_ALG_AES_CFB128";
 	case ODP_CIPHER_ALG_AES_GCM:
 		return "ODP_CIPHER_ALG_AES_GCM";
 	case ODP_CIPHER_ALG_AES_CCM:
@@ -537,6 +539,9 @@ static void check_alg(odp_crypto_op_t op,
 	if (cipher_alg == ODP_CIPHER_ALG_AES_ECB &&
 	    !(capa.ciphers.bit.aes_ecb))
 		rc = -1;
+	if (cipher_alg == ODP_CIPHER_ALG_AES_CFB128 &&
+	    !(capa.ciphers.bit.aes_cfb128))
+		rc = -1;
 	if (cipher_alg == ODP_CIPHER_ALG_AES_GCM &&
 	    !(capa.ciphers.bit.aes_gcm))
 		rc = -1;
@@ -784,6 +789,10 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		break;
 	case ODP_CIPHER_ALG_AES_ECB:
 		if (!capability.ciphers.bit.aes_ecb)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_CIPHER_ALG_AES_CFB128:
+		if (!capability.ciphers.bit.aes_cfb128)
 			return ODP_TEST_INACTIVE;
 		break;
 	case ODP_CIPHER_ALG_AES_GCM:
@@ -1369,6 +1378,74 @@ static void crypto_test_dec_alg_aes_ecb(void)
 		  aes_ecb_reference,
 		  ARRAY_SIZE(aes_ecb_reference),
 		  false,
+		  false);
+}
+
+static int check_alg_aes_cfb128(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_AES_CFB128, ODP_AUTH_ALG_NULL);
+}
+
+/* This test verifies the correctness of encode (plaintext -> ciphertext)
+ * operation for AES128_CFB128 algorithm. IV for the operation is the session
+ * IV.
+ * In addition the test verifies if the implementation can use the
+ * packet buffer as completion event buffer.*/
+static void crypto_test_enc_alg_aes_cfb128(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_AES_CFB128,
+		  ODP_AUTH_ALG_NULL,
+		  aes_cfb128_reference,
+		  ARRAY_SIZE(aes_cfb128_reference),
+		  false,
+		  false);
+}
+
+/* This test verifies the correctness of encode (plaintext -> ciphertext)
+ * operation for AES128_CFB128 algorithm. IV for the operation is the operation
+ * IV.
+ * */
+static void crypto_test_enc_alg_aes_cfb128_ovr_iv(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_AES_CFB128,
+		  ODP_AUTH_ALG_NULL,
+		  aes_cfb128_reference,
+		  ARRAY_SIZE(aes_cfb128_reference),
+		  true,
+		  false);
+}
+
+/* This test verifies the correctness of decode (ciphertext -> plaintext)
+ * operation for AES128_CFB128 algorithm. IV for the operation is the session IV
+ * In addition the test verifies if the implementation can use the
+ * packet buffer as completion event buffer.
+ * */
+static void crypto_test_dec_alg_aes_cfb128(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_AES_CFB128,
+		  ODP_AUTH_ALG_NULL,
+		  aes_cfb128_reference,
+		  ARRAY_SIZE(aes_cfb128_reference),
+		  false,
+		  false);
+}
+
+/* This test verifies the correctness of decode (ciphertext -> plaintext)
+ * operation for AES128_CFB128 algorithm. IV for the operation is the session IV
+ * In addition the test verifies if the implementation can use the
+ * packet buffer as completion event buffer.
+ * */
+static void crypto_test_dec_alg_aes_cfb128_ovr_iv(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_AES_CFB128,
+		  ODP_AUTH_ALG_NULL,
+		  aes_cfb128_reference,
+		  ARRAY_SIZE(aes_cfb128_reference),
+		  true,
 		  false);
 }
 
@@ -2225,6 +2302,14 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_aes_ecb),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_ecb,
 				  check_alg_aes_ecb),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_cfb128,
+				  check_alg_aes_cfb128),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_cfb128,
+				  check_alg_aes_cfb128),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_cfb128_ovr_iv,
+				  check_alg_aes_cfb128),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_cfb128_ovr_iv,
+				  check_alg_aes_cfb128),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_kasumi_f8,
 				  check_alg_kasumi_f8),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_kasumi_f8,

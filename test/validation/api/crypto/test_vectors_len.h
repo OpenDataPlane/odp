@@ -34,6 +34,9 @@
 /* AES-CTR */
 #define AES_CTR_IV_LEN         16
 
+/* AES-CFB128 */
+#define AES_CFB128_IV_LEN      16
+
 /* AES-GCM */
 #define AES_GCM_IV_LEN         12
 #define AES_GCM_DIGEST_LEN     16
