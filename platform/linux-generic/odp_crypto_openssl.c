@@ -71,6 +71,11 @@ static const odp_crypto_cipher_capability_t cipher_capa_aes_ecb[] = {
 {.key_len = 24},
 {.key_len = 32} };
 
+static const odp_crypto_cipher_capability_t cipher_capa_aes_cfb128[] = {
+{.key_len = 16, .iv_len = 16},
+{.key_len = 24, .iv_len = 16},
+{.key_len = 32, .iv_len = 16} };
+
 static const odp_crypto_cipher_capability_t cipher_capa_aes_gcm[] = {
 {.key_len = 16, .iv_len = 12},
 {.key_len = 24, .iv_len = 12},
@@ -1474,6 +1479,7 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->ciphers.bit.aes_cbc    = 1;
 	capa->ciphers.bit.aes_ctr    = 1;
 	capa->ciphers.bit.aes_ecb    = 1;
+	capa->ciphers.bit.aes_cfb128 = 1;
 	capa->ciphers.bit.aes_gcm    = 1;
 	capa->ciphers.bit.aes_ccm    = 1;
 #if _ODP_HAVE_CHACHA20_POLY1305
@@ -1548,6 +1554,10 @@ int odp_crypto_cipher_capability(odp_cipher_alg_t cipher,
 	case ODP_CIPHER_ALG_AES_ECB:
 		src = cipher_capa_aes_ecb;
 		num = sizeof(cipher_capa_aes_ecb) / size;
+		break;
+	case ODP_CIPHER_ALG_AES_CFB128:
+		src = cipher_capa_aes_cfb128;
+		num = sizeof(cipher_capa_aes_cfb128) / size;
 		break;
 	case ODP_CIPHER_ALG_AES_GCM:
 		src = cipher_capa_aes_gcm;
@@ -1767,6 +1777,19 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 			rc = process_cipher_param(session, EVP_aes_192_ecb());
 		else if (param->cipher_key.length == 32)
 			rc = process_cipher_param(session, EVP_aes_256_ecb());
+		else
+			rc = -1;
+		break;
+	case ODP_CIPHER_ALG_AES_CFB128:
+		if (param->cipher_key.length == 16)
+			rc = process_cipher_param(session,
+						  EVP_aes_128_cfb128());
+		else if (param->cipher_key.length == 24)
+			rc = process_cipher_param(session,
+						  EVP_aes_192_cfb128());
+		else if (param->cipher_key.length == 32)
+			rc = process_cipher_param(session,
+						  EVP_aes_256_cfb128());
 		else
 			rc = -1;
 		break;
