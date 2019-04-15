@@ -37,6 +37,11 @@
 /* AES-CFB128 */
 #define AES_CFB128_IV_LEN      16
 
+/* AES-XTS */
+#define AES128_XTS_KEY_LEN        32
+#define AES256_XTS_KEY_LEN        64
+#define AES_XTS_IV_LEN         16
+
 /* AES-GCM */
 #define AES_GCM_IV_LEN         12
 #define AES_GCM_DIGEST_LEN     16
