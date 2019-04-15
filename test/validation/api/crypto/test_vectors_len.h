@@ -104,4 +104,22 @@
 #define ZUC_EIA3_IV_LEN          16
 #define ZUC_EIA3_DIGEST_LEN      4
 
+/* MD5 */
+#define MD5_DIGEST_LEN     16
+
+/* SHA1 */
+#define SHA1_DIGEST_LEN     20
+
+/* SHA224 */
+#define SHA224_DIGEST_LEN     28
+
+/* SHA256 */
+#define SHA256_DIGEST_LEN     32
+
+/* SHA384 */
+#define SHA384_DIGEST_LEN     48
+
+/* SHA512 */
+#define SHA512_DIGEST_LEN     64
+
 #endif
