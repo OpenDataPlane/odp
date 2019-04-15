@@ -91,6 +91,10 @@ typedef enum {
 	/** AES with 128-bit cipher feedback */
 	ODP_CIPHER_ALG_AES_CFB128,
 
+	/** AES with XEX-based tweaked-codebook mode with ciphertext stealing
+	 * (XTS) */
+	ODP_CIPHER_ALG_AES_XTS,
+
 	/** AES-GCM
 	 *
 	 *  AES in Galois/Counter Mode (GCM) algorithm. GCM provides both
@@ -325,6 +329,9 @@ typedef union odp_crypto_cipher_algos_t {
 
 		/** ODP_CIPHER_ALG_AES_CFB128 */
 		uint32_t aes_cfb128  : 1;
+
+		/** ODP_CIPHER_ALG_AES_XTS */
+		uint32_t aes_xts     : 1;
 
 		/** ODP_CIPHER_ALG_AES_GCM */
 		uint32_t aes_gcm     : 1;
