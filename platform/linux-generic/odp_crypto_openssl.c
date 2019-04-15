@@ -137,6 +137,10 @@ static const odp_crypto_auth_capability_t auth_capa_aes_ccm[] = {
 
 static const odp_crypto_auth_capability_t auth_capa_aes_gmac[] = {
 {.digest_len = 16, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0},
+	.iv_len = 12 },
+{.digest_len = 16, .key_len = 24, .aad_len = {.min = 0, .max = 0, .inc = 0},
+	.iv_len = 12 },
+{.digest_len = 16, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0},
 	.iv_len = 12 } };
 
 static const odp_crypto_auth_capability_t auth_capa_aes_cmac[] = {
