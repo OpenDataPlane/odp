@@ -1,9 +1,13 @@
 include ../Makefile.inc
 
-# most platforms are expected not to support multiple ODP inits
-# following each other: therefore 3 separate binaries are
-# created, each containing its ODP init test.
-test_PROGRAMS = init_main_abort init_main_log init_main_ok
-init_main_abort_SOURCES = init_main_abort.c
-init_main_log_SOURCES   = init_main_log.c
-init_main_ok_SOURCES    = init_main_ok.c
+# Keep init test cases in separate binaries. Some implementations may not allow
+# the same application process to call odp_init_global() multiple times.
+test_PROGRAMS = init_defaults init_abort init_log
+
+init_defaults_CPPFLAGS = -DINIT_TEST=0 $(AM_CPPFLAGS)
+init_abort_CPPFLAGS    = -DINIT_TEST=1 $(AM_CPPFLAGS)
+init_log_CPPFLAGS      = -DINIT_TEST=2 $(AM_CPPFLAGS)
+
+init_defaults_SOURCES = init_main.c
+init_abort_SOURCES = init_main.c
+init_log_SOURCES = init_main.c

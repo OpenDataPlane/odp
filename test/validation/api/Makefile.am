@@ -43,9 +43,9 @@ TESTS = \
 	errno/errno_main$(EXEEXT) \
 	event/event_main$(EXEEXT) \
 	hash/hash_main$(EXEEXT) \
-	init/init_main_ok$(EXEEXT) \
-	init/init_main_abort$(EXEEXT) \
-	init/init_main_log$(EXEEXT) \
+	init/init_defaults$(EXEEXT) \
+	init/init_abort$(EXEEXT) \
+	init/init_log$(EXEEXT) \
 	ipsec/ipsec_sync$(EXEEXT) \
 	ipsec/ipsec_async$(EXEEXT) \
 	ipsec/ipsec_inline_in$(EXEEXT) \
