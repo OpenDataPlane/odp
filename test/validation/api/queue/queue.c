@@ -623,6 +623,7 @@ static void queue_test_param(void)
 	CU_ASSERT(ODP_SCHED_SYNC_PARALLEL == odp_queue_sched_type(queue));
 	CU_ASSERT(ODP_SCHED_GROUP_WORKER  == odp_queue_sched_group(queue));
 
+	CU_ASSERT(odp_queue_context(queue) == NULL);
 	CU_ASSERT(0 == odp_queue_context_set(queue, &queue_context,
 					     sizeof(queue_context)));
 
@@ -633,6 +634,7 @@ static void queue_test_param(void)
 	odp_queue_param_init(&qparams);
 	null_queue = odp_queue_create(NULL, &qparams);
 	CU_ASSERT(ODP_QUEUE_INVALID != null_queue);
+	CU_ASSERT(odp_queue_context(null_queue) == NULL);
 
 	/* Plain type queue */
 	odp_queue_param_init(&qparams);
