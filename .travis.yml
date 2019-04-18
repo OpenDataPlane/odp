@@ -1,21 +1,22 @@
 # Copyright (c) 2016-2019, Linaro Limited
+# Copyright (c) 2019, Nokia
 # All rights reserved.
 # SPDX-License-Identifier:     BSD-3-Clause
 #
-# Please update xxxx for your coverity token and notification email if required
+# Please update xxxx for your Coverity token and notification email if required
 # pushing to github/master will run make check
 # pushing to github/coverity_scan will also launch a static analysis
 # See https://scan.coverity.com/travis_ci
 
 #
-# Travis uses Docker images which mainained here:
+# Travis uses Docker images which are maintained here:
 # 	https://github.com/OpenDataPlane/odp-docker-images
-# CI scirpts are maintained under ./scripts/ci/ directory
-# which passed into container during the test run.
+# CI scripts are maintained under ./scripts/ci/ directory
+# which is passed to the containers during a test run.
 
 language: c
 sudo: required
-dist: trusty
+dist: xenial
 stages:
   - "build only"
   - test
@@ -43,9 +44,10 @@ compiler:
 env:
     global:
         #
-        # By default Linaro CODECOV_TOKEN token is used. It's ok to use it to see
-        # for individual commit validation. But you you want to track tests history
-        # you need generated new one at https://codecov.io specific for your repo.
+        # By default, OpenDataPlane CODECOV_TOKEN token is used. It's OK to use
+        # it for individual commit validation. If you want to track test history
+        # you need to generate a new one at https://codecov.io specific for your
+        # repo.
         - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
         - OS="ubuntu_16.04"
         - CHECK=1
@@ -232,7 +234,7 @@ jobs:
                           - pushd doc
                           - make
                           - popd
-                          # doxygen does not trap on warnings, check for them here.
+                          # Doxygen does not trap on warnings, check for them here.
                           - make doxygen-doc 2>&1 |tee doxygen.log
                           - |
                              fgrep -rq warning ./doxygen.log
