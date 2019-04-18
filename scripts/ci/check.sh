@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo 1000 | tee /proc/sys/vm/nr_hugepages
+echo 1500 | tee /proc/sys/vm/nr_hugepages
 mkdir -p /mnt/huge
 mount -t hugetlbfs nodev /mnt/huge
 
