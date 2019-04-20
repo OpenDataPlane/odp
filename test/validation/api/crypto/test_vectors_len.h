@@ -93,6 +93,10 @@
 #define SNOW3G_UEA2_KEY_LEN      16
 #define SNOW3G_UEA2_IV_LEN       16
 
+/* AES_EEA2 */
+#define AES_EEA2_KEY_LEN        16
+#define AES_EEA2_IV_LEN         16
+
 /* ZUC_EEA3 */
 #define ZUC_EEA3_KEY_LEN         16
 #define ZUC_EEA3_IV_LEN          16
@@ -106,6 +110,11 @@
 #define SNOW3G_UIA2_KEY_LEN      16
 #define SNOW3G_UIA2_IV_LEN       16
 #define SNOW3G_UIA2_DIGEST_LEN   4
+
+/* AES_EIA2 */
+#define AES_EIA2_KEY_LEN        16
+#define AES_EIA2_IV_LEN         8
+#define AES_EIA2_DIGEST_LEN     4
 
 /* ZUC_EIA3 */
 #define ZUC_EIA3_KEY_LEN         16
