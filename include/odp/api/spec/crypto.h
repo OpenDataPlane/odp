@@ -134,6 +134,12 @@ typedef enum {
 	 */
 	ODP_CIPHER_ALG_SNOW3G_UEA2,
 
+	/** Confidentiality 128-EEA2 algorithm
+	 *
+	 *  AES-CTR-based 128-EEA2 algorithm.
+	 */
+	ODP_CIPHER_ALG_AES_EEA2,
+
 	/** Confidentiality 128-EEA3 algorithm
 	 *
 	 *  ZUC-based 128-EEA3 algorithm.
@@ -265,6 +271,12 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_SNOW3G_UIA2,
 
+	/** Integrity 128-EIA2 algorithm
+	 *
+	 *  AES_CMAC-based 128-EIA2 algorithm.
+	 */
+	ODP_AUTH_ALG_AES_EIA2,
+
 	/** Integrity 128-EIA3 algorithm
 	 *
 	 *  ZUC-based 128-EIA3 algorithm.
@@ -348,6 +360,9 @@ typedef union odp_crypto_cipher_algos_t {
 		/** ODP_CIPHER_ALG_SNOW3G_UEA2 */
 		uint32_t snow3g_uea2 : 1;
 
+		/** ODP_CIPHER_ALG_AES_EEA2 */
+		uint32_t aes_eea2 : 1;
+
 		/** ODP_CIPHER_ALG_ZUC_EEA3 */
 		uint32_t zuc_eea3    : 1;
 
@@ -416,6 +431,9 @@ typedef union odp_crypto_auth_algos_t {
 
 		/** ODP_AUTH_ALG_SNOW3G_UIA2 */
 		uint32_t snow3g_uia2 : 1;
+
+		/** ODP_AUTH_ALG_AES_EIA2 */
+		uint32_t aes_eia2 : 1;
 
 		/** ODP_AUTH_ALG_ZUC_EIA3 */
 		uint32_t zuc_eia3    : 1;
