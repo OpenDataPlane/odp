@@ -68,6 +68,8 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 		return "ODP_AUTH_ALG_KASUMI_F9";
 	case ODP_AUTH_ALG_SNOW3G_UIA2:
 		return "ODP_AUTH_ALG_SNOW3G_UIA2";
+	case ODP_AUTH_ALG_AES_EIA2:
+		return "ODP_AUTH_ALG_AES_EIA2";
 	case ODP_AUTH_ALG_ZUC_EIA3:
 		return "ODP_AUTH_ALG_ZUC_EIA3";
 	case ODP_AUTH_ALG_MD5:
@@ -118,6 +120,8 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 		return "ODP_CIPHER_ALG_KASUMI_F8";
 	case ODP_CIPHER_ALG_SNOW3G_UEA2:
 		return "ODP_CIPHER_ALG_SNOW3G_UEA2";
+	case ODP_CIPHER_ALG_AES_EEA2:
+		return "ODP_CIPHER_ALG_AES_EEA2";
 	case ODP_CIPHER_ALG_ZUC_EEA3:
 		return "ODP_CIPHER_ALG_ZUC_EEA3";
 	default:
@@ -562,6 +566,9 @@ static void check_alg(odp_crypto_op_t op,
 	if (cipher_alg == ODP_CIPHER_ALG_SNOW3G_UEA2 &&
 	    !(capa.ciphers.bit.snow3g_uea2))
 		rc = -1;
+	if (cipher_alg == ODP_CIPHER_ALG_AES_EEA2 &&
+	    !(capa.ciphers.bit.aes_eea2))
+		rc = -1;
 	if (cipher_alg == ODP_CIPHER_ALG_ZUC_EEA3 &&
 	    !(capa.ciphers.bit.zuc_eea3))
 		rc = -1;
@@ -595,6 +602,9 @@ static void check_alg(odp_crypto_op_t op,
 		rc = -1;
 	if (auth_alg == ODP_AUTH_ALG_SNOW3G_UIA2 &&
 	    !(capa.auths.bit.snow3g_uia2))
+		rc = -1;
+	if (auth_alg == ODP_AUTH_ALG_AES_EIA2 &&
+	    !(capa.auths.bit.aes_eia2))
 		rc = -1;
 	if (auth_alg == ODP_AUTH_ALG_ZUC_EIA3 &&
 	    !(capa.auths.bit.zuc_eia3))
@@ -824,6 +834,10 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		if (!capability.ciphers.bit.snow3g_uea2)
 			return ODP_TEST_INACTIVE;
 		break;
+	case ODP_CIPHER_ALG_AES_EEA2:
+		if (!capability.ciphers.bit.aes_eea2)
+			return ODP_TEST_INACTIVE;
+		break;
 	case ODP_CIPHER_ALG_ZUC_EEA3:
 		if (!capability.ciphers.bit.zuc_eea3)
 			return ODP_TEST_INACTIVE;
@@ -893,6 +907,10 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		break;
 	case ODP_AUTH_ALG_SNOW3G_UIA2:
 		if (!capability.auths.bit.snow3g_uia2)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_AES_EIA2:
+		if (!capability.auths.bit.aes_eia2)
 			return ODP_TEST_INACTIVE;
 		break;
 	case ODP_AUTH_ALG_ZUC_EIA3:
@@ -1622,6 +1640,56 @@ static void crypto_test_dec_alg_snow3g_uea2_ovr_iv(void)
 		  true);
 }
 
+static int check_alg_aes_eea2(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_AES_EEA2,
+				 ODP_AUTH_ALG_NULL);
+}
+
+static void crypto_test_enc_alg_aes_eea2(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_AES_EEA2,
+		  ODP_AUTH_ALG_NULL,
+		  aes_eea2_reference,
+		  ARRAY_SIZE(aes_eea2_reference),
+		  false,
+		  true);
+}
+
+static void crypto_test_enc_alg_aes_eea2_ovr_iv(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_AES_EEA2,
+		  ODP_AUTH_ALG_NULL,
+		  aes_eea2_reference,
+		  ARRAY_SIZE(aes_eea2_reference),
+		  true,
+		  true);
+}
+
+static void crypto_test_dec_alg_aes_eea2(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_AES_EEA2,
+		  ODP_AUTH_ALG_NULL,
+		  aes_eea2_reference,
+		  ARRAY_SIZE(aes_eea2_reference),
+		  false,
+		  true);
+}
+
+static void crypto_test_dec_alg_aes_eea2_ovr_iv(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_AES_EEA2,
+		  ODP_AUTH_ALG_NULL,
+		  aes_eea2_reference,
+		  ARRAY_SIZE(aes_eea2_reference),
+		  true,
+		  true);
+}
+
 static int check_alg_zuc_eea3(void)
 {
 	return check_alg_support(ODP_CIPHER_ALG_ZUC_EEA3, ODP_AUTH_ALG_NULL);
@@ -2077,6 +2145,56 @@ static void crypto_test_check_alg_snow3g_uia2_ovr_iv(void)
 		  true);
 }
 
+static int check_alg_aes_eia2(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_NULL,
+				 ODP_AUTH_ALG_AES_EIA2);
+}
+
+static void crypto_test_gen_alg_aes_eia2(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_NULL,
+		  ODP_AUTH_ALG_AES_EIA2,
+		  aes_eia2_reference,
+		  ARRAY_SIZE(aes_eia2_reference),
+		  false,
+		  true);
+}
+
+static void crypto_test_gen_alg_aes_eia2_ovr_iv(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_NULL,
+		  ODP_AUTH_ALG_AES_EIA2,
+		  aes_eia2_reference,
+		  ARRAY_SIZE(aes_eia2_reference),
+		  true,
+		  true);
+}
+
+static void crypto_test_check_alg_aes_eia2(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_NULL,
+		  ODP_AUTH_ALG_AES_EIA2,
+		  aes_eia2_reference,
+		  ARRAY_SIZE(aes_eia2_reference),
+		  false,
+		  true);
+}
+
+static void crypto_test_check_alg_aes_eia2_ovr_iv(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_NULL,
+		  ODP_AUTH_ALG_AES_EIA2,
+		  aes_eia2_reference,
+		  ARRAY_SIZE(aes_eia2_reference),
+		  true,
+		  true);
+}
+
 static int check_alg_zuc_eia3(void)
 {
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_ZUC_EIA3);
@@ -2409,6 +2527,14 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_snow3g_uea2),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_snow3g_uea2_ovr_iv,
 				  check_alg_snow3g_uea2),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_eea2,
+				  check_alg_aes_eea2),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_eea2,
+				  check_alg_aes_eea2),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_eea2_ovr_iv,
+				  check_alg_aes_eea2),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_eea2_ovr_iv,
+				  check_alg_aes_eea2),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_zuc_eea3,
 				  check_alg_zuc_eea3),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_zuc_eea3,
@@ -2497,6 +2623,14 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_snow3g_uia2),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_snow3g_uia2_ovr_iv,
 				  check_alg_snow3g_uia2),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_aes_eia2,
+				  check_alg_aes_eia2),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_aes_eia2,
+				  check_alg_aes_eia2),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_aes_eia2_ovr_iv,
+				  check_alg_aes_eia2),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_aes_eia2_ovr_iv,
+				  check_alg_aes_eia2),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_zuc_eia3,
 				  check_alg_zuc_eia3),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_zuc_eia3,
