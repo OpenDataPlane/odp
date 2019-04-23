@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -721,6 +722,10 @@ static void scheduler_test_groups(void)
 	rc = odp_schedule_group_thrmask(mygrp2, &testmask);
 	CU_ASSERT(rc == 0);
 	CU_ASSERT(odp_thrmask_isset(&testmask, thr_id));
+
+	/* Leave group 2 */
+	rc = odp_schedule_group_leave(mygrp2, &mymask);
+	CU_ASSERT(rc == 0);
 
 	/* Now verify scheduler adherence to groups */
 	odp_pool_param_init(&params);
