@@ -307,6 +307,10 @@ static void scheduler_test_queue_destroy(void)
 
 		odp_buffer_free(buf);
 		release_context(qp.sched.sync);
+
+		/*  Make sure atomic/ordered context is released */
+		CU_ASSERT(drain_queues() == 0);
+
 		CU_ASSERT_FATAL(odp_queue_destroy(queue) == 0);
 	}
 
