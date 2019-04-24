@@ -925,13 +925,15 @@ static int chaos_thread(void *arg)
 		printf("Thread %d completed %d rounds...terminating\n",
 		       odp_thread_id(), CHAOS_NUM_EVENTS);
 
-	exit_schedule_loop();
-
 	end_time = odp_time_local();
 	diff = odp_time_diff(end_time, start_time);
 
 	printf("Thread %d ends, elapsed time = %" PRIu64 "us\n",
 	       odp_thread_id(), odp_time_to_ns(diff) / 1000);
+
+	odp_barrier_wait(&globals->barrier);
+
+	exit_schedule_loop();
 
 	return 0;
 }
