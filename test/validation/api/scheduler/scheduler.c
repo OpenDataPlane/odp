@@ -928,13 +928,24 @@ static int chaos_thread(void *arg)
 		printf("Thread %d completed %d rounds...terminating\n",
 		       odp_thread_id(), CHAOS_NUM_EVENTS);
 
-	exit_schedule_loop();
-
 	end_time = odp_time_local();
 	diff = odp_time_diff(end_time, start_time);
 
 	printf("Thread %d ends, elapsed time = %" PRIu64 "us\n",
 	       odp_thread_id(), odp_time_to_ns(diff) / 1000);
+
+	/* Make sure scheduling context is released */
+	odp_schedule_pause();
+	while ((ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT))
+	      != ODP_EVENT_INVALID) {
+		odp_event_free(ev);
+	}
+
+	/* Don't resume scheduling until all threads have finished */
+	odp_barrier_wait(&globals->barrier);
+	odp_schedule_resume();
+
+	drain_queues();
 
 	return 0;
 }
