@@ -979,7 +979,6 @@ static void chaos_run(unsigned int qtype)
 	CU_ASSERT_PTR_NOT_NULL_FATAL(args);
 
 	args->globals = globals;
-	args->cu_thr.numthrds = globals->num_workers;
 
 	odp_queue_param_init(&qp);
 	odp_pool_param_init(&params);
@@ -1025,16 +1024,19 @@ static void chaos_run(unsigned int qtype)
 		CU_ASSERT_FATAL(rc == 0);
 	}
 
-	/* Run the test */
-	odp_cunit_thread_create(chaos_thread, &args->cu_thr);
-	odp_cunit_thread_exit(&args->cu_thr);
+	/* Test runs also on the main thread */
+	args->cu_thr.numthrds = globals->num_workers - 1;
+	if (args->cu_thr.numthrds > 0)
+		odp_cunit_thread_create(chaos_thread, &args->cu_thr);
+
+	chaos_thread(args);
+
+	if (args->cu_thr.numthrds > 0)
+		odp_cunit_thread_exit(&args->cu_thr);
 
 	if (CHAOS_DEBUG)
 		printf("Thread %d returning from chaos threads..cleaning up\n",
 		       odp_thread_id());
-
-	drain_queues();
-	exit_schedule_loop();
 
 	for (i = 0; i < CHAOS_NUM_QUEUES; i++) {
 		if (CHAOS_DEBUG)
@@ -1457,11 +1459,17 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 	fill_queues(args);
 
 	/* Create and launch worker threads */
-	args->cu_thr.numthrds = globals->num_workers;
-	odp_cunit_thread_create(schedule_common_, &args->cu_thr);
+
+	/* Test runs also on the main thread */
+	args->cu_thr.numthrds = globals->num_workers - 1;
+	if (args->cu_thr.numthrds > 0)
+		odp_cunit_thread_create(schedule_common_, &args->cu_thr);
+
+	schedule_common_(args);
 
 	/* Wait for worker threads to terminate */
-	odp_cunit_thread_exit(&args->cu_thr);
+	if (args->cu_thr.numthrds > 0)
+		odp_cunit_thread_exit(&args->cu_thr);
 
 	/* Cleanup ordered queues for next pass */
 	if (sync == ODP_SCHED_SYNC_ORDERED)
