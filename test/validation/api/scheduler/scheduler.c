@@ -1022,6 +1022,9 @@ static void chaos_run(unsigned int qtype)
 
 	/* Run the test */
 	odp_cunit_thread_create(chaos_thread, &args->cu_thr);
+
+	chaos_thread(args);
+
 	odp_cunit_thread_exit(&args->cu_thr);
 
 	if (CHAOS_DEBUG)
@@ -1445,7 +1448,7 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 		args->num_bufs = globals->max_sched_queue_size;
 	else
 		args->num_bufs = BUFS_PER_QUEUE;
-	args->num_workers = globals->num_workers;
+	args->num_workers = globals->num_workers + 1; /* Include main thread */
 	args->enable_schd_multi = enable_schd_multi;
 	args->enable_excl_atomic = enable_excl_atomic;
 
@@ -1454,6 +1457,8 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 	/* Create and launch worker threads */
 	args->cu_thr.numthrds = globals->num_workers;
 	odp_cunit_thread_create(schedule_common_, &args->cu_thr);
+
+	schedule_common_(args);
 
 	/* Wait for worker threads to terminate */
 	odp_cunit_thread_exit(&args->cu_thr);
@@ -2073,8 +2078,9 @@ static int scheduler_suite_init(void)
 
 	memset(args, 0, sizeof(thread_args_t));
 
-	/* Barrier to sync test case execution */
-	odp_barrier_init(&globals->barrier, globals->num_workers);
+	/* Barrier to sync test case execution. Used also by the main thread. */
+	odp_barrier_init(&globals->barrier, globals->num_workers + 1);
+
 	odp_ticketlock_init(&globals->lock);
 	odp_spinlock_init(&globals->atomic_lock);
 
