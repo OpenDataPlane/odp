@@ -11,7 +11,6 @@
 #include "odp_cunit_common.h"
 #include <odp/helper/odph_api.h>
 
-#define MAX_WORKERS_THREADS	32
 #define MAX_ORDERED_LOCKS       2
 #define MSG_POOL_SIZE		(64 * 1024)
 #define QUEUES_PER_PRIO		16
