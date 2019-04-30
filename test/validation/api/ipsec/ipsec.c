@@ -1,4 +1,5 @@
 /* Copyright (c) 2017-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	 BSD-3-Clause
@@ -147,6 +148,13 @@ int ipsec_check(odp_bool_t ah,
 	     ODP_SUPPORT_NO == capa.op_mode_inline_in) ||
 	    (ODP_IPSEC_OP_MODE_INLINE == suite_context.outbound_op_mode &&
 	     ODP_SUPPORT_NO == capa.op_mode_inline_out))
+		return ODP_TEST_INACTIVE;
+
+	/* suite_context.pktio is set to ODP_PKTIO_INVALID in ipsec_suite_init()
+	 * if the pktio device doesn't support inline IPsec processing. */
+	if (suite_context.pktio == ODP_PKTIO_INVALID &&
+	    (ODP_IPSEC_OP_MODE_INLINE == suite_context.inbound_op_mode ||
+	     ODP_IPSEC_OP_MODE_INLINE == suite_context.outbound_op_mode))
 		return ODP_TEST_INACTIVE;
 
 	if (ah && (ODP_SUPPORT_NO == capa.proto_ah))
