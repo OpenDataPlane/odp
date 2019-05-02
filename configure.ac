@@ -1,6 +1,6 @@
 AC_PREREQ([2.5])
 ##########################################################################
-# Set correct API version
+# ODP API version
 ##########################################################################
 m4_define([odpapi_generation_version], [1])
 m4_define([odpapi_major_version], [21])
@@ -16,6 +16,24 @@ ODP_VERSION_API_MAJOR=odpapi_major_version
 AC_SUBST(ODP_VERSION_API_MAJOR)
 ODP_VERSION_API_MINOR=odpapi_minor_version
 AC_SUBST(ODP_VERSION_API_MINOR)
+
+##########################################################################
+# Helper library version
+##########################################################################
+m4_define([odph_version_generation], [1])
+m4_define([odph_version_major], [0])
+m4_define([odph_version_minor], [0])
+
+m4_define([odph_version],
+    [odph_version_generation.odph_version_major.odph_version_minor])
+
+ODPH_VERSION_GENERATION=odph_version_generation
+AC_SUBST(ODPH_VERSION_GENERATION)
+ODPH_VERSION_MAJOR=odph_version_major
+AC_SUBST(ODPH_VERSION_MAJOR)
+ODPH_VERSION_MINOR=odph_version_minor
+AC_SUBST(ODPH_VERSION_MINOR)
+
 AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects foreign nostdinc -Wall -Werror])
 AC_CONFIG_SRCDIR([include/odp/api/spec/init.h])
 AM_CONFIG_HEADER([include/config.h])
@@ -360,6 +378,7 @@ AC_CONFIG_FILES([include/Makefile
 		 include/odp/api/spec/version.h
 		 include/odp/api/spec/deprecated.h])
 
+AC_CONFIG_FILES([helper/include/odp/helper/version.h])
 
 ##########################################################################
 # distribute the changed variables among the Makefiles
