@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -70,17 +71,34 @@ typedef struct {
 
 } odph_thread_param_t;
 
-/** The odpthread starting arguments, used both in process or thread mode */
+/** Helper internal thread start arguments. Used both in process and thread
+ *  mode */
 typedef struct {
-	odp_mem_model_t mem_model;          /**< process or thread */
-	odph_thread_param_t thr_params; /**< odpthread start parameters */
-} odph_odpthread_start_args_t;
+	/** Atomic variable to sync status */
+	odp_atomic_u32_t status;
 
-/** Linux odpthread state information, used both in process or thread mode */
+	/** Process or thread */
+	odp_mem_model_t mem_model;
+
+	/** ODP instance handle */
+	odp_instance_t instance;
+
+	/** Thread parameters */
+	odph_thread_param_t thr_params;
+
+} odph_thread_start_args_t;
+
+/** Thread state information. Used both in process and thread mode */
 typedef struct {
-	odph_odpthread_start_args_t	start_args; /**< start arguments */
-	int				cpu;	/**< CPU ID */
-	int				last;   /**< true if last table entry */
+	/** Start arguments */
+	odph_thread_start_args_t start_args;
+
+	/** CPU ID */
+	int cpu;
+
+	/** 1: last table entry */
+	uint8_t last;
+
 	/** Variant field mappings for thread/process modes */
 	union {
 		/** For thread implementation */
@@ -88,12 +106,14 @@ typedef struct {
 			pthread_t	thread_id; /**< Pthread ID */
 			pthread_attr_t	attr;	/**< Pthread attributes */
 		} thread;
+
 		/** For process implementation */
 		struct {
 			pid_t		pid;	/**< Process ID */
 			int		status;	/**< Process state chge status*/
 		} proc;
 	};
+
 } odph_thread_t;
 
 /** Linux helper options */
