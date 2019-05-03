@@ -1426,11 +1426,12 @@ static void create_groups(int num, odp_schedule_group_t *group)
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_odpthread_t thread_tbl[MAX_WORKERS];
+	odph_thread_t thread_tbl[MAX_WORKERS];
+	odph_thread_param_t thr_param[MAX_WORKERS];
+	odph_thread_common_param_t thr_common;
 	odp_pool_t pool;
 	int i;
-	int cpu;
-	int num_workers;
+	int num_workers, num_thr;
 	odp_shm_t shm;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
@@ -1637,8 +1638,6 @@ int main(int argc, char *argv[])
 	if (!gbl_args->appl.sched_mode)
 		print_port_mapping();
 
-	memset(thread_tbl, 0, sizeof(thread_tbl));
-
 	odp_barrier_init(&gbl_args->init_barrier, num_workers + 1);
 	odp_barrier_init(&gbl_args->term_barrier, num_workers + 1);
 
@@ -1650,28 +1649,34 @@ int main(int argc, char *argv[])
 		thr_run_func = run_worker_sched_mode;
 
 	/* Create worker threads */
-	cpu = odp_cpumask_first(&cpumask);
-	for (i = 0; i < num_workers; ++i) {
-		odp_cpumask_t thd_mask;
-		odph_odpthread_params_t thr_params;
+	memset(thread_tbl, 0, sizeof(thread_tbl));
+	memset(thr_param, 0, sizeof(thr_param));
+	memset(&thr_common, 0, sizeof(thr_common));
 
-		memset(&thr_params, 0, sizeof(thr_params));
-		thr_params.start    = thr_run_func;
-		thr_params.arg      = &gbl_args->thread[i];
-		thr_params.thr_type = ODP_THREAD_WORKER;
-		thr_params.instance = instance;
+	thr_common.instance = instance;
+	thr_common.cpumask  = &cpumask;
+	/* Synchronize thread start up. Test runs are more repeatable when
+	 * thread / thread ID / CPU ID mapping stays constant. */
+	thr_common.sync     = 1;
+
+	for (i = 0; i < num_workers; ++i) {
+		thr_param[i].start    = thr_run_func;
+		thr_param[i].arg      = &gbl_args->thread[i];
+		thr_param[i].thr_type = ODP_THREAD_WORKER;
 
 		/* Round robin threads to groups */
 		gbl_args->thread[i].num_groups = 1;
 		gbl_args->thread[i].group[0] = group[i % num_groups];
 
 		stats[i] = &gbl_args->thread[i].stats;
+	}
 
-		odp_cpumask_zero(&thd_mask);
-		odp_cpumask_set(&thd_mask, cpu);
-		odph_odpthreads_create(&thread_tbl[i], &thd_mask,
-				       &thr_params);
-		cpu = odp_cpumask_next(&cpumask, cpu);
+	num_thr = odph_thread_create(thread_tbl, &thr_common, thr_param,
+				     num_workers);
+
+	if (num_thr != num_workers) {
+		LOG_ERR("Error: worker create failed %i\n", num_thr);
+		exit(EXIT_FAILURE);
 	}
 
 	/* Start packet receive and transmit */
@@ -1703,8 +1708,11 @@ int main(int argc, char *argv[])
 		odp_barrier_wait(&gbl_args->term_barrier);
 
 	/* Master thread waits for other threads to exit */
-	for (i = 0; i < num_workers; ++i)
-		odph_odpthreads_join(&thread_tbl[i]);
+	num_thr = odph_thread_join(thread_tbl, num_workers);
+	if (num_thr != num_workers) {
+		LOG_ERR("Error: worker join failed %i\n", num_thr);
+			exit(EXIT_FAILURE);
+	}
 
 	for (i = 0; i < if_count; ++i) {
 		if (odp_pktio_close(gbl_args->pktios[i].pktio)) {
