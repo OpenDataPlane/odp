@@ -143,10 +143,11 @@ int main(int argc, char **argv)
 	odp_pool_t pool;
 	odp_pool_param_t params;
 	odp_cpumask_t cpumask;
-	odph_odpthread_t thd[MAX_WORKERS];
+	odph_thread_t thd[MAX_WORKERS];
 	odp_instance_t instance;
 	odp_init_t init_param;
-	odph_odpthread_params_t thr_params;
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
 	odph_ethaddr_t correct_src;
 	uint32_t mtu1, mtu2;
 	odp_shm_t shm;
@@ -243,16 +244,28 @@ int main(int argc, char **argv)
 
 	odp_cpumask_default_worker(&cpumask, MAX_WORKERS);
 
-	memset(&thr_params, 0, sizeof(thr_params));
-	thr_params.start    = run_worker;
-	thr_params.arg      = NULL;
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = instance;
+	memset(&thr_common, 0, sizeof(thr_common));
+	memset(&thr_param, 0, sizeof(thr_param));
+
+	thr_param.start    = run_worker;
+	thr_param.thr_type = ODP_THREAD_WORKER;
+
+	thr_common.instance    = instance;
+	thr_common.cpumask     = &cpumask;
+	thr_common.share_param = 1;
 
 	signal(SIGINT, sig_handler);
 
-	odph_odpthreads_create(thd, &cpumask, &thr_params);
-	odph_odpthreads_join(thd);
+	if (odph_thread_create(thd, &thr_common, &thr_param, MAX_WORKERS) !=
+	    MAX_WORKERS) {
+		printf("Error: failed to create threads\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odph_thread_join(thd, MAX_WORKERS) != MAX_WORKERS) {
+		printf("Error: failed to join threads\n");
+		exit(EXIT_FAILURE);
+	}
 
 	if (odp_pktio_stop(global->if0) || odp_pktio_close(global->if0)) {
 		printf("Error: failed to close interface %s\n", argv[1]);
