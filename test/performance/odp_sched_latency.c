@@ -425,11 +425,10 @@ static int test_schedule(int thr, test_globals_t *globals)
 		}
 	}
 
-	odp_schedule_resume();
-
 	odp_barrier_wait(&globals->barrier);
 
 	if (thr == MAIN_THREAD) {
+		odp_schedule_resume();
 		clear_sched_queues(globals);
 		print_results(globals);
 	}
