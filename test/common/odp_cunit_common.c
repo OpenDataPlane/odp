@@ -29,7 +29,7 @@
 
 /* Globals */
 static int allow_skip_result;
-static odph_odpthread_t thread_tbl[MAX_WORKERS];
+static odph_thread_t thread_tbl[MAX_WORKERS];
 static odp_instance_t instance;
 static char *progname;
 
@@ -50,27 +50,41 @@ static odp_suiteinfo_t *global_testsuites;
 int odp_cunit_thread_create(int func_ptr(void *), pthrd_arg *arg)
 {
 	odp_cpumask_t cpumask;
-	odph_odpthread_params_t thr_params;
+	odph_thread_common_param_t thr_common;
+	int ret;
+	int num = arg->numthrds;
+	odph_thread_param_t thr_param;
 
-	memset(&thr_params, 0, sizeof(thr_params));
-	thr_params.start    = func_ptr;
-	thr_params.arg      = arg;
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = instance;
+	memset(&thr_common, 0, sizeof(thr_common));
+	memset(&thr_param, 0, sizeof(thr_param));
 
-	/* Create and init additional threads */
-	odp_cpumask_default_worker(&cpumask, arg->numthrds);
+	thr_param.start    = func_ptr;
+	thr_param.arg      = arg;
+	thr_param.thr_type = ODP_THREAD_WORKER;
 
-	return odph_odpthreads_create(thread_tbl, &cpumask, &thr_params);
+	odp_cpumask_default_worker(&cpumask, num);
+
+	thr_common.instance    = instance;
+	thr_common.cpumask     = &cpumask;
+	thr_common.share_param = 1;
+
+	/* Create and start additional threads */
+	ret = odph_thread_create(thread_tbl, &thr_common, &thr_param, num);
+
+	if (ret != num)
+		fprintf(stderr, "error: odph_thread_create() failed.\n");
+
+	return ret;
 }
 
 /** exit from test thread */
 int odp_cunit_thread_exit(pthrd_arg *arg)
 {
+	int num = arg->numthrds;
+
 	/* Wait for other threads to exit */
-	if (odph_odpthreads_join(thread_tbl) != arg->numthrds) {
-		fprintf(stderr,
-			"error: odph_odpthreads_join() failed.\n");
+	if (odph_thread_join(thread_tbl, num) != num) {
+		fprintf(stderr, "error: odph_thread_join() failed.\n");
 		return -1;
 	}
 
