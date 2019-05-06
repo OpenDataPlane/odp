@@ -690,15 +690,14 @@ int main(int argc, char **argv)
 	odp_queue_param_t queue_param;
 	odp_shm_t shm;
 	odph_helper_options_t helper_options;
-	odph_odpthread_t thr_tbl[ODP_THREAD_COUNT_MAX];
+	odph_thread_t thr_tbl[ODP_THREAD_COUNT_MAX];
+	odph_thread_param_t thr_param[ODP_THREAD_COUNT_MAX];
+	odph_thread_common_param_t thr_common;
 	odph_ethaddr_t new_addr;
-	odph_odpthread_params_t thr_params;
 	stats_t *stats[ODP_THREAD_COUNT_MAX];
 	thread_args_t *thr_args;
 	uint32_t pkt_len, seg_len, pkt_num;
-	int qid;
-	int cpu;
-	int num_threads;
+	int num_threads, num_workers;
 	int i;
 	int ret;
 
@@ -746,6 +745,7 @@ int main(int argc, char **argv)
 	num_threads = setup_thread_masks(&thr_mask_rx, &thr_mask_tx,
 					 &thr_mask_worker,
 					 global->appl.num_workers);
+	num_workers = num_threads - 2;
 
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &global->appl);
@@ -852,43 +852,46 @@ int main(int argc, char **argv)
 		stats[i] = &global->thread[i].stats;
 
 	memset(thr_tbl, 0, sizeof(thr_tbl));
-	memset(&thr_params, 0, sizeof(thr_params));
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = instance;
+	memset(thr_param, 0, sizeof(thr_param));
+	memset(&thr_common, 0, sizeof(thr_common));
+
+	thr_common.instance = instance;
 
 	/* RX thread */
 	thr_args = &global->thread[0];
 	thr_args->tx_queue = global->queue[0];
-	thr_params.start = rx_thread;
-	thr_params.arg = thr_args;
-	odph_odpthreads_create(&thr_tbl[0], &thr_mask_rx, &thr_params);
+	thr_param[0].start = rx_thread;
+	thr_param[0].arg = thr_args;
+	thr_param[0].thr_type = ODP_THREAD_WORKER;
+	thr_common.cpumask = &thr_mask_rx;
+	odph_thread_create(thr_tbl, &thr_common, thr_param, 1);
 
 	/* Worker threads */
-	cpu = odp_cpumask_first(&thr_mask_worker);
-	for (i = 1, qid = 0; i < (num_threads - 1); i++, qid++) {
-		odp_cpumask_t thr_mask;
+	for (i = 0; i < num_workers; i++) {
+		thr_args = &global->thread[i + 1];
+		thr_args->rx_queue = global->queue[i];
+		thr_args->tx_queue = global->queue[i + 1];
 
-		thr_args = &global->thread[i];
-		thr_args->rx_queue = global->queue[qid];
-		thr_args->tx_queue = global->queue[qid + 1];
+		thr_param[i].start    = worker_thread;
+		thr_param[i].arg      = thr_args;
+		thr_param[i].thr_type = ODP_THREAD_WORKER;
+	}
 
-		thr_params.start    = worker_thread;
-		thr_params.arg      = &global->thread[i];
-
-		odp_cpumask_zero(&thr_mask);
-		odp_cpumask_set(&thr_mask, cpu);
-		odph_odpthreads_create(&thr_tbl[i], &thr_mask,
-				       &thr_params);
-		cpu = odp_cpumask_next(&thr_mask_worker, cpu);
+	if (num_workers) {
+		thr_common.cpumask = &thr_mask_worker;
+		odph_thread_create(&thr_tbl[1], &thr_common, thr_param,
+				   num_workers);
 	}
 
 	/* TX thread */
 	thr_args = &global->thread[num_threads - 1];
-	thr_args->rx_queue = global->queue[global->appl.num_workers];
-	thr_params.start = tx_thread;
-	thr_params.arg = thr_args;
-	odph_odpthreads_create(&thr_tbl[num_threads - 1], &thr_mask_tx,
-			       &thr_params);
+	thr_args->rx_queue = global->queue[num_workers];
+	thr_param[0].start = tx_thread;
+	thr_param[0].arg = thr_args;
+	thr_param[0].thr_type = ODP_THREAD_WORKER;
+	thr_common.cpumask = &thr_mask_tx;
+	odph_thread_create(&thr_tbl[num_threads - 1], &thr_common, thr_param,
+			   1);
 
 	ret = print_speed_stats(num_threads, stats, global->appl.time,
 				global->appl.accuracy);
@@ -905,8 +908,7 @@ int main(int argc, char **argv)
 	global->exit_threads = 1;
 	odp_barrier_wait(&global->term_barrier);
 
-	for (i = 0; i < num_threads; i++)
-		odph_odpthreads_join(&thr_tbl[i]);
+	odph_thread_join(thr_tbl, num_threads);
 
 	if (odp_pktio_close(global->if0)) {
 		printf("Error: failed to close interface %s\n", argv[1]);
