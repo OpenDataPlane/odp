@@ -1100,7 +1100,7 @@ static void print_global_stats(int num_workers)
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_odpthread_t thread_tbl[MAX_WORKERS];
+	odph_thread_t thread_tbl[MAX_WORKERS];
 	odp_pool_t pool;
 	int num_workers;
 	unsigned num_rx_queues, num_tx_queues;
@@ -1112,7 +1112,8 @@ int main(int argc, char *argv[])
 	interface_t *ifs;
 	odp_instance_t instance;
 	odp_init_t init_param;
-	odph_odpthread_params_t thr_params;
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
 
 	/* Signal handler has to be registered before global init in case ODP
 	 * implementation creates internal threads/processes. */
@@ -1253,9 +1254,11 @@ int main(int argc, char *argv[])
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
 	/* Init threads params */
-	memset(&thr_params, 0, sizeof(thr_params));
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = instance;
+	memset(&thr_param, 0, sizeof(thr_param));
+	thr_param.thr_type = ODP_THREAD_WORKER;
+
+	memset(&thr_common, 0, sizeof(thr_common));
+	thr_common.instance = instance;
 
 	/* num workers + print thread */
 	odp_barrier_init(&args->barrier, num_workers + 1);
@@ -1275,17 +1278,17 @@ int main(int argc, char *argv[])
 		thr_args->pool = pool;
 		thr_args->mode = args->appl.mode;
 
-		memset(&thr_params, 0, sizeof(thr_params));
 		if (args->appl.sched)
-			thr_params.start = gen_recv_thread;
+			thr_param.start = gen_recv_thread;
 		else
-			thr_params.start = gen_recv_direct_thread;
-		thr_params.arg      = thr_args;
-		thr_params.thr_type = ODP_THREAD_WORKER;
-		thr_params.instance = instance;
+			thr_param.start = gen_recv_direct_thread;
 
-		odph_odpthreads_create(&thread_tbl[PING_THR_RX],
-				       &cpu_mask, &thr_params);
+		thr_param.arg = thr_args;
+
+		thr_common.cpumask = &cpu_mask;
+
+		odph_thread_create(&thread_tbl[PING_THR_RX], &thr_common,
+				   &thr_param, 1);
 
 		thr_args = &args->thread[PING_THR_TX];
 		thr_args->tx.pktout = ifs[0].pktout[0];
@@ -1296,11 +1299,11 @@ int main(int argc, char *argv[])
 		odp_cpumask_zero(&cpu_mask);
 		odp_cpumask_set(&cpu_mask, cpu_next);
 
-		thr_params.start = gen_send_thread;
-		thr_params.arg   = thr_args;
+		thr_param.start = gen_send_thread;
+		thr_param.arg   = thr_args;
 
-		odph_odpthreads_create(&thread_tbl[PING_THR_TX],
-				       &cpu_mask, &thr_params);
+		odph_thread_create(&thread_tbl[PING_THR_TX], &thr_common,
+				   &thr_param, 1);
 
 	} else {
 		int cpu = odp_cpumask_first(&cpumask);
@@ -1381,11 +1384,13 @@ int main(int argc, char *argv[])
 			odp_cpumask_zero(&thd_mask);
 			odp_cpumask_set(&thd_mask, cpu);
 
-			thr_params.start = thr_run_func;
-			thr_params.arg   = &args->thread[i];
+			thr_param.start = thr_run_func;
+			thr_param.arg   = &args->thread[i];
 
-			odph_odpthreads_create(&thread_tbl[i],
-					       &thd_mask, &thr_params);
+			thr_common.cpumask = &thd_mask;
+
+			odph_thread_create(&thread_tbl[i], &thr_common,
+					   &thr_param, 1);
 			cpu = odp_cpumask_next(&cpumask, cpu);
 		}
 	}
@@ -1393,8 +1398,7 @@ int main(int argc, char *argv[])
 	print_global_stats(num_workers);
 
 	/* Master thread waits for other threads to exit */
-	for (i = 0; i < num_workers; ++i)
-		odph_odpthreads_join(&thread_tbl[i]);
+	odph_thread_join(thread_tbl, num_workers);
 
 	for (i = 0; i < args->appl.if_count; ++i)
 		odp_pktio_stop(ifs[i].pktio);
