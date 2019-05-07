@@ -255,10 +255,11 @@ int main(int argc, char *argv[])
 	odp_shm_t shm_log = ODP_SHM_INVALID;
 	int log_size, log_enries_num;
 	odph_helper_options_t helper_options;
-	odph_odpthread_t thread_tbl[MAX_WORKERS];
+	odph_thread_t thread_tbl[MAX_WORKERS];
 	odp_instance_t instance;
 	odp_init_t init_param;
-	odph_odpthread_params_t thr_params;
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
 
 	printf("\nODP global time test starts\n");
 
@@ -330,17 +331,22 @@ int main(int argc, char *argv[])
 		goto err;
 	}
 
-	memset(&thr_params, 0, sizeof(thr_params));
-	thr_params.start    = run_thread;
-	thr_params.arg      = gbls;
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = instance;
+	memset(&thr_common, 0, sizeof(thr_common));
+	memset(&thr_param, 0, sizeof(thr_param));
+
+	thr_param.start    = run_thread;
+	thr_param.arg      = gbls;
+	thr_param.thr_type = ODP_THREAD_WORKER;
+
+	thr_common.instance = instance;
+	thr_common.cpumask = &cpumask;
+	thr_common.share_param = 1;
 
 	/* Create and launch worker threads */
-	odph_odpthreads_create(thread_tbl, &cpumask, &thr_params);
+	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
 
 	/* Wait for worker threads to exit */
-	odph_odpthreads_join(thread_tbl);
+	odph_thread_join(thread_tbl, num_workers);
 
 	print_log(gbls);
 
