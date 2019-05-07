@@ -469,7 +469,7 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_odpthread_t thread_tbl[MAX_WORKERS];
+	odph_thread_t thread_tbl[MAX_WORKERS];
 	odp_pool_t pool;
 	int num_workers;
 	int i;
@@ -483,7 +483,8 @@ int main(int argc, char *argv[])
 	int ret;
 	odp_instance_t instance;
 	odp_init_t init_param;
-	odph_odpthread_params_t thr_params;
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
@@ -577,19 +578,24 @@ int main(int argc, char *argv[])
 
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
+	memset(&thr_common, 0, sizeof(thr_common));
+	memset(&thr_param, 0, sizeof(thr_param));
 
-	memset(&thr_params, 0, sizeof(thr_params));
-	thr_params.start    = pktio_receive_thread;
-	thr_params.arg      = args;
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = instance;
-	odph_odpthreads_create(thread_tbl, &cpumask, &thr_params);
+	thr_param.start    = pktio_receive_thread;
+	thr_param.arg      = args;
+	thr_param.thr_type = ODP_THREAD_WORKER;
+
+	thr_common.instance    = instance;
+	thr_common.cpumask     = &cpumask;
+	thr_common.share_param = 1;
+
+	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
 
 	print_cls_statistics(args);
 
 	odp_pktio_stop(pktio);
 	args->shutdown = 1;
-	odph_odpthreads_join(thread_tbl);
+	odph_thread_join(thread_tbl, num_workers);
 
 	for (i = 0; i < args->policy_count; i++) {
 		if ((i !=  args->policy_count - 1) &&
