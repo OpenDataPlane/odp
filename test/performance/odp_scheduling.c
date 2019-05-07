@@ -796,7 +796,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_odpthread_t *thread_tbl;
+	odph_thread_t *thread_tbl;
 	test_args_t args;
 	int num_workers;
 	odp_cpumask_t cpumask;
@@ -810,7 +810,8 @@ int main(int argc, char *argv[])
 	int ret = 0;
 	odp_instance_t instance;
 	odp_init_t init_param;
-	odph_odpthread_params_t thr_params;
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
 	odp_queue_capability_t capa;
 	odp_pool_capability_t pool_capa;
 	odp_schedule_config_t schedule_config;
@@ -857,7 +858,7 @@ int main(int argc, char *argv[])
 	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
 	printf("cpu mask:           %s\n", cpumaskstr);
 
-	thread_tbl = calloc(sizeof(odph_odpthread_t), num_workers);
+	thread_tbl = calloc(sizeof(odph_thread_t), num_workers);
 	if (!thread_tbl) {
 		LOG_ERR("no memory for thread_tbl\n");
 		return -1;
@@ -997,15 +998,21 @@ int main(int argc, char *argv[])
 	globals->first_thr = -1;
 
 	/* Create and launch worker threads */
-	memset(&thr_params, 0, sizeof(thr_params));
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = instance;
-	thr_params.start = run_thread;
-	thr_params.arg   = NULL;
-	odph_odpthreads_create(thread_tbl, &cpumask, &thr_params);
+	memset(&thr_common, 0, sizeof(thr_common));
+	memset(&thr_param, 0, sizeof(thr_param));
+
+	thr_param.thr_type = ODP_THREAD_WORKER;
+	thr_param.start    = run_thread;
+	thr_param.arg      = NULL;
+
+	thr_common.instance = instance;
+	thr_common.cpumask  = &cpumask;
+	thr_common.share_param = 1;
+
+	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
 
 	/* Wait for worker threads to terminate */
-	odph_odpthreads_join(thread_tbl);
+	odph_thread_join(thread_tbl, num_workers);
 	free(thread_tbl);
 
 	printf("ODP example complete\n\n");
