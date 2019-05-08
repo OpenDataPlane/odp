@@ -136,6 +136,21 @@ typedef struct {
 } odp_timer_pool_param_t;
 
 /**
+ * Timer resolution capability
+ */
+typedef struct {
+	/** Timeout resolution in nanoseconds */
+	uint64_t res_ns;
+
+	/** Minimum relative timeout in nanoseconds */
+	uint64_t min_tmo;
+
+	/** Maximum relative timeout in nanoseconds */
+	uint64_t max_tmo;
+
+} odp_timer_res_capability_t;
+
+/**
  * Timer capability
  */
 typedef struct {
@@ -160,8 +175,35 @@ typedef struct {
 	 *  This defines the highest resolution supported by a timer.
 	 *  It's the minimum valid value for 'res_ns' timer pool
 	 *  parameter.
+	 *
+	 *  This value is equal to 'max_res.res_ns' capability.
 	 */
 	uint64_t highest_res_ns;
+
+	/**
+	 * Maximum resolution
+	 *
+	 * This defines the highest resolution supported by a timer, with
+	 * limits to min/max timeout values. The highest resolution for a timer
+	 * pool is defined by 'max_res.res_ns', therefore it's the minimum value
+	 * for 'res_ns' timer pool parameter. When this resolution is used:
+	 * - 'min_tmo' parameter value must be in minimum 'max_res.min_tmo'
+	 * - 'max_tmo' parameter value must be in maximum 'max_res.max_tmo'
+	 */
+	odp_timer_res_capability_t max_res;
+
+	/**
+	 * Maximum timeout length
+	 *
+	 * This defines the maximum relative timeout value supported by a timer,
+	 * with limits to min timeout and max resolution values. The maximum
+	 * value for 'max_tmo' timer pool parameter is defined by
+	 * 'max_tmo.max_tmo'. When this max timeout value is used:
+	 * - 'min_tmo' parameter value must be in minimum 'max_tmo.min_tmo'
+	 * - 'res_ns'  parameter value must be in minimum 'max_tmo.res_ns'
+	 */
+	odp_timer_res_capability_t max_tmo;
+
 } odp_timer_capability_t;
 
 /**
@@ -177,6 +219,28 @@ typedef struct {
  */
 int odp_timer_capability(odp_timer_clk_src_t clk_src,
 			 odp_timer_capability_t *capa);
+
+/**
+ * Timer resolution capability
+ *
+ * This function fills in capability limits for timer pool resolution and
+ * min/max timeout values, based on either resolution or maximum timeout.
+ * Set the required value to 'res_ns' or 'max_tmo', and set other fields to
+ * zero. A successful call fills in the other two fields. The call returns
+ * a failure, if the user defined value ('res_ns' or 'max_tmo)' exceeds
+ * capability limits. Outputted values are minimums for 'res_ns' and 'min_tmo',
+ * and a maximum for 'max_tmo'.
+ *
+ * @param         clk_src  Clock source for timers
+ * @param[in,out] res_capa Resolution capability pointer for input/output.
+ *                         Set either 'res_ns' or 'max_tmo', a successful call
+ *                         fills in other fields.
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_timer_res_capability(odp_timer_clk_src_t clk_src,
+			     odp_timer_res_capability_t *res_capa);
 
 /**
  * Create a timer pool
