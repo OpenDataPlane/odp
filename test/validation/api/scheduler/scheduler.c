@@ -1771,6 +1771,7 @@ static void scheduler_test_ordered_lock(void)
 
 	if (lock_count < 2) {
 		printf("  ONLY ONE ORDERED LOCK. Unlock_lock not tested.\n");
+		CU_ASSERT(drain_queues() == BUFS_PER_QUEUE / 2);
 		return;
 	}
 
