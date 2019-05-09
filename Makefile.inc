@@ -14,6 +14,7 @@ ODP_INCLUDES += \
 endif
 
 HELPER_INCLUDES = \
+	-I$(top_builddir)/helper/include \
 	-I$(top_srcdir)/helper/include
 
 LIB   = $(top_builddir)/lib

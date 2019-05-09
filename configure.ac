@@ -378,7 +378,8 @@ AC_CONFIG_FILES([include/Makefile
 		 include/odp/api/spec/version.h
 		 include/odp/api/spec/deprecated.h])
 
-AC_CONFIG_FILES([helper/include/odp/helper/version.h])
+AC_CONFIG_FILES([helper/Makefile
+		 helper/include/odp/helper/version.h])
 
 ##########################################################################
 # distribute the changed variables among the Makefiles

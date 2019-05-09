@@ -15,6 +15,5 @@ AC_ARG_ENABLE([helper-linux],
     [helper_linux=$enableval],
     [helper_linux=yes])
 
-AC_CONFIG_FILES([helper/Makefile
-		 helper/libodphelper.pc
+AC_CONFIG_FILES([helper/libodphelper.pc
 		 helper/test/Makefile])
