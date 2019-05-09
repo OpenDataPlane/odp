@@ -202,6 +202,16 @@ jobs:
                               -e CC="${CC}"
                               -e CONF="--enable-user-guides --disable-abi-compat"
                               ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/distcheck.sh
+                - stage: test
+                  env: TEST=out_of_tree
+                  compiler: gcc
+                  script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
+                          - docker run --privileged -i -t
+                              -v `pwd`:/odp --shm-size 8g
+                              -e CC="${CC}"
+                              -e CONF=""
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/out_of_tree.sh
                 - stage: "build only"
                   env: TEST=documentation
                   compiler: gcc
