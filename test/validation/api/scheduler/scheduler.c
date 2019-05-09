@@ -507,6 +507,9 @@ static void scheduler_test_queue_size(void)
 		}
 
 		CU_ASSERT(num == queue_size);
+
+		CU_ASSERT(drain_queues() == 0);
+
 		CU_ASSERT_FATAL(odp_queue_destroy(queue) == 0);
 	}
 
@@ -622,6 +625,7 @@ static void scheduler_test_order_ignore(void)
 
 	CU_ASSERT(num == queue_size);
 
+	CU_ASSERT(drain_queues() == 0);
 	CU_ASSERT_FATAL(odp_queue_destroy(ordered) == 0);
 	CU_ASSERT_FATAL(odp_queue_destroy(plain) == 0);
 	CU_ASSERT_FATAL(odp_pool_destroy(pool) == 0);
