@@ -396,12 +396,13 @@ static int test_schedule_single(const char *str, int thr,
 		}
 	}
 
-	odp_schedule_resume();
-
 	c2     = odp_cpu_cycles();
 	cycles = odp_cpu_cycles_diff(c2, c1);
 
 	odp_barrier_wait(&globals->barrier);
+
+	odp_schedule_resume();
+
 	clear_sched_queues();
 
 	cycles = cycles / tot;
@@ -469,12 +470,13 @@ static int test_schedule_many(const char *str, int thr,
 		}
 	}
 
-	odp_schedule_resume();
-
 	c2     = odp_cpu_cycles();
 	cycles = odp_cpu_cycles_diff(c2, c1);
 
 	odp_barrier_wait(&globals->barrier);
+
+	odp_schedule_resume();
+
 	clear_sched_queues();
 
 	cycles = cycles / tot;
@@ -557,12 +559,13 @@ static int test_schedule_multi(const char *str, int thr,
 		}
 	}
 
-	odp_schedule_resume();
-
 	c2     = odp_cpu_cycles();
 	cycles = odp_cpu_cycles_diff(c2, c1);
 
 	odp_barrier_wait(&globals->barrier);
+
+	odp_schedule_resume();
+
 	clear_sched_queues();
 
 	if (tot)
