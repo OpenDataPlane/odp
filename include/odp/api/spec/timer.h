@@ -1,4 +1,6 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
+ *
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -83,8 +85,8 @@ typedef enum {
  * timer pool. */
 	ODP_TIMER_TOOLATE = -2,
 /**
- * Timer set operation failed because no timeout event specified and no
- * timeout event present in the timer (timer inactive/expired).
+ * Timer set operation failed because no event specified and no event present
+ * in the timer (timer inactive/expired).
  */
 	ODP_TIMER_NOEVENT = -3
 } odp_timer_set_t;
@@ -294,73 +296,87 @@ odp_timer_t odp_timer_alloc(odp_timer_pool_t tpid,
 odp_event_t odp_timer_free(odp_timer_t tim);
 
 /**
- * Set a timer (absolute time) with a user-provided timeout event
+ * Set (or reset) a timer with absolute expiration time
  *
- * Set (arm) the timer to expire at specific time. The timeout
- * event will be enqueued when the timer expires.
+ * This function sets a timer to expire at a specific time. If the timer is
+ * already running (set and not yet expired), the function updates (resets) it
+ * with a new expiration time and optionally with a new event. A successful
+ * reset operation with a new event outputs the old event. A failed reset
+ * operation does not modify the timer.
  *
- * @param tim      Timer
- * @param abs_tck  Expiration time in absolute timer ticks
- * @param[in,out] tmo_ev  Reference to an event variable that points to
- * timeout event or NULL to reuse the existing timeout event. Any existing
- * timeout event that is replaced by a successful set operation will be
- * returned here.
+ * The user provided event can be of any event type, but only ODP_EVENT_TIMEOUT
+ * type events (odp_timeout_t) carry timeout specific metadata. Furthermore,
+ * timer performance may have been optimized for that event type. When the timer
+ * expires, the event is enqueued to the destination queue of the timer.
  *
- * @retval ODP_TIMER_SUCCESS Operation succeeded
- * @retval ODP_TIMER_TOOEARLY Operation failed because expiration tick too
- * early
- * @retval ODP_TIMER_TOOLATE Operation failed because expiration tick too
- * late
- * @retval ODP_TIMER_NOEVENT Operation failed because timeout event not
- * specified in odp_timer_set call and not present in timer
+ * @param         timer    Timer
+ * @param         abs_tick Absolute expiration time in timer ticks
+ * @param[in,out] tmo_ev   Pointer to an event handle. The event is enqueued
+ *                         when the timer expires. Use NULL when resetting the
+ *                         timer without changing the event. When resetting the
+ *                         timer with a new event, a successful operation
+ *                         outputs the old event here.
+ *
+ * @retval ODP_TIMER_SUCCESS  Success
+ * @retval ODP_TIMER_TOOEARLY Failure. Expiration time is too near to
+ *                            the current time.
+ * @retval ODP_TIMER_TOOLATE  Failure. Expiration time is too far from
+ *                            the current time.
+ * @retval ODP_TIMER_NOEVENT  Failure. Set operation: No event provided.
+ *                            Reset operation: Too late to reset the timer.
+ *
+ * @see odp_timer_set_rel(), odp_timer_alloc(), odp_timer_cancel()
  */
-int odp_timer_set_abs(odp_timer_t tim,
-		      uint64_t abs_tck,
+int odp_timer_set_abs(odp_timer_t timer, uint64_t abs_tick,
 		      odp_event_t *tmo_ev);
 
 /**
- * Set a timer with a relative expiration time and user-provided event.
+ * Set (or reset) a timer with relative expiration time
  *
- * Set (arm) the timer to expire at a relative future time.
+ * Like odp_timer_set_abs(), but the expiration time is relative to the current
+ * time: expiration tick = odp_timer_current_tick() + 'rel_tick'.
  *
- * @param tim      Timer
- * @param rel_tck  Expiration time in timer ticks relative to current time of
- *		   the timer pool the timer belongs to
- * @param[in,out] tmo_ev  Reference to an event variable that points to
- * timeout event or NULL to reuse the existing timeout event. Any existing
- * timeout event that is replaced by a successful set operation will be
- * returned here.
+ * @param         timer    Timer
+ * @param         rel_tick Expiration time relative to current time of
+ *                         the timer pool in timer ticks
+ * @param[in,out] tmo_ev   Pointer to an event handle. The event is enqueued
+ *                         when the timer expires. Use NULL when resetting the
+ *                         timer without changing the event. When resetting the
+ *                         timer with a new event, a successful operation
+ *                         outputs the old event here.
  *
- * @retval ODP_TIMER_SUCCESS Operation succeeded
- * @retval ODP_TIMER_TOOEARLY Operation failed because expiration tick too
- * early
- * @retval ODP_TIMER_TOOLATE Operation failed because expiration tick too
- * late
- * @retval ODP_TIMER_NOEVENT Operation failed because timeout event not
- * specified in call and not present in timer
+ * @retval ODP_TIMER_SUCCESS  Success
+ * @retval ODP_TIMER_TOOEARLY Failure. Expiration time is too near to
+ *                            the current time.
+ * @retval ODP_TIMER_TOOLATE  Failure. Expiration time is too far from
+ *                            the current time.
+ * @retval ODP_TIMER_NOEVENT  Failure. Set operation: No event provided.
+ *                            Reset operation: Too late to reset the timer.
+ *
+ * @see odp_timer_set_abs(), odp_timer_alloc(), odp_timer_cancel()
  */
-int odp_timer_set_rel(odp_timer_t tim,
-		      uint64_t rel_tck,
+int odp_timer_set_rel(odp_timer_t timer, uint64_t rel_tick,
 		      odp_event_t *tmo_ev);
 
 /**
  * Cancel a timer
  *
- * Cancel a timer, preventing future expiration and delivery. Return any
- * present timeout event.
+ * Cancel a timer, preventing future expiration and event delivery. Return any
+ * present event.
  *
  * A timer that has already expired may be impossible to cancel and the timeout
  * will instead be delivered to the destination queue.
  *
- * @param tim     Timer
- * @param[out] tmo_ev Pointer to an event variable
- * @retval 0  Success, active timer cancelled, timeout returned in '*tmo_ev'
- * @retval <0 on failure (timer inactive or already expired)
+ * @param      timer  Timer
+ * @param[out] tmo_ev Pointer to an event handle for output
+ *
+ * @retval 0  Success. Active timer cancelled, timeout returned in 'tmo_ev'
+ * @retval <0 Failure. Timer inactive or already expired.
  */
-int odp_timer_cancel(odp_timer_t tim, odp_event_t *tmo_ev);
+int odp_timer_cancel(odp_timer_t timer, odp_event_t *tmo_ev);
 
 /**
- * Return timeout handle that is associated with timeout event
+ * Get timeout handle from a ODP_EVENT_TIMEOUT type event
  *
  * @param ev An event of type ODP_EVENT_TIMEOUT
  *
