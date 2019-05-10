@@ -122,24 +122,6 @@ static int drain_queues(void)
 	return ret;
 }
 
-static int exit_schedule_loop(void)
-{
-	odp_event_t ev;
-	int ret = 0;
-
-	odp_schedule_pause();
-
-	while ((ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT))
-	      != ODP_EVENT_INVALID) {
-		odp_event_free(ev);
-		ret++;
-	}
-
-	odp_schedule_resume();
-
-	return ret;
-}
-
 static void release_context(odp_schedule_sync_t sync)
 {
 	if (sync == ODP_SCHED_SYNC_ATOMIC)
@@ -410,16 +392,7 @@ static void scheduler_test_wait(void)
 	}
 
 	/* Make sure that scheduler is empty */
-	retry = 0;
-	do {
-		ret = odp_schedule_multi_no_wait(NULL, &ev, 1);
-		CU_ASSERT(ret == 0 || ret == 1);
-
-		if (ret)
-			odp_event_free(ev);
-		else
-			retry++;
-	} while (ret || retry < num_retry);
+	drain_queues();
 
 	CU_ASSERT_FATAL(odp_queue_destroy(queue) == 0);
 	CU_ASSERT_FATAL(odp_pool_destroy(p) == 0);
@@ -858,7 +831,7 @@ static void scheduler_test_groups(void)
 		/* Release schduler context and leave groups */
 		odp_schedule_group_join(mygrp1, &mymask);
 		odp_schedule_group_join(mygrp2, &mymask);
-		CU_ASSERT(exit_schedule_loop() == 0);
+		CU_ASSERT(drain_queues() == 0);
 		odp_schedule_group_leave(mygrp1, &mymask);
 		odp_schedule_group_leave(mygrp2, &mymask);
 
@@ -1282,9 +1255,7 @@ static int schedule_common_(void *arg)
 		odp_ticketlock_unlock(&globals->lock);
 
 	/* Clear scheduler atomic / ordered context between tests */
-	num = exit_schedule_loop();
-
-	CU_ASSERT(num == 0);
+	CU_ASSERT(drain_queues() == 0);
 
 	if (num)
 		printf("\nDROPPED %i events\n\n", num);
@@ -1738,9 +1709,7 @@ static void scheduler_test_pause_resume(void)
 		odp_buffer_free(buf);
 	}
 
-	ret = exit_schedule_loop();
-
-	CU_ASSERT(ret == 0);
+	CU_ASSERT(drain_queues() == 0);
 }
 
 /* Basic, single threaded ordered lock API testing */
@@ -1810,9 +1779,7 @@ static void scheduler_test_ordered_lock(void)
 		odp_buffer_free(buf);
 	}
 
-	ret = exit_schedule_loop();
-
-	CU_ASSERT(ret == 0);
+	CU_ASSERT(drain_queues() == 0);
 }
 
 static int create_queues(test_globals_t *globals)
