@@ -332,6 +332,20 @@ static void HMAC_CTX_free(HMAC_CTX *ctx)
 	HMAC_CTX_cleanup(ctx);
 	free(ctx);
 }
+
+static EVP_MD_CTX *EVP_MD_CTX_new(void)
+{
+	EVP_MD_CTX *ctx = malloc(sizeof(*ctx));
+
+	EVP_MD_CTX_init(ctx);
+	return ctx;
+}
+
+static void EVP_MD_CTX_free(EVP_MD_CTX *ctx)
+{
+	EVP_MD_CTX_cleanup(ctx);
+	free(ctx);
+}
 #endif
 
 static void
