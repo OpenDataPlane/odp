@@ -69,26 +69,29 @@ typedef enum {
  * Return values of timer set calls.
  */
 typedef enum {
-/**
- * Timer set operation succeeded
- */
+	/**
+	 * Timer set operation succeeded
+	 */
 	ODP_TIMER_SUCCESS = 0,
-/**
- * Timer set operation failed, expiration too early.
- * Either retry with a later expiration time or process the timeout
- * immediately. */
+
+	/**
+	 * Timer set operation failed, expiration too early.
+	 * Either retry with a later expiration time or process the timeout
+	 * immediately. */
 	ODP_TIMER_TOOEARLY = -1,
 
-/**
- * Timer set operation failed, expiration too late.
- * Truncate the expiration time against the maximum timeout for the
- * timer pool. */
+	/**
+	 * Timer set operation failed, expiration too late.
+	 * Truncate the expiration time against the maximum timeout for the
+	 * timer pool. */
 	ODP_TIMER_TOOLATE = -2,
-/**
- * Timer set operation failed because no event specified and no event present
- * in the timer (timer inactive/expired).
- */
+
+	/**
+	 * Timer set operation failed because no event specified and no event
+	 * present in the timer (timer inactive/expired).
+	 */
 	ODP_TIMER_NOEVENT = -3
+
 } odp_timer_set_t;
 
 /**
@@ -96,8 +99,8 @@ typedef enum {
  * Maximum timer pool name length in chars including null char
  */
 
-/** Timer pool parameters
- * Timer pool parameters are used when creating and querying timer pools.
+/**
+ * Timer pool parameters
  */
 typedef struct {
 	/** Timeout resolution in nanoseconds. Timer pool must serve timeouts
@@ -187,9 +190,8 @@ int odp_timer_capability(odp_timer_clk_src_t clk_src,
  * @return Timer pool handle on success
  * @retval ODP_TIMER_POOL_INVALID on failure and errno set
  */
-odp_timer_pool_t
-odp_timer_pool_create(const char *name,
-		      const odp_timer_pool_param_t *params);
+odp_timer_pool_t odp_timer_pool_create(const char *name,
+				       const odp_timer_pool_param_t *params);
 
 /**
  * Start a timer pool
@@ -207,60 +209,67 @@ void odp_timer_pool_start(void);
  * Destroy a timer pool, freeing all resources.
  * All timers must have been freed.
  *
- * @param tpid  Timer pool identifier
+ * @param timer_pool  Timer pool
  */
-void odp_timer_pool_destroy(odp_timer_pool_t tpid);
+void odp_timer_pool_destroy(odp_timer_pool_t timer_pool);
 
 /**
  * Convert timer ticks to nanoseconds
  *
- * @param tpid  Timer pool identifier
- * @param ticks Timer ticks
+ * @param timer_pool  Timer pool
+ * @param ticks       Timer ticks
  *
  * @return Nanoseconds
  */
-uint64_t odp_timer_tick_to_ns(odp_timer_pool_t tpid, uint64_t ticks);
+uint64_t odp_timer_tick_to_ns(odp_timer_pool_t timer_pool, uint64_t ticks);
 
 /**
  * Convert nanoseconds to timer ticks
  *
- * @param tpid  Timer pool identifier
- * @param ns    Nanoseconds
+ * @param timer_pool  Timer pool
+ * @param ns          Nanoseconds
  *
  * @return Timer ticks
  */
-uint64_t odp_timer_ns_to_tick(odp_timer_pool_t tpid, uint64_t ns);
+uint64_t odp_timer_ns_to_tick(odp_timer_pool_t timer_pool, uint64_t ns);
 
 /**
  * Current tick value
  *
- * @param tpid Timer pool identifier
+ * @param timer_pool  Timer pool
  *
  * @return Current time in timer ticks
  */
-uint64_t odp_timer_current_tick(odp_timer_pool_t tpid);
+uint64_t odp_timer_current_tick(odp_timer_pool_t timer_pool);
 
 /**
  * ODP timer pool information and configuration
  */
-
 typedef struct {
-	odp_timer_pool_param_t param; /**< Parameters specified at creation */
-	uint32_t cur_timers; /**< Number of currently allocated timers */
-	uint32_t hwm_timers; /**< High watermark of allocated timers */
-	const char *name; /**< Name of timer pool */
+	/** Parameters specified at creation */
+	odp_timer_pool_param_t param;
+
+	/** Number of currently allocated timers */
+	uint32_t cur_timers;
+
+	/** High watermark of allocated timers */
+	uint32_t hwm_timers;
+
+	/** Name of timer pool */
+	const char *name;
+
 } odp_timer_pool_info_t;
 
 /**
  * Query timer pool configuration and current state
  *
- * @param tpid Timer pool identifier
- * @param[out] info Pointer to information buffer
+ * @param      timer_pool  Timer pool
+ * @param[out] info        Pointer to information buffer
  *
  * @retval 0 on success
  * @retval <0 on failure. Info could not be retrieved.
  */
-int odp_timer_pool_info(odp_timer_pool_t tpid,
+int odp_timer_pool_info(odp_timer_pool_t timer_pool,
 			odp_timer_pool_info_t *info);
 
 /**
@@ -270,15 +279,14 @@ int odp_timer_pool_info(odp_timer_pool_t tpid,
  * the timer pool. The user_ptr is copied to timeouts and can be retrieved
  * using the odp_timeout_user_ptr() call.
  *
- * @param tpid     Timer pool identifier
- * @param queue    Destination queue for timeout notifications
- * @param user_ptr User defined pointer or NULL to be copied to timeouts
+ * @param timer_pool  Timer pool
+ * @param queue       Destination queue for timeout notifications
+ * @param user_ptr    User defined pointer or NULL to be copied to timeouts
  *
  * @return Timer handle on success
  * @retval ODP_TIMER_INVALID on failure and errno set.
  */
-odp_timer_t odp_timer_alloc(odp_timer_pool_t tpid,
-			    odp_queue_t queue,
+odp_timer_t odp_timer_alloc(odp_timer_pool_t timer_pool, odp_queue_t queue,
 			    void *user_ptr);
 
 /**
@@ -289,11 +297,12 @@ odp_timer_t odp_timer_alloc(odp_timer_pool_t tpid,
  * The timeout event for an expired timer will not be returned. It is the
  * responsibility of the application to handle this timeout when it is received.
  *
- * @param tim      Timer handle
+ * @param timer      Timer
+ *
  * @return Event handle of timeout event
  * @retval ODP_EVENT_INVALID on failure
  */
-odp_event_t odp_timer_free(odp_timer_t tim);
+odp_event_t odp_timer_free(odp_timer_t timer);
 
 /**
  * Set (or reset) a timer with absolute expiration time
@@ -395,6 +404,7 @@ odp_event_t odp_timeout_to_event(odp_timeout_t tmo);
 
 /**
  * Check for fresh timeout
+ *
  * If the corresponding timer has been reset or cancelled since this timeout
  * was enqueued, the timeout is stale (not fresh).
  *
@@ -424,6 +434,7 @@ uint64_t odp_timeout_tick(odp_timeout_t tmo);
 
 /**
  * Return user pointer for the timeout
+ *
  * The user pointer was specified when the timer was allocated.
  *
  * @param tmo Timeout handle
@@ -456,41 +467,41 @@ void odp_timeout_free(odp_timeout_t tmo);
 /**
  * Get printable value for an odp_timer_pool_t
  *
- * @param hdl  odp_timer_pool_t handle to be printed
- * @return     uint64_t value that can be used to print/display this
- *             handle
+ * @param timer_pool  odp_timer_pool_t handle to be printed
+ *
+ * @return uint64_t value that can be used to print/display this handle
  *
  * @note This routine is intended to be used for diagnostic purposes
  * to enable applications to generate a printable value that represents
  * an odp_timer_pool_t handle.
  */
-uint64_t odp_timer_pool_to_u64(odp_timer_pool_t hdl);
+uint64_t odp_timer_pool_to_u64(odp_timer_pool_t timer_pool);
 
 /**
  * Get printable value for an odp_timer_t
  *
- * @param hdl  odp_timer_t handle to be printed
- * @return     uint64_t value that can be used to print/display this
- *             handle
+ * @param timer  odp_timer_t handle to be printed
+ *
+ * @return uint64_t value that can be used to print/display this handle
  *
  * @note This routine is intended to be used for diagnostic purposes
  * to enable applications to generate a printable value that represents
  * an odp_timer_t handle.
  */
-uint64_t odp_timer_to_u64(odp_timer_t hdl);
+uint64_t odp_timer_to_u64(odp_timer_t timer);
 
 /**
  * Get printable value for an odp_timeout_t
  *
- * @param hdl  odp_timeout_t handle to be printed
- * @return     uint64_t value that can be used to print/display this
- *             handle
+ * @param tmo  odp_timeout_t handle to be printed
+ *
+ * @return uint64_t value that can be used to print/display this handle
  *
  * @note This routine is intended to be used for diagnostic purposes
  * to enable applications to generate a printable value that represents
  * an odp_timeout_t handle.
  */
-uint64_t odp_timeout_to_u64(odp_timeout_t hdl);
+uint64_t odp_timeout_to_u64(odp_timeout_t tmo);
 
 /**
  * @}
