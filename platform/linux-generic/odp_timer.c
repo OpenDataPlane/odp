@@ -70,6 +70,9 @@
  * for checking the freshness of received timeouts */
 #define TMO_INACTIVE ((uint64_t)0x8000000000000000)
 
+/* Max timeout in capability. One year in nsec (0x0070 09D3 2DA3 0000). */
+#define MAX_TMO_NSEC (365 * 24 * 3600 * ODP_TIME_SEC_IN_NS)
+
 /******************************************************************************
  * Mutual exclusion in the absence of CAS16
  *****************************************************************************/
@@ -1114,18 +1117,49 @@ static void itimer_fini(timer_pool_t *tp)
 int odp_timer_capability(odp_timer_clk_src_t clk_src,
 			 odp_timer_capability_t *capa)
 {
-	int ret = 0;
-
-	if (clk_src == ODP_CLOCK_CPU) {
-		capa->max_pools_combined = MAX_TIMER_POOLS;
-		capa->max_pools = MAX_TIMER_POOLS;
-		capa->max_timers = 0;
-		capa->highest_res_ns = timer_global->highest_res_ns;
-	} else {
-		ODP_ERR("ODP timer system doesn't support external clock source currently\n");
-		ret = -1;
+	if (clk_src != ODP_CLOCK_CPU) {
+		ODP_ERR("Only CPU clock source supported\n");
+		return -1;
 	}
-	return ret;
+
+	memset(capa, 0, sizeof(odp_timer_capability_t));
+
+	capa->max_pools_combined = MAX_TIMER_POOLS;
+	capa->max_pools = MAX_TIMER_POOLS;
+	capa->max_timers = 0;
+	capa->highest_res_ns  = timer_global->highest_res_ns;
+	capa->max_res.res_ns  = timer_global->highest_res_ns;
+	capa->max_res.min_tmo = 0;
+	capa->max_res.max_tmo = MAX_TMO_NSEC;
+	capa->max_tmo.res_ns  = timer_global->highest_res_ns;
+	capa->max_tmo.min_tmo = 0;
+	capa->max_tmo.max_tmo = MAX_TMO_NSEC;
+
+	return 0;
+}
+
+int odp_timer_res_capability(odp_timer_clk_src_t clk_src,
+			     odp_timer_res_capability_t *res_capa)
+{
+	if (clk_src != ODP_CLOCK_CPU) {
+		ODP_ERR("Only CPU clock source supported\n");
+		return -1;
+	}
+
+	if (res_capa->min_tmo) {
+		ODP_ERR("Only res_ns or max_tmo based quaries supported\n");
+		return -1;
+	}
+
+	if (res_capa->res_ns) {
+		res_capa->min_tmo = 0;
+		res_capa->max_tmo = MAX_TMO_NSEC;
+	} else { /* max_tmo */
+		res_capa->min_tmo = 0;
+		res_capa->res_ns  = timer_global->highest_res_ns;
+	}
+
+	return 0;
 }
 
 odp_timer_pool_t odp_timer_pool_create(const char *name,
