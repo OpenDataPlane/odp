@@ -181,6 +181,43 @@ static int timer_global_term(odp_instance_t inst)
 	return 0;
 }
 
+static void timer_test_capa(void)
+{
+	odp_timer_capability_t capa;
+	odp_timer_res_capability_t res_capa;
+	int ret;
+
+	memset(&capa, 0, sizeof(capa));
+	ret = odp_timer_capability(ODP_CLOCK_CPU, &capa);
+	CU_ASSERT_FATAL(ret == 0);
+
+	CU_ASSERT(capa.highest_res_ns == capa.max_res.res_ns);
+	CU_ASSERT(capa.max_res.res_ns  < capa.max_res.max_tmo);
+	CU_ASSERT(capa.max_res.min_tmo < capa.max_res.max_tmo);
+	CU_ASSERT(capa.max_tmo.res_ns  < capa.max_tmo.max_tmo);
+	CU_ASSERT(capa.max_tmo.min_tmo < capa.max_tmo.max_tmo);
+
+	/* Set max resolution */
+	memset(&res_capa, 0, sizeof(res_capa));
+	res_capa.res_ns = capa.max_res.res_ns;
+
+	ret = odp_timer_res_capability(ODP_CLOCK_CPU, &res_capa);
+	CU_ASSERT_FATAL(ret == 0);
+	CU_ASSERT(res_capa.res_ns  == capa.max_res.res_ns);
+	CU_ASSERT(res_capa.min_tmo == capa.max_res.min_tmo);
+	CU_ASSERT(res_capa.max_tmo == capa.max_res.max_tmo);
+
+	/* Set max timeout */
+	memset(&res_capa, 0, sizeof(res_capa));
+	res_capa.max_tmo = capa.max_tmo.max_tmo;
+
+	ret = odp_timer_res_capability(ODP_CLOCK_CPU, &res_capa);
+	CU_ASSERT_FATAL(ret == 0);
+	CU_ASSERT(res_capa.max_tmo == capa.max_tmo.max_tmo);
+	CU_ASSERT(res_capa.min_tmo == capa.max_tmo.min_tmo);
+	CU_ASSERT(res_capa.res_ns  == capa.max_tmo.res_ns);
+}
+
 static void timer_test_timeout_pool_alloc(void)
 {
 	odp_pool_t pool;
@@ -1193,6 +1230,7 @@ static void timer_test_odp_timer_all(void)
 }
 
 odp_testinfo_t timer_suite[] = {
+	ODP_TEST_INFO(timer_test_capa),
 	ODP_TEST_INFO(timer_test_timeout_pool_alloc),
 	ODP_TEST_INFO(timer_test_timeout_pool_free),
 	ODP_TEST_INFO(timer_pool_create_destroy),
