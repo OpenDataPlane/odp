@@ -195,9 +195,11 @@ typedef struct timer_pool_s {
 	odp_shm_t shm;
 	timer_t timerid;
 	int notify_overrun;
-	pthread_t timer_thread; /* pthread_t of timer thread */
-	pid_t timer_thread_id; /* gettid() for timer thread */
-	int timer_thread_exit; /* request to exit for timer thread */
+	pthread_t thr_pthread; /* pthread_t of timer thread */
+	pid_t thr_pid; /* gettid() for timer thread */
+	int thr_warm_up; /* number of warm up rounds */
+	odp_atomic_u32_t thr_ready; /* thread ready from warm up */
+	int thr_exit; /* request to exit for timer thread */
 } timer_pool_t;
 
 /* Timer pool index must fit into 8 bits with one index value reserved to
@@ -381,8 +383,8 @@ static void stop_timer_thread(timer_pool_t *tp)
 	int ret;
 
 	ODP_DBG("stop\n");
-	tp->timer_thread_exit = 1;
-	ret = pthread_join(tp->timer_thread, NULL);
+	tp->thr_exit = 1;
+	ret = pthread_join(tp->thr_pthread, NULL);
 	if (ret != 0)
 		ODP_ABORT("unable to join thread, err %d\n", ret);
 }
@@ -954,26 +956,41 @@ static void *timer_thread(void *arg)
 	int ret;
 	struct timespec tmo;
 	siginfo_t si;
+	int warm_up = tp->thr_warm_up;
+	int num = 0;
 
-	tp->timer_thread_id = (pid_t)syscall(SYS_gettid);
-
-	tmo.tv_sec = 0;
+	tmo.tv_sec  = 0;
 	tmo.tv_nsec = ODP_TIME_MSEC_IN_NS * 100;
 
+	/* Unblock sigalarm in this thread */
 	sigemptyset(&sigset);
-	/* unblock sigalarm in this thread */
 	sigprocmask(SIG_BLOCK, &sigset, NULL);
-
 	sigaddset(&sigset, SIGALRM);
+
+	/* Signal that this thread has started */
+	odp_mb_full();
+	tp->thr_pid = (pid_t)syscall(SYS_gettid);
+	odp_mb_full();
 
 	while (1) {
 		ret = sigtimedwait(&sigset, &si, &tmo);
-		if (tp->timer_thread_exit) {
-			tp->timer_thread_id = 0;
+
+		if (tp->thr_exit) {
+			tp->thr_pid = 0;
 			return NULL;
 		}
-		if (ret > 0)
-			timer_notify(tp);
+
+		if (ret <= 0)
+			continue;
+
+		timer_notify(tp);
+
+		if (num < warm_up) {
+			num++;
+
+			if (num == warm_up)
+				odp_atomic_store_rel_u32(&tp->thr_ready, 1);
+		}
 	}
 
 	return NULL;
@@ -1067,29 +1084,35 @@ static void itimer_init(timer_pool_t *tp)
 	ODP_DBG("Creating POSIX timer for timer pool %s, period %"
 		PRIu64" ns\n", tp->name, tp->param.res_ns);
 
-	tp->timer_thread_id = 0;
-	ret = pthread_create(&tp->timer_thread, NULL, timer_thread, tp);
+	res  = tp->param.res_ns;
+	sec  = res / ODP_TIME_SEC_IN_NS;
+	nsec = res - sec * ODP_TIME_SEC_IN_NS;
+
+	tp->thr_pid = 0;
+	tp->thr_warm_up = 1;
+
+	/* 20ms warm up */
+	if (res < (20 * ODP_TIME_MSEC_IN_NS))
+		tp->thr_warm_up = (20 * ODP_TIME_MSEC_IN_NS) / res;
+
+	odp_atomic_init_u32(&tp->thr_ready, 0);
+	ret = pthread_create(&tp->thr_pthread, NULL, timer_thread, tp);
 	if (ret)
 		ODP_ABORT("unable to create timer thread\n");
 
-	/* wait thread set tp->timer_thread_id */
-	do {
+	/* wait thread set tp->thr_pid */
+	while (tp->thr_pid == 0)
 		sched_yield();
-	} while (tp->timer_thread_id == 0);
 
 	memset(&sigev, 0, sizeof(sigev));
 	sigev.sigev_notify          = SIGEV_THREAD_ID;
 	sigev.sigev_value.sival_ptr = tp;
-	sigev._sigev_un._tid = tp->timer_thread_id;
+	sigev._sigev_un._tid = tp->thr_pid;
 	sigev.sigev_signo = SIGALRM;
 
 	if (timer_create(CLOCK_MONOTONIC, &sigev, &tp->timerid))
 		ODP_ABORT("timer_create() returned error %s\n",
 			  strerror(errno));
-
-	res  = tp->param.res_ns;
-	sec  = res / ODP_TIME_SEC_IN_NS;
-	nsec = res - sec * ODP_TIME_SEC_IN_NS;
 
 	memset(&ispec, 0, sizeof(ispec));
 	ispec.it_interval.tv_sec  = (time_t)sec;
@@ -1100,6 +1123,11 @@ static void itimer_init(timer_pool_t *tp)
 	if (timer_settime(tp->timerid, 0, &ispec, NULL))
 		ODP_ABORT("timer_settime() returned error %s\n",
 			  strerror(errno));
+
+	/* Wait response from timer thread that warm up signals have been
+	 * processed. Warm up helps avoiding overrun on the first timeout. */
+	while (odp_atomic_load_acq_u32(&tp->thr_ready) == 0)
+		sched_yield();
 }
 
 static void itimer_fini(timer_pool_t *tp)
