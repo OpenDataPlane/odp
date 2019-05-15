@@ -699,7 +699,7 @@ static void timer_test_sched_queue(void)
 	timer_test_queue_type(ODP_QUEUE_TYPE_SCHED);
 }
 
-static void timer_test_odp_timer_cancel(void)
+static void timer_test_cancel(void)
 {
 	odp_pool_t pool;
 	odp_pool_param_t params;
@@ -784,6 +784,213 @@ static void timer_test_odp_timer_cancel(void)
 
 	if (odp_pool_destroy(pool) != 0)
 		CU_FAIL_FATAL("Failed to destroy pool");
+}
+
+static void timer_test_tmo_limit(odp_queue_type_t queue_type,
+				 int max_res, int min)
+{
+	odp_timer_capability_t timer_capa;
+	odp_pool_t pool;
+	odp_pool_param_t pool_param;
+	odp_queue_param_t queue_param;
+	odp_timer_pool_param_t timer_param;
+	odp_timer_pool_t timer_pool;
+	odp_queue_t queue;
+	odp_timeout_t tmo;
+	odp_event_t ev;
+	odp_time_t t1, t2;
+	uint64_t res_ns, min_tmo, max_tmo;
+	uint64_t tmo_ns, tmo_tick, diff_ns, max_wait;
+	int i, ret, num_tmo;
+	int num = 5;
+	odp_timer_t timer[num];
+
+	memset(&timer_capa, 0, sizeof(timer_capa));
+	ret = odp_timer_capability(ODP_CLOCK_CPU, &timer_capa);
+	CU_ASSERT_FATAL(ret == 0);
+
+	if (max_res) {
+		/* Maximum resolution parameters */
+		res_ns  = timer_capa.max_res.res_ns;
+		min_tmo = timer_capa.max_res.min_tmo;
+		max_tmo = timer_capa.max_res.max_tmo;
+	} else {
+		/* Maximum timeout parameters */
+		res_ns  = timer_capa.max_tmo.res_ns;
+		min_tmo = timer_capa.max_tmo.min_tmo;
+		max_tmo = timer_capa.max_tmo.max_tmo;
+	}
+
+	memset(&timer_param, 0, sizeof(timer_param));
+	timer_param.res_ns     = res_ns;
+	timer_param.min_tmo    = min_tmo;
+	timer_param.max_tmo    = max_tmo;
+	timer_param.num_timers = num;
+	timer_param.clk_src    = ODP_CLOCK_CPU;
+
+	timer_pool = odp_timer_pool_create("timer_pool", &timer_param);
+	if (timer_pool == ODP_TIMER_POOL_INVALID)
+		CU_FAIL_FATAL("Timer pool create failed");
+
+	odp_timer_pool_start();
+
+	odp_pool_param_init(&pool_param);
+	pool_param.type    = ODP_POOL_TIMEOUT;
+	pool_param.tmo.num = num;
+
+	pool = odp_pool_create("timeout_pool", &pool_param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	odp_queue_param_init(&queue_param);
+	if (queue_type == ODP_QUEUE_TYPE_SCHED) {
+		queue_param.type       = ODP_QUEUE_TYPE_SCHED;
+		queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+	}
+
+	queue = odp_queue_create("timeout_queue", &queue_param);
+	if (queue == ODP_QUEUE_INVALID)
+		CU_FAIL_FATAL("Queue create failed");
+
+	if (min)
+		tmo_ns = min_tmo;
+	else
+		tmo_ns = max_tmo;
+
+	tmo_tick    = odp_timer_ns_to_tick(timer_pool, tmo_ns);
+	/* Min_tmo maybe zero. Wait min timeouts at least 20ms + resolution */
+	max_wait    = (20 * ODP_TIME_MSEC_IN_NS + res_ns + 10 * tmo_ns);
+
+	LOG_DBG("\nTimer pool parameters:\n");
+	LOG_DBG("  res_ns      %" PRIu64 "\n",   timer_param.res_ns);
+	LOG_DBG("  min_tmo     %" PRIu64 "\n",   timer_param.min_tmo);
+	LOG_DBG("  max_tmo     %" PRIu64 "\n",   timer_param.max_tmo);
+	LOG_DBG("  tmo_ns      %" PRIu64 "\n",   tmo_ns);
+	LOG_DBG("  tmo_tick    %" PRIu64 "\n\n", tmo_tick);
+
+	for (i = 0; i < num; i++) {
+		timer[i] = odp_timer_alloc(timer_pool, queue, NULL);
+		CU_ASSERT_FATAL(timer[i] != ODP_TIMER_INVALID);
+	}
+
+	num_tmo = 0;
+
+	for (i = 0; i < num; i++) {
+		tmo = odp_timeout_alloc(pool);
+		ev  = odp_timeout_to_event(tmo);
+
+		CU_ASSERT(ev != ODP_EVENT_INVALID);
+
+		t1  = odp_time_local();
+		ret = odp_timer_set_rel(timer[i], tmo_tick, &ev);
+
+		if (ret == ODP_TIMER_TOOEARLY)
+			LOG_DBG("Too early %i\n", i);
+		else if (ret == ODP_TIMER_TOOLATE)
+			LOG_DBG("Too late %i\n", i);
+		else if (ret == ODP_TIMER_NOEVENT)
+			LOG_DBG("No event %i\n", i);
+
+		CU_ASSERT(ret == ODP_TIMER_SUCCESS);
+
+		if (min) {
+			/* Min timeout - wait for events */
+			int break_loop = 0;
+
+			while (1) {
+				if (queue_type == ODP_QUEUE_TYPE_SCHED)
+					ev = odp_schedule(NULL,
+							  ODP_SCHED_NO_WAIT);
+				else
+					ev = odp_queue_deq(queue);
+
+				t2 = odp_time_local();
+				diff_ns = odp_time_diff_ns(t2, t1);
+
+				if (ev != ODP_EVENT_INVALID) {
+					odp_event_free(ev);
+					num_tmo++;
+					break_loop = 1;
+					LOG_DBG("Timeout [%i]: %" PRIu64
+						" nsec\n", i, diff_ns);
+					continue;
+				}
+
+				/* Ensure that schedule context is free */
+				if (break_loop)
+					break;
+
+				/* Give up after waiting max wait time */
+				if (diff_ns > max_wait)
+					break;
+			}
+		} else {
+			/* Max timeout - cancel events */
+			ev = ODP_EVENT_INVALID;
+
+			ret = odp_timer_cancel(timer[i], &ev);
+			t2 = odp_time_local();
+			diff_ns = odp_time_diff_ns(t2, t1);
+
+			CU_ASSERT(ret == 0);
+			CU_ASSERT(ev != ODP_EVENT_INVALID);
+
+			if (ev != ODP_EVENT_INVALID)
+				odp_event_free(ev);
+
+			LOG_DBG("Cancelled [%i]: %" PRIu64
+				" nsec\n", i, diff_ns);
+		}
+	}
+
+	if (min)
+		CU_ASSERT(num_tmo == num);
+
+	for (i = 0; i < num; i++)
+		CU_ASSERT(odp_timer_free(timer[i]) == ODP_EVENT_INVALID);
+
+	odp_timer_pool_destroy(timer_pool);
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+static void timer_test_max_res_min_tmo_plain(void)
+{
+	timer_test_tmo_limit(ODP_QUEUE_TYPE_PLAIN, 1, 1);
+}
+
+static void timer_test_max_res_min_tmo_sched(void)
+{
+	timer_test_tmo_limit(ODP_QUEUE_TYPE_SCHED, 1, 1);
+}
+
+static void timer_test_max_res_max_tmo_plain(void)
+{
+	timer_test_tmo_limit(ODP_QUEUE_TYPE_PLAIN, 1, 0);
+}
+
+static void timer_test_max_res_max_tmo_sched(void)
+{
+	timer_test_tmo_limit(ODP_QUEUE_TYPE_SCHED, 1, 0);
+}
+
+static void timer_test_max_tmo_min_tmo_plain(void)
+{
+	timer_test_tmo_limit(ODP_QUEUE_TYPE_PLAIN, 0, 1);
+}
+
+static void timer_test_max_tmo_min_tmo_sched(void)
+{
+	timer_test_tmo_limit(ODP_QUEUE_TYPE_SCHED, 0, 1);
+}
+
+static void timer_test_max_tmo_max_tmo_plain(void)
+{
+	timer_test_tmo_limit(ODP_QUEUE_TYPE_PLAIN, 0, 0);
+}
+
+static void timer_test_max_tmo_max_tmo_sched(void)
+{
+	timer_test_tmo_limit(ODP_QUEUE_TYPE_SCHED, 0, 0);
 }
 
 /* Handle a received (timeout) event */
@@ -1076,8 +1283,7 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 	return CU_get_number_of_failures();
 }
 
-/* Timer test case entrypoint */
-static void timer_test_odp_timer_all(void)
+static void timer_test_all(void)
 {
 	int rc;
 	odp_pool_param_t params;
@@ -1240,10 +1446,18 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_test_buf_event_sched),
 	ODP_TEST_INFO(timer_test_pkt_event_plain),
 	ODP_TEST_INFO(timer_test_pkt_event_sched),
+	ODP_TEST_INFO(timer_test_cancel),
+	ODP_TEST_INFO(timer_test_max_res_min_tmo_plain),
+	ODP_TEST_INFO(timer_test_max_res_min_tmo_sched),
+	ODP_TEST_INFO(timer_test_max_res_max_tmo_plain),
+	ODP_TEST_INFO(timer_test_max_res_max_tmo_sched),
+	ODP_TEST_INFO(timer_test_max_tmo_min_tmo_plain),
+	ODP_TEST_INFO(timer_test_max_tmo_min_tmo_sched),
+	ODP_TEST_INFO(timer_test_max_tmo_max_tmo_plain),
+	ODP_TEST_INFO(timer_test_max_tmo_max_tmo_sched),
 	ODP_TEST_INFO(timer_test_plain_queue),
 	ODP_TEST_INFO(timer_test_sched_queue),
-	ODP_TEST_INFO(timer_test_odp_timer_cancel),
-	ODP_TEST_INFO(timer_test_odp_timer_all),
+	ODP_TEST_INFO(timer_test_all),
 	ODP_TEST_INFO_NULL,
 };
 
