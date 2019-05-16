@@ -28,6 +28,17 @@ static void time_test_constants(void)
 {
 	uint64_t ns;
 
+	CU_ASSERT(ODP_TIME_USEC_IN_NS == 1000);
+
+	ns = ODP_TIME_HOUR_IN_NS;
+	CU_ASSERT(ns == 60 * ODP_TIME_MIN_IN_NS);
+	ns = ODP_TIME_MIN_IN_NS;
+	CU_ASSERT(ns == 60 * ODP_TIME_SEC_IN_NS);
+	ns = ODP_TIME_SEC_IN_NS;
+	CU_ASSERT(ns == 1000 * ODP_TIME_MSEC_IN_NS);
+	ns = ODP_TIME_MSEC_IN_NS;
+	CU_ASSERT(ns == 1000 * ODP_TIME_USEC_IN_NS);
+
 	ns = ODP_TIME_SEC_IN_NS / 1000;
 	CU_ASSERT(ns == ODP_TIME_MSEC_IN_NS);
 	ns /= 1000;
