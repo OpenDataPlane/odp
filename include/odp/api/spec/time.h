@@ -22,10 +22,20 @@ extern "C" {
  *  @{
  */
 
-/* Time in nanoseconds */
-#define ODP_TIME_USEC_IN_NS	1000ULL       /**< Microsecond in nsec */
-#define ODP_TIME_MSEC_IN_NS	1000000ULL    /**< Millisecond in nsec */
-#define ODP_TIME_SEC_IN_NS	1000000000ULL /**< Second in nsec */
+/** A microsecond in nanoseconds */
+#define ODP_TIME_USEC_IN_NS  1000ULL
+
+/** A millisecond in nanoseconds */
+#define ODP_TIME_MSEC_IN_NS  1000000ULL
+
+/** A second in nanoseconds */
+#define ODP_TIME_SEC_IN_NS   1000000000ULL
+
+/** A minute in nanoseconds */
+#define ODP_TIME_MIN_IN_NS   60000000000ULL
+
+/** An hour in nanoseconds */
+#define ODP_TIME_HOUR_IN_NS  3600000000000ULL
 
 /**
  * @typedef odp_time_t
