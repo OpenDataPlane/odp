@@ -71,7 +71,7 @@ env:
         - CONF="--disable-host-optimization --disable-abi-compat"
         - CHECK=0 ARCH="x86_64" CONF="--enable-pcapng-support"
         - CHECK=0 ARCH="x86_64" OS="centos_7"
-        - CONF="--without-openssl"
+        - CONF="--without-openssl --without-pcap"
         - OS="ubuntu_18.04"
 
 matrix:

@@ -13,8 +13,17 @@ AC_ARG_WITH([openssl],
 AS_IF([test "$with_openssl" != "no"],
       [ODP_OPENSSL])
 AM_CONDITIONAL([WITH_OPENSSL], [test x$with_openssl != xno])
+
+AC_ARG_WITH([pcap],
+	    [AS_HELP_STRING([--without-pcap],
+			    [compile without PCAP])],
+	    [],
+	    [with_pcap=yes])
+AS_IF([test "x$with_pcap" != xno],
+      [ODP_PCAP([with_pcap=yes]‚[with_pcap=no])])
+AM_CONDITIONAL([HAVE_PCAP], [test x$have_pcap = xyes])
+
 ODP_LIBCONFIG([linux-generic])
-m4_include([platform/linux-generic/m4/odp_pcap.m4])
 m4_include([platform/linux-generic/m4/odp_pcapng.m4])
 m4_include([platform/linux-generic/m4/odp_netmap.m4])
 m4_include([platform/linux-generic/m4/odp_dpdk.m4])
