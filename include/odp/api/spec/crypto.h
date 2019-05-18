@@ -265,7 +265,7 @@ typedef enum {
 	 */
 	ODP_AUTH_ALG_KASUMI_F9,
 
-	/** Integrity UIA2 algorithm (128-EEA1)
+	/** Integrity UIA2 algorithm (128-EIA1)
 	 *
 	 *  SNOW 3G-based UIA2 algorithm (also known as 128-EIA1).
 	 */
