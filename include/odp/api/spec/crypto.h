@@ -125,24 +125,42 @@ typedef enum {
 	/** Confidentiality F8 algorithm (UEA1)
 	 *
 	 *  KASUMI-based F8 algorithm (also known as UEA1).
+	 *
+	 *  IV should be formatted according to the 3GPP TS 35.201:
+	 *  COUNT || BEARER || DIRECTION || 0...0
 	 */
 	ODP_CIPHER_ALG_KASUMI_F8,
 
 	/** Confidentiality UEA2 algorithm (128-EEA1)
 	 *
 	 *  SNOW 3G-based UEA2 algorithm (also known as 128-EEA1).
+	 *
+	 *  IV (128 bit) should be formatted according to the ETSI/SAGE
+	 *  UEA2 & UIA2 specification:
+	 *  COUNT || BEARER || DIRECTION || 0...0 ||
+	 *  COUNT || BEARER || DIRECTION || 0...0 ||
 	 */
 	ODP_CIPHER_ALG_SNOW3G_UEA2,
 
 	/** Confidentiality 128-EEA2 algorithm
 	 *
 	 *  AES-CTR-based 128-EEA2 algorithm.
+	 *
+	 *  IV (128 bit) should be formatted according to the ETSI/SAGE
+	 *  128-EA2 & 128-EIA2 specification:
+	 *  COUNT || BEARER ||
+	 *  DIRECTION || 0....0
 	 */
 	ODP_CIPHER_ALG_AES_EEA2,
 
 	/** Confidentiality 128-EEA3 algorithm
 	 *
 	 *  ZUC-based 128-EEA3 algorithm.
+	 *
+	 *  IV (128 bit) should be formatted according to the ETSI/SAGE
+	 *  128-EEA3 & 128-EIA3 specification:
+	 *  COUNT || BEARER || DIRECTION || 0...0 ||
+	 *  COUNT || BEARER || DIRECTION || 0...0 ||
 	 */
 	ODP_CIPHER_ALG_ZUC_EEA3,
 
@@ -262,24 +280,42 @@ typedef enum {
 	 *
 	 *  IV (9 bytes) is a concatenation of COUNT (32b), FRESH (32b) and
 	 *  DIRECTION (LSB-aligned, 1b).
+	 *  IV (8 bytes) is a concatenation of COUNT (32b) and FRESH (32b)
+	 *  DIRECTION (1b) and padding should come at the end of message.
 	 */
 	ODP_AUTH_ALG_KASUMI_F9,
 
 	/** Integrity UIA2 algorithm (128-EIA1)
 	 *
 	 *  SNOW 3G-based UIA2 algorithm (also known as 128-EIA1).
+	 *  IV (128 bit) should be formatted according to the ETSI/SAGE
+	 *  UEA2 & UIA2 specification:
+	 *  COUNT || FRESH ||
+	 *  DIRECTION XOR COUNT0 || COUNT1 .. COUNT31 ||
+	 *  FRESH0 .. FRESH15 || FRESH16 XOR DIRECTION || FRESH17 .. FRESH31
 	 */
 	ODP_AUTH_ALG_SNOW3G_UIA2,
 
 	/** Integrity 128-EIA2 algorithm
 	 *
 	 *  AES_CMAC-based 128-EIA2 algorithm.
+	 *
+	 *  IV (128 bit) should be formatted according to the ETSI/SAGE
+	 *  128-EA2 & 128-EIA2 specification:
+	 *  COUNT || BEARER ||
+	 *  DIRECTION || 0....0
 	 */
 	ODP_AUTH_ALG_AES_EIA2,
 
 	/** Integrity 128-EIA3 algorithm
 	 *
 	 *  ZUC-based 128-EIA3 algorithm.
+	 *
+	 *  IV (128 bit) should be formatted according to the ETSI/SAGE
+	 *  128-EA3 & 128-EIA2 specification:
+	 *  COUNT || BEARER ||
+	 *  DIRECTION XOR COUNT0 || COUNT1 .. COUNT31 ||
+	 *  BEARER || 0...0 || DIRECTION || 0...0
 	 */
 	ODP_AUTH_ALG_ZUC_EIA3,
 
