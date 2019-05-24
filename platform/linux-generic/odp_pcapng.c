@@ -199,6 +199,10 @@ int pcapng_prepare(pktio_entry_t *entry)
 			continue;
 		}
 
+		if (chmod(pcapng_path, S_IRUSR | S_IRGRP))
+			ODP_ERR("Failed to change file permission for %s %s\n",
+				pcapng_path, strerror(errno));
+
 		fd = open(pcapng_path, O_RDWR | O_NONBLOCK);
 		if (fd == -1) {
 			ODP_ERR("Fail to open fifo\n");
