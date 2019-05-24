@@ -65,10 +65,6 @@ struct odp_global_data_ro_t {
 /* Modifiable global data. Memory region is shared and synchronized amongst all
  * worker processes. */
 struct odp_global_data_rw_t {
-	int inotify_pcapng_fd;
-	int inotify_watch_fd;
-	pthread_t inotify_thread;
-	int inotify_pcapng_is_running;
 	odp_bool_t dpdk_initialized;
 	odp_bool_t inline_timers;
 };
