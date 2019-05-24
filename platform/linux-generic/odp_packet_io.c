@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -95,6 +96,13 @@ int odp_pktio_init_global(void)
 					pktio_if);
 				return -1;
 			}
+	}
+
+	if (_ODP_PCAPNG) {
+		if (_odp_pcapng_init_global()) {
+			ODP_ERR("Failed to initialize pcapng\n");
+			return -1;
+		}
 	}
 
 	return 0;
@@ -1275,6 +1283,12 @@ int odp_pktio_term_global(void)
 			if (pktio_if_ops[pktio_if]->term())
 				ODP_ABORT("failed to terminate pktio type %d",
 					  pktio_if);
+	}
+
+	if (_ODP_PCAPNG) {
+		ret = _odp_pcapng_term_global();
+		if (ret)
+			ODP_ERR("Failed to terminate pcapng\n");
 	}
 
 	ret = odp_shm_free(odp_shm_lookup("_odp_pktio_entries"));
