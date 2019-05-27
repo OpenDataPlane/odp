@@ -530,8 +530,8 @@ int odp_pktio_start(odp_pktio_t hdl)
 		entry->s.name, entry->s.num_in_queue, entry->s.num_out_queue);
 
 	if (_ODP_PCAPNG) {
-		if (pcapng_prepare(entry))
-			ODP_ERR("pcap init failed, won't capture\n");
+		if (_odp_pcapng_start(entry))
+			ODP_ERR("pcapng start failed, won't capture\n");
 	}
 
 	return res;
@@ -559,7 +559,7 @@ static int _pktio_stop(pktio_entry_t *entry)
 		entry->s.state = PKTIO_STATE_STOPPED;
 
 	if (_ODP_PCAPNG)
-		pcapng_destroy(entry);
+		_odp_pcapng_stop(entry);
 
 	return res;
 }
@@ -1758,7 +1758,7 @@ static inline void _odp_dump_pcapng_pkts(pktio_entry_t *entry, int qidx,
 					 const odp_packet_t packets[], int num)
 {
 	if (odp_unlikely(entry->s.pcapng.state[qidx] == PCAPNG_WR_PKT))
-		write_pcapng_pkts(entry, qidx, packets, num);
+		_odp_pcapng_write_pkts(entry, qidx, packets, num);
 }
 
 int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num)

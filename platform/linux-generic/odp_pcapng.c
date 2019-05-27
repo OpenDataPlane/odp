@@ -28,6 +28,47 @@
 #include <sys/inotify.h>
 #include <sys/select.h>
 
+#define PCAPNG_BLOCK_TYPE_EPB 0x00000006UL
+#define PCAPNG_BLOCK_TYPE_SHB 0x0A0D0D0AUL
+#define PCAPNG_BLOCK_TYPE_IDB 0x00000001UL
+#define PCAPNG_ENDIAN_MAGIC 0x1A2B3C4DUL
+#define PCAPNG_DATA_ALIGN 4
+#define PCAPNG_LINKTYPE_ETHERNET 0x1
+
+/* inotify */
+#define INOTIFY_BUF_LEN (16 * (sizeof(struct inotify_event)))
+#define PCAPNG_WATCH_DIR "/var/run/odp/"
+
+/* pcapng: enhanced packet block file encoding */
+typedef struct ODP_PACKED pcapng_section_hdr_block_s {
+	uint32_t block_type;
+	uint32_t block_total_length;
+	uint32_t magic;
+	uint16_t version_major;
+	uint16_t version_minor;
+	int64_t section_len;
+	uint32_t block_total_length2;
+} pcapng_section_hdr_block_t;
+
+typedef struct pcapng_interface_description_block {
+	uint32_t block_type;
+	uint32_t block_total_length;
+	uint16_t linktype;
+	uint16_t reserved;
+	uint32_t snaplen;
+	uint32_t block_total_length2;
+} pcapng_interface_description_block_t;
+
+typedef struct pcapng_enhanced_packet_block_s {
+	uint32_t block_type;
+	uint32_t block_total_length;
+	uint32_t interface_idx;
+	uint32_t timestamp_high;
+	uint32_t timestamp_low;
+	uint32_t captured_len;
+	uint32_t packet_len;
+} pcapng_enhanced_packet_block_t;
+
 typedef struct ODP_ALIGNED_CACHE {
 	odp_shm_t shm;
 	pktio_entry_t *entry[ODP_CONFIG_PKTIO_ENTRIES];
@@ -40,6 +81,8 @@ typedef struct ODP_ALIGNED_CACHE {
 } pcapng_global_t;
 
 static pcapng_global_t *pcapng_gbl;
+
+int write_pcapng_hdr(pktio_entry_t *entry, int qidx);
 
 int _odp_pcapng_init_global(void)
 {
@@ -241,7 +284,7 @@ static int get_fifo_max_size(void)
 	return ret;
 }
 
-int pcapng_prepare(pktio_entry_t *entry)
+int _odp_pcapng_start(pktio_entry_t *entry)
 {
 	int ret = -1, fd;
 	pthread_attr_t attr;
@@ -342,12 +385,12 @@ int pcapng_prepare(pktio_entry_t *entry)
 out_destroy:
 	odp_spinlock_unlock(&pcapng_gbl->lock);
 
-	pcapng_destroy(entry);
+	_odp_pcapng_stop(entry);
 
 	return ret;
 }
 
-void pcapng_destroy(pktio_entry_t *entry)
+void _odp_pcapng_stop(pktio_entry_t *entry)
 {
 	int ret;
 	unsigned int i;
@@ -465,8 +508,8 @@ static ssize_t write_fifo(int fd, struct iovec *iov, int iovcnt)
 	return len;
 }
 
-int write_pcapng_pkts(pktio_entry_t *entry, int qidx,
-		      const odp_packet_t packets[], int num)
+int _odp_pcapng_write_pkts(pktio_entry_t *entry, int qidx,
+			   const odp_packet_t packets[], int num)
 {
 	int i = 0;
 	struct iovec packet_iov[3 * num];
