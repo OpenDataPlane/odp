@@ -84,20 +84,23 @@ static void print_log(test_globals_t *gbls)
 		printf("Number of errors: %u\n", err_num);
 }
 
-static void
-generate_next_queue(test_globals_t *gbls, odp_queue_t *queue, unsigned int id)
+static void generate_next_queue(test_globals_t *gbls, odp_queue_t *queue,
+				unsigned int id)
 {
 	int thr;
-	unsigned int rand_id;
+	uint8_t rand_u8;
 	char queue_name[sizeof(QUEUE_NAME_PREFIX) + 2];
+	unsigned int rand_id = 1;
 
 	thr = odp_thread_id();
 
 	/* generate next random id */
-	do {
-		odp_random_data((uint8_t *)&rand_id, sizeof(rand_id), 1);
-		rand_id = rand_id % gbls->thread_num + 1;
-	} while (rand_id == id);
+	if (gbls->thread_num > 1) {
+		do {
+			odp_random_data(&rand_u8, 1, ODP_RANDOM_BASIC);
+			rand_id = rand_u8 % gbls->thread_num + 1;
+		} while (rand_id == id);
+	}
 
 	sprintf(queue_name, QUEUE_NAME_PREFIX "%d", rand_id);
 	*queue = odp_queue_lookup(queue_name);
