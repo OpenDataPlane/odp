@@ -3,15 +3,15 @@ include $(top_srcdir)/example/Makefile.inc
 bin_PROGRAMS = odp_ipsec
 
 dist_bin_SCRIPTS = \
-	      odp_ipsec_run_ah_in \
-	      odp_ipsec_run_ah_out \
-	      odp_ipsec_run_both_in \
-	      odp_ipsec_run_both_out \
-	      odp_ipsec_run_esp_in \
-	      odp_ipsec_run_esp_out \
-	      odp_ipsec_run_live \
-	      odp_ipsec_run_router \
-	      odp_ipsec_run_simple
+	      odp_ipsec_run_ah_in.sh \
+	      odp_ipsec_run_ah_out.sh \
+	      odp_ipsec_run_both_in.sh \
+	      odp_ipsec_run_both_out.sh \
+	      odp_ipsec_run_esp_in.sh \
+	      odp_ipsec_run_esp_out.sh \
+	      odp_ipsec_run_live.sh \
+	      odp_ipsec_run_router.sh \
+	      odp_ipsec_run_simple.sh
 
 odp_ipsec_SOURCES = odp_ipsec.c \
 		    odp_ipsec_sa_db.c \
