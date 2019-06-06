@@ -948,6 +948,9 @@ main(int argc, char *argv[])
 	memset(global, 0, sizeof(global_data_t));
 	global->shm = shm;
 
+	/* Configure scheduler */
+	odp_schedule_config(NULL);
+
 	/* Must init our databases before parsing args */
 	ipsec_init_pre();
 	init_fwd_db();
@@ -1000,9 +1003,6 @@ main(int argc, char *argv[])
 		EXAMPLE_ERR("Error: context pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
-
-	/* Configure scheduler */
-	odp_schedule_config(NULL);
 
 	/* Populate our IPsec cache */
 	printf("Using %s mode for IPsec API\n\n",
