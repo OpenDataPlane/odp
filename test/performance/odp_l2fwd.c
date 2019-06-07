@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -136,8 +137,10 @@ typedef struct thread_args_t {
  * Grouping of all global data
  */
 typedef struct {
+	/* Thread table */
+	odph_thread_t thread_tbl[MAX_WORKERS];
 	/* Thread specific arguments */
-	thread_args_t thread[MAX_WORKERS];
+	thread_args_t thread_args[MAX_WORKERS];
 	/* Barriers to synchronize main and workers */
 	odp_barrier_t init_barrier;
 	odp_barrier_t term_barrier;
@@ -954,7 +957,7 @@ static void bind_workers(void)
 		}
 
 		for (thr = 0; thr < num_workers; thr++) {
-			thr_args = &gbl_args->thread[thr];
+			thr_args = &gbl_args->thread_args[thr];
 			thr_args->num_pktio = if_count;
 
 			/* In sched mode, pktios are not cross connected with
@@ -975,7 +978,7 @@ static void bind_workers(void)
 			thr = 0;
 
 			for (rx_idx = 0; rx_idx < if_count; rx_idx++) {
-				thr_args = &gbl_args->thread[thr];
+				thr_args = &gbl_args->thread_args[thr];
 				pktio    = thr_args->num_pktio;
 				/* Cross connect rx to tx */
 				tx_idx   = gbl_args->dst_port[rx_idx];
@@ -996,7 +999,7 @@ static void bind_workers(void)
 			rx_idx = 0;
 
 			for (thr = 0; thr < num_workers; thr++) {
-				thr_args = &gbl_args->thread[thr];
+				thr_args = &gbl_args->thread_args[thr];
 				pktio    = thr_args->num_pktio;
 				/* Cross connect rx to tx */
 				tx_idx   = gbl_args->dst_port[rx_idx];
@@ -1029,7 +1032,7 @@ static void bind_queues(void)
 
 	for (thr = 0; thr < num_workers; thr++) {
 		int rx_idx, tx_idx;
-		thread_args_t *thr_args = &gbl_args->thread[thr];
+		thread_args_t *thr_args = &gbl_args->thread_args[thr];
 		int num = thr_args->num_pktio;
 
 		printf("worker %i\n", thr);
@@ -1428,7 +1431,6 @@ static void create_groups(int num, odp_schedule_group_t *group)
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_thread_t thread_tbl[MAX_WORKERS];
 	odph_thread_param_t thr_param[MAX_WORKERS];
 	odph_thread_common_param_t thr_common;
 	odp_pool_t pool;
@@ -1521,7 +1523,7 @@ int main(int argc, char *argv[])
 	gbl_args->appl.num_workers = num_workers;
 
 	for (i = 0; i < num_workers; i++)
-		gbl_args->thread[i].thr_idx    = i;
+		gbl_args->thread_args[i].thr_idx = i;
 
 	if_count = gbl_args->appl.if_count;
 
@@ -1651,7 +1653,6 @@ int main(int argc, char *argv[])
 		thr_run_func = run_worker_sched_mode;
 
 	/* Create worker threads */
-	memset(thread_tbl, 0, sizeof(thread_tbl));
 	memset(thr_param, 0, sizeof(thr_param));
 	memset(&thr_common, 0, sizeof(thr_common));
 
@@ -1663,18 +1664,18 @@ int main(int argc, char *argv[])
 
 	for (i = 0; i < num_workers; ++i) {
 		thr_param[i].start    = thr_run_func;
-		thr_param[i].arg      = &gbl_args->thread[i];
+		thr_param[i].arg      = &gbl_args->thread_args[i];
 		thr_param[i].thr_type = ODP_THREAD_WORKER;
 
 		/* Round robin threads to groups */
-		gbl_args->thread[i].num_groups = 1;
-		gbl_args->thread[i].group[0] = group[i % num_groups];
+		gbl_args->thread_args[i].num_groups = 1;
+		gbl_args->thread_args[i].group[0] = group[i % num_groups];
 
-		stats[i] = &gbl_args->thread[i].stats;
+		stats[i] = &gbl_args->thread_args[i].stats;
 	}
 
-	num_thr = odph_thread_create(thread_tbl, &thr_common, thr_param,
-				     num_workers);
+	num_thr = odph_thread_create(gbl_args->thread_tbl, &thr_common,
+				     thr_param, num_workers);
 
 	if (num_thr != num_workers) {
 		LOG_ERR("Error: worker create failed %i\n", num_thr);
@@ -1710,7 +1711,7 @@ int main(int argc, char *argv[])
 		odp_barrier_wait(&gbl_args->term_barrier);
 
 	/* Master thread waits for other threads to exit */
-	num_thr = odph_thread_join(thread_tbl, num_workers);
+	num_thr = odph_thread_join(gbl_args->thread_tbl, num_workers);
 	if (num_thr != num_workers) {
 		LOG_ERR("Error: worker join failed %i\n", num_thr);
 			exit(EXIT_FAILURE);
