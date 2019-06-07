@@ -31,7 +31,7 @@ fi
 $STDBUF ${TEST_DIR}/odp_pktio_ordered${EXEEXT} \
 	-i pcap:in=${PCAP_IN}:loops=$LOOPS,pcap:out=${PCAP_OUT} \
 	-t $DURATION | tee $LOG
-ret=$?
+ret=${PIPESTATUS[0]}
 
 if [ $ret -ne 0 ]; then
 	echo "FAIL: no odp_pktio_ordered${EXEEXT}"
