@@ -2,18 +2,18 @@ include $(top_srcdir)/example/Makefile.inc
 
 bin_PROGRAMS = odp_ipsec_api
 
-dist_bin_SCRIPTS = \
-		   $(srcdir)/odp_ipsec_api_run_ah_in.sh \
-		   $(srcdir)/odp_ipsec_api_run_ah_out.sh \
-		   $(srcdir)/odp_ipsec_api_run_ah_tun_in.sh \
-		   $(srcdir)/odp_ipsec_api_run_ah_tun_out.sh \
-		   $(srcdir)/odp_ipsec_api_run_esp_in.sh \
-		   $(srcdir)/odp_ipsec_api_run_esp_out.sh \
-		   $(srcdir)/odp_ipsec_api_run_esp_tun_in.sh \
-		   $(srcdir)/odp_ipsec_api_run_esp_tun_out.sh \
-		   $(srcdir)/odp_ipsec_api_run_live.sh \
-		   $(srcdir)/odp_ipsec_api_run_router.sh \
-		   $(srcdir)/odp_ipsec_api_run_simple.sh
+dist_check_SCRIPTS = \
+		   odp_ipsec_api_run_ah_in.sh \
+		   odp_ipsec_api_run_ah_out.sh \
+		   odp_ipsec_api_run_ah_tun_in.sh \
+		   odp_ipsec_api_run_ah_tun_out.sh \
+		   odp_ipsec_api_run_esp_in.sh \
+		   odp_ipsec_api_run_esp_out.sh \
+		   odp_ipsec_api_run_esp_tun_in.sh \
+		   odp_ipsec_api_run_esp_tun_out.sh \
+		   odp_ipsec_api_run_live.sh \
+		   odp_ipsec_api_run_router.sh \
+		   odp_ipsec_api_run_simple.sh
 
 odp_ipsec_api_SOURCES = \
 		    odp_ipsec.c \
