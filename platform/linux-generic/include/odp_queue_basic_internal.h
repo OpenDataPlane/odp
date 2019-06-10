@@ -72,7 +72,7 @@ union queue_entry_u {
 };
 
 typedef struct queue_global_t {
-	queue_entry_t   queue[ODP_CONFIG_QUEUES];
+	queue_entry_t   queue[CONFIG_MAX_QUEUES];
 	uint32_t        *ring_data;
 	uint32_t        queue_lf_num;
 	uint32_t        queue_lf_size;

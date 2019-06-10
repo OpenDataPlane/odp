@@ -48,7 +48,7 @@ extern __thread sched_scalable_thread_state_t *sched_ts;
 extern _odp_queue_inline_offset_t _odp_queue_inline_offset;
 
 typedef struct queue_table_t {
-	queue_entry_t  queue[ODP_CONFIG_QUEUES];
+	queue_entry_t  queue[CONFIG_MAX_QUEUES];
 } queue_table_t;
 
 static queue_table_t *queue_tbl;
@@ -214,10 +214,10 @@ static int queue_init_global(void)
 	pool_size = sizeof(queue_table_t);
 	/* Add storage required for queues */
 	pool_size += (CONFIG_SCAL_QUEUE_SIZE *
-		      sizeof(odp_buffer_hdr_t *)) * ODP_CONFIG_QUEUES;
+		      sizeof(odp_buffer_hdr_t *)) * CONFIG_MAX_QUEUES;
 
 	/* Add the reorder window size */
-	pool_size += sizeof(reorder_window_t) * ODP_CONFIG_QUEUES;
+	pool_size += sizeof(reorder_window_t) * CONFIG_MAX_QUEUES;
 	/* Choose min_alloc and max_alloc such that buddy allocator is
 	 * is selected.
 	 */
@@ -242,7 +242,7 @@ static int queue_init_global(void)
 
 	memset(queue_tbl, 0, sizeof(queue_table_t));
 
-	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
+	for (i = 0; i < CONFIG_MAX_QUEUES; i++) {
 		/* init locks */
 		queue_entry_t *queue;
 
@@ -277,7 +277,7 @@ static int queue_term_global(void)
 	queue_entry_t *queue;
 	int i;
 
-	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
+	for (i = 0; i < CONFIG_MAX_QUEUES; i++) {
 		queue = &queue_tbl->queue[i];
 		if (__atomic_load_n(&queue->s.status,
 				    __ATOMIC_RELAXED) != QUEUE_STATUS_FREE) {
@@ -312,15 +312,15 @@ static int queue_capability(odp_queue_capability_t *capa)
 	memset(capa, 0, sizeof(odp_queue_capability_t));
 
 	/* Reserve some queues for internal use */
-	capa->max_queues        = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
+	capa->max_queues        = CONFIG_MAX_QUEUES - CONFIG_INTERNAL_QUEUES;
 #if ODP_DEPRECATED_API
 	capa->max_ordered_locks = sched_fn->max_ordered_locks();
 	capa->max_sched_groups  = sched_fn->num_grps();
 	capa->sched_prios       = odp_schedule_num_prio();
-	capa->sched.max_num     = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
+	capa->sched.max_num     = CONFIG_MAX_SCHED_QUEUES;
 	capa->sched.max_size    = 0;
 #endif
-	capa->plain.max_num     = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
+	capa->plain.max_num     = CONFIG_MAX_PLAIN_QUEUES;
 	capa->plain.max_size    = 0;
 
 	return 0;
@@ -358,6 +358,7 @@ static odp_queue_t queue_create(const char *name,
 				const odp_queue_param_t *param)
 {
 	int queue_idx;
+	int max_idx;
 	queue_entry_t *queue;
 	odp_queue_type_t type;
 	odp_queue_param_t default_param;
@@ -378,7 +379,18 @@ static odp_queue_t queue_create(const char *name,
 		}
 	}
 
-	for (queue_idx = 0; queue_idx < ODP_CONFIG_QUEUES; queue_idx++) {
+	if (type == ODP_QUEUE_TYPE_SCHED) {
+		/* Start scheduled queue indices from zero to enable direct
+		 * mapping to scheduler implementation indices. */
+		queue_idx = 0;
+		max_idx = CONFIG_MAX_SCHED_QUEUES;
+	} else {
+		queue_idx = CONFIG_MAX_SCHED_QUEUES;
+		/* All internal queues are of type plain */
+		max_idx = CONFIG_MAX_QUEUES;
+	}
+
+	for (; queue_idx < max_idx; queue_idx++) {
 		queue = &queue_tbl->queue[queue_idx];
 
 		if (queue->s.status != QUEUE_STATUS_FREE)
@@ -490,7 +502,7 @@ static odp_queue_t queue_lookup(const char *name)
 {
 	uint32_t i;
 
-	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
+	for (i = 0; i < CONFIG_MAX_QUEUES; i++) {
 		queue_entry_t *queue = &queue_tbl->queue[i];
 
 		if (queue->s.status == QUEUE_STATUS_FREE ||
@@ -905,7 +917,7 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 
 	queue_id = queue_to_id(handle);
 
-	if (odp_unlikely(queue_id >= ODP_CONFIG_QUEUES)) {
+	if (odp_unlikely(queue_id >= CONFIG_MAX_QUEUES)) {
 		ODP_ERR("Invalid queue handle:%" PRIu64 "\n",
 			odp_queue_to_u64(handle));
 		return -1;
