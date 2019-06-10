@@ -67,10 +67,10 @@
 /* Maximum priority queue ring size. A ring must be large enough to store all
  * queues in the worst case (all queues are scheduled, have the same priority
  * and no spreading). */
-#define MAX_RING_SIZE ODP_CONFIG_QUEUES
+#define MAX_RING_SIZE CONFIG_MAX_SCHED_QUEUES
 
 /* For best performance, the number of queues should be a power of two. */
-ODP_STATIC_ASSERT(CHECK_IS_POWER2(ODP_CONFIG_QUEUES),
+ODP_STATIC_ASSERT(CHECK_IS_POWER2(CONFIG_MAX_SCHED_QUEUES),
 		  "Number_of_queues_is_not_power_of_two");
 
 /* Ring size must be power of two, so that mask can be used. */
@@ -197,7 +197,7 @@ typedef struct {
 		uint8_t poll_pktin;
 		uint8_t pktio_index;
 		uint8_t pktin_index;
-	} queue[ODP_CONFIG_QUEUES];
+	} queue[CONFIG_MAX_SCHED_QUEUES];
 
 	/* Scheduler priority queues */
 	prio_queue_t prio_q[NUM_SCHED_GRPS][NUM_PRIO][MAX_SPREAD];
@@ -218,7 +218,7 @@ typedef struct {
 	} pktio[NUM_PKTIO];
 	odp_spinlock_t pktio_lock;
 
-	order_context_t order[ODP_CONFIG_QUEUES];
+	order_context_t order[CONFIG_MAX_SCHED_QUEUES];
 
 	/* Scheduler interface config options (not used in fast path) */
 	schedule_config_t config_if;
@@ -807,7 +807,7 @@ static int schedule_term_local(void)
 
 static void schedule_config_init(odp_schedule_config_t *config)
 {
-	config->num_queues = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
+	config->num_queues = CONFIG_MAX_SCHED_QUEUES;
 	config->queue_size = queue_glb->config.max_queue_size;
 }
 
@@ -1585,7 +1585,7 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	capa->max_ordered_locks = schedule_max_ordered_locks();
 	capa->max_groups = schedule_num_grps();
 	capa->max_prios = schedule_num_prio();
-	capa->max_queues = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
+	capa->max_queues = CONFIG_MAX_SCHED_QUEUES;
 	capa->max_queue_size = queue_glb->config.max_queue_size;
 	capa->max_flow_id = BUF_HDR_MAX_FLOW_ID;
 

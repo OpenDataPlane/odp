@@ -24,7 +24,7 @@
 #include <odp_queue_basic_internal.h>
 
 #define NUM_THREAD        ODP_THREAD_COUNT_MAX
-#define NUM_QUEUE         ODP_CONFIG_QUEUES
+#define NUM_QUEUE         CONFIG_MAX_SCHED_QUEUES
 #define NUM_PKTIO         ODP_CONFIG_PKTIO_ENTRIES
 #define NUM_ORDERED_LOCKS 1
 #define NUM_STATIC_GROUP  3
@@ -260,7 +260,7 @@ static int term_local(void)
 
 static void schedule_config_init(odp_schedule_config_t *config)
 {
-	config->num_queues = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
+	config->num_queues = CONFIG_MAX_SCHED_QUEUES;
 	config->queue_size = queue_glb->config.max_queue_size;
 }
 
@@ -951,7 +951,7 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	capa->max_ordered_locks = max_ordered_locks();
 	capa->max_groups = num_grps();
 	capa->max_prios = schedule_num_prio();
-	capa->max_queues = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
+	capa->max_queues = CONFIG_MAX_SCHED_QUEUES;
 	capa->max_queue_size = queue_glb->config.max_queue_size;
 
 	return 0;

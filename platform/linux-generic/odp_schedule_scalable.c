@@ -46,7 +46,7 @@
 
 #define FLAG_PKTIN 0x80
 
-ODP_STATIC_ASSERT(CHECK_IS_POWER2(ODP_CONFIG_QUEUES),
+ODP_STATIC_ASSERT(CHECK_IS_POWER2(CONFIG_MAX_SCHED_QUEUES),
 		  "Number_of_queues_is_not_power_of_two");
 
 #define SCHED_GROUP_JOIN 0
@@ -1996,7 +1996,7 @@ static int schedule_term_local(void)
 
 static void schedule_config_init(odp_schedule_config_t *config)
 {
-	config->num_queues = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
+	config->num_queues = CONFIG_MAX_SCHED_QUEUES;
 	config->queue_size = 0; /* FIXME ? */
 }
 
@@ -2128,7 +2128,7 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	capa->max_ordered_locks = schedule_max_ordered_locks();
 	capa->max_groups = num_grps();
 	capa->max_prios = schedule_num_prio();
-	capa->max_queues = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
+	capa->max_queues = CONFIG_MAX_SCHED_QUEUES;
 	capa->max_queue_size = 0;
 
 	return 0;
