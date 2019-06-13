@@ -664,13 +664,17 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t *pkt,
 	*skip = FALSE;
 	ctx->state = PKT_STATE_IPSEC_IN_FINISH;
 	if (entry->async) {
-		if (odp_crypto_op_enq(pkt, &out_pkt, &params, 1))
-			abort();
+		if (odp_crypto_op_enq(pkt, &out_pkt, &params, 1) != 1) {
+			EXAMPLE_ERR("Error: odp_crypto_op_enq() failed\n");
+			exit(EXIT_FAILURE);
+		}
 		return PKT_POSTED;
 	}
 
-	if (odp_crypto_op(pkt, &out_pkt, &params, 1))
-		abort();
+	if (odp_crypto_op(pkt, &out_pkt, &params, 1) != 1) {
+		EXAMPLE_ERR("Error: odp_crypto_op() failed\n");
+		exit(EXIT_FAILURE);
+	}
 	*pkt = out_pkt;
 
 	return PKT_CONTINUE;
@@ -958,8 +962,10 @@ pkt_disposition_e do_ipsec_out_seq(odp_packet_t *pkt,
 			ret = odp_random_data((uint8_t *)ctx->ipsec.tun_hdr_id,
 					      sizeof(*ctx->ipsec.tun_hdr_id),
 					      1);
-			if (ret != sizeof(*ctx->ipsec.tun_hdr_id))
-				abort();
+			if (ret != sizeof(*ctx->ipsec.tun_hdr_id)) {
+				EXAMPLE_ERR("Error: Not enough random data\n");
+				exit(EXIT_FAILURE);
+			}
 		}
 	}
 
@@ -968,14 +974,17 @@ pkt_disposition_e do_ipsec_out_seq(odp_packet_t *pkt,
 	/* Issue crypto request */
 	if (entry->async) {
 		if (odp_crypto_op_enq(pkt, &out_pkt,
-				      &ctx->ipsec.params, 1))
-			abort();
+				      &ctx->ipsec.params, 1) != 1) {
+			EXAMPLE_ERR("Error: odp_crypto_op_enq() failed\n");
+			exit(EXIT_FAILURE);
+		}
 		return PKT_POSTED;
 	}
 
-	if (odp_crypto_op(pkt, &out_pkt,
-			  &ctx->ipsec.params, 1))
-		abort();
+	if (odp_crypto_op(pkt, &out_pkt, &ctx->ipsec.params, 1) != 1) {
+		EXAMPLE_ERR("Error: odp_crypto_op() failed\n");
+		exit(EXIT_FAILURE);
+	}
 	*pkt = out_pkt;
 
 	return PKT_CONTINUE;
@@ -1057,6 +1066,11 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 		/* Use schedule to get event from any input queue */
 		ev = schedule(&dispatchq);
 
+		if (ev == ODP_EVENT_INVALID) {
+			EXAMPLE_ERR("Error: Bad event handle\n");
+			exit(EXIT_FAILURE);
+		}
+
 		/* Determine new work versus completion or sequence number */
 		if (ODP_EVENT_PACKET == odp_event_types(ev, &subtype)) {
 			pkt = odp_packet_from_event(ev);
@@ -1072,7 +1086,8 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 				ctx->state = PKT_STATE_INPUT_VERIFY;
 			}
 		} else {
-			abort();
+			EXAMPLE_ERR("Error: Bad event type\n");
+			exit(EXIT_FAILURE);
 		}
 
 		/*
