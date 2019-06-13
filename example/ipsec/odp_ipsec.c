@@ -1435,7 +1435,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:i:m:h:r:p:a:e:t:s:";
+	static const char *shortopts = "+c:i:m:r:p:a:e:t:s:h";
 
 	printf("\nParsing command line options\n");
 
