@@ -1109,7 +1109,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	static const struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
 		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
-		{"lookup", 0, NULL, 'l'},
+		{"lookup", no_argument, NULL, 'l'},
 		{"mode", required_argument, NULL, 'm'},		/* return 'm' */
 		{"route", required_argument, NULL, 'r'},	/* return 'r' */
 		{"policy", required_argument, NULL, 'p'},	/* return 'p' */
@@ -1121,7 +1121,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:i:h:lm:r:p:a:e:t:s:";
+	static const char *shortopts = "+c:i:m:r:p:a:e:t:s:lh";
 
 	appl_args->cpu_count = 1; /* use one worker by default */
 
