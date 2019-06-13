@@ -2,7 +2,7 @@ include $(top_srcdir)/example/Makefile.inc
 
 bin_PROGRAMS = odp_ipsec
 
-dist_bin_SCRIPTS = \
+dist_check_SCRIPTS = \
 	      odp_ipsec_run_ah_in.sh \
 	      odp_ipsec_run_ah_out.sh \
 	      odp_ipsec_run_both_in.sh \
