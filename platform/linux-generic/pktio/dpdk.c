@@ -1240,6 +1240,9 @@ static int dpdk_pktio_init(void)
 
 	i = rte_eal_init(dpdk_argc, dpdk_argv);
 
+	/* Force getopt() to reset its internal state */
+	optind = 0;
+
 	if (i < 0) {
 		ODP_ERR("Cannot init the Intel DPDK EAL!\n");
 		return -1;
