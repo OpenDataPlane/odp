@@ -96,6 +96,7 @@ typedef struct {
 	odp_barrier_t sync_barrier;
 	odp_queue_t poll_queues[MAX_POLL_QUEUES];
 	int num_polled_queues;
+	volatile int stop_workers;
 } global_data_t;
 
 /* helper funcs */
@@ -230,7 +231,7 @@ odp_queue_t polled_odp_queue_create(const char *name,
 static inline
 odp_event_t odp_schedule_cb(odp_queue_t *from)
 {
-	return odp_schedule(from, ODP_SCHED_WAIT);
+	return odp_schedule(from, ODP_SCHED_NO_WAIT);
 }
 
 /**
@@ -241,22 +242,23 @@ odp_event_t polled_odp_schedule_cb(odp_queue_t *from)
 {
 	int idx = 0;
 
-	while (1) {
-		if (idx >= global->num_polled_queues)
-			idx = 0;
-
+	while (idx < global->num_polled_queues) {
 		odp_queue_t queue = global->poll_queues[idx++];
-		odp_event_t buf;
+		odp_event_t ev;
 
-		buf = odp_queue_deq(queue);
+		ev = odp_queue_deq(queue);
 
-		if (ODP_EVENT_INVALID != buf) {
-			*from = queue;
-			return buf;
+		if (ODP_EVENT_INVALID != ev) {
+			if (from)
+				*from = queue;
+
+			return ev;
 		}
 	}
 
-	*from = ODP_QUEUE_INVALID;
+	if (from)
+		*from = ODP_QUEUE_INVALID;
+
 	return ODP_EVENT_INVALID;
 }
 
@@ -735,7 +737,7 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 	odp_barrier_wait(&global->sync_barrier);
 
 	/* Loop packets */
-	for (;;) {
+	while (global->stop_workers == 0) {
 		pkt_disposition_e rc = PKT_CONTINUE;
 		pkt_ctx_t   *ctx;
 		odp_queue_t  dispatchq;
@@ -743,6 +745,9 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 
 		/* Use schedule to get event from any input queue */
 		ev = schedule(&dispatchq);
+
+		if (ev == ODP_EVENT_INVALID)
+			continue;
 
 		/* Determine new work versus completion or sequence number */
 		if (ODP_EVENT_PACKET == odp_event_types(ev, &subtype)) {
@@ -875,7 +880,6 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 		}
 	}
 
-	/* unreachable */
 	return 0;
 }
 
@@ -897,6 +901,7 @@ main(int argc, char *argv[])
 	odp_instance_t instance;
 	odp_init_t init_param;
 	odph_odpthread_params_t thr_params;
+	odp_event_t ev;
 
 	/* create by default scheduled queues */
 	queue_create = odp_queue_create;
@@ -1022,6 +1027,7 @@ main(int argc, char *argv[])
 	/*
 	 * Create and init worker threads
 	 */
+	memset(thread_tbl, 0, sizeof(thread_tbl));
 	memset(&thr_params, 0, sizeof(thr_params));
 	thr_params.start    = pktio_thread;
 	thr_params.arg      = NULL;
@@ -1041,9 +1047,12 @@ main(int argc, char *argv[])
 			sleep(1);
 		} while (!done);
 		printf("All received\n");
-	} else {
-		odph_odpthreads_join(thread_tbl);
 	}
+
+	global->stop_workers = 1;
+	odp_mb_full();
+
+	odph_odpthreads_join(thread_tbl);
 
 	/* Stop and close used pktio devices */
 	for (i = 0; i < global->appl.if_count; i++) {
@@ -1061,6 +1070,22 @@ main(int argc, char *argv[])
 
 	free(global->appl.if_names);
 	free(global->appl.if_str);
+
+	if (destroy_ipsec_cache())
+		EXAMPLE_ERR("Error: crypto session destroy failed\n");
+
+	/* Drop any remaining events. ipsec_sa_disable sends status event in
+	 * async mode */
+	while ((ev = schedule(NULL)) != ODP_EVENT_INVALID)
+		odp_event_free(ev);
+
+	if (odp_queue_destroy(global->completionq))
+		EXAMPLE_ERR("Error: queue destroy failed\n");
+
+	if (odp_pool_destroy(global->pkt_pool))
+		EXAMPLE_ERR("Error: pool destroy failed\n");
+	if (odp_pool_destroy(global->ctx_pool))
+		EXAMPLE_ERR("Error: pool destroy failed\n");
 
 	shm = odp_shm_lookup("shm_ipsec_cache");
 	if (odp_shm_free(shm) != 0)
@@ -1082,6 +1107,16 @@ main(int argc, char *argv[])
 		EXAMPLE_ERR("Error: shm free stream_db failed\n");
 	if (odp_shm_free(global->shm)) {
 		EXAMPLE_ERR("Error: shm free global data failed\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_term_local()) {
+		EXAMPLE_ERR("Error: term local failed\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_term_global(instance)) {
+		EXAMPLE_ERR("Error: term global failed\n");
 		exit(EXIT_FAILURE);
 	}
 
