@@ -127,6 +127,8 @@ ipsec_cache_entry_t *find_ipsec_cache_entry_out(uint32_t src_ip,
 						uint32_t dst_ip,
 						uint8_t proto);
 
+int destroy_ipsec_cache(void);
+
 #ifdef __cplusplus
 }
 #endif
