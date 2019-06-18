@@ -50,6 +50,7 @@ env:
         # repo.
         - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
         - OS="ubuntu_16.04"
+        - ARCH=x86_64
         - CHECK=1
         - NETMAP=0
     matrix:
@@ -69,8 +70,8 @@ env:
         - NETMAP=1 CONF="--disable-static-applications"
         - CONF="--disable-host-optimization"
         - CONF="--disable-host-optimization --disable-abi-compat"
-        - CHECK=0 ARCH="x86_64" CONF="--enable-pcapng-support"
-        - CHECK=0 ARCH="x86_64" OS="centos_7"
+        - CHECK=0 CONF="--enable-pcapng-support"
+        - CHECK=0 OS="centos_7"
         - CONF="--without-openssl --without-pcap"
         - OS="ubuntu_18.04"
 
