@@ -54,9 +54,8 @@ env:
         - CHECK=1
         - NETMAP=0
     matrix:
-        - CONF=""
-        - CONF="--disable-abi-compat"
-        - NETMAP=1 CONF=""
+        - CHECK=0 CONF="CFLAGS=-O3"
+        - CHECK=0 CONF="CFLAGS=-O0 --enable-debug --enable-debug-print"
         - CHECK=0 ARCH="arm64"
         - CHECK=0 ARCH="armhf"
         - CHECK=0 ARCH="powerpc"
@@ -65,8 +64,11 @@ env:
         - CHECK=0 ARCH="armhf" CONF="--disable-abi-compat"
         - CHECK=0 ARCH="powerpc" CONF="--disable-abi-compat"
         - CHECK=0 ARCH="i386" CONF="--disable-abi-compat"
+        - CONF=""
+        - CONF="--disable-abi-compat"
         - CONF="--enable-deprecated"
         - CONF="--enable-dpdk-zero-copy --disable-static-applications"
+        - NETMAP=1 CONF=""
         - NETMAP=1 CONF="--disable-static-applications"
         - CONF="--disable-host-optimization"
         - CONF="--disable-host-optimization --disable-abi-compat"
