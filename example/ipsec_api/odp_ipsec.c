@@ -193,7 +193,7 @@ typedef odp_queue_t (*queue_create_func_t)
 typedef odp_event_t (*schedule_func_t) (odp_queue_t *);
 
 static queue_create_func_t queue_create;
-static schedule_func_t schedule;
+static schedule_func_t schedule_fn;
 
 /**
  * odp_queue_create wrapper to enable polling versus scheduling
@@ -744,7 +744,7 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 		odp_event_subtype_t subtype;
 
 		/* Use schedule to get event from any input queue */
-		ev = schedule(&dispatchq);
+		ev = schedule_fn(&dispatchq);
 
 		if (ev == ODP_EVENT_INVALID)
 			continue;
@@ -905,12 +905,12 @@ main(int argc, char *argv[])
 
 	/* create by default scheduled queues */
 	queue_create = odp_queue_create;
-	schedule = odp_schedule_cb;
+	schedule_fn = odp_schedule_cb;
 
 	/* check for using poll queues */
 	if (getenv("ODP_IPSEC_USE_POLL_QUEUES")) {
 		queue_create = polled_odp_queue_create;
-		schedule = polled_odp_schedule_cb;
+		schedule_fn = polled_odp_schedule_cb;
 	}
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
@@ -1076,7 +1076,7 @@ main(int argc, char *argv[])
 
 	/* Drop any remaining events. ipsec_sa_disable sends status event in
 	 * async mode */
-	while ((ev = schedule(NULL)) != ODP_EVENT_INVALID)
+	while ((ev = schedule_fn(NULL)) != ODP_EVENT_INVALID)
 		odp_event_free(ev);
 
 	if (odp_queue_destroy(global->completionq))
