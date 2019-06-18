@@ -56,6 +56,8 @@ env:
     matrix:
         - CHECK=0 CONF="CFLAGS=-O3"
         - CHECK=0 CONF="CFLAGS=-O0 --enable-debug --enable-debug-print"
+        - CHECK=0 OS=ubuntu_18.04 CONF="CFLAGS=-O3"
+        - CHECK=0 OS=ubuntu_18.04 CONF="CFLAGS=-O0 --enable-debug --enable-debug-print"
         - CHECK=0 ARCH=arm64
         - CHECK=0 ARCH=armhf
         - CHECK=0 ARCH=powerpc
