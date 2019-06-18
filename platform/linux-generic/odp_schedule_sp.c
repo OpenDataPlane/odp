@@ -297,6 +297,12 @@ static void remove_group(sched_group_t *sched_group, int thr, int group)
 
 	num = thr_group->num_group;
 
+	/* Extra array bounds check to suppress warning on GCC 7.4 with -O3 */
+	if (num >= NUM_GROUP) {
+		ODP_ERR("Too many groups");
+		return;
+	}
+
 	for (i = 0; i < num; i++) {
 		if (thr_group->group[i] == group) {
 			found = 1;
