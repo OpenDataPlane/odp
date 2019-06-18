@@ -49,21 +49,21 @@ env:
         # you need to generate a new one at https://codecov.io specific for your
         # repo.
         - CODECOV_TOKEN=a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
-        - OS="ubuntu_16.04"
+        - OS=ubuntu_16.04
         - ARCH=x86_64
         - CHECK=1
         - NETMAP=0
     matrix:
         - CHECK=0 CONF="CFLAGS=-O3"
         - CHECK=0 CONF="CFLAGS=-O0 --enable-debug --enable-debug-print"
-        - CHECK=0 ARCH="arm64"
-        - CHECK=0 ARCH="armhf"
-        - CHECK=0 ARCH="powerpc"
-        - CHECK=0 ARCH="i386"
-        - CHECK=0 ARCH="arm64" CONF="--disable-abi-compat"
-        - CHECK=0 ARCH="armhf" CONF="--disable-abi-compat"
-        - CHECK=0 ARCH="powerpc" CONF="--disable-abi-compat"
-        - CHECK=0 ARCH="i386" CONF="--disable-abi-compat"
+        - CHECK=0 ARCH=arm64
+        - CHECK=0 ARCH=armhf
+        - CHECK=0 ARCH=powerpc
+        - CHECK=0 ARCH=i386
+        - CHECK=0 ARCH=arm64 CONF="--disable-abi-compat"
+        - CHECK=0 ARCH=armhf CONF="--disable-abi-compat"
+        - CHECK=0 ARCH=powerpc CONF="--disable-abi-compat"
+        - CHECK=0 ARCH=i386 CONF="--disable-abi-compat"
         - CONF=""
         - CONF="--disable-abi-compat"
         - CONF="--enable-deprecated"
@@ -73,16 +73,16 @@ env:
         - CONF="--disable-host-optimization"
         - CONF="--disable-host-optimization --disable-abi-compat"
         - CHECK=0 CONF="--enable-pcapng-support"
-        - CHECK=0 OS="centos_7"
+        - CHECK=0 OS=centos_7
         - CONF="--without-openssl --without-pcap"
-        - OS="ubuntu_18.04"
+        - OS=ubuntu_18.04
 
 matrix:
   exclude:
   - compiler: gcc
-    env: CHECK=0 ARCH="arm64"
+    env: CHECK=0 ARCH=arm64
   - compiler: gcc
-    env: CHECK=0 ARCH="i386"
+    env: CHECK=0 ARCH=i386
 
 install:
         - if [ ${NETMAP} -eq 1 ] ; then
