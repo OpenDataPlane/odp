@@ -34,6 +34,13 @@ AC_SUBST(ODPH_VERSION_MAJOR)
 ODPH_VERSION_MINOR=odph_version_minor
 AC_SUBST(ODPH_VERSION_MINOR)
 
+##########################################################################
+# Test if user has set CFLAGS. Automake initializes CFLAGS to "-g -O2"
+# by default.
+##########################################################################
+AS_IF([test "$ac_cv_env_CFLAGS_set" = ""], [user_cflags=0], [user_cflags=1])
+
+# Initialize automake
 AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects foreign nostdinc -Wall -Werror])
 AC_CONFIG_SRCDIR([include/odp/api/spec/init.h])
 AM_CONFIG_HEADER([include/config.h])
@@ -216,12 +223,16 @@ AC_ARG_ENABLE([abi-compat],
     [if test "x$enableval" = "xno"; then
 	ODP_ABI_COMPAT=0
 	abi_compat=no
+
 	#if there is no ABI compatibility the .so numbers are meaningless
 	ODP_LIBSO_VERSION=0:0:0
-	# do not try -march=native for clang due to possible failures on
-	# clang optimizations
+
+	# do not use -march=native with clang (due to possible failures on
+	# clang optimizations) or when user have defined CFLAGS (may contain
+	# another -march option).
 	$CC --version | grep -q clang
-	if test $? -ne 0; then
+
+	if test $? -ne 0 -a $user_cflags -eq 0; then
 		ODP_CHECK_CFLAG([-march=native])
 	fi
     fi])
