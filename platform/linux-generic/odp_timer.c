@@ -1413,6 +1413,12 @@ int odp_timer_init_global(const odp_init_t *params)
 	const char *conf_str;
 	int val = 0;
 
+	if (params && params->not_used.feat.timer) {
+		ODP_DBG("Timers disabled\n");
+		timer_global = NULL;
+		return 0;
+	}
+
 	shm = odp_shm_reserve("_odp_timer", sizeof(timer_global_t),
 			      ODP_CACHE_LINE_SIZE, 0);
 
@@ -1452,9 +1458,6 @@ int odp_timer_init_global(const odp_init_t *params)
 	}
 	timer_global->inline_poll_interval = val;
 
-	if (params && params->not_used.feat.timer)
-		timer_global->use_inline_timers = false;
-
 	timer_global->time_per_ratelimit_period =
 		odp_time_global_from_ns(timer_global->min_res_ns / 2);
 
@@ -1468,7 +1471,7 @@ int odp_timer_init_global(const odp_init_t *params)
 
 int odp_timer_term_global(void)
 {
-	if (odp_shm_free(timer_global->shm)) {
+	if (timer_global && odp_shm_free(timer_global->shm)) {
 		ODP_ERR("Shm free failed for odp_timer\n");
 		return -1;
 	}
