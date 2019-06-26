@@ -20,9 +20,9 @@ static void set_random_payload(odp_packet_t packet, uint32_t payload_offset,
 			       uint32_t size)
 {
 	uint32_t i, j;
-	uint32_t bytes_remaining;
 	unsigned char *buffer;
 	unsigned char seed = rand() % (UINT8_MAX + 1);
+	uint32_t bytes_remaining = 0;
 
 	/*
 	 * Set the payload to a run of consecutive numbers from a random seed.
@@ -99,11 +99,11 @@ int packet_memcmp(odp_packet_t a, odp_packet_t b, uint32_t offset_a,
 {
 	uint32_t i = 0;
 	void *data_a, *data_b;
+	uint32_t bytes_remaining_a = 0;
+	uint32_t bytes_remaining_b = 0;
 
 	while (i < length) {
 		int status;
-		uint32_t bytes_remaining_a;
-		uint32_t bytes_remaining_b;
 		uint32_t bytes_remaining;
 
 		data_a = odp_packet_offset(a, offset_a + i, &bytes_remaining_a,
