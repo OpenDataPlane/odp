@@ -239,6 +239,24 @@ AC_ARG_ENABLE([abi-compat],
 AM_CONDITIONAL(ODP_ABI_COMPAT, [test "x$ODP_ABI_COMPAT" = "x1"])
 
 ##########################################################################
+# Enable/disable link time optimization
+##########################################################################
+lto_enabled=no
+AC_ARG_ENABLE([lto],
+	[AS_HELP_STRING([--enable-lto],
+			[Enable Link Time Optimization (LTO) in compiler and linker])],
+	[if test "x$enableval" = "xyes"; then
+		lto_enabled=yes
+		# Fat LTO object file contains GIMPLE bytecodes and the usual
+		# final code. There are less build problems (e.g. due to older
+		# binutils), but object files are larger.
+		ODP_LTO_FLAGS="-flto -ffat-lto-objects"
+	fi])
+AC_SUBST(ODP_LTO_FLAGS)
+
+ODP_CFLAGS="$ODP_CFLAGS $ODP_LTO_FLAGS"
+
+##########################################################################
 # Determine which platform to build for
 ##########################################################################
 AC_ARG_WITH([platform],
@@ -383,6 +401,7 @@ AC_SUBST(ODP_DEPRECATED_API)
 ##########################################################################
 CFLAGS="$CFLAGS $ODP_CFLAGS"
 CXXFLAGS="$CXXFLAGS $ODP_CXXFLAGS"
+LDFLAGS="$LDFLAGS $ODP_LTO_FLAGS"
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([include/Makefile
@@ -436,7 +455,8 @@ AC_MSG_RESULT([
 	static libraries:	${enable_static}
 	shared libraries:	${enable_shared}
 	ABI compatible:		${abi_compat}
-	Deprecated APIs:	${deprecated}
+	link time optimization:	${lto_enabled}
+	deprecated APIs:	${deprecated}
 	debug:			${enable_debug}
 	cunit:			${cunit_support}
 	static tests linkage:	${enable_static_applications}
