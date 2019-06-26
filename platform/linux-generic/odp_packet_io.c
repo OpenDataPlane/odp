@@ -1642,6 +1642,11 @@ int odp_pktin_event_queue(odp_pktio_t pktio, odp_queue_t queues[], int num)
 		return -1;
 	}
 
+	if (num < 0) {
+		ODP_DBG("Bad param: num %i\n", num);
+		return -1;
+	}
+
 	mode = entry->s.param.in_mode;
 
 	if (mode == ODP_PKTIN_MODE_DISABLED)
@@ -1653,8 +1658,11 @@ int odp_pktin_event_queue(odp_pktio_t pktio, odp_queue_t queues[], int num)
 
 	num_queues = entry->s.num_in_queue;
 
-	if (queues && num > 0) {
-		for (i = 0; i < num && i < num_queues; i++)
+	if (queues) {
+		if (num_queues < num)
+			num = num_queues;
+
+		for (i = 0; i < num; i++)
 			queues[i] = entry->s.in_queue[i].queue;
 	}
 
@@ -1674,6 +1682,11 @@ int odp_pktin_queue(odp_pktio_t pktio, odp_pktin_queue_t queues[], int num)
 		return -1;
 	}
 
+	if (num < 0) {
+		ODP_DBG("Bad param: num %i\n", num);
+		return -1;
+	}
+
 	mode = entry->s.param.in_mode;
 
 	if (mode == ODP_PKTIN_MODE_DISABLED)
@@ -1684,8 +1697,11 @@ int odp_pktin_queue(odp_pktio_t pktio, odp_pktin_queue_t queues[], int num)
 
 	num_queues = entry->s.num_in_queue;
 
-	if (queues && num > 0) {
-		for (i = 0; i < num && i < num_queues; i++)
+	if (queues) {
+		if (num_queues < num)
+			num = num_queues;
+
+		for (i = 0; i < num; i++)
 			queues[i] = entry->s.in_queue[i].pktin;
 	}
 

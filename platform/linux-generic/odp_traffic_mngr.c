@@ -503,8 +503,8 @@ static void *tm_common_profile_create(const char      *name,
 	_odp_int_name_kind_t handle_kind;
 	_odp_int_name_t      name_tbl_id;
 	tm_handle_t          profile_handle;
-	uint32_t             idx;
 	void                *object_ptr;
+	uint32_t             idx = 0;
 
 	/* Note that alloc_entry_in_tbl will zero out all of the memory that it
 	 * allocates, so an additional memset here is unnecessary. */
@@ -2052,8 +2052,8 @@ static void egress_vlan_marking(tm_vlan_marking_t *vlan_marking,
 	_odp_vlanhdr_t  vlan_hdr, *vlan_hdr_ptr;
 	_odp_ethhdr_t  *ether_hdr_ptr;
 	odp_bool_t      split_hdr;
-	uint32_t        hdr_len;
 	uint16_t        old_tci, new_tci;
+	uint32_t        hdr_len = 0;
 
 	ether_hdr_ptr = odp_packet_l2_ptr(odp_pkt, &hdr_len);
 	vlan_hdr_ptr  = (_odp_vlanhdr_t *)(ether_hdr_ptr + 1);
@@ -2091,8 +2091,9 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 {
 	_odp_ipv4hdr_t ipv4_hdr, *ipv4_hdr_ptr;
 	odp_bool_t     split_hdr;
-	uint32_t       hdr_len, l3_offset, old_chksum, ones_compl_sum, tos_diff;
+	uint32_t       l3_offset, old_chksum, ones_compl_sum, tos_diff;
 	uint8_t        old_tos, new_tos, ecn;
+	uint32_t       hdr_len = 0;
 
 	l3_offset    = odp_packet_l3_offset(odp_pkt);
 	ipv4_hdr_ptr = odp_packet_l3_ptr(odp_pkt, &hdr_len);
@@ -2157,8 +2158,9 @@ static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 {
 	_odp_ipv6hdr_t ipv6_hdr, *ipv6_hdr_ptr;
 	odp_bool_t     split_hdr;
-	uint32_t       hdr_len, old_ver_tc_flow, new_ver_tc_flow, l3_offset;
+	uint32_t       old_ver_tc_flow, new_ver_tc_flow, l3_offset;
 	uint8_t        old_tc, new_tc, ecn;
+	uint32_t       hdr_len = 0;
 
 	l3_offset    = odp_packet_l3_offset(odp_pkt);
 	ipv6_hdr_ptr = odp_packet_l3_ptr(odp_pkt, &hdr_len);

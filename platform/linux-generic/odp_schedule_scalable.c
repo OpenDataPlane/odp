@@ -777,7 +777,7 @@ static int poll_pktin(sched_elem_t *elem, odp_event_t ev[], int num_evts)
 	/* For ordered queues only */
 	reorder_context_t *rctx;
 	reorder_window_t *rwin = NULL;
-	uint32_t sn;
+	uint32_t sn = 0;
 	uint32_t idx;
 
 	if (is_ordered(elem)) {
