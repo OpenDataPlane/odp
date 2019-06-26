@@ -106,9 +106,10 @@ static inline int odph_process_l4_hdr(odp_packet_t      odp_pkt,
 	odph_udphdr_t  *udp_hdr_ptr;
 	odph_tcphdr_t  *tcp_hdr_ptr;
 	odp_bool_t      split_l4_hdr, is_tcp;
-	uint32_t        l4_offset, l4_len, hdr_len, pkt_chksum_offset;
+	uint32_t        l4_offset, l4_len, pkt_chksum_offset;
 	uint16_t       *pkt_chksum_ptr;
 	uint8_t        *l4_ptr;
+	uint32_t hdr_len = 0;
 
 	/* Parse the TCP/UDP header. */
 	l4_offset         = odp_packet_l4_offset(odp_pkt);
@@ -185,9 +186,10 @@ static inline int odph_process_l3_hdr(odp_packet_t odp_pkt,
 	odph_ipv6hdr_t *ipv6_hdr_ptr, ipv6_hdr;
 	odp_bool_t      split_l3_hdr;
 	swap_buf_t      swap_buf;
-	uint32_t        l3_offset, l4_offset, l3_hdrs_len, hdr_len, addrs_len;
+	uint32_t        l3_offset, l4_offset, l3_hdrs_len, addrs_len;
 	uint32_t        protocol, l3_len, l4_len, idx, ipv6_payload_len, sum;
 	uint16_t       *addrs_ptr;
+	uint32_t hdr_len = 0;
 
 	/* The following computation using the l3 and l4 offsets handles both
 	 * the case of IPv4 options and IPv6 extension headers uniformly. */
@@ -271,11 +273,12 @@ int odph_udp_tcp_chksum(odp_packet_t     odp_pkt,
 	odph_l4_hdr_t    udp_tcp_hdr;
 	odp_bool_t       split_l4_hdr, is_tcp, is_last;
 	odp_bool_t       has_odd_byte_in;
-	uint32_t         l4_len, sum, ones_compl_sum, remaining_seg_len;
+	uint32_t         l4_len, sum, ones_compl_sum;
 	uint32_t         data_len, pkt_chksum_offset, offset;
 	uint16_t        *pkt_chksum_ptr, chksum;
 	uint8_t         *data_ptr, odd_byte_in_out;
 	int              rc, ret_code;
+	uint32_t remaining_seg_len = 0;
 
 	/* First parse and process the l4 header */
 	rc = odph_process_l4_hdr(odp_pkt, op, &udp_tcp_hdr, chksum_ptr, &l4_len,
@@ -364,7 +367,7 @@ static uint32_t odph_packet_crc32c(odp_packet_t pkt,
 		return sum;
 
 	while (length > 0) {
-		uint32_t seg_len;
+		uint32_t seg_len = 0;
 		void *data = odp_packet_offset(pkt, offset, &seg_len, NULL);
 
 		if (seg_len > length)
