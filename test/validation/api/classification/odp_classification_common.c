@@ -180,8 +180,15 @@ int parse_ipv4_string(const char *ipaddress, uint32_t *addr, uint32_t *mask)
 void enqueue_pktio_interface(odp_packet_t pkt, odp_pktio_t pktio)
 {
 	odp_pktout_queue_t pktout;
+	int ret;
 
-	CU_ASSERT_FATAL(odp_pktout_queue(pktio, &pktout, 1) == 1);
+	ret = odp_pktout_queue(pktio, &pktout, 1);
+
+	if (ret != 1) {
+		CU_FAIL_FATAL("No pktout queue");
+		return;
+	}
+
 	CU_ASSERT(odp_pktout_send(pktout, &pkt, 1) == 1);
 }
 

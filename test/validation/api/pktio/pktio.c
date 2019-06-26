@@ -550,12 +550,18 @@ static int get_packets(pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
 	odp_event_t evt_tbl[num];
 	int num_evts = 0;
 	int num_pkts = 0;
-	int i;
+	int i, ret;
 
 	if (pktio_rx->in_mode == ODP_PKTIN_MODE_DIRECT) {
 		odp_pktin_queue_t pktin;
 
-		CU_ASSERT_FATAL(odp_pktin_queue(pktio_rx->id, &pktin, 1) == 1);
+		ret = odp_pktin_queue(pktio_rx->id, &pktin, 1);
+
+		if (ret != 1) {
+			CU_FAIL_FATAL("No pktin queues");
+			return -1;
+		}
+
 		return odp_pktin_recv(pktin, pkt_tbl, num);
 	}
 
@@ -837,7 +843,7 @@ static void test_txrx(odp_pktin_mode_t in_mode, int num_pkts,
 	/* create pktios and associate input/output queues */
 	for (i = 0; i < num_ifaces; ++i) {
 		odp_pktout_queue_t pktout;
-		odp_queue_t queue;
+		odp_queue_t queue = ODP_QUEUE_INVALID;
 		odp_pktout_mode_t out_mode = ODP_PKTOUT_MODE_DIRECT;
 
 		if (mode == TXRX_MODE_MULTI_EVENT)
@@ -859,7 +865,6 @@ static void test_txrx(odp_pktin_mode_t in_mode, int num_pkts,
 			CU_ASSERT_FATAL(odp_pktout_queue(io->id,
 							 &pktout, 1) == 1);
 			io->pktout = pktout;
-			queue = ODP_QUEUE_INVALID;
 		}
 
 		io->queue_out = queue;

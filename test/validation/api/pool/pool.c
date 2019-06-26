@@ -216,6 +216,7 @@ static void pool_test_info_packet(void)
 	pool = odp_pool_create(pool_name, &param);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
+	memset(&info, 0, sizeof(odp_pool_info_t));
 	CU_ASSERT_FATAL(odp_pool_info(pool, &info) == 0);
 
 	CU_ASSERT(strncmp(pool_name, info.name, sizeof(pool_name)) == 0);
@@ -262,7 +263,8 @@ static void pool_test_info_data_range(void)
 
 	for (i = 0; i < num; i++) {
 		uintptr_t pkt_data, pkt_data_end;
-		uint32_t offset = 0, seg_len;
+		uint32_t offset = 0;
+		uint32_t seg_len = 0;
 		uint32_t pkt_len = odp_packet_len(pkt[i]);
 
 		while (offset < pkt_len) {

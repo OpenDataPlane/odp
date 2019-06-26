@@ -648,8 +648,9 @@ static int get_ip_tos(odp_packet_t odp_pkt, uint8_t *tos_ptr)
 {
 	odph_ipv4hdr_t *ipv4_hdr;
 	odph_ipv6hdr_t *ipv6_hdr;
-	uint32_t        hdr_len, ver_tc_flow;
+	uint32_t        ver_tc_flow;
 	uint8_t         tos, tc;
+	uint32_t        hdr_len = 0;
 
 	if (odp_packet_has_ipv4(odp_pkt)) {
 		ipv4_hdr = odp_packet_l3_ptr(odp_pkt, &hdr_len);
@@ -2243,6 +2244,7 @@ static void check_threshold_profile(char    *threshold_name,
 {
 	odp_tm_threshold_params_t threshold_params;
 	odp_tm_threshold_t        profile;
+	int ret;
 
 	profile = odp_tm_thresholds_lookup(threshold_name);
 	CU_ASSERT(profile != ODP_TM_INVALID);
@@ -2251,7 +2253,12 @@ static void check_threshold_profile(char    *threshold_name,
 	if (profile == threshold_profiles[threshold_idx - 1])
 		return;
 
-	odp_tm_thresholds_params_read(profile, &threshold_params);
+	ret = odp_tm_thresholds_params_read(profile, &threshold_params);
+	CU_ASSERT(ret == 0);
+
+	if (ret)
+		return;
+
 	CU_ASSERT(threshold_params.max_pkts  ==
 				  threshold_idx * MIN_PKT_THRESHOLD);
 	CU_ASSERT(threshold_params.max_bytes ==
@@ -2307,6 +2314,7 @@ static void check_wred_profile(char    *wred_name,
 {
 	odp_tm_wred_params_t wred_params;
 	odp_tm_wred_t        profile;
+	int ret;
 
 	profile = odp_tm_wred_lookup(wred_name);
 	CU_ASSERT(profile != ODP_TM_INVALID);
@@ -2314,7 +2322,12 @@ static void check_wred_profile(char    *wred_name,
 	if (profile != wred_profiles[wred_idx - 1][color])
 		return;
 
-	odp_tm_wred_params_read(profile, &wred_params);
+	ret = odp_tm_wred_params_read(profile, &wred_params);
+	CU_ASSERT(ret == 0);
+
+	if (ret)
+		return;
+
 	CU_ASSERT(wred_params.min_threshold == wred_idx * MIN_WRED_THRESH);
 	CU_ASSERT(wred_params.med_threshold == wred_idx * MED_WRED_THRESH);
 	CU_ASSERT(wred_params.med_drop_prob == wred_idx * MED_DROP_PROB);

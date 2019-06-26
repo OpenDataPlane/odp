@@ -398,6 +398,7 @@ void ipsec_sa_destroy(odp_ipsec_sa_t sa)
 {
 	odp_event_t event;
 	odp_ipsec_status_t status;
+	int ret;
 
 	CU_ASSERT_EQUAL(IPSEC_SA_CTX, odp_ipsec_sa_context(sa));
 
@@ -410,12 +411,15 @@ void ipsec_sa_destroy(odp_ipsec_sa_t sa)
 
 		CU_ASSERT_EQUAL(ODP_EVENT_IPSEC_STATUS, odp_event_type(event));
 
-		CU_ASSERT_EQUAL(ODP_IPSEC_OK, odp_ipsec_status(&status, event));
+		ret = odp_ipsec_status(&status, event);
+		CU_ASSERT(ret == 0);
 
-		CU_ASSERT_EQUAL(ODP_IPSEC_STATUS_SA_DISABLE, status.id);
-		CU_ASSERT_EQUAL(sa, status.sa);
-		CU_ASSERT_EQUAL(0, status.result);
-		CU_ASSERT_EQUAL(0, status.warn.all);
+		if (ret == 0) {
+			CU_ASSERT_EQUAL(ODP_IPSEC_STATUS_SA_DISABLE, status.id);
+			CU_ASSERT_EQUAL(sa, status.sa);
+			CU_ASSERT_EQUAL(0, status.result);
+			CU_ASSERT_EQUAL(0, status.warn.all);
+		}
 
 		odp_event_free(event);
 	}
@@ -570,11 +574,13 @@ static int ipsec_send_in_one(const ipsec_test_part *part,
 				  ODP_EVENT_PACKET_IPSEC);
 		}
 	} else {
-		odp_queue_t queue;
 		odp_pktout_queue_t pktout;
+		odp_queue_t queue = ODP_QUEUE_INVALID;
 
-		CU_ASSERT_EQUAL_FATAL(1, odp_pktout_queue(suite_context.pktio,
-							  &pktout, 1));
+		if (odp_pktout_queue(suite_context.pktio, &pktout, 1) != 1) {
+			CU_FAIL_FATAL("No pktout queue");
+			return 0;
+		}
 
 		CU_ASSERT_EQUAL(1, odp_pktout_send(pktout, &pkt, 1));
 		CU_ASSERT_EQUAL_FATAL(1,
@@ -662,9 +668,9 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 		}
 	} else {
 		struct odp_ipsec_out_inline_param_t inline_param;
-		odp_queue_t queue;
 		uint32_t hdr_len;
 		uint8_t hdr[32];
+		odp_queue_t queue = ODP_QUEUE_INVALID;
 
 		if (NULL != part->out[0].pkt_out) {
 			hdr_len = part->out[0].pkt_out->l3_offset;
