@@ -442,10 +442,9 @@ static uint32_t _tx_pkt_to_iovec(odp_packet_t pkt,
 	uint32_t pkt_len = odp_packet_len(pkt);
 	uint32_t offset = 0;
 	uint32_t iov_count = 0;
+	uint32_t seglen = 0;
 
 	while (offset < pkt_len) {
-		uint32_t seglen;
-
 		iovecs[iov_count].iov_base = odp_packet_offset(pkt, offset,
 				&seglen, NULL);
 		iovecs[iov_count].iov_len = seglen;
