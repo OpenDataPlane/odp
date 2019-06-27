@@ -58,6 +58,10 @@ env:
         - CHECK=0 CONF="CFLAGS=-O0 --enable-debug --enable-debug-print"
         - CHECK=0 OS=ubuntu_18.04 CONF="CFLAGS=-O3"
         - CHECK=0 OS=ubuntu_18.04 CONF="CFLAGS=-O0 --enable-debug --enable-debug-print"
+        - CHECK=0 CONF="--enable-lto"
+        - CHECK=0 CONF="--enable-lto --disable-abi-compat"
+        - CHECK=0 OS=ubuntu_18.04 CONF="--enable-lto"
+        - CHECK=0 OS=ubuntu_18.04 CONF="--enable-lto --disable-abi-compat"
         - CHECK=0 ARCH=arm64
         - CHECK=0 ARCH=armhf
         - CHECK=0 ARCH=powerpc
@@ -85,6 +89,14 @@ matrix:
     env: CHECK=0 ARCH=arm64
   - compiler: gcc
     env: CHECK=0 ARCH=i386
+  - compiler: clang
+    env: CHECK=0 CONF="--enable-lto"
+  - compiler: clang
+    env: CHECK=0 CONF="--enable-lto --disable-abi-compat"
+  - compiler: clang
+    env: CHECK=0 OS=ubuntu_18.04 CONF="--enable-lto"
+  - compiler: clang
+    env: CHECK=0 OS=ubuntu_18.04 CONF="--enable-lto --disable-abi-compat"
 
 install:
         - if [ ${NETMAP} -eq 1 ] ; then
