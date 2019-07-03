@@ -15,6 +15,7 @@
 #include <odp/helper/odph_api.h>
 
 #define MAX_QUEUES  (256 * 1024)
+#define MAX_GROUPS  256
 
 typedef struct test_options_t {
 	uint32_t num_cpu;
@@ -22,6 +23,8 @@ typedef struct test_options_t {
 	uint32_t num_dummy;
 	uint32_t num_event;
 	uint32_t num_round;
+	uint32_t num_group;
+	uint32_t num_join;
 	uint32_t max_burst;
 	int      queue_type;
 	int      forward;
@@ -48,6 +51,7 @@ typedef struct test_global_t {
 	odp_pool_t pool;
 	odp_cpumask_t cpumask;
 	odp_queue_t queue[MAX_QUEUES];
+	odp_schedule_group_t group[MAX_GROUPS];
 	odph_odpthread_t thread_tbl[ODP_THREAD_COUNT_MAX];
 	test_stat_t stat[ODP_THREAD_COUNT_MAX];
 
@@ -67,6 +71,11 @@ static void print_usage(void)
 	       "  -d, --num_dummy        Number of empty queues. Default: 0.\n"
 	       "  -e, --num_event        Number of events per queue. Default: 100.\n"
 	       "  -r, --num_round        Number of rounds\n"
+	       "  -g, --num_group        Number of schedule groups. Round robins threads and queues into groups.\n"
+	       "                         0: SCHED_GROUP_ALL (default)\n"
+	       "  -j, --num_join         Number of groups a thread joins. Threads are divide evenly into groups,\n"
+	       "                         if num_cpu is multiple of num_group and num_group is multiple of num_join.\n"
+	       "                         0: join all groups (default)\n"
 	       "  -b, --burst            Maximum number of events per operation. Default: 100.\n"
 	       "  -t, --type             Queue type. 0: parallel, 1: atomic, 2: ordered. Default: 0.\n"
 	       "  -f, --forward          0: Keep event in the original queue, 1: Forward event to the next queue. Default: 0.\n"
@@ -79,6 +88,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	int opt;
 	int long_index;
 	int ret = 0;
+	uint32_t num_group, num_join;
 
 	static const struct option longopts[] = {
 		{"num_cpu",   required_argument, NULL, 'c'},
@@ -86,6 +96,8 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"num_dummy", required_argument, NULL, 'd'},
 		{"num_event", required_argument, NULL, 'e'},
 		{"num_round", required_argument, NULL, 'r'},
+		{"num_group", required_argument, NULL, 'g'},
+		{"num_join",  required_argument, NULL, 'j'},
 		{"burst",     required_argument, NULL, 'b'},
 		{"type",      required_argument, NULL, 't'},
 		{"forward",   required_argument, NULL, 'f'},
@@ -93,13 +105,15 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:q:d:e:r:b:t:f:h";
+	static const char *shortopts = "+c:q:d:e:r:g:j:b:t:f:h";
 
 	test_options->num_cpu    = 1;
 	test_options->num_queue  = 1;
 	test_options->num_dummy  = 0;
 	test_options->num_event  = 100;
 	test_options->num_round  = 100000;
+	test_options->num_group  = 0;
+	test_options->num_join   = 0;
 	test_options->max_burst  = 100;
 	test_options->queue_type = 0;
 	test_options->forward    = 0;
@@ -126,6 +140,12 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		case 'r':
 			test_options->num_round = atoi(optarg);
 			break;
+		case 'g':
+			test_options->num_group = atoi(optarg);
+			break;
+		case 'j':
+			test_options->num_join = atoi(optarg);
+			break;
 		case 'b':
 			test_options->max_burst = atoi(optarg);
 			break;
@@ -145,9 +165,34 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	}
 
 	if ((test_options->num_queue + test_options->num_dummy) > MAX_QUEUES) {
-		printf("Error: Too many queues. Max supported %i\n.",
+		printf("Error: Too many queues. Max supported %i.\n",
 		       MAX_QUEUES);
 		ret = -1;
+	}
+
+	num_group = test_options->num_group;
+	num_join  = test_options->num_join;
+	if (num_group > MAX_GROUPS) {
+		printf("Error: Too many groups. Max supported %i.\n",
+		       MAX_GROUPS);
+		ret = -1;
+	}
+
+	if (num_join > num_group) {
+		printf("Error: num_join (%u) larger than num_group (%u).\n",
+		       num_join, num_group);
+		ret = -1;
+	}
+
+	if (num_join && num_group > (test_options->num_cpu * num_join)) {
+		printf("WARNING: Too many groups (%u). Some groups (%u) are not served.\n\n",
+		       num_group,
+		       num_group - (test_options->num_cpu * num_join));
+
+		if (test_options->forward) {
+			printf("Error: Cannot forward when some queues are not served.\n");
+			ret = -1;
+		}
 	}
 
 	test_options->tot_queue = test_options->num_queue +
@@ -211,6 +256,8 @@ static int create_pool(test_global_t *global)
 	uint32_t tot_queue = test_options->tot_queue;
 	uint32_t tot_event = test_options->tot_event;
 	uint32_t queue_size = test_options->queue_size;
+	uint32_t num_group = test_options->num_group;
+	uint32_t num_join = test_options->num_join;
 	int      forward   = test_options->forward;
 
 	printf("\nScheduler performance test\n");
@@ -218,6 +265,8 @@ static int create_pool(test_global_t *global)
 	printf("  num queues       %u\n", num_queue);
 	printf("  num empty queues %u\n", num_dummy);
 	printf("  total queues     %u\n", tot_queue);
+	printf("  num groups       %u\n", num_group);
+	printf("  num join         %u\n", num_join);
 	printf("  events per queue %u\n", num_event);
 	printf("  queue size       %u\n", queue_size);
 	printf("  max burst size   %u\n", max_burst);
@@ -249,6 +298,46 @@ static int create_pool(test_global_t *global)
 	}
 
 	global->pool = pool;
+
+	return 0;
+}
+
+static int create_groups(test_global_t *global)
+{
+	odp_schedule_capability_t sched_capa;
+	odp_thrmask_t thrmask;
+	uint32_t i;
+	test_options_t *test_options = &global->test_options;
+	uint32_t num_group = test_options->num_group;
+
+	if (num_group == 0)
+		return 0;
+
+	if (odp_schedule_capability(&sched_capa)) {
+		printf("Error: schedule capability failed\n");
+		return -1;
+	}
+
+	if (num_group > sched_capa.max_groups) {
+		printf("Error: Too many sched groups (max_groups capa %u)\n",
+		       sched_capa.max_groups);
+		return -1;
+	}
+
+	odp_thrmask_zero(&thrmask);
+
+	for (i = 0; i < num_group; i++) {
+		odp_schedule_group_t group;
+
+		group = odp_schedule_group_create("test_group", &thrmask);
+
+		if (group == ODP_SCHED_GROUP_INVALID) {
+			printf("Error: Group create failed %u\n", i);
+			return -1;
+		}
+
+		global->group[i] = group;
+	}
 
 	return 0;
 }
@@ -370,6 +459,27 @@ static int destroy_queues(test_global_t *global)
 				printf("Error: Queue destroy failed %u\n", i);
 				return -1;
 			}
+		}
+	}
+
+	return 0;
+}
+
+static int destroy_groups(test_global_t *global)
+{
+	uint32_t i;
+	test_options_t *test_options = &global->test_options;
+	uint32_t num_group = test_options->num_group;
+
+	if (num_group == 0)
+		return 0;
+
+	for (i = 0; i < num_group; i++) {
+		odp_schedule_group_t group = global->group[i];
+
+		if (odp_schedule_group_destroy(group)) {
+			printf("Error: Group destroy failed %u\n", i);
+			return -1;
 		}
 	}
 
@@ -614,6 +724,9 @@ int main(int argc, char **argv)
 	if (create_pool(global))
 		return -1;
 
+	if (create_groups(global))
+		return -1;
+
 	if (create_queues(global))
 		return -1;
 
@@ -624,6 +737,9 @@ int main(int argc, char **argv)
 	odph_odpthreads_join(global->thread_tbl);
 
 	if (destroy_queues(global))
+		return -1;
+
+	if (destroy_groups(global))
 		return -1;
 
 	print_stat(global);
