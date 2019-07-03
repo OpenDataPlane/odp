@@ -200,6 +200,7 @@ static int create_pool(test_global_t *global)
 	odp_pool_capability_t pool_capa;
 	odp_pool_param_t pool_param;
 	odp_pool_t pool;
+	uint32_t max_num;
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_cpu   = test_options->num_cpu;
 	uint32_t num_queue = test_options->num_queue;
@@ -229,8 +230,10 @@ static int create_pool(test_global_t *global)
 		return -1;
 	}
 
-	if (tot_event > pool_capa.buf.max_num) {
-		printf("Max events supported %u\n", pool_capa.buf.max_num);
+	max_num = pool_capa.buf.max_num;
+
+	if (max_num && tot_event > max_num) {
+		printf("Error: max events supported %u\n", max_num);
 		return -1;
 	}
 
