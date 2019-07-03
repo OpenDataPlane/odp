@@ -260,11 +260,10 @@ static int create_queues(test_global_t *global)
 	odp_buffer_t buf;
 	odp_schedule_sync_t sync;
 	const char *type_str;
-	uint32_t i, j;
+	uint32_t i, j, first;
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_event = test_options->num_event;
 	uint32_t queue_size = test_options->queue_size;
-	uint32_t num_queue = test_options->num_queue;
 	uint32_t tot_queue = test_options->tot_queue;
 	int type = test_options->queue_type;
 	odp_pool_t pool = global->pool;
@@ -313,15 +312,19 @@ static int create_queues(test_global_t *global)
 		}
 	}
 
-	/* Store events into queues. Dummy queues are left empty. */
-	for (i = 0; i < num_queue; i++) {
+	first = test_options->num_dummy;
+
+	/* Store events into queues. Dummy queues are allocated from
+	 * the beginning of the array, so that usage of those affect allocation
+	 * of active queues. Dummy queues are left empty. */
+	for (i = first; i < tot_queue; i++) {
 		queue = global->queue[i];
 
 		if (test_options->forward) {
 			uint32_t next = i + 1;
 
-			if (next == num_queue)
-				next = 0;
+			if (next == tot_queue)
+				next = first;
 
 			if (odp_queue_context_set(queue, &global->queue[next],
 						  sizeof(odp_queue_t))) {
