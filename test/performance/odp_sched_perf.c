@@ -31,6 +31,7 @@ typedef struct test_options_t {
 	uint32_t queue_size;
 	uint32_t tot_queue;
 	uint32_t tot_event;
+	uint64_t wait_ns;
 
 } test_options_t;
 
@@ -40,6 +41,7 @@ typedef struct test_stat_t {
 	uint64_t events;
 	uint64_t nsec;
 	uint64_t cycles;
+	uint64_t waits;
 
 } test_stat_t;
 
@@ -85,6 +87,7 @@ static void print_usage(void)
 	       "  -b, --burst            Maximum number of events per operation. Default: 100.\n"
 	       "  -t, --type             Queue type. 0: parallel, 1: atomic, 2: ordered. Default: 0.\n"
 	       "  -f, --forward          0: Keep event in the original queue, 1: Forward event to the next queue. Default: 0.\n"
+	       "  -w, --wait_ns          Number of nsec to wait before enqueueing events. Default: 0.\n"
 	       "  -h, --help             This help\n"
 	       "\n");
 }
@@ -107,11 +110,12 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"burst",     required_argument, NULL, 'b'},
 		{"type",      required_argument, NULL, 't'},
 		{"forward",   required_argument, NULL, 'f'},
+		{"wait_ns",   required_argument, NULL, 'w'},
 		{"help",      no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:q:d:e:r:g:j:b:t:f:h";
+	static const char *shortopts = "+c:q:d:e:r:g:j:b:t:f:w:h";
 
 	test_options->num_cpu    = 1;
 	test_options->num_queue  = 1;
@@ -123,6 +127,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->max_burst  = 100;
 	test_options->queue_type = 0;
 	test_options->forward    = 0;
+	test_options->wait_ns    = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -160,6 +165,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 'f':
 			test_options->forward = atoi(optarg);
+			break;
+		case 'w':
+			test_options->wait_ns = atoll(optarg);
 			break;
 		case 'h':
 			/* fall through */
@@ -265,6 +273,7 @@ static int create_pool(test_global_t *global)
 	uint32_t num_group = test_options->num_group;
 	uint32_t num_join = test_options->num_join;
 	int      forward   = test_options->forward;
+	uint64_t wait_ns = test_options->wait_ns;
 
 	printf("\nScheduler performance test\n");
 	printf("  num cpu          %u\n", num_cpu);
@@ -279,6 +288,7 @@ static int create_pool(test_global_t *global)
 	printf("  total events     %u\n", tot_event);
 	printf("  num rounds       %u\n", num_round);
 	printf("  forward events   %i\n", forward ? 1 : 0);
+	printf("  wait nsec        %" PRIu64 "\n", wait_ns);
 
 	if (odp_pool_capability(&pool_capa)) {
 		printf("Error: Pool capa failed.\n");
@@ -548,7 +558,7 @@ static int test_sched(void *arg)
 	int num, num_enq, ret, thr;
 	uint32_t i, rounds;
 	uint64_t c1, c2, cycles, nsec;
-	uint64_t events, enqueues;
+	uint64_t events, enqueues, waits;
 	odp_time_t t1, t2;
 	odp_queue_t queue;
 	odp_queue_t *next;
@@ -559,6 +569,7 @@ static int test_sched(void *arg)
 	uint32_t max_burst = test_options->max_burst;
 	uint32_t num_group = test_options->num_group;
 	int forward = test_options->forward;
+	uint64_t wait_ns = test_options->wait_ns;
 	odp_event_t ev[max_burst];
 
 	thr = odp_thread_id();
@@ -598,6 +609,7 @@ static int test_sched(void *arg)
 
 	enqueues = 0;
 	events = 0;
+	waits = 0;
 	ret = 0;
 
 	/* Start all workers at the same time */
@@ -617,6 +629,11 @@ static int test_sched(void *arg)
 			if (odp_unlikely(forward)) {
 				next  = odp_queue_context(queue);
 				queue = *next;
+			}
+
+			if (odp_unlikely(wait_ns)) {
+				waits++;
+				odp_time_wait_ns(wait_ns);
 			}
 
 			while (num) {
@@ -661,6 +678,7 @@ static int test_sched(void *arg)
 	global->stat[thr].events   = events;
 	global->stat[thr].nsec     = nsec;
 	global->stat[thr].cycles   = cycles;
+	global->stat[thr].waits    = waits;
 
 	/* Pause scheduling before thread exit */
 	odp_schedule_pause();
@@ -728,17 +746,51 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 	return 0;
 }
 
+static double measure_wait_time_cycles(uint64_t wait_ns)
+{
+	uint64_t i, c1, c2, diff;
+	uint64_t rounds;
+	double wait_cycles;
+
+	if (wait_ns == 0)
+		return 0.0;
+
+	/* Run measurement for 100msec or at least two times, so that effect
+	 * from CPU frequency scaling is minimized. */
+	rounds = (100 * ODP_TIME_MSEC_IN_NS) / wait_ns;
+	if (rounds == 0)
+		rounds = 2;
+
+	c1 = odp_cpu_cycles();
+
+	for (i = 0; i < rounds; i++)
+		odp_time_wait_ns(wait_ns);
+
+	c2 = odp_cpu_cycles();
+	diff = odp_cpu_cycles_diff(c2, c1);
+	wait_cycles = (double)diff / rounds;
+
+	printf("\nMeasured wait cycles: %.3f\n", wait_cycles);
+
+	return wait_cycles;
+}
+
 static void print_stat(test_global_t *global)
 {
 	int i, num;
 	double rounds_ave, enqueues_ave, events_ave, nsec_ave, cycles_ave;
+	double waits_ave, wait_cycles, wait_cycles_ave;
 	test_options_t *test_options = &global->test_options;
 	int num_cpu = test_options->num_cpu;
+	uint64_t wait_ns = test_options->wait_ns;
 	uint64_t rounds_sum = 0;
 	uint64_t enqueues_sum = 0;
 	uint64_t events_sum = 0;
 	uint64_t nsec_sum = 0;
 	uint64_t cycles_sum = 0;
+	uint64_t waits_sum = 0;
+
+	wait_cycles = measure_wait_time_cycles(wait_ns);
 
 	/* Averages */
 	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
@@ -747,6 +799,7 @@ static void print_stat(test_global_t *global)
 		events_sum   += global->stat[i].events;
 		nsec_sum     += global->stat[i].nsec;
 		cycles_sum   += global->stat[i].cycles;
+		waits_sum    += global->stat[i].waits;
 	}
 
 	if (rounds_sum == 0) {
@@ -759,6 +812,8 @@ static void print_stat(test_global_t *global)
 	events_ave   = events_sum / num_cpu;
 	nsec_ave     = nsec_sum / num_cpu;
 	cycles_ave   = cycles_sum / num_cpu;
+	waits_ave    = waits_sum / num_cpu;
+	wait_cycles_ave = waits_ave * wait_cycles;
 	num = 0;
 
 	printf("\n");
@@ -788,6 +843,10 @@ static void print_stat(test_global_t *global)
 	       cycles_ave / rounds_ave);
 	printf("  cycles per event:         %.3f\n",
 	       cycles_ave / events_ave);
+	if (wait_ns) {
+		printf("    without wait_ns cycles: %.3f\n",
+		       (cycles_ave - wait_cycles_ave) / events_ave);
+	}
 	printf("  ave events received:      %.3f\n",
 	       events_ave / rounds_ave);
 	printf("  rounds per sec:           %.3f M\n",
