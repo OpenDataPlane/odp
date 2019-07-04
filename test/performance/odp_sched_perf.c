@@ -43,17 +43,23 @@ typedef struct test_stat_t {
 
 } test_stat_t;
 
+typedef struct thread_arg_t {
+	void *global;
+	int first_group;
+
+} thread_arg_t;
+
 typedef struct test_global_t {
 	test_options_t test_options;
-
 	odp_schedule_config_t schedule_config;
 	odp_barrier_t barrier;
 	odp_pool_t pool;
 	odp_cpumask_t cpumask;
 	odp_queue_t queue[MAX_QUEUES];
 	odp_schedule_group_t group[MAX_GROUPS];
-	odph_odpthread_t thread_tbl[ODP_THREAD_COUNT_MAX];
+	odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
 	test_stat_t stat[ODP_THREAD_COUNT_MAX];
+	thread_arg_t thread_arg[ODP_THREAD_COUNT_MAX];
 
 } test_global_t;
 
@@ -354,6 +360,7 @@ static int create_queues(test_global_t *global)
 	uint32_t num_event = test_options->num_event;
 	uint32_t queue_size = test_options->queue_size;
 	uint32_t tot_queue = test_options->tot_queue;
+	uint32_t num_group = test_options->num_group;
 	int type = test_options->queue_type;
 	odp_pool_t pool = global->pool;
 
@@ -391,6 +398,14 @@ static int create_queues(test_global_t *global)
 	queue_param.size = queue_size;
 
 	for (i = 0; i < tot_queue; i++) {
+		if (num_group) {
+			odp_schedule_group_t group;
+
+			/* Divide all queues evenly into groups */
+			group = global->group[i % num_group];
+			queue_param.sched.group = group;
+		}
+
 		queue = odp_queue_create(NULL, &queue_param);
 
 		global->queue[i] = queue;
@@ -440,6 +455,44 @@ static int create_queues(test_global_t *global)
 	return 0;
 }
 
+static int join_group(test_global_t *global, int grp_index, int thr)
+{
+	odp_thrmask_t thrmask;
+	odp_schedule_group_t group;
+
+	odp_thrmask_zero(&thrmask);
+	odp_thrmask_set(&thrmask, thr);
+	group = global->group[grp_index];
+
+	if (odp_schedule_group_join(group, &thrmask)) {
+		printf("Error: Group %i join failed (thr %i)\n",
+		       grp_index, thr);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int join_all_groups(test_global_t *global, int thr)
+{
+	uint32_t i;
+	test_options_t *test_options = &global->test_options;
+	uint32_t num_group = test_options->num_group;
+
+	if (num_group == 0)
+		return 0;
+
+	for (i = 0; i < num_group; i++) {
+		if (join_group(global, i, thr)) {
+			printf("Error: Group %u join failed (thr %i)\n",
+			       i, thr);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
 static int destroy_queues(test_global_t *global)
 {
 	uint32_t i;
@@ -447,6 +500,10 @@ static int destroy_queues(test_global_t *global)
 	uint64_t wait;
 	test_options_t *test_options = &global->test_options;
 	uint32_t tot_queue = test_options->tot_queue;
+	int thr = odp_thread_id();
+
+	if (join_all_groups(global, thr))
+		return -1;
 
 	wait = odp_schedule_wait_time(200 * ODP_TIME_MSEC_IN_NS);
 
@@ -495,14 +552,46 @@ static int test_sched(void *arg)
 	odp_time_t t1, t2;
 	odp_queue_t queue;
 	odp_queue_t *next;
-	test_global_t *global = arg;
+	thread_arg_t *thread_arg = arg;
+	test_global_t *global = thread_arg->global;
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_round = test_options->num_round;
 	uint32_t max_burst = test_options->max_burst;
+	uint32_t num_group = test_options->num_group;
 	int forward = test_options->forward;
 	odp_event_t ev[max_burst];
 
 	thr = odp_thread_id();
+
+	if (num_group) {
+		uint32_t num_join = test_options->num_join;
+
+		if (num_join) {
+			int pos = 0;
+			int n = 512;
+			char str[n];
+			int group_index = thread_arg->first_group;
+
+			pos += snprintf(&str[pos], n - pos,
+					"Thread %i joined groups:", thr);
+
+			for (i = 0; i < num_join; i++) {
+				if (join_group(global, group_index, thr))
+					return -1;
+
+				pos += snprintf(&str[pos], n - pos, " %i",
+						group_index);
+
+				group_index = (group_index + 1) % num_group;
+			}
+
+			printf("%s\n", str);
+
+		} else {
+			if (join_all_groups(global, thr))
+				return -1;
+		}
+	}
 
 	for (i = 0; i < max_burst; i++)
 		ev[i] = ODP_EVENT_INVALID;
@@ -595,19 +684,46 @@ static int test_sched(void *arg)
 
 static int start_workers(test_global_t *global, odp_instance_t instance)
 {
-	odph_odpthread_params_t thr_params;
+	odph_thread_common_param_t thr_common;
+	int i, ret;
 	test_options_t *test_options = &global->test_options;
-	int num_cpu = test_options->num_cpu;
+	uint32_t num_group = test_options->num_group;
+	uint32_t num_join  = test_options->num_join;
+	int num_cpu   = test_options->num_cpu;
+	odph_thread_param_t thr_param[num_cpu];
 
-	memset(&thr_params, 0, sizeof(thr_params));
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = instance;
-	thr_params.start    = test_sched;
-	thr_params.arg      = global;
+	memset(global->thread_tbl, 0, sizeof(global->thread_tbl));
+	memset(thr_param, 0, sizeof(thr_param));
+	memset(&thr_common, 0, sizeof(thr_common));
 
-	if (odph_odpthreads_create(global->thread_tbl, &global->cpumask,
-				   &thr_params) != num_cpu)
+	thr_common.instance = instance;
+	thr_common.cpumask  = &global->cpumask;
+
+	for (i = 0; i < num_cpu; i++) {
+		thr_param[i].start    = test_sched;
+		thr_param[i].arg      = &global->thread_arg[i];
+		thr_param[i].thr_type = ODP_THREAD_WORKER;
+
+		global->thread_arg[i].global = global;
+		global->thread_arg[i].first_group = 0;
+
+		if (num_group && num_join) {
+			/* Each thread joins only num_join groups, starting
+			 * from this group index and wraping around the group
+			 * table. */
+			int first_group = (i * num_join) % num_group;
+
+			global->thread_arg[i].first_group = first_group;
+		}
+	}
+
+	ret = odph_thread_create(global->thread_tbl, &thr_common, thr_param,
+				 num_cpu);
+
+	if (ret != num_cpu) {
+		printf("Error: thread create failed %i\n", ret);
 		return -1;
+	}
 
 	return 0;
 }
@@ -645,6 +761,7 @@ static void print_stat(test_global_t *global)
 	cycles_ave   = cycles_sum / num_cpu;
 	num = 0;
 
+	printf("\n");
 	printf("RESULTS - per thread (Million events per sec):\n");
 	printf("----------------------------------------------\n");
 	printf("        1      2      3      4      5      6      7      8      9     10");
@@ -734,7 +851,7 @@ int main(int argc, char **argv)
 	start_workers(global, instance);
 
 	/* Wait workers to exit */
-	odph_odpthreads_join(global->thread_tbl);
+	odph_thread_join(global->thread_tbl, global->test_options.num_cpu);
 
 	if (destroy_queues(global))
 		return -1;
