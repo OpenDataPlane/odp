@@ -82,10 +82,10 @@ ODP_STATIC_ASSERT(ODP_THREAD_COUNT_MAX < (64 * 1024),
 		  "Max_64k_threads_supported");
 
 /* Mask of queues per priority */
-typedef uint8_t pri_mask_t;
+typedef uint8_t prio_q_mask_t;
 
-ODP_STATIC_ASSERT((8 * sizeof(pri_mask_t)) >= MAX_SPREAD,
-		  "pri_mask_t_is_too_small");
+ODP_STATIC_ASSERT((8 * sizeof(prio_q_mask_t)) >= MAX_SPREAD,
+		  "prio_q_mask_t_is_too_small");
 
 /* Start of named groups in group mask arrays */
 #define SCHED_GROUP_NAMED (ODP_SCHED_GROUP_CONTROL + 1)
@@ -182,7 +182,7 @@ typedef struct {
 
 	uint16_t         max_spread;
 	uint32_t         ring_mask;
-	pri_mask_t       pri_mask[NUM_PRIO];
+	prio_q_mask_t    prio_q_mask[NUM_PRIO];
 	odp_spinlock_t   mask_lock;
 	odp_atomic_u32_t grp_epoch;
 	odp_shm_t        shm;
@@ -202,7 +202,7 @@ typedef struct {
 	/* Scheduler priority queues */
 	prio_queue_t prio_q[NUM_SCHED_GRPS][NUM_PRIO][MAX_SPREAD];
 
-	uint32_t pri_count[NUM_PRIO][MAX_SPREAD];
+	uint32_t prio_q_count[NUM_PRIO][MAX_SPREAD];
 
 	odp_thrmask_t  mask_all;
 	odp_spinlock_t grp_lock;
@@ -576,8 +576,8 @@ static int schedule_create_queue(uint32_t queue_index,
 	odp_spinlock_lock(&sched->mask_lock);
 
 	/* update scheduler prio queue usage status */
-	sched->pri_mask[prio] |= 1 << spread;
-	sched->pri_count[prio][spread]++;
+	sched->prio_q_mask[prio] |= 1 << spread;
+	sched->prio_q_count[prio][spread]++;
 
 	odp_spinlock_unlock(&sched->mask_lock);
 
@@ -617,10 +617,10 @@ static void schedule_destroy_queue(uint32_t queue_index)
 	odp_spinlock_lock(&sched->mask_lock);
 
 	/* Clear mask bit when last queue is removed*/
-	sched->pri_count[prio][spread]--;
+	sched->prio_q_count[prio][spread]--;
 
-	if (sched->pri_count[prio][spread] == 0)
-		sched->pri_mask[prio] &= (uint8_t)(~(1 << spread));
+	if (sched->prio_q_count[prio][spread] == 0)
+		sched->prio_q_mask[prio] &= (uint8_t)(~(1 << spread));
 
 	odp_spinlock_unlock(&sched->mask_lock);
 
@@ -956,7 +956,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 	/* Schedule events */
 	for (prio = 0; prio < NUM_PRIO; prio++) {
 
-		if (sched->pri_mask[prio] == 0)
+		if (sched->prio_q_mask[prio] == 0)
 			continue;
 
 		burst_def = sched->config.burst_default[prio];
@@ -978,7 +978,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 				id = 0;
 
 			/* No queues created for this priority queue */
-			if (odp_unlikely((sched->pri_mask[prio] & (1 << id))
+			if (odp_unlikely((sched->prio_q_mask[prio] & (1 << id))
 			    == 0)) {
 				i++;
 				id++;
