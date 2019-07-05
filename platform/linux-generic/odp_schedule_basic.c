@@ -352,8 +352,9 @@ static int read_config_file(sched_global_t *sched)
 	return 0;
 }
 
-static inline uint8_t prio_spread_index(uint32_t index)
+static inline uint8_t spread_index(uint32_t index)
 {
+	/* thread/queue index to spread index */
 	return index % sched->config.num_spread;
 }
 
@@ -370,15 +371,15 @@ static void sched_local_init(void)
 	sched_local.sync_ctx    = NO_SYNC_CONTEXT;
 	sched_local.stash.queue = ODP_QUEUE_INVALID;
 
-	spread = prio_spread_index(sched_local.thr);
+	spread = spread_index(sched_local.thr);
 	prefer_ratio = sched->config.prefer_ratio;
 
 	for (i = 0; i < SPREAD_TBL_SIZE; i++) {
 		sched_local.spread_tbl[i] = spread;
 
 		if (num_spread > 1 && (i % prefer_ratio) == 0) {
-			sched_local.spread_tbl[i] = prio_spread_index(spread +
-								      offset);
+			sched_local.spread_tbl[i] = spread_index(spread +
+								 offset);
 			offset++;
 			if (offset == num_spread)
 				offset = 1;
@@ -559,56 +560,30 @@ static inline int prio_level_from_api(int api_prio)
 	return schedule_max_prio() - api_prio;
 }
 
-static void pri_set(int id, int prio)
-{
-	odp_spinlock_lock(&sched->mask_lock);
-	sched->pri_mask[prio] |= 1 << id;
-	sched->pri_count[prio][id]++;
-	odp_spinlock_unlock(&sched->mask_lock);
-}
-
-static void pri_clr(int id, int prio)
-{
-	odp_spinlock_lock(&sched->mask_lock);
-
-	/* Clear mask bit when last queue is removed*/
-	sched->pri_count[prio][id]--;
-
-	if (sched->pri_count[prio][id] == 0)
-		sched->pri_mask[prio] &= (uint8_t)(~(1 << id));
-
-	odp_spinlock_unlock(&sched->mask_lock);
-}
-
-static void pri_set_queue(uint32_t queue_index, int prio)
-{
-	uint8_t id = prio_spread_index(queue_index);
-
-	return pri_set(id, prio);
-}
-
-static void pri_clr_queue(uint32_t queue_index, int prio)
-{
-	uint8_t id = prio_spread_index(queue_index);
-	pri_clr(id, prio);
-}
-
 static int schedule_create_queue(uint32_t queue_index,
 				 const odp_schedule_param_t *sched_param)
 {
 	uint32_t ring_size;
 	int i;
 	int prio = prio_level_from_api(sched_param->prio);
+	uint8_t spread = spread_index(queue_index);
 
 	if (_odp_schedule_configured == 0) {
 		ODP_ERR("Scheduler has not been configured\n");
 		return -1;
 	}
 
-	pri_set_queue(queue_index, prio);
+	odp_spinlock_lock(&sched->mask_lock);
+
+	/* update scheduler prio queue usage status */
+	sched->pri_mask[prio] |= 1 << spread;
+	sched->pri_count[prio][spread]++;
+
+	odp_spinlock_unlock(&sched->mask_lock);
+
 	sched->queue[queue_index].grp  = sched_param->group;
 	sched->queue[queue_index].prio = prio;
-	sched->queue[queue_index].spread = prio_spread_index(queue_index);
+	sched->queue[queue_index].spread = spread;
 	sched->queue[queue_index].sync = sched_param->sync;
 	sched->queue[queue_index].order_lock_count = sched_param->lock_count;
 	sched->queue[queue_index].poll_pktin  = 0;
@@ -637,8 +612,18 @@ static inline uint8_t sched_sync_type(uint32_t queue_index)
 static void schedule_destroy_queue(uint32_t queue_index)
 {
 	int prio = sched->queue[queue_index].prio;
+	uint8_t spread = spread_index(queue_index);
 
-	pri_clr_queue(queue_index, prio);
+	odp_spinlock_lock(&sched->mask_lock);
+
+	/* Clear mask bit when last queue is removed*/
+	sched->pri_count[prio][spread]--;
+
+	if (sched->pri_count[prio][spread] == 0)
+		sched->pri_mask[prio] &= (uint8_t)(~(1 << spread));
+
+	odp_spinlock_unlock(&sched->mask_lock);
+
 	sched->queue[queue_index].grp    = 0;
 	sched->queue[queue_index].prio   = 0;
 	sched->queue[queue_index].spread = 0;
