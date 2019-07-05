@@ -593,8 +593,8 @@ static void pri_clr_queue(uint32_t queue_index, int prio)
 	pri_clr(id, prio);
 }
 
-static int schedule_init_queue(uint32_t queue_index,
-			       const odp_schedule_param_t *sched_param)
+static int schedule_create_queue(uint32_t queue_index,
+				 const odp_schedule_param_t *sched_param)
 {
 	uint32_t ring_size;
 	int i;
@@ -1598,7 +1598,7 @@ const schedule_fn_t schedule_basic_fn = {
 	.thr_add = schedule_thr_add,
 	.thr_rem = schedule_thr_rem,
 	.num_grps = schedule_num_grps,
-	.init_queue = schedule_init_queue,
+	.create_queue = schedule_create_queue,
 	.destroy_queue = schedule_destroy_queue,
 	.sched_queue = schedule_sched_queue,
 	.ord_enq_multi = schedule_ord_enq_multi,
