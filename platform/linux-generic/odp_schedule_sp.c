@@ -376,7 +376,7 @@ static int num_grps(void)
 	return NUM_GROUP - NUM_STATIC_GROUP;
 }
 
-static int init_queue(uint32_t qi, const odp_schedule_param_t *sched_param)
+static int create_queue(uint32_t qi, const odp_schedule_param_t *sched_param)
 {
 	sched_group_t *sched_group = &sched_global->sched_group;
 	odp_schedule_group_t group = sched_param->group;
@@ -969,7 +969,7 @@ const schedule_fn_t schedule_sp_fn = {
 	.thr_add       = thr_add,
 	.thr_rem       = thr_rem,
 	.num_grps      = num_grps,
-	.init_queue    = init_queue,
+	.create_queue  = create_queue,
 	.destroy_queue = destroy_queue,
 	.sched_queue   = sched_queue,
 	.ord_enq_multi = ord_enq_multi,
