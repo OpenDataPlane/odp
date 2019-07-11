@@ -32,6 +32,8 @@ static global_data_t *global;
 static void sig_handler(int signo ODP_UNUSED)
 {
 	printf("sig_handler!\n");
+	if (global == NULL)
+		return;
 	global->exit_thr = 1;
 }
 
@@ -281,7 +283,9 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_shm_free(global->shm)) {
+	global = NULL;
+	odp_mb_full();
+	if (odp_shm_free(shm)) {
 		printf("Error: shm free global data\n");
 		exit(EXIT_FAILURE);
 	}

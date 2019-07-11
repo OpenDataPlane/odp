@@ -172,7 +172,8 @@ static void print_global_stats(int num_workers);
 static void sig_handler(int signo ODP_UNUSED)
 {
 	int i;
-
+	if (args == NULL)
+		return;
 	for (i = 0; i < args->thread_cnt; i++)
 		args->thread[i].stop = 1;
 }
@@ -1408,6 +1409,8 @@ int main(int argc, char *argv[])
 	free(ifs);
 	free(args->appl.if_names);
 	free(args->appl.if_str);
+	args = NULL;
+	odp_mb_full();
 	if (0 != odp_pool_destroy(pool))
 		fprintf(stderr, "unable to destroy pool \"pool\"\n");
 	if (0 != odp_shm_free(shm))
