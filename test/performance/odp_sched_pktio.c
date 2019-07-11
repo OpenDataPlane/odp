@@ -1544,6 +1544,8 @@ quit:
 		if (test_global->tx_pkt_sum > TEST_PASSED_LIMIT)
 			ret += 2;
 	}
+	test_global = NULL;
+	odp_mb_full();
 
 	if (odp_shm_free(shm)) {
 		printf("Error: shm free failed.\n");
