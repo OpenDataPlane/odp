@@ -178,6 +178,8 @@ static args_t *gbl_args;
 
 static void sig_handler(int signo ODP_UNUSED)
 {
+	if (gbl_args == NULL)
+		return;
 	gbl_args->exit_threads = 1;
 }
 
@@ -1724,6 +1726,8 @@ int main(int argc, char *argv[])
 
 	free(gbl_args->appl.if_names);
 	free(gbl_args->appl.if_str);
+	gbl_args = NULL;
+	odp_mb_full();
 
 	if (odp_pool_destroy(pool)) {
 		LOG_ERR("Error: pool destroy\n");
