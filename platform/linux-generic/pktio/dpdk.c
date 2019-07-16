@@ -537,7 +537,7 @@ uint32_t _odp_dpdk_pool_obj_size(pool_t *pool, uint32_t block_size)
 	return total_size;
 }
 
-static struct rte_mempool_ops ops_stack = {
+static struct rte_mempool_ops odp_pool_ops = {
 	.name = "odp_pool",
 	.alloc = pool_alloc,
 	.free = pool_free,
@@ -546,7 +546,7 @@ static struct rte_mempool_ops ops_stack = {
 	.get_count = pool_get_count
 };
 
-MEMPOOL_REGISTER_OPS(ops_stack);
+MEMPOOL_REGISTER_OPS(odp_pool_ops);
 
 static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 			      odp_packet_t pkt_table[],
