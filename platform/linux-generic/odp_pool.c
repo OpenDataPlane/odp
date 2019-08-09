@@ -560,11 +560,27 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	strcpy(&uarea_name[name_len], postfix);
 
 	pool->params = *params;
+	pool->block_offset = 0;
 
 	if (params->type == ODP_POOL_PACKET) {
+		uint32_t dpdk_obj_size;
+
 		hdr_size = ROUNDUP_CACHE_LINE(sizeof(odp_packet_hdr_t));
-		block_size = ROUNDUP_CACHE_LINE(hdr_size + align + headroom +
-						seg_len + tailroom);
+		block_size = hdr_size + align + headroom + seg_len + tailroom;
+		/* Calculate extra space required for storing DPDK objects and
+		 * mbuf headers. NOP if no DPDK pktio used or zero-copy mode is
+		 * disabled. */
+		dpdk_obj_size = _odp_dpdk_pool_obj_size(pool, block_size);
+		if (!dpdk_obj_size) {
+			ODP_ERR("Calculating DPDK mempool obj size failed\n");
+			return ODP_POOL_INVALID;
+		}
+		if (dpdk_obj_size != block_size) {
+			shmflags |= ODP_SHM_HP;
+			block_size = dpdk_obj_size;
+		} else {
+			block_size = ROUNDUP_CACHE_LINE(block_size);
+		}
 	} else {
 		/* Header size is rounded up to cache line size, so the
 		 * following data can be cache line aligned without extra
@@ -577,22 +593,6 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 				ROUNDUP_CACHE_LINE(sizeof(odp_timeout_hdr_t));
 
 		block_size = ROUNDUP_CACHE_LINE(hdr_size + align_pad + seg_len);
-	}
-
-	/* Calculate extra space required for storing DPDK objects and mbuf
-	 * headers. NOP if zero-copy is disabled. */
-	pool->block_offset = 0;
-	if (params->type == ODP_POOL_PACKET) {
-		uint32_t dpdk_obj_size;
-
-		dpdk_obj_size = _odp_dpdk_pool_obj_size(pool, block_size);
-		if (!dpdk_obj_size) {
-			ODP_ERR("Calculating DPDK mempool obj size failed\n");
-			return ODP_POOL_INVALID;
-		}
-		if (dpdk_obj_size != block_size)
-			shmflags |= ODP_SHM_HP;
-		block_size = dpdk_obj_size;
 	}
 
 	/* Allocate extra memory for skipping packet buffers which cross huge
