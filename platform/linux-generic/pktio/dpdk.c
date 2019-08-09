@@ -79,8 +79,6 @@ ODP_STATIC_ASSERT(CONFIG_PACKET_HEADROOM == RTE_PKTMBUF_HEADROOM,
 #define DPDK_MBUF_BUF_SIZE RTE_MBUF_DEFAULT_BUF_SIZE
 #define DPDK_MEMPOOL_CACHE_SIZE 64
 
-#define MBUF_OFFSET (ROUNDUP_CACHE_LINE(sizeof(struct rte_mbuf)))
-
 ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
 		  (DPDK_MEMPOOL_CACHE_SIZE <= RTE_MEMPOOL_CACHE_MAX_SIZE) &&
 		  (DPDK_MEMPOOL_CACHE_SIZE <= DPDK_MBUF_BUF_SIZE * 10 / 15)
@@ -131,6 +129,16 @@ typedef struct ODP_ALIGNED_CACHE {
 
 ODP_STATIC_ASSERT(PKTIO_PRIVATE_SIZE >= sizeof(pkt_dpdk_t),
 		  "PKTIO_PRIVATE_SIZE too small");
+
+static inline struct rte_mbuf *mbuf_from_pkt_hdr(odp_packet_hdr_t *pkt_hdr)
+{
+	return ((struct rte_mbuf *)pkt_hdr) - 1;
+}
+
+static inline odp_packet_hdr_t *pkt_hdr_from_mbuf(struct rte_mbuf *mbuf)
+{
+	return (odp_packet_hdr_t *)(mbuf + 1);
+}
 
 static inline pkt_dpdk_t *pkt_priv(pktio_entry_t *pktio_entry)
 {
@@ -259,7 +267,7 @@ static void pktmbuf_init(struct rte_mempool *mp, void *opaque_arg ODP_UNUSED,
 	odp_packet_hdr_t *pkt_hdr;
 	void *buf_addr;
 
-	pkt_hdr = (odp_packet_hdr_t *)(uintptr_t)((uint8_t *)m + MBUF_OFFSET);
+	pkt_hdr = pkt_hdr_from_mbuf(m);
 	buf_addr = pkt_hdr->buf_hdr.base_data - RTE_PKTMBUF_HEADROOM;
 
 	mbuf_size = sizeof(struct rte_mbuf);
@@ -373,8 +381,9 @@ static int pool_enqueue(struct rte_mempool *mp,
 		return 0;
 
 	for (i = 0; i < num; i++) {
-		odp_packet_hdr_t *pkt_hdr = (odp_packet_hdr_t *)(uintptr_t)
-				((uint8_t *)obj_table[i] + MBUF_OFFSET);
+		struct rte_mbuf *mbuf = (struct rte_mbuf *)obj_table[i];
+		odp_packet_hdr_t *pkt_hdr = pkt_hdr_from_mbuf(mbuf);
+
 		pkt_tbl[i] = packet_handle(pkt_hdr);
 	}
 
@@ -404,8 +413,7 @@ static int pool_dequeue_bulk(struct rte_mempool *mp, void **obj_table,
 	for (i = 0; i < pkts; i++) {
 		odp_packet_hdr_t *pkt_hdr = packet_hdr(packet_tbl[i]);
 
-		obj_table[i] = (struct rte_mbuf *)(uintptr_t)
-				((uint8_t *)pkt_hdr - MBUF_OFFSET);
+		obj_table[i] = mbuf_from_pkt_hdr(pkt_hdr);
 	}
 
 	return 0;
@@ -501,12 +509,11 @@ uint32_t _odp_dpdk_pool_obj_size(pool_t *pool, uint32_t block_size)
 		odp_global_rw->dpdk_initialized = 1;
 	}
 
-	block_size += MBUF_OFFSET;
+	block_size += sizeof(struct rte_mbuf);
 	total_size = rte_mempool_calc_obj_size(block_size, MEMPOOL_F_NO_SPREAD,
 					       &sz);
-
 	pool->dpdk_elt_size = sz.elt_size;
-	pool->block_offset = sz.header_size + MBUF_OFFSET;
+	pool->block_offset = sz.header_size + sizeof(struct rte_mbuf);
 
 	return total_size;
 }
@@ -786,8 +793,7 @@ fail:
 
 static inline void prefetch_pkt(struct rte_mbuf *mbuf)
 {
-	odp_packet_hdr_t *pkt_hdr = (odp_packet_hdr_t *)(uintptr_t)
-			((uint8_t *)mbuf + MBUF_OFFSET);
+	odp_packet_hdr_t *pkt_hdr = pkt_hdr_from_mbuf(mbuf);
 	void *data = rte_pktmbuf_mtod(mbuf, char *);
 
 	odp_prefetch(pkt_hdr);
@@ -837,8 +843,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		data = rte_pktmbuf_mtod(mbuf, char *);
 		pkt_len = rte_pktmbuf_pkt_len(mbuf);
 
-		pkt_hdr = (odp_packet_hdr_t *)(uintptr_t)((uint8_t *)mbuf +
-				MBUF_OFFSET);
+		pkt_hdr = pkt_hdr_from_mbuf(mbuf);
 
 		if (pktio_cls_enabled(pktio_entry)) {
 			packet_parse_reset(&parsed_hdr);
@@ -904,8 +909,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 	for (i = 0; i < num; i++) {
 		odp_packet_t pkt = pkt_table[i];
 		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-		struct rte_mbuf *mbuf = (struct rte_mbuf *)(uintptr_t)
-				((uint8_t *)pkt_hdr - MBUF_OFFSET);
+		struct rte_mbuf *mbuf = mbuf_from_pkt_hdr(pkt_hdr);
 		uint16_t pkt_len = odp_packet_len(pkt);
 
 		if (odp_unlikely(pkt_len > pkt_dpdk->mtu))
