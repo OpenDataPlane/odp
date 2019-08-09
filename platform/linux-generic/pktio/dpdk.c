@@ -139,32 +139,6 @@ static inline pkt_dpdk_t *pkt_priv(pktio_entry_t *pktio_entry)
 
 static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 
-#ifndef RTE_BUILD_SHARED_LIB
-#define MEMPOOL_OPS(hdl) \
-extern void mp_hdlr_init_##hdl(void)
-
-MEMPOOL_OPS(ops_mp_mc);
-MEMPOOL_OPS(ops_sp_sc);
-MEMPOOL_OPS(ops_mp_sc);
-MEMPOOL_OPS(ops_sp_mc);
-MEMPOOL_OPS(ops_stack);
-
-/*
- * This function is not called from anywhere, it's only purpose is to make sure
- * that if ODP and DPDK are statically linked to an application, the GCC
- * constructors of mempool handlers are linked as well. Otherwise the linker
- * would omit them. It's not an issue with dynamic linking. */
-void refer_constructors(void);
-void refer_constructors(void)
-{
-	mp_hdlr_init_ops_mp_mc();
-	mp_hdlr_init_ops_sp_sc();
-	mp_hdlr_init_ops_mp_sc();
-	mp_hdlr_init_ops_sp_mc();
-	mp_hdlr_init_ops_stack();
-}
-#endif
-
 static int dpdk_pktio_init(void);
 
 static int pool_alloc(struct rte_mempool *mp);
