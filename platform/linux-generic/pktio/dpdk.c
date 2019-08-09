@@ -149,8 +149,6 @@ static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 
 static int dpdk_pktio_init(void);
 
-static int pool_alloc(struct rte_mempool *mp);
-
 static int lookup_opt(const char *opt_name, const char *drv_name, int *val)
 {
 	const char *base = "pktio_dpdk";
@@ -338,6 +336,8 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 		goto fail;
 	}
 
+	mp->pool_data = pool_entry->pool_hdl;
+
 	if (rte_mempool_set_ops_byname(mp, "odp_pool", pool_entry)) {
 		ODP_ERR("Failed setting mempool operations\n");
 		goto fail;
@@ -348,11 +348,6 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 	mbp_priv.mbuf_priv_size = RTE_ALIGN(sizeof(odp_packet_hdr_t),
 					    RTE_MBUF_PRIV_ALIGN);
 	rte_pktmbuf_pool_init(mp, &mbp_priv);
-
-	if (pool_alloc(mp)) {
-		ODP_ERR("Failed allocating mempool\n");
-		goto fail;
-	}
 
 	num = rte_mempool_populate_iova(mp, (char *)pool_entry->base_addr,
 					RTE_BAD_IOVA, pool_entry->shm_size,
@@ -423,13 +418,8 @@ static int pool_dequeue_bulk(struct rte_mempool *mp, void **obj_table,
 	return 0;
 }
 
-static int pool_alloc(struct rte_mempool *mp)
+static int pool_alloc(struct rte_mempool *mp ODP_UNUSED)
 {
-	pool_t *pool_entry = (pool_t *)mp->pool_config;
-
-	mp->pool_data = pool_entry->pool_hdl;
-	mp->flags |= MEMPOOL_F_POOL_CREATED;
-
 	return 0;
 }
 
