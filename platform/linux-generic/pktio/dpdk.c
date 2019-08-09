@@ -263,25 +263,28 @@ static void pktmbuf_init(struct rte_mempool *mp, void *opaque_arg ODP_UNUSED,
 			 void *_m, unsigned i ODP_UNUSED)
 {
 	struct rte_mbuf *m = _m;
-	uint32_t mbuf_size, buf_len;
+	uint32_t mbuf_size, buf_len, priv_size;
 	odp_packet_hdr_t *pkt_hdr;
 	void *buf_addr;
 
 	pkt_hdr = pkt_hdr_from_mbuf(m);
 	buf_addr = pkt_hdr->buf_hdr.base_data - RTE_PKTMBUF_HEADROOM;
 
+	priv_size = rte_pktmbuf_priv_size(mp);
 	mbuf_size = sizeof(struct rte_mbuf);
 	buf_len = rte_pktmbuf_data_room_size(mp);
 
+	/* odp_packet_hdr_t stored in private data so don't zero */
 	memset(m, 0, mbuf_size);
-	m->priv_size = 0;
+	m->priv_size = priv_size;
 	m->buf_addr = buf_addr;
+
 	m->buf_iova = rte_mem_virt2iova(buf_addr);
+	if (odp_unlikely(m->buf_iova == 0))
+		ODP_ABORT("Bad IO virtual address\n");
+
 	m->buf_len = (uint16_t)buf_len;
 	m->data_off = RTE_PKTMBUF_HEADROOM;
-
-	if (odp_unlikely(m->buf_iova == RTE_BAD_IOVA || m->buf_iova == 0))
-		ODP_ABORT("Failed to map virt addr to iova\n");
 
 	/* Init some constant fields */
 	m->pool = mp;
@@ -341,8 +344,10 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 		goto fail;
 	}
 
-	mbp_priv.mbuf_data_room_size = pool_entry->seg_len;
-	mbp_priv.mbuf_priv_size = 0;
+	mbp_priv.mbuf_data_room_size = pool_entry->headroom +
+			pool_entry->seg_len;
+	mbp_priv.mbuf_priv_size = RTE_ALIGN(sizeof(odp_packet_hdr_t),
+					    RTE_MBUF_PRIV_ALIGN);
 	rte_pktmbuf_pool_init(mp, &mbp_priv);
 
 	if (pool_alloc(mp)) {
