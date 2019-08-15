@@ -1,3 +1,258 @@
+== OpenDataPlane (1.22.0.0)
+=== Summary of Changes
+ODP v1.22.0.0 adds several smaller API changes mainly related to API
+clarification.
+
+=== API Changes
+==== Added `odp_queue_order_t` parameter to `odp_queue_param_t`
+Added a parameter to control if a destination queue does not require event
+re-ordering. By default, event order is maintained for all destination queues as
+before. Application may use `ODP_QUEUE_ORDER_IGNORE` for those queues that are
+used under ordered queue context, but do not require re-ordering and/or do need
+to avoid extra re-ordering delays.
+
+==== Added `ODP_SHM_HP` flag for `odp_shm_reserve()`
+When set, this flag guarantees that the memory reserved by `odp_shm_reserve()`
+is allocated from huge pages. If enough huge page memory is not available the
+call will fail.
+
+==== Improved initialization and termination specification
+Improve specification of initialization and termination steps. Explicitly list
+those functions that may be used before global init (those that are needed for
+setting up parameters). No changes to functionality.
+
+==== Improved queue context specification
+Highlight that queue context default value is NULL. This was defined already in
+`odp_queue_param_t` specification.
+
+==== New Crypto Algorithm Support
+Support for new crypto algorithms is added by defining symbols for:
+
+* `ODP_CIPHER_ALG_3DES_ECB`
+* `ODP_CIPHER_ALG_AES_ECB`
+* `ODP_CIPHER_ALG_AES_CFB128`
+* `ODP_CIPHER_ALG_AES_XTS`
+* `ODP_CIPHER_ALG_AES_EEA2`
+
+Support for new crypto authentication algorithms is added by defining symbols
+for:
+
+* `ODP_AUTH_ALG_SHA224_HMAC`
+* `ODP_AUTH_ALG_AES_EIA2`
+
+Added enumeration for digest (unkeyed) algorithms. They are added as auth
+algorithms with empty key required.
+
+* `ODP_AUTH_ALG_MD5`
+* `ODP_AUTH_ALG_SHA1`
+* `ODP_AUTH_ALG_SHA224`
+* `ODP_AUTH_ALG_SHA256`
+* `ODP_AUTH_ALG_SHA384`
+* `ODP_AUTH_ALG_SHA512`
+
+==== Crypto specification improvements / fixes
+Correct documentation for `ODP_AUTH_ALG_SNOW3G_UIA2` to reference 128-EIA1
+instead of 128-EEA1.
+
+Clarify IV data format and point to proper documents for 3GPP algorithms.
+
+==== Timer specification clarification
+Timer API intention has always been to allow any event type to be used as
+timeout events. Application should use `ODP_EVENT_TIMEOUT` type events
+(`odp_timeout_t`) by default, but also other event types may be used. Also,
+clarified timer set/reset functionality of `odp_timer_set_abs()` and
+`odp_timer_set_rel()` functions.
+
+API functionality not changed, just wording updated.
+
+==== Added timer resolution capability
+Typically, timer implementation needs to trade-off between highest resolution
+and longest timeout. Add new capability information
+(`odp_timer_res_capability_t`) and function to check limits between resolution
+and maximum timeout length.
+
+`odp_timer_res_capability()`::
+This function fills in capability limits for timer pool resolution and min/max
+timeout values, based on either resolution or maximum timeout.
+
+==== Added defines for minute and hour
+Defines for a minute and an hour are useful e.g. when setting timers for a bit
+longer (background, session lifetime, etc.) timeouts.
+
+* `ODP_TIME_MIN_IN_NS`
+* `ODP_TIME_HOUR_IN_NS`
+
+=== Helper Changes
+==== Added helper library version
+Added helper library version defines, so that application can track helper
+version independent of ODP API version:
+
+* `ODPH_VERSION_GENERATION`
+* `ODPH_VERSION_MAJOR`
+* `ODPH_VERSION_MINOR`
+
+Also, added a function for generating easy printout of the versions number.
+
+`odph_version_str()`::
+The version string defines the helper library version the following format:
+ `<generation>.<major>.<minor>`
+
+==== Added new thread create and join functions
+Defined new versions of thread create and join calls. The new calls explicitly
+support thread create and join in multiple steps. Also, per thread
+(`odph_thread_param_t`) and common parameters (`odph_thread_common_param_t`)
+have been improved.
+
+`odph_thread_create()`::
+Create and pin threads (as Linux pthreads or processes)
+
+`odph_thread_join()`::
+Wait previously launched threads to exit
+
+Old functions `odph_odpthreads_create()` and `odph_odpthreads_join()`
+have been deprecated.
+
+==== Added helper debug defines
+Added debug defines/macros into helper API and configure options to
+enable/disable helper debugging. These defines may be used both in helper and
+application code:
+
+* `ODPH_DEBUG` is 1 when helper debugging is enabled (`--enable-helper-debug`)
+* `ODPH_DEBUG_PRINT` is 1 when helper debug printing is enabled (`--enable-helper-debug-print`)
+* `ODPH_ASSERT()` generates assertion code when helper debugging is enabled
+
+=== Validation Test Improvements
+==== Timer Test Improvements
+Enables passing tests on high core count devices.
+
+Test min/max timeouts with the highest resolution and longest timeout
+parameters.
+
+==== Scheduler Test Fixes
+The group test would fail if `odp_schedule(ODP_SCHED_NO_WAIT)` wouldn't return
+any events on the first call.
+
+`scheduler_test_pause_resume()` would get stuck if all events were not
+successfully enqueued.
+
+Fixed a number of synchronization problems revealed by a scheduler
+implementation doing pre-scheduling. Makes sure scheduling context is always
+properly released.
+
+==== Classification Test Fixes
+Some of the test array elements may have not been set if the number of supported
+scheduling priorities was low.
+
+==== Pktio Test Improvements
+Added more debug information on magic number misses.
+
+==== Initialization Test Improvements / Fixes
+Added missing local init/term calls to all test cases.
+
+Added test case to set num_worker and num_control parameters.
+
+Added test case to set not used features flags in init parameters.
+
+==== Buffer Test Fixes
+Test suite missed to output the return value of `odp_cunit_run()`.
+
+==== Queue Test Improvements
+Check that queue context pointer value is NULL by default.
+
+==== IPsec Test Fixes
+Check pktio level inline IPsec support before running tests.
+
+==== Crypto Test Improvements
+Added support for AES-194-GMAC and AES-256-GMAC algorithms.
+
+Added more AES-CBC and AES-CTR test vectors.
+
+=== Example Changes
+==== Added new pipeline example application
+The application receives packets from one interface and passes them through 0-N
+worker stages before outputting them from a second network interface. The RX,
+worker, and TX stages are connected using plain queues and each stage is run on
+a separate CPU thread. Optionally, the worker stages calculate CRC-32C over
+packet data.
+
+==== Time example fixes
+Fix single worker deadlock and run the application as part of `make check`.
+
+==== IPsec example fixes
+Fixed a number of issues in IPsec example applications and run them during
+`make check`.
+
+==== New command line options
+===== l2fwd
+* added `-b` option to control maximum packet receive burst size
+
+===== pool_perf
+* added `-n` option to allocate multiple event bursts before freeing those
+* added `-t` option to select between buffer or packet pool types
+* added `-s` option to select data size
+
+===== sched_perf
+
+* added `-w` option to simulate application work
+* added `-g` and `-j` options to test scheduling with a number of schedule groups
+
+=== Implementation Improvements
+==== Pool Implementation Improvements
+Refactor local buffer caching into separate functions and optimize
+implementation by caching buffer header pointers instead of indices.
+
+New configuration options have been added for local cache
+(`pool:local_cache_size`) and burst sizes (`pool:burst_size`).
+
+Pool implementation has been modified to store buffer headers instead of
+indices to reduce type conversion overhead.
+
+==== Timer Implementation Improvements
+Added warm up period into POSIX timer pool startup to avoid the first timeout
+to slip. Otherwise, timer pthread receives the first signal after about 15ms and
+first timeout of the pool slips.
+
+==== DPDK Packet I/O Improvements
+The zero-copy DPDK pktio implementation has been cleaned up resulting a small
+performance improvement. Linking to DPDK library has also been simplified.
+
+=== Miscellaneous
+* ODP project has been moved from Linaro to OpenFastPath Foundation. Project
+documentation and domain addresses have been updated to reflect this change.
+
+* Added `--without-pcap` configuration option to explicitly build ODP without
+PCAP pktio regardless of if the library is available on the build host.
+
+* Added `--enable-lto` configuration option to build ODP with link time
+optimization (`-flto` flag).
+
+* Travis default distribution is updated to Ubuntu Xenial.
+
+* Added `-O3`, `-O0`, and LTO build tests to Travis
+
+* Supported Netmap version has been bumped to v13.0
+
+=== Bug Fixes
+==== Numbered Bugs / Issues
+* Fixed: https://github.com/OpenDataPlane/odp/issues/827[Issue 827]
+API doc links are not working
+
+* Fixed: https://github.com/OpenDataPlane/odp/issues/817[Issue 817]
+ODP fails to compile with latest OpenSSL
+
+* Fixed: https://github.com/OpenDataPlane/odp/issues/784[Issue 784]
+Bus error
+
+==== Unnumbered Bugs / Issues
+* Fixed build problems on Debian 8
+
+* Fixed AES-GMAC with OpenSSL 1.1.1b and later
+
+* Fixed out-of-tree build
+
+* Fixed pcapng pipe read permissions and made possible to capture traffic from
+multiple interfaces
+
 == OpenDataPlane (1.21.0.0)
 === Summary of Changes
 ODP v1.21.0.0 adds two new API families as well as several small improvements.
