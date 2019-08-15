@@ -348,8 +348,7 @@ static int run_worker_sched_mode(void *arg)
 		unsigned tx_drops;
 		int src_idx;
 
-		pkts = odp_schedule_multi(NULL, ODP_SCHED_NO_WAIT, ev_tbl,
-					  MAX_PKT_BURST);
+		pkts = odp_schedule_multi_no_wait(NULL, ev_tbl, MAX_PKT_BURST);
 
 		if (pkts <= 0)
 			continue;
