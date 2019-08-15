@@ -93,6 +93,7 @@ typedef struct {
 	int chksum;             /* Checksum offload */
 	int sched_mode;         /* Scheduler mode */
 	int num_groups;         /* Number of scheduling groups */
+	int burst_rx;           /* Receive burst size */
 	int verbose;		/* Verbose output */
 } appl_args_t;
 
@@ -296,6 +297,7 @@ static int run_worker_sched_mode(void *arg)
 	int dst_idx;
 	int i;
 	int pktio, num_pktio;
+	uint16_t max_burst;
 	odp_pktout_queue_t pktout[MAX_PKTIOS];
 	odp_queue_t tx_queue[MAX_PKTIOS];
 	thread_args_t *thr_args = arg;
@@ -304,6 +306,7 @@ static int run_worker_sched_mode(void *arg)
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
 
 	thr = odp_thread_id();
+	max_burst = gbl_args->appl.burst_rx;
 
 	if (gbl_args->appl.num_groups) {
 		odp_thrmask_t mask;
@@ -348,7 +351,7 @@ static int run_worker_sched_mode(void *arg)
 		unsigned tx_drops;
 		int src_idx;
 
-		pkts = odp_schedule_multi_no_wait(NULL, ev_tbl, MAX_PKT_BURST);
+		pkts = odp_schedule_multi_no_wait(NULL, ev_tbl, max_burst);
 
 		if (pkts <= 0)
 			continue;
@@ -432,6 +435,7 @@ static int run_worker_plain_queue_mode(void *arg)
 {
 	int thr;
 	int pkts;
+	uint16_t max_burst;
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	int dst_idx, num_pktio;
 	odp_queue_t queue;
@@ -444,6 +448,7 @@ static int run_worker_plain_queue_mode(void *arg)
 	int i;
 
 	thr = odp_thread_id();
+	max_burst = gbl_args->appl.burst_rx;
 
 	num_pktio = thr_args->num_pktio;
 	dst_idx   = thr_args->pktio[pktio].tx_idx;
@@ -474,7 +479,7 @@ static int run_worker_plain_queue_mode(void *arg)
 				pktio = 0;
 		}
 
-		pkts = odp_queue_deq_multi(queue, event, MAX_PKT_BURST);
+		pkts = odp_queue_deq_multi(queue, event, max_burst);
 		if (odp_unlikely(pkts <= 0))
 			continue;
 
@@ -559,6 +564,7 @@ static int run_worker_direct_mode(void *arg)
 {
 	int thr;
 	int pkts;
+	uint16_t max_burst;
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	int dst_idx, num_pktio;
 	odp_pktin_queue_t pktin;
@@ -570,6 +576,7 @@ static int run_worker_direct_mode(void *arg)
 	int use_event_queue = gbl_args->appl.out_mode;
 
 	thr = odp_thread_id();
+	max_burst = gbl_args->appl.burst_rx;
 
 	num_pktio = thr_args->num_pktio;
 	dst_idx   = thr_args->pktio[pktio].tx_idx;
@@ -599,7 +606,7 @@ static int run_worker_direct_mode(void *arg)
 				pktio = 0;
 		}
 
-		pkts = odp_pktin_recv(pktin, pkt_tbl, MAX_PKT_BURST);
+		pkts = odp_pktin_recv(pktin, pkt_tbl, max_burst);
 		if (odp_unlikely(pkts <= 0))
 			continue;
 
@@ -1147,6 +1154,8 @@ static void usage(char *progname)
 	       "  -g, --groups <num>      Number of groups to use: 0 ... num\n"
 	       "                          0: SCHED_GROUP_ALL (default)\n"
 	       "                          num: must not exceed number of interfaces or workers\n"
+	       "  -b, --burst_rx <num>    0:   Use max burst size (default)\n"
+	       "                          num: Max number of packets per receive call\n"
 	       "  -v, --verbose           Verbose output.\n"
 	       "  -h, --help              Display help and exit.\n\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
@@ -1181,12 +1190,13 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"error_check", required_argument, NULL, 'e'},
 		{"chksum", required_argument, NULL, 'k'},
 		{"groups", required_argument, NULL, 'g'},
+		{"burst_rx", required_argument, NULL, 'b'},
 		{"verbose", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts =  "+c:+t:+a:i:m:o:r:d:s:e:k:g:vh";
+	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:vh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1195,6 +1205,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->src_change = 1; /* change eth src address by default */
 	appl_args->num_groups = 0; /* use default group */
 	appl_args->error_check = 0; /* don't check packet errors by default */
+	appl_args->burst_rx = 0;
 	appl_args->verbose = 0;
 	appl_args->chksum = 0; /* don't use checksum offload by default */
 
@@ -1325,6 +1336,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'g':
 			appl_args->num_groups = atoi(optarg);
 			break;
+		case 'b':
+			appl_args->burst_rx = atoi(optarg);
+			break;
 		case 'v':
 			appl_args->verbose = 1;
 			break;
@@ -1348,6 +1362,15 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
+
+	if (appl_args->burst_rx > MAX_PKT_BURST) {
+		printf("Error: Burst size (%i) too large. Maximum is %i.\n",
+		       appl_args->burst_rx, MAX_PKT_BURST);
+		exit(EXIT_FAILURE);
+	}
+
+	if (appl_args->burst_rx == 0)
+		appl_args->burst_rx = MAX_PKT_BURST;
 
 	appl_args->extra_check = appl_args->error_check || appl_args->chksum;
 
@@ -1384,11 +1407,13 @@ static void print_info(char *progname, appl_args_t *appl_args)
 		printf("PKTIN_SCHED_ORDERED, ");
 
 	if (appl_args->out_mode)
-		printf("PKTOUT_QUEUE");
+		printf("PKTOUT_QUEUE\n");
 	else
-		printf("PKTOUT_DIRECT");
+		printf("PKTOUT_DIRECT\n");
 
-	printf("\n\n");
+	printf("Burst size:      %i\n", appl_args->burst_rx);
+
+	printf("\n");
 	fflush(NULL);
 }
 
