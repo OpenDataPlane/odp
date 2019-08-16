@@ -22,7 +22,7 @@ AC_SUBST(ODP_VERSION_API_MINOR)
 ##########################################################################
 m4_define([odph_version_generation], [1])
 m4_define([odph_version_major], [0])
-m4_define([odph_version_minor], [1])
+m4_define([odph_version_minor], [2])
 
 m4_define([odph_version],
     [odph_version_generation.odph_version_major.odph_version_minor])
