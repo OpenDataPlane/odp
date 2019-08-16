@@ -13,6 +13,7 @@ AM_LDFLAGS = -version-number '$(ODPHELPER_LIBSO_VERSION)'
 helperincludedir = $(includedir)/odp/helper/
 helperinclude_HEADERS = \
 		  include/odp/helper/chksum.h\
+		  include/odp/helper/odph_debug.h \
 		  include/odp/helper/eth.h\
 		  include/odp/helper/icmp.h\
 		  include/odp/helper/ip.h\
@@ -41,7 +42,6 @@ helperlinuxinclude_HEADERS = \
 endif
 
 noinst_HEADERS = \
-		 include/odph_debug.h \
 		 include/odph_list_internal.h
 
 __LIB__libodphelper_la_SOURCES = \

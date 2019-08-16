@@ -15,7 +15,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include <odph_debug.h>
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 

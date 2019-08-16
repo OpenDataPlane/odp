@@ -10,8 +10,8 @@
 #include <string.h>
 #include <malloc.h>
 
-#include "odp/helper/odph_lineartable.h"
-#include "odph_debug.h"
+#include <odp/helper/odph_lineartable.h>
+#include <odp/helper/odph_debug.h>
 #include <odp_api.h>
 
 #define     ODPH_SUCCESS	0
