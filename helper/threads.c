@@ -20,7 +20,7 @@
 
 #include <odp_api.h>
 #include <odp/helper/threads.h>
-#include "odph_debug.h"
+#include <odp/helper/odph_debug.h>
 
 #define FAILED_CPU -1
 

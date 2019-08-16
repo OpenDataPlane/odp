@@ -6,8 +6,8 @@
 
 #include "config.h"
 
-#include <odph_debug.h>
 #include <odp_api.h>
+#include <odp/helper/odph_api.h>
 #include <odp/helper/linux/pthread.h>
 #include <odp/helper/linux/process.h>
 

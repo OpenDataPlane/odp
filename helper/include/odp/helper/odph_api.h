@@ -18,6 +18,7 @@
 extern "C" {
 #endif
 
+#include <odp/helper/odph_debug.h>
 #include <odp/helper/chksum.h>
 #include <odp/helper/odph_cuckootable.h>
 #include <odp/helper/eth.h>

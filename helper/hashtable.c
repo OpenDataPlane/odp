@@ -10,9 +10,9 @@
 #include <string.h>
 #include <malloc.h>
 
-#include "odp/helper/odph_hashtable.h"
+#include <odp/helper/odph_hashtable.h>
+#include <odp/helper/odph_debug.h>
 #include "odph_list_internal.h"
-#include "odph_debug.h"
 #include <odp_api.h>
 
 #define    ODPH_SUCCESS	0

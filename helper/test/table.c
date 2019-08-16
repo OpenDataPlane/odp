@@ -6,9 +6,8 @@
 
 #include "config.h"
 
-#include <odph_debug.h>
-#include <odp/helper/odph_api.h>
 #include <odp_api.h>
+#include <odp/helper/odph_api.h>
 
 /**
  * Address Resolution Protocol (ARP)
