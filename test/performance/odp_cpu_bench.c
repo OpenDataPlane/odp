@@ -382,7 +382,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+a:+c:+l:+t:h";
+	static const char *shortopts = "+a:c:l:t:h";
 
 	appl_args->accuracy = 1; /* Get and print pps stats second */
 	appl_args->cpu_count = 1;
