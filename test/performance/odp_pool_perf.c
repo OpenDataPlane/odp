@@ -1,4 +1,6 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
+ *
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -20,6 +22,8 @@ typedef struct test_options_t {
 	uint32_t num_round;
 	uint32_t max_burst;
 	uint32_t num_burst;
+	uint32_t data_size;
+	int      pool_type;
 
 } test_options_t;
 
@@ -57,6 +61,9 @@ static void print_usage(void)
 	       "  -r, --num_round        Number of rounds\n"
 	       "  -b, --burst            Maximum number of events per operation\n"
 	       "  -n, --num_burst        Number of bursts allocated/freed back-to-back\n"
+	       "  -s, --data_size        Data size in bytes\n"
+	       "  -t, --pool_type        0: Buffer pool (default)\n"
+	       "                         1: Packet pool\n"
 	       "  -h, --help             This help\n"
 	       "\n");
 }
@@ -73,17 +80,21 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"num_round", required_argument, NULL, 'r'},
 		{"burst",     required_argument, NULL, 'b'},
 		{"num_burst", required_argument, NULL, 'n'},
+		{"data_size", required_argument, NULL, 's'},
+		{"pool_type", required_argument, NULL, 't'},
 		{"help",      no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:e:r:b:n:h";
+	static const char *shortopts = "+c:e:r:b:n:s:t:h";
 
 	test_options->num_cpu   = 1;
 	test_options->num_event = 1000;
 	test_options->num_round = 100000;
 	test_options->max_burst = 100;
 	test_options->num_burst = 1;
+	test_options->data_size = 64;
+	test_options->pool_type = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -106,6 +117,12 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 'n':
 			test_options->num_burst = atoi(optarg);
+			break;
+		case 's':
+			test_options->data_size = atoi(optarg);
+			break;
+		case 't':
+			test_options->pool_type = atoi(optarg);
 			break;
 		case 'h':
 			/* fall through */
@@ -164,36 +181,62 @@ static int create_pool(test_global_t *global)
 	odp_pool_capability_t pool_capa;
 	odp_pool_param_t pool_param;
 	odp_pool_t pool;
-	uint32_t max_num;
+	uint32_t max_num, max_size;
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_event = test_options->num_event;
 	uint32_t num_round = test_options->num_round;
 	uint32_t max_burst = test_options->max_burst;
 	uint32_t num_burst = test_options->num_burst;
 	uint32_t num_cpu   = test_options->num_cpu;
+	uint32_t data_size = test_options->data_size;
+	int packet_pool = test_options->pool_type;
 
 	printf("\nPool performance test\n");
 	printf("  num cpu    %u\n", num_cpu);
 	printf("  num rounds %u\n", num_round);
 	printf("  num events %u\n", num_event);
 	printf("  max burst  %u\n", max_burst);
-	printf("  num bursts %u\n\n", num_burst);
+	printf("  num bursts %u\n", num_burst);
+	printf("  data size  %u\n", data_size);
+	printf("  pool type  %s\n\n", packet_pool ? "packet" : "buffer");
 
 	if (odp_pool_capability(&pool_capa)) {
 		printf("Error: Pool capa failed.\n");
 		return -1;
 	}
 
-	max_num = pool_capa.buf.max_num;
+	if (packet_pool) {
+		max_num  = pool_capa.pkt.max_num;
+		max_size = pool_capa.pkt.max_len;
+	} else {
+		max_num  = pool_capa.buf.max_num;
+		max_size = pool_capa.buf.max_size;
+	}
 
 	if (max_num && num_event > max_num) {
 		printf("Error: max events supported %u\n", max_num);
 		return -1;
 	}
 
+	if (max_size && data_size > max_size) {
+		printf("Error: max data size supported %u\n", max_size);
+		return -1;
+	}
+
 	odp_pool_param_init(&pool_param);
-	pool_param.type = ODP_POOL_BUFFER;
-	pool_param.buf.num = num_event;
+
+	if (packet_pool) {
+		pool_param.type        = ODP_POOL_PACKET;
+		pool_param.pkt.num     = num_event;
+		pool_param.pkt.len     = data_size;
+		pool_param.pkt.max_num = num_event;
+		pool_param.pkt.max_len = data_size;
+
+	} else {
+		pool_param.type     = ODP_POOL_BUFFER;
+		pool_param.buf.num  = num_event;
+		pool_param.buf.size = data_size;
+	}
 
 	pool = odp_pool_create("pool perf", &pool_param);
 
@@ -207,7 +250,7 @@ static int create_pool(test_global_t *global)
 	return 0;
 }
 
-static int test_pool(void *arg)
+static int test_buffer_pool(void *arg)
 {
 	int ret, thr;
 	uint32_t num, num_free, num_freed, i, rounds;
@@ -289,17 +332,106 @@ static int test_pool(void *arg)
 	return 0;
 }
 
+static int test_packet_pool(void *arg)
+{
+	int ret, thr;
+	uint32_t num, num_free, num_freed, i, rounds;
+	uint64_t c1, c2, cycles, nsec;
+	uint64_t events, frees;
+	odp_time_t t1, t2;
+	test_global_t *global = arg;
+	test_options_t *test_options = &global->test_options;
+	uint32_t num_round = test_options->num_round;
+	uint32_t max_burst = test_options->max_burst;
+	uint32_t num_burst = test_options->num_burst;
+	uint32_t max_num = num_burst * max_burst;
+	uint32_t data_size = test_options->data_size;
+	odp_pool_t pool = global->pool;
+	odp_packet_t pkt[max_num];
+
+	thr = odp_thread_id();
+
+	for (i = 0; i < max_num; i++)
+		pkt[i] = ODP_PACKET_INVALID;
+
+	events = 0;
+	frees = 0;
+	ret = 0;
+
+	/* Start all workers at the same time */
+	odp_barrier_wait(&global->barrier);
+
+	t1 = odp_time_local();
+	c1 = odp_cpu_cycles();
+
+	for (rounds = 0; rounds < num_round; rounds++) {
+		num = 0;
+
+		for (i = 0; i < num_burst; i++) {
+			ret = odp_packet_alloc_multi(pool, data_size, &pkt[num],
+						     max_burst);
+			if (odp_unlikely(ret < 0)) {
+				printf("Error: Alloc failed. Round %u\n",
+				       rounds);
+
+				if (num)
+					odp_packet_free_multi(pkt, num);
+
+				return -1;
+			}
+
+			num += ret;
+		}
+
+		if (odp_unlikely(num == 0))
+			continue;
+
+		events += num;
+		num_freed = 0;
+
+		while (num_freed < num) {
+			num_free = num - num_freed;
+			if (num_free > max_burst)
+				num_free = max_burst;
+
+			odp_packet_free_multi(&pkt[num_freed], num_free);
+			frees++;
+			num_freed += num_free;
+		}
+	}
+
+	c2 = odp_cpu_cycles();
+	t2 = odp_time_local();
+
+	nsec   = odp_time_diff_ns(t2, t1);
+	cycles = odp_cpu_cycles_diff(c2, c1);
+
+	/* Update stats*/
+	global->stat[thr].rounds = rounds;
+	global->stat[thr].frees  = frees;
+	global->stat[thr].events = events;
+	global->stat[thr].nsec   = nsec;
+	global->stat[thr].cycles = cycles;
+
+	return 0;
+}
+
 static int start_workers(test_global_t *global, odp_instance_t instance)
 {
 	odph_odpthread_params_t thr_params;
 	test_options_t *test_options = &global->test_options;
 	int num_cpu = test_options->num_cpu;
+	int packet_pool = test_options->pool_type;
 
 	memset(&thr_params, 0, sizeof(thr_params));
 	thr_params.thr_type = ODP_THREAD_WORKER;
 	thr_params.instance = instance;
-	thr_params.start    = test_pool;
 	thr_params.arg      = global;
+
+	if (packet_pool)
+		thr_params.start = test_packet_pool;
+	else
+		thr_params.start = test_buffer_pool;
 
 	if (odph_odpthreads_create(global->thread_tbl, &global->cpumask,
 				   &thr_params) != num_cpu)
