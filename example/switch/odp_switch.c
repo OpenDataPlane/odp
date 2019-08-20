@@ -756,7 +756,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:+t:+a:i:h";
+	static const char *shortopts = "+c:t:a:i:h";
 
 	appl_args->cpu_count = 1; /* use one worker by default */
 	appl_args->time = 0; /* loop forever if time to run is 0 */

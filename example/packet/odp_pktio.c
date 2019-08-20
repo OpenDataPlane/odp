@@ -600,7 +600,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:i:+m:t:h";
+	static const char *shortopts = "+c:i:m:t:h";
 
 	appl_args->cpu_count = 1; /* use one worker by default */
 	appl_args->mode = APPL_MODE_PKT_SCHED;
