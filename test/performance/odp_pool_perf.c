@@ -19,6 +19,7 @@ typedef struct test_options_t {
 	uint32_t num_event;
 	uint32_t num_round;
 	uint32_t max_burst;
+	uint32_t num_burst;
 
 } test_options_t;
 
@@ -55,6 +56,7 @@ static void print_usage(void)
 	       "  -e, --num_event        Number of events\n"
 	       "  -r, --num_round        Number of rounds\n"
 	       "  -b, --burst            Maximum number of events per operation\n"
+	       "  -n, --num_burst        Number of bursts allocated/freed back-to-back\n"
 	       "  -h, --help             This help\n"
 	       "\n");
 }
@@ -70,16 +72,18 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"num_event", required_argument, NULL, 'e'},
 		{"num_round", required_argument, NULL, 'r'},
 		{"burst",     required_argument, NULL, 'b'},
+		{"num_burst", required_argument, NULL, 'n'},
 		{"help",      no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:e:r:b:h";
+	static const char *shortopts = "+c:e:r:b:n:h";
 
 	test_options->num_cpu   = 1;
 	test_options->num_event = 1000;
 	test_options->num_round = 100000;
 	test_options->max_burst = 100;
+	test_options->num_burst = 1;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -100,6 +104,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		case 'b':
 			test_options->max_burst = atoi(optarg);
 			break;
+		case 'n':
+			test_options->num_burst = atoi(optarg);
+			break;
 		case 'h':
 			/* fall through */
 		default:
@@ -107,6 +114,15 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			ret = -1;
 			break;
 		}
+	}
+
+	if (test_options->num_burst * test_options->max_burst >
+	    test_options->num_event) {
+		printf("Not enough events (%u) for the burst configuration.\n"
+		       "Use smaller burst size (%u) or less bursts (%u)\n",
+		       test_options->num_event, test_options->max_burst,
+		       test_options->num_burst);
+		ret = -1;
 	}
 
 	return ret;
@@ -153,13 +169,15 @@ static int create_pool(test_global_t *global)
 	uint32_t num_event = test_options->num_event;
 	uint32_t num_round = test_options->num_round;
 	uint32_t max_burst = test_options->max_burst;
+	uint32_t num_burst = test_options->num_burst;
 	uint32_t num_cpu   = test_options->num_cpu;
 
 	printf("\nPool performance test\n");
 	printf("  num cpu    %u\n", num_cpu);
 	printf("  num rounds %u\n", num_round);
 	printf("  num events %u\n", num_event);
-	printf("  max burst  %u\n\n", max_burst);
+	printf("  max burst  %u\n", max_burst);
+	printf("  num bursts %u\n\n", num_burst);
 
 	if (odp_pool_capability(&pool_capa)) {
 		printf("Error: Pool capa failed.\n");
@@ -191,8 +209,8 @@ static int create_pool(test_global_t *global)
 
 static int test_pool(void *arg)
 {
-	int num, ret, thr;
-	uint32_t i, rounds;
+	int ret, thr;
+	uint32_t num, num_free, num_freed, i, rounds;
 	uint64_t c1, c2, cycles, nsec;
 	uint64_t events, frees;
 	odp_time_t t1, t2;
@@ -200,12 +218,14 @@ static int test_pool(void *arg)
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_round = test_options->num_round;
 	uint32_t max_burst = test_options->max_burst;
+	uint32_t num_burst = test_options->num_burst;
+	uint32_t max_num = num_burst * max_burst;
 	odp_pool_t pool = global->pool;
-	odp_buffer_t buf[max_burst];
+	odp_buffer_t buf[max_num];
 
 	thr = odp_thread_id();
 
-	for (i = 0; i < max_burst; i++)
+	for (i = 0; i < max_num; i++)
 		buf[i] = ODP_BUFFER_INVALID;
 
 	events = 0;
@@ -219,19 +239,37 @@ static int test_pool(void *arg)
 	c1 = odp_cpu_cycles();
 
 	for (rounds = 0; rounds < num_round; rounds++) {
-		num = odp_buffer_alloc_multi(pool, buf, max_burst);
+		num = 0;
 
-		if (odp_likely(num > 0)) {
-			events += num;
-			odp_buffer_free_multi(buf, num);
-			frees++;
-			continue;
+		for (i = 0; i < num_burst; i++) {
+			ret = odp_buffer_alloc_multi(pool, &buf[num],
+						     max_burst);
+			if (odp_unlikely(ret < 0)) {
+				printf("Error: Alloc failed. Round %u\n",
+				       rounds);
+				if (num)
+					odp_buffer_free_multi(buf, num);
+
+				return -1;
+			}
+
+			num += ret;
 		}
 
-		if (num < 0) {
-			printf("Error: Alloc failed. Round %u\n", rounds);
-			ret = -1;
-			break;
+		if (odp_unlikely(num == 0))
+			continue;
+
+		events += num;
+		num_freed = 0;
+
+		while (num_freed < num) {
+			num_free = num - num_freed;
+			if (num_free > max_burst)
+				num_free = max_burst;
+
+			odp_buffer_free_multi(&buf[num_freed], num_free);
+			frees++;
+			num_freed += num_free;
 		}
 	}
 
@@ -248,7 +286,7 @@ static int test_pool(void *arg)
 	global->stat[thr].nsec   = nsec;
 	global->stat[thr].cycles = cycles;
 
-	return ret;
+	return 0;
 }
 
 static int start_workers(test_global_t *global, odp_instance_t instance)
@@ -273,9 +311,11 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 static void print_stat(test_global_t *global)
 {
 	int i, num;
-	double rounds_ave, frees_ave, events_ave, nsec_ave, cycles_ave;
+	double rounds_ave, allocs_ave, frees_ave;
+	double events_ave, nsec_ave, cycles_ave;
 	test_options_t *test_options = &global->test_options;
 	int num_cpu = test_options->num_cpu;
+	uint32_t num_burst = test_options->num_burst;
 	uint64_t rounds_sum = 0;
 	uint64_t frees_sum = 0;
 	uint64_t events_sum = 0;
@@ -297,6 +337,7 @@ static void print_stat(test_global_t *global)
 	}
 
 	rounds_ave = rounds_sum / num_cpu;
+	allocs_ave = (num_burst * rounds_sum) / num_cpu;
 	frees_ave  = frees_sum / num_cpu;
 	events_ave = events_sum / num_cpu;
 	nsec_ave   = nsec_sum / num_cpu;
@@ -321,7 +362,7 @@ static void print_stat(test_global_t *global)
 
 	printf("RESULTS - average over %i threads:\n", num_cpu);
 	printf("----------------------------------\n");
-	printf("  alloc calls:          %.3f\n", rounds_ave);
+	printf("  alloc calls:          %.3f\n", allocs_ave);
 	printf("  free calls:           %.3f\n", frees_ave);
 	printf("  duration:             %.3f msec\n", nsec_ave / 1000000);
 	printf("  num cycles:           %.3f M\n", cycles_ave / 1000000);
@@ -330,9 +371,11 @@ static void print_stat(test_global_t *global)
 	printf("  cycles per event:     %.3f\n",
 	       cycles_ave / events_ave);
 	printf("  ave events allocated: %.3f\n",
-	       events_ave / rounds_ave);
-	printf("  operations per sec:   %.3f M\n",
-	       (1000.0 * rounds_ave) / nsec_ave);
+	       events_ave / allocs_ave);
+	printf("  allocs per sec:       %.3f M\n",
+	       (1000.0 * allocs_ave) / nsec_ave);
+	printf("  frees per sec:        %.3f M\n",
+	       (1000.0 * frees_ave) / nsec_ave);
 	printf("  events per sec:       %.3f M\n\n",
 	       (1000.0 * events_ave) / nsec_ave);
 }
