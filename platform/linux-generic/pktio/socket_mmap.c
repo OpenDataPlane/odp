@@ -43,12 +43,6 @@
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 
-/* Maximum number of retries per sock_mmap_send() call */
-#define TX_RETRIES 10
-
-/* Number of nanoseconds to wait between TX retries */
-#define TX_RETRY_NSEC 1000
-
 /* Maximum number of packets to store in each RX/TX block */
 #define MAX_PKTS_PER_BLOCK 512
 
@@ -141,17 +135,6 @@ static inline int mmap_rx_kernel_ready(struct tpacket2_hdr *hdr)
 static inline void mmap_rx_user_ready(struct tpacket2_hdr *hdr)
 {
 	hdr->tp_status = TP_STATUS_KERNEL;
-	__sync_synchronize();
-}
-
-static inline int mmap_tx_kernel_ready(struct tpacket2_hdr *hdr)
-{
-	return !(hdr->tp_status & (TP_STATUS_SEND_REQUEST | TP_STATUS_SENDING));
-}
-
-static inline void mmap_tx_user_ready(struct tpacket2_hdr *hdr)
-{
-	hdr->tp_status = TP_STATUS_SEND_REQUEST;
 	__sync_synchronize();
 }
 
@@ -303,118 +286,99 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	return nb_rx;
 }
 
-static unsigned handle_pending_frames(int sock, struct ring *ring, int frames)
+static inline int pkt_mmap_v2_tx(int sock, struct ring *ring,
+				 const odp_packet_t pkt_table[],
+				 uint32_t num)
 {
-	int i;
-	int retry = 0;
-	unsigned nb_tx = 0;
-	unsigned frame_num;
-	unsigned frame_count = ring->rd_num;
-	unsigned first_frame_num = ring->frame_num;
-
-	for (frame_num = first_frame_num, i = 0; i < frames; i++) {
-		struct tpacket2_hdr *hdr = ring->rd[frame_num].iov_base;
-
-		if (odp_likely(hdr->tp_status == TP_STATUS_AVAILABLE ||
-			       hdr->tp_status == TP_STATUS_SENDING)) {
-			nb_tx++;
-		} else if (hdr->tp_status == TP_STATUS_SEND_REQUEST) {
-			if (retry++ < TX_RETRIES) {
-				struct timespec ts = { .tv_nsec = TX_RETRY_NSEC,
-						       .tv_sec = 0 };
-
-				sendto(sock, NULL, 0, MSG_DONTWAIT, NULL, 0);
-				nanosleep(&ts, NULL);
-				i--;
-				continue;
-			} else {
-				hdr->tp_status = TP_STATUS_AVAILABLE;
-			}
-		} else { /* TP_STATUS_WRONG_FORMAT */
-			/* Don't try re-sending frames after failure */
-			for (; i < frames; i++) {
-				hdr = ring->rd[frame_num].iov_base;
-				hdr->tp_status = TP_STATUS_AVAILABLE;
-				frame_num = next_frame(frame_num, frame_count);
-			}
-			break;
-		}
-		frame_num = next_frame(frame_num, frame_count);
-	}
-
-	ring->frame_num = next_frame(first_frame_num + nb_tx - 1, frame_count);
-
-	return nb_tx;
-}
-
-static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
-				      const odp_packet_t pkt_table[],
-				      unsigned num)
-{
-	union frame_map ppd;
-	uint32_t pkt_len;
-	unsigned first_frame_num, frame_num, frame_count;
+	uint32_t i, pkt_len, num_tx;
+	uint32_t first_frame_num, frame_num, frame_count;
 	int ret;
 	uint8_t *buf;
-	unsigned i = 0;
-	unsigned nb_tx = 0;
-	int send_errno;
+	struct tpacket2_hdr *tp_hdr[num];
 	int total_len = 0;
 
 	first_frame_num = ring->frame_num;
 	frame_num = first_frame_num;
 	frame_count = ring->rd_num;
 
-	while (i < num) {
-		ppd.raw = ring->rd[frame_num].iov_base;
-		if (!odp_unlikely(mmap_tx_kernel_ready(ppd.raw)))
+	if (num > frame_count)
+		num = frame_count;
+
+	for (i = 0; i < num; i++) {
+		tp_hdr[i] = ring->rd[frame_num].iov_base;
+
+		if (tp_hdr[i]->tp_status != TP_STATUS_AVAILABLE) {
+			if (tp_hdr[i]->tp_status == TP_STATUS_WRONG_FORMAT) {
+				ODP_ERR("Socket mmap: wrong format\n");
+				return -1;
+			}
+
 			break;
+		}
 
 		pkt_len = odp_packet_len(pkt_table[i]);
-		ppd.v2->tp_h.tp_snaplen = pkt_len;
-		ppd.v2->tp_h.tp_len = pkt_len;
+		tp_hdr[i]->tp_len = pkt_len;
 		total_len += pkt_len;
 
-		buf = (uint8_t *)ppd.raw + TPACKET2_HDRLEN -
+		buf = (uint8_t *)(void *)tp_hdr[i] + TPACKET2_HDRLEN -
 		       sizeof(struct sockaddr_ll);
 		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, buf);
 
-		mmap_tx_user_ready(ppd.raw);
+		tp_hdr[i]->tp_status = TP_STATUS_SEND_REQUEST;
 
 		frame_num = next_frame(frame_num, frame_count);
-		i++;
 	}
 
-	ret = sendto(sock, NULL, 0, MSG_DONTWAIT, NULL, 0);
-	send_errno = errno;
+	num    = i;
+	num_tx = num;
 
-	/* On success, the return value indicates the number of bytes sent. On
-	 * failure a value of -1 is returned, even if the failure occurred
-	 * after some of the packets in the ring have already been sent, so we
-	 * need to inspect the packet status to determine which were sent. */
-	if (odp_likely(ret == total_len)) {
-		nb_tx = i;
-		ring->frame_num = frame_num;
-	} else {
-		nb_tx = handle_pending_frames(sock, ring, i);
+	/* Ping kernel to send packets */
+	ret = send(sock, NULL, 0, MSG_DONTWAIT);
 
-		if (odp_unlikely(ret == -1 && nb_tx == 0 &&
-				 SOCK_ERR_REPORT(send_errno))) {
-			__odp_errno = send_errno;
-			/* ENOBUFS indicates that the transmit queue is full,
-			 * which will happen regularly when overloaded so don't
-			 * print it */
-			if (errno != ENOBUFS)
-				ODP_ERR("sendto(pkt mmap): %s\n",
-					strerror(send_errno));
+	ring->frame_num = frame_num;
+
+	if (odp_unlikely(ret != total_len)) {
+		uint32_t tp_status, frame_sum;
+
+		/* Returns -1 when nothing is sent (send() would block) */
+		if (ret < 0 && errno != EWOULDBLOCK) {
+			ODP_ERR("Socket mmap: send failed, ret %i, errno %i\n",
+				ret, errno);
 			return -1;
 		}
+
+		/* Check how many first packets have been sent
+		 * (TP_STATUS_AVAILABLE or TP_STATUS_SENDING). Assuming that
+		 * the rest will not be sent. */
+		for (i = 0; i < num; i++) {
+			tp_status = tp_hdr[i]->tp_status;
+
+			if (tp_status == TP_STATUS_SEND_REQUEST)
+				break;
+
+			if (tp_status == TP_STATUS_WRONG_FORMAT) {
+				ODP_ERR("Socket mmap: wrong format\n");
+				break;
+			}
+		}
+
+		num_tx = i;
+
+		/* Clear status of not sent packets */
+		for (i = num_tx; i < num; i++)
+			tp_hdr[i]->tp_status = TP_STATUS_AVAILABLE;
+
+		frame_sum       = first_frame_num + num_tx;
+		ring->frame_num = frame_sum;
+
+		if (frame_sum >= frame_count)
+			ring->frame_num = frame_sum - frame_count;
 	}
 
-	for (i = 0; i < nb_tx; ++i)
-		odp_packet_free(pkt_table[i]);
+	/* Free sent packets */
+	odp_packet_free_multi(pkt_table, num_tx);
 
-	return nb_tx;
+	return num_tx;
 }
 
 static void mmap_fill_ring(struct ring *ring, odp_pool_t pool_hdl, int fanout)
@@ -470,6 +434,12 @@ static int mmap_setup_ring(int sock, struct ring *ring, int type,
 	ring->version = TPACKET_V2;
 
 	mmap_fill_ring(ring, pool_hdl, fanout);
+
+	ODP_DBG("  tp_block_size %u\n", ring->req.tp_block_size);
+	ODP_DBG("  tp_block_nr   %u\n", ring->req.tp_block_nr);
+	ODP_DBG("  tp_frame_size %u\n", ring->req.tp_frame_size);
+	ODP_DBG("  tp_frame_nr   %u\n", ring->req.tp_frame_nr);
+	ODP_DBG("  fanout        %i\n", fanout);
 
 	ret = setsockopt(sock, SOL_PACKET, type, &ring->req, sizeof(ring->req));
 	if (ret == -1) {
@@ -630,11 +600,13 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 	if (ret != 0)
 		goto error;
 
+	ODP_DBG("TX ring setup:\n");
 	ret = mmap_setup_ring(pkt_sock->sockfd, &pkt_sock->tx_ring,
 			      PACKET_TX_RING, pool, fanout);
 	if (ret != 0)
 		goto error;
 
+	ODP_DBG("RX ring setup:\n");
 	ret = mmap_setup_ring(pkt_sock->sockfd, &pkt_sock->rx_ring,
 			      PACKET_RX_RING, pool, fanout);
 	if (ret != 0)
