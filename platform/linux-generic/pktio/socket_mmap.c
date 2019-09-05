@@ -135,7 +135,6 @@ static inline int mmap_rx_kernel_ready(struct tpacket2_hdr *hdr)
 static inline void mmap_rx_user_ready(struct tpacket2_hdr *hdr)
 {
 	hdr->tp_status = TP_STATUS_KERNEL;
-	__sync_synchronize();
 }
 
 static uint8_t *pkt_mmap_vlan_insert(uint8_t *l2_hdr_ptr,
@@ -204,13 +203,14 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		odp_pool_t pool = pkt_sock->pool;
 		int pkts;
 
-		if (!mmap_rx_kernel_ready(ring->rd[frame_num].iov_base))
+		ppd.raw = ring->rd[frame_num].iov_base;
+
+		if (!mmap_rx_kernel_ready(ppd.raw))
 			break;
 
 		if (ts != NULL)
 			ts_val = odp_time_global();
 
-		ppd.raw = ring->rd[frame_num].iov_base;
 		next_frame_num = next_frame(frame_num, ring->rd_num);
 
 		pkt_buf = (uint8_t *)ppd.raw + ppd.v2->tp_h.tp_mac;
