@@ -95,16 +95,6 @@ static int set_pkt_sock_fanout_mmap(pkt_sock_mmap_t *const pkt_sock,
 	return 0;
 }
 
-union frame_map {
-	struct {
-		struct tpacket2_hdr ODP_ALIGNED(TPACKET_ALIGNMENT) tp_h;
-		struct sockaddr_ll ODP_ALIGNED(TPACKET_ALIGN(sizeof(struct
-				tpacket2_hdr))) s_ll;
-	} *v2;
-
-	void *raw;
-};
-
 static int mmap_pkt_socket(void)
 {
 	int ver = TPACKET_V2;
@@ -126,16 +116,6 @@ static int mmap_pkt_socket(void)
 	}
 
 	return sock;
-}
-
-static inline int mmap_rx_kernel_ready(struct tpacket2_hdr *hdr)
-{
-	return ((hdr->tp_status & TP_STATUS_USER) == TP_STATUS_USER);
-}
-
-static inline void mmap_rx_user_ready(struct tpacket2_hdr *hdr)
-{
-	hdr->tp_status = TP_STATUS_KERNEL;
 }
 
 static uint8_t *pkt_mmap_vlan_insert(uint8_t *l2_hdr_ptr,
@@ -179,7 +159,6 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 				      odp_packet_t pkt_table[], unsigned num,
 				      unsigned char if_mac[])
 {
-	union frame_map ppd;
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
 	unsigned frame_num, next_frame_num;
@@ -199,14 +178,15 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	frame_num = ring->frame_num;
 
 	for (i = 0, nb_rx = 0; i < num; i++) {
+		struct tpacket2_hdr *tp_hdr;
 		odp_packet_hdr_t *hdr;
 		odp_packet_hdr_t parsed_hdr;
 		odp_pool_t pool = pkt_sock->pool;
 		int pkts;
 
-		ppd.raw = ring->rd[frame_num].iov_base;
+		tp_hdr = ring->rd[frame_num].iov_base;
 
-		if (!mmap_rx_kernel_ready(ppd.raw))
+		if (tp_hdr->tp_status == TP_STATUS_KERNEL)
 			break;
 
 		if (ts != NULL)
@@ -214,11 +194,11 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 
 		next_frame_num = next_frame(frame_num, ring->rd_num);
 
-		pkt_buf = (uint8_t *)ppd.raw + ppd.v2->tp_h.tp_mac;
-		pkt_len = ppd.v2->tp_h.tp_snaplen;
+		pkt_buf = (uint8_t *)(void *)tp_hdr + tp_hdr->tp_mac;
+		pkt_len = tp_hdr->tp_snaplen;
 
 		if (odp_unlikely(pkt_len > pkt_sock->mtu)) {
-			mmap_rx_user_ready(ppd.raw);
+			tp_hdr->tp_status = TP_STATUS_KERNEL;
 			frame_num = next_frame_num;
 			ODP_DBG("dropped oversized packet\n");
 			continue;
@@ -228,22 +208,22 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		eth_hdr = (struct ethhdr *)pkt_buf;
 		if (odp_unlikely(ethaddrs_equal(if_mac,
 						eth_hdr->h_source))) {
-			mmap_rx_user_ready(ppd.raw); /* drop */
+			tp_hdr->tp_status = TP_STATUS_KERNEL;
 			frame_num = next_frame_num;
 			continue;
 		}
 
-		if (ppd.v2->tp_h.tp_status & TP_STATUS_VLAN_VALID)
+		if (tp_hdr->tp_status & TP_STATUS_VLAN_VALID)
 			pkt_buf = pkt_mmap_vlan_insert(pkt_buf,
-						       ppd.v2->tp_h.tp_mac,
-						       ppd.v2->tp_h.tp_vlan_tci,
+						       tp_hdr->tp_mac,
+						       tp_hdr->tp_vlan_tci,
 						       &pkt_len);
 
 		if (pktio_cls_enabled(pktio_entry)) {
 			if (cls_classify_packet(pktio_entry, pkt_buf, pkt_len,
 						pkt_len, &pool, &parsed_hdr,
 						true)) {
-				mmap_rx_user_ready(ppd.raw); /* drop */
+				tp_hdr->tp_status = TP_STATUS_KERNEL;
 				frame_num = next_frame_num;
 				continue;
 			}
@@ -253,7 +233,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 
 		if (odp_unlikely(pkts != 1)) {
 			pkt_table[nb_rx] = ODP_PACKET_INVALID;
-			mmap_rx_user_ready(ppd.raw); /* drop */
+			tp_hdr->tp_status = TP_STATUS_KERNEL;
 			frame_num = next_frame_num;
 			continue;
 		}
@@ -262,7 +242,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 						pkt_len, pkt_buf);
 		if (ret != 0) {
 			odp_packet_free(pkt_table[nb_rx]);
-			mmap_rx_user_ready(ppd.raw); /* drop */
+			tp_hdr->tp_status = TP_STATUS_KERNEL;
 			frame_num = next_frame_num;
 			continue;
 		}
@@ -277,7 +257,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 
 		packet_set_ts(hdr, ts);
 
-		mmap_rx_user_ready(ppd.raw);
+		tp_hdr->tp_status = TP_STATUS_KERNEL;
 		frame_num = next_frame_num;
 
 		nb_rx++;
