@@ -43,8 +43,9 @@
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 
-/* Maximum number of packets to store in each RX/TX block */
-#define MAX_PKTS_PER_BLOCK 512
+/* Reserve 4MB memory for frames in a RX/TX ring */
+#define FRAME_MEM_SIZE (4 * 1024 * 1024)
+#define BLOCK_SIZE     (4 * 1024)
 
 /** Packet socket using mmap rings for both Rx and Tx */
 typedef struct {
@@ -381,65 +382,58 @@ static inline int pkt_mmap_v2_tx(int sock, struct ring *ring,
 	return num_tx;
 }
 
-static void mmap_fill_ring(struct ring *ring, odp_pool_t pool_hdl, int fanout)
+static int mmap_setup_ring(pkt_sock_mmap_t *pkt_sock, struct ring *ring,
+			   int type)
 {
-	uint32_t num_frames;
-	int pz = getpagesize();
-	pool_t *pool;
-
-	if (pool_hdl == ODP_POOL_INVALID)
-		ODP_ABORT("Invalid pool handle\n");
-
-	pool = pool_entry_from_hdl(pool_hdl);
-
-	/* Frame has to capture full packet which can fit to the pool block.*/
-	ring->req.tp_frame_size = (pool->headroom + pool->seg_len +
-				   pool->tailroom + TPACKET_HDRLEN +
-				   TPACKET_ALIGNMENT + (pz - 1)) & (-pz);
-
-	/* Calculate how many pages we need to hold at most MAX_PKTS_PER_BLOCK
-	 * packets and align size to page boundary.
-	 */
-	num_frames = pool->num < MAX_PKTS_PER_BLOCK ? pool->num :
-			MAX_PKTS_PER_BLOCK;
-	ring->req.tp_block_size = (ring->req.tp_frame_size * num_frames +
-				   (pz - 1)) & (-pz);
-
-	if (!fanout) {
-		/* Single socket is in use. Use 1 block with buf_num frames. */
-		ring->req.tp_block_nr = 1;
-	} else {
-		/* Fanout is in use, more likely taffic split accodring to
-		 * number of cpu threads. Use cpu blocks and buf_num frames. */
-		ring->req.tp_block_nr = odp_cpu_count();
-	}
-
-	ring->req.tp_frame_nr = ring->req.tp_block_size /
-				ring->req.tp_frame_size * ring->req.tp_block_nr;
-
-	ring->mm_len = ring->req.tp_block_size * ring->req.tp_block_nr;
-	ring->rd_num = ring->req.tp_frame_nr;
-	ring->flen = ring->req.tp_frame_size;
-}
-
-static int mmap_setup_ring(int sock, struct ring *ring, int type,
-			   odp_pool_t pool_hdl, int fanout)
-{
-	int ret = 0;
-	int flags = 0;
 	odp_shm_t shm;
+	uint32_t block_size, block_nr, frame_size, frame_nr;
+	uint32_t ring_size;
+	int flags;
+	int sock = pkt_sock->sockfd;
+	int mtu = pkt_sock->mtu;
+	int ret = 0;
 
 	ring->sock = sock;
 	ring->type = type;
 	ring->version = TPACKET_V2;
 
-	mmap_fill_ring(ring, pool_hdl, fanout);
+	frame_size = ROUNDUP_POWER2_U32(mtu + TPACKET_HDRLEN
+					+ TPACKET_ALIGNMENT);
+	block_size = BLOCK_SIZE;
+	if (frame_size > block_size)
+		block_size = frame_size;
+
+	block_nr   = FRAME_MEM_SIZE / block_size;
+	frame_nr   = (block_size / frame_size) * block_nr;
+	ring_size  = frame_nr * sizeof(struct iovec);
+	flags      = 0;
+
+	if (odp_global_ro.shm_single_va)
+		flags += ODP_SHM_SINGLE_VA;
+
+	shm = odp_shm_reserve(NULL, ring_size, ODP_CACHE_LINE_SIZE, flags);
+
+	if (shm == ODP_SHM_INVALID) {
+		ODP_ERR("Reserving shm failed\n");
+		return -1;
+	}
+	ring->shm = shm;
+
+	ring->req.tp_block_size = block_size;
+	ring->req.tp_block_nr   = block_nr;
+	ring->req.tp_frame_size = frame_size;
+	ring->req.tp_frame_nr   = frame_nr;
+
+	ring->mm_len = ring->req.tp_block_size * ring->req.tp_block_nr;
+	ring->rd_num = ring->req.tp_frame_nr;
+	ring->flen   = ring->req.tp_frame_size;
+	ring->rd_len = ring_size;
 
 	ODP_DBG("  tp_block_size %u\n", ring->req.tp_block_size);
 	ODP_DBG("  tp_block_nr   %u\n", ring->req.tp_block_nr);
 	ODP_DBG("  tp_frame_size %u\n", ring->req.tp_frame_size);
 	ODP_DBG("  tp_frame_nr   %u\n", ring->req.tp_frame_nr);
-	ODP_DBG("  fanout        %i\n", fanout);
+	ODP_DBG("  fanout        %i\n", pkt_sock->fanout);
 
 	ret = setsockopt(sock, SOL_PACKET, type, &ring->req, sizeof(ring->req));
 	if (ret == -1) {
@@ -447,19 +441,6 @@ static int mmap_setup_ring(int sock, struct ring *ring, int type,
 		ODP_ERR("setsockopt(pkt mmap): %s\n", strerror(errno));
 		return -1;
 	}
-
-	ring->rd_len = ring->rd_num * sizeof(*ring->rd);
-
-	if (odp_global_ro.shm_single_va)
-		flags += ODP_SHM_SINGLE_VA;
-
-	shm = odp_shm_reserve(NULL, ring->rd_len, ODP_CACHE_LINE_SIZE, flags);
-
-	if (shm == ODP_SHM_INVALID) {
-		ODP_ERR("Reserving shm failed\n");
-		return -1;
-	}
-	ring->shm = shm;
 
 	ring->rd = odp_shm_addr(shm);
 	if (!ring->rd) {
@@ -516,11 +497,17 @@ static int mmap_sock(pkt_sock_mmap_t *pkt_sock)
 
 static int mmap_unmap_sock(pkt_sock_mmap_t *pkt_sock)
 {
+	int ret = 0;
+
 	if (pkt_sock->rx_ring.shm != ODP_SHM_INVALID)
 		odp_shm_free(pkt_sock->rx_ring.shm);
 	if (pkt_sock->tx_ring.shm != ODP_SHM_INVALID)
 		odp_shm_free(pkt_sock->tx_ring.shm);
-	return munmap(pkt_sock->mmap_base, pkt_sock->mmap_len);
+
+	if (pkt_sock->mmap_base != MAP_FAILED)
+		ret = munmap(pkt_sock->mmap_base, pkt_sock->mmap_len);
+
+	return ret;
 }
 
 static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, const char *netdev)
@@ -576,12 +563,14 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 		return -1;
 
 	pkt_sock_mmap_t *const pkt_sock = pkt_priv(pktio_entry);
-	int fanout = 1;
+	int fanout = 0;
 
 	/* Init pktio entry */
 	memset(pkt_sock, 0, sizeof(*pkt_sock));
 	/* set sockfd to -1, because a valid socked might be initialized to 0 */
 	pkt_sock->sockfd = -1;
+	pkt_sock->mmap_base = MAP_FAILED;
+	pkt_sock->fanout = fanout;
 
 	if (pool == ODP_POOL_INVALID)
 		return -1;
@@ -600,15 +589,19 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 	if (ret != 0)
 		goto error;
 
+	pkt_sock->mtu = mtu_get_fd(pkt_sock->sockfd, netdev);
+	if (!pkt_sock->mtu)
+		goto error;
+
+	ODP_DBG("MTU size: %i\n", pkt_sock->mtu);
+
 	ODP_DBG("TX ring setup:\n");
-	ret = mmap_setup_ring(pkt_sock->sockfd, &pkt_sock->tx_ring,
-			      PACKET_TX_RING, pool, fanout);
+	ret = mmap_setup_ring(pkt_sock, &pkt_sock->tx_ring, PACKET_TX_RING);
 	if (ret != 0)
 		goto error;
 
 	ODP_DBG("RX ring setup:\n");
-	ret = mmap_setup_ring(pkt_sock->sockfd, &pkt_sock->rx_ring,
-			      PACKET_RX_RING, pool, fanout);
+	ret = mmap_setup_ring(pkt_sock, &pkt_sock->rx_ring, PACKET_RX_RING);
 	if (ret != 0)
 		goto error;
 
@@ -620,10 +613,6 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 	if (ret != 0)
 		goto error;
 
-	pkt_sock->mtu = mtu_get_fd(pkt_sock->sockfd, netdev);
-	if (!pkt_sock->mtu)
-		goto error;
-
 	if_idx = if_nametoindex(netdev);
 	if (if_idx == 0) {
 		__odp_errno = errno;
@@ -631,7 +620,6 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 		goto error;
 	}
 
-	pkt_sock->fanout = fanout;
 	if (fanout) {
 		ret = set_pkt_sock_fanout_mmap(pkt_sock, if_idx);
 		if (ret != 0)
