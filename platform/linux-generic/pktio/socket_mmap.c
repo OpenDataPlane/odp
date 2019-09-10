@@ -162,13 +162,12 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
 	unsigned frame_num, next_frame_num;
-	uint8_t *pkt_buf;
+	uint8_t *pkt_buf, *next_ptr;
 	int pkt_len;
 	struct ethhdr *eth_hdr;
 	unsigned i;
 	unsigned nb_rx;
 	struct ring *ring;
-	int ret;
 
 	if (pktio_entry->s.config.pktin.bit.ts_all ||
 	    pktio_entry->s.config.pktin.bit.ts_ptp)
@@ -176,23 +175,28 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 
 	ring  = &pkt_sock->rx_ring;
 	frame_num = ring->frame_num;
+	next_ptr = ring->rd[frame_num].iov_base;
 
 	for (i = 0, nb_rx = 0; i < num; i++) {
 		struct tpacket2_hdr *tp_hdr;
+		odp_packet_t pkt;
 		odp_packet_hdr_t *hdr;
 		odp_packet_hdr_t parsed_hdr;
 		odp_pool_t pool = pkt_sock->pool;
-		int pkts;
+		int ret;
 
-		tp_hdr = ring->rd[frame_num].iov_base;
+		tp_hdr = (void *)next_ptr;
 
 		if (tp_hdr->tp_status == TP_STATUS_KERNEL)
 			break;
 
+		next_frame_num = next_frame(frame_num, ring->rd_num);
+		next_ptr = ring->rd[next_frame_num].iov_base;
+		odp_prefetch(next_ptr);
+		odp_prefetch(next_ptr + ODP_CACHE_LINE_SIZE);
+
 		if (ts != NULL)
 			ts_val = odp_time_global();
-
-		next_frame_num = next_frame(frame_num, ring->rd_num);
 
 		pkt_buf = (uint8_t *)(void *)tp_hdr + tp_hdr->tp_mac;
 		pkt_len = tp_hdr->tp_snaplen;
@@ -229,19 +233,18 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			}
 		}
 
-		pkts = packet_alloc_multi(pool, pkt_len, &pkt_table[nb_rx], 1);
+		ret = packet_alloc_multi(pool, pkt_len, &pkt, 1);
 
-		if (odp_unlikely(pkts != 1)) {
-			pkt_table[nb_rx] = ODP_PACKET_INVALID;
+		if (odp_unlikely(ret != 1)) {
 			tp_hdr->tp_status = TP_STATUS_KERNEL;
 			frame_num = next_frame_num;
 			continue;
 		}
-		hdr = packet_hdr(pkt_table[nb_rx]);
-		ret = odp_packet_copy_from_mem(pkt_table[nb_rx], 0,
-						pkt_len, pkt_buf);
+
+		hdr = packet_hdr(pkt);
+		ret = odp_packet_copy_from_mem(pkt, 0, pkt_len, pkt_buf);
 		if (ret != 0) {
-			odp_packet_free(pkt_table[nb_rx]);
+			odp_packet_free(pkt);
 			tp_hdr->tp_status = TP_STATUS_KERNEL;
 			frame_num = next_frame_num;
 			continue;
@@ -260,6 +263,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		tp_hdr->tp_status = TP_STATUS_KERNEL;
 		frame_num = next_frame_num;
 
+		pkt_table[nb_rx] = pkt;
 		nb_rx++;
 	}
 
@@ -272,21 +276,23 @@ static inline int pkt_mmap_v2_tx(int sock, struct ring *ring,
 				 uint32_t num)
 {
 	uint32_t i, pkt_len, num_tx;
-	uint32_t first_frame_num, frame_num, frame_count;
+	uint32_t first_frame_num, frame_num, next_frame_num, frame_count;
 	int ret;
 	uint8_t *buf;
+	void *next_ptr;
 	struct tpacket2_hdr *tp_hdr[num];
 	int total_len = 0;
 
-	first_frame_num = ring->frame_num;
-	frame_num = first_frame_num;
+	frame_num = ring->frame_num;
+	first_frame_num = frame_num;
 	frame_count = ring->rd_num;
+	next_ptr = ring->rd[frame_num].iov_base;
 
 	if (num > frame_count)
 		num = frame_count;
 
 	for (i = 0; i < num; i++) {
-		tp_hdr[i] = ring->rd[frame_num].iov_base;
+		tp_hdr[i] = next_ptr;
 
 		if (tp_hdr[i]->tp_status != TP_STATUS_AVAILABLE) {
 			if (tp_hdr[i]->tp_status == TP_STATUS_WRONG_FORMAT) {
@@ -296,6 +302,10 @@ static inline int pkt_mmap_v2_tx(int sock, struct ring *ring,
 
 			break;
 		}
+
+		next_frame_num = next_frame(frame_num, frame_count);
+		next_ptr = ring->rd[next_frame_num].iov_base;
+		odp_prefetch(next_ptr);
 
 		pkt_len = odp_packet_len(pkt_table[i]);
 		tp_hdr[i]->tp_len = pkt_len;
@@ -307,7 +317,7 @@ static inline int pkt_mmap_v2_tx(int sock, struct ring *ring,
 
 		tp_hdr[i]->tp_status = TP_STATUS_SEND_REQUEST;
 
-		frame_num = next_frame(frame_num, frame_count);
+		frame_num = next_frame_num;
 	}
 
 	num    = i;
