@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -93,8 +94,10 @@ struct pktio_entry {
 	odp_proto_chksums_t in_chksums; /**< Checksums validation settings */
 	pktio_stats_type_t stats_type;
 	char name[PKTIO_NAME_LEN];	/**< name of pktio provided to
-					   pktio_open() */
-
+					     internal pktio_open() calls */
+	char full_name[PKTIO_NAME_LEN];	/**< original pktio name passed to
+					     odp_pktio_open() and returned by
+					     odp_pktio_info() */
 	odp_pool_t pool;
 	odp_pktio_param_t param;
 	odp_pktio_capability_t capa;	/**< Packet IO capabilities */
