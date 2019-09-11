@@ -137,6 +137,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	unsigned i;
 	unsigned nb_rx;
 	struct ring *ring;
+	odp_pool_t pool = pkt_sock->pool;
 
 	if (pktio_entry->s.config.pktin.bit.ts_all ||
 	    pktio_entry->s.config.pktin.bit.ts_ptp)
@@ -151,7 +152,6 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		odp_packet_t pkt;
 		odp_packet_hdr_t *hdr;
 		odp_packet_hdr_t parsed_hdr;
-		odp_pool_t pool = pkt_sock->pool;
 		int ret;
 
 		tp_hdr = (void *)next_ptr;
@@ -177,10 +177,19 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			continue;
 		}
 
+		ret = packet_alloc_multi(pool, pkt_len, &pkt, 1);
+
+		if (odp_unlikely(ret != 1)) {
+			/* Stop receiving packets when pool is empty. Leave
+			 * the current frame into the ring. */
+			break;
+		}
+
 		/* Don't receive packets sent by ourselves */
 		eth_hdr = (struct ethhdr *)pkt_buf;
 		if (odp_unlikely(ethaddrs_equal(if_mac,
 						eth_hdr->h_source))) {
+			odp_packet_free(pkt);
 			tp_hdr->tp_status = TP_STATUS_KERNEL;
 			frame_num = next_frame_num;
 			continue;
@@ -190,18 +199,11 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			if (cls_classify_packet(pktio_entry, pkt_buf, pkt_len,
 						pkt_len, &pool, &parsed_hdr,
 						true)) {
+				odp_packet_free(pkt);
 				tp_hdr->tp_status = TP_STATUS_KERNEL;
 				frame_num = next_frame_num;
 				continue;
 			}
-		}
-
-		ret = packet_alloc_multi(pool, pkt_len, &pkt, 1);
-
-		if (odp_unlikely(ret != 1)) {
-			tp_hdr->tp_status = TP_STATUS_KERNEL;
-			frame_num = next_frame_num;
-			continue;
 		}
 
 		hdr = packet_hdr(pkt);
