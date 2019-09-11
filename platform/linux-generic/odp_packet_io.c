@@ -195,6 +195,56 @@ static odp_pktio_t alloc_lock_pktio_entry(void)
 	return ODP_PKTIO_INVALID;
 }
 
+/**
+ * Strip optional pktio type from device name by moving start pointer
+ *
+ * @param      name      Packet IO device name
+ * @param[out] type_out  Optional char array (len = PKTIO_NAME_LEN) for storing
+ *                       pktio type. Ignored when NULL.
+ *
+ * @return Pointer to the beginning of device name
+ */
+static const char *strip_pktio_type(const char *name, char *type_out)
+{
+	const char *if_name;
+
+	if (type_out)
+		type_out[0] = '\0';
+
+	/* Strip pktio type prefix <pktio_type>:<if_name> */
+	if_name = strchr(name, ':');
+
+	if (if_name) {
+		int pktio_if;
+		int type_len = if_name - name;
+		char pktio_type[type_len + 1];
+
+		strncpy(pktio_type, name, type_len);
+		pktio_type[type_len] = '\0';
+
+		/* Remove colon */
+		if_name++;
+
+		/* Match if_type to enabled pktio devices */
+		for (pktio_if = 0; pktio_if_ops[pktio_if]; pktio_if++) {
+			if (!strcmp(pktio_type, pktio_if_ops[pktio_if]->name)) {
+				if (type_out)
+					strcpy(type_out, pktio_type);
+				/* Some pktio devices expect device names to
+				 * begin with pktio type */
+				if (!strcmp(pktio_type, "ipc") ||
+				    !strcmp(pktio_type, "null") ||
+				    !strcmp(pktio_type, "pcap") ||
+				    !strcmp(pktio_type, "tap"))
+					return name;
+
+				return if_name;
+			}
+		}
+	}
+	return name;
+}
+
 static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 				     const odp_pktio_param_t *param)
 {
@@ -202,6 +252,8 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	pktio_entry_t *pktio_entry;
 	int ret = -1;
 	int pktio_if;
+	char pktio_type[PKTIO_NAME_LEN];
+	const char *if_name;
 
 	if (strlen(name) >= PKTIO_NAME_LEN - 1) {
 		/* ioctl names limitation */
@@ -209,6 +261,8 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 			name, PKTIO_NAME_LEN - 1);
 		return ODP_PKTIO_INVALID;
 	}
+
+	if_name = strip_pktio_type(name, pktio_type);
 
 	hdl = alloc_lock_pktio_entry();
 	if (hdl == ODP_PKTIO_INVALID) {
@@ -230,7 +284,12 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	odp_pktio_config_init(&pktio_entry->s.config);
 
 	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
-		ret = pktio_if_ops[pktio_if]->open(hdl, pktio_entry, name,
+		/* Only use explicitly defined pktio type */
+		if (strlen(pktio_type) &&
+		    strcmp(pktio_if_ops[pktio_if]->name, pktio_type))
+			continue;
+
+		ret = pktio_if_ops[pktio_if]->open(hdl, pktio_entry, if_name,
 						   pool);
 		if (!ret)
 			break;
@@ -244,7 +303,9 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	}
 
 	snprintf(pktio_entry->s.name,
-		 sizeof(pktio_entry->s.name), "%s", name);
+		 sizeof(pktio_entry->s.name), "%s", if_name);
+	snprintf(pktio_entry->s.full_name,
+		 sizeof(pktio_entry->s.full_name), "%s", name);
 	pktio_entry->s.state = PKTIO_STATE_OPENED;
 	pktio_entry->s.ops = pktio_if_ops[pktio_if];
 	unlock_entry(pktio_entry);
@@ -588,7 +649,10 @@ odp_pktio_t odp_pktio_lookup(const char *name)
 {
 	odp_pktio_t hdl = ODP_PKTIO_INVALID;
 	pktio_entry_t *entry;
+	const char *ifname;
 	int i;
+
+	ifname = strip_pktio_type(name, NULL);
 
 	odp_spinlock_lock(&pktio_tbl->lock);
 
@@ -600,7 +664,7 @@ odp_pktio_t odp_pktio_lookup(const char *name)
 		lock_entry(entry);
 
 		if (entry->s.state >= PKTIO_STATE_ACTIVE &&
-		    strncmp(entry->s.name, name, sizeof(entry->s.name)) == 0)
+		    strncmp(entry->s.name, ifname, sizeof(entry->s.name)) == 0)
 			hdl = _odp_cast_scalar(odp_pktio_t, i + 1);
 
 		unlock_entry(entry);
@@ -1139,7 +1203,7 @@ int odp_pktio_info(odp_pktio_t hdl, odp_pktio_info_t *info)
 	}
 
 	memset(info, 0, sizeof(odp_pktio_info_t));
-	info->name = entry->s.name;
+	info->name = entry->s.full_name;
 	info->drv_name = entry->s.ops->name;
 	info->pool = entry->s.pool;
 	memcpy(&info->param, &entry->s.param, sizeof(odp_pktio_param_t));
