@@ -59,6 +59,7 @@
 
 /** packet mmap ring */
 struct ring {
+	odp_ticketlock_t lock;
 	struct iovec *rd;
 	unsigned int frame_num;
 	int rd_num;
@@ -565,6 +566,8 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 	pkt_sock->frame_offset = 0;
 
 	pkt_sock->pool = pool;
+	odp_ticketlock_init(&pkt_sock->rx_ring.lock);
+	odp_ticketlock_init(&pkt_sock->tx_ring.lock);
 	pkt_sock->rx_ring.shm = ODP_SHM_INVALID;
 	pkt_sock->tx_ring.shm = ODP_SHM_INVALID;
 	pkt_sock->sockfd = mmap_pkt_socket();
@@ -649,10 +652,10 @@ static int sock_mmap_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	pkt_sock_mmap_t *const pkt_sock = pkt_priv(pktio_entry);
 	int ret;
 
-	odp_ticketlock_lock(&pktio_entry->s.rxl);
+	odp_ticketlock_lock(&pkt_sock->rx_ring.lock);
 	ret = pkt_mmap_v2_rx(pktio_entry, pkt_sock, pkt_table, num,
 			     pkt_sock->if_mac);
-	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+	odp_ticketlock_unlock(&pkt_sock->rx_ring.lock);
 
 	return ret;
 }
@@ -748,10 +751,10 @@ static int sock_mmap_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int ret;
 	pkt_sock_mmap_t *const pkt_sock = pkt_priv(pktio_entry);
 
-	odp_ticketlock_lock(&pktio_entry->s.txl);
+	odp_ticketlock_lock(&pkt_sock->tx_ring.lock);
 	ret = pkt_mmap_v2_tx(pkt_sock->tx_ring.sock, &pkt_sock->tx_ring,
 			     pkt_table, num);
-	odp_ticketlock_unlock(&pktio_entry->s.txl);
+	odp_ticketlock_unlock(&pkt_sock->tx_ring.lock);
 
 	return ret;
 }
