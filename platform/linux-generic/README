@@ -1,17 +1,43 @@
 Copyright (c) 2014-2018, Linaro Limited
+Copyright (c) 2019, Nokia
 All rights reserved.
 
 SPDX-License-Identifier:        BSD-3-Clause
 
 1. Intro
-
-OpenDataPlane implementation for Linux generic. Directory linux-generic contains ODP headers and implementation
-for linux-generic target. This drop does not target high
-performance. It is rather proof of ODP API functionality. It still uses
-linux-generic's SW scheduler.
+    OpenDataPlane API generic Linux implementation. Directory linux-generic
+    contains the header and source files and additional platform test scripts
+    for ODP linux-generic implementation.
 
 2. Build
-# To compile ODP
-./bootstrap
-./configure
-make
+    See DEPENDENCIES file about system requirements and dependencies to external
+    libraries/packages. It contains also more detailed build instructions.
+
+    Generally, ODP is built with these three steps:
+        ./bootstrap
+        ./configure
+        make
+
+3. Configuration file
+    See config/README for application runtime configuration options.
+
+4. Packet I/O
+    When passing a packet I/O device name to odp_pktio_open() one can explicitly
+    specify the used implementation internal pktio type. The pktio type can be
+    selected by adding a pktio type prefix to the device name separated by a
+    colon (<pktio_type>:<if_name>).
+
+    E.g.
+        socket:eth1
+        netmap:eth2
+
+    The supported pktio types are:
+        dpdk
+        ipc
+        loop
+        netmap
+        null
+        pcap
+        socket
+        socket_mmap
+        tap
