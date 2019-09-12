@@ -84,8 +84,8 @@ run_test_veth()
 	fi
 
 	setup_pktio_env clean
-	export ODP_PKTIO_IF0=$IF0
-	export ODP_PKTIO_IF1=$IF1
+	export ODP_PKTIO_IF0=netmap:$IF0
+	export ODP_PKTIO_IF1=netmap:$IF1
 	run_test
 	return $?
 }
