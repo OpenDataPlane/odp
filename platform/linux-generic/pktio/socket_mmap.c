@@ -24,10 +24,10 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <time.h>
+#include <linux/if_packet.h>
 
 #include <odp_api.h>
 #include <odp/api/plat/packet_inlines.h>
-#include <odp_packet_socket.h>
 #include <odp_socket_common.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
@@ -46,6 +46,37 @@
 /* Reserve 4MB memory for frames in a RX/TX ring */
 #define FRAME_MEM_SIZE (4 * 1024 * 1024)
 #define BLOCK_SIZE     (4 * 1024)
+
+/*
+ * This makes sure that building for kernels older than 3.1 works
+ * and a fanout requests fails (for invalid packet socket option)
+ * in runtime if requested
+ */
+#ifndef PACKET_FANOUT
+#define PACKET_FANOUT		18
+#define PACKET_FANOUT_HASH	0
+#endif
+
+/** packet mmap ring */
+struct ring {
+	struct iovec *rd;
+	unsigned int frame_num;
+	int rd_num;
+
+	odp_shm_t shm;
+	int sock;
+	int type;
+	int version;
+	uint8_t *mm_space;
+	size_t mm_len;
+	size_t rd_len;
+	int flen;
+
+	struct tpacket_req req;
+};
+
+ODP_STATIC_ASSERT(offsetof(struct ring, mm_space) <= ODP_CACHE_LINE_SIZE,
+		  "ERR_STRUCT_RING");
 
 /** Packet socket using mmap rings for both Rx and Tx */
 typedef struct {
