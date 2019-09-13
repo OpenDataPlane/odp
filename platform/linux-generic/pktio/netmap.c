@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -34,7 +35,6 @@
 #include <odp_classification_internal.h>
 #include <odp_libconfig_internal.h>
 
-
 #include <inttypes.h>
 
 /* Disable netmap debug prints */
@@ -51,6 +51,8 @@
 #define NM_INJECT_RETRIES 10
 
 #define NM_MAX_DESC 64
+
+#define NM_BUF_SIZE "/sys/module/netmap/parameters/buf_size"
 
 /** netmap runtime configuration options */
 typedef struct {
@@ -113,6 +115,29 @@ static inline pkt_netmap_t *pkt_priv(pktio_entry_t *pktio_entry)
 
 static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 static int netmap_stats_reset(pktio_entry_t *pktio_entry);
+
+static int read_netmap_buf_size(void)
+{
+	FILE  *file;
+	char str[128];
+	int size = 0;
+
+	file = fopen(NM_BUF_SIZE, "rt");
+	if (file == NULL) {
+		/* File not found */
+		return 0;
+	}
+
+	if (fgets(str, sizeof(str), file) != NULL) {
+		/* Read netmap buffer size */
+		if (sscanf(str, "%i", &size) != 1)
+			size = 0;
+	}
+
+	fclose(file);
+
+	return size;
+}
 
 static int lookup_opt(const char *opt_name, const char *drv_name, int *val)
 {
@@ -443,10 +468,9 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	int sockfd;
 	const char *prefix;
 	uint32_t mtu;
-	uint32_t buf_size;
+	uint32_t nm_buf_size;
 	pkt_netmap_t *pkt_nm = pkt_priv(pktio_entry);
 	struct nm_desc *desc;
-	struct netmap_ring *ring;
 	odp_pktin_hash_proto_t hash_proto;
 	odp_pktio_stats_t cur_stats;
 
@@ -480,6 +504,39 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		return -1;
 	}
 
+	/* Read netmap buffer size */
+	nm_buf_size = read_netmap_buf_size();
+	if (!nm_buf_size) {
+		ODP_ERR("Unable to read netmap buf size\n");
+		return -1;
+	}
+
+	if (!pkt_nm->is_virtual) {
+		sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+		if (sockfd == -1) {
+			ODP_ERR("Cannot get device control socket\n");
+			return -1;
+		}
+		pkt_nm->sockfd = sockfd;
+
+		/* Use either interface MTU or netmap buffer size as MTU,
+		 * whichever is smaller. */
+		mtu = mtu_get_fd(pkt_nm->sockfd, pkt_nm->if_name);
+		if (mtu == 0) {
+			ODP_ERR("Unable to read interface MTU\n");
+			goto error;
+		}
+		pkt_nm->mtu = (mtu < nm_buf_size) ? mtu : nm_buf_size;
+
+		/* Netmap requires that interface MTU size <= nm buf size */
+		if (mtu > nm_buf_size) {
+			if (mtu_set_fd(pkt_nm->sockfd, pkt_nm->if_name,
+				       nm_buf_size)) {
+				ODP_ERR("Unable to set interface MTU\n");
+				goto error;
+			}
+		}
+	}
 	/* Dummy open here to check if netmap module is available and to read
 	 * capability info. */
 	desc = nm_open(pkt_nm->nm_name, NULL, 0, NULL);
@@ -492,8 +549,6 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 
 	netmap_init_capability(pktio_entry);
 
-	ring = NETMAP_RXRING(desc->nifp, desc->cur_rx_ring);
-	buf_size = ring->nr_buf_size;
 	nm_close(desc);
 
 	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
@@ -511,7 +566,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 
 		pktio_entry->s.capa.max_input_queues = 1;
 		pktio_entry->s.capa.set_op.op.promisc_mode = 0;
-		pkt_nm->mtu = buf_size;
+		pkt_nm->mtu = nm_buf_size;
 		pktio_entry->s.stats_type = STATS_UNSUPPORTED;
 		/* Set MAC address for virtual interface */
 		pkt_nm->if_mac[0] = 0x2;
@@ -524,24 +579,9 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		return 0;
 	}
 
-	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sockfd == -1) {
-		ODP_ERR("Cannot get device control socket\n");
-		goto error;
-	}
-	pkt_nm->sockfd = sockfd;
-
-	/* Use either interface MTU or netmap buffer size as MTU, whichever is
-	 * smaller. */
-	mtu = mtu_get_fd(pkt_priv(pktio_entry)->sockfd, pkt_nm->if_name);
-	if (mtu == 0) {
-		ODP_ERR("Unable to read interface MTU\n");
-		goto error;
-	}
-	pkt_nm->mtu = (mtu < buf_size) ? mtu : buf_size;
-
 	/* Check if RSS is supported. If not, set 'max_input_queues' to 1. */
-	if (rss_conf_get_supported_fd(sockfd, netdev, &hash_proto) == 0) {
+	if (rss_conf_get_supported_fd(pkt_nm->sockfd, netdev,
+				      &hash_proto) == 0) {
 		ODP_DBG("RSS not supported\n");
 		pktio_entry->s.capa.max_input_queues = 1;
 	}
@@ -552,13 +592,12 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	if ((pkt_nm->if_flags & IFF_UP) == 0)
 		ODP_DBG("%s is down\n", pkt_nm->if_name);
 
-	err = mac_addr_get_fd(sockfd, netdev, pkt_nm->if_mac);
+	err = mac_addr_get_fd(pkt_nm->sockfd, netdev, pkt_nm->if_mac);
 	if (err)
 		goto error;
 
 	/* netmap uses only ethtool to get statistics counters */
-	err = ethtool_stats_get_fd(pkt_priv(pktio_entry)->sockfd,
-				   pkt_nm->if_name, &cur_stats);
+	err = ethtool_stats_get_fd(pkt_nm->sockfd, pkt_nm->if_name, &cur_stats);
 	if (err) {
 		ODP_ERR("netmap pktio %s does not support statistics counters\n",
 			pkt_nm->if_name);
