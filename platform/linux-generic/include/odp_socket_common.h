@@ -1,4 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -35,6 +36,11 @@ int mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[]);
  * Read the MTU from a packet socket
  */
 uint32_t mtu_get_fd(int fd, const char *name);
+
+/**
+ * Set a packet socket MTU
+ */
+int mtu_set_fd(int fd, const char *name, int mtu);
 
 /**
  * Enable/Disable promisc mode for a packet socket

@@ -1,4 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -64,6 +65,27 @@ uint32_t mtu_get_fd(int fd, const char *name)
 		return 0;
 	}
 	return ifr.ifr_mtu + _ODP_ETHHDR_LEN;
+}
+
+/*
+ * ODP_PACKET_NETMAP:
+ */
+int mtu_set_fd(int fd, const char *name, int mtu)
+{
+	struct ifreq ifr;
+	int ret;
+
+	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
+	ifr.ifr_mtu = mtu;
+
+	ret = ioctl(fd, SIOCSIFMTU, &ifr);
+	if (ret < 0) {
+		__odp_errno = errno;
+		ODP_DBG("ioctl(SIOCSIFMTU): %s: \"%s\".\n", strerror(errno),
+			ifr.ifr_name);
+		return -1;
+	}
+	return 0;
 }
 
 /*
