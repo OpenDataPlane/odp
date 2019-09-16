@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 /**
  * @file
  *
@@ -16,10 +14,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <test_debug.h>
 #include <odp_cunit_common.h>
 #include <odp_packet_io_ring_internal.h>
 #include <odp_errno_define.h>
+
+#include <odp/helper/odph_api.h>
 
 #include "ring_suites.h"
 
@@ -42,7 +41,7 @@ int ring_test_basic_start(void)
 	/* alloc dummy object pointers for enqueue testing */
 	test_enq_data = malloc(RING_SIZE * 2 * sizeof(void *));
 	if (NULL == test_enq_data) {
-		LOG_ERR("failed to allocate basic test enqeue data\n");
+		ODPH_ERR("failed to allocate basic test enqeue data\n");
 		return -1;
 	}
 
@@ -52,7 +51,7 @@ int ring_test_basic_start(void)
 	/* alloc dummy object pointers for dequeue testing */
 	test_deq_data = malloc(RING_SIZE * 2 * sizeof(void *));
 	if (NULL == test_deq_data) {
-		LOG_ERR("failed to allocate basic test dequeue data\n");
+		ODPH_ERR("failed to allocate basic test dequeue data\n");
 		free(test_enq_data); test_enq_data = NULL;
 		return -1;
 	}

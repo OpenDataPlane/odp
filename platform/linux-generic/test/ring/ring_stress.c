@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 /**
  * @file
  *
@@ -24,7 +22,6 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 #include <odp_packet_io_ring_internal.h>
-#include <test_debug.h>
 #include <odp_cunit_common.h>
 
 #include "ring_suites.h"
@@ -88,7 +85,7 @@ int ring_test_stress_start(void)
 	/* multiple thread usage scenario, thread or process sharable */
 	r_stress = _ring_create(ring_name, RING_SIZE, _RING_SHM_PROC);
 	if (r_stress == NULL) {
-		LOG_ERR("create ring failed for stress.\n");
+		ODPH_ERR("create ring failed for stress.\n");
 		return -1;
 	}
 
@@ -121,7 +118,7 @@ void ring_test_stress_1_1_producer_consumer(void)
 
 	/* not failure, insufficient resource */
 	if (worker_param.numthrds < 2) {
-		LOG_ERR("insufficient cpu for 1:1 "
+		ODPH_ERR("insufficient cpu for 1:1 "
 			"producer/consumer stress.\n");
 		return;
 	}
@@ -156,7 +153,7 @@ void ring_test_stress_N_M_producer_consumer(void)
 
 	/* not failure, insufficient resource */
 	if (worker_param.numthrds < 3) {
-		LOG_ERR("insufficient cpu for N:M "
+		ODPH_ERR("insufficient cpu for N:M "
 			"producer/consumer stress.\n");
 		return;
 	}
@@ -244,7 +241,7 @@ static int stress_worker(void *_data)
 	/* verify ring lookup in worker context */
 	r_stress = _ring_lookup(ring_name);
 	if (NULL == r_stress) {
-		LOG_ERR("ring lookup %s not found\n", ring_name);
+		ODPH_ERR("ring lookup %s not found\n", ring_name);
 		return (*result = -1);
 	}
 
@@ -262,8 +259,8 @@ static int stress_worker(void *_data)
 	case STRESS_1_N_PRODUCER_CONSUMER:
 	case STRESS_N_1_PRODUCER_CONSUMER:
 	default:
-		LOG_ERR("invalid or not-implemented stress type (%d)\n",
-			worker_param->testcase);
+		ODPH_ERR("invalid or not-implemented stress type (%d)\n",
+			 worker_param->testcase);
 		break;
 	}
 
