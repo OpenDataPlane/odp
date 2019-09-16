@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:	BSD-3-Clause
  */
 
-#include "config.h"
-
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
@@ -15,9 +13,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <math.h>
-#include <odp.h>
+
+#include <odp_api.h>
 #include <odp/helper/odph_api.h>
-#include <test_debug.h>
 #include "odp_cunit_common.h"
 
 #define TM_DEBUG                 0
@@ -404,8 +402,8 @@ static int test_overall_capabilities(void)
 	 */
 	num_records = MAX_CAPABILITIES;
 	if (MAX_CAPABILITIES < rc)
-		LOG_DBG("There were more than %u capabilities (%u)\n",
-			MAX_CAPABILITIES, rc);
+		ODPH_DBG("There were more than %u capabilities (%u)\n",
+			 MAX_CAPABILITIES, rc);
 	else
 		num_records = rc;
 
@@ -501,7 +499,7 @@ static int open_pktios(void)
 		if (pktio == ODP_PKTIO_INVALID)
 			pktio = odp_pktio_lookup(iface_name[iface]);
 		if (pktio == ODP_PKTIO_INVALID) {
-			LOG_ERR("odp_pktio_open() failed\n");
+			ODPH_ERR("odp_pktio_open() failed\n");
 			return -1;
 		}
 
@@ -516,13 +514,13 @@ static int open_pktios(void)
 
 		if (odp_pktin_queue(pktio, &pktins[iface], 1) != 1) {
 			odp_pktio_close(pktio);
-			LOG_ERR("odp_pktio_open() failed: no pktin queue\n");
+			ODPH_ERR("odp_pktio_open() failed: no pktin queue\n");
 			return -1;
 		}
 
 		if (odp_pktout_queue(pktio, &pktouts[iface], 1) != 1) {
 			odp_pktio_close(pktio);
-			LOG_ERR("odp_pktio_open() failed: no pktout queue\n");
+			ODPH_ERR("odp_pktio_open() failed: no pktout queue\n");
 			return -1;
 		}
 
@@ -536,7 +534,7 @@ static int open_pktios(void)
 						ODPH_ETHADDR_LEN);
 
 		if (rc != ODPH_ETHADDR_LEN) {
-			LOG_ERR("odp_pktio_mac_addr() failed\n");
+			ODPH_ERR("odp_pktio_mac_addr() failed\n");
 			return -1;
 		}
 	}
@@ -546,7 +544,7 @@ static int open_pktios(void)
 		rcv_pktin  = pktins[1];
 		ret = odp_pktio_start(pktios[1]);
 		if (ret != 0) {
-			LOG_ERR("odp_pktio_start() failed\n");
+			ODPH_ERR("odp_pktio_start() failed\n");
 			return -1;
 		}
 	} else {
@@ -556,15 +554,15 @@ static int open_pktios(void)
 
 	ret = odp_pktio_start(pktios[0]);
 	if (ret != 0) {
-		LOG_ERR("odp_pktio_start() failed\n");
+		ODPH_ERR("odp_pktio_start() failed\n");
 		return -1;
 	}
 
 	/* Now wait until the link or links are up. */
 	rc = wait_linkup(pktios[0]);
 	if (rc != 1) {
-		LOG_ERR("link %" PRIX64 " not up\n",
-			odp_pktio_to_u64(pktios[0]));
+		ODPH_ERR("link %" PRIX64 " not up\n",
+			 odp_pktio_to_u64(pktios[0]));
 		return -1;
 	}
 
@@ -574,8 +572,8 @@ static int open_pktios(void)
 	/* Wait for 2nd link to be up */
 	rc = wait_linkup(pktios[1]);
 	if (rc != 1) {
-		LOG_ERR("link %" PRIX64 " not up\n",
-			odp_pktio_to_u64(pktios[0]));
+		ODPH_ERR("link %" PRIX64 " not up\n",
+			 odp_pktio_to_u64(pktios[0]));
 		return -1;
 	}
 
@@ -705,7 +703,7 @@ static odp_packet_t make_pkt(odp_pool_t  pkt_pool,
 	l2_len       = l2_hdr_len + l3_len;
 	pkt_len      = l2_len;
 	if (unique_id == 0) {
-		LOG_ERR("make_pkt called with invalid unique_id of 0\n");
+		ODPH_ERR("%s called with invalid unique_id of 0\n", __func__);
 		return ODP_PACKET_INVALID;
 	}
 
@@ -812,7 +810,7 @@ static odp_packet_t make_pkt(odp_pool_t  pkt_pool,
 
 	/* Next the UDP/TCP checksum. */
 	if (odph_udp_tcp_chksum(odp_pkt, ODPH_CHKSUM_GENERATE, NULL) != 0)
-		LOG_ERR("odph_udp_tcp_chksum failed\n");
+		ODPH_ERR("odph_udp_tcp_chksum failed\n");
 
 	return odp_pkt;
 }
@@ -886,17 +884,18 @@ static int receive_pkts(odp_tm_t          odp_tm,
 				(odp_packet_has_l3_error(rcv_pkt) << 2) |
 				(odp_packet_has_l4_error(rcv_pkt) << 3);
 
-			LOG_ERR("received a pkt with the following errors\n");
-			LOG_ERR("    l2_err=%u l3_err=%u l4_err=%u. Skipping\n",
-				(rcv_pkt_desc->errors >> 1) & 0x1,
-				(rcv_pkt_desc->errors >> 2) & 0x1,
-				(rcv_pkt_desc->errors >> 3) & 0x1);
+			ODPH_ERR("received a pkt with the following errors\n");
+			ODPH_ERR("    l2_err=%u l3_err=%u l4_err=%u. "
+				 "Skipping\n",
+				 (rcv_pkt_desc->errors >> 1) & 0x1,
+				 (rcv_pkt_desc->errors >> 2) & 0x1,
+				 (rcv_pkt_desc->errors >> 3) & 0x1);
 		}
 
 		unique_id    = 0;
 		rc           = get_unique_id(rcv_pkt, &unique_id, &is_ipv4_pkt);
 		if (rc != 0) {
-			LOG_ERR("received a non IPv4/IPv6 pkt\n");
+			ODPH_ERR("received a non IPv4/IPv6 pkt\n");
 			return -1;
 		}
 
@@ -1318,14 +1317,14 @@ static int create_tm_queue(odp_tm_t         odp_tm,
 
 	tm_queue = odp_tm_queue_create(odp_tm, &queue_params);
 	if (tm_queue == ODP_TM_INVALID) {
-		LOG_ERR("odp_tm_queue_create() failed\n");
+		ODPH_ERR("odp_tm_queue_create() failed\n");
 		return -1;
 	}
 
 	queue_desc->tm_queues[priority] = tm_queue;
 	rc = odp_tm_queue_connect(tm_queue, tm_node);
 	if (rc != 0) {
-		LOG_ERR("odp_tm_queue_connect() failed\n");
+		ODPH_ERR("odp_tm_queue_connect() failed\n");
 		odp_tm_queue_destroy(tm_queue);
 		return -1;
 	}
@@ -1385,8 +1384,8 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 
 	tm_node = odp_tm_node_create(odp_tm, node_name, &node_params);
 	if (tm_node == ODP_TM_INVALID) {
-		LOG_ERR("odp_tm_node_create() failed @ level=%" PRIu32 "\n",
-			level);
+		ODPH_ERR("odp_tm_node_create() failed @ level=%" PRIu32 "\n",
+			 level);
 		return NULL;
 	}
 
@@ -1398,8 +1397,8 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 
 	rc = odp_tm_node_connect(tm_node, parent_node);
 	if (rc != 0) {
-		LOG_ERR("odp_tm_node_connect() failed @ level=%" PRIu32 "\n",
-			level);
+		ODPH_ERR("odp_tm_node_connect() failed @ level=%" PRIu32 "\n",
+			 level);
 		odp_tm_node_destroy(tm_node);
 		return NULL;
 	}
@@ -1432,8 +1431,8 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 		rc = create_tm_queue(odp_tm, tm_node, node_idx, queue_desc,
 				     priority);
 		if (rc != 0) {
-			LOG_ERR("create_tm_queue() failed @ "
-				"level=%" PRIu32 "\n", level);
+			ODPH_ERR("create_tm_queue() failed @ "
+				 "level=%" PRIu32 "\n", level);
 			while (priority > 0)
 				(void)destroy_tm_queue
 					(queue_desc->tm_queues[--priority]);
@@ -1458,7 +1457,8 @@ static tm_node_desc_t *create_tm_subtree(odp_tm_t        odp_tm,
 	node_desc = create_tm_node(odp_tm, level, num_levels,
 				   node_idx, parent_node);
 	if (node_desc == NULL) {
-		LOG_ERR("create_tm_node() failed @ level=%" PRIu32 "\n", level);
+		ODPH_ERR("create_tm_node() failed @ level=%" PRIu32 "\n",
+			 level);
 		return NULL;
 	}
 
@@ -1468,8 +1468,8 @@ static tm_node_desc_t *create_tm_subtree(odp_tm_t        odp_tm,
 						       num_levels, child_idx,
 						       node_desc);
 			if (child_desc == NULL) {
-				LOG_ERR("create_tm_subtree failed "
-					"level=%" PRIu32 "\n", level);
+				ODPH_ERR("%s failed level=%" PRIu32 "\n",
+					 __func__, level);
 
 				return NULL;
 			}
@@ -1634,7 +1634,7 @@ static int create_tm_system(void)
 		 num_odp_tm_systems);
 	odp_tm = odp_tm_create(tm_name, &requirements, &egress);
 	if (odp_tm == ODP_TM_INVALID) {
-		LOG_ERR("odp_tm_create() failed\n");
+		ODPH_ERR("odp_tm_create() failed\n");
 		return -1;
 	}
 
@@ -1643,7 +1643,7 @@ static int create_tm_system(void)
 	root_node_desc = create_tm_subtree(odp_tm, 0, NUM_LEVELS, 0, NULL);
 	root_node_descs[num_odp_tm_systems] = root_node_desc;
 	if (root_node_desc == NULL) {
-		LOG_ERR("create_tm_subtree() failed\n");
+		ODPH_ERR("create_tm_subtree() failed\n");
 		return -1;
 	}
 
@@ -1652,13 +1652,13 @@ static int create_tm_system(void)
 	/* Test odp_tm_capability and odp_tm_find. */
 	rc = odp_tm_capability(odp_tm, &tm_capabilities);
 	if (rc != 0) {
-		LOG_ERR("odp_tm_capability() failed\n");
+		ODPH_ERR("odp_tm_capability() failed\n");
 		return -1;
 	}
 
 	found_odp_tm = odp_tm_find(tm_name, &requirements, &egress);
 	if ((found_odp_tm == ODP_TM_INVALID) || (found_odp_tm != odp_tm)) {
-		LOG_ERR("odp_tm_find() failed\n");
+		ODPH_ERR("odp_tm_find() failed\n");
 		return -1;
 	}
 
@@ -1676,8 +1676,8 @@ static void dump_tm_subtree(tm_node_desc_t *node_desc)
 
 	rc = odp_tm_node_info(node_desc->node, &node_info);
 	if (rc != 0) {
-		LOG_ERR("odp_tm_node_info failed for tm_node=0x%" PRIX64 "\n",
-			node_desc->node);
+		ODPH_ERR("odp_tm_node_info failed for tm_node=0x%" PRIX64 "\n",
+			 node_desc->node);
 	}
 
 	num_queues = 0;
@@ -1717,15 +1717,15 @@ static int unconfig_tm_queue_profiles(odp_tm_queue_t tm_queue)
 
 	rc = odp_tm_queue_info(tm_queue, &queue_info);
 	if (rc != 0) {
-		LOG_ERR("odp_tm_queue_info failed code=%d\n", rc);
+		ODPH_ERR("odp_tm_queue_info failed code=%d\n", rc);
 		return rc;
 	}
 
 	if (queue_info.shaper_profile != ODP_TM_INVALID) {
 		rc = odp_tm_queue_shaper_config(tm_queue, ODP_TM_INVALID);
 		if (rc != 0) {
-			LOG_ERR("odp_tm_queue_shaper_config failed code=%d\n",
-				rc);
+			ODPH_ERR("odp_tm_queue_shaper_config failed code=%d\n",
+				 rc);
 			return rc;
 		}
 	}
@@ -1733,8 +1733,8 @@ static int unconfig_tm_queue_profiles(odp_tm_queue_t tm_queue)
 	if (queue_info.threshold_profile != ODP_TM_INVALID) {
 		rc = odp_tm_queue_threshold_config(tm_queue, ODP_TM_INVALID);
 		if (rc != 0) {
-			LOG_ERR("odp_tm_queue_threshold_config failed "
-				"code=%d\n", rc);
+			ODPH_ERR("odp_tm_queue_threshold_config failed "
+				 "code=%d\n", rc);
 			return rc;
 		}
 	}
@@ -1745,8 +1745,8 @@ static int unconfig_tm_queue_profiles(odp_tm_queue_t tm_queue)
 			rc = odp_tm_queue_wred_config(tm_queue, color,
 						      ODP_TM_INVALID);
 			if (rc != 0) {
-				LOG_ERR("odp_tm_queue_wred_config failed "
-					"color=%" PRIu32 " code=%d\n",
+				ODPH_ERR("odp_tm_queue_wred_config failed "
+					 "color=%" PRIu32 " code=%d\n",
 					color, rc);
 				return rc;
 			}
@@ -1768,24 +1768,24 @@ static int destroy_tm_queues(tm_queue_desc_t *queue_desc)
 		if (tm_queue != ODP_TM_INVALID) {
 			rc = odp_tm_queue_disconnect(tm_queue);
 			if (rc != 0) {
-				LOG_ERR("odp_tm_queue_disconnect failed "
-					"idx=%" PRIu32 " code=%d\n",
+				ODPH_ERR("odp_tm_queue_disconnect failed "
+					 "idx=%" PRIu32 " code=%d\n",
 					queue_idx, rc);
 				return rc;
 			}
 
 			rc = unconfig_tm_queue_profiles(tm_queue);
 			if (rc != 0) {
-				LOG_ERR("unconfig_tm_queue_profiles failed "
-					"idx=%" PRIu32 " code=%d\n",
+				ODPH_ERR("unconfig_tm_queue_profiles failed "
+					 "idx=%" PRIu32 " code=%d\n",
 					queue_idx, rc);
 				return rc;
 			}
 
 			rc = odp_tm_queue_destroy(tm_queue);
 			if (rc != 0) {
-				LOG_ERR("odp_tm_queue_destroy failed "
-					"idx=%" PRIu32 " code=%d\n",
+				ODPH_ERR("odp_tm_queue_destroy failed "
+					 "idx=%" PRIu32 " code=%d\n",
 					queue_idx, rc);
 				return rc;
 			}
@@ -1805,15 +1805,15 @@ static int unconfig_tm_node_profiles(odp_tm_node_t tm_node)
 
 	rc = odp_tm_node_info(tm_node, &node_info);
 	if (rc != 0) {
-		LOG_ERR("odp_tm_node_info failed code=%d\n", rc);
+		ODPH_ERR("odp_tm_node_info failed code=%d\n", rc);
 		return rc;
 	}
 
 	if (node_info.shaper_profile != ODP_TM_INVALID) {
 		rc = odp_tm_node_shaper_config(tm_node, ODP_TM_INVALID);
 		if (rc != 0) {
-			LOG_ERR("odp_tm_node_shaper_config failed code=%d\n",
-				rc);
+			ODPH_ERR("odp_tm_node_shaper_config failed code=%d\n",
+				 rc);
 			return rc;
 		}
 	}
@@ -1821,8 +1821,8 @@ static int unconfig_tm_node_profiles(odp_tm_node_t tm_node)
 	if (node_info.threshold_profile != ODP_TM_INVALID) {
 		rc = odp_tm_node_threshold_config(tm_node, ODP_TM_INVALID);
 		if (rc != 0) {
-			LOG_ERR("odp_tm_node_threshold_config failed "
-				"code=%d\n", rc);
+			ODPH_ERR("odp_tm_node_threshold_config failed "
+				 "code=%d\n", rc);
 			return rc;
 		}
 	}
@@ -1833,9 +1833,9 @@ static int unconfig_tm_node_profiles(odp_tm_node_t tm_node)
 			rc = odp_tm_node_wred_config(tm_node, color,
 						     ODP_TM_INVALID);
 			if (rc != 0) {
-				LOG_ERR("odp_tm_node_wred_config failed "
-					"color=%" PRIu32 " code=%d\n",
-					color, rc);
+				ODPH_ERR("odp_tm_node_wred_config failed "
+					 "color=%" PRIu32 " code=%d\n",
+					 color, rc);
 				return rc;
 			}
 		}
@@ -1858,9 +1858,8 @@ static int destroy_tm_subtree(tm_node_desc_t *node_desc)
 		if (child_desc != NULL) {
 			rc = destroy_tm_subtree(child_desc);
 			if (rc != 0) {
-				LOG_ERR("destroy_tm_subtree failed "
-					"child_num=%" PRIu32 " code=%d\n",
-					child_num, rc);
+				ODPH_ERR("%s failed child_num=%" PRIu32 " "
+					 "code=%d\n", __func__, child_num, rc);
 				return rc;
 			}
 		}
@@ -1870,7 +1869,7 @@ static int destroy_tm_subtree(tm_node_desc_t *node_desc)
 	if (queue_desc != NULL) {
 		rc = destroy_tm_queues(queue_desc);
 		if (rc != 0) {
-			LOG_ERR("destroy_tm_queues failed code=%d\n", rc);
+			ODPH_ERR("destroy_tm_queues failed code=%d\n", rc);
 			return rc;
 		}
 	}
@@ -1878,19 +1877,19 @@ static int destroy_tm_subtree(tm_node_desc_t *node_desc)
 	tm_node = node_desc->node;
 	rc = odp_tm_node_disconnect(tm_node);
 	if (rc != 0) {
-		LOG_ERR("odp_tm_node_disconnect failed code=%d\n", rc);
+		ODPH_ERR("odp_tm_node_disconnect failed code=%d\n", rc);
 		return rc;
 	}
 
 	rc = unconfig_tm_node_profiles(tm_node);
 	if (rc != 0) {
-		LOG_ERR("unconfig_tm_node_profiles failed code=%d\n", rc);
+		ODPH_ERR("unconfig_tm_node_profiles failed code=%d\n", rc);
 		return rc;
 	}
 
 	rc = odp_tm_node_destroy(tm_node);
 	if (rc != 0) {
-		LOG_ERR("odp_tm_node_destroy failed code=%d\n", rc);
+		ODPH_ERR("odp_tm_node_destroy failed code=%d\n", rc);
 		return rc;
 	}
 
@@ -1912,8 +1911,8 @@ static int destroy_all_shaper_profiles(void)
 		if (shaper_profile != ODP_TM_INVALID) {
 			rc = odp_tm_shaper_destroy(shaper_profile);
 			if (rc != 0) {
-				LOG_ERR("odp_tm_sched_destroy failed "
-					"idx=%" PRIu32 " code=%d\n", idx, rc);
+				ODPH_ERR("odp_tm_sched_destroy failed "
+					 "idx=%" PRIu32 " code=%d\n", idx, rc);
 				return rc;
 			}
 			shaper_profiles[idx] = ODP_TM_INVALID;
@@ -1934,8 +1933,8 @@ static int destroy_all_sched_profiles(void)
 		if (sched_profile != ODP_TM_INVALID) {
 			rc = odp_tm_sched_destroy(sched_profile);
 			if (rc != 0) {
-				LOG_ERR("odp_tm_sched_destroy failed "
-					"idx=%" PRIu32 " code=%d\n", idx, rc);
+				ODPH_ERR("odp_tm_sched_destroy failed "
+					 "idx=%" PRIu32 " code=%d\n", idx, rc);
 				return rc;
 			}
 			sched_profiles[idx] = ODP_TM_INVALID;
@@ -1956,8 +1955,8 @@ static int destroy_all_threshold_profiles(void)
 		if (threshold_profile != ODP_TM_INVALID) {
 			rc = odp_tm_threshold_destroy(threshold_profile);
 			if (rc != 0) {
-				LOG_ERR("odp_tm_threshold_destroy failed "
-					"idx=%" PRIu32 " code=%d\n", idx, rc);
+				ODPH_ERR("odp_tm_threshold_destroy failed "
+					 "idx=%" PRIu32 " code=%d\n", idx, rc);
 				return rc;
 			}
 			threshold_profiles[idx] = ODP_TM_INVALID;
@@ -1979,10 +1978,10 @@ static int destroy_all_wred_profiles(void)
 			if (wred_profile != ODP_TM_INVALID) {
 				rc = odp_tm_wred_destroy(wred_profile);
 				if (rc != 0) {
-					LOG_ERR("odp_tm_wred_destroy failed "
-						"idx=%" PRIu32 " "
-						"color=%" PRIu32 " code=%d\n",
-						idx, color, rc);
+					ODPH_ERR("odp_tm_wred_destroy failed "
+						 "idx=%" PRIu32 " "
+						 "color=%" PRIu32 " code=%d\n",
+						 idx, color, rc);
 					return rc;
 				}
 				wred_profiles[idx][color] = ODP_TM_INVALID;
@@ -1999,25 +1998,25 @@ static int destroy_all_profiles(void)
 
 	rc = destroy_all_shaper_profiles();
 	if (rc != 0) {
-		LOG_ERR("destroy_all_shaper_profiles failed code=%d\n", rc);
+		ODPH_ERR("destroy_all_shaper_profiles failed code=%d\n", rc);
 		return rc;
 	}
 
 	rc = destroy_all_sched_profiles();
 	if (rc != 0) {
-		LOG_ERR("destroy_all_sched_profiles failed code=%d\n", rc);
+		ODPH_ERR("destroy_all_sched_profiles failed code=%d\n", rc);
 		return rc;
 	}
 
 	rc = destroy_all_threshold_profiles();
 	if (rc != 0) {
-		LOG_ERR("destroy_all_threshold_profiles failed code=%d\n", rc);
+		ODPH_ERR("destroy_all_threshold_profiles failed code=%d\n", rc);
 		return rc;
 	}
 
 	rc = destroy_all_wred_profiles();
 	if (rc != 0) {
-		LOG_ERR("destroy_all_wred_profiles failed code=%d\n", rc);
+		ODPH_ERR("destroy_all_wred_profiles failed code=%d\n", rc);
 		return rc;
 	}
 
@@ -2400,7 +2399,7 @@ static int set_shaper(const char    *node_name,
 
 	tm_node = find_tm_node(0, node_name);
 	if (tm_node == ODP_TM_INVALID) {
-		LOG_ERR("find_tm_node(%s) failed\n", node_name);
+		ODPH_ERR("find_tm_node(%s) failed\n", node_name);
 		CU_ASSERT_FATAL(tm_node != ODP_TM_INVALID);
 		return -1;
 	}
@@ -2434,9 +2433,9 @@ static int traffic_mngr_check_shaper(void)
 	int cpucount = odp_cpumask_all_available(&cpumask);
 
 	if (cpucount < 2) {
-		LOG_DBG("\nSkipping shaper test because cpucount = %d "
-			"is less then min number 2 required\n", cpucount);
-		LOG_DBG("Rerun with more cpu resources\n");
+		ODPH_DBG("\nSkipping shaper test because cpucount = %d "
+			 "is less then min number 2 required\n", cpucount);
+		ODPH_DBG("Rerun with more cpu resources\n");
 		return ODP_TEST_INACTIVE;
 	}
 
@@ -2449,9 +2448,9 @@ static int traffic_mngr_check_scheduler(void)
 	int cpucount = odp_cpumask_all_available(&cpumask);
 
 	if (cpucount < 2) {
-		LOG_DBG("\nSkipping scheduler test because cpucount = %d "
-			"is less then min number 2 required\n", cpucount);
-		LOG_DBG("Rerun with more cpu resources\n");
+		ODPH_DBG("\nSkipping scheduler test because cpucount = %d "
+			 "is less then min number 2 required\n", cpucount);
+		ODPH_DBG("Rerun with more cpu resources\n");
 		return ODP_TEST_INACTIVE;
 	}
 
@@ -2511,19 +2510,19 @@ static int test_shaper_bw(const char *shaper_name,
 		/* This is fairly major failure in that most of the pkts didn't
 		 * even get received, regardless of rate or order. Log the error
 		 * to assist with debugging */
-		LOG_ERR("Sent %" PRIu32 " pkts but only %" PRIu32 " "
-			"came back\n", pkts_sent, num_rcv_pkts);
+		ODPH_ERR("Sent %" PRIu32 " pkts but only %" PRIu32 " "
+			 "came back\n", pkts_sent, num_rcv_pkts);
 		CU_ASSERT(num_rcv_pkts <= (pkts_sent / 2));
 	} else if (pkts_rcvd_in_order <= 32) {
-		LOG_ERR("Sent %" PRIu32 " pkts but only %" PRIu32 " "
-			"came back (%" PRIu32 " in order)\n",
-			pkts_sent, num_rcv_pkts, pkts_rcvd_in_order);
+		ODPH_ERR("Sent %" PRIu32 " pkts but only %" PRIu32 " "
+			 "came back (%" PRIu32 " in order)\n",
+			 pkts_sent, num_rcv_pkts, pkts_rcvd_in_order);
 		CU_ASSERT(pkts_rcvd_in_order <= 32);
 	} else {
 		if (pkts_rcvd_in_order < pkts_sent)
-			LOG_DBG("Info: of %" PRIu32 " pkts sent %" PRIu32 " "
-				"came back (%" PRIu32 " in order)\n",
-				pkts_sent, num_rcv_pkts, pkts_rcvd_in_order);
+			ODPH_DBG("Info: of %" PRIu32 " pkts sent %" PRIu32 " "
+				 "came back (%" PRIu32 " in order)\n",
+				 pkts_sent, num_rcv_pkts, pkts_rcvd_in_order);
 
 		/* Next determine the inter arrival receive pkt statistics. */
 		rc = rcv_rate_stats(&rcv_stats, pkt_info.pkt_class);
@@ -2538,21 +2537,21 @@ static int test_shaper_bw(const char *shaper_name,
 					100) + 2;
 		if ((avg_rcv_gap < min_rcv_gap) ||
 		    (max_rcv_gap < avg_rcv_gap)) {
-			LOG_ERR("min=%" PRIu32 " avg_rcv_gap=%" PRIu32 " "
-				"max=%" PRIu32 " std_dev_gap=%" PRIu32 "\n",
-				rcv_stats.min_rcv_gap, avg_rcv_gap,
-				rcv_stats.max_rcv_gap, rcv_stats.std_dev_gap);
-			LOG_ERR("  expected_rcv_gap=%" PRIu64 " acceptable "
-				"rcv_gap range=%" PRIu32 "..%" PRIu32 "\n",
-				expected_rcv_gap_us, min_rcv_gap, max_rcv_gap);
+			ODPH_ERR("min=%" PRIu32 " avg_rcv_gap=%" PRIu32 " "
+				 "max=%" PRIu32 " std_dev_gap=%" PRIu32 "\n",
+				 rcv_stats.min_rcv_gap, avg_rcv_gap,
+				 rcv_stats.max_rcv_gap, rcv_stats.std_dev_gap);
+			ODPH_ERR("  expected_rcv_gap=%" PRIu64 " acceptable "
+				 "rcv_gap range=%" PRIu32 "..%" PRIu32 "\n",
+				 expected_rcv_gap_us, min_rcv_gap, max_rcv_gap);
 		} else if (expected_rcv_gap_us < rcv_stats.std_dev_gap) {
-			LOG_ERR("min=%" PRIu32 " avg_rcv_gap=%" PRIu32 " "
-				"max=%" PRIu32 " std_dev_gap=%" PRIu32 "\n",
-				rcv_stats.min_rcv_gap, avg_rcv_gap,
-				rcv_stats.max_rcv_gap, rcv_stats.std_dev_gap);
-			LOG_ERR("  expected_rcv_gap=%" PRIu64 " acceptable "
-				"rcv_gap range=%" PRIu32 "..%" PRIu32 "\n",
-				expected_rcv_gap_us, min_rcv_gap, max_rcv_gap);
+			ODPH_ERR("min=%" PRIu32 " avg_rcv_gap=%" PRIu32 " "
+				 "max=%" PRIu32 " std_dev_gap=%" PRIu32 "\n",
+				 rcv_stats.min_rcv_gap, avg_rcv_gap,
+				 rcv_stats.max_rcv_gap, rcv_stats.std_dev_gap);
+			ODPH_ERR("  expected_rcv_gap=%" PRIu64 " acceptable "
+				 "rcv_gap range=%" PRIu32 "..%" PRIu32 "\n",
+				 expected_rcv_gap_us, min_rcv_gap, max_rcv_gap);
 			ret_code = 0;
 		} else {
 			ret_code = 0;
@@ -2560,15 +2559,15 @@ static int test_shaper_bw(const char *shaper_name,
 
 		if ((avg_rcv_gap < min_rcv_gap) ||
 		    (avg_rcv_gap > max_rcv_gap)) {
-			LOG_ERR("agv_rcv_gap=%" PRIu32 " acceptable "
-			"rcv_gap range=%" PRIu32 "..%" PRIu32 "\n",
-			avg_rcv_gap, min_rcv_gap, max_rcv_gap);
+			ODPH_ERR("agv_rcv_gap=%" PRIu32 " acceptable "
+				 "rcv_gap range=%" PRIu32 "..%" PRIu32 "\n",
+				 avg_rcv_gap, min_rcv_gap, max_rcv_gap);
 			ret_code = -1;
 		}
 
 		if (rcv_stats.std_dev_gap > expected_rcv_gap_us) {
-			LOG_ERR("std_dev_gap=%" PRIu32 " >  "
-				"expected_rcv_gap_us=%" PRIu64 "\n",
+			ODPH_ERR("std_dev_gap=%" PRIu32 " >  "
+				 "expected_rcv_gap_us=%" PRIu64 "\n",
 			rcv_stats.std_dev_gap, expected_rcv_gap_us);
 			ret_code = -1;
 		}
@@ -2705,9 +2704,9 @@ static int test_sched_queue_priority(const char *shaper_name,
 	pkts_in_order = pkts_rcvd_in_given_order(unique_id_list, pkt_cnt, 0,
 						 false, false);
 	if (pkts_in_order != pkt_cnt) {
-		LOG_ERR("pkts_sent=%" PRIu32 " pkt_cnt=%" PRIu32 " "
-			"num_rcv_pkts=%" PRIu32 " rcvd_in_order=%" PRIu32 "\n",
-			pkts_sent, pkt_cnt, num_rcv_pkts, pkts_in_order);
+		ODPH_ERR("pkts_sent=%" PRIu32 " pkt_cnt=%" PRIu32 " "
+			 "num_rcv_pkts=%" PRIu32 " rcvd_in_order=%" PRIu32 "\n",
+			 pkts_sent, pkt_cnt, num_rcv_pkts, pkts_in_order);
 	}
 
 	CU_ASSERT(pkts_in_order == pkt_cnt);
@@ -2972,7 +2971,7 @@ static int test_threshold(const char *threshold_name,
 	tm_queue = find_tm_queue(0, node_name, priority);
 	if (set_queue_thresholds(tm_queue, threshold_name,
 				 &threshold_params) != 0) {
-		LOG_ERR("set_queue_thresholds failed\n");
+		ODPH_ERR("set_queue_thresholds failed\n");
 		return -1;
 	}
 
@@ -2983,7 +2982,7 @@ static int test_threshold(const char *threshold_name,
 	pkt_info.drop_eligible = true;
 	pkt_info.pkt_class     = 1;
 	if (make_pkts(num_pkts, pkt_len, &pkt_info) != 0) {
-		LOG_ERR("make_pkts failed\n");
+		ODPH_ERR("make_pkts failed\n");
 		return -1;
 	}
 
@@ -3103,7 +3102,7 @@ static int test_byte_wred(const char      *wred_name,
 	threshold_params.enable_max_bytes = true;
 	if (set_queue_thresholds(tm_queue, threshold_name,
 				 &threshold_params) != 0) {
-		LOG_ERR("set_queue_thresholds failed\n");
+		ODPH_ERR("set_queue_thresholds failed\n");
 		return -1;
 	}
 
@@ -3148,9 +3147,9 @@ static int test_byte_wred(const char      *wred_name,
 	ret = !((wred_pkt_cnts->min_cnt <= pkts_sent) &&
 	      (pkts_sent <= wred_pkt_cnts->max_cnt));
 	if (ret)
-		LOG_DBG("min %" PRIu32 " pkts %" PRIu32" max %" PRIu32 "\n",
-			wred_pkt_cnts->min_cnt, pkts_sent,
-			wred_pkt_cnts->max_cnt);
+		ODPH_DBG("min %" PRIu32 " pkts %" PRIu32 " max %" PRIu32 "\n",
+			 wred_pkt_cnts->min_cnt, pkts_sent,
+			 wred_pkt_cnts->max_cnt);
 	return odp_cunit_ret(ret);
 }
 
@@ -3189,7 +3188,7 @@ static int test_pkt_wred(const char      *wred_name,
 	ret = set_queue_thresholds(tm_queue, threshold_name,
 				   &threshold_params);
 	if (ret) {
-		LOG_ERR("set_queue_thresholds failed\n");
+		ODPH_ERR("set_queue_thresholds failed\n");
 		return -1;
 	}
 
@@ -3236,10 +3235,9 @@ static int test_pkt_wred(const char      *wred_name,
 
 	if ((pkts_sent < wred_pkt_cnts->min_cnt) ||
 	    (pkts_sent > wred_pkt_cnts->max_cnt)) {
-		LOG_ERR("min_cnt %d <= pkts_sent %d <= max_cnt %d\n",
-			wred_pkt_cnts->min_cnt,
-			pkts_sent,
-			wred_pkt_cnts->max_cnt);
+		ODPH_ERR("min_cnt %d <= pkts_sent %d <= max_cnt %d\n",
+			 wred_pkt_cnts->min_cnt, pkts_sent,
+			 wred_pkt_cnts->max_cnt);
 		return -1;
 	}
 
@@ -3333,7 +3331,7 @@ static int check_vlan_marking_pkts(void)
 			/* Make sure no VLAN header. */
 			if (odp_packet_has_vlan(rcv_pkt)) {
 				err_cnt++;
-				LOG_ERR("VLAN incorrectly added\n");
+				ODPH_ERR("VLAN incorrectly added\n");
 				CU_ASSERT(odp_packet_has_vlan(rcv_pkt));
 			}
 			break;
@@ -3343,7 +3341,7 @@ static int check_vlan_marking_pkts(void)
 			/* Make sure it does have a VLAN header */
 			if (!odp_packet_has_vlan(rcv_pkt)) {
 				err_cnt++;
-				LOG_ERR("VLAN header missing\n");
+				ODPH_ERR("VLAN header missing\n");
 				CU_ASSERT(!odp_packet_has_vlan(rcv_pkt));
 				break;
 			}
@@ -3352,7 +3350,7 @@ static int check_vlan_marking_pkts(void)
 			 * pkt_class == 3. */
 			if (get_vlan_tci(rcv_pkt, &tci) != 0) {
 				err_cnt++;
-				LOG_ERR("VLAN header missing\n");
+				ODPH_ERR("VLAN header missing\n");
 				CU_ASSERT(!odp_packet_has_vlan(rcv_pkt));
 				break;
 			}
@@ -3360,8 +3358,8 @@ static int check_vlan_marking_pkts(void)
 			dei          = (tci >> ODPH_VLANHDR_DEI_SHIFT) & 1;
 			expected_dei = (pkt_class == 2) ? 0 : 1;
 			if (dei != expected_dei) {
-				LOG_ERR("expected_dei=%u rcvd dei=%u\n",
-					expected_dei, dei);
+				ODPH_ERR("expected_dei=%u rcvd dei=%u\n",
+					 expected_dei, dei);
 				err_cnt++;
 				CU_ASSERT(dei == expected_dei);
 			}
@@ -3370,7 +3368,7 @@ static int check_vlan_marking_pkts(void)
 		default:
 			/* Log error but otherwise ignore, since it is
 			 * probably a stray pkt from a previous test. */
-			LOG_ERR("Pkt rcvd with invalid pkt class\n");
+			ODPH_ERR("Pkt rcvd with invalid pkt class\n");
 		}
 	}
 
@@ -3393,7 +3391,7 @@ static int test_vlan_marking(const char        *node_name,
 	for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
 		rc = odp_tm_vlan_marking(odp_tm, color, false);
 		if (rc != 0) {
-			LOG_ERR("disabling odp_tm_vlan_marking() failed\n");
+			ODPH_ERR("disabling odp_tm_vlan_marking() failed\n");
 			return -1;
 		}
 	}
@@ -3403,7 +3401,7 @@ static int test_vlan_marking(const char        *node_name,
 
 	tm_queue = find_tm_queue(0, node_name, 0);
 	if (tm_queue == ODP_TM_INVALID) {
-		LOG_ERR("No tm_queue found for node_name='%s'\n", node_name);
+		ODPH_ERR("No tm_queue found for node_name='%s'\n", node_name);
 		return -1;
 	}
 
@@ -3436,11 +3434,11 @@ static int test_vlan_marking(const char        *node_name,
 	num_rcv_pkts = receive_pkts(odp_tm_systems[0], rcv_pktin, pkts_sent,
 				    1000 * 1000);
 	if (num_rcv_pkts == 0) {
-		LOG_ERR("No pkts received\n");
+		ODPH_ERR("No pkts received\n");
 		rc = -1;
 	} else if (num_rcv_pkts != pkts_sent) {
-		LOG_ERR("pkts_sent=%" PRIu32 " but num_rcv_pkts=%" PRIu32 "\n",
-			pkts_sent, num_rcv_pkts);
+		ODPH_ERR("pkts_sent=%" PRIu32 " but num_rcv_pkts=%" PRIu32 "\n",
+			 pkts_sent, num_rcv_pkts);
 		dump_rcvd_pkts(0, num_rcv_pkts - 1);
 		CU_ASSERT(num_rcv_pkts == pkts_sent);
 	} else {
@@ -3502,9 +3500,9 @@ static int check_tos_marking_pkts(odp_bool_t use_ipv6,
 
 		if (rc != 1) {
 			if (use_ipv6)
-				LOG_ERR("Expected IPv6 pkt but got IPv4");
+				ODPH_ERR("Expected IPv6 pkt but got IPv4");
 			else
-				LOG_ERR("Expected IPv4 pkt but got IPv6");
+				ODPH_ERR("Expected IPv4 pkt but got IPv6");
 
 			return -1;
 		}
@@ -3517,9 +3515,9 @@ static int check_tos_marking_pkts(odp_bool_t use_ipv6,
 
 		if (rc != 1) {
 			if (use_tcp)
-				LOG_ERR("Expected TCP pkt but got UDP");
+				ODPH_ERR("Expected TCP pkt but got UDP");
 			else
-				LOG_ERR("Expected UDP pkt but got TCP");
+				ODPH_ERR("Expected UDP pkt but got TCP");
 
 			return -1;
 		}
@@ -3527,7 +3525,7 @@ static int check_tos_marking_pkts(odp_bool_t use_ipv6,
 		/* Now get the tos field to see if it was changed */
 		rc = get_ip_tos(rcv_pkt, &tos);
 		if (rc != 0) {
-			LOG_ERR("get_ip_tos failed\n");
+			ODPH_ERR("get_ip_tos failed\n");
 			return -1;
 		}
 
@@ -3535,8 +3533,8 @@ static int check_tos_marking_pkts(odp_bool_t use_ipv6,
 		case 2:
 			/* Tos field must be unchanged. */
 			if (unmarked_tos != tos) {
-				LOG_ERR("Tos was changed from 0x%X to 0x%X\n",
-					unmarked_tos, tos);
+				ODPH_ERR("Tos was changed from 0x%X to 0x%X\n",
+					 unmarked_tos, tos);
 				return -1;
 			}
 			break;
@@ -3544,8 +3542,8 @@ static int check_tos_marking_pkts(odp_bool_t use_ipv6,
 		case 3:
 			/* Tos field must be changed. */
 			if (tos != expected_tos) {
-				LOG_ERR("tos=0x%X instead of expected 0x%X\n",
-					tos, expected_tos);
+				ODPH_ERR("tos=0x%X instead of expected 0x%X\n",
+					 tos, expected_tos);
 				CU_ASSERT(tos == expected_tos);
 			}
 			break;
@@ -3553,8 +3551,8 @@ static int check_tos_marking_pkts(odp_bool_t use_ipv6,
 		default:
 			/* Log error but otherwise ignore, since it is
 			 * probably a stray pkt from a previous test. */
-			LOG_ERR("Pkt rcvd with invalid pkt class=%u\n",
-				pkt_class);
+			ODPH_ERR("Pkt rcvd with invalid pkt class=%u\n",
+				 pkt_class);
 		}
 	}
 
@@ -3583,13 +3581,13 @@ static int test_ip_marking(const char        *node_name,
 	for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
 		rc = odp_tm_ecn_marking(odp_tm, color, false);
 		if (rc != 0) {
-			LOG_ERR("disabling odp_tm_ecn_marking() failed\n");
+			ODPH_ERR("disabling odp_tm_ecn_marking() failed\n");
 			return -1;
 		}
 
 		rc = odp_tm_drop_prec_marking(odp_tm, color, false);
 		if (rc != 0) {
-			LOG_ERR("disabling odp_tm_drop_prec_marking failed\n");
+			ODPH_ERR("disabling odp_tm_drop_prec_marking failed\n");
 			return -1;
 		}
 	}
@@ -3601,7 +3599,7 @@ static int test_ip_marking(const char        *node_name,
 	if (test_ecn) {
 		rc = odp_tm_ecn_marking(odp_tm, pkt_color, true);
 		if (rc != 0) {
-			LOG_ERR("odp_tm_ecn_marking() call failed\n");
+			ODPH_ERR("odp_tm_ecn_marking() call failed\n");
 			return -1;
 		}
 	}
@@ -3609,14 +3607,14 @@ static int test_ip_marking(const char        *node_name,
 	if (test_drop_prec) {
 		rc = odp_tm_drop_prec_marking(odp_tm, pkt_color, true);
 		if (rc != 0) {
-			LOG_ERR("odp_tm_drop_prec_marking() call failed\n");
+			ODPH_ERR("odp_tm_drop_prec_marking() call failed\n");
 			return -1;
 		}
 	}
 
 	tm_queue = find_tm_queue(0, node_name, 0);
 	if (tm_queue == ODP_TM_INVALID) {
-		LOG_ERR("No tm_queue found for node_name='%s'\n", node_name);
+		ODPH_ERR("No tm_queue found for node_name='%s'\n", node_name);
 		return -1;
 	}
 
@@ -3637,7 +3635,7 @@ static int test_ip_marking(const char        *node_name,
 			pkt_info.pkt_class = 2;
 
 		if (make_pkts(pkt_cnt, pkt_len, &pkt_info) != 0) {
-			LOG_ERR("make_pkts failed\n");
+			ODPH_ERR("make_pkts failed\n");
 			return -1;
 		}
 	}
@@ -3648,12 +3646,12 @@ static int test_ip_marking(const char        *node_name,
 	ret_code     = -1;
 
 	if (num_rcv_pkts == 0) {
-		LOG_ERR("No pkts received\n");
+		ODPH_ERR("No pkts received\n");
 		CU_ASSERT(num_rcv_pkts != 0);
 		ret_code = -1;
 	} else if (num_rcv_pkts != pkts_sent) {
-		LOG_ERR("pkts_sent=%" PRIu32 " but num_rcv_pkts=%" PRIu32 "\n",
-			pkts_sent, num_rcv_pkts);
+		ODPH_ERR("pkts_sent=%" PRIu32 " but num_rcv_pkts=%" PRIu32 "\n",
+			 pkts_sent, num_rcv_pkts);
 		dump_rcvd_pkts(0, num_rcv_pkts - 1);
 		CU_ASSERT(num_rcv_pkts == pkts_sent);
 		ret_code = -1;
@@ -3686,8 +3684,8 @@ static int test_protocol_marking(const char        *node_name,
 			     test_ecn, test_drop_prec, new_dscp, dscp_mask);
 	CU_ASSERT(rc == 0);
 	if (rc != 0) {
-		LOG_ERR("test_ip_marking failed using IPV4/UDP pkts color=%u "
-			"test_ecn=%u test_drop_prec=%u\n",
+		ODPH_ERR("test_ip_marking failed using IPV4/UDP pkts color=%u "
+			 "test_ecn=%u test_drop_prec=%u\n",
 			pkt_color, test_ecn, test_drop_prec);
 		errs++;
 	}
@@ -3696,8 +3694,8 @@ static int test_protocol_marking(const char        *node_name,
 			     test_ecn, test_drop_prec, new_dscp, dscp_mask);
 	CU_ASSERT(rc == 0);
 	if (rc != 0) {
-		LOG_ERR("test_ip_marking failed using IPV6/UDP pkts color=%u "
-			"test_ecn=%u test_drop_prec=%u\n",
+		ODPH_ERR("test_ip_marking failed using IPV6/UDP pkts color=%u "
+			 "test_ecn=%u test_drop_prec=%u\n",
 			pkt_color, test_ecn, test_drop_prec);
 		errs++;
 	}
@@ -3706,8 +3704,8 @@ static int test_protocol_marking(const char        *node_name,
 			     test_ecn, test_drop_prec, new_dscp, dscp_mask);
 	CU_ASSERT(rc == 0);
 	if (rc != 0) {
-		LOG_ERR("test_ip_marking failed using IPV4/TCP pkts color=%u "
-			"test_ecn=%u test_drop_prec=%u\n",
+		ODPH_ERR("test_ip_marking failed using IPV4/TCP pkts color=%u "
+			 "test_ecn=%u test_drop_prec=%u\n",
 			pkt_color, test_ecn, test_drop_prec);
 		errs++;
 	}
@@ -3716,9 +3714,9 @@ static int test_protocol_marking(const char        *node_name,
 			     test_ecn, test_drop_prec, new_dscp, dscp_mask);
 	CU_ASSERT(rc == 0);
 	if (rc != 0) {
-		LOG_ERR("test_ip_marking failed using IPV6/TCP pkts color=%u "
-			"test_ecn=%u test_drop_prec=%u\n",
-			pkt_color, test_ecn, test_drop_prec);
+		ODPH_ERR("test_ip_marking failed using IPV6/TCP pkts color=%u "
+			 "test_ecn=%u test_drop_prec=%u\n",
+			 pkt_color, test_ecn, test_drop_prec);
 		errs++;
 	}
 
@@ -3769,14 +3767,14 @@ static int walk_tree_backwards(odp_tm_node_t tm_node)
 	 * and active tm_queue is reached. */
 	rc = odp_tm_node_info(tm_node, &node_info);
 	if (rc != 0) {
-		LOG_ERR("odp_tm_node_info failed for tm_node=0x%" PRIX64 "\n",
-			tm_node);
+		ODPH_ERR("odp_tm_node_info failed for tm_node=0x%" PRIX64 "\n",
+			 tm_node);
 		return rc;
 	}
 
 	if ((node_info.tm_queue_fanin == 0) &&
 	    (node_info.tm_node_fanin  == 0)) {
-		LOG_ERR("odp_tm_node_info showed no fanin for this node\n");
+		ODPH_ERR("odp_tm_node_info showed no fanin for this node\n");
 		return -1;
 	}
 
@@ -3798,7 +3796,7 @@ static int walk_tree_backwards(odp_tm_node_t tm_node)
 
 		if ((fanin_info.tm_queue != ODP_TM_INVALID) &&
 		    (fanin_info.tm_node  != ODP_TM_INVALID)) {
-			LOG_ERR("Both tm_queue and tm_node are set\n");
+			ODPH_ERR("Both tm_queue and tm_node are set\n");
 			return -1;
 		} else if (fanin_info.tm_queue != ODP_TM_INVALID) {
 			tm_queue_fanin++;
@@ -3809,15 +3807,15 @@ static int walk_tree_backwards(odp_tm_node_t tm_node)
 			if (first_tm_node == ODP_TM_INVALID)
 				first_tm_node = fanin_info.tm_node;
 		} else {
-			LOG_ERR("both tm_queue and tm_node are INVALID\n");
+			ODPH_ERR("both tm_queue and tm_node are INVALID\n");
 			return -1;
 		}
 	}
 
 	if (tm_queue_fanin != node_info.tm_queue_fanin)
-		LOG_ERR("tm_queue_fanin count error\n");
+		ODPH_ERR("tm_queue_fanin count error\n");
 	else if (tm_node_fanin != node_info.tm_node_fanin)
-		LOG_ERR("tm_node_fanin count error\n");
+		ODPH_ERR("tm_node_fanin count error\n");
 
 	/* If we have found a tm_queue then we are successfully done. */
 	if (first_tm_queue != ODP_TM_INVALID)
@@ -3834,13 +3832,13 @@ static int test_fanin_info(const char *node_name)
 
 	node_desc = find_node_desc(0, node_name);
 	if (node_desc == NULL) {
-		LOG_ERR("node_name %s not found\n", node_name);
+		ODPH_ERR("node_name %s not found\n", node_name);
 		return -1;
 	}
 
 	tm_node = node_desc->node;
 	if (tm_node == ODP_TM_INVALID) {
-		LOG_ERR("tm_node is ODP_TM_INVALID\n");
+		ODPH_ERR("tm_node is ODP_TM_INVALID\n");
 		return -1;
 	}
 
@@ -3913,8 +3911,8 @@ static void traffic_mngr_test_thresholds(void)
 static void traffic_mngr_test_byte_wred(void)
 {
 	if (!tm_capabilities.tm_queue_wred_supported) {
-		LOG_DBG("\nwas not run because tm_capabilities indicates"
-			" no WRED support\n");
+		ODPH_DBG("\nwas not run because tm_capabilities indicates"
+			 " no WRED support\n");
 		return;
 	}
 
@@ -3938,8 +3936,8 @@ static void traffic_mngr_test_pkt_wred(void)
 	int rc;
 
 	if (!tm_capabilities.tm_queue_wred_supported) {
-		LOG_DBG("\ntest_pkt_wred was not run because tm_capabilities "
-			"indicates no WRED support\n");
+		ODPH_DBG("\ntest_pkt_wred was not run because tm_capabilities "
+			 "indicates no WRED support\n");
 		return;
 	}
 
@@ -3950,8 +3948,8 @@ static void traffic_mngr_test_pkt_wred(void)
 		CU_FAIL("40G test failed\n");
 
 	if (!tm_capabilities.tm_queue_dual_slope_supported) {
-		LOG_DBG("since tm_capabilities indicates no dual slope "
-			"WRED support  these tests are skipped.\n");
+		ODPH_DBG("since tm_capabilities indicates no dual slope "
+			 "WRED support  these tests are skipped.\n");
 		return;
 	}
 
@@ -3992,8 +3990,8 @@ static void traffic_mngr_test_marking(void)
 			CU_ASSERT(rc == 0);
 		}
 	} else {
-		LOG_DBG("\ntest_vlan_marking was not run because "
-			"tm_capabilities indicates no vlan marking support\n");
+		ODPH_DBG("\ntest_vlan_marking was not run because "
+			 "tm_capabilities indicates no vlan marking support\n");
 	}
 
 	if (tm_capabilities.ecn_marking_supported) {
@@ -4003,8 +4001,8 @@ static void traffic_mngr_test_marking(void)
 		rc = ip_marking_tests("node_1_3_2", test_ecn, test_drop_prec);
 		CU_ASSERT(rc == 0);
 	} else {
-		LOG_DBG("\necn_marking tests were not run because "
-			"tm_capabilities indicates no ecn marking support\n");
+		ODPH_DBG("\necn_marking tests were not run because "
+			 "tm_capabilities indicates no ecn marking support\n");
 	}
 
 	if (tm_capabilities.drop_prec_marking_supported) {
@@ -4014,9 +4012,9 @@ static void traffic_mngr_test_marking(void)
 		rc = ip_marking_tests("node_1_4_2", test_ecn, test_drop_prec);
 		CU_ASSERT(rc == 0);
 	} else {
-		LOG_DBG("\ndrop_prec marking tests were not run because "
-			"tm_capabilities indicates no drop precedence "
-			"marking support\n");
+		ODPH_DBG("\ndrop_prec marking tests were not run because "
+			 "tm_capabilities indicates no drop precedence "
+			 "marking support\n");
 	}
 
 	if (tm_capabilities.ecn_marking_supported &&

@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 /* For rand_r and nanosleep */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -15,7 +13,6 @@
 #include <odp.h>
 #include <odp/helper/odph_api.h>
 #include "odp_cunit_common.h"
-#include "test_debug.h"
 
 #define GLOBAL_SHM_NAME	"GlobalTimerTest"
 
@@ -435,13 +432,13 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 	period_tick = odp_timer_ns_to_tick(timer_pool, period_ns);
 	duration_ns = num * period_ns;
 
-	LOG_DBG("\nTimer pool parameters:\n");
-	LOG_DBG("  res_ns  %" PRIu64 "\n", timer_param.res_ns);
-	LOG_DBG("  min_tmo %" PRIu64 "\n", timer_param.min_tmo);
-	LOG_DBG("  max_tmo %" PRIu64 "\n", timer_param.max_tmo);
-	LOG_DBG("  period_ns %" PRIu64 "\n", period_ns);
-	LOG_DBG("  period_tick %" PRIu64 "\n", period_tick);
-	LOG_DBG("  duration_ns %" PRIu64 "\n\n", duration_ns);
+	ODPH_DBG("\nTimer pool parameters:\n");
+	ODPH_DBG("  res_ns  %" PRIu64 "\n", timer_param.res_ns);
+	ODPH_DBG("  min_tmo %" PRIu64 "\n", timer_param.min_tmo);
+	ODPH_DBG("  max_tmo %" PRIu64 "\n", timer_param.max_tmo);
+	ODPH_DBG("  period_ns %" PRIu64 "\n", period_ns);
+	ODPH_DBG("  period_tick %" PRIu64 "\n", period_tick);
+	ODPH_DBG("  duration_ns %" PRIu64 "\n\n", duration_ns);
 
 	for (i = 0; i < num; i++) {
 		if (event_type == ODP_EVENT_BUFFER) {
@@ -463,11 +460,11 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 		ret = odp_timer_set_rel(timer[i], (i + 1) * period_tick, &ev);
 
 		if (ret == ODP_TIMER_TOOEARLY)
-			LOG_DBG("Too early %i\n", i);
+			ODPH_DBG("Too early %i\n", i);
 		else if (ret == ODP_TIMER_TOOLATE)
-			LOG_DBG("Too late %i\n", i);
+			ODPH_DBG("Too late %i\n", i);
 		else if (ret == ODP_TIMER_NOEVENT)
-			LOG_DBG("No event %i\n", i);
+			ODPH_DBG("No event %i\n", i);
 
 		CU_ASSERT(ret == ODP_TIMER_SUCCESS);
 	}
@@ -573,10 +570,10 @@ static void timer_test_queue_type(odp_queue_type_t queue_type)
 	tparam.priv       = 0;
 	tparam.clk_src    = ODP_CLOCK_CPU;
 
-	LOG_DBG("\nTimer pool parameters:\n");
-	LOG_DBG("  res_ns  %" PRIu64 "\n", tparam.res_ns);
-	LOG_DBG("  min_tmo %" PRIu64 "\n", tparam.min_tmo);
-	LOG_DBG("  max_tmo %" PRIu64 "\n", tparam.max_tmo);
+	ODPH_DBG("\nTimer pool parameters:\n");
+	ODPH_DBG("  res_ns  %" PRIu64 "\n", tparam.res_ns);
+	ODPH_DBG("  min_tmo %" PRIu64 "\n", tparam.min_tmo);
+	ODPH_DBG("  max_tmo %" PRIu64 "\n", tparam.max_tmo);
 
 	tp = odp_timer_pool_create("timer_pool", &tparam);
 	if (tp == ODP_TIMER_POOL_INVALID)
@@ -599,8 +596,8 @@ static void timer_test_queue_type(odp_queue_type_t queue_type)
 	period_tick = odp_timer_ns_to_tick(tp, period_ns);
 	test_period = num * period_ns;
 
-	LOG_DBG("  period_ns %" PRIu64 "\n", period_ns);
-	LOG_DBG("  period_tick %" PRIu64 "\n\n", period_tick);
+	ODPH_DBG("  period_ns %" PRIu64 "\n", period_ns);
+	ODPH_DBG("  period_tick %" PRIu64 "\n\n", period_tick);
 
 	tick_base = odp_timer_current_tick(tp);
 	t0 = odp_time_local();
@@ -619,13 +616,13 @@ static void timer_test_queue_type(odp_queue_type_t queue_type)
 		tick = tick_base + ((i + 1) * period_tick);
 		ret = odp_timer_set_abs(tim, tick, &ev);
 
-		LOG_DBG("abs timer tick %" PRIu64 "\n", tick);
+		ODPH_DBG("abs timer tick %" PRIu64 "\n", tick);
 		if (ret == ODP_TIMER_TOOEARLY)
-			LOG_DBG("Too early %" PRIu64 "\n", tick);
+			ODPH_DBG("Too early %" PRIu64 "\n", tick);
 		else if (ret == ODP_TIMER_TOOLATE)
-			LOG_DBG("Too late %" PRIu64 "\n", tick);
+			ODPH_DBG("Too late %" PRIu64 "\n", tick);
 		else if (ret == ODP_TIMER_NOEVENT)
-			LOG_DBG("No event %" PRIu64 "\n", tick);
+			ODPH_DBG("No event %" PRIu64 "\n", tick);
 
 		CU_ASSERT(ret == ODP_TIMER_SUCCESS);
 	}
@@ -651,9 +648,8 @@ static void timer_test_queue_type(odp_queue_type_t queue_type)
 			CU_ASSERT(diff_period > (period_ns - (5 * res_ns)));
 			CU_ASSERT(diff_period < (period_ns + (5 * res_ns)));
 
-			LOG_DBG("timeout tick %" PRIu64 ", "
-				"timeout period %" PRIu64 "\n",
-				tick, diff_period);
+			ODPH_DBG("timeout tick %" PRIu64 ", timeout period "
+				 "%" PRIu64 "\n", tick, diff_period);
 
 			odp_timeout_free(tmo);
 			CU_ASSERT(odp_timer_free(tim) == ODP_EVENT_INVALID);
@@ -663,7 +659,7 @@ static void timer_test_queue_type(odp_queue_type_t queue_type)
 
 	} while (diff_test < (2 * test_period) && num_tmo < num);
 
-	LOG_DBG("test period %" PRIu64 "\n", diff_test);
+	ODPH_DBG("test period %" PRIu64 "\n", diff_test);
 
 	CU_ASSERT(num_tmo == num);
 	CU_ASSERT(diff_test > (test_period - period_ns));
@@ -741,7 +737,7 @@ static void timer_test_cancel(void)
 	tim = odp_timer_alloc(tp, queue, USER_PTR);
 	if (tim == ODP_TIMER_INVALID)
 		CU_FAIL_FATAL("Failed to allocate timer");
-	LOG_DBG("Timer handle: %" PRIu64 "\n", odp_timer_to_u64(tim));
+	ODPH_DBG("Timer handle: %" PRIu64 "\n", odp_timer_to_u64(tim));
 
 	ev = odp_timeout_to_event(odp_timeout_alloc(pool));
 	if (ev == ODP_EVENT_INVALID)
@@ -763,7 +759,7 @@ static void timer_test_cancel(void)
 	tmo = odp_timeout_from_event(ev);
 	if (tmo == ODP_TIMEOUT_INVALID)
 		CU_FAIL_FATAL("Cancel did not return timeout");
-	LOG_DBG("Timeout handle: %" PRIu64 "\n", odp_timeout_to_u64(tmo));
+	ODPH_DBG("Timeout handle: %" PRIu64 "\n", odp_timeout_to_u64(tmo));
 
 	if (odp_timeout_timer(tmo) != tim)
 		CU_FAIL("Cancel invalid tmo.timer");
@@ -860,12 +856,12 @@ static void timer_test_tmo_limit(odp_queue_type_t queue_type,
 	/* Min_tmo maybe zero. Wait min timeouts at least 20ms + resolution */
 	max_wait    = (20 * ODP_TIME_MSEC_IN_NS + res_ns + 10 * tmo_ns);
 
-	LOG_DBG("\nTimer pool parameters:\n");
-	LOG_DBG("  res_ns      %" PRIu64 "\n",   timer_param.res_ns);
-	LOG_DBG("  min_tmo     %" PRIu64 "\n",   timer_param.min_tmo);
-	LOG_DBG("  max_tmo     %" PRIu64 "\n",   timer_param.max_tmo);
-	LOG_DBG("  tmo_ns      %" PRIu64 "\n",   tmo_ns);
-	LOG_DBG("  tmo_tick    %" PRIu64 "\n\n", tmo_tick);
+	ODPH_DBG("\nTimer pool parameters:\n");
+	ODPH_DBG("  res_ns      %" PRIu64 "\n",   timer_param.res_ns);
+	ODPH_DBG("  min_tmo     %" PRIu64 "\n",   timer_param.min_tmo);
+	ODPH_DBG("  max_tmo     %" PRIu64 "\n",   timer_param.max_tmo);
+	ODPH_DBG("  tmo_ns      %" PRIu64 "\n",   tmo_ns);
+	ODPH_DBG("  tmo_tick    %" PRIu64 "\n\n", tmo_tick);
 
 	for (i = 0; i < num; i++) {
 		timer[i] = odp_timer_alloc(timer_pool, queue, NULL);
@@ -884,11 +880,11 @@ static void timer_test_tmo_limit(odp_queue_type_t queue_type,
 		ret = odp_timer_set_rel(timer[i], tmo_tick, &ev);
 
 		if (ret == ODP_TIMER_TOOEARLY)
-			LOG_DBG("Too early %i\n", i);
+			ODPH_DBG("Too early %i\n", i);
 		else if (ret == ODP_TIMER_TOOLATE)
-			LOG_DBG("Too late %i\n", i);
+			ODPH_DBG("Too late %i\n", i);
 		else if (ret == ODP_TIMER_NOEVENT)
-			LOG_DBG("No event %i\n", i);
+			ODPH_DBG("No event %i\n", i);
 
 		CU_ASSERT(ret == ODP_TIMER_SUCCESS);
 
@@ -910,8 +906,8 @@ static void timer_test_tmo_limit(odp_queue_type_t queue_type,
 					odp_event_free(ev);
 					num_tmo++;
 					break_loop = 1;
-					LOG_DBG("Timeout [%i]: %" PRIu64
-						" nsec\n", i, diff_ns);
+					ODPH_DBG("Timeout [%i]: %" PRIu64 " "
+						 "nsec\n", i, diff_ns);
 					continue;
 				}
 
@@ -937,8 +933,8 @@ static void timer_test_tmo_limit(odp_queue_type_t queue_type,
 			if (ev != ODP_EVENT_INVALID)
 				odp_event_free(ev);
 
-			LOG_DBG("Cancelled [%i]: %" PRIu64
-				" nsec\n", i, diff_ns);
+			ODPH_DBG("Cancelled [%i]: %" PRIu64 " nsec\n", i,
+				 diff_ns);
 		}
 	}
 
@@ -1050,9 +1046,8 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 	if (!stale) {
 		/* tmo tick cannot be smaller than pre-calculated tick */
 		if (tick < ttp->tick) {
-			LOG_DBG("Too small tick: pre-calculated %" PRIu64
-				" timeout %" PRIu64 "\n",
-				ttp->tick, tick);
+			ODPH_DBG("Too small tick: pre-calculated %" PRIu64 " "
+				 "timeout %" PRIu64 "\n", ttp->tick, tick);
 			CU_FAIL("odp_timeout_tick() too small tick");
 		}
 
@@ -1060,9 +1055,8 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 			CU_FAIL("Timeout delivered early");
 
 		if (tick < prev_tick) {
-			LOG_DBG("Too late tick: %" PRIu64
-				" prev_tick %" PRIu64"\n",
-				tick, prev_tick);
+			ODPH_DBG("Too late tick: %" PRIu64 " prev_tick "
+				 "%" PRIu64 "\n", tick, prev_tick);
 			/* We don't report late timeouts using CU_FAIL */
 			odp_atomic_inc_u32(&global_mem->ndelivtoolate);
 		}
@@ -1075,7 +1069,7 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 
 /* Worker thread entrypoint which performs timer alloc/set/cancel/free
  * tests */
-static int worker_entrypoint(void *arg TEST_UNUSED)
+static int worker_entrypoint(void *arg ODP_UNUSED)
 {
 	int thr = odp_thread_id();
 	uint32_t i, allocated;
@@ -1112,14 +1106,14 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 	for (i = 0; i < num_timers; i++) {
 		tt[i].ev = odp_timeout_to_event(odp_timeout_alloc(tbp));
 		if (tt[i].ev == ODP_EVENT_INVALID) {
-			LOG_DBG("Failed to allocate timeout (%" PRIu32 "/%d)\n",
-				i, num_timers);
+			ODPH_DBG("Failed to allocate timeout ("
+				 "%" PRIu32 "/%d)\n", i, num_timers);
 			break;
 		}
 		tt[i].tim = odp_timer_alloc(tp, queue, &tt[i]);
 		if (tt[i].tim == ODP_TIMER_INVALID) {
-			LOG_DBG("Failed to allocate timer (%" PRIu32 "/%d)\n",
-				i, num_timers);
+			ODPH_DBG("Failed to allocate timer (%" PRIu32 "/%d)\n",
+				 i, num_timers);
 			odp_event_free(tt[i].ev);
 			break;
 		}
@@ -1142,9 +1136,9 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 		      odp_timer_ns_to_tick(tp, nsec);
 		timer_rc = odp_timer_set_abs(tt[i].tim, tck, &tt[i].ev);
 		if (timer_rc == ODP_TIMER_TOOEARLY) {
-			LOG_ERR("Missed tick, setting timer\n");
+			ODPH_ERR("Missed tick, setting timer\n");
 		} else if (timer_rc != ODP_TIMER_SUCCESS) {
-			LOG_ERR("Failed to set timer: %d\n", timer_rc);
+			ODPH_ERR("Failed to set timer: %d\n", timer_rc);
 			CU_FAIL("Failed to set timer");
 		} else {
 			tt[i].tick = tck;
@@ -1175,7 +1169,7 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 			if (rc != 0) {
 				/* Cancel failed, timer already expired */
 				ntoolate++;
-				LOG_DBG("Failed to cancel timer, probably already expired\n");
+				ODPH_DBG("Failed to cancel timer, probably already expired\n");
 			} else {
 				tt[i].tick = TICK_INVALID;
 				ncancel++;
@@ -1232,15 +1226,14 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 			nstale++;
 	}
 
-	LOG_DBG("Thread %u: %" PRIu32 " timers set\n", thr, nset);
-	LOG_DBG("Thread %u: %" PRIu32 " timers reset\n", thr, nreset);
-	LOG_DBG("Thread %u: %" PRIu32 " timers cancelled\n", thr, ncancel);
-	LOG_DBG("Thread %u: %" PRIu32 " timers reset/cancelled too late\n",
-		thr, ntoolate);
-	LOG_DBG("Thread %u: %" PRIu32 " timeouts received\n", thr, nrcv);
-	LOG_DBG("Thread %u: %" PRIu32
-		" stale timeout(s) after odp_timer_cancel()\n",
-		thr, nstale);
+	ODPH_DBG("Thread %u: %" PRIu32 " timers set\n", thr, nset);
+	ODPH_DBG("Thread %u: %" PRIu32 " timers reset\n", thr, nreset);
+	ODPH_DBG("Thread %u: %" PRIu32 " timers cancelled\n", thr, ncancel);
+	ODPH_DBG("Thread %u: %" PRIu32 " timers reset/cancelled too late\n",
+		 thr, ntoolate);
+	ODPH_DBG("Thread %u: %" PRIu32 " timeouts received\n", thr, nrcv);
+	ODPH_DBG("Thread %u: %" PRIu32 " "
+		 "stale timeout(s) after odp_timer_cancel()\n", thr, nstale);
 
 	/* Delay some more to ensure timeouts for expired timers can be
 	 * received. Can not use busy loop here to make background timer
@@ -1279,7 +1272,7 @@ static int worker_entrypoint(void *arg TEST_UNUSED)
 	}
 
 	free(tt);
-	LOG_DBG("Thread %u: exiting\n", thr);
+	ODPH_DBG("Thread %u: exiting\n", thr);
 	return CU_get_number_of_failures();
 }
 
@@ -1364,17 +1357,17 @@ static void timer_test_all(void)
 	CU_ASSERT(tpinfo.param.max_tmo == max_tmo);
 	CU_ASSERT(strcmp(tpinfo.name, NAME) == 0);
 
-	LOG_DBG("Timer pool handle: %" PRIu64 "\n", odp_timer_pool_to_u64(tp));
-	LOG_DBG("Resolution:   %" PRIu64 "\n", tparam.res_ns);
-	LOG_DBG("Min timeout:  %" PRIu64 "\n", tparam.min_tmo);
-	LOG_DBG("Max timeout:  %" PRIu64 "\n", tparam.max_tmo);
-	LOG_DBG("Num timers:   %u\n", tparam.num_timers);
-	LOG_DBG("Tmo range:    %u ms (%" PRIu64 " ticks)\n", RANGE_MS,
-		odp_timer_ns_to_tick(tp, 1000000ULL * RANGE_MS));
-	LOG_DBG("Max timers:   %" PRIu32 "\n", timer_capa.max_timers);
-	LOG_DBG("Max timer pools:       %" PRIu32 "\n", timer_capa.max_pools);
-	LOG_DBG("Max timer pools combined: %" PRIu32 "\n",
-		timer_capa.max_pools_combined);
+	ODPH_DBG("Timer pool handle: %" PRIu64 "\n", odp_timer_pool_to_u64(tp));
+	ODPH_DBG("Resolution:   %" PRIu64 "\n", tparam.res_ns);
+	ODPH_DBG("Min timeout:  %" PRIu64 "\n", tparam.min_tmo);
+	ODPH_DBG("Max timeout:  %" PRIu64 "\n", tparam.max_tmo);
+	ODPH_DBG("Num timers:   %u\n", tparam.num_timers);
+	ODPH_DBG("Tmo range:    %u ms (%" PRIu64 " ticks)\n", RANGE_MS,
+		 odp_timer_ns_to_tick(tp, 1000000ULL * RANGE_MS));
+	ODPH_DBG("Max timers:   %" PRIu32 "\n", timer_capa.max_timers);
+	ODPH_DBG("Max timer pools:       %" PRIu32 "\n", timer_capa.max_pools);
+	ODPH_DBG("Max timer pools combined: %" PRIu32 "\n",
+		 timer_capa.max_pools_combined);
 
 	tick = odp_timer_ns_to_tick(tp, 0);
 	CU_ASSERT(tick == 0);
@@ -1386,14 +1379,14 @@ static void timer_test_all(void)
 		ns2  = odp_timer_tick_to_ns(tp, tick);
 
 		if (ns2 < ns - res_ns) {
-			LOG_DBG("FAIL ns:%" PRIu64 " tick:%" PRIu64 " ns2:%"
-				PRIu64 "\n", ns, tick, ns2);
+			ODPH_DBG("FAIL ns:%" PRIu64 " tick:%" PRIu64 " ns2:"
+				 "%" PRIu64 "\n", ns, tick, ns2);
 			CU_FAIL("tick conversion: nsec too small\n");
 		}
 
 		if (ns2 > ns + res_ns) {
-			LOG_DBG("FAIL ns:%" PRIu64 " tick:%" PRIu64 " ns2:%"
-				PRIu64 "\n", ns, tick, ns2);
+			ODPH_DBG("FAIL ns:%" PRIu64 " tick:%" PRIu64 " ns2:"
+				 "%" PRIu64 "\n", ns, tick, ns2);
 			CU_FAIL("tick conversion: nsec too large\n");
 		}
 	}
@@ -1414,8 +1407,9 @@ static void timer_test_all(void)
 
 	/* Wait for worker threads to exit */
 	odp_cunit_thread_exit(&thrdarg);
-	LOG_DBG("Number of timeouts delivered/received too late: %" PRIu32 "\n",
-		odp_atomic_load_u32(&global_mem->ndelivtoolate));
+	ODPH_DBG("Number of timeouts delivered/received too late: "
+		 "%" PRIu32 "\n",
+		 odp_atomic_load_u32(&global_mem->ndelivtoolate));
 
 	/* Check some statistics after the test */
 	if (odp_timer_pool_info(tp, &tpinfo) != 0)
