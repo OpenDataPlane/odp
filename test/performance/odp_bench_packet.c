@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 /**
  * @file
  *
@@ -19,13 +17,8 @@
 #include <inttypes.h>
 #include <signal.h>
 
-#include <test_debug.h>
-
 #include <odp_api.h>
-#include <odp/helper/threads.h>
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
-#include <odp/helper/udp.h>
+#include <odp/helper/odph_api.h>
 
 /** Minimum number of packet data bytes in the first segment */
 #define PKT_POOL_SEG_LEN 128
@@ -200,7 +193,7 @@ static void run_indef(args_t *args, int idx)
 			args->bench[idx].term();
 
 		if (!ret)
-			LOG_ABORT("Benchmark %s failed\n", desc);
+			ODPH_ABORT("Benchmark %s failed\n", desc);
 	}
 }
 
@@ -257,7 +250,7 @@ static int run_benchmarks(void *arg)
 				args->bench[j].term();
 
 			if (!ret) {
-				LOG_ERR("Benchmark %s failed\n", desc);
+				ODPH_ERR("Benchmark %s failed\n", desc);
 				args->bench_failed = 1;
 				return -1;
 			}
@@ -314,7 +307,7 @@ static void allocate_test_packets(uint32_t len, odp_packet_t pkt[], int num)
 		ret = odp_packet_alloc_multi(gbl_args->pool, len, &pkt[pkts],
 					     num - pkts);
 		if (ret < 0)
-			LOG_ABORT("Allocating test packets failed\n");
+			ODPH_ABORT("Allocating test packets failed\n");
 
 		pkts += ret;
 	}
@@ -351,7 +344,7 @@ static void alloc_ref_packets(void)
 	for (i = 0; i < TEST_REPEAT_COUNT; i++) {
 		ref_tbl[i] = odp_packet_ref(pkt_tbl[i], TEST_MIN_PKT_SIZE / 2);
 		if (ref_tbl[i] == ODP_PACKET_INVALID)
-			LOG_ABORT("Allocating packet reference failed\n");
+			ODPH_ABORT("Allocating packet reference failed\n");
 	}
 }
 
@@ -399,7 +392,7 @@ static void create_packets(void)
 		if (odp_packet_l2_offset_set(pkt_tbl[i], TEST_L2_OFFSET) ||
 		    odp_packet_l3_offset_set(pkt_tbl[i], TEST_L3_OFFSET) ||
 		    odp_packet_l4_offset_set(pkt_tbl[i], TEST_L4_OFFSET))
-			LOG_ABORT("Setting test packet offsets failed\n");
+			ODPH_ABORT("Setting test packet offsets failed\n");
 
 		odp_packet_flow_hash_set(pkt_tbl[i], i);
 		odp_packet_ts_set(pkt_tbl[i], odp_time_local());
@@ -523,7 +516,7 @@ static int bench_packet_alloc_free_multi(void)
 					      gbl_args->appl.burst_size);
 
 		if (pkts < 0)
-			LOG_ABORT("Packet alloc failed\n");
+			ODPH_ABORT("Packet alloc failed\n");
 
 		odp_packet_free_multi(gbl_args->pkt_tbl, pkts);
 	}
@@ -1530,7 +1523,7 @@ int main(int argc, char *argv[])
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
-		LOG_ERR("Error: reading ODP helper options failed.\n");
+		ODPH_ERR("Error: reading ODP helper options failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1539,13 +1532,13 @@ int main(int argc, char *argv[])
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init_param, NULL)) {
-		LOG_ERR("Error: ODP global init failed.\n");
+		ODPH_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
-		LOG_ERR("Error: ODP local init failed.\n");
+		ODPH_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1554,14 +1547,14 @@ int main(int argc, char *argv[])
 			      ODP_CACHE_LINE_SIZE, 0);
 
 	if (shm == ODP_SHM_INVALID) {
-		LOG_ERR("Error: shared mem reserve failed.\n");
+		ODPH_ERR("Error: shared mem reserve failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	gbl_args = odp_shm_addr(shm);
 
 	if (gbl_args == NULL) {
-		LOG_ERR("Error: shared mem alloc failed.\n");
+		ODPH_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1578,7 +1571,7 @@ int main(int argc, char *argv[])
 
 	/* Get default worker cpumask */
 	if (odp_cpumask_default_worker(&cpumask, 1) != 1) {
-		LOG_ERR("Error: unable to allocate worker thread.\n");
+		ODPH_ERR("Error: unable to allocate worker thread.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1586,7 +1579,7 @@ int main(int argc, char *argv[])
 
 	/* Check pool capability */
 	if (odp_pool_capability(&capa)) {
-		LOG_ERR("Error: unable to query pool capability.\n");
+		ODPH_ERR("Error: unable to query pool capability.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1596,19 +1589,19 @@ int main(int argc, char *argv[])
 			2 * TEST_REPEAT_COUNT;
 
 	if (capa.pkt.max_num && capa.pkt.max_num < pkt_num) {
-		LOG_ERR("Error: packet pool size not supported.\n");
+		ODPH_ERR("Error: packet pool size not supported.\n");
 		printf("MAX: %" PRIu32 "\n", capa.pkt.max_num);
 		exit(EXIT_FAILURE);
 	} else if (capa.pkt.max_len && capa.pkt.max_len < TEST_MAX_PKT_SIZE) {
-		LOG_ERR("Error: packet length not supported.\n");
+		ODPH_ERR("Error: packet length not supported.\n");
 		exit(EXIT_FAILURE);
 	} else if (capa.pkt.max_seg_len &&
 		   capa.pkt.max_seg_len < PKT_POOL_SEG_LEN) {
-		LOG_ERR("Error: segment length not supported.\n");
+		ODPH_ERR("Error: segment length not supported.\n");
 		exit(EXIT_FAILURE);
 	} else if (capa.pkt.max_uarea_size &&
 		   capa.pkt.max_uarea_size < PKT_POOL_UAREA_SIZE) {
-		LOG_ERR("Error: user area size not supported.\n");
+		ODPH_ERR("Error: user area size not supported.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1623,7 +1616,7 @@ int main(int argc, char *argv[])
 	gbl_args->pool = odp_pool_create("packet pool", &params);
 
 	if (gbl_args->pool == ODP_POOL_INVALID) {
-		LOG_ERR("Error: packet pool create failed.\n");
+		ODPH_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1660,24 +1653,24 @@ int main(int argc, char *argv[])
 	ret = gbl_args->bench_failed;
 
 	if (odp_pool_destroy(gbl_args->pool)) {
-		LOG_ERR("Error: pool destroy\n");
+		ODPH_ERR("Error: pool destroy\n");
 		exit(EXIT_FAILURE);
 	}
 	gbl_args = NULL;
 	odp_mb_full();
 
 	if (odp_shm_free(shm)) {
-		LOG_ERR("Error: shm free\n");
+		ODPH_ERR("Error: shm free\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_local()) {
-		LOG_ERR("Error: term local\n");
+		ODPH_ERR("Error: term local\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_global(instance)) {
-		LOG_ERR("Error: term global\n");
+		ODPH_ERR("Error: term global\n");
 		exit(EXIT_FAILURE);
 	}
 

@@ -4,12 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
-
-#include <test_debug.h>
 
 #include <getopt.h>
 #include <inttypes.h>
@@ -192,14 +188,14 @@ static inline void init_packet(odp_packet_t pkt, uint32_t seq, uint16_t group)
 	param.last_layer = ODP_PROTO_LAYER_ALL;
 	param.chksums.all_chksum = 0;
 	if (odp_packet_parse(pkt, 0, &param))
-		LOG_ABORT("odp_packet_parse() failed\n");
+		ODPH_ABORT("odp_packet_parse() failed\n");
 
 	/* Modify UDP payload and update checksum */
 	payload = odp_packet_offset(pkt, odp_packet_l4_offset(pkt) +
 				    ODPH_UDPHDR_LEN, NULL, NULL);
 	*payload = seq;
 	if (odph_udp_chksum_set(pkt))
-		LOG_ABORT("odph_udp_chksum_set() failed\n");
+		ODPH_ABORT("odph_udp_chksum_set() failed\n");
 
 	/* Test header is stored in user area */
 	hdr = odp_packet_user_area(pkt);
@@ -233,13 +229,13 @@ static inline odp_queue_t work_on_event(odp_event_t event)
 
 	crc = odp_hash_crc32c(data, pkt_len, CRC_INIT_VAL);
 	if (crc != hdr->crc)
-		LOG_ERR("Error: Invalid packet crc\n");
+		ODPH_ERR("Error: Invalid packet crc\n");
 
 	param.proto = ODP_PROTO_ETH;
 	param.last_layer = ODP_PROTO_LAYER_ALL;
 	param.chksums.all_chksum = 1;
 	if (odp_packet_parse(pkt, 0, &param)) {
-		LOG_ERR("Error: odp_packet_parse() failed\n");
+		ODPH_ERR("Error: odp_packet_parse() failed\n");
 		return ODP_QUEUE_INVALID;
 	}
 
@@ -304,7 +300,7 @@ static int run_thread(void *arg)
 			}
 
 			if (odp_unlikely(odp_queue_enq(dst_queue, event))) {
-				LOG_ERR("Error: odp_queue_enq() failed\n");
+				ODPH_ERR("Error: odp_queue_enq() failed\n");
 				stats->s.dropped_pkts++;
 				odp_event_free(event);
 				break;
@@ -549,7 +545,7 @@ int main(int argc, char *argv[])
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
-		LOG_ERR("Error: reading ODP helper options failed.\n");
+		ODPH_ERR("Error: reading ODP helper options failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -569,25 +565,25 @@ int main(int argc, char *argv[])
 	signal(SIGINT, sig_handler);
 
 	if (odp_init_global(&instance, &init, NULL)) {
-		LOG_ERR("Error: ODP global init failed\n");
+		ODPH_ERR("Error: ODP global init failed\n");
 		return -1;
 	}
 
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
-		LOG_ERR("Error: ODP local init failed\n");
+		ODPH_ERR("Error: ODP local init failed\n");
 		exit(EXIT_FAILURE);
 	}
 
 	shm = odp_shm_reserve("shm_args", sizeof(args_t), ODP_CACHE_LINE_SIZE,
 			      0);
 	if (shm == ODP_SHM_INVALID) {
-		LOG_ERR("Error: shared mem reserve failed.\n");
+		ODPH_ERR("Error: shared mem reserve failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	gbl_args = odp_shm_addr(shm);
 	if (gbl_args == NULL) {
-		LOG_ERR("Error: shared mem alloc failed\n");
+		ODPH_ERR("Error: shared mem alloc failed\n");
 		exit(EXIT_FAILURE);
 	}
 	gbl_args_init(gbl_args);
@@ -600,13 +596,13 @@ int main(int argc, char *argv[])
 					 gbl_args->appl.lookup_tbl_size,
 					 ODP_CACHE_LINE_SIZE, 0);
 	if (lookup_tbl_shm == ODP_SHM_INVALID) {
-		LOG_ERR("Error: shared mem reserve failed.\n");
+		ODPH_ERR("Error: shared mem reserve failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	gbl_args->lookup_tbl = odp_shm_addr(lookup_tbl_shm);
 	if (gbl_args->lookup_tbl == NULL) {
-		LOG_ERR("Error: lookup table mem alloc failed\n");
+		ODPH_ERR("Error: lookup table mem alloc failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -637,7 +633,7 @@ int main(int argc, char *argv[])
 
 	/* Divide queues evenly into groups */
 	if (schedule_config.num_queues < QUEUES_PER_GROUP) {
-		LOG_ERR("Error: min %d queues required\n", QUEUES_PER_GROUP);
+		ODPH_ERR("Error: min %d queues required\n", QUEUES_PER_GROUP);
 		return -1;
 	}
 	num_queues = num_workers > schedule_config.num_queues ?
@@ -661,7 +657,7 @@ int main(int argc, char *argv[])
 
 			queue = odp_queue_create(NULL, &param);
 			if (queue == ODP_QUEUE_INVALID) {
-				LOG_ERR("Error: odp_queue_create() failed\n");
+				ODPH_ERR("Error: odp_queue_create() failed\n");
 				return -1;
 			}
 			gbl_args->queue[i][j] = queue;
@@ -670,7 +666,7 @@ int main(int argc, char *argv[])
 
 	/* Create packet pool */
 	if (odp_pool_capability(&pool_capa)) {
-		LOG_ERR("Error: odp_pool_capability() failed\n");
+		ODPH_ERR("Error: odp_pool_capability() failed\n");
 		exit(EXIT_FAILURE);
 	}
 	num_pkts = pkts_per_group * num_groups;
@@ -685,15 +681,15 @@ int main(int argc, char *argv[])
 		pkt_len = pool_capa.pkt.max_seg_len;
 
 	if (pkt_len < sizeof(test_udp_packet)) {
-		LOG_ERR("Error: min %dB single segment packets required\n",
-			(int)sizeof(test_udp_packet));
+		ODPH_ERR("Error: min %dB single segment packets required\n",
+			 (int)sizeof(test_udp_packet));
 		exit(EXIT_FAILURE);
 	}
 
 	if (pool_capa.pkt.max_uarea_size &&
 	    pool_capa.pkt.max_uarea_size < sizeof(test_hdr_t)) {
-		LOG_ERR("Error: min %dB of packet user area required\n",
-			(int)sizeof(test_hdr_t));
+		ODPH_ERR("Error: min %dB of packet user area required\n",
+			 (int)sizeof(test_hdr_t));
 		exit(EXIT_FAILURE);
 	}
 
@@ -707,7 +703,7 @@ int main(int argc, char *argv[])
 	params.type = ODP_POOL_PACKET;
 	pool = odp_pool_create("pkt_pool", &params);
 	if (pool == ODP_POOL_INVALID) {
-		LOG_ERR("Error: packet pool create failed\n");
+		ODPH_ERR("Error: packet pool create failed\n");
 		exit(EXIT_FAILURE);
 	}
 	odp_pool_print(pool);
@@ -728,7 +724,7 @@ int main(int argc, char *argv[])
 		uint16_t group = i % num_groups;
 
 		if (pkt == ODP_PACKET_INVALID) {
-			LOG_ERR("Error: odp_packet_alloc() failed\n");
+			ODPH_ERR("Error: odp_packet_alloc() failed\n");
 			return -1;
 		}
 
@@ -740,7 +736,7 @@ int main(int argc, char *argv[])
 
 		ev = odp_packet_to_event(pkt);
 		if (odp_queue_enq(queue, ev)) {
-			LOG_ERR("Error: odp_queue_enq() failed\n");
+			ODPH_ERR("Error: odp_queue_enq() failed\n");
 			return -1;
 		}
 	}
@@ -796,7 +792,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < num_groups; i++) {
 		for (j = 0; j < QUEUES_PER_GROUP; j++) {
 			if (odp_queue_destroy(gbl_args->queue[i][j])) {
-				LOG_ERR("Error: queue destroy\n");
+				ODPH_ERR("Error: queue destroy\n");
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -805,27 +801,27 @@ int main(int argc, char *argv[])
 	odp_mb_full();
 
 	if (odp_pool_destroy(pool)) {
-		LOG_ERR("Error: pool destroy\n");
+		ODPH_ERR("Error: pool destroy\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_shm_free(shm)) {
-		LOG_ERR("Error: shm free\n");
+		ODPH_ERR("Error: shm free\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_shm_free(lookup_tbl_shm)) {
-		LOG_ERR("Error: shm free\n");
+		ODPH_ERR("Error: shm free\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_local()) {
-		LOG_ERR("Error: term local\n");
+		ODPH_ERR("Error: term local\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_global(instance)) {
-		LOG_ERR("Error: term global\n");
+		ODPH_ERR("Error: term global\n");
 		exit(EXIT_FAILURE);
 	}
 
