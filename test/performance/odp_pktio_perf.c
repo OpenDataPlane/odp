@@ -21,8 +21,6 @@
  *
  */
 
-#include "config.h"
-
 #include <odp_api.h>
 
 #include <odp/helper/odph_api.h>
@@ -32,7 +30,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-#include <test_debug.h>
 
 #define TEST_SKIP 77
 
@@ -223,7 +220,7 @@ static odp_packet_t pktio_create_packet(uint32_t seq)
 	pkt_hdr.magic = TEST_HDR_MAGIC;
 	if (odp_packet_copy_from_mem(pkt, offset, sizeof(pkt_hdr),
 				     &pkt_hdr) != 0)
-		LOG_ABORT("Failed to generate test packet.\n");
+		ODPH_ABORT("Failed to generate test packet.\n");
 
 	return pkt;
 }
@@ -326,7 +323,8 @@ static int run_thread_tx(void *arg)
 	stats = &globals->tx_stats[thr_id];
 
 	if (odp_pktout_queue(globals->pktio_tx, &pktout, 1) != 1)
-		LOG_ABORT("Failed to get output queue for thread %d\n", thr_id);
+		ODPH_ABORT("Failed to get output queue for thread %d\n",
+			   thr_id);
 
 	burst_gap = odp_time_local_from_ns(
 			ODP_TIME_SEC_IN_NS / (targs->pps / targs->batch_len));
@@ -430,7 +428,7 @@ static int run_thread_rx(void *arg)
 
 	if (gbl_args->args.schedule == 0) {
 		if (odp_pktin_event_queue(globals->pktio_rx, &queue, 1) != 1)
-			LOG_ABORT("No input queue.\n");
+			ODPH_ABORT("No input queue.\n");
 	}
 
 	odp_barrier_wait(&globals->rx_barrier);
@@ -480,7 +478,7 @@ static int process_results(uint64_t expected_tx_cnt,
 	}
 
 	if (rx_pkts == 0) {
-		LOG_ERR("no packets received\n");
+		ODPH_ERR("no packets received\n");
 		return -1;
 	}
 
@@ -554,19 +552,19 @@ static int setup_txrx_masks(odp_cpumask_t *thd_mask_tx,
 		odp_cpumask_default_worker(&cpumask,
 					   gbl_args->args.cpu_count);
 	if (num_workers < 2) {
-		LOG_ERR("Need at least two cores\n");
+		ODPH_ERR("Need at least two cores\n");
 		return TEST_SKIP;
 	}
 
 	if (num_workers > MAX_WORKERS) {
-		LOG_DBG("Worker count limited to MAX_WORKERS define (=%d)\n",
-			MAX_WORKERS);
+		ODPH_DBG("Worker count limited to MAX_WORKERS define (=%d)\n",
+			 MAX_WORKERS);
 		num_workers = MAX_WORKERS;
 	}
 
 	if (gbl_args->args.num_tx_workers) {
 		if (gbl_args->args.num_tx_workers > (num_workers - 1)) {
-			LOG_ERR("Invalid TX worker count\n");
+			ODPH_ERR("Invalid TX worker count\n");
 			return -1;
 		}
 		num_tx_workers = gbl_args->args.num_tx_workers;
@@ -751,7 +749,7 @@ static int test_init(void)
 	gbl_args->transmit_pkt_pool = odp_pool_create("pkt_pool_transmit",
 						      &params);
 	if (gbl_args->transmit_pkt_pool == ODP_POOL_INVALID)
-		LOG_ABORT("Failed to create transmit pool\n");
+		ODPH_ABORT("Failed to create transmit pool\n");
 
 	odp_atomic_init_u32(&gbl_args->ip_seq, 0);
 	odp_atomic_init_u32(&gbl_args->shutdown, 0);
@@ -778,19 +776,19 @@ static int test_init(void)
 
 	if (gbl_args->pktio_rx == ODP_PKTIO_INVALID ||
 	    gbl_args->pktio_tx == ODP_PKTIO_INVALID) {
-		LOG_ERR("failed to open pktio\n");
+		ODPH_ERR("failed to open pktio\n");
 		return -1;
 	}
 
 	/* Create single queue with default parameters */
 	if (odp_pktout_queue_config(gbl_args->pktio_tx, NULL)) {
-		LOG_ERR("failed to configure pktio_tx queue\n");
+		ODPH_ERR("failed to configure pktio_tx queue\n");
 		return -1;
 	}
 
 	/* Configure also input side (with defaults) */
 	if (odp_pktin_queue_config(gbl_args->pktio_tx, NULL)) {
-		LOG_ERR("failed to configure pktio_tx queue\n");
+		ODPH_ERR("failed to configure pktio_tx queue\n");
 		return -1;
 	}
 
@@ -803,12 +801,12 @@ static int test_init(void)
 
 	if (gbl_args->args.num_ifaces > 1) {
 		if (odp_pktout_queue_config(gbl_args->pktio_rx, NULL)) {
-			LOG_ERR("failed to configure pktio_rx queue\n");
+			ODPH_ERR("failed to configure pktio_rx queue\n");
 			return -1;
 		}
 
 		if (odp_pktin_queue_config(gbl_args->pktio_rx, NULL)) {
-			LOG_ERR("failed to configure pktio_rx queue\n");
+			ODPH_ERR("failed to configure pktio_rx queue\n");
 			return -1;
 		}
 	}
@@ -858,12 +856,12 @@ static int test_term(void)
 
 	if (gbl_args->pktio_tx != gbl_args->pktio_rx) {
 		if (odp_pktio_stop(gbl_args->pktio_tx)) {
-			LOG_ERR("Failed to stop pktio_tx\n");
+			ODPH_ERR("Failed to stop pktio_tx\n");
 			return -1;
 		}
 
 		if (odp_pktio_close(gbl_args->pktio_tx)) {
-			LOG_ERR("Failed to close pktio_tx\n");
+			ODPH_ERR("Failed to close pktio_tx\n");
 			ret = -1;
 		}
 	}
@@ -871,12 +869,12 @@ static int test_term(void)
 	empty_inq(gbl_args->pktio_rx);
 
 	if (odp_pktio_stop(gbl_args->pktio_rx)) {
-		LOG_ERR("Failed to stop pktio_rx\n");
+		ODPH_ERR("Failed to stop pktio_rx\n");
 		return -1;
 	}
 
 	if (odp_pktio_close(gbl_args->pktio_rx) != 0) {
-		LOG_ERR("Failed to close pktio_rx\n");
+		ODPH_ERR("Failed to close pktio_rx\n");
 		ret = -1;
 	}
 
@@ -888,28 +886,28 @@ static int test_term(void)
 			continue;
 
 		if (odp_pool_destroy(pool) != 0) {
-			LOG_ERR("Failed to destroy pool %s\n", pool_name);
+			ODPH_ERR("Failed to destroy pool %s\n", pool_name);
 			ret = -1;
 		}
 	}
 
 	if (odp_pool_destroy(gbl_args->transmit_pkt_pool) != 0) {
-		LOG_ERR("Failed to destroy transmit pool\n");
+		ODPH_ERR("Failed to destroy transmit pool\n");
 		ret = -1;
 	}
 
 	free(gbl_args->args.if_str);
 
 	if (odp_shm_free(odp_shm_lookup("test_globals")) != 0) {
-		LOG_ERR("Failed to free test_globals\n");
+		ODPH_ERR("Failed to free test_globals\n");
 		ret = -1;
 	}
 	if (odp_shm_free(odp_shm_lookup("test_globals.rx_stats")) != 0) {
-		LOG_ERR("Failed to free test_globals.rx_stats\n");
+		ODPH_ERR("Failed to free test_globals.rx_stats\n");
 		ret = -1;
 	}
 	if (odp_shm_free(odp_shm_lookup("test_globals.tx_stats")) != 0) {
-		LOG_ERR("Failed to free test_globals.tx_stats\n");
+		ODPH_ERR("Failed to free test_globals.tx_stats\n");
 		ret = -1;
 	}
 
@@ -1002,7 +1000,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 			args->if_str = malloc(strlen(optarg) + 1);
 
 			if (!args->if_str)
-				LOG_ABORT("Failed to alloc iface storage\n");
+				ODPH_ABORT("Failed to alloc iface storage\n");
 
 			strcpy(args->if_str, optarg);
 			for (token = strtok(args->if_str, ",");
@@ -1047,7 +1045,7 @@ int main(int argc, char **argv)
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
-		LOG_ERR("Error: reading ODP helper options failed.\n");
+		ODPH_ERR("Error: reading ODP helper options failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1055,19 +1053,19 @@ int main(int argc, char **argv)
 	init_param.mem_model = helper_options.mem_model;
 
 	if (odp_init_global(&instance, &init_param, NULL) != 0)
-		LOG_ABORT("Failed global init.\n");
+		ODPH_ABORT("Failed global init.\n");
 
 	if (odp_init_local(instance, ODP_THREAD_CONTROL) != 0)
-		LOG_ABORT("Failed local init.\n");
+		ODPH_ABORT("Failed local init.\n");
 
 	shm = odp_shm_reserve("test_globals",
 			      sizeof(test_globals_t), ODP_CACHE_LINE_SIZE, 0);
 	if (shm == ODP_SHM_INVALID)
-		LOG_ABORT("Shared memory reserve failed.\n");
+		ODPH_ABORT("Shared memory reserve failed.\n");
 
 	gbl_args = odp_shm_addr(shm);
 	if (gbl_args == NULL)
-		LOG_ABORT("Shared memory reserve failed.\n");
+		ODPH_ABORT("Shared memory reserve failed.\n");
 	memset(gbl_args, 0, sizeof(test_globals_t));
 
 	max_thrs = odp_thread_count_max();
@@ -1080,12 +1078,12 @@ int main(int argc, char **argv)
 			      gbl_args->rx_stats_size,
 			      ODP_CACHE_LINE_SIZE, 0);
 	if (shm == ODP_SHM_INVALID)
-		LOG_ABORT("Shared memory reserve failed.\n");
+		ODPH_ABORT("Shared memory reserve failed.\n");
 
 	gbl_args->rx_stats = odp_shm_addr(shm);
 
 	if (gbl_args->rx_stats == NULL)
-		LOG_ABORT("Shared memory reserve failed.\n");
+		ODPH_ABORT("Shared memory reserve failed.\n");
 
 	memset(gbl_args->rx_stats, 0, gbl_args->rx_stats_size);
 
@@ -1093,12 +1091,12 @@ int main(int argc, char **argv)
 			      gbl_args->tx_stats_size,
 			      ODP_CACHE_LINE_SIZE, 0);
 	if (shm == ODP_SHM_INVALID)
-		LOG_ABORT("Shared memory reserve failed.\n");
+		ODPH_ABORT("Shared memory reserve failed.\n");
 
 	gbl_args->tx_stats = odp_shm_addr(shm);
 
 	if (gbl_args->tx_stats == NULL)
-		LOG_ABORT("Shared memory reserve failed.\n");
+		ODPH_ABORT("Shared memory reserve failed.\n");
 
 	memset(gbl_args->tx_stats, 0, gbl_args->tx_stats_size);
 
