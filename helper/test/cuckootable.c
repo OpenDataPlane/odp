@@ -542,7 +542,7 @@ test_cuckoo_hash_table(void)
 	return 0;
 }
 
-int main(int argc ODPH_UNUSED, char *argv[] ODPH_UNUSED)
+int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 {
 	odp_instance_t instance;
 	int ret = 0;

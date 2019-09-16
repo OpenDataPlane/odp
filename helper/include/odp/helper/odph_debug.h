@@ -24,6 +24,10 @@
 extern "C" {
 #endif
 
+/** @addtogroup odph_debug ODPH DEBUG
+ *  @{
+ */
+
 /**
  * Assert macro for applications and helper code
  *
@@ -96,11 +100,6 @@ do { \
 /**
  * @}
  */
-
-/**
- * Mark intentionally unused argument for functions
- */
-#define ODPH_UNUSED     __attribute__((__unused__))
 
 #ifdef __cplusplus
 }

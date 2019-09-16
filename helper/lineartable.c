@@ -43,7 +43,7 @@ typedef struct {
  */
 
 odph_table_t odph_linear_table_create(const char *name, uint32_t capacity,
-				      uint32_t un ODPH_UNUSED,
+				      uint32_t un ODP_UNUSED,
 				      uint32_t value_size)
 {
 	uint32_t idx;
@@ -181,7 +181,7 @@ static int odph_lineartable_put_value(odph_table_t table,
 /* should make sure the input table exists and is available */
 static int odph_lineartable_get_value(odph_table_t table,
 				      void *key, void *buffer,
-				      uint32_t buffer_size ODPH_UNUSED)
+				      uint32_t buffer_size ODP_UNUSED)
 {
 	odph_linear_table_imp *tbl;
 	uint32_t ikey = 0;

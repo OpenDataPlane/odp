@@ -26,7 +26,7 @@ static void main_exit(void);
 /* ODP application instance */
 static odp_instance_t odp_instance;
 
-static int worker_fn(void *arg ODPH_UNUSED)
+static int worker_fn(void *arg ODP_UNUSED)
 {
 	int cpu;
 	odp_cpumask_t workers;
