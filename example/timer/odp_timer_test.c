@@ -8,8 +8,6 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
-#include <example_debug.h>
-
 /* ODP main header */
 #include <odp_api.h>
 
@@ -92,28 +90,28 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 	odp_timeout_t tmo;
 	uint32_t num_workers = gbls->num_workers;
 
-	EXAMPLE_DBG("  [%i] test_timeouts\n", thr);
+	ODPH_DBG("  [%i] test_timeouts\n", thr);
 
 	queue = odp_queue_lookup("timer_queue");
 
 	period_ns = gbls->args.period_us * ODP_TIME_USEC_IN_NS;
 	period    = odp_timer_ns_to_tick(gbls->tp, period_ns);
 
-	EXAMPLE_DBG("  [%i] period %"PRIu64" ticks,  %"PRIu64" ns\n", thr,
-		    period, period_ns);
+	ODPH_DBG("  [%i] period %" PRIu64 " ticks,  %" PRIu64 " ns\n", thr,
+		 period, period_ns);
 
-	EXAMPLE_DBG("  [%i] current tick %"PRIu64"\n", thr,
-		    odp_timer_current_tick(gbls->tp));
+	ODPH_DBG("  [%i] current tick %" PRIu64 "\n", thr,
+		 odp_timer_current_tick(gbls->tp));
 
 	ttp = &gbls->tt[thr];
 	ttp->tim = odp_timer_alloc(gbls->tp, queue, ttp);
 	if (ttp->tim == ODP_TIMER_INVALID) {
-		EXAMPLE_ERR("Failed to allocate timer\n");
+		ODPH_ERR("Failed to allocate timer\n");
 		return;
 	}
 	tmo = odp_timeout_alloc(gbls->pool);
 	if (tmo == ODP_TIMEOUT_INVALID) {
-		EXAMPLE_ERR("Failed to allocate timeout\n");
+		ODPH_ERR("Failed to allocate timeout\n");
 		return;
 	}
 	ttp->ev = odp_timeout_to_event(tmo);
@@ -129,8 +127,8 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 			rc = odp_timer_set_abs(ttp->tim, tick, &ttp->ev);
 			if (odp_unlikely(rc != ODP_TIMER_SUCCESS)) {
 				/* Too early or too late timeout requested */
-				EXAMPLE_ABORT("odp_timer_set_abs() failed: %s\n",
-					      timerset2str(rc));
+				ODPH_ABORT("odp_timer_set_abs() failed: %s\n",
+					   timerset2str(rc));
 			}
 		}
 
@@ -148,7 +146,7 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 			 * are no remaining timeouts to receive */
 			if (++wait > WAIT_NUM &&
 			    odp_atomic_load_u32(&gbls->remain) < num_workers)
-				EXAMPLE_ABORT("At least one TMO was lost\n");
+				ODPH_ABORT("At least one TMO was lost\n");
 		} while (ev == ODP_EVENT_INVALID &&
 			 (int)odp_atomic_load_u32(&gbls->remain) > 0);
 
@@ -156,8 +154,8 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 			break; /* No more timeouts */
 		if (odp_event_type(ev) != ODP_EVENT_TIMEOUT) {
 			/* Not a default timeout event */
-			EXAMPLE_ABORT("Unexpected event type (%u) received\n",
-				      odp_event_type(ev));
+			ODPH_ABORT("Unexpected event type (%u) received\n",
+				   odp_event_type(ev));
 		}
 		odp_timeout_t tmo = odp_timeout_from_event(ev);
 		tick = odp_timeout_tick(tmo);
@@ -166,18 +164,18 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 		if (!odp_timeout_fresh(tmo)) {
 			/* Not the expected expiration tick, timer has
 			 * been reset or cancelled or freed */
-			EXAMPLE_ABORT("Unexpected timeout received (timer "
-				      "%" PRIu64", tick %" PRIu64 ")\n",
-				      odp_timer_to_u64(ttp->tim), tick);
+			ODPH_ABORT("Unexpected timeout received (timer "
+				   "%" PRIu64 ", tick %" PRIu64 ")\n",
+				   odp_timer_to_u64(ttp->tim), tick);
 		}
-		EXAMPLE_DBG("  [%i] timeout, tick %"PRIu64"\n", thr, tick);
+		ODPH_DBG("  [%i] timeout, tick %" PRIu64 "\n", thr, tick);
 
 		uint32_t rx_num = odp_atomic_fetch_dec_u32(&gbls->remain);
 
 		if (!rx_num)
-			EXAMPLE_ABORT("Unexpected timeout received (timer "
-				      "%" PRIu64 ", tick %" PRIu64 ")\n",
-				      odp_timer_to_u64(ttp->tim), tick);
+			ODPH_ABORT("Unexpected timeout received (timer "
+				   "%" PRIu64 ", tick %" PRIu64 ")\n",
+				   odp_timer_to_u64(ttp->tim), tick);
 		else if (rx_num > num_workers)
 			continue;
 
@@ -215,7 +213,7 @@ static int run_thread(void *ptr)
 	msg_pool = odp_pool_lookup("msg_pool");
 
 	if (msg_pool == ODP_POOL_INVALID) {
-		EXAMPLE_ERR("  [%i] msg_pool not found\n", thr);
+		ODPH_ERR("  [%i] msg_pool not found\n", thr);
 		return -1;
 	}
 
@@ -354,7 +352,7 @@ int main(int argc, char *argv[])
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
-		EXAMPLE_ERR("Error: reading ODP helper options failed.\n");
+		ODPH_ERR("Error: reading ODP helper options failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -382,14 +380,14 @@ int main(int argc, char *argv[])
 			      ODP_CACHE_LINE_SIZE, 0);
 	if (ODP_SHM_INVALID == shm) {
 		err = 1;
-		EXAMPLE_ERR("Error: shared mem reserve failed.\n");
+		ODPH_ERR("Error: shared mem reserve failed.\n");
 		goto err;
 	}
 
 	gbls = odp_shm_addr(shm);
 	if (NULL == gbls) {
 		err = 1;
-		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
+		ODPH_ERR("Error: shared mem alloc failed.\n");
 		goto err;
 	}
 	memset(gbls, 0, sizeof(test_globals_t));
@@ -432,7 +430,7 @@ int main(int argc, char *argv[])
 
 	if (gbls->pool == ODP_POOL_INVALID) {
 		err = 1;
-		EXAMPLE_ERR("Pool create failed.\n");
+		ODPH_ERR("Pool create failed.\n");
 		goto err;
 	}
 
@@ -445,7 +443,7 @@ int main(int argc, char *argv[])
 	gbls->tp = odp_timer_pool_create("timer_pool", &tparams);
 	if (gbls->tp == ODP_TIMER_POOL_INVALID) {
 		err = 1;
-		EXAMPLE_ERR("Timer pool create failed.\n");
+		ODPH_ERR("Timer pool create failed.\n");
 		goto err;
 	}
 	odp_timer_pool_start();
@@ -473,7 +471,7 @@ int main(int argc, char *argv[])
 
 	if (queue == ODP_QUEUE_INVALID) {
 		err = 1;
-		EXAMPLE_ERR("Timer queue create failed.\n");
+		ODPH_ERR("Timer queue create failed.\n");
 		goto err;
 	}
 

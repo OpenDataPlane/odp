@@ -20,8 +20,6 @@
 #include <unistd.h>
 #include <inttypes.h>
 
-#include <example_debug.h>
-
 #include <odp_api.h>
 
 #include <odp/helper/odph_api.h>
@@ -284,7 +282,7 @@ void ipsec_init_pre(void)
 
 	global->completionq = queue_create("completion", &qparam);
 	if (ODP_QUEUE_INVALID == global->completionq) {
-		EXAMPLE_ERR("Error: completion queue creation failed\n");
+		ODPH_ERR("Error: completion queue creation failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -315,7 +313,7 @@ void ipsec_init_post(odp_ipsec_op_mode_t api_mode)
 	odp_ipsec_capability_t ipsec_cap;
 
 	if (odp_ipsec_capability(&ipsec_cap) != ODP_IPSEC_OK) {
-		EXAMPLE_ERR("Error: failure getting IPSec caps\n");
+		ODPH_ERR("Error: failure getting IPSec caps\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -325,7 +323,7 @@ void ipsec_init_post(odp_ipsec_op_mode_t api_mode)
 	ipsec_config.outbound_mode = api_mode;
 	ipsec_config.inbound.default_queue = global->completionq;
 	if (odp_ipsec_config(&ipsec_config) != ODP_IPSEC_OK) {
-		EXAMPLE_ERR("Error: failure setting IPSec config\n");
+		ODPH_ERR("Error: failure setting IPSec config\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -356,7 +354,7 @@ void ipsec_init_post(odp_ipsec_op_mode_t api_mode)
 						     tun,
 						     entry->input,
 						     global->completionq)) {
-				EXAMPLE_ERR("Error: IPSec cache entry failed.\n"
+				ODPH_ERR("Error: IPSec cache entry failed.\n"
 						);
 				exit(EXIT_FAILURE);
 			}
@@ -444,7 +442,7 @@ void initialize_intf(char *intf)
 	 */
 	pktio = odp_pktio_open(intf, global->pkt_pool, &pktio_param);
 	if (ODP_PKTIO_INVALID == pktio) {
-		EXAMPLE_ERR("Error: pktio create failed for %s\n", intf);
+		ODPH_ERR("Error: pktio create failed for %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
 
@@ -452,27 +450,27 @@ void initialize_intf(char *intf)
 	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
 
 	if (odp_pktin_queue_config(pktio, &pktin_param)) {
-		EXAMPLE_ERR("Error: pktin config failed for %s\n", intf);
+		ODPH_ERR("Error: pktin config failed for %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_pktout_queue_config(pktio, NULL)) {
-		EXAMPLE_ERR("Error: pktout config failed for %s\n", intf);
+		ODPH_ERR("Error: pktout config failed for %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_pktin_event_queue(pktio, &inq, 1) != 1) {
-		EXAMPLE_ERR("Error: failed to get input queue for %s\n", intf);
+		ODPH_ERR("Error: failed to get input queue for %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_pktout_queue(pktio, &pktout, 1) != 1) {
-		EXAMPLE_ERR("Error: failed to get pktout queue for %s\n", intf);
+		ODPH_ERR("Error: failed to get pktout queue for %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_pktio_capability(pktio, &capa) != 0) {
-		EXAMPLE_ERR("Error: failed to get capabilities for %s\n", intf);
+		ODPH_ERR("Error: failed to get capabilities for %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
 
@@ -485,21 +483,20 @@ void initialize_intf(char *intf)
 		config.outbound_ipsec = capa.config.outbound_ipsec;
 
 	if (odp_pktio_config(pktio, &config) != 0) {
-		EXAMPLE_ERR("Error: failed to set config for %s\n", intf);
+		ODPH_ERR("Error: failed to set config for %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
 
 	ret = odp_pktio_start(pktio);
 	if (ret) {
-		EXAMPLE_ERR("Error: unable to start %s\n", intf);
+		ODPH_ERR("Error: unable to start %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
 
 	/* Read the source MAC address for this interface */
 	ret = odp_pktio_mac_addr(pktio, src_mac, sizeof(src_mac));
 	if (ret <= 0) {
-		EXAMPLE_ERR("Error: failed during MAC address get for %s\n",
-			    intf);
+		ODPH_ERR("Error: failed during MAC address get for %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
 
@@ -524,7 +521,7 @@ void initialize_intf(char *intf)
  */
 static
 pkt_disposition_e do_input_verify(odp_packet_t pkt,
-				  pkt_ctx_t *ctx EXAMPLE_UNUSED)
+				  pkt_ctx_t *ctx ODP_UNUSED)
 {
 	if (odp_unlikely(odp_packet_has_error(pkt)))
 		return PKT_DROP;
@@ -723,7 +720,7 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t *ppkt, pkt_ctx_t *ctx)
  * @return NULL (should never return)
  */
 static
-int pktio_thread(void *arg EXAMPLE_UNUSED)
+int pktio_thread(void *arg ODP_UNUSED)
 {
 	int thr;
 	odp_packet_t pkt;
@@ -764,13 +761,13 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 
 				if (odp_unlikely(odp_ipsec_result(&result,
 								  pkt) < 0)) {
-					EXAMPLE_DBG("Error Event\n");
+					ODPH_DBG("Error Event\n");
 					odp_event_free(ev);
 					continue;
 				}
 
 				if (result.status.error.all != 0) {
-					EXAMPLE_DBG("Error in IPsec\n");
+					ODPH_DBG("Error in IPsec\n");
 					rc = PKT_DROP;
 				}
 
@@ -789,7 +786,7 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 					ctx = odp_packet_user_ptr(pkt);
 				}
 			} else {
-				EXAMPLE_DBG("Unsupported Packet\n");
+				ODPH_DBG("Unsupported Packet\n");
 				odp_event_free(ev);
 				continue;
 			}
@@ -797,7 +794,7 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 			odp_ipsec_status_t status;
 
 			if (odp_unlikely(odp_ipsec_status(&status, ev) < 0)) {
-				EXAMPLE_DBG("Error Event\n");
+				ODPH_DBG("Error Event\n");
 				odp_event_free(ev);
 				continue;
 			}
@@ -916,7 +913,7 @@ main(int argc, char *argv[])
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
-		EXAMPLE_ERR("Error: reading ODP helper options failed.\n");
+		ODPH_ERR("Error: reading ODP helper options failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -925,13 +922,13 @@ main(int argc, char *argv[])
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init_param, NULL)) {
-		EXAMPLE_ERR("Error: ODP global init failed.\n");
+		ODPH_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
-		EXAMPLE_ERR("Error: ODP local init failed.\n");
+		ODPH_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -940,14 +937,14 @@ main(int argc, char *argv[])
 			      ODP_CACHE_LINE_SIZE, 0);
 
 	if (shm == ODP_SHM_INVALID) {
-		EXAMPLE_ERR("Error: shared mem reserve failed.\n");
+		ODPH_ERR("Error: shared mem reserve failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	global = odp_shm_addr(shm);
 
 	if (NULL == global) {
-		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
+		ODPH_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	memset(global, 0, sizeof(global_data_t));
@@ -992,7 +989,7 @@ main(int argc, char *argv[])
 	global->pkt_pool = odp_pool_create("packet_pool", &params);
 
 	if (ODP_POOL_INVALID == global->pkt_pool) {
-		EXAMPLE_ERR("Error: packet pool create failed.\n");
+		ODPH_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1005,7 +1002,7 @@ main(int argc, char *argv[])
 	global->ctx_pool = odp_pool_create("ctx_pool", &params);
 
 	if (ODP_POOL_INVALID == global->ctx_pool) {
-		EXAMPLE_ERR("Error: context pool create failed.\n");
+		ODPH_ERR("Error: context pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1062,8 +1059,8 @@ main(int argc, char *argv[])
 			continue;
 
 		if (odp_pktio_stop(pktio) || odp_pktio_close(pktio)) {
-			EXAMPLE_ERR("Error: failed to close pktio %s\n",
-				    global->appl.if_names[i]);
+			ODPH_ERR("Error: failed to close pktio %s\n",
+				 global->appl.if_names[i]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -1072,7 +1069,7 @@ main(int argc, char *argv[])
 	free(global->appl.if_str);
 
 	if (destroy_ipsec_cache())
-		EXAMPLE_ERR("Error: crypto session destroy failed\n");
+		ODPH_ERR("Error: crypto session destroy failed\n");
 
 	/* Drop any remaining events. ipsec_sa_disable sends status event in
 	 * async mode */
@@ -1080,43 +1077,43 @@ main(int argc, char *argv[])
 		odp_event_free(ev);
 
 	if (odp_queue_destroy(global->completionq))
-		EXAMPLE_ERR("Error: queue destroy failed\n");
+		ODPH_ERR("Error: queue destroy failed\n");
 
 	if (odp_pool_destroy(global->pkt_pool))
-		EXAMPLE_ERR("Error: pool destroy failed\n");
+		ODPH_ERR("Error: pool destroy failed\n");
 	if (odp_pool_destroy(global->ctx_pool))
-		EXAMPLE_ERR("Error: pool destroy failed\n");
+		ODPH_ERR("Error: pool destroy failed\n");
 
 	shm = odp_shm_lookup("shm_ipsec_cache");
 	if (odp_shm_free(shm) != 0)
-		EXAMPLE_ERR("Error: shm free shm_ipsec_cache failed\n");
+		ODPH_ERR("Error: shm free shm_ipsec_cache failed\n");
 	shm = odp_shm_lookup("shm_fwd_db");
 	if (odp_shm_free(shm) != 0)
-		EXAMPLE_ERR("Error: shm free shm_fwd_db failed\n");
+		ODPH_ERR("Error: shm free shm_fwd_db failed\n");
 	shm = odp_shm_lookup("shm_sa_db");
 	if (odp_shm_free(shm) != 0)
-		EXAMPLE_ERR("Error: shm free shm_sa_db failed\n");
+		ODPH_ERR("Error: shm free shm_sa_db failed\n");
 	shm = odp_shm_lookup("shm_tun_db");
 	if (odp_shm_free(shm) != 0)
-		EXAMPLE_ERR("Error: shm free shm_tun_db failed\n");
+		ODPH_ERR("Error: shm free shm_tun_db failed\n");
 	shm = odp_shm_lookup("shm_sp_db");
 	if (odp_shm_free(shm) != 0)
-		EXAMPLE_ERR("Error: shm free shm_sp_db failed\n");
+		ODPH_ERR("Error: shm free shm_sp_db failed\n");
 	shm = odp_shm_lookup("stream_db");
 	if (odp_shm_free(shm) != 0)
-		EXAMPLE_ERR("Error: shm free stream_db failed\n");
+		ODPH_ERR("Error: shm free stream_db failed\n");
 	if (odp_shm_free(global->shm)) {
-		EXAMPLE_ERR("Error: shm free global data failed\n");
+		ODPH_ERR("Error: shm free global data failed\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_local()) {
-		EXAMPLE_ERR("Error: term local failed\n");
+		ODPH_ERR("Error: term local failed\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_global(instance)) {
-		EXAMPLE_ERR("Error: term global failed\n");
+		ODPH_ERR("Error: term global failed\n");
 		exit(EXIT_FAILURE);
 	}
 

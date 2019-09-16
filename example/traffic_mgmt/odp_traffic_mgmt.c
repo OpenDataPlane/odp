@@ -8,14 +8,16 @@
 
 #define _GNU_SOURCE
 
-#include <unistd.h>
-#include <signal.h>
-#include <string.h>
-#include <inttypes.h>
-#include <sys/resource.h>
 #include <execinfo.h>
+#include <inttypes.h>
+#include <signal.h>
+#include <sys/resource.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
 #include <odp_api.h>
-#include <example_debug.h>
 
 #define NUM_SVC_CLASSES     4
 #define USERS_PER_SVC_CLASS 2

@@ -10,12 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <example_debug.h>
-
 #include <odp.h>
-
-#include <odp/helper/ipsec.h>
-#include <odp/helper/ip.h>
+#include <odp/helper/odph_api.h>
 
 #include <odp_ipsec_offload_cache.h>
 
@@ -34,12 +30,12 @@ void init_ipsec_cache(void)
 			      0);
 
 	if (shm == ODP_SHM_INVALID)
-		EXAMPLE_ABORT("Error: shared mem reserve failed.\n");
+		ODPH_ABORT("Error: shared mem reserve failed.\n");
 
 	ipsec_cache = odp_shm_addr(shm);
 
 	if (ipsec_cache == NULL)
-		EXAMPLE_ABORT("Error: shared mem alloc failed.\n");
+		ODPH_ABORT("Error: shared mem alloc failed.\n");
 	memset(ipsec_cache, 0, sizeof(*ipsec_cache));
 }
 

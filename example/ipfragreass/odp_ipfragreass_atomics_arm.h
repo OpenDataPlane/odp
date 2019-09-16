@@ -7,7 +7,7 @@
 #ifndef ODP_FRAGREASS_PP_ATOMICS_ARM_H_
 #define ODP_FRAGREASS_PP_ATOMICS_ARM_H_
 
-#include <example_debug.h>
+#include <odp_api.h>
 
 #if __SIZEOF_POINTER__ == 8 && defined(__aarch64__)
 static inline __int128 lld(__int128 *var, int mo)
@@ -45,7 +45,7 @@ static inline uint32_t scd(__int128 *var, __int128 neu, int mo)
 
 static inline bool atomic_strong_cas_dblptr(__int128 *var, __int128 *exp,
 					    __int128 neu, int mo_success,
-					    int mo_failure EXAMPLE_UNUSED)
+					    int mo_failure ODP_UNUSED)
 {
 	register __int128 old;
 	register __int128 expected = *exp;
@@ -95,7 +95,7 @@ static inline uint32_t scd(uint64_t *var, uint64_t neu, int mo)
 
 static inline bool atomic_strong_cas_dblptr(uint64_t *var, uint64_t *exp,
 					    uint64_t neu, int mo_success,
-					    int mo_failure EXAMPLE_UNUSED)
+					    int mo_failure ODP_UNUSED)
 {
 	register uint64_t old;
 	register uint64_t expected = *exp;

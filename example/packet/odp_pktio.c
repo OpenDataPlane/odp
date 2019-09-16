@@ -10,8 +10,6 @@
 #include <unistd.h>
 #include <inttypes.h>
 
-#include <example_debug.h>
-
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
@@ -133,13 +131,13 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 		break;
 	default:
-		EXAMPLE_ABORT("invalid mode %d\n", mode);
+		ODPH_ABORT("invalid mode %d\n", mode);
 	}
 
 	/* Open a packet IO instance */
 	pktio = odp_pktio_open(dev, pool, &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID)
-		EXAMPLE_ABORT("Error: pktio create failed for %s\n", dev);
+		ODPH_ABORT("Error: pktio create failed for %s\n", dev);
 
 	odp_pktin_queue_param_init(&pktin_param);
 
@@ -147,14 +145,14 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 		pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
 
 	if (odp_pktin_queue_config(pktio, &pktin_param))
-		EXAMPLE_ABORT("Error: pktin config failed for %s\n", dev);
+		ODPH_ABORT("Error: pktin config failed for %s\n", dev);
 
 	if (odp_pktout_queue_config(pktio, NULL))
-		EXAMPLE_ABORT("Error: pktout config failed for %s\n", dev);
+		ODPH_ABORT("Error: pktout config failed for %s\n", dev);
 
 	ret = odp_pktio_start(pktio);
 	if (ret != 0)
-		EXAMPLE_ABORT("Error: unable to start %s\n", dev);
+		ODPH_ABORT("Error: unable to start %s\n", dev);
 
 	printf("  created pktio:%02" PRIu64
 	       ", dev:%s, queue mode (ATOMIC queues)\n"
@@ -188,8 +186,8 @@ static int pktio_queue_thread(void *arg)
 
 	pktio = odp_pktio_lookup(thr_args->pktio_dev);
 	if (pktio == ODP_PKTIO_INVALID) {
-		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
-			    thr, thr_args->pktio_dev);
+		ODPH_ERR("  [%02i] Error: lookup of pktio %s failed\n",
+			 thr, thr_args->pktio_dev);
 		return -1;
 	}
 
@@ -202,8 +200,8 @@ static int pktio_queue_thread(void *arg)
 
 	if ((thr_args->mode == APPL_MODE_PKT_QUEUE) &&
 	    (odp_pktin_event_queue(pktio, &inq, 1) != 1)) {
-		EXAMPLE_ERR("  [%02i] Error: no input queue for %s\n",
-			    thr, thr_args->pktio_dev);
+		ODPH_ERR("  [%02i] Error: no input queue for %s\n",
+			 thr, thr_args->pktio_dev);
 		return -1;
 	}
 
@@ -225,14 +223,14 @@ static int pktio_queue_thread(void *arg)
 
 		/* Drop packets with errors */
 		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
-			EXAMPLE_ERR("Drop frame - err_cnt:%lu\n", ++err_cnt);
+			ODPH_ERR("Drop frame - err_cnt:%lu\n", ++err_cnt);
 			continue;
 		}
 
 		pktio_tmp = odp_packet_input(pkt);
 
 		if (odp_pktout_queue(pktio_tmp, &pktout, 1) != 1) {
-			EXAMPLE_ERR("  [%02i] Error: no pktout queue\n", thr);
+			ODPH_ERR("  [%02i] Error: no pktout queue\n", thr);
 			return -1;
 		}
 
@@ -241,7 +239,7 @@ static int pktio_queue_thread(void *arg)
 
 		/* Enqueue the packet for output */
 		if (odp_pktout_send(pktout, &pkt, 1) != 1) {
-			EXAMPLE_ERR("  [%i] Packet send failed.\n", thr);
+			ODPH_ERR("  [%i] Packet send failed.\n", thr);
 			odp_packet_free(pkt);
 			continue;
 		}
@@ -279,8 +277,8 @@ static int pktio_ifburst_thread(void *arg)
 
 	pktio = odp_pktio_lookup(thr_args->pktio_dev);
 	if (pktio == ODP_PKTIO_INVALID) {
-		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
-			    thr, thr_args->pktio_dev);
+		ODPH_ERR("  [%02i] Error: lookup of pktio %s failed\n",
+			 thr, thr_args->pktio_dev);
 		return -1;
 	}
 
@@ -288,12 +286,12 @@ static int pktio_ifburst_thread(void *arg)
 	       thr, odp_pktio_to_u64(pktio));
 
 	if (odp_pktin_queue(pktio, &pktin, 1) != 1) {
-		EXAMPLE_ERR("  [%02i] Error: no pktin queue\n", thr);
+		ODPH_ERR("  [%02i] Error: no pktin queue\n", thr);
 		return -1;
 	}
 
 	if (odp_pktout_queue(pktio, &pktout, 1) != 1) {
-		EXAMPLE_ERR("  [%02i] Error: no pktout queue\n", thr);
+		ODPH_ERR("  [%02i] Error: no pktout queue\n", thr);
 		return -1;
 	}
 
@@ -320,8 +318,8 @@ static int pktio_ifburst_thread(void *arg)
 			}
 
 			if (odp_unlikely(pkts_ok != pkts))
-				EXAMPLE_ERR("Dropped frames:%u - err_cnt:%lu\n",
-					    pkts-pkts_ok, ++err_cnt);
+				ODPH_ERR("Dropped frames:%u - err_cnt:%lu\n",
+					 pkts - pkts_ok, ++err_cnt);
 
 			/* Print packet counts every once in a while */
 			tmp += pkts_ok;
@@ -360,7 +358,7 @@ int main(int argc, char *argv[])
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
-		EXAMPLE_ERR("Error: reading ODP helper options failed.\n");
+		ODPH_ERR("Error: reading ODP helper options failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -369,13 +367,13 @@ int main(int argc, char *argv[])
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init_param, NULL)) {
-		EXAMPLE_ERR("Error: ODP global init failed.\n");
+		ODPH_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
-		EXAMPLE_ERR("Error: ODP local init failed.\n");
+		ODPH_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -383,13 +381,13 @@ int main(int argc, char *argv[])
 	shm = odp_shm_reserve("_appl_global_data", sizeof(args_t),
 			      ODP_CACHE_LINE_SIZE, 0);
 	if (shm == ODP_SHM_INVALID) {
-		EXAMPLE_ERR("Error: shared mem reserve failed.\n");
+		ODPH_ERR("Error: shared mem reserve failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	args = odp_shm_addr(shm);
 	if (args == NULL) {
-		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
+		ODPH_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -424,7 +422,7 @@ int main(int argc, char *argv[])
 	pool = odp_pool_create("packet_pool", &params);
 
 	if (pool == ODP_POOL_INVALID) {
-		EXAMPLE_ERR("Error: packet pool create failed.\n");
+		ODPH_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	odp_pool_print(pool);
@@ -500,7 +498,7 @@ int main(int argc, char *argv[])
 	odp_pool_destroy(pool);
 
 	if (odp_shm_free(args->shm)) {
-		EXAMPLE_ERR("Error: shm free global data\n");
+		ODPH_ERR("Error: shm free global data\n");
 		exit(EXIT_FAILURE);
 	}
 

@@ -13,10 +13,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include <example_debug.h>
 
 /* ODP main header */
 #include <odp_api.h>
+
+#include <odp/helper/odph_api.h>
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
@@ -101,14 +102,14 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 
 	tim = odp_timer_alloc(timer_pool, queue, NULL);
 	if (tim == ODP_TIMER_INVALID) {
-		EXAMPLE_ERR("Failed to allocate timer\n");
+		ODPH_ERR("Failed to allocate timer\n");
 		ret += 1;
 		goto err;
 	}
 
 	tmo = odp_timeout_alloc(timeout_pool);
 	if (tmo == ODP_TIMEOUT_INVALID) {
-		EXAMPLE_ERR("Failed to allocate timeout\n");
+		ODPH_ERR("Failed to allocate timeout\n");
 		return -1;
 	}
 
@@ -131,16 +132,15 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 		rc = odp_timer_set_abs(tim, tick + period, &ev);
 		/* Too early or too late timeout requested */
 		if (odp_unlikely(rc != ODP_TIMER_SUCCESS))
-			EXAMPLE_ABORT("odp_timer_set_abs() failed: %d\n",
-				      rc);
+			ODPH_ABORT("odp_timer_set_abs() failed: %d\n", rc);
 
 		/* Wait for 2 seconds for timeout action to be generated */
 		ev = odp_schedule(&queue, sched_tmo);
 		if (ev == ODP_EVENT_INVALID)
-			EXAMPLE_ABORT("Invalid event\n");
+			ODPH_ABORT("Invalid event\n");
 		if (odp_event_type(ev) != ODP_EVENT_TIMEOUT)
-			EXAMPLE_ABORT("Unexpected event type (%u) received\n",
-				      odp_event_type(ev));
+			ODPH_ABORT("Unexpected event type (%u) received\n",
+				   odp_event_type(ev));
 
 		time = odp_time_global();
 		printf("timer tick %d, time ns %" PRIu64 "\n",
