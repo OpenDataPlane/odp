@@ -14,3 +14,4 @@ odp_sched_latency
 odp_sched_perf
 odp_sched_pktio
 odp_scheduling
+odp_timer_perf
