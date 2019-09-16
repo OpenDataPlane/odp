@@ -4,13 +4,10 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 #include <odp_cunit_common.h>
 #include <mask_common.h>
-#include <test_debug.h>
 
 #define GLOBAL_SHM_NAME		"GlobalThreadTest"
 
@@ -100,7 +97,7 @@ static void thread_test_odp_thread_count(void)
 	CU_PASS();
 }
 
-static int thread_func(void *arg TEST_UNUSED)
+static int thread_func(void *arg ODP_UNUSED)
 {
 	/* indicate that thread has started */
 	odp_barrier_wait(&global_mem->bar_entry);

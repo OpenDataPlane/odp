@@ -4,13 +4,11 @@
  * SPDX-License-Identifier:	BSD-3-Clause
  */
 
-#include "config.h"
-
 #include <ctype.h>
 #include <odp_api.h>
-#include <odp/api/cpumask.h>
+#include <odp/helper/odph_api.h>
+
 #include "odp_cunit_common.h"
-#include "test_debug.h"
 
 #define DIFF_TRY_NUM			160
 #define RES_TRY_NUM			10
@@ -34,7 +32,7 @@ static void system_test_odp_version_numbers(void)
 			s++;
 		} else {
 			char_ok = 0;
-			LOG_DBG("\nBAD VERSION=%s\n", version_string);
+			ODPH_DBG("\nBAD VERSION=%s\n", version_string);
 			break;
 		}
 	}
@@ -218,7 +216,7 @@ static void system_test_odp_sys_huge_page_size(void)
 	page = odp_sys_huge_page_size();
 	if (page == 0)
 		/* Not an error, but just to be sure to hit logs */
-		LOG_ERR("Huge pages do not seem to be supported\n");
+		ODPH_ERR("Huge pages do not seem to be supported\n");
 	else
 		CU_ASSERT(page % ODP_PAGE_SIZE == 0);
 }

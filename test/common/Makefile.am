@@ -14,5 +14,5 @@ libthrmask_common_la_CFLAGS = $(AM_CFLAGS) -DTEST_THRMASK
 
 endif
 
-noinst_HEADERS = test_debug.h test_packet_parser.h
+noinst_HEADERS = test_packet_parser.h
 dist_test_SCRIPTS = run-test.sh

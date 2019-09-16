@@ -4,14 +4,11 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <odp_api.h>
 #include "odp_cunit_common.h"
-#include "test_debug.h"
 #include <odp/helper/odph_api.h>
 
 #include <CUnit/TestDB.h>
@@ -431,8 +428,8 @@ int odp_cunit_parse_options(int argc, char *argv[])
 
 	if (env && !strcmp(env, "true")) {
 		allow_skip_result = 1;
-		LOG_DBG("\nWARNING: test result can be used for code coverage only.\n"
-			"CI=true env variable is set!\n");
+		ODPH_DBG("\nWARNING: test result can be used for code coverage only.\n"
+			 "CI=true env variable is set!\n");
 	}
 
 	return 0;
