@@ -4,14 +4,13 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 #include <odp_api.h>
-#include <test_debug.h>
+#include <odp/helper/odph_api.h>
+
 #include <odp_cunit_common.h>
 #include <odp_packet_io_ring_internal.h>
 
@@ -20,11 +19,11 @@
 static int ring_suites_init(odp_instance_t *inst)
 {
 	if (0 != odp_init_global(inst, NULL, NULL)) {
-		LOG_ERR("error: odp_init_global() failed.\n");
+		ODPH_ERR("error: odp_init_global() failed.\n");
 		return -1;
 	}
 	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
-		LOG_ERR("error: odp_init_local() failed.\n");
+		ODPH_ERR("error: odp_init_local() failed.\n");
 		return -1;
 	}
 

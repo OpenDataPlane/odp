@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 #include "ipc_common.h"
 
 /**
@@ -77,7 +75,7 @@ static int pktio_run_loop(odp_pool_t pool)
 		return -1;
 
 	if (odp_pktin_queue(ipc_pktio, &pktin, 1) != 1) {
-		LOG_ERR("no input queue\n");
+		ODPH_ERR("no input queue\n");
 		return -1;
 	}
 
@@ -110,8 +108,8 @@ static int pktio_run_loop(odp_pool_t pool)
 			cycle = odp_time_local();
 			diff = odp_time_diff(cycle, start_cycle);
 			if (odp_time_cmp(wait, diff) < 0) {
-				LOG_DBG("exit after %d seconds\n",
-					run_time_sec);
+				ODPH_DBG("exit after %d seconds\n",
+					 run_time_sec);
 				break;
 			}
 		}
@@ -135,7 +133,7 @@ static int pktio_run_loop(odp_pool_t pool)
 					stat_errors++;
 					stat_free++;
 					odp_packet_free(pkt);
-					LOG_ERR("invalid l4 offset\n");
+					ODPH_ERR("invalid l4 offset\n");
 				}
 
 				off += ODPH_UDPHDR_LEN;
@@ -146,7 +144,7 @@ static int pktio_run_loop(odp_pool_t pool)
 					stat_errors++;
 					stat_free++;
 					odp_packet_free(pkt);
-					LOG_DBG("error\n");
+					ODPH_DBG("error\n");
 					continue;
 				}
 
@@ -160,7 +158,7 @@ static int pktio_run_loop(odp_pool_t pool)
 					stat_errors++;
 					stat_free++;
 					odp_packet_free(pkt);
-					LOG_DBG("error\n");
+					ODPH_DBG("error\n");
 					continue;
 				}
 
@@ -187,11 +185,10 @@ static int pktio_run_loop(odp_pool_t pool)
 				if (head.seq != cnt_recv && sync_cnt) {
 					stat_errors++;
 					odp_packet_free(pkt);
-					LOG_DBG("head.seq %d - "
-						    "cnt_recv %" PRIu64 ""
-						    " = %" PRIu64 "\n",
-						    head.seq, cnt_recv,
-						    head.seq - cnt_recv);
+					ODPH_DBG("head.seq %d - cnt_recv "
+						 "%" PRIu64 " = %" PRIu64 "\n",
+						 head.seq, cnt_recv,
+						 head.seq - cnt_recv);
 					cnt_recv = head.seq;
 					stat_free++;
 					continue;
@@ -206,7 +203,7 @@ static int pktio_run_loop(odp_pool_t pool)
 		ret = odp_random_data((uint8_t *)&pkts, sizeof(pkts),
 				      ODP_RANDOM_BASIC);
 		if (ret != sizeof(pkts)) {
-			LOG_ABORT("random failed");
+			ODPH_ABORT("random failed");
 			break;
 		}
 		pkts = ((pkts & 0xffff) % MAX_PKT_BURST) + 1;
@@ -234,7 +231,7 @@ static int pktio_run_loop(odp_pool_t pool)
 
 			off = odp_packet_l4_offset(pkt);
 			if (off == ODP_PACKET_OFFSET_INVALID)
-				LOG_ABORT("packet L4 offset not set");
+				ODPH_ABORT("packet L4 offset not set");
 
 			head.magic = TEST_SEQ_MAGIC;
 			head.seq   = cnt++;
@@ -243,20 +240,20 @@ static int pktio_run_loop(odp_pool_t pool)
 			ret = odp_packet_copy_from_mem(pkt, off, sizeof(head),
 						       &head);
 			if (ret)
-				LOG_ABORT("unable to copy in head data");
+				ODPH_ABORT("unable to copy in head data");
 
 			tail.magic = TEST_SEQ_MAGIC;
 			off = odp_packet_len(pkt) - sizeof(pkt_tail_t);
 			ret = odp_packet_copy_from_mem(pkt, off, sizeof(tail),
 						       &tail);
 			if (ret)
-				LOG_ABORT("unable to copy in tail data");
+				ODPH_ABORT("unable to copy in tail data");
 		}
 
 		/* 5. Send packets to ipc_pktio */
 		ret = ipc_odp_packet_send_or_free(ipc_pktio, pkt_tbl, pkts);
 		if (ret < 0) {
-			LOG_DBG("unable to sending to ipc pktio\n");
+			ODPH_DBG("unable to sending to ipc pktio\n");
 			break;
 		}
 
@@ -283,14 +280,14 @@ static int pktio_run_loop(odp_pool_t pool)
 	/* cleanup and exit */
 	ret = odp_pktio_stop(ipc_pktio);
 	if (ret) {
-		LOG_DBG("odp_pktio_stop error %d\n", ret);
+		ODPH_DBG("odp_pktio_stop error %d\n", ret);
 		return -1;
 	}
 
 exit:
 	ret = odp_pktio_close(ipc_pktio);
 	if (ret) {
-		LOG_DBG("odp_pktio_close error %d\n", ret);
+		ODPH_DBG("odp_pktio_close error %d\n", ret);
 		return -1;
 	}
 
@@ -316,7 +313,7 @@ int main(int argc, char *argv[])
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, NULL, NULL)) {
-		LOG_ERR("Error: ODP global init failed.\n");
+		ODPH_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -337,7 +334,7 @@ int main(int argc, char *argv[])
 
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_WORKER)) {
-		LOG_ERR("Error: ODP local init failed.\n");
+		ODPH_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -353,7 +350,7 @@ int main(int argc, char *argv[])
 
 	pool = odp_pool_create(TEST_IPC_POOL_NAME, &params);
 	if (pool == ODP_POOL_INVALID) {
-		LOG_ERR("Error: packet pool create failed.\n");
+		ODPH_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -362,20 +359,20 @@ int main(int argc, char *argv[])
 	ret = pktio_run_loop(pool);
 
 	if (odp_pool_destroy(pool)) {
-		LOG_ERR("Error: odp_pool_destroy() failed.\n");
+		ODPH_ERR("Error: odp_pool_destroy() failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_local()) {
-		LOG_ERR("Error: odp_term_local() failed.\n");
+		ODPH_ERR("Error: odp_term_local() failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_global(instance)) {
-		LOG_ERR("Error: odp_term_global() failed.\n");
+		ODPH_ERR("Error: odp_term_global() failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	LOG_DBG("return %d\n", ret);
+	ODPH_DBG("return %d\n", ret);
 	return ret;
 }
