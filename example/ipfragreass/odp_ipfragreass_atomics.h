@@ -7,8 +7,6 @@
 #ifndef ODP_FRAGREASS_PP_ATOMICS_H_
 #define ODP_FRAGREASS_PP_ATOMICS_H_
 
-#include <example_debug.h>
-
 #if __SIZEOF_POINTER__ == 4
 /**
  * A wrapper function to perform a 64-bit "strong" atomic compare and swap

@@ -17,8 +17,6 @@
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
 
-#include <example_debug.h>
-
 #include <odp_api.h>
 
 #include <odp/helper/odph_api.h>
@@ -49,14 +47,14 @@ void init_stream_db(void)
 			      0);
 
 	if (shm == ODP_SHM_INVALID) {
-		EXAMPLE_ERR("Error: shared mem reserve failed.\n");
+		ODPH_ERR("Error: shared mem reserve failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	stream_db = odp_shm_addr(shm);
 
 	if (stream_db == NULL) {
-		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
+		ODPH_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	memset(stream_db, 0, sizeof(*stream_db));
@@ -552,7 +550,7 @@ int create_stream_db_inputs(void)
 	/* Lookup the packet pool */
 	pkt_pool = odp_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_POOL_INVALID) {
-		EXAMPLE_ERR("Error: pkt_pool not found\n");
+		ODPH_ERR("Error: pkt_pool not found\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -566,16 +564,15 @@ int create_stream_db_inputs(void)
 		ret = odp_pktio_mac_addr(stream->input.pktio,
 					 dmac, sizeof(dmac));
 		if (ret <= 0) {
-			EXAMPLE_ERR("Error: failed during MAC address get "
-				    "for %s\n",
-					stream->input.intf);
+			ODPH_ERR("Error: failed during MAC address get for "
+				 "%s\n", stream->input.intf);
 			continue;
 		}
 
 		ret = odp_pktout_queue(stream->input.pktio, &queue, 1);
 		if (ret < 1) {
-			EXAMPLE_ERR("Error: failed to get outqueue for %s\n",
-				    stream->input.intf);
+			ODPH_ERR("Error: failed to get outqueue for %s\n",
+				 stream->input.intf);
 			continue;
 		}
 
@@ -620,8 +617,8 @@ odp_bool_t verify_stream_db_outputs(void)
 
 		ret = odp_pktin_event_queue(stream->output.pktio, &queue, 1);
 		if (ret < 1) {
-			EXAMPLE_ERR("Error: failed to get inqueue for %s\n",
-				    stream->output.intf);
+			ODPH_ERR("Error: failed to get inqueue for %s\n",
+				 stream->output.intf);
 			continue;
 		}
 

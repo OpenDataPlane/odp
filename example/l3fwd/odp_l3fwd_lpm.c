@@ -10,8 +10,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <example_debug.h>
 #include <odp_api.h>
+#include <odp/helper/odph_api.h>
 
 #include <odp_l3fwd_lpm.h>
 
@@ -155,13 +155,13 @@ void fib_tbl_init(void)
 	/*Reserve memory for Routing hash table*/
 	lpm_shm = odp_shm_reserve("fib_lpm_sub", size, ODP_CACHE_LINE_SIZE, 0);
 	if (lpm_shm == ODP_SHM_INVALID) {
-		EXAMPLE_ERR("Error: shared mem reserve failed.\n");
+		ODPH_ERR("Error: shared mem reserve failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	fe = odp_shm_addr(lpm_shm);
 	if (!fe) {
-		EXAMPLE_ERR("Error: shared mem alloc failed for lpm cache.\n");
+		ODPH_ERR("Error: shared mem alloc failed for lpm cache.\n");
 		exit(-1);
 	}
 

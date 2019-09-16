@@ -7,11 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <example_debug.h>
-
 #include <odp_api.h>
-
-#include <odp/helper/ipsec.h>
+#include <odp/helper/odph_api.h>
 
 #include <odp_ipsec_cache.h>
 
@@ -29,14 +26,14 @@ void init_ipsec_cache(void)
 			      0);
 
 	if (shm == ODP_SHM_INVALID) {
-		EXAMPLE_ERR("Error: shared mem reserve failed.\n");
+		ODPH_ERR("Error: shared mem reserve failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	ipsec_cache = odp_shm_addr(shm);
 
 	if (ipsec_cache == NULL) {
-		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
+		ODPH_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	memset(ipsec_cache, 0, sizeof(*ipsec_cache));
@@ -102,7 +99,7 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 
 	ipsec_sa = odp_ipsec_sa_create(&param);
 	if (ODP_IPSEC_SA_INVALID == ipsec_sa) {
-		EXAMPLE_ERR("Error: SA creation failed\n");
+		ODPH_ERR("Error: SA creation failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -176,7 +173,7 @@ ipsec_cache_entry_t *find_ipsec_cache_entry_in(uint32_t src_ip,
 
 ipsec_cache_entry_t *find_ipsec_cache_entry_out(uint32_t src_ip,
 						uint32_t dst_ip,
-						uint8_t proto EXAMPLE_UNUSED)
+						uint8_t proto ODP_UNUSED)
 {
 	ipsec_cache_entry_t *entry = ipsec_cache->out_list;
 

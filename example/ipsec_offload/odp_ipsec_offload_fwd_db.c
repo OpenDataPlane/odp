@@ -10,8 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <example_debug.h>
 #include <odp.h>
+#include <odp/helper/odph_api.h>
 
 #include <odp_ipsec_offload_fwd_db.h>
 
@@ -39,10 +39,10 @@ void init_routing_table(void)
 				   sizeof(flow_bucket_t) * bucket_count,
 				   ODP_CACHE_LINE_SIZE, 0);
 	if (hash_shm == ODP_SHM_INVALID)
-		EXAMPLE_ABORT("Error: shared mem alloc failed.\n");
+		ODPH_ABORT("Error: shared mem alloc failed.\n");
 	flow_table = odp_shm_addr(hash_shm);
 	if (!flow_table)
-		EXAMPLE_ABORT("Error: shared mem alloc failed.\n");
+		ODPH_ABORT("Error: shared mem alloc failed.\n");
 	/*Inialize Locks*/
 	for (i = 0; i < bucket_count; i++) {
 		bucket = &flow_table[i];
@@ -62,12 +62,12 @@ void init_fwd_db(void)
 			      0);
 
 	if (shm == ODP_SHM_INVALID)
-		EXAMPLE_ABORT("Error: shared mem reserve failed.\n");
+		ODPH_ABORT("Error: shared mem reserve failed.\n");
 
 	fwd_db = odp_shm_addr(shm);
 
 	if (fwd_db == NULL)
-		EXAMPLE_ABORT("Error: shared mem alloc failed.\n");
+		ODPH_ABORT("Error: shared mem alloc failed.\n");
 	memset(fwd_db, 0, sizeof(*fwd_db));
 }
 

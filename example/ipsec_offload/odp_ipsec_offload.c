@@ -20,15 +20,8 @@
 #include <unistd.h>
 #include <inttypes.h>
 
-#include <example_debug.h>
-
 #include <odp_api.h>
-#include <odp/helper/linux.h>
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
-#include <odp/helper/icmp.h>
-#include <odp/helper/udp.h>
-#include <odp/helper/ipsec.h>
+#include <odp/helper/odph_api.h>
 
 #include <stdbool.h>
 #include <sys/socket.h>
@@ -177,7 +170,7 @@ void ipsec_init_post(void)
 						     entry->input,
 						     queue)
 			    ) {
-				EXAMPLE_ABORT("Error: IPSec cache entry failed.\n");
+				ODPH_ABORT("Error: IPSec cache entry failed\n");
 			}
 		} else {
 			printf(" WARNING: SA not found for SP\n");
@@ -214,14 +207,14 @@ static void initialize_intf(char *intf, int queue_type)
 	 */
 	pktio = odp_pktio_open(intf, global->pkt_pool, &pktio_param);
 	if (ODP_PKTIO_INVALID == pktio)
-		EXAMPLE_ABORT("Error: pktio create failed for %s\n", intf);
+		ODPH_ABORT("Error: pktio create failed for %s\n", intf);
 
 	odp_pktin_queue_param_init(&pktin_param);
 
 	ret = odp_pktio_capability(pktio, &capa);
 	if (ret != 0)
-		EXAMPLE_ABORT("Error: Unable to get pktio capability %s\n",
-			      intf);
+		ODPH_ABORT("Error: Unable to get pktio capability %s\n",
+			   intf);
 
 	pktin_param.queue_param.type = ODP_QUEUE_TYPE_SCHED;
 	pktin_param.queue_param.sched.sync = queue_type;
@@ -232,24 +225,24 @@ static void initialize_intf(char *intf, int queue_type)
 		pktin_param.hash_enable = 1;
 
 	if (odp_pktin_queue_config(pktio, &pktin_param))
-		EXAMPLE_ABORT("Error: pktin config failed for %s\n", intf);
+		ODPH_ABORT("Error: pktin config failed for %s\n", intf);
 
 	if (odp_pktout_queue_config(pktio, NULL))
-		EXAMPLE_ABORT("Error: pktout config failed for %s\n", intf);
+		ODPH_ABORT("Error: pktout config failed for %s\n", intf);
 
 	if (odp_pktout_queue(pktio, &pktout, 1) != 1)
-		EXAMPLE_ABORT("Error: failed to get pktout queue for %s\n",
-			      intf);
+		ODPH_ABORT("Error: failed to get pktout queue for %s\n",
+			   intf);
 
 	ret = odp_pktio_start(pktio);
 	if (ret)
-		EXAMPLE_ABORT("Error: unable to start %s\n", intf);
+		ODPH_ABORT("Error: unable to start %s\n", intf);
 
 	/* Read the source MAC address for this interface */
 	ret = odp_pktio_mac_addr(pktio, src_mac, sizeof(src_mac));
 	if (ret < 0) {
-		EXAMPLE_ABORT("Error: failed during MAC address get for %s\n",
-			      intf);
+		ODPH_ABORT("Error: failed during MAC address get for %s\n",
+			   intf);
 	}
 
 	printf("Created pktio:%02" PRIu64 "\n", odp_pktio_to_u64(pktio));
@@ -326,7 +319,7 @@ pkt_disposition_e do_route_fwd_db(odp_packet_t pkt)
 		/*Check into Routing table*/
 		fwd_entry = find_fwd_db_entry(dip);
 		if (!fwd_entry) {
-			EXAMPLE_DBG("No flow match found. Packet is dropped.\n");
+			ODPH_DBG("No flow match found. Packet is dropped.\n");
 			odp_packet_free(pkt);
 			return PKT_DROP;
 		}
@@ -334,7 +327,7 @@ pkt_disposition_e do_route_fwd_db(odp_packet_t pkt)
 		/*Entry found. Updated in Flow table first.*/
 		flow = calloc(1, sizeof(flow_entry_t));
 		if (!flow) {
-			EXAMPLE_ABORT("Failure to allocate memory");
+			ODPH_ABORT("Failure to allocate memory");
 			return PKT_DROP;
 		}
 		flow->l3_src = sip;
@@ -369,7 +362,7 @@ pkt_disposition_e do_route_fwd_db(odp_packet_t pkt)
 
 	/* Issue ipsec request */
 	if (odp_unlikely(odp_ipsec_out_enq(&pkt, 1, &params) < 0)) {
-		EXAMPLE_DBG("Unable to out enqueue\n");
+		ODPH_DBG("Unable to out enqueue\n");
 		odp_packet_free(pkt);
 		return PKT_DROP;
 	}
@@ -400,7 +393,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt)
 
 	/* Issue ipsec request */
 	if (odp_unlikely(odp_ipsec_in_enq(&pkt, 1, &params) < 0)) {
-		EXAMPLE_DBG("Unable to in enqueue\n");
+		ODPH_DBG("Unable to in enqueue\n");
 		odp_packet_free(pkt);
 		return PKT_DROP;
 	}
@@ -421,7 +414,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt)
  * @return NULL (should never return)
  */
 static
-int pktio_thread(void *arg EXAMPLE_UNUSED)
+int pktio_thread(void *arg ODP_UNUSED)
 {
 	int thr = odp_thread_id();
 	odp_packet_t pkt;
@@ -448,7 +441,7 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 
 				if (odp_unlikely(odp_ipsec_result(&res,
 								  pkt) < 0)) {
-					EXAMPLE_DBG("Error Event\n");
+					ODPH_DBG("Error Event\n");
 					odp_event_free((odp_event_t)ev);
 					continue;
 				}
@@ -479,7 +472,7 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 				odp_packet_free(pkt);
 
 		} else {
-			EXAMPLE_DBG("Invalid Event\n");
+			ODPH_DBG("Invalid Event\n");
 			odp_event_free(ev);
 			continue;
 		}
@@ -517,21 +510,21 @@ main(int argc, char *argv[])
 
 	/* Initialize ODP before calling anything else */
 	if (odp_init_global(&instance, NULL, NULL))
-		EXAMPLE_ABORT("Error: ODP global init failed.\n");
+		ODPH_ABORT("Error: ODP global init failed.\n");
 	/* Initialize this thread */
 	if (odp_init_local(instance, ODP_THREAD_CONTROL))
-		EXAMPLE_ABORT("Error: ODP local init failed.\n");
+		ODPH_ABORT("Error: ODP local init failed.\n");
 	/* Reserve memory for arguments from shared memory */
 	shm = odp_shm_reserve("shm_args", sizeof(global_data_t),
 			      ODP_CACHE_LINE_SIZE, 0);
 
 	if (shm == ODP_SHM_INVALID)
-		EXAMPLE_ABORT("Error: shared mem reserve failed.\n");
+		ODPH_ABORT("Error: shared mem reserve failed.\n");
 
 	global = odp_shm_addr(shm);
 
 	if (NULL == global)
-		EXAMPLE_ABORT("Error: shared mem alloc failed.\n");
+		ODPH_ABORT("Error: shared mem alloc failed.\n");
 	memset(global, 0, sizeof(global_data_t));
 
 	/* Must init our databases before parsing args */
@@ -548,7 +541,7 @@ main(int argc, char *argv[])
 	print_info(NO_PATH(argv[0]), &global->appl);
 
 	if (odp_ipsec_capability(&capa))
-		EXAMPLE_ABORT("Error: Capability not configured.\n");
+		ODPH_ABORT("Error: Capability not configured.\n");
 
 	odp_ipsec_config_init(&config);
 
@@ -556,11 +549,11 @@ main(int argc, char *argv[])
 		config.inbound_mode = ODP_IPSEC_OP_MODE_ASYNC;
 		config.outbound_mode = ODP_IPSEC_OP_MODE_ASYNC;
 	} else {
-		EXAMPLE_ABORT("Error: Sync mode not supported.\n");
+		ODPH_ABORT("Error: Sync mode not supported.\n");
 	}
 
 	if (odp_ipsec_config(&config))
-		EXAMPLE_ABORT("Error: IPSec not configured.\n");
+		ODPH_ABORT("Error: IPSec not configured.\n");
 
 	global->num_workers = MAX_WORKERS;
 	if (global->appl.cpu_count && global->appl.cpu_count < MAX_WORKERS)
@@ -587,7 +580,7 @@ main(int argc, char *argv[])
 		global->completionq[i] = odp_queue_create("completion",
 							  &qparam);
 		if (ODP_QUEUE_INVALID == global->completionq[i])
-			EXAMPLE_ABORT("Error: completion queue creation failed\n");
+			ODPH_ABORT("Error: completion queue creation failed\n");
 	}
 	printf("num worker threads: %i\n", global->num_workers);
 	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
@@ -606,7 +599,7 @@ main(int argc, char *argv[])
 	global->pkt_pool = odp_pool_create("packet_pool", &params);
 
 	if (ODP_POOL_INVALID == global->pkt_pool)
-		EXAMPLE_ABORT("Error: packet pool create failed.\n");
+		ODPH_ABORT("Error: packet pool create failed.\n");
 
 	ipsec_init_post();
 
@@ -642,8 +635,8 @@ main(int argc, char *argv[])
 			continue;
 
 		if (odp_pktio_stop(pktio) || odp_pktio_close(pktio)) {
-			EXAMPLE_ERR("Error: failed to close pktio %s\n",
-				    global->appl.if_names[i]);
+			ODPH_ERR("Error: failed to close pktio %s\n",
+				 global->appl.if_names[i]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -652,7 +645,7 @@ main(int argc, char *argv[])
 	free(global->appl.if_str);
 
 	if (odp_shm_free(shm)) {
-		EXAMPLE_ERR("Error: shm free global data\n");
+		ODPH_ERR("Error: shm free global data\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -710,7 +703,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 				printf("-f must be the 1st argument of the command\n");
 				rc = -1;
 			}
-			EXAMPLE_DBG("Bucket count = %d\n", bucket_count);
+			ODPH_DBG("Bucket count = %d\n", bucket_count);
 			break;
 		case 'c':
 			appl_args->cpu_count = atoi(optarg);
@@ -745,7 +738,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			appl_args->if_names =
 				calloc(appl_args->if_count, sizeof(char *));
 			if (!appl_args->if_names)
-				EXAMPLE_ABORT("Memory allocation failure\n");
+				ODPH_ABORT("Memory allocation failure\n");
 			/* Store the if names (reset names string) */
 			strcpy(appl_args->if_str, optarg);
 			for (token = strtok(appl_args->if_str, ","), i = 0;

@@ -12,9 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <example_debug.h>
-
 #include <odp_api.h>
+#include <odp/helper/odph_api.h>
 
 #include <odp_ipsec_sp_db.h>
 
@@ -31,14 +30,14 @@ void init_sp_db(void)
 			      0);
 
 	if (shm == ODP_SHM_INVALID) {
-		EXAMPLE_ERR("Error: shared mem reserve failed.\n");
+		ODPH_ERR("Error: shared mem reserve failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	sp_db = odp_shm_addr(shm);
 
 	if (sp_db == NULL) {
-		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
+		ODPH_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	memset(sp_db, 0, sizeof(*sp_db));

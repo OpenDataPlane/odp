@@ -12,7 +12,8 @@ extern "C" {
 #endif
 
 #include <odp.h>
-#include <odp/helper/eth.h>
+#include <odp/helper/odph_api.h>
+
 #include <odp_ipsec_offload_misc.h>
 
 #define OIF_LEN 32
@@ -120,7 +121,7 @@ static inline void route_flow_insert_in_bucket(flow_entry_t *flow,
 	flow_bucket_t *bkt = (flow_bucket_t *)bucket;
 
 	if (!flow) {
-		EXAMPLE_ERR("Invalid flow entry passed\n");
+		ODPH_ERR("Invalid flow entry passed\n");
 		return;
 	}
 

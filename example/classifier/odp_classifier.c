@@ -9,10 +9,10 @@
 #include <getopt.h>
 #include <unistd.h>
 #include <inttypes.h>
-#include <example_debug.h>
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
+
 #include <strings.h>
 #include <errno.h>
 #include <stdio.h>
@@ -220,9 +220,9 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	pktio = odp_pktio_open(dev, pool, &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID) {
 		if (odp_errno() == EPERM)
-			EXAMPLE_ERR("Root level permission required\n");
+			ODPH_ERR("Root level permission required\n");
 
-		EXAMPLE_ERR("pktio create failed for %s\n", dev);
+		ODPH_ERR("pktio create failed for %s\n", dev);
 		exit(EXIT_FAILURE);
 	}
 
@@ -231,12 +231,12 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	pktin_param.classifier_enable = 1;
 
 	if (odp_pktin_queue_config(pktio, &pktin_param)) {
-		EXAMPLE_ERR("pktin queue config failed for %s\n", dev);
+		ODPH_ERR("pktin queue config failed for %s\n", dev);
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_pktout_queue_config(pktio, NULL)) {
-		EXAMPLE_ERR("pktout queue config failed for %s\n", dev);
+		ODPH_ERR("pktout queue config failed for %s\n", dev);
 		exit(EXIT_FAILURE);
 	}
 
@@ -289,14 +289,14 @@ static int pktio_receive_thread(void *arg)
 
 		/* Drop packets with errors */
 		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
-			EXAMPLE_ERR("Drop frame - err_cnt:%lu\n", ++err_cnt);
+			ODPH_ERR("Drop frame - err_cnt:%lu\n", ++err_cnt);
 			continue;
 		}
 
 		pktio_tmp = odp_packet_input(pkt);
 
 		if (odp_pktout_queue(pktio_tmp, &pktout, 1) != 1) {
-			EXAMPLE_ERR("  [%02i] Error: no output queue\n", thr);
+			ODPH_ERR("  [%02i] Error: no output queue\n", thr);
 			return -1;
 		}
 
@@ -318,7 +318,7 @@ static int pktio_receive_thread(void *arg)
 		}
 
 		if (odp_pktout_send(pktout, &pkt, 1) < 1) {
-			EXAMPLE_ERR("  [%i] Packet send failed.\n", thr);
+			ODPH_ERR("  [%i] Packet send failed\n", thr);
 			odp_packet_free(pkt);
 		}
 	}
@@ -347,7 +347,7 @@ static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	queue_default = odp_queue_create(queue_name, &qparam);
 	if (queue_default == ODP_QUEUE_INVALID) {
-		EXAMPLE_ERR("Error: default queue create failed.\n");
+		ODPH_ERR("Error: default queue create failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -359,7 +359,7 @@ static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 	pool_default = odp_pool_create(pool_name, &pool_params);
 
 	if (pool_default == ODP_POOL_INVALID) {
-		EXAMPLE_ERR("Error: default pool create failed.\n");
+		ODPH_ERR("Error: default pool create failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -370,12 +370,12 @@ static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 	cos_default = odp_cls_cos_create(cos_name, &cls_param);
 
 	if (cos_default == ODP_COS_INVALID) {
-		EXAMPLE_ERR("Error: default cos create failed.\n");
+		ODPH_ERR("Error: default cos create failed\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (0 > odp_pktio_default_cos_set(pktio, cos_default)) {
-		EXAMPLE_ERR("odp_pktio_default_cos_set failed");
+		ODPH_ERR("odp_pktio_default_cos_set failed\n");
 		exit(EXIT_FAILURE);
 	}
 	stats[args->policy_count].cos = cos_default;
@@ -416,7 +416,7 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 			 args->stats[i].cos_name, i);
 		stats->queue = odp_queue_create(queue_name, &qparam);
 		if (ODP_QUEUE_INVALID == stats->queue) {
-			EXAMPLE_ERR("odp_queue_create failed");
+			ODPH_ERR("odp_queue_create failed\n");
 			exit(EXIT_FAILURE);
 		}
 
@@ -432,7 +432,7 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 		stats->pool = odp_pool_create(pool_name, &pool_params);
 
 		if (stats->pool == ODP_POOL_INVALID) {
-			EXAMPLE_ERR("Error: default pool create failed.\n");
+			ODPH_ERR("Error: default pool create failed\n");
 			exit(EXIT_FAILURE);
 		}
 
@@ -454,7 +454,7 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 		stats->pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos,
 						stats->cos);
 		if (stats->pmr == ODP_PMR_INVALID) {
-			EXAMPLE_ERR("odp_pktio_pmr_cos failed");
+			ODPH_ERR("odp_pktio_pmr_cos failed\n");
 			exit(EXIT_FAILURE);
 		}
 
@@ -489,7 +489,7 @@ int main(int argc, char *argv[])
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
-		EXAMPLE_ERR("Error: reading ODP helper options failed.\n");
+		ODPH_ERR("Error: reading ODP helper options failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -498,13 +498,13 @@ int main(int argc, char *argv[])
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init_param, NULL)) {
-		EXAMPLE_ERR("Error: ODP global init failed.\n");
+		ODPH_ERR("Error: ODP global init failed\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
-		EXAMPLE_ERR("Error: ODP local init failed.\n");
+		ODPH_ERR("Error: ODP local init failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -513,14 +513,14 @@ int main(int argc, char *argv[])
 			      ODP_CACHE_LINE_SIZE, 0);
 
 	if (shm == ODP_SHM_INVALID) {
-		EXAMPLE_ERR("Error: shared mem reserve failed.\n");
+		ODPH_ERR("Error: shared mem reserve failed\n");
 		exit(EXIT_FAILURE);
 	}
 
 	args = odp_shm_addr(shm);
 
 	if (args == NULL) {
-		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
+		ODPH_ERR("Error: shared mem alloc failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -553,7 +553,7 @@ int main(int argc, char *argv[])
 	pool = odp_pool_create("packet_pool", &params);
 
 	if (pool == ODP_POOL_INVALID) {
-		EXAMPLE_ERR("Error: packet pool create failed.\n");
+		ODPH_ERR("Error: packet pool create failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -572,7 +572,7 @@ int main(int argc, char *argv[])
 	configure_cos(default_cos, args);
 
 	if (odp_pktio_start(pktio)) {
-		EXAMPLE_ERR("Error: unable to start pktio.\n");
+		ODPH_ERR("Error: unable to start pktio\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -600,28 +600,28 @@ int main(int argc, char *argv[])
 	for (i = 0; i < args->policy_count; i++) {
 		if ((i !=  args->policy_count - 1) &&
 		    odp_cls_pmr_destroy(args->stats[i].pmr))
-			EXAMPLE_ERR("err: odp_cls_pmr_destroy for %d\n", i);
+			ODPH_ERR("err: odp_cls_pmr_destroy for %d\n", i);
 		if (odp_cos_destroy(args->stats[i].cos))
-			EXAMPLE_ERR("err: odp_cos_destroy for %d\n", i);
+			ODPH_ERR("err: odp_cos_destroy for %d\n", i);
 		if (odp_queue_destroy(args->stats[i].queue))
-			EXAMPLE_ERR("err: odp_queue_destroy for %d\n", i);
+			ODPH_ERR("err: odp_queue_destroy for %d\n", i);
 		if (odp_pool_destroy(args->stats[i].pool))
-			EXAMPLE_ERR("err: odp_pool_destroy for %d\n", i);
+			ODPH_ERR("err: odp_pool_destroy for %d\n", i);
 	}
 
 	free(args->if_name);
 	odp_shm_free(shm);
 	if (odp_pktio_close(pktio))
-		EXAMPLE_ERR("err: close pktio error\n");
+		ODPH_ERR("err: close pktio error\n");
 	if (odp_pool_destroy(pool))
-		EXAMPLE_ERR("err: odp_pool_destroy error\n");
+		ODPH_ERR("err: odp_pool_destroy error\n");
 
 	ret = odp_term_local();
 	if (ret)
-		EXAMPLE_ERR("odp_term_local error %d\n", ret);
+		ODPH_ERR("odp_term_local error %d\n", ret);
 	ret = odp_term_global(instance);
 	if (ret)
-		EXAMPLE_ERR("odp_term_global error %d\n", ret);
+		ODPH_ERR("odp_term_global error %d\n", ret);
 	printf("Exit\n\n");
 	return ret;
 }
@@ -731,7 +731,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 
 	/* last array index is needed for default queue */
 	if (policy_count >= MAX_PMR_COUNT - 1) {
-		EXAMPLE_ERR("Maximum allowed PMR reached\n");
+		ODPH_ERR("Maximum allowed PMR reached\n");
 		return -1;
 	}
 
@@ -743,7 +743,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 	/* PMR TERM */
 	token = strtok(pmr_str, ":");
 	if (convert_str_to_pmr_enum(token, &term, &offset)) {
-		EXAMPLE_ERR("Invalid ODP_PMR_TERM string\n");
+		ODPH_ERR("Invalid ODP_PMR_TERM string\n");
 		exit(EXIT_FAILURE);
 	}
 	stats[policy_count].rule.term = term;
@@ -756,7 +756,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 			DISPLAY_STRING_LEN - 1);
 
 		if (odph_ipv4_addr_parse(&ip_addr, token)) {
-			EXAMPLE_ERR("Bad IP address\n");
+			ODPH_ERR("Bad IP address\n");
 			exit(EXIT_FAILURE);
 		}
 
