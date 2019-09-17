@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -30,22 +31,11 @@ typedef ODP_HANDLE_T(odp_packet_t);
 
 #define ODP_PACKET_OFFSET_INVALID 0xffff
 
-typedef uint8_t odp_packet_seg_t;
+typedef ODP_HANDLE_T(odp_packet_seg_t);
 
-/* or it will be provided by packet_inlines.h */
-#define _ODP_HAVE_PACKET_SEG_NDX	1
+#define ODP_PACKET_SEG_INVALID _odp_cast_scalar(odp_packet_seg_t, 0)
 
-static inline uint8_t _odp_packet_seg_to_ndx(odp_packet_seg_t seg)
-{
-	return (uint8_t)seg;
-}
-
-static inline odp_packet_seg_t _odp_packet_seg_from_ndx(uint8_t ndx)
-{
-	return (odp_packet_seg_t)ndx;
-}
-
-#define ODP_PACKET_SEG_INVALID ((odp_packet_seg_t)-1)
+#define ODP_PACKET_OFFSET_INVALID 0xffff
 
 typedef uint8_t odp_proto_l2_type_t;
 

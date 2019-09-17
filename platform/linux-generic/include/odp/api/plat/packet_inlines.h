@@ -1,4 +1,5 @@
 /* Copyright (c) 2017-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -56,8 +57,6 @@
 	#define odp_packet_head __odp_packet_head
 	#define odp_packet_is_segmented __odp_packet_is_segmented
 	#define odp_packet_first_seg __odp_packet_first_seg
-	#define odp_packet_last_seg __odp_packet_last_seg
-	#define odp_packet_next_seg __odp_packet_next_seg
 	#define odp_packet_prefetch __odp_packet_prefetch
 	#define odp_packet_copy_from_mem __odp_packet_copy_from_mem
 	#define odp_packet_copy_to_mem __odp_packet_copy_to_mem
@@ -72,7 +71,7 @@
 #endif
 
 void *_odp_packet_map(void *pkt_ptr, uint32_t offset, uint32_t *seg_len,
-		      int *seg_idx);
+		      odp_packet_seg_t *seg);
 
 int _odp_packet_copy_from_mem_seg(odp_packet_t pkt, uint32_t offset,
 				  uint32_t len, const void *src);
@@ -83,22 +82,9 @@ int _odp_packet_copy_to_mem_seg(odp_packet_t pkt, uint32_t offset,
 extern const _odp_packet_inline_offset_t _odp_packet_inline;
 extern const _odp_pool_inline_offset_t   _odp_pool_inline;
 
-#ifndef _ODP_HAVE_PACKET_SEG_NDX
-#include <odp/api/plat/strong_types.h>
-static inline uint32_t _odp_packet_seg_to_ndx(odp_packet_seg_t seg)
-{
-	return _odp_typeval(seg) - 1;
-}
-
-static inline odp_packet_seg_t _odp_packet_seg_from_ndx(uint32_t ndx)
-{
-	return _odp_cast_scalar(odp_packet_seg_t, ndx + 1);
-}
-#endif
-
 _ODP_INLINE void *odp_packet_data(odp_packet_t pkt)
 {
-	return _odp_pkt_get(pkt, void *, data);
+	return _odp_pkt_get(pkt, void *, seg_data);
 }
 
 _ODP_INLINE uint32_t odp_packet_seg_len(odp_packet_t pkt)
@@ -149,7 +135,7 @@ _ODP_INLINE int odp_packet_input_index(odp_packet_t pkt)
 
 _ODP_INLINE int odp_packet_num_segs(odp_packet_t pkt)
 {
-	return _odp_pkt_get(pkt, uint8_t, segcount);
+	return _odp_pkt_get(pkt, uint8_t, seg_count);
 }
 
 _ODP_INLINE void *odp_packet_user_ptr(odp_packet_t pkt)
@@ -262,29 +248,12 @@ _ODP_INLINE void *odp_packet_head(odp_packet_t pkt)
 
 _ODP_INLINE int odp_packet_is_segmented(odp_packet_t pkt)
 {
-	return _odp_pkt_get(pkt, uint8_t, segcount) > 1;
+	return _odp_pkt_get(pkt, uint8_t, seg_count) > 1;
 }
 
 _ODP_INLINE odp_packet_seg_t odp_packet_first_seg(odp_packet_t pkt)
 {
-	(void)pkt;
-
-	return _odp_packet_seg_from_ndx(0);
-}
-
-_ODP_INLINE odp_packet_seg_t odp_packet_last_seg(odp_packet_t pkt)
-{
-	return _odp_packet_seg_from_ndx(odp_packet_num_segs(pkt) - 1);
-}
-
-_ODP_INLINE odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt,
-						    odp_packet_seg_t seg)
-{
-	if (odp_unlikely(_odp_packet_seg_to_ndx(seg) >=
-			 _odp_packet_seg_to_ndx(odp_packet_last_seg(pkt))))
-		return ODP_PACKET_SEG_INVALID;
-
-	return seg + 1;
+	return (odp_packet_seg_t)pkt;
 }
 
 _ODP_INLINE void odp_packet_prefetch(odp_packet_t pkt, uint32_t offset,

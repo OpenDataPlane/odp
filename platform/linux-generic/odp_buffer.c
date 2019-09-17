@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -38,7 +39,7 @@ void *odp_buffer_addr(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = buf_hdl_to_hdr(buf);
 
-	return hdr->seg[0].data;
+	return hdr->base_data;
 }
 
 uint32_t odp_buffer_size(odp_buffer_t buf)
@@ -69,7 +70,7 @@ int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
 			"  pool         %" PRIu64 "\n",
 			odp_pool_to_u64(pool->pool_hdl));
 	len += snprintf(&str[len], n - len,
-			"  addr         %p\n",          hdr->seg[0].data);
+			"  addr         %p\n",          hdr->base_data);
 	len += snprintf(&str[len], n - len,
 			"  size         %" PRIu32 "\n", odp_buffer_size(buf));
 	len += snprintf(&str[len], n - len,

@@ -216,7 +216,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_time_t *ts = NULL;
 	const int sockfd = pkt_sock->sockfd;
 	struct mmsghdr msgvec[num];
-	struct iovec iovecs[num][CONFIG_PACKET_MAX_SEGS];
+	struct iovec iovecs[num][PKT_MAX_SEGS];
 	int nb_rx = 0;
 	int nb_pkts;
 	int recv_msgs;
@@ -421,7 +421,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 {
 	pkt_sock_t *pkt_sock = pkt_priv(pktio_entry);
 	struct mmsghdr msgvec[num];
-	struct iovec iovecs[num][CONFIG_PACKET_MAX_SEGS];
+	struct iovec iovecs[num][PKT_MAX_SEGS];
 	int ret;
 	int sockfd = pkt_sock->sockfd;
 	int i;
