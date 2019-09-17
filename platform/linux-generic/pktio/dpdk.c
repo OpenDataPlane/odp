@@ -1,4 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -233,8 +234,7 @@ static unsigned cache_size(uint32_t num)
 static inline uint16_t mbuf_data_off(struct rte_mbuf *mbuf,
 				     odp_packet_hdr_t *pkt_hdr)
 {
-	return (uintptr_t)pkt_hdr->buf_hdr.seg[0].data -
-			(uintptr_t)mbuf->buf_addr;
+	return (uintptr_t)pkt_hdr->seg_data - (uintptr_t)mbuf->buf_addr;
 }
 
 /**
@@ -250,8 +250,7 @@ static inline void mbuf_update(struct rte_mbuf *mbuf, odp_packet_hdr_t *pkt_hdr,
 	mbuf->refcnt = 1;
 	mbuf->ol_flags = 0;
 
-	if (odp_unlikely(pkt_hdr->buf_hdr.base_data !=
-			 pkt_hdr->buf_hdr.seg[0].data))
+	if (odp_unlikely(pkt_hdr->buf_hdr.base_data != pkt_hdr->seg_data))
 		mbuf->data_off = mbuf_data_off(mbuf, pkt_hdr);
 }
 
@@ -876,7 +875,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 
 		/* Init buffer segments. Currently, only single segment packets
 		 * are supported. */
-		pkt_hdr->buf_hdr.seg[0].data = data;
+		pkt_hdr->seg_data = data;
 
 		packet_init(pkt_hdr, pkt_len);
 		pkt_hdr->input = input;
@@ -927,7 +926,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 		if (odp_unlikely(pkt_len > pkt_dpdk->mtu))
 			goto fail;
 
-		if (odp_likely(pkt_hdr->buf_hdr.segcount == 1)) {
+		if (odp_likely(pkt_hdr->seg_count == 1)) {
 			mbuf_update(mbuf, pkt_hdr, pkt_len);
 
 			if (odp_unlikely(pktio_entry->s.chksum_insert_ena))
@@ -1919,7 +1918,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 				odp_packet_t pkt = pkt_table[i];
 				odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-				if (pkt_hdr->buf_hdr.segcount > 1) {
+				if (pkt_hdr->seg_count > 1) {
 					if (odp_likely(i < tx_pkts))
 						odp_packet_free(pkt);
 					else

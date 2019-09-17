@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -32,12 +33,6 @@ extern "C" {
 #include <odp_schedule_if.h>
 #include <stddef.h>
 
-typedef struct seg_entry_t {
-	void     *hdr;
-	uint8_t  *data;
-	uint32_t  len;
-} seg_entry_t;
-
 typedef union buffer_index_t {
 	uint32_t u32;
 
@@ -58,46 +53,14 @@ ODP_STATIC_ASSERT(CONFIG_POOL_MAX_NUM <= (0xFFFFFF + 1), "TOO_LARGE_POOL");
 
 /* Common buffer header */
 struct ODP_ALIGNED_CACHE odp_buffer_hdr_t {
-	/* Combined pool and buffer index */
-	buffer_index_t index;
-
-	/* Total segment count */
-	uint16_t  segcount;
-
-	/* Pool type */
-	int8_t    type;
-
-	/* Number of seg[] entries used */
-	uint8_t   num_seg;
-
-	/* Next header which continues the segment list */
-	void *next_seg;
-
-	/* Last header of the segment list */
-	void *last_seg;
-
 	/* Initial buffer data pointer */
 	uint8_t  *base_data;
 
 	/* Pool pointer */
-	void *pool_ptr;
-
-	/* --- 40 bytes --- */
-
-	/* Segments */
-	seg_entry_t seg[CONFIG_PACKET_SEGS_PER_HDR];
+	void     *pool_ptr;
 
 	/* --- Mostly read only data --- */
 	const void *user_ptr;
-
-	/* Reference count */
-	odp_atomic_u32_t ref_cnt;
-
-	/* Event type. Maybe different than pool type (crypto compl event) */
-	int8_t    event_type;
-
-	/* Event flow id */
-	uint8_t   flow_id;
 
 	/* Initial buffer tail pointer */
 	uint8_t  *buf_end;
@@ -109,12 +72,24 @@ struct ODP_ALIGNED_CACHE odp_buffer_hdr_t {
 	 * offset has to be used */
 	uint64_t ipc_data_offset;
 
+	/* Combined pool and buffer index */
+	buffer_index_t index;
+
+	/* Reference count */
+	odp_atomic_u32_t ref_cnt;
+
+	/* Pool type */
+	int8_t    type;
+
+	/* Event type. Maybe different than pool type (crypto compl event) */
+	int8_t    event_type;
+
+	/* Event flow id */
+	uint8_t   flow_id;
+
 	/* Data or next header */
 	uint8_t data[0];
 };
-
-ODP_STATIC_ASSERT(CONFIG_PACKET_SEGS_PER_HDR < 256,
-		  "CONFIG_PACKET_SEGS_PER_HDR_TOO_LARGE");
 
 odp_event_type_t _odp_buffer_event_type(odp_buffer_t buf);
 void _odp_buffer_event_type_set(odp_buffer_t buf, int ev);

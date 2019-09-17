@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -29,6 +30,8 @@ extern "C" {
 #include <odp_ipsec_internal.h>
 #include <odp/api/abi/packet.h>
 #include <odp_queue_if.h>
+
+#include <stdint.h>
 
 /** Minimum segment length expected by packet_parse_common() */
 #define PACKET_PARSE_SEG_LEN 96
@@ -65,6 +68,11 @@ typedef struct {
 /* Packet extra data types */
 #define PKT_EXTRA_TYPE_DPDK 1
 
+/* Maximum number of segments per packet */
+#define PKT_MAX_SEGS 255
+
+ODP_STATIC_ASSERT(PKT_MAX_SEGS < UINT16_MAX, "PACKET_MAX_SEGS_ERROR");
+
 /**
  * Internal Packet header
  *
@@ -72,38 +80,48 @@ typedef struct {
  * packet_init(). Because of this any new fields added must be reviewed for
  * initialization requirements.
  */
-typedef struct {
-	/* common buffer header */
+typedef struct odp_packet_hdr_t {
+	/* Common buffer header */
 	odp_buffer_hdr_t buf_hdr;
 
-	/*
-	 * Following members are initialized by packet_init()
-	 */
+	/* --- 64 bytes --- */
+
+	/* Segment data start */
+	uint8_t *seg_data;
 
 	packet_parser_t p;
 
 	odp_pktio_t input;
 
+	/* Next header which continues the segment list */
+	struct odp_packet_hdr_t *seg_next;
+
+	/* Total packet length */
 	uint32_t frame_len;
 
+	/* Segment data length */
+	uint32_t seg_len;
+
+	/* Total segment count */
+	uint16_t seg_count;
+
 	uint16_t headroom;
+
 	uint16_t tailroom;
 
 	/* Event subtype */
-	int8_t subtype;
+	int8_t   subtype;
 
-	/*
-	 * Members below are not initialized by packet_init()
-	 */
-
-	/* Flow hash value */
-	uint32_t flow_hash;
+	/* --- 128 bytes --- */
 
 	/* Timestamp value */
 	odp_time_t timestamp;
 
 	/* Classifier destination queue */
 	odp_queue_t dst_queue;
+
+	/* Flow hash value */
+	uint32_t flow_hash;
 
 	union {
 		struct {
@@ -145,14 +163,12 @@ static inline odp_packet_t packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
 	return (odp_packet_t)(odp_packet_hdr_t *)buf_hdr;
 }
 
-static inline seg_entry_t *seg_entry_last(odp_packet_hdr_t *hdr)
+static inline odp_packet_hdr_t *packet_last_seg(odp_packet_hdr_t *hdr)
 {
-	odp_packet_hdr_t *last;
-	uint8_t last_seg;
+	while (hdr->seg_next != NULL)
+		hdr = hdr->seg_next;
 
-	last     = hdr->buf_hdr.last_seg;
-	last_seg = last->buf_hdr.num_seg - 1;
-	return &last->buf_hdr.seg[last_seg];
+	return hdr;
 }
 
 static inline void packet_subtype_set(odp_packet_t pkt, int ev)
@@ -167,19 +183,19 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
 	pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 	uint32_t seg_len;
-	int num = pkt_hdr->buf_hdr.segcount;
+	int num = pkt_hdr->seg_count;
 
-	if (odp_likely(CONFIG_PACKET_SEG_DISABLED || num == 1)) {
+	if (odp_likely(num == 1)) {
 		seg_len = len;
-		pkt_hdr->buf_hdr.seg[0].len = len;
+		pkt_hdr->seg_len = len;
 	} else {
-		seg_entry_t *last;
+		odp_packet_hdr_t *last;
 
 		seg_len = len - ((num - 1) * pool->seg_len);
 
 		/* Last segment data length */
-		last      = seg_entry_last(pkt_hdr);
-		last->len = seg_len;
+		last = packet_last_seg(pkt_hdr);
+		last->seg_len = seg_len;
 	}
 
 	pkt_hdr->p.input_flags.all  = 0;
@@ -221,11 +237,11 @@ static inline void copy_packet_cls_metadata(odp_packet_hdr_t *src_hdr,
 
 static inline void pull_tail(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
-	seg_entry_t *last = seg_entry_last(pkt_hdr);
+	odp_packet_hdr_t *last = packet_last_seg(pkt_hdr);
 
 	pkt_hdr->tailroom  += len;
 	pkt_hdr->frame_len -= len;
-	last->len          -= len;
+	last->seg_len      -= len;
 }
 
 static inline uint32_t packet_len(odp_packet_hdr_t *pkt_hdr)

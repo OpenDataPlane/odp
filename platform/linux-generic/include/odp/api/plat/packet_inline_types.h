@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -28,14 +29,14 @@ extern "C" {
 
 /* Packet header field offsets for inline functions */
 typedef struct _odp_packet_inline_offset_t {
-	uint16_t data;
+	uint16_t seg_data;
 	uint16_t seg_len;
 	uint16_t frame_len;
 	uint16_t headroom;
 	uint16_t tailroom;
 	uint16_t pool;
 	uint16_t input;
-	uint16_t segcount;
+	uint16_t seg_count;
 	uint16_t user_ptr;
 	uint16_t user_area;
 	uint16_t l2_offset;
