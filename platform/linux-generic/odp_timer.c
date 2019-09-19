@@ -731,7 +731,7 @@ static odp_buffer_t timer_cancel(timer_pool_t *tp,
 	return old_buf;
 }
 
-static unsigned timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
+static inline void timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 {
 	_odp_timer_t *tim = &tp->timers[idx];
 	tick_buf_t *tb = &tp->tick_buf[idx];
@@ -810,20 +810,14 @@ static unsigned timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 			ODP_ABORT("Failed to enqueue timeout buffer (%d)\n",
 				  rc);
 		}
-		return 1;
-	} else {
-		/* Else false positive, ignore */
-		return 0;
 	}
 }
 
-static unsigned odp_timer_pool_expire(odp_timer_pool_t tpid, uint64_t tick)
+static inline void timer_pool_scan(timer_pool_t *tp, uint64_t tick)
 {
-	timer_pool_t *tp = timer_pool_from_hdl(tpid);
 	tick_buf_t *array = &tp->tick_buf[0];
 	uint32_t high_wm = _odp_atomic_u32_load_mm(&tp->high_wm,
 			_ODP_MEMMODEL_ACQ);
-	unsigned nexp = 0;
 	uint32_t i;
 
 	ODP_ASSERT(high_wm <= tp->param.num_timers);
@@ -837,24 +831,22 @@ static unsigned odp_timer_pool_expire(odp_timer_pool_t tpid, uint64_t tick)
 		uint64_t exp_tck = array[i++].exp_tck.v;
 		if (odp_unlikely(exp_tck <= tick)) {
 			/* Attempt to expire timer */
-			nexp += timer_expire(tp, i - 1, tick);
+			timer_expire(tp, i - 1, tick);
 		}
 	}
-	return nexp;
 }
 
 /******************************************************************************
  * Inline timer processing
  *****************************************************************************/
 
-static inline int process_timer_pools(void)
+static inline void timer_pool_scan_inline(void)
 {
 	timer_pool_t *tp;
 	odp_time_t now, start;
 	uint64_t new_tick, old_tick;
 	int64_t diff;
 	int i;
-	int num_exp = 0;
 
 	for (i = 0; i < MAX_TIMER_POOLS; i++) {
 		tp = timer_global->timer_pool[i];
@@ -882,40 +874,37 @@ static inline int process_timer_pools(void)
 					tp->notify_overrun = 0;
 				}
 			}
-			num_exp += odp_timer_pool_expire(timer_pool_to_hdl(tp),
-							 new_tick);
+			timer_pool_scan(tp, new_tick);
 		}
 	}
-
-	return num_exp;
 }
 
-unsigned int _timer_run(int dec)
+void _timer_run_inline(int dec)
 {
 	static __thread odp_time_t last_timer_run;
 	static __thread int timer_run_cnt = 1;
 	odp_time_t now;
 
 	if (timer_global->num_timer_pools == 0)
-		return 0;
+		return;
 
 	/* Rate limit how often this thread checks the timer pools. */
 
 	if (timer_global->inline_poll_interval > 1) {
 		timer_run_cnt -= dec;
 		if (timer_run_cnt > 0)
-			return 0;
+			return;
 		timer_run_cnt = timer_global->inline_poll_interval;
 	}
 
 	now = odp_time_global();
 	if (odp_time_cmp(odp_time_diff(now, last_timer_run),
 			 timer_global->time_per_ratelimit_period) == -1)
-		return 0;
+		return;
 	last_timer_run = now;
 
 	/* Check the timer pools. */
-	return process_timer_pools();
+	timer_pool_scan_inline();
 }
 
 /******************************************************************************
@@ -923,7 +912,7 @@ unsigned int _timer_run(int dec)
  * Functions that use Linux/POSIX per-process timers and related facilities
  *****************************************************************************/
 
-static void timer_notify(timer_pool_t *tp)
+static inline void timer_run_posix(timer_pool_t *tp)
 {
 	int overrun;
 	int64_t prev_tick;
@@ -945,10 +934,7 @@ static void timer_notify(timer_pool_t *tp)
 	prev_tick = odp_atomic_fetch_inc_u64(&tp->cur_tick);
 
 	/* Scan timer array, looking for timers to expire */
-	(void)odp_timer_pool_expire(timer_pool_to_hdl(tp), prev_tick + 1);
-
-	/* Else skip scan of timers. cur_tick was updated and next itimer
-	 * invocation will process older expiration ticks as well */
+	timer_pool_scan(tp, prev_tick + 1);
 }
 
 static void *timer_thread(void *arg)
@@ -985,7 +971,7 @@ static void *timer_thread(void *arg)
 		if (ret <= 0)
 			continue;
 
-		timer_notify(tp);
+		timer_run_posix(tp);
 
 		if (num < warm_up) {
 			num++;
