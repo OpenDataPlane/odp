@@ -37,12 +37,13 @@ typedef struct {
 
 /* A larger decrement value should be used after receiving events compared to
  * an 'empty' call. */
-unsigned int _timer_run(int dec);
+void _timer_run_inline(int dec);
 
 /* Static inline wrapper to minimize modification of schedulers. */
-static inline unsigned int timer_run(int dec)
+static inline void timer_run(int dec)
 {
-	return odp_global_rw->inline_timers ? _timer_run(dec) : 0;
+	if (odp_global_rw->inline_timers)
+		_timer_run_inline(dec);
 }
 
 #endif
