@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -69,7 +70,10 @@
 #define TMO_INACTIVE ((uint64_t)0x8000000000000000)
 
 /* Max timeout in capability. One year in nsec (0x0070 09D3 2DA3 0000). */
-#define MAX_TMO_NSEC (365 * 24 * 3600 * ODP_TIME_SEC_IN_NS)
+#define MAX_TMO_NSEC (365 * 24 * ODP_TIME_HOUR_IN_NS)
+
+/* Max inline timer resolution */
+#define MAX_INLINE_RES_NS 500
 
 /******************************************************************************
  * Mutual exclusion in the absence of CAS16
@@ -176,8 +180,8 @@ static inline void set_next_free(_odp_timer_t *tim, uint32_t nf)
 
 typedef struct timer_pool_s {
 /* Put frequently accessed fields in the first cache line */
-	odp_time_t prev_scan; /* Time when previous scan started */
 	odp_time_t time_per_tick; /* Time per timer pool tick */
+	odp_time_t start_time;
 	odp_atomic_u64_t cur_tick;/* Current tick value */
 	uint64_t min_rel_tck;
 	uint64_t max_rel_tck;
@@ -316,7 +320,6 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 
 	memset(tp, 0, tp_size);
 
-	tp->prev_scan = odp_time_global();
 	tp->time_per_tick = odp_time_global_from_ns(param->res_ns);
 	odp_atomic_init_u64(&tp->cur_tick, 0);
 
@@ -364,6 +367,9 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 		if (tp->param.clk_src == ODP_CLOCK_CPU)
 			itimer_init(tp);
 	}
+
+	tp->start_time = odp_time_global();
+
 	return timer_pool_to_hdl(tp);
 }
 
@@ -841,49 +847,47 @@ static unsigned odp_timer_pool_expire(odp_timer_pool_t tpid, uint64_t tick)
  * Inline timer processing
  *****************************************************************************/
 
-static unsigned process_timer_pools(void)
+static inline int process_timer_pools(void)
 {
 	timer_pool_t *tp;
-	odp_time_t prev_scan, now;
-	uint64_t nticks;
-	unsigned nexp = 0;
+	odp_time_t now, start;
+	uint64_t new_tick, old_tick;
+	int64_t diff;
+	int i;
+	int num_exp = 0;
 
-	for (size_t i = 0; i < MAX_TIMER_POOLS; i++) {
+	for (i = 0; i < MAX_TIMER_POOLS; i++) {
 		tp = timer_global->timer_pool[i];
 
 		if (tp == NULL)
 			continue;
 
-		/*
-		 * Check the last time this timer pool was expired. If one
-		 * or more periods have passed, attempt to expire it.
-		 */
-		prev_scan = tp->prev_scan;
 		now = odp_time_global();
+		start = tp->start_time;
+		new_tick = (now.u64 - start.u64) / tp->time_per_tick.u64;
+		old_tick = odp_atomic_load_u64(&tp->cur_tick);
+		diff = new_tick - old_tick;
 
-		nticks = (now.u64 - prev_scan.u64) / tp->time_per_tick.u64;
-
-		if (nticks < 1)
+		if (diff < 1)
 			continue;
 
-		if (__atomic_compare_exchange_n(
-			    &tp->prev_scan.u64, &prev_scan.u64,
-			    prev_scan.u64 + (tp->time_per_tick.u64 * nticks),
-			    false, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
-			uint64_t tp_tick = _odp_atomic_u64_fetch_add_mm(
-				&tp->cur_tick, nticks, _ODP_MEMMODEL_RLX);
-
-			if (tp->notify_overrun && nticks > 1) {
-				ODP_ERR("\n\t%d ticks overrun on timer pool "
-					"\"%s\", timer resolution too high\n",
-					nticks - 1, tp->name);
-				tp->notify_overrun = 0;
+		if (odp_atomic_cas_u64(&tp->cur_tick, &old_tick, new_tick)) {
+			if (tp->notify_overrun && diff > 1) {
+				if (old_tick == 0) {
+					ODP_ERR("Timer pool (%s) %" PRIi64 " ticks overrun in start up\n",
+						tp->name, diff - 1);
+				} else {
+					ODP_ERR("Timer pool (%s) resolution too high: %" PRIi64 " ticks overrun\n",
+						tp->name, diff - 1);
+					tp->notify_overrun = 0;
+				}
 			}
-			nexp += odp_timer_pool_expire(timer_pool_to_hdl(tp),
-						      tp_tick + nticks);
+			num_exp += odp_timer_pool_expire(timer_pool_to_hdl(tp),
+							 new_tick);
 		}
 	}
-	return nexp;
+
+	return num_exp;
 }
 
 unsigned int _timer_run(int dec)
@@ -1430,7 +1434,7 @@ int odp_timer_init_global(const odp_init_t *params)
 	memset(timer_global, 0, sizeof(timer_global_t));
 	odp_ticketlock_init(&timer_global->lock);
 	timer_global->shm = shm;
-	timer_global->highest_res_ns = 500;
+	timer_global->highest_res_ns = MAX_INLINE_RES_NS;
 	timer_global->min_res_ns = INT64_MAX;
 
 #ifndef ODP_ATOMIC_U128
