@@ -217,7 +217,6 @@ typedef struct timer_global_t {
 	/* Max timer resolution in nanoseconds */
 	uint64_t highest_res_ns;
 	uint64_t min_res_ns;
-	odp_time_t time_per_ratelimit_period;
 	int num_timer_pools;
 	uint8_t timer_pool_used[MAX_TIMER_POOLS];
 	timer_pool_t *timer_pool[MAX_TIMER_POOLS];
@@ -225,8 +224,12 @@ typedef struct timer_global_t {
 	/* Multiple locks per cache line! */
 	_odp_atomic_flag_t ODP_ALIGNED_CACHE locks[NUM_LOCKS];
 #endif
+	/* These are read frequently from inline timer */
+	odp_time_t time_per_ratelimit_period;
 	odp_bool_t use_inline_timers;
 	int inline_poll_interval;
+	int highest_tp_idx;
+
 } timer_global_t;
 
 static timer_global_t *timer_global;
@@ -277,7 +280,8 @@ static void itimer_fini(timer_pool_t *tp);
 static odp_timer_pool_t timer_pool_new(const char *name,
 				       const odp_timer_pool_param_t *param)
 {
-	uint32_t i, tp_idx;
+	uint32_t i;
+	int tp_idx;
 	size_t sz0, sz1, sz2;
 	uint64_t tp_size;
 	uint32_t flags = ODP_SHM_SW_ONLY;
@@ -302,6 +306,9 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 
 	tp_idx = i;
 	timer_global->num_timer_pools++;
+
+	if (tp_idx > timer_global->highest_tp_idx)
+		timer_global->highest_tp_idx = tp_idx;
 
 	odp_ticketlock_unlock(&timer_global->lock);
 
@@ -395,7 +402,7 @@ static void stop_timer_thread(timer_pool_t *tp)
 
 static void odp_timer_pool_del(timer_pool_t *tp)
 {
-	int rc;
+	int rc, highest;
 	odp_shm_t shm;
 
 	odp_spinlock_lock(&tp->lock);
@@ -423,9 +430,20 @@ static void odp_timer_pool_del(timer_pool_t *tp)
 	timer_global->timer_pool_used[tp->tp_idx] = 0;
 	timer_global->num_timer_pools--;
 
+	highest = -1;
+
 	/* Disable inline timer polling */
-	if (timer_global->num_timer_pools == 0)
+	if (timer_global->num_timer_pools == 0) {
 		odp_global_rw->inline_timers = false;
+	} else {
+		int i;
+
+		for (i = 0; i < MAX_TIMER_POOLS; i++)
+			if (timer_global->timer_pool_used[i])
+				highest = i;
+	}
+
+	timer_global->highest_tp_idx = highest;
 
 	odp_ticketlock_unlock(&timer_global->lock);
 
@@ -840,7 +858,7 @@ static inline void timer_pool_scan(timer_pool_t *tp, uint64_t tick)
  * Inline timer processing
  *****************************************************************************/
 
-static inline void timer_pool_scan_inline(void)
+static inline void timer_pool_scan_inline(int num)
 {
 	timer_pool_t *tp;
 	odp_time_t now, start;
@@ -848,7 +866,7 @@ static inline void timer_pool_scan_inline(void)
 	int64_t diff;
 	int i;
 
-	for (i = 0; i < MAX_TIMER_POOLS; i++) {
+	for (i = 0; i < num; i++) {
 		tp = timer_global->timer_pool[i];
 
 		if (tp == NULL)
@@ -884,8 +902,9 @@ void _timer_run_inline(int dec)
 	static __thread odp_time_t last_timer_run;
 	static __thread int timer_run_cnt = 1;
 	odp_time_t now;
+	int num = timer_global->highest_tp_idx + 1;
 
-	if (timer_global->num_timer_pools == 0)
+	if (num == 0)
 		return;
 
 	/* Rate limit how often this thread checks the timer pools. */
@@ -904,7 +923,7 @@ void _timer_run_inline(int dec)
 	last_timer_run = now;
 
 	/* Check the timer pools. */
-	timer_pool_scan_inline();
+	timer_pool_scan_inline(num);
 }
 
 /******************************************************************************
@@ -1422,6 +1441,7 @@ int odp_timer_init_global(const odp_init_t *params)
 	timer_global->shm = shm;
 	timer_global->highest_res_ns = MAX_INLINE_RES_NS;
 	timer_global->min_res_ns = INT64_MAX;
+	timer_global->highest_tp_idx = -1;
 
 #ifndef ODP_ATOMIC_U128
 	uint32_t i;
