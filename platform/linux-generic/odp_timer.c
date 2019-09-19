@@ -11,15 +11,6 @@
  * ODP timer service
  *
  */
-
-#if __SIZEOF_POINTER__ != 8
-/* TB_NEEDS_PAD defined if sizeof(odp_buffer_t) != 8 */
-#define TB_NEEDS_PAD
-#define TB_SET_PAD(x) ((x).pad = 0)
-#else
-#define TB_SET_PAD(x) (void)(x)
-#endif
-
 #include <odp_posix_extensions.h>
 
 #include <errno.h>
@@ -117,10 +108,15 @@ tick_buf_s {
 #else
 	odp_atomic_u64_t exp_tck;/* Expiration tick or TMO_xxx */
 #endif
-	odp_buffer_t tmo_buf;/* ODP_BUFFER_INVALID if timer not active */
-#ifdef TB_NEEDS_PAD
-	uint32_t pad;/* Need to be able to access padding for successful CAS */
-#endif
+
+	union {
+		/* ODP_BUFFER_INVALID if timer not active */
+		odp_buffer_t tmo_buf;
+
+		/* Ensures that tick_buf_t is 128 bits */
+		uint64_t tmo_u64;
+	};
+
 } tick_buf_t;
 
 #if __GCC_ATOMIC_LLONG_LOCK_FREE >= 2
@@ -140,9 +136,9 @@ static void timer_init(_odp_timer_t *tim,
 {
 	tim->queue = _q;
 	tim->user_ptr = _up;
+	tb->tmo_u64 = 0;
 	tb->tmo_buf = ODP_BUFFER_INVALID;
-	/* All pad fields need a defined and constant value */
-	TB_SET_PAD(*tb);
+
 	/* Release the timer by setting timer state to inactive */
 #if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	tb->exp_tck.v = TMO_INACTIVE;
@@ -530,11 +526,16 @@ static bool timer_reset(uint32_t idx,
 	if (tmo_buf == NULL || *tmo_buf == ODP_BUFFER_INVALID) {
 #ifdef ODP_ATOMIC_U128 /* Target supports 128-bit atomic operations */
 		tick_buf_t new, old;
+
+		/* Init all bits, also when tmo_buf is less than 64 bits */
+		new.tmo_u64 = 0;
+		old.tmo_u64 = 0;
+
 		do {
 			/* Relaxed and non-atomic read of current values */
 			old.exp_tck.v = tb->exp_tck.v;
 			old.tmo_buf = tb->tmo_buf;
-			TB_SET_PAD(old);
+
 			/* Check if there actually is a timeout buffer
 			 * present */
 			if (old.tmo_buf == ODP_BUFFER_INVALID) {
@@ -546,7 +547,7 @@ static bool timer_reset(uint32_t idx,
 			/* Set up new values */
 			new.exp_tck.v = abs_tck;
 			new.tmo_buf = old.tmo_buf;
-			TB_SET_PAD(new);
+
 			/* Atomic CAS will fail if we experienced torn reads,
 			 * retry update sequence until CAS succeeds */
 		} while (!_odp_atomic_u128_cmp_xchg_mm(
@@ -620,9 +621,13 @@ static bool timer_reset(uint32_t idx,
 		odp_buffer_t old_buf = ODP_BUFFER_INVALID;
 #ifdef ODP_ATOMIC_U128
 		tick_buf_t new, old;
+
+		/* Init all bits, also when tmo_buf is less than 64 bits */
+		new.tmo_u64 = 0;
+
 		new.exp_tck.v = abs_tck;
 		new.tmo_buf = *tmo_buf;
-		TB_SET_PAD(new);
+
 		/* We are releasing the new timeout buffer to some other
 		 * thread */
 		_odp_atomic_u128_xchg_mm((_odp_atomic_u128_t *)tb,
@@ -661,11 +666,15 @@ static odp_buffer_t timer_set_unused(timer_pool_t *tp,
 
 #ifdef ODP_ATOMIC_U128
 	tick_buf_t new, old;
+
+	/* Init all bits, also when tmo_buf is less than 64 bits */
+	new.tmo_u64 = 0;
+
 	/* Update the timer state (e.g. cancel the current timeout) */
 	new.exp_tck.v = TMO_UNUSED;
 	/* Swap out the old buffer */
 	new.tmo_buf = ODP_BUFFER_INVALID;
-	TB_SET_PAD(new);
+
 	_odp_atomic_u128_xchg_mm((_odp_atomic_u128_t *)tb,
 				 (_uint128_t *)&new, (_uint128_t *)&old,
 				 _ODP_MEMMODEL_RLX);
@@ -700,11 +709,14 @@ static odp_buffer_t timer_cancel(timer_pool_t *tp,
 #ifdef ODP_ATOMIC_U128
 	tick_buf_t new, old;
 
+	/* Init all bits, also when tmo_buf is less than 64 bits */
+	new.tmo_u64 = 0;
+	old.tmo_u64 = 0;
+
 	do {
 		/* Relaxed and non-atomic read of current values */
 		old.exp_tck.v = tb->exp_tck.v;
 		old.tmo_buf = tb->tmo_buf;
-		TB_SET_PAD(old);
 
 		/* Check if it is not expired already */
 		if (old.exp_tck.v & TMO_INACTIVE) {
@@ -715,7 +727,7 @@ static odp_buffer_t timer_cancel(timer_pool_t *tp,
 		/* Set up new values */
 		new.exp_tck.v = TMO_INACTIVE;
 		new.tmo_buf = ODP_BUFFER_INVALID;
-		TB_SET_PAD(new);
+
 		/* Atomic CAS will fail if we experienced torn reads,
 		 * retry update sequence until CAS succeeds */
 	} while (!_odp_atomic_u128_cmp_xchg_mm(
@@ -763,15 +775,20 @@ static inline void timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 		/* Attempt to grab timeout buffer, replace with inactive timer
 		 * and invalid buffer */
 		tick_buf_t new, old;
+
+		/* Init all bits, also when tmo_buf is less than 64 bits */
+		new.tmo_u64 = 0;
+		old.tmo_u64 = 0;
+
 		old.exp_tck.v = exp_tck;
 		old.tmo_buf = tb->tmo_buf;
-		TB_SET_PAD(old);
+
 		/* Set the inactive/expired bit keeping the expiration tick so
 		 * that we can check against the expiration tick of the timeout
 		 * when it is received */
 		new.exp_tck.v = exp_tck | TMO_INACTIVE;
 		new.tmo_buf = ODP_BUFFER_INVALID;
-		TB_SET_PAD(new);
+
 		int succ = _odp_atomic_u128_cmp_xchg_mm(
 				(_odp_atomic_u128_t *)tb,
 				(_uint128_t *)&old, (_uint128_t *)&new,
