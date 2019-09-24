@@ -16,10 +16,13 @@
 #ifndef ODP_DEBUG_INTERNAL_H_
 #define ODP_DEBUG_INTERNAL_H_
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <odp/config.h>
 #include <odp/api/debug.h>
 #include <odp_global_data.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

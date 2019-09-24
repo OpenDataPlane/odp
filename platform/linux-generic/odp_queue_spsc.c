@@ -9,7 +9,6 @@
 #include <odp_queue_basic_internal.h>
 #include <odp_pool_internal.h>
 
-#include "config.h"
 #include <odp_debug_internal.h>
 
 static inline void buffer_index_from_buf(uint32_t buffer_index[],

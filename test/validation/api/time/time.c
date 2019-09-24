@@ -4,11 +4,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include "config.h"
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
+#include <time.h>
 
 #include <odp_api.h>
 #include "odp_cunit_common.h"
-#include <time.h>
 
 #define BUSY_LOOP_CNT		30000000    /* used for t > min resolution */
 #define BUSY_LOOP_CNT_LONG	6000000000  /* used for t > 4 sec */

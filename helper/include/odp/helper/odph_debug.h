@@ -15,7 +15,7 @@
 #ifndef ODPH_DEBUG_H_
 #define ODPH_DEBUG_H_
 
-#include "config.h"
+#include <odp/config.h>
 
 #include <stdio.h>
 #include <stdlib.h>

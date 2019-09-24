@@ -18,6 +18,8 @@
 extern "C" {
 #endif
 
+#include <odp/config.h>
+
 #include <odp/api/packet_io.h>
 #include <odp/api/plat/pktio_inlines.h>
 #include <odp/api/spinlock.h>
@@ -34,6 +36,7 @@ extern "C" {
 #include <string.h>
 #include <net/if.h>
 #include <linux/if_ether.h>
+#include <sys/select.h>
 
 #define PKTIO_MAX_QUEUES 64
 

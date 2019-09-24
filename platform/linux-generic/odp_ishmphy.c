@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 /*
  * This file handles the lower end of the ishm memory allocator:
  * It performs the physical mappings.

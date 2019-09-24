@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 #include <odp/api/plat/packet_flag_inlines.h>
 #include <odp/api/packet_flags.h>
 #include <odp_packet_internal.h>

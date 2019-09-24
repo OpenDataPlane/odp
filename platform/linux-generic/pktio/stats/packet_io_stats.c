@@ -4,12 +4,11 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
-#include <string.h>
 #include <odp_packet_io_stats.h>
 #include <odp_ethtool_stats.h>
 #include <odp_sysfs_stats.h>
+
+#include <string.h>
 
 int sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd)
 {

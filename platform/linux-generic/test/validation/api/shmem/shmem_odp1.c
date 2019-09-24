@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 #include <odp.h>
 #include <linux/limits.h>
 #include <sys/types.h>

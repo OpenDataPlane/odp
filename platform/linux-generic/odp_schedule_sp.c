@@ -5,9 +5,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
-#include <string.h>
 #include <odp/api/ticketlock.h>
 #include <odp/api/thread.h>
 #include <odp/api/plat/thread_inlines.h>
@@ -22,6 +19,8 @@
 #include <odp_ring_u32_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_queue_basic_internal.h>
+
+#include <string.h>
 
 #define NUM_THREAD        ODP_THREAD_COUNT_MAX
 #define NUM_QUEUE         CONFIG_MAX_SCHED_QUEUES

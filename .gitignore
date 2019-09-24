@@ -38,8 +38,8 @@ depcomp
 doc/output
 dpdk/
 install-sh
-include/config.h.in
-include/config.h
+include/odp/config.h.in
+include/odp/config.h
 include/stamp-h1
 lib/
 libtool

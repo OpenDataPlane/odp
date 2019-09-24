@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 #include "ipsec.h"
 
 static int ipsec_sync_init(odp_instance_t *inst)

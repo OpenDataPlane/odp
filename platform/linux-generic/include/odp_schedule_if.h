@@ -87,9 +87,7 @@ int sched_cb_pktin_poll_one(int pktio_index, int rx_queue, odp_event_t evts[]);
 void sched_cb_pktio_stop_finalize(int pktio_index);
 
 /* For debugging */
-#ifdef ODP_DEBUG
 extern int _odp_schedule_configured;
-#endif
 
 /* API functions */
 typedef struct {

@@ -5,7 +5,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
+#include <odp/config.h>
 
 #if defined(_ODP_PCAPNG) && _ODP_PCAPNG == 1
 
