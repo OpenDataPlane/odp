@@ -839,17 +839,17 @@ static inline void timer_pool_scan(timer_pool_t *tp, uint64_t tick)
 	uint32_t i;
 
 	ODP_ASSERT(high_wm <= tp->param.num_timers);
-	for (i = 0; i < high_wm;) {
+	for (i = 0; i < high_wm; i++) {
 		/* As a rare occurrence, we can outsmart the HW prefetcher
 		 * and the compiler (GCC -fprefetch-loop-arrays) with some
 		 * tuned manual prefetching (32x16=512B ahead), seems to
 		 * give 30% better performance on ARM C-A15 */
 		__builtin_prefetch(&array[i + 32], 0, 0);
 		/* Non-atomic read for speed */
-		uint64_t exp_tck = array[i++].exp_tck.v;
+		uint64_t exp_tck = array[i].exp_tck.v;
 		if (odp_unlikely(exp_tck <= tick)) {
 			/* Attempt to expire timer */
-			timer_expire(tp, i - 1, tick);
+			timer_expire(tp, i, tick);
 		}
 	}
 }
