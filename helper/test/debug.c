@@ -4,7 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
+#include <odp/config.h>
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>

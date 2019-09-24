@@ -4,7 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
+#include <odp/config.h>
 
 #include <odp_schedule_if.h>
 #include <odp_init_internal.h>

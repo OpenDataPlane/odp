@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 /*
  * This file implements a file descriptor sharing server enabling
  * sharing of file descriptors between processes, regardless of fork time.

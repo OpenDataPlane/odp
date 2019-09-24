@@ -5,7 +5,6 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-#include <config.h>
 
 #include <odp/api/hints.h>
 #include <odp/api/ticketlock.h>

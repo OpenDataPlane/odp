@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 #include <odp_sysinfo_internal.h>
 
 int cpuinfo_parser(FILE *file ODP_UNUSED, system_info_t *sysinfo)

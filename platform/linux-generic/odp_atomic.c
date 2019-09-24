@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 #include <odp/api/atomic.h>
 
 int odp_atomic_lock_free_u64(odp_atomic_op_t *atomic_op)

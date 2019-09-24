@@ -37,8 +37,6 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-
 #include "cpu_flags.h"
 #include <odp_debug_internal.h>
 #include <odp/api/abi/cpu_time.h>

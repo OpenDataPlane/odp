@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 /* this test makes sure that odp shared memory created with the ODP_SHM_PROC
  * flag is visible under linux, and checks that memory created with the
  * ODP_SHM_EXPORT flag is visible by other ODP instances.

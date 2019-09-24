@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 #include <odp_sysinfo_internal.h>
 #include "cpu_flags.h"
 #include <string.h>

@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 #include <stdbool.h>
 #include <odp/api/atomic.h>
 #include <odp/api/rwlock.h>

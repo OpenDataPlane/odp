@@ -12,7 +12,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "config.h"
 #include <odp_debug_internal.h>
 
 #define RING_LF_SIZE   32

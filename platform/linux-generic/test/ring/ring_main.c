@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "config.h"
-
 #include "ring_suites.h"
 
 int main(int argc, char *argv[])
