@@ -1533,6 +1533,11 @@ int odp_packet_concat(odp_packet_t *dst, odp_packet_t src)
 
 	ODP_ASSERT(odp_packet_has_ref(*dst) == 0);
 
+	if (odp_unlikely(dst_len + src_len > dst_pool->max_len)) {
+		ODP_ERR("concat would result oversized packet\n");
+		return -1;
+	}
+
 	/* Do a copy if packets are from different pools. */
 	if (odp_unlikely(dst_pool != src_pool)) {
 		if (odp_packet_extend_tail(dst, src_len, NULL, NULL) >= 0) {
