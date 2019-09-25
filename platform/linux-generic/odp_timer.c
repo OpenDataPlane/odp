@@ -176,7 +176,7 @@ static inline void set_next_free(_odp_timer_t *tim, uint32_t nf)
 
 typedef struct timer_pool_s {
 /* Put frequently accessed fields in the first cache line */
-	odp_time_t time_per_tick; /* Time per timer pool tick */
+	uint64_t nsec_per_scan;
 	odp_time_t start_time;
 	odp_atomic_u64_t cur_tick;/* Current tick value */
 	uint64_t min_rel_tck;
@@ -323,7 +323,7 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 
 	memset(tp, 0, tp_size);
 
-	tp->time_per_tick = odp_time_global_from_ns(param->res_ns);
+	tp->nsec_per_scan = param->res_ns;
 	odp_atomic_init_u64(&tp->cur_tick, 0);
 
 	if (name == NULL) {
@@ -875,11 +875,20 @@ static inline void timer_pool_scan(timer_pool_t *tp, uint64_t tick)
  * Inline timer processing
  *****************************************************************************/
 
+static inline uint64_t current_nsec(timer_pool_t *tp)
+{
+	odp_time_t now, start;
+
+	now = odp_time_global();
+	start = tp->start_time;
+
+	return odp_time_diff_ns(now, start);
+}
+
 static inline void timer_pool_scan_inline(int num)
 {
 	timer_pool_t *tp;
-	odp_time_t now, start;
-	uint64_t new_tick, old_tick;
+	uint64_t new_tick, old_tick, nsec;
 	int64_t diff;
 	int i;
 
@@ -889,9 +898,8 @@ static inline void timer_pool_scan_inline(int num)
 		if (tp == NULL)
 			continue;
 
-		now = odp_time_global();
-		start = tp->start_time;
-		new_tick = (now.u64 - start.u64) / tp->time_per_tick.u64;
+		nsec     = current_nsec(tp);
+		new_tick = nsec / tp->nsec_per_scan;
 		old_tick = odp_atomic_load_u64(&tp->cur_tick);
 		diff = new_tick - old_tick;
 
@@ -909,7 +917,7 @@ static inline void timer_pool_scan_inline(int num)
 					tp->notify_overrun = 0;
 				}
 			}
-			timer_pool_scan(tp, new_tick);
+			timer_pool_scan(tp, nsec);
 		}
 	}
 }
@@ -950,8 +958,8 @@ void _timer_run_inline(int dec)
 
 static inline void timer_run_posix(timer_pool_t *tp)
 {
+	uint64_t nsec;
 	int overrun;
-	int64_t prev_tick;
 
 	if (tp->notify_overrun) {
 		overrun = timer_getoverrun(tp->timerid);
@@ -967,10 +975,9 @@ static inline void timer_run_posix(timer_pool_t *tp)
 	/* Prefetch initial cache lines (match 32 above) */
 	for (i = 0; i < 32; i += ODP_CACHE_LINE_SIZE / sizeof(array[0]))
 		__builtin_prefetch(&array[i], 0, 0);
-	prev_tick = odp_atomic_fetch_inc_u64(&tp->cur_tick);
 
-	/* Scan timer array, looking for timers to expire */
-	timer_pool_scan(tp, prev_tick + 1);
+	nsec = current_nsec(tp);
+	timer_pool_scan(tp, nsec);
 }
 
 static void *timer_thread(void *arg)
@@ -1248,24 +1255,25 @@ void odp_timer_pool_destroy(odp_timer_pool_t tpid)
 
 uint64_t odp_timer_tick_to_ns(odp_timer_pool_t tpid, uint64_t ticks)
 {
-	timer_pool_t *tp = timer_pool_from_hdl(tpid);
+	(void)tpid;
 
-	return ticks * tp->param.res_ns;
+	/* Timer ticks in API are nsec */
+	return ticks;
 }
 
 uint64_t odp_timer_ns_to_tick(odp_timer_pool_t tpid, uint64_t ns)
 {
-	timer_pool_t *tp = timer_pool_from_hdl(tpid);
+	(void)tpid;
 
-	return (uint64_t)(ns / tp->param.res_ns);
+	/* Timer ticks in API are nsec */
+	return ns;
 }
 
 uint64_t odp_timer_current_tick(odp_timer_pool_t tpid)
 {
 	timer_pool_t *tp = timer_pool_from_hdl(tpid);
 
-	/* Relaxed atomic read for lowest overhead */
-	return odp_atomic_load_u64(&tp->cur_tick);
+	return current_nsec(tp);
 }
 
 int odp_timer_pool_info(odp_timer_pool_t tpid,
@@ -1318,8 +1326,8 @@ int odp_timer_set_abs(odp_timer_t hdl,
 		      odp_event_t *tmo_ev)
 {
 	timer_pool_t *tp = handle_to_tp(hdl);
+	uint64_t cur_tick = current_nsec(tp);
 	uint32_t idx = handle_to_idx(hdl, tp);
-	uint64_t cur_tick = odp_atomic_load_u64(&tp->cur_tick);
 
 	if (odp_unlikely(abs_tck < cur_tick + tp->min_rel_tck))
 		return ODP_TIMER_TOOEARLY;
@@ -1336,8 +1344,10 @@ int odp_timer_set_rel(odp_timer_t hdl,
 		      odp_event_t *tmo_ev)
 {
 	timer_pool_t *tp = handle_to_tp(hdl);
+	uint64_t cur_tick = current_nsec(tp);
+	uint64_t abs_tck = cur_tick + rel_tck;
 	uint32_t idx = handle_to_idx(hdl, tp);
-	uint64_t abs_tck = odp_atomic_load_u64(&tp->cur_tick) + rel_tck;
+
 	if (odp_unlikely(rel_tck < tp->min_rel_tck))
 		return ODP_TIMER_TOOEARLY;
 	if (odp_unlikely(rel_tck > tp->max_rel_tck))
