@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -1383,7 +1384,8 @@ static void packet_test_copy(void)
 	odp_packet_t pkt;
 	odp_packet_t pkt_copy, pkt_part;
 	odp_pool_t pool;
-	uint32_t i, plen, seg_len, src_offset, dst_offset;
+	uint32_t i, plen, src_offset, dst_offset;
+	uint32_t seg_len = 0;
 	void *pkt_data;
 
 	pkt = odp_packet_copy(test_packet, packet_pool_no_uarea);
@@ -1462,7 +1464,7 @@ static void packet_test_copy(void)
 
 	/* Test segment crossing if we support segments */
 	pkt_data = odp_packet_offset(pkt, 0, &seg_len, NULL);
-	CU_ASSERT(pkt_data != NULL);
+	CU_ASSERT_FATAL(pkt_data != NULL);
 
 	if (seg_len < plen) {
 		src_offset = seg_len - 15;
@@ -2166,7 +2168,8 @@ static void packet_test_extend_ref(void)
 static void packet_test_align(void)
 {
 	odp_packet_t pkt;
-	uint32_t pkt_len, seg_len, offset, aligned_seglen;
+	uint32_t pkt_len, offset;
+	uint32_t seg_len = 0, aligned_seglen = 0;
 	void *pkt_data, *aligned_data;
 	const uint32_t max_align = 32;
 
@@ -2224,7 +2227,8 @@ static void packet_test_align(void)
 static void packet_test_offset(void)
 {
 	odp_packet_t pkt = test_packet;
-	uint32_t seg_len, full_seg_len;
+	uint32_t seg_len = 0;
+	uint32_t full_seg_len;
 	uint8_t *ptr, *start_ptr;
 	uint32_t offset;
 	odp_packet_seg_t seg = ODP_PACKET_SEG_INVALID;
