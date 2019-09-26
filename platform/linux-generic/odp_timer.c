@@ -875,17 +875,23 @@ static inline void timer_pool_scan(timer_pool_t *tp, uint64_t tick)
  * Inline timer processing
  *****************************************************************************/
 
-static inline uint64_t current_nsec(timer_pool_t *tp)
+static inline uint64_t time_nsec(timer_pool_t *tp, odp_time_t now)
 {
-	odp_time_t now, start;
-
-	now = odp_time_global();
-	start = tp->start_time;
+	odp_time_t start = tp->start_time;
 
 	return odp_time_diff_ns(now, start);
 }
 
-static inline void timer_pool_scan_inline(int num)
+static inline uint64_t current_nsec(timer_pool_t *tp)
+{
+	odp_time_t now;
+
+	now = odp_time_global();
+
+	return time_nsec(tp, now);
+}
+
+static inline void timer_pool_scan_inline(int num, odp_time_t now)
 {
 	timer_pool_t *tp;
 	uint64_t new_tick, old_tick, nsec;
@@ -898,7 +904,7 @@ static inline void timer_pool_scan_inline(int num)
 		if (tp == NULL)
 			continue;
 
-		nsec     = current_nsec(tp);
+		nsec     = time_nsec(tp, now);
 		new_tick = nsec / tp->nsec_per_scan;
 		old_tick = odp_atomic_load_u64(&tp->cur_tick);
 		diff = new_tick - old_tick;
@@ -948,7 +954,7 @@ void _timer_run_inline(int dec)
 	last_timer_run = now;
 
 	/* Check the timer pools. */
-	timer_pool_scan_inline(num);
+	timer_pool_scan_inline(num, now);
 }
 
 /******************************************************************************
