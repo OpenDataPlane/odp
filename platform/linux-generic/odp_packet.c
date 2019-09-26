@@ -792,11 +792,16 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	odp_packet_hdr_t *const pkt_hdr = packet_hdr(pkt);
 	pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 	int num = pkt_hdr->seg_count;
+	int num_req;
 
 	if (odp_unlikely(len > (pool->seg_len * num)))
 		return -1;
 
-	reset_seg(pkt_hdr, num);
+	/* Free possible extra segments */
+	num_req = num_segments(len, pool->seg_len);
+	if (odp_unlikely(num_req < num))
+		free_segments(pkt_hdr, num - num_req, 0, 0, 0);
+	reset_seg(pkt_hdr, num_req);
 
 	packet_init(pkt_hdr, len);
 
