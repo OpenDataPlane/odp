@@ -57,6 +57,9 @@
 	#define odp_packet_head __odp_packet_head
 	#define odp_packet_is_segmented __odp_packet_is_segmented
 	#define odp_packet_first_seg __odp_packet_first_seg
+	#define odp_packet_seg_data __odp_packet_seg_data
+	#define odp_packet_seg_data_len __odp_packet_seg_data_len
+	#define odp_packet_next_seg __odp_packet_next_seg
 	#define odp_packet_prefetch __odp_packet_prefetch
 	#define odp_packet_copy_from_mem __odp_packet_copy_from_mem
 	#define odp_packet_copy_to_mem __odp_packet_copy_to_mem
@@ -254,6 +257,29 @@ _ODP_INLINE int odp_packet_is_segmented(odp_packet_t pkt)
 _ODP_INLINE odp_packet_seg_t odp_packet_first_seg(odp_packet_t pkt)
 {
 	return (odp_packet_seg_t)pkt;
+}
+
+_ODP_INLINE void *odp_packet_seg_data(odp_packet_t pkt ODP_UNUSED,
+				      odp_packet_seg_t seg)
+{
+	return _odp_pkt_get((odp_packet_t)seg, void *, seg_data);
+}
+
+_ODP_INLINE uint32_t odp_packet_seg_data_len(odp_packet_t pkt ODP_UNUSED,
+					     odp_packet_seg_t seg)
+{
+	return _odp_pkt_get((odp_packet_t)seg, uint32_t, seg_len);
+}
+
+_ODP_INLINE odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt ODP_UNUSED,
+						 odp_packet_seg_t seg)
+{
+	void *next_seg = _odp_pkt_get((odp_packet_t)seg, void *, seg_next);
+
+	if (odp_unlikely(next_seg == NULL))
+		return ODP_PACKET_SEG_INVALID;
+
+	return (odp_packet_seg_t)next_seg;
 }
 
 _ODP_INLINE void odp_packet_prefetch(odp_packet_t pkt, uint32_t offset,

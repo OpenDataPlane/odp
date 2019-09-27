@@ -38,6 +38,7 @@
 const _odp_packet_inline_offset_t ODP_ALIGNED_CACHE _odp_packet_inline = {
 	.seg_data       = offsetof(odp_packet_hdr_t, seg_data),
 	.seg_len        = offsetof(odp_packet_hdr_t, seg_len),
+	.seg_next       = offsetof(odp_packet_hdr_t, seg_next),
 	.frame_len      = offsetof(odp_packet_hdr_t, frame_len),
 	.headroom       = offsetof(odp_packet_hdr_t, headroom),
 	.tailroom       = offsetof(odp_packet_hdr_t, tailroom),
@@ -1194,35 +1195,9 @@ void odp_packet_ts_set(odp_packet_t pkt, odp_time_t timestamp)
  *
  */
 
-void *odp_packet_seg_data(odp_packet_t pkt ODP_UNUSED, odp_packet_seg_t seg)
-{
-	odp_packet_hdr_t *seg_hdr = packet_seg_to_hdr(seg);
-
-	return seg_hdr->seg_data;
-}
-
-uint32_t odp_packet_seg_data_len(odp_packet_t pkt ODP_UNUSED,
-				 odp_packet_seg_t seg)
-{
-	odp_packet_hdr_t *seg_hdr = packet_seg_to_hdr(seg);
-
-	return seg_hdr->seg_len;
-}
-
 odp_packet_seg_t odp_packet_last_seg(odp_packet_t pkt)
 {
 	return (odp_packet_seg_t)packet_last_seg(packet_hdr(pkt));
-}
-
-odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt ODP_UNUSED,
-				     odp_packet_seg_t seg)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_seg_to_hdr(seg);
-
-	if (odp_unlikely(pkt_hdr->seg_next == NULL))
-		return ODP_PACKET_SEG_INVALID;
-
-	return (odp_packet_seg_t)pkt_hdr->seg_next;
 }
 
 /*
