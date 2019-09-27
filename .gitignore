@@ -40,7 +40,7 @@ dpdk/
 install-sh
 include/odp/config.h.in
 include/odp/config.h
-include/stamp-h1
+include/odp/stamp-h1
 lib/
 libtool
 ltmain.sh
