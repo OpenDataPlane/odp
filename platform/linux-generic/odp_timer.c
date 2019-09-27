@@ -212,7 +212,7 @@ typedef struct timer_global_t {
 	odp_shm_t shm;
 	/* Max timer resolution in nanoseconds */
 	uint64_t highest_res_ns;
-	uint64_t min_res_ns;
+	uint64_t poll_interval_nsec;
 	int num_timer_pools;
 	uint8_t timer_pool_used[MAX_TIMER_POOLS];
 	timer_pool_t *timer_pool[MAX_TIMER_POOLS];
@@ -221,9 +221,9 @@ typedef struct timer_global_t {
 	_odp_atomic_flag_t ODP_ALIGNED_CACHE locks[NUM_LOCKS];
 #endif
 	/* These are read frequently from inline timer */
-	odp_time_t time_per_ratelimit_period;
+	odp_time_t poll_interval_time;
 	odp_bool_t use_inline_timers;
-	int inline_poll_interval;
+	int poll_interval;
 	int highest_tp_idx;
 
 } timer_global_t;
@@ -280,6 +280,7 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	int tp_idx;
 	size_t sz0, sz1, sz2;
 	uint64_t tp_size;
+	uint64_t res_ns, nsec_per_scan;
 	uint32_t flags = ODP_SHM_SW_ONLY;
 
 	if (odp_global_ro.shm_single_va)
@@ -323,7 +324,16 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 
 	memset(tp, 0, tp_size);
 
-	tp->nsec_per_scan = param->res_ns;
+	res_ns = param->res_ns;
+
+	/* Scan timer pool twice during resolution interval */
+	if (res_ns > ODP_TIME_USEC_IN_NS)
+		nsec_per_scan = res_ns / 2;
+	else
+		nsec_per_scan = res_ns;
+
+	tp->nsec_per_scan = nsec_per_scan;
+
 	odp_atomic_init_u64(&tp->cur_tick, 0);
 
 	if (name == NULL) {
@@ -364,6 +374,13 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 
 	if (timer_global->num_timer_pools == 1)
 		odp_global_rw->inline_timers = timer_global->use_inline_timers;
+
+	/* Increase poll rate to match the highest resolution */
+	if (timer_global->poll_interval_nsec > nsec_per_scan) {
+		timer_global->poll_interval_nsec = nsec_per_scan;
+		timer_global->poll_interval_time =
+			odp_time_global_from_ns(nsec_per_scan);
+	}
 
 	odp_ticketlock_unlock(&timer_global->lock);
 	if (!odp_global_rw->inline_timers) {
@@ -915,10 +932,10 @@ static inline void timer_pool_scan_inline(int num, odp_time_t now)
 		if (odp_atomic_cas_u64(&tp->cur_tick, &old_tick, new_tick)) {
 			if (tp->notify_overrun && diff > 1) {
 				if (old_tick == 0) {
-					ODP_ERR("Timer pool (%s) %" PRIi64 " ticks overrun in start up\n",
+					ODP_ERR("Timer pool (%s) missed %" PRIi64 " scans in start up\n",
 						tp->name, diff - 1);
 				} else {
-					ODP_ERR("Timer pool (%s) resolution too high: %" PRIi64 " ticks overrun\n",
+					ODP_ERR("Timer pool (%s) resolution too high: missed %" PRIi64 " scans\n",
 						tp->name, diff - 1);
 					tp->notify_overrun = 0;
 				}
@@ -934,24 +951,30 @@ void _timer_run_inline(int dec)
 	static __thread int timer_run_cnt = 1;
 	odp_time_t now;
 	int num = timer_global->highest_tp_idx + 1;
+	int poll_interval = timer_global->poll_interval;
 
 	if (num == 0)
 		return;
 
 	/* Rate limit how often this thread checks the timer pools. */
 
-	if (timer_global->inline_poll_interval > 1) {
+	if (poll_interval > 1) {
 		timer_run_cnt -= dec;
 		if (timer_run_cnt > 0)
 			return;
-		timer_run_cnt = timer_global->inline_poll_interval;
+		timer_run_cnt = poll_interval;
 	}
 
 	now = odp_time_global();
-	if (odp_time_cmp(odp_time_diff(now, last_timer_run),
-			 timer_global->time_per_ratelimit_period) == -1)
-		return;
-	last_timer_run = now;
+
+	if (poll_interval > 1) {
+		odp_time_t period = odp_time_diff(now, last_timer_run);
+
+		if (odp_time_cmp(period,
+				 timer_global->poll_interval_time) < 0)
+			return;
+		last_timer_run = now;
+	}
 
 	/* Check the timer pools. */
 	timer_pool_scan_inline(num, now);
@@ -1240,12 +1263,6 @@ odp_timer_pool_t odp_timer_pool_create(const char *name,
 		return ODP_TIMER_POOL_INVALID;
 	}
 
-	if (timer_global->min_res_ns > param->res_ns) {
-		timer_global->min_res_ns = param->res_ns;
-		timer_global->time_per_ratelimit_period =
-			odp_time_global_from_ns(timer_global->min_res_ns / 2);
-	}
-
 	return timer_pool_new(name, param);
 }
 
@@ -1473,7 +1490,6 @@ int odp_timer_init_global(const odp_init_t *params)
 	odp_ticketlock_init(&timer_global->lock);
 	timer_global->shm = shm;
 	timer_global->highest_res_ns = MAX_INLINE_RES_NS;
-	timer_global->min_res_ns = INT64_MAX;
 	timer_global->highest_tp_idx = -1;
 
 #ifndef ODP_ATOMIC_U128
@@ -1497,10 +1513,17 @@ int odp_timer_init_global(const odp_init_t *params)
 		odp_shm_free(shm);
 		return -1;
 	}
-	timer_global->inline_poll_interval = val;
+	timer_global->poll_interval = val;
 
-	timer_global->time_per_ratelimit_period =
-		odp_time_global_from_ns(timer_global->min_res_ns / 2);
+	conf_str =  "timer.inline_poll_interval_nsec";
+	if (!_odp_libconfig_lookup_int(conf_str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", conf_str);
+		odp_shm_free(shm);
+		return -1;
+	}
+	timer_global->poll_interval_nsec = val;
+	timer_global->poll_interval_time =
+		odp_time_global_from_ns(timer_global->poll_interval_nsec);
 
 	if (!timer_global->use_inline_timers) {
 		timer_res_init();
