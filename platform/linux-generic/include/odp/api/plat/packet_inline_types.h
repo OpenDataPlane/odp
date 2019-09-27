@@ -31,6 +31,7 @@ extern "C" {
 typedef struct _odp_packet_inline_offset_t {
 	uint16_t seg_data;
 	uint16_t seg_len;
+	uint16_t seg_next;
 	uint16_t frame_len;
 	uint16_t headroom;
 	uint16_t tailroom;
