@@ -646,6 +646,8 @@ static inline int packet_alloc(pool_t *pool, uint32_t len, int max_pkt,
 	int num     = max_pkt;
 	int max_buf = max_pkt * num_seg;
 	odp_packet_hdr_t *pkt_hdr[max_buf];
+	odp_packet_hdr_t *hdr_next;
+	odp_packet_hdr_t *hdr;
 
 	num_buf = buffer_alloc_multi(pool, (odp_buffer_hdr_t **)pkt_hdr,
 				     max_buf);
@@ -668,16 +670,28 @@ static inline int packet_alloc(pool_t *pool, uint32_t len, int max_pkt,
 			return 0;
 	}
 
-	for (i = 0; i < num; i++) {
-		odp_packet_hdr_t *hdr;
+	hdr_next = pkt_hdr[0];
+	odp_prefetch(hdr_next);
+	odp_prefetch((uint8_t *)hdr_next + ODP_CACHE_LINE_SIZE);
+
+	for (i = 0; i < num - 1; i++) {
+		hdr = hdr_next;
+		hdr_next = pkt_hdr[(i + 1) * num_seg];
+
+		odp_prefetch(hdr_next);
+		odp_prefetch((uint8_t *)hdr_next + ODP_CACHE_LINE_SIZE);
 
 		/* First buffer is the packet descriptor */
-		hdr    = pkt_hdr[i * num_seg];
 		pkt[i] = packet_handle(hdr);
 		init_segments(&pkt_hdr[i * num_seg], num_seg);
 
 		packet_init(hdr, len);
 	}
+
+	/* Last packet */
+	pkt[i] = packet_handle(hdr_next);
+	init_segments(&pkt_hdr[i * num_seg], num_seg);
+	packet_init(hdr_next, len);
 
 	return num;
 }
