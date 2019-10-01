@@ -112,7 +112,7 @@ static int start_timers(test_global_t *test_global)
 	odp_queue_t queue;
 	odp_queue_param_t queue_param;
 	uint64_t tick, start_tick;
-	uint64_t period_ns, res_ns, start_ns, time_ns, res_capa;
+	uint64_t period_ns, res_ns, start_ns, nsec, res_capa;
 	odp_event_t event;
 	odp_timeout_t timeout;
 	odp_timer_set_t ret;
@@ -178,8 +178,8 @@ static int start_timers(test_global_t *test_global)
 	memset(&timer_param, 0, sizeof(odp_timer_pool_param_t));
 
 	timer_param.res_ns     = res_ns;
-	timer_param.min_tmo    = period_ns;
-	timer_param.max_tmo    = START_OFFSET_NS + (num * period_ns);
+	timer_param.min_tmo    = START_OFFSET_NS / 2;
+	timer_param.max_tmo    = START_OFFSET_NS + ((num + 1) * period_ns);
 	timer_param.num_timers = num;
 	timer_param.clk_src    = ODP_CLOCK_CPU;
 
@@ -216,7 +216,10 @@ static int start_timers(test_global_t *test_global)
 		test_global->timer[i] = timer;
 	}
 
-	start_tick = 0;
+	start_tick = odp_timer_current_tick(timer_pool);
+	time       = odp_time_local();
+	start_ns   = odp_time_to_ns(time);
+	test_global->first_ns = start_ns + START_OFFSET_NS;
 
 	for (i = 0; i < num; i++) {
 		timer = test_global->timer[i];
@@ -229,15 +232,9 @@ static int start_timers(test_global_t *test_global)
 
 		event = odp_timeout_to_event(timeout);
 
-		if (i == 0) {
-			start_tick = odp_timer_current_tick(timer_pool);
-			time       = odp_time_local();
-			start_ns   = odp_time_to_ns(time);
-			test_global->first_ns = start_ns + START_OFFSET_NS;
-		}
+		nsec = START_OFFSET_NS + (i * period_ns);
+		tick = start_tick + odp_timer_ns_to_tick(timer_pool, nsec);
 
-		time_ns = test_global->first_ns + (i * period_ns);
-		tick = start_tick + odp_timer_ns_to_tick(timer_pool, time_ns);
 		ret = odp_timer_set_abs(timer, tick, &event);
 
 		if (ret != ODP_TIMER_SUCCESS) {
