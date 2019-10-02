@@ -216,7 +216,7 @@ extern const pktio_if_ops_t dpdk_pktio_ops;
 extern const pktio_if_ops_t sock_mmsg_pktio_ops;
 extern const pktio_if_ops_t sock_mmap_pktio_ops;
 extern const pktio_if_ops_t loopback_pktio_ops;
-#ifdef HAVE_PCAP
+#ifdef _ODP_PKTIO_PCAP
 extern const pktio_if_ops_t pcap_pktio_ops;
 #endif
 extern const pktio_if_ops_t tap_pktio_ops;

@@ -54,7 +54,7 @@ AS_IF([test "x$DPDK_SHARED" = "xyes"], [dnl
 OLD_LIBS=$LIBS
 LIBS="-lnuma"
 AC_TRY_LINK_FUNC([numa_num_configured_nodes],
-		 [AC_DEFINE([HAVE_NUMA_LIBRARY], [1],
+		 [AC_DEFINE([_ODP_HAVE_NUMA_LIBRARY], [1],
 			    [Define to 1 if numa library is usable])
 		 AS_VAR_APPEND([DPDK_LIBS_LIBODP], [" -lnuma"])])
 LIBS=$OLD_LIBS
