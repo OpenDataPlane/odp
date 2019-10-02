@@ -55,7 +55,7 @@
 #include <rte_version.h>
 
 /* NUMA is not supported on all platforms */
-#ifdef HAVE_NUMA_LIBRARY
+#ifdef _ODP_HAVE_NUMA_LIBRARY
 #include <numa.h>
 #else
 #define numa_num_configured_nodes() 1

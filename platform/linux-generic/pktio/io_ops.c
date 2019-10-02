@@ -19,7 +19,7 @@ const pktio_if_ops_t * const pktio_if_ops[]  = {
 #ifdef ODP_NETMAP
 	&netmap_pktio_ops,
 #endif
-#ifdef HAVE_PCAP
+#ifdef _ODP_PKTIO_PCAP
 	&pcap_pktio_ops,
 #endif
 	&ipc_pktio_ops,

@@ -13,7 +13,8 @@ AC_CHECK_HEADER(pcap/pcap.h,
 [])
 
 if test "$have_pcap" = "yes"; then
-    AC_DEFINE([HAVE_PCAP], 1, [Define to 1 if you have pcap library])
+    AC_DEFINE([_ODP_PKTIO_PCAP], 1,
+    	      [Define to 1 to enable pcap packet I/O support])
     PCAP_LIBS="-lpcap"
 else
     PCAP_LIBS=""
