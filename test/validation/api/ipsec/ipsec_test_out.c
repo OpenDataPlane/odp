@@ -45,16 +45,17 @@ static void test_out_ipv4_ah_sha256(void)
 
 static void test_out_ipv4_ah_sha256_tun_ipv4(void)
 {
-	uint32_t src = IPV4ADDR(10, 0, 111, 2);
-	uint32_t dst = IPV4ADDR(10, 0, 222, 2);
-	odp_ipsec_tunnel_param_t tunnel = {
-		.type = ODP_IPSEC_TUNNEL_IPV4,
-		.ipv4.src_addr = &src,
-		.ipv4.dst_addr = &dst,
-		.ipv4.ttl = 64,
-	};
+	odp_ipsec_tunnel_param_t tunnel;
 	odp_ipsec_sa_param_t param;
 	odp_ipsec_sa_t sa;
+	uint32_t src = IPV4ADDR(10, 0, 111, 2);
+	uint32_t dst = IPV4ADDR(10, 0, 222, 2);
+
+	memset(&tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	tunnel.type = ODP_IPSEC_TUNNEL_IPV4;
+	tunnel.ipv4.src_addr = &src;
+	tunnel.ipv4.dst_addr = &dst;
+	tunnel.ipv4.ttl = 64;
 
 	ipsec_sa_param_fill(&param,
 			    false, true, 123, &tunnel,
@@ -83,6 +84,9 @@ static void test_out_ipv4_ah_sha256_tun_ipv4(void)
 
 static void test_out_ipv4_ah_sha256_tun_ipv6(void)
 {
+	odp_ipsec_tunnel_param_t tunnel;
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
 	uint8_t src[16] = {
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 		0x02, 0x11, 0x43, 0xff, 0xfe, 0x4a, 0xd7, 0x0a,
@@ -91,14 +95,12 @@ static void test_out_ipv4_ah_sha256_tun_ipv6(void)
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16,
 	};
-	odp_ipsec_tunnel_param_t tunnel = {
-		.type = ODP_IPSEC_TUNNEL_IPV6,
-		.ipv6.src_addr = src,
-		.ipv6.dst_addr = dst,
-		.ipv6.hlimit = 64,
-	};
-	odp_ipsec_sa_param_t param;
-	odp_ipsec_sa_t sa;
+
+	memset(&tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	tunnel.type = ODP_IPSEC_TUNNEL_IPV6;
+	tunnel.ipv6.src_addr = src;
+	tunnel.ipv6.dst_addr = dst;
+	tunnel.ipv6.hlimit = 64;
 
 	ipsec_sa_param_fill(&param,
 			    false, true, 123, &tunnel,
@@ -157,16 +159,17 @@ static void test_out_ipv4_esp_null_sha256(void)
 
 static void test_out_ipv4_esp_null_sha256_tun_ipv4(void)
 {
-	uint32_t src = IPV4ADDR(10, 0, 111, 2);
-	uint32_t dst = IPV4ADDR(10, 0, 222, 2);
-	odp_ipsec_tunnel_param_t tunnel = {
-		.type = ODP_IPSEC_TUNNEL_IPV4,
-		.ipv4.src_addr = &src,
-		.ipv4.dst_addr = &dst,
-		.ipv4.ttl = 64,
-	};
+	odp_ipsec_tunnel_param_t tunnel;
 	odp_ipsec_sa_param_t param;
 	odp_ipsec_sa_t sa;
+	uint32_t src = IPV4ADDR(10, 0, 111, 2);
+	uint32_t dst = IPV4ADDR(10, 0, 222, 2);
+
+	memset(&tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	tunnel.type = ODP_IPSEC_TUNNEL_IPV4;
+	tunnel.ipv4.src_addr = &src;
+	tunnel.ipv4.dst_addr = &dst;
+	tunnel.ipv4.ttl = 64;
 
 	ipsec_sa_param_fill(&param,
 			    false, false, 123, &tunnel,
@@ -196,6 +199,9 @@ static void test_out_ipv4_esp_null_sha256_tun_ipv4(void)
 
 static void test_out_ipv4_esp_null_sha256_tun_ipv6(void)
 {
+	odp_ipsec_tunnel_param_t tunnel;
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
 	uint8_t src[16] = {
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 		0x02, 0x11, 0x43, 0xff, 0xfe, 0x4a, 0xd7, 0x0a,
@@ -204,14 +210,12 @@ static void test_out_ipv4_esp_null_sha256_tun_ipv6(void)
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16,
 	};
-	odp_ipsec_tunnel_param_t tunnel = {
-		.type = ODP_IPSEC_TUNNEL_IPV6,
-		.ipv6.src_addr = src,
-		.ipv6.dst_addr = dst,
-		.ipv6.hlimit = 64,
-	};
-	odp_ipsec_sa_param_t param;
-	odp_ipsec_sa_t sa;
+
+	memset(&tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	tunnel.type = ODP_IPSEC_TUNNEL_IPV6;
+	tunnel.ipv6.src_addr = src;
+	tunnel.ipv6.dst_addr = dst;
+	tunnel.ipv6.hlimit = 64;
 
 	ipsec_sa_param_fill(&param,
 			    false, false, 123, &tunnel,
@@ -770,16 +774,17 @@ static void test_out_ipv6_ah_sha256(void)
 
 static void test_out_ipv6_ah_sha256_tun_ipv4(void)
 {
-	uint32_t src = IPV4ADDR(10, 0, 111, 2);
-	uint32_t dst = IPV4ADDR(10, 0, 222, 2);
-	odp_ipsec_tunnel_param_t tunnel = {
-		.type = ODP_IPSEC_TUNNEL_IPV4,
-		.ipv4.src_addr = &src,
-		.ipv4.dst_addr = &dst,
-		.ipv4.ttl = 64,
-	};
+	odp_ipsec_tunnel_param_t tunnel;
 	odp_ipsec_sa_param_t param;
 	odp_ipsec_sa_t sa;
+	uint32_t src = IPV4ADDR(10, 0, 111, 2);
+	uint32_t dst = IPV4ADDR(10, 0, 222, 2);
+
+	memset(&tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	tunnel.type = ODP_IPSEC_TUNNEL_IPV4;
+	tunnel.ipv4.src_addr = &src;
+	tunnel.ipv4.dst_addr = &dst;
+	tunnel.ipv4.ttl = 64;
 
 	ipsec_sa_param_fill(&param,
 			    false, true, 123, &tunnel,
@@ -808,6 +813,9 @@ static void test_out_ipv6_ah_sha256_tun_ipv4(void)
 
 static void test_out_ipv6_ah_sha256_tun_ipv6(void)
 {
+	odp_ipsec_tunnel_param_t tunnel;
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
 	uint8_t src[16] = {
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 		0x02, 0x11, 0x43, 0xff, 0xfe, 0x4a, 0xd7, 0x0a,
@@ -816,14 +824,12 @@ static void test_out_ipv6_ah_sha256_tun_ipv6(void)
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16,
 	};
-	odp_ipsec_tunnel_param_t tunnel = {
-		.type = ODP_IPSEC_TUNNEL_IPV6,
-		.ipv6.src_addr = src,
-		.ipv6.dst_addr = dst,
-		.ipv6.hlimit = 64,
-	};
-	odp_ipsec_sa_param_t param;
-	odp_ipsec_sa_t sa;
+
+	memset(&tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	tunnel.type = ODP_IPSEC_TUNNEL_IPV6;
+	tunnel.ipv6.src_addr = src;
+	tunnel.ipv6.dst_addr = dst;
+	tunnel.ipv6.hlimit = 64;
 
 	ipsec_sa_param_fill(&param,
 			    false, true, 123, &tunnel,
@@ -882,16 +888,17 @@ static void test_out_ipv6_esp_null_sha256(void)
 
 static void test_out_ipv6_esp_null_sha256_tun_ipv4(void)
 {
-	uint32_t src = IPV4ADDR(10, 0, 111, 2);
-	uint32_t dst = IPV4ADDR(10, 0, 222, 2);
-	odp_ipsec_tunnel_param_t tunnel = {
-		.type = ODP_IPSEC_TUNNEL_IPV4,
-		.ipv4.src_addr = &src,
-		.ipv4.dst_addr = &dst,
-		.ipv4.ttl = 64,
-	};
+	odp_ipsec_tunnel_param_t tunnel;
 	odp_ipsec_sa_param_t param;
 	odp_ipsec_sa_t sa;
+	uint32_t src = IPV4ADDR(10, 0, 111, 2);
+	uint32_t dst = IPV4ADDR(10, 0, 222, 2);
+
+	memset(&tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	tunnel.type = ODP_IPSEC_TUNNEL_IPV4;
+	tunnel.ipv4.src_addr = &src;
+	tunnel.ipv4.dst_addr = &dst;
+	tunnel.ipv4.ttl = 64;
 
 	ipsec_sa_param_fill(&param,
 			    false, false, 123, &tunnel,
@@ -921,6 +928,9 @@ static void test_out_ipv6_esp_null_sha256_tun_ipv4(void)
 
 static void test_out_ipv6_esp_null_sha256_tun_ipv6(void)
 {
+	odp_ipsec_tunnel_param_t tunnel;
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
 	uint8_t src[16] = {
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 		0x02, 0x11, 0x43, 0xff, 0xfe, 0x4a, 0xd7, 0x0a,
@@ -929,14 +939,12 @@ static void test_out_ipv6_esp_null_sha256_tun_ipv6(void)
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16,
 	};
-	odp_ipsec_tunnel_param_t tunnel = {
-		.type = ODP_IPSEC_TUNNEL_IPV6,
-		.ipv6.src_addr = &src,
-		.ipv6.dst_addr = &dst,
-		.ipv6.hlimit = 64,
-	};
-	odp_ipsec_sa_param_t param;
-	odp_ipsec_sa_t sa;
+
+	memset(&tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	tunnel.type = ODP_IPSEC_TUNNEL_IPV6;
+	tunnel.ipv6.src_addr = &src;
+	tunnel.ipv6.dst_addr = &dst;
+	tunnel.ipv6.hlimit = 64;
 
 	ipsec_sa_param_fill(&param,
 			    false, false, 123, &tunnel,
@@ -997,17 +1005,18 @@ static void test_out_ipv6_esp_udp_null_sha256(void)
 
 static void test_out_dummy_esp_null_sha256_tun_ipv4(void)
 {
-	uint32_t src = IPV4ADDR(10, 0, 111, 2);
-	uint32_t dst = IPV4ADDR(10, 0, 222, 2);
-	odp_ipsec_tunnel_param_t tunnel = {
-		.type = ODP_IPSEC_TUNNEL_IPV4,
-		.ipv4.src_addr = &src,
-		.ipv4.dst_addr = &dst,
-		.ipv4.ttl = 64,
-	};
+	odp_ipsec_tunnel_param_t tunnel;
 	odp_ipsec_sa_param_t param;
 	odp_ipsec_sa_t sa;
 	odp_ipsec_sa_t sa2;
+	uint32_t src = IPV4ADDR(10, 0, 111, 2);
+	uint32_t dst = IPV4ADDR(10, 0, 222, 2);
+
+	memset(&tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	tunnel.type = ODP_IPSEC_TUNNEL_IPV4;
+	tunnel.ipv4.src_addr = &src;
+	tunnel.ipv4.dst_addr = &dst;
+	tunnel.ipv4.ttl = 64;
 
 	/* This test will not work properly inbound inline mode.
 	 * Packet might be dropped and we will not check for that. */
@@ -1073,6 +1082,10 @@ static void test_out_dummy_esp_null_sha256_tun_ipv4(void)
 
 static void test_out_dummy_esp_null_sha256_tun_ipv6(void)
 {
+	odp_ipsec_tunnel_param_t tunnel;
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+	odp_ipsec_sa_t sa2;
 	uint8_t src[16] = {
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 		0x02, 0x11, 0x43, 0xff, 0xfe, 0x4a, 0xd7, 0x0a,
@@ -1081,15 +1094,12 @@ static void test_out_dummy_esp_null_sha256_tun_ipv6(void)
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16,
 	};
-	odp_ipsec_tunnel_param_t tunnel = {
-		.type = ODP_IPSEC_TUNNEL_IPV6,
-		.ipv6.src_addr = src,
-		.ipv6.dst_addr = dst,
-		.ipv6.hlimit = 64,
-	};
-	odp_ipsec_sa_param_t param;
-	odp_ipsec_sa_t sa;
-	odp_ipsec_sa_t sa2;
+
+	memset(&tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	tunnel.type = ODP_IPSEC_TUNNEL_IPV6;
+	tunnel.ipv6.src_addr = src;
+	tunnel.ipv6.dst_addr = dst;
+	tunnel.ipv6.hlimit = 64;
 
 	/* This test will not work properly inbound inline mode.
 	 * Packet might be dropped and we will not check for that. */
