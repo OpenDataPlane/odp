@@ -15,7 +15,7 @@
 #ifndef ODPH_DEBUG_H_
 #define ODPH_DEBUG_H_
 
-#include <odp/config.h>
+#include <odp/autoheader_external.h>
 
 #include <stdio.h>
 #include <stdlib.h>

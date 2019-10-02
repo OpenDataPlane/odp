@@ -4,7 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/config.h>
+#include <odp/autoheader_internal.h>
 #include <odp/api/version.h>
 
 #define ODP_VERSION_IMPL 0

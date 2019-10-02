@@ -16,7 +16,7 @@
 #ifndef ODP_DEBUG_INTERNAL_H_
 #define ODP_DEBUG_INTERNAL_H_
 
-#include <odp/config.h>
+#include <odp/autoheader_external.h>
 #include <odp/api/debug.h>
 #include <odp_global_data.h>
 

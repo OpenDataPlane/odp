@@ -4,7 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/config.h>
+#include <odp/autoheader_internal.h>
 
 #ifdef ODP_PKTIO_DPDK
 

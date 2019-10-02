@@ -1,0 +1,17 @@
+
+#ifndef ODP_AUTOHEADER_EXTERNAL_H_
+#define ODP_AUTOHEADER_EXTERNAL_H_
+
+/* Define to 1 to include additional debug code */
+#undef ODP_DEBUG
+
+/* Define to 1 to display debug information */
+#undef ODP_DEBUG_PRINT
+
+/* Define to 1 to include additional helper debug code */
+#undef ODPH_DEBUG
+
+/* Define to 1 to display helper debug information */
+#undef ODPH_DEBUG_PRINT
+
+#endif
