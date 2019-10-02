@@ -446,6 +446,8 @@ static int print_packet(test_global_t *global, odp_packet_t pkt,
 	int tcp  = odp_packet_has_tcp(pkt);
 	int udp  = odp_packet_has_udp(pkt);
 	int sctp = odp_packet_has_sctp(pkt);
+	int icmp = odp_packet_has_icmp(pkt);
+	int ipv4 = odp_packet_has_ipv4(pkt);
 
 	if (odp_packet_has_ts(pkt))
 		time = odp_packet_ts(pkt);
@@ -518,7 +520,7 @@ static int print_packet(test_global_t *global, odp_packet_t pkt,
 	}
 
 	/* L3 */
-	if (odp_packet_has_ipv4(pkt)) {
+	if (ipv4) {
 		printf("  IPv4 offset:     %u bytes\n", l3_offset);
 		offset = l3_offset + 12;
 		if (offset + 4 <= seg_len) {
@@ -557,6 +559,17 @@ static int print_packet(test_global_t *global, odp_packet_t pkt,
 		if (offset + 2 <= seg_len) {
 			printf("    dst port:      ");
 			print_port(data + offset);
+		}
+	} else if (icmp) {
+		printf("  ICMP offset:     %u bytes\n", l4_offset);
+		if (ipv4) {
+			uint32_t len;
+			uint8_t *u8 = odp_packet_l4_ptr(pkt, &len);
+
+			if (u8 && len >= 2) {
+				printf("    type:          %u\n", u8[0]);
+				printf("    code:          %u\n", u8[1]);
+			}
 		}
 	} else if (odp_packet_has_l4(pkt)) {
 		printf("  L4 (%i) offset:   %u bytes\n",
