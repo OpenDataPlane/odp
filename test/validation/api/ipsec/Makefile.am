@@ -1,7 +1,5 @@
 include ../Makefile.inc
 
-AM_CPPFLAGS += -Wno-error=missing-field-initializers
-
 noinst_LTLIBRARIES = libtestipsec.la
 libtestipsec_la_SOURCES = \
 	test_vectors.h \
