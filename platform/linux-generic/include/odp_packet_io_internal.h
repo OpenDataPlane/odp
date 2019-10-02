@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-#include <odp/config.h>
+#include <odp/autoheader_internal.h>
 
 #include <odp/api/packet_io.h>
 #include <odp/api/plat/pktio_inlines.h>

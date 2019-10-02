@@ -4,7 +4,7 @@ include_HEADERS = \
 
 odpincludedir= $(includedir)/odp
 odpinclude_HEADERS = \
-		  odp/config.h \
+		  odp/autoheader_external.h \
 		  odp/visibility_begin.h \
 		  odp/visibility_end.h
 
