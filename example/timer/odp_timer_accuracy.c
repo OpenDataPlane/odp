@@ -203,6 +203,9 @@ static int start_timers(test_global_t *test_global)
 
 	odp_timer_pool_start();
 
+	/* Spend some time so that current tick would not be zero */
+	odp_time_wait_ns(100 * ODP_TIME_MSEC_IN_NS);
+
 	test_global->timer_pool = timer_pool;
 
 	for (i = 0; i < num; i++) {
@@ -214,6 +217,17 @@ static int start_timers(test_global_t *test_global)
 		}
 
 		test_global->timer[i] = timer;
+	}
+
+	/* Run scheduler few times to ensure that (software) timer is active */
+	for (i = 0; i < 1000; i++) {
+		event = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+
+		if (event != ODP_EVENT_INVALID) {
+			printf("Spurious event received\n");
+			odp_event_free(event);
+			return -1;
+		}
 	}
 
 	start_tick = odp_timer_current_tick(timer_pool);
