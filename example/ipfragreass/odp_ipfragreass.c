@@ -230,7 +230,7 @@ int main(void)
 	odp_pool_t fragment_pool;
 	odp_shm_t shm;
 	odp_cpumask_t cpumask;
-	odph_odpthread_t threads[MAX_WORKERS] = {};
+	odph_odpthread_t threads[MAX_WORKERS];
 	odph_odpthread_params_t thread_params;
 	odp_packet_t dequeued_pkts[NUM_PACKETS];
 	odp_event_t ev;
@@ -242,6 +242,7 @@ int main(void)
 	int num_workers = MAX_WORKERS;
 	int reassembled;
 
+	memset(&threads, 0, sizeof(threads));
 	init(&instance, &fragment_pool, &shm, &cpumask, &num_workers);
 
 	/* Packet generation & fragmentation */
