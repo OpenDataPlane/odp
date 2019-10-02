@@ -112,6 +112,7 @@ AC_TYPE_UINT64_T
 ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror"
 ODP_CXXFLAGS="$ODP_CXXFLAGS -W -Wall -Werror"
 
+# Additional warnings:
 ODP_CHECK_CFLAG([-Wstrict-prototypes])
 ODP_CHECK_CFLAG([-Wmissing-prototypes])
 ODP_CHECK_CFLAG([-Wmissing-declarations])
@@ -126,6 +127,11 @@ ODP_CHECK_CFLAG([-Wundef])
 ODP_CHECK_CFLAG([-Wwrite-strings])
 ODP_CHECK_CFLAG([-Wformat-truncation=0])
 ODP_CHECK_CFLAG([-Wformat-overflow=0])
+
+# Suppressed warnings:
+# GCC-9 warns about taking pointers to packed structure fields (e.g. protocol
+# header structures). Generate only warnings on those, not errors.
+ODP_CHECK_CFLAG([-Wno-error=address-of-packed-member])
 
 ODP_CFLAGS="$ODP_CFLAGS -std=c99"
 ODP_CXXFLAGS="$ODP_CXXFLAGS -std=c++11"
