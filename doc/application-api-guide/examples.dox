@@ -55,6 +55,11 @@
  */
 
 /**
+ *@example odp_ping.c
+ * Example application which replies to ICMPv4 echo requests (ping)
+ */
+
+/**
  *@example odp_pktio.c
  * Basic packet IO loopback test application
  */
