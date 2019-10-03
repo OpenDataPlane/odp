@@ -6,7 +6,7 @@
 
 #include <odp/autoheader_internal.h>
 
-#ifdef ODP_PKTIO_DPDK
+#ifdef _ODP_PKTIO_DPDK
 
 #include <odp_posix_extensions.h>
 
@@ -65,7 +65,7 @@
 #define rte_log_set_global_level rte_set_log_level
 #endif
 
-#if ODP_DPDK_ZERO_COPY
+#if _ODP_DPDK_ZERO_COPY
 ODP_STATIC_ASSERT(CONFIG_PACKET_HEADROOM == RTE_PKTMBUF_HEADROOM,
 		  "ODP and DPDK headroom sizes not matching!");
 #endif
@@ -465,7 +465,7 @@ int _odp_dpdk_pool_create(pool_t *pool)
 	struct rte_mempool *pkt_pool;
 	char pool_name[RTE_MEMPOOL_NAMESIZE];
 
-	if (!ODP_DPDK_ZERO_COPY)
+	if (!_ODP_DPDK_ZERO_COPY)
 		return 0;
 
 	pool->pool_in_use = 0;
@@ -492,7 +492,7 @@ uint32_t _odp_dpdk_pool_obj_size(pool_t *pool, uint32_t block_size)
 	struct rte_mempool_objsz sz;
 	uint32_t total_size;
 
-	if (!ODP_DPDK_ZERO_COPY)
+	if (!_ODP_DPDK_ZERO_COPY)
 		return block_size;
 
 	if (odp_global_rw->dpdk_initialized == 0) {
@@ -1296,7 +1296,7 @@ static int dpdk_pktio_term(void)
 	}
 #endif
 
-	if (!ODP_DPDK_ZERO_COPY)
+	if (!_ODP_DPDK_ZERO_COPY)
 		rte_mempool_walk(dpdk_mempool_free, NULL);
 
 	return 0;
@@ -1569,7 +1569,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	else
 		pkt_dpdk->min_rx_burst = 0;
 
-	if (ODP_DPDK_ZERO_COPY) {
+	if (_ODP_DPDK_ZERO_COPY) {
 		pkt_pool = (struct rte_mempool *)pool_entry->ext_desc;
 	} else {
 		snprintf(pool_name, sizeof(pool_name), "pktpool_%s", netdev);
@@ -1806,7 +1806,7 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 			ts_val = odp_time_global();
 			ts = &ts_val;
 		}
-		if (ODP_DPDK_ZERO_COPY)
+		if (_ODP_DPDK_ZERO_COPY)
 			nb_rx = mbuf_to_pkt_zero(pktio_entry, pkt_table,
 						 rx_mbufs, nb_rx, ts);
 		else
@@ -1830,7 +1830,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
 		return 0;
 
-	if (ODP_DPDK_ZERO_COPY)
+	if (_ODP_DPDK_ZERO_COPY)
 		mbufs = pkt_to_mbuf_zero(pktio_entry, tx_mbufs, pkt_table, num,
 					 &copy_count);
 	else
@@ -1845,7 +1845,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	if (!pkt_dpdk->lockless_tx)
 		odp_ticketlock_unlock(&pkt_dpdk->tx_lock[index]);
 
-	if (ODP_DPDK_ZERO_COPY) {
+	if (_ODP_DPDK_ZERO_COPY) {
 		/* Free copied packets */
 		if (odp_unlikely(copy_count)) {
 			uint16_t freed = 0;
@@ -2014,4 +2014,4 @@ int _odp_dpdk_pool_create(pool_t *pool ODP_UNUSED)
 	return 0;
 }
 
-#endif /* ODP_PKTIO_DPDK */
+#endif /* _ODP_PKTIO_DPDK */

@@ -7,7 +7,7 @@
 
 #include <odp/autoheader_internal.h>
 
-#ifdef ODP_NETMAP
+#ifdef _ODP_PKTIO_NETMAP
 
 #include <odp_posix_extensions.h>
 
@@ -1253,4 +1253,4 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.fd_set = netmap_fd_set
 };
 
-#endif /* ODP_NETMAP */
+#endif /* _ODP_PKTIO_NETMAP */

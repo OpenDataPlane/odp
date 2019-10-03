@@ -3,22 +3,22 @@
 #define ODP_AUTOHEADER_INTERNAL_H_
 
 /* Define to the name of the implementation */
-#undef ODP_IMPLEMENTATION_NAME
+#undef _ODP_IMPLEMENTATION_NAME
 
 /* Define to name default scheduler */
-#undef ODP_SCHEDULE_DEFAULT
+#undef _ODP_SCHEDULE_DEFAULT
 
 /* Define to 1 if numa library is usable */
 #undef _ODP_HAVE_NUMA_LIBRARY
 
-/* Define to 1 to enable DPDK zero copy support */
-#undef ODP_DPDK_ZERO_COPY
-
-/* Define to 1 to enable netmap IO support */
-#undef ODP_NETMAP
-
 /* Define to 1 to enable DPDK packet I/O support */
-#undef ODP_PKTIO_DPDK
+#undef _ODP_PKTIO_DPDK
+
+/* Define to 1 to enable DPDK zero copy support */
+#undef _ODP_DPDK_ZERO_COPY
+
+/* Define to 1 to enable netmap packet I/O support */
+#undef _ODP_PKTIO_NETMAP
 
 /* Define to 1 to enable pcap packet I/O support */
 #undef _ODP_PKTIO_PCAP

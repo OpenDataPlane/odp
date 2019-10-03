@@ -206,7 +206,7 @@ int _odp_schedule_init_global(void)
 	const char *sched = getenv("ODP_SCHEDULER");
 
 	if (sched == NULL || !strcmp(sched, "default"))
-		sched = ODP_SCHEDULE_DEFAULT;
+		sched = _ODP_SCHEDULE_DEFAULT;
 
 	ODP_PRINT("Using scheduler '%s'\n", sched);
 

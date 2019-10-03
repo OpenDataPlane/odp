@@ -54,11 +54,11 @@ extern "C" {
 /* Forward declaration */
 struct pktio_if_ops;
 
-#if defined(ODP_NETMAP)
+#if defined(_ODP_PKTIO_NETMAP)
 #define PKTIO_PRIVATE_SIZE 74752
-#elif defined(ODP_PKTIO_DPDK) && ODP_CACHE_LINE_SIZE == 128
+#elif defined(_ODP_PKTIO_DPDK) && ODP_CACHE_LINE_SIZE == 128
 #define PKTIO_PRIVATE_SIZE 10240
-#elif defined(ODP_PKTIO_DPDK)
+#elif defined(_ODP_PKTIO_DPDK)
 #define PKTIO_PRIVATE_SIZE 5632
 #else
 #define PKTIO_PRIVATE_SIZE 384
