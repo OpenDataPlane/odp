@@ -6,7 +6,7 @@
 
 #include <odp/autoheader_internal.h>
 
-#ifdef ODP_PKTIO_DPDK
+#ifdef _ODP_PKTIO_DPDK
 
 #include <odp_packet_io_internal.h>
 #include <odp_packet_dpdk.h>
@@ -489,4 +489,4 @@ int _odp_dpdk_packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 					      pktin_cfg);
 }
 
-#endif /* ODP_PKTIO_DPDK */
+#endif /* _ODP_PKTIO_DPDK */

@@ -101,7 +101,7 @@ int _odp_queue_init_global(void)
 	const char *sched = getenv("ODP_SCHEDULER");
 
 	if (sched == NULL || !strcmp(sched, "default"))
-		sched = ODP_SCHEDULE_DEFAULT;
+		sched = _ODP_SCHEDULE_DEFAULT;
 
 	if (!strcmp(sched, "basic") || !strcmp(sched, "sp")) {
 		queue_fn = &queue_basic_fn;

@@ -281,7 +281,7 @@ AS_IF([test "${with_platform}" = "linux-generic"],
       [m4_include([./platform/linux-generic/m4/configure.m4])],
       [AC_MSG_ERROR([UNSUPPORTED PLATFORM: ${with_platform}])])
 
-AC_DEFINE_UNQUOTED([ODP_IMPLEMENTATION_NAME], ["$ODP_IMPLEMENTATION_NAME"],
+AC_DEFINE_UNQUOTED([_ODP_IMPLEMENTATION_NAME], ["$ODP_IMPLEMENTATION_NAME"],
 		   [Define to the name of the implementation])
 
 AM_CONDITIONAL([ODP_USE_CONFIG], [test "x$odp_use_config" = "xtrue"])

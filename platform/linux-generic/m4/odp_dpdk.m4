@@ -41,9 +41,9 @@ then
     esac
 
     ODP_CHECK_CFLAG([-Wno-error=cast-align])
-    AC_DEFINE([ODP_PKTIO_DPDK], [1],
+    AC_DEFINE([_ODP_PKTIO_DPDK], [1],
 	      [Define to 1 to enable DPDK packet I/O support])
-    AC_DEFINE_UNQUOTED([ODP_DPDK_ZERO_COPY], [$zero_copy],
+    AC_DEFINE_UNQUOTED([_ODP_DPDK_ZERO_COPY], [$zero_copy],
 	      [Define to 1 to enable DPDK zero copy support])
 else
     pktio_dpdk_support=no
