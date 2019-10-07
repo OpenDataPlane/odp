@@ -832,6 +832,9 @@ int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr, odp_packet_hdr_t *pkt_hdr)
 			break;
 		case ODP_PMR_INNER_HDR_OFF:
 			break;
+		default:
+			pmr_failure = 1;
+			break;
 		}
 
 		if (pmr_failure)
