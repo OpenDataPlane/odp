@@ -92,7 +92,8 @@ ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
 typedef struct {
 	int num_rx_desc;
 	int num_tx_desc;
-	int rx_drop_en;
+	uint8_t rx_drop_en;
+	uint8_t set_flow_hash;
 } dpdk_opt_t;
 
 struct pkt_cache_t {
@@ -169,6 +170,7 @@ static int init_options(pktio_entry_t *pktio_entry,
 			const struct rte_eth_dev_info *dev_info)
 {
 	dpdk_opt_t *opt = &pkt_priv(pktio_entry)->opt;
+	int val;
 
 	if (!lookup_opt("num_rx_desc", dev_info->driver_name,
 			&opt->num_rx_desc))
@@ -190,10 +192,13 @@ static int init_options(pktio_entry_t *pktio_entry,
 		return -1;
 	}
 
-	if (!lookup_opt("rx_drop_en", dev_info->driver_name,
-			&opt->rx_drop_en))
+	if (!lookup_opt("rx_drop_en", dev_info->driver_name, &val))
 		return -1;
-	opt->rx_drop_en = !!opt->rx_drop_en;
+	opt->rx_drop_en = !!val;
+
+	if (!lookup_opt("set_flow_hash", NULL, &val))
+		return -1;
+	opt->set_flow_hash = !!val;
 
 	ODP_PRINT("DPDK interface (%s): %" PRIu16 "\n", dev_info->driver_name,
 		  pkt_priv(pktio_entry)->port_id);
@@ -810,6 +815,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 {
 	odp_packet_hdr_t *pkt_hdr;
 	uint16_t pkt_len;
+	uint8_t set_flow_hash;
 	struct rte_mbuf *mbuf;
 	void *data;
 	int i, nb_pkts;
@@ -824,6 +830,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 	pkt_dpdk = pkt_priv(pktio_entry);
 	nb_pkts = 0;
 	pool = pkt_dpdk->pool;
+	set_flow_hash = pkt_dpdk->opt.set_flow_hash;
 	pktin_cfg = pktio_entry->s.config.pktin;
 	parse_layer = pktio_entry->s.config.parser.layer;
 	input = pktio_entry->s.handle;
@@ -893,8 +900,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 				continue;
 			}
 		}
-
-		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
+		if (set_flow_hash && (mbuf->ol_flags & PKT_RX_RSS_HASH))
 			packet_set_flow_hash(pkt_hdr, mbuf->hash.rss);
 
 		packet_set_ts(pkt_hdr, ts);
