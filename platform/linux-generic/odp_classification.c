@@ -476,7 +476,7 @@ int odp_pktio_skip_set(odp_pktio_t pktio_in, uint32_t offset)
 	pktio_entry_t *entry = get_pktio_entry(pktio_in);
 
 	if (entry == NULL) {
-		ODP_ERR("Invalid odp_cos_t handle");
+		ODP_ERR("Invalid odp_pktio_t handle\n");
 		return -1;
 	}
 
@@ -650,7 +650,7 @@ odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 	cos_t *cos_dst = get_cos_entry(dst_cos);
 
 	if (NULL == cos_src || NULL == cos_dst) {
-		ODP_ERR("Invalid input handle");
+		ODP_ERR("Invalid odp_cos_t handle\n");
 		return ODP_PMR_INVALID;
 	}
 
