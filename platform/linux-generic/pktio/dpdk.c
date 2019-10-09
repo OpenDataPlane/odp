@@ -804,7 +804,7 @@ static inline void prefetch_pkt(struct rte_mbuf *mbuf)
 	void *data = rte_pktmbuf_mtod(mbuf, char *);
 
 	odp_prefetch(pkt_hdr);
-	odp_prefetch(&pkt_hdr->p);
+	odp_prefetch_store((uint8_t *)pkt_hdr + ODP_CACHE_LINE_SIZE);
 	odp_prefetch(data);
 }
 
@@ -920,6 +920,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
 	odp_pktout_config_opt_t *pktout_capa =
 		&pktio_entry->s.capa.config.pktout;
+	uint16_t mtu = pkt_dpdk->mtu;
 	int i;
 	*copy_count = 0;
 
@@ -929,7 +930,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 		struct rte_mbuf *mbuf = mbuf_from_pkt_hdr(pkt_hdr);
 		uint16_t pkt_len = odp_packet_len(pkt);
 
-		if (odp_unlikely(pkt_len > pkt_dpdk->mtu))
+		if (odp_unlikely(pkt_len > mtu))
 			goto fail;
 
 		if (odp_likely(pkt_hdr->seg_count == 1)) {
