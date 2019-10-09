@@ -383,20 +383,18 @@ static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 		link_segments(pkt_hdr, num);
 }
 
-static inline void reset_seg(odp_packet_hdr_t *pkt_hdr, int num)
+static inline void reset_segments(odp_packet_hdr_t *pkt_hdr)
 {
-	odp_packet_hdr_t *hdr = pkt_hdr;
 	void *base;
-	int i;
-	uint32_t seg_len = ((pool_t *)(hdr->buf_hdr.pool_ptr))->seg_len;
+	uint32_t seg_len = ((pool_t *)(pkt_hdr->buf_hdr.pool_ptr))->seg_len;
 
-	for (i = 0; i < num; i++) {
-		base = hdr->buf_hdr.base_data;
+	while (pkt_hdr != NULL) {
+		base = pkt_hdr->buf_hdr.base_data;
 
-		hdr->seg_len  = seg_len;
-		hdr->seg_data = base;
+		pkt_hdr->seg_len  = seg_len;
+		pkt_hdr->seg_data = base;
 
-		hdr = hdr->seg_next;
+		pkt_hdr = pkt_hdr->seg_next;
 	}
 }
 
@@ -559,11 +557,11 @@ static inline void free_all_segments(odp_packet_hdr_t *pkt_hdr, int num)
 {
 	int i;
 	odp_buffer_hdr_t *buf_hdr[num];
-	odp_packet_hdr_t *seg = pkt_hdr;
+	odp_packet_hdr_t *seg_hdr = pkt_hdr;
 
 	for (i = 0; i < num; i++) {
-		buf_hdr[i] = &seg->buf_hdr;
-		seg = seg->seg_next;
+		buf_hdr[i] = &seg_hdr->buf_hdr;
+		seg_hdr = seg_hdr->seg_next;
 	}
 
 	packet_free_multi(buf_hdr, num);
@@ -573,7 +571,7 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 					      int num, uint32_t free_len,
 					      uint32_t pull_len, int head)
 {
-	odp_packet_hdr_t *seg;
+	odp_packet_hdr_t *seg_hdr;
 	int i;
 	int num_remain = pkt_hdr->seg_count - num;
 	odp_packet_hdr_t *hdr = pkt_hdr;
@@ -584,8 +582,8 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 		odp_packet_hdr_t *new_hdr;
 
 		for (i = 0; i < num; i++) {
-			seg        = packet_seg_step(&hdr);
-			buf_hdr[i] = &seg->buf_hdr;
+			seg_hdr    = packet_seg_step(&hdr);
+			buf_hdr[i] = &seg_hdr->buf_hdr;
 		}
 
 		/* The first remaining header is the new packet descriptor.
@@ -619,8 +617,8 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 		packet_seg_step(&hdr);
 
 		for (i = 0; i < num; i++) {
-			seg        = packet_seg_step(&hdr);
-			buf_hdr[i] = &seg->buf_hdr;
+			seg_hdr    = packet_seg_step(&hdr);
+			buf_hdr[i] = &seg_hdr->buf_hdr;
 		}
 
 		packet_free_multi(buf_hdr, num);
@@ -770,9 +768,7 @@ void odp_packet_free(odp_packet_t pkt)
 void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 {
 	odp_buffer_hdr_t *buf_hdr[num];
-	odp_buffer_hdr_t *buf_hdr2[num];
 	int i;
-	int links = 0;
 	int num_freed = 0;
 
 	for (i = 0; i < num; i++) {
@@ -789,9 +785,6 @@ void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 
 		buf_hdr[i - num_freed] = &pkt_hdr->buf_hdr;
 	}
-
-	if (odp_unlikely(links))
-		packet_free_multi(buf_hdr2, links);
 
 	if (odp_likely(num - num_freed))
 		packet_free_multi(buf_hdr, num - num_freed);
@@ -816,7 +809,7 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	num_req = num_segments(len, pool->seg_len);
 	if (odp_unlikely(num_req < num))
 		free_segments(pkt_hdr, num - num_req, 0, 0, 0);
-	reset_seg(pkt_hdr, num_req);
+	reset_segments(pkt_hdr);
 
 	packet_init(pkt_hdr, len);
 
