@@ -894,6 +894,9 @@ int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len,
 			return -1;
 
 		num = num_segments(len - headroom, pool->seg_len);
+		if (odp_unlikely(pkt_hdr->seg_count + num > PKT_MAX_SEGS))
+			return -1;
+
 		push_head(pkt_hdr, headroom);
 		ptr = add_segments(pkt_hdr, pool, len - headroom, num, 1);
 
@@ -1000,6 +1003,9 @@ int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len,
 			return -1;
 
 		num = num_segments(len - tailroom, pool->seg_len);
+		if (odp_unlikely(pkt_hdr->seg_count + num > PKT_MAX_SEGS))
+			return -1;
+
 		push_tail(pkt_hdr, tailroom);
 		ptr = add_segments(pkt_hdr, pool, len - tailroom, num, 0);
 
@@ -1355,6 +1361,10 @@ int odp_packet_concat(odp_packet_t *dst, odp_packet_t src)
 
 		return -1;
 	}
+
+	if (odp_unlikely(dst_hdr->seg_count + src_hdr->seg_count >
+			 PKT_MAX_SEGS))
+		return -1;
 
 	add_all_segs(dst_hdr, src_hdr);
 
