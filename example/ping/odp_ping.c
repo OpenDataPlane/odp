@@ -492,11 +492,11 @@ static uint16_t update_chksum(uint16_t chksum, uint16_t old, uint16_t new)
 
 static void icmp_reply(test_global_t *global, odp_packet_t pkt)
 {
-	uint32_t len;
 	uint32_t dst_ip;
 	odph_ipv4hdr_t *ip_hdr;
 	odph_ethhdr_t *eth_hdr;
 	uint16_t old, new;
+	uint32_t len = 0;
 	int index = odp_packet_input_index(pkt);
 	odp_pktout_queue_t pktout = global->pktio[index].pktout;
 	odph_ethaddr_t *eth_addr = &global->pktio[index].eth_addr;
