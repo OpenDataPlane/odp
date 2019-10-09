@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -1669,7 +1670,7 @@ static void classification_test_pmr_queue_set(void)
 	odp_pktio_close(pktio);
 }
 
-static void classification_test_pmr_term_daddr(void)
+static void test_pmr_term_ipv4_addr(int dst)
 {
 	odp_packet_t pkt;
 	uint32_t seqno;
@@ -1683,13 +1684,14 @@ static void classification_test_pmr_term_daddr(void)
 	odp_pmr_t pmr;
 	odp_cos_t cos;
 	odp_cos_t default_cos;
-	uint32_t addr;
-	uint32_t mask;
+	uint32_t dst_addr, src_addr;
+	uint32_t dst_mask, src_mask;
 	char cosname[ODP_QUEUE_NAME_LEN];
 	odp_pmr_param_t pmr_param;
 	odp_cls_cos_param_t cls_param;
 	odph_ipv4hdr_t *ip;
-	const char *dst_addr = "10.0.0.99/32";
+	const char *src_str = "10.0.0.88/32";
+	const char *dst_str = "10.0.0.99/32";
 	odph_ethhdr_t *eth;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
@@ -1699,13 +1701,13 @@ static void classification_test_pmr_term_daddr(void)
 	configure_default_cos(pktio, &default_cos,
 			      &default_queue, &default_pool);
 
-	queue = queue_create("daddr", true);
+	queue = queue_create("ipv4 addr", true);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
-	pool = pool_create("daddr");
+	pool = pool_create("ipv4 addr");
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
-	sprintf(cosname, "daddr");
+	sprintf(cosname, "ipv4 addr");
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool;
 	cls_param.queue = queue;
@@ -1714,25 +1716,36 @@ static void classification_test_pmr_term_daddr(void)
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
-	parse_ipv4_string(dst_addr, &addr, &mask);
+	parse_ipv4_string(src_str, &src_addr, &src_mask);
+	parse_ipv4_string(dst_str, &dst_addr, &dst_mask);
+
 	odp_cls_pmr_param_init(&pmr_param);
-	pmr_param.term = ODP_PMR_DIP_ADDR;
-	pmr_param.match.value = &addr;
-	pmr_param.match.mask = &mask;
-	pmr_param.val_sz = sizeof(addr);
+
+	if (dst) {
+		pmr_param.term = ODP_PMR_DIP_ADDR;
+		pmr_param.match.value = &dst_addr;
+		pmr_param.match.mask = &dst_mask;
+		pmr_param.val_sz = sizeof(dst_addr);
+	} else {
+		pmr_param.term = ODP_PMR_SIP_ADDR;
+		pmr_param.match.value = &src_addr;
+		pmr_param.match.mask = &src_mask;
+		pmr_param.val_sz = sizeof(src_addr);
+	}
 
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
 	CU_ASSERT_FATAL(pmr != ODP_PMR_INVALID);
 
-	/* packet with dst ip address matching PMR rule to be
-	received in the CoS queue*/
+	/* packet with IP address matching PMR rule to be
+	 * received in the CoS queue */
 	pkt = create_packet(default_pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
 	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
-	ip->dst_addr = odp_cpu_to_be_32(addr);
+	ip->src_addr = odp_cpu_to_be_32(src_addr);
+	ip->dst_addr = odp_cpu_to_be_32(dst_addr);
 	odph_ipv4_csum_update(pkt);
 
 	seqno = cls_pkt_get_seq(pkt);
@@ -1772,6 +1785,16 @@ static void classification_test_pmr_term_daddr(void)
 	odp_queue_destroy(queue);
 	odp_queue_destroy(default_queue);
 	odp_pktio_close(pktio);
+}
+
+static void classification_test_pmr_term_ipv4_saddr(void)
+{
+	test_pmr_term_ipv4_addr(0);
+}
+
+static void classification_test_pmr_term_ipv4_daddr(void)
+{
+	test_pmr_term_ipv4_addr(1);
 }
 
 static void classification_test_pmr_term_ipv6daddr(void)
@@ -2015,7 +2038,8 @@ odp_testinfo_t classification_suite_pmr[] = {
 	ODP_TEST_INFO(classification_test_pmr_term_dmac),
 	ODP_TEST_INFO(classification_test_pmr_pool_set),
 	ODP_TEST_INFO(classification_test_pmr_queue_set),
-	ODP_TEST_INFO(classification_test_pmr_term_daddr),
+	ODP_TEST_INFO(classification_test_pmr_term_ipv4_saddr),
+	ODP_TEST_INFO(classification_test_pmr_term_ipv4_daddr),
 	ODP_TEST_INFO(classification_test_pmr_term_ipv6saddr),
 	ODP_TEST_INFO(classification_test_pmr_term_ipv6daddr),
 	ODP_TEST_INFO(classification_test_pmr_term_packet_len),
