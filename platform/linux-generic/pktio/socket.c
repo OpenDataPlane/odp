@@ -30,6 +30,8 @@
 #include <odp_classification_internal.h>
 
 typedef struct {
+	odp_ticketlock_t ODP_ALIGNED_CACHE rx_lock;
+	odp_ticketlock_t ODP_ALIGNED_CACHE tx_lock;
 	int sockfd; /**< socket descriptor */
 	odp_pool_t pool; /**< pool to alloc packets from */
 	uint32_t mtu;    /**< maximum transmission unit */
@@ -163,6 +165,9 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	if (err != 0)
 		goto error;
 
+	odp_ticketlock_init(&pkt_sock->rx_lock);
+	odp_ticketlock_init(&pkt_sock->tx_lock);
+
 	return 0;
 
 error:
@@ -226,9 +231,9 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		msgvec[i].msg_hdr.msg_iov = iovecs[i];
 	}
 
-	odp_ticketlock_lock(&pktio_entry->s.rxl);
+	odp_ticketlock_lock(&pkt_sock->rx_lock);
 	recv_msgs = recvmmsg(sockfd, msgvec, nb_pkts, MSG_DONTWAIT, NULL);
-	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+	odp_ticketlock_unlock(&pkt_sock->rx_lock);
 
 	if (pktio_entry->s.config.pktin.bit.ts_all ||
 	    pktio_entry->s.config.pktin.bit.ts_ptp) {
@@ -418,7 +423,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 								iovecs[i]);
 	}
 
-	odp_ticketlock_lock(&pktio_entry->s.txl);
+	odp_ticketlock_lock(&pkt_sock->tx_lock);
 
 	for (i = 0; i < num; ) {
 		ret = sendmmsg(sockfd, &msgvec[i], num - i, MSG_DONTWAIT);
@@ -426,7 +431,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			if (i == 0 && SOCK_ERR_REPORT(errno)) {
 				__odp_errno = errno;
 				ODP_ERR("sendmmsg(): %s\n", strerror(errno));
-				odp_ticketlock_unlock(&pktio_entry->s.txl);
+				odp_ticketlock_unlock(&pkt_sock->tx_lock);
 				return -1;
 			}
 			break;
@@ -435,7 +440,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		i += ret;
 	}
 
-	odp_ticketlock_unlock(&pktio_entry->s.txl);
+	odp_ticketlock_unlock(&pkt_sock->tx_lock);
 
 	odp_packet_free_multi(pkt_table, i);
 
