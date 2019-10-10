@@ -103,5 +103,6 @@ void odp_cunit_register_global_init(int (*func_init_ptr)(odp_instance_t *inst));
 void odp_cunit_register_global_term(int (*func_term_ptr)(odp_instance_t inst));
 
 int odp_cunit_ret(int val);
+int odp_cunit_print_inactive(void);
 
 #endif /* ODP_CUNICT_COMMON_H */
