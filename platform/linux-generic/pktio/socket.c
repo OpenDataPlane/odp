@@ -199,31 +199,26 @@ static int sock_mmsg_open(odp_pktio_t id ODP_UNUSED,
 
 static inline uint32_t _rx_pkt_to_iovec(odp_packet_t pkt, struct iovec *iovecs)
 {
-	odp_packet_seg_t seg = odp_packet_first_seg(pkt);
+	odp_packet_seg_t seg;
 	uint32_t seg_count = odp_packet_num_segs(pkt);
-	uint32_t seg_id = 0;
-	uint32_t iov_count = 0;
-	uint8_t *ptr;
-	uint32_t seglen;
+	uint32_t i;
 
-	for (seg_id = 0; seg_id < seg_count; ++seg_id) {
-		ptr    = odp_packet_seg_data(pkt, seg);
-		seglen = odp_packet_seg_data_len(pkt, seg);
-
-		if (ptr) {
-			iovecs[iov_count].iov_base = ptr;
-			iovecs[iov_count].iov_len = seglen;
-			iov_count++;
-		}
-		seg = odp_packet_next_seg(pkt, seg);
+	if (odp_likely(seg_count) == 1) {
+		iovecs[0].iov_base = odp_packet_data(pkt);
+		iovecs[0].iov_len = odp_packet_len(pkt);
+		return 1;
 	}
 
-	return iov_count;
+	seg = odp_packet_first_seg(pkt);
+
+	for (i = 0; i < seg_count; i++) {
+		iovecs[i].iov_base = odp_packet_seg_data(pkt, seg);
+		iovecs[i].iov_len = odp_packet_seg_data_len(pkt, seg);
+		seg = odp_packet_next_seg(pkt, seg);
+	}
+	return i;
 }
 
-/*
- * ODP_PACKET_SOCKET_MMSG:
- */
 static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  odp_packet_t pkt_table[], int num)
 {
@@ -239,12 +234,6 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int recv_msgs;
 	int i;
 
-	odp_ticketlock_lock(&pktio_entry->s.rxl);
-
-	if (pktio_entry->s.config.pktin.bit.ts_all ||
-	    pktio_entry->s.config.pktin.bit.ts_ptp)
-		ts = &ts_val;
-
 	memset(msgvec, 0, sizeof(msgvec));
 
 	nb_pkts = packet_alloc_multi(pool, pkt_sock->mtu, pkt_table, num);
@@ -254,10 +243,15 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		msgvec[i].msg_hdr.msg_iov = iovecs[i];
 	}
 
+	odp_ticketlock_lock(&pktio_entry->s.rxl);
 	recv_msgs = recvmmsg(sockfd, msgvec, nb_pkts, MSG_DONTWAIT, NULL);
+	odp_ticketlock_unlock(&pktio_entry->s.rxl);
 
-	if (ts != NULL)
+	if (pktio_entry->s.config.pktin.bit.ts_all ||
+	    pktio_entry->s.config.pktin.bit.ts_ptp) {
 		ts_val = odp_time_global();
+		ts = &ts_val;
+	}
 
 	for (i = 0; i < recv_msgs; i++) {
 		void *base = msgvec[i].msg_hdr.msg_iov->iov_base;
@@ -309,17 +303,14 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 					   pktio_entry->s.config.parser.layer,
 					   pktio_entry->s.in_chksums);
 
-		pkt_hdr->input = pktio_entry->s.handle;
 		packet_set_ts(pkt_hdr, ts);
 
 		pkt_table[nb_rx++] = pkt;
 	}
 
 	/* Free unused pkt buffers */
-	for (; i < nb_pkts; i++)
-		odp_packet_free(pkt_table[i]);
-
-	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+	if (i < nb_pkts)
+		odp_packet_free_multi(&pkt_table[i], nb_pkts - i);
 
 	return nb_rx;
 }
