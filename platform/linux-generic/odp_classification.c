@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -155,6 +156,12 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 	capability->max_cos = CLS_COS_MAX_ENTRY;
 	capability->pmr_range_supported = false;
 	capability->supported_terms.all_bits = 0;
+	capability->supported_terms.bit.len = 1;
+	capability->supported_terms.bit.ethtype_0 = 1;
+	capability->supported_terms.bit.ethtype_x = 1;
+	capability->supported_terms.bit.vlan_id_0 = 1;
+	capability->supported_terms.bit.vlan_id_x = 1;
+	capability->supported_terms.bit.dmac = 1;
 	capability->supported_terms.bit.ip_proto = 1;
 	capability->supported_terms.bit.udp_dport = 1;
 	capability->supported_terms.bit.udp_sport = 1;
@@ -162,6 +169,8 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 	capability->supported_terms.bit.tcp_sport = 1;
 	capability->supported_terms.bit.sip_addr = 1;
 	capability->supported_terms.bit.dip_addr = 1;
+	capability->supported_terms.bit.sip6_addr = 1;
+	capability->supported_terms.bit.dip6_addr = 1;
 	capability->random_early_detection = ODP_SUPPORT_NO;
 	capability->back_pressure = ODP_SUPPORT_NO;
 	capability->threshold_red.all_bits = 0;
