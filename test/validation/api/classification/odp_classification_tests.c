@@ -137,6 +137,9 @@ int classification_suite_term(void)
 			odp_pool_destroy(pool_list[i]);
 	}
 
+	if (odp_cunit_print_inactive())
+		retcode = -1;
+
 	return retcode;
 }
 
