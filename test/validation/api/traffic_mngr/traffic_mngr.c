@@ -2104,6 +2104,9 @@ static int traffic_mngr_suite_term(void)
 			return -1;
 	}
 
+	if (odp_cunit_print_inactive())
+		return -1;
+
 	return 0;
 }
 
