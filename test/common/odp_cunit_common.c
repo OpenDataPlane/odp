@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -226,6 +227,52 @@ static int _cunit_suite_init(void)
 	return ret;
 }
 
+/* Print names of all inactive tests of the suite. This should be called by
+ * every suite terminate function. Otherwise, inactive tests are not listed in
+ * test suite results. */
+int odp_cunit_print_inactive(void)
+{
+	CU_pSuite cur_suite;
+	CU_pTest ptest;
+	odp_suiteinfo_t *sinfo;
+	odp_testinfo_t *tinfo;
+	int first = 1;
+
+	cur_suite = CU_get_current_suite();
+	if (cur_suite == NULL)
+		return -1;
+
+	sinfo = cunit_get_suite_info(cur_suite->pName);
+	if (sinfo == NULL)
+		return -1;
+
+	for (tinfo = sinfo->testinfo_tbl; tinfo->name; tinfo++) {
+		ptest = CU_get_test_by_name(tinfo->name, cur_suite);
+		if (ptest == NULL) {
+			fprintf(stderr, "%s: test not found: %s\n",
+				__func__, tinfo->name);
+			return -1;
+		}
+
+		if (ptest->fActive)
+			continue;
+
+		if (first) {
+			printf("\n\n  Inactive tests:\n");
+			first = 0;
+		}
+
+		printf("    %s\n", tinfo->name);
+	}
+
+	return 0;
+}
+
+static int default_term_func(void)
+{
+	return odp_cunit_print_inactive();
+}
+
 /*
  * Register suites and tests with CUnit.
  *
@@ -238,10 +285,14 @@ static int cunit_register_suites(odp_suiteinfo_t testsuites[])
 	odp_testinfo_t *tinfo;
 	CU_pSuite suite;
 	CU_pTest test;
+	CU_CleanupFunc term_func;
 
 	for (sinfo = testsuites; sinfo->name; sinfo++) {
-		suite = CU_add_suite(sinfo->name,
-				     _cunit_suite_init, sinfo->term_func);
+		term_func = default_term_func;
+		if (sinfo->term_func)
+			term_func = sinfo->term_func;
+
+		suite = CU_add_suite(sinfo->name, _cunit_suite_init, term_func);
 		if (!suite)
 			return CU_get_error();
 
