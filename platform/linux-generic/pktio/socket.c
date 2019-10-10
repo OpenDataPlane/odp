@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2013, Nokia Solutions and Networks
+ * Copyright (c) 2013-2019, Nokia Solutions and Networks
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -40,16 +40,11 @@
 #include <odp_align_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_errno_define.h>
-#include <odp_classification_datamodel.h>
-#include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
 #include <odp/api/hints.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>
-
-#define MAX_SEGS          CONFIG_PACKET_MAX_SEGS
-#define PACKET_JUMBO_LEN  (9 * 1024)
 
 typedef struct {
 	int sockfd; /**< socket descriptor */
@@ -102,22 +97,6 @@ int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
 
 #endif
 }
-
-/** Eth buffer start offset from u32-aligned address to make sure the following
- * header (e.g. IP) starts at a 32-bit aligned address.
- */
-#define ETHBUF_OFFSET (ODP_ALIGN_ROUNDUP(_ODP_ETHHDR_LEN, sizeof(uint32_t)) \
-				- _ODP_ETHHDR_LEN)
-
-/** Round up buffer address to get a properly aliged eth buffer, i.e. aligned
- * so that the next header always starts at a 32bit aligned address.
- */
-#define ETHBUF_ALIGN(buf_ptr) ((uint8_t *)ODP_ALIGN_ROUNDUP_PTR((buf_ptr), \
-				sizeof(uint32_t)) + ETHBUF_OFFSET)
-
-/*
- * ODP_PACKET_SOCKET_MMSG:
- */
 static int sock_close(pktio_entry_t *pktio_entry)
 {
 	pkt_sock_t *pkt_sock = pkt_priv(pktio_entry);
@@ -131,9 +110,6 @@ static int sock_close(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
-/*
- * ODP_PACKET_SOCKET_MMSG:
- */
 static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 			  odp_pool_t pool)
 {
@@ -212,9 +188,6 @@ error:
 	return -1;
 }
 
-/*
- * ODP_PACKET_SOCKET_MMSG:
- */
 static int sock_mmsg_open(odp_pktio_t id ODP_UNUSED,
 			  pktio_entry_t *pktio_entry,
 			  const char *devname, odp_pool_t pool)
@@ -224,8 +197,7 @@ static int sock_mmsg_open(odp_pktio_t id ODP_UNUSED,
 	return sock_setup_pkt(pktio_entry, devname, pool);
 }
 
-static uint32_t _rx_pkt_to_iovec(odp_packet_t pkt,
-				 struct iovec iovecs[MAX_SEGS])
+static inline uint32_t _rx_pkt_to_iovec(odp_packet_t pkt, struct iovec *iovecs)
 {
 	odp_packet_seg_t seg = odp_packet_first_seg(pkt);
 	uint32_t seg_count = odp_packet_num_segs(pkt);
@@ -261,7 +233,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_time_t *ts = NULL;
 	const int sockfd = pkt_sock->sockfd;
 	struct mmsghdr msgvec[num];
-	struct iovec iovecs[num][MAX_SEGS];
+	struct iovec iovecs[num][CONFIG_PACKET_MAX_SEGS];
 	int nb_rx = 0;
 	int nb_pkts;
 	int recv_msgs;
@@ -433,8 +405,7 @@ static int sock_recv_mq_tmo(pktio_entry_t *pktio_entry[], int index[],
 	return 0;
 }
 
-static uint32_t _tx_pkt_to_iovec(odp_packet_t pkt,
-				 struct iovec iovecs[MAX_SEGS])
+static inline uint32_t _tx_pkt_to_iovec(odp_packet_t pkt, struct iovec *iovecs)
 {
 	uint32_t pkt_len = odp_packet_len(pkt);
 	uint32_t offset = 0;
@@ -459,7 +430,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 {
 	pkt_sock_t *pkt_sock = pkt_priv(pktio_entry);
 	struct mmsghdr msgvec[num];
-	struct iovec iovecs[num][MAX_SEGS];
+	struct iovec iovecs[num][CONFIG_PACKET_MAX_SEGS];
 	int ret;
 	int sockfd;
 	int n, i;
@@ -498,17 +469,11 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	return i;
 }
 
-/*
- * ODP_PACKET_SOCKET_MMSG:
- */
 static uint32_t sock_mtu_get(pktio_entry_t *pktio_entry)
 {
 	return pkt_priv(pktio_entry)->mtu;
 }
 
-/*
- * ODP_PACKET_SOCKET_MMSG:
- */
 static int sock_mac_addr_get(pktio_entry_t *pktio_entry,
 			     void *mac_addr)
 {
@@ -516,9 +481,6 @@ static int sock_mac_addr_get(pktio_entry_t *pktio_entry,
 	return ETH_ALEN;
 }
 
-/*
- * ODP_PACKET_SOCKET_MMSG:
- */
 static int sock_promisc_mode_set(pktio_entry_t *pktio_entry,
 				 odp_bool_t enable)
 {
@@ -526,9 +488,6 @@ static int sock_promisc_mode_set(pktio_entry_t *pktio_entry,
 				   pktio_entry->s.name, enable);
 }
 
-/*
- * ODP_PACKET_SOCKET_MMSG:
- */
 static int sock_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
 	return promisc_mode_get_fd(pkt_priv(pktio_entry)->sockfd,
@@ -564,9 +523,7 @@ static int sock_stats(pktio_entry_t *pktio_entry,
 		return 0;
 	}
 
-	return sock_stats_fd(pktio_entry,
-			     stats,
-			     pkt_priv(pktio_entry)->sockfd);
+	return sock_stats_fd(pktio_entry, stats, pkt_priv(pktio_entry)->sockfd);
 }
 
 static int sock_stats_reset(pktio_entry_t *pktio_entry)
@@ -577,8 +534,7 @@ static int sock_stats_reset(pktio_entry_t *pktio_entry)
 		return 0;
 	}
 
-	return sock_stats_reset_fd(pktio_entry,
-				   pkt_priv(pktio_entry)->sockfd);
+	return sock_stats_reset_fd(pktio_entry, pkt_priv(pktio_entry)->sockfd);
 }
 
 static int sock_init_global(void)
