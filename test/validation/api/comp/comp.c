@@ -455,33 +455,15 @@ static odp_testinfo_t comp_suite[] = {
 	ODP_TEST_INFO_NULL,
 };
 
-static int comp_suite_term(void)
-{
-	int i;
-	int first = 1;
-
-	for (i = 0; comp_suite[i].name; i++) {
-		if (comp_suite[i].check_active &&
-		    comp_suite[i].check_active() == ODP_TEST_INACTIVE) {
-			if (first) {
-				first = 0;
-				printf("\n\n  Inactive tests:\n");
-			}
-			printf("    %s\n", comp_suite[i].name);
-		}
-	}
-	return 0;
-}
-
 /* Suite names */
 #define ODP_COMP_SYNC_TEST	"Comp/decomp sync test"
 #define ODP_COMP_ASYNC_TEST	"Comp/decomp async test"
 
 static odp_suiteinfo_t comp_suites[] = {
 	{ODP_COMP_SYNC_TEST, comp_suite_sync_init,
-	 comp_suite_term, comp_suite},
+	 NULL, comp_suite},
 	{ODP_COMP_ASYNC_TEST, comp_suite_async_init,
-	 comp_suite_term, comp_suite},
+	 NULL, comp_suite},
 	ODP_SUITE_INFO_NULL,
 };
 
