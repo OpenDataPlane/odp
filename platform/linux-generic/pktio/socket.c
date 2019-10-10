@@ -10,41 +10,24 @@
 #include <sys/socket.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <linux/if_packet.h>
-#include <linux/filter.h>
-#include <ctype.h>
-#include <fcntl.h>
 #include <unistd.h>
-#include <bits/wordsize.h>
-#include <net/ethernet.h>
-#include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <stdint.h>
 #include <string.h>
 #include <net/if.h>
-#include <inttypes.h>
-#include <poll.h>
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <sys/syscall.h>
-#include <linux/ethtool.h>
-#include <linux/sockios.h>
 
 #include <odp_api.h>
 #include <odp_socket_common.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_packet_io_stats.h>
-#include <odp_align_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_errno_define.h>
 #include <odp_classification_internal.h>
-#include <odp/api/hints.h>
-
-#include <protocols/eth.h>
-#include <protocols/ip.h>
 
 typedef struct {
 	int sockfd; /**< socket descriptor */
