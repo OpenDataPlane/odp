@@ -883,36 +883,25 @@ int ipsec_suite_init(void)
 	return rc < 0 ? -1 : 0;
 }
 
-static int ipsec_suite_term(odp_testinfo_t *suite)
+static int ipsec_suite_term(void)
 {
-	int i;
-	int first = 1;
-
 	if (suite_context.pktio != ODP_PKTIO_INVALID)
 		pktio_stop(suite_context.pktio);
 
-	for (i = 0; suite[i].name; i++) {
-		if (suite[i].check_active &&
-		    suite[i].check_active() == ODP_TEST_INACTIVE) {
-			if (first) {
-				first = 0;
-				printf("\n\n  Inactive tests:\n");
-			}
-			printf("    %s\n", suite[i].name);
-		}
-	}
+	if (odp_cunit_print_inactive())
+		return -1;
 
 	return 0;
 }
 
 int ipsec_in_term(void)
 {
-	return ipsec_suite_term(ipsec_in_suite);
+	return ipsec_suite_term();
 }
 
 int ipsec_out_term(void)
 {
-	return ipsec_suite_term(ipsec_out_suite);
+	return ipsec_suite_term();
 }
 
 int ipsec_init(odp_instance_t *inst)
