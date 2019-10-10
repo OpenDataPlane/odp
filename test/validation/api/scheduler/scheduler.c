@@ -2135,6 +2135,9 @@ static int scheduler_suite_term(void)
 	if (odp_shm_free(shm) != 0)
 		fprintf(stderr, "error: failed to free shm\n");
 
+	if (odp_cunit_print_inactive())
+		return -1;
+
 	return 0;
 }
 
