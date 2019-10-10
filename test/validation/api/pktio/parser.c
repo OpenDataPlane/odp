@@ -577,6 +577,9 @@ int parser_suite_term(void)
 		ret = -1;
 	}
 
+	if (odp_cunit_print_inactive())
+		ret = -1;
+
 	return ret;
 }
 
