@@ -407,24 +407,25 @@ static int sock_recv_mq_tmo(pktio_entry_t *pktio_entry[], int index[],
 
 static inline uint32_t _tx_pkt_to_iovec(odp_packet_t pkt, struct iovec *iovecs)
 {
-	uint32_t pkt_len = odp_packet_len(pkt);
-	uint32_t offset = 0;
-	uint32_t iov_count = 0;
-	uint32_t seglen = 0;
+	odp_packet_seg_t seg;
+	int seg_count = odp_packet_num_segs(pkt);
+	int i;
 
-	while (offset < pkt_len) {
-		iovecs[iov_count].iov_base = odp_packet_offset(pkt, offset,
-				&seglen, NULL);
-		iovecs[iov_count].iov_len = seglen;
-		iov_count++;
-		offset += seglen;
+	if (odp_likely(seg_count == 1)) {
+		iovecs[0].iov_base = odp_packet_data(pkt);
+		iovecs[0].iov_len = odp_packet_len(pkt);
+		return 1;
 	}
-	return iov_count;
+
+	seg = odp_packet_first_seg(pkt);
+	for (i = 0; i < seg_count; i++) {
+		iovecs[i].iov_base = odp_packet_seg_data(pkt, seg);
+		iovecs[i].iov_len = odp_packet_seg_data_len(pkt, seg);
+		seg = odp_packet_next_seg(pkt, seg);
+	}
+	return i;
 }
 
-/*
- * ODP_PACKET_SOCKET_MMSG:
- */
 static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  const odp_packet_t pkt_table[], int num)
 {
@@ -432,19 +433,18 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	struct mmsghdr msgvec[num];
 	struct iovec iovecs[num][CONFIG_PACKET_MAX_SEGS];
 	int ret;
-	int sockfd;
-	int n, i;
+	int sockfd = pkt_sock->sockfd;
+	int i;
 
-	odp_ticketlock_lock(&pktio_entry->s.txl);
-
-	sockfd = pkt_sock->sockfd;
 	memset(msgvec, 0, sizeof(msgvec));
 
 	for (i = 0; i < num; i++) {
 		msgvec[i].msg_hdr.msg_iov = iovecs[i];
 		msgvec[i].msg_hdr.msg_iovlen = _tx_pkt_to_iovec(pkt_table[i],
-				iovecs[i]);
+								iovecs[i]);
 	}
+
+	odp_ticketlock_lock(&pktio_entry->s.txl);
 
 	for (i = 0; i < num; ) {
 		ret = sendmmsg(sockfd, &msgvec[i], num - i, MSG_DONTWAIT);
@@ -463,8 +463,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	odp_ticketlock_unlock(&pktio_entry->s.txl);
 
-	for (n = 0; n < i; ++n)
-		odp_packet_free(pkt_table[n]);
+	odp_packet_free_multi(pkt_table, i);
 
 	return i;
 }
