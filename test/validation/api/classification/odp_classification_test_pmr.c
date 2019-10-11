@@ -1285,7 +1285,7 @@ static void classification_test_pmr_term_eth_type_0(void)
 	odph_ethhdr_t *eth;
 	cls_packet_info_t pkt_info;
 
-	val = 0x88A8;
+	val = ODPH_ETHTYPE_IPV6;
 	mask = 0xffff;
 	seqno = 0;
 
@@ -1322,8 +1322,7 @@ static void classification_test_pmr_term_eth_type_0(void)
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt_info = default_pkt_info;
-	pkt_info.vlan = true;
-	pkt_info.vlan_qinq = true;
+	pkt_info.ipv6 = true;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
