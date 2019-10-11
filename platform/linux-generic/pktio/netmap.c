@@ -31,7 +31,6 @@
 #include <linux/ethtool.h>
 #include <linux/sockios.h>
 #include <odp_classification_datamodel.h>
-#include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
 #include <odp_libconfig_internal.h>
 
