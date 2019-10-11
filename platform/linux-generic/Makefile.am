@@ -90,7 +90,6 @@ noinst_HEADERS = \
 		  include/odp_bitset.h \
 		  include/odp_buffer_internal.h \
 		  include/odp_classification_datamodel.h \
-		  include/odp_classification_inlines.h \
 		  include/odp_classification_internal.h \
 		  include/odp_config_internal.h \
 		  include/odp_debug_internal.h \

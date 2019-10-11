@@ -34,7 +34,6 @@
 #include <odp_debug_internal.h>
 #include <odp_errno_define.h>
 #include <odp_classification_datamodel.h>
-#include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
 #include <odp/api/hints.h>
 #include <odp_global_data.h>
