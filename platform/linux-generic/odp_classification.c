@@ -1041,7 +1041,7 @@ static inline int verify_pmr_eth_type_0(const uint8_t *pkt_addr,
 	const _odp_ethhdr_t *eth;
 	uint16_t ethtype;
 
-	if (!pkt_hdr->p.input_flags.vlan_qinq)
+	if (!packet_hdr_has_eth(pkt_hdr))
 		return 0;
 
 	eth = (const _odp_ethhdr_t *)(pkt_addr + pkt_hdr->p.l2_offset);
