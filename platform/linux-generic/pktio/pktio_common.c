@@ -85,10 +85,8 @@ int sock_recv_mq_tmo_try_int_driven(const struct odp_pktin_queue_t queues[],
 			impl = entry[i]->s.ops->recv_mq_tmo;
 			impl_set = 1;
 		} else {
-			if (impl != entry[i]->s.ops->recv_mq_tmo) {
+			if (impl != entry[i]->s.ops->recv_mq_tmo)
 				impl = NULL;
-				break;
-			}
 		}
 	}
 
