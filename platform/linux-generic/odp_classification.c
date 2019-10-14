@@ -173,6 +173,7 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 	capability->supported_terms.bit.dip_addr = 1;
 	capability->supported_terms.bit.sip6_addr = 1;
 	capability->supported_terms.bit.dip6_addr = 1;
+	capability->supported_terms.bit.custom_frame = 1;
 	capability->random_early_detection = ODP_SUPPORT_NO;
 	capability->back_pressure = ODP_SUPPORT_NO;
 	capability->threshold_red.all_bits = 0;
