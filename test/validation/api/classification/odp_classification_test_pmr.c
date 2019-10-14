@@ -2037,6 +2037,147 @@ static void classification_test_pmr_term_tcp_dport_multi(void)
 	_classification_test_pmr_term_tcp_dport(SHM_PKT_NUM_BUFS / 4);
 }
 
+static void test_pmr_term_custom(int custom_l3)
+{
+	odp_packet_t pkt;
+	uint32_t seqno;
+	int retval;
+	odp_pktio_t pktio;
+	odp_queue_t queue;
+	odp_queue_t retqueue;
+	odp_queue_t default_queue;
+	odp_pool_t pool;
+	odp_pool_t default_pool;
+	odp_pmr_t pmr;
+	odp_cos_t cos;
+	odp_cos_t default_cos;
+	uint32_t dst_addr, src_addr;
+	uint32_t addr_be, mask_be;
+	uint32_t dst_mask, src_mask;
+	char cosname[ODP_QUEUE_NAME_LEN];
+	odp_pmr_param_t pmr_param;
+	odp_cls_cos_param_t cls_param;
+	odph_ipv4hdr_t *ip;
+	odph_ethhdr_t *eth;
+	const char *pmr_src_str = "10.0.8.0/24";
+	const char *pmr_dst_str = "10.0.9.0/24";
+	const char *pkt_src_str = "10.0.8.88/32";
+	const char *pkt_dst_str = "10.0.9.99/32";
+
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
+	retval = start_pktio(pktio);
+	CU_ASSERT(retval == 0);
+
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
+	queue = queue_create("ipv4 addr", true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	pool = pool_create("ipv4 addr");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	sprintf(cosname, "ipv4 addr");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	cos = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+
+	/* Match values for custom PRM rules are passed in network endian */
+	parse_ipv4_string(pmr_src_str, &src_addr, &src_mask);
+	parse_ipv4_string(pmr_dst_str, &dst_addr, &dst_mask);
+
+	odp_cls_pmr_param_init(&pmr_param);
+
+	if (custom_l3) {
+		addr_be = odp_cpu_to_be_32(dst_addr);
+		mask_be = odp_cpu_to_be_32(dst_mask);
+		pmr_param.term = ODP_PMR_CUSTOM_L3;
+		pmr_param.match.value = &addr_be;
+		pmr_param.match.mask = &mask_be;
+		pmr_param.val_sz = sizeof(addr_be);
+		/* Offset from start of L3 to IPv4 dst address */
+		pmr_param.offset = 16;
+	} else {
+		addr_be = odp_cpu_to_be_32(src_addr);
+		mask_be = odp_cpu_to_be_32(src_mask);
+		pmr_param.term = ODP_PMR_CUSTOM_FRAME;
+		pmr_param.match.value = &addr_be;
+		pmr_param.match.mask = &mask_be;
+		pmr_param.val_sz = sizeof(addr_be);
+		/* Offset from start of ethernet/IPv4 frame to IPv4
+		 * src address */
+		pmr_param.offset = 26;
+	}
+
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
+	CU_ASSERT_FATAL(pmr != ODP_PMR_INVALID);
+
+	/* IPv4 packet with matching addresses */
+	parse_ipv4_string(pkt_src_str, &src_addr, NULL);
+	parse_ipv4_string(pkt_dst_str, &dst_addr, NULL);
+	pkt = create_packet(default_pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
+	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
+	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
+	ip->src_addr = odp_cpu_to_be_32(src_addr);
+	ip->dst_addr = odp_cpu_to_be_32(dst_addr);
+	odph_ipv4_csum_update(pkt);
+
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	CU_ASSERT(retqueue == queue);
+	odp_packet_free(pkt);
+
+	/* Other packets delivered to default queue */
+	pkt = create_packet(default_pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
+	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	CU_ASSERT(retqueue == default_queue);
+
+	odp_cos_destroy(cos);
+	odp_cos_destroy(default_cos);
+	odp_cls_pmr_destroy(pmr);
+	odp_packet_free(pkt);
+	stop_pktio(pktio);
+	odp_pool_destroy(default_pool);
+	odp_pool_destroy(pool);
+	odp_queue_destroy(queue);
+	odp_queue_destroy(default_queue);
+	odp_pktio_close(pktio);
+}
+
+static void classification_test_pmr_term_custom_frame(void)
+{
+	test_pmr_term_custom(0);
+}
+
+static void classification_test_pmr_term_custom_l3(void)
+{
+	test_pmr_term_custom(1);
+}
+
 static int check_capa_tcp_dport(void)
 {
 	return cls_capa.supported_terms.bit.tcp_dport;
@@ -2112,6 +2253,16 @@ static int check_capa_ethtype_x(void)
 	return cls_capa.supported_terms.bit.ethtype_x;
 }
 
+static int check_capa_custom_frame(void)
+{
+	return cls_capa.supported_terms.bit.custom_frame;
+}
+
+static int check_capa_custom_l3(void)
+{
+	return cls_capa.supported_terms.bit.custom_l3;
+}
+
 odp_testinfo_t classification_suite_pmr[] = {
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_tcp_dport,
 				  check_capa_tcp_dport),
@@ -2145,6 +2296,10 @@ odp_testinfo_t classification_suite_pmr[] = {
 				  check_capa_ethtype_0),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_eth_type_x,
 				  check_capa_ethtype_x),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_custom_frame,
+				  check_capa_custom_frame),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_custom_l3,
+				  check_capa_custom_l3),
 	ODP_TEST_INFO(classification_test_pktin_classifier_flag),
 	ODP_TEST_INFO(classification_test_pmr_term_tcp_dport_multi),
 	ODP_TEST_INFO_NULL,
