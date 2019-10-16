@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -9,6 +10,7 @@
 #include <getopt.h>
 #include <unistd.h>
 #include <inttypes.h>
+#include <signal.h>
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
@@ -74,12 +76,16 @@ typedef struct {
 	uint32_t time;		/**< Number of seconds to run */
 	char *if_name;		/**< pointer to interface names */
 	int shutdown;		/**< Shutdown threads if !0 */
+	int shutdown_sig;
+	int verbose;
 } appl_args_t;
 
 enum packet_mode {
 	APPL_MODE_DROP,		/**< Packet is dropped */
 	APPL_MODE_REPLY		/**< Packet is sent back */
 };
+
+static appl_args_t *appl_args_gbl;
 
 /* helper funcs */
 static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len);
@@ -93,8 +99,7 @@ static int convert_str_to_pmr_enum(char *token, odp_cls_pmr_term_t *term,
 				   uint32_t *offset);
 static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg);
 
-static inline
-void print_cls_statistics(appl_args_t *args)
+static inline void print_cls_statistics(appl_args_t *args)
 {
 	int i;
 	uint32_t timeout;
@@ -153,6 +158,9 @@ void print_cls_statistics(appl_args_t *args)
 		printf("%-" PRIu64, odp_atomic_load_u64(&args->
 							total_packets));
 
+		if (args->shutdown_sig)
+			break;
+
 		sleep(1);
 		printf("\r");
 		fflush(stdout);
@@ -161,8 +169,7 @@ void print_cls_statistics(appl_args_t *args)
 	printf("\n");
 }
 
-static inline
-int parse_mask(const char *str, uint64_t *mask)
+static inline int parse_mask(const char *str, uint64_t *mask)
 {
 	uint64_t b;
 	int ret;
@@ -172,8 +179,7 @@ int parse_mask(const char *str, uint64_t *mask)
 	return ret != 1;
 }
 
-static
-int parse_value(const char *str, uint64_t *val, uint32_t *val_sz)
+static int parse_value(const char *str, uint64_t *val, uint32_t *val_sz)
 {
 	size_t len;
 	size_t i;
@@ -260,12 +266,13 @@ static int pktio_receive_thread(void *arg)
 	odp_packet_t pkt;
 	odp_pool_t pool;
 	odp_event_t ev;
-	unsigned long err_cnt = 0;
 	odp_queue_t queue;
 	int i;
+	global_statistics *stats;
+	unsigned long err_cnt = 0;
 	thr = odp_thread_id();
 	appl_args_t *appl = (appl_args_t *)arg;
-	global_statistics *stats;
+	uint64_t wait_time = odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS);
 
 	/* Loop packets */
 	for (;;) {
@@ -275,14 +282,26 @@ static int pktio_receive_thread(void *arg)
 			break;
 
 		/* Use schedule to get buf from any input queue */
-		ev = odp_schedule(&queue,
-				  odp_schedule_wait_time(ODP_TIME_SEC_IN_NS));
+		ev = odp_schedule(&queue, wait_time);
 
 		/* Loop back to receive packets incase of invalid event */
 		if (odp_unlikely(ev == ODP_EVENT_INVALID))
 			continue;
 
 		pkt = odp_packet_from_event(ev);
+
+		if (appl->verbose) {
+			odp_queue_info_t info;
+			uint32_t len = odp_packet_len(pkt);
+
+			if (odp_queue_info(queue, &info) == 0)
+				printf("Queue: %s\n", info.name);
+
+			if (len > 96)
+				len = 96;
+
+			odp_packet_print_data(pkt, 0, len);
+		}
 
 		/* Total packets received */
 		odp_atomic_inc_u64(&appl->total_packets);
@@ -394,8 +413,8 @@ static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 {
 	char cos_name[ODP_COS_NAME_LEN];
-	char queue_name[ODP_QUEUE_NAME_LEN];
 	char pool_name[ODP_POOL_NAME_LEN];
+	const char *queue_name;
 	odp_pool_param_t pool_params;
 	odp_cls_cos_param_t cls_param;
 	odp_pmr_param_t pmr_param;
@@ -412,8 +431,7 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 		qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 		qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
-		snprintf(queue_name, sizeof(queue_name), "%sQueue%d",
-			 args->stats[i].cos_name, i);
+		queue_name = args->stats[i].cos_name;
 		stats->queue = odp_queue_create(queue_name, &qparam);
 		if (ODP_QUEUE_INVALID == stats->queue) {
 			ODPH_ERR("odp_queue_create failed\n");
@@ -463,6 +481,15 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 	}
 }
 
+static void sig_handler(int signo)
+{
+	(void)signo;
+
+	if (appl_args_gbl == NULL)
+		return;
+	appl_args_gbl->shutdown_sig = 1;
+}
+
 /**
  * ODP Classifier example main function
  */
@@ -485,6 +512,8 @@ int main(int argc, char *argv[])
 	odp_init_t init_param;
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param;
+
+	signal(SIGINT, sig_handler);
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
@@ -524,6 +553,7 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	appl_args_gbl = args;
 	memset(args, 0, sizeof(*args));
 	/* Parse and store the application arguments */
 	parse_args(argc, argv, args);
@@ -591,7 +621,18 @@ int main(int argc, char *argv[])
 
 	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
 
-	print_cls_statistics(args);
+	if (args->verbose == 0) {
+		print_cls_statistics(args);
+	} else {
+		int timeout = args->time;
+
+		for (i = 0; timeout == 0 || i < timeout; i++) {
+			if (args->shutdown_sig)
+				break;
+
+			sleep(1);
+		}
+	}
 
 	odp_pktio_stop(pktio);
 	args->shutdown = 1;
@@ -714,7 +755,6 @@ static int convert_str_to_pmr_enum(char *token, odp_cls_pmr_term_t *term,
 	return -1;
 }
 
-
 static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 {
 	int policy_count;
@@ -813,17 +853,19 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 	static const struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
-		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
-		{"policy", required_argument, NULL, 'p'},	/* return 'p' */
-		{"mode", required_argument, NULL, 'm'},		/* return 'm' */
-		{"time", required_argument, NULL, 't'},		/* return 't' */
-		{"help", no_argument, NULL, 'h'},		/* return 'h' */
+		{"interface", required_argument, NULL, 'i'},
+		{"policy", required_argument, NULL, 'p'},
+		{"mode", required_argument, NULL, 'm'},
+		{"time", required_argument, NULL, 't'},
+		{"verbose", no_argument, NULL, 'v'},
+		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:i:p:m:t:h";
+	static const char *shortopts = "+c:t:i:p:m:t:vh";
 
 	appl_args->cpu_count = 1; /* Use one worker by default */
+	appl_args->verbose = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts,
@@ -861,11 +903,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			strcpy(appl_args->if_name, optarg);
 			interface = 1;
 			break;
-
-		case 'h':
-			usage(argv[0]);
-			exit(EXIT_SUCCESS);
-			break;
 		case 'm':
 			i = atoi(optarg);
 			if (i == 0)
@@ -873,7 +910,13 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			else
 				appl_args->appl_mode = APPL_MODE_REPLY;
 			break;
-
+		case 'v':
+			appl_args->verbose = 1;
+			break;
+		case 'h':
+			usage(argv[0]);
+			exit(EXIT_SUCCESS);
+			break;
 		default:
 			break;
 		}
