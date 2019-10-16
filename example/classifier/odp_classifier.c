@@ -56,6 +56,7 @@ typedef struct {
 	odp_atomic_u64_t queue_pkt_count; /**< count of received packets */
 	odp_atomic_u64_t pool_pkt_count; /**< count of received packets */
 	char cos_name[ODP_COS_NAME_LEN];	/**< cos name */
+	char src_cos_name[ODP_COS_NAME_LEN];	/**< source cos name */
 	struct {
 		odp_cls_pmr_term_t term;	/**< odp pmr term value */
 		uint64_t val;	/**< pmr term value */
@@ -65,6 +66,8 @@ typedef struct {
 	} rule;
 	char value[DISPLAY_STRING_LEN];	/**< Display string for value */
 	char mask[DISPLAY_STRING_LEN];	/**< Display string for mask */
+	int has_src_cos;
+
 } global_statistics;
 
 typedef struct {
@@ -87,17 +90,11 @@ enum packet_mode {
 
 static appl_args_t *appl_args_gbl;
 
-/* helper funcs */
 static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len);
 static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len);
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
-static void configure_cos(odp_cos_t default_cos, appl_args_t *args);
-static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args);
-static int convert_str_to_pmr_enum(char *token, odp_cls_pmr_term_t *term,
-				   uint32_t *offset);
-static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg);
 
 static inline void print_cls_statistics(appl_args_t *args)
 {
@@ -410,6 +407,23 @@ static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 	return cos_default;
 }
 
+static int find_cos(appl_args_t *args, const char *name, odp_cos_t *cos)
+{
+	global_statistics *stats;
+	int i;
+
+	for (i = 0; i < args->policy_count - 1; i++) {
+		stats = &args->stats[i];
+
+		if (strcmp(stats->cos_name, name) == 0) {
+			*cos = stats->cos;
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
 static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 {
 	char cos_name[ODP_COS_NAME_LEN];
@@ -417,7 +431,6 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 	const char *queue_name;
 	odp_pool_param_t pool_params;
 	odp_cls_cos_param_t cls_param;
-	odp_pmr_param_t pmr_param;
 	int i;
 	global_statistics *stats;
 	odp_queue_param_t qparam;
@@ -462,6 +475,23 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 		cls_param.drop_policy = ODP_COS_DROP_POOL;
 		stats->cos = odp_cls_cos_create(cos_name, &cls_param);
 
+		odp_atomic_init_u64(&stats->queue_pkt_count, 0);
+		odp_atomic_init_u64(&stats->pool_pkt_count, 0);
+	}
+
+	for (i = 0; i < args->policy_count - 1; i++) {
+		odp_pmr_param_t pmr_param;
+		odp_cos_t src_cos = default_cos;
+
+		stats = &args->stats[i];
+
+		if (stats->has_src_cos) {
+			if (find_cos(args, stats->src_cos_name, &src_cos)) {
+				ODPH_ERR("find_cos failed\n");
+				exit(EXIT_FAILURE);
+			}
+		}
+
 		odp_cls_pmr_param_init(&pmr_param);
 		pmr_param.term = stats->rule.term;
 		pmr_param.match.value = &stats->rule.val;
@@ -469,16 +499,14 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 		pmr_param.val_sz = stats->rule.val_sz;
 		pmr_param.offset = stats->rule.offset;
 
-		stats->pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos,
+		stats->pmr = odp_cls_pmr_create(&pmr_param, 1, src_cos,
 						stats->cos);
 		if (stats->pmr == ODP_PMR_INVALID) {
 			ODPH_ERR("odp_pktio_pmr_cos failed\n");
 			exit(EXIT_FAILURE);
 		}
-
-		odp_atomic_init_u64(&stats->queue_pkt_count, 0);
-		odp_atomic_init_u64(&stats->pool_pkt_count, 0);
 	}
+
 }
 
 static void sig_handler(int signo)
@@ -735,30 +763,26 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 	}
 }
 
-static int convert_str_to_pmr_enum(char *token, odp_cls_pmr_term_t *term,
-				   uint32_t *offset)
+static int convert_str_to_pmr_enum(char *token, odp_cls_pmr_term_t *term)
 {
 	if (NULL == token)
 		return -1;
 
-	if (0 == strcasecmp(token, "ODP_PMR_SIP_ADDR")) {
+	if (strcasecmp(token, "ODP_PMR_SIP_ADDR") == 0) {
 		*term = ODP_PMR_SIP_ADDR;
 		return 0;
-	} else {
-		errno = 0;
-		*offset = strtoul(token, NULL, 0);
-		if (errno)
-			return -1;
+	} else if (strcasecmp(token, "ODP_PMR_CUSTOM_FRAME") == 0) {
 		*term = ODP_PMR_CUSTOM_FRAME;
 		return 0;
 	}
+
 	return -1;
 }
 
 static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 {
 	int policy_count;
-	char *token;
+	char *token, *cos0, *cos1;
 	size_t len;
 	odp_cls_pmr_term_t term;
 	global_statistics *stats;
@@ -781,8 +805,9 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 	strcpy(pmr_str, optarg);
 
 	/* PMR TERM */
+	/* <term>:<xxx>:<yyy>:<src_cos>:<dst_cos> */
 	token = strtok(pmr_str, ":");
-	if (convert_str_to_pmr_enum(token, &term, &offset)) {
+	if (convert_str_to_pmr_enum(token, &term)) {
 		ODPH_ERR("Invalid ODP_PMR_TERM string\n");
 		exit(EXIT_FAILURE);
 	}
@@ -791,6 +816,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 	/* PMR value */
 	switch (term)	{
 	case ODP_PMR_SIP_ADDR:
+		/* :<IP addr>:<mask> */
 		token = strtok(NULL, ":");
 		strncpy(stats[policy_count].value, token,
 			DISPLAY_STRING_LEN - 1);
@@ -810,6 +836,13 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 		stats[policy_count].rule.offset = 0;
 	break;
 	case ODP_PMR_CUSTOM_FRAME:
+		/* :<offset>:<value>:<mask> */
+		token = strtok(NULL, ":");
+		errno = 0;
+		offset = strtoul(token, NULL, 0);
+		if (errno)
+			return -1;
+
 		token = strtok(NULL, ":");
 		strncpy(stats[policy_count].value, token,
 			DISPLAY_STRING_LEN - 1);
@@ -826,10 +859,24 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 		exit(EXIT_FAILURE);
 	}
 
-	/* Queue Name */
-	token = strtok(NULL, ":");
+	/* Optional source CoS name and name of this CoS
+	 * :<src_cos>:<cos> */
+	cos0 = strtok(NULL, ":");
+	cos1 = strtok(NULL, ":");
+	if (cos0 == NULL)
+		return -1;
 
-	strncpy(stats[policy_count].cos_name, token, ODP_QUEUE_NAME_LEN - 1);
+	if (cos1) {
+		stats[policy_count].has_src_cos = 1;
+		strncpy(stats[policy_count].src_cos_name, cos0,
+			ODP_COS_NAME_LEN - 1);
+		strncpy(stats[policy_count].cos_name, cos1,
+			ODP_COS_NAME_LEN - 1);
+	} else {
+		strncpy(stats[policy_count].cos_name, cos0,
+			ODP_COS_NAME_LEN - 1);
+	}
+
 	appl_args->policy_count++;
 	free(pmr_str);
 	return 0;
