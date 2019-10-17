@@ -768,7 +768,10 @@ static int convert_str_to_pmr_enum(char *token, odp_cls_pmr_term_t *term)
 	if (NULL == token)
 		return -1;
 
-	if (strcasecmp(token, "ODP_PMR_SIP_ADDR") == 0) {
+	if (strcasecmp(token, "ODP_PMR_ETHTYPE_0") == 0) {
+		*term = ODP_PMR_ETHTYPE_0;
+		return 0;
+	} else if (strcasecmp(token, "ODP_PMR_SIP_ADDR") == 0) {
 		*term = ODP_PMR_SIP_ADDR;
 		return 0;
 	} else if (strcasecmp(token, "ODP_PMR_CUSTOM_FRAME") == 0) {
@@ -789,6 +792,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 	char *pmr_str;
 	uint32_t offset;
 	uint32_t ip_addr;
+	unsigned long int value;
 
 	policy_count = appl_args->policy_count;
 	stats = appl_args->stats;
@@ -812,9 +816,24 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 		exit(EXIT_FAILURE);
 	}
 	stats[policy_count].rule.term = term;
+	stats[policy_count].rule.offset = 0;
 
 	/* PMR value */
-	switch (term)	{
+	switch (term) {
+	case ODP_PMR_ETHTYPE_0:
+		/* :<type>:<mask> */
+		token = strtok(NULL, ":");
+		strncpy(stats[policy_count].value, token,
+			DISPLAY_STRING_LEN - 1);
+		value = strtoul(token, NULL, 0);
+		stats[policy_count].rule.val = value;
+
+		token = strtok(NULL, ":");
+		strncpy(stats[policy_count].mask, token,
+			DISPLAY_STRING_LEN - 1);
+		parse_mask(token, &stats[policy_count].rule.mask);
+		stats[policy_count].rule.val_sz = 2;
+	break;
 	case ODP_PMR_SIP_ADDR:
 		/* :<IP addr>:<mask> */
 		token = strtok(NULL, ":");
@@ -833,7 +852,6 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 			DISPLAY_STRING_LEN - 1);
 		parse_mask(token, &stats[policy_count].rule.mask);
 		stats[policy_count].rule.val_sz = 4;
-		stats[policy_count].rule.offset = 0;
 	break;
 	case ODP_PMR_CUSTOM_FRAME:
 		/* :<offset>:<value>:<mask> */
