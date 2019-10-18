@@ -771,6 +771,9 @@ static int convert_str_to_pmr_enum(char *token, odp_cls_pmr_term_t *term)
 	if (strcasecmp(token, "ODP_PMR_ETHTYPE_0") == 0) {
 		*term = ODP_PMR_ETHTYPE_0;
 		return 0;
+	} else if (strcasecmp(token, "ODP_PMR_VLAN_ID_0") == 0) {
+		*term = ODP_PMR_VLAN_ID_0;
+		return 0;
 	} else if (strcasecmp(token, "ODP_PMR_SIP_ADDR") == 0) {
 		*term = ODP_PMR_SIP_ADDR;
 		return 0;
@@ -822,6 +825,9 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 	switch (term) {
 	case ODP_PMR_ETHTYPE_0:
 		/* :<type>:<mask> */
+		/* Fall through */
+	case ODP_PMR_VLAN_ID_0:
+		/* :<vlan_id>:<mask> */
 		token = strtok(NULL, ":");
 		strncpy(stats[policy_count].value, token,
 			DISPLAY_STRING_LEN - 1);
