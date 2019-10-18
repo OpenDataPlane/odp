@@ -294,6 +294,9 @@ AC_ARG_ENABLE([static-applications],
 			      [disable static linking of examples and tests]
 			      [ with ODP])], [],
 	      [enable_static_applications=yes])
+AS_IF([test "x$enable_static" != "xno" -a "x$enable_static_applications" != "xno"],
+      [enable_static_applications=yes], [enable_static_applications=no])
+
 AM_CONDITIONAL([STATIC_APPS], [test "x$enable_static_applications" != "xno"])
 if test "x$DPDK_SHARED" = "xyes" -a "x$enable_static_applications" != "xno" ;
 then
