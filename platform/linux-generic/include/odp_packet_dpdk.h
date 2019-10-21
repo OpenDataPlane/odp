@@ -16,6 +16,15 @@
 
 struct rte_mbuf;
 
+/* Flags for pkt_dpdk_t.supported_ptypes */
+#define PTYPE_VLAN      0x01
+#define PTYPE_VLAN_QINQ 0x02
+#define PTYPE_ARP       0x04
+#define PTYPE_IPV4      0x08
+#define PTYPE_IPV6      0x10
+#define PTYPE_UDP       0x20
+#define PTYPE_TCP       0x40
+
 /**
  * Calculate size of zero-copy DPDK packet pool object
  */
@@ -33,11 +42,13 @@ int _odp_dpdk_packet_parse_common(packet_parser_t *pkt_hdr,
 				  uint32_t seg_len,
 				  struct rte_mbuf *mbuf,
 				  int layer,
+				  uint32_t supported_ptypes,
 				  odp_pktin_config_opt_t pktin_cfg);
 
 static inline int _odp_dpdk_packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
 					       struct rte_mbuf *mbuf,
 					       odp_pktio_parser_layer_t layer,
+					       uint32_t supported_ptypes,
 					       odp_pktin_config_opt_t pktin_cfg)
 {
 	uint32_t seg_len = pkt_hdr->buf_hdr.seg[0].len;
@@ -45,6 +56,7 @@ static inline int _odp_dpdk_packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
 
 	return _odp_dpdk_packet_parse_common(&pkt_hdr->p, base,
 					     pkt_hdr->frame_len, seg_len, mbuf,
-					     layer, pktin_cfg);
+					     layer, supported_ptypes,
+					     pktin_cfg);
 }
 #endif

@@ -27,14 +27,18 @@
 static inline uint16_t dpdk_parse_eth(packet_parser_t *prs,
 				      const uint8_t **parseptr,
 				      uint32_t *offset, uint32_t frame_len,
-				      uint32_t mbuf_packet_type)
+				      uint32_t mbuf_packet_type,
+				      uint32_t supported_ptypes)
 {
 	uint16_t ethtype;
 	const _odp_ethhdr_t *eth;
 	uint16_t macaddr0, macaddr2, macaddr4;
 	const _odp_vlanhdr_t *vlan;
 	_odp_packet_input_flags_t input_flags;
-	uint32_t l2_packet_type;
+	uint32_t l2_ptype;
+	int vlan_supported = supported_ptypes & PTYPE_VLAN;
+	int qinq_supported = supported_ptypes & PTYPE_VLAN_QINQ;
+	int arp_supported  = supported_ptypes & PTYPE_ARP;
 
 	input_flags.all = 0;
 	input_flags.l2  = 1;
@@ -64,22 +68,19 @@ static inline uint16_t dpdk_parse_eth(packet_parser_t *prs,
 	}
 
 	/* Get Ethertype */
-	l2_packet_type = mbuf_packet_type & RTE_PTYPE_L2_MASK;
-	switch (l2_packet_type) {
-	case RTE_PTYPE_L2_ETHER:
-		if (RTE_ETH_IS_IPV4_HDR(mbuf_packet_type))
-			ethtype = _ODP_ETHTYPE_IPV4;
-		else if (RTE_ETH_IS_IPV6_HDR(mbuf_packet_type))
-			ethtype = _ODP_ETHTYPE_IPV6;
-		else
-			ethtype = odp_be_to_cpu_16(eth->type);
-		break;
-	case RTE_PTYPE_L2_ETHER_VLAN:
+	l2_ptype = mbuf_packet_type & RTE_PTYPE_L2_MASK;
+
+	/* RTE_PTYPE_L2_ETHER type cannot be trusted when some L2 types are
+	 * not supported. E.g. if VLAN is not supported, both VLAN and non-VLAN
+	 * packets are marked as RTE_PTYPE_L2_ETHER. */
+	ethtype = odp_be_to_cpu_16(eth->type);
+
+	if (vlan_supported && l2_ptype == RTE_PTYPE_L2_ETHER_VLAN)
 		ethtype = _ODP_ETHTYPE_VLAN;
-		break;
-	default:
-		ethtype = odp_be_to_cpu_16(eth->type);
-	}
+	else if (qinq_supported && l2_ptype == RTE_PTYPE_L2_ETHER_QINQ)
+		ethtype = _ODP_ETHTYPE_VLAN_OUTER;
+	else if (arp_supported && l2_ptype == RTE_PTYPE_L2_ETHER_ARP)
+		ethtype = _ODP_ETHTYPE_ARP;
 
 	*offset += sizeof(*eth);
 	*parseptr += sizeof(*eth);
@@ -460,6 +461,7 @@ int dpdk_packet_parse_common_l3_l4(packet_parser_t *prs,
 int _odp_dpdk_packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 				  uint32_t frame_len, uint32_t seg_len,
 				  struct rte_mbuf *mbuf, int layer,
+				  uint32_t supported_ptype,
 				  odp_pktin_config_opt_t pktin_cfg)
 {
 	uint32_t offset;
@@ -481,7 +483,7 @@ int _odp_dpdk_packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 	prs->l2_offset = offset;
 
 	ethtype = dpdk_parse_eth(prs, &parseptr, &offset, frame_len,
-				 mbuf_packet_type);
+				 mbuf_packet_type, supported_ptype);
 
 	return dpdk_packet_parse_common_l3_l4(prs, parseptr, offset, frame_len,
 					      seg_len, layer, ethtype,
