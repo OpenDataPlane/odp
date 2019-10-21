@@ -487,6 +487,13 @@ static int term_local(enum init_stage stage)
 		}
 		/* Fall through */
 
+	case TIMER_INIT:
+		if (_odp_timer_term_local()) {
+			ODP_ERR("ODP timer local term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
 	case THREAD_INIT:
 		rc_thd = _odp_thread_term_local();
 		if (rc_thd < 0) {
@@ -538,6 +545,12 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 		goto init_fail;
 	}
 	stage = PKTIO_INIT;
+
+	if (_odp_timer_init_local()) {
+		ODP_ERR("ODP timer local init failed.\n");
+		goto init_fail;
+	}
+	stage = TIMER_INIT;
 
 	if (_odp_random_init_local()) {
 		ODP_ERR("ODP random local init failed.\n");
