@@ -113,6 +113,8 @@ typedef struct ODP_ALIGNED_CACHE {
 	uint32_t data_room;		  /**< maximum packet length */
 	unsigned int min_rx_burst;		  /**< minimum RX burst size */
 	odp_pktin_hash_proto_t hash;	  /**< Packet input hash protocol */
+	/* Supported RTE_PTYPE_XXX flags in a mask */
+	uint32_t supported_ptypes;
 	uint16_t mtu;			  /**< maximum transmission unit */
 	uint16_t port_id;		  /**< DPDK port identifier */
 	/** Use system call to get/set vdev promisc mode */
@@ -533,15 +535,16 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	struct rte_mbuf *mbuf;
 	void *data;
 	int i, j;
-	int nb_pkts = 0;
 	int alloc_len, num;
-	odp_pool_t pool = pkt_priv(pktio_entry)->pool;
+	int nb_pkts = 0;
+	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
+	odp_pool_t pool = pkt_dpdk->pool;
 	odp_pktin_config_opt_t pktin_cfg = pktio_entry->s.config.pktin;
 	odp_proto_layer_t parse_layer = pktio_entry->s.config.parser.layer;
 	odp_pktio_t input = pktio_entry->s.handle;
 
 	/* Allocate maximum sized packets */
-	alloc_len = pkt_priv(pktio_entry)->data_room;
+	alloc_len = pkt_dpdk->data_room;
 
 	num = packet_alloc_multi(pool, alloc_len, pkt_table, mbuf_num);
 	if (num != mbuf_num) {
@@ -566,12 +569,15 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		pkt_len = rte_pktmbuf_pkt_len(mbuf);
 
 		if (pktio_cls_enabled(pktio_entry)) {
+			uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
+
 			packet_parse_reset(&parsed_hdr);
 			packet_set_len(&parsed_hdr, pkt_len);
 			if (_odp_dpdk_packet_parse_common(&parsed_hdr.p, data,
 							  pkt_len, pkt_len,
 							  mbuf,
 							  ODP_PROTO_LAYER_ALL,
+							  supported_ptypes,
 							  pktin_cfg)) {
 				odp_packet_free(pkt_table[i]);
 				rte_pktmbuf_free(mbuf);
@@ -593,16 +599,20 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 
 		pkt_hdr->input = input;
 
-		if (pktio_cls_enabled(pktio_entry))
+		if (pktio_cls_enabled(pktio_entry)) {
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
-		else if (parse_layer != ODP_PROTO_LAYER_NONE)
+		} else if (parse_layer != ODP_PROTO_LAYER_NONE) {
+			uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
+
 			if (_odp_dpdk_packet_parse_layer(pkt_hdr, mbuf,
 							 parse_layer,
+							 supported_ptypes,
 							 pktin_cfg)) {
 				odp_packet_free(pkt);
 				rte_pktmbuf_free(mbuf);
 				continue;
 			}
+		}
 
 		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
 			packet_set_flow_hash(pkt_hdr, mbuf->hash.rss);
@@ -808,11 +818,13 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 	odp_pktin_config_opt_t pktin_cfg;
 	odp_proto_layer_t parse_layer;
 	odp_pktio_t input;
+	pkt_dpdk_t *pkt_dpdk;
 
 	prefetch_pkt(mbuf_table[0]);
 
+	pkt_dpdk = pkt_priv(pktio_entry);
 	nb_pkts = 0;
-	pool = pkt_priv(pktio_entry)->pool;
+	pool = pkt_dpdk->pool;
 	pktin_cfg = pktio_entry->s.config.pktin;
 	parse_layer = pktio_entry->s.config.parser.layer;
 	input = pktio_entry->s.handle;
@@ -839,12 +851,15 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		pkt_hdr = pkt_hdr_from_mbuf(mbuf);
 
 		if (pktio_cls_enabled(pktio_entry)) {
+			uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
+
 			packet_parse_reset(&parsed_hdr);
 			packet_set_len(&parsed_hdr, pkt_len);
 			if (_odp_dpdk_packet_parse_common(&parsed_hdr.p, data,
 							  pkt_len, pkt_len,
 							  mbuf,
 							  ODP_PROTO_LAYER_ALL,
+							  supported_ptypes,
 							  pktin_cfg)) {
 				rte_pktmbuf_free(mbuf);
 				continue;
@@ -866,15 +881,19 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		packet_init(pkt_hdr, pkt_len);
 		pkt_hdr->input = input;
 
-		if (pktio_cls_enabled(pktio_entry))
+		if (pktio_cls_enabled(pktio_entry)) {
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
-		else if (parse_layer != ODP_PROTO_LAYER_NONE)
+		} else if (parse_layer != ODP_PROTO_LAYER_NONE) {
+			uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
+
 			if (_odp_dpdk_packet_parse_layer(pkt_hdr, mbuf,
 							 parse_layer,
+							 supported_ptypes,
 							 pktin_cfg)) {
 				rte_pktmbuf_free(mbuf);
 				continue;
 			}
+		}
 
 		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
 			packet_set_flow_hash(pkt_hdr, mbuf->hash.rss);
@@ -1696,6 +1715,49 @@ static int dpdk_setup_eth_rx(const pktio_entry_t *pktio_entry,
 	return 0;
 }
 
+static void dpdk_ptype_support_set(pktio_entry_t *pktio_entry, uint16_t port_id)
+{
+	int max_num, num, i;
+	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
+	uint32_t mask = RTE_PTYPE_L2_MASK | RTE_PTYPE_L3_MASK |
+			RTE_PTYPE_L4_MASK;
+
+	pkt_dpdk->supported_ptypes = 0;
+
+	max_num = rte_eth_dev_get_supported_ptypes(port_id, mask, NULL, 0);
+	if (max_num <= 0) {
+		ODP_ERR("Device does not support any ptype flags\n");
+		return;
+	}
+
+	uint32_t ptype[max_num];
+
+	num = rte_eth_dev_get_supported_ptypes(port_id, mask, ptype, max_num);
+	if (num <= 0) {
+		ODP_ERR("Device does not support any ptype flags\n");
+		return;
+	}
+
+	for (i = 0; i < num; i++) {
+		ODP_DBG("  supported ptype: 0x%x\n", ptype[i]);
+
+		if (ptype[i] == RTE_PTYPE_L2_ETHER_VLAN)
+			pkt_dpdk->supported_ptypes |= PTYPE_VLAN;
+		else if (ptype[i] == RTE_PTYPE_L2_ETHER_QINQ)
+			pkt_dpdk->supported_ptypes |= PTYPE_VLAN_QINQ;
+		else if (ptype[i] == RTE_PTYPE_L2_ETHER_ARP)
+			pkt_dpdk->supported_ptypes |= PTYPE_ARP;
+		else if (RTE_ETH_IS_IPV4_HDR(ptype[i]))
+			pkt_dpdk->supported_ptypes |= PTYPE_IPV4;
+		else if (RTE_ETH_IS_IPV6_HDR(ptype[i]))
+			pkt_dpdk->supported_ptypes |= PTYPE_IPV6;
+		else if (ptype[i] == RTE_PTYPE_L4_UDP)
+			pkt_dpdk->supported_ptypes |= PTYPE_UDP;
+		else if (ptype[i] == RTE_PTYPE_L4_TCP)
+			pkt_dpdk->supported_ptypes |= PTYPE_TCP;
+	}
+}
+
 static int dpdk_start(pktio_entry_t *pktio_entry)
 {
 	struct rte_eth_dev_info dev_info;
@@ -1732,6 +1794,9 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 			ret, port_id);
 		return -1;
 	}
+
+	/* Record supported parser ptype flags */
+	dpdk_ptype_support_set(pktio_entry, port_id);
 
 	return 0;
 }
