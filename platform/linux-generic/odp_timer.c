@@ -1542,3 +1542,13 @@ int _odp_timer_term_global(void)
 
 	return 0;
 }
+
+int _odp_timer_init_local(void)
+{
+	return 0;
+}
+
+int _odp_timer_term_local(void)
+{
+	return 0;
+}

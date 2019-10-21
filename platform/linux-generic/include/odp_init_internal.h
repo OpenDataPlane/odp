@@ -61,7 +61,9 @@ int _odp_comp_init_global(void);
 int _odp_comp_term_global(void);
 
 int _odp_timer_init_global(const odp_init_t *params);
+int _odp_timer_init_local(void);
 int _odp_timer_term_global(void);
+int _odp_timer_term_local(void);
 
 int _odp_time_init_global(void);
 int _odp_time_term_global(void);
