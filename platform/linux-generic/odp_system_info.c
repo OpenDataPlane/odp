@@ -334,7 +334,7 @@ static int system_hp(hugepage_info_t *hugeinfo)
 /*
  * System info initialisation
  */
-int odp_system_info_init(void)
+int _odp_system_info_init(void)
 {
 	int i;
 	FILE  *file;
@@ -374,7 +374,7 @@ int odp_system_info_init(void)
 /*
  * System info termination
  */
-int odp_system_info_term(void)
+int _odp_system_info_term(void)
 {
 	free(odp_global_ro.hugepage_info.default_huge_page_dir);
 

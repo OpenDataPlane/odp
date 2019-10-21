@@ -1464,7 +1464,7 @@ void odp_timeout_free(odp_timeout_t tmo)
 	odp_buffer_free(odp_buffer_from_event(ev));
 }
 
-int odp_timer_init_global(const odp_init_t *params)
+int _odp_timer_init_global(const odp_init_t *params)
 {
 	odp_shm_t shm;
 	const char *conf_str;
@@ -1533,7 +1533,7 @@ int odp_timer_init_global(const odp_init_t *params)
 	return 0;
 }
 
-int odp_timer_term_global(void)
+int _odp_timer_term_global(void)
 {
 	if (timer_global && odp_shm_free(timer_global->shm)) {
 		ODP_ERR("Shm free failed for odp_timer\n");

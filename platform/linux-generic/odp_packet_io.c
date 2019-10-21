@@ -58,7 +58,7 @@ static inline pktio_entry_t *pktio_entry_by_index(int index)
 	return pktio_entry_ptr[index];
 }
 
-int odp_pktio_init_global(void)
+int _odp_pktio_init_global(void)
 {
 	pktio_entry_t *pktio_entry;
 	int i;
@@ -107,7 +107,7 @@ int odp_pktio_init_global(void)
 	return 0;
 }
 
-int odp_pktio_init_local(void)
+int _odp_pktio_init_local(void)
 {
 	int pktio_if;
 
@@ -1311,7 +1311,7 @@ void odp_pktio_print(odp_pktio_t hdl)
 	ODP_PRINT("\n");
 }
 
-int odp_pktio_term_global(void)
+int _odp_pktio_term_global(void)
 {
 	int ret = 0;
 	int i;

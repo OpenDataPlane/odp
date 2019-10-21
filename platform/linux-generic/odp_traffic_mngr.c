@@ -4720,7 +4720,7 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 	}
 }
 
-int odp_tm_init_global(void)
+int _odp_tm_init_global(void)
 {
 	odp_shm_t shm;
 
@@ -4756,7 +4756,7 @@ int odp_tm_init_global(void)
 	return 0;
 }
 
-int odp_tm_term_global(void)
+int _odp_tm_term_global(void)
 {
 	if (odp_global_ro.init_param.not_used.feat.tm)
 		return 0;

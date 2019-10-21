@@ -208,7 +208,7 @@ static int read_config_file(pool_table_t *pool_tbl)
 	return 0;
 }
 
-int odp_pool_init_global(void)
+int _odp_pool_init_global(void)
 {
 	uint32_t i;
 	odp_shm_t shm;
@@ -246,7 +246,7 @@ int odp_pool_init_global(void)
 	return 0;
 }
 
-int odp_pool_term_global(void)
+int _odp_pool_term_global(void)
 {
 	int i;
 	pool_t *pool;
@@ -273,7 +273,7 @@ int odp_pool_term_global(void)
 	return rc;
 }
 
-int odp_pool_init_local(void)
+int _odp_pool_init_local(void)
 {
 	pool_t *pool;
 	int i;
@@ -291,7 +291,7 @@ int odp_pool_init_local(void)
 	return 0;
 }
 
-int odp_pool_term_local(void)
+int _odp_pool_term_local(void)
 {
 	int i;
 
