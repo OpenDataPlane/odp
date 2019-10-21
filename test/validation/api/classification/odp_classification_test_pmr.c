@@ -1059,8 +1059,8 @@ static void classification_test_pmr_term_vlan_id_0(void)
 	odph_vlanhdr_t *vlan_0;
 	cls_packet_info_t pkt_info;
 
-	val = 1024;
-	mask = 0xff00;
+	val  = 0x123;
+	mask = 0xfff;
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
@@ -1095,10 +1095,8 @@ static void classification_test_pmr_term_vlan_id_0(void)
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
-	/* create packet of payload length 1024 */
 	pkt_info = default_pkt_info;
 	pkt_info.vlan = true;
-	pkt_info.vlan_qinq = true;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -1107,7 +1105,7 @@ static void classification_test_pmr_term_vlan_id_0(void)
 	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
 	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 	vlan_0 = (odph_vlanhdr_t *)(eth + 1);
-	vlan_0->tci = odp_cpu_to_be_16(1024);
+	vlan_0->tci = odp_cpu_to_be_16(val);
 	enqueue_pktio_interface(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
@@ -1172,8 +1170,8 @@ static void classification_test_pmr_term_vlan_id_x(void)
 	odph_vlanhdr_t *vlan_x;
 	cls_packet_info_t pkt_info;
 
-	val = 1024;
-	mask = 0xff00;
+	val  = 0x345;
+	mask = 0xfff;
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
@@ -1208,7 +1206,6 @@ static void classification_test_pmr_term_vlan_id_x(void)
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
-	/* create packet of payload length 1024 */
 	pkt_info = default_pkt_info;
 	pkt_info.vlan = true;
 	pkt_info.vlan_qinq = true;
@@ -1221,7 +1218,7 @@ static void classification_test_pmr_term_vlan_id_x(void)
 	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 	vlan_x = (odph_vlanhdr_t *)(eth + 1);
 	vlan_x++;
-	vlan_x->tci = odp_cpu_to_be_16(1024);
+	vlan_x->tci = odp_cpu_to_be_16(val);
 	enqueue_pktio_interface(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
@@ -1394,8 +1391,8 @@ static void classification_test_pmr_term_eth_type_x(void)
 	odph_vlanhdr_t *vlan_x;
 	cls_packet_info_t pkt_info;
 
-	val = 0x8100;
-	mask = 0xff00;
+	val  = 0x0800;
+	mask = 0xffff;
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
@@ -1430,7 +1427,6 @@ static void classification_test_pmr_term_eth_type_x(void)
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
-	/* create packet of payload length 1024 */
 	pkt_info = default_pkt_info;
 	pkt_info.vlan = true;
 	pkt_info.vlan_qinq = true;
@@ -1442,7 +1438,10 @@ static void classification_test_pmr_term_eth_type_x(void)
 	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
 	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 	vlan_x = (odph_vlanhdr_t *)(eth + 1);
-	vlan_x->tci = odp_cpu_to_be_16(1024);
+	vlan_x++;
+	vlan_x->tci = odp_cpu_to_be_16(0x123);
+	vlan_x->type = odp_cpu_to_be_16(val);
+
 	enqueue_pktio_interface(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
