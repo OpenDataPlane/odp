@@ -125,14 +125,14 @@ static int term_global(enum init_stage stage)
 		/* Fall through */
 
 	case TRAFFIC_MNGR_INIT:
-		if (odp_tm_term_global()) {
+		if (_odp_tm_term_global()) {
 			ODP_ERR("TM term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */
 
 	case CLASSIFICATION_INIT:
-		if (odp_classification_term_global()) {
+		if (_odp_classification_term_global()) {
 			ODP_ERR("ODP classification term failed.\n");
 			rc = -1;
 		}
@@ -146,7 +146,7 @@ static int term_global(enum init_stage stage)
 		/* Fall through */
 
 	case CRYPTO_INIT:
-		if (odp_crypto_term_global()) {
+		if (_odp_crypto_term_global()) {
 			ODP_ERR("ODP crypto term failed.\n");
 			rc = -1;
 		}
@@ -156,14 +156,14 @@ static int term_global(enum init_stage stage)
 		/* Fall through */
 
 	case TIMER_INIT:
-		if (odp_timer_term_global()) {
+		if (_odp_timer_term_global()) {
 			ODP_ERR("ODP timer term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */
 
 	case PKTIO_INIT:
-		if (odp_pktio_term_global()) {
+		if (_odp_pktio_term_global()) {
 			ODP_ERR("ODP pktio term failed.\n");
 			rc = -1;
 		}
@@ -184,14 +184,14 @@ static int term_global(enum init_stage stage)
 		/* Fall through */
 
 	case POOL_INIT:
-		if (odp_pool_term_global()) {
+		if (_odp_pool_term_global()) {
 			ODP_ERR("ODP buffer pool term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */
 
 	case THREAD_INIT:
-		if (odp_thread_term_global()) {
+		if (_odp_thread_term_global()) {
 			ODP_ERR("ODP thread term failed.\n");
 			rc = -1;
 		}
@@ -226,14 +226,14 @@ static int term_global(enum init_stage stage)
 		/* Fall through */
 
 	case SYSINFO_INIT:
-		if (odp_system_info_term()) {
+		if (_odp_system_info_term()) {
 			ODP_ERR("ODP system info term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */
 
 	case TIME_INIT:
-		if (odp_time_term_global()) {
+		if (_odp_time_term_global()) {
 			ODP_ERR("ODP time term failed.\n");
 			rc = -1;
 		}
@@ -242,7 +242,7 @@ static int term_global(enum init_stage stage)
 	case CPU_CYCLES_INIT:
 		/* Fall through */
 	case CPUMASK_INIT:
-		if (odp_cpumask_term_global()) {
+		if (_odp_cpumask_term_global()) {
 			ODP_ERR("ODP cpumask term failed.\n");
 			rc = -1;
 		}
@@ -291,7 +291,7 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = LIBCONFIG_INIT;
 
-	if (odp_cpumask_init_global(params)) {
+	if (_odp_cpumask_init_global(params)) {
 		ODP_ERR("ODP cpumask init failed.\n");
 		goto init_failed;
 	}
@@ -303,13 +303,13 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = CPU_CYCLES_INIT;
 
-	if (odp_time_init_global()) {
+	if (_odp_time_init_global()) {
 		ODP_ERR("ODP time init failed.\n");
 		goto init_failed;
 	}
 	stage = TIME_INIT;
 
-	if (odp_system_info_init()) {
+	if (_odp_system_info_init()) {
 		ODP_ERR("ODP system_info init failed.\n");
 		goto init_failed;
 	}
@@ -339,13 +339,13 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = HASH_INIT;
 
-	if (odp_thread_init_global()) {
+	if (_odp_thread_init_global()) {
 		ODP_ERR("ODP thread init failed.\n");
 		goto init_failed;
 	}
 	stage = THREAD_INIT;
 
-	if (odp_pool_init_global()) {
+	if (_odp_pool_init_global()) {
 		ODP_ERR("ODP pool init failed.\n");
 		goto init_failed;
 	}
@@ -363,13 +363,13 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = SCHED_INIT;
 
-	if (odp_pktio_init_global()) {
+	if (_odp_pktio_init_global()) {
 		ODP_ERR("ODP packet io init failed.\n");
 		goto init_failed;
 	}
 	stage = PKTIO_INIT;
 
-	if (odp_timer_init_global(params)) {
+	if (_odp_timer_init_global(params)) {
 		ODP_ERR("ODP timer init failed.\n");
 		goto init_failed;
 	}
@@ -378,7 +378,7 @@ int odp_init_global(odp_instance_t *instance,
 	/* No init neeeded */
 	stage = RANDOM_INIT;
 
-	if (odp_crypto_init_global()) {
+	if (_odp_crypto_init_global()) {
 		ODP_ERR("ODP crypto init failed.\n");
 		goto init_failed;
 	}
@@ -390,13 +390,13 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = COMP_INIT;
 
-	if (odp_classification_init_global()) {
+	if (_odp_classification_init_global()) {
 		ODP_ERR("ODP classification init failed.\n");
 		goto init_failed;
 	}
 	stage = CLASSIFICATION_INIT;
 
-	if (odp_tm_init_global()) {
+	if (_odp_tm_init_global()) {
 		ODP_ERR("ODP traffic manager init failed\n");
 		goto init_failed;
 	}
@@ -481,14 +481,14 @@ static int term_local(enum init_stage stage)
 		/* Fall through */
 
 	case POOL_INIT:
-		if (odp_pool_term_local()) {
+		if (_odp_pool_term_local()) {
 			ODP_ERR("ODP buffer pool local term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */
 
 	case THREAD_INIT:
-		rc_thd = odp_thread_term_local();
+		rc_thd = _odp_thread_term_local();
 		if (rc_thd < 0) {
 			ODP_ERR("ODP thread local term failed.\n");
 			rc = -1;
@@ -527,13 +527,13 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 	}
 	stage = ISHM_INIT;
 
-	if (odp_thread_init_local(thr_type)) {
+	if (_odp_thread_init_local(thr_type)) {
 		ODP_ERR("ODP thread local init failed.\n");
 		goto init_fail;
 	}
 	stage = THREAD_INIT;
 
-	if (odp_pktio_init_local()) {
+	if (_odp_pktio_init_local()) {
 		ODP_ERR("ODP packet io local init failed.\n");
 		goto init_fail;
 	}
@@ -551,7 +551,7 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 	}
 	stage = CRYPTO_INIT;
 
-	if (odp_pool_init_local()) {
+	if (_odp_pool_init_local()) {
 		ODP_ERR("ODP pool local init failed.\n");
 		goto init_fail;
 	}

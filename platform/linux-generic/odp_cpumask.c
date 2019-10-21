@@ -382,7 +382,7 @@ static void init_default_worker_cpumask(int control_cpus_default)
  * It also allows the default cpumasks to be overridden by
  * externally specified cpumasks passed in as initialization parameters.
  */
-int odp_cpumask_init_global(const odp_init_t *params)
+int _odp_cpumask_init_global(const odp_init_t *params)
 {
 	odp_cpumask_t *control_mask = &odp_global_ro.control_cpus;
 	odp_cpumask_t *worker_mask = &odp_global_ro.worker_cpus;
@@ -451,7 +451,7 @@ int odp_cpumask_init_global(const odp_init_t *params)
 	}
 }
 
-int odp_cpumask_term_global(void)
+int _odp_cpumask_term_global(void)
 {
 	return 0;
 }

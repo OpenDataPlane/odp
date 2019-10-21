@@ -86,7 +86,7 @@ pmr_t *get_pmr_entry_internal(odp_pmr_t pmr)
 	return &pmr_tbl->pmr[_odp_pmr_to_ndx(pmr)];
 }
 
-int odp_classification_init_global(void)
+int _odp_classification_init_global(void)
 {
 	odp_shm_t shm;
 	int i;
@@ -119,7 +119,7 @@ int odp_classification_init_global(void)
 	return 0;
 }
 
-int odp_classification_term_global(void)
+int _odp_classification_term_global(void)
 {
 	if (cls_global && odp_shm_free(cls_global->shm)) {
 		ODP_ERR("shm free failed\n");
