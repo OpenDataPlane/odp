@@ -927,8 +927,8 @@ static void classification_test_pmr_term_packet_len(void)
 {
 	odp_packet_t pkt;
 	uint32_t seqno;
-	uint16_t val;
-	uint16_t mask;
+	uint32_t val;
+	uint32_t mask;
 	int retval;
 	odp_pktio_t pktio;
 	odp_queue_t queue;

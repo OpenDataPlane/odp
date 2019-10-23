@@ -568,12 +568,77 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 	return 0;
 }
 
-static int odp_pmr_create_term(pmr_term_value_t *value,
-			       const odp_pmr_param_t *param)
+static int pmr_create_term(pmr_term_value_t *value,
+			   const odp_pmr_param_t *param)
 {
-	value->term = param->term;
-	value->range_term = param->range_term;
+	uint32_t size;
 	uint8_t i;
+	int custom = 0;
+	odp_cls_pmr_term_t term = param->term;
+
+	value->term = term;
+	value->range_term = param->range_term;
+
+	switch (term) {
+	case ODP_PMR_IPPROTO:
+		size = 1;
+		break;
+
+	case ODP_PMR_ETHTYPE_0:
+		/* Fall through */
+	case ODP_PMR_ETHTYPE_X:
+		/* Fall through */
+	case ODP_PMR_VLAN_ID_0:
+		/* Fall through */
+	case ODP_PMR_VLAN_ID_X:
+		/* Fall through */
+	case ODP_PMR_UDP_DPORT:
+		/* Fall through */
+	case ODP_PMR_TCP_DPORT:
+		/* Fall through */
+	case ODP_PMR_UDP_SPORT:
+		/* Fall through */
+	case ODP_PMR_TCP_SPORT:
+		size = 2;
+		break;
+
+	case ODP_PMR_LEN:
+		/* Fall through */
+	case ODP_PMR_SIP_ADDR:
+		/* Fall through */
+	case ODP_PMR_DIP_ADDR:
+		/* Fall through */
+	case ODP_PMR_IPSEC_SPI:
+		/* Fall through */
+	case ODP_PMR_LD_VNI:
+		size = 4;
+		break;
+
+	case ODP_PMR_DMAC:
+		size = 6;
+		break;
+
+	case ODP_PMR_SIP6_ADDR:
+		/* Fall through */
+	case ODP_PMR_DIP6_ADDR:
+		size = 16;
+		break;
+
+	case ODP_PMR_CUSTOM_FRAME:
+		custom = 1;
+		size = CLS_PMR_TERM_BYTES_MAX;
+		break;
+
+	default:
+		ODP_ERR("Bad PRM term\n");
+		return -1;
+	}
+
+	if ((!custom && param->val_sz != size) ||
+	    (custom && param->val_sz > size)) {
+		ODP_ERR("Bad PMR value size: %u\n", param->val_sz);
+		return -1;
+	}
 
 	switch (value->term) {
 	case ODP_PMR_SIP6_ADDR:
@@ -655,7 +720,6 @@ odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 	pmr_t *pmr;
 	int i;
 	odp_pmr_t id;
-	int val_sz;
 	uint32_t loc;
 	cos_t *cos_src = get_cos_entry(src_cos);
 	cos_t *cos_dst = get_cos_entry(dst_cos);
@@ -680,13 +744,8 @@ odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 
 	pmr->s.num_pmr = num_terms;
 	for (i = 0; i < num_terms; i++) {
-		val_sz = terms[i].val_sz;
-		if (val_sz > CLS_PMR_TERM_BYTES_MAX) {
+		if (pmr_create_term(&pmr->s.pmr_term_value[i], &terms[i])) {
 			pmr->s.valid = 0;
-			return ODP_PMR_INVALID;
-		}
-		if (0 > odp_pmr_create_term(&pmr->s.pmr_term_value[i],
-					    &terms[i])) {
 			UNLOCK(&pmr->s.lock);
 			return ODP_PMR_INVALID;
 		}
