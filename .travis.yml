@@ -332,6 +332,16 @@ jobs:
                               ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_${ARCH}.sh
                 - stage: test
                   canfail: yes
+                  env: TEST=em-odp
+                  install:
+                          - true
+                  script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
+                          - docker run -i -t -v `pwd`:/odp --shm-size 8g
+                              -e CC="${CC}"
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/build_em-odp.sh
+                - stage: test
+                  canfail: yes
                   env: TEST=checkpatch
                   compiler: gcc
                   install:
