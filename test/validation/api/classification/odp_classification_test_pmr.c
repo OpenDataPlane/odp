@@ -1722,6 +1722,10 @@ static void test_pmr_term_ipv4_addr(int dst)
 
 	parse_ipv4_string(src_str, &src_addr, &src_mask);
 	parse_ipv4_string(dst_str, &dst_addr, &dst_mask);
+	src_addr = odp_cpu_to_be_32(src_addr);
+	src_mask = odp_cpu_to_be_32(src_mask);
+	dst_addr = odp_cpu_to_be_32(dst_addr);
+	dst_mask = odp_cpu_to_be_32(dst_mask);
 
 	odp_cls_pmr_param_init(&pmr_param);
 
@@ -1748,8 +1752,8 @@ static void test_pmr_term_ipv4_addr(int dst)
 	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
 	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
-	ip->src_addr = odp_cpu_to_be_32(src_addr);
-	ip->dst_addr = odp_cpu_to_be_32(dst_addr);
+	ip->src_addr = src_addr;
+	ip->dst_addr = dst_addr;
 	odph_ipv4_csum_update(pkt);
 
 	seqno = cls_pkt_get_seq(pkt);

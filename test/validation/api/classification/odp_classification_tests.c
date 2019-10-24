@@ -213,6 +213,9 @@ void configure_cls_pmr_chain(void)
 	CU_ASSERT_FATAL(cos_list[CLS_PMR_CHAIN_DST] != ODP_COS_INVALID);
 
 	parse_ipv4_string(CLS_PMR_CHAIN_SADDR, &addr, &mask);
+	addr = odp_cpu_to_be_32(addr);
+	mask = odp_cpu_to_be_32(mask);
+
 	odp_cls_pmr_param_init(&pmr_param);
 	pmr_param.term = ODP_PMR_SIP_ADDR;
 	pmr_param.match.value = &addr;
@@ -649,6 +652,9 @@ void configure_pktio_pmr_composite(void)
 	CU_ASSERT_FATAL(cos_list[CLS_PMR_SET] != ODP_COS_INVALID);
 
 	parse_ipv4_string(CLS_PMR_SET_SADDR, &addr, &mask);
+	addr = odp_cpu_to_be_32(addr);
+	mask = odp_cpu_to_be_32(mask);
+
 	odp_cls_pmr_param_init(&pmr_params[0]);
 	pmr_params[0].term = ODP_PMR_SIP_ADDR;
 	pmr_params[0].match.value = &addr;

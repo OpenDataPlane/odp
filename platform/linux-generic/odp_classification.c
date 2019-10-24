@@ -825,7 +825,7 @@ static inline int verify_pmr_ipv4_saddr(const uint8_t *pkt_addr,
 	if (!pkt_hdr->p.input_flags.ipv4)
 		return 0;
 	ip = (const _odp_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
-	ipaddr = odp_be_to_cpu_32(ip->src_addr);
+	ipaddr = ip->src_addr;
 	if (term_value->match.value == (ipaddr & term_value->match.mask))
 		return 1;
 
@@ -842,7 +842,7 @@ static inline int verify_pmr_ipv4_daddr(const uint8_t *pkt_addr,
 	if (!pkt_hdr->p.input_flags.ipv4)
 		return 0;
 	ip = (const _odp_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
-	ipaddr = odp_be_to_cpu_32(ip->dst_addr);
+	ipaddr = ip->dst_addr;
 	if (term_value->match.value == (ipaddr & term_value->match.mask))
 		return 1;
 
