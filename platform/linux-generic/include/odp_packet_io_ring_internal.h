@@ -103,6 +103,8 @@ extern "C" {
 #include <sys/queue.h>
 #include <odp_debug_internal.h>
 
+#include <odp_ring_ptr_internal.h>
+
 enum _ring_queue_behavior {
 	_RING_QUEUE_FIXED = 0, /**< Enq/Deq a fixed number
 				of items from a ring */
@@ -158,8 +160,6 @@ typedef struct _ring {
 /* If set - ring is visible from different processes.
  * Default is thread visible.*/
 #define _RING_SHM_PROC (1 << 2)
- /* Do not link ring to linked list. */
-#define _RING_NO_LIST  (1 << 3)
 /* Ring size mask */
 #define _RING_SZ_MASK  (unsigned)(0x0fffffff)
 
@@ -190,8 +190,7 @@ typedef struct _ring {
  *    - EEXIST - a memzone with the same name already exists
  *    - ENOMEM - no appropriate memory area found in which to create memzone
  */
-_ring_t *_ring_create(const char *name, unsigned count,
-		      unsigned flags);
+ring_ptr_t *_ring_create(const char *name, unsigned count, unsigned flags);
 
 /**
  * Destroy the ring created with *name*.
@@ -206,7 +205,7 @@ int _ring_destroy(const char *name);
  *
  * @param r A pointer to the ring structure.
  */
-void _ring_dump(const _ring_t *r);
+void _ring_dump(ring_ptr_t *r, uint32_t mask);
 
 /**
  * Enqueue several objects on the ring (multi-producers safe).
@@ -231,7 +230,7 @@ void _ring_dump(const _ring_t *r);
  *   if behavior = ODPH_RING_QUEUE_VARIABLE
  *   - n: Actual number of objects enqueued.
  */
-int ___ring_mp_do_enqueue(_ring_t *r, void * const *obj_table,
+int ___ring_mp_do_enqueue(ring_ptr_t *r, void * const *obj_table,
 			  unsigned n,
 			  enum _ring_queue_behavior behavior);
 
@@ -262,7 +261,7 @@ int ___ring_mp_do_enqueue(_ring_t *r, void * const *obj_table,
  *   - n: Actual number of objects dequeued.
  */
 
-int ___ring_mc_do_dequeue(_ring_t *r, void **obj_table,
+int ___ring_mc_do_dequeue(ring_ptr_t *r, void **obj_table,
 			  unsigned n,
 			  enum _ring_queue_behavior behavior);
 
@@ -284,7 +283,7 @@ int ___ring_mc_do_dequeue(_ring_t *r, void **obj_table,
  *     high water mark is exceeded.
  *   - -ENOBUFS: Not enough room in the ring to enqueue, no object is enqueued.
  */
-int _ring_mp_enqueue_bulk(_ring_t *r, void * const *obj_table,
+int _ring_mp_enqueue_bulk(ring_ptr_t *r, void * const *obj_table,
 			  unsigned n);
 
 /**
@@ -304,7 +303,7 @@ int _ring_mp_enqueue_bulk(_ring_t *r, void * const *obj_table,
  *   - -ENOENT: Not enough entries in the ring to dequeue; no object is
  *     dequeued.
  */
-int _ring_mc_dequeue_bulk(_ring_t *r, void **obj_table, unsigned n);
+int _ring_mc_dequeue_bulk(ring_ptr_t *r, void **obj_table, unsigned n);
 
 /**
  * Test if a ring is full.
@@ -315,7 +314,7 @@ int _ring_mc_dequeue_bulk(_ring_t *r, void **obj_table, unsigned n);
  *   - 1: The ring is full.
  *   - 0: The ring is not full.
  */
-int _ring_full(const _ring_t *r);
+int _ring_full(ring_ptr_t *r, uint32_t mask);
 
 /**
  * Test if a ring is empty.
@@ -326,7 +325,7 @@ int _ring_full(const _ring_t *r);
  *   - 1: The ring is empty.
  *   - 0: The ring is not empty.
  */
-int _ring_empty(const _ring_t *r);
+int _ring_empty(ring_ptr_t *r, uint32_t mask);
 
 /**
  * Return the number of entries in a ring.
@@ -336,7 +335,7 @@ int _ring_empty(const _ring_t *r);
  * @return
  *   The number of entries in the ring.
  */
-unsigned _ring_count(const _ring_t *r);
+unsigned _ring_count(ring_ptr_t *r, uint32_t mask);
 
 /**
  * Return the number of free entries in a ring.
@@ -346,14 +345,14 @@ unsigned _ring_count(const _ring_t *r);
  * @return
  *   The number of free entries in the ring.
  */
-unsigned _ring_free_count(const _ring_t *r);
+unsigned _ring_free_count(ring_ptr_t *r, uint32_t mask);
 
 /**
  * search ring by name
  * @param name	ring name to search
  * @return	pointer to ring otherwise NULL
  */
-_ring_t *_ring_lookup(const char *name);
+ring_ptr_t *_ring_lookup(const char *name);
 
 /**
  * Enqueue several objects on the ring (multi-producers safe).
@@ -370,7 +369,7 @@ _ring_t *_ring_lookup(const char *name);
  * @return
  *   - n: Actual number of objects enqueued.
  */
-int _ring_mp_enqueue_burst(_ring_t *r, void * const *obj_table,
+int _ring_mp_enqueue_burst(ring_ptr_t *r, void * const *obj_table,
 			   unsigned n);
 
 /**
@@ -390,7 +389,7 @@ int _ring_mp_enqueue_burst(_ring_t *r, void * const *obj_table,
  * @return
  *   - n: Actual number of objects dequeued, 0 if ring is empty
  */
-int _ring_mc_dequeue_burst(_ring_t *r, void **obj_table, unsigned n);
+int _ring_mc_dequeue_burst(ring_ptr_t *r, void **obj_table, unsigned n);
 
 /**
  * dump the status of all rings on the console
@@ -400,12 +399,12 @@ void _ring_list_dump(void);
 /**
  * Initialize ring tailq
  */
-int _ring_tailq_init(void);
+int _ring_global_init(void);
 
 /**
  * Terminate ring tailq
  */
-int _ring_tailq_term(void);
+int _ring_global_term(void);
 
 #ifdef __cplusplus
 }

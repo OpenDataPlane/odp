@@ -20,6 +20,8 @@
 /* number of odp buffers in odp ring queue */
 #define PKTIO_IPC_ENTRIES 4096
 
+#define PKTIO_IPC_ENTRY_MASK (PKTIO_IPC_ENTRIES - 1)
+
 /* that struct is exported to shared memory, so that processes can find
  * each other.
  */
