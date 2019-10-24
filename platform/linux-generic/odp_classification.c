@@ -921,24 +921,23 @@ static inline int verify_pmr_dmac(const uint8_t *pkt_addr,
 				  odp_packet_hdr_t *pkt_hdr,
 				  pmr_term_value_t *term_value)
 {
-	uint64_t dmac = 0;
-	uint64_t dmac_be = 0;
 	const _odp_ethhdr_t *eth;
+	uint16_t dmac[3];
+	uint16_t *mask  = (uint16_t *)&term_value->match.mask;
+	uint16_t *value = (uint16_t *)&term_value->match.value;
 
 	if (!packet_hdr_has_eth(pkt_hdr))
 		return 0;
 
 	eth = (const _odp_ethhdr_t *)(pkt_addr + pkt_hdr->p.l2_offset);
-	memcpy(&dmac_be, eth->dst.addr, _ODP_ETHADDR_LEN);
-	dmac = odp_be_to_cpu_64(dmac_be);
-	/* since we are converting a 48 bit ethernet address from BE to cpu
-	format using odp_be_to_cpu_64() the last 16 bits needs to be right
-	shifted */
-	if (dmac_be != dmac)
-		dmac = dmac >> (64 - (_ODP_ETHADDR_LEN * 8));
+	memcpy(dmac, eth->dst.addr, _ODP_ETHADDR_LEN);
+	dmac[0] &= mask[0];
+	dmac[1] &= mask[1];
+	dmac[2] &= mask[2];
 
-	if (term_value->match.value == (dmac & term_value->match.mask))
+	if (value[0] == dmac[0] && value[1] == dmac[1] && value[2] == dmac[2])
 		return 1;
+
 	return 0;
 }
 
