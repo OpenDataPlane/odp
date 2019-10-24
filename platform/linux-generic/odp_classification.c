@@ -1006,8 +1006,8 @@ static inline int verify_pmr_vlan_id_0(const uint8_t *pkt_addr,
 
 	eth = (const _odp_ethhdr_t *)(pkt_addr + pkt_hdr->p.l2_offset);
 	vlan = (const _odp_vlanhdr_t *)(eth + 1);
-	tci = odp_be_to_cpu_16(vlan->tci);
-	vlan_id = tci & 0x0fff;
+	tci = vlan->tci;
+	vlan_id = tci & odp_cpu_to_be_16(0x0fff);
 
 	if (term_value->match.value == (vlan_id & term_value->match.mask))
 		return 1;

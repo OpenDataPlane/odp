@@ -1059,8 +1059,8 @@ static void classification_test_pmr_term_vlan_id_0(void)
 	odph_vlanhdr_t *vlan_0;
 	cls_packet_info_t pkt_info;
 
-	val  = 0x123;
-	mask = 0xfff;
+	val  = odp_cpu_to_be_16(0x123);
+	mask = odp_cpu_to_be_16(0xfff);
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
@@ -1105,7 +1105,7 @@ static void classification_test_pmr_term_vlan_id_0(void)
 	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
 	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 	vlan_0 = (odph_vlanhdr_t *)(eth + 1);
-	vlan_0->tci = odp_cpu_to_be_16(val);
+	vlan_0->tci = val;
 	enqueue_pktio_interface(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
