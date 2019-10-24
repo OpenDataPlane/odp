@@ -240,9 +240,6 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	odph_ipv4hdr_t *ip;
 	odph_ipv6hdr_t *ipv6;
 	uint16_t payload_len;
-	uint64_t src_mac = CLS_DEFAULT_SMAC;
-	uint64_t dst_mac = CLS_DEFAULT_DMAC;
-	uint64_t dst_mac_be;
 	uint32_t addr = 0;
 	uint32_t mask;
 	odp_packet_t pkt;
@@ -257,12 +254,8 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	uint16_t eth_type;
 	odp_u16be_t *vlan_type;
 	odph_vlanhdr_t *vlan_hdr;
-
-	/* 48 bit ethernet address needs to be left shifted for proper
-	value after changing to be*/
-	dst_mac_be = odp_cpu_to_be_64(dst_mac);
-	if (dst_mac != dst_mac_be)
-		dst_mac_be = dst_mac_be >> (64 - 8 * ODPH_ETHADDR_LEN);
+	uint8_t src_mac[] = CLS_DEFAULT_SMAC;
+	uint8_t dst_mac[] = CLS_DEFAULT_DMAC;
 
 	payload_len = sizeof(cls_test_packet_t) + pkt_info.len;
 	seqno = odp_atomic_fetch_inc_u32(pkt_info.seq);
@@ -287,7 +280,7 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	odp_packet_l2_offset_set(pkt, 0);
 	ethhdr = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 	memcpy(ethhdr->src.addr, &src_mac, ODPH_ETHADDR_LEN);
-	memcpy(ethhdr->dst.addr, &dst_mac_be, ODPH_ETHADDR_LEN);
+	memcpy(ethhdr->dst.addr, &dst_mac, ODPH_ETHADDR_LEN);
 	vlan_type = (odp_u16be_t *)(void *)&ethhdr->type;
 	vlan_hdr = (odph_vlanhdr_t *)(ethhdr + 1);
 

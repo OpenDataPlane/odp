@@ -821,8 +821,6 @@ static void classification_test_pmr_term_dmac(void)
 {
 	odp_packet_t pkt;
 	uint32_t seqno;
-	uint64_t val;
-	uint64_t mask;
 	int retval;
 	odp_pktio_t pktio;
 	odp_queue_t queue;
@@ -839,9 +837,8 @@ static void classification_test_pmr_term_dmac(void)
 	odp_pmr_param_t pmr_param;
 	odph_ethhdr_t *eth;
 	cls_packet_info_t pkt_info;
-
-	val = CLS_DEFAULT_DMAC; /* 48 bit Ethernet Mac address */
-	mask = 0xffffffffffff;
+	uint8_t val[]  = {0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee};
+	uint8_t mask[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
@@ -880,6 +877,8 @@ static void classification_test_pmr_term_dmac(void)
 	pkt_info.udp = true;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+	memcpy(eth->dst.addr, val, ODPH_ETHADDR_LEN);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
@@ -895,9 +894,6 @@ static void classification_test_pmr_term_dmac(void)
 
 	/* Other packets delivered to default queue */
 	pkt = create_packet(default_pkt_info);
-	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-	memset(eth->dst.addr, 0, ODPH_ETHADDR_LEN);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
