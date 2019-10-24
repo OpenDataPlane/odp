@@ -1107,7 +1107,7 @@ static inline int verify_pmr_eth_type_0(const uint8_t *pkt_addr,
 		return 0;
 
 	eth = (const _odp_ethhdr_t *)(pkt_addr + pkt_hdr->p.l2_offset);
-	ethtype = odp_be_to_cpu_16(eth->type);
+	ethtype = eth->type;
 
 	if (term_value->match.value == (ethtype & term_value->match.mask))
 		return 1;
