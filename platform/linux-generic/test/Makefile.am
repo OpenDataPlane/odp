@@ -23,8 +23,7 @@ test_SCRIPTS = $(dist_check_SCRIPTS)
 
 SUBDIRS += validation/api/pktio\
 	  validation/api/shmem\
-	  pktio_ipc\
-	  ring
+	  pktio_ipc
 
 if HAVE_PCAP
 TESTS += validation/api/pktio/pktio_run_pcap.sh
