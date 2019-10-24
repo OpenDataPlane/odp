@@ -1282,8 +1282,8 @@ static void classification_test_pmr_term_eth_type_0(void)
 	odph_ethhdr_t *eth;
 	cls_packet_info_t pkt_info;
 
-	val = ODPH_ETHTYPE_IPV6;
-	mask = 0xffff;
+	val  = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV6);
+	mask = odp_cpu_to_be_16(0xffff);
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
