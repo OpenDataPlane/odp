@@ -1132,7 +1132,7 @@ static inline int verify_pmr_eth_type_x(const uint8_t *pkt_addr,
 	if (pkt_hdr->p.input_flags.vlan_qinq)
 		vlan++;
 
-	ethtype = odp_be_to_cpu_16(vlan->type);
+	ethtype = vlan->type;
 
 	if (term_value->match.value == (ethtype & term_value->match.mask))
 		return 1;
