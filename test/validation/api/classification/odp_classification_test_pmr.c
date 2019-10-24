@@ -121,8 +121,8 @@ static void classification_test_pktin_classifier_flag(void)
 	odp_pmr_param_t pmr_param;
 	odph_ethhdr_t *eth;
 
-	val = CLS_DEFAULT_DPORT;
-	mask = 0xffff;
+	val  = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
+	mask = odp_cpu_to_be_16(0xffff);
 	seqno = 0;
 
 	/* classifier is disabled in pktin queue configuration */
@@ -167,7 +167,7 @@ static void classification_test_pktin_classifier_flag(void)
 	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 
 	tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-	tcp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
+	tcp->dst_port = val;
 
 	enqueue_pktio_interface(pkt, pktio);
 
@@ -217,8 +217,8 @@ static void _classification_test_pmr_term_tcp_dport(int num_pkt)
 	odp_pool_t pool_recv;
 	odp_pmr_param_t pmr_param;
 	odph_ethhdr_t *eth;
-	val = CLS_DEFAULT_DPORT;
-	mask = 0xffff;
+	val  = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
+	mask = odp_cpu_to_be_16(0xffff);
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
@@ -262,7 +262,7 @@ static void _classification_test_pmr_term_tcp_dport(int num_pkt)
 		odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-		tcp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
+		tcp->dst_port = val;
 
 		enqueue_pktio_interface(pkt, pktio);
 	}
@@ -320,7 +320,7 @@ static void _classification_test_pmr_term_tcp_dport(int num_pkt)
 
 		if ((i % 5) < 2) {
 			sent_queue++;
-			tcp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
+			tcp->dst_port = val;
 		} else {
 			sent_default++;
 			tcp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT + 1);
@@ -341,8 +341,7 @@ static void _classification_test_pmr_term_tcp_dport(int num_pkt)
 
 		if (retqueue == queue) {
 			recv_queue++;
-			CU_ASSERT(tcp->dst_port ==
-				  odp_cpu_to_be_16(CLS_DEFAULT_DPORT));
+			CU_ASSERT(tcp->dst_port == val);
 		} else if (retqueue == default_queue) {
 			recv_default++;
 			CU_ASSERT(tcp->dst_port ==
@@ -388,8 +387,8 @@ static void classification_test_pmr_term_tcp_sport(void)
 	odp_pmr_param_t pmr_param;
 	odph_ethhdr_t *eth;
 
-	val = CLS_DEFAULT_SPORT;
-	mask = 0xffff;
+	val  = odp_cpu_to_be_16(CLS_DEFAULT_SPORT);
+	mask = odp_cpu_to_be_16(0xffff);
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
@@ -433,7 +432,7 @@ static void classification_test_pmr_term_tcp_sport(void)
 	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 
 	tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-	tcp->src_port = odp_cpu_to_be_16(CLS_DEFAULT_SPORT);
+	tcp->src_port = val;
 
 	enqueue_pktio_interface(pkt, pktio);
 
@@ -501,8 +500,8 @@ static void classification_test_pmr_term_udp_dport(void)
 	odph_ethhdr_t *eth;
 	cls_packet_info_t pkt_info;
 
-	val = CLS_DEFAULT_DPORT;
-	mask = 0xffff;
+	val  = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
+	mask = odp_cpu_to_be_16(0xffff);
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
@@ -548,7 +547,7 @@ static void classification_test_pmr_term_udp_dport(void)
 	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 
 	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-	udp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
+	udp->dst_port = val;
 
 	enqueue_pktio_interface(pkt, pktio);
 
@@ -617,8 +616,8 @@ static void classification_test_pmr_term_udp_sport(void)
 	odph_ethhdr_t *eth;
 	cls_packet_info_t pkt_info;
 
-	val = CLS_DEFAULT_SPORT;
-	mask = 0xffff;
+	val  = odp_cpu_to_be_16(CLS_DEFAULT_SPORT);
+	mask = odp_cpu_to_be_16(0xffff);
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
@@ -664,7 +663,7 @@ static void classification_test_pmr_term_udp_sport(void)
 	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 
 	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-	udp->src_port = odp_cpu_to_be_16(CLS_DEFAULT_SPORT);
+	udp->src_port = val;
 
 	enqueue_pktio_interface(pkt, pktio);
 

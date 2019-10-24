@@ -859,7 +859,7 @@ static inline int verify_pmr_tcp_sport(const uint8_t *pkt_addr,
 	if (!pkt_hdr->p.input_flags.tcp)
 		return 0;
 	tcp = (const _odp_tcphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
-	sport = odp_be_to_cpu_16(tcp->src_port);
+	sport = tcp->src_port;
 	if (term_value->match.value == (sport & term_value->match.mask))
 		return 1;
 
@@ -876,7 +876,7 @@ static inline int verify_pmr_tcp_dport(const uint8_t *pkt_addr,
 	if (!pkt_hdr->p.input_flags.tcp)
 		return 0;
 	tcp = (const _odp_tcphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
-	dport = odp_be_to_cpu_16(tcp->dst_port);
+	dport = tcp->dst_port;
 	if (term_value->match.value == (dport & term_value->match.mask))
 		return 1;
 
@@ -893,7 +893,7 @@ static inline int verify_pmr_udp_dport(const uint8_t *pkt_addr,
 	if (!pkt_hdr->p.input_flags.udp)
 		return 0;
 	udp = (const _odp_udphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
-	dport = odp_be_to_cpu_16(udp->dst_port);
+	dport = udp->dst_port;
 	if (term_value->match.value == (dport & term_value->match.mask))
 		return 1;
 
@@ -910,7 +910,7 @@ static inline int verify_pmr_udp_sport(const uint8_t *pkt_addr,
 	if (!pkt_hdr->p.input_flags.udp)
 		return 0;
 	udp = (const _odp_udphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
-	sport = odp_be_to_cpu_16(udp->src_port);
+	sport = udp->src_port;
 	if (term_value->match.value == (sport & term_value->match.mask))
 		return 1;
 
