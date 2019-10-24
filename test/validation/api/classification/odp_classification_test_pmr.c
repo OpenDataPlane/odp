@@ -1391,8 +1391,8 @@ static void classification_test_pmr_term_eth_type_x(void)
 	odph_vlanhdr_t *vlan_x;
 	cls_packet_info_t pkt_info;
 
-	val  = 0x0800;
-	mask = 0xffff;
+	val  = odp_cpu_to_be_16(0x0800);
+	mask = odp_cpu_to_be_16(0xffff);
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
@@ -1440,7 +1440,7 @@ static void classification_test_pmr_term_eth_type_x(void)
 	vlan_x = (odph_vlanhdr_t *)(eth + 1);
 	vlan_x++;
 	vlan_x->tci = odp_cpu_to_be_16(0x123);
-	vlan_x->type = odp_cpu_to_be_16(val);
+	vlan_x->type = val;
 
 	enqueue_pktio_interface(pkt, pktio);
 
