@@ -1033,8 +1033,8 @@ static inline int verify_pmr_vlan_id_x(const uint8_t *pkt_addr,
 	if (pkt_hdr->p.input_flags.vlan_qinq)
 		vlan++;
 
-	tci = odp_be_to_cpu_16(vlan->tci);
-	vlan_id = tci & 0x0fff;
+	tci = vlan->tci;
+	vlan_id = tci & odp_cpu_to_be_16(0x0fff);
 
 	if (term_value->match.value == (vlan_id & term_value->match.mask))
 		return 1;
