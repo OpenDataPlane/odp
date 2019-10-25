@@ -14,9 +14,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-/* IPC packet I/O over shared memory ring */
-#include <odp_packet_io_ring_internal.h>
-
 /* number of odp buffers in odp ring queue */
 #define PKTIO_IPC_ENTRIES 4096
 

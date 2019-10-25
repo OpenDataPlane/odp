@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -7,13 +8,15 @@
 #include <odp_packet_io_ipc_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_io_internal.h>
+#include <odp_errno_define.h>
 #include <odp/api/system_info.h>
 #include <odp_shm_internal.h>
 #include <odp_ring_ptr_internal.h>
 
+#include <errno.h>
+#include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 
 #define IPC_ODP_DEBUG_PRINT 0
 
@@ -22,6 +25,129 @@
 		if (IPC_ODP_DEBUG_PRINT == 1) \
 			ODP_DBG(fmt, ##__VA_ARGS__);\
 	} while (0)
+
+/* The maximum length of a ring name. */
+#define _RING_NAMESIZE 32
+/* If set - ring is visible from different processes.
+ * Default is thread visible.*/
+#define _RING_SHM_PROC (1 << 2)
+/* Ring size mask */
+#define _RING_SZ_MASK  (unsigned)(0x0fffffff)
+
+typedef struct {
+	/* Rings tailq lock */
+	odp_rwlock_t qlock;
+	odp_shm_t shm;
+} global_data_t;
+
+static global_data_t *global;
+
+/* Initialize tailq_ring */
+static int _ring_global_init(void)
+{
+	odp_shm_t shm;
+
+	/* Allocate globally shared memory */
+	shm = odp_shm_reserve("_odp_ring_global", sizeof(global_data_t),
+			      ODP_CACHE_LINE_SIZE, 0);
+	if (ODP_SHM_INVALID == shm) {
+		ODP_ERR("Shm reserve failed for pktio ring\n");
+		return -1;
+	}
+
+	global = odp_shm_addr(shm);
+	memset(global, 0, sizeof(global_data_t));
+	global->shm = shm;
+
+	return 0;
+}
+
+static int _ring_global_term(void)
+{
+	if (odp_shm_free(global->shm)) {
+		ODP_ERR("Shm free failed for pktio ring\n");
+		return -1;
+	}
+	return 0;
+}
+
+/* create the ring */
+static ring_ptr_t *
+_ring_create(const char *name, unsigned count, unsigned flags)
+{
+	char ring_name[_RING_NAMESIZE];
+	ring_ptr_t *r;
+	size_t ring_size;
+	uint32_t shm_flag;
+	odp_shm_t shm;
+
+	if (flags & _RING_SHM_PROC)
+		shm_flag = ODP_SHM_PROC | ODP_SHM_EXPORT;
+	else
+		shm_flag = 0;
+	if (odp_global_ro.shm_single_va)
+		shm_flag |= ODP_SHM_SINGLE_VA;
+
+	/* count must be a power of 2 */
+	if (!CHECK_IS_POWER2(count)) {
+		ODP_ERR("Requested size is invalid, must be power of 2,"
+			"and do not exceed the size limit %u\n",
+			_RING_SZ_MASK);
+		__odp_errno = EINVAL;
+		return NULL;
+	}
+
+	snprintf(ring_name, sizeof(ring_name), "%s", name);
+	ring_size = sizeof(ring_ptr_t) + count * sizeof(void *);
+
+	/* reserve a memory zone for this ring.*/
+	shm = odp_shm_reserve(ring_name, ring_size, ODP_CACHE_LINE_SIZE,
+			      shm_flag);
+
+	r = odp_shm_addr(shm);
+	if (r != NULL) {
+		/* init the ring structure */
+		ring_ptr_init(r);
+
+	} else {
+		__odp_errno = ENOMEM;
+		ODP_ERR("Cannot reserve memory\n");
+	}
+
+	return r;
+}
+
+static int _ring_destroy(const char *name)
+{
+	odp_shm_t shm = odp_shm_lookup(name);
+
+	if (shm != ODP_SHM_INVALID)
+		return odp_shm_free(shm);
+
+	return 0;
+}
+
+/**
+ * Return the number of entries in a ring.
+ */
+static unsigned _ring_count(ring_ptr_t *r, uint32_t mask)
+{
+	uint32_t prod_tail = odp_atomic_load_u32(&r->r.w_tail);
+	uint32_t cons_tail = odp_atomic_load_u32(&r->r.r_tail);
+
+	return (prod_tail - cons_tail) & mask;
+}
+
+/**
+ * Return the number of free entries in a ring.
+ */
+static unsigned _ring_free_count(ring_ptr_t *r, uint32_t mask)
+{
+	uint32_t prod_tail = odp_atomic_load_u32(&r->r.w_tail);
+	uint32_t cons_tail = odp_atomic_load_u32(&r->r.r_tail);
+
+	return (cons_tail - prod_tail - 1) & mask;
+}
 
 typedef	struct {
 	/* TX */

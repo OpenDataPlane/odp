@@ -27,7 +27,6 @@ extern "C" {
 #include <odp_classification_datamodel.h>
 #include <odp_align_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_packet_io_ring_internal.h>
 #include <odp_packet_io_stats_common.h>
 #include <odp_queue_if.h>
 
