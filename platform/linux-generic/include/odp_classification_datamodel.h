@@ -42,8 +42,8 @@ extern "C" {
 #define CLS_COS_L3_QOS_BITS		6
 /* Max L3 QoS Value */
 #define CLS_COS_MAX_L3_QOS		(1 << CLS_COS_L3_QOS_BITS)
-/* Max PMR Term bits */
-#define CLS_PMR_TERM_BYTES_MAX		16
+/* Max PMR Term size */
+#define MAX_PMR_TERM_SIZE		16
 /* Max queue per Class of service */
 #define CLS_COS_QUEUE_MAX		32
 /* Max number of implementation created queues */
@@ -61,39 +61,62 @@ typedef union {
 	};
 } odp_cls_hash_proto_t;
 
-/**
-Packet Matching Rule Term Value
-
-Stores the Term and Value mapping for a PMR.
-The maximum size of value currently supported in 64 bits
-**/
+/*
+ * Term and value mapping for a PMR
+ */
 typedef struct pmr_term_value {
-	odp_cls_pmr_term_t	term;	/* PMR Term */
-	odp_bool_t		range_term; /* True if range, false if match */
+	/* PMR Term */
+	odp_cls_pmr_term_t term;
+
+	/* True if range, false if match */
+	odp_bool_t range_term;
+
 	union {
+		/* Match value and mask */
 		struct {
-			/** Value to be matched */
-			uint64_t	value;
-			/** Masked set of bits to be matched */
-			uint64_t	mask;
+			/* Value to be matched. Arrays are used with custom and
+			 * IPv6 address terms. */
+			union {
+				uint64_t value;
+				uint8_t  value_u8[MAX_PMR_TERM_SIZE];
+				uint64_t value_u64[2];
+			};
+
+			/* Mask for the data to be matched */
+			union {
+				uint64_t mask;
+				uint8_t  mask_u8[MAX_PMR_TERM_SIZE];
+				uint64_t mask_u64[2];
+			};
+
 		} match;
+
+		/* Range values */
 		struct {
-			/** Start value of the range */
-			uint64_t	val_start;
-			/** End value of the range */
-			uint64_t	val_end;
+			/* Start value of the range */
+			union {
+				uint64_t start;
+				uint8_t  start_u8[MAX_PMR_TERM_SIZE];
+				uint64_t start_u64[2];
+			};
+
+			/* End value of the range */
+			union {
+				uint64_t end;
+				uint8_t  end_u8[MAX_PMR_TERM_SIZE];
+				uint64_t end_u64[2];
+			};
+
 		} range;
-		struct {
-			_odp_ipv6_addr_t addr;
-			_odp_ipv6_addr_t mask;
-		} match_ipv6;
-		struct {
-			_odp_ipv6_addr_t addr_start;
-			_odp_ipv6_addr_t addr_end;
-		} range_ipv6;
+
 	};
-	uint32_t	offset;	/**< Offset if term == ODP_PMR_CUSTOM_FRAME */
-	uint32_t	val_sz;	/**< Size of the value to be matched */
+
+	/* Offset used with custom PMR */
+	uint32_t offset;
+
+	/* Size of the value to be matched */
+	uint32_t val_sz;
+
 } pmr_term_value_t;
 
 /*
