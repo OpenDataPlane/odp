@@ -576,6 +576,11 @@ static int pmr_create_term(pmr_term_value_t *value,
 	int custom = 0;
 	odp_cls_pmr_term_t term = param->term;
 
+	if (param->range_term) {
+		ODP_ERR("PRM value range not supported\n");
+		return -1;
+	}
+
 	value->term = term;
 	value->range_term = param->range_term;
 
@@ -626,7 +631,7 @@ static int pmr_create_term(pmr_term_value_t *value,
 
 	case ODP_PMR_CUSTOM_FRAME:
 		custom = 1;
-		size = CLS_PMR_TERM_BYTES_MAX;
+		size = MAX_PMR_TERM_SIZE;
 		break;
 
 	default:
@@ -640,45 +645,14 @@ static int pmr_create_term(pmr_term_value_t *value,
 		return -1;
 	}
 
-	switch (value->term) {
-	case ODP_PMR_SIP6_ADDR:
-	case ODP_PMR_DIP6_ADDR:
-	if (!value->range_term) {
-		memset(value->match_ipv6.addr.u8, 0, 16);
-		memset(value->match_ipv6.mask.u8, 0, 16);
-		memcpy(&value->match_ipv6.addr.u8, param->match.value,
-		       param->val_sz);
-		memcpy(&value->match_ipv6.mask.u8, param->match.mask,
-		       param->val_sz);
-		for (i = 0; i < 2; i++)
-			value->match_ipv6.addr.u64[i] &=
-				value->match_ipv6.mask.u64[i];
-	} else {
-		memset(value->range_ipv6.addr_start.u8, 0, 16);
-		memset(value->range_ipv6.addr_end.u8, 0, 16);
-		memcpy(&value->range_ipv6.addr_start.u8, param->range.val_start,
-		       param->val_sz);
-		memcpy(&value->range_ipv6.addr_end.u8, param->range.val_end,
-		       param->val_sz);
-	}
+	memset(&value->match.value, 0, MAX_PMR_TERM_SIZE);
+	memset(&value->match.mask, 0, MAX_PMR_TERM_SIZE);
+	memcpy(&value->match.value, param->match.value, param->val_sz);
+	memcpy(&value->match.mask, param->match.mask, param->val_sz);
 
-	break;
-	default:
-	if (!value->range_term) {
-		value->match.value = 0;
-		value->match.mask = 0;
-		memcpy(&value->match.value, param->match.value, param->val_sz);
-		memcpy(&value->match.mask, param->match.mask, param->val_sz);
-		value->match.value &= value->match.mask;
-	} else {
-		value->range.val_start = 0;
-		value->range.val_end = 0;
-		memcpy(&value->range.val_start, param->range.val_start,
-		       param->val_sz);
-		memcpy(&value->range.val_end, param->range.val_end,
-		       param->val_sz);
-	}
-	}
+	for (i = 0; i < param->val_sz; i++)
+		value->match.value_u8[i] &= value->match.mask_u8[i];
+
 	value->offset = param->offset;
 	value->val_sz = param->val_sz;
 	return 0;
@@ -952,16 +926,13 @@ static inline int verify_pmr_ipv6_saddr(const uint8_t *pkt_addr,
 		return 0;
 
 	ipv6 = (const _odp_ipv6hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
+	memcpy(addr, ipv6->src_addr.u64, _ODP_IPV6ADDR_LEN);
 
-	addr[0] = ipv6->src_addr.u64[0];
-	addr[1] = ipv6->src_addr.u64[1];
+	addr[0] = addr[0] & term_value->match.mask_u64[0];
+	addr[1] = addr[1] & term_value->match.mask_u64[1];
 
-	/* 128 bit address is processed as two 64 bit value
-	* for bitwise AND operation */
-	addr[0] = addr[0] & term_value->match_ipv6.mask.u64[0];
-	addr[1] = addr[1] & term_value->match_ipv6.mask.u64[1];
-
-	if (!memcmp(addr, term_value->match_ipv6.addr.u8, _ODP_IPV6ADDR_LEN))
+	if (addr[0] == term_value->match.value_u64[0] &&
+	    addr[1] == term_value->match.value_u64[1])
 		return 1;
 
 	return 0;
@@ -976,16 +947,15 @@ static inline int verify_pmr_ipv6_daddr(const uint8_t *pkt_addr,
 
 	if (!packet_hdr_has_ipv6(pkt_hdr))
 		return 0;
+
 	ipv6 = (const _odp_ipv6hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
-	addr[0] = ipv6->dst_addr.u64[0];
-	addr[1] = ipv6->dst_addr.u64[1];
+	memcpy(addr, ipv6->dst_addr.u64, _ODP_IPV6ADDR_LEN);
 
-	/* 128 bit address is processed as two 64 bit value
-	* for bitwise AND operation */
-	addr[0] = addr[0] & term_value->match_ipv6.mask.u64[0];
-	addr[1] = addr[1] & term_value->match_ipv6.mask.u64[1];
+	addr[0] = addr[0] & term_value->match.mask_u64[0];
+	addr[1] = addr[1] & term_value->match.mask_u64[1];
 
-	if (!memcmp(addr, term_value->match_ipv6.addr.u8, _ODP_IPV6ADDR_LEN))
+	if (addr[0] == term_value->match.value_u64[0] &&
+	    addr[1] == term_value->match.value_u64[1])
 		return 1;
 
 	return 0;
@@ -1083,7 +1053,7 @@ static inline int verify_pmr_custom_frame(const uint8_t *pkt_addr,
 	uint32_t offset = term_value->offset;
 	uint32_t val_sz = term_value->val_sz;
 
-	ODP_ASSERT(val_sz <= CLS_PMR_TERM_BYTES_MAX);
+	ODP_ASSERT(val_sz <= MAX_PMR_TERM_SIZE);
 
 	if (packet_len(pkt_hdr) <= offset + val_sz)
 		return 0;
