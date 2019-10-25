@@ -5,7 +5,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_packet_io_ipc_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_errno_define.h>
@@ -17,6 +16,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #define IPC_ODP_DEBUG_PRINT 0
 
@@ -25,6 +25,37 @@
 		if (IPC_ODP_DEBUG_PRINT == 1) \
 			ODP_DBG(fmt, ##__VA_ARGS__);\
 	} while (0)
+
+/* number of odp buffers in odp ring queue */
+#define PKTIO_IPC_ENTRIES 4096
+
+#define PKTIO_IPC_ENTRY_MASK (PKTIO_IPC_ENTRIES - 1)
+
+/* that struct is exported to shared memory, so that processes can find
+ * each other.
+ */
+struct pktio_info {
+	struct {
+		/* number of buffer*/
+		int num;
+		/* size of packet/segment in remote pool */
+		uint32_t block_size;
+		char pool_name[ODP_POOL_NAME_LEN];
+		/* 1 if master finished creation of all shared objects */
+		int init_done;
+	} master;
+	struct {
+		void *base_addr;
+		uint32_t block_size;
+		char pool_name[ODP_POOL_NAME_LEN];
+		/* pid of the slave process written to shm and
+		 * used by master to look up memory created by
+		 * slave
+		 */
+		int pid;
+		int init_done;
+	} slave;
+} ODP_PACKED;
 
 /* The maximum length of a ring name. */
 #define _RING_NAMESIZE 32
