@@ -97,11 +97,12 @@ typedef union odp_cls_pmr_terms_t {
 		uint64_t	ipsec_spi:1;
 		/** NVGRE/VXLAN network identifier */
 		uint64_t	ld_vni:1;
-		/** Custom match rule, offset from start of
-		 * frame. The match is defined by the offset, the
-		 * expected value, and its size.
-		 */
-		uint64_t	custom_frame:1;
+		/** Custom frame match rule. PMR offset is counted from
+		 *  the start of the packet. */
+		uint64_t        custom_frame:1;
+		/** Custom layer 3 match rule. PMR offset is counted from
+		 *  the start of layer 3 in the packet. */
+		uint64_t        custom_l3:1;
 
 	} bit;
 	/** All bits of the bit field structure */
@@ -535,6 +536,15 @@ typedef enum {
 	 */
 	ODP_PMR_CUSTOM_FRAME,
 
+	/**
+	 * Custom layer 3 match rule
+	 *
+	 * PMR offset is counted from the start of layer 3 in the packet.
+	 * The match is defined by the offset, the expected value, and its size.
+	 * Custom L3 rules may be combined with other PMRs.
+	 */
+	ODP_PMR_CUSTOM_L3,
+
 	/** Inner header may repeat above values with this offset */
 	ODP_PMR_INNER_HDR_OFF = 32
 
@@ -578,11 +588,18 @@ typedef struct odp_pmr_param_t {
 			const void *val_end;
 		} range;
 	};
-	uint32_t	val_sz;	 /**< Size of the term value */
 
-	uint32_t	offset;  /**< User-defined offset in packet
-				 Used if term == ODP_PMR_CUSTOM_FRAME only,
-				 ignored otherwise */
+	/** Size of the value to be matched */
+	uint32_t val_sz;
+
+	/** Offset to the value
+	 *
+	 * Byte offset to the value to be matched in a packet. PMR term defines
+	 * starting point for the offset. Used only with custom PMR terms,
+	 * ignored with other terms.
+	 */
+	uint32_t offset;
+
 } odp_pmr_param_t;
 
 /**
