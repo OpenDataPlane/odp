@@ -24,7 +24,6 @@
 #include <odp_schedule_if.h>
 #include <odp_classification_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_packet_io_ipc_internal.h>
 #include <odp/api/time.h>
 #include <odp/api/plat/time_inlines.h>
 #include <odp_pcapng.h>
