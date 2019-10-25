@@ -11,6 +11,7 @@
 #include <odp/api/system_info.h>
 #include <odp_shm_internal.h>
 #include <odp_ring_ptr_internal.h>
+#include <odp_global_data.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -38,15 +39,12 @@ struct pktio_info {
 	struct {
 		/* number of buffer*/
 		int num;
-		/* size of packet/segment in remote pool */
-		uint32_t block_size;
 		char pool_name[ODP_POOL_NAME_LEN];
 		/* 1 if master finished creation of all shared objects */
 		int init_done;
 	} master;
 	struct {
 		void *base_addr;
-		uint32_t block_size;
 		char pool_name[ODP_POOL_NAME_LEN];
 		/* pid of the slave process written to shm and
 		 * used by master to look up memory created by
@@ -56,92 +54,6 @@ struct pktio_info {
 		int init_done;
 	} slave;
 } ODP_PACKED;
-
-/* The maximum length of a ring name. */
-#define _RING_NAMESIZE 32
-/* If set - ring is visible from different processes.
- * Default is thread visible.*/
-#define _RING_SHM_PROC (1 << 2)
-/* Ring size mask */
-#define _RING_SZ_MASK  (unsigned)(0x0fffffff)
-
-/* create the ring */
-static ring_ptr_t *
-_ring_create(const char *name, unsigned count, unsigned flags)
-{
-	char ring_name[_RING_NAMESIZE];
-	ring_ptr_t *r;
-	size_t ring_size;
-	uint32_t shm_flag;
-	odp_shm_t shm;
-
-	if (flags & _RING_SHM_PROC)
-		shm_flag = ODP_SHM_PROC | ODP_SHM_EXPORT;
-	else
-		shm_flag = 0;
-	if (odp_global_ro.shm_single_va)
-		shm_flag |= ODP_SHM_SINGLE_VA;
-
-	/* count must be a power of 2 */
-	if (!CHECK_IS_POWER2(count)) {
-		ODP_ERR("Requested size is invalid, must be power of 2,"
-			"and do not exceed the size limit %u\n",
-			_RING_SZ_MASK);
-		__odp_errno = EINVAL;
-		return NULL;
-	}
-
-	snprintf(ring_name, sizeof(ring_name), "%s", name);
-	ring_size = sizeof(ring_ptr_t) + count * sizeof(void *);
-
-	/* reserve a memory zone for this ring.*/
-	shm = odp_shm_reserve(ring_name, ring_size, ODP_CACHE_LINE_SIZE,
-			      shm_flag);
-
-	r = odp_shm_addr(shm);
-	if (r != NULL) {
-		/* init the ring structure */
-		ring_ptr_init(r);
-
-	} else {
-		__odp_errno = ENOMEM;
-		ODP_ERR("Cannot reserve memory\n");
-	}
-
-	return r;
-}
-
-static int _ring_destroy(const char *name)
-{
-	odp_shm_t shm = odp_shm_lookup(name);
-
-	if (shm != ODP_SHM_INVALID)
-		return odp_shm_free(shm);
-
-	return 0;
-}
-
-/**
- * Return the number of entries in a ring.
- */
-static unsigned _ring_count(ring_ptr_t *r, uint32_t mask)
-{
-	uint32_t prod_tail = odp_atomic_load_u32(&r->r.w_tail);
-	uint32_t cons_tail = odp_atomic_load_u32(&r->r.r_tail);
-
-	return (prod_tail - cons_tail) & mask;
-}
-
-/**
- * Return the number of free entries in a ring.
- */
-static unsigned _ring_free_count(ring_ptr_t *r, uint32_t mask)
-{
-	uint32_t prod_tail = odp_atomic_load_u32(&r->r.w_tail);
-	uint32_t cons_tail = odp_atomic_load_u32(&r->r.r_tail);
-
-	return (cons_tail - prod_tail - 1) & mask;
-}
 
 typedef	struct {
 	/* TX */
@@ -166,7 +78,6 @@ typedef	struct {
 	} rx; /* slave */
 	void		*pool_base;	/**< Remote pool base addr */
 	void		*pool_mdata_base; /**< Remote pool mdata base addr */
-	uint64_t	pkt_size;	/**< Packet size in remote pool */
 	odp_pool_t	pool;		/**< Pool of main process */
 	enum {
 		PKTIO_TYPE_IPC_MASTER = 0, /**< Master is the process which
@@ -194,6 +105,74 @@ static inline pkt_ipc_t *pkt_priv(pktio_entry_t *pktio_entry)
 static const char pktio_ipc_mac[] = {0x12, 0x12, 0x12, 0x12, 0x12, 0x12};
 
 static odp_shm_t _ipc_map_remote_pool(const char *name, int pid);
+
+/* create the ring */
+static ring_ptr_t *_ring_create(const char *name, uint32_t count,
+				uint32_t shm_flags)
+{
+	ring_ptr_t *r;
+	size_t ring_size;
+	odp_shm_t shm;
+
+	if (odp_global_ro.shm_single_va)
+		shm_flags |= ODP_SHM_SINGLE_VA;
+
+	/* count must be a power of 2 */
+	if (!CHECK_IS_POWER2(count)) {
+		ODP_ERR("Requested size is invalid, must be a power of 2\n");
+		__odp_errno = EINVAL;
+		return NULL;
+	}
+
+	ring_size = sizeof(ring_ptr_t) + count * sizeof(void *);
+
+	/* reserve a memory zone for this ring.*/
+	shm = odp_shm_reserve(name, ring_size, ODP_CACHE_LINE_SIZE, shm_flags);
+
+	r = odp_shm_addr(shm);
+	if (r != NULL) {
+		/* init the ring structure */
+		ring_ptr_init(r);
+
+	} else {
+		__odp_errno = ENOMEM;
+		ODP_ERR("Cannot reserve memory\n");
+	}
+
+	return r;
+}
+
+static int _ring_destroy(const char *name)
+{
+	odp_shm_t shm = odp_shm_lookup(name);
+
+	if (shm != ODP_SHM_INVALID)
+		return odp_shm_free(shm);
+
+	return 0;
+}
+
+/**
+ * Return the number of entries in a ring.
+ */
+static uint32_t _ring_count(ring_ptr_t *r, uint32_t mask)
+{
+	uint32_t prod_tail = odp_atomic_load_u32(&r->r.w_tail);
+	uint32_t cons_tail = odp_atomic_load_u32(&r->r.r_tail);
+
+	return (prod_tail - cons_tail) & mask;
+}
+
+/**
+ * Return the number of free entries in a ring.
+ */
+static uint32_t _ring_free_count(ring_ptr_t *r, uint32_t mask)
+{
+	uint32_t prod_tail = odp_atomic_load_u32(&r->r.w_tail);
+	uint32_t cons_tail = odp_atomic_load_u32(&r->r.r_tail);
+
+	return (cons_tail - prod_tail - 1) & mask;
+}
 
 static const char *_ipc_odp_buffer_pool_shm_name(odp_pool_t pool_hdl)
 {
@@ -240,12 +219,8 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 			    odp_pool_t pool_hdl)
 {
 	char ipc_shm_name[ODP_POOL_NAME_LEN + sizeof("_m_prod")];
-	pool_t *pool;
 	struct pktio_info *pinfo;
 	const char *pool_name;
-
-	pool = pool_entry_from_hdl(pool_hdl);
-	(void)pool;
 
 	if (strlen(dev) > (ODP_POOL_NAME_LEN - sizeof("_m_prod"))) {
 		ODP_ERR("too big ipc name\n");
@@ -258,7 +233,8 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_prod", dev);
 	pkt_priv(pktio_entry)->tx.send = _ring_create(ipc_shm_name,
 						      PKTIO_IPC_ENTRIES,
-						      _RING_SHM_PROC);
+						      ODP_SHM_PROC |
+						      ODP_SHM_EXPORT);
 	if (!pkt_priv(pktio_entry)->tx.send) {
 		ODP_ERR("pid %d unable to create ipc ring %s name\n",
 			getpid(), ipc_shm_name);
@@ -276,7 +252,8 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_cons", dev);
 	pkt_priv(pktio_entry)->tx.free = _ring_create(ipc_shm_name,
 						      PKTIO_IPC_ENTRIES,
-						      _RING_SHM_PROC);
+						      ODP_SHM_PROC |
+						      ODP_SHM_EXPORT);
 	if (!pkt_priv(pktio_entry)->tx.free) {
 		ODP_ERR("pid %d unable to create ipc ring %s name\n",
 			getpid(), ipc_shm_name);
@@ -291,7 +268,8 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_prod", dev);
 	pkt_priv(pktio_entry)->rx.recv = _ring_create(ipc_shm_name,
 						      PKTIO_IPC_ENTRIES,
-						      _RING_SHM_PROC);
+						      ODP_SHM_PROC |
+						      ODP_SHM_EXPORT);
 	if (!pkt_priv(pktio_entry)->rx.recv) {
 		ODP_ERR("pid %d unable to create ipc ring %s name\n",
 			getpid(), ipc_shm_name);
@@ -306,7 +284,8 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_cons", dev);
 	pkt_priv(pktio_entry)->rx.free = _ring_create(ipc_shm_name,
 						      PKTIO_IPC_ENTRIES,
-						      _RING_SHM_PROC);
+						      ODP_SHM_PROC |
+						      ODP_SHM_EXPORT);
 	if (!pkt_priv(pktio_entry)->rx.free) {
 		ODP_ERR("pid %d unable to create ipc ring %s name\n",
 			getpid(), ipc_shm_name);
@@ -361,7 +340,6 @@ static void _ipc_export_pool(struct pktio_info *pinfo,
 	snprintf(pinfo->slave.pool_name, ODP_POOL_NAME_LEN, "%s",
 		 _ipc_odp_buffer_pool_shm_name(pool_hdl));
 	pinfo->slave.pid = odp_global_ro.main_pid;
-	pinfo->slave.block_size = pool->block_size;
 	pinfo->slave.base_addr = pool->base_addr;
 }
 
@@ -480,7 +458,6 @@ static int _ipc_slave_start(pktio_entry_t *pktio_entry)
 				   pid);
 	pkt_priv(pktio_entry)->remote_pool_shm = shm;
 	pkt_priv(pktio_entry)->pool_mdata_base = (char *)odp_shm_addr(shm);
-	pkt_priv(pktio_entry)->pkt_size = pinfo->master.block_size;
 
 	_ipc_export_pool(pinfo, pkt_priv(pktio_entry)->pool);
 
@@ -516,9 +493,6 @@ static int ipc_pktio_open(odp_pktio_t id ODP_UNUSED,
 	char name[ODP_POOL_NAME_LEN + sizeof("_info")];
 	char tail[ODP_POOL_NAME_LEN];
 	odp_shm_t shm;
-
-	ODP_STATIC_ASSERT(ODP_POOL_NAME_LEN == _RING_NAMESIZE,
-			  "mismatch pool and ring name arrays");
 
 	if (strncmp(dev, "ipc", 3))
 		return -1;
