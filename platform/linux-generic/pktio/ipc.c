@@ -65,43 +65,6 @@ struct pktio_info {
 /* Ring size mask */
 #define _RING_SZ_MASK  (unsigned)(0x0fffffff)
 
-typedef struct {
-	/* Rings tailq lock */
-	odp_rwlock_t qlock;
-	odp_shm_t shm;
-} global_data_t;
-
-static global_data_t *global;
-
-/* Initialize tailq_ring */
-static int _ring_global_init(void)
-{
-	odp_shm_t shm;
-
-	/* Allocate globally shared memory */
-	shm = odp_shm_reserve("_odp_ring_global", sizeof(global_data_t),
-			      ODP_CACHE_LINE_SIZE, 0);
-	if (ODP_SHM_INVALID == shm) {
-		ODP_ERR("Shm reserve failed for pktio ring\n");
-		return -1;
-	}
-
-	global = odp_shm_addr(shm);
-	memset(global, 0, sizeof(global_data_t));
-	global->shm = shm;
-
-	return 0;
-}
-
-static int _ring_global_term(void)
-{
-	if (odp_shm_free(global->shm)) {
-		ODP_ERR("Shm free failed for pktio ring\n");
-		return -1;
-	}
-	return 0;
-}
-
 /* create the ring */
 static ring_ptr_t *
 _ring_create(const char *name, unsigned count, unsigned flags)
@@ -961,23 +924,12 @@ static int ipc_close(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
-static int ipc_pktio_init_global(void)
-{
-	ODP_DBG("PKTIO: initializing ipc interface.\n");
-	return _ring_global_init();
-}
-
-static int ipc_pktio_term_global(void)
-{
-	return _ring_global_term();
-}
-
 const pktio_if_ops_t ipc_pktio_ops = {
 	.name = "ipc",
 	.print = NULL,
-	.init_global = ipc_pktio_init_global,
+	.init_global = NULL,
 	.init_local = NULL,
-	.term = ipc_pktio_term_global,
+	.term = NULL,
 	.open = ipc_pktio_open,
 	.close = ipc_close,
 	.recv =  ipc_pktio_recv,
