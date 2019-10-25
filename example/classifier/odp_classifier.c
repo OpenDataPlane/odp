@@ -44,6 +44,9 @@
  */
 #define DISPLAY_STRING_LEN	32
 
+/** Maximum PMR value size */
+#define MAX_VAL_SIZE    16
+
 /** Get rid of path in filename - only for unix-type paths using '/' */
 #define NO_PATH(file_name) (strrchr((file_name), '/') ? \
 		strrchr((file_name), '/') + 1 : (file_name))
@@ -59,8 +62,8 @@ typedef struct {
 	char src_cos_name[ODP_COS_NAME_LEN];	/**< source cos name */
 	struct {
 		odp_cls_pmr_term_t term;	/**< odp pmr term value */
-		uint64_t val;	/**< pmr term value */
-		uint64_t mask;	/**< pmr term mask */
+		uint8_t value_be[MAX_VAL_SIZE]; /**< value in big endian */
+		uint8_t mask_be[MAX_VAL_SIZE];  /**< mask in big endian */
 		uint32_t val_sz;	/**< size of the pmr term */
 		uint32_t offset;	/**< pmr term offset */
 	} rule;
@@ -166,39 +169,20 @@ static inline void print_cls_statistics(appl_args_t *args)
 	printf("\n");
 }
 
-static inline int parse_mask(const char *str, uint64_t *mask)
+static int parse_custom(const char *str, uint8_t *buf_be, int max_size)
 {
-	uint64_t b;
-	int ret;
+	int i, len;
 
-	ret = sscanf(str, "%" SCNx64, &b);
-	*mask = b;
-	return ret != 1;
-}
-
-static int parse_value(const char *str, uint64_t *val, uint32_t *val_sz)
-{
-	size_t len;
-	size_t i;
-	int converted;
-	union {
-		uint64_t u64;
-		uint8_t u8[8];
-	} buf = {.u64 = 0};
-
+	/* hex string without 0x prefix */
 	len = strlen(str);
-	if (len > 2 * sizeof(buf))
+	if (len > 2 * max_size)
 		return -1;
 
-	for (i = 0; i < len; i += 2) {
-		converted = sscanf(&str[i], "%2" SCNx8, &buf.u8[i / 2]);
-		if (1 != converted)
+	for (i = 0; i < len; i += 2)
+		if (sscanf(&str[i], "%2" SCNx8, &buf_be[i / 2]) != 1)
 			return -1;
-	}
 
-	*val = buf.u64;
-	*val_sz = len / 2;
-	return 0;
+	return len / 2;
 }
 
 /**
@@ -494,8 +478,8 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 
 		odp_cls_pmr_param_init(&pmr_param);
 		pmr_param.term = stats->rule.term;
-		pmr_param.match.value = &stats->rule.val;
-		pmr_param.match.mask = &stats->rule.mask;
+		pmr_param.match.value = stats->rule.value_be;
+		pmr_param.match.mask  = stats->rule.mask_be;
 		pmr_param.val_sz = stats->rule.val_sz;
 		pmr_param.offset = stats->rule.offset;
 
@@ -793,9 +777,10 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 	odp_cls_pmr_term_t term;
 	global_statistics *stats;
 	char *pmr_str;
-	uint32_t offset;
-	uint32_t ip_addr;
-	unsigned long int value;
+	uint32_t offset, ip_addr, u32;
+	unsigned long int value, mask;
+	uint16_t u16;
+	int val_sz, mask_sz;
 
 	policy_count = appl_args->policy_count;
 	stats = appl_args->stats;
@@ -832,12 +817,18 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 		strncpy(stats[policy_count].value, token,
 			DISPLAY_STRING_LEN - 1);
 		value = strtoul(token, NULL, 0);
-		stats[policy_count].rule.val = value;
+		u16 = value;
+		u16 = odp_cpu_to_be_16(u16);
+		memcpy(stats[policy_count].rule.value_be, &u16, sizeof(u16));
 
 		token = strtok(NULL, ":");
 		strncpy(stats[policy_count].mask, token,
 			DISPLAY_STRING_LEN - 1);
-		parse_mask(token, &stats[policy_count].rule.mask);
+		mask = strtoul(token, NULL, 0);
+		u16 = mask;
+		u16 = odp_cpu_to_be_16(u16);
+		memcpy(stats[policy_count].rule.mask_be, &u16, sizeof(u16));
+
 		stats[policy_count].rule.val_sz = 2;
 	break;
 	case ODP_PMR_SIP_ADDR:
@@ -851,12 +842,17 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 			exit(EXIT_FAILURE);
 		}
 
-		stats[policy_count].rule.val = ip_addr;
+		u32 = odp_cpu_to_be_32(ip_addr);
+		memcpy(stats[policy_count].rule.value_be, &u32, sizeof(u32));
 
 		token = strtok(NULL, ":");
 		strncpy(stats[policy_count].mask, token,
 			DISPLAY_STRING_LEN - 1);
-		parse_mask(token, &stats[policy_count].rule.mask);
+		mask = strtoul(token, NULL, 0);
+		u32 = mask;
+		u32 = odp_cpu_to_be_32(u32);
+		memcpy(stats[policy_count].rule.mask_be, &u32, sizeof(u32));
+
 		stats[policy_count].rule.val_sz = 4;
 	break;
 	case ODP_PMR_CUSTOM_FRAME:
@@ -864,19 +860,28 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 		token = strtok(NULL, ":");
 		errno = 0;
 		offset = strtoul(token, NULL, 0);
+		stats[policy_count].rule.offset = offset;
 		if (errno)
 			return -1;
 
 		token = strtok(NULL, ":");
 		strncpy(stats[policy_count].value, token,
 			DISPLAY_STRING_LEN - 1);
-		parse_value(token, &stats[policy_count].rule.val,
-			    &stats[policy_count].rule.val_sz);
+		val_sz = parse_custom(token,
+				      stats[policy_count].rule.value_be,
+				      MAX_VAL_SIZE);
+		stats[policy_count].rule.val_sz = val_sz;
+		if (val_sz <= 0)
+			return -1;
+
 		token = strtok(NULL, ":");
 		strncpy(stats[policy_count].mask, token,
 			DISPLAY_STRING_LEN - 1);
-		parse_mask(token, &stats[policy_count].rule.mask);
-		stats[policy_count].rule.offset = offset;
+		mask_sz = parse_custom(token,
+				       stats[policy_count].rule.mask_be,
+				       MAX_VAL_SIZE);
+		if (mask_sz != val_sz)
+			return -1;
 	break;
 	default:
 		usage(argv[0]);
