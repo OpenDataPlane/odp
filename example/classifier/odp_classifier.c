@@ -764,6 +764,9 @@ static int convert_str_to_pmr_enum(char *token, odp_cls_pmr_term_t *term)
 	} else if (strcasecmp(token, "ODP_PMR_CUSTOM_FRAME") == 0) {
 		*term = ODP_PMR_CUSTOM_FRAME;
 		return 0;
+	} else if (strcasecmp(token, "ODP_PMR_CUSTOM_L3") == 0) {
+		*term = ODP_PMR_CUSTOM_L3;
+		return 0;
 	}
 
 	return -1;
@@ -856,6 +859,8 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 		stats[policy_count].rule.val_sz = 4;
 	break;
 	case ODP_PMR_CUSTOM_FRAME:
+		/* Fall through */
+	case ODP_PMR_CUSTOM_L3:
 		/* :<offset>:<value>:<mask> */
 		token = strtok(NULL, ":");
 		errno = 0;
