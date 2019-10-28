@@ -35,8 +35,9 @@
  */
 struct pktio_info {
 	struct {
+		/* Pool base address */
+		void *base_addr;
 		/* number of buffer*/
-		int num;
 		char pool_name[ODP_POOL_NAME_LEN];
 		/* 1 if master finished creation of all shared objects */
 		int init_done;
@@ -46,6 +47,7 @@ struct pktio_info {
 		uint32_t ring_mask;
 	} master;
 	struct {
+		/* Pool base address */
 		void *base_addr;
 		char pool_name[ODP_POOL_NAME_LEN];
 		/* pid of the slave process written to shm and
@@ -78,8 +80,10 @@ typedef	struct {
 		/* local cache to keep packet order right */
 		ring_ptr_t	*cache;
 	} rx; /* slave */
-	void		*pool_base;	/**< Remote pool base addr */
-	void		*pool_mdata_base; /**< Remote pool mdata base addr */
+	/* Remote pool mdata base addr */
+	void *pool_mdata_base;
+	/* Remote pool base address for offset calculation */
+	void *remote_base_addr;
 	odp_pool_t	pool;		/**< Pool of main process */
 	enum {
 		PKTIO_TYPE_IPC_MASTER = 0, /**< Master is the process which
@@ -212,7 +216,7 @@ static int _ipc_master_start(pktio_entry_t *pktio_entry)
 	}
 
 	pktio_ipc->remote_pool_shm = shm;
-	pktio_ipc->pool_base = odp_shm_addr(shm);
+	pktio_ipc->remote_base_addr = pinfo->slave.base_addr;
 	pktio_ipc->pool_mdata_base = (char *)odp_shm_addr(shm);
 
 	odp_atomic_store_u32(&pktio_ipc->ready, 1);
@@ -328,6 +332,7 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	/* Export ring info for the slave process to use */
 	pinfo->master.ring_size = ring_size;
 	pinfo->master.ring_mask = ring_mask;
+	pinfo->master.base_addr = odp_shm_addr(pool->shm);
 
 	pinfo->slave.base_addr = 0;
 	pinfo->slave.pid = 0;
@@ -362,7 +367,7 @@ static void _ipc_export_pool(struct pktio_info *pinfo,
 	snprintf(pinfo->slave.pool_name, ODP_POOL_NAME_LEN, "%s",
 		 _ipc_odp_buffer_pool_shm_name(pool_hdl));
 	pinfo->slave.pid = odp_global_ro.main_pid;
-	pinfo->slave.base_addr = pool->base_addr;
+	pinfo->slave.base_addr = odp_shm_addr(pool->shm);
 }
 
 static odp_shm_t _ipc_map_remote_pool(const char *name, int pid)
@@ -494,6 +499,7 @@ static int _ipc_slave_start(pktio_entry_t *pktio_entry)
 				   pid);
 	pktio_ipc->remote_pool_shm = shm;
 	pktio_ipc->pool_mdata_base = (char *)odp_shm_addr(shm);
+	pktio_ipc->remote_base_addr = pinfo->master.base_addr;
 
 	_ipc_export_pool(pinfo, pktio_ipc->pool);
 
@@ -674,7 +680,8 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 		if (odp_unlikely(pool == ODP_POOL_INVALID))
 			ODP_ABORT("invalid pool");
 
-		data_pool_off = phdr->buf_hdr.ipc_data_offset;
+		data_pool_off = (uint8_t *)phdr->seg_data -
+				(uint8_t *)pktio_ipc->remote_base_addr;
 
 		pkt = odp_packet_alloc(pool, phdr->frame_len);
 		if (odp_unlikely(pkt == ODP_PACKET_INVALID)) {
@@ -803,7 +810,6 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 
 	/* Set offset to phdr for outgoing packets */
 	for (i = 0; i < num; i++) {
-		uint64_t data_pool_off;
 		odp_packet_t pkt = pkt_table_mapped[i];
 		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 		odp_pool_t pool_hdl = odp_packet_pool(pkt);
@@ -811,17 +817,15 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 
 		offsets[i] = (uint8_t *)pkt_hdr -
 			     (uint8_t *)odp_shm_addr(pool->shm);
-		data_pool_off = (uint8_t *)pkt_hdr->seg_data -
-				(uint8_t *)odp_shm_addr(pool->shm);
 
 		/* compile all function code even if ipc disabled with config */
-		pkt_hdr->buf_hdr.ipc_data_offset = data_pool_off;
 		IPC_ODP_DBG("%d/%d send packet %llx, pool %llx,"
-			    "phdr = %p, offset %x sendoff %x, addr %llx iaddr %llx\n",
+			    "phdr = %p, offset %x, sendoff %x, addr %llx iaddr %llx\n",
 			    i, num,
 			    odp_packet_to_u64(pkt), odp_pool_to_u64(pool_hdl),
-			    pkt_hdr, pkt_hdr->buf_hdr.ipc_data_offset,
-			    offsets[i], odp_shm_addr(pool->shm),
+			    pkt_hdr, (uint8_t *)pkt_hdr->seg_data -
+			    (uint8_t *)odp_shm_addr(pool->shm), offsets[i],
+			    odp_shm_addr(pool->shm),
 			    odp_shm_addr(ipc_pool->shm));
 	}
 

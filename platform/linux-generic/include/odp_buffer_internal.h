@@ -68,10 +68,6 @@ struct ODP_ALIGNED_CACHE odp_buffer_hdr_t {
 	/* User area pointer */
 	void    *uarea_addr;
 
-	/* ipc mapped process can not walk over pointers,
-	 * offset has to be used */
-	uint64_t ipc_data_offset;
-
 	/* Combined pool and buffer index */
 	buffer_index_t index;
 
