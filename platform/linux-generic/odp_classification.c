@@ -174,6 +174,7 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 	capability->supported_terms.bit.sip6_addr = 1;
 	capability->supported_terms.bit.dip6_addr = 1;
 	capability->supported_terms.bit.custom_frame = 1;
+	capability->supported_terms.bit.custom_l3 = 1;
 	capability->random_early_detection = ODP_SUPPORT_NO;
 	capability->back_pressure = ODP_SUPPORT_NO;
 	capability->threshold_red.all_bits = 0;
@@ -631,6 +632,8 @@ static int pmr_create_term(pmr_term_value_t *value,
 		break;
 
 	case ODP_PMR_CUSTOM_FRAME:
+		/* Fall through */
+	case ODP_PMR_CUSTOM_L3:
 		custom = 1;
 		size = MAX_PMR_TERM_SIZE;
 		break;
@@ -1050,7 +1053,8 @@ static inline int verify_pmr_custom_frame(const uint8_t *pkt_addr,
 					  odp_packet_hdr_t *pkt_hdr,
 					  pmr_term_value_t *term_value)
 {
-	uint64_t val = 0;
+	uint32_t i;
+	uint8_t val;
 	uint32_t offset = term_value->offset;
 	uint32_t val_sz = term_value->val_sz;
 
@@ -1059,11 +1063,46 @@ static inline int verify_pmr_custom_frame(const uint8_t *pkt_addr,
 	if (packet_len(pkt_hdr) <= offset + val_sz)
 		return 0;
 
-	memcpy(&val, pkt_addr + offset, val_sz);
-	if (term_value->match.value == (val & term_value->match.mask))
-		return 1;
+	pkt_addr += offset;
 
-	return 0;
+	for (i = 0; i < val_sz; i++) {
+		val = pkt_addr[i] & term_value->match.mask_u8[i];
+
+		if (val != term_value->match.value_u8[i])
+			return 0;
+	}
+
+	return 1;
+}
+
+static inline int verify_pmr_custom_l3(const uint8_t *pkt_addr,
+				       odp_packet_hdr_t *pkt_hdr,
+				       pmr_term_value_t *term_value)
+{
+	uint32_t i;
+	uint8_t val;
+	uint32_t l3_offset = pkt_hdr->p.l3_offset;
+	uint32_t offset = l3_offset + term_value->offset;
+	uint32_t val_sz = term_value->val_sz;
+
+	ODP_ASSERT(val_sz <= MAX_PMR_TERM_SIZE);
+
+	if (!pkt_hdr->p.input_flags.l3)
+		return 0;
+
+	if (packet_len(pkt_hdr) <= offset + val_sz)
+		return 0;
+
+	pkt_addr += offset;
+
+	for (i = 0; i < val_sz; i++) {
+		val = pkt_addr[i] & term_value->match.mask_u8[i];
+
+		if (val != term_value->match.value_u8[i])
+			return 0;
+	}
+
+	return 1;
 }
 
 static inline int verify_pmr_eth_type_0(const uint8_t *pkt_addr,
@@ -1220,6 +1259,11 @@ static int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr,
 		case ODP_PMR_CUSTOM_FRAME:
 			if (!verify_pmr_custom_frame(pkt_addr, pkt_hdr,
 						     term_value))
+				pmr_failure = 1;
+			break;
+		case ODP_PMR_CUSTOM_L3:
+			if (!verify_pmr_custom_l3(pkt_addr, pkt_hdr,
+						  term_value))
 				pmr_failure = 1;
 			break;
 		case ODP_PMR_INNER_HDR_OFF:
