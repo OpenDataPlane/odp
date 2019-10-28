@@ -193,7 +193,8 @@ static const char *_ipc_odp_buffer_pool_shm_name(odp_pool_t pool_hdl)
 
 static int _ipc_master_start(pktio_entry_t *pktio_entry)
 {
-	struct pktio_info *pinfo = pkt_priv(pktio_entry)->pinfo;
+	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
+	struct pktio_info *pinfo = pktio_ipc->pinfo;
 	odp_shm_t shm;
 
 	if (pinfo->slave.init_done == 0)
@@ -207,11 +208,11 @@ static int _ipc_master_start(pktio_entry_t *pktio_entry)
 		return -1;
 	}
 
-	pkt_priv(pktio_entry)->remote_pool_shm = shm;
-	pkt_priv(pktio_entry)->pool_base = odp_shm_addr(shm);
-	pkt_priv(pktio_entry)->pool_mdata_base = (char *)odp_shm_addr(shm);
+	pktio_ipc->remote_pool_shm = shm;
+	pktio_ipc->pool_base = odp_shm_addr(shm);
+	pktio_ipc->pool_mdata_base = (char *)odp_shm_addr(shm);
 
-	odp_atomic_store_u32(&pkt_priv(pktio_entry)->ready, 1);
+	odp_atomic_store_u32(&pktio_ipc->ready, 1);
 
 	IPC_ODP_DBG("%s started.\n",  pktio_entry->s.name);
 	return 0;
@@ -221,6 +222,7 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 			    const char *dev,
 			    odp_pool_t pool_hdl)
 {
+	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
 	char ipc_shm_name[ODP_POOL_NAME_LEN + sizeof("_m_prod")];
 	struct pktio_info *pinfo;
 	const char *pool_name;
@@ -236,17 +238,16 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	/* Ring must be able to store all packets in the pool */
 	ring_size = ROUNDUP_POWER2_U32(pool->num + 1);
 	ring_mask = ring_size - 1;
-	pkt_priv(pktio_entry)->ring_size = ring_size;
-	pkt_priv(pktio_entry)->ring_mask = ring_mask;
+	pktio_ipc->ring_size = ring_size;
+	pktio_ipc->ring_mask = ring_mask;
 
 	if (strlen(dev) > (ODP_POOL_NAME_LEN - sizeof("_m_prod"))) {
 		ODP_ERR("too big ipc name\n");
 		return -1;
 	}
 
-	pkt_priv(pktio_entry)->rx.cache = _ring_create("ipc_rx_cache",
-						       ring_size, 0);
-	if (!pkt_priv(pktio_entry)->rx.cache) {
+	pktio_ipc->rx.cache = _ring_create("ipc_rx_cache", ring_size, 0);
+	if (!pktio_ipc->rx.cache) {
 		ODP_ERR("pid %d unable to create ipc rx cache\n", getpid());
 		return -1;
 	}
@@ -255,66 +256,58 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	 * to be processed packets ring.
 	 */
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_prod", dev);
-	pkt_priv(pktio_entry)->tx.send = _ring_create(ipc_shm_name, ring_size,
-						      ODP_SHM_PROC |
-						      ODP_SHM_EXPORT);
-	if (!pkt_priv(pktio_entry)->tx.send) {
+	pktio_ipc->tx.send = _ring_create(ipc_shm_name, ring_size,
+					  ODP_SHM_PROC | ODP_SHM_EXPORT);
+	if (!pktio_ipc->tx.send) {
 		ODP_ERR("pid %d unable to create ipc ring %s name\n",
 			getpid(), ipc_shm_name);
 		return -1;
 	}
 	ODP_DBG("Created IPC ring: %s, count %d, free %d\n",
-		ipc_shm_name, _ring_count(pkt_priv(pktio_entry)->tx.send,
-					  ring_mask),
-		_ring_free_count(pkt_priv(pktio_entry)->tx.send, ring_mask));
+		ipc_shm_name, _ring_count(pktio_ipc->tx.send, ring_mask),
+		_ring_free_count(pktio_ipc->tx.send, ring_mask));
 
 	/* generate name in shm like ipc_pktio_p for
 	 * already processed packets
 	 */
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_cons", dev);
-	pkt_priv(pktio_entry)->tx.free = _ring_create(ipc_shm_name, ring_size,
-						      ODP_SHM_PROC |
-						      ODP_SHM_EXPORT);
-	if (!pkt_priv(pktio_entry)->tx.free) {
+	pktio_ipc->tx.free = _ring_create(ipc_shm_name, ring_size,
+					  ODP_SHM_PROC | ODP_SHM_EXPORT);
+	if (!pktio_ipc->tx.free) {
 		ODP_ERR("pid %d unable to create ipc ring %s name\n",
 			getpid(), ipc_shm_name);
 		goto free_m_prod;
 	}
 	ODP_DBG("Created IPC ring: %s, count %d, free %d\n",
-		ipc_shm_name, _ring_count(pkt_priv(pktio_entry)->tx.free,
-					  ring_mask),
-		_ring_free_count(pkt_priv(pktio_entry)->tx.free, ring_mask));
+		ipc_shm_name, _ring_count(pktio_ipc->tx.free, ring_mask),
+		_ring_free_count(pktio_ipc->tx.free, ring_mask));
 
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_prod", dev);
-	pkt_priv(pktio_entry)->rx.recv = _ring_create(ipc_shm_name, ring_size,
-						      ODP_SHM_PROC |
-						      ODP_SHM_EXPORT);
-	if (!pkt_priv(pktio_entry)->rx.recv) {
+	pktio_ipc->rx.recv = _ring_create(ipc_shm_name, ring_size,
+					  ODP_SHM_PROC | ODP_SHM_EXPORT);
+	if (!pktio_ipc->rx.recv) {
 		ODP_ERR("pid %d unable to create ipc ring %s name\n",
 			getpid(), ipc_shm_name);
 		goto free_m_cons;
 	}
 	ODP_DBG("Created IPC ring: %s, count %d, free %d\n",
-		ipc_shm_name, _ring_count(pkt_priv(pktio_entry)->rx.recv,
-						   ring_mask),
-		_ring_free_count(pkt_priv(pktio_entry)->rx.recv, ring_mask));
+		ipc_shm_name, _ring_count(pktio_ipc->rx.recv, ring_mask),
+		_ring_free_count(pktio_ipc->rx.recv, ring_mask));
 
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_cons", dev);
-	pkt_priv(pktio_entry)->rx.free = _ring_create(ipc_shm_name, ring_size,
-						      ODP_SHM_PROC |
-						      ODP_SHM_EXPORT);
-	if (!pkt_priv(pktio_entry)->rx.free) {
+	pktio_ipc->rx.free = _ring_create(ipc_shm_name, ring_size,
+					  ODP_SHM_PROC | ODP_SHM_EXPORT);
+	if (!pktio_ipc->rx.free) {
 		ODP_ERR("pid %d unable to create ipc ring %s name\n",
 			getpid(), ipc_shm_name);
 		goto free_s_prod;
 	}
 	ODP_DBG("Created IPC ring: %s, count %d, free %d\n",
-		ipc_shm_name, _ring_count(pkt_priv(pktio_entry)->rx.free,
-						   ring_mask),
-		_ring_free_count(pkt_priv(pktio_entry)->rx.free, ring_mask));
+		ipc_shm_name, _ring_count(pktio_ipc->rx.free, ring_mask),
+		_ring_free_count(pktio_ipc->rx.free, ring_mask));
 
 	/* Set up pool name for remote info */
-	pinfo = pkt_priv(pktio_entry)->pinfo;
+	pinfo = pktio_ipc->pinfo;
 	pool_name = _ipc_odp_buffer_pool_shm_name(pool_hdl);
 	if (strlen(pool_name) > ODP_POOL_NAME_LEN) {
 		ODP_ERR("pid %d ipc pool name %s is too big %d\n",
@@ -332,7 +325,7 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	pinfo->slave.pid = 0;
 	pinfo->slave.init_done = 0;
 
-	pkt_priv(pktio_entry)->pool = pool_hdl;
+	pktio_ipc->pool = pool_hdl;
 
 	ODP_DBG("Pre init... DONE.\n");
 	pinfo->master.init_done = 1;
@@ -426,13 +419,14 @@ static int _ipc_init_slave(const char *dev, pktio_entry_t *pktio_entry,
 
 static int _ipc_slave_start(pktio_entry_t *pktio_entry)
 {
+	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
 	char ipc_shm_name[ODP_POOL_NAME_LEN + sizeof("_slave_r")];
 	struct pktio_info *pinfo;
 	odp_shm_t shm;
 	char tail[ODP_POOL_NAME_LEN];
 	char dev[ODP_POOL_NAME_LEN];
 	int pid;
-	uint32_t ring_mask = pkt_priv(pktio_entry)->ring_mask;
+	uint32_t ring_mask = pktio_ipc->ring_mask;
 
 	if (sscanf(pktio_entry->s.name, "ipc:%d:%s", &pid, tail) != 2) {
 		ODP_ERR("wrong pktio name\n");
@@ -442,68 +436,60 @@ static int _ipc_slave_start(pktio_entry_t *pktio_entry)
 	sprintf(dev, "ipc:%s", tail);
 
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_prod", dev);
-	pkt_priv(pktio_entry)->rx.recv  = _ipc_shm_map(ipc_shm_name, pid);
-	if (!pkt_priv(pktio_entry)->rx.recv) {
+	pktio_ipc->rx.recv  = _ipc_shm_map(ipc_shm_name, pid);
+	if (!pktio_ipc->rx.recv) {
 		ODP_DBG("pid %d unable to find ipc ring %s name\n",
 			getpid(), dev);
 		sleep(1);
 		return -1;
 	}
 	ODP_DBG("Connected IPC ring: %s, count %d, free %d\n",
-		ipc_shm_name, _ring_count(pkt_priv(pktio_entry)->rx.recv,
-					  ring_mask),
-		_ring_free_count(pkt_priv(pktio_entry)->rx.recv,
-				 ring_mask));
+		ipc_shm_name, _ring_count(pktio_ipc->rx.recv, ring_mask),
+		_ring_free_count(pktio_ipc->rx.recv, ring_mask));
 
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_cons", dev);
-	pkt_priv(pktio_entry)->rx.free = _ipc_shm_map(ipc_shm_name, pid);
-	if (!pkt_priv(pktio_entry)->rx.free) {
+	pktio_ipc->rx.free = _ipc_shm_map(ipc_shm_name, pid);
+	if (!pktio_ipc->rx.free) {
 		ODP_ERR("pid %d unable to find ipc ring %s name\n",
 			getpid(), dev);
 		goto free_m_prod;
 	}
 	ODP_DBG("Connected IPC ring: %s, count %d, free %d\n",
-		ipc_shm_name, _ring_count(pkt_priv(pktio_entry)->rx.free,
-					  ring_mask),
-		_ring_free_count(pkt_priv(pktio_entry)->rx.free,
-				 ring_mask));
+		ipc_shm_name, _ring_count(pktio_ipc->rx.free, ring_mask),
+		_ring_free_count(pktio_ipc->rx.free, ring_mask));
 
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_prod", dev);
-	pkt_priv(pktio_entry)->tx.send = _ipc_shm_map(ipc_shm_name, pid);
-	if (!pkt_priv(pktio_entry)->tx.send) {
+	pktio_ipc->tx.send = _ipc_shm_map(ipc_shm_name, pid);
+	if (!pktio_ipc->tx.send) {
 		ODP_ERR("pid %d unable to find ipc ring %s name\n",
 			getpid(), dev);
 		goto free_m_cons;
 	}
 	ODP_DBG("Connected IPC ring: %s, count %d, free %d\n",
-		ipc_shm_name, _ring_count(pkt_priv(pktio_entry)->tx.send,
-					  ring_mask),
-		_ring_free_count(pkt_priv(pktio_entry)->tx.send,
-				 ring_mask));
+		ipc_shm_name, _ring_count(pktio_ipc->tx.send, ring_mask),
+		_ring_free_count(pktio_ipc->tx.send, ring_mask));
 
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_cons", dev);
-	pkt_priv(pktio_entry)->tx.free = _ipc_shm_map(ipc_shm_name, pid);
-	if (!pkt_priv(pktio_entry)->tx.free) {
+	pktio_ipc->tx.free = _ipc_shm_map(ipc_shm_name, pid);
+	if (!pktio_ipc->tx.free) {
 		ODP_ERR("pid %d unable to find ipc ring %s name\n",
 			getpid(), dev);
 		goto free_s_prod;
 	}
 	ODP_DBG("Connected IPC ring: %s, count %d, free %d\n",
-		ipc_shm_name, _ring_count(pkt_priv(pktio_entry)->tx.free,
-					  ring_mask),
-		_ring_free_count(pkt_priv(pktio_entry)->tx.free,
-				 ring_mask));
+		ipc_shm_name, _ring_count(pktio_ipc->tx.free, ring_mask),
+		_ring_free_count(pktio_ipc->tx.free, ring_mask));
 
 	/* Get info about remote pool */
-	pinfo = pkt_priv(pktio_entry)->pinfo;
+	pinfo = pktio_ipc->pinfo;
 	shm = _ipc_map_remote_pool(pinfo->master.pool_name,
 				   pid);
-	pkt_priv(pktio_entry)->remote_pool_shm = shm;
-	pkt_priv(pktio_entry)->pool_mdata_base = (char *)odp_shm_addr(shm);
+	pktio_ipc->remote_pool_shm = shm;
+	pktio_ipc->pool_mdata_base = (char *)odp_shm_addr(shm);
 
-	_ipc_export_pool(pinfo, pkt_priv(pktio_entry)->pool);
+	_ipc_export_pool(pinfo, pktio_ipc->pool);
 
-	odp_atomic_store_u32(&pkt_priv(pktio_entry)->ready, 1);
+	odp_atomic_store_u32(&pktio_ipc->ready, 1);
 	pinfo->slave.init_done = 1;
 
 	ODP_DBG("%s started.\n",  pktio_entry->s.name);
@@ -871,14 +857,15 @@ static int ipc_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
 
 static int ipc_start(pktio_entry_t *pktio_entry)
 {
-	uint32_t ready = odp_atomic_load_u32(&pkt_priv(pktio_entry)->ready);
+	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
+	uint32_t ready = odp_atomic_load_u32(&pktio_ipc->ready);
 
 	if (ready) {
 		ODP_ABORT("%s Already started\n", pktio_entry->s.name);
 		return -1;
 	}
 
-	if (pkt_priv(pktio_entry)->type == PKTIO_TYPE_IPC_MASTER)
+	if (pktio_ipc->type == PKTIO_TYPE_IPC_MASTER)
 		return _ipc_master_start(pktio_entry);
 	else
 		return _ipc_slave_start(pktio_entry);
@@ -906,6 +893,7 @@ static int ipc_stop(pktio_entry_t *pktio_entry)
 
 static int ipc_close(pktio_entry_t *pktio_entry)
 {
+	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
 	char ipc_shm_name[ODP_POOL_NAME_LEN + sizeof("_m_prod")];
 	char *dev = pktio_entry->s.name;
 	char name[ODP_POOL_NAME_LEN];
@@ -914,7 +902,7 @@ static int ipc_close(pktio_entry_t *pktio_entry)
 
 	ipc_stop(pktio_entry);
 
-	odp_shm_free(pkt_priv(pktio_entry)->remote_pool_shm);
+	odp_shm_free(pktio_ipc->remote_pool_shm);
 
 	if (sscanf(dev, "ipc:%d:%s", &pid, tail) == 2)
 		snprintf(name, sizeof(name), "ipc:%s", tail);
@@ -922,7 +910,7 @@ static int ipc_close(pktio_entry_t *pktio_entry)
 		snprintf(name, sizeof(name), "%s", dev);
 
 	/* unlink this pktio info for both master and slave */
-	odp_shm_free(pkt_priv(pktio_entry)->pinfo_shm);
+	odp_shm_free(pktio_ipc->pinfo_shm);
 
 	/* destroy rings */
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_cons", name);
