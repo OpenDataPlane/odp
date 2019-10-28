@@ -106,7 +106,7 @@ typedef struct odp_shm_capability_t {
 	 *
 	 * This number of separate shared memory blocks can be
 	 * reserved concurrently. */
-	unsigned max_blocks;
+	unsigned int max_blocks;
 
 	/** Maximum memory block size in bytes
 	 *
