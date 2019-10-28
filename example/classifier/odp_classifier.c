@@ -95,9 +95,9 @@ static appl_args_t *appl_args_gbl;
 
 static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len);
 static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len);
-static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
+static int parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
-static void usage(char *progname);
+static void usage(void);
 
 static inline void print_cls_statistics(appl_args_t *args)
 {
@@ -568,7 +568,8 @@ int main(int argc, char *argv[])
 	appl_args_gbl = args;
 	memset(args, 0, sizeof(*args));
 	/* Parse and store the application arguments */
-	parse_args(argc, argv, args);
+	if (parse_args(argc, argv, args))
+		goto args_error;
 
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), args);
@@ -662,12 +663,13 @@ int main(int argc, char *argv[])
 			ODPH_ERR("err: odp_pool_destroy for %d\n", i);
 	}
 
-	free(args->if_name);
-	odp_shm_free(shm);
 	if (odp_pktio_close(pktio))
 		ODPH_ERR("err: close pktio error\n");
 	if (odp_pool_destroy(pool))
 		ODPH_ERR("err: odp_pool_destroy error\n");
+
+args_error:
+	odp_shm_free(shm);
 
 	ret = odp_term_local();
 	if (ret)
@@ -772,7 +774,7 @@ static int convert_str_to_pmr_enum(char *token, odp_cls_pmr_term_t *term)
 	return -1;
 }
 
-static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
+static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 {
 	int policy_count;
 	char *token, *cos0, *cos1;
@@ -889,7 +891,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 			return -1;
 	break;
 	default:
-		usage(argv[0]);
+		usage();
 		exit(EXIT_FAILURE);
 	}
 
@@ -923,7 +925,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
  * @param argv[]     argument vector
  * @param appl_args  Store application arguments here
  */
-static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
+static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 {
 	int opt;
 	int long_index;
@@ -931,6 +933,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	int i;
 	int interface = 0;
 	int policy = 0;
+	int ret = 0;
 
 	static const struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
@@ -960,7 +963,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			appl_args->cpu_count = atoi(optarg);
 			break;
 		case 'p':
-			if (0 > parse_pmr_policy(appl_args, argv, optarg))
+			if (0 > parse_pmr_policy(appl_args, optarg))
 				continue;
 			policy = 1;
 			break;
@@ -970,15 +973,15 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'i':
 			len = strlen(optarg);
 			if (len == 0) {
-				usage(argv[0]);
-				exit(EXIT_FAILURE);
+				ret = -1;
+				break;
 			}
 			len += 1;	/* add room for '\0' */
 
 			appl_args->if_name = malloc(len);
 			if (appl_args->if_name == NULL) {
-				usage(argv[0]);
-				exit(EXIT_FAILURE);
+				ret = -1;
+				break;
 			}
 
 			strcpy(appl_args->if_name, optarg);
@@ -995,24 +998,30 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			appl_args->verbose = 1;
 			break;
 		case 'h':
-			usage(argv[0]);
-			exit(EXIT_SUCCESS);
+			ret = -1;
 			break;
 		default:
 			break;
 		}
 	}
 
-	if (!interface ||  !policy) {
-		usage(argv[0]);
-		exit(EXIT_FAILURE);
-	}
-	if (appl_args->if_name == NULL) {
-		usage(argv[0]);
-		exit(EXIT_FAILURE);
+	if (!interface || !policy)
+		ret = -1;
+
+	if (appl_args->if_name == NULL)
+		ret = -1;
+
+	if (ret) {
+		usage();
+
+		if (appl_args->if_name)
+			free(appl_args->if_name);
 	}
 
-	optind = 1;		/* reset 'extern optind' from the getopt lib */
+	/* reset optind from the getopt lib */
+	optind = 1;
+
+	return ret;
 }
 
 /**
@@ -1033,45 +1042,44 @@ static void print_info(char *progname, appl_args_t *appl_args)
 /**
  * Prinf usage information
  */
-static void usage(char *progname)
+static void usage(void)
 {
 	printf("\n"
-			"OpenDataPlane Classifier example.\n"
-			"Usage: %s OPTIONS\n"
-			"  E.g. %s -i eth1 -m 0 -p \"ODP_PMR_SIP_ADDR:10.10.10.5:FFFFFFFF:queue1\" \\\n"
-			"\t\t\t-p \"ODP_PMR_SIP_ADDR:10.10.10.7:000000FF:queue2\" \\\n"
-			"\t\t\t-p \"ODP_PMR_SIP_ADDR:10.5.5.10:FFFFFF00:queue3\"\n"
-			"\n"
-			"For the above example configuration the following will be the packet distribution\n"
-			"queue1\t\tPackets with source ip address 10.10.10.5\n"
-			"queue2\t\tPackets with source ip address whose last 8 bits match 7\n"
-			"queue3\t\tPackets with source ip address in the subnet 10.5.5.0\n"
-			"\n"
-			"Mandatory OPTIONS:\n"
-			"  -i, --interface Eth interface\n"
-			"  -p, --policy [<odp_cls_pmr_term_t>|<offset>]:<value>:<mask bits>:<queue name>\n"
-			"\n"
-			"<odp_cls_pmr_term_t>	Packet Matching Rule defined with odp_cls_pmr_term_t "
-			"for the policy\n"
-			"<offset>		Absolute offset in bytes from frame start to define a "
-			"ODP_PMR_CUSTOM_FRAME Packet Matching Rule for the policy\n"
-			"\n"
-			"<value>		PMR value to be matched.\n"
-			"\n"
-			"<mask  bits>		PMR mask bits to be applied on the PMR term value\n"
-			"\n"
-			"Optional OPTIONS\n"
-			"  -c, --count <number> CPU count, 0=all available, default=1\n"
-			"\n"
-			"  -m, --mode		0: Packet Drop mode. Received packets will be dropped\n"
-			"			!0: Packet ICMP mode. Received packets will be sent back\n"
-			"                       default: Packet Drop mode\n"
-			"\n"
-			" -t, --timeout		!0: Time for which the classifier will be run in seconds\n"
-			"			0: Runs in infinite loop\n"
-			"			default: Runs in infinite loop\n"
-			"\n"
-			"  -h, --help		Display help and exit.\n"
-			"\n", NO_PATH(progname), NO_PATH(progname)
-	      );
+		"ODP Classifier example.\n"
+		"Usage: odp_classifier OPTIONS\n"
+		"  E.g. odp_classifier -i eth1 -m 0 -p \"ODP_PMR_SIP_ADDR:10.10.10.0:0xFFFFFF00:queue1\" \\\n"
+		"                                   -p \"ODP_PMR_SIP_ADDR:10.10.10.10:0xFFFFFFFF:queue1:queue2\"\n"
+		"\n"
+		"The above example would classify:\n"
+		"  1) Packets from source IP address 10.10.10.0/24 to queue1, except ...\n"
+		"  2) Packets from source IP address 10.10.10.10 to queue2\n"
+		"  3) All other packets to DefaultCos\n"
+		"\n"
+		"Mandatory OPTIONS:\n"
+		"  -i, --interface <interface name>\n"
+		"  -p, --policy <PMR term>:<offset>:<value>:<mask>:<src queue>:<dst queue>\n"
+		"\n"
+		"    <PMR term>             PMR term name defined in odp_cls_pmr_term_t\n"
+		"    <offset>               If term is ODP_PMR_CUSTOM_FRAME or _CUSTOM_L3, offset in bytes is used\n"
+		"    <value>                PMR value to be matched\n"
+		"    <mask>                 PMR mask bits to be applied on the PMR value.\n"
+		"                           CUSTOM PMR terms accept plain hex string, other PMR terms require\n"
+		"                           hex string with '0x' prefix.\n"
+		"    <src queue>            Optional name of the source queue (CoS). The default CoS is used when\n"
+		"                           this is not defined.\n"
+		"    <dst queue>            Name of the destination queue (CoS).\n"
+		"\n"
+		"Optional OPTIONS\n"
+		"  -c, --count <num>        CPU count, 0=all available, default=1\n"
+		"\n"
+		"  -m, --mode <mode>        0: Packet Drop mode. Received packets will be dropped\n"
+		"                           !0: Packet ICMP mode. Received packets will be sent back\n"
+		"                           default: Packet Drop mode\n"
+		"\n"
+		" -t, --timeout <sec>       !0: Time for which the classifier will be run in seconds\n"
+		"                           0: Runs in infinite loop\n"
+		"                           default: Runs in infinite loop\n"
+		"\n"
+		"  -h, --help               Display help and exit.\n"
+		"\n");
 }
