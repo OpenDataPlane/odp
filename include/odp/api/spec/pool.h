@@ -48,12 +48,12 @@ extern "C" {
  */
 typedef struct odp_pool_capability_t {
 	/** Maximum number of pools of any type */
-	unsigned max_pools;
+	unsigned int max_pools;
 
 	/** Buffer pool capabilities  */
 	struct {
 		/** Maximum number of buffer pools */
-		unsigned max_pools;
+		unsigned int max_pools;
 
 		/** Maximum buffer data alignment in bytes */
 		uint32_t max_align;
@@ -74,7 +74,7 @@ typedef struct odp_pool_capability_t {
 	/** Packet pool capabilities  */
 	struct {
 		/** Maximum number of packet pools */
-		unsigned max_pools;
+		unsigned int max_pools;
 
 		/** Maximum packet data length in bytes
 		 *
@@ -147,7 +147,7 @@ typedef struct odp_pool_capability_t {
 	/** Timeout pool capabilities  */
 	struct {
 		/** Maximum number of timeout pools */
-		unsigned max_pools;
+		unsigned int max_pools;
 
 		/** Maximum number of timeout events in a pool
 		 *

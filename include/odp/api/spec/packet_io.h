@@ -201,7 +201,7 @@ typedef struct odp_pktin_queue_param_t {
 	  * More than one input queues require flow hashing configured.
 	  * The maximum value is defined by pktio capability 'max_input_queues'.
 	  * Queue type is defined by the input mode. The default value is 1. */
-	unsigned num_queues;
+	unsigned int num_queues;
 
 	/** Queue parameters
 	  *
@@ -243,7 +243,7 @@ typedef struct odp_pktout_queue_param_t {
 
 	/** Number of output queues to be created. The value must be between
 	  * 1 and interface capability. The default value is 1. */
-	unsigned num_queues;
+	unsigned int num_queues;
 
 } odp_pktout_queue_param_t;
 
@@ -551,10 +551,10 @@ typedef union odp_pktio_set_op_t {
  */
 typedef struct odp_pktio_capability_t {
 	/** Maximum number of input queues */
-	unsigned max_input_queues;
+	unsigned int max_input_queues;
 
 	/** Maximum number of output queues */
-	unsigned max_output_queues;
+	unsigned int max_output_queues;
 
 	/** Supported pktio configuration options */
 	odp_pktio_config_t config;
@@ -650,7 +650,7 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa);
  *
  * @return Maximum packet IO interface index
  */
-unsigned odp_pktio_max_index(void);
+unsigned int odp_pktio_max_index(void);
 
 /**
  * Configure packet IO interface options
@@ -947,8 +947,8 @@ int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[],
  * @return Number of packets received
  * @retval <0 on failure
  */
-int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned num_q,
-			  unsigned *from, odp_packet_t packets[], int num,
+int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned int num_q,
+			  unsigned int *from, odp_packet_t packets[], int num,
 			  uint64_t wait);
 
 /**

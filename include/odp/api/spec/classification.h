@@ -175,17 +175,17 @@ typedef struct odp_cls_capability_t {
 	odp_cls_pmr_terms_t supported_terms;
 
 	/** Maximum number of PMR terms */
-	unsigned max_pmr_terms;
+	unsigned int max_pmr_terms;
 
 	/** Number of PMR terms available for use now */
-	unsigned available_pmr_terms;
+	unsigned int available_pmr_terms;
 
 	/** Maximum number of CoS supported */
-	unsigned max_cos;
+	unsigned int max_cos;
 
 	/** Maximun number of queue supported per CoS
 	 * if the value is 1, then hashing is not supported*/
-	unsigned max_hash_queues;
+	unsigned int max_hash_queues;
 
 	/** Protocol header combination supported for Hashing */
 	odp_pktin_hash_proto_t hash_protocols;
