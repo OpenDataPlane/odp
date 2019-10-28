@@ -27,6 +27,9 @@
 			ODP_DBG(fmt, ##__VA_ARGS__);\
 	} while (0)
 
+/* Burst size for IPC free operations */
+#define IPC_BURST_SIZE 32
+
 /* that struct is exported to shared memory, so that processes can find
  * each other.
  */
@@ -237,7 +240,12 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 
 	/* Ring must be able to store all packets in the pool */
 	ring_size = ROUNDUP_POWER2_U32(pool->num + 1);
+
+	/* Ring size has to larger than burst size */
+	if (ring_size <= IPC_BURST_SIZE)
+		ring_size = ROUNDUP_POWER2_U32(IPC_BURST_SIZE + 1);
 	ring_mask = ring_size - 1;
+
 	pktio_ipc->ring_size = ring_size;
 	pktio_ipc->ring_mask = ring_mask;
 
@@ -579,9 +587,7 @@ static void _ipc_free_ring_packets(pktio_entry_t *pktio_entry, ring_ptr_t *r,
 				   uint32_t r_mask)
 {
 	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
-	uint32_t ring_size = pktio_ipc->ring_size;
-	uint32_t ring_mask = pktio_ipc->ring_mask;
-	uintptr_t offsets[ring_size];
+	uintptr_t offsets[IPC_BURST_SIZE];
 	int ret;
 	void **rbuf_p;
 	int i;
@@ -597,7 +603,7 @@ static void _ipc_free_ring_packets(pktio_entry_t *pktio_entry, ring_ptr_t *r,
 	rbuf_p = (void *)&offsets;
 
 	while (1) {
-		ret = ring_ptr_deq_multi(r, r_mask, rbuf_p, ring_mask);
+		ret = ring_ptr_deq_multi(r, r_mask, rbuf_p, IPC_BURST_SIZE);
 		if (ret <= 0)
 			break;
 		for (i = 0; i < ret; i++) {
@@ -616,13 +622,12 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 				   odp_packet_t pkt_table[], int len)
 {
 	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
-	uint32_t ring_size = pktio_ipc->ring_size;
 	uint32_t ring_mask = pktio_ipc->ring_mask;
 	int pkts = 0;
 	int i;
 	ring_ptr_t *r;
 	ring_ptr_t *r_p;
-	uintptr_t offsets[ring_size];
+	uintptr_t offsets[len];
 	void **ipcbufs_p = (void *)&offsets[0];
 	uint32_t ready;
 
