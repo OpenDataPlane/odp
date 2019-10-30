@@ -226,6 +226,7 @@ typedef struct timer_global_t {
 	odp_bool_t use_inline_timers;
 	int poll_interval;
 	int highest_tp_idx;
+	uint8_t thread_type;
 
 } timer_global_t;
 
@@ -1511,28 +1512,32 @@ int _odp_timer_init_global(const odp_init_t *params)
 	conf_str =  "timer.inline";
 	if (!_odp_libconfig_lookup_int(conf_str, &val)) {
 		ODP_ERR("Config option '%s' not found.\n", conf_str);
-		odp_shm_free(shm);
-		return -1;
+		goto error;
 	}
 	timer_global->use_inline_timers = val;
 
 	conf_str =  "timer.inline_poll_interval";
 	if (!_odp_libconfig_lookup_int(conf_str, &val)) {
 		ODP_ERR("Config option '%s' not found.\n", conf_str);
-		odp_shm_free(shm);
-		return -1;
+		goto error;
 	}
 	timer_global->poll_interval = val;
 
 	conf_str =  "timer.inline_poll_interval_nsec";
 	if (!_odp_libconfig_lookup_int(conf_str, &val)) {
 		ODP_ERR("Config option '%s' not found.\n", conf_str);
-		odp_shm_free(shm);
-		return -1;
+		goto error;
 	}
 	timer_global->poll_interval_nsec = val;
 	timer_global->poll_interval_time =
 		odp_time_global_from_ns(timer_global->poll_interval_nsec);
+
+	conf_str =  "timer.inline_thread_type";
+	if (!_odp_libconfig_lookup_int(conf_str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", conf_str);
+		goto error;
+	}
+	timer_global->thread_type = val;
 
 	if (!timer_global->use_inline_timers) {
 		timer_res_init();
@@ -1540,6 +1545,10 @@ int _odp_timer_init_global(const odp_init_t *params)
 	}
 
 	return 0;
+
+error:
+	odp_shm_free(shm);
+	return -1;
 }
 
 int _odp_timer_term_global(void)
