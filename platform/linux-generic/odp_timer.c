@@ -127,6 +127,7 @@ typedef struct timer_pool_s {
 	odp_shm_t shm;
 	timer_t timerid;
 	int notify_overrun;
+	int owner;
 	pthread_t thr_pthread; /* pthread_t of timer thread */
 	pid_t thr_pid; /* gettid() for timer thread */
 	int thr_warm_up; /* number of warm up rounds */
@@ -167,6 +168,7 @@ typedef struct timer_global_t {
 typedef struct timer_local_t {
 	odp_time_t last_run;
 	int        run_cnt;
+	uint8_t    poll_shared;
 
 } timer_local_t;
 
@@ -353,6 +355,11 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	odp_atomic_init_u32(&tp->high_wm, 0);
 	tp->first_free = 0;
 	tp->notify_overrun = 1;
+	tp->owner = -1;
+
+	if (param->priv)
+		tp->owner = odp_thread_id();
+
 	tp->tick_buf = (void *)((char *)odp_shm_addr(shm) + sz0);
 	tp->timers = (void *)((char *)odp_shm_addr(shm) + sz0 + sz1);
 
@@ -921,6 +928,17 @@ static inline void timer_pool_scan_inline(int num, odp_time_t now)
 
 		if (tp == NULL)
 			continue;
+
+		if (odp_likely(tp->owner < 0)) {
+			/* Skip shared pool, if this thread is not configured
+			 * to process those */
+			if (odp_unlikely(timer_local.poll_shared == 0))
+				continue;
+		} else {
+			/* Skip private pool, if this thread is not the owner */
+			if (tp->owner != odp_thread_id())
+				continue;
+		}
 
 		nsec     = time_nsec(tp, now);
 		new_tick = nsec / tp->nsec_per_scan;
@@ -1557,8 +1575,27 @@ int _odp_timer_term_global(void)
 
 int _odp_timer_init_local(void)
 {
+	int conf_thr_type;
+	odp_thread_type_t thr_type;
+
 	timer_local.last_run = odp_time_global_from_ns(0);
 	timer_local.run_cnt = 1;
+	timer_local.poll_shared = 0;
+
+	/* Timer feature disabled */
+	if (timer_global == NULL)
+		return 0;
+
+	/* Check if this thread polls shared (non-private) timer pools */
+	conf_thr_type = timer_global->thread_type;
+	thr_type = odp_thread_type();
+
+	if (conf_thr_type == 0)
+		timer_local.poll_shared = 1;
+	else if (conf_thr_type == 1 && thr_type == ODP_THREAD_WORKER)
+		timer_local.poll_shared = 1;
+	else if (conf_thr_type == 2 && thr_type == ODP_THREAD_CONTROL)
+		timer_local.poll_shared = 1;
 
 	return 0;
 }
