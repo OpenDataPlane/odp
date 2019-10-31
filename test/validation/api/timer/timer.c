@@ -536,7 +536,7 @@ static void timer_test_pkt_event_sched(void)
 	timer_test_event_type(ODP_QUEUE_TYPE_SCHED, ODP_EVENT_PACKET);
 }
 
-static void timer_test_queue_type(odp_queue_type_t queue_type)
+static void timer_test_queue_type(odp_queue_type_t queue_type, int priv)
 {
 	odp_pool_t pool;
 	const int num = 10;
@@ -567,7 +567,7 @@ static void timer_test_queue_type(odp_queue_type_t queue_type)
 	tparam.min_tmo    = global_mem->param.min_tmo;
 	tparam.max_tmo    = global_mem->param.max_tmo;
 	tparam.num_timers = num + 1;
-	tparam.priv       = 0;
+	tparam.priv       = priv;
 	tparam.clk_src    = ODP_CLOCK_CPU;
 
 	ODPH_DBG("\nTimer pool parameters:\n");
@@ -665,8 +665,7 @@ static void timer_test_queue_type(odp_queue_type_t queue_type)
 	CU_ASSERT(diff_test > (test_period - period_ns));
 	CU_ASSERT(diff_test < (test_period + period_ns));
 
-	/* Scalable scheduler needs this pause sequence. Otherwise, it gets
-	 * stuck on terminate. */
+	/* Reset scheduler context for the next test case */
 	if (queue_type == ODP_QUEUE_TYPE_SCHED) {
 		odp_schedule_pause();
 		while (1) {
@@ -677,6 +676,7 @@ static void timer_test_queue_type(odp_queue_type_t queue_type)
 			CU_FAIL("Drop extra event\n");
 			odp_event_free(ev);
 		}
+		odp_schedule_resume();
 	}
 
 	odp_timer_pool_destroy(tp);
@@ -687,12 +687,22 @@ static void timer_test_queue_type(odp_queue_type_t queue_type)
 
 static void timer_test_plain_queue(void)
 {
-	timer_test_queue_type(ODP_QUEUE_TYPE_PLAIN);
+	timer_test_queue_type(ODP_QUEUE_TYPE_PLAIN, 0);
 }
 
 static void timer_test_sched_queue(void)
 {
-	timer_test_queue_type(ODP_QUEUE_TYPE_SCHED);
+	timer_test_queue_type(ODP_QUEUE_TYPE_SCHED, 0);
+}
+
+static void timer_test_plain_queue_priv(void)
+{
+	timer_test_queue_type(ODP_QUEUE_TYPE_PLAIN, 1);
+}
+
+static void timer_test_sched_queue_priv(void)
+{
+	timer_test_queue_type(ODP_QUEUE_TYPE_SCHED, 1);
 }
 
 static void timer_test_cancel(void)
@@ -1451,6 +1461,8 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_test_max_tmo_max_tmo_sched),
 	ODP_TEST_INFO(timer_test_plain_queue),
 	ODP_TEST_INFO(timer_test_sched_queue),
+	ODP_TEST_INFO(timer_test_plain_queue_priv),
+	ODP_TEST_INFO(timer_test_sched_queue_priv),
 	ODP_TEST_INFO(timer_test_all),
 	ODP_TEST_INFO_NULL,
 };
