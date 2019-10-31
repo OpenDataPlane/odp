@@ -25,6 +25,7 @@ typedef struct test_options_t {
 	uint32_t num_timer;
 	uint64_t res_ns;
 	uint64_t period_ns;
+	int      shared;
 
 } test_options_t;
 
@@ -87,6 +88,10 @@ static void print_usage(void)
 	       "  -t, --num_timer        Number of timers per timer pool. Default: 10\n"
 	       "  -r, --res_ns           Resolution in nsec.     Default:  10000000\n"
 	       "  -p, --period_ns        Timeout period in nsec. Default: 100000000\n"
+	       "  -s, --shared           Shared vs private timer pool. Currently, private pools can be\n"
+	       "                         tested only with single CPU. Default: 1\n"
+	       "                           0: Private timer pools\n"
+	       "                           1: Shared timer pools\n"
 	       "  -h, --help             This help\n"
 	       "\n");
 }
@@ -103,17 +108,19 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"num_timer", required_argument, NULL, 't'},
 		{"res_ns",    required_argument, NULL, 'r'},
 		{"period_ns", required_argument, NULL, 'p'},
+		{"shared",    required_argument, NULL, 's'},
 		{"help",      no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:n:t:r:p:h";
+	static const char *shortopts = "+c:n:t:r:p:s:h";
 
 	test_options->num_cpu   = 1;
 	test_options->num_tp    = 1;
 	test_options->num_timer = 10;
 	test_options->res_ns    = 10 * ODP_TIME_MSEC_IN_NS;
 	test_options->period_ns = 100 * ODP_TIME_MSEC_IN_NS;
+	test_options->shared    = 1;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -137,6 +144,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		case 'p':
 			test_options->period_ns = atoll(optarg);
 			break;
+		case 's':
+			test_options->shared = atoi(optarg);
+			break;
 		case 'h':
 			/* fall through */
 		default:
@@ -159,6 +169,7 @@ static int set_num_cpu(test_global_t *global)
 	int ret;
 	test_options_t *test_options = &global->test_options;
 	int num_cpu = test_options->num_cpu;
+	int shared = test_options->shared;
 
 	/* One thread used for the main thread */
 	if (num_cpu > ODP_THREAD_COUNT_MAX - 1) {
@@ -174,14 +185,21 @@ static int set_num_cpu(test_global_t *global)
 		return -1;
 	}
 
+	if (shared == 0 && num_cpu != 1) {
+		printf("Error: Private pool test supports only single CPU\n.");
+		return -1;
+	}
+
 	/* Zero: all available workers */
 	if (num_cpu == 0) {
 		num_cpu = ret;
 		test_options->num_cpu = num_cpu;
 	}
 
-	/* Main thread + all workers */
-	odp_barrier_init(&global->barrier, num_cpu + 1);
+	if (shared) /* Main thread + all workers */
+		odp_barrier_init(&global->barrier, num_cpu + 1);
+	else /* Only the main thread */
+		odp_barrier_init(&global->barrier, 1);
 
 	return 0;
 }
@@ -204,11 +222,17 @@ static int create_timer_pools(test_global_t *global)
 	uint32_t num_timer = test_options->num_timer;
 	uint64_t res_ns    = test_options->res_ns;
 	uint64_t period_ns = test_options->period_ns;
+	int priv;
 
 	max_tmo_ns = START_NS + (num_timer * period_ns);
 
+	priv = 0;
+	if (test_options->shared == 0)
+		priv = 1;
+
 	printf("\nTimer performance test\n");
 	printf("  num cpu          %u\n", num_cpu);
+	printf("  private pool     %i\n", priv);
 	printf("  num timer pool   %u\n", num_tp);
 	printf("  num timer        %u\n", num_timer);
 	printf("  resolution       %" PRIu64 " nsec\n", res_ns);
@@ -266,7 +290,7 @@ static int create_timer_pools(test_global_t *global)
 	timer_pool_param.min_tmo    = START_NS;
 	timer_pool_param.max_tmo    = max_tmo_ns;
 	timer_pool_param.num_timers = num_timer;
-	timer_pool_param.priv       = 0;
+	timer_pool_param.priv       = priv;
 	timer_pool_param.clk_src    = ODP_CLOCK_CPU;
 
 	odp_pool_param_init(&pool_param);
@@ -540,8 +564,6 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 		thr_param[i].start    = test_worker;
 		thr_param[i].arg      = &global->thread_arg[i];
 		thr_param[i].thr_type = ODP_THREAD_WORKER;
-
-		global->thread_arg[i].global = global;
 	}
 
 	ret = odph_thread_create(global->thread_tbl, &thr_common, thr_param,
@@ -644,15 +666,23 @@ int main(int argc, char **argv)
 	odp_instance_t instance;
 	odp_init_t init;
 	test_global_t *global;
+	test_options_t *test_options;
+	int i, shared;
 
 	global = &test_global;
 	memset(global, 0, sizeof(test_global_t));
 	odp_atomic_init_u32(&global->exit_test, 0);
 
+	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++)
+		global->thread_arg[i].global = global;
+
 	signal(SIGINT, sig_handler);
 
 	if (parse_options(argc, argv, &global->test_options))
 		return -1;
+
+	test_options = &global->test_options;
+	shared = test_options->shared;
 
 	/* List features not to be used */
 	odp_init_param_init(&init);
@@ -681,22 +711,33 @@ int main(int argc, char **argv)
 	if (create_timer_pools(global))
 		return -1;
 
-	/* Start worker threads */
-	start_workers(global, instance);
+	if (shared) {
+		/* Start worker threads */
+		start_workers(global, instance);
 
-	/* Wait until workers have started.
-	 * Scheduler calls from workers may be needed to run timer pools in
-	 * a software implementation. Wait 1 msec to ensure that timer pools
-	 * are running before setting timers. */
-	odp_barrier_wait(&global->barrier);
-	odp_time_wait_ns(ODP_TIME_MSEC_IN_NS);
+		/* Wait until workers have started.
+		 * Scheduler calls from workers may be needed to run timer
+		 * pools in a software implementation. Wait 1 msec to ensure
+		 * that timer pools are running before setting timers. */
+		odp_barrier_wait(&global->barrier);
+		odp_time_wait_ns(ODP_TIME_MSEC_IN_NS);
+	}
 
 	/* Set timers. Force workers to exit on failure. */
 	if (set_timers(global))
 		odp_atomic_add_u32(&global->exit_test, MAX_TIMER_POOLS);
 
-	/* Wait workers to exit */
-	odph_thread_join(global->thread_tbl, global->test_options.num_cpu);
+	if (!shared) {
+		/* Test private pools on the master thread */
+		if (test_worker(&global->thread_arg[0])) {
+			printf("Error: test loop failed\n");
+			return -1;
+		}
+	} else {
+		/* Wait workers to exit */
+		odph_thread_join(global->thread_tbl,
+				 global->test_options.num_cpu);
+	}
 
 	print_stat(global);
 
