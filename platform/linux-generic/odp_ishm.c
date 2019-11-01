@@ -681,8 +681,8 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 	fd = open(filename, oflag, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (fd < 0) {
 		if (huge != HUGE)
-			ODP_ERR("open failed for %s: %s.\n",
-				filename, strerror(errno));
+			ODP_ERR("Normal page open failed: file=%s, "
+				"err=\"%s\"\n", filename, strerror(errno));
 		return -1;
 	}
 
@@ -694,8 +694,9 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 		}
 
 		if (ret == -1) {
-			ODP_ERR("memory allocation failed: fd=%d, err=%s.\n",
-				fd, strerror(errno));
+			ODP_ERR("%s memory allocation failed: fd=%d, file=%s, "
+				"err=\"%s\"\n", (huge == HUGE) ? "Huge page" :
+				"Normal page", fd, filename, strerror(errno));
 			close(fd);
 			unlink(filename);
 			return -1;
