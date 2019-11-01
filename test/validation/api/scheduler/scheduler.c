@@ -55,6 +55,8 @@
 #define WAIT_TOLERANCE (150 * ODP_TIME_MSEC_IN_NS)
 #define WAIT_1MS_RETRIES 1000
 
+#define SCHED_AND_PLAIN_ROUNDS 10000
+
 /* Test global variables */
 typedef struct {
 	int num_workers;
@@ -72,6 +74,10 @@ typedef struct {
 		odp_queue_t handle;
 		char name[ODP_QUEUE_NAME_LEN];
 	} chaos_q[CHAOS_NUM_QUEUES];
+	struct {
+		odp_queue_t sched;
+		odp_queue_t plain;
+	} sched_and_plain_q;
 } test_globals_t;
 
 typedef struct {
@@ -1780,6 +1786,229 @@ static void scheduler_test_ordered_lock(void)
 	CU_ASSERT(drain_queues() == 0);
 }
 
+static int sched_and_plain_thread(void *arg)
+{
+	odp_event_t ev1, ev2;
+	thread_args_t *args = (thread_args_t *)arg;
+	test_globals_t *globals = args->globals;
+	odp_queue_t sched_queue = globals->sched_and_plain_q.sched;
+	odp_queue_t plain_queue = globals->sched_and_plain_q.plain;
+	odp_schedule_sync_t sync = odp_queue_sched_type(sched_queue);
+	uint64_t i, wait;
+
+	/* Wait for all threads to start */
+	odp_barrier_wait(&globals->barrier);
+
+	/* Run the test */
+	wait = odp_schedule_wait_time(10 * ODP_TIME_MSEC_IN_NS);
+	for (i = 0; i < SCHED_AND_PLAIN_ROUNDS; i++) {
+		uint32_t rand_val;
+
+		/* Dequeue events from scheduled and plain queues */
+		ev1 = odp_schedule(NULL, wait);
+		if (ev1 == ODP_EVENT_INVALID)
+			continue;
+
+		if (sync == ODP_SCHED_SYNC_ORDERED)
+			odp_schedule_order_lock(0);
+
+		ev2 = odp_queue_deq(plain_queue);
+		CU_ASSERT_FATAL(ev2 != ODP_EVENT_INVALID);
+
+		/* Add random delay to stress scheduler implementation */
+		odp_random_data((uint8_t *)&rand_val, sizeof(rand_val),
+				ODP_RANDOM_BASIC);
+		odp_time_wait_ns(rand_val % ODP_TIME_USEC_IN_NS);
+
+		/* Enqueue events back to the end of the queues */
+		CU_ASSERT_FATAL(!odp_queue_enq(plain_queue, ev2));
+
+		if (sync == ODP_SCHED_SYNC_ORDERED)
+			odp_schedule_order_unlock(0);
+
+		CU_ASSERT_FATAL(!odp_queue_enq(sched_queue, ev1));
+	}
+
+	/* Make sure scheduling context is released */
+	odp_schedule_pause();
+	while ((ev1 = odp_schedule(NULL, wait)) != ODP_EVENT_INVALID)
+		CU_ASSERT_FATAL(!odp_queue_enq(sched_queue, ev1));
+
+	/* Don't resume scheduling until all threads have finished */
+	odp_barrier_wait(&globals->barrier);
+	odp_schedule_resume();
+
+	return 0;
+}
+
+static void scheduler_test_sched_and_plain(odp_schedule_sync_t sync)
+{
+	thread_args_t *args;
+	test_globals_t *globals;
+	odp_queue_t sched_queue;
+	odp_queue_t plain_queue;
+	odp_pool_t pool;
+	odp_queue_param_t queue_param;
+	odp_pool_param_t pool_param;
+	odp_queue_capability_t queue_capa;
+	odp_schedule_capability_t sched_capa;
+	odp_shm_t shm;
+	odp_event_t ev;
+	uint32_t *buf_data;
+	uint32_t seq;
+	uint64_t wait = odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS);
+	uint32_t events_per_queue = BUFS_PER_QUEUE / 2;
+	uint32_t prev_seq;
+	int first;
+
+	CU_ASSERT_FATAL(!odp_schedule_capability(&sched_capa));
+	CU_ASSERT_FATAL(!odp_queue_capability(&queue_capa))
+
+	if (sync == ODP_SCHED_SYNC_ORDERED &&
+	    sched_capa.max_ordered_locks == 0) {
+		printf("\n  NO ORDERED LOCKS. scheduler_test_ordered_and_plain skipped.\n");
+		return;
+	}
+
+	/* Set up the scheduling environment */
+	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+	globals = odp_shm_addr(shm);
+	CU_ASSERT_PTR_NOT_NULL_FATAL(globals);
+
+	shm = odp_shm_lookup(SHM_THR_ARGS_NAME);
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+	args = odp_shm_addr(shm);
+	CU_ASSERT_PTR_NOT_NULL_FATAL(args);
+	args->globals = globals;
+
+	/* Make sure all events fit to queues */
+	if (sched_capa.max_queue_size &&
+	    sched_capa.max_queue_size < events_per_queue)
+		events_per_queue = sched_capa.max_queue_size;
+	if (queue_capa.plain.max_size &&
+	    queue_capa.plain.max_size < events_per_queue)
+		events_per_queue = queue_capa.plain.max_size;
+
+	odp_queue_param_init(&queue_param);
+	queue_param.type = ODP_QUEUE_TYPE_SCHED;
+	queue_param.sched.sync = sync;
+	queue_param.size = events_per_queue;
+	if (sync == ODP_SCHED_SYNC_ORDERED)
+		queue_param.sched.lock_count = 1;
+
+	sched_queue = odp_queue_create(NULL, &queue_param);
+	CU_ASSERT_FATAL(sched_queue != ODP_QUEUE_INVALID);
+	globals->sched_and_plain_q.sched = sched_queue;
+
+	odp_queue_param_init(&queue_param);
+	queue_param.type = ODP_QUEUE_TYPE_PLAIN;
+	queue_param.size = events_per_queue;
+
+	plain_queue = odp_queue_create(NULL, &queue_param);
+	CU_ASSERT_FATAL(sched_queue != ODP_QUEUE_INVALID);
+	globals->sched_and_plain_q.plain = plain_queue;
+
+	odp_pool_param_init(&pool_param);
+	pool_param.buf.size  = 100;
+	pool_param.buf.num   = 2 * events_per_queue;
+	pool_param.type      = ODP_POOL_BUFFER;
+
+	pool = odp_pool_create("sched_to_plain_pool", &pool_param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	/* Create and enq test events with sequential sequence numbers */
+	for (seq = 0; seq < events_per_queue; seq++) {
+		odp_buffer_t buf1, buf2;
+
+		buf1 = odp_buffer_alloc(pool);
+		if (buf1 == ODP_BUFFER_INVALID)
+			break;
+		buf2 = odp_buffer_alloc(pool);
+		if (buf2 == ODP_BUFFER_INVALID) {
+			odp_buffer_free(buf1);
+			break;
+		}
+		buf_data = odp_buffer_addr(buf1);
+		*buf_data = seq;
+		buf_data = odp_buffer_addr(buf2);
+		*buf_data = seq;
+
+		/* Events flow id is 0 by default */
+		CU_ASSERT_FATAL(!odp_queue_enq(sched_queue,
+					       odp_buffer_to_event(buf1)));
+		CU_ASSERT_FATAL(!odp_queue_enq(plain_queue,
+					       odp_buffer_to_event(buf2)));
+	}
+	CU_ASSERT_FATAL(seq > 2);
+
+	/* Test runs also on the main thread */
+	args->cu_thr.numthrds = globals->num_workers - 1;
+	if (args->cu_thr.numthrds > 0)
+		odp_cunit_thread_create(sched_and_plain_thread, &args->cu_thr);
+
+	sched_and_plain_thread(args);
+
+	if (args->cu_thr.numthrds > 0)
+		odp_cunit_thread_exit(&args->cu_thr);
+
+	/* Check plain queue sequence numbers and free events */
+	first = 1;
+	while (1) {
+		ev = odp_queue_deq(plain_queue);
+		if (ev == ODP_EVENT_INVALID)
+			break;
+
+		buf_data = odp_buffer_addr(odp_buffer_from_event(ev));
+		seq = *buf_data;
+
+		if (first) {
+			first = 0;
+			prev_seq = seq;
+			continue;
+		}
+
+		CU_ASSERT(seq == prev_seq + 1 || seq == 0)
+		prev_seq = seq;
+		odp_event_free(ev);
+	}
+
+	/* Check scheduled queue sequence numbers and free events */
+	first = 1;
+	while (1) {
+		ev = odp_schedule(NULL, wait);
+		if (ev == ODP_EVENT_INVALID)
+			break;
+
+		buf_data = odp_buffer_addr(odp_buffer_from_event(ev));
+		seq = *buf_data;
+
+		if (first) {
+			first = 0;
+			prev_seq = seq;
+			continue;
+		}
+
+		CU_ASSERT(seq == prev_seq + 1 || seq == 0)
+		prev_seq = seq;
+		odp_event_free(ev);
+	}
+
+	CU_ASSERT(!odp_queue_destroy(sched_queue));
+	CU_ASSERT(!odp_queue_destroy(plain_queue));
+	CU_ASSERT(!odp_pool_destroy(pool));
+}
+
+static void scheduler_test_atomic_and_plain(void)
+{
+	scheduler_test_sched_and_plain(ODP_SCHED_SYNC_ATOMIC);
+}
+
+static void scheduler_test_ordered_and_plain(void)
+{
+	scheduler_test_sched_and_plain(ODP_SCHED_SYNC_ORDERED);
+}
+
 static int create_queues(test_globals_t *globals)
 {
 	int i, j, prios, rc;
@@ -2278,6 +2507,8 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_parallel),
 	ODP_TEST_INFO(scheduler_test_atomic),
 	ODP_TEST_INFO(scheduler_test_ordered),
+	ODP_TEST_INFO(scheduler_test_atomic_and_plain),
+	ODP_TEST_INFO(scheduler_test_ordered_and_plain),
 	ODP_TEST_INFO(scheduler_test_chaos),
 	ODP_TEST_INFO(scheduler_test_1q_1t_n),
 	ODP_TEST_INFO(scheduler_test_1q_1t_a),
