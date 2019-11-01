@@ -1275,10 +1275,10 @@ static int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr,
 		}
 
 		if (pmr_failure)
-			return false;
+			return 0;
 	}
 	odp_atomic_inc_u32(&pmr->s.count);
-	return true;
+	return 1;
 }
 
 /*
@@ -1286,14 +1286,10 @@ static int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr,
  * This function gets called recursively to check the chained PMR Term value
  * with the packet.
  */
-static
-cos_t *match_pmr_cos(cos_t *cos, const uint8_t *pkt_addr, pmr_t *pmr,
-		     odp_packet_hdr_t *hdr)
+static cos_t *match_pmr_cos(cos_t *cos, const uint8_t *pkt_addr, pmr_t *pmr,
+			    odp_packet_hdr_t *hdr)
 {
-	cos_t *retcos;
-	uint32_t i;
-
-	retcos  = NULL;
+	uint32_t i, num_rule;
 
 	if (cos == NULL || pmr == NULL)
 		return NULL;
@@ -1302,19 +1298,29 @@ cos_t *match_pmr_cos(cos_t *cos, const uint8_t *pkt_addr, pmr_t *pmr,
 		return NULL;
 
 	if (verify_pmr(pmr, pkt_addr, hdr)) {
-		/** This gets called recursively to check all the PMRs in
-		 * a PMR chain */
-		if (0 == odp_atomic_load_u32(&cos->s.num_rule))
+		/* This gets called recursively. First matching leaf or branch
+		 * is returned. */
+		num_rule = odp_atomic_load_u32(&cos->s.num_rule);
+
+		/* No more rules. This is the best match. */
+		if (num_rule == 0)
 			return cos;
 
-		for (i = 0; i < odp_atomic_load_u32(&cos->s.num_rule); i++) {
-			retcos = match_pmr_cos(cos->s.linked_cos[i], pkt_addr,
-					       cos->s.pmr[i], hdr);
-			if (!retcos)
-				return cos;
+		for (i = 0; i < num_rule; i++) {
+			cos_t *retcos = match_pmr_cos(cos->s.linked_cos[i],
+						      pkt_addr, cos->s.pmr[i],
+						      hdr);
+
+			/* Found a matching leaf */
+			if (retcos)
+				return retcos;
 		}
+
+		/* Current CoS was the best match */
+		return cos;
 	}
-	return retcos;
+
+	return NULL;
 }
 
 int pktio_classifier_init(pktio_entry_t *entry)
