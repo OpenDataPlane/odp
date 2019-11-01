@@ -2367,6 +2367,11 @@ static void classification_test_pmr_serial(void)
 	test_pmr_series(1);
 }
 
+static void classification_test_pmr_parallel(void)
+{
+	test_pmr_series(4);
+}
+
 static void classification_test_pmr_term_custom_frame(void)
 {
 	test_pmr_term_custom(0);
@@ -2510,6 +2515,8 @@ odp_testinfo_t classification_suite_pmr[] = {
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_custom_l3,
 				  check_capa_custom_l3),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_serial,
+				  check_capa_pmr_series),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_parallel,
 				  check_capa_pmr_series),
 	ODP_TEST_INFO(classification_test_pktin_classifier_flag),
 	ODP_TEST_INFO(classification_test_pmr_term_tcp_dport_multi),
