@@ -1087,7 +1087,8 @@ static inline int verify_pmr_custom_l3(const uint8_t *pkt_addr,
 
 	ODP_ASSERT(val_sz <= MAX_PMR_TERM_SIZE);
 
-	if (!pkt_hdr->p.input_flags.l3)
+	if (pkt_hdr->p.input_flags.l2 == 0 ||
+	    l3_offset == ODP_PACKET_OFFSET_INVALID)
 		return 0;
 
 	if (packet_len(pkt_hdr) <= offset + val_sz)
