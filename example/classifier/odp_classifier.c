@@ -37,7 +37,7 @@
 /** @def MAX_PMR_COUNT
  * @brief Maximum number of Classification Policy
  */
-#define MAX_PMR_COUNT	8
+#define MAX_PMR_COUNT 32
 
 /** @def DISPLAY_STRING_LEN
  * @brief Length of string used to display term value
@@ -757,8 +757,26 @@ static int convert_str_to_pmr_enum(char *token, odp_cls_pmr_term_t *term)
 	if (strcasecmp(token, "ODP_PMR_ETHTYPE_0") == 0) {
 		*term = ODP_PMR_ETHTYPE_0;
 		return 0;
+	} else if (strcasecmp(token, "ODP_PMR_ETHTYPE_X") == 0) {
+		*term = ODP_PMR_ETHTYPE_X;
+		return 0;
 	} else if (strcasecmp(token, "ODP_PMR_VLAN_ID_0") == 0) {
 		*term = ODP_PMR_VLAN_ID_0;
+		return 0;
+	} else if (strcasecmp(token, "ODP_PMR_VLAN_ID_X") == 0) {
+		*term = ODP_PMR_VLAN_ID_X;
+		return 0;
+	} else if (strcasecmp(token, "ODP_PMR_UDP_DPORT") == 0) {
+		*term = ODP_PMR_UDP_DPORT;
+		return 0;
+	} else if (strcasecmp(token, "ODP_PMR_TCP_DPORT") == 0) {
+		*term = ODP_PMR_TCP_DPORT;
+		return 0;
+	} else if (strcasecmp(token, "ODP_PMR_UDP_SPORT") == 0) {
+		*term = ODP_PMR_UDP_SPORT;
+		return 0;
+	} else if (strcasecmp(token, "ODP_PMR_TCP_SPORT") == 0) {
+		*term = ODP_PMR_TCP_SPORT;
 		return 0;
 	} else if (strcasecmp(token, "ODP_PMR_SIP_ADDR") == 0) {
 		*term = ODP_PMR_SIP_ADDR;
@@ -792,7 +810,8 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 
 	/* last array index is needed for default queue */
 	if (policy_count >= MAX_PMR_COUNT - 1) {
-		ODPH_ERR("Maximum allowed PMR reached\n");
+		ODPH_ERR("Too many policies. Max count is %i.\n",
+			 MAX_PMR_COUNT - 1);
 		return -1;
 	}
 
@@ -814,10 +833,23 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 	/* PMR value */
 	switch (term) {
 	case ODP_PMR_ETHTYPE_0:
-		/* :<type>:<mask> */
 		/* Fall through */
+	case ODP_PMR_ETHTYPE_X:
+		/* Fall through */
+		/* :<type>:<mask> */
 	case ODP_PMR_VLAN_ID_0:
+		/* Fall through */
+	case ODP_PMR_VLAN_ID_X:
+		/* Fall through */
 		/* :<vlan_id>:<mask> */
+	case ODP_PMR_UDP_DPORT:
+		/* Fall through */
+	case ODP_PMR_TCP_DPORT:
+		/* Fall through */
+	case ODP_PMR_UDP_SPORT:
+		/* Fall through */
+	case ODP_PMR_TCP_SPORT:
+		/* :<port>:<mask> */
 		token = strtok(NULL, ":");
 		strncpy(stats[policy_count].value, token,
 			DISPLAY_STRING_LEN - 1);
@@ -951,7 +983,7 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->cpu_count = 1; /* Use one worker by default */
 	appl_args->verbose = 0;
 
-	while (1) {
+	while (ret == 0) {
 		opt = getopt_long(argc, argv, shortopts,
 				  longopts, &long_index);
 
@@ -963,8 +995,10 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			appl_args->cpu_count = atoi(optarg);
 			break;
 		case 'p':
-			if (0 > parse_pmr_policy(appl_args, optarg))
-				continue;
+			if (parse_pmr_policy(appl_args, optarg)) {
+				ret = -1;
+				break;
+			}
 			policy = 1;
 			break;
 		case 't':
