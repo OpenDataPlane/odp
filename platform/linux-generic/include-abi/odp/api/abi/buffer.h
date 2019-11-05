@@ -28,6 +28,9 @@ typedef ODP_HANDLE_T(odp_buffer_t);
 
 #define ODP_BUFFER_INVALID _odp_cast_scalar(odp_buffer_t, 0)
 
+/* Inlined functions for non-ABI compat mode */
+#include <odp/api/plat/buffer_inlines.h>
+
 /**
  * @}
  */
