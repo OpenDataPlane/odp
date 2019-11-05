@@ -41,22 +41,6 @@ odp_event_type_t odp_event_types(odp_event_t event,
 	return event_type;
 }
 
-int odp_event_type_multi(const odp_event_t event[], int num,
-			 odp_event_type_t *type_out)
-{
-	int i;
-	odp_event_type_t type = odp_event_type(event[0]);
-
-	for (i = 1; i < num; i++) {
-		if (odp_event_type(event[i]) != type)
-			break;
-	}
-
-	*type_out = type;
-
-	return i;
-}
-
 uint32_t odp_event_flow_id(odp_event_t event)
 {
 	return event_flow_id(event);
