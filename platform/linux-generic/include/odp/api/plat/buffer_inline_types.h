@@ -23,6 +23,7 @@ extern "C" {
 /* Buffer header field offsets for inline functions */
 typedef struct _odp_buffer_inline_offset_t {
 	uint16_t event_type;
+	uint16_t base_data;
 
 } _odp_buffer_inline_offset_t;
 
