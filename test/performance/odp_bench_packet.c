@@ -17,6 +17,8 @@
 #include <inttypes.h>
 #include <signal.h>
 
+#include <test_packet_parser.h>
+
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
@@ -354,6 +356,77 @@ static void alloc_packets_twice(void)
 			      TEST_REPEAT_COUNT);
 	allocate_test_packets(gbl_args->pkt.len, gbl_args->pkt2_tbl,
 			      TEST_REPEAT_COUNT);
+}
+
+static void alloc_parse_packets(const void *pkt_data, uint32_t len)
+{
+	int i;
+
+	allocate_test_packets(len, gbl_args->pkt_tbl, TEST_REPEAT_COUNT);
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++) {
+		if (odp_packet_copy_from_mem(gbl_args->pkt_tbl[i], 0, len,
+					     pkt_data))
+			ODPH_ABORT("Copying test packet failed\n");
+	}
+}
+
+static void alloc_parse_packets_ipv4_tcp(void)
+{
+	alloc_parse_packets(test_packet_ipv4_tcp, sizeof(test_packet_ipv4_tcp));
+}
+
+static void alloc_parse_packets_ipv4_udp(void)
+{
+	alloc_parse_packets(test_packet_ipv4_udp, sizeof(test_packet_ipv4_udp));
+}
+
+static void alloc_parse_packets_ipv6_tcp(void)
+{
+	alloc_parse_packets(test_packet_ipv6_tcp, sizeof(test_packet_ipv6_tcp));
+}
+
+static void alloc_parse_packets_ipv6_udp(void)
+{
+	alloc_parse_packets(test_packet_ipv6_udp, sizeof(test_packet_ipv6_udp));
+}
+
+static void alloc_parse_packets_multi(const void *pkt_data, uint32_t len)
+{
+	int i;
+
+	allocate_test_packets(len, gbl_args->pkt_tbl,
+			      TEST_REPEAT_COUNT * gbl_args->appl.burst_size);
+
+	for (i = 0; i < TEST_REPEAT_COUNT * gbl_args->appl.burst_size; i++) {
+		if (odp_packet_copy_from_mem(gbl_args->pkt_tbl[i], 0, len,
+					     pkt_data))
+			ODPH_ABORT("Copying test packet failed\n");
+	}
+}
+
+static void alloc_parse_packets_multi_ipv4_tcp(void)
+{
+	alloc_parse_packets_multi(test_packet_ipv4_tcp,
+				  sizeof(test_packet_ipv4_tcp));
+}
+
+static void alloc_parse_packets_multi_ipv4_udp(void)
+{
+	alloc_parse_packets_multi(test_packet_ipv4_udp,
+				  sizeof(test_packet_ipv4_udp));
+}
+
+static void alloc_parse_packets_multi_ipv6_tcp(void)
+{
+	alloc_parse_packets_multi(test_packet_ipv6_tcp,
+				  sizeof(test_packet_ipv6_tcp));
+}
+
+static void alloc_parse_packets_multi_ipv6_udp(void)
+{
+	alloc_parse_packets_multi(test_packet_ipv6_udp,
+				  sizeof(test_packet_ipv6_udp));
 }
 
 static void create_packets(void)
@@ -1352,6 +1425,53 @@ static int bench_packet_subtype(void)
 	return i;
 }
 
+static int bench_packet_parse(void)
+{
+	odp_packet_parse_param_t param;
+	odp_packet_t *pkt_tbl = gbl_args->pkt_tbl;
+	int ret = 0;
+	int i;
+
+	memset(&param, 0, sizeof(odp_packet_parse_param_t));
+	param.proto = ODP_PROTO_ETH;
+	param.last_layer = ODP_PROTO_LAYER_ALL;
+	param.chksums.chksum.ipv4 = 1;
+	param.chksums.chksum.tcp = 1;
+	param.chksums.chksum.udp = 1;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		ret += odp_packet_parse(pkt_tbl[i], 0, &param);
+
+	return !ret;
+}
+
+static int bench_packet_parse_multi(void)
+{
+	int burst_size = gbl_args->appl.burst_size;
+	int ret = 0;
+	int i;
+	odp_packet_parse_param_t param;
+	odp_packet_t *pkt_tbl = gbl_args->pkt_tbl;
+	uint32_t offsets[burst_size];
+
+	memset(&offsets, 0, sizeof(offsets));
+
+	memset(&param, 0, sizeof(odp_packet_parse_param_t));
+	param.proto = ODP_PROTO_ETH;
+	param.last_layer = ODP_PROTO_LAYER_ALL;
+	param.chksums.chksum.ipv4 = 1;
+	param.chksums.chksum.tcp = 1;
+	param.chksums.chksum.udp = 1;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++) {
+		int idx = i * burst_size;
+
+		ret += odp_packet_parse_multi(&pkt_tbl[idx], offsets,
+					      burst_size, &param);
+	}
+	return (ret == TEST_REPEAT_COUNT * burst_size);
+}
+
 /**
  * Prinf usage information
  */
@@ -1586,6 +1706,30 @@ bench_info_t test_suite[] = {
 			   free_packets_twice, NULL),
 		BENCH_INFO(bench_packet_subtype, create_packets, free_packets,
 			   NULL),
+		BENCH_INFO(bench_packet_parse, alloc_parse_packets_ipv4_tcp,
+			   free_packets, "bench_packet_parse_ipv4_tcp"),
+		BENCH_INFO(bench_packet_parse, alloc_parse_packets_ipv4_udp,
+			   free_packets, "bench_packet_parse_ipv4_udp"),
+		BENCH_INFO(bench_packet_parse, alloc_parse_packets_ipv6_tcp,
+			   free_packets, "bench_packet_parse_ipv6_tcp"),
+		BENCH_INFO(bench_packet_parse, alloc_parse_packets_ipv6_udp,
+			   free_packets, "bench_packet_parse_ipv6_udp"),
+		BENCH_INFO(bench_packet_parse_multi,
+			   alloc_parse_packets_multi_ipv4_tcp,
+			   free_packets_multi,
+			   "bench_packet_parse_multi_ipv4_tcp"),
+		BENCH_INFO(bench_packet_parse_multi,
+			   alloc_parse_packets_multi_ipv4_udp,
+			   free_packets_multi,
+			   "bench_packet_parse_multi_ipv4_udp"),
+		BENCH_INFO(bench_packet_parse_multi,
+			   alloc_parse_packets_multi_ipv6_tcp,
+			   free_packets_multi,
+			   "bench_packet_parse_multi_ipv6_tcp"),
+		BENCH_INFO(bench_packet_parse_multi,
+			   alloc_parse_packets_multi_ipv6_udp,
+			   free_packets_multi,
+			   "bench_packet_parse_multi_ipv6_udp"),
 };
 
 /**
