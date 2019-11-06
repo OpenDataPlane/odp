@@ -413,6 +413,18 @@ static void create_events(void)
 		gbl_args->event_tbl[i] = odp_packet_to_event(pkt_tbl[i]);
 }
 
+static void create_events_multi(void)
+{
+	int i;
+	odp_packet_t *pkt_tbl = gbl_args->pkt_tbl;
+
+	allocate_test_packets(gbl_args->pkt.len, gbl_args->pkt_tbl,
+			      TEST_REPEAT_COUNT * gbl_args->appl.burst_size);
+
+	for (i = 0; i < TEST_REPEAT_COUNT * gbl_args->appl.burst_size; i++)
+		gbl_args->event_tbl[i] = odp_packet_to_event(pkt_tbl[i]);
+}
+
 static void free_packets(void)
 {
 	odp_packet_free_multi(gbl_args->pkt_tbl, TEST_REPEAT_COUNT);
@@ -491,6 +503,19 @@ static int bench_packet_free_multi(void)
 	return i;
 }
 
+static int bench_packet_free_sp(void)
+{
+	int i;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++) {
+		int pkt_idx = i * gbl_args->appl.burst_size;
+
+		odp_packet_free_sp(&gbl_args->pkt_tbl[pkt_idx],
+				   gbl_args->appl.burst_size);
+	}
+	return i;
+}
+
 static int bench_packet_alloc_free(void)
 {
 	int i;
@@ -545,6 +570,20 @@ static int bench_packet_from_event(void)
 	return i;
 }
 
+static int bench_packet_from_event_multi(void)
+{
+	int i;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++) {
+		int idx = i * gbl_args->appl.burst_size;
+
+		odp_packet_from_event_multi(&gbl_args->pkt_tbl[idx],
+					    &gbl_args->event_tbl[idx],
+					    gbl_args->appl.burst_size);
+	}
+	return i;
+}
+
 static int bench_packet_to_event(void)
 {
 	int i;
@@ -553,6 +592,20 @@ static int bench_packet_to_event(void)
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
 		gbl_args->event_tbl[i] = odp_packet_to_event(pkt_tbl[i]);
 
+	return i;
+}
+
+static int bench_packet_to_event_multi(void)
+{
+	int i;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++) {
+		int idx = i * gbl_args->appl.burst_size;
+
+		odp_packet_to_event_multi(&gbl_args->pkt_tbl[idx],
+					  &gbl_args->event_tbl[idx],
+					  gbl_args->appl.burst_size);
+	}
 	return i;
 }
 
@@ -584,6 +637,18 @@ static int bench_packet_data(void)
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
 		gbl_args->ptr_tbl[i] = odp_packet_data(gbl_args->pkt_tbl[i]);
 
+	return i;
+}
+
+static int bench_packet_data_seg_len(void)
+{
+	odp_packet_t *pkt_tbl = gbl_args->pkt_tbl;
+	uint32_t *output_tbl = gbl_args->output_tbl;
+	int i;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		gbl_args->ptr_tbl[i] = odp_packet_data_seg_len(pkt_tbl[i],
+							       &output_tbl[i]);
 	return i;
 }
 
@@ -1276,6 +1341,17 @@ static int bench_packet_has_ref(void)
 	return i;
 }
 
+static int bench_packet_subtype(void)
+{
+	int i;
+	odp_packet_t *pkt_tbl = gbl_args->pkt_tbl;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		gbl_args->output_tbl[i] = odp_packet_subtype(pkt_tbl[i]);
+
+	return i;
+}
+
 /**
  * Prinf usage information
  */
@@ -1371,20 +1447,28 @@ bench_info_t test_suite[] = {
 		BENCH_INFO(bench_packet_free, create_packets, NULL, NULL),
 		BENCH_INFO(bench_packet_free_multi, alloc_packets_multi, NULL,
 			   NULL),
+		BENCH_INFO(bench_packet_free_sp, alloc_packets_multi, NULL,
+			   NULL),
 		BENCH_INFO(bench_packet_alloc_free, NULL, NULL, NULL),
 		BENCH_INFO(bench_packet_alloc_free_multi, NULL, NULL, NULL),
 		BENCH_INFO(bench_packet_reset, create_packets, free_packets,
 			   NULL),
 		BENCH_INFO(bench_packet_from_event, create_events, free_packets,
 			   NULL),
+		BENCH_INFO(bench_packet_from_event_multi, create_events_multi,
+			   free_packets_multi, NULL),
 		BENCH_INFO(bench_packet_to_event, create_packets, free_packets,
 			   NULL),
+		BENCH_INFO(bench_packet_to_event_multi, alloc_packets_multi,
+			   free_packets_multi, NULL),
 		BENCH_INFO(bench_packet_head, create_packets, free_packets,
 			   NULL),
 		BENCH_INFO(bench_packet_buf_len, create_packets, free_packets,
 			   NULL),
 		BENCH_INFO(bench_packet_data, create_packets, free_packets,
 			   NULL),
+		BENCH_INFO(bench_packet_data_seg_len, create_packets,
+			   free_packets, NULL),
 		BENCH_INFO(bench_packet_seg_len, create_packets, free_packets,
 			   NULL),
 		BENCH_INFO(bench_packet_len, create_packets, free_packets,
@@ -1500,6 +1584,8 @@ bench_info_t test_suite[] = {
 			   free_packets_twice, NULL),
 		BENCH_INFO(bench_packet_has_ref, alloc_ref_packets,
 			   free_packets_twice, NULL),
+		BENCH_INFO(bench_packet_subtype, create_packets, free_packets,
+			   NULL),
 };
 
 /**
