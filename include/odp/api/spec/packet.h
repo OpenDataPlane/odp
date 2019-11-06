@@ -1508,6 +1508,22 @@ odp_pool_t odp_packet_pool(odp_packet_t pkt);
 odp_pktio_t odp_packet_input(odp_packet_t pkt);
 
 /**
+ * Set packet input interface
+ *
+ * Set packet input interface to a valid packet IO handle or ODP_PKTIO_INVALID.
+ * An application may use this for testing or other purposes, when perception
+ * of the packet input interface need to be changed. The call updates both
+ * input interface handle (odp_packet_input()) and index
+ * (odp_packet_input_index()).
+ *
+ * @param pkt   Packet handle
+ * @param pktio Handle to a valid packet input interface or ODP_PKTIO_INVALID.
+ *              ODP_PKTIO_INVALID indicates that the packet was not received by
+ *              any packet IO interface.
+ */
+void odp_packet_input_set(odp_packet_t pkt, odp_pktio_t pktio);
+
+/**
  * Packet input interface index
  *
  * Returns the index of the packet I/O interface that received the packet, or
