@@ -575,7 +575,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry)) {
 			uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
 
-			packet_parse_reset(&parsed_hdr);
+			packet_parse_reset(&parsed_hdr, 1);
 			packet_set_len(&parsed_hdr, pkt_len);
 			if (_odp_dpdk_packet_parse_common(&parsed_hdr.p, data,
 							  pkt_len, pkt_len,
@@ -859,7 +859,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry)) {
 			uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
 
-			packet_parse_reset(&parsed_hdr);
+			packet_parse_reset(&parsed_hdr, 1);
 			packet_set_len(&parsed_hdr, pkt_len);
 			if (_odp_dpdk_packet_parse_common(&parsed_hdr.p, data,
 							  pkt_len, pkt_len,
