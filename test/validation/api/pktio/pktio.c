@@ -879,6 +879,14 @@ static void pktio_txrx_multi(pktio_info_t *pktio_info_a,
 
 		CU_ASSERT(odp_packet_user_ptr(pkt) == NULL);
 
+		odp_packet_input_set(pkt, ODP_PKTIO_INVALID);
+		CU_ASSERT(odp_packet_input(pkt) == ODP_PKTIO_INVALID);
+		CU_ASSERT(odp_packet_input_index(pkt) < 0);
+
+		odp_packet_input_set(pkt, pktio_b);
+		CU_ASSERT(odp_packet_input(pkt) == pktio_b);
+		CU_ASSERT(odp_packet_input_index(pkt) == pktio_index_b);
+
 		/* Dummy read to ones complement in case pktio has set it */
 		sum = odp_packet_ones_comp(pkt, &range);
 		if (range.length > 0)
