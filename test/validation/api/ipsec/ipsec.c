@@ -461,6 +461,7 @@ static void ipsec_check_packet(const ipsec_test_packet *itp, odp_packet_t pkt,
 	uint8_t data[len];
 	const odph_ipv4hdr_t *itp_ip;
 	odph_ipv4hdr_t *ip;
+	int inline_mode = 0;
 
 	if (NULL == itp)
 		return;
@@ -469,7 +470,18 @@ static void ipsec_check_packet(const ipsec_test_packet *itp, odp_packet_t pkt,
 	if (ODP_PACKET_INVALID == pkt)
 		return;
 
-	CU_ASSERT_EQUAL(PACKET_USER_PTR, odp_packet_user_ptr(pkt));
+	if ((!is_outbound &&
+	     suite_context.inbound_op_mode == ODP_IPSEC_OP_MODE_INLINE) ||
+	    (is_outbound &&
+	     suite_context.outbound_op_mode == ODP_IPSEC_OP_MODE_INLINE))
+		inline_mode = 1;
+
+	if (inline_mode) {
+		/* User pointer is reset during inline mode (packet IO) */
+		CU_ASSERT(odp_packet_user_ptr(pkt) == NULL);
+	} else {
+		CU_ASSERT(odp_packet_user_ptr(pkt) == PACKET_USER_PTR);
+	}
 
 	l3 = odp_packet_l3_offset(pkt);
 	l4 = odp_packet_l4_offset(pkt);
