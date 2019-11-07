@@ -749,21 +749,25 @@ static int send_packet_events(odp_queue_t queue,
 	return 0;
 }
 
-static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
+static void pktio_txrx_multi(pktio_info_t *pktio_info_a,
+			     pktio_info_t *pktio_info_b,
 			     int num_pkts, txrx_mode_e mode)
 {
 	odp_packet_t tx_pkt[num_pkts];
 	odp_packet_t rx_pkt[num_pkts];
 	uint32_t tx_seq[num_pkts];
 	int i, ret, num_rx;
+	odp_pktio_t pktio_a = pktio_info_a->id;
+	odp_pktio_t pktio_b = pktio_info_b->id;
+	int pktio_index_b = odp_pktio_index(pktio_b);
 
 	if (packet_len == USE_MTU) {
 		odp_pool_capability_t pool_capa;
 		uint32_t maxlen;
 
-		maxlen = odp_pktout_maxlen(pktio_a->id);
-		if (odp_pktout_maxlen(pktio_b->id) < maxlen)
-			maxlen = odp_pktout_maxlen(pktio_b->id);
+		maxlen = odp_pktout_maxlen(pktio_a);
+		if (odp_pktout_maxlen(pktio_b) < maxlen)
+			maxlen = odp_pktout_maxlen(pktio_b);
 		CU_ASSERT_FATAL(maxlen > 0);
 		packet_len = maxlen;
 		if (packet_len > PKT_LEN_MAX)
@@ -777,8 +781,7 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 	}
 
 	/* generate test packets to send */
-	ret = create_packets(tx_pkt, tx_seq, num_pkts, pktio_a->id,
-			     pktio_b->id);
+	ret = create_packets(tx_pkt, tx_seq, num_pkts, pktio_a, pktio_b);
 	if (ret != num_pkts) {
 		CU_FAIL("failed to generate test packets");
 		return;
@@ -787,7 +790,8 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 	/* send packet(s) out */
 	if (mode == TXRX_MODE_SINGLE) {
 		for (i = 0; i < num_pkts; ++i) {
-			ret = odp_pktout_send(pktio_a->pktout, &tx_pkt[i], 1);
+			ret = odp_pktout_send(pktio_info_a->pktout,
+					      &tx_pkt[i], 1);
 			if (ret != 1) {
 				CU_FAIL_FATAL("failed to send test packet");
 				odp_packet_free(tx_pkt[i]);
@@ -795,13 +799,13 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 			}
 		}
 	} else if (mode == TXRX_MODE_MULTI) {
-		send_packets(pktio_a->pktout, tx_pkt, num_pkts);
+		send_packets(pktio_info_a->pktout, tx_pkt, num_pkts);
 	} else {
-		send_packet_events(pktio_a->queue_out, tx_pkt, num_pkts);
+		send_packet_events(pktio_info_a->queue_out, tx_pkt, num_pkts);
 	}
 
 	/* and wait for them to arrive back */
-	num_rx = wait_for_packets(pktio_b, rx_pkt, tx_seq,
+	num_rx = wait_for_packets(pktio_info_b, rx_pkt, tx_seq,
 				  num_pkts, mode, ODP_TIME_SEC_IN_NS);
 	CU_ASSERT(num_rx == num_pkts);
 	if (num_rx != num_pkts) {
@@ -815,7 +819,8 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 		odp_packet_t pkt = rx_pkt[i];
 
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-		CU_ASSERT(odp_packet_input(pkt) == pktio_b->id);
+		CU_ASSERT(odp_packet_input(pkt) == pktio_b);
+		CU_ASSERT(odp_packet_input_index(pkt) == pktio_index_b);
 		CU_ASSERT(odp_packet_has_error(pkt) == 0);
 
 		/* Dummy read to ones complement in case pktio has set it */
