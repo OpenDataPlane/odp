@@ -161,7 +161,9 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 					failed++;
 					continue;
 				}
+
 				pkt = new_pkt;
+				pkt_hdr = packet_hdr(new_pkt);
 			}
 		} else {
 			packet_parse_layer(pkt_hdr,
