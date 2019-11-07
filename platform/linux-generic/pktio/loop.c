@@ -121,7 +121,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		pkt_len = odp_packet_len(pkt);
 		pkt_hdr = packet_hdr(pkt);
 
-		packet_parse_reset(pkt_hdr);
+		packet_parse_reset(pkt_hdr, 1);
 		if (pktio_cls_enabled(pktio_entry)) {
 			odp_packet_t new_pkt;
 			odp_pool_t new_pool;

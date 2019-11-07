@@ -267,7 +267,18 @@ int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
 		       odp_proto_chksums_t chksums);
 
 /* Reset parser metadata for a new parse */
-void packet_parse_reset(odp_packet_hdr_t *pkt_hdr);
+static inline void packet_parse_reset(odp_packet_hdr_t *pkt_hdr, int all)
+{
+	pkt_hdr->p.input_flags.all  = 0;
+	pkt_hdr->p.l2_offset        = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->p.l3_offset        = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->p.l4_offset        = ODP_PACKET_OFFSET_INVALID;
+
+	if (all)
+		pkt_hdr->p.flags.all_flags = 0;
+	else /* Keep user ptr and pktout flags */
+		pkt_hdr->p.flags.all.error = 0;
+}
 
 static inline int packet_hdr_has_l2(odp_packet_hdr_t *pkt_hdr)
 {

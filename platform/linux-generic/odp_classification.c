@@ -1415,7 +1415,7 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	uint32_t hash;
 
 	if (parse) {
-		packet_parse_reset(pkt_hdr);
+		packet_parse_reset(pkt_hdr, 1);
 		packet_set_len(pkt_hdr, pkt_len);
 
 		packet_parse_common(&pkt_hdr->p, base, pkt_len, seg_len,

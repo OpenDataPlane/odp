@@ -778,7 +778,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	    ODP_IPSEC_MODE_TUNNEL == ipsec_sa->mode) {
 		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-		packet_parse_reset(pkt_hdr);
+		packet_parse_reset(pkt_hdr, 0);
 		pkt_hdr->p.l3_offset = state.ip_offset;
 	} else {
 		odp_packet_parse_param_t parse_param;
