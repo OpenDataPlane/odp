@@ -491,6 +491,9 @@ static int create_packets_udp(odp_packet_t pkt_tbl[],
 
 		pktio_pkt_set_macs(pkt_tbl[i], pktio_src, pktio_dst);
 
+		/* Set user pointer. It should be NULL on receive side. */
+		odp_packet_user_ptr_set(pkt_tbl[i], (void *)1);
+
 		if (fix_cs)
 			ret = pktio_fixup_checksums(pkt_tbl[i]);
 		else
@@ -873,6 +876,8 @@ static void pktio_txrx_multi(pktio_info_t *pktio_info_a,
 			CU_ASSERT(odp_packet_has_l4(pkt));
 			CU_ASSERT(odp_packet_has_udp(pkt));
 		}
+
+		CU_ASSERT(odp_packet_user_ptr(pkt) == NULL);
 
 		/* Dummy read to ones complement in case pktio has set it */
 		sum = odp_packet_ones_comp(pkt, &range);
