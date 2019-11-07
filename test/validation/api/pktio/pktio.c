@@ -749,6 +749,41 @@ static int send_packet_events(odp_queue_t queue,
 	return 0;
 }
 
+static void check_parser_capa(odp_pktio_t pktio, int *l2, int *l3, int *l4)
+{
+	int ret;
+	odp_pktio_capability_t capa;
+
+	*l2 = 0;
+	*l3 = 0;
+	*l4 = 0;
+
+	ret = odp_pktio_capability(pktio, &capa);
+	CU_ASSERT(ret == 0);
+
+	if (ret < 0)
+		return;
+
+	switch (capa.config.parser.layer) {
+	case ODP_PROTO_LAYER_ALL:
+		/* Fall through */
+	case ODP_PROTO_LAYER_L4:
+		*l2 = 1;
+		*l3 = 1;
+		*l4 = 1;
+		break;
+	case ODP_PROTO_LAYER_L3:
+		*l2 = 1;
+		*l3 = 1;
+		break;
+	case ODP_PROTO_LAYER_L2:
+		*l2 = 1;
+		break;
+	default:
+		break;
+	}
+}
+
 static void pktio_txrx_multi(pktio_info_t *pktio_info_a,
 			     pktio_info_t *pktio_info_b,
 			     int num_pkts, txrx_mode_e mode)
@@ -757,9 +792,13 @@ static void pktio_txrx_multi(pktio_info_t *pktio_info_a,
 	odp_packet_t rx_pkt[num_pkts];
 	uint32_t tx_seq[num_pkts];
 	int i, ret, num_rx;
+	int parser_l2, parser_l3, parser_l4;
 	odp_pktio_t pktio_a = pktio_info_a->id;
 	odp_pktio_t pktio_b = pktio_info_b->id;
 	int pktio_index_b = odp_pktio_index(pktio_b);
+
+	/* Check RX interface parser capability */
+	check_parser_capa(pktio_b, &parser_l2, &parser_l3, &parser_l4);
 
 	if (packet_len == USE_MTU) {
 		odp_pool_capability_t pool_capa;
@@ -822,6 +861,18 @@ static void pktio_txrx_multi(pktio_info_t *pktio_info_a,
 		CU_ASSERT(odp_packet_input(pkt) == pktio_b);
 		CU_ASSERT(odp_packet_input_index(pkt) == pktio_index_b);
 		CU_ASSERT(odp_packet_has_error(pkt) == 0);
+		if (parser_l2) {
+			CU_ASSERT(odp_packet_has_l2(pkt));
+			CU_ASSERT(odp_packet_has_eth(pkt));
+		}
+		if (parser_l3) {
+			CU_ASSERT(odp_packet_has_l3(pkt));
+			CU_ASSERT(odp_packet_has_ipv4(pkt));
+		}
+		if (parser_l4) {
+			CU_ASSERT(odp_packet_has_l4(pkt));
+			CU_ASSERT(odp_packet_has_udp(pkt));
+		}
 
 		/* Dummy read to ones complement in case pktio has set it */
 		sum = odp_packet_ones_comp(pkt, &range);
