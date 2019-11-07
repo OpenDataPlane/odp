@@ -193,8 +193,9 @@ void enqueue_pktio_interface(odp_packet_t pkt, odp_pktio_t pktio)
 odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns)
 {
 	odp_event_t ev;
+	uint64_t wait = odp_schedule_wait_time(ns);
 
-	ev = odp_schedule(queue, ns);
+	ev = odp_schedule(queue, wait);
 	return odp_packet_from_event(ev);
 }
 
