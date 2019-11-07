@@ -39,7 +39,7 @@ typedef struct {
 
 /* Read-only global data. Members should not be modified after global init
  * to enable process more support. */
-struct odp_global_data_ro_t {
+typedef struct odp_global_data_ro_t {
 	odp_init_t init_param;
 	/* directory for odp mmaped files */
 	char *shm_dir;
@@ -60,17 +60,19 @@ struct odp_global_data_ro_t {
 	config_t libconfig_default;
 	config_t libconfig_runtime;
 	odp_random_kind_t ipsec_rand_kind;
-};
+
+} odp_global_data_ro_t;
 
 /* Modifiable global data. Memory region is shared and synchronized amongst all
  * worker processes. */
-struct odp_global_data_rw_t {
+typedef struct odp_global_data_rw_t {
 	odp_bool_t dpdk_initialized;
 	odp_bool_t inline_timers;
-};
 
-extern struct odp_global_data_ro_t odp_global_ro;
-extern struct odp_global_data_rw_t *odp_global_rw;
+} odp_global_data_rw_t;
+
+extern odp_global_data_ro_t odp_global_ro;
+extern odp_global_data_rw_t *odp_global_rw;
 
 #ifdef __cplusplus
 }
