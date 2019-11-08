@@ -2918,7 +2918,7 @@ odp_tm_t odp_tm_create(const char            *name,
 	uint32_t max_tm_queues, max_sorted_lists;
 	int rc;
 
-	if (odp_global_ro.init_param.not_used.feat.tm) {
+	if (odp_global_ro.disable.traffic_mng) {
 		ODP_ERR("TM has been disabled\n");
 		return ODP_TM_INVALID;
 	}
@@ -4724,8 +4724,8 @@ int _odp_tm_init_global(void)
 {
 	odp_shm_t shm;
 
-	if (odp_global_ro.init_param.not_used.feat.tm) {
-		ODP_DBG("TM disabled\n");
+	if (odp_global_ro.disable.traffic_mng) {
+		ODP_PRINT("\nODP traffic manager is DISABLED\n");
 		return 0;
 	}
 
@@ -4758,7 +4758,7 @@ int _odp_tm_init_global(void)
 
 int _odp_tm_term_global(void)
 {
-	if (odp_global_ro.init_param.not_used.feat.tm)
+	if (odp_global_ro.disable.traffic_mng)
 		return 0;
 
 	if (odp_shm_free(tm_glb->shm)) {
