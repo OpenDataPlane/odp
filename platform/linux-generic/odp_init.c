@@ -48,6 +48,64 @@ enum init_stage {
 odp_global_data_ro_t odp_global_ro;
 odp_global_data_rw_t *odp_global_rw;
 
+static int read_config_file(odp_global_data_ro_t *global_ro,
+			    const odp_init_t *init_param)
+{
+	const char *str;
+	int disable_ipsec, disable_crypto;
+	int val = 0;
+
+	/* Disabled features from config file are used when application does
+	 * not provide init params. */
+	str = "global_init.disable.ipsec";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	disable_ipsec = val;
+
+	if (init_param)
+		disable_ipsec = init_param->not_used.feat.ipsec;
+
+	global_ro->disable.ipsec = disable_ipsec;
+
+	str = "global_init.disable.crypto";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	disable_crypto = val;
+
+	if (init_param)
+		disable_crypto = init_param->not_used.feat.crypto;
+
+	if (disable_ipsec && disable_crypto)
+		global_ro->disable.crypto = 1;
+
+	str = "global_init.disable.traffic_mng";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	global_ro->disable.traffic_mng = val;
+
+	if (init_param)
+		global_ro->disable.traffic_mng = init_param->not_used.feat.tm;
+
+	str = "global_init.disable.compress";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	global_ro->disable.compress = val;
+
+	return 0;
+}
+
 void odp_init_param_init(odp_init_t *param)
 {
 	memset(param, 0, sizeof(odp_init_t));
@@ -290,6 +348,11 @@ int odp_init_global(odp_instance_t *instance,
 		goto init_failed;
 	}
 	stage = LIBCONFIG_INIT;
+
+	if (read_config_file(&odp_global_ro, params)) {
+		ODP_ERR("ODP config file read failed.\n");
+		goto init_failed;
+	}
 
 	if (_odp_cpumask_init_global(params)) {
 		ODP_ERR("ODP cpumask init failed.\n");
