@@ -61,6 +61,15 @@ typedef struct odp_global_data_ro_t {
 	config_t libconfig_runtime;
 	odp_random_kind_t ipsec_rand_kind;
 
+	/* Disabled features during global init */
+	struct {
+		uint8_t compress;
+		uint8_t crypto;
+		uint8_t ipsec;
+		uint8_t traffic_mng;
+
+	} disable;
+
 } odp_global_data_ro_t;
 
 /* Modifiable global data. Memory region is shared and synchronized amongst all
