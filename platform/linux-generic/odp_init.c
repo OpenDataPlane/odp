@@ -48,6 +48,25 @@ enum init_stage {
 odp_global_data_ro_t odp_global_ro;
 odp_global_data_rw_t *odp_global_rw;
 
+static void disable_features(odp_global_data_ro_t *global_ro,
+			     const odp_init_t *init_param)
+{
+	int disable_ipsec, disable_crypto;
+
+	if (init_param == NULL)
+		return;
+
+	disable_ipsec = init_param->not_used.feat.ipsec;
+	global_ro->disable.ipsec = disable_ipsec;
+
+	disable_crypto = init_param->not_used.feat.crypto;
+	/* Crypto can be disabled only if IPSec is disabled */
+	if (disable_ipsec && disable_crypto)
+		global_ro->disable.crypto = 1;
+
+	global_ro->disable.traffic_mngr = init_param->not_used.feat.tm;
+}
+
 void odp_init_param_init(odp_init_t *param)
 {
 	memset(param, 0, sizeof(odp_init_t));
@@ -290,6 +309,8 @@ int odp_init_global(odp_instance_t *instance,
 		goto init_failed;
 	}
 	stage = LIBCONFIG_INIT;
+
+	disable_features(&odp_global_ro, params);
 
 	if (_odp_cpumask_init_global(params)) {
 		ODP_ERR("ODP cpumask init failed.\n");
