@@ -12,6 +12,7 @@
 #include <odp_debug_internal.h>
 #include <odp_ipsec_internal.h>
 #include <odp_pool_internal.h>
+#include <odp_global_data.h>
 
 /* Inlined API functions */
 #include <odp/api/plat/event_inlines.h>
@@ -31,6 +32,11 @@ static odp_pool_t ipsec_status_pool = ODP_POOL_INVALID;
 int _odp_ipsec_events_init_global(void)
 {
 	odp_pool_param_t param;
+
+	if (odp_global_ro.disable.ipsec) {
+		ODP_PRINT("\nODP IPSec is DISABLED\n");
+		return 0;
+	}
 
 	odp_pool_param_init(&param);
 
@@ -54,6 +60,9 @@ err_status:
 int _odp_ipsec_events_term_global(void)
 {
 	int ret;
+
+	if (odp_global_ro.disable.ipsec)
+		return 0;
 
 	ret = odp_pool_destroy(ipsec_status_pool);
 	if (ret < 0) {

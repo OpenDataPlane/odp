@@ -13,6 +13,7 @@
 #include <odp_debug_internal.h>
 #include <odp_ipsec_internal.h>
 #include <odp_ring_mpmc_internal.h>
+#include <odp_global_data.h>
 
 #include <odp/api/plat/atomic_inlines.h>
 #include <odp/api/plat/cpu_inlines.h>
@@ -135,6 +136,9 @@ int _odp_ipsec_sad_init_global(void)
 	odp_shm_t shm;
 	unsigned i;
 
+	if (odp_global_ro.disable.ipsec)
+		return 0;
+
 	shm = odp_shm_reserve("_odp_ipsec_sa_table",
 			      sizeof(ipsec_sa_table_t),
 			      ODP_CACHE_LINE_SIZE,
@@ -190,6 +194,9 @@ int _odp_ipsec_sad_term_global(void)
 	ipsec_sa_t *ipsec_sa;
 	int ret = 0;
 	int rc = 0;
+
+	if (odp_global_ro.disable.ipsec)
+		return 0;
 
 	for (i = 0; i < ODP_CONFIG_IPSEC_SAS; i++) {
 		ipsec_sa = ipsec_sa_entry(i);
