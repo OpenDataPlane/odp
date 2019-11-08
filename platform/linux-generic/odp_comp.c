@@ -11,6 +11,7 @@
 #include <odp/api/packet.h>
 #include <odp/api/plat/strong_types.h>
 #include <odp_packet_internal.h>
+#include <odp_global_data.h>
 
 #include <odp_debug_internal.h>
 #include <odp_init_internal.h>
@@ -610,11 +611,17 @@ int _odp_comp_init_global(void)
 	odp_shm_t shm;
 	int idx;
 
+	if (odp_global_ro.disable.compress) {
+		ODP_PRINT("\nODP compress is DISABLED\n");
+		return 0;
+	}
+
 	/* Calculate the memory size we need */
 	mem_size = sizeof(*global);
 
 	/* Allocate our globally shared memory */
-	shm = odp_shm_reserve("comp_pool", mem_size, ODP_CACHE_LINE_SIZE, 0);
+	shm = odp_shm_reserve("_odp_comp_pool", mem_size,
+			      ODP_CACHE_LINE_SIZE, 0);
 
 	global = odp_shm_addr(shm);
 
@@ -638,6 +645,9 @@ int _odp_comp_term_global(void)
 	int ret;
 	int count = 0;
 	odp_comp_generic_session_t *session;
+
+	if (odp_global_ro.disable.compress)
+		return 0;
 
 	for (session = global->free; session != NULL; session = session->next)
 		count++;
