@@ -19,6 +19,7 @@
 #include <odp/api/plat/thread_inlines.h>
 #include <odp_packet_internal.h>
 #include <odp/api/plat/queue_inlines.h>
+#include <odp_global_data.h>
 
 /* Inlined API functions */
 #include <odp/api/plat/event_inlines.h>
@@ -1832,6 +1833,11 @@ static int process_digest_param(odp_crypto_generic_session_t *session,
 
 int odp_crypto_capability(odp_crypto_capability_t *capa)
 {
+	if (odp_global_ro.disable.crypto) {
+		ODP_ERR("Crypto is disabled\n");
+		return -1;
+	}
+
 	if (NULL == capa)
 		return -1;
 
@@ -2074,6 +2080,15 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	int rc;
 	odp_crypto_generic_session_t *session;
 	int aes_gcm = 0;
+
+	if (odp_global_ro.disable.crypto) {
+		ODP_ERR("Crypto is disabled\n");
+		/* Dummy output to avoid compiler warning about uninitialized
+		 * variables */
+		*status = ODP_CRYPTO_SES_CREATE_ERR_ENOMEM;
+		*session_out = ODP_CRYPTO_SESSION_INVALID;
+		return -1;
+	}
 
 	/* Allocate memory for this session */
 	session = alloc_session();
@@ -2494,6 +2509,11 @@ int _odp_crypto_init_global(void)
 	int idx;
 	int nlocks = CRYPTO_num_locks();
 
+	if (odp_global_ro.disable.crypto) {
+		ODP_PRINT("\nODP crypto is DISABLED\n");
+		return 0;
+	}
+
 	/* Calculate the memory size we need */
 	mem_size  = sizeof(odp_crypto_global_t);
 	mem_size += nlocks * sizeof(odp_ticketlock_t);
@@ -2539,6 +2559,9 @@ int _odp_crypto_term_global(void)
 	int count = 0;
 	odp_crypto_generic_session_t *session;
 
+	if (odp_global_ro.disable.crypto)
+		return 0;
+
 	for (session = global->free; session != NULL; session = session->next)
 		count++;
 	if (count != MAX_SESSIONS) {
@@ -2567,6 +2590,9 @@ int _odp_crypto_init_local(void)
 
 	memset(&local, 0, sizeof(local));
 
+	if (odp_global_ro.disable.crypto)
+		return 0;
+
 	for (i = 0; i < MAX_SESSIONS; i++) {
 		local.hmac_ctx[i] = HMAC_CTX_new();
 		local.cmac_ctx[i] = CMAC_CTX_new();
@@ -2594,6 +2620,9 @@ int _odp_crypto_init_local(void)
 int _odp_crypto_term_local(void)
 {
 	unsigned i;
+
+	if (odp_global_ro.disable.crypto)
+		return 0;
 
 	for (i = 0; i < MAX_SESSIONS; i++) {
 		if (local.cmac_ctx[i] != NULL)
