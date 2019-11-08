@@ -33,6 +33,11 @@ int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 	odp_crypto_capability_t crypto_capa;
 	odp_queue_capability_t queue_capa;
 
+	if (odp_global_ro.disable.ipsec) {
+		ODP_ERR("IPSec is disabled\n");
+		return -1;
+	}
+
 	memset(capa, 0, sizeof(odp_ipsec_capability_t));
 
 	capa->op_mode_sync = ODP_SUPPORT_PREFERRED;
@@ -1775,6 +1780,9 @@ int _odp_ipsec_try_inline(odp_packet_t *pkt)
 	odp_ipsec_packet_result_t *result;
 	odp_packet_hdr_t *pkt_hdr;
 
+	if (odp_global_ro.disable.ipsec)
+		return -1;
+
 	memset(&status, 0, sizeof(status));
 
 	ipsec_sa = ipsec_in_single(*pkt, ODP_IPSEC_SA_INVALID, pkt, &status);
@@ -1937,6 +1945,9 @@ int _odp_ipsec_init_global(void)
 {
 	odp_shm_t shm;
 
+	if (odp_global_ro.disable.ipsec)
+		return 0;
+
 	shm = odp_shm_reserve("_odp_ipsec", sizeof(odp_ipsec_config_t),
 			      ODP_CACHE_LINE_SIZE, 0);
 
@@ -1960,7 +1971,12 @@ int _odp_ipsec_init_global(void)
 
 int _odp_ipsec_term_global(void)
 {
-	odp_shm_t shm = odp_shm_lookup("_odp_ipsec");
+	odp_shm_t shm;
+
+	if (odp_global_ro.disable.ipsec)
+		return 0;
+
+	shm = odp_shm_lookup("_odp_ipsec");
 
 	if (shm == ODP_SHM_INVALID || odp_shm_free(shm)) {
 		ODP_ERR("Shm free failed for odp_ipsec");
