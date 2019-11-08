@@ -243,6 +243,7 @@ int main(void)
 	char ava_mask_str[ODP_CPUMASK_STR_SIZE];
 	char work_mask_str[ODP_CPUMASK_STR_SIZE];
 	char ctrl_mask_str[ODP_CPUMASK_STR_SIZE];
+	int crypto_ret;
 
 	printf("\n");
 	printf("ODP system info example\n");
@@ -304,10 +305,9 @@ int main(void)
 		return -1;
 	}
 
-	if (odp_crypto_capability(&crypto_capa)) {
+	crypto_ret = odp_crypto_capability(&crypto_capa);
+	if (crypto_ret < 0)
 		printf("crypto capability failed\n");
-		return -1;
-	}
 
 	printf("\n");
 	printf("S Y S T E M    I N F O R M A T I O N\n");
@@ -417,22 +417,25 @@ int main(void)
 	       timer_capa.highest_res_ns);
 
 	printf("\n");
-	printf("  CRYPTO\n");
-	printf("    max sessions:         %" PRIu32 "\n",
-	       crypto_capa.max_sessions);
-	printf("    sync mode support:    %s\n",
-	       support_level(crypto_capa.sync_mode));
-	printf("    async mode support:   %s\n",
-	       support_level(crypto_capa.async_mode));
-	printf("    cipher algorithms:    ");
-	print_cipher_algos(crypto_capa.ciphers);
-	printf("\n");
-	print_cipher_caps(crypto_capa.ciphers);
-	printf("    auth algorithms:      ");
-	print_auth_algos(crypto_capa.auths);
-	printf("\n");
-	print_auth_caps(crypto_capa.auths);
-	printf("\n");
+
+	if (crypto_ret == 0) {
+		printf("  CRYPTO\n");
+		printf("    max sessions:         %" PRIu32 "\n",
+		       crypto_capa.max_sessions);
+		printf("    sync mode support:    %s\n",
+		       support_level(crypto_capa.sync_mode));
+		printf("    async mode support:   %s\n",
+		       support_level(crypto_capa.async_mode));
+		printf("    cipher algorithms:    ");
+		print_cipher_algos(crypto_capa.ciphers);
+		printf("\n");
+		print_cipher_caps(crypto_capa.ciphers);
+		printf("    auth algorithms:      ");
+		print_auth_algos(crypto_capa.auths);
+		printf("\n");
+		print_auth_caps(crypto_capa.auths);
+		printf("\n");
+	}
 
 	printf("  SHM MEMORY BLOCKS:\n");
 	odp_shm_print_all();
