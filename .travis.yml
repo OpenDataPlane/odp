@@ -200,6 +200,18 @@ jobs:
                               -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/inline-timer.conf
                               ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/check_inline_timer.sh
                 - stage: test
+                  env: TEST=feature_disable
+                  install:
+                          - true
+                  compiler: gcc
+                  script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
+                          - docker run --privileged -i -t
+                              -v `pwd`:/odp --shm-size 8g
+                              -e CC="${CC}"
+                              -e CONF=""
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/feature_disable.sh
+                - stage: test
                   env: TEST=distcheck
                   compiler: gcc
                   script:
