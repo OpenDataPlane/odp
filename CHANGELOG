@@ -1,3 +1,166 @@
+== OpenDataPlane (1.23.0.0)
+=== Summary of Changes
+The ODP API changes in this release are related to the classifier module.
+
+The implementation changes include bug fixes (classifier, socket pktio),
+configurability improvements (inline timer), new packet segmentation
+implementation, and performance improvements (pool).
+
+=== API
+==== Classifier
+The PMR term documentation was not explicit about endianness of value and mask
+fields. Most terms assumed CPU endian, but terms with larger data sizes assumed
+big endian (MAC, IPv6 address and custom).
+
+Term specification was harmonized so that all terms expect value/mask data to be
+in big-endian format, have fixed size, and allow free memory alignment. Packet
+length term is an exception to this as it does not represent a field in a
+packet.
+
+Added new `ODP_PMR_CUSTOM_L3` term to match custom layer 3 protocol fields. PMR
+offset refers to the start of layer 3 in the packet. Other PMR rules (e.g. L2
+classification rules) may precede custom L3 rules.
+
+=== Helper
+Duplicate `ODPH_UNUSED` macro has been removed. `ODP_UNUSED` should be used
+instead.
+
+=== Validation Tests
+==== Common
+Improved test result output when some tests are inactive (skipped due to missing
+capability). Now inactive tests are listed by default in the test suite results.
+
+==== Classifier
+Cleaned up validation test code. Classifier implementation missed reporting some
+capabilities, tests didn't check those capabilities and they were tested. Source
+IPv4 term test was missing.
+
+Added serial PMR test, which tests series of PMR and CoS:
+
+* From default CoS to dest IPv4 CoS
+* From dest IPv4 CoS to dest UDP CoS
+
+Added parallel PMR test, which test serial and parallel PMR and CoS:
+
+* From default CoS to dest IPv4 CoS
+* From dest IPv4 CoS to a parallel UDP CoS per destination port number
+
+==== Scheduler
+Added new validation tests to verify that packet order is maintained when events
+are enqueued and dequeued to/from a plain queue while maintaining atomic/ordered
+scheduling context.
+
+==== Timer
+Added private timer pool test, which creates a timer pool with the `priv` flag
+set. The same thread calls schedule / queue_deq that created the pool.
+
+=== Example Applications
+==== timer_perf
+Added new test application to measure schedule call CPU cycle consumption with
+various timer pool parameter combinations. This measurement is mostly
+interesting with software-based timer implementations, where timers may be
+polled from the schedule call.
+
+==== New odp_ping application
+This application replies to IPv4 ping requests. It can be used to test
+connectivity with standard ping utility. ARP table needs to be setup manually on
+the sender side as the application does not reply to ARP requests.
+
+==== odp_classifier
+Added source CoS name into the parameter list of `-p` option. This enables
+linking classification rules together. When a source CoS is not defined, the
+default CoS is used as the source CoS.
+
+Option `-p` parameter list format is now:
+
+    <term>:<xxx>:<yyy>:<src_cos>:<dst_cos>
+
+Where `<src_cos>` is optional and number of "xxx", "yyy", etc. parameters is
+term depend.
+
+Added `-v` option which prints received packet with CoS queue
+name. This can be used for debugging classification rules.
+
+Added support for `ODP_PMR_VLAN_ID_0`, `ODP_PMR_ETHTYPE_0`, `ODP_PMR_CUSTOM_L3`,
+`ODP_PMR_ETHTYPE_X`, `ODP_PMR_VLAN_ID_X`, `ODP_PMR_UDP_DPORT`,
+`ODP_PMR_UDP_SPORT`, `ODP_PMR_TCP_DPORT`, and `ODP_PMR_TCP_SPORT` rules.
+
+==== timer_accuracy
+Fix bug in timer start offset calculation. Test results were offset by current
+local time value.
+
+Added delay and extra schedule calls to ensure that (software) timer
+implementation has passed its initial state before setting up timers.
+
+Added `-f` option to control offset to the first timer. This can be used e.g. to
+avoid best/worst case synchronization of timers to timer tick boundaries /
+resolution.
+
+==== packet_dump
+Added ICMP support. Print ICMP offset and ICMPv4 type/code. This helps to verify
+that ping requests are received.
+
+==== bench_packet
+Added missing tests for the following packet functions:
+
+* `odp_packet_data_seg_len()`
+* `odp_packet_free_sp()`
+* `odp_packet_from_event_multi()`
+* `odp_packet_to_event_multi()`
+* `odp_packet_subtype()`
+* `odp_packet_parse()`
+* `odp_packet_parse_multi()`
+
+=== Implementation
+==== Classifier
+Cleaned up implementation. Fixed endianness.
+
+==== Inline Timer
+Cleaned up code. Fixed accuracy issue with high resolution (<100us) timer pools.
+Added configuration option `inline_poll_interval_nsec` to select default poll
+interval in nsec.
+
+Added configure file option for inline timer (`inline_thread_type`) to select if
+control threads poll shared timer pools or not. Control threads still poll their
+private pools. With this user can configure control and worker threads to use
+separate timer pools.
+
+==== Packet I/O
+Enable explicit pktio type definition. The pktio type is selected by adding
+pktio_type prefix in front of device name separated by a colon
+(<pktio_type>:<if_name>).
+
+The socket mmsg pktio implementation has been refactored and performance has
+been improved.
+
+The IPC pktio implementation has been modified to use standard ODP internal
+`ring_ptr_t` rings to implement IPC rings. This enables removing the duplicate
+`_ring_t` implementation.
+
+==== Pool
+Packet segmentation has been reimplemented using a linked list. The new
+implementation is simpler and has the added benefit of greatly reducing
+packet and buffer header sizes.
+
+=== Bug Fixes
+==== Unnumbered Bugs / Issues
+* Fixed socket mmap pktio throughput collapse under heavy traffic
+
+* Fixed missing config header in install directory
+
+* Include only ODP defines in autogenerated header files
+
+* Fixed GCC 9 `address-of-packed-member` warnings
+
+* Disable building static test applications without static ODP lib
+
+* Fixed a segfault in `odp_pktin_recv_mq_tmo()` implementation
+
+* Fixed classifier vlan match bugs and tests
+
+* Fixed classifier matching of parallel PMRs
+
+
 == OpenDataPlane (1.22.0.0)
 === Summary of Changes
 ODP v1.22.0.0 adds several smaller API changes mainly related to API
