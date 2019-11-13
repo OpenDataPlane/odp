@@ -47,7 +47,8 @@ TESTS = \
 	init/init_abort$(EXEEXT) \
 	init/init_log$(EXEEXT) \
 	init/init_num_thr$(EXEEXT) \
-	init/init_feature$(EXEEXT) \
+	init/init_feature_enabled$(EXEEXT) \
+	init/init_feature_disabled$(EXEEXT) \
 	ipsec/ipsec_sync$(EXEEXT) \
 	ipsec/ipsec_async$(EXEEXT) \
 	ipsec/ipsec_inline_in$(EXEEXT) \
