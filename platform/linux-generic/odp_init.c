@@ -65,6 +65,7 @@ static void disable_features(odp_global_data_ro_t *global_ro,
 		global_ro->disable.crypto = 1;
 
 	global_ro->disable.traffic_mngr = init_param->not_used.feat.tm;
+	global_ro->disable.compress = init_param->not_used.feat.compress;
 }
 
 void odp_init_param_init(odp_init_t *param)
