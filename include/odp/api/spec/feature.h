@@ -37,6 +37,9 @@ typedef union odp_feature_t {
 		/** Classifier APIs, e.g., odp_cls_xxx(), odp_cos_xxx() */
 		uint32_t cls:1;
 
+		/** Compression APIs, e.g., odp_comp_xxx() */
+		uint32_t compress:1;
+
 		/** Crypto APIs, e.g., odp_crypto_xxx() */
 		uint32_t crypto:1;
 
@@ -55,6 +58,7 @@ typedef union odp_feature_t {
 		/** Traffic Manager APIs, e.g., odp_tm_xxx() */
 		uint32_t tm:1;
 	} feat;
+
 } odp_feature_t;
 
 /**
