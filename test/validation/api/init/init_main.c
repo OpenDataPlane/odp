@@ -134,6 +134,7 @@ static void init_test_feature(int disable)
 
 	if (disable) {
 		param.not_used.feat.cls      = 1;
+		param.not_used.feat.compress = 1;
 		param.not_used.feat.crypto   = 1;
 		param.not_used.feat.ipsec    = 1;
 		param.not_used.feat.schedule = 1;
