@@ -687,6 +687,7 @@ int main(int argc, char **argv)
 	/* List features not to be used */
 	odp_init_param_init(&init);
 	init.not_used.feat.cls      = 1;
+	init.not_used.feat.compress = 1;
 	init.not_used.feat.crypto   = 1;
 	init.not_used.feat.ipsec    = 1;
 	init.not_used.feat.tm       = 1;

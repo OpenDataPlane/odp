@@ -1480,11 +1480,12 @@ int main(int argc, char *argv[])
 	odp_init_param_init(&init);
 
 	/* List features not to be used (may optimize performance) */
-	init.not_used.feat.cls    = 1;
-	init.not_used.feat.crypto = 1;
-	init.not_used.feat.ipsec  = 1;
-	init.not_used.feat.timer  = 1;
-	init.not_used.feat.tm     = 1;
+	init.not_used.feat.cls      = 1;
+	init.not_used.feat.compress = 1;
+	init.not_used.feat.crypto   = 1;
+	init.not_used.feat.ipsec    = 1;
+	init.not_used.feat.timer    = 1;
+	init.not_used.feat.tm       = 1;
 
 	init.mem_model = helper_options.mem_model;
 
