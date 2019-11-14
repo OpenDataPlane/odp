@@ -1048,19 +1048,21 @@ void odp_buffer_free_multi(const odp_buffer_t buf[], int num)
 int odp_pool_capability(odp_pool_capability_t *capa)
 {
 	uint32_t max_seg_len = CONFIG_PACKET_MAX_SEG_LEN;
+	/* Reserve one for internal usage */
+	int max_pools = ODP_CONFIG_POOLS - 1;
 
 	memset(capa, 0, sizeof(odp_pool_capability_t));
 
-	capa->max_pools = ODP_CONFIG_POOLS;
+	capa->max_pools = max_pools;
 
 	/* Buffer pools */
-	capa->buf.max_pools = ODP_CONFIG_POOLS;
+	capa->buf.max_pools = max_pools;
 	capa->buf.max_align = ODP_CONFIG_BUFFER_ALIGN_MAX;
 	capa->buf.max_size  = MAX_SIZE;
 	capa->buf.max_num   = CONFIG_POOL_MAX_NUM;
 
 	/* Packet pools */
-	capa->pkt.max_pools        = ODP_CONFIG_POOLS;
+	capa->pkt.max_pools        = max_pools;
 	capa->pkt.max_len          = CONFIG_PACKET_MAX_LEN;
 	capa->pkt.max_num	   = pool_tbl->config.pkt_max_num;
 	capa->pkt.min_headroom     = CONFIG_PACKET_HEADROOM;
@@ -1072,7 +1074,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	capa->pkt.max_uarea_size   = MAX_SIZE;
 
 	/* Timeout pools */
-	capa->tmo.max_pools = ODP_CONFIG_POOLS;
+	capa->tmo.max_pools = max_pools;
 	capa->tmo.max_num   = CONFIG_POOL_MAX_NUM;
 
 	return 0;
