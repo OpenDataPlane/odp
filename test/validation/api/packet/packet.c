@@ -31,7 +31,7 @@ static uint32_t packet_len;
 static uint32_t segmented_packet_len;
 static odp_bool_t segmentation_supported = true;
 
-odp_packet_t test_packet, segmented_test_packet, test_reset_packet;
+odp_packet_t test_packet, segmented_test_packet;
 
 static struct udata_struct {
 	uint64_t u64;
@@ -208,13 +208,6 @@ static int packet_suite_init(void)
 		data++;
 	}
 
-	test_reset_packet = odp_packet_alloc(default_pool, packet_len);
-
-	if (test_reset_packet == ODP_PACKET_INVALID) {
-		printf("test_reset_packet alloc failed\n");
-		return -1;
-	}
-
 	/* Try to allocate PACKET_POOL_NUM_SEG largest possible packets to see
 	 * if segmentation is supported  */
 	do {
@@ -275,7 +268,6 @@ static int packet_suite_init(void)
 static int packet_suite_term(void)
 {
 	odp_packet_free(test_packet);
-	odp_packet_free(test_reset_packet);
 	odp_packet_free(segmented_test_packet);
 
 	if (odp_pool_destroy(default_pool) != 0)
@@ -662,11 +654,15 @@ static void packet_test_reset(void)
 	uint32_t len, headroom;
 	uintptr_t ptr_len;
 	void *data, *new_data, *tail, *new_tail;
-	odp_packet_t pkt = test_reset_packet;
+	odp_packet_t pkt;
+
+	pkt = odp_packet_alloc(default_pool, packet_len);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
 	len = odp_packet_len(pkt);
+	CU_ASSERT(len == packet_len);
+
 	headroom = odp_packet_headroom(pkt);
-	CU_ASSERT(len > 1);
 
 	if (headroom) {
 		data = odp_packet_data(pkt);
@@ -719,6 +715,8 @@ static void packet_test_reset(void)
 	len = len - len / 2;
 	CU_ASSERT(odp_packet_reset(pkt, len) == 0);
 	CU_ASSERT(odp_packet_len(pkt) == len);
+
+	odp_packet_free(pkt);
 }
 
 static void packet_test_prefetch(void)
