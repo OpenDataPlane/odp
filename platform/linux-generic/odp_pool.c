@@ -266,7 +266,7 @@ int _odp_pool_term_global(void)
 
 	ret = odp_shm_free(pool_tbl->shm);
 	if (ret < 0) {
-		ODP_ERR("shm free failed");
+		ODP_ERR("SHM free failed\n");
 		rc = -1;
 	}
 
@@ -474,7 +474,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	/* Validate requested buffer alignment */
 	if (align > ODP_CONFIG_BUFFER_ALIGN_MAX ||
 	    align != ROUNDDOWN_POWER2(align, align)) {
-		ODP_ERR("Bad align requirement");
+		ODP_ERR("Bad align requirement\n");
 		return ODP_POOL_INVALID;
 	}
 
@@ -492,7 +492,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 
 	case ODP_POOL_PACKET:
 		if (params->pkt.headroom > CONFIG_PACKET_HEADROOM) {
-			ODP_ERR("Packet headroom size not supported.");
+			ODP_ERR("Packet headroom size not supported\n");
 			return ODP_POOL_INVALID;
 		}
 
@@ -514,7 +514,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 		if ((max_len + seg_len - 1) / seg_len > PKT_MAX_SEGS)
 			seg_len = (max_len + PKT_MAX_SEGS - 1) / PKT_MAX_SEGS;
 		if (seg_len > CONFIG_PACKET_MAX_SEG_LEN) {
-			ODP_ERR("Pool unable to store 'max_len' packet");
+			ODP_ERR("Pool unable to store 'max_len' packet\n");
 			return ODP_POOL_INVALID;
 		}
 
@@ -529,7 +529,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 		break;
 
 	default:
-		ODP_ERR("Bad pool type");
+		ODP_ERR("Bad pool type\n");
 		return ODP_POOL_INVALID;
 	}
 
@@ -539,7 +539,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	pool = reserve_pool(shmflags);
 
 	if (pool == NULL) {
-		ODP_ERR("No more free pools");
+		ODP_ERR("No more free pools\n");
 		return ODP_POOL_INVALID;
 	}
 
@@ -627,7 +627,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	pool->shm = shm;
 
 	if (shm == ODP_SHM_INVALID) {
-		ODP_ERR("Shm reserve failed");
+		ODP_ERR("SHM reserve failed\n");
 		goto error;
 	}
 
@@ -643,7 +643,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 		pool->uarea_shm = shm;
 
 		if (shm == ODP_SHM_INVALID) {
-			ODP_ERR("Shm reserve failed (uarea)");
+			ODP_ERR("SHM reserve failed (uarea)\n");
 			goto error;
 		}
 
