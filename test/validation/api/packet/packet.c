@@ -25,7 +25,7 @@ ODP_STATIC_ASSERT(PACKET_POOL_NUM_SEG > 1 &&
 #define PARSE_TEST_NUM_PKT 10
 
 static odp_pool_param_t default_param;
-static odp_pool_t packet_pool;
+static odp_pool_t default_pool;
 static uint32_t packet_len;
 
 static uint32_t segmented_packet_len;
@@ -190,13 +190,13 @@ static int packet_suite_init(void)
 
 	memcpy(&default_param, &params, sizeof(odp_pool_param_t));
 
-	packet_pool = odp_pool_create("packet_pool", &params);
-	if (packet_pool == ODP_POOL_INVALID) {
-		printf("pool_create failed: 1\n");
+	default_pool = odp_pool_create("default_pool", &params);
+	if (default_pool == ODP_POOL_INVALID) {
+		printf("default pool create failed\n");
 		return -1;
 	}
 
-	test_packet = odp_packet_alloc(packet_pool, packet_len);
+	test_packet = odp_packet_alloc(default_pool, packet_len);
 
 	if (test_packet == ODP_PACKET_INVALID) {
 		printf("test_packet alloc failed\n");
@@ -208,7 +208,7 @@ static int packet_suite_init(void)
 		data++;
 	}
 
-	test_reset_packet = odp_packet_alloc(packet_pool, packet_len);
+	test_reset_packet = odp_packet_alloc(default_pool, packet_len);
 
 	if (test_reset_packet == ODP_PACKET_INVALID) {
 		printf("test_reset_packet alloc failed\n");
@@ -218,7 +218,7 @@ static int packet_suite_init(void)
 	/* Try to allocate PACKET_POOL_NUM_SEG largest possible packets to see
 	 * if segmentation is supported  */
 	do {
-		ret = odp_packet_alloc_multi(packet_pool, segmented_packet_len,
+		ret = odp_packet_alloc_multi(default_pool, segmented_packet_len,
 					     pkt_tbl, PACKET_POOL_NUM_SEG);
 		if (ret !=  PACKET_POOL_NUM_SEG) {
 			if (ret > 0)
@@ -257,7 +257,7 @@ static int packet_suite_init(void)
 		return -1;
 	}
 
-	odp_pool_print(packet_pool);
+	odp_pool_print(default_pool);
 	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
 
 	udat = odp_packet_user_area(segmented_test_packet);
@@ -278,7 +278,7 @@ static int packet_suite_term(void)
 	odp_packet_free(test_reset_packet);
 	odp_packet_free(segmented_test_packet);
 
-	if (odp_pool_destroy(packet_pool) != 0)
+	if (odp_pool_destroy(default_pool) != 0)
 		return -1;
 
 	return 0;
@@ -1206,7 +1206,7 @@ static void packet_test_add_rem_data(void)
 
 	min_seg_len = capa.pkt.min_seg_len;
 
-	pkt = odp_packet_alloc(packet_pool, packet_len);
+	pkt = odp_packet_alloc(default_pool, packet_len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
 	pkt_len = odp_packet_len(pkt);
@@ -1633,7 +1633,7 @@ static void packet_test_concat_small(void)
 	param.pkt.num = PACKET_POOL_NUM;
 
 	pool = odp_pool_create("packet_pool_concat", &param);
-	CU_ASSERT(packet_pool != ODP_POOL_INVALID);
+	CU_ASSERT(pool != ODP_POOL_INVALID);
 
 	pkt = odp_packet_alloc(pool, 1);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -1698,7 +1698,7 @@ static void packet_test_concat_extend_trunc(void)
 	param.pkt.num = PACKET_POOL_NUM;
 
 	pool = odp_pool_create("packet_pool_concat", &param);
-	CU_ASSERT_FATAL(packet_pool != ODP_POOL_INVALID);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	pkt = odp_packet_alloc(pool, alloc_len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -1785,7 +1785,7 @@ static void packet_test_extend_small(void)
 	param.pkt.num = PACKET_POOL_NUM;
 
 	pool = odp_pool_create("packet_pool_extend", &param);
-	CU_ASSERT_FATAL(packet_pool != ODP_POOL_INVALID);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	for (round = 0; round < 2; round++) {
 		pkt = odp_packet_alloc(pool, 1);
@@ -1879,7 +1879,7 @@ static void packet_test_extend_large(void)
 	param.pkt.num = PACKET_POOL_NUM;
 
 	pool = odp_pool_create("packet_pool_extend", &param);
-	CU_ASSERT_FATAL(packet_pool != ODP_POOL_INVALID);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	for (round = 0; round < 2 * num_div; round++) {
 		ext_len = len / div;
@@ -1998,7 +1998,7 @@ static void packet_test_extend_mix(void)
 	param.pkt.num = PACKET_POOL_NUM;
 
 	pool = odp_pool_create("packet_pool_extend", &param);
-	CU_ASSERT_FATAL(packet_pool != ODP_POOL_INVALID);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	for (round = 0; round < 2; round++) {
 		small_count = 30;
