@@ -18,9 +18,9 @@ extern "C" {
 #define CONFIG_NUM_CPU 256
 
 /*
- * Maximum number of pools
+ * Maximum number of pools. Limited by ISHM_MAX_NB_BLOCKS.
  */
-#define ODP_CONFIG_POOLS 64
+#define ODP_CONFIG_POOLS 55
 
 /*
  * Queues reserved for ODP internal use
