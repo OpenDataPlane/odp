@@ -24,7 +24,8 @@ ODP_STATIC_ASSERT(PACKET_POOL_NUM_SEG > 1 &&
 /* Number of packets in parse test */
 #define PARSE_TEST_NUM_PKT 10
 
-static odp_pool_t packet_pool, packet_pool_no_uarea, packet_pool_double_uarea;
+static odp_pool_param_t default_param;
+static odp_pool_t packet_pool;
 static uint32_t packet_len;
 
 static uint32_t segmented_packet_len;
@@ -187,29 +188,11 @@ static int packet_suite_init(void)
 	params.pkt.num        = num;
 	params.pkt.uarea_size = sizeof(struct udata_struct);
 
+	memcpy(&default_param, &params, sizeof(odp_pool_param_t));
+
 	packet_pool = odp_pool_create("packet_pool", &params);
 	if (packet_pool == ODP_POOL_INVALID) {
 		printf("pool_create failed: 1\n");
-		return -1;
-	}
-
-	params.pkt.uarea_size = 0;
-	packet_pool_no_uarea = odp_pool_create("packet_pool_no_uarea",
-					       &params);
-	if (packet_pool_no_uarea == ODP_POOL_INVALID) {
-		odp_pool_destroy(packet_pool);
-		printf("pool_create failed: 2\n");
-		return -1;
-	}
-
-	params.pkt.uarea_size = 2 * sizeof(struct udata_struct);
-	packet_pool_double_uarea = odp_pool_create("packet_pool_double_uarea",
-						   &params);
-
-	if (packet_pool_double_uarea == ODP_POOL_INVALID) {
-		odp_pool_destroy(packet_pool_no_uarea);
-		odp_pool_destroy(packet_pool);
-		printf("pool_create failed: 3\n");
 		return -1;
 	}
 
@@ -295,9 +278,7 @@ static int packet_suite_term(void)
 	odp_packet_free(test_reset_packet);
 	odp_packet_free(segmented_test_packet);
 
-	if (odp_pool_destroy(packet_pool_double_uarea) != 0 ||
-	    odp_pool_destroy(packet_pool_no_uarea) != 0 ||
-	    odp_pool_destroy(packet_pool) != 0)
+	if (odp_pool_destroy(packet_pool) != 0)
 		return -1;
 
 	return 0;
@@ -1383,12 +1364,23 @@ static void packet_test_copy(void)
 {
 	odp_packet_t pkt;
 	odp_packet_t pkt_copy, pkt_part;
-	odp_pool_t pool;
+	odp_pool_param_t param;
+	odp_pool_t pool, pool_double_uarea, pool_no_uarea;
 	uint32_t i, plen, src_offset, dst_offset;
 	uint32_t seg_len = 0;
 	void *pkt_data;
 
-	pkt = odp_packet_copy(test_packet, packet_pool_no_uarea);
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+
+	param.pkt.uarea_size = 0;
+	pool_no_uarea = odp_pool_create("no_uarea", &param);
+	CU_ASSERT_FATAL(pool_no_uarea != ODP_POOL_INVALID);
+
+	param.pkt.uarea_size = 2 * sizeof(struct udata_struct);
+	pool_double_uarea = odp_pool_create("double_uarea", &param);
+	CU_ASSERT_FATAL(pool_double_uarea != ODP_POOL_INVALID);
+
+	pkt = odp_packet_copy(test_packet, pool_no_uarea);
 	CU_ASSERT(pkt == ODP_PACKET_INVALID);
 	if (pkt != ODP_PACKET_INVALID)
 		odp_packet_free(pkt);
@@ -1413,7 +1405,7 @@ static void packet_test_copy(void)
 	odp_packet_free(pkt_copy);
 	odp_packet_free(pkt);
 
-	pkt = odp_packet_copy(test_packet, packet_pool_double_uarea);
+	pkt = odp_packet_copy(test_packet, pool_double_uarea);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	packet_compare_data(pkt, test_packet);
 	pool = odp_packet_pool(pkt);
@@ -1480,6 +1472,9 @@ static void packet_test_copy(void)
 
 	odp_packet_free(pkt_part);
 	odp_packet_free(pkt);
+
+	CU_ASSERT(odp_pool_destroy(pool_no_uarea) == 0);
+	CU_ASSERT(odp_pool_destroy(pool_double_uarea) == 0);
 }
 
 static void packet_test_copydata(void)
