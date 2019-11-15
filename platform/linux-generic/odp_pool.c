@@ -142,7 +142,7 @@ static void cache_flush(pool_cache_t *cache, pool_t *pool)
 
 static int read_config_file(pool_global_t *pool_glb)
 {
-	uint32_t local_cache_size, burst_size;
+	uint32_t local_cache_size, burst_size, align;
 	const char *str;
 	int val = 0;
 
@@ -155,7 +155,7 @@ static int read_config_file(pool_global_t *pool_glb)
 	}
 
 	if (val > CONFIG_POOL_CACHE_MAX_SIZE || val < 0) {
-		ODP_ERR("Bad value %s = %u, max %d\n", str, val,
+		ODP_ERR("Bad value %s = %i, max %i\n", str, val,
 			CONFIG_POOL_CACHE_MAX_SIZE);
 		return -1;
 	}
@@ -171,7 +171,7 @@ static int read_config_file(pool_global_t *pool_glb)
 	}
 
 	if (val <= 0) {
-		ODP_ERR("Bad value %s = %u\n", str, val);
+		ODP_ERR("Bad value %s = %i\n", str, val);
 		return -1;
 	}
 
@@ -197,12 +197,48 @@ static int read_config_file(pool_global_t *pool_glb)
 	}
 
 	if (val > CONFIG_POOL_MAX_NUM || val < POOL_MAX_NUM_MIN) {
-		ODP_ERR("Bad value %s = %u\n", str, val);
+		ODP_ERR("Bad value %s = %i\n", str, val);
 		return -1;
 	}
 
 	pool_glb->config.pkt_max_num = val;
 	ODP_PRINT("  %s: %i\n", str, val);
+
+	str = "pool.pkt.base_align";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	align = val;
+	if (val == 0)
+		align = ODP_CACHE_LINE_SIZE;
+
+	if (!CHECK_IS_POWER2(align)) {
+		ODP_ERR("Not a power of two: %s = %i\n", str, val);
+		return -1;
+	}
+
+	pool_glb->config.pkt_base_align = align;
+	ODP_PRINT("  %s: %u\n", str, align);
+
+	str = "pool.buf.min_align";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	align = val;
+	if (val == 0)
+		align = ODP_CACHE_LINE_SIZE;
+
+	if (!CHECK_IS_POWER2(align)) {
+		ODP_ERR("Not a power of two: %s = %i\n", str, val);
+		return -1;
+	}
+
+	pool_glb->config.buf_min_align = align;
+	ODP_PRINT("  %s: %u\n", str, align);
 
 	ODP_PRINT("\n");
 

@@ -97,6 +97,8 @@ typedef struct pool_global_t {
 		uint32_t pkt_max_num;
 		uint32_t local_cache_size;
 		uint32_t burst_size;
+		uint32_t pkt_base_align;
+		uint32_t buf_min_align;
 	} config;
 
 } pool_global_t;
