@@ -60,7 +60,7 @@ typedef struct pool_local_t {
 	int thr_id;
 } pool_local_t;
 
-pool_table_t *pool_tbl;
+pool_global_t *_odp_pool_glb;
 static __thread pool_local_t local;
 
 #include <odp/visibility_begin.h>
@@ -89,8 +89,8 @@ static inline void cache_init(pool_cache_t *cache)
 {
 	memset(cache, 0, sizeof(pool_cache_t));
 
-	cache->size = pool_tbl->config.local_cache_size;
-	cache->burst_size = pool_tbl->config.burst_size;
+	cache->size = _odp_pool_glb->config.local_cache_size;
+	cache->burst_size = _odp_pool_glb->config.burst_size;
 }
 
 static inline uint32_t cache_pop(pool_cache_t *cache,
@@ -140,8 +140,9 @@ static void cache_flush(pool_cache_t *cache, pool_t *pool)
 		ring_ptr_enq(ring, mask, buf_hdr);
 }
 
-static int read_config_file(pool_table_t *pool_tbl)
+static int read_config_file(pool_global_t *pool_glb)
 {
+	uint32_t local_cache_size, burst_size;
 	const char *str;
 	int val = 0;
 
@@ -159,7 +160,8 @@ static int read_config_file(pool_table_t *pool_tbl)
 		return -1;
 	}
 
-	pool_tbl->config.local_cache_size = val;
+	local_cache_size = val;
+	pool_glb->config.local_cache_size = local_cache_size;
 	ODP_PRINT("  %s: %i\n", str, val);
 
 	str = "pool.burst_size";
@@ -173,18 +175,17 @@ static int read_config_file(pool_table_t *pool_tbl)
 		return -1;
 	}
 
-	pool_tbl->config.burst_size = val;
+	burst_size = val;
+	pool_glb->config.burst_size = burst_size;
 	ODP_PRINT("  %s: %i\n", str, val);
 
 	/* Check local cache size and burst size relation */
-	if (pool_tbl->config.local_cache_size % pool_tbl->config.burst_size) {
+	if (local_cache_size % burst_size) {
 		ODP_ERR("Pool cache size not multiple of burst size\n");
 		return -1;
 	}
 
-	if (pool_tbl->config.local_cache_size &&
-	    (pool_tbl->config.local_cache_size /
-	     pool_tbl->config.burst_size < 2)) {
+	if (local_cache_size && (local_cache_size / burst_size < 2)) {
 		ODP_ERR("Cache burst size too large compared to cache size\n");
 		return -1;
 	}
@@ -200,7 +201,7 @@ static int read_config_file(pool_table_t *pool_tbl)
 		return -1;
 	}
 
-	pool_tbl->config.pkt_max_num = val;
+	pool_glb->config.pkt_max_num = val;
 	ODP_PRINT("  %s: %i\n", str, val);
 
 	ODP_PRINT("\n");
@@ -214,19 +215,19 @@ int _odp_pool_init_global(void)
 	odp_shm_t shm;
 
 	shm = odp_shm_reserve("_odp_pool_table",
-			      sizeof(pool_table_t),
+			      sizeof(pool_global_t),
 			      ODP_CACHE_LINE_SIZE,
 			      0);
 
-	pool_tbl = odp_shm_addr(shm);
+	_odp_pool_glb = odp_shm_addr(shm);
 
-	if (pool_tbl == NULL)
+	if (_odp_pool_glb == NULL)
 		return -1;
 
-	memset(pool_tbl, 0, sizeof(pool_table_t));
-	pool_tbl->shm = shm;
+	memset(_odp_pool_glb, 0, sizeof(pool_global_t));
+	_odp_pool_glb->shm = shm;
 
-	if (read_config_file(pool_tbl)) {
+	if (read_config_file(_odp_pool_glb)) {
 		odp_shm_free(shm);
 		return -1;
 	}
@@ -264,7 +265,7 @@ int _odp_pool_term_global(void)
 		UNLOCK(&pool->lock);
 	}
 
-	ret = odp_shm_free(pool_tbl->shm);
+	ret = odp_shm_free(_odp_pool_glb->shm);
 	if (ret < 0) {
 		ODP_ERR("SHM free failed\n");
 		rc = -1;
@@ -678,7 +679,7 @@ static int check_params(odp_pool_param_t *params)
 {
 	odp_pool_capability_t capa;
 	odp_bool_t cache_warning = false;
-	uint32_t cache_size = pool_tbl->config.local_cache_size;
+	uint32_t cache_size = _odp_pool_glb->config.local_cache_size;
 	int num_threads = odp_global_ro.init_param.num_control +
 				odp_global_ro.init_param.num_worker;
 
@@ -686,7 +687,7 @@ static int check_params(odp_pool_param_t *params)
 		return -1;
 
 	if (num_threads)
-		cache_size = num_threads * pool_tbl->config.local_cache_size;
+		cache_size = num_threads * cache_size;
 
 	switch (params->type) {
 	case ODP_POOL_BUFFER:
@@ -1064,7 +1065,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	/* Packet pools */
 	capa->pkt.max_pools        = max_pools;
 	capa->pkt.max_len          = CONFIG_PACKET_MAX_LEN;
-	capa->pkt.max_num	   = pool_tbl->config.pkt_max_num;
+	capa->pkt.max_num	   = _odp_pool_glb->config.pkt_max_num;
 	capa->pkt.min_headroom     = CONFIG_PACKET_HEADROOM;
 	capa->pkt.max_headroom     = CONFIG_PACKET_HEADROOM;
 	capa->pkt.min_tailroom     = CONFIG_PACKET_TAILROOM;
