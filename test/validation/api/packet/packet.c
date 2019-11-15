@@ -2554,6 +2554,70 @@ static void packet_test_ref(void)
 	odp_packet_free(ref_pkt[1]);
 }
 
+static void packet_test_max_pools(void)
+{
+	odp_pool_param_t param;
+	uint32_t i, num_pool, num_pkt;
+	void *addr;
+	odp_event_t ev;
+	uint32_t len = 500;
+	/* Suite init has created one pool already */
+	uint32_t max_pools = pool_capa.pkt.max_pools - 1;
+	odp_pool_t pool[max_pools];
+	odp_packet_t packet[max_pools];
+
+	CU_ASSERT_FATAL(max_pools != 0);
+
+	printf("\n  Creating %u pools\n", max_pools);
+
+	odp_pool_param_init(&param);
+	param.type    = ODP_POOL_PACKET;
+	param.pkt.len = len;
+	param.pkt.num = 1;
+	param.pkt.max_num = 1;
+
+	for (i = 0; i < max_pools; i++) {
+		pool[i] = odp_pool_create(NULL, &param);
+
+		if (pool[i] == ODP_POOL_INVALID)
+			break;
+	}
+
+	num_pool = i;
+
+	CU_ASSERT(num_pool == max_pools);
+	if (num_pool != max_pools)
+		printf("Error: created only %u pools\n", num_pool);
+
+	for (i = 0; i < num_pool; i++) {
+		packet[i] = odp_packet_alloc(pool[i], len);
+
+		if (packet[i] == ODP_PACKET_INVALID)
+			break;
+
+		CU_ASSERT_FATAL(odp_packet_pool(packet[i]) == pool[i]);
+
+		ev = odp_packet_to_event(packet[i]);
+		CU_ASSERT(odp_packet_from_event(ev) == packet[i]);
+		CU_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
+
+		CU_ASSERT(odp_packet_len(packet[i]) == len);
+		addr = odp_packet_data(packet[i]);
+
+		/* Write packet data */
+		memset(addr, 0, len);
+	}
+
+	num_pkt = i;
+	CU_ASSERT(num_pkt == num_pool);
+
+	if (num_pkt)
+		odp_packet_free_multi(packet, num_pkt);
+
+	for (i = 0; i < num_pool; i++)
+		CU_ASSERT(odp_pool_destroy(pool[i]) == 0);
+}
+
 static int packet_parse_suite_init(void)
 {
 	int num_test_pkt, i;
@@ -3493,6 +3557,7 @@ odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_align),
 	ODP_TEST_INFO(packet_test_offset),
 	ODP_TEST_INFO(packet_test_ref),
+	ODP_TEST_INFO(packet_test_max_pools),
 	ODP_TEST_INFO_NULL,
 };
 
