@@ -44,10 +44,6 @@
 /* Define a practical limit for contiguous memory allocations */
 #define MAX_SIZE   (10 * 1024 * 1024)
 
-/* Minimum supported buffer alignment. Requests for values below this will be
- * rounded up to this value. */
-#define BUFFER_ALIGN_MIN ODP_CACHE_LINE_SIZE
-
 ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_LEN_MIN >= 256,
 		  "ODP Segment size must be a minimum of 256 bytes");
 
@@ -502,11 +498,15 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 
 	align = 0;
 
-	if (params->type == ODP_POOL_BUFFER)
-		align = params->buf.align;
+	if (params->type == ODP_POOL_PACKET) {
+		align = _odp_pool_glb->config.pkt_base_align;
+	} else {
+		if (params->type == ODP_POOL_BUFFER)
+			align = params->buf.align;
 
-	if (align < BUFFER_ALIGN_MIN)
-		align = BUFFER_ALIGN_MIN;
+		if (align < _odp_pool_glb->config.buf_min_align)
+			align = _odp_pool_glb->config.buf_min_align;
+	}
 
 	/* Validate requested buffer alignment */
 	if (align > ODP_CONFIG_BUFFER_ALIGN_MAX ||
