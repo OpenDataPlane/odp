@@ -47,7 +47,8 @@
 /* Max wait time supported to avoid potential overflow */
 #define MAX_WAIT_TIME (UINT64_MAX / 1024)
 
-static pktio_table_t *pktio_tbl;
+/* Global variables */
+static pktio_global_t *pktio_global;
 
 /* pktio pointer entries ( for inlines) */
 void *pktio_entry_ptr[ODP_CONFIG_PKTIO_ENTRIES];
@@ -64,20 +65,19 @@ int _odp_pktio_init_global(void)
 	odp_shm_t shm;
 	int pktio_if;
 
-	shm = odp_shm_reserve("_odp_pktio_entries",
-			      sizeof(pktio_table_t),
-			      sizeof(pktio_entry_t),
-			      0);
+	shm = odp_shm_reserve("_odp_pktio_global", sizeof(pktio_global_t),
+			      ODP_CACHE_LINE_SIZE, 0);
 	if (shm == ODP_SHM_INVALID)
 		return -1;
 
-	pktio_tbl = odp_shm_addr(shm);
-	memset(pktio_tbl, 0, sizeof(pktio_table_t));
+	pktio_global = odp_shm_addr(shm);
+	memset(pktio_global, 0, sizeof(pktio_global_t));
+	pktio_global->shm = shm;
 
-	odp_spinlock_init(&pktio_tbl->lock);
+	odp_spinlock_init(&pktio_global->lock);
 
 	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
-		pktio_entry = &pktio_tbl->entries[i];
+		pktio_entry = &pktio_global->entries[i];
 
 		odp_ticketlock_init(&pktio_entry->s.rxl);
 		odp_ticketlock_init(&pktio_entry->s.txl);
@@ -175,7 +175,7 @@ static odp_pktio_t alloc_lock_pktio_entry(void)
 	int i;
 
 	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
-		entry = &pktio_tbl->entries[i];
+		entry = &pktio_global->entries[i];
 		if (is_free(entry)) {
 			lock_entry(entry);
 			if (is_free(entry)) {
@@ -356,9 +356,9 @@ odp_pktio_t odp_pktio_open(const char *name, odp_pool_t pool,
 		return ODP_PKTIO_INVALID;
 	}
 
-	odp_spinlock_lock(&pktio_tbl->lock);
+	odp_spinlock_lock(&pktio_global->lock);
 	hdl = setup_pktio_entry(name, pool, param);
-	odp_spinlock_unlock(&pktio_tbl->lock);
+	odp_spinlock_unlock(&pktio_global->lock);
 
 	ODP_DBG("interface: %s, driver: %s\n", name, driver_name(hdl));
 
@@ -467,9 +467,9 @@ int odp_pktio_close(odp_pktio_t hdl)
 	entry->s.num_in_queue  = 0;
 	entry->s.num_out_queue = 0;
 
-	odp_spinlock_lock(&pktio_tbl->lock);
+	odp_spinlock_lock(&pktio_global->lock);
 	res = _pktio_close(entry);
-	odp_spinlock_unlock(&pktio_tbl->lock);
+	odp_spinlock_unlock(&pktio_global->lock);
 	if (res)
 		ODP_ABORT("unable to close pktio\n");
 
@@ -652,7 +652,7 @@ odp_pktio_t odp_pktio_lookup(const char *name)
 
 	ifname = strip_pktio_type(name, NULL);
 
-	odp_spinlock_lock(&pktio_tbl->lock);
+	odp_spinlock_lock(&pktio_global->lock);
 
 	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
 		entry = pktio_entry_by_index(i);
@@ -671,7 +671,7 @@ odp_pktio_t odp_pktio_lookup(const char *name)
 			break;
 	}
 
-	odp_spinlock_unlock(&pktio_tbl->lock);
+	odp_spinlock_unlock(&pktio_global->lock);
 
 	return hdl;
 }
@@ -1312,14 +1312,17 @@ void odp_pktio_print(odp_pktio_t hdl)
 
 int _odp_pktio_term_global(void)
 {
+	odp_shm_t shm;
+	int i, pktio_if;
 	int ret = 0;
-	int i;
-	int pktio_if;
+
+	if (pktio_global == NULL)
+		return 0;
 
 	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
 		pktio_entry_t *pktio_entry;
 
-		pktio_entry = &pktio_tbl->entries[i];
+		pktio_entry = &pktio_global->entries[i];
 
 		if (is_free(pktio_entry))
 			continue;
@@ -1353,9 +1356,10 @@ int _odp_pktio_term_global(void)
 			ODP_ERR("Failed to terminate pcapng\n");
 	}
 
-	ret = odp_shm_free(odp_shm_lookup("_odp_pktio_entries"));
+	shm = pktio_global->shm;
+	ret = odp_shm_free(shm);
 	if (ret != 0)
-		ODP_ERR("shm free failed for _odp_pktio_entries");
+		ODP_ERR("shm free failed\n");
 
 	return ret;
 }
