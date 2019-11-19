@@ -261,6 +261,7 @@ int _odp_pool_init_global(void)
 
 	if (read_config_file(_odp_pool_glb)) {
 		odp_shm_free(shm);
+		_odp_pool_glb = NULL;
 		return -1;
 	}
 
@@ -285,6 +286,9 @@ int _odp_pool_term_global(void)
 	pool_t *pool;
 	int ret = 0;
 	int rc = 0;
+
+	if (_odp_pool_glb == NULL)
+		return 0;
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		pool = pool_entry(i);
