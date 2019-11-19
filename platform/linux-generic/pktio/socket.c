@@ -221,11 +221,15 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int nb_pkts;
 	int recv_msgs;
 	int i;
+	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
+	uint32_t alloc_len = pkt_sock->mtu + frame_offset;
 
 	memset(msgvec, 0, sizeof(msgvec));
 
-	nb_pkts = packet_alloc_multi(pool, pkt_sock->mtu, pkt_table, num);
+	nb_pkts = packet_alloc_multi(pool, alloc_len, pkt_table, num);
 	for (i = 0; i < nb_pkts; i++) {
+		if (frame_offset)
+			pull_head(packet_hdr(pkt_table[i]), frame_offset);
 		msgvec[i].msg_hdr.msg_iovlen =
 			_rx_pkt_to_iovec(pkt_table[i], iovecs[i]);
 		msgvec[i].msg_hdr.msg_iov = iovecs[i];
