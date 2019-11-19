@@ -285,6 +285,7 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	int pktio_if;
 	char pktio_type[PKTIO_NAME_LEN];
 	const char *if_name;
+	uint16_t pktin_frame_offset = pktio_global->config.pktin_frame_offset;
 
 	if (strlen(name) >= PKTIO_NAME_LEN - 1) {
 		/* ioctl names limitation */
@@ -311,6 +312,7 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	pktio_entry->s.pool = pool;
 	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
 	pktio_entry->s.handle = hdl;
+	pktio_entry->s.pktin_frame_offset = pktin_frame_offset;
 
 	odp_pktio_config_init(&pktio_entry->s.config);
 
