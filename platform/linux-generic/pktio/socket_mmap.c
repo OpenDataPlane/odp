@@ -168,6 +168,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	unsigned nb_rx;
 	struct ring *ring;
 	odp_pool_t pool = pkt_sock->pool;
+	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
 
 	if (pktio_entry->s.config.pktin.bit.ts_all ||
 	    pktio_entry->s.config.pktin.bit.ts_ptp)
@@ -207,7 +208,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			continue;
 		}
 
-		ret = packet_alloc_multi(pool, pkt_len, &pkt, 1);
+		ret = packet_alloc_multi(pool, pkt_len + frame_offset, &pkt, 1);
 
 		if (odp_unlikely(ret != 1)) {
 			/* Stop receiving packets when pool is empty. Leave
@@ -237,6 +238,9 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		}
 
 		hdr = packet_hdr(pkt);
+		if (frame_offset)
+			pull_head(hdr, frame_offset);
+
 		ret = odp_packet_copy_from_mem(pkt, 0, pkt_len, pkt_buf);
 		if (ret != 0) {
 			odp_packet_free(pkt);
