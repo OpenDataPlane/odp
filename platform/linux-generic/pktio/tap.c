@@ -276,6 +276,7 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 	odp_packet_hdr_t *pkt_hdr;
 	odp_packet_hdr_t parsed_hdr;
 	int num;
+	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
 
 	if (pktio_cls_enabled(pktio_entry)) {
 		if (cls_classify_packet(pktio_entry, data, len, len,
@@ -285,18 +286,21 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 		}
 	}
 
-	num = packet_alloc_multi(pkt_priv(pktio_entry)->pool, len, &pkt, 1);
-
+	num = packet_alloc_multi(pkt_priv(pktio_entry)->pool,
+				 len + frame_offset, &pkt, 1);
 	if (num != 1)
 		return ODP_PACKET_INVALID;
+
+	pkt_hdr = packet_hdr(pkt);
+
+	if (frame_offset)
+		pull_head(pkt_hdr, frame_offset);
 
 	if (odp_packet_copy_from_mem(pkt, 0, len, data) < 0) {
 		ODP_ERR("failed to copy packet data\n");
 		odp_packet_free(pkt);
 		return ODP_PACKET_INVALID;
 	}
-
-	pkt_hdr = packet_hdr(pkt);
 
 	if (pktio_cls_enabled(pktio_entry))
 		copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
