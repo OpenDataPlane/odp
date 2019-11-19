@@ -28,6 +28,7 @@
 #include <odp/api/plat/time_inlines.h>
 #include <odp_pcapng.h>
 #include <odp/api/plat/queue_inlines.h>
+#include <odp_libconfig_internal.h>
 
 #include <string.h>
 #include <inttypes.h>
@@ -58,6 +59,32 @@ static inline pktio_entry_t *pktio_entry_by_index(int index)
 	return pktio_entry_ptr[index];
 }
 
+static int read_config_file(pktio_global_t *pktio_glb)
+{
+	const char *str;
+	int val = 0;
+
+	ODP_PRINT("Packet IO config:\n");
+
+	str = "pktio.pktin_frame_offset";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	if (val < 0 || val > UINT16_MAX) {
+		ODP_ERR("Bad value %s = %i\n", str, val);
+		return -1;
+	}
+
+	pktio_glb->config.pktin_frame_offset = val;
+	ODP_PRINT("  %s: %i\n", str, val);
+
+	ODP_PRINT("\n");
+
+	return 0;
+}
+
 int _odp_pktio_init_global(void)
 {
 	pktio_entry_t *pktio_entry;
@@ -75,6 +102,12 @@ int _odp_pktio_init_global(void)
 	pktio_global->shm = shm;
 
 	odp_spinlock_init(&pktio_global->lock);
+
+	if (read_config_file(pktio_global)) {
+		odp_shm_free(shm);
+		pktio_global = NULL;
+		return -1;
+	}
 
 	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
 		pktio_entry = &pktio_global->entries[i];
