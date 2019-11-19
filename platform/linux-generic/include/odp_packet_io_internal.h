@@ -139,6 +139,11 @@ typedef struct {
 	odp_spinlock_t lock;
 	odp_shm_t      shm;
 
+	struct {
+		/* Frame start offset from base pointer at packet input */
+		uint16_t pktin_frame_offset;
+	} config;
+
 	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
 
 } pktio_global_t;
