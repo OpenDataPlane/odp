@@ -160,14 +160,6 @@ static inline void push_head(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	pkt_hdr->seg_len  += len;
 }
 
-static inline void pull_head(odp_packet_hdr_t *pkt_hdr, uint32_t len)
-{
-	pkt_hdr->headroom  += len;
-	pkt_hdr->frame_len -= len;
-	pkt_hdr->seg_data += len;
-	pkt_hdr->seg_len  -= len;
-}
-
 static inline void push_tail(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
 	odp_packet_hdr_t *last_seg = packet_last_seg(pkt_hdr);
