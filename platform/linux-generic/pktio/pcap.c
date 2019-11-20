@@ -227,6 +227,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	pkt_pcap_t *pcap = pkt_priv(pktio_entry);
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
+	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
@@ -252,7 +253,8 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		pkt_len = hdr->caplen;
 
-		ret = packet_alloc_multi(pcap->pool, pkt_len, &pkt, 1);
+		ret = packet_alloc_multi(pcap->pool, pkt_len + frame_offset,
+					 &pkt, 1);
 		if (odp_unlikely(ret != 1))
 			break;
 
@@ -260,8 +262,10 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			ts_val = odp_time_global();
 
 		pkt_hdr = packet_hdr(pkt);
+		if (frame_offset)
+			pull_head(pkt_hdr, frame_offset);
 
-		if (odp_packet_copy_from_mem(pkt, 0, hdr->caplen, data) != 0) {
+		if (odp_packet_copy_from_mem(pkt, 0, pkt_len, data) != 0) {
 			ODP_ERR("failed to copy packet data\n");
 			break;
 		}
