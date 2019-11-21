@@ -1,4 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2019, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -14,6 +15,21 @@
 
 #include <odp_api.h>
 
+typedef struct {
+	uint64_t nsec_before_sum;
+	uint64_t nsec_before_min;
+	uint64_t nsec_before_max;
+
+	uint64_t nsec_after_sum;
+	uint64_t nsec_after_min;
+	uint64_t nsec_after_max;
+
+	uint64_t num_before;
+	uint64_t num_exact;
+	uint64_t num_after;
+
+} test_stat_t;
+
 typedef struct test_global_t {
 	struct {
 		unsigned long long int period_ns;
@@ -22,6 +38,8 @@ typedef struct test_global_t {
 		int num;
 		int init;
 	} opt;
+
+	test_stat_t stat;
 
 	odp_queue_t      queue;
 	odp_timer_pool_t timer_pool;
@@ -307,25 +325,56 @@ static int destroy_timers(test_global_t *test_global)
 	return ret;
 }
 
+static void print_stat(test_global_t *test_global)
+{
+	uint64_t num = test_global->opt.num;
+	uint64_t res_ns = test_global->opt.res_ns;
+	test_stat_t *stat = &test_global->stat;
+	double ave_after = 0.0;
+	double ave_before = 0.0;
+
+	if (stat->num_after)
+		ave_after = (double)stat->nsec_after_sum / stat->num_after;
+	else
+		stat->nsec_after_min = 0;
+
+	if (stat->num_before)
+		ave_before = (double)stat->nsec_before_sum / stat->num_before;
+	else
+		stat->nsec_before_min = 0;
+
+	printf("\n Test results:\n");
+	printf("  num after:  %12" PRIu64 "  /  %.2f%%\n",
+	       stat->num_after, 100.0 * stat->num_after / num);
+	printf("  num before: %12" PRIu64 "  /  %.2f%%\n",
+	       stat->num_before, 100.0 * stat->num_before / num);
+	printf("  num exact:  %12" PRIu64 "  /  %.2f%%\n",
+	       stat->num_exact, 100.0 * stat->num_exact / num);
+	printf("  error after (nsec):\n");
+	printf("         min: %12" PRIu64 "  /  %.3fx resolution\n",
+	       stat->nsec_after_min, (double)stat->nsec_after_min / res_ns);
+	printf("         max: %12" PRIu64 "  /  %.3fx resolution\n",
+	       stat->nsec_after_max, (double)stat->nsec_after_max / res_ns);
+	printf("         ave: %12.0f  /  %.3fx resolution\n",
+	       ave_after, ave_after / res_ns);
+	printf("  error before (nsec):\n");
+	printf("         min: %12" PRIu64 "  /  %.3fx resolution\n",
+	       stat->nsec_before_min, (double)stat->nsec_before_min / res_ns);
+	printf("         max: %12" PRIu64 "  /  %.3fx resolution\n",
+	       stat->nsec_before_max, (double)stat->nsec_before_max / res_ns);
+	printf("         ave: %12.0f  /  %.3fx resolution\n",
+	       ave_before, ave_before / res_ns);
+	printf("\n");
+}
+
 static void run_test(test_global_t *test_global)
 {
 	int num, num_left;
 	odp_event_t ev;
 	odp_time_t time;
-	uint64_t time_ns, diff_ns, next_tmo, res_ns;
-	uint64_t after = 0;
-	uint64_t min_after = UINT64_MAX;
-	uint64_t max_after = 0;
-	uint64_t before = 0;
-	uint64_t min_before = UINT64_MAX;
-	uint64_t max_before = 0;
-	double ave_after = 0.0;
-	double ave_before = 0.0;
-	int num_after = 0;
-	int num_exact = 0;
-	int num_before = 0;
+	uint64_t time_ns, diff_ns, next_tmo;
+	test_stat_t *stat = &test_global->stat;
 
-	res_ns = test_global->opt.res_ns;
 	num = test_global->opt.num;
 	num_left = num;
 	next_tmo = test_global->first_ns;
@@ -338,24 +387,24 @@ static void run_test(test_global_t *test_global)
 
 		if (time_ns > next_tmo) {
 			diff_ns = time_ns - next_tmo;
-			num_after++;
-			after += diff_ns;
-			if (diff_ns < min_after)
-				min_after = diff_ns;
-			if (diff_ns > max_after)
-				max_after = diff_ns;
+			stat->num_after++;
+			stat->nsec_after_sum += diff_ns;
+			if (diff_ns < stat->nsec_after_min)
+				stat->nsec_after_min = diff_ns;
+			if (diff_ns > stat->nsec_after_max)
+				stat->nsec_after_max = diff_ns;
 
 		} else if (time_ns < next_tmo) {
 			diff_ns = next_tmo - time_ns;
-			num_before++;
-			before += diff_ns;
-			if (diff_ns < min_before)
-				min_before = diff_ns;
-			if (diff_ns > max_before)
-				max_before = diff_ns;
+			stat->num_before++;
+			stat->nsec_before_sum += diff_ns;
+			if (diff_ns < stat->nsec_before_min)
+				stat->nsec_before_min = diff_ns;
+			if (diff_ns > stat->nsec_before_max)
+				stat->nsec_before_max = diff_ns;
 
 		} else {
-			num_exact++;
+			stat->num_exact++;
 		}
 
 		odp_event_free(ev);
@@ -370,39 +419,6 @@ static void run_test(test_global_t *test_global)
 		printf("Dropping extra event\n");
 		odp_event_free(ev);
 	}
-
-	if (num_after)
-		ave_after = (double)after / num_after;
-	else
-		min_after = 0;
-
-	if (num_before)
-		ave_before = (double)before / num_before;
-	else
-		min_before = 0;
-
-	printf("\n Test results:\n");
-	printf("  num after:  %12i  /  %.2f%%\n",
-	       num_after, 100.0 * num_after / num);
-	printf("  num before: %12i  /  %.2f%%\n",
-	       num_before, 100.0 * num_before / num);
-	printf("  num exact:  %12i  /  %.2f%%\n",
-	       num_exact, 100.0 * num_exact / num);
-	printf("  error after (nsec):\n");
-	printf("         min: %12" PRIu64 "  /  %.3fx resolution\n",
-	       min_after, (double)min_after / res_ns);
-	printf("         max: %12" PRIu64 "  /  %.3fx resolution\n",
-	       max_after, (double)max_after / res_ns);
-	printf("         ave: %12.0f  /  %.3fx resolution\n",
-	       ave_after, ave_after / res_ns);
-	printf("  error before (nsec):\n");
-	printf("         min: %12" PRIu64 "  /  %.3fx resolution\n",
-	       min_before, (double)min_before / res_ns);
-	printf("         max: %12" PRIu64 "  /  %.3fx resolution\n",
-	       max_before, (double)max_before / res_ns);
-	printf("         ave: %12.0f  /  %.3fx resolution\n",
-	       ave_before, ave_before / res_ns);
-	printf("\n");
 }
 
 int main(int argc, char *argv[])
@@ -415,6 +431,8 @@ int main(int argc, char *argv[])
 	int ret = 0;
 
 	memset(&test_global, 0, sizeof(test_global_t));
+	test_global.stat.nsec_before_min = UINT64_MAX;
+	test_global.stat.nsec_after_min  = UINT64_MAX;
 
 	if (parse_options(argc, argv, &test_global))
 		return -1;
@@ -460,6 +478,8 @@ int main(int argc, char *argv[])
 		goto quit;
 
 	run_test(&test_global);
+
+	print_stat(&test_global);
 
 quit:
 	if (destroy_timers(&test_global))
