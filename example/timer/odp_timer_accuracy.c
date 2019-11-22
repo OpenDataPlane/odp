@@ -15,6 +15,8 @@
 
 #include <odp_api.h>
 
+#define MAX_FILENAME 128
+
 typedef struct timer_ctx_t {
 	odp_timer_t timer;
 	odp_event_t event;
@@ -37,6 +39,12 @@ typedef struct {
 
 } test_stat_t;
 
+typedef struct test_log_t {
+	uint64_t tmo_ns;
+	int64_t  diff_ns;
+
+} test_log_t;
+
 typedef struct test_global_t {
 	struct {
 		unsigned long long int period_ns;
@@ -46,6 +54,7 @@ typedef struct test_global_t {
 		unsigned long long int burst;
 		int mode;
 		int init;
+		int output;
 	} opt;
 
 	test_stat_t stat;
@@ -60,6 +69,9 @@ typedef struct test_global_t {
 	uint64_t         start_tick;
 	uint64_t         start_ns;
 	uint64_t         period_tick;
+	test_log_t	*log;
+	FILE            *file;
+	char		 filename[MAX_FILENAME + 1];
 
 } test_global_t;
 
@@ -78,6 +90,7 @@ static void print_usage(void)
 	       "                            0: Set all timers at init phase.\n"
 	       "                            1: Set first burst of timers at init. Restart timers during test with absolute time.\n"
 	       "                            2: Set first burst of timers at init. Restart timers during test with relative time.\n"
+	       "  -o, --output <file>     Output file for measurement logs\n"
 	       "  -i, --init              Set global init parameters. Default: init params not set.\n"
 	       "  -h, --help              Display help and exit.\n\n");
 }
@@ -92,11 +105,12 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 		{"num",        required_argument, NULL, 'n'},
 		{"burst",      required_argument, NULL, 'b'},
 		{"mode",       required_argument, NULL, 'm'},
+		{"output",     required_argument, NULL, 'o'},
 		{"init",       no_argument,       NULL, 'i'},
 		{"help",       no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+p:r:f:n:b:m:ih";
+	const char *shortopts =  "+p:r:f:n:b:m:o:ih";
 	int ret = 0;
 
 	test_global->opt.period_ns = 200 * ODP_TIME_MSEC_IN_NS;
@@ -106,6 +120,7 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 	test_global->opt.burst     = 1;
 	test_global->opt.mode      = 0;
 	test_global->opt.init      = 0;
+	test_global->opt.output    = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -131,6 +146,11 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 			break;
 		case 'm':
 			test_global->opt.mode = atoi(optarg);
+			break;
+		case 'o':
+			test_global->opt.output = 1;
+			/* filename is NULL terminated in anycase */
+			strncpy(test_global->filename, optarg, MAX_FILENAME);
 			break;
 		case 'i':
 			test_global->opt.init = 1;
@@ -265,6 +285,8 @@ static int start_timers(test_global_t *test_global)
 	printf("  resolution capa: %" PRIu64 " nsec\n", res_capa);
 	printf("  max timers capa: %" PRIu32 "\n", timer_capa.max_timers);
 	printf("  mode:            %i\n", mode);
+	if (test_global->opt.output)
+		printf("  log file:        %s\n", test_global->filename);
 	printf("  start offset:    %" PRIu64 " nsec\n", offset_ns);
 	printf("  period:          %" PRIu64 " nsec\n", period_ns);
 	printf("  resolution:      %" PRIu64 " nsec\n", timer_param.res_ns);
@@ -405,9 +427,11 @@ static int destroy_timers(test_global_t *test_global)
 
 static void print_stat(test_global_t *test_global)
 {
+	uint64_t i;
 	uint64_t tot_timers = test_global->tot_timers;
 	uint64_t res_ns = test_global->opt.res_ns;
 	test_stat_t *stat = &test_global->stat;
+	test_log_t *log = test_global->log;
 	double ave_after = 0.0;
 	double ave_before = 0.0;
 
@@ -420,6 +444,19 @@ static void print_stat(test_global_t *test_global)
 		ave_before = (double)stat->nsec_before_sum / stat->num_before;
 	else
 		stat->nsec_before_min = 0;
+
+	if (log) {
+		FILE *file = test_global->file;
+
+		fprintf(file, "   Timer      tmo(ns)   diff(ns)\n");
+
+		for (i = 0; i < tot_timers; i++) {
+			fprintf(file, "%8" PRIu64 " %12" PRIu64 " %10"
+				PRIi64 "\n", i, log[i].tmo_ns, log[i].diff_ns);
+		}
+
+		fprintf(file, "\n");
+	}
 
 	printf("\n Test results:\n");
 	printf("  num after:  %12" PRIu64 "  /  %.2f%%\n",
@@ -447,7 +484,8 @@ static void print_stat(test_global_t *test_global)
 
 static void run_test(test_global_t *test_global)
 {
-	uint64_t num_left, burst, num, num_tmo, next_tmo;
+	uint64_t burst, num, num_tmo, next_tmo;
+	uint64_t i, tot_timers;
 	odp_event_t ev;
 	odp_time_t time;
 	uint64_t time_ns, diff_ns, period_ns;
@@ -455,16 +493,17 @@ static void run_test(test_global_t *test_global)
 	uint64_t tmo_ns;
 	timer_ctx_t *ctx;
 	test_stat_t *stat = &test_global->stat;
+	test_log_t *log = test_global->log;
 	int mode = test_global->opt.mode;
 
 	num      = 0;
 	next_tmo = 1;
 	num_tmo  = test_global->opt.num;
 	burst    = test_global->opt.burst;
-	num_left = test_global->tot_timers;
+	tot_timers = test_global->tot_timers;
 	period_ns  = test_global->period_ns;
 
-	while (num_left) {
+	for (i = 0; i < tot_timers; i++) {
 		ev = odp_schedule(NULL, ODP_SCHED_WAIT);
 
 		time = odp_time_local();
@@ -481,6 +520,10 @@ static void run_test(test_global_t *test_global)
 				stat->nsec_after_min = diff_ns;
 			if (diff_ns > stat->nsec_after_max)
 				stat->nsec_after_max = diff_ns;
+			if (log) {
+				log[i].tmo_ns  = tmo_ns;
+				log[i].diff_ns = diff_ns;
+			}
 
 		} else if (time_ns < tmo_ns) {
 			diff_ns = tmo_ns - time_ns;
@@ -490,7 +533,10 @@ static void run_test(test_global_t *test_global)
 				stat->nsec_before_min = diff_ns;
 			if (diff_ns > stat->nsec_before_max)
 				stat->nsec_before_max = diff_ns;
-
+			if (log) {
+				log[i].tmo_ns  = tmo_ns;
+				log[i].diff_ns = -diff_ns;
+			}
 		} else {
 			stat->num_exact++;
 		}
@@ -531,7 +577,6 @@ static void run_test(test_global_t *test_global)
 			odp_event_free(ev);
 		}
 
-		num_left--;
 		num++;
 
 		if (num == burst) {
@@ -563,6 +608,15 @@ int main(int argc, char *argv[])
 
 	if (parse_options(argc, argv, &test_global))
 		return -1;
+
+	if (test_global.opt.output) {
+		test_global.file = fopen(test_global.filename, "w");
+		if (test_global.file == NULL) {
+			printf("Failed to open file: %s\n",
+			       test_global.filename);
+			return -1;
+		}
+	}
 
 	/* List features not to be used (may optimize performance) */
 	odp_init_param_init(&init);
@@ -600,6 +654,16 @@ int main(int argc, char *argv[])
 		goto quit;
 	}
 
+	if (test_global.opt.output) {
+		test_global.log = calloc(test_global.tot_timers,
+					 sizeof(test_log_t));
+
+		if (test_global.log == NULL) {
+			printf("Test log calloc failed.\n");
+			goto quit;
+		}
+	}
+
 	if (start_timers(&test_global))
 		goto quit;
 
@@ -608,11 +672,17 @@ int main(int argc, char *argv[])
 	print_stat(&test_global);
 
 quit:
+	if (test_global.file)
+		fclose(test_global.file);
+
 	if (destroy_timers(&test_global))
 		ret = -1;
 
 	if (test_global.timer_ctx)
 		free(test_global.timer_ctx);
+
+	if (test_global.log)
+		free(test_global.log);
 
 	if (odp_term_local()) {
 		printf("Term local failed.\n");
