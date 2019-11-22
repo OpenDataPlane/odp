@@ -76,6 +76,12 @@ int sock_recv_mq_tmo_try_int_driven(const struct odp_pktin_queue_t queues[],
 			*trial_successful = 0;
 			return -1;
 		}
+
+		if (odp_unlikely(entry[i]->s.state != PKTIO_STATE_STARTED)) {
+			*trial_successful = 0;
+			return 0;
+		}
+
 		if (entry[i]->s.ops->recv_mq_tmo == NULL &&
 		    entry[i]->s.ops->fd_set == NULL) {
 			*trial_successful = 0;

@@ -231,7 +231,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
-	if (pktio_entry->s.state != PKTIO_STATE_STARTED || !pcap->rx) {
+	if (odp_unlikely(!pcap->rx)) {
 		odp_ticketlock_unlock(&pktio_entry->s.rxl);
 		return 0;
 	}
@@ -317,11 +317,6 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int i;
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
-
-	if (pktio_entry->s.state != PKTIO_STATE_STARTED) {
-		odp_ticketlock_unlock(&pktio_entry->s.txl);
-		return 0;
-	}
 
 	for (i = 0; i < num; ++i) {
 		int pkt_len = odp_packet_len(pkts[i]);
