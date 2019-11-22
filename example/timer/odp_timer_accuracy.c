@@ -15,6 +15,13 @@
 
 #include <odp_api.h>
 
+typedef struct timer_ctx_t {
+	odp_timer_t timer;
+	odp_event_t event;
+	uint64_t    nsec;
+
+} timer_ctx_t;
+
 typedef struct {
 	uint64_t nsec_before_sum;
 	uint64_t nsec_before_min;
@@ -35,7 +42,8 @@ typedef struct test_global_t {
 		unsigned long long int period_ns;
 		unsigned long long int res_ns;
 		unsigned long long int offset_ns;
-		int num;
+		unsigned long long int num;
+		unsigned long long int burst;
 		int init;
 	} opt;
 
@@ -44,9 +52,10 @@ typedef struct test_global_t {
 	odp_queue_t      queue;
 	odp_timer_pool_t timer_pool;
 	odp_pool_t       timeout_pool;
-	odp_timer_t     *timer;
+	timer_ctx_t     *timer_ctx;
 	uint64_t         period_ns;
 	uint64_t         first_ns;
+	uint64_t         tot_timers;
 
 } test_global_t;
 
@@ -60,6 +69,7 @@ static void print_usage(void)
 	       "  -r, --resolution <nsec> Timeout resolution in nsec. Default: period / 10\n"
 	       "  -f, --first <nsec>      First timer offset in nsec. Default: 300 msec\n"
 	       "  -n, --num <number>      Number of timeouts. Default: 50\n"
+	       "  -b, --burst <number>    Number of timers per timeout. Default: 1\n"
 	       "  -i, --init              Set global init parameters. Default: init params not set.\n"
 	       "  -h, --help              Display help and exit.\n\n");
 }
@@ -72,17 +82,19 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 		{"resolution", required_argument, NULL, 'r'},
 		{"first",      required_argument, NULL, 'f'},
 		{"num",        required_argument, NULL, 'n'},
+		{"burst",      required_argument, NULL, 'b'},
 		{"init",       no_argument,       NULL, 'i'},
 		{"help",       no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+p:r:f:n:ih";
+	const char *shortopts =  "+p:r:f:n:b:ih";
 	int ret = 0;
 
 	test_global->opt.period_ns = 200 * ODP_TIME_MSEC_IN_NS;
 	test_global->opt.res_ns    = 0;
 	test_global->opt.offset_ns = 300 * ODP_TIME_MSEC_IN_NS;
 	test_global->opt.num       = 50;
+	test_global->opt.burst     = 1;
 	test_global->opt.init      = 0;
 
 	while (1) {
@@ -102,7 +114,10 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 			test_global->opt.offset_ns = strtoull(optarg, NULL, 0);
 			break;
 		case 'n':
-			test_global->opt.num = atoi(optarg);
+			test_global->opt.num = strtoull(optarg, NULL, 0);
+			break;
+		case 'b':
+			test_global->opt.burst = strtoull(optarg, NULL, 0);
 			break;
 		case 'i':
 			test_global->opt.init = 1;
@@ -120,6 +135,8 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 
 	if (test_global->opt.res_ns == 0)
 		test_global->opt.res_ns = test_global->opt.period_ns / 10;
+
+	test_global->tot_timers = test_global->opt.num * test_global->opt.burst;
 
 	return ret;
 }
@@ -140,9 +157,11 @@ static int start_timers(test_global_t *test_global)
 	odp_timeout_t timeout;
 	odp_timer_set_t ret;
 	odp_time_t time;
-	int i, num;
+	uint64_t i, j, idx, num_tmo, burst, tot_timers;
 
-	num = test_global->opt.num;
+	tot_timers = test_global->tot_timers;
+	num_tmo = test_global->opt.num;
+	burst = test_global->opt.burst;
 	period_ns = test_global->opt.period_ns;
 	test_global->period_ns = period_ns;
 
@@ -151,8 +170,10 @@ static int start_timers(test_global_t *test_global)
 	test_global->timer_pool = ODP_TIMER_POOL_INVALID;
 	test_global->timeout_pool = ODP_POOL_INVALID;
 
-	for (i = 0; i < num; i++)
-		test_global->timer[i] = ODP_TIMER_INVALID;
+	for (i = 0; i < tot_timers; i++) {
+		test_global->timer_ctx[i].timer = ODP_TIMER_INVALID;
+		test_global->timer_ctx[i].event = ODP_EVENT_INVALID;
+	}
 
 	odp_queue_param_init(&queue_param);
 	queue_param.type        = ODP_QUEUE_TYPE_SCHED;
@@ -170,7 +191,7 @@ static int start_timers(test_global_t *test_global)
 
 	odp_pool_param_init(&pool_param);
 	pool_param.type    = ODP_POOL_TIMEOUT;
-	pool_param.tmo.num = num;
+	pool_param.tmo.num = tot_timers;
 
 	pool = odp_pool_create("timeout pool", &pool_param);
 
@@ -183,6 +204,14 @@ static int start_timers(test_global_t *test_global)
 
 	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa)) {
 		printf("Timer capa failed\n");
+		return -1;
+	}
+
+	if (timer_capa.max_timers &&
+	    test_global->tot_timers > timer_capa.max_timers) {
+		printf("Error: Too many timers: %" PRIu64 ".\n"
+		       "       Max timers: %u\n", test_global->tot_timers,
+		       timer_capa.max_timers);
 		return -1;
 	}
 
@@ -203,20 +232,23 @@ static int start_timers(test_global_t *test_global)
 
 	timer_param.res_ns     = res_ns;
 	timer_param.min_tmo    = offset_ns / 2;
-	timer_param.max_tmo    = offset_ns + ((num + 1) * period_ns);
-	timer_param.num_timers = num;
+	timer_param.max_tmo    = offset_ns + ((num_tmo + 1) * period_ns);
+	timer_param.num_timers = tot_timers;
 	timer_param.clk_src    = ODP_CLOCK_CPU;
 
 	printf("\nTest parameters:\n");
 	printf("  resolution capa: %" PRIu64 " nsec\n", res_capa);
+	printf("  max timers capa: %" PRIu32 "\n", timer_capa.max_timers);
 	printf("  start offset:    %" PRIu64 " nsec\n", offset_ns);
 	printf("  period:          %" PRIu64 " nsec\n", period_ns);
 	printf("  resolution:      %" PRIu64 " nsec\n", timer_param.res_ns);
 	printf("  min timeout:     %" PRIu64 " nsec\n", timer_param.min_tmo);
 	printf("  max timeout:     %" PRIu64 " nsec\n", timer_param.max_tmo);
-	printf("  num timers:      %u\n", timer_param.num_timers);
-	printf("  test run time:   %.1f sec\n\n",
-	       timer_param.max_tmo / 1000000000.0);
+	printf("  num timeout:     %" PRIu64 "\n", num_tmo);
+	printf("  burst size:      %" PRIu64 "\n", burst);
+	printf("  total timers:    %" PRIu64 "\n", tot_timers);
+	printf("  test run time:   %.2f sec\n\n",
+	       (offset_ns + (num_tmo * period_ns)) / 1000000000.0);
 
 	timer_pool = odp_timer_pool_create("timer_accuracy", &timer_param);
 
@@ -232,15 +264,25 @@ static int start_timers(test_global_t *test_global)
 
 	test_global->timer_pool = timer_pool;
 
-	for (i = 0; i < num; i++) {
-		timer = odp_timer_alloc(timer_pool, queue, NULL);
+	for (i = 0; i < tot_timers; i++) {
+		timer_ctx_t *ctx = &test_global->timer_ctx[i];
+
+		timer = odp_timer_alloc(timer_pool, queue, ctx);
 
 		if (timer == ODP_TIMER_INVALID) {
 			printf("Timer alloc failed.\n");
 			return -1;
 		}
 
-		test_global->timer[i] = timer;
+		ctx->timer = timer;
+
+		timeout = odp_timeout_alloc(pool);
+		if (timeout == ODP_TIMEOUT_INVALID) {
+			printf("Timeout alloc failed\n");
+			return -1;
+		}
+
+		ctx->event = odp_timeout_to_event(timeout);
 	}
 
 	/* Run scheduler few times to ensure that (software) timer is active */
@@ -254,30 +296,32 @@ static int start_timers(test_global_t *test_global)
 		}
 	}
 
+	idx = 0;
 	start_tick = odp_timer_current_tick(timer_pool);
 	time       = odp_time_local();
 	start_ns   = odp_time_to_ns(time);
 	test_global->first_ns = start_ns + offset_ns;
 
-	for (i = 0; i < num; i++) {
-		timer = test_global->timer[i];
-
-		timeout = odp_timeout_alloc(pool);
-		if (timeout == ODP_TIMEOUT_INVALID) {
-			printf("Timeout alloc failed\n");
-			return -1;
-		}
-
-		event = odp_timeout_to_event(timeout);
-
+	for (i = 0; i < num_tmo; i++) {
 		nsec = offset_ns + (i * period_ns);
 		tick = start_tick + odp_timer_ns_to_tick(timer_pool, nsec);
 
-		ret = odp_timer_set_abs(timer, tick, &event);
+		for (j = 0; j < burst; j++) {
+			timer_ctx_t *ctx = &test_global->timer_ctx[idx];
 
-		if (ret != ODP_TIMER_SUCCESS) {
-			printf("Timer[%i] set failed: ret %i\n", i, ret);
-			return -1;
+			timer = ctx->timer;
+			event = ctx->event;
+			ctx->nsec = start_ns + nsec;
+
+			ret = odp_timer_set_abs(timer, tick, &event);
+
+			if (ret != ODP_TIMER_SUCCESS) {
+				printf("Timer[%" PRIu64 "] set failed: %i\n",
+				       idx, ret);
+				return -1;
+			}
+
+			idx++;
 		}
 	}
 
@@ -286,15 +330,15 @@ static int start_timers(test_global_t *test_global)
 
 static int destroy_timers(test_global_t *test_global)
 {
-	int i, num;
+	uint64_t i, tot_timers;
 	odp_timer_t timer;
 	odp_event_t ev;
 	int ret = 0;
 
-	num = test_global->opt.num;
+	tot_timers = test_global->tot_timers;
 
-	for (i = 0; i < num; i++) {
-		timer = test_global->timer[i];
+	for (i = 0; i < tot_timers; i++) {
+		timer = test_global->timer_ctx[i].timer;
 
 		if (timer == ODP_TIMER_INVALID)
 			break;
@@ -327,7 +371,7 @@ static int destroy_timers(test_global_t *test_global)
 
 static void print_stat(test_global_t *test_global)
 {
-	uint64_t num = test_global->opt.num;
+	uint64_t tot_timers = test_global->tot_timers;
 	uint64_t res_ns = test_global->opt.res_ns;
 	test_stat_t *stat = &test_global->stat;
 	double ave_after = 0.0;
@@ -345,11 +389,11 @@ static void print_stat(test_global_t *test_global)
 
 	printf("\n Test results:\n");
 	printf("  num after:  %12" PRIu64 "  /  %.2f%%\n",
-	       stat->num_after, 100.0 * stat->num_after / num);
+	       stat->num_after, 100.0 * stat->num_after / tot_timers);
 	printf("  num before: %12" PRIu64 "  /  %.2f%%\n",
-	       stat->num_before, 100.0 * stat->num_before / num);
+	       stat->num_before, 100.0 * stat->num_before / tot_timers);
 	printf("  num exact:  %12" PRIu64 "  /  %.2f%%\n",
-	       stat->num_exact, 100.0 * stat->num_exact / num);
+	       stat->num_exact, 100.0 * stat->num_exact / tot_timers);
 	printf("  error after (nsec):\n");
 	printf("         min: %12" PRIu64 "  /  %.3fx resolution\n",
 	       stat->nsec_after_min, (double)stat->nsec_after_min / res_ns);
@@ -369,14 +413,15 @@ static void print_stat(test_global_t *test_global)
 
 static void run_test(test_global_t *test_global)
 {
-	int num, num_left;
+	uint64_t num_left, burst, num;
 	odp_event_t ev;
 	odp_time_t time;
 	uint64_t time_ns, diff_ns, next_tmo;
 	test_stat_t *stat = &test_global->stat;
 
-	num = test_global->opt.num;
-	num_left = num;
+	num      = 0;
+	burst    = test_global->opt.burst;
+	num_left = test_global->tot_timers;
 	next_tmo = test_global->first_ns;
 
 	while (num_left) {
@@ -409,8 +454,13 @@ static void run_test(test_global_t *test_global)
 
 		odp_event_free(ev);
 
-		next_tmo += test_global->period_ns;
 		num_left--;
+		num++;
+
+		if (num == burst) {
+			next_tmo += test_global->period_ns;
+			num = 0;
+		}
 	}
 
 	/* Free current scheduler context. There should be no more events. */
@@ -425,7 +475,6 @@ int main(int argc, char *argv[])
 {
 	odp_instance_t instance;
 	odp_init_t init;
-	int num;
 	test_global_t test_global;
 	odp_init_t *init_ptr = NULL;
 	int ret = 0;
@@ -465,12 +514,11 @@ int main(int argc, char *argv[])
 	/* Configure scheduler */
 	odp_schedule_config(NULL);
 
-	num = test_global.opt.num;
+	test_global.timer_ctx = calloc(test_global.tot_timers,
+				       sizeof(timer_ctx_t));
 
-	test_global.timer = calloc(num, sizeof(odp_timer_t));
-
-	if (test_global.timer == NULL) {
-		printf("Malloc failed.\n");
+	if (test_global.timer_ctx == NULL) {
+		printf("Timer context table calloc failed.\n");
 		goto quit;
 	}
 
@@ -485,8 +533,8 @@ quit:
 	if (destroy_timers(&test_global))
 		ret = -1;
 
-	if (test_global.timer)
-		free(test_global.timer);
+	if (test_global.timer_ctx)
+		free(test_global.timer_ctx);
 
 	if (odp_term_local()) {
 		printf("Term local failed.\n");
