@@ -1890,6 +1890,9 @@ int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num)
 		return -1;
 	}
 
+	if (odp_unlikely(entry->s.state != PKTIO_STATE_STARTED))
+		return 0;
+
 	ret = entry->s.ops->recv(entry, queue.index, packets, num);
 	if (_ODP_PCAPNG)
 		_odp_dump_pcapng_pkts(entry, queue.index, packets, ret);
@@ -1915,6 +1918,9 @@ int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[], int num,
 		ODP_DBG("pktio entry %d does not exist\n", queue.pktio);
 		return -1;
 	}
+
+	if (odp_unlikely(entry->s.state != PKTIO_STATE_STARTED))
+		return 0;
 
 	if (entry->s.ops->recv_tmo && wait != ODP_PKTIN_NO_WAIT) {
 		ret = entry->s.ops->recv_tmo(entry, queue.index, packets, num,
@@ -2067,6 +2073,9 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 		ODP_DBG("pktio entry %d does not exist\n", pktio);
 		return -1;
 	}
+
+	if (odp_unlikely(entry->s.state != PKTIO_STATE_STARTED))
+		return 0;
 
 	if (_ODP_PCAPNG)
 		_odp_dump_pcapng_pkts(entry, queue.index, packets, num);

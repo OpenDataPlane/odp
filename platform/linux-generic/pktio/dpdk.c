@@ -1833,9 +1833,6 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 	int i;
 	unsigned cache_idx;
 
-	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
-		return 0;
-
 	if (!pkt_dpdk->lockless_rx)
 		odp_ticketlock_lock(&pkt_dpdk->rx_lock[index]);
 	/**
@@ -1904,9 +1901,6 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	int tx_pkts;
 	int i;
 	int mbufs;
-
-	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
-		return 0;
 
 	if (_ODP_DPDK_ZERO_COPY)
 		mbufs = pkt_to_mbuf_zero(pktio_entry, tx_mbufs, pkt_table, num,
