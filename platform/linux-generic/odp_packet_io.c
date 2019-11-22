@@ -602,8 +602,8 @@ int odp_pktio_start(odp_pktio_t hdl)
 	mode = entry->s.param.in_mode;
 
 	if (mode == ODP_PKTIN_MODE_SCHED) {
-		unsigned i;
-		unsigned num = entry->s.num_in_queue;
+		unsigned int i;
+		unsigned int num = entry->s.num_in_queue;
 		int index[num];
 		odp_queue_t odpq[num];
 
@@ -928,7 +928,7 @@ int sched_cb_pktin_poll_one(int pktio_index,
 		return 0;
 	}
 
-	ODP_ASSERT((unsigned)rx_queue < entry->s.num_in_queue);
+	ODP_ASSERT((unsigned int)rx_queue < entry->s.num_in_queue);
 	num_pkts = entry->s.ops->recv(entry, rx_queue,
 				      packets, QUEUE_MULTI_MAX);
 
@@ -1433,7 +1433,7 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 	return ret;
 }
 
-unsigned odp_pktio_max_index(void)
+unsigned int odp_pktio_max_index(void)
 {
 	return ODP_CONFIG_PKTIO_ENTRIES - 1;
 }
@@ -1497,8 +1497,8 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 	pktio_entry_t *entry;
 	odp_pktin_mode_t mode;
 	odp_pktio_capability_t capa;
-	unsigned num_queues;
-	unsigned i;
+	unsigned int num_queues;
+	unsigned int i;
 	int rc;
 	odp_queue_t queue;
 	odp_pktin_queue_param_t default_param;
@@ -1621,8 +1621,8 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 	pktio_entry_t *entry;
 	odp_pktout_mode_t mode;
 	odp_pktio_capability_t capa;
-	unsigned num_queues;
-	unsigned i;
+	unsigned int num_queues;
+	unsigned int i;
 	int rc;
 	odp_pktout_queue_param_t default_param;
 
@@ -1966,11 +1966,11 @@ int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[], int num,
 	}
 }
 
-int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned num_q,
-			  unsigned *from, odp_packet_t packets[], int num,
+int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned int num_q,
+			  unsigned int *from, odp_packet_t packets[], int num,
 			  uint64_t wait)
 {
-	unsigned i;
+	unsigned int i;
 	int ret;
 	odp_time_t t1, t2;
 	struct timespec ts;
