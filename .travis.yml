@@ -200,6 +200,19 @@ jobs:
                               -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/inline-timer.conf
                               ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/check_inline_timer.sh
                 - stage: test
+                  env: TEST=packet_align
+                  install:
+                          - true
+                  compiler: gcc
+                  script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
+                          - docker run --privileged -i -t
+                              -v `pwd`:/odp --shm-size 8g
+                              -e CC="${CC}"
+                              -e CONF=""
+                              -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/packet_align.conf
+                              ${DOCKER_NAMESPACE}/travis-odp-lng-ubuntu_16.04 /odp/scripts/ci/check_pktio.sh
+                - stage: test
                   env: TEST=distcheck
                   compiler: gcc
                   script:
