@@ -56,6 +56,7 @@ static void buffer_test_pool_alloc_free(void)
 	odp_pool_t pool;
 	odp_event_t ev;
 	uint32_t i;
+	uint32_t num_buf = 0;
 	void *addr;
 	odp_event_subtype_t subtype;
 	uint32_t num = default_param.buf.num;
@@ -75,6 +76,7 @@ static void buffer_test_pool_alloc_free(void)
 
 		if (buffer[i] == ODP_BUFFER_INVALID)
 			break;
+		num_buf++;
 
 		CU_ASSERT(odp_buffer_is_valid(buffer[i]) == 1)
 
@@ -91,7 +93,7 @@ static void buffer_test_pool_alloc_free(void)
 			wrong_type = true;
 		if (subtype != ODP_EVENT_NO_SUBTYPE)
 			wrong_subtype = true;
-		if (odp_buffer_size(buffer[i]) != size)
+		if (odp_buffer_size(buffer[i]) < size)
 			wrong_size = true;
 
 		addr = odp_buffer_addr(buffer[i]);
@@ -115,7 +117,7 @@ static void buffer_test_pool_alloc_free(void)
 	CU_ASSERT(!wrong_size);
 	CU_ASSERT(!wrong_align);
 
-	for (i = 0; i < num; i++)
+	for (i = 0; i < num_buf; i++)
 		odp_buffer_free(buffer[i]);
 
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
@@ -171,7 +173,7 @@ static void buffer_test_pool_alloc_free_multi(void)
 			wrong_type = true;
 		if (subtype != ODP_EVENT_NO_SUBTYPE)
 			wrong_subtype = true;
-		if (odp_buffer_size(buffer[i]) != size)
+		if (odp_buffer_size(buffer[i]) < size)
 			wrong_size = true;
 
 		addr = odp_buffer_addr(buffer[i]);
