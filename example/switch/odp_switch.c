@@ -263,7 +263,6 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	}
 
 	pktin_param.hash_enable = 1;
-	pktin_param.hash_proto.proto.ipv4 = 1;
 	pktin_param.hash_proto.proto.ipv4_tcp = 1;
 	pktin_param.hash_proto.proto.ipv4_udp = 1;
 	pktin_param.num_queues  = num_rx;
