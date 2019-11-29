@@ -1525,6 +1525,33 @@ static void dpdk_init_capability(pktio_entry_t *pktio_entry,
 		capa->config.pktout.bit.tcp_chksum;
 }
 
+/* Some DPDK PMD virtual devices, like PCAP, do not support promisc
+ * mode change. Use system call for them. */
+static void promisc_mode_check(pkt_dpdk_t *pkt_dpdk)
+{
+#if RTE_VERSION < RTE_VERSION_NUM(19, 11, 0, 0)
+	/* Enable and disable calls do not have return value */
+	rte_eth_promiscuous_enable(pkt_dpdk->port_id);
+
+	if (!rte_eth_promiscuous_get(pkt_dpdk->port_id))
+		pkt_dpdk->vdev_sysc_promisc = 1;
+
+	rte_eth_promiscuous_disable(pkt_dpdk->port_id);
+#else
+	int ret;
+
+	ret = rte_eth_promiscuous_enable(pkt_dpdk->port_id);
+
+	if (!rte_eth_promiscuous_get(pkt_dpdk->port_id))
+		pkt_dpdk->vdev_sysc_promisc = 1;
+
+	ret += rte_eth_promiscuous_disable(pkt_dpdk->port_id);
+
+	if (ret)
+		pkt_dpdk->vdev_sysc_promisc = 1;
+#endif
+}
+
 static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		     pktio_entry_t *pktio_entry,
 		     const char *netdev,
@@ -1589,12 +1616,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	}
 	pkt_dpdk->mtu = mtu + _ODP_ETHHDR_LEN;
 
-	/* Some DPDK PMD virtual devices, like PCAP, do not support promisc
-	 * mode change. Use system call for them. */
-	rte_eth_promiscuous_enable(pkt_dpdk->port_id);
-	if (!rte_eth_promiscuous_get(pkt_dpdk->port_id))
-		pkt_dpdk->vdev_sysc_promisc = 1;
-	rte_eth_promiscuous_disable(pkt_dpdk->port_id);
+	promisc_mode_check(pkt_dpdk);
 
 	/* Drivers requiring minimum burst size. Supports also *_vf versions
 	 * of the drivers. */
