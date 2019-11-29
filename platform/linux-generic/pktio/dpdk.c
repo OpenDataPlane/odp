@@ -1171,7 +1171,6 @@ static int dpdk_pktio_init(void)
 	int cmd_len;
 	int numa_nodes;
 	cpu_set_t original_cpuset;
-	struct rte_config *cfg;
 
 	/**
 	 * DPDK init changes the affinity of the calling thread, so after it
@@ -1266,10 +1265,6 @@ static int dpdk_pktio_init(void)
 				   &original_cpuset);
 	if (i)
 		ODP_ERR("Failed to reset thread affinity: %d\n", i);
-
-	cfg = rte_eal_get_configuration();
-	for (i = 0; i < RTE_MAX_LCORE; i++)
-		cfg->lcore_role[i] = ROLE_RTE;
 
 	return 0;
 }
