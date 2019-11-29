@@ -55,6 +55,14 @@
 #include <rte_string_fns.h>
 #include <rte_version.h>
 
+#if RTE_VERSION < RTE_VERSION_NUM(19, 8, 0, 0)
+	#define rte_ether_addr ether_addr
+	#define rte_ipv4_hdr   ipv4_hdr
+	#define rte_ipv6_hdr   ipv6_hdr
+	#define rte_tcp_hdr    tcp_hdr
+	#define rte_udp_hdr    udp_hdr
+#endif
+
 /* NUMA is not supported on all platforms */
 #ifdef _ODP_HAVE_NUMA_LIBRARY
 #include <numa.h>
@@ -649,7 +657,7 @@ static inline int check_proto(void *l3_hdr, odp_bool_t *l3_proto_v4,
 	uint8_t l3_proto_ver = _ODP_IPV4HDR_VER(*(uint8_t *)l3_hdr);
 
 	if (l3_proto_ver == _ODP_IPV4) {
-		struct ipv4_hdr *ip = (struct ipv4_hdr *)l3_hdr;
+		struct rte_ipv4_hdr *ip = (struct rte_ipv4_hdr *)l3_hdr;
 
 		*l3_proto_v4 = 1;
 		if (!rte_ipv4_frag_pkt_is_fragmented(ip))
@@ -659,7 +667,7 @@ static inline int check_proto(void *l3_hdr, odp_bool_t *l3_proto_v4,
 
 		return 0;
 	} else if (l3_proto_ver == _ODP_IPV6) {
-		struct ipv6_hdr *ipv6 = (struct ipv6_hdr *)l3_hdr;
+		struct rte_ipv6_hdr *ipv6 = (struct rte_ipv6_hdr *)l3_hdr;
 
 		*l3_proto_v4 = 0;
 		*l4_proto = ipv6->proto;
@@ -730,7 +738,7 @@ static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
 	if (ipv4_chksum_pkt) {
 		mbuf->ol_flags |=  PKT_TX_IP_CKSUM;
 
-		((struct ipv4_hdr *)l3_hdr)->hdr_checksum = 0;
+		((struct rte_ipv4_hdr *)l3_hdr)->hdr_checksum = 0;
 		mbuf->l3_len = _ODP_IPV4HDR_IHL(*(uint8_t *)l3_hdr) * 4;
 	}
 
@@ -744,12 +752,12 @@ static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
 	if (udp_chksum_pkt) {
 		mbuf->ol_flags |= PKT_TX_UDP_CKSUM;
 
-		((struct udp_hdr *)l4_hdr)->dgram_cksum =
+		((struct rte_udp_hdr *)l4_hdr)->dgram_cksum =
 			phdr_csum(l3_proto_v4, l3_hdr, mbuf->ol_flags);
 	} else if (tcp_chksum_pkt) {
 		mbuf->ol_flags |= PKT_TX_TCP_CKSUM;
 
-		((struct tcp_hdr *)l4_hdr)->cksum =
+		((struct rte_tcp_hdr *)l4_hdr)->cksum =
 			phdr_csum(l3_proto_v4, l3_hdr, mbuf->ol_flags);
 	}
 }
@@ -1957,7 +1965,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 static int dpdk_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 {
 	rte_eth_macaddr_get(pkt_priv(pktio_entry)->port_id,
-			    (struct ether_addr *)mac_addr);
+			    (struct rte_ether_addr *)mac_addr);
 	return ETH_ALEN;
 }
 
