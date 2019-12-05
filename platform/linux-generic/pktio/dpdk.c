@@ -74,6 +74,14 @@
 #define rte_log_set_global_level rte_set_log_level
 #endif
 
+/* Release notes v19.11: "Changed the mempool allocation behaviour
+ * so that objects no longer cross pages by default" */
+#if RTE_VERSION >= RTE_VERSION_NUM(19, 11, 0, 0)
+#define MEMPOOL_FLAGS MEMPOOL_F_NO_IOVA_CONTIG
+#else
+#define MEMPOOL_FLAGS 0
+#endif
+
 #if _ODP_DPDK_ZERO_COPY
 ODP_STATIC_ASSERT(CONFIG_PACKET_HEADROOM == RTE_PKTMBUF_HEADROOM,
 		  "ODP and DPDK headroom sizes not matching!");
@@ -331,7 +339,7 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 		goto fail;
 	}
 
-	total_size = rte_mempool_calc_obj_size(elt_size, 0, &sz);
+	total_size = rte_mempool_calc_obj_size(elt_size, MEMPOOL_FLAGS, &sz);
 	if (total_size != pool_entry->block_size) {
 		ODP_ERR("DPDK pool block size not matching to ODP pool: "
 			"%" PRIu32 "/%" PRIu32 "\n", total_size,
@@ -344,7 +352,7 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 	mp = rte_mempool_create_empty(name, num + pool_entry->skipped_blocks,
 				      elt_size, cache_size(num),
 				      sizeof(struct rte_pktmbuf_pool_private),
-				      rte_socket_id(), 0);
+				      rte_socket_id(), MEMPOOL_FLAGS);
 	if (mp == NULL) {
 		ODP_ERR("Failed to create empty DPDK packet pool\n");
 		goto fail;
@@ -518,7 +526,7 @@ uint32_t _odp_dpdk_pool_obj_size(pool_t *pool, uint32_t block_size)
 	}
 
 	block_size += sizeof(struct rte_mbuf);
-	total_size = rte_mempool_calc_obj_size(block_size, 0, &sz);
+	total_size = rte_mempool_calc_obj_size(block_size, MEMPOOL_FLAGS, &sz);
 	pool->dpdk_elt_size = sz.elt_size;
 	pool->block_offset = sz.header_size + sizeof(struct rte_mbuf);
 
