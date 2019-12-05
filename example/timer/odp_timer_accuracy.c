@@ -73,6 +73,7 @@ typedef struct test_global_t {
 	uint64_t         start_tick;
 	uint64_t         start_ns;
 	uint64_t         period_tick;
+	odp_shm_t        log_shm;
 	test_log_t	*log;
 	FILE            *file;
 	char		 filename[MAX_FILENAME + 1];
@@ -691,13 +692,22 @@ int main(int argc, char *argv[])
 	}
 
 	if (test_global.opt.output) {
-		test_global.log = calloc(test_global.tot_timers,
-					 sizeof(test_log_t));
+		odp_shm_t shm;
+		void *addr;
+		uint64_t size = test_global.tot_timers * sizeof(test_log_t);
 
-		if (test_global.log == NULL) {
-			printf("Test log calloc failed.\n");
+		shm = odp_shm_reserve("timer_accuracy_log", size,
+				      sizeof(test_log_t), 0);
+
+		if (shm == ODP_SHM_INVALID) {
+			printf("Test log alloc failed.\n");
 			goto quit;
 		}
+
+		addr = odp_shm_addr(shm);
+		memset(addr, 0, size);
+		test_global.log = addr;
+		test_global.log_shm = shm;
 	}
 
 	if (start_timers(&test_global))
@@ -718,7 +728,7 @@ quit:
 		free(test_global.timer_ctx);
 
 	if (test_global.log)
-		free(test_global.log);
+		odp_shm_free(test_global.log_shm);
 
 	if (odp_term_local()) {
 		printf("Term local failed.\n");
