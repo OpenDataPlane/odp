@@ -1274,6 +1274,8 @@ static int dpdk_pktio_init(void)
 	if (i)
 		ODP_ERR("Failed to reset thread affinity: %d\n", i);
 
+	ODP_PRINT("\nDPDK version: %s\n", rte_version());
+
 	return 0;
 }
 
