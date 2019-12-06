@@ -1786,6 +1786,7 @@ static void scheduler_test_ordered_lock(void)
 	CU_ASSERT(drain_queues() == 0);
 }
 
+#if !defined(PLATFORM_OCTEONTX)
 static int sched_and_plain_thread(void *arg)
 {
 	odp_event_t ev1, ev2;
@@ -1831,8 +1832,18 @@ static int sched_and_plain_thread(void *arg)
 
 	/* Make sure scheduling context is released */
 	odp_schedule_pause();
-	while ((ev1 = odp_schedule(NULL, wait)) != ODP_EVENT_INVALID)
+	while ((ev1 = odp_schedule(NULL, wait)) != ODP_EVENT_INVALID) {
+#if defined(PLATFORM_OCTEONTX2)
+		/* Perform same sequence of ordered locks as with all other
+		 * events to ensure scheduler ordering follows.
+		 */
+		if (sync == ODP_SCHED_SYNC_ORDERED)
+			odp_schedule_order_lock(0);
+		if (sync == ODP_SCHED_SYNC_ORDERED)
+			odp_schedule_order_unlock(0);
+#endif
 		CU_ASSERT_FATAL(!odp_queue_enq(sched_queue, ev1));
+	}
 
 	/* Don't resume scheduling until all threads have finished */
 	odp_barrier_wait(&globals->barrier);
@@ -2008,6 +2019,7 @@ static void scheduler_test_ordered_and_plain(void)
 {
 	scheduler_test_sched_and_plain(ODP_SCHED_SYNC_ORDERED);
 }
+#endif
 
 static int create_queues(test_globals_t *globals)
 {
@@ -2507,8 +2519,10 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_parallel),
 	ODP_TEST_INFO(scheduler_test_atomic),
 	ODP_TEST_INFO(scheduler_test_ordered),
+#if !defined(PLATFORM_OCTEONTX)
 	ODP_TEST_INFO(scheduler_test_atomic_and_plain),
 	ODP_TEST_INFO(scheduler_test_ordered_and_plain),
+#endif
 	ODP_TEST_INFO(scheduler_test_chaos),
 	ODP_TEST_INFO(scheduler_test_1q_1t_n),
 	ODP_TEST_INFO(scheduler_test_1q_1t_a),
