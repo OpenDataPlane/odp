@@ -1831,8 +1831,20 @@ static int sched_and_plain_thread(void *arg)
 
 	/* Make sure scheduling context is released */
 	odp_schedule_pause();
-	while ((ev1 = odp_schedule(NULL, wait)) != ODP_EVENT_INVALID)
+	while ((ev1 = odp_schedule(NULL, wait)) != ODP_EVENT_INVALID) {
+		if (sync == ODP_SCHED_SYNC_ORDERED)
+			odp_schedule_order_lock(0);
+
+		ev2 = odp_queue_deq(plain_queue);
+		CU_ASSERT_FATAL(ev2 != ODP_EVENT_INVALID);
+
+		CU_ASSERT_FATAL(!odp_queue_enq(plain_queue, ev2));
+
+		if (sync == ODP_SCHED_SYNC_ORDERED)
+			odp_schedule_order_unlock(0);
+
 		CU_ASSERT_FATAL(!odp_queue_enq(sched_queue, ev1));
+	}
 
 	/* Don't resume scheduling until all threads have finished */
 	odp_barrier_wait(&globals->barrier);
