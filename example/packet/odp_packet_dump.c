@@ -502,18 +502,59 @@ static int print_packet(test_global_t *global, odp_packet_t pkt,
 
 	/* L2 */
 	if (odp_packet_has_eth(pkt)) {
+		uint8_t *eth = data + l2_offset;
+
 		printf("  Ethernet offset: %u bytes\n", l2_offset);
-		offset = l2_offset;
-		if (offset + 6 <= seg_len) {
+		if (l2_offset + 6 <= seg_len) {
 			printf("    dst address:   ");
-			print_mac_addr(data + offset);
+			print_mac_addr(eth);
 		}
 
-		offset = l2_offset + 6;
-		if (offset + 6 <= seg_len) {
+		if (l2_offset + 12 <= seg_len) {
 			printf("    src address:   ");
-			print_mac_addr(data + offset);
+			print_mac_addr(eth + 6);
 		}
+
+		/* VLAN */
+		if (odp_packet_has_vlan(pkt)) {
+			int qinq = odp_packet_has_vlan_qinq(pkt);
+			uint16_t *tpid = (uint16_t *)(uintptr_t)(eth + 12);
+			uint16_t *tci  = tpid + 1;
+
+			if (qinq)
+				printf("  VLAN (outer):\n");
+			else
+				printf("  VLAN:\n");
+
+			if (l2_offset + 14 <= seg_len) {
+				printf("    TPID:          0x%04x\n",
+				       odp_be_to_cpu_16(*tpid));
+			}
+
+			if (l2_offset + 16 <= seg_len) {
+				printf("    TCI:           0x%04x (VID: %u)\n",
+				       odp_be_to_cpu_16(*tci),
+				       odp_be_to_cpu_16(*tci) & 0x0fff);
+			}
+
+			if (qinq) {
+				printf("  VLAN (inner):\n");
+				tpid += 2;
+				tci  += 2;
+
+				if (l2_offset + 18 <= seg_len) {
+					printf("    TPID:          0x%04x\n",
+					       odp_be_to_cpu_16(*tpid));
+				}
+
+				if (l2_offset + 20 <= seg_len) {
+					printf("    TCI:           0x%04x (VID: %u)\n",
+					       odp_be_to_cpu_16(*tci),
+					       odp_be_to_cpu_16(*tci) & 0x0fff);
+				}
+			}
+		}
+
 	} else if (odp_packet_has_l2(pkt)) {
 		printf("  L2 (%i) offset:   %u bytes\n",
 		       odp_packet_l2_type(pkt), l2_offset);
