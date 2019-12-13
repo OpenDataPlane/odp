@@ -41,6 +41,9 @@
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 
+/* VLAN flags in tpacket2_hdr status */
+#define VLAN_VALID (TP_STATUS_VLAN_VALID | TP_STATUS_VLAN_TPID_VALID)
+
 /* Reserve 4MB memory for frames in a RX/TX ring */
 #define FRAME_MEM_SIZE (4 * 1024 * 1024)
 #define BLOCK_SIZE     (4 * 1024)
@@ -163,12 +166,14 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	unsigned frame_num, next_frame_num;
 	uint8_t *pkt_buf, *next_ptr;
 	int pkt_len;
+	uint32_t alloc_len;
 	struct ethhdr *eth_hdr;
 	unsigned i;
 	unsigned nb_rx;
 	struct ring *ring;
 	odp_pool_t pool = pkt_sock->pool;
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
+	uint16_t vlan_len = 0;
 
 	if (pktio_entry->s.config.pktin.bit.ts_all ||
 	    pktio_entry->s.config.pktin.bit.ts_ptp)
@@ -208,7 +213,12 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			continue;
 		}
 
-		ret = packet_alloc_multi(pool, pkt_len + frame_offset, &pkt, 1);
+		/* Check if packet had a VLAN header */
+		if ((tp_hdr->tp_status & VLAN_VALID) == VLAN_VALID)
+			vlan_len = 4;
+
+		alloc_len = pkt_len + frame_offset + vlan_len;
+		ret = packet_alloc_multi(pool, alloc_len, &pkt, 1);
 
 		if (odp_unlikely(ret != 1)) {
 			/* Stop receiving packets when pool is empty. Leave
@@ -241,6 +251,9 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		if (frame_offset)
 			pull_head(hdr, frame_offset);
 
+		if (vlan_len)
+			pull_head(hdr, vlan_len);
+
 		ret = odp_packet_copy_from_mem(pkt, 0, pkt_len, pkt_buf);
 		if (ret != 0) {
 			odp_packet_free(pkt);
@@ -248,6 +261,24 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			frame_num = next_frame_num;
 			continue;
 		}
+
+		if (vlan_len) {
+			/* Recreate VLAN header. Move MAC addresses and
+			 * insert a VLAN header in between source MAC address
+			 * and Ethernet type. */
+			uint8_t *mac;
+			uint16_t *type, *tci;
+
+			push_head(hdr, vlan_len);
+			mac = packet_data(hdr);
+			memmove(mac, mac + vlan_len, 2 * _ODP_ETHADDR_LEN);
+			type  = (uint16_t *)(uintptr_t)
+				(mac + 2 * _ODP_ETHADDR_LEN);
+			*type = odp_cpu_to_be_16(tp_hdr->tp_vlan_tpid);
+			tci   = type + 1;
+			*tci  = odp_cpu_to_be_16(tp_hdr->tp_vlan_tci);
+		}
+
 		hdr->input = pktio_entry->s.handle;
 
 		if (pktio_cls_enabled(pktio_entry))
