@@ -235,6 +235,19 @@ static inline void copy_packet_cls_metadata(odp_packet_hdr_t *src_hdr,
 	dst_hdr->timestamp = src_hdr->timestamp;
 }
 
+static inline void *packet_data(odp_packet_hdr_t *pkt_hdr)
+{
+	return pkt_hdr->seg_data;
+}
+
+static inline void push_head(odp_packet_hdr_t *pkt_hdr, uint32_t len)
+{
+	pkt_hdr->headroom  -= len;
+	pkt_hdr->frame_len += len;
+	pkt_hdr->seg_data -= len;
+	pkt_hdr->seg_len  += len;
+}
+
 static inline void pull_head(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
 	pkt_hdr->headroom  += len;
