@@ -1,4 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -31,6 +32,9 @@ typedef struct test_options_t {
 	uint32_t queue_size;
 	uint32_t tot_queue;
 	uint32_t tot_event;
+	int      touch_data;
+	uint32_t rd_words;
+	uint32_t rw_words;
 	uint64_t wait_ns;
 
 } test_options_t;
@@ -42,6 +46,7 @@ typedef struct test_stat_t {
 	uint64_t nsec;
 	uint64_t cycles;
 	uint64_t waits;
+	uint64_t dummy_sum;
 
 } test_stat_t;
 
@@ -88,6 +93,8 @@ static void print_usage(void)
 	       "  -t, --type             Queue type. 0: parallel, 1: atomic, 2: ordered. Default: 0.\n"
 	       "  -f, --forward          0: Keep event in the original queue, 1: Forward event to the next queue. Default: 0.\n"
 	       "  -w, --wait_ns          Number of nsec to wait before enqueueing events. Default: 0.\n"
+	       "  -n, --rd_words         Number of event data words (uint64_t) to read before enqueueing it. Default: 0.\n"
+	       "  -m, --rw_words         Number of event data words (uint64_t) to modify before enqueueing it. Default: 0.\n"
 	       "  -h, --help             This help\n"
 	       "\n");
 }
@@ -111,11 +118,13 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"type",      required_argument, NULL, 't'},
 		{"forward",   required_argument, NULL, 'f'},
 		{"wait_ns",   required_argument, NULL, 'w'},
+		{"rd_words",  required_argument, NULL, 'n'},
+		{"rw_words",  required_argument, NULL, 'm'},
 		{"help",      no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:q:d:e:r:g:j:b:t:f:w:h";
+	static const char *shortopts = "+c:q:d:e:r:g:j:b:t:f:w:n:m:h";
 
 	test_options->num_cpu    = 1;
 	test_options->num_queue  = 1;
@@ -127,6 +136,8 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->max_burst  = 100;
 	test_options->queue_type = 0;
 	test_options->forward    = 0;
+	test_options->rd_words   = 0;
+	test_options->rw_words   = 0;
 	test_options->wait_ns    = 0;
 
 	while (1) {
@@ -166,6 +177,12 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		case 'f':
 			test_options->forward = atoi(optarg);
 			break;
+		case 'n':
+			test_options->rd_words = atoi(optarg);
+			break;
+		case 'm':
+			test_options->rw_words = atoi(optarg);
+			break;
 		case 'w':
 			test_options->wait_ns = atoll(optarg);
 			break;
@@ -177,6 +194,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		}
 	}
+
+	test_options->touch_data = test_options->rd_words ||
+				   test_options->rw_words;
 
 	if ((test_options->num_queue + test_options->num_dummy) > MAX_QUEUES) {
 		printf("Error: Too many queues. Max supported %i.\n",
@@ -259,7 +279,7 @@ static int create_pool(test_global_t *global)
 	odp_pool_capability_t pool_capa;
 	odp_pool_param_t pool_param;
 	odp_pool_t pool;
-	uint32_t max_num;
+	uint32_t max_num, max_size;
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_cpu   = test_options->num_cpu;
 	uint32_t num_queue = test_options->num_queue;
@@ -274,21 +294,36 @@ static int create_pool(test_global_t *global)
 	uint32_t num_join = test_options->num_join;
 	int      forward   = test_options->forward;
 	uint64_t wait_ns = test_options->wait_ns;
+	uint32_t event_size = 16;
+	int      touch_data = test_options->touch_data;
+
+	if (touch_data) {
+		event_size = test_options->rd_words + test_options->rw_words;
+		event_size = 8 * event_size;
+	}
 
 	printf("\nScheduler performance test\n");
+	printf("  num rounds       %u\n", num_round);
 	printf("  num cpu          %u\n", num_cpu);
 	printf("  num queues       %u\n", num_queue);
 	printf("  num empty queues %u\n", num_dummy);
 	printf("  total queues     %u\n", tot_queue);
 	printf("  num groups       %u\n", num_group);
 	printf("  num join         %u\n", num_join);
+	printf("  forward events   %i\n", forward ? 1 : 0);
+	printf("  wait nsec        %" PRIu64 "\n", wait_ns);
 	printf("  events per queue %u\n", num_event);
 	printf("  queue size       %u\n", queue_size);
 	printf("  max burst size   %u\n", max_burst);
 	printf("  total events     %u\n", tot_event);
-	printf("  num rounds       %u\n", num_round);
-	printf("  forward events   %i\n", forward ? 1 : 0);
-	printf("  wait nsec        %" PRIu64 "\n", wait_ns);
+	printf("  event size       %u bytes", event_size);
+	if (touch_data) {
+		printf(" (rd: %u, rw: %u)\n",
+		       8 * test_options->rd_words,
+		       8 * test_options->rw_words);
+	} else {
+		printf("\n");
+	}
 
 	if (odp_pool_capability(&pool_capa)) {
 		printf("Error: Pool capa failed.\n");
@@ -296,15 +331,23 @@ static int create_pool(test_global_t *global)
 	}
 
 	max_num = pool_capa.buf.max_num;
+	max_size = pool_capa.buf.max_size;
 
 	if (max_num && tot_event > max_num) {
 		printf("Error: max events supported %u\n", max_num);
 		return -1;
 	}
 
+	if (max_size && event_size > max_size) {
+		printf("Error: max supported event size %u\n", max_size);
+		return -1;
+	}
+
 	odp_pool_param_init(&pool_param);
 	pool_param.type = ODP_POOL_BUFFER;
 	pool_param.buf.num = tot_event;
+	pool_param.buf.size = event_size;
+	pool_param.buf.align = 8;
 
 	pool = odp_pool_create("sched perf", &pool_param);
 
@@ -553,6 +596,31 @@ static int destroy_groups(test_global_t *global)
 	return 0;
 }
 
+static uint64_t rw_data(odp_event_t ev[], int num,
+			uint32_t rd_words, uint32_t rw_words)
+{
+	odp_buffer_t buf;
+	uint64_t *data;
+	int i;
+	uint32_t j;
+	uint64_t sum = 0;
+
+	for (i = 0; i < num; i++) {
+		buf  = odp_buffer_from_event(ev[i]);
+		data = odp_buffer_addr(buf);
+
+		for (j = 0; j < rd_words; j++)
+			sum += data[j];
+
+		for (; j < rd_words + rw_words; j++) {
+			sum += data[j];
+			data[j] += 1;
+		}
+	}
+
+	return sum;
+}
+
 static int test_sched(void *arg)
 {
 	int num, num_enq, ret, thr;
@@ -569,6 +637,10 @@ static int test_sched(void *arg)
 	uint32_t max_burst = test_options->max_burst;
 	uint32_t num_group = test_options->num_group;
 	int forward = test_options->forward;
+	int touch_data = test_options->touch_data;
+	uint32_t rd_words = test_options->rd_words;
+	uint32_t rw_words = test_options->rw_words;
+	uint64_t data_sum = 0;
 	uint64_t wait_ns = test_options->wait_ns;
 	odp_event_t ev[max_burst];
 
@@ -631,6 +703,10 @@ static int test_sched(void *arg)
 				queue = *next;
 			}
 
+			if (odp_unlikely(touch_data))
+				data_sum += rw_data(ev, num, rd_words,
+						    rw_words);
+
 			if (odp_unlikely(wait_ns)) {
 				waits++;
 				odp_time_wait_ns(wait_ns);
@@ -679,6 +755,7 @@ static int test_sched(void *arg)
 	global->stat[thr].nsec     = nsec;
 	global->stat[thr].cycles   = cycles;
 	global->stat[thr].waits    = waits;
+	global->stat[thr].dummy_sum = data_sum;
 
 	/* Pause scheduling before thread exit */
 	odp_schedule_pause();
