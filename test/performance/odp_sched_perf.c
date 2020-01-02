@@ -35,6 +35,7 @@ typedef struct test_options_t {
 	int      touch_data;
 	uint32_t rd_words;
 	uint32_t rw_words;
+	uint32_t ctx_size;
 	uint64_t wait_ns;
 
 } test_options_t;
@@ -62,6 +63,7 @@ typedef struct test_global_t {
 	odp_barrier_t barrier;
 	odp_pool_t pool;
 	odp_cpumask_t cpumask;
+	odp_shm_t ctx_shm;
 	odp_queue_t queue[MAX_QUEUES];
 	odp_schedule_group_t group[MAX_GROUPS];
 	odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
@@ -103,8 +105,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 {
 	int opt;
 	int long_index;
-	int ret = 0;
 	uint32_t num_group, num_join;
+	int ret = 0;
+	uint32_t ctx_size = 0;
 
 	static const struct option longopts[] = {
 		{"num_cpu",   required_argument, NULL, 'c'},
@@ -236,9 +239,14 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 
 	test_options->queue_size = test_options->num_event;
 
-	/* When forwarding, all events may end up into a single queue. */
-	if (test_options->forward)
+	if (test_options->forward) {
+		/* When forwarding, all events may end up into
+		 * a single queue */
 		test_options->queue_size = test_options->tot_event;
+		ctx_size = sizeof(odp_queue_t);
+	}
+
+	test_options->ctx_size = ctx_size;
 
 	return ret;
 }
@@ -416,6 +424,8 @@ static int create_queues(test_global_t *global)
 	uint32_t num_group = test_options->num_group;
 	int type = test_options->queue_type;
 	odp_pool_t pool = global->pool;
+	uint8_t *ctx = NULL;
+	uint32_t ctx_size = test_options->ctx_size;
 
 	if (type == 0) {
 		type_str = "parallel";
@@ -441,6 +451,14 @@ static int create_queues(test_global_t *global)
 		printf("Max queue size %u\n",
 		       global->schedule_config.queue_size);
 		return -1;
+	}
+
+	if (ctx_size) {
+		ctx = odp_shm_addr(global->ctx_shm);
+		if (ctx == NULL) {
+			printf("Bad queue context\n");
+			return -1;
+		}
 	}
 
 	odp_queue_param_init(&queue_param);
@@ -477,17 +495,24 @@ static int create_queues(test_global_t *global)
 	for (i = first; i < tot_queue; i++) {
 		queue = global->queue[i];
 
-		if (test_options->forward) {
-			uint32_t next = i + 1;
+		if (ctx_size) {
+			if (test_options->forward) {
+				odp_queue_t *next_queue;
+				uint32_t next = i + 1;
 
-			if (next == tot_queue)
-				next = first;
+				if (next == tot_queue)
+					next = first;
 
-			if (odp_queue_context_set(queue, &global->queue[next],
-						  sizeof(odp_queue_t))) {
+				next_queue  = (odp_queue_t *)(uintptr_t)ctx;
+				*next_queue = global->queue[next];
+			}
+
+			if (odp_queue_context_set(queue, ctx, ctx_size)) {
 				printf("Error: Context set failed %u\n", i);
 				return -1;
 			}
+
+			ctx += ctx_size;
 		}
 
 		for (j = 0; j < num_event; j++) {
@@ -944,6 +969,7 @@ int main(int argc, char **argv)
 	global = &test_global;
 	memset(global, 0, sizeof(test_global_t));
 	global->pool = ODP_POOL_INVALID;
+	global->ctx_shm = ODP_SHM_INVALID;
 
 	if (parse_options(argc, argv, &global->test_options))
 		return -1;
@@ -967,6 +993,19 @@ int main(int argc, char **argv)
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		printf("Error: Local init failed.\n");
 		return -1;
+	}
+
+	if (global->test_options.ctx_size) {
+		uint64_t size = global->test_options.ctx_size *
+				global->test_options.tot_queue;
+
+		global->ctx_shm = odp_shm_reserve("queue contexts", size,
+						  ODP_CACHE_LINE_SIZE, 0);
+		if (global->ctx_shm == ODP_SHM_INVALID) {
+			printf("Error: SHM reserve %" PRIu64 " bytes failed\n",
+			       size);
+			return -1;
+		}
 	}
 
 	odp_schedule_config_init(&global->schedule_config);
@@ -1002,6 +1041,9 @@ int main(int argc, char **argv)
 		printf("Error: Pool destroy failed.\n");
 		return -1;
 	}
+
+	if (global->ctx_shm != ODP_SHM_INVALID)
+		odp_shm_free(global->ctx_shm);
 
 	if (odp_term_local()) {
 		printf("Error: term local failed.\n");
