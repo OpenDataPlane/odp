@@ -48,12 +48,12 @@ extern "C" {
 
 /**
  * @def ODP_CACHE_LINE_SIZE
- * Cache line size
+ * Cache line size in bytes
  */
 
 /**
  * @def ODP_PAGE_SIZE
- * Page size
+ * Page size in bytes
  */
 
 /**
@@ -64,6 +64,15 @@ extern "C" {
 /**
  * @def ODP_ALIGNED_PAGE
  * Defines type/struct/variable to be page size aligned
+ */
+
+/**
+ * @def ODP_CACHE_LINE_ROUNDUP
+ * Round up to cache line size
+ *
+ * Rounds up the passed value to the next multiple of cache line size
+ * (ODP_CACHE_LINE_SIZE). Returns the original value if it is already
+ * a multiple of cache line size or zero.
  */
 
 /**
