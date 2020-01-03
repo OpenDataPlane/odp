@@ -17,7 +17,7 @@
 #define GIGA_HZ 1000000000ULL
 #define KILO_HZ 1000ULL
 
-static void system_test_odp_version_numbers(void)
+static void test_version_api_str(void)
 {
 	int char_ok = 0;
 	char version_string[128];
@@ -37,6 +37,18 @@ static void system_test_odp_version_numbers(void)
 		}
 	}
 	CU_ASSERT(char_ok);
+}
+
+static void test_version_str(void)
+{
+	printf("\nAPI version:\n");
+	printf("%s\n\n", odp_version_api_str());
+
+	printf("Implementation name:\n");
+	printf("%s\n\n", odp_version_impl_name());
+
+	printf("Implementation details:\n");
+	printf("%s\n\n", odp_version_impl_str());
 }
 
 static void system_test_odp_cpu_count(void)
@@ -335,7 +347,8 @@ static void system_test_info_print(void)
 }
 
 odp_testinfo_t system_suite[] = {
-	ODP_TEST_INFO(system_test_odp_version_numbers),
+	ODP_TEST_INFO(test_version_api_str),
+	ODP_TEST_INFO(test_version_str),
 	ODP_TEST_INFO(system_test_odp_cpu_count),
 	ODP_TEST_INFO(system_test_odp_sys_cache_line_size),
 	ODP_TEST_INFO(system_test_odp_cpu_model_str),
