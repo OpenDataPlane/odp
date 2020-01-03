@@ -206,6 +206,13 @@ static void system_test_odp_sys_cache_line_size(void)
 	cache_size = odp_sys_cache_line_size();
 	CU_ASSERT(0 < cache_size);
 	CU_ASSERT(ODP_CACHE_LINE_SIZE == cache_size);
+
+	CU_ASSERT(ODP_CACHE_LINE_ROUNDUP(0) == 0);
+	CU_ASSERT(ODP_CACHE_LINE_ROUNDUP(1) == ODP_CACHE_LINE_SIZE);
+	CU_ASSERT(ODP_CACHE_LINE_ROUNDUP(ODP_CACHE_LINE_SIZE) ==
+		  ODP_CACHE_LINE_SIZE);
+	CU_ASSERT(ODP_CACHE_LINE_ROUNDUP(ODP_CACHE_LINE_SIZE + 1) ==
+		  2 * ODP_CACHE_LINE_SIZE);
 }
 
 static void system_test_odp_cpu_model_str(void)
