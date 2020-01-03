@@ -18,6 +18,9 @@
 #define MAX_QUEUES  (256 * 1024)
 #define MAX_GROUPS  256
 
+/* Round up 'X' to a multiple of 'NUM' */
+#define ROUNDUP(X, NUM) ((NUM) * (((X) + (NUM) - 1) / (NUM)))
+
 typedef struct test_options_t {
 	uint32_t num_cpu;
 	uint32_t num_queue;
@@ -36,6 +39,8 @@ typedef struct test_options_t {
 	uint32_t rd_words;
 	uint32_t rw_words;
 	uint32_t ctx_size;
+	uint32_t ctx_rd_words;
+	uint32_t ctx_rw_words;
 	uint64_t wait_ns;
 
 } test_options_t;
@@ -95,6 +100,8 @@ static void print_usage(void)
 	       "  -t, --type             Queue type. 0: parallel, 1: atomic, 2: ordered. Default: 0.\n"
 	       "  -f, --forward          0: Keep event in the original queue, 1: Forward event to the next queue. Default: 0.\n"
 	       "  -w, --wait_ns          Number of nsec to wait before enqueueing events. Default: 0.\n"
+	       "  -k, --ctx_rd_words     Number of queue context words (uint64_t) to read on every event. Default: 0.\n"
+	       "  -l, --ctx_rw_words     Number of queue context words (uint64_t) to modify on every event. Default: 0.\n"
 	       "  -n, --rd_words         Number of event data words (uint64_t) to read before enqueueing it. Default: 0.\n"
 	       "  -m, --rw_words         Number of event data words (uint64_t) to modify before enqueueing it. Default: 0.\n"
 	       "  -h, --help             This help\n"
@@ -110,24 +117,26 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	uint32_t ctx_size = 0;
 
 	static const struct option longopts[] = {
-		{"num_cpu",   required_argument, NULL, 'c'},
-		{"num_queue", required_argument, NULL, 'q'},
-		{"num_dummy", required_argument, NULL, 'd'},
-		{"num_event", required_argument, NULL, 'e'},
-		{"num_round", required_argument, NULL, 'r'},
-		{"num_group", required_argument, NULL, 'g'},
-		{"num_join",  required_argument, NULL, 'j'},
-		{"burst",     required_argument, NULL, 'b'},
-		{"type",      required_argument, NULL, 't'},
-		{"forward",   required_argument, NULL, 'f'},
-		{"wait_ns",   required_argument, NULL, 'w'},
-		{"rd_words",  required_argument, NULL, 'n'},
-		{"rw_words",  required_argument, NULL, 'm'},
-		{"help",      no_argument,       NULL, 'h'},
+		{"num_cpu",      required_argument, NULL, 'c'},
+		{"num_queue",    required_argument, NULL, 'q'},
+		{"num_dummy",    required_argument, NULL, 'd'},
+		{"num_event",    required_argument, NULL, 'e'},
+		{"num_round",    required_argument, NULL, 'r'},
+		{"num_group",    required_argument, NULL, 'g'},
+		{"num_join",     required_argument, NULL, 'j'},
+		{"burst",        required_argument, NULL, 'b'},
+		{"type",         required_argument, NULL, 't'},
+		{"forward",      required_argument, NULL, 'f'},
+		{"wait_ns",      required_argument, NULL, 'w'},
+		{"ctx_rd_words", required_argument, NULL, 'k'},
+		{"ctx_rw_words", required_argument, NULL, 'l'},
+		{"rd_words",     required_argument, NULL, 'n'},
+		{"rw_words",     required_argument, NULL, 'm'},
+		{"help",         no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:q:d:e:r:g:j:b:t:f:w:n:m:h";
+	static const char *shortopts = "+c:q:d:e:r:g:j:b:t:f:w:k:l:n:m:h";
 
 	test_options->num_cpu    = 1;
 	test_options->num_queue  = 1;
@@ -139,6 +148,8 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->max_burst  = 100;
 	test_options->queue_type = 0;
 	test_options->forward    = 0;
+	test_options->ctx_rd_words = 0;
+	test_options->ctx_rw_words = 0;
 	test_options->rd_words   = 0;
 	test_options->rw_words   = 0;
 	test_options->wait_ns    = 0;
@@ -179,6 +190,12 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 'f':
 			test_options->forward = atoi(optarg);
+			break;
+		case 'k':
+			test_options->ctx_rd_words = atoi(optarg);
+			break;
+		case 'l':
+			test_options->ctx_rw_words = atoi(optarg);
 			break;
 		case 'n':
 			test_options->rd_words = atoi(optarg);
@@ -246,6 +263,19 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		ctx_size = sizeof(odp_queue_t);
 	}
 
+	if (test_options->ctx_rd_words || test_options->ctx_rw_words) {
+		/* Round up queue handle size to a multiple of 8 for correct
+		 * context data alignment */
+		ctx_size = ROUNDUP(ctx_size, 8);
+		ctx_size += 8 * test_options->ctx_rd_words;
+		ctx_size += 8 * test_options->ctx_rw_words;
+	}
+
+	/* When context data is modified, round up to cache line size to avoid
+	 * false sharing */
+	if (test_options->ctx_rw_words)
+		ctx_size = ROUNDUP(ctx_size, ODP_CACHE_LINE_SIZE);
+
 	test_options->ctx_size = ctx_size;
 
 	return ret;
@@ -304,6 +334,7 @@ static int create_pool(test_global_t *global)
 	uint64_t wait_ns = test_options->wait_ns;
 	uint32_t event_size = 16;
 	int      touch_data = test_options->touch_data;
+	uint32_t ctx_size = test_options->ctx_size;
 
 	if (touch_data) {
 		event_size = test_options->rd_words + test_options->rw_words;
@@ -329,6 +360,15 @@ static int create_pool(test_global_t *global)
 		printf(" (rd: %u, rw: %u)\n",
 		       8 * test_options->rd_words,
 		       8 * test_options->rw_words);
+	} else {
+		printf("\n");
+	}
+
+	printf("  context size     %u bytes", ctx_size);
+	if (test_options->ctx_rd_words || test_options->ctx_rw_words) {
+		printf(" (rd: %u, rw: %u)\n",
+		       8 * test_options->ctx_rd_words,
+		       8 * test_options->ctx_rw_words);
 	} else {
 		printf("\n");
 	}
@@ -621,6 +661,26 @@ static int destroy_groups(test_global_t *global)
 	return 0;
 }
 
+static inline uint64_t rw_ctx_data(void *ctx, uint32_t offset,
+				   uint32_t rd_words, uint32_t rw_words)
+{
+	uint64_t *data;
+	uint32_t i;
+	uint64_t sum = 0;
+
+	data = (uint64_t *)(uintptr_t)((uint8_t *)ctx + offset);
+
+	for (i = 0; i < rd_words; i++)
+		sum += data[i];
+
+	for (; i < rd_words + rw_words; i++) {
+		sum += data[i];
+		data[i] += 1;
+	}
+
+	return sum;
+}
+
 static uint64_t rw_data(odp_event_t ev[], int num,
 			uint32_t rd_words, uint32_t rw_words)
 {
@@ -665,11 +725,20 @@ static int test_sched(void *arg)
 	int touch_data = test_options->touch_data;
 	uint32_t rd_words = test_options->rd_words;
 	uint32_t rw_words = test_options->rw_words;
+	uint32_t ctx_size = test_options->ctx_size;
+	uint32_t ctx_rd_words = test_options->ctx_rd_words;
+	uint32_t ctx_rw_words = test_options->ctx_rw_words;
+	int touch_ctx = ctx_rd_words || ctx_rw_words;
+	uint32_t ctx_offset = 0;
 	uint64_t data_sum = 0;
+	uint64_t ctx_sum = 0;
 	uint64_t wait_ns = test_options->wait_ns;
 	odp_event_t ev[max_burst];
 
 	thr = odp_thread_id();
+
+	if (forward)
+		ctx_offset = ROUNDUP(sizeof(odp_queue_t), 8);
 
 	if (num_group) {
 		uint32_t num_join = test_options->num_join;
@@ -723,9 +792,18 @@ static int test_sched(void *arg)
 			events += num;
 			i = 0;
 
-			if (odp_unlikely(forward)) {
-				next  = odp_queue_context(queue);
-				queue = *next;
+			if (odp_unlikely(ctx_size)) {
+				void *ctx = odp_queue_context(queue);
+
+				if (forward) {
+					next  = ctx;
+					queue = *next;
+				}
+
+				if (odp_unlikely(touch_ctx))
+					ctx_sum += rw_ctx_data(ctx, ctx_offset,
+							       ctx_rd_words,
+							       ctx_rw_words);
 			}
 
 			if (odp_unlikely(touch_data))
@@ -780,7 +858,7 @@ static int test_sched(void *arg)
 	global->stat[thr].nsec     = nsec;
 	global->stat[thr].cycles   = cycles;
 	global->stat[thr].waits    = waits;
-	global->stat[thr].dummy_sum = data_sum;
+	global->stat[thr].dummy_sum = data_sum + ctx_sum;
 
 	/* Pause scheduling before thread exit */
 	odp_schedule_pause();
