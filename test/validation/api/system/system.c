@@ -51,6 +51,28 @@ static void test_version_str(void)
 	printf("%s\n\n", odp_version_impl_str());
 }
 
+static void test_version_macro(void)
+{
+	CU_ASSERT(ODP_VERSION_API_NUM(0, 0, 0) < ODP_VERSION_API_NUM(0, 0, 1));
+	CU_ASSERT(ODP_VERSION_API_NUM(0, 0, 1) < ODP_VERSION_API_NUM(0, 1, 0));
+	CU_ASSERT(ODP_VERSION_API_NUM(0, 1, 0) < ODP_VERSION_API_NUM(1, 0, 0));
+	CU_ASSERT(ODP_VERSION_API_NUM(1, 90, 0) <
+		  ODP_VERSION_API_NUM(1, 90, 1));
+
+	CU_ASSERT(ODP_VERSION_API_NUM(ODP_VERSION_API_GENERATION,
+				      ODP_VERSION_API_MAJOR,
+				      ODP_VERSION_API_MINOR) ==
+		  ODP_VERSION_API);
+
+	CU_ASSERT(ODP_VERSION_API_NUM(ODP_VERSION_API_GENERATION,
+				      ODP_VERSION_API_MAJOR, 0) <=
+		  ODP_VERSION_API);
+
+	CU_ASSERT(ODP_VERSION_API_NUM(ODP_VERSION_API_GENERATION,
+				      ODP_VERSION_API_MAJOR + 1, 0) >
+		  ODP_VERSION_API);
+}
+
 static void system_test_odp_cpu_count(void)
 {
 	int cpus;
@@ -349,6 +371,7 @@ static void system_test_info_print(void)
 odp_testinfo_t system_suite[] = {
 	ODP_TEST_INFO(test_version_api_str),
 	ODP_TEST_INFO(test_version_str),
+	ODP_TEST_INFO(test_version_macro),
 	ODP_TEST_INFO(system_test_odp_cpu_count),
 	ODP_TEST_INFO(system_test_odp_sys_cache_line_size),
 	ODP_TEST_INFO(system_test_odp_cpu_model_str),
