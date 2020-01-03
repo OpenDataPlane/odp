@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -54,6 +55,23 @@ extern "C" {
  * different minor numbers the two versions are backward compatible.
  */
 #define ODP_VERSION_API_MINOR @ODP_VERSION_API_MINOR@
+
+/**
+ * ODP API version number macro
+ *
+ * Macro to build a version number for comparisons
+ */
+#define ODP_VERSION_API_NUM(gen, ma, mi) ((gen) << 24 | (ma) << 16 | (mi) << 8)
+
+/**
+ * ODP API version number
+ *
+ * API version number for comparisons against ODP_VERSION_API_NUM()
+ * macro output.
+ */
+#define ODP_VERSION_API ODP_VERSION_API_NUM(ODP_VERSION_API_GENERATION, \
+					    ODP_VERSION_API_MAJOR, \
+					    ODP_VERSION_API_MINOR)
 
 /**
  * ODP API version string
