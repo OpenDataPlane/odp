@@ -45,6 +45,9 @@ extern "C" {
 
 #define ODP_ALIGNED_PAGE    ODP_ALIGNED(ODP_PAGE_SIZE)
 
+#define ODP_CACHE_LINE_ROUNDUP(x) \
+((ODP_CACHE_LINE_SIZE) * (((x) + (ODP_CACHE_LINE_SIZE) - 1) / (ODP_CACHE_LINE_SIZE)))
+
 /**
  * @}
  */
