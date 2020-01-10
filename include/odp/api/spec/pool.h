@@ -92,6 +92,12 @@ typedef struct odp_pool_capability_t {
 		 * memory size for the pool. */
 		uint32_t max_num;
 
+		/** Maximum packet data alignment in bytes
+		 *
+		 * This is the maximum value of packet pool alignment
+		 * (pkt.align) parameter. */
+		uint32_t max_align;
+
 		/** Minimum packet level headroom length in bytes
 		 *
 		 * The minimum number of headroom bytes that newly created
@@ -247,6 +253,19 @@ typedef struct odp_pool_param_t {
 		 *  pkt.max_len. Use 0 for default (the pool maximum).
 		 */
 		uint32_t max_len;
+
+		/** Minimum packet data alignment in bytes.
+		 *
+		 *  Valid values are powers of two. User allocated packets have
+		 *  start of data (@see odp_packet_data()) aligned to this or
+		 *  a higher alignment (power of two value). This parameter
+		 *  does not apply to packets that ODP allocates internally
+		 *  (e.g. packets from packet input).
+		 *
+		 *  The maximum value is defined by pool capability
+		 *  pkt.max_align. Use 0 for default alignment.
+		 */
+		uint32_t align;
 
 		/** Minimum number of packet data bytes that are stored in the
 		 *  first segment of a packet. The maximum value is defined by
