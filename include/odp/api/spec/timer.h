@@ -489,7 +489,11 @@ int odp_timeout_fresh(odp_timeout_t tmo);
 odp_timer_t odp_timeout_timer(odp_timeout_t tmo);
 
 /**
- * Return expiration tick for the timeout
+ * Timeout expiration tick
+ *
+ * Returns the absolute expiration time (in timer ticks) that was used to set
+ * (or reset) the timer. For timers set with absolute expiration time this
+ * equals the provided tick value.
  *
  * @param tmo Timeout handle
  *
