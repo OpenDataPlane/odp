@@ -503,6 +503,15 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	align = 0;
 
 	if (params->type == ODP_POOL_PACKET) {
+		uint32_t align_req = params->pkt.align;
+
+		if (align_req &&
+		    (!CHECK_IS_POWER2(align_req) ||
+		     align_req > _odp_pool_glb->config.pkt_base_align)) {
+			ODP_ERR("Bad align requirement\n");
+			return ODP_POOL_INVALID;
+		}
+
 		align = _odp_pool_glb->config.pkt_base_align;
 	} else {
 		if (params->type == ODP_POOL_BUFFER)
@@ -1106,6 +1115,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	capa->pkt.max_pools        = max_pools;
 	capa->pkt.max_len          = CONFIG_PACKET_MAX_LEN;
 	capa->pkt.max_num	   = _odp_pool_glb->config.pkt_max_num;
+	capa->pkt.max_align	   = _odp_pool_glb->config.pkt_base_align;
 	capa->pkt.min_headroom     = CONFIG_PACKET_HEADROOM;
 	capa->pkt.max_headroom     = CONFIG_PACKET_HEADROOM;
 	capa->pkt.min_tailroom     = CONFIG_PACKET_TAILROOM;
