@@ -544,6 +544,57 @@ static void packet_test_alloc_segmented(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+static void packet_test_alloc_align(void)
+{
+	odp_pool_t pool;
+	odp_pool_param_t params;
+	uintptr_t data, mask;
+	uint32_t i;
+	uint32_t error_print = 10;
+	uint32_t len = packet_len;
+	uint32_t align = 256;
+	uint32_t num = 100;
+	odp_packet_t pkt[num];
+
+	CU_ASSERT(pool_capa.pkt.max_align >= 2);
+
+	if (align > pool_capa.pkt.max_align)
+		align = pool_capa.pkt.max_align;
+
+	mask = align - 1;
+
+	odp_pool_param_init(&params);
+
+	params.type      = ODP_POOL_PACKET;
+	params.pkt.len   = len;
+	params.pkt.num   = num;
+	params.pkt.align = align;
+
+	pool = odp_pool_create("packet_pool_align", &params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	/* Allocate the only buffer from the pool */
+	for (i = 0; i < num; i++) {
+		pkt[i] = odp_packet_alloc(pool, len);
+		CU_ASSERT_FATAL(pkt[i] != ODP_PACKET_INVALID);
+		CU_ASSERT(odp_packet_len(pkt[i]) == len);
+		data = (uintptr_t)odp_packet_data(pkt[i]);
+
+		if (data & mask) {
+			/* Print only first couple of failures to the log */
+			if (error_print > 0) {
+				CU_ASSERT((data & mask) == 0);
+				printf("\nError: Bad data align. Pointer %p, requested align %u\n",
+				       (void *)data, align);
+				error_print--;
+			}
+		}
+	}
+
+	odp_packet_free_multi(pkt, num);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
 static void packet_test_event_conversion(void)
 {
 	odp_packet_t pkt0 = test_packet;
@@ -3530,6 +3581,7 @@ odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_alloc_free_multi),
 	ODP_TEST_INFO(packet_test_free_sp),
 	ODP_TEST_INFO(packet_test_alloc_segmented),
+	ODP_TEST_INFO(packet_test_alloc_align),
 	ODP_TEST_INFO(packet_test_basic_metadata),
 	ODP_TEST_INFO(packet_test_debug),
 	ODP_TEST_INFO(packet_test_segments),
