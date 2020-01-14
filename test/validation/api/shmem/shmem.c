@@ -366,8 +366,8 @@ static int run_test_reserve_after_fork(void *arg ODP_UNUSED)
 	}
 
 	/* print block address */
-	printf("In thread: Block index: %d mapped at %lx\n",
-	       thr_index, (long int)odp_shm_addr(shm));
+	printf("In thread: Block index: %d mapped at %p\n",
+	       thr_index, odp_shm_addr(shm));
 
 	odp_barrier_wait(&glob_data->test_barrier1);
 	odp_barrier_wait(&glob_data->test_barrier2);
@@ -388,7 +388,6 @@ static void shmem_test_reserve_after_fork(void)
 	odp_cpumask_t unused;
 	int thr_index;
 	int i;
-	void *address;
 	shared_test_data_small_t  *pattern_small;
 	shared_test_data_medium_t *pattern_medium;
 	shared_test_data_big_t    *pattern_big;
@@ -447,11 +446,9 @@ static void shmem_test_reserve_after_fork(void)
 	/*
 	 * print the mapping address of the blocks
 	 */
-	for (thr_index = 0; thr_index < thrdarg.numthrds; thr_index++) {
-		address = odp_shm_addr(glob_data->shm[thr_index]);
-		printf("In main Block index: %d mapped at %lx\n",
-		       thr_index, (long int)address);
-	}
+	for (thr_index = 0; thr_index < thrdarg.numthrds; thr_index++)
+		printf("In main Block index: %d mapped at %p\n",
+		       thr_index, odp_shm_addr(glob_data->shm[thr_index]));
 
 	/* unblock the threads and let them terminate (no free is done): */
 	odp_barrier_wait(&glob_data->test_barrier2);
@@ -541,8 +538,8 @@ static int run_test_singleva_after_fork(void *arg ODP_UNUSED)
 	}
 
 	/* print block address */
-	printf("In thread: Block index: %d mapped at %lx\n",
-	       thr_index, (long int)odp_shm_addr(shm));
+	printf("In thread: Block index: %d mapped at %p\n",
+	       thr_index, odp_shm_addr(shm));
 
 	odp_barrier_wait(&glob_data->test_barrier1);
 	odp_barrier_wait(&glob_data->test_barrier2);
