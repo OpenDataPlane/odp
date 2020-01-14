@@ -686,7 +686,7 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 		return ODP_PACKET_INVALID;
 	}
 
-	if (odp_unlikely(len > pool->max_len))
+	if (odp_unlikely(len > pool->max_len || len == 0))
 		return ODP_PACKET_INVALID;
 
 	num_seg = num_segments(len, pool->seg_len);
@@ -709,7 +709,7 @@ int odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 		return -1;
 	}
 
-	if (odp_unlikely(len > pool->max_len))
+	if (odp_unlikely(len > pool->max_len || len == 0))
 		return -1;
 
 	num_seg = num_segments(len, pool->seg_len);
@@ -771,7 +771,7 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	int num = pkt_hdr->seg_count;
 	int num_req;
 
-	if (odp_unlikely(len > (pool->seg_len * num)))
+	if (odp_unlikely(len > (pool->seg_len * num)) || len == 0)
 		return -1;
 
 	/* Free possible extra segments */
@@ -887,7 +887,7 @@ void *odp_packet_pull_head(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	if (len > pkt_hdr->frame_len)
+	if (len >= pkt_hdr->seg_len)
 		return NULL;
 
 	pull_head(pkt_hdr, len);
@@ -900,7 +900,7 @@ int odp_packet_trunc_head(odp_packet_t *pkt, uint32_t len,
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(*pkt);
 	uint32_t seg_len = packet_first_seg_len(pkt_hdr);
 
-	if (len > pkt_hdr->frame_len)
+	if (len >= pkt_hdr->frame_len)
 		return -1;
 
 	if (len < seg_len) {
@@ -993,7 +993,7 @@ void *odp_packet_pull_tail(odp_packet_t pkt, uint32_t len)
 
 	ODP_ASSERT(odp_packet_has_ref(pkt) == 0);
 
-	if (len > last_seg->seg_len)
+	if (len >= last_seg->seg_len)
 		return NULL;
 
 	pull_tail(pkt_hdr, len);
@@ -1009,7 +1009,7 @@ int odp_packet_trunc_tail(odp_packet_t *pkt, uint32_t len,
 	odp_packet_hdr_t *last_seg;
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(*pkt);
 
-	if (len > pkt_hdr->frame_len)
+	if (len >= pkt_hdr->frame_len)
 		return -1;
 
 	ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
@@ -1234,7 +1234,7 @@ int odp_packet_rem_data(odp_packet_t *pkt_ptr, uint32_t offset, uint32_t len)
 	pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 	odp_packet_t newpkt;
 
-	if (offset > pktlen || offset + len > pktlen)
+	if (offset + len >= pktlen)
 		return -1;
 
 	newpkt = odp_packet_alloc(pool->pool_hdl, pktlen - len);
