@@ -154,7 +154,7 @@ static void process_input(odp_packet_t pkt_out,
 		streamp->next_out = out_data;
 		streamp->avail_out = out_len;
 
-		ODP_DBG("next_in 0x%x, avail_in %d next_out 0x%lx"
+		ODP_DBG("next_in %p, avail_in %d next_out %p"
 			" avail_out %d, sync %d\n",
 			streamp->next_in, streamp->avail_in,
 			streamp->next_out,

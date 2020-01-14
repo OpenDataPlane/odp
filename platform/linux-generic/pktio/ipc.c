@@ -819,9 +819,9 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 			     (uint8_t *)odp_shm_addr(pool->shm);
 
 		/* compile all function code even if ipc disabled with config */
-		IPC_ODP_DBG("%d/%d send packet %llx, pool %llx,"
-			    "phdr = %p, offset %x, sendoff %x, addr %llx iaddr %llx\n",
-			    i, num,
+		IPC_ODP_DBG("%d/%d send packet %" PRIu64 ", pool %" PRIu64 ","
+			    "phdr = %p, offset %x, sendoff %x, addr %p iaddr "
+			    "%p\n", i, num,
 			    odp_packet_to_u64(pkt), odp_pool_to_u64(pool_hdl),
 			    pkt_hdr, (uint8_t *)pkt_hdr->seg_data -
 			    (uint8_t *)odp_shm_addr(pool->shm), offsets[i],
