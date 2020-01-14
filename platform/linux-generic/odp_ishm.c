@@ -2037,7 +2037,9 @@ int _odp_ishm_status(const char *title)
 			entry_fd = ishm_proctable->entry[proc_index].fd;
 		}
 
-		ODP_PRINT("%2i  %-*s %s%c  0x%-08lx-0x%08lx %-08ld   %-08ld %-3lu %-3lu %-3d %s\n",
+		ODP_PRINT("%2i  %-*s %s%c  %p-%p %-08" PRIu64 "   "
+			  "%-08" PRIu64 " %-3" PRIu64 " %-3" PRIu64 " "
+			  "%-3d %s\n",
 			  i, max_name_len, ishm_tbl->block[i].name,
 			  flags, huge, start_addr, end_addr,
 			  ishm_tbl->block[i].user_len,
@@ -2049,10 +2051,10 @@ int _odp_ishm_status(const char *title)
 					  ishm_tbl->block[i].filename :
 					  "(none)");
 	}
-	ODP_PRINT("TOTAL: %58s%-08ld %2s%-08ld\n",
+	ODP_PRINT("TOTAL: %58s%-08" PRIu64 " %2s%-08" PRIu64 "\n",
 		  "", len_total,
 		  "", lost_total);
-	ODP_PRINT("%65s(%dMB) %4s(%dMB)\n",
+	ODP_PRINT("%65s(%" PRIu64 "MB) %4s(%" PRIu64 "MB)\n",
 		  "", len_total / 1024 / 1024,
 		  "", lost_total / 1024 / 1024);
 
@@ -2141,9 +2143,9 @@ void _odp_ishm_print(int block_index)
 	ODP_PRINT(" expt:       %s\n",   block->exptname);
 	ODP_PRINT(" user_flags: 0x%x\n", block->user_flags);
 	ODP_PRINT(" flags:      0x%x\n", block->flags);
-	ODP_PRINT(" user_len:   %lu\n",  block->user_len);
+	ODP_PRINT(" user_len:   %" PRIu64 "\n", block->user_len);
 	ODP_PRINT(" start:      %p\n",   block->start);
-	ODP_PRINT(" len:        %lu\n",  block->len);
+	ODP_PRINT(" len:        %" PRIu64 "\n", block->len);
 
 	switch (block->huge) {
 	case HUGE:
@@ -2163,8 +2165,8 @@ void _odp_ishm_print(int block_index)
 	}
 
 	ODP_PRINT(" page type:  %s\n", str);
-	ODP_PRINT(" seq:        %lu\n",  block->seq);
-	ODP_PRINT(" refcnt:     %lu\n",  block->refcnt);
+	ODP_PRINT(" seq:        %" PRIu64 "\n", block->seq);
+	ODP_PRINT(" refcnt:     %" PRIu64 "\n", block->refcnt);
 	ODP_PRINT("\n");
 
 	odp_spinlock_unlock(&ishm_tbl->lock);

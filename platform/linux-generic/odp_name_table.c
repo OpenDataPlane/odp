@@ -10,6 +10,7 @@
 #include <string.h>
 #include <malloc.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <odp_name_table_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_macros_internal.h>
@@ -1125,8 +1126,8 @@ void _odp_int_name_tbl_stats_print(void)
 	uint32_t avg;
 
 	ODP_DBG("\nname table stats:\n");
-	ODP_DBG("  num_names=%u num_adds=%lu "
-		"num_deletes=%lu num_name_tbls=%u\n",
+	ODP_DBG("  num_names=%" PRIu32 " num_adds=%" PRIu64 " "
+		"num_deletes=%" PRIu64 " num_name_tbls=%" PRIu8 "\n",
 		name_tbls.current_num_names, name_tbls.num_adds,
 		name_tbls.num_deletes, name_tbls.num_name_tbls);
 	for (idx = 0; idx < NUM_NAME_TBLS; idx++) {
