@@ -1036,7 +1036,7 @@ static void test_out_dummy_esp_null_sha256_tun_ipv4(void)
 	test.out[0].l3_type = ODP_PROTO_L3_TYPE_IPV4;
 	test.out[0].l4_type = ODP_PROTO_L4_TYPE_NO_NEXT;
 
-	test_empty.pkt_in = &pkt_test_emtpy;
+	test_empty.pkt_in = &pkt_test_empty;
 	test_empty.num_opt = 1;
 	test_empty.opt.flag.tfc_dummy = 1;
 	test_empty.opt.tfc_pad_len = 16;
@@ -1110,7 +1110,7 @@ static void test_out_dummy_esp_null_sha256_tun_ipv6(void)
 	test.out[0].l3_type = ODP_PROTO_L3_TYPE_IPV4;
 	test.out[0].l4_type = ODP_PROTO_L4_TYPE_NO_NEXT;
 
-	test_empty.pkt_in = &pkt_test_emtpy;
+	test_empty.pkt_in = &pkt_test_empty;
 	test_empty.num_opt = 1;
 	test_empty.opt.flag.tfc_dummy = 1;
 	test_empty.opt.tfc_pad_len = 16;
