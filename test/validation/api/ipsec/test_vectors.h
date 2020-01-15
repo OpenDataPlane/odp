@@ -1865,8 +1865,8 @@ static const ODP_UNUSED ipsec_test_packet
 	},
 };
 
-static const ipsec_test_packet pkt_test_emtpy = {
-	.len = 0,
+static const ipsec_test_packet pkt_test_empty = {
+	.len = 1,
 	.l2_offset = ODP_PACKET_OFFSET_INVALID,
 	.l3_offset = ODP_PACKET_OFFSET_INVALID,
 	.l4_offset = ODP_PACKET_OFFSET_INVALID,
