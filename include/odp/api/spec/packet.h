@@ -318,11 +318,10 @@ void odp_packet_free_sp(const odp_packet_t pkt[], int num);
  *
  * Resets all packet metadata to their default values. Packet length is used
  * to initialize pointers and lengths. It must be less than the total buffer
- * length of the packet minus the default headroom length. Packet is not
- * modified on failure.
+ * length of the packet. Packet is not modified on failure.
  *
  * @param pkt           Packet handle
- * @param len           Packet data length
+ * @param len           Packet data length (1 ... odp_packet_buf_len())
  *
  * @retval 0 on success
  * @retval <0 on failure
@@ -724,7 +723,8 @@ int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len, void **data_ptr,
  *
  * @param[in, out] pkt  Pointer to packet handle. A successful operation outputs
  *                      the new packet handle.
- * @param len           Number of bytes to truncate the head (0 ... packet_len)
+ * @param len           Number of bytes to truncate the head
+ *                      (0 ... packet_len - 1)
  * @param[out] data_ptr Pointer to output the new data pointer.
  *                      Ignored when NULL.
  * @param[out] seg_len  Pointer to output segment length at 'data_ptr' above.
@@ -797,7 +797,8 @@ int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len, void **data_ptr,
  *
  * @param[in, out] pkt  Pointer to packet handle. A successful operation outputs
  *                      the new packet handle.
- * @param len           Number of bytes to truncate the tail (0 ... packet_len)
+ * @param len           Number of bytes to truncate the tail
+ *                      (0 ... packet_len - 1)
  * @param[out] tail_ptr Pointer to output the new tail pointer.
  *                      Ignored when NULL.
  * @param[out] tailroom Pointer to output the new tailroom. Ignored when NULL.
@@ -862,6 +863,7 @@ int odp_packet_add_data(odp_packet_t *pkt, uint32_t offset, uint32_t len);
  *                      the new packet handle.
  * @param offset        Byte offset into the packet
  * @param len           Number of bytes to remove from the offset
+ *                      (0 ... packet_len - offset - 1)
  *
  * @retval 0   Operation successful, old pointers remain valid
  * @retval >0  Operation successful, old pointers need to be updated
@@ -1064,6 +1066,7 @@ int odp_packet_concat(odp_packet_t *dst, odp_packet_t src);
  * @param[in, out] pkt   Pointer to packet handle. A successful operation
  *                       outputs a new packet handle for the head packet.
  * @param len            Data length remaining in the head packet
+ *                       (1 ... packet_len - 1)
  * @param tail           Pointer to output the tail packet handle
  *
  * @retval 0   Operation successful, old pointers remain valid
