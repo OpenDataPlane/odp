@@ -429,7 +429,7 @@ odp_packet_t ipsec_packet(const ipsec_test_packet *itp)
 {
 	odp_packet_t pkt = odp_packet_alloc(suite_context.pool, itp->len);
 
-	CU_ASSERT_NOT_EQUAL(ODP_PACKET_INVALID, pkt);
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_PACKET_INVALID, pkt);
 	if (ODP_PACKET_INVALID == pkt)
 		return pkt;
 
