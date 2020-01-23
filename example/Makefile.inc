@@ -2,7 +2,7 @@ include $(top_srcdir)/Makefile.inc
 
 TESTS_ENVIRONMENT = EXEEXT=${EXEEXT}
 
-LDADD = $(LIB)/libodp-linux.la $(LIB)/libodphelper.la
+LDADD = $(LIB)/libodphelper.la $(LIB)/libodp-linux.la
 
 # Do not link to DPDK twice in case of dynamic linking with ODP
 if STATIC_APPS
