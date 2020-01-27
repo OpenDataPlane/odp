@@ -1,4 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
+ * Copyright (c) 2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -34,6 +35,9 @@
 /** Number of MAC table entries. Must match to hash length. */
 #define MAC_TBL_SIZE           UINT16_MAX
 
+/** Aging time for MAC table entries in minutes. Must be <= UINT8_MAX. */
+#define AGING_TIME 5
+
 /** Get rid of path in filename - only for unix-type paths using '/' */
 #define NO_PATH(file_name) (strrchr((file_name), '/') ? \
 			    strrchr((file_name), '/') + 1 : (file_name))
@@ -43,6 +47,7 @@ typedef union {
 	struct {
 		odph_ethaddr_t mac; /**< Ethernet MAC address */
 		uint8_t port;	    /**< Port index */
+		uint8_t tick;	    /**< Tick of the latest received packet */
 	} s;
 
 	uint64_t u64;
@@ -155,15 +160,29 @@ static inline uint16_t calc_mac_tbl_idx(odph_ethaddr_t *mac)
 }
 
 /**
+ * Calculate diff between ticks and take care of value wrap
+ */
+static inline uint8_t diff_ticks(uint8_t t2, uint8_t t1)
+{
+	if (t1 < t2)
+		return t2 - t1;
+	else if (t1 > t2)
+		return UINT8_MAX + t2 - t1;
+	return 0;
+}
+
+/**
  * Get Ethernet address port index from MAC table
  *
  * @param mac        Pointer to Ethernet address
  * @param port[out]  Pointer to port index for output
+ * @param cur_tick   Current tick
  *
- * @retval 0 on success
- * @retval -1 on failure
+ * @retval 1 on entry found
+ * @retval 0 on entry not found or expired
  */
-static inline int mac_table_get(odph_ethaddr_t *mac, uint8_t *port)
+static inline int mac_table_get(odph_ethaddr_t *mac, uint8_t *port,
+				uint8_t cur_tick)
 {
 	mac_tbl_entry_t entry;
 	uint16_t idx;
@@ -173,10 +192,13 @@ static inline int mac_table_get(odph_ethaddr_t *mac, uint8_t *port)
 	entry.u64 = odp_atomic_load_u64(&gbl_args->mac_tbl[idx]);
 
 	if (memcmp(mac->addr, entry.s.mac.addr, ODPH_ETHADDR_LEN))
-		return -1;
+		return 0;
+
+	if (odp_unlikely(diff_ticks(cur_tick, entry.s.tick) > AGING_TIME))
+		return 0;
 
 	*port = entry.s.port;
-	return 0;
+	return 1;
 }
 
 /**
@@ -184,18 +206,24 @@ static inline int mac_table_get(odph_ethaddr_t *mac, uint8_t *port)
  *
  * @param mac        Pointer to Ethernet address
  * @param port       Pointer to port index
+ * @param cur_tick   Current tick
  */
-static inline void mac_table_put(odph_ethaddr_t *mac, uint8_t port)
+static inline void mac_table_update(odph_ethaddr_t *mac, uint8_t port,
+				    uint8_t cur_tick)
 {
 	mac_tbl_entry_t entry;
 	uint16_t idx;
 
 	idx = calc_mac_tbl_idx(mac);
+	entry.u64 = odp_atomic_load_u64(&gbl_args->mac_tbl[idx]);
 
-	entry.s.mac = *mac;
-	entry.s.port = port;
-
-	odp_atomic_store_u64(&gbl_args->mac_tbl[idx], entry.u64);
+	if (memcmp(entry.s.mac.addr, mac->addr, ODPH_ETHADDR_LEN) ||
+	    entry.s.port != port || entry.s.tick != cur_tick) {
+		entry.s.mac = *mac;
+		entry.s.port = port;
+		entry.s.tick = cur_tick;
+		odp_atomic_store_u64(&gbl_args->mac_tbl[idx], entry.u64);
+	}
 }
 
 /**
@@ -474,15 +502,16 @@ static inline void broadcast_packet(odp_packet_t pkt, thread_args_t *thr_arg,
  * @param num        Number of packets in the array
  * @param thr_arg    Thread arguments
  * @param port_in    Input port index
+ * @param cur_tick   Current tick
  */
 static inline void forward_packets(odp_packet_t pkt_tbl[], unsigned int num,
-				   thread_args_t *thr_arg, uint8_t port_in)
+				   thread_args_t *thr_arg, uint8_t port_in,
+				   uint8_t cur_tick)
 {
 	odp_packet_t pkt;
 	odph_ethhdr_t *eth;
 	unsigned int i;
 	unsigned int buf_id;
-	int ret;
 	uint8_t port_out = 0;
 
 	for (i = 0; i < num; i++) {
@@ -495,16 +524,11 @@ static inline void forward_packets(odp_packet_t pkt_tbl[], unsigned int num,
 
 		eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 
-		/* Lookup source MAC address */
-		ret = mac_table_get(&eth->src, &port_out);
-
-		/* Update for address table if necessary */
-		if (ret < 0 || port_out != port_in)
-			mac_table_put(&eth->src, port_in);
+		/* Update source address MAC table entry */
+		mac_table_update(&eth->src, port_in, cur_tick);
 
 		/* Lookup destination MAC address */
-		ret = mac_table_get(&eth->dst, &port_out);
-		if (ret < 0) {
+		if (!mac_table_get(&eth->dst, &port_out, cur_tick)) {
 			/* If address was not found, broadcast packet */
 			broadcast_packet(pkt, thr_arg, port_in);
 			continue;
@@ -583,6 +607,9 @@ static int run_worker(void *arg)
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	odp_pktin_queue_t pktin;
 	odp_pktout_queue_t pktout;
+	odp_time_t time_prev;
+	odp_time_t minute;
+	uint8_t cur_tick;
 	unsigned int num_pktio;
 	unsigned int pktio = 0;
 	uint8_t port_in;
@@ -595,7 +622,13 @@ static int run_worker(void *arg)
 
 	odp_barrier_wait(&gbl_args->barrier);
 
+	minute = odp_time_local_from_ns(ODP_TIME_MIN_IN_NS);
+	time_prev = odp_time_local();
+	cur_tick = (odp_time_to_ns(time_prev) / ODP_TIME_MIN_IN_NS) % UINT8_MAX;
+
 	while (!gbl_args->exit_threads) {
+		odp_time_t time_cur;
+		odp_time_t time_diff;
 		int sent;
 		unsigned int drops;
 
@@ -611,10 +644,20 @@ static int run_worker(void *arg)
 		if (odp_unlikely(pkts <= 0))
 			continue;
 
+		time_cur = odp_time_local();
+		time_diff = odp_time_diff(time_cur, time_prev);
+
+		if (odp_unlikely(odp_time_cmp(time_diff, minute))) {
+			/* Tick stored as 8 bit value */
+			cur_tick = (odp_time_to_ns(time_cur) /
+					ODP_TIME_MIN_IN_NS) % UINT8_MAX;
+			time_prev = time_cur;
+		}
+
 		thr_args->stats[port_in]->s.rx_packets += pkts;
 
 		/* Sort packets to thread local tx buffers */
-		forward_packets(pkt_tbl, pkts, thr_args, port_in);
+		forward_packets(pkt_tbl, pkts, thr_args, port_in, cur_tick);
 
 		/* Empty all thread local tx buffers */
 		for (port_out = 0; port_out < gbl_args->appl.if_count;
