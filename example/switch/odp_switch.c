@@ -66,6 +66,12 @@ typedef struct {
 	char *if_str;	   /**< Storage for interface names */
 } appl_args_t;
 
+typedef enum frame_type_t {
+	FRAME_UNICAST,
+	FRAME_BROADCAST,
+	FRAME_INVALID
+} frame_type_t;
+
 /**
  * Statistics
  */
@@ -498,6 +504,34 @@ static inline void broadcast_packet(odp_packet_t pkt, thread_args_t *thr_arg,
 }
 
 /**
+ * Check Ethernet frame for broadcast/invalid addresses
+ *
+ * @param eth  Pointer to an Ethernet header
+ *
+ * @retval Ethernet frame_type_t
+ */
+static frame_type_t check_frame(odph_ethhdr_t *eth)
+{
+	static uint8_t broadcast_addr[ODPH_ETHADDR_LEN] = {0xff, 0xff, 0xff,
+							   0xff, 0xff, 0xff};
+	static uint8_t null_addr[ODPH_ETHADDR_LEN] = {0, 0, 0, 0, 0, 0};
+
+	/* Drop invalid frames */
+	if (odp_unlikely(!memcmp(eth->src.addr, broadcast_addr,
+				 ODPH_ETHADDR_LEN) ||
+			 !memcmp(eth->dst.addr, null_addr,
+				 ODPH_ETHADDR_LEN) ||
+			 !memcmp(eth->src.addr, null_addr,
+				 ODPH_ETHADDR_LEN))) {
+		return FRAME_INVALID;
+	}
+	if (!memcmp(eth->dst.addr, broadcast_addr, ODPH_ETHADDR_LEN))
+		return FRAME_BROADCAST;
+
+	return FRAME_UNICAST;
+}
+
+/**
  * Forward packets to correct output buffers
  *
  * Packets, whose destination MAC address is already known from previously
@@ -520,23 +554,33 @@ static inline void forward_packets(odp_packet_t pkt_tbl[], unsigned int num,
 	unsigned int i;
 	unsigned int buf_id;
 	uint8_t port_out = 0;
+	int frame_type;
 
 	for (i = 0; i < num; i++) {
 		pkt = pkt_tbl[i];
 
 		if (!odp_packet_has_eth(pkt)) {
+			thr_arg->stats[port_in]->s.rx_drops++;
 			odp_packet_free(pkt);
 			continue;
 		}
 
 		eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 
+		/* Check Ethernet frame type */
+		frame_type = check_frame(eth);
+		if (odp_unlikely(frame_type == FRAME_INVALID)) {
+			thr_arg->stats[port_in]->s.rx_drops++;
+			odp_packet_free(pkt);
+			continue;
+		}
+
 		/* Update source address MAC table entry */
 		mac_table_update(&eth->src, port_in, cur_tick);
 
-		/* Lookup destination MAC address */
-		if (!mac_table_get(&eth->dst, &port_out, cur_tick)) {
-			/* If address was not found, broadcast packet */
+		/* Broadcast frame is necessary */
+		if (frame_type == FRAME_BROADCAST ||
+		    !mac_table_get(&eth->dst, &port_out, cur_tick)) {
 			broadcast_packet(pkt, thr_arg, port_in);
 			continue;
 		}
