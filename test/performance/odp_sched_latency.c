@@ -26,8 +26,8 @@
 
 #define MAX_QUEUES	  4096		/**< Maximum number of queues */
 #define EVENT_POOL_SIZE	  (1024 * 1024) /**< Event pool size */
-#define TEST_ROUNDS (4 * 1024 * 1024)	/**< Test rounds for each thread */
-#define MAIN_THREAD	   1 /**< Thread ID performing maintenance tasks */
+#define TEST_ROUNDS	  10	/**< Test rounds for each thread (millions) */
+#define MAIN_THREAD	  1	/**< Thread ID performing maintenance tasks */
 
 /* Default values for command line arguments */
 #define SAMPLE_EVENT_PER_PRIO	  0 /**< Allocate a separate sample event for
@@ -75,6 +75,7 @@ typedef struct {
 typedef struct {
 	unsigned int cpu_count;	/**< CPU count */
 	odp_schedule_sync_t sync_type;	/**< Scheduler sync type */
+	int test_rounds;	/**< Number of test rounds (millions) */
 	int warm_up_rounds;	/**< Number of warm-up rounds */
 	struct {
 		int queues;	/**< Number of scheduling queues */
@@ -334,7 +335,7 @@ static void print_results(test_globals_t *globals)
 /**
  * Measure latency of scheduled ODP events
  *
- * Schedule and enqueue events until 'TEST_ROUNDS' events have been processed.
+ * Schedule and enqueue events until 'test_rounds' events have been processed.
  * Scheduling latency is measured only from type 'SAMPLE' events. Other events
  * are simply enqueued back to the scheduling queues.
  *
@@ -360,12 +361,13 @@ static int test_schedule(int thr, test_globals_t *globals)
 	test_stat_t *stats;
 	int dst_idx;
 	int warm_up_rounds = globals->args.warm_up_rounds;
+	uint64_t test_rounds = globals->args.test_rounds * 1000000;
 
 	memset(&globals->core_stat[thr], 0, sizeof(core_stat_t));
 	globals->core_stat[thr].prio[HI_PRIO].min = UINT64_MAX;
 	globals->core_stat[thr].prio[LO_PRIO].min = UINT64_MAX;
 
-	for (i = 0; i < TEST_ROUNDS; i++) {
+	for (i = 0; i < test_rounds; i++) {
 		ev = odp_schedule(&src_queue, ODP_SCHED_WAIT);
 
 		buf = odp_buffer_from_event(ev);
@@ -505,6 +507,7 @@ static void usage(void)
 	       "Usage: ./odp_sched_latency [options]\n"
 	       "Optional OPTIONS:\n"
 	       "  -c, --count <number> CPU count, 0=all available, default=1\n"
+	       "  -d, --duration <number> Test duration in scheduling rounds (millions), default=%d, min=1\n"
 	       "  -l, --lo-prio-queues <number> Number of low priority scheduled queues\n"
 	       "  -t, --hi-prio-queues <number> Number of high priority scheduled queues\n"
 	       "  -m, --lo-prio-events-per-queue <number> Number of events per low priority queue\n"
@@ -522,7 +525,7 @@ static void usage(void)
 	       "               2: ODP_SCHED_SYNC_ORDERED\n"
 	       "  -w, --warm-up <number> Number of warm-up rounds, default=%d, min=1\n"
 	       "  -h, --help   Display help and exit.\n\n"
-	       , WARM_UP_ROUNDS);
+	       , TEST_ROUNDS, WARM_UP_ROUNDS);
 }
 
 /**
@@ -553,9 +556,10 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:s:l:t:m:n:o:p:rw:h";
+	static const char *shortopts = "+c:d:s:l:t:m:n:o:p:rw:h";
 
 	args->cpu_count = 1;
+	args->test_rounds = TEST_ROUNDS;
 	args->warm_up_rounds = WARM_UP_ROUNDS;
 	args->sync_type = ODP_SCHED_SYNC_PARALLEL;
 	args->sample_per_prio = SAMPLE_EVENT_PER_PRIO;
@@ -575,6 +579,9 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		switch (opt) {
 		case 'c':
 			args->cpu_count = atoi(optarg);
+			break;
+		case 'd':
+			args->test_rounds = atoi(optarg);
 			break;
 		case 'l':
 			args->prio[LO_PRIO].queues = atoi(optarg);
@@ -631,6 +638,8 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		args->prio[LO_PRIO].queues = MAX_QUEUES;
 	if (args->prio[HI_PRIO].queues > MAX_QUEUES)
 		args->prio[HI_PRIO].queues = MAX_QUEUES;
+	if (args->test_rounds < 1)
+		args->test_rounds = 1;
 	if (!args->prio[HI_PRIO].queues && !args->prio[LO_PRIO].queues) {
 		printf("No queues configured\n");
 		usage();
