@@ -346,6 +346,8 @@ static int print_speed_stats(int num_workers, stats_t (*thr_stats)[MAX_PKTIOS],
 	uint64_t tx_pkts_prev[MAX_PKTIOS] = {0};
 	uint64_t rx_pkts_tot;
 	uint64_t tx_pkts_tot;
+	uint64_t rx_drops_tot;
+	uint64_t tx_drops_tot;
 	uint64_t rx_pps;
 	uint64_t tx_pps;
 	int i, j;
@@ -364,11 +366,13 @@ static int print_speed_stats(int num_workers, stats_t (*thr_stats)[MAX_PKTIOS],
 	do {
 		uint64_t rx_pkts[MAX_PKTIOS] = {0};
 		uint64_t tx_pkts[MAX_PKTIOS] = {0};
-		uint64_t rx_drops = 0;
-		uint64_t tx_drops = 0;
+		uint64_t rx_drops[MAX_PKTIOS] = {0};
+		uint64_t tx_drops[MAX_PKTIOS] = {0};
 
 		rx_pkts_tot = 0;
 		tx_pkts_tot = 0;
+		rx_drops_tot = 0;
+		tx_drops_tot = 0;
 
 		sleep(timeout);
 		elapsed += timeout;
@@ -377,8 +381,8 @@ static int print_speed_stats(int num_workers, stats_t (*thr_stats)[MAX_PKTIOS],
 			for (j = 0; j < num_ifaces; j++) {
 				rx_pkts[j] += thr_stats[i][j].s.rx_packets;
 				tx_pkts[j] += thr_stats[i][j].s.tx_packets;
-				rx_drops += thr_stats[i][j].s.rx_drops;
-				tx_drops += thr_stats[i][j].s.tx_drops;
+				rx_drops[j] += thr_stats[i][j].s.rx_drops;
+				tx_drops[j] += thr_stats[i][j].s.tx_drops;
 			}
 		}
 
@@ -390,18 +394,21 @@ static int print_speed_stats(int num_workers, stats_t (*thr_stats)[MAX_PKTIOS],
 			tx_pps = (tx_pkts[j] - tx_pkts_prev[j]) / timeout;
 			printf("  Port %d: %" PRIu64 " rx pps, %" PRIu64
 			       " tx pps, %" PRIu64 " rx pkts, %" PRIu64
-			       " tx pkts\n", j, rx_pps, tx_pps, rx_pkts[j],
-			       tx_pkts[j]);
+			       " tx pkts, %" PRIu64 " rx drops, %" PRIu64
+			       " tx drops\n", j, rx_pps, tx_pps, rx_pkts[j],
+			       tx_pkts[j], rx_drops[j], tx_drops[j]);
 
 			rx_pkts_prev[j] = rx_pkts[j];
 			tx_pkts_prev[j] = tx_pkts[j];
 			rx_pkts_tot += rx_pkts[j];
 			tx_pkts_tot += tx_pkts[j];
+			rx_drops_tot += rx_drops[j];
+			tx_drops_tot += tx_drops[j];
 		}
 
 		printf("Total: %" PRIu64 " rx pkts, %" PRIu64 " tx pkts, %"
 		       PRIu64 " rx drops, %" PRIu64 " tx drops\n", rx_pkts_tot,
-		       tx_pkts_tot, rx_drops, tx_drops);
+		       tx_pkts_tot, rx_drops_tot, tx_drops_tot);
 
 	} while (loop_forever || (elapsed < duration));
 
