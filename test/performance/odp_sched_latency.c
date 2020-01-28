@@ -1,4 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
+ * Copyright (c) 2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -35,6 +36,7 @@
 #define LO_PRIO_EVENTS		 32 /**< Number of low priority events */
 #define HI_PRIO_QUEUES		 16 /**< Number of high priority queues */
 #define LO_PRIO_QUEUES		 64 /**< Number of low priority queues */
+#define WARM_UP_ROUNDS		100 /**< Number of warm-up rounds */
 
 #define EVENTS_PER_HI_PRIO_QUEUE 0  /**< Alloc HI_PRIO_QUEUES x HI_PRIO_EVENTS
 					 events */
@@ -54,7 +56,7 @@ ODP_STATIC_ASSERT(LO_PRIO_QUEUES <= MAX_QUEUES, "Too many LO priority queues");
 
 /** Test event types */
 typedef enum {
-	WARM_UP,  /**< Warm up event */
+	WARM_UP,  /**< Warm-up event */
 	COOL_DOWN,/**< Last event on queue */
 	TRAFFIC,  /**< Event used only as traffic load */
 	SAMPLE	  /**< Event used to measure latency */
@@ -66,12 +68,14 @@ typedef struct {
 	event_type_t type;	/**< Message type */
 	int src_idx[NUM_PRIOS]; /**< Source ODP queue */
 	int prio;		/**< Source queue priority */
+	int warm_up_rounds;	/**< Number of completed warm-up rounds */
 } test_event_t;
 
 /** Test arguments */
 typedef struct {
 	unsigned int cpu_count;	/**< CPU count */
 	odp_schedule_sync_t sync_type;	/**< Scheduler sync type */
+	int warm_up_rounds;	/**< Number of warm-up rounds */
 	struct {
 		int queues;	/**< Number of scheduling queues */
 		int events;	/**< Number of events */
@@ -218,9 +222,10 @@ static int enqueue_events(int prio, int num_queues, int num_events,
 			memset(event, 0, sizeof(test_event_t));
 
 			/* Latency isn't measured from the first processing
-			 * round. */
+			 * rounds. */
 			if (num_samples > 0) {
 				event->type = WARM_UP;
+				event->warm_up_rounds = 0;
 				num_samples--;
 			} else {
 				event->type = TRAFFIC;
@@ -354,6 +359,7 @@ static int test_schedule(int thr, test_globals_t *globals)
 	test_event_t *event;
 	test_stat_t *stats;
 	int dst_idx;
+	int warm_up_rounds = globals->args.warm_up_rounds;
 
 	memset(&globals->core_stat[thr], 0, sizeof(core_stat_t));
 	globals->core_stat[thr].prio[HI_PRIO].min = UINT64_MAX;
@@ -383,10 +389,13 @@ static int test_schedule(int thr, test_globals_t *globals)
 				event->prio = !event->prio;
 		}
 
-		if (odp_unlikely(event->type == WARM_UP))
-			event->type = SAMPLE;
-		else
+		if (odp_unlikely(event->type == WARM_UP)) {
+			event->warm_up_rounds++;
+			if (event->warm_up_rounds >= warm_up_rounds)
+				event->type = SAMPLE;
+		} else {
 			stats->events++;
+		}
 
 		/* Move event to next queue */
 		dst_idx = event->src_idx[event->prio] + 1;
@@ -511,8 +520,9 @@ static void usage(void)
 	       "               0: ODP_SCHED_SYNC_PARALLEL (default)\n"
 	       "               1: ODP_SCHED_SYNC_ATOMIC\n"
 	       "               2: ODP_SCHED_SYNC_ORDERED\n"
+	       "  -w, --warm-up <number> Number of warm-up rounds, default=%d, min=1\n"
 	       "  -h, --help   Display help and exit.\n\n"
-	       );
+	       , WARM_UP_ROUNDS);
 }
 
 /**
@@ -538,13 +548,15 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		{"hi-prio-events", required_argument, NULL, 'p'},
 		{"sample-per-prio", no_argument, NULL, 'r'},
 		{"sync", required_argument, NULL, 's'},
+		{"warm-up", required_argument, NULL, 'w'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:s:l:t:m:n:o:p:rh";
+	static const char *shortopts = "+c:s:l:t:m:n:o:p:rw:h";
 
 	args->cpu_count = 1;
+	args->warm_up_rounds = WARM_UP_ROUNDS;
 	args->sync_type = ODP_SCHED_SYNC_PARALLEL;
 	args->sample_per_prio = SAMPLE_EVENT_PER_PRIO;
 	args->prio[LO_PRIO].queues = LO_PRIO_QUEUES;
@@ -597,6 +609,9 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 			break;
 		case 'r':
 			args->sample_per_prio = 1;
+			break;
+		case 'w':
+			args->warm_up_rounds = atoi(optarg);
 			break;
 		case 'h':
 			usage();
