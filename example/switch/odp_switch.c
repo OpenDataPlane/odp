@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <signal.h>
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
@@ -148,6 +149,13 @@ typedef struct {
 
 /** Global pointer to args */
 static args_t *gbl_args;
+
+static void sig_handler(int signo ODP_UNUSED)
+{
+	if (gbl_args == NULL)
+		return;
+	gbl_args->exit_threads = 1;
+}
 
 /**
  * Calculate MAC table index using Ethernet address hash
@@ -416,7 +424,8 @@ static int print_speed_stats(int num_workers, stats_t (*thr_stats)[MAX_PKTIOS],
 		       PRIu64 " rx drops, %" PRIu64 " tx drops\n", rx_pkts_tot,
 		       tx_pkts_tot, rx_drops_tot, tx_drops_tot);
 
-	} while (loop_forever || (elapsed < duration));
+	} while (!gbl_args->exit_threads &&
+		 (loop_forever || (elapsed < duration)));
 
 	return rx_pkts_tot >= 100 ? 0 : -1;
 }
@@ -976,6 +985,8 @@ int main(int argc, char **argv)
 	odp_init_t init_param;
 	odph_odpthread_params_t thr_params;
 
+	signal(SIGINT, sig_handler);
+
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
@@ -1160,6 +1171,5 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	printf("Exit: %d\n\n", ret);
 	return ret;
 }
