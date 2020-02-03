@@ -101,30 +101,33 @@ typedef enum {
  * Return values of timer set calls.
  */
 typedef enum {
-	/**
-	 * Timer set operation succeeded
-	 */
+	/** Timer set operation succeeded */
 	ODP_TIMER_SUCCESS = 0,
 
-	/**
-	 * Timer set operation failed, expiration too early.
-	 * Either retry with a later expiration time or process the timeout
-	 * immediately. */
-	ODP_TIMER_TOOEARLY = -1,
+	/** Timer set operation failed because expiration time is too near to
+	 *  the current time. */
+	ODP_TIMER_TOO_NEAR = -1,
 
-	/**
-	 * Timer set operation failed, expiration too late.
-	 * Truncate the expiration time against the maximum timeout for the
-	 * timer pool. */
-	ODP_TIMER_TOOLATE = -2,
+	/** Timer set operation failed because expiration time is too far from
+	 *  the current time. */
+	ODP_TIMER_TOO_FAR = -2,
 
-	/**
-	 * Timer set operation failed because no event specified and no event
-	 * present in the timer (timer inactive/expired).
-	 */
-	ODP_TIMER_NOEVENT = -3
+	/** Timer set operation failed */
+	ODP_TIMER_FAIL = -3
 
 } odp_timer_set_t;
+
+/** For backwards compatibility, ODP_TIMER_TOOEARLY is synonym of ODP_TIMER_TOO_NEAR.
+ *  This will be deprecated in the future. */
+#define ODP_TIMER_TOOEARLY ODP_TIMER_TOO_NEAR
+
+/** For backwards compatibility, ODP_TIMER_TOOLATE is synonym of ODP_TIMER_TOO_FAR.
+ *  This will be deprecated in the future. */
+#define ODP_TIMER_TOOLATE  ODP_TIMER_TOO_FAR
+
+/** For backwards compatibility, ODP_TIMER_NOEVENT is synonym of ODP_TIMER_FAIL.
+ *  This will be deprecated in the future. */
+#define ODP_TIMER_NOEVENT ODP_TIMER_FAIL
 
 /**
  * @def ODP_TIMER_POOL_NAME_LEN
@@ -455,11 +458,11 @@ odp_event_t odp_timer_free(odp_timer_t timer);
  *                         outputs the old event here.
  *
  * @retval ODP_TIMER_SUCCESS  Success
- * @retval ODP_TIMER_TOOEARLY Failure. Expiration time is too near to
+ * @retval ODP_TIMER_TOO_NEAR Failure. Expiration time is too near to
  *                            the current time.
- * @retval ODP_TIMER_TOOLATE  Failure. Expiration time is too far from
+ * @retval ODP_TIMER_TOO_FAR  Failure. Expiration time is too far from
  *                            the current time.
- * @retval ODP_TIMER_NOEVENT  Failure. Set operation: No event provided.
+ * @retval ODP_TIMER_FAIL     Failure. Set operation: No event provided.
  *                            Reset operation: Too late to reset the timer.
  *
  * @see odp_timer_set_rel(), odp_timer_alloc(), odp_timer_cancel()
@@ -483,11 +486,11 @@ int odp_timer_set_abs(odp_timer_t timer, uint64_t abs_tick,
  *                         outputs the old event here.
  *
  * @retval ODP_TIMER_SUCCESS  Success
- * @retval ODP_TIMER_TOOEARLY Failure. Expiration time is too near to
+ * @retval ODP_TIMER_TOO_NEAR Failure. Expiration time is too near to
  *                            the current time.
- * @retval ODP_TIMER_TOOLATE  Failure. Expiration time is too far from
+ * @retval ODP_TIMER_TOO_FAR  Failure. Expiration time is too far from
  *                            the current time.
- * @retval ODP_TIMER_NOEVENT  Failure. Set operation: No event provided.
+ * @retval ODP_TIMER_FAIL     Failure. Set operation: No event provided.
  *                            Reset operation: Too late to reset the timer.
  *
  * @see odp_timer_set_abs(), odp_timer_alloc(), odp_timer_cancel()
