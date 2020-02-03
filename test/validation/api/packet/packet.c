@@ -341,7 +341,7 @@ static int packet_alloc_multi(odp_pool_t pool, uint32_t pkt_len,
 		CU_ASSERT(ret >= 0);
 		CU_ASSERT(ret <= num - total);
 		total += ret;
-	} while (total < num && ret);
+	} while (total < num && ret > 0);
 
 	return total;
 }
@@ -430,7 +430,7 @@ static void packet_test_free_sp(void)
 	odp_pool_param_t params;
 	uint32_t len = packet_len;
 
-	if (pool_capa.pkt.max_len < len)
+	if (pool_capa.pkt.max_len && pool_capa.pkt.max_len < len)
 		len = pool_capa.pkt.max_len;
 
 	odp_pool_param_init(&params);
