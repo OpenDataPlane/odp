@@ -62,6 +62,7 @@ extern "C" {
 #include <odp/api/std_clib.h>
 #include <odp/api/support.h>
 #include <odp/api/ipsec.h>
+#include <odp/api/stash.h>
 
 #ifdef __cplusplus
 }
