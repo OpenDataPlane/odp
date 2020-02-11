@@ -9,8 +9,10 @@ else
 	export CC="${TARGET_ARCH}-gcc"
 	export CXX="${TARGET_ARCH}-g++"
 fi
-export CPPFLAGS="-I/usr/include/${TARGET_ARCH}/dpdk"
 export CFLAGS="-march=armv7-a"
 export CXXFLAGS="-march=armv7-a"
+
+# No DPDK on ARMv7
+export CONF="${CONF} --disable-dpdk"
 
 exec "$(dirname "$0")"/build.sh
