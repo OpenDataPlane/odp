@@ -15,4 +15,8 @@ export CXXFLAGS="-march=armv7-a"
 # No DPDK on ARMv7
 export CONF="${CONF} --disable-dpdk"
 
+# Use target libraries
+export PKG_CONFIG_PATH=
+export PKG_CONFIG_LIBDIR=/usr/lib/${TARGET_ARCH}/pkgconfig
+
 exec "$(dirname "$0")"/build.sh
