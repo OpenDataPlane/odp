@@ -12,4 +12,8 @@ else
 fi
 export CPPFLAGS="-I/usr/include/i386-linux-gnu/dpdk"
 
+# Use target libraries
+export PKG_CONFIG_PATH=
+export PKG_CONFIG_LIBDIR=/usr/lib/i386-linux-gnu/pkgconfig
+
 exec "$(dirname "$0")"/build.sh
