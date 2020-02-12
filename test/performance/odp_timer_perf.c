@@ -79,9 +79,9 @@ test_global_t test_global;
 static void print_usage(void)
 {
 	printf("\n"
-	       "Scheduler performance test\n"
+	       "Timer performance test\n"
 	       "\n"
-	       "Usage: odp_sched_perf [options]\n"
+	       "Usage: odp_timer_perf [options]\n"
 	       "\n"
 	       "  -c, --num_cpu          Number of CPUs (worker threads). 0: all available CPUs. Default: 1\n"
 	       "  -n, --num_tp           Number of timer pools. Default: 1\n"
