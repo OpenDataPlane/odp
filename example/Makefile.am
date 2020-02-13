@@ -3,7 +3,6 @@ SUBDIRS = classifier \
 	  hello \
 	  ipsec \
 	  ipsec_api \
-	  ipfragreass \
 	  ipsec_offload \
 	  l2fwd_simple \
 	  l3fwd \
@@ -15,3 +14,7 @@ SUBDIRS = classifier \
 	  time \
 	  timer \
 	  traffic_mgmt
+
+if HAVE_DW_ATOMIC_CMP_EXC
+SUBDIRS += ipfragreass
+endif
