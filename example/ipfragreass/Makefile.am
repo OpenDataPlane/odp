@@ -1,6 +1,6 @@
 include $(top_srcdir)/example/Makefile.inc
 
-LDADD += $(ATOMIC_LIBS)
+LDADD += $(ATOMIC_LIBS) $(ATOMIC_LIBS_OPT)
 
 bin_PROGRAMS = odp_ipfragreass
 
