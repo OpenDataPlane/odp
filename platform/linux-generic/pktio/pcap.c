@@ -29,7 +29,8 @@
  *           doesn't exist it will be created, if it does exist it will
  *           be overwritten.
  *   loops   the number of times to iterate through the input file, set
- *           to 0 to loop indefinitely. The default value is 1.
+ *           to 0 to loop indefinitely. The default value is 1. Looping is
+ *           only supported in thread mode (ODP_MEM_MODEL_THREAD).
  *
  * The total length of the string is limited by PKTIO_NAME_LEN.
  */
@@ -38,6 +39,7 @@
 
 #include <odp_api.h>
 #include <odp/api/plat/packet_inlines.h>
+#include <odp_global_data.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 
@@ -198,6 +200,10 @@ static int pcapif_close(pktio_entry_t *pktio_entry)
 static int _pcapif_reopen(pkt_pcap_t *pcap)
 {
 	char errbuf[PCAP_ERRBUF_SIZE];
+
+	/* Reopen causes pcap internal failure in process mode */
+	if (odp_global_ro.init_param.mem_model == ODP_MEM_MODEL_PROCESS)
+		return 1;
 
 	if (pcap->loops != 0 && ++pcap->loop_cnt >= pcap->loops)
 		return 1;

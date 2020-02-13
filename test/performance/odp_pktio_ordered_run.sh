@@ -11,7 +11,7 @@ TEST_DIR="${TEST_DIR:-$(dirname $0)}"
 DURATION=5
 LOG=odp_pktio_ordered.log
 LOOPS=100000000
-PASS_PPS=5000
+PASS_PPS=100
 PCAP_IN=`find . ${TEST_SRC_DIR} $(dirname $0) -name udp64.pcap -print -quit`
 PCAP_OUT=/dev/null
 
