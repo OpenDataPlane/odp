@@ -307,9 +307,6 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	tp_idx = i;
 	timer_global->num_timer_pools++;
 
-	if (tp_idx > timer_global->highest_tp_idx)
-		timer_global->highest_tp_idx = tp_idx;
-
 	odp_ticketlock_unlock(&timer_global->lock);
 
 	sz0 = ROUNDUP_CACHE_LINE(sizeof(timer_pool_t));
@@ -377,7 +374,10 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	}
 	tp->tp_idx = tp_idx;
 	odp_spinlock_init(&tp->lock);
+	tp->start_time = odp_time_global();
+
 	odp_ticketlock_lock(&timer_global->lock);
+	/* Inline timer scan may find the timer pool after this */
 	timer_global->timer_pool[tp_idx] = tp;
 
 	if (timer_global->num_timer_pools == 1)
@@ -391,12 +391,17 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	}
 
 	odp_ticketlock_unlock(&timer_global->lock);
+
 	if (!odp_global_rw->inline_timers) {
 		if (tp->param.clk_src == ODP_CLOCK_CPU)
 			itimer_init(tp);
+	} else {
+		/* Update the highest index for inline timer scan */
+		odp_ticketlock_lock(&timer_global->lock);
+		if (tp_idx > timer_global->highest_tp_idx)
+			timer_global->highest_tp_idx = tp_idx;
+		odp_ticketlock_unlock(&timer_global->lock);
 	}
-
-	tp->start_time = odp_time_global();
 
 	return timer_pool_to_hdl(tp);
 }
