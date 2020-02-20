@@ -20,6 +20,7 @@ COMPILE_ONLY = odp_l2fwd \
 	       odp_scheduling
 
 TESTSCRIPTS = odp_l2fwd_run.sh \
+	      odp_packet_gen_run.sh \
 	      odp_sched_latency_run.sh \
 	      odp_sched_pktio_run.sh \
 	      odp_scheduling_run.sh
