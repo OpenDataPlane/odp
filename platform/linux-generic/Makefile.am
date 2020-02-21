@@ -201,6 +201,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_sorted_list.c \
 			   odp_spinlock.c \
 			   odp_spinlock_recursive.c \
+			   odp_stash.c \
 			   odp_system_info.c \
 			   odp_pcapng.c \
 			   odp_thread.c \
