@@ -803,16 +803,17 @@ static void setup_worker_qconf(app_args_t *args)
 		in_queue_param.op_mode = ODP_PKTIO_OP_MT_UNSAFE;
 		out_queue_param.op_mode = ODP_PKTIO_OP_MT_UNSAFE;
 
-		in_queue_param.hash_enable = 1;
-		in_queue_param.hash_proto.proto.ipv4 = 1;
-		in_queue_param.hash_proto.proto.ipv4_tcp = 1;
-		in_queue_param.hash_proto.proto.ipv4_udp = 1;
-
 		in_queue_param.num_queues = port->rxq_idx;
 		if (port->rxq_idx > port->nb_rxq) {
 			in_queue_param.num_queues = port->nb_rxq;
 			in_queue_param.op_mode = ODP_PKTIO_OP_MT;
 		}
+
+		in_queue_param.hash_enable = (in_queue_param.num_queues > 1) ?
+						1 : 0;
+		in_queue_param.hash_proto.proto.ipv4 = 1;
+		in_queue_param.hash_proto.proto.ipv4_tcp = 1;
+		in_queue_param.hash_proto.proto.ipv4_udp = 1;
 
 		if (odp_pktin_queue_config(port->pktio, &in_queue_param))
 			ODPH_ABORT("Fail to config input queue for port %s\n",
