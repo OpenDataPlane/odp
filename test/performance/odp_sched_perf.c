@@ -18,6 +18,12 @@
 #define MAX_QUEUES  (256 * 1024)
 #define MAX_GROUPS  256
 
+/* Max time to wait for new events in nanoseconds */
+#define MAX_SCHED_WAIT_NS (10 * ODP_TIME_SEC_IN_NS)
+
+/* Scheduling round interval to check for MAX_SCHED_WAIT_NS */
+#define TIME_CHECK_INTERVAL  (1024 * 1024)
+
 /* Round up 'X' to a multiple of 'NUM' */
 #define ROUNDUP(X, NUM) ((NUM) * (((X) + (NUM) - 1) / (NUM)))
 
@@ -26,7 +32,7 @@ typedef struct test_options_t {
 	uint32_t num_queue;
 	uint32_t num_dummy;
 	uint32_t num_event;
-	uint32_t num_round;
+	uint32_t num_sched;
 	uint32_t num_group;
 	uint32_t num_join;
 	uint32_t max_burst;
@@ -53,6 +59,7 @@ typedef struct test_stat_t {
 	uint64_t cycles;
 	uint64_t waits;
 	uint64_t dummy_sum;
+	uint8_t  failed;
 
 } test_stat_t;
 
@@ -90,7 +97,7 @@ static void print_usage(void)
 	       "  -q, --num_queue        Number of queues. Default: 1.\n"
 	       "  -d, --num_dummy        Number of empty queues. Default: 0.\n"
 	       "  -e, --num_event        Number of events per queue. Default: 100.\n"
-	       "  -r, --num_round        Number of rounds\n"
+	       "  -s, --num_sched        Number of events to schedule per thread\n"
 	       "  -g, --num_group        Number of schedule groups. Round robins threads and queues into groups.\n"
 	       "                         0: SCHED_GROUP_ALL (default)\n"
 	       "  -j, --num_join         Number of groups a thread joins. Threads are divide evenly into groups,\n"
@@ -121,7 +128,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"num_queue",    required_argument, NULL, 'q'},
 		{"num_dummy",    required_argument, NULL, 'd'},
 		{"num_event",    required_argument, NULL, 'e'},
-		{"num_round",    required_argument, NULL, 'r'},
+		{"num_sched",    required_argument, NULL, 's'},
 		{"num_group",    required_argument, NULL, 'g'},
 		{"num_join",     required_argument, NULL, 'j'},
 		{"burst",        required_argument, NULL, 'b'},
@@ -136,13 +143,13 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:q:d:e:r:g:j:b:t:f:w:k:l:n:m:h";
+	static const char *shortopts = "+c:q:d:e:s:g:j:b:t:f:w:k:l:n:m:h";
 
 	test_options->num_cpu    = 1;
 	test_options->num_queue  = 1;
 	test_options->num_dummy  = 0;
 	test_options->num_event  = 100;
-	test_options->num_round  = 100000;
+	test_options->num_sched  = 100000;
 	test_options->num_group  = 0;
 	test_options->num_join   = 0;
 	test_options->max_burst  = 100;
@@ -173,8 +180,8 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		case 'e':
 			test_options->num_event = atoi(optarg);
 			break;
-		case 'r':
-			test_options->num_round = atoi(optarg);
+		case 's':
+			test_options->num_sched = atoi(optarg);
 			break;
 		case 'g':
 			test_options->num_group = atoi(optarg);
@@ -323,7 +330,7 @@ static int create_pool(test_global_t *global)
 	uint32_t num_queue = test_options->num_queue;
 	uint32_t num_dummy = test_options->num_dummy;
 	uint32_t num_event = test_options->num_event;
-	uint32_t num_round = test_options->num_round;
+	uint32_t num_sched = test_options->num_sched;
 	uint32_t max_burst = test_options->max_burst;
 	uint32_t tot_queue = test_options->tot_queue;
 	uint32_t tot_event = test_options->tot_event;
@@ -342,7 +349,7 @@ static int create_pool(test_global_t *global)
 	}
 
 	printf("\nScheduler performance test\n");
-	printf("  num rounds       %u\n", num_round);
+	printf("  num sched        %u\n", num_sched);
 	printf("  num cpu          %u\n", num_cpu);
 	printf("  num queues       %u\n", num_queue);
 	printf("  num empty queues %u\n", num_dummy);
@@ -711,14 +718,14 @@ static int test_sched(void *arg)
 	int num, num_enq, ret, thr;
 	uint32_t i, rounds;
 	uint64_t c1, c2, cycles, nsec;
-	uint64_t events, enqueues, waits;
-	odp_time_t t1, t2;
+	uint64_t events, enqueues, waits, events_prev;
+	odp_time_t t1, t2, last_retry_ts;
 	odp_queue_t queue;
 	odp_queue_t *next;
 	thread_arg_t *thread_arg = arg;
 	test_global_t *global = thread_arg->global;
 	test_options_t *test_options = &global->test_options;
-	uint32_t num_round = test_options->num_round;
+	uint32_t num_sched = test_options->num_sched;
 	uint32_t max_burst = test_options->max_burst;
 	uint32_t num_group = test_options->num_group;
 	int forward = test_options->forward;
@@ -730,6 +737,7 @@ static int test_sched(void *arg)
 	uint32_t ctx_rw_words = test_options->ctx_rw_words;
 	int touch_ctx = ctx_rd_words || ctx_rw_words;
 	uint32_t ctx_offset = 0;
+	uint32_t sched_retries = 0;
 	uint64_t data_sum = 0;
 	uint64_t ctx_sum = 0;
 	uint64_t wait_ns = test_options->wait_ns;
@@ -775,6 +783,7 @@ static int test_sched(void *arg)
 
 	enqueues = 0;
 	events = 0;
+	events_prev = 0;
 	waits = 0;
 	ret = 0;
 
@@ -783,12 +792,14 @@ static int test_sched(void *arg)
 
 	t1 = odp_time_local();
 	c1 = odp_cpu_cycles();
+	last_retry_ts = t1;
 
-	for (rounds = 0; rounds < num_round; rounds++) {
+	for (rounds = 0; events < num_sched; rounds++) {
 		num = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT,
 					 ev, max_burst);
 
 		if (odp_likely(num > 0)) {
+			sched_retries = 0;
 			events += num;
 			i = 0;
 
@@ -822,6 +833,7 @@ static int test_sched(void *arg)
 				if (num_enq < 0) {
 					printf("Error: Enqueue failed. Round %u\n",
 					       rounds);
+					odp_event_free_multi(&ev[i], num);
 					ret = -1;
 					break;
 				}
@@ -835,6 +847,25 @@ static int test_sched(void *arg)
 				break;
 
 			continue;
+		} else if (num == 0) {
+			sched_retries++;
+			if (odp_unlikely(sched_retries > TIME_CHECK_INTERVAL)) {
+				odp_time_t cur_time = odp_time_local();
+
+				/* Measure time from the last received event and
+				 * break if MAX_SCHED_WAIT_NS is exceeded */
+				sched_retries = 0;
+				if (events_prev != events) {
+					events_prev = events;
+					last_retry_ts = cur_time;
+				} else if (odp_time_diff_ns(cur_time,
+							    last_retry_ts) >
+						MAX_SCHED_WAIT_NS) {
+					printf("Error: scheduling timed out\n");
+					ret = -1;
+					break;
+				}
+			}
 		}
 
 		/* <0 not specified as an error but checking anyway */
@@ -859,6 +890,7 @@ static int test_sched(void *arg)
 	global->stat[thr].cycles   = cycles;
 	global->stat[thr].waits    = waits;
 	global->stat[thr].dummy_sum = data_sum + ctx_sum;
+	global->stat[thr].failed = ret;
 
 	/* Pause scheduling before thread exit */
 	odp_schedule_pause();
@@ -974,6 +1006,10 @@ static void print_stat(test_global_t *global)
 
 	/* Averages */
 	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
+		if (global->stat[i].failed) {
+			num_cpu--;
+			continue;
+		}
 		rounds_sum   += global->stat[i].rounds;
 		enqueues_sum += global->stat[i].enqueues;
 		events_sum   += global->stat[i].events;
@@ -982,7 +1018,7 @@ static void print_stat(test_global_t *global)
 		waits_sum    += global->stat[i].waits;
 	}
 
-	if (rounds_sum == 0) {
+	if (rounds_sum == 0 || num_cpu <= 0) {
 		printf("No results.\n");
 		return;
 	}
@@ -1006,8 +1042,13 @@ static void print_stat(test_global_t *global)
 			if ((num % 10) == 0)
 				printf("\n   ");
 
-			printf("%6.1f ", (1000.0 * global->stat[i].events) /
-			       global->stat[i].nsec);
+			if (global->stat[i].failed)
+				printf("   n/a ");
+			else
+				printf("%6.1f ",
+				       (1000.0 * global->stat[i].events) /
+				       global->stat[i].nsec);
+
 			num++;
 		}
 	}
