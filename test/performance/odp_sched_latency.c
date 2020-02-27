@@ -54,6 +54,11 @@ ODP_STATIC_ASSERT(LO_PRIO_QUEUES <= MAX_QUEUES, "Too many LO priority queues");
 #define HI_PRIO	  0
 #define LO_PRIO	  1
 
+/* Test event forwarding mode */
+#define EVENT_FORWARD_RAND 0
+#define EVENT_FORWARD_INC  1
+#define EVENT_FORWARD_NONE 2
+
 /** Test event types */
 typedef enum {
 	WARM_UP,  /**< Warm-up event */
@@ -75,6 +80,7 @@ typedef struct {
 typedef struct {
 	unsigned int cpu_count;	/**< CPU count */
 	odp_schedule_sync_t sync_type;	/**< Scheduler sync type */
+	int forward_mode;	/**< Event forwarding mode */
 	int test_rounds;	/**< Number of test rounds (millions) */
 	int warm_up_rounds;	/**< Number of warm-up rounds */
 	struct {
@@ -276,6 +282,11 @@ static void print_results(test_globals_t *globals)
 	       (stype == ODP_SCHED_SYNC_ATOMIC) ? "ATOMIC" :
 	       ((stype == ODP_SCHED_SYNC_ORDERED) ? "ORDERED" : "PARALLEL"));
 
+	printf("  Forwarding mode: %s\n",
+	       (args->forward_mode == EVENT_FORWARD_RAND) ? "random" :
+	       ((args->forward_mode == EVENT_FORWARD_INC) ? "incremental" :
+		"none"));
+
 	printf("  LO_PRIO queues: %i\n", args->prio[LO_PRIO].queues);
 	if (args->prio[LO_PRIO].events_per_queue)
 		printf("  LO_PRIO event per queue: %i\n",
@@ -359,13 +370,15 @@ static int test_schedule(int thr, test_globals_t *globals)
 	uint32_t i;
 	test_event_t *event;
 	test_stat_t *stats;
-	int dst_idx;
+	int dst_idx, change_queue;
 	int warm_up_rounds = globals->args.warm_up_rounds;
 	uint64_t test_rounds = globals->args.test_rounds * 1000000;
 
 	memset(&globals->core_stat[thr], 0, sizeof(core_stat_t));
 	globals->core_stat[thr].prio[HI_PRIO].min = UINT64_MAX;
 	globals->core_stat[thr].prio[LO_PRIO].min = UINT64_MAX;
+
+	change_queue = globals->args.forward_mode != EVENT_FORWARD_NONE ? 1 : 0;
 
 	for (i = 0; i < test_rounds; i++) {
 		ev = odp_schedule(&src_queue, ODP_SCHED_WAIT);
@@ -399,8 +412,11 @@ static int test_schedule(int thr, test_globals_t *globals)
 			stats->events++;
 		}
 
-		/* Move event to next queue */
-		dst_idx = event->src_idx[event->prio] + 1;
+		/* Move event to next queue if forwarding is enabled */
+		if (change_queue)
+			dst_idx = event->src_idx[event->prio] + 1;
+		else
+			dst_idx = event->src_idx[event->prio];
 		if (dst_idx >= globals->args.prio[event->prio].queues)
 			dst_idx = 0;
 		event->src_idx[event->prio] = dst_idx;
@@ -508,6 +524,10 @@ static void usage(void)
 	       "Optional OPTIONS:\n"
 	       "  -c, --count <number> CPU count, 0=all available, default=1\n"
 	       "  -d, --duration <number> Test duration in scheduling rounds (millions), default=%d, min=1\n"
+	       "  -f, --forward-mode <mode> Selection of target queue\n"
+	       "               0: Random (default)\n"
+	       "               1: Incremental\n"
+	       "               2: Use source queue\n"
 	       "  -l, --lo-prio-queues <number> Number of low priority scheduled queues\n"
 	       "  -t, --hi-prio-queues <number> Number of high priority scheduled queues\n"
 	       "  -m, --lo-prio-events-per-queue <number> Number of events per low priority queue\n"
@@ -543,6 +563,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 
 	static const struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
+		{"forward-mode", required_argument, NULL, 'f'},
 		{"lo-prio-queues", required_argument, NULL, 'l'},
 		{"hi-prio-queues", required_argument, NULL, 't'},
 		{"lo-prio-events-per-queue", required_argument, NULL, 'm'},
@@ -556,9 +577,10 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:d:s:l:t:m:n:o:p:rw:h";
+	static const char *shortopts = "+c:d:f:s:l:t:m:n:o:p:rw:h";
 
 	args->cpu_count = 1;
+	args->forward_mode = EVENT_FORWARD_RAND;
 	args->test_rounds = TEST_ROUNDS;
 	args->warm_up_rounds = WARM_UP_ROUNDS;
 	args->sync_type = ODP_SCHED_SYNC_PARALLEL;
@@ -582,6 +604,9 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 			break;
 		case 'd':
 			args->test_rounds = atoi(optarg);
+			break;
+		case 'f':
+			args->forward_mode = atoi(optarg);
 			break;
 		case 'l':
 			args->prio[LO_PRIO].queues = atoi(optarg);
@@ -644,6 +669,31 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		printf("No queues configured\n");
 		usage();
 		exit(EXIT_FAILURE);
+	}
+	if (args->forward_mode > EVENT_FORWARD_NONE ||
+	    args->forward_mode < EVENT_FORWARD_RAND) {
+		printf("Invalid forwarding mode\n");
+		usage();
+		exit(EXIT_FAILURE);
+	}
+}
+
+static void randomize_queues(odp_queue_t queues[], uint32_t num, uint64_t *seed)
+{
+	uint32_t i;
+
+	for (i = 0; i < num; i++) {
+		uint32_t new_index;
+		odp_queue_t swap_queue;
+		odp_queue_t cur_queue = queues[i];
+
+		odp_random_test_data((uint8_t *)&new_index, sizeof(new_index),
+				     seed);
+		new_index = new_index % num;
+		swap_queue = queues[new_index];
+
+		queues[new_index] = cur_queue;
+		queues[i] = swap_queue;
 	}
 }
 
@@ -796,6 +846,12 @@ int main(int argc, char *argv[])
 			}
 
 			globals->queue[i][j] = queue;
+		}
+		if (args.forward_mode == EVENT_FORWARD_RAND) {
+			uint64_t seed = i;
+
+			randomize_queues(globals->queue[i], args.prio[i].queues,
+					 &seed);
 		}
 	}
 
