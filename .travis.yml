@@ -78,6 +78,7 @@ env:
         - CHECK=0 OS=centos_7
         - CONF="--without-openssl --without-pcap"
         - OS=ubuntu_16.04
+        - OS=ubuntu_20.04
 
 matrix:
   exclude:
