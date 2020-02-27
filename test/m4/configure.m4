@@ -39,6 +39,7 @@ AC_CONFIG_FILES([test/Makefile
 		 test/validation/api/random/Makefile
 		 test/validation/api/scheduler/Makefile
 		 test/validation/api/shmem/Makefile
+		 test/validation/api/stash/Makefile
 		 test/validation/api/std_clib/Makefile
 		 test/validation/api/system/Makefile
 		 test/validation/api/thread/Makefile
