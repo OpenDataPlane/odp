@@ -179,9 +179,9 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->bursts     = 1;
 	test_options->gap_nsec   = 1000000;
 	strncpy(test_options->ipv4_src_s, "192.168.0.1",
-		sizeof(test_options->ipv4_src_s));
+		sizeof(test_options->ipv4_src_s) - 1);
 	strncpy(test_options->ipv4_dst_s, "192.168.0.2",
-		sizeof(test_options->ipv4_dst_s));
+		sizeof(test_options->ipv4_dst_s) - 1);
 	odph_ipv4_addr_parse(&test_options->ipv4_src, test_options->ipv4_src_s);
 	odph_ipv4_addr_parse(&test_options->ipv4_dst, test_options->ipv4_dst_s);
 	test_options->udp_src = 10000;
@@ -290,7 +290,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 				ret = -1;
 			}
 			strncpy(test_options->ipv4_src_s, optarg,
-				sizeof(test_options->ipv4_src_s));
+				sizeof(test_options->ipv4_src_s) - 1);
 			break;
 		case 'd':
 			if (odph_ipv4_addr_parse(&test_options->ipv4_dst,
@@ -300,7 +300,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 				ret = -1;
 			}
 			strncpy(test_options->ipv4_dst_s, optarg,
-				sizeof(test_options->ipv4_dst_s));
+				sizeof(test_options->ipv4_dst_s) - 1);
 			break;
 		case 'c':
 			count = strtoul(optarg, &end, 0);
