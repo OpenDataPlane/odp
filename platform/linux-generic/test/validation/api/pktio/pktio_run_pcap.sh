@@ -28,6 +28,8 @@ else
 	exit 1
 fi
 
+export ODP_PKTIO_TEST_DISABLE_START_STOP=1
+
 PCAP_FNAME=vald.pcap
 export ODP_PKTIO_IF0="pcap:out=${PCAP_FNAME}"
 export ODP_PKTIO_IF1="pcap:in=${PCAP_FNAME}"
