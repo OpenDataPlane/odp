@@ -1836,6 +1836,13 @@ static void pktio_test_statistics_counters(void)
 	}
 }
 
+static int pktio_check_start_stop(void)
+{
+	if (getenv("ODP_PKTIO_TEST_DISABLE_START_STOP"))
+		return ODP_TEST_INACTIVE;
+	return ODP_TEST_ACTIVE;
+}
+
 static void pktio_test_start_stop(void)
 {
 	odp_pktio_t pktio[MAX_NUM_IFACES];
@@ -2931,7 +2938,8 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_mtu),
 	ODP_TEST_INFO(pktio_test_promisc),
 	ODP_TEST_INFO(pktio_test_mac),
-	ODP_TEST_INFO(pktio_test_start_stop),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_start_stop,
+				  pktio_check_start_stop),
 	ODP_TEST_INFO(pktio_test_recv_on_wonly),
 	ODP_TEST_INFO(pktio_test_send_on_ronly),
 	ODP_TEST_INFO(pktio_test_plain_multi_event),
