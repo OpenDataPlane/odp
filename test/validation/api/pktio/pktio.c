@@ -1196,7 +1196,8 @@ static void test_recv_tmo(recv_tmo_mode_e mode)
 	CU_ASSERT_FATAL(ret == test_pkt_count);
 
 	ret = recv_packets_tmo(pktio_rx, &pkt_tbl[0], &pkt_seq[0], 1, mode,
-			       odp_pktin_wait_time(UINT64_MAX), 0, 0);
+			       odp_pktin_wait_time(10 * ODP_TIME_SEC_IN_NS),
+			       0, 0);
 	CU_ASSERT_FATAL(ret == 1);
 
 	ret = recv_packets_tmo(pktio_rx, &pkt_tbl[1], &pkt_seq[1], 1, mode,
