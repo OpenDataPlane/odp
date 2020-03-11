@@ -49,7 +49,10 @@ typedef union odp_feature_t {
 		/** Scheduler APIs, e.g., odp_schedule_xxx() */
 		uint32_t schedule:1;
 
-		/** Time APIs are, e.g., odp_time_xxx() */
+		/** Stash APIs, e.g., odp_stash_xxx() */
+		uint32_t stash:1;
+
+		/** Time APIs, e.g., odp_time_xxx() */
 		uint32_t time:1;
 
 		/** Timer APIs, e.g., odp_timer_xxx(), odp_timeout_xxx()  */
