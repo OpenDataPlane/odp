@@ -138,6 +138,7 @@ static void init_test_feature(int disable)
 		param.not_used.feat.crypto   = 1;
 		param.not_used.feat.ipsec    = 1;
 		param.not_used.feat.schedule = 1;
+		param.not_used.feat.stash    = 1;
 		param.not_used.feat.time     = 1;
 		param.not_used.feat.timer    = 1;
 		param.not_used.feat.tm       = 1;
