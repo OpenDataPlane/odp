@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 /** @defgroup odp_random ODP RANDOM
+ *  Random number generation.
  *  @{
  */
 

@@ -20,8 +20,8 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 
-/** @defgroup odp_hash ODP HASH FUNCTIONS
- *  ODP Hash functions
+/** @defgroup odp_hash ODP HASH
+ *  Hash functions.
  *  @{
  */
 

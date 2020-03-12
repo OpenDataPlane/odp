@@ -21,6 +21,7 @@ extern "C" {
 #include <odp/api/std_types.h>
 
 /** @defgroup odp_cpu ODP CPU
+ *  CPU cycle count, frequency, etc. information.
  *  @{
  */
 

@@ -21,7 +21,7 @@ extern "C" {
 #include <odp/api/std_types.h>
 
 /** @defgroup odp_pool ODP POOL
- *  Operations on a pool.
+ *  Packet and buffer (event) pools.
  *  @{
  */
 

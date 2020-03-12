@@ -20,6 +20,8 @@ extern "C" {
 
 /**
  * @defgroup odp_locks ODP LOCKS
+ * Various types of locks for thread synchronization.
+ *
  * @details
  * <b> Reader / writer lock (odp_rwlock_t) </b>
  *

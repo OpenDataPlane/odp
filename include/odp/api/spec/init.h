@@ -24,7 +24,7 @@ extern "C" {
 #include <odp/api/cpumask.h>
 
 /** @defgroup odp_initialization ODP INITIALIZATION
- *  Initialisation operations.
+ *  ODP instance initialization and termination.
  *  @{
  */
 

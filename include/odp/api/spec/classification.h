@@ -22,7 +22,7 @@ extern "C" {
 #include <odp/api/support.h>
 #include <odp/api/threshold.h>
 /** @defgroup odp_classification ODP CLASSIFICATION
- *  Classification operations.
+ *  Packet input classification.
  *  @{
  */
 

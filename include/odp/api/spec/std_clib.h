@@ -20,6 +20,8 @@ extern "C" {
 
 /**
  * @defgroup odp_std_clib ODP STD CLIB
+ * Performance optimized versions of selected C library functions.
+ *
  * @details
  * ODP version of often used C library calls
  * @{

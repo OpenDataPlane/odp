@@ -21,7 +21,7 @@ extern "C" {
 #include <odp/api/time.h>
 
 /** @defgroup odp_packet ODP PACKET
- *  Operations on a packet.
+ *  Packet event metadata and operations.
  *  @{
  */
 

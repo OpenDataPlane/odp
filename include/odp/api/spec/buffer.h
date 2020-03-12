@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 /** @defgroup odp_buffer ODP BUFFER
- *  Operations on a buffer.
+ *  Buffer event metadata and operations.
  *  @{
  */
 

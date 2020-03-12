@@ -22,7 +22,7 @@ extern "C" {
 #include <odp/api/spec/queue_types.h>
 
 /** @defgroup odp_queue ODP QUEUE
- *  Macros and operation on a queue.
+ *  Queues for event passing and scheduling.
  *  @{
  */
 

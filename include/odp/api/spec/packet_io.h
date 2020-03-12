@@ -25,7 +25,7 @@ extern "C" {
 #include <odp/api/packet.h>
 
 /** @defgroup odp_packet_io ODP PACKET IO
- *  Operations on a packet Input/Output interface.
+ *  Packet IO interfaces.
  *
  * Packet IO is the Ingress and Egress interface to ODP processing. It
  * allows manipulation of the interface for setting such attributes as

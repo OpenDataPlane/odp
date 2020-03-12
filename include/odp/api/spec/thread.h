@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 /** @defgroup odp_thread ODP THREAD
+ *  Thread types, masks and IDs.
  *  @{
  */
 
