@@ -22,9 +22,9 @@ extern "C" {
 #endif
 
 /** @defgroup odp_compression ODP COMP
- *  Operations for Compression and Decompression API.
- *  Hash calculation may be combined with de-/compression operations
+ *  Data compression and decompression.
  *
+ *  Hash calculation may be combined with de-/compression operations.
  *  @{
  */
 

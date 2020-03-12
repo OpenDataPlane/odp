@@ -23,7 +23,7 @@ extern "C" {
 #include <odp/api/std_types.h>
 
 /** @defgroup odp_features ODP_FEATURE
- *  ODP feature definitions
+ *  List of ODP features.
  *  @{
  */
 

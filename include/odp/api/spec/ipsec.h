@@ -24,7 +24,7 @@ extern "C" {
 #include <odp/api/classification.h>
 
 /** @defgroup odp_ipsec ODP IPSEC
- *  Operations of IPSEC API.
+ *  IPSEC protocol offload.
  *  @{
  */
 

@@ -20,6 +20,8 @@ extern "C" {
 
 /**
  * @defgroup odp_errno ODP ERRNO
+ * Error number.
+ *
  * @details
  * <b> ODP errno </b>
  *

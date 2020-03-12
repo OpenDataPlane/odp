@@ -23,7 +23,7 @@ extern "C" {
 /** @defgroup odp_traffic_mngr ODP TRAFFIC MNGR
  * @{
  *
- * An API for configuring and using Traffic Management systems
+ * Traffic management on packet output.
  *
  * This file forms a simple interface for creating, configuring and using
  * Traffic Management (TM) subsystems.  By TM subsystem it is meant a general

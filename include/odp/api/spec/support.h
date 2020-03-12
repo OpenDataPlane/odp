@@ -18,8 +18,8 @@
 extern "C" {
 #endif
 
-/** @defgroup odp_support ODP support
- *  Common API
+/** @defgroup odp_support ODP SUPPORT
+ *  Feature support levels.
  *  @{
  */
 

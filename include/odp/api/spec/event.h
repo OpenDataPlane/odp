@@ -21,7 +21,7 @@ extern "C" {
 #include <odp/api/packet.h>
 
 /** @defgroup odp_event ODP EVENT
- *  Operations on an event.
+ *  Generic event metadata and operations.
  *  @{
  */
 

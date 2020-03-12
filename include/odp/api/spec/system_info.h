@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 /** @defgroup odp_system ODP SYSTEM
+ *  System information.
  *  @{
  */
 

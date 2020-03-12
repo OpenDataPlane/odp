@@ -21,6 +21,7 @@ extern "C" {
 #endif
 
 /** @defgroup odp_timer ODP TIMER
+ *  Timer generating timeout events.
  *  @{
  */
 

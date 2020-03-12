@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 /** @defgroup odp_time ODP TIME
+ *  Chip and CPU level wall clock time.
  *  @{
  */
 

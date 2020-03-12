@@ -21,7 +21,7 @@ extern "C" {
 #endif
 
 /** @defgroup odp_shared_memory ODP SHARED MEMORY
- *  Operations on shared memory.
+ *  Shared memory blocks.
  *  @{
  */
 

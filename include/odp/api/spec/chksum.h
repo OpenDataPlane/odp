@@ -7,7 +7,7 @@
 /**
  * @file
  *
- * ODP Hash functions
+ * ODP checksum functions.
  */
 
 #ifndef ODP_API_SPEC_CHKSUM_H_
@@ -21,7 +21,7 @@ extern "C" {
 #include <odp/api/std_types.h>
 
 /** @defgroup odp_chksum ODP CHECKSUM
- *  ODP checksum functions
+ *  Checksum functions.
  *  @{
  */
 

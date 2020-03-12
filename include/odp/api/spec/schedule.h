@@ -25,7 +25,7 @@ extern "C" {
 #include <odp/api/thrmask.h>
 
 /** @defgroup odp_scheduler ODP SCHEDULER
- *  Operations on the scheduler.
+ *  Event scheduler for work load balancing and prioritization.
  *  @{
  */
 

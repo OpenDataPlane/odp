@@ -24,7 +24,7 @@ extern "C" {
 #include <odp/api/packet.h>
 
 /** @defgroup odp_crypto ODP CRYPTO
- *  Macros, enums, types and operations to utilise crypto.
+ *  Data ciphering and authentication.
  *  @{
  */
 

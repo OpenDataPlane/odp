@@ -20,6 +20,8 @@ extern "C" {
 
 /**
  * @defgroup odp_atomic ODP ATOMIC
+ * Atomic variables.
+ *
  * @details
  * <b> Atomic integers using relaxed memory ordering </b>
  *
