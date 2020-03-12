@@ -291,6 +291,7 @@ static void packet_test_alloc_free(void)
 	params.pkt.seg_len    = pool_capa.pkt.min_seg_len;
 	params.pkt.len        = pool_capa.pkt.min_seg_len;
 	params.pkt.num        = 1;
+	params.pkt.max_num    = 1;
 
 	pool = odp_pool_create("packet_pool_alloc", &params);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
@@ -361,6 +362,7 @@ static void packet_test_alloc_free_multi(void)
 	params.pkt.seg_len    = pool_capa.pkt.min_seg_len;
 	params.pkt.len        = pool_capa.pkt.min_seg_len;
 	params.pkt.num        = num_pkt;
+	params.pkt.max_num    = num_pkt;
 
 	pool[0] = odp_pool_create("packet_pool_alloc_multi_0", &params);
 	pool[1] = odp_pool_create("packet_pool_alloc_multi_1", &params);
