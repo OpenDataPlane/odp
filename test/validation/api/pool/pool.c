@@ -384,6 +384,45 @@ static void pool_test_pkt_max_num(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+static void pool_test_pkt_seg_len(void)
+{
+	uint32_t len = 1500;
+	uint32_t min_seg_len = 42;
+	uint32_t max_num = 10;
+	uint32_t num = 0;
+	uint32_t i;
+	odp_packet_t pkt_tbl[max_num];
+	odp_pool_t pool;
+	odp_pool_param_t param;
+
+	odp_pool_param_init(&param);
+
+	param.type         = ODP_POOL_PACKET;
+	param.pkt.num      = max_num;
+	param.pkt.len      = len;
+	param.pkt.max_len  = len;
+	param.pkt.seg_len =  min_seg_len;
+
+	pool = odp_pool_create("test_packet_seg_len", &param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	for (i = 0; i < max_num; i++) {
+		pkt_tbl[i] = odp_packet_alloc(pool, len);
+
+		if (pkt_tbl[i] != ODP_PACKET_INVALID)
+			num++;
+	}
+
+	CU_ASSERT(num == max_num);
+
+	for (i = 0; i < num; i++) {
+		CU_ASSERT(odp_packet_seg_len(pkt_tbl[i]) >= min_seg_len);
+		odp_packet_free(pkt_tbl[i]);
+	}
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
 static void pool_test_tmo_max_num(void)
 {
 	odp_pool_t pool;
@@ -537,6 +576,7 @@ odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO(pool_test_info_data_range),
 	ODP_TEST_INFO(pool_test_buf_max_num),
 	ODP_TEST_INFO(pool_test_pkt_max_num),
+	ODP_TEST_INFO(pool_test_pkt_seg_len),
 	ODP_TEST_INFO(pool_test_tmo_max_num),
 	ODP_TEST_INFO(pool_test_create_after_fork),
 	ODP_TEST_INFO_NULL,
