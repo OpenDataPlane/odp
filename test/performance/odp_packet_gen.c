@@ -19,6 +19,7 @@
 #define MAX_PKTIO_NAME    255
 #define RX_THREAD         1
 #define TX_THREAD         2
+#define MAX_VLANS         4
 
 /* Minimum number of packets to receive in CI test */
 #define MIN_RX_PACKETS_CI 800
@@ -32,12 +33,19 @@ typedef struct test_options_t {
 	uint32_t num_pktio;
 	uint32_t num_pkt;
 	uint32_t pkt_len;
+	uint32_t hdr_len;
 	uint32_t burst_size;
 	uint32_t bursts;
+	uint32_t num_vlan;
 	uint32_t ipv4_src;
 	uint32_t ipv4_dst;
 	uint16_t udp_src;
 	uint16_t udp_dst;
+
+	struct vlan_hdr {
+		uint16_t tpid;
+		uint16_t tci;
+	} vlan[MAX_VLANS];
 
 	struct {
 		uint32_t udp_src;
@@ -114,6 +122,11 @@ static void print_usage(void)
 	       "                          addresses (no spaces), one address per packet IO\n"
 	       "                          interface e.g. AA:BB:CC:DD:EE:FF,11:22:33:44:55:66\n"
 	       "                          Default per interface: 02:00:00:A0:B0:CX, where X = 0,1,...\n"
+	       "  -v, --vlan <tpid:tci>   VLAN configuration. Comma-separated list of VLAN TPID:TCI\n"
+	       "                          values in hexadecimal, starting from the outer most VLAN.\n"
+	       "                          For example:\n"
+	       "                          VLAN 200 (decimal):          8100:c8\n"
+	       "                          Double tagged VLANs 1 and 2: 88a8:1,8100:2\n"
 	       "  -r, --num_rx            Number of receive threads. Default: 1\n"
 	       "  -t, --num_tx            Number of transmit threads. Default: 1\n"
 	       "  -n, --num_pkt           Number of packets in the pool. Default: 1000\n"
@@ -138,6 +151,45 @@ static void print_usage(void)
 	       "\n");
 }
 
+static int parse_vlan(const char *str, test_global_t *global)
+{
+	struct vlan_hdr *vlan;
+	const char *start = str;
+	char *end;
+	int num_vlan = 0;
+	intptr_t str_len = strlen(str);
+
+	while (num_vlan < MAX_VLANS) {
+		vlan = &global->test_options.vlan[num_vlan];
+
+		/* TPID in hexadecimal */
+		end = NULL;
+		vlan->tpid = strtoul(start, &end, 16);
+		if (end < start)
+			break;
+
+		/* Skip ':' */
+		start = end + 1;
+		if (start - str >= str_len)
+			break;
+
+		/* TCI in hexadecimal */
+		end = NULL;
+		vlan->tci = strtoul(start, &end, 16);
+		if (end < start)
+			break;
+
+		num_vlan++;
+
+		/* Skip ',' or stop at the string end */
+		start = end + 1;
+		if (start - str >= str_len)
+			break;
+	}
+
+	return num_vlan;
+}
+
 static int parse_options(int argc, char *argv[], test_global_t *global)
 {
 	int opt, i, len, str_len, long_index;
@@ -146,6 +198,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	char *name, *str, *end;
 	test_options_t *test_options = &global->test_options;
 	int ret = 0;
+	int help = 0;
 	uint8_t default_eth_dst[6] = {0x02, 0x00, 0x00, 0xa0, 0xb0, 0xc0};
 
 	static const struct option longopts[] = {
@@ -158,6 +211,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"burst_size", required_argument, NULL, 'b'},
 		{"bursts",     required_argument, NULL, 'x'},
 		{"gap",        required_argument, NULL, 'g'},
+		{"vlan",       required_argument, NULL, 'v'},
 		{"ipv4_src",   required_argument, NULL, 's'},
 		{"ipv4_dst",   required_argument, NULL, 'd'},
 		{"udp_src",    required_argument, NULL, 'o'},
@@ -168,7 +222,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:n:l:b:x:g:s:d:o:p:c:q:h";
+	static const char *shortopts = "+i:e:r:t:n:l:b:x:g:v:s:d:o:p:c:q:h";
 
 	test_options->num_pktio  = 0;
 	test_options->num_rx     = 1;
@@ -178,6 +232,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->burst_size = 8;
 	test_options->bursts     = 1;
 	test_options->gap_nsec   = 1000000;
+	test_options->num_vlan   = 0;
 	strncpy(test_options->ipv4_src_s, "192.168.0.1",
 		sizeof(test_options->ipv4_src_s) - 1);
 	strncpy(test_options->ipv4_dst_s, "192.168.0.2",
@@ -282,6 +337,13 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		case 'g':
 			test_options->gap_nsec = atoll(optarg);
 			break;
+		case 'v':
+			test_options->num_vlan = parse_vlan(optarg, global);
+			if (test_options->num_vlan == 0) {
+				printf("Error: Did not find any VLANs\n");
+				ret = -1;
+			}
+			break;
 		case 's':
 			if (odph_ipv4_addr_parse(&test_options->ipv4_src,
 						 optarg)) {
@@ -316,13 +378,14 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		case 'h':
 			/* fall through */
 		default:
+			help = 1;
 			print_usage();
 			ret = -1;
 			break;
 		}
 	}
 
-	if (test_options->num_pktio == 0) {
+	if (help == 0 && test_options->num_pktio == 0) {
 		printf("Error: At least one packet IO interface is needed.\n");
 		printf("       Use -i <name> to specify interfaces.\n");
 		ret = -1;
@@ -365,6 +428,16 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	if (test_options->c_mode.udp_src &&
 	    num_tx_pkt % test_options->c_mode.udp_src)
 		printf("\nWARNING: Transmit packet count is not evenly divisible by UDP source port count.\n\n");
+
+	test_options->hdr_len = ODPH_ETHHDR_LEN +
+				(test_options->num_vlan * ODPH_VLANHDR_LEN) +
+				ODPH_IPV4HDR_LEN + ODPH_UDPHDR_LEN;
+
+	if (test_options->hdr_len >= test_options->pkt_len) {
+		printf("Error: Headers do not fit into packet length %u\n",
+		       test_options->pkt_len);
+		ret = -1;
+	}
 
 	return ret;
 }
@@ -451,6 +524,10 @@ static int open_pktios(test_global_t *global)
 	printf("  tx burst gap        %" PRIu64 " nsec\n",
 	       test_options->gap_nsec);
 	printf("  clock resolution    %" PRIu64 " Hz\n", odp_time_local_res());
+	for (i = 0; i < test_options->num_vlan; i++) {
+		printf("  VLAN[%i]             %x:%x\n", i,
+		       test_options->vlan[i].tpid, test_options->vlan[i].tci);
+	}
 	printf("  IPv4 source         %s\n", test_options->ipv4_src_s);
 	printf("  IPv4 destination    %s\n", test_options->ipv4_dst_s);
 	printf("  UDP source          %u\n", test_options->udp_src);
@@ -499,7 +576,7 @@ static int open_pktios(test_global_t *global)
 		return -1;
 	}
 
-	seg_len = ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN + ODPH_UDPHDR_LEN;
+	seg_len = test_options->hdr_len;
 	if (pool_capa.pkt.max_seg_len &&
 	    seg_len > pool_capa.pkt.max_seg_len) {
 		printf("Error: Max segment length is too small %u\n",
@@ -771,14 +848,17 @@ static int init_packets(test_global_t *global, int pktio,
 			odp_packet_t packet[], uint32_t num, uint16_t seq)
 {
 	odp_packet_t pkt;
-	uint32_t i, j, pkt_len, seg_len, payload_len;
+	uint32_t i, j, pkt_len, seg_len, payload_len, l2_len;
 	void *data;
 	uint8_t *u8;
 	odph_ethhdr_t *eth;
+	odph_vlanhdr_t *vlan;
 	odph_ipv4hdr_t *ip;
 	odph_udphdr_t *udp;
+	uint16_t tpid;
 	test_options_t *test_options = &global->test_options;
-	uint32_t hdr_len = ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN + ODPH_UDPHDR_LEN;
+	uint32_t num_vlan = test_options->num_vlan;
+	uint32_t hdr_len = test_options->hdr_len;
 	uint16_t udp_src = test_options->udp_src;
 	uint16_t udp_dst = test_options->udp_dst;
 	uint32_t udp_src_cnt = 0;
@@ -801,12 +881,33 @@ static int init_packets(test_global_t *global, int pktio,
 		memcpy(eth->dst.addr, global->pktio[pktio].eth_dst.addr, 6);
 		memcpy(eth->src.addr, global->pktio[pktio].eth_src.addr, 6);
 		eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
+		l2_len = ODPH_ETHHDR_LEN;
+
+		/* VLAN(s) */
+		if (num_vlan) {
+			tpid = test_options->vlan[0].tpid;
+			eth->type = odp_cpu_to_be_16(tpid);
+		}
+
+		for (j = 0; j < num_vlan; j++) {
+			vlan = (odph_vlanhdr_t *)((uint8_t *)data + l2_len);
+			vlan->tci = odp_cpu_to_be_16(test_options->vlan[j].tci);
+			if (j < num_vlan - 1) {
+				tpid = test_options->vlan[j + 1].tpid;
+				vlan->type = odp_cpu_to_be_16(tpid);
+			}
+
+			l2_len += ODPH_VLANHDR_LEN;
+		}
+
+		if (num_vlan)
+			vlan->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 
 		/* IPv4 */
-		ip = (odph_ipv4hdr_t *)((uint8_t *)data + ODPH_ETHHDR_LEN);
+		ip = (odph_ipv4hdr_t *)((uint8_t *)data + l2_len);
 		memset(ip, 0, ODPH_IPV4HDR_LEN);
 		ip->ver_ihl = ODPH_IPV4 << 4 | ODPH_IPV4HDR_IHL_MIN;
-		ip->tot_len = odp_cpu_to_be_16(pkt_len - ODPH_ETHHDR_LEN);
+		ip->tot_len = odp_cpu_to_be_16(pkt_len - l2_len);
 		ip->id = odp_cpu_to_be_16(seq + i);
 		ip->ttl = 64;
 		ip->proto = ODPH_IPPROTO_UDP;
@@ -815,7 +916,7 @@ static int init_packets(test_global_t *global, int pktio,
 		ip->chksum = ~odp_chksum_ones_comp16(ip, ODPH_IPV4HDR_LEN);
 
 		/* UDP */
-		udp = (odph_udphdr_t *)((uint8_t *)data + ODPH_ETHHDR_LEN +
+		udp = (odph_udphdr_t *)((uint8_t *)data + l2_len +
 		      ODPH_IPV4HDR_LEN);
 		memset(udp, 0, ODPH_UDPHDR_LEN);
 		udp->src_port = odp_cpu_to_be_16(udp_src);
@@ -830,9 +931,8 @@ static int init_packets(test_global_t *global, int pktio,
 			u8[j] = j;
 
 		/* Insert UDP checksum */
-		odp_packet_l3_offset_set(pkt, ODPH_ETHHDR_LEN);
-		odp_packet_l4_offset_set(pkt,
-					 ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
+		odp_packet_l3_offset_set(pkt, l2_len);
+		odp_packet_l4_offset_set(pkt, l2_len + ODPH_IPV4HDR_LEN);
 		odp_packet_has_eth_set(pkt, 1);
 		odp_packet_has_ipv4_set(pkt, 1);
 		odp_packet_has_udp_set(pkt, 1);
