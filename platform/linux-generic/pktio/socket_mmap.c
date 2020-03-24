@@ -305,7 +305,7 @@ static inline int pkt_mmap_v2_tx(int sock, struct ring *ring,
 				 const odp_packet_t pkt_table[],
 				 uint32_t num)
 {
-	uint32_t i, pkt_len, num_tx;
+	uint32_t i, pkt_len, num_tx, tp_status;
 	uint32_t first_frame_num, frame_num, next_frame_num, frame_count;
 	int ret;
 	uint8_t *buf;
@@ -323,9 +323,10 @@ static inline int pkt_mmap_v2_tx(int sock, struct ring *ring,
 
 	for (i = 0; i < num; i++) {
 		tp_hdr[i] = next_ptr;
+		tp_status = tp_hdr[i]->tp_status & 0x7;
 
-		if (tp_hdr[i]->tp_status != TP_STATUS_AVAILABLE) {
-			if (tp_hdr[i]->tp_status == TP_STATUS_WRONG_FORMAT) {
+		if (tp_status != TP_STATUS_AVAILABLE) {
+			if (tp_status == TP_STATUS_WRONG_FORMAT) {
 				ODP_ERR("Socket mmap: wrong format\n");
 				return -1;
 			}
@@ -359,7 +360,7 @@ static inline int pkt_mmap_v2_tx(int sock, struct ring *ring,
 	ring->frame_num = frame_num;
 
 	if (odp_unlikely(ret != total_len)) {
-		uint32_t tp_status, frame_sum;
+		uint32_t frame_sum;
 
 		/* Returns -1 when nothing is sent (send() would block) */
 		if (ret < 0 && errno != EWOULDBLOCK) {
@@ -372,7 +373,7 @@ static inline int pkt_mmap_v2_tx(int sock, struct ring *ring,
 		 * (TP_STATUS_AVAILABLE or TP_STATUS_SENDING). Assuming that
 		 * the rest will not be sent. */
 		for (i = 0; i < num; i++) {
-			tp_status = tp_hdr[i]->tp_status;
+			tp_status = tp_hdr[i]->tp_status & 0x7;
 
 			if (tp_status == TP_STATUS_SEND_REQUEST)
 				break;
