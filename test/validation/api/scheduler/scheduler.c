@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -10,6 +10,7 @@
 #include <odp/helper/odph_api.h>
 
 #define MAX_ORDERED_LOCKS       2
+#define MAX_POOL_SIZE		(1024 * 1024)
 #define MSG_POOL_SIZE		(64 * 1024)
 #define QUEUES_PER_PRIO		16
 #define BUF_SIZE		64
@@ -64,6 +65,7 @@ typedef struct {
 	int buf_count;
 	int buf_count_cpy;
 	int queues_per_prio;
+	uint32_t num_queues;
 	odp_pool_t pool;
 	odp_pool_t queue_ctx_pool;
 	uint32_t max_sched_queue_size;
@@ -491,6 +493,138 @@ static void scheduler_test_queue_size(void)
 	}
 
 	CU_ASSERT_FATAL(odp_pool_destroy(pool) == 0);
+}
+
+static void scheduler_test_full_queues(void)
+{
+	odp_schedule_config_t default_config;
+	odp_pool_t pool;
+	odp_pool_capability_t pool_capa;
+	odp_pool_param_t pool_param;
+	odp_schedule_capability_t sched_capa;
+	odp_queue_param_t queue_param;
+	odp_event_t ev;
+	uint32_t i, j, k, num_bufs, events_per_queue, num_queues;
+	uint32_t queue_size = 2048;
+	int ret;
+	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_PARALLEL,
+				      ODP_SCHED_SYNC_ATOMIC,
+				      ODP_SCHED_SYNC_ORDERED};
+
+	CU_ASSERT_FATAL(!odp_schedule_capability(&sched_capa));
+	if (sched_capa.max_queue_size && queue_size > sched_capa.max_queue_size)
+		queue_size = sched_capa.max_queue_size;
+
+	/* Scheduler has been already configured. Use default config as queue
+	 * size and queue count. */
+	odp_schedule_config_init(&default_config);
+	if (default_config.queue_size)
+		queue_size = default_config.queue_size;
+	num_queues = default_config.num_queues;
+
+	/* Queues reserved by create_queues() in suite init */
+	CU_ASSERT_FATAL(globals->num_queues < num_queues);
+	num_queues -= globals->num_queues;
+
+	odp_queue_t queue[num_queues];
+
+	CU_ASSERT_FATAL(!odp_pool_capability(&pool_capa));
+	num_bufs = num_queues * queue_size;
+	if (pool_capa.buf.max_num && num_bufs > pool_capa.buf.max_num)
+		num_bufs = pool_capa.buf.max_num;
+	if (num_bufs > MAX_POOL_SIZE)
+		num_bufs = MAX_POOL_SIZE;
+	events_per_queue = num_bufs / num_queues;
+
+	/* Make sure there is at least one event for each queue */
+	while (events_per_queue == 0) {
+		num_queues--;
+		events_per_queue = num_bufs / num_queues;
+	}
+
+	odp_pool_param_init(&pool_param);
+	pool_param.buf.size  = 100;
+	pool_param.buf.align = 0;
+	pool_param.buf.num   = num_bufs;
+	pool_param.type      = ODP_POOL_BUFFER;
+
+	pool = odp_pool_create("test_full_queues", &pool_param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	/* Ensure that scheduler is empty */
+	drain_queues();
+
+	/* Run test for each scheduler synchronization type */
+	for (i = 0; i < 3; i++) {
+		uint64_t wait_time;
+		uint32_t num_enq = 0;
+		uint32_t num = 0;
+
+		/* Create and fill all queues */
+		for (j = 0; j < num_queues; j++) {
+			odp_queue_param_init(&queue_param);
+			queue_param.type = ODP_QUEUE_TYPE_SCHED;
+			queue_param.sched.prio  = odp_schedule_default_prio();
+			queue_param.sched.sync  = sync[i];
+			queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+			queue_param.size = events_per_queue;
+
+			queue[j] = odp_queue_create("test_full_queues",
+						    &queue_param);
+			CU_ASSERT_FATAL(queue[j] != ODP_QUEUE_INVALID);
+
+			for (k = 0; k < events_per_queue; k++) {
+				odp_buffer_t buf = odp_buffer_alloc(pool);
+
+				CU_ASSERT(buf != ODP_BUFFER_INVALID);
+				if (buf == ODP_BUFFER_INVALID)
+					continue;
+
+				ev = odp_buffer_to_event(buf);
+				ret = odp_queue_enq(queue[j], ev);
+				CU_ASSERT(ret == 0);
+				if (ret) {
+					odp_event_free(ev);
+					continue;
+				}
+				num_enq++;
+			}
+		}
+		/* Run normal scheduling rounds */
+		wait_time = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS);
+		for (j = 0; j < num_bufs; j++) {
+			odp_queue_t src_queue;
+
+			ev = odp_schedule(&src_queue, wait_time);
+			if (ev == ODP_EVENT_INVALID)
+				continue;
+
+			ret = odp_queue_enq(src_queue, ev);
+			CU_ASSERT(ret == 0);
+			if (ret) {
+				odp_event_free(ev);
+				num_enq--;
+			}
+		}
+		/* Clean-up */
+		wait_time = odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS);
+		for (j = 0; j < num_enq; j++) {
+			ev = odp_schedule(NULL, wait_time);
+
+			if (ev == ODP_EVENT_INVALID)
+				continue;
+
+			odp_event_free(ev);
+			num++;
+		}
+
+		CU_ASSERT(num == num_enq);
+		CU_ASSERT(drain_queues() == 0);
+
+		for (j = 0; j < num_queues; j++)
+			CU_ASSERT_FATAL(odp_queue_destroy(queue[j]) == 0);
+	}
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
 static void scheduler_test_order_ignore(void)
@@ -2197,6 +2331,7 @@ static int create_queues(test_globals_t *globals)
 			}
 		}
 	}
+	globals->num_queues = prios * queues_per_prio * 4;
 
 	return 0;
 }
@@ -2507,6 +2642,7 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_queue_destroy),
 	ODP_TEST_INFO(scheduler_test_wait),
 	ODP_TEST_INFO(scheduler_test_queue_size),
+	ODP_TEST_INFO(scheduler_test_full_queues),
 	ODP_TEST_INFO(scheduler_test_order_ignore),
 	ODP_TEST_INFO(scheduler_test_groups),
 	ODP_TEST_INFO(scheduler_test_pause_resume),
