@@ -67,24 +67,21 @@ int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 	return 0;
 }
 
-/* This should be enough for all ciphers and auths. Currently used maximum is 3
- * capabilities */
-#define MAX_CAPS 10
-
 int odp_ipsec_cipher_capability(odp_cipher_alg_t cipher,
 				odp_ipsec_cipher_capability_t capa[], int num)
 {
-	odp_crypto_cipher_capability_t crypto_capa[MAX_CAPS];
 	uint32_t req_iv_len;
-	int rc, i, out;
+	int rc, i, out, max_capa;
 
-	rc = odp_crypto_cipher_capability(cipher, crypto_capa, MAX_CAPS);
+	max_capa = odp_crypto_cipher_capability(cipher, NULL, 0);
+	if (max_capa <= 0)
+		return max_capa;
+
+	odp_crypto_cipher_capability_t crypto_capa[max_capa];
+
+	rc = odp_crypto_cipher_capability(cipher, crypto_capa, max_capa);
 	if (rc <= 0)
 		return rc;
-
-	ODP_ASSERT(rc <= MAX_CAPS);
-	if (rc > MAX_CAPS)
-		rc = MAX_CAPS;
 
 	req_iv_len = _odp_ipsec_cipher_iv_len(cipher);
 	for (i = 0, out = 0; i < rc; i++) {
@@ -102,17 +99,18 @@ int odp_ipsec_cipher_capability(odp_cipher_alg_t cipher,
 int odp_ipsec_auth_capability(odp_auth_alg_t auth,
 			      odp_ipsec_auth_capability_t capa[], int num)
 {
-	odp_crypto_auth_capability_t crypto_capa[MAX_CAPS];
 	uint32_t req_digest_len;
-	int rc, i, out;
+	int rc, i, out, max_capa;
 
-	rc = odp_crypto_auth_capability(auth, crypto_capa, MAX_CAPS);
+	max_capa = odp_crypto_auth_capability(auth, NULL, 0);
+	if (max_capa <= 0)
+		return max_capa;
+
+	odp_crypto_auth_capability_t crypto_capa[max_capa];
+
+	rc = odp_crypto_auth_capability(auth, crypto_capa, max_capa);
 	if (rc <= 0)
 		return rc;
-
-	ODP_ASSERT(rc <= MAX_CAPS);
-	if (rc > MAX_CAPS)
-		rc = MAX_CAPS;
 
 	req_digest_len = _odp_ipsec_auth_digest_len(auth);
 	for (i = 0, out = 0; i < rc; i++) {
