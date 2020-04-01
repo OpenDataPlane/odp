@@ -59,6 +59,7 @@ env:
         - CHECK=0 CONF="--enable-lto"
         - CHECK=0 CONF="--enable-lto --disable-abi-compat"
         - CHECK=0 ARCH=arm64
+        - CHECK=0 ARCH=arm64 OS=ubuntu_20.04
         - CHECK=0 ARCH=armhf
         - CHECK=0 ARCH=ppc64el
         - CHECK=0 ARCH=i386
