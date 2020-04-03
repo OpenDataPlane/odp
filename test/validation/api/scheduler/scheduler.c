@@ -685,7 +685,7 @@ static void scheduler_test_groups(void)
 	CU_ASSERT(lookup == ODP_SCHED_GROUP_INVALID);
 
 	/* Now create it and verify we can find it */
-	mygrp2 = odp_schedule_group_create("Test Group 2", &zeromask);
+	mygrp2 = odp_schedule_group_create("Test Group 2", &mymask);
 	CU_ASSERT_FATAL(mygrp2 != ODP_SCHED_GROUP_INVALID);
 
 	lookup = odp_schedule_group_lookup("Test Group 2");
@@ -694,15 +694,7 @@ static void scheduler_test_groups(void)
 	/* Destroy group with no name */
 	CU_ASSERT_FATAL(odp_schedule_group_destroy(null_grp) == 0);
 
-	/* Verify we're not part of it */
-	rc = odp_schedule_group_thrmask(mygrp2, &testmask);
-	CU_ASSERT(rc == 0);
-	CU_ASSERT(!odp_thrmask_isset(&testmask, thr_id));
-
-	/* Now join the group and verify we're part of it */
-	rc = odp_schedule_group_join(mygrp2, &mymask);
-	CU_ASSERT(rc == 0);
-
+	/* Verify we're part of group 2 */
 	rc = odp_schedule_group_thrmask(mygrp2, &testmask);
 	CU_ASSERT(rc == 0);
 	CU_ASSERT(odp_thrmask_isset(&testmask, thr_id));
@@ -710,6 +702,11 @@ static void scheduler_test_groups(void)
 	/* Leave group 2 */
 	rc = odp_schedule_group_leave(mygrp2, &mymask);
 	CU_ASSERT(rc == 0);
+
+	/* Verify we're not part of group 2 anymore */
+	rc = odp_schedule_group_thrmask(mygrp2, &testmask);
+	CU_ASSERT(rc == 0);
+	CU_ASSERT(!odp_thrmask_isset(&testmask, thr_id));
 
 	/* Now verify scheduler adherence to groups */
 	odp_pool_param_init(&params);
