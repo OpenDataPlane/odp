@@ -486,7 +486,7 @@ static bool shm_is_from_huge_pages(odp_shm_t shm)
 	return (info.page_size >= huge_page_size);
 }
 
-static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
+static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 			      uint32_t shmflags)
 {
 	pool_t *pool;
@@ -724,7 +724,7 @@ error:
 	return ODP_POOL_INVALID;
 }
 
-static int check_params(odp_pool_param_t *params)
+static int check_params(const odp_pool_param_t *params)
 {
 	odp_pool_capability_t capa;
 	odp_bool_t cache_warning = false;
@@ -829,7 +829,7 @@ static int check_params(odp_pool_param_t *params)
 	return 0;
 }
 
-odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
+odp_pool_t odp_pool_create(const char *name, const odp_pool_param_t *params)
 {
 	uint32_t shm_flags = 0;
 
