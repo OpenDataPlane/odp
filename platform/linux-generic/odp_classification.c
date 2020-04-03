@@ -204,7 +204,7 @@ static inline void _cls_queue_unwind(uint32_t tbl_index, uint32_t j)
 		odp_queue_destroy(queue_grp_tbl->s.queue[tbl_index + --j]);
 }
 
-odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
+odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param)
 {
 	uint32_t i, j;
 	odp_queue_t queue;

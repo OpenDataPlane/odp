@@ -2073,7 +2073,7 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 }
 
 int
-odp_crypto_session_create(odp_crypto_session_param_t *param,
+odp_crypto_session_create(const odp_crypto_session_param_t *param,
 			  odp_crypto_session_t *session_out,
 			  odp_crypto_ses_create_err_t *status)
 {

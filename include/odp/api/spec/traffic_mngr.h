@@ -804,7 +804,7 @@ void odp_tm_shaper_params_init(odp_tm_shaper_params_t *params);
  *                profile object.
  */
 odp_tm_shaper_t odp_tm_shaper_create(const char *name,
-				     odp_tm_shaper_params_t *params);
+				     const odp_tm_shaper_params_t *params);
 
 /** Destroy shaper profile object
  *
@@ -845,7 +845,7 @@ int odp_tm_shaper_params_read(odp_tm_shaper_t shaper_profile,
  * @return                Returns < 0 upon failure or 0 upon success.
  */
 int odp_tm_shaper_params_update(odp_tm_shaper_t shaper_profile,
-				odp_tm_shaper_params_t *params);
+				const odp_tm_shaper_params_t *params);
 
 /** odp_tm_shaper_lookup() can be used to find the shaper profile object
  * created with the specified name.
@@ -914,7 +914,7 @@ void odp_tm_sched_params_init(odp_tm_sched_params_t *params);
  *                object.
  */
 odp_tm_sched_t odp_tm_sched_create(const char *name,
-				   odp_tm_sched_params_t *params);
+				   const odp_tm_sched_params_t *params);
 
 /** Destroy scheduler profile object
  *
@@ -955,7 +955,7 @@ int odp_tm_sched_params_read(odp_tm_sched_t sched_profile,
  * @return                Returns < 0 upon failure or 0 upon success.
  */
 int odp_tm_sched_params_update(odp_tm_sched_t sched_profile,
-			       odp_tm_sched_params_t *params);
+			       const odp_tm_sched_params_t *params);
 
 /** odp_tm_sched_lookup() can be used to find the scheduler profile object
  * created with the specified name.
@@ -1004,7 +1004,8 @@ void odp_tm_threshold_params_init(odp_tm_threshold_params_t *params);
  *                profile object.
  */
 odp_tm_threshold_t odp_tm_threshold_create(const char *name,
-					   odp_tm_threshold_params_t *params);
+					   const odp_tm_threshold_params_t
+					   *params);
 
 /** Destroy a queue threshold profile object
  *
@@ -1046,7 +1047,7 @@ int odp_tm_thresholds_params_read(odp_tm_threshold_t threshold_profile,
  * @return                   Returns < 0 upon failure or 0 upon success.
  */
 int odp_tm_thresholds_params_update(odp_tm_threshold_t threshold_profile,
-				    odp_tm_threshold_params_t *params);
+				    const odp_tm_threshold_params_t *params);
 
 /** odp_tm_thresholds_lookup() can be used to find the queue thresholds
  * profile object created with the specified name.
@@ -1140,7 +1141,7 @@ void odp_tm_wred_params_init(odp_tm_wred_params_t *params);
  *                object.
  */
 odp_tm_wred_t odp_tm_wred_create(const char *name,
-				 odp_tm_wred_params_t *params);
+				 const odp_tm_wred_params_t *params);
 
 /** Destroy WRED profile object
  *
@@ -1181,7 +1182,7 @@ int odp_tm_wred_params_read(odp_tm_wred_t wred_profile,
  * @return              Returns < 0 upon failure or 0 upon success.
  */
 int odp_tm_wred_params_update(odp_tm_wred_t wred_profile,
-			      odp_tm_wred_params_t *params);
+			      const odp_tm_wred_params_t *params);
 
 /** odp_tm_wred_lookup() can be used to find the WRED profile object created
  * with the specified name.
@@ -1259,9 +1260,8 @@ void odp_tm_node_params_init(odp_tm_node_params_t *params);
  * @return        Returns ODP_TM_INVALID upon failure, otherwise returns
  *                a valid odp_tm_node_t handle if successful.
  */
-odp_tm_node_t odp_tm_node_create(odp_tm_t              odp_tm,
-				 const char           *name,
-				 odp_tm_node_params_t *params);
+odp_tm_node_t odp_tm_node_create(odp_tm_t odp_tm, const char *name,
+				 const odp_tm_node_params_t *params);
 
 /** Destroy  a tm_node object.
  *
@@ -1426,7 +1426,7 @@ void odp_tm_queue_params_init(odp_tm_queue_params_t *params);
  *                odp_tm_queue_t handle.
  */
 odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
-				   odp_tm_queue_params_t *params);
+				   const odp_tm_queue_params_t *params);
 
 /** Destroy an tm_queue object. The odp_tm_queue_destroy frees the resources
  * used by a tm_queue_t object.  The tm_queue to be destroyed MUST not be

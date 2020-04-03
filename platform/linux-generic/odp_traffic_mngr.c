@@ -604,7 +604,7 @@ static uint64_t tm_max_time_delta(uint64_t rate)
 		return (1ULL << (26 + 30)) / rate;
 }
 
-static void tm_shaper_params_cvt_to(odp_tm_shaper_params_t *odp_shaper_params,
+static void tm_shaper_params_cvt_to(const odp_tm_shaper_params_t *shaper_params,
 				    tm_shaper_params_t *tm_shaper_params)
 {
 	uint64_t commit_rate, peak_rate, max_commit_time_delta, highest_rate;
@@ -612,8 +612,8 @@ static void tm_shaper_params_cvt_to(odp_tm_shaper_params_t *odp_shaper_params,
 	uint32_t min_time_delta;
 	int64_t  commit_burst, peak_burst;
 
-	commit_rate = tm_bps_to_rate(odp_shaper_params->commit_bps);
-	if ((odp_shaper_params->commit_bps == 0) || (commit_rate == 0)) {
+	commit_rate = tm_bps_to_rate(shaper_params->commit_bps);
+	if ((shaper_params->commit_bps == 0) || (commit_rate == 0)) {
 		tm_shaper_params->max_commit_time_delta = 0;
 		tm_shaper_params->max_peak_time_delta   = 0;
 		tm_shaper_params->commit_rate           = 0;
@@ -628,17 +628,17 @@ static void tm_shaper_params_cvt_to(odp_tm_shaper_params_t *odp_shaper_params,
 	}
 
 	max_commit_time_delta = tm_max_time_delta(commit_rate);
-	commit_burst = (int64_t)odp_shaper_params->commit_burst;
+	commit_burst = (int64_t)shaper_params->commit_burst;
 
-	peak_rate = tm_bps_to_rate(odp_shaper_params->peak_bps);
-	if ((odp_shaper_params->peak_bps == 0) || (peak_rate == 0)) {
+	peak_rate = tm_bps_to_rate(shaper_params->peak_bps);
+	if ((shaper_params->peak_bps == 0) || (peak_rate == 0)) {
 		peak_rate = 0;
 		max_peak_time_delta = 0;
 		peak_burst = 0;
 		min_time_delta = (uint32_t)((1 << 26) / commit_rate);
 	} else {
 		max_peak_time_delta = tm_max_time_delta(peak_rate);
-		peak_burst = (int64_t)odp_shaper_params->peak_burst;
+		peak_burst = (int64_t)shaper_params->peak_burst;
 		highest_rate = MAX(commit_rate, peak_rate);
 		min_time_delta = (uint32_t)((1 << 26) / highest_rate);
 	}
@@ -651,8 +651,8 @@ static void tm_shaper_params_cvt_to(odp_tm_shaper_params_t *odp_shaper_params,
 	tm_shaper_params->max_commit = commit_burst << (26 - 3);
 	tm_shaper_params->max_peak = peak_burst << (26 - 3);
 	tm_shaper_params->min_time_delta = min_time_delta;
-	tm_shaper_params->len_adjust = odp_shaper_params->shaper_len_adjust;
-	tm_shaper_params->dual_rate = odp_shaper_params->dual_rate;
+	tm_shaper_params->len_adjust = shaper_params->shaper_len_adjust;
+	tm_shaper_params->dual_rate = shaper_params->dual_rate;
 	tm_shaper_params->enabled = 1;
 }
 
@@ -3212,7 +3212,7 @@ void odp_tm_shaper_params_init(odp_tm_shaper_params_t *params)
 }
 
 odp_tm_shaper_t odp_tm_shaper_create(const char *name,
-				     odp_tm_shaper_params_t *params)
+				     const odp_tm_shaper_params_t *params)
 {
 	tm_shaper_params_t *profile_obj;
 	odp_tm_shaper_t     shaper_handle;
@@ -3264,7 +3264,7 @@ int odp_tm_shaper_params_read(odp_tm_shaper_t shaper_profile,
 }
 
 int odp_tm_shaper_params_update(odp_tm_shaper_t shaper_profile,
-				odp_tm_shaper_params_t *params)
+				const odp_tm_shaper_params_t *params)
 {
 	tm_shaper_params_t *profile_obj;
 
@@ -3301,15 +3301,15 @@ void odp_tm_sched_params_init(odp_tm_sched_params_t *params)
 	memset(params, 0, sizeof(odp_tm_sched_params_t));
 }
 
-static void tm_sched_params_cvt_to(odp_tm_sched_params_t *odp_sched_params,
+static void tm_sched_params_cvt_to(const odp_tm_sched_params_t *sched_params,
 				   tm_sched_params_t     *tm_sched_params)
 {
 	odp_tm_sched_mode_t sched_mode;
 	uint32_t            priority, weight, inv_weight;
 
 	for (priority = 0; priority < ODP_TM_MAX_PRIORITIES; priority++) {
-		sched_mode = odp_sched_params->sched_modes[priority];
-		weight     = odp_sched_params->sched_weights[priority];
+		sched_mode = sched_params->sched_modes[priority];
+		weight     = sched_params->sched_weights[priority];
 		if (weight == 0)
 			inv_weight = 0;
 		else
@@ -3337,7 +3337,7 @@ static void tm_sched_params_cvt_from(tm_sched_params_t     *tm_sched_params,
 }
 
 odp_tm_sched_t odp_tm_sched_create(const char *name,
-				   odp_tm_sched_params_t *params)
+				   const odp_tm_sched_params_t *params)
 {
 	tm_sched_params_t *profile_obj;
 	_odp_int_name_t    name_tbl_id;
@@ -3389,7 +3389,7 @@ int odp_tm_sched_params_read(odp_tm_sched_t sched_profile,
 }
 
 int odp_tm_sched_params_update(odp_tm_sched_t sched_profile,
-			       odp_tm_sched_params_t *params)
+			       const odp_tm_sched_params_t *params)
 {
 	tm_sched_params_t *profile_obj;
 
@@ -3427,7 +3427,8 @@ void odp_tm_threshold_params_init(odp_tm_threshold_params_t *params)
 }
 
 odp_tm_threshold_t odp_tm_threshold_create(const char *name,
-					   odp_tm_threshold_params_t *params)
+					   const odp_tm_threshold_params_t
+					   *params)
 {
 	tm_queue_thresholds_t *profile_obj;
 	odp_tm_threshold_t     threshold_handle;
@@ -3486,7 +3487,7 @@ int odp_tm_thresholds_params_read(odp_tm_threshold_t threshold_profile,
 }
 
 int odp_tm_thresholds_params_update(odp_tm_threshold_t threshold_profile,
-				    odp_tm_threshold_params_t *params)
+				    const odp_tm_threshold_params_t *params)
 {
 	tm_queue_thresholds_t *profile_obj;
 
@@ -3530,15 +3531,15 @@ void odp_tm_wred_params_init(odp_tm_wred_params_t *params)
 	memset(params, 0, sizeof(odp_tm_wred_params_t));
 }
 
-static void tm_wred_params_cvt_to(odp_tm_wred_params_t *odp_tm_wred_params,
+static void tm_wred_params_cvt_to(const odp_tm_wred_params_t *params,
 				  tm_wred_params_t     *wred_params)
 {
-	wred_params->min_threshold     = odp_tm_wred_params->min_threshold;
-	wred_params->med_threshold     = odp_tm_wred_params->med_threshold;
-	wred_params->med_drop_prob     = odp_tm_wred_params->med_drop_prob;
-	wred_params->max_drop_prob     = odp_tm_wred_params->max_drop_prob;
-	wred_params->enable_wred       = odp_tm_wred_params->enable_wred;
-	wred_params->use_byte_fullness = odp_tm_wred_params->use_byte_fullness;
+	wred_params->min_threshold     = params->min_threshold;
+	wred_params->med_threshold     = params->med_threshold;
+	wred_params->med_drop_prob     = params->med_drop_prob;
+	wred_params->max_drop_prob     = params->max_drop_prob;
+	wred_params->enable_wred       = params->enable_wred;
+	wred_params->use_byte_fullness = params->use_byte_fullness;
 }
 
 static void tm_wred_params_cvt_from(tm_wred_params_t     *wred_params,
@@ -3552,7 +3553,8 @@ static void tm_wred_params_cvt_from(tm_wred_params_t     *wred_params,
 	odp_tm_wred_params->use_byte_fullness = wred_params->use_byte_fullness;
 }
 
-odp_tm_wred_t odp_tm_wred_create(const char *name, odp_tm_wred_params_t *params)
+odp_tm_wred_t odp_tm_wred_create(const char *name,
+				 const odp_tm_wred_params_t *params)
 {
 	tm_wred_params_t *profile_obj;
 	odp_tm_wred_t     wred_handle;
@@ -3605,7 +3607,7 @@ int odp_tm_wred_params_read(odp_tm_wred_t wred_profile,
 }
 
 int odp_tm_wred_params_update(odp_tm_wred_t wred_profile,
-			      odp_tm_wred_params_t *params)
+			      const odp_tm_wred_params_t *params)
 {
 	tm_wred_params_t *wred_params;
 
@@ -3642,9 +3644,8 @@ void odp_tm_node_params_init(odp_tm_node_params_t *params)
 	memset(params, 0, sizeof(odp_tm_node_params_t));
 }
 
-odp_tm_node_t odp_tm_node_create(odp_tm_t             odp_tm,
-				 const char           *name,
-				 odp_tm_node_params_t *params)
+odp_tm_node_t odp_tm_node_create(odp_tm_t odp_tm, const char *name,
+				 const odp_tm_node_params_t *params)
 {
 	odp_tm_level_requirements_t *requirements;
 	_odp_int_sorted_list_t sorted_list;
@@ -3938,7 +3939,7 @@ void odp_tm_queue_params_init(odp_tm_queue_params_t *params)
 }
 
 odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
-				   odp_tm_queue_params_t *params)
+				   const odp_tm_queue_params_t *params)
 {
 	_odp_int_pkt_queue_t _odp_int_pkt_queue;
 	tm_queue_obj_t *queue_obj;

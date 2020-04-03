@@ -320,7 +320,8 @@ int odp_cls_capability(odp_cls_capability_t *capability);
  * and pool associated with a class of service and when any one of these values
  * are configured as INVALID then the packets assigned to the CoS gets dropped.
  */
-odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param);
+odp_cos_t odp_cls_cos_create(const char *name,
+			     const odp_cls_cos_param_t *param);
 
 /**
  * Queue hash result

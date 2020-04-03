@@ -335,13 +335,12 @@ typedef struct odp_pool_param_t {
  *
  * @param name     Name of the pool or NULL. Maximum string length is
  *                 ODP_POOL_NAME_LEN.
- * @param params   Pool parameters.
+ * @param param    Pool parameters.
  *
  * @return Handle of the created pool
  * @retval ODP_POOL_INVALID  Pool could not be created
  */
-
-odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params);
+odp_pool_t odp_pool_create(const char *name, const odp_pool_param_t *param);
 
 /**
  * Destroy a pool previously created by odp_pool_create()
