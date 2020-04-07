@@ -331,7 +331,8 @@ typedef struct odp_pool_param_t {
  *
  * This routine is used to create a pool. The use of pool name is optional.
  * Unique names are not required. However, odp_pool_lookup() returns only a
- * single matching pool.
+ * single matching pool. Use odp_pool_param_init() to initialize parameters
+ * into their default values.
  *
  * @param name     Name of the pool or NULL. Maximum string length is
  *                 ODP_POOL_NAME_LEN.

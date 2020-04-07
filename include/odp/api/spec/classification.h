@@ -308,6 +308,8 @@ int odp_cls_capability(odp_cls_capability_t *capability);
  * Create a class-of-service
  *
  * The use of class-of-service name is optional. Unique names are not required.
+ * Use odp_cls_cos_param_init() to initialize parameters into their default
+ * values.
  *
  * @param name         Name of the class-of-service or NULL. Maximum string
  *                     length is ODP_COS_NAME_LEN.
@@ -613,6 +615,8 @@ typedef struct odp_pmr_param_t {
 void odp_cls_pmr_param_init(odp_pmr_param_t *param);
 
 /**
+ * Create a packet matching rule
+ *
  * Create a packet match rule between source and destination class of service.
  * This packet matching rule is applied on all packets arriving at the source
  * class of service and packets satisfying this PMR are sent to the destination
@@ -624,6 +628,9 @@ void odp_cls_pmr_param_init(odp_pmr_param_t *param);
  * of value match rules, and the application should take care
  * of inspecting the return value when installing such rules, and perform
  * appropriate fallback action.
+ *
+ * Use odp_cls_pmr_param_init() to initialize parameters into their default
+ * values.
  *
  * @param terms        Array of odp_pmr_param_t entries, one entry per term
  *                     desired.
