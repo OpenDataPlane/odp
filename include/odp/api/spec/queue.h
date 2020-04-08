@@ -130,10 +130,16 @@ int odp_queue_context_set(odp_queue_t queue, void *context, uint32_t len);
 void *odp_queue_context(odp_queue_t queue);
 
 /**
- * Queue enqueue
+ * Enqueue an event to a queue
  *
- * Enqueue the 'ev' on 'queue'. On failure the event is not consumed, the caller
- * has to take care of it.
+ * Enqueues the event into the queue. The caller loses ownership of the event on
+ * a successful call. The event is not enqueued on failure, and the caller
+ * maintains ownership of it.
+ *
+ * When successful, this function acts as a release memory barrier between
+ * the sender (the calling thread) and the receiver of the event. The receiver
+ * sees correctly the memory stores done by the sender before it enqueued
+ * the event.
  *
  * @param queue   Queue handle
  * @param ev      Event handle
@@ -146,14 +152,15 @@ int odp_queue_enq(odp_queue_t queue, odp_event_t ev);
 /**
  * Enqueue multiple events to a queue
  *
- * Enqueue the events from 'events[]' on 'queue'. A successful call returns the
- * actual number of events enqueued. If return value is less than 'num', the
- * remaining events at the end of events[] are not consumed, and the caller
- * has to take care of them.
+ * Like odp_queue_enq(), but enqueues multiple events into the queue. Events are
+ * stored into the queue in the order they are in the array. A successful
+ * call returns the actual number of events enqueued. If return value is less
+ * than 'num', the remaining events at the end of events[] are not enqueued,
+ * and the caller maintains ownership of those.
  *
  * @param queue   Queue handle
  * @param events  Array of event handles
- * @param num     Number of event handles to enqueue
+ * @param num     Number of events to enqueue
  *
  * @return Number of events actually enqueued (0 ... num)
  * @retval <0 on failure
@@ -161,27 +168,34 @@ int odp_queue_enq(odp_queue_t queue, odp_event_t ev);
 int odp_queue_enq_multi(odp_queue_t queue, const odp_event_t events[], int num);
 
 /**
- * Queue dequeue
+ * Dequeue an event from a queue
  *
- * Dequeues next event from head of the queue. Cannot be used for
- * ODP_QUEUE_TYPE_SCHED type queues (use odp_schedule() instead).
+ * Returns the next event from head of the queue, or ODP_EVENT_INVALID when the
+ * queue is empty. Cannot be used for ODP_QUEUE_TYPE_SCHED type queues
+ * (use odp_schedule() instead).
+ *
+ * When successful, this function acts as an acquire memory barrier between
+ * the sender and the receiver (the calling thread) of the event. The receiver
+ * sees correctly the memory stores done by the sender before it enqueued
+ * the event.
  *
  * @param queue   Queue handle
  *
  * @return Event handle
- * @retval ODP_EVENT_INVALID on failure (e.g. queue empty)
+ * @retval ODP_EVENT_INVALID on failure, or when the queue is empty
  */
 odp_event_t odp_queue_deq(odp_queue_t queue);
 
 /**
  * Dequeue multiple events from a queue
  *
- * Dequeues multiple events from head of the queue. Cannot be used for
- * ODP_QUEUE_TYPE_SCHED type queues (use odp_schedule() instead).
+ * Like odp_queue_deq(), but dequeues multiple events from head of the queue.
+ * Cannot be used for ODP_QUEUE_TYPE_SCHED type queues (use odp_schedule_multi()
+ * instead). A successful call returns the actual number of events dequeued.
  *
- * @param queue   Queue handle
+ * @param queue        Queue handle
  * @param[out] events  Array of event handles for output
- * @param num     Maximum number of events to dequeue
+ * @param num          Maximum number of events to dequeue
 
  * @return Number of events actually dequeued (0 ... num)
  * @retval <0 on failure
