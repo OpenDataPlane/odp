@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -18,6 +19,7 @@
 #include <odp_global_data.h>
 #include <odp_sysinfo_internal.h>
 #include <odp_init_internal.h>
+#include <odp_libconfig_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/api/align.h>
 #include <odp/api/cpu.h>
@@ -331,6 +333,28 @@ static int system_hp(hugepage_info_t *hugeinfo)
 	return 0;
 }
 
+static int read_config_file(void)
+{
+	const char *str;
+	int val = 0;
+
+	str = "system.cpu_mhz";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+	odp_global_ro.system_info.default_cpu_hz = (uint64_t)val * 1000000;
+
+	str = "system.cpu_mhz_max";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+	odp_global_ro.system_info.default_cpu_hz_max = (uint64_t)val * 1000000;
+
+	return 0;
+}
+
 /*
  * System info initialisation
  */
@@ -342,6 +366,10 @@ int _odp_system_info_init(void)
 	memset(&odp_global_ro.system_info, 0, sizeof(system_info_t));
 
 	odp_global_ro.system_info.page_size = ODP_PAGE_SIZE;
+
+	/* Read default CPU Hz values from config file */
+	if (read_config_file())
+		return -1;
 
 	/* By default, read max frequency from a cpufreq file */
 	for (i = 0; i < CONFIG_NUM_CPU; i++) {

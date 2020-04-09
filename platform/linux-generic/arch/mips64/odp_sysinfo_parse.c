@@ -4,6 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <odp_global_data.h>
 #include <odp_sysinfo_internal.h>
 #include <string.h>
 
@@ -64,5 +65,5 @@ void sys_info_print_arch(void)
 
 uint64_t odp_cpu_arch_hz_current(int id ODP_UNUSED)
 {
-	return 0;
+	return odp_global_ro.system_info.default_cpu_hz;
 }
