@@ -25,6 +25,8 @@ extern "C" {
 
 typedef struct {
 	uint64_t cpu_hz_max[CONFIG_NUM_CPU];
+	uint64_t default_cpu_hz_max;
+	uint64_t default_cpu_hz;
 	uint64_t page_size;
 	int      cache_line_size;
 	int      cpu_count;

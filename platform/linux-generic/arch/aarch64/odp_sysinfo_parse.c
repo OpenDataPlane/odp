@@ -8,6 +8,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <odp/api/hints.h>
+#include <odp_global_data.h>
 #include <odp_sysinfo_internal.h>
 #include <odp_debug_internal.h>
 
@@ -184,10 +186,11 @@ int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 			/* Some CPUs do not support cpufreq, use a dummy
 			 * max freq. */
 			if (sysinfo->cpu_hz_max[id] == 0) {
-				uint64_t hz = DUMMY_MAX_MHZ * 1000000;
+				uint64_t hz = sysinfo->default_cpu_hz_max;
 
-				ODP_PRINT("WARN: cpu[%i] uses dummy max frequency %u MHz\n",
-					  id, DUMMY_MAX_MHZ);
+				ODP_PRINT("WARN: cpu[%i] uses default max "
+					  "frequency of %" PRIu64 " Hz from "
+					  "config file\n", id, hz);
 				sysinfo->cpu_hz_max[id] = hz;
 			}
 
@@ -272,9 +275,7 @@ void sys_info_print_arch(void)
 	printf("\n");
 }
 
-uint64_t odp_cpu_arch_hz_current(int id)
+uint64_t odp_cpu_arch_hz_current(int id ODP_UNUSED)
 {
-	(void)id;
-
-	return 0;
+	return odp_global_ro.system_info.default_cpu_hz;
 }
