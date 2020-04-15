@@ -284,7 +284,8 @@ static void system_test_odp_sys_huge_page_size_all(void)
 static int system_check_odp_cpu_hz(void)
 {
 	if (odp_cpu_hz() == 0) {
-		fprintf(stderr, "odp_cpu_hz is not supported, skipping\n");
+		fprintf(stderr, "odp_cpu_hz() is not supported, skipping "
+			"test\n");
 		return ODP_TEST_INACTIVE;
 	}
 
@@ -314,9 +315,8 @@ static int system_check_odp_cpu_hz_id(void)
 	for (i = 0; i < num; i++) {
 		hz = odp_cpu_hz_id(cpu);
 		if (hz == 0) {
-			fprintf(stderr, "cpu %d does not support"
-				" odp_cpu_hz_id(),"
-				"skip that test\n", cpu);
+			fprintf(stderr, "odp_cpu_hz_id() is not supported by "
+				"CPU %d, skipping test\n", cpu);
 			return ODP_TEST_INACTIVE;
 		}
 		cpu = odp_cpumask_next(&mask, cpu);
@@ -344,12 +344,45 @@ static void system_test_odp_cpu_hz_id(void)
 	}
 }
 
+static int system_check_odp_cpu_hz_max(void)
+{
+	if (odp_cpu_hz_max() == 0) {
+		fprintf(stderr, "odp_cpu_hz_max() is not supported, skipping "
+			"test\n");
+		return ODP_TEST_INACTIVE;
+	}
+	return ODP_TEST_ACTIVE;
+}
+
 static void system_test_odp_cpu_hz_max(void)
 {
-	uint64_t hz;
+	uint64_t hz = odp_cpu_hz_max();
 
-	hz = odp_cpu_hz_max();
-	CU_ASSERT(0 < hz);
+	/* Sanity check value */
+	CU_ASSERT(hz > 1 * KILO_HZ);
+	CU_ASSERT(hz < 20 * GIGA_HZ);
+}
+
+static int system_check_odp_cpu_hz_max_id(void)
+{
+	uint64_t hz;
+	odp_cpumask_t mask;
+	int i, num, cpu;
+
+	num = odp_cpumask_all_available(&mask);
+	cpu = odp_cpumask_first(&mask);
+
+	for (i = 0; i < num; i++) {
+		hz = odp_cpu_hz_max_id(cpu);
+		if (hz == 0) {
+			fprintf(stderr, "odp_cpu_hz_max_id() is not supported "
+			"by CPU %d, skipping test\n", cpu);
+			return ODP_TEST_INACTIVE;
+		}
+		cpu = odp_cpumask_next(&mask, cpu);
+	}
+
+	return ODP_TEST_ACTIVE;
 }
 
 static void system_test_odp_cpu_hz_max_id(void)
@@ -363,7 +396,9 @@ static void system_test_odp_cpu_hz_max_id(void)
 
 	for (i = 0; i < num; i++) {
 		hz = odp_cpu_hz_max_id(cpu);
-		CU_ASSERT(0 < hz);
+		/* Sanity check value */
+		CU_ASSERT(hz > 1 * KILO_HZ);
+		CU_ASSERT(hz < 20 * GIGA_HZ);
 		cpu = odp_cpumask_next(&mask, cpu);
 	}
 }
@@ -390,8 +425,10 @@ odp_testinfo_t system_suite[] = {
 				  system_check_odp_cpu_hz),
 	ODP_TEST_INFO_CONDITIONAL(system_test_odp_cpu_hz_id,
 				  system_check_odp_cpu_hz_id),
-	ODP_TEST_INFO(system_test_odp_cpu_hz_max),
-	ODP_TEST_INFO(system_test_odp_cpu_hz_max_id),
+	ODP_TEST_INFO_CONDITIONAL(system_test_odp_cpu_hz_max,
+				  system_check_odp_cpu_hz_max),
+	ODP_TEST_INFO_CONDITIONAL(system_test_odp_cpu_hz_max_id,
+				  system_check_odp_cpu_hz_max_id),
 	ODP_TEST_INFO(system_test_odp_cpu_cycles),
 	ODP_TEST_INFO(system_test_odp_cpu_cycles_max),
 	ODP_TEST_INFO(system_test_odp_cpu_cycles_resolution),
