@@ -2,7 +2,7 @@ include $(top_srcdir)/Makefile.inc
 
 COMMON_DIR = $(top_builddir)/test/common
 
-LIBODP = $(LIB)/libodphelper.la $(LIB)/libodp-linux.la
+LIBODP = $(LIB)/libodphelper.la $(LIB)/lib$(ODP_LIB_NAME).la
 
 LIBCUNIT_COMMON = $(COMMON_DIR)/libcunit_common.la
 LIBCPUMASK_COMMON = $(COMMON_DIR)/libcpumask_common.la

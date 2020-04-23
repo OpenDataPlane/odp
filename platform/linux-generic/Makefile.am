@@ -2,6 +2,7 @@
 #export CUSTOM_STR=https://github.com/OpenDataPlane/odp.git
 
 include $(top_srcdir)/platform/Makefile.inc
+lib_LTLIBRARIES += $(LIB)/libodp-linux.la
 
 AM_CPPFLAGS  =  $(ODP_INCLUDES)
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/include
