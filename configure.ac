@@ -291,6 +291,18 @@ then
 fi
 
 ##########################################################################
+# Configure/disable usage of OpenSSL library
+##########################################################################
+AC_ARG_WITH([openssl],
+	    [AS_HELP_STRING([--without-openssl],
+			    [compile without OpenSSL (may result in disabled crypto and random support)])],
+	    [],
+	    [with_openssl=yes])
+AS_IF([test "$with_openssl" != "no"],
+      [ODP_OPENSSL])
+AM_CONDITIONAL([WITH_OPENSSL], [test x$with_openssl != xno])
+
+##########################################################################
 # Include m4 files
 ##########################################################################
 m4_include([./doc/m4/configure.m4])
