@@ -294,6 +294,7 @@ AC_DEFINE_UNQUOTED([_ODP_IMPLEMENTATION_NAME], ["$ODP_IMPLEMENTATION_NAME"],
 		   [Define to the name of the implementation])
 
 AM_CONDITIONAL([ODP_USE_CONFIG], [test "x$odp_use_config" = "xtrue"])
+AC_SUBST([ODP_LIB_NAME])
 
 ##########################################################################
 # Build examples/tests dynamically
@@ -455,6 +456,7 @@ AC_OUTPUT
 AC_MSG_RESULT([
 	$PACKAGE $VERSION
 
+	ODP Library name:	${ODP_LIB_NAME}
 	ODP Library version:	${ODP_LIBSO_VERSION}
 	Helper Library version:	${ODPHELPER_LIBSO_VERSION}
 
