@@ -9,11 +9,9 @@ odp_l3fwd_SOURCES = \
 		    odp_l3fwd_db.h \
 		    odp_l3fwd_lpm.h
 
-
 if test_example
-if HAVE_PCAP
+if ODP_PKTIO_PCAP
 TESTS = odp_l3fwd_run.sh
 endif
 endif
-
 EXTRA_DIST = odp_l3fwd_run.sh udp64.pcap

@@ -5,7 +5,7 @@ bin_PROGRAMS = odp_l2fwd_simple
 odp_l2fwd_simple_SOURCES = odp_l2fwd_simple.c
 
 if test_example
-if HAVE_PCAP
+if ODP_PKTIO_PCAP
 TESTS = l2fwd_simple_run.sh
 endif
 endif

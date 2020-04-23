@@ -339,7 +339,7 @@ noinst_HEADERS += arch/x86/cpu_flags.h \
 		  arch/default/odp_cpu_idling.h
 endif
 
-if HAVE_PCAP
+if ODP_PKTIO_PCAP
 __LIB__libodp_linux_la_SOURCES += pktio/pcap.c
 endif
 
@@ -350,6 +350,6 @@ __LIB__libodp_linux_la_LIBADD += $(DPDK_LIBS_LIBODP)
 __LIB__libodp_linux_la_LIBADD += $(PTHREAD_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(TIMER_LIBS)
 
-if HAVE_PCAP
+if ODP_PKTIO_PCAP
 __LIB__libodp_linux_la_LIBADD += $(PCAP_LIBS)
 endif
