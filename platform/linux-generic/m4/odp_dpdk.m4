@@ -49,4 +49,6 @@ else
     pktio_dpdk_support=no
 fi
 
+AC_CONFIG_COMMANDS_PRE([dnl
 AM_CONDITIONAL([PKTIO_DPDK], [test x$pktio_dpdk_support = xyes ])
+])

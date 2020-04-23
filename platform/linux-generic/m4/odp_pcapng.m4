@@ -15,4 +15,6 @@ AC_ARG_ENABLE([pcapng-support],
 AC_DEFINE_UNQUOTED([_ODP_PCAPNG], [$pcapng_support],
 	[Define to 1 to enable pcapng support])
 
+AC_CONFIG_COMMANDS_PRE([dnl
 AM_CONDITIONAL([have_pcapng], [test x$have_pcapng = xyes])
+])
