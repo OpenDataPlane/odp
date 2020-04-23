@@ -14,6 +14,7 @@ AC_ARG_WITH([pcap],
 			    [compile without PCAP])],
 	    [],
 	    [with_pcap=yes])
+have_pcap=no
 AS_IF([test "x$with_pcap" != xno],
       [ODP_PCAP([with_pcap=yes]‚[with_pcap=no])])
 AM_CONDITIONAL([ODP_PKTIO_PCAP], [test x$have_pcap = xyes])
@@ -25,6 +26,13 @@ m4_include([platform/linux-generic/m4/odp_dpdk.m4])
 ODP_SCHEDULER
 
 AS_VAR_APPEND([PLAT_DEP_LIBS], ["${LIBCONFIG_LIBS} ${OPENSSL_LIBS} ${DPDK_LIBS_LT}"])
+
+# Add text to the end of configure with platform specific settings.
+# Make sure it's aligned same as other lines in configure.ac.
+AS_VAR_APPEND([PLAT_CFG_TEXT], ["
+	pcap:			${have_pcap}
+	pcapng:			${have_pcapng}
+	default_config_path:	${default_config_path}"])
 
 AC_CONFIG_COMMANDS_PRE([dnl
 AM_CONDITIONAL([PLATFORM_IS_LINUX_GENERIC],

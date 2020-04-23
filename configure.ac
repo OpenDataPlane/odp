@@ -418,6 +418,10 @@ AC_SUBST([with_platform])
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=297726
 PLAT_DEP_LIBS=
 AC_SUBST([PLAT_DEP_LIBS])
+# Platforms should append to this variable to have their settings printed
+# at the end of the configure report.
+PLAT_CFG_TEXT="
+	Platform specific:"
 
 AS_IF([test "${with_platform}" = "linux-generic"],
       [m4_include([./platform/linux-generic/m4/configure.m4])],
@@ -519,8 +523,7 @@ AC_MSG_RESULT([
 	test_helper:		${test_helper}
 	test_example:		${test_example}
 	user_guides:		${user_guides}
-	pcapng:			${have_pcapng}
-	default_config_path:    ${default_config_path}
+${PLAT_CFG_TEXT}
 ])
 
 AS_IF([test "${with_openssl}" = "no"],
