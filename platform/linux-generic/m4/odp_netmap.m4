@@ -4,7 +4,7 @@
 netmap_support=no
 AC_ARG_ENABLE([netmap_support],
     [AS_HELP_STRING([--enable-netmap-support], [include netmap IO support]
-                    [[default=disabled]])],
+                    [[default=disabled] (linux-generic)])],
     [if test x$enableval = xyes; then
         netmap_support=yes
     fi])
@@ -14,7 +14,7 @@ AC_ARG_ENABLE([netmap_support],
 ##########################################################################
 AC_ARG_WITH([netmap-path],
 AS_HELP_STRING([--with-netmap-path=DIR], [path to netmap root directory]
-               [[default=system]]),
+               [[default=system] (linux-generic)]),
     [NETMAP_PATH=$withval
     NETMAP_CPPFLAGS="-isystem $NETMAP_PATH/sys"
     netmap_support=yes],[])

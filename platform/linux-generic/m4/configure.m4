@@ -11,7 +11,7 @@ m4_include([platform/linux-generic/m4/odp_scheduler.m4])
 
 AC_ARG_WITH([pcap],
 	    [AS_HELP_STRING([--without-pcap],
-			    [compile without PCAP [default=with]])],
+			    [compile without PCAP [default=with] (linux-generic)])],
 	    [],
 	    [with_pcap=yes])
 have_pcap=no
