@@ -5,13 +5,13 @@ pktio_dpdk_support=no
 
 AC_ARG_ENABLE([dpdk],
 	      [AS_HELP_STRING([--enable-dpdk],
-			      [enable DPDK support for Packet I/O [default=disabled]])],
+			      [enable DPDK support for Packet I/O [default=disabled] (linux-generic)])],
 	      [pktio_dpdk_support=$enableval
 	       DPDK_PATH=system])
 
 AC_ARG_WITH([dpdk-path],
 [AS_HELP_STRING([--with-dpdk-path=DIR],
-		[path to DPDK build directory [default=system]])],
+		[path to DPDK build directory [default=system] (linux-generic)])],
     [DPDK_PATH="$withval"
      pktio_dpdk_support=yes],[])
 
@@ -21,7 +21,7 @@ AC_ARG_WITH([dpdk-path],
 zero_copy=0
 AC_ARG_ENABLE([dpdk-zero-copy],
     [AS_HELP_STRING([--enable-dpdk-zero-copy],
-                    [enable experimental zero-copy DPDK pktio mode [default=disabled]])],
+                    [enable experimental zero-copy DPDK pktio mode [default=disabled] (linux-generic)])],
     [if test x$enableval = xyes; then
         zero_copy=1
     fi])
