@@ -6,14 +6,6 @@ ODP_ATOMIC
 
 ODP_PTHREAD
 ODP_TIMER
-AC_ARG_WITH([openssl],
-	    [AS_HELP_STRING([--without-openssl],
-			    [compile without OpenSSL (results in disabled crypto and random support)])],
-	    [],
-	    [with_openssl=yes])
-AS_IF([test "$with_openssl" != "no"],
-      [ODP_OPENSSL])
-AM_CONDITIONAL([WITH_OPENSSL], [test x$with_openssl != xno])
 
 AC_ARG_WITH([pcap],
 	    [AS_HELP_STRING([--without-pcap],
