@@ -14,7 +14,7 @@ AC_ARG_WITH([pcap],
 	    [with_pcap=yes])
 AS_IF([test "x$with_pcap" != xno],
       [ODP_PCAP([with_pcap=yes]‚[with_pcap=no])])
-AM_CONDITIONAL([HAVE_PCAP], [test x$have_pcap = xyes])
+AM_CONDITIONAL([ODP_PKTIO_PCAP], [test x$have_pcap = xyes])
 
 m4_include([platform/linux-generic/m4/odp_libconfig.m4])
 m4_include([platform/linux-generic/m4/odp_pcapng.m4])

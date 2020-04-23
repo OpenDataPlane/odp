@@ -5,7 +5,7 @@ bin_PROGRAMS = odp_switch
 odp_switch_SOURCES = odp_switch.c
 
 if test_example
-if HAVE_PCAP
+if ODP_PKTIO_PCAP
 TESTS = switch_run.sh
 endif
 endif

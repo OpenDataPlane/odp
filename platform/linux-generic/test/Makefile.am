@@ -25,7 +25,7 @@ SUBDIRS += validation/api/pktio\
 	  validation/api/shmem\
 	  pktio_ipc
 
-if HAVE_PCAP
+if ODP_PKTIO_PCAP
 TESTS += validation/api/pktio/pktio_run_pcap.sh
 endif
 if netmap_support
