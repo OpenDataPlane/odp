@@ -213,7 +213,7 @@ static pool_t *_odp_ishmbud_pool_create(const char *pool_name, int store_idx,
 	saved_order_sz = ROUNDUP_CACHE_LINE(max_nb_bblock * sizeof(uint8_t));
 
 	/* space needed for user area is 2^order bytes: */
-	user_sz = 1 << order;
+	user_sz = 1ULL << order;
 
 	total_sz = control_sz +
 		   free_head_sz +
