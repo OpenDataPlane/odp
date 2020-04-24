@@ -1437,11 +1437,13 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 		else
 			rc = -1;
 
-		if (state.ip_tot_len + state.ip_offset != odp_packet_len(pkt))
-			rc = -1;
-
-		if (rc == 0)
-			ipsec_out_checksums(pkt, &state);
+		if (rc == 0) {
+			if (state.ip_tot_len + state.ip_offset !=
+			    odp_packet_len(pkt))
+				rc = -1;
+			else
+				ipsec_out_checksums(pkt, &state);
+		}
 	} else {
 		if (state.is_ipv4)
 			rc = ipsec_out_tunnel_parse_ipv4(&state, ipsec_sa);
