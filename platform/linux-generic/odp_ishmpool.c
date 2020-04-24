@@ -413,98 +413,6 @@ static int _odp_ishmbud_free(pool_t *bpool, void *addr)
 	return 0;
 }
 
-/* print buddy pool status and performs sanity checks */
-static int _odp_ishmbud_pool_status(const char *title, pool_t *bpool)
-{
-	uint8_t order, pool_order, pool_min_order;
-	uint64_t free_q_nb_bblocks[64];
-	uint64_t allocated_nb_bblocks[64];
-	uint64_t free_q_nb_bblocks_bytes[64];
-	uint64_t allocated_nb_bblocks_bytes[64];
-	uint64_t total_bytes_free;
-	uint64_t total_bytes_allocated;
-	uint64_t nr;
-	bblock_t *bblock;
-	int res = 0;
-
-	odp_spinlock_lock(&bpool->ctrl.lock);
-
-	pool_order = bpool->ctrl.order;
-	pool_min_order = bpool->ctrl.min_order;
-
-	ODP_DBG("\n%s\n", title);
-	ODP_DBG("Pool Type: BUDDY\n");
-	ODP_DBG("pool size: %" PRIu64 " (bytes)\n", (1UL << pool_order));
-	ODP_DBG("pool order: %d\n", (int)pool_order);
-	ODP_DBG("pool min_order: %d\n", (int)pool_min_order);
-
-	/* a pool wholse order is more than 64 cannot even be reached on 64
-	 * bit machines! */
-	if (pool_order > 64) {
-		odp_spinlock_unlock(&bpool->ctrl.lock);
-		return -1;
-	}
-
-	total_bytes_free = 0;
-	total_bytes_allocated = 0;
-
-	/* for each queue */
-	for (order = pool_min_order; order <= pool_order; order++) {
-		free_q_nb_bblocks[order] = 0;
-		free_q_nb_bblocks_bytes[order] = 0;
-		allocated_nb_bblocks[order] = 0;
-		allocated_nb_bblocks_bytes[order] = 0;
-
-		/* get the number of buffs in the free queue for this order: */
-		bblock = bpool->ctrl.free_heads[order];
-		while (bblock) {
-			free_q_nb_bblocks[order]++;
-			free_q_nb_bblocks_bytes[order] += (1 << order);
-			bblock = bblock->next;
-		}
-
-		total_bytes_free += free_q_nb_bblocks_bytes[order];
-
-		/* get the number of allocated buffers of this order */
-		for (nr = 0;
-		     nr < (1U << (pool_order - pool_min_order)); nr++) {
-			if (bpool->ctrl.alloced_order[nr] == order)
-				allocated_nb_bblocks[order]++;
-		}
-
-		allocated_nb_bblocks_bytes[order] =
-			allocated_nb_bblocks[order] * (1 << order);
-
-		total_bytes_allocated += allocated_nb_bblocks_bytes[order];
-
-		ODP_DBG("Order %d => Free: %" PRIu64 " buffers "
-			"(%" PRIu64" bytes)   "
-			"Allocated %" PRIu64 " buffers (%" PRIu64 "  bytes)   "
-			"Total: %" PRIu64 "  bytes\n",
-			(int)order, free_q_nb_bblocks[order],
-			free_q_nb_bblocks_bytes[order],
-			allocated_nb_bblocks[order],
-			allocated_nb_bblocks_bytes[order],
-			free_q_nb_bblocks_bytes[order] +
-			allocated_nb_bblocks_bytes[order]);
-	}
-
-	ODP_DBG("Allocated space: %" PRIu64 " (bytes)\n",
-		total_bytes_allocated);
-	ODP_DBG("Free space: %" PRIu64 " (bytes)\n", total_bytes_free);
-
-	if (total_bytes_free + total_bytes_allocated != (1U << pool_order)) {
-		ODP_DBG("Lost bytes on this pool!\n");
-		res = -1;
-	}
-
-	if (res)
-		ODP_DBG("Pool inconsistent!\n");
-
-	odp_spinlock_unlock(&bpool->ctrl.lock);
-	return res;
-}
-
 /* section 2: functions for slab allocation:                                  */
 
 /* free slab blocks contains the following structure, used to link the
@@ -657,34 +565,6 @@ static int _odp_ishmslab_free(pool_t *spool, void *addr)
 	return 0;
 }
 
-/* print slab pool status and performs sanity checks */
-static int _odp_ishmslab_pool_status(const char *title, pool_t *spool)
-{
-	sblock_t *sblock;
-	uint64_t nb_free_elts; /* number of free elements */
-
-	odp_spinlock_lock(&spool->ctrl.lock);
-
-	ODP_DBG("\n%s\n", title);
-	ODP_DBG("Pool Type: FIXED SIZE\n");
-	ODP_DBG("pool size: %" PRIu64 " (bytes)\n",
-		spool->ctrl.nb_elem * spool->ctrl.element_sz);
-
-	/* count the number of free elements in the free list: */
-	nb_free_elts = 0;
-	sblock = (sblock_t *)spool->ctrl.free_head;
-	while (sblock) {
-		nb_free_elts++;
-		sblock = sblock->next;
-	}
-
-	ODP_DBG("%" PRIu64 "/%" PRIu64 " available elements.\n",
-		nb_free_elts, spool->ctrl.nb_elem);
-
-	odp_spinlock_unlock(&spool->ctrl.lock);
-	return 0;
-}
-
 /* section 3: common, external functions:                                     */
 
 /* create a pool: either with fixed alloc size (if max_alloc/min_alloc<2) or
@@ -765,15 +645,6 @@ int _odp_ishm_pool_free(_odp_ishm_pool_t *pool, void *addr)
 		return _odp_ishmbud_free(pool, addr);
 	else
 		return _odp_ishmslab_free(pool, addr);
-}
-
-/* Print a pool status */
-int _odp_ishm_pool_status(const char *title, _odp_ishm_pool_t *pool)
-{
-	if (!pool->ctrl.element_sz)
-		return _odp_ishmbud_pool_status(title, pool);
-	else
-		return _odp_ishmslab_pool_status(title, pool);
 }
 
 void _odp_ishm_pool_init(void)

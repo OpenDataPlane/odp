@@ -45,7 +45,6 @@ _odp_ishm_pool_t *_odp_ishm_pool_create(const char *pool_name,
 int _odp_ishm_pool_destroy(_odp_ishm_pool_t *pool);
 void *_odp_ishm_pool_alloc(_odp_ishm_pool_t *pool, uint64_t size);
 int _odp_ishm_pool_free(_odp_ishm_pool_t *pool, void *addr);
-int _odp_ishm_pool_status(const char *title, _odp_ishm_pool_t *pool);
 void _odp_ishm_pool_init(void);
 
 #ifdef __cplusplus
