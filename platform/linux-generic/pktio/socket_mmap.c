@@ -48,16 +48,6 @@
 #define FRAME_MEM_SIZE (4 * 1024 * 1024)
 #define BLOCK_SIZE     (4 * 1024)
 
-/*
- * This makes sure that building for kernels older than 3.1 works
- * and a fanout requests fails (for invalid packet socket option)
- * in runtime if requested
- */
-#ifndef PACKET_FANOUT
-#define PACKET_FANOUT		18
-#define PACKET_FANOUT_HASH	0
-#endif
-
 /** packet mmap ring */
 struct ring {
 	odp_ticketlock_t lock;
@@ -95,7 +85,6 @@ typedef struct {
 	unsigned int mmap_len;
 	unsigned char if_mac[ETH_ALEN];
 	struct sockaddr_ll ll;
-	int fanout;
 } pkt_sock_mmap_t;
 
 ODP_STATIC_ASSERT(PKTIO_PRIVATE_SIZE >= sizeof(pkt_sock_mmap_t),
@@ -107,26 +96,6 @@ static inline pkt_sock_mmap_t *pkt_priv(pktio_entry_t *pktio_entry)
 }
 
 static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
-
-static int set_pkt_sock_fanout_mmap(pkt_sock_mmap_t *const pkt_sock,
-				    int sock_group_idx)
-{
-	int sockfd = pkt_sock->sockfd;
-	int val;
-	int err;
-	uint16_t fanout_group;
-
-	fanout_group = (uint16_t)(sock_group_idx & 0xffff);
-	val = (PACKET_FANOUT_HASH << 16) | fanout_group;
-
-	err = setsockopt(sockfd, SOL_PACKET, PACKET_FANOUT, &val, sizeof(val));
-	if (err != 0) {
-		__odp_errno = errno;
-		ODP_ERR("setsockopt(PACKET_FANOUT): %s\n", strerror(errno));
-		return -1;
-	}
-	return 0;
-}
 
 static int mmap_pkt_socket(void)
 {
@@ -454,7 +423,6 @@ static int mmap_setup_ring(pkt_sock_mmap_t *pkt_sock, struct ring *ring,
 	ODP_DBG("  tp_block_nr   %u\n", ring->req.tp_block_nr);
 	ODP_DBG("  tp_frame_size %u\n", ring->req.tp_frame_size);
 	ODP_DBG("  tp_frame_nr   %u\n", ring->req.tp_frame_nr);
-	ODP_DBG("  fanout        %i\n", pkt_sock->fanout);
 
 	ret = setsockopt(sock, SOL_PACKET, type, &ring->req, sizeof(ring->req));
 	if (ret == -1) {
@@ -584,14 +552,12 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 		return -1;
 
 	pkt_sock_mmap_t *const pkt_sock = pkt_priv(pktio_entry);
-	int fanout = 0;
 
 	/* Init pktio entry */
 	memset(pkt_sock, 0, sizeof(*pkt_sock));
 	/* set sockfd to -1, because a valid socked might be initialized to 0 */
 	pkt_sock->sockfd = -1;
 	pkt_sock->mmap_base = MAP_FAILED;
-	pkt_sock->fanout = fanout;
 
 	if (pool == ODP_POOL_INVALID)
 		return -1;
@@ -641,12 +607,6 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 		__odp_errno = errno;
 		ODP_ERR("if_nametoindex(): %s\n", strerror(errno));
 		goto error;
-	}
-
-	if (fanout) {
-		ret = set_pkt_sock_fanout_mmap(pkt_sock, if_idx);
-		if (ret != 0)
-			goto error;
 	}
 
 	pktio_entry->s.stats_type = sock_stats_type_fd(pktio_entry,
