@@ -1426,7 +1426,7 @@ int main(int argc, char *argv[])
 	odp_instance_t instance;
 	odp_init_t init;
 	odp_shm_t shm;
-	odp_time_t t1, t2;
+	odp_time_t t1 = ODP_TIME_NULL, t2 = ODP_TIME_NULL;
 	odph_helper_options_t helper_options;
 	odph_odpthread_t thread[MAX_WORKERS];
 	test_options_t test_options;

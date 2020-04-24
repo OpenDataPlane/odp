@@ -896,6 +896,9 @@ static int init_packets(test_global_t *global, int pktio,
 	uint32_t udp_src_cnt = 0;
 	uint32_t udp_dst_cnt = 0;
 
+	if (num_vlan > MAX_VLANS)
+		num_vlan = MAX_VLANS;
+
 	for (i = 0; i < num; i++) {
 		pkt = packet[i];
 		pkt_len = odp_packet_len(pkt);
