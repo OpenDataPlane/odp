@@ -4722,6 +4722,41 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 	}
 }
 
+uint64_t odp_tm_to_u64(odp_tm_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_tm_queue_to_u64(odp_tm_queue_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_tm_node_to_u64(odp_tm_node_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_tm_shaper_to_u64(odp_tm_shaper_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_tm_sched_to_u64(odp_tm_sched_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_tm_threshold_to_u64(odp_tm_threshold_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_tm_wred_to_u64(odp_tm_wred_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
 int _odp_tm_init_global(void)
 {
 	odp_shm_t shm;
