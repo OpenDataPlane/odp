@@ -1952,6 +1952,97 @@ odp_bool_t odp_tm_is_idle(odp_tm_t odp_tm);
 void odp_tm_stats_print(odp_tm_t odp_tm);
 
 /**
+ * Get printable value for an odp_tm_t
+ *
+ * @param hdl  odp_tm_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_tm_t handle.
+ */
+uint64_t odp_tm_to_u64(odp_tm_t hdl);
+
+/**
+ * Get printable value for an odp_tm_queue_t
+ *
+ * @param hdl  odp_tm_queue_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_tm_queue_t handle.
+ */
+uint64_t odp_tm_queue_to_u64(odp_tm_queue_t hdl);
+
+/**
+ * Get printable value for an odp_tm_node_t
+ *
+ * @param hdl  odp_tm_node_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_tm_node_t handle.
+ */
+uint64_t odp_tm_node_to_u64(odp_tm_node_t hdl);
+
+/**
+ * Get printable value for an odp_tm_shaper_t
+ *
+ * @param hdl  odp_tm_shaper_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_tm_shaper_t handle.
+ */
+uint64_t odp_tm_shaper_to_u64(odp_tm_shaper_t hdl);
+
+/**
+ * Get printable value for an odp_tm_sched_t
+ *
+ * @param hdl  odp_tm_sched_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_tm_sched_t handle.
+ */
+uint64_t odp_tm_sched_to_u64(odp_tm_sched_t hdl);
+
+/**
+ * Get printable value for an odp_tm_threshold_t
+ *
+ * @param hdl  odp_tm_threshold_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_tm_threshold_t handle.
+ */
+uint64_t odp_tm_threshold_to_u64(odp_tm_threshold_t hdl);
+
+/**
+ * Get printable value for an odp_tm_wred_t
+ *
+ * @param hdl  odp_tm_wred_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_tm_wred_t handle.
+ */
+uint64_t odp_tm_wred_to_u64(odp_tm_wred_t hdl);
+
+/**
  * @}
  */
 
