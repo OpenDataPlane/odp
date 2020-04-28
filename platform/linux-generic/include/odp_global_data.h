@@ -24,14 +24,14 @@ extern "C" {
 #define UID_MAXLEN 30
 
 typedef struct {
-	uint64_t cpu_hz_max[CONFIG_NUM_CPU];
+	uint64_t cpu_hz_max[CONFIG_NUM_CPU_IDS];
 	uint64_t default_cpu_hz_max;
 	uint64_t default_cpu_hz;
 	uint64_t page_size;
 	int      cache_line_size;
 	int      cpu_count;
 	char     cpu_arch_str[128];
-	char     model_str[CONFIG_NUM_CPU][MODEL_STR_SIZE];
+	char     model_str[CONFIG_NUM_CPU_IDS][MODEL_STR_SIZE];
 } system_info_t;
 
 typedef struct {

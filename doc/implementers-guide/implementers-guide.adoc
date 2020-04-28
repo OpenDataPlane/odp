@@ -708,9 +708,10 @@ reference implementation in the file
 [source,c]
 -----
 /*
- * Maximum number of CPUs supported. Maximum CPU ID is CONFIG_NUM_CPU - 1.
+ * Maximum number of supported CPU identifiers. The maximum supported CPU ID is
+ * CONFIG_NUM_CPU_IDS - 1.
  */
-#define CONFIG_NUM_CPU 256
+#define CONFIG_NUM_CPU_IDS 256
 
 /*
  * Maximum number of pools
