@@ -360,6 +360,7 @@ static int read_config_file(void)
  */
 int _odp_system_info_init(void)
 {
+	int num_cpus;
 	int i;
 	FILE  *file;
 
@@ -370,6 +371,13 @@ int _odp_system_info_init(void)
 	/* Read default CPU Hz values from config file */
 	if (read_config_file())
 		return -1;
+
+	/* Check that CONFIG_NUM_CPU_IDS is large enough */
+	num_cpus = get_nprocs_conf();
+	if (num_cpus > CONFIG_NUM_CPU_IDS)
+		ODP_ERR("Unable to handle all %d "
+			"CPU IDs. Increase CONFIG_NUM_CPU_IDS value.\n",
+			num_cpus);
 
 	/* By default, read max frequency from a cpufreq file */
 	for (i = 0; i < CONFIG_NUM_CPU_IDS; i++) {
