@@ -132,7 +132,7 @@ int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 	rev  = 0;
 	id   = 0;
 
-	while (fgets(str, sizeof(str), file) != NULL && id < CONFIG_NUM_CPU) {
+	while (fgets(str, sizeof(str), file) != NULL && id < CONFIG_NUM_CPU_IDS) {
 		/* Parse line by line a block of cpuinfo */
 		cur = strstr(str, "CPU implementer");
 

@@ -1,5 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -13,9 +13,11 @@ extern "C" {
 #endif
 
 /*
- * Maximum number of CPUs supported. Maximum CPU ID is CONFIG_NUM_CPU - 1.
+ * Maximum number of supported CPU identifiers. The maximum supported CPU ID is
+ * CONFIG_NUM_CPU_IDS - 1. Note that the maximum number of ODP threads is
+ * defined by ODP_THREAD_COUNT_MAX.
  */
-#define CONFIG_NUM_CPU 256
+#define CONFIG_NUM_CPU_IDS 256
 
 /*
  * Maximum number of pools. Limited by ISHM_MAX_NB_BLOCKS.
