@@ -77,6 +77,14 @@ uint64_t odp_schedule_wait_time(uint64_t ns);
  * sees correctly the memory stores done by the sender before it enqueued
  * the event.
  *
+ * When the event was scheduled from an atomic queue, this function acts as
+ * an acquire memory barrier between the previous holder of the same atomic
+ * synchronization context and the calling thread. When the context is released,
+ * a release memory barrier is performed towards the next holder of the context.
+ * This ensures that memory stores done when holding an atomic context are
+ * correctly visible to other threads that will subsequently hold the same
+ * atomic context.
+ *
  * @param from    Output parameter for the source queue (where the event was
  *                dequeued from). Ignored if NULL.
  * @param wait    Minimum time to wait for an event. Waits indefinitely if set
