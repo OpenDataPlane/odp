@@ -56,20 +56,26 @@ extern "C" {
 uint64_t odp_schedule_wait_time(uint64_t ns);
 
 /**
- * Schedule
+ * Schedule an event
  *
- * Schedules all queues created with ODP_QUEUE_TYPE_SCHED type. Returns
- * next highest priority event which is available for the calling thread.
- * Outputs the source queue of the event. If there's no event available, waits
+ * Run event scheduler to find the next highest priority event which is
+ * available for the calling thread. Only queues that have been created with
+ * ODP_QUEUE_TYPE_SCHED type are connected to the scheduler. Optionally,
+ * outputs the source queue of the event. If there's no event available, waits
  * for an event according to the wait parameter setting. Returns
  * ODP_EVENT_INVALID if reaches end of the wait period.
  *
  * When returns an event, the thread holds the queue synchronization context
- * (atomic or ordered) until the next odp_schedule() or odp_schedule_multi()
- * call. The next call implicitly releases the current context and potentially
- * returns with a new context. User can allow early context release (e.g., see
- * odp_schedule_release_atomic() and odp_schedule_release_ordered()) for
- * performance optimization.
+ * (atomic or ordered) until the next schedule call (e.g. odp_schedule() or
+ * odp_schedule_multi()). The next call implicitly releases the current context
+ * and potentially returns with a new context. User can allow early context
+ * release (e.g., see odp_schedule_release_atomic() and
+ * odp_schedule_release_ordered()) for performance optimization.
+ *
+ * When successful, this function acts as an acquire memory barrier between
+ * the sender and the receiver (the calling thread) of the event. The receiver
+ * sees correctly the memory stores done by the sender before it enqueued
+ * the event.
  *
  * @param from    Output parameter for the source queue (where the event was
  *                dequeued from). Ignored if NULL.
