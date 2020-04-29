@@ -170,8 +170,8 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 3.4 DPDK packet I/O support (optional)
 
-   Use DPDK for ODP packet I/O. Currently supported DPDK versions are v17.11,
-   v18.02, v18.05 and v18.11.
+   Use DPDK for ODP packet I/O. Currently supported DPDK versions are v18.11
+   and v19.11.
 
    Note: only packet I/O is accelerated with DPDK. Use
         https://github.com/OpenDataPlane/odp-dpdk.git
@@ -179,7 +179,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 3.4.1 DPDK pktio requirements
 
-   DPDK pktio adds a depency to NUMA library.
+   DPDK pktio adds a dependency to NUMA library.
    # Debian/Ubuntu
    $ sudo apt-get install libnuma-dev
    # CentOS/RedHat/Fedora
@@ -190,7 +190,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ sudo apt-get install dpdk-dev
 
 3.4.2 Built DPDK from src
-   git clone --branch=17.11 http://dpdk.org/git/dpdk-stable dpdk
+   git clone --branch=18.11 http://dpdk.org/git/dpdk-stable dpdk
 
    #Make and edit DPDK configuration
    TARGET="x86_64-native-linuxapp-gcc"
@@ -206,19 +206,19 @@ Prerequisites for building the OpenDataPlane (ODP) API
    make install O=${TARGET} DESTDIR=${TARGET}
 
    #compile ODP
-   ./configure --with-dpdk-path=`pwd`/dpdk/${TARGET}/usr/local
+   ./configure --with-dpdk-path=<dpdk_install_dir>
 
 3.4.3 Setup system
 
    # Load DPDK modules
-   $ sudo /sbin/modprobe uio
+   $ sudo modprobe uio
    $ cd <dpdk-dir>
    $ sudo insmod x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
 
    Reserve and mount hugepages and bind supported interfaces to DPDK modules
    following the DPDK documentation. ODP DPDK packet I/O has been tested with
    512 x 2MB hugepages. All this can be done with the DPDK setup script
-   (<dpdk-dir>/tools/dpdk-setup.sh).
+   (<dpdk-dir>/usertools/dpdk-setup.sh).
 
 3.4.4 Running ODP with DPDK pktio
 
