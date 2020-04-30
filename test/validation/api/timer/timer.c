@@ -553,6 +553,9 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv)
 	uint64_t diff_period, diff_test;
 	odp_pool_param_t params;
 	odp_time_t t0, t1, t2;
+	odp_timer_t timer[num];
+	uint64_t target_tick[num];
+	void *user_ptr[num];
 
 	odp_pool_param_init(&params);
 	params.type    = ODP_POOL_TIMEOUT;
@@ -610,11 +613,14 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv)
 		ev  = odp_timeout_to_event(tmo);
 		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
 
-		tim = odp_timer_alloc(tp, queue, USER_PTR);
+		user_ptr[i] = (void *)(uintptr_t)i;
+		tim = odp_timer_alloc(tp, queue, user_ptr[i]);
 		CU_ASSERT_FATAL(tim != ODP_TIMER_INVALID);
+		timer[i] = tim;
 
 		tick = tick_base + ((i + 1) * period_tick);
 		ret = odp_timer_set_abs(tim, tick, &ev);
+		target_tick[i] = tick;
 
 		ODPH_DBG("abs timer tick %" PRIu64 "\n", tick);
 		if (ret == ODP_TIMER_TOOEARLY)
@@ -645,11 +651,16 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv)
 			tim = odp_timeout_timer(tmo);
 			tick = odp_timeout_tick(tmo);
 
+			CU_ASSERT(timer[num_tmo] == tim);
+			CU_ASSERT(target_tick[num_tmo] == tick);
+			CU_ASSERT(user_ptr[num_tmo] ==
+				  odp_timeout_user_ptr(tmo));
 			CU_ASSERT(diff_period > (period_ns - (5 * res_ns)));
 			CU_ASSERT(diff_period < (period_ns + (5 * res_ns)));
 
-			ODPH_DBG("timeout tick %" PRIu64 ", timeout period "
-				 "%" PRIu64 "\n", tick, diff_period);
+			ODPH_DBG("timeout tick %" PRIu64 ", target tick  "
+				 "%" PRIu64 ", timeout period %" PRIu64 "\n",
+				 tick, target_tick[num_tmo], diff_period);
 
 			odp_timeout_free(tmo);
 			CU_ASSERT(odp_timer_free(tim) == ODP_EVENT_INVALID);
