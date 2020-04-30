@@ -44,6 +44,14 @@ extern "C" {
 
 /**
  * Application SW only, no HW access
+ *
+ * @deprecated  When set, application will not share the reserved memory with HW
+ * accelerators. However, leaving this flag to zero does not guarantee that
+ * the reserved memory can be accessed from HW, and thus usage of this flag is
+ * considered deprecated. If HW accessible memory is required, set
+ * ODP_SHM_HW_ACCESS instead.
+ *
+ * This flag must not be combined with ODP_SHM_HW_ACCESS.
  */
 #define ODP_SHM_SW_ONLY		0x1
 
@@ -77,6 +85,17 @@ extern "C" {
  * huge page memory is not available.
  */
 #define ODP_SHM_HP		0x10
+
+/**
+ * Share memory with HW accelerators
+ *
+ * When set, this flag guarantees that the reserved memory is accessible
+ * by both CPUs and HW accelerators of the device. This may require e.g. that
+ * the odp_shm_reserve() call configures the memory to be accessible through
+ * an Input-Output Memory Management Unit (IOMMU). The reserve call will return
+ * failure if such configuration is not supported.
+ */
+#define ODP_SHM_HW_ACCESS	0x20
 
 /**
  * Shared memory block info
