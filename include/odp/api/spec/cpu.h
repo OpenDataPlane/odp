@@ -68,44 +68,48 @@ const char *odp_cpu_model_str_id(int id);
 /**
  * Current CPU frequency in Hz
  *
- * Returns current frequency of this CPU
+ * Returns current frequency of this CPU. Returns zero if the frequency
+ * request is not supported.
  *
  * @return CPU frequency in Hz
- * @retval 0 on failure
+ * @retval 0 Not supported or a failure
  */
 uint64_t odp_cpu_hz(void);
 
 /**
  * Current CPU frequency of a CPU (in Hz)
  *
- * Returns current frequency of specified CPU
+ * Returns current frequency of the specified CPU. Returns zero if the frequency
+ * request is not supported.
  *
  * @param id    CPU ID
  *
  * @return CPU frequency in Hz
- * @retval 0 on failure
+ * @retval 0 Not supported or a failure
  */
 uint64_t odp_cpu_hz_id(int id);
 
 /**
  * Maximum CPU frequency in Hz
  *
- * Returns maximum frequency of this CPU
+ * Returns the maximum frequency of this CPU. Returns zero if the frequency
+ * request is not supported.
  *
  * @return CPU frequency in Hz
- * @retval 0 on failure
+ * @retval 0 Not supported or a failure
  */
 uint64_t odp_cpu_hz_max(void);
 
 /**
  * Maximum CPU frequency of a CPU (in Hz)
  *
- * Returns maximum frequency of specified CPU
+ * Returns the maximum frequency of the specified CPU. Returns zero if the
+ * frequency request is not supported.
  *
  * @param id    CPU ID
  *
  * @return CPU frequency in Hz
- * @retval 0 on failure
+ * @retval 0 Not supported or a failure
  */
 uint64_t odp_cpu_hz_max_id(int id);
 
@@ -115,14 +119,15 @@ uint64_t odp_cpu_hz_max_id(int id);
  * Return current CPU cycle count. Cycle count may not be reset at ODP init
  * and thus may wrap back to zero between two calls. Use odp_cpu_cycles_max()
  * to read the maximum count value after which it wraps. Cycle count frequency
- * follows the CPU frequency and thus may change at any time. The count may
- * advance in steps larger than one. Use odp_cpu_cycles_resolution() to read
- * the step size.
+ * follows the CPU frequency and thus may change at any time. Cycle count should
+ * not be used for time measurements due to the possibility of frequency
+ * variation. The count may advance in steps larger than one. Use
+ * odp_cpu_cycles_resolution() to read the step size.
  *
- * @note Do not use CPU count for time measurements since the frequency may
- * vary.
+ * Returns zero if CPU cycle counter is not supported.
  *
  * @return Current CPU cycle count
+ * @retval 0 Not supported
  */
 uint64_t odp_cpu_cycles(void);
 
@@ -143,9 +148,11 @@ uint64_t odp_cpu_cycles_diff(uint64_t c2, uint64_t c1);
 /**
  * Maximum CPU cycle count
  *
- * Maximum CPU cycle count value before it wraps back to zero.
+ * Maximum CPU cycle count value before it wraps back to zero. Returns zero
+ * if CPU cycle counter is not supported.
  *
  * @return Maximum CPU cycle count value
+ * @retval 0 Not supported
  */
 uint64_t odp_cpu_cycles_max(void);
 
@@ -153,9 +160,11 @@ uint64_t odp_cpu_cycles_max(void);
  * Resolution of CPU cycle count
  *
  * CPU cycle count may advance in steps larger than one. This function returns
- * resolution of odp_cpu_cycles() in CPU cycles.
+ * resolution of odp_cpu_cycles() in CPU cycles. Returns zero if CPU cycle
+ * counter is not supported.
  *
  * @return CPU cycle count resolution in CPU cycles
+ * @retval 0 Not supported
  */
 uint64_t odp_cpu_cycles_resolution(void);
 
