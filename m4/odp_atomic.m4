@@ -126,12 +126,13 @@ AC_CACHE_CHECK([whether -latomic is needed for 64-bit atomic compare exchange],
 	       [odp_cv_atomic_needed_64bit_cmp_exc], [dnl
 AC_LINK_IFELSE(
   [AC_LANG_SOURCE([[
+    #include <stdbool.h>
     #include <stdint.h>
     static uint64_t loc;
     int main(void)
     {
         uint64_t exp = 0;
-        uint64_t = __atomic_compare_exchange_n(&loc, &exp, 1, 1,
+        bool res = __atomic_compare_exchange_8(&loc, &exp, 1, 1,
                                                __ATOMIC_ACQUIRE,
                                                __ATOMIC_RELAXED);
         return 0;
@@ -157,14 +158,14 @@ AC_CACHE_CHECK([whether -latomic is needed for 128-bit atomic compare exchange],
 	       [odp_cv_atomic_needed_128bit_cmp_exc], [dnl
 AC_LINK_IFELSE(
   [AC_LANG_SOURCE([[
-    #include <stdint.h>
+    #include <stdbool.h>
     static __int128 loc;
     int main(void)
     {
         __int128 exp = 0;
-        __int128 = __atomic_compare_exchange_n(&loc, &exp, 1, 1,
-                                               __ATOMIC_ACQUIRE,
-                                               __ATOMIC_RELAXED);
+        bool res = __atomic_compare_exchange_16(&loc, &exp, 1, 1,
+                                                __ATOMIC_ACQUIRE,
+                                                __ATOMIC_RELAXED);
         return 0;
     }
     ]])],
