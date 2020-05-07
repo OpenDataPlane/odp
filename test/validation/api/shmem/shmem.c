@@ -129,7 +129,7 @@ static int run_test_basic_thread(void *arg ODP_UNUSED)
 /*
  * test basic things: shmem creation, info, share, and free
  */
-static void shmem_test_basic(void)
+static void shmem_test_multi_thread(void)
 {
 	pthrd_arg thrdarg;
 	odp_shm_t shm;
@@ -212,10 +212,27 @@ static void shmem_test_basic(void)
 	CU_ASSERT(0 == odp_shm_free(shm));
 }
 
+static void shmem_test_reserve(void)
+{
+	odp_shm_t shm;
+	void *addr;
+
+	shm = odp_shm_reserve(MEM_NAME, MEDIUM_MEM, ALIGN_SIZE, 0);
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+
+	addr = odp_shm_addr(shm);
+	CU_ASSERT(addr != NULL);
+
+	if (addr)
+		memset(addr, 0, MEDIUM_MEM);
+
+	CU_ASSERT(odp_shm_free(shm) == 0);
+}
+
 /*
  * test reserving memory from huge pages
  */
-static void shmem_test_hp(void)
+static void shmem_test_flag_hp(void)
 {
 	odp_shm_t shm;
 	odp_shm_info_t info;
@@ -247,6 +264,73 @@ static void shmem_test_hp(void)
 	}
 
 	CU_ASSERT(i < num_sizes);
+
+	CU_ASSERT(odp_shm_free(shm) == 0);
+}
+
+static void shmem_test_flag_proc(void)
+{
+	odp_shm_t shm;
+	void *addr;
+
+	shm = odp_shm_reserve(MEM_NAME, MEDIUM_MEM, ALIGN_SIZE, ODP_SHM_PROC);
+
+	if (shm == ODP_SHM_INVALID) {
+		printf("    ODP_SHM_PROC flag not supported\n");
+		return;
+	}
+
+	addr = odp_shm_addr(shm);
+
+	CU_ASSERT(addr != NULL);
+
+	if (addr)
+		memset(addr, 0, MEDIUM_MEM);
+
+	CU_ASSERT(odp_shm_free(shm) == 0);
+}
+
+static void shmem_test_flag_export(void)
+{
+	odp_shm_t shm;
+	void *addr;
+
+	shm = odp_shm_reserve(MEM_NAME, MEDIUM_MEM, ALIGN_SIZE, ODP_SHM_EXPORT);
+
+	if (shm == ODP_SHM_INVALID) {
+		printf("    ODP_SHM_EXPORT flag not supported\n");
+		return;
+	}
+
+	addr = odp_shm_addr(shm);
+
+	CU_ASSERT(addr != NULL);
+
+	if (addr)
+		memset(addr, 0, MEDIUM_MEM);
+
+	CU_ASSERT(odp_shm_free(shm) == 0);
+}
+
+static void shmem_test_flag_hw_access(void)
+{
+	odp_shm_t shm;
+	void *addr;
+
+	shm = odp_shm_reserve(MEM_NAME, MEDIUM_MEM, ALIGN_SIZE,
+			      ODP_SHM_HW_ACCESS);
+
+	if (shm == ODP_SHM_INVALID) {
+		printf("    ODP_SHM_HW_ACCESS flag not supported\n");
+		return;
+	}
+
+	addr = odp_shm_addr(shm);
+
+	CU_ASSERT(addr != NULL);
+
+	if (addr)
+		memset(addr, 0, MEDIUM_MEM);
 
 	CU_ASSERT(odp_shm_free(shm) == 0);
 }
@@ -855,9 +939,13 @@ static void shmem_test_stress(void)
 }
 
 odp_testinfo_t shmem_suite[] = {
-	ODP_TEST_INFO(shmem_test_basic),
-	ODP_TEST_INFO(shmem_test_hp),
+	ODP_TEST_INFO(shmem_test_reserve),
+	ODP_TEST_INFO(shmem_test_flag_hp),
+	ODP_TEST_INFO(shmem_test_flag_proc),
+	ODP_TEST_INFO(shmem_test_flag_export),
+	ODP_TEST_INFO(shmem_test_flag_hw_access),
 	ODP_TEST_INFO(shmem_test_max_reserve),
+	ODP_TEST_INFO(shmem_test_multi_thread),
 	ODP_TEST_INFO(shmem_test_reserve_after_fork),
 	ODP_TEST_INFO(shmem_test_singleva_after_fork),
 	ODP_TEST_INFO(shmem_test_stress),
