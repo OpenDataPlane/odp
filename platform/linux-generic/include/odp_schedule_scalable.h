@@ -89,6 +89,7 @@ typedef struct ODP_ALIGNED_CACHE {
 #define cons_type qschst_type
 #endif
 	odp_schedule_group_t sched_grp;
+	uint32_t loop_check[CONFIG_NUM_CPU_IDS];
 } sched_elem_t;
 
 /* Number of scheduling groups */
@@ -138,6 +139,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	bitset_t ODP_ALIGNED_CACHE rvec_free;
 	/* Reordering contexts to allocate from */
 	reorder_context_t ODP_ALIGNED_CACHE rvec[TS_RVEC_SIZE];
+	uint32_t loop_cnt; /*Counter to check pktio ingress queue dead loop */
 } sched_scalable_thread_state_t;
 
 void sched_update_enq(sched_elem_t *q, uint32_t actual);
