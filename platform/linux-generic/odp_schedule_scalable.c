@@ -87,6 +87,7 @@ static int thread_state_init(int tidx)
 	ts->rvec_free = (1ULL << TS_RVEC_SIZE) - 1;
 	ts->num_schedq = 0;
 	ts->sg_sem = 1; /* Start with sched group semaphore changed */
+	ts->loop_cnt = 0;
 	memset(ts->sg_actual, 0, sizeof(ts->sg_actual));
 	for (i = 0; i < TS_RVEC_SIZE; i++) {
 		ts->rvec[i].rvec_free = &ts->rvec_free;
@@ -874,9 +875,9 @@ events_dequeued:
 static int _schedule(odp_queue_t *from, odp_event_t ev[], int num_evts)
 {
 	sched_scalable_thread_state_t *ts;
-	sched_elem_t *first;
 	sched_elem_t *atomq;
 	int num;
+	int cpu_id;
 	uint32_t i;
 
 	ts = sched_ts;
@@ -946,10 +947,13 @@ dequeue_atomic:
 		update_sg_membership(ts);
 	}
 
+	cpu_id = odp_cpu_id();
 	/* Scan our schedq list from beginning to end */
-	for (i = 0, first = NULL; i < ts->num_schedq; i++, first = NULL) {
+	for (i = 0; i < ts->num_schedq; i++) {
 		sched_queue_t *schedq = ts->schedq_list[i];
 		sched_elem_t *elem;
+
+		ts->loop_cnt++;
 restart_same:
 		elem = schedq_peek(schedq);
 		if (odp_unlikely(elem == NULL)) {
@@ -958,10 +962,12 @@ restart_same:
 		}
 		if (is_pktin(elem)) {
 			/* Pktio ingress queue */
-			if (first == NULL)
-				first = elem;
-			else if (elem == first) /* Wrapped around */
-				continue; /* Go to next schedq */
+			if (elem->schedq != schedq) { /* Low priority schedq*/
+				if (elem->loop_check[cpu_id] != ts->loop_cnt)
+					elem->loop_check[cpu_id] = ts->loop_cnt;
+				else /* Wrapped around */
+					continue; /* Go to next schedq */
+			}
 
 			if (odp_unlikely(!schedq_cond_pop(schedq, elem)))
 				goto restart_same;
