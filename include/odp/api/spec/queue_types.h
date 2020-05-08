@@ -194,7 +194,8 @@ typedef struct odp_queue_capability_t {
 			  * supported when zero. */
 			uint32_t max_num;
 
-			/** Maximum queue size */
+			/** Maximum queue size. The value of zero means that
+			 *  there is no size limit. */
 			uint32_t max_size;
 
 		} lockfree;
@@ -207,7 +208,8 @@ typedef struct odp_queue_capability_t {
 			  * supported when zero. */
 			uint32_t max_num;
 
-			/** Maximum queue size */
+			/** Maximum queue size. The value of zero means that
+			 *  there is no size limit. */
 			uint32_t max_size;
 
 		} waitfree;
