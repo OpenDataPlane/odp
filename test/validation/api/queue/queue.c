@@ -468,7 +468,8 @@ static void test_pair(odp_nonblocking_t nonblocking,
 			return;
 		}
 
-		if (capa.plain.lockfree.max_size < max_burst)
+		if (capa.plain.lockfree.max_size &&
+		    capa.plain.lockfree.max_size < max_burst)
 			max_burst = capa.plain.lockfree.max_size;
 	} else {
 		if (capa.plain.max_size && capa.plain.max_size < max_burst)
