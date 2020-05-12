@@ -72,7 +72,7 @@ odp_random_kind_t odp_random_max_kind(void);
  *                      is expected to fail if the implementation is unable to
  *                      provide the requested type.
  *
- * @return Number of bytes written
+ * @return Number of bytes written (0...len).
  * @retval <0 on failure
  */
 int32_t odp_random_data(uint8_t *buf, uint32_t len, odp_random_kind_t kind);
@@ -96,7 +96,7 @@ int32_t odp_random_data(uint8_t *buf, uint32_t len, odp_random_kind_t kind);
  *                     variable. Results are undefined if multiple threads
  *                     call this routine with the same seed variable.
  *
- * @return Number of bytes written
+ * @return Number of bytes written (always len)
  * @retval <0 on failure
  */
 int32_t odp_random_test_data(uint8_t *buf, uint32_t len, uint64_t *seed);
