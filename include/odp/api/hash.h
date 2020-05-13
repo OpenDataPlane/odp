@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/abi/hash.h>
+
 #include <odp/api/spec/hash.h>
 
 #ifdef __cplusplus
