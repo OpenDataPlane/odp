@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -70,7 +70,8 @@ static inline int sched_mode(pktin_mode_t in_mode)
  * Parsed command line application arguments
  */
 typedef struct {
-	int extra_check;        /* Some extra checks have been enabled */
+	/* Some extra features (e.g. error checks) have been enabled */
+	int extra_feat;
 	unsigned int cpu_count;
 	int if_count;		/* Number of interfaces to be used */
 	int addr_count;		/* Number of dst addresses to be used */
@@ -85,6 +86,7 @@ typedef struct {
 	int dst_change;		/* Change destination eth addresses */
 	int src_change;		/* Change source eth addresses */
 	int error_check;        /* Check packet errors */
+	int packet_copy;        /* Packet copy */
 	int chksum;             /* Checksum offload */
 	int sched_mode;         /* Scheduler mode */
 	int num_groups;         /* Number of scheduling groups */
@@ -101,6 +103,8 @@ typedef union ODP_ALIGNED_CACHE {
 		uint64_t rx_drops;
 		/* Packets dropped due to transmit error */
 		uint64_t tx_drops;
+		/* Number of failed packet copies */
+		uint64_t copy_fails;
 	} s;
 
 	uint8_t padding[ODP_CACHE_LINE_SIZE];
@@ -280,6 +284,28 @@ static inline void chksum_insert(odp_packet_t *pkt_tbl, int pkts)
 	}
 }
 
+static inline int copy_packets(odp_packet_t *pkt_tbl, int pkts)
+{
+	odp_packet_t old_pkt, new_pkt;
+	odp_pool_t pool;
+	int i;
+	int copy_fails = 0;
+
+	for (i = 0; i < pkts; i++) {
+		old_pkt = pkt_tbl[i];
+		pool    = odp_packet_pool(old_pkt);
+		new_pkt = odp_packet_copy(old_pkt, pool);
+		if (odp_likely(new_pkt != ODP_PACKET_INVALID)) {
+			pkt_tbl[i] = new_pkt;
+			odp_packet_free(old_pkt);
+		} else {
+			copy_fails++;
+		}
+	}
+
+	return copy_fails;
+}
+
 /*
  * Packet IO worker thread using scheduled queues
  *
@@ -353,7 +379,14 @@ static int run_worker_sched_mode(void *arg)
 
 		odp_packet_from_event_multi(pkt_tbl, ev_tbl, pkts);
 
-		if (odp_unlikely(gbl_args->appl.extra_check)) {
+		if (odp_unlikely(gbl_args->appl.extra_feat)) {
+			if (gbl_args->appl.packet_copy) {
+				int fails;
+
+				fails = copy_packets(pkt_tbl, pkts);
+				stats->s.copy_fails += fails;
+			}
+
 			if (gbl_args->appl.chksum)
 				chksum_insert(pkt_tbl, pkts);
 
@@ -480,7 +513,14 @@ static int run_worker_plain_queue_mode(void *arg)
 
 		odp_packet_from_event_multi(pkt_tbl, event, pkts);
 
-		if (odp_unlikely(gbl_args->appl.extra_check)) {
+		if (odp_unlikely(gbl_args->appl.extra_feat)) {
+			if (gbl_args->appl.packet_copy) {
+				int fails;
+
+				fails = copy_packets(pkt_tbl, pkts);
+				stats->s.copy_fails += fails;
+			}
+
 			if (gbl_args->appl.chksum)
 				chksum_insert(pkt_tbl, pkts);
 
@@ -605,7 +645,14 @@ static int run_worker_direct_mode(void *arg)
 		if (odp_unlikely(pkts <= 0))
 			continue;
 
-		if (odp_unlikely(gbl_args->appl.extra_check)) {
+		if (odp_unlikely(gbl_args->appl.extra_feat)) {
+			if (gbl_args->appl.packet_copy) {
+				int fails;
+
+				fails = copy_packets(pkt_tbl, pkts);
+				stats->s.copy_fails += fails;
+			}
+
 			if (gbl_args->appl.chksum)
 				chksum_insert(pkt_tbl, pkts);
 
@@ -711,9 +758,10 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	}
 
 	odp_pktio_config_init(&config);
-	config.parser.layer = gbl_args->appl.extra_check ?
-			ODP_PROTO_LAYER_ALL :
-			ODP_PROTO_LAYER_NONE;
+
+	config.parser.layer = ODP_PROTO_LAYER_NONE;
+	if (gbl_args->appl.error_check || gbl_args->appl.chksum)
+		config.parser.layer = ODP_PROTO_LAYER_ALL;
 
 	if (gbl_args->appl.chksum) {
 		printf("Checksum offload enabled\n");
@@ -833,7 +881,7 @@ static int print_speed_stats(int num_workers, stats_t **thr_stats,
 	uint64_t pkts = 0;
 	uint64_t pkts_prev = 0;
 	uint64_t pps;
-	uint64_t rx_drops, tx_drops;
+	uint64_t rx_drops, tx_drops, copy_fails;
 	uint64_t maximum_pps = 0;
 	int i;
 	int elapsed = 0;
@@ -851,6 +899,7 @@ static int print_speed_stats(int num_workers, stats_t **thr_stats,
 		pkts = 0;
 		rx_drops = 0;
 		tx_drops = 0;
+		copy_fails = 0;
 
 		sleep(timeout);
 
@@ -858,6 +907,7 @@ static int print_speed_stats(int num_workers, stats_t **thr_stats,
 			pkts += thr_stats[i]->s.packets;
 			rx_drops += thr_stats[i]->s.rx_drops;
 			tx_drops += thr_stats[i]->s.tx_drops;
+			copy_fails += thr_stats[i]->s.copy_fails;
 		}
 		if (stats_enabled) {
 			pps = (pkts - pkts_prev) / timeout;
@@ -866,7 +916,10 @@ static int print_speed_stats(int num_workers, stats_t **thr_stats,
 			printf("%" PRIu64 " pps, %" PRIu64 " max pps, ",  pps,
 			       maximum_pps);
 
-			printf(" %" PRIu64 " rx drops, %" PRIu64 " tx drops\n",
+			if (gbl_args->appl.packet_copy)
+				printf("%" PRIu64 " copy fails, ", copy_fails);
+
+			printf("%" PRIu64 " rx drops, %" PRIu64 " tx drops\n",
 			       rx_drops, tx_drops);
 
 			pkts_prev = pkts;
@@ -1150,6 +1203,9 @@ static void usage(char *progname)
 	       "                          num: must not exceed number of interfaces or workers\n"
 	       "  -b, --burst_rx <num>    0:   Use max burst size (default)\n"
 	       "                          num: Max number of packets per receive call\n"
+	       "  -p, --packet_copy       0: Don't copy packet (default)\n"
+	       "                          1: Create and send copy of the received packet.\n"
+	       "                             Free the original packet.\n"
 	       "  -v, --verbose           Verbose output.\n"
 	       "  -h, --help              Display help and exit.\n\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
@@ -1185,12 +1241,13 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"chksum", required_argument, NULL, 'k'},
 		{"groups", required_argument, NULL, 'g'},
 		{"burst_rx", required_argument, NULL, 'b'},
+		{"packet_copy", required_argument, NULL, 'p'},
 		{"verbose", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:vh";
+	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:p:vh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1199,6 +1256,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->src_change = 1; /* change eth src address by default */
 	appl_args->num_groups = 0; /* use default group */
 	appl_args->error_check = 0; /* don't check packet errors by default */
+	appl_args->packet_copy = 0;
 	appl_args->burst_rx = 0;
 	appl_args->verbose = 0;
 	appl_args->chksum = 0; /* don't use checksum offload by default */
@@ -1333,6 +1391,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'b':
 			appl_args->burst_rx = atoi(optarg);
 			break;
+		case 'p':
+			appl_args->packet_copy = atoi(optarg);
+			break;
 		case 'v':
 			appl_args->verbose = 1;
 			break;
@@ -1366,7 +1427,10 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	if (appl_args->burst_rx == 0)
 		appl_args->burst_rx = MAX_PKT_BURST;
 
-	appl_args->extra_check = appl_args->error_check || appl_args->chksum;
+	appl_args->extra_feat = 0;
+	if (appl_args->error_check || appl_args->chksum ||
+	    appl_args->packet_copy)
+		appl_args->extra_feat = 1;
 
 	optind = 1;		/* reset 'extern optind' from the getopt lib */
 }
@@ -1406,6 +1470,13 @@ static void print_info(char *progname, appl_args_t *appl_args)
 		printf("PKTOUT_DIRECT\n");
 
 	printf("Burst size:      %i\n", appl_args->burst_rx);
+
+	if (appl_args->extra_feat) {
+		printf("Extra features:  %s%s%s\n",
+		       appl_args->error_check ? "error_check " : "",
+		       appl_args->chksum ? "chksum " : "",
+		       appl_args->packet_copy ? "packet_copy" : "");
+	}
 
 	printf("\n");
 	fflush(NULL);
