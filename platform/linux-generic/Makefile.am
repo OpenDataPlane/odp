@@ -59,6 +59,7 @@ odpapiabiarchinclude_HEADERS += \
 		  include-abi/odp/api/abi/debug.h \
 		  include-abi/odp/api/abi/errno.h \
 		  include-abi/odp/api/abi/event.h \
+		  include-abi/odp/api/abi/hash.h \
 		  include-abi/odp/api/abi/init.h \
 		  include-abi/odp/api/abi/ipsec.h \
 		  include-abi/odp/api/abi/packet.h \
