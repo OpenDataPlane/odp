@@ -862,7 +862,7 @@ static void _verify_headroom_shift(odp_packet_t *pkt,
 	uint32_t room = odp_packet_headroom(*pkt);
 	uint32_t seg_data_len = odp_packet_seg_len(*pkt);
 	uint32_t pkt_data_len = odp_packet_len(*pkt);
-	void *data;
+	void *data = NULL;
 	char *data_orig = odp_packet_data(*pkt);
 	char *head_orig = odp_packet_head(*pkt);
 	uint32_t seg_len;
@@ -1571,7 +1571,7 @@ static void packet_test_concatsplit(void)
 {
 	odp_packet_t pkt, pkt2;
 	uint32_t pkt_len;
-	odp_packet_t splits[4];
+	odp_packet_t splits[4] = {ODP_PACKET_INVALID};
 	odp_pool_t pool;
 
 	pool = odp_packet_pool(test_packet);

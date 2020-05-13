@@ -83,6 +83,7 @@ static void pool_test_lookup_info_print(void)
 	odp_pool_info_t info;
 	odp_pool_param_t param;
 
+	memset(&info, 0, sizeof(info));
 	odp_pool_param_init(&param);
 
 	param.type      = ODP_POOL_BUFFER;
@@ -321,6 +322,7 @@ static void pool_test_info_packet(void)
 	odp_pool_param_t param;
 	const char pool_name[] = "test_pool_name";
 
+	memset(&info, 0, sizeof(info));
 	odp_pool_param_init(&param);
 
 	param.type     = ODP_POOL_PACKET;
@@ -351,6 +353,7 @@ static void pool_test_info_data_range(void)
 	uint32_t i, num;
 	uintptr_t pool_len;
 
+	memset(&info, 0, sizeof(info));
 	odp_pool_param_init(&param);
 
 	param.type     = ODP_POOL_PACKET;

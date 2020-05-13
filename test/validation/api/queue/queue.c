@@ -580,8 +580,8 @@ static void queue_test_pair_lf_spsc(void)
 static void queue_test_param(void)
 {
 	odp_queue_t queue, null_queue;
-	odp_event_t enev[BURST_SIZE];
-	odp_event_t deev[BURST_SIZE];
+	odp_event_t enev[BURST_SIZE] = {ODP_EVENT_INVALID};
+	odp_event_t deev[BURST_SIZE] = {ODP_EVENT_INVALID};
 	odp_buffer_t buf;
 	odp_event_t ev;
 	odp_pool_t msg_pool;
