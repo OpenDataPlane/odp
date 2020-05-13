@@ -649,7 +649,7 @@ static int recv_packets_tmo(odp_pktio_t pktio, odp_packet_t pkt_tbl[],
 	int num_q;
 	int i;
 	int n;
-	unsigned from_val;
+	unsigned int from_val = 0;
 	unsigned *from = NULL;
 
 	if (mode == RECV_MQ_TMO)
