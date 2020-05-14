@@ -1828,8 +1828,7 @@ static int schedule_init_global(void)
 		    sizeof(sched_queue_t);
 	max_alloc = min_alloc;
 	pool = _odp_ishm_pool_create("sched_shm_pool", pool_size,
-				     min_alloc, max_alloc,
-				     _ODP_ISHM_SINGLE_VA);
+				     min_alloc, max_alloc, 0);
 	if (pool == NULL) {
 		ODP_ERR("Failed to allocate shared memory pool "
 			"for sched\n");
