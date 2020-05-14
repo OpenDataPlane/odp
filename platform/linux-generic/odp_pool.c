@@ -406,9 +406,9 @@ static void init_buffers(pool_t *pool)
 					   pool->block_offset];
 		buf_hdr = addr;
 		pkt_hdr = addr;
-		/* Skip packet buffers which cross huge page boundaries. Some
+		/* Skip buffers which cross huge page boundaries. Some
 		 * NICs cannot handle buffers which cross page boundaries. */
-		if (pool->params.type == ODP_POOL_PACKET &&
+		if (pool->params.skip_cross_page &&
 		    page_size >= FIRST_HP_SIZE) {
 			uint64_t first_page;
 			uint64_t last_page;
@@ -505,6 +505,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	if (params->type == ODP_POOL_PACKET) {
 		uint32_t align_req = params->pkt.align;
 
+		params->skip_cross_page = true;
 		if (align_req &&
 		    (!CHECK_IS_POWER2(align_req) ||
 		     align_req > _odp_pool_glb->config.pkt_base_align)) {
@@ -641,9 +642,9 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 		block_size = ROUNDUP_CACHE_LINE(hdr_size + align_pad + seg_len);
 	}
 
-	/* Allocate extra memory for skipping packet buffers which cross huge
+	/* Allocate extra memory for skipping buffers which cross huge
 	 * page boundaries. */
-	if (params->type == ODP_POOL_PACKET) {
+	if (params->skip_cross_page) {
 		num_extra = (((uint64_t)(num * block_size) +
 				FIRST_HP_SIZE - 1) / FIRST_HP_SIZE);
 		num_extra += (((uint64_t)(num_extra * block_size) +

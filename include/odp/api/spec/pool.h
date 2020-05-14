@@ -200,6 +200,9 @@ typedef struct odp_pool_param_t {
 	/** Pool type */
 	int type;
 
+	/** skip buffers which cross huge page boundaries */
+	odp_bool_t skip_cross_page;
+
 	/** Parameters for buffer pools */
 	struct {
 		/** Number of buffers in the pool */
