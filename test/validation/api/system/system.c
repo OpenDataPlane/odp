@@ -17,6 +17,9 @@
 #define GIGA_HZ 1000000000ULL
 #define KILO_HZ 1000ULL
 
+/* 10 usec wait time assumes >100kHz resolution on CPU cycles counter */
+#define CPU_CYCLES_WAIT_NS 10000
+
 static void test_version_api_str(void)
 {
 	int char_ok = 0;
@@ -81,37 +84,37 @@ static void system_test_odp_cpu_count(void)
 	CU_ASSERT(0 < cpus);
 }
 
-static void system_test_odp_cpu_cycles(void)
+static void system_test_cpu_cycles(void)
 {
 	uint64_t c2, c1;
 
 	c1 = odp_cpu_cycles();
-	odp_time_wait_ns(100);
+	odp_time_wait_ns(CPU_CYCLES_WAIT_NS);
 	c2 = odp_cpu_cycles();
 
 	CU_ASSERT(c2 != c1);
 }
 
-static void system_test_odp_cpu_cycles_max(void)
+static void system_test_cpu_cycles_max(void)
 {
 	uint64_t c2, c1;
 	uint64_t max1, max2;
 
 	max1 = odp_cpu_cycles_max();
-	odp_time_wait_ns(100);
+	odp_time_wait_ns(CPU_CYCLES_WAIT_NS);
 	max2 = odp_cpu_cycles_max();
 
 	CU_ASSERT(max1 >= UINT32_MAX / 2);
 	CU_ASSERT(max1 == max2);
 
 	c1 = odp_cpu_cycles();
-	odp_time_wait_ns(1000);
+	odp_time_wait_ns(CPU_CYCLES_WAIT_NS);
 	c2 = odp_cpu_cycles();
 
 	CU_ASSERT(c1 <= max1 && c2 <= max1);
 }
 
-static void system_test_odp_cpu_cycles_resolution(void)
+static void system_test_cpu_cycles_resolution(void)
 {
 	int i;
 	uint64_t res;
@@ -133,7 +136,7 @@ static void system_test_odp_cpu_cycles_resolution(void)
 	}
 }
 
-static void system_test_odp_cpu_cycles_diff(void)
+static void system_test_cpu_cycles_diff(void)
 {
 	int i;
 	uint64_t c2, c1, c3, max;
@@ -279,6 +282,17 @@ static void system_test_odp_sys_huge_page_size_all(void)
 		CU_ASSERT(pagesz_tbs[i] > prev_pagesz);
 		prev_pagesz = pagesz_tbs[i];
 	}
+}
+
+static int system_check_cycle_counter(void)
+{
+	if (odp_cpu_cycles_max() == 0) {
+		fprintf(stderr, "Cycle counter is not supported, skipping "
+			"test\n");
+		return ODP_TEST_INACTIVE;
+	}
+
+	return ODP_TEST_ACTIVE;
 }
 
 static int system_check_odp_cpu_hz(void)
@@ -429,10 +443,14 @@ odp_testinfo_t system_suite[] = {
 				  system_check_odp_cpu_hz_max),
 	ODP_TEST_INFO_CONDITIONAL(system_test_odp_cpu_hz_max_id,
 				  system_check_odp_cpu_hz_max_id),
-	ODP_TEST_INFO(system_test_odp_cpu_cycles),
-	ODP_TEST_INFO(system_test_odp_cpu_cycles_max),
-	ODP_TEST_INFO(system_test_odp_cpu_cycles_resolution),
-	ODP_TEST_INFO(system_test_odp_cpu_cycles_diff),
+	ODP_TEST_INFO_CONDITIONAL(system_test_cpu_cycles,
+				  system_check_cycle_counter),
+	ODP_TEST_INFO_CONDITIONAL(system_test_cpu_cycles_max,
+				  system_check_cycle_counter),
+	ODP_TEST_INFO_CONDITIONAL(system_test_cpu_cycles_resolution,
+				  system_check_cycle_counter),
+	ODP_TEST_INFO_CONDITIONAL(system_test_cpu_cycles_diff,
+				  system_check_cycle_counter),
 	ODP_TEST_INFO(system_test_info_print),
 	ODP_TEST_INFO_NULL,
 };
