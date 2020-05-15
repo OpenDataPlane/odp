@@ -20,6 +20,12 @@ AS_IF([test -z "$OD"], [AC_MSG_ERROR([Could not find 'od'])])
 AS_IF([test -z "$2"] || [test ! -f $2],
       [AC_MSG_ERROR([Default configuration file not found])], [])
 
+conf_ver=$_ODP_CONFIG_VERSION_GENERATION.$_ODP_CONFIG_VERSION_MAJOR.$_ODP_CONFIG_VERSION_MINOR
+file_ver=`$SED 's/ //g' $2 | $GREP -oP '(?<=config_file_version=").*?(?=")'`
+
+AS_IF([test "x$conf_ver" = "x$file_ver"], [],
+      [AC_MSG_ERROR([Configuration file version mismatch (_ODP_CONFIG_VERSION=$conf_ver config_file_version=$file_ver)])])
+
 odp_use_config=true
 ##########################################################################
 # Create a header file odp_libconfig_config.h which containins null
