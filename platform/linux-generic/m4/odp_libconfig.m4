@@ -15,4 +15,14 @@ AC_SUBST(_ODP_CONFIG_VERSION_MAJOR)
 _ODP_CONFIG_VERSION_MINOR=_odp_config_version_minor
 AC_SUBST(_ODP_CONFIG_VERSION_MINOR)
 
-ODP_LIBCONFIG([$with_platform])
+##########################################################################
+# Set optional path for the default configuration file
+##########################################################################
+default_config_path="${srcdir}/config/odp-$with_platform.conf"
+
+AC_ARG_WITH([config-file],
+AS_HELP_STRING([--with-config-file=FILE path to the default configuration file],
+               [(this file must include all configuration options).]),
+            [default_config_path=$withval], [])
+
+ODP_LIBCONFIG([$with_platform], [$default_config_path])
