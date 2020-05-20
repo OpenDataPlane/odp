@@ -56,15 +56,16 @@ static int parse_args(int argc, char *argv[], options_t *opt)
 
 int main(int argc, char *argv[])
 {
+	char mask_str[ODP_CPUMASK_STR_SIZE];
 	odp_instance_t inst;
 	options_t opt;
 	pid_t pid;
 	cpu_set_t cpu_set;
-	int i;
+	int i, cpu;
 	odp_cpumask_t mask;
 
 	memset(&opt, 0, sizeof(opt));
-	opt.cpu = 0;
+	opt.cpu = 1;
 	opt.num = 1;
 
 	if (parse_args(argc, argv, &opt))
@@ -77,8 +78,20 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	odp_cpumask_default_control(&mask, 0);
-	opt.cpu = odp_cpumask_first(&mask);
+	odp_cpumask_all_available(&mask);
+	cpu = odp_cpumask_first(&mask);
+	while (cpu >= 0) {
+		if (cpu == opt.cpu)
+			break;
+		cpu = odp_cpumask_next(&mask, cpu);
+	}
+	if (cpu != opt.cpu) {
+		if (odp_cpumask_to_str(&mask, mask_str, sizeof(mask_str)) < 0)
+			mask_str[0] = '\0';
+		printf("Requested CPU %d is not part of available mask[%s]\n",
+		       opt.cpu, mask_str);
+		return -1;
+	}
 
 	CPU_ZERO(&cpu_set);
 	CPU_SET(opt.cpu, &cpu_set);
