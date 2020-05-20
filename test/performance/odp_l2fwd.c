@@ -91,6 +91,7 @@ typedef struct {
 	int sched_mode;         /* Scheduler mode */
 	int num_groups;         /* Number of scheduling groups */
 	int burst_rx;           /* Receive burst size */
+	int pool_per_if;        /* Create pool per interface */
 	int verbose;		/* Verbose output */
 } appl_args_t;
 
@@ -1206,6 +1207,8 @@ static void usage(char *progname)
 	       "  -p, --packet_copy       0: Don't copy packet (default)\n"
 	       "                          1: Create and send copy of the received packet.\n"
 	       "                             Free the original packet.\n"
+	       "  -y, --pool_per_if       0: Share a single pool between all interfaces (default)\n"
+	       "                          1: Create a pool per interface\n"
 	       "  -v, --verbose           Verbose output.\n"
 	       "  -h, --help              Display help and exit.\n\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
@@ -1242,12 +1245,13 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"groups", required_argument, NULL, 'g'},
 		{"burst_rx", required_argument, NULL, 'b'},
 		{"packet_copy", required_argument, NULL, 'p'},
+		{"pool_per_if", required_argument, NULL, 'y'},
 		{"verbose", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:p:vh";
+	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:p:y:vh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1260,6 +1264,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->burst_rx = 0;
 	appl_args->verbose = 0;
 	appl_args->chksum = 0; /* don't use checksum offload by default */
+	appl_args->pool_per_if = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -1394,6 +1399,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'p':
 			appl_args->packet_copy = atoi(optarg);
 			break;
+		case 'y':
+			appl_args->pool_per_if = atoi(optarg);
+			break;
 		case 'v':
 			appl_args->verbose = 1;
 			break;
@@ -1470,6 +1478,8 @@ static void print_info(char *progname, appl_args_t *appl_args)
 		printf("PKTOUT_DIRECT\n");
 
 	printf("Burst size:      %i\n", appl_args->burst_rx);
+	printf("Number of pools: %i\n", appl_args->pool_per_if ?
+					appl_args->if_count : 1);
 
 	if (appl_args->extra_feat) {
 		printf("Extra features:  %s%s%s\n",
@@ -1522,7 +1532,6 @@ int main(int argc, char *argv[])
 	odph_helper_options_t helper_options;
 	odph_thread_param_t thr_param[MAX_WORKERS];
 	odph_thread_common_param_t thr_common;
-	odp_pool_t pool;
 	int i;
 	int num_workers, num_thr;
 	odp_shm_t shm;
@@ -1532,11 +1541,13 @@ int main(int argc, char *argv[])
 	odp_pool_param_t params;
 	int ret;
 	stats_t *stats[MAX_WORKERS];
-	int if_count;
+	int if_count, num_pools;
 	int (*thr_run_func)(void *);
 	odp_instance_t instance;
 	int num_groups;
 	odp_schedule_group_t group[MAX_PKTIOS];
+	odp_pool_t pool_tbl[MAX_PKTIOS];
+	odp_pool_t pool;
 	odp_init_t init;
 	odp_pool_capability_t pool_capa;
 	uint32_t pkt_len, pkt_num;
@@ -1634,8 +1645,17 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	num_pools = 1;
+	if (gbl_args->appl.pool_per_if)
+		num_pools = if_count;
+
 	if (odp_pool_capability(&pool_capa)) {
 		ODPH_ERR("Error: pool capability failed\n");
+		return -1;
+	}
+
+	if (num_pools > (int)pool_capa.pkt.max_pools) {
+		ODPH_ERR("Error: Too many pools %i\n", num_pools);
 		return -1;
 	}
 
@@ -1655,13 +1675,17 @@ int main(int argc, char *argv[])
 	params.pkt.num     = pkt_num;
 	params.type        = ODP_POOL_PACKET;
 
-	pool = odp_pool_create("packet pool", &params);
+	for (i = 0; i < num_pools; i++) {
+		pool_tbl[i] = odp_pool_create("packet pool", &params);
 
-	if (pool == ODP_POOL_INVALID) {
-		ODPH_ERR("Error: packet pool create failed.\n");
-		exit(EXIT_FAILURE);
+		if (pool_tbl[i] == ODP_POOL_INVALID) {
+			ODPH_ERR("Error: pool create failed %i\n", i);
+			exit(EXIT_FAILURE);
+		}
+
+		if (gbl_args->appl.verbose)
+			odp_pool_print(pool_tbl[i]);
 	}
-	odp_pool_print(pool);
 
 	if (odp_pktio_max_index() >= MAX_PKTIO_INDEXES)
 		ODPH_DBG("Warning: max pktio index (%u) is too large\n",
@@ -1678,6 +1702,8 @@ int main(int argc, char *argv[])
 	} else {
 		create_groups(num_groups, group);
 	}
+
+	pool = pool_tbl[0];
 
 	for (i = 0; i < if_count; ++i) {
 		const char *dev = gbl_args->appl.if_names[i];
@@ -1696,6 +1722,9 @@ int main(int argc, char *argv[])
 
 		/* Round robin pktios to groups */
 		grp = group[i % num_groups];
+
+		if (gbl_args->appl.pool_per_if)
+			pool = pool_tbl[i];
 
 		if (create_pktio(dev, i, num_rx, num_tx, pool, grp))
 			exit(EXIT_FAILURE);
@@ -1772,6 +1801,9 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	if (gbl_args->appl.verbose)
+		odp_shm_print_all();
+
 	/* Start packet receive and transmit */
 	for (i = 0; i < if_count; ++i) {
 		odp_pktio_t pktio;
@@ -1820,9 +1852,11 @@ int main(int argc, char *argv[])
 	gbl_args = NULL;
 	odp_mb_full();
 
-	if (odp_pool_destroy(pool)) {
-		ODPH_ERR("Error: pool destroy\n");
-		exit(EXIT_FAILURE);
+	for (i = 0; i < num_pools; i++) {
+		if (odp_pool_destroy(pool_tbl[i])) {
+			ODPH_ERR("Error: pool destroy failed %i\n", i);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	if (odp_shm_free(shm)) {
