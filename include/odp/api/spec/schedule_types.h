@@ -160,6 +160,39 @@ extern "C" {
  */
 typedef int odp_schedule_prio_t;
 
+/**
+ * Multi event config parameters
+ */
+typedef struct odp_multi_event_param_t {
+	/** Number of events to accumulate
+	 *
+	 * The scheduler will asynchronously accumulate upto these many number
+	 * of events and deliver the events on the subsequent invocation of
+	 * odp_schedule_multi().
+	 * This value should be less than or equal to max_multi_event_count.
+	 *
+	 * 0:     Asynchronous accumulation is disabled.
+	 * >= 1:  Asynchronous accumulation is enabled.
+	 *
+	 * @see odp_schedule_capability_t::max_multi_event_count.
+	 *
+	 * Default value is 0. */
+	unit32_t   multi_event_count;
+
+	/** Timeout for accumulation
+	 *
+	 * The scheduler will asynchronously accumulate events for this time
+	 * period before delivering the batch of events.
+	 * This value should be in the range defined by
+	 * multi_event_min_async_wait and multi_event_max_async_wait.
+	 *
+	 * @see odp_schedule_capability_t::multi_event_min_async_wait.
+	 * @see odp_schedule_capability_t::multi_event_max_async_wait.
+	 *
+	 * Default value is 0. */
+	uint32_t  multi_event_async_wait_ns;
+} odp_multi_event_param_t;
+
 /** Scheduler parameters */
 typedef	struct odp_schedule_param_t {
 	/** Priority level
@@ -181,6 +214,9 @@ typedef	struct odp_schedule_param_t {
 	  *
 	  * Default value is 0. */
 	uint32_t lock_count;
+
+	/** Multi event config options */
+	odp_multi_event_param_t multi_event_param;
 } odp_schedule_param_t;
 
 /**
@@ -222,6 +258,17 @@ typedef struct odp_schedule_capability_t {
 	 * The specification is the same as for the blocking implementation. */
 	odp_support_t waitfree_queues;
 
+	/** Maximum number of events scheduler can accumulate asynchronously.
+	 * @see odp_multi_event_param_t::multi_event_count. */
+	uint32_t max_multi_event_count;
+
+	/** Maximum timeout for accumulation in nano seconds.
+	 * @see odp_multi_event_param_t::multi_event_async_wait_ns. */
+	uint32_t  multi_event_max_async_wait;
+
+	/** Minimum timeout for accumulation in nano seconds.
+	 * @see odp_multi_event_param_t::multi_event_async_wait_ns. */
+	uint32_t  multi_event_min_async_wait;
 } odp_schedule_capability_t;
 
 /**
