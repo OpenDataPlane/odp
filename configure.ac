@@ -272,31 +272,6 @@ AC_SUBST(ODP_LTO_FLAGS)
 ODP_CFLAGS="$ODP_CFLAGS $ODP_LTO_FLAGS"
 
 ##########################################################################
-# Determine which platform to build for
-##########################################################################
-AC_ARG_WITH([platform],
-    [AS_HELP_STRING([--with-platform=platform],
-	[select platform to be used, default linux-generic])],
-    [],
-    [with_platform=linux-generic
-    ])
-
-AC_SUBST([with_platform])
-
-##########################################################################
-# Run platform specific checks and settings
-##########################################################################
-AS_IF([test "${with_platform}" = "linux-generic"],
-      [m4_include([./platform/linux-generic/m4/configure.m4])],
-      [AC_MSG_ERROR([UNSUPPORTED PLATFORM: ${with_platform}])])
-
-AC_DEFINE_UNQUOTED([_ODP_IMPLEMENTATION_NAME], ["$ODP_IMPLEMENTATION_NAME"],
-		   [Define to the name of the implementation])
-
-AM_CONDITIONAL([ODP_USE_CONFIG], [test "x$odp_use_config" = "xtrue"])
-AC_SUBST([ODP_LIB_NAME])
-
-##########################################################################
 # Build examples/tests dynamically
 ##########################################################################
 AC_ARG_ENABLE([static-applications],
@@ -350,22 +325,6 @@ AM_CONDITIONAL([ARCH_IS_POWERPC], [test "x${ARCH_DIR}" = "xpowerpc"])
 AM_CONDITIONAL([ARCH_IS_X86], [test "x${ARCH_DIR}" = "xx86"])
 AM_CONDITIONAL([ARCH_IS_X86_32], [test "x${ARCH_ABI}" = "xx86_32-linux"])
 AM_CONDITIONAL([ARCH_IS_X86_64], [test "x${ARCH_ABI}" = "xx86_64-linux"])
-
-##########################################################################
-# Setup doxygen documentation
-##########################################################################
-DX_HTML_FEATURE(ON)
-DX_PDF_FEATURE(OFF)
-DX_PS_FEATURE(OFF)
-DX_ENV_APPEND(WITH_PLATFORM, $with_platform)
-
-DX_INIT_DOXYGEN($PACKAGE_NAME,
-		${srcdir}/doc/application-api-guide/Doxyfile,
-		${builddir}/doc/application-api-guide/output,
-		${srcdir}/doc/helper-guide/Doxyfile,
-		${builddir}/doc/helper-guide/output,
-		${srcdir}/doc/platform-api-guide/Doxyfile,
-		${builddir}/doc/platform-api-guide/output)
 
 ##########################################################################
 # Enable/disable ODP_DEBUG
@@ -427,6 +386,54 @@ AC_ARG_ENABLE([deprecated],
 AC_SUBST(ODP_DEPRECATED_API)
 
 ##########################################################################
+# Determine which platform to build for
+##########################################################################
+AC_ARG_WITH([platform],
+    [AS_HELP_STRING([--with-platform=platform],
+	[select platform to be used, default linux-generic])],
+    [],
+    [with_platform=linux-generic
+    ])
+
+AC_SUBST([with_platform])
+
+##########################################################################
+# Run platform specific checks and settings
+##########################################################################
+# Placeholder for platform dependency libraries which might come from custom
+# paths. Platform should fill it in configure.m4 with AS_VAR_APPEND.
+# This works around a bug in libtool.m4 on some systems:
+# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=297726
+PLAT_DEP_LIBS=
+AC_SUBST([PLAT_DEP_LIBS])
+
+AS_IF([test "${with_platform}" = "linux-generic"],
+      [m4_include([./platform/linux-generic/m4/configure.m4])],
+      [AC_MSG_ERROR([UNSUPPORTED PLATFORM: ${with_platform}])])
+
+AC_DEFINE_UNQUOTED([_ODP_IMPLEMENTATION_NAME], ["$ODP_IMPLEMENTATION_NAME"],
+		   [Define to the name of the implementation])
+
+AM_CONDITIONAL([ODP_USE_CONFIG], [test "x$odp_use_config" = "xtrue"])
+AC_SUBST([ODP_LIB_NAME])
+
+##########################################################################
+# Setup doxygen documentation
+##########################################################################
+DX_HTML_FEATURE(ON)
+DX_PDF_FEATURE(OFF)
+DX_PS_FEATURE(OFF)
+DX_ENV_APPEND(WITH_PLATFORM, $with_platform)
+
+DX_INIT_DOXYGEN($PACKAGE_NAME,
+		${srcdir}/doc/application-api-guide/Doxyfile,
+		${builddir}/doc/application-api-guide/output,
+		${srcdir}/doc/helper-guide/Doxyfile,
+		${builddir}/doc/helper-guide/output,
+		${srcdir}/doc/platform-api-guide/Doxyfile,
+		${builddir}/doc/platform-api-guide/output)
+
+##########################################################################
 # Default include setup
 ##########################################################################
 CFLAGS="$CFLAGS $ODP_CFLAGS"
@@ -482,6 +489,7 @@ AC_MSG_RESULT([
 	ld:			${LD}
 	ldflags:		${LDFLAGS}
 	libs:			${LIBS}
+	dependency libs:	${PLAT_DEP_LIBS}
 	defs:			${DEFS}
 	static libraries:	${enable_static}
 	shared libraries:	${enable_shared}
