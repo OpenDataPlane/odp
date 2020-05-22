@@ -31,10 +31,13 @@ AC_DEFUN([_ODP_DPDK_SET_LIBS], [dnl
 ODP_DPDK_PMDS([$DPDK_PMD_PATH])
 DPDK_LIB="-Wl,--whole-archive,-ldpdk,--no-whole-archive"
 AS_IF([test "x$DPDK_SHARED" = "xyes"], [dnl
-    # applications don't need to be linked to anything, just rpath
-    DPDK_LIBS_LT="$DPDK_RPATH_LT"
-    # static linking flags will need -ldpdk
-    DPDK_LIBS_LT_STATIC="$DPDK_LDFLAGS $DPDK_LIB $DPDK_LIBS"
+    if test x$enable_static_applications != xyes; then
+      # applications don't need to be linked to anything, just rpath
+      DPDK_LIBS_LT="$DPDK_RPATH_LT"
+    else
+      # static linking flags will need -ldpdk
+      DPDK_LIBS_LT="$DPDK_LDFLAGS $DPDK_LIB $DPDK_LIBS"
+    fi
     DPDK_LIBS="-Wl,--no-as-needed,-ldpdk,--as-needed,`echo $DPDK_LIBS | sed -e 's/ /,/g'`"
     DPDK_LIBS="$DPDK_LDFLAGS $DPDK_RPATH $DPDK_LIBS"
     # link libodp-linux with -ldpdk
@@ -44,7 +47,6 @@ AS_IF([test "x$DPDK_SHARED" = "xyes"], [dnl
     # rearranged by libtool
     DPDK_LIBS_LT="`echo $DPDK_LIBS | sed -e 's/^/-Wc,/' -e 's/ /,/g'`"
     DPDK_LIBS_LT="$DPDK_LDFLAGS $DPDK_LIB $DPDK_LIBS_LT $DPDK_LIBS"
-    DPDK_LIBS_LT_STATIC="$DPDK_LIBS_LT"
     # static linking flags follow the suite
     DPDK_LIBS="$DPDK_LDFLAGS $DPDK_LIB $DPDK_LIBS"
     # link libodp-linux with libtool linking flags
@@ -62,7 +64,6 @@ LIBS=$OLD_LIBS
 AC_SUBST([DPDK_LIBS])
 AC_SUBST([DPDK_LIBS_LIBODP])
 AC_SUBST([DPDK_LIBS_LT])
-AC_SUBST([DPDK_LIBS_LT_STATIC])
 ])
 
 # _ODP_DPDK_CHECK_LIB(LDFLAGS, [LIBS])
@@ -189,8 +190,6 @@ DPDK_PKG=", libdpdk"
 AC_SUBST([DPDK_PKG])
 # applications don't need to be linked to anything, just rpath
 DPDK_LIBS_LT=""
-# compile all static flags into single argument to fool libtool
-DPDK_LIBS_LT_STATIC="-pthread -Wl,`echo $DPDK_STATIC_LIBS | sed -e 's/-pthread//g' -e 's/ \+/,/g' -e 's/-Wl,//g'`"
 # FIXME: this might need to be changed to DPDK_LIBS_STATIC
 DPDK_LIBS_LIBODP="$DPDK_LIBS"
 DPDK_LIBS=""

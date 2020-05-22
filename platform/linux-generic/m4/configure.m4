@@ -30,6 +30,8 @@ m4_include([platform/linux-generic/m4/odp_netmap.m4])
 m4_include([platform/linux-generic/m4/odp_dpdk.m4])
 ODP_SCHEDULER
 
+AS_VAR_APPEND([PLAT_DEP_LIBS], ["${LIBCONFIG_LIBS} ${OPENSSL_LIBS} ${DPDK_LIBS_LT}"])
+
 AC_CONFIG_COMMANDS_PRE([dnl
 AM_CONDITIONAL([PLATFORM_IS_LINUX_GENERIC],
 	       [test "${with_platform}" = "linux-generic"])
