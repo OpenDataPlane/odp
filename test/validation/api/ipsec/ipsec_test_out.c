@@ -453,7 +453,8 @@ static void test_out_ipv4_esp_aes_gcm128(void)
 static void test_out_ipv4_ah_aes_gmac_128(void)
 {
 	odp_ipsec_sa_param_t param;
-	odp_ipsec_sa_t sa;
+	odp_ipsec_sa_t out_sa;
+	odp_ipsec_sa_t in_sa;
 
 	ipsec_sa_param_fill(&param,
 			    false, true, 123, NULL,
@@ -461,9 +462,19 @@ static void test_out_ipv4_ah_aes_gmac_128(void)
 			    ODP_AUTH_ALG_AES_GMAC, &key_a5_128,
 			    NULL, &key_mcgrew_gcm_salt_2);
 
-	sa = odp_ipsec_sa_create(&param);
+	out_sa = odp_ipsec_sa_create(&param);
 
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, out_sa);
+
+	ipsec_sa_param_fill(&param,
+			    true, true, 123, NULL,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_AES_GMAC, &key_a5_128,
+			    NULL, &key_mcgrew_gcm_salt_2);
+
+	in_sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, in_sa);
 
 	ipsec_test_part test = {
 		.pkt_in = &pkt_ipv4_icmp_0,
@@ -471,19 +482,23 @@ static void test_out_ipv4_ah_aes_gmac_128(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_out = &pkt_ipv4_icmp_0_ah_aes_gmac_128_1 },
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
+			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
 
-	ipsec_check_out_one(&test, sa);
+	ipsec_check_out_in_one(&test, out_sa, in_sa);
 
-	ipsec_sa_destroy(sa);
+	ipsec_sa_destroy(out_sa);
+	ipsec_sa_destroy(in_sa);
 }
 
 static void test_out_ipv4_esp_null_aes_gmac_128(void)
 {
 	odp_ipsec_sa_param_t param;
-	odp_ipsec_sa_t sa;
+	odp_ipsec_sa_t out_sa;
+	odp_ipsec_sa_t in_sa;
 
 	ipsec_sa_param_fill(&param,
 			    false, false, 123, NULL,
@@ -491,9 +506,19 @@ static void test_out_ipv4_esp_null_aes_gmac_128(void)
 			    ODP_AUTH_ALG_AES_GMAC, &key_a5_128,
 			    NULL, &key_mcgrew_gcm_salt_2);
 
-	sa = odp_ipsec_sa_create(&param);
+	out_sa = odp_ipsec_sa_create(&param);
 
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, out_sa);
+
+	ipsec_sa_param_fill(&param,
+			    true, false, 123, NULL,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_AES_GMAC, &key_a5_128,
+			    NULL, &key_mcgrew_gcm_salt_2);
+
+	in_sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, in_sa);
 
 	ipsec_test_part test = {
 		.pkt_in = &pkt_ipv4_icmp_0,
@@ -501,13 +526,16 @@ static void test_out_ipv4_esp_null_aes_gmac_128(void)
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .pkt_out = &pkt_ipv4_icmp_0_esp_null_aes_gmac_128_1 },
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
+			  .pkt_out = &pkt_ipv4_icmp_0 },
 		},
 	};
 
-	ipsec_check_out_one(&test, sa);
+	ipsec_check_out_in_one(&test, out_sa, in_sa);
 
-	ipsec_sa_destroy(sa);
+	ipsec_sa_destroy(out_sa);
+	ipsec_sa_destroy(in_sa);
 }
 
 static void test_out_ipv4_esp_chacha20_poly1305(void)
