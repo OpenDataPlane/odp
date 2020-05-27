@@ -54,6 +54,14 @@ ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_SIZE < 0xffff,
 typedef struct pool_local_t {
 	pool_cache_t *cache[ODP_CONFIG_POOLS];
 	int thr_id;
+
+	/* Number of event allocs and frees by this thread. */
+	struct {
+		uint64_t num_alloc;
+		uint64_t num_free;
+
+	} stat[ODP_CONFIG_POOLS];
+
 } pool_local_t;
 
 pool_global_t *_odp_pool_glb;
@@ -333,6 +341,18 @@ int _odp_pool_term_local(void)
 		pool_t *pool = pool_entry(i);
 
 		cache_flush(local.cache[i], pool);
+
+		if (ODP_DEBUG == 1) {
+			uint64_t num_alloc = local.stat[i].num_alloc;
+			uint64_t num_free  = local.stat[i].num_free;
+
+			if (num_alloc || num_free) {
+				ODP_DBG("Pool[%i] stats: thr %i, "
+					"allocs % " PRIu64 ", "
+					"frees % " PRIu64 "\n",
+					i, local.thr_id, num_alloc, num_free);
+			}
+		}
 	}
 
 	return 0;
@@ -954,10 +974,11 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 
 int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 {
-	pool_cache_t *cache = local.cache[pool->pool_idx];
+	uint32_t pool_idx = pool->pool_idx;
+	pool_cache_t *cache = local.cache[pool_idx];
 	ring_ptr_t *ring;
 	odp_buffer_hdr_t *hdr;
-	uint32_t mask, num_ch, i;
+	uint32_t mask, num_ch, num_alloc, i;
 	uint32_t num_deq = 0;
 	uint32_t burst_size = pool->burst_size;
 
@@ -999,16 +1020,25 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 			cache_push(cache, &hdr_tmp[num_deq], cache_num);
 	}
 
-	return num_ch + num_deq;
+	num_alloc = num_ch + num_deq;
+
+	if (ODP_DEBUG == 1)
+		local.stat[pool_idx].num_alloc += num_alloc;
+
+	return num_alloc;
 }
 
 static inline void buffer_free_to_pool(pool_t *pool,
 				       odp_buffer_hdr_t *buf_hdr[], int num)
 {
-	pool_cache_t *cache = local.cache[pool->pool_idx];
+	uint32_t pool_idx = pool->pool_idx;
+	pool_cache_t *cache = local.cache[pool_idx];
 	ring_ptr_t *ring;
 	uint32_t cache_num, mask;
 	uint32_t cache_size = pool->cache_size;
+
+	if (ODP_DEBUG == 1)
+		local.stat[pool_idx].num_free += num;
 
 	/* Special case of a very large free. Move directly to
 	 * the global pool. */
