@@ -513,9 +513,10 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 	uint32_t max_len, cache_size, burst_size;
 	uint32_t ring_size;
 	uint32_t num_extra = 0;
-	int name_len;
-	const char *postfix = "_uarea";
-	char uarea_name[ODP_POOL_NAME_LEN + sizeof(postfix)];
+	const char *max_prefix = "pool_000_uarea_";
+	int max_prefix_len = strlen(max_prefix);
+	char shm_name[ODP_POOL_NAME_LEN + max_prefix_len];
+	char uarea_name[ODP_POOL_NAME_LEN + max_prefix_len];
 
 	align = 0;
 
@@ -622,9 +623,9 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 		pool->name[ODP_POOL_NAME_LEN - 1] = 0;
 	}
 
-	name_len = strlen(pool->name);
-	memcpy(uarea_name, pool->name, name_len);
-	strcpy(&uarea_name[name_len], postfix);
+	/* Format SHM names from prefix, pool index and pool name. */
+	sprintf(shm_name,   "pool_%03i_%s", pool->pool_idx, pool->name);
+	sprintf(uarea_name, "pool_%03i_uarea_%s", pool->pool_idx, pool->name);
 
 	pool->params = *params;
 	pool->block_offset = 0;
@@ -706,7 +707,7 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 		pool->burst_size = burst_size;
 	}
 
-	shm = odp_shm_reserve(pool->name, pool->shm_size, ODP_PAGE_SIZE,
+	shm = odp_shm_reserve(shm_name, pool->shm_size, ODP_PAGE_SIZE,
 			      shmflags);
 
 	pool->shm = shm;
