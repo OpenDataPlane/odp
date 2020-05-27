@@ -566,7 +566,10 @@ static int ipsec_send_in_one(const ipsec_test_part *part,
 		CU_ASSERT_EQUAL(num_out, part->out_pkt);
 		CU_ASSERT(odp_packet_subtype(*pkto) == ODP_EVENT_PACKET_IPSEC);
 	} else if (ODP_IPSEC_OP_MODE_ASYNC == suite_context.inbound_op_mode) {
-		CU_ASSERT_EQUAL(1, odp_ipsec_in_enq(&pkt, 1, &param));
+		num_out = odp_ipsec_in_enq(&pkt, 1, &param);
+		CU_ASSERT_EQUAL(1, num_out);
+
+		num_out = (num_out == 1) ?  1 : 0;
 
 		for (i = 0; i < num_out; i++) {
 			odp_event_t event;
@@ -659,7 +662,10 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 		CU_ASSERT(odp_packet_subtype(*pkto) ==
 			  ODP_EVENT_PACKET_IPSEC);
 	} else if (ODP_IPSEC_OP_MODE_ASYNC == suite_context.outbound_op_mode) {
-		CU_ASSERT_EQUAL(1, odp_ipsec_out_enq(&pkt, 1, &param));
+		num_out = odp_ipsec_out_enq(&pkt, 1, &param);
+		CU_ASSERT_EQUAL(1, num_out);
+
+		num_out = (num_out == 1) ?  1 : 0;
 
 		for (i = 0; i < num_out; i++) {
 			odp_event_t event;
