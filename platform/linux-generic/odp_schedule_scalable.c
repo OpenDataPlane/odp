@@ -732,7 +732,6 @@ static void pktio_start(int pktio_idx,
 
 static void pktio_stop(sched_elem_t *elem)
 {
-	elem->cons_type &= ~FLAG_PKTIN; /* Clear pktin queue flag */
 	sched_pktin_rem(elem->sched_grp);
 	if (__atomic_sub_fetch(&global->poll_count[elem->pktio_idx],
 			       1, __ATOMIC_RELAXED) == 0) {
