@@ -23,10 +23,10 @@
 /* Maximum number of worker threads */
 #define MAX_WORKERS            (ODP_THREAD_COUNT_MAX - 1)
 
-/* Size of the shared memory block */
-#define POOL_PKT_NUM           (16 * 1024)
+/* Default number of packets per pool */
+#define DEFAULT_NUM_PKT        (16 * 1024)
 
-/* Buffer size of the packet pool buffer */
+/* Packet length to pool create */
 #define POOL_PKT_LEN           1536
 
 /* Maximum number of packet in a burst */
@@ -92,6 +92,7 @@ typedef struct {
 	int num_groups;         /* Number of scheduling groups */
 	int burst_rx;           /* Receive burst size */
 	int pool_per_if;        /* Create pool per interface */
+	uint32_t num_pkt;       /* Number of packets per pool */
 	int verbose;		/* Verbose output */
 } appl_args_t;
 
@@ -1209,6 +1210,8 @@ static void usage(char *progname)
 	       "                             Free the original packet.\n"
 	       "  -y, --pool_per_if       0: Share a single pool between all interfaces (default)\n"
 	       "                          1: Create a pool per interface\n"
+	       "  -n, --num_pkt <num>     Number of packets per pool. Default is 16k or\n"
+	       "                          the maximum capability. Use 0 for the default.\n"
 	       "  -v, --verbose           Verbose output.\n"
 	       "  -h, --help              Display help and exit.\n\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
@@ -1246,12 +1249,13 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"burst_rx", required_argument, NULL, 'b'},
 		{"packet_copy", required_argument, NULL, 'p'},
 		{"pool_per_if", required_argument, NULL, 'y'},
+		{"num_pkt", required_argument, NULL, 'n'},
 		{"verbose", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:p:y:vh";
+	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:p:y:n:vh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1265,6 +1269,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->verbose = 0;
 	appl_args->chksum = 0; /* don't use checksum offload by default */
 	appl_args->pool_per_if = 0;
+	appl_args->num_pkt = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -1402,6 +1407,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'y':
 			appl_args->pool_per_if = atoi(optarg);
 			break;
+		case 'n':
+			appl_args->num_pkt = atoi(optarg);
+			break;
 		case 'v':
 			appl_args->verbose = 1;
 			break;
@@ -1446,21 +1454,22 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 /*
  * Print system and application info
  */
-static void print_info(char *progname, appl_args_t *appl_args)
+static void print_info(appl_args_t *appl_args)
 {
 	int i;
 
 	odp_sys_info_print();
 
-	printf("Running ODP appl: \"%s\"\n"
+	printf("\n"
+	       "odp_l2fwd options\n"
 	       "-----------------\n"
-	       "IF-count:        %i\n"
-	       "Using IFs:      ",
-	       progname, appl_args->if_count);
+	       "IF-count:           %i\n"
+	       "Using IFs:         ", appl_args->if_count);
+
 	for (i = 0; i < appl_args->if_count; ++i)
 		printf(" %s", appl_args->if_names[i]);
 	printf("\n"
-	       "Mode:            ");
+	       "Mode:               ");
 	if (appl_args->in_mode == DIRECT_RECV)
 		printf("PKTIN_DIRECT, ");
 	else if (appl_args->in_mode == PLAIN_QUEUE)
@@ -1477,19 +1486,16 @@ static void print_info(char *progname, appl_args_t *appl_args)
 	else
 		printf("PKTOUT_DIRECT\n");
 
-	printf("Burst size:      %i\n", appl_args->burst_rx);
-	printf("Number of pools: %i\n", appl_args->pool_per_if ?
-					appl_args->if_count : 1);
+	printf("Burst size:         %i\n", appl_args->burst_rx);
+	printf("Number of pools:    %i\n", appl_args->pool_per_if ?
+					   appl_args->if_count : 1);
 
 	if (appl_args->extra_feat) {
-		printf("Extra features:  %s%s%s\n",
+		printf("Extra features:     %s%s%s\n",
 		       appl_args->error_check ? "error_check " : "",
 		       appl_args->chksum ? "chksum " : "",
 		       appl_args->packet_copy ? "packet_copy" : "");
 	}
-
-	printf("\n");
-	fflush(NULL);
 }
 
 static void gbl_args_init(args_t *args)
@@ -1550,7 +1556,7 @@ int main(int argc, char *argv[])
 	odp_pool_t pool;
 	odp_init_t init;
 	odp_pool_capability_t pool_capa;
-	uint32_t pkt_len, pkt_num;
+	uint32_t pkt_len, num_pkt;
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
@@ -1611,7 +1617,7 @@ int main(int argc, char *argv[])
 		gbl_args->appl.sched_mode = 1;
 
 	/* Print both system and application information */
-	print_info(NO_PATH(argv[0]), &gbl_args->appl);
+	print_info(&gbl_args->appl);
 
 	num_workers = MAX_WORKERS;
 	if (gbl_args->appl.cpu_count && gbl_args->appl.cpu_count < MAX_WORKERS)
@@ -1630,14 +1636,12 @@ int main(int argc, char *argv[])
 
 	num_groups = gbl_args->appl.num_groups;
 
-	printf("num worker threads: %i\n", num_workers);
-	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
-	printf("cpu mask:           %s\n", cpumaskstr);
+	printf("Num worker threads: %i\n", num_workers);
+	printf("First CPU:          %i\n", odp_cpumask_first(&cpumask));
+	printf("CPU mask:           %s\n", cpumaskstr);
 
 	if (num_groups)
 		printf("num groups:         %i\n", num_groups);
-
-	printf("\n");
 
 	if (num_groups > if_count || num_groups > num_workers) {
 		ODPH_ERR("Too many groups. Number of groups may not exceed "
@@ -1660,19 +1664,39 @@ int main(int argc, char *argv[])
 	}
 
 	pkt_len = POOL_PKT_LEN;
-	pkt_num = POOL_PKT_NUM;
 
-	if (pool_capa.pkt.max_len && pkt_len > pool_capa.pkt.max_len)
+	if (pool_capa.pkt.max_len && pkt_len > pool_capa.pkt.max_len) {
 		pkt_len = pool_capa.pkt.max_len;
+		printf("\nWarning: packet length reduced to %u\n\n", pkt_len);
+	}
 
-	if (pool_capa.pkt.max_num && pkt_num > pool_capa.pkt.max_num)
-		pkt_num = pool_capa.pkt.max_num;
+	/* zero means default number of packets */
+	if (gbl_args->appl.num_pkt == 0)
+		num_pkt = DEFAULT_NUM_PKT;
+	else
+		num_pkt = gbl_args->appl.num_pkt;
+
+	if (pool_capa.pkt.max_num && num_pkt > pool_capa.pkt.max_num) {
+		if (gbl_args->appl.num_pkt == 0) {
+			num_pkt = pool_capa.pkt.max_num;
+			printf("\nWarning: number of packets reduced to %u\n\n",
+			       num_pkt);
+		} else {
+			ODPH_ERR("Error: Too many packets %u. Maximum is %u.\n",
+				 num_pkt, pool_capa.pkt.max_num);
+			return -1;
+		}
+	}
+
+	printf("Packets per pool:   %u\n", num_pkt);
+	printf("Packet length:      %u\n", pkt_len);
+	printf("\n\n");
 
 	/* Create packet pool */
 	odp_pool_param_init(&params);
 	params.pkt.seg_len = pkt_len;
 	params.pkt.len     = pkt_len;
-	params.pkt.num     = pkt_num;
+	params.pkt.num     = num_pkt;
 	params.type        = ODP_POOL_PACKET;
 
 	for (i = 0; i < num_pools; i++) {
