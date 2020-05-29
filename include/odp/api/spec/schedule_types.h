@@ -177,7 +177,7 @@ typedef struct odp_multi_event_param_t {
 	 * @see odp_schedule_capability_t::max_multi_event_count.
 	 *
 	 * Default value is 0. */
-	unit32_t   multi_event_count;
+	uint32_t   multi_event_count;
 
 	/** Timeout for accumulation
 	 *
