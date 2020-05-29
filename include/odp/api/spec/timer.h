@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2020, Nokia
  *
  * All rights reserved.
  *
@@ -106,14 +106,20 @@ typedef enum {
 typedef struct {
 	/** Timeout resolution in nanoseconds. Timer pool must serve timeouts
 	 *  with this or higher resolution. The minimum valid value (highest
-	 *  resolution) is defined by timer capability 'highest_res_ns'. */
+	 *  resolution) is defined by timer resolution capability. When this
+	 *  parameter is used, set 'res_hz' to zero. */
 	uint64_t res_ns;
+
+	/** Timeout resolution in hertz. This may be used to specify the highest
+	 *  required resolution in hertz instead of nanoseconds. When this
+	 *  parameter is used, set 'res_ns' to zero. */
+	uint64_t res_hz;
 
 	/** Minimum relative timeout in nanoseconds. All requested timeouts
 	 *  will be at least this many nanoseconds after the current
 	 *  time of the timer pool. Timer set functions return an error, if too
-	 *  short timeout was requested. The value may be also less than
-	 *  'res_ns'. */
+	 *  short timeout was requested. The value may be also smaller than
+	 *  the requested resolution. */
 	uint64_t min_tmo;
 
 	/** Maximum relative timeout in nanoseconds. All requested timeouts
@@ -142,6 +148,9 @@ typedef struct {
 typedef struct {
 	/** Timeout resolution in nanoseconds */
 	uint64_t res_ns;
+
+	/** Timeout resolution in hertz */
+	uint64_t res_hz;
 
 	/** Minimum relative timeout in nanoseconds */
 	uint64_t min_tmo;
@@ -186,8 +195,9 @@ typedef struct {
 	 *
 	 * This defines the highest resolution supported by a timer, with
 	 * limits to min/max timeout values. The highest resolution for a timer
-	 * pool is defined by 'max_res.res_ns', therefore it's the minimum value
-	 * for 'res_ns' timer pool parameter. When this resolution is used:
+	 * pool is defined by 'max_res.res_ns' in nanoseconds and
+	 * 'max_res.res_hz' in hertz.
+	 * When this resolution is used:
 	 * - 'min_tmo' parameter value must be in minimum 'max_res.min_tmo'
 	 * - 'max_tmo' parameter value must be in maximum 'max_res.max_tmo'
 	 */
@@ -201,7 +211,8 @@ typedef struct {
 	 * value for 'max_tmo' timer pool parameter is defined by
 	 * 'max_tmo.max_tmo'. When this max timeout value is used:
 	 * - 'min_tmo' parameter value must be in minimum 'max_tmo.min_tmo'
-	 * - 'res_ns'  parameter value must be in minimum 'max_tmo.res_ns'
+	 * - 'res_ns'  parameter value must be in minimum 'max_tmo.res_ns' or
+	 * - 'res_hz'  parameter value must be in maximum 'max_tmo.res_hz'
 	 */
 	odp_timer_res_capability_t max_tmo;
 
@@ -226,16 +237,16 @@ int odp_timer_capability(odp_timer_clk_src_t clk_src,
  *
  * This function fills in capability limits for timer pool resolution and
  * min/max timeout values, based on either resolution or maximum timeout.
- * Set the required value to 'res_ns' or 'max_tmo', and set other fields to
- * zero. A successful call fills in the other two fields. The call returns
- * a failure, if the user defined value ('res_ns' or 'max_tmo)' exceeds
- * capability limits. Outputted values are minimums for 'res_ns' and 'min_tmo',
- * and a maximum for 'max_tmo'.
+ * Set the required value to a resolution field (res_ns or res_hz) or to the
+ * maximum timeout field (max_tmo), and set other fields to zero. A successful
+ * call fills in the other fields. The call returns a failure, if the user
+ * defined value exceeds capability limits. Outputted values are minimums for
+ * 'res_ns' and 'min_tmo', and maximums for 'res_hz' and 'max_tmo'.
  *
  * @param         clk_src  Clock source for timers
  * @param[in,out] res_capa Resolution capability pointer for input/output.
- *                         Set either 'res_ns' or 'max_tmo', a successful call
- *                         fills in other fields.
+ *                         Set either a resolution or max timeout field,
+ *                         a successful call fills in other fields.
  *
  * @retval 0 on success
  * @retval <0 on failure
