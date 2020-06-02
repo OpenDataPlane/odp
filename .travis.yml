@@ -236,6 +236,16 @@ jobs:
                               -e CC="${CC}"
                               -e CONF=""
                               ${DOCKER_NAMESPACE}/travis-odp-${OS}-${ARCH} /odp/scripts/ci/out_of_tree.sh
+                - stage: test
+                  env: TEST=gcc_10
+                  compiler: gcc-10
+                  install:
+                          - true
+                  script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
+                          - docker run -i -t -v `pwd`:/odp --shm-size 8g
+                              -e CC="${CC}"
+                              ${DOCKER_NAMESPACE}/travis-odp-ubuntu_20.04-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
                 - stage: "build only"
                   env: TEST=documentation
                   compiler: gcc
