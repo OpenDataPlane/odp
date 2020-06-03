@@ -139,10 +139,8 @@ void print_info(char *progname)
 {
 	odp_sys_info_print();
 
-	printf("Running ODP appl: \"%s\"\n"
-	       "-----------------\n"
-	       "Using IF:        %s\n",
-	       progname, pktio_name);
+	printf("Running ODP appl: \"%s\"\n",
+	       progname);
 	printf("\n\n");
 	fflush(NULL);
 }
