@@ -5,6 +5,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/*
+ * Suppress bounds warnings about interior zero length arrays. Such an array
+ * is used intentionally in prio_queue_t.
+ */
+#if __GNUC__ >= 10
+#pragma GCC diagnostic ignored "-Wzero-length-bounds"
+#endif
+
 #include <odp/api/schedule.h>
 #include <odp_schedule_if.h>
 #include <odp/api/align.h>
@@ -154,7 +162,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	ring_u32_t ring;
 
 	/* Ring data: queue indexes */
-	uint32_t queue_index[MAX_RING_SIZE];
+	uint32_t queue_index[MAX_RING_SIZE]; /* overlaps with ring.data[] */
 
 } prio_queue_t;
 
