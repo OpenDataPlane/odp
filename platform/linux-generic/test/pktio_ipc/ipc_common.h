@@ -64,14 +64,11 @@ typedef struct ODP_PACKED {
 	odp_u32be_t magic;
 } pkt_tail_t;
 
-/** Application argument */
-char *pktio_name;
-
 /** Run time in seconds */
-int run_time_sec;
+extern int run_time_sec;
 
 /** PID of the master process */
-int master_pid;
+extern int master_pid;
 
 /* helper funcs */
 void parse_args(int argc, char *argv[]);
