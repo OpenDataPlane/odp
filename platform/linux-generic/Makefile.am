@@ -17,7 +17,7 @@ AM_CFLAGS +=  $(DPDK_CFLAGS)
 AM_CFLAGS +=  $(LIBCONFIG_CFLAGS)
 
 DISTCLEANFILES = include/odp_libconfig_config.h
-include/odp_libconfig_config.h: $(top_srcdir)/config/odp-$(with_platform).conf $(top_builddir)/config.status
+include/odp_libconfig_config.h: $(top_builddir)/$(rel_default_config_path) $(top_builddir)/config.status
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 
 odpapiabiarchincludedir = $(archincludedir)/odp/api/abi
@@ -148,7 +148,7 @@ noinst_HEADERS = \
 		  include/protocols/tcp.h \
 		  include/protocols/thash.h \
 		  include/protocols/udp.h
-nodist_noinst_HEADERS = \
+BUILT_SOURCES = \
 		  include/odp_libconfig_config.h
 
 __LIB__libodp_linux_la_SOURCES = \

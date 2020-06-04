@@ -7,8 +7,8 @@ EXTRA_DIST = doc/platform_specific.dox
 
 configdir = $(sysconfdir)/odp
 if ODP_USE_CONFIG
-config_DATA = $(top_srcdir)/config/odp-$(with_platform).conf
-EXTRA_DIST += $(top_srcdir)/config/odp-$(with_platform).conf
+config_DATA = $(top_builddir)/$(rel_default_config_path)
+EXTRA_DIST += $(top_builddir)/$(rel_default_config_path)
 endif
 
 VPATH = $(srcdir) $(builddir)
