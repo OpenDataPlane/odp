@@ -489,6 +489,7 @@ AC_MSG_RESULT([
 	test_example:		${test_example}
 	user_guides:		${user_guides}
 	pcapng:			${have_pcapng}
+	default_config_path:    ${default_config_path}
 ])
 
 AS_IF([test "${with_openssl}" = "no"],
