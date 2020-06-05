@@ -38,6 +38,7 @@ odpapiinclude_HEADERS = \
 	odp/api/pool.h \
 	odp/api/queue.h \
 	odp/api/random.h \
+	odp/api/reassembly.h \
 	odp/api/rwlock.h \
 	odp/api/rwlock_recursive.h \
 	odp/api/schedule.h \
@@ -90,6 +91,7 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/queue.h \
 		  odp/api/spec/queue_types.h \
 		  odp/api/spec/random.h \
+		  odp/api/spec/reassembly.h \
 		  odp/api/spec/rwlock.h \
 		  odp/api/spec/rwlock_recursive.h \
 		  odp/api/spec/schedule.h \

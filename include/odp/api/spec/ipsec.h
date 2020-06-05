@@ -191,6 +191,25 @@ typedef struct odp_ipsec_inbound_config_t {
 	 */
 	odp_proto_chksums_t chksums;
 
+	/** Post-IPsec reassembly configuration
+	 *
+	 *  This field provides global IPsec configuration parameters for
+	 *  fragment reassembly. The enable flag does not turn on reassembly
+	 *  but tells if reassembly may be enabled in SA parameters.
+	 *
+	 *  The enable flag may be set only if retain_outer is
+	 *  ODP_PROTO_LAYER_NONE.
+	 */
+	odp_reass_config_t reassembly;
+
+	/** Attempt reassembly after inbound IPsec processing in
+	 *  odp_ipsec_in_enq().
+	 */
+	odp_bool_t reass_async;
+
+	/** Attempt reassembly after inline inbound IPsec processing. */
+	odp_bool_t reass_inline;
+
 } odp_ipsec_inbound_config_t;
 
 /**
@@ -343,6 +362,16 @@ typedef struct odp_ipsec_capability_t {
 	 * @see odp_ipsec_test_sa_update()
 	 */
 	odp_ipsec_test_capability_t test;
+
+	/** Post-IPsec reassembly capability */
+	odp_reass_capability_t reassembly;
+
+	/** Support of reassembly after inbound processing in odp_ipsec_in_enq() */
+	odp_bool_t reass_async;
+
+	/** Support of reassembly after inline inbound IPsec processing */
+	odp_bool_t reass_inline;
+
 } odp_ipsec_capability_t;
 
 /**
@@ -831,6 +860,30 @@ typedef struct odp_ipsec_sa_param_t {
 			 *  IPSEC capability max_cls_cos.
 			 */
 			odp_cos_t dest_cos;
+
+			/** Enable reassembly of IPsec tunneled fragments
+			 *
+			 *  Attempt reassembly of fragments after IPsec tunnel
+			 *  decapsulation.
+			 *
+			 *  Reassembly is attempted for inline or asynchronously
+			 *  processed packets, not for packets processed using
+			 *  the synchronous API function.
+			 *
+			 *  Fragments received through different SAs will not be
+			 *  reassembled into the same packet.
+			 *
+			 *  IPsec statistics reflect IPsec processing before
+			 *  reassembly and thus count all individual fragments.
+			 *
+			 *  Reassembly may be enabled for an SA only if
+			 *  reassembly was enabled in the global IPsec
+			 *  configuration.
+			 *
+			 *  @see odp_ipsec_config()
+			 *
+			 */
+			odp_bool_t reassembly_en;
 
 		} inbound;
 
@@ -1663,6 +1716,14 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
  * happens in the odp_ipsec_result() function that must be called at least
  * once before packet data or metadata (other than packet type and subtype)
  * may be accessed.
+ *
+ * If reassembly is attempted but fails, the result packet delivered to the
+ * application will have reassembly status as ODP_PACKET_REASS_INCOMPLETE and
+ * will not have ODP_EVENT_PACKET_IPSEC subtype. In that case, the application
+ * can call odp_packet_reass_partial_state() to get fragments of the packet. The
+ * fragments will have subtype as ODP_EVENT_PACKET_IPSEC and the application
+ * must call odp_ipsec_result() for such a fragment before accessing its packet
+ * data.
  *
  * @param          pkt      Packets to be processed
  * @param          num      Number of packets to be processed
