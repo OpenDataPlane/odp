@@ -739,6 +739,29 @@ typedef struct odp_ipsec_sa_param_t {
 			 */
 			odp_cos_t dest_cos;
 
+			/** Parse packet headers after IPsec transformation
+			 *
+			 *  Select header parsing level after inbound
+			 *  processing. Headers of the resulting packet must
+			 *  be checked (at least) up to this level. Offset
+			 *  (and pointer) to the next layer is set.
+			 *  Other layer/protocol specific metadata have
+			 *  undefined values.
+			 *
+			 *  If its not required to control parse level as SA
+			 *  level, the value can be set to
+			 *  ODP_PROTO_LAYER_NONE.
+			 *
+			 *  When this value is set to ODP_PROTO_LAYER_NONE,
+			 *  the parse level value present int he global config
+			 *  takes precedence.
+			 *
+			 *  When the value is set to any other value, this
+			 *  value takes precedence over the parse level
+			 *  present in global config.
+			 */
+			odp_proto_layer_t parse_level;
+
 		} inbound;
 
 		/** Outbound specific parameters */
