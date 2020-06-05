@@ -22,6 +22,7 @@ extern "C" {
 #include <odp/api/deprecated.h>
 #include <odp/api/packet_io_stats.h>
 #include <odp/api/queue.h>
+#include <odp/api/reassembly.h>
 #include <odp/api/time.h>
 #include <odp/api/packet.h>
 
@@ -633,6 +634,9 @@ typedef struct odp_pktio_config_t {
 	 */
 	odp_bool_t enable_lso;
 
+	/** Packet input reassembly configuration */
+	odp_reass_config_t reassembly;
+
 } odp_pktio_config_t;
 
 /**
@@ -900,6 +904,9 @@ typedef struct odp_pktio_capability_t {
 		uint32_t mode_all:1;
 
 	} tx_compl;
+
+	/** Packet input reassembly capability */
+	odp_reass_capability_t reassembly;
 
 } odp_pktio_capability_t;
 
