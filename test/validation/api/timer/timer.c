@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2019-2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -189,18 +190,36 @@ static void timer_test_capa(void)
 	CU_ASSERT_FATAL(ret == 0);
 
 	CU_ASSERT(capa.highest_res_ns == capa.max_res.res_ns);
+	/* Assuming max resoultion to be 100 msec or better */
+	CU_ASSERT(capa.max_res.res_ns <= 100000000);
+	CU_ASSERT(capa.max_res.res_hz >= 10);
 	CU_ASSERT(capa.max_res.res_ns  < capa.max_res.max_tmo);
 	CU_ASSERT(capa.max_res.min_tmo < capa.max_res.max_tmo);
+
+	/* With max timeout, resolution may be low (worse than 1 sec) */
 	CU_ASSERT(capa.max_tmo.res_ns  < capa.max_tmo.max_tmo);
 	CU_ASSERT(capa.max_tmo.min_tmo < capa.max_tmo.max_tmo);
+	CU_ASSERT(capa.max_tmo.res_ns != 0 || capa.max_tmo.res_hz != 0);
+	if (capa.max_tmo.res_hz == 0)
+		CU_ASSERT(capa.max_tmo.res_ns > 1000000000);
 
-	/* Set max resolution */
+	/* Set max resolution in nsec */
 	memset(&res_capa, 0, sizeof(res_capa));
 	res_capa.res_ns = capa.max_res.res_ns;
 
 	ret = odp_timer_res_capability(ODP_CLOCK_CPU, &res_capa);
 	CU_ASSERT_FATAL(ret == 0);
 	CU_ASSERT(res_capa.res_ns  == capa.max_res.res_ns);
+	CU_ASSERT(res_capa.min_tmo == capa.max_res.min_tmo);
+	CU_ASSERT(res_capa.max_tmo == capa.max_res.max_tmo);
+
+	/* Set max resolution in hz */
+	memset(&res_capa, 0, sizeof(res_capa));
+	res_capa.res_hz = capa.max_res.res_hz;
+
+	ret = odp_timer_res_capability(ODP_CLOCK_CPU, &res_capa);
+	CU_ASSERT_FATAL(ret == 0);
+	CU_ASSERT(res_capa.res_hz  == capa.max_res.res_hz);
 	CU_ASSERT(res_capa.min_tmo == capa.max_res.min_tmo);
 	CU_ASSERT(res_capa.max_tmo == capa.max_res.max_tmo);
 
@@ -213,6 +232,7 @@ static void timer_test_capa(void)
 	CU_ASSERT(res_capa.max_tmo == capa.max_tmo.max_tmo);
 	CU_ASSERT(res_capa.min_tmo == capa.max_tmo.min_tmo);
 	CU_ASSERT(res_capa.res_ns  == capa.max_tmo.res_ns);
+	CU_ASSERT(res_capa.res_hz  == capa.max_tmo.res_hz);
 }
 
 static void timer_test_timeout_pool_alloc(void)
@@ -365,6 +385,88 @@ static void timer_pool_create_destroy(void)
 	odp_timer_pool_destroy(tp[0]);
 
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
+}
+
+static void timer_pool_max_res(void)
+{
+	odp_timer_capability_t capa;
+	odp_timer_pool_param_t tp_param;
+	odp_timer_pool_t tp;
+	odp_timer_t timer;
+	odp_pool_param_t pool_param;
+	odp_pool_t pool;
+	odp_queue_t queue;
+	odp_timeout_t tmo;
+	odp_event_t ev;
+	uint64_t tick;
+	int ret, i;
+
+	memset(&capa, 0, sizeof(capa));
+	ret = odp_timer_capability(ODP_CLOCK_CPU, &capa);
+	CU_ASSERT_FATAL(ret == 0);
+
+	odp_pool_param_init(&pool_param);
+	pool_param.type    = ODP_POOL_TIMEOUT;
+	pool_param.tmo.num = 10;
+	pool = odp_pool_create("timeout_pool", &pool_param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	queue = odp_queue_create("timer_queue", NULL);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	/* Highest resolution: first in nsec, then in hz */
+	for (i = 0; i < 2; i++) {
+		memset(&tp_param, 0, sizeof(odp_timer_pool_param_t));
+
+		if (i == 0) {
+			printf("\n    Highest resolution %" PRIu64 " nsec\n",
+			       capa.max_res.res_ns);
+			tp_param.res_ns = capa.max_res.res_ns;
+		} else {
+			printf("    Highest resolution %" PRIu64 " Hz\n",
+			       capa.max_res.res_hz);
+			tp_param.res_hz = capa.max_res.res_hz;
+		}
+
+		tp_param.min_tmo    = capa.max_res.min_tmo;
+		tp_param.max_tmo    = capa.max_res.max_tmo;
+		tp_param.num_timers = 100;
+		tp_param.priv       = 0;
+		tp_param.clk_src    = ODP_CLOCK_CPU;
+
+		tp = odp_timer_pool_create("high_res_tp", &tp_param);
+		CU_ASSERT_FATAL(tp != ODP_TIMER_POOL_INVALID);
+
+		odp_timer_pool_start();
+
+		/* Maximum timeout length with maximum resolution */
+		tick = odp_timer_ns_to_tick(tp, capa.max_res.max_tmo);
+
+		timer = odp_timer_alloc(tp, queue, USER_PTR);
+		CU_ASSERT_FATAL(timer != ODP_TIMER_INVALID);
+
+		tmo = odp_timeout_alloc(pool);
+		ev  = odp_timeout_to_event(tmo);
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+
+		ret = odp_timer_set_rel(timer, tick, &ev);
+		CU_ASSERT(ret == ODP_TIMER_SUCCESS);
+
+		ev = ODP_EVENT_INVALID;
+		ret = odp_timer_cancel(timer, &ev);
+		CU_ASSERT(ret == 0);
+
+		if (ret == 0) {
+			CU_ASSERT(ev != ODP_EVENT_INVALID);
+			odp_event_free(ev);
+		}
+
+		CU_ASSERT(odp_timer_free(timer) == ODP_EVENT_INVALID);
+		odp_timer_pool_destroy(tp);
+	}
+
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
 static void timer_test_event_type(odp_queue_type_t queue_type,
@@ -1455,6 +1557,7 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_test_timeout_pool_alloc),
 	ODP_TEST_INFO(timer_test_timeout_pool_free),
 	ODP_TEST_INFO(timer_pool_create_destroy),
+	ODP_TEST_INFO(timer_pool_max_res),
 	ODP_TEST_INFO(timer_test_tmo_event_plain),
 	ODP_TEST_INFO(timer_test_tmo_event_sched),
 	ODP_TEST_INFO(timer_test_buf_event_plain),
