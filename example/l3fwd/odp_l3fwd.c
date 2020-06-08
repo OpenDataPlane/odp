@@ -66,7 +66,8 @@ struct thread_arg_s {
 };
 
 typedef struct {
-	char *if_names[MAX_NB_PKTIO];
+	char *if_names_buf;           /* memory buffer for all if_names */
+	char *if_names[MAX_NB_PKTIO]; /* pointers to name strings stored in if_names_buf */
 	int if_count;
 	char *route_str[MAX_NB_ROUTE];
 	unsigned int worker_count;
@@ -570,6 +571,7 @@ static void parse_cmdline_args(int argc, char *argv[], app_args_t *args)
 				print_usage(argv[0]);
 				exit(EXIT_FAILURE);
 			}
+			args->if_names_buf = local;
 
 			/* store the if names (reset names string) */
 			strcpy(local, optarg);
@@ -1131,8 +1133,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/* if_names share a single buffer, so only one free */
-	free(args->if_names[0]);
+	/* if_names share a single buffer */
+	free(args->if_names_buf);
 
 	for (i = 0; i < MAX_NB_ROUTE; i++)
 		free(args->route_str[i]);
