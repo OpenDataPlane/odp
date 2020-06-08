@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -75,6 +76,24 @@ odp_time_t odp_time_local(void);
  * @return Global time stamp.
  */
 odp_time_t odp_time_global(void);
+
+/**
+ * Current local time in nanoseconds
+ *
+ * Like odp_time_local(), but the time stamp value is converted into nanoseconds.
+ *
+ * @return Local time stamp in nanoseconds
+ */
+uint64_t odp_time_local_ns(void);
+
+/**
+ * Current global time in nanoseconds
+ *
+ * Like odp_time_global(), but the time stamp value is converted into nanoseconds.
+ *
+ * @return Global time stamp in nanoseconds
+ */
+uint64_t odp_time_global_ns(void);
 
 /**
  * Time difference
