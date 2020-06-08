@@ -571,29 +571,23 @@ static void parse_cmdline_args(int argc, char *argv[], app_args_t *args)
 				exit(EXIT_FAILURE);
 			}
 
-			/* count the number of tokens separated by ',' */
-			strcpy(local, optarg);
-			for (token = strtok(local, ","), i = 0;
-			     token != NULL;
-			     token = strtok(NULL, ","), i++)
-				;
-
-			if (i == 0) {
-				print_usage(argv[0]);
-				free(local);
-				exit(EXIT_FAILURE);
-			} else if (i > MAX_NB_PKTIO) {
-				printf("too many ports specified, "
-				       "truncated to %d", MAX_NB_PKTIO);
-			}
-			args->if_count = i;
-
 			/* store the if names (reset names string) */
 			strcpy(local, optarg);
 			for (token = strtok(local, ","), i = 0;
 			     token != NULL; token = strtok(NULL, ","), i++) {
+				if (i >= MAX_NB_PKTIO) {
+					printf("too many ports specified, "
+					       "truncated to %d", MAX_NB_PKTIO);
+					break; /* for */
+				}
 				args->if_names[i] = token;
 			}
+			if (i == 0) {
+				print_usage(argv[0]);
+				free(local);
+				exit(EXIT_FAILURE);
+			}
+			args->if_count = i;
 			break;
 
 		/*Configure Route in forwarding database*/
