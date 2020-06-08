@@ -74,12 +74,14 @@ static inline uint64_t _odp_time_convert_to_ns(odp_time_t time)
 #ifndef _ODP_NO_INLINE
 	/* Inline functions by default */
 	#define _ODP_INLINE static inline
-	#define odp_time_local   __odp_time_local
-	#define odp_time_global  __odp_time_global
-	#define odp_time_to_ns   __odp_time_to_ns
-	#define odp_time_cmp     __odp_time_cmp
-	#define odp_time_diff    __odp_time_diff
-	#define odp_time_sum     __odp_time_sum
+	#define odp_time_local      __odp_time_local
+	#define odp_time_global     __odp_time_global
+	#define odp_time_to_ns      __odp_time_to_ns
+	#define odp_time_local_ns   __odp_time_local_ns
+	#define odp_time_global_ns  __odp_time_global_ns
+	#define odp_time_cmp        __odp_time_cmp
+	#define odp_time_diff       __odp_time_diff
+	#define odp_time_sum        __odp_time_sum
 
 #else
 	#define _ODP_INLINE
@@ -98,6 +100,16 @@ _ODP_INLINE odp_time_t odp_time_global(void)
 _ODP_INLINE uint64_t odp_time_to_ns(odp_time_t time)
 {
 	return _odp_time_convert_to_ns(time);
+}
+
+_ODP_INLINE uint64_t odp_time_local_ns(void)
+{
+	return _odp_time_convert_to_ns(_odp_time_cur());
+}
+
+_ODP_INLINE uint64_t odp_time_global_ns(void)
+{
+	return _odp_time_convert_to_ns(_odp_time_cur());
 }
 
 _ODP_INLINE int odp_time_cmp(odp_time_t t2, odp_time_t t1)
