@@ -260,7 +260,11 @@ odph_cuckoo_table_create(
 	pool = odp_pool_lookup(pool_name);
 
 	if (pool != ODP_POOL_INVALID)
-		odp_pool_destroy(pool);
+		if (odp_pool_destroy(pool)) {
+			odp_shm_free(shm_tbl);
+			ODPH_DBG("failed to destroy pre-existing pool\n");
+			return NULL;
+		}
 
 	odp_pool_param_init(&param);
 	param.type = ODP_POOL_BUFFER;
@@ -285,7 +289,7 @@ odph_cuckoo_table_create(
 	queue = odp_queue_create(queue_name, &qparam);
 	if (queue == ODP_QUEUE_INVALID) {
 		ODPH_DBG("failed to create free_slots queue\n");
-		odp_pool_destroy(pool);
+		(void)odp_pool_destroy(pool);
 		odp_shm_free(shm_tbl);
 		return NULL;
 	}
