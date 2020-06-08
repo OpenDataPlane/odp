@@ -78,11 +78,6 @@ static inline uint64_t time_spec_res(void)
 	return ODP_TIME_SEC_IN_NS / (uint64_t)tres.tv_nsec;
 }
 
-static inline uint64_t time_spec_to_ns(odp_time_t time)
-{
-	return time.nsec;
-}
-
 static inline odp_time_t time_spec_from_ns(uint64_t ns)
 {
 	odp_time_t time;
@@ -99,23 +94,6 @@ static inline odp_time_t time_spec_from_ns(uint64_t ns)
 static inline uint64_t time_hw_res(void)
 {
 	return _odp_time_glob.hw_freq_hz;
-}
-
-static inline uint64_t time_hw_to_ns(odp_time_t time)
-{
-	uint64_t nsec;
-	uint64_t freq_hz = _odp_time_glob.hw_freq_hz;
-	uint64_t count = time.count;
-	uint64_t sec = 0;
-
-	if (count >= freq_hz) {
-		sec   = count / freq_hz;
-		count = count - sec * freq_hz;
-	}
-
-	nsec = (ODP_TIME_SEC_IN_NS * count) / freq_hz;
-
-	return (sec * ODP_TIME_SEC_IN_NS) + nsec;
 }
 
 static inline odp_time_t time_hw_from_ns(uint64_t ns)
@@ -150,14 +128,6 @@ static inline uint64_t time_res(void)
 	return time_spec_res();
 }
 
-static inline uint64_t time_to_ns(odp_time_t time)
-{
-	if (_odp_time_glob.use_hw)
-		return time_hw_to_ns(time);
-
-	return time_spec_to_ns(time);
-}
-
 static inline odp_time_t time_from_ns(uint64_t ns)
 {
 	if (_odp_time_glob.use_hw)
@@ -181,12 +151,7 @@ uint64_t odp_time_diff_ns(odp_time_t t2, odp_time_t t1)
 
 	time.u64 = t2.u64 - t1.u64;
 
-	return time_to_ns(time);
-}
-
-uint64_t odp_time_to_ns(odp_time_t time)
-{
-	return time_to_ns(time);
+	return odp_time_to_ns(time);
 }
 
 odp_time_t odp_time_local_from_ns(uint64_t ns)
