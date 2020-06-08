@@ -721,7 +721,7 @@ quit:
 	if (test_global.file)
 		fclose(test_global.file);
 
-	if (destroy_timers(&test_global))
+	if (test_global.timer_ctx && destroy_timers(&test_global))
 		ret = -1;
 
 	if (test_global.timer_ctx)
