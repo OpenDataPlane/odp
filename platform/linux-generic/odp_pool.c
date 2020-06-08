@@ -666,9 +666,9 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 	/* Allocate extra memory for skipping packet buffers which cross huge
 	 * page boundaries. */
 	if (params->type == ODP_POOL_PACKET) {
-		num_extra = (((uint64_t)(num * block_size) +
+		num_extra = ((((uint64_t)num * block_size) +
 				FIRST_HP_SIZE - 1) / FIRST_HP_SIZE);
-		num_extra += (((uint64_t)(num_extra * block_size) +
+		num_extra += ((((uint64_t)num_extra * block_size) +
 				FIRST_HP_SIZE - 1) / FIRST_HP_SIZE);
 	}
 
