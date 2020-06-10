@@ -346,7 +346,6 @@ jobs:
                               -e CC="${CC}"
                               ${DOCKER_NAMESPACE}/travis-odp-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
                 - stage: test
-                  canfail: yes
                   env: TEST=checkpatch
                   compiler: gcc
                   install:
@@ -355,8 +354,6 @@ jobs:
                           - echo ${TRAVIS_COMMIT_RANGE};
                           - ODP_PATCHES=`echo ${TRAVIS_COMMIT_RANGE} | sed 's/\.//'`;
                           - ./scripts/ci-checkpatches.sh ${ODP_PATCHES};
-        allow_failures:
-          - canfail: yes
 
 after_failure:
   - cat config.log
