@@ -475,9 +475,6 @@ our $logFunctions = qr{(?x:
 	WARN(?:_RATELIMIT|_ONCE|)|
 	panic|
 	MODULE_[A-Z_]+|
-	ODP_ASSERT|ODP_DBG|ODP_ERR|ODP_ABORT|ODP_LOG|ODP_PRINT|
-	ODPH_ASSERT|ODPH_DBG|ODPH_ERR|ODPH_ABORT|ODPH_LOG|
-	printf
 	seq_vprintf|seq_printf|seq_puts
 )};
 
