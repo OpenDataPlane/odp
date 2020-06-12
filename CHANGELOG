@@ -1,3 +1,328 @@
+== OpenDataPlane (1.24.0.0)
+=== Summary of Changes
+
+This release introduces a new stash API module. The other main API additions are
+pool buffer caching configuration and packet IO link information. The release
+also includes several smaller API improvements and clarifications.
+
+=== API
+==== Common
+* Added missing const qualifiers
+
+Some API calls missed const qualifiers on read-only data pointers.
+
+* Improved Doxygen module descriptions
+* Use param_init functions for parameter defaults
+
+When available, parameter init functions must be used to initialize parameters
+into their default values.
+
+=== Align
+* Added `ODP_CACHE_LINE_ROUNDUP` macro
+
+Added macro for rounding up a value to the next multiple of cache line size.
+This round up is needed e.g. when selecting buffer sizes so that false sharing
+is avoided.
+
+==== CPU
+* Make supporting CPU frequency and cycle counter optional
+
+CPU frequencies or CPU cycle counter may not be available on all HW/SW
+platforms. Zero is returned if those cannot be read.
+
+==== Feature
+* Added feature bits `stash` and `compress` into `odp_feature_t`.
+
+==== Packet
+* Clarify packet length function argument definitions
+
+Modify documentations of functions, which decrease packet length, to clearly
+state what are the allowed values for length argument. This is done to avoid
+creating zero length packets which are not allowed by the packet API.
+
+* Added `odp_packet_input_set()` function
+
+An application may use this for testing or other purposes, when perception of
+the packet input interface need to be changed.
+
+==== Packet I/O
+* Added `odp_pktio_link_info()` function for reading link status information
+** Autonegotiation mode (unknown/enabled/disabled)
+** Duplex mode (unknown/half duplex/full duplex)
+** Flow control (unknown/on/off)
+** Link status (unknown/up/down)
+** Media (media type as string)
+** Speed (unknown/Mbps)
+
+* Modified `odp_pktio_link_status()` to return `odp_pktio_link_status_t` enum
+(backward compatible values)
+
+==== Pool
+* Added `cache_size` parameters to `odp_pool_capability_t` and `odp_pool_param_t`
+
+Added thread local cache size parameter and capability. This allows application
+to control thread local caching and prepare large enough pool when
+implementation caches events per thread. The default value is implementation
+specific for backwards compatibility.
+
+* Removed default value of packet `max_len` from `odp_pool_param_t`
+
+The default value is implementation specific and may not be equal to the maximum
+capability.
+
+* Added packet data `align` parameter to `odp_pool_param_t`
+
+Added packet pool parameter to request minimum data alignment for user allocated
+packets. When user allocates a new packet and fills in protocol headers, it's
+convenient that data alignment does not need to be checked (and tuned) on each
+allocated packet.
+
+==== Queue
+* Unify `max_size capa` specification for all plain queue types
+
+Specify queue maximum size capability the same way for all non-blocking levels
+(`ODP_BLOCKING`, `ODP_NONBLOCKING_LF` and `ODP_NONBLOCKING_WF`). Max_size value
+of zero means that there is no size limit.
+
+* Clarify that queue operations include memory barriers
+
+Clarify that queue enqueue operations include memory barrier of release
+semantics and queue dequeue operations include acquire semantics.
+
+==== Random
+* Clarify how much data `odp_random_data()` and `odp_random_test_data()` output on success.
+
+It may not be possible for random generator functions to return requested number
+of bytes. Clarify that implementation is not required to loop until `len` bytes
+are available. Instead application should contain such logic.
+
+==== Scheduler
+* Clarify synchronization of store operations during atomic context
+
+Stores performed while holding an atomic scheduling context are seen correctly
+by other thread when they hold the same context later on. This is guaranteed
+also when queue enqueue is not used in between.
+
+* Clarify that schedule operations include memory barriers
+
+Clarify that event schedule operations include memory barrier of acquire
+semantics.
+
+==== Shared Memory
+* Add `ODP_SHM_HW_ACCESS` flag
+
+This can be used to memory allocations where both CPUs and HW accelerators
+access the same memory area. These HW accelerators may be programmed outside of
+ODP APIs, but the memory is reserved and shared normally inside/between ODP
+applications.
+
+==== Stash
+* Added new stash API module
+
+Application needs often store object handles for later usage. From current APIs,
+e.g. buffers and queues could be used to store these handles, but buffers
+consume more memory than is necessary and event queues are not needed for this
+simple use case. This new API maybe implemented e.g. as a ring of object handles
+in memory, or with a HW buffer manager.
+
+==== Time
+* Added `odp_time_local_ns()` and `odp_time_global_ns()` functions for acquiring
+current time stamp in nanoseconds
+
+Added functions to get the current local/global
+time stamp directly in nanoseconds. For example, `odp_time_local_ns()` is
+equivalent of calling `odp_time_to_ns(odp_time_local())`. This simplifies use
+cases where time will be always converted to nanoseconds. However, when time API
+performance is important conversions to nanoseconds should be avoided or
+minimized.
+
+==== Timer
+* Clarify that `odp_timeout_tick()` returns original expiration time
+
+Specification was open if returned expiration time is the original or actual
+expiration time. HW based implementations will not likely modify timeout event
+with actual expiration time. Also original expiration time is more valuable to
+an application as it can be used to calculate e.g. the next period.
+
+* Add resolution in hertz parameter `res_hz` into `odp_timer_pool_param_t`
+
+Added option to specify timer pool resolution in hertz. High resolution values
+in nanoseconds result small numbers and thus poor granularity. Hertz offers
+better granularity with high resolution values. User gives resolution either in
+nanoseconds or hertz, and sets the other parameter to zero.
+
+==== Traffic Manager
+* Add missing handle debug functions
+
+Traffic Manager API defines all types as platform specific, yet unit tests
+expect to be able to print them. Therefore introduce u64 debug print conversion
+functions for all TM types: `odp_tm_to_u64()`, `odp_tm_queue_to_u64()`,
+`odp_tm_node_to_u64()`, `odp_tm_shaper_to_u64()`, `odp_tm_sched_to_u64()`,
+`odp_tm_threshold_to_u64()`, `odp_tm_wred_to_u64()`
+
+* Info structures are written only on success
+
+Clarify that info structures (`odp_tm_node_info_t`, `odp_tm_node_fanin_info_t`,
+`odp_tm_queue_info_t`, `odp_tm_query_info_t`) are written only on success.
+
+==== Version
+* Added `ODP_VERSION_API` define and `ODP_VERSION_API_NUM` macro
+
+Added a macro and version number defines for easier comparison of API version
+numbers.
+
+=== Validation Tests
+==== Buffer
+* Rewrote buffer tests for improved coverage
+* Allow allocated buffer size to be larger than requested
+
+==== Classification
+* Fix duplicate global variable definition
+* Use `odp_schedule_wait_time()` correctly
+
+==== Crypto
+* Fix var len array scope
+
+==== Init
+* Add tests for new `compress` and `stash` feature bits
+* Improved log prints
+
+==== IPSec
+* Fixed invalid allocation of zero length test packet
+* Fixed invalid test for user pointer value
+
+==== Packet
+* Add max pools test
+* Add packet alloc align test
+* Fix max_num expectations
+* Prevent test trying to allocate zero length packets
+* Remove pools from suite init
+* Remove reset test packet from suite init
+* Rename default pool
+* Use common pool capability
+
+==== Packet I/O
+* Check parser flags on receive
+* Check pktio index
+* Decrease timeout in `odp_pktin_recv_tmo()` test
+* Make `pktio_check_start_stop()` test conditional
+* Remove unnecessary test start-up input flushes
+* Test `odp_packet_input_set()`
+* Test user pointer on receive
+* Do no attempt to continue with invalid queue handle
+
+==== Pool
+* Add pool cache size tests
+* Add test for packet pool seg_len parameter
+
+==== Queue
+* Lockfree queue max_size may be zero
+
+==== Scheduler
+* Add new stress test
+* Fix plain+sched test
+* Test `odp_schedule_group_create()` with non-zero mask
+
+==== Shared Memory
+* Add reserve flag tests
+* Fix printf format types for pointers
+
+==== Stash
+* Add tests for the new API
+
+==== System
+* Add test for `ODP_CACHE_LINE_ROUNDUP`
+* Add version macro test
+* Call version string functions
+* Cpu cycle counter may not be supported
+* Make `odp_cpu_hz_max()` tests conditional
+
+==== Timer
+* Timeout tick equals requested tick
+* Always initialize `odp_timer_pool_param_t` contents
+
+==== Traffic Manager
+* Fix shaper profile parameter check
+* Init structs between tests
+
+=== Example Applications
+==== Bench_packet
+* Added tests for missing packet functions
+
+==== Hello
+* Removed `-c` command line option
+
+==== L2fwd
+* Added number of packets option `-n`
+* Added packet copy option `-p`
+* Added pool per interface option `-y`
+
+==== Packet_dump
+* Added VLAN support
+
+==== Packet_gen
+* Added new simple packet generator test application
+
+==== Sched_latency
+* Added option for selecting event forwarding mode `-f`
+* Increased the number of warm-up and scheduling rounds
+
+==== Sched_perf
+* Added data touch options `-n` and `-m`
+* Added queue context data touch options `-k` and `-l`
+* Improved test reliability
+
+==== Switch
+* Added 5 minute aging time to MAC table entries
+* Added signal handler for SIGINT
+* Added support for detecting invalid and broadcast ethernet addresses
+* Improved packet drop statistics printing
+
+==== Timer_accuracy
+* Added burst gap option `-g`
+* Added mode option `-m`
+* Added option `-e` to retry on too early error
+* Added output file option `-o`
+* Added timer burst option `-b`
+
+=== Implementation Improvements
+==== GCC 10 support
+Fixed issues reported by GCC 10. The code base builds now with GCC 10
+also when LTO is enabled.
+
+==== Add configure option for setting path to the default config file
+Added `--with-config-file=FILE` configuration option for setting path to the
+default configuration file. The default configuration file has to include  all
+configuration options.
+
+=== Bug Fixes
+==== Numbered Bugs / Issues
+* Fixed: https://github.com/OpenDataPlane/odp/issues/796[Issue 796]
+seg[0].data MUST return to its initial value on odp_packet_reset
+
+* Fixed: https://github.com/OpenDataPlane/odp/issues/826[Issue 826]
+max_size requires clarification for ODP_NONBLOCKING_LF and ODP_NONBLOCKING_WF
+
+* Fixed: https://github.com/OpenDataPlane/odp/issues/915[Issue 915]
+SIGSEGV: example/sysinfo (raspberry Pi 3B+, arm7, odp-linux, gcc 8.2.0)
+
+* Fixed: https://github.com/OpenDataPlane/odp/issues/930[Issue 930]
+Build failing with GCC 9.2
+
+* Fixed: https://github.com/OpenDataPlane/odp/issues/959[Issue 959]
+ODP build fails with GCC 10.1
+
+==== Unnumbered Bugs / Issues
+* Fixed: crypto: fix session allocation when out of sessions
+* Fixed: dpdk: DPDK renamed protocol structs
+* Fixed: dpdk: fix rx/tx checksum offload
+* Fixed: fix print failures on 32-bit systems
+* Fixed: pool: fix overflow when creating a huge packet pool
+* Fixed: pool: rename pool global variable
+* Fixed: sched scalable: fix pktio ingress queue polling dead lock
+* Fixed: test: fix global variables that are defined multiple times
+* Fixed: timer: fix timer pool create sync with inline timer scan
+
 == OpenDataPlane (1.23.0.0)
 === Summary of Changes
 The ODP API changes in this release are related to the classifier module.
