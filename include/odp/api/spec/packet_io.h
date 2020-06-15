@@ -57,8 +57,18 @@ extern "C" {
  */
 
 /**
+ * @typedef odp_lso_profile_t
+ * LSO profile handle
+ */
+
+/**
  * @def ODP_PKTIO_INVALID
  * Invalid packet IO handle
+ */
+
+/**
+ * @def ODP_LSO_PROFILE_INVALID
+ * Invalid LSO profile handle
  */
 
 /**
@@ -594,6 +604,18 @@ typedef struct odp_pktio_config_t {
 	 */
 	odp_bool_t outbound_ipsec;
 
+	/** Enable Large Send Offload (LSO)
+	 *
+	 *  LSO operation cannot be combined with IPSEC or Traffic Manager (ODP_PKTOUT_MODE_TM) on
+	 *  packet output.
+	 *
+	 *  0: Application will not use LSO (default)
+	 *  1: Application will use LSO
+	 *
+	 *  @see odp_pktout_send_lso()
+	 */
+	odp_bool_t enable_lso;
+
 } odp_pktio_config_t;
 
 /**
@@ -616,6 +638,131 @@ typedef union odp_pktio_set_op_t {
 	  * operations over the entire structure. */
 	uint32_t all_bits;
 } odp_pktio_set_op_t;
+
+/** Maximum number of custom LSO fields supported by ODP API */
+#define ODP_LSO_MAX_CUSTOM 8
+
+/** LSO custom modification options */
+typedef enum odp_lso_modify_t {
+	/** Add current segment number. Numbering starts from zero. */
+	ODP_LSO_ADD_SEGMENT_NUM = 0x1,
+
+	/** Add number of payload bytes in the segment */
+	ODP_LSO_ADD_PAYLOAD_LEN = 0x2,
+
+	/** Add number of payload bytes in all previous segments */
+	ODP_LSO_ADD_PAYLOAD_OFFSET = 0x4
+
+} odp_lso_modify_t;
+
+/** LSO protocol options
+ *
+ *  An LSO operation may perform segmentation on these protocols.
+ */
+typedef enum odp_lso_protocol_t {
+	/** Protocol not selected. */
+	ODP_LSO_PROTO_NONE = 0,
+
+	/** Custom protocol. LSO performs only custom field updates to the packet headers. */
+	ODP_LSO_PROTO_CUSTOM,
+
+	/** LSO performs IPv4 fragmentation.
+	 *
+	 *  IP header length and checksum fields are updated. IP fragmentation related fields are
+	 *  filled and IPv4 Identification field value is copied from the original packet. */
+	ODP_LSO_PROTO_IPV4,
+
+	/** LSO performs IPv6 fragmentation. */
+	ODP_LSO_PROTO_IPV6,
+
+	/** LSO performs TCP segmentation on top of IPv4.
+	 *
+	 *  IP header length and checksum fields are updated. IP fragmentation is not performed
+	 *  and IPv4 Don't Fragment bit is not set. Unique IPv4 Identification field values
+	 *  are generated. Those are usually increments of the IPv4 ID field value in the packet.
+	 */
+	ODP_LSO_PROTO_TCP_IPV4,
+
+	/** LSO performs TCP segmentation on top of IPv6. */
+	ODP_LSO_PROTO_TCP_IPV6,
+
+	/** LSO performs SCTP segmentation on top of IPv4. */
+	ODP_LSO_PROTO_SCTP_IPV4,
+
+	/** LSO performs SCTP segmentation on top of IPv6. */
+	ODP_LSO_PROTO_SCTP_IPV6
+
+} odp_lso_protocol_t;
+
+/** Large Send Offload (LSO) capabilities */
+typedef struct odp_lso_capability_t {
+	/** Maximum number of LSO profiles. When zero, LSO is not supported. */
+	uint32_t max_profiles;
+
+	/** Maximum number of LSO profiles per packet IO interface. When zero, LSO is not
+	 *  supported by the interface. */
+	uint32_t max_profiles_per_pktio;
+
+	/** Maximum number of segments in an input packet. When one, LSO operation accepts only
+	 *  non-segmented packets as input. */
+	uint32_t max_packet_segments;
+
+	/** Maximum number of segments an LSO operation may create. This implies that
+	 *  the maximum supported input packet payload size for an LSO operation is
+	 *  max_segments * max_payload_len bytes. */
+	uint32_t max_segments;
+
+	/** Maximum payload length per an LSO generated packet (in bytes). This is the maximum value
+	 *  for max_payload_len in odp_packet_lso_opt_t. */
+	uint32_t max_payload_len;
+
+	/** Maximum supported offset to the packet payload (in bytes). This is the maximum value
+	 *  for payload_offset in odp_packet_lso_opt_t. */
+	uint32_t max_payload_offset;
+
+	/** Supported LSO custom modification options */
+	struct {
+		/** ODP_LSO_ADD_SEGMENT_NUM support */
+		uint16_t add_segment_num:1;
+
+		/** ODP_LSO_ADD_PAYLOAD_LEN support */
+		uint16_t add_payload_len:1;
+
+		/** ODP_LSO_ADD_PAYLOAD_OFFSET support */
+		uint16_t add_payload_offset:1;
+
+	} mod_op;
+
+	/** Maximum number of custom fields supported per LSO profile. When zero, custom
+	 *  fields are not supported. */
+	uint8_t max_num_custom;
+
+	/** Supported LSO protocol options */
+	struct {
+		/** ODP_LSO_PROTO_CUSTOM support */
+		uint32_t custom:1;
+
+		/** ODP_LSO_PROTO_IPV4 support */
+		uint32_t ipv4:1;
+
+		/** ODP_LSO_PROTO_IPV6 support */
+		uint32_t ipv6:1;
+
+		/** ODP_LSO_PROTO_TCP_IPV4 support */
+		uint32_t tcp_ipv4:1;
+
+		/** ODP_LSO_PROTO_TCP_IPV6 support */
+		uint32_t tcp_ipv6:1;
+
+		/** ODP_LSO_PROTO_SCTP_IPV4 support */
+		uint32_t sctp_ipv4:1;
+
+		/** ODP_LSO_PROTO_SCTP_IPV6 support */
+		uint32_t sctp_ipv6:1;
+
+	} proto;
+
+} odp_lso_capability_t;
 
 /**
  * Packet input vector capabilities
@@ -672,6 +819,9 @@ typedef struct odp_pktio_capability_t {
 
 	/** Packet input vector capability */
 	odp_pktin_vector_capability_t vector;
+
+	/** LSO capabilities */
+	odp_lso_capability_t lso;
 
 } odp_pktio_capability_t;
 
@@ -1094,6 +1244,123 @@ uint64_t odp_pktin_wait_time(uint64_t nsec);
  */
 int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 		    int num);
+
+/**
+ * LSO profile parameters
+ */
+typedef struct odp_lso_profile_param_t {
+	/**
+	 * Segmentation protocol
+	 *
+	 * Selects on which protocol LSO operation performs segmentation (e.g. IP fragmentation vs.
+	 * TCP segmentation). When ODP_LSO_PROTO_CUSTOM is selected, only custom field
+	 * modifications are performed. The default value is ODP_LSO_PROTO_NONE. Check LSO
+	 * capability for supported protocols.
+	 */
+	odp_lso_protocol_t lso_proto;
+
+	/**
+	 * Custom fields
+	 *
+	 * Set lso_proto to ODP_LSO_PROTO_CUSTOM when using custom fields. Fields are defined
+	 * in the same order they appear in the packet.
+	 */
+	struct {
+		/** Custom field to be modified by LSO */
+		struct {
+			/** Field modify operation. Selects how value of the field is modified
+			 *  from its original value during segmentation. Field value is assumed
+			 *  to be in network (big endian) byte order. */
+			odp_lso_modify_t mod_op;
+
+			/** Field offset in bytes from packet start */
+			uint32_t offset;
+
+			/** Field size in bytes. Valid values are 1, 2, 4, and 8 bytes. */
+			uint8_t size;
+
+		} field[ODP_LSO_MAX_CUSTOM];
+
+		/** Number of custom fields specified. The default value is 0. */
+		uint8_t num_custom;
+
+	} custom;
+
+} odp_lso_profile_param_t;
+
+/**
+ * Initialize LSO profile parameters
+ *
+ * Initialize an odp_lso_profile_param_t to its default values for all fields.
+ *
+ * @param param Address of the odp_lso_profile_param_t to be initialized
+ */
+void odp_lso_profile_param_init(odp_lso_profile_param_t *param);
+
+/**
+ * Create LSO profile
+ *
+ * LSO profile defines the set of segmentation operations to be performed to a packet. LSO profiles
+ * are created before the packet IO interface is started (after odp_pktio_config() and before
+ * odp_pktio_start()).
+ *
+ * See odp_lso_capability_t for maximum number of profiles supported and other LSO capabilities.
+ *
+ * @param pktio   Packet IO interface which is used with this LSO profile
+ * @param param   LSO profile parameters
+ *
+ * @return LSO profile handle
+ * @retval ODP_LSO_PROFILE_INVALID on failure
+ */
+odp_lso_profile_t odp_lso_profile_create(odp_pktio_t pktio, const odp_lso_profile_param_t *param);
+
+/**
+ * Destroy LSO profile
+ *
+ * LSO profiles can be destoyed only when the packet IO interface is not active (i.e. after it
+ * has been stopped).
+ *
+ * @param lso_profile   LSO profile to be destroyed
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_lso_profile_destroy(odp_lso_profile_t lso_profile);
+
+/**
+ * Send packets with segmentation offload
+ *
+ * Like odp_pktout_send(), but splits a packet payload into 'max_payload_len' or smaller segments
+ * during output. Packet headers (before 'payload_offset') are copied into each segment and
+ * automatically modified before transmission. Header updates are based on segmentation protocol
+ * selection (odp_lso_profile_param_t::lso_proto) in LSO profile. Header checksums are updated
+ * after modifications. L3/L4 header modifications (see e.g. ODP_LSO_PROTO_TCP_IPV4) require that
+ * L3/L4 layer offsets in the packet are valid (see e.g. odp_packet_l3_offset()).
+ *
+ * In addition, custom field updates may be used to cover unsupported or proprietary protocols.
+ * Custom fields must not overlap with each other and can be used only when ODP_LSO_PROTO_CUSTOM
+ * is selected.
+ *
+ * Packets are processed and transmitted in the array order. Segments of each packet are transmitted
+ * in ascending order.
+ *
+ * When all packets share the same LSO options, usage of 'lso_opt' parameter may improve
+ * performance as a number of packet metadata writes/reads are avoided. Results are undefined if
+ * 'lso_opt' is NULL and a packet misses LSO options.
+ *
+ * Check LSO support level from packet IO capabilities (odp_pktio_capability_t).
+ *
+ * @param queue     Packet output queue handle
+ * @param packet[]  Array of packets to be LSO processed and sent
+ * @param num       Number of packets
+ * @param lso_opt   When set, LSO options to be used for all packets. When NULL, LSO options are
+ *                  read from each packet (see odp_packet_lso_request()).
+ *
+ * @return Number of packets successfully segmented (0 ... num)
+ * @retval <0 on failure
+ */
+int odp_pktout_send_lso(odp_pktout_queue_t queue, const odp_packet_t packet[], int num,
+			const odp_packet_lso_opt_t *lso_opt);
 
 /**
  * MTU value of a packet IO interface
