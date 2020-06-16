@@ -467,6 +467,11 @@ static int tap_link_status(pktio_entry_t *pktio_entry)
 			      pktio_entry->s.name + 4);
 }
 
+static int tap_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info)
+{
+	return link_info_fd(pkt_priv(pktio_entry)->skfd, pktio_entry->s.name + 4, info);
+}
+
 static int tap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 			  odp_pktio_capability_t *capa)
 {
@@ -501,6 +506,7 @@ const pktio_if_ops_t tap_pktio_ops = {
 	.mac_get = tap_mac_addr_get,
 	.mac_set = tap_mac_addr_set,
 	.link_status = tap_link_status,
+	.link_info = tap_link_info,
 	.capability = tap_capability,
 	.pktin_ts_res = NULL,
 	.pktin_ts_from_ns = NULL,
