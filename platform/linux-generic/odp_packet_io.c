@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -1242,6 +1242,23 @@ int odp_pktio_info(odp_pktio_t hdl, odp_pktio_info_t *info)
 	memcpy(&info->param, &entry->s.param, sizeof(odp_pktio_param_t));
 
 	return 0;
+}
+
+int odp_pktio_link_info(odp_pktio_t hdl, odp_pktio_link_info_t *info)
+{
+	pktio_entry_t *entry;
+
+	entry = get_pktio_entry(hdl);
+
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", hdl);
+		return -1;
+	}
+
+	if (entry->s.ops->link_info)
+		return entry->s.ops->link_info(entry, info);
+
+	return -1;
 }
 
 uint64_t odp_pktin_ts_res(odp_pktio_t hdl)

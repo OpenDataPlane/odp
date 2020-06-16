@@ -784,6 +784,11 @@ static int sock_mmap_link_status(pktio_entry_t *pktio_entry)
 			      pktio_entry->s.name);
 }
 
+static int sock_mmap_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info)
+{
+	return link_info_fd(pkt_priv(pktio_entry)->sockfd, pktio_entry->s.name, info);
+}
+
 static int sock_mmap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 				odp_pktio_capability_t *capa)
 {
@@ -860,6 +865,7 @@ const pktio_if_ops_t sock_mmap_pktio_ops = {
 	.mac_get = sock_mmap_mac_addr_get,
 	.mac_set = NULL,
 	.link_status = sock_mmap_link_status,
+	.link_info = sock_mmap_link_info,
 	.capability = sock_mmap_capability,
 	.pktin_ts_res = NULL,
 	.pktin_ts_from_ns = NULL,

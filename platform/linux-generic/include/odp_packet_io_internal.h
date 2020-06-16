@@ -180,6 +180,7 @@ typedef struct pktio_if_ops {
 	int (*mac_get)(pktio_entry_t *pktio_entry, void *mac_addr);
 	int (*mac_set)(pktio_entry_t *pktio_entry, const void *mac_addr);
 	int (*link_status)(pktio_entry_t *pktio_entry);
+	int (*link_info)(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info);
 	int (*capability)(pktio_entry_t *pktio_entry,
 			  odp_pktio_capability_t *capa);
 	int (*config)(pktio_entry_t *pktio_entry,
