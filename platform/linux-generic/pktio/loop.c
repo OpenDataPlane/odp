@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2013, Nokia Solutions and Networks
+ * Copyright (c) 2013-2020, Nokia Solutions and Networks
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -370,6 +370,21 @@ static int loopback_link_status(pktio_entry_t *pktio_entry ODP_UNUSED)
 	return 1;
 }
 
+static int loopback_link_info(pktio_entry_t *pktio_entry ODP_UNUSED, odp_pktio_link_info_t *info)
+{
+	memset(info, 0, sizeof(odp_pktio_link_info_t));
+
+	info->autoneg = ODP_PKTIO_LINK_AUTONEG_OFF;
+	info->duplex = ODP_PKTIO_LINK_DUPLEX_FULL;
+	info->media = "virtual";
+	info->pause_rx = ODP_PKTIO_LINK_PAUSE_OFF;
+	info->pause_tx = ODP_PKTIO_LINK_PAUSE_OFF;
+	info->speed = ODP_PKTIO_LINK_SPEED_UNKNOWN;
+	info->status = ODP_PKTIO_LINK_STATUS_UP;
+
+	return 0;
+}
+
 static int loopback_init_capability(pktio_entry_t *pktio_entry)
 {
 	odp_pktio_capability_t *capa = &pktio_entry->s.capa;
@@ -467,6 +482,7 @@ const pktio_if_ops_t loopback_pktio_ops = {
 	.mac_get = loopback_mac_addr_get,
 	.mac_set = NULL,
 	.link_status = loopback_link_status,
+	.link_info = loopback_link_info,
 	.capability = loopback_capability,
 	.pktin_ts_res = NULL,
 	.pktin_ts_from_ns = NULL,
