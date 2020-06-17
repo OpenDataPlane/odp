@@ -444,6 +444,11 @@ static int pcapif_init_global(void)
 	return 0;
 }
 
+static int pcapif_link_status(pktio_entry_t *pktio_entry ODP_UNUSED)
+{
+	return 1;
+}
+
 const pktio_if_ops_t pcap_pktio_ops = {
 	.name = "pcap",
 	.print = NULL,
@@ -466,4 +471,5 @@ const pktio_if_ops_t pcap_pktio_ops = {
 	.config = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
+	.link_status = pcapif_link_status,
 };
