@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -359,6 +359,27 @@ static int netmap_link_status(pktio_entry_t *pktio_entry)
 
 	return link_status_fd(pkt_priv(pktio_entry)->sockfd,
 			      pkt_priv(pktio_entry)->if_name);
+}
+
+static int netmap_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info)
+{
+	pkt_netmap_t *pkt_nm = pkt_priv(pktio_entry);
+
+	if (pkt_nm->is_virtual) {
+		memset(info, 0, sizeof(odp_pktio_link_info_t));
+
+		info->autoneg = ODP_PKTIO_LINK_AUTONEG_OFF;
+		info->duplex = ODP_PKTIO_LINK_DUPLEX_FULL;
+		info->media = "virtual";
+		info->pause_rx = ODP_PKTIO_LINK_PAUSE_OFF;
+		info->pause_tx = ODP_PKTIO_LINK_PAUSE_OFF;
+		info->speed = ODP_PKTIO_LINK_SPEED_UNKNOWN;
+		info->status = ODP_PKTIO_LINK_STATUS_UP;
+
+		return 0;
+	}
+
+	return link_info_fd(pkt_nm->sockfd, pkt_nm->if_name, info);
 }
 
 /**
@@ -1225,6 +1246,7 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.start = netmap_start,
 	.stop = netmap_stop,
 	.link_status = netmap_link_status,
+	.link_info = netmap_link_info,
 	.stats = netmap_stats,
 	.stats_reset = netmap_stats_reset,
 	.mtu_get = netmap_mtu_get,
