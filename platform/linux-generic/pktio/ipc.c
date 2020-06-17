@@ -900,6 +900,13 @@ static int ipc_stop(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
+static int ipc_link_status(pktio_entry_t *pktio_entry)
+{
+	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
+
+	return odp_atomic_load_u32(&pktio_ipc->ready);
+}
+
 static int ipc_close(pktio_entry_t *pktio_entry)
 {
 	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
@@ -947,6 +954,7 @@ const pktio_if_ops_t ipc_pktio_ops = {
 	.send = ipc_pktio_send,
 	.start = ipc_start,
 	.stop = ipc_stop,
+	.link_status = ipc_link_status,
 	.mtu_get = ipc_mtu_get,
 	.promisc_mode_set = NULL,
 	.promisc_mode_get = NULL,
