@@ -154,6 +154,11 @@ static int null_init_global(void)
 	return 0;
 }
 
+static int null_link_status(pktio_entry_t *pktio_entry ODP_UNUSED)
+{
+	return 1;
+}
+
 const pktio_if_ops_t null_pktio_ops = {
 	.name = "null",
 	.print = NULL,
@@ -179,4 +184,5 @@ const pktio_if_ops_t null_pktio_ops = {
 	.config = NULL,
 	.input_queues_config = null_inqueues_config,
 	.output_queues_config = null_outqueues_config,
+	.link_status = null_link_status
 };
