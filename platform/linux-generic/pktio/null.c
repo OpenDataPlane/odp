@@ -159,6 +159,21 @@ static int null_link_status(pktio_entry_t *pktio_entry ODP_UNUSED)
 	return 1;
 }
 
+static int null_link_info(pktio_entry_t *pktio_entry ODP_UNUSED, odp_pktio_link_info_t *info)
+{
+	memset(info, 0, sizeof(odp_pktio_link_info_t));
+
+	info->autoneg = ODP_PKTIO_LINK_AUTONEG_OFF;
+	info->duplex = ODP_PKTIO_LINK_DUPLEX_FULL;
+	info->media = "virtual";
+	info->pause_rx = ODP_PKTIO_LINK_PAUSE_OFF;
+	info->pause_tx = ODP_PKTIO_LINK_PAUSE_OFF;
+	info->speed = ODP_PKTIO_LINK_SPEED_UNKNOWN;
+	info->status = ODP_PKTIO_LINK_STATUS_UP;
+
+	return 0;
+}
+
 const pktio_if_ops_t null_pktio_ops = {
 	.name = "null",
 	.print = NULL,
@@ -184,5 +199,6 @@ const pktio_if_ops_t null_pktio_ops = {
 	.config = NULL,
 	.input_queues_config = null_inqueues_config,
 	.output_queues_config = null_outqueues_config,
-	.link_status = null_link_status
+	.link_status = null_link_status,
+	.link_info = null_link_info
 };
