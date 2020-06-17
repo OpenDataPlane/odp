@@ -1,5 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -2060,6 +2060,60 @@ static int dpdk_link_status(pktio_entry_t *pktio_entry)
 	return link.link_status;
 }
 
+static int dpdk_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info)
+{
+	struct rte_eth_link link;
+	struct rte_eth_fc_conf fc_conf;
+	uint16_t port_id = pkt_priv(pktio_entry)->port_id;
+	int ret;
+
+	memset(&fc_conf, 0, sizeof(struct rte_eth_fc_conf));
+	memset(&link, 0, sizeof(struct rte_eth_link));
+
+	ret = rte_eth_dev_flow_ctrl_get(port_id, &fc_conf);
+	if (ret && ret != -ENOTSUP) {
+		ODP_ERR("rte_eth_dev_flow_ctrl_get() failed\n");
+		return -1;
+	}
+
+	memset(info, 0, sizeof(odp_pktio_link_info_t));
+	info->pause_rx = ODP_PKTIO_LINK_PAUSE_OFF;
+	info->pause_tx = ODP_PKTIO_LINK_PAUSE_OFF;
+	if (fc_conf.mode == RTE_FC_RX_PAUSE) {
+		info->pause_rx = ODP_PKTIO_LINK_PAUSE_ON;
+	} else if (fc_conf.mode == RTE_FC_TX_PAUSE) {
+		info->pause_tx = ODP_PKTIO_LINK_PAUSE_ON;
+	} else if (fc_conf.mode == RTE_FC_FULL) {
+		info->pause_rx = ODP_PKTIO_LINK_PAUSE_ON;
+		info->pause_tx = ODP_PKTIO_LINK_PAUSE_ON;
+	}
+
+	rte_eth_link_get_nowait(port_id, &link);
+	if (link.link_autoneg == ETH_LINK_AUTONEG)
+		info->autoneg = ODP_PKTIO_LINK_AUTONEG_ON;
+	else
+		info->autoneg = ODP_PKTIO_LINK_AUTONEG_OFF;
+
+	if (link.link_duplex == ETH_LINK_FULL_DUPLEX)
+		info->duplex = ODP_PKTIO_LINK_DUPLEX_FULL;
+	else
+		info->duplex = ODP_PKTIO_LINK_DUPLEX_HALF;
+
+	if (link.link_status == ETH_SPEED_NUM_NONE)
+		info->speed = ODP_PKTIO_LINK_SPEED_UNKNOWN;
+	else
+		info->speed = link.link_speed;
+
+	if (link.link_status == ETH_LINK_UP)
+		info->status = ODP_PKTIO_LINK_STATUS_UP;
+	else
+		info->status = ODP_PKTIO_LINK_STATUS_DOWN;
+
+	info->media = "unknown";
+
+	return 0;
+}
+
 static void stats_convert(const struct rte_eth_stats *rte_stats,
 			  odp_pktio_stats_t *stats)
 {
@@ -2106,6 +2160,7 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.recv = dpdk_recv,
 	.send = dpdk_send,
 	.link_status = dpdk_link_status,
+	.link_info = dpdk_link_info,
 	.mtu_get = dpdk_frame_maxlen,
 	.promisc_mode_set = dpdk_promisc_mode_set,
 	.promisc_mode_get = dpdk_promisc_mode_get,
