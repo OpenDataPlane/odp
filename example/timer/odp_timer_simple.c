@@ -69,6 +69,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 		ret += 1;
 		goto err_tp;
 	}
+	memset(&tparams, 0, sizeof(tparams));
 	tparams.res_ns = MAX(10 * ODP_TIME_MSEC_IN_NS,
 			     timer_capa.highest_res_ns);
 	tparams.min_tmo = 10 * ODP_TIME_MSEC_IN_NS;
