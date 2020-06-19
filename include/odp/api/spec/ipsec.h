@@ -22,6 +22,7 @@ extern "C" {
 #include <odp/api/support.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/classification.h>
+#include <odp/api/traffic_mngr.h>
 
 /** @defgroup odp_ipsec ODP IPSEC
  *  IPSEC protocol offload.
@@ -261,6 +262,15 @@ typedef struct odp_ipsec_capability_t {
 
 	/** Supported authentication algorithms */
 	odp_crypto_auth_algos_t   auths;
+
+	/** Support of traffic manager (TM) after inline outbound IPSEC
+	 *  processing. On unsupported platforms, application is not allowed
+	 *  to use a TM enabled pktio (ODP_PKTOUT_MODE_TM) with outbound
+	 *  inline IPSEC.
+	 *
+	 *  @see odp_pktio_open(), odp_pktio_param_t
+	 */
+	odp_support_t inline_ipsec_tm;
 
 } odp_ipsec_capability_t;
 
@@ -1148,13 +1158,28 @@ typedef struct odp_ipsec_in_param_t {
  * Outbound inline IPSEC operation parameters
  */
 typedef struct odp_ipsec_out_inline_param_t {
-	/** Packet output interface for inline output operation
+	/** Packet output interface for inline outbound operation without TM
 	 *
 	 *  Outbound inline IPSEC operation uses this packet IO interface to
 	 *  output the packet after a successful IPSEC transformation. The pktio
 	 *  must have been configured to operate in inline IPSEC mode.
+	 *
+	 *  The pktio must not have been configured with ODP_PKTOUT_MODE_TM.
+	 *  For IPSEC inline output to TM enabled interfaces set this field
+	 *  to ODP_PKTIO_INVALID and specify the TM queue to be used through
+	 *  the tm_queue parameter. Inline IPSEC output through TM can be
+	 *  done only if the platform has inline_ipsec_tm capability.
 	 */
 	odp_pktio_t pktio;
+
+	/** TM queue for inline outbound operation
+	 *
+	 *  TM queue to be used for inline IPSEC output when pktio field
+	 *  is ODP_PKTIO_INVALID, indicating use of TM. Otherwise ignored.
+	 *
+	 *  @see odp_ipsec_capability()
+	 */
+	odp_tm_queue_t tm_queue;
 
 	/** Outer headers for inline output operation
 	 *
@@ -1489,8 +1514,8 @@ int odp_ipsec_out_enq(const odp_packet_t pkt[], int num,
  *
  * This operation does outbound inline IPSEC processing for the packets. It's
  * otherwise identical to odp_ipsec_out_enq(), but outputs all successfully
- * transformed packets to the specified output interface, instead of generating
- * events for those.
+ * transformed packets to the specified output interface (or tm_queue), instead of
+ * generating events for those.
  *
  * Inline operation parameters are defined per packet. The array of parameters
  * must have 'num' elements and is pointed to by 'inline_param'.
