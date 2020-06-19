@@ -822,7 +822,7 @@ static int test_init(void)
 
 static int empty_inq(odp_pktio_t pktio)
 {
-	odp_queue_t queue;
+	odp_queue_t queue = ODP_QUEUE_INVALID;
 	odp_event_t ev;
 	odp_queue_type_t q_type;
 
