@@ -136,7 +136,7 @@ ODP_CHECK_CFLAG([-Wno-error=address-of-packed-member])
 # GCC 10 sometimes gets confused about object sizes and gives bogus warnings.
 # Make the affected warnings generate only warnings, not errors.
 AS_IF([test "$GCC" == yes],
-      AS_IF([test `$CC -dumpversion` -ge 10],
+      AS_IF([test `$CC -dumpversion | cut -d '.' -f 1` -ge 10],
 	    ODP_CHECK_CFLAG([-Wno-error=array-bounds])
 	    ODP_CHECK_CFLAG([-Wno-error=stringop-overflow])
       )
