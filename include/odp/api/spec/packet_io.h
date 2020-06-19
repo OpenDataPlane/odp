@@ -516,13 +516,14 @@ typedef struct odp_pktio_config_t {
 	 *  to the pktio interface for output. IPSEC configuration is done
 	 *  through the IPSEC API.
 	 *
-	 *  Outbound IPSEC inline operation cannot be combined with traffic
-	 *  manager (ODP_PKTOUT_MODE_TM).
+	 *  Support of outbound IPSEC inline operation with traffic manager
+	 *  (ODP_PKTOUT_MODE_TM) can be queried with odp_ipsec_capability().
 	 *
-	 *  0: Disable outbound IPSEC inline operation (default)
-	 *  1: Enable outbound IPSEC inline operation
+	 * * 0: Disable outbound IPSEC inline operation (default)
+	 * * 1: Enable outbound IPSEC inline operation
 	 *
 	 *  @see odp_ipsec_config(), odp_ipsec_sa_create()
+	 *  odp_ipsec_out_inline()
 	 */
 	odp_bool_t outbound_ipsec;
 
