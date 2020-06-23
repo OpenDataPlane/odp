@@ -43,6 +43,9 @@ _odp_int_queue_pool_t _odp_queue_pool_create(uint32_t max_num_queues,
 
 _odp_int_pkt_queue_t _odp_pkt_queue_create(_odp_int_queue_pool_t queue_pool);
 
+void _odp_pkt_queue_destroy(_odp_int_queue_pool_t queue_pool,
+			    _odp_int_pkt_queue_t  pkt_queue);
+
 int _odp_pkt_queue_append(_odp_int_queue_pool_t queue_pool,
 			  _odp_int_pkt_queue_t  pkt_queue,
 			  odp_packet_t          pkt);
