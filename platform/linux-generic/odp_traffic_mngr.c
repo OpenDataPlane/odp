@@ -4052,6 +4052,8 @@ int odp_tm_queue_destroy(odp_tm_queue_t tm_queue)
 	odp_queue_destroy(tm_queue_obj->queue);
 
 	odp_ticketlock_lock(&tm_glb->queue_obj.lock);
+	_odp_pkt_queue_destroy(tm_system->_odp_int_queue_pool,
+			       tm_queue_obj->_odp_int_pkt_queue);
 	tm_queue_obj->status = TM_STATUS_FREE;
 	odp_ticketlock_unlock(&tm_glb->queue_obj.lock);
 

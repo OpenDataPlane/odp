@@ -13,6 +13,7 @@
 #include <inttypes.h>
 #include <odp_api.h>
 #include <odp_pkt_queue_internal.h>
+#include <odp_traffic_mngr_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_macros_internal.h>
 
@@ -46,6 +47,7 @@ typedef struct {
 } queue_region_desc_t;
 
 typedef struct {
+	uint8_t  queue_status[ODP_TM_MAX_TM_QUEUES];
 	uint64_t total_pkt_appends;
 	uint64_t total_pkt_removes;
 	uint64_t total_bad_removes;
@@ -55,7 +57,7 @@ typedef struct {
 	uint32_t free_list_head_idx;
 	uint32_t max_queue_num;
 	uint32_t max_queued_pkts;
-	uint32_t next_queue_num;
+	uint32_t num_queues;
 	queue_region_desc_t queue_region_descs[16];
 	uint32_t *queue_num_tbl;
 	uint8_t current_region;
@@ -251,7 +253,7 @@ _odp_int_queue_pool_t _odp_queue_pool_create(uint32_t max_num_queues,
 
 	pool->max_queue_num = max_num_queues;
 	pool->max_queued_pkts = max_queued_pkts;
-	pool->next_queue_num = 1;
+	pool->num_queues = 0;
 
 	pool->min_free_list_size = pool->free_list_size;
 	pool->peak_free_list_size = pool->free_list_size;
@@ -260,15 +262,35 @@ _odp_int_queue_pool_t _odp_queue_pool_create(uint32_t max_num_queues,
 
 _odp_int_pkt_queue_t _odp_pkt_queue_create(_odp_int_queue_pool_t queue_pool)
 {
-	queue_pool_t *pool;
-	uint32_t queue_num;
+	queue_pool_t *pool = (queue_pool_t *)(uintptr_t)queue_pool;
+	uint32_t i;
 
-	pool = (queue_pool_t *)(uintptr_t)queue_pool;
-	queue_num = pool->next_queue_num++;
-	if (pool->max_queue_num < queue_num)
+	if (pool->num_queues >= pool->max_queue_num)
 		return _ODP_INT_PKT_QUEUE_INVALID;
 
-	return (_odp_int_pkt_queue_t)queue_num;
+	for (i = 0; i < pool->max_queue_num; i++) {
+		if (pool->queue_status[i] == TM_STATUS_FREE) {
+			pool->queue_status[i] = TM_STATUS_RESERVED;
+			pool->num_queues++;
+			return (_odp_int_pkt_queue_t)(i + 1);
+		}
+	}
+	return _ODP_INT_PKT_QUEUE_INVALID;
+}
+
+void _odp_pkt_queue_destroy(_odp_int_queue_pool_t queue_pool,
+			    _odp_int_pkt_queue_t  pkt_queue)
+{
+	queue_pool_t *pool = (queue_pool_t *)(uintptr_t)queue_pool;
+	uint32_t queue_num = (uint32_t)pkt_queue;
+
+	if ((queue_num == 0) || (queue_num > pool->max_queue_num)) {
+		ODP_ERR("Invalid TM packet queue ID\n");
+		return;
+	}
+
+	pool->queue_status[queue_num - 1] = TM_STATUS_FREE;
+	pool->num_queues--;
 }
 
 int _odp_pkt_queue_append(_odp_int_queue_pool_t queue_pool,
@@ -390,9 +412,9 @@ void _odp_pkt_queue_stats_print(_odp_int_queue_pool_t queue_pool)
 
 	pool = (queue_pool_t *)(uintptr_t)queue_pool;
 	ODP_PRINT("pkt_queue_stats - queue_pool=0x%" PRIX64 "\n", queue_pool);
-	ODP_PRINT("  max_queue_num=%u max_queued_pkts=%u next_queue_num=%u\n",
-		  pool->max_queue_num, pool->max_queued_pkts,
-		  pool->next_queue_num);
+	ODP_PRINT("  max_queue_num=%" PRIu32 " max_queued_pkts=%" PRIu32 " "
+		  "num_queues=%" PRIu32 "\n", pool->max_queue_num,
+		  pool->max_queued_pkts, pool->num_queues);
 	ODP_PRINT("  total pkt appends=%" PRIu64 " total pkt removes=%" PRIu64
 		  " bad removes=%" PRIu64 "\n",
 		  pool->total_pkt_appends, pool->total_pkt_removes,
