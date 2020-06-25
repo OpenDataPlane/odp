@@ -4575,7 +4575,8 @@ static int tm_query_info_copy(tm_queue_info_t     *queue_info,
 			      uint32_t             query_flags,
 			      odp_tm_query_info_t *info)
 {
-	tm_queue_thresholds_t *threshold_params;
+	if ((query_flags & ODP_TM_QUERY_THRESHOLDS) && !queue_info->threshold_params)
+		return -1;
 
 	memset(info, 0, sizeof(odp_tm_query_info_t));
 	info->total_pkt_cnt =
@@ -4587,9 +4588,7 @@ static int tm_query_info_copy(tm_queue_info_t     *queue_info,
 	info->approx_byte_cnt = 0;
 
 	if (query_flags & ODP_TM_QUERY_THRESHOLDS) {
-		threshold_params = queue_info->threshold_params;
-		if (!threshold_params)
-			return -1;
+		tm_queue_thresholds_t *threshold_params = queue_info->threshold_params;
 
 		info->max_pkt_cnt = threshold_params->max_pkts;
 		info->max_byte_cnt = threshold_params->max_bytes;
