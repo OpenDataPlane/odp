@@ -1651,7 +1651,8 @@ typedef struct {
 /** Get tm_node Info
  *
  * The odp_tm_node_info() function is used to extract various bits of
- * configuration associated with a given tm_node.
+ * configuration associated with a given tm_node. The info structure is written
+ * only on success.
  *
  * @param      tm_node  Specifies the tm_node to be queried.
  * @param[out] info     A pointer to an odp_tm_node_info_t record that is to
@@ -1711,7 +1712,7 @@ typedef struct {
  * from their fanin list, a reasonable list walk can occur - even while past or
  * future entries are being removed or while future entries are being added.
  * Note that all new additions to a fanin list always take place at the end of
- * the list.
+ * the list. The info structure is written only on success.
  *
  * @param         tm_node  Specifies the tm_node to be queried.
  * @param[in,out] info     A pointer to an odp_tm_node_fanin_info_t record that
@@ -1756,7 +1757,8 @@ typedef struct {
 /** Get tm_queue Info
  *
  * The odp_tm_queue_info() function is used to extract various bits of
- * configuration associated with a given tm_queue.
+ * configuration associated with a given tm_queue. The info structure is
+ * written only on success.
  *
  * @param      tm_queue  Specifies the tm_queue to be queried.
  * @param[out] info      A pointer to an odp_tm_queue_info_t record that is to
@@ -1840,11 +1842,12 @@ typedef struct {
  * byte counts or both are being requested.  It is an error to request
  * neither.  The implementation may still return both sets of counts
  * regardless of query_flags if the cost of returning all the counts is
- * comparable to the cost of checking the query_flags.
+ * comparable to the cost of checking the query_flags. The info structure is
+ * written only on success.
  *
  * @param      tm_queue     Specifies the tm_queue (and indirectly the
  *                          TM system).
- * @param[out] query_flags  A set of flag bits indicating which counters are
+ * @param      query_flags  A set of flag bits indicating which counters are
  *                          being requested to be returned in the info record.
  * @param[out] info         Pointer to an odp_tm_query_info_t record where the
  *                          requested queue info is returned.
@@ -1860,12 +1863,12 @@ int odp_tm_queue_query(odp_tm_queue_t       tm_queue,
  * requested.  It is an error to request neither.  The implementation may
  * still return both sets of counts regardless of query_flags if the cost of
  * returning all the counts is comparable to the cost of checking the
- * query_flags.
+ * query_flags. The info structure is written only on success.
  *
  * @param      odp_tm       Specifies the TM system.
  * @param      priority     Supplies the strict priority level used to specify
  *                          which tm_queues are included in the info values.
- * @param[out] query_flags  A set of flag bits indicating which counters are
+ * @param      query_flags  A set of flag bits indicating which counters are
  *                          being requested to be returned in the info record.
  * @param[out] info         Pointer to an odp_tm_query_info_t record where the
  *                          requested queue info is returned.
@@ -1882,10 +1885,10 @@ int odp_tm_priority_query(odp_tm_t             odp_tm,
  * requested.  It is an error to request neither.  The implementation may
  * still return both sets of counts regardless of query_flags if the cost of
  * returning all the counts is comparable to the cost of checking the
- * query_flags.
+ * query_flags. The info structure is written only on success.
  *
  * @param      odp_tm       Specifies the TM system.
- * @param[out] query_flags  A set of flag bits indicating which counters are
+ * @param      query_flags  A set of flag bits indicating which counters are
  *                          being requested to be returned in the info record.
  * @param[out] info         Pointer to an odp_tm_query_info_t record where the
  *                          requested queue info is returned.
