@@ -32,7 +32,7 @@ typedef struct test_global_t {
 	uint64_t rx_packets;
 	uint64_t tx_replies;
 	odp_pool_t pool;
-	int stop;
+	odp_atomic_u32_t stop;
 
 	struct {
 		odph_ethaddr_t eth_addr;
@@ -50,8 +50,7 @@ static void sig_handler(int signo)
 {
 	(void)signo;
 
-	test_global.stop = 1;
-	odp_mb_full();
+	odp_atomic_store_u32(&test_global.stop, 1);
 }
 
 static void print_usage(void)
@@ -575,7 +574,7 @@ static int receive_packets(test_global_t *global)
 	odp_time_t cur = odp_time_local();
 	odp_time_t prev = cur;
 
-	while (!global->stop) {
+	while (!odp_atomic_load_u32(&global->stop)) {
 		ev = odp_schedule(NULL, wait);
 
 		cur = odp_time_local();
@@ -629,6 +628,7 @@ int main(int argc, char *argv[])
 
 	global = &test_global;
 	memset(global, 0, sizeof(test_global_t));
+	odp_atomic_init_u32(&global->stop, 0);
 
 	signal(SIGINT, sig_handler);
 

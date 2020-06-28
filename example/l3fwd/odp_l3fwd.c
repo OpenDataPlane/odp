@@ -90,7 +90,7 @@ typedef struct {
 	/** Shm for storing global data */
 	odp_shm_t shm;
 	/** Break workers loop if set to 1 */
-	int exit_threads;
+	odp_atomic_u32_t exit_threads;
 
 	/* forward func, hash or lpm */
 	int (*fwd_func)(odp_packet_t pkt, int sif);
@@ -323,7 +323,7 @@ static int run_worker(void *arg)
 
 	odp_barrier_wait(&global->barrier);
 
-	while (!global->exit_threads) {
+	while (!odp_atomic_load_u32(&global->exit_threads)) {
 		if (num_pktio > 1) {
 			if_idx = input_ifs[pktio];
 			inq = input_queues[pktio];
@@ -972,6 +972,7 @@ int main(int argc, char **argv)
 	}
 
 	memset(global, 0, sizeof(global_data_t));
+	odp_atomic_init_u32(&global->exit_threads, 0);
 	global->shm = shm;
 
 	/* Initialize the dest mac as 2:0:0:0:0:x */
@@ -1117,7 +1118,7 @@ int main(int argc, char **argv)
 	}
 
 	print_speed_stats(nb_worker, args->duration, PRINT_INTERVAL);
-	global->exit_threads = 1;
+	odp_atomic_store_u32(&global->exit_threads, 1);
 
 	/* wait for other threads to join */
 	for (i = 0; i < nb_worker; i++)

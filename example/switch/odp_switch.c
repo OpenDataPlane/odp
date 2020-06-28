@@ -131,7 +131,7 @@ typedef struct {
 	/** Global barrier to synchronize main and workers */
 	odp_barrier_t barrier;
 	/** Break workers loop if set to 1 */
-	int exit_threads;
+	odp_atomic_u32_t exit_threads;
 	/** Table of pktio handles */
 	struct {
 		odp_pktio_t pktio;
@@ -154,7 +154,7 @@ static void sig_handler(int signo ODP_UNUSED)
 {
 	if (gbl_args == NULL)
 		return;
-	gbl_args->exit_threads = 1;
+	odp_atomic_store_u32(&gbl_args->exit_threads, 1);
 }
 
 /**
@@ -424,7 +424,7 @@ static int print_speed_stats(int num_workers, stats_t (*thr_stats)[MAX_PKTIOS],
 		       PRIu64 " rx drops, %" PRIu64 " tx drops\n", rx_pkts_tot,
 		       tx_pkts_tot, rx_drops_tot, tx_drops_tot);
 
-	} while (!gbl_args->exit_threads &&
+	} while (!odp_atomic_load_u32(&gbl_args->exit_threads) &&
 		 (loop_forever || (elapsed < duration)));
 
 	return rx_pkts_tot >= 100 ? 0 : -1;
@@ -686,7 +686,7 @@ static int run_worker(void *arg)
 	time_prev = odp_time_local();
 	cur_tick = (odp_time_to_ns(time_prev) / ODP_TIME_MIN_IN_NS) % UINT8_MAX;
 
-	while (!gbl_args->exit_threads) {
+	while (!odp_atomic_load_u32(&gbl_args->exit_threads)) {
 		odp_time_t time_cur;
 		odp_time_t time_diff;
 		int sent;
@@ -962,6 +962,7 @@ static void gbl_args_init(args_t *args)
 	int pktio;
 
 	memset(args, 0, sizeof(args_t));
+	odp_atomic_init_u32(&args->exit_threads, 0);
 
 	for (pktio = 0; pktio < MAX_PKTIOS; pktio++)
 		args->pktios[pktio].pktio = ODP_PKTIO_INVALID;
@@ -1132,7 +1133,7 @@ int main(int argc, char **argv)
 
 	ret = print_speed_stats(num_workers, gbl_args->stats,
 				gbl_args->appl.time, gbl_args->appl.accuracy);
-	gbl_args->exit_threads = 1;
+	odp_atomic_store_u32(&gbl_args->exit_threads, 1);
 
 	/* Master thread waits for other threads to exit */
 	for (i = 0; i < num_workers; ++i)

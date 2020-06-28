@@ -23,7 +23,7 @@ typedef struct {
 	odp_pktout_queue_t if0out, if1out;
 	odph_ethaddr_t src, dst;
 	odp_shm_t shm;
-	int exit_thr;
+	odp_atomic_u32_t exit_thr;
 	int wait_sec;
 } global_data_t;
 
@@ -34,7 +34,7 @@ static void sig_handler(int signo ODP_UNUSED)
 	printf("sig_handler!\n");
 	if (global == NULL)
 		return;
-	global->exit_thr = 1;
+	odp_atomic_store_u32(&global->exit_thr, 1);
 }
 
 static odp_pktio_t create_pktio(const char *name, odp_pool_t pool,
@@ -105,7 +105,7 @@ static int run_worker(void *arg ODP_UNUSED)
 	printf("started output interface\n");
 	printf("started all\n");
 
-	while (!global->exit_thr) {
+	while (!odp_atomic_load_u32(&global->exit_thr)) {
 		pkts = odp_pktin_recv_tmo(global->if0in, pkt_tbl, MAX_PKT_BURST,
 					  wait_time);
 
@@ -189,6 +189,7 @@ int main(int argc, char **argv)
 	}
 
 	memset(global, 0, sizeof(global_data_t));
+	odp_atomic_init_u32(&global->exit_thr, 0);
 	global->shm = shm;
 
 	if (argc > 7 ||

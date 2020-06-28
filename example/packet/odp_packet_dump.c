@@ -36,7 +36,7 @@ typedef struct test_options_t {
 typedef struct test_global_t {
 	test_options_t opt;
 	odp_pool_t pool;
-	int stop;
+	odp_atomic_u32_t stop;
 
 	struct {
 		odp_pktio_t pktio;
@@ -52,8 +52,7 @@ static void sig_handler(int signo)
 {
 	(void)signo;
 
-	test_global.stop = 1;
-	odp_mb_full();
+	odp_atomic_store_u32(&test_global.stop, 1);
 }
 
 static void print_usage(void)
@@ -636,7 +635,7 @@ static int receive_packets(test_global_t *global)
 	int printed;
 	uint64_t num_packet = 0;
 
-	while (!global->stop) {
+	while (!odp_atomic_load_u32(&global->stop)) {
 		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
 
 		if (ev == ODP_EVENT_INVALID)
@@ -674,6 +673,7 @@ int main(int argc, char *argv[])
 
 	global = &test_global;
 	memset(global, 0, sizeof(test_global_t));
+	odp_atomic_init_u32(&global->stop, 0);
 
 	signal(SIGINT, sig_handler);
 
