@@ -74,7 +74,7 @@ typedef struct {
 	odp_pktout_queue_t if0out, if1out;
 	odph_ethaddr_t src_addr; /* Source MAC address */
 	odph_ethaddr_t dst_addr; /* Destination MAC address */
-	int exit_threads;
+	odp_atomic_u32_t exit_threads;
 	/* Application (parsed) arguments */
 	appl_args_t appl;
 } global_data_t;
@@ -83,7 +83,7 @@ static global_data_t *global;
 
 static void sig_handler(int signo ODP_UNUSED)
 {
-	global->exit_threads = 1;
+	odp_atomic_store_u32(&global->exit_threads, 1);
 }
 
 static odp_pktio_t create_pktio(const char *name, odp_pool_t pool,
@@ -191,7 +191,7 @@ static inline int rx_thread(void *arg)
 
 	odp_barrier_wait(&global->init_barrier);
 
-	while (!global->exit_threads) {
+	while (!odp_atomic_load_u32(&global->exit_threads)) {
 		pkts = odp_pktin_recv(pktin_queue, pkt_tbl, MAX_PKT_BURST);
 		if (odp_unlikely(pkts <= 0))
 			continue;
@@ -234,7 +234,7 @@ static inline int tx_thread(void *arg)
 
 	odp_barrier_wait(&global->init_barrier);
 
-	while (!global->exit_threads) {
+	while (!odp_atomic_load_u32(&global->exit_threads)) {
 		events = odp_queue_deq_multi(rx_queue, event_tbl,
 					     MAX_PKT_BURST);
 		if (odp_unlikely(events <= 0))
@@ -301,7 +301,7 @@ static inline int worker_thread(void *arg ODP_UNUSED)
 
 	odp_barrier_wait(&global->init_barrier);
 
-	while (!global->exit_threads) {
+	while (!odp_atomic_load_u32(&global->exit_threads)) {
 		events = odp_queue_deq_multi(rx_queue, event_tbl,
 					     MAX_PKT_BURST);
 
@@ -472,7 +472,7 @@ static int print_speed_stats(int num_workers, stats_t **thr_stats,
 			pkts_prev = total_pkts;
 		}
 		elapsed += timeout;
-	} while (!global->exit_threads && (loop_forever ||
+	} while (!odp_atomic_load_u32(&global->exit_threads) && (loop_forever ||
 		 (elapsed < duration)));
 
 	if (stats_enabled)
@@ -736,6 +736,7 @@ int main(int argc, char **argv)
 	}
 
 	memset(global, 0, sizeof(global_data_t));
+	odp_atomic_init_u32(&global->exit_threads, 0);
 
 	signal(SIGINT, sig_handler);
 
@@ -905,7 +906,7 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	global->exit_threads = 1;
+	odp_atomic_store_u32(&global->exit_threads, 1);
 	odp_barrier_wait(&global->term_barrier);
 
 	odph_thread_join(thr_tbl, num_threads);
