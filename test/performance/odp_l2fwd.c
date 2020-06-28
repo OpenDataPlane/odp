@@ -174,7 +174,7 @@ typedef struct {
 	 * mode. */
 	uint8_t dst_port_from_idx[MAX_PKTIO_INDEXES];
 	/* Break workers loop if set to 1 */
-	int exit_threads;
+	odp_atomic_u32_t exit_threads;
 
 } args_t;
 
@@ -185,7 +185,7 @@ static void sig_handler(int signo ODP_UNUSED)
 {
 	if (gbl_args == NULL)
 		return;
-	gbl_args->exit_threads = 1;
+	odp_atomic_store_u32(&gbl_args->exit_threads, 1);
 }
 
 /*
@@ -367,7 +367,7 @@ static int run_worker_sched_mode(void *arg)
 	odp_barrier_wait(&gbl_args->init_barrier);
 
 	/* Loop packets */
-	while (!gbl_args->exit_threads) {
+	while (!odp_atomic_load_u32(&gbl_args->exit_threads)) {
 		odp_event_t  ev_tbl[MAX_PKT_BURST];
 		odp_packet_t pkt_tbl[MAX_PKT_BURST];
 		int sent;
@@ -492,7 +492,7 @@ static int run_worker_plain_queue_mode(void *arg)
 	odp_barrier_wait(&gbl_args->init_barrier);
 
 	/* Loop packets */
-	while (!gbl_args->exit_threads) {
+	while (!odp_atomic_load_u32(&gbl_args->exit_threads)) {
 		int sent;
 		unsigned tx_drops;
 		odp_event_t event[MAX_PKT_BURST];
@@ -627,7 +627,7 @@ static int run_worker_direct_mode(void *arg)
 	odp_barrier_wait(&gbl_args->init_barrier);
 
 	/* Loop packets */
-	while (!gbl_args->exit_threads) {
+	while (!odp_atomic_load_u32(&gbl_args->exit_threads)) {
 		int sent;
 		unsigned tx_drops;
 
@@ -927,7 +927,7 @@ static int print_speed_stats(int num_workers, stats_t **thr_stats,
 			pkts_prev = pkts;
 		}
 		elapsed += timeout;
-	} while (!gbl_args->exit_threads && (loop_forever ||
+	} while (!odp_atomic_load_u32(&gbl_args->exit_threads) && (loop_forever ||
 		 (elapsed < duration)));
 
 	if (stats_enabled)
@@ -1503,6 +1503,7 @@ static void gbl_args_init(args_t *args)
 	int pktio, queue;
 
 	memset(args, 0, sizeof(args_t));
+	odp_atomic_init_u32(&args->exit_threads, 0);
 
 	for (pktio = 0; pktio < MAX_PKTIOS; pktio++) {
 		args->pktios[pktio].pktio = ODP_PKTIO_INVALID;
@@ -1852,7 +1853,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	gbl_args->exit_threads = 1;
+	odp_atomic_store_u32(&gbl_args->exit_threads, 1);
 	if (gbl_args->appl.in_mode != DIRECT_RECV)
 		odp_barrier_wait(&gbl_args->term_barrier);
 

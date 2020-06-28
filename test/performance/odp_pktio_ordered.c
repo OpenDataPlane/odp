@@ -245,7 +245,7 @@ typedef struct {
 	/** Global barrier to synchronize main and workers */
 	odp_barrier_t barrier;
 	/** Break workers loop if set to 1 */
-	int exit_threads;
+	odp_atomic_u32_t exit_threads;
 } args_t;
 
 /** Global pointer to args */
@@ -533,7 +533,7 @@ static int run_worker(void *arg)
 	odp_barrier_wait(&gbl_args->barrier);
 
 	/* Loop packets */
-	while (!gbl_args->exit_threads) {
+	while (!odp_atomic_load_u32(&gbl_args->exit_threads)) {
 		pkts = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT, ev_tbl,
 					  MAX_PKT_BURST);
 		if (pkts <= 0)
@@ -1034,6 +1034,7 @@ static void gbl_args_init(args_t *args)
 	int pktio, queue;
 
 	memset(args, 0, sizeof(args_t));
+	odp_atomic_init_u32(&args->exit_threads, 0);
 
 	for (pktio = 0; pktio < MAX_PKTIOS; pktio++) {
 		args->pktios[pktio].pktio = ODP_PKTIO_INVALID;
@@ -1320,7 +1321,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < if_count; i++)
 		odp_pktio_stop(gbl_args->pktios[i].pktio);
 
-	gbl_args->exit_threads = 1;
+	odp_atomic_store_u32(&gbl_args->exit_threads, 1);
 
 	/* Master thread waits for other threads to exit */
 	for (i = 0; i < num_workers; ++i)
