@@ -92,7 +92,7 @@ typedef struct {
 	/* Test lookup table */
 	lookup_entry_t *lookup_tbl;
 	/* Break workers loop if set to 1 */
-	int exit_threads;
+	odp_atomic_u32_t exit_threads;
 } args_t;
 
 /* Global pointer to args */
@@ -175,7 +175,7 @@ static void sig_handler(int signo ODP_UNUSED)
 {
 	if (gbl_args == NULL)
 		return;
-	gbl_args->exit_threads = 1;
+	odp_atomic_store_u32(&gbl_args->exit_threads, 1);
 }
 
 static inline void init_packet(odp_packet_t pkt, uint32_t seq, uint16_t group)
@@ -278,7 +278,7 @@ static int run_thread(void *arg)
 	c1 = odp_cpu_cycles();
 	t1 = odp_time_local();
 
-	while (!gbl_args->exit_threads) {
+	while (!odp_atomic_load_u32(&gbl_args->exit_threads)) {
 		odp_event_t  event_tbl[MAX_EVENT_BURST];
 		odp_queue_t dst_queue;
 		int num_events;
@@ -469,10 +469,10 @@ static int print_stats(int num_workers, stats_t **thr_stats, int duration,
 
 		pkts_prev = pkts;
 		elapsed += accuracy;
-	} while (!gbl_args->exit_threads &&
+	} while (!odp_atomic_load_u32(&gbl_args->exit_threads) &&
 		 (loop_forever || (elapsed < duration)));
 
-	gbl_args->exit_threads = 1;
+	odp_atomic_store_u32(&gbl_args->exit_threads, 1);
 	odp_barrier_wait(&gbl_args->term_barrier);
 
 	pkts = 0;
@@ -511,6 +511,7 @@ static int print_stats(int num_workers, stats_t **thr_stats, int duration,
 static void gbl_args_init(args_t *args)
 {
 	memset(args, 0, sizeof(args_t));
+	odp_atomic_init_u32(&args->exit_threads, 0);
 }
 
 /**
