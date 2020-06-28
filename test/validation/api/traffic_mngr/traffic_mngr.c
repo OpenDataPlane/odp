@@ -2127,6 +2127,7 @@ static void check_shaper_profile(char *shaper_name, uint32_t shaper_idx)
 {
 	odp_tm_shaper_params_t shaper_params;
 	odp_tm_shaper_t        profile;
+	int		       rc;
 
 	profile = odp_tm_shaper_lookup(shaper_name);
 	CU_ASSERT(profile != ODP_TM_INVALID);
@@ -2134,7 +2135,9 @@ static void check_shaper_profile(char *shaper_name, uint32_t shaper_idx)
 	if (profile != shaper_profiles[shaper_idx - 1])
 		return;
 
-	odp_tm_shaper_params_read(profile, &shaper_params);
+	memset(&shaper_params, 0, sizeof(shaper_params));
+	rc = odp_tm_shaper_params_read(profile, &shaper_params);
+	CU_ASSERT(rc == 0);
 	CU_ASSERT(approx_eq64(shaper_params.commit_bps,
 			      shaper_idx * MIN_COMMIT_BW));
 	CU_ASSERT(approx_eq64(shaper_params.peak_bps,
