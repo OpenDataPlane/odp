@@ -73,6 +73,7 @@ static int ipc_second_process(int master_pid)
 		return -1;
 	}
 
+	memset(&pktin, 0, sizeof(pktin)); /* not needed but makes GCC happy */
 	if (odp_pktin_queue(ipc_pktio, &pktin, 1) != 1) {
 		odp_pool_destroy(pool);
 		ODPH_ERR("no input queue\n");
