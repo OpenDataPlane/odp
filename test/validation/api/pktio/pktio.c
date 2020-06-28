@@ -1745,7 +1745,7 @@ static void pktio_test_statistics_counters(void)
 	pktio_tx = pktio[0];
 	pktio_rx = (num_ifaces > 1) ? pktio[1] : pktio_tx;
 
-	CU_ASSERT(odp_pktout_queue(pktio_tx, &pktout, 1) == 1);
+	CU_ASSERT_FATAL(odp_pktout_queue(pktio_tx, &pktout, 1) == 1);
 
 	ret = odp_pktio_start(pktio_tx);
 	CU_ASSERT(ret == 0);
@@ -1849,7 +1849,7 @@ static void pktio_test_start_stop(void)
 		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
 	}
 
-	CU_ASSERT(odp_pktout_queue(pktio[0], &pktout, 1) == 1);
+	CU_ASSERT_FATAL(odp_pktout_queue(pktio[0], &pktout, 1) == 1);
 
 	/* Interfaces are stopped by default,
 	 * Check that stop when stopped generates an error */
