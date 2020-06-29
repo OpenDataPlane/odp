@@ -22,6 +22,7 @@ int _odp_libconfig_term_global(void);
 
 int _odp_libconfig_lookup_int(const char *path, int *value);
 int _odp_libconfig_lookup_array(const char *path, int value[], int max_num);
+int _odp_libconfig_lookup_string(const char *path, const char **value);
 
 int _odp_libconfig_lookup_ext_int(const char *base_path,
 				  const char *local_path,

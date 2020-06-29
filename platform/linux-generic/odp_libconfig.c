@@ -146,6 +146,21 @@ int _odp_libconfig_lookup_array(const char *path, int value[], int max_num)
 	return num_out;
 }
 
+int _odp_libconfig_lookup_string(const char *path, const char **value)
+{
+	int ret_def = CONFIG_FALSE;
+	int ret_rt = CONFIG_FALSE;
+
+	ret_def = config_lookup_string(&odp_global_ro.libconfig_default, path,
+				       value);
+
+	/* Runtime option overrides default value */
+	ret_rt = config_lookup_string(&odp_global_ro.libconfig_runtime, path,
+				      value);
+
+	return  (ret_def == CONFIG_TRUE || ret_rt == CONFIG_TRUE) ? 1 : 0;
+}
+
 static int lookup_int(config_t *cfg,
 		      const char *base_path,
 		      const char *local_path,
