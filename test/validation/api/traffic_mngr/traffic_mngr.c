@@ -3292,6 +3292,7 @@ static int test_query_functions(const char *shaper_name,
 	expected_pkt_cnt  = num_pkts - 2;
 	expected_byte_cnt = expected_pkt_cnt * PKT_BUF_SIZE;
 
+	memset(&query_info, 0, sizeof(query_info));
 	rc = odp_tm_queue_query(tm_queue,
 				ODP_TM_QUERY_PKT_CNT | ODP_TM_QUERY_BYTE_CNT,
 				&query_info);
@@ -3301,6 +3302,7 @@ static int test_query_functions(const char *shaper_name,
 	CU_ASSERT(query_info.total_byte_cnt_valid);
 	CU_ASSERT(expected_byte_cnt < query_info.total_byte_cnt);
 
+	memset(&query_info, 0, sizeof(query_info));
 	rc = odp_tm_priority_query(odp_tm_systems[0], priority,
 				   ODP_TM_QUERY_PKT_CNT | ODP_TM_QUERY_BYTE_CNT,
 				   &query_info);
@@ -3310,6 +3312,7 @@ static int test_query_functions(const char *shaper_name,
 	CU_ASSERT(query_info.total_byte_cnt_valid);
 	CU_ASSERT(expected_byte_cnt < query_info.total_byte_cnt);
 
+	memset(&query_info, 0, sizeof(query_info));
 	rc = odp_tm_total_query(odp_tm_systems[0],
 				ODP_TM_QUERY_PKT_CNT | ODP_TM_QUERY_BYTE_CNT,
 				&query_info);
