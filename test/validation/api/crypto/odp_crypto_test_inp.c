@@ -514,16 +514,17 @@ static void check_alg(odp_crypto_op_t op,
 	int rc, i;
 	int cipher_num = odp_crypto_cipher_capability(cipher_alg, NULL, 0);
 	int auth_num = odp_crypto_auth_capability(auth_alg, NULL, 0);
-	odp_crypto_cipher_capability_t cipher_capa[cipher_num];
-	odp_crypto_auth_capability_t auth_capa[auth_num];
-	odp_bool_t cipher_tested[cipher_num];
-	odp_bool_t auth_tested[auth_num];
 	odp_bool_t cipher_ok = false;
 	odp_bool_t auth_ok = false;
 	size_t idx;
 
 	CU_ASSERT_FATAL(cipher_num > 0);
 	CU_ASSERT_FATAL(auth_num > 0);
+
+	odp_crypto_cipher_capability_t cipher_capa[cipher_num];
+	odp_crypto_auth_capability_t auth_capa[auth_num];
+	odp_bool_t cipher_tested[cipher_num];
+	odp_bool_t auth_tested[auth_num];
 
 	rc = odp_crypto_capability(&capa);
 	CU_ASSERT(!rc);
