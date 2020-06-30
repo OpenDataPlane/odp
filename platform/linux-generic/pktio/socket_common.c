@@ -157,10 +157,12 @@ int link_status_fd(int fd, const char *name)
 		__odp_errno = errno;
 		ODP_DBG("ioctl(SIOCGIFFLAGS): %s: \"%s\".\n", strerror(errno),
 			ifr.ifr_name);
-		return -1;
+		return ODP_PKTIO_LINK_STATUS_UNKNOWN;
 	}
 
-	return !!(ifr.ifr_flags & IFF_RUNNING);
+	if (ifr.ifr_flags & IFF_RUNNING)
+		return ODP_PKTIO_LINK_STATUS_UP;
+	return ODP_PKTIO_LINK_STATUS_DOWN;
 }
 
 int link_info_fd(int fd, const char *name, odp_pktio_link_info_t *info)

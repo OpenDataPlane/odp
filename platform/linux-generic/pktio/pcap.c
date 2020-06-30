@@ -446,7 +446,7 @@ static int pcapif_init_global(void)
 
 static int pcapif_link_status(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
-	return 1;
+	return ODP_PKTIO_LINK_STATUS_UP;
 }
 
 static int pcapif_link_info(pktio_entry_t *pktio_entry ODP_UNUSED, odp_pktio_link_info_t *info)

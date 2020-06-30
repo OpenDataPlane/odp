@@ -367,7 +367,7 @@ static int loopback_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
 static int loopback_link_status(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
 	/* loopback interfaces are always up */
-	return 1;
+	return ODP_PKTIO_LINK_STATUS_UP;
 }
 
 static int loopback_link_info(pktio_entry_t *pktio_entry ODP_UNUSED, odp_pktio_link_info_t *info)

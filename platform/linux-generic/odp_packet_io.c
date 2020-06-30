@@ -1168,15 +1168,15 @@ int odp_pktio_mac_addr_set(odp_pktio_t hdl, const void *mac_addr, int addr_size)
 	return ret;
 }
 
-int odp_pktio_link_status(odp_pktio_t hdl)
+odp_pktio_link_status_t odp_pktio_link_status(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
-	int ret = -1;
+	int ret = ODP_PKTIO_LINK_STATUS_UNKNOWN;
 
 	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
 		ODP_DBG("pktio entry %d does not exist\n", hdl);
-		return -1;
+		return ODP_PKTIO_LINK_STATUS_UNKNOWN;
 	}
 
 	lock_entry(entry);
@@ -1184,7 +1184,7 @@ int odp_pktio_link_status(odp_pktio_t hdl)
 	if (odp_unlikely(is_free(entry))) {
 		unlock_entry(entry);
 		ODP_DBG("already freed pktio\n");
-		return -1;
+		return ODP_PKTIO_LINK_STATUS_UNKNOWN;
 	}
 
 	if (entry->s.ops->link_status)
