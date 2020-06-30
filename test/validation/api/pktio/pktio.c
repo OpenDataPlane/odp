@@ -112,7 +112,7 @@ static inline void _pktio_wait_linkup(odp_pktio_t pktio)
 
 	for (i = 0; i < wait_num; i++) {
 		ret = odp_pktio_link_status(pktio);
-		if (ret < 0 || ret == 1)
+		if (ret == ODP_PKTIO_LINK_STATUS_UNKNOWN || ret == ODP_PKTIO_LINK_STATUS_UP)
 			break;
 		/* link is down, call status again after delay */
 		odp_time_wait_ns(wait_ns);
@@ -1508,7 +1508,6 @@ static void pktio_test_link_info(void)
 		CU_ASSERT(link_info.pause_tx == ODP_PKTIO_LINK_PAUSE_UNKNOWN ||
 			  link_info.pause_tx == ODP_PKTIO_LINK_PAUSE_ON ||
 			  link_info.pause_tx == ODP_PKTIO_LINK_PAUSE_OFF);
-		CU_ASSERT(link_info.speed >= 0);
 		CU_ASSERT(link_info.status == ODP_PKTIO_LINK_STATUS_UNKNOWN ||
 			  link_info.status == ODP_PKTIO_LINK_STATUS_UP ||
 			  link_info.status == ODP_PKTIO_LINK_STATUS_DOWN);
