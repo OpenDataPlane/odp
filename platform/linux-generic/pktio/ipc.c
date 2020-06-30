@@ -904,7 +904,9 @@ static int ipc_link_status(pktio_entry_t *pktio_entry)
 {
 	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
 
-	return odp_atomic_load_u32(&pktio_ipc->ready);
+	if (odp_atomic_load_u32(&pktio_ipc->ready))
+		return ODP_PKTIO_LINK_STATUS_UP;
+	return ODP_PKTIO_LINK_STATUS_DOWN;
 }
 
 static int ipc_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info)

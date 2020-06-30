@@ -355,7 +355,7 @@ static int netmap_close(pktio_entry_t *pktio_entry)
 static int netmap_link_status(pktio_entry_t *pktio_entry)
 {
 	if (pkt_priv(pktio_entry)->is_virtual)
-		return 1;
+		return ODP_PKTIO_LINK_STATUS_UP;
 
 	return link_status_fd(pkt_priv(pktio_entry)->sockfd,
 			      pkt_priv(pktio_entry)->if_name);

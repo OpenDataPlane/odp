@@ -2056,8 +2056,9 @@ static int dpdk_link_status(pktio_entry_t *pktio_entry)
 	memset(&link, 0, sizeof(struct rte_eth_link));
 
 	rte_eth_link_get_nowait(pkt_priv(pktio_entry)->port_id, &link);
-
-	return link.link_status;
+	if (link.link_status)
+		return ODP_PKTIO_LINK_STATUS_UP;
+	return ODP_PKTIO_LINK_STATUS_DOWN;
 }
 
 static int dpdk_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info)
