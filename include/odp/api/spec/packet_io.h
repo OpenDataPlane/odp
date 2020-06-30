@@ -1221,11 +1221,10 @@ typedef enum odp_pktio_link_status_t {
  *
  * @param pktio Packet IO handle.
  *
- * @retval  1 link is up
- * @retval  0 link is down
- * @retval <0 on failure
+ * @retval  ODP_PKTIO_LINK_STATUS_UP or ODP_PKTIO_LINK_STATUS_DOWN on success
+ * @retval  ODP_PKTIO_LINK_STATUS_UNKNOWN on failure
 */
-int odp_pktio_link_status(odp_pktio_t pktio);
+odp_pktio_link_status_t odp_pktio_link_status(odp_pktio_t pktio);
 
 /**
  * Packet IO information
