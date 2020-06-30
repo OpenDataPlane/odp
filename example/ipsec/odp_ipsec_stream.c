@@ -168,7 +168,8 @@ void resolve_stream_db(void)
 
 odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 				uint8_t *dmac,
-				odp_pool_t pkt_pool)
+				odp_pool_t pkt_pool,
+				uint32_t max_len)
 {
 	ipsec_cache_entry_t *entry = NULL;
 	odp_packet_t pkt;
@@ -188,10 +189,18 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	else if (stream->output.entry)
 		entry = stream->output.entry;
 
-	/* Get packet */
-	pkt = odp_packet_alloc(pkt_pool, 0);
-	if (ODP_PACKET_INVALID == pkt)
+	/* Make sure there is enough space for protocol overhead */
+	if ((stream->length + 200) > max_len) {
+		ODPH_ERR("Error: too large test packet\n");
 		return ODP_PACKET_INVALID;
+	}
+
+	/* Get packet */
+	pkt = odp_packet_alloc(pkt_pool, max_len);
+	if (ODP_PACKET_INVALID == pkt) {
+		ODPH_ERR("Error: packet alloc failed\n");
+		return ODP_PACKET_INVALID;
+	}
 	base = odp_packet_data(pkt);
 	data = odp_packet_data(pkt);
 
@@ -358,7 +367,7 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	}
 
 	/* Correct set packet length offsets */
-	odp_packet_push_tail(pkt, data - base);
+	odp_packet_pull_tail(pkt, max_len - (data - base));
 	odp_packet_l2_offset_set(pkt, (uint8_t *)eth - base);
 	odp_packet_l3_offset_set(pkt, (uint8_t *)ip - base);
 	odp_packet_l4_offset_set(pkt, ((uint8_t *)ip - base) + sizeof(*ip));
@@ -545,7 +554,9 @@ int create_stream_db_inputs(void)
 {
 	int created = 0;
 	odp_pool_t pkt_pool;
+	odp_pool_info_t pool_info;
 	stream_db_entry_t *stream = NULL;
+	uint32_t max_len;
 
 	/* Lookup the packet pool */
 	pkt_pool = odp_pool_lookup("packet_pool");
@@ -553,6 +564,13 @@ int create_stream_db_inputs(void)
 		ODPH_ERR("Error: pkt_pool not found\n");
 		exit(EXIT_FAILURE);
 	}
+	if (odp_pool_info(pkt_pool, &pool_info)) {
+		ODPH_ERR("Error: pool info failed\n");
+		return -1;
+	}
+
+	/* Only single segment packets are supported */
+	max_len = pool_info.params.pkt.seg_len;
 
 	/* For each stream create corresponding input packets */
 	for (stream = stream_db->list; NULL != stream; stream = stream->next) {
@@ -579,7 +597,7 @@ int create_stream_db_inputs(void)
 		for (count = stream->count; count > 0; count--) {
 			odp_packet_t pkt;
 
-			pkt = create_ipv4_packet(stream, dmac, pkt_pool);
+			pkt = create_ipv4_packet(stream, dmac, pkt_pool, max_len);
 			if (ODP_PACKET_INVALID == pkt) {
 				printf("Packet buffers exhausted\n");
 				break;
