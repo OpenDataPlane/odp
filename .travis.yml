@@ -244,6 +244,16 @@ jobs:
                           - docker run -i -t -v `pwd`:/odp --shm-size 8g
                               -e CC="${CC}"
                               ${DOCKER_NAMESPACE}/travis-odp-ubuntu_20.04-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+                - stage: test
+                  env: TEST=gcc-10_lto
+                  compiler: gcc-10
+                  script:
+                          - if [ -z "${DOCKER_NAMESPACE}" ] ; then export DOCKER_NAMESPACE="opendataplane"; fi
+                          - docker run -i -t -v `pwd`:/odp --shm-size 8g
+                              -e CC="${CC}"
+                              -e CXX=g++-10
+                              -e CONF="--enable-lto"
+                              ${DOCKER_NAMESPACE}/travis-odp-ubuntu_20.04-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
                 - stage: "build only"
                   env: TEST=documentation
                   compiler: gcc
