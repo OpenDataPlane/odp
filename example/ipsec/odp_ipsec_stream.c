@@ -562,7 +562,7 @@ int create_stream_db_inputs(void)
 	pkt_pool = odp_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_POOL_INVALID) {
 		ODPH_ERR("Error: pkt_pool not found\n");
-		exit(EXIT_FAILURE);
+		return -1;
 	}
 	if (odp_pool_info(pkt_pool, &pool_info)) {
 		ODPH_ERR("Error: pool info failed\n");
@@ -599,13 +599,13 @@ int create_stream_db_inputs(void)
 
 			pkt = create_ipv4_packet(stream, dmac, pkt_pool, max_len);
 			if (ODP_PACKET_INVALID == pkt) {
-				printf("Packet buffers exhausted\n");
+				ODPH_ERR("Error: packet buffers exhausted\n");
 				break;
 			}
 			stream->created++;
 			if (odp_pktout_send(queue, &pkt, 1) != 1) {
 				odp_packet_free(pkt);
-				printf("Queue enqueue failed\n");
+				ODPH_ERR("Error: queue enqueue failed\n");
 				break;
 			}
 
@@ -613,6 +613,10 @@ int create_stream_db_inputs(void)
 			if (1 == stream->created)
 				created++;
 		}
+	}
+	if ((stream_db->index > 0) && created == 0) {
+		ODPH_ERR("Error: failed to create any input streams\n");
+		return -1;
 	}
 
 	return created;
