@@ -110,10 +110,11 @@ odp_bool_t verify_ipv4_packet(stream_db_entry_t *stream,
  *
  * Create input packets based on the configured streams and enqueue them
  * into loop interface input queues.  Once packet processing starts these
- * packets will be remomved and processed as if they had come from a normal
+ * packets will be removed and processed as if they had come from a normal
  * packet interface.
  *
  * @return number of streams successfully processed
+ * @return <0 on failure
  */
 int create_stream_db_inputs(void);
 
