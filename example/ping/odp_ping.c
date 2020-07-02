@@ -407,11 +407,12 @@ static void print_packet(odp_packet_t pkt, uint64_t num_packet)
 	nsec  = nsec - (sec * ODP_TIME_SEC_IN_NS);
 	pktio = odp_packet_input(pkt);
 
-	odp_pktio_info(pktio, &pktio_info);
-
 	printf("PACKET [%" PRIu64 "]\n", num_packet);
 	printf("  time:            %" PRIu64 ".%09" PRIu64 " sec\n", sec, nsec);
-	printf("  interface name:  %s\n", pktio_info.name);
+	if (odp_pktio_info(pktio, &pktio_info) == 0)
+		printf("  interface name:  %s\n", pktio_info.name);
+	else
+		printf("  interface name:  n/a\n");
 	printf("  packet length:   %u bytes\n", odp_packet_len(pkt));
 
 	/* L2 */
