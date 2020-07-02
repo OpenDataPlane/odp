@@ -1291,7 +1291,8 @@ odp_timer_pool_t odp_timer_pool_create(const char *name,
 		return ODP_TIMER_POOL_INVALID;
 	}
 
-	if (param->res_ns == 0 && param->res_hz == 0) {
+	if ((param->res_ns && param->res_hz) ||
+	    (param->res_ns == 0 && param->res_hz == 0)) {
 		__odp_errno = EINVAL;
 		return ODP_TIMER_POOL_INVALID;
 	}
