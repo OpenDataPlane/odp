@@ -668,6 +668,7 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv)
 
 	res_ns = global_mem->param.res_ns;
 
+	memset(&tparam, 0, sizeof(odp_timer_pool_param_t));
 	tparam.res_ns     = global_mem->param.res_ns;
 	tparam.min_tmo    = global_mem->param.min_tmo;
 	tparam.max_tmo    = global_mem->param.max_tmo;
@@ -840,6 +841,7 @@ static void timer_test_cancel(void)
 	if (pool == ODP_POOL_INVALID)
 		CU_FAIL_FATAL("Timeout pool create failed");
 
+	memset(&tparam, 0, sizeof(odp_timer_pool_param_t));
 	tparam.res_ns	  = global_mem->param.res_ns;
 	tparam.min_tmo    = global_mem->param.min_tmo;
 	tparam.max_tmo    = global_mem->param.max_tmo;
@@ -1458,6 +1460,7 @@ static void timer_test_all(void)
 	max_tmo = global_mem->param.max_tmo;
 	min_tmo = global_mem->param.min_tmo;
 
+	memset(&tparam, 0, sizeof(odp_timer_pool_param_t));
 	tparam.res_ns  = res_ns;
 	tparam.min_tmo = min_tmo;
 	tparam.max_tmo = max_tmo;
