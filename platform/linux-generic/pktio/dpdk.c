@@ -2100,7 +2100,7 @@ static int dpdk_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *inf
 	else
 		info->duplex = ODP_PKTIO_LINK_DUPLEX_HALF;
 
-	if (link.link_status == ETH_SPEED_NUM_NONE)
+	if (link.link_speed == ETH_SPEED_NUM_NONE)
 		info->speed = ODP_PKTIO_LINK_SPEED_UNKNOWN;
 	else
 		info->speed = link.link_speed;
