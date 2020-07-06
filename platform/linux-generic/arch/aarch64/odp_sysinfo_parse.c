@@ -25,7 +25,7 @@ static void aarch64_impl_str(char *str, int maxlen, int implementer)
 		snprintf(str, maxlen, "Broadcom Corporation");
 		return;
 	case 0x43:
-		snprintf(str, maxlen, "Cavium Inc.");
+		snprintf(str, maxlen, "Marvell (Cavium) Inc.");
 		return;
 	case 0x44:
 		snprintf(str, maxlen, "Digital Equipment Corporation");
@@ -63,6 +63,12 @@ static void aarch64_part_str(char *str, int maxlen, int implementer,
 {
 	if (implementer == 0x41) {
 		switch (part) {
+		case 0xd02:
+			snprintf(str, maxlen, "Cortex-A34");
+			return;
+		case 0xd04:
+			snprintf(str, maxlen, "Cortex-A35");
+			return;
 		case 0xd03:
 			snprintf(str, maxlen, "Cortex-A53");
 			return;
@@ -72,6 +78,9 @@ static void aarch64_part_str(char *str, int maxlen, int implementer,
 		case 0xd07:
 			snprintf(str, maxlen, "Cortex-A57");
 			return;
+		case 0xd06:
+			snprintf(str, maxlen, "Cortex-A65");
+			return;
 		case 0xd08:
 			snprintf(str, maxlen, "Cortex-A72");
 			return;
@@ -80,6 +89,18 @@ static void aarch64_part_str(char *str, int maxlen, int implementer,
 			return;
 		case 0xd0a:
 			snprintf(str, maxlen, "Cortex-A75");
+			return;
+		case 0xd0b:
+			snprintf(str, maxlen, "Cortex-A76");
+			return;
+		case 0xd0e:
+			snprintf(str, maxlen, "Cortex-A76AE");
+			return;
+		case 0xd0d:
+			snprintf(str, maxlen, "Cortex-A77");
+			return;
+		case 0xd41:
+			snprintf(str, maxlen, "Cortex-A78");
 			return;
 		default:
 			break;
@@ -99,8 +120,17 @@ static void aarch64_part_str(char *str, int maxlen, int implementer,
 				 variant + 1, revision);
 			return;
 		case 0xaf:
-			snprintf(str, maxlen, "CN99XX, Pass %i.%i",
-				 variant + 1, revision);
+			snprintf(str, maxlen, "CN99XX, Rev %c%i", 'A' + variant, revision);
+			return;
+		case 0xb1:
+			snprintf(str, maxlen, "CN98XX, Rev %c%i", 'A' + variant, revision);
+			return;
+		case 0xb2:
+			/* Handle B0 errata: variant and revision numbers show up as A1 */
+			if (variant == 0 && revision == 1)
+				snprintf(str, maxlen, "CN96XX, Rev B0");
+			else
+				snprintf(str, maxlen, "CN96XX, Rev %c%i", 'A' + variant, revision);
 			return;
 		default:
 			break;
