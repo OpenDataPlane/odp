@@ -255,25 +255,6 @@ void sys_info_print_arch(void)
 	printf("%s\n", ndef);
 #endif
 
-#if defined(__ARM_ARCH) && __ARM_ARCH >= 8
-	/* Actually, this checks for new NEON instructions in
-	 * v8.1, but is currently the only way to distinguish
-	 * v8.0 and >=v8.1. */
-	printf("    ARMv8 ISA version  ");
-#ifdef __ARM_FEATURE_QRDMX
-	printf("v8.1 or higher\n");
-#else
-	printf("v8.0\n");
-#endif
-#endif
-
-#ifdef __ARM_FEATURE_QRDMX
-	/* Actually, this checks for new NEON instructions in
-	 * v8.1, but is currently the only way to distinguish
-	 * v8.0 and >=v8.1. */
-	printf("    ARMv8.1 instructions\n");
-#endif
-
 	printf("  __ARM_NEON           ");
 #ifdef __ARM_NEON
 	printf("%i\n", __ARM_NEON);
@@ -288,6 +269,13 @@ void sys_info_print_arch(void)
 	printf("%s\n", ndef);
 #endif
 
+	printf("  __ARM_FEATURE_QRDMX  ");
+#ifdef __ARM_FEATURE_QRDMX
+	printf("%i\n", __ARM_FEATURE_QRDMX);
+#else
+	printf("%s\n", ndef);
+#endif
+
 	printf("  __ARM_FEATURE_CRYPTO ");
 #ifdef __ARM_FEATURE_CRYPTO
 	printf("%i\n", __ARM_FEATURE_CRYPTO);
@@ -298,6 +286,32 @@ void sys_info_print_arch(void)
 	printf("  __ARM_FEATURE_CRC32  ");
 #ifdef __ARM_FEATURE_CRC32
 	printf("%i\n", __ARM_FEATURE_CRC32);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  ARM ISA version:     ");
+#if defined(__ARM_ARCH)
+	if (__ARM_ARCH < 8) {
+		printf("v%i\n", __ARM_ARCH);
+	} else if (__ARM_ARCH == 8) {
+		/* Actually, this checks for new NEON instructions in
+		 * v8.1, but is currently the only way to distinguish
+		 * v8.0 and >=v8.1. */
+	#ifdef __ARM_FEATURE_QRDMX
+		printf("v8.1 or higher\n");
+	#else
+		printf("v8.0\n");
+	#endif
+	} else {
+		/* ACLE 2018 defines that from v8.1 onwards the value includes
+		 * the minor version number: __ARM_ARCH = X * 100 + Y
+		 * E.g. for Armv8.1 __ARM_ARCH = 801 */
+		int major = __ARM_ARCH / 100;
+		int minor = __ARM_ARCH - (major * 100);
+
+		printf("v%i.%i\n", major, minor);
+	}
 #else
 	printf("%s\n", ndef);
 #endif
