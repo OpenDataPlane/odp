@@ -241,56 +241,105 @@ void sys_info_print_arch(void)
 	/* See ARM C Language Extensions documentation for details */
 	printf("ARM FEATURES:\n");
 
-	printf("  __ARM_ARCH           ");
+	printf("  __ARM_ARCH              ");
 #ifdef __ARM_ARCH
 	printf("%i\n", __ARM_ARCH);
 #else
 	printf("%s\n", ndef);
 #endif
 
-	printf("  __ARM_ARCH_ISA_A64   ");
+	printf("  __ARM_ARCH_ISA_A64      ");
 #ifdef __ARM_ARCH_ISA_A64
 	printf("%i\n", __ARM_ARCH_ISA_A64);
 #else
 	printf("%s\n", ndef);
 #endif
 
-	printf("  __ARM_NEON           ");
+	printf("  __ARM_NEON              ");
 #ifdef __ARM_NEON
 	printf("%i\n", __ARM_NEON);
 #else
 	printf("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_IDIV   ");
+	printf("  __ARM_FEATURE_ATOMICS   ");
+#ifdef __ARM_FEATURE_ATOMICS
+	printf("%i\n", __ARM_FEATURE_ATOMICS);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_UNALIGNED ");
+#ifdef __ARM_FEATURE_UNALIGNED
+	printf("%i\n", __ARM_FEATURE_UNALIGNED);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_IDIV      ");
 #ifdef __ARM_FEATURE_IDIV
 	printf("%i\n", __ARM_FEATURE_IDIV);
 #else
 	printf("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_QRDMX  ");
+	printf("  __ARM_FEATURE_QRDMX     ");
 #ifdef __ARM_FEATURE_QRDMX
 	printf("%i\n", __ARM_FEATURE_QRDMX);
 #else
 	printf("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_CRYPTO ");
+	printf("  __ARM_FEATURE_DOTPROD   ");
+#ifdef __ARM_FEATURE_DOTPROD
+	printf("%i\n", __ARM_FEATURE_DOTPROD);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_CRYPTO    ");
 #ifdef __ARM_FEATURE_CRYPTO
 	printf("%i\n", __ARM_FEATURE_CRYPTO);
 #else
 	printf("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_CRC32  ");
+	printf("  __ARM_FEATURE_SHA512    ");
+#ifdef __ARM_FEATURE_SHA512
+	printf("%i\n", __ARM_FEATURE_SHA512);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_SHA3      ");
+#ifdef __ARM_FEATURE_SHA3
+	printf("%i\n", __ARM_FEATURE_SHA3);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_SM3       ");
+#ifdef __ARM_FEATURE_SM3
+	printf("%i\n", __ARM_FEATURE_SM3);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_SM4       ");
+#ifdef __ARM_FEATURE_SM4
+	printf("%i\n", __ARM_FEATURE_SM4);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_CRC32     ");
 #ifdef __ARM_FEATURE_CRC32
 	printf("%i\n", __ARM_FEATURE_CRC32);
 #else
 	printf("%s\n", ndef);
 #endif
 
-	printf("  ARM ISA version:     ");
+	printf("  ARM ISA version:        ");
 #if defined(__ARM_ARCH)
 	if (__ARM_ARCH < 8) {
 		printf("v%i\n", __ARM_ARCH);
