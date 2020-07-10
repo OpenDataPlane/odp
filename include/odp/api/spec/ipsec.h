@@ -33,6 +33,11 @@ extern "C" {
  * IPSEC Security Association (SA)
  */
 
+/**
+ * Maximum length for extended statistics names
+ */
+#define ODP_IPSEC_XSTATS_NAME_MAX_LEN 64
+
  /**
  * @def ODP_IPSEC_SA_INVALID
  * Invalid IPSEC SA
@@ -255,6 +260,15 @@ typedef struct odp_ipsec_capability_t {
 
 	/** Maximum anti-replay window size. */
 	uint32_t max_antireplay_ws;
+
+	/** Maximum extended stats supported by the platform.
+	 * odp_ipsec_xstats() and odp_ipsec_xstats_names() will return
+	 * this many number of extended stats.
+	 *
+	 * 0: Extended stats is not supported by the platform.
+	 * @see odp_ipsec_xstats(), odp_ipsec_xstats_names()
+	 */
+	uint32_t max_xstats;
 
 	/** Supported cipher algorithms */
 	odp_crypto_cipher_algos_t ciphers;
@@ -1262,6 +1276,52 @@ typedef struct odp_ipsec_status_t {
 	odp_ipsec_warn_t warn;
 
 } odp_ipsec_status_t;
+
+/**
+ * Extended statistics of IPsec
+ */
+typedef struct odp_ipsec_xstats_t {
+	/** Index of the counter in the extended statistics name array */
+	uint64_t index;
+
+	/** Value of the extended statistics counter */
+	uint64_t value;
+} odp_ipsec_xstats_t;
+
+/**
+ * Names for extended statistics of IPsec
+ */
+typedef struct odp_ipsec_xstats_name_t {
+	/** Name of the extended statistics counter */
+	char name[ODP_IPSEC_XSTATS_NAME_MAX_LEN];
+} odp_ipsec_xstats_name_t;
+
+/**
+ * Get extended statistics of an SA
+ *
+ * @param          sa       SA handle.
+ * @param[out]     xstats   Pointer to an array of type odp_ipsec_xstats_t.
+ * @param          len      Size of xstats array.
+ */
+
+void odp_ipsec_xstats(odp_ipsec_sa_t sa, odp_ipsec_xstats_t *xstats, int len);
+
+/**
+ * Get names of extended statistics of an SA.
+ *
+ * @param          sa             SA handle.
+ * @param[out]     xstats_names   Pointer to an array of xstats names.
+ * @param          len            Size of xstats_names array.
+ */
+void odp_ipsec_xstats_names(odp_ipsec_sa_t sa,
+			    odp_ipsec_xstats_name_t *xstats_names, int len);
+
+/**
+ * Clear extended statistics of an SA.
+ *
+ * @param          sa             SA handle.
+ */
+void odp_ipsec_xstats_clear(odp_ipsec_sa_t sa);
 
 /**
  * Inbound synchronous IPSEC operation
