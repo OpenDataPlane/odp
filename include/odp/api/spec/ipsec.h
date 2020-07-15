@@ -647,6 +647,20 @@ typedef enum odp_ipsec_ip_version_t {
  * IPSEC Security Association (SA) parameters
  */
 typedef struct odp_ipsec_sa_param_t {
+	/** IPsec operation mode of SA
+	 *
+	 * When the IPsec mode in global config is: ODP_IPSEC_OP_MODE_INLINE,
+	 * this value takes precedence over the global config value.
+	 * In all other cases, IPsec mode in global config will take
+	 * precedence over this value.
+	 *
+	 * With IPsec mode in global config set to ODP_IPSEC_OP_MODE_INLINE,
+	 * value for this can be set to either ODP_IPSEC_OP_MODE_INLINE
+	 * or ODP_IPSEC_OP_MODE_ASYNC.
+	 *
+	 */
+	odp_ipsec_op_mode_t op_mode;
+
 	/** IPSEC SA direction: inbound or outbound */
 	odp_ipsec_dir_t dir;
 
