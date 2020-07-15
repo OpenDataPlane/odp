@@ -692,6 +692,15 @@ typedef struct odp_ipsec_sa_param_t {
 	 */
 	uint32_t context_len;
 
+	/** Specify whether SA is to be used for inline IPsec
+	 *
+	 *  Allow inline IPSEC processing to be performed with the SA. For
+	 *  inbound SA, lookup_mode must not be ODP_IPSEC_LOOKUP_DISABLED
+	 *  as IPSEC processing need to be performed before application
+	 *  receives the packet for performing SA lookup.
+	 */
+	odp_bool_t is_inline;
+
 	/** IPSEC SA direction dependent parameters */
 	union {
 		/** Inbound specific parameters */
