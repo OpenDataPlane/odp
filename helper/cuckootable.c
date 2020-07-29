@@ -269,7 +269,8 @@ odph_cuckoo_table_create(
 	odp_pool_param_init(&param);
 	param.type = ODP_POOL_BUFFER;
 	param.buf.size = kv_entry_size;
-	param.buf.align = ODP_CACHE_LINE_SIZE;
+	if (pcapa.buf.max_align >= ODP_CACHE_LINE_SIZE)
+		param.buf.align = ODP_CACHE_LINE_SIZE;
 	param.buf.num = capacity;
 
 	pool = odp_pool_create(pool_name, &param);

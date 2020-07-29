@@ -330,7 +330,6 @@ int main(int argc, char *argv[])
 	odp_pool_param_init(&pool_param);
 
 	pool_param.buf.size  = sizeof(timestamp_event_t);
-	pool_param.buf.align = ODP_CACHE_LINE_SIZE;
 	pool_param.buf.num   = MAX_NUM_BUF;
 	pool_param.type      = ODP_POOL_BUFFER;
 

@@ -216,7 +216,8 @@ cache_alloc_new_pool(
 	/* Create new pool (new free buffers). */
 	odp_pool_param_init(&param);
 	param.type = ODP_POOL_BUFFER;
-	param.buf.align = ODP_CACHE_LINE_SIZE;
+	if (pool_capa.buf.max_align >= ODP_CACHE_LINE_SIZE)
+		param.buf.align = ODP_CACHE_LINE_SIZE;
 	if (type == CACHE_TYPE_SUBTREE) {
 		num = CACHE_NUM_SUBTREE;
 		size = ENTRY_SIZE * ENTRY_NUM_SUBTREE;
