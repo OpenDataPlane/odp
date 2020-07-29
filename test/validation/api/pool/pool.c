@@ -45,7 +45,6 @@ static void pool_test_create_destroy_buffer(void)
 
 	param.type      = ODP_POOL_BUFFER;
 	param.buf.size  = BUF_SIZE;
-	param.buf.align = ODP_CACHE_LINE_SIZE;
 	param.buf.num   = BUF_NUM;
 
 	pool_create_destroy(&param);
@@ -88,7 +87,6 @@ static void pool_test_lookup_info_print(void)
 
 	param.type      = ODP_POOL_BUFFER;
 	param.buf.size  = BUF_SIZE;
-	param.buf.align = ODP_CACHE_LINE_SIZE;
 	param.buf.num   = BUF_NUM;
 
 	pool = odp_pool_create(pool_name, &param);
@@ -630,7 +628,6 @@ static int run_pool_test_create_after_fork(void *arg ODP_UNUSED)
 
 		param.type      = ODP_POOL_BUFFER;
 		param.buf.size  = BUF_SIZE;
-		param.buf.align = ODP_CACHE_LINE_SIZE;
 		param.buf.num   = BUF_NUM;
 
 		pool = odp_pool_create(NULL, &param);

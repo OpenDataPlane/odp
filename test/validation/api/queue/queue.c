@@ -83,7 +83,6 @@ static int queue_suite_init(void)
 	odp_pool_param_init(&params);
 
 	params.buf.size  = 4;
-	params.buf.align = ODP_CACHE_LINE_SIZE;
 	params.buf.num   = MAX_NUM_EVENT;
 	params.type      = ODP_POOL_BUFFER;
 
