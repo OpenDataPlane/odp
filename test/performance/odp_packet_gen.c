@@ -207,7 +207,7 @@ static int parse_vlan(const char *str, test_global_t *global)
 
 static int parse_options(int argc, char *argv[], test_global_t *global)
 {
-	int opt, i, len, str_len, long_index;
+	int opt, i, len, str_len, long_index, udp_port;
 	unsigned long int count;
 	uint32_t min_packets, num_tx_pkt;
 	char *name, *str, *end;
@@ -332,6 +332,24 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 				str += len + 1;
 				i++;
 			}
+			break;
+		case 'o':
+			udp_port = atoi(optarg);
+			if (udp_port < 0 || udp_port > UINT16_MAX) {
+				printf("Error: Bad UDP source port: %d\n", udp_port);
+				ret = -1;
+				break;
+			}
+			test_options->udp_src = udp_port;
+			break;
+		case 'p':
+			udp_port = atoi(optarg);
+			if (udp_port < 0 || udp_port > UINT16_MAX) {
+				printf("Error: Bad UDP destination port: %d\n", udp_port);
+				ret = -1;
+				break;
+			}
+			test_options->udp_dst = udp_port;
 			break;
 		case 'r':
 			test_options->num_rx = atoi(optarg);
