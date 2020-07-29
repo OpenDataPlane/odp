@@ -803,7 +803,7 @@ static int rx_thread(void *arg)
 	int i, thr, num;
 	uint32_t exit_test;
 	uint64_t bytes;
-	odp_time_t t1, t2;
+	odp_time_t t1, t2, exit_time;
 	odp_packet_t pkt;
 	thread_arg_t *thread_arg = arg;
 	test_global_t *global = thread_arg->global;
@@ -814,6 +814,7 @@ static int rx_thread(void *arg)
 	uint64_t nsec = 0;
 	int ret = 0;
 	int clock_started = 0;
+	int exit_timer_started = 0;
 	int paused = 0;
 	int max_num = 32;
 	odp_event_t ev[max_num];
@@ -828,15 +829,29 @@ static int rx_thread(void *arg)
 		num = odp_schedule_multi_no_wait(NULL, ev, max_num);
 
 		exit_test = odp_atomic_load_u32(&global->exit_test);
-		if (num == 0 && exit_test) {
-			if (paused == 0) {
-				odp_schedule_pause();
-				paused = 1;
-			} else {
-				/* Exit schedule loop after schedule paused and
-				 * no more packets received */
-				break;
+		if (exit_test) {
+			/* Wait 1 second for possible in flight packets sent by the tx threads */
+			if (exit_timer_started == 0) {
+				exit_time = odp_time_local();
+				t2 = exit_time;
+				exit_timer_started = 1;
+			} else if (odp_time_diff_ns(odp_time_local(), exit_time) >
+				   ODP_TIME_SEC_IN_NS) {
+				if (paused == 0) {
+					odp_schedule_pause();
+					paused = 1;
+				} else if (num == 0) {
+					/* Exit schedule loop after schedule paused and no more
+					 * packets received */
+					break;
+				}
 			}
+			/* Use last received packet as stop time and don't increase rx_timeouts
+			 * counter since tx threads have already been stopped */
+			if (num)
+				t2 = odp_time_local();
+			else
+				continue;
 		}
 
 		if (num == 0) {
@@ -868,8 +883,6 @@ static int rx_thread(void *arg)
 
 		odp_event_free_multi(ev, num);
 	}
-
-	t2 = odp_time_local();
 
 	if (clock_started)
 		nsec = odp_time_diff_ns(t2, t1);
