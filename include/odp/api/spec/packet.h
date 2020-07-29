@@ -115,6 +115,11 @@ extern "C" {
  */
 
 /**
+ * @typedef odp_proto_l4_type_t
+ * Layer 4 protocol type
+ */
+
+/**
  * @def ODP_PROTO_L4_TYPE_NONE
  * Layer 4 protocol type not defined
  *
