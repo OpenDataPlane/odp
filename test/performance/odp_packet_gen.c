@@ -48,6 +48,7 @@ typedef struct test_options_t {
 	uint32_t ipv4_dst;
 	uint16_t udp_src;
 	uint16_t udp_dst;
+	uint32_t wait_sec;
 
 	struct vlan_hdr {
 		uint16_t tpid;
@@ -163,6 +164,8 @@ static void print_usage(void)
 	       "  -u, --update_stat <msec>  Update and print statistics every <msec> milliseconds.\n"
 	       "                            0: Don't print statistics periodically (default)\n"
 	       "  -h, --help                This help\n"
+	       "  -w, --wait <sec>          Wait up to <sec> seconds for network links to be up.\n"
+	       "                            Default: 0 (don't check link status)\n"
 	       "\n");
 }
 
@@ -233,12 +236,13 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"udp_dst",     required_argument, NULL, 'p'},
 		{"c_mode",      required_argument, NULL, 'c'},
 		{"quit",        required_argument, NULL, 'q'},
+		{"wait",        required_argument, NULL, 'w'},
 		{"update_stat", required_argument, NULL, 'u'},
 		{"help",        no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:n:l:b:x:g:v:s:d:o:p:c:q:u:h";
+	static const char *shortopts = "+i:e:r:t:n:l:b:x:g:v:s:d:o:p:c:q:u:w:h";
 
 	test_options->num_pktio  = 0;
 	test_options->num_rx     = 1;
@@ -261,6 +265,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->c_mode.udp_dst = 0;
 	test_options->quit = 0;
 	test_options->update_msec = 0;
+	test_options->wait_sec = 0;
 
 	for (i = 0; i < MAX_PKTIOS; i++) {
 		memcpy(global->pktio[i].eth_dst.addr, default_eth_dst, 6);
@@ -412,6 +417,9 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 			break;
 		case 'u':
 			test_options->update_msec = atoll(optarg);
+			break;
+		case 'w':
+			test_options->wait_sec = atoi(optarg);
 			break;
 		case 'h':
 			/* fall through */
@@ -724,11 +732,38 @@ static int open_pktios(test_global_t *global)
 	return 0;
 }
 
+static int print_link_info(odp_pktio_t pktio)
+{
+	odp_pktio_link_info_t info;
+
+	if (odp_pktio_link_info(pktio, &info)) {
+		printf("Error: Pktio link info failed.\n");
+		return -1;
+	}
+
+	printf("  autoneg     %s\n",
+	       (info.autoneg == ODP_PKTIO_LINK_AUTONEG_ON ? "on" :
+	       (info.autoneg == ODP_PKTIO_LINK_AUTONEG_OFF ? "off" : "unknown")));
+	printf("  duplex      %s\n",
+	       (info.duplex == ODP_PKTIO_LINK_DUPLEX_HALF ? "half" :
+	       (info.duplex == ODP_PKTIO_LINK_DUPLEX_FULL ? "full" : "unknown")));
+	printf("  media       %s\n", info.media);
+	printf("  pause_rx    %s\n",
+	       (info.pause_rx == ODP_PKTIO_LINK_PAUSE_ON ? "on" :
+	       (info.pause_rx == ODP_PKTIO_LINK_PAUSE_OFF ? "off" : "unknown")));
+	printf("  pause_tx    %s\n",
+	       (info.pause_tx == ODP_PKTIO_LINK_PAUSE_ON ? "on" :
+	       (info.pause_tx == ODP_PKTIO_LINK_PAUSE_OFF ? "off" : "unknown")));
+	printf("  speed(Mbit/s) %" PRIu32 "\n\n", info.speed);
+
+	return 0;
+}
 static int start_pktios(test_global_t *global)
 {
 	uint32_t i;
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_pktio = test_options->num_pktio;
+	uint32_t link_wait = 0;
 
 	for (i = 0; i < num_pktio; i++) {
 		if (odp_pktio_start(global->pktio[i].pktio)) {
@@ -741,6 +776,32 @@ static int start_pktios(test_global_t *global)
 		global->pktio[i].started = 1;
 	}
 
+	if (!test_options->wait_sec)
+		return 0;
+
+	/* Wait until all links are up */
+	for (i = 0; i < num_pktio; i++) {
+		while (1) {
+			odp_pktio_t pktio = global->pktio[i].pktio;
+
+			if (odp_pktio_link_status(pktio) == ODP_PKTIO_LINK_STATUS_UP) {
+				printf("pktio:%s\n", test_options->pktio_name[i]);
+				if (print_link_info(pktio)) {
+					printf("Error (%s): Printing link info failed.\n",
+					       test_options->pktio_name[i]);
+					return -1;
+				}
+				break;
+			}
+			link_wait++;
+			if (link_wait > test_options->wait_sec) {
+				printf("Error (%s): Pktio link down.\n",
+				       test_options->pktio_name[i]);
+				return -1;
+			}
+			odp_time_wait_ns(ODP_TIME_SEC_IN_NS);
+		}
+	}
 	return 0;
 }
 
