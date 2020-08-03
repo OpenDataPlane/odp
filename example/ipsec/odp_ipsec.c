@@ -17,6 +17,7 @@
 
 #include <stdlib.h>
 #include <getopt.h>
+#include <signal.h>
 #include <unistd.h>
 #include <inttypes.h>
 
@@ -96,7 +97,8 @@ typedef struct {
 	odp_barrier_t sync_barrier;
 	odp_queue_t poll_queues[MAX_POLL_QUEUES];
 	int num_polled_queues;
-	volatile int stop_workers;
+	/* Stop workers if set to 1 */
+	odp_atomic_u32_t exit_threads;
 } global_data_t;
 
 /* helper funcs */
@@ -182,6 +184,13 @@ typedef struct {
 #define SHM_CTX_POOL_SIZE      (SHM_CTX_POOL_BUF_COUNT * SHM_CTX_POOL_BUF_SIZE)
 
 static global_data_t *global;
+
+static void sig_handler(int signo ODP_UNUSED)
+{
+	if (global == NULL)
+		return;
+	odp_atomic_store_u32(&global->exit_threads, 1);
+}
 
 /**
  * Get per packet processing context from packet buffer
@@ -1052,7 +1061,7 @@ int pktio_thread(void *arg ODP_UNUSED)
 	odp_barrier_wait(&global->sync_barrier);
 
 	/* Loop packets */
-	while (global->stop_workers == 0) {
+	while (!odp_atomic_load_u32(&global->exit_threads)) {
 		pkt_disposition_e rc;
 		pkt_ctx_t   *ctx;
 		odp_queue_t  dispatchq;
@@ -1223,6 +1232,10 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	/* Signal handler has to be registered before global init in case ODP
+	 * implementation creates internal threads/processes. */
+	signal(SIGINT, sig_handler);
+
 	odp_init_param_init(&init_param);
 	init_param.mem_model = helper_options.mem_model;
 
@@ -1255,6 +1268,7 @@ main(int argc, char *argv[])
 	}
 	memset(global, 0, sizeof(global_data_t));
 	global->shm = shm;
+	odp_atomic_init_u32(&global->exit_threads, 0);
 
 	/* Configure scheduler */
 	odp_schedule_config(NULL);
@@ -1342,22 +1356,18 @@ main(int argc, char *argv[])
 	thr_params.instance = instance;
 	odph_odpthreads_create(thread_tbl, &cpumask, &thr_params);
 
-	/*
-	 * If there are streams attempt to verify them else
-	 * wait indefinitely
-	 */
+	/* If there are streams attempt to verify them. Otherwise, run until
+	 * SIGINT is received. */
 	if (stream_count) {
 		odp_bool_t done;
+
 		do {
 			done = verify_stream_db_outputs();
 			sleep(1);
 		} while (!done);
 		printf("All received\n");
+		odp_atomic_store_u32(&global->exit_threads, 1);
 	}
-
-	global->stop_workers = 1;
-	odp_mb_full();
-
 	odph_odpthreads_join(thread_tbl);
 
 	/* Stop and close used pktio devices */
