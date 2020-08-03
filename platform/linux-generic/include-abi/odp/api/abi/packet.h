@@ -77,8 +77,6 @@ typedef enum {
 	ODP_PACKET_ALL_COLORS = 3,
 } odp_packet_color_t;
 
-#define ODP_NUM_PACKET_COLORS 3
-
 typedef struct odp_packet_parse_result_flag_t {
 	union {
 		uint64_t all;
