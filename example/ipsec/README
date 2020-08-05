@@ -7,7 +7,7 @@ SPDX-License-Identifier:        BSD-3-Clause
 
 The IPsec example application "odp_ipsec" functions as a simple L3 IPv4 router
 with support IPsec 3DES cipher and HMAC-MD5 authentication in both the transmit
-and receive directions.  Note that only IPsec "transport" mode is supported.
+and receive directions. Note that only IPsec "transport" mode is supported.
 
 2. Prerequisites
 
@@ -18,9 +18,9 @@ the makefile specifically links with "-lcrypto".
 
 3. Topology
 
-The following test topology was used for development.  Each of the VMs
-is running Fedora16.  Sanity testing consists of pinging VM2 from VM0
-such that the packets traverse VM1.  Packets between VM1 and VM2 are
+The following test topology was used for development. Each of the VMs
+is running Fedora 32. Sanity testing consists of pinging VM2 from VM0
+such that the packets traverse VM1. Packets between VM1 and VM2 are
 IPsec AH and ESP encapsulated.
 
      VM0                            VM1 (UUT)                          VM2
@@ -36,7 +36,7 @@ IPsec AH and ESP encapsulated.
 
   4.1 VM0 configuration
 
-VM0 has the follwing interface configuration:
+VM0 has the following interface configuration:
 
          cat /etc/sysconfig/network-scripts/ifcfg-p7p1
          DEVICE=p7p1
@@ -55,7 +55,7 @@ In addition, static ARP and IPv4 routes must be added on VM0:
 
 For the unit under test, IP forwarding and IP tables were disabled.
 
-VM1 has the follwing interface configurations:
+VM1 has the following interface configurations:
 
          cat /etc/sysconfig/network-scripts/ifcfg-p7p1
          DEVICE=p7p1
@@ -73,11 +73,8 @@ VM1 has the follwing interface configurations:
          NETMASK=255.255.255.0
          ONBOOT=yes
 
-The application is launched on VM1 with the following command line
-using a bash script:
+The application is launched on VM1 with the following command:
 
-         cat test/ipsec/run_test.sh
-         #!/bin/bash
          sudo ./odp_ipsec -i p7p1,p8p1 \
          -r 192.168.111.2/32:p7p1:08.00.27.76.B5.E0 \
          -r 192.168.222.2/32:p8p1:08.00.27.F5.8B.DB \
@@ -87,19 +84,33 @@ using a bash script:
          -p 192.168.222.0/24:192.168.111.0/24:in:both \
          -e 192.168.222.2:192.168.111.2:3des:301:c966199f24d095f3990a320d749056401e82b26570320292 \
          -a 192.168.222.2:192.168.111.2:md5:300:27f6d123d7077b361662fc6e451f65d8 \
-         -c 2 -f 0 -m 0
+         -c 2 -m 0
 
   4.3 VM2 configuration
 
+VM2 has the following interface configuration:
+
+         cat /etc/sysconfig/network-scripts/ifcfg-p7p1
+         DEVICE=p7p1
+         HWADDR=08:00:27:F5:8B:DB
+         BOOTPROTO=static
+         IPADDR=192.168.222.2
+         NETMASK=255.255.255.0
+         ONBOOT=yes
+
+In addition, static ARP and IPv4 routes must be added on VM2:
+
+         sudo ip route add 192.168.111.0/24 via 192.168.222.1
+         sudo arp -s 192.168.222.1 08:00:27:4c:55:cc
+
 VM2 must be setup with an IPsec configuration complementing
 the configuration used by the "odp_ipsec" application running
-on VM1.  The configuration is applied using "setkey"
+on VM1. The configuration is applied using "setkey" (provided by ipsec-tools
+package).
 
-VM2 has the following setkey configuration file applied:
+VM2 uses the following setkey configuration:
 
-         cat /media/sf_SharedVM2/setkey_vm2.txt
-         #!/sbin/setkey -f
-
+         cat setkey_vm2.conf
          # Flush the SAD and SPD
          flush;
          spdflush;
@@ -122,26 +133,14 @@ VM2 has the following setkey configuration file applied:
                     esp/transport//require
                     ah/transport//require;
 
-VM2 has the follwing interface configuration:
-
-         cat /etc/sysconfig/network-scripts/ifcfg-p7p1
-         DEVICE=p7p1
-         HWADDR=08:00:27:F5:8B:DB
-         BOOTPROTO=static
-         IPADDR=192.168.222.2
-         NETMASK=255.255.255.0
-         ONBOOT=yes
-
-In addition, static ARP and IPv4 routes must be added on VM2:
-
-         sudo ip route add 192.168.111.0/24 via 192.168.222.1
-         sudo arp -s 192.168.222.1 08:00:27:4c:55:cc
+Apply the setkey configuration:
+         sudo setkey -f setkey_vm2.conf
 
 5. Sanity Test with Real Traffic
 
-Once all three VMs have been configured and static ARP and route
-entries added, VM0 should be able to ping VM2 at the 192.168.222.2
-address.
+Once all three VMs have been configured, static ARP and route entries added,
+setkey configuration applied, and odp_ipsec application is running, VM0 should
+be able to ping VM2 at the 192.168.222.2 address.
 
 At VM0 console issue the ping to VM2's address:
 
@@ -150,7 +149,7 @@ At VM0 console issue the ping to VM2's address:
          64 bytes from 192.168.222.2: icmp_req=1 ttl=64 time=33.9 ms
          64 bytes from 192.168.222.2: icmp_req=2 ttl=64 time=23.3 ms
 
-At VM2 console use tcpdump to observe IPsec packets :
+At VM2 console use tcpdump to observe IPsec packets:
 
          sudo tcpdump -nt -i p7p1
          tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
@@ -164,7 +163,7 @@ At VM2 console use tcpdump to observe IPsec packets :
 6. Standalone Loopback Tests
 
 BASH batch files are now included to run several simple loopback tests that
-do not require any packet IO.  The scripts create internal "loopback" packet
+do not require any packet IO. The scripts create internal "loopback" packet
 interfaces.
 Before running the example bash scripts add odp_ipsec to your PATH
 export PATH="<path_to_odp_ipsec>:$PATH"
