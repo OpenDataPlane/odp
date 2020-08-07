@@ -2,6 +2,7 @@
 #export CUSTOM_STR=https://github.com/OpenDataPlane/odp.git
 
 include $(top_srcdir)/platform/Makefile.inc
+lib_LTLIBRARIES += $(LIB)/libodp-linux.la
 
 AM_CPPFLAGS  =  $(ODP_INCLUDES)
 AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/include
@@ -17,7 +18,7 @@ AM_CFLAGS +=  $(DPDK_CFLAGS)
 AM_CFLAGS +=  $(LIBCONFIG_CFLAGS)
 
 DISTCLEANFILES = include/odp_libconfig_config.h
-include/odp_libconfig_config.h: $(top_srcdir)/config/odp-$(with_platform).conf $(top_builddir)/config.status
+include/odp_libconfig_config.h: $(top_builddir)/$(rel_default_config_path) $(top_builddir)/config.status
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 
 odpapiabiarchincludedir = $(archincludedir)/odp/api/abi
@@ -57,7 +58,9 @@ odpapiabiarchinclude_HEADERS += \
 		  include-abi/odp/api/abi/cpumask.h \
 		  include-abi/odp/api/abi/crypto.h \
 		  include-abi/odp/api/abi/debug.h \
+		  include-abi/odp/api/abi/errno.h \
 		  include-abi/odp/api/abi/event.h \
+		  include-abi/odp/api/abi/hash.h \
 		  include-abi/odp/api/abi/init.h \
 		  include-abi/odp/api/abi/ipsec.h \
 		  include-abi/odp/api/abi/packet.h \
@@ -148,7 +151,7 @@ noinst_HEADERS = \
 		  include/protocols/tcp.h \
 		  include/protocols/thash.h \
 		  include/protocols/udp.h
-nodist_noinst_HEADERS = \
+BUILT_SOURCES = \
 		  include/odp_libconfig_config.h
 
 __LIB__libodp_linux_la_SOURCES = \

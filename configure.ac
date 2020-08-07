@@ -3,8 +3,8 @@ AC_PREREQ([2.5])
 # ODP API version
 ##########################################################################
 m4_define([odpapi_generation_version], [1])
-m4_define([odpapi_major_version], [23])
-m4_define([odpapi_minor_version], [5])
+m4_define([odpapi_major_version], [24])
+m4_define([odpapi_minor_version], [0])
 m4_define([odpapi_point_version], [0])
 m4_define([odpapi_version],
     [odpapi_generation_version.odpapi_major_version.odpapi_minor_version.odpapi_point_version])
@@ -132,6 +132,15 @@ ODP_CHECK_CFLAG([-Wformat-overflow=0])
 # GCC-9 warns about taking pointers to packed structure fields (e.g. protocol
 # header structures). Generate only warnings on those, not errors.
 ODP_CHECK_CFLAG([-Wno-error=address-of-packed-member])
+
+# GCC 10 sometimes gets confused about object sizes and gives bogus warnings.
+# Make the affected warnings generate only warnings, not errors.
+AS_IF([test "$GCC" == yes],
+      AS_IF([test `$CC -dumpversion | cut -d '.' -f 1` -ge 10],
+	    ODP_CHECK_CFLAG([-Wno-error=array-bounds])
+	    ODP_CHECK_CFLAG([-Wno-error=stringop-overflow])
+      )
+)
 
 ODP_CFLAGS="$ODP_CFLAGS -std=c99"
 ODP_CXXFLAGS="$ODP_CXXFLAGS -std=c++11"
@@ -285,6 +294,7 @@ AC_DEFINE_UNQUOTED([_ODP_IMPLEMENTATION_NAME], ["$ODP_IMPLEMENTATION_NAME"],
 		   [Define to the name of the implementation])
 
 AM_CONDITIONAL([ODP_USE_CONFIG], [test "x$odp_use_config" = "xtrue"])
+AC_SUBST([ODP_LIB_NAME])
 
 ##########################################################################
 # Build examples/tests dynamically
@@ -446,6 +456,7 @@ AC_OUTPUT
 AC_MSG_RESULT([
 	$PACKAGE $VERSION
 
+	ODP Library name:	${ODP_LIB_NAME}
 	ODP Library version:	${ODP_LIBSO_VERSION}
 	Helper Library version:	${ODPHELPER_LIBSO_VERSION}
 
@@ -489,6 +500,7 @@ AC_MSG_RESULT([
 	test_example:		${test_example}
 	user_guides:		${user_guides}
 	pcapng:			${have_pcapng}
+	default_config_path:    ${default_config_path}
 ])
 
 AS_IF([test "${with_openssl}" = "no"],

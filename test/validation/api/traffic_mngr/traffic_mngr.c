@@ -456,7 +456,7 @@ static int wait_linkup(odp_pktio_t pktio)
 
 	for (i = 0; i < wait_num; i++) {
 		ret = odp_pktio_link_status(pktio);
-		if (ret < 0 || ret == 1)
+		if (ret == ODP_PKTIO_LINK_STATUS_UNKNOWN || ret == ODP_PKTIO_LINK_STATUS_UP)
 			break;
 		/* link is down, call status again after delay */
 		odp_time_wait_ns(wait_ns);
@@ -1324,7 +1324,8 @@ static int create_tm_queue(odp_tm_t         odp_tm,
 	queue_desc->tm_queues[priority] = tm_queue;
 	rc = odp_tm_queue_connect(tm_queue, tm_node);
 	if (rc != 0) {
-		ODPH_ERR("odp_tm_queue_connect() failed\n");
+		ODPH_ERR("odp_tm_queue_connect() failed for queue %" PRIx64
+			"\n", odp_tm_queue_to_u64(tm_queue));
 		odp_tm_queue_destroy(tm_queue);
 		return -1;
 	}
@@ -1652,7 +1653,8 @@ static int create_tm_system(void)
 	/* Test odp_tm_capability and odp_tm_find. */
 	rc = odp_tm_capability(odp_tm, &tm_capabilities);
 	if (rc != 0) {
-		ODPH_ERR("odp_tm_capability() failed\n");
+		ODPH_ERR("odp_tm_capability() failed for tm: %" PRIx64 "\n",
+			 odp_tm_to_u64(odp_tm));
 		return -1;
 	}
 
@@ -1677,7 +1679,7 @@ static void dump_tm_subtree(tm_node_desc_t *node_desc)
 	rc = odp_tm_node_info(node_desc->node, &node_info);
 	if (rc != 0) {
 		ODPH_ERR("odp_tm_node_info failed for tm_node=0x%" PRIX64 "\n",
-			 node_desc->node);
+			 odp_tm_node_to_u64(node_desc->node));
 	}
 
 	num_queues = 0;
@@ -1688,8 +1690,9 @@ static void dump_tm_subtree(tm_node_desc_t *node_desc)
 	       "level=%" PRIu32" parent=0x%" PRIX64 " children=%" PRIu32 " "
 	       "queues=%" PRIu32 " queue_fanin=%" PRIu32 " "
 	       "node_fanin=%" PRIu32 "\n",
-	       node_desc, node_desc->node_name, node_desc->node,
-	       node_desc->node_idx, node_desc->level, node_desc->parent_node,
+	       node_desc, node_desc->node_name,
+	       odp_tm_node_to_u64(node_desc->node), node_desc->node_idx,
+	       node_desc->level, odp_tm_node_to_u64(node_desc->parent_node),
 	       node_desc->num_children, num_queues, node_info.tm_queue_fanin,
 	       node_info.tm_node_fanin);
 
@@ -1912,7 +1915,10 @@ static int destroy_all_shaper_profiles(void)
 			rc = odp_tm_shaper_destroy(shaper_profile);
 			if (rc != 0) {
 				ODPH_ERR("odp_tm_sched_destroy failed "
-					 "idx=%" PRIu32 " code=%d\n", idx, rc);
+					 "node=%" PRIx64 " idx=%" PRIu32
+					 " code=%d\n",
+					 odp_tm_shaper_to_u64(shaper_profile),
+					 idx, rc);
 				return rc;
 			}
 			shaper_profiles[idx] = ODP_TM_INVALID;
@@ -1934,7 +1940,10 @@ static int destroy_all_sched_profiles(void)
 			rc = odp_tm_sched_destroy(sched_profile);
 			if (rc != 0) {
 				ODPH_ERR("odp_tm_sched_destroy failed "
-					 "idx=%" PRIu32 " code=%d\n", idx, rc);
+					 "node=%" PRIx64 " idx=%" PRIu32
+					 " code=%d\n",
+					 odp_tm_sched_to_u64(sched_profile),
+					 idx, rc);
 				return rc;
 			}
 			sched_profiles[idx] = ODP_TM_INVALID;
@@ -1946,17 +1955,20 @@ static int destroy_all_sched_profiles(void)
 
 static int destroy_all_threshold_profiles(void)
 {
-	odp_tm_threshold_t threshold_profile;
+	odp_tm_threshold_t thr_profile;
 	uint32_t           idx;
 	int                rc;
 
 	for (idx = 0; idx < NUM_THRESHOLD_PROFILES; idx++) {
-		threshold_profile = threshold_profiles[idx];
-		if (threshold_profile != ODP_TM_INVALID) {
-			rc = odp_tm_threshold_destroy(threshold_profile);
+		thr_profile = threshold_profiles[idx];
+		if (thr_profile != ODP_TM_INVALID) {
+			rc = odp_tm_threshold_destroy(thr_profile);
 			if (rc != 0) {
 				ODPH_ERR("odp_tm_threshold_destroy failed "
-					 "idx=%" PRIu32 " code=%d\n", idx, rc);
+					 "node=%" PRIx64 " idx=%" PRIu32
+					 " code=%d\n",
+					 odp_tm_threshold_to_u64(thr_profile),
+					 idx, rc);
 				return rc;
 			}
 			threshold_profiles[idx] = ODP_TM_INVALID;
@@ -1968,19 +1980,20 @@ static int destroy_all_threshold_profiles(void)
 
 static int destroy_all_wred_profiles(void)
 {
-	odp_tm_wred_t wred_profile;
+	odp_tm_wred_t wred_prof;
 	uint32_t      idx, color;
 	int           rc;
 
 	for (idx = 0; idx < NUM_WRED_PROFILES; idx++) {
 		for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
-			wred_profile = wred_profiles[idx][color];
-			if (wred_profile != ODP_TM_INVALID) {
-				rc = odp_tm_wred_destroy(wred_profile);
+			wred_prof = wred_profiles[idx][color];
+			if (wred_prof != ODP_TM_INVALID) {
+				rc = odp_tm_wred_destroy(wred_prof);
 				if (rc != 0) {
 					ODPH_ERR("odp_tm_wred_destroy failed "
-						 "idx=%" PRIu32 " "
-						 "color=%" PRIu32 " code=%d\n",
+						 "node=%" PRIx64 " idx=%" PRIu32
+						 " color=%" PRIu32 " code=%d\n",
+						 odp_tm_wred_to_u64(wred_prof),
 						 idx, color, rc);
 					return rc;
 				}
@@ -2114,6 +2127,7 @@ static void check_shaper_profile(char *shaper_name, uint32_t shaper_idx)
 {
 	odp_tm_shaper_params_t shaper_params;
 	odp_tm_shaper_t        profile;
+	int		       rc;
 
 	profile = odp_tm_shaper_lookup(shaper_name);
 	CU_ASSERT(profile != ODP_TM_INVALID);
@@ -2121,7 +2135,9 @@ static void check_shaper_profile(char *shaper_name, uint32_t shaper_idx)
 	if (profile != shaper_profiles[shaper_idx - 1])
 		return;
 
-	odp_tm_shaper_params_read(profile, &shaper_params);
+	memset(&shaper_params, 0, sizeof(shaper_params));
+	rc = odp_tm_shaper_params_read(profile, &shaper_params);
+	CU_ASSERT(rc == 0);
 	CU_ASSERT(approx_eq64(shaper_params.commit_bps,
 			      shaper_idx * MIN_COMMIT_BW));
 	CU_ASSERT(approx_eq64(shaper_params.peak_bps,
@@ -2211,7 +2227,7 @@ static void traffic_mngr_test_sched_profile(void)
 	for (idx = 1; idx <= NUM_SCHED_TEST_PROFILES; idx++) {
 		snprintf(sched_name, sizeof(sched_name),
 			 "sched_profile_%" PRIu32, idx);
-		for (priority = 0; priority < 16; priority++) {
+		for (priority = 0; priority < ODP_TM_MAX_PRIORITIES; priority++) {
 			sched_params.sched_modes[priority] =
 				ODP_TM_BYTE_BASED_WEIGHTS;
 			sched_params.sched_weights[priority] = 8 + idx +
@@ -3276,6 +3292,7 @@ static int test_query_functions(const char *shaper_name,
 	expected_pkt_cnt  = num_pkts - 2;
 	expected_byte_cnt = expected_pkt_cnt * PKT_BUF_SIZE;
 
+	memset(&query_info, 0, sizeof(query_info));
 	rc = odp_tm_queue_query(tm_queue,
 				ODP_TM_QUERY_PKT_CNT | ODP_TM_QUERY_BYTE_CNT,
 				&query_info);
@@ -3285,6 +3302,7 @@ static int test_query_functions(const char *shaper_name,
 	CU_ASSERT(query_info.total_byte_cnt_valid);
 	CU_ASSERT(expected_byte_cnt < query_info.total_byte_cnt);
 
+	memset(&query_info, 0, sizeof(query_info));
 	rc = odp_tm_priority_query(odp_tm_systems[0], priority,
 				   ODP_TM_QUERY_PKT_CNT | ODP_TM_QUERY_BYTE_CNT,
 				   &query_info);
@@ -3294,6 +3312,7 @@ static int test_query_functions(const char *shaper_name,
 	CU_ASSERT(query_info.total_byte_cnt_valid);
 	CU_ASSERT(expected_byte_cnt < query_info.total_byte_cnt);
 
+	memset(&query_info, 0, sizeof(query_info));
 	rc = odp_tm_total_query(odp_tm_systems[0],
 				ODP_TM_QUERY_PKT_CNT | ODP_TM_QUERY_BYTE_CNT,
 				&query_info);
@@ -3771,7 +3790,7 @@ static int walk_tree_backwards(odp_tm_node_t tm_node)
 	rc = odp_tm_node_info(tm_node, &node_info);
 	if (rc != 0) {
 		ODPH_ERR("odp_tm_node_info failed for tm_node=0x%" PRIX64 "\n",
-			 tm_node);
+			 odp_tm_node_to_u64(tm_node));
 		return rc;
 	}
 

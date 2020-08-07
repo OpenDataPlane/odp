@@ -4,6 +4,11 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/* enable usleep */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -11,6 +16,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <unistd.h>
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
@@ -27,6 +33,7 @@
 typedef struct test_options_t {
 	uint64_t gap_nsec;
 	uint64_t quit;
+	uint64_t update_msec;
 	uint32_t num_rx;
 	uint32_t num_tx;
 	uint32_t num_cpu;
@@ -79,6 +86,12 @@ typedef struct ODP_ALIGNED_CACHE thread_stat_t {
 
 	int      thread_type;
 
+	struct {
+		uint64_t rx_packets;
+		uint64_t tx_packets;
+
+	} pktio[MAX_PKTIOS];
+
 } thread_stat_t;
 
 typedef struct test_global_t {
@@ -118,36 +131,38 @@ static void print_usage(void)
 	       "                          At least one interface is required.\n"
 	       "\n"
 	       "  Optional:\n"
-	       "  -e, --eth_dst <mac>     Destination MAC address. Comma-separated list of\n"
-	       "                          addresses (no spaces), one address per packet IO\n"
-	       "                          interface e.g. AA:BB:CC:DD:EE:FF,11:22:33:44:55:66\n"
-	       "                          Default per interface: 02:00:00:A0:B0:CX, where X = 0,1,...\n"
-	       "  -v, --vlan <tpid:tci>   VLAN configuration. Comma-separated list of VLAN TPID:TCI\n"
-	       "                          values in hexadecimal, starting from the outer most VLAN.\n"
-	       "                          For example:\n"
-	       "                          VLAN 200 (decimal):          8100:c8\n"
-	       "                          Double tagged VLANs 1 and 2: 88a8:1,8100:2\n"
-	       "  -r, --num_rx            Number of receive threads. Default: 1\n"
-	       "  -t, --num_tx            Number of transmit threads. Default: 1\n"
-	       "  -n, --num_pkt           Number of packets in the pool. Default: 1000\n"
-	       "  -l, --len               Packet length. Default: 512\n"
-	       "  -b, --burst_size        Transmit burst size. Default: 8\n"
-	       "  -x, --bursts            Number of bursts per one transmit round. Default: 1\n"
-	       "  -g, --gap               Gap between transmit rounds in nsec. Default: 1000000\n"
-	       "                          Transmit packet rate per interface:\n"
-	       "                            num_tx * burst_size * bursts * (10^9 / gap)\n"
-	       "  -s, --ipv4_src          IPv4 source address. Default: 192.168.0.1\n"
-	       "  -d, --ipv4_dst          IPv4 destination address. Default: 192.168.0.2\n"
-	       "  -o, --udp_src           UDP source port. Default: 10000\n"
-	       "  -p, --udp_dst           UDP destination port. Default: 20000\n"
-	       "  -c, --c_mode <counts>   Counter mode for incrementing UDP port numbers.\n"
-	       "                          Specify the number of port numbers used starting from\n"
-	       "                          udp_src/udp_dst. Comma-serarated (no spaces) list of\n"
-	       "                          count values: <udp_src count>,<udp_dst count>\n"
-	       "                          Default value: 0,0\n"
-	       "  -q, --quit              Quit after this many transmit rounds.\n"
-	       "                          Default: 0 (don't quit)\n"
-	       "  -h, --help              This help\n"
+	       "  -e, --eth_dst <mac>       Destination MAC address. Comma-separated list of\n"
+	       "                            addresses (no spaces), one address per packet IO\n"
+	       "                            interface e.g. AA:BB:CC:DD:EE:FF,11:22:33:44:55:66\n"
+	       "                            Default per interface: 02:00:00:A0:B0:CX, where X = 0,1,...\n"
+	       "  -v, --vlan <tpid:tci>     VLAN configuration. Comma-separated list of VLAN TPID:TCI\n"
+	       "                            values in hexadecimal, starting from the outer most VLAN.\n"
+	       "                            For example:\n"
+	       "                            VLAN 200 (decimal):          8100:c8\n"
+	       "                            Double tagged VLANs 1 and 2: 88a8:1,8100:2\n"
+	       "  -r, --num_rx              Number of receive threads. Default: 1\n"
+	       "  -t, --num_tx              Number of transmit threads. Default: 1\n"
+	       "  -n, --num_pkt             Number of packets in the pool. Default: 1000\n"
+	       "  -l, --len                 Packet length. Default: 512\n"
+	       "  -b, --burst_size          Transmit burst size. Default: 8\n"
+	       "  -x, --bursts              Number of bursts per one transmit round. Default: 1\n"
+	       "  -g, --gap                 Gap between transmit rounds in nsec. Default: 1000000\n"
+	       "                            Transmit packet rate per interface:\n"
+	       "                              num_tx * burst_size * bursts * (10^9 / gap)\n"
+	       "  -s, --ipv4_src            IPv4 source address. Default: 192.168.0.1\n"
+	       "  -d, --ipv4_dst            IPv4 destination address. Default: 192.168.0.2\n"
+	       "  -o, --udp_src             UDP source port. Default: 10000\n"
+	       "  -p, --udp_dst             UDP destination port. Default: 20000\n"
+	       "  -c, --c_mode <counts>     Counter mode for incrementing UDP port numbers.\n"
+	       "                            Specify the number of port numbers used starting from\n"
+	       "                            udp_src/udp_dst. Comma-serarated (no spaces) list of\n"
+	       "                            count values: <udp_src count>,<udp_dst count>\n"
+	       "                            Default value: 0,0\n"
+	       "  -q, --quit                Quit after this many transmit rounds.\n"
+	       "                            Default: 0 (don't quit)\n"
+	       "  -u, --update_stat <msec>  Update and print statistics every <msec> milliseconds.\n"
+	       "                            0: Don't print statistics periodically (default)\n"
+	       "  -h, --help                This help\n"
 	       "\n");
 }
 
@@ -192,7 +207,7 @@ static int parse_vlan(const char *str, test_global_t *global)
 
 static int parse_options(int argc, char *argv[], test_global_t *global)
 {
-	int opt, i, len, str_len, long_index;
+	int opt, i, len, str_len, long_index, udp_port;
 	unsigned long int count;
 	uint32_t min_packets, num_tx_pkt;
 	char *name, *str, *end;
@@ -202,27 +217,28 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	uint8_t default_eth_dst[6] = {0x02, 0x00, 0x00, 0xa0, 0xb0, 0xc0};
 
 	static const struct option longopts[] = {
-		{"interface",  required_argument, NULL, 'i'},
-		{"eth_dst",    required_argument, NULL, 'e'},
-		{"num_rx",     required_argument, NULL, 'r'},
-		{"num_tx",     required_argument, NULL, 't'},
-		{"num_pkt",    required_argument, NULL, 'n'},
-		{"len",        required_argument, NULL, 'l'},
-		{"burst_size", required_argument, NULL, 'b'},
-		{"bursts",     required_argument, NULL, 'x'},
-		{"gap",        required_argument, NULL, 'g'},
-		{"vlan",       required_argument, NULL, 'v'},
-		{"ipv4_src",   required_argument, NULL, 's'},
-		{"ipv4_dst",   required_argument, NULL, 'd'},
-		{"udp_src",    required_argument, NULL, 'o'},
-		{"udp_dst",    required_argument, NULL, 'p'},
-		{"c_mode",     required_argument, NULL, 'c'},
-		{"quit",       required_argument, NULL, 'q'},
-		{"help",       no_argument,       NULL, 'h'},
+		{"interface",   required_argument, NULL, 'i'},
+		{"eth_dst",     required_argument, NULL, 'e'},
+		{"num_rx",      required_argument, NULL, 'r'},
+		{"num_tx",      required_argument, NULL, 't'},
+		{"num_pkt",     required_argument, NULL, 'n'},
+		{"len",         required_argument, NULL, 'l'},
+		{"burst_size",  required_argument, NULL, 'b'},
+		{"bursts",      required_argument, NULL, 'x'},
+		{"gap",         required_argument, NULL, 'g'},
+		{"vlan",        required_argument, NULL, 'v'},
+		{"ipv4_src",    required_argument, NULL, 's'},
+		{"ipv4_dst",    required_argument, NULL, 'd'},
+		{"udp_src",     required_argument, NULL, 'o'},
+		{"udp_dst",     required_argument, NULL, 'p'},
+		{"c_mode",      required_argument, NULL, 'c'},
+		{"quit",        required_argument, NULL, 'q'},
+		{"update_stat", required_argument, NULL, 'u'},
+		{"help",        no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:n:l:b:x:g:v:s:d:o:p:c:q:h";
+	static const char *shortopts = "+i:e:r:t:n:l:b:x:g:v:s:d:o:p:c:q:u:h";
 
 	test_options->num_pktio  = 0;
 	test_options->num_rx     = 1;
@@ -244,6 +260,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->c_mode.udp_src = 0;
 	test_options->c_mode.udp_dst = 0;
 	test_options->quit = 0;
+	test_options->update_msec = 0;
 
 	for (i = 0; i < MAX_PKTIOS; i++) {
 		memcpy(global->pktio[i].eth_dst.addr, default_eth_dst, 6);
@@ -316,6 +333,24 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 				i++;
 			}
 			break;
+		case 'o':
+			udp_port = atoi(optarg);
+			if (udp_port < 0 || udp_port > UINT16_MAX) {
+				printf("Error: Bad UDP source port: %d\n", udp_port);
+				ret = -1;
+				break;
+			}
+			test_options->udp_src = udp_port;
+			break;
+		case 'p':
+			udp_port = atoi(optarg);
+			if (udp_port < 0 || udp_port > UINT16_MAX) {
+				printf("Error: Bad UDP destination port: %d\n", udp_port);
+				ret = -1;
+				break;
+			}
+			test_options->udp_dst = udp_port;
+			break;
 		case 'r':
 			test_options->num_rx = atoi(optarg);
 			break;
@@ -374,6 +409,9 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 			break;
 		case 'q':
 			test_options->quit = atoll(optarg);
+			break;
+		case 'u':
+			test_options->update_msec = atoll(optarg);
 			break;
 		case 'h':
 			/* fall through */
@@ -764,15 +802,19 @@ static int rx_thread(void *arg)
 {
 	int i, thr, num;
 	uint32_t exit_test;
-	odp_time_t t1, t2;
+	uint64_t bytes;
+	odp_time_t t1, t2, exit_time;
+	odp_packet_t pkt;
 	thread_arg_t *thread_arg = arg;
 	test_global_t *global = thread_arg->global;
+	int periodic_stat = global->test_options.update_msec ? 1 : 0;
 	uint64_t rx_timeouts = 0;
 	uint64_t rx_packets = 0;
 	uint64_t rx_bytes = 0;
 	uint64_t nsec = 0;
 	int ret = 0;
 	int clock_started = 0;
+	int exit_timer_started = 0;
 	int paused = 0;
 	int max_num = 32;
 	odp_event_t ev[max_num];
@@ -787,15 +829,29 @@ static int rx_thread(void *arg)
 		num = odp_schedule_multi_no_wait(NULL, ev, max_num);
 
 		exit_test = odp_atomic_load_u32(&global->exit_test);
-		if (num == 0 && exit_test) {
-			if (paused == 0) {
-				odp_schedule_pause();
-				paused = 1;
-			} else {
-				/* Exit schedule loop after schedule paused and
-				 * no more packets received */
-				break;
+		if (exit_test) {
+			/* Wait 1 second for possible in flight packets sent by the tx threads */
+			if (exit_timer_started == 0) {
+				exit_time = odp_time_local();
+				t2 = exit_time;
+				exit_timer_started = 1;
+			} else if (odp_time_diff_ns(odp_time_local(), exit_time) >
+				   ODP_TIME_SEC_IN_NS) {
+				if (paused == 0) {
+					odp_schedule_pause();
+					paused = 1;
+				} else if (num == 0) {
+					/* Exit schedule loop after schedule paused and no more
+					 * packets received */
+					break;
+				}
 			}
+			/* Use last received packet as stop time and don't increase rx_timeouts
+			 * counter since tx threads have already been stopped */
+			if (num)
+				t2 = odp_time_local();
+			else
+				continue;
 		}
 
 		if (num == 0) {
@@ -808,18 +864,25 @@ static int rx_thread(void *arg)
 			clock_started = 1;
 		}
 
+		bytes = 0;
 		for (i = 0; i < num; i++) {
-			odp_packet_t pkt;
-
 			pkt = odp_packet_from_event(ev[i]);
-			rx_bytes += odp_packet_len(pkt);
+			bytes += odp_packet_len(pkt);
+		}
+
+		rx_packets += num;
+		rx_bytes   += bytes;
+
+		if (odp_unlikely(periodic_stat)) {
+			/* All packets from the same queue are from the same pktio interface */
+			int index = odp_packet_input_index(odp_packet_from_event(ev[0]));
+
+			if (index >= 0)
+				global->stat[thr].pktio[index].rx_packets += num;
 		}
 
 		odp_event_free_multi(ev, num);
-		rx_packets += num;
 	}
-
-	t2 = odp_time_local();
 
 	if (clock_started)
 		nsec = odp_time_diff_ns(t2, t1);
@@ -863,6 +926,9 @@ static int init_packets(test_global_t *global, int pktio,
 	uint16_t udp_dst = test_options->udp_dst;
 	uint32_t udp_src_cnt = 0;
 	uint32_t udp_dst_cnt = 0;
+
+	if (num_vlan > MAX_VLANS)
+		num_vlan = MAX_VLANS;
 
 	for (i = 0; i < num; i++) {
 		pkt = packet[i];
@@ -1003,6 +1069,7 @@ static int tx_thread(void *arg)
 	thread_arg_t *thread_arg = arg;
 	test_global_t *global = thread_arg->global;
 	test_options_t *test_options = &global->test_options;
+	int periodic_stat = test_options->update_msec ? 1 : 0;
 	odp_pool_t pool = global->pool;
 	uint64_t gap_nsec = test_options->gap_nsec;
 	uint64_t quit = test_options->quit;
@@ -1087,6 +1154,10 @@ static int tx_thread(void *arg)
 				tx_packets += sent;
 				if (odp_unlikely(sent < burst_size))
 					tx_drops += burst_size - sent;
+
+				if (odp_unlikely(periodic_stat))
+					global->stat[thr].pktio[i].tx_packets += sent;
+
 			}
 		}
 	}
@@ -1161,7 +1232,65 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 	return 0;
 }
 
-static int print_stat(test_global_t *global)
+static void print_periodic_stat(test_global_t *global, uint64_t nsec)
+{
+	int i, j;
+	int num_pktio = global->test_options.num_pktio;
+	double sec  = nsec / 1000000000.0;
+	uint64_t num_tx[num_pktio];
+	uint64_t num_rx[num_pktio];
+
+	for (i = 0; i < num_pktio; i++) {
+		num_tx[i] = 0;
+		num_rx[i] = 0;
+
+		for (j = 0; j < ODP_THREAD_COUNT_MAX; j++) {
+			if (global->stat[j].thread_type == RX_THREAD)
+				num_rx[i] += global->stat[j].pktio[i].rx_packets;
+			else if (global->stat[j].thread_type == TX_THREAD)
+				num_tx[i] += global->stat[j].pktio[i].tx_packets;
+		}
+	}
+
+	printf("  TX: %12.6fs", sec);
+	for (i = 0; i < num_pktio; i++)
+		printf(" %10" PRIu64 "", num_tx[i]);
+
+	printf("\n  RX: %12.6fs", sec);
+	for (i = 0; i < num_pktio; i++)
+		printf(" %10" PRIu64 "", num_rx[i]);
+
+	printf("\n");
+}
+
+static void periodic_print_loop(test_global_t *global)
+{
+	odp_time_t t1, t2;
+	uint64_t nsec;
+	int i;
+	int num_pktio = global->test_options.num_pktio;
+
+	printf("\n\nPackets per interface\n");
+	printf("  Dir          Time");
+	for (i = 0; i < num_pktio; i++)
+		printf(" %10i", i);
+
+	printf("\n  -----------------");
+	for (i = 0; i < num_pktio; i++)
+		printf("-----------");
+
+	printf("\n");
+
+	t1 = odp_time_local();
+	while (odp_atomic_load_u32(&global->exit_test) == 0) {
+		usleep(1000 * global->test_options.update_msec);
+		t2 = odp_time_local();
+		nsec = odp_time_diff_ns(t2, t1);
+		print_periodic_stat(global, nsec);
+	}
+}
+
+static int print_final_stat(test_global_t *global)
 {
 	int i, num_thr;
 	double rx_pkt_ave, rx_mbit_per_sec, tx_mbit_per_sec;
@@ -1378,6 +1507,10 @@ int main(int argc, char **argv)
 	/* Wait until workers have started. */
 	odp_barrier_wait(&global->barrier);
 
+	/* Periodic statistics printing */
+	if (global->test_options.update_msec)
+		periodic_print_loop(global);
+
 	/* Wait workers to exit */
 	odph_thread_join(global->thread_tbl,
 			 global->test_options.num_cpu);
@@ -1390,7 +1523,7 @@ int main(int argc, char **argv)
 	if (close_pktios(global))
 		ret = -1;
 
-	if (print_stat(global))
+	if (print_final_stat(global))
 		ret = -2;
 
 term:

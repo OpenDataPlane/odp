@@ -126,7 +126,7 @@ typedef struct {
 	/** Number of benchmark functions */
 	int num_bench;
 	/** Break worker loop if set to 1 */
-	int exit_thread;
+	odp_atomic_u32_t exit_thread;
 	struct {
 		/** Test packet length */
 		uint32_t len;
@@ -168,7 +168,7 @@ static void sig_handler(int signo ODP_UNUSED)
 {
 	if (gbl_args == NULL)
 		return;
-	gbl_args->exit_thread = 1;
+	odp_atomic_store_u32(&gbl_args->exit_thread, 1);
 }
 
 /**
@@ -183,7 +183,7 @@ static void run_indef(args_t *args, int idx)
 
 	printf("Running %s() indefinitely\n", desc);
 
-	while (!gbl_args->exit_thread) {
+	while (!odp_atomic_load_u32(&gbl_args->exit_thread)) {
 		int ret;
 
 		if (args->bench[idx].init != NULL)
@@ -1789,6 +1789,7 @@ int main(int argc, char *argv[])
 	}
 
 	memset(gbl_args, 0, sizeof(args_t));
+	odp_atomic_init_u32(&gbl_args->exit_thread, 0);
 
 	gbl_args->bench = test_suite;
 	gbl_args->num_bench = sizeof(test_suite) / sizeof(test_suite[0]);

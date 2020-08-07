@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -111,7 +112,7 @@ static inline void _pktio_wait_linkup(odp_pktio_t pktio)
 
 	for (i = 0; i < wait_num; i++) {
 		ret = odp_pktio_link_status(pktio);
-		if (ret < 0 || ret == 1)
+		if (ret == ODP_PKTIO_LINK_STATUS_UNKNOWN || ret == ODP_PKTIO_LINK_STATUS_UP)
 			break;
 		/* link is down, call status again after delay */
 		odp_time_wait_ns(wait_ns);
@@ -649,7 +650,7 @@ static int recv_packets_tmo(odp_pktio_t pktio, odp_packet_t pkt_tbl[],
 	int num_q;
 	int i;
 	int n;
-	unsigned from_val;
+	unsigned int from_val = 0;
 	unsigned *from = NULL;
 
 	if (mode == RECV_MQ_TMO)
@@ -1480,6 +1481,44 @@ static void pktio_test_info(void)
 	}
 }
 
+static void pktio_test_link_info(void)
+{
+	odp_pktio_t pktio;
+	odp_pktio_link_info_t link_info;
+	int i;
+
+	for (i = 0; i < num_ifaces; i++) {
+		memset(&link_info, 0, sizeof(link_info));
+
+		pktio = create_pktio(i, ODP_PKTIN_MODE_QUEUE,
+				     ODP_PKTOUT_MODE_DIRECT);
+		CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+
+		CU_ASSERT_FATAL(odp_pktio_link_info(pktio, &link_info) == 0);
+
+		CU_ASSERT(link_info.autoneg == ODP_PKTIO_LINK_AUTONEG_UNKNOWN ||
+			  link_info.autoneg == ODP_PKTIO_LINK_AUTONEG_ON ||
+			  link_info.autoneg == ODP_PKTIO_LINK_AUTONEG_OFF);
+		CU_ASSERT(link_info.duplex == ODP_PKTIO_LINK_DUPLEX_UNKNOWN ||
+			  link_info.duplex == ODP_PKTIO_LINK_DUPLEX_HALF ||
+			  link_info.duplex == ODP_PKTIO_LINK_DUPLEX_FULL);
+		CU_ASSERT(link_info.pause_rx == ODP_PKTIO_LINK_PAUSE_UNKNOWN ||
+			  link_info.pause_rx == ODP_PKTIO_LINK_PAUSE_ON ||
+			  link_info.pause_rx == ODP_PKTIO_LINK_PAUSE_OFF);
+		CU_ASSERT(link_info.pause_tx == ODP_PKTIO_LINK_PAUSE_UNKNOWN ||
+			  link_info.pause_tx == ODP_PKTIO_LINK_PAUSE_ON ||
+			  link_info.pause_tx == ODP_PKTIO_LINK_PAUSE_OFF);
+		CU_ASSERT(link_info.status == ODP_PKTIO_LINK_STATUS_UNKNOWN ||
+			  link_info.status == ODP_PKTIO_LINK_STATUS_UP ||
+			  link_info.status == ODP_PKTIO_LINK_STATUS_DOWN);
+		CU_ASSERT(link_info.media != NULL);
+
+		CU_ASSERT(odp_pktio_link_info(ODP_PKTIO_INVALID, &link_info) < 0);
+
+		CU_ASSERT(odp_pktio_close(pktio) == 0);
+	}
+}
+
 static void pktio_test_pktin_queue_config_direct(void)
 {
 	odp_pktio_t pktio;
@@ -1745,7 +1784,7 @@ static void pktio_test_statistics_counters(void)
 	pktio_tx = pktio[0];
 	pktio_rx = (num_ifaces > 1) ? pktio[1] : pktio_tx;
 
-	CU_ASSERT(odp_pktout_queue(pktio_tx, &pktout, 1) == 1);
+	CU_ASSERT_FATAL(odp_pktout_queue(pktio_tx, &pktout, 1) == 1);
 
 	ret = odp_pktio_start(pktio_tx);
 	CU_ASSERT(ret == 0);
@@ -1849,7 +1888,7 @@ static void pktio_test_start_stop(void)
 		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
 	}
 
-	CU_ASSERT(odp_pktout_queue(pktio[0], &pktout, 1) == 1);
+	CU_ASSERT_FATAL(odp_pktout_queue(pktio[0], &pktout, 1) == 1);
 
 	/* Interfaces are stopped by default,
 	 * Check that stop when stopped generates an error */
@@ -2908,6 +2947,7 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_print),
 	ODP_TEST_INFO(pktio_test_pktio_config),
 	ODP_TEST_INFO(pktio_test_info),
+	ODP_TEST_INFO(pktio_test_link_info),
 	ODP_TEST_INFO(pktio_test_pktin_queue_config_direct),
 	ODP_TEST_INFO(pktio_test_pktin_queue_config_sched),
 	ODP_TEST_INFO(pktio_test_pktin_queue_config_multi_sched),

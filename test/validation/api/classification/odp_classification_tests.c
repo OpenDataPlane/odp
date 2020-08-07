@@ -25,7 +25,7 @@ static int global_num_l2_qos;
 #define NUM_COS_PMR	1
 #define NUM_COS_COMPOSITE	1
 /** sequence number of IP packets */
-odp_atomic_u32_t seq;
+static odp_atomic_u32_t seq;
 
 /* default packet info */
 static cls_packet_info_t default_pkt_info;

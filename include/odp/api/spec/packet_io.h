@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -1208,16 +1209,22 @@ void odp_pktio_config_init(odp_pktio_config_t *config);
  */
 void odp_pktio_print(odp_pktio_t pktio);
 
+/** Link status */
+typedef enum odp_pktio_link_status_t {
+	ODP_PKTIO_LINK_STATUS_UNKNOWN = -1,
+	ODP_PKTIO_LINK_STATUS_DOWN = 0,
+	ODP_PKTIO_LINK_STATUS_UP = 1
+} odp_pktio_link_status_t;
+
 /**
  * Determine pktio link is up or down for a packet IO interface.
  *
  * @param pktio Packet IO handle.
  *
- * @retval  1 link is up
- * @retval  0 link is down
- * @retval <0 on failure
+ * @retval  ODP_PKTIO_LINK_STATUS_UP or ODP_PKTIO_LINK_STATUS_DOWN on success
+ * @retval  ODP_PKTIO_LINK_STATUS_UNKNOWN on failure
 */
-int odp_pktio_link_status(odp_pktio_t pktio);
+odp_pktio_link_status_t odp_pktio_link_status(odp_pktio_t pktio);
 
 /**
  * Packet IO information
@@ -1254,6 +1261,112 @@ typedef struct odp_pktio_info_t {
  * @retval <0 on failure
  */
 int odp_pktio_info(odp_pktio_t pktio, odp_pktio_info_t *info);
+
+/** @name Link speed
+ *  Packet IO link speeds in Mbps
+ *  @anchor link_speed
+ *  @{
+ */
+
+/** Link speed unknown */
+#define	ODP_PKTIO_LINK_SPEED_UNKNOWN 0
+/** Link speed 10 Mbit/s */
+#define	ODP_PKTIO_LINK_SPEED_10M     10
+/** Link speed 100 Mbit/s */
+#define	ODP_PKTIO_LINK_SPEED_100M    100
+/** Link speed 1 Gbit/s */
+#define	ODP_PKTIO_LINK_SPEED_1G      1000
+/** Link speed 2.5 Gbit/s */
+#define	ODP_PKTIO_LINK_SPEED_2_5G    2500
+/** Link speed 5 Gbit/s */
+#define	ODP_PKTIO_LINK_SPEED_5G      5000
+/** Link speed 10 Gbit/s */
+#define	ODP_PKTIO_LINK_SPEED_10G     10000
+/** Link speed 20 Gbit/s */
+#define	ODP_PKTIO_LINK_SPEED_20G     20000
+/** Link speed 25 Gbit/s */
+#define	ODP_PKTIO_LINK_SPEED_25G     25000
+/** Link speed 40 Gbit/s */
+#define	ODP_PKTIO_LINK_SPEED_40G     40000
+/** Link speed 50 Gbit/s */
+#define	ODP_PKTIO_LINK_SPEED_50G     50000
+/** Link speed 56 Gbit/s */
+#define	ODP_PKTIO_LINK_SPEED_56G     56000
+/** Link speed 100 Gbit/s */
+#define	ODP_PKTIO_LINK_SPEED_100G    100000
+/** Link speed 200 Gbit/s */
+#define	ODP_PKTIO_LINK_SPEED_200G    200000
+/** Link speed 400 Gbit/s */
+#define	ODP_PKTIO_LINK_SPEED_400G    400000
+
+/** @} */
+
+/** Autonegotiation mode */
+typedef enum odp_pktio_link_autoneg_t {
+	/** Autonegotiation state unknown */
+	ODP_PKTIO_LINK_AUTONEG_UNKNOWN = -1,
+	/** Autonegotiation disabled */
+	ODP_PKTIO_LINK_AUTONEG_OFF = 0,
+	/** Autonegotiation enabled */
+	ODP_PKTIO_LINK_AUTONEG_ON  = 1
+} odp_pktio_link_autoneg_t;
+
+/** Duplex mode */
+typedef enum odp_pktio_link_duplex_t {
+	ODP_PKTIO_LINK_DUPLEX_UNKNOWN = -1,
+	ODP_PKTIO_LINK_DUPLEX_HALF = 0,
+	ODP_PKTIO_LINK_DUPLEX_FULL = 1
+} odp_pktio_link_duplex_t;
+
+/** Ethernet pause frame (flow control) mode */
+typedef enum odp_pktio_link_pause_t {
+	ODP_PKTIO_LINK_PAUSE_UNKNOWN = -1,
+	ODP_PKTIO_LINK_PAUSE_OFF = 0,
+	ODP_PKTIO_LINK_PAUSE_ON  = 1
+} odp_pktio_link_pause_t;
+
+/**
+ * Packet IO link information
+ */
+typedef struct odp_pktio_link_info_t {
+	/** Link autonegotiation */
+	odp_pktio_link_autoneg_t autoneg;
+	/** Duplex mode */
+	odp_pktio_link_duplex_t duplex;
+	/** Link media type
+	 *
+	 * The implementation owned string describes link media type. Values are
+	 * implementation specific short names like copper, fiber, or virtual.
+	 * The value of "unknown" is used when media type cannot be determined. */
+	const char *media;
+	/** Reception of pause frames */
+	odp_pktio_link_pause_t pause_rx;
+	/** Transmission of pause frames */
+	odp_pktio_link_pause_t pause_tx;
+	/** Link speed in Mbps
+	  *
+	  * The value of zero means that the link speed is unknown.
+	  * ODP_PKTIO_LINK_SPEED_* (@ref link_speed) defines can be used to
+	  * compare the value to standard link speeds. */
+	uint32_t speed;
+	/** Link status */
+	odp_pktio_link_status_t status;
+} odp_pktio_link_info_t;
+
+/**
+ * Retrieve information about packet IO link status
+ *
+ * Fills in link information structure with the current link status values.
+ * May be called any time with a valid pktio handle. The call is not intended
+ * for fast path use. The info structure is written only on success.
+ *
+ * @param      pktio   Packet IO handle
+ * @param[out] info    Pointer to packet IO link info struct for output
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_pktio_link_info(odp_pktio_t pktio, odp_pktio_link_info_t *info);
 
 /**
  * Packet input timestamp resolution in hertz

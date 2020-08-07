@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/abi/errno.h>
+
 #include <odp/api/spec/errno.h>
 
 #ifdef __cplusplus

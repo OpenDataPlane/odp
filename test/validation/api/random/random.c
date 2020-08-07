@@ -9,11 +9,31 @@
 
 static void random_test_get_size(void)
 {
-	int32_t ret;
+	/* odp_random_data may fail to return data on every call (i.e. lack of
+	 * entropy). Therefore loop with some sane loop timeout value. Note that
+	 * it is not required for implementation to return data in the "timeout"
+	 * amount of steps. Rather it is a way for preventing the test to loop
+	 * forever.
+	 * Also note that the timeout value here is chosen completely
+	 * arbitrarily (although considered sane) and neither platforms or
+	 * applications are not required to use it.
+	 */
+	int32_t ret, timeout_ns = 1 * ODP_TIME_MSEC_IN_NS, sleep_ns = 100;
+	uint32_t bytes = 0;
 	uint8_t buf[32];
 
-	ret = odp_random_data(buf, sizeof(buf), ODP_RANDOM_BASIC);
-	CU_ASSERT(ret == sizeof(buf));
+	do {
+		ret = odp_random_data(buf + bytes, sizeof(buf) - bytes,
+				      ODP_RANDOM_BASIC);
+		bytes += ret;
+		if (ret < 0 || bytes >= sizeof(buf))
+			break;
+		odp_time_wait_ns(sleep_ns);
+		timeout_ns -= sleep_ns;
+	} while (timeout_ns > 0);
+
+	CU_ASSERT(ret > 0);
+	CU_ASSERT(bytes == (int32_t)sizeof(buf));
 }
 
 static void random_test_kind(void)

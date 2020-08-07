@@ -150,7 +150,7 @@ cache_destroy(odph_iplookup_table_impl *impl)
 			sprintf(
 					pool_name, "%s_%d_%d",
 					impl->name, i, count);
-			odp_pool_destroy(odp_pool_lookup(pool_name));
+			(void)odp_pool_destroy(odp_pool_lookup(pool_name));
 		}
 	}
 }

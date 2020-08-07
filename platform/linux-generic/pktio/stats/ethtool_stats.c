@@ -18,11 +18,19 @@
 #include <odp_debug_internal.h>
 #include <odp_errno_define.h>
 
+/*
+ * Suppress bounds warnings about interior zero length arrays. Such an array
+ * is used intentionally in sset_info.
+ */
+#if __GNUC__ >= 10
+#pragma GCC diagnostic ignored "-Wzero-length-bounds"
+#endif
+
 static struct ethtool_gstrings *get_stringset(int fd, struct ifreq *ifr)
 {
 	struct {
 		struct ethtool_sset_info hdr;
-		uint32_t buf[1];
+		uint32_t buf[1]; /* overlaps with hdr.data[] */
 	} sset_info;
 	struct ethtool_drvinfo drvinfo;
 	uint32_t len;

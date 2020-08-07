@@ -22,6 +22,7 @@ int ipc_odp_packet_send_or_free(odp_pktio_t pktio,
 	odp_pktout_queue_t pktout;
 	int i;
 
+	memset(&pktout, 0, sizeof(pktout));
 	start_time = odp_time_local();
 	wait = odp_time_local_from_ns(ODP_TIME_SEC_IN_NS);
 	end_time = odp_time_sum(start_time, wait);
@@ -139,10 +140,8 @@ void print_info(char *progname)
 {
 	odp_sys_info_print();
 
-	printf("Running ODP appl: \"%s\"\n"
-	       "-----------------\n"
-	       "Using IF:        %s\n",
-	       progname, pktio_name);
+	printf("Running ODP appl: \"%s\"\n",
+	       progname);
 	printf("\n\n");
 	fflush(NULL);
 }

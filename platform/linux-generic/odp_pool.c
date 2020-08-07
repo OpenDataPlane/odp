@@ -54,6 +54,14 @@ ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_SIZE < 0xffff,
 typedef struct pool_local_t {
 	pool_cache_t *cache[ODP_CONFIG_POOLS];
 	int thr_id;
+
+	/* Number of event allocs and frees by this thread. */
+	struct {
+		uint64_t num_alloc;
+		uint64_t num_free;
+
+	} stat[ODP_CONFIG_POOLS];
+
 } pool_local_t;
 
 pool_global_t *_odp_pool_glb;
@@ -333,6 +341,18 @@ int _odp_pool_term_local(void)
 		pool_t *pool = pool_entry(i);
 
 		cache_flush(local.cache[i], pool);
+
+		if (ODP_DEBUG == 1) {
+			uint64_t num_alloc = local.stat[i].num_alloc;
+			uint64_t num_free  = local.stat[i].num_free;
+
+			if (num_alloc || num_free) {
+				ODP_DBG("Pool[%i] stats: thr %i, "
+					"allocs % " PRIu64 ", "
+					"frees % " PRIu64 "\n",
+					i, local.thr_id, num_alloc, num_free);
+			}
+		}
 	}
 
 	return 0;
@@ -493,9 +513,10 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 	uint32_t max_len, cache_size, burst_size;
 	uint32_t ring_size;
 	uint32_t num_extra = 0;
-	int name_len;
-	const char *postfix = "_uarea";
-	char uarea_name[ODP_POOL_NAME_LEN + sizeof(postfix)];
+	const char *max_prefix = "pool_000_uarea_";
+	int max_prefix_len = strlen(max_prefix);
+	char shm_name[ODP_POOL_NAME_LEN + max_prefix_len];
+	char uarea_name[ODP_POOL_NAME_LEN + max_prefix_len];
 
 	align = 0;
 
@@ -602,9 +623,9 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 		pool->name[ODP_POOL_NAME_LEN - 1] = 0;
 	}
 
-	name_len = strlen(pool->name);
-	memcpy(uarea_name, pool->name, name_len);
-	strcpy(&uarea_name[name_len], postfix);
+	/* Format SHM names from prefix, pool index and pool name. */
+	sprintf(shm_name,   "pool_%03i_%s", pool->pool_idx, pool->name);
+	sprintf(uarea_name, "pool_%03i_uarea_%s", pool->pool_idx, pool->name);
 
 	pool->params = *params;
 	pool->block_offset = 0;
@@ -645,9 +666,9 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 	/* Allocate extra memory for skipping packet buffers which cross huge
 	 * page boundaries. */
 	if (params->type == ODP_POOL_PACKET) {
-		num_extra = (((uint64_t)(num * block_size) +
+		num_extra = ((((uint64_t)num * block_size) +
 				FIRST_HP_SIZE - 1) / FIRST_HP_SIZE);
-		num_extra += (((uint64_t)(num_extra * block_size) +
+		num_extra += ((((uint64_t)num_extra * block_size) +
 				FIRST_HP_SIZE - 1) / FIRST_HP_SIZE);
 	}
 
@@ -686,7 +707,7 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 		pool->burst_size = burst_size;
 	}
 
-	shm = odp_shm_reserve(pool->name, pool->shm_size, ODP_PAGE_SIZE,
+	shm = odp_shm_reserve(shm_name, pool->shm_size, ODP_PAGE_SIZE,
 			      shmflags);
 
 	pool->shm = shm;
@@ -954,10 +975,11 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 
 int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 {
-	pool_cache_t *cache = local.cache[pool->pool_idx];
+	uint32_t pool_idx = pool->pool_idx;
+	pool_cache_t *cache = local.cache[pool_idx];
 	ring_ptr_t *ring;
 	odp_buffer_hdr_t *hdr;
-	uint32_t mask, num_ch, i;
+	uint32_t mask, num_ch, num_alloc, i;
 	uint32_t num_deq = 0;
 	uint32_t burst_size = pool->burst_size;
 
@@ -999,16 +1021,25 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 			cache_push(cache, &hdr_tmp[num_deq], cache_num);
 	}
 
-	return num_ch + num_deq;
+	num_alloc = num_ch + num_deq;
+
+	if (ODP_DEBUG == 1)
+		local.stat[pool_idx].num_alloc += num_alloc;
+
+	return num_alloc;
 }
 
 static inline void buffer_free_to_pool(pool_t *pool,
 				       odp_buffer_hdr_t *buf_hdr[], int num)
 {
-	pool_cache_t *cache = local.cache[pool->pool_idx];
+	uint32_t pool_idx = pool->pool_idx;
+	pool_cache_t *cache = local.cache[pool_idx];
 	ring_ptr_t *ring;
 	uint32_t cache_num, mask;
 	uint32_t cache_size = pool->cache_size;
+
+	if (ODP_DEBUG == 1)
+		local.stat[pool_idx].num_free += num;
 
 	/* Special case of a very large free. Move directly to
 	 * the global pool. */

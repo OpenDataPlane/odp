@@ -25,7 +25,7 @@ static void aarch64_impl_str(char *str, int maxlen, int implementer)
 		snprintf(str, maxlen, "Broadcom Corporation");
 		return;
 	case 0x43:
-		snprintf(str, maxlen, "Cavium Inc.");
+		snprintf(str, maxlen, "Marvell (Cavium) Inc.");
 		return;
 	case 0x44:
 		snprintf(str, maxlen, "Digital Equipment Corporation");
@@ -63,6 +63,12 @@ static void aarch64_part_str(char *str, int maxlen, int implementer,
 {
 	if (implementer == 0x41) {
 		switch (part) {
+		case 0xd02:
+			snprintf(str, maxlen, "Cortex-A34");
+			return;
+		case 0xd04:
+			snprintf(str, maxlen, "Cortex-A35");
+			return;
 		case 0xd03:
 			snprintf(str, maxlen, "Cortex-A53");
 			return;
@@ -72,6 +78,9 @@ static void aarch64_part_str(char *str, int maxlen, int implementer,
 		case 0xd07:
 			snprintf(str, maxlen, "Cortex-A57");
 			return;
+		case 0xd06:
+			snprintf(str, maxlen, "Cortex-A65");
+			return;
 		case 0xd08:
 			snprintf(str, maxlen, "Cortex-A72");
 			return;
@@ -80,6 +89,18 @@ static void aarch64_part_str(char *str, int maxlen, int implementer,
 			return;
 		case 0xd0a:
 			snprintf(str, maxlen, "Cortex-A75");
+			return;
+		case 0xd0b:
+			snprintf(str, maxlen, "Cortex-A76");
+			return;
+		case 0xd0e:
+			snprintf(str, maxlen, "Cortex-A76AE");
+			return;
+		case 0xd0d:
+			snprintf(str, maxlen, "Cortex-A77");
+			return;
+		case 0xd41:
+			snprintf(str, maxlen, "Cortex-A78");
 			return;
 		default:
 			break;
@@ -99,8 +120,17 @@ static void aarch64_part_str(char *str, int maxlen, int implementer,
 				 variant + 1, revision);
 			return;
 		case 0xaf:
-			snprintf(str, maxlen, "CN99XX, Pass %i.%i",
-				 variant + 1, revision);
+			snprintf(str, maxlen, "CN99XX, Rev %c%i", 'A' + variant, revision);
+			return;
+		case 0xb1:
+			snprintf(str, maxlen, "CN98XX, Rev %c%i", 'A' + variant, revision);
+			return;
+		case 0xb2:
+			/* Handle B0 errata: variant and revision numbers show up as A1 */
+			if (variant == 0 && revision == 1)
+				snprintf(str, maxlen, "CN96XX, Rev B0");
+			else
+				snprintf(str, maxlen, "CN96XX, Rev %c%i", 'A' + variant, revision);
 			return;
 		default:
 			break;
@@ -211,63 +241,126 @@ void sys_info_print_arch(void)
 	/* See ARM C Language Extensions documentation for details */
 	printf("ARM FEATURES:\n");
 
-	printf("  __ARM_ARCH           ");
+	printf("  __ARM_ARCH              ");
 #ifdef __ARM_ARCH
 	printf("%i\n", __ARM_ARCH);
 #else
 	printf("%s\n", ndef);
 #endif
 
-	printf("  __ARM_ARCH_ISA_A64   ");
+	printf("  __ARM_ARCH_ISA_A64      ");
 #ifdef __ARM_ARCH_ISA_A64
 	printf("%i\n", __ARM_ARCH_ISA_A64);
 #else
 	printf("%s\n", ndef);
 #endif
 
-#if defined(__ARM_ARCH) && __ARM_ARCH >= 8
-	/* Actually, this checks for new NEON instructions in
-	 * v8.1, but is currently the only way to distinguish
-	 * v8.0 and >=v8.1. */
-	printf("    ARMv8 ISA version  ");
-#ifdef __ARM_FEATURE_QRDMX
-	printf("v8.1 or higher\n");
-#else
-	printf("v8.0\n");
-#endif
-#endif
-
-#ifdef __ARM_FEATURE_QRDMX
-	/* Actually, this checks for new NEON instructions in
-	 * v8.1, but is currently the only way to distinguish
-	 * v8.0 and >=v8.1. */
-	printf("    ARMv8.1 instructions\n");
-#endif
-
-	printf("  __ARM_NEON           ");
+	printf("  __ARM_NEON              ");
 #ifdef __ARM_NEON
 	printf("%i\n", __ARM_NEON);
 #else
 	printf("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_IDIV   ");
+	printf("  __ARM_FEATURE_ATOMICS   ");
+#ifdef __ARM_FEATURE_ATOMICS
+	printf("%i\n", __ARM_FEATURE_ATOMICS);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_UNALIGNED ");
+#ifdef __ARM_FEATURE_UNALIGNED
+	printf("%i\n", __ARM_FEATURE_UNALIGNED);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_IDIV      ");
 #ifdef __ARM_FEATURE_IDIV
 	printf("%i\n", __ARM_FEATURE_IDIV);
 #else
 	printf("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_CRYPTO ");
+	printf("  __ARM_FEATURE_QRDMX     ");
+#ifdef __ARM_FEATURE_QRDMX
+	printf("%i\n", __ARM_FEATURE_QRDMX);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_DOTPROD   ");
+#ifdef __ARM_FEATURE_DOTPROD
+	printf("%i\n", __ARM_FEATURE_DOTPROD);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_CRYPTO    ");
 #ifdef __ARM_FEATURE_CRYPTO
 	printf("%i\n", __ARM_FEATURE_CRYPTO);
 #else
 	printf("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_CRC32  ");
+	printf("  __ARM_FEATURE_SHA512    ");
+#ifdef __ARM_FEATURE_SHA512
+	printf("%i\n", __ARM_FEATURE_SHA512);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_SHA3      ");
+#ifdef __ARM_FEATURE_SHA3
+	printf("%i\n", __ARM_FEATURE_SHA3);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_SM3       ");
+#ifdef __ARM_FEATURE_SM3
+	printf("%i\n", __ARM_FEATURE_SM3);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_SM4       ");
+#ifdef __ARM_FEATURE_SM4
+	printf("%i\n", __ARM_FEATURE_SM4);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  __ARM_FEATURE_CRC32     ");
 #ifdef __ARM_FEATURE_CRC32
 	printf("%i\n", __ARM_FEATURE_CRC32);
+#else
+	printf("%s\n", ndef);
+#endif
+
+	printf("  ARM ISA version:        ");
+#if defined(__ARM_ARCH)
+	if (__ARM_ARCH < 8) {
+		printf("v%i\n", __ARM_ARCH);
+	} else if (__ARM_ARCH == 8) {
+		/* Actually, this checks for new NEON instructions in
+		 * v8.1, but is currently the only way to distinguish
+		 * v8.0 and >=v8.1. */
+	#ifdef __ARM_FEATURE_QRDMX
+		printf("v8.1 or higher\n");
+	#else
+		printf("v8.0\n");
+	#endif
+	} else {
+		/* ACLE 2018 defines that from v8.1 onwards the value includes
+		 * the minor version number: __ARM_ARCH = X * 100 + Y
+		 * E.g. for Armv8.1 __ARM_ARCH = 801 */
+		int major = __ARM_ARCH / 100;
+		int minor = __ARM_ARCH - (major * 100);
+
+		printf("v%i.%i\n", major, minor);
+	}
 #else
 	printf("%s\n", ndef);
 #endif

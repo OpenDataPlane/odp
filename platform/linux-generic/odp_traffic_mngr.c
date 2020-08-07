@@ -4575,7 +4575,8 @@ static int tm_query_info_copy(tm_queue_info_t     *queue_info,
 			      uint32_t             query_flags,
 			      odp_tm_query_info_t *info)
 {
-	tm_queue_thresholds_t *threshold_params;
+	if ((query_flags & ODP_TM_QUERY_THRESHOLDS) && !queue_info->threshold_params)
+		return -1;
 
 	memset(info, 0, sizeof(odp_tm_query_info_t));
 	info->total_pkt_cnt =
@@ -4587,9 +4588,7 @@ static int tm_query_info_copy(tm_queue_info_t     *queue_info,
 	info->approx_byte_cnt = 0;
 
 	if (query_flags & ODP_TM_QUERY_THRESHOLDS) {
-		threshold_params = queue_info->threshold_params;
-		if (!threshold_params)
-			return -1;
+		tm_queue_thresholds_t *threshold_params = queue_info->threshold_params;
 
 		info->max_pkt_cnt = threshold_params->max_pkts;
 		info->max_byte_cnt = threshold_params->max_bytes;
@@ -4720,6 +4719,41 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 				  tm_queue_obj->pkts_dequeued_cnt,
 				  tm_queue_obj->pkts_consumed_cnt);
 	}
+}
+
+uint64_t odp_tm_to_u64(odp_tm_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_tm_queue_to_u64(odp_tm_queue_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_tm_node_to_u64(odp_tm_node_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_tm_shaper_to_u64(odp_tm_shaper_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_tm_sched_to_u64(odp_tm_sched_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_tm_threshold_to_u64(odp_tm_threshold_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_tm_wred_to_u64(odp_tm_wred_t hdl)
+{
+	return _odp_pri(hdl);
 }
 
 int _odp_tm_init_global(void)

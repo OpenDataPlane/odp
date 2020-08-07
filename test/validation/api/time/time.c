@@ -26,6 +26,7 @@ static uint64_t global_res;
 typedef odp_time_t time_cb(void);
 typedef uint64_t time_res_cb(void);
 typedef odp_time_t time_from_ns_cb(uint64_t ns);
+typedef uint64_t time_nsec_cb(void);
 
 static void time_test_constants(void)
 {
@@ -120,10 +121,14 @@ static void time_test_monotony(void)
 	volatile uint64_t count = 0;
 	odp_time_t l_t1, l_t2, l_t3;
 	odp_time_t g_t1, g_t2, g_t3;
+	uint64_t lns_t1, lns_t2, lns_t3;
+	uint64_t gns_t1, gns_t2, gns_t3;
 	uint64_t ns1, ns2, ns3;
 
 	l_t1 = odp_time_local();
 	g_t1 = odp_time_global();
+	lns_t1 = odp_time_local_ns();
+	gns_t1 = odp_time_global_ns();
 
 	while (count < BUSY_LOOP_CNT) {
 		count++;
@@ -131,6 +136,8 @@ static void time_test_monotony(void)
 
 	l_t2 = odp_time_local();
 	g_t2 = odp_time_global();
+	lns_t2 = odp_time_local_ns();
+	gns_t2 = odp_time_global_ns();
 
 	while (count < BUSY_LOOP_CNT_LONG) {
 		count++;
@@ -138,6 +145,8 @@ static void time_test_monotony(void)
 
 	l_t3 = odp_time_local();
 	g_t3 = odp_time_global();
+	lns_t3 = odp_time_local_ns();
+	gns_t3 = odp_time_global_ns();
 
 	ns1 = odp_time_to_ns(l_t1);
 	ns2 = odp_time_to_ns(l_t2);
@@ -154,6 +163,14 @@ static void time_test_monotony(void)
 	/* Global time assertions */
 	CU_ASSERT(ns2 > ns1);
 	CU_ASSERT(ns3 > ns2);
+
+	/* Local time in nsec */
+	CU_ASSERT(lns_t2 > lns_t1);
+	CU_ASSERT(lns_t3 > lns_t2);
+
+	/* Global time in nsec */
+	CU_ASSERT(gns_t2 > gns_t1);
+	CU_ASSERT(gns_t3 > gns_t2);
 }
 
 static void time_test_cmp(time_cb time_cur, time_from_ns_cb time_from_ns)
@@ -481,6 +498,51 @@ static void time_test_global_accuracy(void)
 	time_test_accuracy(odp_time_global, odp_time_global_from_ns);
 }
 
+static void time_test_accuracy_nsec(time_nsec_cb time_nsec)
+{
+	uint64_t t1, t2, diff;
+	struct timespec ts1, ts2, tsdiff;
+	double sec_t, sec_c;
+	int i, ret;
+
+	ret = clock_gettime(CLOCK_MONOTONIC, &ts1);
+	CU_ASSERT(ret == 0);
+	t1 = time_nsec();
+
+	for (i = 0; i < 5; i++)
+		odp_time_wait_ns(ODP_TIME_SEC_IN_NS);
+
+	ret = clock_gettime(CLOCK_MONOTONIC, &ts2);
+	CU_ASSERT(ret == 0);
+	t2 = time_nsec();
+
+	if (ts2.tv_nsec < ts1.tv_nsec) {
+		tsdiff.tv_nsec = 1000000000L + ts2.tv_nsec - ts1.tv_nsec;
+		tsdiff.tv_sec = ts2.tv_sec - 1 - ts1.tv_sec;
+	} else {
+		tsdiff.tv_nsec = ts2.tv_nsec - ts1.tv_nsec;
+		tsdiff.tv_sec = ts2.tv_sec - ts1.tv_sec;
+	}
+
+	diff  = t2 - t1;
+	sec_t = ((double)diff) / ODP_TIME_SEC_IN_NS;
+	sec_c = ((double)(tsdiff.tv_nsec) / 1000000000L) + tsdiff.tv_sec;
+
+	/* Check that ODP time is within +-5% of system time */
+	CU_ASSERT(sec_t < sec_c * 1.05);
+	CU_ASSERT(sec_t > sec_c * 0.95);
+}
+
+static void time_test_local_accuracy_nsec(void)
+{
+	time_test_accuracy_nsec(odp_time_local_ns);
+}
+
+static void time_test_global_accuracy_nsec(void)
+{
+	time_test_accuracy_nsec(odp_time_global_ns);
+}
+
 odp_testinfo_t time_suite_time[] = {
 	ODP_TEST_INFO(time_test_constants),
 	ODP_TEST_INFO(time_test_local_res),
@@ -499,6 +561,8 @@ odp_testinfo_t time_suite_time[] = {
 	ODP_TEST_INFO(time_test_global_sum),
 	ODP_TEST_INFO(time_test_global_wait_until),
 	ODP_TEST_INFO(time_test_global_accuracy),
+	ODP_TEST_INFO(time_test_local_accuracy_nsec),
+	ODP_TEST_INFO(time_test_global_accuracy_nsec),
 	ODP_TEST_INFO_NULL
 };
 

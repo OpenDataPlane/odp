@@ -1020,6 +1020,10 @@ main(int argc, char *argv[])
 	/* If we have test streams build them before starting workers */
 	resolve_stream_db();
 	stream_count = create_stream_db_inputs();
+	if (stream_count < 0) {
+		ODPH_ERR("Error: creating input packets failed\n");
+		exit(EXIT_FAILURE);
+	}
 
 	/*
 	 * Create and init worker threads
@@ -1331,6 +1335,7 @@ static void usage(char *progname)
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -c, --count <number> CPU count, 0=all available, default=1\n"
+	       "  -s, --stream SrcIP:DstIP:InIntf:OutIntf:Count:Length\n"
 	       "  -h, --help           Display help and exit.\n"
 	       " environment variables: ODP_IPSEC_USE_POLL_QUEUES\n"
 	       " to enable use of poll queues instead of scheduled (default)\n"

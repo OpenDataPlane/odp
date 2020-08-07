@@ -15,6 +15,7 @@
 
 #include <stdint.h>
 #include <inttypes.h>
+#include <stdlib.h>
 #include <CUnit/Basic.h>
 #include <odp_api.h>
 
@@ -104,5 +105,27 @@ void odp_cunit_register_global_term(int (*func_term_ptr)(odp_instance_t inst));
 
 int odp_cunit_ret(int val);
 int odp_cunit_print_inactive(void);
+
+/*
+ * Wrapper for CU_ASSERT_FATAL implementation to show the compiler that
+ * the function does not return if the assertion fails. This reduces bogus
+ * warnings generated from the code after the fatal assert.
+ */
+static inline void odp_cu_assert_fatal(CU_BOOL value, unsigned int line,
+				       const char *condition, const char *file)
+{
+	CU_assertImplementation(value, line, condition, file, "", CU_TRUE);
+
+	if (!value) {
+		/* not reached */
+		abort();  /* this has noreturn function attribute */
+		for (;;) /* this also shows that return is not possible */
+			;
+	}
+}
+
+#undef CU_ASSERT_FATAL
+#define CU_ASSERT_FATAL(value) \
+	{ odp_cu_assert_fatal((value), __LINE__, #value, __FILE__); }
 
 #endif /* ODP_CUNICT_COMMON_H */

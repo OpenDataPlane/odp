@@ -1,4 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -16,6 +17,7 @@
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #define _ODP_TIMESPEC_SIZE 16
+#define _ODP_TIME_GIGA_HZ  1000000000ULL
 
 typedef struct _odp_time_global_t {
 	/* Storage space for struct timespec. Posix headers are not included
@@ -44,14 +46,42 @@ static inline odp_time_t _odp_time_cur(void)
 	return _odp_timespec_cur();
 }
 
+static inline uint64_t _odp_time_hw_to_ns(odp_time_t time)
+{
+	uint64_t nsec;
+	uint64_t freq_hz = _odp_time_glob.hw_freq_hz;
+	uint64_t count = time.count;
+	uint64_t sec = 0;
+
+	if (count >= freq_hz) {
+		sec   = count / freq_hz;
+		count = count - sec * freq_hz;
+	}
+
+	nsec = (_ODP_TIME_GIGA_HZ * count) / freq_hz;
+
+	return (sec * _ODP_TIME_GIGA_HZ) + nsec;
+}
+
+static inline uint64_t _odp_time_convert_to_ns(odp_time_t time)
+{
+	if (_odp_time_glob.use_hw)
+		return _odp_time_hw_to_ns(time);
+
+	return time.nsec;
+}
+
 #ifndef _ODP_NO_INLINE
 	/* Inline functions by default */
 	#define _ODP_INLINE static inline
-	#define odp_time_local   __odp_time_local
-	#define odp_time_global  __odp_time_global
-	#define odp_time_cmp     __odp_time_cmp
-	#define odp_time_diff    __odp_time_diff
-	#define odp_time_sum     __odp_time_sum
+	#define odp_time_local      __odp_time_local
+	#define odp_time_global     __odp_time_global
+	#define odp_time_to_ns      __odp_time_to_ns
+	#define odp_time_local_ns   __odp_time_local_ns
+	#define odp_time_global_ns  __odp_time_global_ns
+	#define odp_time_cmp        __odp_time_cmp
+	#define odp_time_diff       __odp_time_diff
+	#define odp_time_sum        __odp_time_sum
 
 #else
 	#define _ODP_INLINE
@@ -65,6 +95,21 @@ _ODP_INLINE odp_time_t odp_time_local(void)
 _ODP_INLINE odp_time_t odp_time_global(void)
 {
 	return _odp_time_cur();
+}
+
+_ODP_INLINE uint64_t odp_time_to_ns(odp_time_t time)
+{
+	return _odp_time_convert_to_ns(time);
+}
+
+_ODP_INLINE uint64_t odp_time_local_ns(void)
+{
+	return _odp_time_convert_to_ns(_odp_time_cur());
+}
+
+_ODP_INLINE uint64_t odp_time_global_ns(void)
+{
+	return _odp_time_convert_to_ns(_odp_time_cur());
 }
 
 _ODP_INLINE int odp_time_cmp(odp_time_t t2, odp_time_t t1)

@@ -88,7 +88,7 @@ typedef struct {
 	/** Thread specific arguments */
 	thread_args_t thread[MAX_WORKERS];
 	/** Flag to exit worker threads */
-	int exit_threads;
+	odp_atomic_u32_t exit_threads;
 } args_t;
 
 /** Global pointer to args */
@@ -206,7 +206,7 @@ static int pktio_queue_thread(void *arg)
 	}
 
 	/* Loop packets */
-	while (!args->exit_threads) {
+	while (!odp_atomic_load_u32(&args->exit_threads)) {
 		odp_pktio_t pktio_tmp;
 
 		if (inq != ODP_QUEUE_INVALID)
@@ -296,7 +296,7 @@ static int pktio_ifburst_thread(void *arg)
 	}
 
 	/* Loop packets */
-	while (!args->exit_threads) {
+	while (!odp_atomic_load_u32(&args->exit_threads)) {
 		pkts = odp_pktin_recv(pktin, pkt_tbl, MAX_PKT_BURST);
 		if (pkts > 0) {
 			/* Drop packets with errors */
@@ -392,6 +392,7 @@ int main(int argc, char *argv[])
 	}
 
 	memset(args, 0, sizeof(args_t));
+	odp_atomic_init_u32(&args->exit_threads, 0);
 	args->shm = shm;
 
 	/* Parse and store the application arguments */
@@ -482,7 +483,7 @@ int main(int argc, char *argv[])
 		}
 		/* use delay to let workers clean up queues */
 		odp_time_wait_ns(ODP_TIME_SEC_IN_NS);
-		args->exit_threads = 1;
+		odp_atomic_store_u32(&args->exit_threads, 1);
 	}
 
 	/* Master thread waits for other threads to exit */

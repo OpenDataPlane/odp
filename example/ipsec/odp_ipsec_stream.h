@@ -85,12 +85,14 @@ void resolve_stream_db(void);
  * @param stream    Stream DB entry
  * @param dmac      Destination MAC address to use
  * @param pkt_pool  Packet buffer pool to allocate from
+ * @param max_len   Maximum packet length
  *
  * @return packet else ODP_PACKET_INVALID
  */
 odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 				uint8_t *dmac,
-				odp_pool_t pkt_pool);
+				odp_pool_t pkt_pool,
+				uint32_t max_len);
 
 /**
  * Verify an IPv4 packet received on a loop output queue
@@ -108,10 +110,11 @@ odp_bool_t verify_ipv4_packet(stream_db_entry_t *stream,
  *
  * Create input packets based on the configured streams and enqueue them
  * into loop interface input queues.  Once packet processing starts these
- * packets will be remomved and processed as if they had come from a normal
+ * packets will be removed and processed as if they had come from a normal
  * packet interface.
  *
  * @return number of streams successfully processed
+ * @return <0 on failure
  */
 int create_stream_db_inputs(void);
 

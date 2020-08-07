@@ -127,7 +127,9 @@ odpapiabidefaultinclude_HEADERS = \
 	odp/api/abi-default/cpumask.h \
 	odp/api/abi-default/crypto.h \
 	odp/api/abi-default/debug.h \
+	odp/api/abi-default/errno.h \
 	odp/api/abi-default/event.h \
+	odp/api/abi-default/hash.h \
 	odp/api/abi-default/init.h \
 	odp/api/abi-default/ipsec.h \
 	odp/api/abi-default/packet.h \
@@ -171,7 +173,9 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm32-linux/odp/api/abi/cpumask.h \
 	odp/arch/arm32-linux/odp/api/abi/crypto.h \
 	odp/arch/arm32-linux/odp/api/abi/debug.h \
+	odp/arch/arm32-linux/odp/api/abi/errno.h \
 	odp/arch/arm32-linux/odp/api/abi/event.h \
+	odp/arch/arm32-linux/odp/api/abi/hash.h \
 	odp/arch/arm32-linux/odp/api/abi/init.h \
 	odp/arch/arm32-linux/odp/api/abi/ipsec.h \
 	odp/arch/arm32-linux/odp/api/abi/packet.h \
@@ -211,7 +215,9 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm64-linux/odp/api/abi/cpumask.h \
 	odp/arch/arm64-linux/odp/api/abi/crypto.h \
 	odp/arch/arm64-linux/odp/api/abi/debug.h \
+	odp/arch/arm64-linux/odp/api/abi/errno.h \
 	odp/arch/arm64-linux/odp/api/abi/event.h \
+	odp/arch/arm64-linux/odp/api/abi/hash.h \
 	odp/arch/arm64-linux/odp/api/abi/init.h \
 	odp/arch/arm64-linux/odp/api/abi/ipsec.h \
 	odp/arch/arm64-linux/odp/api/abi/packet.h \
@@ -251,7 +257,9 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/default-linux/odp/api/abi/cpumask.h \
 	odp/arch/default-linux/odp/api/abi/crypto.h \
 	odp/arch/default-linux/odp/api/abi/debug.h \
+	odp/arch/default-linux/odp/api/abi/errno.h \
 	odp/arch/default-linux/odp/api/abi/event.h \
+	odp/arch/default-linux/odp/api/abi/hash.h \
 	odp/arch/default-linux/odp/api/abi/init.h \
 	odp/arch/default-linux/odp/api/abi/ipsec.h \
 	odp/arch/default-linux/odp/api/abi/packet.h \
@@ -291,7 +299,9 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/mips64-linux/odp/api/abi/cpumask.h \
 	odp/arch/mips64-linux/odp/api/abi/crypto.h \
 	odp/arch/mips64-linux/odp/api/abi/debug.h \
+	odp/arch/mips64-linux/odp/api/abi/errno.h \
 	odp/arch/mips64-linux/odp/api/abi/event.h \
+	odp/arch/mips64-linux/odp/api/abi/hash.h \
 	odp/arch/mips64-linux/odp/api/abi/init.h \
 	odp/arch/mips64-linux/odp/api/abi/ipsec.h \
 	odp/arch/mips64-linux/odp/api/abi/packet.h \
@@ -331,7 +341,9 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/power64-linux/odp/api/abi/cpumask.h \
 	odp/arch/power64-linux/odp/api/abi/crypto.h \
 	odp/arch/power64-linux/odp/api/abi/debug.h \
+	odp/arch/power64-linux/odp/api/abi/errno.h \
 	odp/arch/power64-linux/odp/api/abi/event.h \
+	odp/arch/power64-linux/odp/api/abi/hash.h \
 	odp/arch/power64-linux/odp/api/abi/init.h \
 	odp/arch/power64-linux/odp/api/abi/ipsec.h \
 	odp/arch/power64-linux/odp/api/abi/packet.h \
@@ -371,7 +383,9 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_32-linux/odp/api/abi/cpumask.h \
 	odp/arch/x86_32-linux/odp/api/abi/crypto.h \
 	odp/arch/x86_32-linux/odp/api/abi/debug.h \
+	odp/arch/x86_32-linux/odp/api/abi/errno.h \
 	odp/arch/x86_32-linux/odp/api/abi/event.h \
+	odp/arch/x86_32-linux/odp/api/abi/hash.h \
 	odp/arch/x86_32-linux/odp/api/abi/init.h \
 	odp/arch/x86_32-linux/odp/api/abi/ipsec.h \
 	odp/arch/x86_32-linux/odp/api/abi/packet.h \
@@ -411,7 +425,9 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_64-linux/odp/api/abi/cpumask.h \
 	odp/arch/x86_64-linux/odp/api/abi/crypto.h \
 	odp/arch/x86_64-linux/odp/api/abi/debug.h \
+	odp/arch/x86_64-linux/odp/api/abi/errno.h \
 	odp/arch/x86_64-linux/odp/api/abi/event.h \
+	odp/arch/x86_64-linux/odp/api/abi/hash.h \
 	odp/arch/x86_64-linux/odp/api/abi/init.h \
 	odp/arch/x86_64-linux/odp/api/abi/ipsec.h \
 	odp/arch/x86_64-linux/odp/api/abi/packet.h \

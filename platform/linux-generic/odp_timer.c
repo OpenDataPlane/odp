@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -53,6 +53,9 @@
 
 /* Inlined API functions */
 #include <odp/api/plat/event_inlines.h>
+
+/* One divided by one nanosecond in Hz */
+#define GIGA_HZ 1000000000
 
 #define TMO_UNUSED   ((uint64_t)0xFFFFFFFFFFFFFFFF)
 /* TMO_INACTIVE is or-ed with the expiration tick to indicate an expired timer.
@@ -148,6 +151,7 @@ typedef struct timer_global_t {
 	odp_shm_t shm;
 	/* Max timer resolution in nanoseconds */
 	uint64_t highest_res_ns;
+	uint64_t highest_res_hz;
 	uint64_t poll_interval_nsec;
 	int num_timer_pools;
 	uint8_t timer_pool_used[MAX_TIMER_POOLS];
@@ -324,7 +328,10 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 
 	memset(tp, 0, tp_size);
 
-	res_ns = param->res_ns;
+	if (param->res_ns)
+		res_ns = param->res_ns;
+	else
+		res_ns = GIGA_HZ / param->res_hz;
 
 	/* Scan timer pool twice during resolution interval */
 	if (res_ns > ODP_TIME_USEC_IN_NS)
@@ -344,6 +351,7 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	}
 	tp->shm = shm;
 	tp->param = *param;
+	tp->param.res_ns = res_ns;
 	tp->min_rel_tck = odp_timer_ns_to_tick(timer_pool_to_hdl(tp),
 					       param->min_tmo);
 	tp->max_rel_tck = odp_timer_ns_to_tick(timer_pool_to_hdl(tp),
@@ -1239,9 +1247,11 @@ int odp_timer_capability(odp_timer_clk_src_t clk_src,
 	capa->max_timers = 0;
 	capa->highest_res_ns  = timer_global->highest_res_ns;
 	capa->max_res.res_ns  = timer_global->highest_res_ns;
+	capa->max_res.res_hz  = timer_global->highest_res_hz;
 	capa->max_res.min_tmo = 0;
 	capa->max_res.max_tmo = MAX_TMO_NSEC;
 	capa->max_tmo.res_ns  = timer_global->highest_res_ns;
+	capa->max_tmo.res_hz  = timer_global->highest_res_hz;
 	capa->max_tmo.min_tmo = 0;
 	capa->max_tmo.max_tmo = MAX_TMO_NSEC;
 
@@ -1261,12 +1271,13 @@ int odp_timer_res_capability(odp_timer_clk_src_t clk_src,
 		return -1;
 	}
 
-	if (res_capa->res_ns) {
+	if (res_capa->res_ns || res_capa->res_hz) {
 		res_capa->min_tmo = 0;
 		res_capa->max_tmo = MAX_TMO_NSEC;
 	} else { /* max_tmo */
 		res_capa->min_tmo = 0;
 		res_capa->res_ns  = timer_global->highest_res_ns;
+		res_capa->res_hz  = timer_global->highest_res_hz;
 	}
 
 	return 0;
@@ -1280,7 +1291,20 @@ odp_timer_pool_t odp_timer_pool_create(const char *name,
 		return ODP_TIMER_POOL_INVALID;
 	}
 
-	if (param->res_ns < timer_global->highest_res_ns) {
+	if ((param->res_ns && param->res_hz) ||
+	    (param->res_ns == 0 && param->res_hz == 0)) {
+		__odp_errno = EINVAL;
+		return ODP_TIMER_POOL_INVALID;
+	}
+
+	if (param->res_hz == 0 &&
+	    param->res_ns < timer_global->highest_res_ns) {
+		__odp_errno = EINVAL;
+		return ODP_TIMER_POOL_INVALID;
+	}
+
+	if (param->res_ns == 0 &&
+	    param->res_hz > timer_global->highest_res_hz) {
 		__odp_errno = EINVAL;
 		return ODP_TIMER_POOL_INVALID;
 	}
@@ -1560,6 +1584,9 @@ int _odp_timer_init_global(const odp_init_t *params)
 		timer_res_init();
 		block_sigalarm();
 	}
+
+	/* timer_res_init() may update highest_res_ns */
+	timer_global->highest_res_hz = GIGA_HZ / timer_global->highest_res_ns;
 
 	return 0;
 

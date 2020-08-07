@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/packet_io.h>
+
 #include <string.h>
 #include <linux/if_ether.h>
 
@@ -56,6 +58,11 @@ int promisc_mode_get_fd(int fd, const char *name);
  * Return link status of a packet socket (up/down)
  */
 int link_status_fd(int fd, const char *name);
+
+/**
+ * Read link information from a packet socket
+ */
+int link_info_fd(int fd, const char *name, odp_pktio_link_info_t *info);
 
 #ifdef __cplusplus
 }

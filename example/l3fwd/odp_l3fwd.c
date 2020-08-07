@@ -66,7 +66,8 @@ struct thread_arg_s {
 };
 
 typedef struct {
-	char *if_names[MAX_NB_PKTIO];
+	char *if_names_buf;           /* memory buffer for all if_names */
+	char *if_names[MAX_NB_PKTIO]; /* pointers to name strings stored in if_names_buf */
 	int if_count;
 	char *route_str[MAX_NB_ROUTE];
 	unsigned int worker_count;
@@ -89,7 +90,7 @@ typedef struct {
 	/** Shm for storing global data */
 	odp_shm_t shm;
 	/** Break workers loop if set to 1 */
-	int exit_threads;
+	odp_atomic_u32_t exit_threads;
 
 	/* forward func, hash or lpm */
 	int (*fwd_func)(odp_packet_t pkt, int sif);
@@ -322,7 +323,7 @@ static int run_worker(void *arg)
 
 	odp_barrier_wait(&global->barrier);
 
-	while (!global->exit_threads) {
+	while (!odp_atomic_load_u32(&global->exit_threads)) {
 		if (num_pktio > 1) {
 			if_idx = input_ifs[pktio];
 			inq = input_queues[pktio];
@@ -570,30 +571,25 @@ static void parse_cmdline_args(int argc, char *argv[], app_args_t *args)
 				print_usage(argv[0]);
 				exit(EXIT_FAILURE);
 			}
-
-			/* count the number of tokens separated by ',' */
-			strcpy(local, optarg);
-			for (token = strtok(local, ","), i = 0;
-			     token != NULL;
-			     token = strtok(NULL, ","), i++)
-				;
-
-			if (i == 0) {
-				print_usage(argv[0]);
-				free(local);
-				exit(EXIT_FAILURE);
-			} else if (i > MAX_NB_PKTIO) {
-				printf("too many ports specified, "
-				       "truncated to %d", MAX_NB_PKTIO);
-			}
-			args->if_count = i;
+			args->if_names_buf = local;
 
 			/* store the if names (reset names string) */
 			strcpy(local, optarg);
 			for (token = strtok(local, ","), i = 0;
 			     token != NULL; token = strtok(NULL, ","), i++) {
+				if (i >= MAX_NB_PKTIO) {
+					printf("too many ports specified, "
+					       "truncated to %d", MAX_NB_PKTIO);
+					break; /* for */
+				}
 				args->if_names[i] = token;
 			}
+			if (i == 0) {
+				print_usage(argv[0]);
+				free(local);
+				exit(EXIT_FAILURE);
+			}
+			args->if_count = i;
 			break;
 
 		/*Configure Route in forwarding database*/
@@ -976,6 +972,7 @@ int main(int argc, char **argv)
 	}
 
 	memset(global, 0, sizeof(global_data_t));
+	odp_atomic_init_u32(&global->exit_threads, 0);
 	global->shm = shm;
 
 	/* Initialize the dest mac as 2:0:0:0:0:x */
@@ -1121,7 +1118,7 @@ int main(int argc, char **argv)
 	}
 
 	print_speed_stats(nb_worker, args->duration, PRINT_INTERVAL);
-	global->exit_threads = 1;
+	odp_atomic_store_u32(&global->exit_threads, 1);
 
 	/* wait for other threads to join */
 	for (i = 0; i < nb_worker; i++)
@@ -1137,8 +1134,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/* if_names share a single buffer, so only one free */
-	free(args->if_names[0]);
+	/* if_names share a single buffer */
+	free(args->if_names_buf);
 
 	for (i = 0; i < MAX_NB_ROUTE; i++)
 		free(args->route_str[i]);

@@ -900,6 +900,35 @@ static int ipc_stop(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
+static int ipc_link_status(pktio_entry_t *pktio_entry)
+{
+	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
+
+	if (odp_atomic_load_u32(&pktio_ipc->ready))
+		return ODP_PKTIO_LINK_STATUS_UP;
+	return ODP_PKTIO_LINK_STATUS_DOWN;
+}
+
+static int ipc_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info)
+{
+	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
+
+	memset(info, 0, sizeof(odp_pktio_link_info_t));
+
+	info->autoneg = ODP_PKTIO_LINK_AUTONEG_OFF;
+	info->duplex = ODP_PKTIO_LINK_DUPLEX_FULL;
+	info->media = "virtual";
+	info->pause_rx = ODP_PKTIO_LINK_PAUSE_OFF;
+	info->pause_tx = ODP_PKTIO_LINK_PAUSE_OFF;
+	info->speed = ODP_PKTIO_LINK_SPEED_UNKNOWN;
+	if (odp_atomic_load_u32(&pktio_ipc->ready))
+		info->status = ODP_PKTIO_LINK_STATUS_UP;
+	else
+		info->status = ODP_PKTIO_LINK_STATUS_DOWN;
+
+	return 0;
+}
+
 static int ipc_close(pktio_entry_t *pktio_entry)
 {
 	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
@@ -947,6 +976,8 @@ const pktio_if_ops_t ipc_pktio_ops = {
 	.send = ipc_pktio_send,
 	.start = ipc_start,
 	.stop = ipc_stop,
+	.link_status = ipc_link_status,
+	.link_info = ipc_link_info,
 	.mtu_get = ipc_mtu_get,
 	.promisc_mode_set = NULL,
 	.promisc_mode_get = NULL,
