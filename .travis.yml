@@ -1,5 +1,5 @@
 # Copyright (c) 2016-2019, Linaro Limited
-# Copyright (c) 2019, Nokia
+# Copyright (c) 2019-2020, Nokia
 # All rights reserved.
 # SPDX-License-Identifier:     BSD-3-Clause
 #
@@ -15,7 +15,7 @@
 # which is passed to the containers during a test run.
 
 language: c
-sudo: required
+os: linux
 dist: xenial
 stages:
   - "build only"
@@ -53,7 +53,7 @@ env:
         - ARCH=x86_64
         - CHECK=1
         - NETMAP=0
-    matrix:
+    jobs:
         - CHECK=0 CONF="CFLAGS=-O3"
         - CHECK=0 CONF="CFLAGS=-O0 --enable-debug --enable-debug-print"
         - CHECK=0 CONF="--enable-lto"
@@ -80,17 +80,6 @@ env:
         - CONF="--without-openssl --without-pcap"
         - OS=ubuntu_16.04
         - OS=ubuntu_20.04
-
-matrix:
-  exclude:
-  - compiler: gcc
-    env: CHECK=0 ARCH=arm64
-  - compiler: gcc
-    env: CHECK=0 ARCH=i386
-  - compiler: clang
-    env: CHECK=0 CONF="--enable-lto"
-  - compiler: clang
-    env: CHECK=0 CONF="--enable-lto --disable-abi-compat"
 
 install:
         - if [ ${NETMAP} -eq 1 ] ; then
@@ -121,6 +110,15 @@ script:
                  ${DOCKER_NAMESPACE}/travis-odp-${OS}-${ARCH} /odp/scripts/ci/check.sh ;
           fi
 jobs:
+        exclude:
+                - compiler: gcc
+                  env: CHECK=0 ARCH=arm64
+                - compiler: gcc
+                  env: CHECK=0 ARCH=i386
+                - compiler: clang
+                  env: CHECK=0 CONF="--enable-lto"
+                - compiler: clang
+                  env: CHECK=0 CONF="--enable-lto --disable-abi-compat"
         include:
                 - stage: test
                   env: TEST=coverage
