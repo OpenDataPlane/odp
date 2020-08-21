@@ -295,6 +295,16 @@ void odp_queue_param_init(odp_queue_param_t *param);
 int odp_queue_info(odp_queue_t queue, odp_queue_info_t *info);
 
 /**
+ * Print queue info
+ *
+ * Print implementation defined information about the specified queue to the ODP
+ * log. The information is intended to be used for debugging.
+ *
+ * @param      queue   Queue handle
+ */
+void odp_queue_print(odp_queue_t queue);
+
+/**
  * @}
  */
 
