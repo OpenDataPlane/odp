@@ -1264,6 +1264,81 @@ typedef struct odp_ipsec_status_t {
 } odp_ipsec_status_t;
 
 /**
+ * IPsec statistics
+ */
+typedef struct odp_ipsec_stats_t {
+	/** All packets of an SA received, decrypted
+	 * and authenticated successfully */
+	uint64_t in_sa_pkts;
+
+	/** All packets of an SA received but
+	 * discarded due to anti replay error
+	 */
+	uint64_t in_ar_err_pkts;
+
+	/** All packets of an SA but discarded
+	 * due to decryption or authentication errors.
+	 */
+	uint64_t in_dec_err_pkts;
+
+	/** All packets of an SA encrypted and
+	 * sent successfully
+	 */
+	uint64_t out_sa_pkts;
+
+	/** All packets of an SA with
+	 * encryption failures
+	 */
+	uint64_t out_enc_err_pkts;
+
+	/** Pending counter for soft byte limit of the SA */
+	uint64_t byte_limit_soft_pending;
+
+	/** Pending counter for hard byte limit of the SA */
+	uint64_t byte_limit_hard_pending;
+
+	/** Pending counter for soft pkt limit of the SA */
+	uint64_t pkt_limit_soft_pending;
+
+	/** Pending counter for hard pkt limit of the SA */
+	uint64_t pkt_limit_hard_pending;
+} odp_ipsec_stats_t;
+
+/**
+ * Get IPsec stats.
+ *
+ * Get IPsec stats for multiple SAs.
+ *
+ * @param          sa       Array of IPsec SA handles.
+ * @param[out]     stats    Stats array for output.
+ * @param          num      Number of SA handles.
+ *
+ * All SAs passed should be valid SAs.
+ * Application should not call this function after destroying the
+ * SAs using odp_ipsec_sa_destroy().
+ *
+ * @retval <0     On failure
+ */
+int odp_ipsec_stats_multi(odp_ipsec_sa_t sa[],  odp_ipsec_stats_t *stats[],
+			  int num);
+
+/**
+ * Clear IPsec stats.
+ *
+ * Clear IPsec stats for multiple IPsec SAs.
+ *
+ * @param          sa       Array of IPsec SA handles.
+ * @param          num      Number of SA handles.
+ *
+ * All SAs passed should be valid SAs.
+ * Application should not call this function after destroying the
+ * SAs using odp_ipsec_sa_destroy().
+ *
+ * @retval <0     On failure
+ */
+int odp_ipsec_stats_clear_multi(odp_ipsec_sa_t sa[], int num);
+
+/**
  * Inbound synchronous IPSEC operation
  *
  * This operation does inbound IPSEC processing in synchronous mode
