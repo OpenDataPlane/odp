@@ -1,8 +1,9 @@
 Prerequisites for building the OpenDataPlane (ODP) API
 
-1. Linux kernel >= 2.6.32
-
-   Earlier versions may or may not work.
+1. Linux
+   CentOS 7 (kernel v3.10) and Ubuntu 16.04 (kernel v4.4) are the oldest
+   Linux distributions tested by the ODP CI. Earlier versions may or may not
+   work.
 
 2. autotools
 
