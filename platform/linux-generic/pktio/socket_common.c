@@ -23,6 +23,26 @@
 #include <odp_socket_common.h>
 #include <protocols/eth.h>
 
+/* Fallback for old kernels (< v4.6) */
+#ifndef ETHTOOL_GLINKSETTINGS
+#define ETHTOOL_GLINKSETTINGS 0x0000004c
+
+struct ethtool_link_settings {
+	uint32_t cmd;
+	uint32_t speed;
+	uint8_t  duplex;
+	uint8_t  port;
+	uint8_t  phy_address;
+	uint8_t  autoneg;
+	uint8_t  mdio_support;
+	uint8_t  eth_tp_mdix;
+	uint8_t  eth_tp_mdix_ctrl;
+	int8_t   link_mode_masks_nwords;
+	uint32_t reserved[8];
+	uint32_t link_mode_masks[0];
+};
+#endif
+
 /**
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
