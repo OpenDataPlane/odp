@@ -42,7 +42,11 @@
 #include <protocols/ip.h>
 
 /* VLAN flags in tpacket2_hdr status */
+#ifdef TP_STATUS_VLAN_TPID_VALID
 #define VLAN_VALID (TP_STATUS_VLAN_VALID | TP_STATUS_VLAN_TPID_VALID)
+#else
+#define VLAN_VALID (TP_STATUS_VLAN_VALID)
+#endif
 
 /* Reserve 4MB memory for frames in a RX/TX ring */
 #define FRAME_MEM_SIZE (4 * 1024 * 1024)
@@ -243,7 +247,26 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			memmove(mac, mac + vlan_len, 2 * _ODP_ETHADDR_LEN);
 			type  = (uint16_t *)(uintptr_t)
 				(mac + 2 * _ODP_ETHADDR_LEN);
+
+			#ifdef TP_STATUS_VLAN_TPID_VALID
 			*type = odp_cpu_to_be_16(tp_hdr->tp_vlan_tpid);
+			#else
+			/* Fallback for old kernels (< v3.14) */
+			uint16_t *type2;
+			static int warning_printed;
+
+			if (warning_printed == 0) {
+				ODP_DBG("Original TPID value lost. Using 0x8100 for single tagged and 0x88a8 for double tagged.\n");
+				warning_printed = 1;
+			}
+			type2 = (uint16_t *)(uintptr_t)(mac + (2 * _ODP_ETHADDR_LEN) + vlan_len);
+			/* Recreate TPID 0x88a8 for double tagged and 0x8100 for single tagged */
+			if (*type2 == odp_cpu_to_be_16(0x8100))
+				*type = odp_cpu_to_be_16(0x88a8);
+			else
+				*type = odp_cpu_to_be_16(0x8100);
+			#endif
+
 			tci   = type + 1;
 			*tci  = odp_cpu_to_be_16(tp_hdr->tp_vlan_tci);
 		}
