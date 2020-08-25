@@ -8,10 +8,16 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <odp/api/random.h>
+#include <odp/api/byteorder.h>
 #include <odp/api/cpu.h>
+#include <odp/api/debug.h>
 #include <odp_init_internal.h>
 
 #include <time.h>
+
+/* Assume at least two rand bytes are available and RAND_MAX is power of two - 1 */
+ODP_STATIC_ASSERT(RAND_MAX >= UINT16_MAX, "RAND_MAX too small");
+ODP_STATIC_ASSERT((RAND_MAX & (RAND_MAX + 1))  ==  0, "RAND_MAX not power of two - 1");
 
 odp_random_kind_t odp_random_max_kind(void)
 {
@@ -24,12 +30,14 @@ static int32_t _random_data(uint8_t *buf, uint32_t len, uint32_t *seed)
 		uint32_t rand_word;
 		uint8_t rand_byte[4];
 	} u;
-	uint32_t i = 0, j;
+	uint32_t i = 0, j, k;
 
 	while (i < len) {
 		u.rand_word = rand_r(seed);
 
-		for (j = 0; j < 4 && i < len; j++, i++)
+		/* Use two least significant bytes */
+		j = ODP_LITTLE_ENDIAN ? 0 : 2;
+		for (k = 0; k < 2 && i < len; i++, j++, k++)
 			*buf++ = u.rand_byte[j];
 	}
 
