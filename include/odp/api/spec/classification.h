@@ -285,6 +285,9 @@ typedef struct odp_cls_cos_param {
 
 	/** Back Pressure configuration */
 	odp_bp_param_t bp;
+
+	/** Packet input vector configuration */
+	odp_pktin_vector_config_t vector;
 } odp_cls_cos_param_t;
 
 /**
