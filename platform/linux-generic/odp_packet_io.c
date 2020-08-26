@@ -313,6 +313,7 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
 	pktio_entry->s.handle = hdl;
 	pktio_entry->s.pktin_frame_offset = pktin_frame_offset;
+	odp_atomic_init_u64(&pktio_entry->s.stats_extra.in_discards, 0);
 
 	odp_pktio_config_init(&pktio_entry->s.config);
 
@@ -947,9 +948,7 @@ int sched_cb_pktin_poll_one(int pktio_index,
 			if (num_enq < 0) {
 				/* Queue full? */
 				odp_packet_free(pkt);
-				__atomic_fetch_add(&entry->s.stats.in_discards,
-						   1,
-						   __ATOMIC_RELAXED);
+				odp_atomic_inc_u64(&entry->s.stats_extra.in_discards);
 			}
 		} else {
 			evt_tbl[num_rx++] = odp_packet_to_event(pkt);
@@ -1480,6 +1479,8 @@ int odp_pktio_stats(odp_pktio_t pktio,
 
 	if (entry->s.ops->stats)
 		ret = entry->s.ops->stats(entry, stats);
+	if (odp_likely(ret == 0))
+		stats->in_discards += odp_atomic_load_u64(&entry->s.stats_extra.in_discards);
 	unlock_entry(entry);
 
 	return ret;
@@ -1504,6 +1505,7 @@ int odp_pktio_stats_reset(odp_pktio_t pktio)
 		return -1;
 	}
 
+	odp_atomic_store_u64(&entry->s.stats_extra.in_discards, 0);
 	if (entry->s.ops->stats)
 		ret = entry->s.ops->stats_reset(entry);
 	unlock_entry(entry);
