@@ -93,7 +93,12 @@ struct pktio_entry {
 	} state;
 	odp_pktio_config_t config;	/**< Device configuration */
 	classifier_t cls;		/**< classifier linked with this pktio*/
-	odp_pktio_stats_t stats;	/**< statistic counters for pktio */
+	/* Driver level statistics counters */
+	odp_pktio_stats_t stats;
+	/* Statistics counters used outside drivers */
+	struct {
+		odp_atomic_u64_t in_discards;
+	} stats_extra;
 	odp_proto_chksums_t in_chksums; /**< Checksums validation settings */
 	pktio_stats_type_t stats_type;
 	char name[PKTIO_NAME_LEN];	/**< name of pktio provided to
