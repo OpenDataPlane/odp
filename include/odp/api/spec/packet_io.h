@@ -160,6 +160,50 @@ typedef struct odp_pktin_queue_param_ovr_t {
 } odp_pktin_queue_param_ovr_t;
 
 /**
+ * Packet input vector configuration
+ */
+typedef struct odp_pktin_vector_config_t {
+	/** Enable packet input vector
+	 *
+	 * When true, packet input vector is enabled and configured with vector
+	 * config parameters. Otherwise, packet input vector configuration
+	 * parameters are ignored.
+	 */
+	odp_bool_t enable;
+
+	/** Vector pool
+	 *
+	 * Vector pool to allocate the vectors to hold packets.
+	 * The pool must have been created with the ODP_POOL_VECTOR type.
+	 */
+	odp_pool_t pool;
+
+	/** Maximum time to wait for packets
+	 *
+	 * Maximum timeout in nanoseconds to wait for the producer to form the
+	 * vector of packet events (odp_packet_vector_t). This value should be
+	 * in the range of odp_pktin_vector_capability_t::min_tmo_ns to
+	 * odp_pktin_vector_capability_t::max_tmo_ns.
+	 */
+	uint64_t max_tmo_ns;
+
+	/** Maximum number of packets in a vector
+	 *
+	 * The packet input subsystem forms packet vector events when either
+	 * it reaches odp_pktin_vector_config_t::max_tmo_ns or producer reaches
+	 * max_size packets. This value should be in the range of
+	 * odp_pktin_vector_capability_t::min_size to
+	 * odp_pktin_vector_capability_t::max_size.
+	 *
+	 * @note The maximum number of packets this vector can hold is defined
+	 * by odp_pool_param_t::vector::max_size with odp_pktin_vector_config_t::pool.
+	 * The max_size should not be greater than odp_pool_param_t::vector::max_size.
+	 */
+	uint32_t max_size;
+
+} odp_pktin_vector_config_t;
+
+/**
  * Packet input queue parameters
  */
 typedef struct odp_pktin_queue_param_t {
@@ -226,6 +270,10 @@ typedef struct odp_pktin_queue_param_t {
 	  * NULL.
 	  */
 	odp_pktin_queue_param_ovr_t *queue_param_ovr;
+
+	/** Packet input vector configuration */
+	odp_pktin_vector_config_t vector;
+
 } odp_pktin_queue_param_t;
 
 /**
@@ -570,6 +618,37 @@ typedef union odp_pktio_set_op_t {
 } odp_pktio_set_op_t;
 
 /**
+ * Packet input vector capabilities
+ */
+typedef struct odp_pktin_vector_capability_t {
+	/** Packet input vector availability */
+	odp_support_t supported;
+
+	/** Maximum number of packets that can be accumulated into a packet
+	 *  vector by a producer
+	 *
+	 * odp_pktin_vector_config_t::max_size should not be greater than this
+	 * value. */
+	uint32_t max_size;
+
+	/** Minimum value allowed to be configured to
+	 * odp_pktin_vector_config_t::max_size */
+	uint32_t min_size;
+
+	/** Maximum timeout in nanoseconds for the producer to wait for the
+	 *  vector of packets
+	 *
+	 * odp_pktin_vector_config_t::max_tmo_ns should not be greater than this
+	 * value. */
+	uint64_t max_tmo_ns;
+
+	/** Minimum value allowed to be configured to
+	 * odp_pktin_vector_config_t::max_tmo_ns */
+	uint64_t min_tmo_ns;
+
+} odp_pktin_vector_capability_t;
+
+/**
  * Packet IO capabilities
  */
 typedef struct odp_pktio_capability_t {
@@ -590,6 +669,10 @@ typedef struct odp_pktio_capability_t {
 
 	/** @deprecated Use enable_loop inside odp_pktin_config_t */
 	odp_bool_t ODP_DEPRECATE(loop_supported);
+
+	/** Packet input vector capability */
+	odp_pktin_vector_capability_t vector;
+
 } odp_pktio_capability_t;
 
 /**
