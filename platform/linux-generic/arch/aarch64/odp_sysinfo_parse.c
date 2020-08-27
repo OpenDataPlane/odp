@@ -239,118 +239,118 @@ void sys_info_print_arch(void)
 	(void)ndef;
 
 	/* See ARM C Language Extensions documentation for details */
-	printf("ARM FEATURES:\n");
+	ODP_PRINT("ARM FEATURES:\n");
 
-	printf("  __ARM_ARCH              ");
+	ODP_PRINT("  __ARM_ARCH              ");
 #ifdef __ARM_ARCH
-	printf("%i\n", __ARM_ARCH);
+	ODP_PRINT("%i\n", __ARM_ARCH);
 #else
-	printf("%s\n", ndef);
+	ODP_PRINT("%s\n", ndef);
 #endif
 
-	printf("  __ARM_ARCH_ISA_A64      ");
+	ODP_PRINT("  __ARM_ARCH_ISA_A64      ");
 #ifdef __ARM_ARCH_ISA_A64
-	printf("%i\n", __ARM_ARCH_ISA_A64);
+	ODP_PRINT("%i\n", __ARM_ARCH_ISA_A64);
 #else
-	printf("%s\n", ndef);
+	ODP_PRINT("%s\n", ndef);
 #endif
 
-	printf("  __ARM_NEON              ");
+	ODP_PRINT("  __ARM_NEON              ");
 #ifdef __ARM_NEON
-	printf("%i\n", __ARM_NEON);
+	ODP_PRINT("%i\n", __ARM_NEON);
 #else
-	printf("%s\n", ndef);
+	ODP_PRINT("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_ATOMICS   ");
+	ODP_PRINT("  __ARM_FEATURE_ATOMICS   ");
 #ifdef __ARM_FEATURE_ATOMICS
-	printf("%i\n", __ARM_FEATURE_ATOMICS);
+	ODP_PRINT("%i\n", __ARM_FEATURE_ATOMICS);
 #else
-	printf("%s\n", ndef);
+	ODP_PRINT("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_UNALIGNED ");
+	ODP_PRINT("  __ARM_FEATURE_UNALIGNED ");
 #ifdef __ARM_FEATURE_UNALIGNED
-	printf("%i\n", __ARM_FEATURE_UNALIGNED);
+	ODP_PRINT("%i\n", __ARM_FEATURE_UNALIGNED);
 #else
-	printf("%s\n", ndef);
+	ODP_PRINT("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_IDIV      ");
+	ODP_PRINT("  __ARM_FEATURE_IDIV      ");
 #ifdef __ARM_FEATURE_IDIV
-	printf("%i\n", __ARM_FEATURE_IDIV);
+	ODP_PRINT("%i\n", __ARM_FEATURE_IDIV);
 #else
-	printf("%s\n", ndef);
+	ODP_PRINT("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_QRDMX     ");
+	ODP_PRINT("  __ARM_FEATURE_QRDMX     ");
 #ifdef __ARM_FEATURE_QRDMX
-	printf("%i\n", __ARM_FEATURE_QRDMX);
+	ODP_PRINT("%i\n", __ARM_FEATURE_QRDMX);
 #else
-	printf("%s\n", ndef);
+	ODP_PRINT("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_DOTPROD   ");
+	ODP_PRINT("  __ARM_FEATURE_DOTPROD   ");
 #ifdef __ARM_FEATURE_DOTPROD
-	printf("%i\n", __ARM_FEATURE_DOTPROD);
+	ODP_PRINT("%i\n", __ARM_FEATURE_DOTPROD);
 #else
-	printf("%s\n", ndef);
+	ODP_PRINT("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_CRYPTO    ");
+	ODP_PRINT("  __ARM_FEATURE_CRYPTO    ");
 #ifdef __ARM_FEATURE_CRYPTO
-	printf("%i\n", __ARM_FEATURE_CRYPTO);
+	ODP_PRINT("%i\n", __ARM_FEATURE_CRYPTO);
 #else
-	printf("%s\n", ndef);
+	ODP_PRINT("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_SHA512    ");
+	ODP_PRINT("  __ARM_FEATURE_SHA512    ");
 #ifdef __ARM_FEATURE_SHA512
-	printf("%i\n", __ARM_FEATURE_SHA512);
+	ODP_PRINT("%i\n", __ARM_FEATURE_SHA512);
 #else
-	printf("%s\n", ndef);
+	ODP_PRINT("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_SHA3      ");
+	ODP_PRINT("  __ARM_FEATURE_SHA3      ");
 #ifdef __ARM_FEATURE_SHA3
-	printf("%i\n", __ARM_FEATURE_SHA3);
+	ODP_PRINT("%i\n", __ARM_FEATURE_SHA3);
 #else
-	printf("%s\n", ndef);
+	ODP_PRINT("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_SM3       ");
+	ODP_PRINT("  __ARM_FEATURE_SM3       ");
 #ifdef __ARM_FEATURE_SM3
-	printf("%i\n", __ARM_FEATURE_SM3);
+	ODP_PRINT("%i\n", __ARM_FEATURE_SM3);
 #else
-	printf("%s\n", ndef);
+	ODP_PRINT("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_SM4       ");
+	ODP_PRINT("  __ARM_FEATURE_SM4       ");
 #ifdef __ARM_FEATURE_SM4
-	printf("%i\n", __ARM_FEATURE_SM4);
+	ODP_PRINT("%i\n", __ARM_FEATURE_SM4);
 #else
-	printf("%s\n", ndef);
+	ODP_PRINT("%s\n", ndef);
 #endif
 
-	printf("  __ARM_FEATURE_CRC32     ");
+	ODP_PRINT("  __ARM_FEATURE_CRC32     ");
 #ifdef __ARM_FEATURE_CRC32
-	printf("%i\n", __ARM_FEATURE_CRC32);
+	ODP_PRINT("%i\n", __ARM_FEATURE_CRC32);
 #else
-	printf("%s\n", ndef);
+	ODP_PRINT("%s\n", ndef);
 #endif
 
-	printf("  ARM ISA version:        ");
+	ODP_PRINT("  ARM ISA version:        ");
 #if defined(__ARM_ARCH)
 	if (__ARM_ARCH < 8) {
-		printf("v%i\n", __ARM_ARCH);
+		ODP_PRINT("v%i\n", __ARM_ARCH);
 	} else if (__ARM_ARCH == 8) {
 		/* Actually, this checks for new NEON instructions in
 		 * v8.1, but is currently the only way to distinguish
 		 * v8.0 and >=v8.1. */
 	#ifdef __ARM_FEATURE_QRDMX
-		printf("v8.1 or higher\n");
+		ODP_PRINT("v8.1 or higher\n");
 	#else
-		printf("v8.0\n");
+		ODP_PRINT("v8.0\n");
 	#endif
 	} else {
 		/* ACLE 2018 defines that from v8.1 onwards the value includes
@@ -359,13 +359,13 @@ void sys_info_print_arch(void)
 		int major = __ARM_ARCH / 100;
 		int minor = __ARM_ARCH - (major * 100);
 
-		printf("v%i.%i\n", major, minor);
+		ODP_PRINT("v%i.%i\n", major, minor);
 	}
 #else
-	printf("%s\n", ndef);
+	ODP_PRINT("%s\n", ndef);
 #endif
 
-	printf("\n");
+	ODP_PRINT("\n");
 }
 
 uint64_t odp_cpu_arch_hz_current(int id ODP_UNUSED)

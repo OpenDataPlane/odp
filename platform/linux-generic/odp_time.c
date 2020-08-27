@@ -203,8 +203,8 @@ int _odp_time_init_global(void)
 		if (global->hw_freq_hz == 0)
 			return -1;
 
-		printf("HW time counter freq: %" PRIu64 " hz\n\n",
-		       global->hw_freq_hz);
+		ODP_PRINT("HW time counter freq: %" PRIu64 " hz\n\n",
+			  global->hw_freq_hz);
 
 		global->hw_start = _odp_cpu_global_time();
 		return 0;
