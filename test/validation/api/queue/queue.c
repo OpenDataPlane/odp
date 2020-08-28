@@ -732,7 +732,7 @@ static void queue_test_info(void)
 	q_order = odp_queue_create(nq_order, &param);
 	CU_ASSERT(ODP_QUEUE_INVALID != q_order);
 
-	/* Check info for the plain queue */
+	/* Check info and call print for a plain queue */
 	CU_ASSERT(odp_queue_info(q_plain, &info) == 0);
 	CU_ASSERT(strcmp(nq_plain, info.name) == 0);
 	CU_ASSERT(info.param.type == ODP_QUEUE_TYPE_PLAIN);
@@ -740,8 +740,9 @@ static void queue_test_info(void)
 	ctx = info.param.context; /* 'char' context ptr */
 	CU_ASSERT(ctx == q_plain_ctx);
 	CU_ASSERT(info.param.context == odp_queue_context(q_plain));
+	odp_queue_print(q_plain);
 
-	/* Check info for the scheduled ordered queue */
+	/* Check info and call print for a scheduled ordered queue */
 	CU_ASSERT(odp_queue_info(q_order, &info) == 0);
 	CU_ASSERT(strcmp(nq_order, info.name) == 0);
 	CU_ASSERT(info.param.type == ODP_QUEUE_TYPE_SCHED);
@@ -756,6 +757,7 @@ static void queue_test_info(void)
 	CU_ASSERT(ret == param.sched.lock_count);
 	lock_count = ret;
 	CU_ASSERT(info.param.sched.lock_count == lock_count);
+	odp_queue_print(q_order);
 
 	CU_ASSERT(odp_queue_destroy(q_plain) == 0);
 	CU_ASSERT(odp_queue_destroy(q_order) == 0);
