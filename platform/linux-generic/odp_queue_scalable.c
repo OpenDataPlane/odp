@@ -942,6 +942,77 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 	return 0;
 }
 
+static void queue_print(odp_queue_t handle)
+{
+	odp_pktio_info_t pktio_info;
+	queue_entry_t *queue;
+	uint32_t queue_id;
+	int status;
+
+	queue_id = queue_to_id(handle);
+
+	if (odp_unlikely(queue_id >= CONFIG_MAX_QUEUES)) {
+		ODP_ERR("Invalid queue handle: 0x%" PRIx64 "\n",
+			odp_queue_to_u64(handle));
+		return;
+	}
+
+	queue = get_qentry(queue_id);
+
+	LOCK(&queue->s.lock);
+	status = queue->s.status;
+
+	if (odp_unlikely(status == QUEUE_STATUS_FREE ||
+			 status == QUEUE_STATUS_DESTROYED)) {
+		UNLOCK(&queue->s.lock);
+		ODP_ERR("Invalid queue status:%d\n", status);
+		return;
+	}
+	ODP_PRINT("\nQueue info\n");
+	ODP_PRINT("----------\n");
+	ODP_PRINT("  handle          %p\n", queue->s.handle);
+	ODP_PRINT("  index           %" PRIu32 "\n", queue->s.index);
+	ODP_PRINT("  name            %s\n", queue->s.name);
+	ODP_PRINT("  enq mode        %s\n",
+		  queue->s.param.enq_mode == ODP_QUEUE_OP_MT ? "ODP_QUEUE_OP_MT" :
+		  (queue->s.param.enq_mode == ODP_QUEUE_OP_MT_UNSAFE ? "ODP_QUEUE_OP_MT_UNSAFE" :
+		   (queue->s.param.enq_mode == ODP_QUEUE_OP_DISABLED ? "ODP_QUEUE_OP_DISABLED" :
+		    "unknown")));
+	ODP_PRINT("  deq mode        %s\n",
+		  queue->s.param.deq_mode == ODP_QUEUE_OP_MT ? "ODP_QUEUE_OP_MT" :
+		  (queue->s.param.deq_mode == ODP_QUEUE_OP_MT_UNSAFE ? "ODP_QUEUE_OP_MT_UNSAFE" :
+		   (queue->s.param.deq_mode == ODP_QUEUE_OP_DISABLED ? "ODP_QUEUE_OP_DISABLED" :
+		    "unknown")));
+	ODP_PRINT("  type            %s\n",
+		  queue->s.type == ODP_QUEUE_TYPE_PLAIN ? "ODP_QUEUE_TYPE_PLAIN" :
+		  (queue->s.type == ODP_QUEUE_TYPE_SCHED ? "ODP_QUEUE_TYPE_SCHED" : "unknown"));
+	if (queue->s.type == ODP_QUEUE_TYPE_SCHED) {
+		ODP_PRINT("    sync          %s\n",
+			  queue->s.param.sched.sync == ODP_SCHED_SYNC_PARALLEL ?
+			  "ODP_SCHED_SYNC_PARALLEL" :
+			  (queue->s.param.sched.sync == ODP_SCHED_SYNC_ATOMIC ?
+			   "ODP_SCHED_SYNC_ATOMIC" :
+			   (queue->s.param.sched.sync == ODP_SCHED_SYNC_ORDERED ?
+			    "ODP_SCHED_SYNC_ORDERED" : "unknown")));
+		ODP_PRINT("    priority      %d\n", queue->s.param.sched.prio);
+		ODP_PRINT("    group         %d\n", queue->s.param.sched.group);
+	}
+	if (queue->s.pktin.pktio != ODP_PKTIO_INVALID) {
+		if (!odp_pktio_info(queue->s.pktin.pktio, &pktio_info))
+			ODP_PRINT("  pktin           %s\n", pktio_info.name);
+	}
+	if (queue->s.pktout.pktio != ODP_PKTIO_INVALID) {
+		if (!odp_pktio_info(queue->s.pktout.pktio, &pktio_info))
+			ODP_PRINT("  pktout          %s\n", pktio_info.name);
+	}
+	ODP_PRINT("  timers          %" PRIu32 "\n",
+		  odp_atomic_load_u64(&queue->s.num_timers));
+	ODP_PRINT("  param.size      %" PRIu32 "\n", queue->s.param.size);
+	ODP_PRINT("\n");
+
+	UNLOCK(&queue->s.lock);
+}
+
 static uint64_t queue_to_u64(odp_queue_t hdl)
 {
 	return _odp_pri(hdl);
@@ -1027,7 +1098,8 @@ _odp_queue_api_fn_t queue_scalable_api = {
 	.queue_lock_count = queue_lock_count,
 	.queue_to_u64 = queue_to_u64,
 	.queue_param_init = queue_param_init,
-	.queue_info = queue_info
+	.queue_info = queue_info,
+	.queue_print = queue_print
 };
 
 /* Functions towards internal components */
