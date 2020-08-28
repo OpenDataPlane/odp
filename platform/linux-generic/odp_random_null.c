@@ -17,7 +17,7 @@
 
 /* Assume at least two rand bytes are available and RAND_MAX is power of two - 1 */
 ODP_STATIC_ASSERT(RAND_MAX >= UINT16_MAX, "RAND_MAX too small");
-ODP_STATIC_ASSERT((RAND_MAX & (RAND_MAX + 1))  ==  0, "RAND_MAX not power of two - 1");
+ODP_STATIC_ASSERT((RAND_MAX & (RAND_MAX + 1ULL))  ==  0, "RAND_MAX not power of two - 1");
 
 odp_random_kind_t odp_random_max_kind(void)
 {
