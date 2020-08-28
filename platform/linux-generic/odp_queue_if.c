@@ -96,6 +96,11 @@ int odp_queue_info(odp_queue_t queue, odp_queue_info_t *info)
 	return _odp_queue_api->queue_info(queue, info);
 }
 
+void odp_queue_print(odp_queue_t queue)
+{
+	return _odp_queue_api->queue_print(queue);
+}
+
 int _odp_queue_init_global(void)
 {
 	const char *sched = getenv("ODP_SCHEDULER");

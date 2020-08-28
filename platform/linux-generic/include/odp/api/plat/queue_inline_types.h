@@ -50,6 +50,7 @@ typedef struct {
 	uint64_t (*queue_to_u64)(odp_queue_t queue);
 	void (*queue_param_init)(odp_queue_param_t *param);
 	int (*queue_info)(odp_queue_t queue, odp_queue_info_t *info);
+	void (*queue_print)(odp_queue_t queue);
 } _odp_queue_api_fn_t;
 
 /** @endcond */
