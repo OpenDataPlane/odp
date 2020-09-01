@@ -13,6 +13,11 @@
 # 	https://github.com/OpenDataPlane/odp-docker-images
 # CI scripts are maintained under ./scripts/ci/ directory
 # which is passed to the containers during a test run.
+#
+# Prebuilt Docker images are stored in Docker Hub under 'opendataplane'
+# namespace. Set DOCKER_NAMESPACE Travis environment variable to use a custom
+# namespace. To increase Docker Hub pull quota set DOCKER_USERNAME and
+# DOCKER_TOKEN environment variables accordingly.
 
 language: c
 os: linux
@@ -80,6 +85,13 @@ env:
         - CONF="--without-openssl --without-pcap"
         - OS=ubuntu_16.04
         - OS=ubuntu_20.04
+
+before_install:
+        - if [ -n "${DOCKER_USERNAME}" -a -n "${DOCKER_TOKEN}" ] ; then
+               echo ${DOCKER_TOKEN} | docker login --username ${DOCKER_USERNAME} --password-stdin ;
+          else
+               echo "Using Docker Hub anonymously. May run out of pull quota." ;
+          fi
 
 install:
         - if [ ${NETMAP} -eq 1 ] ; then
