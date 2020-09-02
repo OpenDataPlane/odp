@@ -127,6 +127,8 @@ noinst_HEADERS = \
 		  include/odp_queue_basic_internal.h \
 		  include/odp_queue_lf.h \
 		  include/odp_queue_scalable_internal.h \
+		  include/odp_random_std_internal.h \
+		  include/odp_random_openssl_internal.h \
 		  include/odp_ring_common.h \
 		  include/odp_ring_internal.h \
 		  include/odp_ring_mpmc_internal.h \
@@ -193,6 +195,9 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_queue_lf.c \
 			   odp_queue_scalable.c \
 			   odp_queue_spsc.c \
+			   odp_random.c \
+			   odp_random_std.c \
+			   odp_random_openssl.c \
 			   odp_rwlock.c \
 			   odp_rwlock_recursive.c \
 			   odp_schedule_basic.c \
@@ -234,12 +239,10 @@ __LIB__libodp_linux_la_SOURCES = \
 
 if WITH_OPENSSL
 __LIB__libodp_linux_la_SOURCES += \
-			   odp_crypto_openssl.c \
-			   odp_random_openssl.c
+			   odp_crypto_openssl.c
 else
 __LIB__libodp_linux_la_SOURCES += \
-			   odp_crypto_null.c \
-			   odp_random_null.c
+			   odp_crypto_null.c
 endif
 if ODP_ABI_COMPAT
 __LIB__libodp_linux_la_SOURCES += \

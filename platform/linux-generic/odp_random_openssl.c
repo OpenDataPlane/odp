@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -7,16 +8,20 @@
 #include <odp_posix_extensions.h>
 #include <stdint.h>
 #include <odp/api/random.h>
+#include <odp/autoheader_internal.h>
 #include <odp_init_internal.h>
+#include <odp_random_openssl_internal.h>
 
+#if _ODP_OPENSSL
 #include <openssl/rand.h>
 
-odp_random_kind_t odp_random_max_kind(void)
+odp_random_kind_t _odp_random_openssl_max_kind(void)
 {
 	return ODP_RANDOM_CRYPTO;
 }
 
-int32_t odp_random_data(uint8_t *buf, uint32_t len, odp_random_kind_t kind)
+int32_t _odp_random_openssl_data(uint8_t *buf, uint32_t len,
+				 odp_random_kind_t kind)
 {
 	int rc;
 
@@ -32,7 +37,8 @@ int32_t odp_random_data(uint8_t *buf, uint32_t len, odp_random_kind_t kind)
 	}
 }
 
-int32_t odp_random_test_data(uint8_t *buf, uint32_t len, uint64_t *seed)
+int32_t _odp_random_openssl_test_data(uint8_t *buf, uint32_t len,
+				      uint64_t *seed)
 {
 	union {
 		uint32_t rand_word;
@@ -51,13 +57,34 @@ int32_t odp_random_test_data(uint8_t *buf, uint32_t len, uint64_t *seed)
 	*seed = seed32;
 	return len;
 }
+#else
+/* Dummy functions for building without OpenSSL support */
+odp_random_kind_t _odp_random_openssl_max_kind(void)
+{
+	return ODP_RANDOM_BASIC;
+}
 
-int _odp_random_init_local(void)
+int32_t _odp_random_openssl_data(uint8_t *buf ODP_UNUSED,
+				 uint32_t len ODP_UNUSED,
+				 odp_random_kind_t kind ODP_UNUSED)
+{
+	return -1;
+}
+
+int32_t _odp_random_openssl_test_data(uint8_t *buf ODP_UNUSED,
+				      uint32_t len ODP_UNUSED,
+				      uint64_t *seed ODP_UNUSED)
+{
+	return -1;
+}
+#endif /* _ODP_OPENSSL */
+
+int _odp_random_openssl_init_local(void)
 {
 	return 0;
 }
 
-int _odp_random_term_local(void)
+int _odp_random_openssl_term_local(void)
 {
 	return 0;
 }
