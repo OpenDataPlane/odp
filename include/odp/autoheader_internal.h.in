@@ -26,4 +26,7 @@
 /* Define to 1 to enable pcapng support */
 #undef _ODP_PCAPNG
 
+/* Define to 1 to enable OpenSSL support */
+#undef _ODP_OPENSSL
+
 #endif
