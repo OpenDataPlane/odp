@@ -27,6 +27,8 @@ uint32_t queue_lf_init_global(uint32_t *queue_lf_size,
 void queue_lf_term_global(void);
 void *queue_lf_create(queue_entry_t *queue);
 void queue_lf_destroy(void *queue_lf);
+uint32_t queue_lf_length(void *queue_lf);
+uint32_t queue_lf_max_length(void);
 
 #ifdef __cplusplus
 }

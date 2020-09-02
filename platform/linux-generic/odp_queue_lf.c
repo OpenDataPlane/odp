@@ -394,3 +394,24 @@ void queue_lf_destroy(void *queue_lf_ptr)
 
 	queue_lf->used = 0;
 }
+
+uint32_t queue_lf_length(void *queue_lf_ptr)
+{
+	queue_lf_t *queue_lf = queue_lf_ptr;
+	ring_lf_node_t node_val;
+	uint32_t i;
+	uint32_t num = 0;
+
+	for (i = 0; i < RING_LF_SIZE; i++) {
+		node_val.u128 =  atomic_load_u128(&queue_lf->node[i].u128);
+		if (node_val.s.counter)
+			num++;
+	}
+	return num;
+}
+
+uint32_t queue_lf_max_length(void)
+{
+	return RING_LF_SIZE;
+}
+
