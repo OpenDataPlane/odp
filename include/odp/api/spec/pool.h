@@ -181,6 +181,27 @@ typedef struct odp_pool_capability_t {
 		uint32_t max_cache_size;
 	} tmo;
 
+	/** Vector pool capabilities */
+	struct {
+		/** Maximum number of vector pools */
+		unsigned int max_pools;
+
+		/** Maximum number of vector events in a pool
+		 *
+		 * The value of zero means that limited only by the available
+		 * memory size for the pool. */
+		uint32_t max_num;
+
+		/** Maximum number of general types, such as odp_packet_t, in a vector. */
+		uint32_t max_size;
+
+		/** Minimum size of thread local cache */
+		uint32_t min_cache_size;
+
+		/** Maximum size of thread local cache */
+		uint32_t max_cache_size;
+	} vector;
+
 } odp_pool_capability_t;
 
 /**
@@ -359,6 +380,21 @@ typedef struct odp_pool_param_t {
 		uint32_t cache_size;
 	} tmo;
 
+	/** Parameters for vector pools */
+	struct {
+		/** Number of vectors in the pool */
+		uint32_t num;
+
+		/** Maximum number of general types, such as odp_packet_t, in a vector. */
+		uint32_t max_size;
+
+		/** Maximum number of vectors cached locally per thread
+		 *
+		 *  See buf.cache_size documentation for details.
+		 */
+		uint32_t cache_size;
+	} vector;
+
 } odp_pool_param_t;
 
 /** Packet pool*/
@@ -367,6 +403,12 @@ typedef struct odp_pool_param_t {
 #define ODP_POOL_BUFFER       ODP_EVENT_BUFFER
 /** Timeout pool */
 #define ODP_POOL_TIMEOUT      ODP_EVENT_TIMEOUT
+/** Vector pool
+ *
+ * The pool to hold a vector of general type such as odp_packet_t.
+ * Each vector holds an array of generic types of the same type.
+ */
+#define ODP_POOL_VECTOR	      (ODP_POOL_TIMEOUT + 1)
 
 /**
  * Create a pool
