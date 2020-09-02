@@ -162,6 +162,15 @@ static inline int ring_mpmc_is_empty(ring_mpmc_t *ring)
 	return head == tail;
 }
 
+/* Return current ring length */
+static inline uint32_t ring_mpmc_length(ring_mpmc_t *ring)
+{
+	uint32_t head = odp_atomic_load_u32(&ring->r_head);
+	uint32_t tail = odp_atomic_load_u32(&ring->w_tail);
+
+	return tail - head;
+}
+
 #ifdef __cplusplus
 }
 #endif
