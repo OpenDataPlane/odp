@@ -98,6 +98,12 @@ static inline int ring_st_is_empty(ring_st_t *ring)
 	return ring->head == ring->tail;
 }
 
+/* Return current ring length */
+static inline uint32_t ring_st_length(ring_st_t *ring)
+{
+	return ring->tail - ring->head;
+}
+
 #ifdef __cplusplus
 }
 #endif

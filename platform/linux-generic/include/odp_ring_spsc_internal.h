@@ -114,6 +114,15 @@ static inline int ring_spsc_is_empty(ring_spsc_t *ring)
 	return head == tail;
 }
 
+/* Return current ring length */
+static inline uint32_t ring_spsc_length(ring_spsc_t *ring)
+{
+	uint32_t head = odp_atomic_load_u32(&ring->head);
+	uint32_t tail = odp_atomic_load_u32(&ring->tail);
+
+	return tail - head;
+}
+
 #ifdef __cplusplus
 }
 #endif
