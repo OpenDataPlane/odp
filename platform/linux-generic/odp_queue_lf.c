@@ -367,6 +367,11 @@ void *queue_lf_create(queue_entry_t *queue)
 	int i;
 	queue_lf_t *queue_lf = NULL;
 
+	if (queue_lf_glb == NULL) {
+		ODP_ERR("No lock-free queues available\n");
+		return NULL;
+	}
+
 	if (queue->s.type != ODP_QUEUE_TYPE_PLAIN)
 		return NULL;
 
