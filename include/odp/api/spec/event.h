@@ -58,6 +58,8 @@ extern "C" {
  *     - Crypto completion event (odp_crypto_compl_t)
  * - ODP_EVENT_IPSEC_STATUS
  *     - IPSEC status update event (odp_ipsec_status_t)
+ * - ODP_EVENT_PACKET_VECTOR
+ *     - Vector of packets(odp_packet_t) as odp_packet_vector_t
  */
 
 /**
