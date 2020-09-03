@@ -24,8 +24,9 @@ AC_CHECK_PROGS([REALPATH], [realpath])
 AS_IF([test -z "$REALPATH"], [AC_MSG_ERROR([Could not find 'realpath'])])
 
 AC_ARG_WITH([config-file],
-AS_HELP_STRING([--with-config-file=FILE path to the default configuration file],
-               [(this file must include all configuration options).]),
+AS_HELP_STRING([--with-config-file=FILE], [path to the default configuration file]
+               [(this file must include all configuration options)]
+               [[default=SRCDIR/config/odp-<platform>.conf]]),
             [default_config_path=$withval], [])
 
 rel_default_config_path=`realpath --relative-to=$(pwd) ${default_config_path}`
