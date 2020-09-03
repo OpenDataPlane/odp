@@ -177,6 +177,16 @@ extern "C" {
  */
 
 /**
+ * @typedef odp_packet_vector_t
+ * ODP packet vector
+ */
+
+/**
+ * @def ODP_PACKET_VECTOR_INVALID
+ * Invalid packet vector
+ */
+
+/**
  * Protocol
  */
 typedef enum odp_proto_t {
@@ -2024,6 +2034,34 @@ void odp_packet_shaper_len_adjust_set(odp_packet_t pkt, int8_t adj);
  * @see odp_cls_capability_t::max_mark, odp_pmr_create_opt_t::mark, odp_cls_pmr_create_opt()
  */
 uint64_t odp_packet_cls_mark(odp_packet_t pkt);
+
+/*
+ *
+ * Packet vector handling routines
+ * ********************************************************
+ *
+ */
+
+/**
+ * Get packet vector handle from event
+ *
+ * Converts an ODP_EVENT_PACKET_VECTOR type event to a packet vector handle
+ *
+ * @param ev Event handle
+ * @return Packet vector handle
+ *
+ * @see odp_event_type()
+ */
+odp_packet_vector_t odp_packet_vector_from_event(odp_event_t ev);
+
+/**
+ * Convert packet vector handle to event
+ *
+ * @param pktv Packet vector handle
+ *
+ * @return Event handle
+ */
+odp_event_t odp_packet_vector_to_event(odp_packet_vector_t pktv);
 
 /*
  *

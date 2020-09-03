@@ -35,6 +35,10 @@ typedef ODP_HANDLE_T(odp_packet_seg_t);
 
 #define ODP_PACKET_SEG_INVALID _odp_cast_scalar(odp_packet_seg_t, 0)
 
+typedef ODP_HANDLE_T(odp_packet_vector_t);
+
+#define ODP_PACKET_VECTOR_INVALID _odp_cast_scalar(odp_packet_vector_t, 0)
+
 #define ODP_PACKET_OFFSET_INVALID 0xffff
 
 typedef uint8_t odp_proto_l2_type_t;
