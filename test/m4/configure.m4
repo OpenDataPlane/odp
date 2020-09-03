@@ -3,7 +3,8 @@
 ##########################################################################
 AC_ARG_WITH([tests],
 	    [AS_HELP_STRING([--without-tests],
-			    [don't build and install test applications])],
+			    [don't build and install test applications]
+			    [[default=with]])],
 	    [],
 	    [with_tests=yes])
 AM_CONDITIONAL([WITH_TESTS], [test x$with_tests != xno])

@@ -2,7 +2,8 @@
 # Enable/disable Unit tests
 ##########################################################################
 AC_ARG_ENABLE([test_vald],
-    [AS_HELP_STRING([--enable-test-vald], [run test in test/validation])],
+    [AS_HELP_STRING([--enable-test-vald],
+                    [run test in test/validation [default=enabled]])],
     [test_vald=$enableval],
     [test_vald=check])
 

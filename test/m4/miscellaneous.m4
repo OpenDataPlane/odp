@@ -2,7 +2,8 @@
 # Enable/disable test-cpp
 ##########################################################################
 AC_ARG_ENABLE([test-cpp],
-    [AS_HELP_STRING([--disable-test-cpp], [run basic test against cpp])],
+    [AS_HELP_STRING([--disable-test-cpp], [run basic test against cpp]
+                    [[default=enable-if-cpp-works]])],
     [test_cpp=$enableval],
     [test_cpp=check])
 

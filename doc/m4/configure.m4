@@ -19,7 +19,8 @@ fi
 ##########################################################################
 user_guides=no
 AC_ARG_ENABLE([user-guides],
-    [  --enable-user-guides    generate supplemental users guides],
+    [AS_HELP_STRING([--enable-user-guides],
+                    [generate supplemental users guides [default=disabled]])],
     [if test "x$enableval" = "xyes"; then
         if test -z "$ASCIIDOCTOR";
            then AC_MSG_ERROR([cannot generate user guides without asciidoctor])

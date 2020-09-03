@@ -3,7 +3,8 @@
 ##########################################################################
 AC_ARG_WITH([examples],
 	    [AS_HELP_STRING([--without-examples],
-			    [don't build and install example applications])],
+			    [don't build and install example applications]
+			    [[default=with]])],
 	    [],
 	    [with_examples=yes])
 AM_CONDITIONAL([WITH_EXAMPLES], [test x$with_examples != xno])
@@ -12,7 +13,8 @@ AM_CONDITIONAL([WITH_EXAMPLES], [test x$with_examples != xno])
 # Test examples during 'make check'
 ##########################################################################
 AC_ARG_ENABLE([test-example],
-    [AS_HELP_STRING([--enable-test-example], [run basic test against examples])],
+    [AS_HELP_STRING([--enable-test-example],
+		    [run basic test against examples [default=enabled]])],
     [test_example=$enableval],
     [test_example=yes])
 AM_CONDITIONAL([test_example], [test x$test_example = xyes ])

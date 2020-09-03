@@ -2,7 +2,8 @@
 # Enable/disable test-helper
 ##########################################################################
 AC_ARG_ENABLE([test-helper],
-    [AS_HELP_STRING([--enable-test-helper], [run test in helper/test])],
+    [AS_HELP_STRING([--enable-test-helper],
+		    [run test in helper/test [default=enabled]])],
     [test_helper=$enableval],
     [test_helper=yes])
 AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
@@ -11,7 +12,8 @@ AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
 # Enable/disable Linux helpers
 ##########################################################################
 AC_ARG_ENABLE([helper-linux],
-    [AS_HELP_STRING([--disable-helper-linux], [disable Linux helpers])],
+    [AS_HELP_STRING([--disable-helper-linux],
+		   [disable Linux helpers [default=enabled]])],
     [helper_linux=$enableval],
     [helper_linux=yes])
 
