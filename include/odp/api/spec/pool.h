@@ -407,6 +407,7 @@ typedef struct odp_pool_param_t {
  *
  * The pool to hold a vector of general type such as odp_packet_t.
  * Each vector holds an array of generic types of the same type.
+ * @see ODP_EVENT_PACKET_VECTOR
  */
 #define ODP_POOL_VECTOR	      (ODP_POOL_TIMEOUT + 1)
 
