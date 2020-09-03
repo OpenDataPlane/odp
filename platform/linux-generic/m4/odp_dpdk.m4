@@ -11,7 +11,7 @@ AC_ARG_ENABLE([dpdk],
 
 AC_ARG_WITH([dpdk-path],
 [AS_HELP_STRING([--with-dpdk-path=DIR],
-		[path to dpdk build directory [default=system]])],
+		[path to DPDK build directory [default=system]])],
     [DPDK_PATH="$withval"
      pktio_dpdk_support=yes],[])
 
