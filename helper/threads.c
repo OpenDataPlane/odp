@@ -182,7 +182,7 @@ static int create_pthread(odph_thread_t *thread, int cpu)
 			     run_thread,
 			     &thread->start_args);
 	if (ret != 0) {
-		ODPH_ERR("Failed to start thread on cpu #%d\n", cpu);
+		ODPH_ERR("Failed to start thread on CPU #%d: %d\n", cpu, ret);
 		thread->cpu = FAILED_CPU;
 		return ret;
 	}

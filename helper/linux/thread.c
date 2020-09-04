@@ -89,7 +89,8 @@ int odph_linux_pthread_create(odph_linux_pthread_t *pthread_tbl,
 				     _odph_run_start_routine,
 				     &pthread_tbl[i].thr_params);
 		if (ret != 0) {
-			ODPH_ERR("Failed to start thread on cpu #%d\n", cpu);
+			ODPH_ERR("Failed to start thread on CPU #%d: %d\n", cpu,
+				 ret);
 			break;
 		}
 
