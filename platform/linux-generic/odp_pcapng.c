@@ -373,7 +373,7 @@ int _odp_pcapng_start(pktio_entry_t *entry)
 	ret = pthread_create(&pcapng_gbl->inotify_thread, &attr, inotify_update,
 			     &pcapng_gbl->inotify_fd);
 	if (ret) {
-		ODP_ERR("can't start inotify thread. pcap disabled\n");
+		ODP_ERR("Can't start inotify thread (ret=%d). pcapng disabled.\n", ret);
 	} else {
 		pcapng_gbl->entry[odp_pktio_index(entry->s.handle)] = entry;
 		pcapng_gbl->num_entries++;

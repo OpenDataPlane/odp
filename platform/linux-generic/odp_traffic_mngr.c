@@ -2745,8 +2745,8 @@ static int tm_thread_create(tm_system_group_t *tm_group)
 	rc = pthread_create(&tm_group->thread, &tm_group->attr,
 			    tm_system_thread, tm_group);
 	if (rc != 0)
-		ODP_DBG("Failed to start thread on cpu num=%u\n", cpu_num);
-
+		ODP_ERR("Failed to start TM thread on CPU #%u: %d\n", cpu_num,
+			rc);
 	return rc;
 }
 static void _odp_tm_group_destroy(_odp_tm_group_t odp_tm_group)

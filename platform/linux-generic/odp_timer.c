@@ -1188,7 +1188,7 @@ static void itimer_init(timer_pool_t *tp)
 	odp_atomic_init_u32(&tp->thr_ready, 0);
 	ret = pthread_create(&tp->thr_pthread, NULL, timer_thread, tp);
 	if (ret)
-		ODP_ABORT("unable to create timer thread\n");
+		ODP_ABORT("Unable to create timer thread: %d\n", ret);
 
 	/* wait thread set tp->thr_pid */
 	while (tp->thr_pid == 0)
