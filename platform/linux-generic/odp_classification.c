@@ -180,7 +180,15 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 	capability->threshold_red.all_bits = 0;
 	capability->threshold_bp.all_bits = 0;
 	capability->max_hash_queues = CLS_COS_QUEUE_MAX;
+	capability->max_mark = 0;
 	return 0;
+}
+
+void odp_cls_pmr_create_opt_init(odp_pmr_create_opt_t *opt)
+{
+	opt->terms = NULL;
+	opt->num_terms = 0;
+	opt->mark = 0;
 }
 
 static void _odp_cls_update_hash_proto(cos_t *cos,
@@ -736,6 +744,19 @@ odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 
 	UNLOCK(&pmr->s.lock);
 	return id;
+}
+
+odp_pmr_t odp_cls_pmr_create_opt(const odp_pmr_create_opt_t *opt,
+				 odp_cos_t src_cos, odp_cos_t dst_cos)
+{
+	if (opt == NULL)
+		return ODP_PMR_INVALID;
+
+	/* Current implementation does not support mark > 0*/
+	if (opt->mark != 0)
+		return ODP_PMR_INVALID;
+
+	return odp_cls_pmr_create(opt->terms, opt->num_terms, src_cos, dst_cos);
 }
 
 int odp_cls_cos_pool_set(odp_cos_t cos_id, odp_pool_t pool)

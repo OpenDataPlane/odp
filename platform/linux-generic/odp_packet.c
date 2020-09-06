@@ -2843,3 +2843,10 @@ odp_proto_l4_type_t odp_packet_l4_type(odp_packet_t pkt)
 
 	return ODP_PROTO_L4_TYPE_NONE;
 }
+
+uint64_t odp_packet_cls_mark(odp_packet_t pkt)
+{
+	(void)pkt;
+
+	return 0;
+}
