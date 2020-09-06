@@ -204,6 +204,10 @@ typedef struct odp_cls_capability_t {
 
 	/** Supported threshold type for BP */
 	odp_threshold_types_t threshold_bp;
+
+	/** Maximum value of odp_pmr_create_opt_t::mark */
+	uint64_t max_mark;
+
 } odp_cls_capability_t;
 
 /**
@@ -606,6 +610,30 @@ typedef struct odp_pmr_param_t {
 } odp_pmr_param_t;
 
 /**
+ * Packet Matching Rule creation options
+ */
+typedef struct odp_pmr_create_opt_t {
+	/** PMR terms
+	 *
+	 *  Array of odp_pmr_param_t entries, one entry per term desired.
+	 *  Use odp_cls_pmr_param_init() to initialize parameters into their default values.
+	 */
+	odp_pmr_param_t *terms;
+
+	/** Number of terms in the match rule. */
+	int num_terms;
+
+	/** Classification mark value
+	 *
+	 * Value to be set in the CLS mark of a packet when the packet matches this
+	 * Packet Matching Rule. The default value is zero. The maximum value is indicated in
+	 * odp_cls_capability_t::max_mark capability.
+	 */
+	uint64_t mark;
+
+} odp_pmr_create_opt_t;
+
+/**
  * Initialize packet matching rule parameters
  *
  * Initialize an odp_pmr_param_t to its default values for all fields
@@ -613,6 +641,15 @@ typedef struct odp_pmr_param_t {
  * @param param        Address of the odp_pmr_param_t to be initialized
  */
 void odp_cls_pmr_param_init(odp_pmr_param_t *param);
+
+/**
+ * Initialize packet matching rule creation option
+ *
+ * Initialize an odp_pmr_create_opt_t to its default values for all fields
+ *
+ * @param opt       Address of the odp_pmr_create_opt_t to be initialized
+ */
+void odp_cls_pmr_create_opt_init(odp_pmr_create_opt_t *opt);
 
 /**
  * Create a packet matching rule
@@ -640,10 +677,36 @@ void odp_cls_pmr_param_init(odp_pmr_param_t *param);
  *
  * @return Handle to the Packet Match Rule.
  * @retval ODP_PMR_INVALID on failure
+ *
+ * @note Matching PMR rule created through this function sets the CLS mark metadata
+ * of the packet to zero.
+ *
+ * @note Rules created through this function are equivalent to rules created through
+ * odp_cls_pmr_create_opt() with the same PMR terms and with the additional option
+ * fields set to their default values.
  */
 odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 			     odp_cos_t src_cos, odp_cos_t dst_cos);
 
+/**
+ * Create a packet matching rule with options
+ *
+ * Similar to odp_cls_pmr_create() function with additional PMR creation
+ * options specified through odp_pmr_create_opt_t.
+ *
+ * Use odp_cls_pmr_create_opt_init() to initialize options into their default
+ * values.
+ *
+ * @param opt	       points to PMR create options
+ * @param src_cos      source CoS handle
+ * @param dst_cos      destination CoS handle
+ *
+ * @return Handle to the Packet Match Rule.
+ * @retval ODP_PMR_INVALID on failure
+ *
+ */
+odp_pmr_t odp_cls_pmr_create_opt(const odp_pmr_create_opt_t *opt,
+				 odp_cos_t src_cos, odp_cos_t dst_cos);
 /**
  * Function to destroy a packet match rule
  * Destroying a PMR removes the link between the source and destination
