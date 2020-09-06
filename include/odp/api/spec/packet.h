@@ -1990,6 +1990,20 @@ int8_t odp_packet_shaper_len_adjust(odp_packet_t pkt);
  */
 void odp_packet_shaper_len_adjust_set(odp_packet_t pkt, int8_t adj);
 
+/**
+ * Get CLS mark value from the odp_packet_t
+ *
+ * Get the value of the CLS mark of the packet.
+ * The mark value is zero by default but may be changed by the classification subsystem.
+ *
+ * @param pkt Packet handle
+ * @return mark value
+ * @see odp_cls_capability_t::max_mark
+ * @see odp_pmr_create_opt_t::mark
+ * @see odp_cls_pmr_create_opt()
+ */
+uint64_t odp_packet_cls_mark(odp_packet_t pkt);
+
 /*
  *
  * Debugging
