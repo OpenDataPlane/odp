@@ -121,6 +121,10 @@ typedef union odp_pktin_hash_proto_t {
 		uint32_t ipv6_tcp : 1;
 		/** IPv6 addresses */
 		uint32_t ipv6     : 1;
+		/** Destination MAC address */
+		uint32_t dmac	  : 1;
+		/** Custom L3 fields */
+		uint32_t l3_custom: 1;
 	} proto;
 
 	/** All bits of the bit field structure */
