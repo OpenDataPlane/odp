@@ -24,7 +24,7 @@
 #   help (for MS users), 'CHI' for generating a separate .chi file by the
 #   .chm file, and 'MAN', 'RTF', 'XML', 'PDF' and 'PS' for the appropriate
 #   output formats. The environment variable DOXYGEN_PAPER_SIZE may be
-#   specified to override the default 'a4wide' paper size.
+#   specified to override the default 'a4' paper size.
 #
 #   By default, HTML, PDF and PS documentation is generated as this seems to
 #   be the most popular and portable combination. MAN pages created by
@@ -363,13 +363,13 @@ fi
 
 # Paper size for PS and/or PDF:
 AC_ARG_VAR(DOXYGEN_PAPER_SIZE,
-           [a4wide (default), a4, letter, legal or executive])
+           [a4(default), letter, legal or executive])
 case "$DOXYGEN_PAPER_SIZE" in
 #(
 "")
     AC_SUBST(DOXYGEN_PAPER_SIZE, "")
 ;; #(
-a4wide|a4|letter|legal|executive)
+a4|letter|legal|executive)
     DX_ENV_APPEND(PAPER_SIZE, $DOXYGEN_PAPER_SIZE)
 ;; #(
 *)
