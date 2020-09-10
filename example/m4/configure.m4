@@ -20,6 +20,7 @@ AC_ARG_ENABLE([test-example],
 AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
 
 AC_CONFIG_FILES([example/classifier/Makefile
+		 example/debug/Makefile
 		 example/generator/Makefile
 		 example/hello/Makefile
 		 example/ipsec/Makefile

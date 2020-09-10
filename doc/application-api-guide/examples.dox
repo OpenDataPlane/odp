@@ -10,6 +10,11 @@
  */
 
 /**
+ * @example odp_debug.c
+ * Debug example application
+ */
+
+/**
  * @example odp_generator.c
  * Traffic generator and loopback demo application
  */

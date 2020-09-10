@@ -1,4 +1,5 @@
 SUBDIRS = classifier \
+	  debug \
 	  generator \
 	  hello \
 	  ipsec \
