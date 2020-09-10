@@ -1237,7 +1237,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 
 		case 'p':
-			rc = create_sp_db_entry(optarg);
+			rc = create_sp_db_entry(optarg, FALSE);
 			break;
 
 		case 'a':
@@ -1326,7 +1326,7 @@ static void usage(char *progname)
 	       "\n"
 	       "Routing / IPSec OPTIONS:\n"
 	       " -r, --route SubNet:Intf:NextHopMAC\n"
-	       " -p, --policy SrcSubNet:DstSubNet:(in|out):(ah|esp|both)\n"
+	       " -p, --policy SrcSubNet:DstSubNet:(in|out):(ah|esp)\n"
 	       " -e, --esp SrcIP:DstIP:(3des|null):SPI:Key192\n"
 	       " -a, --ah SrcIP:DstIP:(sha256|md5|null):SPI:Key(256|128)\n"
 	       "\n"
