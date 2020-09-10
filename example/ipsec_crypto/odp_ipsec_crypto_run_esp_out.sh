@@ -9,7 +9,7 @@ if [ -z "$IPSEC_EXAMPLE_PATH" ]; then
 IPSEC_EXAMPLE_PATH=.
 fi
 
-${IPSEC_EXAMPLE_PATH}/odp_ipsec -i loop1,loop2 \
+${IPSEC_EXAMPLE_PATH}/odp_ipsec_crypto -i loop1,loop2 \
 -r 192.168.222.2/32:loop2:08.00.27.F5.8B.DB \
 -p 192.168.111.0/24:192.168.222.0/24:out:esp \
 -e 192.168.111.2:192.168.222.2:\

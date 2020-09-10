@@ -15,16 +15,16 @@ fi
 # Absolute path to the example binary. This is needed during distcheck, which
 # keeps scripts and binaries in different directories (scripts are not copied
 # into the distribution directory).
-export IPSEC_EXAMPLE_PATH=$(pwd)/../../../example/ipsec
+export IPSEC_EXAMPLE_PATH=$(pwd)/../../../example/ipsec_crypto
 
 declare -i RESULT=0
 
-pushd $(dirname $0)/../../../../example/ipsec
+pushd $(dirname $0)/../../../../example/ipsec_crypto
 
-./odp_ipsec_run_simple.sh
+./odp_ipsec_crypto_run_simple.sh
 RESULT+=$?
 
-./odp_ipsec_run_esp_out.sh
+./odp_ipsec_crypto_run_esp_out.sh
 RESULT+=$?
 
 popd

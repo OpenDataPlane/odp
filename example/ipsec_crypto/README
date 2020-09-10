@@ -5,9 +5,11 @@ SPDX-License-Identifier:        BSD-3-Clause
 
 1. Intro
 
-The IPsec example application "odp_ipsec" functions as a simple L3 IPv4 router
-with support IPsec 3DES cipher and HMAC-MD5 authentication in both the transmit
-and receive directions. Note that only IPsec "transport" mode is supported.
+The odp_ipsec_crypto example application demonstrates an IPsec implementation
+using ODP crypto APIs. The application functions as a simple L3 IPv4 router
+which supports IPsec 3DES cipher and HMAC-MD5 authentication in both the
+transmit and receive directions. Note that only IPsec "transport" mode is
+supported.
 
 2. Prerequisites
 
@@ -75,7 +77,7 @@ VM1 has the following interface configurations:
 
 The application is launched on VM1 with the following command:
 
-         sudo ./odp_ipsec -i p7p1,p8p1 \
+         sudo ./odp_ipsec_crypto -i p7p1,p8p1 \
          -r 192.168.111.2/32:p7p1:08.00.27.76.B5.E0 \
          -r 192.168.222.2/32:p8p1:08.00.27.F5.8B.DB \
          -p 192.168.111.0/24:192.168.222.0/24:out:both \
@@ -104,7 +106,7 @@ In addition, static ARP and IPv4 routes must be added on VM2:
          sudo arp -s 192.168.222.1 08:00:27:4c:55:cc
 
 VM2 must be setup with an IPsec configuration complementing
-the configuration used by the "odp_ipsec" application running
+the configuration used by the "odp_ipsec_crypto" application running
 on VM1. The configuration is applied using "setkey" (provided by ipsec-tools
 package).
 
@@ -139,8 +141,8 @@ Apply the setkey configuration:
 5. Sanity Test with Real Traffic
 
 Once all three VMs have been configured, static ARP and route entries added,
-setkey configuration applied, and odp_ipsec application is running, VM0 should
-be able to ping VM2 at the 192.168.222.2 address.
+setkey configuration applied, and odp_ipsec_crypto application is running, VM0
+should be able to ping VM2 at the 192.168.222.2 address.
 
 At VM0 console issue the ping to VM2's address:
 
@@ -165,5 +167,5 @@ At VM2 console use tcpdump to observe IPsec packets:
 BASH batch files are now included to run several simple loopback tests that
 do not require any packet IO. The scripts create internal "loopback" packet
 interfaces.
-Before running the example bash scripts add odp_ipsec to your PATH
-export PATH="<path_to_odp_ipsec>:$PATH"
+Before running the example bash scripts add odp_ipsec_crypto to your PATH
+export PATH="<path_to_odp_ipsec_crypto>:$PATH"
