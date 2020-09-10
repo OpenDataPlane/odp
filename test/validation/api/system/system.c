@@ -18,7 +18,7 @@
 #define KILO_HZ 1000ULL
 
 /* 10 usec wait time assumes >100kHz resolution on CPU cycles counter */
-#define CPU_CYCLES_WAIT_NS 10000
+#define WAIT_TIME (10 * ODP_TIME_USEC_IN_NS)
 
 static void test_version_api_str(void)
 {
@@ -86,13 +86,28 @@ static void system_test_odp_cpu_count(void)
 
 static void system_test_cpu_cycles(void)
 {
-	uint64_t c2, c1;
+	uint64_t c2, c1, diff, max;
 
 	c1 = odp_cpu_cycles();
-	odp_time_wait_ns(CPU_CYCLES_WAIT_NS);
+	odp_time_wait_ns(WAIT_TIME);
 	c2 = odp_cpu_cycles();
 
 	CU_ASSERT(c2 != c1);
+
+	max = odp_cpu_cycles_max();
+
+	/* With 10 usec delay, diff should be small compared to the maximum.
+	 * Otherwise, counter is going backwards. */
+	if (c2 > c1) {
+		diff = c2 - c1;
+		CU_ASSERT(diff < (max - diff));
+	}
+
+	/* Same applies also when there was a wrap. */
+	if (c2 < c1) {
+		diff = max - c1 + c2;
+		CU_ASSERT(diff < (max - diff));
+	}
 }
 
 static void system_test_cpu_cycles_max(void)
@@ -101,14 +116,14 @@ static void system_test_cpu_cycles_max(void)
 	uint64_t max1, max2;
 
 	max1 = odp_cpu_cycles_max();
-	odp_time_wait_ns(CPU_CYCLES_WAIT_NS);
+	odp_time_wait_ns(WAIT_TIME);
 	max2 = odp_cpu_cycles_max();
 
 	CU_ASSERT(max1 >= UINT32_MAX / 2);
 	CU_ASSERT(max1 == max2);
 
 	c1 = odp_cpu_cycles();
-	odp_time_wait_ns(CPU_CYCLES_WAIT_NS);
+	odp_time_wait_ns(WAIT_TIME);
 	c2 = odp_cpu_cycles();
 
 	CU_ASSERT(c1 <= max1 && c2 <= max1);
@@ -143,6 +158,18 @@ static void system_test_cpu_cycles_diff(void)
 
 	res = odp_cpu_cycles_resolution();
 	max = odp_cpu_cycles_max();
+
+	c1 = res;
+	c2 = 2 * res;
+	diff = odp_cpu_cycles_diff(c2, c1);
+	CU_ASSERT(diff == res);
+
+	c1 = odp_cpu_cycles();
+	odp_time_wait_ns(WAIT_TIME);
+	c2 = odp_cpu_cycles();
+	diff = odp_cpu_cycles_diff(c2, c1);
+	CU_ASSERT(diff > 0);
+	CU_ASSERT(diff < (max - diff));
 
 	/* check resolution for wrap */
 	c1 = max - 2 * res;
