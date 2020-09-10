@@ -1538,7 +1538,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 
 		case 'p':
-			rc = create_sp_db_entry(optarg);
+			rc = create_sp_db_entry(optarg, TRUE);
 			break;
 
 		case 'a':

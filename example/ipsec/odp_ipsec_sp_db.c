@@ -43,7 +43,7 @@ void init_sp_db(void)
 	memset(sp_db, 0, sizeof(*sp_db));
 }
 
-int create_sp_db_entry(char *input)
+int create_sp_db_entry(char *input, odp_bool_t both_supported)
 {
 	int pos = 0;
 	char *local;
@@ -106,6 +106,13 @@ int create_sp_db_entry(char *input)
 
 		/* Advance to next position */
 		pos++;
+	}
+
+	/* Check if enabling both AH and ESP protocols is supported */
+	if (!both_supported && (entry->ah && entry->esp)) {
+		printf("ERROR: enabling both AH and ESP is not supported\n");
+		free(local);
+		return -1;
 	}
 
 	/* Verify we parsed exactly the number of tokens we expected */
