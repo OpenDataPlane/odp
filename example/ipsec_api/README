@@ -1,0 +1,157 @@
+Copyright (c) 2014-2018, Linaro Limited
+Copyright (c) 2020, Nokia
+All rights reserved.
+
+SPDX-License-Identifier:        BSD-3-Clause
+
+1. Intro
+
+The IPsec API example application "odp_ipsec_api" functions as a simple L3 IPv4
+router which supports IPsec AH and ESP protocols in both transmit and receive
+directions. AH and ESP protocols are not supported simultaneously.
+
+With ESP, the application supports 3DES and NULL encryption algorithms, with
+NULL authentication. With AH, HMAC-MD5 or HMAC-SHA-256 integrity algorithms are
+supported.
+
+2. Prerequisites
+
+  2.1 SSL development libraries
+
+Development has been done to this point with the openssl-devel libraries,
+the makefile specifically links with "-lcrypto".
+
+3. Topology
+
+The following test topology was used for development. Each of the VMs
+is running Fedora 32. Sanity testing consists of pinging VM2 from VM0
+such that the packets traverse VM1. Packets between VM1 and VM2 are
+IPsec AH or ESP encapsulated.
+
+     VM0                            VM1 (UUT)                          VM2
++------------+                  +--------------+                  +------------+
+|            |     (clear)      |              |     (crypto)     |            |
+|            |      subnet      |              |      subnet      |            |
+|       p7p1 |<---------------->| p7p1    p8p1 |<---------------->| p7p1       |
+|        .2  |   192.168.111.0  |  .1      .1  |   192.168.222.0  |  .2        |
+|            |                  |              |                  |            |
++------------+                  +--------------+                  +------------+
+
+4. VM configurations
+
+  4.1 VM0 configuration
+
+VM0 has the following interface configuration:
+
+$ cat /etc/sysconfig/network-scripts/ifcfg-p7p1
+DEVICE=p7p1
+HWADDR=08:00:27:76:B5:E0
+BOOTPROTO=static
+IPADDR=192.168.111.2
+NETMASK=255.255.255.0
+ONBOOT=yes
+
+In addition, static ARP and IPv4 routes must be added on VM0:
+
+$ sudo ip route add 192.168.222.0/24 via 192.168.111.1
+$ sudo arp -s 192.168.111.1 08:00:27:04:BF:8C
+
+  4.2 VM1 configuration
+
+For the unit under test, IP forwarding and IP tables were disabled.
+
+VM1 has the following interface configurations:
+
+$ cat /etc/sysconfig/network-scripts/ifcfg-p7p1
+DEVICE=p7p1
+HWADDR=08:00:27:04:BF:8C
+BOOTPROTO=static
+IPADDR=192.168.111.1
+NETMASK=255.255.255.0
+ONBOOT=yes
+
+$ cat /etc/sysconfig/network-scripts/ifcfg-p8p1
+DEVICE=p8p1
+HWADDR=08:00:27:4C:55:CC
+BOOTPROTO=static
+IPADDR=192.168.222.1
+NETMASK=255.255.255.0
+ONBOOT=yes
+
+The application is launched on VM1 with the following command:
+
+$ sudo ./odp_ipsec_api -i p7p1,p8p1 \
+-r 192.168.111.2/32:p7p1:08.00.27.76.B5.E0 \
+-r 192.168.222.2/32:p8p1:08.00.27.F5.8B.DB \
+-p 192.168.111.0/24:192.168.222.0/24:out:esp \
+-e 192.168.111.2:192.168.222.2:3des:201:656c8523255ccc23a66c1917aa0cf30991fce83532a4b224 \
+-p 192.168.222.0/24:192.168.111.0/24:in:esp \
+-e 192.168.222.2:192.168.111.2:3des:301:c966199f24d095f3990a320d749056401e82b26570320292 \
+-c 2 -m 0
+
+  4.3 VM2 configuration
+
+VM2 has the following interface configuration:
+
+$ cat /etc/sysconfig/network-scripts/ifcfg-p7p1
+DEVICE=p7p1
+HWADDR=08:00:27:F5:8B:DB
+BOOTPROTO=static
+IPADDR=192.168.222.2
+NETMASK=255.255.255.0
+ONBOOT=yes
+
+In addition, static ARP and IPv4 routes must be added on VM2:
+
+$ sudo ip route add 192.168.111.0/24 via 192.168.222.1
+$ sudo arp -s 192.168.222.1 08:00:27:4C:55:CC
+
+VM2 must be setup with an IPsec configuration complementing the configuration
+used by the "odp_ipsec_api" application running on VM1. The configuration is
+applied using "setkey" (provided by ipsec-tools package).
+
+VM2 uses the following setkey configuration:
+
+$ cat setkey_vm2.conf
+# Flush the SAD and SPD
+flush;
+spdflush;
+add 192.168.111.2 192.168.222.2 esp 0x201 -E 3des-cbc
+0x656c8523255ccc23a66c1917aa0cf30991fce83532a4b224;
+add 192.168.222.2 192.168.111.2 esp 0x301 -E 3des-cbc
+0xc966199f24d095f3990a320d749056401e82b26570320292;
+spdadd 192.168.111.2 192.168.222.2 any -P in ipsec esp/transport//require;
+spdadd 192.168.222.2 192.168.111.2 any -P out ipsec esp/transport//require;
+
+Apply the setkey configuration:
+$ sudo setkey -f setkey_vm2.conf
+
+5. Sanity Test with Real Traffic
+
+Once all three VMs have been configured, static ARP and route entries added,
+setkey configuration applied, and odp_ipsec_api application is running, VM0
+should be able to ping VM2 at the 192.168.222.2 address.
+
+At VM0 console issue the ping to VM2's address:
+
+$ sudo ping -c 2 -i 0.1 192.168.222.2
+PING 192.168.222.2 (192.168.222.2) 56(84) bytes of data.
+64 bytes from 192.168.222.2: icmp_seq=1 ttl=64 time=0.614 ms
+64 bytes from 192.168.222.2: icmp_seq=2 ttl=64 time=0.560 ms
+
+At VM2 console use tcpdump to observe IPsec packets:
+
+$ sudo tcpdump -nt -i p7p1
+dropped privs to tcpdump
+tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+listening on enp0s9, link-type EN10MB (Ethernet), capture size 262144 bytes
+IP 192.168.111.2 > 192.168.222.2: ESP(spi=0x00000201,seq=0x196), length 88
+IP 192.168.222.2 > 192.168.111.2: ESP(spi=0x00000301,seq=0xf4), length 88
+IP 192.168.111.2 > 192.168.222.2: ESP(spi=0x00000201,seq=0x197), length 88
+IP 192.168.222.2 > 192.168.111.2: ESP(spi=0x00000301,seq=0xf5), length 88
+
+6. Standalone Loopback Tests
+
+Bash script files are also included to run several simple loopback tests that
+do not require any packet IO. The scripts create internal "loopback" packet
+interfaces.
