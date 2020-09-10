@@ -10,9 +10,9 @@
 
 #include "odp_cunit_common.h"
 
-#define DIFF_TRY_NUM			160
-#define RES_TRY_NUM			10
-#define PAGESZ_NUM			10
+#define PERIODS_100_MSEC  160
+#define RES_TRY_NUM       10
+#define PAGESZ_NUM        10
 
 #define GIGA_HZ 1000000000ULL
 #define KILO_HZ 1000ULL
@@ -138,8 +138,7 @@ static void system_test_cpu_cycles_resolution(void)
 
 static void system_test_cpu_cycles_diff(void)
 {
-	int i;
-	uint64_t c2, c1, c3, max;
+	uint64_t c2, c1, max;
 	uint64_t tmp, diff, res;
 
 	res = odp_cpu_cycles_resolution();
@@ -165,9 +164,21 @@ static void system_test_cpu_cycles_diff(void)
 	diff = odp_cpu_cycles_diff(c1, c2);
 	CU_ASSERT(diff == tmp);
 	CU_ASSERT(diff % res == 0);
+}
+
+static void system_test_cpu_cycles_long_period(void)
+{
+	int i;
+	uint64_t c2, c1, c3, max;
+	uint64_t tmp, diff, res;
+
+	printf("\n        Testing CPU cycles for %i seconds... ", PERIODS_100_MSEC / 10);
+
+	res = odp_cpu_cycles_resolution();
+	max = odp_cpu_cycles_max();
 
 	c3 = odp_cpu_cycles();
-	for (i = 0; i < DIFF_TRY_NUM; i++) {
+	for (i = 0; i < PERIODS_100_MSEC; i++) {
 		c1 = odp_cpu_cycles();
 		odp_time_wait_ns(100 * ODP_TIME_MSEC_IN_NS + i);
 		c2 = odp_cpu_cycles();
@@ -192,14 +203,16 @@ static void system_test_cpu_cycles_diff(void)
 	}
 
 	/* wrap was detected, no need to continue */
-	if (i < DIFF_TRY_NUM)
+	if (i < PERIODS_100_MSEC) {
+		printf("wrap was detected.\n");
 		return;
+	}
 
 	/* wrap has to be detected if possible */
 	CU_ASSERT(max > UINT32_MAX);
 	CU_ASSERT((max - c3) > UINT32_MAX);
 
-	printf("wrap was not detected...");
+	printf("wrap was not detected.\n");
 }
 
 static void system_test_odp_sys_cache_line_size(void)
@@ -450,6 +463,8 @@ odp_testinfo_t system_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(system_test_cpu_cycles_resolution,
 				  system_check_cycle_counter),
 	ODP_TEST_INFO_CONDITIONAL(system_test_cpu_cycles_diff,
+				  system_check_cycle_counter),
+	ODP_TEST_INFO_CONDITIONAL(system_test_cpu_cycles_long_period,
 				  system_check_cycle_counter),
 	ODP_TEST_INFO(system_test_info_print),
 	ODP_TEST_INFO_NULL,
