@@ -2,8 +2,8 @@ SUBDIRS = classifier \
 	  debug \
 	  generator \
 	  hello \
-	  ipsec \
 	  ipsec_api \
+	  ipsec_crypto \
 	  ipsec_offload \
 	  l2fwd_simple \
 	  l3fwd \
