@@ -25,9 +25,9 @@
  * compiled against a specific ODP implementation layer.  The purpose
  * of the implementation layer is to provide an optimal mapping of ODP
  * APIs to the underlying capabilities (including hardware
- * co-processing and acceleration support) of of SoCs hosting ODP
+ * co-processing and acceleration support) of SoCs hosting ODP
  * implementations.  As a bootstrapping mechanism for applications, as
- * well as to provide a model for ODP implementers, ODP provides a
+ * well as provide a model for ODP implementers, ODP provides a
  * 'linux-generic' reference implementation designed to run on any SoC
  * which has a Linux kernel.  While linux-generic is not a performance
  * target, it does provide a starting point for ODP implementers and
