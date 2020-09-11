@@ -39,7 +39,7 @@ typedef struct odp_<descriptive_name>_s {
 } odp_<descriptive_name>_t;
 @endcode
 
-The use of typedef allows implementations to choose underlying data representations that map efficiently to platform capabilities while providing accessor functions to provide structured access to implementation information in a portable manner
+The use of typedef allows implementations to choose underlying data representations that map efficiently to platform capabilities while providing accessor functions to provide structured access to implementation information in a portable manner.
 Similarly, the use of enum is RECOMMENDED to provide value abstraction for API parameters while enabling the implementation to choose code points that map well to platform native values.
 
 Several native C types are used conventionally within ODP and SHOULD be employed in API design:
@@ -59,7 +59,7 @@ Minimizing pathlength in API design involves several considerations:
  - The number of parameters passed to a call.
    In general, ODP APIs designed for frequent use SHOULD have few parameters.
    Limiting parameter count to one or two well-chosen parameters SHOULD be the goal for APIs designed for frequent use.
-   If a call requires more complex parameter data then it is RECOMMENDED that instead of multiple parameters a single pointer to a struct that can be statically templated and modified by the caller be used.
+   If a call requires more complex parameter data then it is RECOMMENDED that instead of multiple parameters, a single pointer to a struct that can be statically templated and modified by the caller be used.
  - The use of macros and inlining.
    ODP APIs MAY be implemented as preprocessor macros and/or inline functions.
    This is especially true for accessor functions that are designed to provide getters/setters for object meta data.
@@ -85,7 +85,7 @@ Functions must attempt to be so clear in their intent that referencing the docum
 @subsection getters Getting information
 
 @subsubsection is_has Is / Has
-An api with "is" or "has" are both considered @ref boolean questions. They can only return true or false and it reflects the current state of something.
+An API with "is" or "has" are both considered @ref boolean questions. They can only return true or false and it reflects the current state of something.
 
 An example might be a packet interface, you might want to know if it is in promiscuous mode.
 @code odp_bool_t state = odp_pktio_is_promiscuous(pktio handle) @endcode
@@ -98,10 +98,10 @@ Another case might be if a packet has a vlan flag set
 
 @subsubsection get Get
 Where possible returned information should be an enum if it reflects a finite list of information.
-In general get apis drop the actual tag "get" in the function name.
+In general, get APIs drop the actual tag "get" in the function name.
 
 @subsection converter Converter Functions
-To maintain efficiency in fastpath code converter functions should expect correct inputs with undefined results otherwise.
+To maintain efficiency in fastpath code, converter functions should expect correct inputs with undefined results otherwise.
 
 @code
 static inline odp_foo_t _odp_foo_from_bar(odp_bar_t bar)
@@ -147,7 +147,7 @@ An example of this might be the number of queues that an application can create.
 An attempt to allocate more queues than the underlying implementation supports would result in this failure code being returned via errno.
 
 @subsection boolean Boolean
-For odp all booleans are integers. To aid application readability they are defined as the type odp_bool_t.
+For ODP all booleans are integers. To aid application readability they are defined as the type odp_bool_t.
 The values  !0 = true, 0 = false are used for this purpose.
 
 @subsection success Success and Failure
@@ -203,6 +203,6 @@ For example an API marked as deprecated in 1.1.0 will still be present in 1.2.0 
 A deprecated API will contain the doxygen tag \@deprecated with a description of the reason for the change.
 
 @section defaults Default behaviours
-When an API has a default behaviour it must be possible for the application to explicitly call for that behaviour, this guards against the default changing and breaking the application.
+When an API has a default behaviour it must be possible for the application to explicitly call for that behaviour; this guards against the default changing and breaking the application.
 
 */

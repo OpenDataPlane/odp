@@ -48,7 +48,7 @@ Existing application code shall not have to change if the new API is not used.
 - New element to an enum that is an input to ODP
 
 @subsection minor Minor
-The digit is used for backward compatible changes
+The digit is used for backward compatible changes.
 Any existing app should work as before.
 - Documentation updates
 
