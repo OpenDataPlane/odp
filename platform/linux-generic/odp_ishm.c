@@ -1775,7 +1775,7 @@ int _odp_ishm_init_global(const odp_init_t *init)
 	ishm_ftbl->unused_fragmnts = &ishm_ftbl->fragment[1];
 
 	/*
-	 * We run _odp_ishm_init_local() directely here to give the
+	 * We run _odp_ishm_init_local() directly here to give the
 	 * possibility to run shm_reserve() before the odp_init_local()
 	 * is performed for the main thread... Many init_global() functions
 	 * indeed assume the availability of odp_shm_reserve()...:
