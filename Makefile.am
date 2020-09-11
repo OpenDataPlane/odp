@@ -16,12 +16,20 @@ SUBDIRS = \
 	  helper \
 	  doc
 
+# Tests are run in this SUBDIRS order. The intention is to run validation tests first,
+# then example/performance/platform specific tests.
+if WITH_TESTS
+SUBDIRS += test/common
+SUBDIRS += test/miscellaneous
+SUBDIRS += test/validation
+endif
+
 if WITH_EXAMPLES
 SUBDIRS += example
 endif
 
 if WITH_TESTS
-SUBDIRS += test
+SUBDIRS += test/performance
 SUBDIRS += helper/test
 SUBDIRS += $(PLATFORM_TEST_DIR)
 endif
