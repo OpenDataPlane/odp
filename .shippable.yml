@@ -4,6 +4,15 @@ compiler:
   - gcc
   - clang
 
+integrations:
+  notifications:
+    - integrationName: email
+      type: email
+      on_success: never
+      on_failure: never
+      on_cancel: never
+      on_pull_request: never
+
 env:
     - CONF="--disable-test-perf"
     - CONF="--disable-abi-compat --disable-test-perf"
