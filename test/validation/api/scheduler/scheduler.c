@@ -53,7 +53,9 @@
 #define CHAOS_PTR_TO_NDX(p) ((uint64_t)(uint32_t)(uintptr_t)p)
 #define CHAOS_NDX_TO_PTR(n) ((void *)(uintptr_t)n)
 
-#define WAIT_TOLERANCE (150 * ODP_TIME_MSEC_IN_NS)
+#define WAIT_TIMEOUT     (1000 * ODP_TIME_MSEC_IN_NS)
+#define WAIT_ROUNDS      5
+#define WAIT_TOLERANCE   (150 * ODP_TIME_MSEC_IN_NS)
 #define WAIT_1MS_RETRIES 1000
 
 #define SCHED_AND_PLAIN_ROUNDS 10000
@@ -155,10 +157,12 @@ static void scheduler_test_wait_time(void)
 {
 	int i;
 	odp_queue_t queue;
+	odp_event_t ev;
 	uint64_t wait_time;
 	odp_queue_param_t qp;
 	odp_time_t lower_limit, upper_limit;
 	odp_time_t start_time, end_time, diff;
+	uint64_t duration_ns = WAIT_ROUNDS * WAIT_TIMEOUT;
 
 	/* check on read */
 	wait_time = odp_schedule_wait_time(0);
@@ -173,10 +177,11 @@ static void scheduler_test_wait_time(void)
 	queue = odp_queue_create("dummy_queue", &qp);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
-	wait_time = odp_schedule_wait_time(ODP_TIME_SEC_IN_NS);
+	wait_time = odp_schedule_wait_time(WAIT_TIMEOUT);
 	start_time = odp_time_local();
-	odp_schedule(&queue, ODP_SCHED_NO_WAIT);
+	ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
 	end_time = odp_time_local();
+	CU_ASSERT_FATAL(ev == ODP_EVENT_INVALID);
 
 	diff = odp_time_diff(end_time, start_time);
 	lower_limit = ODP_TIME_NULL;
@@ -186,16 +191,17 @@ static void scheduler_test_wait_time(void)
 	CU_ASSERT(odp_time_cmp(diff, upper_limit) <= 0);
 
 	/* check time correctness */
+	printf("\nTesting wait time for %.3f sec ...\n", (double)duration_ns / ODP_TIME_SEC_IN_NS);
 	start_time = odp_time_local();
-	for (i = 1; i < 6; i++)
-		odp_schedule(&queue, wait_time);
+	for (i = 0; i < WAIT_ROUNDS; i++) {
+		ev = odp_schedule(NULL, wait_time);
+		CU_ASSERT_FATAL(ev == ODP_EVENT_INVALID);
+	}
 	end_time = odp_time_local();
 
 	diff = odp_time_diff(end_time, start_time);
-	lower_limit = odp_time_local_from_ns(5 * ODP_TIME_SEC_IN_NS -
-					     WAIT_TOLERANCE);
-	upper_limit = odp_time_local_from_ns(5 * ODP_TIME_SEC_IN_NS +
-					     WAIT_TOLERANCE);
+	lower_limit = odp_time_local_from_ns(duration_ns - WAIT_TOLERANCE);
+	upper_limit = odp_time_local_from_ns(duration_ns + WAIT_TOLERANCE);
 
 	if (odp_time_cmp(diff, lower_limit) <= 0) {
 		fprintf(stderr, "Exceed lower limit: "
