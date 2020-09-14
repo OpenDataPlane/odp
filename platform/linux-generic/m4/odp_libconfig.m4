@@ -18,7 +18,7 @@ AC_SUBST(_ODP_CONFIG_VERSION_MINOR)
 ##########################################################################
 # Set optional path for the default configuration file
 ##########################################################################
-default_config_path="${srcdir}/config/odp-$with_platform.conf"
+default_config_path="${srcdir}/config/odp-linux-generic.conf"
 
 AC_CHECK_PROGS([REALPATH], [realpath])
 AS_IF([test -z "$REALPATH"], [AC_MSG_ERROR([Could not find 'realpath'])])
@@ -33,4 +33,4 @@ rel_default_config_path=`realpath --relative-to=$(pwd) ${default_config_path}`
 AC_SUBST(default_config_path)
 AC_SUBST(rel_default_config_path)
 
-ODP_LIBCONFIG([$with_platform], [$rel_default_config_path])
+ODP_LIBCONFIG([linux-generic], [$rel_default_config_path])
