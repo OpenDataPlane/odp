@@ -1847,6 +1847,104 @@ static void scheduler_test_pause_resume(void)
 	CU_ASSERT(drain_queues() == 0);
 }
 
+static void scheduler_test_pause_enqueue(void)
+{
+	odp_queue_t queue;
+	odp_buffer_t buf;
+	odp_event_t ev;
+	odp_event_t ev_tbl[NUM_BUFS_BEFORE_PAUSE];
+	odp_queue_t from;
+	odp_pool_t pool;
+	int i;
+	int ret;
+	int local_bufs;
+
+	queue = odp_queue_lookup("sched_0_0_n");
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	pool = odp_pool_lookup(MSG_POOL_NAME);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	for (i = 0; i < NUM_BUFS_PAUSE; i++) {
+		buf = odp_buffer_alloc(pool);
+		CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+		ev = odp_buffer_to_event(buf);
+		ret = odp_queue_enq(queue, ev);
+		CU_ASSERT_FATAL(ret == 0);
+	}
+
+	for (i = 0; i < NUM_BUFS_BEFORE_PAUSE; i++) {
+		from = ODP_QUEUE_INVALID;
+		ev = odp_schedule(&from, ODP_SCHED_WAIT);
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+		CU_ASSERT(from == queue);
+		ev_tbl[i] = ev;
+	}
+
+	/* Pause, enqueue, schedule, resume */
+	odp_schedule_pause();
+
+	for (i = 0; i < NUM_BUFS_BEFORE_PAUSE; i++) {
+		ev = ev_tbl[i];
+		ret = odp_queue_enq(queue, ev);
+		CU_ASSERT_FATAL(ret == 0);
+	}
+
+	local_bufs = 0;
+	while (1) {
+		from = ODP_QUEUE_INVALID;
+		ev = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+		if (ev == ODP_EVENT_INVALID)
+			break;
+
+		CU_ASSERT(from == queue);
+		ret = odp_queue_enq(queue, ev);
+		CU_ASSERT_FATAL(ret == 0);
+
+		local_bufs++;
+		CU_ASSERT_FATAL(local_bufs <= NUM_BUFS_PAUSE);
+	}
+
+	odp_schedule_resume();
+
+	for (i = 0; i < NUM_BUFS_BEFORE_PAUSE; i++) {
+		from = ODP_QUEUE_INVALID;
+		ev = odp_schedule(&from, ODP_SCHED_WAIT);
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+		CU_ASSERT(from == queue);
+		ev_tbl[i] = ev;
+	}
+
+	/* Pause, schedule, enqueue, resume */
+	odp_schedule_pause();
+
+	local_bufs = 0;
+	while (1) {
+		from = ODP_QUEUE_INVALID;
+		ev = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+		if (ev == ODP_EVENT_INVALID)
+			break;
+
+		CU_ASSERT(from == queue);
+		ret = odp_queue_enq(queue, ev);
+		CU_ASSERT_FATAL(ret == 0);
+
+		local_bufs++;
+		CU_ASSERT_FATAL(local_bufs <= NUM_BUFS_PAUSE - NUM_BUFS_BEFORE_PAUSE);
+	}
+
+	for (i = 0; i < NUM_BUFS_BEFORE_PAUSE; i++) {
+		ev = ev_tbl[i];
+		ret = odp_queue_enq(queue, ev);
+		CU_ASSERT_FATAL(ret == 0);
+	}
+
+	odp_schedule_resume();
+
+	/* Free all */
+	CU_ASSERT(drain_queues() == NUM_BUFS_PAUSE);
+}
+
 /* Basic, single threaded ordered lock API testing */
 static void scheduler_test_ordered_lock(void)
 {
@@ -2646,6 +2744,7 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_order_ignore),
 	ODP_TEST_INFO(scheduler_test_groups),
 	ODP_TEST_INFO(scheduler_test_pause_resume),
+	ODP_TEST_INFO(scheduler_test_pause_enqueue),
 	ODP_TEST_INFO(scheduler_test_ordered_lock),
 	ODP_TEST_INFO_CONDITIONAL(scheduler_test_flow_aware,
 				  check_flow_aware_support),
