@@ -204,16 +204,14 @@ static void scheduler_test_wait_time(void)
 	upper_limit = odp_time_local_from_ns(duration_ns + WAIT_TOLERANCE);
 
 	if (odp_time_cmp(diff, lower_limit) <= 0) {
-		fprintf(stderr, "Exceed lower limit: "
-			"diff is %" PRIu64 ", lower_limit %" PRIu64 "\n",
-			odp_time_to_ns(diff), odp_time_to_ns(lower_limit));
+		ODPH_ERR("Exceed lower limit: diff is %" PRIu64 ", lower_limit %" PRIu64 "\n",
+			 odp_time_to_ns(diff), odp_time_to_ns(lower_limit));
 		CU_FAIL("Exceed lower limit\n");
 	}
 
 	if (odp_time_cmp(diff, upper_limit) >= 0) {
-		fprintf(stderr, "Exceed upper limit: "
-			"diff is %" PRIu64 ", upper_limit %" PRIu64 "\n",
-			odp_time_to_ns(diff), odp_time_to_ns(upper_limit));
+		ODPH_ERR("Exceed upper limit: diff is %" PRIu64 ", upper_limit %" PRIu64 "\n",
+			 odp_time_to_ns(diff), odp_time_to_ns(upper_limit));
 		CU_FAIL("Exceed upper limit\n");
 	}
 
@@ -2583,7 +2581,7 @@ static int destroy_queues(void)
 	}
 
 	if (odp_pool_destroy(globals->queue_ctx_pool) != 0) {
-		fprintf(stderr, "error: failed to destroy queue ctx pool\n");
+		ODPH_ERR("Failed to destroy queue ctx pool\n");
 		return -1;
 	}
 
@@ -2596,21 +2594,21 @@ static int scheduler_suite_term(void)
 	odp_shm_t shm;
 
 	if (destroy_queues() != 0) {
-		fprintf(stderr, "error: failed to destroy queues\n");
+		ODPH_ERR("Failed to destroy queues\n");
 		return -1;
 	}
 
 	pool = odp_pool_lookup(MSG_POOL_NAME);
 	if (odp_pool_destroy(pool) != 0)
-		fprintf(stderr, "error: failed to destroy pool\n");
+		ODPH_ERR("Failed to destroy pool\n");
 
 	shm = odp_shm_lookup(SHM_THR_ARGS_NAME);
 	if (odp_shm_free(shm) != 0)
-		fprintf(stderr, "error: failed to free shm\n");
+		ODPH_ERR("Failed to free shm\n");
 
 	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
 	if (odp_shm_free(shm) != 0)
-		fprintf(stderr, "error: failed to free shm\n");
+		ODPH_ERR("Failed to free shm\n");
 
 	if (odp_cunit_print_inactive())
 		return -1;
@@ -2802,7 +2800,7 @@ static int global_init(odp_instance_t *inst)
 	odph_helper_options_t helper_options;
 
 	if (odph_options(&helper_options)) {
-		fprintf(stderr, "error: odph_options() failed.\n");
+		ODPH_ERR("odph_options() failed.\n");
 		return -1;
 	}
 
@@ -2810,12 +2808,12 @@ static int global_init(odp_instance_t *inst)
 	init_param.mem_model = helper_options.mem_model;
 
 	if (0 != odp_init_global(inst, &init_param, NULL)) {
-		fprintf(stderr, "error: odp_init_global() failed.\n");
+		ODPH_ERR("odp_init_global() failed.\n");
 		return -1;
 	}
 
 	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
-		fprintf(stderr, "error: odp_init_local() failed.\n");
+		ODPH_ERR("odp_init_local() failed.\n");
 		return -1;
 	}
 
