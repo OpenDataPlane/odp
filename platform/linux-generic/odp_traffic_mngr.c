@@ -367,25 +367,25 @@ static void free_tbl_entry(profile_tbl_t *profile_tbl,
 	switch (profile_kind) {
 	case TM_SHAPER_PROFILE:
 		odp_ticketlock_lock(&profile_tbl->shaper.lock);
-		profile_tbl->shaper.profile[idx].status = TM_STATUS_RESERVED;
+		profile_tbl->shaper.profile[idx].status = TM_STATUS_FREE;
 		odp_ticketlock_unlock(&profile_tbl->shaper.lock);
 		return;
 
 	case TM_SCHED_PROFILE:
 		odp_ticketlock_lock(&profile_tbl->sched.lock);
-		profile_tbl->sched.profile[idx].status = TM_STATUS_RESERVED;
+		profile_tbl->sched.profile[idx].status = TM_STATUS_FREE;
 		odp_ticketlock_unlock(&profile_tbl->sched.lock);
 		return;
 
 	case TM_THRESHOLD_PROFILE:
 		odp_ticketlock_lock(&profile_tbl->threshold.lock);
-		profile_tbl->threshold.profile[idx].status = TM_STATUS_RESERVED;
+		profile_tbl->threshold.profile[idx].status = TM_STATUS_FREE;
 		odp_ticketlock_unlock(&profile_tbl->threshold.lock);
 		return;
 
 	case TM_WRED_PROFILE:
 		odp_ticketlock_lock(&profile_tbl->wred.lock);
-		profile_tbl->wred.profile[idx].status = TM_STATUS_RESERVED;
+		profile_tbl->wred.profile[idx].status = TM_STATUS_FREE;
 		odp_ticketlock_unlock(&profile_tbl->wred.lock);
 		return;
 
