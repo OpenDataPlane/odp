@@ -378,6 +378,30 @@ static void test_esp_out_in_all(void)
 	printf("\n  ");
 }
 
+static void test_ah_out_in(struct auth_param *auth)
+{
+	int auth_keylen = auth->key ? 8 * auth->key->length : 0;
+
+	if (ipsec_check_ah(auth->algo, auth_keylen) != ODP_TEST_ACTIVE)
+		return;
+
+	printf("\n    %s (keylen %d) ", auth->name, auth_keylen);
+
+	test_out_in_common(true /* AH */,
+			   ODP_CIPHER_ALG_NULL, NULL,
+			   auth->algo, auth->key,
+			   NULL, auth->key_extra);
+}
+
+static void test_ah_out_in_all(void)
+{
+	uint32_t a;
+
+	for (a = 0; a < ARRAY_SIZE(auths); a++)
+		test_ah_out_in(&auths[a]);
+	printf("\n  ");
+}
+
 static void test_out_ipv4_esp_udp_null_sha256(void)
 {
 	odp_ipsec_sa_param_t param;
@@ -1102,5 +1126,6 @@ odp_testinfo_t ipsec_out_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_udp_esp_null_sha256,
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO(test_esp_out_in_all),
+	ODP_TEST_INFO(test_ah_out_in_all),
 	ODP_TEST_INFO_NULL,
 };
