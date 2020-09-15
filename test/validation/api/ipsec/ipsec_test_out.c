@@ -465,11 +465,43 @@ static void test_out_ipv4_ah_aes_gmac_128(void)
 			   NULL, &key_mcgrew_gcm_salt_2);
 }
 
+static void test_out_ipv4_ah_aes_gmac_192(void)
+{
+	test_out_in_common(true,
+			   ODP_CIPHER_ALG_NULL, NULL,
+			   ODP_AUTH_ALG_AES_GMAC, &key_a5_192,
+			   NULL, &key_mcgrew_gcm_salt_2);
+}
+
+static void test_out_ipv4_ah_aes_gmac_256(void)
+{
+	test_out_in_common(true,
+			   ODP_CIPHER_ALG_NULL, NULL,
+			   ODP_AUTH_ALG_AES_GMAC, &key_a5_256,
+			   NULL, &key_mcgrew_gcm_salt_2);
+}
+
 static void test_out_ipv4_esp_null_aes_gmac_128(void)
 {
 	test_out_in_common(false,
 			   ODP_CIPHER_ALG_NULL, NULL,
 			   ODP_AUTH_ALG_AES_GMAC, &key_a5_128,
+			   NULL, &key_mcgrew_gcm_salt_2);
+}
+
+static void test_out_ipv4_esp_null_aes_gmac_192(void)
+{
+	test_out_in_common(false,
+			   ODP_CIPHER_ALG_NULL, NULL,
+			   ODP_AUTH_ALG_AES_GMAC, &key_a5_192,
+			   NULL, &key_mcgrew_gcm_salt_2);
+}
+
+static void test_out_ipv4_esp_null_aes_gmac_256(void)
+{
+	test_out_in_common(false,
+			   ODP_CIPHER_ALG_NULL, NULL,
+			   ODP_AUTH_ALG_AES_GMAC, &key_a5_256,
 			   NULL, &key_mcgrew_gcm_salt_2);
 }
 
@@ -1113,8 +1145,16 @@ odp_testinfo_t ipsec_out_suite[] = {
 				  ipsec_check_esp_aes_gcm_256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_aes_gmac_128,
 				  ipsec_check_ah_aes_gmac_128),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_aes_gmac_192,
+				  ipsec_check_ah_aes_gmac_192),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_aes_gmac_256,
+				  ipsec_check_ah_aes_gmac_256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_aes_gmac_128,
 				  ipsec_check_esp_null_aes_gmac_128),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_aes_gmac_192,
+				  ipsec_check_esp_null_aes_gmac_192),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_aes_gmac_256,
+				  ipsec_check_esp_null_aes_gmac_256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_chacha20_poly1305,
 				  ipsec_check_esp_chacha20_poly1305),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sha256_frag_check,
