@@ -23,14 +23,51 @@ struct suite_context_s {
 
 static struct suite_context_s suite_context;
 
-static int packet_cmp_mem(odp_packet_t pkt, uint32_t offset,
-			  void *s, uint32_t len)
+static int packet_cmp_mem_bits(odp_packet_t pkt, uint32_t offset,
+			       uint8_t *s, uint32_t len)
+{
+	int rc = -1;
+	uint32_t len_bytes = ((len + 7) / 8);
+	uint8_t leftover_bits = len % 8;
+	uint8_t buf[len_bytes];
+
+	odp_packet_copy_to_mem(pkt, offset, len_bytes, buf);
+
+	/* Compare till the last full byte */
+	rc = memcmp(buf, s, leftover_bits ? len_bytes - 1 : len_bytes);
+
+	if (rc == 0 && leftover_bits) {
+		/* Do masked comparison for the leftover bits */
+		uint8_t mask = 0xff << (8 - leftover_bits);
+
+		rc = !((mask & buf[len_bytes - 1]) ==
+		       (mask & s[len_bytes - 1]));
+	}
+
+	return rc;
+}
+
+static int packet_cmp_mem_bytes(odp_packet_t pkt, uint32_t offset,
+				uint8_t *s, uint32_t len)
 {
 	uint8_t buf[len];
 
 	odp_packet_copy_to_mem(pkt, offset, len, buf);
 
 	return memcmp(buf, s, len);
+}
+
+static int packet_cmp_mem(odp_packet_t pkt, uint32_t offset,
+			  uint8_t *s, uint32_t len, odp_bool_t bit_mode)
+{
+	int rc = -1;
+
+	if (bit_mode)
+		rc = packet_cmp_mem_bits(pkt, offset, s, len);
+	else
+		rc = packet_cmp_mem_bytes(pkt, offset, s, len);
+
+	return rc;
 }
 
 static const char *auth_alg_name(odp_auth_alg_t auth)
@@ -484,14 +521,17 @@ static void alg_test(odp_crypto_op_t op,
 		if (op == ODP_CRYPTO_OP_ENCODE) {
 			CU_ASSERT(!packet_cmp_mem(pkt, 0,
 						  ref->ciphertext,
-						  reflength));
+						  ref->length,
+						  bit_mode));
 			CU_ASSERT(!packet_cmp_mem(pkt, reflength,
 						  ref->digest,
-						  ref->digest_length));
+						  ref->digest_length,
+						  bit_mode));
 		} else {
 			CU_ASSERT(!packet_cmp_mem(pkt, 0,
 						  ref->plaintext,
-						  reflength));
+						  ref->length,
+						  bit_mode));
 		}
 	}
 
