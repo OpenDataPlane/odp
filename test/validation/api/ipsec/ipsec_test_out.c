@@ -505,6 +505,30 @@ static void test_out_ipv4_esp_null_aes_gmac_256(void)
 			   NULL, &key_mcgrew_gcm_salt_2);
 }
 
+static void test_out_ipv4_esp_aes_ccm128(void)
+{
+	test_out_in_common(false,
+			   ODP_CIPHER_ALG_AES_CCM, &key_a5_128,
+			   ODP_AUTH_ALG_AES_CCM, NULL,
+			   &key_3byte_salt, NULL);
+}
+
+static void test_out_ipv4_esp_aes_ccm192(void)
+{
+	test_out_in_common(false,
+			   ODP_CIPHER_ALG_AES_CCM, &key_a5_192,
+			   ODP_AUTH_ALG_AES_CCM, NULL,
+			   &key_3byte_salt, NULL);
+}
+
+static void test_out_ipv4_esp_aes_ccm256(void)
+{
+	test_out_in_common(false,
+			   ODP_CIPHER_ALG_AES_CCM, &key_a5_256,
+			   ODP_AUTH_ALG_AES_CCM, NULL,
+			   &key_3byte_salt, NULL);
+}
+
 static void test_out_ipv4_esp_chacha20_poly1305(void)
 {
 	test_out_in_common(false,
@@ -1155,6 +1179,12 @@ odp_testinfo_t ipsec_out_suite[] = {
 				  ipsec_check_esp_null_aes_gmac_192),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_aes_gmac_256,
 				  ipsec_check_esp_null_aes_gmac_256),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_aes_ccm128,
+				  ipsec_check_esp_aes_ccm_128),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_aes_ccm192,
+				  ipsec_check_esp_aes_ccm_192),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_aes_ccm256,
+				  ipsec_check_esp_aes_ccm_256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_chacha20_poly1305,
 				  ipsec_check_esp_chacha20_poly1305),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sha256_frag_check,
