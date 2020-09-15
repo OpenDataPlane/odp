@@ -1,4 +1,5 @@
 /* Copyright (c) 2017-2018, Linaro Limited
+ * Copyright (c) 2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -243,31 +244,37 @@ static void test_out_ipv4_esp_null_sha256_tun_ipv6(void)
 	ipsec_sa_destroy(sa);
 }
 
-static void test_out_ipv4_esp_aes_cbc_null(void)
+static void test_out_in_common(odp_bool_t ah,
+			       odp_cipher_alg_t cipher,
+			       const odp_crypto_key_t *cipher_key,
+			       odp_auth_alg_t auth,
+			       const odp_crypto_key_t *auth_key,
+			       const odp_crypto_key_t *cipher_key_extra,
+			       const odp_crypto_key_t *auth_key_extra)
 {
 	odp_ipsec_sa_param_t param;
-	odp_ipsec_sa_t sa;
-	odp_ipsec_sa_t sa2;
+	odp_ipsec_sa_t sa_out;
+	odp_ipsec_sa_t sa_in;
 
 	ipsec_sa_param_fill(&param,
-			    false, false, 123, NULL,
-			    ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
-			    ODP_AUTH_ALG_NULL, NULL,
-			    NULL, NULL);
+			    false, ah, 123, NULL,
+			    cipher, cipher_key,
+			    auth, auth_key,
+			    cipher_key_extra, auth_key_extra);
 
-	sa = odp_ipsec_sa_create(&param);
+	sa_out = odp_ipsec_sa_create(&param);
 
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa_out);
 
 	ipsec_sa_param_fill(&param,
-			    true, false, 123, NULL,
-			    ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
-			    ODP_AUTH_ALG_NULL, NULL,
-			    NULL, NULL);
+			    true, ah, 123, NULL,
+			    cipher, cipher_key,
+			    auth, auth_key,
+			    cipher_key_extra, auth_key_extra);
 
-	sa2 = odp_ipsec_sa_create(&param);
+	sa_in = odp_ipsec_sa_create(&param);
 
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa2);
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa_in);
 
 	ipsec_test_part test = {
 		.pkt_in = &pkt_ipv4_icmp_0,
@@ -281,10 +288,18 @@ static void test_out_ipv4_esp_aes_cbc_null(void)
 		},
 	};
 
-	ipsec_check_out_in_one(&test, sa, sa2);
+	ipsec_check_out_in_one(&test, sa_out, sa_in);
 
-	ipsec_sa_destroy(sa2);
-	ipsec_sa_destroy(sa);
+	ipsec_sa_destroy(sa_out);
+	ipsec_sa_destroy(sa_in);
+}
+
+static void test_out_ipv4_esp_aes_cbc_null(void)
+{
+	test_out_in_common(false,
+			   ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
+			   ODP_AUTH_ALG_NULL, NULL,
+			   NULL, NULL);
 }
 
 static void test_out_ipv4_esp_udp_null_sha256(void)
@@ -320,266 +335,50 @@ static void test_out_ipv4_esp_udp_null_sha256(void)
 
 static void test_out_ipv4_esp_aes_cbc_sha256(void)
 {
-	odp_ipsec_sa_param_t param;
-	odp_ipsec_sa_t sa;
-	odp_ipsec_sa_t sa2;
-
-	ipsec_sa_param_fill(&param,
-			    false, false, 123, NULL,
-			    ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
-			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL, NULL);
-
-	sa = odp_ipsec_sa_create(&param);
-
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
-
-	ipsec_sa_param_fill(&param,
-			    true, false, 123, NULL,
-			    ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
-			    ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			    NULL, NULL);
-
-	sa2 = odp_ipsec_sa_create(&param);
-
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa2);
-
-	ipsec_test_part test = {
-		.pkt_in = &pkt_ipv4_icmp_0,
-		.out_pkt = 1,
-		.out = {
-			{ .status.warn.all = 0,
-			  .status.error.all = 0,
-			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
-			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
-			  .pkt_out = &pkt_ipv4_icmp_0 },
-		},
-	};
-
-	ipsec_check_out_in_one(&test, sa, sa2);
-
-	ipsec_sa_destroy(sa2);
-	ipsec_sa_destroy(sa);
+	test_out_in_common(false,
+			   ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
+			   ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
+			   NULL, NULL);
 }
 
 static void test_out_ipv4_esp_aes_ctr_null(void)
 {
-	odp_ipsec_sa_param_t param;
-	odp_ipsec_sa_t sa;
-	odp_ipsec_sa_t sa2;
-
-	ipsec_sa_param_fill(&param,
-			    false, false, 123, NULL,
-			    ODP_CIPHER_ALG_AES_CTR, &key_a5_128,
-			    ODP_AUTH_ALG_NULL, NULL,
-			    &key_mcgrew_gcm_salt_3, NULL);
-
-	sa = odp_ipsec_sa_create(&param);
-
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
-
-	ipsec_sa_param_fill(&param,
-			    true, false, 123, NULL,
-			    ODP_CIPHER_ALG_AES_CTR, &key_a5_128,
-			    ODP_AUTH_ALG_NULL, NULL,
-			    &key_mcgrew_gcm_salt_3, NULL);
-
-	sa2 = odp_ipsec_sa_create(&param);
-
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa2);
-
-	ipsec_test_part test = {
-		.pkt_in = &pkt_ipv4_icmp_0,
-		.out_pkt = 1,
-		.out = {
-			{ .status.warn.all = 0,
-			  .status.error.all = 0,
-			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
-			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
-			  .pkt_out = &pkt_ipv4_icmp_0 },
-		},
-	};
-
-	ipsec_check_out_in_one(&test, sa, sa2);
-
-	ipsec_sa_destroy(sa2);
-	ipsec_sa_destroy(sa);
+	test_out_in_common(false,
+			   ODP_CIPHER_ALG_AES_CTR, &key_a5_128,
+			   ODP_AUTH_ALG_NULL, NULL,
+			   &key_mcgrew_gcm_salt_3, NULL);
 }
 
 static void test_out_ipv4_esp_aes_gcm128(void)
 {
-	odp_ipsec_sa_param_t param;
-	odp_ipsec_sa_t sa;
-	odp_ipsec_sa_t sa2;
-
-	ipsec_sa_param_fill(&param,
-			    false, false, 123, NULL,
-			    ODP_CIPHER_ALG_AES_GCM, &key_a5_128,
-			    ODP_AUTH_ALG_AES_GCM, NULL,
-			    &key_mcgrew_gcm_salt_2, NULL);
-
-	sa = odp_ipsec_sa_create(&param);
-
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
-
-	ipsec_sa_param_fill(&param,
-			    true, false, 123, NULL,
-			    ODP_CIPHER_ALG_AES_GCM, &key_a5_128,
-			    ODP_AUTH_ALG_AES_GCM, NULL,
-			    &key_mcgrew_gcm_salt_2, NULL);
-
-	sa2 = odp_ipsec_sa_create(&param);
-
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa2);
-
-	ipsec_test_part test = {
-		.pkt_in = &pkt_ipv4_icmp_0,
-		.out_pkt = 1,
-		.out = {
-			{ .status.warn.all = 0,
-			  .status.error.all = 0,
-			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
-			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
-			  .pkt_out = &pkt_ipv4_icmp_0 },
-		},
-	};
-
-	ipsec_check_out_in_one(&test, sa, sa2);
-
-	ipsec_sa_destroy(sa2);
-	ipsec_sa_destroy(sa);
+	test_out_in_common(false,
+			   ODP_CIPHER_ALG_AES_GCM, &key_a5_128,
+			   ODP_AUTH_ALG_AES_GCM, NULL,
+			   &key_mcgrew_gcm_salt_2, NULL);
 }
 
 static void test_out_ipv4_ah_aes_gmac_128(void)
 {
-	odp_ipsec_sa_param_t param;
-	odp_ipsec_sa_t out_sa;
-	odp_ipsec_sa_t in_sa;
-
-	ipsec_sa_param_fill(&param,
-			    false, true, 123, NULL,
-			    ODP_CIPHER_ALG_NULL, NULL,
-			    ODP_AUTH_ALG_AES_GMAC, &key_a5_128,
-			    NULL, &key_mcgrew_gcm_salt_2);
-
-	out_sa = odp_ipsec_sa_create(&param);
-
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, out_sa);
-
-	ipsec_sa_param_fill(&param,
-			    true, true, 123, NULL,
-			    ODP_CIPHER_ALG_NULL, NULL,
-			    ODP_AUTH_ALG_AES_GMAC, &key_a5_128,
-			    NULL, &key_mcgrew_gcm_salt_2);
-
-	in_sa = odp_ipsec_sa_create(&param);
-
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, in_sa);
-
-	ipsec_test_part test = {
-		.pkt_in = &pkt_ipv4_icmp_0,
-		.out_pkt = 1,
-		.out = {
-			{ .status.warn.all = 0,
-			  .status.error.all = 0,
-			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
-			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
-			  .pkt_out = &pkt_ipv4_icmp_0 },
-		},
-	};
-
-	ipsec_check_out_in_one(&test, out_sa, in_sa);
-
-	ipsec_sa_destroy(out_sa);
-	ipsec_sa_destroy(in_sa);
+	test_out_in_common(true,
+			   ODP_CIPHER_ALG_NULL, NULL,
+			   ODP_AUTH_ALG_AES_GMAC, &key_a5_128,
+			   NULL, &key_mcgrew_gcm_salt_2);
 }
 
 static void test_out_ipv4_esp_null_aes_gmac_128(void)
 {
-	odp_ipsec_sa_param_t param;
-	odp_ipsec_sa_t out_sa;
-	odp_ipsec_sa_t in_sa;
-
-	ipsec_sa_param_fill(&param,
-			    false, false, 123, NULL,
-			    ODP_CIPHER_ALG_NULL, NULL,
-			    ODP_AUTH_ALG_AES_GMAC, &key_a5_128,
-			    NULL, &key_mcgrew_gcm_salt_2);
-
-	out_sa = odp_ipsec_sa_create(&param);
-
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, out_sa);
-
-	ipsec_sa_param_fill(&param,
-			    true, false, 123, NULL,
-			    ODP_CIPHER_ALG_NULL, NULL,
-			    ODP_AUTH_ALG_AES_GMAC, &key_a5_128,
-			    NULL, &key_mcgrew_gcm_salt_2);
-
-	in_sa = odp_ipsec_sa_create(&param);
-
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, in_sa);
-
-	ipsec_test_part test = {
-		.pkt_in = &pkt_ipv4_icmp_0,
-		.out_pkt = 1,
-		.out = {
-			{ .status.warn.all = 0,
-			  .status.error.all = 0,
-			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
-			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
-			  .pkt_out = &pkt_ipv4_icmp_0 },
-		},
-	};
-
-	ipsec_check_out_in_one(&test, out_sa, in_sa);
-
-	ipsec_sa_destroy(out_sa);
-	ipsec_sa_destroy(in_sa);
+	test_out_in_common(false,
+			   ODP_CIPHER_ALG_NULL, NULL,
+			   ODP_AUTH_ALG_AES_GMAC, &key_a5_128,
+			   NULL, &key_mcgrew_gcm_salt_2);
 }
 
 static void test_out_ipv4_esp_chacha20_poly1305(void)
 {
-	odp_ipsec_sa_param_t param;
-	odp_ipsec_sa_t sa;
-	odp_ipsec_sa_t sa2;
-
-	ipsec_sa_param_fill(&param,
-			    false, false, 123, NULL,
-			    ODP_CIPHER_ALG_CHACHA20_POLY1305, &key_rfc7634,
-			    ODP_AUTH_ALG_CHACHA20_POLY1305, NULL,
-			    &key_rfc7634_salt, NULL);
-
-	sa = odp_ipsec_sa_create(&param);
-
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
-
-	ipsec_sa_param_fill(&param,
-			    true, false, 123, NULL,
-			    ODP_CIPHER_ALG_CHACHA20_POLY1305, &key_rfc7634,
-			    ODP_AUTH_ALG_CHACHA20_POLY1305, NULL,
-			    &key_rfc7634_salt, NULL);
-
-	sa2 = odp_ipsec_sa_create(&param);
-
-	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa2);
-
-	ipsec_test_part test = {
-		.pkt_in = &pkt_ipv4_icmp_0,
-		.out_pkt = 1,
-		.out = {
-			{ .status.warn.all = 0,
-			  .status.error.all = 0,
-			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
-			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
-			  .pkt_out = &pkt_ipv4_icmp_0 },
-		},
-	};
-
-	ipsec_check_out_in_one(&test, sa, sa2);
-
-	ipsec_sa_destroy(sa2);
-	ipsec_sa_destroy(sa);
+	test_out_in_common(false,
+			   ODP_CIPHER_ALG_CHACHA20_POLY1305, &key_rfc7634,
+			   ODP_AUTH_ALG_CHACHA20_POLY1305, NULL,
+			   &key_rfc7634_salt, NULL);
 }
 
 static void test_out_ipv4_ah_sha256_frag_check(void)
