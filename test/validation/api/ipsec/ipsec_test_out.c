@@ -9,6 +9,42 @@
 
 #include "test_vectors.h"
 
+struct cipher_param {
+	const char *name;
+	odp_cipher_alg_t algo;
+	const odp_crypto_key_t *key;
+	const odp_crypto_key_t *key_extra;
+};
+
+struct auth_param {
+	const char *name;
+	odp_auth_alg_t algo;
+	const odp_crypto_key_t *key;
+	const odp_crypto_key_t *key_extra;
+};
+
+#define ALG(alg, key, key_extra) { #alg, alg, key, key_extra }
+
+/*
+ * Ciphers that can be used in ESP and combined with any integrity
+ * algorithm. This excludes combined mode algorithms such as AES-GCM.
+ */
+static struct cipher_param ciphers[] = {
+	ALG(ODP_CIPHER_ALG_AES_CBC, &key_a5_128, NULL),
+	ALG(ODP_CIPHER_ALG_AES_CTR, &key_a5_128, &key_mcgrew_gcm_salt_3)
+};
+
+/*
+ * Integrity algorithms that can be used in ESP and AH. This excludes
+ * AES-GMAC which is defined for ESP as a combined-mode algorithm.
+ */
+static struct auth_param auths[] = {
+	ALG(ODP_AUTH_ALG_NULL, NULL, NULL),
+	ALG(ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256, NULL)
+};
+
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
 static void test_out_ipv4_ah_sha256(void)
 {
 	odp_ipsec_sa_param_t param;
@@ -294,12 +330,40 @@ static void test_out_in_common(odp_bool_t ah,
 	ipsec_sa_destroy(sa_in);
 }
 
-static void test_out_ipv4_esp_aes_cbc_null(void)
+static void test_esp_out_in(struct cipher_param *cipher,
+			    struct auth_param *auth)
 {
-	test_out_in_common(false,
-			   ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
-			   ODP_AUTH_ALG_NULL, NULL,
-			   NULL, NULL);
+	int cipher_keylen = cipher->key ? 8 * cipher->key->length : 0;
+	int auth_keylen = auth->key ? 8 * auth->key->length : 0;
+
+	if (ipsec_check_esp(cipher->algo, cipher_keylen,
+			    auth->algo, auth_keylen) != ODP_TEST_ACTIVE)
+		return;
+
+	printf("\n    %s (keylen %d) %s (keylen %d) ",
+	       cipher->name, cipher_keylen, auth->name, auth_keylen);
+
+	test_out_in_common(false /* ESP */,
+			   cipher->algo, cipher->key,
+			   auth->algo, auth->key,
+			   cipher->key_extra, auth->key_extra);
+}
+
+/*
+ * Test ESP output followed by input with all combinations of normal
+ * mode (not combined mode) ciphers and integrity algorithms.
+ *
+ * Combined mode algorithms are tested one-by-one in their own test cases.
+ */
+static void test_esp_out_in_all(void)
+{
+	uint32_t c;
+	uint32_t a;
+
+	for (c = 0; c < ARRAY_SIZE(ciphers); c++)
+		for (a = 0; a < ARRAY_SIZE(auths); a++)
+			test_esp_out_in(&ciphers[c], &auths[a]);
+	printf("\n  ");
 }
 
 static void test_out_ipv4_esp_udp_null_sha256(void)
@@ -331,22 +395,6 @@ static void test_out_ipv4_esp_udp_null_sha256(void)
 	ipsec_check_out_one(&test, sa);
 
 	ipsec_sa_destroy(sa);
-}
-
-static void test_out_ipv4_esp_aes_cbc_sha256(void)
-{
-	test_out_in_common(false,
-			   ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
-			   ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256,
-			   NULL, NULL);
-}
-
-static void test_out_ipv4_esp_aes_ctr_null(void)
-{
-	test_out_in_common(false,
-			   ODP_CIPHER_ALG_AES_CTR, &key_a5_128,
-			   ODP_AUTH_ALG_NULL, NULL,
-			   &key_mcgrew_gcm_salt_3, NULL);
 }
 
 static void test_out_ipv4_esp_aes_gcm128(void)
@@ -1005,12 +1053,6 @@ odp_testinfo_t ipsec_out_suite[] = {
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_udp_null_sha256,
 				  ipsec_check_esp_null_sha256),
-	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_aes_cbc_null,
-				  ipsec_check_esp_aes_cbc_128_null),
-	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_aes_cbc_sha256,
-				  ipsec_check_esp_aes_cbc_128_sha256),
-	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_aes_ctr_null,
-				  ipsec_check_esp_aes_ctr_128_null),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_aes_gcm128,
 				  ipsec_check_esp_aes_gcm_128),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_aes_gmac_128,
@@ -1047,5 +1089,6 @@ odp_testinfo_t ipsec_out_suite[] = {
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_udp_esp_null_sha256,
 				  ipsec_check_esp_null_sha256),
+	ODP_TEST_INFO(test_esp_out_in_all),
 	ODP_TEST_INFO_NULL,
 };
