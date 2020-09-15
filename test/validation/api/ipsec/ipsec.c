@@ -336,10 +336,34 @@ int ipsec_check_ah_aes_gmac_128(void)
 				ODP_AUTH_ALG_AES_GMAC, 128);
 }
 
+int ipsec_check_ah_aes_gmac_192(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
+				ODP_AUTH_ALG_AES_GMAC, 192);
+}
+
+int ipsec_check_ah_aes_gmac_256(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
+				ODP_AUTH_ALG_AES_GMAC, 256);
+}
+
 int ipsec_check_esp_null_aes_gmac_128(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
 				ODP_AUTH_ALG_AES_GMAC, 128);
+}
+
+int ipsec_check_esp_null_aes_gmac_192(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
+				ODP_AUTH_ALG_AES_GMAC, 192);
+}
+
+int ipsec_check_esp_null_aes_gmac_256(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
+				ODP_AUTH_ALG_AES_GMAC, 256);
 }
 
 int ipsec_check_esp_chacha20_poly1305(void)
