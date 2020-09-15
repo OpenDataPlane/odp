@@ -415,7 +415,7 @@ static void test_out_ipv4_esp_aes_gcm128(void)
 	ipsec_sa_param_fill(&param,
 			    false, false, 123, NULL,
 			    ODP_CIPHER_ALG_AES_GCM, &key_a5_128,
-			    ODP_AUTH_ALG_AES_GCM, &key_a5_128,
+			    ODP_AUTH_ALG_AES_GCM, NULL,
 			    &key_mcgrew_gcm_salt_2, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
@@ -425,7 +425,7 @@ static void test_out_ipv4_esp_aes_gcm128(void)
 	ipsec_sa_param_fill(&param,
 			    true, false, 123, NULL,
 			    ODP_CIPHER_ALG_AES_GCM, &key_a5_128,
-			    ODP_AUTH_ALG_AES_GCM, &key_a5_128,
+			    ODP_AUTH_ALG_AES_GCM, NULL,
 			    &key_mcgrew_gcm_salt_2, NULL);
 
 	sa2 = odp_ipsec_sa_create(&param);
