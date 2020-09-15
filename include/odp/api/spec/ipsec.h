@@ -72,6 +72,46 @@ typedef enum odp_ipsec_op_mode_t {
 } odp_ipsec_op_mode_t;
 
 /**
+ * IPSEC TEST SA operation
+ */
+typedef enum odp_ipsec_test_sa_operation_t {
+	/** Update next sequence number
+	 *
+	 * The seq_num parameter is an outbound SA specific parameter.
+	 * Invoking the odp_ipsec_test_sa_update() API to update this
+	 * field on an inbound SA will cause the API to return failure.
+	 */
+	ODP_IPSEC_TEST_SA_UPDATE_SEQ_NUM = 0,
+
+	/** Update highest authenticated sequence number
+	 *
+	 * The antireplay_window_top parameter is inbound SA specific.
+	 * Invoking the odp_ipsec_test_sa_update() API to update this
+	 * field on an outbound SA will cause the API to return failure.
+	 */
+	ODP_IPSEC_TEST_SA_UPDATE_ANTIREPLAY_WINDOW_TOP
+
+} odp_ipsec_test_sa_operation_t;
+
+/**
+ * IPSEC TEST SA parameter
+ */
+typedef union odp_ipsec_test_sa_param_t {
+	/** Next sequence number
+	 *
+	 * @see ODP_IPSEC_TEST_SA_UPDATE_SEQ_NUM
+	 */
+	uint64_t seq_num;
+
+	/** Highest authenticated sequence number
+	 *
+	 * @see ODP_IPSEC_TEST_SA_UPDATE_ANTIREPLAY_WINDOW_TOP
+	 */
+	uint64_t antireplay_window_top;
+
+} odp_ipsec_test_sa_param_t;
+
+/**
  * Configuration options for IPSEC inbound processing
  */
 typedef struct odp_ipsec_inbound_config_t {
@@ -193,6 +233,28 @@ typedef struct odp_ipsec_outbound_config_t {
 } odp_ipsec_outbound_config_t;
 
 /**
+ * IPSEC TEST capability
+ */
+typedef struct odp_ipsec_test_capability_t {
+	/** Parameters supported for sa_update */
+	struct {
+		/** Next sequence number value
+		 *
+		 * @see ODP_IPSEC_TEST_SA_UPDATE_SEQ_NUM
+		 */
+		odp_bool_t seq_num;
+
+		/** Highest authenticated sequence number
+		 *
+		 * @see ODP_IPSEC_TEST_SA_UPDATE_ANTIREPLAY_WINDOW_TOP
+		 */
+		odp_bool_t antireplay_window_top;
+
+	} sa_operations;
+
+} odp_ipsec_test_capability_t;
+
+/**
  * IPSEC capability
  */
 typedef struct odp_ipsec_capability_t {
@@ -273,6 +335,11 @@ typedef struct odp_ipsec_capability_t {
 	 */
 	odp_support_t inline_ipsec_tm;
 
+	/** IPSEC TEST capabilities
+	 *
+	 * @see odp_ipsec_test_sa_update()
+	 */
+	odp_ipsec_test_capability_t test;
 } odp_ipsec_capability_t;
 
 /**
@@ -1714,6 +1781,36 @@ int odp_ipsec_result(odp_ipsec_packet_result_t *result, odp_packet_t packet);
  * @see odp_ipsec_sa_disable()
  */
 int odp_ipsec_status(odp_ipsec_status_t *status, odp_event_t event);
+
+/**
+ * IPSEC test API for modifying internal state of an SA.
+ *
+ * This function is not meant to be used by normal applications but by special
+ * test applications that test or debug the operation of the underlying ODP
+ * implementation. Calling this function may degrade the performance of the
+ * calling thread, other threads or the IPSEC implementation in general.
+ *
+ * Calling this function for an SA at the same time when the SA is used for
+ * processing traffic or when the SA is being modified through other parts
+ * of IPSEC API may result in undefined behaviour.
+ *
+ * SA state update through this function may not be supported by all ODP
+ * implementations, ODP instances or SA instances or at every moment. This
+ * function may return failure for unspecified reasons even when the capability
+ * call indicated support for updating a particular parameter and previous
+ * similar calls succeeded.
+ *
+ * @param          sa            IPSEC SA to be updated
+ * @param          op            Specifies operation to be performed
+ * @param          param         Pointer to IPSEC TEST SA param structure to be
+ *                               used for the operation
+ *
+ * @return 0      On success
+ * @retval <0     On failure
+ */
+int odp_ipsec_test_sa_update(odp_ipsec_sa_t sa,
+			     odp_ipsec_test_sa_operation_t op,
+			     const odp_ipsec_test_sa_param_t *param);
 
 /**
  * Update MTU for outbound IP fragmentation
