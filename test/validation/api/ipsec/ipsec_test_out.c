@@ -30,8 +30,15 @@ struct auth_param {
  * algorithm. This excludes combined mode algorithms such as AES-GCM.
  */
 static struct cipher_param ciphers[] = {
+	ALG(ODP_CIPHER_ALG_NULL, NULL, NULL),
+	ALG(ODP_CIPHER_ALG_DES, &key_des_64, NULL),
+	ALG(ODP_CIPHER_ALG_3DES_CBC, &key_des_192, NULL),
 	ALG(ODP_CIPHER_ALG_AES_CBC, &key_a5_128, NULL),
-	ALG(ODP_CIPHER_ALG_AES_CTR, &key_a5_128, &key_mcgrew_gcm_salt_3)
+	ALG(ODP_CIPHER_ALG_AES_CBC, &key_a5_192, NULL),
+	ALG(ODP_CIPHER_ALG_AES_CBC, &key_a5_256, NULL),
+	ALG(ODP_CIPHER_ALG_AES_CTR, &key_a5_128, &key_mcgrew_gcm_salt_3),
+	ALG(ODP_CIPHER_ALG_AES_CTR, &key_a5_192, &key_mcgrew_gcm_salt_3),
+	ALG(ODP_CIPHER_ALG_AES_CTR, &key_a5_256, &key_mcgrew_gcm_salt_3)
 };
 
 /*
@@ -40,7 +47,12 @@ static struct cipher_param ciphers[] = {
  */
 static struct auth_param auths[] = {
 	ALG(ODP_AUTH_ALG_NULL, NULL, NULL),
-	ALG(ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256, NULL)
+	ALG(ODP_AUTH_ALG_MD5_HMAC, &key_5a_128, NULL),
+	ALG(ODP_AUTH_ALG_SHA1_HMAC, &key_5a_160, NULL),
+	ALG(ODP_AUTH_ALG_SHA256_HMAC, &key_5a_256, NULL),
+	ALG(ODP_AUTH_ALG_SHA384_HMAC, &key_5a_384, NULL),
+	ALG(ODP_AUTH_ALG_SHA512_HMAC, &key_5a_512, NULL),
+	ALG(ODP_AUTH_ALG_AES_XCBC_MAC, &key_5a_128, NULL)
 };
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
