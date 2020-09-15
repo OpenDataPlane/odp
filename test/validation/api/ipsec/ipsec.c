@@ -1,5 +1,5 @@
 /* Copyright (c) 2017-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	 BSD-3-Clause
@@ -315,6 +315,12 @@ int ipsec_check_esp_aes_ctr_128_null(void)
 int ipsec_check_esp_aes_gcm_128(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_GCM, 128,
+				ODP_AUTH_ALG_AES_GCM, 0);
+}
+
+int ipsec_check_esp_aes_gcm_192(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_GCM, 192,
 				ODP_AUTH_ALG_AES_GCM, 0);
 }
 
