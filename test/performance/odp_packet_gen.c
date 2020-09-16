@@ -26,6 +26,10 @@
 #define RX_THREAD         1
 #define TX_THREAD         2
 #define MAX_VLANS         4
+/* Number of random 16-bit words used to generate random length packets */
+#define RAND_16BIT_WORDS  128
+/* Max retries to generate random data */
+#define MAX_RAND_RETRIES  1000
 
 /* Minimum number of packets to receive in CI test */
 #define MIN_RX_PACKETS_CI 800
@@ -40,6 +44,10 @@ typedef struct test_options_t {
 	uint32_t num_pktio;
 	uint32_t num_pkt;
 	uint32_t pkt_len;
+	uint8_t  use_rand_pkt_len;
+	uint32_t rand_pkt_len_min;
+	uint32_t rand_pkt_len_max;
+	uint32_t rand_pkt_len_bins;
 	uint32_t hdr_len;
 	uint32_t burst_size;
 	uint32_t bursts;
@@ -83,6 +91,7 @@ typedef struct ODP_ALIGNED_CACHE thread_stat_t {
 
 	uint64_t tx_timeouts;
 	uint64_t tx_packets;
+	uint64_t tx_bytes;
 	uint64_t tx_drops;
 
 	int      thread_type;
@@ -145,6 +154,14 @@ static void print_usage(void)
 	       "  -t, --num_tx              Number of transmit threads. Default: 1\n"
 	       "  -n, --num_pkt             Number of packets in the pool. Default: 1000\n"
 	       "  -l, --len                 Packet length. Default: 512\n"
+	       "  -L, --len_range <min,max,bins>\n"
+	       "                            Random packet length. Specify the minimum and maximum\n"
+	       "                            packet lengths and the number of bins. To reduce pool size\n"
+	       "                            requirement the length range can be divined into even sized\n"
+	       "                            bins. Min and max size packets are always used and included\n"
+	       "                            into the number of bins (bins >= 2). Bin value of 0 means\n"
+	       "                            that each packet length is used. Comma-separated (no spaces).\n"
+	       "                            Overrides standard packet length option.\n"
 	       "  -b, --burst_size          Transmit burst size. Default: 8\n"
 	       "  -x, --bursts              Number of bursts per one transmit round. Default: 1\n"
 	       "  -g, --gap                 Gap between transmit rounds in nsec. Default: 1000000\n"
@@ -156,7 +173,7 @@ static void print_usage(void)
 	       "  -p, --udp_dst             UDP destination port. Default: 20000\n"
 	       "  -c, --c_mode <counts>     Counter mode for incrementing UDP port numbers.\n"
 	       "                            Specify the number of port numbers used starting from\n"
-	       "                            udp_src/udp_dst. Comma-serarated (no spaces) list of\n"
+	       "                            udp_src/udp_dst. Comma-separated (no spaces) list of\n"
 	       "                            count values: <udp_src count>,<udp_dst count>\n"
 	       "                            Default value: 0,0\n"
 	       "  -q, --quit                Quit after this many transmit rounds.\n"
@@ -212,7 +229,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 {
 	int opt, i, len, str_len, long_index, udp_port;
 	unsigned long int count;
-	uint32_t min_packets, num_tx_pkt;
+	uint32_t min_packets, num_tx_pkt, pkt_len, val;
 	char *name, *str, *end;
 	test_options_t *test_options = &global->test_options;
 	int ret = 0;
@@ -226,6 +243,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"num_tx",      required_argument, NULL, 't'},
 		{"num_pkt",     required_argument, NULL, 'n'},
 		{"len",         required_argument, NULL, 'l'},
+		{"len_range",    required_argument, NULL, 'L'},
 		{"burst_size",  required_argument, NULL, 'b'},
 		{"bursts",      required_argument, NULL, 'x'},
 		{"gap",         required_argument, NULL, 'g'},
@@ -242,13 +260,14 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:n:l:b:x:g:v:s:d:o:p:c:q:u:w:h";
+	static const char *shortopts = "+i:e:r:t:n:l:L:b:x:g:v:s:d:o:p:c:q:u:w:h";
 
 	test_options->num_pktio  = 0;
 	test_options->num_rx     = 1;
 	test_options->num_tx     = 1;
 	test_options->num_pkt    = 1000;
 	test_options->pkt_len    = 512;
+	test_options->use_rand_pkt_len = 0;
 	test_options->burst_size = 8;
 	test_options->bursts     = 1;
 	test_options->gap_nsec   = 1000000;
@@ -368,6 +387,17 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		case 'l':
 			test_options->pkt_len = atoi(optarg);
 			break;
+		case 'L':
+			pkt_len = strtoul(optarg, &end, 0);
+			test_options->rand_pkt_len_min = pkt_len;
+			end++;
+			pkt_len = strtoul(end, &str, 0);
+			test_options->rand_pkt_len_max = pkt_len;
+			str++;
+			val = strtoul(str, NULL, 0);
+			test_options->rand_pkt_len_bins = val;
+			test_options->use_rand_pkt_len = 1;
+			break;
 		case 'b':
 			test_options->burst_size = atoi(optarg);
 			break;
@@ -444,9 +474,37 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 
 	test_options->num_cpu = test_options->num_rx + test_options->num_tx;
 
+	num_tx_pkt  = test_options->burst_size * test_options->bursts;
+	if (test_options->use_rand_pkt_len) {
+		uint32_t pkt_sizes = test_options->rand_pkt_len_max -
+					test_options->rand_pkt_len_min + 1;
+		uint32_t pkt_bins = test_options->rand_pkt_len_bins;
+		uint32_t req_pkts;
+
+		if (test_options->rand_pkt_len_max <= test_options->rand_pkt_len_min) {
+			printf("Error: Bad max packet length\n");
+			ret = -1;
+		}
+		if (pkt_bins == 1) {
+			printf("Error: Invalid bins value\n");
+			ret = -1;
+		}
+		if (pkt_sizes < pkt_bins) {
+			printf("Error: Not enough packet sizes for %" PRIu32 " bins\n", pkt_bins);
+			ret = -1;
+		}
+		if (pkt_bins && num_tx_pkt > pkt_bins && num_tx_pkt % pkt_bins)
+			printf("\nWARNING: Transmit packet count is not evenly divisible into packet length bins.\n\n");
+		else if (!pkt_bins && num_tx_pkt > pkt_sizes && num_tx_pkt % pkt_sizes)
+			printf("\nWARNING: Transmit packet count is not evenly divisible into packet lengths.\n\n");
+
+		req_pkts = pkt_bins ? pkt_bins : pkt_sizes;
+		if (req_pkts > num_tx_pkt)
+			num_tx_pkt = req_pkts;
+	}
+
 	/* Pool needs to have enough packets for all tx side bursts and
 	 * one rx side burst */
-	num_tx_pkt  = test_options->burst_size * test_options->bursts;
 	min_packets = (test_options->num_pktio * test_options->num_tx *
 		      num_tx_pkt) +
 		      (test_options->num_pktio * test_options->num_rx *
@@ -479,9 +537,10 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 				(test_options->num_vlan * ODPH_VLANHDR_LEN) +
 				ODPH_IPV4HDR_LEN + ODPH_UDPHDR_LEN;
 
-	if (test_options->hdr_len >= test_options->pkt_len) {
-		printf("Error: Headers do not fit into packet length %u\n",
-		       test_options->pkt_len);
+	pkt_len = test_options->use_rand_pkt_len ?
+			test_options->rand_pkt_len_min : test_options->pkt_len;
+	if (test_options->hdr_len >= pkt_len) {
+		printf("Error: Headers do not fit into packet length %" PRIu32 "\n", pkt_len);
 		ret = -1;
 	}
 
@@ -556,6 +615,8 @@ static int open_pktios(test_global_t *global)
 	uint32_t num_pktio = test_options->num_pktio;
 	uint32_t num_pkt = test_options->num_pkt;
 	uint32_t pkt_len = test_options->pkt_len;
+	uint32_t pkt_len_max = test_options->use_rand_pkt_len ?
+				test_options->rand_pkt_len_max : pkt_len;
 	odp_pktout_queue_t pktout[num_tx];
 
 	printf("\nODP packet generator\n");
@@ -564,7 +625,13 @@ static int open_pktios(test_global_t *global)
 	printf("  num rx threads      %u\n", num_rx);
 	printf("  num tx threads      %i\n", num_tx);
 	printf("  num packets         %u\n", num_pkt);
-	printf("  packet length       %u bytes\n", pkt_len);
+	if (test_options->use_rand_pkt_len)
+		printf("  packet length       %u-%u bytes, %u bins\n",
+		       test_options->rand_pkt_len_min,
+		       test_options->rand_pkt_len_max,
+		       test_options->rand_pkt_len_bins);
+	else
+		printf("  packet length       %u bytes\n", pkt_len);
 	printf("  tx burst size       %u\n", test_options->burst_size);
 	printf("  tx bursts           %u\n", test_options->bursts);
 	printf("  tx burst gap        %" PRIu64 " nsec\n",
@@ -616,7 +683,7 @@ static int open_pktios(test_global_t *global)
 	}
 
 	if (pool_capa.pkt.max_len &&
-	    pkt_len > pool_capa.pkt.max_len) {
+	    pkt_len_max > pool_capa.pkt.max_len) {
 		printf("Error: Too large packets. Max %u supported length.\n",
 		       pool_capa.pkt.max_len);
 		return -1;
@@ -1089,23 +1156,70 @@ static int init_packets(test_global_t *global, int pktio,
 	return 0;
 }
 
+static inline int update_rand_data(uint8_t *data, uint32_t data_len)
+{
+	uint32_t generated = 0;
+	uint32_t retries = 0;
+
+	while (generated < data_len) {
+		int32_t  ret = odp_random_data(data, data_len - generated, ODP_RANDOM_BASIC);
+
+		if (odp_unlikely(ret < 0)) {
+			printf("Error: odp_random_data() failed: %" PRId32 "\n", ret);
+			return -1;
+		} else if (odp_unlikely(ret == 0)) {
+			retries++;
+			if (odp_unlikely(retries > MAX_RAND_RETRIES)) {
+				printf("Error: Failed to create random data\n");
+				return -1;
+			}
+			continue;
+		}
+		data += ret;
+		generated += ret;
+	}
+	return 0;
+}
+
 static inline int send_burst(odp_pktout_queue_t pktout, odp_packet_t pkt[],
-			     int burst_size) {
+			     int burst_size, odp_bool_t use_rand_len, uint32_t pkts_per_pktio,
+			     uint64_t *sent_bytes) {
 	int i, sent;
+	int ret = 0;
 	int num = burst_size;
 	odp_packet_t pkt_ref[burst_size];
+	static __thread int rand_idx = RAND_16BIT_WORDS;
+	static __thread uint16_t rand_data[RAND_16BIT_WORDS];
+	uint64_t bytes_total = 0;
 
 	for (i = 0; i < burst_size; i++) {
-		pkt_ref[i] = odp_packet_ref_static(pkt[i]);
+		int idx = i;
 
-		if (pkt_ref[i] == ODP_PACKET_INVALID) {
+		if (use_rand_len) {
+			if (rand_idx >= RAND_16BIT_WORDS) {
+				if (odp_unlikely(update_rand_data((uint8_t *)rand_data,
+								  RAND_16BIT_WORDS * 2))) {
+					num = i;
+					ret = -1;
+					break;
+				}
+				rand_idx = 0;
+			}
+			idx = rand_data[rand_idx++] % pkts_per_pktio;
+		}
+
+		pkt_ref[i] = odp_packet_ref_static(pkt[idx]);
+		if (odp_unlikely(pkt_ref[i] == ODP_PACKET_INVALID)) {
 			num = i;
 			break;
 		}
+		bytes_total += odp_packet_len(pkt_ref[i]);
 	}
 
-	if (odp_unlikely(num == 0))
-		return 0;
+	if (odp_unlikely(num == 0)) {
+		*sent_bytes = 0;
+		return ret;
+	}
 
 	sent = odp_pktout_send(pktout, pkt_ref, num);
 
@@ -1115,10 +1229,67 @@ static inline int send_burst(odp_pktout_queue_t pktout, odp_packet_t pkt[],
 	if (odp_unlikely(sent != num)) {
 		uint32_t num_drop = num - sent;
 
+		for (i = sent; i < num; i++)
+			bytes_total -= odp_packet_len(pkt_ref[i]);
 		odp_packet_free_multi(&pkt_ref[sent], num_drop);
 	}
 
+	*sent_bytes = bytes_total;
 	return sent;
+}
+
+static int alloc_test_packets(odp_pool_t pool, odp_packet_t *pkt_tbl, int num_pkt,
+			      int pkts_per_pktio, test_options_t *test_options)
+{
+	int num_alloc = 0;
+
+	if (test_options->use_rand_pkt_len) {
+		int i, j;
+		int num_pktio = test_options->num_pktio;
+		uint32_t pkt_bins = test_options->rand_pkt_len_bins;
+		uint32_t pkt_len_min = test_options->rand_pkt_len_min;
+		uint32_t pkt_len_max = test_options->rand_pkt_len_max;
+		uint32_t bin_size = 1;
+
+		if (pkt_bins)
+			bin_size = (pkt_len_max - pkt_len_min + 1) / (pkt_bins - 1);
+
+		for (i = 0; i < num_pktio; i++) {
+			uint32_t cur_bin = 0;
+			uint32_t pkt_len = pkt_len_min;
+
+			for (j = 0; j < pkts_per_pktio; j++) {
+				if (pkt_bins) {
+					if (cur_bin + 1 < pkt_bins) {
+						pkt_len = pkt_len_min + (cur_bin * bin_size);
+						cur_bin++;
+					} else {
+						cur_bin = 0;
+						pkt_len = pkt_len_max;
+					}
+				}
+
+				pkt_tbl[num_alloc] = odp_packet_alloc(pool, pkt_len);
+				if (pkt_tbl[num_alloc] == ODP_PACKET_INVALID) {
+					printf("Error: Alloc of %dB packet failed\n", pkt_len);
+					break;
+				}
+				num_alloc++;
+
+				if (!pkt_bins) {
+					pkt_len++;
+					if (pkt_len > pkt_len_max)
+						pkt_len = pkt_len_min;
+				}
+			}
+		}
+		return num_alloc;
+	}
+	num_alloc = odp_packet_alloc_multi(pool, test_options->pkt_len, pkt_tbl, num_pkt);
+	if (num_alloc != num_pkt)
+		printf("Error: Alloc of %u packets failed\n", num_pkt);
+
+	return num_alloc;
 }
 
 static int tx_thread(void *arg)
@@ -1135,36 +1306,47 @@ static int tx_thread(void *arg)
 	uint64_t gap_nsec = test_options->gap_nsec;
 	uint64_t quit = test_options->quit;
 	uint64_t tx_timeouts = 0;
+	uint64_t tx_bytes = 0;
 	uint64_t tx_packets = 0;
 	uint64_t tx_drops = 0;
 	int ret = 0;
 	int burst_size = test_options->burst_size;
 	int bursts = test_options->bursts;
 	uint32_t num_tx = test_options->num_tx;
-	uint32_t pkt_len = test_options->pkt_len;
+	odp_bool_t use_rand_len = test_options->use_rand_pkt_len;
 	int num_pktio = test_options->num_pktio;
-	int num_pkt = num_pktio * bursts * burst_size;
+	int num_pkt;
 	odp_pktout_queue_t pktout[num_pktio];
+	uint32_t pkts_per_pktio = bursts * burst_size;
+
+	if (use_rand_len) {
+		uint32_t pkt_sizes = test_options->rand_pkt_len_max -
+					test_options->rand_pkt_len_min + 1;
+
+		if (test_options->rand_pkt_len_bins)
+			pkt_sizes = test_options->rand_pkt_len_bins;
+		if (pkt_sizes > pkts_per_pktio)
+			pkts_per_pktio = pkt_sizes;
+	}
+	num_pkt = num_pktio * pkts_per_pktio;
+
 	odp_packet_t pkt[num_pkt];
 
 	thr = odp_thread_id();
 	tx_thr = thread_arg->tx_thr;
 	global->stat[thr].thread_type = TX_THREAD;
 
-	num_alloc = odp_packet_alloc_multi(pool, pkt_len, pkt, num_pkt);
-
-	if (num_alloc != num_pkt) {
-		printf("Error: alloc of %u packets failed (%i)\n",
-		       num_pkt, thr);
+	/* Preallocate test packets */
+	num_alloc = alloc_test_packets(pool, pkt, num_pkt, pkts_per_pktio, test_options);
+	if (num_alloc != num_pkt)
 		ret = -1;
-	}
 
 	/* Initialize packets per pktio interface */
 	for (i = 0; ret == 0 && i < num_pktio; i++) {
-		int f = i * bursts * burst_size;
+		int f = i * pkts_per_pktio;
 
 		pktout[i] = thread_arg->pktout[i];
-		if (init_packets(global, i, &pkt[f], bursts * burst_size, f)) {
+		if (init_packets(global, i, &pkt[f], pkts_per_pktio, f)) {
 			ret = -1;
 			break;
 		}
@@ -1199,12 +1381,14 @@ static int tx_thread(void *arg)
 		/* Send bursts to each pktio */
 		for (i = 0; i < num_pktio; i++) {
 			int sent, j;
-			int first = i * bursts * burst_size;
+			int first = i * bursts * pkts_per_pktio;
+			uint64_t sent_bytes;
 
 			for (j = 0; j < bursts; j++) {
 				sent = send_burst(pktout[i],
 						  &pkt[first + j * burst_size],
-						  burst_size);
+						  burst_size, use_rand_len,
+						  pkts_per_pktio, &sent_bytes);
 
 				if (odp_unlikely(sent < 0)) {
 					ret = -1;
@@ -1212,6 +1396,7 @@ static int tx_thread(void *arg)
 					break;
 				}
 
+				tx_bytes += sent_bytes;
 				tx_packets += sent;
 				if (odp_unlikely(sent < burst_size))
 					tx_drops += burst_size - sent;
@@ -1232,6 +1417,7 @@ static int tx_thread(void *arg)
 	/* Update stats */
 	global->stat[thr].time_nsec   = diff_ns;
 	global->stat[thr].tx_timeouts = tx_timeouts;
+	global->stat[thr].tx_bytes    = tx_bytes;
 	global->stat[thr].tx_packets  = tx_packets;
 	global->stat[thr].tx_drops    = tx_drops;
 
@@ -1358,13 +1544,13 @@ static int print_final_stat(test_global_t *global)
 	test_options_t *test_options = &global->test_options;
 	int num_rx = test_options->num_rx;
 	int num_tx = test_options->num_tx;
-	uint32_t pkt_len = test_options->pkt_len;
 	uint64_t rx_nsec_sum = 0;
 	uint64_t rx_pkt_sum = 0;
 	uint64_t rx_byte_sum = 0;
 	uint64_t rx_tmo_sum = 0;
 	uint64_t tx_nsec_sum = 0;
 	uint64_t tx_pkt_sum = 0;
+	uint64_t tx_byte_sum = 0;
 	uint64_t tx_drop_sum = 0;
 	uint64_t tx_tmo_sum = 0;
 	double rx_pkt_per_sec = 0.0;
@@ -1372,6 +1558,7 @@ static int print_final_stat(test_global_t *global)
 	double rx_pkt_len = 0.0;
 	double rx_sec = 0.0;
 	double tx_pkt_per_sec = 0.0;
+	double tx_byte_per_sec = 0.0;
 	double tx_sec = 0.0;
 
 	printf("\nRESULTS PER THREAD\n");
@@ -1423,6 +1610,7 @@ static int print_final_stat(test_global_t *global)
 		} else if (global->stat[i].thread_type == TX_THREAD) {
 			tx_tmo_sum  += global->stat[i].tx_timeouts;
 			tx_pkt_sum  += global->stat[i].tx_packets;
+			tx_byte_sum  += global->stat[i].tx_bytes;
 			tx_drop_sum += global->stat[i].tx_drops;
 			tx_nsec_sum += global->stat[i].time_nsec;
 		}
@@ -1445,12 +1633,15 @@ static int print_final_stat(test_global_t *global)
 	if (tx_nsec_sum) {
 		tx_pkt_per_sec = (1000000000.0 * (double)tx_pkt_sum) /
 				 (double)tx_nsec_sum;
+
+		tx_byte_per_sec  = 1000000000.0;
+		tx_byte_per_sec *= (tx_byte_sum + 24 * tx_pkt_sum);
+		tx_byte_per_sec /= (double)tx_nsec_sum;
 	}
 
 	/* Total Mbit/s */
 	rx_mbit_per_sec = (num_rx * 8 * rx_byte_per_sec) / 1000000.0;
-	tx_mbit_per_sec = (num_tx * 8 * tx_pkt_per_sec * (pkt_len + 24))
-			  / 1000000.0;
+	tx_mbit_per_sec = (num_tx * 8 * tx_byte_per_sec) / 1000000.0;
 
 	if (rx_pkt_sum)
 		rx_pkt_len = (double)rx_byte_sum / rx_pkt_sum;
