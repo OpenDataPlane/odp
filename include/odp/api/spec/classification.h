@@ -103,6 +103,8 @@ typedef union odp_cls_pmr_terms_t {
 		/** Custom layer 3 match rule. PMR offset is counted from
 		 *  the start of layer 3 in the packet. */
 		uint64_t        custom_l3:1;
+		/** IGMP Group address */
+		uint64_t	igmp_grp_addr:1;
 
 	} bit;
 	/** All bits of the bit field structure */
@@ -547,6 +549,9 @@ typedef enum {
 	 * Custom L3 rules may be combined with other PMRs.
 	 */
 	ODP_PMR_CUSTOM_L3,
+
+	/** IGMP Group address (val_sz = 4) */
+	ODP_PMR_IGMP_GRP_ADDR,
 
 	/** Inner header may repeat above values with this offset */
 	ODP_PMR_INNER_HDR_OFF = 32
