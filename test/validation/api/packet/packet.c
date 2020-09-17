@@ -1,5 +1,6 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2020, Marvell
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -10,6 +11,8 @@
 #include <odp_api.h>
 #include <odp_cunit_common.h>
 #include <test_packet_parser.h>
+
+#include <odp/helper/odph_api.h>
 
 /* Reserve some tailroom for tests */
 #define TAILROOM_RESERVE  4
@@ -24,6 +27,13 @@ ODP_STATIC_ASSERT(PACKET_POOL_NUM_SEG > 1 &&
 /* Number of packets in parse test */
 #define PARSE_TEST_NUM_PKT 10
 
+/* Default packet vector size */
+#define PKT_VEC_SIZE 64
+/* Number of packet vectors in default pool */
+#define PKT_VEC_NUM 10
+/* Number of preallocated packet vector test packets */
+#define PKT_VEC_PACKET_NUM PKT_VEC_NUM
+
 static odp_pool_capability_t pool_capa;
 static odp_pool_param_t default_param;
 static odp_pool_t default_pool;
@@ -33,6 +43,10 @@ static uint32_t segmented_packet_len;
 static odp_bool_t segmentation_supported = true;
 
 odp_packet_t test_packet, segmented_test_packet;
+/* Packet vector globals */
+static odp_packet_t pkt_vec[PKT_VEC_PACKET_NUM];
+static odp_packet_vector_t pktv_default = ODP_PACKET_VECTOR_INVALID;
+static odp_pool_t vector_default_pool = ODP_POOL_INVALID;
 
 static struct udata_struct {
 	uint64_t u64;
@@ -2614,6 +2628,329 @@ static void packet_test_ref(void)
 	odp_packet_free(ref_pkt[1]);
 }
 
+static void packet_vector_test_event_conversion(void)
+{
+	odp_packet_vector_t pktv0 = pktv_default;
+	odp_packet_vector_t pktv1;
+	odp_event_t event;
+
+	event = odp_packet_vector_to_event(pktv0);
+	CU_ASSERT_FATAL(event != ODP_EVENT_INVALID);
+	CU_ASSERT(odp_event_type(event) == ODP_EVENT_PACKET_VECTOR);
+
+	pktv1 = odp_packet_vector_from_event(event);
+	CU_ASSERT_FATAL(pktv1 != ODP_PACKET_VECTOR_INVALID);
+	CU_ASSERT(pktv1 == pktv0);
+}
+
+static int remove_invalid_pkts_tbl(odp_packet_t *pkt_tbl, int num_pkts)
+{
+	int i, j, count = 0;
+
+	for (i = 0; i < (num_pkts - count) ; i++) {
+		if (pkt_tbl[i] == ODP_PACKET_INVALID) {
+			for (j = i; j < num_pkts; j++)
+				pkt_tbl[j] = pkt_tbl[j + 1];
+
+			count++;
+		}
+	}
+
+	return count;
+}
+
+static void packet_vector_test_tbl(void)
+{
+	odp_packet_vector_t pktv = ODP_PACKET_VECTOR_INVALID;
+	odp_packet_t *pkt_tbl, packet;
+	odp_packet_t clone_packet = ODP_PACKET_INVALID;
+	odp_packet_t orig_pkt_tbl[PKT_VEC_SIZE];
+	odp_pool_param_t params;
+	odp_pool_capability_t capa;
+	odp_pool_t pool;
+	uint32_t i, num;
+	uint32_t max_size = PKT_VEC_SIZE;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+	CU_ASSERT_FATAL(capa.vector.max_size > 0);
+
+	if (capa.vector.max_size < max_size)
+		max_size = capa.vector.max_size;
+
+	odp_pool_param_init(&params);
+	params.type = ODP_POOL_VECTOR;
+	params.vector.num = 1;
+	params.vector.max_size = max_size;
+
+	pool = odp_pool_create("vector_pool_alloc", &params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	/* Allocate the only vector from the pool */
+	pktv = odp_packet_vector_alloc(pool);
+	/* Check if vector packet is valid */
+	CU_ASSERT_FATAL(odp_packet_vector_valid(pktv) == 1)
+	CU_ASSERT(odp_packet_vector_to_u64(pktv) !=
+		  odp_packet_vector_to_u64(ODP_PACKET_VECTOR_INVALID));
+
+	/* Allocate packets */
+	for (i = 0; i < max_size; i++) {
+		orig_pkt_tbl[i] = odp_packet_alloc(default_pool,
+						   default_param.pkt.len);
+		CU_ASSERT_FATAL(orig_pkt_tbl[i] != ODP_PACKET_INVALID);
+	}
+
+	/* Get packet vector table */
+	num = odp_packet_vector_tbl(pktv, &pkt_tbl);
+	/* Make sure there are initially no packets in the vector */
+	CU_ASSERT(num == 0);
+
+	/* Fill the allocated packets in the vector */
+	for (i = 0; i < max_size; i++)
+		pkt_tbl[i] = orig_pkt_tbl[i];
+
+	/* Set number of packets stored in the vector */
+	odp_packet_vector_size_set(pktv, max_size);
+
+	/* Get number of packets in the vector */
+	num = odp_packet_vector_size(pktv);
+	CU_ASSERT(num == max_size);
+
+	if (max_size < 4) {
+		printf("Max vector size too small to run all tests.\n");
+		goto cleanup;
+	}
+
+	/* Preparing a copy of the packet */
+	packet = orig_pkt_tbl[0];
+	clone_packet = odp_packet_copy(packet, odp_packet_pool(packet));
+	CU_ASSERT_FATAL(clone_packet != ODP_PACKET_INVALID);
+	CU_ASSERT(odp_packet_to_u64(clone_packet) != odp_packet_to_u64(packet));
+
+	/* Change one packet handle in the table */
+	pkt_tbl[1] = clone_packet;
+	/* Read packet vector table. */
+	num = odp_packet_vector_tbl(pktv, &pkt_tbl);
+	/* Packets available should be equal to last updated */
+	CU_ASSERT(num == max_size);
+	/* Check if packet handle still corresponds to cloned packet */
+	CU_ASSERT(odp_packet_to_u64(pkt_tbl[1]) ==
+		  odp_packet_to_u64(clone_packet));
+
+	/*  Mark the first packet as invalid */
+	pkt_tbl[0] = ODP_PACKET_INVALID;
+	/* Reading the table to confirm if the first packet is invalid */
+	num = odp_packet_vector_tbl(pktv, &pkt_tbl);
+	CU_ASSERT(odp_packet_is_valid(pkt_tbl[0]) == 0);
+
+	/* Invalid packet should never be present in the table, following logic
+	 * updates the pkt_tble array and returns the number of invalid packets
+	 * removed. */
+	num = remove_invalid_pkts_tbl(pkt_tbl, odp_packet_vector_size(pktv));
+	CU_ASSERT(num == 1);
+	/* Update number of valid packets in the table */
+	odp_packet_vector_size_set(pktv, odp_packet_vector_size(pktv) - num);
+	CU_ASSERT(odp_packet_vector_size(pktv) == max_size - num);
+	/* The first packet should be valid now */
+	CU_ASSERT(odp_packet_is_valid(pkt_tbl[0]) == 1);
+
+cleanup:
+	if (clone_packet != ODP_PACKET_INVALID)
+		odp_packet_free(clone_packet);
+	odp_packet_free_multi(orig_pkt_tbl, max_size);
+	odp_packet_vector_free(pktv);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+static void packet_vector_test_debug(void)
+{
+	CU_ASSERT_FATAL(odp_packet_vector_valid(pktv_default) == 1);
+	printf("\n\n");
+	odp_packet_vector_print(pktv_default);
+}
+
+static void packet_vector_test_alloc_free(void)
+{
+	odp_packet_vector_t pktv = ODP_PACKET_VECTOR_INVALID;
+	odp_pool_param_t params;
+	odp_pool_capability_t capa;
+	odp_pool_t pool;
+	odp_packet_t pkt;
+	odp_packet_t *pkts_tbl;
+	uint32_t max_size = PKT_VEC_SIZE;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+	CU_ASSERT_FATAL(capa.vector.max_size > 0);
+
+	if (capa.vector.max_size < max_size)
+		max_size = capa.vector.max_size;
+
+	odp_pool_param_init(&params);
+	params.type = ODP_POOL_VECTOR;
+	params.vector.num = 1;
+	params.vector.max_size = max_size;
+
+	pool = odp_pool_create("vector_pool_alloc", &params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	/* Allocate the only vector from the pool */
+	pktv = odp_packet_vector_alloc(pool);
+	/* Check if vector packet is valid */
+	CU_ASSERT_FATAL(odp_packet_vector_valid(pktv) == 1)
+	CU_ASSERT(odp_packet_vector_to_u64(pktv) !=
+		  odp_packet_vector_to_u64(ODP_PACKET_VECTOR_INVALID));
+
+	/* Since it was only one buffer pool, more vector packets can't be
+	 * allocated.
+	 */
+	CU_ASSERT_FATAL(odp_packet_vector_alloc(pool) == ODP_PACKET_VECTOR_INVALID);
+
+	/* Freeing the buffer back to pool */
+	odp_packet_vector_free(pktv);
+
+	/* Check that the buffer was returned back to the pool */
+	pktv = odp_packet_vector_alloc(pool);
+	CU_ASSERT_FATAL(pktv != ODP_PACKET_VECTOR_INVALID);
+	CU_ASSERT(odp_packet_vector_size(pktv) == 0);
+
+	/* Free packet vector using odp_event_free()  */
+	pkt = odp_packet_alloc(default_pool, default_param.pkt.len);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+
+	CU_ASSERT(odp_packet_vector_tbl(pktv, &pkts_tbl) == 0);
+	pkts_tbl[0] = pkt;
+	odp_packet_vector_size_set(pktv, 1);
+
+	odp_event_free(odp_packet_vector_to_event(pktv));
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+static void packet_vector_basic_test(void)
+{
+	odp_packet_t *pkt_tbl;
+	odp_pool_capability_t capa;
+	uint32_t i, num;
+	uint32_t max_size = PKT_VEC_PACKET_NUM;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+	if (capa.vector.max_size < max_size)
+		max_size = capa.vector.max_size;
+
+	/* Checking if default vector packet is valid */
+	CU_ASSERT(odp_packet_vector_valid(pktv_default) == 1)
+
+	/* Making sure default vector packet is from default vector pool */
+	CU_ASSERT(odp_packet_vector_pool(pktv_default) == vector_default_pool)
+
+	/* Get packet vector table */
+	num = odp_packet_vector_tbl(pktv_default, &pkt_tbl);
+	/* Making sure initially no packet in the vector */
+	CU_ASSERT(num == 0);
+
+	/* Fill the preallocated packets in vector */
+	for (i = 0; i < max_size; i++)
+		pkt_tbl[i] = pkt_vec[i];
+
+	/* Setting up number of packets stored in vector */
+	odp_packet_vector_size_set(pktv_default, max_size);
+
+	/* Get number of packets in vector */
+	num = odp_packet_vector_size(pktv_default);
+	CU_ASSERT(num == max_size);
+
+	CU_ASSERT(odp_packet_vector_valid(pktv_default) == 1);
+}
+
+static int packet_vector_suite_init(void)
+{
+	uint32_t num_pkt = PKT_VEC_PACKET_NUM;
+	uint32_t num = PACKET_POOL_NUM;
+	odp_pool_param_t params;
+	uint32_t i, ret, len;
+
+	memset(&pool_capa, 0, sizeof(odp_pool_capability_t));
+
+	if (odp_pool_capability(&pool_capa) < 0) {
+		ODPH_ERR("pool_capability failed\n");
+		return -1;
+	}
+
+	if (pool_capa.pkt.max_num != 0 && pool_capa.pkt.max_num < num)
+		num = pool_capa.pkt.max_num;
+
+	/* Creating default packet pool */
+	odp_pool_param_init(&params);
+	params.type           = ODP_POOL_PACKET;
+	params.pkt.len        = pool_capa.pkt.min_seg_len;
+	params.pkt.num        = num;
+
+	memcpy(&default_param, &params, sizeof(odp_pool_param_t));
+
+	default_pool = odp_pool_create("default_pool", &params);
+	if (default_pool == ODP_POOL_INVALID) {
+		ODPH_ERR("default pool create failed\n");
+		return -1;
+	}
+
+	/* Allocating ipv4-udp packets */
+	len = sizeof(test_packet_ipv4_udp);
+	ret = odp_packet_alloc_multi(default_pool, len, pkt_vec, num_pkt);
+	if (ret != num_pkt) {
+		ODPH_ERR("packet allocation failed\n");
+		if (ret > 0)
+			odp_packet_free_multi(pkt_vec, ret);
+		goto err;
+	}
+
+	for (i = 0; i < num_pkt; i++) {
+		ret = odp_packet_copy_from_mem(pkt_vec[i], 0, len,
+					       test_packet_ipv4_udp);
+		if (ret != 0) {
+			ODPH_ERR("packet preparation failed\n");
+			goto err1;
+		}
+	}
+
+	/* Creating the vector pool */
+	odp_pool_param_init(&params);
+	params.type = ODP_POOL_VECTOR;
+	params.vector.num = PKT_VEC_NUM;
+	params.vector.max_size = pool_capa.vector.max_size < PKT_VEC_SIZE ?
+					pool_capa.vector.max_size : PKT_VEC_SIZE;
+
+	vector_default_pool = odp_pool_create("vector_default_pool", &params);
+
+	if (vector_default_pool == ODP_POOL_INVALID) {
+		ODPH_ERR("default vector pool create failed\n");
+		goto err1;
+	}
+
+	/* Allocating a default vector */
+	pktv_default = odp_packet_vector_alloc(vector_default_pool);
+	if (pktv_default == ODP_PACKET_VECTOR_INVALID) {
+		ODPH_ERR("default vector packet allocation failed\n");
+		goto err2;
+	}
+	return 0;
+err2:
+	odp_pool_destroy(vector_default_pool);
+err1:
+	odp_packet_free_multi(pkt_vec, PKT_VEC_PACKET_NUM);
+err:
+	odp_pool_destroy(default_pool);
+	return -1;
+}
+
+static int packet_vector_suite_term(void)
+{
+	odp_packet_free_multi(pkt_vec, PKT_VEC_PACKET_NUM);
+
+	odp_pool_destroy(default_pool);
+
+	odp_packet_vector_free(pktv_default);
+	odp_pool_destroy(vector_default_pool);
+	return 0;
+}
 static void packet_test_max_pools(void)
 {
 	odp_pool_param_t param;
@@ -3622,6 +3959,15 @@ odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO_NULL,
 };
 
+odp_testinfo_t packet_vector_parse_suite[] = {
+	ODP_TEST_INFO(packet_vector_test_debug),
+	ODP_TEST_INFO(packet_vector_basic_test),
+	ODP_TEST_INFO(packet_vector_test_alloc_free),
+	ODP_TEST_INFO(packet_vector_test_tbl),
+	ODP_TEST_INFO(packet_vector_test_event_conversion),
+	ODP_TEST_INFO_NULL,
+};
+
 odp_testinfo_t packet_parse_suite[] = {
 	ODP_TEST_INFO(parse_eth_ipv4_udp),
 	ODP_TEST_INFO(parse_ipv4_udp),
@@ -3659,6 +4005,11 @@ odp_suiteinfo_t packet_suites[] = {
 	  .testinfo_tbl = packet_parse_suite,
 	  .init_func    = packet_parse_suite_init,
 	  .term_func    = packet_parse_suite_term,
+	},
+	{ .name         = "packet vector tests",
+	  .testinfo_tbl = packet_vector_parse_suite,
+	  .init_func    = packet_vector_suite_init,
+	  .term_func    = packet_vector_suite_term,
 	},
 	ODP_SUITE_INFO_NULL,
 };
