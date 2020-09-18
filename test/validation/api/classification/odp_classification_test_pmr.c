@@ -2283,6 +2283,7 @@ static void test_pmr_series(const int num_udp)
 	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
 	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 	ip->dst_addr  = dst_addr_be;
+	odph_ipv4_csum_update(pkt);
 
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
@@ -2310,6 +2311,7 @@ static void test_pmr_series(const int num_udp)
 		odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
 		odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 		ip->dst_addr  = dst_addr_be;
+		odph_ipv4_csum_update(pkt);
 		udp->dst_port = odp_cpu_to_be_16(dst_port + i);
 
 		seqno = cls_pkt_get_seq(pkt);

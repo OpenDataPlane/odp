@@ -316,11 +316,13 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 		ip->src_addr = odp_cpu_to_be_32(addr);
 		ip->ver_ihl = ODPH_IPV4 << 4 | ODPH_IPV4HDR_IHL_MIN;
 		ip->id = odp_cpu_to_be_16(seqno);
-		odph_ipv4_csum_update(pkt);
 		ip->proto = next_hdr;
 		ip->tot_len = odp_cpu_to_be_16(l3_len);
 		ip->ttl = DEFAULT_TTL;
+		ip->frag_offset = 0;
+		ip->tos = 0;
 		odp_packet_has_ipv4_set(pkt, 1);
+		odph_ipv4_csum_update(pkt);
 	} else {
 		/* ipv6 */
 		odp_packet_has_ipv6_set(pkt, 1);
@@ -357,7 +359,13 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	} else {
 		tcp->src_port = odp_cpu_to_be_16(CLS_DEFAULT_SPORT);
 		tcp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
+		tcp->doffset_flags = 0;
+		tcp->seq_no = 0;
+		tcp->ack_no = 0;
+		tcp->window = 0;
+		tcp->urgptr = 0;
 		tcp->hl = ODPH_TCPHDR_LEN / 4;
+		tcp->ack = 1;
 		tcp->cksm = 0;
 		odp_packet_has_tcp_set(pkt, 1);
 		if (odph_udp_tcp_chksum(pkt, ODPH_CHKSUM_GENERATE, NULL) != 0) {
