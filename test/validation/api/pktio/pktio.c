@@ -2211,6 +2211,12 @@ static void pktio_test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 		return;
 	}
 
+	/* Provide L3 and L4 proto for pktout HW checksum generation */
+	for (i = 0; i < TX_BATCH_LEN; i++) {
+		odp_packet_has_ipv4_set(pkt_tbl[i], true);
+		odp_packet_has_udp_set(pkt_tbl[i], true);
+	}
+
 	ret = odp_pktout_queue(pktio_tx, &pktout_queue, 1);
 	CU_ASSERT_FATAL(ret > 0);
 
@@ -2278,6 +2284,12 @@ static void pktio_test_chksum_sctp(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 			CU_ASSERT_FATAL(odp_pktio_close(pktio[i]) == 0);
 		}
 		return;
+	}
+
+	/* Provide L3 and L4 proto for pktout HW checksum generation */
+	for (i = 0; i < TX_BATCH_LEN; i++) {
+		odp_packet_has_ipv4_set(pkt_tbl[i], true);
+		odp_packet_has_sctp_set(pkt_tbl[i], true);
 	}
 
 	ret = odp_pktout_queue(pktio_tx, &pktout_queue, 1);
