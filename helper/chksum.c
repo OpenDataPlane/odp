@@ -98,14 +98,13 @@ static inline int odph_process_l4_hdr(odp_packet_t      odp_pkt,
 				      uint32_t         *l4_len_ptr,
 				      odp_bool_t       *split_l4_hdr_ptr,
 				      odp_bool_t       *is_tcp_ptr,
-				      uint32_t         *pkt_chksum_offset_ptr,
-				      uint16_t        **pkt_chksum_ptr_ptr)
+				      uint32_t         *pkt_chksum_offset_ptr)
 {
-	odph_udphdr_t  *udp_hdr_ptr;
-	odph_tcphdr_t  *tcp_hdr_ptr;
+	odph_udphdr_t  *udp_hdr_ptr = NULL;
+	odph_tcphdr_t  *tcp_hdr_ptr = NULL;
 	odp_bool_t      split_l4_hdr, is_tcp;
 	uint32_t        l4_offset, l4_len, pkt_chksum_offset;
-	uint16_t       *pkt_chksum_ptr;
+	uint16_t        pkt_chksum;
 	uint8_t        *l4_ptr;
 	uint32_t hdr_len = 0;
 
@@ -130,7 +129,7 @@ static inline int odph_process_l4_hdr(odp_packet_t      odp_pkt,
 		 * should come from the udp header, unlike for TCP where is
 		 * derived. */
 		l4_len            = odp_be_to_cpu_16(udp_hdr_ptr->length);
-		pkt_chksum_ptr    = (uint16_t *)(void *)&udp_hdr_ptr->chksum;
+		pkt_chksum        = udp_hdr_ptr->chksum;
 		pkt_chksum_offset = l4_offset + offsetof(odph_udphdr_t, chksum);
 	} else if (odp_packet_has_tcp(odp_pkt)) {
 		tcp_hdr_ptr  = (odph_tcphdr_t *)l4_ptr;
@@ -141,7 +140,7 @@ static inline int odph_process_l4_hdr(odp_packet_t      odp_pkt,
 					       ODPH_TCPHDR_LEN, tcp_hdr_ptr);
 		}
 
-		pkt_chksum_ptr    = (uint16_t *)(void *)&tcp_hdr_ptr->cksm;
+		pkt_chksum        = tcp_hdr_ptr->cksm;
 		pkt_chksum_offset = l4_offset + offsetof(odph_tcphdr_t, cksm);
 		is_tcp            = true;
 	} else {
@@ -151,25 +150,24 @@ static inline int odph_process_l4_hdr(odp_packet_t      odp_pkt,
 	/* Note that if the op is ODPH_CHKSUM_VERIFY and the existing
 	 * chksum field is 0 and this is a UDP pkt and the chksum_ptr is NULL
 	 * then skip the rest of the chksum calculation, returning 1 instead. */
-	if ((op == ODPH_CHKSUM_VERIFY) && (*pkt_chksum_ptr == 0) &&
+	if ((op == ODPH_CHKSUM_VERIFY) && (pkt_chksum == 0) &&
 	    (!is_tcp) && (chksum_ptr == NULL))
 		return 1;
 
 	/* If we are doing a ODPH_CHKSUM_GENERATE op, then make sure that the
 	 * existing chksum field has been set to zeros. */
-	if ((op == ODPH_CHKSUM_GENERATE) && (*pkt_chksum_ptr != 0)) {
+	if ((op == ODPH_CHKSUM_GENERATE) && (pkt_chksum != 0)) {
 		if (split_l4_hdr)
 			odp_packet_copy_from_mem(odp_pkt, pkt_chksum_offset,
 						 2, ZEROS);
 		else
-			*pkt_chksum_ptr = 0;
+			(is_tcp  ? (tcp_hdr_ptr->cksm = 0) : (udp_hdr_ptr->chksum = 0));
 	}
 
 	*l4_len_ptr            = l4_len;
 	*split_l4_hdr_ptr      = split_l4_hdr;
 	*is_tcp_ptr            = is_tcp;
 	*pkt_chksum_offset_ptr = pkt_chksum_offset;
-	*pkt_chksum_ptr_ptr    = pkt_chksum_ptr;
 	return 0;
 }
 
@@ -184,10 +182,10 @@ static inline int odph_process_l3_hdr(odp_packet_t odp_pkt,
 	odph_ipv6hdr_t *ipv6_hdr_ptr, ipv6_hdr;
 	odp_bool_t      split_l3_hdr;
 	swap_buf_t      swap_buf;
-	uint32_t        l3_offset, l4_offset, l3_hdrs_len, addrs_len;
-	uint32_t        protocol, l3_len, l4_len, idx, ipv6_payload_len, sum;
-	uint16_t       *addrs_ptr;
-	uint32_t hdr_len = 0;
+	uint32_t        l3_offset, l4_offset, l3_hdrs_len;
+	uint32_t        protocol, l3_len, l4_len, idx, ipv6_payload_len;
+	uint32_t        sum = 0;
+	uint32_t        hdr_len = 0;
 
 	/* The following computation using the l3 and l4 offsets handles both
 	 * the case of IPv4 options and IPv6 extension headers uniformly. */
@@ -206,10 +204,14 @@ static inline int odph_process_l3_hdr(odp_packet_t odp_pkt,
 			ipv4_hdr_ptr = &ipv4_hdr;
 		}
 
-		addrs_ptr = (uint16_t *)(void *)&ipv4_hdr_ptr->src_addr;
-		addrs_len = 2 * ODPH_IPV4ADDR_LEN;
 		protocol  = ipv4_hdr_ptr->proto;
 		l3_len    = odp_be_to_cpu_16(ipv4_hdr_ptr->tot_len);
+
+		/* calculate IP pseudo header src and dest addr checksum */
+		sum       = ipv4_hdr_ptr->src_addr & 0xFFFF;
+		sum      += ipv4_hdr_ptr->src_addr >> 16;
+		sum      += ipv4_hdr_ptr->dst_addr & 0xFFFF;
+		sum      += ipv4_hdr_ptr->dst_addr >> 16;
 	} else if (odp_packet_has_ipv6(odp_pkt)) {
 		ipv6_hdr_ptr = odp_packet_l3_ptr(odp_pkt, &hdr_len);
 		split_l3_hdr = hdr_len < ODPH_IPV6HDR_LEN;
@@ -219,11 +221,23 @@ static inline int odph_process_l3_hdr(odp_packet_t odp_pkt,
 			ipv6_hdr_ptr = &ipv6_hdr;
 		}
 
-		addrs_ptr        = (uint16_t *)(void *)&ipv6_hdr_ptr->src_addr;
-		addrs_len        = 2 * ODPH_IPV6ADDR_LEN;
 		protocol         = ipv6_hdr_ptr->next_hdr;
 		ipv6_payload_len = odp_be_to_cpu_16(ipv6_hdr_ptr->payload_len);
 		l3_len           = ipv6_payload_len + ODPH_IPV6HDR_LEN;
+
+		for (idx = 0; idx < 16; idx += 4) {
+			swap_buf.bytes[0] = ipv6_hdr_ptr->src_addr[idx];
+			swap_buf.bytes[1] = ipv6_hdr_ptr->src_addr[idx + 1];
+			swap_buf.bytes[2] = ipv6_hdr_ptr->src_addr[idx + 2];
+			swap_buf.bytes[3] = ipv6_hdr_ptr->src_addr[idx + 3];
+			sum += (uint32_t)swap_buf.words16[0] + (uint32_t)swap_buf.words16[1];
+
+			swap_buf.bytes[0] = ipv6_hdr_ptr->dst_addr[idx];
+			swap_buf.bytes[1] = ipv6_hdr_ptr->dst_addr[idx + 1];
+			swap_buf.bytes[2] = ipv6_hdr_ptr->dst_addr[idx + 2];
+			swap_buf.bytes[3] = ipv6_hdr_ptr->dst_addr[idx + 3];
+			sum += (uint32_t)swap_buf.words16[0] + (uint32_t)swap_buf.words16[1];
+		}
 	} else {
 		return -1;
 	}
@@ -232,12 +246,6 @@ static inline int odph_process_l3_hdr(odp_packet_t odp_pkt,
 	 * For tcp pkts the l4_len is derived from the l3_len and l3_hdrs_len
 	 * calculated above. */
 	l4_len = is_tcp ? (l3_len - l3_hdrs_len) : *l4_len_ptr;
-
-	/* Do a one's complement addition over the IP pseudo-header.
-	 * Note that the pseudo-header is different for IPv4 and IPv6. */
-	sum = 0;
-	for (idx = 0; idx < addrs_len / 2; idx++)
-		sum += (uint32_t)*addrs_ptr++;
 
 	/* Need to convert l4_len and protocol into endian independent form */
 	swap_buf.bytes[0] = (l4_len >> 8) & 0xFF;
@@ -273,15 +281,17 @@ int odph_udp_tcp_chksum(odp_packet_t     odp_pkt,
 	odp_bool_t       has_odd_byte_in;
 	uint32_t         l4_len, sum, ones_compl_sum;
 	uint32_t         data_len, pkt_chksum_offset, offset;
-	uint16_t        *pkt_chksum_ptr, chksum;
-	uint8_t         *data_ptr, odd_byte_in_out;
+	uint16_t         chksum;
+	uint8_t          *data_ptr, odd_byte_in_out;
 	int              rc, ret_code;
-	uint32_t remaining_seg_len = 0;
+	uint32_t         remaining_seg_len = 0;
+	odph_udphdr_t    *udp_hdr_ptr = NULL;
+	odph_tcphdr_t    *tcp_hdr_ptr = NULL;
+	uint8_t          *l4_ptr = NULL;
 
 	/* First parse and process the l4 header */
 	rc = odph_process_l4_hdr(odp_pkt, op, &udp_tcp_hdr, chksum_ptr, &l4_len,
-				 &split_l4_hdr, &is_tcp, &pkt_chksum_offset,
-				 &pkt_chksum_ptr);
+				 &split_l4_hdr, &is_tcp, &pkt_chksum_offset);
 	if (rc != 0)
 		return rc;
 
@@ -298,6 +308,10 @@ int odph_udp_tcp_chksum(odp_packet_t     odp_pkt,
 	offset          = odp_packet_l4_offset(odp_pkt);
 	has_odd_byte_in = false;
 	odd_byte_in_out = 0;
+	/* save l4 pointer for later use to update checksum value
+	 * in case of ODPH_CHKSUM_GENERATE operation
+	 */
+	l4_ptr          = data_ptr;
 
 	while (true) {
 		data_len = remaining_seg_len;
@@ -333,6 +347,11 @@ int odph_udp_tcp_chksum(odp_packet_t     odp_pkt,
 	chksum         = (~ones_compl_sum) & 0xFFFF;
 	ret_code       = 0;
 
+	if (is_tcp)
+		tcp_hdr_ptr = (odph_tcphdr_t *)l4_ptr;
+	else
+		udp_hdr_ptr = (odph_udphdr_t *)l4_ptr;
+
 	/* Now based upon the given op, the calculated chksum and the incoming
 	 * chksum value complete the operation. */
 	if (op == ODPH_CHKSUM_GENERATE) {
@@ -340,9 +359,9 @@ int odph_udp_tcp_chksum(odp_packet_t     odp_pkt,
 			odp_packet_copy_from_mem(odp_pkt, pkt_chksum_offset,
 						 2, &chksum);
 		else
-			*pkt_chksum_ptr = chksum;
+			is_tcp ? (tcp_hdr_ptr->cksm = chksum) : (udp_hdr_ptr->chksum = chksum);
 	} else if (op == ODPH_CHKSUM_VERIFY) {
-		if ((*pkt_chksum_ptr == 0) && (!is_tcp))
+		if ((!is_tcp) && (udp_hdr_ptr->chksum == 0))
 			ret_code = 1;
 		else
 			ret_code = (chksum == 0) ? 0 : 2;
