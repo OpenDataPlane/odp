@@ -111,7 +111,10 @@ typedef union odp_cls_pmr_terms_t {
 		uint64_t	icmp_type:1;
 		/** ICMP code, implies IPPROTO=1 */
 		uint64_t	icmp_code:1;
-
+		/** Source SCTP port, implies IPPROTO=132 */
+		uint64_t	sctp_sport:1;
+		/** Destination SCTP port, implies IPPROTO=132 */
+		uint64_t	sctp_dport:1;
 	} bit;
 	/** All bits of the bit field structure */
 	uint64_t all_bits;
@@ -574,6 +577,12 @@ typedef enum {
 
 	/** ICMP code (val_sz = 1), implies IPPROTO=1 */
 	ODP_PMR_ICMP_CODE,
+
+	/** Source SCTP port (val_sz = 2), implies IPPROTO=132 */
+	ODP_PMR_SCTP_SPORT,
+
+	/** Destination SCTP port (val_sz = 2), implies IPPROTO=132 */
+	ODP_PMR_SCTP_DPORT,
 
 	/** Inner header may repeat above values with this offset */
 	ODP_PMR_INNER_HDR_OFF = 32
