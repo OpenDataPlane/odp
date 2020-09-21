@@ -915,9 +915,12 @@ typedef struct odp_crypto_cipher_capability_t {
 	 * which is not divisible by 8 is unsupported and will result in
 	 * unspecified behaviour.
 	 *
-	 * Note2: currently data length MUST be divisible by 8. Specifying data
-	 * which does not consist of full bytes will result in unspecified
-	 * behaviour.
+	 * Note2: If the data length is not a multiple of 8, the remaining
+	 * bits of the data in the last byte of the input/output will be the
+	 * most significant bits, i.e. the most significant bit is considered
+	 * to be the first bit of a byte for the purpose of input and output
+	 * data range. The output bits that fall out of the output range are
+	 * undefined.
 	 */
 	odp_bool_t bit_mode;
 
@@ -958,6 +961,13 @@ typedef struct odp_crypto_auth_capability_t {
 	 * Note: data buffer MUST start on the byte boundary, using offset
 	 * which is not divisible by 8 is unsupported and will result in
 	 * unpredictable behaviour.
+	 *
+	 * Note2: If the data length is not a multiple of 8, the remaining
+	 * bits of the data in the last byte of the input/output will be the
+	 * most significant bits, i.e. the most significant bit is considered
+	 * to be the first bit of a byte for the purpose of input and output
+	 * data range. The output bits that fall out of the output range are
+	 * undefined.
 	 */
 	odp_bool_t bit_mode;
 
