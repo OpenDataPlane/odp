@@ -105,6 +105,12 @@ typedef union odp_cls_pmr_terms_t {
 		uint64_t        custom_l3:1;
 		/** IGMP Group address, implies IPPROTO=2 */
 		uint64_t	igmp_grp_addr:1;
+		/** ICMP identifier, implies IPPROTO=1 and ICMP_TYPE=0 or ICMP_TYPE=8 */
+		uint64_t	icmp_id:1;
+		/** ICMP type, implies IPPROTO=1 */
+		uint64_t	icmp_type:1;
+		/** ICMP code, implies IPPROTO=1 */
+		uint64_t	icmp_code:1;
 
 	} bit;
 	/** All bits of the bit field structure */
@@ -559,6 +565,15 @@ typedef enum {
 
 	/** IGMP Group address (val_sz = 4), implies IPPROTO=2 */
 	ODP_PMR_IGMP_GRP_ADDR,
+
+	/** ICMP identifier (val_sz = 2), implies IPPROTO=1 and ICMP_TYPE=0 or ICMP_TYPE=8 */
+	ODP_PMR_ICMP_ID,
+
+	/** ICMP type (val_sz = 1), implies IPPROTO=1 */
+	ODP_PMR_ICMP_TYPE,
+
+	/** ICMP code (val_sz = 1), implies IPPROTO=1 */
+	ODP_PMR_ICMP_CODE,
 
 	/** Inner header may repeat above values with this offset */
 	ODP_PMR_INNER_HDR_OFF = 32
