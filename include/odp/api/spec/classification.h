@@ -113,6 +113,8 @@ typedef union odp_cls_pmr_terms_t {
 		uint64_t	sctp_sport:1;
 		/** Destination SCTP port */
 		uint64_t	sctp_dport:1;
+		/** GTPU Tunnel endpoint identifier */
+		uint64_t	gtpu_teid:1;
 
 	} bit;
 	/** All bits of the bit field structure */
@@ -572,6 +574,9 @@ typedef enum {
 
 	/** Destination SCTP port (val_sz = 2) */
 	ODP_PMR_SCTP_DPORT,
+
+	/** GTPU Tunnel endpoint identifier  (val_sz = 4)*/
+	ODP_PMR_GTPU_TEID,
 
 	/** Inner header may repeat above values with this offset */
 	ODP_PMR_INNER_HDR_OFF = 32
