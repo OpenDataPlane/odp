@@ -115,6 +115,8 @@ typedef union odp_cls_pmr_terms_t {
 		uint64_t	sctp_sport:1;
 		/** Destination SCTP port, implies IPPROTO=132 */
 		uint64_t	sctp_dport:1;
+		/** GTPv1 tunnel endpoint identifier */
+		uint64_t	gtpv1_teid:1;
 	} bit;
 	/** All bits of the bit field structure */
 	uint64_t all_bits;
@@ -583,6 +585,14 @@ typedef enum {
 
 	/** Destination SCTP port (val_sz = 2), implies IPPROTO=132 */
 	ODP_PMR_SCTP_DPORT,
+
+	/** GTPv1 tunnel endpoint identifier (val_sz = 4)
+	 *
+	 * Matches if and only if IP protocol is UDP, UDP destination port
+	 * is 2152 and the UDP payload interpreted as GTP header has GTP
+	 * version 1 and TEID as specified.
+	 */
+	ODP_PMR_GTPV1_TEID,
 
 	/** Inner header may repeat above values with this offset */
 	ODP_PMR_INNER_HDR_OFF = 32
