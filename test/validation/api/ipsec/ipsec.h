@@ -14,7 +14,7 @@
 extern odp_testinfo_t ipsec_in_suite[];
 extern odp_testinfo_t ipsec_out_suite[];
 
-int ipsec_init(odp_instance_t *inst);
+int ipsec_init(odp_instance_t *inst, odp_ipsec_op_mode_t mode);
 int ipsec_term(odp_instance_t inst);
 int ipsec_config(odp_instance_t inst);
 

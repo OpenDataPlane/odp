@@ -980,7 +980,7 @@ int ipsec_out_term(void)
 	return ipsec_suite_term();
 }
 
-int ipsec_init(odp_instance_t *inst)
+int ipsec_init(odp_instance_t *inst, odp_ipsec_op_mode_t mode)
 {
 	odp_pool_param_t params;
 	odp_pool_t pool;
@@ -989,6 +989,10 @@ int ipsec_init(odp_instance_t *inst)
 	odp_pktio_t pktio;
 	odp_init_t init_param;
 	odph_helper_options_t helper_options;
+
+	suite_context.pool = ODP_POOL_INVALID;
+	suite_context.queue = ODP_QUEUE_INVALID;
+	suite_context.pktio = ODP_PKTIO_INVALID;
 
 	if (odph_options(&helper_options)) {
 		fprintf(stderr, "error: odph_options() failed.\n");
@@ -1037,16 +1041,21 @@ int ipsec_init(odp_instance_t *inst)
 		fprintf(stderr, "Packet pool creation failed.\n");
 		return -1;
 	}
-	out_queue = odp_queue_create("ipsec-out", NULL);
-	if (ODP_QUEUE_INVALID == out_queue) {
-		fprintf(stderr, "IPsec outq creation failed.\n");
-		return -1;
+	if (mode == ODP_IPSEC_OP_MODE_ASYNC ||
+	    mode == ODP_IPSEC_OP_MODE_INLINE) {
+		out_queue = odp_queue_create("ipsec-out", NULL);
+		if (ODP_QUEUE_INVALID == out_queue) {
+			fprintf(stderr, "IPsec outq creation failed.\n");
+			return -1;
+		}
 	}
 
-	pktio = pktio_create(pool);
-	if (ODP_PKTIO_INVALID == pktio) {
-		fprintf(stderr, "IPsec pktio creation failed.\n");
-		return -1;
+	if (mode == ODP_IPSEC_OP_MODE_INLINE) {
+		pktio = pktio_create(pool);
+		if (ODP_PKTIO_INVALID == pktio) {
+			fprintf(stderr, "IPsec pktio creation failed.\n");
+			return -1;
+		}
 	}
 
 	return 0;
@@ -1093,32 +1102,23 @@ int ipsec_config(odp_instance_t ODP_UNUSED inst)
 
 int ipsec_term(odp_instance_t inst)
 {
-	odp_pool_t pool;
-	odp_queue_t out_queue;
-	odp_pktio_t pktio;
+	odp_pool_t pool = suite_context.pool;
+	odp_queue_t out_queue = suite_context.queue;
+	odp_pktio_t pktio = suite_context.pktio;
 
-	pktio = odp_pktio_lookup("loop");
 	if (ODP_PKTIO_INVALID != pktio) {
 		if (odp_pktio_close(pktio))
 			fprintf(stderr, "IPsec pktio close failed.\n");
-	} else {
-		fprintf(stderr, "IPsec pktio not found.\n");
 	}
 
-	out_queue = odp_queue_lookup("ipsec-out");
 	if (ODP_QUEUE_INVALID != out_queue) {
 		if (odp_queue_destroy(out_queue))
 			fprintf(stderr, "IPsec outq destroy failed.\n");
-	} else {
-		fprintf(stderr, "IPsec outq not found.\n");
 	}
 
-	pool = odp_pool_lookup("packet_pool");
 	if (ODP_POOL_INVALID != pool) {
 		if (odp_pool_destroy(pool))
 			fprintf(stderr, "Packet pool destroy failed.\n");
-	} else {
-		fprintf(stderr, "Packet pool not found.\n");
 	}
 
 	if (0 != odp_term_local()) {

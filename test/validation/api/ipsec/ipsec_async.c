@@ -10,7 +10,7 @@ static int ipsec_async_init(odp_instance_t *inst)
 {
 	int rc;
 
-	rc = ipsec_init(inst);
+	rc = ipsec_init(inst, ODP_IPSEC_OP_MODE_ASYNC);
 	if (rc != 0)
 		return rc;
 
@@ -21,7 +21,6 @@ static int ipsec_async_init(odp_instance_t *inst)
 	if (suite_context.queue == ODP_QUEUE_INVALID)
 		return -1;
 
-	suite_context.pktio = ODP_PKTIO_INVALID;
 	suite_context.inbound_op_mode = ODP_IPSEC_OP_MODE_ASYNC;
 	suite_context.outbound_op_mode = ODP_IPSEC_OP_MODE_ASYNC;
 
