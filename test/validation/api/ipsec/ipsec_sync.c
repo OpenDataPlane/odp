@@ -10,7 +10,7 @@ static int ipsec_sync_init(odp_instance_t *inst)
 {
 	int rc;
 
-	rc = ipsec_init(inst);
+	rc = ipsec_init(inst, ODP_IPSEC_OP_MODE_SYNC);
 	if (rc != 0)
 		return rc;
 
@@ -18,8 +18,6 @@ static int ipsec_sync_init(odp_instance_t *inst)
 	if (suite_context.pool == ODP_POOL_INVALID)
 		return -1;
 
-	suite_context.queue = ODP_QUEUE_INVALID;
-	suite_context.pktio = ODP_PKTIO_INVALID;
 	suite_context.inbound_op_mode = ODP_IPSEC_OP_MODE_SYNC;
 	suite_context.outbound_op_mode = ODP_IPSEC_OP_MODE_SYNC;
 

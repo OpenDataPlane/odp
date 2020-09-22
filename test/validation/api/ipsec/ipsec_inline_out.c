@@ -10,7 +10,7 @@ static int ipsec_sync_init(odp_instance_t *inst)
 {
 	int rc;
 
-	rc = ipsec_init(inst);
+	rc = ipsec_init(inst, ODP_IPSEC_OP_MODE_INLINE);
 	if (rc != 0)
 		return rc;
 
