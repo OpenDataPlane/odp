@@ -1,3 +1,4 @@
 odp_simple_pipeline
+pktio_env
 *.log
 *.trs

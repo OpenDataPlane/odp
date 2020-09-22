@@ -6,21 +6,29 @@
 # SPDX-License-Identifier:     BSD-3-Clause
 #
 
-PCAP_IN=`find . ${TEST_DIR} $(dirname $0) -name icmp_echo_req.pcap -print -quit`
-PCAP_OUT="pcapout.pcap"
-PCAP_IN_SIZE=`stat -c %s ${PCAP_IN}`
-echo "using PCAP in=${PCAP_IN}:out=${PCAP_OUT} size %${PCAP_IN_SIZE}"
+if  [ -f ./pktio_env ]; then
+	. ./pktio_env
+else
+        echo "BUG: unable to find pktio_env!"
+        echo "pktio_env has to be in current directory"
+        exit 1
+fi
+
+setup_interfaces
 
 # Ping test with 100 ICMP echo request packets (verbose mode)
-./odp_ping${EXEEXT} -v -n 100 -ipcap:in=${PCAP_IN}:out=${PCAP_OUT}
+./odp_ping${EXEEXT} -v -n 100 -i $IF0
 STATUS=$?
-PCAP_OUT_SIZE=`stat -c %s ${PCAP_OUT}`
-rm -f ${PCAP_OUT}
 
-if [ ${STATUS} -ne 0 ] || [ ${PCAP_IN_SIZE} -ne ${PCAP_OUT_SIZE} ]; then
-	echo "Error: status ${STATUS}, in:${PCAP_IN_SIZE} out:${PCAP_OUT_SIZE}"
+if [ ${STATUS} -ne 0 ]; then
+	echo "Error: status ${STATUS}"
 	exit 1
 fi
-echo "Pass: status ${STATUS}, in:${PCAP_IN_SIZE} out:${PCAP_OUT_SIZE}"
+
+validate_result
+
+cleanup_interfaces
+
+echo "Pass: status ${STATUS}"
 
 exit 0

@@ -1,4 +1,5 @@
 odp_ping
+pktio_env
 *.log
 *.trs
 pcapout.pcap
