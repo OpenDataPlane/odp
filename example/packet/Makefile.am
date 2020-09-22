@@ -27,6 +27,8 @@ all-local:
 			fi \
 		done \
 	fi
+	ln -f -s $(top_srcdir)/platform/$(with_platform)/test/example/packet/pktio_env \
+		pktio_env
 clean-local:
 	if [ "x$(srcdir)" != "x$(builddir)" ]; then \
 		for f in $(EXTRA_DIST); do \

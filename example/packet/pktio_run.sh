@@ -6,57 +6,63 @@
 # SPDX-License-Identifier:     BSD-3-Clause
 #
 
-PCAP_IN=`find . ${TEST_DIR} $(dirname $0) -name udp64.pcap -print -quit`
-PCAP_OUT="pcapout.pcap"
-PCAP_IN_SIZE=`stat -c %s ${PCAP_IN}`
-echo "using PCAP in=${PCAP_IN}:out=${PCAP_OUT} size %${PCAP_IN_SIZE}"
+if  [ -f ./pktio_env ]; then
+	. ./pktio_env
+else
+        echo "BUG: unable to find pktio_env!"
+        echo "pktio_env has to be in current directory"
+        exit 1
+fi
+
+setup_interfaces
 
 # burst mode
-./odp_pktio${EXEEXT} -ipcap:in=${PCAP_IN}:out=${PCAP_OUT} -t 5 -m 0
+./odp_pktio${EXEEXT} -i $IF1 -t 5 -m 0
 STATUS=$?
-PCAP_OUT_SIZE=`stat -c %s ${PCAP_OUT}`
-rm -f ${PCAP_OUT}
-
-if [ ${STATUS} -ne 0 ] || [ ${PCAP_IN_SIZE} -ne ${PCAP_OUT_SIZE} ]; then
-	echo "Error: status ${STATUS}, in:${PCAP_IN_SIZE} out:${PCAP_OUT_SIZE}"
+if [ ${STATUS} -ne 0 ]; then
+	echo "Error: status ${STATUS}"
 	exit 1
 fi
-echo "Pass -m 0: status ${STATUS}, in:${PCAP_IN_SIZE} out:${PCAP_OUT_SIZE}"
+
+validate_result
+echo "Pass -m 0: status ${STATUS}"
 
 # queue mode
-./odp_pktio${EXEEXT} -ipcap:in=${PCAP_IN}:out=${PCAP_OUT} -t 5 -m 1
+./odp_pktio${EXEEXT} -i $IF1 -t 5 -m 1
 STATUS=$?
-PCAP_OUT_SIZE=`stat -c %s ${PCAP_OUT}`
-rm -f ${PCAP_OUT}
 
-if [ ${STATUS} -ne 0 ] || [ ${PCAP_IN_SIZE} -ne ${PCAP_OUT_SIZE} ]; then
-	echo "Error: status ${STATUS}, in:${PCAP_IN_SIZE} out:${PCAP_OUT_SIZE}"
+if [ ${STATUS} -ne 0 ]; then
+	echo "Error: status ${STATUS}"
 	exit 2
 fi
-echo "Pass -m 1: status ${STATUS}, in:${PCAP_IN_SIZE} out:${PCAP_OUT_SIZE}"
+
+validate_result
+echo "Pass -m 1: status ${STATUS}"
 
 # sched/queue mode
-./odp_pktio${EXEEXT} -ipcap:in=${PCAP_IN}:out=${PCAP_OUT} -t 5 -m 2
+./odp_pktio${EXEEXT} -i $IF1 -t 5 -m 2
 STATUS=$?
-PCAP_OUT_SIZE=`stat -c %s ${PCAP_OUT}`
-rm -f ${PCAP_OUT}
 
-if [ ${STATUS} -ne 0 ] || [ ${PCAP_IN_SIZE} -ne ${PCAP_OUT_SIZE} ]; then
-	echo "Error: status ${STATUS}, in:${PCAP_IN_SIZE} out:${PCAP_OUT_SIZE}"
+if [ ${STATUS} -ne 0 ]; then
+	echo "Error: status ${STATUS}"
 	exit 3
 fi
-echo "Pass -m 2: status ${STATUS}, in:${PCAP_IN_SIZE} out:${PCAP_OUT_SIZE}"
+
+validate_result
+echo "Pass -m 2: status ${STATUS}"
 
 # cpu number option test 1
-./odp_pktio${EXEEXT} -ipcap:in=${PCAP_IN}:out=${PCAP_OUT} -t 5 -m 0 -c 1
+./odp_pktio${EXEEXT} -i $IF1 -t 5 -m 0 -c 1
 STATUS=$?
-PCAP_OUT_SIZE=`stat -c %s ${PCAP_OUT}`
-rm -f ${PCAP_OUT}
 
-if [ ${STATUS} -ne 0 ] || [ ${PCAP_IN_SIZE} -ne ${PCAP_OUT_SIZE} ]; then
-	echo "Error: status ${STATUS}, in:${PCAP_IN_SIZE} out:${PCAP_OUT_SIZE}"
+if [ ${STATUS} -ne 0 ]; then
+	echo "Error: status ${STATUS}"
 	exit 4
 fi
-echo "Pass -m 0 -c 1: status ${STATUS}, in:${PCAP_IN_SIZE} out:${PCAP_OUT_SIZE}"
+
+validate_result
+echo "Pass -m 0 -c 1: status ${STATUS}"
+
+cleanup_interfaces
 
 exit 0

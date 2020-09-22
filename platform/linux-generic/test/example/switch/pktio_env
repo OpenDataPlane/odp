@@ -1,0 +1,53 @@
+#!/bin/sh
+#
+# Copyright (C) 2020, Marvell
+# All rights reserved.
+#
+# SPDX-License-Identifier:	BSD-3-Clause
+#
+# Script to setup interfaces used for running application on linux-generic.
+#
+# For linux-generic the default behavior is to create two pcap interfaces
+# and one interface uses udp64.pcap to inject traffic. An output pcap file
+# is generated via second interface.
+#
+# Network set-up
+# IF0 |---> IF1
+#     |---> IF2
+#     |---> IF3
+
+NUM_RX_PORT=3
+PCAP_IN=`find . ${TEST_DIR} $(dirname $0) -name udp64.pcap -print -quit`
+echo "Switch test using PCAP_IN = ${PCAP_IN}"
+
+IF0=pcap:in=${PCAP_IN}
+IF1=pcap:out=pcapout1.pcap
+IF2=pcap:out=pcapout2.pcap
+IF3=pcap:out=pcapout3.pcap
+
+if [ "$0" = "$BASH_SOURCE" ]; then
+	echo "Error: Platform specific env file has to be sourced."
+fi
+
+validate_result()
+{
+	for i in `seq 1 $NUM_RX_PORT`;
+	do
+		if [ `stat -c %s pcapout${i}.pcap` -ne `stat -c %s ${PCAP_IN}` ]; then
+			echo "Error: Output file $i size not matching"
+		fi
+		rm -f pcapout${i}.pcap
+	done
+}
+
+setup_interfaces()
+{
+	echo "pktio: setting up test interfaces $IF0, $IF1, $IF2, $IF3."
+	return 0
+}
+
+cleanup_interfaces()
+{
+	echo "pktio: cleaning up test interfaces $IF0, $IF1, $IF2, $IF3."
+	return 0
+}

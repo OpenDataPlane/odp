@@ -1,3 +1,4 @@
 odp_switch
+pktio_env
 *.log
 *.trs

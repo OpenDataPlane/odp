@@ -6,23 +6,27 @@
 # SPDX-License-Identifier:     BSD-3-Clause
 #
 
-PCAP_IN=`find . ${TEST_DIR} $(dirname $0) -name udp64.pcap -print -quit`
-PCAP_OUT="pcapout.pcap"
-PCAP_IN_SIZE=`stat -c %s ${PCAP_IN}`
-echo "using PCAP_IN = ${PCAP_IN}, PCAP_OUT = ${PCAP_OUT}"
-
-./odp_l3fwd${EXEEXT} -i pcap:in=${PCAP_IN},pcap:out=${PCAP_OUT} \
-	    -r "10.0.0.0/24,pcap:out=${PCAP_OUT}" -d 30
-
-STATUS=$?
-PCAP_OUT_SIZE=`stat -c %s ${PCAP_OUT}`
-rm -f ${PCAP_OUT}
-
-if [ ${STATUS} -ne 0 ] || [ ${PCAP_IN_SIZE} -ne ${PCAP_OUT_SIZE} ]; then
-	echo "Error: status ${STATUS}, in:${PCAP_IN_SIZE} out:${PCAP_OUT_SIZE}"
+if  [ -f ./pktio_env ]; then
+	. ./pktio_env
+else
+	echo "BUG: unable to find pktio_env!"
+	echo "pktio_env has to be in current directory"
 	exit 1
 fi
 
-echo "Pass: status ${STATUS}, in:${PCAP_IN_SIZE} out:${PCAP_OUT_SIZE}"
+setup_interfaces
+
+./odp_l3fwd${EXEEXT} -i $IF0,$IF1 -r "10.0.0.0/24,$IF1" -d 30
+
+STATUS=$?
+
+if [ ${STATUS} -ne 0 ]; then
+	echo "Error: status ${STATUS}"
+	exit 1
+fi
+
+validate_result
+
+cleanup_interfaces
 
 exit 0

@@ -1,3 +1,4 @@
 odp_l3fwd
+pktio_env
 *.log
 *.trs

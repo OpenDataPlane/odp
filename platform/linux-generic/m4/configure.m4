@@ -43,6 +43,13 @@ AC_CONFIG_FILES([platform/linux-generic/Makefile
 		 platform/linux-generic/libodp-linux.pc
 		 platform/linux-generic/dumpconfig/Makefile
 		 platform/linux-generic/test/Makefile
+		 platform/linux-generic/test/example/Makefile
+		 platform/linux-generic/test/example/l2fwd_simple/Makefile
+		 platform/linux-generic/test/example/l3fwd/Makefile
+		 platform/linux-generic/test/example/packet/Makefile
+		 platform/linux-generic/test/example/ping/Makefile
+		 platform/linux-generic/test/example/simple_pipeline/Makefile
+		 platform/linux-generic/test/example/switch/Makefile
 		 platform/linux-generic/test/validation/api/shmem/Makefile
 		 platform/linux-generic/test/validation/api/pktio/Makefile
 		 platform/linux-generic/test/pktio_ipc/Makefile])
