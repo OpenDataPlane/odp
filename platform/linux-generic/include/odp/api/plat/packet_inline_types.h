@@ -59,6 +59,7 @@ typedef union {
 	/* Individual input flags */
 	struct {
 		uint64_t dst_queue:1; /* Dst queue present */
+		uint64_t cls_mark: 1; /* Classifier mark value present*/
 
 		uint64_t flow_hash:1; /* Flow hash present */
 		uint64_t timestamp:1; /* Timestamp present */

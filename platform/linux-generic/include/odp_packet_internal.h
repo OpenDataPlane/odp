@@ -123,6 +123,9 @@ typedef struct odp_packet_hdr_t {
 	/* Flow hash value */
 	uint32_t flow_hash;
 
+	/* Classifier mark */
+	uint16_t cls_mark;
+
 	union {
 		struct {
 			/* Result for crypto packet op */
@@ -198,8 +201,9 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 		last->seg_len = seg_len;
 	}
 
-	pkt_hdr->p.input_flags.all  = 0;
-	pkt_hdr->p.flags.all_flags  = 0;
+	/* Clear all flags. Resets also return value of cls_mark, user_ptr, etc. */
+	pkt_hdr->p.input_flags.all = 0;
+	pkt_hdr->p.flags.all_flags = 0;
 
 	pkt_hdr->p.l2_offset = 0;
 	pkt_hdr->p.l3_offset = ODP_PACKET_OFFSET_INVALID;
@@ -233,6 +237,7 @@ static inline void copy_packet_cls_metadata(odp_packet_hdr_t *src_hdr,
 	dst_hdr->dst_queue = src_hdr->dst_queue;
 	dst_hdr->flow_hash = src_hdr->flow_hash;
 	dst_hdr->timestamp = src_hdr->timestamp;
+	dst_hdr->cls_mark  = src_hdr->cls_mark;
 }
 
 static inline void *packet_data(odp_packet_hdr_t *pkt_hdr)
