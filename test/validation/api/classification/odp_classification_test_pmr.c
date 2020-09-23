@@ -9,6 +9,10 @@
 #include "classification.h"
 #include <odp_cunit_common.h>
 
+#define MAX_NUM_UDP 4
+#define MARK_IP     1
+#define MARK_UDP    2
+
 static odp_pool_t pkt_pool;
 /** sequence number of IP packets */
 static odp_atomic_u32_t seq;
@@ -2176,7 +2180,7 @@ static void test_pmr_term_custom(int custom_l3)
  *             dst IP        dst UDP[0 ... 3]
  * default_cos   ->   cos_ip        ->        cos_udp[0 ... 3]
  */
-static void test_pmr_series(const int num_udp)
+static void test_pmr_series(const int num_udp, int marking)
 {
 	odp_packet_t pkt;
 	uint32_t seqno;
@@ -2196,6 +2200,7 @@ static void test_pmr_series(const int num_udp)
 	uint32_t dst_mask;
 	odp_pmr_param_t pmr_param;
 	odp_cls_cos_param_t cls_param;
+	odp_pmr_create_opt_t create_opt;
 	odph_ethhdr_t *eth;
 	odph_ipv4hdr_t *ip;
 	odph_udphdr_t *udp;
@@ -2237,7 +2242,17 @@ static void test_pmr_series(const int num_udp)
 	pmr_param.val_sz      = sizeof(dst_addr_be);
 	pmr_param.offset      = 0;
 
-	pmr_ip = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos_ip);
+	if (marking) {
+		odp_cls_pmr_create_opt_init(&create_opt);
+		create_opt.terms     = &pmr_param;
+		create_opt.num_terms = 1;
+		create_opt.mark      = MARK_IP;
+
+		pmr_ip = odp_cls_pmr_create_opt(&create_opt, default_cos, cos_ip);
+	} else {
+		pmr_ip = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos_ip);
+	}
+
 	CU_ASSERT_FATAL(pmr_ip != ODP_PMR_INVALID);
 
 	/* Dest UDP port */
@@ -2265,8 +2280,17 @@ static void test_pmr_series(const int num_udp)
 		pmr_param.val_sz      = 2;
 		pmr_param.offset      = 0;
 
-		pmr_udp[i] = odp_cls_pmr_create(&pmr_param, 1,
-						cos_ip, cos_udp[i]);
+		if (marking) {
+			odp_cls_pmr_create_opt_init(&create_opt);
+			create_opt.terms     = &pmr_param;
+			create_opt.num_terms = 1;
+			create_opt.mark      = MARK_UDP + i;
+
+			pmr_udp[i] = odp_cls_pmr_create_opt(&create_opt, cos_ip, cos_udp[i]);
+		} else {
+			pmr_udp[i] = odp_cls_pmr_create(&pmr_param, 1, cos_ip, cos_udp[i]);
+		}
+
 		CU_ASSERT_FATAL(pmr_udp[i] != ODP_PMR_INVALID);
 	}
 
@@ -2294,6 +2318,16 @@ static void test_pmr_series(const int num_udp)
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	CU_ASSERT(retqueue == queue_ip);
+
+	if (marking) {
+		CU_ASSERT(odp_packet_cls_mark(pkt) == MARK_IP);
+		CU_ASSERT(odp_packet_reset(pkt, odp_packet_len(pkt)) == 0);
+		CU_ASSERT(odp_packet_cls_mark(pkt) == 0);
+	} else {
+		/* Default is 0 */
+		CU_ASSERT(odp_packet_cls_mark(pkt) == 0);
+	}
+
 	odp_packet_free(pkt);
 
 	/* Matching UDP/IP packets */
@@ -2323,6 +2357,14 @@ static void test_pmr_series(const int num_udp)
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 		CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 		CU_ASSERT(retqueue == queue_udp[i]);
+
+		if (marking) {
+			CU_ASSERT(odp_packet_cls_mark(pkt) == (uint64_t)(MARK_UDP + i));
+		} else {
+			/* Default is 0 */
+			CU_ASSERT(odp_packet_cls_mark(pkt) == 0);
+		}
+
 		odp_packet_free(pkt);
 	}
 
@@ -2366,12 +2408,17 @@ static void test_pmr_series(const int num_udp)
 
 static void classification_test_pmr_serial(void)
 {
-	test_pmr_series(1);
+	test_pmr_series(1, 0);
 }
 
 static void classification_test_pmr_parallel(void)
 {
-	test_pmr_series(4);
+	test_pmr_series(MAX_NUM_UDP, 0);
+}
+
+static void classification_test_pmr_marking(void)
+{
+	test_pmr_series(MAX_NUM_UDP, 1);
 }
 
 static void classification_test_pmr_term_custom_frame(void)
@@ -2479,6 +2526,20 @@ static int check_capa_pmr_series(void)
 	return support;
 }
 
+static int check_capa_pmr_marking(void)
+{
+	uint64_t terms;
+
+	terms = cls_capa.supported_terms.bit.dip_addr &&
+		cls_capa.supported_terms.bit.udp_dport;
+
+	/* one PMR for IP, MAX_NUM_UDP PMRs for UDP */
+	if (terms && cls_capa.max_mark >= (MARK_UDP + MAX_NUM_UDP - 1))
+		return 1;
+
+	return 0;
+}
+
 odp_testinfo_t classification_suite_pmr[] = {
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_tcp_dport,
 				  check_capa_tcp_dport),
@@ -2522,5 +2583,7 @@ odp_testinfo_t classification_suite_pmr[] = {
 				  check_capa_pmr_series),
 	ODP_TEST_INFO(classification_test_pktin_classifier_flag),
 	ODP_TEST_INFO(classification_test_pmr_term_tcp_dport_multi),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_marking,
+				  check_capa_pmr_marking),
 	ODP_TEST_INFO_NULL,
 };
