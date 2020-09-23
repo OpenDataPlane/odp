@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include "parser.h"
+#include "lso.h"
 
 #define PKT_BUF_NUM            128
 #define PKT_BUF_SIZE           (9 * 1024)
@@ -3481,6 +3482,7 @@ odp_suiteinfo_t pktio_suites[] = {
 	 pktio_suite_term, pktio_suite_segmented},
 	{"Packet parser", parser_suite_init, parser_suite_term, parser_suite},
 	{"Packet vector", pktv_suite_init, pktv_suite_term, pktv_suite},
+	{"Large Segment Offload", lso_suite_init, lso_suite_term, lso_suite},
 	ODP_SUITE_INFO_NULL
 };
 
