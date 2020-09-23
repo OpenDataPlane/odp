@@ -195,11 +195,23 @@ typedef enum odp_proto_layer_t {
 	/** Layer L2 protocols (Ethernet, VLAN, etc) */
 	ODP_PROTO_LAYER_L2,
 
-	/** Layer L3 protocols (IPv4, IPv6, ICMP, IPSEC, etc) */
+	/** Layer L3 protocols (IPv4, IPv6, etc) */
 	ODP_PROTO_LAYER_L3,
 
-	/** Layer L4 protocols (UDP, TCP, SCTP) */
+	/** Layer L4 protocols (UDP, TCP, SCTP, IPSEC, ICMP, etc) */
 	ODP_PROTO_LAYER_L4,
+
+	/** Layer Tunnel protocols (VXLAN, GENEVE) */
+	ODP_PROTO_LAYER_TUN,
+
+	/** Layer Inner L2 protocols (Ethernet, VLAN, etc) */
+	ODP_PROTO_LAYER_INNER_L2,
+
+	/** Layer Inner L3 protocols (IPv4, IPv6, etc) */
+	ODP_PROTO_LAYER_INNER_L3,
+
+	/** Layer L4 protocols (UDP, TCP, SCTP, IPSEC, ICMP, etc) */
+	ODP_PROTO_LAYER_INNER_L4,
 
 	/** All layers */
 	ODP_PROTO_LAYER_ALL
@@ -1370,6 +1382,18 @@ typedef union odp_proto_chksums_t {
 		/** SCTP checksum */
 		uint32_t sctp   : 1;
 
+		/** Inner IPv4 header checksum */
+		uint32_t inner_ipv4   : 1;
+
+		/** Inner UDP checksum */
+		uint32_t inner_udp    : 1;
+
+		/** Inner TCP checksum */
+		uint32_t inner_tcp    : 1;
+
+		/** Inner SCTP checksum */
+		uint32_t inner_sctp   : 1;
+
 	} chksum;
 
 	/** All checksum bits. This can be used to set/clear all flags. */
@@ -1391,8 +1415,9 @@ typedef struct odp_packet_parse_param_t {
 
 	/** Flags to control payload data checksums checks up to the selected
 	 *  parse layer. Checksum checking status can be queried for each packet
-	 *  with odp_packet_l3_chksum_status() and
-	 *  odp_packet_l4_chksum_status().
+	 *  with odp_packet_l3_chksum_status(), odp_packet_l4_chksum_status(),
+	 *  odp_packet_inner_l3_chksum_status() and
+	 *  odp_packet_inner_l4_chksum_status().
 	 */
 	odp_proto_chksums_t chksums;
 
@@ -1456,11 +1481,21 @@ typedef struct odp_packet_parse_result_t {
 	uint32_t l3_offset;
 	/** @see odp_packet_l4_offset() */
 	uint32_t l4_offset;
+	/** @see odp_packet_inner_l2_offset() */
+	uint32_t inner_l2_offset;
+	/** @see odp_packet_inner_l3_offset() */
+	uint32_t inner_l3_offset;
+	/** @see odp_packet_inner_l4_offset() */
+	uint32_t inner_l4_offset;
 
 	/** @see odp_packet_l3_chksum_status() */
 	odp_packet_chksum_status_t l3_chksum_status;
 	/** @see odp_packet_l4_chksum_status() */
 	odp_packet_chksum_status_t l4_chksum_status;
+	/** @see odp_packet_inner_l3_chksum_status() */
+	odp_packet_chksum_status_t inner_l3_chksum_status;
+	/** @see odp_packet_inner_l4_chksum_status() */
+	odp_packet_chksum_status_t inner_l4_chksum_status;
 
 	/** @see odp_packet_l2_type() */
 	odp_proto_l2_type_t l2_type;
@@ -1468,6 +1503,12 @@ typedef struct odp_packet_parse_result_t {
 	odp_proto_l3_type_t l3_type;
 	/** @see odp_packet_l4_type() */
 	odp_proto_l4_type_t l4_type;
+	/** @see odp_packet_inner_l2_type() */
+	odp_proto_l2_type_t inner_l2_type;
+	/** @see odp_packet_inner_l3_type() */
+	odp_proto_l3_type_t inner_l3_type;
+	/** @see odp_packet_inner_l4_type() */
+	odp_proto_l4_type_t inner_l4_type;
 
 } odp_packet_parse_result_t;
 
@@ -1852,6 +1893,257 @@ void odp_packet_l3_chksum_insert(odp_packet_t pkt, int insert);
  *                1: insert L4 checksum
  */
 void odp_packet_l4_chksum_insert(odp_packet_t pkt, int insert);
+
+/**
+ * Inner Layer 2 start pointer
+ *
+ * Returns pointer to the start of Inner layer 2. Optionally, outputs number of data
+ * bytes in the segment following the pointer. The pointer value is generated
+ * from the current Inner layer 2 offset.
+ *
+ * @param      pkt      Packet handle
+ * @param[out] len      Number of data bytes remaining in the segment (output).
+ *                      Ignored when NULL.
+ *
+ * @return Inner Layer 2 start pointer
+ * @retval NULL  Inner Layer 2 offset has not been set
+ *
+ * @see odp_packet_inner_l2_offset(), odp_packet_inner_l2_offset_set(), odp_packet_has_inner_l2()
+ */
+void *odp_packet_inner_l2_ptr(odp_packet_t pkt, uint32_t *len);
+
+/**
+ * Inner Layer 2 start offset
+ *
+ * Returns offset to the start of inner layer 2. The offset is calculated from the
+ * current odp_packet_data() position in bytes. Packet parsing sets the offset
+ * according to parse configuration and layers recognized in the packet. Data
+ * start position updating functions (e.g. odp_packet_push_head()) do not modify
+ * the offset, but user sets a new value when needed.
+ *
+ * @param pkt  Packet handle
+ *
+ * @return Inner Layer 2 start offset
+ * @retval ODP_PACKET_OFFSET_INVALID  Inner Layer 2 offset has not been set
+ *
+ * @see odp_packet_inner_l2_offset_set(), odp_packet_has_inner_l2()
+ */
+uint32_t odp_packet_inner_l2_offset(odp_packet_t pkt);
+
+/**
+ * Set Inner layer 2 start offset
+ *
+ * Set offset to the start of Inner layer 2. The offset is calculated from the current
+ * odp_packet_data() position in bytes. Offset must not exceed packet data
+ * length. Offset is not modified on an error.
+ *
+ * @param pkt     Packet handle
+ * @param offset  Inner Layer 2 start offset (0 ... odp_packet_len()-1)
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_packet_inner_l2_offset_set(odp_packet_t pkt, uint32_t offset);
+
+/**
+ * Inner Layer 3 start pointer
+ *
+ * Returns pointer to the start of inner layer 3. Optionally, outputs number of data
+ * bytes in the segment following the pointer. The pointer value is generated
+ * from the current inner layer 3 offset.
+ *
+ * @param      pkt      Packet handle
+ * @param[out] len      Number of data bytes remaining in the segment (output).
+ *                      Ignored when NULL.
+ *
+ * @return Inner Layer 3 start pointer
+ * @retval NULL  Inner Layer 3 offset has not been set
+ *
+ * @see odp_packet_inner_l3_offset(), odp_packet_inner_l3_offset_set(), odp_packet_has_inner_l3()
+ */
+void *odp_packet_inner_l3_ptr(odp_packet_t pkt, uint32_t *len);
+
+/**
+ * Inner Layer 3 start offset
+ *
+ * Returns offset to the start of inner layer 3. The offset is calculated from the
+ * current odp_packet_data() position in bytes. Packet parsing sets the offset
+ * according to parse configuration and inner layers recognized in the packet. Data
+ * start position updating functions (e.g. odp_packet_push_head()) do not modify
+ * the offset, but user sets a new value when needed.
+ *
+ * @param pkt  Packet handle
+ *
+ * @return Inner Layer 3 start offset
+ * @retval ODP_PACKET_OFFSET_INVALID  Inner Layer 3 offset has not been set
+ *
+ * @see odp_packet_inner_l3_offset_set(), odp_packet_has_inner_l3()
+ */
+uint32_t odp_packet_inner_l3_offset(odp_packet_t pkt);
+
+/**
+ * Set inner layer 3 start offset
+ *
+ * Set offset to the start of inner layer 3. The offset is calculated from the current
+ * odp_packet_data() position in bytes. Offset must not exceed packet data
+ * length. Offset is not modified on an error.
+ *
+ * @param pkt     Packet handle
+ * @param offset  Inner Layer 3 start offset (0 ... odp_packet_len()-1)
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_packet_inner_l3_offset_set(odp_packet_t pkt, uint32_t offset);
+
+/**
+ * Inner Layer 4 start pointer
+ *
+ * Returns pointer to the start of inner layer 4. Optionally, outputs number of data
+ * bytes in the segment following the pointer. The pointer value is generated
+ * from the current inner layer 4 offset.
+ *
+ * @param      pkt      Packet handle
+ * @param[out] len      Number of data bytes remaining in the segment (output).
+ *                      Ignored when NULL.
+ *
+ * @return Layer 4 start pointer
+ * @retval NULL  Layer 4 offset has not been set
+ *
+ * @see odp_packet_inner_l4_offset(), odp_packet_inner_l4_offset_set(), odp_packet_has_inner_l4()
+ */
+void *odp_packet_inner_l4_ptr(odp_packet_t pkt, uint32_t *len);
+
+/**
+ * Inner Layer 4 start offset
+ *
+ * Returns offset to the start of inner layer 4. The offset is calculated from the
+ * current odp_packet_data() position in bytes. Packet parsing sets the offset
+ * according to parse configuration and inner layers recognized in the packet. Data
+ * start position updating functions (e.g. odp_packet_push_head()) do not modify
+ * the offset, but user sets a new value when needed.
+ *
+ * @param pkt  Packet handle
+ *
+ * @return Inner Layer 4 start offset
+ * @retval ODP_PACKET_OFFSET_INVALID  Inner Layer 4 offset has not been set
+ *
+ * @see odp_packet_l4_offset_set(), odp_packet_has_l4()
+ */
+uint32_t odp_packet_inner_l4_offset(odp_packet_t pkt);
+
+/**
+ * Set inner layer 4 start offset
+ *
+ * Set offset to the start of inner layer 4. The offset is calculated from the current
+ * odp_packet_data() position in bytes. Offset must not exceed packet data
+ * length. Offset is not modified on an error.
+ *
+ * @param pkt     Packet handle
+ * @param offset  Inner Layer 4 start offset (0 ... odp_packet_len()-1)
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_packet_inner_l4_offset_set(odp_packet_t pkt, uint32_t offset);
+
+/**
+ * Inner Layer 2 protocol type
+ *
+ * Returns inner layer 2 protocol type. Initial type value is ODP_PROTO_L2_TYPE_NONE.
+ *
+ * @param      pkt      Packet handle
+ *
+ * @return Inner Layer 2 protocol type
+ */
+odp_proto_l2_type_t odp_packet_inner_l2_type(odp_packet_t pkt);
+
+/**
+ * Inner Layer 3 protocol type
+ *
+ * Returns inner layer 3 protocol type. Initial type value is ODP_PROTO_L3_TYPE_NONE.
+ *
+ * @param      pkt      Packet handle
+ *
+ * @return Inner Layer 3 protocol type
+ */
+odp_proto_l3_type_t odp_packet_inner_l3_type(odp_packet_t pkt);
+
+/**
+ * Inner Layer 4 protocol type
+ *
+ * Returns Inner layer 4 protocol type. Initial type value is ODP_PROTO_L4_TYPE_NONE.
+ *
+ * @param      pkt      Packet handle
+ *
+ * @return Inner Layer 4 protocol type
+ */
+odp_proto_l4_type_t odp_packet_inner_l4_type(odp_packet_t pkt);
+
+/**
+ * Inner Layer 3 checksum check status
+ *
+ * Returns the result of the latest inner layer 3 checksum check done for the packet.
+ * The status tells if checksum check was attempted and the result of the
+ * attempt. It depends on packet input (or IPSEC) configuration, packet content
+ * and implementation capabilities if checksum check is attempted for a packet.
+ *
+ * @param pkt     Packet handle
+ *
+ * @return L3 checksum check status
+ */
+odp_packet_chksum_status_t odp_packet_inner_l3_chksum_status(odp_packet_t pkt);
+
+/**
+ * Inner Layer 4 checksum check status
+ *
+ * Returns the result of the latest inner layer 4 checksum check done for the packet.
+ * The status tells if checksum check was attempted and the result of the
+ * attempt. It depends on packet input (or IPSEC) configuration, packet content
+ * and implementation capabilities if checksum check is attempted for a packet.
+ *
+ * When a UDP packet does not have a checksum (e.g. checksum field of a UDP/IPv4
+ * packet is zero), checksum check result is ODP_PACKET_CHKSUM_OK.
+ *
+ * @param pkt     Packet handle
+ *
+ * @return L4 checksum check status
+ */
+odp_packet_chksum_status_t odp_packet_inner_l4_chksum_status(odp_packet_t pkt);
+
+/**
+ * Inner Layer 3 checksum insertion override
+ *
+ * Override checksum insertion configuration per packet. This per packet setting
+ * overrides a higher level configuration for checksum insertion into a inner L3
+ * header during packet output processing.
+ *
+ * Calling this function is always allowed but the checksum will not be
+ * inserted if the packet is output through a pktio that does not have
+ * the relevant checksum insertion enabled.
+ *
+ * @param pkt     Packet handle
+ * @param insert  0: do not insert L3 checksum
+ *                1: insert L3 checksum
+ */
+void odp_packet_inner_l3_chksum_insert(odp_packet_t pkt, int insert);
+
+/**
+ * Inner Layer 4 checksum insertion override
+ *
+ * Override checksum insertion configuration per packet. This per packet setting
+ * overrides a higher level configuration for checksum insertion into a inner L4
+ * header during packet output processing.
+ *
+ * Calling this function is always allowed but the checksum will not be
+ * inserted if the packet is output through a pktio that does not have
+ * the relevant checksum insertion enabled.
+ *
+ * @param pkt     Packet handle
+ * @param insert  0: do not insert L4 checksum
+ *                1: insert L4 checksum
+ */
+void odp_packet_inner_l4_chksum_insert(odp_packet_t pkt, int insert);
 
 /**
  * Ones' complement sum of packet data
