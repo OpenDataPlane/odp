@@ -145,14 +145,12 @@ typedef union cos_u {
 	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct cos_s))];
 } cos_t;
 
-/**
-Packet Matching Rule
-
-**/
+/* Pattern Matching Rule */
 struct pmr_s {
 	uint32_t valid;			/* Validity Flag */
 	odp_atomic_u32_t count;		/* num of packets matching this rule */
 	uint32_t num_pmr;		/* num of PMR Term Values*/
+	uint16_t mark;
 	odp_spinlock_t lock;		/* pmr lock*/
 	cos_t *src_cos;			/* source CoS where PMR is attached */
 	pmr_term_value_t  pmr_term_value[CLS_PMRTERM_MAX];

@@ -26,7 +26,10 @@
 #include <string.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <inttypes.h>
 #include <odp/api/spinlock.h>
+
+#define MAX_MARK UINT16_MAX
 
 #define LOCK(a)      odp_spinlock_lock(a)
 #define UNLOCK(a)    odp_spinlock_unlock(a)
@@ -180,7 +183,15 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 	capability->threshold_red.all_bits = 0;
 	capability->threshold_bp.all_bits = 0;
 	capability->max_hash_queues = CLS_COS_QUEUE_MAX;
+	capability->max_mark = MAX_MARK;
 	return 0;
+}
+
+void odp_cls_pmr_create_opt_init(odp_pmr_create_opt_t *opt)
+{
+	opt->terms = NULL;
+	opt->num_terms = 0;
+	opt->mark = 0;
 }
 
 static void _odp_cls_update_hash_proto(cos_t *cos,
@@ -692,8 +703,8 @@ no_rule:
 	return 0;
 }
 
-odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
-			     odp_cos_t src_cos, odp_cos_t dst_cos)
+static odp_pmr_t cls_pmr_create(const odp_pmr_param_t *terms, int num_terms, uint16_t mark,
+				odp_cos_t src_cos, odp_cos_t dst_cos)
 {
 	pmr_t *pmr;
 	int i;
@@ -729,6 +740,8 @@ odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 		}
 	}
 
+	pmr->s.mark = mark;
+
 	loc = odp_atomic_fetch_inc_u32(&cos_src->s.num_rule);
 	cos_src->s.pmr[loc] = pmr;
 	cos_src->s.linked_cos[loc] = cos_dst;
@@ -736,6 +749,28 @@ odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 
 	UNLOCK(&pmr->s.lock);
 	return id;
+}
+
+odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
+			     odp_cos_t src_cos, odp_cos_t dst_cos)
+{
+	return cls_pmr_create(terms, num_terms, 0, src_cos, dst_cos);
+}
+
+odp_pmr_t odp_cls_pmr_create_opt(const odp_pmr_create_opt_t *opt,
+				 odp_cos_t src_cos, odp_cos_t dst_cos)
+{
+	if (opt == NULL) {
+		ODP_ERR("Bad parameter\n");
+		return ODP_PMR_INVALID;
+	}
+
+	if (opt->mark > MAX_MARK) {
+		ODP_ERR("Too large mark value: %" PRIu64 "\n", opt->mark);
+		return ODP_PMR_INVALID;
+	}
+
+	return cls_pmr_create(opt->terms, opt->num_terms, opt->mark, src_cos, dst_cos);
 }
 
 int odp_cls_cos_pool_set(odp_cos_t cos_id, odp_pool_t pool)
@@ -1298,6 +1333,13 @@ static cos_t *match_pmr_cos(cos_t *cos, const uint8_t *pkt_addr, pmr_t *pmr,
 		return NULL;
 
 	if (verify_pmr(pmr, pkt_addr, hdr)) {
+		/* PRM matched */
+		hdr->p.input_flags.cls_mark = 0;
+		if (pmr->s.mark) {
+			hdr->p.input_flags.cls_mark = 1;
+			hdr->cls_mark = pmr->s.mark;
+		}
+
 		/* This gets called recursively. First matching leaf or branch
 		 * is returned. */
 		num_rule = odp_atomic_load_u32(&cos->s.num_rule);
