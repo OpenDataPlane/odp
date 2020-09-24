@@ -508,7 +508,8 @@ const pktio_if_ops_t tap_pktio_ops = {
 	.link_status = tap_link_status,
 	.link_info = tap_link_info,
 	.capability = tap_capability,
-	.pktin_ts_res = NULL,
-	.pktin_ts_from_ns = NULL,
+	.pktio_ts_res = NULL,
+	.pktio_ts_from_ns = NULL,
+	.pktio_time = NULL,
 	.config = NULL
 };
