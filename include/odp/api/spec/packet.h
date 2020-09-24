@@ -1946,6 +1946,22 @@ odp_time_t odp_packet_ts(odp_packet_t pkt);
 void odp_packet_ts_set(odp_packet_t pkt, odp_time_t timestamp);
 
 /**
+ * Request Tx timestamp capture
+ *
+ * Control whether timestamp needs to be captured when this packet is
+ * transmitted. By default, Tx timestamping is disabled. This API is allowed to
+ * be called always, but the Tx timestamp is not captured if the output packet
+ * IO device is not configured to enable timestamping.
+ *
+ * @param pkt     Packet handle
+ * @param enable  0: do not capture timestamp on Tx
+ *                1: capture timestamp on Tx
+ *
+ * @see odp_pktout_ts_read()
+ */
+void odp_packet_ts_request(odp_packet_t pkt, int enable);
+
+/**
  * Get packet color
  *
  * @param pkt Packet handle
