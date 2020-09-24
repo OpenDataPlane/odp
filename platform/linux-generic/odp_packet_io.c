@@ -1260,38 +1260,71 @@ int odp_pktio_link_info(odp_pktio_t hdl, odp_pktio_link_info_t *info)
 	return -1;
 }
 
-uint64_t odp_pktin_ts_res(odp_pktio_t hdl)
+uint64_t odp_pktio_ts_res(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
 
 	entry = get_pktio_entry(hdl);
-
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", hdl);
+		ODP_ERR("pktio entry %d does not exist\n", hdl);
 		return 0;
 	}
 
-	if (entry->s.ops->pktin_ts_res)
-		return entry->s.ops->pktin_ts_res(entry);
+	if (entry->s.ops->pktio_ts_res)
+		return entry->s.ops->pktio_ts_res(entry);
 
 	return odp_time_global_res();
 }
 
-odp_time_t odp_pktin_ts_from_ns(odp_pktio_t hdl, uint64_t ns)
+odp_time_t odp_pktio_ts_from_ns(odp_pktio_t hdl, uint64_t ns)
 {
 	pktio_entry_t *entry;
 
 	entry = get_pktio_entry(hdl);
 
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", hdl);
+		ODP_ERR("pktio entry %d does not exist\n", hdl);
 		return ODP_TIME_NULL;
 	}
 
-	if (entry->s.ops->pktin_ts_from_ns)
-		return entry->s.ops->pktin_ts_from_ns(entry, ns);
+	if (entry->s.ops->pktio_ts_from_ns)
+		return entry->s.ops->pktio_ts_from_ns(entry, ns);
 
 	return odp_time_global_from_ns(ns);
+}
+
+odp_time_t odp_pktio_time(odp_pktio_t hdl, odp_time_t *global_ts)
+{
+	pktio_entry_t *entry;
+	odp_time_t ts;
+
+	entry = get_pktio_entry(hdl);
+	if (entry == NULL) {
+		ODP_ERR("pktio entry %d does not exist\n", hdl);
+		return ODP_TIME_NULL;
+	}
+
+	/* Callback if present */
+	if (entry->s.ops->pktio_time)
+		return entry->s.ops->pktio_time(entry, global_ts);
+
+	/* By default both Packet IO time source and
+	 * global time source are same.
+	 */
+	ts = odp_time_global();
+	if (global_ts)
+		*global_ts = ts;
+	return ts;
+}
+
+uint64_t odp_pktin_ts_res(odp_pktio_t hdl)
+{
+	return odp_pktio_ts_res(hdl);
+}
+
+odp_time_t odp_pktin_ts_from_ns(odp_pktio_t hdl, uint64_t ns)
+{
+	return odp_pktio_ts_from_ns(hdl, ns);
 }
 
 void odp_pktio_print(odp_pktio_t hdl)

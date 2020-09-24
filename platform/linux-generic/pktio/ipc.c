@@ -983,7 +983,8 @@ const pktio_if_ops_t ipc_pktio_ops = {
 	.promisc_mode_get = NULL,
 	.mac_get = ipc_mac_addr_get,
 	.mac_set = NULL,
-	.pktin_ts_res = NULL,
-	.pktin_ts_from_ns = NULL,
+	.pktio_ts_res = NULL,
+	.pktio_ts_from_ns = NULL,
+	.pktio_time = NULL,
 	.config = NULL
 };
