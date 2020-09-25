@@ -661,6 +661,8 @@ static void packet_test_basic_metadata(void)
 	odp_packet_has_flow_hash_clr(pkt);
 	CU_ASSERT(!odp_packet_has_flow_hash(pkt));
 
+	CU_ASSERT(odp_packet_cls_mark(pkt) == 0);
+
 	ts = odp_time_global();
 	odp_packet_ts_set(pkt, ts);
 	CU_ASSERT_FATAL(odp_packet_has_ts(pkt));
@@ -737,6 +739,7 @@ static void packet_test_reset(void)
 	ptr_len = (uintptr_t)odp_packet_data(pkt) -
 		  (uintptr_t)odp_packet_head(pkt);
 	CU_ASSERT(ptr_len == headroom);
+	CU_ASSERT(odp_packet_cls_mark(pkt) == 0);
 
 	tail = odp_packet_tail(pkt);
 	new_tail = odp_packet_pull_tail(pkt, 1);

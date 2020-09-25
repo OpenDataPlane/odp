@@ -879,6 +879,7 @@ static void pktio_txrx_multi(pktio_info_t *pktio_info_a,
 		}
 
 		CU_ASSERT(odp_packet_user_ptr(pkt) == NULL);
+		CU_ASSERT(odp_packet_cls_mark(pkt) == 0);
 
 		odp_packet_input_set(pkt, ODP_PKTIO_INVALID);
 		CU_ASSERT(odp_packet_input(pkt) == ODP_PKTIO_INVALID);
