@@ -1058,6 +1058,8 @@ int main(int argc, char **argv)
 	if (odp_init_local(instance, ODP_THREAD_CONTROL) != 0)
 		ODPH_ABORT("Failed local init.\n");
 
+	odp_sys_info_print();
+
 	shm = odp_shm_reserve("test_globals",
 			      sizeof(test_globals_t), ODP_CACHE_LINE_SIZE, 0);
 	if (shm == ODP_SHM_INVALID)

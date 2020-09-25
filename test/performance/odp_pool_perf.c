@@ -547,6 +547,8 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
+	odp_sys_info_print();
+
 	if (set_num_cpu(global))
 		return -1;
 

@@ -1545,6 +1545,8 @@ int main(int argc, char **argv)
 		goto term;
 	}
 
+	odp_sys_info_print();
+
 	odp_schedule_config(NULL);
 
 	if (set_num_cpu(global)) {

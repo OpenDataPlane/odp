@@ -704,6 +704,8 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
+	odp_sys_info_print();
+
 	odp_schedule_config(NULL);
 
 	if (set_num_cpu(global))
