@@ -52,10 +52,10 @@ run_packet_gen()
 
 	ret=$?
 
-	if [ $ret -eq -1 ]; then
-		echo "FAIL: test failed"
-	elif [ $ret -eq -2 ]; then
+	if [ $ret -eq 2 ]; then
 		echo "FAIL: too few packets received"
+	elif [ $ret -ne 0 ]; then
+		echo "FAIL: test failed: $ret"
 	fi
 
 	cleanup_pktio_env
