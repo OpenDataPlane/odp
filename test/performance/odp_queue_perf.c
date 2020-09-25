@@ -560,6 +560,8 @@ int main(int argc, char **argv)
 	if (parse_options(argc, argv, &global->options))
 		return -1;
 
+	odp_sys_info_print();
+
 	global->instance = instance;
 
 	if (create_queues(global)) {

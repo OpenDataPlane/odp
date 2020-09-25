@@ -1064,6 +1064,8 @@ int main(int argc, char *argv[])
 	/* Init this thread */
 	odp_init_local(instance, ODP_THREAD_WORKER);
 
+	odp_sys_info_print();
+
 	if (odp_crypto_capability(&crypto_capa)) {
 		app_err("Crypto capability request failed.\n");
 		exit(EXIT_FAILURE);

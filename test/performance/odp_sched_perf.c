@@ -1114,6 +1114,8 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
+	odp_sys_info_print();
+
 	if (global->test_options.ctx_size) {
 		uint64_t size = global->test_options.ctx_size *
 				global->test_options.tot_queue;

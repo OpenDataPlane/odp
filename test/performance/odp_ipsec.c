@@ -1051,6 +1051,8 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	odp_sys_info_print();
+
 	if (odp_pool_capability(&capa)) {
 		app_err("Pool capability request failed.\n");
 		exit(EXIT_FAILURE);
