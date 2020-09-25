@@ -1514,13 +1514,13 @@ int main(int argc, char **argv)
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init, NULL)) {
 		printf("Error: Global init failed.\n");
-		return -1;
+		return 1;
 	}
 
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		printf("Error: Local init failed.\n");
-		return -1;
+		return 1;
 	}
 
 	shm = odp_shm_reserve("packet_gen_global", sizeof(test_global_t),
@@ -1528,7 +1528,7 @@ int main(int argc, char **argv)
 
 	if (shm == ODP_SHM_INVALID) {
 		printf("Error: SHM reserve failed.\n");
-		return -1;
+		return 1;
 	}
 
 	global = odp_shm_addr(shm);
@@ -1541,7 +1541,7 @@ int main(int argc, char **argv)
 		global->thread_arg[i].global = global;
 
 	if (parse_options(argc, argv, global)) {
-		ret = -1;
+		ret = 1;
 		goto term;
 	}
 
@@ -1550,17 +1550,17 @@ int main(int argc, char **argv)
 	odp_schedule_config(NULL);
 
 	if (set_num_cpu(global)) {
-		ret = -1;
+		ret = 1;
 		goto term;
 	}
 
 	if (open_pktios(global)) {
-		ret = -1;
+		ret = 1;
 		goto term;
 	}
 
 	if (start_pktios(global)) {
-		ret = -1;
+		ret = 1;
 		goto term;
 	}
 
@@ -1579,30 +1579,30 @@ int main(int argc, char **argv)
 			 global->test_options.num_cpu);
 
 	if (stop_pktios(global))
-		ret = -1;
+		ret = 1;
 
 	drain_queues(global);
 
 	if (close_pktios(global))
-		ret = -1;
+		ret = 1;
 
 	if (print_final_stat(global))
-		ret = -2;
+		ret = 2;
 
 term:
 	if (odp_shm_free(shm)) {
 		printf("Error: SHM free failed.\n");
-		return -1;
+		return 1;
 	}
 
 	if (odp_term_local()) {
 		printf("Error: term local failed.\n");
-		return -1;
+		return 1;
 	}
 
 	if (odp_term_global(instance)) {
 		printf("Error: term global failed.\n");
-		return -1;
+		return 1;
 	}
 
 	return ret;
