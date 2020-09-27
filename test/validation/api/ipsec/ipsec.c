@@ -711,12 +711,13 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 	param.opt = &part->opt;
 
 	if (ODP_IPSEC_OP_MODE_SYNC == suite_context.outbound_op_mode) {
-		CU_ASSERT_EQUAL(part->out_pkt, odp_ipsec_out(&pkt, 1,
-							     pkto, &num_out,
-							     &param));
-		CU_ASSERT_EQUAL(num_out, part->out_pkt);
-		CU_ASSERT(odp_packet_subtype(*pkto) ==
-			  ODP_EVENT_PACKET_IPSEC);
+		CU_ASSERT_EQUAL(1, odp_ipsec_out(&pkt, 1, pkto, &num_out,
+						 &param));
+		CU_ASSERT_EQUAL(num_out, 1);
+		if (num_out == 1) {
+			CU_ASSERT(odp_packet_subtype(*pkto) ==
+				  ODP_EVENT_PACKET_IPSEC);
+		}
 	} else if (ODP_IPSEC_OP_MODE_ASYNC == suite_context.outbound_op_mode) {
 		num_out = odp_ipsec_out_enq(&pkt, 1, &param);
 		CU_ASSERT_EQUAL(1, num_out);
