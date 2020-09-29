@@ -26,3 +26,4 @@
 /* Include non-inlined versions of API functions */
 #define _ODP_NO_INLINE
 #include <odp/api/plat/packet_inlines.h>
+#include <odp/api/plat/packet_vector_inlines.h>

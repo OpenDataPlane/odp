@@ -123,6 +123,7 @@ typedef struct odp_packet_parse_result_flag_t {
 } odp_packet_parse_result_flag_t;
 
 #include <odp/api/plat/packet_inlines.h>
+#include <odp/api/plat/packet_vector_inlines.h>
 
 /**
  * @}
