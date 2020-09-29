@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -23,6 +23,7 @@
 #include <odp_libconfig_internal.h>
 #include <odp_shm_internal.h>
 #include <odp_timer_internal.h>
+#include <odp_event_vector_internal.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -281,6 +282,9 @@ int _odp_pool_init_global(void)
 	ODP_DBG("\nPool init global\n");
 	ODP_DBG("  odp_buffer_hdr_t size %zu\n", sizeof(odp_buffer_hdr_t));
 	ODP_DBG("  odp_packet_hdr_t size %zu\n", sizeof(odp_packet_hdr_t));
+	ODP_DBG("  odp_timeout_hdr_t size %zu\n", sizeof(odp_timeout_hdr_t));
+	ODP_DBG("  odp_event_vector_hdr_t size %zu\n", sizeof(odp_event_vector_hdr_t));
+
 	ODP_DBG("\n");
 	return 0;
 }
@@ -397,6 +401,7 @@ static void init_buffers(pool_t *pool)
 	uint64_t i;
 	odp_buffer_hdr_t *buf_hdr;
 	odp_packet_hdr_t *pkt_hdr;
+	odp_event_vector_hdr_t *vect_hdr;
 	odp_shm_info_t shm_info;
 	void *addr;
 	void *uarea = NULL;
@@ -423,6 +428,7 @@ static void init_buffers(pool_t *pool)
 					   pool->block_offset];
 		buf_hdr = addr;
 		pkt_hdr = addr;
+		vect_hdr = addr;
 		/* Skip packet buffers which cross huge page boundaries. Some
 		 * NICs cannot handle buffers which cross page boundaries. */
 		if (pool->params.type == ODP_POOL_PACKET &&
@@ -462,6 +468,8 @@ static void init_buffers(pool_t *pool)
 		buf_hdr->index.buffer = i;
 		buf_hdr->type = type;
 		buf_hdr->event_type = type;
+		if (type == ODP_POOL_VECTOR)
+			buf_hdr->event_type = ODP_EVENT_PACKET_VECTOR;
 		buf_hdr->pool_ptr = pool;
 		buf_hdr->uarea_addr = uarea;
 
@@ -474,6 +482,10 @@ static void init_buffers(pool_t *pool)
 		}
 
 		odp_atomic_init_u32(&buf_hdr->ref_cnt, 0);
+
+		/* Initialize event vector metadata */
+		if (type == ODP_POOL_VECTOR)
+			vect_hdr->size = 0;
 
 		/* Store base values for fast init */
 		buf_hdr->base_data = &data[offset];
@@ -600,6 +612,12 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 		cache_size = params->tmo.cache_size;
 		break;
 
+	case ODP_POOL_VECTOR:
+		num = params->vector.num;
+		cache_size = params->vector.cache_size;
+		seg_len = params->vector.max_size * sizeof(odp_packet_t);
+		break;
+
 	default:
 		ODP_ERR("Bad pool type\n");
 		return ODP_POOL_INVALID;
@@ -656,9 +674,12 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 		uint32_t align_pad = (align > ODP_CACHE_LINE_SIZE) ?
 				align - ODP_CACHE_LINE_SIZE : 0;
 
-		hdr_size =  (params->type == ODP_POOL_BUFFER) ?
-				ROUNDUP_CACHE_LINE(sizeof(odp_buffer_hdr_t)) :
-				ROUNDUP_CACHE_LINE(sizeof(odp_timeout_hdr_t));
+		if (params->type == ODP_POOL_BUFFER)
+			hdr_size = ROUNDUP_CACHE_LINE(sizeof(odp_buffer_hdr_t));
+		else if (params->type == ODP_POOL_TIMEOUT)
+			hdr_size = ROUNDUP_CACHE_LINE(sizeof(odp_timeout_hdr_t));
+		else
+			hdr_size = ROUNDUP_CACHE_LINE(sizeof(odp_event_vector_hdr_t));
 
 		block_size = ROUNDUP_CACHE_LINE(hdr_size + align_pad + seg_len);
 	}
@@ -849,6 +870,33 @@ static int check_params(const odp_pool_param_t *params)
 			ODP_ERR("tmo.num too large %u\n", params->tmo.num);
 			return -1;
 		}
+
+		break;
+
+	case ODP_POOL_VECTOR:
+		num = params->vector.num;
+		cache_size = params->vector.cache_size;
+
+		if (params->vector.num == 0) {
+			ODP_ERR("vector.num zero\n");
+			return -1;
+		}
+
+		if (params->vector.num > capa.vector.max_num) {
+			ODP_ERR("vector.num too large %u\n", params->vector.num);
+			return -1;
+		}
+
+		if (params->vector.max_size == 0) {
+			ODP_ERR("vector.max_size zero\n");
+			return -1;
+		}
+
+		if (params->vector.max_size > capa.vector.max_size) {
+			ODP_ERR("vector.max_size too large %u\n", params->vector.max_size);
+			return -1;
+		}
+
 		break;
 
 	default:
@@ -1184,6 +1232,13 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	capa->tmo.min_cache_size = 0;
 	capa->tmo.max_cache_size = CONFIG_POOL_CACHE_MAX_SIZE;
 
+	/* Vector pools */
+	capa->vector.max_pools = max_pools;
+	capa->vector.max_num   = CONFIG_POOL_MAX_NUM;
+	capa->vector.max_size = CONFIG_PACKET_VECTOR_MAX_SIZE;
+	capa->vector.min_cache_size = 0;
+	capa->vector.max_cache_size = CONFIG_POOL_CACHE_MAX_SIZE;
+
 	return 0;
 }
 
@@ -1202,7 +1257,8 @@ void odp_pool_print(odp_pool_t pool_hdl)
 		  pool->params.type == ODP_POOL_BUFFER ? "buffer" :
 		  (pool->params.type == ODP_POOL_PACKET ? "packet" :
 		   (pool->params.type == ODP_POOL_TIMEOUT ? "timeout" :
-		    "unknown")));
+		    (pool->params.type == ODP_POOL_VECTOR ? "vector" :
+		     "unknown"))));
 	ODP_PRINT("  pool shm        %" PRIu64 "\n",
 		  odp_shm_to_u64(pool->shm));
 	ODP_PRINT("  user area shm   %" PRIu64 "\n",
@@ -1240,6 +1296,7 @@ void odp_pool_param_init(odp_pool_param_t *params)
 	params->buf.cache_size = default_cache_size;
 	params->pkt.cache_size = default_cache_size;
 	params->tmo.cache_size = default_cache_size;
+	params->vector.cache_size = default_cache_size;
 }
 
 uint64_t odp_pool_to_u64(odp_pool_t hdl)
