@@ -40,4 +40,17 @@ static inline odp_event_vector_hdr_t *_odp_packet_vector_hdr(odp_packet_vector_t
 	return (odp_event_vector_hdr_t *)(uintptr_t)pktv;
 }
 
+/**
+ * Free packet vector and contained packets
+ */
+static inline void _odp_packet_vector_free_full(odp_packet_vector_t pktv)
+{
+	odp_event_vector_hdr_t *pktv_hdr = _odp_packet_vector_hdr(pktv);
+
+	if (pktv_hdr->size)
+		odp_packet_free_multi(pktv_hdr->packet, pktv_hdr->size);
+
+	odp_packet_vector_free(pktv);
+}
+
 #endif /* ODP_EVENT_VECTOR_INTERNAL_H_ */
