@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -14,10 +15,12 @@
 #include <odp_ipsec_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_internal.h>
+#include <odp_event_vector_internal.h>
 
 /* Inlined API functions */
 #include <odp/api/plat/event_inlines.h>
 #include <odp/api/plat/packet_inlines.h>
+#include <odp/api/plat/packet_vector_inlines.h>
 
 odp_event_subtype_t odp_event_subtype(odp_event_t event)
 {
@@ -59,6 +62,9 @@ void odp_event_free(odp_event_t event)
 		break;
 	case ODP_EVENT_PACKET:
 		odp_packet_free(odp_packet_from_event(event));
+		break;
+	case ODP_EVENT_PACKET_VECTOR:
+		_odp_packet_vector_free_full(odp_packet_vector_from_event(event));
 		break;
 	case ODP_EVENT_TIMEOUT:
 		odp_timeout_free(odp_timeout_from_event(event));
