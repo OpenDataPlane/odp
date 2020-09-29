@@ -188,6 +188,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_libconfig.c \
 			   odp_name_table.c \
 			   odp_packet.c \
+			   odp_packet_vector.c \
 			   odp_packet_flags.c \
 			   odp_packet_io.c \
 			   odp_pkt_queue.c \

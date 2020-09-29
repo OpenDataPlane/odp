@@ -32,4 +32,12 @@ typedef struct {
 
 } odp_event_vector_hdr_t;
 
+/**
+ * Return the vector header
+ */
+static inline odp_event_vector_hdr_t *_odp_packet_vector_hdr(odp_packet_vector_t pktv)
+{
+	return (odp_event_vector_hdr_t *)(uintptr_t)pktv;
+}
+
 #endif /* ODP_EVENT_VECTOR_INTERNAL_H_ */
