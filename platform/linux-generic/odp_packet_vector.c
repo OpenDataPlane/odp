@@ -4,6 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <odp/api/align.h>
 #include <odp/api/buffer.h>
 #include <odp/api/hints.h>
 #include <odp/api/packet.h>
@@ -13,6 +14,17 @@
 #include <odp_debug_internal.h>
 #include <odp_event_vector_internal.h>
 #include <odp_pool_internal.h>
+
+#include <odp/visibility_begin.h>
+
+/* Packet vector header field offsets for inline functions */
+const _odp_event_vector_inline_offset_t _odp_event_vector_inline ODP_ALIGNED_CACHE = {
+	.packet    = offsetof(odp_event_vector_hdr_t, packet),
+	.pool      = offsetof(odp_event_vector_hdr_t, buf_hdr.pool_ptr),
+	.size      = offsetof(odp_event_vector_hdr_t, size)
+};
+
+#include <odp/visibility_end.h>
 
 static inline odp_event_vector_hdr_t *event_vector_hdr_from_buffer(odp_buffer_t buf)
 {
