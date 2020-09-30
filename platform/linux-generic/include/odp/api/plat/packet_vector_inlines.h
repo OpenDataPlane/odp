@@ -16,6 +16,12 @@
 
 #include <odp/api/abi/event.h>
 #include <odp/api/abi/packet.h>
+#include <odp/api/abi/pool.h>
+
+#include <odp/api/plat/event_vector_inline_types.h>
+#include <odp/api/plat/pool_inline_types.h>
+
+#include <stdint.h>
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
@@ -24,10 +30,17 @@
 	#define _ODP_INLINE static inline
 	#define odp_packet_vector_from_event __odp_packet_vector_from_event
 	#define odp_packet_vector_to_event __odp_packet_vector_to_event
+	#define odp_packet_vector_tbl __odp_packet_vector_tbl
+	#define odp_packet_vector_pool __odp_packet_vector_pool
+	#define odp_packet_vector_size __odp_packet_vector_size
+	#define odp_packet_vector_size_set __odp_packet_vector_size_set
 #else
 	#undef _ODP_INLINE
 	#define _ODP_INLINE
 #endif
+
+extern const _odp_event_vector_inline_offset_t _odp_event_vector_inline;
+extern const _odp_pool_inline_offset_t _odp_pool_inline;
 
 _ODP_INLINE odp_packet_vector_t odp_packet_vector_from_event(odp_event_t ev)
 {
@@ -37,6 +50,32 @@ _ODP_INLINE odp_packet_vector_t odp_packet_vector_from_event(odp_event_t ev)
 _ODP_INLINE odp_event_t odp_packet_vector_to_event(odp_packet_vector_t pktv)
 {
 	return (odp_event_t)pktv;
+}
+
+_ODP_INLINE uint32_t odp_packet_vector_tbl(odp_packet_vector_t pktv, odp_packet_t **pkt_tbl)
+{
+	*pkt_tbl = _odp_event_vect_get_ptr(pktv, odp_packet_t, packet);
+
+	return _odp_event_vect_get(pktv, uint32_t, size);
+}
+
+_ODP_INLINE odp_pool_t odp_packet_vector_pool(odp_packet_vector_t pktv)
+{
+	void *pool = _odp_event_vect_get(pktv, void *, pool);
+
+	return _odp_pool_get(pool, odp_pool_t, pool_hdl);
+}
+
+_ODP_INLINE uint32_t odp_packet_vector_size(odp_packet_vector_t pktv)
+{
+	return _odp_event_vect_get(pktv, uint32_t, size);
+}
+
+_ODP_INLINE void odp_packet_vector_size_set(odp_packet_vector_t pktv, uint32_t size)
+{
+	uint32_t *vector_size = _odp_event_vect_get_ptr(pktv, uint32_t, size);
+
+	*vector_size = size;
 }
 
 /** @endcond */
