@@ -1475,7 +1475,7 @@ static int print_final_stat(test_global_t *global)
 	printf("  tx Mbit/s:                  %.1f\n", tx_mbit_per_sec);
 	printf("\n");
 
-	if (rx_pkt_sum < MIN_RX_PACKETS_CI)
+	if (rx_pkt_sum < MIN_RX_PACKETS_CI && rx_pkt_sum < tx_pkt_sum)
 		return -1;
 
 	return 0;
