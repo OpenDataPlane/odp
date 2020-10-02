@@ -126,6 +126,7 @@ struct pktio_entry {
 	struct {
 		odp_queue_t        queue;
 		odp_pktin_queue_t  pktin;
+		odp_pktin_vector_config_t vector;
 	} in_queue[PKTIO_MAX_QUEUES];
 
 	struct {
