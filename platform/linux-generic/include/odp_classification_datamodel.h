@@ -129,8 +129,9 @@ typedef struct pmr_term_value {
 Class Of Service
 */
 struct cos_s {
-	odp_queue_t queue;			/* Associated Queue */
+	odp_queue_t queue;		/* Associated Queue */
 	odp_pool_t pool;		/* Associated Buffer pool */
+	odp_pktin_vector_config_t vector;	/* Packet vector config */
 	union pmr_u *pmr[CLS_PMR_PER_COS_MAX];	/* Chained PMR */
 	union cos_u *linked_cos[CLS_PMR_PER_COS_MAX]; /* Chained CoS with PMR*/
 	uint32_t valid;			/* validity Flag */
