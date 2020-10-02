@@ -724,6 +724,75 @@ odp_pktio_t odp_pktio_lookup(const char *name)
 	return hdl;
 }
 
+static void packet_vector_enq_cos(odp_queue_t queue, odp_event_t events[],
+				  uint32_t num, const cos_t *cos_hdr)
+{
+	odp_packet_vector_t pktv;
+	odp_pool_t pool = cos_hdr->s.vector.pool;
+	uint32_t max_size = cos_hdr->s.vector.max_size;
+	uint32_t num_enq;
+	int num_pktv = (num + max_size - 1) / max_size;
+	int ret;
+	int i;
+	odp_packet_vector_t pktv_tbl[num_pktv];
+	odp_event_t event_tbl[num_pktv];
+
+	for (i = 0; i < num_pktv; i++) {
+		pktv = odp_packet_vector_alloc(pool);
+		if (odp_unlikely(pktv == ODP_PACKET_VECTOR_INVALID))
+			break;
+		pktv_tbl[i] = pktv;
+		event_tbl[i] = odp_packet_vector_to_event(pktv);
+	}
+	if (odp_unlikely(i == 0)) {
+		odp_event_free_multi(events, num);
+		return;
+	}
+	num_pktv = i;
+	num_enq = 0;
+	for (i = 0; i < num_pktv; i++) {
+		odp_packet_t *pkt_tbl;
+		int pktv_size = max_size;
+
+		pktv = pktv_tbl[i];
+
+		if (num_enq + max_size > num)
+			pktv_size = num - num_enq;
+
+		odp_packet_vector_tbl(pktv, &pkt_tbl);
+		odp_packet_from_event_multi(pkt_tbl, &events[num_enq], pktv_size);
+		odp_packet_vector_size_set(pktv, pktv_size);
+		num_enq += pktv_size;
+	}
+
+	ret = odp_queue_enq_multi(queue, event_tbl, num_pktv);
+	if (odp_unlikely(ret != num_pktv)) {
+		if (ret < 0)
+			ret = 0;
+		odp_event_free_multi(&event_tbl[ret], num_pktv - ret);
+	}
+}
+
+static void packet_vector_enq(odp_queue_t queue, odp_event_t events[],
+			      uint32_t num, odp_pool_t pool)
+{
+	odp_packet_vector_t pktv;
+	odp_packet_t *pkt_tbl;
+
+	pktv = odp_packet_vector_alloc(pool);
+	if (odp_unlikely(pktv == ODP_PACKET_VECTOR_INVALID)) {
+		odp_event_free_multi(events, num);
+		return;
+	}
+
+	odp_packet_vector_tbl(pktv, &pkt_tbl);
+	odp_packet_from_event_multi(pkt_tbl, events, num);
+	odp_packet_vector_size_set(pktv, num);
+
+	if (odp_unlikely(odp_queue_enq(queue, odp_packet_vector_to_event(pktv))))
+		odp_event_free(odp_packet_vector_to_event(pktv));
+}
+
 static inline odp_packet_vector_t packet_vector_create(odp_packet_t packets[], uint32_t num,
 						       odp_pool_t pool)
 {
@@ -757,6 +826,8 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 	odp_queue_t cur_queue;
 	odp_event_t ev[num];
 	odp_queue_t dst[num];
+	uint16_t cos[num];
+	uint16_t cur_cos = 0;
 	int dst_idx[num];
 	odp_bool_t vector_enabled = entry->s.in_queue[pktin_index].vector.enable;
 
@@ -782,19 +853,24 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 		buf_hdr = packet_to_buf_hdr(pkt);
 
 		if (odp_unlikely(pkt_hdr->p.input_flags.dst_queue)) {
-			/* Sort events for enqueue multi operation(s) */
+			/* Sort events for enqueue multi operation(s) based on CoS
+			 * and destination queue. */
 			if (odp_unlikely(num_dst == 0)) {
 				num_dst = 1;
 				cur_queue = pkt_hdr->dst_queue;
+				cur_cos = pkt_hdr->cos;
 				dst[0] = cur_queue;
+				cos[0] = cur_cos;
 				dst_idx[0] = 0;
 			}
 
 			ev[num_ev] = odp_packet_to_event(pkt);
 
-			if (cur_queue != pkt_hdr->dst_queue) {
+			if (cur_queue != pkt_hdr->dst_queue || cur_cos != pkt_hdr->cos) {
 				cur_queue = pkt_hdr->dst_queue;
+				cur_cos = pkt_hdr->cos;
 				dst[num_dst] = cur_queue;
+				cos[num_dst] = cur_cos;
 				dst_idx[num_dst] = num_ev;
 				num_dst++;
 			}
@@ -829,6 +905,20 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 			num_enq = num_ev - idx;
 		else
 			num_enq = dst_idx[i + 1] - idx;
+
+		if (cos[i] != CLS_COS_IDX_NONE) {
+			/* Packets from classifier */
+			cos_t *cos_hdr = _odp_cos_entry_from_idx(cos[i]);
+
+			if (cos_hdr->s.vector.enable) {
+				packet_vector_enq_cos(dst[i], &ev[idx], num_enq, cos_hdr);
+				continue;
+			}
+		} else if (vector_enabled) {
+			/* Packets from inline IPsec */
+			packet_vector_enq(dst[i], &ev[idx], num_enq, pool);
+			continue;
+		}
 
 		ret = odp_queue_enq_multi(dst[i], &ev[idx], num_enq);
 
@@ -971,7 +1061,6 @@ int sched_cb_pktin_poll_one(int pktio_index,
 	odp_packet_t pkt;
 	odp_packet_hdr_t *pkt_hdr;
 	odp_pool_t pool = ODP_POOL_INVALID;
-	odp_buffer_hdr_t *buf_hdr;
 	odp_packet_t packets[QUEUE_MULTI_MAX];
 	odp_queue_t queue;
 	odp_bool_t vector_enabled = entry->s.in_queue[rx_queue].vector.enable;
@@ -1001,14 +1090,25 @@ int sched_cb_pktin_poll_one(int pktio_index,
 		pkt = packets[i];
 		pkt_hdr = packet_hdr(pkt);
 		if (odp_unlikely(pkt_hdr->p.input_flags.dst_queue)) {
-			int num_enq;
+			odp_event_t event = odp_packet_to_event(pkt);
 
 			queue = pkt_hdr->dst_queue;
-			buf_hdr = packet_to_buf_hdr(pkt);
-			num_enq = odp_queue_enq_multi(queue,
-						      (odp_event_t *)&buf_hdr,
-						      1);
-			if (num_enq < 0) {
+
+			if (pkt_hdr->cos != CLS_COS_IDX_NONE) {
+				/* Packets from classifier */
+				cos_t *cos_hdr = _odp_cos_entry_from_idx(pkt_hdr->cos);
+
+				if (cos_hdr->s.vector.enable) {
+					packet_vector_enq_cos(queue, &event, 1, cos_hdr);
+					continue;
+				}
+			} else if (vector_enabled) {
+				/* Packets from inline IPsec */
+				packet_vector_enq(queue, &event, 1, pool);
+				continue;
+			}
+
+			if (odp_unlikely(odp_queue_enq(queue, event))) {
 				/* Queue full? */
 				odp_packet_free(pkt);
 				odp_atomic_inc_u64(&entry->s.stats_extra.in_discards);

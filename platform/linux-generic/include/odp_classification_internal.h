@@ -25,6 +25,8 @@ extern "C" {
 #include <odp_packet_io_internal.h>
 #include <odp_classification_datamodel.h>
 
+cos_t *_odp_cos_entry_from_idx(uint32_t ndx);
+
 /** Classification Internal function **/
 
 /**
