@@ -29,6 +29,7 @@
 #include <odp_pcapng.h>
 #include <odp/api/plat/queue_inlines.h>
 #include <odp_libconfig_internal.h>
+#include <odp_event_vector_internal.h>
 
 #include <string.h>
 #include <inttypes.h>
@@ -57,6 +58,11 @@ void *pktio_entry_ptr[ODP_CONFIG_PKTIO_ENTRIES];
 static inline pktio_entry_t *pktio_entry_by_index(int index)
 {
 	return pktio_entry_ptr[index];
+}
+
+static inline odp_buffer_hdr_t *packet_vector_to_buf_hdr(odp_packet_vector_t pktv)
+{
+	return &_odp_packet_vector_hdr(pktv)->buf_hdr;
 }
 
 static int read_config_file(pktio_global_t *pktio_glb)
@@ -718,18 +724,48 @@ odp_pktio_t odp_pktio_lookup(const char *name)
 	return hdl;
 }
 
+static inline odp_packet_vector_t packet_vector_create(odp_packet_t packets[], uint32_t num,
+						       odp_pool_t pool)
+{
+	odp_packet_vector_t pktv;
+	odp_packet_t *pkt_tbl;
+	uint32_t i;
+
+	pktv = odp_packet_vector_alloc(pool);
+	if (odp_unlikely(pktv == ODP_PACKET_VECTOR_INVALID)) {
+		odp_packet_free_multi(packets, num);
+		return ODP_PACKET_VECTOR_INVALID;
+	}
+
+	odp_packet_vector_tbl(pktv, &pkt_tbl);
+	for (i = 0; i < num; i++)
+		pkt_tbl[i] = packets[i];
+	odp_packet_vector_size_set(pktv, num);
+
+	return pktv;
+}
+
 static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 				 odp_buffer_hdr_t *buffer_hdrs[], int num)
 {
 	odp_packet_t pkt;
 	odp_packet_t packets[num];
 	odp_packet_hdr_t *pkt_hdr;
+	odp_pool_t pool = ODP_POOL_INVALID;
 	odp_buffer_hdr_t *buf_hdr;
 	int i, pkts, num_rx, num_ev, num_dst;
 	odp_queue_t cur_queue;
 	odp_event_t ev[num];
 	odp_queue_t dst[num];
 	int dst_idx[num];
+	odp_bool_t vector_enabled = entry->s.in_queue[pktin_index].vector.enable;
+
+	if (vector_enabled) {
+		/* Make sure all packets will fit into a single packet vector */
+		if ((int)entry->s.in_queue[pktin_index].vector.max_size < num)
+			num = entry->s.in_queue[pktin_index].vector.max_size;
+		pool = entry->s.in_queue[pktin_index].vector.pool;
+	}
 
 	num_rx = 0;
 	num_dst = 0;
@@ -770,8 +806,20 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 	}
 
 	/* Optimization for the common case */
-	if (odp_likely(num_dst == 0))
-		return num_rx;
+	if (odp_likely(num_dst == 0)) {
+		if (!vector_enabled || num_rx < 1)
+			return num_rx;
+
+		/* Create packet vector */
+		odp_packet_vector_t pktv = packet_vector_create((odp_packet_t *)buffer_hdrs,
+								num_rx, pool);
+
+		if (odp_unlikely(pktv == ODP_PACKET_VECTOR_INVALID))
+			return 0;
+
+		buffer_hdrs[0] = packet_vector_to_buf_hdr(pktv);
+		return 1;
+	}
 
 	for (i = 0; i < num_dst; i++) {
 		int num_enq, ret;
@@ -922,9 +970,12 @@ int sched_cb_pktin_poll_one(int pktio_index,
 	pktio_entry_t *entry = pktio_entry_by_index(pktio_index);
 	odp_packet_t pkt;
 	odp_packet_hdr_t *pkt_hdr;
+	odp_pool_t pool = ODP_POOL_INVALID;
 	odp_buffer_hdr_t *buf_hdr;
 	odp_packet_t packets[QUEUE_MULTI_MAX];
 	odp_queue_t queue;
+	odp_bool_t vector_enabled = entry->s.in_queue[rx_queue].vector.enable;
+	uint32_t num = QUEUE_MULTI_MAX;
 
 	if (odp_unlikely(entry->s.state != PKTIO_STATE_STARTED)) {
 		if (entry->s.state < PKTIO_STATE_ACTIVE ||
@@ -935,9 +986,15 @@ int sched_cb_pktin_poll_one(int pktio_index,
 		return 0;
 	}
 
+	if (vector_enabled) {
+		/* Make sure all packets will fit into a single packet vector */
+		if (entry->s.in_queue[rx_queue].vector.max_size < num)
+			num = entry->s.in_queue[rx_queue].vector.max_size;
+		pool = entry->s.in_queue[rx_queue].vector.pool;
+	}
+
 	ODP_ASSERT((unsigned int)rx_queue < entry->s.num_in_queue);
-	num_pkts = entry->s.ops->recv(entry, rx_queue,
-				      packets, QUEUE_MULTI_MAX);
+	num_pkts = entry->s.ops->recv(entry, rx_queue, packets, num);
 
 	num_rx = 0;
 	for (i = 0; i < num_pkts; i++) {
@@ -960,6 +1017,19 @@ int sched_cb_pktin_poll_one(int pktio_index,
 			evt_tbl[num_rx++] = odp_packet_to_event(pkt);
 		}
 	}
+
+	/* Create packet vector */
+	if (vector_enabled && num_rx > 0) {
+		odp_packet_vector_t pktv = packet_vector_create((odp_packet_t *)evt_tbl,
+								num_rx, pool);
+
+		if (odp_unlikely(pktv == ODP_PACKET_VECTOR_INVALID))
+			return 0;
+
+		evt_tbl[0] = odp_packet_vector_to_event(pktv);
+		return 1;
+	}
+
 	return num_rx;
 }
 
@@ -1495,6 +1565,16 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 		capa->config.pktout.bit.no_packet_refs = 1;
 	}
 
+	/* Packet vector generation is common for all pktio types */
+	if (ret == 0 && (entry->s.param.in_mode ==  ODP_PKTIN_MODE_QUEUE ||
+			 entry->s.param.in_mode ==  ODP_PKTIN_MODE_SCHED)) {
+		capa->vector.supported = true;
+		capa->vector.max_size = CONFIG_PACKET_VECTOR_MAX_SIZE;
+		capa->vector.min_size = 1;
+		capa->vector.max_tmo_ns = 0;
+		capa->vector.min_tmo_ns = 0;
+	}
+
 	return ret;
 }
 
@@ -1614,6 +1694,45 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 		return -1;
 	}
 
+	/* Validate packet vector parameters */
+	if (param->vector.enable) {
+		odp_pool_t pool = param->vector.pool;
+		odp_pool_info_t pool_info;
+
+		if (mode == ODP_PKTIN_MODE_DIRECT) {
+			ODP_ERR("packet vectors not supported with ODP_PKTIN_MODE_DIRECT\n");
+			return -1;
+		}
+		if (param->vector.max_size < capa.vector.min_size) {
+			ODP_ERR("vector.max_size too small %" PRIu32 "\n",
+				param->vector.max_size);
+			return -1;
+		}
+		if (param->vector.max_size > capa.vector.max_size) {
+			ODP_ERR("vector.max_size too large %" PRIu32 "\n",
+				param->vector.max_size);
+			return -1;
+		}
+		if (param->vector.max_tmo_ns > capa.vector.max_tmo_ns) {
+			ODP_ERR("vector.max_tmo_ns too large %" PRIu64 "\n",
+				param->vector.max_tmo_ns);
+			return -1;
+		}
+
+		if (pool == ODP_POOL_INVALID || odp_pool_info(pool, &pool_info)) {
+			ODP_ERR("invalid packet vector pool\n");
+			return -1;
+		}
+		if (pool_info.params.type != ODP_POOL_VECTOR) {
+			ODP_ERR("wrong pool type\n");
+			return -1;
+		}
+		if (param->vector.max_size > pool_info.params.vector.max_size) {
+			ODP_ERR("vector.max_size larger than pool max vector size\n");
+			return -1;
+		}
+	}
+
 	/* If re-configuring, destroy old queues */
 	if (entry->s.num_in_queue)
 		destroy_in_queues(entry, entry->s.num_in_queue);
@@ -1673,6 +1792,7 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 
 		entry->s.in_queue[i].pktin.index = i;
 		entry->s.in_queue[i].pktin.pktio = entry->s.handle;
+		entry->s.in_queue[i].vector = param->vector;
 	}
 
 	entry->s.num_in_queue = num_queues;
