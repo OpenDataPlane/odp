@@ -104,7 +104,10 @@ int cls_pkt_set_seq(odp_packet_t pkt)
 	offset = odp_packet_l4_offset(pkt);
 	CU_ASSERT_FATAL(offset != ODP_PACKET_OFFSET_INVALID);
 
-	if (ip->proto == ODPH_IPPROTO_SCTP) {
+	if (ip->proto == ODPH_IPPROTO_ICMPV4) {
+		status = odp_packet_copy_from_mem(pkt, offset + ODPH_ICMPHDR_LEN,
+						  sizeof(data), &data);
+	} else if (ip->proto == ODPH_IPPROTO_SCTP) {
 		status = odp_packet_copy_from_mem(pkt, offset + ODPH_SCTPHDR_LEN,
 						  sizeof(data), &data);
 	} else if (ip->proto == ODPH_IPPROTO_UDP)
@@ -131,7 +134,10 @@ uint32_t cls_pkt_get_seq(odp_packet_t pkt)
 
 	if (offset == ODP_PACKET_OFFSET_INVALID || ip == NULL)
 		return TEST_SEQ_INVALID;
-	if (ip->proto == ODPH_IPPROTO_SCTP) {
+	if (ip->proto == ODPH_IPPROTO_ICMPV4) {
+		odp_packet_copy_to_mem(pkt, offset + ODPH_ICMPHDR_LEN,
+				       sizeof(data), &data);
+	} else if (ip->proto == ODPH_IPPROTO_SCTP) {
 		odp_packet_copy_to_mem(pkt, offset + ODPH_SCTPHDR_LEN,
 				       sizeof(data), &data);
 	} else if (ip->proto == ODPH_IPPROTO_UDP)
@@ -244,6 +250,7 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	odph_udphdr_t *udp;
 	odph_tcphdr_t *tcp;
 	odph_sctphdr_t *sctp;
+	odph_icmphdr_t *icmp;
 	odph_ipv4hdr_t *ip;
 	odph_ipv6hdr_t *ipv6;
 	uint16_t payload_len;
@@ -273,6 +280,7 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	eth_type = pkt_info.ipv6 ? ODPH_ETHTYPE_IPV6 : ODPH_ETHTYPE_IPV4;
 	next_hdr = pkt_info.udp ? ODPH_IPPROTO_UDP : ODPH_IPPROTO_TCP;
 	next_hdr = pkt_info.sctp ? ODPH_IPPROTO_SCTP : next_hdr;
+	next_hdr = pkt_info.icmp ? ODPH_IPPROTO_ICMPV4 : next_hdr;
 	l2_hdr_len   = ODPH_ETHHDR_LEN + vlan_hdr_len;
 	l4_len	= l4_hdr_len + payload_len;
 	l3_len	= l3_hdr_len + l4_len;
@@ -352,8 +360,15 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	tcp = (odph_tcphdr_t *)(buf + l4_offset);
 	udp = (odph_udphdr_t *)(buf + l4_offset);
 	sctp = (odph_sctphdr_t *)(buf + l4_offset);
+	icmp = (odph_icmphdr_t *)(buf + l4_offset);
 
-	if (pkt_info.sctp) {
+	if (pkt_info.icmp) {
+		icmp->type = ICMP_ECHO;
+		icmp->code = 0;
+		icmp->un.echo.id = 0;
+		icmp->un.echo.sequence = 0;
+		icmp->chksum = 0;
+	} else if (pkt_info.sctp) {
 		sctp->src_port = odp_cpu_to_be_16(CLS_DEFAULT_SPORT);
 		sctp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
 		sctp->tag = 0;
