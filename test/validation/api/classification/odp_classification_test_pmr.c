@@ -2544,6 +2544,354 @@ static void classification_test_pmr_term_sctp_dport(void)
 	classification_test_pmr_term_sctp(1);
 }
 
+static void classification_test_pmr_term_icmp_type(void)
+{
+	odp_packet_t pkt;
+	odph_icmphdr_t *icmp;
+	uint8_t val;
+	uint8_t mask;
+	uint32_t seqno;
+	int retval;
+	odp_pktio_t pktio;
+	odp_queue_t queue;
+	odp_queue_t retqueue;
+	odp_queue_t default_queue;
+	odp_cos_t default_cos;
+	odp_pool_t default_pool;
+	odp_pool_t pool;
+	odp_pool_t recvpool;
+	odp_pmr_t pmr;
+	odp_cos_t cos;
+	char cosname[ODP_COS_NAME_LEN];
+	odp_cls_cos_param_t cls_param;
+	odp_pmr_param_t pmr_param;
+	odph_ethhdr_t *eth;
+	cls_packet_info_t pkt_info;
+
+	val  = ICMP_ECHO;
+	mask = 0xff;
+	seqno = 0;
+
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+	retval = start_pktio(pktio);
+	CU_ASSERT(retval == 0);
+
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
+	queue = queue_create("icmp_type", true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	pool = pool_create("icmp_type");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	sprintf(cosname, "icmp_type");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	cos = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_ICMP_TYPE;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
+
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
+
+	pkt_info = default_pkt_info;
+	pkt_info.l4_type = CLS_PKT_L4_ICMP;
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
+	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
+
+	icmp = (odph_icmphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	icmp->type = val;
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	CU_ASSERT(retqueue == queue);
+	recvpool = odp_packet_pool(pkt);
+	CU_ASSERT(recvpool == pool);
+	odp_packet_free(pkt);
+
+	/* Other packets should goto default queue */
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
+	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
+
+	icmp = (odph_icmphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	icmp->type = ICMP_ECHOREPLY;
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	CU_ASSERT(retqueue == default_queue);
+	recvpool = odp_packet_pool(pkt);
+	CU_ASSERT(recvpool == default_pool);
+
+	odp_packet_free(pkt);
+	odp_cos_destroy(cos);
+	odp_cos_destroy(default_cos);
+	odp_cls_pmr_destroy(pmr);
+	stop_pktio(pktio);
+	odp_pool_destroy(default_pool);
+	odp_pool_destroy(pool);
+	odp_queue_destroy(queue);
+	odp_queue_destroy(default_queue);
+	odp_pktio_close(pktio);
+}
+
+static void classification_test_pmr_term_icmp_code(void)
+{
+	odp_packet_t pkt;
+	odph_icmphdr_t *icmp;
+	uint8_t val;
+	uint8_t mask;
+	uint32_t seqno;
+	int retval;
+	odp_pktio_t pktio;
+	odp_queue_t queue;
+	odp_queue_t retqueue;
+	odp_queue_t default_queue;
+	odp_cos_t default_cos;
+	odp_pool_t default_pool;
+	odp_pool_t pool;
+	odp_pool_t recvpool;
+	odp_pmr_t pmr;
+	odp_cos_t cos;
+	char cosname[ODP_COS_NAME_LEN];
+	odp_cls_cos_param_t cls_param;
+	odp_pmr_param_t pmr_param;
+	odph_ethhdr_t *eth;
+	cls_packet_info_t pkt_info;
+
+	val  = 0x1;
+	mask = 0xff;
+	seqno = 0;
+
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+	retval = start_pktio(pktio);
+	CU_ASSERT(retval == 0);
+
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
+	queue = queue_create("icmp_code", true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	pool = pool_create("icmp_code");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	sprintf(cosname, "icmp_code");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	cos = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_ICMP_CODE;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
+
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
+
+	pkt_info = default_pkt_info;
+	pkt_info.l4_type = CLS_PKT_L4_ICMP;
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
+	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
+
+	icmp = (odph_icmphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	icmp->code = 0x1;
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	CU_ASSERT(retqueue == queue);
+	recvpool = odp_packet_pool(pkt);
+	CU_ASSERT(recvpool == pool);
+	odp_packet_free(pkt);
+
+	/* Other packets should goto default queue */
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
+	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
+
+	icmp = (odph_icmphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	icmp->code = 0;
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	CU_ASSERT(retqueue == default_queue);
+	recvpool = odp_packet_pool(pkt);
+	CU_ASSERT(recvpool == default_pool);
+
+	odp_packet_free(pkt);
+	odp_cos_destroy(cos);
+	odp_cos_destroy(default_cos);
+	odp_cls_pmr_destroy(pmr);
+	stop_pktio(pktio);
+	odp_pool_destroy(default_pool);
+	odp_pool_destroy(pool);
+	odp_queue_destroy(queue);
+	odp_queue_destroy(default_queue);
+	odp_pktio_close(pktio);
+}
+
+static void classification_test_pmr_term_icmp_id(void)
+{
+	odp_packet_t pkt;
+	odph_icmphdr_t *icmp;
+	uint16_t val;
+	uint16_t mask;
+	uint32_t seqno;
+	int retval;
+	odp_pktio_t pktio;
+	odp_queue_t queue;
+	odp_queue_t retqueue;
+	odp_queue_t default_queue;
+	odp_cos_t default_cos;
+	odp_pool_t default_pool;
+	odp_pool_t pool;
+	odp_pool_t recvpool;
+	odp_pmr_t pmr;
+	odp_cos_t cos;
+	char cosname[ODP_COS_NAME_LEN];
+	odp_cls_cos_param_t cls_param;
+	odp_pmr_param_t pmr_param;
+	odph_ethhdr_t *eth;
+	cls_packet_info_t pkt_info;
+
+	val  = odp_cpu_to_be_16(0x1234);
+	mask = odp_cpu_to_be_16(0xffff);
+	seqno = 0;
+
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+	retval = start_pktio(pktio);
+	CU_ASSERT(retval == 0);
+
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
+	queue = queue_create("icmp_id", true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	pool = pool_create("icmp_id");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	sprintf(cosname, "icmp_id");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	cos = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_ICMP_ID;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
+
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
+
+	pkt_info = default_pkt_info;
+	pkt_info.l4_type = CLS_PKT_L4_ICMP;
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
+	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
+
+	icmp = (odph_icmphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	icmp->un.echo.id = odp_cpu_to_be_16(0x1234);
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	CU_ASSERT(retqueue == queue);
+	recvpool = odp_packet_pool(pkt);
+	CU_ASSERT(recvpool == pool);
+	odp_packet_free(pkt);
+
+	/* Other packets should goto default queue */
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
+	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
+
+	icmp = (odph_icmphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	icmp->un.echo.id = 0x4567;
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	CU_ASSERT(retqueue == default_queue);
+	recvpool = odp_packet_pool(pkt);
+	CU_ASSERT(recvpool == default_pool);
+
+	odp_packet_free(pkt);
+	odp_cos_destroy(cos);
+	odp_cos_destroy(default_cos);
+	odp_cls_pmr_destroy(pmr);
+	stop_pktio(pktio);
+	odp_pool_destroy(default_pool);
+	odp_pool_destroy(pool);
+	odp_queue_destroy(queue);
+	odp_queue_destroy(default_queue);
+	odp_pktio_close(pktio);
+}
+
 static void classification_test_pmr_serial(void)
 {
 	test_pmr_series(1, 0);
@@ -2688,6 +3036,21 @@ static int check_capa_sctp_dport(void)
 	return cls_capa.supported_terms.bit.sctp_dport;
 }
 
+static int check_capa_icmp_type(void)
+{
+	return cls_capa.supported_terms.bit.icmp_type;
+}
+
+static int check_capa_icmp_code(void)
+{
+	return cls_capa.supported_terms.bit.icmp_code;
+}
+
+static int check_capa_icmp_id(void)
+{
+	return cls_capa.supported_terms.bit.icmp_id;
+}
+
 odp_testinfo_t classification_suite_pmr[] = {
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_tcp_dport,
 				  check_capa_tcp_dport),
@@ -2701,6 +3064,12 @@ odp_testinfo_t classification_suite_pmr[] = {
 				  check_capa_sctp_sport),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_sctp_dport,
 				  check_capa_sctp_dport),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_icmp_type,
+				  check_capa_icmp_type),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_icmp_code,
+				  check_capa_icmp_code),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_icmp_id,
+				  check_capa_icmp_id),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipproto,
 				  check_capa_ip_proto),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_dmac,
