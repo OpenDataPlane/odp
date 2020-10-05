@@ -467,6 +467,20 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	odp_atomic_init_u64(&ipsec_sa->stats.hard_exp_pkts_err, 0);
 	odp_atomic_init_u64(&ipsec_sa->stats.post_lifetime_err_pkts, 0);
 
+	/* Copy application provided parameter values. */
+	ipsec_sa->param = *param;
+
+	/* Set all the key related pointers and ip address pointers to null. */
+	ipsec_sa->param.crypto.cipher_key.data = NULL;
+	ipsec_sa->param.crypto.cipher_key_extra.data = NULL;
+	ipsec_sa->param.crypto.auth_key.data = NULL;
+	ipsec_sa->param.crypto.auth_key_extra.data = NULL;
+	ipsec_sa->param.inbound.lookup_param.dst_addr = NULL;
+	ipsec_sa->param.outbound.tunnel.ipv4.src_addr = NULL;
+	ipsec_sa->param.outbound.tunnel.ipv4.dst_addr = NULL;
+	ipsec_sa->param.outbound.tunnel.ipv6.src_addr = NULL;
+	ipsec_sa->param.outbound.tunnel.ipv6.dst_addr = NULL;
+
 	if (ODP_IPSEC_MODE_TUNNEL == ipsec_sa->mode &&
 	    ODP_IPSEC_DIR_OUTBOUND == param->dir) {
 		if (ODP_IPSEC_TUNNEL_IPV4 == param->outbound.tunnel.type) {
@@ -839,6 +853,16 @@ int _odp_ipsec_sa_lifetime_update(ipsec_sa_t *ipsec_sa, uint32_t len,
 	return 0;
 }
 
+static uint64_t ipsec_sa_antireplay_max_seq(ipsec_sa_t *ipsec_sa)
+{
+	uint64_t state, max_seq;
+
+	state = odp_atomic_load_u64(&ipsec_sa->hot.in.antireplay);
+	max_seq = state & 0xffffffff;
+
+	return max_seq;
+}
+
 int _odp_ipsec_sa_replay_precheck(ipsec_sa_t *ipsec_sa, uint32_t seq,
 				  odp_ipsec_op_status_t *status)
 {
@@ -948,4 +972,79 @@ uint64_t _odp_ipsec_sa_stats_pkts(ipsec_sa_t *sa)
 	return odp_atomic_load_u64(&sa->hot.packets)
 	       - odp_atomic_load_u64(&sa->stats.post_lifetime_err_pkts)
 	       - tl_pkt_quota;
+}
+
+static void ipsec_out_sa_info(ipsec_sa_t *ipsec_sa, odp_ipsec_sa_info_t *sa_info)
+{
+	sa_info->outbound.seq_num =
+		(uint64_t)odp_atomic_load_u64(&ipsec_sa->hot.out.seq) -	1;
+
+	if (ipsec_sa->param.mode == ODP_IPSEC_MODE_TUNNEL) {
+		uint8_t *src, *dst;
+
+		if (ipsec_sa->param.outbound.tunnel.type ==
+				ODP_IPSEC_TUNNEL_IPV4) {
+			src = sa_info->outbound.tunnel.ipv4.src_addr;
+			dst = sa_info->outbound.tunnel.ipv4.dst_addr;
+			memcpy(src, &ipsec_sa->out.tun_ipv4.src_ip,
+			       ODP_IPV4_ADDR_SIZE);
+			memcpy(dst, &ipsec_sa->out.tun_ipv4.dst_ip,
+			       ODP_IPV4_ADDR_SIZE);
+			sa_info->param.outbound.tunnel.ipv4.src_addr = src;
+			sa_info->param.outbound.tunnel.ipv4.dst_addr = dst;
+		} else {
+			src = sa_info->outbound.tunnel.ipv6.src_addr;
+			dst = sa_info->outbound.tunnel.ipv6.dst_addr;
+			memcpy(src, &ipsec_sa->out.tun_ipv6.src_ip,
+			       ODP_IPV6_ADDR_SIZE);
+			memcpy(dst, &ipsec_sa->out.tun_ipv6.dst_ip,
+			       ODP_IPV6_ADDR_SIZE);
+			sa_info->param.outbound.tunnel.ipv6.src_addr = src;
+			sa_info->param.outbound.tunnel.ipv6.dst_addr = dst;
+		}
+	}
+}
+
+static void ipsec_in_sa_info(ipsec_sa_t *ipsec_sa, odp_ipsec_sa_info_t *sa_info)
+{
+	if (ipsec_sa->param.mode == ODP_IPSEC_MODE_TUNNEL) {
+		uint8_t *dst = sa_info->inbound.lookup_param.dst_addr;
+
+		if (ipsec_sa->param.inbound.lookup_param.ip_version ==
+		    ODP_IPSEC_IPV4)
+			memcpy(dst, &ipsec_sa->in.lookup_dst_ipv4,
+			       ODP_IPV4_ADDR_SIZE);
+		else
+			memcpy(dst, &ipsec_sa->in.lookup_dst_ipv6,
+			       ODP_IPV6_ADDR_SIZE);
+
+		sa_info->param.inbound.lookup_param.dst_addr = dst;
+	}
+
+	if (ipsec_sa->antireplay) {
+		sa_info->inbound.antireplay_ws = IPSEC_ANTIREPLAY_WS;
+		sa_info->inbound.antireplay_window_top =
+			ipsec_sa_antireplay_max_seq(ipsec_sa);
+	}
+}
+
+int odp_ipsec_sa_info(odp_ipsec_sa_t sa, odp_ipsec_sa_info_t  *sa_info)
+{
+	ipsec_sa_t *ipsec_sa;
+
+	ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
+
+	ODP_ASSERT(ipsec_sa != NULL);
+	ODP_ASSERT(sa_info != NULL);
+
+	memset(sa_info, 0, sizeof(*sa_info));
+
+	sa_info->param = ipsec_sa->param;
+
+	if (ipsec_sa->param.dir == ODP_IPSEC_DIR_OUTBOUND)
+		ipsec_out_sa_info(ipsec_sa, sa_info);
+	else
+		ipsec_in_sa_info(ipsec_sa, sa_info);
+
+	return 0;
 }
