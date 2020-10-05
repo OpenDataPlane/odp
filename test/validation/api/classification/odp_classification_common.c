@@ -105,7 +105,13 @@ int cls_pkt_set_seq(odp_packet_t pkt)
 	offset = odp_packet_l4_offset(pkt);
 	CU_ASSERT_FATAL(offset != ODP_PACKET_OFFSET_INVALID);
 
-	if (ip->proto == ODPH_IPPROTO_UDP)
+	if (ip->proto == ODPH_IPPROTO_SCTP) {
+		/* Create some invalid SCTP packet for testing under the assumption that
+		 * no implementation really cares
+		 */
+		status = odp_packet_copy_from_mem(pkt, offset + ODPH_SCTPHDR_LEN,
+						  sizeof(data), &data);
+	} else if (ip->proto == ODPH_IPPROTO_UDP)
 		status = odp_packet_copy_from_mem(pkt, offset + ODPH_UDPHDR_LEN,
 						  sizeof(data), &data);
 	else {
@@ -129,8 +135,10 @@ uint32_t cls_pkt_get_seq(odp_packet_t pkt)
 
 	if (offset == ODP_PACKET_OFFSET_INVALID || ip == NULL)
 		return TEST_SEQ_INVALID;
-
-	if (ip->proto == ODPH_IPPROTO_UDP)
+	if (ip->proto == ODPH_IPPROTO_SCTP) {
+		odp_packet_copy_to_mem(pkt, offset + ODPH_SCTPHDR_LEN,
+				       sizeof(data), &data);
+	} else if (ip->proto == ODPH_IPPROTO_UDP)
 		odp_packet_copy_to_mem(pkt, offset + ODPH_UDPHDR_LEN,
 				       sizeof(data), &data);
 	else {
@@ -293,6 +301,7 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	odph_ethhdr_t *ethhdr;
 	odph_udphdr_t *udp;
 	odph_tcphdr_t *tcp;
+	odph_sctphdr_t *sctp;
 	odph_ipv4hdr_t *ip;
 	odph_ipv6hdr_t *ipv6;
 	uint16_t payload_len;
@@ -318,9 +327,27 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	vlan_hdr_len = pkt_info.vlan ? ODPH_VLANHDR_LEN : 0;
 	vlan_hdr_len = pkt_info.vlan_qinq ? 2 * vlan_hdr_len : vlan_hdr_len;
 	l3_hdr_len = pkt_info.ipv6 ? ODPH_IPV6HDR_LEN : ODPH_IPV4HDR_LEN;
-	l4_hdr_len = pkt_info.udp ? ODPH_UDPHDR_LEN : ODPH_TCPHDR_LEN;
 	eth_type = pkt_info.ipv6 ? ODPH_ETHTYPE_IPV6 : ODPH_ETHTYPE_IPV4;
-	next_hdr = pkt_info.udp ? ODPH_IPPROTO_UDP : ODPH_IPPROTO_TCP;
+	next_hdr = ODPH_IPPROTO_TCP;
+	l4_hdr_len = ODPH_TCPHDR_LEN;
+
+	switch (pkt_info.l4_type) {
+	case CLS_PKT_L4_TCP:
+		next_hdr = ODPH_IPPROTO_TCP;
+		l4_hdr_len = ODPH_TCPHDR_LEN;
+		break;
+	case CLS_PKT_L4_UDP:
+		next_hdr = ODPH_IPPROTO_UDP;
+		l4_hdr_len = ODPH_UDPHDR_LEN;
+		break;
+	case CLS_PKT_L4_SCTP:
+		next_hdr = ODPH_IPPROTO_SCTP;
+		l4_hdr_len = ODPH_SCTPHDR_LEN;
+		break;
+	default:
+		ODPH_ASSERT(0);
+	}
+
 	l2_hdr_len   = ODPH_ETHHDR_LEN + vlan_hdr_len;
 	l4_len	= l4_hdr_len + payload_len;
 	l3_len	= l3_hdr_len + l4_len;
@@ -399,9 +426,20 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	odp_packet_l4_offset_set(pkt, l4_offset);
 	tcp = (odph_tcphdr_t *)(buf + l4_offset);
 	udp = (odph_udphdr_t *)(buf + l4_offset);
+	sctp = (odph_sctphdr_t *)(buf + l4_offset);
 
-	/* udp */
-	if (pkt_info.udp) {
+	if (pkt_info.l4_type == CLS_PKT_L4_SCTP) {
+		sctp->src_port = odp_cpu_to_be_16(CLS_DEFAULT_SPORT);
+		sctp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
+		sctp->tag = 0;
+		sctp->chksum = 0;
+		odp_packet_has_sctp_set(pkt, 1);
+		if (odph_sctp_chksum_set(pkt) != 0) {
+			ODPH_ERR("odph_sctp_chksum failed\n");
+			return ODP_PACKET_INVALID;
+		}
+	} else if (pkt_info.l4_type == CLS_PKT_L4_UDP) {
+		/* udp */
 		udp->src_port = odp_cpu_to_be_16(CLS_DEFAULT_SPORT);
 		udp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
 		udp->length = odp_cpu_to_be_16(payload_len + ODPH_UDPHDR_LEN);

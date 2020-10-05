@@ -542,7 +542,7 @@ static void classification_test_pmr_term_udp_dport(void)
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt_info = default_pkt_info;
-	pkt_info.udp = true;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -658,7 +658,7 @@ static void classification_test_pmr_term_udp_sport(void)
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt_info = default_pkt_info;
-	pkt_info.udp = true;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -772,7 +772,7 @@ static void classification_test_pmr_term_ipproto(void)
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt_info = default_pkt_info;
-	pkt_info.udp = true;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -878,7 +878,7 @@ static void classification_test_pmr_term_dmac(void)
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt_info = default_pkt_info;
-	pkt_info.udp = true;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
@@ -985,7 +985,7 @@ static void classification_test_pmr_term_packet_len(void)
 
 	/* create packet of payload length 1024 */
 	pkt_info = default_pkt_info;
-	pkt_info.udp = true;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt_info.len = 1024;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -1550,7 +1550,7 @@ static void classification_test_pmr_pool_set(void)
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 
 	pkt_info = default_pkt_info;
-	pkt_info.udp = true;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -1648,7 +1648,7 @@ static void classification_test_pmr_queue_set(void)
 	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVALID);
 	pkt_info = default_pkt_info;
-	pkt_info.udp = true;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -2297,7 +2297,7 @@ static void test_pmr_series(const int num_udp, int marking)
 
 	/* Matching TCP/IP packet */
 	pkt_info = default_pkt_info;
-	pkt_info.udp = false;
+	pkt_info.l4_type = CLS_PKT_L4_TCP;
 
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -2333,7 +2333,7 @@ static void test_pmr_series(const int num_udp, int marking)
 
 	/* Matching UDP/IP packets */
 	pkt_info = default_pkt_info;
-	pkt_info.udp = true;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
 
 	for (i = 0; i < num_udp; i++) {
 		pkt = create_packet(pkt_info);
@@ -2405,6 +2405,143 @@ static void test_pmr_series(const int num_udp, int marking)
 	odp_queue_destroy(queue_ip);
 	odp_queue_destroy(default_queue);
 	odp_pktio_close(pktio);
+}
+
+static void classification_test_pmr_term_sctp(bool is_dport)
+{
+	odp_packet_t pkt;
+	odph_sctphdr_t *sctp;
+	uint32_t seqno;
+	uint16_t val;
+	uint16_t mask;
+	int retval;
+	odp_pktio_t pktio;
+	odp_queue_t queue;
+	odp_queue_t retqueue;
+	odp_queue_t default_queue;
+	odp_cos_t default_cos;
+	odp_pool_t default_pool;
+	odp_pool_t pool;
+	odp_pool_t recvpool;
+	odp_pmr_t pmr;
+	odp_cos_t cos;
+	const char *port_type[2] = {"sctp_sport", "sctp_dport"};
+	odp_cls_cos_param_t cls_param;
+	odp_pmr_param_t pmr_param;
+	odph_ethhdr_t *eth;
+	cls_packet_info_t pkt_info;
+
+	val  = odp_cpu_to_be_16(CLS_DEFAULT_SPORT);
+	if (is_dport)
+		val  = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
+	mask = odp_cpu_to_be_16(0xffff);
+	seqno = 0;
+
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+	retval = start_pktio(pktio);
+	CU_ASSERT(retval == 0);
+
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
+	queue = queue_create(port_type[is_dport], true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	pool = pool_create(port_type[is_dport]);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	cos = odp_cls_cos_create(port_type[is_dport], &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_SCTP_SPORT;
+	if (is_dport)
+		pmr_param.term = ODP_PMR_SCTP_DPORT;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
+
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
+	CU_ASSERT(pmr != ODP_PMR_INVALID);
+
+	pkt_info = default_pkt_info;
+	pkt_info.l4_type = CLS_PKT_L4_SCTP;
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
+	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
+
+	sctp = (odph_sctphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	if (is_dport)
+		sctp->dst_port = val;
+	else
+		sctp->src_port = val;
+	CU_ASSERT(odph_sctp_chksum_set(pkt) == 0);
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	CU_ASSERT(retqueue == queue);
+	recvpool = odp_packet_pool(pkt);
+	CU_ASSERT(recvpool == pool);
+	odp_packet_free(pkt);
+
+	/* Other packets should goto default queue */
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
+	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
+
+	sctp = (odph_sctphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	if (is_dport)
+		sctp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT + 1);
+	else
+		sctp->src_port = odp_cpu_to_be_16(CLS_DEFAULT_SPORT + 1);
+	CU_ASSERT(odph_sctp_chksum_set(pkt) == 0);
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	CU_ASSERT(retqueue == default_queue);
+	recvpool = odp_packet_pool(pkt);
+	CU_ASSERT(recvpool == default_pool);
+
+	odp_packet_free(pkt);
+	odp_cos_destroy(cos);
+	odp_cos_destroy(default_cos);
+	odp_cls_pmr_destroy(pmr);
+	stop_pktio(pktio);
+	odp_pool_destroy(default_pool);
+	odp_pool_destroy(pool);
+	odp_queue_destroy(queue);
+	odp_queue_destroy(default_queue);
+	odp_pktio_close(pktio);
+}
+
+static void classification_test_pmr_term_sctp_sport(void)
+{
+	classification_test_pmr_term_sctp(0);
+}
+
+static void classification_test_pmr_term_sctp_dport(void)
+{
+	classification_test_pmr_term_sctp(1);
 }
 
 static void classification_test_pmr_serial(void)
@@ -2541,6 +2678,16 @@ static int check_capa_pmr_marking(void)
 	return 0;
 }
 
+static int check_capa_sctp_sport(void)
+{
+	return cls_capa.supported_terms.bit.sctp_sport;
+}
+
+static int check_capa_sctp_dport(void)
+{
+	return cls_capa.supported_terms.bit.sctp_dport;
+}
+
 odp_testinfo_t classification_suite_pmr[] = {
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_tcp_dport,
 				  check_capa_tcp_dport),
@@ -2550,6 +2697,10 @@ odp_testinfo_t classification_suite_pmr[] = {
 				  check_capa_udp_dport),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_udp_sport,
 				  check_capa_udp_sport),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_sctp_sport,
+				  check_capa_sctp_sport),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_sctp_dport,
+				  check_capa_sctp_dport),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipproto,
 				  check_capa_ip_proto),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_dmac,

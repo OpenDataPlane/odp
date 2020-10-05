@@ -12,12 +12,18 @@
 #include <odp_cunit_common.h>
 #include <stdbool.h>
 
+typedef enum cls_packet_l4_info {
+	CLS_PKT_L4_TCP,
+	CLS_PKT_L4_UDP,
+	CLS_PKT_L4_SCTP,
+} cls_packet_l4_info;
+
 typedef struct cls_packet_info {
 	odp_pool_t pool;
 	bool	vlan;
 	bool	vlan_qinq;
 	odp_atomic_u32_t *seq;
-	bool	udp;
+	cls_packet_l4_info l4_type;
 	bool	ipv6;
 	uint32_t len;
 } cls_packet_info_t;
