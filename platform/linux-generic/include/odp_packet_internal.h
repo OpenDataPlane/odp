@@ -126,6 +126,9 @@ typedef struct odp_packet_hdr_t {
 	/* Classifier mark */
 	uint16_t cls_mark;
 
+	/* Classifier handle index */
+	uint16_t cos;
+
 	union {
 		struct {
 			/* Result for crypto packet op */
@@ -235,6 +238,7 @@ static inline void copy_packet_cls_metadata(odp_packet_hdr_t *src_hdr,
 {
 	dst_hdr->p = src_hdr->p;
 	dst_hdr->dst_queue = src_hdr->dst_queue;
+	dst_hdr->cos = src_hdr->cos;
 	dst_hdr->flow_hash = src_hdr->flow_hash;
 	dst_hdr->timestamp = src_hdr->timestamp;
 	dst_hdr->cls_mark  = src_hdr->cls_mark;

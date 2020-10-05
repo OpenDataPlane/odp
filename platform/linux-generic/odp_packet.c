@@ -169,8 +169,9 @@ static inline void packet_seg_copy_md(odp_packet_hdr_t *dst,
 	 *   .tailroom
 	 */
 
-	dst->input     = src->input;
+	dst->input = src->input;
 	dst->dst_queue = src->dst_queue;
+	dst->cos = src->cos;
 	dst->flow_hash = src->flow_hash;
 	dst->timestamp = src->timestamp;
 
@@ -1720,6 +1721,7 @@ int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 
 	dsthdr->input = srchdr->input;
 	dsthdr->dst_queue = srchdr->dst_queue;
+	dsthdr->cos = srchdr->cos;
 	dsthdr->cls_mark = srchdr->cls_mark;
 	dsthdr->buf_hdr.user_ptr = srchdr->buf_hdr.user_ptr;
 	if (dsthdr->buf_hdr.uarea_addr != NULL &&
