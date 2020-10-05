@@ -513,7 +513,7 @@ static void print_stat(test_global_t *global)
 	printf("------------------------------------------\n");
 	printf("  duration:                 %.3f msec\n", nsec_ave / 1000000);
 	printf("  num cycles:               %.3f M\n", cycles_ave / 1000000);
-	printf("  evenst per dequeue:       %.3f\n",
+	printf("  events per dequeue:       %.3f\n",
 	       events_ave / rounds_ave);
 	printf("  cycles per event:         %.3f\n",
 	       cycles_ave / events_ave);
