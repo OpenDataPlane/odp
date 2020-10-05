@@ -1579,6 +1579,7 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 
 	*pool = cos->s.pool;
 	pkt_hdr->p.input_flags.dst_queue = 1;
+	pkt_hdr->cos = cos->s.index;
 
 	if (!cos->s.queue_group) {
 		pkt_hdr->dst_queue = cos->s.queue;

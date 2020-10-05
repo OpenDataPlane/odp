@@ -17,6 +17,7 @@
 #include <odp_packet_internal.h>
 #include <odp_ipsec_internal.h>
 #include <odp/api/plat/queue_inlines.h>
+#include <odp_classification_internal.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>
@@ -1808,6 +1809,8 @@ int _odp_ipsec_try_inline(odp_packet_t *pkt)
 	pkt_hdr = packet_hdr(*pkt);
 	pkt_hdr->p.input_flags.dst_queue = 1;
 	pkt_hdr->dst_queue = ipsec_sa->queue;
+	/* Distinguish inline IPsec packets from classifier packets */
+	pkt_hdr->cos = CLS_COS_IDX_NONE;
 
 	/* Last thing */
 	_odp_ipsec_sa_unuse(ipsec_sa);
