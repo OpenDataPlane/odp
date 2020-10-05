@@ -21,6 +21,7 @@
 #define CLS_DEFAULT_DPORT	2048
 #define CLS_DEFAULT_DMAC	{0x01, 0x02, 0x03, 0x04, 0x05, 0x06}
 #define CLS_DEFAULT_SMAC	{0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c}
+#define CLS_MAGIC_VAL		0xdeadbeef
 
 /* Config values for Error CoS */
 #define TEST_ERROR		1

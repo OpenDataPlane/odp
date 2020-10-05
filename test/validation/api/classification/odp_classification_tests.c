@@ -339,7 +339,7 @@ void test_cls_pmr_chain(odp_bool_t enable_pktv)
 	cls_packet_info_t pkt_info;
 
 	pkt_info = default_pkt_info;
-	pkt_info.udp = true;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -434,7 +434,7 @@ void test_pktio_default_cos(odp_bool_t enable_pktv)
 
 	/* create a default packet */
 	pkt_info = default_pkt_info;
-	pkt_info.udp = true;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -505,7 +505,7 @@ void test_pktio_error_cos(odp_bool_t enable_pktv)
 
 	/*Create an error packet */
 	pkt_info = default_pkt_info;
-	pkt_info.udp = true;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
@@ -633,7 +633,7 @@ void test_cos_with_l2_priority(odp_bool_t enable_pktv)
 	uint8_t i;
 
 	pkt_info = default_pkt_info;
-	pkt_info.udp = true;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt_info.vlan = true;
 
 	for (i = 0; i < global_num_l2_qos; i++) {
@@ -719,7 +719,7 @@ void test_pmr_cos(odp_bool_t enable_pktv)
 	cls_packet_info_t pkt_info;
 
 	pkt_info = default_pkt_info;
-	pkt_info.udp = true;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -816,7 +816,7 @@ void test_pktio_pmr_composite_cos(odp_bool_t enable_pktv)
 	cls_packet_info_t pkt_info;
 
 	pkt_info = default_pkt_info;
-	pkt_info.udp = true;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
