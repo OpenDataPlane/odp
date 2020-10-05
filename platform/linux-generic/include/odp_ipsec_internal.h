@@ -207,6 +207,8 @@ struct ipsec_sa_s {
 		 */
 		odp_atomic_u64_t post_lifetime_err_pkts;
 	} stats;
+
+	odp_ipsec_sa_param_t param;
 };
 
 /**
