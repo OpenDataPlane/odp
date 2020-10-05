@@ -21,6 +21,7 @@ extern "C" {
 #include <odp/api/crypto.h>
 #include <odp/api/support.h>
 #include <odp/api/packet_io.h>
+#include <odp/api/protocols.h>
 #include <odp/api/classification.h>
 #include <odp/api/traffic_mngr.h>
 
@@ -808,6 +809,76 @@ typedef struct odp_ipsec_stats_t {
 	/** Number of packets with hard lifetime(packets) expired */
 	uint64_t hard_exp_pkts_err;
 } odp_ipsec_stats_t;
+
+/**
+ * IPSEC SA information
+ */
+typedef struct odp_ipsec_sa_info_t {
+	/** Copy of IPSEC Security Association (SA) parameters */
+	odp_ipsec_sa_param_t param;
+
+	/** IPSEC SA direction dependent parameters */
+	union {
+		/** Inbound specific parameters */
+		struct {
+			/** Additional SA lookup parameters. */
+			struct {
+				/** IP destination address (NETWORK ENDIAN) to
+				 *  be matched in addition to SPI value. */
+				uint8_t dst_addr[ODP_IPV6_ADDR_SIZE];
+			} lookup_param;
+
+			/** Antireplay window size
+			 *
+			 * Antireplay window size configured for the SA.
+			 * This value can be different from what application
+			 * had requested.
+			 */
+			uint32_t antireplay_ws;
+
+			/** Antireplay window top
+			 *
+			 * Sequence number representing a recent top of the
+			 * anti-replay window. There may be a delay before the
+			 * SA state is reflected in the value. The value will be
+			 * zero if no packets have been processed or if the
+			 * anti-replay service is not enabled.
+			 */
+			uint64_t antireplay_window_top;
+		} inbound;
+
+		/** Outbound specific parameters */
+		struct {
+			/** Sequence number
+			 *
+			 * Sequence number used for a recently processed packet.
+			 * There may be a delay before the SA state is reflected
+			 * in the value. When no packets have been processed,
+			 * the value will be zero.
+			 */
+			uint64_t seq_num;
+
+			/** Tunnel IP address */
+			union {
+				/** IPv4 */
+				struct {
+					/** IPv4 source address */
+					uint8_t src_addr[ODP_IPV4_ADDR_SIZE];
+					/** IPv4 destination address */
+					uint8_t dst_addr[ODP_IPV4_ADDR_SIZE];
+				} ipv4;
+
+				/** IPv6 */
+				struct {
+					/** IPv6 source address */
+					uint8_t src_addr[ODP_IPV6_ADDR_SIZE];
+					/** IPv6 destination address */
+					uint8_t dst_addr[ODP_IPV6_ADDR_SIZE];
+				} ipv6;
+			} tunnel;
+		} outbound;
+	};
+} odp_ipsec_sa_info_t;
 
 /**
  * Query IPSEC capabilities
@@ -1702,6 +1773,25 @@ int odp_ipsec_stats(odp_ipsec_sa_t sa, odp_ipsec_stats_t *stats);
  * @retval <0 on failure
  */
 int odp_ipsec_stats_multi(odp_ipsec_sa_t sa[], odp_ipsec_stats_t stats[], int num);
+
+/**
+ * Retrieve information about an IPSEC SA
+ *
+ * The cipher and auth key data(including key extra) will not be exposed and
+ * the corresponding pointers will be set to NULL. The IP address pointers
+ * will point to the corresponding buffers available in the SA info structure.
+ *
+ * The user defined SA context pointer is an opaque field and hence the value
+ * provided during the SA creation will be returned.
+ *
+ * @param      sa       The IPSEC SA for which to retrieve information
+ * @param[out] sa_info  Pointer to caller allocated SA info structure to be
+ *                      filled in
+ *
+ * @retval 0            On success
+ * @retval <0           On failure
+ **/
+int odp_ipsec_sa_info(odp_ipsec_sa_t sa, odp_ipsec_sa_info_t *sa_info);
 
 /**
  * @}
