@@ -252,6 +252,7 @@ typedef struct ODP_PACKED {
  * @{*/
 #define ODPH_IPPROTO_HOPOPTS 0x00 /**< IPv6 hop-by-hop options */
 #define ODPH_IPPROTO_ICMPV4  0x01 /**< Internet Control Message Protocol (1) */
+#define ODPH_IPPROTO_IGMP    0x02 /**< Internet Group Message Protocol (1) */
 #define ODPH_IPPROTO_TCP     0x06 /**< Transmission Control Protocol (6) */
 #define ODPH_IPPROTO_UDP     0x11 /**< User Datagram Protocol (17) */
 #define ODPH_IPPROTO_ROUTE   0x2B /**< IPv6 Routing header (43) */
