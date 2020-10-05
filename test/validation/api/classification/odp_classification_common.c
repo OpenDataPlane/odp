@@ -110,7 +110,10 @@ int cls_pkt_set_seq(odp_packet_t pkt)
 	offset = odp_packet_l4_offset(pkt);
 	CU_ASSERT_FATAL(offset != ODP_PACKET_OFFSET_INVALID);
 
-	if (ip->proto == ODPH_IPPROTO_ICMPV4) {
+	if (ip->proto == ODPH_IPPROTO_IGMP) {
+		status = odp_packet_copy_from_mem(pkt, offset + ODP_IGMP_HLEN,
+						  sizeof(data), &data);
+	} else if (ip->proto == ODPH_IPPROTO_ICMPV4) {
 		status = odp_packet_copy_from_mem(pkt, offset + ODPH_ICMPHDR_LEN,
 						  sizeof(data), &data);
 	} else if (ip->proto == ODPH_IPPROTO_SCTP) {
@@ -154,7 +157,12 @@ uint32_t cls_pkt_get_seq(odp_packet_t pkt)
 
 	if (offset == ODP_PACKET_OFFSET_INVALID || ip == NULL)
 		return TEST_SEQ_INVALID;
-	if (ip->proto == ODPH_IPPROTO_ICMPV4) {
+
+	if (ip->proto == ODPH_IPPROTO_IGMP) {
+		odp_packet_copy_to_mem(pkt, offset + ODP_IGMP_HLEN,
+				       sizeof(data), &data);
+
+	} else if (ip->proto == ODPH_IPPROTO_ICMPV4) {
 		odp_packet_copy_to_mem(pkt, offset + ODPH_ICMPHDR_LEN,
 				       sizeof(data), &data);
 	} else if (ip->proto == ODPH_IPPROTO_SCTP) {
@@ -335,6 +343,7 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	odph_ipv4hdr_t *ip;
 	odph_ipv6hdr_t *ipv6;
 	odph_gtphdr_t *gtpu;
+	odph_igmphdr_t *igmp;
 	uint8_t *hlen = 0;
 	uint16_t payload_len;
 	uint32_t addr = 0;
@@ -383,6 +392,10 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	case CLS_PKT_L4_ICMP:
 		next_hdr = ODPH_IPPROTO_ICMPV4;
 		l4_hdr_len = ODPH_ICMPHDR_LEN;
+		break;
+	case CLS_PKT_L4_IGMP:
+		next_hdr = ODPH_IPPROTO_IGMP;
+		l4_hdr_len = ODP_IGMP_HLEN;
 		break;
 	default:
 		ODPH_ASSERT(0);
@@ -469,7 +482,13 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	sctp = (odph_sctphdr_t *)(buf + l4_offset);
 	icmp = (odph_icmphdr_t *)(buf + l4_offset);
 
-	if (pkt_info.l4_type == CLS_PKT_L4_ICMP) {
+	if (pkt_info.l4_type == CLS_PKT_L4_IGMP) {
+		igmp = (odph_igmphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+		igmp->group = odp_cpu_to_be_32(CLS_MAGIC_VAL);
+		igmp->type = 0x12;
+		igmp->code = 0;
+		igmp->csum = 0;
+	} else if (pkt_info.l4_type == CLS_PKT_L4_ICMP) {
 		icmp->type = ICMP_ECHO;
 		icmp->code = 0;
 		icmp->un.echo.id = 0;
