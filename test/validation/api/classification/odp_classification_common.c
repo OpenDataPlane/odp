@@ -25,6 +25,8 @@ static uint8_t IPV6_DST_ADDR[ODPH_IPV6ADDR_LEN] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 10, 0, 0, 100
 };
 
+#define ODP_GTPU_UDP_PORT 2152
+
 odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool,
 			 odp_bool_t cls_enable)
 {
@@ -96,6 +98,9 @@ int cls_pkt_set_seq(odp_packet_t pkt)
 	uint32_t offset;
 	odph_ipv4hdr_t *ip;
 	odph_tcphdr_t *tcp;
+	odph_udphdr_t *udp;
+	uint16_t port = 0;
+	uint32_t hlen = 0;
 	int status;
 
 	data.magic = DATA_MAGIC;
@@ -114,10 +119,18 @@ int cls_pkt_set_seq(odp_packet_t pkt)
 		 */
 		status = odp_packet_copy_from_mem(pkt, offset + ODPH_SCTPHDR_LEN,
 						  sizeof(data), &data);
-	} else if (ip->proto == ODPH_IPPROTO_UDP)
-		status = odp_packet_copy_from_mem(pkt, offset + ODPH_UDPHDR_LEN,
-						  sizeof(data), &data);
-	else {
+	} else if (ip->proto == ODPH_IPPROTO_UDP) {
+		udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+		port = odp_be_to_cpu_16(udp->dst_port);
+		if (port == ODP_GTPU_UDP_PORT) {
+			hlen = offset + ODPH_UDPHDR_LEN + ODP_GTP_HLEN;
+			status = odp_packet_copy_from_mem(pkt, hlen,
+							  sizeof(data), &data);
+		} else {
+			status = odp_packet_copy_from_mem(pkt, offset + ODPH_UDPHDR_LEN,
+							  sizeof(data), &data);
+		}
+	} else {
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 		status = odp_packet_copy_from_mem(pkt, offset + tcp->hl * 4,
 						  sizeof(data), &data);
@@ -132,6 +145,9 @@ uint32_t cls_pkt_get_seq(odp_packet_t pkt)
 	cls_test_packet_t data;
 	odph_ipv4hdr_t *ip;
 	odph_tcphdr_t *tcp;
+	odph_udphdr_t *udp;
+	uint32_t hlen = 0;
+	uint16_t port = 0;
 
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	offset = odp_packet_l4_offset(pkt);
@@ -144,10 +160,17 @@ uint32_t cls_pkt_get_seq(odp_packet_t pkt)
 	} else if (ip->proto == ODPH_IPPROTO_SCTP) {
 		odp_packet_copy_to_mem(pkt, offset + ODPH_SCTPHDR_LEN,
 				       sizeof(data), &data);
-	} else if (ip->proto == ODPH_IPPROTO_UDP)
-		odp_packet_copy_to_mem(pkt, offset + ODPH_UDPHDR_LEN,
-				       sizeof(data), &data);
-	else {
+	} else if (ip->proto == ODPH_IPPROTO_UDP) {
+		udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+		port = odp_be_to_cpu_16(udp->dst_port);
+		if (port == ODP_GTPU_UDP_PORT) {
+			hlen = offset + ODPH_UDPHDR_LEN + ODP_GTP_HLEN;
+			odp_packet_copy_to_mem(pkt, hlen, sizeof(data), &data);
+		} else {
+			odp_packet_copy_to_mem(pkt, offset + ODPH_UDPHDR_LEN,
+					       sizeof(data), &data);
+		}
+	} else {
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 		odp_packet_copy_to_mem(pkt, offset + tcp->hl * 4,
 				       sizeof(data), &data);
@@ -311,6 +334,8 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	odph_icmphdr_t *icmp;
 	odph_ipv4hdr_t *ip;
 	odph_ipv6hdr_t *ipv6;
+	odph_gtphdr_t *gtpu;
+	uint8_t *hlen = 0;
 	uint16_t payload_len;
 	uint32_t addr = 0;
 	uint32_t mask;
@@ -329,6 +354,9 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	uint8_t dst_mac[] = CLS_DEFAULT_DMAC;
 
 	payload_len = sizeof(cls_test_packet_t) + pkt_info.len;
+	if (pkt_info.l4_type == CLS_PKT_L4_GTP)
+		payload_len += sizeof(odph_gtphdr_t);
+
 	seqno = odp_atomic_fetch_inc_u32(pkt_info.seq);
 
 	vlan_hdr_len = pkt_info.vlan ? ODPH_VLANHDR_LEN : 0;
@@ -343,6 +371,7 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 		next_hdr = ODPH_IPPROTO_TCP;
 		l4_hdr_len = ODPH_TCPHDR_LEN;
 		break;
+	case CLS_PKT_L4_GTP:
 	case CLS_PKT_L4_UDP:
 		next_hdr = ODPH_IPPROTO_UDP;
 		l4_hdr_len = ODPH_UDPHDR_LEN;
@@ -463,6 +492,24 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 		udp->length = odp_cpu_to_be_16(payload_len + ODPH_UDPHDR_LEN);
 		udp->chksum = 0;
 		odp_packet_has_udp_set(pkt, 1);
+		if (odph_udp_tcp_chksum(pkt, ODPH_CHKSUM_GENERATE, NULL) != 0) {
+			ODPH_ERR("odph_udp_tcp_chksum failed\n");
+			return ODP_PACKET_INVALID;
+		}
+	} else if (pkt_info.l4_type == CLS_PKT_L4_GTP) {
+		udp->src_port = odp_cpu_to_be_16(CLS_DEFAULT_SPORT);
+		udp->dst_port = odp_cpu_to_be_16(ODP_GTPU_UDP_PORT);
+		udp->length = odp_cpu_to_be_16(payload_len + ODPH_UDPHDR_LEN);
+		udp->chksum = 0;
+		odp_packet_has_udp_set(pkt, 1);
+		hlen = (uint8_t *)odp_packet_l4_ptr(pkt, NULL);
+		gtpu = (odph_gtphdr_t *)(hlen + sizeof(odph_udphdr_t));
+		gtpu->teid = odp_cpu_to_be_32(CLS_MAGIC_VAL);
+		/* GTPv1 without optional headers */
+		gtpu->gtp_hdr_info = 0x30;
+		/* GTP echo request */
+		gtpu->msg_type = 1;
+		gtpu->plen = sizeof(cls_test_packet_t);
 		if (odph_udp_tcp_chksum(pkt, ODPH_CHKSUM_GENERATE, NULL) != 0) {
 			ODPH_ERR("odph_udp_tcp_chksum failed\n");
 			return ODP_PACKET_INVALID;
