@@ -919,8 +919,7 @@ void ipsec_check_out_in_one(const ipsec_test_part *part,
 		} else {
 			/* IPsec packet */
 			CU_ASSERT_EQUAL(0, odp_ipsec_result(&result, pkto[i]));
-			CU_ASSERT_EQUAL(part->out[i].status.error.all,
-					result.status.error.all);
+			CU_ASSERT_EQUAL(0, result.status.error.all);
 			CU_ASSERT_EQUAL(sa, result.sa);
 			CU_ASSERT_EQUAL(IPSEC_SA_CTX,
 					odp_ipsec_sa_context(sa));
