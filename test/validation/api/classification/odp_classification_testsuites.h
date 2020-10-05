@@ -19,6 +19,7 @@ typedef struct cls_packet_info {
 	odp_atomic_u32_t *seq;
 	bool	udp;
 	bool	gtpu;
+	bool	igmp;
 	bool	sctp;
 	bool	icmp;
 	bool	ipv6;
