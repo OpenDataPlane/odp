@@ -16,6 +16,7 @@ typedef enum cls_packet_l4_info {
 	CLS_PKT_L4_TCP,
 	CLS_PKT_L4_UDP,
 	CLS_PKT_L4_SCTP,
+	CLS_PKT_L4_ICMP,
 } cls_packet_l4_info;
 
 typedef struct cls_packet_info {
