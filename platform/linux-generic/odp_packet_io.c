@@ -1445,9 +1445,12 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 	else
 		ret = single_capability(capa);
 
-	/* The same parser is used for all pktios */
-	if (ret == 0)
+	if (ret == 0) {
+		/* The same parser is used for all pktios */
 		capa->config.parser.layer = ODP_PROTO_LAYER_ALL;
+		/* Header skip is not supported */
+		capa->set_op.op.skip_offset = 0;
+	}
 
 	return ret;
 }
