@@ -320,6 +320,14 @@ typedef struct odp_ipsec_config_t {
 	/** IPSEC outbound processing configuration */
 	odp_ipsec_outbound_config_t outbound;
 
+	/** Enable stats collection
+	 *
+	 *  Default value is false (stats collection disabled).
+	 *
+	 *  @see odp_ipsec_stats(), odp_ipsec_stats_multi()
+	 */
+	odp_bool_t stats_en;
+
 } odp_ipsec_config_t;
 
 /**
@@ -771,6 +779,35 @@ typedef struct odp_ipsec_sa_param_t {
 	};
 
 } odp_ipsec_sa_param_t;
+
+/**
+ * IPSEC stats content
+ */
+typedef struct odp_ipsec_stats_t {
+	/** Number of packets processed successfully */
+	uint64_t success;
+
+	/** Number of packets with protocol errors */
+	uint64_t proto_err;
+
+	/** Number of packets with authentication errors */
+	uint64_t auth_err;
+
+	/** Number of packets with antireplay check failures */
+	uint64_t antireplay_err;
+
+	/** Number of packets with algorithm errors */
+	uint64_t alg_err;
+
+	/** Number of packes with MTU errors */
+	uint64_t mtu_err;
+
+	/** Number of packets with hard lifetime(bytes) expired */
+	uint64_t hard_exp_bytes_err;
+
+	/** Number of packets with hard lifetime(packets) expired */
+	uint64_t hard_exp_pkts_err;
+} odp_ipsec_stats_t;
 
 /**
  * Query IPSEC capabilities
@@ -1642,6 +1679,29 @@ void odp_ipsec_print(void);
  * Print implementation-defined IPSEC SA debug information to the ODP log.
  */
 void odp_ipsec_sa_print(odp_ipsec_sa_t sa);
+
+/**
+ * Get IPSEC stats for the IPSEC SA handle
+ *
+ * @param          sa       IPSEC SA handle
+ * @param[out]     stats    Stats output
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_ipsec_stats(odp_ipsec_sa_t sa, odp_ipsec_stats_t *stats);
+
+/**
+ * Get IPSEC stats for multiple IPSEC SA handles
+ *
+ * @param          sa       Array of IPSEC SA handles
+ * @param[out]     stats    Stats array for output
+ * @param          num      Number of SA handles
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_ipsec_stats_multi(odp_ipsec_sa_t sa[], odp_ipsec_stats_t stats[], int num);
 
 /**
  * @}
