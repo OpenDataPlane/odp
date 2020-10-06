@@ -414,6 +414,20 @@ typedef union odp_pktout_config_opt_t {
 		/** Insert SCTP checksum on packet by default */
 		uint64_t sctp_chksum     : 1;
 
+		/** Packet references not used on packet output
+		 *
+		 * When set, application indicates that it will not transmit
+		 * packet references on this packet IO interface.
+		 * Since every ODP implementation supports it, it is always
+		 * ok to set this flag.
+		 *
+		 * 0: Packet references may be transmitted on the
+		 *    interface (the default value).
+		 * 1: Packet references will not be transmitted on the
+		 *    interface.
+		 */
+		uint64_t no_packet_refs  : 1;
+
 	} bit;
 
 	/** All bits of the bit field structure
