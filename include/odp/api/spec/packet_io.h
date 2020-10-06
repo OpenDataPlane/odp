@@ -540,6 +540,8 @@ typedef union odp_pktio_set_op_t {
 		uint32_t promisc_mode : 1;
 		/** MAC address  */
 		uint32_t mac_addr : 1;
+		/** Per port header offset(skip)set */
+		uint32_t skip_offset : 1;
 	} op;
 	/** All bits of the bit field structure.
 	  * This field can be used to set/clear all flags, or bitwise
@@ -1118,6 +1120,11 @@ int odp_pktio_error_cos_set(odp_pktio_t pktio, odp_cos_t error_cos);
  *
  * @param pktio      Ingress port pktio handle.
  * @param offset     Number of bytes the classifier must skip.
+ *
+ * This option is input to packet input parser/classifier indicating
+ * how many bytes of data should be skipped from start of packet,
+ * before parsing starts. So this option effects all packet input
+ * protocol identification and other offloads.
  *
  * @retval  0 on success
  * @retval <0 on failure
