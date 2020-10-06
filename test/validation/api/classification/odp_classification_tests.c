@@ -15,6 +15,7 @@ static odp_pool_t pool_list[CLS_ENTRIES];
 
 static odp_pool_t pool_default;
 static odp_pktio_t pktio_loop;
+static odp_pktio_capability_t pktio_capa;
 static odp_cls_testcase_u tc;
 static int global_num_l2_qos;
 
@@ -52,6 +53,12 @@ int classification_suite_init(void)
 		ret = odp_pool_destroy(pool_default);
 		if (ret)
 			fprintf(stderr, "unable to destroy pool.\n");
+		return -1;
+	}
+
+	ret = odp_pktio_capability(pktio_loop, &pktio_capa);
+	if (ret) {
+		fprintf(stderr, "unable to get pktio capability.\n");
 		return -1;
 	}
 
@@ -769,8 +776,14 @@ static void classification_test_pktio_test(void)
 		test_pktio_pmr_composite_cos();
 }
 
+static int check_capa_skip_offset(void)
+{
+	return pktio_capa.set_op.op.skip_offset;
+}
+
 odp_testinfo_t classification_suite[] = {
-	ODP_TEST_INFO(classification_test_pktio_set_skip),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pktio_set_skip,
+				  check_capa_skip_offset),
 	ODP_TEST_INFO(classification_test_pktio_set_headroom),
 	ODP_TEST_INFO(classification_test_pktio_configure),
 	ODP_TEST_INFO(classification_test_pktio_test),
