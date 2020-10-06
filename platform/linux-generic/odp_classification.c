@@ -497,15 +497,11 @@ int odp_pktio_error_cos_set(odp_pktio_t pktio_in, odp_cos_t error_cos)
 
 int odp_pktio_skip_set(odp_pktio_t pktio_in, uint32_t offset)
 {
-	pktio_entry_t *entry = get_pktio_entry(pktio_in);
+	(void)pktio_in;
+	(void)offset;
 
-	if (entry == NULL) {
-		ODP_ERR("Invalid odp_pktio_t handle\n");
-		return -1;
-	}
-
-	entry->s.cls.skip = offset;
-	return 0;
+	/* Skipping bytes before parsing is not supported */
+	return -ENOTSUP;
 }
 
 int odp_pktio_headroom_set(odp_pktio_t pktio_in, uint32_t headroom)
