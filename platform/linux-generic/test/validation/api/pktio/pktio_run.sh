@@ -84,10 +84,6 @@ run_test()
 
 run()
 {
-	echo "pktio: using 'loop' device"
-	pktio_main${EXEEXT} $*
-	loop_ret=$?
-
 	# need to be root to run tests with real interfaces
 	if [ "$(id -u)" != "0" ]; then
 		exit $ret
@@ -107,8 +103,6 @@ run()
 
 	run_test
 	ret=$?
-
-	[ $ret = 0 ] && ret=$loop_ret
 
 	exit $ret
 }
