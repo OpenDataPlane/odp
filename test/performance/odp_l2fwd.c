@@ -94,6 +94,7 @@ typedef struct {
 	int pool_per_if;        /* Create pool per interface */
 	uint32_t num_pkt;       /* Number of packets per pool */
 	int verbose;		/* Verbose output */
+	int promisc_mode;       /* Promiscuous mode enabled */
 } appl_args_t;
 
 /* Statistics */
@@ -791,6 +792,20 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 
 	odp_pktio_config(pktio, &config);
 
+	if (gbl_args->appl.promisc_mode) {
+		if (!pktio_capa.set_op.op.promisc_mode) {
+			ODPH_ERR("Error: promisc mode set not supported %s\n",
+				 dev);
+			return -1;
+		}
+
+		/* Enable promisc mode */
+		if (odp_pktio_promisc_mode_set(pktio, true)) {
+			ODPH_ERR("Error: promisc mode enable failed %s\n", dev);
+			return -1;
+		}
+	}
+
 	odp_pktin_queue_param_init(&pktin_param);
 	odp_pktout_queue_param_init(&pktout_param);
 
@@ -1229,6 +1244,7 @@ static void usage(char *progname)
 	       "                          1: Create a pool per interface\n"
 	       "  -n, --num_pkt <num>     Number of packets per pool. Default is 16k or\n"
 	       "                          the maximum capability. Use 0 for the default.\n"
+	       "  -P, --promisc_mode      Enable promiscuous mode.\n"
 	       "  -v, --verbose           Verbose output.\n"
 	       "  -h, --help              Display help and exit.\n\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
@@ -1267,12 +1283,13 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"packet_copy", required_argument, NULL, 'p'},
 		{"pool_per_if", required_argument, NULL, 'y'},
 		{"num_pkt", required_argument, NULL, 'n'},
+		{"promisc_mode", no_argument, NULL, 'P'},
 		{"verbose", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:p:y:n:vh";
+	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:p:y:n:Pvh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1287,6 +1304,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->chksum = 0; /* don't use checksum offload by default */
 	appl_args->pool_per_if = 0;
 	appl_args->num_pkt = 0;
+	appl_args->promisc_mode = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -1427,6 +1445,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'n':
 			appl_args->num_pkt = atoi(optarg);
 			break;
+		case 'P':
+			appl_args->promisc_mode = 1;
+			break;
 		case 'v':
 			appl_args->verbose = 1;
 			break;
@@ -1503,6 +1524,8 @@ static void print_info(appl_args_t *appl_args)
 	else
 		printf("PKTOUT_DIRECT\n");
 
+	printf("Promisc mode:       %s\n", appl_args->promisc_mode ?
+					   "enabled" : "disabled");
 	printf("Burst size:         %i\n", appl_args->burst_rx);
 	printf("Number of pools:    %i\n", appl_args->pool_per_if ?
 					   appl_args->if_count : 1);
