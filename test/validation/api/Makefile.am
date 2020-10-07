@@ -56,6 +56,7 @@ TESTS = \
 	ipsec/ipsec_inline_out$(EXEEXT) \
 	lock/lock_main$(EXEEXT) \
 	packet/packet_main$(EXEEXT) \
+	pktio/pktio_main$(EXEEXT) \
 	pool/pool_main$(EXEEXT) \
 	queue/queue_main$(EXEEXT) \
 	random/random_main$(EXEEXT) \
