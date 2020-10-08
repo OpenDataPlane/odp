@@ -434,6 +434,22 @@ static int run_worker_sched_mode(void *arg)
 		stats->s.packets += pkts;
 	}
 
+	/*
+	 * Free prefetched packets before entering the thread barrier.
+	 * Such packets can block sending of later packets in other threads
+	 * that then would never enter the thread barrier and we would
+	 * end up in a dead-lock.
+	 */
+	odp_schedule_pause();
+	while (1) {
+		odp_event_t  ev;
+
+		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+		if (ev == ODP_EVENT_INVALID)
+			break;
+		odp_event_free(ev);
+	}
+
 	/* Make sure that latest stat writes are visible to other threads */
 	odp_mb_full();
 
@@ -441,6 +457,7 @@ static int run_worker_sched_mode(void *arg)
 	odp_barrier_wait(&gbl_args->term_barrier);
 
 	/* Free remaining events in queues */
+	odp_schedule_resume();
 	while (1) {
 		odp_event_t  ev;
 
