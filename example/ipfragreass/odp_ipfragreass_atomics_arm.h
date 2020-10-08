@@ -10,6 +10,46 @@
 #include <odp_api.h>
 
 #if __SIZEOF_POINTER__ == 8 && defined(__aarch64__)
+#if defined(__ARM_FEATURE_ATOMICS)
+static inline bool atomic_strong_cas_dblptr(__int128 *var, __int128 *exp,
+					    __int128 neu, int mo_success,
+					    int mo_failure ODP_UNUSED)
+{
+	register __int128 expected = *exp;
+	bool ret;
+
+	if (mo_success == __ATOMIC_RELAXED) {
+		asm volatile(".cpu  generic+lse\n"
+		     "casp %[c], %H[c], %[s], %H[s], [%[p]]\n"
+		     : [s] "+r"((neu)), [c] "+r"((expected))
+		     : [p] "r"((var))
+		     : "memory");
+	} else if (mo_success == __ATOMIC_ACQUIRE) {
+		asm volatile(".cpu  generic+lse\n"
+		     "caspa %[c], %H[c], %[s], %H[s], [%[p]]\n"
+		     : [s] "+r"((neu)), [c] "+r"((expected))
+		     : [p] "r"((var))
+		     : "memory");
+	} else if (mo_success == __ATOMIC_RELEASE) {
+		asm volatile(".cpu  generic+lse\n"
+		     "caspl %[c], %H[c], %[s], %H[s], [%[p]]\n"
+		     : [s] "+r"((neu)), [c] "+r"((expected))
+		     : [p] "r"((var))
+		     : "memory");
+	} else {
+		asm volatile(".cpu  generic+lse\n"
+		     "caspal %[c], %H[c], %[s], %H[s], [%[p]]\n"
+		     : [s] "+r"((neu)), [c] "+r"((expected))
+		     : [p] "r"((var))
+		     : "memory");
+	}
+
+	ret = (*exp == expected);
+	*exp = expected;
+
+	return ret;
+}
+#else
 static inline __int128 lld(__int128 *var, int mo)
 {
 	__int128 old;
@@ -71,6 +111,7 @@ static inline bool atomic_strong_cas_dblptr(__int128 *var, __int128 *exp,
 	*exp = old;
 	return (old == expected);
 }
+#endif
 #elif __SIZEOF_POINTER__ == 4 && defined(__ARM_ARCH) && __ARM_ARCH == 7
 static inline uint64_t lld(uint64_t *var, int mo)
 {
