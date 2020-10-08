@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -2034,6 +2035,110 @@ void odp_packet_shaper_len_adjust_set(odp_packet_t pkt, int8_t adj);
  * @see odp_cls_capability_t::max_mark, odp_pmr_create_opt_t::mark, odp_cls_pmr_create_opt()
  */
 uint64_t odp_packet_cls_mark(odp_packet_t pkt);
+
+/**
+ * LSO options
+ */
+typedef struct odp_packet_lso_opt_t {
+	/** LSO profile handle
+	 *
+	 * The selected LSO profile specifies details of the segmentation operation to be done.
+	 * Depending on LSO profile options, additional metadata (e.g. L3/L4 protocol header
+	 * offsets) may need to be set on the packet. See LSO documentation
+	 * (e.g. odp_pktout_send_lso() and odp_lso_protocol_t) for additional metadata
+	 * requirements.
+	 */
+	odp_lso_profile_t lso_profile;
+
+	/** LSO payload offset
+	 *
+	 *  LSO operation considers packet data before 'payload_offset' as
+	 *  protocol headers and copies those in front of every created segment. It will modify
+	 *  protocol headers according to the LSO profile before segment transmission.
+	 *
+	 *  When stored into a packet, this offset can be read with odp_packet_payload_offset() and
+	 *  modified with odp_packet_payload_offset_set().
+	 */
+	uint32_t payload_offset;
+
+	/** Maximum payload length in an LSO segment
+	 *
+	 *  Max_payload_len parameter defines the maximum number of payload bytes in each
+	 *  created segment. Depending on the implementation, segments with less payload may be
+	 *  created. However, this value is used typically to divide packet payload evenly over
+	 *  all segments except the last one, which contains the remaining payload bytes.
+	 */
+	uint32_t max_payload_len;
+
+} odp_packet_lso_opt_t;
+
+/**
+ * Request Large Send Offload (LSO) for a packet
+ *
+ * Setup packet metadata which requests LSO segmentation to be performed during packet output.
+ * The selected LSO profile specifies details of the segmentation operation to be done. Depending on
+ * LSO profile options, additional metadata (e.g. L3/L4 protocol header offsets) may need to be
+ * set on the packet.
+ *
+ * @param pkt      Packet handle
+ * @param lso_opt  LSO options
+ *
+ * @retval 0  On success
+ * @retval <0 On failure
+ */
+int odp_packet_lso_request(odp_packet_t pkt, const odp_packet_lso_opt_t *lso_opt);
+
+/**
+ * Clear LSO request from a packet
+ *
+ * Clears packet metadata not to request LSO segmentation.
+ *
+ * @param pkt     Packet handle
+ */
+void odp_packet_lso_request_clr(odp_packet_t pkt);
+
+/**
+ * Check if LSO is requested for the packet
+ *
+ * @param pkt     Packet handle
+ *
+ * @retval non-zero  LSO is requested
+ * @retval 0         LSO is not requested
+ */
+int odp_packet_has_lso_request(odp_packet_t pkt);
+
+/**
+ * Payload data offset
+ *
+ * Returns offset to the start of payload data. Packet data before this offset is considered as
+ * protocol headers. The offset is calculated from the current odp_packet_data() position in bytes.
+ * Data start position updating functions (e.g. odp_packet_push_head()) do not modify the offset,
+ * but user sets a new value when needed.
+ *
+ * Packet parsing does not set this offset. Initial offset value is undefined. Application may
+ * utilize the offset for internal purposes or when requesting LSO segmentation for the packet.
+ *
+ * @param pkt     Packet handle
+ *
+ * @return Payload data offset
+ * @retval ODP_PACKET_OFFSET_INVALID  Payload data offset has not been set
+ */
+uint32_t odp_packet_payload_offset(odp_packet_t pkt);
+
+/**
+ * Set payload data start offset
+ *
+ * Set offset to the start of payload data. The offset is calculated from the current
+ * odp_packet_data() position in bytes. Offset must not exceed packet data length. Offset is not
+ * modified on an error.
+ *
+ * @param pkt     Packet handle
+ * @param offset  Payload data start offset (0 ... odp_packet_len()-1) or ODP_PACKET_OFFSET_INVALID
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_packet_payload_offset_set(odp_packet_t pkt, uint32_t offset);
 
 /*
  *
