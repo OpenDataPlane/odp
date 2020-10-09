@@ -87,6 +87,11 @@ struct ODP_ALIGNED_CACHE odp_buffer_hdr_t {
 	uint8_t data[0];
 };
 
+/* Buffer header size is critical for performance. Ensure that it does not accidentally
+ * grow over cache line size. Note that ODP_ALIGNED_CACHE rounds up struct size to a multiple of
+ * ODP_CACHE_LINE_SIZE. */
+ODP_STATIC_ASSERT(sizeof(odp_buffer_hdr_t) <= ODP_CACHE_LINE_SIZE, "BUFFER_HDR_SIZE_ERROR");
+
 odp_event_type_t _odp_buffer_event_type(odp_buffer_t buf);
 void _odp_buffer_event_type_set(odp_buffer_t buf, int ev);
 

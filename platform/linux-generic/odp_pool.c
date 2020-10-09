@@ -298,11 +298,12 @@ int _odp_pool_init_global(void)
 	}
 
 	ODP_DBG("\nPool init global\n");
-	ODP_DBG("  odp_buffer_hdr_t size %zu\n", sizeof(odp_buffer_hdr_t));
-	ODP_DBG("  odp_packet_hdr_t size %zu\n", sizeof(odp_packet_hdr_t));
-	ODP_DBG("  odp_timeout_hdr_t size %zu\n", sizeof(odp_timeout_hdr_t));
-	ODP_DBG("  odp_event_vector_hdr_t size %zu\n", sizeof(odp_event_vector_hdr_t));
-
+	ODP_DBG("  buffer_hdr_t size              %zu\n", sizeof(odp_buffer_hdr_t));
+	ODP_DBG("  packet_hdr_t size              %zu\n", sizeof(odp_packet_hdr_t));
+	ODP_DBG("  timeout_hdr_t size             %zu\n", sizeof(odp_timeout_hdr_t));
+	ODP_DBG("  event_vector_hdr_t size        %zu\n", sizeof(odp_event_vector_hdr_t));
+	ODP_DBG("  packet_hdr_t::seg_data offset  %zu\n", offsetof(odp_packet_hdr_t, seg_data));
+	ODP_DBG("  packet_hdr_t::timestamp offset %zu\n", offsetof(odp_packet_hdr_t, timestamp));
 	ODP_DBG("\n");
 	return 0;
 }
