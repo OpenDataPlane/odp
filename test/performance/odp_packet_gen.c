@@ -614,9 +614,8 @@ static int open_pktios(test_global_t *global)
 	int num_tx = test_options->num_tx;
 	uint32_t num_pktio = test_options->num_pktio;
 	uint32_t num_pkt = test_options->num_pkt;
-	uint32_t pkt_len = test_options->pkt_len;
-	uint32_t pkt_len_max = test_options->use_rand_pkt_len ?
-				test_options->rand_pkt_len_max : pkt_len;
+	uint32_t pkt_len = test_options->use_rand_pkt_len ?
+				test_options->rand_pkt_len_max : test_options->pkt_len;
 	odp_pktout_queue_t pktout[num_tx];
 
 	printf("\nODP packet generator\n");
@@ -682,8 +681,7 @@ static int open_pktios(test_global_t *global)
 		return -1;
 	}
 
-	if (pool_capa.pkt.max_len &&
-	    pkt_len_max > pool_capa.pkt.max_len) {
+	if (pool_capa.pkt.max_len && pkt_len > pool_capa.pkt.max_len) {
 		printf("Error: Too large packets. Max %u supported length.\n",
 		       pool_capa.pkt.max_len);
 		return -1;
