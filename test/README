@@ -15,3 +15,8 @@ $ make
 $ cd test/<platform_name>
 $ make check-valgrind
 
+To run these tests with gdb, use the following libtool command:
+$ libtool --mode=execute gdb ./<test_name>
+
+Refer to the prerequisites section of the DEPENDENCIES file for how to
+install the libtool package.
