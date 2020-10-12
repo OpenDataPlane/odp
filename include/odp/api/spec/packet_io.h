@@ -538,8 +538,12 @@ typedef union odp_pktio_set_op_t {
 	struct {
 		/** Promiscuous mode */
 		uint32_t promisc_mode : 1;
-		/** MAC address  */
+		/** MAC address */
 		uint32_t mac_addr : 1;
+		/** Maximum frame length at packet input */
+		uint32_t pktin_maxlen : 1;
+		/** Maximum frame length at packet output */
+		uint32_t pktout_maxlen : 1;
 	} op;
 	/** All bits of the bit field structure.
 	  * This field can be used to set/clear all flags, or bitwise
@@ -1042,6 +1046,20 @@ int odp_pktio_promisc_mode(odp_pktio_t pktio);
 uint32_t odp_pktin_maxlen(odp_pktio_t pktio);
 
 /**
+ * Set maximum frame length at packet input
+ *
+ * Check from odp_pktio_set_op_t::pktin_maxlen in odp_pktio_capability_t if the
+ * operation is supported for selected interface.
+ *
+ * @param pktio  Packet IO handle.
+ * @param len    Maximum frame length.
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_pktin_maxlen_set(odp_pktio_t pktio, uint32_t len);
+
+/**
  * Maximum frame length at packet output
  *
  * Maximum frame length in bytes that the packet IO interface can transmit.
@@ -1055,6 +1073,20 @@ uint32_t odp_pktin_maxlen(odp_pktio_t pktio);
  * @retval 0 on failure
  */
 uint32_t odp_pktout_maxlen(odp_pktio_t pktio);
+
+/**
+ * Set maximum frame length at packet output
+ *
+ * Check from odp_pktio_set_op_t::pktout_maxlen in odp_pktio_capability_t if the
+ * operation is supported for selected interface.
+ *
+ * @param pktio  Packet IO handle.
+ * @param len    Maximum frame length.
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_pktout_maxlen_set(odp_pktio_t pktio, uint32_t len);
 
 /**
  * Get the default MAC address of a packet IO interface.
