@@ -790,6 +790,9 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 		config.pktout.bit.tcp_chksum_ena  = 1;
 	}
 
+	/* Provide hint to pktio that packet references are not used */
+	config.pktout.bit.no_packet_refs = 1;
+
 	odp_pktio_config(pktio, &config);
 
 	if (gbl_args->appl.promisc_mode) {
