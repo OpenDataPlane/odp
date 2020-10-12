@@ -619,7 +619,9 @@ typedef struct odp_pktio_capability_t {
  * @retval ODP_PKTIO_INVALID on failure
  *
  * @note The device name "loop" is a reserved name for a loopback device used
- *	 for testing purposes.
+ *       for testing purposes. Multiple loopback devices may be supported. In
+ *       this case devices are identified by an integer postfix (e.g. loop1,
+ *       loop2, loop3).
  *
  * @note The device name "null" is reserved for a sink device. Send operations
  *       to a null device always succeed (packets are simply freed) and receive
