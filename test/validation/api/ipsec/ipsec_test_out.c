@@ -1230,6 +1230,127 @@ static void test_out_ipv4_udp_esp_null_sha256(void)
 	ipsec_sa_destroy(sa);
 }
 
+static void test_sa_info(void)
+{
+	uint32_t src = IPV4ADDR(10, 0, 111, 2);
+	uint32_t dst = IPV4ADDR(10, 0, 222, 2);
+	odp_ipsec_tunnel_param_t tunnel_out;
+	odp_ipsec_tunnel_param_t tunnel_in;
+	odp_ipsec_sa_param_t param_out;
+	odp_ipsec_sa_param_t param_in;
+	odp_ipsec_sa_info_t info_out;
+	odp_ipsec_sa_info_t info_in;
+	odp_ipsec_capability_t capa;
+	odp_ipsec_sa_t sa_out;
+	odp_ipsec_sa_t sa_in;
+
+	CU_ASSERT_EQUAL(0, odp_ipsec_capability(&capa));
+
+	memset(&tunnel_out, 0, sizeof(tunnel_out));
+	memset(&tunnel_in, 0, sizeof(tunnel_in));
+
+	tunnel_out.type = ODP_IPSEC_TUNNEL_IPV4;
+	tunnel_out.ipv4.src_addr = &src;
+	tunnel_out.ipv4.dst_addr = &dst;
+
+	ipsec_sa_param_fill(&param_out,
+			    false, false, 123, &tunnel_out,
+			    ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
+			    ODP_AUTH_ALG_SHA1_HMAC, &key_5a_160,
+			    NULL, NULL);
+
+	sa_out = odp_ipsec_sa_create(&param_out);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa_out);
+
+	ipsec_sa_param_fill(&param_in,
+			    true, false, 123, &tunnel_in,
+			    ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
+			    ODP_AUTH_ALG_SHA1_HMAC, &key_5a_160,
+			    NULL, NULL);
+
+	param_in.inbound.antireplay_ws = 32;
+	sa_in = odp_ipsec_sa_create(&param_in);
+
+	memset(&info_out, 0, sizeof(info_out));
+	CU_ASSERT_EQUAL_FATAL(0, odp_ipsec_sa_info(sa_out, &info_out));
+
+	CU_ASSERT_EQUAL(info_out.param.dir, param_out.dir);
+	CU_ASSERT_EQUAL(info_out.param.proto, param_out.proto);
+	CU_ASSERT_EQUAL(info_out.param.mode, param_out.mode);
+
+	CU_ASSERT_EQUAL(info_out.param.crypto.cipher_alg,
+			param_out.crypto.cipher_alg);
+	CU_ASSERT_EQUAL(info_out.param.crypto.auth_alg,
+			param_out.crypto.auth_alg);
+	CU_ASSERT_EQUAL(info_out.param.opt.udp_encap, param_out.opt.udp_encap);
+	CU_ASSERT_EQUAL(info_out.param.spi, param_out.spi);
+	CU_ASSERT_EQUAL(info_out.param.opt.esn, param_out.opt.esn);
+	CU_ASSERT_EQUAL(info_out.param.opt.udp_encap, param_out.opt.udp_encap);
+	CU_ASSERT_EQUAL(info_out.param.opt.copy_dscp, param_out.opt.copy_dscp);
+	CU_ASSERT_EQUAL(info_out.param.opt.copy_flabel, param_out.opt.copy_flabel);
+	CU_ASSERT_EQUAL(info_out.param.opt.copy_df, param_out.opt.copy_df);
+
+	CU_ASSERT_EQUAL(ODP_IPSEC_MODE_TUNNEL, info_out.param.mode);
+
+	CU_ASSERT_EQUAL(info_out.param.outbound.tunnel.type,
+			param_out.outbound.tunnel.type);
+	CU_ASSERT_EQUAL(info_out.param.outbound.tunnel.ipv4.dscp,
+			param_out.outbound.tunnel.ipv4.dscp);
+	CU_ASSERT_EQUAL(info_out.param.outbound.tunnel.ipv4.df,
+			param_out.outbound.tunnel.ipv4.df);
+	CU_ASSERT_NOT_EQUAL_FATAL(NULL,
+				  info_out.param.outbound.tunnel.ipv4.src_addr);
+	CU_ASSERT_EQUAL(0, memcmp(info_out.param.outbound.tunnel.ipv4.src_addr,
+				  param_out.outbound.tunnel.ipv4.src_addr,
+				  ODP_IPV4_ADDR_SIZE));
+	CU_ASSERT_NOT_EQUAL_FATAL(NULL,
+				  info_out.param.outbound.tunnel.ipv4.dst_addr);
+	CU_ASSERT_EQUAL(0, memcmp(info_out.param.outbound.tunnel.ipv4.dst_addr,
+				  param_out.outbound.tunnel.ipv4.dst_addr,
+				  ODP_IPV4_ADDR_SIZE));
+
+	CU_ASSERT_EQUAL(info_out.param.lifetime.soft_limit.bytes,
+			param_out.lifetime.soft_limit.bytes);
+	CU_ASSERT_EQUAL(info_out.param.lifetime.hard_limit.bytes,
+			param_out.lifetime.hard_limit.bytes);
+	CU_ASSERT_EQUAL(info_out.param.lifetime.soft_limit.packets,
+			param_out.lifetime.soft_limit.packets);
+	CU_ASSERT_EQUAL(info_out.param.lifetime.hard_limit.packets,
+			param_out.lifetime.hard_limit.packets);
+
+	CU_ASSERT_EQUAL(0, info_out.outbound.seq_num);
+
+	memset(&info_in, 0, sizeof(info_in));
+	CU_ASSERT_EQUAL_FATAL(0, odp_ipsec_sa_info(sa_in, &info_in));
+	CU_ASSERT_EQUAL(0, info_in.inbound.antireplay_window_top);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_icmp_0,
+		.num_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
+			  .pkt_res = &pkt_ipv4_icmp_0 },
+		},
+	};
+
+	ipsec_check_out_in_one(&test, sa_out, sa_in);
+
+	memset(&info_out, 0, sizeof(info_out));
+	CU_ASSERT_EQUAL_FATAL(0, odp_ipsec_sa_info(sa_out, &info_out));
+	CU_ASSERT_EQUAL(1, info_out.outbound.seq_num);
+
+	memset(&info_in, 0, sizeof(info_in));
+	CU_ASSERT_EQUAL_FATAL(0, odp_ipsec_sa_info(sa_in, &info_in));
+	CU_ASSERT_EQUAL(1, info_in.inbound.antireplay_window_top);
+
+	ipsec_sa_destroy(sa_out);
+	ipsec_sa_destroy(sa_in);
+}
+
 static void ipsec_test_capability(void)
 {
 	odp_ipsec_capability_t capa;
@@ -1308,6 +1429,8 @@ odp_testinfo_t ipsec_out_suite[] = {
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_udp_esp_null_sha256,
 				  ipsec_check_esp_null_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_sa_info,
+				  ipsec_check_esp_aes_cbc_128_sha1),
 	ODP_TEST_INFO(test_esp_out_in_all_basic),
 	ODP_TEST_INFO(test_ah_out_in_all),
 	ODP_TEST_INFO(test_ipsec_stats),
