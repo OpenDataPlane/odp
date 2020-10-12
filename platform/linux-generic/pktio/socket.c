@@ -191,7 +191,7 @@ static inline uint32_t _rx_pkt_to_iovec(odp_packet_t pkt, struct iovec *iovecs)
 	uint32_t seg_count = odp_packet_num_segs(pkt);
 	uint32_t i;
 
-	if (odp_likely(seg_count) == 1) {
+	if (odp_likely(seg_count == 1)) {
 		iovecs[0].iov_base = odp_packet_data(pkt);
 		iovecs[0].iov_len = odp_packet_len(pkt);
 		return 1;
