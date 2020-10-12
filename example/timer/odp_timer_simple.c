@@ -83,6 +83,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 		goto err;
 	}
 
+	odp_timer_pool_start();
 	/* Configure scheduler */
 	odp_schedule_config(NULL);
 
