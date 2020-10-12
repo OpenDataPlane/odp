@@ -827,6 +827,21 @@ static void packet_test_context(void)
 	CU_ASSERT(odp_packet_user_ptr(pkt) == NULL);
 }
 
+static void packet_test_payload_offset(void)
+{
+	odp_packet_t pkt = test_packet;
+	uint32_t pkt_len = odp_packet_len(pkt);
+
+	CU_ASSERT(odp_packet_payload_offset_set(pkt, 42) == 0);
+	CU_ASSERT(odp_packet_payload_offset(pkt) == 42);
+	CU_ASSERT(odp_packet_payload_offset_set(pkt, 0) == 0);
+	CU_ASSERT(odp_packet_payload_offset(pkt) == 0);
+	CU_ASSERT(odp_packet_payload_offset_set(pkt, pkt_len - 1) == 0);
+	CU_ASSERT(odp_packet_payload_offset(pkt) == pkt_len - 1);
+	CU_ASSERT(odp_packet_payload_offset_set(pkt, ODP_PACKET_OFFSET_INVALID) == 0);
+	CU_ASSERT(odp_packet_payload_offset(pkt) == ODP_PACKET_OFFSET_INVALID);
+}
+
 static void packet_test_layer_offsets(void)
 {
 	odp_packet_t pkt = test_packet;
@@ -1410,6 +1425,110 @@ static void _packet_compare_offset(odp_packet_t pkt1, uint32_t off1,
 		off2 += cmplen;
 		len  -= cmplen;
 	}
+}
+
+static void packet_test_meta_data_copy(void)
+{
+	odp_packet_t pkt, copy;
+	odp_pool_param_t pool_param;
+	odp_pool_t pool;
+	odp_pktio_t pktio;
+	odp_time_t t1, t2;
+
+	memcpy(&pool_param, &default_param, sizeof(odp_pool_param_t));
+	pool = odp_pool_create("meta_data_copy", &pool_param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	pktio = odp_pktio_open("loop", pool, NULL);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+
+	t1 = odp_time_global();
+
+	pkt = odp_packet_alloc(pool, packet_len);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(odp_packet_has_l2(pkt) == 0);
+	CU_ASSERT(odp_packet_has_l3(pkt) == 0);
+	CU_ASSERT(odp_packet_has_l4(pkt) == 0);
+	CU_ASSERT(odp_packet_has_eth(pkt) == 0);
+	CU_ASSERT(odp_packet_has_eth_bcast(pkt) == 0);
+	CU_ASSERT(odp_packet_has_eth_mcast(pkt) == 0);
+	CU_ASSERT(odp_packet_has_jumbo(pkt) == 0);
+	CU_ASSERT(odp_packet_has_vlan(pkt) == 0);
+	CU_ASSERT(odp_packet_has_vlan_qinq(pkt) == 0);
+	CU_ASSERT(odp_packet_has_arp(pkt) == 0);
+	CU_ASSERT(odp_packet_has_ipv4(pkt) == 0);
+	CU_ASSERT(odp_packet_has_ipv6(pkt) == 0);
+	CU_ASSERT(odp_packet_has_ip_bcast(pkt) == 0);
+	CU_ASSERT(odp_packet_has_ip_mcast(pkt) == 0);
+	CU_ASSERT(odp_packet_has_ipfrag(pkt) == 0);
+	CU_ASSERT(odp_packet_has_ipopt(pkt) == 0);
+	CU_ASSERT(odp_packet_has_ipsec(pkt) == 0);
+	CU_ASSERT(odp_packet_has_udp(pkt) == 0);
+	CU_ASSERT(odp_packet_has_tcp(pkt) == 0);
+	CU_ASSERT(odp_packet_has_sctp(pkt) == 0);
+	CU_ASSERT(odp_packet_has_icmp(pkt) == 0);
+	CU_ASSERT(odp_packet_input(pkt) == ODP_PKTIO_INVALID);
+	CU_ASSERT(odp_packet_l3_offset(pkt) == ODP_PACKET_OFFSET_INVALID);
+	CU_ASSERT(odp_packet_l4_offset(pkt) == ODP_PACKET_OFFSET_INVALID);
+	CU_ASSERT(odp_packet_payload_offset(pkt) == ODP_PACKET_OFFSET_INVALID);
+
+	odp_packet_has_l2_set(pkt, 1);
+	odp_packet_has_l3_set(pkt, 1);
+	odp_packet_has_l4_set(pkt, 1);
+	odp_packet_has_eth_set(pkt, 1);
+	odp_packet_has_eth_bcast_set(pkt, 1);
+	odp_packet_has_eth_mcast_set(pkt, 1);
+	odp_packet_has_jumbo_set(pkt, 1);
+	odp_packet_has_vlan_set(pkt, 1);
+	odp_packet_has_vlan_qinq_set(pkt, 1);
+	odp_packet_has_arp_set(pkt, 1);
+	odp_packet_has_ipv4_set(pkt, 1);
+	odp_packet_has_ipv6_set(pkt, 1);
+	odp_packet_has_ip_bcast_set(pkt, 1);
+	odp_packet_has_ip_mcast_set(pkt, 1);
+	odp_packet_has_ipfrag_set(pkt, 1);
+	odp_packet_has_ipopt_set(pkt, 1);
+	odp_packet_has_ipsec_set(pkt, 1);
+	odp_packet_has_udp_set(pkt, 1);
+	odp_packet_has_tcp_set(pkt, 1);
+	odp_packet_has_sctp_set(pkt, 1);
+	odp_packet_has_icmp_set(pkt, 1);
+
+	odp_packet_input_set(pkt, pktio);
+	odp_packet_user_ptr_set(pkt, (void *)(uintptr_t)0xdeadbeef);
+	CU_ASSERT(odp_packet_l2_offset_set(pkt, 20) == 0);
+	CU_ASSERT(odp_packet_l3_offset_set(pkt, 30) == 0);
+	CU_ASSERT(odp_packet_l4_offset_set(pkt, 40) == 0);
+	CU_ASSERT(odp_packet_payload_offset_set(pkt, 50) == 0);
+	odp_packet_flow_hash_set(pkt, 0xcafe);
+	odp_packet_ts_set(pkt, t1);
+	odp_packet_color_set(pkt, ODP_PACKET_RED);
+	odp_packet_drop_eligible_set(pkt, 1);
+	odp_packet_shaper_len_adjust_set(pkt, 1);
+
+	/* Make a copy of the packet and check that meta data values are the same */
+	copy = odp_packet_copy(pkt, pool);
+	CU_ASSERT_FATAL(copy != ODP_PACKET_INVALID);
+
+	_packet_compare_inflags(pkt, copy);
+	CU_ASSERT(odp_packet_input(copy) == pktio);
+	CU_ASSERT(odp_packet_user_ptr(copy) == (void *)(uintptr_t)0xdeadbeef);
+	CU_ASSERT(odp_packet_l2_offset(copy) == 20);
+	CU_ASSERT(odp_packet_l3_offset(copy) == 30);
+	CU_ASSERT(odp_packet_l4_offset(copy) == 40);
+	CU_ASSERT(odp_packet_payload_offset(copy) == 50);
+	CU_ASSERT(odp_packet_flow_hash(copy) == 0xcafe);
+	t2 = odp_packet_ts(copy);
+	CU_ASSERT(odp_time_cmp(t2, t1) == 0);
+	CU_ASSERT(odp_packet_color(copy) == ODP_PACKET_RED);
+	CU_ASSERT(odp_packet_drop_eligible(copy) == 1);
+	CU_ASSERT(odp_packet_shaper_len_adjust(copy) == 1);
+
+	odp_packet_free(pkt);
+	odp_packet_free(copy);
+
+	CU_ASSERT(odp_pktio_close(pktio) == 0);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
 static void packet_test_copy(void)
@@ -3981,12 +4100,14 @@ odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_headroom),
 	ODP_TEST_INFO(packet_test_tailroom),
 	ODP_TEST_INFO(packet_test_context),
+	ODP_TEST_INFO(packet_test_payload_offset),
 	ODP_TEST_INFO(packet_test_event_conversion),
 	ODP_TEST_INFO(packet_test_layer_offsets),
 	ODP_TEST_INFO(packet_test_segment_last),
 	ODP_TEST_INFO(packet_test_in_flags),
 	ODP_TEST_INFO(packet_test_error_flags),
 	ODP_TEST_INFO(packet_test_add_rem_data),
+	ODP_TEST_INFO(packet_test_meta_data_copy),
 	ODP_TEST_INFO(packet_test_copy),
 	ODP_TEST_INFO(packet_test_copydata),
 	ODP_TEST_INFO(packet_test_concatsplit),
