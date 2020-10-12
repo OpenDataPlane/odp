@@ -58,7 +58,7 @@ extern "C" {
 /**
  * Branch likely taken
  */
-#define odp_likely(x)   __builtin_expect((x), 1)
+#define odp_likely(x)   __builtin_expect(!!(x), 1)
 
 /**
  * Branch unlikely taken
