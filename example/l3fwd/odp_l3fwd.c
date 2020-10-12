@@ -128,6 +128,10 @@ static int create_pktio(const char *name, odp_pool_t pool,
 	config.parser.layer = global->cmd_args.error_check ?
 			ODP_PROTO_LAYER_ALL :
 			ODP_PROTO_LAYER_L4;
+
+	/* Provide hint to pktio that packet references are not used */
+	config.pktout.bit.no_packet_refs = 1;
+
 	odp_pktio_config(pktio, &config);
 
 	fwd_pktio->nb_rxq = (int)capa.max_input_queues;
