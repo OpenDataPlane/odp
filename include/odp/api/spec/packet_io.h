@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2020, Nokia
+ * Copyright (c) 2020-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -633,6 +633,8 @@ typedef union odp_pktio_set_op_t {
 		uint32_t mac_addr : 1;
 		/** Per port header offset(skip)set */
 		uint32_t skip_offset : 1;
+		/** Maximum frame length */
+		uint32_t maxlen : 1;
 	} op;
 	/** All bits of the bit field structure.
 	  * This field can be used to set/clear all flags, or bitwise
@@ -823,6 +825,25 @@ typedef struct odp_pktio_capability_t {
 
 	/** LSO capabilities */
 	odp_lso_capability_t lso;
+
+	/** Supported frame lengths for odp_pktio_maxlen_set()
+	 *
+	 * A frame length value of zero indicates an unsupported operation. */
+	struct {
+		/** Equal maximum frame length for both packet input and output
+		 *
+		 * When set, the same maximum frame length value has to be used
+		 * for both input and output directions. */
+		odp_bool_t equal;
+		/** Minimum valid value for 'maxlen_input' */
+		uint32_t min_input;
+		/** Maximum valid value for 'maxlen_input' */
+		uint32_t max_input;
+		/** Minimum valid value for 'maxlen_output' */
+		uint32_t min_output;
+		/** Maximum valid value for 'maxlen_output' */
+		uint32_t max_output;
+	} maxlen;
 
 } odp_pktio_capability_t;
 
@@ -1428,6 +1449,32 @@ uint32_t odp_pktin_maxlen(odp_pktio_t pktio);
  * @retval 0 on failure
  */
 uint32_t odp_pktout_maxlen(odp_pktio_t pktio);
+
+/**
+ * Set maximum frame lengths
+ *
+ * Set the maximum frame lengths in bytes that the packet IO interface can
+ * receive and transmit. For Ethernet, the frame length bytes start with MAC
+ * addresses and continue to the end of the payload. So, Ethernet checksum,
+ * interpacket gap, and preamble bytes are excluded from the lengths.
+ *
+ * Use odp_pktio_capability() to query interface capabilities. If setting
+ * maximum frame length is only supported in input or output direction, the
+ * parameter for the unsupported direction has to be set to zero. When
+ * 'equal' flag in odp_pktio_capability_t::maxlen is set, the same maximum
+ * frame length value has to be used for both input and output directions.
+ *
+ * @param pktio         Packet IO handle
+ * @param maxlen_input  Maximum frame length at packet input
+ * @param maxlen_output Maximum frame length at packet output
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ *
+ * @see odp_pktin_maxlen(), odp_pktout_maxlen()
+ */
+int odp_pktio_maxlen_set(odp_pktio_t pktio, uint32_t maxlen_input,
+			 uint32_t maxlen_output);
 
 /**
  * Get the default MAC address of a packet IO interface.
