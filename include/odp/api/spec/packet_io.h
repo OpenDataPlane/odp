@@ -621,6 +621,12 @@ typedef struct odp_pktio_capability_t {
  * @note The device name "loop" is a reserved name for a loopback device used
  *	 for testing purposes.
  *
+ * @note The device name "null" is reserved for a sink device. Send operations
+ *       to a null device always succeed (packets are simply freed) and receive
+ *       operations never return anything. Multiple null devices may be
+ *       supported. In this case devices are identified by an integer postfix
+ *       (e.g. null1, null2, null3).
+ *
  * @note Packets arriving via this interface assigned to a CoS by the
  *	 classifier are received into the pool associated with that CoS. This
  *	 will occur either because this pktio is assigned a default CoS via
