@@ -50,7 +50,7 @@ all-local:
 		for f in $(dist_check_SCRIPTS); do \
 			if [ -e $(srcdir)/$$f ]; then \
 				mkdir -p $(builddir)/$$(dirname $$f); \
-				cp $(srcdir)/$$f $(builddir)/$$f; \
+				cp -f $(srcdir)/$$f $(builddir)/$$f; \
 			fi \
 		done \
 	fi
