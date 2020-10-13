@@ -831,8 +831,9 @@ void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 			CU_ASSERT_EQUAL(0, odp_ipsec_result(&result, pkto[i]));
 			CU_ASSERT_EQUAL(part->out[i].status.error.all,
 					result.status.error.all);
-			CU_ASSERT(!result.status.error.all ==
-				  !odp_packet_has_error(pkto[i]));
+			if (0 == result.status.error.all)
+				CU_ASSERT_EQUAL(0,
+						odp_packet_has_error(pkto[i]));
 			CU_ASSERT_EQUAL(suite_context.inbound_op_mode ==
 					ODP_IPSEC_OP_MODE_INLINE,
 					result.flag.inline_mode);
@@ -881,8 +882,9 @@ void ipsec_check_out_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 			CU_ASSERT_EQUAL(0, odp_ipsec_result(&result, pkto[i]));
 			CU_ASSERT_EQUAL(part->out[i].status.error.all,
 					result.status.error.all);
-			CU_ASSERT(!result.status.error.all ==
-				  !odp_packet_has_error(pkto[i]));
+			if (0 == result.status.error.all)
+				CU_ASSERT_EQUAL(0,
+						odp_packet_has_error(pkto[i]));
 			CU_ASSERT_EQUAL(sa, result.sa);
 			CU_ASSERT_EQUAL(IPSEC_SA_CTX,
 					odp_ipsec_sa_context(sa));
