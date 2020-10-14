@@ -171,12 +171,12 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 3.4 DPDK packet I/O support (optional)
 
-   Use DPDK for ODP packet I/O. Currently supported DPDK versions are v18.11
-   and v19.11.
+   Use DPDK for ODP packet I/O. Currently supported DPDK versions are v19.11
+   (recommended) and v18.11.
 
-   Note: only packet I/O is accelerated with DPDK. Use
+   Note: only packet I/O is accelerated with DPDK. See
         https://github.com/OpenDataPlane/odp-dpdk.git
-   for fully accelerated odp dpdk platform.
+   for a full DPDK based ODP implementation.
 
 3.4.1 DPDK pktio requirements
 
@@ -190,24 +190,23 @@ Prerequisites for building the OpenDataPlane (ODP) API
    # Debian/Ubuntu starting from 18.04
    $ sudo apt-get install dpdk-dev
 
-3.4.2 Built DPDK from src
-   git clone --branch=18.11 http://dpdk.org/git/dpdk-stable dpdk
+3.4.2 Build DPDK from source
+   $ git clone --branch=19.11 http://dpdk.org/git/dpdk-stable dpdk
 
-   #Make and edit DPDK configuration
-   TARGET="x86_64-native-linuxapp-gcc"
-   make config T=${TARGET} O=${TARGET}
-   pushd ${TARGET}
+   # Make and edit DPDK configuration
+   $ export TARGET="x86_64-native-linuxapp-gcc"
+   $ make config T=${TARGET} O=${TARGET}
+   $ pushd ${TARGET}
 
-   #To use I/O without DPDK supported NIC's enable pcap pmd:
-   sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
-   popd
+   # Enable pcap PMD to use DPDK pktio without supported NICs:
+   $ sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
+   $ popd
 
-   #Build DPDK
-   make build O=${TARGET} EXTRA_CFLAGS="-fPIC"
-   make install O=${TARGET} DESTDIR=${TARGET}
+   # Build and install DPDK
+   $ make install T=${TARGET} EXTRA_CFLAGS="-fPIC" DESTDIR=./install
 
-   #compile ODP
-   ./configure --with-dpdk-path=<dpdk_install_dir>
+   # Compile ODP
+   $ ./configure --with-dpdk-path=<dpdk_install_dir>
 
 3.4.3 Setup system
 
@@ -216,9 +215,9 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ cd <dpdk-dir>
    $ sudo insmod x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
 
-   Reserve and mount hugepages and bind supported interfaces to DPDK modules
+   Reserve and mount huge pages and bind supported interfaces to DPDK modules
    following the DPDK documentation. ODP DPDK packet I/O has been tested with
-   512 x 2MB hugepages. All this can be done with the DPDK setup script
+   512 x 2MB huge pages. All this can be done with the DPDK setup script
    (<dpdk-dir>/usertools/dpdk-setup.sh).
 
 3.4.4 Running ODP with DPDK pktio
