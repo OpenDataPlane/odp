@@ -1246,7 +1246,7 @@ void _odp_sched_cb_pktio_stop_finalize(int pktio_index)
 	unlock_entry(entry);
 }
 
-static inline uint32_t pktio_mtu(odp_pktio_t hdl)
+static inline uint32_t pktio_maxlen(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
 	uint32_t ret = 0;
@@ -1265,8 +1265,8 @@ static inline uint32_t pktio_mtu(odp_pktio_t hdl)
 		return 0;
 	}
 
-	if (entry->s.ops->mtu_get)
-		ret = entry->s.ops->mtu_get(entry);
+	if (entry->s.ops->maxlen_get)
+		ret = entry->s.ops->maxlen_get(entry);
 
 	unlock_entry(entry);
 	return ret;
@@ -1274,17 +1274,17 @@ static inline uint32_t pktio_mtu(odp_pktio_t hdl)
 
 uint32_t ODP_DEPRECATE(odp_pktio_mtu)(odp_pktio_t pktio)
 {
-	return pktio_mtu(pktio);
+	return pktio_maxlen(pktio);
 }
 
 uint32_t odp_pktin_maxlen(odp_pktio_t pktio)
 {
-	return pktio_mtu(pktio);
+	return pktio_maxlen(pktio);
 }
 
 uint32_t odp_pktout_maxlen(odp_pktio_t pktio)
 {
-	return pktio_mtu(pktio);
+	return pktio_maxlen(pktio);
 }
 
 int odp_pktio_promisc_mode_set(odp_pktio_t hdl, odp_bool_t enable)
@@ -1726,7 +1726,7 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 		ret = single_capability(capa);
 
 	if (ret == 0) {
-		uint32_t mtu = pktio_mtu(pktio);
+		uint32_t mtu = pktio_maxlen(pktio);
 
 		if (mtu == 0) {
 			ODP_DBG("MTU query failed: %s\n", entry->s.name);
