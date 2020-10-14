@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -1285,6 +1285,72 @@ uint32_t odp_pktin_maxlen(odp_pktio_t pktio)
 uint32_t odp_pktout_maxlen(odp_pktio_t pktio)
 {
 	return pktio_maxlen(pktio);
+}
+
+int odp_pktio_maxlen_set(odp_pktio_t hdl, uint32_t maxlen_input,
+			 uint32_t maxlen_output)
+{
+	odp_pktio_capability_t capa;
+	pktio_entry_t *entry;
+	int ret = 0;
+
+	entry = get_pktio_entry(hdl);
+	if (entry == NULL) {
+		ODP_ERR("Pktio entry %d does not exist\n", hdl);
+		return -1;
+	}
+
+	ret = odp_pktio_capability(hdl, &capa);
+	if (ret) {
+		ODP_ERR("Reading pktio capability failed\n");
+		goto fail;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		ODP_ERR("Pktio already freed\n");
+		ret = -1;
+		goto fail;
+	}
+	if (entry->s.state == PKTIO_STATE_STARTED) {
+		ODP_ERR("Pktio not stopped\n");
+		ret = -1;
+		goto fail;
+	}
+
+	if (capa.set_op.op.maxlen == 0) {
+		ODP_ERR("Setting maximum frame length not supported\n");
+		ret = -1;
+		goto fail;
+	}
+
+	if (capa.maxlen.equal && (maxlen_input != maxlen_output)) {
+		ODP_ERR("Max input and output lengths don't match\n");
+		ret = -1;
+		goto fail;
+	}
+
+	if (maxlen_input < capa.maxlen.min_input ||
+	    maxlen_input > capa.maxlen.max_input) {
+		ODP_ERR("Invalid max input length value: %" PRIu32 "\n", maxlen_input);
+		ret = -1;
+		goto fail;
+	}
+
+	if (maxlen_output < capa.maxlen.min_output ||
+	    maxlen_output > capa.maxlen.max_output) {
+		ODP_ERR("Invalid max output length value: %" PRIu32 "\n", maxlen_output);
+		ret = -1;
+		goto fail;
+	}
+
+	if (entry->s.ops->maxlen_set)
+		ret = entry->s.ops->maxlen_set(entry, maxlen_input, maxlen_output);
+
+fail:
+	unlock_entry(entry);
+	return ret;
 }
 
 int odp_pktio_promisc_mode_set(odp_pktio_t hdl, odp_bool_t enable)
