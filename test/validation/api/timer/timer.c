@@ -41,12 +41,19 @@ struct test_timer {
 	uint64_t tick; /* Expiration tick or TICK_INVALID */
 };
 
+struct thread_args {
+	pthrd_arg thrdarg;
+	odp_queue_type_t queue_type;
+};
+
 typedef struct {
 	/* Default resolution / timeout parameters */
 	struct {
 		uint64_t res_ns;
 		uint64_t min_tmo;
 		uint64_t max_tmo;
+		odp_bool_t queue_type_sched;
+		odp_bool_t queue_type_plain;
 	} param;
 
 	/* Timeout pool handle used by all threads */
@@ -152,6 +159,8 @@ static int timer_global_init(odp_instance_t *inst)
 	global_mem->param.res_ns  = res_ns;
 	global_mem->param.min_tmo = min_tmo;
 	global_mem->param.max_tmo = max_tmo;
+	global_mem->param.queue_type_plain = capa.queue_type_plain;
+	global_mem->param.queue_type_sched = capa.queue_type_sched;
 
 	return 0;
 }
@@ -177,6 +186,24 @@ static int timer_global_term(odp_instance_t inst)
 	}
 
 	return 0;
+}
+
+static int
+check_sched_queue_support(void)
+{
+	if (global_mem->param.queue_type_sched)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static int
+check_plain_queue_support(void)
+{
+	if (global_mem->param.queue_type_plain)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
 }
 
 static void timer_test_capa(void)
@@ -323,12 +350,26 @@ static void timer_test_timeout_pool_free(void)
 static void timer_pool_create_destroy(void)
 {
 	odp_timer_pool_param_t tparam;
+	odp_queue_param_t queue_param;
+	odp_timer_capability_t capa;
 	odp_timer_pool_info_t info;
 	odp_timer_pool_t tp[2];
 	odp_timer_t tim;
 	odp_queue_t queue;
+	int ret;
 
-	queue = odp_queue_create("timer_queue", NULL);
+	memset(&capa, 0, sizeof(capa));
+	ret = odp_timer_capability(ODP_CLOCK_CPU, &capa);
+	CU_ASSERT_FATAL(ret == 0);
+
+	odp_queue_param_init(&queue_param);
+	if (capa.queue_type_plain) {
+		queue_param.type = ODP_QUEUE_TYPE_PLAIN;
+	} else if (capa.queue_type_sched) {
+		queue_param.type = ODP_QUEUE_TYPE_SCHED;
+		queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+	}
+	queue = odp_queue_create("timer_queue", &queue_param);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
 	memset(&tparam, 0, sizeof(odp_timer_pool_param_t));
@@ -391,6 +432,7 @@ static void timer_pool_max_res(void)
 {
 	odp_timer_capability_t capa;
 	odp_timer_pool_param_t tp_param;
+	odp_queue_param_t queue_param;
 	odp_timer_pool_t tp;
 	odp_timer_t timer;
 	odp_pool_param_t pool_param;
@@ -411,7 +453,14 @@ static void timer_pool_max_res(void)
 	pool = odp_pool_create("timeout_pool", &pool_param);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
-	queue = odp_queue_create("timer_queue", NULL);
+	odp_queue_param_init(&queue_param);
+	if (capa.queue_type_plain) {
+		queue_param.type = ODP_QUEUE_TYPE_PLAIN;
+	} else if (capa.queue_type_sched) {
+		queue_param.type = ODP_QUEUE_TYPE_SCHED;
+		queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+	}
+	queue = odp_queue_create("timer_queue", &queue_param);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
 	/* Highest resolution: first in nsec, then in hz */
@@ -824,6 +873,8 @@ static void timer_test_cancel(void)
 	odp_pool_t pool;
 	odp_pool_param_t params;
 	odp_timer_pool_param_t tparam;
+	odp_queue_param_t queue_param;
+	odp_timer_capability_t capa;
 	odp_timer_pool_t tp;
 	odp_queue_t queue;
 	odp_timer_t tim;
@@ -831,6 +882,11 @@ static void timer_test_cancel(void)
 	odp_timeout_t tmo;
 	odp_timer_set_t rc;
 	uint64_t tick;
+	int ret;
+
+	memset(&capa, 0, sizeof(capa));
+	ret = odp_timer_capability(ODP_CLOCK_CPU, &capa);
+	CU_ASSERT_FATAL(ret == 0);
 
 	odp_pool_param_init(&params);
 	params.type    = ODP_POOL_TIMEOUT;
@@ -855,7 +911,15 @@ static void timer_test_cancel(void)
 	/* Start all created timer pools */
 	odp_timer_pool_start();
 
-	queue = odp_queue_create("timer_queue", NULL);
+	odp_queue_param_init(&queue_param);
+	if (capa.queue_type_plain) {
+		queue_param.type = ODP_QUEUE_TYPE_PLAIN;
+	} else if (capa.queue_type_sched) {
+		queue_param.type = ODP_QUEUE_TYPE_SCHED;
+		queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+	}
+
+	queue = odp_queue_create("timer_queue", &queue_param);
 	if (queue == ODP_QUEUE_INVALID)
 		CU_FAIL_FATAL("Queue create failed");
 
@@ -1165,10 +1229,10 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 	if (ttp->tim != tim)
 		CU_FAIL("odp_timeout_timer() wrong timer");
 
-	if (!odp_timeout_fresh(tmo))
-		CU_FAIL("Wrong status (stale) for fresh timeout");
-
 	if (!stale) {
+		if (!odp_timeout_fresh(tmo))
+			CU_FAIL("Wrong status (stale) for fresh timeout");
+
 		/* tmo tick cannot be smaller than pre-calculated tick */
 		if (tick < ttp->tick) {
 			ODPH_DBG("Too small tick: pre-calculated %" PRIu64 " "
@@ -1194,7 +1258,7 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 
 /* Worker thread entrypoint which performs timer alloc/set/cancel/free
  * tests */
-static int worker_entrypoint(void *arg ODP_UNUSED)
+static int worker_entrypoint(void *arg)
 {
 	int thr = odp_thread_id();
 	uint32_t i, allocated;
@@ -1218,8 +1282,31 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 	odp_pool_t tbp = global_mem->tbp;
 	uint32_t num_timers = global_mem->timers_per_thread;
 	uint64_t min_tmo = global_mem->param.min_tmo;
+	odp_queue_param_t queue_param;
+	odp_queue_type_t queue_type = ODP_QUEUE_TYPE_PLAIN;
+	odp_thrmask_t thr_mask;
+	odp_schedule_group_t group;
+	struct thread_args *thr_args = arg;
+	uint64_t sched_tmo;
 
-	queue = odp_queue_create("timer_queue", NULL);
+	odp_queue_param_init(&queue_param);
+	if (thr_args->queue_type == ODP_QUEUE_TYPE_PLAIN) {
+		queue_param.type = ODP_QUEUE_TYPE_PLAIN;
+		queue_type = ODP_QUEUE_TYPE_PLAIN;
+	} else {
+		odp_thrmask_zero(&thr_mask);
+		odp_thrmask_set(&thr_mask, odp_thread_id());
+		group = odp_schedule_group_create(NULL, &thr_mask);
+		if (group == ODP_SCHED_GROUP_INVALID)
+			CU_FAIL_FATAL("Schedule group create failed");
+
+		queue_param.type = ODP_QUEUE_TYPE_SCHED;
+		queue_param.sched.sync = ODP_SCHED_SYNC_PARALLEL;
+		queue_type = ODP_QUEUE_TYPE_SCHED;
+		queue_param.sched.group = group;
+	}
+
+	queue = odp_queue_create("timer_queue", &queue_param);
 	if (queue == ODP_QUEUE_INVALID)
 		CU_FAIL_FATAL("Queue create failed");
 
@@ -1279,7 +1366,10 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 	prev_tick = odp_timer_current_tick(tp);
 
 	for (ms = 0; ms < 7 * RANGE_MS / 10 && allocated > 0; ms++) {
-		while ((ev = odp_queue_deq(queue)) != ODP_EVENT_INVALID) {
+		while ((ev = queue_type == ODP_QUEUE_TYPE_PLAIN ?
+			odp_queue_deq(queue) :
+			odp_schedule(NULL, ODP_SCHED_NO_WAIT))
+				!= ODP_EVENT_INVALID) {
 			/* Subtract one from prev_tick to allow for timeouts
 			 * to be delivered a tick late */
 			handle_tmo(ev, false, prev_tick - 1);
@@ -1289,6 +1379,9 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 		i = rand_r(&seed) % allocated;
 		if (tt[i].ev == ODP_EVENT_INVALID &&
 		    (rand_r(&seed) % 2 == 0)) {
+			if (odp_timer_current_tick(tp) >= tt[i].tick)
+				/* Timer just expired. */
+				goto sleep;
 			/* Timer active, cancel it */
 			rc = odp_timer_cancel(tt[i].tim, &tt[i].ev);
 			if (rc != 0) {
@@ -1307,6 +1400,9 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 			if (tt[i].ev != ODP_EVENT_INVALID)
 				/* Timer inactive => set */
 				nset++;
+			else if (odp_timer_current_tick(tp) >= tt[i].tick)
+				/* Timer just expired. */
+				goto sleep;
 			else
 				/* Timer active => reset */
 				nreset++;
@@ -1334,6 +1430,7 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 				CU_FAIL("Failed to set timer: bad return code");
 			}
 		}
+sleep:
 		ts.tv_sec = 0;
 		ts.tv_nsec = 1000000; /* 1ms */
 		if (nanosleep(&ts, NULL) < 0)
@@ -1368,8 +1465,12 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 	if (nanosleep(&ts, NULL) < 0)
 		CU_FAIL_FATAL("nanosleep failed");
 
+	sched_tmo = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS * RANGE_MS);
 	while (nstale != 0) {
-		ev = odp_queue_deq(queue);
+		if (queue_type == ODP_QUEUE_TYPE_PLAIN)
+			ev = odp_queue_deq(queue);
+		else
+			ev = odp_schedule(NULL, sched_tmo);
 		if (ev != ODP_EVENT_INVALID) {
 			handle_tmo(ev, true, 0/*Don't care for stale tmo's*/);
 			nstale--;
@@ -1385,7 +1486,10 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 	}
 
 	/* Check if there any more (unexpected) events */
-	ev = odp_queue_deq(queue);
+	if (queue_type == ODP_QUEUE_TYPE_PLAIN)
+		ev = odp_queue_deq(queue);
+	else
+		ev = odp_schedule(NULL, sched_tmo);
 	if (ev != ODP_EVENT_INVALID)
 		CU_FAIL("Unexpected event received");
 
@@ -1401,7 +1505,7 @@ static int worker_entrypoint(void *arg ODP_UNUSED)
 	return CU_get_number_of_failures();
 }
 
-static void timer_test_all(void)
+static void timer_test_all(odp_queue_type_t queue_type)
 {
 	int rc;
 	odp_pool_param_t params;
@@ -1411,22 +1515,29 @@ static void timer_test_all(void)
 	uint64_t ns, tick, ns2;
 	uint64_t res_ns, min_tmo, max_tmo;
 	uint32_t timers_allocated;
-	pthrd_arg thrdarg;
+	struct thread_args thr_args;
 	odp_pool_capability_t pool_capa;
 	odp_timer_capability_t timer_capa;
+	odp_schedule_capability_t sched_capa;
 	odp_pool_t tbp;
 	odp_timer_pool_t tp;
 	uint32_t num_timers;
+	uint32_t num_workers;
 	int timers_per_thread;
 
+	CU_ASSERT_FATAL(odp_schedule_capability(&sched_capa) == 0);
 	/* Reserve at least one core for running other processes so the timer
 	 * test hopefully can run undisturbed and thus get better timing
 	 * results. */
-	int num_workers = odp_cpumask_default_worker(&unused, 0);
+	num_workers = odp_cpumask_default_worker(&unused, 0);
 
 	/* force to max CPU count */
 	if (num_workers > MAX_WORKERS)
 		num_workers = MAX_WORKERS;
+
+	if (queue_type == ODP_QUEUE_TYPE_SCHED &&
+	    num_workers > sched_capa.max_groups)
+		num_workers = sched_capa.max_groups;
 
 	/* On a single-CPU machine run at least one thread */
 	if (num_workers < 1)
@@ -1527,12 +1638,13 @@ static void timer_test_all(void)
 	odp_atomic_init_u32(&global_mem->timers_allocated, 0);
 
 	/* Create and start worker threads */
-	thrdarg.testcase = 0;
-	thrdarg.numthrds = num_workers;
-	odp_cunit_thread_create(worker_entrypoint, &thrdarg);
+	thr_args.thrdarg.testcase = 0;
+	thr_args.thrdarg.numthrds = num_workers;
+	thr_args.queue_type = queue_type;
+	odp_cunit_thread_create(worker_entrypoint, &thr_args.thrdarg);
 
 	/* Wait for worker threads to exit */
-	odp_cunit_thread_exit(&thrdarg);
+	odp_cunit_thread_exit(&thr_args.thrdarg);
 	ODPH_DBG("Number of timeouts delivered/received too late: "
 		 "%" PRIu32 "\n",
 		 odp_atomic_load_u32(&global_mem->ndelivtoolate));
@@ -1551,8 +1663,16 @@ static void timer_test_all(void)
 	/* Destroy timeout pool, all timeouts must have been freed */
 	rc = odp_pool_destroy(tbp);
 	CU_ASSERT(rc == 0);
+}
 
-	CU_PASS("ODP timer test");
+static void timer_test_plain_all(void)
+{
+	timer_test_all(ODP_QUEUE_TYPE_PLAIN);
+}
+
+static void timer_test_sched_all(void)
+{
+	timer_test_all(ODP_QUEUE_TYPE_SCHED);
 }
 
 odp_testinfo_t timer_suite[] = {
@@ -1561,26 +1681,47 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_test_timeout_pool_free),
 	ODP_TEST_INFO(timer_pool_create_destroy),
 	ODP_TEST_INFO(timer_pool_max_res),
-	ODP_TEST_INFO(timer_test_tmo_event_plain),
-	ODP_TEST_INFO(timer_test_tmo_event_sched),
-	ODP_TEST_INFO(timer_test_buf_event_plain),
-	ODP_TEST_INFO(timer_test_buf_event_sched),
-	ODP_TEST_INFO(timer_test_pkt_event_plain),
-	ODP_TEST_INFO(timer_test_pkt_event_sched),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_tmo_event_plain,
+				  check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_tmo_event_sched,
+				  check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_buf_event_plain,
+				  check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_buf_event_sched,
+				  check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_pkt_event_plain,
+				  check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_pkt_event_sched,
+				  check_sched_queue_support),
 	ODP_TEST_INFO(timer_test_cancel),
-	ODP_TEST_INFO(timer_test_max_res_min_tmo_plain),
-	ODP_TEST_INFO(timer_test_max_res_min_tmo_sched),
-	ODP_TEST_INFO(timer_test_max_res_max_tmo_plain),
-	ODP_TEST_INFO(timer_test_max_res_max_tmo_sched),
-	ODP_TEST_INFO(timer_test_max_tmo_min_tmo_plain),
-	ODP_TEST_INFO(timer_test_max_tmo_min_tmo_sched),
-	ODP_TEST_INFO(timer_test_max_tmo_max_tmo_plain),
-	ODP_TEST_INFO(timer_test_max_tmo_max_tmo_sched),
-	ODP_TEST_INFO(timer_test_plain_queue),
-	ODP_TEST_INFO(timer_test_sched_queue),
-	ODP_TEST_INFO(timer_test_plain_queue_priv),
-	ODP_TEST_INFO(timer_test_sched_queue_priv),
-	ODP_TEST_INFO(timer_test_all),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_max_res_min_tmo_plain,
+				  check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_max_res_min_tmo_sched,
+				  check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_max_res_max_tmo_plain,
+				  check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_max_res_max_tmo_sched,
+				  check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_max_tmo_min_tmo_plain,
+				  check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_max_tmo_min_tmo_sched,
+				  check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_max_tmo_max_tmo_plain,
+				  check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_max_tmo_max_tmo_sched,
+				  check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_plain_queue,
+				  check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_sched_queue,
+				  check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_plain_queue_priv,
+				  check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_sched_queue_priv,
+				  check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_plain_all,
+				  check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_sched_all,
+				  check_sched_queue_support),
 	ODP_TEST_INFO_NULL,
 };
 
