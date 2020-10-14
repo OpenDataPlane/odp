@@ -216,6 +216,27 @@ typedef struct {
 	 */
 	odp_timer_res_capability_t max_tmo;
 
+	/**
+	 * Scheduled queue destination support
+	 *
+	 * This defines whether schedule queues are supported as timeout
+	 * destination queues.
+	 * 0: Scheduled queues are not supported as timeout destination queues
+	 * 1: Scheduled queues are supported as timeout destination queues
+	 * @see odp_timer_alloc()
+	 */
+	odp_bool_t queue_type_sched;
+
+	/**
+	 * Plain queue destination support
+	 *
+	 * This defines whether plain queues are supported as timeout
+	 * destination queues.
+	 * 0: Plain queues are not supported as timeout destination queues
+	 * 1: Plain queues are supported as timeout destination queues
+	 * @see odp_timer_alloc()
+	 */
+	odp_bool_t queue_type_plain;
 } odp_timer_capability_t;
 
 /**
