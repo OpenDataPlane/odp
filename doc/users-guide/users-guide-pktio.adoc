@@ -371,14 +371,16 @@ transmitted:
  * These defaults may be overridden on per packet basis using e.g.
  * odp_packet_l4_chksum_insert().
  *
- * For correct operation, packet metadata must provide valid offsets for the
- * appropriate protocols. For example, UDP checksum calculation needs both L3
- * and L4 offsets (to access IP and UDP headers). When application
- * (e.g. a switch) does not modify L3/L4 data and thus checksum does not need
- * to be updated, checksum insertion should be disabled for optimal performance.
- *
- * Packet flags (odp_packet_has_*()) are ignored for the purpose of checksum
- * insertion in packet output.
+ * For correct operation, packet metadata must provide valid offsets and type
+ * flags for the appropriate layer 3 and layer 4 protocols.  L3 and L4 offsets
+ * can be updated with odp_packet_l3_offset_set() and odp_packet_l4_offset_set()
+ * calls. L3 and L4 type flags can be updated using odp_packet_has_*_set() calls
+ * For example, UDP checksum calculation needs both L3 and L4 types (IP and UDP) and
+ * L3 and L4 offsets (to access IP and UDP headers), while IP checksum
+ * calculation only needs L3 type (IP) and L3 offset (to access IP header).
+ * When application (e.g. a switch) does not modify L3/L4 data and thus checksum
+ * does not need to be updated, checksum insertion should be disabled for optimal
+ * performance.
  *
  * UDP, TCP and SCTP checksum insertion must not be requested for IP fragments.
  * Use checksum override function (odp_packet_l4_chksum_insert()) to disable
