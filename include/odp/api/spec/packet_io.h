@@ -388,6 +388,9 @@ typedef union odp_pktin_config_opt_t {
 typedef union odp_pktout_config_opt_t {
 	/** Option flags for packet output */
 	struct {
+		/** Enable Tx timestamp capture. */
+		uint64_t ts_ena : 1;
+
 		/** Enable IPv4 header checksum insertion. */
 		uint64_t ipv4_chksum_ena : 1;
 
@@ -1393,6 +1396,69 @@ uint64_t odp_pktin_ts_res(odp_pktio_t pktio);
  * @return Packet input timestamp
  */
 odp_time_t odp_pktin_ts_from_ns(odp_pktio_t pktio, uint64_t ns);
+
+/**
+ * Packet IO timestamp resolution in hertz
+ *
+ * This is the resolution of packet input and packet output timestamps.
+ * using Packet IO time source. Returns zero on a failure or when both
+ * Rx and Tx timestamping are disabled.
+ *
+ * @param      pktio   Packet IO handle
+ *
+ * @return Packet IO timestamp resolution in hertz
+ * @retval 0 on failure
+ */
+uint64_t odp_pktio_ts_res(odp_pktio_t pktio);
+
+/**
+ * Convert nanoseconds to Packet IO time
+ *
+ * Packet IO time source is used for timestamping incoming packets and outgoing
+ * packets. This function is used convert nanosecond time to
+ * packet input or packet output timestamp time.
+ *
+ * @param      pktio   Packet IO handle
+ * @param      ns      Time in nanoseconds
+ *
+ * @return Packet IO timestamp
+ */
+odp_time_t odp_pktio_ts_from_ns(odp_pktio_t pktio, uint64_t ns);
+
+/**
+ * Current Packet IO time and global time
+ *
+ * Returns current Packet IO time and optionally
+ * global time. This global time is that of global time source
+ * where as Packet IO timestamp is of Packet IO time source that
+ * is used to timestamp incoming and outgoing packets.
+ *
+ * @param      pktio        Packet IO handle
+ * @param      ts_global    Pointer to odp_time_t.
+ *                          When not NULL, on success, global timestamp
+ *                          will be updated taken at same point of time
+ *                          as Packet IO time.
+ *
+ * @return  Current Packet IO time if packet timestamping is supported and
+ *          ODP_TIME_NULL if not.
+ */
+odp_time_t odp_pktio_time(odp_pktio_t pktio, odp_time_t *ts_global);
+
+/**
+ * Read last captured Tx timestamp of a packet if available and clear it for
+ * next timestamp.
+ *
+ * @param pktio handle identifying pktio
+ * @param ts    Pointer to odp_time_t where timestamp will be written
+ *
+ * @retval zero     Successfully returns last pkt timestamp.
+ * @retval positive Timestamp not available either because none has been
+ *                  requested or requested but not yet available for the
+ *                  packet sent. In case it is latter, then retry again
+ *                  later for retrieving the timestamp.
+ * @retval negative error code on failure.
+ */
+int odp_pktout_ts_read(odp_pktio_t pktio, odp_time_t *ts);
 
 /**
  * @}
