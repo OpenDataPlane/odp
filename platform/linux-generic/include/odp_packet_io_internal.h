@@ -204,7 +204,7 @@ typedef struct pktio_if_ops {
 	int (*fd_set)(pktio_entry_t *entry, int index, fd_set *readfds);
 	int (*send)(pktio_entry_t *entry, int index,
 		    const odp_packet_t packets[], int num);
-	uint32_t (*mtu_get)(pktio_entry_t *pktio_entry);
+	uint32_t (*maxlen_get)(pktio_entry_t *pktio_entry);
 	int (*promisc_mode_set)(pktio_entry_t *pktio_entry,  int enable);
 	int (*promisc_mode_get)(pktio_entry_t *pktio_entry);
 	int (*mac_get)(pktio_entry_t *pktio_entry, void *mac_addr);
