@@ -397,11 +397,22 @@ transmitted:
  * can always free the packet buffer after transmission and need not check
  * for packet references and application will make sure that a packet
  * transmitted via this pktio will always have only single reference.
+ *
+ * Packet Tx timestamp capture may be enabled or disabled.
+ * When enabled, packet Tx timestamps will be captured per packet basis for
+ * packets requesting it (odp_packet_ts_request()). The timestamp can be
+ * retrieved using odp_pktout_ts_read() API after the packet has been
+ * transmitted. Since packet Tx depends on scheduling, shaping and then finally
+ * transmission to physical link, user has to wait long enough for
+ * odp_pktout_ts_read() to provide the timestamp captured for the last packet.
  */
 typedef union odp_pktout_config_opt_t {
 	/** Option flags for packet output */
 	struct {
-		/** Enable IPv4 header checksum insertion. */
+		/** Enable Tx timestamp capture */
+		uint64_t ts_ena : 1;
+
+		/** Enable IPv4 header checksum insertion */
 		uint64_t ipv4_chksum_ena : 1;
 
 		/** Enable UDP checksum insertion */
