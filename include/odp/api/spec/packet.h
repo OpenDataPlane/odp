@@ -1830,9 +1830,14 @@ odp_packet_chksum_status_t odp_packet_l4_chksum_status(odp_packet_t pkt);
  * inserted if the packet is output through a pktio that does not have
  * the relevant checksum insertion enabled.
  *
+ * L3 type and L3 offset in packet metadata should provide valid protocol
+ * and header offset for checksum insertion purposes.
+ *
  * @param pkt     Packet handle
  * @param insert  0: do not insert L3 checksum
  *                1: insert L3 checksum
+ *
+ * @see odp_packet_l3_offset(), odp_packet_has_ipv4(), odp_packet_has_ipv6()
  */
 void odp_packet_l3_chksum_insert(odp_packet_t pkt, int insert);
 
@@ -1847,9 +1852,16 @@ void odp_packet_l3_chksum_insert(odp_packet_t pkt, int insert);
  * inserted if the packet is output through a pktio that does not have
  * the relevant checksum insertion enabled.
  *
+ * L3 type, L4 type, L3 offset and L4 offset in packet metadata should provide
+ * valid protocols and header offsets for checksum insertion purposes.
+ *
  * @param pkt     Packet handle
  * @param insert  0: do not insert L4 checksum
  *                1: insert L4 checksum
+ *
+ * @see odp_packet_l3_offset(), odp_packet_has_ipv4(), odp_packet_has_ipv6()
+ * @see odp_packet_l4_offset(), odp_packet_has_tcp(), odp_packet_has_udp()
+ * @see odp_packet_has_sctp()
  */
 void odp_packet_l4_chksum_insert(odp_packet_t pkt, int insert);
 
