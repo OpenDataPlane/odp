@@ -405,8 +405,10 @@ static int setup_udp_pkt(odp_packet_t pkt, odp_pktout_config_opt_t *pktout_cfg,
 	if (pktout_cfg->bit.ipv4_chksum || pktout_cfg->bit.udp_chksum) {
 		odp_packet_l2_offset_set(pkt, 0);
 		odp_packet_l3_offset_set(pkt, ODPH_ETHHDR_LEN);
+		odp_packet_has_ipv4_set(pkt, 1);
 		odp_packet_l4_offset_set(pkt, ODPH_ETHHDR_LEN +
 					 ODPH_IPV4HDR_LEN);
+		odp_packet_has_udp_set(pkt, 1);
 	}
 	return 0;
 }
@@ -518,6 +520,7 @@ static int setup_icmp_pkt(odp_packet_t pkt,
 	if (pktout_cfg->bit.ipv4_chksum) {
 		odp_packet_l2_offset_set(pkt, 0);
 		odp_packet_l3_offset_set(pkt, ODPH_ETHHDR_LEN);
+		odp_packet_has_ipv4_set(pkt, 1);
 		odp_packet_l4_offset_set(pkt, ODPH_ETHHDR_LEN +
 					 ODPH_IPV4HDR_LEN);
 	}
