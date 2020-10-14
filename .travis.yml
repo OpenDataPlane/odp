@@ -205,7 +205,7 @@ jobs:
                               -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/packet_align.conf
                               ${DOCKER_NAMESPACE}/travis-odp-${OS}-${ARCH} /odp/scripts/ci/check_pktio.sh
                 - stage: test
-                  env: TEST=dpdk-19.11
+                  env: TEST=dpdk-18.11
                   install:
                           - true
                   compiler: gcc
@@ -215,7 +215,7 @@ jobs:
                               -v `pwd`:/odp --shm-size 8g
                               -e CC="${CC}"
                               -e CONF=""
-                              ${DOCKER_NAMESPACE}/travis-odp-${OS}-${ARCH}-dpdk_19.11 /odp/scripts/ci/check.sh
+                              ${DOCKER_NAMESPACE}/travis-odp-${OS}-${ARCH}-dpdk_18.11 /odp/scripts/ci/check.sh
                 - stage: test
                   env: TEST=distcheck
                   compiler: gcc
