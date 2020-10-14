@@ -404,7 +404,7 @@ To get rate of time source `odp_time_local_res()`, `odp_time_global_res()`
 are used. To wait, `odp_time_wait_ns()` and `odp_time_wait_until()` are used,
 during which a thread potentially busy loops the entire wait time.
 
-The `odp_time_t` opaque type represents local or global timestamps.
+The `odp_time_t` opaque type represents local, global and PktIO timestamps.
 
 ==== Portability Considerations
 The ODP Time APIs are designed to permit high-precision relative time

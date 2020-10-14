@@ -390,10 +390,21 @@ transmitted:
  * contain at least as many data bytes after L3/L4 offsets as the headers
  * indicate. Other data bytes of the packet are ignored for the checksum
  * insertion.
+ *
+ * Packet Tx timestamp capture may be enabled or disabled.
+ * When enabled, packet Tx timestamp will be captured per packet basis
+ * for packets requesting the same. It can be retrieved after packet
+ * has been transmitted using odp_pktout_ts_read() API. Since packet Tx
+ * depends on scheduling, shaping and then finally transmission on
+ * to physical link, user has to wait for enough time for
+ * odp_pktout_ts_read() to provide the timestamp captured for last pkt.
  */
 typedef union odp_pktout_config_opt_t {
 	/** Option flags for packet output */
 	struct {
+		/* Enable Tx timestamp capture. */
+		uint64_t ts_ena : 1;
+
 		/** Enable IPv4 header checksum insertion. */
 		uint64_t ipv4_chksum_ena : 1;
 
