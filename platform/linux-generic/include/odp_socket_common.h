@@ -13,20 +13,23 @@ extern "C" {
 #endif
 
 #include <odp/api/packet_io.h>
+#include <protocols/eth.h>
 
 #include <string.h>
-#include <linux/if_ether.h>
+
+#define _ODP_SOCKET_MTU_MIN (68 + _ODP_ETHHDR_LEN)
+#define _ODP_SOCKET_MTU_MAX (9000 + _ODP_ETHHDR_LEN)
 
 static inline void
 ethaddr_copy(unsigned char mac_dst[], unsigned char mac_src[])
 {
-	memcpy(mac_dst, mac_src, ETH_ALEN);
+	memcpy(mac_dst, mac_src, _ODP_ETHADDR_LEN);
 }
 
 static inline int
 ethaddrs_equal(unsigned char mac_a[], unsigned char mac_b[])
 {
-	return !memcmp(mac_a, mac_b, ETH_ALEN);
+	return !memcmp(mac_a, mac_b, _ODP_ETHADDR_LEN);
 }
 
 /**
