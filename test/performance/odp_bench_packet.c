@@ -858,7 +858,7 @@ static int bench_packet_extend_head(void)
 	uint32_t *data_tbl = gbl_args->output_tbl;
 
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
-		ret += odp_packet_extend_head(&pkt_tbl[i], len, ptr_tbl[i],
+		ret += odp_packet_extend_head(&pkt_tbl[i], len, &ptr_tbl[i],
 					      &data_tbl[i]);
 	return ret >= 0;
 }
@@ -873,7 +873,7 @@ static int bench_packet_trunc_head(void)
 	uint32_t *data_tbl = gbl_args->output_tbl;
 
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
-		ret += odp_packet_trunc_head(&pkt_tbl[i], len, ptr_tbl[i],
+		ret += odp_packet_trunc_head(&pkt_tbl[i], len, &ptr_tbl[i],
 					     &data_tbl[i]);
 	return ret >= 0;
 }
@@ -888,7 +888,7 @@ static int bench_packet_extend_tail(void)
 	uint32_t *data_tbl = gbl_args->output_tbl;
 
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
-		ret += odp_packet_extend_tail(&pkt_tbl[i], len, ptr_tbl[i],
+		ret += odp_packet_extend_tail(&pkt_tbl[i], len, &ptr_tbl[i],
 					      &data_tbl[i]);
 	return ret >= 0;
 }
@@ -903,7 +903,7 @@ static int bench_packet_trunc_tail(void)
 	uint32_t *data_tbl = gbl_args->output_tbl;
 
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
-		ret += odp_packet_trunc_tail(&pkt_tbl[i], len, ptr_tbl[i],
+		ret += odp_packet_trunc_tail(&pkt_tbl[i], len, &ptr_tbl[i],
 					     &data_tbl[i]);
 	return ret >= 0;
 }
