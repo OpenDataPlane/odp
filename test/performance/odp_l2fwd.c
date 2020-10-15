@@ -264,9 +264,9 @@ static inline int event_queue_send(odp_queue_t queue, odp_packet_t *pkt_tbl,
 	while (sent < pkts) {
 		ret = odp_queue_enq_multi(queue, &ev_tbl[sent], pkts - sent);
 
-		if (ret < 0) {
-			ODPH_ERR("Failed to send packet as events\n");
-			break;
+		if (odp_unlikely(ret <= 0)) {
+			if (ret < 0 || odp_atomic_load_u32(&gbl_args->exit_threads))
+				break;
 		}
 
 		sent += ret;
