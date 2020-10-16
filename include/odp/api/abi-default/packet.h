@@ -70,6 +70,12 @@ typedef enum {
 	ODP_PACKET_ALL_COLORS = 3,
 } odp_packet_color_t;
 
+typedef enum {
+	ODP_PACKET_CHKSUM_UNKNOWN = 0,
+	ODP_PACKET_CHKSUM_BAD,
+	ODP_PACKET_CHKSUM_OK
+} odp_packet_chksum_status_t;
+
 /** Parse result flags */
 typedef struct odp_packet_parse_result_flag_t {
 	/** Flags union */
