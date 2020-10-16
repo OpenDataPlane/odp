@@ -168,6 +168,21 @@ extern "C" {
  */
 
 /**
+ * @enum odp_packet_chksum_status_t
+ * Checksum check status in packet
+ *
+ * @var ODP_PACKET_CHKSUM_UNKNOWN
+ * Checksum was not checked. Checksum check was not
+ * attempted or the attempt failed.
+ *
+ * @var ODP_PACKET_CHKSUM_BAD
+ * Checksum was checked and it was not correct.
+ *
+ * @var ODP_PACKET_CHKSUM_OK
+ * Checksum was checked and it was correct.
+ */
+
+/**
  * Protocol
  */
 typedef enum odp_proto_t {
@@ -217,22 +232,6 @@ typedef struct odp_packet_data_range {
 	uint32_t length;
 
 } odp_packet_data_range_t;
-
-/**
- * Checksum check status in packet
- */
-typedef enum odp_packet_chksum_status_t {
-	/** Checksum was not checked. Checksum check was not attempted or
-	  * the attempt failed. */
-	ODP_PACKET_CHKSUM_UNKNOWN = 0,
-
-	/** Checksum was checked and it was not correct */
-	ODP_PACKET_CHKSUM_BAD,
-
-	/** Checksum was checked and it was correct */
-	ODP_PACKET_CHKSUM_OK
-
-} odp_packet_chksum_status_t;
 
 /**
  * Event subtype of a packet
