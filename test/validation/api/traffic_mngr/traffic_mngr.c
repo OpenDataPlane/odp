@@ -2563,6 +2563,10 @@ static int test_shaper_bw(const char *shaper_name,
 			ODPH_ERR("  expected_rcv_gap=%" PRIu64 " acceptable "
 				 "rcv_gap range=%" PRIu32 "..%" PRIu32 "\n",
 				 expected_rcv_gap_us, min_rcv_gap, max_rcv_gap);
+			ODPH_ERR("agv_rcv_gap=%" PRIu32 " acceptable "
+				 "rcv_gap range=%" PRIu32 "..%" PRIu32 "\n",
+				 avg_rcv_gap, min_rcv_gap, max_rcv_gap);
+			ret_code = -1;
 		} else if (expected_rcv_gap_us < rcv_stats.std_dev_gap) {
 			ODPH_ERR("min=%" PRIu32 " avg_rcv_gap=%" PRIu32 " "
 				 "max=%" PRIu32 " std_dev_gap=%" PRIu32 "\n",
@@ -2571,24 +2575,12 @@ static int test_shaper_bw(const char *shaper_name,
 			ODPH_ERR("  expected_rcv_gap=%" PRIu64 " acceptable "
 				 "rcv_gap range=%" PRIu32 "..%" PRIu32 "\n",
 				 expected_rcv_gap_us, min_rcv_gap, max_rcv_gap);
-			ret_code = 0;
-		} else {
-			ret_code = 0;
-		}
-
-		if ((avg_rcv_gap < min_rcv_gap) ||
-		    (avg_rcv_gap > max_rcv_gap)) {
-			ODPH_ERR("agv_rcv_gap=%" PRIu32 " acceptable "
-				 "rcv_gap range=%" PRIu32 "..%" PRIu32 "\n",
-				 avg_rcv_gap, min_rcv_gap, max_rcv_gap);
-			ret_code = -1;
-		}
-
-		if (rcv_stats.std_dev_gap > expected_rcv_gap_us) {
 			ODPH_ERR("std_dev_gap=%" PRIu32 " >  "
 				 "expected_rcv_gap_us=%" PRIu64 "\n",
-			rcv_stats.std_dev_gap, expected_rcv_gap_us);
+				 rcv_stats.std_dev_gap, expected_rcv_gap_us);
 			ret_code = -1;
+		} else {
+			ret_code = 0;
 		}
 	}
 
