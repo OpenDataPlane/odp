@@ -26,15 +26,6 @@ fi
 
 validate_result
 
-./odp_l2fwd_simple${EXEEXT} null:0 null:1 \
-	02:00:00:00:00:01 02:00:00:00:00:02 -t 2
-STATUS=$?
-
-if [ "$STATUS" -ne 0 ]; then
-  echo "Error: status was: $STATUS, expected 0"
-  exit 1
-fi
-
 cleanup_interfaces
 
 exit 0
