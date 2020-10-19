@@ -50,25 +50,19 @@ extern "C" {
  * Invalid packet segment
  */
 
- /**
-  * @typedef odp_packet_color_t
-  * Color of packet for shaper/drop processing
-  */
-
- /**
-  * @def ODP_PACKET_GREEN
-  * Packet is green
-  */
-
- /**
-  * @def ODP_PACKET_YELLOW
-  * Packet is yellow
-  */
-
- /**
-  * @def ODP_PACKET_RED
-  * Packet is red
-  */
+/**
+ * @enum odp_packet_color_t
+ * Color of packet for shaper/drop processing
+ *
+ * @var ODP_PACKET_GREEN
+ * Packet is green
+ *
+ * @var ODP_PACKET_YELLOW
+ * Packet is yellow
+ *
+ * @var ODP_PACKET_RED
+ * Packet is red
+ */
 
 /**
  * Maximum number of packet colors which accommodates ODP_PACKET_GREEN, ODP_PACKET_YELLOW and
