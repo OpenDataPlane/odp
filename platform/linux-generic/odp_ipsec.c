@@ -63,6 +63,7 @@ int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 		return rc;
 
 	capa->max_queues = queue_capa.max_queues;
+	capa->inline_ipsec_tm = ODP_SUPPORT_NO;
 
 	return 0;
 }
@@ -1821,6 +1822,7 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 	unsigned opt_inc = (param->num_opt > 1) ? 1 : 0;
 
 	ODP_ASSERT(param->num_sa != 0);
+	ODP_ASSERT(inline_param->pktio != ODP_PKTIO_INVALID);
 
 	while (in_pkt < num_in) {
 		odp_packet_t pkt = pkt_in[in_pkt];
