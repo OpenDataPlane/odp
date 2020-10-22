@@ -18,6 +18,16 @@ int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 	int id = 0;
 	bool freq_set = false;
 
+	sysinfo->cpu_arch = ODP_CPU_ARCH_X86;
+	sysinfo->cpu_isa_sw.x86 = ODP_CPU_ARCH_X86_UNKNOWN;
+	sysinfo->cpu_isa_hw.x86 = ODP_CPU_ARCH_X86_UNKNOWN;
+
+	#if defined __x86_64 || defined __x86_64__
+	sysinfo->cpu_isa_sw.x86 = ODP_CPU_ARCH_X86_64;
+	#elif defined __i686 || defined __i686__
+	sysinfo->cpu_isa_sw.x86 = ODP_CPU_ARCH_X86_I686;
+	#endif
+
 	strcpy(sysinfo->cpu_arch_str, "x86");
 	while (fgets(str, sizeof(str), file) != NULL && id < CONFIG_NUM_CPU_IDS) {
 		pos = strstr(str, "model name");

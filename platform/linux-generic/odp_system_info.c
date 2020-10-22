@@ -527,6 +527,18 @@ int odp_cpu_count(void)
 	return odp_global_ro.system_info.cpu_count;
 }
 
+int odp_system_info(odp_system_info_t *info)
+{
+	system_info_t *sys_info = &odp_global_ro.system_info;
+
+	memset(info, 0, sizeof(odp_system_info_t));
+
+	info->cpu_arch   = sys_info->cpu_arch;
+	info->cpu_isa_sw = sys_info->cpu_isa_sw;
+
+	return 0;
+}
+
 void odp_sys_info_print(void)
 {
 	int len, num_cpu;

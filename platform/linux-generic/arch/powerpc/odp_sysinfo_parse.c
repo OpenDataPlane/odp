@@ -18,6 +18,10 @@ int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 	int count = 2;
 	int id = 0;
 
+	sysinfo->cpu_arch       = ODP_CPU_ARCH_PPC;
+	sysinfo->cpu_isa_sw.ppc = ODP_CPU_ARCH_PPC_UNKNOWN;
+	sysinfo->cpu_isa_hw.ppc = ODP_CPU_ARCH_PPC_UNKNOWN;
+
 	strcpy(sysinfo->cpu_arch_str, "powerpc");
 	while (fgets(str, sizeof(str), file) != NULL && id < CONFIG_NUM_CPU_IDS) {
 		if (!mhz) {

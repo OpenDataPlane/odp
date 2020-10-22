@@ -141,6 +141,50 @@ static void aarch64_part_str(char *str, int maxlen, int implementer,
 		 part, variant, revision);
 }
 
+static odp_cpu_arch_arm_t arm_isa_version(void)
+{
+#if defined(__ARM_ARCH)
+	if (__ARM_ARCH == 8) {
+	#ifdef __ARM_FEATURE_QRDMX
+		/* v8.1 or higher */
+		return ODP_CPU_ARCH_ARMV8_1;
+	#else
+		return ODP_CPU_ARCH_ARMV8_0;
+	#endif
+	}
+
+	if (__ARM_ARCH >= 800) {
+		/* ACLE 2018 defines that from v8.1 onwards the value includes
+		 * the minor version number: __ARM_ARCH = X * 100 + Y
+		 * E.g. for Armv8.1 __ARM_ARCH = 801 */
+		int major = __ARM_ARCH / 100;
+		int minor = __ARM_ARCH - (major * 100);
+
+		if (major == 8) {
+			switch (minor) {
+			case 0:
+				return ODP_CPU_ARCH_ARMV8_0;
+			case 1:
+				return ODP_CPU_ARCH_ARMV8_1;
+			case 2:
+				return ODP_CPU_ARCH_ARMV8_2;
+			case 3:
+				return ODP_CPU_ARCH_ARMV8_3;
+			case 4:
+				return ODP_CPU_ARCH_ARMV8_4;
+			case 5:
+				return ODP_CPU_ARCH_ARMV8_5;
+			case 6:
+				return ODP_CPU_ARCH_ARMV8_6;
+			default:
+				return ODP_CPU_ARCH_ARM_UNKNOWN;
+			}
+		}
+	}
+#endif
+	return ODP_CPU_ARCH_ARM_UNKNOWN;
+}
+
 int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 {
 	char str[1024];
@@ -149,6 +193,11 @@ int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 	const char *cur;
 	long int impl, arch, var, part, rev;
 	int id;
+
+	sysinfo->cpu_arch = ODP_CPU_ARCH_ARM;
+	sysinfo->cpu_isa_sw.arm = arm_isa_version();
+	/* Linux cpuinfo does not have detailed ISA version number (CPU architecture: 8) */
+	sysinfo->cpu_isa_hw.arm = ODP_CPU_ARCH_ARM_UNKNOWN;
 
 	strcpy(sysinfo->cpu_arch_str, "aarch64");
 

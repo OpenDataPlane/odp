@@ -18,6 +18,10 @@ int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 	int count = 2;
 	int id = 0;
 
+	sysinfo->cpu_arch        = ODP_CPU_ARCH_MIPS;
+	sysinfo->cpu_isa_sw.mips = ODP_CPU_ARCH_MIPS_UNKNOWN;
+	sysinfo->cpu_isa_hw.mips = ODP_CPU_ARCH_MIPS_UNKNOWN;
+
 	strcpy(sysinfo->cpu_arch_str, "mips64");
 	while (fgets(str, sizeof(str), file) != NULL && id < CONFIG_NUM_CPU_IDS) {
 		if (!mhz) {
