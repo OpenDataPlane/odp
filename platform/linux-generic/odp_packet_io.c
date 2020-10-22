@@ -1450,6 +1450,10 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 		capa->config.parser.layer = ODP_PROTO_LAYER_ALL;
 		/* Header skip is not supported */
 		capa->set_op.op.skip_offset = 0;
+		/* Irrespective of whether we optimize the fast path or not,
+		 * we can report that it is supported.
+		 */
+		capa->config.pktout.bit.no_packet_refs = 1;
 	}
 
 	return ret;
