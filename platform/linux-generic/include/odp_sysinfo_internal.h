@@ -26,6 +26,8 @@ static inline int _odp_dummy_cpuinfo(system_info_t *sysinfo)
 	uint64_t cpu_hz_max = sysinfo->default_cpu_hz_max;
 	int i;
 
+	sysinfo->cpu_arch = ODP_CPU_ARCH_UNKNOWN;
+
 	ODP_DBG("Warning: use dummy values for freq and model string\n");
 	for (i = 0; i < CONFIG_NUM_CPU_IDS; i++) {
 		ODP_PRINT("WARN: cpu[%i] uses default max frequency of "

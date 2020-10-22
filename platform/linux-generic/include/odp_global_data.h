@@ -14,6 +14,7 @@ extern "C" {
 #include <odp/api/init.h>
 #include <odp/api/cpumask.h>
 #include <odp/api/random.h>
+#include <odp/api/system_info.h>
 #include <sys/types.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -30,6 +31,9 @@ typedef struct {
 	uint64_t page_size;
 	int      cache_line_size;
 	int      cpu_count;
+	odp_cpu_arch_t cpu_arch;
+	odp_cpu_arch_isa_t cpu_isa_sw;
+	odp_cpu_arch_isa_t cpu_isa_hw;
 	char     cpu_arch_str[128];
 	char     model_str[CONFIG_NUM_CPU_IDS][MODEL_STR_SIZE];
 } system_info_t;
