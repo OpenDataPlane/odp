@@ -131,7 +131,10 @@ application changes the Layer 3 offset by using the `odp_packet_l3_offset_set()`
 API, the subsequent calls to `odp_packet_l3_ptr()` will return an address
 starting from that changed offset, changing an attribute like
 `odp_packet_has_udp_set()` will not, by itself, turn a non-UDP packet into
-a valid UDP packet. Applications are expected to exercise appropriate care
+a valid UDP packet. The same applies to inner layers and its offsets which
+can be modified using equivalent inner layer API such as
+`odp_packet_inner_l3_offset_set()`, `odp_packet_has_inner_udp_set()`.
+Applications are expected to exercise appropriate care
 when changing packet metadata to ensure that the resulting metadata changes
 reflect the actual changed packet structure that the application has made.
 
@@ -516,21 +519,23 @@ depth of the desired parse, as well as whether checksum validation should be
 performed as part of the parse, and if so which checksums require this
 processing.
 
-Packets containing Layer 3 (IPv4) and Layer 4 (TCP, UDP, SCTP) checksums
-can have these validated (on RX) and generated (on TX) automatically.
-This is normally controlled by the settings on the PktIOs that
-receive/transmit them, however they can also be controlled on an
-individual packet basis.
+Packets containing Layer 3 (IPv4), Layer 4 (TCP, UDP, SCTP) checksums, Inner
+Layer 3 (IPv4) and Inner Layer 4 (TCP, UDP, SCTP) can have these
+validated (on RX) and generated (on TX) automatically. This is normally
+controlled by the settings on the PktIOs that receive/transmit them,
+however they can also be controlled on an individual packet basis.
 
 Packets have associated `odp_packet_chksum_status_t` metadata that indicates
 the state any checksums contained in that packet. These can be queried via
-the APIs `odp_packet_l3_chksum_status()` and `odp_packet_l4_chksum_status()`,
+the APIs `odp_packet_l3_chksum_status()`, `odp_packet_l4_chksum_status()`,
+`odp_packet_inner_l3_chksum_status()`, `odp_packet_inner_l4_chksum_status()`
 respectively. Checksums can either be known good, known bad, or unknown, where
 unknown means that checksum validation processing has not occurred or the
 attempt to validate the checksum failed.
 
-Similarly, the `odp_packet_l3_chksum_insert()` and
-`odp_packet_l4_chksum_insert()` APIs may be used to override default checksum
-processing for individual packets prior to transmission. If no explicit
-checksum processing is specified for a packet, then any checksum generation
-is controlled by the PktIO configuration of the interface used to transmit it.
+Similarly, the `odp_packet_l3_chksum_insert()`, `odp_packet_l4_chksum_insert()`
+`odp_packet_inner_l3_chksum_insert()` and `odp_packet_inner_l4_chksum_insert()`
+APIs may be used to override default checksum processing for individual packets
+prior to transmission. If no explicit checksum processing is specified for a
+packet, then any checksum generation is controlled by the PktIO configuration
+of the interface used to transmit it.

@@ -412,6 +412,30 @@ typedef union odp_pktout_config_opt_t {
 		/** Insert SCTP checksum on packet by default */
 		uint64_t sctp_chksum     : 1;
 
+		/** Enable inner IPv4 header checksum insertion. */
+		uint64_t inner_ipv4_chksum_ena : 1;
+
+		/** Enable inner UDP checksum insertion */
+		uint64_t inner_udp_chksum_ena  : 1;
+
+		/** Enable inner TCP checksum insertion */
+		uint64_t inner_tcp_chksum_ena  : 1;
+
+		/** Enable inner SCTP checksum insertion */
+		uint64_t inner_sctp_chksum_ena : 1;
+
+		/** Insert inner IPv4 header checksum by default */
+		uint64_t inner_ipv4_chksum     : 1;
+
+		/** Insert inner UDP checksum on packet by default */
+		uint64_t inner_udp_chksum      : 1;
+
+		/** Insert inner TCP checksum on packet by default */
+		uint64_t inner_tcp_chksum      : 1;
+
+		/** Insert inner SCTP checksum on packet by default */
+		uint64_t inner_sctp_chksum     : 1;
+
 	} bit;
 
 	/** All bits of the bit field structure

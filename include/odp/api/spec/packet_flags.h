@@ -82,6 +82,44 @@ int odp_packet_has_l3_error(odp_packet_t pkt);
 int odp_packet_has_l4_error(odp_packet_t pkt);
 
 /**
+ * Check for errors in inner layer 2
+ *
+ * When inner layer 2 is included in the parse configuration, check if any errors were
+ * found in inner layer 2 of the packet.
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet has errors in inner layer 2
+ * @retval 0           No errors were found in inner layer 2
+ */
+int odp_packet_has_inner_l2_error(odp_packet_t pkt);
+
+/**
+ * Check for errors in inner layer 3
+ *
+ * When inner layer 3 is included in the parse configuration, check if any errors were
+ * found in inner layer 3 of the packet.
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet has errors in inner layer 3
+ * @retval 0           No errors found in inner layer 3
+ */
+int odp_packet_has_inner_l3_error(odp_packet_t pkt);
+
+/**
+ * Check for errors in inner layer 4
+ *
+ * When inner layer 4 is included in the parse configuration, check if any errors were
+ * found in inner layer 4 of the packet.
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet has errors in inner layer 4
+ * @retval 0           No errors were found in inner layer 4
+ */
+int odp_packet_has_inner_l4_error(odp_packet_t pkt);
+/**
  * Check for layer 2 protocols
  *
  * When layer 2 is included in the parse configuration, check if packet parsing
@@ -119,6 +157,45 @@ int odp_packet_has_l3(odp_packet_t pkt);
  * @retval 0           No layer 4 protocol was found
  */
 int odp_packet_has_l4(odp_packet_t pkt);
+
+/**
+ * Check for inner layer 2 protocols
+ *
+ * When inner layer 2 is included in the parse configuration, check if packet parsing
+ * has found and checked a inner layer 2 protocol (e.g. Ethernet) in the packet.
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    A inner layer 2 protocol header was found and checked
+ * @retval 0           No inner layer 2 protocol was found
+ */
+int odp_packet_has_inner_l2(odp_packet_t pkt);
+
+/**
+ * Check for inner layer 3 protocols
+ *
+ * When inner layer 3 is included in the parse configuration, check if packet parsing
+ * has found and checked a inner layer 3 protocol (e.g. IPv4, IPv6) in the packet.
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    A inner layer 3 protocol header was found and checked
+ * @retval 0           No inner layer 3 protocol was found
+ */
+int odp_packet_has_inner_l3(odp_packet_t pkt);
+
+/**
+ * Check for inner layer 4 protocols
+ *
+ * When inner layer 4 is included in the parse configuration, check if packet parsing
+ * has found and checked a layer 4 protocol (e.g. UDP, TCP, SCTP) in the packet.
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    A inner layer 4 protocol header was found and checked
+ * @retval 0           No inner layer 4 protocol was found
+ */
+int odp_packet_has_inner_l4(odp_packet_t pkt);
 
 /**
  * Check for Ethernet header
@@ -305,6 +382,76 @@ int odp_packet_has_tcp(odp_packet_t pkt);
  * @retval 0           Packet does not contain a SCTP header
  */
 int odp_packet_has_sctp(odp_packet_t pkt);
+
+/**
+ * Check for inner IPv4
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains an inner IPv4 header
+ * @retval 0           Packet does not contain an inner IPv4 header
+ */
+int odp_packet_has_inner_ipv4(odp_packet_t pkt);
+
+/**
+ * Check for inner IPv6
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains an inner IPv6 header
+ * @retval 0           Packet does not contain an inner IPv6 header
+ */
+int odp_packet_has_inner_ipv6(odp_packet_t pkt);
+
+/**
+ * Check for inner IP fragment
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Inner packet is an IP fragment
+ * @retval 0           Inner packet is not an IP fragment
+ */
+int odp_packet_has_inner_ipfrag(odp_packet_t pkt);
+
+/**
+ * Check for inner IP options
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains inner IP options
+ * @retval 0           Packet does not contain inner IP options
+ */
+int odp_packet_has_inner_ipopt(odp_packet_t pkt);
+
+/**
+ * Check for inner UDP
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains a inner UDP header
+ * @retval 0           Packet does not contain a inner UDP header
+ */
+int odp_packet_has_inner_udp(odp_packet_t pkt);
+
+/**
+ * Check for inner TCP
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains a inner TCP header
+ * @retval 0           Packet does not contain a inner TCP header
+ */
+int odp_packet_has_inner_tcp(odp_packet_t pkt);
+
+/**
+ * Check for inner SCTP
+ *
+ * @param pkt          Packet handle
+ *
+ * @retval non-zero    Packet contains a inner SCTP header
+ * @retval 0           Packet does not contain a inner SCTP header
+ */
+int odp_packet_has_inner_sctp(odp_packet_t pkt);
 
 /**
  * Check for ICMP
@@ -497,6 +644,62 @@ void odp_packet_has_tcp_set(odp_packet_t pkt, int val);
  * @param val Value
  */
 void odp_packet_has_sctp_set(odp_packet_t pkt, int val);
+
+/**
+ * Set flag for inner IPv4
+ *
+ * @param pkt Packet handle
+ * @param val Value
+ */
+void odp_packet_has_inner_ipv4_set(odp_packet_t pkt, int val);
+
+/**
+ * Set flag for inner IPv6
+ *
+ * @param pkt Packet handle
+ * @param val Value
+ */
+void odp_packet_has_inner_ipv6_set(odp_packet_t pkt, int val);
+
+/**
+ * Set flag for inner IP fragment
+ *
+ * @param pkt Packet handle
+ * @param val Value
+ */
+void odp_packet_has_inner_ipfrag_set(odp_packet_t pkt, int val);
+
+/**
+ * Set flag for inner IP options
+ *
+ * @param pkt Packet handle
+ * @param val Value
+ */
+void odp_packet_has_inner_ipopt_set(odp_packet_t pkt, int val);
+
+/**
+ * Set flag for inner UDP
+ *
+ * @param pkt Packet handle
+ * @param val Value
+ */
+void odp_packet_has_inner_udp_set(odp_packet_t pkt, int val);
+
+/**
+ * Set flag for inner TCP
+ *
+ * @param pkt Packet handle
+ * @param val Value
+ */
+void odp_packet_has_inner_tcp_set(odp_packet_t pkt, int val);
+
+/**
+ * Set flag for inner SCTP
+ *
+ * @param pkt Packet handle
+ * @param val Value
+ */
+void odp_packet_has_inner_sctp_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for ICMP

@@ -264,10 +264,15 @@ controls RX processing to be performed on these packets as they are received:
  * IPv4 checksum checking may be enabled only when parsing level is
  * ODP_PROTO_LAYER_L3 or higher. Similarly, L4 level checksum checking
  * may be enabled only with parsing level ODP_PROTO_LAYER_L4 or higher.
+ * Similarly inner IPv4 checksum checking is enabled only whenever parsing level
+ * is ODP_PROTO_LAYER_INNER_L3 or higher and inner L4 level checksum checking
+ * if parsing level is ODP_PROTO_LAYER_INNER_L4 or higher.
  *
  * Whether checksum checking was done and whether a checksum was correct
- * can be queried for each received packet with odp_packet_l3_chksum_status()
- * and odp_packet_l4_chksum_status().
+ * can be queried for each received packet with odp_packet_l3_chksum_status(),
+ * odp_packet_l4_chksum_status() for outer layer checksum status and
+ * odp_packet_inner_l3_chksum_status(), odp_packet_inner_l4_chksum_status()
+ * for inner layer checksum status.
  */
 typedef union odp_pktin_config_opt_t {
 	/** Option flags */
@@ -377,8 +382,8 @@ transmitted:
  * (e.g. a switch) does not modify L3/L4 data and thus checksum does not need
  * to be updated, checksum insertion should be disabled for optimal performance.
  *
- * Packet flags (odp_packet_has_*()) are ignored for the purpose of checksum
- * insertion in packet output.
+ * Packet flags (odp_packet_has_*()) will be used for purpose of identification
+ * of l3 and l4 layer protocols.
  *
  * UDP, TCP and SCTP checksum insertion must not be requested for IP fragments.
  * Use checksum override function (odp_packet_l4_chksum_insert()) to disable
@@ -417,6 +422,30 @@ typedef union odp_pktout_config_opt_t {
 
 		/** Insert SCTP checksum on packet by default */
 		uint64_t sctp_chksum     : 1;
+
+		/** Enable inner IPv4 header checksum insertion. */
+		uint64_t inner_ipv4_chksum_ena : 1;
+
+		/** Enable inner UDP checksum insertion */
+		uint64_t inner_udp_chksum_ena  : 1;
+
+		/** Enable inner TCP checksum insertion */
+		uint64_t inner_tcp_chksum_ena  : 1;
+
+		/** Enable inner SCTP checksum insertion */
+		uint64_t inner_sctp_chksum_ena : 1;
+
+		/** Insert inner IPv4 header checksum by default */
+		uint64_t inner_ipv4_chksum     : 1;
+
+		/** Insert inner UDP checksum on packet by default */
+		uint64_t inner_udp_chksum      : 1;
+
+		/** Insert inner TCP checksum on packet by default */
+		uint64_t inner_tcp_chksum      : 1;
+
+		/** Insert inner SCTP checksum on packet by default */
+		uint64_t inner_sctp_chksum     : 1;
 
 	} bit;
 
