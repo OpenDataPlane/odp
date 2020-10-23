@@ -1441,6 +1441,9 @@ static void pktio_test_pktio_config(void)
 
 	odp_pktio_config_init(&config);
 
+	/* Indicate packet refs might be used */
+	config.pktout.bit.no_packet_refs = 0;
+
 	CU_ASSERT(config.parser.layer == ODP_PROTO_LAYER_ALL);
 
 	CU_ASSERT(odp_pktio_config(pktio, NULL) == 0);
