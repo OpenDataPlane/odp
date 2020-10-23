@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -115,7 +115,7 @@ typedef union {
 	uint32_t all_flags;
 
 	struct {
-		uint32_t reserved1:     10;
+		uint32_t reserved1:     9;
 
 	/*
 	 * Init flags
@@ -128,7 +128,8 @@ typedef union {
 		uint32_t l3_chksum_set:  1; /* L3 chksum bit is valid */
 		uint32_t l3_chksum:      1; /* L3 chksum override */
 		uint32_t l4_chksum_set:  1; /* L4 chksum bit is valid */
-		uint32_t l4_chksum:      1; /* L4 chksum override  */
+		uint32_t l4_chksum:      1; /* L4 chksum override */
+		uint32_t ts_set:         1; /* Set Tx timestamp */
 		uint32_t shaper_len_adj: 8; /* Adjustment for traffic mgr */
 
 	/*
@@ -147,8 +148,8 @@ typedef union {
 
 	/* Flag groups */
 	struct {
-		uint32_t reserved2:     10;
-		uint32_t other:         13; /* All other flags */
+		uint32_t reserved2:     9;
+		uint32_t other:         14; /* All other flags */
 		uint32_t error:          9; /* All error flags */
 	} all;
 
