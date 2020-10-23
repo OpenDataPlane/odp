@@ -2856,3 +2856,10 @@ uint64_t odp_packet_cls_mark(odp_packet_t pkt)
 
 	return 0;
 }
+
+void odp_packet_ts_request(odp_packet_t pkt, int enable)
+{
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	pkt_hdr->p.flags.ts_set = !!enable;
+}
