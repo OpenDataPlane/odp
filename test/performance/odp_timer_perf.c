@@ -207,6 +207,7 @@ static int set_num_cpu(test_global_t *global)
 static int create_timer_pools(test_global_t *global)
 {
 	odp_timer_capability_t timer_capa;
+	odp_timer_res_capability_t timer_res_capa;
 	odp_timer_pool_param_t timer_pool_param;
 	odp_timer_pool_t tp;
 	odp_queue_param_t queue_param;
@@ -257,17 +258,24 @@ static int create_timer_pools(test_global_t *global)
 		return -1;
 	}
 
+	memset(&timer_res_capa, 0, sizeof(odp_timer_res_capability_t));
+	timer_res_capa.res_ns = res_ns;
+	if (odp_timer_res_capability(ODP_CLOCK_CPU, &timer_res_capa)) {
+		printf("Error: timer resolution capability failed\n");
+		return -1;
+	}
+
 	if (res_ns < timer_capa.max_res.res_ns) {
 		printf("Error: too high resolution\n");
 		return -1;
 	}
 
-	if (START_NS < timer_capa.max_res.min_tmo) {
+	if (START_NS < timer_res_capa.min_tmo) {
 		printf("Error: too short min timeout\n");
 		return -1;
 	}
 
-	if (max_tmo_ns > timer_capa.max_res.max_tmo) {
+	if (max_tmo_ns > timer_res_capa.max_tmo) {
 		printf("Error: too long max timeout\n");
 		return -1;
 	}
