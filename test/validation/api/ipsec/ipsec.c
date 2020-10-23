@@ -760,6 +760,7 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 			memset(hdr, 0xff, hdr_len);
 		}
 		inline_param.pktio = suite_context.pktio;
+		inline_param.tm_queue = ODP_TM_INVALID;
 		inline_param.outer_hdr.ptr = hdr;
 		inline_param.outer_hdr.len = hdr_len;
 
