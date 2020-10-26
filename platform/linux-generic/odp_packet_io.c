@@ -315,6 +315,10 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	pktio_entry->s.pktin_frame_offset = pktin_frame_offset;
 	odp_atomic_init_u64(&pktio_entry->s.stats_extra.in_discards, 0);
 
+	/* Tx timestamping is disabled by default */
+	pktio_entry->s.enabled.tx_ts = 0;
+	odp_atomic_init_u64(&pktio_entry->s.tx_ts, 0);
+
 	odp_pktio_config_init(&pktio_entry->s.config);
 
 	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
@@ -566,6 +570,8 @@ int odp_pktio_config(odp_pktio_t hdl, const odp_pktio_config_t *config)
 	entry->s.in_chksums.chksum.tcp = config->pktin.bit.tcp_chksum;
 	entry->s.in_chksums.chksum.udp = config->pktin.bit.udp_chksum;
 	entry->s.in_chksums.chksum.sctp = config->pktin.bit.sctp_chksum;
+
+	entry->s.enabled.tx_ts = config->pktout.bit.ts_ena;
 
 	if (entry->s.ops->config)
 		res = entry->s.ops->config(entry, config);
@@ -2149,4 +2155,26 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 uint64_t odp_pktio_to_u64(odp_pktio_t hdl)
 {
 	return _odp_pri(hdl);
+}
+
+int odp_pktout_ts_read(odp_pktio_t hdl, odp_time_t *ts)
+{
+	pktio_entry_t *entry;
+	uint64_t ts_val;
+
+	entry = get_pktio_entry(hdl);
+	if (odp_unlikely(entry == NULL)) {
+		ODP_ERR("pktio entry %d does not exist\n", hdl);
+		return -1;
+	}
+
+	if (odp_atomic_load_u64(&entry->s.tx_ts) == 0)
+		return 1;
+
+	ts_val = odp_atomic_xchg_u64(&entry->s.tx_ts, 0);
+	if (odp_unlikely(ts_val == 0))
+		return 1;
+
+	ts->u64 = ts_val;
+	return 0;
 }
