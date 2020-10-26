@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2013, Nokia Solutions and Networks
+ * Copyright (c) 2013-2020, Nokia Solutions and Networks
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -293,9 +293,9 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	return nb_rx;
 }
 
-static inline int pkt_mmap_v2_tx(int sock, struct ring *ring,
-				 const odp_packet_t pkt_table[],
-				 uint32_t num)
+static inline int pkt_mmap_v2_tx(pktio_entry_t *pktio_entry, int sock,
+				 struct ring *ring,
+				 const odp_packet_t pkt_table[], uint32_t num)
 {
 	uint32_t i, pkt_len, num_tx, tp_status;
 	uint32_t first_frame_num, frame_num, next_frame_num, frame_count;
@@ -304,6 +304,8 @@ static inline int pkt_mmap_v2_tx(int sock, struct ring *ring,
 	void *next_ptr;
 	struct tpacket2_hdr *tp_hdr[num];
 	int total_len = 0;
+	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
+	uint32_t tx_ts_idx = 0;
 
 	frame_num = ring->frame_num;
 	first_frame_num = frame_num;
@@ -341,6 +343,11 @@ static inline int pkt_mmap_v2_tx(int sock, struct ring *ring,
 		tp_hdr[i]->tp_status = TP_STATUS_SEND_REQUEST;
 
 		frame_num = next_frame_num;
+
+		if (tx_ts_enabled && tx_ts_idx == 0) {
+			if (odp_unlikely(packet_hdr(pkt_table[i])->p.flags.ts_set))
+				tx_ts_idx = i + 1;
+		}
 	}
 
 	num    = i;
@@ -388,6 +395,9 @@ static inline int pkt_mmap_v2_tx(int sock, struct ring *ring,
 		if (frame_sum >= frame_count)
 			ring->frame_num = frame_sum - frame_count;
 	}
+
+	if (odp_unlikely(tx_ts_idx && num_tx >= tx_ts_idx))
+		_odp_pktio_tx_ts_set(pktio_entry);
 
 	/* Free sent packets */
 	odp_packet_free_multi(pkt_table, num_tx);
@@ -769,8 +779,8 @@ static int sock_mmap_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	pkt_sock_mmap_t *const pkt_sock = pkt_priv(pktio_entry);
 
 	odp_ticketlock_lock(&pkt_sock->tx_ring.lock);
-	ret = pkt_mmap_v2_tx(pkt_sock->tx_ring.sock, &pkt_sock->tx_ring,
-			     pkt_table, num);
+	ret = pkt_mmap_v2_tx(pktio_entry, pkt_sock->tx_ring.sock,
+			     &pkt_sock->tx_ring, pkt_table, num);
 	odp_ticketlock_unlock(&pkt_sock->tx_ring.lock);
 
 	return ret;
@@ -824,6 +834,9 @@ static int sock_mmap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
 	capa->config.pktin.bit.ts_ptp = 1;
+
+	capa->config.pktout.bit.ts_ena = 1;
+
 	return 0;
 }
 
