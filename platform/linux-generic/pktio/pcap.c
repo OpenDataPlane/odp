@@ -321,6 +321,7 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 {
 	pkt_pcap_t *pcap = pkt_priv(pktio_entry);
 	int i;
+	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
@@ -339,6 +340,10 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			break;
 
 		pktio_entry->s.stats.out_octets += pkt_len;
+
+		if (odp_unlikely(tx_ts_enabled && packet_hdr(pkts[i])->p.flags.ts_set))
+			_odp_pktio_tx_ts_set(pktio_entry);
+
 		odp_packet_free(pkts[i]);
 	}
 
@@ -374,6 +379,9 @@ static int pcapif_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
 	capa->config.pktin.bit.ts_ptp = 1;
+
+	capa->config.pktout.bit.ts_ena = 1;
+
 	return 0;
 }
 
