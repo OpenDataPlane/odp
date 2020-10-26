@@ -289,6 +289,8 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int i;
 	int ret;
 	int nb_tx = 0;
+	int tx_ts_idx = 0;
+	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
 	uint32_t bytes = 0;
 	uint32_t out_octets_tbl[num];
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
@@ -315,6 +317,11 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		 */
 		out_octets_tbl[i] = bytes;
 		nb_tx++;
+
+		if (tx_ts_enabled && tx_ts_idx == 0) {
+			if (odp_unlikely(packet_hdr(pkt_tbl[i])->p.flags.ts_set))
+				tx_ts_idx = i + 1;
+		}
 	}
 
 	for (i = 0; i < nb_tx; ++i) {
@@ -339,6 +346,9 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	ret = odp_queue_enq_multi(queue, (odp_event_t *)hdr_tbl, nb_tx);
 
 	if (ret > 0) {
+		if (odp_unlikely(tx_ts_idx) && ret >= tx_ts_idx)
+			_odp_pktio_tx_ts_set(pktio_entry);
+
 		pktio_entry->s.stats.out_ucast_pkts += ret;
 		pktio_entry->s.stats.out_octets += out_octets_tbl[ret - 1];
 	} else {
@@ -406,6 +416,7 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 	capa->config.pktout.bit.tcp_chksum = 1;
 	capa->config.pktout.bit.udp_chksum = 1;
 	capa->config.pktout.bit.sctp_chksum = 1;
+	capa->config.pktout.bit.ts_ena = 1;
 
 	if (odp_global_ro.disable.ipsec == 0) {
 		capa->config.inbound_ipsec = 1;
