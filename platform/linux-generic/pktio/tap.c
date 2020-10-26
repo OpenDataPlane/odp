@@ -360,6 +360,7 @@ static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
 	ssize_t retval;
 	int i, n;
 	uint32_t pkt_len;
+	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
 	uint8_t buf[BUF_SIZE];
 	pkt_tap_t *tap = pkt_priv(pktio_entry);
 
@@ -397,6 +398,11 @@ static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
 				return -1;
 			}
 			break;
+		}
+
+		if (tx_ts_enabled) {
+			if (odp_unlikely(packet_hdr(pkts[i])->p.flags.ts_set))
+				_odp_pktio_tx_ts_set(pktio_entry);
 		}
 	}
 
@@ -485,6 +491,9 @@ static int tap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
 	capa->config.pktin.bit.ts_ptp = 1;
+
+	capa->config.pktout.bit.ts_ena = 1;
+
 	return 0;
 }
 
