@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -74,6 +74,8 @@ struct pktio_entry {
 		uint8_t chksum_insert : 1;
 		/* Classifier */
 		uint8_t cls : 1;
+		/* Tx timestamp */
+		uint8_t tx_ts : 1;
 	} enabled;
 	odp_pktio_t handle;		/**< pktio handle */
 	unsigned char ODP_ALIGNED_CACHE pkt_priv[PKTIO_PRIVATE_SIZE];
@@ -103,6 +105,8 @@ struct pktio_entry {
 	struct {
 		odp_atomic_u64_t in_discards;
 	} stats_extra;
+	/* Latest Tx timestamp */
+	odp_atomic_u64_t tx_ts;
 	odp_proto_chksums_t in_chksums; /**< Checksums validation settings */
 	pktio_stats_type_t stats_type;
 	char name[PKTIO_NAME_LEN];	/**< name of pktio provided to
@@ -229,6 +233,18 @@ static inline int pktio_cls_enabled(pktio_entry_t *entry)
 static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
 {
 	entry->s.enabled.cls = !!ena;
+}
+
+static inline int _odp_pktio_tx_ts_enabled(pktio_entry_t *entry)
+{
+	return entry->s.enabled.tx_ts;
+}
+
+static inline void _odp_pktio_tx_ts_set(pktio_entry_t *entry)
+{
+	odp_time_t ts_val = odp_time_global();
+
+	odp_atomic_store_u64(&entry->s.tx_ts, ts_val.u64);
 }
 
 extern const pktio_if_ops_t netmap_pktio_ops;
