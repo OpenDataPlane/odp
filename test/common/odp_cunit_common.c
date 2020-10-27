@@ -1,5 +1,6 @@
 /* Copyright (c) 2014-2018, Linaro Limited
  * Copyright (c) 2019, Nokia
+ * Copyright (c) 2021, Marvell
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -273,6 +274,39 @@ static int default_term_func(void)
 	return odp_cunit_print_inactive();
 }
 
+static void _cunit_test_setup_func(void)
+{
+	CU_AllTestsCompleteMessageHandler all_test_comp_handler;
+	CU_SuiteCompleteMessageHandler suite_comp_handler;
+	CU_pFailureRecord failrec;
+	CU_pSuite suite;
+
+	if (!getenv("ODP_CUNIT_FAIL_IMMEDIATE"))
+		return;
+
+	if (CU_get_number_of_failure_records() == 0)
+		return;
+
+	/* User wants the suite to fail immediately once a test hits an error */
+	suite = CU_get_current_suite();
+	failrec = CU_get_failure_list();
+
+	printf("Force aborting as a previous test failed\n");
+
+	/* Call the Cleanup functions before aborting */
+	suite->pCleanupFunc();
+
+	suite_comp_handler = CU_get_suite_complete_handler();
+	if (suite_comp_handler)
+		suite_comp_handler(suite, failrec);
+
+	all_test_comp_handler = CU_get_all_test_complete_handler();
+	if (all_test_comp_handler)
+		all_test_comp_handler(failrec);
+
+	exit(EXIT_FAILURE);
+}
+
 /*
  * Register suites and tests with CUnit.
  *
@@ -292,7 +326,9 @@ static int cunit_register_suites(odp_suiteinfo_t testsuites[])
 		if (sinfo->term_func)
 			term_func = sinfo->term_func;
 
-		suite = CU_add_suite(sinfo->name, _cunit_suite_init, term_func);
+		suite = CU_add_suite_with_setup_and_teardown(sinfo->name, _cunit_suite_init,
+							     term_func, _cunit_test_setup_func,
+							     NULL);
 		if (!suite)
 			return CU_get_error();
 
