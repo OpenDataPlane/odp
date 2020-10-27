@@ -801,7 +801,7 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 
 		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
 
-		if (odp_unlikely(pktio_entry->s.chksum_insert_ena)) {
+		if (odp_unlikely(pktio_entry->s.enabled.chksum_insert)) {
 			odp_pktout_config_opt_t *pktout_capa =
 			&pktio_entry->s.capa.config.pktout;
 
@@ -956,7 +956,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 		if (odp_likely(pkt_hdr->seg_count == 1)) {
 			mbuf_update(mbuf, pkt_hdr, pkt_len);
 
-			if (odp_unlikely(pktio_entry->s.chksum_insert_ena))
+			if (odp_unlikely(pktio_entry->s.enabled.chksum_insert))
 				pkt_set_ol_tx(pktout_cfg, pktout_capa, pkt_hdr,
 					      mbuf, odp_packet_data(pkt));
 		} else {
@@ -1164,7 +1164,7 @@ static int dpdk_setup_eth_dev(pktio_entry_t *pktio_entry,
 	eth_conf.txmode.offloads = tx_offloads;
 
 	if (tx_offloads)
-		pktio_entry->s.chksum_insert_ena = 1;
+		pktio_entry->s.enabled.chksum_insert = 1;
 
 	ret = rte_eth_dev_configure(pkt_dpdk->port_id,
 				    pktio_entry->s.num_in_queue,

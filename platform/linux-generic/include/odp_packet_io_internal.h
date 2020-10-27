@@ -68,9 +68,13 @@ struct pktio_entry {
 	/* These two locks together lock the whole pktio device */
 	odp_ticketlock_t rxl;		/**< RX ticketlock */
 	odp_ticketlock_t txl;		/**< TX ticketlock */
-	uint8_t cls_enabled;            /**< classifier enabled */
-	uint8_t chksum_insert_ena;      /**< pktout checksum offload enabled */
 	uint16_t pktin_frame_offset;
+	struct {
+		/* Pktout checksum offload */
+		uint8_t chksum_insert : 1;
+		/* Classifier */
+		uint8_t cls : 1;
+	} enabled;
 	odp_pktio_t handle;		/**< pktio handle */
 	unsigned char ODP_ALIGNED_CACHE pkt_priv[PKTIO_PRIVATE_SIZE];
 	enum {
@@ -219,12 +223,12 @@ static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 
 static inline int pktio_cls_enabled(pktio_entry_t *entry)
 {
-	return entry->s.cls_enabled;
+	return entry->s.enabled.cls;
 }
 
 static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
 {
-	entry->s.cls_enabled = ena;
+	entry->s.enabled.cls = !!ena;
 }
 
 extern const pktio_if_ops_t netmap_pktio_ops;
