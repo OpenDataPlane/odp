@@ -454,6 +454,8 @@ static void netmap_init_capability(pktio_entry_t *pktio_entry)
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
 	capa->config.pktin.bit.ts_ptp = 1;
+
+	capa->config.pktout.bit.ts_ena = 1;
 }
 
 /**
@@ -1084,6 +1086,8 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 	int i;
 	int nb_tx;
 	int desc_id;
+	int tx_ts_idx = 0;
+	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
 	odp_packet_t pkt;
 	uint32_t pkt_len;
 	unsigned slot_id;
@@ -1130,6 +1134,11 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 		}
 		if (i == NM_INJECT_RETRIES)
 			break;
+
+		if (tx_ts_enabled && tx_ts_idx == 0) {
+			if (odp_unlikely(packet_hdr(pkt)->p.flags.ts_set))
+				tx_ts_idx = i + 1;
+		}
 	}
 	/* Send pending packets */
 	poll(&polld, 1, 0);
@@ -1141,6 +1150,9 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 		if (__odp_errno != 0)
 			return -1;
 	} else {
+		if (odp_unlikely(tx_ts_idx && nb_tx >= tx_ts_idx))
+			_odp_pktio_tx_ts_set(pktio_entry);
+
 		odp_packet_free_multi(pkt_table, nb_tx);
 	}
 
