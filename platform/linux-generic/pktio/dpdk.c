@@ -772,12 +772,15 @@ static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
 
 static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 			      struct rte_mbuf *mbuf_table[],
-			      const odp_packet_t pkt_table[], uint16_t num)
+			      const odp_packet_t pkt_table[], uint16_t num,
+			      int *tx_ts_idx)
 {
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	int i, j;
 	char *data;
 	uint16_t pkt_len;
+	uint8_t chksum_enabled = pktio_entry->s.enabled.chksum_insert;
+	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
 
 	if (odp_unlikely((rte_pktmbuf_alloc_bulk(pkt_dpdk->pkt_pool,
@@ -801,12 +804,17 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 
 		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
 
-		if (odp_unlikely(pktio_entry->s.enabled.chksum_insert)) {
+		if (odp_unlikely(chksum_enabled)) {
 			odp_pktout_config_opt_t *pktout_capa =
 			&pktio_entry->s.capa.config.pktout;
 
 			pkt_set_ol_tx(pktout_cfg, pktout_capa, pkt_hdr,
 				      mbuf_table[i], data);
+		}
+
+		if (odp_unlikely(tx_ts_enabled)) {
+			if (odp_unlikely(*tx_ts_idx == 0 && pkt_hdr->p.flags.ts_set))
+				*tx_ts_idx = i + 1;
 		}
 	}
 	return i;
@@ -934,13 +942,15 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 				   struct rte_mbuf *mbuf_table[],
 				   const odp_packet_t pkt_table[], uint16_t num,
-				   uint16_t *copy_count)
+				   uint16_t *copy_count, int *tx_ts_idx)
 {
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
 	odp_pktout_config_opt_t *pktout_capa =
 		&pktio_entry->s.capa.config.pktout;
 	uint16_t mtu = pkt_dpdk->mtu;
+	uint8_t chksum_enabled = pktio_entry->s.enabled.chksum_insert;
+	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
 	int i;
 	*copy_count = 0;
 
@@ -956,17 +966,24 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 		if (odp_likely(pkt_hdr->seg_count == 1)) {
 			mbuf_update(mbuf, pkt_hdr, pkt_len);
 
-			if (odp_unlikely(pktio_entry->s.enabled.chksum_insert))
+			if (odp_unlikely(chksum_enabled))
 				pkt_set_ol_tx(pktout_cfg, pktout_capa, pkt_hdr,
 					      mbuf, odp_packet_data(pkt));
 		} else {
+			int dummy_idx = 0;
+
 			/* Fall back to packet copy */
 			if (odp_unlikely(pkt_to_mbuf(pktio_entry, &mbuf,
-						     &pkt, 1) != 1))
+						     &pkt, 1, &dummy_idx) != 1))
 				goto fail;
 			(*copy_count)++;
 		}
 		mbuf_table[i] = mbuf;
+
+		if (odp_unlikely(tx_ts_enabled)) {
+			if (odp_unlikely(*tx_ts_idx == 0 && pkt_hdr->p.flags.ts_set))
+				*tx_ts_idx = i + 1;
+		}
 	}
 	return i;
 
@@ -1572,6 +1589,7 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
 		capa->config.pktout.bit.udp_chksum;
 	capa->config.pktout.bit.tcp_chksum_ena =
 		capa->config.pktout.bit.tcp_chksum;
+	capa->config.pktout.bit.ts_ena = 1;
 
 	return 0;
 }
@@ -1949,12 +1967,14 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	int tx_pkts;
 	int i;
 	int mbufs;
+	int tx_ts_idx = 0;
 
 	if (_ODP_DPDK_ZERO_COPY)
 		mbufs = pkt_to_mbuf_zero(pktio_entry, tx_mbufs, pkt_table, num,
-					 &copy_count);
+					 &copy_count, &tx_ts_idx);
 	else
-		mbufs = pkt_to_mbuf(pktio_entry, tx_mbufs, pkt_table, num);
+		mbufs = pkt_to_mbuf(pktio_entry, tx_mbufs, pkt_table, num,
+				    &tx_ts_idx);
 
 	if (!pkt_dpdk->lockless_tx)
 		odp_ticketlock_lock(&pkt_dpdk->tx_lock[index]);
@@ -1964,6 +1984,9 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 
 	if (!pkt_dpdk->lockless_tx)
 		odp_ticketlock_unlock(&pkt_dpdk->tx_lock[index]);
+
+	if (odp_unlikely(tx_ts_idx && tx_pkts >= tx_ts_idx))
+		_odp_pktio_tx_ts_set(pktio_entry);
 
 	if (_ODP_DPDK_ZERO_COPY) {
 		/* Free copied packets */
