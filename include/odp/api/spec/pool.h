@@ -542,6 +542,26 @@ uint64_t odp_pool_to_u64(odp_pool_t hdl);
 void odp_pool_param_init(odp_pool_param_t *param);
 
 /**
+ * Maximum pool index
+ *
+ * Return the maximum pool index. Pool indexes
+ * (e.g. returned by odp_pool_index()) range from zero to this maximum value.
+ *
+ * @return Maximum pool index
+ */
+unsigned int odp_pool_max_index(void);
+
+/**
+ * Get pool index
+ *
+ * @param pool      Pool handle
+ *
+ * @return        Pool index (0..odp_pool_max_index())
+ * @retval <0     On failure (e.g., handle not valid)
+ */
+int odp_pool_index(odp_pool_t pool);
+
+/**
  * @}
  */
 
