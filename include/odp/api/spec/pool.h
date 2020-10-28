@@ -45,6 +45,85 @@ extern "C" {
 #define ODP_POOL_MAX_SUBPARAMS  7
 
 /**
+ * Pool statistics counters options
+ *
+ * Pool statistics counters listed in a bit field structure.
+ */
+typedef union odp_pool_stats_opt_t {
+	/** Option flags */
+	struct {
+		/** @see odp_pool_stats_t::available */
+		uint64_t available          : 1;
+
+		/** @see odp_pool_stats_t::alloc_ops */
+		uint64_t alloc_ops          : 1;
+
+		/** @see odp_pool_stats_t::alloc_fails */
+		uint64_t alloc_fails        : 1;
+
+		/** @see odp_pool_stats_t::free_ops */
+		uint64_t free_ops           : 1;
+
+		/** @see odp_pool_stats_t::total_ops */
+		uint64_t total_ops          : 1;
+
+		/** @see odp_pool_stats_t::cache_available */
+		uint64_t cache_available    : 1;
+
+		/** @see odp_pool_stats_t::cache_alloc_ops */
+		uint64_t cache_alloc_ops    : 1;
+
+		/** @see odp_pool_stats_t::cache_free_ops */
+		uint64_t cache_free_ops     : 1;
+	} bit;
+
+	/** All bits of the bit field structure
+	 *
+	 *  This field can be used to set/clear all flags, or for bitwise
+	 *  operations over the entire structure. */
+	uint64_t all;
+
+} odp_pool_stats_opt_t;
+
+/**
+ * Pool statistics counters
+ *
+ * In addition to API alloc and free calls, statistics counters may be updated
+ * by alloc/free operations from implementation internal software or hardware
+ * components.
+ */
+typedef struct odp_pool_stats_t {
+	/** The number of available events in the pool */
+	uint64_t available;
+
+	/** The number of alloc operations from the pool. Includes both
+	 *  successful and failed operations (pool empty). */
+	uint64_t alloc_ops;
+
+	/** The number of failed alloc operations (pool empty) */
+	uint64_t alloc_fails;
+
+	/** The number of free operations to the pool */
+	uint64_t free_ops;
+
+	/** The total number of alloc and free operations. Includes both
+	 *  successful and failed operations (pool empty). */
+	uint64_t total_ops;
+
+	/** The number of available events in the local caches of all threads
+	 *  using the pool */
+	uint64_t cache_available;
+
+	/** The number of successful alloc operations from pool caches (returned
+	 *  at least one event). */
+	uint64_t cache_alloc_ops;
+
+	/** The number of free operations, which stored events to pool caches. */
+	uint64_t cache_free_ops;
+
+} odp_pool_stats_t;
+
+/**
  * Pool capabilities
  */
 typedef struct odp_pool_capability_t {
@@ -76,6 +155,9 @@ typedef struct odp_pool_capability_t {
 
 		/** Maximum size of thread local cache */
 		uint32_t max_cache_size;
+
+		/** Supported statistics counters */
+		odp_pool_stats_opt_t stats;
 	} buf;
 
 	/** Packet pool capabilities  */
@@ -161,6 +243,9 @@ typedef struct odp_pool_capability_t {
 
 		/** Maximum size of thread local cache */
 		uint32_t max_cache_size;
+
+		/** Supported statistics counters */
+		odp_pool_stats_opt_t stats;
 	} pkt;
 
 	/** Timeout pool capabilities  */
@@ -179,6 +264,9 @@ typedef struct odp_pool_capability_t {
 
 		/** Maximum size of thread local cache */
 		uint32_t max_cache_size;
+
+		/** Supported statistics counters */
+		odp_pool_stats_opt_t stats;
 	} tmo;
 
 	/** Vector pool capabilities */
@@ -200,6 +288,9 @@ typedef struct odp_pool_capability_t {
 
 		/** Maximum size of thread local cache */
 		uint32_t max_cache_size;
+
+		/** Supported statistics counters */
+		odp_pool_stats_opt_t stats;
 	} vector;
 
 } odp_pool_capability_t;
@@ -395,6 +486,14 @@ typedef struct odp_pool_param_t {
 		uint32_t cache_size;
 	} vector;
 
+	/**
+	 * Configure statistics counters
+	 *
+	 * An application can read the enabled statistics counters using
+	 * odp_pool_stats(). For optimal performance an application should
+	 * enable only the required counters.
+	 */
+	odp_pool_stats_opt_t stats;
 } odp_pool_param_t;
 
 /** Packet pool*/
@@ -560,6 +659,33 @@ unsigned int odp_pool_max_index(void);
  * @retval <0 on failure
  */
 int odp_pool_index(odp_pool_t pool);
+
+/**
+ * Get statistics for pool handle
+ *
+ * Read the statistics counters enabled using odp_pool_stats_opt_t during pool
+ * creation. The inactive counters are set to zero by the implementation.
+ *
+ * @param      pool   Pool handle
+ * @param[out] stats  Output buffer for counters
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_pool_stats(odp_pool_t pool, odp_pool_stats_t *stats);
+
+/**
+ * Reset statistics for pool handle
+ *
+ * Reset all statistics counters to zero except: odp_pool_stats_t::available,
+ * odp_pool_stats_t::cache_available
+ *
+ * @param pool    Pool handle
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_pool_stats_reset(odp_pool_t pool);
 
 /**
  * @}
