@@ -20,6 +20,7 @@ extern "C" {
 #endif
 
 #include <odp/api/std_types.h>
+#include <odp/api/support.h>
 
 /** @defgroup odp_pool ODP POOL
  *  Packet and buffer (event) pools.
@@ -202,6 +203,10 @@ typedef struct odp_pool_capability_t {
 		uint32_t max_cache_size;
 	} vector;
 
+	/** External memory allocator availability
+	 * @see odp_pool_ext_mem_allocate_t, odp_pool_ext_mem_deallocate_t
+	 */
+	odp_support_t ext_mem;
 } odp_pool_capability_t;
 
 /**
@@ -227,6 +232,46 @@ typedef struct odp_pool_pkt_subparam_t {
 	uint32_t len;
 
 } odp_pool_pkt_subparam_t;
+
+/**
+ * ODP pool external memory allocator callback.
+ *
+ * If an implementation supports the external memory allocator for pool memory,
+ * the application can register this callback to allocate the external memory.
+ *
+ * This callback shall be invoked by the implementation once in the pool creation time.
+ * Value NULL is allowed. In that case, a default implementation-specific allocator shall be used.
+ * An implementation may have constraints on the type of memory to be allocated,
+ * such as hugepage memory and/or physically contiguous, etc.
+ * Such constraints will be documented(if any) in the platform-specific documentation,
+ * and implementation shall test memory type requirements in the odp_pool_create() implementation.
+ * odp_pool_create() shall fail when the implementation fails to meet the memory constraints.
+ *
+ * @param arg    Opaque pointer registered by the user with odp_pool_param_t::allocater_arg
+ * @param total_sz  Total memory size to be allocated in the callback.
+ * @param align     Alignment for memory to be allocated in the callback.
+ *
+ * @retval Pointer to the start address of the external memory
+ * @retval NULL on failure
+ *
+ * @see odp_pool_capability_t::ext_mem
+ */
+typedef uintptr_t (*odp_pool_ext_mem_allocate_t)(void *arg, uint32_t total_sz, unsigned int align);
+
+/**
+ * ODP pool external memory deallocator callback.
+ *
+ * If an implementation supports the external memory allocator for pool memory,
+ * the application can register this callback to deallocate the external memory.
+ *
+ * This callback shall be invoked by the implementation once in the pool destroy time.
+ *
+ * @param arg    Opaque pointer registered by the user with odp_pool_param_t::deallocater_arg
+ * @param ptr Pointer to the start address of the external memory to be deallocated.
+ *
+ * @see odp_pool_capability_t::ext_mem
+ */
+typedef void (*odp_pool_ext_mem_deallocate_t)(void *arg, uintptr_t ptr);
 
 /**
  * Pool parameters
@@ -395,6 +440,15 @@ typedef struct odp_pool_param_t {
 		uint32_t cache_size;
 	} vector;
 
+	/** Opaque pointer to be passed in allocater invocation */
+	void *allocater_arg;
+	/** External memory allocator callback */
+	odp_pool_ext_mem_allocate_t allocater;
+
+	/** Opaque pointer to be passed in deallocater invocation */
+	void *deallocater_arg;
+	/** External memory deallocator callback */
+	odp_pool_ext_mem_deallocate_t deallocater;
 } odp_pool_param_t;
 
 /** Packet pool*/
