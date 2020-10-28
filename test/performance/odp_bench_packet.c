@@ -1823,7 +1823,8 @@ int main(int argc, char *argv[])
 		ODPH_ERR("Error: packet pool size not supported.\n");
 		printf("MAX: %" PRIu32 "\n", capa.pkt.max_num);
 		exit(EXIT_FAILURE);
-	} else if (capa.pkt.max_len && capa.pkt.max_len < TEST_MAX_PKT_SIZE) {
+	} else if (capa.pkt.max_len &&
+		   capa.pkt.max_len < 2 * TEST_MAX_PKT_SIZE) {
 		ODPH_ERR("Error: packet length not supported.\n");
 		exit(EXIT_FAILURE);
 	} else if (capa.pkt.max_seg_len &&
@@ -1839,7 +1840,11 @@ int main(int argc, char *argv[])
 	/* Create packet pool */
 	odp_pool_param_init(&params);
 	params.pkt.seg_len = PKT_POOL_SEG_LEN;
-	params.pkt.len     = TEST_MAX_PKT_SIZE;
+	/* Using packet length as twice the TEST_MAX_PKT_SIZE as some
+	 * test cases (bench_packet_ref_pkt) might allocate a bigger
+	 * packet than TEST_MAX_PKT_SIZE.
+	 */
+	params.pkt.len     = 2 * TEST_MAX_PKT_SIZE;
 	params.pkt.num     = pkt_num;
 	params.pkt.uarea_size = PKT_POOL_UAREA_SIZE;
 	params.type        = ODP_POOL_PACKET;
