@@ -2052,6 +2052,23 @@ uint64_t odp_packet_cls_mark(odp_packet_t pkt);
  */
 odp_packet_t odp_packet_from_head(odp_pool_t pool, void *headroom_addr);
 
+/**
+ * Get packet handle from the user area address pointer
+ *
+ * Get packet handle from the user area address pointer for the given pool.
+ * The pool must have been created with the ODP_POOL_PACKET type and non zero user area value.
+ * user area addr must point to that address provided by odp_packet_user_area() just after
+ * the odp_packet_alloc().
+ *
+ * @param pool Pool handle
+ * @param uarea_addr user area start address
+ *
+ * @return packet handle
+ * @return ODP_PACKET_INVALID on failure
+ *
+ */
+odp_packet_t odp_packet_from_user_area(odp_pool_t pool, void *uarea_addr);
+
 /*
  *
  * Packet vector handling routines
