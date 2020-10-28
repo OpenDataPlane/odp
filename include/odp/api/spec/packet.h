@@ -2035,6 +2035,23 @@ void odp_packet_shaper_len_adjust_set(odp_packet_t pkt, int8_t adj);
  */
 uint64_t odp_packet_cls_mark(odp_packet_t pkt);
 
+/**
+ * Get packet handle from the headroom address pointer
+ *
+ * Get packet handle from the headroom address pointer for the given pool.
+ * The pool must have been created with the ODP_POOL_PACKET type and non zero headroom value.
+ * headroom_addr must point to that address provided by odp_packet_head() just after
+ * the odp_packet_alloc().
+ *
+ * @param pool Pool handle
+ * @param headroom_addr head room start address
+ *
+ * @return packet handle
+ * @return ODP_PACKET_INVALID on failure
+ *
+ */
+odp_packet_t odp_packet_from_head(odp_pool_t pool, void *headroom_addr);
+
 /*
  *
  * Packet vector handling routines
