@@ -274,6 +274,42 @@ typedef uintptr_t (*odp_pool_ext_mem_allocate_t)(void *arg, uint32_t total_sz, u
 typedef void (*odp_pool_ext_mem_deallocate_t)(void *arg, uintptr_t ptr);
 
 /**
+ * ODP pool buffer type iterator callback.
+ *
+ * This callback shall be invoked by the implementation when each odp_buffer_t type is freed
+ * to the pool in odp_pool_create().
+ *
+ * @param arg    Opaque pointer registered by the user with odp_pool_param_t::buf::arg
+ * @param data_addr Pointer to the buffer start address.
+ *
+ * On successful pool creation, the application can access the same buffer
+ * address using odp_buffer_addr().
+ *
+ */
+typedef void (*odp_pool_buffer_iterator_t)(void *arg, void *data_addr);
+
+/**
+ * ODP pool packet type iterator callback.
+ *
+ * This callback shall be invoked by the implementation when each odp_packet_seg_t
+ * type is freed to the pool on odp_pool_create().
+ *
+ * @param headroom_addr Pointer to the start address packet headroom.
+ * On successful pool creation, the application can access the same headroom address
+ * using odp_packet_head().
+ * Value NULL will be passed to the callback when packet headroom of size zero.
+ *
+ * @param arg    Opaque pointer registered by the user with odp_pool_param_t::pkt::arg
+ * @param uarea_addr Pointer to the start address packet user area.
+ *
+ * On successful pool creation, the application can access the same user area address
+ * using odp_packet_user_area().
+ * Value NULL will be passed to the callback when the packet user area of size zero.
+ *
+ */
+typedef void (*odp_pool_packet_iterator_t)(void *arg, void *headroom_addr, void *uarea_addr);
+
+/**
  * Pool parameters
  */
 typedef struct odp_pool_param_t {
@@ -311,6 +347,12 @@ typedef struct odp_pool_param_t {
 		 *  implementation specific and set by odp_pool_param_init().
 		 */
 		uint32_t cache_size;
+
+		/** Opaque pointer to be passed in buf_iter invocation */
+		void *arg;
+
+		/** Buffer type iterator callback */
+		odp_pool_buffer_iterator_t buf_iter;
 	} buf;
 
 	/** Parameters for packet pools */
@@ -411,6 +453,12 @@ typedef struct odp_pool_param_t {
 		 *  See buf.cache_size documentation for details.
 		 */
 		uint32_t cache_size;
+
+		/** Opaque pointer to be passed in pkt_iter invocation */
+		void *arg;
+
+		/** Packet segment type iterator callback */
+		odp_pool_packet_iterator_t pkt_iter;
 	} pkt;
 
 	/** Parameters for timeout pools */
