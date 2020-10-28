@@ -288,6 +288,9 @@ typedef struct odp_cls_cos_param {
 
 	/** Packet input vector configuration */
 	odp_pktin_vector_config_t vector;
+
+	/** Packet input buffer sort configuration */
+	odp_pktin_buffer_sort_config_t sort;
 } odp_cls_cos_param_t;
 
 /**

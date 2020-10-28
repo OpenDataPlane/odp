@@ -204,6 +204,71 @@ typedef struct odp_pktin_vector_config_t {
 } odp_pktin_vector_config_t;
 
 /**
+ * Packet input buffer sorting entry
+ */
+typedef struct odp_pktin_sort_entry_t {
+	/** Packet length to be compared in bytes */
+	uint32_t len;
+	/** Packet pool
+	 *
+	 * Packet pool to allocate the packet from if the packet length is less than or equal
+	 * to len value. The pool must have been created with the ODP_POOL_PACKET type.
+	 * The selected length value must be less than odp_pool_param_t::param::max_len
+	 * configured in the selected packet pool.
+	 *
+	 * @see odp_pktio_open()
+	 */
+	odp_pool_t pool;
+} odp_pktin_sort_entry_t;
+
+/** Maximum number of packet input buffer sort entries */
+#define ODP_PKTIN_BUFFER_SORT_MAX_ENTRY 7
+
+/** Packet input buffer sorting configuration */
+typedef struct odp_pktin_buffer_sort_config_t {
+	/** Enable packet input buffer sorting
+	 *
+	 * When true, packet input buffer sorting is enabled and configured with config parameters.
+	 * Otherwise, packet input buffer configuration parameters are ignored.
+	 */
+	odp_bool_t enable;
+	/** Number of packet input buffer sorting entries.
+	 *  This value should be in range of 1..odp_pktin_buffer_sort_capability_t::max_num_entries
+	 */
+	uint16_t num_entries;
+	/** Packet input buffer sorting entries
+	 *
+	 * Packet input buffer sorting entries define the sorting requirements.
+	 * When sorting is enabled and packet received in given a packet io,
+	 * the implementation shall scan the configured entries, if the packet size
+	 * is less than or equal odp_pktin_sort_desc_t::len, it allocates
+	 * the packets from odp_pktin_sort_desc_t::pool.
+	 *
+	 * odp_pktin_sort_desc_t::len value in each entry must be unique and
+	 * must be sorted in ascending order. Otherwise, the behavior is undefined.
+	 *
+	 * \code{.unparsed}
+	 *
+	 * Example sorting entry table configuration:
+	 * (0B <= packet_size <= 1500B), steer to pool a
+	 * (1500B < packet_size <= 4000B), steer to pool b
+	 * (4000B < packet_size <= 7000B), steer to pool c
+	 * (7000B < packet_size <= default_pool::param::max_len), steer to
+	 * default pool configured for the pktio.
+	 *
+	 * tbl[0].len = 1500;
+	 * tbl[0].pool = pool_a;
+	 * tbl[1].len = 4000;
+	 * tbl[1].pool = pool_b;
+	 * tbl[2].len = 7000;
+	 * tbl[2].pool = pool_c;
+	 *
+	 * \endcode
+	 */
+	odp_pktin_sort_entry_t tbl[ODP_PKTIN_BUFFER_SORT_MAX_ENTRY];
+} odp_pktin_buffer_sort_config_t;
+
+/**
  * Packet input queue parameters
  */
 typedef struct odp_pktin_queue_param_t {
@@ -274,6 +339,8 @@ typedef struct odp_pktin_queue_param_t {
 	/** Packet input vector configuration */
 	odp_pktin_vector_config_t vector;
 
+	/** Packet input buffer sort configuration */
+	odp_pktin_buffer_sort_config_t sort;
 } odp_pktin_queue_param_t;
 
 /**
@@ -617,6 +684,16 @@ typedef union odp_pktio_set_op_t {
 	uint32_t all_bits;
 } odp_pktio_set_op_t;
 
+/** Packet input buffer sort capabilities */
+typedef struct odp_pktin_buffer_sort_capability_t {
+	/** Packet input buffer sort availability */
+	odp_support_t supported;
+	/** Maximum number of sorting entries.
+	 * odp_pktin_buffer_sort_config_t::num_entries should not be greater than this value.
+	 */
+	uint8_t max_num_entries;
+} odp_pktin_buffer_sort_capability_t;
+
 /**
  * Packet input vector capabilities
  */
@@ -673,6 +750,8 @@ typedef struct odp_pktio_capability_t {
 	/** Packet input vector capability */
 	odp_pktin_vector_capability_t vector;
 
+	/** Packet input buffer sorting capability */
+	odp_pktin_buffer_sort_capability_t sort;
 } odp_pktio_capability_t;
 
 /**
