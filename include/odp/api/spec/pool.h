@@ -45,6 +45,57 @@ extern "C" {
 #define ODP_POOL_MAX_SUBPARAMS  7
 
 /**
+ * Pool statistics counter options bit field
+ *
+ * Pool statistics counter options listed in a bit field structure.
+ * This structure shall be used to get the supported counters for the pool
+ * and configure the statistics counters.
+ *
+ * @see odp_pool_capability_t::buf::stats_supported
+ * @see odp_pool_param_t::stats_config
+ *
+ */
+typedef union odp_pool_stats_opt_t {
+	/** Option flags */
+	struct {
+		/** Select the odp_pool_stats_t::available counter */
+		uint64_t available             : 1;
+
+		/** Select the odp_pool_stats_t::available_local_cache counter */
+		uint64_t available_local_cache : 1;
+
+		/** Select the odp_pool_stats_t::ops counter */
+		uint64_t ops                   : 1;
+	} bit;
+
+	/** All bits of the bit field structure
+	  *
+	  * This field can be used to set/clear all flags, or bitwise
+	  * operations over the entire structure. */
+	uint64_t all;
+} odp_pool_stats_opt_t;
+
+/**
+ * Pool statistics
+ */
+typedef struct odp_pool_stats_t {
+	/**
+	 * The number of available entries in the pool.
+	 */
+	uint64_t available;
+
+	/**
+	 * The number of available entries in the local cache of all the CPU of a pool.
+	 */
+	uint64_t available_local_cache;
+
+	/**
+	 * The number of free and alloc operations in the pool.
+	 */
+	uint64_t ops;
+} odp_pool_stats_t;
+
+/**
  * Pool capabilities
  */
 typedef struct odp_pool_capability_t {
@@ -76,6 +127,9 @@ typedef struct odp_pool_capability_t {
 
 		/** Maximum size of thread local cache */
 		uint32_t max_cache_size;
+
+		/** Supported statistics counters */
+		odp_pool_stats_opt_t stats_supported;
 	} buf;
 
 	/** Packet pool capabilities  */
@@ -161,6 +215,9 @@ typedef struct odp_pool_capability_t {
 
 		/** Maximum size of thread local cache */
 		uint32_t max_cache_size;
+
+		/** Supported statistics counters */
+		odp_pool_stats_opt_t stats_supported;
 	} pkt;
 
 	/** Timeout pool capabilities  */
@@ -179,6 +236,9 @@ typedef struct odp_pool_capability_t {
 
 		/** Maximum size of thread local cache */
 		uint32_t max_cache_size;
+
+		/** Supported statistics counters */
+		odp_pool_stats_opt_t stats_supported;
 	} tmo;
 
 	/** Vector pool capabilities */
@@ -200,6 +260,9 @@ typedef struct odp_pool_capability_t {
 
 		/** Maximum size of thread local cache */
 		uint32_t max_cache_size;
+
+		/** Supported statistics counters */
+		odp_pool_stats_opt_t stats_supported;
 	} vector;
 
 } odp_pool_capability_t;
@@ -395,6 +458,18 @@ typedef struct odp_pool_param_t {
 		uint32_t cache_size;
 	} vector;
 
+	/**
+	 * Configure statistics counters
+	 *
+	 * Application can get the statistics of selected statistics counter using
+	 * odp_pool_stats().
+	 * For the optimized implementation, the application must select only the
+	 * counters that required for the application.
+	 *
+	 * The selected counters must be a subset or the same as supported counters
+	 * identified using odp_pool_capability_t::stats_supported.
+	 */
+	odp_pool_stats_opt_t stats_config;
 } odp_pool_param_t;
 
 /** Packet pool*/
@@ -560,6 +635,33 @@ unsigned int odp_pool_max_index(void);
  * @retval <0     On failure (e.g., handle not valid)
  */
 int odp_pool_index(odp_pool_t pool);
+
+/**
+ * Get statistics for pool handle
+ *
+ * Get statistics counters configured with odp_pool_param_t::stats_config for the pool.
+ *
+ * @param pool      Pool handle
+ * @param[out]	stats	 Output buffer for counters
+ * @retval  0 on success
+ * @retval <0 on failure
+ *
+ * @note The counters are not configured with odp_pool_param_t::stats_config
+ * has to be set to 0 by the implementation.
+ */
+int odp_pool_stats(odp_pool_t pool, odp_pool_stats_t *stats);
+
+/**
+ * Reset statistics for pool handle
+ *
+ * Reset statistics counters configured with odp_pool_param_t::stats_config for the pool to 0.
+ *
+ * @param pool      Pool handle
+ * @retval  0 on success
+ * @retval <0 on failure
+ *
+ */
+int odp_pool_stats_reset(odp_pool_t pool);
 
 /**
  * @}
