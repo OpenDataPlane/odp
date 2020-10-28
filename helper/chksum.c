@@ -105,7 +105,7 @@ static inline int odph_process_l4_hdr(odp_packet_t      odp_pkt,
 	odph_tcphdr_t  *tcp_hdr_ptr;
 	odp_bool_t      split_l4_hdr, is_tcp;
 	uint32_t        l4_offset, l4_len, pkt_chksum_offset;
-	uint16_t       *pkt_chksum_ptr;
+	odp_una_u16_t  *pkt_chksum_ptr;
 	uint8_t        *l4_ptr;
 	uint32_t hdr_len = 0;
 
@@ -130,7 +130,7 @@ static inline int odph_process_l4_hdr(odp_packet_t      odp_pkt,
 		 * should come from the udp header, unlike for TCP where is
 		 * derived. */
 		l4_len            = odp_be_to_cpu_16(udp_hdr_ptr->length);
-		pkt_chksum_ptr    = (uint16_t *)(void *)&udp_hdr_ptr->chksum;
+		pkt_chksum_ptr    = (odp_una_u16_t *)&udp_hdr_ptr->chksum;
 		pkt_chksum_offset = l4_offset + offsetof(odph_udphdr_t, chksum);
 	} else if (odp_packet_has_tcp(odp_pkt)) {
 		tcp_hdr_ptr  = (odph_tcphdr_t *)l4_ptr;
@@ -141,7 +141,7 @@ static inline int odph_process_l4_hdr(odp_packet_t      odp_pkt,
 					       ODPH_TCPHDR_LEN, tcp_hdr_ptr);
 		}
 
-		pkt_chksum_ptr    = (uint16_t *)(void *)&tcp_hdr_ptr->cksm;
+		pkt_chksum_ptr    = (odp_una_u16_t *)&tcp_hdr_ptr->cksm;
 		pkt_chksum_offset = l4_offset + offsetof(odph_tcphdr_t, cksm);
 		is_tcp            = true;
 	} else {
@@ -186,7 +186,7 @@ static inline int odph_process_l3_hdr(odp_packet_t odp_pkt,
 	swap_buf_t      swap_buf;
 	uint32_t        l3_offset, l4_offset, l3_hdrs_len, addrs_len;
 	uint32_t        protocol, l3_len, l4_len, idx, ipv6_payload_len, sum;
-	uint16_t       *addrs_ptr;
+	odp_una_u16_t  *addrs_ptr;
 	uint32_t hdr_len = 0;
 
 	/* The following computation using the l3 and l4 offsets handles both
@@ -206,7 +206,7 @@ static inline int odph_process_l3_hdr(odp_packet_t odp_pkt,
 			ipv4_hdr_ptr = &ipv4_hdr;
 		}
 
-		addrs_ptr = (uint16_t *)(void *)&ipv4_hdr_ptr->src_addr;
+		addrs_ptr = (odp_una_u16_t *)&ipv4_hdr_ptr->src_addr;
 		addrs_len = 2 * ODPH_IPV4ADDR_LEN;
 		protocol  = ipv4_hdr_ptr->proto;
 		l3_len    = odp_be_to_cpu_16(ipv4_hdr_ptr->tot_len);
@@ -219,7 +219,7 @@ static inline int odph_process_l3_hdr(odp_packet_t odp_pkt,
 			ipv6_hdr_ptr = &ipv6_hdr;
 		}
 
-		addrs_ptr        = (uint16_t *)(void *)&ipv6_hdr_ptr->src_addr;
+		addrs_ptr        = (odp_una_u16_t *)&ipv6_hdr_ptr->src_addr;
 		addrs_len        = 2 * ODPH_IPV6ADDR_LEN;
 		protocol         = ipv6_hdr_ptr->next_hdr;
 		ipv6_payload_len = odp_be_to_cpu_16(ipv6_hdr_ptr->payload_len);
