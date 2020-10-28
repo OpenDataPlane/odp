@@ -16,6 +16,7 @@
 #include <odp/visibility_begin.h>
 /* uint64_t, uint32_t, etc */
 #include <stdint.h>
+#include <odp/api/align.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,6 +40,15 @@ extern "C" {
  * Hence 100% is represented as integer value 10000.
  */
 typedef uint32_t odp_percent_t;
+
+/** Unaligned uint16_t type */
+typedef uint16_t odp_una_u16_t ODP_ALIGNED(1);
+
+/** Unaligned uint32_t type */
+typedef uint32_t odp_una_u32_t ODP_ALIGNED(1);
+
+/** Unaligned uint64_t type */
+typedef uint64_t odp_una_u64_t ODP_ALIGNED(1);
 
 /**
  * @}
