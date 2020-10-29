@@ -209,25 +209,24 @@ static uint32_t pktio_pkt_seq_hdr(odp_packet_t pkt, size_t l4_hdr_len)
 	pkt_tail_t tail;
 
 	if (pkt == ODP_PACKET_INVALID) {
-		fprintf(stderr, "error: pkt invalid\n");
+		ODPH_ERR("pkt invalid\n");
 		return TEST_SEQ_INVALID;
 	}
 
 	off = odp_packet_l4_offset(pkt);
 	if (off ==  ODP_PACKET_OFFSET_INVALID) {
-		fprintf(stderr, "error: offset invalid\n");
+		ODPH_ERR("offset invalid\n");
 		return TEST_SEQ_INVALID;
 	}
 
 	off += l4_hdr_len;
 	if (odp_packet_copy_to_mem(pkt, off, sizeof(head), &head) != 0) {
-		fprintf(stderr, "error: header copy failed\n");
+		ODPH_ERR("header copy failed\n");
 		return TEST_SEQ_INVALID;
 	}
 
 	if (head.magic != TEST_SEQ_MAGIC) {
-		fprintf(stderr, "error: header magic invalid 0x%" PRIx32 "\n",
-			head.magic);
+		ODPH_ERR("header magic invalid 0x%" PRIx32 "\n", head.magic);
 		odp_packet_print(pkt);
 		return TEST_SEQ_INVALID;
 	}
@@ -236,7 +235,7 @@ static uint32_t pktio_pkt_seq_hdr(odp_packet_t pkt, size_t l4_hdr_len)
 		off = packet_len - sizeof(tail);
 		if (odp_packet_copy_to_mem(pkt, off, sizeof(tail),
 					   &tail) != 0) {
-			fprintf(stderr, "error: header copy failed\n");
+			ODPH_ERR("header copy failed\n");
 			return TEST_SEQ_INVALID;
 		}
 
@@ -244,15 +243,11 @@ static uint32_t pktio_pkt_seq_hdr(odp_packet_t pkt, size_t l4_hdr_len)
 			seq = head.seq;
 			CU_ASSERT(seq != TEST_SEQ_INVALID);
 		} else {
-			fprintf(stderr,
-				"error: tail magic invalid 0x%" PRIx32 "\n",
-				tail.magic);
+			ODPH_ERR("tail magic invalid 0x%" PRIx32 "\n", tail.magic);
 		}
 	} else {
-		fprintf(stderr,
-			"error: packet length invalid: "
-			"%" PRIu32 "(%" PRIu32 ")\n",
-			odp_packet_len(pkt), packet_len);
+		ODPH_ERR("packet length invalid: %" PRIu32 "(%" PRIu32 ")\n",
+			 odp_packet_len(pkt), packet_len);
 	}
 
 	return seq;
@@ -965,10 +960,8 @@ static void pktio_txrx_multi(pktio_info_t *pktio_info_a,
 	num_rx = wait_for_packets(pktio_info_b, rx_pkt, tx_seq, num_pkts, mode,
 				  ODP_TIME_SEC_IN_NS, vector_mode);
 	CU_ASSERT(num_rx == num_pkts);
-	if (num_rx != num_pkts) {
-		fprintf(stderr, "error: received %i, out of %i packets\n",
-			num_rx, num_pkts);
-	}
+	if (num_rx != num_pkts)
+		ODPH_ERR("received %i, out of %i packets\n", num_rx, num_pkts);
 
 	for (i = 0; i < num_rx; ++i) {
 		odp_packet_data_range_t range;
@@ -1831,26 +1824,26 @@ static void pktio_test_pktout_queue_config(void)
 #ifdef DEBUG_STATS
 static void _print_pktio_stats(odp_pktio_stats_t *s, const char *name)
 {
-	fprintf(stderr, "\n%s:\n"
-		"  in_octets %" PRIu64 "\n"
-		"  in_ucast_pkts %" PRIu64 "\n"
-		"  in_discards %" PRIu64 "\n"
-		"  in_errors %" PRIu64 "\n"
-		"  in_unknown_protos %" PRIu64 "\n"
-		"  out_octets %" PRIu64 "\n"
-		"  out_ucast_pkts %" PRIu64 "\n"
-		"  out_discards %" PRIu64 "\n"
-		"  out_errors %" PRIu64 "\n",
-		name,
-		s->in_octets,
-		s->in_ucast_pkts,
-		s->in_discards,
-		s->in_errors,
-		s->in_unknown_protos,
-		s->out_octets,
-		s->out_ucast_pkts,
-		s->out_discards,
-		s->out_errors);
+	ODPH_ERR("\n%s:\n"
+		 "  in_octets %" PRIu64 "\n"
+		 "  in_ucast_pkts %" PRIu64 "\n"
+		 "  in_discards %" PRIu64 "\n"
+		 "  in_errors %" PRIu64 "\n"
+		 "  in_unknown_protos %" PRIu64 "\n"
+		 "  out_octets %" PRIu64 "\n"
+		 "  out_ucast_pkts %" PRIu64 "\n"
+		 "  out_discards %" PRIu64 "\n"
+		 "  out_errors %" PRIu64 "\n",
+		 name,
+		 s->in_octets,
+		 s->in_ucast_pkts,
+		 s->in_discards,
+		 s->in_errors,
+		 s->in_unknown_protos,
+		 s->out_octets,
+		 s->out_ucast_pkts,
+		 s->out_discards,
+		 s->out_errors);
 }
 #endif
 
@@ -3095,8 +3088,7 @@ static int create_pool(const char *iface, int num)
 
 	pool[num] = odp_pool_create(pool_name, &params);
 	if (ODP_POOL_INVALID == pool[num]) {
-		fprintf(stderr, "%s: failed to create pool: %d",
-			__func__, odp_errno());
+		ODPH_ERR("failed to create pool: %d", odp_errno());
 		return -1;
 	}
 
@@ -3307,7 +3299,7 @@ static int pktio_suite_init(void)
 	}
 
 	if (default_pool_create() != 0) {
-		fprintf(stderr, "error: failed to create default pool\n");
+		ODPH_ERR("failed to create default pool\n");
 		return -1;
 	}
 
@@ -3352,8 +3344,7 @@ static int pktio_suite_term(void)
 			continue;
 
 		if (odp_pool_destroy(pool) != 0) {
-			fprintf(stderr, "error: failed to destroy pool %s\n",
-				pool_name);
+			ODPH_ERR("failed to destroy pool %s\n", pool_name);
 			ret = -1;
 		}
 	}
@@ -3372,7 +3363,7 @@ static int pktio_suite_term(void)
 	}
 
 	if (odp_pool_destroy(default_pkt_pool) != 0) {
-		fprintf(stderr, "error: failed to destroy default pool\n");
+		ODPH_ERR("failed to destroy default pool\n");
 		ret = -1;
 	}
 	default_pkt_pool = ODP_POOL_INVALID;
