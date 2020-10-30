@@ -460,6 +460,21 @@ static void test_out_in_common(ipsec_test_flags *flags,
 		test_ipsec_stats_zero_assert(&stats);
 	}
 
+	if (flags->test_sa_seq_num) {
+		int rc;
+
+		test.out[0].seq_num = 0x1235;
+		rc = ipsec_test_sa_update_seq_num(sa_out, test.out[0].seq_num);
+
+		/* Skip further checks related to this specific test if the
+		 * SA update call was not successful.
+		 */
+		if (rc < 0) {
+			printf("\t >> skipped");
+			test.flags.test_sa_seq_num = false;
+		}
+	}
+
 	ipsec_check_out_in_one(&test, sa_out, sa_in);
 
 	if (flags->stats == IPSEC_TEST_STATS_SUCCESS) {
@@ -1364,6 +1379,19 @@ static void test_sa_info(void)
 	ipsec_sa_destroy(sa_in);
 }
 
+static void test_test_sa_update_seq_num(void)
+{
+	ipsec_test_flags flags;
+
+	memset(&flags, 0, sizeof(flags));
+	flags.display_algo = true;
+	flags.test_sa_seq_num = true;
+
+	test_esp_out_in_all(&flags);
+
+	printf("\n  ");
+}
+
 static void ipsec_test_capability(void)
 {
 	odp_ipsec_capability_t capa;
@@ -1444,6 +1472,8 @@ odp_testinfo_t ipsec_out_suite[] = {
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_sa_info,
 				  ipsec_check_esp_aes_cbc_128_sha1),
+	ODP_TEST_INFO_CONDITIONAL(test_test_sa_update_seq_num,
+				  ipsec_check_test_sa_update_seq_num),
 	ODP_TEST_INFO(test_esp_out_in_all_basic),
 	ODP_TEST_INFO_CONDITIONAL(test_esp_out_in_all_hdr_in_packet,
 				  is_out_mode_inline),

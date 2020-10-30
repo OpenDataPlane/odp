@@ -261,6 +261,18 @@ int ipsec_check_esp_chacha20_poly1305(void)
 				ODP_AUTH_ALG_CHACHA20_POLY1305, 0);
 }
 
+int ipsec_check_test_sa_update_seq_num(void)
+{
+	odp_ipsec_capability_t capa;
+
+	odp_ipsec_capability(&capa);
+
+	if (!capa.test.sa_operations.seq_num)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
 void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
 			 odp_bool_t in,
 			 odp_bool_t ah,
@@ -734,6 +746,48 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 	return num_out;
 }
 
+int ipsec_test_sa_update_seq_num(odp_ipsec_sa_t sa, uint32_t seq_num)
+{
+	odp_ipsec_test_sa_operation_t sa_op;
+	odp_ipsec_test_sa_param_t sa_param;
+
+	sa_op = ODP_IPSEC_TEST_SA_UPDATE_SEQ_NUM;
+	sa_param.seq_num = seq_num;
+
+	return odp_ipsec_test_sa_update(sa, sa_op, &sa_param);
+}
+
+static void ipsec_pkt_seq_num_check(odp_packet_t pkt, uint32_t seq_num)
+{
+	uint32_t l3_off = odp_packet_l3_offset(pkt);
+	uint32_t l4_off;
+	odph_ipv4hdr_t ip;
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_PACKET_OFFSET_INVALID, l3_off);
+	CU_ASSERT_EQUAL_FATAL(0, odp_packet_copy_to_mem(pkt, l3_off, sizeof(ip),
+							&ip));
+
+	if (ODPH_IPV4HDR_VER(ip.ver_ihl) == ODPH_IPV4) {
+		l4_off = l3_off + (ODPH_IPV4HDR_IHL(ip.ver_ihl) * 4);
+
+		if (ip.proto == ODPH_IPPROTO_ESP) {
+			odph_esphdr_t esp;
+
+			odp_packet_copy_to_mem(pkt, l4_off, sizeof(esp), &esp);
+			CU_ASSERT_EQUAL(odp_be_to_cpu_32(esp.seq_no), seq_num);
+		} else if (ip.proto == ODPH_IPPROTO_AH) {
+			odph_ahhdr_t ah;
+
+			odp_packet_copy_to_mem(pkt, l4_off, sizeof(ah), &ah);
+			CU_ASSERT_EQUAL(odp_be_to_cpu_32(ah.seq_no), seq_num);
+		} else {
+			CU_FAIL("Unexpected IP Proto");
+		}
+	} else {
+		CU_FAIL("Unexpected IP Version");
+	}
+}
+
 static void ipsec_pkt_proto_err_set(odp_packet_t pkt)
 {
 	uint32_t l3_off = odp_packet_l3_offset(pkt);
@@ -897,6 +951,9 @@ void ipsec_check_out_in_one(const ipsec_test_part *part,
 		}
 		CU_ASSERT_FATAL(odp_packet_len(pkto[i]) <=
 				sizeof(pkt_in.data));
+
+		if (part->flags.test_sa_seq_num)
+			ipsec_pkt_seq_num_check(pkto[i], part->out[i].seq_num);
 
 		if (part->flags.stats == IPSEC_TEST_STATS_PROTO_ERR)
 			ipsec_pkt_proto_err_set(pkto[i]);
