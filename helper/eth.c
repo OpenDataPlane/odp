@@ -11,7 +11,7 @@
 
 int odph_eth_addr_parse(odph_ethaddr_t *mac, const char *str)
 {
-	int byte[ODPH_ETHADDR_LEN];
+	unsigned int byte[ODPH_ETHADDR_LEN];
 	int i;
 
 	memset(byte, 0, sizeof(byte));
@@ -22,7 +22,7 @@ int odph_eth_addr_parse(odph_ethaddr_t *mac, const char *str)
 		return -1;
 
 	for (i = 0; i < ODPH_ETHADDR_LEN; i++)
-		if (byte[i] < 0 || byte[i] > 255)
+		if (byte[i] > 255)
 			return -1;
 
 	mac->addr[0] = byte[0];
