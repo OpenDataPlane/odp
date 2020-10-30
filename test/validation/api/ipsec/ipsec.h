@@ -59,6 +59,7 @@ typedef struct {
 	odp_bool_t lookup;
 	odp_bool_t ah;
 	odp_bool_t inline_hdr_in_packet;
+	odp_bool_t test_sa_seq_num;
 	enum ipsec_test_stats stats;
 } ipsec_test_flags;
 
@@ -73,6 +74,7 @@ typedef struct {
 		const ipsec_test_packet *pkt_res;
 		odp_proto_l3_type_t l3_type;
 		odp_proto_l4_type_t l4_type;
+		uint32_t seq_num;
 	} out[1];
 	struct {
 		odp_ipsec_op_status_t status;
@@ -101,6 +103,7 @@ void ipsec_check_out_one(const ipsec_test_part *part, odp_ipsec_sa_t sa);
 void ipsec_check_out_in_one(const ipsec_test_part *part,
 			    odp_ipsec_sa_t sa,
 			    odp_ipsec_sa_t sa_in);
+int ipsec_test_sa_update_seq_num(odp_ipsec_sa_t sa, uint32_t seq_num);
 
 int ipsec_check(odp_bool_t ah,
 		odp_cipher_alg_t cipher,
@@ -128,5 +131,6 @@ int ipsec_check_esp_null_aes_gmac_128(void);
 int ipsec_check_esp_null_aes_gmac_192(void);
 int ipsec_check_esp_null_aes_gmac_256(void);
 int ipsec_check_esp_chacha20_poly1305(void);
+int ipsec_check_test_sa_update_seq_num(void);
 
 #endif
