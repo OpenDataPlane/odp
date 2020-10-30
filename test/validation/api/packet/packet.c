@@ -187,6 +187,10 @@ static int packet_suite_init(void)
 	params.type           = ODP_POOL_PACKET;
 	params.pkt.seg_len    = pool_capa.pkt.min_seg_len;
 	params.pkt.len        = pool_capa.pkt.min_seg_len;
+	/* Defining max_len to ensure packet of segmented_packet_len
+	 * length can be allocated from this pool.
+	 */
+	params.pkt.max_len    = segmented_packet_len;
 	params.pkt.num        = num;
 	params.pkt.uarea_size = sizeof(struct udata_struct);
 
