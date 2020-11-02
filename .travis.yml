@@ -369,7 +369,8 @@ jobs:
                   env: TEST=checkpatch
                   compiler: gcc
                   install:
-                          - true
+                          - sudo apt-get update
+                          - sudo apt-get -y install codespell
                   script:
                           - echo ${TRAVIS_COMMIT_RANGE};
                           - ODP_PATCHES=`echo ${TRAVIS_COMMIT_RANGE} | sed 's/\.//'`;
