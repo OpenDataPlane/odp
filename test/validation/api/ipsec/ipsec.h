@@ -47,9 +47,18 @@ typedef struct {
 #define _ODP_PROTO_L3_TYPE_UNDEF ((odp_proto_l3_type_t)-1)
 #define _ODP_PROTO_L4_TYPE_UNDEF ((odp_proto_l4_type_t)-1)
 
+enum ipsec_test_stats {
+	IPSEC_TEST_STATS_NONE = 0,
+	IPSEC_TEST_STATS_SUCCESS,
+	IPSEC_TEST_STATS_PROTO_ERR,
+	IPSEC_TEST_STATS_AUTH_ERR,
+};
+
 typedef struct {
+	odp_bool_t display_algo;
 	odp_bool_t lookup;
 	odp_bool_t ah;
+	enum ipsec_test_stats stats;
 } ipsec_test_flags;
 
 typedef struct {

@@ -341,6 +341,52 @@ static void test_out_ipv4_esp_null_sha256_tun_ipv6(void)
 	ipsec_sa_destroy(sa);
 }
 
+static void test_ipsec_stats_zero_assert(odp_ipsec_stats_t *stats)
+{
+	CU_ASSERT_EQUAL(stats->success, 0);
+	CU_ASSERT_EQUAL(stats->proto_err, 0);
+	CU_ASSERT_EQUAL(stats->auth_err, 0);
+	CU_ASSERT_EQUAL(stats->antireplay_err, 0);
+	CU_ASSERT_EQUAL(stats->alg_err, 0);
+	CU_ASSERT_EQUAL(stats->mtu_err, 0);
+	CU_ASSERT_EQUAL(stats->hard_exp_bytes_err, 0);
+	CU_ASSERT_EQUAL(stats->hard_exp_pkts_err, 0);
+}
+
+static void test_ipsec_stats_test_assert(odp_ipsec_stats_t *stats,
+					 enum ipsec_test_stats test)
+{
+	if (test == IPSEC_TEST_STATS_SUCCESS) {
+		/* Braces needed by CU macro */
+		CU_ASSERT_EQUAL(stats->success, 1);
+	} else {
+		/* Braces needed by CU macro */
+		CU_ASSERT_EQUAL(stats->success, 0);
+	}
+
+	if (test == IPSEC_TEST_STATS_PROTO_ERR) {
+		/* Braces needed by CU macro */
+		CU_ASSERT_EQUAL(stats->proto_err, 1);
+	} else {
+		/* Braces needed by CU macro */
+		CU_ASSERT_EQUAL(stats->proto_err, 0);
+	}
+
+	if (test == IPSEC_TEST_STATS_AUTH_ERR) {
+		/* Braces needed by CU macro */
+		CU_ASSERT_EQUAL(stats->auth_err, 1);
+	} else {
+		/* Braces needed by CU macro */
+		CU_ASSERT_EQUAL(stats->auth_err, 0);
+	}
+
+	CU_ASSERT_EQUAL(stats->antireplay_err, 0);
+	CU_ASSERT_EQUAL(stats->alg_err, 0);
+	CU_ASSERT_EQUAL(stats->mtu_err, 0);
+	CU_ASSERT_EQUAL(stats->hard_exp_bytes_err, 0);
+	CU_ASSERT_EQUAL(stats->hard_exp_pkts_err, 0);
+}
+
 static void test_out_in_common(ipsec_test_flags *flags,
 			       odp_cipher_alg_t cipher,
 			       const odp_crypto_key_t *cipher_key,
@@ -350,8 +396,16 @@ static void test_out_in_common(ipsec_test_flags *flags,
 			       const odp_crypto_key_t *auth_key_extra)
 {
 	odp_ipsec_sa_param_t param;
+	odp_ipsec_stats_t stats;
 	odp_ipsec_sa_t sa_out;
 	odp_ipsec_sa_t sa_in;
+
+	CU_ASSERT_NOT_EQUAL_FATAL(flags, NULL);
+
+	/* ICV won't be generated for NULL AUTH */
+	if ((flags->stats == IPSEC_TEST_STATS_AUTH_ERR) &&
+	    (auth == ODP_AUTH_ALG_NULL))
+		return;
 
 	ipsec_sa_param_fill(&param,
 			    false, flags->ah, 123, NULL,
@@ -392,50 +446,92 @@ static void test_out_in_common(ipsec_test_flags *flags,
 		},
 	};
 
+	test.flags = *flags;
+
+	if (flags->stats == IPSEC_TEST_STATS_PROTO_ERR)
+		test.in[0].status.error.proto = 1;
+	if (flags->stats == IPSEC_TEST_STATS_AUTH_ERR)
+		test.in[0].status.error.auth = 1;
+
+	if (flags->stats != IPSEC_TEST_STATS_NONE) {
+		CU_ASSERT_EQUAL(odp_ipsec_stats(sa_out, &stats), 0);
+		test_ipsec_stats_zero_assert(&stats);
+		CU_ASSERT_EQUAL(odp_ipsec_stats(sa_in, &stats), 0);
+		test_ipsec_stats_zero_assert(&stats);
+	}
+
 	ipsec_check_out_in_one(&test, sa_out, sa_in);
+
+	if (flags->stats == IPSEC_TEST_STATS_SUCCESS) {
+		CU_ASSERT_EQUAL(odp_ipsec_stats(sa_in, &stats), 0);
+		test_ipsec_stats_test_assert(&stats, flags->stats);
+	}
+
+	if (flags->stats != IPSEC_TEST_STATS_NONE) {
+		/* All stats tests have outbound operation success and inbound
+		 * varying.
+		 */
+		CU_ASSERT_EQUAL(odp_ipsec_stats(sa_out, &stats), 0);
+		test_ipsec_stats_test_assert(&stats, IPSEC_TEST_STATS_SUCCESS);
+
+		CU_ASSERT_EQUAL(odp_ipsec_stats(sa_in, &stats), 0);
+		test_ipsec_stats_test_assert(&stats, flags->stats);
+	}
 
 	ipsec_sa_destroy(sa_out);
 	ipsec_sa_destroy(sa_in);
 }
 
 static void test_esp_out_in(struct cipher_param *cipher,
-			    struct auth_param *auth)
+			    struct auth_param *auth,
+			    ipsec_test_flags *flags)
 {
 	int cipher_keylen = cipher->key ? 8 * cipher->key->length : 0;
 	int auth_keylen = auth->key ? 8 * auth->key->length : 0;
-	ipsec_test_flags flags;
 
 	if (ipsec_check_esp(cipher->algo, cipher_keylen,
 			    auth->algo, auth_keylen) != ODP_TEST_ACTIVE)
 		return;
 
-	printf("\n    %s (keylen %d) %s (keylen %d) ",
-	       cipher->name, cipher_keylen, auth->name, auth_keylen);
+	if (flags->display_algo)
+		printf("\n    %s (keylen %d) %s (keylen %d) ",
+		       cipher->name, cipher_keylen, auth->name, auth_keylen);
 
-	memset(&flags, 0, sizeof(flags));
-	flags.ah = false;
-
-	test_out_in_common(&flags, cipher->algo, cipher->key,
+	test_out_in_common(flags, cipher->algo, cipher->key,
 			   auth->algo, auth->key,
 			   cipher->key_extra, auth->key_extra);
+}
+
+static void test_esp_out_in_all(ipsec_test_flags *flags)
+{
+	uint32_t c;
+	uint32_t a;
+
+	flags->ah = false;
+
+	for (c = 0; c < ARRAY_SIZE(ciphers); c++)
+		for (a = 0; a < ARRAY_SIZE(auths); a++)
+			test_esp_out_in(&ciphers[c], &auths[a], flags);
+
+	for (c = 0; c < ARRAY_SIZE(cipher_auth_comb); c++)
+		test_esp_out_in(&cipher_auth_comb[c].cipher,
+				&cipher_auth_comb[c].auth,
+				flags);
 }
 
 /*
  * Test ESP output followed by input with all combinations of ciphers and
  * integrity algorithms.
  */
-static void test_esp_out_in_all(void)
+static void test_esp_out_in_all_basic(void)
 {
-	uint32_t c;
-	uint32_t a;
+	ipsec_test_flags flags;
 
-	for (c = 0; c < ARRAY_SIZE(ciphers); c++)
-		for (a = 0; a < ARRAY_SIZE(auths); a++)
-			test_esp_out_in(&ciphers[c], &auths[a]);
+	memset(&flags, 0, sizeof(flags));
+	flags.display_algo = true;
 
-	for (c = 0; c < ARRAY_SIZE(cipher_auth_comb); c++)
-		test_esp_out_in(&cipher_auth_comb[c].cipher,
-				&cipher_auth_comb[c].auth);
+	test_esp_out_in_all(&flags);
+
 	printf("\n  ");
 }
 
@@ -1141,6 +1237,27 @@ static void ipsec_test_capability(void)
 	CU_ASSERT(odp_ipsec_capability(&capa) == 0);
 }
 
+static void test_ipsec_stats(void)
+{
+	ipsec_test_flags flags;
+
+	memset(&flags, 0, sizeof(flags));
+
+	printf("\n        Stats : success");
+	flags.stats = IPSEC_TEST_STATS_SUCCESS;
+	test_esp_out_in_all(&flags);
+
+	printf("\n        Stats : proto err");
+	flags.stats = IPSEC_TEST_STATS_PROTO_ERR;
+	test_esp_out_in_all(&flags);
+
+	printf("\n        Stats : auth err");
+	flags.stats = IPSEC_TEST_STATS_AUTH_ERR;
+	test_esp_out_in_all(&flags);
+
+	printf("\n  ");
+}
+
 odp_testinfo_t ipsec_out_suite[] = {
 	ODP_TEST_INFO(ipsec_test_capability),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sha256,
@@ -1191,7 +1308,8 @@ odp_testinfo_t ipsec_out_suite[] = {
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_udp_esp_null_sha256,
 				  ipsec_check_esp_null_sha256),
-	ODP_TEST_INFO(test_esp_out_in_all),
+	ODP_TEST_INFO(test_esp_out_in_all_basic),
 	ODP_TEST_INFO(test_ah_out_in_all),
+	ODP_TEST_INFO(test_ipsec_stats),
 	ODP_TEST_INFO_NULL,
 };
