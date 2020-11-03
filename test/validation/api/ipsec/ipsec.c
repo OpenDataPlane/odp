@@ -797,6 +797,35 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 	return num_out;
 }
 
+static void ipsec_pkt_proto_err_set(odp_packet_t pkt)
+{
+	uint32_t l3_off = odp_packet_l3_offset(pkt);
+	odph_ipv4hdr_t ip;
+
+	/* Simulate proto error by corrupting protocol field */
+
+	odp_packet_copy_to_mem(pkt, l3_off, sizeof(ip), &ip);
+
+	if (ip.proto == ODPH_IPPROTO_ESP)
+		ip.proto = ODPH_IPPROTO_AH;
+	else
+		ip.proto = ODPH_IPPROTO_ESP;
+
+	odp_packet_copy_from_mem(pkt, l3_off, sizeof(ip), &ip);
+}
+
+static void ipsec_pkt_auth_err_set(odp_packet_t pkt)
+{
+	uint32_t data, len;
+
+	/* Simulate auth error by corrupting ICV */
+
+	len = odp_packet_len(pkt);
+	odp_packet_copy_to_mem(pkt, len - sizeof(data), sizeof(data), &data);
+	data = ~data;
+	odp_packet_copy_from_mem(pkt, len - sizeof(data), sizeof(data), &data);
+}
+
 void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 {
 	int num_out = part->num_pkt;
@@ -821,6 +850,12 @@ void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 			CU_ASSERT_EQUAL(0, odp_ipsec_result(&result, pkto[i]));
 			CU_ASSERT_EQUAL(part->in[i].status.error.all,
 					result.status.error.all);
+
+			if (part->in[i].status.error.all != 0) {
+				odp_packet_free(pkto[i]);
+				return;
+			}
+
 			if (0 == result.status.error.all)
 				CU_ASSERT_EQUAL(0,
 						odp_packet_has_error(pkto[i]));
@@ -921,6 +956,12 @@ void ipsec_check_out_in_one(const ipsec_test_part *part,
 		}
 		CU_ASSERT_FATAL(odp_packet_len(pkto[i]) <=
 				sizeof(pkt_in.data));
+
+		if (part->flags.stats == IPSEC_TEST_STATS_PROTO_ERR)
+			ipsec_pkt_proto_err_set(pkto[i]);
+
+		if (part->flags.stats == IPSEC_TEST_STATS_AUTH_ERR)
+			ipsec_pkt_auth_err_set(pkto[i]);
 
 		pkt_in.len = odp_packet_len(pkto[i]);
 		pkt_in.l2_offset = odp_packet_l2_offset(pkto[i]);
@@ -1085,6 +1126,7 @@ int ipsec_config(odp_instance_t ODP_UNUSED inst)
 	ipsec_config.inbound.default_queue = suite_context.queue;
 	ipsec_config.inbound.parse_level = ODP_PROTO_LAYER_ALL;
 	ipsec_config.inbound.chksums.all_chksum = ~0;
+	ipsec_config.stats_en = true;
 
 	if (ODP_IPSEC_OK != odp_ipsec_config(&ipsec_config))
 		return -1;
