@@ -1,5 +1,6 @@
 /* Copyright (c) 2017-2018, Linaro Limited
  * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2020, Marvell
  * All rights reserved.
  *
  * SPDX-License-Identifier:	 BSD-3-Clause
@@ -332,12 +333,6 @@ int ipsec_check_esp_aes_gcm_128(void)
 				ODP_AUTH_ALG_AES_GCM, 0);
 }
 
-int ipsec_check_esp_aes_gcm_192(void)
-{
-	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_GCM, 192,
-				ODP_AUTH_ALG_AES_GCM, 0);
-}
-
 int ipsec_check_esp_aes_gcm_256(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_GCM, 256,
@@ -378,24 +373,6 @@ int ipsec_check_esp_null_aes_gmac_256(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
 				ODP_AUTH_ALG_AES_GMAC, 256);
-}
-
-int ipsec_check_esp_aes_ccm_128(void)
-{
-	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_CCM, 128,
-				ODP_AUTH_ALG_AES_CCM, 0);
-}
-
-int ipsec_check_esp_aes_ccm_192(void)
-{
-	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_CCM, 192,
-				ODP_AUTH_ALG_AES_CCM, 0);
-}
-
-int ipsec_check_esp_aes_ccm_256(void)
-{
-	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_CCM, 256,
-				ODP_AUTH_ALG_AES_CCM, 0);
 }
 
 int ipsec_check_esp_chacha20_poly1305(void)

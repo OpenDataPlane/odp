@@ -1,4 +1,5 @@
 /* Copyright (c) 2017-2018, Linaro Limited
+ * Copyright (c) 2020, Marvell
  * Copyright (c) 2020, Nokia
  * All rights reserved.
  *
@@ -53,6 +54,54 @@ static struct auth_param auths[] = {
 	ALG(ODP_AUTH_ALG_SHA384_HMAC, &key_5a_384, NULL),
 	ALG(ODP_AUTH_ALG_SHA512_HMAC, &key_5a_512, NULL),
 	ALG(ODP_AUTH_ALG_AES_XCBC_MAC, &key_5a_128, NULL)
+};
+
+struct cipher_auth_comb_param {
+	struct cipher_param cipher;
+	struct auth_param auth;
+};
+
+static struct cipher_auth_comb_param cipher_auth_comb[] = {
+	{
+		ALG(ODP_CIPHER_ALG_AES_GCM, &key_a5_128, &key_mcgrew_gcm_salt_2),
+		ALG(ODP_AUTH_ALG_AES_GCM, NULL, NULL),
+	},
+	{
+		ALG(ODP_CIPHER_ALG_AES_GCM, &key_a5_192, &key_mcgrew_gcm_salt_2),
+		ALG(ODP_AUTH_ALG_AES_GCM, NULL, NULL),
+	},
+	{
+		ALG(ODP_CIPHER_ALG_AES_GCM, &key_a5_256, &key_mcgrew_gcm_salt_2),
+		ALG(ODP_AUTH_ALG_AES_GCM, NULL, NULL),
+	},
+	{
+		ALG(ODP_CIPHER_ALG_NULL, NULL, NULL),
+		ALG(ODP_AUTH_ALG_AES_GMAC, &key_a5_128, &key_mcgrew_gcm_salt_2),
+	},
+	{
+		ALG(ODP_CIPHER_ALG_NULL, NULL, NULL),
+		ALG(ODP_AUTH_ALG_AES_GMAC, &key_a5_192, &key_mcgrew_gcm_salt_2),
+	},
+	{
+		ALG(ODP_CIPHER_ALG_NULL, NULL, NULL),
+		ALG(ODP_AUTH_ALG_AES_GMAC, &key_a5_256, &key_mcgrew_gcm_salt_2),
+	},
+	{
+		ALG(ODP_CIPHER_ALG_AES_CCM, &key_a5_128, &key_3byte_salt),
+		ALG(ODP_AUTH_ALG_AES_CCM, NULL, NULL),
+	},
+	{
+		ALG(ODP_CIPHER_ALG_AES_CCM, &key_a5_192, &key_3byte_salt),
+		ALG(ODP_AUTH_ALG_AES_CCM, NULL, NULL),
+	},
+	{
+		ALG(ODP_CIPHER_ALG_AES_CCM, &key_a5_256, &key_3byte_salt),
+		ALG(ODP_AUTH_ALG_AES_CCM, NULL, NULL),
+	},
+	{
+		ALG(ODP_CIPHER_ALG_CHACHA20_POLY1305, &key_rfc7634, &key_rfc7634_salt),
+		ALG(ODP_AUTH_ALG_CHACHA20_POLY1305, NULL, NULL),
+	},
 };
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
@@ -362,10 +411,8 @@ static void test_esp_out_in(struct cipher_param *cipher,
 }
 
 /*
- * Test ESP output followed by input with all combinations of normal
- * mode (not combined mode) ciphers and integrity algorithms.
- *
- * Combined mode algorithms are tested one-by-one in their own test cases.
+ * Test ESP output followed by input with all combinations of ciphers and
+ * integrity algorithms.
  */
 static void test_esp_out_in_all(void)
 {
@@ -375,6 +422,10 @@ static void test_esp_out_in_all(void)
 	for (c = 0; c < ARRAY_SIZE(ciphers); c++)
 		for (a = 0; a < ARRAY_SIZE(auths); a++)
 			test_esp_out_in(&ciphers[c], &auths[a]);
+
+	for (c = 0; c < ARRAY_SIZE(cipher_auth_comb); c++)
+		test_esp_out_in(&cipher_auth_comb[c].cipher,
+				&cipher_auth_comb[c].auth);
 	printf("\n  ");
 }
 
@@ -433,30 +484,6 @@ static void test_out_ipv4_esp_udp_null_sha256(void)
 	ipsec_sa_destroy(sa);
 }
 
-static void test_out_ipv4_esp_aes_gcm128(void)
-{
-	test_out_in_common(false,
-			   ODP_CIPHER_ALG_AES_GCM, &key_a5_128,
-			   ODP_AUTH_ALG_AES_GCM, NULL,
-			   &key_mcgrew_gcm_salt_2, NULL);
-}
-
-static void test_out_ipv4_esp_aes_gcm192(void)
-{
-	test_out_in_common(false,
-			   ODP_CIPHER_ALG_AES_GCM, &key_a5_192,
-			   ODP_AUTH_ALG_AES_GCM, NULL,
-			   &key_mcgrew_gcm_salt_2, NULL);
-}
-
-static void test_out_ipv4_esp_aes_gcm256(void)
-{
-	test_out_in_common(false,
-			   ODP_CIPHER_ALG_AES_GCM, &key_a5_256,
-			   ODP_AUTH_ALG_AES_GCM, NULL,
-			   &key_mcgrew_gcm_salt_2, NULL);
-}
-
 static void test_out_ipv4_ah_aes_gmac_128(void)
 {
 	test_out_in_common(true,
@@ -479,62 +506,6 @@ static void test_out_ipv4_ah_aes_gmac_256(void)
 			   ODP_CIPHER_ALG_NULL, NULL,
 			   ODP_AUTH_ALG_AES_GMAC, &key_a5_256,
 			   NULL, &key_mcgrew_gcm_salt_2);
-}
-
-static void test_out_ipv4_esp_null_aes_gmac_128(void)
-{
-	test_out_in_common(false,
-			   ODP_CIPHER_ALG_NULL, NULL,
-			   ODP_AUTH_ALG_AES_GMAC, &key_a5_128,
-			   NULL, &key_mcgrew_gcm_salt_2);
-}
-
-static void test_out_ipv4_esp_null_aes_gmac_192(void)
-{
-	test_out_in_common(false,
-			   ODP_CIPHER_ALG_NULL, NULL,
-			   ODP_AUTH_ALG_AES_GMAC, &key_a5_192,
-			   NULL, &key_mcgrew_gcm_salt_2);
-}
-
-static void test_out_ipv4_esp_null_aes_gmac_256(void)
-{
-	test_out_in_common(false,
-			   ODP_CIPHER_ALG_NULL, NULL,
-			   ODP_AUTH_ALG_AES_GMAC, &key_a5_256,
-			   NULL, &key_mcgrew_gcm_salt_2);
-}
-
-static void test_out_ipv4_esp_aes_ccm128(void)
-{
-	test_out_in_common(false,
-			   ODP_CIPHER_ALG_AES_CCM, &key_a5_128,
-			   ODP_AUTH_ALG_AES_CCM, NULL,
-			   &key_3byte_salt, NULL);
-}
-
-static void test_out_ipv4_esp_aes_ccm192(void)
-{
-	test_out_in_common(false,
-			   ODP_CIPHER_ALG_AES_CCM, &key_a5_192,
-			   ODP_AUTH_ALG_AES_CCM, NULL,
-			   &key_3byte_salt, NULL);
-}
-
-static void test_out_ipv4_esp_aes_ccm256(void)
-{
-	test_out_in_common(false,
-			   ODP_CIPHER_ALG_AES_CCM, &key_a5_256,
-			   ODP_AUTH_ALG_AES_CCM, NULL,
-			   &key_3byte_salt, NULL);
-}
-
-static void test_out_ipv4_esp_chacha20_poly1305(void)
-{
-	test_out_in_common(false,
-			   ODP_CIPHER_ALG_CHACHA20_POLY1305, &key_rfc7634,
-			   ODP_AUTH_ALG_CHACHA20_POLY1305, NULL,
-			   &key_rfc7634_salt, NULL);
 }
 
 static void test_out_ipv4_ah_sha256_frag_check(void)
@@ -1161,32 +1132,12 @@ odp_testinfo_t ipsec_out_suite[] = {
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_udp_null_sha256,
 				  ipsec_check_esp_null_sha256),
-	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_aes_gcm128,
-				  ipsec_check_esp_aes_gcm_128),
-	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_aes_gcm192,
-				  ipsec_check_esp_aes_gcm_192),
-	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_aes_gcm256,
-				  ipsec_check_esp_aes_gcm_256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_aes_gmac_128,
 				  ipsec_check_ah_aes_gmac_128),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_aes_gmac_192,
 				  ipsec_check_ah_aes_gmac_192),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_aes_gmac_256,
 				  ipsec_check_ah_aes_gmac_256),
-	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_aes_gmac_128,
-				  ipsec_check_esp_null_aes_gmac_128),
-	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_aes_gmac_192,
-				  ipsec_check_esp_null_aes_gmac_192),
-	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_null_aes_gmac_256,
-				  ipsec_check_esp_null_aes_gmac_256),
-	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_aes_ccm128,
-				  ipsec_check_esp_aes_ccm_128),
-	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_aes_ccm192,
-				  ipsec_check_esp_aes_ccm_192),
-	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_aes_ccm256,
-				  ipsec_check_esp_aes_ccm_256),
-	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_chacha20_poly1305,
-				  ipsec_check_esp_chacha20_poly1305),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sha256_frag_check,
 				  ipsec_check_ah_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sha256_frag_check_2,
