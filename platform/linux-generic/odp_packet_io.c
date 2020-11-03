@@ -1726,6 +1726,13 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 		ret = single_capability(capa);
 
 	if (ret == 0) {
+		uint32_t mtu = pktio_mtu(pktio);
+
+		if (mtu == 0) {
+			ODP_DBG("MTU query failed: %s\n", entry->s.name);
+			return -1;
+		}
+
 		/* The same parser is used for all pktios */
 		capa->config.parser.layer = ODP_PROTO_LAYER_ALL;
 		/* Header skip is not supported */
@@ -1734,6 +1741,17 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 		 * we can report that it is supported.
 		 */
 		capa->config.pktout.bit.no_packet_refs = 1;
+
+		/* LSO implementation is common to all pktios */
+		capa->lso.max_profiles           = PKTIO_LSO_PROFILES;
+		capa->lso.max_profiles_per_pktio = PKTIO_LSO_PROFILES;
+		capa->lso.max_packet_segments    = PKT_MAX_SEGS;
+		capa->lso.max_segments           = PKTIO_LSO_MAX_SEGMENTS;
+		capa->lso.max_payload_len        = mtu - PKTIO_LSO_MAX_PAYLOAD_OFFSET;
+		capa->lso.max_payload_offset     = PKTIO_LSO_MAX_PAYLOAD_OFFSET;
+		capa->lso.max_num_custom         = ODP_LSO_MAX_CUSTOM;
+		capa->lso.proto.custom           = 1;
+		capa->lso.mod_op.add_segment_num = 1;
 	}
 
 	/* Packet vector generation is common for all pktio types */
@@ -2471,4 +2489,353 @@ int odp_pktout_ts_read(odp_pktio_t hdl, odp_time_t *ts)
 
 	ts->u64 = ts_val;
 	return 0;
+}
+
+void odp_lso_profile_param_init(odp_lso_profile_param_t *param)
+{
+	memset(param, 0, sizeof(odp_lso_profile_param_t));
+
+	param->lso_proto = ODP_LSO_PROTO_NONE;
+}
+
+odp_lso_profile_t odp_lso_profile_create(odp_pktio_t pktio, const odp_lso_profile_param_t *param)
+{
+	uint32_t i, num_custom, mod_op, offset, size;
+	lso_profile_t *lso_prof = NULL;
+	(void)pktio;
+
+	/* Currently only custom implemented */
+	if (param->lso_proto != ODP_LSO_PROTO_CUSTOM) {
+		ODP_ERR("Protocol not supported\n");
+		return ODP_LSO_PROFILE_INVALID;
+	}
+
+	num_custom = param->custom.num_custom;
+	if (num_custom > ODP_LSO_MAX_CUSTOM) {
+		ODP_ERR("Too many custom fields\n");
+		return ODP_LSO_PROFILE_INVALID;
+	}
+
+	for (i = 0; i < num_custom; i++) {
+		mod_op = param->custom.field[i].mod_op;
+		offset = param->custom.field[i].offset;
+		size   = param->custom.field[i].size;
+
+		if (offset > PKTIO_LSO_MAX_PAYLOAD_OFFSET) {
+			ODP_ERR("Too large custom field offset %u\n", offset);
+			return ODP_LSO_PROFILE_INVALID;
+		}
+
+		/* Currently only segment number supported */
+		if (mod_op != ODP_LSO_ADD_SEGMENT_NUM) {
+			ODP_ERR("Custom modify operation %u not supported\n", mod_op);
+			return ODP_LSO_PROFILE_INVALID;
+		}
+
+		if (size != 1 && size != 2 && size != 4 && size != 8) {
+			ODP_ERR("Bad custom field size %u\n", size);
+			return ODP_LSO_PROFILE_INVALID;
+		}
+	}
+
+	odp_spinlock_lock(&pktio_global->lock);
+
+	if (pktio_global->num_lso_profiles >= PKTIO_LSO_PROFILES) {
+		odp_spinlock_unlock(&pktio_global->lock);
+		ODP_ERR("All LSO profiles used already: %u\n", PKTIO_LSO_PROFILES);
+		return ODP_LSO_PROFILE_INVALID;
+	}
+
+	for (i = 0; i < PKTIO_LSO_PROFILES; i++) {
+		if (pktio_global->lso_profile[i].used == 0) {
+			lso_prof = &pktio_global->lso_profile[i];
+			lso_prof->used = 1;
+			pktio_global->num_lso_profiles++;
+			break;
+		}
+	}
+
+	odp_spinlock_unlock(&pktio_global->lock);
+
+	if (lso_prof == NULL) {
+		ODP_ERR("Did not find free LSO profile\n");
+		return ODP_LSO_PROFILE_INVALID;
+	}
+
+	lso_prof->param = *param;
+	lso_prof->index = i;
+
+	return (odp_lso_profile_t)(uintptr_t)lso_prof;
+}
+
+static inline odp_lso_profile_t lso_profile_from_idx(uint8_t idx)
+{
+	return (odp_lso_profile_t)(uintptr_t)&pktio_global->lso_profile[idx];
+}
+
+static inline lso_profile_t *lso_profile_ptr(odp_lso_profile_t handle)
+{
+	return (lso_profile_t *)(uintptr_t)handle;
+}
+
+int odp_lso_profile_destroy(odp_lso_profile_t lso_profile)
+{
+	lso_profile_t *lso_prof = lso_profile_ptr(lso_profile);
+
+	if (lso_profile == ODP_LSO_PROFILE_INVALID || lso_prof->used == 0) {
+		ODP_ERR("Bad handle\n");
+		return -1;
+	}
+
+	odp_spinlock_lock(&pktio_global->lock);
+	lso_prof->used = 0;
+	pktio_global->num_lso_profiles--;
+	odp_spinlock_unlock(&pktio_global->lock);
+
+	return 0;
+}
+
+int odp_packet_lso_request(odp_packet_t pkt, const odp_packet_lso_opt_t *lso_opt)
+{
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+	lso_profile_t *lso_prof = lso_profile_ptr(lso_opt->lso_profile);
+	uint32_t payload_offset = lso_opt->payload_offset;
+
+	if (odp_unlikely(lso_opt->lso_profile == ODP_LSO_PROFILE_INVALID || lso_prof->used == 0)) {
+		ODP_ERR("Bad LSO profile handle\n");
+		return -1;
+	}
+
+	if (odp_unlikely(payload_offset > PKTIO_LSO_MAX_PAYLOAD_OFFSET)) {
+		ODP_ERR("Too large LSO payload offset\n");
+		return -1;
+	}
+
+	if (odp_unlikely((payload_offset + lso_opt->max_payload_len) > pkt_hdr->frame_len)) {
+		ODP_ERR("LSO options larger than packet data length\n");
+		return -1;
+	}
+
+	pkt_hdr->p.flags.lso     = 1;
+	pkt_hdr->lso_max_payload = lso_opt->max_payload_len;
+	pkt_hdr->lso_profile_idx = lso_prof->index;
+	odp_packet_payload_offset_set(pkt, payload_offset);
+
+	return 0;
+}
+
+static int lso_update_custom(lso_profile_t *lso_prof, odp_packet_t pkt, int segnum)
+{
+	void *ptr;
+	int i, mod_op;
+	uint32_t offset;
+	uint8_t size;
+	int num_custom = lso_prof->param.custom.num_custom;
+	uint64_t u64 = 0;
+	uint32_t u32 = 0;
+	uint16_t u16 = 0;
+	uint8_t  u8 = 0;
+
+	for (i = 0; i < num_custom; i++) {
+		mod_op = lso_prof->param.custom.field[i].mod_op;
+		offset = lso_prof->param.custom.field[i].offset;
+		size   = lso_prof->param.custom.field[i].size;
+
+		if (size == 8)
+			ptr = &u64;
+		else if (size == 4)
+			ptr = &u32;
+		else if (size == 2)
+			ptr = &u16;
+		else
+			ptr = &u8;
+
+		if (odp_packet_copy_to_mem(pkt, offset, size, ptr)) {
+			ODP_ERR("Read from packet failed at offset %u\n", offset);
+			return -1;
+		}
+
+		if (mod_op == ODP_LSO_ADD_SEGMENT_NUM) {
+			if (size == 8)
+				u64 = odp_cpu_to_be_64(segnum + odp_be_to_cpu_64(u64));
+			else if (size == 4)
+				u32 = odp_cpu_to_be_32(segnum + odp_be_to_cpu_32(u32));
+			else if (size == 2)
+				u16 = odp_cpu_to_be_16(segnum + odp_be_to_cpu_16(u16));
+			else
+				u8 += segnum;
+		}
+
+		if (odp_packet_copy_from_mem(pkt, offset, size, ptr)) {
+			ODP_ERR("Write to packet failed at offset %u\n", offset);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+static int pktout_send_lso(odp_pktout_queue_t queue, odp_packet_t packet,
+			   const odp_packet_lso_opt_t *lso_opt)
+{
+	odp_pool_t pool;
+	odp_packet_t pkt;
+	int i, ret, num, num_pkt, num_full;
+	uint32_t hdr_len, pkt_len, pkt_payload, payload_len, left_over_len, offset;
+	int left_over = 0;
+	int num_free = 0;
+	int first_free = 0;
+	odp_lso_profile_t lso_profile = lso_opt->lso_profile;
+	lso_profile_t *lso_prof = lso_profile_ptr(lso_profile);
+	int num_custom = lso_prof->param.custom.num_custom;
+
+	payload_len = lso_opt->max_payload_len;
+	hdr_len     = lso_opt->payload_offset;
+	pkt_len     = odp_packet_len(packet);
+	pkt_payload = pkt_len - hdr_len;
+
+	if (odp_unlikely(hdr_len > PKTIO_LSO_MAX_PAYLOAD_OFFSET)) {
+		ODP_ERR("Too large LSO payload offset\n");
+		return -1;
+	}
+
+	if (odp_unlikely((hdr_len + payload_len) > pkt_len)) {
+		ODP_ERR("LSO options larger than packet data length\n");
+		return -1;
+	}
+
+	pool = odp_packet_pool(packet);
+	pkt_len = hdr_len + payload_len;
+	num_pkt = pkt_payload / payload_len;
+	num_full = num_pkt;
+	left_over_len = pkt_payload - (num_pkt * payload_len);
+	if (left_over_len) {
+		left_over = 1;
+		num_pkt++;
+	}
+
+	/* Alloc packets */
+	odp_packet_t pkt_out[num_pkt];
+
+	num = odp_packet_alloc_multi(pool, pkt_len, pkt_out, num_full);
+	if (odp_unlikely(num < num_full)) {
+		ODP_DBG("Alloc failed %i\n", num);
+		if (num > 0) {
+			num_free = num;
+			goto error;
+		}
+	}
+
+	if (left_over) {
+		pkt = odp_packet_alloc(pool, hdr_len + left_over_len);
+		if (pkt == ODP_PACKET_INVALID) {
+			ODP_DBG("Alloc failed\n");
+			num_free = num_full;
+			goto error;
+		}
+
+		pkt_out[num_pkt - 1] = pkt;
+	}
+
+	/* Copy headers */
+	for (i = 0; i < num_pkt; i++) {
+		if (odp_packet_copy_from_pkt(pkt_out[i], 0, packet, 0, hdr_len)) {
+			ODP_ERR("Header copy failed\n");
+			num_free = num_pkt;
+			goto error;
+		}
+	}
+
+	/* Copy payload */
+	for (i = 0; i < num_full; i++) {
+		offset = hdr_len + (i * payload_len);
+		if (odp_packet_copy_from_pkt(pkt_out[i], hdr_len, packet, offset, payload_len)) {
+			ODP_ERR("Payload copy failed\n");
+			num_free = num_pkt;
+			goto error;
+		}
+	}
+
+	if (left_over) {
+		offset = hdr_len + (num_full * payload_len);
+		if (odp_packet_copy_from_pkt(pkt_out[num_pkt - 1], hdr_len, packet, offset,
+					     left_over_len)){
+			ODP_ERR("Payload copy failed\n");
+			num_free = num_pkt;
+			goto error;
+		}
+	}
+
+	/* Update custom fields */
+	for (i = 0; num_custom && i < num_pkt; i++) {
+		if (lso_update_custom(lso_prof, pkt_out[i], i)) {
+			ODP_ERR("Custom field update failed. Segment %i\n", i);
+			num_free = num_pkt;
+			goto error;
+		}
+	}
+
+	ret = odp_pktout_send(queue, pkt_out, num_pkt);
+
+	if (ret < num_pkt) {
+		ODP_DBG("Packet send failed %i\n", ret);
+		num_free = num_pkt;
+		if (ret > 0) {
+			first_free = ret;
+			num_free = num_pkt - ret;
+		}
+	}
+
+	odp_packet_free(packet);
+
+	return 0;
+
+error:
+	odp_packet_free_multi(&pkt_out[first_free], num_free);
+	return -1;
+}
+
+int odp_pktout_send_lso(odp_pktout_queue_t queue, const odp_packet_t packet[], int num,
+			const odp_packet_lso_opt_t *opt)
+{
+	int i;
+	odp_packet_t pkt;
+	odp_packet_lso_opt_t lso_opt;
+	const odp_packet_lso_opt_t *opt_ptr = &lso_opt;
+
+	if (odp_unlikely(num <= 0)) {
+		ODP_ERR("No packets\n");
+		return -1;
+	}
+
+	memset(&lso_opt, 0, sizeof(odp_packet_lso_opt_t));
+	if (opt)
+		opt_ptr = opt;
+
+	for (i = 0; i < num; i++) {
+		pkt = packet[i];
+
+		if (opt == NULL) {
+			odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+			if (pkt_hdr->p.flags.lso == 0) {
+				ODP_ERR("No LSO options on packet %i\n", i);
+				if (i == 0)
+					return -1;
+
+				return i;
+			}
+
+			lso_opt.lso_profile     = lso_profile_from_idx(pkt_hdr->lso_profile_idx);
+			lso_opt.payload_offset  = odp_packet_payload_offset(pkt);
+			lso_opt.max_payload_len = pkt_hdr->lso_max_payload;
+		}
+
+		if (odp_unlikely(pktout_send_lso(queue, pkt, opt_ptr))) {
+			ODP_DBG("LSO output failed on packet %i\n", i);
+			return i;
+		}
+	}
+
+	return i;
 }

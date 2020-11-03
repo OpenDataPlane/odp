@@ -38,6 +38,10 @@ extern "C" {
 #include <sys/select.h>
 
 #define PKTIO_MAX_QUEUES 64
+#define PKTIO_LSO_PROFILES 16
+#define PKTIO_LSO_MAX_PAYLOAD_OFFSET 128
+#define PKTIO_LSO_MAX_SEGMENTS 8
+ODP_STATIC_ASSERT(PKTIO_LSO_PROFILES < UINT8_MAX, "PKTIO_LSO_PROFILES_ERROR");
 
 #define PKTIO_NAME_LEN 256
 
@@ -150,6 +154,13 @@ typedef union {
 	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct pktio_entry))];
 } pktio_entry_t;
 
+typedef struct {
+	odp_lso_profile_param_t param;
+	int used;
+	uint8_t index;
+
+} lso_profile_t;
+
 /* Global variables */
 typedef struct {
 	odp_spinlock_t lock;
@@ -161,6 +172,9 @@ typedef struct {
 	} config;
 
 	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
+
+	lso_profile_t lso_profile[PKTIO_LSO_PROFILES];
+	int num_lso_profiles;
 
 } pktio_global_t;
 
