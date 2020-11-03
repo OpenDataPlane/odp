@@ -37,12 +37,16 @@ typedef union odp_cls_testcase {
 extern odp_testinfo_t classification_suite[];
 extern odp_testinfo_t classification_suite_basic[];
 extern odp_testinfo_t classification_suite_pmr[];
+extern odp_testinfo_t classification_suite_pktv[];
 
 int classification_suite_init(void);
 int classification_suite_term(void);
 
 int classification_suite_pmr_term(void);
 int classification_suite_pmr_init(void);
+
+int classification_suite_pktv_init(void);
+int classification_suite_pktv_term(void);
 
 odp_packet_t create_packet(cls_packet_info_t pkt_info);
 int cls_pkt_set_seq(odp_packet_t pkt);
@@ -53,21 +57,22 @@ void configure_default_cos(odp_pktio_t pktio, odp_cos_t *cos,
 			   odp_queue_t *queue, odp_pool_t *pool);
 int parse_ipv4_string(const char *ipaddress, uint32_t *addr, uint32_t *mask);
 void enqueue_pktio_interface(odp_packet_t pkt, odp_pktio_t pktio);
-odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns);
+odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns, odp_bool_t enable_pktv);
 odp_pool_t pool_create(const char *poolname);
+odp_pool_t pktv_pool_create(const char *poolname);
 odp_queue_t queue_create(const char *queuename, bool sched);
-void configure_pktio_default_cos(void);
-void test_pktio_default_cos(void);
-void configure_pktio_error_cos(void);
-void test_pktio_error_cos(void);
-void configure_cls_pmr_chain(void);
-void test_cls_pmr_chain(void);
-void configure_cos_with_l2_priority(void);
-void test_cos_with_l2_priority(void);
-void configure_pmr_cos(void);
-void test_pmr_cos(void);
-void configure_pktio_pmr_composite(void);
-void test_pktio_pmr_composite_cos(void);
+void configure_pktio_default_cos(odp_bool_t enable_pktv);
+void test_pktio_default_cos(odp_bool_t enable_pktv);
+void configure_pktio_error_cos(odp_bool_t enable_pktv);
+void test_pktio_error_cos(odp_bool_t enable_pktv);
+void configure_cls_pmr_chain(odp_bool_t enable_pktv);
+void test_cls_pmr_chain(odp_bool_t enable_pktv);
+void configure_cos_with_l2_priority(odp_bool_t enable_pktv);
+void test_cos_with_l2_priority(odp_bool_t enable_pktv);
+void configure_pmr_cos(odp_bool_t enable_pktv);
+void test_pmr_cos(odp_bool_t enable_pktv);
+void configure_pktio_pmr_composite(odp_bool_t enable_pktv);
+void test_pktio_pmr_composite_cos(odp_bool_t enable_pktv);
 int stop_pktio(odp_pktio_t pktio);
 odp_cls_pmr_term_t find_first_supported_l3_pmr(void);
 int set_first_supported_pmr_port(odp_packet_t pkt, uint16_t port);

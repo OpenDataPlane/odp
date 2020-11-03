@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -190,13 +191,38 @@ void enqueue_pktio_interface(odp_packet_t pkt, odp_pktio_t pktio)
 	CU_ASSERT(odp_pktout_send(pktout, &pkt, 1) == 1);
 }
 
-odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns)
+odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns, odp_bool_t enable_pktv)
 {
 	odp_event_t ev;
 	uint64_t wait = odp_schedule_wait_time(ns);
 
 	ev = odp_schedule(queue, wait);
-	return odp_packet_from_event(ev);
+	if (ev == ODP_EVENT_INVALID)
+		return ODP_PACKET_INVALID;
+
+	if (!enable_pktv && odp_event_type(ev) == ODP_EVENT_PACKET) {
+		return odp_packet_from_event(ev);
+	} else if (enable_pktv && odp_event_type(ev) == ODP_EVENT_PACKET_VECTOR) {
+		odp_packet_vector_t pktv;
+		odp_packet_t *pkt_tbl;
+		odp_packet_t pkt;
+		uint32_t pktv_len;
+
+		pktv = odp_packet_vector_from_event(ev);
+		pktv_len = odp_packet_vector_tbl(pktv, &pkt_tbl);
+
+		CU_ASSERT_FATAL(pktv_len > 0);
+
+		pkt = pkt_tbl[0];
+		if (pktv_len > 1)
+			odp_packet_free_multi(&pkt_tbl[1], pktv_len - 1);
+		odp_packet_vector_free(pktv);
+		return pkt;
+	}
+
+	odp_event_free(ev);
+	return ODP_PACKET_INVALID;
+
 }
 
 odp_queue_t queue_create(const char *queuename, bool sched)
@@ -228,6 +254,35 @@ odp_pool_t pool_create(const char *poolname)
 	param.pkt.len     = SHM_PKT_BUF_SIZE;
 	param.pkt.num     = SHM_PKT_NUM_BUFS;
 	param.type        = ODP_POOL_PACKET;
+
+	return odp_pool_create(poolname, &param);
+}
+
+odp_pool_t pktv_pool_create(const char *poolname)
+{
+	odp_pool_capability_t capa;
+	odp_pool_param_t param;
+
+	if (odp_pool_capability(&capa)) {
+		ODPH_ERR("Pool capability failed\n");
+		return ODP_POOL_INVALID;
+	}
+
+	if (capa.vector.max_pools == 0) {
+		ODPH_ERR("No packet vector pools available\n");
+		return ODP_POOL_INVALID;
+	}
+
+	if (capa.vector.max_num && capa.vector.max_num < SHM_PKT_NUM_BUFS) {
+		ODPH_ERR("Unable to create large enough (%d) packet vector pool\n",
+			 SHM_PKT_NUM_BUFS);
+		return ODP_POOL_INVALID;
+	}
+
+	odp_pool_param_init(&param);
+	param.type = ODP_POOL_VECTOR;
+	param.vector.num = SHM_PKT_NUM_BUFS;
+	param.vector.max_size = capa.vector.max_size;
 
 	return odp_pool_create(poolname, &param);
 }

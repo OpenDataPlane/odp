@@ -23,6 +23,11 @@ odp_suiteinfo_t classification_suites[] = {
 	  .init_func    = classification_suite_init,
 	  .term_func    = classification_suite_term,
 	},
+	{ .name         = "classification packet vector tests",
+	  .testinfo_tbl = classification_suite_pktv,
+	  .init_func    = classification_suite_pktv_init,
+	  .term_func    = classification_suite_pktv_term,
+	},
 	ODP_SUITE_INFO_NULL,
 };
 
