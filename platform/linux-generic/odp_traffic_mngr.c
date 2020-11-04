@@ -3038,6 +3038,22 @@ int odp_tm_capability(odp_tm_t odp_tm, odp_tm_capabilities_t *capabilities)
 	return 0;
 }
 
+int odp_tm_start(odp_tm_t odp_tm)
+{
+	(void)odp_tm;
+
+	/* Nothing more to do after TM create */
+	return 0;
+}
+
+int odp_tm_stop(odp_tm_t odp_tm)
+{
+	(void)odp_tm;
+
+	/* Nothing more to do for topology changes */
+	return 0;
+}
+
 int odp_tm_destroy(odp_tm_t odp_tm)
 {
 	tm_system_t *tm_system;
