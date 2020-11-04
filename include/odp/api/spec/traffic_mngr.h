@@ -625,6 +625,34 @@ odp_tm_t odp_tm_find(const char            *name,
  */
 int odp_tm_capability(odp_tm_t odp_tm, odp_tm_capabilities_t *capabilities);
 
+/** Start a TM system.
+ *
+ * odp_tm_start() needs to be used to start an already created / found TM system
+ * and in stopped state. By default platforms can choose to be already in
+ * started state with immediately after created. Calling this function
+ * on an already started TM system will be ignored.
+ *
+ * @param odp_tm  The odp_tm_t value of the TM system to be started.
+ * @return        0 upon success, < 0 upon failure.
+ */
+int odp_tm_start(odp_tm_t odp_tm);
+
+/** Stop a TM system.
+ *
+ * odp_tm_stop() can to be used to stop a TM system that is already started.
+ * Stopping a TM system will cause a TM system to stop / pause processing
+ * packets. This can be used to idle a TM system. Applications cannot call
+ * tm enqueue on a TM system which is in stopped state.
+ *
+ * Stopping a TM system is necessary in scenarios where a platform does not
+ * support dynamic topology, shaper or sched profile update while TM system is
+ * active. In such cases updates can be done after stopping TM system.
+ *
+ * @param odp_tm  The odp_tm_t value of the TM system to be stopped.
+ * @return        0 upon success, < 0 upon failure.
+ */
+int odp_tm_stop(odp_tm_t odp_tm);
+
 /** Destroy a TM system.
  *
  * odp_tm_destroy() may be used to destroy TM systems created via
