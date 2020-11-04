@@ -605,6 +605,42 @@ odp_tm_t odp_tm_find(const char            *name,
  */
 int odp_tm_capability(odp_tm_t odp_tm, odp_tm_capabilities_t *capabilities);
 
+/**
+ * Start a TM system
+ *
+ * odp_tm_start() needs to be used to start an already created or found TM
+ * system. By default, all the TM systems are in stopped state.
+ *
+ * @param tm  TM system to be started
+ *
+ * @retval 0  on success
+ * @retval <0 on failure
+ */
+int odp_tm_start(odp_tm_t tm);
+
+/**
+ * Stop a TM system
+ *
+ * odp_tm_stop() can to used to stop a TM system that is already started for the
+ * purpose of reconfiguration that cannot be done dynamically.
+ *
+ * When TM is in the stopped state,
+ * - New packets must not be sent to the TM either directly by TM API or indirectly
+ *   via IPsec outbound inline API. New packets can only be enqueued after
+ *   starting the TM system using odp_tm_start().
+ * - Packets already inflight inside TM or IPSec for transmit may get silently dropped
+ *   or may get transmitted with unspecified TM treatment.
+ *
+ * A following call to odp_tm_start() restarts TM system and its scheduling/shaping
+ * on existing and new packets.
+ *
+ * @param tm  TM system to be stopped
+ *
+ * @retval 0  on success
+ * @retval <0 on failure
+ */
+int odp_tm_stop(odp_tm_t tm);
+
 /** Destroy a TM system.
  *
  * odp_tm_destroy() may be used to destroy TM systems created via
