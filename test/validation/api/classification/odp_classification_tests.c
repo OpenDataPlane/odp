@@ -49,7 +49,7 @@ static int classification_suite_common_init(odp_bool_t enable_pktv)
 
 	pool_default = pool_create("classification_pool");
 	if (ODP_POOL_INVALID == pool_default) {
-		fprintf(stderr, "Packet pool creation failed.\n");
+		ODPH_ERR("Packet pool creation failed\n");
 		return -1;
 	}
 
@@ -60,7 +60,7 @@ static int classification_suite_common_init(odp_bool_t enable_pktv)
 	if (pktio_loop == ODP_PKTIO_INVALID) {
 		ret = odp_pool_destroy(pool_default);
 		if (ret)
-			fprintf(stderr, "unable to destroy pool.\n");
+			ODPH_ERR("Unable to destroy pool\n");
 		return -1;
 	}
 
@@ -111,12 +111,12 @@ static int classification_suite_common_init(odp_bool_t enable_pktv)
 	}
 
 	if (odp_pktin_queue_config(pktio_loop, &pktin_param)) {
-		fprintf(stderr, "pktin queue config failed.\n");
+		ODPH_ERR("Pktin queue config failed\n");
 		return -1;
 	}
 
 	if (odp_pktout_queue_config(pktio_loop, NULL)) {
-		fprintf(stderr, "pktout queue config failed.\n");
+		ODPH_ERR("Pktout queue config failed\n");
 		return -1;
 	}
 
@@ -136,7 +136,7 @@ static int classification_suite_common_init(odp_bool_t enable_pktv)
 
 	ret = odp_pktio_start(pktio_loop);
 	if (ret) {
-		fprintf(stderr, "unable to start loop\n");
+		ODPH_ERR("Unable to start loop\n");
 		return -1;
 	}
 
@@ -149,17 +149,17 @@ static int classification_suite_common_term(odp_bool_t enable_pktv)
 	int retcode = 0;
 
 	if (0 >	stop_pktio(pktio_loop)) {
-		fprintf(stderr, "stop pktio failed.\n");
+		ODPH_ERR("Stop pktio failed\n");
 		retcode = -1;
 	}
 
 	if (0 > odp_pktio_close(pktio_loop)) {
-		fprintf(stderr, "pktio close failed.\n");
+		ODPH_ERR("Pktio close failed\n");
 		retcode = -1;
 	}
 
 	if (0 != odp_pool_destroy(pool_default)) {
-		fprintf(stderr, "pool_default destroy failed.\n");
+		ODPH_ERR("Pool_default destroy failed\n");
 		retcode = -1;
 	}
 

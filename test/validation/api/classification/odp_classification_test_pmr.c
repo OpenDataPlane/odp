@@ -8,6 +8,7 @@
 #include "odp_classification_testsuites.h"
 #include "classification.h"
 #include <odp_cunit_common.h>
+#include <odp/helper/odph_api.h>
 
 #define MAX_NUM_UDP 4
 #define MARK_IP     1
@@ -25,13 +26,13 @@ int classification_suite_pmr_init(void)
 	memset(&cls_capa, 0, sizeof(odp_cls_capability_t));
 
 	if (odp_cls_capability(&cls_capa)) {
-		fprintf(stderr, "Classifier capability call failed.\n");
+		ODPH_ERR("Classifier capability call failed\n");
 		return -1;
 	}
 
 	pkt_pool = pool_create("classification_pmr_pool");
 	if (ODP_POOL_INVALID == pkt_pool) {
-		fprintf(stderr, "Packet pool creation failed.\n");
+		ODPH_ERR("Packet pool creation failed\n");
 		return -1;
 	}
 
@@ -47,7 +48,7 @@ int classification_suite_pmr_init(void)
 static int start_pktio(odp_pktio_t pktio)
 {
 	if (odp_pktio_start(pktio)) {
-		fprintf(stderr, "unable to start loop\n");
+		ODPH_ERR("Unable to start loop\n");
 		return -1;
 	}
 
@@ -92,7 +93,7 @@ int classification_suite_pmr_term(void)
 	int ret = 0;
 
 	if (0 != odp_pool_destroy(pkt_pool)) {
-		fprintf(stderr, "pkt_pool destroy failed.\n");
+		ODPH_ERR("Packet pool destroy failed\n");
 		ret += -1;
 	}
 

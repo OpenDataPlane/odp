@@ -46,7 +46,7 @@ odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool,
 	if (pktio == ODP_PKTIO_INVALID) {
 		ret = odp_pool_destroy(pool);
 		if (ret)
-			fprintf(stderr, "unable to destroy pool.\n");
+			ODPH_ERR("Unable to destroy pool\n");
 		return ODP_PKTIO_INVALID;
 	}
 
@@ -56,12 +56,12 @@ odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool,
 	pktin_param.hash_enable = false;
 
 	if (odp_pktin_queue_config(pktio, &pktin_param)) {
-		fprintf(stderr, "pktin queue config failed.\n");
+		ODPH_ERR("Pktin queue config failed\n");
 		return ODP_PKTIO_INVALID;
 	}
 
 	if (odp_pktout_queue_config(pktio, NULL)) {
-		fprintf(stderr, "pktout queue config failed.\n");
+		ODPH_ERR("Pktout queue config failed\n");
 		return ODP_PKTIO_INVALID;
 	}
 
@@ -73,7 +73,7 @@ int stop_pktio(odp_pktio_t pktio)
 	odp_event_t ev;
 
 	if (odp_pktio_stop(pktio)) {
-		fprintf(stderr, "pktio stop failed.\n");
+		ODPH_ERR("Pktio stop failed\n");
 		return -1;
 	}
 
