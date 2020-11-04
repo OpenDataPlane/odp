@@ -242,6 +242,15 @@ int odp_sys_cache_line_size(void);
 void odp_sys_info_print(void);
 
 /**
+ * Print configuration
+ *
+ * Print out implementation defined information about selected configuration options. This
+ * information is intended for debugging purposes and may contain e.g. content of various
+ * configuration files, environment variables and configuration options of ODP API.
+ */
+void odp_sys_config_print(void);
+
+/**
  * @}
  */
 
