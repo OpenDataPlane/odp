@@ -826,6 +826,13 @@ int main(int argc, char *argv[])
 
 	create_and_config_tm();
 
+	/* Start TM */
+	rc = odp_tm_start(odp_tm_test);
+	if (rc != 0) {
+		printf("Error: odp_tm_start() failed, rc=%d\n", rc);
+		return -1;
+	}
+
 	odp_random_data(random_buf, RANDOM_BUF_LEN, 1);
 	next_rand_byte = 0;
 
@@ -840,6 +847,13 @@ int main(int argc, char *argv[])
 	       pkts_into_tm, pkts_from_tm);
 
 	odp_tm_stats_print(odp_tm_test);
+
+	/* Stop TM */
+	rc = odp_tm_stop(odp_tm_test);
+	if (rc != 0) {
+		printf("Error: odp_tm_stop() failed, rc = %d\n", rc);
+		return -1;
+	}
 
 	rc = destroy_tm_queues();
 	if (rc != 0) {
