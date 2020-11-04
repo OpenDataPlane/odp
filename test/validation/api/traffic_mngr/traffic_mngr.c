@@ -1664,6 +1664,14 @@ static int create_tm_system(void)
 		return -1;
 	}
 
+	/* Start TM system */
+	CU_ASSERT((rc = odp_tm_start(odp_tm)) == 0);
+	if (rc != 0) {
+		ODPH_ERR("odp_tm_start() failed for tm: %" PRIx64 "\n",
+			 odp_tm_to_u64(odp_tm));
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -2042,11 +2050,16 @@ static int destroy_tm_systems(void)
 
 	/* Close/free the TM systems. */
 	for (idx = 0; idx < num_odp_tm_systems; idx++) {
+		if (odp_tm_stop(odp_tm_systems[idx]) != 0)
+			return -1;
+
 		if (destroy_tm_subtree(root_node_descs[idx]) != 0)
 			return -1;
 
 		if (odp_tm_destroy(odp_tm_systems[idx]) != 0)
 			return -1;
+
+		odp_tm_systems[idx] = ODP_TM_INVALID;
 	}
 
 	/* Close/free the TM profiles. */
