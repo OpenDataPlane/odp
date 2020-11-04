@@ -540,6 +540,8 @@ static int create_and_config_tm(void)
 		       __func__, err_cnt);
 
 	config_company_node("TestCompany");
+
+	odp_tm_start(odp_tm_test);
 	return err_cnt;
 }
 
@@ -752,6 +754,8 @@ static int destroy_tm_queues(void)
 	int i;
 	int class;
 	int ret;
+
+	odp_tm_stop(odp_tm_test);
 
 	for (i = 0; i < NUM_SVC_CLASSES; i++)
 		for (class = 0; class < TM_QUEUES_PER_CLASS; class++) {
