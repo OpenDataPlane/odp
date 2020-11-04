@@ -21,6 +21,7 @@
 #include <odp_init_internal.h>
 #include <odp_libconfig_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_config_internal.h>
 #include <odp/api/align.h>
 #include <odp/api/cpu.h>
 #include <errno.h>
@@ -576,4 +577,27 @@ void odp_sys_info_print(void)
 	ODP_PRINT("%s", str);
 
 	sys_info_print_arch();
+}
+
+void odp_sys_config_print(void)
+{
+	/* Print ODP_CONFIG_FILE default and override values */
+	if (_odp_libconfig_print())
+		ODP_ERR("Config file print failed\n");
+
+	ODP_PRINT("\n\nodp_config_internal.h values:\n"
+		  "-----------------------------\n");
+	ODP_PRINT("ODP_CONFIG_POOLS:            %i\n", ODP_CONFIG_POOLS);
+	ODP_PRINT("CONFIG_MAX_PLAIN_QUEUES:     %i\n", CONFIG_MAX_PLAIN_QUEUES);
+	ODP_PRINT("CONFIG_MAX_SCHED_QUEUES:     %i\n", CONFIG_MAX_SCHED_QUEUES);
+	ODP_PRINT("CONFIG_QUEUE_MAX_ORD_LOCKS:  %i\n", CONFIG_QUEUE_MAX_ORD_LOCKS);
+	ODP_PRINT("ODP_CONFIG_PKTIO_ENTRIES:    %i\n", ODP_CONFIG_PKTIO_ENTRIES);
+	ODP_PRINT("CONFIG_PACKET_HEADROOM:      %i\n", CONFIG_PACKET_HEADROOM);
+	ODP_PRINT("CONFIG_PACKET_TAILROOM:      %i\n", CONFIG_PACKET_TAILROOM);
+	ODP_PRINT("CONFIG_PACKET_MAX_LEN:       %i\n", CONFIG_PACKET_MAX_LEN);
+	ODP_PRINT("ODP_CONFIG_SHM_BLOCKS:       %i\n", ODP_CONFIG_SHM_BLOCKS);
+	ODP_PRINT("CONFIG_BURST_SIZE:           %i\n", CONFIG_BURST_SIZE);
+	ODP_PRINT("CONFIG_POOL_MAX_NUM:         %i\n", CONFIG_POOL_MAX_NUM);
+	ODP_PRINT("CONFIG_POOL_CACHE_MAX_SIZE:  %i\n", CONFIG_POOL_CACHE_MAX_SIZE);
+	ODP_PRINT("\n");
 }

@@ -1,10 +1,12 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <libconfig.h>
 
@@ -28,6 +30,7 @@ int _odp_libconfig_init_global(void)
 
 	config_init(config);
 	config_init(config_rt);
+	odp_global_ro.has_config_rt = 0;
 
 	if (!config_read_string(config, config_builtin)) {
 		ODP_ERR("Failed to read default config: %s(%d): %s\n",
@@ -76,6 +79,7 @@ int _odp_libconfig_init_global(void)
 		goto fail;
 	}
 
+	odp_global_ro.has_config_rt = 1;
 	return 0;
 fail:
 	ODP_ERR("Config file failure\n");
@@ -182,4 +186,42 @@ int _odp_libconfig_lookup_ext_int(const char *base_path,
 		return 1;
 
 	return 0;
+}
+
+int _odp_libconfig_print(void)
+{
+	int c;
+	/* Temp file for config_write() output */
+	FILE *file = tmpfile();
+
+	if (file == NULL)
+		return -1;
+
+	if (fprintf(file,
+		    "\nODP_CONFIG_FILE default values:\n"
+		    "-------------------------------\n\n") < 0)
+		goto fail;
+
+	config_write(&odp_global_ro.libconfig_default, file);
+
+	if (odp_global_ro.has_config_rt) {
+		if (fprintf(file,
+			    "\nODP_CONFIG_FILE override values:\n"
+			    "--------------------------------\n\n") < 0)
+			goto fail;
+
+		config_write(&odp_global_ro.libconfig_runtime, file);
+	}
+
+	/* Print temp file to the log */
+	rewind(file);
+	while ((c = fgetc(file)) != EOF)
+		ODP_PRINT("%c", (char)c);
+
+	fclose(file);
+	return 0;
+
+fail:
+	fclose(file);
+	return -1;
 }

@@ -64,6 +64,7 @@ typedef struct odp_global_data_ro_t {
 	odp_cpumask_t control_cpus;
 	odp_cpumask_t worker_cpus;
 	int num_cpus_installed;
+	uint8_t has_config_rt;
 	config_t libconfig_default;
 	config_t libconfig_runtime;
 	odp_random_kind_t ipsec_rand_kind;
