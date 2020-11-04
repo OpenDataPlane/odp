@@ -28,6 +28,8 @@ int _odp_libconfig_lookup_ext_int(const char *base_path,
 				  const char *name,
 				  int *value);
 
+int _odp_libconfig_print(void);
+
 #ifdef __cplusplus
 }
 #endif
