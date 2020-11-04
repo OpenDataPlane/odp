@@ -259,11 +259,40 @@ int odp_cunit_print_inactive(void)
 			continue;
 
 		if (first) {
-			printf("\n\n  Inactive tests:\n");
+			printf("\n\nSuite: %s\n", sinfo->name);
+			printf("  Inactive tests:\n");
 			first = 0;
 		}
 
 		printf("    %s\n", tinfo->name);
+	}
+
+	return 0;
+}
+
+int odp_cunit_set_inactive(void)
+{
+	CU_pSuite cur_suite;
+	CU_pTest ptest;
+	odp_suiteinfo_t *sinfo;
+	odp_testinfo_t *tinfo;
+
+	cur_suite = CU_get_current_suite();
+	if (cur_suite == NULL)
+		return -1;
+
+	sinfo = cunit_get_suite_info(cur_suite->pName);
+	if (sinfo == NULL)
+		return -1;
+
+	for (tinfo = sinfo->testinfo_tbl; tinfo->name; tinfo++) {
+		ptest = CU_get_test_by_name(tinfo->name, cur_suite);
+		if (ptest == NULL) {
+			fprintf(stderr, "%s: test not found: %s\n",
+				__func__, tinfo->name);
+			return -1;
+		}
+		CU_set_test_active(ptest, false);
 	}
 
 	return 0;
