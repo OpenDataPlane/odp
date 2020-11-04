@@ -2566,6 +2566,12 @@ int odp_tm_capabilities(odp_tm_capabilities_t capabilities[] ODP_UNUSED,
 	cap_ptr->ecn_marking_supported         = true;
 	cap_ptr->drop_prec_marking_supported   = true;
 
+	cap_ptr->dynamic_topology_update  = true;
+	cap_ptr->dynamic_shaper_update    = true;
+	cap_ptr->dynamic_sched_update     = true;
+	cap_ptr->dynamic_wred_update      = true;
+	cap_ptr->dynamic_threshold_update = true;
+
 	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++)
 		cap_ptr->marking_colors_supported[color] = true;
 
@@ -2618,6 +2624,12 @@ static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
 	cap_ptr->ecn_marking_supported         = req_ptr->ecn_marking_needed;
 	cap_ptr->drop_prec_marking_supported   =
 					req_ptr->drop_prec_marking_needed;
+
+	cap_ptr->dynamic_topology_update  = true;
+	cap_ptr->dynamic_shaper_update    = true;
+	cap_ptr->dynamic_sched_update     = true;
+	cap_ptr->dynamic_wred_update      = true;
+	cap_ptr->dynamic_threshold_update = true;
 
 	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++)
 		cap_ptr->marking_colors_supported[color] =
@@ -3045,6 +3057,22 @@ int odp_tm_capability(odp_tm_t odp_tm, odp_tm_capabilities_t *capabilities)
 	tm_system = GET_TM_SYSTEM(odp_tm);
 	memcpy(capabilities, &tm_system->capabilities,
 	       sizeof(odp_tm_capabilities_t));
+	return 0;
+}
+
+int odp_tm_start(odp_tm_t odp_tm)
+{
+	(void)odp_tm;
+
+	/* Nothing more to do after TM create */
+	return 0;
+}
+
+int odp_tm_stop(odp_tm_t odp_tm)
+{
+	(void)odp_tm;
+
+	/* Nothing more to do for topology changes */
 	return 0;
 }
 
