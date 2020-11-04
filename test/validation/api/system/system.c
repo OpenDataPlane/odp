@@ -327,8 +327,7 @@ static void system_test_odp_sys_huge_page_size_all(void)
 static int system_check_cycle_counter(void)
 {
 	if (odp_cpu_cycles_max() == 0) {
-		fprintf(stderr, "Cycle counter is not supported, skipping "
-			"test\n");
+		printf("Cycle counter is not supported, skipping test\n");
 		return ODP_TEST_INACTIVE;
 	}
 
@@ -338,8 +337,7 @@ static int system_check_cycle_counter(void)
 static int system_check_odp_cpu_hz(void)
 {
 	if (odp_cpu_hz() == 0) {
-		fprintf(stderr, "odp_cpu_hz() is not supported, skipping "
-			"test\n");
+		printf("odp_cpu_hz() is not supported, skipping test\n");
 		return ODP_TEST_INACTIVE;
 	}
 
@@ -369,8 +367,7 @@ static int system_check_odp_cpu_hz_id(void)
 	for (i = 0; i < num; i++) {
 		hz = odp_cpu_hz_id(cpu);
 		if (hz == 0) {
-			fprintf(stderr, "odp_cpu_hz_id() is not supported by "
-				"CPU %d, skipping test\n", cpu);
+			printf("odp_cpu_hz_id() is not supported by CPU %d, skipping test\n", cpu);
 			return ODP_TEST_INACTIVE;
 		}
 		cpu = odp_cpumask_next(&mask, cpu);
@@ -401,8 +398,7 @@ static void system_test_odp_cpu_hz_id(void)
 static int system_check_odp_cpu_hz_max(void)
 {
 	if (odp_cpu_hz_max() == 0) {
-		fprintf(stderr, "odp_cpu_hz_max() is not supported, skipping "
-			"test\n");
+		printf("odp_cpu_hz_max() is not supported, skipping test\n");
 		return ODP_TEST_INACTIVE;
 	}
 	return ODP_TEST_ACTIVE;
@@ -429,8 +425,8 @@ static int system_check_odp_cpu_hz_max_id(void)
 	for (i = 0; i < num; i++) {
 		hz = odp_cpu_hz_max_id(cpu);
 		if (hz == 0) {
-			fprintf(stderr, "odp_cpu_hz_max_id() is not supported "
-			"by CPU %d, skipping test\n", cpu);
+			printf("odp_cpu_hz_max_id() is not supported by CPU %d, skipping test\n",
+			       cpu);
 			return ODP_TEST_INACTIVE;
 		}
 		cpu = odp_cpumask_next(&mask, cpu);
