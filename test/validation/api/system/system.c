@@ -464,6 +464,13 @@ static void system_test_info_print(void)
 	printf("...done. ");
 }
 
+static void system_test_config_print(void)
+{
+	printf("\n\nCalling system config print...\n");
+	odp_sys_config_print();
+	printf("...done. ");
+}
+
 static void system_test_info(void)
 {
 	odp_system_info_t info;
@@ -551,6 +558,7 @@ odp_testinfo_t system_suite[] = {
 				  system_check_cycle_counter),
 	ODP_TEST_INFO(system_test_info),
 	ODP_TEST_INFO(system_test_info_print),
+	ODP_TEST_INFO(system_test_config_print),
 	ODP_TEST_INFO_NULL,
 };
 
