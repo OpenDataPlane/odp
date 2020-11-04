@@ -331,6 +331,26 @@ typedef struct {
 	/** The per_level array specifies the TM system capabilities that
 	 * can vary based upon the tm_node level. */
 	odp_tm_level_capabilities_t per_level[ODP_TM_MAX_LEVELS];
+
+	/** node_priority indicates that this TM system supports
+	 * only having single priority associated to fan-in nodes at any
+	 * level. When TRUE, Priority is fixed for a fanin node i.e all packets
+	 * fed by a particular fanin node to a tm node will have a fixed priority.
+	 * This is equivalent to the packet priority being overloaded by
+	 * fan-in node priority. When FALSE, every fan-in node can feed packets
+	 * to parent tm node with priorities ranging from
+	 * 0..ODP_TM_MAX_PRIORITIES - 1.
+	 */
+	odp_bool_t node_priority_override;
+
+	/** max_wfq_groups_per_node indicates maximum number of wfq groups supported
+	 * by a tm node at any level. This capability is valid only when
+	 * node_priority_override is TRUE. In a given topology only these many
+	 * groups of children can be formed of same node priority under a parent.
+	 * This value can range from 1..ODP_TM_MAX_PRIORITIES as there can be
+	 * only as many number of WFQ groups as MAX priority.
+	 */
+	uint8_t max_wfq_groups_per_node;
 } odp_tm_capabilities_t;
 
 /** Per Level Requirements
@@ -1233,6 +1253,12 @@ typedef struct {
 	 * greater levels may be connected to the fan-in of tm_node's with
 	 * numerically smaller levels. */
 	uint8_t level;
+
+	/** The strict priority level assigned to packets going through this
+	 * node. In other words all packets going through node
+	 * will be assigned this priority overriding previous priority.
+	 * in the range 0..max_priority. */
+	uint8_t priority;
 } odp_tm_node_params_t;
 
 /** odp_tm_node_params_init() must be called to initialize any
