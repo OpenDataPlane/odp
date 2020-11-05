@@ -33,6 +33,7 @@ static void event_test_free(void)
 
 	for (i = 0; i < EVENT_BURST; i++) {
 		buf = odp_buffer_alloc(pool);
+		CU_ASSERT(odp_event_is_valid(odp_buffer_to_event(buf)) == 1);
 		CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
 		event[i] = odp_buffer_to_event(buf);
 		CU_ASSERT(odp_event_type(event[i]) == ODP_EVENT_BUFFER);
@@ -58,6 +59,7 @@ static void event_test_free(void)
 
 	for (i = 0; i < EVENT_BURST; i++) {
 		pkt = odp_packet_alloc(pool, EVENT_SIZE);
+		CU_ASSERT(odp_event_is_valid(odp_packet_to_event(pkt)) == 1);
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 		event[i] = odp_packet_to_event(pkt);
 		CU_ASSERT(odp_event_type(event[i]) == ODP_EVENT_PACKET);
@@ -83,6 +85,7 @@ static void event_test_free(void)
 
 	for (i = 0; i < EVENT_BURST; i++) {
 		tmo = odp_timeout_alloc(pool);
+		CU_ASSERT(odp_event_is_valid(odp_timeout_to_event(tmo)) == 1);
 		CU_ASSERT_FATAL(tmo != ODP_TIMEOUT_INVALID);
 		event[i] = odp_timeout_to_event(tmo);
 		CU_ASSERT(odp_event_type(event[i]) == ODP_EVENT_TIMEOUT);
@@ -384,12 +387,21 @@ static void event_test_filter_packet(void)
 	CU_ASSERT(odp_pool_destroy(pkt_pool) == 0);
 }
 
+static void event_test_is_valid(void)
+{
+	CU_ASSERT(odp_event_is_valid(ODP_EVENT_INVALID) == 0);
+	CU_ASSERT(odp_buffer_is_valid(ODP_BUFFER_INVALID) == 0);
+	CU_ASSERT(odp_packet_is_valid(ODP_PACKET_INVALID) == 0);
+	CU_ASSERT(odp_packet_vector_valid(ODP_PACKET_VECTOR_INVALID) == 0);
+}
+
 odp_testinfo_t event_suite[] = {
 	ODP_TEST_INFO(event_test_free),
 	ODP_TEST_INFO(event_test_free_multi),
 	ODP_TEST_INFO(event_test_free_multi_mixed),
 	ODP_TEST_INFO(event_test_type_multi),
 	ODP_TEST_INFO(event_test_filter_packet),
+	ODP_TEST_INFO(event_test_is_valid),
 	ODP_TEST_INFO_NULL,
 };
 
