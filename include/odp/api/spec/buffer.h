@@ -74,7 +74,11 @@ void *odp_buffer_addr(odp_buffer_t buf);
 uint32_t odp_buffer_size(odp_buffer_t buf);
 
 /**
- * Tests if buffer is valid
+ * Check that buffer is valid
+ *
+ * This function can be used for debugging purposes to check if a buffer handle represents
+ * a valid buffer. The level of error checks depends on the implementation. The call should not
+ * crash if the buffer handle is corrupted.
  *
  * @param buf      Buffer handle
  *
@@ -95,8 +99,8 @@ odp_pool_t odp_buffer_pool(odp_buffer_t buf);
 /**
  * Buffer alloc
  *
- * The validity of a buffer can be checked at any time with
- * odp_buffer_is_valid().
+ * Allocates a buffer from the pool. Returns ODP_BUFFER_INVALID when a buffer
+ * can not be allocated.
  *
  * @param pool      Pool handle
  *
@@ -107,8 +111,8 @@ odp_buffer_t odp_buffer_alloc(odp_pool_t pool);
 
 /**
  * Allocate multiple buffers
-
- * Otherwise like odp_buffer_alloc(), but allocates multiple buffers from a pool
+ *
+ * Otherwise like odp_buffer_alloc(), but allocates multiple buffers from a pool.
  *
  * @param pool      Pool handle
  * @param[out] buf  Array of buffer handles for output
