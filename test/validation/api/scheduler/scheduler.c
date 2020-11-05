@@ -1271,13 +1271,16 @@ static int schedule_common_(void *arg)
 				}
 			}
 
-			for (j = 0; j < num; j++)
+			for (j = 0; j < num; j++) {
+				CU_ASSERT(odp_event_is_valid(events[j]) == 1);
 				odp_event_free(events[j]);
+			}
 		} else {
 			ev  = odp_schedule(&from, ODP_SCHED_NO_WAIT);
 			if (ev == ODP_EVENT_INVALID)
 				continue;
 
+			CU_ASSERT(odp_event_is_valid(ev) == 1);
 			buf = odp_buffer_from_event(ev);
 			num = 1;
 			if (sync == ODP_SCHED_SYNC_ORDERED) {
