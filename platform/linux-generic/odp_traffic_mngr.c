@@ -3065,6 +3065,7 @@ int odp_tm_destroy(odp_tm_t odp_tm)
 	_odp_queue_pool_destroy(tm_system->_odp_int_queue_pool);
 	_odp_timer_wheel_destroy(tm_system->_odp_int_timer_wheel);
 
+	_odp_int_name_tbl_delete(tm_system->name_tbl_id);
 	tm_system_free(tm_system);
 	return 0;
 }
@@ -3573,7 +3574,7 @@ int odp_tm_wred_destroy(odp_tm_wred_t wred_profile)
 		return -1;
 
 	return tm_common_profile_destroy(wred_profile,
-					 ODP_INVALID_NAME);
+					 wred_params->name_tbl_id);
 }
 
 int odp_tm_wred_params_read(odp_tm_wred_t wred_profile,
