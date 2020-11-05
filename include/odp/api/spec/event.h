@@ -182,6 +182,20 @@ int odp_event_filter_packet(const odp_event_t event[],
 uint64_t odp_event_to_u64(odp_event_t hdl);
 
 /**
+ * Check that event is valid
+ *
+ * This function can be used for debugging purposes to check if an event handle represents
+ * a valid event. The level of error checks depends on the implementation. The call should not
+ * crash if the event handle is corrupted.
+ *
+ * @param event    Event handle
+ *
+ * @retval 1 Event handle represents a valid event.
+ * @retval 0 Event handle does not represent a valid event.
+ */
+int odp_event_is_valid(odp_event_t event);
+
+/**
  * Free event
  *
  * Frees the event based on its type. Results are undefined if event
