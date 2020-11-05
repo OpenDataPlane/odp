@@ -2162,10 +2162,12 @@ uint32_t odp_packet_vector_size(odp_packet_vector_t pktv);
 void odp_packet_vector_size_set(odp_packet_vector_t pktv, uint32_t size);
 
 /**
- * Perform full packet vector validity check
+ * Check that packet vector is valid
  *
- * The operation may consume considerable number of cpu cycles depending on
- * the check level.
+ * This function can be used for debugging purposes to check if a packet vector handle represents
+ * a valid packet vector. The level of error checks depends on the implementation. Considerable
+ * number of cpu cycles may be consumed depending on the level. The call should not crash if
+ * the packet vector handle is corrupted.
  *
  * @param pktv Packet vector handle
  *
@@ -2238,10 +2240,12 @@ void odp_packet_print(odp_packet_t pkt);
 void odp_packet_print_data(odp_packet_t pkt, uint32_t offset, uint32_t len);
 
 /**
- * Perform full packet validity check
+ * Check that packet is valid
  *
- * The operation may consume considerable number of cpu cycles depending on
- * the check level.
+ * This function can be used for debugging purposes to check if a packet handle represents
+ * a valid packet. The level of error checks depends on the implementation. Considerable number of
+ * cpu cycles may be consumed depending on the level. The call should not crash if the packet
+ * handle is corrupted.
  *
  * @param pkt  Packet handle
  *
