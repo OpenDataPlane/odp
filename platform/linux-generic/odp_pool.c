@@ -741,6 +741,7 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 	pool->mem_from_huge_pages = shm_is_from_huge_pages(pool->shm);
 
 	pool->base_addr = odp_shm_addr(pool->shm);
+	pool->max_addr  = pool->base_addr + pool->shm_size - 1;
 
 	pool->uarea_shm = ODP_SHM_INVALID;
 	if (uarea_size) {
@@ -1016,7 +1017,7 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 		info->pkt.max_num = pool->num;
 
 	info->min_data_addr = (uintptr_t)pool->base_addr;
-	info->max_data_addr = (uintptr_t)pool->base_addr + pool->shm_size - 1;
+	info->max_data_addr = (uintptr_t)pool->max_addr;
 
 	return 0;
 }
@@ -1273,6 +1274,7 @@ void odp_pool_print(odp_pool_t pool_hdl)
 	ODP_PRINT("  uarea size      %u\n", pool->uarea_size);
 	ODP_PRINT("  shm size        %" PRIu64 "\n", pool->shm_size);
 	ODP_PRINT("  base addr       %p\n", pool->base_addr);
+	ODP_PRINT("  max addr        %p\n", pool->max_addr);
 	ODP_PRINT("  uarea shm size  %" PRIu64 "\n", pool->uarea_shm_size);
 	ODP_PRINT("  uarea base addr %p\n", pool->uarea_base_addr);
 	ODP_PRINT("  cache size      %u\n", pool->cache_size);
@@ -1304,19 +1306,52 @@ uint64_t odp_pool_to_u64(odp_pool_t hdl)
 	return _odp_pri(hdl);
 }
 
-int odp_buffer_is_valid(odp_buffer_t buf)
+static pool_t *find_pool(odp_buffer_hdr_t *buf_hdr)
+{
+	int i;
+	uint8_t *ptr = (uint8_t *)buf_hdr;
+
+	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
+		pool_t *pool = pool_entry(i);
+
+		if (pool->reserved == 0)
+			continue;
+
+		if (ptr >= pool->base_addr && ptr < pool->max_addr)
+			return pool;
+	}
+
+	return NULL;
+}
+
+int _odp_buffer_is_valid(odp_buffer_t buf)
 {
 	pool_t *pool;
+	odp_buffer_hdr_t *buf_hdr = buf_hdl_to_hdr(buf);
 
 	if (buf == ODP_BUFFER_INVALID)
 		return 0;
 
-	pool = pool_from_buf(buf);
-
-	if (pool->pool_idx >= ODP_CONFIG_POOLS)
+	/* Check that buffer header is from a known pool */
+	pool = find_pool(buf_hdr);
+	if (pool == NULL)
 		return 0;
 
-	if (pool->reserved == 0)
+	if (pool != buf_hdr->pool_ptr)
+		return 0;
+
+	if (buf_hdr->index.buffer >= (pool->num + pool->skipped_blocks))
+		return 0;
+
+	return 1;
+}
+
+int odp_buffer_is_valid(odp_buffer_t buf)
+{
+	if (_odp_buffer_is_valid(buf) == 0)
+		return 0;
+
+	if (odp_event_type(odp_buffer_to_event(buf)) != ODP_EVENT_BUFFER)
 		return 0;
 
 	return 1;
