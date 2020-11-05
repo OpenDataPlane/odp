@@ -1694,11 +1694,32 @@ void odp_packet_print_data(odp_packet_t pkt, uint32_t offset,
 
 int odp_packet_is_valid(odp_packet_t pkt)
 {
-	if (odp_buffer_is_valid(packet_to_buffer(pkt)) == 0)
+	odp_event_t ev;
+
+	if (pkt == ODP_PACKET_INVALID)
 		return 0;
 
-	if (odp_event_type(odp_packet_to_event(pkt)) != ODP_EVENT_PACKET)
+	if (_odp_buffer_is_valid(packet_to_buffer(pkt)) == 0)
 		return 0;
+
+	ev = odp_packet_to_event(pkt);
+
+	if (odp_event_type(ev) != ODP_EVENT_PACKET)
+		return 0;
+
+	switch (odp_event_subtype(ev)) {
+	case ODP_EVENT_PACKET_BASIC:
+		/* Fall through */
+	case ODP_EVENT_PACKET_COMP:
+		/* Fall through */
+	case ODP_EVENT_PACKET_CRYPTO:
+		/* Fall through */
+	case ODP_EVENT_PACKET_IPSEC:
+		/* Fall through */
+		break;
+	default:
+		return 0;
+	}
 
 	return 1;
 }
