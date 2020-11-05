@@ -208,6 +208,8 @@ static void alloc_packet_vector(uint32_t cache_size)
 	for (i = 0; i < max_num; i++) {
 		pkt_vec[num] = odp_packet_vector_alloc(pool);
 		CU_ASSERT(pkt_vec[num] != ODP_PACKET_VECTOR_INVALID);
+		CU_ASSERT(odp_packet_vector_valid(pkt_vec[num]) == 1);
+		CU_ASSERT(odp_event_is_valid(odp_packet_vector_to_event(pkt_vec[num])) == 1);
 
 		if (pkt_vec[num] != ODP_PACKET_VECTOR_INVALID)
 			num++;
@@ -512,8 +514,11 @@ static void pool_test_buf_max_num(void)
 	for (i = 0; i < max_num; i++) {
 		buf[num] = odp_buffer_alloc(pool);
 
-		if (buf[num] != ODP_BUFFER_INVALID)
+		if (buf[num] != ODP_BUFFER_INVALID) {
+			CU_ASSERT(odp_buffer_is_valid(buf[num]) == 1);
+			CU_ASSERT(odp_event_is_valid(odp_buffer_to_event(buf[num])) == 1);
 			num++;
+		}
 	}
 
 	CU_ASSERT(num == max_num);
@@ -566,8 +571,11 @@ static void pool_test_pkt_max_num(void)
 	for (i = 0; i < max_num; i++) {
 		pkt[num] = odp_packet_alloc(pool, len);
 
-		if (pkt[num] != ODP_PACKET_INVALID)
+		if (pkt[num] != ODP_PACKET_INVALID) {
+			CU_ASSERT(odp_packet_is_valid(pkt[num]) == 1);
+			CU_ASSERT(odp_event_is_valid(odp_packet_to_event(pkt[num])) == 1);
 			num++;
+		}
 	}
 
 	CU_ASSERT(num == max_num);
@@ -702,8 +710,10 @@ static void pool_test_tmo_max_num(void)
 	for (i = 0; i < max_num; i++) {
 		tmo[num] = odp_timeout_alloc(pool);
 
-		if (tmo[num] != ODP_TIMEOUT_INVALID)
+		if (tmo[num] != ODP_TIMEOUT_INVALID) {
+			CU_ASSERT(odp_event_is_valid(odp_timeout_to_event(tmo[num])) == 1);
 			num++;
+		}
 	}
 
 	CU_ASSERT(num == max_num);
