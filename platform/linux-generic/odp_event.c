@@ -97,3 +97,34 @@ uint64_t odp_event_to_u64(odp_event_t hdl)
 {
 	return _odp_pri(hdl);
 }
+
+int odp_event_is_valid(odp_event_t event)
+{
+	odp_buffer_t buf;
+
+	if (event == ODP_EVENT_INVALID)
+		return 0;
+
+	buf = odp_buffer_from_event(event);
+	if (_odp_buffer_is_valid(buf) == 0)
+		return 0;
+
+	switch (odp_event_type(event)) {
+	case ODP_EVENT_BUFFER:
+		/* Fall through */
+	case ODP_EVENT_PACKET:
+		/* Fall through */
+	case ODP_EVENT_TIMEOUT:
+		/* Fall through */
+	case ODP_EVENT_CRYPTO_COMPL:
+		/* Fall through */
+	case ODP_EVENT_IPSEC_STATUS:
+		/* Fall through */
+	case ODP_EVENT_PACKET_VECTOR:
+		break;
+	default:
+		return 0;
+	}
+
+	return 1;
+}
