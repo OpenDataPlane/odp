@@ -2560,6 +2560,15 @@ int odp_tm_capabilities(odp_tm_capabilities_t capabilities[] ODP_UNUSED,
 	cap_ptr->vlan_marking_supported        = true;
 	cap_ptr->ecn_marking_supported         = true;
 	cap_ptr->drop_prec_marking_supported   = true;
+	cap_ptr->tm_queue_threshold_supported  = true;
+	cap_ptr->tm_queue_query_mask           = (ODP_TM_QUERY_PKT_CNT |
+						  ODP_TM_QUERY_BYTE_CNT |
+						  ODP_TM_QUERY_THRESHOLDS);
+
+	cap_ptr->dynamic_topology_update_supported  = true;
+	cap_ptr->dynamic_shaper_update_supported    = true;
+	cap_ptr->dynamic_sched_update_supported     = true;
+	cap_ptr->dynamic_threshold_update_supported = true;
 
 	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++)
 		cap_ptr->marking_colors_supported[color] = true;
@@ -2578,9 +2587,19 @@ int odp_tm_capabilities(odp_tm_capabilities_t capabilities[] ODP_UNUSED,
 		per_level_cap->tm_node_dual_slope_supported = true;
 		per_level_cap->fair_queuing_supported       = true;
 		per_level_cap->weights_supported            = true;
+		per_level_cap->tm_node_threshold_supported  = true;
 	}
 
 	return 1;
+}
+
+int odp_tm_egress_capabilities(odp_tm_capabilities_t capabilities[],
+			       uint32_t capabilities_size,
+			       odp_tm_egress_t *egress)
+{
+	(void)egress;
+
+	return odp_tm_capabilities(capabilities, capabilities_size);
 }
 
 static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
@@ -2613,6 +2632,15 @@ static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
 	cap_ptr->ecn_marking_supported         = req_ptr->ecn_marking_needed;
 	cap_ptr->drop_prec_marking_supported   =
 					req_ptr->drop_prec_marking_needed;
+	cap_ptr->tm_queue_threshold_supported  = true;
+	cap_ptr->tm_queue_query_mask           = (ODP_TM_QUERY_PKT_CNT |
+						  ODP_TM_QUERY_BYTE_CNT |
+						  ODP_TM_QUERY_THRESHOLDS);
+
+	cap_ptr->dynamic_topology_update_supported  = true;
+	cap_ptr->dynamic_shaper_update_supported    = true;
+	cap_ptr->dynamic_sched_update_supported     = true;
+	cap_ptr->dynamic_threshold_update_supported = true;
 
 	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++)
 		cap_ptr->marking_colors_supported[color] =
@@ -2647,6 +2675,7 @@ static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
 		per_level_cap->tm_node_dual_slope_supported = dual_slope;
 		per_level_cap->fair_queuing_supported       = true;
 		per_level_cap->weights_supported            = true;
+		per_level_cap->tm_node_threshold_supported  = true;
 	}
 }
 
