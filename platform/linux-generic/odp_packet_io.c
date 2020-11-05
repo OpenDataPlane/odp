@@ -2090,17 +2090,21 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 
 	mode = entry->s.param.out_mode;
 
-	/* Ignore the call when packet output is disabled, or routed through
-	 * traffic manager. */
-	if (mode == ODP_PKTOUT_MODE_DISABLED || mode == ODP_PKTOUT_MODE_TM)
+	/* Ignore the call when packet output is disabled. */
+	if (mode == ODP_PKTOUT_MODE_DISABLED)
 		return 0;
 
-	if (mode != ODP_PKTOUT_MODE_DIRECT && mode != ODP_PKTOUT_MODE_QUEUE) {
+	if (mode != ODP_PKTOUT_MODE_DIRECT &&
+	    mode != ODP_PKTOUT_MODE_QUEUE &&
+	    mode != ODP_PKTOUT_MODE_TM) {
 		ODP_DBG("pktio %s: bad packet output mode\n", entry->s.name);
 		return -1;
 	}
 
-	num_queues = param->num_queues;
+	if (mode == ODP_PKTOUT_MODE_TM)
+		num_queues = 1;
+	else
+		num_queues = param->num_queues;
 
 	if (num_queues == 0) {
 		ODP_DBG("pktio %s: zero output queues\n", entry->s.name);
@@ -2304,7 +2308,7 @@ int odp_pktout_queue(odp_pktio_t pktio, odp_pktout_queue_t queues[], int num)
 	if (mode == ODP_PKTOUT_MODE_DISABLED)
 		return 0;
 
-	if (mode != ODP_PKTOUT_MODE_DIRECT)
+	if (mode != ODP_PKTOUT_MODE_DIRECT && mode != ODP_PKTOUT_MODE_TM)
 		return -1;
 
 	num_queues = entry->s.num_out_queue;
