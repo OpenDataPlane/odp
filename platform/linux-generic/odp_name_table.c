@@ -376,6 +376,7 @@ static void name_tbl_entry_free(name_tbl_entry_t *name_tbl_entry)
 	memset(name_tbl_entry, 0, sizeof(name_tbl_entry_t));
 	name_tbl_entry->next_entry = name_tbl->free_list_head;
 	name_tbl->free_list_head   = name_tbl_entry;
+	name_tbl_entry->name_tbl_id = name_tbl_id;
 }
 
 static hash_tbl_entry_t make_hash_tbl_entry(name_tbl_entry_t *name_tbl_entry,
