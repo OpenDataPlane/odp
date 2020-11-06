@@ -65,13 +65,13 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
    # Build and install 32 bit version of openssl
    $ ./Configure linux-generic32 --cross-compile-prefix=arm-linux-gnueabihf- \
-     --prefix=/home/user/src/install-openssl shared
+     --prefix=/home/${USER}/src/install-openssl shared
    $ make
    $ make install
 
    # Build and install 64 bit version of openssl
    $ ./Configure linux-generic64 --cross-compile-prefix=aarch64-linux-gnu- \
-     --prefix=/home/user/src/install-openssl-aarch64 shared
+     --prefix=/home/${USER}/src/install-openssl-aarch64 shared
    $ make
    $ make install
 
@@ -82,12 +82,12 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
    # Build 32 bit version of ODP
    $ ./configure --host=arm-linux-gnueabihf \
-     --with-openssl-path=/home/user/src/install-openssl
+     --with-openssl-path=/home/${USER}/src/install-openssl
    $ make
 
    # Or build 64 bit version of ODP
    $ ./configure --host=aarch64-linux-gnu \
-     --with-openssl-path=/home/user/src/install-openssl-aarch64
+     --with-openssl-path=/home/${USER}/src/install-openssl-aarch64
    $ make
 
 3.3 Netmap packet I/O support (optional)
@@ -278,7 +278,16 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ git svn clone http://svn.code.sf.net/p/cunit/code/trunk cunit-code
    $ cd cunit-code
    $ ./bootstrap
+
+   # Build and install 32 bit version of cunit
    $ ./configure --host=arm-linux-gnueabihf --prefix=/home/${USER}/src/install-cunit
+   $ make
+   $ make install
+
+   # Build and install 64 bit version of cunit
+   $ ./configure --host=aarch64-linux-gnu --prefix=/home/${USER}/src/install-cunit
+   $ make
+   $ make install
 
 4.4 Using CUnit with ODP
 
