@@ -794,20 +794,32 @@ typedef enum {
  */
 typedef struct {
 	/** The committed information rate for this shaper profile.  The units
-	 * for this integer are always in bits per second. */
-	uint64_t commit_bps;
+	 * for this integer is in bits per second when packet_mode is
+	 * not TRUE while packets per second when packet mode is TRUE.
+	 */
+	union {
+		uint64_t commit_bps; /**< Commit information rate in bps */
+		uint64_t commit_rate; /**< Commit information rate */
+	};
 
 	/** The peak information rate for this shaper profile.  The units for
-	 * this integer are always in bits per second. */
-	uint64_t peak_bps;
+	 * this integer is in bits per second when packet_mode is
+	 * not TRUE while in packets per second when packet mode is TRUE.
+	 */
+	union {
+		uint64_t peak_bps; /**< Peak information rate in bps */
+		uint64_t peak_rate; /**< Peak information rate */
+	};
 
 	/** The commit burst tolerance for this shaper profile.  The units for
-	 * this field are always bits.  This value sets an upper limit for the
+	 * this field is bits when packet_mode is not TRUE and packets when
+	 * packet_mode is TRUE.  This value sets an upper limit for the
 	 * size of the commitCnt. */
 	uint32_t commit_burst;
 
 	/** The peak burst tolerance for this shaper profile.  The units for
-	 * this field are always bits.  This value sets an upper limit for the
+	 * this field in bits when packet_mode is not TRUE and packets
+	 * when packet_mode is TRUE. This value sets an upper limit for the
 	 * size of the peakCnt. */
 	uint32_t peak_burst;
 
@@ -819,7 +831,9 @@ typedef struct {
 	 * to a value approximating the "time" (in units of bytes) taken by
 	 * the Ethernet preamble and Inter Frame Gap.  Traditionally this
 	 * would be the value 20 (8 + 12), but in same cases can be as low as
-	 * 9 (4 + 5). */
+	 * 9 (4 + 5).
+	 * This field is ignored when packet_mode is TRUE.
+	 */
 	int8_t shaper_len_adjust;
 
 	/** If dual_rate is TRUE it indicates the desire for the
@@ -828,6 +842,12 @@ typedef struct {
 	 * implementation specific, but in any case require a non-zero set of
 	 * both commit and peak parameters. */
 	odp_bool_t dual_rate;
+
+	/** If packet_mode is TRUE it indicates that shaper should work
+	 * in packet mode ignoring lengths of packet and hence shaping
+	 * traffic in packet's per second as opposed to bytes per second.
+	 */
+	odp_bool_t packet_mode;
 } odp_tm_shaper_params_t;
 
 /** odp_tm_shaper_params_init() must be called to initialize any
