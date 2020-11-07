@@ -1518,6 +1518,12 @@ typedef struct {
 	 * have the same single strict priority level and this level must be
 	 * in the range 0..max_priority. */
 	uint8_t priority;
+
+	/** Maintain original packet order of the source queue when enqueuing
+	 * packets to this queue while holding ordered or atomic queue
+	 * synchronization context. Default value of this flag is true.
+	 */
+	odp_bool_t ordered_enqueue;
 } odp_tm_queue_params_t;
 
 /** odp_tm_queue_params_init() must be called to initialize any
@@ -1718,6 +1724,22 @@ int odp_tm_queue_disconnect(odp_tm_queue_t tm_queue);
  *                  more common failure reasons is WRED drop.
  */
 int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt);
+
+/** The odp_tm_enq_multi() function is used to add packets to a given TM system.
+ * This function enqueues multiple packets but is otherwise similar to
+ * odp_tm_enq(). Packets dropped by WRED or other queue management action do not
+ * cause this function to return a failure. Such packets get consumed just like
+ * the packets that are not dropped.
+ *
+ * @param tm_queue  Specifies the tm_queue (and indirectly the TM system).
+ * @param packets   Array of packets to enqueue.
+ * @param num       Number of packets to send.
+ *
+ * @retval >0  on success indicating number of packets consumed
+ * @retval <=0 on failure.
+ */
+int odp_tm_enq_multi(odp_tm_queue_t tm_queue, const odp_packet_t packets[],
+		     int num);
 
 /** The odp_tm_enq_with_cnt() function behaves identically to odp_tm_enq(),
  * except that it also returns (an approximation to?) the current tm_queue
