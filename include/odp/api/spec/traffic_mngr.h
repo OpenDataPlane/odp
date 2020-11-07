@@ -1655,6 +1655,20 @@ int odp_tm_queue_disconnect(odp_tm_queue_t tm_queue);
  */
 int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt);
 
+/** The odp_tm_enq_multi() function is used to add packets to a given TM system.
+ * This API takes multiple packets to enqueue unlike odp_tm_enq() but
+ * rest of the behaviour is identical to that of odp_tm_enq().
+ *
+ * @param tm_queue  Specifies the tm_queue (and indirectly the TM system).
+ * @param packets   Array of packets to enqueue.
+ * @param num       Number of packets to send.
+ * @return          Returns >0 upon success indicating number of packets
+ *                  enqueued, <= 0 upon failure. One of the more common
+ *                  failure reasons is WRED drop.
+ */
+int odp_tm_enq_multi(odp_tm_queue_t tm_queue, const odp_packet_t packets[],
+		     int num);
+
 /** The odp_tm_enq_with_cnt() function behaves identically to odp_tm_enq(),
  * except that it also returns (an approximation to?) the current tm_queue
  * packet queue count.
@@ -1665,6 +1679,19 @@ int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt);
  *                  this tm_queue upon success, < 0 upon failure.
  */
 int odp_tm_enq_with_cnt(odp_tm_queue_t tm_queue, odp_packet_t pkt);
+
+/** The odp_tm_queue_enq() function is used to add packets to a given TM system.
+ * This API needs to be used to enqueue events of type ODP_EVENT_PACKET_VECTOR
+ * or ODP_EVENT_PACKET to tm queue only when PKTOUT mode is
+ * ODP_PKTOUT_MODE_TM_QUEUE. Apart from this, rest of the behaviour is
+ * identical to that of odp_tm_enq().
+ *
+ * @param tm_queue  Specifies the tm_queue (and indirectly the TM system).
+ * @param ev        Event handle representing a packet or packet vector.
+ * @return          Returns 0 upon success, < 0 upon failure. One of the
+ *                  more common failure reasons is WRED drop.
+ */
+int odp_tm_queue_enq(odp_tm_queue_t tm_queue, odp_event_t ev);
 
 /* Dynamic state query functions */
 

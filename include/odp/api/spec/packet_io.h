@@ -106,6 +106,10 @@ typedef enum odp_pktout_mode_t {
 	ODP_PKTOUT_MODE_QUEUE,
 	/** Packet output through traffic manager API */
 	ODP_PKTOUT_MODE_TM,
+	/** Packet output through traffic manager API where
+	 * TM queues act as event queues.
+	 */
+	ODP_PKTOUT_MODE_TM_QUEUE,
 	/** Application will never send to this interface */
 	ODP_PKTOUT_MODE_DISABLED
 } odp_pktout_mode_t;
@@ -595,7 +599,8 @@ typedef struct odp_pktio_config_t {
 	 *  through the IPSEC API.
 	 *
 	 *  Support of outbound IPSEC inline operation with traffic manager
-	 *  (ODP_PKTOUT_MODE_TM) can be queried with odp_ipsec_capability().
+	 *  (ODP_PKTOUT_MODE_TM or ODP_PKTOUT_MODE_TM_QUEUE) can be queried
+	 *  with odp_ipsec_capability().
 	 *
 	 * * 0: Disable outbound IPSEC inline operation (default)
 	 * * 1: Enable outbound IPSEC inline operation
@@ -865,8 +870,9 @@ typedef struct odp_pktio_capability_t {
  *
  * Packet output queue configuration must be setup with
  * odp_pktout_queue_config() before odp_pktio_start() is called. When packet
- * output mode is ODP_PKTOUT_MODE_DISABLED or ODP_PKTOUT_MODE_TM,
- * odp_pktout_queue_config() call is optional and will ignore all parameters.
+ * output mode is ODP_PKTOUT_MODE_DISABLED, ODP_PKTOUT_MODE_TM or
+ * ODP_PKTOUT_MODE_TM_QUEUE, odp_pktout_queue_config() call is optional
+ * and will ignore all parameters.
  *
  * Packet receive and transmit on the interface is enabled with a call to
  * odp_pktio_start(). If not specified otherwise, any interface level
