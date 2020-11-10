@@ -27,13 +27,17 @@ extern "C" {
  */
 
 /**
- * Check for all errors in packet
+ * Check for all parse errors in packet
  *
  * Check if packet parsing has found any errors in the packet. The level of
  * error checking depends on the parse configuration (e.g. included layers and
  * checksums). Protocol layer functions (e.g. odp_packet_has_l3()) indicate
  * which layers have been checked, and layer error functions
  * (e.g. odp_packet_has_l3_error()) which layers have errors.
+ *
+ * If packet subtype is ODP_EVENT_PACKET_IPSEC, odp_packet_has_error() would
+ * indicate parsing errors after IPSEC processing. IPSEC errors/warnings need
+ * to be checked using odp_ipsec_result().
  *
  * @param pkt          Packet handle
  *
