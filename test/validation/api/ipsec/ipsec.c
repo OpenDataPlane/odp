@@ -591,7 +591,7 @@ static int ipsec_send_in_one(const ipsec_test_part *part,
 	pkt = ipsec_packet(part->pkt_in);
 
 	memset(&param, 0, sizeof(param));
-	if (!part->lookup) {
+	if (!part->flags.lookup) {
 		param.num_sa = 1;
 		param.sa = &sa;
 	} else {

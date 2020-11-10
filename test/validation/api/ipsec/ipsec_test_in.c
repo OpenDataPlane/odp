@@ -289,7 +289,9 @@ static void test_in_ipv4_ah_sha256_lookup(void)
 
 	ipsec_test_part test = {
 		.pkt_in = &pkt_ipv4_icmp_0_ah_sha256_1,
-		.lookup = 1,
+		.flags = {
+			.lookup = 1,
+		},
 		.num_pkt = 1,
 		.in = {
 			{ .status.warn.all = 0,
@@ -322,7 +324,9 @@ static void test_in_ipv4_esp_null_sha256_lookup(void)
 
 	ipsec_test_part test = {
 		.pkt_in = &pkt_ipv4_icmp_0_esp_null_sha256_1,
-		.lookup = 1,
+		.flags = {
+			.lookup = 1,
+		},
 		.num_pkt = 1,
 		.in = {
 			{ .status.warn.all = 0,
@@ -459,7 +463,9 @@ static void test_in_ipv4_esp_udp_null_sha256_lookup(void)
 
 	ipsec_test_part test = {
 		.pkt_in = &pkt_ipv4_icmp_0_esp_udp_null_sha256_1,
-		.lookup = 1,
+		.flags = {
+			.lookup = 1,
+		},
 		.num_pkt = 1,
 		.in = {
 			{ .status.warn.all = 0,
@@ -778,7 +784,7 @@ static void test_in_ipv4_ah_esp_pkt_lookup(void)
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
 	test.pkt_in = &pkt_ipv4_icmp_0_esp_null_sha256_1;
-	test.lookup = 1;
+	test.flags.lookup = 1;
 	test.num_pkt = 1;
 	test.in[0].status.error.sa_lookup = 1;
 
@@ -806,7 +812,7 @@ static void test_in_ipv4_esp_ah_pkt_lookup(void)
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
 	test.pkt_in = &pkt_ipv4_icmp_0_ah_sha256_1;
-	test.lookup = 1;
+	test.flags.lookup = 1;
 	test.num_pkt = 1;
 	test.in[0].status.error.sa_lookup = 1;
 
@@ -1596,7 +1602,9 @@ static void test_in_ipv6_esp_udp_null_sha256_lookup(void)
 
 	ipsec_test_part test = {
 		.pkt_in = &pkt_ipv6_icmp_0_esp_udp_null_sha256_1,
-		.lookup = 1,
+		.flags = {
+			.lookup = 1,
+		},
 		.num_pkt = 1,
 		.in = {
 			{ .status.warn.all = 0,
