@@ -63,6 +63,9 @@ typedef enum odp_ipsec_op_mode_t {
 	  * Packet input/output is connected directly to IPSEC inbound/outbound
 	  * processing. Application uses asynchronous or inline IPSEC
 	  * operations.
+	  *
+	  * Inline processed inbound packets are delivered to the application
+	  * in the same way as packets processed by odp_ipsec_in_enq().
 	  */
 	ODP_IPSEC_OP_MODE_INLINE,
 
@@ -1575,6 +1578,12 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
  * may be processed simultaneously in both modes (initiated by this function
  * and inline operation).
  *
+ * Post-processing may be required after the reception of an IPsec packet
+ * event to complete IPsec processing for the packet. The post-processing
+ * happens in the odp_ipsec_result() function that must be called at least
+ * once before packet data or metadata (other than packet type and subtype)
+ * may be accessed.
+ *
  * @param          pkt      Packets to be processed
  * @param          num      Number of packets to be processed
  * @param          param    Inbound operation parameters
@@ -1610,6 +1619,12 @@ int odp_ipsec_in_enq(const odp_packet_t pkt[], int num,
  *
  * The function may be used also in inline processing mode, e.g. for IPSEC
  * packets for which inline processing is not possible.
+ *
+ * Post-processing may be required after the reception of an IPsec packet
+ * event to complete IPsec processing for the packet. The post-processing
+ * happens in the odp_ipsec_result() function that must be called at least
+ * once before packet data or metadata (other than packet type and subtype)
+ * may be accessed.
  *
  * @param          pkt      Packets to be processed
  * @param          num      Number of packets to be processed
