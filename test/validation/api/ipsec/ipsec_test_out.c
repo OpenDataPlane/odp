@@ -341,7 +341,7 @@ static void test_out_ipv4_esp_null_sha256_tun_ipv6(void)
 	ipsec_sa_destroy(sa);
 }
 
-static void test_out_in_common(odp_bool_t ah,
+static void test_out_in_common(ipsec_test_flags *flags,
 			       odp_cipher_alg_t cipher,
 			       const odp_crypto_key_t *cipher_key,
 			       odp_auth_alg_t auth,
@@ -354,7 +354,7 @@ static void test_out_in_common(odp_bool_t ah,
 	odp_ipsec_sa_t sa_in;
 
 	ipsec_sa_param_fill(&param,
-			    false, ah, 123, NULL,
+			    false, flags->ah, 123, NULL,
 			    cipher, cipher_key,
 			    auth, auth_key,
 			    cipher_key_extra, auth_key_extra);
@@ -364,7 +364,7 @@ static void test_out_in_common(odp_bool_t ah,
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa_out);
 
 	ipsec_sa_param_fill(&param,
-			    true, ah, 123, NULL,
+			    true, flags->ah, 123, NULL,
 			    cipher, cipher_key,
 			    auth, auth_key,
 			    cipher_key_extra, auth_key_extra);
@@ -403,6 +403,7 @@ static void test_esp_out_in(struct cipher_param *cipher,
 {
 	int cipher_keylen = cipher->key ? 8 * cipher->key->length : 0;
 	int auth_keylen = auth->key ? 8 * auth->key->length : 0;
+	ipsec_test_flags flags;
 
 	if (ipsec_check_esp(cipher->algo, cipher_keylen,
 			    auth->algo, auth_keylen) != ODP_TEST_ACTIVE)
@@ -411,8 +412,10 @@ static void test_esp_out_in(struct cipher_param *cipher,
 	printf("\n    %s (keylen %d) %s (keylen %d) ",
 	       cipher->name, cipher_keylen, auth->name, auth_keylen);
 
-	test_out_in_common(false /* ESP */,
-			   cipher->algo, cipher->key,
+	memset(&flags, 0, sizeof(flags));
+	flags.ah = false;
+
+	test_out_in_common(&flags, cipher->algo, cipher->key,
 			   auth->algo, auth->key,
 			   cipher->key_extra, auth->key_extra);
 }
@@ -439,14 +442,17 @@ static void test_esp_out_in_all(void)
 static void test_ah_out_in(struct auth_param *auth)
 {
 	int auth_keylen = auth->key ? 8 * auth->key->length : 0;
+	ipsec_test_flags flags;
 
 	if (ipsec_check_ah(auth->algo, auth_keylen) != ODP_TEST_ACTIVE)
 		return;
 
 	printf("\n    %s (keylen %d) ", auth->name, auth_keylen);
 
-	test_out_in_common(true /* AH */,
-			   ODP_CIPHER_ALG_NULL, NULL,
+	memset(&flags, 0, sizeof(flags));
+	flags.ah = true;
+
+	test_out_in_common(&flags, ODP_CIPHER_ALG_NULL, NULL,
 			   auth->algo, auth->key,
 			   NULL, auth->key_extra);
 }
@@ -493,24 +499,36 @@ static void test_out_ipv4_esp_udp_null_sha256(void)
 
 static void test_out_ipv4_ah_aes_gmac_128(void)
 {
-	test_out_in_common(true,
-			   ODP_CIPHER_ALG_NULL, NULL,
+	ipsec_test_flags flags;
+
+	memset(&flags, 0, sizeof(flags));
+	flags.ah = true;
+
+	test_out_in_common(&flags, ODP_CIPHER_ALG_NULL, NULL,
 			   ODP_AUTH_ALG_AES_GMAC, &key_a5_128,
 			   NULL, &key_mcgrew_gcm_salt_2);
 }
 
 static void test_out_ipv4_ah_aes_gmac_192(void)
 {
-	test_out_in_common(true,
-			   ODP_CIPHER_ALG_NULL, NULL,
+	ipsec_test_flags flags;
+
+	memset(&flags, 0, sizeof(flags));
+	flags.ah = true;
+
+	test_out_in_common(&flags, ODP_CIPHER_ALG_NULL, NULL,
 			   ODP_AUTH_ALG_AES_GMAC, &key_a5_192,
 			   NULL, &key_mcgrew_gcm_salt_2);
 }
 
 static void test_out_ipv4_ah_aes_gmac_256(void)
 {
-	test_out_in_common(true,
-			   ODP_CIPHER_ALG_NULL, NULL,
+	ipsec_test_flags flags;
+
+	memset(&flags, 0, sizeof(flags));
+	flags.ah = true;
+
+	test_out_in_common(&flags, ODP_CIPHER_ALG_NULL, NULL,
 			   ODP_AUTH_ALG_AES_GMAC, &key_a5_256,
 			   NULL, &key_mcgrew_gcm_salt_2);
 }

@@ -48,8 +48,13 @@ typedef struct {
 #define _ODP_PROTO_L4_TYPE_UNDEF ((odp_proto_l4_type_t)-1)
 
 typedef struct {
-	const ipsec_test_packet *pkt_in;
 	odp_bool_t lookup;
+	odp_bool_t ah;
+} ipsec_test_flags;
+
+typedef struct {
+	const ipsec_test_packet *pkt_in;
+	ipsec_test_flags flags;
 	int num_opt;
 	odp_ipsec_out_opt_t opt;
 	int num_pkt;
