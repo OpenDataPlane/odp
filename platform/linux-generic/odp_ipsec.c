@@ -606,7 +606,6 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	odp_crypto_packet_op_param_t param;
 	int rc;
 	odp_crypto_packet_result_t crypto; /**< Crypto operation result */
-	odp_packet_hdr_t *pkt_hdr;
 
 	state.ip_offset = odp_packet_l3_offset(pkt);
 	ODP_ASSERT(ODP_PACKET_OFFSET_INVALID != state.ip_offset);
@@ -799,14 +798,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		odp_packet_parse(pkt, state.ip_offset, &parse_param);
 	}
 
-	*pkt_out = pkt;
-
-	return ipsec_sa;
-
 err:
-	pkt_hdr = packet_hdr(pkt);
-	pkt_hdr->p.flags.ipsec_err = 1;
-
 	*pkt_out = pkt;
 
 	return ipsec_sa;
@@ -1392,7 +1384,6 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	odp_crypto_packet_op_param_t param;
 	int rc;
 	odp_crypto_packet_result_t crypto; /**< Crypto operation result */
-	odp_packet_hdr_t *pkt_hdr;
 	odp_ipsec_frag_mode_t frag_mode;
 	uint32_t mtu;
 
@@ -1555,14 +1546,7 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	else if (ODP_IPSEC_AH == ipsec_sa->proto)
 		ipsec_out_ah_post(&state, pkt);
 
-	*pkt_out = pkt;
-	return ipsec_sa;
-
 err:
-	pkt_hdr = packet_hdr(pkt);
-
-	pkt_hdr->p.flags.ipsec_err = 1;
-
 	*pkt_out = pkt;
 	return ipsec_sa;
 }
