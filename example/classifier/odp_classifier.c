@@ -797,6 +797,9 @@ static int convert_str_to_pmr_enum(char *token, odp_cls_pmr_term_t *term)
 	} else if (strcasecmp(token, "ODP_PMR_TCP_SPORT") == 0) {
 		*term = ODP_PMR_TCP_SPORT;
 		return 0;
+	} else if (strcasecmp(token, "ODP_PMR_DIP_ADDR") == 0) {
+		*term = ODP_PMR_DIP_ADDR;
+		return 0;
 	} else if (strcasecmp(token, "ODP_PMR_SIP_ADDR") == 0) {
 		*term = ODP_PMR_SIP_ADDR;
 		return 0;
@@ -891,6 +894,8 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 
 		stats[policy_count].rule.val_sz = 2;
 	break;
+	case ODP_PMR_DIP_ADDR:
+		/* Fall through */
 	case ODP_PMR_SIP_ADDR:
 		/* :<IP addr>:<mask> */
 		token = strtok(NULL, ":");
