@@ -133,7 +133,7 @@ typedef struct {
 	/* Indicate to the receivers to shutdown */
 	odp_atomic_u32_t shutdown;
 	/* Sequence number of IP packets */
-	odp_atomic_u32_t ODP_ALIGNED_CACHE ip_seq;
+	odp_atomic_u32_t ip_seq ODP_ALIGNED_CACHE;
 } test_globals_t;
 
 /* Status of max rate search */
