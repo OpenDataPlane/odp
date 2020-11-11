@@ -99,7 +99,7 @@ typedef bitset_t sched_group_mask_t;
 
 typedef struct {
 	/* Threads currently associated with the sched group */
-	bitset_t ODP_ALIGNED_CACHE thr_actual[ODP_SCHED_PRIO_NUM];
+	bitset_t thr_actual[ODP_SCHED_PRIO_NUM] ODP_ALIGNED_CACHE;
 	bitset_t thr_wanted;
 	/* Used to spread queues over schedq's */
 	uint32_t xcount[ODP_SCHED_PRIO_NUM];
@@ -107,7 +107,7 @@ typedef struct {
 	uint32_t xfactor;
 	char name[ODP_SCHED_GROUP_NAME_LEN];
 	/* ODP_SCHED_PRIO_NUM * xfactor. Must be last. */
-	sched_queue_t ODP_ALIGNED_CACHE schedq[1];
+	sched_queue_t schedq[1] ODP_ALIGNED_CACHE;
 } sched_group_t;
 
 /* Number of reorder contexts per thread */
@@ -136,9 +136,9 @@ typedef struct ODP_ALIGNED_CACHE {
 	sched_group_mask_t sg_wanted[ODP_SCHED_PRIO_NUM];
 	bitset_t priv_rvec_free;
 	/* Bitset of free entries in rvec[] */
-	bitset_t ODP_ALIGNED_CACHE rvec_free;
+	bitset_t rvec_free ODP_ALIGNED_CACHE;
 	/* Reordering contexts to allocate from */
-	reorder_context_t ODP_ALIGNED_CACHE rvec[TS_RVEC_SIZE];
+	reorder_context_t rvec[TS_RVEC_SIZE] ODP_ALIGNED_CACHE;
 	uint32_t loop_cnt; /*Counter to check pktio ingress queue dead loop */
 } sched_scalable_thread_state_t;
 

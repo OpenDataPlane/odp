@@ -30,8 +30,8 @@
 #include <odp_classification_internal.h>
 
 typedef struct {
-	odp_ticketlock_t ODP_ALIGNED_CACHE rx_lock;
-	odp_ticketlock_t ODP_ALIGNED_CACHE tx_lock;
+	odp_ticketlock_t rx_lock ODP_ALIGNED_CACHE;
+	odp_ticketlock_t tx_lock ODP_ALIGNED_CACHE;
 	int sockfd; /**< socket descriptor */
 	odp_pool_t pool; /**< pool to alloc packets from */
 	uint32_t mtu;    /**< maximum transmission unit */

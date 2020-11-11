@@ -35,7 +35,7 @@ extern "C" {
 
 struct queue_entry_s {
 	/* The first cache line is read only */
-	queue_enq_fn_t       ODP_ALIGNED_CACHE enqueue;
+	queue_enq_fn_t       enqueue ODP_ALIGNED_CACHE;
 	queue_deq_fn_t       dequeue;
 	queue_enq_multi_fn_t enqueue_multi;
 	queue_deq_multi_fn_t dequeue_multi;

@@ -78,7 +78,7 @@ struct pktio_entry {
 		uint8_t tx_ts : 1;
 	} enabled;
 	odp_pktio_t handle;		/**< pktio handle */
-	unsigned char ODP_ALIGNED_CACHE pkt_priv[PKTIO_PRIVATE_SIZE];
+	unsigned char pkt_priv[PKTIO_PRIVATE_SIZE] ODP_ALIGNED_CACHE;
 	enum {
 		/* Not allocated */
 		PKTIO_STATE_FREE = 0,

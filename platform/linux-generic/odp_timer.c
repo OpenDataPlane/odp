@@ -158,7 +158,7 @@ typedef struct timer_global_t {
 	timer_pool_t *timer_pool[MAX_TIMER_POOLS];
 #ifndef ODP_ATOMIC_U128
 	/* Multiple locks per cache line! */
-	_odp_atomic_flag_t ODP_ALIGNED_CACHE locks[NUM_LOCKS];
+	_odp_atomic_flag_t locks[NUM_LOCKS] ODP_ALIGNED_CACHE;
 #endif
 	/* These are read frequently from inline timer */
 	odp_time_t poll_interval_time;

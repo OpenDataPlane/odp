@@ -22,7 +22,7 @@
 typedef struct _odp_time_global_t {
 	/* Storage space for struct timespec. Posix headers are not included
 	 * here to avoid application exposure. */
-	uint8_t ODP_ALIGNED(_ODP_TIMESPEC_SIZE) timespec[_ODP_TIMESPEC_SIZE];
+	uint8_t timespec[_ODP_TIMESPEC_SIZE] ODP_ALIGNED(_ODP_TIMESPEC_SIZE);
 
 	int             use_hw;
 	uint64_t        hw_start;

@@ -35,7 +35,7 @@
 #include <odp/visibility_begin.h>
 
 /* Fill in packet header field offsets for inline functions */
-const _odp_packet_inline_offset_t ODP_ALIGNED_CACHE _odp_packet_inline = {
+const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.seg_data       = offsetof(odp_packet_hdr_t, seg_data),
 	.seg_len        = offsetof(odp_packet_hdr_t, seg_len),
 	.seg_next       = offsetof(odp_packet_hdr_t, seg_next),

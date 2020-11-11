@@ -18,7 +18,7 @@
 
 #include <odp/visibility_begin.h>
 
-_odp_queue_inline_offset_t ODP_ALIGNED_CACHE _odp_queue_inline_offset;
+_odp_queue_inline_offset_t _odp_queue_inline_offset ODP_ALIGNED_CACHE;
 const _odp_queue_api_fn_t *_odp_queue_api;
 
 #include <odp/visibility_end.h>

@@ -18,8 +18,8 @@
 #include <odp/visibility_begin.h>
 
 /* Fill in buffer header field offsets for inline functions */
-const _odp_buffer_inline_offset_t ODP_ALIGNED_CACHE
-_odp_buffer_inline_offset = {
+const _odp_buffer_inline_offset_t
+_odp_buffer_inline_offset ODP_ALIGNED_CACHE = {
 	.event_type = offsetof(odp_buffer_hdr_t, event_type),
 	.base_data  = offsetof(odp_buffer_hdr_t, base_data)
 };
