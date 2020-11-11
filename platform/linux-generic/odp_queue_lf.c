@@ -84,9 +84,9 @@ static inline int atomic_is_lockfree_u128(void)
 /* These definitions enable build in non 128 bit compatible systems.
  * Implementation is active only when 128 bit lockfree atomics are available.
  * So, these are never actually used. */
-typedef struct {
+typedef struct ODP_ALIGNED(16) {
 	uint64_t u64[2];
-} u128_t ODP_ALIGNED(16);
+} u128_t;
 
 static inline u128_t atomic_load_u128(u128_t *atomic)
 {
@@ -135,19 +135,19 @@ typedef union {
 } ring_lf_node_t;
 
 /* Lock-free ring */
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	ring_lf_node_t   node[RING_LF_SIZE];
 	int              used;
 	odp_atomic_u64_t enq_counter;
 
-} queue_lf_t ODP_ALIGNED_CACHE;
+} queue_lf_t;
 
 /* Lock-free queue globals */
-typedef struct {
+typedef struct ODP_ALIGNED_CACHE {
 	queue_lf_t queue_lf[QUEUE_LF_NUM];
 	odp_shm_t  shm;
 
-} queue_lf_global_t ODP_ALIGNED_CACHE;
+} queue_lf_global_t;
 
 static queue_lf_global_t *queue_lf_glb;
 
