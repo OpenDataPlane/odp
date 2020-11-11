@@ -24,9 +24,9 @@ extern "C" {
  * @internal
  * Atomic 32-bit unsigned integer
  */
-struct odp_atomic_u32_s {
+typedef struct ODP_ALIGNED(sizeof(uint32_t)) odp_atomic_u32_s {
 	uint32_t v; /**< Actual storage for the atomic variable */
-} ODP_ALIGNED(sizeof(uint32_t)); /* Enforce alignment! */
+} odp_atomic_u32_t;
 
 #if __GCC_ATOMIC_LLONG_LOCK_FREE >= 2
 
@@ -34,9 +34,9 @@ struct odp_atomic_u32_s {
  * @internal
  * Atomic 64-bit unsigned integer
  */
-struct odp_atomic_u64_s {
+typedef struct ODP_ALIGNED(sizeof(uint64_t)) odp_atomic_u64_s {
 	uint64_t v; /**< Actual storage for the atomic variable */
-} ODP_ALIGNED(sizeof(uint64_t)); /* Enforce alignment! */
+} odp_atomic_u64_t;
 
 #else
 
@@ -50,18 +50,14 @@ struct odp_atomic_u64_s {
  * @internal
  * Atomic 64-bit unsigned integer
  */
-struct odp_atomic_u64_s {
+typedef struct ODP_ALIGNED(sizeof(uint64_t)) odp_atomic_u64_s {
 	uint64_t v; /**< Actual storage for the atomic variable */
 	/* Some architectures do not support lock-free operations on 64-bit
 	 * data types. We use a spin lock to ensure atomicity. */
 	char lock; /**< Spin lock (if needed) used to ensure atomic access */
-} ODP_ALIGNED(sizeof(uint64_t)); /* Enforce alignment! */
+} odp_atomic_u64_t;
 
 #endif
-
-typedef struct odp_atomic_u64_s odp_atomic_u64_t;
-
-typedef struct odp_atomic_u32_s odp_atomic_u32_t;
 
 #ifdef __cplusplus
 }
