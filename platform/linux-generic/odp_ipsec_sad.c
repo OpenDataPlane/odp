@@ -387,6 +387,16 @@ uint32_t _odp_ipsec_auth_digest_len(odp_auth_alg_t auth)
 	}
 }
 
+static uint32_t esp_block_len_to_mask(uint32_t block_len)
+{
+	/* ESP trailer should be 32-bit right aligned */
+	if (block_len < 4)
+		block_len = 4;
+
+	ODP_ASSERT(CHECK_IS_POWER2(block_len));
+	return block_len - 1;
+}
+
 odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 {
 	ipsec_sa_t *ipsec_sa;
@@ -521,25 +531,25 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	switch (crypto_param.cipher_alg) {
 	case ODP_CIPHER_ALG_NULL:
 		ipsec_sa->esp_iv_len = 0;
-		ipsec_sa->esp_block_len = 1;
+		ipsec_sa->esp_pad_mask = esp_block_len_to_mask(1);
 		break;
 	case ODP_CIPHER_ALG_DES:
 	case ODP_CIPHER_ALG_3DES_CBC:
 		ipsec_sa->esp_iv_len = 8;
-		ipsec_sa->esp_block_len = 8;
+		ipsec_sa->esp_pad_mask = esp_block_len_to_mask(8);
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_CBC:
 #endif
 	case ODP_CIPHER_ALG_AES_CBC:
 		ipsec_sa->esp_iv_len = 16;
-		ipsec_sa->esp_block_len = 16;
+		ipsec_sa->esp_pad_mask = esp_block_len_to_mask(16);
 		break;
 	case ODP_CIPHER_ALG_AES_CTR:
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->aes_ctr_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
-		ipsec_sa->esp_block_len = 1;
+		ipsec_sa->esp_pad_mask = esp_block_len_to_mask(1);
 		/* 4 byte nonse */
 		ipsec_sa->salt_length = 4;
 		salt_param = &param->crypto.cipher_key_extra;
@@ -550,21 +560,21 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	case ODP_CIPHER_ALG_AES_GCM:
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
-		ipsec_sa->esp_block_len = 16;
+		ipsec_sa->esp_pad_mask = esp_block_len_to_mask(16);
 		ipsec_sa->salt_length = 4;
 		salt_param = &param->crypto.cipher_key_extra;
 		break;
 	case ODP_CIPHER_ALG_AES_CCM:
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
-		ipsec_sa->esp_block_len = 16;
+		ipsec_sa->esp_pad_mask = esp_block_len_to_mask(16);
 		ipsec_sa->salt_length = 3;
 		salt_param = &param->crypto.cipher_key_extra;
 		break;
 	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
-		ipsec_sa->esp_block_len = 1;
+		ipsec_sa->esp_pad_mask = esp_block_len_to_mask(1);
 		ipsec_sa->salt_length = 4;
 		salt_param = &param->crypto.cipher_key_extra;
 		break;
@@ -584,7 +594,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 			goto error;
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
-		ipsec_sa->esp_block_len = 16;
+		ipsec_sa->esp_pad_mask = esp_block_len_to_mask(16);
 		crypto_param.auth_iv.length = 12;
 		ipsec_sa->salt_length = 4;
 		salt_param = &param->crypto.auth_key_extra;

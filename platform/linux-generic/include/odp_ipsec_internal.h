@@ -138,7 +138,7 @@ struct ipsec_sa_s {
 
 	uint32_t	icv_len;
 	uint32_t	esp_iv_len;
-	uint32_t	esp_block_len;
+	uint32_t	esp_pad_mask;
 
 	uint8_t		salt[IPSEC_MAX_SALT_LEN];
 	uint32_t	salt_length;
