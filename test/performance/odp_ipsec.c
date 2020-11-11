@@ -1111,6 +1111,10 @@ int main(int argc, char *argv[])
 		config.outbound_mode = ODP_IPSEC_OP_MODE_SYNC;
 		config.inbound.default_queue = ODP_QUEUE_INVALID;
 	}
+	if (odp_ipsec_config(&config)) {
+		app_err("odp_ipsec_config() failed\n");
+		exit(EXIT_FAILURE);
+	}
 
 	if (cargs.schedule) {
 		printf("Run in async scheduled mode\n");
