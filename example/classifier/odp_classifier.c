@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -800,6 +800,9 @@ static int convert_str_to_pmr_enum(char *token, odp_cls_pmr_term_t *term)
 	} else if (strcasecmp(token, "ODP_PMR_SIP_ADDR") == 0) {
 		*term = ODP_PMR_SIP_ADDR;
 		return 0;
+	} else if (strcasecmp(token, "ODP_PMR_DMAC") == 0) {
+		*term = ODP_PMR_DMAC;
+		return 0;
 	} else if (strcasecmp(token, "ODP_PMR_CUSTOM_FRAME") == 0) {
 		*term = ODP_PMR_CUSTOM_FRAME;
 		return 0;
@@ -814,10 +817,11 @@ static int convert_str_to_pmr_enum(char *token, odp_cls_pmr_term_t *term)
 static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 {
 	int policy_count;
-	char *token, *cos0, *cos1;
+	char *token, *cos0, *cos1, *cur_char;
 	size_t len;
 	odp_cls_pmr_term_t term;
 	global_statistics *stats;
+	odph_ethaddr_t mac;
 	char *pmr_str;
 	uint32_t offset, ip_addr, u32;
 	unsigned long int value, mask;
@@ -910,6 +914,34 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 		memcpy(stats[policy_count].rule.mask_be, &u32, sizeof(u32));
 
 		stats[policy_count].rule.val_sz = 4;
+	break;
+	case ODP_PMR_DMAC:
+		/* :<MAC addr>:<mask> */
+		token = strtok(NULL, ":");
+		strncpy(stats[policy_count].value, token,
+			DISPLAY_STRING_LEN - 1);
+
+		/* Replace hyphens in the MAC string with colons to be compatible with
+		 * odph_eth_addr_parse(). */
+		cur_char = token;
+		while ((cur_char = strchr(cur_char, '-')) != NULL)
+			*cur_char++ = ':';
+
+		if (odph_eth_addr_parse(&mac, token)) {
+			ODPH_ERR("Invalid MAC address. Use format 11-22-33-44-55-66.\n");
+			exit(EXIT_FAILURE);
+		}
+
+		memcpy(stats[policy_count].rule.value_be, mac.addr, ODPH_ETHADDR_LEN);
+		stats[policy_count].rule.val_sz = 6;
+
+		token = strtok(NULL, ":");
+		strncpy(stats[policy_count].mask, token, DISPLAY_STRING_LEN - 1);
+		mask_sz = parse_custom(token, stats[policy_count].rule.mask_be, ODPH_ETHADDR_LEN);
+		if (mask_sz != ODPH_ETHADDR_LEN) {
+			ODPH_ERR("Invalid mask. Provide mask without 0x prefix.\n");
+			return -1;
+		}
 	break;
 	case ODP_PMR_CUSTOM_FRAME:
 		/* Fall through */
