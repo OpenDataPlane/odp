@@ -1542,13 +1542,11 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 		goto err;
 	}
 
-	/* Finalize the IPv4 header */
+	/* Finalize the IP header */
 	if (ODP_IPSEC_ESP == ipsec_sa->proto)
 		ipsec_out_esp_post(&state, pkt);
 	else if (ODP_IPSEC_AH == ipsec_sa->proto)
 		ipsec_out_ah_post(&state, pkt);
-
-	_odp_packet_ipv4_chksum_insert(pkt);
 
 	*pkt_out = pkt;
 	return ipsec_sa;
