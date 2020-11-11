@@ -266,8 +266,8 @@ int link_info_fd(int fd, const char *name, odp_pktio_link_info_t *info)
 	/* Reserve space for the three bitmasks (map_supported, map_advertising, map_lp_advertising)
 	 * at the end of struct ethtool_link_settings. 'link_mode_masks_nwords' defines the bitmask
 	 * length in 32-bit words. */
-	uint8_t ODP_ALIGNED_CACHE data[offsetof(struct ethtool_link_settings, link_mode_masks) +
-				       (3 * sizeof(uint32_t) * hcmd.link_mode_masks_nwords)];
+	uint8_t data[offsetof(struct ethtool_link_settings, link_mode_masks) +
+		     (3 * sizeof(uint32_t) * hcmd.link_mode_masks_nwords)] ODP_ALIGNED_CACHE;
 
 	ecmd = (void *)data;
 	*ecmd = hcmd;

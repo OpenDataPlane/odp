@@ -92,7 +92,7 @@ int _odp_ipsec_status_send(odp_queue_t queue,
 #define ODP_CONFIG_IPSEC_SAS	8
 
 struct ipsec_sa_s {
-	odp_atomic_u32_t ODP_ALIGNED_CACHE state;
+	odp_atomic_u32_t state ODP_ALIGNED_CACHE;
 
 	/*
 	 * State that gets updated very frequently. Grouped separately

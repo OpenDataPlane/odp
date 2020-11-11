@@ -140,7 +140,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	uint8_t lockless_rx;		  /**< no locking for rx */
 	uint8_t lockless_tx;		  /**< no locking for tx */
 	  /** RX queue locks */
-	odp_ticketlock_t ODP_ALIGNED_CACHE rx_lock[PKTIO_MAX_QUEUES];
+	odp_ticketlock_t rx_lock[PKTIO_MAX_QUEUES] ODP_ALIGNED_CACHE;
 	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES];  /**< TX queue locks */
 	/** cache for storing extra RX packets */
 	pkt_cache_t rx_cache[PKTIO_MAX_QUEUES];

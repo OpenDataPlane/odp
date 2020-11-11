@@ -48,7 +48,7 @@ typedef struct ODP_ALIGNED_CACHE {
 typedef void (*pool_destroy_cb_fn)(void *pool);
 
 typedef struct pool_t {
-	odp_ticketlock_t ODP_ALIGNED_CACHE lock;
+	odp_ticketlock_t lock ODP_ALIGNED_CACHE;
 
 	char             name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t params;

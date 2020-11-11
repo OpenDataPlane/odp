@@ -85,7 +85,7 @@ typedef struct ipsec_sa_table_t {
 	ipsec_thread_local_t per_thread[ODP_THREAD_COUNT_MAX];
 	struct ODP_ALIGNED_CACHE {
 		ring_mpmc_t ipv4_id_ring;
-		uint32_t ODP_ALIGNED_CACHE ipv4_id_data[IPV4_ID_RING_SIZE];
+		uint32_t ipv4_id_data[IPV4_ID_RING_SIZE] ODP_ALIGNED_CACHE;
 	} hot;
 	odp_shm_t shm;
 } ipsec_sa_table_t;

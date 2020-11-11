@@ -34,10 +34,10 @@ extern "C" {
  *
  */
 typedef struct {
-	odp_atomic_u32_t ODP_ALIGNED_CACHE r_head;
+	odp_atomic_u32_t r_head ODP_ALIGNED_CACHE;
 	odp_atomic_u32_t r_tail;
 
-	odp_atomic_u32_t ODP_ALIGNED_CACHE w_head;
+	odp_atomic_u32_t w_head ODP_ALIGNED_CACHE;
 	odp_atomic_u32_t w_tail;
 
 } ring_mpmc_t;

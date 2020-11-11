@@ -77,11 +77,11 @@ ODP_STATIC_ASSERT(offsetof(struct ring, mm_space) <= ODP_CACHE_LINE_SIZE,
 /** Packet socket using mmap rings for both Rx and Tx */
 typedef struct {
 	/** Packet mmap ring for Rx */
-	struct ring ODP_ALIGNED_CACHE rx_ring;
+	struct ring rx_ring ODP_ALIGNED_CACHE;
 	/** Packet mmap ring for Tx */
-	struct ring ODP_ALIGNED_CACHE tx_ring;
+	struct ring tx_ring ODP_ALIGNED_CACHE;
 
-	int ODP_ALIGNED_CACHE sockfd;
+	int sockfd ODP_ALIGNED_CACHE;
 	odp_pool_t pool;
 	int mtu; /**< maximum transmission unit */
 	size_t frame_offset; /**< frame start offset from start of pkt buf */

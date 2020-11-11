@@ -169,7 +169,7 @@ typedef struct ODP_ALIGNED_CACHE {
 /* Order context of a queue */
 typedef struct ODP_ALIGNED_CACHE {
 	/* Current ordered context id */
-	odp_atomic_u64_t ODP_ALIGNED_CACHE ctx;
+	odp_atomic_u64_t ctx ODP_ALIGNED_CACHE;
 
 	/* Next unallocated context id */
 	odp_atomic_u64_t next_ctx;

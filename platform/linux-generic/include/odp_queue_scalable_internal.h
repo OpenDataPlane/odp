@@ -34,11 +34,11 @@ extern "C" {
 struct queue_entry_s {
 	sched_elem_t     sched_elem;
 
-	odp_ticketlock_t ODP_ALIGNED_CACHE lock;
+	odp_ticketlock_t lock ODP_ALIGNED_CACHE;
 	odp_atomic_u64_t num_timers;
 	int              status;
 
-	queue_enq_fn_t       ODP_ALIGNED_CACHE enqueue;
+	queue_enq_fn_t       enqueue ODP_ALIGNED_CACHE;
 	queue_deq_fn_t       dequeue;
 	queue_enq_multi_fn_t enqueue_multi;
 	queue_deq_multi_fn_t dequeue_multi;
