@@ -93,13 +93,6 @@ typedef struct {
 	int debug_packets;
 
 	/**
-	 * If non zero Try to run crypto operation in place. Note some
-	 * implementation may not support such mode. Enabled by -n or
-	 * --inplace option.
-	 */
-	int in_place;
-
-	/**
 	 * Maximum number of outstanding encryption requests. Note code
 	 * poll for results over queue and if nothing is available it can
 	 * submit more encryption requests up to maximum number specified by
@@ -664,8 +657,6 @@ run_measure_one(ipsec_args_t *cargs,
 			if (ODP_PACKET_INVALID == pkt)
 				return -1;
 
-			out_pkt = cargs->in_place ? pkt : ODP_PACKET_INVALID;
-
 			if (cargs->debug_packets)
 				odp_packet_print_data(pkt, 0,
 						      odp_packet_len(pkt));
@@ -902,7 +893,6 @@ static void usage(char *progname)
 	printf("  -d, --debug	       Enable dump of processed packets.\n"
 	       "  -f, --flight <number> Max number of packet processed in parallel (default 1)\n"
 	       "  -i, --iterations <number> Number of iterations.\n"
-	       "  -n, --inplace	       Encrypt on place.\n"
 	       "  -l, --payload	       Payload length.\n"
 	       "  -s, --schedule       Use scheduler for completion events.\n"
 	       "  -p, --poll           Poll completion queue for completion events.\n"
@@ -922,7 +912,6 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 		{"flight", optional_argument, NULL, 'f'},
 		{"help", no_argument, NULL, 'h'},
 		{"iterations", optional_argument, NULL, 'i'},
-		{"inplace", no_argument, NULL, 'n'},
 		{"payload", optional_argument, NULL, 'l'},
 		{"sessions", optional_argument, NULL, 'm'},
 		{"poll", no_argument, NULL, 'p'},
@@ -934,7 +923,6 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 
 	static const char *shortopts = "+a:c:df:hi:m:nl:sptu";
 
-	cargs->in_place = 0;
 	cargs->in_flight = 1;
 	cargs->debug_packets = 0;
 	cargs->iteration_count = 10000;
@@ -971,9 +959,6 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 		case 'h':
 			usage(argv[0]);
 			exit(EXIT_SUCCESS);
-			break;
-		case 'n':
-			cargs->in_place = 1;
 			break;
 		case 'l':
 			cargs->payload_length = atoi(optarg);
