@@ -821,6 +821,17 @@ uint64_t ipsec_seq_no(ipsec_sa_t *ipsec_sa)
 /* Helper for calculating encode length using data length and block size */
 #define IPSEC_PAD_LEN(x, b) ((((x) + ((b) - 1)) / (b)) * (b))
 
+/*
+ * Round len up to next multiple of pad_mask + 1.
+ * pad_mask + 1 must be a power of 2.
+ */
+static inline uint32_t ipsec_padded_len(uint32_t len, uint32_t pad_mask)
+{
+	ODP_ASSERT(CHECK_IS_POWER2(pad_mask + 1));
+
+	return (len + pad_mask) & ~pad_mask;
+}
+
 static int ipsec_out_tunnel_parse_ipv4(ipsec_state_t *state,
 				       ipsec_sa_t *ipsec_sa)
 {
@@ -1053,7 +1064,6 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 			       state->ip_hdr_len;
 	uint16_t tfc_len = (opt->flag.tfc_pad || opt->flag.tfc_dummy) ?
 		opt->tfc_pad_len : 0;
-	uint32_t pad_block = ipsec_sa->esp_block_len;
 	uint16_t ipsec_offset = state->ip_offset + state->ip_hdr_len;
 	unsigned hdr_len;
 	unsigned trl_len;
@@ -1066,12 +1076,8 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 		state->ip_tot_len = state->ip_offset + state->ip_hdr_len;
 	}
 
-	/* ESP trailer should be 32-bit right aligned */
-	if (pad_block < 4)
-		pad_block = 4;
-
-	encrypt_len = IPSEC_PAD_LEN(ip_data_len + tfc_len + _ODP_ESPTRL_LEN,
-				    pad_block);
+	encrypt_len = ipsec_padded_len(ip_data_len + tfc_len + _ODP_ESPTRL_LEN,
+				       ipsec_sa->esp_pad_mask);
 
 	hdr_len = _ODP_ESPHDR_LEN + ipsec_sa->esp_iv_len;
 	trl_len = encrypt_len -
