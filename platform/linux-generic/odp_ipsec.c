@@ -151,7 +151,7 @@ void odp_ipsec_config_init(odp_ipsec_config_t *config)
 
 int odp_ipsec_config(const odp_ipsec_config_t *config)
 {
-	if (ODP_CONFIG_IPSEC_SAS > config->max_num_sa)
+	if (ODP_CONFIG_IPSEC_SAS < config->max_num_sa)
 		return -1;
 
 	*ipsec_config = *config;
