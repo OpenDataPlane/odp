@@ -1172,11 +1172,12 @@ static void usage(void)
 		"                           !0: Packet ICMP mode. Received packets will be sent back\n"
 		"                           default: Packet Drop mode\n"
 		"\n"
-		"  -t, --timeout <sec>      !0: Time for which the classifier will be run in seconds\n"
+		"  -t, --time <sec>         !0: Time for which the classifier will be run in seconds\n"
 		"                           0: Runs in infinite loop\n"
 		"                           default: Runs in infinite loop\n"
 		"\n"
 		"  -P, --promisc_mode       Enable promiscuous mode.\n"
+		"  -v, --verbose            Verbose output.\n"
 		"  -h, --help               Display help and exit.\n"
 		"\n");
 }
