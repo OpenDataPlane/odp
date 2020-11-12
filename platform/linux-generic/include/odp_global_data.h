@@ -51,6 +51,7 @@ typedef struct odp_global_data_ro_t {
 	uint64_t shm_max_size;
 	int shm_single_va;
 	pid_t main_pid;
+	pid_t fdserver_pid;
 	char uid[UID_MAXLEN];
 	odp_log_func_t log_fn;
 	odp_abort_func_t abort_fn;

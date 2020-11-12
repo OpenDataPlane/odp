@@ -672,6 +672,7 @@ int _odp_fdserver_init_global(void)
 	}
 
 	/* parent */
+	odp_global_ro.fdserver_pid = server_pid;
 	close(sock);
 	return 0;
 }
@@ -682,11 +683,20 @@ int _odp_fdserver_init_global(void)
 int _odp_fdserver_term_global(void)
 {
 	int status;
+	pid_t pid;
 	char sockpath[FDSERVER_SOCKPATH_MAXLEN];
 
-	/* close the server and wait for child terminaison*/
-	stop_server();
-	wait(&status);
+	/* close fdserver and wait for it to terminate */
+	if (stop_server()) {
+		ODP_ERR("Server stop failed\n");
+		return -1;
+	}
+
+	ODP_DBG("Waiting for fdserver (%i) to stop\n", odp_global_ro.fdserver_pid);
+	pid = waitpid(odp_global_ro.fdserver_pid, &status, 0);
+
+	if (pid != odp_global_ro.fdserver_pid)
+		ODP_ERR("Failed to wait for fdserver\n");
 
 	/* construct the server named socket path: */
 	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCK_FORMAT,
