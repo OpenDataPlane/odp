@@ -84,6 +84,7 @@ typedef struct {
 	int shutdown;		/**< Shutdown threads if !0 */
 	int shutdown_sig;
 	int verbose;
+	int promisc_mode;	/**< Promiscuous mode enabled */
 } appl_args_t;
 
 enum packet_mode {
@@ -199,6 +200,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	odp_pktio_t pktio;
 	odp_pktio_param_t pktio_param;
 	odp_pktin_queue_param_t pktin_param;
+	odp_pktio_capability_t capa;
 
 	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
@@ -210,6 +212,11 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 			ODPH_ERR("Root level permission required\n");
 
 		ODPH_ERR("pktio create failed for %s\n", dev);
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_pktio_capability(pktio, &capa)) {
+		ODPH_ERR("pktio capability failed for %s\n", dev);
 		exit(EXIT_FAILURE);
 	}
 
@@ -225,6 +232,18 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	if (odp_pktout_queue_config(pktio, NULL)) {
 		ODPH_ERR("pktout queue config failed for %s\n", dev);
 		exit(EXIT_FAILURE);
+	}
+
+	if (appl_args_gbl->promisc_mode) {
+		if (!capa.set_op.op.promisc_mode) {
+			ODPH_ERR("enabling promisc mode not supported %s\n", dev);
+			exit(EXIT_FAILURE);
+		}
+
+		if (odp_pktio_promisc_mode_set(pktio, true)) {
+			ODPH_ERR("failed to enable promisc mode for %s\n", dev);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	printf("  created pktio:%02" PRIu64
@@ -973,15 +992,17 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"policy", required_argument, NULL, 'p'},
 		{"mode", required_argument, NULL, 'm'},
 		{"time", required_argument, NULL, 't'},
+		{"promisc_mode", no_argument, NULL, 'P'},
 		{"verbose", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:i:p:m:t:vh";
+	static const char *shortopts = "+c:t:i:p:m:t:Pvh";
 
 	appl_args->cpu_count = 1; /* Use one worker by default */
 	appl_args->verbose = 0;
+	appl_args->promisc_mode = 0;
 
 	while (ret == 0) {
 		opt = getopt_long(argc, argv, shortopts,
@@ -1028,6 +1049,9 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			else
 				appl_args->appl_mode = APPL_MODE_REPLY;
 			break;
+		case 'P':
+			appl_args->promisc_mode = 1;
+			break;
 		case 'v':
 			appl_args->verbose = 1;
 			break;
@@ -1067,8 +1091,9 @@ static void print_info(char *progname, appl_args_t *appl_args)
 
 	printf("Running ODP appl: \"%s\"\n"
 			"-----------------\n"
-			"Using IF:%s      ",
+			"Using IF:        %s\n",
 			progname, appl_args->if_name);
+	printf("Promisc mode:    %s\n", appl_args->promisc_mode ? "enabled" : "disabled");
 	printf("\n\n");
 	fflush(NULL);
 }
@@ -1110,10 +1135,11 @@ static void usage(void)
 		"                           !0: Packet ICMP mode. Received packets will be sent back\n"
 		"                           default: Packet Drop mode\n"
 		"\n"
-		" -t, --timeout <sec>       !0: Time for which the classifier will be run in seconds\n"
+		"  -t, --timeout <sec>      !0: Time for which the classifier will be run in seconds\n"
 		"                           0: Runs in infinite loop\n"
 		"                           default: Runs in infinite loop\n"
 		"\n"
+		"  -P, --promisc_mode       Enable promiscuous mode.\n"
 		"  -h, --help               Display help and exit.\n"
 		"\n");
 }
