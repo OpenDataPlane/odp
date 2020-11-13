@@ -301,33 +301,66 @@ Prerequisites for building the OpenDataPlane (ODP) API
    # ... OR directly specifying flags
    ./configure CUNIT_CFLAGS="-I/home/<my_cunit_path>/include" CUNIT_LIBS="/home/<my_cunit_path>/lib -lcunit"
 
-5.0 Documentation Images & Doxygen
+5.0 Cross Compilation for arm64
 
-  Images are stored as svg files. No conversions for these are needed.
+   To cross compile binaries for arm64 on an x86_64 Debian based system, install
+   the following packages: crossbuild-essential-arm64, libconfig-dev:arm64
+   (optionally libssl-dev:arm64).
 
-  Message squence diagrams are stored as msc files and the svg versions generated when the docs are built
-  mscgen is used
-  #Debian/Ubuntu
-  # apt-get install mscgen
+5.1 Pre-installation setup (optional)
 
-5.1 API Guide
-See http://www.stack.nl/~dimitri/doxygen/manual/install.html
+   # Debian/Ubuntu
+   $ sudo dpkg --add-architecture arm64
 
-The tested version of doxygen is 1.8.8
+   Modify /etc/apt/sources.list to add remote repositories for fetching arm64
+   software packages for your Ubuntu version. Once this is complete, run:
+   $ sudo apt-get update
 
-5.1.1 HTML
+5.2 Install packages
+
+   # Debian/Ubuntu
+   $ sudo apt-get install crossbuild-essential-arm64
+   $ sudo apt-get install libconfig-dev:arm64
+
+   Installing OpenSSL is optional. Refer to section 3 for more details.
+   $ sudo apt-get install libssl-dev:arm64
+
+5.3 Building ODP
+
+   $ ./bootstrap
+   $ ./configure --host=aarch64-linux-gnu
+   $ make
+
+   To build ODP with cross-compiled cunit for arm64, refer to sections 4.3
+   and 4.4.
+
+6.0 Documentation Images & Doxygen
+
+   Images are stored as svg files. No conversions for these are needed.
+
+   Message sequence diagrams are stored as msc files and the svg versions are generated
+   when the docs are built.
+   # Debian/Ubuntu
+   $ apt-get install mscgen
+
+6.1 API Guide
+   See https://www.doxygen.nl/manual/install.html
+
+   The tested version of doxygen is 1.8.8
+
+6.1.1 HTML
    # Debian/Ubuntu
    $ apt-get install doxygen graphviz
 
-5.2 User guides
+6.2 User guides
 
-5.2.1 HTML
+6.2.1 HTML
    # Debian/Ubuntu
    $ apt-get install asciidoctor source-highlight librsvg2-bin
 
-6.0 Submitting patches
+7.0 Submitting patches
 
    When submitting patches they should be checked with ./scripts/checkpatch.pl
    To have this tool also check spelling you need codespell.
    # Debian/Ubuntu
-   #sudo apt install codespell
+   $ sudo apt-get install codespell
