@@ -463,6 +463,7 @@ void ipsec_sa_destroy(odp_ipsec_sa_t sa)
 			event = odp_queue_deq(suite_context.queue);
 		} while (event == ODP_EVENT_INVALID);
 
+		CU_ASSERT(odp_event_is_valid(event) == 1);
 		CU_ASSERT_EQUAL(ODP_EVENT_IPSEC_STATUS, odp_event_type(event));
 
 		ret = odp_ipsec_status(&status, event);
@@ -635,6 +636,7 @@ static int ipsec_send_in_one(const ipsec_test_part *part,
 				event = odp_queue_deq(suite_context.queue);
 			} while (event == ODP_EVENT_INVALID);
 
+			CU_ASSERT(odp_event_is_valid(event) == 1);
 			CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
 					odp_event_types(event, &subtype));
 			CU_ASSERT_EQUAL(ODP_EVENT_PACKET_IPSEC, subtype);
@@ -663,6 +665,7 @@ static int ipsec_send_in_one(const ipsec_test_part *part,
 
 			ev = odp_queue_deq(queue);
 			if (ODP_EVENT_INVALID != ev) {
+				CU_ASSERT(odp_event_is_valid(ev) == 1);
 				CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
 						odp_event_types(ev, &subtype));
 				CU_ASSERT_EQUAL(ODP_EVENT_PACKET_BASIC,
@@ -675,6 +678,7 @@ static int ipsec_send_in_one(const ipsec_test_part *part,
 
 			ev = odp_queue_deq(suite_context.queue);
 			if (ODP_EVENT_INVALID != ev) {
+				CU_ASSERT(odp_event_is_valid(ev) == 1);
 				CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
 						odp_event_types(ev, &subtype));
 				CU_ASSERT_EQUAL(ODP_EVENT_PACKET_IPSEC,
@@ -732,6 +736,7 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 				event = odp_queue_deq(suite_context.queue);
 			} while (event == ODP_EVENT_INVALID);
 
+			CU_ASSERT(odp_event_is_valid(event) == 1);
 			CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
 					odp_event_types(event, &subtype));
 			CU_ASSERT_EQUAL(ODP_EVENT_PACKET_IPSEC, subtype);
@@ -777,6 +782,7 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 
 			ev = odp_queue_deq(queue);
 			if (ODP_EVENT_INVALID != ev) {
+				CU_ASSERT(odp_event_is_valid(ev) == 1);
 				CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
 						odp_event_types(ev, &subtype));
 				CU_ASSERT_EQUAL(ODP_EVENT_PACKET_BASIC,
@@ -789,6 +795,7 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 
 			ev = odp_queue_deq(suite_context.queue);
 			if (ODP_EVENT_INVALID != ev) {
+				CU_ASSERT(odp_event_is_valid(ev) == 1);
 				CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
 						odp_event_types(ev, &subtype));
 				CU_ASSERT_EQUAL(ODP_EVENT_PACKET_IPSEC,
