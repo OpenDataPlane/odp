@@ -29,6 +29,8 @@
 #include <inttypes.h>
 #include <odp/api/spinlock.h>
 
+/* Debug level for per packet classification operations */
+#define CLS_DBG  3
 #define MAX_MARK UINT16_MAX
 
 #define LOCK(a)      odp_spinlock_lock(a)
@@ -586,7 +588,7 @@ static int pmr_create_term(pmr_term_value_t *value,
 	odp_cls_pmr_term_t term = param->term;
 
 	if (param->range_term) {
-		ODP_ERR("PRM value range not supported\n");
+		ODP_ERR("PMR value range not supported\n");
 		return -1;
 	}
 
@@ -646,7 +648,7 @@ static int pmr_create_term(pmr_term_value_t *value,
 		break;
 
 	default:
-		ODP_ERR("Bad PRM term\n");
+		ODP_ERR("Bad PMR term\n");
 		return -1;
 	}
 
@@ -1312,6 +1314,103 @@ static int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr,
 	return 1;
 }
 
+static const char *format_pmr_name(odp_cls_pmr_term_t pmr_term)
+{
+	const char *name;
+
+	switch (pmr_term) {
+	case ODP_PMR_LEN:
+		name = "PMR_LEN";
+		break;
+	case ODP_PMR_ETHTYPE_0:
+		name = "PMR_ETHTYPE_0";
+		break;
+	case ODP_PMR_ETHTYPE_X:
+		name = "PMR_ETHTYPE_X";
+		break;
+	case ODP_PMR_VLAN_ID_0:
+		name = "PMR_VLAN_ID_0";
+		break;
+	case ODP_PMR_VLAN_ID_X:
+		name = "PMR_VLAN_ID_X";
+		break;
+	case ODP_PMR_DMAC:
+		name = "PMR_DMAC";
+		break;
+	case ODP_PMR_IPPROTO:
+		name = "PMR_IPPROTO";
+		break;
+	case ODP_PMR_UDP_DPORT:
+		name = "PMR_UDP_DPORT";
+		break;
+	case ODP_PMR_TCP_DPORT:
+		name = "PMR_TCP_DPORT";
+		break;
+	case ODP_PMR_UDP_SPORT:
+		name = "PMR_UDP_SPORT";
+		break;
+	case ODP_PMR_TCP_SPORT:
+		name = "PMR_TCP_SPORT";
+		break;
+	case ODP_PMR_SIP_ADDR:
+		name = "PMR_SIP_ADDR";
+		break;
+	case ODP_PMR_DIP_ADDR:
+		name = "PMR_DIP_ADDR";
+		break;
+	case ODP_PMR_SIP6_ADDR:
+		name = "PMR_SIP6_ADDR";
+		break;
+	case ODP_PMR_DIP6_ADDR:
+		name = "PMR_DIP6_ADDR";
+		break;
+	case ODP_PMR_IPSEC_SPI:
+		name = "PMR_IPSEC_SPI";
+		break;
+	case ODP_PMR_LD_VNI:
+		name = "PMR_LD_VNI";
+		break;
+	case ODP_PMR_CUSTOM_FRAME:
+		name = "PMR_CUSTOM_FRAME";
+		break;
+	case ODP_PMR_CUSTOM_L3:
+		name = "PMR_CUSTOM_L3";
+		break;
+	default:
+		name = "unknown";
+		break;
+	}
+
+	return name;
+}
+
+static inline void pmr_debug_print(pmr_t *pmr, cos_t *cos)
+{
+	uint32_t i;
+	const char *pmr_name;
+	const char *cos_name = cos->s.name;
+	uint32_t cos_index = cos->s.index;
+	uint32_t num_pmr = pmr->s.num_pmr;
+
+	if (ODP_DEBUG_PRINT == 0)
+		return;
+
+	if (num_pmr == 1) {
+		pmr_name = format_pmr_name(pmr->s.pmr_term_value[0].term);
+		ODP_DBG_RAW(CLS_DBG, "  PMR matched: %s -> cos: %s(%u)\n", pmr_name, cos_name,
+			    cos_index);
+		return;
+	}
+
+	ODP_DBG_RAW(CLS_DBG, "  PMRs matched:");
+	for (i = 0; i < num_pmr; i++) {
+		pmr_name = format_pmr_name(pmr->s.pmr_term_value[i].term);
+		ODP_DBG_RAW(CLS_DBG, " %s", pmr_name);
+	}
+
+	ODP_DBG_RAW(CLS_DBG, " -> cos: %s(%u)\n", cos_name, cos_index);
+}
+
 /*
  * Match a PMR chain with a Packet and return matching CoS
  * This function gets called recursively to check the chained PMR Term value
@@ -1329,7 +1428,9 @@ static cos_t *match_pmr_cos(cos_t *cos, const uint8_t *pkt_addr, pmr_t *pmr,
 		return NULL;
 
 	if (verify_pmr(pmr, pkt_addr, hdr)) {
-		/* PRM matched */
+		/* PMR matched */
+		pmr_debug_print(pmr, cos);
+
 		hdr->p.input_flags.cls_mark = 0;
 		if (pmr->s.mark) {
 			hdr->p.input_flags.cls_mark = 1;
@@ -1418,9 +1519,12 @@ static inline cos_t *cls_select_cos(pktio_entry_t *entry,
 	}
 
 	cos = match_qos_cos(entry, pkt_addr, pkt_hdr);
-	if (cos)
+	if (cos) {
+		ODP_DBG_RAW(CLS_DBG, "  QoS matched -> cos: %s(%u)\n", cos->s.name, cos->s.index);
 		return cos;
+	}
 
+	ODP_DBG_RAW(CLS_DBG, "  No match -> default cos\n");
 	return cls->default_cos;
 }
 
@@ -1451,6 +1555,8 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	cos_t *cos;
 	uint32_t tbl_index;
 	uint32_t hash;
+
+	ODP_DBG_LVL(CLS_DBG, "Classify packet from %s\n", entry->s.full_name);
 
 	if (parse) {
 		packet_parse_reset(pkt_hdr, 1);
