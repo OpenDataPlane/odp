@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -27,9 +28,9 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_ver_abt_log_dbg
- *  @{
- */
+/* Debug level configure option. Zero is the highest level. Value of N prints debug messages from
+ * level 0 to N. */
+#define CONFIG_DEBUG_LEVEL 0
 
 /**
  * Runtime assertion-macro - aborts if 'cond' is false.
@@ -47,13 +48,31 @@ extern "C" {
 		odp_global_ro.log_fn(ODP_LOG_UNIMPLEMENTED, \
 			"%s:%d:The function %s() is not implemented\n", \
 			__FILE__, __LINE__, __func__)
-/**
- * Log debug message if ODP_DEBUG_PRINT flag is set.
+/*
+ * Print debug message to log, if ODP_DEBUG_PRINT flag is set (ignores CONFIG_DEBUG_LEVEL).
  */
 #define ODP_DBG(fmt, ...) \
 	do { \
 		if (ODP_DEBUG_PRINT == 1) \
 			ODP_LOG(ODP_LOG_DBG, fmt, ##__VA_ARGS__);\
+	} while (0)
+
+/*
+ * Print debug message to log, if ODP_DEBUG_PRINT flag is set and CONFIG_DEBUG_LEVEL is high enough.
+ */
+#define ODP_DBG_LVL(level, fmt, ...) \
+	do { \
+		if (ODP_DEBUG_PRINT == 1 && CONFIG_DEBUG_LEVEL >= (level)) \
+			ODP_LOG(ODP_LOG_DBG, fmt, ##__VA_ARGS__);\
+	} while (0)
+
+/*
+ * Same as ODP_DBG_LVL() but does not add file/line/function name prefix
+ */
+#define ODP_DBG_RAW(level, fmt, ...) \
+	do { \
+		if (ODP_DEBUG_PRINT == 1 && CONFIG_DEBUG_LEVEL >= (level)) \
+			odp_global_ro.log_fn(ODP_LOG_DBG, fmt, ##__VA_ARGS__);\
 	} while (0)
 
 /**
