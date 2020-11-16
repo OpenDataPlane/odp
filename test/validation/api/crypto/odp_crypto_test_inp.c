@@ -213,6 +213,7 @@ static int alg_op(odp_packet_t pkt,
 			event = odp_queue_deq(suite_context.queue);
 		} while (event == ODP_EVENT_INVALID);
 
+		CU_ASSERT(odp_event_is_valid(event) == 1);
 		CU_ASSERT(ODP_EVENT_CRYPTO_COMPL == odp_event_type(event));
 		CU_ASSERT(ODP_EVENT_NO_SUBTYPE == odp_event_subtype(event));
 		CU_ASSERT(ODP_EVENT_CRYPTO_COMPL ==
