@@ -1627,6 +1627,23 @@ int odp_ipsec_sa_mtu_update(odp_ipsec_sa_t sa, uint32_t mtu);
 void *odp_ipsec_sa_context(odp_ipsec_sa_t sa);
 
 /**
+ * Print global IPSEC configuration info
+ *
+ * Print implementation-defined information about the global IPSEC
+ * configuration.
+ */
+void odp_ipsec_print(void);
+
+/**
+ * Print IPSEC SA info
+ *
+ * @param sa      SA handle
+ *
+ * Print implementation-defined IPSEC SA debug information to the ODP log.
+ */
+void odp_ipsec_sa_print(odp_ipsec_sa_t sa);
+
+/**
  * @}
  */
 
