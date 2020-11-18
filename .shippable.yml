@@ -19,6 +19,7 @@ env:
 
 build:
   ci:
+    - rm -f /etc/apt/sources.list.d/basho_riak.list
     - apt-get update
     - apt-get install --no-install-recommends -yy asciidoctor autoconf automake build-essential ccache clang doxygen gcc graphviz libconfig-dev libcunit1-dev libnuma-dev libpcap-dev libssl-dev libtool mscgen xsltproc
     - mkdir -p $HOME/odp-shmdir
