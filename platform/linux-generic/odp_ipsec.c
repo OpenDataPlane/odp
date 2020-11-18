@@ -685,14 +685,14 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		goto err;
 	}
 
-	if (_odp_ipsec_sa_stats_update(ipsec_sa,
-				       state.stats_length,
-				       status) < 0)
-		goto err;
-
 	if (_odp_ipsec_sa_replay_update(ipsec_sa,
 					state.in.seq_no,
 					status) < 0)
+		goto err;
+
+	if (_odp_ipsec_sa_stats_update(ipsec_sa,
+				       state.stats_length,
+				       status) < 0)
 		goto err;
 
 	state.ip = odp_packet_l3_ptr(pkt, NULL);
