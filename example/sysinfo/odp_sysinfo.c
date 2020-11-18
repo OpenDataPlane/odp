@@ -25,6 +25,90 @@ static const char *support_level(odp_support_t support)
 	}
 }
 
+static const char *cpu_arch_name(odp_system_info_t *sysinfo)
+{
+	odp_cpu_arch_t cpu_arch = sysinfo->cpu_arch;
+
+	switch (cpu_arch) {
+	case ODP_CPU_ARCH_ARM:
+		return "ARM";
+	case ODP_CPU_ARCH_MIPS:
+		return "MIPS";
+	case ODP_CPU_ARCH_PPC:
+		return "PPC";
+	case ODP_CPU_ARCH_RISCV:
+		return "RISC-V";
+	case ODP_CPU_ARCH_X86:
+		return "x86";
+	default:
+		return "Unknown";
+	}
+}
+
+static const char *arm_isa(odp_cpu_arch_arm_t isa)
+{
+	switch (isa) {
+	case ODP_CPU_ARCH_ARMV6:
+		return "ARMv6";
+	case ODP_CPU_ARCH_ARMV7:
+		return "ARMv7-A";
+	case ODP_CPU_ARCH_ARMV8_0:
+		return "ARMv8.0-A";
+	case ODP_CPU_ARCH_ARMV8_1:
+		return "ARMv8.1-A";
+	case ODP_CPU_ARCH_ARMV8_2:
+		return "ARMv8.2-A";
+	case ODP_CPU_ARCH_ARMV8_3:
+		return "ARMv8.3-A";
+	case ODP_CPU_ARCH_ARMV8_4:
+		return "ARMv8.4-A";
+	case ODP_CPU_ARCH_ARMV8_5:
+		return "ARMv8.5-A";
+	case ODP_CPU_ARCH_ARMV8_6:
+		return "ARMv8.6-A";
+	default:
+		return "Unknown";
+	}
+}
+
+static const char *x86_isa(odp_cpu_arch_x86_t isa)
+{
+	switch (isa) {
+	case ODP_CPU_ARCH_X86_I686:
+		return "x86_i686";
+	case ODP_CPU_ARCH_X86_64:
+		return "x86_64";
+	default:
+		return "Unknown";
+	}
+}
+
+static const char *cpu_arch_isa(odp_system_info_t *sysinfo, int isa_sw)
+{
+	odp_cpu_arch_t cpu_arch = sysinfo->cpu_arch;
+
+	switch (cpu_arch) {
+	case ODP_CPU_ARCH_ARM:
+		if (isa_sw)
+			return arm_isa(sysinfo->cpu_isa_sw.arm);
+		else
+			return arm_isa(sysinfo->cpu_isa_hw.arm);
+	case ODP_CPU_ARCH_MIPS:
+		return "Unknown";
+	case ODP_CPU_ARCH_PPC:
+		return "Unknown";
+	case ODP_CPU_ARCH_RISCV:
+		return "Unknown";
+	case ODP_CPU_ARCH_X86:
+		if (isa_sw)
+			return x86_isa(sysinfo->cpu_isa_sw.x86);
+		else
+			return x86_isa(sysinfo->cpu_isa_hw.x86);
+	default:
+		return "Unknown";
+	}
+}
+
 static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 {
 	switch (cipher) {
@@ -233,6 +317,7 @@ int main(void)
 	int i, num_hp, num_hp_print;
 	int num_ava, num_work, num_ctrl;
 	odp_cpumask_t ava_mask, work_mask, ctrl_mask;
+	odp_system_info_t sysinfo;
 	odp_shm_capability_t shm_capa;
 	odp_pool_capability_t pool_capa;
 	odp_queue_capability_t queue_capa;
@@ -260,7 +345,20 @@ int main(void)
 		return -1;
 	}
 
+	printf("\n");
+	printf("odp_sys_info_print()\n");
+	printf("***********************************************************\n");
 	odp_sys_info_print();
+
+	printf("\n");
+	printf("odp_sys_config_print()\n");
+	printf("***********************************************************\n");
+	odp_sys_config_print();
+
+	if (odp_system_info(&sysinfo)) {
+		printf("system info call failed\n");
+		return -1;
+	}
 
 	memset(ava_mask_str, 0, ODP_CPUMASK_STR_SIZE);
 	num_ava = odp_cpumask_all_available(&ava_mask);
@@ -317,6 +415,9 @@ int main(void)
 	printf("  ODP impl name:          %s\n", odp_version_impl_name());
 	printf("  ODP impl details:       %s\n", odp_version_impl_str());
 	printf("  CPU model:              %s\n", odp_cpu_model_str());
+	printf("  CPU arch:               %s\n", cpu_arch_name(&sysinfo));
+	printf("  CPU ISA version:        %s\n", cpu_arch_isa(&sysinfo, 0));
+	printf("  SW ISA version:         %s\n", cpu_arch_isa(&sysinfo, 1));
 	printf("  CPU max freq:           %" PRIu64 " hz\n", odp_cpu_hz_max());
 	printf("  Current CPU:            %i\n", odp_cpu_id());
 	printf("  Current CPU freq:       %" PRIu64 " hz\n", odp_cpu_hz());
