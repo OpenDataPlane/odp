@@ -62,12 +62,24 @@ void odp_packet_vector_free(odp_packet_vector_t pktv)
 
 int odp_packet_vector_valid(odp_packet_vector_t pktv)
 {
-	odp_event_vector_hdr_t *pktv_hdr = _odp_packet_vector_hdr(pktv);
-	pool_t *pool = pktv_hdr->buf_hdr.pool_ptr;
+	odp_event_vector_hdr_t *pktv_hdr;
+	odp_event_t ev;
+	pool_t *pool;
 	uint32_t i;
 
 	if (odp_unlikely(pktv == ODP_PACKET_VECTOR_INVALID))
 		return 0;
+
+	if (_odp_buffer_is_valid((odp_buffer_t)pktv) == 0)
+		return 0;
+
+	ev = odp_packet_vector_to_event(pktv);
+
+	if (odp_event_type(ev) != ODP_EVENT_PACKET_VECTOR)
+		return 0;
+
+	pktv_hdr = _odp_packet_vector_hdr(pktv);
+	pool = pktv_hdr->buf_hdr.pool_ptr;
 
 	if (odp_unlikely(pktv_hdr->size > pool->params.vector.max_size))
 		return 0;
