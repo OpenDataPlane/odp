@@ -93,7 +93,6 @@ endif
 noinst_HEADERS = \
 		  include/odp_align_internal.h \
 		  include/odp_atomic_internal.h \
-		  include/odp_bitmap_internal.h \
 		  include/odp_bitset.h \
 		  include/odp_buffer_internal.h \
 		  include/odp_classification_datamodel.h \
@@ -162,7 +161,6 @@ BUILT_SOURCES = \
 __LIB__libodp_linux_la_SOURCES = \
 			   odp_atomic.c \
 			   odp_barrier.c \
-			   odp_bitmap.c \
 			   odp_buffer.c \
 			   odp_chksum.c \
 			   odp_classification.c \
