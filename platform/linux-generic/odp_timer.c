@@ -1254,6 +1254,8 @@ int odp_timer_capability(odp_timer_clk_src_t clk_src,
 	capa->max_tmo.res_hz  = timer_global->highest_res_hz;
 	capa->max_tmo.min_tmo = 0;
 	capa->max_tmo.max_tmo = MAX_TMO_NSEC;
+	capa->queue_type_sched = true;
+	capa->queue_type_plain = true;
 
 	return 0;
 }
