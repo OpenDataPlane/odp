@@ -536,6 +536,7 @@ int odp_system_info(odp_system_info_t *info)
 
 	info->cpu_arch   = sys_info->cpu_arch;
 	info->cpu_isa_sw = sys_info->cpu_isa_sw;
+	info->cpu_isa_hw = sys_info->cpu_isa_hw;
 
 	return 0;
 }
