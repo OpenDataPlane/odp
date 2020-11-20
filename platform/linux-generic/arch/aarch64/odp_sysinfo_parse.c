@@ -58,49 +58,64 @@ static void aarch64_impl_str(char *str, int maxlen, int implementer)
 	snprintf(str, maxlen, "UNKNOWN (0x%x)", implementer);
 }
 
-static void aarch64_part_str(char *str, int maxlen, int implementer,
-			     int part, int variant, int revision)
+static void aarch64_part_info(char *str, int maxlen, odp_cpu_arch_arm_t *cpu_isa, int implementer,
+			      int part, int variant, int revision)
 {
+	*cpu_isa = ODP_CPU_ARCH_ARM_UNKNOWN;
+
 	if (implementer == 0x41) {
 		switch (part) {
 		case 0xd02:
 			snprintf(str, maxlen, "Cortex-A34");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_0;
 			return;
 		case 0xd04:
 			snprintf(str, maxlen, "Cortex-A35");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_0;
 			return;
 		case 0xd03:
 			snprintf(str, maxlen, "Cortex-A53");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_0;
 			return;
 		case 0xd05:
 			snprintf(str, maxlen, "Cortex-A55");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
 			return;
 		case 0xd07:
 			snprintf(str, maxlen, "Cortex-A57");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_0;
 			return;
 		case 0xd06:
 			snprintf(str, maxlen, "Cortex-A65");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
 			return;
 		case 0xd08:
 			snprintf(str, maxlen, "Cortex-A72");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_0;
 			return;
 		case 0xd09:
 			snprintf(str, maxlen, "Cortex-A73");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_0;
 			return;
 		case 0xd0a:
 			snprintf(str, maxlen, "Cortex-A75");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
 			return;
 		case 0xd0b:
 			snprintf(str, maxlen, "Cortex-A76");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
 			return;
 		case 0xd0e:
 			snprintf(str, maxlen, "Cortex-A76AE");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
 			return;
 		case 0xd0d:
 			snprintf(str, maxlen, "Cortex-A77");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
 			return;
 		case 0xd41:
 			snprintf(str, maxlen, "Cortex-A78");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
 			return;
 		default:
 			break;
@@ -108,22 +123,24 @@ static void aarch64_part_str(char *str, int maxlen, int implementer,
 	} else if (implementer == 0x43) {
 		switch (part) {
 		case 0xa1:
-			snprintf(str, maxlen, "CN88XX, Pass %i.%i",
-				 variant + 1, revision);
+			snprintf(str, maxlen, "CN88XX, Pass %i.%i", variant + 1, revision);
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_1;
 			return;
 		case 0xa2:
-			snprintf(str, maxlen, "CN81XX, Pass %i.%i",
-				 variant + 1, revision);
+			snprintf(str, maxlen, "CN81XX, Pass %i.%i", variant + 1, revision);
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_1;
 			return;
 		case 0xa3:
-			snprintf(str, maxlen, "CN83XX, Pass %i.%i",
-				 variant + 1, revision);
+			snprintf(str, maxlen, "CN83XX, Pass %i.%i", variant + 1, revision);
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_1;
 			return;
 		case 0xaf:
 			snprintf(str, maxlen, "CN99XX, Rev %c%i", 'A' + variant, revision);
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_1;
 			return;
 		case 0xb1:
 			snprintf(str, maxlen, "CN98XX, Rev %c%i", 'A' + variant, revision);
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
 			return;
 		case 0xb2:
 			/* Handle B0 errata: variant and revision numbers show up as A1 */
@@ -131,6 +148,8 @@ static void aarch64_part_str(char *str, int maxlen, int implementer,
 				snprintf(str, maxlen, "CN96XX, Rev B0");
 			else
 				snprintf(str, maxlen, "CN96XX, Rev %c%i", 'A' + variant, revision);
+
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
 			return;
 		default:
 			break;
@@ -249,11 +268,13 @@ int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 		cur = strstr(str, "CPU revision");
 
 		if (cur) {
+			odp_cpu_arch_arm_t cpu_isa;
+
 			cur = strchr(cur, ':');
 			rev = strtol(cur + 1, NULL, 10);
 
-			aarch64_part_str(part_str, TMP_STR_LEN,
-					 impl, part, var, rev);
+			aarch64_part_info(part_str, TMP_STR_LEN, &cpu_isa, impl, part, var, rev);
+			sysinfo->cpu_isa_hw.arm = cpu_isa;
 
 			/* This is the last line about this cpu, update
 			 * model string. */
