@@ -61,7 +61,7 @@ typedef struct sa_thread_local_s {
 	 * Packets that can be processed in this thread before looking at
 	 * the SA-global packet counter and checking hard and soft limits.
 	 */
-	uint32_t packet_quota;
+	odp_atomic_u32_t packet_quota;
 	/*
 	 * Bytes that can be processed in this thread before looking at
 	 * at the SA-global byte counter and checking hard and soft limits.
@@ -125,7 +125,7 @@ static void init_sa_thread_local(ipsec_sa_t *sa)
 
 	for (n = 0; n < ODP_THREAD_COUNT_MAX; n++) {
 		sa_tl = &ipsec_sa_tbl->per_thread[n].sa[sa->ipsec_sa_idx];
-		sa_tl->packet_quota = 0;
+		odp_atomic_init_u32(&sa_tl->packet_quota, 0);
 		sa_tl->byte_quota = 0;
 		sa_tl->lifetime_status.all = 0;
 	}
@@ -458,6 +458,15 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	ipsec_sa->hard_limit_bytes = param->lifetime.hard_limit.bytes;
 	ipsec_sa->hard_limit_packets = param->lifetime.hard_limit.packets;
 
+	odp_atomic_init_u64(&ipsec_sa->stats.proto_err, 0);
+	odp_atomic_init_u64(&ipsec_sa->stats.auth_err, 0);
+	odp_atomic_init_u64(&ipsec_sa->stats.antireplay_err, 0);
+	odp_atomic_init_u64(&ipsec_sa->stats.alg_err, 0);
+	odp_atomic_init_u64(&ipsec_sa->stats.mtu_err, 0);
+	odp_atomic_init_u64(&ipsec_sa->stats.hard_exp_bytes_err, 0);
+	odp_atomic_init_u64(&ipsec_sa->stats.hard_exp_pkts_err, 0);
+	odp_atomic_init_u64(&ipsec_sa->stats.post_lifetime_err_pkts, 0);
+
 	if (ODP_IPSEC_MODE_TUNNEL == ipsec_sa->mode &&
 	    ODP_IPSEC_DIR_OUTBOUND == param->dir) {
 		if (ODP_IPSEC_TUNNEL_IPV4 == param->outbound.tunnel.type) {
@@ -781,17 +790,19 @@ int _odp_ipsec_sa_stats_precheck(ipsec_sa_t *ipsec_sa,
 	return rc;
 }
 
-int _odp_ipsec_sa_stats_update(ipsec_sa_t *ipsec_sa, uint32_t len,
-			       odp_ipsec_op_status_t *status)
+int _odp_ipsec_sa_lifetime_update(ipsec_sa_t *ipsec_sa, uint32_t len,
+				  odp_ipsec_op_status_t *status)
 {
 	sa_thread_local_t *sa_tl = ipsec_sa_thread_local(ipsec_sa);
 	uint64_t packets, bytes;
+	uint32_t tl_pkt_quota;
 
-	if (odp_unlikely(sa_tl->packet_quota == 0)) {
+	tl_pkt_quota = odp_atomic_load_u32(&sa_tl->packet_quota);
+	if (odp_unlikely(tl_pkt_quota == 0)) {
 		packets = odp_atomic_fetch_add_u64(&ipsec_sa->hot.packets,
 						   SA_LIFE_PACKETS_PREALLOC);
 		packets += SA_LIFE_PACKETS_PREALLOC;
-		sa_tl->packet_quota += SA_LIFE_PACKETS_PREALLOC;
+		tl_pkt_quota += SA_LIFE_PACKETS_PREALLOC;
 
 		if (ipsec_sa->soft_limit_packets > 0 &&
 		    packets >= ipsec_sa->soft_limit_packets)
@@ -801,7 +812,8 @@ int _odp_ipsec_sa_stats_update(ipsec_sa_t *ipsec_sa, uint32_t len,
 		    packets >= ipsec_sa->hard_limit_packets)
 			sa_tl->lifetime_status.error.hard_exp_packets = 1;
 	}
-	sa_tl->packet_quota--;
+	tl_pkt_quota--;
+	odp_atomic_store_u32(&sa_tl->packet_quota, tl_pkt_quota);
 
 	if (odp_unlikely(sa_tl->byte_quota < len)) {
 		bytes = odp_atomic_fetch_add_u64(&ipsec_sa->hot.bytes,
@@ -909,4 +921,31 @@ uint16_t _odp_ipsec_sa_alloc_ipv4_id(ipsec_sa_t *ipsec_sa)
 
 	/* No need to convert to BE: ID just should not be duplicated */
 	return tl->next_ipv4_id++;
+}
+
+uint64_t _odp_ipsec_sa_stats_pkts(ipsec_sa_t *sa)
+{
+	uint64_t tl_pkt_quota = 0;
+	sa_thread_local_t *sa_tl;
+	int n;
+
+	/*
+	 * Field 'hot.packets' tracks SA lifetime. The same field is being used
+	 * to track the number of success packets.
+	 *
+	 * SA lifetime tracking implements a per thread packet quota to allow
+	 * less frequent updates to the hot field. The per thread quota need
+	 * to be decremented. In addition, SA lifetime gets consumed for any
+	 * errors occurring after lifetime check is done. Those packets also
+	 * need to be accounted for.
+	 */
+
+	for (n = 0; n < ODP_THREAD_COUNT_MAX; n++) {
+		sa_tl = &ipsec_sa_tbl->per_thread[n].sa[sa->ipsec_sa_idx];
+		tl_pkt_quota += odp_atomic_load_u32(&sa_tl->packet_quota);
+	}
+
+	return odp_atomic_load_u64(&sa->hot.packets)
+	       - odp_atomic_load_u64(&sa->stats.post_lifetime_err_pkts)
+	       - tl_pkt_quota;
 }

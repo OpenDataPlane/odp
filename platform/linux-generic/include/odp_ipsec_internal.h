@@ -190,6 +190,23 @@ struct ipsec_sa_s {
 			};
 		} out;
 	};
+
+	struct {
+		odp_atomic_u64_t proto_err;
+		odp_atomic_u64_t auth_err;
+		odp_atomic_u64_t antireplay_err;
+		odp_atomic_u64_t alg_err;
+		odp_atomic_u64_t mtu_err;
+		odp_atomic_u64_t hard_exp_bytes_err;
+		odp_atomic_u64_t hard_exp_pkts_err;
+
+		/*
+		 * Track error packets after lifetime check is done.
+		 * Required since, the stats tracking lifetime is being
+		 * used for SA success packets stats.
+		 */
+		odp_atomic_u64_t post_lifetime_err_pkts;
+	} stats;
 };
 
 /**
@@ -250,12 +267,12 @@ int _odp_ipsec_sa_stats_precheck(ipsec_sa_t *ipsec_sa,
 				 odp_ipsec_op_status_t *status);
 
 /**
- * Update SA usage statistics, filling respective status for the packet.
+ * Update SA lifetime counters, filling respective status for the packet.
  *
  * @retval <0 if hard limits were breached
  */
-int _odp_ipsec_sa_stats_update(ipsec_sa_t *ipsec_sa, uint32_t len,
-			       odp_ipsec_op_status_t *status);
+int _odp_ipsec_sa_lifetime_update(ipsec_sa_t *ipsec_sa, uint32_t len,
+				  odp_ipsec_op_status_t *status);
 
 /* Run pre-check on sequence number of the packet.
  *
@@ -283,6 +300,12 @@ uint16_t _odp_ipsec_sa_alloc_ipv4_id(ipsec_sa_t *ipsec_sa);
  *           processing
  */
 int _odp_ipsec_try_inline(odp_packet_t *pkt);
+
+/**
+ * Get number of packets successfully processed by the SA
+ *
+ */
+uint64_t _odp_ipsec_sa_stats_pkts(ipsec_sa_t *sa);
 
 /**
  * @}

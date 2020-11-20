@@ -24,6 +24,7 @@
 #include <protocols/ipsec.h>
 #include <protocols/udp.h>
 
+#include <errno.h>
 #include <string.h>
 
 static odp_ipsec_config_t *ipsec_config;
@@ -217,6 +218,7 @@ void odp_ipsec_config_init(odp_ipsec_config_t *config)
 	config->inbound.default_queue = ODP_QUEUE_INVALID;
 	config->inbound.lookup.min_spi = 0;
 	config->inbound.lookup.max_spi = UINT32_MAX;
+	config->stats_en = false;
 }
 
 int odp_ipsec_config(const odp_ipsec_config_t *config)
@@ -665,6 +667,37 @@ static int ipsec_in_ah_post(odp_packet_t pkt,
 	return 0;
 }
 
+static void
+ipsec_sa_err_stats_update(ipsec_sa_t *sa, odp_ipsec_op_status_t *status)
+{
+	if (odp_likely(ODP_IPSEC_OK == status->error.all))
+		return;
+
+	if (NULL == sa)
+		return;
+
+	if (status->error.proto)
+		odp_atomic_inc_u64(&sa->stats.proto_err);
+
+	if (status->error.auth)
+		odp_atomic_inc_u64(&sa->stats.auth_err);
+
+	if (status->error.antireplay)
+		odp_atomic_inc_u64(&sa->stats.antireplay_err);
+
+	if (status->error.alg)
+		odp_atomic_inc_u64(&sa->stats.alg_err);
+
+	if (status->error.mtu)
+		odp_atomic_inc_u64(&sa->stats.mtu_err);
+
+	if (status->error.hard_exp_bytes)
+		odp_atomic_inc_u64(&sa->stats.hard_exp_bytes_err);
+
+	if (status->error.hard_exp_packets)
+		odp_atomic_inc_u64(&sa->stats.hard_exp_pkts_err);
+}
+
 static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 				   odp_ipsec_sa_t sa,
 				   odp_packet_t *pkt_out,
@@ -702,7 +735,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	if (rc < 0 ||
 	    state.ip_tot_len + state.ip_offset > odp_packet_len(pkt)) {
 		status->error.alg = 1;
-		goto err;
+		goto exit;
 	}
 
 	/* Check IP header for IPSec protocols and look it up */
@@ -713,18 +746,18 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		rc = ipsec_in_ah(&pkt, &state, &ipsec_sa, sa, &param, status);
 	} else {
 		status->error.proto = 1;
-		goto err;
+		goto exit;
 	}
 	if (rc < 0)
-		goto err;
+		goto exit;
 
 	if (_odp_ipsec_sa_replay_precheck(ipsec_sa,
 					  state.in.seq_no,
 					  status) < 0)
-		goto err;
+		goto exit;
 
 	if (_odp_ipsec_sa_stats_precheck(ipsec_sa, status) < 0)
-		goto err;
+		goto exit;
 
 	param.session = ipsec_sa->session;
 
@@ -732,14 +765,14 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	if (rc < 0) {
 		ODP_DBG("Crypto failed\n");
 		status->error.alg = 1;
-		goto err;
+		goto exit;
 	}
 
 	rc = odp_crypto_result(&crypto, pkt);
 	if (rc < 0) {
 		ODP_DBG("Crypto failed\n");
 		status->error.alg = 1;
-		goto err;
+		goto exit;
 	}
 
 	if (!crypto.ok) {
@@ -751,18 +784,18 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		else
 			status->error.alg = 1;
 
-		goto err;
+		goto exit;
 	}
 
 	if (_odp_ipsec_sa_replay_update(ipsec_sa,
 					state.in.seq_no,
 					status) < 0)
-		goto err;
+		goto exit;
 
-	if (_odp_ipsec_sa_stats_update(ipsec_sa,
-				       state.stats_length,
-				       status) < 0)
-		goto err;
+	if (_odp_ipsec_sa_lifetime_update(ipsec_sa,
+					  state.stats_length,
+					  status) < 0)
+		goto post_lifetime_err_cnt_update;
 
 	state.ip = odp_packet_l3_ptr(pkt, NULL);
 
@@ -774,12 +807,12 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		rc = -1;
 	if (rc < 0) {
 		status->error.proto = 1;
-		goto err;
+		goto post_lifetime_err_cnt_update;
 	}
 
 	if (odp_packet_trunc_tail(&pkt, state.in.trl_len, NULL, NULL) < 0) {
 		status->error.alg = 1;
-		goto err;
+		goto post_lifetime_err_cnt_update;
 	}
 	state.ip_tot_len -= state.in.trl_len;
 
@@ -793,7 +826,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 					  state.in.hdr_len,
 					  NULL, NULL) < 0) {
 			status->error.alg = 1;
-			goto err;
+			goto post_lifetime_err_cnt_update;
 		}
 		state.ip_tot_len -= state.ip_hdr_len + state.in.hdr_len;
 		if (_ODP_IPPROTO_IPIP == state.ip_next_hdr) {
@@ -807,7 +840,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 			state.is_ipv6 = 0;
 		} else {
 			status->error.proto = 1;
-			goto err;
+			goto post_lifetime_err_cnt_update;
 		}
 	} else {
 		odp_packet_move_data(pkt, state.in.hdr_len, 0,
@@ -815,7 +848,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		if (odp_packet_trunc_head(&pkt, state.in.hdr_len,
 					  NULL, NULL) < 0) {
 			status->error.alg = 1;
-			goto err;
+			goto post_lifetime_err_cnt_update;
 		}
 		state.ip_tot_len -= state.in.hdr_len;
 	}
@@ -840,7 +873,7 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 			ipv6hdr->hop_limit -= ipsec_sa->dec_ttl;
 	} else if (state.ip_next_hdr != _ODP_IPPROTO_NO_NEXT) {
 		status->error.proto = 1;
-		goto err;
+		goto post_lifetime_err_cnt_update;
 	}
 
 	if (_ODP_IPPROTO_NO_NEXT == state.ip_next_hdr &&
@@ -863,8 +896,17 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		odp_packet_parse(pkt, state.ip_offset, &parse_param);
 	}
 
-err:
+	goto exit;
+
+post_lifetime_err_cnt_update:
+	if (ipsec_config->stats_en)
+		odp_atomic_inc_u64(&ipsec_sa->stats.post_lifetime_err_pkts);
+
+exit:
 	*pkt_out = pkt;
+
+	if (ipsec_config->stats_en)
+		ipsec_sa_err_stats_update(ipsec_sa, status);
 
 	return ipsec_sa;
 }
@@ -1522,7 +1564,7 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 			rc = -1;
 		if (rc < 0) {
 			status->error.alg = 1;
-			goto err;
+			goto exit;
 		}
 
 		ipsec_out_checksums(pkt, &state);
@@ -1540,7 +1582,7 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	}
 	if (rc < 0) {
 		status->error.alg = 1;
-		goto err;
+		goto exit;
 	}
 
 	if (ODP_IPSEC_ESP == ipsec_sa->proto) {
@@ -1550,16 +1592,16 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 		rc = ipsec_out_ah(&pkt, &state, ipsec_sa, &param, status, mtu);
 	} else {
 		status->error.alg = 1;
-		goto err;
+		goto exit;
 	}
 	if (rc < 0)
-		goto err;
+		goto exit;
 
 	/* No need to run precheck here, we know that packet is authentic */
-	if (_odp_ipsec_sa_stats_update(ipsec_sa,
-				       state.stats_length,
-				       status) < 0)
-		goto err;
+	if (_odp_ipsec_sa_lifetime_update(ipsec_sa,
+					  state.stats_length,
+					  status) < 0)
+		goto post_lifetime_err_cnt_update;
 
 	param.session = ipsec_sa->session;
 
@@ -1579,19 +1621,19 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	if (rc < 0) {
 		ODP_DBG("Crypto failed\n");
 		status->error.alg = 1;
-		goto err;
+		goto post_lifetime_err_cnt_update;
 	}
 
 	rc = odp_crypto_result(&crypto, pkt);
 	if (rc < 0) {
 		ODP_DBG("Crypto failed\n");
 		status->error.alg = 1;
-		goto err;
+		goto post_lifetime_err_cnt_update;
 	}
 
 	if (!crypto.ok) {
 		status->error.alg = 1;
-		goto err;
+		goto post_lifetime_err_cnt_update;
 	}
 
 	/* Finalize the IP header */
@@ -1600,7 +1642,13 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	else if (ODP_IPSEC_AH == ipsec_sa->proto)
 		ipsec_out_ah_post(&state, pkt);
 
-err:
+	goto exit;
+
+post_lifetime_err_cnt_update:
+	if (ipsec_config->stats_en)
+		odp_atomic_inc_u64(&ipsec_sa->stats.post_lifetime_err_pkts);
+
+exit:
 	*pkt_out = pkt;
 	return ipsec_sa;
 }
@@ -1699,6 +1747,9 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
 		memset(result, 0, sizeof(*result));
 		result->status = status;
 		result->sa = ipsec_sa->ipsec_sa_hdl;
+
+		if (ipsec_config->stats_en)
+			ipsec_sa_err_stats_update(ipsec_sa, &status);
 
 		pkt_out[out_pkt] = pkt;
 		in_pkt++;
@@ -1804,6 +1855,9 @@ int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in,
 		result->status = status;
 		result->sa = ipsec_sa->ipsec_sa_hdl;
 		queue = ipsec_sa->queue;
+
+		if (ipsec_config->stats_en)
+			ipsec_sa_err_stats_update(ipsec_sa, &status);
 
 		if (odp_queue_enq(queue, odp_ipsec_packet_to_event(pkt))) {
 			odp_packet_free(pkt);
@@ -1942,6 +1996,9 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 		} else {
 			odp_queue_t queue;
 err:
+			if (ipsec_config->stats_en)
+				ipsec_sa_err_stats_update(ipsec_sa, &status);
+
 			packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
 			result = ipsec_pkt_result(pkt);
 			memset(result, 0, sizeof(*result));
@@ -1987,6 +2044,33 @@ odp_packet_t odp_ipsec_packet_from_event(odp_event_t ev)
 odp_event_t odp_ipsec_packet_to_event(odp_packet_t pkt)
 {
 	return odp_packet_to_event(pkt);
+}
+
+int odp_ipsec_stats(odp_ipsec_sa_t sa, odp_ipsec_stats_t *stats)
+{
+	ipsec_sa_t *ipsec_sa;
+
+	if (ODP_IPSEC_SA_INVALID == sa)
+		return -EINVAL;
+
+	if (!ipsec_config->stats_en)
+		return -ENOTSUP;
+
+	ODP_ASSERT(NULL != stats);
+
+	ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
+	ODP_ASSERT(NULL != ipsec_sa);
+
+	stats->success = _odp_ipsec_sa_stats_pkts(ipsec_sa);
+	stats->proto_err = odp_atomic_load_u64(&ipsec_sa->stats.proto_err);
+	stats->auth_err = odp_atomic_load_u64(&ipsec_sa->stats.auth_err);
+	stats->antireplay_err = odp_atomic_load_u64(&ipsec_sa->stats.antireplay_err);
+	stats->alg_err = odp_atomic_load_u64(&ipsec_sa->stats.alg_err);
+	stats->mtu_err = odp_atomic_load_u64(&ipsec_sa->stats.mtu_err);
+	stats->hard_exp_bytes_err = odp_atomic_load_u64(&ipsec_sa->stats.hard_exp_bytes_err);
+	stats->hard_exp_pkts_err = odp_atomic_load_u64(&ipsec_sa->stats.hard_exp_pkts_err);
+
+	return 0;
 }
 
 int _odp_ipsec_init_global(void)
