@@ -7,7 +7,7 @@
 #include <odp_global_data.h>
 #include <odp_sysinfo_internal.h>
 
-int cpuinfo_parser(FILE * file ODP_UNUSED, system_info_t *sysinfo)
+int _odp_cpuinfo_parser(FILE *file ODP_UNUSED, system_info_t *sysinfo)
 {
 	sysinfo->cpu_arch = ODP_CPU_ARCH_ARM;
 	sysinfo->cpu_isa_sw.arm = ODP_CPU_ARCH_ARM_UNKNOWN;
@@ -23,7 +23,7 @@ int cpuinfo_parser(FILE * file ODP_UNUSED, system_info_t *sysinfo)
 	return _odp_dummy_cpuinfo(sysinfo);
 }
 
-void sys_info_print_arch(void)
+void _odp_sys_info_print_arch(void)
 {
 }
 

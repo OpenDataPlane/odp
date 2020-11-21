@@ -48,7 +48,7 @@ struct ethtool_link_settings {
  * ODP_PACKET_SOCKET_MMAP:
  * ODP_PACKET_NETMAP:
  */
-int mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[])
+int _odp_mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[])
 {
 	struct ifreq ethreq;
 	int ret;
@@ -73,7 +73,7 @@ int mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[])
  * ODP_PACKET_SOCKET_MMAP:
  * ODP_PACKET_NETMAP:
  */
-uint32_t mtu_get_fd(int fd, const char *name)
+uint32_t _odp_mtu_get_fd(int fd, const char *name)
 {
 	struct ifreq ifr;
 	int ret;
@@ -92,7 +92,7 @@ uint32_t mtu_get_fd(int fd, const char *name)
 /*
  * ODP_PACKET_NETMAP:
  */
-int mtu_set_fd(int fd, const char *name, int mtu)
+int _odp_mtu_set_fd(int fd, const char *name, int mtu)
 {
 	struct ifreq ifr;
 	int ret;
@@ -115,7 +115,7 @@ int mtu_set_fd(int fd, const char *name, int mtu)
  * ODP_PACKET_SOCKET_MMAP:
  * ODP_PACKET_NETMAP:
  */
-int promisc_mode_set_fd(int fd, const char *name, int enable)
+int _odp_promisc_mode_set_fd(int fd, const char *name, int enable)
 {
 	struct ifreq ifr;
 	int ret;
@@ -149,7 +149,7 @@ int promisc_mode_set_fd(int fd, const char *name, int enable)
  * ODP_PACKET_SOCKET_MMAP:
  * ODP_PACKET_NETMAP:
  */
-int promisc_mode_get_fd(int fd, const char *name)
+int _odp_promisc_mode_get_fd(int fd, const char *name)
 {
 	struct ifreq ifr;
 	int ret;
@@ -166,7 +166,7 @@ int promisc_mode_get_fd(int fd, const char *name)
 	return !!(ifr.ifr_flags & IFF_PROMISC);
 }
 
-int link_status_fd(int fd, const char *name)
+int _odp_link_status_fd(int fd, const char *name)
 {
 	struct ifreq ifr;
 	int ret;
@@ -185,7 +185,7 @@ int link_status_fd(int fd, const char *name)
 	return ODP_PKTIO_LINK_STATUS_DOWN;
 }
 
-int link_info_fd(int fd, const char *name, odp_pktio_link_info_t *info)
+int _odp_link_info_fd(int fd, const char *name, odp_pktio_link_info_t *info)
 {
 	struct ethtool_link_settings hcmd = {.cmd = ETHTOOL_GLINKSETTINGS};
 	struct ethtool_link_settings *ecmd;
@@ -193,7 +193,7 @@ int link_info_fd(int fd, const char *name, odp_pktio_link_info_t *info)
 	struct ifreq ifr;
 	int status;
 
-	status = link_status_fd(fd, name);
+	status = _odp_link_status_fd(fd, name);
 	if (status < 0)
 		return -1;
 

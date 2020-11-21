@@ -15,9 +15,9 @@
 
 #include <string.h>
 
-extern __thread sched_scalable_thread_state_t *sched_ts;
+extern __thread sched_scalable_thread_state_t *_odp_sched_ts;
 
-reorder_window_t *rwin_alloc(_odp_ishm_pool_t *pool, unsigned lock_count)
+reorder_window_t *_odp_rwin_alloc(_odp_ishm_pool_t *pool, unsigned int lock_count)
 {
 	reorder_window_t *rwin;
 	uint32_t i;
@@ -40,12 +40,12 @@ reorder_window_t *rwin_alloc(_odp_ishm_pool_t *pool, unsigned lock_count)
 	return rwin;
 }
 
-int rwin_free(_odp_ishm_pool_t *pool, reorder_window_t *rwin)
+int _odp_rwin_free(_odp_ishm_pool_t *pool, reorder_window_t *rwin)
 {
 	return _odp_ishm_pool_free(pool, rwin);
 }
 
-bool rwin_reserve(reorder_window_t *rwin, uint32_t *sn)
+bool _odp_rwin_reserve(reorder_window_t *rwin, uint32_t *sn)
 {
 	uint32_t head;
 	uint32_t oldt;
@@ -73,7 +73,7 @@ bool rwin_reserve(reorder_window_t *rwin, uint32_t *sn)
 	return true;
 }
 
-bool rwin_reserve_sc(reorder_window_t *rwin, uint32_t *sn)
+bool _odp_rwin_reserve_sc(reorder_window_t *rwin, uint32_t *sn)
 {
 	uint32_t head;
 	uint32_t oldt;
@@ -93,7 +93,7 @@ bool rwin_reserve_sc(reorder_window_t *rwin, uint32_t *sn)
 	return true;
 }
 
-void rwin_unreserve_sc(reorder_window_t *rwin, uint32_t sn)
+void _odp_rwin_unreserve_sc(reorder_window_t *rwin, uint32_t sn)
 {
 	ODP_ASSERT(rwin->tail == sn + 1);
 	rwin->tail = sn;
@@ -183,8 +183,8 @@ static void rwin_insert(reorder_window_t *rwin,
 			__ATOMIC_ACQUIRE));
 }
 
-void rctx_init(reorder_context_t *rctx, uint16_t idx,
-	       reorder_window_t *rwin, uint32_t sn)
+void _odp_rctx_init(reorder_context_t *rctx, uint16_t idx,
+		    reorder_window_t *rwin, uint32_t sn)
 {
 	/* rctx->rvec_free and rctx->idx already initialised in
 	 * thread_state_init function.
@@ -210,13 +210,13 @@ static inline void rctx_free(const reorder_context_t *rctx)
 
 	ODP_ASSERT(rctx->rwin != NULL);
 	/* Set free bit */
-	if (rctx->rvec_free == &sched_ts->rvec_free)
+	if (rctx->rvec_free == &_odp_sched_ts->rvec_free)
 		/* Since it is our own reorder context, we can instead
 		 * perform a non-atomic and relaxed update on our private
 		 * rvec_free.
 		 */
-		sched_ts->priv_rvec_free =
-			bitset_set(sched_ts->priv_rvec_free, rctx->idx);
+		_odp_sched_ts->priv_rvec_free =
+			bitset_set(_odp_sched_ts->priv_rvec_free, rctx->idx);
 	else
 		atom_bitset_set(rctx->rvec_free, rctx->idx, __ATOMIC_RELEASE);
 
@@ -225,9 +225,9 @@ static inline void rctx_free(const reorder_context_t *rctx)
 		rctx = &base[next_idx];
 		next_idx = rctx->next_idx;
 		/* Set free bit */
-		if (rctx->rvec_free == &sched_ts->rvec_free)
-			sched_ts->priv_rvec_free =
-				bitset_set(sched_ts->priv_rvec_free, rctx->idx);
+		if (rctx->rvec_free == &_odp_sched_ts->rvec_free)
+			_odp_sched_ts->priv_rvec_free =
+				bitset_set(_odp_sched_ts->priv_rvec_free, rctx->idx);
 		else
 			atom_bitset_set(rctx->rvec_free, rctx->idx,
 					__ATOMIC_RELEASE);
@@ -304,7 +304,7 @@ static void rctx_retire(reorder_context_t *first)
 	rctx_free(first);
 }
 
-void rctx_release(reorder_context_t *rctx)
+void _odp_rctx_release(reorder_context_t *rctx)
 {
 	/* Insert reorder context into reorder window, potentially calling the
 	 * rctx_retire function for all pending reorder_contexts.
@@ -315,7 +315,7 @@ void rctx_release(reorder_context_t *rctx)
 /* Save destination queue and events in the reorder context for deferred
  * enqueue.
  */
-int rctx_save(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
+int _odp_rctx_save(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 {
 	int i;
 	sched_scalable_thread_state_t *ts;
@@ -323,7 +323,7 @@ int rctx_save(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 	reorder_context_t *cur;
 	bitset_t next_idx;
 
-	ts = sched_ts;
+	ts = _odp_sched_ts;
 	first = ts->rctx;
 	ODP_ASSERT(ts->rctx != NULL);
 	cur = &first[(int)first->cur_idx - (int)first->idx];
@@ -361,7 +361,7 @@ int rctx_save(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 			first->cur_idx = next_idx;
 			/* Update current to next */
 			cur = &ts->rvec[next_idx];
-			rctx_init(cur, next_idx, NULL, 0);
+			_odp_rctx_init(cur, next_idx, NULL, 0);
 			/* The last rctx (so far) */
 			cur->next_idx = first->idx;
 		}

@@ -144,9 +144,9 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				pkt_addr = odp_packet_data(pkt);
 			}
 
-			ret = cls_classify_packet(pktio_entry, pkt_addr,
-						  pkt_len, seg_len,
-						  &new_pool, pkt_hdr, true);
+			ret = _odp_cls_classify_packet(pktio_entry, pkt_addr,
+						       pkt_len, seg_len,
+						       &new_pool, pkt_hdr, true);
 			if (ret) {
 				failed++;
 				odp_packet_free(pkt);
@@ -167,9 +167,9 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				pkt_hdr = packet_hdr(new_pkt);
 			}
 		} else {
-			packet_parse_layer(pkt_hdr,
-					   pktio_entry->s.config.parser.layer,
-					   pktio_entry->s.in_chksums);
+			_odp_packet_parse_layer(pkt_hdr,
+						pktio_entry->s.config.parser.layer,
+						pktio_entry->s.in_chksums);
 		}
 
 		packet_set_ts(pkt_hdr, ts);
@@ -473,7 +473,7 @@ static int loop_init_global(void)
 	return 0;
 }
 
-const pktio_if_ops_t loopback_pktio_ops = {
+const pktio_if_ops_t _odp_loopback_pktio_ops = {
 	.name = "loop",
 	.print = NULL,
 	.init_global = loop_init_global,

@@ -38,9 +38,9 @@ Start function for Packet Classifier
 This function calls Classifier module internal functions for a given packet and
 selects destination queue and packet pool based on selected PMR and CoS.
 **/
-int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
-			uint16_t pkt_len, uint32_t seg_len, odp_pool_t *pool,
-			odp_packet_hdr_t *pkt_hdr, odp_bool_t parse);
+int _odp_cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
+			     uint16_t pkt_len, uint32_t seg_len, odp_pool_t *pool,
+			     odp_packet_hdr_t *pkt_hdr, odp_bool_t parse);
 
 /**
 Packet IO classifier init
@@ -48,7 +48,7 @@ Packet IO classifier init
 This function does initialization of classifier object associated with pktio.
 This function should be called during pktio initialization.
 **/
-int pktio_classifier_init(pktio_entry_t *pktio);
+int _odp_pktio_classifier_init(pktio_entry_t *pktio);
 
 #ifdef __cplusplus
 }

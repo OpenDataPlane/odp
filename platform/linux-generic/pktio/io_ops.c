@@ -12,7 +12,7 @@
  * will be picked.
  * Array must be NULL terminated */
 const pktio_if_ops_t * const pktio_if_ops[]  = {
-	&loopback_pktio_ops,
+	&_odp_loopback_pktio_ops,
 #ifdef _ODP_PKTIO_DPDK
 	&dpdk_pktio_ops,
 #endif
@@ -20,12 +20,12 @@ const pktio_if_ops_t * const pktio_if_ops[]  = {
 	&netmap_pktio_ops,
 #endif
 #ifdef _ODP_PKTIO_PCAP
-	&pcap_pktio_ops,
+	&_odp_pcap_pktio_ops,
 #endif
-	&ipc_pktio_ops,
-	&tap_pktio_ops,
-	&null_pktio_ops,
-	&sock_mmap_pktio_ops,
-	&sock_mmsg_pktio_ops,
+	&_odp_ipc_pktio_ops,
+	&_odp_tap_pktio_ops,
+	&_odp_null_pktio_ops,
+	&_odp_sock_mmap_pktio_ops,
+	&_odp_sock_mmsg_pktio_ops,
 	NULL
 };

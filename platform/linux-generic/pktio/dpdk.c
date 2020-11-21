@@ -605,10 +605,10 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 				rte_pktmbuf_free(mbuf);
 				continue;
 			}
-			if (cls_classify_packet(pktio_entry,
-						(const uint8_t *)data,
-						pkt_len, pkt_len, &pool,
-						&parsed_hdr, false))
+			if (_odp_cls_classify_packet(pktio_entry,
+						     (const uint8_t *)data,
+						     pkt_len, pkt_len, &pool,
+						     &parsed_hdr, false))
 				goto fail;
 		}
 
@@ -898,10 +898,10 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 				rte_pktmbuf_free(mbuf);
 				continue;
 			}
-			if (cls_classify_packet(pktio_entry,
-						(const uint8_t *)data,
-						pkt_len, pkt_len, &pool,
-						&parsed_hdr, false)) {
+			if (_odp_cls_classify_packet(pktio_entry,
+						     (const uint8_t *)data,
+						     pkt_len, pkt_len, &pool,
+						     &parsed_hdr, false)) {
 				ODP_ERR("Unable to classify packet\n");
 				rte_pktmbuf_free(mbuf);
 				continue;
@@ -1022,7 +1022,7 @@ static uint32_t dpdk_vdev_mtu_get(uint16_t port_id)
 		return 0;
 	}
 
-	mtu = mtu_get_fd(sockfd, ifr.ifr_name);
+	mtu = _odp_mtu_get_fd(sockfd, ifr.ifr_name);
 	close(sockfd);
 	return mtu;
 }
@@ -1073,7 +1073,7 @@ static int dpdk_vdev_promisc_mode_get(uint16_t port_id)
 		return -1;
 	}
 
-	mode = promisc_mode_get_fd(sockfd, ifr.ifr_name);
+	mode = _odp_promisc_mode_get_fd(sockfd, ifr.ifr_name);
 	close(sockfd);
 	return mode;
 }
@@ -1096,7 +1096,7 @@ static int dpdk_vdev_promisc_mode_set(uint16_t port_id, int enable)
 		return -1;
 	}
 
-	mode = promisc_mode_set_fd(sockfd, ifr.ifr_name, enable);
+	mode = _odp_promisc_mode_set_fd(sockfd, ifr.ifr_name, enable);
 	close(sockfd);
 	return mode;
 }

@@ -22,13 +22,13 @@ typedef struct {
 
 } queue_lf_func_t;
 
-uint32_t queue_lf_init_global(uint32_t *queue_lf_size,
-			      queue_lf_func_t *lf_func);
-void queue_lf_term_global(void);
-void *queue_lf_create(queue_entry_t *queue);
-void queue_lf_destroy(void *queue_lf);
-uint32_t queue_lf_length(void *queue_lf);
-uint32_t queue_lf_max_length(void);
+uint32_t _odp_queue_lf_init_global(uint32_t *queue_lf_size,
+				   queue_lf_func_t *lf_func);
+void _odp_queue_lf_term_global(void);
+void *_odp_queue_lf_create(queue_entry_t *queue);
+void _odp_queue_lf_destroy(void *queue_lf);
+uint32_t _odp_queue_lf_length(void *queue_lf);
+uint32_t _odp_queue_lf_max_length(void);
 
 #ifdef __cplusplus
 }

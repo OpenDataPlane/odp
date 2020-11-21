@@ -14,8 +14,8 @@ extern "C" {
 #include <odp/api/packet_io_stats.h>
 #include <odp_packet_io_internal.h>
 
-int sysfs_stats(pktio_entry_t *pktio_entry,
-		odp_pktio_stats_t *stats);
+int _odp_sysfs_stats(pktio_entry_t *pktio_entry,
+		     odp_pktio_stats_t *stats);
 
 #ifdef __cplusplus
 }

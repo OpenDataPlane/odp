@@ -284,9 +284,9 @@ static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
 		lockless = (p->op_mode == ODP_PKTIO_OP_MT_UNSAFE);
 
 	if (p->hash_enable && num_queues > 1) {
-		if (rss_conf_set_fd(pkt_priv(pktio_entry)->sockfd,
-				    pkt_priv(pktio_entry)->if_name,
-				    &p->hash_proto)) {
+		if (_odp_rss_conf_set_fd(pkt_priv(pktio_entry)->sockfd,
+					 pkt_priv(pktio_entry)->if_name,
+					 &p->hash_proto)) {
 			ODP_ERR("Failed to configure input hash\n");
 			return -1;
 		}
@@ -357,8 +357,8 @@ static int netmap_link_status(pktio_entry_t *pktio_entry)
 	if (pkt_priv(pktio_entry)->is_virtual)
 		return ODP_PKTIO_LINK_STATUS_UP;
 
-	return link_status_fd(pkt_priv(pktio_entry)->sockfd,
-			      pkt_priv(pktio_entry)->if_name);
+	return _odp_link_status_fd(pkt_priv(pktio_entry)->sockfd,
+				   pkt_priv(pktio_entry)->if_name);
 }
 
 static int netmap_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info)
@@ -379,7 +379,7 @@ static int netmap_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *i
 		return 0;
 	}
 
-	return link_info_fd(pkt_nm->sockfd, pkt_nm->if_name, info);
+	return _odp_link_info_fd(pkt_nm->sockfd, pkt_nm->if_name, info);
 }
 
 /**
@@ -543,7 +543,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 
 		/* Use either interface MTU or netmap buffer size as MTU,
 		 * whichever is smaller. */
-		mtu = mtu_get_fd(pkt_nm->sockfd, pkt_nm->if_name);
+		mtu = _odp_mtu_get_fd(pkt_nm->sockfd, pkt_nm->if_name);
 		if (mtu == 0) {
 			ODP_ERR("Unable to read interface MTU\n");
 			goto error;
@@ -552,8 +552,8 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 
 		/* Netmap requires that interface MTU size <= nm buf size */
 		if (mtu > nm_buf_size) {
-			if (mtu_set_fd(pkt_nm->sockfd, pkt_nm->if_name,
-				       nm_buf_size)) {
+			if (_odp_mtu_set_fd(pkt_nm->sockfd, pkt_nm->if_name,
+					    nm_buf_size)) {
 				ODP_ERR("Unable to set interface MTU\n");
 				goto error;
 			}
@@ -602,8 +602,8 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	}
 
 	/* Check if RSS is supported. If not, set 'max_input_queues' to 1. */
-	if (rss_conf_get_supported_fd(pkt_nm->sockfd, netdev,
-				      &hash_proto) == 0) {
+	if (_odp_rss_conf_get_supported_fd(pkt_nm->sockfd, netdev,
+					   &hash_proto) == 0) {
 		ODP_DBG("RSS not supported\n");
 		pktio_entry->s.capa.max_input_queues = 1;
 	}
@@ -614,12 +614,12 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	if ((pkt_nm->if_flags & IFF_UP) == 0)
 		ODP_DBG("%s is down\n", pkt_nm->if_name);
 
-	err = mac_addr_get_fd(pkt_nm->sockfd, netdev, pkt_nm->if_mac);
+	err = _odp_mac_addr_get_fd(pkt_nm->sockfd, netdev, pkt_nm->if_mac);
 	if (err)
 		goto error;
 
 	/* netmap uses only ethtool to get statistics counters */
-	err = ethtool_stats_get_fd(pkt_nm->sockfd, pkt_nm->if_name, &cur_stats);
+	err = _odp_ethtool_stats_get_fd(pkt_nm->sockfd, pkt_nm->if_name, &cur_stats);
 	if (err) {
 		ODP_ERR("netmap pktio %s does not support statistics counters\n",
 			pkt_nm->if_name);
@@ -832,9 +832,9 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 		odp_prefetch(slot.buf);
 
 		if (pktio_cls_enabled(pktio_entry)) {
-			if (cls_classify_packet(pktio_entry,
-						(const uint8_t *)slot.buf, len,
-						len, &pool, &parsed_hdr, true))
+			if (_odp_cls_classify_packet(pktio_entry,
+						     (const uint8_t *)slot.buf, len,
+						     len, &pool, &parsed_hdr, true))
 				goto fail;
 		}
 
@@ -852,9 +852,9 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry))
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 		else
-			packet_parse_layer(pkt_hdr,
-					   pktio_entry->s.config.parser.layer,
-					   pktio_entry->s.in_chksums);
+			_odp_packet_parse_layer(pkt_hdr,
+						pktio_entry->s.config.parser.layer,
+						pktio_entry->s.in_chksums);
 
 		packet_set_ts(pkt_hdr, ts);
 	}
@@ -1178,8 +1178,8 @@ static int netmap_promisc_mode_set(pktio_entry_t *pktio_entry,
 		return -1;
 	}
 
-	return promisc_mode_set_fd(pkt_priv(pktio_entry)->sockfd,
-				   pkt_priv(pktio_entry)->if_name, enable);
+	return _odp_promisc_mode_set_fd(pkt_priv(pktio_entry)->sockfd,
+					pkt_priv(pktio_entry)->if_name, enable);
 }
 
 static int netmap_promisc_mode_get(pktio_entry_t *pktio_entry)
@@ -1187,8 +1187,8 @@ static int netmap_promisc_mode_get(pktio_entry_t *pktio_entry)
 	if (pkt_priv(pktio_entry)->is_virtual)
 		return 0;
 
-	return promisc_mode_get_fd(pkt_priv(pktio_entry)->sockfd,
-				   pkt_priv(pktio_entry)->if_name);
+	return _odp_promisc_mode_get_fd(pkt_priv(pktio_entry)->sockfd,
+					pkt_priv(pktio_entry)->if_name);
 }
 
 static int netmap_capability(pktio_entry_t *pktio_entry,
@@ -1206,9 +1206,9 @@ static int netmap_stats(pktio_entry_t *pktio_entry,
 		return 0;
 	}
 
-	return sock_stats_fd(pktio_entry,
-			     stats,
-			     pkt_priv(pktio_entry)->sockfd);
+	return _odp_sock_stats_fd(pktio_entry,
+				  stats,
+				  pkt_priv(pktio_entry)->sockfd);
 }
 
 static int netmap_stats_reset(pktio_entry_t *pktio_entry)
@@ -1219,17 +1219,17 @@ static int netmap_stats_reset(pktio_entry_t *pktio_entry)
 		return 0;
 	}
 
-	return sock_stats_reset_fd(pktio_entry,
-				   pkt_priv(pktio_entry)->sockfd);
+	return _odp_sock_stats_reset_fd(pktio_entry,
+					pkt_priv(pktio_entry)->sockfd);
 }
 
 static void netmap_print(pktio_entry_t *pktio_entry)
 {
 	odp_pktin_hash_proto_t hash_proto;
 
-	if (rss_conf_get_fd(pkt_priv(pktio_entry)->sockfd,
-			    pkt_priv(pktio_entry)->if_name, &hash_proto))
-		rss_conf_print(&hash_proto);
+	if (_odp_rss_conf_get_fd(pkt_priv(pktio_entry)->sockfd,
+				 pkt_priv(pktio_entry)->if_name, &hash_proto))
+		_odp_rss_conf_print(&hash_proto);
 }
 
 static int netmap_init_global(void)

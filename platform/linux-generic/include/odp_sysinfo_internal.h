@@ -16,10 +16,10 @@ extern "C" {
 #include <inttypes.h>
 #include <string.h>
 
-int cpuinfo_parser(FILE *file, system_info_t *sysinfo);
+int _odp_cpuinfo_parser(FILE *file, system_info_t *sysinfo);
 uint64_t odp_cpu_hz_current(int id);
 uint64_t odp_cpu_arch_hz_current(int id);
-void sys_info_print_arch(void);
+void _odp_sys_info_print_arch(void);
 
 static inline int _odp_dummy_cpuinfo(system_info_t *sysinfo)
 {

@@ -48,10 +48,10 @@ static int sock_recv_mq_tmo_select(pktio_entry_t * const *entry,
 	return 0;
 }
 
-int sock_recv_mq_tmo_try_int_driven(const struct odp_pktin_queue_t queues[],
-				    unsigned int num_q, unsigned int *from,
-				    odp_packet_t packets[], int num,
-				    uint64_t usecs, int *trial_successful)
+int _odp_sock_recv_mq_tmo_try_int_driven(const struct odp_pktin_queue_t queues[],
+					 unsigned int num_q, unsigned int *from,
+					 odp_packet_t packets[], int num,
+					 uint64_t usecs, int *trial_successful)
 {
 	unsigned int i;
 	pktio_entry_t *entry[num_q];

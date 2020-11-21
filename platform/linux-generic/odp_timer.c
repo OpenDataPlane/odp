@@ -513,7 +513,7 @@ static inline odp_timer_t timer_alloc(timer_pool_t *tp,
 						 _ODP_MEMMODEL_RLS);
 		hdl = tp_idx_to_handle(tp, idx);
 		/* Add timer to queue */
-		queue_fn->timer_add(queue);
+		_odp_queue_fn->timer_add(queue);
 	} else {
 		__odp_errno = ENFILE; /* Reusing file table overflow */
 		hdl = ODP_TIMER_INVALID;
@@ -534,7 +534,7 @@ static inline odp_buffer_t timer_free(timer_pool_t *tp, uint32_t idx)
 	odp_buffer_t old_buf = timer_set_unused(tp, idx);
 
 	/* Remove timer from queue */
-	queue_fn->timer_rem(tim->queue);
+	_odp_queue_fn->timer_rem(tim->queue);
 
 	/* Destroy timer */
 	timer_fini(tim, &tp->tick_buf[idx]);

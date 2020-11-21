@@ -137,11 +137,11 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	}
 	if_idx = ethreq.ifr_ifindex;
 
-	err = mac_addr_get_fd(sockfd, netdev, pkt_sock->if_mac);
+	err = _odp_mac_addr_get_fd(sockfd, netdev, pkt_sock->if_mac);
 	if (err != 0)
 		goto error;
 
-	pkt_sock->mtu = mtu_get_fd(sockfd, netdev);
+	pkt_sock->mtu = _odp_mtu_get_fd(sockfd, netdev);
 	if (!pkt_sock->mtu)
 		goto error;
 
@@ -156,8 +156,8 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 		goto error;
 	}
 
-	pktio_entry->s.stats_type = sock_stats_type_fd(pktio_entry,
-						       pkt_sock->sockfd);
+	pktio_entry->s.stats_type = _odp_sock_stats_type_fd(pktio_entry,
+							    pkt_sock->sockfd);
 	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED)
 		ODP_DBG("pktio: %s unsupported stats\n", pktio_entry->s.name);
 
@@ -264,10 +264,10 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			if (msgvec[i].msg_hdr.msg_iov->iov_len < pkt_len)
 				seg_len = msgvec[i].msg_hdr.msg_iov->iov_len;
 
-			if (cls_classify_packet(pktio_entry, base, pkt_len,
-						seg_len, &pool, pkt_hdr,
-						true)) {
-				ODP_ERR("cls_classify_packet failed");
+			if (_odp_cls_classify_packet(pktio_entry, base, pkt_len,
+						     seg_len, &pool, pkt_hdr,
+						     true)) {
+				ODP_ERR("_odp_cls_classify_packet failed");
 				odp_packet_free(pkt);
 				continue;
 			}
@@ -291,9 +291,9 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		pkt_hdr->input = pktio_entry->s.handle;
 
 		if (!pktio_cls_enabled(pktio_entry))
-			packet_parse_layer(pkt_hdr,
-					   pktio_entry->s.config.parser.layer,
-					   pktio_entry->s.in_chksums);
+			_odp_packet_parse_layer(pkt_hdr,
+						pktio_entry->s.config.parser.layer,
+						pktio_entry->s.in_chksums);
 
 		packet_set_ts(pkt_hdr, ts);
 
@@ -486,25 +486,25 @@ static int sock_mac_addr_get(pktio_entry_t *pktio_entry,
 static int sock_promisc_mode_set(pktio_entry_t *pktio_entry,
 				 odp_bool_t enable)
 {
-	return promisc_mode_set_fd(pkt_priv(pktio_entry)->sockfd,
-				   pktio_entry->s.name, enable);
+	return _odp_promisc_mode_set_fd(pkt_priv(pktio_entry)->sockfd,
+					pktio_entry->s.name, enable);
 }
 
 static int sock_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
-	return promisc_mode_get_fd(pkt_priv(pktio_entry)->sockfd,
-				   pktio_entry->s.name);
+	return _odp_promisc_mode_get_fd(pkt_priv(pktio_entry)->sockfd,
+					pktio_entry->s.name);
 }
 
 static int sock_link_status(pktio_entry_t *pktio_entry)
 {
-	return link_status_fd(pkt_priv(pktio_entry)->sockfd,
-			      pktio_entry->s.name);
+	return _odp_link_status_fd(pkt_priv(pktio_entry)->sockfd,
+				   pktio_entry->s.name);
 }
 
 static int sock_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info)
 {
-	return link_info_fd(pkt_priv(pktio_entry)->sockfd, pktio_entry->s.name, info);
+	return _odp_link_info_fd(pkt_priv(pktio_entry)->sockfd, pktio_entry->s.name, info);
 }
 
 static int sock_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
@@ -533,7 +533,7 @@ static int sock_stats(pktio_entry_t *pktio_entry,
 		return 0;
 	}
 
-	return sock_stats_fd(pktio_entry, stats, pkt_priv(pktio_entry)->sockfd);
+	return _odp_sock_stats_fd(pktio_entry, stats, pkt_priv(pktio_entry)->sockfd);
 }
 
 static int sock_stats_reset(pktio_entry_t *pktio_entry)
@@ -544,7 +544,7 @@ static int sock_stats_reset(pktio_entry_t *pktio_entry)
 		return 0;
 	}
 
-	return sock_stats_reset_fd(pktio_entry, pkt_priv(pktio_entry)->sockfd);
+	return _odp_sock_stats_reset_fd(pktio_entry, pkt_priv(pktio_entry)->sockfd);
 }
 
 static int sock_init_global(void)
@@ -560,7 +560,7 @@ static int sock_init_global(void)
 	return 0;
 }
 
-const pktio_if_ops_t sock_mmsg_pktio_ops = {
+const pktio_if_ops_t _odp_sock_mmsg_pktio_ops = {
 	.name = "socket",
 	.print = NULL,
 	.init_global = sock_init_global,

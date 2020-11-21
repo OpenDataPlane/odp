@@ -53,11 +53,11 @@
 static pktio_global_t *pktio_global;
 
 /* pktio pointer entries ( for inlines) */
-void *pktio_entry_ptr[ODP_CONFIG_PKTIO_ENTRIES];
+void *_odp_pktio_entry_ptr[ODP_CONFIG_PKTIO_ENTRIES];
 
 static inline pktio_entry_t *pktio_entry_by_index(int index)
 {
-	return pktio_entry_ptr[index];
+	return _odp_pktio_entry_ptr[index];
 }
 
 static inline odp_buffer_hdr_t *packet_vector_to_buf_hdr(odp_packet_vector_t pktv)
@@ -123,7 +123,7 @@ int _odp_pktio_init_global(void)
 		odp_spinlock_init(&pktio_entry->s.cls.l2_cos_table.lock);
 		odp_spinlock_init(&pktio_entry->s.cls.l3_cos_table.lock);
 
-		pktio_entry_ptr[i] = pktio_entry;
+		_odp_pktio_entry_ptr[i] = pktio_entry;
 	}
 
 	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
@@ -205,7 +205,7 @@ static void init_pktio_entry(pktio_entry_t *entry)
 	init_in_queues(entry);
 	init_out_queues(entry);
 
-	pktio_classifier_init(entry);
+	_odp_pktio_classifier_init(entry);
 }
 
 static odp_pktio_t alloc_lock_pktio_entry(void)
@@ -632,7 +632,7 @@ int odp_pktio_start(odp_pktio_t hdl)
 			}
 		}
 
-		sched_fn->pktio_start(odp_pktio_index(hdl), num, index, odpq);
+		_odp_sched_fn->pktio_start(odp_pktio_index(hdl), num, index, odpq);
 	}
 
 	ODP_DBG("interface: %s, input queues: %u, output queues: %u\n",
@@ -971,10 +971,10 @@ static int pktout_enqueue(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr)
 	int len = 1;
 	int nbr;
 
-	if (sched_fn->ord_enq_multi(queue, (void **)buf_hdr, len, &nbr))
+	if (_odp_sched_fn->ord_enq_multi(queue, (void **)buf_hdr, len, &nbr))
 		return (nbr == len ? 0 : -1);
 
-	pktout_queue = queue_fn->get_pktout(queue);
+	pktout_queue = _odp_queue_fn->get_pktout(queue);
 
 	if (odp_event_type(event) == ODP_EVENT_PACKET_VECTOR)
 		return packet_vector_send(pktout_queue, event);
@@ -993,7 +993,7 @@ static int pktout_enq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
 	int nbr;
 	int i;
 
-	if (sched_fn->ord_enq_multi(queue, (void **)buf_hdr, num, &nbr))
+	if (_odp_sched_fn->ord_enq_multi(queue, (void **)buf_hdr, num, &nbr))
 		return nbr;
 
 	for (i = 0; i < num; ++i) {
@@ -1007,7 +1007,7 @@ static int pktout_enq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
 		pkt_tbl[i] = packet_from_buf_hdr(buf_hdr[i]);
 	}
 
-	pktout_queue = queue_fn->get_pktout(queue);
+	pktout_queue = _odp_queue_fn->get_pktout(queue);
 
 	if (!have_pktv)
 		return odp_pktout_send(pktout_queue, pkt_tbl, num);
@@ -1034,14 +1034,14 @@ static odp_buffer_hdr_t *pktin_dequeue(odp_queue_t queue)
 	odp_buffer_hdr_t *buf_hdr;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	int pkts;
-	odp_pktin_queue_t pktin_queue = queue_fn->get_pktin(queue);
+	odp_pktin_queue_t pktin_queue = _odp_queue_fn->get_pktin(queue);
 	odp_pktio_t pktio = pktin_queue.pktio;
 	int pktin_index   = pktin_queue.index;
 	pktio_entry_t *entry = get_pktio_entry(pktio);
 
 	ODP_ASSERT(entry != NULL);
 
-	if (queue_fn->orig_deq_multi(queue, &buf_hdr, 1) == 1)
+	if (_odp_queue_fn->orig_deq_multi(queue, &buf_hdr, 1) == 1)
 		return buf_hdr;
 
 	pkts = pktin_recv_buf(entry, pktin_index, hdr_tbl, QUEUE_MULTI_MAX);
@@ -1076,14 +1076,14 @@ static int pktin_deq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
 	int nbr;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	int pkts, i, j;
-	odp_pktin_queue_t pktin_queue = queue_fn->get_pktin(queue);
+	odp_pktin_queue_t pktin_queue = _odp_queue_fn->get_pktin(queue);
 	odp_pktio_t pktio = pktin_queue.pktio;
 	int pktin_index   = pktin_queue.index;
 	pktio_entry_t *entry = get_pktio_entry(pktio);
 
 	ODP_ASSERT(entry != NULL);
 
-	nbr = queue_fn->orig_deq_multi(queue, buf_hdr, num);
+	nbr = _odp_queue_fn->orig_deq_multi(queue, buf_hdr, num);
 	if (odp_unlikely(nbr > num))
 		ODP_ABORT("queue_deq_multi req: %d, returned %d\n", num, nbr);
 
@@ -1123,9 +1123,9 @@ static int pktin_deq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
 	return nbr;
 }
 
-int sched_cb_pktin_poll_one(int pktio_index,
-			    int rx_queue,
-			    odp_event_t evt_tbl[QUEUE_MULTI_MAX])
+int _odp_sched_cb_pktin_poll_one(int pktio_index,
+				 int rx_queue,
+				 odp_event_t evt_tbl[QUEUE_MULTI_MAX])
 {
 	int num_rx, num_pkts, i;
 	pktio_entry_t *entry = pktio_entry_by_index(pktio_index);
@@ -1204,8 +1204,8 @@ int sched_cb_pktin_poll_one(int pktio_index,
 	return num_rx;
 }
 
-int sched_cb_pktin_poll(int pktio_index, int pktin_index,
-			odp_buffer_hdr_t *hdr_tbl[], int num)
+int _odp_sched_cb_pktin_poll(int pktio_index, int pktin_index,
+			     odp_buffer_hdr_t *hdr_tbl[], int num)
 {
 	pktio_entry_t *entry = pktio_entry_by_index(pktio_index);
 	int state = entry->s.state;
@@ -1222,7 +1222,7 @@ int sched_cb_pktin_poll(int pktio_index, int pktin_index,
 	return pktin_recv_buf(entry, pktin_index, hdr_tbl, num);
 }
 
-void sched_cb_pktio_stop_finalize(int pktio_index)
+void _odp_sched_cb_pktio_stop_finalize(int pktio_index)
 {
 	int state;
 	pktio_entry_t *entry = pktio_entry_by_index(pktio_index);
@@ -1950,12 +1950,12 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 			}
 
 			if (mode == ODP_PKTIN_MODE_QUEUE) {
-				queue_fn->set_pktin(queue, pktio, i);
-				queue_fn->set_enq_deq_fn(queue,
-							 NULL,
-							 NULL,
-							 pktin_dequeue,
-							 pktin_deq_multi);
+				_odp_queue_fn->set_pktin(queue, pktio, i);
+				_odp_queue_fn->set_enq_deq_fn(queue,
+							      NULL,
+							      NULL,
+							      pktin_dequeue,
+							      pktin_deq_multi);
 			}
 
 			entry->s.in_queue[i].queue = queue;
@@ -2073,14 +2073,14 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 				return -1;
 			}
 
-			queue_fn->set_pktout(queue, pktio, i);
+			_odp_queue_fn->set_pktout(queue, pktio, i);
 
 			/* Override default enqueue / dequeue functions */
-			queue_fn->set_enq_deq_fn(queue,
-						 pktout_enqueue,
-						 pktout_enq_multi,
-						 NULL,
-						 NULL);
+			_odp_queue_fn->set_enq_deq_fn(queue,
+						      pktout_enqueue,
+						      pktout_enq_multi,
+						      NULL,
+						      NULL);
 
 			entry->s.out_queue[i].queue = queue;
 		}
@@ -2354,9 +2354,9 @@ int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned int num_q,
 	if (wait == 0)
 		return 0;
 
-	ret = sock_recv_mq_tmo_try_int_driven(queues, num_q, &lfrom,
-					      packets, num, wait,
-					      &trial_successful);
+	ret = _odp_sock_recv_mq_tmo_try_int_driven(queues, num_q, &lfrom,
+						   packets, num, wait,
+						   &trial_successful);
 	if (ret > 0 && from)
 		*from = lfrom;
 	if (trial_successful) {

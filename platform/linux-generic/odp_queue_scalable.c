@@ -43,7 +43,7 @@
 #define UNLOCK(a)    odp_ticketlock_unlock(a)
 #define LOCK_INIT(a) odp_ticketlock_init(a)
 
-extern __thread sched_scalable_thread_state_t *sched_ts;
+extern __thread sched_scalable_thread_state_t *_odp_sched_ts;
 extern _odp_queue_inline_offset_t _odp_queue_inline_offset;
 
 typedef struct queue_table_t {
@@ -65,7 +65,7 @@ static queue_entry_t *get_qentry(uint32_t queue_id)
 	return &queue_tbl->queue[queue_id];
 }
 
-queue_entry_t *qentry_from_ext(odp_queue_t handle)
+queue_entry_t *_odp_qentry_from_ext(odp_queue_t handle)
 {
 	return (queue_entry_t *)(uintptr_t)handle;
 }
@@ -168,8 +168,8 @@ static int queue_init(queue_entry_t *queue, const char *name,
 
 		if (queue->s.param.sched.sync == ODP_SCHED_SYNC_ORDERED) {
 			sched_elem->rwin =
-				rwin_alloc(queue_shm_pool,
-					   queue->s.param.sched.lock_count);
+				_odp_rwin_alloc(queue_shm_pool,
+						queue->s.param.sched.lock_count);
 			if (sched_elem->rwin == NULL) {
 				ODP_ERR("Reorder window not created\n");
 				goto rwin_create_failed;
@@ -178,7 +178,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 		sched_elem->sched_grp = param->sched.group;
 		sched_elem->sched_prio = prio;
 		sched_elem->schedq =
-			sched_queue_add(param->sched.group, prio);
+			_odp_sched_queue_add(param->sched.group, prio);
 		ODP_ASSERT(sched_elem->schedq != NULL);
 
 	}
@@ -313,8 +313,8 @@ static int queue_capability(odp_queue_capability_t *capa)
 	/* Reserve some queues for internal use */
 	capa->max_queues        = CONFIG_MAX_QUEUES - CONFIG_INTERNAL_QUEUES;
 #if ODP_DEPRECATED_API
-	capa->max_ordered_locks = sched_fn->max_ordered_locks();
-	capa->max_sched_groups  = sched_fn->num_grps();
+	capa->max_ordered_locks = _odp_sched_fn->max_ordered_locks();
+	capa->max_sched_groups  = _odp_sched_fn->num_grps();
 	capa->sched_prios       = odp_schedule_num_prio();
 	capa->sched.max_num     = CONFIG_MAX_SCHED_QUEUES;
 	capa->sched.max_size    = 0;
@@ -327,27 +327,27 @@ static int queue_capability(odp_queue_capability_t *capa)
 
 static odp_queue_type_t queue_type(odp_queue_t handle)
 {
-	return qentry_from_ext(handle)->s.type;
+	return _odp_qentry_from_ext(handle)->s.type;
 }
 
 static odp_schedule_sync_t queue_sched_type(odp_queue_t handle)
 {
-	return qentry_from_ext(handle)->s.param.sched.sync;
+	return _odp_qentry_from_ext(handle)->s.param.sched.sync;
 }
 
 static odp_schedule_prio_t queue_sched_prio(odp_queue_t handle)
 {
-	return qentry_from_ext(handle)->s.param.sched.prio;
+	return _odp_qentry_from_ext(handle)->s.param.sched.prio;
 }
 
 static odp_schedule_group_t queue_sched_group(odp_queue_t handle)
 {
-	return qentry_from_ext(handle)->s.param.sched.group;
+	return _odp_qentry_from_ext(handle)->s.param.sched.group;
 }
 
 static uint32_t queue_lock_count(odp_queue_t handle)
 {
-	queue_entry_t *queue = qentry_from_ext(handle);
+	queue_entry_t *queue = _odp_qentry_from_ext(handle);
 
 	return queue->s.param.sched.sync == ODP_SCHED_SYNC_ORDERED ?
 		queue->s.param.sched.lock_count : 0;
@@ -419,7 +419,7 @@ static int queue_destroy(odp_queue_t handle)
 	if (handle == ODP_QUEUE_INVALID)
 		return -1;
 
-	queue = qentry_from_ext(handle);
+	queue = _odp_qentry_from_ext(handle);
 	LOCK(&queue->s.lock);
 	if (queue->s.status != QUEUE_STATUS_READY) {
 		UNLOCK(&queue->s.lock);
@@ -469,14 +469,14 @@ static int queue_destroy(odp_queue_t handle)
 	}
 
 	if (q->schedq != NULL) {
-		sched_queue_rem(q->sched_grp, q->sched_prio);
+		_odp_sched_queue_rem(q->sched_grp, q->sched_prio);
 		q->schedq = NULL;
 	}
 
 	_odp_ishm_pool_free(queue_shm_pool, q->prod_ring);
 
 	if (q->rwin != NULL) {
-		if (rwin_free(queue_shm_pool, q->rwin) < 0) {
+		if (_odp_rwin_free(queue_shm_pool, q->rwin) < 0) {
 			ODP_ERR("Failed to free reorder window\n");
 			UNLOCK(&queue->s.lock);
 			return -1;
@@ -492,7 +492,7 @@ static int queue_context_set(odp_queue_t handle, void *context,
 			     uint32_t len ODP_UNUSED)
 {
 	odp_mb_full();
-	qentry_from_ext(handle)->s.param.context = context;
+	_odp_qentry_from_ext(handle)->s.param.context = context;
 	odp_mb_full();
 	return 0;
 }
@@ -642,10 +642,10 @@ static int _queue_enq_multi(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr[],
 	sched_scalable_thread_state_t *ts;
 
 	queue = qentry_from_int(handle);
-	ts = sched_ts;
+	ts = _odp_sched_ts;
 	if (ts && odp_unlikely(ts->out_of_order) &&
 	    (queue->s.param.order == ODP_QUEUE_ORDER_KEEP)) {
-		actual = rctx_save(queue, buf_hdr, num);
+		actual = _odp_rctx_save(queue, buf_hdr, num);
 		return actual;
 	}
 
@@ -659,9 +659,9 @@ static int _queue_enq_multi(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr[],
 	if (odp_likely(queue->s.sched_elem.schedq != NULL && actual != 0)) {
 		/* Perform scheduler related updates. */
 #ifdef CONFIG_QSCHST_LOCK
-		sched_update_enq_sp(&queue->s.sched_elem, actual);
+		_odp_sched_update_enq_sp(&queue->s.sched_elem, actual);
 #else
-		sched_update_enq(&queue->s.sched_elem, actual);
+		_odp_sched_update_enq(&queue->s.sched_elem, actual);
 #endif
 	}
 
@@ -686,7 +686,7 @@ static int queue_enq_multi(odp_queue_t handle, const odp_event_t ev[], int num)
 	if (num > QUEUE_MULTI_MAX)
 		num = QUEUE_MULTI_MAX;
 
-	queue = qentry_from_ext(handle);
+	queue = _odp_qentry_from_ext(handle);
 
 	for (i = 0; i < num; i++)
 		buf_hdr[i] = buf_hdl_to_hdr(odp_buffer_from_event(ev[i]));
@@ -699,7 +699,7 @@ static int queue_enq(odp_queue_t handle, odp_event_t ev)
 	odp_buffer_hdr_t *buf_hdr;
 	queue_entry_t *queue;
 
-	queue   = qentry_from_ext(handle);
+	queue   = _odp_qentry_from_ext(handle);
 	buf_hdr = buf_hdl_to_hdr(odp_buffer_from_event(ev));
 
 	return queue->s.enqueue(handle, buf_hdr);
@@ -867,7 +867,7 @@ static int queue_deq_multi(odp_queue_t handle, odp_event_t ev[], int num)
 	if (num > QUEUE_MULTI_MAX)
 		num = QUEUE_MULTI_MAX;
 
-	queue = qentry_from_ext(handle);
+	queue = _odp_qentry_from_ext(handle);
 
 	ret = queue->s.dequeue_multi(handle, (odp_buffer_hdr_t **)ev, num);
 
@@ -880,7 +880,7 @@ static int queue_deq_multi(odp_queue_t handle, odp_event_t ev[], int num)
 
 static odp_event_t queue_deq(odp_queue_t handle)
 {
-	queue_entry_t *queue = qentry_from_ext(handle);
+	queue_entry_t *queue = _odp_qentry_from_ext(handle);
 	odp_event_t ev = (odp_event_t)queue->s.dequeue(handle);
 
 	if (odp_global_rw->inline_timers &&
@@ -1068,20 +1068,20 @@ static int queue_orig_multi(odp_queue_t handle,
 
 static void queue_timer_add(odp_queue_t handle)
 {
-	queue_entry_t *queue = qentry_from_ext(handle);
+	queue_entry_t *queue = _odp_qentry_from_ext(handle);
 
 	odp_atomic_inc_u64(&queue->s.num_timers);
 }
 
 static void queue_timer_rem(odp_queue_t handle)
 {
-	queue_entry_t *queue = qentry_from_ext(handle);
+	queue_entry_t *queue = _odp_qentry_from_ext(handle);
 
 	odp_atomic_dec_u64(&queue->s.num_timers);
 }
 
 /* API functions */
-_odp_queue_api_fn_t queue_scalable_api = {
+_odp_queue_api_fn_t _odp_queue_scalable_api = {
 	.queue_create = queue_create,
 	.queue_destroy = queue_destroy,
 	.queue_lookup = queue_lookup,
@@ -1103,7 +1103,7 @@ _odp_queue_api_fn_t queue_scalable_api = {
 };
 
 /* Functions towards internal components */
-queue_fn_t queue_scalable_fn = {
+queue_fn_t _odp_queue_scalable_fn = {
 	.init_global = queue_init_global,
 	.term_global = queue_term_global,
 	.init_local = queue_init_local,

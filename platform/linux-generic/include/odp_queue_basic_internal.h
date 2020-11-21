@@ -87,7 +87,7 @@ typedef struct queue_global_t {
 
 } queue_global_t;
 
-extern queue_global_t *queue_glb;
+extern queue_global_t *_odp_queue_glb;
 
 static inline uint32_t queue_to_index(odp_queue_t handle)
 {
@@ -98,7 +98,7 @@ static inline uint32_t queue_to_index(odp_queue_t handle)
 
 static inline queue_entry_t *qentry_from_index(uint32_t queue_id)
 {
-	return &queue_glb->queue[queue_id];
+	return &_odp_queue_glb->queue[queue_id];
 }
 
 static inline odp_queue_t queue_from_index(uint32_t queue_id)
@@ -111,13 +111,13 @@ static inline queue_entry_t *qentry_from_handle(odp_queue_t handle)
 	return (queue_entry_t *)(uintptr_t)handle;
 }
 
-void queue_spsc_init(queue_entry_t *queue, uint32_t queue_size);
+void _odp_queue_spsc_init(queue_entry_t *queue, uint32_t queue_size);
 
 /* Functions for schedulers */
-void sched_queue_set_status(uint32_t queue_index, int status);
-int sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int num,
-		    int update_status);
-int sched_queue_empty(uint32_t queue_index);
+void _odp_sched_queue_set_status(uint32_t queue_index, int status);
+int _odp_sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int num,
+			 int update_status);
+int _odp_sched_queue_empty(uint32_t queue_index);
 
 #ifdef __cplusplus
 }

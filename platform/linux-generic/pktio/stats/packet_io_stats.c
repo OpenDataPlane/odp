@@ -10,7 +10,7 @@
 
 #include <string.h>
 
-int sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd)
+int _odp_sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd)
 {
 	int err = 0;
 	odp_pktio_stats_t cur_stats;
@@ -24,11 +24,11 @@ int sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd)
 	memset(&cur_stats, 0, sizeof(odp_pktio_stats_t));
 
 	if (pktio_entry->s.stats_type == STATS_ETHTOOL) {
-		(void)ethtool_stats_get_fd(fd,
-					   pktio_entry->s.name,
-					   &cur_stats);
+		(void)_odp_ethtool_stats_get_fd(fd,
+						pktio_entry->s.name,
+						&cur_stats);
 	} else if (pktio_entry->s.stats_type == STATS_SYSFS) {
-		err = sysfs_stats(pktio_entry, &cur_stats);
+		err = _odp_sysfs_stats(pktio_entry, &cur_stats);
 		if (err != 0)
 			ODP_ERR("stats error\n");
 	}
@@ -40,9 +40,9 @@ int sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd)
 	return err;
 }
 
-int sock_stats_fd(pktio_entry_t *pktio_entry,
-		  odp_pktio_stats_t *stats,
-		  int fd)
+int _odp_sock_stats_fd(pktio_entry_t *pktio_entry,
+		       odp_pktio_stats_t *stats,
+		       int fd)
 {
 	odp_pktio_stats_t cur_stats;
 	int ret = 0;
@@ -52,11 +52,11 @@ int sock_stats_fd(pktio_entry_t *pktio_entry,
 
 	memset(&cur_stats, 0, sizeof(odp_pktio_stats_t));
 	if (pktio_entry->s.stats_type == STATS_ETHTOOL) {
-		(void)ethtool_stats_get_fd(fd,
-					   pktio_entry->s.name,
-					   &cur_stats);
+		(void)_odp_ethtool_stats_get_fd(fd,
+						pktio_entry->s.name,
+						&cur_stats);
 	} else if (pktio_entry->s.stats_type == STATS_SYSFS) {
-		sysfs_stats(pktio_entry, &cur_stats);
+		_odp_sysfs_stats(pktio_entry, &cur_stats);
 	}
 
 	stats->in_octets = cur_stats.in_octets -
@@ -82,14 +82,14 @@ int sock_stats_fd(pktio_entry_t *pktio_entry,
 	return ret;
 }
 
-pktio_stats_type_t sock_stats_type_fd(pktio_entry_t *pktio_entry, int fd)
+pktio_stats_type_t _odp_sock_stats_type_fd(pktio_entry_t *pktio_entry, int fd)
 {
 	odp_pktio_stats_t cur_stats;
 
-	if (!ethtool_stats_get_fd(fd, pktio_entry->s.name, &cur_stats))
+	if (!_odp_ethtool_stats_get_fd(fd, pktio_entry->s.name, &cur_stats))
 		return STATS_ETHTOOL;
 
-	if (!sysfs_stats(pktio_entry, &cur_stats))
+	if (!_odp_sysfs_stats(pktio_entry, &cur_stats))
 		return STATS_SYSFS;
 
 	return STATS_UNSUPPORTED;

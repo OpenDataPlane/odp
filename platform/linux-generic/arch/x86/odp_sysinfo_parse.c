@@ -8,7 +8,7 @@
 #include "cpu_flags.h"
 #include <string.h>
 
-int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
+int _odp_cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 {
 	char str[1024];
 	char *pos, *pos_end;
@@ -77,9 +77,9 @@ int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 	return 0;
 }
 
-void sys_info_print_arch(void)
+void _odp_sys_info_print_arch(void)
 {
-	cpu_flags_print_all();
+	_odp_cpu_flags_print_all();
 }
 
 uint64_t odp_cpu_arch_hz_current(int id)
