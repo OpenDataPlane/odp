@@ -116,7 +116,7 @@ static odp_buffer_hdr_t *queue_spsc_deq(odp_queue_t handle)
 		return NULL;
 }
 
-void queue_spsc_init(queue_entry_t *queue, uint32_t queue_size)
+void _odp_queue_spsc_init(queue_entry_t *queue, uint32_t queue_size)
 {
 	uint64_t offset;
 
@@ -126,9 +126,9 @@ void queue_spsc_init(queue_entry_t *queue, uint32_t queue_size)
 	queue->s.dequeue_multi = queue_spsc_deq_multi;
 	queue->s.orig_dequeue_multi = queue_spsc_deq_multi;
 
-	offset = queue->s.index * (uint64_t)queue_glb->config.max_queue_size;
+	offset = queue->s.index * (uint64_t)_odp_queue_glb->config.max_queue_size;
 
-	queue->s.ring_data = &queue_glb->ring_data[offset];
+	queue->s.ring_data = &_odp_queue_glb->ring_data[offset];
 	queue->s.ring_mask = queue_size - 1;
 	ring_spsc_init(&queue->s.ring_spsc);
 }

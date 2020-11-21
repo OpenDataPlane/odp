@@ -281,9 +281,9 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		if (pktio_cls_enabled(pktio_entry)) {
 			odp_packet_t new_pkt;
 
-			ret = cls_classify_packet(pktio_entry, data,
-						  pkt_len, pkt_len,
-						  &new_pool, pkt_hdr, true);
+			ret = _odp_cls_classify_packet(pktio_entry, data,
+						       pkt_len, pkt_len,
+						       &new_pool, pkt_hdr, true);
 			if (ret) {
 				odp_packet_free(pkt);
 				continue;
@@ -300,9 +300,9 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				pkt_hdr = packet_hdr(new_pkt);
 			}
 		} else {
-			packet_parse_layer(pkt_hdr,
-					   pktio_entry->s.config.parser.layer,
-					   pktio_entry->s.in_chksums);
+			_odp_packet_parse_layer(pkt_hdr,
+						pktio_entry->s.config.parser.layer,
+						pktio_entry->s.in_chksums);
 		}
 		pktio_entry->s.stats.in_octets += pkt_hdr->frame_len;
 
@@ -497,7 +497,7 @@ static int pcapif_link_info(pktio_entry_t *pktio_entry ODP_UNUSED, odp_pktio_lin
 	return 0;
 }
 
-const pktio_if_ops_t pcap_pktio_ops = {
+const pktio_if_ops_t _odp_pcap_pktio_ops = {
 	.name = "pcap",
 	.print = NULL,
 	.init_global = pcapif_init_global,

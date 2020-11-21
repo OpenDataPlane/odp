@@ -142,9 +142,9 @@ typedef struct ODP_ALIGNED_CACHE {
 	uint32_t loop_cnt; /*Counter to check pktio ingress queue dead loop */
 } sched_scalable_thread_state_t;
 
-void sched_update_enq(sched_elem_t *q, uint32_t actual);
-void sched_update_enq_sp(sched_elem_t *q, uint32_t actual);
-sched_queue_t *sched_queue_add(odp_schedule_group_t grp, uint32_t prio);
-void sched_queue_rem(odp_schedule_group_t grp, uint32_t prio);
+void _odp_sched_update_enq(sched_elem_t *q, uint32_t actual);
+void _odp_sched_update_enq_sp(sched_elem_t *q, uint32_t actual);
+sched_queue_t *_odp_sched_queue_add(odp_schedule_group_t grp, uint32_t prio);
+void _odp_sched_queue_rem(odp_schedule_group_t grp, uint32_t prio);
 
 #endif  /* ODP_SCHEDULE_SCALABLE_H */

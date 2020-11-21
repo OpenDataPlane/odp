@@ -164,7 +164,7 @@ static int ethtool_stats(int fd, struct ifreq *ifr, odp_pktio_stats_t *stats)
 	return 0;
 }
 
-int ethtool_stats_get_fd(int fd, const char *name, odp_pktio_stats_t *stats)
+int _odp_ethtool_stats_get_fd(int fd, const char *name, odp_pktio_stats_t *stats)
 {
 	struct ifreq ifr;
 

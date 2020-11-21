@@ -2031,9 +2031,9 @@ static int tm_enqueue(tm_system_t *tm_system,
 
 	work_item.queue_num = tm_queue_obj->queue_num;
 	work_item.pkt = pkt;
-	sched_fn->order_lock();
+	_odp_sched_fn->order_lock();
 	rc = input_work_queue_append(tm_system, &work_item);
-	sched_fn->order_unlock();
+	_odp_sched_fn->order_unlock();
 
 	if (rc < 0) {
 		ODP_DBG("%s work queue full\n", __func__);
@@ -3985,8 +3985,8 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 
 		queue_obj->queue = queue;
 		odp_queue_context_set(queue, queue_obj, sizeof(tm_queue_obj_t));
-		queue_fn->set_enq_deq_fn(queue, queue_tm_reenq,
-					 queue_tm_reenq_multi, NULL, NULL);
+		_odp_queue_fn->set_enq_deq_fn(queue, queue_tm_reenq,
+					      queue_tm_reenq_multi, NULL, NULL);
 
 		tm_system->queue_num_tbl[queue_obj->queue_num - 1] = queue_obj;
 

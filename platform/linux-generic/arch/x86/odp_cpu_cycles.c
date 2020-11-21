@@ -12,7 +12,7 @@
 
 int _odp_cpu_cycles_init_global(void)
 {
-	if (cpu_flags_has_rdtsc() == 0) {
+	if (_odp_cpu_flags_has_rdtsc() == 0) {
 		ODP_ERR("RDTSC instruction not supported\n");
 		return -1;
 	}

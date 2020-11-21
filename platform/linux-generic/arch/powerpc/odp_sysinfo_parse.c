@@ -8,7 +8,7 @@
 #include <odp_sysinfo_internal.h>
 #include <string.h>
 
-int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
+int _odp_cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 {
 	char str[1024];
 	char *pos;
@@ -62,7 +62,7 @@ int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
 	return 0;
 }
 
-void sys_info_print_arch(void)
+void _odp_sys_info_print_arch(void)
 {
 }
 

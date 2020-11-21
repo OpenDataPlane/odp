@@ -479,7 +479,7 @@ static int schedule_term_global(void)
 					odp_event_t events[1];
 					int num;
 
-					num = sched_queue_deq(qi, events, 1, 1);
+					num = _odp_sched_queue_deq(qi, events, 1, 1);
 
 					if (num > 0)
 						ODP_ERR("Queue not empty\n");
@@ -674,7 +674,7 @@ static void schedule_pktio_start(int pktio_index, int num_pktin,
 		ODP_ASSERT(pktin_idx[i] <= MAX_PKTIN_INDEX);
 
 		/* Start polling */
-		sched_queue_set_status(qi, QUEUE_STATUS_SCHED);
+		_odp_sched_queue_set_status(qi, QUEUE_STATUS_SCHED);
 		schedule_sched_queue(qi);
 	}
 }
@@ -805,7 +805,7 @@ static int schedule_term_local(void)
 static void schedule_config_init(odp_schedule_config_t *config)
 {
 	config->num_queues = CONFIG_MAX_SCHED_QUEUES;
-	config->queue_size = queue_glb->config.max_queue_size;
+	config->queue_size = _odp_queue_glb->config.max_queue_size;
 }
 
 static int schedule_config(const odp_schedule_config_t *config)
@@ -912,7 +912,7 @@ static inline int poll_pktin(uint32_t qi, int direct_recv,
 	pktio_index = sched->queue[qi].pktio_index;
 	pktin_index = sched->queue[qi].pktin_index;
 
-	num = sched_cb_pktin_poll(pktio_index, pktin_index, hdr_tbl, max_num);
+	num = _odp_sched_cb_pktin_poll(pktio_index, pktin_index, hdr_tbl, max_num);
 
 	if (num == 0)
 		return 0;
@@ -925,10 +925,10 @@ static inline int poll_pktin(uint32_t qi, int direct_recv,
 		num_pktin = sched->pktio[pktio_index].num_pktin;
 		odp_spinlock_unlock(&sched->pktio_lock);
 
-		sched_queue_set_status(qi, QUEUE_STATUS_NOTSCHED);
+		_odp_sched_queue_set_status(qi, QUEUE_STATUS_NOTSCHED);
 
 		if (num_pktin == 0)
-			sched_cb_pktio_stop_finalize(pktio_index);
+			_odp_sched_cb_pktio_stop_finalize(pktio_index);
 
 		return num;
 	}
@@ -1028,7 +1028,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 			pktin = queue_is_pktin(qi);
 
-			num = sched_queue_deq(qi, ev_tbl, max_deq, !pktin);
+			num = _odp_sched_queue_deq(qi, ev_tbl, max_deq, !pktin);
 
 			if (odp_unlikely(num < 0)) {
 				/* Destroyed queue. Continue scheduling the same
@@ -1583,14 +1583,14 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	capa->max_groups = schedule_num_grps();
 	capa->max_prios = schedule_num_prio();
 	capa->max_queues = CONFIG_MAX_SCHED_QUEUES;
-	capa->max_queue_size = queue_glb->config.max_queue_size;
+	capa->max_queue_size = _odp_queue_glb->config.max_queue_size;
 	capa->max_flow_id = BUF_HDR_MAX_FLOW_ID;
 
 	return 0;
 }
 
 /* Fill in scheduler interface */
-const schedule_fn_t schedule_basic_fn = {
+const schedule_fn_t _odp_schedule_basic_fn = {
 	.pktio_start = schedule_pktio_start,
 	.thr_add = schedule_thr_add,
 	.thr_rem = schedule_thr_rem,
@@ -1610,7 +1610,7 @@ const schedule_fn_t schedule_basic_fn = {
 };
 
 /* Fill in scheduler API calls */
-const schedule_api_t schedule_basic_api = {
+const schedule_api_t _odp_schedule_basic_api = {
 	.schedule_wait_time       = schedule_wait_time,
 	.schedule_capability      = schedule_capability,
 	.schedule_config_init     = schedule_config_init,

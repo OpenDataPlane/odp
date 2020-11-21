@@ -62,7 +62,7 @@ int _odp_queue_deq(sched_elem_t *q, odp_buffer_hdr_t *buf_hdr[], int num);
 int _odp_queue_deq_sc(sched_elem_t *q, odp_event_t *evp, int num);
 int _odp_queue_deq_mc(sched_elem_t *q, odp_event_t *evp, int num);
 int _odp_queue_enq_sp(sched_elem_t *q, odp_buffer_hdr_t *buf_hdr[], int num);
-queue_entry_t *qentry_from_ext(odp_queue_t handle);
+queue_entry_t *_odp_qentry_from_ext(odp_queue_t handle);
 
 /* Round up memory size to next cache line size to
  * align all memory addresses on cache line boundary.
@@ -79,7 +79,7 @@ static inline void *shm_pool_alloc_align(_odp_ishm_pool_t *pool, uint32_t size)
 
 static inline uint32_t queue_to_id(odp_queue_t handle)
 {
-	return qentry_from_ext(handle)->s.index;
+	return _odp_qentry_from_ext(handle)->s.index;
 }
 
 static inline queue_entry_t *qentry_from_int(odp_queue_t handle)

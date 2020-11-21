@@ -33,7 +33,7 @@ extern "C" {
 
 #include <stdint.h>
 
-/** Minimum segment length expected by packet_parse_common() */
+/** Minimum segment length expected by _odp_packet_parse_common() */
 #define PACKET_PARSE_SEG_LEN 96
 
 ODP_STATIC_ASSERT(sizeof(_odp_packet_input_flags_t) == sizeof(uint64_t),
@@ -292,9 +292,9 @@ int packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 		       odp_packet_t pkt[], int max_num);
 
 /* Perform packet parse up to a given protocol layer */
-int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
-		       odp_proto_layer_t layer,
-		       odp_proto_chksums_t chksums);
+int _odp_packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
+			    odp_proto_layer_t layer,
+			    odp_proto_chksums_t chksums);
 
 /* Reset parser metadata for a new parse */
 static inline void packet_parse_reset(odp_packet_hdr_t *pkt_hdr, int all)
@@ -345,9 +345,9 @@ static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 	}
 }
 
-int packet_parse_common(packet_parser_t *pkt_hdr, const uint8_t *ptr,
-			uint32_t pkt_len, uint32_t seg_len, int layer,
-			odp_proto_chksums_t chksums);
+int _odp_packet_parse_common(packet_parser_t *pkt_hdr, const uint8_t *ptr,
+			     uint32_t pkt_len, uint32_t seg_len, int layer,
+			     odp_proto_chksums_t chksums);
 
 int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
 

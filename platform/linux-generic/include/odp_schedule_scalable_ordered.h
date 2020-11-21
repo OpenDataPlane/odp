@@ -110,15 +110,15 @@ struct ODP_ALIGNED_CACHE reorder_context {
 	queue_entry_t *destq[RC_EVT_SIZE];
 };
 
-reorder_window_t *rwin_alloc(_odp_ishm_pool_t *pool,
-			     unsigned lock_count);
-int rwin_free(_odp_ishm_pool_t *pool, reorder_window_t *rwin);
-bool rwin_reserve(reorder_window_t *rwin, uint32_t *sn);
-bool rwin_reserve_sc(reorder_window_t *rwin, uint32_t *sn);
-void rwin_unreserve_sc(reorder_window_t *rwin, uint32_t sn);
-void rctx_init(reorder_context_t *rctx, uint16_t idx,
-	       reorder_window_t *rwin, uint32_t sn);
-void rctx_release(reorder_context_t *rctx);
-int rctx_save(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num);
+reorder_window_t *_odp_rwin_alloc(_odp_ishm_pool_t *pool,
+				  unsigned int lock_count);
+int _odp_rwin_free(_odp_ishm_pool_t *pool, reorder_window_t *rwin);
+bool _odp_rwin_reserve(reorder_window_t *rwin, uint32_t *sn);
+bool _odp_rwin_reserve_sc(reorder_window_t *rwin, uint32_t *sn);
+void _odp_rwin_unreserve_sc(reorder_window_t *rwin, uint32_t sn);
+void _odp_rctx_init(reorder_context_t *rctx, uint16_t idx,
+		    reorder_window_t *rwin, uint32_t sn);
+void _odp_rctx_release(reorder_context_t *rctx);
+int _odp_rctx_save(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num);
 
 #endif  /* ODP_SCHEDULE_SCALABLE_ORDERED_H */

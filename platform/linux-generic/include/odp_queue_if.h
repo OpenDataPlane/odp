@@ -61,7 +61,7 @@ typedef struct {
 	queue_deq_multi_fn_t orig_deq_multi;
 } queue_fn_t;
 
-extern const queue_fn_t *queue_fn;
+extern const queue_fn_t *_odp_queue_fn;
 
 #ifdef __cplusplus
 }

@@ -41,8 +41,8 @@ static int sysfs_get_val(const char *fname, uint64_t *val)
 	return 0;
 }
 
-int sysfs_stats(pktio_entry_t *pktio_entry,
-		odp_pktio_stats_t *stats)
+int _odp_sysfs_stats(pktio_entry_t *pktio_entry,
+		     odp_pktio_stats_t *stats)
 {
 	char fname[256];
 	const char *dev = pktio_entry->s.name;

@@ -53,8 +53,8 @@ static inline int get_rss_hash_options(int fd, const char *name,
 	return 0;
 }
 
-int rss_conf_get_fd(int fd, const char *name,
-		    odp_pktin_hash_proto_t *hash_proto)
+int _odp_rss_conf_get_fd(int fd, const char *name,
+			 odp_pktin_hash_proto_t *hash_proto)
 {
 	uint64_t options;
 	int rss_enabled = 0;
@@ -131,14 +131,14 @@ static inline int set_rss_hash(int fd, const char *name,
 	return 0;
 }
 
-int rss_conf_set_fd(int fd, const char *name,
-		    const odp_pktin_hash_proto_t *hash_proto)
+int _odp_rss_conf_set_fd(int fd, const char *name,
+			 const odp_pktin_hash_proto_t *hash_proto)
 {
 	uint64_t options;
 	odp_pktin_hash_proto_t cur_hash;
 
 	/* Compare to currently set hash protocols */
-	rss_conf_get_fd(fd, name, &cur_hash);
+	_odp_rss_conf_get_fd(fd, name, &cur_hash);
 
 	if (hash_proto->proto.ipv4_udp && !cur_hash.proto.ipv4_udp) {
 		options = RXH_IP_SRC | RXH_IP_DST | RXH_L4_B_0_1 | RXH_L4_B_2_3;
@@ -173,8 +173,8 @@ int rss_conf_set_fd(int fd, const char *name,
 	return 0;
 }
 
-int rss_conf_get_supported_fd(int fd, const char *name,
-			      odp_pktin_hash_proto_t *hash_proto)
+int _odp_rss_conf_get_supported_fd(int fd, const char *name,
+				   odp_pktin_hash_proto_t *hash_proto)
 {
 	uint64_t options;
 	int rss_supported = 0;
@@ -220,7 +220,7 @@ int rss_conf_get_supported_fd(int fd, const char *name,
 	return rss_supported;
 }
 
-void rss_conf_print(const odp_pktin_hash_proto_t *hash_proto)
+void _odp_rss_conf_print(const odp_pktin_hash_proto_t *hash_proto)
 {	int max_len = 512;
 	char str[max_len];
 	int len = 0;

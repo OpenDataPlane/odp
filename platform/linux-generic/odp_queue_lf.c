@@ -302,8 +302,8 @@ static int queue_lf_deq_multi(odp_queue_t handle, odp_buffer_hdr_t **buf_hdr,
 	return 1;
 }
 
-uint32_t queue_lf_init_global(uint32_t *queue_lf_size,
-			      queue_lf_func_t *lf_func)
+uint32_t _odp_queue_lf_init_global(uint32_t *queue_lf_size,
+				   queue_lf_func_t *lf_func)
 {
 	odp_shm_t shm;
 	int lockfree;
@@ -339,7 +339,7 @@ uint32_t queue_lf_init_global(uint32_t *queue_lf_size,
 	return QUEUE_LF_NUM;
 }
 
-void queue_lf_term_global(void)
+void _odp_queue_lf_term_global(void)
 {
 	odp_shm_t shm;
 
@@ -362,7 +362,7 @@ static void init_queue(queue_lf_t *queue_lf)
 		atomic_zero_u128(&queue_lf->node[i].u128);
 }
 
-void *queue_lf_create(queue_entry_t *queue)
+void *_odp_queue_lf_create(queue_entry_t *queue)
 {
 	int i;
 	queue_lf_t *queue_lf = NULL;
@@ -388,14 +388,14 @@ void *queue_lf_create(queue_entry_t *queue)
 	return queue_lf;
 }
 
-void queue_lf_destroy(void *queue_lf_ptr)
+void _odp_queue_lf_destroy(void *queue_lf_ptr)
 {
 	queue_lf_t *queue_lf = queue_lf_ptr;
 
 	queue_lf->used = 0;
 }
 
-uint32_t queue_lf_length(void *queue_lf_ptr)
+uint32_t _odp_queue_lf_length(void *queue_lf_ptr)
 {
 	queue_lf_t *queue_lf = queue_lf_ptr;
 	ring_lf_node_t node_val;
@@ -410,7 +410,7 @@ uint32_t queue_lf_length(void *queue_lf_ptr)
 	return num;
 }
 
-uint32_t queue_lf_max_length(void)
+uint32_t _odp_queue_lf_max_length(void)
 {
 	return RING_LF_SIZE;
 }

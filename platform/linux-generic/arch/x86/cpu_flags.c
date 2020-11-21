@@ -329,7 +329,7 @@ static const char *cpu_get_flag_name(enum rte_cpu_flag_t feature)
 	return cpu_feature_table[feature].name;
 }
 
-void cpu_flags_print_all(void)
+void _odp_cpu_flags_print_all(void)
 {
 	int len, i;
 	int max_str = 1024;
@@ -367,7 +367,7 @@ int _odp_cpu_has_global_time(void)
 	return 0;
 }
 
-int cpu_flags_has_rdtsc(void)
+int _odp_cpu_flags_has_rdtsc(void)
 {
 	if (cpu_get_flag_enabled(RTE_CPUFLAG_TSC) > 0)
 		return 1;

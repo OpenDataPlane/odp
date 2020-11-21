@@ -17,7 +17,7 @@ extern "C" {
 /**
  * Get ethtool statistics of a packet socket
  */
-int ethtool_stats_get_fd(int fd, const char *name, odp_pktio_stats_t *stats);
+int _odp_ethtool_stats_get_fd(int fd, const char *name, odp_pktio_stats_t *stats);
 
 #ifdef __cplusplus
 }

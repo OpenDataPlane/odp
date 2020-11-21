@@ -167,10 +167,10 @@ static int tap_pktio_open(odp_pktio_t id ODP_UNUSED,
 		goto tap_err;
 	}
 
-	mtu = mtu_get_fd(skfd, devname + 4);
+	mtu = _odp_mtu_get_fd(skfd, devname + 4);
 	if (mtu == 0) {
 		__odp_errno = errno;
-		ODP_ERR("mtu_get_fd failed: %s\n", strerror(errno));
+		ODP_ERR("_odp_mtu_get_fd failed: %s\n", strerror(errno));
 		goto sock_err;
 	}
 
@@ -279,9 +279,9 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
 
 	if (pktio_cls_enabled(pktio_entry)) {
-		if (cls_classify_packet(pktio_entry, data, len, len,
-					&pkt_priv(pktio_entry)->pool,
-					&parsed_hdr, true)) {
+		if (_odp_cls_classify_packet(pktio_entry, data, len, len,
+					     &pkt_priv(pktio_entry)->pool,
+					     &parsed_hdr, true)) {
 			return ODP_PACKET_INVALID;
 		}
 	}
@@ -305,9 +305,9 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 	if (pktio_cls_enabled(pktio_entry))
 		copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 	else
-		packet_parse_layer(pkt_hdr,
-				   pktio_entry->s.config.parser.layer,
-				   pktio_entry->s.in_chksums);
+		_odp_packet_parse_layer(pkt_hdr,
+					pktio_entry->s.config.parser.layer,
+					pktio_entry->s.in_chksums);
 
 	packet_set_ts(pkt_hdr, ts);
 	pkt_hdr->input = pktio_entry->s.handle;
@@ -430,8 +430,8 @@ static uint32_t tap_mtu_get(pktio_entry_t *pktio_entry)
 {
 	uint32_t ret;
 
-	ret =  mtu_get_fd(pkt_priv(pktio_entry)->skfd,
-			  pktio_entry->s.name + 4);
+	ret =  _odp_mtu_get_fd(pkt_priv(pktio_entry)->skfd,
+			       pktio_entry->s.name + 4);
 	if (ret > 0)
 		pkt_priv(pktio_entry)->mtu = ret;
 
@@ -441,14 +441,14 @@ static uint32_t tap_mtu_get(pktio_entry_t *pktio_entry)
 static int tap_promisc_mode_set(pktio_entry_t *pktio_entry,
 				odp_bool_t enable)
 {
-	return promisc_mode_set_fd(pkt_priv(pktio_entry)->skfd,
-				   pktio_entry->s.name + 4, enable);
+	return _odp_promisc_mode_set_fd(pkt_priv(pktio_entry)->skfd,
+					pktio_entry->s.name + 4, enable);
 }
 
 static int tap_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
-	return promisc_mode_get_fd(pkt_priv(pktio_entry)->skfd,
-				   pktio_entry->s.name + 4);
+	return _odp_promisc_mode_get_fd(pkt_priv(pktio_entry)->skfd,
+					pktio_entry->s.name + 4);
 }
 
 static int tap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
@@ -469,13 +469,13 @@ static int tap_mac_addr_set(pktio_entry_t *pktio_entry, const void *mac_addr)
 
 static int tap_link_status(pktio_entry_t *pktio_entry)
 {
-	return link_status_fd(pkt_priv(pktio_entry)->skfd,
-			      pktio_entry->s.name + 4);
+	return _odp_link_status_fd(pkt_priv(pktio_entry)->skfd,
+				   pktio_entry->s.name + 4);
 }
 
 static int tap_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info)
 {
-	return link_info_fd(pkt_priv(pktio_entry)->skfd, pktio_entry->s.name + 4, info);
+	return _odp_link_info_fd(pkt_priv(pktio_entry)->skfd, pktio_entry->s.name + 4, info);
 }
 
 static int tap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
@@ -497,7 +497,7 @@ static int tap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	return 0;
 }
 
-const pktio_if_ops_t tap_pktio_ops = {
+const pktio_if_ops_t _odp_tap_pktio_ops = {
 	.name = "tap",
 	.print = NULL,
 	.init_global = NULL,

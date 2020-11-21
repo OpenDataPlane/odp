@@ -67,7 +67,7 @@ typedef struct {
 
 static sched_global_t *global;
 
-__thread sched_scalable_thread_state_t *sched_ts;
+__thread sched_scalable_thread_state_t *_odp_sched_ts;
 
 static int thread_state_init(int tidx)
 {
@@ -94,7 +94,7 @@ static int thread_state_init(int tidx)
 		ts->rvec[i].rvec_free = &ts->rvec_free;
 		ts->rvec[i].idx = i;
 	}
-	sched_ts = ts;
+	_odp_sched_ts = ts;
 
 	return 0;
 }
@@ -185,7 +185,7 @@ static inline bool schedq_elem_on_queue(sched_elem_t *elem)
  * Shared metadata btwn scheduler and queue
  ******************************************************************************/
 
-void sched_update_enq(sched_elem_t *q, uint32_t actual)
+void _odp_sched_update_enq(sched_elem_t *q, uint32_t actual)
 {
 	qschedstate_t oss, nss;
 	uint32_t ticket;
@@ -245,7 +245,7 @@ void sched_update_enq(sched_elem_t *q, uint32_t actual)
 	/* Else queue was not empty or atomic queue already busy. */
 }
 
-void sched_update_enq_sp(sched_elem_t *q, uint32_t actual)
+void _odp_sched_update_enq_sp(sched_elem_t *q, uint32_t actual)
 {
 	qschedstate_t oss, nss;
 	uint32_t ticket;
@@ -316,7 +316,7 @@ sched_update_deq(sched_elem_t *q,
 		 */
 		oss = q->qschst;
 		do {
-			ODP_ASSERT(oss.cur_ticket == sched_ts->ticket);
+			ODP_ASSERT(oss.cur_ticket == _odp_sched_ts->ticket);
 			nss = oss;
 			nss.numevts -= actual;
 			if (nss.numevts > 0 && !pushed) {
@@ -328,7 +328,7 @@ sched_update_deq(sched_elem_t *q,
 			 * Unfortunately nxt_ticket will also be included in
 			 * the CAS operation
 			 */
-			nss.cur_ticket = sched_ts->ticket + 1;
+			nss.cur_ticket = _odp_sched_ts->ticket + 1;
 		} while (odp_unlikely(!__atomic_compare_exchange(
 							  &q->qschst,
 							  &oss, &nss,
@@ -423,10 +423,10 @@ sched_update_deq_sc(sched_elem_t *q,
 	uint32_t ticket;
 
 	if (atomic) {
-		ODP_ASSERT(q->qschst.cur_ticket == sched_ts->ticket);
+		ODP_ASSERT(q->qschst.cur_ticket == _odp_sched_ts->ticket);
 		ODP_ASSERT(q->qschst.cur_ticket != q->qschst.nxt_ticket);
 		q->qschst.numevts -= actual;
-		q->qschst.cur_ticket = sched_ts->ticket + 1;
+		q->qschst.cur_ticket = _odp_sched_ts->ticket + 1;
 		if (q->qschst.numevts > 0)
 			schedq_push(q->schedq, q);
 		return;
@@ -524,7 +524,7 @@ static void signal_threads_add(sched_group_t *sg, uint32_t sgi, uint32_t prio)
 	}
 }
 
-sched_queue_t *sched_queue_add(odp_schedule_group_t grp, uint32_t prio)
+sched_queue_t *_odp_sched_queue_add(odp_schedule_group_t grp, uint32_t prio)
 {
 	uint32_t sgi;
 	sched_group_t *sg;
@@ -563,7 +563,7 @@ static uint32_t sched_pktin_add(odp_schedule_group_t grp, uint32_t prio)
 	sgi = grp;
 	sg = global->sg_vec[sgi];
 
-	(void)sched_queue_add(grp, ODP_SCHED_PRIO_PKTIN);
+	(void)_odp_sched_queue_add(grp, ODP_SCHED_PRIO_PKTIN);
 	return (ODP_SCHED_PRIO_PKTIN - prio) * sg->xfactor;
 }
 
@@ -585,7 +585,7 @@ static void signal_threads_rem(sched_group_t *sg, uint32_t sgi, uint32_t prio)
 	}
 }
 
-void sched_queue_rem(odp_schedule_group_t grp, uint32_t prio)
+void _odp_sched_queue_rem(odp_schedule_group_t grp, uint32_t prio)
 {
 	uint32_t sgi;
 	sched_group_t *sg;
@@ -610,7 +610,7 @@ void sched_queue_rem(odp_schedule_group_t grp, uint32_t prio)
 
 static void sched_pktin_rem(odp_schedule_group_t grp)
 {
-	sched_queue_rem(grp, ODP_SCHED_PRIO_PKTIN);
+	_odp_sched_queue_rem(grp, ODP_SCHED_PRIO_PKTIN);
 }
 
 static void update_sg_add(sched_scalable_thread_state_t *ts,
@@ -700,7 +700,7 @@ static inline void _schedule_release_atomic(sched_scalable_thread_state_t *ts)
 static inline void _schedule_release_ordered(sched_scalable_thread_state_t *ts)
 {
 	ts->out_of_order = false;
-	rctx_release(ts->rctx);
+	_odp_rctx_release(ts->rctx);
 	ts->rctx = NULL;
 }
 
@@ -719,7 +719,7 @@ static void pktio_start(int pktio_idx,
 		ODP_ASSERT(rxq < PKTIO_MAX_QUEUES);
 		__atomic_fetch_add(&global->poll_count[pktio_idx], 1,
 				   __ATOMIC_RELAXED);
-		qentry = qentry_from_ext(odpq[i]);
+		qentry = _odp_qentry_from_ext(odpq[i]);
 		elem = &qentry->s.sched_elem;
 		elem->cons_type |= FLAG_PKTIN; /* Set pktin queue flag */
 		elem->pktio_idx = pktio_idx;
@@ -738,7 +738,7 @@ static void pktio_stop(sched_elem_t *elem)
 			       1, __ATOMIC_RELAXED) == 0) {
 		/* Call stop_finalize when all queues
 		 * of the pktio have been removed */
-		sched_cb_pktio_stop_finalize(elem->pktio_idx);
+		_odp_sched_cb_pktio_stop_finalize(elem->pktio_idx);
 	}
 }
 
@@ -772,7 +772,7 @@ static inline bool is_ordered(sched_elem_t *elem)
 
 static int poll_pktin(sched_elem_t *elem, odp_event_t ev[], int num_evts)
 {
-	sched_scalable_thread_state_t *ts = sched_ts;
+	sched_scalable_thread_state_t *ts = _odp_sched_ts;
 	int num, i;
 	/* For ordered queues only */
 	reorder_context_t *rctx;
@@ -785,7 +785,7 @@ static int poll_pktin(sched_elem_t *elem, odp_event_t ev[], int num_evts)
 		rwin = queue_get_rwin((queue_entry_t *)elem);
 		ODP_ASSERT(rwin != NULL);
 		if (odp_unlikely(!have_reorder_ctx(ts) ||
-				 !rwin_reserve_sc(rwin, &sn))) {
+				 !_odp_rwin_reserve_sc(rwin, &sn))) {
 			/* Put back queue on source schedq */
 			schedq_push(ts->src_schedq, elem);
 			return 0;
@@ -809,7 +809,7 @@ events_dequeued:
 				ts->priv_rvec_free =
 					bitset_clr(ts->priv_rvec_free, idx);
 				rctx = &ts->rvec[idx];
-				rctx_init(rctx, idx, rwin, sn);
+				_odp_rctx_init(rctx, idx, rwin, sn);
 				/* Are we in-order or out-of-order? */
 				ts->out_of_order = sn != rwin->hc.head;
 				ts->rctx = rctx;
@@ -821,7 +821,7 @@ events_dequeued:
 
 	/* Ingress queue empty => poll pktio RX queue */
 	odp_event_t rx_evts[QUEUE_MULTI_MAX];
-	int num_rx = sched_cb_pktin_poll_one(elem->pktio_idx,
+	int num_rx = _odp_sched_cb_pktin_poll_one(elem->pktio_idx,
 			elem->rx_queue,
 			rx_evts);
 	if (odp_likely(num_rx > 0)) {
@@ -847,7 +847,7 @@ events_dequeued:
 	if (is_atomic(elem))
 		ts->atomq = NULL;
 	else if (is_ordered(elem))
-		rwin_unreserve_sc(rwin, sn);
+		_odp_rwin_unreserve_sc(rwin, sn);
 
 	if (odp_likely(num_rx == 0)) {
 		/* RX queue empty, push it to pktin priority schedq */
@@ -880,7 +880,7 @@ static int _schedule(odp_queue_t *from, odp_event_t ev[], int num_evts)
 	int cpu_id;
 	uint32_t i;
 
-	ts = sched_ts;
+	ts = _odp_sched_ts;
 	atomq = ts->atomq;
 
 	timer_run(1);
@@ -1051,13 +1051,13 @@ restart_same:
 			if (odp_unlikely(!have_reorder_ctx(ts)))
 				continue;
 
-			/* rwin_reserve and odp_queue_deq must be atomic or
+			/* _odp_rwin_reserve and odp_queue_deq must be atomic or
 			 * there will be a potential race condition.
 			 * Allocate a slot in the reorder window.
 			 */
 			rwin = queue_get_rwin((queue_entry_t *)elem);
 			ODP_ASSERT(rwin != NULL);
-			if (odp_unlikely(!rwin_reserve(rwin, &sn))) {
+			if (odp_unlikely(!_odp_rwin_reserve(rwin, &sn))) {
 				/* Reorder window full */
 				/* Look at next schedq, find other queue */
 				continue;
@@ -1089,7 +1089,7 @@ restart_same:
 			/* Need to initialise reorder context or we can't
 			 * release it later.
 			 */
-			rctx_init(rctx, idx, rwin, sn);
+			_odp_rctx_init(rctx, idx, rwin, sn);
 
 			/* Was dequeue successful? */
 			if (odp_likely(num != 0)) {
@@ -1118,7 +1118,7 @@ restart_same:
 			 * the reorder context needs to be released and
 			 * inserted into the reorder window.
 			 */
-			rctx_release(rctx);
+			_odp_rctx_release(rctx);
 			ODP_ASSERT(ts->rctx == NULL);
 		}
 		/* Dequeue from parallel/ordered queue failed
@@ -1144,7 +1144,7 @@ restart_same:
 
 static void schedule_order_lock(uint32_t lock_index)
 {
-	struct reorder_context *rctx = sched_ts->rctx;
+	struct reorder_context *rctx = _odp_sched_ts->rctx;
 
 	if (odp_unlikely(rctx == NULL ||
 			 rctx->rwin == NULL ||
@@ -1166,7 +1166,7 @@ static void schedule_order_unlock(uint32_t lock_index)
 {
 	struct reorder_context *rctx;
 
-	rctx = sched_ts->rctx;
+	rctx = _odp_sched_ts->rctx;
 	if (odp_unlikely(rctx == NULL ||
 			 rctx->rwin == NULL ||
 			 lock_index >= rctx->rwin->lock_count ||
@@ -1201,7 +1201,7 @@ static void schedule_release_atomic(void)
 {
 	sched_scalable_thread_state_t *ts;
 
-	ts = sched_ts;
+	ts = _odp_sched_ts;
 	if (odp_likely(ts->atomq != NULL)) {
 #ifdef CONFIG_QSCHST_LOCK
 		sched_elem_t *atomq;
@@ -1220,7 +1220,7 @@ static void schedule_release_ordered(void)
 {
 	sched_scalable_thread_state_t *ts;
 
-	ts = sched_ts;
+	ts = _odp_sched_ts;
 	if (ts->rctx != NULL)
 		_schedule_release_ordered(ts);
 }
@@ -1234,7 +1234,7 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait, odp_event_t ev[],
 	odp_time_t delta;
 	odp_time_t deadline;
 
-	ts = sched_ts;
+	ts = _odp_sched_ts;
 	/* Release any previous reorder context. */
 	if (ts->rctx != NULL)
 		_schedule_release_ordered(ts);
@@ -1294,7 +1294,7 @@ static odp_event_t schedule(odp_queue_t *from, uint64_t wait)
 	odp_time_t delta;
 	odp_time_t deadline;
 
-	ts = sched_ts;
+	ts = _odp_sched_ts;
 	/* Release any previous reorder context. */
 	if (ts->rctx != NULL)
 		_schedule_release_ordered(ts);
@@ -1360,12 +1360,12 @@ static int schedule_multi_no_wait(odp_queue_t *from, odp_event_t events[],
 
 static void schedule_pause(void)
 {
-	sched_ts->pause = true;
+	_odp_sched_ts->pause = true;
 }
 
 static void schedule_resume(void)
 {
-	sched_ts->pause = false;
+	_odp_sched_ts->pause = false;
 }
 
 static uint64_t schedule_wait_time(uint64_t ns)
@@ -1545,13 +1545,13 @@ static int schedule_group_destroy(odp_schedule_group_t group)
 		goto invalid_group;
 	}
 
-	if (sched_ts &&
-	    odp_unlikely(__atomic_load_n(&sched_ts->sg_sem,
+	if (_odp_sched_ts &&
+	    odp_unlikely(__atomic_load_n(&_odp_sched_ts->sg_sem,
 					 __ATOMIC_RELAXED) != 0)) {
-		(void)__atomic_load_n(&sched_ts->sg_sem,
+		(void)__atomic_load_n(&_odp_sched_ts->sg_sem,
 				      __ATOMIC_ACQUIRE);
-		sched_ts->sg_sem = 0;
-		update_sg_membership(sched_ts);
+		_odp_sched_ts->sg_sem = 0;
+		update_sg_membership(_odp_sched_ts);
 	}
 	odp_spinlock_lock(&global->sched_grp_lock);
 
@@ -1986,12 +1986,12 @@ static int schedule_term_local(void)
 			ODP_ERR("Failed to leave ODP_SCHED_GROUP_WORKER\n");
 	}
 
-	update_sg_membership(sched_ts);
+	update_sg_membership(_odp_sched_ts);
 
 	/* Check if the thread is still part of any groups */
-	if (sched_ts->num_schedq != 0) {
+	if (_odp_sched_ts->num_schedq != 0) {
 		ODP_ERR("Thread %d still part of scheduler group(s)\n",
-			sched_ts->tidx);
+			_odp_sched_ts->tidx);
 		rc = -1;
 	}
 
@@ -2067,11 +2067,11 @@ static int ord_enq_multi(odp_queue_t handle, void *buf_hdr[], int num,
 	sched_scalable_thread_state_t *ts;
 	int actual;
 
-	ts = sched_ts;
+	ts = _odp_sched_ts;
 	queue = qentry_from_int(handle);
 	if (ts && odp_unlikely(ts->out_of_order) &&
 	    (queue->s.param.order == ODP_QUEUE_ORDER_KEEP)) {
-		actual = rctx_save(queue, (odp_buffer_hdr_t **)buf_hdr, num);
+		actual = _odp_rctx_save(queue, (odp_buffer_hdr_t **)buf_hdr, num);
 		*ret = actual;
 		return 1;
 	}
@@ -2092,7 +2092,7 @@ static void order_lock(void)
 	reorder_window_t *rwin;
 	uint32_t sn;
 
-	ts = sched_ts;
+	ts = _odp_sched_ts;
 	if (odp_unlikely(ts->out_of_order)) {
 		/* We are processing ordered queue and are currently
 		 * out-of-order.
@@ -2138,7 +2138,7 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	return 0;
 }
 
-const schedule_fn_t schedule_scalable_fn = {
+const schedule_fn_t _odp_schedule_scalable_fn = {
 	.pktio_start	= pktio_start,
 	.thr_add	= thr_add,
 	.thr_rem	= thr_rem,
@@ -2156,7 +2156,7 @@ const schedule_fn_t schedule_scalable_fn = {
 	.max_ordered_locks = schedule_max_ordered_locks,
 };
 
-const schedule_api_t schedule_scalable_api = {
+const schedule_api_t _odp_schedule_scalable_api = {
 	.schedule_wait_time		= schedule_wait_time,
 	.schedule_capability            = schedule_capability,
 	.schedule_config_init		= schedule_config_init,

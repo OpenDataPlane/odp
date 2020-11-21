@@ -32,37 +32,37 @@ ethaddrs_equal(unsigned char mac_a[], unsigned char mac_b[])
 /**
  * Read the MAC address from a packet socket
  */
-int mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[]);
+int _odp_mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[]);
 
 /**
  * Read the MTU from a packet socket
  */
-uint32_t mtu_get_fd(int fd, const char *name);
+uint32_t _odp_mtu_get_fd(int fd, const char *name);
 
 /**
  * Set a packet socket MTU
  */
-int mtu_set_fd(int fd, const char *name, int mtu);
+int _odp_mtu_set_fd(int fd, const char *name, int mtu);
 
 /**
  * Enable/Disable promisc mode for a packet socket
  */
-int promisc_mode_set_fd(int fd, const char *name, int enable);
+int _odp_promisc_mode_set_fd(int fd, const char *name, int enable);
 
 /**
  * Return promisc mode of a packet socket
  */
-int promisc_mode_get_fd(int fd, const char *name);
+int _odp_promisc_mode_get_fd(int fd, const char *name);
 
 /**
  * Return link status of a packet socket (up/down)
  */
-int link_status_fd(int fd, const char *name);
+int _odp_link_status_fd(int fd, const char *name);
 
 /**
  * Read link information from a packet socket
  */
-int link_info_fd(int fd, const char *name, odp_pktio_link_info_t *info);
+int _odp_link_info_fd(int fd, const char *name, odp_pktio_link_info_t *info);
 
 #ifdef __cplusplus
 }

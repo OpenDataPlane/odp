@@ -22,8 +22,8 @@ extern "C" {
  *
  * @returns Number enabled hash protocols
  */
-int rss_conf_get_fd(int fd, const char *name,
-		    odp_pktin_hash_proto_t *hash_proto);
+int _odp_rss_conf_get_fd(int fd, const char *name,
+			 odp_pktin_hash_proto_t *hash_proto);
 
 /**
  * Get supported RSS hash protocols of a packet socket
@@ -36,8 +36,8 @@ int rss_conf_get_fd(int fd, const char *name,
  *
  * @returns Number of supported hash protocols
  */
-int rss_conf_get_supported_fd(int fd, const char *name,
-			      odp_pktin_hash_proto_t *hash_proto);
+int _odp_rss_conf_get_supported_fd(int fd, const char *name,
+				   odp_pktin_hash_proto_t *hash_proto);
 
 /**
  * Set RSS hash protocols of a packet socket
@@ -49,15 +49,15 @@ int rss_conf_get_supported_fd(int fd, const char *name,
  * @retval 0 on success
  * @retval <0 on failure
  */
-int rss_conf_set_fd(int fd, const char *name,
-		    const odp_pktin_hash_proto_t *proto);
+int _odp_rss_conf_set_fd(int fd, const char *name,
+			 const odp_pktin_hash_proto_t *proto);
 
 /**
  * Print enabled RSS hash protocols
  *
  * @param hash_proto      Hash protocols
  */
-void rss_conf_print(const odp_pktin_hash_proto_t *hash_proto);
+void _odp_rss_conf_print(const odp_pktin_hash_proto_t *hash_proto);
 
 #ifdef __cplusplus
 }

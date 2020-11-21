@@ -192,7 +192,7 @@ static int null_link_info(pktio_entry_t *pktio_entry ODP_UNUSED, odp_pktio_link_
 	return 0;
 }
 
-const pktio_if_ops_t null_pktio_ops = {
+const pktio_if_ops_t _odp_null_pktio_ops = {
 	.name = "null",
 	.print = NULL,
 	.init_global = null_init_global,
