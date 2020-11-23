@@ -1,0 +1,299 @@
+name: CI
+
+on: [push, pull_request]
+env:
+  ARCH: x86_64
+  CC: gcc
+  CONTAINER_NAMESPACE: ghcr.io/opendataplane/odp-docker-images
+  OS: ubuntu_18.04
+
+jobs:
+  Checkpatch:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Install dependencies
+      run: |
+        sudo apt install codespell
+
+    - name: Checkpatch
+      run: |
+        AFTER=${{ github.event.after }}
+        BEFORE=${{ github.event.before }}
+        echo Commit range $BEFORE..$AFTER
+        ./scripts/ci-checkpatches.sh ${BEFORE}..${AFTER}
+
+  Documentation:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install dependencies
+      run: |
+        sudo apt install doxygen asciidoctor libconfig-dev libssl-dev mscgen cmake graphviz
+    - name: Build
+      run: |
+        ./bootstrap
+        ./configure --enable-user-guides
+        pushd doc
+        make
+        popd
+        make doxygen-doc
+
+  Build_x86_64:
+    runs-on: ubuntu-18.04
+    env:
+      ARCH: x86_64
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+        conf: ['', 'CFLAGS=-O3', 'CFLAGS=-O0 --enable-debug --enable-debug-print', '--enable-lto', '--enable-lto --disable-abi-compat', '--enable-pcapng-support']
+        exclude:
+          - cc: clang
+            conf: '--enable-lto'
+          - cc: clang
+            conf: '--enable-lto --disable-abi-compat'
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+
+  Build_arm64:
+    runs-on: ubuntu-18.04
+    env:
+      ARCH: arm64
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Minimal
+        run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+
+      - name: --disable-abi-compat
+        env:
+          CONF: "--disable-abi-compat"
+        run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+
+      - name: Ubuntu 20.04
+        env:
+          OS: ubuntu_20.04
+        run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.compiler}}"
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+
+  Build_armhf:
+    runs-on: ubuntu-18.04
+    env:
+      ARCH: armhf
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+        conf: ['', '--disable-abi-compat']
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+
+  Build_ppc64el:
+    runs-on: ubuntu-18.04
+    env:
+      ARCH: ppc64el
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+        conf: ['', '--disable-abi-compat']
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+
+  Build_i386:
+    runs-on: ubuntu-18.04
+    env:
+      ARCH: i386
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+        conf: ['', '--disable-abi-compat']
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+
+  Build_OS:
+    runs-on: ubuntu-18.04
+    env:
+      ARCH: x86_64
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+        os: ['centos_7', 'centos_8']
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${{matrix.os}}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+
+  Build_gcc-10:
+    runs-on: ubuntu-18.04
+    env:
+      ARCH: x86_64
+      CC: gcc-10
+      OS: ubuntu_20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        conf: ['', '--enable-lto']
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+
+  Build_out-of-tree:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+    - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
+             -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/out_of_tree.sh
+
+  Run_distcheck:
+    runs-on: ubuntu-18.04
+    strategy:
+      fail-fast: false
+      matrix:
+        conf: ['--enable-user-guides', '--enable-user-guides --disable-abi-compat']
+    steps:
+    - uses: actions/checkout@v2
+    - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+             -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/distcheck.sh
+    - name: Failure log
+      if: ${{ failure() }}
+      run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+
+  Run_x86_64:
+    runs-on: ubuntu-18.04
+    env:
+      ARCH: x86_64
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+        conf: ['', '--disable-abi-compat', '--enable-deprecated', '--enable-dpdk-zero-copy --disable-static-applications', '--disable-host-optimization', '--disable-host-optimization --disable-abi-compat', '--without-openssl --without-pcap']
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+               -e CXX=g++-10 -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check.sh
+      - name: Failure log
+        if: ${{ failure() }}
+        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+
+  Run_OS:
+    runs-on: ubuntu-18.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+        os: ['ubuntu_16.04', 'ubuntu_20.04']
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${{matrix.os}}-${ARCH} /odp/scripts/ci/check.sh
+      - name: Failure log
+        if: ${{ failure() }}
+        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+
+  Run_scheduler:
+    runs-on: ubuntu-18.04
+    strategy:
+      fail-fast: false
+      matrix:
+        scheduler: ['sp', 'scalable']
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
+               -e CONF="${CONF}" -e ODP_SCHEDULER=${{matrix.scheduler}} $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check.sh
+      - name: Failure log
+        if: ${{ failure() }}
+        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+
+  Run_process_mode:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
+               -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/process-mode.conf
+               -e ODPH_PROC_MODE=1 $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check.sh
+      - name: Failure log
+        if: ${{ failure() }}
+        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+
+  Run_inline_timer:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
+               -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/inline-timer.conf
+               $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check_inline_timer.sh
+      - name: Failure log
+        if: ${{ failure() }}
+        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+
+  Run_packet_align:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
+               -e CONF="${CONF}" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/packet_align.conf
+               $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check_pktio.sh
+      - name: Failure log
+        if: ${{ failure() }}
+        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+
+  Run_dpdk-18_11:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-dpdk_18.11 /odp/scripts/ci/check.sh
+      - name: Failure log
+        if: ${{ failure() }}
+        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+
+  Run_netmap:
+    runs-on: ubuntu-18.04
+    env:
+      NETMAP_TAG: a7a80b1a
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+        conf: ['--with-netmap-path=/odp/netmap', '--with-netmap-path=/odp/netmap --disable-static-applications']
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          sudo apt-get install linux-headers-`uname -r`
+          CDIR=`pwd`
+          git clone --single-branch --branch=master https://github.com/luigirizzo/netmap.git
+          pushd netmap/LINUX
+          git checkout ${NETMAP_TAG}
+          ./configure --drivers=
+          make -j $(nproc)
+          popd
+          sudo insmod ./netmap/LINUX/netmap.ko
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/check.sh
+      - name: Failure log
+        if: ${{ failure() }}
+        run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
