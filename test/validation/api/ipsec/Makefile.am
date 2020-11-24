@@ -3,6 +3,7 @@ include ../Makefile.inc
 noinst_LTLIBRARIES = libtestipsec.la
 libtestipsec_la_SOURCES = \
 	test_vectors.h \
+	reass_test_vectors.h \
 	ipsec_test_in.c \
 	ipsec_test_out.c \
 	ipsec.h \

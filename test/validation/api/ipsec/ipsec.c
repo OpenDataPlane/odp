@@ -14,6 +14,7 @@
 #include "ipsec.h"
 
 #include "test_vectors.h"
+#include "reass_test_vectors.h"
 
 struct suite_context_s suite_context;
 static odp_ipsec_capability_t capa;
@@ -1118,6 +1119,8 @@ int ipsec_config(odp_instance_t ODP_UNUSED inst)
 	    (ODP_IPSEC_OP_MODE_INLINE == suite_context.outbound_op_mode &&
 	     ODP_SUPPORT_NO == capa.op_mode_inline_out))
 		return 0;
+
+	reass_test_vectors_init();
 
 	odp_ipsec_config_init(&ipsec_config);
 	ipsec_config.max_num_sa = capa.max_num_sa;
