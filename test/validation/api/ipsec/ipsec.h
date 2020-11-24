@@ -36,7 +36,9 @@ struct suite_context_s {
 
 extern struct suite_context_s suite_context;
 
-#define MAX_PKT_LEN 1024
+#define MAX_FRAG_LEN 1500
+#define MAX_FRAGS 4
+#define MAX_PKT_LEN (MAX_FRAG_LEN * MAX_FRAGS)
 
 typedef struct {
 	uint32_t len;
