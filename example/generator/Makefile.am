@@ -7,10 +7,9 @@ odp_generator_SOURCES = odp_generator.c
 TEST_EXTENSIONS = .sh
 
 if test_example
-TESTS = generator_null_test.sh
-TESTS_ENVIRONMENT += ODP_PLATFORM=$(with_platform)
+TESTS = generator_run.sh
 endif
-EXTRA_DIST = generator_null_test.sh
+EXTRA_DIST = generator_run.sh
 
 # If building out-of-tree, make check will not copy the scripts and data to the
 # $(builddir) assuming that all commands are run locally. However this prevents
@@ -25,6 +24,8 @@ all-local:
 			fi \
 		done \
 	fi
+	ln -f -s $(top_srcdir)/platform/$(with_platform)/test/example/generator/pktio_env \
+		pktio_env
 clean-local:
 	if [ "x$(srcdir)" != "x$(builddir)" ]; then \
 		for f in $(EXTRA_DIST); do \
