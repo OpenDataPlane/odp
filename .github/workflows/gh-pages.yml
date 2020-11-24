@@ -1,0 +1,52 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  Documentation:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: |
+        sudo apt install doxygen asciidoctor libconfig-dev libssl-dev mscgen cmake graphviz
+        sudo gem install asciidoctor
+    - name: Build
+      run: |
+        ./bootstrap
+        ./configure --enable-user-guides
+        pushd doc
+        make
+        popd
+        # Doxygen does not trap on warnings so check for them here
+        make doxygen-doc 2>&1 | tee ./doxygen.log
+        ! fgrep -rq warning ./doxygen.log
+
+    - name: Before deploy
+      run: |
+        pushd doc
+        mkdir gh-pages
+        # Prevent Shippable run on gh-pages branch
+        printf "branches:\n  except:\n    - gh-pages\n" >> gh-pages/.shippable.yml
+        cp -r application-api-guide/output/html/* gh-pages/
+        cp -r platform-api-guide/output/html/ gh-pages/platform-api-guide
+        cp -r helper-guide/output/html/ gh-pages/helper-guide
+        mkdir gh-pages/implementers-guide
+        cp implementers-guide/implementers-guide.html gh-pages/implementers-guide/index.html
+        mkdir gh-pages/users-guide
+        cp users-guide/users-guide.html gh-pages/users-guide/index.html
+        mkdir gh-pages/process-guide
+        cp process-guide/*.html gh-pages/process-guide/
+        popd
+
+    - name: Deploy
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: crazy-max/ghaction-github-pages@v2.2.0
+      with:
+        allow_empty_commit: false
+        build_dir: ./doc/gh-pages
+        target_branch: gh-pages
