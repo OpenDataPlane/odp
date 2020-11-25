@@ -22,7 +22,11 @@ mount -t hugetlbfs nodev /mnt/huge
 export CI="true"
 
 ODP_SCHEDULER=basic    make check
-ODP_SCHEDULER=sp       make check
+
+# Run only validation tests for scalable and sp schedulers
+pushd ./test/validation/api/
 ODP_SCHEDULER=scalable make check
+ODP_SCHEDULER=sp       make check
+popd
 
 umount /mnt/huge
