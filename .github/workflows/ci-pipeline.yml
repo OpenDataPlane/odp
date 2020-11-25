@@ -184,16 +184,15 @@ jobs:
 
   Run_coverage:
     runs-on: ubuntu-18.04
-    env:
-      CODECOV_TOKEN: a733c34c-5f5c-4ff1-af4b-e9f5edb1ab5e
     steps:
       - uses: actions/checkout@v2
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
-               -e CONF="${CONF}" -e CODECOV_TOKEN="${CODECOV_TOKEN}"
-                $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/coverage.sh
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/coverage.sh
       - name: Failure log
         if: ${{ failure() }}
         run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v1.0.15
 
   Run_distcheck:
     runs-on: ubuntu-18.04
