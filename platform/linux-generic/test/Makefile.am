@@ -9,15 +9,21 @@ endif
 
 SUBDIRS =
 
-if test_vald
-TESTS = validation/api/pktio/pktio_run.sh \
-	validation/api/pktio/pktio_run_tap.sh \
-	validation/api/shmem/shmem_linux$(EXEEXT) \
-	ipsec/ipsec_api_example.sh \
+if WITH_EXAMPLES
+TESTS = ipsec/ipsec_api_example.sh \
 	ipsec/ipsec_crypto_example.sh
 
 dist_check_SCRIPTS = ipsec/ipsec_api_example.sh \
 		     ipsec/ipsec_crypto_example.sh
+else
+TESTS =
+dist_check_SCRIPTS =
+endif
+
+if test_vald
+TESTS += validation/api/pktio/pktio_run.sh \
+	 validation/api/pktio/pktio_run_tap.sh \
+	 validation/api/shmem/shmem_linux$(EXEEXT)
 
 test_SCRIPTS = $(dist_check_SCRIPTS)
 
