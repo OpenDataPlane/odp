@@ -480,59 +480,6 @@ static odp_pktio_t create_pktio(int iface_idx, odp_pktin_mode_t imode,
 	return pktio;
 }
 
-static odp_pktio_t create_pktv_pktio(int iface_idx, odp_pktin_mode_t imode,
-				     odp_pktout_mode_t omode, odp_schedule_sync_t sync_mode)
-{
-	const char *iface = iface_name[iface_idx];
-	odp_pktout_queue_param_t pktout_param;
-	odp_pktin_queue_param_t pktin_param;
-	odp_pktio_param_t pktio_param;
-	odp_pktio_capability_t capa;
-	odp_pktio_t pktio;
-
-	odp_pktio_param_init(&pktio_param);
-
-	pktio_param.in_mode = imode;
-	pktio_param.out_mode = omode;
-
-	pktio = odp_pktio_open(iface, pool[iface_idx], &pktio_param);
-	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-
-	CU_ASSERT(odp_pktio_capability(pktio, &capa) == 0);
-	if (!capa.vector.supported) {
-		printf("Vector mode is not supported. Test Skipped.\n");
-		return ODP_PKTIO_INVALID;
-	}
-
-	odp_pktin_queue_param_init(&pktin_param);
-
-	if (imode == ODP_PKTIN_MODE_SCHED) {
-		pktin_param.queue_param.sched.prio = ODP_SCHED_PRIO_DEFAULT;
-		pktin_param.queue_param.sched.sync = sync_mode;
-		pktin_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
-	}
-
-	pktin_param.hash_enable = 0;
-	pktin_param.num_queues = 1;
-	pktin_param.op_mode = ODP_PKTIO_OP_MT_UNSAFE;
-	pktin_param.vector.enable = 1;
-	pktin_param.vector.pool = pktv_pool[iface_idx];
-	pktin_param.vector.max_size = capa.vector.max_size < PKTV_DEFAULT_SIZE ?
-					capa.vector.max_size : PKTV_DEFAULT_SIZE;
-	pktin_param.vector.max_tmo_ns = capa.vector.min_tmo_ns;
-	CU_ASSERT(odp_pktin_queue_config(pktio, &pktin_param) == 0);
-
-	odp_pktout_queue_param_init(&pktout_param);
-	pktout_param.op_mode = ODP_PKTIO_OP_MT_UNSAFE;
-	pktout_param.num_queues = 1;
-	CU_ASSERT(odp_pktout_queue_config(pktio, &pktout_param) == 0);
-
-	if (wait_for_network)
-		odp_time_wait_ns(ODP_TIME_SEC_IN_NS / 4);
-
-	return pktio;
-}
-
 static int flush_input_queue(odp_pktio_t pktio, odp_pktin_mode_t imode)
 {
 	odp_event_t ev;
@@ -645,6 +592,49 @@ static int create_packets(odp_packet_t pkt_tbl[], uint32_t pkt_seq[], int num,
 {
 	return create_packets_udp(pkt_tbl, pkt_seq, num, pktio_src, pktio_dst,
 				  true);
+}
+
+static void configure_pktio(int iface_idx, odp_pktio_t pktio, txrx_mode_flags_t flags,
+			    odp_pktin_mode_t imode, odp_pktout_mode_t omode,
+			    odp_schedule_sync_t sync_mode)
+{
+	odp_pktout_queue_param_t pktout_param;
+	odp_pktin_queue_param_t pktin_param;
+	odp_pktio_capability_t capa;
+
+	(void)(omode);
+
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+	CU_ASSERT_FATAL(verify_txrx_mode_flags(flags) == 0);
+	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0);
+
+	odp_pktin_queue_param_init(&pktin_param);
+	odp_pktout_queue_param_init(&pktout_param);
+
+	if (TXRX_FLAG_ISSET(flags, VECTOR) && capa.vector.supported) {
+		if (imode == ODP_PKTIN_MODE_SCHED) {
+			pktin_param.queue_param.sched.prio = ODP_SCHED_PRIO_DEFAULT;
+			pktin_param.queue_param.sched.sync = sync_mode;
+			pktin_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+		}
+
+		pktin_param.hash_enable = 0;
+		pktin_param.num_queues = 1;
+		pktin_param.op_mode = ODP_PKTIO_OP_MT_UNSAFE;
+		pktin_param.vector.enable = 1;
+		pktin_param.vector.pool = pktv_pool[iface_idx];
+		pktin_param.vector.max_size = capa.vector.max_size < PKTV_DEFAULT_SIZE ?
+					      capa.vector.max_size : PKTV_DEFAULT_SIZE;
+		pktin_param.vector.max_tmo_ns = capa.vector.min_tmo_ns;
+		CU_ASSERT(odp_pktin_queue_config(pktio, &pktin_param) == 0);
+
+		pktout_param.op_mode = ODP_PKTIO_OP_MT_UNSAFE;
+		pktout_param.num_queues = 1;
+		CU_ASSERT(odp_pktout_queue_config(pktio, &pktout_param) == 0);
+	}
+
+	if (wait_for_network)
+		odp_time_wait_ns(ODP_TIME_SEC_IN_NS / 4);
 }
 
 static int get_packets(pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
@@ -1053,16 +1043,15 @@ static void test_txrx(odp_pktin_mode_t in_mode, int num_pkts,
 			out_mode = ODP_PKTOUT_MODE_QUEUE;
 
 		io = &pktios[i];
-
 		io->name = iface_name[i];
-		if (TXRX_FLAG_ISSET(flags, VECTOR))
-			io->id = create_pktv_pktio(i, in_mode, out_mode, sync_mode);
-		else
-			io->id = create_pktio(i, in_mode, out_mode);
+		io->id = create_pktio(i, in_mode, out_mode);
+
 		if (io->id == ODP_PKTIO_INVALID) {
 			CU_FAIL("failed to open iface");
 			return;
 		}
+
+		configure_pktio(i, io->id, flags, in_mode, out_mode, sync_mode);
 
 		if (TXRX_FLAG_ISSET(flags, MULTI_EVENT)) {
 			CU_ASSERT_FATAL(odp_pktout_event_queue(io->id,
