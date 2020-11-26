@@ -213,9 +213,16 @@ static uint32_t pktio_pkt_seq_hdr(odp_packet_t pkt, size_t l4_hdr_len)
 	uint32_t seq = TEST_SEQ_INVALID;
 	pkt_head_t head;
 	pkt_tail_t tail;
+	uint32_t len;
 
 	if (pkt == ODP_PACKET_INVALID) {
 		ODPH_ERR("pkt invalid\n");
+		return TEST_SEQ_INVALID;
+	}
+
+	len = odp_packet_len(pkt);
+	if (len < l4_hdr_len + sizeof(head) + sizeof(tail)) {
+		ODPH_ERR("packet length invalid: %" PRIu32 "\n", len);
 		return TEST_SEQ_INVALID;
 	}
 
@@ -237,23 +244,17 @@ static uint32_t pktio_pkt_seq_hdr(odp_packet_t pkt, size_t l4_hdr_len)
 		return TEST_SEQ_INVALID;
 	}
 
-	if (odp_packet_len(pkt) == packet_len) {
-		off = packet_len - sizeof(tail);
-		if (odp_packet_copy_to_mem(pkt, off, sizeof(tail),
-					   &tail) != 0) {
-			ODPH_ERR("header copy failed\n");
-			return TEST_SEQ_INVALID;
-		}
+	off = len - sizeof(tail);
+	if (odp_packet_copy_to_mem(pkt, off, sizeof(tail), &tail) != 0) {
+		ODPH_ERR("header copy failed\n");
+		return TEST_SEQ_INVALID;
+	}
 
-		if (tail.magic == TEST_SEQ_MAGIC) {
-			seq = head.seq;
-			CU_ASSERT(seq != TEST_SEQ_INVALID);
-		} else {
-			ODPH_ERR("tail magic invalid 0x%" PRIx32 "\n", tail.magic);
-		}
+	if (tail.magic == TEST_SEQ_MAGIC) {
+		seq = head.seq;
+		CU_ASSERT(seq != TEST_SEQ_INVALID);
 	} else {
-		ODPH_ERR("packet length invalid: %" PRIu32 "(%" PRIu32 ")\n",
-			 odp_packet_len(pkt), packet_len);
+		ODPH_ERR("tail magic invalid 0x%" PRIx32 "\n", tail.magic);
 	}
 
 	return seq;
@@ -510,6 +511,7 @@ static int flush_input_queue(odp_pktio_t pktio, odp_pktin_mode_t imode)
 
 static int create_packets_udp(odp_packet_t pkt_tbl[],
 			      uint32_t pkt_seq[],
+			      uint32_t pkt_len[],
 			      int num,
 			      odp_pktio_t pktio_src,
 			      odp_pktio_t pktio_dst,
@@ -518,7 +520,12 @@ static int create_packets_udp(odp_packet_t pkt_tbl[],
 	int i, ret;
 
 	for (i = 0; i < num; i++) {
-		pkt_tbl[i] = odp_packet_alloc(default_pkt_pool, packet_len);
+		uint32_t len = packet_len;
+
+		if (pkt_len != NULL)
+			len = pkt_len[i];
+
+		pkt_tbl[i] = odp_packet_alloc(default_pkt_pool, len);
 		if (pkt_tbl[i] == ODP_PACKET_INVALID)
 			break;
 
@@ -587,10 +594,10 @@ static int verify_txrx_mode_flags(txrx_mode_flags_t flags)
 	return 0;
 }
 
-static int create_packets(odp_packet_t pkt_tbl[], uint32_t pkt_seq[], int num,
+static int create_packets(odp_packet_t pkt_tbl[], uint32_t pkt_seq[], uint32_t pkt_len[], int num,
 			  odp_pktio_t pktio_src, odp_pktio_t pktio_dst)
 {
-	return create_packets_udp(pkt_tbl, pkt_seq, num, pktio_src, pktio_dst,
+	return create_packets_udp(pkt_tbl, pkt_seq, pkt_len, num, pktio_src, pktio_dst,
 				  true);
 }
 
@@ -948,7 +955,7 @@ static void pktio_txrx_multi(pktio_info_t *pktio_info_a,
 	}
 
 	/* generate test packets to send */
-	ret = create_packets(tx_pkt, tx_seq, num_pkts, pktio_a, pktio_b);
+	ret = create_packets(tx_pkt, tx_seq, NULL, num_pkts, pktio_a, pktio_b);
 	if (ret != num_pkts) {
 		CU_FAIL("failed to generate test packets");
 		return;
@@ -1201,7 +1208,7 @@ static void pktio_test_recv_queue(void)
 		pktio_rx = pktio_tx;
 
 	/* Allocate and initialize test packets */
-	ret = create_packets(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx,
+	ret = create_packets(pkt_tbl, pkt_seq, NULL, TX_BATCH_LEN, pktio_tx,
 			     pktio_rx);
 	if (ret != TX_BATCH_LEN) {
 		CU_FAIL("Failed to generate test packets");
@@ -1311,7 +1318,7 @@ static void test_recv_tmo(recv_tmo_mode_e mode)
 
 	ns = 100 * ODP_TIME_MSEC_IN_NS;
 
-	ret = create_packets(pkt_tbl, pkt_seq, test_pkt_count, pktio_tx,
+	ret = create_packets(pkt_tbl, pkt_seq, NULL, test_pkt_count, pktio_tx,
 			     pktio_rx);
 	CU_ASSERT_FATAL(ret == test_pkt_count);
 
@@ -1923,7 +1930,7 @@ static void pktio_test_statistics_counters(void)
 		CU_ASSERT(ret == 0);
 	}
 
-	alloc = create_packets(tx_pkt, pkt_seq, 1000, pktio_tx, pktio_rx);
+	alloc = create_packets(tx_pkt, pkt_seq, NULL, 1000, pktio_tx, pktio_rx);
 
 	ret = odp_pktio_stats_reset(pktio_tx);
 	CU_ASSERT(ret == 0);
@@ -2036,7 +2043,7 @@ static void pktio_test_start_stop(void)
 
 	/* Test Rx on a stopped interface. Only works if there are 2 */
 	if (num_ifaces > 1) {
-		alloc = create_packets(tx_pkt, pkt_seq, 1000, pktio[0],
+		alloc = create_packets(tx_pkt, pkt_seq, NULL, 1000, pktio[0],
 				       pktio[1]);
 
 		for (pkts = 0; pkts != alloc; ) {
@@ -2084,7 +2091,7 @@ static void pktio_test_start_stop(void)
 	else
 		pktio_in = pktio[0];
 
-	alloc = create_packets(tx_pkt, pkt_seq, 1000, pktio[0], pktio_in);
+	alloc = create_packets(tx_pkt, pkt_seq, NULL, 1000, pktio[0], pktio_in);
 
 	/* send */
 	for (pkts = 0; pkts != alloc; ) {
@@ -2258,7 +2265,7 @@ static void pktio_test_pktin_ts(void)
 	CU_ASSERT((ns2 <= (ns1 + PKTIO_TS_CMP_RES)) &&
 		  (ns2 >= (ns1 - PKTIO_TS_CMP_RES)));
 
-	ret = create_packets(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx,
+	ret = create_packets(pkt_tbl, pkt_seq, NULL, TX_BATCH_LEN, pktio_tx,
 			     pktio_rx);
 	CU_ASSERT_FATAL(ret == TX_BATCH_LEN);
 
@@ -2360,7 +2367,7 @@ static void pktio_test_pktout_ts(void)
 	pktio_rx_info.inq  = ODP_QUEUE_INVALID;
 	pktio_rx_info.in_mode = ODP_PKTIN_MODE_DIRECT;
 
-	ret = create_packets(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx,
+	ret = create_packets(pkt_tbl, pkt_seq, NULL, TX_BATCH_LEN, pktio_tx,
 			     pktio_rx);
 	CU_ASSERT_FATAL(ret == TX_BATCH_LEN);
 
@@ -2439,7 +2446,7 @@ static void pktio_test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 		_pktio_wait_linkup(pktio[i]);
 	}
 
-	ret = create_packets_udp(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx,
+	ret = create_packets_udp(pkt_tbl, pkt_seq, NULL, TX_BATCH_LEN, pktio_tx,
 				 pktio_rx, false);
 	CU_ASSERT(ret == TX_BATCH_LEN);
 	if (ret != TX_BATCH_LEN) {
