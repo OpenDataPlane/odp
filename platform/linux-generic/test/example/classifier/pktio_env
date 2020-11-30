@@ -1,0 +1,44 @@
+#!/bin/sh
+#
+# Copyright (c) 2020, Marvell
+# All rights reserved.
+#
+# SPDX-License-Identifier:	BSD-3-Clause
+#
+# Script to setup interfaces used for running application on linux-generic.
+#
+# For linux-generic the default behavior is to create one pcap interface
+# which uses udp64.pcap to inject traffic.
+#
+# Network set-up
+# +---------+          +-----------+
+# |pcap intf| IF0<---> | Classifier|
+# +---------           +-----------+
+#
+
+PCAP_IN=`find . ${TEST_DIR} $(dirname $0) -name udp64.pcap -print -quit`
+echo "using PCAP in=${PCAP_IN}"
+
+IF0=pcap:in=${PCAP_IN}
+TIME_OUT_VAL=10
+CPASS_COUNT_ARG1=100
+CPASS_COUNT_ARG2=100
+
+if [ "$0" = "$BASH_SOURCE" ]; then
+	echo "Error: Platform specific env file has to be sourced."
+fi
+
+validate_result()
+{
+	return 0;
+}
+
+setup_interfaces()
+{
+	return 0
+}
+
+cleanup_interfaces()
+{
+	return 0
+}
