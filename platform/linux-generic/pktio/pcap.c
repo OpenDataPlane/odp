@@ -39,6 +39,7 @@
 
 #include <odp_api.h>
 #include <odp/api/plat/packet_inlines.h>
+#include <odp_classification_internal.h>
 #include <odp_global_data.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
@@ -226,6 +227,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 {
 	int i;
 	struct pcap_pkthdr *hdr;
+	odp_pool_t new_pool;
 	const u_char *data;
 	odp_packet_t pkt;
 	odp_packet_hdr_t *pkt_hdr;
@@ -276,9 +278,32 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			break;
 		}
 
-		packet_parse_layer(pkt_hdr,
-				   pktio_entry->s.config.parser.layer,
-				   pktio_entry->s.in_chksums);
+		if (pktio_cls_enabled(pktio_entry)) {
+			odp_packet_t new_pkt;
+
+			ret = cls_classify_packet(pktio_entry, data,
+						  pkt_len, pkt_len,
+						  &new_pool, pkt_hdr, true);
+			if (ret) {
+				odp_packet_free(pkt);
+				continue;
+			}
+			if (new_pool != pcap->pool) {
+				new_pkt = odp_packet_copy(pkt, new_pool);
+
+				odp_packet_free(pkt);
+
+				if (odp_unlikely(new_pkt == ODP_PACKET_INVALID))
+					continue;
+
+				pkt = new_pkt;
+				pkt_hdr = packet_hdr(new_pkt);
+			}
+		} else {
+			packet_parse_layer(pkt_hdr,
+					   pktio_entry->s.config.parser.layer,
+					   pktio_entry->s.in_chksums);
+		}
 		pktio_entry->s.stats.in_octets += pkt_hdr->frame_len;
 
 		packet_set_ts(pkt_hdr, ts);
