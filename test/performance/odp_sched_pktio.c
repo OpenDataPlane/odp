@@ -203,9 +203,6 @@ static int worker_thread_direct(void *arg)
 		odp_event_t ev[burst_size];
 		odp_packet_t pkt[burst_size];
 
-		num_pkt = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT,
-					     ev, burst_size);
-
 		polls++;
 
 		if (polls == CHECK_PERIOD) {
@@ -213,6 +210,9 @@ static int worker_thread_direct(void *arg)
 			if (test_global->stop_workers)
 				break;
 		}
+
+		num_pkt = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT,
+					     ev, burst_size);
 
 		if (num_pkt <= 0)
 			continue;
@@ -238,6 +238,22 @@ static int worker_thread_direct(void *arg)
 			test_global->worker_stat[worker_id].rx_pkt += num_pkt;
 	}
 
+	/*
+	 * Free prefetched packets before exiting worker thread as
+	 * such packets can block main thread event cleanup or
+	 * cause buffer leak.
+	 */
+	odp_schedule_pause();
+	while (1) {
+		odp_event_t  ev;
+
+		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+		if (ev == ODP_EVENT_INVALID)
+			break;
+		odp_event_free(ev);
+	}
+
+	/* Non-prefetched events in scheduler are cleaned up by main thread */
 	printf("Worker %i stopped\n", worker_id);
 
 	return 0;
