@@ -674,17 +674,13 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	}
 
 	if (!crypto.ok) {
-		if ((crypto.cipher_status.alg_err !=
-		     ODP_CRYPTO_ALG_ERR_NONE) ||
-		    (crypto.cipher_status.hw_err !=
-		     ODP_CRYPTO_HW_ERR_NONE))
-			status->error.alg = 1;
-
-		if ((crypto.auth_status.alg_err !=
-		     ODP_CRYPTO_ALG_ERR_NONE) ||
-		    (crypto.auth_status.hw_err !=
-		     ODP_CRYPTO_HW_ERR_NONE))
+		if ((crypto.cipher_status.alg_err ==
+		     ODP_CRYPTO_ALG_ERR_ICV_CHECK) ||
+		    (crypto.auth_status.alg_err ==
+		     ODP_CRYPTO_ALG_ERR_ICV_CHECK))
 			status->error.auth = 1;
+		else
+			status->error.alg = 1;
 
 		goto err;
 	}
