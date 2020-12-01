@@ -1,5 +1,6 @@
 /* Copyright (c) 2015-2018, Linaro Limited
  * Copyright (c) 2019-2020, Nokia
+ * Copyright (C) 2020, Marvell
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -74,8 +75,15 @@ typedef struct {
 } global_statistics;
 
 typedef struct {
+	char cos_name[ODP_COS_NAME_LEN];
+	uint64_t count;
+} ci_pass_counters;
+
+typedef struct {
 	global_statistics stats[MAX_PMR_COUNT];
+	ci_pass_counters ci_pass_rules[MAX_PMR_COUNT];
 	int policy_count;	/**< global policy count */
+	int num_ci_pass_rules;	/**< ci pass count */
 	int appl_mode;		/**< application mode */
 	odp_atomic_u64_t total_packets;	/**< total received packets */
 	unsigned int cpu_count; /**< Number of CPUs to use */
@@ -99,6 +107,38 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len);
 static int parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(void);
+
+static inline int check_ci_pass_count(appl_args_t *args)
+{
+	int i, j;
+	uint64_t count;
+
+	if (args->num_ci_pass_rules == 0)
+		return 0;
+
+	for (i = 0; i < args->num_ci_pass_rules; i++) {
+		for (j = 0; j < args->policy_count; j++) {
+			if (!strcmp(args->stats[j].cos_name,
+				    args->ci_pass_rules[i].cos_name)) {
+				count = odp_atomic_load_u64(&args->stats[i].queue_pkt_count);
+				if (args->ci_pass_rules[i].count > count) {
+					ODPH_ERR("Error: Cos = %s, expected packets = %" PRIu64 ","
+						 "received packet = %" PRIu64 "\n",
+						 args->stats[j].cos_name,
+						 args->ci_pass_rules[i].count, count);
+					return -1;
+				}
+				break;
+			}
+		}
+		if (j == args->policy_count) {
+			ODPH_ERR("Error: invalid Cos:%s specified for CI pass count\n",
+				 args->ci_pass_rules[i].cos_name);
+			return -1;
+		}
+	}
+	return 0;
+}
 
 static inline void print_cls_statistics(appl_args_t *args)
 {
@@ -670,6 +710,11 @@ int main(int argc, char *argv[])
 	args->shutdown = 1;
 	odph_thread_join(thread_tbl, num_workers);
 
+	if (check_ci_pass_count(args)) {
+		ODPH_ERR("Error: Packet count verification failed\n");
+		exit(EXIT_FAILURE);
+	}
+
 	for (i = 0; i < args->policy_count; i++) {
 		if ((i !=  args->policy_count - 1) &&
 		    odp_cls_pmr_destroy(args->stats[i].pmr))
@@ -1006,6 +1051,42 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 	return 0;
 }
 
+static int parse_policy_ci_pass_count(appl_args_t *appl_args, char *optarg)
+{
+	int num_ci_pass_rules;
+	char *token, *value;
+	size_t len;
+	ci_pass_counters *ci_pass_rules;
+	char *count_str;
+
+	num_ci_pass_rules = appl_args->num_ci_pass_rules;
+	ci_pass_rules = appl_args->ci_pass_rules;
+
+	/* last array index is needed for default queue */
+	if (num_ci_pass_rules >= MAX_PMR_COUNT) {
+		ODPH_ERR("Too many ci pass counters. Max count is %i.\n",
+			 MAX_PMR_COUNT);
+		return -1;
+	}
+
+	len = strlen(optarg);
+	len++;
+	count_str = malloc(len);
+	strcpy(count_str, optarg);
+
+	token = strtok(count_str, ":");
+	value = strtok(NULL, ":");
+	if (!token || !value) {
+		free(count_str);
+		return -1;
+	}
+	strcpy(ci_pass_rules[num_ci_pass_rules].cos_name, token);
+	ci_pass_rules[num_ci_pass_rules].count = atoll(value);
+	appl_args->num_ci_pass_rules++;
+	free(count_str);
+	return 0;
+}
+
 /**
  * Parse and store the command line arguments
  *
@@ -1029,13 +1110,14 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"policy", required_argument, NULL, 'p'},
 		{"mode", required_argument, NULL, 'm'},
 		{"time", required_argument, NULL, 't'},
+		{"ci_pass", required_argument, NULL, 'C'},
 		{"promisc_mode", no_argument, NULL, 'P'},
 		{"verbose", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:i:p:m:t:Pvh";
+	static const char *shortopts = "+c:t:i:p:m:t:C:Pvh";
 
 	appl_args->cpu_count = 1; /* Use one worker by default */
 	appl_args->verbose = 0;
@@ -1085,6 +1167,12 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 				appl_args->appl_mode = APPL_MODE_DROP;
 			else
 				appl_args->appl_mode = APPL_MODE_REPLY;
+			break;
+		case 'C':
+			if (parse_policy_ci_pass_count(appl_args, optarg)) {
+				ret = -1;
+				break;
+			}
 			break;
 		case 'P':
 			appl_args->promisc_mode = 1;
@@ -1176,6 +1264,11 @@ static void usage(void)
 		"                           0: Runs in infinite loop\n"
 		"                           default: Runs in infinite loop\n"
 		"\n"
+		"  -C, --ci_pass <dst queue:count>\n"
+		"                           Minimum acceptable packet count for a CoS destination queue.\n"
+		"                           If the received packet count is smaller than this value,\n"
+		"                           the application will exit with an error.\n"
+		"                            E.g: -C \"queue1:100\" -C \"queue2:200\" -C \"DefaultQueue:100\"\n"
 		"  -P, --promisc_mode       Enable promiscuous mode.\n"
 		"  -v, --verbose            Verbose output.\n"
 		"  -h, --help               Display help and exit.\n"
