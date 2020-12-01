@@ -1,5 +1,6 @@
 /* Copyright (c) 2014-2018, Linaro Limited
  * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2020, Marvell
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -40,6 +41,12 @@
 
 /* Maximum pktio index table size */
 #define MAX_PKTIO_INDEXES      1024
+
+/* Default vector size */
+#define DEFAULT_VEC_SIZE       MAX_PKT_BURST
+
+/* Default vector timeout */
+#define DEFAULT_VEC_TMO        ODP_TIME_MSEC_IN_NS
 
 /* Packet input mode */
 typedef enum pktin_mode_t {
@@ -93,6 +100,10 @@ typedef struct {
 	int burst_rx;           /* Receive burst size */
 	int pool_per_if;        /* Create pool per interface */
 	uint32_t num_pkt;       /* Number of packets per pool */
+	bool vector_mode;       /* Vector mode enabled */
+	uint32_t num_vec;       /* Number of vectors per pool */
+	uint64_t vec_tmo_ns;    /* Vector formation timeout in ns */
+	uint32_t vec_size;      /* Vector size */
 	int verbose;		/* Verbose output */
 	int promisc_mode;       /* Promiscuous mode enabled */
 } appl_args_t;
@@ -307,6 +318,187 @@ static inline int copy_packets(odp_packet_t *pkt_tbl, int pkts)
 	}
 
 	return copy_fails;
+}
+
+/*
+ * Packet IO worker thread using scheduled queues and vector mode.
+ *
+ * arg  thread arguments of type 'thread_args_t *'
+ */
+static int run_worker_sched_mode_vector(void *arg)
+{
+	int thr;
+	int i;
+	int pktio, num_pktio;
+	uint16_t max_burst;
+	odp_pktout_queue_t pktout[MAX_PKTIOS];
+	odp_queue_t tx_queue[MAX_PKTIOS];
+	thread_args_t *thr_args = arg;
+	stats_t *stats = &thr_args->stats;
+	int use_event_queue = gbl_args->appl.out_mode;
+	pktin_mode_t in_mode = gbl_args->appl.in_mode;
+
+	thr = odp_thread_id();
+	max_burst = gbl_args->appl.burst_rx;
+
+	if (gbl_args->appl.num_groups) {
+		odp_thrmask_t mask;
+
+		odp_thrmask_zero(&mask);
+		odp_thrmask_set(&mask, thr);
+
+		/* Join non-default groups */
+		for (i = 0; i < thr_args->num_groups; i++) {
+			if (odp_schedule_group_join(thr_args->group[i],
+						    &mask)) {
+				ODPH_ERR("Join failed\n");
+				return -1;
+			}
+		}
+	}
+
+	num_pktio = thr_args->num_pktio;
+
+	if (num_pktio > MAX_PKTIOS) {
+		ODPH_ERR("Too many pktios %i\n", num_pktio);
+		return -1;
+	}
+
+	for (pktio = 0; pktio < num_pktio; pktio++) {
+		tx_queue[pktio] = thr_args->pktio[pktio].tx_queue;
+		pktout[pktio]   = thr_args->pktio[pktio].pktout;
+	}
+
+	printf("[%02i] PKTIN_SCHED_%s_VECTOR, %s\n", thr,
+	       (in_mode == SCHED_PARALLEL) ? "PARALLEL" :
+	       ((in_mode == SCHED_ATOMIC) ? "ATOMIC" : "ORDERED"),
+	       (use_event_queue) ? "PKTOUT_QUEUE" : "PKTOUT_DIRECT");
+
+	odp_barrier_wait(&gbl_args->init_barrier);
+
+	/* Loop packets */
+	while (!odp_atomic_load_u32(&gbl_args->exit_threads)) {
+		odp_event_t  ev_tbl[MAX_PKT_BURST];
+		int pktvs;
+
+		pktvs = odp_schedule_multi_no_wait(NULL, ev_tbl, max_burst);
+
+		if (pktvs <= 0)
+			continue;
+
+		for (i = 0; i < pktvs; i++) {
+			odp_packet_vector_t pkt_vec;
+			odp_packet_t *pkt_tbl;
+			unsigned int tx_drops;
+			int src_idx, dst_idx;
+			int pkts, sent;
+
+			ODPH_ASSERT(odp_event_type(ev_tbl[i]) == ODP_EVENT_PACKET_VECTOR);
+			pkt_vec = odp_packet_vector_from_event(ev_tbl[i]);
+			pkts = odp_packet_vector_tbl(pkt_vec, &pkt_tbl);
+
+			if (odp_unlikely(gbl_args->appl.extra_feat)) {
+				if (gbl_args->appl.packet_copy) {
+					int fails;
+
+					fails = copy_packets(pkt_tbl, pkts);
+					stats->s.copy_fails += fails;
+				}
+
+				if (gbl_args->appl.chksum)
+					chksum_insert(pkt_tbl, pkts);
+
+				if (gbl_args->appl.error_check) {
+					int rx_drops;
+
+					/* Drop packets with errors */
+					rx_drops = drop_err_pkts(pkt_tbl, pkts);
+
+					if (odp_unlikely(rx_drops)) {
+						stats->s.rx_drops += rx_drops;
+						if (pkts == rx_drops) {
+							odp_packet_vector_free(pkt_vec);
+							continue;
+						}
+
+						pkts -= rx_drops;
+						odp_packet_vector_size_set(pkt_vec, pkts);
+					}
+				}
+			}
+
+			/* packets from the same queue are from the same interface */
+			src_idx = odp_packet_input_index(pkt_tbl[0]);
+			ODPH_ASSERT(src_idx >= 0);
+			dst_idx = gbl_args->dst_port_from_idx[src_idx];
+			fill_eth_addrs(pkt_tbl, pkts, dst_idx);
+
+			if (odp_unlikely(use_event_queue)) {
+				odp_event_t event = odp_packet_vector_to_event(pkt_vec);
+
+				sent = odp_queue_enq(tx_queue[dst_idx], event);
+				sent = odp_likely(sent == 0) ? pkts : 0;
+			} else {
+				sent = odp_pktout_send(pktout[dst_idx], pkt_tbl, pkts);
+				sent = odp_unlikely(sent < 0) ? 0 : sent;
+			}
+
+			tx_drops = pkts - sent;
+			if (odp_unlikely(tx_drops)) {
+				int j;
+
+				stats->s.tx_drops += tx_drops;
+				/* Drop rejected packets */
+				for (j = sent; j < pkts; j++)
+					odp_packet_free(pkt_tbl[j]);
+			}
+
+			/* Free packet vector if sending failed or in direct mode. */
+			if (tx_drops || !use_event_queue)
+				odp_packet_vector_free(pkt_vec);
+
+			stats->s.packets += pkts;
+		}
+	}
+
+	/*
+	 * Free prefetched packets before entering the thread barrier.
+	 * Such packets can block sending of later packets in other threads
+	 * that then would never enter the thread barrier and we would
+	 * end up in a dead-lock.
+	 */
+	odp_schedule_pause();
+	while (1) {
+		odp_event_t  ev;
+
+		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+		if (ev == ODP_EVENT_INVALID)
+			break;
+
+		odp_event_free(ev);
+	}
+
+	/* Make sure that latest stat writes are visible to other threads */
+	odp_mb_full();
+
+	/* Wait until pktio devices are stopped */
+	odp_barrier_wait(&gbl_args->term_barrier);
+
+	/* Free remaining events in queues */
+	odp_schedule_resume();
+	while (1) {
+		odp_event_t  ev;
+
+		ev = odp_schedule(NULL,
+				  odp_schedule_wait_time(ODP_TIME_SEC_IN_NS));
+
+		if (ev == ODP_EVENT_INVALID)
+			break;
+
+		odp_event_free(ev);
+	}
+
+	return 0;
 }
 
 /*
@@ -721,6 +913,57 @@ static int run_worker_direct_mode(void *arg)
 	return 0;
 }
 
+static int set_pktin_vector_params(odp_pktin_queue_param_t *pktin_param, odp_pool_t vec_pool,
+				   odp_pktio_capability_t pktio_capa)
+{
+	uint64_t vec_tmo_ns;
+	uint32_t vec_size;
+
+	pktin_param->vector.enable = true;
+	pktin_param->vector.pool = vec_pool;
+
+	if (gbl_args->appl.vec_size == 0)
+		vec_size = DEFAULT_VEC_SIZE;
+	else
+		vec_size = gbl_args->appl.vec_size;
+
+	if (vec_size > pktio_capa.vector.max_size ||
+	    vec_size < pktio_capa.vector.min_size) {
+		if (gbl_args->appl.vec_size == 0) {
+			vec_size = (vec_size > pktio_capa.vector.max_size) ?
+				pktio_capa.vector.max_size : pktio_capa.vector.min_size;
+			printf("\nWarning: Modified vector size to %u\n\n", vec_size);
+		} else {
+			ODPH_ERR("Error: Invalid pktio vector size %u, valid range [%u, %u]\n",
+				 vec_size, pktio_capa.vector.min_size, pktio_capa.vector.max_size);
+			return -1;
+		}
+	}
+	pktin_param->vector.max_size = vec_size;
+
+	if (gbl_args->appl.vec_tmo_ns == 0)
+		vec_tmo_ns = DEFAULT_VEC_TMO;
+	else
+		vec_tmo_ns = gbl_args->appl.vec_tmo_ns;
+
+	if (vec_tmo_ns > pktio_capa.vector.max_tmo_ns ||
+	    vec_tmo_ns < pktio_capa.vector.min_tmo_ns) {
+		if (gbl_args->appl.vec_tmo_ns == 0) {
+			vec_tmo_ns = (vec_tmo_ns > pktio_capa.vector.max_tmo_ns) ?
+				pktio_capa.vector.max_tmo_ns : pktio_capa.vector.min_tmo_ns;
+			printf("\nWarning: Modified vector timeout to %" PRIu64 "\n\n", vec_tmo_ns);
+		} else {
+			ODPH_ERR("Error: Invalid vector timeout %" PRIu64 ", valid range [%" PRIu64
+				 ", %" PRIu64 "]\n", vec_tmo_ns,
+				 pktio_capa.vector.min_tmo_ns, pktio_capa.vector.max_tmo_ns);
+			return -1;
+		}
+	}
+	pktin_param->vector.max_tmo_ns = vec_tmo_ns;
+
+	return 0;
+}
+
 /*
  * Create a pktio handle, optionally associating a default input queue.
  *
@@ -730,8 +973,8 @@ static int run_worker_direct_mode(void *arg)
  *
  * Returns 0 on success, -1 on failure
  */
-static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
-			odp_pool_t pool, odp_schedule_group_t group)
+static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_pool_t pool,
+			odp_pool_t vec_pool, odp_schedule_group_t group)
 {
 	odp_pktio_t pktio;
 	odp_pktio_param_t pktio_param;
@@ -851,6 +1094,15 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 
 	pktout_param.op_mode    = mode_tx;
 	pktout_param.num_queues = num_tx;
+
+	if (gbl_args->appl.vector_mode) {
+		if (!pktio_capa.vector.supported) {
+			ODPH_ERR("Error: packet vector input not supported %s\n", dev);
+			return -1;
+		}
+		if (set_pktin_vector_params(&pktin_param, vec_pool, pktio_capa))
+			return -1;
+	}
 
 	if (odp_pktin_queue_config(pktio, &pktin_param)) {
 		ODPH_ERR("Error: input queue config failed %s\n", dev);
@@ -1243,14 +1495,22 @@ static void usage(char *progname)
 	       "  -p, --packet_copy       0: Don't copy packet (default)\n"
 	       "                          1: Create and send copy of the received packet.\n"
 	       "                             Free the original packet.\n"
-	       "  -y, --pool_per_if       0: Share a single pool between all interfaces (default)\n"
+	       "  -y, --pool_per_if       Create a packet (and packet vector) pool per interface.\n"
+	       "                          0: Share a single pool between all interfaces (default)\n"
 	       "                          1: Create a pool per interface\n"
 	       "  -n, --num_pkt <num>     Number of packets per pool. Default is 16k or\n"
 	       "                          the maximum capability. Use 0 for the default.\n"
+	       "  -u, --vector_mode       Enable vector mode.\n"
+	       "                          Supported only with scheduler packet input modes (1-3).\n"
+	       "  -w, --num_vec <num>     Number of vectors per pool.\n"
+	       "                          Default is num_pkts divided by vec_size.\n"
+	       "  -x, --vec_size <num>    Vector size (default %i).\n"
+	       "  -z, --vec_tmo_ns <ns>   Vector timeout in ns (default %llu ns).\n"
 	       "  -P, --promisc_mode      Enable promiscuous mode.\n"
 	       "  -v, --verbose           Verbose output.\n"
 	       "  -h, --help              Display help and exit.\n\n"
-	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
+	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS, DEFAULT_VEC_SIZE,
+		DEFAULT_VEC_TMO
 	    );
 }
 
@@ -1286,13 +1546,17 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"packet_copy", required_argument, NULL, 'p'},
 		{"pool_per_if", required_argument, NULL, 'y'},
 		{"num_pkt", required_argument, NULL, 'n'},
+		{"num_vec", required_argument, NULL, 'w'},
+		{"vec_size", required_argument, NULL, 'x'},
+		{"vec_tmo_ns", required_argument, NULL, 'z'},
+		{"vector_mode", no_argument, NULL, 'u'},
 		{"promisc_mode", no_argument, NULL, 'P'},
 		{"verbose", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:p:y:n:Pvh";
+	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:p:y:n:w:x:z:uPvh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1308,6 +1572,10 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->pool_per_if = 0;
 	appl_args->num_pkt = 0;
 	appl_args->promisc_mode = 0;
+	appl_args->vector_mode = 0;
+	appl_args->num_vec = 0;
+	appl_args->vec_size = 0;
+	appl_args->vec_tmo_ns = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -1451,6 +1719,18 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'P':
 			appl_args->promisc_mode = 1;
 			break;
+		case 'u':
+			appl_args->vector_mode = 1;
+			break;
+		case 'w':
+			appl_args->num_vec = atoi(optarg);
+			break;
+		case 'x':
+			appl_args->vec_size = atoi(optarg);
+			break;
+		case 'z':
+			appl_args->vec_tmo_ns = atoi(optarg);
+			break;
 		case 'v':
 			appl_args->verbose = 1;
 			break;
@@ -1574,6 +1854,54 @@ static void create_groups(int num, odp_schedule_group_t *group)
 	}
 }
 
+static int set_vector_pool_params(odp_pool_param_t *params, odp_pool_capability_t pool_capa)
+{
+	uint32_t num_vec, vec_size;
+
+	if (gbl_args->appl.vec_size == 0)
+		vec_size = DEFAULT_VEC_SIZE;
+	else
+		vec_size = gbl_args->appl.vec_size;
+
+	ODPH_ASSERT(pool_capa.vector.max_size > 0);
+	if (vec_size > pool_capa.vector.max_size) {
+		if (gbl_args->appl.vec_size == 0) {
+			vec_size = pool_capa.vector.max_size;
+			printf("\nWarning: Vector size reduced to %u\n\n", vec_size);
+		} else {
+			ODPH_ERR("Error: Vector size too big %u. Maximum is %u.\n",
+				 vec_size, pool_capa.vector.max_size);
+			return -1;
+		}
+	}
+
+	if (gbl_args->appl.num_vec == 0) {
+		uint32_t num_pkt =  gbl_args->appl.num_pkt ?
+			gbl_args->appl.num_pkt : DEFAULT_NUM_PKT;
+
+		num_vec = (num_pkt + vec_size - 1) / vec_size;
+	} else {
+		num_vec = gbl_args->appl.num_vec;
+	}
+
+	if (pool_capa.vector.max_num && num_vec > pool_capa.vector.max_num) {
+		if (gbl_args->appl.num_vec == 0) {
+			num_vec = pool_capa.vector.max_num;
+			printf("\nWarning: number of vectors reduced to %u\n\n", num_vec);
+		} else {
+			ODPH_ERR("Error: Too many vectors (%u) per pool. Maximum is %u.\n",
+				 num_vec, pool_capa.vector.max_num);
+			return -1;
+		}
+	}
+
+	params->vector.num = num_vec;
+	params->vector.max_size = vec_size;
+	params->type = ODP_POOL_VECTOR;
+
+	return 0;
+}
+
 /*
  * L2 forwarding main function
  */
@@ -1591,13 +1919,13 @@ int main(int argc, char *argv[])
 	odp_pool_param_t params;
 	int ret;
 	stats_t *stats[MAX_WORKERS];
-	int if_count, num_pools;
+	int if_count, num_pools, num_vec_pools;
 	int (*thr_run_func)(void *);
 	odp_instance_t instance;
 	int num_groups;
 	odp_schedule_group_t group[MAX_PKTIOS];
-	odp_pool_t pool_tbl[MAX_PKTIOS];
-	odp_pool_t pool;
+	odp_pool_t pool_tbl[MAX_PKTIOS], vec_pool_tbl[MAX_PKTIOS];
+	odp_pool_t pool, vec_pool;
 	odp_init_t init;
 	odp_pool_capability_t pool_capa;
 	uint32_t pkt_len, num_pkt;
@@ -1755,6 +2083,41 @@ int main(int argc, char *argv[])
 			odp_pool_print(pool_tbl[i]);
 	}
 
+	/* Create vector pool */
+	num_vec_pools = 0;
+	if (gbl_args->appl.vector_mode) {
+		if (!sched_mode(gbl_args->appl.in_mode)) {
+			ODPH_ERR("Error: vector mode only supports scheduler pktin modes (1-3)\n");
+			return -1;
+		}
+
+		num_vec_pools = gbl_args->appl.pool_per_if ? if_count : 1;
+		if (num_vec_pools > (int)pool_capa.vector.max_pools) {
+			ODPH_ERR("Error: Too many vector pools %i\n", num_vec_pools);
+			return -1;
+		}
+
+		odp_pool_param_init(&params);
+		if (set_vector_pool_params(&params, pool_capa))
+			return -1;
+
+		printf("Vectors per pool:   %u\n", params.vector.num);
+		printf("Vector size:        %u\n", params.vector.max_size);
+		printf("\n\n");
+
+		for (i = 0; i < num_vec_pools; i++) {
+			vec_pool_tbl[i] = odp_pool_create("vector pool", &params);
+
+			if (vec_pool_tbl[i] == ODP_POOL_INVALID) {
+				ODPH_ERR("Error: vector pool create failed %i\n", i);
+				exit(EXIT_FAILURE);
+			}
+
+			if (gbl_args->appl.verbose)
+				odp_pool_print(vec_pool_tbl[i]);
+		}
+	}
+
 	if (odp_pktio_max_index() >= MAX_PKTIO_INDEXES)
 		ODPH_DBG("Warning: max pktio index (%u) is too large\n",
 			 odp_pktio_max_index());
@@ -1772,6 +2135,7 @@ int main(int argc, char *argv[])
 	}
 
 	pool = pool_tbl[0];
+	vec_pool = vec_pool_tbl[0];
 
 	for (i = 0; i < if_count; ++i) {
 		const char *dev = gbl_args->appl.if_names[i];
@@ -1791,10 +2155,12 @@ int main(int argc, char *argv[])
 		/* Round robin pktios to groups */
 		grp = group[i % num_groups];
 
-		if (gbl_args->appl.pool_per_if)
+		if (gbl_args->appl.pool_per_if) {
 			pool = pool_tbl[i];
+			vec_pool = vec_pool_tbl[i];
+		}
 
-		if (create_pktio(dev, i, num_rx, num_tx, pool, grp))
+		if (create_pktio(dev, i, num_rx, num_tx, pool, vec_pool, grp))
 			exit(EXIT_FAILURE);
 
 		/* Save interface ethernet address */
@@ -1837,7 +2203,8 @@ int main(int argc, char *argv[])
 	else if (gbl_args->appl.in_mode == PLAIN_QUEUE)
 		thr_run_func = run_worker_plain_queue_mode;
 	else /* SCHED_PARALLEL / SCHED_ATOMIC / SCHED_ORDERED */
-		thr_run_func = run_worker_sched_mode;
+		thr_run_func = gbl_args->appl.vector_mode ?
+			run_worker_sched_mode_vector : run_worker_sched_mode;
 
 	/* Create worker threads */
 	memset(thr_param, 0, sizeof(thr_param));
@@ -1923,6 +2290,13 @@ int main(int argc, char *argv[])
 	for (i = 0; i < num_pools; i++) {
 		if (odp_pool_destroy(pool_tbl[i])) {
 			ODPH_ERR("Error: pool destroy failed %i\n", i);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	for (i = 0; i < num_vec_pools; i++) {
+		if (odp_pool_destroy(vec_pool_tbl[i])) {
+			ODPH_ERR("Error: vector pool destroy failed %i\n", i);
 			exit(EXIT_FAILURE);
 		}
 	}
