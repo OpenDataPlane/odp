@@ -34,6 +34,7 @@ odpapiinclude_HEADERS = \
 	odp/api/packet_flags.h \
 	odp/api/packet_io.h \
 	odp/api/packet_io_stats.h \
+	odp/api/protocols.h \
 	odp/api/pool.h \
 	odp/api/queue.h \
 	odp/api/random.h \
@@ -84,6 +85,7 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/packet_flags.h \
 		  odp/api/spec/packet_io.h \
 		  odp/api/spec/packet_io_stats.h \
+		  odp/api/spec/protocols.h \
 		  odp/api/spec/pool.h \
 		  odp/api/spec/queue.h \
 		  odp/api/spec/queue_types.h \
