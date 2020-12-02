@@ -560,7 +560,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	case ODP_CIPHER_ALG_AES_GCM:
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
-		ipsec_sa->esp_pad_mask = esp_block_len_to_mask(16);
+		ipsec_sa->esp_pad_mask = esp_block_len_to_mask(1);
 		ipsec_sa->salt_length = 4;
 		salt_param = &param->crypto.cipher_key_extra;
 		break;
@@ -594,7 +594,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 			goto error;
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
-		ipsec_sa->esp_pad_mask = esp_block_len_to_mask(16);
+		ipsec_sa->esp_pad_mask = esp_block_len_to_mask(1);
 		crypto_param.auth_iv.length = 12;
 		ipsec_sa->salt_length = 4;
 		salt_param = &param->crypto.auth_key_extra;
