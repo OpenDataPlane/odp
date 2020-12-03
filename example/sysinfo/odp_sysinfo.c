@@ -323,12 +323,14 @@ int main(void)
 	odp_queue_capability_t queue_capa;
 	odp_timer_capability_t timer_capa;
 	odp_crypto_capability_t crypto_capa;
+	odp_ipsec_capability_t ipsec_capa;
 	odp_schedule_capability_t schedule_capa;
 	uint64_t huge_page[MAX_HUGE_PAGES];
 	char ava_mask_str[ODP_CPUMASK_STR_SIZE];
 	char work_mask_str[ODP_CPUMASK_STR_SIZE];
 	char ctrl_mask_str[ODP_CPUMASK_STR_SIZE];
 	int crypto_ret;
+	int ipsec_ret;
 
 	printf("\n");
 	printf("ODP system info example\n");
@@ -406,6 +408,10 @@ int main(void)
 	crypto_ret = odp_crypto_capability(&crypto_capa);
 	if (crypto_ret < 0)
 		printf("crypto capability failed\n");
+
+	ipsec_ret = odp_ipsec_capability(&ipsec_capa);
+	if (ipsec_ret < 0)
+		printf("IPsec capability failed\n");
 
 	printf("\n");
 	printf("S Y S T E M    I N F O R M A T I O N\n");
@@ -536,6 +542,53 @@ int main(void)
 		printf("\n");
 		print_auth_caps(crypto_capa.auths);
 		printf("\n");
+	}
+
+	if (ipsec_ret == 0) {
+		printf("  IPSEC\n");
+		printf("    max SAs:                      %" PRIu32 "\n",
+		       ipsec_capa.max_num_sa);
+		printf("    sync mode support:            %s\n",
+		       support_level(ipsec_capa.op_mode_sync));
+		printf("    async mode support:           %s\n",
+		       support_level(ipsec_capa.op_mode_async));
+		printf("    inline inbound mode support:  %s\n",
+		       support_level(ipsec_capa.op_mode_inline_in));
+		printf("    inline outbound mode support: %s\n",
+		       support_level(ipsec_capa.op_mode_inline_out));
+		printf("    AH support:                   %s\n",
+		       support_level(ipsec_capa.proto_ah));
+		printf("    post-IPsec fragmentation:     %s\n",
+		       support_level(ipsec_capa.frag_after));
+		printf("    pre-IPsec fragmentation:      %s\n",
+		       support_level(ipsec_capa.frag_before));
+		printf("    post-IPsec classification:    %s\n",
+		       support_level(ipsec_capa.pipeline_cls));
+		printf("    retaining outer headers:      %s\n",
+		       support_level(ipsec_capa.retain_header));
+		printf("    inbound checksum offload support:\n");
+		printf("      IPv4 header checksum:       %s\n",
+		       support_level(ipsec_capa.chksums_in.chksum.ipv4));
+		printf("      UDP checksum:               %s\n",
+		       support_level(ipsec_capa.chksums_in.chksum.udp));
+		printf("      TCP checksum:               %s\n",
+		       support_level(ipsec_capa.chksums_in.chksum.tcp));
+		printf("      SCTP checksum:              %s\n",
+		       support_level(ipsec_capa.chksums_in.chksum.sctp));
+		printf("    max destination CoSes:        %" PRIu32 "\n",
+		       ipsec_capa.max_cls_cos);
+		printf("    max destination queues:       %" PRIu32 "\n",
+		       ipsec_capa.max_queues);
+		printf("    max anti-replay window size:  %" PRIu32 "\n",
+		       ipsec_capa.max_antireplay_ws);
+		printf("    inline TM pipelining:         %s\n",
+		       support_level(ipsec_capa.inline_ipsec_tm));
+		printf("    cipher algorithms:            ");
+		print_cipher_algos(ipsec_capa.ciphers);
+		printf("\n");
+		printf("    auth algorithms:              ");
+		print_auth_algos(ipsec_capa.auths);
+		printf("\n\n");
 	}
 
 	printf("  SHM MEMORY BLOCKS:\n");
