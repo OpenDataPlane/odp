@@ -146,6 +146,22 @@ jobs:
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
 
+  Build_riscv64:
+    runs-on: ubuntu-18.04
+    env:
+      ARCH: riscv64
+      OS: ubuntu_20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc]
+        conf: ['', '--disable-abi-compat']
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+
+
   Build_OS:
     runs-on: ubuntu-18.04
     env:
