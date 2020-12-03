@@ -28,10 +28,82 @@
 
 static odp_ipsec_config_t *ipsec_config;
 
-int odp_ipsec_capability(odp_ipsec_capability_t *capa)
+/*
+ * Set cabability bits for algorithms that are defined for use with IPsec
+ * and for which the IPsec crypto or auth capability function returns
+ * at least one supported instance.
+ */
+static int set_ipsec_crypto_capa(odp_ipsec_capability_t *capa)
 {
 	int rc;
 	odp_crypto_capability_t crypto_capa;
+
+	rc = odp_crypto_capability(&crypto_capa);
+	if (rc < 0)
+		return rc;
+
+#define CHECK_CIPHER(field, alg) do {				\
+	if (crypto_capa.ciphers.bit.field &&			\
+	    odp_ipsec_cipher_capability(alg, NULL, 0) > 0)	\
+		capa->ciphers.bit.field = 1;			\
+} while (0)
+
+	CHECK_CIPHER(null,		ODP_CIPHER_ALG_NULL);
+	CHECK_CIPHER(des,		ODP_CIPHER_ALG_DES);
+	CHECK_CIPHER(trides_cbc,	ODP_CIPHER_ALG_3DES_CBC);
+	CHECK_CIPHER(aes_cbc,		ODP_CIPHER_ALG_AES_CBC);
+	CHECK_CIPHER(aes_ctr,		ODP_CIPHER_ALG_AES_CTR);
+	CHECK_CIPHER(aes_gcm,		ODP_CIPHER_ALG_AES_GCM);
+	CHECK_CIPHER(aes_ccm,		ODP_CIPHER_ALG_AES_CCM);
+	CHECK_CIPHER(chacha20_poly1305,	ODP_CIPHER_ALG_CHACHA20_POLY1305);
+
+#define CHECK_AUTH(field, alg) do {				\
+	if (crypto_capa.auths.bit.field &&			\
+	    odp_ipsec_auth_capability(alg, NULL, 0) > 0)	\
+		capa->auths.bit.field = 1;			\
+} while (0)
+
+	CHECK_AUTH(null,		ODP_AUTH_ALG_NULL);
+	CHECK_AUTH(md5_hmac,		ODP_AUTH_ALG_MD5_HMAC);
+	CHECK_AUTH(sha1_hmac,		ODP_AUTH_ALG_SHA1_HMAC);
+	CHECK_AUTH(sha256_hmac,		ODP_AUTH_ALG_SHA256_HMAC);
+	CHECK_AUTH(sha384_hmac,		ODP_AUTH_ALG_SHA384_HMAC);
+	CHECK_AUTH(sha512_hmac,		ODP_AUTH_ALG_SHA512_HMAC);
+	CHECK_AUTH(aes_gcm,		ODP_AUTH_ALG_AES_GCM);
+	CHECK_AUTH(aes_gmac,		ODP_AUTH_ALG_AES_GMAC);
+	CHECK_AUTH(aes_ccm,		ODP_AUTH_ALG_AES_CCM);
+	CHECK_AUTH(aes_cmac,		ODP_AUTH_ALG_AES_CMAC);
+	CHECK_AUTH(aes_xcbc_mac,	ODP_AUTH_ALG_AES_XCBC_MAC);
+	CHECK_AUTH(chacha20_poly1305,	ODP_AUTH_ALG_CHACHA20_POLY1305);
+
+	/*
+	 * Certain combined mode algorithms are configured by setting
+	 * both cipher and auth to the corresponding algorithm when
+	 * creating an SA. Since such algorithms cannot be combined
+	 * with anything else, clear both capability fields if the
+	 * cipher and auth check did not both succeed.
+	 *
+	 * Although AES-GMAC is a combined mode algorithm, it does
+	 * not appear here because it is configured by setting cipher
+	 * to null.
+	 */
+#define REQUIRE_BOTH(field) do {		\
+	if (!capa->ciphers.bit.field)		\
+		capa->auths.bit.field = 0;	\
+	if (!capa->auths.bit.field)		\
+		capa->ciphers.bit.field = 0;	\
+	} while (0)
+
+	REQUIRE_BOTH(aes_gcm);
+	REQUIRE_BOTH(aes_ccm);
+	REQUIRE_BOTH(chacha20_poly1305);
+
+	return 0;
+}
+
+int odp_ipsec_capability(odp_ipsec_capability_t *capa)
+{
+	int rc;
 	odp_queue_capability_t queue_capa;
 
 	if (odp_global_ro.disable.ipsec) {
@@ -52,12 +124,9 @@ int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 
 	capa->max_antireplay_ws = IPSEC_ANTIREPLAY_WS;
 
-	rc = odp_crypto_capability(&crypto_capa);
+	rc = set_ipsec_crypto_capa(capa);
 	if (rc < 0)
 		return rc;
-
-	capa->ciphers = crypto_capa.ciphers;
-	capa->auths = crypto_capa.auths;
 
 	rc = odp_queue_capability(&queue_capa);
 	if (rc < 0)
