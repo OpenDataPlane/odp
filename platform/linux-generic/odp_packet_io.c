@@ -1673,7 +1673,7 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 	/* Packet vector generation is common for all pktio types */
 	if (ret == 0 && (entry->s.param.in_mode ==  ODP_PKTIN_MODE_QUEUE ||
 			 entry->s.param.in_mode ==  ODP_PKTIN_MODE_SCHED)) {
-		capa->vector.supported = true;
+		capa->vector.supported = ODP_SUPPORT_YES;
 		capa->vector.max_size = CONFIG_PACKET_VECTOR_MAX_SIZE;
 		capa->vector.min_size = 1;
 		capa->vector.max_tmo_ns = 0;
