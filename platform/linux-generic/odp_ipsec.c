@@ -1867,7 +1867,6 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 	unsigned opt_inc = (param->num_opt > 1) ? 1 : 0;
 
 	ODP_ASSERT(param->num_sa != 0);
-	ODP_ASSERT(inline_param->pktio != ODP_PKTIO_INVALID);
 
 	while (in_pkt < num_in) {
 		odp_packet_t pkt = pkt_in[in_pkt];
@@ -1878,6 +1877,8 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 		const odp_ipsec_out_opt_t *opt;
 		uint32_t hdr_len, offset;
 		const void *ptr;
+
+		ODP_ASSERT(inline_param[in_pkt].pktio != ODP_PKTIO_INVALID);
 
 		memset(&status, 0, sizeof(status));
 
