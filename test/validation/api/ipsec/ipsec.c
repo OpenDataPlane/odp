@@ -321,6 +321,18 @@ int ipsec_check_esp_aes_cbc_128_sha256(void)
 				ODP_AUTH_ALG_SHA256_HMAC, 256);
 }
 
+int ipsec_check_esp_aes_cbc_128_sha384(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_CBC, 128,
+				ODP_AUTH_ALG_SHA384_HMAC, 384);
+}
+
+int ipsec_check_esp_aes_cbc_128_sha512(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_CBC, 128,
+				ODP_AUTH_ALG_SHA512_HMAC, 512);
+}
+
 int ipsec_check_esp_aes_ctr_128_null(void)
 {
 	return  ipsec_check_esp(ODP_CIPHER_ALG_AES_CTR, 128,

@@ -208,6 +208,38 @@ static void test_in_ipv4_esp_aes_cbc_null(void)
 	ipsec_sa_destroy(sa);
 }
 
+static void test_in_ipv4_esp_aes_cbc_sha1(void)
+{
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    true, false, 123, NULL,
+			    ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
+			    ODP_AUTH_ALG_SHA1_HMAC, &key_5a_160,
+			    NULL, NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_icmp_0_esp_aes_cbc_sha1_1,
+		.num_pkt = 1,
+		.in = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
+			  .pkt_res = &pkt_ipv4_icmp_0 },
+		},
+	};
+
+	ipsec_check_in_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
 static void test_in_ipv4_esp_aes_cbc_sha256(void)
 {
 	odp_ipsec_sa_param_t param;
@@ -225,6 +257,70 @@ static void test_in_ipv4_esp_aes_cbc_sha256(void)
 
 	ipsec_test_part test = {
 		.pkt_in = &pkt_ipv4_icmp_0_esp_aes_cbc_sha256_1,
+		.num_pkt = 1,
+		.in = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
+			  .pkt_res = &pkt_ipv4_icmp_0 },
+		},
+	};
+
+	ipsec_check_in_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
+static void test_in_ipv4_esp_aes_cbc_sha384(void)
+{
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    true, false, 123, NULL,
+			    ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
+			    ODP_AUTH_ALG_SHA384_HMAC, &key_5a_384,
+			    NULL, NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_icmp_0_esp_aes_cbc_sha384_1,
+		.num_pkt = 1,
+		.in = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
+			  .pkt_res = &pkt_ipv4_icmp_0 },
+		},
+	};
+
+	ipsec_check_in_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
+static void test_in_ipv4_esp_aes_cbc_sha512(void)
+{
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	ipsec_sa_param_fill(&param,
+			    true, false, 123, NULL,
+			    ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
+			    ODP_AUTH_ALG_SHA512_HMAC, &key_5a_512,
+			    NULL, NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_icmp_0_esp_aes_cbc_sha512_1,
 		.num_pkt = 1,
 		.in = {
 			{ .status.warn.all = 0,
@@ -1690,8 +1786,14 @@ odp_testinfo_t ipsec_in_suite[] = {
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_esp_aes_cbc_null,
 				  ipsec_check_esp_aes_cbc_128_null),
+	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_esp_aes_cbc_sha1,
+				  ipsec_check_esp_aes_cbc_128_sha1),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_esp_aes_cbc_sha256,
 				  ipsec_check_esp_aes_cbc_128_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_esp_aes_cbc_sha384,
+				  ipsec_check_esp_aes_cbc_128_sha384),
+	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_esp_aes_cbc_sha512,
+				  ipsec_check_esp_aes_cbc_128_sha512),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_esp_aes_ctr_null,
 				  ipsec_check_esp_aes_ctr_128_null),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_ah_sha256_lookup,
