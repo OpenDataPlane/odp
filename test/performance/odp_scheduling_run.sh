@@ -9,7 +9,6 @@
 # launched by 'make check'
 
 TEST_DIR="${TEST_DIR:-$(dirname $0)}"
-ret=0
 ALL=0
 
 run()
@@ -19,9 +18,10 @@ run()
 
 	$TEST_DIR/odp_scheduling${EXEEXT} -c $1
 
-	if [ $? -ne 0 ]; then
+	RET_VAL=$?
+	if [ $RET_VAL -ne 0 ]; then
 		echo odp_scheduling FAILED
-		exit $?
+		exit $RET_VAL
 	fi
 }
 
