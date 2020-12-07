@@ -208,7 +208,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	}
 
 	if (test_options->num_timer > MAX_TIMERS) {
-		printf("Error: too many timers. Max %u\n", MAX_TIMERS);
+		ODPH_ERR("Too many timers. Max %u\n", MAX_TIMERS);
 		ret = -1;
 	}
 
@@ -224,20 +224,19 @@ static int set_num_cpu(test_global_t *global)
 
 	/* One thread used for the main thread */
 	if (num_cpu > ODP_THREAD_COUNT_MAX - 1) {
-		printf("Error: Too many workers. Maximum is %i.\n",
-		       ODP_THREAD_COUNT_MAX - 1);
+		ODPH_ERR("Too many workers. Maximum is %i.\n", ODP_THREAD_COUNT_MAX - 1);
 		return -1;
 	}
 
 	ret = odp_cpumask_default_worker(&global->cpumask, num_cpu);
 
 	if (num_cpu && ret != num_cpu) {
-		printf("Error: Too many workers. Max supported %i\n.", ret);
+		ODPH_ERR("Too many workers. Max supported %i\n.", ret);
 		return -1;
 	}
 
 	if (shared == 0 && num_cpu != 1) {
-		printf("Error: Private pool test supports only single CPU\n.");
+		ODPH_ERR("Private pool test supports only single CPU\n.");
 		return -1;
 	}
 
@@ -309,41 +308,40 @@ static int create_timer_pools(test_global_t *global)
 	}
 
 	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa)) {
-		printf("Error: timer capability failed\n");
+		ODPH_ERR("Timer capability failed\n");
 		return -1;
 	}
 
 	memset(&timer_res_capa, 0, sizeof(odp_timer_res_capability_t));
 	timer_res_capa.res_ns = res_ns;
 	if (odp_timer_res_capability(ODP_CLOCK_CPU, &timer_res_capa)) {
-		printf("Error: timer resolution capability failed\n");
+		ODPH_ERR("Timer resolution capability failed\n");
 		return -1;
 	}
 
 	if (res_ns < timer_capa.max_res.res_ns) {
-		printf("Error: too high resolution\n");
+		ODPH_ERR("Too high resolution\n");
 		return -1;
 	}
 
 	if (min_tmo_ns < timer_res_capa.min_tmo) {
-		printf("Error: too short min timeout\n");
+		ODPH_ERR("Too short min timeout\n");
 		return -1;
 	}
 
 	if (max_tmo_ns > timer_res_capa.max_tmo) {
-		printf("Error: too long max timeout\n");
+		ODPH_ERR("Too long max timeout\n");
 		return -1;
 	}
 
 	max_timers = timer_capa.max_timers;
 	if (max_timers && num_timer > max_timers) {
-		printf("Error: too many timers (max %u)\n", max_timers);
+		ODPH_ERR("Too many timers (max %u)\n", max_timers);
 		return -1;
 	}
 
 	if (num_tp > timer_capa.max_pools) {
-		printf("Error: too many timer pools (max %u)\n",
-		       timer_capa.max_pools);
+		ODPH_ERR("Too many timer pools (max %u)\n", timer_capa.max_pools);
 		return -1;
 	}
 
@@ -375,21 +373,21 @@ static int create_timer_pools(test_global_t *global)
 		tp = odp_timer_pool_create(tp_name, &timer_pool_param);
 		global->timer_pool[i].tp = tp;
 		if (tp == ODP_TIMER_POOL_INVALID) {
-			printf("Error: timer pool create failed (%u)\n", i);
+			ODPH_ERR("Timer pool create failed (%u)\n", i);
 			return -1;
 		}
 
 		pool = odp_pool_create(tp_name, &pool_param);
 		global->pool[i] = pool;
 		if (pool == ODP_POOL_INVALID) {
-			printf("Error: pool create failed (%u)\n", i);
+			ODPH_ERR("Pool create failed (%u)\n", i);
 			return -1;
 		}
 
 		queue = odp_queue_create(tp_name, &queue_param);
 		global->queue[i] = queue;
 		if (queue == ODP_QUEUE_INVALID) {
-			printf("Error: queue create failed (%u)\n", i);
+			ODPH_ERR("Queue create failed (%u)\n", i);
 			return -1;
 		}
 
@@ -463,14 +461,13 @@ static int set_timers(test_global_t *global)
 						   &ev);
 
 			if (status != ODP_TIMER_SUCCESS) {
-				printf("Error: Timer set %i/%i (ret %i)\n",
-				       i, j, status);
+				ODPH_ERR("Timer set %i/%i (ret %i)\n", i, j, status);
 				return -1;
 			}
 		}
 
 		if (odp_timer_pool_info(tp, &timer_pool_info)) {
-			printf("Error: timer pool info failed\n");
+			ODPH_ERR("Timer pool info failed\n");
 			return -1;
 		}
 
@@ -703,7 +700,7 @@ static int set_cancel_mode_worker(void *arg)
 			num_set++;
 
 			if (status != ODP_TIMER_SUCCESS) {
-				printf("Error: Timer set (tmo) failed (ret %i)\n", status);
+				ODPH_ERR("Timer set (tmo) failed (ret %i)\n", status);
 				ret = -1;
 				break;
 			}
@@ -754,8 +751,8 @@ static int set_cancel_mode_worker(void *arg)
 				num_set++;
 
 				if (status != ODP_TIMER_SUCCESS) {
-					printf("Error: Timer (%u/%u) set failed (ret %i)\n", i, j,
-					       status);
+					ODPH_ERR("Timer (%u/%u) set failed (ret %i)\n", i, j,
+						 status);
 					ret = -1;
 					break;
 				}
@@ -818,7 +815,7 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 				 num_cpu);
 
 	if (ret != num_cpu) {
-		printf("Error: thread create failed %i\n", ret);
+		ODPH_ERR("Thread create failed %i\n", ret);
 		return -1;
 	}
 
@@ -989,13 +986,13 @@ int main(int argc, char **argv)
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init, NULL)) {
-		printf("Error: Global init failed.\n");
+		ODPH_ERR("Global init failed.\n");
 		return -1;
 	}
 
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
-		printf("Error: Local init failed.\n");
+		ODPH_ERR("Local init failed.\n");
 		return -1;
 	}
 
@@ -1031,12 +1028,12 @@ int main(int argc, char **argv)
 		/* Test private pools on the master thread */
 		if (mode == MODE_SCHED_OVERH) {
 			if (sched_mode_worker(&global->thread_arg[0])) {
-				printf("Error: sched_mode_worker failed\n");
+				ODPH_ERR("Sched_mode_worker failed\n");
 				return -1;
 			}
 		} else {
 			if (set_cancel_mode_worker(&global->thread_arg[0])) {
-				printf("Error: set_cancel_mode_worker failed\n");
+				ODPH_ERR("Set_cancel_mode_worker failed\n");
 				return -1;
 			}
 		}
@@ -1056,12 +1053,12 @@ int main(int argc, char **argv)
 	destroy_timer_pool(global);
 
 	if (odp_term_local()) {
-		printf("Error: term local failed.\n");
+		ODPH_ERR("Term local failed.\n");
 		return -1;
 	}
 
 	if (odp_term_global(instance)) {
-		printf("Error: term global failed.\n");
+		ODPH_ERR("Term global failed.\n");
 		return -1;
 	}
 
