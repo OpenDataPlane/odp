@@ -1117,7 +1117,7 @@ int main(int argc, char **argv)
 	odp_sys_info_print();
 
 	if (global->test_options.ctx_size) {
-		uint64_t size = global->test_options.ctx_size *
+		uint64_t size = (uint64_t)global->test_options.ctx_size *
 				global->test_options.tot_queue;
 
 		global->ctx_shm = odp_shm_reserve("queue contexts", size,
