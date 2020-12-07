@@ -1113,7 +1113,9 @@ int ipsec_term(odp_instance_t inst)
 {
 	odp_pool_t pool = suite_context.pool;
 	odp_queue_t out_queue = suite_context.queue;
-	odp_pktio_t pktio = suite_context.pktio;
+	/* suite_context.pktio is set to ODP_PKTIO_INVALID by ipsec_suite_init()
+	   if inline processing is not supported. */
+	odp_pktio_t pktio = odp_pktio_lookup("loop");
 
 	if (ODP_PKTIO_INVALID != pktio) {
 		if (odp_pktio_close(pktio))
