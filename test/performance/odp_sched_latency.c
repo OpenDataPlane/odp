@@ -367,12 +367,12 @@ static int test_schedule(int thr, test_globals_t *globals)
 	odp_queue_t src_queue;
 	odp_queue_t dst_queue;
 	uint64_t latency;
-	uint32_t i;
+	uint64_t i;
 	test_event_t *event;
 	test_stat_t *stats;
 	int dst_idx, change_queue;
 	int warm_up_rounds = globals->args.warm_up_rounds;
-	uint64_t test_rounds = globals->args.test_rounds * 1000000;
+	uint64_t test_rounds = globals->args.test_rounds * (uint64_t)1000000;
 
 	memset(&globals->core_stat[thr], 0, sizeof(core_stat_t));
 	globals->core_stat[thr].prio[HI_PRIO].min = UINT64_MAX;
