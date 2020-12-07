@@ -186,14 +186,14 @@ static void sig_handler(int signo ODP_UNUSED)
 */
 static int scan_ip(char *buf, unsigned int *paddr)
 {
-	int part1, part2, part3, part4;
+	unsigned int part1, part2, part3, part4;
 	char tail = 0;
 	int field;
 
 	if (buf == NULL)
 		return 0;
 
-	field = sscanf(buf, "%d . %d . %d . %d %c",
+	field = sscanf(buf, "%u . %u . %u . %u %c",
 		       &part1, &part2, &part3, &part4, &tail);
 
 	if (field < 4 || field > 5) {
@@ -206,14 +206,13 @@ static int scan_ip(char *buf, unsigned int *paddr)
 		return 0;
 	}
 
-	if ((part1 >= 0 && part1 <= 255) && (part2 >= 0 && part2 <= 255) &&
-	    (part3 >= 0 && part3 <= 255) && (part4 >= 0 && part4 <= 255)) {
+	if (part1 <= 255 && part2 <= 255 && part3 <= 255 && part4 <= 255) {
 		if (paddr)
 			*paddr = part1 << 24 | part2 << 16 | part3 << 8 | part4;
 		return 1;
-	} else {
-		printf("not good ip %d:%d:%d:%d/n", part1, part2, part3, part4);
 	}
+
+	printf("not good ip %u:%u:%u:%u/n", part1, part2, part3, part4);
 
 	return 0;
 }
