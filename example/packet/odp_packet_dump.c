@@ -492,7 +492,10 @@ static int print_packet(test_global_t *global, odp_packet_t pkt,
 	nsec  = nsec - (sec * ODP_TIME_SEC_IN_NS);
 	pktio = odp_packet_input(pkt);
 
-	odp_pktio_info(pktio, &pktio_info);
+	if (odp_pktio_info(pktio, &pktio_info)) {
+		printf("Error: odp_pktio_info() failed\n");
+		return -1;
+	}
 
 	printf("PACKET [%" PRIu64 "]\n", num_packet);
 	printf("  time:            %" PRIu64 ".%09" PRIu64 " sec\n", sec, nsec);
@@ -652,6 +655,9 @@ static int receive_packets(test_global_t *global)
 		printed = print_packet(global, pkt, num_packet);
 
 		odp_packet_free(pkt);
+
+		if (odp_unlikely(printed < 0))
+			return -1;
 
 		if (!printed)
 			continue;
