@@ -16,8 +16,8 @@
 
 #define ADD_SUB_CNT		5
 
-#define CNT			10
-#define U32_INIT_VAL		(1UL << 10)
+#define CNT			50000
+#define U32_INIT_VAL		(1UL << 28)
 #define U64_INIT_VAL		(1ULL << 33)
 #define U32_MAGIC		0xa23f65b2
 #define U64_MAGIC		0xf2e1c5430cb6a52e
@@ -45,6 +45,8 @@ typedef struct {
 	uint32_t g_num_threads;
 	uint32_t g_iterations;
 	uint32_t g_verbose;
+
+	odp_barrier_t global_barrier;
 } global_shared_mem_t;
 
 /* Per-thread memory */
@@ -95,6 +97,8 @@ static void test_atomic_inc_32(void)
 {
 	int i;
 
+	odp_barrier_wait(&global_mem->global_barrier);
+
 	for (i = 0; i < CNT; i++)
 		odp_atomic_inc_u32(&global_mem->a32u);
 }
@@ -102,6 +106,8 @@ static void test_atomic_inc_32(void)
 static void test_atomic_inc_64(void)
 {
 	int i;
+
+	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++)
 		odp_atomic_inc_u64(&global_mem->a64u);
@@ -111,6 +117,8 @@ static void test_atomic_dec_32(void)
 {
 	int i;
 
+	odp_barrier_wait(&global_mem->global_barrier);
+
 	for (i = 0; i < CNT; i++)
 		odp_atomic_dec_u32(&global_mem->a32u);
 }
@@ -118,6 +126,8 @@ static void test_atomic_dec_32(void)
 static void test_atomic_dec_64(void)
 {
 	int i;
+
+	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++)
 		odp_atomic_dec_u64(&global_mem->a64u);
@@ -127,6 +137,8 @@ static void test_atomic_fetch_inc_32(void)
 {
 	int i;
 
+	odp_barrier_wait(&global_mem->global_barrier);
+
 	for (i = 0; i < CNT; i++)
 		odp_atomic_fetch_inc_u32(&global_mem->a32u);
 }
@@ -134,6 +146,8 @@ static void test_atomic_fetch_inc_32(void)
 static void test_atomic_fetch_inc_64(void)
 {
 	int i;
+
+	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++)
 		odp_atomic_fetch_inc_u64(&global_mem->a64u);
@@ -143,6 +157,8 @@ static void test_atomic_fetch_dec_32(void)
 {
 	int i;
 
+	odp_barrier_wait(&global_mem->global_barrier);
+
 	for (i = 0; i < CNT; i++)
 		odp_atomic_fetch_dec_u32(&global_mem->a32u);
 }
@@ -150,6 +166,8 @@ static void test_atomic_fetch_dec_32(void)
 static void test_atomic_fetch_dec_64(void)
 {
 	int i;
+
+	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++)
 		odp_atomic_fetch_dec_u64(&global_mem->a64u);
@@ -159,6 +177,8 @@ static void test_atomic_add_32(void)
 {
 	int i;
 
+	odp_barrier_wait(&global_mem->global_barrier);
+
 	for (i = 0; i < CNT; i++)
 		odp_atomic_add_u32(&global_mem->a32u, ADD_SUB_CNT);
 }
@@ -166,6 +186,8 @@ static void test_atomic_add_32(void)
 static void test_atomic_add_64(void)
 {
 	int i;
+
+	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++)
 		odp_atomic_add_u64(&global_mem->a64u, ADD_SUB_CNT);
@@ -175,6 +197,8 @@ static void test_atomic_sub_32(void)
 {
 	int i;
 
+	odp_barrier_wait(&global_mem->global_barrier);
+
 	for (i = 0; i < CNT; i++)
 		odp_atomic_sub_u32(&global_mem->a32u, ADD_SUB_CNT);
 }
@@ -182,6 +206,8 @@ static void test_atomic_sub_32(void)
 static void test_atomic_sub_64(void)
 {
 	int i;
+
+	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++)
 		odp_atomic_sub_u64(&global_mem->a64u, ADD_SUB_CNT);
@@ -191,6 +217,8 @@ static void test_atomic_fetch_add_32(void)
 {
 	int i;
 
+	odp_barrier_wait(&global_mem->global_barrier);
+
 	for (i = 0; i < CNT; i++)
 		odp_atomic_fetch_add_u32(&global_mem->a32u, ADD_SUB_CNT);
 }
@@ -198,6 +226,8 @@ static void test_atomic_fetch_add_32(void)
 static void test_atomic_fetch_add_64(void)
 {
 	int i;
+
+	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++)
 		odp_atomic_fetch_add_u64(&global_mem->a64u, ADD_SUB_CNT);
@@ -207,6 +237,8 @@ static void test_atomic_fetch_sub_32(void)
 {
 	int i;
 
+	odp_barrier_wait(&global_mem->global_barrier);
+
 	for (i = 0; i < CNT; i++)
 		odp_atomic_fetch_sub_u32(&global_mem->a32u, ADD_SUB_CNT);
 }
@@ -214,6 +246,8 @@ static void test_atomic_fetch_sub_32(void)
 static void test_atomic_fetch_sub_64(void)
 {
 	int i;
+
+	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++)
 		odp_atomic_fetch_sub_u64(&global_mem->a64u, ADD_SUB_CNT);
@@ -223,6 +257,8 @@ static void test_atomic_min_32(void)
 {
 	int i;
 	uint32_t tmp;
+
+	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++) {
 		tmp = odp_atomic_fetch_dec_u32(&global_mem->a32u);
@@ -235,6 +271,8 @@ static void test_atomic_min_64(void)
 	int i;
 	uint64_t tmp;
 
+	odp_barrier_wait(&global_mem->global_barrier);
+
 	for (i = 0; i < CNT; i++) {
 		tmp = odp_atomic_fetch_dec_u64(&global_mem->a64u);
 		odp_atomic_min_u64(&global_mem->a64u_min, tmp);
@@ -245,6 +283,8 @@ static void test_atomic_max_32(void)
 {
 	int i;
 	uint32_t tmp;
+
+	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++) {
 		tmp = odp_atomic_fetch_inc_u32(&global_mem->a32u);
@@ -257,6 +297,8 @@ static void test_atomic_max_64(void)
 	int i;
 	uint64_t tmp;
 
+	odp_barrier_wait(&global_mem->global_barrier);
+
 	for (i = 0; i < CNT; i++) {
 		tmp = odp_atomic_fetch_inc_u64(&global_mem->a64u);
 		odp_atomic_max_u64(&global_mem->a64u_max, tmp);
@@ -268,6 +310,8 @@ static void test_atomic_cas_inc_32(void)
 	int i;
 	uint32_t old;
 	odp_atomic_u32_t *a32u = &global_mem->a32u;
+
+	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++) {
 		old = odp_atomic_load_u32(a32u);
@@ -283,6 +327,8 @@ static void test_atomic_cas_dec_32(void)
 	uint32_t old;
 	odp_atomic_u32_t *a32u = &global_mem->a32u;
 
+	odp_barrier_wait(&global_mem->global_barrier);
+
 	for (i = 0; i < CNT; i++) {
 		old = odp_atomic_load_u32(a32u);
 
@@ -296,6 +342,8 @@ static void test_atomic_cas_inc_64(void)
 	int i;
 	uint64_t old;
 	odp_atomic_u64_t *a64u = &global_mem->a64u;
+
+	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++) {
 		old = odp_atomic_load_u64(a64u);
@@ -311,6 +359,8 @@ static void test_atomic_cas_dec_64(void)
 	uint64_t old;
 	odp_atomic_u64_t *a64u = &global_mem->a64u;
 
+	odp_barrier_wait(&global_mem->global_barrier);
+
 	for (i = 0; i < CNT; i++) {
 		old = odp_atomic_load_u64(a64u);
 
@@ -325,6 +375,8 @@ static void test_atomic_xchg_32(void)
 	int i;
 	odp_atomic_u32_t *a32u = &global_mem->a32u;
 	odp_atomic_u32_t *a32u_xchg = &global_mem->a32u_xchg;
+
+	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++) {
 		new = odp_atomic_fetch_inc_u32(a32u);
@@ -346,6 +398,8 @@ static void test_atomic_xchg_64(void)
 	int i;
 	odp_atomic_u64_t *a64u = &global_mem->a64u;
 	odp_atomic_u64_t *a64u_xchg = &global_mem->a64u_xchg;
+
+	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++) {
 		new = odp_atomic_fetch_inc_u64(a64u);
@@ -369,6 +423,8 @@ static void test_atomic_non_relaxed_32(void)
 	odp_atomic_u32_t *a32u_min = &global_mem->a32u_min;
 	odp_atomic_u32_t *a32u_max = &global_mem->a32u_max;
 	odp_atomic_u32_t *a32u_xchg = &global_mem->a32u_xchg;
+
+	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++) {
 		tmp = odp_atomic_load_acq_u32(a32u);
@@ -404,6 +460,8 @@ static void test_atomic_non_relaxed_64(void)
 	odp_atomic_u64_t *a64u_min = &global_mem->a64u_min;
 	odp_atomic_u64_t *a64u_max = &global_mem->a64u_max;
 	odp_atomic_u64_t *a64u_xchg = &global_mem->a64u_xchg;
+
+	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++) {
 		tmp = odp_atomic_load_acq_u64(a64u);
@@ -603,6 +661,8 @@ static int atomic_init(odp_instance_t *inst)
 
 	printf("Num of threads used = %" PRIu32 "\n",
 	       global_mem->g_num_threads);
+
+	odp_barrier_init(&global_mem->global_barrier, global_mem->g_num_threads);
 
 	return ret;
 }
