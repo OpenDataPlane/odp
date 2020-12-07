@@ -9,21 +9,22 @@ EXECUTABLES = odp_bench_packet \
 	      odp_pktio_perf \
 	      odp_pool_perf \
 	      odp_queue_perf \
-	      odp_sched_perf \
-	      odp_timer_perf
+	      odp_sched_perf
 
 COMPILE_ONLY = odp_l2fwd \
 	       odp_packet_gen \
 	       odp_pktio_ordered \
 	       odp_sched_latency \
 	       odp_sched_pktio \
-	       odp_scheduling
+	       odp_scheduling \
+	       odp_timer_perf
 
 TESTSCRIPTS = odp_l2fwd_run.sh \
 	      odp_packet_gen_run.sh \
 	      odp_sched_latency_run.sh \
 	      odp_sched_pktio_run.sh \
-	      odp_scheduling_run.sh
+	      odp_scheduling_run.sh \
+	      odp_timer_perf_run.sh
 
 if ODP_PKTIO_PCAP
 TESTSCRIPTS += odp_pktio_ordered_run.sh
