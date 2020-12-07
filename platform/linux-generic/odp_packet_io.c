@@ -374,12 +374,13 @@ static const char *driver_name(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
 
-	if (hdl != ODP_PKTIO_INVALID) {
-		entry = get_pktio_entry(hdl);
-		return entry->s.ops->name;
+	entry = get_pktio_entry(hdl);
+	if (entry == NULL) {
+		ODP_ERR("pktio entry %d does not exist\n", hdl);
+		return "bad handle";
 	}
 
-	return "bad handle";
+	return entry->s.ops->name;
 }
 
 odp_pktio_t odp_pktio_open(const char *name, odp_pool_t pool,
@@ -972,6 +973,8 @@ static odp_buffer_hdr_t *pktin_dequeue(odp_queue_t queue)
 	int pktin_index   = pktin_queue.index;
 	pktio_entry_t *entry = get_pktio_entry(pktio);
 
+	ODP_ASSERT(entry != NULL);
+
 	if (queue_fn->orig_deq_multi(queue, &buf_hdr, 1) == 1)
 		return buf_hdr;
 
@@ -1011,6 +1014,8 @@ static int pktin_deq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
 	odp_pktio_t pktio = pktin_queue.pktio;
 	int pktin_index   = pktin_queue.index;
 	pktio_entry_t *entry = get_pktio_entry(pktio);
+
+	ODP_ASSERT(entry != NULL);
 
 	nbr = queue_fn->orig_deq_multi(queue, buf_hdr, num);
 	if (odp_unlikely(nbr > num))
