@@ -3126,6 +3126,50 @@ static void parse_eth_ipv4_udp(void)
 	odp_packet_free_multi(pkt, num_pkt);
 }
 
+/* Ethernet SNAP/IPv4/UDP */
+static void parse_eth_snap_ipv4_udp(void)
+{
+	odp_packet_parse_param_t parse;
+	int i;
+	odp_packet_chksum_status_t chksum_status;
+	int num_pkt = PARSE_TEST_NUM_PKT;
+	odp_packet_t pkt[num_pkt];
+
+	parse_test_alloc(pkt, test_packet_snap_ipv4_udp,
+			 sizeof(test_packet_snap_ipv4_udp), num_pkt);
+
+	for (i = 0; i < num_pkt; i++) {
+		chksum_status = odp_packet_l3_chksum_status(pkt[i]);
+		CU_ASSERT(chksum_status == ODP_PACKET_CHKSUM_UNKNOWN);
+		chksum_status = odp_packet_l4_chksum_status(pkt[i]);
+		CU_ASSERT(chksum_status == ODP_PACKET_CHKSUM_UNKNOWN);
+	}
+
+	parse.proto = ODP_PROTO_ETH;
+	parse.last_layer = ODP_PROTO_LAYER_ALL;
+	parse.chksums = parse_test.all_chksums;
+
+	CU_ASSERT(odp_packet_parse(pkt[0], 0, &parse) == 0);
+	CU_ASSERT(odp_packet_parse_multi(&pkt[1], parse_test.offset_zero,
+					 num_pkt - 1, &parse) == (num_pkt - 1));
+
+	for (i = 0; i < num_pkt; i++) {
+		CU_ASSERT(odp_packet_has_eth(pkt[i]));
+		CU_ASSERT(odp_packet_has_ipv4(pkt[i]));
+		CU_ASSERT(odp_packet_has_udp(pkt[i]));
+		CU_ASSERT(!odp_packet_has_ipv6(pkt[i]));
+		CU_ASSERT(!odp_packet_has_tcp(pkt[i]));
+		CU_ASSERT_EQUAL(odp_packet_l2_type(pkt[i]),
+				ODP_PROTO_L2_TYPE_ETH);
+		CU_ASSERT_EQUAL(odp_packet_l3_type(pkt[i]),
+				ODP_PROTO_L3_TYPE_IPV4);
+		CU_ASSERT_EQUAL(odp_packet_l4_type(pkt[i]),
+				ODP_PROTO_L4_TYPE_UDP);
+	}
+
+	odp_packet_free_multi(pkt, num_pkt);
+}
+
 /* IPv4/UDP */
 static void parse_ipv4_udp(void)
 {
@@ -3970,6 +4014,7 @@ odp_testinfo_t packet_vector_parse_suite[] = {
 
 odp_testinfo_t packet_parse_suite[] = {
 	ODP_TEST_INFO(parse_eth_ipv4_udp),
+	ODP_TEST_INFO(parse_eth_snap_ipv4_udp),
 	ODP_TEST_INFO(parse_ipv4_udp),
 	ODP_TEST_INFO(parse_eth_ipv4_tcp),
 	ODP_TEST_INFO(parse_eth_ipv6_udp),
