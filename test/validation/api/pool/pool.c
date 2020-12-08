@@ -815,6 +815,72 @@ static void pool_test_create_after_fork(void)
 	CU_ASSERT(!odp_shm_free(shm));
 }
 
+static void pool_test_pool_index(void)
+{
+	uint32_t max_pools = global_pool_capa.pkt.max_pools;
+	uint32_t i, num_pools;
+	unsigned int max_index = odp_pool_max_index();
+	odp_packet_t pool_lookup[max_index + 1];
+	odp_packet_t pkt;
+	odp_pool_t pool[max_pools];
+	odp_pool_param_t param;
+	int pool_index;
+
+	CU_ASSERT_FATAL(max_pools > 0);
+
+	/* Pool max index should match to pool capability */
+	CU_ASSERT_FATAL(max_index >= global_pool_capa.max_pools - 1);
+	CU_ASSERT_FATAL(max_index >= global_pool_capa.pkt.max_pools - 1);
+
+	odp_pool_param_init(&param);
+	param.type    = ODP_POOL_PACKET;
+	param.pkt.len = PKT_LEN;
+	param.pkt.num = 1;
+	param.pkt.max_num = 1;
+
+	for (i = 0; i < max_pools; i++) {
+		pool[i] = odp_pool_create(NULL, &param);
+
+		if (pool[i] == ODP_POOL_INVALID)
+			break;
+	}
+
+	/* Ensuring max possible pools are created */
+	num_pools = i;
+	CU_ASSERT(num_pools == max_pools);
+
+	for (i = 0; i < num_pools; i++) {
+		pkt = odp_packet_alloc(pool[i], PKT_LEN);
+		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+
+		/* Only one packet should be possible from each pool */
+		CU_ASSERT_FATAL(odp_packet_alloc(pool[i], PKT_LEN) == ODP_PACKET_INVALID);
+
+		/* Check pool index validity */
+		pool_index = odp_pool_index(pool[i]);
+		CU_ASSERT_FATAL(pool_index >= 0);
+		CU_ASSERT_FATAL((unsigned int)pool_index <= odp_pool_max_index());
+
+		/* Store packet handle in pool lookup table */
+		pool_lookup[pool_index] = pkt;
+	}
+
+	for (i = 0; i < num_pools; i++) {
+		pool_index = odp_pool_index(pool[i]);
+
+		/* Free the packet using pool lookup */
+		odp_packet_free(pool_lookup[pool_index]);
+
+		/* Now packet allocation from the pool should be possible */
+		pkt = odp_packet_alloc(pool[i], PKT_LEN);
+		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+		odp_packet_free(pkt);
+
+		/* Destroy the pool */
+		CU_ASSERT(odp_pool_destroy(pool[i]) == 0);
+	}
+}
+
 static int pool_suite_init(void)
 {
 	memset(&global_pool_capa, 0, sizeof(odp_pool_capability_t));
@@ -857,6 +923,7 @@ odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO(pool_test_pkt_seg_len),
 	ODP_TEST_INFO(pool_test_tmo_max_num),
 	ODP_TEST_INFO(pool_test_create_after_fork),
+	ODP_TEST_INFO(pool_test_pool_index),
 	ODP_TEST_INFO_NULL,
 };
 
