@@ -1306,6 +1306,22 @@ uint64_t odp_pool_to_u64(odp_pool_t hdl)
 	return _odp_pri(hdl);
 }
 
+unsigned int odp_pool_max_index(void)
+{
+	return ODP_CONFIG_POOLS - 1;
+}
+
+int odp_pool_index(odp_pool_t pool_hdl)
+{
+	pool_t *pool;
+
+	ODP_ASSERT(pool_hdl != ODP_POOL_INVALID);
+
+	pool = pool_entry_from_hdl(pool_hdl);
+
+	return pool->pool_idx;
+}
+
 static pool_t *find_pool(odp_buffer_hdr_t *buf_hdr)
 {
 	int i;
