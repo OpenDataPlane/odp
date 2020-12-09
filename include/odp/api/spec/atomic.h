@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2021, ARM Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -25,13 +26,13 @@ extern "C" {
  * @details
  * <b> Atomic integers using relaxed memory ordering </b>
  *
- * Atomic integer types (odp_atomic_u32_t and odp_atomic_u64_t) can be used to
- * implement e.g. shared counters. If not otherwise documented, operations in
- * this API are implemented using <b> RELAXED memory ordering </b> (see memory
- * order descriptions in the C11 specification). Relaxed operations do not
- * provide synchronization or ordering for other memory accesses (initiated
- * before or after the operation), only atomicity of the operation itself is
- * guaranteed.
+ * Atomic integer types (odp_atomic_u32_t, odp_atomic_u64_t and
+ * odp_atomic_u128_t) can be used to implement e.g. shared counters. If not
+ * otherwise documented, operations in this API are implemented using
+ * <b> RELAXED memory ordering </b> (see memory order descriptions in
+ * the C11 specification). Relaxed operations do not provide synchronization or
+ * ordering for other memory accesses (initiated before or after the operation),
+ * only atomicity of the operation itself is guaranteed.
  *
  * <b> Operations with non-relaxed memory ordering </b>
  *
@@ -54,6 +55,9 @@ extern "C" {
  */
 
 /**
+ * @typedef odp_atomic_u128_t
+ * Atomic 128-bit unsigned integer
+ *
  * @typedef odp_atomic_u64_t
  * Atomic 64-bit unsigned integer
  *
@@ -373,6 +377,58 @@ int odp_atomic_cas_u64(odp_atomic_u64_t *atom, uint64_t *old_val,
 uint64_t odp_atomic_xchg_u64(odp_atomic_u64_t *atom, uint64_t new_val);
 
 /*
+ * 128-bit operations in RELAXED memory ordering
+ * --------------------------------------------
+ */
+
+/**
+ * Initialize atomic odp_u128_t variable
+ *
+ * Initializes the atomic variable with 'val'. This operation is not atomic.
+ * Application must ensure that there's no race condition while initializing
+ * the variable.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param val     Value to initialize the variable with
+ */
+void odp_atomic_init_u128(odp_atomic_u128_t *atom, odp_u128_t val);
+
+/**
+ * Load value of atomic odp_u128_t variable
+ *
+ * @param atom    Pointer to atomic variable
+ *
+ * @return Value of the variable
+ */
+odp_u128_t odp_atomic_load_u128(odp_atomic_u128_t *atom);
+
+/**
+ * Store value to atomic odp_u128_t variable
+ *
+ * @param atom    Pointer to atomic variable
+ * @param val     Value to store in the variable
+ */
+void odp_atomic_store_u128(odp_atomic_u128_t *atom, odp_u128_t val);
+
+/**
+ * Compare and swap atomic odp_u128_t variable
+ *
+ * Compares value of atomic variable to the value pointed by 'old_val'.
+ * If values are equal, the operation writes 'new_val' into the atomic variable
+ * and returns success. If they are not equal, the operation writes current
+ * value of atomic variable into 'old_val' and returns failure.
+ *
+ * @param         atom      Pointer to atomic variable
+ * @param[in,out] old_val   Pointer to the old value of the atomic variable.
+ *                          Operation updates this value on failure.
+ * @param         new_val   New value to be written into the atomic variable
+ *
+ * @return 0 on failure, !0 on success
+ */
+int odp_atomic_cas_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
+			odp_u128_t new_val);
+
+/*
  * 32-bit operations in non-RELAXED memory ordering
  * ------------------------------------------------
  */
@@ -621,6 +677,80 @@ typedef union odp_atomic_op_t {
  * @retval 2 All operations are lock-free
  */
 int odp_atomic_lock_free_u64(odp_atomic_op_t *atomic_op);
+
+/*
+ * 128-bit operations in non-RELAXED memory ordering
+ * ------------------------------------------------
+ */
+
+/**
+ * Compare and swap atomic odp_u128_t variable using ACQUIRE memory ordering
+ *
+ * Otherwise identical to odp_atomic_cas_u128() but ensures ACQUIRE memory
+ * ordering on success. Memory ordering is RELAXED on failure.
+ *
+ * @param         atom      Pointer to atomic variable
+ * @param[in,out] old_val   Pointer to the old value of the atomic variable.
+ *                          Operation updates this value on failure.
+ * @param         new_val   New value to be written into the atomic variable
+ *
+ * @return 0 on failure, !0 on success
+ */
+int odp_atomic_cas_acq_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
+			    odp_u128_t new_val);
+
+/**
+ * Compare and swap atomic odp_u128_t variable using RELEASE memory ordering
+ *
+ * Otherwise identical to odp_atomic_cas_u128() but ensures RELEASE memory
+ * ordering on success. Memory ordering is RELAXED on failure.
+ *
+ * @param         atom      Pointer to atomic variable
+ * @param[in,out] old_val   Pointer to the old value of the atomic variable.
+ *                          Operation updates this value on failure.
+ * @param         new_val   New value to be written into the atomic variable
+ *
+ * @return 0 on failure, !0 on success
+ */
+int odp_atomic_cas_rel_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
+			    odp_u128_t new_val);
+
+/**
+ * Compare and swap atomic odp_u128_t variable using ACQUIRE-and-RELEASE memory
+ * ordering
+ *
+ * Otherwise identical to odp_atomic_cas_u128() but ensures ACQUIRE-and-RELEASE
+ * memory ordering on success. Memory ordering is RELAXED on failure.
+ *
+ * @param         atom      Pointer to atomic variable
+ * @param[in,out] old_val   Pointer to the old value of the atomic variable.
+ *                          Operation updates this value on failure.
+ * @param         new_val   New value to be written into the atomic variable
+ *
+ * @return 0 on failure, !0 on success
+ */
+int odp_atomic_cas_acq_rel_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
+				odp_u128_t new_val);
+
+/**
+ * Query which atomic odp_atomic_u128_t operations are lock-free
+ *
+ * Lock-free implementations have higher performance and scale better than
+ * implementations using locks.
+ *
+ * Init operations (e.g. odp_atomic_init_u128()) are not atomic. This function
+ * clears the op.init bit but will never set it to one.
+ *
+ * Note: 128-bit atomic API includes only init, load, store and CAS operations.
+ *
+ * @param atomic_op  Pointer to atomic operation structure for storing
+ *                   operation flags. All bits are initialized to zero during
+ *                   the operation. The parameter is ignored when NULL.
+ * @retval 0 None of the 128-bit atomic operations are lock-free
+ * @retval 1 Some of the 128-bit atomic operations are lock-free
+ * @retval 2 All 128-bit atomic operations are lock-free
+ */
+int odp_atomic_lock_free_u128(odp_atomic_op_t *atomic_op);
 
 /**
  * @}

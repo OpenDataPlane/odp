@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2021, ARM Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -49,6 +50,28 @@ typedef uint32_t odp_una_u32_t ODP_ALIGNED(1);
 
 /** Unaligned uint64_t type */
 typedef uint64_t odp_una_u64_t ODP_ALIGNED(1);
+
+/**
+ * @typedef odp_u128_t
+ * 128-bit unsigned integer structure
+ */
+
+/**
+ * 128-bit unsigned integer structure
+ */
+typedef struct ODP_ALIGNED(16) odp_u128_s {
+	/** 128 bits in various sizes */
+	union {
+		/** 128 bits as uint64_t words */
+		uint64_t u64[2];
+		/** 128 bits as uint32_t words */
+		uint32_t u32[4];
+		/** 128 bits as uint16_t words */
+		uint16_t u16[8];
+		/** 128 bits as bytes */
+		uint8_t  u8[16];
+	};
+} odp_u128_t;
 
 /**
  * @}
