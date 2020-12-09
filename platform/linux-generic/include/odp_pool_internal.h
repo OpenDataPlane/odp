@@ -84,6 +84,14 @@ typedef struct pool_t {
 	pool_destroy_cb_fn ext_destroy;
 	void            *ext_desc;
 
+	struct ODP_CACHE_ALIGNED {
+		odp_atomic_u64_t alloc_ops;
+		odp_atomic_u64_t alloc_fails;
+		odp_atomic_u64_t free_ops;
+		odp_atomic_u64_t cache_alloc_ops;
+		odp_atomic_u64_t cache_free_ops;
+	} stats;
+
 	pool_cache_t     local_cache[ODP_THREAD_COUNT_MAX];
 
 	odp_shm_t        ring_shm;
