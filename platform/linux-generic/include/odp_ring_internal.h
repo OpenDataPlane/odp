@@ -72,6 +72,7 @@ static inline int cas_mo_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
 #undef _RING_DEQ_MULTI
 #undef _RING_ENQ
 #undef _RING_ENQ_MULTI
+#undef _RING_LEN
 
 /* Remap generic types and function names to ring data type specific ones. One
  * should never use the generic names (e.g. _RING_INIT) directly. */
@@ -85,6 +86,7 @@ static inline int cas_mo_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
 	#define _RING_DEQ_MULTI ring_u32_deq_multi
 	#define _RING_ENQ ring_u32_enq
 	#define _RING_ENQ_MULTI ring_u32_enq_multi
+	#define _RING_LEN ring_u32_len
 #elif _ODP_RING_TYPE == _ODP_RING_TYPE_PTR
 	#define _ring_gen_t ring_ptr_t
 	#define _ring_data_t void *
@@ -94,6 +96,7 @@ static inline int cas_mo_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
 	#define _RING_DEQ_MULTI ring_ptr_deq_multi
 	#define _RING_ENQ ring_ptr_enq
 	#define _RING_ENQ_MULTI ring_ptr_enq_multi
+	#define _RING_LEN ring_ptr_len
 #endif
 
 /* Initialize ring */
@@ -242,6 +245,14 @@ static inline void _RING_ENQ_MULTI(_ring_gen_t *ring, uint32_t mask,
 
 	/* Release the new writer tail, readers acquire it. */
 	odp_atomic_store_rel_u32(&ring->r.w_tail, old_head + num);
+}
+
+static inline uint32_t _RING_LEN(_ring_gen_t *ring)
+{
+	uint32_t head = odp_atomic_load_u32(&ring->r.r_head);
+	uint32_t tail = odp_atomic_load_u32(&ring->r.w_tail);
+
+	return tail - head;
 }
 
 #ifdef __cplusplus
