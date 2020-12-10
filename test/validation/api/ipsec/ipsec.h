@@ -92,6 +92,7 @@ int ipsec_check(odp_bool_t ah,
 int ipsec_check_ah_sha256(void);
 int ipsec_check_esp_null_sha256(void);
 int ipsec_check_esp_aes_cbc_128_null(void);
+int ipsec_check_esp_aes_cbc_128_sha1(void);
 int ipsec_check_esp_aes_cbc_128_sha256(void);
 int ipsec_check_esp_aes_ctr_128_null(void);
 int ipsec_check_esp_aes_gcm_128(void);
