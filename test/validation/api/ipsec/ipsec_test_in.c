@@ -1597,6 +1597,31 @@ static void test_in_ipv6_esp_udp_null_sha256_lookup(void)
 	ipsec_sa_destroy(sa);
 }
 
+static void test_ipsec_print(void)
+{
+	odp_ipsec_print();
+}
+
+static void test_ipsec_sa_print(void)
+{
+	odp_ipsec_sa_param_t param_in;
+	odp_ipsec_sa_t in_sa;
+
+	ipsec_sa_param_fill(&param_in,
+			    true, false, 123, NULL,
+			    ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
+			    ODP_AUTH_ALG_SHA1_HMAC, &key_5a_160,
+			    NULL, NULL);
+
+	in_sa = odp_ipsec_sa_create(&param_in);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, in_sa);
+
+	odp_ipsec_sa_print(in_sa);
+
+	ipsec_sa_destroy(in_sa);
+}
+
 static void ipsec_test_capability(void)
 {
 	odp_ipsec_capability_t capa;
@@ -1700,5 +1725,8 @@ odp_testinfo_t ipsec_in_suite[] = {
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv6_esp_udp_null_sha256_lookup,
 				  ipsec_check_esp_null_sha256),
+	ODP_TEST_INFO(test_ipsec_print),
+	ODP_TEST_INFO_CONDITIONAL(test_ipsec_sa_print,
+				  ipsec_check_esp_aes_cbc_128_sha1),
 	ODP_TEST_INFO_NULL,
 };
