@@ -2033,3 +2033,19 @@ int _odp_ipsec_term_global(void)
 
 	return 0;
 }
+
+void odp_ipsec_print(void)
+{
+	ODP_PRINT("\nIPSEC print\n");
+	ODP_PRINT("-----------\n");
+	ODP_PRINT("  max number of SA %u\n", ipsec_config->max_num_sa);
+}
+
+void odp_ipsec_sa_print(odp_ipsec_sa_t sa)
+{
+	ipsec_sa_t *ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
+
+	ODP_PRINT("\nIPSEC SA print\n");
+	ODP_PRINT("--------------\n");
+	ODP_PRINT("  SPI              %u\n", ipsec_sa->spi);
+}
