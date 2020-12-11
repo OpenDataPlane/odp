@@ -290,7 +290,8 @@ odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/cpu_inlines.h \
 				arch/default/odp/api/abi/cpu_time.h \
 				arch/aarch64/odp/api/abi/hash_crc32.h
 if !ODP_ABI_COMPAT
-odpapiabiarchinclude_HEADERS += arch/aarch64/odp/api/abi/cpu.h
+odpapiabiarchinclude_HEADERS += arch/aarch64/odp/api/abi/atomic.h \
+		                arch/aarch64/odp/api/abi/cpu.h
 endif
 noinst_HEADERS += arch/aarch64/odp_atomic.h \
 		  arch/aarch64/odp_cpu.h \
