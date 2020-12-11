@@ -1,5 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2020, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -293,7 +293,7 @@ static void add_group(sched_group_t *sched_group, int thr, int group)
 	thr_group->group[num] = group;
 	thr_group->num_group  = num + 1;
 	gen_cnt = odp_atomic_load_u32(&thr_group->gen_cnt);
-	odp_atomic_store_u32(&thr_group->gen_cnt, gen_cnt + 1);
+	odp_atomic_store_rel_u32(&thr_group->gen_cnt, gen_cnt + 1);
 }
 
 static void remove_group(sched_group_t *sched_group, int thr, int group)
@@ -326,7 +326,7 @@ static void remove_group(sched_group_t *sched_group, int thr, int group)
 
 		thr_group->num_group = num - 1;
 		gen_cnt = odp_atomic_load_u32(&thr_group->gen_cnt);
-		odp_atomic_store_u32(&thr_group->gen_cnt, gen_cnt + 1);
+		odp_atomic_store_rel_u32(&thr_group->gen_cnt, gen_cnt + 1);
 	}
 }
 
@@ -740,7 +740,7 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 {
 	odp_schedule_group_t group = ODP_SCHED_GROUP_INVALID;
 	sched_group_t *sched_group = &sched_global->sched_group;
-	int i;
+	int i, thr;
 
 	odp_ticketlock_lock(&sched_group->s.lock);
 
@@ -755,10 +755,16 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 					ODP_SCHED_GROUP_NAME_LEN - 1);
 				grp_name[ODP_SCHED_GROUP_NAME_LEN - 1] = 0;
 			}
-			odp_thrmask_copy(&sched_group->s.group[i].mask,
-					 thrmask);
+
+			odp_thrmask_copy(&sched_group->s.group[i].mask, thrmask);
 			sched_group->s.group[i].allocated = 1;
 			group = i;
+
+			thr = odp_thrmask_first(thrmask);
+			while (thr >= 0) {
+				add_group(sched_group, thr, group);
+				thr = odp_thrmask_next(thrmask, thr);
+			}
 			break;
 		}
 	}
@@ -771,6 +777,8 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 static int schedule_group_destroy(odp_schedule_group_t group)
 {
 	sched_group_t *sched_group = &sched_global->sched_group;
+	int thr;
+	const odp_thrmask_t *thrmask;
 
 	if (group < NUM_STATIC_GROUP || group >= NUM_GROUP)
 		return -1;
@@ -780,6 +788,14 @@ static int schedule_group_destroy(odp_schedule_group_t group)
 	if (!sched_group->s.group[group].allocated) {
 		odp_ticketlock_unlock(&sched_group->s.lock);
 		return -1;
+	}
+
+	thrmask = &sched_group->s.group[group].mask;
+
+	thr = odp_thrmask_first(thrmask);
+	while (thr >= 0) {
+		remove_group(sched_group, thr, group);
+		thr = odp_thrmask_next(thrmask, thr);
 	}
 
 	memset(&sched_group->s.group[group], 0,
