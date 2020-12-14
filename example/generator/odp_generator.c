@@ -24,13 +24,15 @@
 /* Max number of workers */
 #define MAX_WORKERS            (ODP_THREAD_COUNT_MAX - 1)
 #define POOL_NUM_PKT           2048  /* Number of packets in packet pool */
-#define POOL_PKT_LEN           1856  /* Max packet length */
+#define POOL_PKT_LEN           1856  /* Default packet pool length */
 #define DEFAULT_PKT_INTERVAL   1000  /* Interval between each packet */
 #define DEFAULT_UDP_TX_BURST	16
 #define MAX_UDP_TX_BURST	512
 #define DEFAULT_RX_BURST	32
 #define MAX_RX_BURST		512
 #define STATS_INTERVAL		10   /* Interval between stats prints (sec) */
+/* L2 + L3 + L4 header length */
+#define MAX_HDR_LEN (ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN + MAX(ODPH_UDPHDR_LEN, ODPH_ICMPHDR_LEN))
 
 #define APPL_MODE_UDP    0			/**< UDP mode */
 #define APPL_MODE_PING   1			/**< ping mode */
@@ -1115,6 +1117,7 @@ int main(int argc, char *argv[])
 	odp_init_t init_param;
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param;
+	uint32_t pkt_len;
 
 	/* Signal handler has to be registered before global init in case ODP
 	 * implementation creates internal threads/processes. */
@@ -1210,10 +1213,16 @@ int main(int argc, char *argv[])
 	/* Configure scheduler */
 	odp_schedule_config(NULL);
 
+	pkt_len = args->appl.payload + MAX_HDR_LEN;
+	if (pkt_len < POOL_PKT_LEN)
+		pkt_len = POOL_PKT_LEN;
+
+	printf("Packet length:      %u\n", pkt_len);
+
 	/* Create packet pool */
 	odp_pool_param_init(&params);
 	params.pkt.seg_len = POOL_PKT_LEN;
-	params.pkt.len     = POOL_PKT_LEN;
+	params.pkt.len     = pkt_len;
 	params.pkt.num     = POOL_NUM_PKT;
 	params.type        = ODP_POOL_PACKET;
 
