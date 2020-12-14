@@ -746,6 +746,70 @@ static void scheduler_test_order_ignore(void)
 	CU_ASSERT_FATAL(odp_pool_destroy(pool) == 0);
 }
 
+static void scheduler_test_create_group(void)
+{
+	odp_thrmask_t mask;
+	odp_schedule_group_t group;
+	int thr_id;
+	odp_pool_t pool;
+	odp_pool_param_t pool_params;
+	odp_queue_t queue, from;
+	odp_queue_param_t qp;
+	odp_buffer_t buf;
+	odp_event_t ev;
+	uint64_t wait_time;
+
+	thr_id = odp_thread_id();
+	odp_thrmask_zero(&mask);
+	odp_thrmask_set(&mask, thr_id);
+
+	group = odp_schedule_group_create("create_group", &mask);
+	CU_ASSERT_FATAL(group != ODP_SCHED_GROUP_INVALID);
+
+	odp_pool_param_init(&pool_params);
+	pool_params.buf.size  = 100;
+	pool_params.buf.num   = 2;
+	pool_params.type      = ODP_POOL_BUFFER;
+
+	pool = odp_pool_create("create_group", &pool_params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	odp_queue_param_init(&qp);
+	qp.type        = ODP_QUEUE_TYPE_SCHED;
+	qp.sched.prio  = odp_schedule_default_prio();
+	qp.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
+	qp.sched.group = group;
+
+	queue = odp_queue_create("create_group", &qp);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	buf = odp_buffer_alloc(pool);
+	CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+
+	ev = odp_buffer_to_event(buf);
+
+	CU_ASSERT_FATAL(odp_queue_enq(queue, ev) == 0);
+
+	wait_time = odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS);
+	ev = odp_schedule(&from, wait_time);
+
+	CU_ASSERT(ev != ODP_EVENT_INVALID);
+	CU_ASSERT(from == queue);
+
+	if (ev != ODP_EVENT_INVALID)
+		odp_event_free(ev);
+
+	/* Free schedule context */
+	drain_queues();
+
+	CU_ASSERT_FATAL(odp_queue_destroy(queue) == 0);
+	CU_ASSERT_FATAL(odp_pool_destroy(pool) == 0);
+	CU_ASSERT_FATAL(odp_schedule_group_destroy(group) == 0);
+
+	/* Run scheduler after the group has been destroyed */
+	CU_ASSERT_FATAL(odp_schedule(NULL, wait_time) == ODP_EVENT_INVALID);
+}
+
 static void scheduler_test_groups(void)
 {
 	odp_pool_t p;
@@ -2749,6 +2813,7 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_queue_size),
 	ODP_TEST_INFO(scheduler_test_full_queues),
 	ODP_TEST_INFO(scheduler_test_order_ignore),
+	ODP_TEST_INFO(scheduler_test_create_group),
 	ODP_TEST_INFO(scheduler_test_groups),
 	ODP_TEST_INFO(scheduler_test_pause_resume),
 	ODP_TEST_INFO(scheduler_test_pause_enqueue),
