@@ -1297,7 +1297,13 @@ typedef struct odp_ipsec_out_inline_param_t {
 	struct {
 		/** Points to first byte of outer headers to be copied in
 		 *  front of the outgoing IPSEC packet. Implementation copies
-		 *  the headers during odp_ipsec_out_inline() call. */
+		 *  the headers during odp_ipsec_out_inline() call.
+		 *
+		 *  Null value indicates that the outer headers are in the
+		 *  packet data, starting at L2 offset and ending at the byte
+		 *  before L3 offset. In this case, value of 'len' field must
+		 *  be greater than zero and set to L3 offset minus L2 offset.
+		 */
 		const uint8_t *ptr;
 
 		/** Outer header length in bytes */
