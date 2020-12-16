@@ -2701,7 +2701,7 @@ static int test_sched_queue_priority(const char *shaper_name,
 	for (priority = NUM_PRIORITIES - 1; 0 <= priority; priority--)
 		pkts_sent += send_pkts(tm_queues[priority], num_pkts);
 
-	busy_wait(1000000);   /* wait 1 millisecond */
+	busy_wait(100 * ODP_TIME_MSEC_IN_NS);
 
 	/* Disable the shaper, so as to get the pkts out quicker. */
 	set_shaper(node_name, shaper_name, 0, 0);
@@ -2807,7 +2807,7 @@ static int test_sched_node_priority(const char *shaper_name,
 		}
 	}
 
-	busy_wait(1000000);   /* wait 1 millisecond */
+	busy_wait(100 * ODP_TIME_MSEC_IN_NS);
 
 	/* Disable the shaper, so as to get the pkts out quicker. */
 	set_shaper(node_name, shaper_name, 0, 0);
