@@ -792,11 +792,32 @@ static int
 run_measure_one_config(ipsec_args_t *cargs,
 		       ipsec_alg_config_t *config)
 {
-	odp_ipsec_sa_t sa;
-	int rc = 0;
 	unsigned int num_payloads = global_num_payloads;
 	unsigned int *payloads = global_payloads;
+	odp_ipsec_capability_t capa;
+	odp_ipsec_sa_t sa;
 	unsigned int i;
+	int rc = 0;
+
+	if (odp_ipsec_capability(&capa) < 0) {
+		app_err("IPSEC capability call failed.\n");
+		return -1;
+	}
+
+	if (cargs->ah && (ODP_SUPPORT_NO == capa.proto_ah)) {
+		app_err("IPSEC AH protocol not supported.\n");
+		return -1;
+	}
+
+	rc = odph_ipsec_alg_check(capa, config->crypto.cipher_alg,
+				  config->crypto.cipher_key.length,
+				  config->crypto.auth_alg,
+				  config->crypto.auth_key.length);
+
+	if (rc) {
+		printf("    => %s skipped\n\n", config->name);
+		return 0;
+	}
 
 	sa = create_sa_from_config(config, cargs);
 	if (sa == ODP_IPSEC_SA_INVALID) {
