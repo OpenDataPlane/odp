@@ -105,6 +105,8 @@ typedef struct {
 	uint64_t vec_tmo_ns;    /* Vector formation timeout in ns */
 	uint32_t vec_size;      /* Vector size */
 	int verbose;		/* Verbose output */
+	uint32_t packet_len;	/* Maximum packet length supported */
+	uint32_t seg_len;	/* Pool segment length */
 	int promisc_mode;       /* Promiscuous mode enabled */
 } appl_args_t;
 
@@ -1507,10 +1509,13 @@ static void usage(char *progname)
 	       "  -x, --vec_size <num>    Vector size (default %i).\n"
 	       "  -z, --vec_tmo_ns <ns>   Vector timeout in ns (default %llu ns).\n"
 	       "  -P, --promisc_mode      Enable promiscuous mode.\n"
+	       "  -l, --packet_len <len>  Maximum length of packets supported (default %d).\n"
+	       "  -L, --seg_len <len>     Packet pool segment length\n"
+	       "                          (default equal to packet length).\n"
 	       "  -v, --verbose           Verbose output.\n"
 	       "  -h, --help              Display help and exit.\n\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS, DEFAULT_VEC_SIZE,
-		DEFAULT_VEC_TMO
+		DEFAULT_VEC_TMO, POOL_PKT_LEN
 	    );
 }
 
@@ -1551,12 +1556,14 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"vec_tmo_ns", required_argument, NULL, 'z'},
 		{"vector_mode", no_argument, NULL, 'u'},
 		{"promisc_mode", no_argument, NULL, 'P'},
+		{"packet_len", required_argument, NULL, 'l'},
+		{"seg_len", required_argument, NULL, 'L'},
 		{"verbose", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:p:y:n:w:x:z:uPvh";
+	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:p:y:n:l:L:w:x:z:uPvh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1571,6 +1578,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->chksum = 0; /* don't use checksum offload by default */
 	appl_args->pool_per_if = 0;
 	appl_args->num_pkt = 0;
+	appl_args->packet_len = POOL_PKT_LEN;
+	appl_args->seg_len = UINT32_MAX;
 	appl_args->promisc_mode = 0;
 	appl_args->vector_mode = 0;
 	appl_args->num_vec = 0;
@@ -1715,6 +1724,12 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 		case 'n':
 			appl_args->num_pkt = atoi(optarg);
+			break;
+		case 'l':
+			appl_args->packet_len = atoi(optarg);
+			break;
+		case 'L':
+			appl_args->seg_len = atoi(optarg);
 			break;
 		case 'P':
 			appl_args->promisc_mode = 1;
@@ -1928,7 +1943,7 @@ int main(int argc, char *argv[])
 	odp_pool_t pool, vec_pool;
 	odp_init_t init;
 	odp_pool_capability_t pool_capa;
-	uint32_t pkt_len, num_pkt;
+	uint32_t pkt_len, num_pkt, seg_len;
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
@@ -2035,12 +2050,32 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	pkt_len = POOL_PKT_LEN;
+	pkt_len = gbl_args->appl.packet_len;
 
 	if (pool_capa.pkt.max_len && pkt_len > pool_capa.pkt.max_len) {
 		pkt_len = pool_capa.pkt.max_len;
 		printf("\nWarning: packet length reduced to %u\n\n", pkt_len);
 	}
+
+	if (gbl_args->appl.seg_len == UINT32_MAX)
+		seg_len = gbl_args->appl.packet_len;
+	else
+		seg_len = gbl_args->appl.seg_len;
+
+	/* Check whether we have sufficient segments to support requested packet
+	 * length, if not adjust to bigger segment size */
+	if (seg_len < (pkt_len / pool_capa.pkt.max_segs_per_pkt))
+		seg_len = pkt_len / pool_capa.pkt.max_segs_per_pkt;
+
+	if (pool_capa.pkt.min_seg_len && seg_len < pool_capa.pkt.min_seg_len)
+		seg_len = pool_capa.pkt.min_seg_len;
+
+	if (pool_capa.pkt.max_seg_len && seg_len > pool_capa.pkt.max_seg_len)
+		seg_len = pool_capa.pkt.max_seg_len;
+
+	if ((gbl_args->appl.seg_len != UINT32_MAX) && (seg_len != gbl_args->appl.seg_len))
+		printf("\nWarning: Segment length requested %d configured %d\n",
+		       gbl_args->appl.seg_len, seg_len);
 
 	/* zero means default number of packets */
 	if (gbl_args->appl.num_pkt == 0)
@@ -2062,11 +2097,12 @@ int main(int argc, char *argv[])
 
 	printf("Packets per pool:   %u\n", num_pkt);
 	printf("Packet length:      %u\n", pkt_len);
+	printf("Segment length:     %u\n", seg_len);
 	printf("\n\n");
 
 	/* Create packet pool */
 	odp_pool_param_init(&params);
-	params.pkt.seg_len = pkt_len;
+	params.pkt.seg_len = seg_len;
 	params.pkt.len     = pkt_len;
 	params.pkt.num     = num_pkt;
 	params.type        = ODP_POOL_PACKET;
