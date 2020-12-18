@@ -56,13 +56,6 @@ typedef struct pool_local_t {
 	pool_cache_t *cache[ODP_CONFIG_POOLS];
 	int thr_id;
 
-	/* Number of event allocs and frees by this thread. */
-	struct {
-		uint64_t num_alloc;
-		uint64_t num_free;
-
-	} stat[ODP_CONFIG_POOLS];
-
 } pool_local_t;
 
 pool_global_t *_odp_pool_glb;
@@ -356,18 +349,6 @@ int _odp_pool_term_local(void)
 		pool_t *pool = pool_entry(i);
 
 		cache_flush(local.cache[i], pool);
-
-		if (ODP_DEBUG == 1) {
-			uint64_t num_alloc = local.stat[i].num_alloc;
-			uint64_t num_free  = local.stat[i].num_free;
-
-			if (num_alloc || num_free) {
-				ODP_DBG("Pool[%i] stats: thr %i, "
-					"allocs % " PRIu64 ", "
-					"frees % " PRIu64 "\n",
-					i, local.thr_id, num_alloc, num_free);
-			}
-		}
 	}
 
 	return 0;
@@ -1120,9 +1101,6 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 
 	num_alloc = num_ch + num_deq;
 
-	if (ODP_DEBUG == 1)
-		local.stat[pool_idx].num_alloc += num_alloc;
-
 	return num_alloc;
 }
 
@@ -1134,9 +1112,6 @@ static inline void buffer_free_to_pool(pool_t *pool,
 	ring_ptr_t *ring;
 	uint32_t cache_num, mask;
 	uint32_t cache_size = pool->cache_size;
-
-	if (ODP_DEBUG == 1)
-		local.stat[pool_idx].num_free += num;
 
 	/* Special case of a very large free. Move directly to
 	 * the global pool. */
