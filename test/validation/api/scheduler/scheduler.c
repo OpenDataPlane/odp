@@ -810,6 +810,52 @@ static void scheduler_test_create_group(void)
 	CU_ASSERT_FATAL(odp_schedule(NULL, wait_time) == ODP_EVENT_INVALID);
 }
 
+static void scheduler_test_create_max_groups(void)
+{
+	odp_thrmask_t mask;
+	int thr_id;
+	uint32_t i;
+	odp_queue_param_t queue_param;
+	odp_schedule_capability_t sched_capa;
+
+	CU_ASSERT_FATAL(!odp_schedule_capability(&sched_capa));
+	uint32_t max_groups = sched_capa.max_groups;
+	odp_schedule_group_t group[max_groups];
+	odp_queue_t queue[max_groups];
+
+	CU_ASSERT_FATAL(max_groups > 0);
+	CU_ASSERT_FATAL(sched_capa.max_queues >= sched_capa.max_groups);
+
+	thr_id = odp_thread_id();
+	odp_thrmask_zero(&mask);
+	odp_thrmask_set(&mask, thr_id);
+
+	odp_queue_param_init(&queue_param);
+	queue_param.type       = ODP_QUEUE_TYPE_SCHED;
+	queue_param.sched.prio = odp_schedule_default_prio();
+	queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+
+	for (i = 0; i < max_groups; i++) {
+		group[i] = odp_schedule_group_create("max_groups", &mask);
+		if (group[i] == ODP_SCHED_GROUP_INVALID) {
+			ODPH_ERR("schedule group create %u failed\n", i);
+			break;
+		}
+
+		queue_param.sched.group = group[i];
+		queue[i] = odp_queue_create("max_groups", &queue_param);
+		CU_ASSERT_FATAL(queue[i] != ODP_QUEUE_INVALID);
+	}
+
+	CU_ASSERT(i == max_groups);
+	max_groups = i;
+
+	for (i = 0; i < max_groups; i++) {
+		CU_ASSERT_FATAL(odp_queue_destroy(queue[i]) == 0);
+		CU_ASSERT_FATAL(odp_schedule_group_destroy(group[i]) == 0);
+	}
+}
+
 static void scheduler_test_groups(void)
 {
 	odp_pool_t p;
@@ -2814,6 +2860,7 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_full_queues),
 	ODP_TEST_INFO(scheduler_test_order_ignore),
 	ODP_TEST_INFO(scheduler_test_create_group),
+	ODP_TEST_INFO(scheduler_test_create_max_groups),
 	ODP_TEST_INFO(scheduler_test_groups),
 	ODP_TEST_INFO(scheduler_test_pause_resume),
 	ODP_TEST_INFO(scheduler_test_pause_enqueue),
