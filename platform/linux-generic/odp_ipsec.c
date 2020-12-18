@@ -1910,6 +1910,8 @@ int _odp_ipsec_try_inline(odp_packet_t *pkt)
 	return 0;
 }
 
+#define MAX_HDR_LEN 100 /* Enough for VxLAN over IPv6 */
+
 int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 			 const odp_ipsec_out_param_t *param,
 			 const odp_ipsec_out_inline_param_t *inline_param)
@@ -1919,6 +1921,7 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 	unsigned opt_idx = 0;
 	unsigned sa_inc = (param->num_sa > 1) ? 1 : 0;
 	unsigned opt_inc = (param->num_opt > 1) ? 1 : 0;
+	uint8_t hdr_buf[MAX_HDR_LEN];
 
 	ODP_ASSERT(param->num_sa != 0);
 
@@ -1943,6 +1946,25 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 			ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 		}
 
+		hdr_len = inline_param[in_pkt].outer_hdr.len;
+		ptr = inline_param[in_pkt].outer_hdr.ptr;
+
+		if (!ptr) {
+			uint32_t l2_offset = odp_packet_l2_offset(pkt);
+
+			ODP_ASSERT(hdr_len == odp_packet_l3_offset(pkt) - l2_offset);
+
+			if (odp_likely(hdr_len <= MAX_HDR_LEN) &&
+			    odp_likely(odp_packet_copy_to_mem(pkt, l2_offset,
+							      hdr_len, hdr_buf) == 0)) {
+				ptr = hdr_buf;
+			} else {
+				status.error.proto = 1;
+				ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
+				goto err;
+			}
+		}
+
 		if (0 == param->num_opt)
 			opt = &default_out_opt;
 		else
@@ -1951,8 +1973,6 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 		ipsec_sa = ipsec_out_single(pkt, sa, &pkt, opt, &status);
 		ODP_ASSERT(NULL != ipsec_sa);
 
-		hdr_len = inline_param[in_pkt].outer_hdr.len;
-		ptr = inline_param[in_pkt].outer_hdr.ptr;
 		offset = odp_packet_l3_offset(pkt);
 		if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
 			offset = 0;
