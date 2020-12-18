@@ -580,6 +580,11 @@ static int schedule_create_queue(uint32_t queue_index,
 		return -1;
 	}
 
+	if (sched_param->group < 0 || sched_param->group >= NUM_SCHED_GRPS) {
+		ODP_ERR("Bad schedule group\n");
+		return -1;
+	}
+
 	odp_spinlock_lock(&sched->mask_lock);
 
 	/* update scheduler prio queue usage status */
@@ -1562,7 +1567,7 @@ static void schedule_prefetch(int num ODP_UNUSED)
 
 static int schedule_num_grps(void)
 {
-	return NUM_SCHED_GRPS;
+	return NUM_SCHED_GRPS - SCHED_GROUP_NAMED;
 }
 
 static void schedule_get_config(schedule_config_t *config)
