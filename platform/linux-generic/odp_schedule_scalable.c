@@ -50,6 +50,7 @@ ODP_STATIC_ASSERT(CHECK_IS_POWER2(CONFIG_MAX_SCHED_QUEUES),
 
 #define SCHED_GROUP_JOIN 0
 #define SCHED_GROUP_LEAVE 1
+#define NUM_AUTO_GROUPS (ODP_SCHED_GROUP_CONTROL + 1)
 
 typedef struct {
 	odp_shm_t shm;
@@ -2012,7 +2013,7 @@ static int schedule_config(const odp_schedule_config_t *config)
 
 static int num_grps(void)
 {
-	return MAX_SCHED_GROUP;
+	return MAX_SCHED_GROUP - NUM_AUTO_GROUPS;
 }
 
 /*
