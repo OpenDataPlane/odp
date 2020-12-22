@@ -774,9 +774,39 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 			hdr_len = 14;
 			memset(hdr, 0xff, hdr_len);
 		}
+
+		if (part->flags.inline_hdr_in_packet) {
+			/*
+			 * Provide the to-be-prepended header to ODP in the
+			 * the packet data. Use nonzero L2 offset for better
+			 * test coverage.
+			 */
+			uint32_t new_l2_offset = 100;
+			uint32_t l3_offset = odp_packet_l3_offset(pkt);
+			uint32_t new_l3_offset = new_l2_offset + hdr_len;
+			uint32_t l4_offset = odp_packet_l4_offset(pkt);
+			int ret;
+
+			ret = odp_packet_trunc_head(&pkt, l3_offset,
+						    NULL, NULL);
+			CU_ASSERT_FATAL(ret >= 0);
+			ret = odp_packet_extend_head(&pkt, new_l3_offset,
+						     NULL, NULL);
+			CU_ASSERT_FATAL(ret >= 0);
+			odp_packet_l2_offset_set(pkt, new_l2_offset);
+			odp_packet_l3_offset_set(pkt, new_l3_offset);
+			odp_packet_copy_from_mem(pkt, new_l2_offset, hdr_len, hdr);
+			if (l4_offset != ODP_PACKET_OFFSET_INVALID)
+				odp_packet_l4_offset_set(pkt, new_l3_offset +
+							 l4_offset - l3_offset);
+
+			inline_param.outer_hdr.ptr = NULL;
+		} else {
+			inline_param.outer_hdr.ptr = hdr;
+		}
+
 		inline_param.pktio = suite_context.pktio;
 		inline_param.tm_queue = ODP_TM_INVALID;
-		inline_param.outer_hdr.ptr = hdr;
 		inline_param.outer_hdr.len = hdr_len;
 
 		CU_ASSERT_EQUAL(1, odp_ipsec_out_inline(&pkt, 1, &param,
