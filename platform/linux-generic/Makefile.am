@@ -96,6 +96,7 @@ noinst_HEADERS = \
 		  include/odp_atomic_internal.h \
 		  include/odp_bitset.h \
 		  include/odp_buffer_internal.h \
+		  include/odp_chksum_internal.h \
 		  include/odp_classification_datamodel.h \
 		  include/odp_classification_internal.h \
 		  include/odp_config_internal.h \
