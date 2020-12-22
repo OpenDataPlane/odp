@@ -58,6 +58,7 @@ typedef struct {
 	odp_bool_t display_algo;
 	odp_bool_t lookup;
 	odp_bool_t ah;
+	odp_bool_t inline_hdr_in_packet;
 	enum ipsec_test_stats stats;
 } ipsec_test_flags;
 

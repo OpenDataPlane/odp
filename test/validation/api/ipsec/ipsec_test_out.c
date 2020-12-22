@@ -535,6 +535,19 @@ static void test_esp_out_in_all_basic(void)
 	printf("\n  ");
 }
 
+static int is_out_mode_inline(void)
+{
+	return suite_context.outbound_op_mode == ODP_IPSEC_OP_MODE_INLINE;
+}
+
+static void test_esp_out_in_all_hdr_in_packet(void)
+{
+	ipsec_test_flags flags = {
+		.inline_hdr_in_packet = true,
+	};
+	test_esp_out_in_all(&flags);
+}
+
 static void test_ah_out_in(struct auth_param *auth)
 {
 	int auth_keylen = auth->key ? 8 * auth->key->length : 0;
@@ -1432,6 +1445,8 @@ odp_testinfo_t ipsec_out_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_sa_info,
 				  ipsec_check_esp_aes_cbc_128_sha1),
 	ODP_TEST_INFO(test_esp_out_in_all_basic),
+	ODP_TEST_INFO_CONDITIONAL(test_esp_out_in_all_hdr_in_packet,
+				  is_out_mode_inline),
 	ODP_TEST_INFO(test_ah_out_in_all),
 	ODP_TEST_INFO(test_ipsec_stats),
 	ODP_TEST_INFO_NULL,
