@@ -490,6 +490,28 @@ odp_packet_t ipsec_packet(const ipsec_test_packet *itp)
 	return pkt;
 }
 
+static void check_l2_header(const ipsec_test_packet *itp, odp_packet_t pkt)
+{
+	uint32_t len = odp_packet_len(pkt);
+	uint8_t data[len];
+	uint32_t l2 = odp_packet_l2_offset(pkt);
+	uint32_t l3 = odp_packet_l3_offset(pkt);
+	uint32_t hdr_len;
+
+	if (!itp)
+		return;
+
+	hdr_len = itp->l3_offset - itp->l2_offset;
+
+	CU_ASSERT_FATAL(l2 != ODP_PACKET_OFFSET_INVALID);
+	CU_ASSERT_FATAL(l3 != ODP_PACKET_OFFSET_INVALID);
+	CU_ASSERT_EQUAL(l3 - l2, hdr_len);
+	odp_packet_copy_to_mem(pkt, 0, len, data);
+	CU_ASSERT_EQUAL(0, memcmp(data + l2,
+				  itp->data + itp->l2_offset,
+				  hdr_len));
+}
+
 /*
  * Compare packages ignoring everything before L3 header
  */
@@ -734,6 +756,11 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 		odp_queue_t queue = ODP_QUEUE_INVALID;
 
 		if (NULL != part->out[0].pkt_res) {
+			/*
+			 * Take L2 header from the expected result.
+			 * This way ethertype will be correct for input
+			 * processing even with IPv4-in-IPv6-tunnels etc.
+			 */
 			hdr_len = part->out[0].pkt_res->l3_offset;
 			CU_ASSERT_FATAL(hdr_len <= sizeof(hdr));
 			memcpy(hdr, part->out[0].pkt_res->data, hdr_len);
@@ -902,6 +929,8 @@ void ipsec_check_out_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 		    odp_event_subtype(odp_packet_to_event(pkto[i]))) {
 			/* Inline packet went through loop */
 			CU_ASSERT_EQUAL(0, part->out[i].status.error.all);
+			/* L2 header must match the requested one */
+			check_l2_header(part->out[i].pkt_res, pkto[i]);
 		} else {
 			/* IPsec packet */
 			CU_ASSERT_EQUAL(0, odp_ipsec_result(&result, pkto[i]));
@@ -945,6 +974,8 @@ void ipsec_check_out_in_one(const ipsec_test_part *part,
 		    odp_event_subtype(odp_packet_to_event(pkto[i]))) {
 			/* Inline packet went through loop */
 			CU_ASSERT_EQUAL(0, part->out[i].status.error.all);
+			/* L2 header must match that of input packet */
+			check_l2_header(part->out[i].pkt_res, pkto[i]);
 		} else {
 			/* IPsec packet */
 			CU_ASSERT_EQUAL(0, odp_ipsec_result(&result, pkto[i]));
