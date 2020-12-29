@@ -611,8 +611,8 @@ static void tm_shaper_params_cvt_to(const odp_tm_shaper_params_t *shaper_params,
 	uint32_t min_time_delta;
 	int64_t  commit_burst, peak_burst;
 
-	commit_rate = tm_bps_to_rate(shaper_params->commit_bps);
-	if ((shaper_params->commit_bps == 0) || (commit_rate == 0)) {
+	commit_rate = tm_bps_to_rate(shaper_params->commit_rate);
+	if ((shaper_params->commit_rate == 0) || (commit_rate == 0)) {
 		tm_shaper_params->max_commit_time_delta = 0;
 		tm_shaper_params->max_peak_time_delta   = 0;
 		tm_shaper_params->commit_rate           = 0;
@@ -629,8 +629,8 @@ static void tm_shaper_params_cvt_to(const odp_tm_shaper_params_t *shaper_params,
 	max_commit_time_delta = tm_max_time_delta(commit_rate);
 	commit_burst = (int64_t)shaper_params->commit_burst;
 
-	peak_rate = tm_bps_to_rate(shaper_params->peak_bps);
-	if ((shaper_params->peak_bps == 0) || (peak_rate == 0)) {
+	peak_rate = tm_bps_to_rate(shaper_params->peak_rate);
+	if ((shaper_params->peak_rate == 0) || (peak_rate == 0)) {
 		peak_rate = 0;
 		max_peak_time_delta = 0;
 		peak_burst = 0;
@@ -670,8 +670,8 @@ static void tm_shaper_params_cvt_from(tm_shaper_params_t     *tm_shaper_params,
 	commit_burst = tm_shaper_params->max_commit >> (26 - 3);
 	peak_burst = tm_shaper_params->max_peak >> (26 - 3);
 
-	odp_shaper_params->commit_bps = commit_bps;
-	odp_shaper_params->peak_bps = peak_bps;
+	odp_shaper_params->commit_rate = commit_bps;
+	odp_shaper_params->peak_rate = peak_bps;
 	odp_shaper_params->commit_burst = (uint32_t)commit_burst;
 	odp_shaper_params->peak_burst = (uint32_t)peak_burst;
 	odp_shaper_params->shaper_len_adjust = tm_shaper_params->len_adjust;
@@ -3210,6 +3210,10 @@ odp_tm_shaper_t odp_tm_shaper_create(const char *name,
 	tm_shaper_params_t *profile_obj;
 	odp_tm_shaper_t     shaper_handle;
 	_odp_int_name_t     name_tbl_id;
+
+	/* We don't support shaper in packet mode */
+	if (params->packet_mode)
+		return ODP_TM_INVALID;
 
 	profile_obj = tm_common_profile_create(name, TM_SHAPER_PROFILE,
 					       &shaper_handle, &name_tbl_id);
