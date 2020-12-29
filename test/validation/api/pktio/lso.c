@@ -21,6 +21,7 @@
 
 /* Max payload bytes per LSO segment */
 #define CUSTOM_MAX_PAYLOAD 288
+#define IPV4_MAX_PAYLOAD   700
 
 /* Pktio interface info
  */
@@ -54,6 +55,9 @@ static int wait_for_network;
 
 /* LSO test packet pool */
 odp_pool_t lso_pool = ODP_POOL_INVALID;
+
+/* Check test packet size */
+ODP_STATIC_ASSERT(sizeof(test_packet_ipv4_udp_1500) == 1500, "error: size is not 1500");
 
 static inline void wait_linkup(odp_pktio_t pktio)
 {
@@ -474,6 +478,30 @@ static int check_lso_custom_restart(void)
 	return ODP_TEST_ACTIVE;
 }
 
+static int check_lso_ipv4(void)
+{
+	if (pktio_a->capa.lso.max_profiles == 0 || pktio_a->capa.lso.max_profiles_per_pktio == 0)
+		return ODP_TEST_INACTIVE;
+
+	if (pktio_a->capa.lso.proto.ipv4 == 0)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+static int check_lso_ipv4_restart(void)
+{
+	if (check_lso_ipv4() == ODP_TEST_INACTIVE)
+		return ODP_TEST_INACTIVE;
+
+	if (disable_restart && num_starts > 0)
+		return ODP_TEST_INACTIVE;
+
+	num_starts++;
+
+	return ODP_TEST_ACTIVE;
+}
+
 static void lso_capability(void)
 {
 	/* LSO not supported when max_profiles is zero */
@@ -496,6 +524,23 @@ static void lso_capability(void)
 			  pktio_a->capa.lso.mod_op.add_payload_len ||
 			  pktio_a->capa.lso.mod_op.add_payload_offset)
 	}
+}
+
+static void lso_create_ipv4_profile(void)
+{
+	odp_lso_profile_param_t param;
+	odp_lso_profile_t profile;
+
+	odp_lso_profile_param_init(&param);
+	CU_ASSERT(param.lso_proto == ODP_LSO_PROTO_NONE);
+	CU_ASSERT(param.custom.num_custom == 0);
+
+	param.lso_proto = ODP_LSO_PROTO_IPV4;
+
+	profile = odp_lso_profile_create(pktio_a->hdl, &param);
+	CU_ASSERT_FATAL(profile != ODP_LSO_PROFILE_INVALID);
+
+	CU_ASSERT_FATAL(odp_lso_profile_destroy(profile) == 0);
 }
 
 static void lso_create_custom_profile(void)
@@ -668,9 +713,92 @@ static void lso_send_custom_eth_use_opt(void)
 	lso_send_custom_eth(1);
 }
 
+static void lso_send_ipv4(int use_opt)
+{
+	int i, ret, num;
+	odp_lso_profile_param_t param;
+	odp_lso_profile_t profile;
+	uint32_t offset, len, payload_len, payload_sum;
+	odp_packet_t packet[MAX_NUM_SEG];
+	/* Ethernet 14B + IPv4 header 20B */
+	uint32_t hdr_len = 34;
+	uint32_t pkt_len = sizeof(test_packet_ipv4_udp_1500);
+	uint32_t sent_payload = pkt_len - hdr_len;
+	uint32_t max_payload = IPV4_MAX_PAYLOAD;
+
+	odp_lso_profile_param_init(&param);
+	param.lso_proto = ODP_LSO_PROTO_IPV4;
+
+	profile = odp_lso_profile_create(pktio_a->hdl, &param);
+	CU_ASSERT_FATAL(profile != ODP_LSO_PROFILE_INVALID);
+
+	CU_ASSERT_FATAL(start_interfaces() == 0);
+
+	test_lso_request_clear(profile, test_packet_ipv4_udp_1500, pkt_len, hdr_len, max_payload);
+
+	ret = send_packets(profile, pktio_a, pktio_b, test_packet_ipv4_udp_1500,
+			   pkt_len, hdr_len, max_payload, 14, use_opt);
+	CU_ASSERT_FATAL(ret == 0);
+
+	ODPH_DBG("\n    Sent payload length:     %u bytes\n", sent_payload);
+
+	/* Wait 1 sec to receive all created segments. Timeout and MAX_NUM_SEG values should be
+	 * large enough to ensure that we receive all created segments. */
+	num = recv_packets(pktio_b, ODP_TIME_SEC_IN_NS, packet, MAX_NUM_SEG);
+	CU_ASSERT(num > 0);
+	CU_ASSERT(num < MAX_NUM_SEG);
+
+	offset = hdr_len;
+	payload_sum = 0;
+	for (i = 0; i < num; i++) {
+		len = odp_packet_len(packet[i]);
+		payload_len = len - hdr_len;
+
+		ODPH_DBG("    LSO segment[%i] payload:  %u bytes\n", i, payload_len);
+
+		CU_ASSERT(odp_packet_has_ipv4(packet[i]));
+		CU_ASSERT(odp_packet_has_ipfrag(packet[i]));
+		CU_ASSERT(odp_packet_has_error(packet[i]) == 0);
+		CU_ASSERT(payload_len <= IPV4_MAX_PAYLOAD);
+
+		if (compare_data(packet[i], hdr_len,
+				 test_packet_ipv4_udp_1500 + offset, payload_len) >= 0) {
+			ODPH_ERR("    Payload compare failed at offset %u\n", offset);
+			CU_FAIL("Payload compare failed\n");
+		}
+
+		offset      += payload_len;
+		payload_sum += payload_len;
+	}
+
+	ODPH_DBG("    Received payload length: %u bytes\n", payload_sum);
+
+	CU_ASSERT(payload_sum == sent_payload);
+
+	if (num > 0)
+		odp_packet_free_multi(packet, num);
+
+	CU_ASSERT_FATAL(stop_interfaces() == 0);
+
+	CU_ASSERT_FATAL(odp_lso_profile_destroy(profile) == 0);
+}
+
+static void lso_send_ipv4_use_pkt_meta(void)
+{
+	lso_send_ipv4(0);
+}
+
+static void lso_send_ipv4_use_opt(void)
+{
+	lso_send_ipv4(1);
+}
+
 odp_testinfo_t lso_suite[] = {
 	ODP_TEST_INFO(lso_capability),
+	ODP_TEST_INFO_CONDITIONAL(lso_create_ipv4_profile, check_lso_ipv4),
 	ODP_TEST_INFO_CONDITIONAL(lso_create_custom_profile, check_lso_custom),
+	ODP_TEST_INFO_CONDITIONAL(lso_send_ipv4_use_pkt_meta, check_lso_ipv4_restart),
+	ODP_TEST_INFO_CONDITIONAL(lso_send_ipv4_use_opt, check_lso_ipv4_restart),
 	ODP_TEST_INFO_CONDITIONAL(lso_send_custom_eth_use_pkt_meta, check_lso_custom_restart),
 	ODP_TEST_INFO_CONDITIONAL(lso_send_custom_eth_use_opt, check_lso_custom_restart),
 	ODP_TEST_INFO_NULL
