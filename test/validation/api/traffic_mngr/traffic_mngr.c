@@ -2185,9 +2185,9 @@ static void check_shaper_profile(char *shaper_name, uint32_t shaper_idx)
 	memset(&shaper_params, 0, sizeof(shaper_params));
 	rc = odp_tm_shaper_params_read(profile, &shaper_params);
 	CU_ASSERT(rc == 0);
-	CU_ASSERT(approx_eq64(shaper_params.commit_bps,
+	CU_ASSERT(approx_eq64(shaper_params.commit_rate,
 			      shaper_idx * MIN_COMMIT_BW));
-	CU_ASSERT(approx_eq64(shaper_params.peak_bps,
+	CU_ASSERT(approx_eq64(shaper_params.peak_rate,
 			      shaper_idx * MIN_PEAK_BW));
 	CU_ASSERT(approx_eq32(shaper_params.commit_burst,
 			      shaper_idx * MIN_COMMIT_BURST));
@@ -2212,8 +2212,8 @@ static void traffic_mngr_test_shaper_profile(void)
 	for (idx = 1; idx <= NUM_SHAPER_TEST_PROFILES; idx++) {
 		snprintf(shaper_name, sizeof(shaper_name),
 			 "shaper_profile_%" PRIu32, idx);
-		shaper_params.commit_bps   = idx * MIN_COMMIT_BW;
-		shaper_params.peak_bps     = idx * MIN_PEAK_BW;
+		shaper_params.commit_rate  = idx * MIN_COMMIT_BW;
+		shaper_params.peak_rate    = idx * MIN_PEAK_BW;
 		shaper_params.commit_burst = idx * MIN_COMMIT_BURST;
 		shaper_params.peak_burst   = idx * MIN_PEAK_BURST;
 
@@ -2471,8 +2471,8 @@ static int set_shaper(const char    *node_name,
 	}
 
 	odp_tm_shaper_params_init(&shaper_params);
-	shaper_params.commit_bps        = commit_bps;
-	shaper_params.peak_bps          = 0;
+	shaper_params.commit_rate       = commit_bps;
+	shaper_params.peak_rate         = 0;
 	shaper_params.commit_burst      = commit_burst_in_bits;
 	shaper_params.peak_burst        = 0;
 	shaper_params.shaper_len_adjust = 0;
