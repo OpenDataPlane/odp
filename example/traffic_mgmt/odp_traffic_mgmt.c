@@ -62,8 +62,8 @@ static const odp_init_t ODP_INIT_PARAMS = {
 
 static profile_params_set_t COMPANY_PROFILE_PARAMS = {
 	.shaper_params = {
-		.commit_bps = 50  * MBPS,  .commit_burst      = 1000000,
-		.peak_bps   = 0,           .peak_burst        = 0,
+		.commit_rate = 50  * MBPS, .commit_burst      = 1000000,
+		.peak_rate   = 0,          .peak_burst        = 0,
 		.dual_rate  = FALSE,       .shaper_len_adjust = 20
 	},
 
@@ -95,8 +95,8 @@ static profile_params_set_t COMPANY_PROFILE_PARAMS = {
 
 static profile_params_set_t COS0_PROFILE_PARAMS = {
 	.shaper_params = {
-		.commit_bps = 1 * MBPS,  .commit_burst      = 100000,
-		.peak_bps   = 4 * MBPS,  .peak_burst        = 200000,
+		.commit_rate = 1 * MBPS, .commit_burst      = 100000,
+		.peak_rate   = 4 * MBPS, .peak_burst        = 200000,
 		.dual_rate  = FALSE,     .shaper_len_adjust = 20
 	},
 
@@ -128,8 +128,8 @@ static profile_params_set_t COS0_PROFILE_PARAMS = {
 
 static profile_params_set_t COS1_PROFILE_PARAMS = {
 	.shaper_params = {
-		.commit_bps = 500  * KBPS,  .commit_burst      = 50000,
-		.peak_bps   = 1500 * KBPS,  .peak_burst        = 150000,
+		.commit_rate = 500  * KBPS, .commit_burst      = 50000,
+		.peak_rate   = 1500 * KBPS, .peak_burst        = 150000,
 		.dual_rate  = FALSE,        .shaper_len_adjust = 20
 	},
 
@@ -161,8 +161,8 @@ static profile_params_set_t COS1_PROFILE_PARAMS = {
 
 static profile_params_set_t COS2_PROFILE_PARAMS = {
 	.shaper_params = {
-		.commit_bps = 200 * KBPS,  .commit_burst      = 20000,
-		.peak_bps   = 400 * KBPS,  .peak_burst        = 40000,
+		.commit_rate = 200 * KBPS, .commit_burst      = 20000,
+		.peak_rate   = 400 * KBPS, .peak_burst        = 40000,
 		.dual_rate  = FALSE,       .shaper_len_adjust = 20
 	},
 
@@ -194,8 +194,8 @@ static profile_params_set_t COS2_PROFILE_PARAMS = {
 
 static profile_params_set_t COS3_PROFILE_PARAMS = {
 	.shaper_params = {
-		.commit_bps = 100 * KBPS,  .commit_burst      = 5000,
-		.peak_bps   = 0,           .peak_burst        = 0,
+		.commit_rate = 100 * KBPS, .commit_burst      = 5000,
+		.peak_rate   = 0,          .peak_burst        = 0,
 		.dual_rate  = FALSE,       .shaper_len_adjust = 20
 	},
 
@@ -272,8 +272,8 @@ static uint32_t create_profile_set(profile_params_set_t *profile_params_set,
 
 	odp_tm_shaper_params_init(&shaper_params);
 	shaper                          = &profile_params_set->shaper_params;
-	shaper_params.commit_bps        = shaper->commit_bps   * shaper_scale;
-	shaper_params.peak_bps          = shaper->peak_bps     * shaper_scale;
+	shaper_params.commit_rate       = shaper->commit_rate  * shaper_scale;
+	shaper_params.peak_rate         = shaper->peak_rate    * shaper_scale;
 	shaper_params.commit_burst      = shaper->commit_burst * shaper_scale;
 	shaper_params.peak_burst        = shaper->peak_burst   * shaper_scale;
 	shaper_params.dual_rate         = shaper->dual_rate;
