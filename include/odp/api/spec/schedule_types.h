@@ -190,7 +190,10 @@ typedef struct odp_schedule_capability_t {
 	/** Maximum number of ordered locks per queue */
 	uint32_t max_ordered_locks;
 
-	/** Maximum number of scheduling groups */
+	/** Maximum number of scheduling groups. The value includes the enabled
+	 *  predefined scheduling groups (ODP_SCHED_GROUP_ALL,
+	 *  ODP_SCHED_GROUP_WORKER, and ODP_SCHED_GROUP_CONTROL). By default, an
+	 *  application can create 'max_groups' - 3 groups. */
 	uint32_t max_groups;
 
 	/** Number of scheduling priorities */
