@@ -62,8 +62,8 @@ extern "C" {
 /** @internal Returns IPv4 Don't fragment */
 #define _ODP_IPV4HDR_FLAGS_DONT_FRAG(frag_offset)  ((frag_offset) & 0x4000)
 
-/** @internal Returns IPv4 more fragments */
-#define _ODP_IPV4HDR_FLAGS_MORE_FRAGS(frag_offset)  ((frag_offset) & 0x2000)
+/* IPv4 more fragments flag in the frag_offset field */
+#define _ODP_IPV4HDR_FRAG_OFFSET_MORE_FRAGS 0x2000
 
 /** @internal Returns IPv4 fragment offset */
 #define _ODP_IPV4HDR_FRAG_OFFSET(frag_offset) ((frag_offset) & 0x1fff)

@@ -1750,6 +1750,7 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 		capa->lso.max_payload_len        = mtu - PKTIO_LSO_MAX_PAYLOAD_OFFSET;
 		capa->lso.max_payload_offset     = PKTIO_LSO_MAX_PAYLOAD_OFFSET;
 		capa->lso.max_num_custom         = ODP_LSO_MAX_CUSTOM;
+		capa->lso.proto.ipv4             = 1;
 		capa->lso.proto.custom           = 1;
 		capa->lso.mod_op.add_segment_num = 1;
 	}
@@ -2504,37 +2505,40 @@ odp_lso_profile_t odp_lso_profile_create(odp_pktio_t pktio, const odp_lso_profil
 	lso_profile_t *lso_prof = NULL;
 	(void)pktio;
 
-	/* Currently only custom implemented */
-	if (param->lso_proto != ODP_LSO_PROTO_CUSTOM) {
+	/* Currently only IPv4 and custom implemented */
+	if (param->lso_proto != ODP_LSO_PROTO_IPV4 &&
+	    param->lso_proto != ODP_LSO_PROTO_CUSTOM) {
 		ODP_ERR("Protocol not supported\n");
 		return ODP_LSO_PROFILE_INVALID;
 	}
 
-	num_custom = param->custom.num_custom;
-	if (num_custom > ODP_LSO_MAX_CUSTOM) {
-		ODP_ERR("Too many custom fields\n");
-		return ODP_LSO_PROFILE_INVALID;
-	}
-
-	for (i = 0; i < num_custom; i++) {
-		mod_op = param->custom.field[i].mod_op;
-		offset = param->custom.field[i].offset;
-		size   = param->custom.field[i].size;
-
-		if (offset > PKTIO_LSO_MAX_PAYLOAD_OFFSET) {
-			ODP_ERR("Too large custom field offset %u\n", offset);
+	if (param->lso_proto == ODP_LSO_PROTO_CUSTOM) {
+		num_custom = param->custom.num_custom;
+		if (num_custom > ODP_LSO_MAX_CUSTOM) {
+			ODP_ERR("Too many custom fields\n");
 			return ODP_LSO_PROFILE_INVALID;
 		}
 
-		/* Currently only segment number supported */
-		if (mod_op != ODP_LSO_ADD_SEGMENT_NUM) {
-			ODP_ERR("Custom modify operation %u not supported\n", mod_op);
-			return ODP_LSO_PROFILE_INVALID;
-		}
+		for (i = 0; i < num_custom; i++) {
+			mod_op = param->custom.field[i].mod_op;
+			offset = param->custom.field[i].offset;
+			size   = param->custom.field[i].size;
 
-		if (size != 1 && size != 2 && size != 4 && size != 8) {
-			ODP_ERR("Bad custom field size %u\n", size);
-			return ODP_LSO_PROFILE_INVALID;
+			if (offset > PKTIO_LSO_MAX_PAYLOAD_OFFSET) {
+				ODP_ERR("Too large custom field offset %u\n", offset);
+				return ODP_LSO_PROFILE_INVALID;
+			}
+
+			/* Currently only segment number supported */
+			if (mod_op != ODP_LSO_ADD_SEGMENT_NUM) {
+				ODP_ERR("Custom modify operation %u not supported\n", mod_op);
+				return ODP_LSO_PROFILE_INVALID;
+			}
+
+			if (size != 1 && size != 2 && size != 4 && size != 8) {
+				ODP_ERR("Bad custom field size %u\n", size);
+				return ODP_LSO_PROFILE_INVALID;
+			}
 		}
 	}
 
@@ -2624,6 +2628,32 @@ int odp_packet_lso_request(odp_packet_t pkt, const odp_packet_lso_opt_t *lso_opt
 	return 0;
 }
 
+static int lso_update_ipv4(odp_packet_t pkt, int index, int num_pkt,
+			   uint32_t l3_offset, uint32_t payload_len)
+{
+	_odp_ipv4hdr_t *ipv4;
+	uint32_t pkt_len = odp_packet_len(pkt);
+	uint16_t tot_len = pkt_len - l3_offset;
+	int ret = 0;
+	uint16_t frag_offset;
+
+	odp_packet_l3_offset_set(pkt, l3_offset);
+	ipv4 = odp_packet_l3_ptr(pkt, NULL);
+	ipv4->tot_len = odp_cpu_to_be_16(tot_len);
+
+	/* IP payload offset in 8 byte blocks */
+	frag_offset = ((uint32_t)index * payload_len) / 8;
+
+	/* More fragments flag */
+	if (index < (num_pkt - 1))
+		frag_offset |= _ODP_IPV4HDR_FRAG_OFFSET_MORE_FRAGS;
+
+	ipv4->frag_offset = odp_cpu_to_be_16(frag_offset);
+	ret = _odp_packet_ipv4_chksum_insert(pkt);
+
+	return ret;
+}
+
 static int lso_update_custom(lso_profile_t *lso_prof, odp_packet_t pkt, int segnum)
 {
 	void *ptr;
@@ -2682,12 +2712,14 @@ static int pktout_send_lso(odp_pktout_queue_t queue, odp_packet_t packet,
 	odp_packet_t pkt;
 	int i, ret, num, num_pkt, num_full;
 	uint32_t hdr_len, pkt_len, pkt_payload, payload_len, left_over_len, offset;
+	uint32_t l3_offset, iphdr_len;
 	int left_over = 0;
 	int num_free = 0;
 	int first_free = 0;
 	odp_lso_profile_t lso_profile = lso_opt->lso_profile;
 	lso_profile_t *lso_prof = lso_profile_ptr(lso_profile);
 	int num_custom = lso_prof->param.custom.num_custom;
+	odp_lso_protocol_t lso_proto = lso_prof->param.lso_proto;
 
 	payload_len = lso_opt->max_payload_len;
 	hdr_len     = lso_opt->payload_offset;
@@ -2702,6 +2734,24 @@ static int pktout_send_lso(odp_pktout_queue_t queue, odp_packet_t packet,
 	if (odp_unlikely((hdr_len + payload_len) > pkt_len)) {
 		ODP_ERR("LSO options larger than packet data length\n");
 		return -1;
+	}
+
+	if (lso_proto == ODP_LSO_PROTO_IPV4) {
+		l3_offset = odp_packet_l3_offset(packet);
+		iphdr_len = hdr_len - l3_offset;
+
+		if (l3_offset == ODP_PACKET_OFFSET_INVALID) {
+			ODP_ERR("Invalid L3 offset\n");
+			return -1;
+		}
+
+		if (hdr_len < l3_offset || iphdr_len < _ODP_IPV4HDR_LEN) {
+			ODP_ERR("Bad payload or L3 offset\n");
+			return -1;
+		}
+
+		/* Round down payload len to a multiple of 8 (on other than the last fragment). */
+		payload_len = (payload_len / 8) * 8;
 	}
 
 	pool = odp_packet_pool(packet);
@@ -2766,12 +2816,30 @@ static int pktout_send_lso(odp_pktout_queue_t queue, odp_packet_t packet,
 		}
 	}
 
-	/* Update custom fields */
-	for (i = 0; num_custom && i < num_pkt; i++) {
-		if (lso_update_custom(lso_prof, pkt_out[i], i)) {
-			ODP_ERR("Custom field update failed. Segment %i\n", i);
+	if (lso_proto == ODP_LSO_PROTO_IPV4) {
+		l3_offset = odp_packet_l3_offset(packet);
+
+		if (l3_offset == ODP_PACKET_OFFSET_INVALID) {
+			ODP_ERR("Invalid L3 offset\n");
 			num_free = num_pkt;
 			goto error;
+		}
+
+		for (i = 0; i < num_pkt; i++) {
+			if (lso_update_ipv4(pkt_out[i], i, num_pkt, l3_offset, payload_len)) {
+				ODP_ERR("IPv4 header update failed. Packet %i.\n", i);
+				num_free = num_pkt;
+				goto error;
+			}
+		}
+	} else {
+		/* Update custom fields */
+		for (i = 0; num_custom && i < num_pkt; i++) {
+			if (lso_update_custom(lso_prof, pkt_out[i], i)) {
+				ODP_ERR("Custom field update failed. Segment %i\n", i);
+				num_free = num_pkt;
+				goto error;
+			}
 		}
 	}
 
