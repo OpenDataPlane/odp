@@ -157,13 +157,27 @@ int odp_schedule_multi_no_wait(odp_queue_t *from, odp_event_t events[],
 /**
  * Pause scheduling
  *
- * Pause global scheduling for this thread. After this call, all schedule calls
- * will return only locally pre-scheduled events (if any). User can exit the
- * schedule loop only after the schedule function indicates that there's no more
- * (pre-scheduled) events.
+ * Pause global scheduling for this thread. After this call, only
+ * ODP_SCHED_NO_WAIT schedule calls are allowed and these calls will return only
+ * locally pre-scheduled events (if any). User can exit the schedule loop only
+ * after the schedule function indicates that there's no more (pre-scheduled)
+ * events.
  *
- * Must be used with odp_schedule() and odp_schedule_multi() before exiting (or
- * stalling) the schedule loop.
+ * Example call pattern:
+ *
+ * while (!stop) {
+ *     odp_event_t ev = odp_schedule(NULL, ODP_SCHED_WAIT);
+ *     // Process event
+ * }
+ *
+ * odp_schedule_pause();
+ *
+ * while (1) {
+ *     odp_event_t ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+ *     if (ev == ODP_EVENT_INVALID)
+ *         break;
+ *     odp_event_free(ev);
+ * }
  */
 void odp_schedule_pause(void);
 
