@@ -2177,7 +2177,7 @@ static int sched_and_plain_thread(void *arg)
 
 	/* Make sure scheduling context is released */
 	odp_schedule_pause();
-	while ((ev1 = odp_schedule(NULL, wait)) != ODP_EVENT_INVALID) {
+	while ((ev1 = odp_schedule(NULL, ODP_SCHED_NO_WAIT)) != ODP_EVENT_INVALID) {
 		if (sync == ODP_SCHED_SYNC_ORDERED)
 			odp_schedule_order_lock(0);
 
