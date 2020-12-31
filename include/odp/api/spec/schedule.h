@@ -340,10 +340,10 @@ int odp_schedule_capability(odp_schedule_capability_t *capa);
  * Creates a schedule group with the thread mask. Only threads in the
  * mask will receive events from a queue that belongs to the schedule group.
  * Thread masks of various schedule groups may overlap. There are predefined
- * groups such as ODP_SCHED_GROUP_ALL and ODP_SCHED_GROUP_WORKER, which are
- * always present and automatically updated. The use of group name is optional.
- * Unique names are not required. However, odp_schedule_group_lookup() returns
- * only a single matching group.
+ * groups, such as ODP_SCHED_GROUP_ALL and ODP_SCHED_GROUP_WORKER, which are
+ * present by default and are automatically updated. The use of group name is
+ * optional. Unique names are not required. However, odp_schedule_group_lookup()
+ * returns only a single matching group.
  *
  * @param name    Name of the schedule group or NULL. Maximum string length is
  *                ODP_SCHED_GROUP_NAME_LEN.
