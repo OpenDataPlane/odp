@@ -61,6 +61,7 @@ TESTS = \
 	queue/queue_main$(EXEEXT) \
 	random/random_main$(EXEEXT) \
 	scheduler/scheduler_main$(EXEEXT) \
+	scheduler/scheduler_no_predef_groups$(EXEEXT) \
 	stash/stash_main$(EXEEXT) \
 	std_clib/std_clib_main$(EXEEXT) \
 	thread/thread_main$(EXEEXT) \
