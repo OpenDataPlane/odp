@@ -138,6 +138,16 @@ static void release_context(odp_schedule_sync_t sync)
 		odp_schedule_release_ordered();
 }
 
+static void scheduler_test_init(void)
+{
+	odp_schedule_config_t default_config;
+
+	odp_schedule_config_init(&default_config);
+
+	CU_ASSERT(default_config.sched_group.all);
+	CU_ASSERT(default_config.sched_group.control);
+	CU_ASSERT(default_config.sched_group.worker);
+}
 static void scheduler_test_capa(void)
 {
 	odp_schedule_capability_t sched_capa;
@@ -819,7 +829,7 @@ static void scheduler_test_create_max_groups(void)
 	odp_schedule_capability_t sched_capa;
 
 	CU_ASSERT_FATAL(!odp_schedule_capability(&sched_capa));
-	uint32_t max_groups = sched_capa.max_groups;
+	uint32_t max_groups = sched_capa.max_groups - 3; /* Enabled predefined groups */
 	odp_schedule_group_t group[max_groups];
 	odp_queue_t queue[max_groups];
 
@@ -2851,6 +2861,7 @@ static void scheduler_test_flow_aware(void)
 
 /* Default scheduler config */
 odp_testinfo_t scheduler_suite[] = {
+	ODP_TEST_INFO(scheduler_test_init),
 	ODP_TEST_INFO(scheduler_test_capa),
 	ODP_TEST_INFO(scheduler_test_wait_time),
 	ODP_TEST_INFO(scheduler_test_num_prio),
