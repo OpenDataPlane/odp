@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -529,6 +529,9 @@ static inline int grp_update_tbl(void)
 
 	odp_spinlock_unlock(&sched->grp_lock);
 
+	if (odp_unlikely(num == 0))
+		return 0;
+
 	/* Update group weights. Round robin over all thread's groups. */
 	for (i = 0; i < GRP_WEIGHT_TBL_SIZE; i++)
 		sched_local.grp_weight[i] = i % num;
@@ -582,6 +585,21 @@ static int schedule_create_queue(uint32_t queue_index,
 
 	if (sched_param->group < 0 || sched_param->group >= NUM_SCHED_GRPS) {
 		ODP_ERR("Bad schedule group\n");
+		return -1;
+	}
+	if (sched_param->group == ODP_SCHED_GROUP_ALL &&
+	    !sched->config_if.group_enable.all) {
+		ODP_ERR("Trying to use disabled ODP_SCHED_GROUP_ALL\n");
+		return -1;
+	}
+	if (sched_param->group == ODP_SCHED_GROUP_CONTROL &&
+	    !sched->config_if.group_enable.control) {
+		ODP_ERR("Trying to use disabled ODP_SCHED_GROUP_CONTROL\n");
+		return -1;
+	}
+	if (sched_param->group == ODP_SCHED_GROUP_WORKER &&
+	    !sched->config_if.group_enable.worker) {
+		ODP_ERR("Trying to use disabled ODP_SCHED_GROUP_WORKER\n");
 		return -1;
 	}
 
@@ -806,11 +824,44 @@ static void schedule_config_init(odp_schedule_config_t *config)
 {
 	config->num_queues = CONFIG_MAX_SCHED_QUEUES;
 	config->queue_size = _odp_queue_glb->config.max_queue_size;
+	config->sched_group.all = sched->config_if.group_enable.all;
+	config->sched_group.control = sched->config_if.group_enable.control;
+	config->sched_group.worker = sched->config_if.group_enable.worker;
+}
+
+static void schedule_group_clear(odp_schedule_group_t group)
+{
+	odp_thrmask_t zero;
+
+	odp_thrmask_zero(&zero);
+
+	if (group < 0 || group > ODP_SCHED_GROUP_CONTROL)
+		ODP_ABORT("Invalid scheduling group\n");
+
+	grp_update_mask(group, &zero);
+	sched->sched_grp[group].allocated = 0;
+
 }
 
 static int schedule_config(const odp_schedule_config_t *config)
 {
-	(void)config;
+	odp_spinlock_lock(&sched->grp_lock);
+
+	sched->config_if.group_enable.all = config->sched_group.all;
+	sched->config_if.group_enable.control = config->sched_group.control;
+	sched->config_if.group_enable.worker = config->sched_group.worker;
+
+	/* Remove existing threads from predefined scheduling groups. */
+	if (!config->sched_group.all)
+		schedule_group_clear(ODP_SCHED_GROUP_ALL);
+
+	if (!config->sched_group.worker)
+		schedule_group_clear(ODP_SCHED_GROUP_WORKER);
+
+	if (!config->sched_group.control)
+		schedule_group_clear(ODP_SCHED_GROUP_CONTROL);
+
+	odp_spinlock_unlock(&sched->grp_lock);
 
 	return 0;
 }
@@ -1530,6 +1581,11 @@ static int schedule_thr_add(odp_schedule_group_t group, int thr)
 
 	odp_spinlock_lock(&sched->grp_lock);
 
+	if (!sched->sched_grp[group].allocated) {
+		odp_spinlock_unlock(&sched->grp_lock);
+		return 0;
+	}
+
 	odp_thrmask_or(&new_mask, &sched->sched_grp[group].mask, &mask);
 	grp_update_mask(group, &new_mask);
 
@@ -1551,6 +1607,11 @@ static int schedule_thr_rem(odp_schedule_group_t group, int thr)
 	odp_thrmask_xor(&new_mask, &mask, &sched->mask_all);
 
 	odp_spinlock_lock(&sched->grp_lock);
+
+	if (!sched->sched_grp[group].allocated) {
+		odp_spinlock_unlock(&sched->grp_lock);
+		return 0;
+	}
 
 	odp_thrmask_and(&new_mask, &sched->sched_grp[group].mask, &new_mask);
 	grp_update_mask(group, &new_mask);
