@@ -1,5 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
- * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -125,6 +125,8 @@ typedef struct {
 	prio_queue_t  prio_queue[NUM_GROUP][NUM_PRIO];
 	sched_group_t sched_group;
 	odp_shm_t     shm;
+	/* Scheduler interface config options (not used in fast path) */
+	schedule_config_t config_if;
 } sched_global_t;
 
 typedef struct {
@@ -138,6 +140,8 @@ typedef struct {
 
 static sched_global_t *sched_global;
 static __thread sched_local_t sched_local;
+
+static void remove_group(sched_group_t *sched_group, int thr, int group);
 
 static inline uint32_t index_to_ring_idx(int pktio, uint32_t index)
 {
@@ -220,6 +224,10 @@ static int init_global(void)
 	odp_thrmask_zero(&sched_group->s.group[GROUP_CONTROL].mask);
 	sched_group->s.group[GROUP_CONTROL].allocated = 1;
 
+	sched_global->config_if.group_enable.all = 1;
+	sched_global->config_if.group_enable.control = 1;
+	sched_global->config_if.group_enable.worker = 1;
+
 	return 0;
 }
 
@@ -269,11 +277,52 @@ static void schedule_config_init(odp_schedule_config_t *config)
 {
 	config->num_queues = CONFIG_MAX_SCHED_QUEUES;
 	config->queue_size = _odp_queue_glb->config.max_queue_size;
+	config->sched_group.all = true;
+	config->sched_group.control = true;
+	config->sched_group.worker = true;
+}
+
+static void schedule_group_clear(odp_schedule_group_t group)
+{
+	sched_group_t *sched_group = &sched_global->sched_group;
+	int thr;
+	const odp_thrmask_t *thrmask;
+
+	if (group < 0 || group >= NUM_STATIC_GROUP)
+		ODP_ABORT("Invalid scheduling group\n");
+
+	thrmask = &sched_group->s.group[group].mask;
+
+	thr = odp_thrmask_first(thrmask);
+	while (thr >= 0) {
+		remove_group(sched_group, thr, group);
+		thr = odp_thrmask_next(thrmask, thr);
+	}
+
+	memset(&sched_group->s.group[group], 0, sizeof(sched_group->s.group[0]));
 }
 
 static int schedule_config(const odp_schedule_config_t *config)
 {
-	(void)config;
+	sched_group_t *sched_group = &sched_global->sched_group;
+
+	odp_ticketlock_lock(&sched_group->s.lock);
+
+	sched_global->config_if.group_enable.all = config->sched_group.all;
+	sched_global->config_if.group_enable.control = config->sched_group.control;
+	sched_global->config_if.group_enable.worker = config->sched_group.worker;
+
+	/* Remove existing threads from predefined scheduling groups. */
+	if (!config->sched_group.all)
+		schedule_group_clear(ODP_SCHED_GROUP_ALL);
+
+	if (!config->sched_group.worker)
+		schedule_group_clear(ODP_SCHED_GROUP_WORKER);
+
+	if (!config->sched_group.control)
+		schedule_group_clear(ODP_SCHED_GROUP_CONTROL);
+
+	odp_ticketlock_unlock(&sched_group->s.lock);
 
 	return 0;
 }
@@ -334,7 +383,7 @@ static int thr_add(odp_schedule_group_t group, int thr)
 {
 	sched_group_t *sched_group = &sched_global->sched_group;
 
-	if (group < 0 || group >= NUM_GROUP)
+	if (group < 0 || group >= NUM_STATIC_GROUP)
 		return -1;
 
 	if (thr < 0 || thr >= NUM_THREAD)
@@ -344,7 +393,7 @@ static int thr_add(odp_schedule_group_t group, int thr)
 
 	if (!sched_group->s.group[group].allocated) {
 		odp_ticketlock_unlock(&sched_group->s.lock);
-		return -1;
+		return 0;
 	}
 
 	odp_thrmask_set(&sched_group->s.group[group].mask, thr);
@@ -359,14 +408,14 @@ static int thr_rem(odp_schedule_group_t group, int thr)
 {
 	sched_group_t *sched_group = &sched_global->sched_group;
 
-	if (group < 0 || group >= NUM_GROUP)
+	if (group < 0 || group >= NUM_STATIC_GROUP)
 		return -1;
 
 	odp_ticketlock_lock(&sched_group->s.lock);
 
 	if (!sched_group->s.group[group].allocated) {
 		odp_ticketlock_unlock(&sched_group->s.lock);
-		return -1;
+		return 0;
 	}
 
 	odp_thrmask_clr(&sched_group->s.group[group].mask, thr);
@@ -986,6 +1035,11 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	return 0;
 }
 
+static void get_config(schedule_config_t *config)
+{
+	*config = *(&sched_global->config_if);
+};
+
 /* Fill in scheduler interface */
 const schedule_fn_t _odp_schedule_sp_fn = {
 	.pktio_start   = pktio_start,
@@ -1002,7 +1056,8 @@ const schedule_fn_t _odp_schedule_sp_fn = {
 	.term_local    = term_local,
 	.order_lock    = order_lock,
 	.order_unlock  = order_unlock,
-	.max_ordered_locks = max_ordered_locks
+	.max_ordered_locks = max_ordered_locks,
+	.get_config    = get_config
 };
 
 /* Fill in scheduler API calls */
