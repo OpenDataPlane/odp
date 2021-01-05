@@ -298,13 +298,17 @@ static int start_timers(test_global_t *test_global)
 
 	memset(&timer_param, 0, sizeof(odp_timer_pool_param_t));
 
-	timer_param.res_ns     = res_ns;
-	if (mode)
-		timer_param.min_tmo = period_ns / 10;
-	else
-		timer_param.min_tmo = offset_ns / 2;
+	timer_param.res_ns = res_ns;
 
-	timer_param.max_tmo = offset_ns + ((num_tmo + 1) * period_ns);
+	if (mode == 0) {
+		timer_param.min_tmo = offset_ns / 2;
+		timer_param.max_tmo = offset_ns + ((num_tmo + 1) * period_ns);
+	} else {
+		/* periodic mode */
+		timer_param.min_tmo = period_ns / 10;
+		timer_param.max_tmo = offset_ns + (2 * period_ns);
+	}
+
 	if (test_global->opt.max_tmo_ns) {
 		if (test_global->opt.max_tmo_ns < timer_param.max_tmo) {
 			printf("Max tmo is too small. Must be at least %" PRIu64 " nsec.\n",
