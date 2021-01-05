@@ -57,6 +57,7 @@ typedef struct test_global_t {
 		unsigned long long burst;
 		unsigned long long burst_gap;
 		int mode;
+		int clk_src;
 		int init;
 		int output;
 		int early_retry;
@@ -101,6 +102,9 @@ static void print_usage(void)
 	       "  -o, --output <file>     Output file for measurement logs\n"
 	       "  -e, --early_retry <num> When timer restart fails due to ODP_TIMER_TOOEARLY, retry this many times\n"
 	       "                          with expiration time incremented by the period. Default: 0\n"
+	       "  -s, --clk_src           Clock source select (default 0):\n"
+	       "                            0: ODP_CLOCK_CPU\n"
+	       "                            1: ODP_CLOCK_EXT\n"
 	       "  -i, --init              Set global init parameters. Default: init params not set.\n"
 	       "  -h, --help              Display help and exit.\n\n");
 }
@@ -119,11 +123,12 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 		{"mode",         required_argument, NULL, 'm'},
 		{"output",       required_argument, NULL, 'o'},
 		{"early_retry",  required_argument, NULL, 'e'},
+		{"clk_src",      required_argument, NULL, 's'},
 		{"init",         no_argument,       NULL, 'i'},
 		{"help",         no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+p:r:f:x:n:b:g:m:o:e:ih";
+	const char *shortopts =  "+p:r:f:x:n:b:g:m:o:e:s:ih";
 	int ret = 0;
 
 	test_global->opt.period_ns = 200 * ODP_TIME_MSEC_IN_NS;
@@ -134,6 +139,7 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 	test_global->opt.burst     = 1;
 	test_global->opt.burst_gap = 0;
 	test_global->opt.mode      = 0;
+	test_global->opt.clk_src   = 0;
 	test_global->opt.init      = 0;
 	test_global->opt.output    = 0;
 	test_global->opt.early_retry = 0;
@@ -176,6 +182,9 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 			break;
 		case 'e':
 			test_global->opt.early_retry = atoi(optarg);
+			break;
+		case 's':
+			test_global->opt.clk_src = atoi(optarg);
 			break;
 		case 'i':
 			test_global->opt.init = 1;
@@ -223,6 +232,7 @@ static int start_timers(test_global_t *test_global)
 	uint64_t i, j, idx, num_tmo, burst, burst_gap;
 	uint64_t tot_timers, alloc_timers;
 	int mode;
+	odp_timer_clk_src_t clk_src;
 
 	mode = test_global->opt.mode;
 	alloc_timers = test_global->alloc_timers;
@@ -270,7 +280,12 @@ static int start_timers(test_global_t *test_global)
 
 	test_global->timeout_pool = pool;
 
-	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa)) {
+	if (test_global->opt.clk_src == 0)
+		clk_src = ODP_CLOCK_CPU;
+	else
+		clk_src = ODP_CLOCK_EXT;
+
+	if (odp_timer_capability(clk_src, &timer_capa)) {
 		printf("Timer capa failed\n");
 		return -1;
 	}
@@ -320,9 +335,10 @@ static int start_timers(test_global_t *test_global)
 	}
 
 	timer_param.num_timers = alloc_timers;
-	timer_param.clk_src    = ODP_CLOCK_CPU;
+	timer_param.clk_src    = clk_src;
 
 	printf("\nTest parameters:\n");
+	printf("  clock source:    %i\n", test_global->opt.clk_src);
 	printf("  resolution capa: %" PRIu64 " nsec\n", res_capa);
 	printf("  max timers capa: %" PRIu32 "\n", timer_capa.max_timers);
 	printf("  mode:            %i\n", mode);
