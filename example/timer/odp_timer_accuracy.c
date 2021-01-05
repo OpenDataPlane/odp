@@ -49,12 +49,13 @@ typedef struct test_log_t {
 
 typedef struct test_global_t {
 	struct {
-		unsigned long long int period_ns;
-		unsigned long long int res_ns;
-		unsigned long long int offset_ns;
-		unsigned long long int num;
-		unsigned long long int burst;
-		unsigned long long int burst_gap;
+		unsigned long long period_ns;
+		unsigned long long res_ns;
+		unsigned long long offset_ns;
+		unsigned long long max_tmo_ns;
+		unsigned long long num;
+		unsigned long long burst;
+		unsigned long long burst_gap;
 		int mode;
 		int init;
 		int output;
@@ -89,6 +90,7 @@ static void print_usage(void)
 	       "  -p, --period <nsec>     Timeout period in nsec. Default: 200 msec\n"
 	       "  -r, --resolution <nsec> Timeout resolution in nsec. Default: period / 10\n"
 	       "  -f, --first <nsec>      First timer offset in nsec. Default: 300 msec\n"
+	       "  -x, --max_tmo <nsec>    Maximum timeout in nsec. When 0, max tmo is calculated from other options. Default: 0\n"
 	       "  -n, --num <number>      Number of timeout periods. Default: 50\n"
 	       "  -b, --burst <number>    Number of timers per a timeout period. Default: 1\n"
 	       "  -g, --burst_gap <nsec>  Gap (in nsec) between timers within a burst. Default: 0\n"
@@ -110,6 +112,7 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 		{"period",       required_argument, NULL, 'p'},
 		{"resolution",   required_argument, NULL, 'r'},
 		{"first",        required_argument, NULL, 'f'},
+		{"max_tmo",      required_argument, NULL, 'x'},
 		{"num",          required_argument, NULL, 'n'},
 		{"burst",        required_argument, NULL, 'b'},
 		{"burst_gap",    required_argument, NULL, 'g'},
@@ -120,12 +123,13 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 		{"help",         no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+p:r:f:n:b:g:m:o:e:ih";
+	const char *shortopts =  "+p:r:f:x:n:b:g:m:o:e:ih";
 	int ret = 0;
 
 	test_global->opt.period_ns = 200 * ODP_TIME_MSEC_IN_NS;
 	test_global->opt.res_ns    = 0;
 	test_global->opt.offset_ns = 300 * ODP_TIME_MSEC_IN_NS;
+	test_global->opt.max_tmo_ns = 0;
 	test_global->opt.num       = 50;
 	test_global->opt.burst     = 1;
 	test_global->opt.burst_gap = 0;
@@ -149,6 +153,9 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 			break;
 		case 'f':
 			test_global->opt.offset_ns = strtoull(optarg, NULL, 0);
+			break;
+		case 'x':
+			test_global->opt.max_tmo_ns = strtoull(optarg, NULL, 0);
 			break;
 		case 'n':
 			test_global->opt.num = strtoull(optarg, NULL, 0);
@@ -297,7 +304,17 @@ static int start_timers(test_global_t *test_global)
 	else
 		timer_param.min_tmo = offset_ns / 2;
 
-	timer_param.max_tmo    = offset_ns + ((num_tmo + 1) * period_ns);
+	timer_param.max_tmo = offset_ns + ((num_tmo + 1) * period_ns);
+	if (test_global->opt.max_tmo_ns) {
+		if (test_global->opt.max_tmo_ns < timer_param.max_tmo) {
+			printf("Max tmo is too small. Must be at least %" PRIu64 " nsec.\n",
+			       timer_param.max_tmo);
+			return -1;
+		}
+
+		timer_param.max_tmo = test_global->opt.max_tmo_ns;
+	}
+
 	timer_param.num_timers = alloc_timers;
 	timer_param.clk_src    = ODP_CLOCK_CPU;
 
