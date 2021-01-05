@@ -1567,10 +1567,11 @@ void odp_packet_print(odp_packet_t pkt)
 	int len = 0;
 	int n = max_len - 1;
 	odp_packet_hdr_t *hdr = packet_hdr(pkt);
-	odp_buffer_t buf      = packet_to_buffer(pkt);
 
-	len += snprintf(&str[len], n - len, "Packet ");
-	len += odp_buffer_snprint(&str[len], n - len, buf);
+	len += snprintf(&str[len], n - len, "Packet\n------\n");
+	len += snprintf(&str[len], n - len, "  pool index   %u\n", hdr->buf_hdr.index.pool);
+	len += snprintf(&str[len], n - len, "  buf index    %u\n", hdr->buf_hdr.index.buffer);
+	len += snprintf(&str[len], n - len, "  ev subtype   %i\n", hdr->subtype);
 	len += snprintf(&str[len], n - len, "  input_flags  0x%" PRIx64 "\n",
 			hdr->p.input_flags.all);
 	if (hdr->p.input_flags.all) {
@@ -1650,7 +1651,7 @@ void odp_packet_print_data(odp_packet_t pkt, uint32_t offset,
 			"  buf index     %" PRIu32 "\n",
 			hdr->buf_hdr.index.buffer);
 	len += snprintf(&str[len], n - len,
-			"  seg_count      %" PRIu16 "\n", hdr->seg_count);
+			"  seg_count     %" PRIu16 "\n", hdr->seg_count);
 	len += snprintf(&str[len], n - len,
 			"  data len      %" PRIu32 "\n", data_len);
 	len += snprintf(&str[len], n - len,
