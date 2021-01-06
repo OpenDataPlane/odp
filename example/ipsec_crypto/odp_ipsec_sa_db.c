@@ -95,8 +95,8 @@ int create_sa_db_entry(char *input, odp_bool_t cipher)
 	str = local;
 	save = NULL;
 
-	/* Parse tokens separated by ':' */
-	while (NULL != (token = strtok_r(str, ":", &save))) {
+	/* Parse tokens separated by ',' */
+	while (NULL != (token = strtok_r(str, ",", &save))) {
 		str = NULL;  /* reset str for subsequent strtok_r calls */
 
 		/* Parse token based on its position */
@@ -191,8 +191,8 @@ int create_tun_db_entry(char *input)
 	str = local;
 	save = NULL;
 
-	/* Parse tokens separated by ':' */
-	while (NULL != (token = strtok_r(str, ":", &save))) {
+	/* Parse tokens separated by ',' */
+	while (NULL != (token = strtok_r(str, ",", &save))) {
 		str = NULL;  /* reset str for subsequent strtok_r calls */
 
 		/* Parse token based on its position */

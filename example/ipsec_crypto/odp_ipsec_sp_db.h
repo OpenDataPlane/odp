@@ -43,7 +43,7 @@ void init_sp_db(void);
 /**
  * Create an SP DB entry
  *
- * String is of the format "SrcSubNet:DstSubNet:(in|out):(ah|esp|[both])"
+ * String is of the format "SrcSubNet,DstSubNet,(in|out),(ah|esp|[both])"
  *
  * @param input          Pointer to a string describing SP
  * @param both_supported Enabling both AH and ESP is supported

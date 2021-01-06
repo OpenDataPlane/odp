@@ -83,8 +83,8 @@ int create_stream_db_entry(char *input)
 	str = local;
 	save = NULL;
 
-	/* Parse tokens separated by ':' */
-	while (NULL != (token = strtok_r(str, ":", &save))) {
+	/* Parse tokens separated by ',' */
+	while (NULL != (token = strtok_r(str, ",", &save))) {
 		str = NULL;  /* reset str for subsequent strtok_r calls */
 
 		/* Parse token based on its position */
