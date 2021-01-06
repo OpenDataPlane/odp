@@ -233,7 +233,7 @@ char *ipv4_subnet_str(char *b, ip_addr_range_t *range)
 static inline
 char *mac_addr_str(char *b, uint8_t *mac)
 {
-	sprintf(b, "%02X.%02X.%02X.%02X.%02X.%02X",
+	sprintf(b, "%02X:%02X:%02X:%02X:%02X:%02X",
 		mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	return b;
 }
@@ -241,7 +241,7 @@ char *mac_addr_str(char *b, uint8_t *mac)
 /**
  * Parse text string representing a MAC address into byte araray
  *
- * String is of the format "XX.XX.XX.XX.XX.XX" where XX is hexadecimal
+ * String is of the format "XX:XX:XX:XX:XX:XX" where XX is hexadecimal
  *
  * @param macaddress  Pointer to MAC address string to convert
  * @param mac         Pointer to MAC address byte array to populate
@@ -255,7 +255,7 @@ int parse_mac_string(char *macaddress, uint8_t *mac)
 	int converted;
 
 	converted = sscanf(macaddress,
-			   "%x.%x.%x.%x.%x.%x",
+			   "%x:%x:%x:%x:%x:%x",
 			   &macwords[0], &macwords[1], &macwords[2],
 			   &macwords[3], &macwords[4], &macwords[5]);
 	if (6 != converted)

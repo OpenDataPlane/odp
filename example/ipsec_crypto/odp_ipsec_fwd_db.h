@@ -47,7 +47,7 @@ void init_fwd_db(void);
 /**
  * Create a forwarding database entry
  *
- * String is of the format "SubNet:Intf:NextHopMAC"
+ * String is of the format "SubNet,Intf,NextHopMAC"
  *
  * @param input  Pointer to string describing route
  *

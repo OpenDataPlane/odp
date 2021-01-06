@@ -48,7 +48,7 @@ void init_sa_db(void);
 /**
  * Create an SA DB entry
  *
- * String is of the format "SrcIP:DstIP:Alg:SPI:Key"
+ * String is of the format "SrcIP,DstIP,Alg,SPI,Key"
  *
  * @param input  Pointer to string describing SA
  * @param cipher TRUE if cipher else FALSE for auth
@@ -100,7 +100,7 @@ void init_tun_db(void);
 /**
  * Create an tunnel DB entry
  *
- * String is of the format "SrcIP:DstIP:TunSrcIp:TunDstIp"
+ * String is of the format "SrcIP,DstIP,TunSrcIp,TunDstIp"
  *
  * @param input  Pointer to string describing tun
  *

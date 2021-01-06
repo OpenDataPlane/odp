@@ -58,7 +58,7 @@ void init_stream_db(void);
 /**
  * Create an stream DB entry
  *
- * String is of the format "SrcIP:DstIP:InInt:OutIntf:Count:Length"
+ * String is of the format "SrcIP,DstIP,InInt,OutIntf,Count,Length"
  *
  * @param input  Pointer to string describing stream
  *
