@@ -1675,7 +1675,7 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
 		if (0 == param->num_sa) {
 			sa = ODP_IPSEC_SA_INVALID;
 		} else {
-			sa = param->sa[sa_idx++];
+			sa = param->sa[sa_idx];
 			ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 		}
 
@@ -1731,7 +1731,7 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
 
 		memset(&status, 0, sizeof(status));
 
-		sa = param->sa[sa_idx++];
+		sa = param->sa[sa_idx];
 		ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 
 		if (0 == param->num_opt)
@@ -1783,7 +1783,7 @@ int odp_ipsec_in_enq(const odp_packet_t pkt_in[], int num_in,
 		if (0 == param->num_sa) {
 			sa = ODP_IPSEC_SA_INVALID;
 		} else {
-			sa = param->sa[sa_idx++];
+			sa = param->sa[sa_idx];
 			ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 		}
 
@@ -1838,7 +1838,7 @@ int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in,
 
 		memset(&status, 0, sizeof(status));
 
-		sa = param->sa[sa_idx++];
+		sa = param->sa[sa_idx];
 		ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 
 		if (0 == param->num_opt)
@@ -1942,7 +1942,7 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 		if (0 == param->num_sa) {
 			sa = ODP_IPSEC_SA_INVALID;
 		} else {
-			sa = param->sa[sa_idx++];
+			sa = param->sa[sa_idx];
 			ODP_ASSERT(ODP_IPSEC_SA_INVALID != sa);
 		}
 
