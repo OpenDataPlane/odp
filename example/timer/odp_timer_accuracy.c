@@ -574,6 +574,9 @@ static void run_test(test_global_t *test_global)
 		ctx = odp_timeout_user_ptr(tmo);
 		tmo_ns = ctx->nsec;
 
+		if (log)
+			log[i].tmo_ns = tmo_ns;
+
 		if (time_ns > tmo_ns) {
 			diff_ns = time_ns - tmo_ns;
 			stat->num_after++;
@@ -582,10 +585,8 @@ static void run_test(test_global_t *test_global)
 				stat->nsec_after_min = diff_ns;
 			if (diff_ns > stat->nsec_after_max)
 				stat->nsec_after_max = diff_ns;
-			if (log) {
-				log[i].tmo_ns  = tmo_ns;
+			if (log)
 				log[i].diff_ns = diff_ns;
-			}
 
 		} else if (time_ns < tmo_ns) {
 			diff_ns = tmo_ns - time_ns;
@@ -595,10 +596,8 @@ static void run_test(test_global_t *test_global)
 				stat->nsec_before_min = diff_ns;
 			if (diff_ns > stat->nsec_before_max)
 				stat->nsec_before_max = diff_ns;
-			if (log) {
-				log[i].tmo_ns  = tmo_ns;
+			if (log)
 				log[i].diff_ns = -diff_ns;
-			}
 		} else {
 			stat->num_exact++;
 		}
