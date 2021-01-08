@@ -405,10 +405,15 @@ static int start_timers(test_global_t *test_global)
 	}
 
 	idx = 0;
+
+	/* Record test start time and tick. Memory barriers forbid compiler and out-of-order
+	 * CPU to move samples apart. */
+	odp_mb_full();
 	start_tick = odp_timer_current_tick(timer_pool);
 	time       = odp_time_local();
-	start_ns   = odp_time_to_ns(time);
+	odp_mb_full();
 
+	start_ns = odp_time_to_ns(time);
 	test_global->start_tick = start_tick;
 	test_global->start_ns = start_ns;
 	test_global->period_tick = odp_timer_ns_to_tick(timer_pool, period_ns);
