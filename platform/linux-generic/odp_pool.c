@@ -210,6 +210,20 @@ static int read_config_file(pool_global_t *pool_glb)
 	pool_glb->config.pkt_max_num = val;
 	ODP_PRINT("  %s: %i\n", str, val);
 
+	str = "pool.pkt.max_len";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	if (val <= 0) {
+		ODP_ERR("Bad value %s = %i\n", str, val);
+		return -1;
+	}
+
+	pool_glb->config.pkt_max_len = val;
+	ODP_PRINT("  %s: %i\n", str, val);
+
 	str = "pool.pkt.base_align";
 	if (!_odp_libconfig_lookup_int(str, &val)) {
 		ODP_ERR("Config option '%s' not found.\n", str);
@@ -571,7 +585,7 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 		}
 
 		seg_len = CONFIG_PACKET_MAX_SEG_LEN;
-		max_len = CONFIG_PACKET_MAX_LEN;
+		max_len = _odp_pool_glb->config.pkt_max_len;
 
 		if (params->pkt.len &&
 		    params->pkt.len < CONFIG_PACKET_MAX_SEG_LEN)
@@ -1256,7 +1270,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 
 	/* Packet pools */
 	capa->pkt.max_pools        = max_pools;
-	capa->pkt.max_len          = CONFIG_PACKET_MAX_LEN;
+	capa->pkt.max_len          = _odp_pool_glb->config.pkt_max_len;
 	capa->pkt.max_num	   = _odp_pool_glb->config.pkt_max_num;
 	capa->pkt.max_align	   = _odp_pool_glb->config.pkt_base_align;
 	capa->pkt.min_headroom     = CONFIG_PACKET_HEADROOM;

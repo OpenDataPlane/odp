@@ -92,11 +92,6 @@ extern "C" {
 #define CONFIG_PACKET_TAILROOM 0
 
 /*
- * Maximum packet data length in bytes
- */
-#define CONFIG_PACKET_MAX_LEN (64 * 1024)
-
-/*
  * Maximum packet segment size including head- and tailrooms
  */
 #define CONFIG_PACKET_SEG_SIZE (60 * 1024)

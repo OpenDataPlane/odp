@@ -104,6 +104,7 @@ typedef struct pool_global_t {
 	odp_shm_t shm;
 
 	struct {
+		uint32_t pkt_max_len;
 		uint32_t pkt_max_num;
 		uint32_t local_cache_size;
 		uint32_t burst_size;
