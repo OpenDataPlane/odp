@@ -91,98 +91,60 @@ int stop_pktio(odp_pktio_t pktio)
 	return 0;
 }
 
+static uint32_t seqno_offset(odp_packet_t pkt)
+{
+	uint32_t l3_offset = odp_packet_l3_offset(pkt);
+	int rc;
+	uint16_t len = 0;
+
+	CU_ASSERT_FATAL(l3_offset != ODP_PACKET_OFFSET_INVALID);
+
+	if (odp_packet_has_ipv4(pkt)) {
+		odph_ipv4hdr_t ip;
+
+		rc = odp_packet_copy_to_mem(pkt, l3_offset, sizeof(ip), &ip);
+		CU_ASSERT_FATAL(rc == 0);
+		len = odp_be_to_cpu_16(ip.tot_len);
+	} else if (odp_packet_has_ipv6(pkt)) {
+		odph_ipv6hdr_t ip;
+
+		rc = odp_packet_copy_to_mem(pkt, l3_offset, sizeof(ip), &ip);
+		CU_ASSERT_FATAL(rc == 0);
+		len = sizeof(ip) + odp_be_to_cpu_16(ip.payload_len);
+	} else {
+		CU_FAIL_FATAL("Unexcpected packet type");
+	}
+
+	return l3_offset + len - sizeof(cls_test_packet_t);
+}
+
 int cls_pkt_set_seq(odp_packet_t pkt)
 {
-	static uint32_t seq;
 	cls_test_packet_t data;
+	static uint32_t seq;
 	uint32_t offset;
-	odph_ipv4hdr_t *ip;
-	odph_tcphdr_t *tcp;
-	odph_udphdr_t *udp;
-	uint16_t port = 0;
-	uint32_t hlen = 0;
 	int status;
 
 	data.magic = DATA_MAGIC;
 	data.seq = ++seq;
 
-	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
-	offset = odp_packet_l4_offset(pkt);
-	CU_ASSERT_FATAL(offset != ODP_PACKET_OFFSET_INVALID);
+	offset = seqno_offset(pkt);
 
-	if (ip->proto == ODPH_IPPROTO_IGMP) {
-		status = odp_packet_copy_from_mem(pkt, offset + ODP_IGMP_HLEN,
-						  sizeof(data), &data);
-	} else if (ip->proto == ODPH_IPPROTO_ICMPV4) {
-		status = odp_packet_copy_from_mem(pkt, offset + ODPH_ICMPHDR_LEN,
-						  sizeof(data), &data);
-	} else if (ip->proto == ODPH_IPPROTO_SCTP) {
-		/* Create some invalid SCTP packet for testing under the assumption that
-		 * no implementation really cares
-		 */
-		status = odp_packet_copy_from_mem(pkt, offset + ODPH_SCTPHDR_LEN,
-						  sizeof(data), &data);
-	} else if (ip->proto == ODPH_IPPROTO_UDP) {
-		udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-		port = odp_be_to_cpu_16(udp->dst_port);
-		if (port == ODP_GTPU_UDP_PORT) {
-			hlen = offset + ODPH_UDPHDR_LEN + ODP_GTP_HLEN;
-			status = odp_packet_copy_from_mem(pkt, hlen,
-							  sizeof(data), &data);
-		} else {
-			status = odp_packet_copy_from_mem(pkt, offset + ODPH_UDPHDR_LEN,
-							  sizeof(data), &data);
-		}
-	} else {
-		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-		status = odp_packet_copy_from_mem(pkt, offset + tcp->hl * 4,
-						  sizeof(data), &data);
-	}
+	status = odp_packet_copy_from_mem(pkt, offset, sizeof(data), &data);
 
 	return status;
 }
 
 uint32_t cls_pkt_get_seq(odp_packet_t pkt)
 {
-	uint32_t offset;
 	cls_test_packet_t data;
-	odph_ipv4hdr_t *ip;
-	odph_tcphdr_t *tcp;
-	odph_udphdr_t *udp;
-	uint32_t hlen = 0;
-	uint16_t port = 0;
+	uint32_t offset;
+	int rc;
 
-	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
-	offset = odp_packet_l4_offset(pkt);
+	offset = seqno_offset(pkt);
 
-	if (offset == ODP_PACKET_OFFSET_INVALID || ip == NULL)
-		return TEST_SEQ_INVALID;
-
-	if (ip->proto == ODPH_IPPROTO_IGMP) {
-		odp_packet_copy_to_mem(pkt, offset + ODP_IGMP_HLEN,
-				       sizeof(data), &data);
-
-	} else if (ip->proto == ODPH_IPPROTO_ICMPV4) {
-		odp_packet_copy_to_mem(pkt, offset + ODPH_ICMPHDR_LEN,
-				       sizeof(data), &data);
-	} else if (ip->proto == ODPH_IPPROTO_SCTP) {
-		odp_packet_copy_to_mem(pkt, offset + ODPH_SCTPHDR_LEN,
-				       sizeof(data), &data);
-	} else if (ip->proto == ODPH_IPPROTO_UDP) {
-		udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-		port = odp_be_to_cpu_16(udp->dst_port);
-		if (port == ODP_GTPU_UDP_PORT) {
-			hlen = offset + ODPH_UDPHDR_LEN + ODP_GTP_HLEN;
-			odp_packet_copy_to_mem(pkt, hlen, sizeof(data), &data);
-		} else {
-			odp_packet_copy_to_mem(pkt, offset + ODPH_UDPHDR_LEN,
-					       sizeof(data), &data);
-		}
-	} else {
-		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-		odp_packet_copy_to_mem(pkt, offset + tcp->hl * 4,
-				       sizeof(data), &data);
-	}
+	rc = odp_packet_copy_to_mem(pkt, offset, sizeof(data), &data);
+	CU_ASSERT_FATAL(rc == 0);
 
 	if (data.magic == DATA_MAGIC)
 		return data.seq;
