@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2013-2020, Nokia Solutions and Networks
+ * Copyright (c) 2013-2021, Nokia Solutions and Networks
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -25,14 +25,18 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #define MAX_LOOP 16
-#define LOOP_MTU (64 * 1024)
+
+#define LOOP_MTU_MIN 68
+#define LOOP_MTU_MAX UINT16_MAX
 
 typedef struct {
 	odp_queue_t loopq;		/**< loopback queue for "loop" device */
 	odp_bool_t promisc;		/**< promiscuous mode state */
+	uint16_t mtu;			/**< link MTU */
 	uint8_t idx;			/**< index of "loop" device */
 } pkt_loop_t;
 
@@ -53,6 +57,7 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry);
 static int loopback_open(odp_pktio_t id, pktio_entry_t *pktio_entry,
 			 const char *devname, odp_pool_t pool ODP_UNUSED)
 {
+	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
 	long idx;
 	char loopq_name[ODP_QUEUE_NAME_LEN];
 
@@ -70,11 +75,11 @@ static int loopback_open(odp_pktio_t id, pktio_entry_t *pktio_entry,
 
 	snprintf(loopq_name, sizeof(loopq_name), "%" PRIu64 "-pktio_loopq",
 		 odp_pktio_to_u64(id));
-	pkt_priv(pktio_entry)->loopq =
-		odp_queue_create(loopq_name, NULL);
-	pkt_priv(pktio_entry)->idx = idx;
+	pkt_loop->idx = idx;
+	pkt_loop->mtu = LOOP_MTU_MAX;
+	pkt_loop->loopq = odp_queue_create(loopq_name, NULL);
 
-	if (pkt_priv(pktio_entry)->loopq == ODP_QUEUE_INVALID)
+	if (pkt_loop->loopq == ODP_QUEUE_INVALID)
 		return -1;
 
 	loopback_stats_reset(pktio_entry);
@@ -284,6 +289,7 @@ static inline void loopback_fix_checksums(odp_packet_t pkt,
 static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			 const odp_packet_t pkt_tbl[], int num)
 {
+	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	odp_queue_t queue;
 	int i;
@@ -303,7 +309,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	for (i = 0; i < num; ++i) {
 		uint32_t pkt_len = odp_packet_len(pkt_tbl[i]);
 
-		if (pkt_len > LOOP_MTU) {
+		if (odp_unlikely(pkt_len > pkt_loop->mtu)) {
 			if (nb_tx == 0) {
 				__odp_errno = EMSGSIZE;
 				return -1;
@@ -361,9 +367,21 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	return ret;
 }
 
-static uint32_t loopback_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
+static uint32_t loopback_mtu_get(pktio_entry_t *pktio_entry)
 {
-	return LOOP_MTU;
+	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
+
+	return pkt_loop->mtu;
+}
+
+static int loopback_mtu_set(pktio_entry_t *pktio_entry, uint32_t maxlen_input,
+			    uint32_t maxlen_output ODP_UNUSED)
+{
+	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
+
+	pkt_loop->mtu = maxlen_input;
+
+	return 0;
 }
 
 static int loopback_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
@@ -404,6 +422,13 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 	capa->max_input_queues  = 1;
 	capa->max_output_queues = 1;
 	capa->set_op.op.promisc_mode = 1;
+	capa->set_op.op.maxlen = 1;
+
+	capa->maxlen.equal = true;
+	capa->maxlen.min_input = LOOP_MTU_MIN;
+	capa->maxlen.max_input = LOOP_MTU_MAX;
+	capa->maxlen.min_output = LOOP_MTU_MIN;
+	capa->maxlen.max_output = LOOP_MTU_MAX;
 
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
@@ -488,6 +513,7 @@ const pktio_if_ops_t _odp_loopback_pktio_ops = {
 	.recv = loopback_recv,
 	.send = loopback_send,
 	.maxlen_get = loopback_mtu_get,
+	.maxlen_set = loopback_mtu_set,
 	.promisc_mode_set = loopback_promisc_mode_set,
 	.promisc_mode_get = loopback_promisc_mode_get,
 	.mac_get = loopback_mac_addr_get,
