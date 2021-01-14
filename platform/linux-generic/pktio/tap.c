@@ -1,4 +1,5 @@
 /* Copyright (c) 2015, Ilya Maximets <i.maximets@samsung.com>
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -47,12 +48,11 @@
 #include <odp_classification_internal.h>
 #include <odp_errno_define.h>
 
-#define BUF_SIZE 65536
-
 typedef struct {
 	int fd;				/**< file descriptor for tap interface*/
 	int skfd;			/**< socket descriptor */
 	uint32_t mtu;			/**< cached mtu */
+	uint32_t mtu_max;		/**< maximum supported MTU value */
 	unsigned char if_mac[ETH_ALEN];	/**< MAC address of pktio side (not a
 					     MAC address of kernel interface)*/
 	odp_pool_t pool;		/**< pool to alloc packets from */
@@ -173,6 +173,9 @@ static int tap_pktio_open(odp_pktio_t id ODP_UNUSED,
 		ODP_ERR("_odp_mtu_get_fd failed: %s\n", strerror(errno));
 		goto sock_err;
 	}
+	tap->mtu_max = _ODP_SOCKET_MTU_MAX;
+	if (mtu > tap->mtu_max)
+		tap->mtu_max =  mtu;
 
 	tap->fd = fd;
 	tap->skfd = skfd;
@@ -318,10 +321,11 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  odp_packet_t pkts[], int num)
 {
+	pkt_tap_t *tap = pkt_priv(pktio_entry);
 	ssize_t retval;
 	int i;
-	uint8_t buf[BUF_SIZE];
-	pkt_tap_t *tap = pkt_priv(pktio_entry);
+	uint32_t mtu = tap->mtu;
+	uint8_t buf[mtu];
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
 
@@ -333,7 +337,7 @@ static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	for (i = 0; i < num; i++) {
 		do {
-			retval = read(tap->fd, buf, BUF_SIZE);
+			retval = read(tap->fd, buf, mtu);
 		} while (retval < 0 && errno == EINTR);
 
 		if (ts != NULL)
@@ -357,17 +361,18 @@ static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
 				   const odp_packet_t pkts[], int num)
 {
+	pkt_tap_t *tap = pkt_priv(pktio_entry);
 	ssize_t retval;
 	int i, n;
 	uint32_t pkt_len;
+	uint32_t mtu = tap->mtu;
 	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
-	uint8_t buf[BUF_SIZE];
-	pkt_tap_t *tap = pkt_priv(pktio_entry);
+	uint8_t buf[mtu];
 
 	for (i = 0; i < num; i++) {
 		pkt_len = odp_packet_len(pkts[i]);
 
-		if (pkt_len > tap->mtu) {
+		if (odp_unlikely(pkt_len > mtu)) {
 			if (i == 0) {
 				__odp_errno = EMSGSIZE;
 				return -1;
@@ -438,6 +443,21 @@ static uint32_t tap_mtu_get(pktio_entry_t *pktio_entry)
 	return ret;
 }
 
+static int tap_mtu_set(pktio_entry_t *pktio_entry, uint32_t maxlen_input,
+		       uint32_t maxlen_output ODP_UNUSED)
+{
+	pkt_tap_t *tap = pkt_priv(pktio_entry);
+	int ret;
+
+	ret = _odp_mtu_set_fd(tap->skfd, pktio_entry->s.name + 4, maxlen_input);
+	if (ret)
+		return ret;
+
+	tap->mtu = maxlen_input;
+
+	return 0;
+}
+
 static int tap_promisc_mode_set(pktio_entry_t *pktio_entry,
 				odp_bool_t enable)
 {
@@ -481,12 +501,21 @@ static int tap_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info
 static int tap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 			  odp_pktio_capability_t *capa)
 {
+	pkt_tap_t *tap = pkt_priv(pktio_entry);
+
 	memset(capa, 0, sizeof(odp_pktio_capability_t));
 
 	capa->max_input_queues  = 1;
 	capa->max_output_queues = 1;
 	capa->set_op.op.promisc_mode = 1;
 	capa->set_op.op.mac_addr = 1;
+	capa->set_op.op.maxlen = 1;
+
+	capa->maxlen.equal = true;
+	capa->maxlen.min_input = _ODP_SOCKET_MTU_MIN;
+	capa->maxlen.max_input = tap->mtu_max;
+	capa->maxlen.min_output = _ODP_SOCKET_MTU_MIN;
+	capa->maxlen.max_output = tap->mtu_max;
 
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
@@ -510,6 +539,7 @@ const pktio_if_ops_t _odp_tap_pktio_ops = {
 	.recv = tap_pktio_recv,
 	.send = tap_pktio_send,
 	.maxlen_get = tap_mtu_get,
+	.maxlen_set = tap_mtu_set,
 	.promisc_mode_set = tap_promisc_mode_set,
 	.promisc_mode_get = tap_promisc_mode_get,
 	.mac_get = tap_mac_addr_get,

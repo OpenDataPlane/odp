@@ -72,6 +72,7 @@ int _odp_mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[])
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
  * ODP_PACKET_NETMAP:
+ * ODP_PACKET_TAP:
  */
 uint32_t _odp_mtu_get_fd(int fd, const char *name)
 {
@@ -92,6 +93,7 @@ uint32_t _odp_mtu_get_fd(int fd, const char *name)
 /*
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_NETMAP:
+ * ODP_PACKET_TAP:
  */
 int _odp_mtu_set_fd(int fd, const char *name, int mtu)
 {
