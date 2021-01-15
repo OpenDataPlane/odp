@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -57,6 +58,7 @@ typedef struct {
 	void *tx;		/**< tx pcap handle */
 	void *tx_dump;		/**< tx pcap dumper handle */
 	odp_pool_t pool;	/**< rx pool */
+	uint32_t mtu;		/**< link MTU */
 	int loops;		/**< number of times to loop rx pcap */
 	int loop_cnt;		/**< number of loops completed */
 	odp_bool_t promisc;	/**< promiscuous mode state */
@@ -70,7 +72,9 @@ static inline pkt_pcap_t *pkt_priv(pktio_entry_t *pktio_entry)
 	return (pkt_pcap_t *)(uintptr_t)(pktio_entry->s.pkt_priv);
 }
 
-#define PKTIO_PCAP_MTU (64 * 1024)
+#define PKTIO_PCAP_MTU_MIN (68 + _ODP_ETHHDR_LEN)
+#define PKTIO_PCAP_MTU_MAX (64 * 1024)
+
 static const char pcap_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x04};
 
 static int pcapif_stats_reset(pktio_entry_t *pktio_entry);
@@ -132,7 +136,7 @@ static int _pcapif_init_tx(pkt_pcap_t *pcap)
 	if (!tx) {
 		/* if there is no rx pcap_t already open for rx, a dummy
 		 * one needs to be opened for writing the dump */
-		tx = pcap_open_dead(DLT_EN10MB, PKTIO_PCAP_MTU);
+		tx = pcap_open_dead(DLT_EN10MB, PKTIO_PCAP_MTU_MAX);
 		if (!tx) {
 			ODP_ERR("failed to open TX dump\n");
 			return -1;
@@ -162,6 +166,7 @@ static int pcapif_init(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	pcap->loops = 1;
 	pcap->pool = pool;
 	pcap->promisc = 1;
+	pcap->mtu = PKTIO_PCAP_MTU_MAX;
 
 	ret = _pcapif_parse_devname(pcap, devname);
 
@@ -323,7 +328,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 static int _pcapif_dump_pkt(pkt_pcap_t *pcap, odp_packet_t pkt)
 {
 	struct pcap_pkthdr hdr;
-	uint8_t tx_buf[PKTIO_PCAP_MTU];
+	uint8_t tx_buf[PKTIO_PCAP_MTU_MAX];
 
 	if (!pcap->tx_dump)
 		return 0;
@@ -351,9 +356,9 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
 	for (i = 0; i < num; ++i) {
-		int pkt_len = odp_packet_len(pkts[i]);
+		uint32_t pkt_len = odp_packet_len(pkts[i]);
 
-		if (pkt_len > PKTIO_PCAP_MTU) {
+		if (odp_unlikely(pkt_len > pcap->mtu)) {
 			if (i == 0) {
 				odp_ticketlock_unlock(&pktio_entry->s.txl);
 				return -1;
@@ -381,7 +386,19 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 static uint32_t pcapif_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
-	return PKTIO_PCAP_MTU;
+	pkt_pcap_t *pcap = pkt_priv(pktio_entry);
+
+	return pcap->mtu;
+}
+
+static int pcapif_mtu_set(pktio_entry_t *pktio_entry, uint32_t maxlen_input,
+			  uint32_t maxlen_output ODP_UNUSED)
+{
+	pkt_pcap_t *pcap = pkt_priv(pktio_entry);
+
+	pcap->mtu = maxlen_input;
+
+	return 0;
 }
 
 static int pcapif_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
@@ -400,6 +417,13 @@ static int pcapif_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	capa->max_input_queues  = 1;
 	capa->max_output_queues = 1;
 	capa->set_op.op.promisc_mode = 1;
+	capa->set_op.op.maxlen = 1;
+
+	capa->maxlen.equal = true;
+	capa->maxlen.min_input = PKTIO_PCAP_MTU_MIN;
+	capa->maxlen.max_input = PKTIO_PCAP_MTU_MAX;
+	capa->maxlen.min_output = PKTIO_PCAP_MTU_MIN;
+	capa->maxlen.max_output = PKTIO_PCAP_MTU_MAX;
 
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
@@ -509,6 +533,7 @@ const pktio_if_ops_t _odp_pcap_pktio_ops = {
 	.recv = pcapif_recv_pkt,
 	.send = pcapif_send_pkt,
 	.maxlen_get = pcapif_mtu_get,
+	.maxlen_set = pcapif_mtu_set,
 	.promisc_mode_set = pcapif_promisc_mode_set,
 	.promisc_mode_get = pcapif_promisc_mode_get,
 	.mac_get = pcapif_mac_addr_get,
