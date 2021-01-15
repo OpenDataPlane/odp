@@ -425,6 +425,13 @@ odp_bool_t verify_ipv4_packet(stream_db_entry_t *stream,
 	/* Find IPsec headers if any and compare against entry */
 	hdr_len = locate_ipsec_headers(ip, &ah, &esp);
 
+	/* Verify if the packet is IPsec encapsulated or is cleartext as
+	 * expected
+	 */
+	if (((stream->output.entry && (!ah && !esp))) ||
+	    (stream->input.entry && (ah || esp)))
+		return FALSE;
+
 	/* Cleartext packet */
 	if (!ah && !esp)
 		goto clear_packet;
