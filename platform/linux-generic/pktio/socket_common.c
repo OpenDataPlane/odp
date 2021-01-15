@@ -91,6 +91,7 @@ uint32_t _odp_mtu_get_fd(int fd, const char *name)
 }
 
 /*
+ * ODP_PACKET_SOCKET_MMAP:
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_NETMAP:
  * ODP_PACKET_TAP:
