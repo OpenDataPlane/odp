@@ -216,11 +216,11 @@ static int init_options(pktio_entry_t *pktio_entry,
 		return -1;
 	opt->set_flow_hash = !!val;
 
-	ODP_PRINT("DPDK interface (%s): %" PRIu16 "\n", dev_info->driver_name,
-		  pkt_priv(pktio_entry)->port_id);
-	ODP_PRINT("  num_rx_desc: %d\n", opt->num_rx_desc);
-	ODP_PRINT("  num_tx_desc: %d\n", opt->num_tx_desc);
-	ODP_PRINT("  rx_drop_en: %d\n", opt->rx_drop_en);
+	ODP_DBG("DPDK interface (%s): %" PRIu16 "\n", dev_info->driver_name,
+		pkt_priv(pktio_entry)->port_id);
+	ODP_DBG("  num_rx_desc: %d\n", opt->num_rx_desc);
+	ODP_DBG("  num_tx_desc: %d\n", opt->num_tx_desc);
+	ODP_DBG("  rx_drop_en: %d\n", opt->rx_drop_en);
 
 	return 0;
 }
@@ -1805,7 +1805,7 @@ static void dpdk_ptype_support_set(pktio_entry_t *pktio_entry, uint16_t port_id)
 
 	max_num = rte_eth_dev_get_supported_ptypes(port_id, mask, NULL, 0);
 	if (max_num <= 0) {
-		ODP_ERR("Device does not support any ptype flags\n");
+		ODP_DBG("Device does not support any ptype flags\n");
 		return;
 	}
 
@@ -1813,7 +1813,7 @@ static void dpdk_ptype_support_set(pktio_entry_t *pktio_entry, uint16_t port_id)
 
 	num = rte_eth_dev_get_supported_ptypes(port_id, mask, ptype, max_num);
 	if (num <= 0) {
-		ODP_ERR("Device does not support any ptype flags\n");
+		ODP_DBG("Device does not support any ptype flags\n");
 		return;
 	}
 
