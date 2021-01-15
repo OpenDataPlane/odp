@@ -44,6 +44,11 @@ helperlinuxinclude_HEADERS = \
 		  include/odp/helper/linux/process.h
 endif
 
+if helper_cli
+helperinclude_HEADERS += \
+		  include/odp/helper/cli.h
+endif
+
 noinst_HEADERS = \
 		 include/odph_list_internal.h
 
@@ -64,6 +69,12 @@ __LIB__libodphelper_la_SOURCES += \
 				linux/thread.c
 endif
 
+if helper_cli
+__LIB__libodphelper_la_SOURCES += \
+				cli.c
+endif
+
 __LIB__libodphelper_la_LIBADD = $(PTHREAD_LIBS)
+__LIB__libodphelper_la_LIBADD += $(LIBCLI_LIBS)
 
 lib_LTLIBRARIES = $(LIB)/libodphelper.la

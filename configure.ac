@@ -332,6 +332,7 @@ AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
 AM_CONDITIONAL([helper_linux], [test x$helper_linux = xyes ])
+AM_CONDITIONAL([helper_cli], [test x$helper_cli = xyes ])
 AM_CONDITIONAL([ARCH_IS_ARM], [test "x${ARCH_DIR}" = "xarm"])
 AM_CONDITIONAL([ARCH_IS_AARCH64], [test "x${ARCH_DIR}" = "xaarch64"])
 AM_CONDITIONAL([ARCH_IS_DEFAULT], [test "x${ARCH_DIR}" = "xdefault"])
@@ -479,6 +480,7 @@ AC_MSG_RESULT([
 	ARCH_ABI		${ARCH_ABI}
 	with_platform:		${with_platform}
 	helper_linux:		${helper_linux}
+	helper_cli:		${helper_cli}
 	prefix:			${prefix}
 	sysconfdir:		${sysconfdir}
 	libdir:			${libdir}

@@ -38,6 +38,12 @@ extern "C" {
 #include <odp/helper/udp.h>
 #include <odp/helper/version.h>
 
+#include <odp/helper/autoheader_external.h>
+
+#ifdef ODPH_CLI
+#include <odp/helper/cli.h>
+#endif
+
 #ifdef __cplusplus
 }
 #endif

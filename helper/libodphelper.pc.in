@@ -7,5 +7,5 @@ Name: libodphelper
 Description: Helper for the ODP packet processing engine
 Version: @PKGCONFIG_VERSION@
 Libs: -L${libdir} -lodphelper
-Libs.private:
+Libs.private: @LIBCLI_LIBS@
 Cflags: -I${includedir}
