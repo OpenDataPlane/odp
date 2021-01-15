@@ -1,5 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
- * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -104,6 +104,14 @@ ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
 /* Minimum RX burst size */
 #define DPDK_MIN_RX_BURST 4
 
+/* Limits for setting link MTU */
+#if RTE_VERSION >= RTE_VERSION_NUM(19, 11, 0, 0)
+#define DPDK_MTU_MIN (RTE_ETHER_MIN_MTU + _ODP_ETHHDR_LEN)
+#else
+#define DPDK_MTU_MIN (68 + _ODP_ETHHDR_LEN)
+#endif
+#define DPDK_MTU_MAX (9000 + _ODP_ETHHDR_LEN)
+
 /** DPDK runtime configuration options */
 typedef struct {
 	int num_rx_desc;
@@ -126,19 +134,21 @@ typedef union ODP_ALIGNED_CACHE {
 
 /** Packet IO using DPDK interface */
 typedef struct ODP_ALIGNED_CACHE {
-	odp_pool_t pool;		  /**< pool to alloc packets from */
-	struct rte_mempool *pkt_pool;	  /**< DPDK packet pool */
-	uint32_t data_room;		  /**< maximum packet length */
-	unsigned int min_rx_burst;		  /**< minimum RX burst size */
-	odp_pktin_hash_proto_t hash;	  /**< Packet input hash protocol */
+	odp_pool_t pool;		/**< pool to alloc packets from */
+	struct rte_mempool *pkt_pool;	/**< DPDK packet pool */
+	uint32_t data_room;		/**< maximum packet length */
+	unsigned int min_rx_burst;	/**< minimum RX burst size */
+	odp_pktin_hash_proto_t hash;	/**< Packet input hash protocol */
 	/* Supported RTE_PTYPE_XXX flags in a mask */
 	uint32_t supported_ptypes;
-	uint16_t mtu;			  /**< maximum transmission unit */
-	uint16_t port_id;		  /**< DPDK port identifier */
+	uint16_t mtu;			/**< maximum transmission unit */
+	uint32_t mtu_max;		/**< maximum supported MTU value */
+	odp_bool_t mtu_set;		/**< DPDK MTU has been modified */
+	uint16_t port_id;		/**< DPDK port identifier */
 	/** Use system call to get/set vdev promisc mode */
 	uint8_t vdev_sysc_promisc;
-	uint8_t lockless_rx;		  /**< no locking for rx */
-	uint8_t lockless_tx;		  /**< no locking for tx */
+	uint8_t lockless_rx;		/**< no locking for rx */
+	uint8_t lockless_tx;		/**< no locking for tx */
 	  /** RX queue locks */
 	odp_ticketlock_t rx_lock[PKTIO_MAX_QUEUES] ODP_ALIGNED_CACHE;
 	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES];  /**< TX queue locks */
@@ -793,7 +803,7 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 
 		pkt_len = packet_len(pkt_hdr);
 
-		if (pkt_len > pkt_dpdk->mtu) {
+		if (odp_unlikely(pkt_len > pkt_dpdk->mtu)) {
 			if (i == 0)
 				__odp_errno = EMSGSIZE;
 			goto fail;
@@ -1048,11 +1058,31 @@ static uint32_t dpdk_mtu_get(pktio_entry_t *pktio_entry)
 	return mtu;
 }
 
-static uint32_t dpdk_frame_maxlen(pktio_entry_t *pktio_entry)
+static uint32_t dpdk_maxlen(pktio_entry_t *pktio_entry)
 {
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 
 	return pkt_dpdk->mtu;
+}
+
+static int dpdk_maxlen_set(pktio_entry_t *pktio_entry, uint32_t maxlen_input,
+			   uint32_t maxlen_output ODP_UNUSED)
+{
+	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
+	uint16_t mtu;
+	int ret;
+
+	/* DPDK MTU value does not include Ethernet header */
+	mtu = maxlen_input - _ODP_ETHHDR_LEN;
+
+	ret = rte_eth_dev_set_mtu(pkt_dpdk->port_id, mtu);
+	if (odp_unlikely(ret))
+		ODP_ERR("rte_eth_dev_set_mtu() failed: %d\n", ret);
+
+	pkt_dpdk->mtu = maxlen_input;
+	pkt_dpdk->mtu_set = true;
+
+	return ret;
 }
 
 static int dpdk_vdev_promisc_mode_get(uint16_t port_id)
@@ -1491,7 +1521,7 @@ static int dpdk_output_queues_config(pktio_entry_t *pktio_entry,
 }
 
 static int dpdk_init_capability(pktio_entry_t *pktio_entry,
-				struct rte_eth_dev_info *dev_info)
+				const struct rte_eth_dev_info *dev_info)
 {
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	odp_pktio_capability_t *capa = &pktio_entry->s.capa;
@@ -1503,10 +1533,8 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
 	int ret;
 	uint32_t ptype_mask = RTE_PTYPE_L3_MASK | RTE_PTYPE_L4_MASK;
 
-	memset(dev_info, 0, sizeof(struct rte_eth_dev_info));
 	memset(capa, 0, sizeof(odp_pktio_capability_t));
 
-	rte_eth_dev_info_get(pkt_dpdk->port_id, dev_info);
 	capa->max_input_queues = RTE_MIN(dev_info->max_rx_queues,
 					 PKTIO_MAX_QUEUES);
 
@@ -1527,6 +1555,20 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
 		capa->set_op.op.mac_addr = 1;
 	} else if (ret != -ENOTSUP && ret != -EPERM) {
 		ODP_ERR("Failed to set interface default MAC: %d\n", ret);
+		return -1;
+	}
+
+	/* Check if setting MTU is supported */
+	ret = rte_eth_dev_set_mtu(pkt_dpdk->port_id, pkt_dpdk->mtu - _ODP_ETHHDR_LEN);
+	if (ret == 0) {
+		capa->set_op.op.maxlen = 1;
+		capa->maxlen.equal = true;
+		capa->maxlen.min_input = DPDK_MTU_MIN;
+		capa->maxlen.max_input = pkt_dpdk->mtu_max;
+		capa->maxlen.min_output = DPDK_MTU_MIN;
+		capa->maxlen.max_output = pkt_dpdk->mtu_max;
+	} else if (ret != -ENOTSUP) {
+		ODP_ERR("Failed to set interface MTU: %d\n", ret);
 		return -1;
 	}
 
@@ -1670,10 +1712,8 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		return -1;
 	}
 
-	if (dpdk_init_capability(pktio_entry, &dev_info)) {
-		ODP_ERR("Failed to initialize capability\n");
-		return -1;
-	}
+	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
+	rte_eth_dev_info_get(pkt_dpdk->port_id, &dev_info);
 
 	/* Initialize runtime options */
 	if (init_options(pktio_entry, &dev_info)) {
@@ -1687,6 +1727,8 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		return -1;
 	}
 	pkt_dpdk->mtu = mtu + _ODP_ETHHDR_LEN;
+	pkt_dpdk->mtu_max = RTE_MAX(pkt_dpdk->mtu, DPDK_MTU_MAX);
+	pkt_dpdk->mtu_set = false;
 
 	promisc_mode_check(pkt_dpdk);
 
@@ -1731,7 +1773,13 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	pkt_dpdk->data_room -= pktio_entry->s.pktin_frame_offset;
 
 	/* Mbuf chaining not yet supported */
-	 pkt_dpdk->mtu = RTE_MIN(pkt_dpdk->mtu, pkt_dpdk->data_room);
+	pkt_dpdk->mtu = RTE_MIN(pkt_dpdk->mtu, pkt_dpdk->data_room);
+	pkt_dpdk->mtu_max = RTE_MIN(pkt_dpdk->mtu_max, pkt_dpdk->data_room);
+
+	if (dpdk_init_capability(pktio_entry, &dev_info)) {
+		ODP_ERR("Failed to initialize capability\n");
+		return -1;
+	}
 
 	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
 		odp_ticketlock_init(&pkt_dpdk->rx_lock[i]);
@@ -1866,6 +1914,15 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 	if (dpdk_setup_eth_rx(pktio_entry, pkt_dpdk, &dev_info))
 		return -1;
 
+	/* Restore MTU value resetted by dpdk_setup_eth_rx() */
+	if (pkt_dpdk->mtu_set && pktio_entry->s.capa.set_op.op.maxlen) {
+		ret = dpdk_maxlen_set(pktio_entry, pkt_dpdk->mtu, 0);
+		if (ret) {
+			ODP_ERR("Restoring device MTU failed: err=%d, port=%" PRIu8 "\n",
+				ret, port_id);
+			return -1;
+		}
+	}
 	/* Start device */
 	ret = rte_eth_dev_start(port_id);
 	if (ret < 0) {
@@ -2185,7 +2242,8 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.send = dpdk_send,
 	.link_status = dpdk_link_status,
 	.link_info = dpdk_link_info,
-	.maxlen_get = dpdk_frame_maxlen,
+	.maxlen_get = dpdk_maxlen,
+	.maxlen_set = dpdk_maxlen_set,
 	.promisc_mode_set = dpdk_promisc_mode_set,
 	.promisc_mode_get = dpdk_promisc_mode_get,
 	.mac_get = dpdk_mac_addr_get,
