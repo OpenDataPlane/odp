@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -86,6 +86,7 @@ typedef struct {
 	odp_pool_t pool;		/**< pool to alloc packets from */
 	uint32_t if_flags;		/**< interface flags */
 	uint32_t mtu;			/**< maximum transmission unit */
+	uint32_t mtu_max;		/**< maximum supported MTU value */
 	int sockfd;			/**< control socket */
 	unsigned char if_mac[ETH_ALEN]; /**< eth mac address */
 	char nm_name[IF_NAMESIZE + 7];  /**< netmap:<ifname> */
@@ -449,6 +450,13 @@ static void netmap_init_capability(pktio_entry_t *pktio_entry)
 	}
 
 	capa->set_op.op.promisc_mode = 1;
+	capa->set_op.op.maxlen = 1;
+
+	capa->maxlen.equal = true;
+	capa->maxlen.min_input = _ODP_SOCKET_MTU_MIN;
+	capa->maxlen.max_input = pkt_nm->mtu_max;
+	capa->maxlen.min_output = _ODP_SOCKET_MTU_MIN;
+	capa->maxlen.max_output = pkt_nm->mtu_max;
 
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
@@ -531,6 +539,9 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		ODP_ERR("Unable to read netmap buf size\n");
 		return -1;
 	}
+	pkt_nm->mtu_max = _ODP_SOCKET_MTU_MAX;
+	if (pkt_nm->mtu_max > nm_buf_size)
+		pkt_nm->mtu_max = nm_buf_size;
 
 	if (!pkt_nm->is_virtual) {
 		sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -586,6 +597,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 				"addresses may not be unique.\n");
 
 		pktio_entry->s.capa.max_input_queues = 1;
+		pktio_entry->s.capa.set_op.op.maxlen = 0;
 		pktio_entry->s.capa.set_op.op.promisc_mode = 0;
 		pkt_nm->mtu = nm_buf_size;
 		pktio_entry->s.stats_type = STATS_UNSUPPORTED;
@@ -1169,6 +1181,21 @@ static uint32_t netmap_mtu_get(pktio_entry_t *pktio_entry)
 	return pkt_priv(pktio_entry)->mtu;
 }
 
+static int netmap_mtu_set(pktio_entry_t *pktio_entry, uint32_t maxlen_input,
+			  uint32_t maxlen_output ODP_UNUSED)
+{
+	pkt_netmap_t *pkt_nm = pkt_priv(pktio_entry);
+	int ret;
+
+	ret = _odp_mtu_set_fd(pkt_nm->sockfd, pktio_entry->s.name, maxlen_input);
+	if (ret)
+		return ret;
+
+	pkt_nm->mtu = maxlen_input;
+
+	return 0;
+}
+
 static int netmap_promisc_mode_set(pktio_entry_t *pktio_entry,
 				   odp_bool_t enable)
 {
@@ -1261,6 +1288,7 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.stats = netmap_stats,
 	.stats_reset = netmap_stats_reset,
 	.maxlen_get = netmap_mtu_get,
+	.maxlen_set = netmap_mtu_set,
 	.promisc_mode_set = netmap_promisc_mode_set,
 	.promisc_mode_get = netmap_promisc_mode_get,
 	.mac_get = netmap_mac_addr_get,
