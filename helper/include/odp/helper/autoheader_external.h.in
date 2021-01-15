@@ -2,6 +2,9 @@
 #ifndef ODPH_AUTOHEADER_EXTERNAL_H_
 #define ODPH_AUTOHEADER_EXTERNAL_H_
 
+/* Define to 1 to enable CLI helper */
+#undef ODPH_CLI
+
 /* Define to 1 to include additional helper debug code */
 #undef ODPH_DEBUG
 

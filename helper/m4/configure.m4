@@ -42,5 +42,20 @@ AS_IF([test "x$enable_helper_debug_print" != "xno"], [ODPH_DEBUG_PRINT=1],
 AC_DEFINE_UNQUOTED([ODPH_DEBUG_PRINT], [$ODPH_DEBUG_PRINT],
 		   [Define to 1 to display helper debug information])
 
+#########################################################################
+# If libcli is available, enable CLI helper
+#########################################################################
+helper_cli=no
+AC_CHECK_HEADER(libcli.h,
+    [AC_CHECK_LIB(cli, cli_init, [helper_cli=yes], [], [-lcrypt])],
+    [])
+
+LIBCLI_LIBS=""
+AS_IF([test "x$helper_cli" != "xno"],
+    [AC_DEFINE_UNQUOTED([ODPH_CLI], [1], [Define to 1 to enable CLI helper])
+        LIBCLI_LIBS="-lcli -lcrypt"])
+
+AC_SUBST([LIBCLI_LIBS])
+
 AC_CONFIG_FILES([helper/libodphelper.pc
 		 helper/test/Makefile])
