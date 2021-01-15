@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2013-2020, Nokia Solutions and Networks
+ * Copyright (c) 2013-2021, Nokia Solutions and Networks
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -84,6 +84,7 @@ typedef struct {
 	int sockfd ODP_ALIGNED_CACHE;
 	odp_pool_t pool;
 	int mtu; /**< maximum transmission unit */
+	uint32_t mtu_max; /**< maximum supported MTU value */
 	size_t frame_offset; /**< frame start offset from start of pkt buf */
 	uint8_t *mmap_base;
 	unsigned int mmap_len;
@@ -413,7 +414,7 @@ static int mmap_setup_ring(pkt_sock_mmap_t *pkt_sock, struct ring *ring,
 	uint32_t ring_size;
 	int flags;
 	int sock = pkt_sock->sockfd;
-	int mtu = pkt_sock->mtu;
+	int mtu = pkt_sock->mtu_max;
 	int ret = 0;
 
 	ring->sock = sock;
@@ -614,6 +615,9 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 	pkt_sock->mtu = _odp_mtu_get_fd(pkt_sock->sockfd, netdev);
 	if (!pkt_sock->mtu)
 		goto error;
+	pkt_sock->mtu_max = _ODP_SOCKET_MTU_MAX;
+	if (pkt_sock->mtu > _ODP_SOCKET_MTU_MAX)
+		pkt_sock->mtu_max =  pkt_sock->mtu;
 
 	ODP_DBG("MTU size: %i\n", pkt_sock->mtu);
 
@@ -792,6 +796,21 @@ static uint32_t sock_mmap_mtu_get(pktio_entry_t *pktio_entry)
 			       pktio_entry->s.name);
 }
 
+static int sock_mmap_mtu_set(pktio_entry_t *pktio_entry, uint32_t maxlen_input,
+			     uint32_t maxlen_output ODP_UNUSED)
+{
+	pkt_sock_mmap_t *pkt_sock = pkt_priv(pktio_entry);
+	int ret;
+
+	ret = _odp_mtu_set_fd(pkt_sock->sockfd, pktio_entry->s.name, maxlen_input);
+	if (ret)
+		return ret;
+
+	pkt_sock->mtu = maxlen_input;
+
+	return 0;
+}
+
 static int sock_mmap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 {
 	memcpy(mac_addr, pkt_priv(pktio_entry)->if_mac, ETH_ALEN);
@@ -825,11 +844,20 @@ static int sock_mmap_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t
 static int sock_mmap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 				odp_pktio_capability_t *capa)
 {
+	pkt_sock_mmap_t *const pkt_sock = pkt_priv(pktio_entry);
+
 	memset(capa, 0, sizeof(odp_pktio_capability_t));
 
 	capa->max_input_queues  = 1;
 	capa->max_output_queues = 1;
 	capa->set_op.op.promisc_mode = 1;
+	capa->set_op.op.maxlen = 1;
+
+	capa->maxlen.equal = true;
+	capa->maxlen.min_input = _ODP_SOCKET_MTU_MIN;
+	capa->maxlen.max_input = pkt_sock->mtu_max;
+	capa->maxlen.min_output = _ODP_SOCKET_MTU_MIN;
+	capa->maxlen.max_output = pkt_sock->mtu_max;
 
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
@@ -896,6 +924,7 @@ const pktio_if_ops_t _odp_sock_mmap_pktio_ops = {
 	.send = sock_mmap_send,
 	.fd_set = sock_mmap_fd_set,
 	.maxlen_get = sock_mmap_mtu_get,
+	.maxlen_set = sock_mmap_mtu_set,
 	.promisc_mode_set = sock_mmap_promisc_mode_set,
 	.promisc_mode_get = sock_mmap_promisc_mode_get,
 	.mac_get = sock_mmap_mac_addr_get,
