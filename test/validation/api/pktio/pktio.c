@@ -1566,6 +1566,10 @@ static void pktio_test_pktio_config(void)
 	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0);
 
 	config = capa.config;
+
+	/* Disable inbound_ipsec as it requires IPsec config to be done */
+	config.inbound_ipsec = 0;
+
 	CU_ASSERT(odp_pktio_config(pktio, &config) == 0);
 
 	CU_ASSERT_FATAL(odp_pktio_close(pktio) == 0);
