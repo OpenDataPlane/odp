@@ -173,10 +173,9 @@ static int init_options(pktio_entry_t *pktio_entry)
 		return -1;
 	}
 
-	ODP_PRINT("netmap interface: %s\n",
-		  pkt_priv(pktio_entry)->if_name);
-	ODP_PRINT("  num_rx_desc: %d\n", opt->nr_rx_slots);
-	ODP_PRINT("  num_tx_desc: %d\n", opt->nr_tx_slots);
+	ODP_DBG("netmap interface: %s\n", pkt_priv(pktio_entry)->if_name);
+	ODP_DBG("  num_rx_desc: %d\n", opt->nr_rx_slots);
+	ODP_DBG("  num_tx_desc: %d\n", opt->nr_tx_slots);
 
 	return 0;
 }
@@ -621,7 +620,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	/* netmap uses only ethtool to get statistics counters */
 	err = _odp_ethtool_stats_get_fd(pkt_nm->sockfd, pkt_nm->if_name, &cur_stats);
 	if (err) {
-		ODP_ERR("netmap pktio %s does not support statistics counters\n",
+		ODP_DBG("netmap pktio %s does not support statistics counters\n",
 			pkt_nm->if_name);
 		pktio_entry->s.stats_type = STATS_UNSUPPORTED;
 	} else {
