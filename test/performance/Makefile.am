@@ -6,6 +6,7 @@ EXECUTABLES = odp_bench_packet \
 	      odp_cpu_bench \
 	      odp_crypto \
 	      odp_ipsec \
+	      odp_mem_perf \
 	      odp_pktio_perf \
 	      odp_pool_perf \
 	      odp_queue_perf \
@@ -42,6 +43,7 @@ odp_bench_packet_SOURCES = odp_bench_packet.c
 odp_cpu_bench_SOURCES = odp_cpu_bench.c
 odp_crypto_SOURCES = odp_crypto.c
 odp_ipsec_SOURCES = odp_ipsec.c
+odp_mem_perf_SOURCES = odp_mem_perf.c
 odp_packet_gen_SOURCES = odp_packet_gen.c
 odp_pktio_ordered_SOURCES = odp_pktio_ordered.c dummy_crc.h
 odp_sched_latency_SOURCES = odp_sched_latency.c
