@@ -15,4 +15,7 @@
 
 #include <odp/api/abi-default/hash.h>
 
+/* Inlined functions for non-ABI compat mode */
+#include <odp/api/plat/hash_inlines.h>
+
 #endif
