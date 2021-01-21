@@ -59,4 +59,8 @@ do {							     \
 #include "odp_atomic.h"
 #include "odp_cpu_idling.h"
 
+#ifdef __ARM_FEATURE_UNALIGNED
+#define _ODP_UNALIGNED
+#endif
+
 #endif  /* PLATFORM_LINUXGENERIC_ARCH_ARM_ODP_CPU_H */
