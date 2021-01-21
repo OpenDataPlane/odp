@@ -352,6 +352,7 @@ if !ODP_ABI_COMPAT
 odpapiabiarchinclude_HEADERS += arch/x86/odp/api/abi/cpu.h
 endif
 noinst_HEADERS += arch/x86/cpu_flags.h \
+		  arch/x86/odp_cpu.h \
 		  arch/default/odp_cpu.h \
 		  arch/default/odp_cpu_idling.h
 endif
