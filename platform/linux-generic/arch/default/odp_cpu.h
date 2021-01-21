@@ -9,6 +9,10 @@
 #ifndef ODP_DEFAULT_CPU_H_
 #define ODP_DEFAULT_CPU_H_
 
+#ifndef _ODP_UNALIGNED
+#define _ODP_UNALIGNED 0
+#endif
+
 /******************************************************************************
  * Atomics
  *****************************************************************************/

@@ -52,4 +52,10 @@ static inline void _odp_dmb(void)
 #include "odp_atomic.h"
 #include "odp_cpu_idling.h"
 
+#ifdef __ARM_FEATURE_UNALIGNED
+#define _ODP_UNALIGNED 1
+#else
+#define _ODP_UNALIGNED 0
+#endif
+
 #endif  /* PLATFORM_LINUXGENERIC_ARCH_ARM_ODP_CPU_H */
