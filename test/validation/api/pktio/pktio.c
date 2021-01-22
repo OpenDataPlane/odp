@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2020, Nokia
+ * Copyright (c) 2020-2021, Nokia
  * Copyright (c) 2020, Marvell
  * All rights reserved.
  *
@@ -1349,7 +1349,7 @@ static void pktio_test_recv_mtu(void)
 	packet_len = PKT_LEN_NORMAL;
 }
 
-static void pktio_test_mtu(void)
+static void pktio_test_maxlen(void)
 {
 	int ret;
 	uint32_t maxlen;
@@ -1361,13 +1361,119 @@ static void pktio_test_mtu(void)
 	maxlen = odp_pktout_maxlen(pktio);
 	CU_ASSERT(maxlen > 0);
 
-	printf(" %" PRIu32 " ",  maxlen);
-
 	maxlen = odp_pktin_maxlen(pktio);
 	CU_ASSERT(maxlen > 0);
 
-	printf(" %" PRIu32 " ",  maxlen);
+	ret = odp_pktio_close(pktio);
+	CU_ASSERT(ret == 0);
+}
 
+static int pktio_check_maxlen_set(void)
+{
+	odp_pktio_t pktio;
+	odp_pktio_capability_t capa;
+	odp_pktio_param_t pktio_param;
+	int ret;
+
+	odp_pktio_param_init(&pktio_param);
+	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
+
+	pktio = odp_pktio_open(iface_name[0], pool[0], &pktio_param);
+	if (pktio == ODP_PKTIO_INVALID)
+		return ODP_TEST_INACTIVE;
+
+	ret = odp_pktio_capability(pktio, &capa);
+	(void)odp_pktio_close(pktio);
+
+	if (ret < 0 || !capa.set_op.op.maxlen)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+static void pktio_test_maxlen_set(void)
+{
+	odp_pktio_capability_t capa;
+	int ret;
+	uint32_t maxlen, input_orig, output_orig;
+
+	odp_pktio_t pktio = create_pktio(0, ODP_PKTIN_MODE_DIRECT,
+					 ODP_PKTOUT_MODE_DIRECT);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+
+	CU_ASSERT_FATAL(!odp_pktio_capability(pktio, &capa));
+
+	input_orig = odp_pktin_maxlen(pktio);
+	CU_ASSERT(input_orig > 0);
+
+	output_orig = odp_pktout_maxlen(pktio);
+	CU_ASSERT(output_orig > 0);
+
+	if (capa.maxlen.equal) { /* Input and output values have to be equal */
+		CU_ASSERT(capa.maxlen.min_input == capa.maxlen.min_output);
+		CU_ASSERT(capa.maxlen.max_input == capa.maxlen.max_output);
+		CU_ASSERT(capa.maxlen.max_input > capa.maxlen.min_input);
+
+		maxlen = capa.maxlen.min_input;
+		CU_ASSERT(!odp_pktio_maxlen_set(pktio, maxlen, maxlen));
+		CU_ASSERT(odp_pktin_maxlen(pktio) == maxlen);
+		CU_ASSERT(odp_pktout_maxlen(pktio) == maxlen);
+
+		maxlen = capa.maxlen.max_input;
+		CU_ASSERT(!odp_pktio_maxlen_set(pktio, maxlen, maxlen));
+		CU_ASSERT(odp_pktin_maxlen(pktio) == maxlen);
+		CU_ASSERT(odp_pktout_maxlen(pktio) == maxlen);
+
+		CU_ASSERT(!odp_pktio_maxlen_set(pktio, input_orig, input_orig));
+	} else {
+		CU_ASSERT(capa.maxlen.max_input || capa.maxlen.max_output);
+		if (capa.maxlen.max_output == 0) { /* Only input supported */
+			CU_ASSERT(capa.maxlen.min_output == 0);
+			CU_ASSERT(capa.maxlen.min_input < capa.maxlen.max_input);
+
+			CU_ASSERT(!odp_pktio_maxlen_set(pktio, capa.maxlen.min_input, 0));
+			CU_ASSERT(odp_pktin_maxlen(pktio) == capa.maxlen.min_input);
+			CU_ASSERT(!odp_pktio_maxlen_set(pktio, capa.maxlen.max_input, 0));
+			CU_ASSERT(odp_pktin_maxlen(pktio) == capa.maxlen.max_input);
+			CU_ASSERT(!odp_pktio_maxlen_set(pktio, input_orig, 0));
+		} else if (capa.maxlen.max_input == 0) { /* Only output supported */
+			CU_ASSERT(capa.maxlen.min_input == 0);
+			CU_ASSERT(capa.maxlen.min_output < capa.maxlen.max_output);
+
+			CU_ASSERT(!odp_pktio_maxlen_set(pktio, 0, capa.maxlen.min_output));
+			CU_ASSERT(odp_pktout_maxlen(pktio) == capa.maxlen.min_output);
+			CU_ASSERT(!odp_pktio_maxlen_set(pktio, 0, capa.maxlen.max_output));
+			CU_ASSERT(odp_pktout_maxlen(pktio) == capa.maxlen.max_output);
+			CU_ASSERT(!odp_pktio_maxlen_set(pktio, 0, output_orig));
+		} else { /* Both directions supported */
+			CU_ASSERT(capa.maxlen.min_input < capa.maxlen.max_input);
+			CU_ASSERT(capa.maxlen.min_output < capa.maxlen.max_output);
+
+			CU_ASSERT(!odp_pktio_maxlen_set(pktio, capa.maxlen.min_input,
+							capa.maxlen.min_output));
+			CU_ASSERT(odp_pktin_maxlen(pktio) == capa.maxlen.min_input);
+			CU_ASSERT(odp_pktout_maxlen(pktio) == capa.maxlen.min_output);
+
+			CU_ASSERT(!odp_pktio_maxlen_set(pktio, capa.maxlen.max_input,
+							capa.maxlen.max_output));
+			CU_ASSERT(odp_pktin_maxlen(pktio) == capa.maxlen.max_input);
+			CU_ASSERT(odp_pktout_maxlen(pktio) == capa.maxlen.max_output);
+
+			CU_ASSERT(!odp_pktio_maxlen_set(pktio, capa.maxlen.max_input,
+							capa.maxlen.min_output));
+			CU_ASSERT(odp_pktin_maxlen(pktio) == capa.maxlen.max_input);
+			CU_ASSERT(odp_pktout_maxlen(pktio) == capa.maxlen.min_output);
+
+			CU_ASSERT(!odp_pktio_maxlen_set(pktio, capa.maxlen.min_input,
+							capa.maxlen.max_output));
+			CU_ASSERT(odp_pktin_maxlen(pktio) == capa.maxlen.min_input);
+			CU_ASSERT(odp_pktout_maxlen(pktio) == capa.maxlen.max_output);
+
+			CU_ASSERT(!odp_pktio_maxlen_set(pktio, input_orig, output_orig));
+		}
+	}
+	CU_ASSERT(odp_pktin_maxlen(pktio) == input_orig);
+	CU_ASSERT(odp_pktout_maxlen(pktio) == output_orig);
 	ret = odp_pktio_close(pktio);
 	CU_ASSERT(ret == 0);
 }
@@ -3272,6 +3378,95 @@ static void pktio_test_pktv_pktin_queue_config_sched(void)
 	pktio_test_pktv_pktin_queue_config(ODP_PKTIN_MODE_SCHED);
 }
 
+static void pktio_test_recv_maxlen_set(void)
+{
+	odp_pktio_t pktio_tx, pktio_rx;
+	odp_pktio_t pktio[MAX_NUM_IFACES];
+	pktio_info_t pktio_rx_info;
+	odp_pktio_capability_t capa;
+	odp_pktio_config_t config;
+	odp_pktout_queue_t pktout_queue;
+	odp_packet_t pkt_tbl[TX_BATCH_LEN];
+	uint32_t pkt_seq[TX_BATCH_LEN];
+	uint32_t max_len = PKT_LEN_MAX;
+	int num_rx = 0;
+	int ret;
+	int i;
+
+	CU_ASSERT_FATAL(num_ifaces >= 1);
+
+	/* Open and configure interfaces */
+	for (i = 0; i < num_ifaces; i++) {
+		uint32_t maxlen_tmp;
+
+		pktio[i] = create_pktio(i, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT);
+		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
+
+		CU_ASSERT_FATAL(!odp_pktio_capability(pktio[i], &capa));
+		CU_ASSERT_FATAL(capa.set_op.op.maxlen);
+
+		odp_pktio_config_init(&config);
+		CU_ASSERT_FATAL(!odp_pktio_config(pktio[i], &config));
+
+		maxlen_tmp = capa.maxlen.max_input;
+		if (maxlen_tmp == 0)
+			maxlen_tmp = odp_pktin_maxlen(pktio[i]);
+		if (maxlen_tmp < max_len)
+			max_len = maxlen_tmp;
+
+		maxlen_tmp = capa.maxlen.max_output;
+		if (maxlen_tmp == 0)
+			maxlen_tmp = odp_pktout_maxlen(pktio[i]);
+		if (maxlen_tmp < max_len)
+			max_len = maxlen_tmp;
+
+		CU_ASSERT_FATAL(!odp_pktio_maxlen_set(pktio[i], capa.maxlen.max_input,
+						      capa.maxlen.max_output));
+
+		CU_ASSERT_FATAL(odp_pktio_start(pktio[i]) == 0);
+	}
+
+	for (i = 0; i < num_ifaces; i++)
+		_pktio_wait_linkup(pktio[i]);
+
+	pktio_tx = pktio[0];
+	pktio_rx = (num_ifaces > 1) ? pktio[1] : pktio_tx;
+	pktio_rx_info.id   = pktio_rx;
+	pktio_rx_info.inq  = ODP_QUEUE_INVALID;
+	pktio_rx_info.in_mode = ODP_PKTIN_MODE_DIRECT;
+
+	packet_len = max_len;
+	ret = create_packets(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx,
+			     pktio_rx);
+	CU_ASSERT_FATAL(ret == TX_BATCH_LEN);
+
+	ret = odp_pktout_queue(pktio_tx, &pktout_queue, 1);
+	CU_ASSERT_FATAL(ret > 0);
+
+	/* Send packets one at a time and add delay between the packets */
+	for (i = 0; i < TX_BATCH_LEN;  i++) {
+		CU_ASSERT_FATAL(odp_pktout_send(pktout_queue,
+						&pkt_tbl[i], 1) == 1);
+		ret = wait_for_packets(&pktio_rx_info, &pkt_tbl[i], &pkt_seq[i],
+				       1, TXRX_MODE_SINGLE, ODP_TIME_SEC_IN_NS, false);
+		if (ret != 1)
+			break;
+	}
+	num_rx = i;
+	CU_ASSERT(num_rx == TX_BATCH_LEN);
+
+	if (num_rx)
+		odp_packet_free_multi(pkt_tbl, num_rx);
+
+	for (i = 0; i < num_ifaces; i++) {
+		CU_ASSERT_FATAL(!odp_pktio_stop(pktio[i]));
+		CU_ASSERT_FATAL(!odp_pktio_close(pktio[i]));
+	}
+
+	/* Restore global variable */
+	packet_len = PKT_LEN_NORMAL;
+}
+
 static int pktio_suite_init(void)
 {
 	int i;
@@ -3415,7 +3610,9 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_recv_tmo),
 	ODP_TEST_INFO(pktio_test_recv_mq_tmo),
 	ODP_TEST_INFO(pktio_test_recv_mtu),
-	ODP_TEST_INFO(pktio_test_mtu),
+	ODP_TEST_INFO(pktio_test_maxlen),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_maxlen_set,
+				  pktio_check_maxlen_set),
 	ODP_TEST_INFO(pktio_test_promisc),
 	ODP_TEST_INFO(pktio_test_mac),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_start_stop,
@@ -3455,6 +3652,8 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 				  pktio_check_chksum_out_sctp),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_chksum_out_sctp_ovr,
 				  pktio_check_chksum_out_sctp),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_recv_maxlen_set,
+				  pktio_check_maxlen_set),
 	ODP_TEST_INFO_NULL
 };
 
