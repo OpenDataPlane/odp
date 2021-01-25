@@ -118,8 +118,6 @@ static void pktio_stop(odp_pktio_t pktio)
 	}
 }
 
-#define MAX_ALG_CAPA 32
-
 int ipsec_check(odp_bool_t ah,
 		odp_cipher_alg_t cipher,
 		uint32_t cipher_bits,
@@ -127,10 +125,6 @@ int ipsec_check(odp_bool_t ah,
 		uint32_t auth_bits)
 {
 	odp_ipsec_capability_t capa;
-	odp_ipsec_cipher_capability_t cipher_capa[MAX_ALG_CAPA];
-	odp_ipsec_auth_capability_t   auth_capa[MAX_ALG_CAPA];
-	int i, num;
-	odp_bool_t found;
 
 	if (odp_ipsec_capability(&capa) < 0)
 		return ODP_TEST_INACTIVE;
@@ -159,135 +153,9 @@ int ipsec_check(odp_bool_t ah,
 	if (ah && (ODP_SUPPORT_NO == capa.proto_ah))
 		return ODP_TEST_INACTIVE;
 
-	/* Cipher algorithms */
-	switch (cipher) {
-	case ODP_CIPHER_ALG_NULL:
-		if (!capa.ciphers.bit.null)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_CIPHER_ALG_DES:
-		if (!capa.ciphers.bit.des)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_CIPHER_ALG_3DES_CBC:
-		if (!capa.ciphers.bit.trides_cbc)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_CIPHER_ALG_AES_CBC:
-		if (!capa.ciphers.bit.aes_cbc)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_CIPHER_ALG_AES_CTR:
-		if (!capa.ciphers.bit.aes_ctr)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_CIPHER_ALG_AES_GCM:
-		if (!capa.ciphers.bit.aes_gcm)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_CIPHER_ALG_AES_CCM:
-		if (!capa.ciphers.bit.aes_ccm)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
-		if (!capa.ciphers.bit.chacha20_poly1305)
-			return ODP_TEST_INACTIVE;
-		break;
-	default:
-		fprintf(stderr, "Unsupported cipher algorithm\n");
+	if (odph_ipsec_alg_check(capa, cipher, cipher_bits / 8, auth,
+				 auth_bits / 8) < 0)
 		return ODP_TEST_INACTIVE;
-	}
-
-	/* Authentication algorithms */
-	switch (auth) {
-	case ODP_AUTH_ALG_NULL:
-		if (!capa.auths.bit.null)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_AUTH_ALG_MD5_HMAC:
-		if (!capa.auths.bit.md5_hmac)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_AUTH_ALG_SHA1_HMAC:
-		if (!capa.auths.bit.sha1_hmac)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_AUTH_ALG_SHA256_HMAC:
-		if (!capa.auths.bit.sha256_hmac)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_AUTH_ALG_SHA384_HMAC:
-		if (!capa.auths.bit.sha384_hmac)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_AUTH_ALG_SHA512_HMAC:
-		if (!capa.auths.bit.sha512_hmac)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_AUTH_ALG_AES_XCBC_MAC:
-		if (!capa.auths.bit.aes_xcbc_mac)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_AUTH_ALG_AES_GCM:
-		if (!capa.auths.bit.aes_gcm)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_AUTH_ALG_AES_GMAC:
-		if (!capa.auths.bit.aes_gmac)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_AUTH_ALG_AES_CCM:
-		if (!capa.auths.bit.aes_ccm)
-			return ODP_TEST_INACTIVE;
-		break;
-	case ODP_AUTH_ALG_CHACHA20_POLY1305:
-		if (!capa.auths.bit.chacha20_poly1305)
-			return ODP_TEST_INACTIVE;
-		break;
-	default:
-		fprintf(stderr, "Unsupported authentication algorithm\n");
-		return ODP_TEST_INACTIVE;
-	}
-
-	num = odp_ipsec_cipher_capability(cipher, cipher_capa, MAX_ALG_CAPA);
-	if (num <= 0) {
-		fprintf(stderr, "Wrong cipher capabilities\n");
-		return ODP_TEST_INACTIVE;
-	}
-
-	/* Search for the test case */
-	found = false;
-	for (i = 0; i < num; i++) {
-		if (cipher_capa[i].key_len == cipher_bits / 8) {
-			found = 1;
-			break;
-		}
-	}
-
-	if (!found) {
-		fprintf(stderr, "Unsupported key length\n");
-		return ODP_TEST_INACTIVE;
-	}
-
-	num = odp_ipsec_auth_capability(auth, auth_capa, MAX_ALG_CAPA);
-	if (num <= 0) {
-		fprintf(stderr, "Wrong auth capabilities\n");
-		return ODP_TEST_INACTIVE;
-	}
-
-	/* Search for the test case */
-	found = false;
-	for (i = 0; i < num; i++) {
-		if (auth_capa[i].key_len == auth_bits / 8) {
-			found = 1;
-			break;
-		}
-	}
-
-	if (!found) {
-		fprintf(stderr, "Unsupported auth key length\n");
-		return ODP_TEST_INACTIVE;
-	}
 
 	return ODP_TEST_ACTIVE;
 }
