@@ -54,6 +54,7 @@ __LIB__libodphelper_la_SOURCES = \
 					lineartable.c \
 					cuckootable.c \
 					iplookuptable.c \
+					ipsec.c \
 					threads.c \
 					version.c
 

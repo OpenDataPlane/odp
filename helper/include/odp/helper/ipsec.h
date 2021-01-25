@@ -71,6 +71,29 @@ ODP_STATIC_ASSERT(sizeof(odph_ahhdr_t) == ODPH_AHHDR_LEN,
 		  "ODPH_AHHDR_T__SIZE_ERROR");
 
 /**
+ * Check IPSEC algorithm support
+ *
+ * Based on the capabilities exposed by the ODP implementation, check whether
+ * the specified IPSEC algorithm configuration is supported by the
+ * implementation. The caller provides the IPSEC capability structure as an
+ * argument to the helper function.
+ *
+ * @param      capa            IPSEC capability structure
+ * @param      cipher_alg      Cipher algorithm
+ * @param      cipher_key_len  Length of cipher key in bytes
+ * @param      auth_alg        Authentication algorithm
+ * @param      auth_key_len    Length of authentication key in bytes
+ *
+ * @retval 0  on success
+ * @retval <0 on failure
+ */
+int odph_ipsec_alg_check(odp_ipsec_capability_t capa,
+			 odp_cipher_alg_t cipher_alg,
+			 uint32_t cipher_key_len,
+			 odp_auth_alg_t auth_alg,
+			 uint32_t auth_key_len);
+
+/**
  * @}
  */
 
