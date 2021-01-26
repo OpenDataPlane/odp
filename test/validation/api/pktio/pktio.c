@@ -140,7 +140,8 @@ static void set_pool_len(odp_pool_param_t *params, odp_pool_capability_t *capa)
 
 	len = (capa->pkt.max_len && capa->pkt.max_len < PKT_BUF_SIZE) ?
 			capa->pkt.max_len : PKT_BUF_SIZE;
-	seg_len = capa->pkt.max_seg_len ? capa->pkt.max_seg_len : PKT_BUF_SIZE;
+	seg_len = (capa->pkt.max_seg_len && capa->pkt.max_seg_len < PKT_BUF_SIZE) ?
+			capa->pkt.max_seg_len : PKT_BUF_SIZE;
 
 	switch (pool_segmentation) {
 	case PKT_POOL_SEGMENTED:
