@@ -28,11 +28,13 @@
 
 #define CHECK_MAX_MIN		(1 << 0)
 #define CHECK_XCHG		(1 << 2)
+#define CHECK_CAS_128		(1 << 4)
 
 typedef __volatile uint32_t volatile_u32_t;
 typedef __volatile uint64_t volatile_u64_t;
 
 typedef struct {
+	odp_atomic_u128_t a128u;
 	odp_atomic_u64_t a64u;
 	odp_atomic_u64_t a64u_min;
 	odp_atomic_u64_t a64u_max;
@@ -489,6 +491,90 @@ static void test_atomic_non_relaxed_64(void)
 	}
 }
 
+static void test_atomic_relaxed_128(void)
+{
+	int i, ret;
+	odp_u128_t old, new;
+	odp_atomic_u128_t *a128u = &global_mem->a128u;
+
+	odp_barrier_wait(&global_mem->global_barrier);
+
+	for (i = 0; i < CNT; i++) {
+		old = odp_atomic_load_u128(a128u);
+
+		do {
+			new.u64[0] = old.u64[0] + 2;
+			new.u64[1] = old.u64[1] + 1;
+
+			ret = odp_atomic_cas_u128(a128u, &old, new);
+
+		} while (ret == 0);
+	}
+}
+
+static void test_atomic_non_relaxed_128_acq(void)
+{
+	int i, ret;
+	odp_u128_t old, new;
+	odp_atomic_u128_t *a128u = &global_mem->a128u;
+
+	odp_barrier_wait(&global_mem->global_barrier);
+
+	for (i = 0; i < CNT; i++) {
+		old = odp_atomic_load_u128(a128u);
+
+		do {
+			new.u64[0] = old.u64[0] + 2;
+			new.u64[1] = old.u64[1] + 1;
+
+			ret = odp_atomic_cas_acq_u128(a128u, &old, new);
+
+		} while (ret == 0);
+	}
+}
+
+static void test_atomic_non_relaxed_128_rel(void)
+{
+	int i, ret;
+	odp_u128_t old, new;
+	odp_atomic_u128_t *a128u = &global_mem->a128u;
+
+	odp_barrier_wait(&global_mem->global_barrier);
+
+	for (i = 0; i < CNT; i++) {
+		old = odp_atomic_load_u128(a128u);
+
+		do {
+			new.u64[0] = old.u64[0] + 2;
+			new.u64[1] = old.u64[1] + 1;
+
+			ret = odp_atomic_cas_rel_u128(a128u, &old, new);
+
+		} while (ret == 0);
+	}
+}
+
+static void test_atomic_non_relaxed_128_acq_rel(void)
+{
+	int i, ret;
+	odp_u128_t old, new;
+	odp_atomic_u128_t *a128u = &global_mem->a128u;
+
+	odp_barrier_wait(&global_mem->global_barrier);
+
+	for (i = 0; i < CNT; i++) {
+		old = odp_atomic_load_u128(a128u);
+
+		do {
+			new.u64[0] = old.u64[0] + 2;
+			new.u64[1] = old.u64[1] + 1;
+
+			ret = odp_atomic_cas_acq_rel_u128(a128u, &old, new);
+
+		} while (ret == 0);
+	}
+}
+
 static void test_atomic_inc_dec_32(void)
 {
 	test_atomic_inc_32();
@@ -561,6 +647,14 @@ static void test_atomic_cas_inc_dec_64(void)
 	test_atomic_cas_dec_64();
 }
 
+static void test_atomic_cas_inc_128(void)
+{
+	test_atomic_relaxed_128();
+	test_atomic_non_relaxed_128_acq();
+	test_atomic_non_relaxed_128_rel();
+	test_atomic_non_relaxed_128_acq_rel();
+}
+
 static void test_atomic_init(void)
 {
 	odp_atomic_init_u32(&global_mem->a32u, 0);
@@ -571,6 +665,12 @@ static void test_atomic_init(void)
 	odp_atomic_init_u64(&global_mem->a64u_max, 0);
 	odp_atomic_init_u32(&global_mem->a32u_xchg, 0);
 	odp_atomic_init_u64(&global_mem->a64u_xchg, 0);
+
+	odp_u128_t a128u_tmp;
+
+	a128u_tmp.u64[0] = 0;
+	a128u_tmp.u64[1] = 0;
+	odp_atomic_init_u128(&global_mem->a128u, a128u_tmp);
 }
 
 static void test_atomic_store(void)
@@ -583,12 +683,32 @@ static void test_atomic_store(void)
 	odp_atomic_store_u64(&global_mem->a64u_max, U64_INIT_VAL);
 	odp_atomic_store_u32(&global_mem->a32u_xchg, U32_INIT_VAL);
 	odp_atomic_store_u64(&global_mem->a64u_xchg, U64_INIT_VAL);
+
+	odp_u128_t a128u_tmp;
+
+	a128u_tmp.u64[0] = U64_INIT_VAL;
+	a128u_tmp.u64[1] = U64_INIT_VAL;
+	odp_atomic_store_u128(&global_mem->a128u, a128u_tmp);
 }
 
 static void test_atomic_validate(int check)
 {
 	CU_ASSERT(U32_INIT_VAL == odp_atomic_load_u32(&global_mem->a32u));
 	CU_ASSERT(U64_INIT_VAL == odp_atomic_load_u64(&global_mem->a64u));
+
+	odp_u128_t a128u_tmp;
+
+	a128u_tmp = odp_atomic_load_u128(&global_mem->a128u);
+
+	if (check & CHECK_CAS_128) {
+		uint64_t iterations = 0;
+
+		iterations = a128u_tmp.u64[0] - a128u_tmp.u64[1];
+		CU_ASSERT(iterations == 4 * CNT * global_mem->g_num_threads);
+	} else {
+		CU_ASSERT(U64_INIT_VAL == a128u_tmp.u64[0]);
+		CU_ASSERT(U64_INIT_VAL == a128u_tmp.u64[1]);
+	}
 
 	if (check & CHECK_MAX_MIN) {
 		CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_max) >
@@ -763,6 +883,7 @@ static int test_atomic_cas_inc_dec_thread(void *arg UNUSED)
 	per_thread_mem = thread_init();
 	test_atomic_cas_inc_dec_32();
 	test_atomic_cas_inc_dec_64();
+	test_atomic_cas_inc_128();
 
 	thread_finalize(per_thread_mem);
 
@@ -807,51 +928,9 @@ static void test_atomic_functional(int func_ptr(void *), int check)
 	test_atomic_validate(check);
 }
 
-static void atomic_test_atomic_inc_dec(void)
-{
-	test_atomic_functional(test_atomic_inc_dec_thread, 0);
-}
-
-static void atomic_test_atomic_add_sub(void)
-{
-	test_atomic_functional(test_atomic_add_sub_thread, 0);
-}
-
-static void atomic_test_atomic_fetch_inc_dec(void)
-{
-	test_atomic_functional(test_atomic_fetch_inc_dec_thread, 0);
-}
-
-static void atomic_test_atomic_fetch_add_sub(void)
-{
-	test_atomic_functional(test_atomic_fetch_add_sub_thread, 0);
-}
-
-static void atomic_test_atomic_max_min(void)
-{
-	test_atomic_functional(test_atomic_max_min_thread, CHECK_MAX_MIN);
-}
-
-static void atomic_test_atomic_cas_inc_dec(void)
-{
-	test_atomic_functional(test_atomic_cas_inc_dec_thread, 0);
-}
-
-static void atomic_test_atomic_xchg(void)
-{
-	test_atomic_functional(test_atomic_xchg_thread, CHECK_XCHG);
-}
-
-static void atomic_test_atomic_non_relaxed(void)
-{
-	test_atomic_functional(test_atomic_non_relaxed_thread,
-			       CHECK_MAX_MIN | CHECK_XCHG);
-}
-
-static void atomic_test_atomic_op_lock_free(void)
+static void test_atomic_op_lock_free_set(void)
 {
 	odp_atomic_op_t atomic_op;
-	int ret_null, ret;
 
 	memset(&atomic_op, 0xff, sizeof(odp_atomic_op_t));
 	atomic_op.all_bits = 0;
@@ -897,6 +976,12 @@ static void atomic_test_atomic_op_lock_free(void)
 	CU_ASSERT(atomic_op.all_bits     != 0);
 	atomic_op.op.dec = 0;
 	CU_ASSERT(atomic_op.all_bits     == 0);
+}
+
+static void test_atomic_op_lock_free_64(void)
+{
+	odp_atomic_op_t atomic_op;
+	int ret_null, ret;
 
 	memset(&atomic_op, 0xff, sizeof(odp_atomic_op_t));
 	ret      = odp_atomic_lock_free_u64(&atomic_op);
@@ -952,6 +1037,93 @@ static void atomic_test_atomic_op_lock_free(void)
 		CU_ASSERT(atomic_op.op.cas       == 1);
 		CU_ASSERT(atomic_op.op.xchg      == 1);
 	}
+}
+
+static void test_atomic_op_lock_free_128(void)
+{
+	odp_atomic_op_t atomic_op;
+	int ret_null, ret;
+
+	memset(&atomic_op, 0xff, sizeof(odp_atomic_op_t));
+	ret      = odp_atomic_lock_free_u128(&atomic_op);
+	ret_null = odp_atomic_lock_free_u128(NULL);
+
+	CU_ASSERT(ret == ret_null);
+
+	/* Init operation is not atomic by the spec. Call to
+	 * odp_atomic_lock_free_u128() zeros it but never sets it. */
+
+	if (ret == 0) {
+		/* none are lock free */
+		CU_ASSERT(atomic_op.all_bits     == 0);
+		CU_ASSERT(atomic_op.op.init      == 0);
+		CU_ASSERT(atomic_op.op.load      == 0);
+		CU_ASSERT(atomic_op.op.store     == 0);
+		CU_ASSERT(atomic_op.op.cas       == 0);
+	}
+
+	if (ret == 1) {
+		/* some are lock free */
+		CU_ASSERT(atomic_op.all_bits     != 0);
+		CU_ASSERT(atomic_op.op.init      == 0);
+	}
+
+	if (ret == 2) {
+		/* all are lock free */
+		CU_ASSERT(atomic_op.all_bits     != 0);
+		CU_ASSERT(atomic_op.op.init      == 0);
+		CU_ASSERT(atomic_op.op.load      == 1);
+		CU_ASSERT(atomic_op.op.store     == 1);
+		CU_ASSERT(atomic_op.op.cas       == 1);
+	}
+}
+
+static void atomic_test_atomic_inc_dec(void)
+{
+	test_atomic_functional(test_atomic_inc_dec_thread, 0);
+}
+
+static void atomic_test_atomic_add_sub(void)
+{
+	test_atomic_functional(test_atomic_add_sub_thread, 0);
+}
+
+static void atomic_test_atomic_fetch_inc_dec(void)
+{
+	test_atomic_functional(test_atomic_fetch_inc_dec_thread, 0);
+}
+
+static void atomic_test_atomic_fetch_add_sub(void)
+{
+	test_atomic_functional(test_atomic_fetch_add_sub_thread, 0);
+}
+
+static void atomic_test_atomic_max_min(void)
+{
+	test_atomic_functional(test_atomic_max_min_thread, CHECK_MAX_MIN);
+}
+
+static void atomic_test_atomic_cas_inc_dec(void)
+{
+	test_atomic_functional(test_atomic_cas_inc_dec_thread, CHECK_CAS_128);
+}
+
+static void atomic_test_atomic_xchg(void)
+{
+	test_atomic_functional(test_atomic_xchg_thread, CHECK_XCHG);
+}
+
+static void atomic_test_atomic_non_relaxed(void)
+{
+	test_atomic_functional(test_atomic_non_relaxed_thread,
+			       CHECK_MAX_MIN | CHECK_XCHG);
+}
+
+static void atomic_test_atomic_op_lock_free(void)
+{
+	test_atomic_op_lock_free_set();
+	test_atomic_op_lock_free_64();
+	test_atomic_op_lock_free_128();
 }
 
 odp_testinfo_t atomic_suite_atomic[] = {
