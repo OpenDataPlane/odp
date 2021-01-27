@@ -575,7 +575,8 @@ typedef struct odp_pktio_config_t {
 	 *
 	 *  Enable/disable inline inbound IPSEC operation. When enabled packet
 	 *  input directs all IPSEC packets automatically to IPSEC inbound
-	 *  processing. IPSEC configuration is done through the IPSEC API.
+	 *  processing. IPSEC configuration (through IPSEC API) must be done
+	 *  before enabling this feature in pktio.
 	 *  Packets that are not (recognized as) IPSEC are processed
 	 *  according to the packet input configuration.
 	 *
