@@ -19,6 +19,11 @@ linux_pthread_SOURCES = linux/pthread.c
 linux_process_SOURCES = linux/process.c
 endif
 
+if helper_cli
+EXECUTABLES += cli
+cli_SOURCES = cli.c
+endif
+
 COMPILE_ONLY = odpthreads
 
 TESTSCRIPTS = odpthreads_as_processes \
