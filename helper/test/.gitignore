@@ -1,6 +1,7 @@
 *.trs
 *.log
 chksum
+cli
 cuckootable
 iplookuptable
 odpthreads
