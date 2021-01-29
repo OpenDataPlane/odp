@@ -10,6 +10,11 @@
  */
 
 /**
+ * @example odp_cli.c
+ * CLI example application
+ */
+
+/**
  * @example odp_debug.c
  * Debug example application
  */
