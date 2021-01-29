@@ -18,3 +18,7 @@ SUBDIRS = classifier \
 if HAVE_DW_ATOMIC_CMP_EXC
 SUBDIRS += ipfragreass
 endif
+
+if helper_cli
+SUBDIRS += cli
+endif
