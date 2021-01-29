@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -18,6 +19,7 @@
 #include <odp/api/cpu.h>
 #include <odp_schedule_if.h>
 #include <odp/api/plat/thread_inlines.h>
+#include <odp_libconfig_internal.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -35,6 +37,7 @@ typedef struct {
 	uint32_t       num;
 	uint32_t       num_worker;
 	uint32_t       num_control;
+	uint32_t       num_max;
 	odp_spinlock_t lock;
 } thread_globals_t;
 
@@ -51,6 +54,19 @@ __thread _odp_thread_state_t *_odp_this_thread;
 int _odp_thread_init_global(void)
 {
 	odp_shm_t shm;
+	int num_max = 0;
+	const char *str = "system.thread_count_max";
+
+	if (!_odp_libconfig_lookup_int(str, &num_max)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+	if (num_max <= 0) {
+		ODP_ERR("Config option '%s' not valid.\n", str);
+		return -1;
+	}
+	if (num_max > ODP_THREAD_COUNT_MAX)
+		num_max = ODP_THREAD_COUNT_MAX;
 
 	shm = odp_shm_reserve("_odp_thread_globals",
 			      sizeof(thread_globals_t),
@@ -63,6 +79,9 @@ int _odp_thread_init_global(void)
 
 	memset(thread_globals, 0, sizeof(thread_globals_t));
 	odp_spinlock_init(&thread_globals->lock);
+	thread_globals->num_max = num_max;
+	ODP_PRINT("System config:\n");
+	ODP_PRINT("  system.thread_count_max: %d\n\n", num_max);
 
 	return 0;
 }
@@ -83,10 +102,10 @@ static int alloc_id(odp_thread_type_t type)
 	int thr;
 	odp_thrmask_t *all = &thread_globals->all;
 
-	if (thread_globals->num >= ODP_THREAD_COUNT_MAX)
+	if (thread_globals->num >= thread_globals->num_max)
 		return -1;
 
-	for (thr = 0; thr < ODP_THREAD_COUNT_MAX; thr++) {
+	for (thr = 0; thr < (int)thread_globals->num_max; thr++) {
 		if (odp_thrmask_isset(all, thr) == 0) {
 			odp_thrmask_set(all, thr);
 
@@ -110,7 +129,7 @@ static int free_id(int thr)
 {
 	odp_thrmask_t *all = &thread_globals->all;
 
-	if (thr < 0 || thr >= ODP_THREAD_COUNT_MAX)
+	if (thr < 0 || thr >= (int)thread_globals->num_max)
 		return -1;
 
 	if (odp_thrmask_isset(all, thr) == 0)
@@ -231,7 +250,7 @@ int odp_thread_count(void)
 
 int odp_thread_count_max(void)
 {
-	return ODP_THREAD_COUNT_MAX;
+	return thread_globals->num_max;
 }
 
 int odp_thrmask_worker(odp_thrmask_t *mask)
