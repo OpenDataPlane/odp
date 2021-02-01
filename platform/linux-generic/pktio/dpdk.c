@@ -1799,6 +1799,17 @@ static int dpdk_setup_eth_tx(pktio_entry_t *pktio_entry,
 		}
 	}
 
+	/* Set per queue statistics mappings. Not supported by all PMDs, so
+	 * ignore the return value. */
+	for (i = 0; i < pktio_entry->s.num_out_queue && i < RTE_ETHDEV_QUEUE_STAT_CNTRS; i++) {
+		ret = rte_eth_dev_set_tx_queue_stats_mapping(port_id, i, i);
+		if (ret) {
+			ODP_DBG("Mapping per TX queue statistics not supported: %d\n", ret);
+			break;
+		}
+	}
+	ODP_DBG("Mapped %" PRIu32 "/%d TX counters\n", i, RTE_ETHDEV_QUEUE_STAT_CNTRS);
+
 	return 0;
 }
 
@@ -1826,6 +1837,17 @@ static int dpdk_setup_eth_rx(const pktio_entry_t *pktio_entry,
 			return -1;
 		}
 	}
+
+	/* Set per queue statistics mappings. Not supported by all PMDs, so
+	 * ignore the return value. */
+	for (i = 0; i < pktio_entry->s.num_in_queue && i < RTE_ETHDEV_QUEUE_STAT_CNTRS; i++) {
+		ret = rte_eth_dev_set_rx_queue_stats_mapping(port_id, i, i);
+		if (ret) {
+			ODP_DBG("Mapping per RX queue statistics not supported: %d\n", ret);
+			break;
+		}
+	}
+	ODP_DBG("Mapped %" PRIu32 "/%d RX counters\n", i, RTE_ETHDEV_QUEUE_STAT_CNTRS);
 
 	return 0;
 }
