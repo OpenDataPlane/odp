@@ -1605,15 +1605,16 @@ void odp_packet_print(odp_packet_t pkt)
 
 	seg = odp_packet_first_seg(pkt);
 
-	while (seg != ODP_PACKET_SEG_INVALID) {
+	for (int seg_idx = 0; seg != ODP_PACKET_SEG_INVALID; seg_idx++) {
 		odp_packet_hdr_t *seg_hdr = packet_seg_to_hdr(seg);
 		odp_buffer_hdr_t *buf_hdr = &seg_hdr->buf_hdr;
 		char seg_str[max_len];
 		int str_len;
 
 		str_len = snprintf(&seg_str[0], max_len,
-				   "    seg_len    %-4" PRIu32 "  seg_data %p "
-				   "ref_cnt %u\n",
+				   "    [%d] seg_len %-4" PRIu32 "  seg_data %p "
+				   " ref_cnt %u\n",
+				   seg_idx,
 				   odp_packet_seg_data_len(pkt, seg),
 				   odp_packet_seg_data(pkt, seg),
 				   buffer_ref(buf_hdr));
