@@ -1,0 +1,66 @@
+#!/bin/sh
+#
+# Copyright (C) 2021, Marvell
+# All rights reserved.
+#
+# SPDX-License-Identifier:	BSD-3-Clause
+#
+# Script to setup interfaces used for running application on linux-generic.
+#
+# ipsec_api application uses two loop devices loop0 and loop1.
+#
+
+if [ "$0" == "$BASH_SOURCE" ]; then
+	echo "Error: Platform specific env file has to be sourced."
+	exit 1
+fi
+
+# Absolute path to the .env file.
+LINUX_ENV_PATH=$PWD/../../platform/linux-generic/test
+
+TESTENV="tests-linux-generic.env"
+
+if [ -f $LINUX_ENV_PATH/$TESTENV ]; then
+	source $LINUX_ENV_PATH/$TESTENV
+else
+	echo "BUG: unable to find $TESTENV!"
+	echo "$TESTENV has to be in following directory: "
+	echo "  $LINUX_ENV_PATH"
+	exit 1
+fi
+
+# Skip IPsec example tests when there's no OpenSSL.
+if [ -n "$WITH_OPENSSL" ] && [ ${WITH_OPENSSL} -eq 0 ]; then
+	echo "Crypto not supported. Skipping."
+	exit 77
+fi
+
+IF0=p7p1
+IF1=p8p1
+
+NEXT_HOP_MAC0=08:00:27:76:B5:E0
+NEXT_HOP_MAC1=08:00:27:F5:8B:DB
+
+LIF0=loop1
+LIF1=loop2
+
+IF_LIST=$LIF0,$LIF1
+ROUTE_IF_INB=$LIF0
+ROUTE_IF_OUTB=$LIF1
+OUT_IF=$LIF1
+IN_IF=$LIF0
+
+validate_result()
+{
+	return 0
+}
+
+setup_interfaces()
+{
+	return 0
+}
+
+cleanup_interfaces()
+{
+	return 0
+}
