@@ -1,20 +1,24 @@
-/* Copyright (c) 2020, Nokia
+/* Copyright (c) 2020-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <getopt.h>
 
 #include <odp_api.h>
+#include <odp/helper/odph_api.h>
 
 typedef struct test_global_t {
+	int system;
 	int shm;
-	int shm_all;
 	int pool;
 	int queue;
+	int pktio;
+	int ipsec;
 
 } test_global_t;
 
@@ -27,10 +31,12 @@ static void print_usage(void)
 	       "are called when no options are given.\n"
 	       "\n"
 	       "OPTIONS:\n"
-	       "  -S, --shm_all      Call odp_shm_print_all()\n"
+	       "  -S, --system       Call odp_sys_info_print() and odp_sys_config_print()\n"
 	       "  -s, --shm          Create a SHM and call odp_shm_print()\n"
 	       "  -p, --pool         Create various types of pools and call odp_pool_print()\n"
 	       "  -q, --queue        Create various types of queues and call odp_queue_print()\n"
+	       "  -i, --interface    Create packet IO interface (loop) and call odp_pktio_print()\n"
+	       "  -I, --ipsec        Call odp_ipsec_print()\n"
 	       "  -h, --help         Display help and exit.\n\n");
 }
 
@@ -39,14 +45,16 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	int opt, long_index;
 
 	const struct option longopts[] = {
-		{"shm_all",     no_argument,       NULL, 'S'},
+		{"system",      no_argument,       NULL, 'S'},
 		{"shm",         no_argument,       NULL, 's'},
 		{"pool",        no_argument,       NULL, 'p'},
 		{"queue",       no_argument,       NULL, 'q'},
+		{"interface",   no_argument,       NULL, 'i'},
+		{"ipsec",       no_argument,       NULL, 'I'},
 		{"help",        no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+Sspqh";
+	const char *shortopts =  "+SspqiIh";
 	int ret = 0;
 
 	while (1) {
@@ -57,7 +65,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 
 		switch (opt) {
 		case 'S':
-			global->shm_all = 1;
+			global->system = 1;
 			break;
 		case 's':
 			global->shm = 1;
@@ -67,6 +75,12 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 			break;
 		case 'q':
 			global->queue = 1;
+			break;
+		case 'i':
+			global->pktio = 1;
+			break;
+		case 'I':
+			global->ipsec = 1;
 			break;
 		case 'h':
 		default:
@@ -78,32 +92,26 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	return ret;
 }
 
-static int shm_debug(test_global_t *global)
+static int shm_debug(void)
 {
 	const char *name = "debug_shm";
 	odp_shm_t shm = ODP_SHM_INVALID;
 
-	if (global->shm) {
-		shm = odp_shm_reserve(name, 8 * 1024, 64, 0);
-		if (shm == ODP_SHM_INVALID) {
-			printf("SHM reserve failed: %s\n", name);
-			return -1;
-		}
+	shm = odp_shm_reserve(name, 8 * 1024, 64, 0);
+	if (shm == ODP_SHM_INVALID) {
+		ODPH_ERR("SHM reserve failed: %s\n", name);
+		return -1;
 	}
 
-	if (global->shm_all) {
-		printf("\n");
-		odp_shm_print_all();
-	}
+	printf("\n");
+	odp_shm_print_all();
 
-	if (global->shm) {
-		printf("\n");
-		odp_shm_print(shm);
+	printf("\n");
+	odp_shm_print(shm);
 
-		if (odp_shm_free(shm)) {
-			printf("SHM free failed: %s\n", name);
-			return -1;
-		}
+	if (odp_shm_free(shm)) {
+		ODPH_ERR("SHM free failed: %s\n", name);
+		return -1;
 	}
 
 	return 0;
@@ -114,7 +122,7 @@ static int buffer_debug(odp_pool_t pool)
 	odp_buffer_t buf = odp_buffer_alloc(pool);
 
 	if (buf == ODP_BUFFER_INVALID) {
-		printf("Buffer alloc failed\n");
+		ODPH_ERR("Buffer alloc failed\n");
 		return -1;
 	}
 
@@ -131,12 +139,15 @@ static int packet_debug(odp_pool_t pool, int len)
 	odp_packet_t pkt = odp_packet_alloc(pool, len);
 
 	if (pkt == ODP_PACKET_INVALID) {
-		printf("Packet alloc failed\n");
+		ODPH_ERR("Packet alloc failed\n");
 		return -1;
 	}
 
 	printf("\n");
 	odp_packet_print(pkt);
+
+	printf("\n");
+	odp_packet_print_data(pkt, 0, len);
 
 	odp_packet_free(pkt);
 
@@ -159,7 +170,7 @@ static int pool_debug(void)
 	pool = odp_pool_create(name, &param);
 
 	if (pool == ODP_POOL_INVALID) {
-		printf("Pool create failed: %s\n", name);
+		ODPH_ERR("Pool create failed: %s\n", name);
 		return -1;
 	}
 
@@ -170,7 +181,7 @@ static int pool_debug(void)
 		return -1;
 
 	if (odp_pool_destroy(pool)) {
-		printf("Pool destroy failed: %s\n", name);
+		ODPH_ERR("Pool destroy failed: %s\n", name);
 		return -1;
 	}
 
@@ -184,7 +195,7 @@ static int pool_debug(void)
 	pool = odp_pool_create(name, &param);
 
 	if (pool == ODP_POOL_INVALID) {
-		printf("Pool create failed: %s\n", name);
+		ODPH_ERR("Pool create failed: %s\n", name);
 		return -1;
 	}
 
@@ -195,7 +206,7 @@ static int pool_debug(void)
 		return -1;
 
 	if (odp_pool_destroy(pool)) {
-		printf("Pool destroy failed: %s\n", name);
+		ODPH_ERR("Pool destroy failed: %s\n", name);
 		return -1;
 	}
 
@@ -207,7 +218,7 @@ static int pool_debug(void)
 	pool = odp_pool_create(name, &param);
 
 	if (pool == ODP_POOL_INVALID) {
-		printf("Pool create failed: %s\n", name);
+		ODPH_ERR("Pool create failed: %s\n", name);
 		return -1;
 	}
 
@@ -215,7 +226,7 @@ static int pool_debug(void)
 	odp_pool_print(pool);
 
 	if (odp_pool_destroy(pool)) {
-		printf("Pool destroy failed: %s\n", name);
+		ODPH_ERR("Pool destroy failed: %s\n", name);
 		return -1;
 	}
 
@@ -235,7 +246,7 @@ static int queue_debug(void)
 	queue = odp_queue_create(name, &param);
 
 	if (queue == ODP_QUEUE_INVALID) {
-		printf("Queue create failed: %s\n", name);
+		ODPH_ERR("Queue create failed: %s\n", name);
 		return -1;
 	}
 
@@ -243,13 +254,13 @@ static int queue_debug(void)
 	odp_queue_print(queue);
 
 	if (odp_queue_destroy(queue)) {
-		printf("Queue destroy failed: %s\n", name);
+		ODPH_ERR("Queue destroy failed: %s\n", name);
 		return -1;
 	}
 
 	/* Configure scheduler before creating any scheduled queues */
 	if (odp_schedule_config(NULL)) {
-		printf("Schedule config failed\n");
+		ODPH_ERR("Schedule config failed\n");
 		return -1;
 	}
 
@@ -260,7 +271,7 @@ static int queue_debug(void)
 	queue = odp_queue_create(name, &param);
 
 	if (queue == ODP_QUEUE_INVALID) {
-		printf("Queue create failed: %s\n", name);
+		ODPH_ERR("Queue create failed: %s\n", name);
 		return -1;
 	}
 
@@ -268,9 +279,59 @@ static int queue_debug(void)
 	odp_queue_print(queue);
 
 	if (odp_queue_destroy(queue)) {
-		printf("Queue destroy failed: %s\n", name);
+		ODPH_ERR("Queue destroy failed: %s\n", name);
 		return -1;
 	}
+
+	return 0;
+}
+
+static int pktio_debug(void)
+{
+	odp_pool_t pool;
+	odp_pool_param_t pool_param;
+	odp_pktio_t pktio;
+	int pkt_len = 100;
+
+	odp_pool_param_init(&pool_param);
+	pool_param.type = ODP_POOL_PACKET;
+	pool_param.pkt.num = 10;
+	pool_param.pkt.len = pkt_len;
+
+	pool = odp_pool_create("debug_pktio_pool", &pool_param);
+
+	if (pool == ODP_POOL_INVALID) {
+		ODPH_ERR("Pool create failed\n");
+		return -1;
+	}
+
+	pktio = odp_pktio_open("loop", pool, NULL);
+
+	if (pktio == ODP_PKTIO_INVALID) {
+		ODPH_ERR("Pktio open failed\n");
+		return -1;
+	}
+
+	printf("\n");
+	odp_pktio_print(pktio);
+
+	if (odp_pktio_close(pktio)) {
+		ODPH_ERR("Pktio close failed\n");
+		return -1;
+	}
+
+	if (odp_pool_destroy(pool)) {
+		ODPH_ERR("Pool destroy failed\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+static int ipsec_debug(void)
+{
+	printf("\n");
+	odp_ipsec_print();
 
 	return 0;
 }
@@ -285,50 +346,68 @@ int main(int argc, char *argv[])
 
 	if (argc < 2) {
 		/* If not arguments, run all test cases */
-		global->shm_all = 1;
+		global->system  = 1;
 		global->shm     = 1;
 		global->pool    = 1;
 		global->queue   = 1;
+		global->pktio   = 1;
+		global->ipsec   = 1;
 	} else {
 		if (parse_options(argc, argv, global))
 			return -1;
 	}
 
 	if (odp_init_global(&inst, NULL, NULL)) {
-		printf("Global init failed.\n");
-		return -1;
+		ODPH_ERR("Global init failed.\n");
+		exit(EXIT_FAILURE);
 	}
 
 	if (odp_init_local(inst, ODP_THREAD_CONTROL)) {
-		printf("Local init failed.\n");
-		return -1;
+		ODPH_ERR("Local init failed.\n");
+		exit(EXIT_FAILURE);
 	}
 
-	odp_sys_info_print();
+	if (global->system) {
+		printf("\n");
+		odp_sys_info_print();
 
-	if ((global->shm_all || global->shm) && shm_debug(global)) {
-		printf("SHM debug failed.\n");
-		return -1;
+		printf("\n");
+		odp_sys_config_print();
+	}
+
+	if (global->shm && shm_debug()) {
+		ODPH_ERR("SHM debug failed.\n");
+		exit(EXIT_FAILURE);
 	}
 
 	if (global->pool && pool_debug()) {
-		printf("Pool debug failed.\n");
-		return -1;
+		ODPH_ERR("Pool debug failed.\n");
+		exit(EXIT_FAILURE);
 	}
 
 	if (global->queue && queue_debug()) {
-		printf("Queue debug failed.\n");
-		return -1;
+		ODPH_ERR("Queue debug failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (global->pktio && pktio_debug()) {
+		ODPH_ERR("Packet debug failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (global->ipsec && ipsec_debug()) {
+		ODPH_ERR("IPSEC debug failed.\n");
+		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_local()) {
-		printf("Local term failed.\n");
-		return -1;
+		ODPH_ERR("Local term failed.\n");
+		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_global(inst)) {
-		printf("Global term failed.\n");
-		return -1;
+		ODPH_ERR("Global term failed.\n");
+		exit(EXIT_FAILURE);
 	}
 
 	return 0;
