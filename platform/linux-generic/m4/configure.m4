@@ -47,6 +47,7 @@ AC_CONFIG_FILES([platform/linux-generic/Makefile
 		 platform/linux-generic/test/example/Makefile
 		 platform/linux-generic/test/example/classifier/Makefile
 		 platform/linux-generic/test/example/generator/Makefile
+		 platform/linux-generic/test/example/ipsec_api/Makefile
 		 platform/linux-generic/test/example/l2fwd_simple/Makefile
 		 platform/linux-generic/test/example/l3fwd/Makefile
 		 platform/linux-generic/test/example/packet/Makefile
