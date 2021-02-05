@@ -2142,7 +2142,7 @@ void odp_ipsec_print(void)
 {
 	ODP_PRINT("\nIPSEC print\n");
 	ODP_PRINT("-----------\n");
-	ODP_PRINT("  max number of SA %u\n", ipsec_config->max_num_sa);
+	ODP_PRINT("  max number of SA %u\n\n", ipsec_config->max_num_sa);
 }
 
 void odp_ipsec_sa_print(odp_ipsec_sa_t sa)
@@ -2151,5 +2151,5 @@ void odp_ipsec_sa_print(odp_ipsec_sa_t sa)
 
 	ODP_PRINT("\nIPSEC SA print\n");
 	ODP_PRINT("--------------\n");
-	ODP_PRINT("  SPI              %u\n", ipsec_sa->spi);
+	ODP_PRINT("  SPI              %u\n\n", ipsec_sa->spi);
 }
