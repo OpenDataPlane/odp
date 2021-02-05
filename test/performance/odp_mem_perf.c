@@ -135,7 +135,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 
 static int set_num_cpu(test_global_t *global)
 {
-	int ret;
+	int ret, max_num;
 	test_options_t *test_options = &global->test_options;
 	int num_cpu = test_options->num_cpu;
 
@@ -145,7 +145,11 @@ static int set_num_cpu(test_global_t *global)
 		return -1;
 	}
 
-	ret = odp_cpumask_default_worker(&global->cpumask, num_cpu);
+	max_num = num_cpu;
+	if (num_cpu == 0)
+		max_num = ODP_THREAD_COUNT_MAX - 1;
+
+	ret = odp_cpumask_default_worker(&global->cpumask, max_num);
 
 	if (num_cpu && ret != num_cpu) {
 		ODPH_ERR("Too many workers. Max supported %i.\n", ret);
@@ -154,6 +158,11 @@ static int set_num_cpu(test_global_t *global)
 
 	/* Zero: all available workers */
 	if (num_cpu == 0) {
+		if (ret > max_num) {
+			ODPH_ERR("Too many cpus from odp_cpumask_default_worker(): %i\n", ret);
+			return -1;
+		}
+
 		num_cpu = ret;
 		test_options->num_cpu = num_cpu;
 	}
