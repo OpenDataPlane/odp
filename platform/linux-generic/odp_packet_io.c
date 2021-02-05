@@ -1656,8 +1656,7 @@ void odp_pktio_print(odp_pktio_t hdl)
 		return;
 	}
 
-	len += snprintf(&str[len], n - len,
-			"pktio\n");
+	len += snprintf(&str[len], n - len, "Pktio info\n----------\n");
 	len += snprintf(&str[len], n - len,
 			"  name              %s\n", entry->s.name);
 	len += snprintf(&str[len], n - len,
