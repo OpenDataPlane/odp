@@ -4,7 +4,6 @@ SUBDIRS = classifier \
 	  hello \
 	  ipsec_api \
 	  ipsec_crypto \
-	  ipsec_offload \
 	  l2fwd_simple \
 	  l3fwd \
 	  packet \

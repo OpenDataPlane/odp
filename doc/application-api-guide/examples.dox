@@ -40,11 +40,6 @@
  */
 
 /**
- * @example ipsec_offload/odp_ipsec_offload.c
- * IPsec offload example application
- */
-
-/**
  * @example odp_l2fwd.c
  * L2 forwarding example application
  */

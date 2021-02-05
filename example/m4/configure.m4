@@ -26,7 +26,6 @@ AC_CONFIG_FILES([example/classifier/Makefile
 		 example/ipsec_api/Makefile
 		 example/ipsec_crypto/Makefile
 		 example/ipfragreass/Makefile
-		 example/ipsec_offload/Makefile
 		 example/l2fwd_simple/Makefile
 		 example/l3fwd/Makefile
 		 example/packet/Makefile
