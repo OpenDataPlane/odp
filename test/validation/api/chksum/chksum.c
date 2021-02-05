@@ -392,11 +392,43 @@ static void chksum_ones_complement_pseudorandom(void)
 	free(buf);
 }
 
+/*
+ * Test with very long data with most of the bits set. The idea is to
+ * maximize the number of carries.
+ */
+static void chksum_ones_complement_very_long(void)
+{
+	const int size = 64 * 1024;
+	const unsigned long page = 4096;
+	/* Allocate two extra pages for alignment. */
+	uint8_t *buf = (uint8_t *)malloc(size + page * 2);
+	uint8_t *data = (uint8_t *)(((uintptr_t)buf + (page - 1)) & ~(page - 1));
+
+	/* Start with all bits set. */
+	memset(data, 0xff, size + page);
+
+	for (int i = 0; i < 100; i++) {
+		for (int len = size - 8; len <= size; len++) {
+			/* Alignment 0, 2, 4, 6, 8. */
+			for (int a = 0; a <= 8; a += 2)
+				CU_ASSERT(chksum_rfc1071(data + a, len) ==
+					  odp_chksum_ones_comp16(data + a, len));
+		}
+
+		/* Turn off some random bits in the data. */
+		uint64_t rnd = KISS;
+		((uint8_t *)data)[rnd & (size - 1)] &= (rnd >> 32) & 0xff;
+	}
+
+	free(buf);
+}
+
 odp_testinfo_t chksum_suite[] = {
 	ODP_TEST_INFO(chksum_ones_complement_ip),
 	ODP_TEST_INFO(chksum_ones_complement_udp),
 	ODP_TEST_INFO(chksum_ones_complement_udp_long),
 	ODP_TEST_INFO(chksum_ones_complement_pseudorandom),
+	ODP_TEST_INFO(chksum_ones_complement_very_long),
 	ODP_TEST_INFO_NULL,
 };
 
