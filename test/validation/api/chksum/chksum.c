@@ -313,10 +313,90 @@ static void chksum_ones_complement_udp_long(void)
 	CU_ASSERT(res == UDP_LONG_CHKSUM);
 }
 
+static uint16_t chksum_rfc1071(const void *p, uint32_t len)
+{
+	uint32_t sum = 0;
+	const uint16_t *data = p;
+
+	while (len > 1) {
+		sum += *data++;
+		len -= 2;
+	}
+
+	/* Add left-over byte, if any */
+	if (len > 0) {
+		uint16_t left_over = 0;
+
+		*(uint8_t *)&left_over = *(const uint8_t *)data;
+		sum += left_over;
+	}
+
+	/* Fold 32-bit sum to 16 bits */
+	while (sum >> 16)
+		sum = (sum & 0xffff) + (sum >> 16);
+
+	return sum;
+}
+
+/*
+ * 64-bit KISS RNGs
+ * George Marsaglia
+ * https://www.thecodingforums.com/threads/64-bit-kiss-rngs.673657
+ */
+
+static unsigned long long x = 1234567890987654321ULL, c = 123456123456123456ULL,
+			  y = 362436362436362436ULL, z = 1066149217761810ULL, t;
+
+#define MWC (t = (x << 58) + c, c = (x >> 6), x += t, c += (x < t), x)
+#define XSH (y ^= (y << 13), y ^= (y >> 17), y ^= (y << 43))
+#define CNG (z = 6906969069LL * z + 1234567)
+#define KISS (MWC + XSH + CNG)
+
+/*
+ * Test with pseudorandom data and different data lengths and alignments.
+ */
+static void chksum_ones_complement_pseudorandom(void)
+{
+	const int size = 32 * 1024;
+	const unsigned long page = 4096;
+	/* Allocate some extra pages for alignment and length. */
+	uint8_t *buf = (uint8_t *)malloc(size + page * 4);
+	uint8_t *data = (uint8_t *)(((uintptr_t)buf + (page - 1)) & ~(page - 1));
+
+	for (int i = 0; i < (size + (int)page * 3) / 8; i++)
+		((uint64_t *)(uintptr_t)data)[i] = KISS;
+
+	/* Test data lengths from 1 to more than 9000 bytes. */
+	for (int len = 1; len < 10000; len++) {
+		/*
+		 * To avoid spending too much time on long data, the number of
+		 * rounds goes down as data length goes up.
+		 */
+		int rounds = 1000000000 / (len * len + 1000000);
+
+		for (int i = 0; i < rounds; i++) {
+			/* Align p to two bytes. */
+			uint8_t *p = data + (KISS & (size - 1) & ~1UL);
+			/*
+			 * Generate some fresh random bits at the start of the
+			 * data to be checksummed.
+			 */
+			uint64_t rnd = KISS;
+
+			memcpy(p, &rnd, sizeof(rnd));
+			CU_ASSERT(chksum_rfc1071(p, len) ==
+				  odp_chksum_ones_comp16(p, len));
+		}
+	}
+
+	free(buf);
+}
+
 odp_testinfo_t chksum_suite[] = {
 	ODP_TEST_INFO(chksum_ones_complement_ip),
 	ODP_TEST_INFO(chksum_ones_complement_udp),
 	ODP_TEST_INFO(chksum_ones_complement_udp_long),
+	ODP_TEST_INFO(chksum_ones_complement_pseudorandom),
 	ODP_TEST_INFO_NULL,
 };
 
