@@ -3,8 +3,8 @@ AC_PREREQ([2.5])
 # ODP API version
 ##########################################################################
 m4_define([odpapi_generation_version], [1])
-m4_define([odpapi_major_version], [25])
-m4_define([odpapi_minor_version], [2])
+m4_define([odpapi_major_version], [26])
+m4_define([odpapi_minor_version], [0])
 m4_define([odpapi_point_version], [0])
 m4_define([odpapi_version],
     [odpapi_generation_version.odpapi_major_version.odpapi_minor_version.odpapi_point_version])
