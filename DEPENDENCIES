@@ -5,6 +5,14 @@ Prerequisites for building the OpenDataPlane (ODP) API
    Linux distributions tested by the ODP CI. Earlier versions may or may not
    work.
 
+   For CentOS/RedHat distros, configure the system to use Fedora EPEL repos and
+   third-party packages:
+   $ sudo yum install epel-release
+
+   Additionally, for CentOS 8 distros, enable the powertools repository:
+   $ sudo yum install dnf-plugins-core
+   $ sudo yum config-manager --set-enabled powertools
+
 2. autotools
 
    automake
@@ -23,10 +31,10 @@ Prerequisites for building the OpenDataPlane (ODP) API
    Libraries currently required to link: libconfig, openssl, libatomic
 
    On Debian/Ubuntu systems:
-   $ sudo apt-get install libconfig-dev
+   $ sudo apt-get install libconfig-dev libatomic
 
    On CentOS/RedHat/Fedora systems:
-   $ sudo yum install libconfig-devel
+   $ sudo yum install libconfig-devel libatomic
 
    It is possible to build ODP without OpenSSL by passing flag
    --without-openssl to configure script. However this will result in
@@ -183,6 +191,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    DPDK pktio adds a dependency to NUMA library.
    # Debian/Ubuntu
    $ sudo apt-get install libnuma-dev
+
    # CentOS/RedHat/Fedora
    $ sudo yum install numactl-devel
 
@@ -245,7 +254,10 @@ Prerequisites for building the OpenDataPlane (ODP) API
 4.1 Native CUnit install
 
    # Debian/Ubuntu
-   $ apt-get install libcunit1-dev
+   $ sudo apt-get install libcunit1-dev
+
+   # CentOS/RedHat/Fedora systems
+   $ sudo yum install CUnit-devel
 
 4.2 Built from src
 
@@ -341,7 +353,10 @@ Prerequisites for building the OpenDataPlane (ODP) API
    Message sequence diagrams are stored as msc files and the svg versions are generated
    when the docs are built.
    # Debian/Ubuntu
-   $ apt-get install mscgen
+   $ sudo apt-get install mscgen
+
+   # CentOS 8/RedHat/Fedora
+   $ sudo yum install mscgen
 
 6.1 API Guide
    See https://www.doxygen.nl/manual/install.html
@@ -350,13 +365,19 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 6.1.1 HTML
    # Debian/Ubuntu
-   $ apt-get install doxygen graphviz
+   $ sudo apt-get install doxygen graphviz
+
+   # CentOS/RedHat/Fedora
+   $ sudo yum install doxygen graphviz
 
 6.2 User guides
 
 6.2.1 HTML
    # Debian/Ubuntu
-   $ apt-get install asciidoctor source-highlight librsvg2-bin
+   $ sudo apt-get install asciidoctor source-highlight librsvg2-bin
+
+   # CentOS/RedHat/Fedora
+   $ sudo yum install asciidoc source-highlight librsvg2
 
 7.0 Submitting patches
 
