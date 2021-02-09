@@ -4,7 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/autoheader_external.h>
+#include <odp/helper/autoheader_external.h>
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>

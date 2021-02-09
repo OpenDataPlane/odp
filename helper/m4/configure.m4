@@ -17,5 +17,30 @@ AC_ARG_ENABLE([helper-linux],
     [helper_linux=$enableval],
     [helper_linux=yes])
 
+##########################################################################
+# Enable/disable ODPH_DEBUG
+##########################################################################
+AC_ARG_ENABLE([helper-debug],
+    [AS_HELP_STRING([--enable-helper-debug],
+		    [helpers include additional debugging code [default=disabled]])],
+    [], [AS_IF([test "x$enable_debug" = "xfull"], [enable_helper_debug=yes],
+    [enable_helper_debug=no])])
+AS_IF([test "x$enable_helper_debug" != "xno"], [ODPH_DEBUG=1], [ODPH_DEBUG=0])
+AC_DEFINE_UNQUOTED([ODPH_DEBUG], [$ODPH_DEBUG],
+		   [Define to 1 to include additional helper debug code])
+
+##########################################################################
+# Enable/disable ODPH_DEBUG_PRINT
+##########################################################################
+AC_ARG_ENABLE([helper-debug-print],
+    [AS_HELP_STRING([--enable-helper-debug-print],
+		    [display helper debugging information [default=disabled]])],
+    [], [AS_IF([test "x$enable_debug" = "xfull"], [enable_helper_debug_print=yes],
+	       [enable_helper_debug_print=no])])
+AS_IF([test "x$enable_helper_debug_print" != "xno"], [ODPH_DEBUG_PRINT=1],
+      [ODPH_DEBUG_PRINT=0])
+AC_DEFINE_UNQUOTED([ODPH_DEBUG_PRINT], [$ODPH_DEBUG_PRINT],
+		   [Define to 1 to display helper debug information])
+
 AC_CONFIG_FILES([helper/libodphelper.pc
 		 helper/test/Makefile])
