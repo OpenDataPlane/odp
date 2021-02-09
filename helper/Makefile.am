@@ -12,6 +12,7 @@ AM_LDFLAGS = -version-number '$(ODPHELPER_LIBSO_VERSION)'
 
 helperincludedir = $(includedir)/odp/helper/
 helperinclude_HEADERS = \
+		  include/odp/helper/autoheader_external.h\
 		  include/odp/helper/chksum.h\
 		  include/odp/helper/odph_debug.h \
 		  include/odp/helper/eth.h\

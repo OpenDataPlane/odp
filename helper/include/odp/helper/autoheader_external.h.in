@@ -1,0 +1,11 @@
+
+#ifndef ODPH_AUTOHEADER_EXTERNAL_H_
+#define ODPH_AUTOHEADER_EXTERNAL_H_
+
+/* Define to 1 to include additional helper debug code */
+#undef ODPH_DEBUG
+
+/* Define to 1 to display helper debug information */
+#undef ODPH_DEBUG_PRINT
+
+#endif

@@ -43,6 +43,8 @@ include/odp/autoheader_build.h
 include/odp/autoheader_external.h
 include/odp/autoheader_internal.h
 include/odp/stamp-h*
+helper/include/odp/helper/autoheader_external.h
+helper/include/odp/helper/stamp-h*
 lib/
 libtool
 ltmain.sh
