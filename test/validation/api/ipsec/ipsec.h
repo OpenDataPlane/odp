@@ -139,5 +139,6 @@ int ipsec_check_esp_null_aes_gmac_256(void);
 int ipsec_check_esp_chacha20_poly1305(void);
 int ipsec_check_test_sa_update_seq_num(void);
 int ipsec_check_esp_aes_gcm_128_reass_ipv4(void);
+int ipsec_check_esp_aes_gcm_128_reass_ipv6(void);
 
 #endif
