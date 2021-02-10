@@ -2021,6 +2021,272 @@ static void test_in_ipv4_esp_reass_incomp(void)
 	ipsec_sa_destroy(out_sa);
 }
 
+static void test_in_ipv6_esp_reass_success_two_frags(odp_ipsec_sa_t out_sa,
+						     odp_ipsec_sa_t in_sa)
+{
+	ipsec_test_part test_out[MAX_FRAGS], test_in[MAX_FRAGS];
+	int i;
+
+	memset(test_in, 0, sizeof(test_in));
+
+	CU_ASSERT(MAX_FRAGS >= 2);
+
+	part_prep_esp(test_out, 2, true);
+
+	test_out[0].pkt_in = &pkt_ipv6_udp_p1_f1;
+	test_out[1].pkt_in = &pkt_ipv6_udp_p1_f2;
+
+	part_prep_plain(&test_in[1], 1, true, true);
+	test_in[1].out[0].pkt_res = &pkt_ipv6_udp_p1;
+
+	for (i = 0; i < 2; i++) {
+		ipsec_test_packet test_pkt;
+		odp_packet_t pkt;
+
+		CU_ASSERT_EQUAL(ipsec_check_out(&test_out[i], out_sa, &pkt), 1);
+
+		ipsec_test_packet_from_pkt(&test_pkt, &pkt);
+		test_in[i].pkt_in = &test_pkt;
+
+		ipsec_check_in_one(&test_in[i], in_sa);
+	}
+}
+
+static void test_in_ipv6_esp_reass_success_four_frags(odp_ipsec_sa_t out_sa,
+						      odp_ipsec_sa_t in_sa)
+{
+	ipsec_test_part test_out[MAX_FRAGS], test_in[MAX_FRAGS];
+	int i;
+
+	memset(test_in, 0, sizeof(test_in));
+
+	CU_ASSERT(MAX_FRAGS >= 4);
+
+	part_prep_esp(test_out, 4, true);
+
+	test_out[0].pkt_in = &pkt_ipv6_udp_p2_f1;
+	test_out[1].pkt_in = &pkt_ipv6_udp_p2_f2;
+	test_out[2].pkt_in = &pkt_ipv6_udp_p2_f3;
+	test_out[3].pkt_in = &pkt_ipv6_udp_p2_f4;
+
+	part_prep_plain(&test_in[3], 1, true, true);
+	test_in[3].out[0].pkt_res = &pkt_ipv6_udp_p2;
+
+	for (i = 0; i < 4; i++) {
+		ipsec_test_packet test_pkt;
+		odp_packet_t pkt;
+
+		CU_ASSERT_EQUAL(ipsec_check_out(&test_out[i], out_sa, &pkt), 1);
+
+		ipsec_test_packet_from_pkt(&test_pkt, &pkt);
+		test_in[i].pkt_in = &test_pkt;
+
+		ipsec_check_in_one(&test_in[i], in_sa);
+	}
+}
+
+static void test_in_ipv6_esp_reass_success_two_frags_ooo(odp_ipsec_sa_t out_sa,
+							 odp_ipsec_sa_t in_sa)
+{
+	ipsec_test_part test_out[MAX_FRAGS], test_in[MAX_FRAGS];
+	int i;
+
+	memset(test_in, 0, sizeof(test_in));
+
+	CU_ASSERT(MAX_FRAGS >= 2);
+
+	part_prep_esp(test_out, 2, true);
+
+	test_out[0].pkt_in = &pkt_ipv6_udp_p1_f2;
+	test_out[1].pkt_in = &pkt_ipv6_udp_p1_f1;
+
+	part_prep_plain(&test_in[1], 1, true, true);
+	test_in[1].out[0].pkt_res = &pkt_ipv6_udp_p1;
+
+	for (i = 0; i < 2; i++) {
+		ipsec_test_packet test_pkt;
+		odp_packet_t pkt;
+
+		CU_ASSERT_EQUAL(ipsec_check_out(&test_out[i], out_sa, &pkt), 1);
+
+		ipsec_test_packet_from_pkt(&test_pkt, &pkt);
+		test_in[i].pkt_in = &test_pkt;
+
+		ipsec_check_in_one(&test_in[i], in_sa);
+	}
+}
+
+static void test_in_ipv6_esp_reass_success_four_frags_ooo(odp_ipsec_sa_t out_sa,
+							  odp_ipsec_sa_t in_sa)
+{
+	ipsec_test_part test_out[MAX_FRAGS], test_in[MAX_FRAGS];
+	int i;
+
+	memset(test_in, 0, sizeof(test_in));
+
+	CU_ASSERT(MAX_FRAGS >= 4);
+
+	part_prep_esp(test_out, 4, true);
+
+	test_out[1].pkt_in = &pkt_ipv6_udp_p2_f2;
+	test_out[2].pkt_in = &pkt_ipv6_udp_p2_f3;
+	test_out[3].pkt_in = &pkt_ipv6_udp_p2_f4;
+	test_out[0].pkt_in = &pkt_ipv6_udp_p2_f1;
+
+	part_prep_plain(&test_in[3], 1, true, true);
+	test_in[3].out[0].pkt_res = &pkt_ipv6_udp_p2;
+
+	for (i = 0; i < 4; i++) {
+		ipsec_test_packet test_pkt;
+		odp_packet_t pkt;
+
+		CU_ASSERT_EQUAL(ipsec_check_out(&test_out[i], out_sa, &pkt), 1);
+
+		ipsec_test_packet_from_pkt(&test_pkt, &pkt);
+		test_in[i].pkt_in = &test_pkt;
+
+		ipsec_check_in_one(&test_in[i], in_sa);
+	}
+}
+
+static void test_in_ipv6_esp_reass_incomp_missing(odp_ipsec_sa_t out_sa,
+						  odp_ipsec_sa_t in_sa)
+{
+	ipsec_test_part test_out[MAX_FRAGS], test_in[MAX_FRAGS];
+	ipsec_test_packet test_pkt;
+	odp_packet_t pkt;
+
+	memset(test_in, 0, sizeof(test_in));
+
+	CU_ASSERT(MAX_FRAGS >= 1);
+
+	part_prep_esp(test_out, 1, true);
+
+	test_out[0].pkt_in = &pkt_ipv6_udp_p1_f1;
+
+	part_prep_plain(&test_in[0], 1, true, true);
+	test_in[0].out[0].pkt_res = &pkt_ipv6_udp_p1_f1;
+
+	CU_ASSERT_EQUAL(ipsec_check_out(&test_out[0], out_sa, &pkt), 1);
+
+	ipsec_test_packet_from_pkt(&test_pkt, &pkt);
+	test_in[0].pkt_in = &test_pkt;
+
+	ipsec_check_in_one(&test_in[0], in_sa);
+}
+
+static void test_in_ipv6_esp_reass_success(void)
+{
+	odp_ipsec_tunnel_param_t in_tunnel, out_tunnel;
+	odp_ipsec_sa_param_t param_in, param_out;
+	odp_ipsec_sa_t out_sa, in_sa;
+	odp_ipsec_capability_t capa;
+	uint8_t src[16] = {
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x02, 0x11, 0x43, 0xff, 0xfe, 0x4a, 0xd7, 0x0a,
+	};
+	uint8_t dst[16] = {
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16,
+	};
+
+	memset(&in_tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	memset(&out_tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	out_tunnel.type = ODP_IPSEC_TUNNEL_IPV6;
+	out_tunnel.ipv6.src_addr = &src;
+	out_tunnel.ipv6.dst_addr = &dst;
+	out_tunnel.ipv6.hlimit = 64;
+
+	CU_ASSERT(odp_ipsec_capability(&capa) == 0);
+
+	ipsec_sa_param_fill(&param_out,
+			    false, false, 0x4a2cbfe7, &out_tunnel,
+			    ODP_CIPHER_ALG_AES_GCM, &key_mcgrew_gcm_4,
+			    ODP_AUTH_ALG_AES_GCM, NULL,
+			    &key_mcgrew_gcm_salt_4, NULL);
+
+	ipsec_sa_param_fill(&param_in,
+			    true, false, 0x4a2cbfe7, &in_tunnel,
+			    ODP_CIPHER_ALG_AES_GCM, &key_mcgrew_gcm_4,
+			    ODP_AUTH_ALG_AES_GCM, NULL,
+			    &key_mcgrew_gcm_salt_4, NULL);
+	param_in.inbound.reassembly_en = 1;
+
+	out_sa = odp_ipsec_sa_create(&param_out);
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, out_sa);
+
+	in_sa = odp_ipsec_sa_create(&param_in);
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, in_sa);
+
+	printf("\n	IPv6 two frags");
+	test_in_ipv6_esp_reass_success_two_frags(out_sa, in_sa);
+
+	printf("\n	IPv6 four frags");
+	test_in_ipv6_esp_reass_success_four_frags(out_sa, in_sa);
+
+	printf("\n	IPv6 two frags out of order");
+	test_in_ipv6_esp_reass_success_two_frags_ooo(out_sa, in_sa);
+
+	printf("\n	IPv6 four frags out of order");
+	test_in_ipv6_esp_reass_success_four_frags_ooo(out_sa, in_sa);
+
+	printf("\n");
+
+	ipsec_sa_destroy(in_sa);
+	ipsec_sa_destroy(out_sa);
+}
+
+static void test_in_ipv6_esp_reass_incomp(void)
+{
+	odp_ipsec_tunnel_param_t in_tunnel, out_tunnel;
+	odp_ipsec_sa_param_t param_in, param_out;
+	odp_ipsec_sa_t out_sa, in_sa;
+	odp_ipsec_capability_t capa;
+	uint8_t src[16] = {
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x02, 0x11, 0x43, 0xff, 0xfe, 0x4a, 0xd7, 0x0a,
+	};
+	uint8_t dst[16] = {
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16,
+	};
+
+	memset(&in_tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	memset(&out_tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	out_tunnel.type = ODP_IPSEC_TUNNEL_IPV6;
+	out_tunnel.ipv6.src_addr = &src;
+	out_tunnel.ipv6.dst_addr = &dst;
+
+	CU_ASSERT(odp_ipsec_capability(&capa) == 0);
+
+	ipsec_sa_param_fill(&param_out,
+			    false, false, 0x4a2cbfe7, &out_tunnel,
+			    ODP_CIPHER_ALG_AES_GCM, &key_mcgrew_gcm_4,
+			    ODP_AUTH_ALG_AES_GCM, NULL,
+			    &key_mcgrew_gcm_salt_4, NULL);
+
+	ipsec_sa_param_fill(&param_in,
+			    true, false, 0x4a2cbfe7, &in_tunnel,
+			    ODP_CIPHER_ALG_AES_GCM, &key_mcgrew_gcm_4,
+			    ODP_AUTH_ALG_AES_GCM, NULL,
+			    &key_mcgrew_gcm_salt_4, NULL);
+	param_in.inbound.reassembly_en = 1;
+
+	out_sa = odp_ipsec_sa_create(&param_out);
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, out_sa);
+
+	in_sa = odp_ipsec_sa_create(&param_in);
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, in_sa);
+
+	printf("\n	IPv6 missing frag");
+	test_in_ipv6_esp_reass_incomp_missing(out_sa, in_sa);
+
+	printf("\n");
+
+	ipsec_sa_destroy(in_sa);
+	ipsec_sa_destroy(out_sa);
+}
+
 static void ipsec_test_capability(void)
 {
 	odp_ipsec_capability_t capa;
@@ -2137,5 +2403,9 @@ odp_testinfo_t ipsec_in_suite[] = {
 				  ipsec_check_esp_aes_gcm_128_reass_ipv4),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_esp_reass_incomp,
 				  ipsec_check_esp_aes_gcm_128_reass_ipv4),
+	ODP_TEST_INFO_CONDITIONAL(test_in_ipv6_esp_reass_success,
+				  ipsec_check_esp_aes_gcm_128_reass_ipv6),
+	ODP_TEST_INFO_CONDITIONAL(test_in_ipv6_esp_reass_incomp,
+				  ipsec_check_esp_aes_gcm_128_reass_ipv6),
 	ODP_TEST_INFO_NULL,
 };

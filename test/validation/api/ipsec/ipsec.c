@@ -277,6 +277,14 @@ int ipsec_check_esp_aes_gcm_128_reass_ipv4(void)
 	return ODP_TEST_INACTIVE;
 }
 
+int ipsec_check_esp_aes_gcm_128_reass_ipv6(void)
+{
+	if (suite_context.reass_ipv6)
+		return  ipsec_check_esp(ODP_CIPHER_ALG_AES_GCM, 128,
+					ODP_AUTH_ALG_AES_GCM, 0);
+	return ODP_TEST_INACTIVE;
+}
+
 void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
 			 odp_bool_t in,
 			 odp_bool_t ah,
