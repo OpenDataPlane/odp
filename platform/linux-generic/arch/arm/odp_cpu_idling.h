@@ -30,12 +30,6 @@ static inline int wfe(void)
 	return 1;
 }
 
-static inline void doze(void)
-{
-	/* When using WFE do not stall the pipeline using other means */
-	odp_cpu_pause();
-}
-
 #define monitor128(addr, mo) lld((addr), (mo))
 #define monitor64(addr, mo) ll64((addr), (mo))
 #define monitor32(addr, mo) ll32((addr), (mo))

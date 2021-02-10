@@ -28,9 +28,4 @@ static inline int wfe(void)
 #define monitor32(addr, mo) __atomic_load_n((addr), (mo))
 #define monitor8(addr, mo) __atomic_load_n((addr), (mo))
 
-static inline void doze(void)
-{
-	odp_cpu_pause();
-}
-
 #endif
