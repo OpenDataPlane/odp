@@ -227,7 +227,7 @@ void _odp_sched_update_enq(sched_elem_t *q, uint32_t actual)
 			while (wfe() &&
 			       monitor8(&q->qschst.cur_ticket,
 					__ATOMIC_ACQUIRE) != ticket)
-				doze();
+				odp_cpu_pause();
 		}
 		/* Enqueue at end of scheduler queue */
 		/* We are here because of empty-to-non-empty transition
@@ -375,7 +375,7 @@ sched_update_deq(sched_elem_t *q,
 			while (wfe() &&
 			       monitor8(&q->qschst.cur_ticket,
 					__ATOMIC_ACQUIRE) != ticket)
-				doze();
+				odp_cpu_pause();
 		}
 		/* We are here because of non-empty-to-empty transition or
 		 * WRR budget exhausted
@@ -502,7 +502,7 @@ static inline void sched_update_popd(sched_elem_t *elem)
 		sevl();
 		while (wfe() && monitor8(&elem->qschst.cur_ticket,
 					 __ATOMIC_ACQUIRE) != ticket)
-			doze();
+			odp_cpu_pause();
 	}
 	sched_update_popd_sc(elem);
 	atomic_store_release(&elem->qschst.cur_ticket, ticket + 1,
@@ -1074,7 +1074,7 @@ restart_same:
 				while (wfe() &&
 				       monitor32(&rwin->turn, __ATOMIC_ACQUIRE)
 						!= sn)
-					doze();
+					odp_cpu_pause();
 			}
 #ifdef CONFIG_QSCHST_LOCK
 			LOCK(&elem->qschlock);
@@ -1162,7 +1162,7 @@ static void schedule_order_lock(uint32_t lock_index)
 		while (wfe() &&
 		       monitor32(&rctx->rwin->olock[lock_index],
 				 __ATOMIC_ACQUIRE) != rctx->sn)
-			doze();
+			odp_cpu_pause();
 	}
 }
 
@@ -1579,7 +1579,7 @@ static int schedule_group_destroy(odp_schedule_group_t group)
 			       !bitset_is_eql(wanted,
 					      bitset_monitor(&sg->thr_actual[p],
 							     __ATOMIC_RELAXED)))
-				doze();
+				odp_cpu_pause();
 		}
 		/* Else ignore because no ODP queues on this prio */
 	}
@@ -2157,7 +2157,7 @@ static void order_lock(void)
 		 */
 		while (wfe() &&
 		       monitor32(&rwin->hc.head, __ATOMIC_ACQUIRE) != sn)
-			doze();
+			odp_cpu_pause();
 	}
 }
 

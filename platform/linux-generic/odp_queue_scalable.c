@@ -15,6 +15,7 @@
 #include <odp/api/sync.h>
 #include <odp/api/plat/sync_inlines.h>
 #include <odp/api/traffic_mngr.h>
+#include <odp/api/cpu.h>
 
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
@@ -465,7 +466,7 @@ static int queue_destroy(odp_queue_t handle)
 		sevl();
 		while (wfe() && monitor32((uint32_t *)&q->qschst.numevts,
 					  __ATOMIC_RELAXED) != 0)
-			doze();
+			odp_cpu_pause();
 	}
 
 	if (q->schedq != NULL) {
@@ -573,7 +574,7 @@ static inline int _odp_queue_enq(sched_elem_t *q,
 		sevl();
 		while (wfe() && monitor32(&q->cons_write,
 					  __ATOMIC_RELAXED) != old_write)
-			doze();
+			odp_cpu_pause();
 	}
 
 	/* Signal consumers that events are available (release events)
@@ -803,7 +804,7 @@ inline int _odp_queue_deq(sched_elem_t *q, odp_buffer_hdr_t *buf_hdr[], int num)
 		sevl();
 		while (wfe() && monitor32(&q->prod_read,
 					  __ATOMIC_RELAXED) != old_read)
-			doze();
+			odp_cpu_pause();
 	}
 
 	/* Signal producers that empty slots are available
