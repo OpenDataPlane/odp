@@ -201,7 +201,7 @@ static void timer_init(_odp_timer_t *tim,
 #if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	tb->exp_tck.v = TMO_INACTIVE;
 #else
-	_odp_atomic_u64_store_mm(&tb->exp_tck, TMO_INACTIVE, _ODP_MEMMODEL_RLS);
+	odp_atomic_store_rel_u64(&tb->exp_tck, TMO_INACTIVE);
 #endif
 }
 
@@ -806,7 +806,7 @@ static inline void timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 	uint64_t exp_tck;
 #ifdef ODP_ATOMIC_U128
 	/* Atomic re-read for correctness */
-	exp_tck = _odp_atomic_u64_load_mm(&tb->exp_tck, _ODP_MEMMODEL_RLX);
+	exp_tck = odp_atomic_load_u64(&tb->exp_tck);
 	/* Re-check exp_tck */
 	if (odp_likely(exp_tck <= tick)) {
 		/* Attempt to grab timeout buffer, replace with inactive timer
