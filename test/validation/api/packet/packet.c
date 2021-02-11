@@ -1442,6 +1442,9 @@ static void packet_test_meta_data_copy(void)
 	pktio = odp_pktio_open("loop", pool, NULL);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
+	CU_ASSERT(odp_pktin_queue_config(pktio, NULL) == 0);
+	CU_ASSERT(odp_pktout_queue_config(pktio, NULL) == 0);
+
 	t1 = odp_time_global();
 
 	pkt = odp_packet_alloc(pool, packet_len);
