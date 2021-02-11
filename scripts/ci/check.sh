@@ -12,6 +12,6 @@ cd "$(dirname "$0")"/../..
 # Ignore possible failures there because these tests depends on measurements
 # and systems might differ in performance.
 export CI="true"
-make check
+make -j $(nproc) check
 
 umount /mnt/huge
