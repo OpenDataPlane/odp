@@ -602,8 +602,8 @@ static bool timer_reset(uint32_t idx, uint64_t abs_tck, odp_buffer_t *tmo_buf,
 		uint64_t old;
 		/* Swap in new expiration tick, get back old tick which
 		 * will indicate active/inactive timer state */
-		old = _odp_atomic_u64_xchg_mm(&tb->exp_tck, abs_tck,
-					      _ODP_MEMMODEL_RLX);
+		old = odp_atomic_xchg_u64(&tb->exp_tck, abs_tck);
+
 		if ((old & TMO_INACTIVE) != 0) {
 			/* Timer was inactive (cancelled or expired),
 			 * we can't reset a timer without a timeout buffer.
@@ -615,12 +615,7 @@ static bool timer_reset(uint32_t idx, uint64_t abs_tck, odp_buffer_t *tmo_buf,
 			 * reset or cancelled the timer. Without any
 			 * synchronization between the threads, we have a
 			 * data race and the behavior is undefined */
-			(void)_odp_atomic_u64_cmp_xchg_strong_mm(
-					&tb->exp_tck,
-					&abs_tck,
-					old,
-					_ODP_MEMMODEL_RLX,
-					_ODP_MEMMODEL_RLX);
+			(void)odp_atomic_cas_u64(&tb->exp_tck, &abs_tck, old);
 			success = false;
 		}
 #else /* Target supports neither 128-bit nor 64-bit CAS => use lock */
