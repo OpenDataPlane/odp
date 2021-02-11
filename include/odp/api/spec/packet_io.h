@@ -489,6 +489,9 @@ typedef union odp_pktout_config_opt_t {
 		 */
 		uint64_t no_packet_refs  : 1;
 
+		/** Enable packet aging and drop */
+		uint64_t aging_ena  : 1;
+
 	} bit;
 
 	/** All bits of the bit field structure
@@ -844,6 +847,12 @@ typedef struct odp_pktio_capability_t {
 		/** Maximum valid value for 'maxlen_output' */
 		uint32_t max_output;
 	} maxlen;
+
+	/**
+	 * Max Tx aging timeout in micro seconds supported when packet aging
+	 * feature is supported.
+	 */
+	unsigned int max_tx_aging_tmo_us;
 
 } odp_pktio_capability_t;
 
