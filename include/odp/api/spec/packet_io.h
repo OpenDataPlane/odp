@@ -489,6 +489,13 @@ typedef union odp_pktout_config_opt_t {
 		 */
 		uint64_t no_packet_refs  : 1;
 
+		/** Enable packet aging and drop
+		 *
+		 * 0: application will not request packet aging (default)
+		 * 1: application may request packet aging
+		 */
+		uint64_t aging_ena  : 1;
+
 	} bit;
 
 	/** All bits of the bit field structure
@@ -844,6 +851,15 @@ typedef struct odp_pktio_capability_t {
 		/** Maximum valid value for 'maxlen_output' */
 		uint32_t max_output;
 	} maxlen;
+
+	/**
+	 * Max Tx aging timeout in nano seconds supported when packet aging
+	 * feature is supported.
+	 *
+	 * 0: aging is not supported
+	 * >0: maximum aging timeout supported in nanoseconds
+	 */
+	uint64_t max_tx_aging_tmo_ns;
 
 } odp_pktio_capability_t;
 
