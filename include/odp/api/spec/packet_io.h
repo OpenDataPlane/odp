@@ -496,6 +496,15 @@ typedef union odp_pktout_config_opt_t {
 		 */
 		uint64_t aging_ena  : 1;
 
+		/** Enable packet transmit completion event requests
+		 *
+		 * Use pktio capability tx_compl to check if TX completion events are supported.
+		 *
+		 * 0: Application will not request packet TX completion events (default)
+		 * 1: Application may request packet TX completion events
+		 */
+		uint64_t tx_compl_ena : 1;
+
 	} bit;
 
 	/** All bits of the bit field structure
@@ -860,6 +869,37 @@ typedef struct odp_pktio_capability_t {
 	 * >0: maximum aging timeout supported in nanoseconds
 	 */
 	uint64_t max_tx_aging_tmo_ns;
+
+	/** Supported packet Tx completion options */
+	struct {
+		/**
+		 * Scheduled queue support
+		 *
+		 * This defines whether schedule queues are supported for receiving Tx
+		 * completion events.
+		 *
+		 * 0: Scheduled queues are not supported for receiving Tx completion events.
+		 * 1: Scheduled queues are supported for receiving Tx completion events.
+		 * @see odp_packet_tx_compl_request()
+		 */
+		odp_bool_t queue_type_sched;
+
+		/**
+		 * Plain queue support
+		 *
+		 * This defines whether plain queues are supported for receiving Tx
+		 * completion events.
+		 *
+		 * 0: Plain queues are not supported for receiving Tx completion events.
+		 * 1: Plain queues are supported for receiving Tx completion events.
+		 * @see odp_packet_tx_compl_request()
+		 */
+		odp_bool_t queue_type_plain;
+
+		/** ODP_PACKET_TX_COMPL_ALL supported */
+		uint32_t mode_all:1;
+
+	} tx_compl;
 
 } odp_pktio_capability_t;
 
