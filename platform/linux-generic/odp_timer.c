@@ -26,6 +26,7 @@
 #include <odp/api/align.h>
 #include <odp_align_internal.h>
 #include <odp/api/atomic.h>
+#include <odp/api/plat/atomic_inlines.h>
 #include <odp_atomic_internal.h>
 #include <odp/api/buffer.h>
 #include <odp/api/cpu.h>
@@ -504,13 +505,12 @@ static inline odp_timer_t timer_alloc(timer_pool_t *tp,
 		tp->first_free = get_next_free(tim);
 		/* Initialize timer */
 		timer_init(tim, &tp->tick_buf[idx], queue, user_ptr);
-		if (odp_unlikely(tp->num_alloc >
-				 odp_atomic_load_u32(&tp->high_wm)))
+		if (odp_unlikely(tp->num_alloc > odp_atomic_load_u32(&tp->high_wm))) {
 			/* Update high_wm last with release model to
 			 * ensure timer initialization is visible */
-			_odp_atomic_u32_store_mm(&tp->high_wm,
-						 tp->num_alloc,
-						 _ODP_MEMMODEL_RLS);
+			odp_atomic_store_rel_u32(&tp->high_wm, tp->num_alloc);
+		}
+
 		hdl = tp_idx_to_handle(tp, idx);
 		/* Add timer to queue */
 		_odp_queue_fn->timer_add(queue);
@@ -888,8 +888,7 @@ static inline void timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 static inline void timer_pool_scan(timer_pool_t *tp, uint64_t tick)
 {
 	tick_buf_t *array = &tp->tick_buf[0];
-	uint32_t high_wm = _odp_atomic_u32_load_mm(&tp->high_wm,
-			_ODP_MEMMODEL_ACQ);
+	uint32_t high_wm = odp_atomic_load_acq_u32(&tp->high_wm);
 	uint32_t i;
 
 	ODP_ASSERT(high_wm <= tp->param.num_timers);
