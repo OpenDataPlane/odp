@@ -14,7 +14,3 @@ odp_ipfragreass_SOURCES = odp_ipfragreass.c \
 			  odp_ipfragreass_helpers.h \
 			  odp_ipfragreass_ip.h \
 			  odp_ipfragreass_reassemble.h
-
-if test_example
-TESTS = odp_ipfragreass
-endif

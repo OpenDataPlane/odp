@@ -6,9 +6,6 @@ odp_generator_SOURCES = odp_generator.c
 
 TEST_EXTENSIONS = .sh
 
-if test_example
-TESTS = generator_run.sh
-endif
 EXTRA_DIST = generator_run.sh
 
 # If building out-of-tree, make check will not copy the scripts and data to the

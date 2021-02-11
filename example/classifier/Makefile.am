@@ -4,11 +4,6 @@ bin_PROGRAMS = odp_classifier
 
 odp_classifier_SOURCES = odp_classifier.c
 
-if test_example
-if ODP_PKTIO_PCAP
-TESTS = odp_classifier_run.sh
-endif
-endif
 EXTRA_DIST = odp_classifier_run.sh udp64.pcap
 
 # If building out-of-tree, make check will not copy the scripts and data to the
