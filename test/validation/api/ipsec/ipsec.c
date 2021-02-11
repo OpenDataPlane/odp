@@ -18,7 +18,6 @@
 struct suite_context_s suite_context;
 
 #define PKT_POOL_NUM  64
-#define PKT_POOL_LEN  (1 * 1024)
 
 #define PACKET_USER_PTR	((void *)0x1212fefe)
 #define IPSEC_SA_CTX	((void *)0xfefefafa)
@@ -817,6 +816,35 @@ static void ipsec_pkt_auth_err_set(odp_packet_t pkt)
 	odp_packet_copy_from_mem(pkt, len - sizeof(data), sizeof(data), &data);
 }
 
+static void ipsec_pkt_v4_check_udp_encap(odp_packet_t pkt)
+{
+	uint32_t l3_off = odp_packet_l3_offset(pkt);
+	odph_ipv4hdr_t ip;
+
+	odp_packet_copy_to_mem(pkt, l3_off, sizeof(ip), &ip);
+
+	CU_ASSERT(ip.proto == ODPH_IPPROTO_UDP);
+}
+
+static void ipsec_pkt_v6_check_udp_encap(odp_packet_t pkt)
+{
+	uint32_t l3_off = odp_packet_l3_offset(pkt);
+	odph_ipv6hdr_ext_t ext;
+	odph_ipv6hdr_t ip;
+	uint8_t next_hdr;
+
+	odp_packet_copy_to_mem(pkt, l3_off, sizeof(ip), &ip);
+
+	next_hdr = ip.next_hdr;
+
+	if (ip.next_hdr == ODPH_IPPROTO_HOPOPTS) {
+		odp_packet_copy_to_mem(pkt, l3_off + sizeof(ip), sizeof(ext), &ext);
+		next_hdr = ext.next_hdr;
+	}
+
+	CU_ASSERT(next_hdr == ODPH_IPPROTO_UDP);
+}
+
 void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 {
 	int num_out = part->num_pkt;
@@ -961,6 +989,14 @@ void ipsec_check_out_in_one(const ipsec_test_part *part,
 		if (part->flags.stats == IPSEC_TEST_STATS_AUTH_ERR)
 			ipsec_pkt_auth_err_set(pkto[i]);
 
+		if (part->flags.udp_encap) {
+			if ((!part->flags.tunnel && part->flags.v6) ||
+			    (part->flags.tunnel && part->flags.tunnel_is_v6))
+				ipsec_pkt_v6_check_udp_encap(pkto[i]);
+			else
+				ipsec_pkt_v4_check_udp_encap(pkto[i]);
+		}
+
 		pkt_in.len = odp_packet_len(pkto[i]);
 		pkt_in.l2_offset = odp_packet_l2_offset(pkto[i]);
 		pkt_in.l3_offset = odp_packet_l3_offset(pkto[i]);
@@ -1049,19 +1085,19 @@ int ipsec_init(odp_instance_t *inst, odp_ipsec_op_mode_t mode)
 	}
 
 	odp_pool_param_init(&params);
-	params.pkt.seg_len = PKT_POOL_LEN;
-	params.pkt.len     = PKT_POOL_LEN;
+	params.pkt.seg_len = MAX_PKT_LEN;
+	params.pkt.len     = MAX_PKT_LEN;
 	params.pkt.num     = PKT_POOL_NUM;
 	params.type        = ODP_POOL_PACKET;
 
 	if (pool_capa.pkt.max_seg_len &&
-	    PKT_POOL_LEN > pool_capa.pkt.max_seg_len) {
+	    MAX_PKT_LEN > pool_capa.pkt.max_seg_len) {
 		fprintf(stderr, "Warning: small packet segment length\n");
 		params.pkt.seg_len = pool_capa.pkt.max_seg_len;
 	}
 
 	if (pool_capa.pkt.max_len &&
-	    PKT_POOL_LEN > pool_capa.pkt.max_len) {
+	    MAX_PKT_LEN > pool_capa.pkt.max_len) {
 		fprintf(stderr, "Pool max packet length too small\n");
 		return -1;
 	}

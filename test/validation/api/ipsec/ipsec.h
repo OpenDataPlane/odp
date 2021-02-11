@@ -36,12 +36,14 @@ struct suite_context_s {
 
 extern struct suite_context_s suite_context;
 
+#define MAX_PKT_LEN 1024
+
 typedef struct {
 	uint32_t len;
 	uint32_t l2_offset;
 	uint32_t l3_offset;
 	uint32_t l4_offset;
-	uint8_t data[256];
+	uint8_t data[MAX_PKT_LEN];
 } ipsec_test_packet;
 
 #define _ODP_PROTO_L3_TYPE_UNDEF ((odp_proto_l3_type_t)-1)
@@ -60,6 +62,10 @@ typedef struct {
 	odp_bool_t ah;
 	odp_bool_t inline_hdr_in_packet;
 	odp_bool_t test_sa_seq_num;
+	odp_bool_t v6;
+	odp_bool_t tunnel;
+	odp_bool_t tunnel_is_v6;
+	odp_bool_t udp_encap;
 	enum ipsec_test_stats stats;
 } ipsec_test_flags;
 

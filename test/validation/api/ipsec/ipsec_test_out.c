@@ -395,6 +395,18 @@ static void test_out_in_common(ipsec_test_flags *flags,
 			       const odp_crypto_key_t *cipher_key_extra,
 			       const odp_crypto_key_t *auth_key_extra)
 {
+	odp_ipsec_tunnel_param_t *tun_ptr = NULL;
+	odp_ipsec_tunnel_param_t tunnel;
+	uint32_t src_v4 = IPV4ADDR(10, 0, 111, 2);
+	uint32_t dst_v4 = IPV4ADDR(10, 0, 222, 2);
+	uint8_t src_v6[16] = {
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x02, 0x11, 0x43, 0xff, 0xfe, 0x4a, 0xd7, 0x0a,
+	};
+	uint8_t dst_v6[16] = {
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16,
+	};
 	odp_ipsec_sa_param_t param;
 	odp_ipsec_stats_t stats;
 	odp_ipsec_sa_t sa_out;
@@ -407,21 +419,45 @@ static void test_out_in_common(ipsec_test_flags *flags,
 	    (auth == ODP_AUTH_ALG_NULL))
 		return;
 
+	if (flags->tunnel) {
+		if (flags->tunnel_is_v6) {
+			memset(&tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+			tunnel.type = ODP_IPSEC_TUNNEL_IPV6;
+			tunnel.ipv6.src_addr = &src_v6;
+			tunnel.ipv6.dst_addr = &dst_v6;
+			tunnel.ipv6.hlimit = 64;
+			tun_ptr = &tunnel;
+		} else {
+			memset(&tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+			tunnel.type = ODP_IPSEC_TUNNEL_IPV4;
+			tunnel.ipv4.src_addr = &src_v4;
+			tunnel.ipv4.dst_addr = &dst_v4;
+			tunnel.ipv4.ttl = 64;
+			tun_ptr = &tunnel;
+		}
+	}
+
 	ipsec_sa_param_fill(&param,
-			    false, flags->ah, 123, NULL,
+			    false, flags->ah, 123, tun_ptr,
 			    cipher, cipher_key,
 			    auth, auth_key,
 			    cipher_key_extra, auth_key_extra);
+
+	if (flags->udp_encap)
+		param.opt.udp_encap = 1;
 
 	sa_out = odp_ipsec_sa_create(&param);
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa_out);
 
 	ipsec_sa_param_fill(&param,
-			    true, flags->ah, 123, NULL,
+			    true, flags->ah, 123, tun_ptr,
 			    cipher, cipher_key,
 			    auth, auth_key,
 			    cipher_key_extra, auth_key_extra);
+
+	if (flags->udp_encap)
+		param.opt.udp_encap = 1;
 
 	sa_in = odp_ipsec_sa_create(&param);
 
@@ -445,6 +481,16 @@ static void test_out_in_common(ipsec_test_flags *flags,
 			  .pkt_res = &pkt_ipv4_icmp_0 },
 		},
 	};
+
+	if (flags->v6) {
+		test.pkt_in = &pkt_ipv6_icmp_0;
+		test.out[0].l3_type = ODP_PROTO_L3_TYPE_IPV6;
+		test.out[0].l4_type = ODP_PROTO_L4_TYPE_ICMPV6;
+		test.out[0].pkt_res = &pkt_ipv6_icmp_0;
+		test.in[0].l3_type = ODP_PROTO_L3_TYPE_IPV6;
+		test.in[0].l4_type = ODP_PROTO_L4_TYPE_ICMPV6;
+		test.in[0].pkt_res = &pkt_ipv6_icmp_0;
+	}
 
 	test.flags = *flags;
 
@@ -1495,6 +1541,47 @@ static void test_ipsec_stats(void)
 	printf("\n  ");
 }
 
+static void test_udp_encap(void)
+{
+	ipsec_test_flags flags;
+
+	memset(&flags, 0, sizeof(flags));
+	flags.udp_encap = 1;
+	flags.tunnel = 0;
+
+	printf("\n        IPv4 Transport");
+	flags.v6 = 0;
+	test_esp_out_in_all(&flags);
+
+	printf("\n        IPv6 Transport");
+	flags.v6 = 1;
+	test_esp_out_in_all(&flags);
+
+	flags.tunnel = 1;
+
+	printf("\n        IPv4-in-IPv4 Tunnel");
+	flags.v6 = 0;
+	flags.tunnel_is_v6 = 0;
+	test_esp_out_in_all(&flags);
+
+	printf("\n        IPv4-in-IPv6 Tunnel");
+	flags.v6 = 0;
+	flags.tunnel_is_v6 = 1;
+	test_esp_out_in_all(&flags);
+
+	printf("\n        IPv6-in-IPv4 Tunnel");
+	flags.v6 = 1;
+	flags.tunnel_is_v6 = 0;
+	test_esp_out_in_all(&flags);
+
+	printf("\n        IPv6-in-IPv6 Tunnel");
+	flags.v6 = 1;
+	flags.tunnel_is_v6 = 1;
+	test_esp_out_in_all(&flags);
+
+	printf("\n  ");
+}
+
 odp_testinfo_t ipsec_out_suite[] = {
 	ODP_TEST_INFO(ipsec_test_capability),
 	ODP_TEST_INFO(ipsec_test_default_values),
@@ -1555,5 +1642,6 @@ odp_testinfo_t ipsec_out_suite[] = {
 				  is_out_mode_inline),
 	ODP_TEST_INFO(test_ah_out_in_all),
 	ODP_TEST_INFO(test_ipsec_stats),
+	ODP_TEST_INFO(test_udp_encap),
 	ODP_TEST_INFO_NULL,
 };
