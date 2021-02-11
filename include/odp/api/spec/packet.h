@@ -2194,6 +2194,21 @@ int odp_packet_has_aging_drop(odp_packet_t pkt);
  */
 uint32_t odp_packet_aging_tmo(odp_packet_t pkt);
 
+/**
+  * Request Tx completion event.
+  *
+  * Control whether Tx completion event needs to be enabled or not. When enabled, an event is
+  * posted to given odp_queue_t after packet reaches terminal state i.e either transmit or drop.
+  *
+  * @param pkt     Packet handle
+  * @param event   Event of type ODP_EVENT_PACKET_TX_COMPL that will be enqueued to odp queue
+  *                after packet reaches its terminal state.
+  *                ODP_EVENT_INVALID disables Tx completion generation for the packet.
+  *                By default Tx completion generation for a packet is disabled.
+  * @param queue   Queue to enqueue the completion event.
+  */
+void odp_packet_tx_completion_request(odp_packet_t pkt, odp_event_t event, odp_queue_t queue);
+
 /*
  *
  * Packet vector handling routines

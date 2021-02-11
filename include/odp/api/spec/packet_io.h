@@ -492,6 +492,8 @@ typedef union odp_pktout_config_opt_t {
 		/** Enable packet aging and drop */
 		uint64_t aging_ena  : 1;
 
+		/** Enable packet Tx completion event */
+		uint64_t tx_completion : 1;
 	} bit;
 
 	/** All bits of the bit field structure
