@@ -32,7 +32,7 @@ SUBDIRS = $(ODP_MODULES)
 include $(top_srcdir)/test/Makefile.inc
 TESTS_ENVIRONMENT += TEST_DIR=${top_builddir}/test/validation
 
-TESTS = \
+TESTS_PARALLEL = \
 	atomic/atomic_main$(EXEEXT) \
 	barrier/barrier_main$(EXEEXT) \
 	buffer/buffer_main$(EXEEXT) \
@@ -67,9 +67,13 @@ TESTS = \
 	thread/thread_main$(EXEEXT) \
 	time/time_main$(EXEEXT) \
 	timer/timer_main$(EXEEXT) \
-	traffic_mngr/traffic_mngr_main$(EXEEXT) \
 	shmem/shmem_main$(EXEEXT) \
 	system/system_main$(EXEEXT)
+
+TESTS = $(TESTS_PARALLEL) \
+	traffic_mngr/traffic_mngr_main$(EXEEXT)
+
+traffic_mngr/traffic_mngr_main$(EXEEXT): | $(TESTS_PARALLEL:=.log)
 
 TESTNAME = validation
 
