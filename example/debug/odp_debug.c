@@ -6,6 +6,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <inttypes.h>
 #include <string.h>
 #include <getopt.h>
 
@@ -19,6 +21,7 @@ typedef struct test_global_t {
 	int queue;
 	int pktio;
 	int ipsec;
+	int timer;
 
 } test_global_t;
 
@@ -37,6 +40,7 @@ static void print_usage(void)
 	       "  -q, --queue        Create various types of queues and call odp_queue_print()\n"
 	       "  -i, --interface    Create packet IO interface (loop) and call odp_pktio_print()\n"
 	       "  -I, --ipsec        Call odp_ipsec_print()\n"
+	       "  -t, --timer        Call timer pool, timer and timeout print functions\n"
 	       "  -h, --help         Display help and exit.\n\n");
 }
 
@@ -51,10 +55,11 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"queue",       no_argument,       NULL, 'q'},
 		{"interface",   no_argument,       NULL, 'i'},
 		{"ipsec",       no_argument,       NULL, 'I'},
+		{"timer",       no_argument,       NULL, 't'},
 		{"help",        no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+SspqiIh";
+	const char *shortopts =  "+SspqiIth";
 	int ret = 0;
 
 	while (1) {
@@ -81,6 +86,9 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 			break;
 		case 'I':
 			global->ipsec = 1;
+			break;
+		case 't':
+			global->timer = 1;
 			break;
 		case 'h':
 		default:
@@ -258,12 +266,6 @@ static int queue_debug(void)
 		return -1;
 	}
 
-	/* Configure scheduler before creating any scheduled queues */
-	if (odp_schedule_config(NULL)) {
-		ODPH_ERR("Schedule config failed\n");
-		return -1;
-	}
-
 	name = "debug_sched_queue";
 	odp_queue_param_init(&param);
 	param.type = ODP_QUEUE_TYPE_SCHED;
@@ -336,6 +338,121 @@ static int ipsec_debug(void)
 	return 0;
 }
 
+static int timer_debug(void)
+{
+	odp_pool_t pool;
+	odp_pool_param_t pool_param;
+	odp_timeout_t timeout;
+	odp_timer_capability_t timer_capa;
+	odp_timer_pool_t timer_pool;
+	odp_timer_pool_param_t timer_param;
+	odp_timer_t timer;
+	odp_queue_t queue;
+	odp_queue_param_t queue_param;
+	odp_event_t event;
+	uint64_t tick;
+	uint64_t max_tmo = ODP_TIME_SEC_IN_NS;
+	uint64_t res     = 100 * ODP_TIME_MSEC_IN_NS;
+
+	odp_pool_param_init(&pool_param);
+	pool_param.type = ODP_POOL_TIMEOUT;
+	pool_param.tmo.num = 10;
+
+	pool = odp_pool_create("debug_timer", &pool_param);
+
+	if (pool == ODP_POOL_INVALID) {
+		ODPH_ERR("Pool create failed\n");
+		return -1;
+	}
+
+	timeout = odp_timeout_alloc(pool);
+	if (timeout == ODP_TIMEOUT_INVALID) {
+		ODPH_ERR("Timeout alloc failed\n");
+		return -1;
+	}
+
+	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa)) {
+		ODPH_ERR("Timer capa failed\n");
+		return -1;
+	}
+
+	if (timer_capa.max_tmo.max_tmo < max_tmo)
+		max_tmo = timer_capa.max_tmo.max_tmo;
+
+	if (timer_capa.max_tmo.res_ns > res)
+		res = timer_capa.max_tmo.res_ns;
+
+	memset(&timer_param, 0, sizeof(timer_param));
+	timer_param.res_ns  = res;
+	timer_param.min_tmo = max_tmo / 10;
+	timer_param.max_tmo = max_tmo;
+	timer_param.num_timers = 10;
+	timer_param.clk_src = ODP_CLOCK_CPU;
+
+	timer_pool = odp_timer_pool_create("debug_timer", &timer_param);
+
+	if (timer_pool == ODP_TIMER_POOL_INVALID) {
+		ODPH_ERR("Timer pool create failed\n");
+		return -1;
+	}
+
+	odp_timer_pool_start();
+
+	odp_queue_param_init(&queue_param);
+	if (timer_capa.queue_type_sched)
+		queue_param.type = ODP_QUEUE_TYPE_SCHED;
+
+	queue = odp_queue_create("debug_timer", &queue_param);
+	if (queue == ODP_QUEUE_INVALID) {
+		ODPH_ERR("Queue create failed.\n");
+		return -1;
+	}
+
+	printf("\n");
+	odp_timer_pool_print(timer_pool);
+
+	tick = odp_timer_ns_to_tick(timer_pool, max_tmo / 2);
+
+	timer = odp_timer_alloc(timer_pool, queue, (void *)(uintptr_t)0xdeadbeef);
+
+	printf("\n");
+	odp_timeout_print(timeout);
+
+	event = odp_timeout_to_event(timeout);
+	if (odp_timer_set_rel(timer, tick, &event) != ODP_TIMER_SUCCESS)
+		ODPH_ERR("Timer set failed.\n");
+
+	printf("\n");
+	odp_timer_print(timer);
+
+	event = odp_timer_free(timer);
+
+	if (event == ODP_EVENT_INVALID) {
+		ODPH_ERR("Timer free failed.\n");
+	} else {
+		timeout = odp_timeout_from_event(event);
+
+		printf("\n");
+		odp_timeout_print(timeout);
+
+		odp_timeout_free(timeout);
+	}
+
+	odp_timer_pool_destroy(timer_pool);
+
+	if (odp_queue_destroy(queue)) {
+		ODPH_ERR("Queue destroy failed\n");
+		return -1;
+	}
+
+	if (odp_pool_destroy(pool)) {
+		ODPH_ERR("Pool destroy failed\n");
+		return -1;
+	}
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	odp_instance_t inst;
@@ -352,9 +469,10 @@ int main(int argc, char *argv[])
 		global->queue   = 1;
 		global->pktio   = 1;
 		global->ipsec   = 1;
+		global->timer   = 1;
 	} else {
 		if (parse_options(argc, argv, global))
-			return -1;
+			exit(EXIT_FAILURE);
 	}
 
 	if (odp_init_global(&inst, NULL, NULL)) {
@@ -364,6 +482,12 @@ int main(int argc, char *argv[])
 
 	if (odp_init_local(inst, ODP_THREAD_CONTROL)) {
 		ODPH_ERR("Local init failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	/* Configure scheduler before creating any scheduled queues */
+	if (odp_schedule_config(NULL)) {
+		ODPH_ERR("Schedule config failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -397,6 +521,11 @@ int main(int argc, char *argv[])
 
 	if (global->ipsec && ipsec_debug()) {
 		ODPH_ERR("IPSEC debug failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (global->timer && timer_debug()) {
+		ODPH_ERR("Timer debug failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
