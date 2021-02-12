@@ -1284,6 +1284,7 @@ static void test_sa_info(void)
 
 	param_in.inbound.antireplay_ws = 32;
 	sa_in = odp_ipsec_sa_create(&param_in);
+	CU_ASSERT_FATAL(sa_in != ODP_IPSEC_SA_INVALID);
 
 	memset(&info_out, 0, sizeof(info_out));
 	CU_ASSERT_EQUAL_FATAL(0, odp_ipsec_sa_info(sa_out, &info_out));
@@ -1361,6 +1362,33 @@ static void test_sa_info(void)
 	CU_ASSERT_EQUAL(1, info_in.inbound.antireplay_window_top);
 
 	ipsec_sa_destroy(sa_out);
+	ipsec_sa_destroy(sa_in);
+
+	/*
+	 * Additional check for SA lookup parameters. Let's use transport
+	 * mode SA and ODP_IPSEC_DSTADD_SPI lookup mode.
+	 */
+	ipsec_sa_param_fill(&param_in,
+			    true, false, 123, NULL,
+			    ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
+			    ODP_AUTH_ALG_SHA1_HMAC, &key_5a_160,
+			    NULL, NULL);
+	param_in.inbound.lookup_mode = ODP_IPSEC_LOOKUP_DSTADDR_SPI;
+	param_in.inbound.lookup_param.ip_version = ODP_IPSEC_IPV4;
+	param_in.inbound.lookup_param.dst_addr = &dst;
+	sa_in = odp_ipsec_sa_create(&param_in);
+	CU_ASSERT_FATAL(sa_in != ODP_IPSEC_SA_INVALID);
+
+	memset(&info_in, 0, sizeof(info_in));
+	CU_ASSERT_FATAL(odp_ipsec_sa_info(sa_in, &info_in) == 0);
+
+	CU_ASSERT(info_in.param.inbound.lookup_mode ==
+		  ODP_IPSEC_LOOKUP_DSTADDR_SPI);
+	CU_ASSERT_FATAL(info_in.param.inbound.lookup_param.dst_addr ==
+			&info_in.inbound.lookup_param.dst_addr);
+	CU_ASSERT(!memcmp(info_in.param.inbound.lookup_param.dst_addr,
+			  &dst,
+			  ODP_IPV4_ADDR_SIZE));
 	ipsec_sa_destroy(sa_in);
 }
 
