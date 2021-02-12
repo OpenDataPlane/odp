@@ -534,6 +534,8 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 	odp_time_t t1, t2;
 	uint64_t period_ns, period_tick, duration_ns;
 	int i, ret, num_tmo;
+	const char *user_ctx = "User context";
+	int test_print = 0;
 	int num = 5;
 	odp_timer_t timer[num];
 
@@ -562,6 +564,7 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 	} else if (event_type == ODP_EVENT_TIMEOUT) {
 		pool_param.type    = ODP_POOL_TIMEOUT;
 		pool_param.tmo.num = num;
+		test_print = 1;
 	} else {
 		CU_FAIL("Bad event_type");
 		return;
@@ -589,7 +592,8 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 	ODPH_DBG("  max_tmo %" PRIu64 "\n", timer_param.max_tmo);
 	ODPH_DBG("  period_ns %" PRIu64 "\n", period_ns);
 	ODPH_DBG("  period_tick %" PRIu64 "\n", period_tick);
-	ODPH_DBG("  duration_ns %" PRIu64 "\n\n", duration_ns);
+	ODPH_DBG("  duration_ns %" PRIu64 "\n", duration_ns);
+	ODPH_DBG("  user_ptr %p\n\n", user_ctx);
 
 	for (i = 0; i < num; i++) {
 		if (event_type == ODP_EVENT_BUFFER) {
@@ -605,7 +609,7 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 
 		CU_ASSERT(ev != ODP_EVENT_INVALID);
 
-		timer[i] = odp_timer_alloc(timer_pool, queue, NULL);
+		timer[i] = odp_timer_alloc(timer_pool, queue, user_ctx);
 		CU_ASSERT_FATAL(timer[i] != ODP_TIMER_INVALID);
 
 		ret = odp_timer_set_rel(timer[i], (i + 1) * period_tick, &ev);
@@ -618,6 +622,12 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 			ODPH_DBG("No event %i\n", i);
 
 		CU_ASSERT(ret == ODP_TIMER_SUCCESS);
+	}
+
+	if (test_print) {
+		printf("\n");
+		odp_timer_pool_print(timer_pool);
+		odp_timer_print(timer[0]);
 	}
 
 	ev = ODP_EVENT_INVALID;
@@ -641,6 +651,13 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 		}
 
 		CU_ASSERT(odp_event_type(ev) == event_type);
+
+		if (test_print) {
+			test_print = 0;
+			tmo = odp_timeout_from_event(ev);
+			odp_timeout_print(tmo);
+			printf("\n");
+		}
 
 		odp_event_free(ev);
 		num_tmo++;
