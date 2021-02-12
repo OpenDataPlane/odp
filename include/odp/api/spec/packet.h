@@ -1539,6 +1539,8 @@ odp_pktio_t odp_packet_input(odp_packet_t pkt);
  * @param pktio Handle to a valid packet input interface or ODP_PKTIO_INVALID.
  *              ODP_PKTIO_INVALID indicates that the packet was not received by
  *              any packet IO interface.
+ *
+ * @note odp_packet_input_set() expects PktIO handle to be in configured state.
  */
 void odp_packet_input_set(odp_packet_t pkt, odp_pktio_t pktio);
 
