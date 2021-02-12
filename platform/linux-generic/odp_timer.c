@@ -1503,6 +1503,81 @@ void odp_timeout_free(odp_timeout_t tmo)
 	odp_buffer_free(odp_buffer_from_event(ev));
 }
 
+void odp_timer_pool_print(odp_timer_pool_t timer_pool)
+{
+	timer_pool_t *tp;
+
+	if (timer_pool == ODP_TIMER_POOL_INVALID) {
+		ODP_ERR("Bad timer pool handle\n");
+		return;
+	}
+
+	tp = timer_pool_from_hdl(timer_pool);
+
+	ODP_PRINT("\nTimer pool info\n");
+	ODP_PRINT("---------------\n");
+	ODP_PRINT("  timer pool     %p\n", tp);
+	ODP_PRINT("  tp index       %u\n", tp->tp_idx);
+	ODP_PRINT("  num timers     %u\n", tp->num_alloc);
+	ODP_PRINT("  num tp         %i\n", timer_global->num_timer_pools);
+	ODP_PRINT("  inline timers  %i\n", timer_global->use_inline_timers);
+	ODP_PRINT("\n");
+}
+
+void odp_timer_print(odp_timer_t timer)
+{
+	timer_pool_t *tp;
+	uint32_t idx;
+	_odp_timer_t *tim;
+
+	if (timer == ODP_TIMER_INVALID) {
+		ODP_ERR("Bad timer handle\n");
+		return;
+	}
+
+	tp  = handle_to_tp(timer);
+	idx = handle_to_idx(timer, tp);
+	tim = &tp->timers[idx];
+
+	ODP_PRINT("\nTimer info\n");
+	ODP_PRINT("----------\n");
+	ODP_PRINT("  timer pool     %p\n", tp);
+	ODP_PRINT("  timer index    %u\n", idx);
+	ODP_PRINT("  dest queue     0x%" PRIx64 "\n", odp_queue_to_u64(tim->queue));
+	ODP_PRINT("  user ptr       %p\n", tim->user_ptr);
+	ODP_PRINT("\n");
+}
+
+void odp_timeout_print(odp_timeout_t tmo)
+{
+	const odp_timeout_hdr_t *tmo_hdr;
+	odp_timer_t timer;
+	timer_pool_t *tp = NULL;
+	uint32_t idx = 0;
+
+	if (tmo == ODP_TIMEOUT_INVALID) {
+		ODP_ERR("Bad timeout handle\n");
+		return;
+	}
+
+	tmo_hdr = timeout_hdr(tmo);
+	timer = tmo_hdr->timer;
+
+	if (timer != ODP_TIMER_INVALID) {
+		tp  = handle_to_tp(timer);
+		idx = handle_to_idx(timer, tp);
+	}
+
+	ODP_PRINT("\nTimeout info\n");
+	ODP_PRINT("------------\n");
+	ODP_PRINT("  tmo handle     0x%" PRIx64 "\n", odp_timeout_to_u64(tmo));
+	ODP_PRINT("  timer pool     %p\n", tp);
+	ODP_PRINT("  timer index    %u\n", idx);
+	ODP_PRINT("  expiration     %" PRIu64 "\n", tmo_hdr->expiration);
+	ODP_PRINT("  user ptr       %p\n", tmo_hdr->user_ptr);
+	ODP_PRINT("\n");
+}
+
 int _odp_timer_init_global(const odp_init_t *params)
 {
 	odp_shm_t shm;
