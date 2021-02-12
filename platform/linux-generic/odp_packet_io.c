@@ -1829,6 +1829,8 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 		capa->vector.max_tmo_ns = 0;
 		capa->vector.min_tmo_ns = 0;
 	}
+	/* Setting up max flow hash capability. */
+	capa->max_flow_hash = UINT32_MAX;
 
 	return ret;
 }
