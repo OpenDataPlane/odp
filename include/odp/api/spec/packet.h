@@ -2412,6 +2412,54 @@ odp_packet_tx_compl_t odp_packet_tx_compl_from_event(odp_event_t ev);
   */
 odp_event_t odp_packet_tx_compl_to_event(odp_packet_tx_compl_t tx_compl);
 
+/**
+ * Allocate a packet Tx completion from a packet Tx completion pool
+ *
+ * Allocates a packet Tx completion from specified packet Tx completion pool.
+ * The pool must have been created with the ODP_POOL_PACKET_TX_COMPL type.
+ *
+ * @param pool Packet Tx completion pool handle
+ *
+ * @return Handle of allocated packet Tx completion event
+ * @retval ODP_PACKET_TX_COMPL_INVALID Packet Tx completion could not be allocated
+ */
+odp_packet_tx_compl_t odp_packet_tx_compl_alloc(odp_pool_t pool);
+
+/**
+ * Free packet Tx completion
+ *
+ * Frees the packet Tx completion into the packet Tx completion pool it was allocated
+ * from.
+ *
+ * @param tx_compl Packet Tx completion handle
+ */
+void odp_packet_tx_compl_free(odp_packet_tx_compl_t tx_compl);
+
+/**
+ * User context pointer
+ *
+ * Return previously stored user context pointer from packet Tx
+ * completion.
+ *
+ * @param tx_compl  Packet Tx completion handle
+ *
+ * @return User context pointer
+ */
+void *odp_packet_tx_compl_user_ptr(odp_packet_tx_compl_t tx_compl);
+
+/**
+ * Set user context pointer
+ *
+ * Each packet Tx completion has room for a user defined context pointer.
+ * The pointer value does not necessarily represent a valid address - e.g.
+ * user may store any value of type intptr_t.
+ *
+ * @param tx_compl  Packet Tx completion handle
+ * @param user_ptr  User context pointer
+ */
+void odp_packet_tx_compl_user_ptr_set(odp_packet_tx_compl_t tx_compl,
+				      const void *user_ptr);
+
 /*
  *
  * Debugging
