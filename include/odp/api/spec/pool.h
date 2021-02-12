@@ -293,6 +293,27 @@ typedef struct odp_pool_capability_t {
 		odp_pool_stats_opt_t stats;
 	} vector;
 
+	/** Packet Tx completion pool capabilities */
+	struct {
+		/** Maximum number of packet Tx completion pools */
+		unsigned int max_pools;
+
+		/** Maximum number of packet Tx completion events in a pool
+		 *
+		 * The value of zero means that limited only by the available
+		 * memory size for the pool. */
+		uint32_t max_num;
+
+		/** Minimum size of thread local cache */
+		uint32_t min_cache_size;
+
+		/** Maximum size of thread local cache */
+		uint32_t max_cache_size;
+
+		/** Supported statistics counters */
+		odp_pool_stats_opt_t stats;
+	} pkt_tx_compl;
+
 } odp_pool_capability_t;
 
 /**
@@ -486,6 +507,18 @@ typedef struct odp_pool_param_t {
 		uint32_t cache_size;
 	} vector;
 
+	/** Parameters for pkt Tx completion event pools */
+	struct {
+		/** Number of pkt Tx completion events  in the pool */
+		uint32_t num;
+
+		/** Maximum number of events cached locally per thread
+		 *
+		 *  See buf.cache_size documentation for details.
+		 */
+		uint32_t cache_size;
+	} pkt_tx_compl;
+
 	/**
 	 * Configure statistics counters
 	 *
@@ -509,6 +542,8 @@ typedef struct odp_pool_param_t {
  * @see ODP_EVENT_PACKET_VECTOR
  */
 #define ODP_POOL_VECTOR	      (ODP_POOL_TIMEOUT + 1)
+/** Packet Tx completion event pool */
+#define ODP_POOL_PACKET_TX_COMPL (ODP_POOL_VECTOR + 1)
 
 /**
  * Create a pool
