@@ -845,6 +845,15 @@ typedef struct odp_pktio_capability_t {
 		uint32_t max_output;
 	} maxlen;
 
+	/** Maximum flow hash value.
+	 *
+	 * This defines the maximum flow hash value that an application can set.
+	 * Attempts to set flow hash value greater than this limit will fail.
+	 *
+	 * @see odp_packet_flow_hash_set()
+	 */
+	uint32_t max_flow_hash;
+
 } odp_pktio_capability_t;
 
 /**
