@@ -6,16 +6,17 @@
 # SPDX-License-Identifier:     BSD-3-Clause
 #
 
-# Exit code expected by automake for skipped tests
-TEST_SKIPPED=77
+cd "$(dirname "$0")"
 
 if  [ -f ./pktio_env ]; then
   . ./pktio_env
 else
-  echo "BUG: unable to find pktio_env!"
-  echo "pktio_env has to be in current directory"
+  echo "ERROR: file not found: $(pwd)/pktio"
   exit 1
 fi
+
+# Exit code expected by automake for skipped tests
+TEST_SKIPPED=77
 
 if [ $(nproc --all) -lt 3 ]; then
   echo "Not enough CPU cores. Skipping test."

@@ -6,15 +6,16 @@
 # SPDX-License-Identifier:     BSD-3-Clause
 #
 
-RETVAL=0
+cd "$(dirname "$0")"
 
 if  [ -f ./pktio_env ]; then
   . ./pktio_env
 else
-  echo "BUG: unable to find pktio_env!"
-  echo "pktio_env has to be in current directory"
+  echo "ERROR: file not found: $(pwd)/pktio"
   exit 1
 fi
+
+RETVAL=0
 
 setup_interfaces
 
