@@ -691,8 +691,7 @@ static int pmr_create_term(pmr_term_value_t *value,
 		return -1;
 	}
 
-	memset(&value->match.value, 0, MAX_PMR_TERM_SIZE);
-	memset(&value->match.mask, 0, MAX_PMR_TERM_SIZE);
+	memset(&value->match, 0, sizeof(value->match));
 	memcpy(&value->match.value, param->match.value, param->val_sz);
 	memcpy(&value->match.mask, param->match.mask, param->val_sz);
 
