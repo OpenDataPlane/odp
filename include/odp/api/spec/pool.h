@@ -542,7 +542,9 @@ typedef struct odp_pool_param_t {
  * @see ODP_EVENT_PACKET_VECTOR
  */
 #define ODP_POOL_VECTOR	      (ODP_POOL_TIMEOUT + 1)
-/** Packet Tx completion event pool */
+/** Packet Tx completion event pool
+ * @see ODP_EVENT_PACKET_TX_COMPL
+ */
 #define ODP_POOL_PACKET_TX_COMPL (ODP_POOL_VECTOR + 1)
 
 /**
