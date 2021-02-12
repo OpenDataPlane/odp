@@ -188,6 +188,16 @@ extern "C" {
  */
 
 /**
+ * @typedef odp_packet_tx_compl_t
+ * ODP Packet Tx completion
+ */
+
+/**
+ * @def ODP_PACKET_TX_COMPL_INVALID
+ * Invalid packet Tx completion
+ */
+
+/**
  * Protocol
  */
 typedef enum odp_proto_t {
@@ -2344,6 +2354,61 @@ void odp_packet_vector_print(odp_packet_vector_t pktv);
  * odp_packet_vector_t handle.
  */
 uint64_t odp_packet_vector_to_u64(odp_packet_vector_t hdl);
+
+/*
+ *
+ * Packet Tx completion event handling routines
+ * ********************************************************
+ */
+
+/**
+ * Get packet Tx completion handle from event
+ *
+ * Converts an ODP_EVENT_PACKET_TX_COMPL type event to packet Tx completion
+ * handle.
+ *
+ * @param ev Event handle
+ *
+ * @return Packet Tx completion handle
+ *
+ * @see odp_event_type()
+ */
+odp_packet_tx_compl_t odp_packet_tx_compl_from_event(odp_event_t ev);
+
+/** Convert packet Tx completion to event
+  *
+  * @param tx_compl Packet Tx completion
+  *
+  * @return Event handle
+  */
+odp_event_t odp_packet_tx_compl_to_event(odp_packet_tx_compl_t tx_compl);
+
+/**
+ * Free packet Tx completion
+ *
+ * Frees the packet Tx completion back to platform. It frees packet Tx
+ * completion that gets allocated as part of packet Tx completion request
+ * for a given packet.
+ *
+ * @param tx_compl Packet Tx completion handle
+ *
+ * @see odp_packet_tx_completion_request()
+ */
+void odp_packet_tx_compl_free(odp_packet_tx_compl_t tx_compl);
+
+/**
+ * User context pointer
+ *
+ * Return user context pointer from packet Tx completion event.
+ * This is the same value set to packet using odp_packet_user_ptr_set().
+ *
+ * @param tx_compl  Packet Tx completion handle
+ *
+ * @return User context pointer
+ *
+ * @see odp_packet_user_ptr_set()
+ */
+void *odp_packet_tx_compl_user_ptr(odp_packet_tx_compl_t tx_compl);
 
 /*
  *

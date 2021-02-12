@@ -60,6 +60,9 @@ extern "C" {
  *     - IPSEC status update event (odp_ipsec_status_t)
  * - ODP_EVENT_PACKET_VECTOR
  *     - Vector of packet events (odp_packet_t) as odp_packet_vector_t
+ * - ODP_EVENT_PACKET_TX_COMPL
+ *     - Packet Tx completion event (odp_packet_tx_compl_t) generated as a result of a Packet Tx
+ *       completion.
  */
 
 /**
