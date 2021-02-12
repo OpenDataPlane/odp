@@ -383,8 +383,7 @@ int odp_timer_pool_info(odp_timer_pool_t timer_pool,
  * @return Timer handle on success
  * @retval ODP_TIMER_INVALID on failure and errno set.
  */
-odp_timer_t odp_timer_alloc(odp_timer_pool_t timer_pool, odp_queue_t queue,
-			    void *user_ptr);
+odp_timer_t odp_timer_alloc(odp_timer_pool_t timer_pool, odp_queue_t queue, const void *user_ptr);
 
 /**
  * Free a timer
