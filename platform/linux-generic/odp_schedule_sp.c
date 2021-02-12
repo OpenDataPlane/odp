@@ -1037,7 +1037,7 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 
 static void get_config(schedule_config_t *config)
 {
-	*config = *(&sched_global->config_if);
+	*config = sched_global->config_if;
 };
 
 /* Fill in scheduler interface */
