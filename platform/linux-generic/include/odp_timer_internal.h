@@ -29,10 +29,13 @@ typedef struct {
 
 	/* Requested expiration time */
 	uint64_t expiration;
+
 	/* User ptr inherited from parent timer */
-	void *user_ptr;
+	const void *user_ptr;
+
 	/* Parent timer */
 	odp_timer_t timer;
+
 } odp_timeout_hdr_t;
 
 /* A larger decrement value should be used after receiving events compared to
