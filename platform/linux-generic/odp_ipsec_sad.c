@@ -1007,8 +1007,9 @@ static void ipsec_out_sa_info(ipsec_sa_t *ipsec_sa, odp_ipsec_sa_info_t *sa_info
 
 static void ipsec_in_sa_info(ipsec_sa_t *ipsec_sa, odp_ipsec_sa_info_t *sa_info)
 {
-	if (ipsec_sa->param.mode == ODP_IPSEC_MODE_TUNNEL) {
-		uint8_t *dst = sa_info->inbound.lookup_param.dst_addr;
+	uint8_t *dst = sa_info->inbound.lookup_param.dst_addr;
+
+	if (ipsec_sa->lookup_mode == ODP_IPSEC_LOOKUP_DSTADDR_SPI) {
 
 		if (ipsec_sa->param.inbound.lookup_param.ip_version ==
 		    ODP_IPSEC_IPV4)
@@ -1018,8 +1019,8 @@ static void ipsec_in_sa_info(ipsec_sa_t *ipsec_sa, odp_ipsec_sa_info_t *sa_info)
 			memcpy(dst, &ipsec_sa->in.lookup_dst_ipv6,
 			       ODP_IPV6_ADDR_SIZE);
 
-		sa_info->param.inbound.lookup_param.dst_addr = dst;
 	}
+	sa_info->param.inbound.lookup_param.dst_addr = dst;
 
 	if (ipsec_sa->antireplay) {
 		sa_info->inbound.antireplay_ws = IPSEC_ANTIREPLAY_WS;
