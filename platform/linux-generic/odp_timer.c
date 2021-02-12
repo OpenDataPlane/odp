@@ -107,7 +107,7 @@ ODP_STATIC_ASSERT(sizeof(tick_buf_t) == 16, "sizeof(tick_buf_t) == 16");
 #endif
 
 typedef struct {
-	void *user_ptr;
+	const void *user_ptr;
 	odp_queue_t queue;/* Used for free list when timer is free */
 
 } _odp_timer_t;
@@ -187,10 +187,7 @@ static __thread timer_local_t timer_local;
 static void itimer_init(timer_pool_t *tp);
 static void itimer_fini(timer_pool_t *tp);
 
-static void timer_init(_odp_timer_t *tim,
-		       tick_buf_t *tb,
-		       odp_queue_t _q,
-		       void *_up)
+static void timer_init(_odp_timer_t *tim, tick_buf_t *tb, odp_queue_t _q, const void *_up)
 {
 	tim->queue = _q;
 	tim->user_ptr = _up;
@@ -488,9 +485,7 @@ static void odp_timer_pool_del(timer_pool_t *tp)
 		ODP_ABORT("Failed to free shared memory (%d)\n", rc);
 }
 
-static inline odp_timer_t timer_alloc(timer_pool_t *tp,
-				      odp_queue_t queue,
-				      void *user_ptr)
+static inline odp_timer_t timer_alloc(timer_pool_t *tp, odp_queue_t queue, const void *user_ptr)
 {
 	odp_timer_t hdl;
 
@@ -1358,9 +1353,7 @@ uint64_t odp_timer_pool_to_u64(odp_timer_pool_t tpid)
 	return _odp_pri(tpid);
 }
 
-odp_timer_t odp_timer_alloc(odp_timer_pool_t tpid,
-			    odp_queue_t queue,
-			    void *user_ptr)
+odp_timer_t odp_timer_alloc(odp_timer_pool_t tpid, odp_queue_t queue, const void *user_ptr)
 {
 	timer_pool_t *tp = timer_pool_from_hdl(tpid);
 
@@ -1491,7 +1484,7 @@ uint64_t odp_timeout_tick(odp_timeout_t tmo)
 
 void *odp_timeout_user_ptr(odp_timeout_t tmo)
 {
-	return timeout_hdr(tmo)->user_ptr;
+	return (void *)(uintptr_t)timeout_hdr(tmo)->user_ptr;
 }
 
 odp_timeout_t odp_timeout_alloc(odp_pool_t pool)
