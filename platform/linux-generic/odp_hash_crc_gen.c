@@ -66,15 +66,15 @@ static inline uint8_t reflect_u8(uint8_t byte)
 {
 	uint8_t u8[8];
 
-	u8[0] = (byte & (0x1 << 7)) >> 7;
-	u8[1] = (byte & (0x1 << 6)) >> 5;
-	u8[2] = (byte & (0x1 << 5)) >> 3;
-	u8[3] = (byte & (0x1 << 4)) >> 1;
+	u8[0] = (byte & (0x1u << 7)) >> 7;
+	u8[1] = (byte & (0x1u << 6)) >> 5;
+	u8[2] = (byte & (0x1u << 5)) >> 3;
+	u8[3] = (byte & (0x1u << 4)) >> 1;
 
-	u8[4] = (byte & (0x1 << 3)) << 1;
-	u8[5] = (byte & (0x1 << 2)) << 3;
-	u8[6] = (byte & (0x1 << 1)) << 5;
-	u8[7] = (byte & 0x1) << 7;
+	u8[4] = (byte & (0x1u << 3)) << 1;
+	u8[5] = (byte & (0x1u << 2)) << 3;
+	u8[6] = (byte & (0x1u << 1)) << 5;
+	u8[7] = (byte & 0x1u) << 7;
 
 	return u8[0] | u8[1] | u8[2] | u8[3] | u8[4] | u8[5] | u8[6] | u8[7];
 }
@@ -84,10 +84,10 @@ static inline uint32_t reflect_u32(uint32_t u32)
 {
 	uint8_t u8[4];
 
-	u8[0] = reflect_u8((u32 & 0xff000000) >> 24);
-	u8[1] = reflect_u8((u32 & 0x00ff0000) >> 16);
-	u8[2] = reflect_u8((u32 & 0x0000ff00) >> 8);
-	u8[3] = reflect_u8(u32 & 0xff);
+	u8[0] = reflect_u8((u32 & 0xff000000u) >> 24);
+	u8[1] = reflect_u8((u32 & 0x00ff0000u) >> 16);
+	u8[2] = reflect_u8((u32 & 0x0000ff00u) >> 8);
+	u8[3] = reflect_u8(u32 & 0xffu);
 
 	return (u8[3] << 24) | (u8[2] << 16) | (u8[1] << 8) | u8[0];
 }
@@ -97,9 +97,9 @@ static inline uint32_t reflect_u24(uint32_t u32)
 {
 	uint8_t u8[4];
 
-	u8[0] = reflect_u8((u32 & 0xff0000) >> 16);
-	u8[1] = reflect_u8((u32 & 0x00ff00) >> 8);
-	u8[2] = reflect_u8(u32 & 0xff);
+	u8[0] = reflect_u8((u32 & 0xff0000u) >> 16);
+	u8[1] = reflect_u8((u32 & 0x00ff00u) >> 8);
+	u8[2] = reflect_u8(u32 & 0xffu);
 
 	return (u8[2] << 16) | (u8[1] << 8) | u8[0];
 }
@@ -109,8 +109,8 @@ static inline uint32_t reflect_u16(uint32_t u32)
 {
 	uint8_t u8[4];
 
-	u8[0] = reflect_u8((u32 & 0xff00) >> 8);
-	u8[1] = reflect_u8(u32 & 0xff);
+	u8[0] = reflect_u8((u32 & 0xff00u) >> 8);
+	u8[1] = reflect_u8(u32 & 0xffu);
 
 	return (u8[1] << 8) | u8[0];
 }
@@ -128,8 +128,8 @@ static inline void crc_table_gen(uint32_t poly, int reflect, int width)
 	crc_table->reflect = reflect;
 
 	shift = width - 8;
-	mask  = 0xffffffff >> (32 - width);
-	msb   = 0x1 << (width - 1);
+	mask  = 0xffffffffu >> (32 - width);
+	msb   = 0x1u << (width - 1);
 
 	if (reflect) {
 		if (width == 32)
@@ -145,7 +145,7 @@ static inline void crc_table_gen(uint32_t poly, int reflect, int width)
 			crc = i;
 
 			for (bit = 0; bit < 8; bit++) {
-				if (crc & 0x1)
+				if (crc & 0x1u)
 					crc = poly ^ (crc >> 1);
 				else
 					crc = crc >> 1;
@@ -173,7 +173,7 @@ static inline uint32_t crc_calc(const uint8_t *data, uint32_t data_len,
 	uint32_t mask;
 
 	shift = width - 8;
-	mask  = 0xffffffff >> (32 - width);
+	mask  = 0xffffffffu >> (32 - width);
 
 	crc = init_val;
 
@@ -181,7 +181,7 @@ static inline uint32_t crc_calc(const uint8_t *data, uint32_t data_len,
 		byte = data[i];
 
 		if (reflect) {
-			crc = crc_table->crc[(crc ^ byte) & 0xff] ^ (crc >> 8);
+			crc = crc_table->crc[(crc ^ byte) & 0xffu] ^ (crc >> 8);
 		} else {
 			crc = crc_table->crc[(crc >> shift) ^ byte] ^
 					(crc << 8);
