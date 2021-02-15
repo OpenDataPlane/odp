@@ -19,6 +19,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/proto_stats.h>
 #include <odp/api/time.h>
 
 /** @defgroup odp_packet ODP PACKET
@@ -2208,6 +2209,66 @@ uint32_t odp_packet_aging_tmo(odp_packet_t pkt);
   * @param queue   Queue to enqueue the completion event.
   */
 void odp_packet_tx_completion_request(odp_packet_t pkt, odp_event_t event, odp_queue_t queue);
+
+/** ODP packet proto stats op */
+typedef enum odp_packet_proto_stats_op_t {
+	/** Set inner octet adjust to total packet len
+	 * Inner octet count for proto stats is computed as
+	 * `odp_packet_len() + INNER_ADJ`
+	 */
+	ODP_PACKET_PROTO_STATS_OP_S16_INNER_ADJ,
+	/** Set outer octet adjust to total packet len
+	 * Outer octet count for proto stats is computed as
+	 * `odp_packet_len() + OUTER_ADJ`
+	 */
+	ODP_PACKET_PROTO_STATS_OP_S16_OUTER_ADJ,
+	/** Enable / Disable Outer octet update for a packet */
+	ODP_PACKET_PROTO_STATS_OP_BOOL_OUTER_ENABLE,
+} odp_packet_proto_stats_op_t;
+
+/**
+ * Set proto stats object.
+ *
+ * Associate a proto stats object to a packet. This enables updating protocol
+ * stats of the packet in the given object after packet is enqueued to queue
+ * and reaches a terminal state i.e either transmit or drop.
+ *
+ * @param pkt   Packet handle
+ * @param stat  Proto stats object handle
+ */
+void odp_packet_proto_stats_set(odp_packet_t pkt, odp_proto_stats_t stat);
+
+/**
+ * Get proto stats object.
+ *
+ * Get the proto stats object associated with the given packet.
+ *
+ * @param pkt Packet handle
+ *
+ * @return Proto stats object handle or ODP_PROTO_STATS_INVALID if not set.
+ */
+odp_proto_stats_t odp_packet_proto_stats(odp_packet_t pkt);
+
+/**
+ * Set packet specific metadata for proto stats
+ * Per-Packet metadata needs to be updated for modes ODP_PROTO_STATS_MODE_TX_*
+ *
+ * @param pkt   Packet handle
+ * @param op    Proto stats meta data op
+ * @param data  Pointer to meta data specific to op
+ *
+ * @see odp_proto_stats_mode_t
+ */
+void odp_packet_proto_stats_ops_set(odp_packet_t pkt, odp_packet_proto_stats_op_t op, void *data);
+
+/**
+ * Get packet specific metadata for proto stats
+ *
+ * @param pkt   Packet handle
+ * @param op    Meta data to retrieve
+ * @param data  Pointer to location where meta data will be updated
+ */
+void odp_packet_proto_stats_ops(odp_packet_t pkt, odp_packet_proto_stats_op_t op, void *data);
 
 /*
  *

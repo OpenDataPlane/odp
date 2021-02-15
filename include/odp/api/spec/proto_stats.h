@@ -49,6 +49,14 @@ typedef enum odp_proto_stats_mode_t {
 	 *   on Tx of a packet via Packet IO. Packet IO pktout config
 	 *   `odp_pktout_config_opt_t::bit::proto_stats` needs to be enabled for
 	 *   the offload to work.
+	 * - For each of the below mode, proto stats object needs to be associated
+	 *   on per-packet basis using `odp_packet_proto_stats_set(pkt, stat)`
+	 *   for stats update to be enabled for that packet.
+	 * - Proto stats packet meta data such as inner adjust, outer adjust needs to
+	 *   be also updated on per-packet basis using `odp_packet_proto_stats_ops_set()`.
+	 * - Default behaviour is stats update is disabled.
+	 *
+	 * @see odp_packet_proto_stats_set(), odp_packet_proto_stats_ops_set()
 	 */
 
 	/** Tx packet stats mode
