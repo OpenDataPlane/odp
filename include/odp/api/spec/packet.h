@@ -19,6 +19,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/proto_stats.h>
 #include <odp/api/time.h>
 #include <odp/api/packet_types.h>
 
@@ -2029,6 +2030,61 @@ int odp_packet_tx_compl_request(odp_packet_t pkt, const odp_packet_tx_compl_opt_
  * @retval 0         TX completion event is not requested
  */
 int odp_packet_has_tx_compl_request(odp_packet_t pkt);
+
+/**
+ * Packet proto stats options.
+ */
+typedef struct odp_packet_proto_stats_opt_t {
+	/** Packet proto stats object handle
+	 *
+	 * Stats in the packet proto stats object will be updated.
+	 */
+	odp_proto_stats_t stat;
+
+	/** Octet counter 0 adjust */
+	int32_t oct_count0_adj;
+
+	/** Octet counter 1 adjust */
+	int32_t oct_count1_adj;
+} odp_packet_proto_stats_opt_t;
+
+/**
+ * Request packet proto stats.
+ *
+ * The statistics enabled in the proto stats object are updated for the packet in
+ * packet output when the packet is transmitted or dropped. The statistics update
+ * is done as the last step of output processing after possible packet
+ * transformations (e.g. fragmentation, IPsec) that may occur. If a packet is
+ * fragmented or segmented to multiple packets as part of output processing, all
+ * the resulting packets inherit the proto stats object association from the
+ * original packet.
+ *
+ * The relevant octet counts will be updated with the actual packet length at
+ * the time of transmission or drop plus the respective adjustment value passed
+ * in the 'opt' parameter. The octet counts thus include possible additional
+ * headers added by ODP during packet output (e.g. ESP header added by inline
+ * outbound IPsec processing). Ethernet padding and FCS are not included in the
+ * octet counts. The adjustment value is added only if the respective capability
+ * field is true and otherwise ignored.
+ *
+ * @param pkt   Packet handle
+ * @param opt   Proto stats options. If NULL, then proto stats update is
+ *              disabled for this packet.
+ *
+ * @see odp_proto_stats_capability_t::tx
+ */
+void odp_packet_proto_stats_request(odp_packet_t pkt, odp_packet_proto_stats_opt_t *opt);
+
+/**
+ * Get proto stats object.
+ *
+ * Get the proto stats object associated with the given packet.
+ *
+ * @param pkt Packet handle
+ *
+ * @return Proto stats object handle or ODP_PROTO_STATS_INVALID if not set.
+ */
+odp_proto_stats_t odp_packet_proto_stats(odp_packet_t pkt);
 
 /*
  *
