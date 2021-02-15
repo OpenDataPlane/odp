@@ -27,12 +27,73 @@ extern "C" {
 
 /** ODP proto stats id */
 typedef enum odp_proto_stats_id_t {
-	/** None */
-	ODP_PROTO_STATS_ID_NONE,
+	/** Packet sent count */
+	ODP_PROTO_STATS_ID_TX_PKT,
+	/** Packet drop count */
+	ODP_PROTO_STATS_ID_TX_PKT_DROP,
+	/** Inner packet octet count */
+	ODP_PROTO_STATS_ID_TX_INNER_IP_OCT,
+	/** Inner packet octet drop count */
+	ODP_PROTO_STATS_ID_TX_INNER_IP_DROP_OCT,
+	/** Outer packet octet count */
+	ODP_PROTO_STATS_ID_TX_OUTER_IP_OCT,
+	/** Outer packet octet drop count */
+	ODP_PROTO_STATS_ID_TX_OUTER_IP_DROP_OCT,
 } odp_proto_stats_id_t;
 
 /** ODP proto stats mode */
 typedef enum odp_proto_stats_mode_t {
+	/** Tx Proto stats modes i.e ODP_PROTO_STATS_MODE_TX_*
+	 *
+	 * - All the below modes are associated to packet stats and accounting
+	 *   on Tx of a packet via Packet IO. Packet IO pktout config
+	 *   `odp_pktout_config_opt_t::bit::proto_stats` needs to be enabled for
+	 *   the offload to work.
+	 */
+
+	/** Tx packet stats mode
+	 * Packet count updated both for transmitted and dropped pkts.
+	 *
+	 * @see ODP_PROTO_STATS_ID_TX_PKT, ODP_PROTO_STATS_ID_TX_PKT_DROP
+	 */
+	ODP_PROTO_STATS_MODE_TX_PKT,
+	/** Tx octet stats mode
+	 * Outer/Inner Octet count updated both for transmitted and dropped pkts.
+	 *
+	 * @see ODP_PROTO_STATS_ID_TX_INNER_IP_OCT, ODP_PROTO_STATS_ID_TX_INNER_IP_DROP_OCT
+	 * @see ODP_PROTO_STATS_ID_TX_OUTER_IP_OCT, ODP_PROTO_STATS_ID_TX_OUTER_IP_DROP_OCT
+	 */
+	ODP_PROTO_STATS_MODE_TX_OCT,
+	/** Tx packet stats and octet stats mode
+	 * Packet count and Outer/Inner Octet count updated both for transmitted and dropped
+	 * pkts
+	 *
+	 * @see ODP_PROTO_STATS_ID_TX_PKT, ODP_PROTO_STATS_ID_TX_PKT_DROP
+	 * @see ODP_PROTO_STATS_ID_TX_INNER_IP_OCT, ODP_PROTO_STATS_ID_TX_INNER_IP_DROP_OCT
+	 * @see ODP_PROTO_STATS_ID_TX_OUTER_IP_OCT, ODP_PROTO_STATS_ID_TX_OUTER_IP_DROP_OCT
+	 */
+	ODP_PROTO_STATS_MODE_TX_PKT_OCT,
+	/** Tx packet drop mode
+	 * Packet count updated only when packet is dropped
+	 *
+	 * @see ODP_PROTO_STATS_ID_TX_PKT_DROP
+	 */
+	ODP_PROTO_STATS_MODE_TX_PKT_DROP_ONLY,
+	/** Tx Octet drop mode
+	 * Outer/Inner Octet count updated only when packet is dropped.
+	 *
+	 * @see ODP_PROTO_STATS_ID_TX_INNER_IP_DROP_OCT
+	 * @see ODP_PROTO_STATS_ID_TX_OUTER_IP_DROP_OCT
+	 */
+	ODP_PROTO_STATS_MODE_TX_OCT_DROP_ONLY,
+	/** Tx packet and octet drop mode
+	 * Packet drop count and Octet drop count updated only when packet is dropped.
+	 *
+	 * @see ODP_PROTO_STATS_ID_TX_PKT_DROP
+	 * @see ODP_PROTO_STATS_ID_TX_INNER_IP_DROP_OCT
+	 * @see ODP_PROTO_STATS_ID_TX_OUTER_IP_DROP_OCT
+	 */
+	ODP_PROTO_STATS_MODE_TX_PKT_OCT_DROP_ONLY,
 	ODP_PROTO_STATS_MODE_MAX,
 } odp_proto_stats_mode_t;
 
