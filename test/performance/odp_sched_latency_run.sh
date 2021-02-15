@@ -14,9 +14,13 @@ ALL=0
 run()
 {
 	echo odp_sched_latency_run starts requesting $1 worker threads
-	echo ===============================================
+	echo =========================================================
 
-	$TEST_DIR/odp_sched_latency${EXEEXT} -c $1 || exit $?
+	if [ $(nproc) -lt $1 ]; then
+		echo "Not enough CPU cores. Skipping test."
+	else
+		$TEST_DIR/odp_sched_latency${EXEEXT} -c $1 || exit $?
+	fi
 }
 
 run 1
