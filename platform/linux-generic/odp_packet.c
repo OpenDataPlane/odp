@@ -2932,3 +2932,20 @@ void *odp_packet_tx_compl_user_ptr(odp_packet_tx_compl_t tx_compl)
 
 	return NULL;
 }
+
+odp_packet_reass_status_t
+odp_packet_reass_status(odp_packet_t pkt)
+{
+	(void)pkt;
+	return ODP_PACKET_REASS_NONE;
+}
+
+int
+odp_packet_reass_partial_state(odp_packet_t pkt, odp_packet_t frags[],
+			       odp_packet_reass_partial_state_t *res)
+{
+	(void)pkt;
+	(void)frags;
+	(void)res;
+	return -ENOTSUP;
+}

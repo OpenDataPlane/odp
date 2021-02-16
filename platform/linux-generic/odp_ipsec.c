@@ -138,6 +138,13 @@ int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 	capa->inline_ipsec_tm = ODP_SUPPORT_NO;
 
 	capa->test.sa_operations.seq_num = 1;
+
+	capa->reassembly.ip = false;
+	capa->reassembly.ipv4 = false;
+	capa->reassembly.ipv6 = false;
+	capa->reass_async = false;
+	capa->reass_inline = false;
+
 	return 0;
 }
 
