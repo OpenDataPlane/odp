@@ -1,5 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -51,6 +51,7 @@ typedef struct test_global_t {
 	struct {
 		unsigned long long period_ns;
 		unsigned long long res_ns;
+		unsigned long long res_hz;
 		unsigned long long offset_ns;
 		unsigned long long max_tmo_ns;
 		unsigned long long num;
@@ -89,7 +90,9 @@ static void print_usage(void)
 	       "\n"
 	       "OPTIONS:\n"
 	       "  -p, --period <nsec>     Timeout period in nsec. Default: 200 msec\n"
-	       "  -r, --resolution <nsec> Timeout resolution in nsec. Default: period / 10\n"
+	       "  -r, --res_ns <nsec>     Timeout resolution in nsec. Default: period / 10\n"
+	       "  -R, --res_hz <hertz>    Timeout resolution in hertz. Note: resolution can be set\n"
+	       "                          either in nsec or hertz (not both). Default: 0\n"
 	       "  -f, --first <nsec>      First timer offset in nsec. Default: 300 msec\n"
 	       "  -x, --max_tmo <nsec>    Maximum timeout in nsec. When 0, max tmo is calculated from other options. Default: 0\n"
 	       "  -n, --num <number>      Number of timeout periods. Default: 50\n"
@@ -114,7 +117,8 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 	int opt, long_index;
 	const struct option longopts[] = {
 		{"period",       required_argument, NULL, 'p'},
-		{"resolution",   required_argument, NULL, 'r'},
+		{"res_ns",       required_argument, NULL, 'r'},
+		{"res_hz",       required_argument, NULL, 'R'},
 		{"first",        required_argument, NULL, 'f'},
 		{"max_tmo",      required_argument, NULL, 'x'},
 		{"num",          required_argument, NULL, 'n'},
@@ -128,11 +132,12 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 		{"help",         no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+p:r:f:x:n:b:g:m:o:e:s:ih";
+	const char *shortopts =  "+p:r:R:f:x:n:b:g:m:o:e:s:ih";
 	int ret = 0;
 
 	test_global->opt.period_ns = 200 * ODP_TIME_MSEC_IN_NS;
 	test_global->opt.res_ns    = 0;
+	test_global->opt.res_hz    = 0;
 	test_global->opt.offset_ns = 300 * ODP_TIME_MSEC_IN_NS;
 	test_global->opt.max_tmo_ns = 0;
 	test_global->opt.num       = 50;
@@ -156,6 +161,9 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 			break;
 		case 'r':
 			test_global->opt.res_ns = strtoull(optarg, NULL, 0);
+			break;
+		case 'R':
+			test_global->opt.res_hz = strtoull(optarg, NULL, 0);
 			break;
 		case 'f':
 			test_global->opt.offset_ns = strtoull(optarg, NULL, 0);
@@ -200,7 +208,8 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 		}
 	}
 
-	if (test_global->opt.res_ns == 0)
+	/* Default resolution */
+	if (test_global->opt.res_ns == 0 && test_global->opt.res_hz == 0)
 		test_global->opt.res_ns = test_global->opt.period_ns / 10;
 
 	test_global->tot_timers = test_global->opt.num * test_global->opt.burst;
@@ -224,7 +233,8 @@ static int start_timers(test_global_t *test_global)
 	odp_queue_t queue;
 	odp_queue_param_t queue_param;
 	uint64_t tick, start_tick;
-	uint64_t period_ns, res_ns, start_ns, nsec, res_capa, offset_ns;
+	uint64_t period_ns, res_ns, res_hz, start_ns, nsec, offset_ns;
+	uint64_t max_res_ns, max_res_hz;
 	odp_event_t event;
 	odp_timeout_t timeout;
 	odp_timer_set_t ret;
@@ -298,22 +308,39 @@ static int start_timers(test_global_t *test_global)
 		return -1;
 	}
 
-	res_capa = timer_capa.highest_res_ns;
+	max_res_ns = timer_capa.max_res.res_ns;
+	max_res_hz = timer_capa.max_res.res_hz;
 
 	offset_ns = test_global->opt.offset_ns;
-	res_ns = test_global->opt.res_ns;
 
-	if (res_ns < res_capa) {
-		printf("Resolution %" PRIu64 " nsec too high. "
-		       "Highest resolution %" PRIu64 " nsec. "
+	if (test_global->opt.res_ns) {
+		res_ns = test_global->opt.res_ns;
+		res_hz = 0;
+	} else {
+		res_ns = 0;
+		res_hz = test_global->opt.res_hz;
+	}
+
+	if (res_ns && res_ns < max_res_ns) {
+		printf("Resolution %" PRIu64 " nsec too high. Highest resolution %" PRIu64 " nsec. "
 		       "Default resolution is period / 10.\n\n",
-		       res_ns, res_capa);
+		       res_ns, max_res_ns);
+		return -1;
+	}
+
+	if (res_hz && res_hz > max_res_hz) {
+		printf("Resolution %" PRIu64 " hz too high. Highest resolution %" PRIu64 " hz. "
+		       "Default resolution is period / 10.\n\n",
+		       res_hz, max_res_hz);
 		return -1;
 	}
 
 	memset(&timer_param, 0, sizeof(odp_timer_pool_param_t));
 
-	timer_param.res_ns = res_ns;
+	if (res_ns)
+		timer_param.res_ns = res_ns;
+	else
+		timer_param.res_hz = res_hz;
 
 	if (mode == 0) {
 		timer_param.min_tmo = offset_ns / 2;
@@ -339,7 +366,8 @@ static int start_timers(test_global_t *test_global)
 
 	printf("\nTest parameters:\n");
 	printf("  clock source:    %i\n", test_global->opt.clk_src);
-	printf("  resolution capa: %" PRIu64 " nsec\n", res_capa);
+	printf("  max res nsec:    %" PRIu64 "\n", max_res_ns);
+	printf("  max res hertz:   %" PRIu64 "\n", max_res_hz);
 	printf("  max timers capa: %" PRIu32 "\n", timer_capa.max_timers);
 	printf("  mode:            %i\n", mode);
 	printf("  restart retries: %i\n", test_global->opt.early_retry);
@@ -347,7 +375,10 @@ static int start_timers(test_global_t *test_global)
 		printf("  log file:        %s\n", test_global->filename);
 	printf("  start offset:    %" PRIu64 " nsec\n", offset_ns);
 	printf("  period:          %" PRIu64 " nsec\n", period_ns);
-	printf("  resolution:      %" PRIu64 " nsec\n", timer_param.res_ns);
+	if (res_ns)
+		printf("  resolution:      %" PRIu64 " nsec\n", res_ns);
+	else
+		printf("  resolution:      %" PRIu64 " hz\n", res_hz);
 	printf("  min timeout:     %" PRIu64 " nsec\n", timer_param.min_tmo);
 	printf("  max timeout:     %" PRIu64 " nsec\n", timer_param.max_tmo);
 	printf("  num timeout:     %" PRIu64 "\n", num_tmo);
@@ -494,11 +525,14 @@ static void print_stat(test_global_t *test_global)
 {
 	uint64_t i;
 	uint64_t tot_timers = test_global->tot_timers;
-	uint64_t res_ns = test_global->opt.res_ns;
 	test_stat_t *stat = &test_global->stat;
 	test_log_t *log = test_global->log;
 	double ave_after = 0.0;
 	double ave_before = 0.0;
+	double res_ns = test_global->opt.res_ns;
+
+	if (test_global->opt.res_ns == 0)
+		res_ns = 1000000000.0 / test_global->opt.res_hz;
 
 	if (stat->num_after)
 		ave_after = (double)stat->nsec_after_sum / stat->num_after;
