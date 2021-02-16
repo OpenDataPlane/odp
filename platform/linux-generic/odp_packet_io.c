@@ -1830,6 +1830,10 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 		capa->vector.min_tmo_ns = 0;
 	}
 
+	capa->reassembly.ip = false;
+	capa->reassembly.ipv4 = false;
+	capa->reassembly.ipv6 = false;
+
 	return ret;
 }
 
