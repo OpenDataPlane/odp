@@ -884,7 +884,14 @@ typedef struct odp_ipsec_stats_t {
  * IPSEC SA information
  */
 typedef struct odp_ipsec_sa_info_t {
-	/** Copy of IPSEC Security Association (SA) parameters */
+	/** IPsec SA parameters
+	 *
+	 * This is not necessarily an exact copy of the actual parameter
+	 * structure used in SA creation. The fields that were relevant
+	 * for the SA in the creation phase will have the same values,
+	 * but other fields, such as tunnel parameters for a transport
+	 * mode SA, will have undefined values.
+	 */
 	odp_ipsec_sa_param_t param;
 
 	/** IPSEC SA direction dependent parameters */
