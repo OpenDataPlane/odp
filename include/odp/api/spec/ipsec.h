@@ -522,13 +522,13 @@ typedef struct odp_ipsec_ipv4_param_t {
 	/** IPv4 destination address (NETWORK ENDIAN) */
 	void *dst_addr;
 
-	/** IPv4 Differentiated Services Code Point */
+	/** IPv4 Differentiated Services Code Point. The default value is 0. */
 	uint8_t dscp;
 
-	/** IPv4 Don't Fragment bit */
+	/** IPv4 Don't Fragment bit. The default value is 0. */
 	uint8_t df;
 
-	/** IPv4 Time To Live */
+	/** IPv4 Time To Live. The default value is 255. */
 	uint8_t ttl;
 
 } odp_ipsec_ipv4_param_t;
@@ -541,13 +541,13 @@ typedef struct odp_ipsec_ipv6_param_t {
 	/** IPv6 destination address (NETWORK ENDIAN) */
 	void *dst_addr;
 
-	/** IPv6 flow label */
+	/** IPv6 flow label. The default value is 0. */
 	uint32_t flabel;
 
-	/** IPv6 Differentiated Services Code Point */
+	/** IPv6 Differentiated Services Code Point. The default value is 0. */
 	uint8_t dscp;
 
-	/** IPv6 hop limit */
+	/** IPv6 hop limit. The default value is 255. */
 	uint8_t hlimit;
 
 } odp_ipsec_ipv6_param_t;
@@ -561,11 +561,11 @@ typedef struct odp_ipsec_ipv6_param_t {
  * pointers and copied byte-by-byte from memory to the packet.
  */
 typedef struct odp_ipsec_tunnel_param_t {
-	/** Tunnel type: IPv4 or IPv6 */
+	/** Tunnel type: IPv4 or IPv6. The default is IPv4. */
 	odp_ipsec_tunnel_type_t type;
 
-	/** Variant mappings for tunnel parameters */
-	union {
+	/** Tunnel type specific parameters */
+	struct {
 		/** IPv4 header parameters */
 		odp_ipsec_ipv4_param_t ipv4;
 
@@ -581,7 +581,7 @@ typedef struct odp_ipsec_sa_opt_t {
 	/** Extended Sequence Numbers (ESN)
 	  *
 	  * * 1: Use extended (64 bit) sequence numbers
-	  * * 0: Use normal sequence numbers
+	  * * 0: Use normal sequence numbers (the default value)
 	  */
 	uint32_t esn : 1;
 
@@ -589,7 +589,7 @@ typedef struct odp_ipsec_sa_opt_t {
 	  *
 	  * * 1: Do UDP encapsulation/decapsulation so that IPSEC packets can
 	  *      traverse through NAT boxes.
-	  * * 0: No UDP encapsulation
+	  * * 0: No UDP encapsulation (the default value)
 	  */
 	uint32_t udp_encap : 1;
 
@@ -599,7 +599,7 @@ typedef struct odp_ipsec_sa_opt_t {
 	  *      the outer IP header in encapsulation, and vice versa in
 	  *      decapsulation.
 	  * * 0: Use values from odp_ipsec_tunnel_param_t in encapsulation and
-	  *      do not change DSCP field in decapsulation.
+	  *      do not change DSCP field in decapsulation (the default value).
 	  */
 	uint32_t copy_dscp : 1;
 
@@ -607,7 +607,7 @@ typedef struct odp_ipsec_sa_opt_t {
 	  *
 	  * * 1: Copy IPv6 flow label from inner IPv6 header to the
 	  *      outer IPv6 header.
-	  * * 0: Use value from odp_ipsec_tunnel_param_t
+	  * * 0: Use value from odp_ipsec_tunnel_param_t (the default value)
 	  */
 	uint32_t copy_flabel : 1;
 
@@ -615,7 +615,7 @@ typedef struct odp_ipsec_sa_opt_t {
 	  *
 	  * * 1: Copy the DF bit from the inner IPv4 header to the outer
 	  *      IPv4 header.
-	  * * 0: Use value from odp_ipsec_tunnel_param_t
+	  * * 0: Use value from odp_ipsec_tunnel_param_t (the default value)
 	  */
 	uint32_t copy_df : 1;
 
@@ -624,7 +624,7 @@ typedef struct odp_ipsec_sa_opt_t {
 	  * * 1: In tunnel mode, decrement inner packet IPv4 TTL or
 	  *      IPv6 Hop Limit after tunnel decapsulation, or before tunnel
 	  *      encapsulation.
-	  * * 0: Inner packet is not modified.
+	  * * 0: Inner packet is not modified (the default value)
 	  */
 	uint32_t dec_ttl : 1;
 
@@ -639,6 +639,8 @@ typedef struct odp_ipsec_sa_opt_t {
  * lifetime expiration is reported: only once, first N or all packets following
  * the limit crossing. Any number of limits may be used simultaneously.
  * Use zero when there is no limit.
+ *
+ * The default value is zero (i.e. no limit) for all the limits.
  */
 typedef struct odp_ipsec_lifetime_t {
 	/** Soft expiry limits for the session */
@@ -739,7 +741,7 @@ typedef struct odp_ipsec_sa_param_t {
 	/** IPSEC SA direction: inbound or outbound */
 	odp_ipsec_dir_t dir;
 
-	/** IPSEC protocol: ESP or AH */
+	/** IPSEC protocol: ESP or AH. The default value is ODP_IPSEC_ESP. */
 	odp_ipsec_protocol_t proto;
 
 	/** IPSEC protocol mode: transport or tunnel */
@@ -782,10 +784,12 @@ typedef struct odp_ipsec_sa_param_t {
 	uint32_t context_len;
 
 	/** IPSEC SA direction dependent parameters */
-	union {
+	struct {
 		/** Inbound specific parameters */
 		struct {
-			/** SA lookup mode */
+			/** SA lookup mode
+			 *  The default value is ODP_IPSEC_LOOKUP_DISABLED.
+			 */
 			odp_ipsec_lookup_mode_t lookup_mode;
 
 			/** Additional SA lookup parameters. Values are
@@ -802,7 +806,7 @@ typedef struct odp_ipsec_sa_param_t {
 			} lookup_param;
 
 			/** Minimum anti-replay window size. Use 0 to disable
-			 *  anti-replay service.
+			 *  anti-replay service. The default value is 0.
 			 */
 			uint32_t antireplay_ws;
 
@@ -835,7 +839,9 @@ typedef struct odp_ipsec_sa_param_t {
 			/** Parameters for tunnel mode */
 			odp_ipsec_tunnel_param_t tunnel;
 
-			/** Fragmentation mode */
+			/** Fragmentation mode
+			 *  The default value is ODP_IPSEC_FRAG_DISABLED.
+			 */
 			odp_ipsec_frag_mode_t frag_mode;
 
 			/** MTU for outbound IP fragmentation offload
