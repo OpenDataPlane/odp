@@ -1135,7 +1135,7 @@ static void pktio_test_recv_multi_event(void)
 static void pktio_test_recv_queue(void)
 {
 	odp_pktio_t pktio_tx, pktio_rx;
-	odp_pktio_t pktio[MAX_NUM_IFACES];
+	odp_pktio_t pktio[MAX_NUM_IFACES] = {0};
 	odp_pktio_capability_t capa;
 	odp_pktin_queue_param_t in_queue_param;
 	odp_pktout_queue_param_t out_queue_param;
@@ -1247,7 +1247,7 @@ static void pktio_test_recv_queue(void)
 static void test_recv_tmo(recv_tmo_mode_e mode)
 {
 	odp_pktio_t pktio_tx, pktio_rx;
-	odp_pktio_t pktio[MAX_NUM_IFACES];
+	odp_pktio_t pktio[MAX_NUM_IFACES] = {0};
 	odp_pktio_capability_t capa;
 	odp_pktin_queue_param_t in_queue_param;
 	odp_pktout_queue_t pktout_queue;
@@ -2302,7 +2302,7 @@ static int pktio_check_pktin_ts(void)
 static void pktio_test_pktin_ts(void)
 {
 	odp_pktio_t pktio_tx, pktio_rx;
-	odp_pktio_t pktio[MAX_NUM_IFACES];
+	odp_pktio_t pktio[MAX_NUM_IFACES] = {0};
 	pktio_info_t pktio_rx_info;
 	odp_pktio_capability_t capa;
 	odp_pktio_config_t config;
@@ -2417,7 +2417,7 @@ static int pktio_check_pktout_ts(void)
 static void pktio_test_pktout_ts(void)
 {
 	odp_packet_t pkt_tbl[TX_BATCH_LEN];
-	odp_pktio_t pktio[MAX_NUM_IFACES];
+	odp_pktio_t pktio[MAX_NUM_IFACES] = {0};
 	odp_pktout_queue_t pktout_queue;
 	odp_pktio_t pktio_tx, pktio_rx;
 	uint32_t pkt_seq[TX_BATCH_LEN];
@@ -3381,7 +3381,7 @@ static void pktio_test_pktv_pktin_queue_config_sched(void)
 static void pktio_test_recv_maxlen_set(void)
 {
 	odp_pktio_t pktio_tx, pktio_rx;
-	odp_pktio_t pktio[MAX_NUM_IFACES];
+	odp_pktio_t pktio[MAX_NUM_IFACES] = {0};
 	pktio_info_t pktio_rx_info;
 	odp_pktio_capability_t capa;
 	odp_pktio_config_t config;
