@@ -1427,6 +1427,53 @@ static void ipsec_test_capability(void)
 	CU_ASSERT(odp_ipsec_capability(&capa) == 0);
 }
 
+static void ipsec_test_default_values(void)
+{
+	odp_ipsec_config_t config;
+	odp_ipsec_sa_param_t sa_param;
+
+	memset(&config, 0x55, sizeof(config));
+	memset(&sa_param, 0x55, sizeof(sa_param));
+
+	odp_ipsec_config_init(&config);
+	CU_ASSERT(config.inbound.lookup.min_spi == 0);
+	CU_ASSERT(config.inbound.lookup.max_spi == UINT32_MAX);
+	CU_ASSERT(config.inbound.lookup.spi_overlap == 0);
+	CU_ASSERT(config.inbound.retain_outer == ODP_PROTO_LAYER_NONE);
+	CU_ASSERT(config.inbound.parse_level == ODP_PROTO_LAYER_NONE);
+	CU_ASSERT(config.inbound.chksums.all_chksum == 0);
+	CU_ASSERT(config.outbound.all_chksum == 0);
+	CU_ASSERT(!config.stats_en);
+
+	odp_ipsec_sa_param_init(&sa_param);
+	CU_ASSERT(sa_param.proto == ODP_IPSEC_ESP);
+	CU_ASSERT(sa_param.crypto.cipher_alg == ODP_CIPHER_ALG_NULL);
+	CU_ASSERT(sa_param.crypto.auth_alg == ODP_AUTH_ALG_NULL);
+	CU_ASSERT(sa_param.opt.esn == 0);
+	CU_ASSERT(sa_param.opt.udp_encap == 0);
+	CU_ASSERT(sa_param.opt.copy_dscp == 0);
+	CU_ASSERT(sa_param.opt.copy_flabel == 0);
+	CU_ASSERT(sa_param.opt.copy_df == 0);
+	CU_ASSERT(sa_param.opt.dec_ttl == 0);
+	CU_ASSERT(sa_param.lifetime.soft_limit.bytes == 0);
+	CU_ASSERT(sa_param.lifetime.soft_limit.packets == 0);
+	CU_ASSERT(sa_param.lifetime.hard_limit.bytes == 0);
+	CU_ASSERT(sa_param.lifetime.hard_limit.packets == 0);
+	CU_ASSERT(sa_param.context == NULL);
+	CU_ASSERT(sa_param.context_len == 0);
+	CU_ASSERT(sa_param.inbound.lookup_mode == ODP_IPSEC_LOOKUP_DISABLED);
+	CU_ASSERT(sa_param.inbound.antireplay_ws == 0);
+	CU_ASSERT(sa_param.inbound.pipeline == ODP_IPSEC_PIPELINE_NONE);
+	CU_ASSERT(sa_param.outbound.tunnel.type == ODP_IPSEC_TUNNEL_IPV4);
+	CU_ASSERT(sa_param.outbound.tunnel.ipv4.dscp == 0);
+	CU_ASSERT(sa_param.outbound.tunnel.ipv4.df == 0);
+	CU_ASSERT(sa_param.outbound.tunnel.ipv4.ttl == 255);
+	CU_ASSERT(sa_param.outbound.tunnel.ipv6.flabel == 0);
+	CU_ASSERT(sa_param.outbound.tunnel.ipv6.dscp == 0);
+	CU_ASSERT(sa_param.outbound.tunnel.ipv6.hlimit == 255);
+	CU_ASSERT(sa_param.outbound.frag_mode == ODP_IPSEC_FRAG_DISABLED);
+}
+
 static void test_ipsec_stats(void)
 {
 	ipsec_test_flags flags;
@@ -1450,6 +1497,7 @@ static void test_ipsec_stats(void)
 
 odp_testinfo_t ipsec_out_suite[] = {
 	ODP_TEST_INFO(ipsec_test_capability),
+	ODP_TEST_INFO(ipsec_test_default_values),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sha256,
 				  ipsec_check_ah_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sha256_tun_ipv4,
