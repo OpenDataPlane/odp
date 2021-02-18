@@ -251,6 +251,9 @@ static int queue_debug(void)
 	}
 
 	printf("\n");
+	odp_queue_print_all();
+
+	printf("\n");
 	odp_queue_print(queue);
 
 	if (odp_queue_destroy(queue)) {
