@@ -35,3 +35,5 @@ clean-local:
 			rm -f $(builddir)/$$f; \
 		done \
 	fi
+
+.NOTPARALLEL:
