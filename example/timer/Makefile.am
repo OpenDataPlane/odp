@@ -14,3 +14,5 @@ if test_example
 TESTS  = odp_timer_accuracy \
 	odp_timer_simple
 endif
+
+.NOTPARALLEL:

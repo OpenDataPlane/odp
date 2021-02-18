@@ -88,3 +88,5 @@ if test_installdir
 installcheck-local:
 	$(DESTDIR)/$(testdir)/run-test.sh $(TESTNAME)
 endif
+
+.NOTPARALLEL:
