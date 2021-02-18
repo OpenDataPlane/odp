@@ -759,6 +759,8 @@ static void queue_test_info(void)
 	CU_ASSERT(info.param.sched.lock_count == lock_count);
 	odp_queue_print(q_order);
 
+	odp_queue_print_all();
+
 	CU_ASSERT(odp_queue_destroy(q_plain) == 0);
 	CU_ASSERT(odp_queue_destroy(q_order) == 0);
 }
