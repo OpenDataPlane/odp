@@ -767,6 +767,97 @@ static void queue_print(odp_queue_t handle)
 	UNLOCK(queue);
 }
 
+static void queue_print_all(void)
+{
+	uint32_t i, index, len, max_len;
+	const char *name;
+	int status;
+	odp_queue_type_t type;
+	odp_nonblocking_t blocking;
+	odp_queue_op_mode_t enq_mode;
+	odp_queue_op_mode_t deq_mode;
+	odp_queue_order_t order;
+	const char *status_str;
+	const char *bl_str;
+	char type_c, enq_c, deq_c, order_c, sync_c;
+	const int col_width = 24;
+	int prio = 0;
+	odp_schedule_sync_t sync = ODP_SCHED_SYNC_PARALLEL;
+
+	ODP_PRINT("\nList of all queues\n");
+	ODP_PRINT("------------------\n");
+	ODP_PRINT(" idx %-*s type stat blk enq deq ord    len max_len sync prio\n", col_width, "name");
+
+	for (i = 0; i < CONFIG_MAX_QUEUES; i++) {
+		queue_entry_t *queue = qentry_from_index(i);
+
+		if (queue->s.status < QUEUE_STATUS_READY)
+			continue;
+
+		LOCK(queue);
+
+		status   = queue->s.status;
+		index    = queue->s.index;
+		name     = queue->s.name;
+		type     = queue->s.type;
+		blocking = queue->s.param.nonblocking;
+		enq_mode = queue->s.param.enq_mode;
+		deq_mode = queue->s.param.deq_mode;
+		order    = queue->s.param.order;
+
+		if (queue->s.queue_lf) {
+			len     = _odp_queue_lf_length(queue->s.queue_lf);
+			max_len = _odp_queue_lf_max_length();
+		} else if (queue->s.spsc) {
+			len     = ring_spsc_length(&queue->s.ring_spsc);
+			max_len = queue->s.ring_mask + 1;
+		} else if (type == ODP_QUEUE_TYPE_SCHED) {
+			len     = ring_st_length(&queue->s.ring_st);
+			max_len = queue->s.ring_mask + 1;
+			prio    = queue->s.param.sched.prio;
+			sync    = queue->s.param.sched.sync;
+		} else {
+			len     = ring_mpmc_length(&queue->s.ring_mpmc);
+			max_len = queue->s.ring_mask + 1;
+		}
+
+		UNLOCK(queue);
+
+		if (status < QUEUE_STATUS_READY)
+			continue;
+
+		status_str = (status == QUEUE_STATUS_READY) ? "R" :
+			     ((status == QUEUE_STATUS_SCHED) ? "S" : "NS");
+
+		type_c = (type == ODP_QUEUE_TYPE_PLAIN) ? 'P' : 'S';
+
+		bl_str = (blocking == ODP_BLOCKING) ? "B" :
+			 ((blocking == ODP_NONBLOCKING_LF) ? "LF" : "WF");
+
+		enq_c = (enq_mode == ODP_QUEUE_OP_MT) ? 'S' :
+			((enq_mode == ODP_QUEUE_OP_MT_UNSAFE) ? 'U' : 'D');
+
+		deq_c = (deq_mode == ODP_QUEUE_OP_MT) ? 'S' :
+			((deq_mode == ODP_QUEUE_OP_MT_UNSAFE) ? 'U' : 'D');
+
+		order_c = (order == ODP_QUEUE_ORDER_KEEP) ? 'K' : 'I';
+
+		ODP_PRINT("%4u %-*s    %c   %2s  %2s", index, col_width, name, type_c,
+			  status_str, bl_str);
+		ODP_PRINT("   %c   %c   %c %6u  %6u", enq_c, deq_c, order_c, len, max_len);
+
+		if (type == ODP_QUEUE_TYPE_SCHED) {
+			sync_c = (sync == ODP_SCHED_SYNC_PARALLEL) ? 'P' :
+				 ((sync == ODP_SCHED_SYNC_ATOMIC) ? 'A' : 'O');
+			ODP_PRINT("    %c %4i", sync_c, prio);
+		}
+
+		ODP_PRINT("\n");
+	}
+
+	ODP_PRINT("\n");
+}
+
 static inline int _sched_queue_enq_multi(odp_queue_t handle,
 					 odp_buffer_hdr_t *buf_hdr[], int num)
 {
@@ -1137,7 +1228,9 @@ _odp_queue_api_fn_t _odp_queue_basic_api = {
 	.queue_to_u64 = queue_to_u64,
 	.queue_param_init = queue_param_init,
 	.queue_info = queue_info,
-	.queue_print = queue_print
+	.queue_print = queue_print,
+	.queue_print_all = queue_print_all
+
 };
 
 /* Functions towards internal components */

@@ -88,7 +88,7 @@ uint64_t odp_queue_to_u64(odp_queue_t hdl)
 
 void odp_queue_param_init(odp_queue_param_t *param)
 {
-	return _odp_queue_api->queue_param_init(param);
+	_odp_queue_api->queue_param_init(param);
 }
 
 int odp_queue_info(odp_queue_t queue, odp_queue_info_t *info)
@@ -98,7 +98,12 @@ int odp_queue_info(odp_queue_t queue, odp_queue_info_t *info)
 
 void odp_queue_print(odp_queue_t queue)
 {
-	return _odp_queue_api->queue_print(queue);
+	_odp_queue_api->queue_print(queue);
+}
+
+void odp_queue_print_all(void)
+{
+	_odp_queue_api->queue_print_all();
 }
 
 int _odp_queue_init_global(void)
