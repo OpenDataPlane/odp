@@ -37,7 +37,7 @@
 #define _ODP_HAVE_CHACHA20_POLY1305 0
 #endif
 
-#define MAX_SESSIONS 32
+#define MAX_SESSIONS 4000
 #define AES_BLOCK_SIZE 16
 #define AES_KEY_LENGTH 16
 
