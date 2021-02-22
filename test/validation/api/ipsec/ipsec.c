@@ -1154,6 +1154,7 @@ int ipsec_config(odp_instance_t ODP_UNUSED inst)
 		return 0;
 
 	odp_ipsec_config_init(&ipsec_config);
+	ipsec_config.max_num_sa = capa.max_num_sa;
 	ipsec_config.inbound_mode = suite_context.inbound_op_mode;
 	ipsec_config.outbound_mode = suite_context.outbound_op_mode;
 	ipsec_config.outbound.all_chksum = ~0;
