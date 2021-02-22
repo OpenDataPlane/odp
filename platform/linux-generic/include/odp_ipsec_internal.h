@@ -86,11 +86,6 @@ int _odp_ipsec_status_send(odp_queue_t queue,
 /* 32 is minimum required by the standard. We do not support more */
 #define IPSEC_ANTIREPLAY_WS	32
 
-/**
- * Maximum number of available SAs
- */
-#define ODP_CONFIG_IPSEC_SAS	8
-
 struct ipsec_sa_s {
 	odp_atomic_u32_t state ODP_ALIGNED_CACHE;
 
@@ -239,6 +234,9 @@ uint32_t _odp_ipsec_cipher_iv_len(odp_cipher_alg_t cipher);
 
 /* Return digest length required for the cipher for IPsec use */
 uint32_t _odp_ipsec_auth_digest_len(odp_auth_alg_t auth);
+
+/* Return the maximum number of SAs supported by the implementation */
+uint32_t _odp_ipsec_max_num_sa(void);
 
 /*
  * Get SA entry from handle without obtaining a reference

@@ -1,5 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
- * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -146,6 +146,13 @@ extern "C" {
 
 /* Enable pool statistics collection */
 #define CONFIG_POOL_STATISTICS 1
+
+/*
+ * Maximum number of IPsec SAs. The actual maximum number can be further
+ * limited by the number of sessions supported by the crypto subsystem and
+ * is reported by odp_ipsec_capability().
+ */
+#define CONFIG_IPSEC_MAX_NUM_SA 4000
 
 #ifdef __cplusplus
 }

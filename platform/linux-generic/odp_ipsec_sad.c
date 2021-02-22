@@ -1,4 +1,5 @@
 /* Copyright (c) 2017-2018, Linaro Limited
+ * Copyright (c) 2018-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -9,6 +10,7 @@
 #include <odp/api/random.h>
 #include <odp/api/shared_memory.h>
 
+#include <odp_config_internal.h>
 #include <odp_init_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_ipsec_internal.h>
@@ -75,18 +77,19 @@ typedef struct sa_thread_local_s {
 } sa_thread_local_t;
 
 typedef struct ODP_ALIGNED_CACHE ipsec_thread_local_s {
-	sa_thread_local_t sa[ODP_CONFIG_IPSEC_SAS];
+	sa_thread_local_t sa[CONFIG_IPSEC_MAX_NUM_SA];
 	uint16_t first_ipv4_id; /* first ID of current block of IDs */
 	uint16_t next_ipv4_id;  /* next ID to be used */
 } ipsec_thread_local_t;
 
 typedef struct ipsec_sa_table_t {
-	ipsec_sa_t ipsec_sa[ODP_CONFIG_IPSEC_SAS];
+	ipsec_sa_t ipsec_sa[CONFIG_IPSEC_MAX_NUM_SA];
 	ipsec_thread_local_t per_thread[ODP_THREAD_COUNT_MAX];
 	struct ODP_ALIGNED_CACHE {
 		ring_mpmc_t ipv4_id_ring;
 		uint32_t ipv4_id_data[IPV4_ID_RING_SIZE] ODP_ALIGNED_CACHE;
 	} hot;
+	uint32_t max_num_sa;
 	odp_shm_t shm;
 } ipsec_sa_table_t;
 
@@ -133,11 +136,20 @@ static void init_sa_thread_local(ipsec_sa_t *sa)
 
 int _odp_ipsec_sad_init_global(void)
 {
+	odp_crypto_capability_t crypto_capa;
+	uint32_t max_num_sa = CONFIG_IPSEC_MAX_NUM_SA;
 	odp_shm_t shm;
 	unsigned i;
 
 	if (odp_global_ro.disable.ipsec)
 		return 0;
+
+	if (odp_crypto_capability(&crypto_capa)) {
+		ODP_ERR("odp_crypto_capability() failed\n");
+		return -1;
+	}
+	if (max_num_sa > crypto_capa.max_sessions)
+		max_num_sa = crypto_capa.max_sessions;
 
 	shm = odp_shm_reserve("_odp_ipsec_sa_table",
 			      sizeof(ipsec_sa_table_t),
@@ -149,6 +161,7 @@ int _odp_ipsec_sad_init_global(void)
 	ipsec_sa_tbl = odp_shm_addr(shm);
 	memset(ipsec_sa_tbl, 0, sizeof(ipsec_sa_table_t));
 	ipsec_sa_tbl->shm = shm;
+	ipsec_sa_tbl->max_num_sa = max_num_sa;
 
 	ring_mpmc_init(&ipsec_sa_tbl->hot.ipv4_id_ring);
 	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
@@ -175,7 +188,7 @@ int _odp_ipsec_sad_init_global(void)
 				    1);
 	}
 
-	for (i = 0; i < ODP_CONFIG_IPSEC_SAS; i++) {
+	for (i = 0; i < ipsec_sa_tbl->max_num_sa; i++) {
 		ipsec_sa_t *ipsec_sa = ipsec_sa_entry(i);
 
 		ipsec_sa->ipsec_sa_hdl = ipsec_sa_index_to_handle(i);
@@ -190,7 +203,7 @@ int _odp_ipsec_sad_init_global(void)
 
 int _odp_ipsec_sad_term_global(void)
 {
-	int i;
+	uint32_t i;
 	ipsec_sa_t *ipsec_sa;
 	int ret = 0;
 	int rc = 0;
@@ -198,7 +211,7 @@ int _odp_ipsec_sad_term_global(void)
 	if (odp_global_ro.disable.ipsec)
 		return 0;
 
-	for (i = 0; i < ODP_CONFIG_IPSEC_SAS; i++) {
+	for (i = 0; i < ipsec_sa_tbl->max_num_sa; i++) {
 		ipsec_sa = ipsec_sa_entry(i);
 
 		if (odp_atomic_load_u32(&ipsec_sa->state) !=
@@ -219,12 +232,17 @@ int _odp_ipsec_sad_term_global(void)
 	return rc;
 }
 
+uint32_t _odp_ipsec_max_num_sa(void)
+{
+	return ipsec_sa_tbl->max_num_sa;
+}
+
 static ipsec_sa_t *ipsec_sa_reserve(void)
 {
-	int i;
+	uint32_t i;
 	ipsec_sa_t *ipsec_sa;
 
-	for (i = 0; i < ODP_CONFIG_IPSEC_SAS; i++) {
+	for (i = 0; i < ipsec_sa_tbl->max_num_sa; i++) {
 		uint32_t state = IPSEC_SA_STATE_FREE;
 
 		ipsec_sa = ipsec_sa_entry(i);
@@ -758,10 +776,10 @@ int odp_ipsec_sa_mtu_update(odp_ipsec_sa_t sa, uint32_t mtu)
 
 ipsec_sa_t *_odp_ipsec_sa_lookup(const ipsec_sa_lookup_t *lookup)
 {
-	int i;
+	uint32_t i;
 	ipsec_sa_t *best = NULL;
 
-	for (i = 0; i < ODP_CONFIG_IPSEC_SAS; i++) {
+	for (i = 0; i < ipsec_sa_tbl->max_num_sa; i++) {
 		ipsec_sa_t *ipsec_sa = ipsec_sa_entry(i);
 
 		if (ipsec_sa_lock(ipsec_sa) < 0)
