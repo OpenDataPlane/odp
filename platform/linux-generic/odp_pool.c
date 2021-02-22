@@ -1056,7 +1056,7 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 	return 0;
 }
 
-int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
+int _odp_buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 {
 	uint32_t pool_idx = pool->pool_idx;
 	pool_cache_t *cache = local.cache[pool_idx];
@@ -1171,7 +1171,7 @@ static inline void buffer_free_to_pool(pool_t *pool,
 		odp_atomic_inc_u64(&pool->stats.cache_free_ops);
 }
 
-void buffer_free_multi(odp_buffer_hdr_t *buf_hdr[], int num_total)
+void _odp_buffer_free_multi(odp_buffer_hdr_t *buf_hdr[], int num_total)
 {
 	pool_t *pool;
 	int num;
@@ -1210,7 +1210,7 @@ odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 	ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
 
 	pool = pool_entry_from_hdl(pool_hdl);
-	ret  = buffer_alloc_multi(pool, (odp_buffer_hdr_t **)&buf, 1);
+	ret  = _odp_buffer_alloc_multi(pool, (odp_buffer_hdr_t **)&buf, 1);
 
 	if (odp_likely(ret == 1))
 		return buf;
@@ -1226,17 +1226,17 @@ int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
 
 	pool = pool_entry_from_hdl(pool_hdl);
 
-	return buffer_alloc_multi(pool, (odp_buffer_hdr_t **)buf, num);
+	return _odp_buffer_alloc_multi(pool, (odp_buffer_hdr_t **)buf, num);
 }
 
 void odp_buffer_free(odp_buffer_t buf)
 {
-	buffer_free_multi((odp_buffer_hdr_t **)&buf, 1);
+	_odp_buffer_free_multi((odp_buffer_hdr_t **)&buf, 1);
 }
 
 void odp_buffer_free_multi(const odp_buffer_t buf[], int num)
 {
-	buffer_free_multi((odp_buffer_hdr_t **)(uintptr_t)buf, num);
+	_odp_buffer_free_multi((odp_buffer_hdr_t **)(uintptr_t)buf, num);
 }
 
 int odp_pool_capability(odp_pool_capability_t *capa)

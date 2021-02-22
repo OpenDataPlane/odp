@@ -311,7 +311,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		if (odp_unlikely(pkt_len > pkt_loop->mtu)) {
 			if (nb_tx == 0) {
-				__odp_errno = EMSGSIZE;
+				_odp_errno = EMSGSIZE;
 				return -1;
 			}
 			break;

@@ -160,8 +160,8 @@ static inline odp_buffer_hdr_t *buf_hdr_from_index_u32(uint32_t u32)
 	return buf_hdr_from_index(pool, buffer_idx);
 }
 
-int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int num);
-void buffer_free_multi(odp_buffer_hdr_t *buf_hdr[], int num_free);
+int _odp_buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int num);
+void _odp_buffer_free_multi(odp_buffer_hdr_t *buf_hdr[], int num_free);
 int _odp_buffer_is_valid(odp_buffer_t buf);
 
 #ifdef __cplusplus

@@ -300,8 +300,8 @@ static inline void packet_set_len(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 
 /* Packet alloc of pktios */
-int packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
-		       odp_packet_t pkt[], int max_num);
+int _odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
+			    odp_packet_t pkt[], int max_num);
 
 /* Perform packet parse up to a given protocol layer */
 int _odp_packet_parse_layer(odp_packet_hdr_t *pkt_hdr,

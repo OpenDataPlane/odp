@@ -11,13 +11,13 @@
  * Order matters. The first implementation to setup successfully
  * will be picked.
  * Array must be NULL terminated */
-const pktio_if_ops_t * const pktio_if_ops[]  = {
+const pktio_if_ops_t * const _odp_pktio_if_ops[]  = {
 	&_odp_loopback_pktio_ops,
 #ifdef _ODP_PKTIO_DPDK
-	&dpdk_pktio_ops,
+	&_odp_dpdk_pktio_ops,
 #endif
 #ifdef _ODP_PKTIO_NETMAP
-	&netmap_pktio_ops,
+	&_odp_netmap_pktio_ops,
 #endif
 #ifdef _ODP_PKTIO_PCAP
 	&_odp_pcap_pktio_ops,

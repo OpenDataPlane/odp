@@ -762,7 +762,7 @@ static inline void ordered_stash_release(void)
 				num_enq = 0;
 
 			ODP_DBG("Dropped %i packets\n", num - num_enq);
-			buffer_free_multi(&buf_hdr[num_enq], num - num_enq);
+			_odp_buffer_free_multi(&buf_hdr[num_enq], num - num_enq);
 		}
 	}
 	sched_local.ordered.stash_num = 0;
@@ -999,7 +999,7 @@ static inline int poll_pktin(uint32_t qi, int direct_recv,
 			num_enq = 0;
 
 		ODP_DBG("Dropped %i packets\n", num - num_enq);
-		buffer_free_multi(&b_hdr[num_enq], num - num_enq);
+		_odp_buffer_free_multi(&b_hdr[num_enq], num - num_enq);
 	}
 
 	return ret;

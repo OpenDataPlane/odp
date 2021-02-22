@@ -266,8 +266,8 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		pkt_len = hdr->caplen;
 
-		ret = packet_alloc_multi(pcap->pool, pkt_len + frame_offset,
-					 &pkt, 1);
+		ret = _odp_packet_alloc_multi(pcap->pool, pkt_len + frame_offset,
+					      &pkt, 1);
 		if (odp_unlikely(ret != 1))
 			break;
 

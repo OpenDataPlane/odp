@@ -432,8 +432,8 @@ static int pool_dequeue_bulk(struct rte_mempool *mp, void **obj_table,
 	int pkts;
 	int i;
 
-	pkts = packet_alloc_multi(pool, pool_entry->seg_len, packet_tbl,
-				  num);
+	pkts = _odp_packet_alloc_multi(pool, pool_entry->seg_len, packet_tbl,
+				       num);
 
 	if (odp_unlikely(pkts != (int)num)) {
 		if (pkts > 0)
@@ -577,10 +577,10 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	/* Allocate maximum sized packets */
 	max_len = pkt_dpdk->data_room;
 
-	num = packet_alloc_multi(pool, max_len + frame_offset,
-				 pkt_table, mbuf_num);
+	num = _odp_packet_alloc_multi(pool, max_len + frame_offset,
+				      pkt_table, mbuf_num);
 	if (num != mbuf_num) {
-		ODP_DBG("packet_alloc_multi() unable to allocate all packets: "
+		ODP_DBG("_odp_packet_alloc_multi() unable to allocate all packets: "
 			"%d/%" PRIu16 " allocated\n", num, mbuf_num);
 		for (i = num; i < mbuf_num; i++)
 			rte_pktmbuf_free(mbuf_table[i]);
@@ -805,7 +805,7 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 
 		if (odp_unlikely(pkt_len > pkt_dpdk->mtu)) {
 			if (i == 0)
-				__odp_errno = EMSGSIZE;
+				_odp_errno = EMSGSIZE;
 			goto fail;
 		}
 
@@ -999,7 +999,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 
 fail:
 	if (i == 0)
-		__odp_errno = EMSGSIZE;
+		_odp_errno = EMSGSIZE;
 	return i;
 }
 
@@ -2063,8 +2063,8 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 				}
 			}
 		}
-		if (odp_unlikely(tx_pkts == 0 && __odp_errno != 0))
-				return -1;
+		if (odp_unlikely(tx_pkts == 0 && _odp_errno != 0))
+			return -1;
 	} else {
 		if (odp_unlikely(tx_pkts < mbufs)) {
 			for (i = tx_pkts; i < mbufs; i++)
@@ -2072,7 +2072,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 		}
 
 		if (odp_unlikely(tx_pkts == 0)) {
-			if (__odp_errno != 0)
+			if (_odp_errno != 0)
 				return -1;
 		} else {
 			odp_packet_free_multi(pkt_table, tx_pkts);
@@ -2227,7 +2227,7 @@ static int dpdk_stats_reset(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
-const pktio_if_ops_t dpdk_pktio_ops = {
+const pktio_if_ops_t _odp_dpdk_pktio_ops = {
 	.name = "dpdk",
 	.init_global = dpdk_pktio_init_global,
 	.init_local = dpdk_pktio_init_local,

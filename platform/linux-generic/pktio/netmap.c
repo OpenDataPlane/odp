@@ -345,7 +345,7 @@ static int netmap_close(pktio_entry_t *pktio_entry)
 	netmap_close_descriptors(pktio_entry);
 
 	if (pkt_nm->sockfd != -1 && close(pkt_nm->sockfd) != 0) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		ODP_ERR("close(sockfd): %s\n", strerror(errno));
 		return -1;
 	}
@@ -830,8 +830,8 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 	/* Allocate maximum sized packets */
 	max_len = pkt_priv(pktio_entry)->mtu;
 
-	num = packet_alloc_multi(pool, max_len + frame_offset,
-				 pkt_tbl, slot_num);
+	num = _odp_packet_alloc_multi(pool, max_len + frame_offset,
+				      pkt_tbl, slot_num);
 
 	for (i = 0; i < num; i++) {
 		netmap_slot_t slot;
@@ -1121,7 +1121,7 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 
 		if (pkt_len > pkt_nm->mtu) {
 			if (nb_tx == 0)
-				__odp_errno = EMSGSIZE;
+				_odp_errno = EMSGSIZE;
 			break;
 		}
 		for (i = 0; i < NM_INJECT_RETRIES; i++) {
@@ -1158,7 +1158,7 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 		odp_ticketlock_unlock(&pkt_nm->tx_desc_ring[index].s.lock);
 
 	if (odp_unlikely(nb_tx == 0)) {
-		if (__odp_errno != 0)
+		if (_odp_errno != 0)
 			return -1;
 	} else {
 		if (odp_unlikely(tx_ts_idx && nb_tx >= tx_ts_idx))
@@ -1200,7 +1200,7 @@ static int netmap_promisc_mode_set(pktio_entry_t *pktio_entry,
 				   odp_bool_t enable)
 {
 	if (pkt_priv(pktio_entry)->is_virtual) {
-		__odp_errno = ENOTSUP;
+		_odp_errno = ENOTSUP;
 		return -1;
 	}
 
@@ -1273,7 +1273,7 @@ static int netmap_init_global(void)
 	return 0;
 }
 
-const pktio_if_ops_t netmap_pktio_ops = {
+const pktio_if_ops_t _odp_netmap_pktio_ops = {
 	.name = "netmap",
 	.print = netmap_print,
 	.init_global = netmap_init_global,
