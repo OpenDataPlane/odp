@@ -375,6 +375,54 @@ uint64_t odp_timer_ns_to_tick(odp_timer_pool_t timer_pool, uint64_t ns);
 uint64_t odp_timer_current_tick(odp_timer_pool_t timer_pool);
 
 /**
+ * Timer tick information
+ */
+typedef struct odp_timer_tick_info_t {
+	/**
+	 * Timer tick frequency in hertz
+	 *
+	 * Timer tick frequency expressed as a fractional number. The integer part contains
+	 * full hertz. The fraction part (numerator / denominator) contains parts of
+	 * a hertz to be added with the integer.
+	 *
+	 * For example, a timer tick frequency of 333 333 and 1/3 Hz could be presented with
+	 * these values: integer = 333 333, numer = 1, denom = 3. Implementation may choose numer
+	 * and denom values freely.
+	 */
+	odp_fract_u64_t freq;
+
+	/**
+	 * One timer tick in nanoseconds
+	 *
+	 * Nanoseconds per tick is expressed as a fractional number. The integer part contains
+	 * full nanoseconds. The fraction part (numerator / denominator) contains parts of
+	 * a nanosecond to be added with the integer.
+	 *
+	 * For example, a timer tick period of 3.125 nanoseconds (320MHz) could be presented with
+	 * these values: integer = 3, numer = 125 000 000, denom = 1 000 000 000. Implementation
+	 * may choose numer and denom values freely.
+	 */
+	odp_fract_u64_t nsec;
+
+	/**
+	 * One timer tick in source clock cycles
+	 *
+	 * The clock cycle count is expressed as a fractional number. The integer part contains
+	 * full clock cycles. The fraction part (numerator / denominator) contains parts of
+	 * a clock cycle to be added with the integer.
+	 *
+	 * For example, a timer tick period of 42 and 1/3 source clock cycles could be presented
+	 * with these values: integer = 42, numer = 1, denom = 3. Implementation may choose numer
+	 * and denom values freely.
+	 *
+	 * The value is zero, when there is no direct connection between tick and the source
+	 * clock signal.
+	 */
+	odp_fract_u64_t clk_cycle;
+
+} odp_timer_tick_info_t;
+
+/**
  * ODP timer pool information and configuration
  */
 typedef struct {
@@ -389,6 +437,9 @@ typedef struct {
 
 	/** Name of timer pool */
 	const char *name;
+
+	/** Timer pool tick information */
+	odp_timer_tick_info_t tick_info;
 
 } odp_timer_pool_info_t;
 
