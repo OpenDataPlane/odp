@@ -373,3 +373,16 @@ __LIB__libodp_linux_la_LIBADD += $(TIMER_LIBS)
 if ODP_PKTIO_PCAP
 __LIB__libodp_linux_la_LIBADD += $(PCAP_LIBS)
 endif
+
+CHECK_GLOBALS_REGEX = " (odp_|_odp_|_deprecated_odp_|miniz_|mz_|tdefl_|tinfl_|mp_hdlr_init_odp_pool_ops)"
+
+TESTS_ENVIRONMENT = \
+	LIBTOOL="$(LIBTOOL)" \
+	NM="$(NM)" \
+	LIB="$(LIB)" \
+	lib_LTLIBRARIES="$(lib_LTLIBRARIES)" \
+	CHECK_GLOBALS_REGEX=$(CHECK_GLOBALS_REGEX)
+
+dist_check_SCRIPTS = check-globals.sh
+
+TESTS = $(dist_check_SCRIPTS)
