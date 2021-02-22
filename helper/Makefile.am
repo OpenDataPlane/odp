@@ -79,3 +79,16 @@ __LIB__libodphelper_la_LIBADD = $(PTHREAD_LIBS)
 __LIB__libodphelper_la_LIBADD += $(LIBCLI_LIBS)
 
 lib_LTLIBRARIES = $(LIB)/libodphelper.la
+
+CHECK_GLOBALS_REGEX = " odph_"
+
+TESTS_ENVIRONMENT = \
+	LIBTOOL="$(LIBTOOL)" \
+	NM="$(NM)" \
+	LIB="$(LIB)" \
+	lib_LTLIBRARIES="$(lib_LTLIBRARIES)" \
+	CHECK_GLOBALS_REGEX=$(CHECK_GLOBALS_REGEX)
+
+dist_check_SCRIPTS = check-globals.sh
+
+TESTS = $(dist_check_SCRIPTS)
