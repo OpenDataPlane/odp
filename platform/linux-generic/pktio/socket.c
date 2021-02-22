@@ -88,7 +88,7 @@ static int sock_close(pktio_entry_t *pktio_entry)
 	pkt_sock_t *pkt_sock = pkt_priv(pktio_entry);
 
 	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		ODP_ERR("close(sockfd): %s\n", strerror(errno));
 		return -1;
 	}
@@ -120,7 +120,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 
 	sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (sockfd == -1) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		ODP_ERR("socket(): %s\n", strerror(errno));
 		goto error;
 	}
@@ -131,7 +131,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	snprintf(ethreq.ifr_name, IF_NAMESIZE, "%s", netdev);
 	err = ioctl(sockfd, SIOCGIFINDEX, &ethreq);
 	if (err != 0) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		ODP_ERR("ioctl(SIOCGIFINDEX): %s: \"%s\".\n", strerror(errno),
 			ethreq.ifr_name);
 		goto error;
@@ -155,7 +155,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	sa_ll.sll_ifindex = if_idx;
 	sa_ll.sll_protocol = htons(ETH_P_ALL);
 	if (bind(sockfd, (struct sockaddr *)&sa_ll, sizeof(sa_ll)) < 0) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		ODP_ERR("bind(to IF): %s\n", strerror(errno));
 		goto error;
 	}
@@ -230,7 +230,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	memset(msgvec, 0, sizeof(msgvec));
 
-	nb_pkts = packet_alloc_multi(pool, alloc_len, pkt_table, num);
+	nb_pkts = _odp_packet_alloc_multi(pool, alloc_len, pkt_table, num);
 	for (i = 0; i < nb_pkts; i++) {
 		if (frame_offset)
 			pull_head(packet_hdr(pkt_table[i]), frame_offset);
@@ -454,7 +454,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		ret = sendmmsg(sockfd, &msgvec[i], num - i, MSG_DONTWAIT);
 		if (odp_unlikely(ret <= -1)) {
 			if (i == 0 && SOCK_ERR_REPORT(errno)) {
-				__odp_errno = errno;
+				_odp_errno = errno;
 				ODP_ERR("sendmmsg(): %s\n", strerror(errno));
 				odp_ticketlock_unlock(&pkt_sock->tx_lock);
 				return -1;

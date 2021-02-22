@@ -48,13 +48,13 @@ static struct ethtool_gstrings *get_stringset(int fd, struct ifreq *ifr)
 		drvinfo.cmd = ETHTOOL_GDRVINFO;
 		ifr->ifr_data = (void *)&drvinfo;
 		if (ioctl(fd, SIOCETHTOOL, ifr)) {
-			__odp_errno = errno;
+			_odp_errno = errno;
 			ODP_ERR("Cannot get stats information\n");
 			return NULL;
 		}
 		len = *(uint32_t *)(void *)((char *)&drvinfo + drvinfo_offset);
 	} else {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		return NULL;
 	}
 
@@ -74,7 +74,7 @@ static struct ethtool_gstrings *get_stringset(int fd, struct ifreq *ifr)
 	strings->len = len;
 	ifr->ifr_data = (void *)strings;
 	if (ioctl(fd, SIOCETHTOOL, ifr)) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		ODP_ERR("Cannot get stats information\n");
 		free(strings);
 		return NULL;
@@ -114,7 +114,7 @@ static int ethtool_stats(int fd, struct ifreq *ifr, odp_pktio_stats_t *stats)
 	ifr->ifr_data = (void *)estats;
 	err = ioctl(fd, SIOCETHTOOL, ifr);
 	if (err < 0) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		free(strings);
 		free(estats);
 		return -1;

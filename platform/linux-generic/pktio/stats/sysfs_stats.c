@@ -19,7 +19,7 @@ static int sysfs_get_val(const char *fname, uint64_t *val)
 
 	file = fopen(fname, "rt");
 	if (file == NULL) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		/* do not print debug err if sysfs is not supported by
 		 * kernel driver.
 		 */

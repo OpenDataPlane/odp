@@ -126,9 +126,9 @@ int _odp_pktio_init_global(void)
 		_odp_pktio_entry_ptr[i] = pktio_entry;
 	}
 
-	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
-		if (pktio_if_ops[pktio_if]->init_global)
-			if (pktio_if_ops[pktio_if]->init_global()) {
+	for (pktio_if = 0; _odp_pktio_if_ops[pktio_if]; ++pktio_if) {
+		if (_odp_pktio_if_ops[pktio_if]->init_global)
+			if (_odp_pktio_if_ops[pktio_if]->init_global()) {
 				ODP_ERR("failed to initialized pktio type %d",
 					pktio_if);
 				return -1;
@@ -149,9 +149,9 @@ int _odp_pktio_init_local(void)
 {
 	int pktio_if;
 
-	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
-		if (pktio_if_ops[pktio_if]->init_local)
-			if (pktio_if_ops[pktio_if]->init_local()) {
+	for (pktio_if = 0; _odp_pktio_if_ops[pktio_if]; ++pktio_if) {
+		if (_odp_pktio_if_ops[pktio_if]->init_local)
+			if (_odp_pktio_if_ops[pktio_if]->init_local()) {
 				ODP_ERR("failed to initialized pktio type %d",
 					pktio_if);
 				return -1;
@@ -263,8 +263,8 @@ static const char *strip_pktio_type(const char *name, char *type_out)
 		if_name++;
 
 		/* Match if_type to enabled pktio devices */
-		for (pktio_if = 0; pktio_if_ops[pktio_if]; pktio_if++) {
-			if (!strcmp(pktio_type, pktio_if_ops[pktio_if]->name)) {
+		for (pktio_if = 0; _odp_pktio_if_ops[pktio_if]; pktio_if++) {
+			if (!strcmp(pktio_type, _odp_pktio_if_ops[pktio_if]->name)) {
 				if (type_out)
 					strcpy(type_out, pktio_type);
 				/* Some pktio devices expect device names to
@@ -328,14 +328,14 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 
 	odp_pktio_config_init(&pktio_entry->s.config);
 
-	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
+	for (pktio_if = 0; _odp_pktio_if_ops[pktio_if]; ++pktio_if) {
 		/* Only use explicitly defined pktio type */
 		if (strlen(pktio_type) &&
-		    strcmp(pktio_if_ops[pktio_if]->name, pktio_type))
+		    strcmp(_odp_pktio_if_ops[pktio_if]->name, pktio_type))
 			continue;
 
-		ret = pktio_if_ops[pktio_if]->open(hdl, pktio_entry, if_name,
-						   pool);
+		ret = _odp_pktio_if_ops[pktio_if]->open(hdl, pktio_entry, if_name,
+							pool);
 		if (!ret)
 			break;
 	}
@@ -352,7 +352,7 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	snprintf(pktio_entry->s.full_name,
 		 sizeof(pktio_entry->s.full_name), "%s", name);
 	pktio_entry->s.state = PKTIO_STATE_OPENED;
-	pktio_entry->s.ops = pktio_if_ops[pktio_if];
+	pktio_entry->s.ops = _odp_pktio_if_ops[pktio_if];
 	unlock_entry(pktio_entry);
 
 	return hdl;
@@ -400,7 +400,7 @@ odp_pktio_t odp_pktio_open(const char *name, odp_pool_t pool,
 	hdl = odp_pktio_lookup(name);
 	if (hdl != ODP_PKTIO_INVALID) {
 		/* interface is already open */
-		__odp_errno = EEXIST;
+		_odp_errno = EEXIST;
 		return ODP_PKTIO_INVALID;
 	}
 
@@ -1062,7 +1062,7 @@ static odp_buffer_hdr_t *pktin_dequeue(odp_queue_t queue)
 
 			ODP_DBG("Interface %s dropped %i packets\n",
 				entry->s.name, num - num_enq);
-			buffer_free_multi(&hdr_tbl[num_enq + 1], num - num_enq);
+			_odp_buffer_free_multi(&hdr_tbl[num_enq + 1], num - num_enq);
 		}
 	}
 
@@ -1116,7 +1116,7 @@ static int pktin_deq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
 
 			ODP_DBG("Interface %s dropped %i packets\n",
 				entry->s.name, j - num_enq);
-			buffer_free_multi(&buf_hdr[num_enq], j - num_enq);
+			_odp_buffer_free_multi(&buf_hdr[num_enq], j - num_enq);
 		}
 	}
 
@@ -1742,9 +1742,9 @@ int _odp_pktio_term_global(void)
 		unlock_entry(pktio_entry);
 	}
 
-	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
-		if (pktio_if_ops[pktio_if]->term)
-			if (pktio_if_ops[pktio_if]->term())
+	for (pktio_if = 0; _odp_pktio_if_ops[pktio_if]; ++pktio_if) {
+		if (_odp_pktio_if_ops[pktio_if]->term)
+			if (_odp_pktio_if_ops[pktio_if]->term())
 				ODP_ABORT("failed to terminate pktio type %d",
 					  pktio_if);
 	}

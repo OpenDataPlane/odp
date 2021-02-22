@@ -510,7 +510,7 @@ static inline odp_timer_t timer_alloc(timer_pool_t *tp, odp_queue_t queue, const
 		/* Add timer to queue */
 		_odp_queue_fn->timer_add(queue);
 	} else {
-		__odp_errno = ENFILE; /* Reusing file table overflow */
+		_odp_errno = ENFILE; /* Reusing file table overflow */
 		hdl = ODP_TIMER_INVALID;
 	}
 	odp_spinlock_unlock(&tp->lock);
@@ -966,7 +966,7 @@ static inline void timer_pool_scan_inline(int num, odp_time_t now)
 	}
 }
 
-void _timer_run_inline(int dec)
+void _odp_timer_run_inline(int dec)
 {
 	odp_time_t now;
 	int num = timer_global->highest_tp_idx + 1;
@@ -1284,19 +1284,19 @@ odp_timer_pool_t odp_timer_pool_create(const char *name,
 
 	if ((param->res_ns && param->res_hz) ||
 	    (param->res_ns == 0 && param->res_hz == 0)) {
-		__odp_errno = EINVAL;
+		_odp_errno = EINVAL;
 		return ODP_TIMER_POOL_INVALID;
 	}
 
 	if (param->res_hz == 0 &&
 	    param->res_ns < timer_global->highest_res_ns) {
-		__odp_errno = EINVAL;
+		_odp_errno = EINVAL;
 		return ODP_TIMER_POOL_INVALID;
 	}
 
 	if (param->res_ns == 0 &&
 	    param->res_hz > timer_global->highest_res_hz) {
-		__odp_errno = EINVAL;
+		_odp_errno = EINVAL;
 		return ODP_TIMER_POOL_INVALID;
 	}
 

@@ -265,8 +265,8 @@ static inline void _odp_pktio_tx_ts_set(pktio_entry_t *entry)
 	odp_atomic_store_u64(&entry->s.tx_ts, ts_val.u64);
 }
 
-extern const pktio_if_ops_t netmap_pktio_ops;
-extern const pktio_if_ops_t dpdk_pktio_ops;
+extern const pktio_if_ops_t _odp_netmap_pktio_ops;
+extern const pktio_if_ops_t _odp_dpdk_pktio_ops;
 extern const pktio_if_ops_t _odp_sock_mmsg_pktio_ops;
 extern const pktio_if_ops_t _odp_sock_mmap_pktio_ops;
 extern const pktio_if_ops_t _odp_loopback_pktio_ops;
@@ -276,7 +276,7 @@ extern const pktio_if_ops_t _odp_pcap_pktio_ops;
 extern const pktio_if_ops_t _odp_tap_pktio_ops;
 extern const pktio_if_ops_t _odp_null_pktio_ops;
 extern const pktio_if_ops_t _odp_ipc_pktio_ops;
-extern const pktio_if_ops_t * const pktio_if_ops[];
+extern const pktio_if_ops_t * const _odp_pktio_if_ops[];
 
 /**
  * Try interrupt-driven receive

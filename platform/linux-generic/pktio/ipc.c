@@ -130,7 +130,7 @@ static ring_ptr_t *_ring_create(const char *name, uint32_t count,
 	/* count must be a power of 2 */
 	if (!CHECK_IS_POWER2(count)) {
 		ODP_ERR("Requested size is invalid, must be a power of 2\n");
-		__odp_errno = EINVAL;
+		_odp_errno = EINVAL;
 		return NULL;
 	}
 
@@ -145,7 +145,7 @@ static ring_ptr_t *_ring_create(const char *name, uint32_t count,
 		ring_ptr_init(r);
 
 	} else {
-		__odp_errno = ENOMEM;
+		_odp_errno = ENOMEM;
 		ODP_ERR("Cannot reserve memory\n");
 	}
 

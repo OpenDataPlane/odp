@@ -57,7 +57,7 @@ int _odp_mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[])
 	snprintf(ethreq.ifr_name, IF_NAMESIZE, "%s", name);
 	ret = ioctl(fd, SIOCGIFHWADDR, &ethreq);
 	if (ret != 0) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		ODP_ERR("ioctl(SIOCGIFHWADDR): %s: \"%s\".\n", strerror(errno),
 			ethreq.ifr_name);
 		return -1;
@@ -82,7 +82,7 @@ uint32_t _odp_mtu_get_fd(int fd, const char *name)
 	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
 	ret = ioctl(fd, SIOCGIFMTU, &ifr);
 	if (ret < 0) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		ODP_ERR("ioctl(SIOCGIFMTU): %s: \"%s\".\n", strerror(errno),
 			ifr.ifr_name);
 		return 0;
@@ -106,7 +106,7 @@ int _odp_mtu_set_fd(int fd, const char *name, int mtu)
 
 	ret = ioctl(fd, SIOCSIFMTU, &ifr);
 	if (ret < 0) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		ODP_ERR("ioctl(SIOCSIFMTU): %s: \"%s\".\n", strerror(errno),
 			ifr.ifr_name);
 		return -1;
@@ -127,7 +127,7 @@ int _odp_promisc_mode_set_fd(int fd, const char *name, int enable)
 	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
 	ret = ioctl(fd, SIOCGIFFLAGS, &ifr);
 	if (ret < 0) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		ODP_DBG("ioctl(SIOCGIFFLAGS): %s: \"%s\".\n", strerror(errno),
 			ifr.ifr_name);
 		return -1;
@@ -140,7 +140,7 @@ int _odp_promisc_mode_set_fd(int fd, const char *name, int enable)
 
 	ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
 	if (ret < 0) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		ODP_DBG("ioctl(SIOCSIFFLAGS): %s: \"%s\".\n", strerror(errno),
 			ifr.ifr_name);
 		return -1;
@@ -161,7 +161,7 @@ int _odp_promisc_mode_get_fd(int fd, const char *name)
 	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
 	ret = ioctl(fd, SIOCGIFFLAGS, &ifr);
 	if (ret < 0) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		ODP_DBG("ioctl(SIOCGIFFLAGS): %s: \"%s\".\n", strerror(errno),
 			ifr.ifr_name);
 		return -1;
@@ -178,7 +178,7 @@ int _odp_link_status_fd(int fd, const char *name)
 	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
 	ret = ioctl(fd, SIOCGIFFLAGS, &ifr);
 	if (ret < 0) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		ODP_DBG("ioctl(SIOCGIFFLAGS): %s: \"%s\".\n", strerror(errno),
 			ifr.ifr_name);
 		return ODP_PKTIO_LINK_STATUS_UNKNOWN;
@@ -206,7 +206,7 @@ int _odp_link_info_fd(int fd, const char *name, odp_pktio_link_info_t *info)
 	/* Link pause status */
 	ifr.ifr_data = (void *)&pcmd;
 	if (ioctl(fd, SIOCETHTOOL, &ifr) && errno != EOPNOTSUPP) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		ODP_ERR("ioctl(SIOCETHTOOL): %s: \"%s\".\n", strerror(errno),
 			ifr.ifr_name);
 		return -1;
@@ -219,7 +219,7 @@ int _odp_link_info_fd(int fd, const char *name, odp_pktio_link_info_t *info)
 
 		ifr.ifr_data = (void *)&ecmd_old;
 		if (ioctl(fd, SIOCETHTOOL, &ifr) < 0) {
-			__odp_errno = errno;
+			_odp_errno = errno;
 			ODP_ERR("ioctl(SIOCETHTOOL): %s: \"%s\".\n", strerror(errno), ifr.ifr_name);
 			return -1;
 		}
@@ -277,7 +277,7 @@ int _odp_link_info_fd(int fd, const char *name, odp_pktio_link_info_t *info)
 	*ecmd = hcmd;
 	ifr.ifr_data = (void *)ecmd;
 	if (ioctl(fd, SIOCETHTOOL, &ifr) < 0) {
-		__odp_errno = errno;
+		_odp_errno = errno;
 		ODP_ERR("ioctl(SIOCETHTOOL): %s: \"%s\".\n", strerror(errno),
 			ifr.ifr_name);
 		return -1;

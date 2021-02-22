@@ -9,24 +9,24 @@
 #include <stdio.h>
 #include <odp_debug_internal.h>
 
-__thread int __odp_errno;
+__thread int _odp_errno;
 
 int odp_errno(void)
 {
-	return __odp_errno;
+	return _odp_errno;
 }
 
 void odp_errno_zero(void)
 {
-	__odp_errno = 0;
+	_odp_errno = 0;
 }
 
 void odp_errno_print(const char *str)
 {
 	if (str != NULL)
-		ODP_PRINT("%s %s\n", str, strerror(__odp_errno));
+		ODP_PRINT("%s %s\n", str, strerror(_odp_errno));
 	else
-		ODP_PRINT("%s\n", strerror(__odp_errno));
+		ODP_PRINT("%s\n", strerror(_odp_errno));
 }
 
 const char *odp_errno_str(int errnum)

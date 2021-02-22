@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-extern __thread int __odp_errno;
+extern __thread int _odp_errno;
 
 #ifdef __cplusplus
 }
