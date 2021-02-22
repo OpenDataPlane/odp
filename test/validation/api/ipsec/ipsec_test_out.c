@@ -1,6 +1,6 @@
 /* Copyright (c) 2017-2018, Linaro Limited
  * Copyright (c) 2020, Marvell
- * Copyright (c) 2020, Nokia
+ * Copyright (c) 2020-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -1582,6 +1582,126 @@ static void test_udp_encap(void)
 	printf("\n  ");
 }
 
+static void test_max_num_sa(void)
+{
+	odp_ipsec_capability_t capa;
+	uint32_t sa_pairs;
+	odp_bool_t odd = false;
+	uint32_t n;
+	uint8_t cipher_key_data[128 / 8]; /* 128 bit key for AES */
+	uint8_t auth_key_data[160 / 8];   /* 160 bit key for SHA-1 */
+	odp_crypto_key_t cipher_key;
+	odp_crypto_key_t auth_key;
+	uint32_t tun_src;
+	uint32_t tun_dst;
+	odp_ipsec_tunnel_param_t tun = {
+		.type = ODP_IPSEC_TUNNEL_IPV4,
+		.ipv4.src_addr = &tun_src,
+		.ipv4.dst_addr = &tun_dst,
+		.ipv4.ttl = 64,
+	};
+	odp_ipsec_sa_param_t param;
+	const uint32_t spi_start = 256;
+	odp_ipsec_sa_t sa_odd = ODP_IPSEC_SA_INVALID;
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_icmp_0,
+		.flags = {
+			/* Test lookup now that we have lots of SAs */
+			.lookup = 1,
+		},
+		.num_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
+			  .pkt_res = &pkt_ipv4_icmp_0 },
+		},
+		.in = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
+			  .pkt_res = &pkt_ipv4_icmp_0 },
+		},
+	};
+
+	CU_ASSERT_FATAL(odp_ipsec_capability(&capa) == 0);
+	sa_pairs = capa.max_num_sa / 2;
+	if (capa.max_num_sa > 2 && capa.max_num_sa % 2)
+		odd = true;
+
+	odp_ipsec_sa_t sa_out[sa_pairs];
+	odp_ipsec_sa_t sa_in[sa_pairs];
+
+	memset(cipher_key_data, 0xa5, sizeof(cipher_key_data));
+	cipher_key.data = cipher_key_data;
+	cipher_key.length = sizeof(cipher_key_data);
+
+	memset(auth_key_data, 0x5a, sizeof(auth_key_data));
+	auth_key.data = auth_key_data;
+	auth_key.length = sizeof(auth_key_data);
+
+	for (n = 0; n < sa_pairs; n++) {
+		/* Make keys unique */
+		if (cipher_key.length > sizeof(n))
+			memcpy(cipher_key.data, &n, sizeof(n));
+		if (auth_key.length > sizeof(n))
+			memcpy(auth_key.data, &n, sizeof(n));
+
+		/* These are for outbound SAs only */
+		tun_src = 0x0a000000 + n;
+		tun_dst = 0x0a800000 + n;
+
+		ipsec_sa_param_fill(&param,
+				    false, false, spi_start + n, &tun,
+				    ODP_CIPHER_ALG_AES_CBC, &cipher_key,
+				    ODP_AUTH_ALG_SHA1_HMAC, &auth_key,
+				    NULL, NULL);
+		sa_out[n] = odp_ipsec_sa_create(&param);
+		CU_ASSERT_FATAL(sa_out[n] != ODP_IPSEC_SA_INVALID);
+
+		ipsec_sa_param_fill(&param,
+				    true, false, spi_start + n, &tun,
+				    ODP_CIPHER_ALG_AES_CBC, &cipher_key,
+				    ODP_AUTH_ALG_SHA1_HMAC, &auth_key,
+				    NULL, NULL);
+		sa_in[n] = odp_ipsec_sa_create(&param);
+		CU_ASSERT_FATAL(sa_in[n] != ODP_IPSEC_SA_INVALID);
+	}
+
+	n = sa_pairs - 1;
+	if (odd) {
+		/*
+		 * We have an odd number of max SAs. Let's create a similar
+		 * SA as the last created outbound SA and test it against
+		 * the last created inbound SA.
+		 */
+		tun_src = 0x0a000000 + n;
+		tun_dst = 0x0a800000 + n;
+
+		ipsec_sa_param_fill(&param,
+				    false, false, spi_start + n, &tun,
+				    ODP_CIPHER_ALG_AES_CBC, &cipher_key,
+				    ODP_AUTH_ALG_SHA1_HMAC, &auth_key,
+				    NULL, NULL);
+		sa_odd = odp_ipsec_sa_create(&param);
+		CU_ASSERT_FATAL(sa_odd != ODP_IPSEC_SA_INVALID);
+
+		ipsec_check_out_in_one(&test, sa_odd, sa_in[n]);
+	}
+
+	for (n = 0; n < sa_pairs; n++)
+		ipsec_check_out_in_one(&test, sa_out[n], sa_in[n]);
+
+	for (n = 0; n < sa_pairs; n++) {
+		ipsec_sa_destroy(sa_out[n]);
+		ipsec_sa_destroy(sa_in[n]);
+	}
+	if (odd)
+		ipsec_sa_destroy(sa_odd);
+}
+
 odp_testinfo_t ipsec_out_suite[] = {
 	ODP_TEST_INFO(ipsec_test_capability),
 	ODP_TEST_INFO(ipsec_test_default_values),
@@ -1643,5 +1763,7 @@ odp_testinfo_t ipsec_out_suite[] = {
 	ODP_TEST_INFO(test_ah_out_in_all),
 	ODP_TEST_INFO(test_ipsec_stats),
 	ODP_TEST_INFO(test_udp_encap),
+	ODP_TEST_INFO_CONDITIONAL(test_max_num_sa,
+				  ipsec_check_esp_aes_cbc_128_sha1),
 	ODP_TEST_INFO_NULL,
 };
