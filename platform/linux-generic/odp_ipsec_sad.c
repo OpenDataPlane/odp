@@ -84,13 +84,13 @@ typedef struct ODP_ALIGNED_CACHE ipsec_thread_local_s {
 
 typedef struct ipsec_sa_table_t {
 	ipsec_sa_t ipsec_sa[CONFIG_IPSEC_MAX_NUM_SA];
-	ipsec_thread_local_t per_thread[ODP_THREAD_COUNT_MAX];
 	struct ODP_ALIGNED_CACHE {
 		ring_mpmc_t ipv4_id_ring;
 		uint32_t ipv4_id_data[IPV4_ID_RING_SIZE] ODP_ALIGNED_CACHE;
 	} hot;
 	uint32_t max_num_sa;
 	odp_shm_t shm;
+	ipsec_thread_local_t per_thread[];
 } ipsec_sa_table_t;
 
 static ipsec_sa_table_t *ipsec_sa_tbl;
@@ -125,8 +125,9 @@ static void init_sa_thread_local(ipsec_sa_t *sa)
 {
 	sa_thread_local_t *sa_tl;
 	int n;
+	int thread_count_max = odp_thread_count_max();
 
-	for (n = 0; n < ODP_THREAD_COUNT_MAX; n++) {
+	for (n = 0; n < thread_count_max; n++) {
 		sa_tl = &ipsec_sa_tbl->per_thread[n].sa[sa->ipsec_sa_idx];
 		odp_atomic_init_u32(&sa_tl->packet_quota, 0);
 		sa_tl->byte_quota = 0;
@@ -138,6 +139,8 @@ int _odp_ipsec_sad_init_global(void)
 {
 	odp_crypto_capability_t crypto_capa;
 	uint32_t max_num_sa = CONFIG_IPSEC_MAX_NUM_SA;
+	uint64_t shm_size;
+	unsigned int thread_count_max = odp_thread_count_max();
 	odp_shm_t shm;
 	unsigned i;
 
@@ -151,8 +154,11 @@ int _odp_ipsec_sad_init_global(void)
 	if (max_num_sa > crypto_capa.max_sessions)
 		max_num_sa = crypto_capa.max_sessions;
 
+	shm_size = sizeof(ipsec_sa_table_t) +
+		sizeof(ipsec_thread_local_t) * thread_count_max;
+
 	shm = odp_shm_reserve("_odp_ipsec_sa_table",
-			      sizeof(ipsec_sa_table_t),
+			      shm_size,
 			      ODP_CACHE_LINE_SIZE,
 			      0);
 	if (shm == ODP_SHM_INVALID)
@@ -164,7 +170,7 @@ int _odp_ipsec_sad_init_global(void)
 	ipsec_sa_tbl->max_num_sa = max_num_sa;
 
 	ring_mpmc_init(&ipsec_sa_tbl->hot.ipv4_id_ring);
-	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
+	for (i = 0; i < thread_count_max; i++) {
 		/*
 		 * Make the current ID block fully used, forcing allocation
 		 * of a fresh block at first use.
@@ -969,6 +975,7 @@ uint16_t _odp_ipsec_sa_alloc_ipv4_id(ipsec_sa_t *ipsec_sa)
 
 uint64_t _odp_ipsec_sa_stats_pkts(ipsec_sa_t *sa)
 {
+	int thread_count_max = odp_thread_count_max();
 	uint64_t tl_pkt_quota = 0;
 	sa_thread_local_t *sa_tl;
 	int n;
@@ -984,7 +991,7 @@ uint64_t _odp_ipsec_sa_stats_pkts(ipsec_sa_t *sa)
 	 * need to be accounted for.
 	 */
 
-	for (n = 0; n < ODP_THREAD_COUNT_MAX; n++) {
+	for (n = 0; n < thread_count_max; n++) {
 		sa_tl = &ipsec_sa_tbl->per_thread[n].sa[sa->ipsec_sa_idx];
 		tl_pkt_quota += odp_atomic_load_u32(&sa_tl->packet_quota);
 	}
