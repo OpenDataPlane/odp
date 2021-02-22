@@ -1,5 +1,5 @@
 /* Copyright (c) 2017-2018, Linaro Limited
- * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2018-2021, Nokia
  * Copyright (c) 2020, Marvell
  * All rights reserved.
  *
@@ -16,6 +16,7 @@
 #include "test_vectors.h"
 
 struct suite_context_s suite_context;
+static odp_ipsec_capability_t capa;
 
 #define PKT_POOL_NUM  64
 
@@ -123,11 +124,6 @@ int ipsec_check(odp_bool_t ah,
 		odp_auth_alg_t auth,
 		uint32_t auth_bits)
 {
-	odp_ipsec_capability_t capa;
-
-	if (odp_ipsec_capability(&capa) < 0)
-		return ODP_TEST_INACTIVE;
-
 	if ((ODP_IPSEC_OP_MODE_SYNC == suite_context.inbound_op_mode &&
 	     ODP_SUPPORT_NO == capa.op_mode_sync) ||
 	    (ODP_IPSEC_OP_MODE_SYNC == suite_context.outbound_op_mode &&
@@ -287,9 +283,10 @@ void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
 	odp_ipsec_sa_param_init(param);
 	param->dir = in ? ODP_IPSEC_DIR_INBOUND :
 			  ODP_IPSEC_DIR_OUTBOUND;
-	if (in)
+	if (in) {
 		param->inbound.lookup_mode = ODP_IPSEC_LOOKUP_SPI;
-
+		param->inbound.antireplay_ws = capa.max_antireplay_ws;
+	}
 	param->proto = ah ? ODP_IPSEC_AH :
 			    ODP_IPSEC_ESP;
 
@@ -320,6 +317,18 @@ void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
 
 	if (auth_key_extra)
 		param->crypto.auth_key_extra = *auth_key_extra;
+
+	/*
+	 * Let's use arbitrary non-zero life time values to get life time
+	 * checking code paths exercised. Let's not use very small values
+	 * to avoid unexpected expiration with implementations that do
+	 * not have packet-accurate life time checking but may report
+	 * expiration a bit early.
+	 */
+	param->lifetime.soft_limit.bytes = 900 * 1000;
+	param->lifetime.hard_limit.bytes = 1000 * 1000;
+	param->lifetime.soft_limit.packets = 9000 * 1000;
+	param->lifetime.hard_limit.packets = 10000 * 1000;
 }
 
 void ipsec_sa_destroy(odp_ipsec_sa_t sa)
@@ -1130,7 +1139,6 @@ int ipsec_init(odp_instance_t *inst, odp_ipsec_op_mode_t mode)
 
 int ipsec_config(odp_instance_t ODP_UNUSED inst)
 {
-	odp_ipsec_capability_t capa;
 	odp_ipsec_config_t ipsec_config;
 
 	if (odp_ipsec_capability(&capa) < 0)
