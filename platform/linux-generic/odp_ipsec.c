@@ -1,4 +1,5 @@
 /* Copyright (c) 2017-2018, Linaro Limited
+ * Copyright (c) 2018-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -121,7 +122,7 @@ int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 
 	capa->proto_ah = ODP_SUPPORT_YES;
 
-	capa->max_num_sa = ODP_CONFIG_IPSEC_SAS;
+	capa->max_num_sa = _odp_ipsec_max_num_sa();
 
 	capa->max_antireplay_ws = IPSEC_ANTIREPLAY_WS;
 
@@ -215,7 +216,7 @@ void odp_ipsec_config_init(odp_ipsec_config_t *config)
 	memset(config, 0, sizeof(odp_ipsec_config_t));
 	config->inbound_mode = ODP_IPSEC_OP_MODE_SYNC;
 	config->outbound_mode = ODP_IPSEC_OP_MODE_SYNC;
-	config->max_num_sa = ODP_CONFIG_IPSEC_SAS;
+	config->max_num_sa = _odp_ipsec_max_num_sa();
 	config->inbound.default_queue = ODP_QUEUE_INVALID;
 	config->inbound.lookup.min_spi = 0;
 	config->inbound.lookup.max_spi = UINT32_MAX;
@@ -224,7 +225,7 @@ void odp_ipsec_config_init(odp_ipsec_config_t *config)
 
 int odp_ipsec_config(const odp_ipsec_config_t *config)
 {
-	if (ODP_CONFIG_IPSEC_SAS < config->max_num_sa)
+	if (config->max_num_sa > _odp_ipsec_max_num_sa())
 		return -1;
 
 	*ipsec_config = *config;
