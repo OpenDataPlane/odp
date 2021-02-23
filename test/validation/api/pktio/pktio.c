@@ -33,7 +33,6 @@
 #define PKTIO_TS_INTERVAL      (50 * ODP_TIME_MSEC_IN_NS)
 #define PKTIO_TS_MIN_RES       1000
 #define PKTIO_TS_MAX_RES       10000000000
-#define PKTIO_TS_CMP_RES       1
 
 #define PKTIO_SRC_MAC		{1, 2, 3, 4, 5, 6}
 #define PKTIO_DST_MAC		{6, 5, 4, 3, 2, 1}
@@ -2310,7 +2309,7 @@ static void pktio_test_pktin_ts(void)
 	odp_packet_t pkt_tbl[TX_BATCH_LEN];
 	uint32_t pkt_seq[TX_BATCH_LEN];
 	uint64_t ns1, ns2;
-	uint64_t res;
+	uint64_t res, res_ns;
 	odp_time_t ts_prev;
 	odp_time_t ts;
 	int num_rx = 0;
@@ -2351,9 +2350,11 @@ static void pktio_test_pktin_ts(void)
 	ns1 = 100;
 	ts = odp_pktio_ts_from_ns(pktio_tx, ns1);
 	ns2 = odp_time_to_ns(ts);
+	res_ns = ODP_TIME_SEC_IN_NS / res;
+	if (ODP_TIME_SEC_IN_NS % res)
+		res_ns++;
 	/* Allow some arithmetic tolerance */
-	CU_ASSERT((ns2 <= (ns1 + PKTIO_TS_CMP_RES)) &&
-		  (ns2 >= (ns1 - PKTIO_TS_CMP_RES)));
+	CU_ASSERT((ns2 <= (ns1 + res_ns)) && (ns2 >= (ns1 - res_ns)));
 
 	ret = create_packets(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx,
 			     pktio_rx);
