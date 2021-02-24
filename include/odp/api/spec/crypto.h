@@ -893,6 +893,27 @@ typedef struct odp_crypto_capability_t {
 	/** Authentication algorithms implemented with HW offload */
 	odp_crypto_auth_algos_t   hw_auths;
 
+	/**
+	 * Scheduled crypto completion queue support
+	 *
+	 * This defines whether scheduled queues are supported as crypto
+	 * compl_queue.
+	 * 0: Scheduled queues are not supported as crypto completion queues
+	 * 1: Scheduled queues are supported as crypto completion queues
+	 * @see odp_crypto_session_param_t
+	 */
+	odp_bool_t queue_type_sched;
+
+	/**
+	 * Plain crypto completion queue support
+	 *
+	 * This defines whether plain queues are supported as crypto
+	 * compl_queue.
+	 * 0: Plain queues are not supported as crypto completion queues
+	 * 1: Plain queues are supported as crypto completion queues
+	 * @see odp_crypto_session_param_t
+	 */
+	odp_bool_t queue_type_plain;
 } odp_crypto_capability_t;
 
 /**
