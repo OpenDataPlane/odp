@@ -366,30 +366,30 @@ static void stash_default_put(uint32_t size, int32_t burst)
 	int32_t num;
 	void *input, *output;
 	uint64_t input_u64[burst];
-	uint64_t output_u64[burst];
+	uint64_t output_u64[burst + 2];
 	uint32_t input_u32[burst];
-	uint32_t output_u32[burst];
+	uint32_t output_u32[burst + 2];
 	uint16_t input_u16[burst];
-	uint16_t output_u16[burst];
+	uint16_t output_u16[burst + 2];
 	uint8_t input_u8[burst];
-	uint8_t output_u8[burst];
+	uint8_t output_u8[burst + 2];
 
 	if (size == sizeof(uint64_t)) {
 		num    = global.num_default.u64;
 		input  = input_u64;
-		output = output_u64;
+		output = &output_u64[1];
 	} else if (size == sizeof(uint32_t)) {
 		num    = global.num_default.u32;
 		input  = input_u32;
-		output = output_u32;
+		output = &output_u32[1];
 	} else if (size == sizeof(uint16_t)) {
 		num    = global.num_default.u16;
 		input  = input_u16;
-		output = output_u16;
+		output = &output_u16[1];
 	} else {
 		num    = global.num_default.u8;
 		input  = input_u8;
-		output = output_u8;
+		output = &output_u8[1];
 	}
 
 	for (i = 0; i < burst; i++) {
@@ -432,21 +432,50 @@ static void stash_default_put(uint32_t size, int32_t burst)
 	while (num_left) {
 		memset(output, 0, burst * size);
 
+		/* Init first and last array element for under-/overflow checking */
+		if (size == sizeof(uint64_t)) {
+			output_u64[0]         = MAGIC_U64;
+			output_u64[burst + 1] = MAGIC_U64;
+		} else if (size == sizeof(uint32_t)) {
+			output_u32[0]         = MAGIC_U32;
+			output_u32[burst + 1] = MAGIC_U32;
+		} else if (size == sizeof(uint16_t)) {
+			output_u16[0]         = MAGIC_U16;
+			output_u16[burst + 1] = MAGIC_U16;
+		} else {
+			output_u8[0]          = MAGIC_U8;
+			output_u8[burst + 1]  = MAGIC_U8;
+		}
+
 		ret = odp_stash_get(stash, output, burst);
 		CU_ASSERT_FATAL(ret >= 0);
 		CU_ASSERT_FATAL(ret <= burst);
+
+		if (size == sizeof(uint64_t)) {
+			CU_ASSERT_FATAL(output_u64[0]         == MAGIC_U64);
+			CU_ASSERT_FATAL(output_u64[burst + 1] == MAGIC_U64);
+		} else if (size == sizeof(uint32_t)) {
+			CU_ASSERT_FATAL(output_u32[0]         == MAGIC_U32);
+			CU_ASSERT_FATAL(output_u32[burst + 1] == MAGIC_U32);
+		} else if (size == sizeof(uint16_t)) {
+			CU_ASSERT_FATAL(output_u16[0]         == MAGIC_U16);
+			CU_ASSERT_FATAL(output_u16[burst + 1] == MAGIC_U16);
+		} else {
+			CU_ASSERT_FATAL(output_u8[0]          == MAGIC_U8);
+			CU_ASSERT_FATAL(output_u8[burst + 1]  == MAGIC_U8);
+		}
 
 		if (ret) {
 			for (i = 0; i < ret; i++) {
 				if (size == sizeof(uint64_t)) {
 					/* CU_ASSERT needs brackets around it */
-					CU_ASSERT(output_u64[i] == VAL_U64);
+					CU_ASSERT(output_u64[i + 1] == VAL_U64);
 				} else if (size == sizeof(uint32_t)) {
-					CU_ASSERT(output_u32[i] == VAL_U32);
+					CU_ASSERT(output_u32[i + 1] == VAL_U32);
 				} else if (size == sizeof(uint16_t)) {
-					CU_ASSERT(output_u16[i] == VAL_U16);
+					CU_ASSERT(output_u16[i + 1] == VAL_U16);
 				} else {
-					CU_ASSERT(output_u8[i] == VAL_U8);
+					CU_ASSERT(output_u8[i + 1] == VAL_U8);
 				}
 			}
 
@@ -473,30 +502,30 @@ static void stash_fifo_put(uint32_t size, int32_t burst)
 	int32_t num;
 	void *input, *output;
 	uint64_t input_u64[burst];
-	uint64_t output_u64[burst];
+	uint64_t output_u64[burst + 2];
 	uint32_t input_u32[burst];
-	uint32_t output_u32[burst];
+	uint32_t output_u32[burst + 2];
 	uint16_t input_u16[burst];
-	uint16_t output_u16[burst];
+	uint16_t output_u16[burst + 2];
 	uint8_t input_u8[burst];
-	uint8_t output_u8[burst];
+	uint8_t output_u8[burst + 2];
 
 	if (size == sizeof(uint64_t)) {
 		num    = global.num_fifo.u64;
 		input  = input_u64;
-		output = output_u64;
+		output = &output_u64[1];
 	} else if (size == sizeof(uint32_t)) {
 		num    = global.num_fifo.u32;
 		input  = input_u32;
-		output = output_u32;
+		output = &output_u32[1];
 	} else if (size == sizeof(uint16_t)) {
 		num    = global.num_fifo.u16;
 		input  = input_u16;
-		output = output_u16;
+		output = &output_u16[1];
 	} else {
 		num    = global.num_fifo.u8;
 		input  = input_u8;
-		output = output_u8;
+		output = &output_u8[1];
 	}
 
 	odp_stash_param_init(&param);
@@ -543,8 +572,37 @@ static void stash_fifo_put(uint32_t size, int32_t burst)
 	while (num_left) {
 		memset(output, 0, burst * size);
 
+		/* Init first and last array element for under-/overflow checking */
+		if (size == sizeof(uint64_t)) {
+			output_u64[0]         = MAGIC_U64;
+			output_u64[burst + 1] = MAGIC_U64;
+		} else if (size == sizeof(uint32_t)) {
+			output_u32[0]         = MAGIC_U32;
+			output_u32[burst + 1] = MAGIC_U32;
+		} else if (size == sizeof(uint16_t)) {
+			output_u16[0]         = MAGIC_U16;
+			output_u16[burst + 1] = MAGIC_U16;
+		} else {
+			output_u8[0]          = MAGIC_U8;
+			output_u8[burst + 1]  = MAGIC_U8;
+		}
+
 		ret = odp_stash_get(stash, output, burst);
 		CU_ASSERT_FATAL(ret >= 0);
+
+		if (size == sizeof(uint64_t)) {
+			CU_ASSERT_FATAL(output_u64[0]         == MAGIC_U64);
+			CU_ASSERT_FATAL(output_u64[burst + 1] == MAGIC_U64);
+		} else if (size == sizeof(uint32_t)) {
+			CU_ASSERT_FATAL(output_u32[0]         == MAGIC_U32);
+			CU_ASSERT_FATAL(output_u32[burst + 1] == MAGIC_U32);
+		} else if (size == sizeof(uint16_t)) {
+			CU_ASSERT_FATAL(output_u16[0]         == MAGIC_U16);
+			CU_ASSERT_FATAL(output_u16[burst + 1] == MAGIC_U16);
+		} else {
+			CU_ASSERT_FATAL(output_u8[0]          == MAGIC_U8);
+			CU_ASSERT_FATAL(output_u8[burst + 1]  == MAGIC_U8);
+		}
 
 		if (ret) {
 			CU_ASSERT_FATAL(ret <= burst);
@@ -552,19 +610,19 @@ static void stash_fifo_put(uint32_t size, int32_t burst)
 				if (size == sizeof(uint64_t)) {
 					uint64_t val = VAL_U64 + num_left - i;
 
-					CU_ASSERT(output_u64[i] == val);
+					CU_ASSERT(output_u64[i + 1] == val);
 				} else if (size == sizeof(uint32_t)) {
 					uint32_t val = VAL_U32 + num_left - i;
 
-					CU_ASSERT(output_u32[i] == val);
+					CU_ASSERT(output_u32[i + 1] == val);
 				} else if (size == sizeof(uint16_t)) {
 					uint16_t val = VAL_U16 + num_left - i;
 
-					CU_ASSERT(output_u16[i] == val);
+					CU_ASSERT(output_u16[i + 1] == val);
 				} else {
 					uint8_t val = VAL_U8 + num_left - i;
 
-					CU_ASSERT(output_u8[i] == val);
+					CU_ASSERT(output_u8[i + 1] == val);
 				}
 			}
 
