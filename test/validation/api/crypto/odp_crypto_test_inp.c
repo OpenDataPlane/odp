@@ -19,6 +19,8 @@ struct suite_context_s {
 	odp_crypto_op_mode_t pref_mode;
 	odp_pool_t pool;
 	odp_queue_t queue;
+	odp_queue_type_t q_type;
+	odp_event_t (*compl_queue_deq)(void);
 };
 
 static struct suite_context_s suite_context;
@@ -208,9 +210,10 @@ static int alg_op(odp_packet_t pkt,
 		odp_event_t event;
 		odp_crypto_compl_t compl_event;
 
-		/* Poll completion queue for results */
+		/* Get crypto completion event from compl_queue. */
+		CU_ASSERT_FATAL(NULL != suite_context.compl_queue_deq);
 		do {
-			event = odp_queue_deq(suite_context.queue);
+			event = suite_context.compl_queue_deq();
 		} while (event == ODP_EVENT_INVALID);
 
 		CU_ASSERT(odp_event_is_valid(event) == 1);
@@ -342,9 +345,10 @@ static int alg_packet_op_enq(odp_packet_t pkt,
 		return rc;
 	}
 
-	/* Poll completion queue for results */
+	/* Get crypto completion event from compl_queue. */
+	CU_ASSERT_FATAL(NULL != suite_context.compl_queue_deq);
 	do {
-		event = odp_queue_deq(suite_context.queue);
+		event = suite_context.compl_queue_deq();
 	} while (event == ODP_EVENT_INVALID);
 
 	CU_ASSERT(ODP_EVENT_PACKET == odp_event_type(event));
@@ -805,6 +809,15 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 	if (odp_crypto_capability(&capability)) {
 		fprintf(stderr, "odp_crypto_capability() failed\n");
 		return ODP_TEST_INACTIVE;
+	}
+
+	if (suite_context.queue != ODP_QUEUE_INVALID) {
+		if (suite_context.q_type == ODP_QUEUE_TYPE_PLAIN &&
+		    capability.queue_type_plain == 0)
+			return ODP_TEST_INACTIVE;
+		if (suite_context.q_type == ODP_QUEUE_TYPE_SCHED &&
+		    capability.queue_type_sched == 0)
+			return ODP_TEST_INACTIVE;
 	}
 
 	if (suite_context.packet) {
@@ -2446,6 +2459,34 @@ static void crypto_test_check_alg_sha512(void)
 		  false);
 }
 
+static odp_queue_t sched_compl_queue_create(void)
+{
+	odp_queue_param_t qparam;
+
+	odp_queue_param_init(&qparam);
+	qparam.type = ODP_QUEUE_TYPE_SCHED;
+	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	qparam.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
+
+	return odp_queue_create("crypto-out", &qparam);
+}
+
+static odp_queue_t plain_compl_queue_create(void)
+{
+	return odp_queue_create("crypto-out", NULL);
+}
+
+static odp_event_t sched_compl_queue_deq(void)
+{
+	return odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+}
+
+static odp_event_t plain_compl_queue_deq(void)
+{
+	return odp_queue_deq(suite_context.queue);
+}
+
 static int crypto_suite_sync_init(void)
 {
 	suite_context.pool = odp_pool_lookup("packet_pool");
@@ -2457,16 +2498,45 @@ static int crypto_suite_sync_init(void)
 	return 0;
 }
 
-static int crypto_suite_async_init(void)
+static int crypto_suite_async_plain_init(void)
 {
+	odp_queue_t out_queue;
+
 	suite_context.pool = odp_pool_lookup("packet_pool");
 	if (suite_context.pool == ODP_POOL_INVALID)
 		return -1;
-	suite_context.queue = odp_queue_lookup("crypto-out");
-	if (suite_context.queue == ODP_QUEUE_INVALID)
+
+	out_queue = plain_compl_queue_create();
+	if (ODP_QUEUE_INVALID == out_queue) {
+		fprintf(stderr, "Crypto outq creation failed.\n");
+		return -1;
+	}
+	suite_context.queue = out_queue;
+	suite_context.q_type = ODP_QUEUE_TYPE_PLAIN;
+	suite_context.compl_queue_deq = plain_compl_queue_deq;
+	suite_context.pref_mode = ODP_CRYPTO_ASYNC;
+
+	return 0;
+}
+
+static int crypto_suite_async_sched_init(void)
+{
+	odp_queue_t out_queue;
+
+	suite_context.pool = odp_pool_lookup("packet_pool");
+	if (suite_context.pool == ODP_POOL_INVALID)
 		return -1;
 
+	out_queue = sched_compl_queue_create();
+	if (ODP_QUEUE_INVALID == out_queue) {
+		fprintf(stderr, "Crypto outq creation failed.\n");
+		return -1;
+	}
+	suite_context.queue = out_queue;
+	suite_context.q_type = ODP_QUEUE_TYPE_SCHED;
+	suite_context.compl_queue_deq = sched_compl_queue_deq;
 	suite_context.pref_mode = ODP_CRYPTO_ASYNC;
+
 	return 0;
 }
 
@@ -2483,8 +2553,10 @@ static int crypto_suite_packet_sync_init(void)
 	return 0;
 }
 
-static int crypto_suite_packet_async_init(void)
+static int crypto_suite_packet_async_plain_init(void)
 {
+	odp_queue_t out_queue;
+
 	suite_context.packet = true;
 	suite_context.op_mode = ODP_CRYPTO_ASYNC;
 
@@ -2492,10 +2564,51 @@ static int crypto_suite_packet_async_init(void)
 	if (suite_context.pool == ODP_POOL_INVALID)
 		return -1;
 
-	suite_context.queue = odp_queue_lookup("crypto-out");
-	if (suite_context.queue == ODP_QUEUE_INVALID)
+	out_queue = plain_compl_queue_create();
+	if (ODP_QUEUE_INVALID == out_queue) {
+		fprintf(stderr, "Crypto outq creation failed.\n");
 		return -1;
+	}
+	suite_context.queue = out_queue;
+	suite_context.q_type = ODP_QUEUE_TYPE_PLAIN;
+	suite_context.compl_queue_deq = plain_compl_queue_deq;
+
 	return 0;
+}
+
+static int crypto_suite_packet_async_sched_init(void)
+{
+	odp_queue_t out_queue;
+
+	suite_context.packet = true;
+	suite_context.op_mode = ODP_CRYPTO_ASYNC;
+
+	suite_context.pool = odp_pool_lookup("packet_pool");
+	if (suite_context.pool == ODP_POOL_INVALID)
+		return -1;
+
+	out_queue = sched_compl_queue_create();
+	if (ODP_QUEUE_INVALID == out_queue) {
+		fprintf(stderr, "Crypto outq creation failed.\n");
+		return -1;
+	}
+	suite_context.queue = out_queue;
+	suite_context.q_type = ODP_QUEUE_TYPE_SCHED;
+	suite_context.compl_queue_deq = sched_compl_queue_deq;
+
+	return 0;
+}
+
+static int crypto_suite_term(void)
+{
+	if (ODP_QUEUE_INVALID != suite_context.queue) {
+		if (odp_queue_destroy(suite_context.queue))
+			fprintf(stderr, "Crypto outq destroy failed.\n");
+	} else {
+		fprintf(stderr, "Crypto outq not found.\n");
+	}
+
+	return odp_cunit_print_inactive();
 }
 
 odp_testinfo_t crypto_suite[] = {
@@ -2706,21 +2819,21 @@ odp_testinfo_t crypto_suite[] = {
 	ODP_TEST_INFO_NULL,
 };
 
-/* Suite names */
-#define ODP_CRYPTO_SYNC_INP         "odp_crypto_sync_inp"
-#define ODP_CRYPTO_ASYNC_INP        "odp_crypto_async_inp"
-#define ODP_CRYPTO_PACKET_SYNC_INP  "odp_crypto_packet_sync_inp"
-#define ODP_CRYPTO_PACKET_ASYNC_INP "odp_crypto_packet_async_inp"
-
 odp_suiteinfo_t crypto_suites[] = {
-	{ODP_CRYPTO_SYNC_INP, crypto_suite_sync_init,
+	{"odp_crypto_sync_inp", crypto_suite_sync_init,
 	 NULL, crypto_suite},
-	{ODP_CRYPTO_ASYNC_INP, crypto_suite_async_init,
+	{"odp_crypto_async_plain_inp", crypto_suite_async_plain_init,
+	 crypto_suite_term, crypto_suite},
+	{"odp_crypto_async_sched_inp", crypto_suite_async_sched_init,
+	 crypto_suite_term, crypto_suite},
+	{"odp_crypto_packet_sync_inp", crypto_suite_packet_sync_init,
 	 NULL, crypto_suite},
-	{ODP_CRYPTO_PACKET_SYNC_INP, crypto_suite_packet_sync_init,
-	 NULL, crypto_suite},
-	{ODP_CRYPTO_PACKET_ASYNC_INP, crypto_suite_packet_async_init,
-	 NULL, crypto_suite},
+	{"odp_crypto_packet_async_plain_inp",
+	 crypto_suite_packet_async_plain_init,
+	 crypto_suite_term, crypto_suite},
+	{"odp_crypto_packet_async_sched_inp",
+	 crypto_suite_packet_async_sched_init,
+	 crypto_suite_term, crypto_suite},
 	ODP_SUITE_INFO_NULL,
 };
 
@@ -2728,9 +2841,7 @@ static int crypto_init(odp_instance_t *inst)
 {
 	odp_pool_param_t params;
 	odp_pool_t pool;
-	odp_queue_t out_queue;
 	odp_pool_capability_t pool_capa;
-	odp_crypto_capability_t crypto_capa;
 	odp_init_t init_param;
 	odph_helper_options_t helper_options;
 
@@ -2752,8 +2863,9 @@ static int crypto_init(odp_instance_t *inst)
 		return -1;
 	}
 
-	if (odp_crypto_capability(&crypto_capa)) {
-		fprintf(stderr, "error: odp_crypto_capability() failed.\n");
+	/* Configure the scheduler. */
+	if (odp_schedule_config(NULL)) {
+		fprintf(stderr, "odp_schedule_config() failed.\n");
 		return -1;
 	}
 
@@ -2786,11 +2898,6 @@ static int crypto_init(odp_instance_t *inst)
 		fprintf(stderr, "Packet pool creation failed.\n");
 		return -1;
 	}
-	out_queue = odp_queue_create("crypto-out", NULL);
-	if (ODP_QUEUE_INVALID == out_queue) {
-		fprintf(stderr, "Crypto outq creation failed.\n");
-		return -1;
-	}
 
 	return 0;
 }
@@ -2798,15 +2905,6 @@ static int crypto_init(odp_instance_t *inst)
 static int crypto_term(odp_instance_t inst)
 {
 	odp_pool_t pool;
-	odp_queue_t out_queue;
-
-	out_queue = odp_queue_lookup("crypto-out");
-	if (ODP_QUEUE_INVALID != out_queue) {
-		if (odp_queue_destroy(out_queue))
-			fprintf(stderr, "Crypto outq destroy failed.\n");
-	} else {
-		fprintf(stderr, "Crypto outq not found.\n");
-	}
 
 	pool = odp_pool_lookup("packet_pool");
 	if (ODP_POOL_INVALID != pool) {
