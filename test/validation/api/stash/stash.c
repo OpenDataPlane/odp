@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, Nokia
+/* Copyright (c) 2020-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -11,6 +11,11 @@
 #define MAGIC_U32  0x74a13b94
 #define MAGIC_U16  0x25bf
 #define MAGIC_U8   0xab
+
+#define VAL_U64    0x6b89f0742a672c34
+#define VAL_U32    0x713d847b
+#define VAL_U16    0xb587
+#define VAL_U8     0x9d
 
 #define NUM_U64    1024
 #define NUM_U32    1024
@@ -388,10 +393,10 @@ static void stash_default_put(uint32_t size, int32_t burst)
 	}
 
 	for (i = 0; i < burst; i++) {
-		input_u64[i] = MAGIC_U64;
-		input_u32[i] = MAGIC_U32;
-		input_u16[i] = MAGIC_U16;
-		input_u8[i]  = MAGIC_U8;
+		input_u64[i] = VAL_U64;
+		input_u32[i] = VAL_U32;
+		input_u16[i] = VAL_U16;
+		input_u8[i]  = VAL_U8;
 	}
 
 	odp_stash_param_init(&param);
@@ -435,13 +440,13 @@ static void stash_default_put(uint32_t size, int32_t burst)
 			for (i = 0; i < ret; i++) {
 				if (size == sizeof(uint64_t)) {
 					/* CU_ASSERT needs brackets around it */
-					CU_ASSERT(output_u64[i] == MAGIC_U64);
+					CU_ASSERT(output_u64[i] == VAL_U64);
 				} else if (size == sizeof(uint32_t)) {
-					CU_ASSERT(output_u32[i] == MAGIC_U32);
+					CU_ASSERT(output_u32[i] == VAL_U32);
 				} else if (size == sizeof(uint16_t)) {
-					CU_ASSERT(output_u16[i] == MAGIC_U16);
+					CU_ASSERT(output_u16[i] == VAL_U16);
 				} else {
-					CU_ASSERT(output_u8[i] == MAGIC_U8);
+					CU_ASSERT(output_u8[i] == VAL_U8);
 				}
 			}
 
@@ -511,13 +516,13 @@ static void stash_fifo_put(uint32_t size, int32_t burst)
 	while (num_left) {
 		for (i = 0; i < burst; i++) {
 			if (size == sizeof(uint64_t))
-				input_u64[i] = MAGIC_U64 + num_left - i;
+				input_u64[i] = VAL_U64 + num_left - i;
 			else if (size == sizeof(uint32_t))
-				input_u32[i] = MAGIC_U32 + num_left - i;
+				input_u32[i] = VAL_U32 + num_left - i;
 			else if (size == sizeof(uint16_t))
-				input_u16[i] = MAGIC_U16 + num_left - i;
+				input_u16[i] = VAL_U16 + num_left - i;
 			else
-				input_u8[i] = MAGIC_U8 + num_left - i;
+				input_u8[i] = VAL_U8 + num_left - i;
 		}
 
 		ret = odp_stash_put(stash, input, burst);
@@ -545,19 +550,19 @@ static void stash_fifo_put(uint32_t size, int32_t burst)
 			CU_ASSERT_FATAL(ret <= burst);
 			for (i = 0; i < ret; i++) {
 				if (size == sizeof(uint64_t)) {
-					uint64_t val = MAGIC_U64 + num_left - i;
+					uint64_t val = VAL_U64 + num_left - i;
 
 					CU_ASSERT(output_u64[i] == val);
 				} else if (size == sizeof(uint32_t)) {
-					uint32_t val = MAGIC_U32 + num_left - i;
+					uint32_t val = VAL_U32 + num_left - i;
 
 					CU_ASSERT(output_u32[i] == val);
 				} else if (size == sizeof(uint16_t)) {
-					uint16_t val = MAGIC_U16 + num_left - i;
+					uint16_t val = VAL_U16 + num_left - i;
 
 					CU_ASSERT(output_u16[i] == val);
 				} else {
-					uint8_t val = MAGIC_U8 + num_left - i;
+					uint8_t val = VAL_U8 + num_left - i;
 
 					CU_ASSERT(output_u8[i] == val);
 				}
