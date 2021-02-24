@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -612,7 +613,7 @@ static void queue_test_param(void)
 	qparams.sched.group = ODP_SCHED_GROUP_WORKER;
 
 	queue = odp_queue_create("test_queue", &qparams);
-	CU_ASSERT(ODP_QUEUE_INVALID != queue);
+	CU_ASSERT_FATAL(ODP_QUEUE_INVALID != queue);
 	CU_ASSERT(odp_queue_to_u64(queue) !=
 		  odp_queue_to_u64(ODP_QUEUE_INVALID));
 	CU_ASSERT(queue == odp_queue_lookup("test_queue"));
@@ -631,7 +632,7 @@ static void queue_test_param(void)
 	/* Create queue with no name */
 	odp_queue_param_init(&qparams);
 	null_queue = odp_queue_create(NULL, &qparams);
-	CU_ASSERT(ODP_QUEUE_INVALID != null_queue);
+	CU_ASSERT_FATAL(ODP_QUEUE_INVALID != null_queue);
 	CU_ASSERT(odp_queue_context(null_queue) == NULL);
 
 	/* Plain type queue */
@@ -641,7 +642,7 @@ static void queue_test_param(void)
 	qparams.context_len = sizeof(queue_context);
 
 	queue = odp_queue_create("test_queue", &qparams);
-	CU_ASSERT(ODP_QUEUE_INVALID != queue);
+	CU_ASSERT_FATAL(ODP_QUEUE_INVALID != queue);
 	CU_ASSERT(queue == odp_queue_lookup("test_queue"));
 	CU_ASSERT(ODP_QUEUE_TYPE_PLAIN == odp_queue_type(queue));
 	CU_ASSERT(&queue_context == odp_queue_context(queue));
@@ -712,7 +713,7 @@ static void queue_test_info(void)
 
 	/* Create a plain queue and set context */
 	q_plain = odp_queue_create(nq_plain, NULL);
-	CU_ASSERT(ODP_QUEUE_INVALID != q_plain);
+	CU_ASSERT_FATAL(ODP_QUEUE_INVALID != q_plain);
 	CU_ASSERT(odp_queue_context_set(q_plain, q_plain_ctx,
 					sizeof(q_plain_ctx)) == 0);
 
@@ -730,7 +731,7 @@ static void queue_test_info(void)
 		printf("\n    Ordered locks NOT supported\n");
 	param.context = q_order_ctx;
 	q_order = odp_queue_create(nq_order, &param);
-	CU_ASSERT(ODP_QUEUE_INVALID != q_order);
+	CU_ASSERT_FATAL(ODP_QUEUE_INVALID != q_order);
 
 	/* Check info and call print for a plain queue */
 	CU_ASSERT(odp_queue_info(q_plain, &info) == 0);
