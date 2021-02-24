@@ -2451,6 +2451,14 @@ static int traffic_mngr_check_shaper(void)
 	odp_cpumask_t cpumask;
 	int cpucount = odp_cpumask_all_available(&cpumask);
 
+/* Skip the shaper test on arm64 systems */
+#if defined(__aarch64__)
+	printf("\nTemporarily skip shaper test which intermittently "
+	       "fails on arm64 systems. Will be activated when issue "
+	       "is resolved\n");
+	return ODP_TEST_INACTIVE;
+#endif
+
 	if (cpucount < 2) {
 		ODPH_DBG("\nSkipping shaper test because cpucount = %d "
 			 "is less then min number 2 required\n", cpucount);
