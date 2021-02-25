@@ -1024,11 +1024,11 @@ static void queue_print_all(void)
 	odp_queue_op_mode_t enq_mode;
 	odp_queue_op_mode_t deq_mode;
 	odp_queue_order_t order;
+	odp_schedule_sync_t sync;
+	int prio;
 	const char *bl_str;
 	char type_c, enq_c, deq_c, order_c, sync_c;
 	const int col_width = 24;
-	int prio = 0;
-	odp_schedule_sync_t sync = ODP_SCHED_SYNC_PARALLEL;
 
 	ODP_PRINT("\nList of all queues\n");
 	ODP_PRINT("------------------\n");
@@ -1050,6 +1050,8 @@ static void queue_print_all(void)
 		enq_mode = queue->s.param.enq_mode;
 		deq_mode = queue->s.param.deq_mode;
 		order    = queue->s.param.order;
+		prio     = queue->s.param.sched.prio;
+		sync     = queue->s.param.sched.sync;
 
 		UNLOCK(&queue->s.lock);
 
