@@ -751,10 +751,12 @@ static void schedule_resume(void)
 
 static void schedule_release_atomic(void)
 {
+	/* Nothing to do */
 }
 
 static void schedule_release_ordered(void)
 {
+	/* Nothing to do */
 }
 
 static void schedule_prefetch(int num)
@@ -1016,10 +1018,12 @@ static void schedule_order_lock_wait(uint32_t lock_index)
 
 static void order_lock(void)
 {
+	/* Nothing to do */
 }
 
 static void order_unlock(void)
 {
+	/* Nothing to do */
 }
 
 static int schedule_capability(odp_schedule_capability_t *capa)

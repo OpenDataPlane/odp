@@ -1326,6 +1326,7 @@ static inline void order_lock(void)
 
 static void order_unlock(void)
 {
+	/* Nothing to do */
 }
 
 static void schedule_order_lock(uint32_t lock_index)
@@ -1621,9 +1622,9 @@ static int schedule_thr_rem(odp_schedule_group_t group, int thr)
 	return 0;
 }
 
-/* This function is a no-op */
-static void schedule_prefetch(int num ODP_UNUSED)
+static void schedule_prefetch(int num)
 {
+	(void)num;
 }
 
 static int schedule_num_grps(void)
