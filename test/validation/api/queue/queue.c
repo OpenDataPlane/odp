@@ -122,6 +122,19 @@ static int queue_suite_term(void)
 static void queue_test_capa(void)
 {
 	odp_queue_capability_t capa;
+
+	memset(&capa, 0, sizeof(odp_queue_capability_t));
+	CU_ASSERT_FATAL(odp_queue_capability(&capa) == 0);
+
+	CU_ASSERT(capa.max_queues > 0);
+	CU_ASSERT(capa.max_queues >= capa.plain.max_num);
+	CU_ASSERT(capa.max_queues >= capa.plain.lockfree.max_num);
+	CU_ASSERT(capa.max_queues >= capa.plain.waitfree.max_num);
+}
+
+static void queue_test_max_plain(void)
+{
+	odp_queue_capability_t capa;
 	odp_queue_param_t qparams;
 	char name[ODP_QUEUE_NAME_LEN];
 	odp_queue_t queue[MAX_QUEUES];
@@ -601,6 +614,7 @@ static void queue_test_param(void)
 	CU_ASSERT(qparams.sched.sync == ODP_SCHED_SYNC_PARALLEL);
 	CU_ASSERT(qparams.sched.group == ODP_SCHED_GROUP_ALL);
 	CU_ASSERT(qparams.sched.lock_count == 0);
+	CU_ASSERT(qparams.order == ODP_QUEUE_ORDER_KEEP);
 	CU_ASSERT(qparams.nonblocking == ODP_BLOCKING);
 	CU_ASSERT(qparams.context == NULL);
 	CU_ASSERT(qparams.context_len == 0);
@@ -968,6 +982,7 @@ static void queue_test_mt_plain_nonblock_lf(void)
 odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_capa),
 	ODP_TEST_INFO(queue_test_mode),
+	ODP_TEST_INFO(queue_test_max_plain),
 	ODP_TEST_INFO(queue_test_burst),
 	ODP_TEST_INFO(queue_test_burst_spmc),
 	ODP_TEST_INFO(queue_test_burst_mpsc),
