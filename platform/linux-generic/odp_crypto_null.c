@@ -121,6 +121,8 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 
 	capa->sync_mode = ODP_SUPPORT_PREFERRED;
 	capa->async_mode = ODP_SUPPORT_YES;
+	capa->queue_type_plain = 1;
+	capa->queue_type_sched = 1;
 
 	capa->ciphers.bit.null       = 1;
 
