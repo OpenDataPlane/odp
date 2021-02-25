@@ -2167,6 +2167,7 @@ static void order_lock(void)
  */
 static void order_unlock(void)
 {
+	/* Nothing to do */
 }
 
 static uint32_t schedule_max_ordered_locks(void)
