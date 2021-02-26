@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -67,7 +67,8 @@ typedef struct {
 	int buf_count;
 	int buf_count_cpy;
 	int queues_per_prio;
-	uint32_t num_queues;
+	odp_shm_t shm_glb;
+	odp_shm_t shm_args;
 	odp_pool_t pool;
 	odp_pool_t queue_ctx_pool;
 	uint32_t max_sched_queue_size;
@@ -161,6 +162,15 @@ static void scheduler_test_capa(void)
 	CU_ASSERT(sched_capa.max_prios != 0);
 	CU_ASSERT(sched_capa.max_queues != 0);
 	CU_ASSERT(queue_capa.max_queues >= sched_capa.max_queues);
+}
+
+static void sched_queue_param_init(odp_queue_param_t *param)
+{
+	odp_queue_param_init(param);
+	param->type        = ODP_QUEUE_TYPE_SCHED;
+	param->sched.sync  = ODP_SCHED_SYNC_PARALLEL;
+	param->sched.prio  = odp_schedule_default_prio();
+	param->sched.group = ODP_SCHED_GROUP_ALL;
 }
 
 static void scheduler_test_wait_time(void)
@@ -535,10 +545,6 @@ static void scheduler_test_full_queues(void)
 	if (default_config.queue_size)
 		queue_size = default_config.queue_size;
 	num_queues = default_config.num_queues;
-
-	/* Queues reserved by create_queues() in suite init */
-	CU_ASSERT_FATAL(globals->num_queues < num_queues);
-	num_queues -= globals->num_queues;
 
 	odp_queue_t queue[num_queues];
 
@@ -1915,6 +1921,7 @@ static void scheduler_test_multi_1q_mt_a_excl(void)
 
 static void scheduler_test_pause_resume(void)
 {
+	odp_queue_param_t qp;
 	odp_queue_t queue;
 	odp_buffer_t buf;
 	odp_event_t ev;
@@ -1924,7 +1931,8 @@ static void scheduler_test_pause_resume(void)
 	int local_bufs = 0;
 	int ret;
 
-	queue = odp_queue_lookup("sched_0_0_n");
+	sched_queue_param_init(&qp);
+	queue = odp_queue_create("pause_resume", &qp);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
 	pool = odp_pool_lookup(MSG_POOL_NAME);
@@ -1972,10 +1980,12 @@ static void scheduler_test_pause_resume(void)
 	}
 
 	CU_ASSERT(drain_queues() == 0);
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
 }
 
 static void scheduler_test_pause_enqueue(void)
 {
+	odp_queue_param_t qp;
 	odp_queue_t queue;
 	odp_buffer_t buf;
 	odp_event_t ev;
@@ -1986,7 +1996,8 @@ static void scheduler_test_pause_enqueue(void)
 	int ret;
 	int local_bufs;
 
-	queue = odp_queue_lookup("sched_0_0_n");
+	sched_queue_param_init(&qp);
+	queue = odp_queue_create("pause_enqueue", &qp);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
 	pool = odp_pool_lookup(MSG_POOL_NAME);
@@ -2070,11 +2081,13 @@ static void scheduler_test_pause_enqueue(void)
 
 	/* Free all */
 	CU_ASSERT(drain_queues() == NUM_BUFS_PAUSE);
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
 }
 
 /* Basic, single threaded ordered lock API testing */
 static void scheduler_test_ordered_lock(void)
 {
+	odp_queue_param_t qp;
 	odp_queue_t queue;
 	odp_buffer_t buf;
 	odp_event_t ev;
@@ -2083,8 +2096,15 @@ static void scheduler_test_ordered_lock(void)
 	int i;
 	int ret;
 	uint32_t lock_count;
+	odp_schedule_capability_t sched_capa;
 
-	queue = odp_queue_lookup("sched_0_0_o");
+	CU_ASSERT_FATAL(!odp_schedule_capability(&sched_capa));
+
+	sched_queue_param_init(&qp);
+	qp.sched.sync = ODP_SCHED_SYNC_ORDERED;
+	qp.sched.lock_count = sched_capa.max_ordered_locks;
+
+	queue = odp_queue_create("ordered_lock", &qp);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 	CU_ASSERT_FATAL(odp_queue_type(queue) == ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT_FATAL(odp_queue_sched_type(queue) == ODP_SCHED_SYNC_ORDERED);
@@ -2093,6 +2113,7 @@ static void scheduler_test_ordered_lock(void)
 
 	if (lock_count == 0) {
 		printf("  NO ORDERED LOCKS. Ordered locks not tested.\n");
+		CU_ASSERT(odp_queue_destroy(queue) == 0);
 		return;
 	}
 
@@ -2124,6 +2145,7 @@ static void scheduler_test_ordered_lock(void)
 	if (lock_count < 2) {
 		printf("  ONLY ONE ORDERED LOCK. Unlock_lock not tested.\n");
 		CU_ASSERT(drain_queues() == BUFS_PER_QUEUE / 2);
+		CU_ASSERT(odp_queue_destroy(queue) == 0);
 		return;
 	}
 
@@ -2140,6 +2162,7 @@ static void scheduler_test_ordered_lock(void)
 	}
 
 	CU_ASSERT(drain_queues() == 0);
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
 }
 
 static int sched_and_plain_thread(void *arg)
@@ -2556,105 +2579,6 @@ static int create_queues(test_globals_t *globals)
 			}
 		}
 	}
-	globals->num_queues = prios * queues_per_prio * 4;
-
-	return 0;
-}
-
-static int scheduler_suite_init(void)
-{
-	odp_cpumask_t mask;
-	odp_shm_t shm;
-	odp_pool_t pool;
-	thread_args_t *args;
-	odp_pool_param_t params;
-	uint64_t num_flows;
-	odp_schedule_capability_t sched_capa;
-	odp_schedule_config_t sched_config;
-
-	if (odp_schedule_capability(&sched_capa)) {
-		printf("odp_schedule_capability() failed\n");
-		return -1;
-	}
-
-	num_flows = 0;
-	odp_schedule_config_init(&sched_config);
-
-	/* Enable flow aware scheduling */
-	if (sched_capa.max_flow_id > 0) {
-		num_flows = MAX_FLOWS;
-		if ((MAX_FLOWS - 1) > sched_capa.max_flow_id)
-			num_flows = sched_capa.max_flow_id + 1;
-
-		sched_config.max_flow_id = num_flows - 1;
-	}
-
-	/* Configure the scheduler. All test cases share the config. */
-	if (odp_schedule_config(&sched_config)) {
-		printf("odp_schedule_config() failed.\n");
-		return -1;
-	}
-
-	odp_pool_param_init(&params);
-	params.buf.size  = BUF_SIZE;
-	params.buf.align = 0;
-	params.buf.num   = MSG_POOL_SIZE;
-	params.type      = ODP_POOL_BUFFER;
-
-	pool = odp_pool_create(MSG_POOL_NAME, &params);
-
-	if (pool == ODP_POOL_INVALID) {
-		printf("Pool creation failed (msg).\n");
-		return -1;
-	}
-
-	shm = odp_shm_reserve(GLOBALS_SHM_NAME,
-			      sizeof(test_globals_t), ODP_CACHE_LINE_SIZE, 0);
-
-	if (shm == ODP_SHM_INVALID) {
-		printf("Shared memory reserve failed (globals).\n");
-		return -1;
-	}
-
-	globals = odp_shm_addr(shm);
-
-	if (!globals) {
-		printf("Shared memory reserve failed (globals).\n");
-		return -1;
-	}
-
-	memset(globals, 0, sizeof(test_globals_t));
-
-	globals->num_flows = num_flows;
-
-	globals->num_workers = odp_cpumask_default_worker(&mask, 0);
-	if (globals->num_workers > MAX_WORKERS)
-		globals->num_workers = MAX_WORKERS;
-
-	shm = odp_shm_reserve(SHM_THR_ARGS_NAME, sizeof(thread_args_t),
-			      ODP_CACHE_LINE_SIZE, 0);
-
-	if (shm == ODP_SHM_INVALID) {
-		printf("Shared memory reserve failed (args).\n");
-		return -1;
-	}
-
-	args = odp_shm_addr(shm);
-
-	if (!args) {
-		printf("Shared memory reserve failed (args).\n");
-		return -1;
-	}
-
-	memset(args, 0, sizeof(thread_args_t));
-
-	/* Barrier to sync test case execution */
-	odp_barrier_init(&globals->barrier, globals->num_workers);
-	odp_ticketlock_init(&globals->lock);
-	odp_spinlock_init(&globals->atomic_lock);
-
-	if (create_queues(globals) != 0)
-		return -1;
 
 	return 0;
 }
@@ -2707,34 +2631,6 @@ static int destroy_queues(void)
 		ODPH_ERR("Failed to destroy queue ctx pool\n");
 		return -1;
 	}
-
-	return 0;
-}
-
-static int scheduler_suite_term(void)
-{
-	odp_pool_t pool;
-	odp_shm_t shm;
-
-	if (destroy_queues() != 0) {
-		ODPH_ERR("Failed to destroy queues\n");
-		return -1;
-	}
-
-	pool = odp_pool_lookup(MSG_POOL_NAME);
-	if (odp_pool_destroy(pool) != 0)
-		ODPH_ERR("Failed to destroy pool\n");
-
-	shm = odp_shm_lookup(SHM_THR_ARGS_NAME);
-	if (odp_shm_free(shm) != 0)
-		ODPH_ERR("Failed to free shm\n");
-
-	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
-	if (odp_shm_free(shm) != 0)
-		ODPH_ERR("Failed to free shm\n");
-
-	if (odp_cunit_print_inactive())
-		return -1;
 
 	return 0;
 }
@@ -2859,8 +2755,196 @@ static void scheduler_test_flow_aware(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-/* Default scheduler config */
-odp_testinfo_t scheduler_suite[] = {
+static int scheduler_test_global_init(void)
+{
+	odp_cpumask_t mask;
+	odp_shm_t shm;
+	thread_args_t *args;
+	odp_pool_t pool;
+	odp_pool_param_t params;
+	uint64_t num_flows;
+	odp_schedule_capability_t sched_capa;
+	odp_schedule_config_t sched_config;
+
+	shm = odp_shm_reserve(GLOBALS_SHM_NAME,
+			      sizeof(test_globals_t), ODP_CACHE_LINE_SIZE, 0);
+
+	if (shm == ODP_SHM_INVALID) {
+		printf("Shared memory reserve failed (globals).\n");
+		return -1;
+	}
+
+	globals = odp_shm_addr(shm);
+
+	if (!globals) {
+		printf("Shared memory reserve failed (globals).\n");
+		return -1;
+	}
+
+	memset(globals, 0, sizeof(test_globals_t));
+	globals->shm_glb = shm;
+
+	globals->num_workers = odp_cpumask_default_worker(&mask, 0);
+	if (globals->num_workers > MAX_WORKERS)
+		globals->num_workers = MAX_WORKERS;
+
+	shm = odp_shm_reserve(SHM_THR_ARGS_NAME, sizeof(thread_args_t),
+			      ODP_CACHE_LINE_SIZE, 0);
+
+	if (shm == ODP_SHM_INVALID) {
+		printf("Shared memory reserve failed (args).\n");
+		return -1;
+	}
+
+	args = odp_shm_addr(shm);
+	globals->shm_args = shm;
+
+	if (!args) {
+		printf("Shared memory reserve failed (args).\n");
+		return -1;
+	}
+
+	memset(args, 0, sizeof(thread_args_t));
+
+	/* Barrier to sync test case execution */
+	odp_barrier_init(&globals->barrier, globals->num_workers);
+	odp_ticketlock_init(&globals->lock);
+	odp_spinlock_init(&globals->atomic_lock);
+
+	odp_pool_param_init(&params);
+	params.buf.size  = BUF_SIZE;
+	params.buf.align = 0;
+	params.buf.num   = MSG_POOL_SIZE;
+	params.type      = ODP_POOL_BUFFER;
+
+	pool = odp_pool_create(MSG_POOL_NAME, &params);
+
+	if (pool == ODP_POOL_INVALID) {
+		printf("Pool creation failed (msg).\n");
+		return -1;
+	}
+
+	globals->pool = pool;
+
+	if (odp_schedule_capability(&sched_capa)) {
+		printf("odp_schedule_capability() failed\n");
+		return -1;
+	}
+
+	num_flows = 0;
+	odp_schedule_config_init(&sched_config);
+
+	/* Enable flow aware scheduling */
+	if (sched_capa.max_flow_id > 0) {
+		num_flows = MAX_FLOWS;
+		if ((MAX_FLOWS - 1) > sched_capa.max_flow_id)
+			num_flows = sched_capa.max_flow_id + 1;
+
+		sched_config.max_flow_id = num_flows - 1;
+	}
+
+	globals->num_flows = num_flows;
+
+	/* Configure the scheduler. All test cases share the config. */
+	if (odp_schedule_config(&sched_config)) {
+		printf("odp_schedule_config() failed.\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+static int scheduler_multi_suite_init(void)
+{
+	if (create_queues(globals) != 0)
+		return -1;
+
+	return 0;
+}
+
+static int scheduler_multi_suite_term(void)
+{
+	if (destroy_queues() != 0) {
+		ODPH_ERR("Failed to destroy queues\n");
+		return -1;
+	}
+
+	if (odp_cunit_print_inactive())
+		return -1;
+
+	return 0;
+}
+
+static int scheduler_basic_suite_init(void)
+{
+	return 0;
+}
+
+static int scheduler_basic_suite_term(void)
+{
+	if (odp_cunit_print_inactive())
+		return -1;
+
+	return 0;
+}
+
+static int global_init(odp_instance_t *inst)
+{
+	odp_init_t init_param;
+	odph_helper_options_t helper_options;
+
+	if (odph_options(&helper_options)) {
+		ODPH_ERR("odph_options() failed.\n");
+		return -1;
+	}
+
+	odp_init_param_init(&init_param);
+	init_param.mem_model = helper_options.mem_model;
+
+	if (0 != odp_init_global(inst, &init_param, NULL)) {
+		ODPH_ERR("odp_init_global() failed.\n");
+		return -1;
+	}
+
+	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
+		ODPH_ERR("odp_init_local() failed.\n");
+		return -1;
+	}
+
+	if (scheduler_test_global_init()) {
+		ODPH_ERR("scheduler test global init failed\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+static int global_term(odp_instance_t inst)
+{
+	if (odp_pool_destroy(globals->pool))
+		ODPH_ERR("Failed to destroy pool\n");
+
+	if (odp_shm_free(globals->shm_args))
+		ODPH_ERR("Failed to free shm\n");
+
+	if (odp_shm_free(globals->shm_glb))
+		ODPH_ERR("Failed to free shm\n");
+
+	if (odp_term_local()) {
+		ODPH_ERR("odp_term_local() failed.\n");
+		return -1;
+	}
+
+	if (odp_term_global(inst)) {
+		ODPH_ERR("odp_term_global() failed.\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+/* Basic scheduler test suite */
+odp_testinfo_t scheduler_basic_suite[] = {
 	ODP_TEST_INFO(scheduler_test_init),
 	ODP_TEST_INFO(scheduler_test_capa),
 	ODP_TEST_INFO(scheduler_test_wait_time),
@@ -2883,6 +2967,12 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_ordered),
 	ODP_TEST_INFO(scheduler_test_atomic_and_plain),
 	ODP_TEST_INFO(scheduler_test_ordered_and_plain),
+	ODP_TEST_INFO_NULL
+};
+
+/* Scheduler test suite which runs events through hundreds of queues. Queues are created once
+ * in suite init phase. */
+odp_testinfo_t scheduler_multi_suite[] = {
 	ODP_TEST_INFO(scheduler_test_chaos),
 	ODP_TEST_INFO(scheduler_test_1q_1t_n),
 	ODP_TEST_INFO(scheduler_test_1q_1t_a),
@@ -2910,41 +3000,19 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_multi_mq_mt_prio_a),
 	ODP_TEST_INFO(scheduler_test_multi_mq_mt_prio_o),
 	ODP_TEST_INFO(scheduler_test_multi_1q_mt_a_excl),
-	ODP_TEST_INFO_NULL,
+	ODP_TEST_INFO_NULL
 };
 
 odp_suiteinfo_t scheduler_suites[] = {
-	{"Scheduler",
-	 scheduler_suite_init, scheduler_suite_term, scheduler_suite
+	{"Scheduler basic",
+	 scheduler_basic_suite_init, scheduler_basic_suite_term, scheduler_basic_suite
 	},
+	{"Scheduler multi",
+	 scheduler_multi_suite_init, scheduler_multi_suite_term, scheduler_multi_suite
+	},
+
 	ODP_SUITE_INFO_NULL,
 };
-
-static int global_init(odp_instance_t *inst)
-{
-	odp_init_t init_param;
-	odph_helper_options_t helper_options;
-
-	if (odph_options(&helper_options)) {
-		ODPH_ERR("odph_options() failed.\n");
-		return -1;
-	}
-
-	odp_init_param_init(&init_param);
-	init_param.mem_model = helper_options.mem_model;
-
-	if (0 != odp_init_global(inst, &init_param, NULL)) {
-		ODPH_ERR("odp_init_global() failed.\n");
-		return -1;
-	}
-
-	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
-		ODPH_ERR("odp_init_local() failed.\n");
-		return -1;
-	}
-
-	return 0;
-}
 
 int main(int argc, char *argv[])
 {
@@ -2955,6 +3023,8 @@ int main(int argc, char *argv[])
 		return -1;
 
 	odp_cunit_register_global_init(global_init);
+	odp_cunit_register_global_term(global_term);
+
 	ret = odp_cunit_register(scheduler_suites);
 
 	if (ret == 0)
