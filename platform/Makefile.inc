@@ -17,9 +17,9 @@ lib_LTLIBRARIES =
 AM_LDFLAGS = -version-number '$(ODP_LIBSO_VERSION)'
 
 if ODP_ABI_COMPAT
-AM_LDFLAGS += -export-symbols-regex '^(_deprecated_)?odp_'
+AM_LDFLAGS += -export-symbols-regex '^(odp_|_deprecated_odp_)'
 else
-AM_LDFLAGS += -export-symbols-regex '^(_deprecated_)?_?odp_'
+AM_LDFLAGS += -export-symbols-regex '^(odp_|_odp_|_deprecated_odp_)'
 endif
 
 AM_CFLAGS = "-DODP_VERSION_BUILD=$(VERSION)"
