@@ -393,7 +393,10 @@ static int hp_get_cached(uint64_t len)
 {
 	int fd;
 
-	if (NULL == hpc || hpc->idx < 0 || len != hpc->len)
+	if (hpc == NULL)
+		return -1;
+
+	if (hpc->idx < 0 || len != hpc->len)
 		return -1;
 
 	fd = hpc->fd[hpc->idx];
@@ -404,12 +407,17 @@ static int hp_get_cached(uint64_t len)
 
 static int hp_put_cached(int fd)
 {
-	if (NULL == hpc || odp_unlikely(++hpc->idx >= hpc->total)) {
-		hpc->idx--;
+	if (hpc == NULL) {
+		ODP_ERR("Bad hpc state\n");
+		return -1;
+	}
+
+	if (odp_unlikely((hpc->idx + 1) >= hpc->total)) {
 		ODP_ERR("Trying to put more FD than allowed: %d\n", fd);
 		return -1;
 	}
 
+	hpc->idx++;
 	hpc->fd[hpc->idx] = fd;
 
 	return 0;
