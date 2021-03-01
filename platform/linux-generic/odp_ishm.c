@@ -2088,7 +2088,7 @@ int _odp_ishm_status(const char *title)
 
 		/* some other sanity checks: */
 		if (fragmnt->prev != previous)
-				ODP_ERR("chaining error\n");
+			ODP_ERR("chaining error\n");
 
 		if (fragmnt != ishm_ftbl->used_fragmnts) {
 			if ((uintptr_t)fragmnt->start != last_address + 1)

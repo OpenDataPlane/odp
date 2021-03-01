@@ -637,9 +637,7 @@ static int timer_current_wheel_update(timer_wheels_t *timer_wheels,
 		if (timer_slot->user_data != 0) {
 			rc = expired_timers_append(timer_wheels, timer_slot);
 			if (rc < 0)
-				timer_wheels->
-					expired_timers_ring->
-					expired_ring_full_cnt++;
+				timer_wheels->expired_timers_ring->expired_ring_full_cnt++;
 
 			timer_slot->user_data = 0;
 		}

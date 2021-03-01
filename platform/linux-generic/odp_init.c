@@ -294,10 +294,10 @@ int odp_init_global(odp_instance_t *instance,
 		    const odp_init_t *params,
 		    const odp_platform_init_t *platform_params ODP_UNUSED)
 {
+	enum init_stage stage = NO_INIT;
+
 	memset(&odp_global_ro, 0, sizeof(odp_global_data_ro_t));
 	odp_global_ro.main_pid = getpid();
-
-	enum init_stage stage = NO_INIT;
 	odp_global_ro.log_fn = odp_override_log;
 	odp_global_ro.abort_fn = odp_override_abort;
 
