@@ -255,7 +255,6 @@ static int term_global(void)
 				}
 				odp_event_free(event);
 			}
-
 		}
 	}
 

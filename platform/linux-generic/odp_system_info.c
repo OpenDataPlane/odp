@@ -89,7 +89,6 @@ static int systemcpu_cache_line_size(void)
 }
 #endif
 
-
 static uint64_t default_huge_page_size(void)
 {
 	char str[1024];
@@ -248,11 +247,9 @@ static char *get_hugepage_dir(uint64_t hugepage_sz)
 					retval = strdup(tokens[MOUNTPT]);
 					break;
 				}
-			}
-			/* there is an explicit page size, so check it */
-			else {
-				pagesz =
-				     str_to_size(&pagesz_str[pagesize_opt_len]);
+			} else {
+				/* there is an explicit page size, so check it */
+				pagesz = str_to_size(&pagesz_str[pagesize_opt_len]);
 				if (pagesz == hugepage_sz) {
 					retval = strdup(tokens[MOUNTPT]);
 					break;
@@ -303,7 +300,6 @@ static int systemcpu(system_info_t *sysinfo)
 	}
 
 	sysinfo->cpu_count = ret;
-
 
 	ret = systemcpu_cache_line_size();
 	if (ret == 0) {

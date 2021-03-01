@@ -1552,17 +1552,19 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 				ipsec_out_checksums(pkt, &state);
 		}
 	} else {
-		if (state.is_ipv4)
+		if (state.is_ipv4) {
 			rc = ipsec_out_tunnel_parse_ipv4(&state, ipsec_sa);
-		else if (state.is_ipv6)
+		} else if (state.is_ipv6) {
 			rc = ipsec_out_tunnel_parse_ipv6(&state, ipsec_sa);
-		else if (opt->flag.tfc_dummy) {
+		} else if (opt->flag.tfc_dummy) {
 			state.out_tunnel.ip_tos = 0;
 			state.out_tunnel.ip_df = 0;
 			state.out_tunnel.ip_flabel = 0;
 			rc = 0;
-		} else
+		} else {
 			rc = -1;
+		}
+
 		if (rc < 0) {
 			status->error.alg = 1;
 			goto exit;

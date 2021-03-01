@@ -583,12 +583,9 @@ static bool timer_reset(uint32_t idx, uint64_t abs_tck, odp_buffer_t *tmo_buf,
 
 			/* Atomic CAS will fail if we experienced torn reads,
 			 * retry update sequence until CAS succeeds */
-		} while (!_odp_atomic_u128_cmp_xchg_mm(
-					(_odp_atomic_u128_t *)tb,
-					(_uint128_t *)&old,
-					(_uint128_t *)&new,
-					_ODP_MEMMODEL_RLS,
-					_ODP_MEMMODEL_RLX));
+		} while (!_odp_atomic_u128_cmp_xchg_mm((_odp_atomic_u128_t *)tb,
+						       (_uint128_t *)&old, (_uint128_t *)&new,
+						       _ODP_MEMMODEL_RLS, _ODP_MEMMODEL_RLX));
 #elif __GCC_ATOMIC_LLONG_LOCK_FREE >= 2 && \
 	defined __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8
 	/* Target supports lock-free 64-bit CAS (and probably exchange) */
@@ -816,10 +813,9 @@ static inline void timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 		new.exp_tck.v = exp_tck | TMO_INACTIVE;
 		new.tmo_buf = ODP_BUFFER_INVALID;
 
-		int succ = _odp_atomic_u128_cmp_xchg_mm(
-				(_odp_atomic_u128_t *)tb,
-				(_uint128_t *)&old, (_uint128_t *)&new,
-				_ODP_MEMMODEL_RLS, _ODP_MEMMODEL_RLX);
+		int succ = _odp_atomic_u128_cmp_xchg_mm((_odp_atomic_u128_t *)tb,
+							(_uint128_t *)&old, (_uint128_t *)&new,
+							_ODP_MEMMODEL_RLS, _ODP_MEMMODEL_RLX);
 		if (succ)
 			tmo_buf = old.tmo_buf;
 		/* Else CAS failed, something changed => skip timer

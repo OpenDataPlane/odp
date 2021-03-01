@@ -2066,7 +2066,6 @@ int _odp_ishm_status(const char *title)
 		  "", len_total / 1024 / 1024,
 		  "", lost_total / 1024 / 1024);
 
-
 	/* display the virtual space allocations... : */
 	ODP_PRINT("\nishm virtual space:\n");
 	for (fragmnt = ishm_ftbl->used_fragmnts;
