@@ -523,7 +523,6 @@ static inline void packet_free_multi(odp_buffer_hdr_t *hdr[], int num)
 		/* Skip references and pack to be freed headers to array head */
 		if (odp_unlikely(num_ref))
 			hdr[i - num_ref] = hdr[i];
-
 	}
 
 	num -= num_ref;

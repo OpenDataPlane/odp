@@ -952,9 +952,7 @@ void _odp_timer_wheel_stats_print(_odp_timer_wheel_t timer_wheel)
 	ODP_PRINT("_odp_int_timer_wheel_stats current_ticks=%" PRIu64 "\n",
 		  timer_wheels->current_ticks);
 	for (wheel_idx = 0; wheel_idx < 4; wheel_idx++)
-		_odp_int_timer_wheel_desc_print(
-			&timer_wheels->wheel_descs[wheel_idx],
-			wheel_idx);
+		_odp_int_timer_wheel_desc_print(&timer_wheels->wheel_descs[wheel_idx], wheel_idx);
 
 	ODP_PRINT("  total timer_inserts=%" PRIu64 " timer_removes=%" PRIu64
 		  " insert_fails=%" PRIu64 "\n",

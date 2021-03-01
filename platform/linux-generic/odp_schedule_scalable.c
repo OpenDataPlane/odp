@@ -214,15 +214,13 @@ void _odp_sched_update_enq(sched_elem_t *q, uint32_t actual)
 				ticket = nss.nxt_ticket++;
 		/* Else queue already was non-empty. */
 	/* Attempt to update numevts counter and optionally take ticket. */
-	} while (!__atomic_compare_exchange(
-		       &q->qschst, &oss, &nss,
-		       true, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
+	} while (!__atomic_compare_exchange(&q->qschst, &oss, &nss,
+					    true, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
 
 	if (odp_unlikely(ticket != TICKET_INVALID)) {
 		/* Wait for our turn to update schedq. */
-		if (odp_unlikely(
-			    __atomic_load_n(&q->qschst.cur_ticket,
-					    __ATOMIC_ACQUIRE) != ticket)) {
+		if (odp_unlikely(__atomic_load_n(&q->qschst.cur_ticket,
+						 __ATOMIC_ACQUIRE) != ticket)) {
 			sevl();
 			while (wfe() &&
 			       monitor8(&q->qschst.cur_ticket,
@@ -333,12 +331,9 @@ sched_update_deq(sched_elem_t *q,
 			 * the CAS operation
 			 */
 			nss.cur_ticket = _odp_sched_ts->ticket + 1;
-		} while (odp_unlikely(!__atomic_compare_exchange(
-							  &q->qschst,
-							  &oss, &nss,
-							  true,
-							  __ATOMIC_RELEASE,
-							  __ATOMIC_RELAXED)));
+		} while (odp_unlikely(!__atomic_compare_exchange(&q->qschst, &oss, &nss, true,
+								 __ATOMIC_RELEASE,
+								 __ATOMIC_RELAXED)));
 		return;
 	}
 
@@ -361,16 +356,14 @@ sched_update_deq(sched_elem_t *q,
 			nss.wrr_budget = CONFIG_WRR_WEIGHT;
 		}
 	/* Attempt to update numevts and optionally take ticket. */
-	} while (!__atomic_compare_exchange(
-		       &q->qschst, &oss, &nss,
-		       true, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
+	} while (!__atomic_compare_exchange(&q->qschst, &oss, &nss,
+					    true, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
 
 	if (odp_unlikely(ticket != TICKET_INVALID)) {
 		ODP_ASSERT(q->qschst_type != ODP_SCHED_SYNC_ATOMIC);
 		/* Wait for our turn to update schedq. */
-		if (odp_unlikely(
-			    __atomic_load_n(&q->qschst.cur_ticket,
-					    __ATOMIC_ACQUIRE) != ticket)) {
+		if (odp_unlikely(__atomic_load_n(&q->qschst.cur_ticket,
+						 __ATOMIC_ACQUIRE) != ticket)) {
 			sevl();
 			while (wfe() &&
 			       monitor8(&q->qschst.cur_ticket,
@@ -728,8 +721,7 @@ static void pktio_start(int pktio_idx,
 		elem->cons_type |= FLAG_PKTIN; /* Set pktin queue flag */
 		elem->pktio_idx = pktio_idx;
 		elem->rx_queue = rxq;
-		elem->xoffset = sched_pktin_add(elem->sched_grp,
-				elem->sched_prio);
+		elem->xoffset = sched_pktin_add(elem->sched_grp, elem->sched_prio);
 		ODP_ASSERT(elem->schedq != NULL);
 		schedq_push(elem->schedq, elem);
 	}
@@ -899,8 +891,7 @@ static int _schedule(odp_queue_t *from, odp_event_t ev[], int num_evts)
 			num = poll_pktin(atomq, ev, num_evts);
 			if (odp_likely(num != 0)) {
 				if (from)
-					*from = queue_get_handle(
-							(queue_entry_t *)atomq);
+					*from = queue_get_handle((queue_entry_t *)atomq);
 				return num;
 			}
 		} else {
@@ -932,8 +923,7 @@ dequeue_atomic:
 				 * scheduler.
 				 */
 				if (from)
-					*from = queue_get_handle(
-							(queue_entry_t *)atomq);
+					*from = queue_get_handle((queue_entry_t *)atomq);
 				return num;
 			}
 		}
@@ -1006,11 +996,10 @@ restart_same:
 			 * responsibility.
 			 */
 			/* The ticket taken below will signal producers */
-			ts->ticket = __atomic_fetch_add(
-				&atomq->qschst.nxt_ticket, 1, __ATOMIC_RELAXED);
-			while (__atomic_load_n(
-					&atomq->qschst.cur_ticket,
-					__ATOMIC_ACQUIRE) != ts->ticket) {
+			ts->ticket = __atomic_fetch_add(&atomq->qschst.nxt_ticket, 1,
+							__ATOMIC_RELAXED);
+			while (__atomic_load_n(&atomq->qschst.cur_ticket,
+					       __ATOMIC_ACQUIRE) != ts->ticket) {
 				/* No need to use WFE, spinning here seems
 				 * very infrequent.
 				 */
@@ -1111,8 +1100,7 @@ restart_same:
 
 				ts->rctx = rctx;
 				if (from)
-					*from = queue_get_handle(
-						(queue_entry_t *)elem);
+					*from = queue_get_handle((queue_entry_t *)elem);
 				return num;
 			}
 #ifdef CONFIG_QSCHST_LOCK
@@ -1571,8 +1559,7 @@ static int schedule_group_destroy(odp_schedule_group_t group)
 	 */
 	for (p = 0; p < ODP_SCHED_PRIO_NUM; p++) {
 		if (sg->xcount[p] != 0) {
-			bitset_t wanted = atom_bitset_load(
-				&sg->thr_wanted, __ATOMIC_RELAXED);
+			bitset_t wanted = atom_bitset_load(&sg->thr_wanted, __ATOMIC_RELAXED);
 
 			sevl();
 			while (wfe() &&

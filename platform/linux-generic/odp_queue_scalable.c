@@ -181,7 +181,6 @@ static int queue_init(queue_entry_t *queue, const char *name,
 		sched_elem->schedq =
 			_odp_sched_queue_add(param->sched.group, prio);
 		ODP_ASSERT(sched_elem->schedq != NULL);
-
 	}
 
 	return 0;
@@ -674,8 +673,7 @@ static int _queue_enq_multi(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr[],
 
 static int _queue_enq(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr)
 {
-	return odp_likely(
-		_queue_enq_multi(handle, &buf_hdr, 1) == 1) ? 0 : -1;
+	return odp_likely(_queue_enq_multi(handle, &buf_hdr, 1) == 1) ? 0 : -1;
 }
 
 static int queue_enq_multi(odp_queue_t handle, const odp_event_t ev[], int num)
@@ -734,8 +732,7 @@ int _odp_queue_deq_sc(sched_elem_t *q, odp_event_t *evp, int num)
 	mask = q->cons_mask;
 	ring = q->cons_ring;
 	do {
-		*evp++ = odp_buffer_to_event(
-				buf_from_buf_hdr(ring[old_read & mask]));
+		*evp++ = odp_buffer_to_event(buf_from_buf_hdr(ring[old_read & mask]));
 	} while (++old_read != new_read);
 
 	/* Signal producers that empty slots are available
@@ -828,8 +825,7 @@ inline int _odp_queue_deq_mc(sched_elem_t *q, odp_event_t *evp, int num)
 	ret = _odp_queue_deq(q, hdr_tbl, num);
 	if (odp_likely(ret != 0)) {
 		for (evt_idx = 0; evt_idx < num; evt_idx++)
-			evp[evt_idx] = odp_buffer_to_event(
-					buf_from_buf_hdr(hdr_tbl[evt_idx]));
+			evp[evt_idx] = odp_buffer_to_event(buf_from_buf_hdr(hdr_tbl[evt_idx]));
 	}
 
 	return ret;

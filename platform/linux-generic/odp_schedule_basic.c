@@ -840,7 +840,6 @@ static void schedule_group_clear(odp_schedule_group_t group)
 
 	grp_update_mask(group, &zero);
 	sched->sched_grp[group].allocated = 0;
-
 }
 
 static int schedule_config(const odp_schedule_config_t *config)
@@ -1018,7 +1017,6 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 	/* Schedule events */
 	for (prio = 0; prio < NUM_PRIO; prio++) {
-
 		if (sched->prio_q_mask[prio] == 0)
 			continue;
 
@@ -1253,7 +1251,6 @@ static inline int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 	int ret;
 
 	while (1) {
-
 		ret = do_schedule(out_queue, out_ev, max_num);
 		if (ret) {
 			timer_run(2);

@@ -332,15 +332,11 @@ int _odp_rctx_save(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 			/* No more space in current reorder context
 			 * Try to allocate another.
 			 */
-			if (odp_unlikely(
-				bitset_is_null(ts->priv_rvec_free))) {
-				ts->priv_rvec_free =
-					atom_bitset_xchg(
-						&ts->rvec_free,
-						0,
-						__ATOMIC_RELAXED);
-				if (odp_unlikely(bitset_is_null(
-						ts->priv_rvec_free)))
+			if (odp_unlikely(bitset_is_null(ts->priv_rvec_free))) {
+				ts->priv_rvec_free = atom_bitset_xchg(&ts->rvec_free, 0,
+								      __ATOMIC_RELAXED);
+
+				if (odp_unlikely(bitset_is_null(ts->priv_rvec_free)))
 					/* Out of reorder contexts.
 					 * Return the number of events
 					 * stored so far.
