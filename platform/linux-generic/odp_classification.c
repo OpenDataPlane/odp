@@ -120,12 +120,14 @@ int _odp_classification_init_global(void)
 	for (i = 0; i < CLS_COS_MAX_ENTRY; i++) {
 		/* init locks */
 		cos_t *cos = get_cos_entry_internal(_odp_cos_from_ndx(i));
+
 		LOCK_INIT(&cos->s.lock);
 	}
 
 	for (i = 0; i < CLS_PMR_MAX_ENTRY; i++) {
 		/* init locks */
 		pmr_t *pmr = get_pmr_entry_internal(_odp_pmr_from_ndx(i));
+
 		LOCK_INIT(&pmr->s.lock);
 	}
 
@@ -290,8 +292,7 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param)
 							   param->hash_proto);
 				tbl_index = i * CLS_COS_QUEUE_MAX;
 				for (j = 0; j < param->num_queue; j++) {
-					queue = odp_queue_create(NULL, &cos->s.
-								 queue_param);
+					queue = odp_queue_create(NULL, &cos->s.queue_param);
 					if (queue == ODP_QUEUE_INVALID) {
 						/* unwind the queues */
 						_cls_queue_unwind(tbl_index, j);
