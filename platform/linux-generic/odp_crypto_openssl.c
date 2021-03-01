@@ -314,9 +314,9 @@ null_crypto_routine(odp_packet_t pkt ODP_UNUSED,
 }
 
 static void
-null_crypto_init_routine(odp_crypto_generic_session_t *session ODP_UNUSED)
+null_crypto_init_routine(odp_crypto_generic_session_t *session)
 {
-	return;
+	(void)session;
 }
 
 /* Mimic new OpenSSL 1.1.y API */
