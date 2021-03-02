@@ -229,6 +229,7 @@ typedef struct {
 
 	/* Scheduler interface config options (not used in fast path) */
 	schedule_config_t config_if;
+	uint32_t max_queues;
 
 } sched_global_t;
 
@@ -399,6 +400,7 @@ static int schedule_init_global(void)
 	odp_shm_t shm;
 	int i, j, grp;
 	int prefer_ratio;
+	uint32_t ring_size;
 
 	ODP_DBG("Schedule init ... ");
 
@@ -419,11 +421,21 @@ static int schedule_init_global(void)
 		return -1;
 	}
 
+	sched->shm = shm;
 	prefer_ratio = sched->config.prefer_ratio;
 
 	/* When num_spread == 1, only spread_tbl[0] is used. */
 	sched->max_spread = (sched->config.num_spread - 1) * prefer_ratio;
-	sched->shm  = shm;
+
+	ring_size = MAX_RING_SIZE / sched->config.num_spread;
+	ring_size = ROUNDUP_POWER2_U32(ring_size);
+	ODP_ASSERT(ring_size <= MAX_RING_SIZE);
+	sched->ring_mask = ring_size - 1;
+
+	/* Each ring can hold in maximum ring_size-1 queues. */
+	sched->max_queues = sched->ring_mask * sched->config.num_spread;
+	ODP_ASSERT(sched->max_queues <= CONFIG_MAX_SCHED_QUEUES);
+
 	odp_spinlock_init(&sched->mask_lock);
 
 	for (grp = 0; grp < NUM_SCHED_GRPS; grp++) {
@@ -573,7 +585,6 @@ static inline int prio_level_from_api(int api_prio)
 static int schedule_create_queue(uint32_t queue_index,
 				 const odp_schedule_param_t *sched_param)
 {
-	uint32_t ring_size;
 	int i;
 	int prio = prio_level_from_api(sched_param->prio);
 	uint8_t spread = spread_index(queue_index);
@@ -619,11 +630,6 @@ static int schedule_create_queue(uint32_t queue_index,
 	sched->queue[queue_index].poll_pktin  = 0;
 	sched->queue[queue_index].pktio_index = 0;
 	sched->queue[queue_index].pktin_index = 0;
-
-	ring_size = MAX_RING_SIZE / sched->config.num_spread;
-	ring_size = ROUNDUP_POWER2_U32(ring_size);
-	ODP_ASSERT(ring_size <= MAX_RING_SIZE);
-	sched->ring_mask = ring_size - 1;
 
 	odp_atomic_init_u64(&sched->order[queue_index].ctx, 0);
 	odp_atomic_init_u64(&sched->order[queue_index].next_ctx, 0);
@@ -822,7 +828,7 @@ static int schedule_term_local(void)
 
 static void schedule_config_init(odp_schedule_config_t *config)
 {
-	config->num_queues = CONFIG_MAX_SCHED_QUEUES;
+	config->num_queues = sched->max_queues;
 	config->queue_size = _odp_queue_glb->config.max_queue_size;
 	config->sched_group.all = sched->config_if.group_enable.all;
 	config->sched_group.control = sched->config_if.group_enable.control;
@@ -1641,7 +1647,7 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	capa->max_ordered_locks = schedule_max_ordered_locks();
 	capa->max_groups = schedule_num_grps();
 	capa->max_prios = schedule_num_prio();
-	capa->max_queues = CONFIG_MAX_SCHED_QUEUES;
+	capa->max_queues = sched->max_queues;
 	capa->max_queue_size = _odp_queue_glb->config.max_queue_size;
 	capa->max_flow_id = BUF_HDR_MAX_FLOW_ID;
 
