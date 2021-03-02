@@ -24,6 +24,7 @@
 #define USE_MTU                0
 #define MAX_NUM_IFACES         2
 #define TEST_SEQ_INVALID       ((uint32_t)~0)
+#define TEST_SEQ_RELATIVE      ((uint32_t)~1)
 #define TEST_SEQ_MAGIC         0x92749451
 #define TX_BATCH_LEN           4
 #define PKTV_TX_BATCH_LEN      32
@@ -212,19 +213,20 @@ static uint32_t pktio_pkt_set_seq(odp_packet_t pkt, size_t l4_hdr_len)
 	return head.seq;
 }
 
-static uint32_t pktio_pkt_seq_hdr(odp_packet_t pkt, size_t l4_hdr_len)
+static uint32_t pktio_pkt_seq_hdr(odp_packet_t pkt, size_t l4_hdr_len, size_t l4_offset)
 {
-	size_t off;
 	uint32_t seq = TEST_SEQ_INVALID;
 	pkt_head_t head;
 	pkt_tail_t tail;
+	size_t off = 0;
 
 	if (pkt == ODP_PACKET_INVALID) {
 		ODPH_ERR("pkt invalid\n");
 		return TEST_SEQ_INVALID;
 	}
 
-	off = odp_packet_l4_offset(pkt);
+	off = (l4_offset != 0) ? l4_offset : odp_packet_l4_offset(pkt);
+
 	if (off ==  ODP_PACKET_OFFSET_INVALID) {
 		ODPH_ERR("offset invalid\n");
 		return TEST_SEQ_INVALID;
@@ -266,7 +268,7 @@ static uint32_t pktio_pkt_seq_hdr(odp_packet_t pkt, size_t l4_hdr_len)
 
 static uint32_t pktio_pkt_seq(odp_packet_t pkt)
 {
-	return pktio_pkt_seq_hdr(pkt, ODPH_UDPHDR_LEN);
+	return pktio_pkt_seq_hdr(pkt, ODPH_UDPHDR_LEN, 0);
 }
 
 static void pktio_init_packet_eth_ipv4(odp_packet_t pkt, uint8_t proto)
@@ -725,6 +727,7 @@ static int wait_for_packets_hdr(pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
 	int num_rx = 0;
 	int i;
 	odp_packet_t pkt_tmp[num];
+	size_t l4_offset = 0;
 
 	wait_time = odp_time_local_from_ns(ns);
 	start     = odp_time_local();
@@ -740,11 +743,19 @@ static int wait_for_packets_hdr(pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
 			continue;
 
 		for (i = 0; i < n; ++i) {
-			if (pktio_pkt_seq_hdr(pkt_tmp[i], l4_hdr_len) ==
-			    seq_tbl[num_rx])
+			if (seq_tbl[i] == TEST_SEQ_RELATIVE) {
+				l4_offset = ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN;
+				/* Compare if adjacent to previous packet seq number */
+				if (pktio_pkt_seq_hdr(pkt_tmp[i], l4_hdr_len, l4_offset) ==
+					(seq_tbl[0] + i)) {
+					pkt_tbl[num_rx++] = pkt_tmp[i];
+				}
+			} else if (pktio_pkt_seq_hdr(pkt_tmp[i], l4_hdr_len, 0) ==
+					 seq_tbl[num_rx]) {
 				pkt_tbl[num_rx++] = pkt_tmp[i];
-			else
+			} else {
 				odp_packet_free(pkt_tmp[i]);
+			}
 		}
 	}
 
@@ -3399,7 +3410,7 @@ static void pktio_test_pktout_compl_sched_queue(void)
 }
 
 static void pktio_test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
-			      void (*prep_fn)(odp_packet_t pkt),
+			      void (*prep_fn)(odp_packet_t pkt, void *arg),
 			      void (*test_fn)(odp_packet_t pkt))
 {
 	odp_pktio_t pktio_tx, pktio_rx;
@@ -3455,7 +3466,7 @@ static void pktio_test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 
 	for (i = 0; i < TX_BATCH_LEN; i++)
 		if (prep_fn)
-			prep_fn(pkt_tbl[i]);
+			prep_fn(pkt_tbl[i], &pkt_seq[i]);
 
 	send_packets(pktout_queue, pkt_tbl, TX_BATCH_LEN);
 	num_rx = wait_for_packets(&pktio_rx_info, pkt_tbl, pkt_seq,
@@ -3587,13 +3598,15 @@ static void pktio_test_chksum_in_ipv4_config(odp_pktio_t pktio_tx ODP_UNUSED,
 	CU_ASSERT_FATAL(odp_pktio_config(pktio_rx, &config) == 0);
 }
 
-static void pktio_test_chksum_in_ipv4_prep(odp_packet_t pkt)
+static void pktio_test_chksum_in_ipv4_prep(odp_packet_t pkt, void *arg ODP_UNUSED)
 {
 	odph_ipv4_csum_update(pkt);
 }
 
 static void pktio_test_chksum_in_ipv4_test(odp_packet_t pkt)
 {
+	CU_ASSERT(odp_packet_has_error(pkt) == 0);
+	CU_ASSERT(odp_packet_has_l3_error(pkt) == 0);
 	CU_ASSERT(odp_packet_l3_chksum_status(pkt) == ODP_PACKET_CHKSUM_OK);
 }
 
@@ -3602,6 +3615,50 @@ static void pktio_test_chksum_in_ipv4(void)
 	pktio_test_chksum(pktio_test_chksum_in_ipv4_config,
 			  pktio_test_chksum_in_ipv4_prep,
 			  pktio_test_chksum_in_ipv4_test);
+}
+
+static void pktio_test_chksum_bad_in_ipv4_prep(odp_packet_t pkt, void *arg)
+{
+	static bool first_packet = true;
+	uint32_t *seq = (uint32_t *)arg;
+	odph_ipv4hdr_t *hdr;
+
+	pktio_test_chksum_in_ipv4_prep(pkt, NULL);
+
+	/* First packet in the test carries valid sequence number
+	 * which is used for relative comparison with subsequent
+	 * invalid checksum packets */
+	if (first_packet) {
+		first_packet = false;
+		return;
+	}
+
+	/* Insert incorrect checksum */
+	hdr = odp_packet_l3_ptr(pkt, NULL);
+	hdr->chksum ^= 1;
+	*seq = TEST_SEQ_RELATIVE;
+}
+
+static void pktio_test_chksum_bad_in_ipv4_test(odp_packet_t pkt)
+{
+	static bool first_packet = true;
+
+	if (first_packet) {
+		pktio_test_chksum_in_ipv4_test(pkt);
+		first_packet = false;
+		return;
+	}
+
+	CU_ASSERT(odp_packet_has_error(pkt) != 0);
+	CU_ASSERT(odp_packet_has_l3_error(pkt) != 0);
+	CU_ASSERT(odp_packet_l3_chksum_status(pkt) == ODP_PACKET_CHKSUM_BAD);
+}
+
+static void pktio_test_chksum_bad_in_ipv4(void)
+{
+	pktio_test_chksum(pktio_test_chksum_in_ipv4_config,
+			  pktio_test_chksum_bad_in_ipv4_prep,
+			  pktio_test_chksum_bad_in_ipv4_test);
 }
 
 static int pktio_check_chksum_in_udp(void)
@@ -3643,7 +3700,7 @@ static void pktio_test_chksum_in_udp_config(odp_pktio_t pktio_tx ODP_UNUSED,
 	CU_ASSERT_FATAL(odp_pktio_config(pktio_rx, &config) == 0);
 }
 
-static void pktio_test_chksum_in_udp_prep(odp_packet_t pkt)
+static void pktio_test_chksum_in_udp_prep(odp_packet_t pkt, void *arg ODP_UNUSED)
 {
 	odp_packet_has_ipv4_set(pkt, 1);
 	odp_packet_has_udp_set(pkt, 1);
@@ -3653,6 +3710,8 @@ static void pktio_test_chksum_in_udp_prep(odp_packet_t pkt)
 
 static void pktio_test_chksum_in_udp_test(odp_packet_t pkt)
 {
+	CU_ASSERT(odp_packet_has_error(pkt) == 0);
+	CU_ASSERT(odp_packet_has_l4_error(pkt) == 0);
 	CU_ASSERT(odp_packet_l4_chksum_status(pkt) == ODP_PACKET_CHKSUM_OK);
 }
 
@@ -3661,6 +3720,30 @@ static void pktio_test_chksum_in_udp(void)
 	pktio_test_chksum(pktio_test_chksum_in_udp_config,
 			  pktio_test_chksum_in_udp_prep,
 			  pktio_test_chksum_in_udp_test);
+}
+
+static void pktio_test_chksum_bad_in_udp_prep(odp_packet_t pkt, void *arg ODP_UNUSED)
+{
+	odph_udphdr_t *hdr;
+
+	/* Insert incorrect checksum */
+	pktio_test_chksum_in_udp_prep(pkt, NULL);
+	hdr = odp_packet_l4_ptr(pkt, NULL);
+	hdr->chksum ^= 1;
+}
+
+static void pktio_test_chksum_bad_in_udp_test(odp_packet_t pkt)
+{
+	CU_ASSERT(odp_packet_has_error(pkt) != 0);
+	CU_ASSERT(odp_packet_has_l4_error(pkt) != 0);
+	CU_ASSERT(odp_packet_l4_chksum_status(pkt) == ODP_PACKET_CHKSUM_BAD);
+}
+
+static void pktio_test_chksum_bad_in_udp(void)
+{
+	pktio_test_chksum(pktio_test_chksum_in_udp_config,
+			  pktio_test_chksum_bad_in_udp_prep,
+			  pktio_test_chksum_bad_in_udp_test);
 }
 
 static int pktio_check_chksum_in_sctp(void)
@@ -3712,6 +3795,7 @@ static void pktio_test_chksum_in_sctp_prep(odp_packet_t pkt)
 
 static void pktio_test_chksum_in_sctp_test(odp_packet_t pkt)
 {
+	CU_ASSERT(odp_packet_has_error(pkt) == 0);
 	CU_ASSERT(odp_packet_l4_chksum_status(pkt) == ODP_PACKET_CHKSUM_OK);
 }
 
@@ -3720,6 +3804,29 @@ static void pktio_test_chksum_in_sctp(void)
 	pktio_test_chksum_sctp(pktio_test_chksum_in_sctp_config,
 			       pktio_test_chksum_in_sctp_prep,
 			       pktio_test_chksum_in_sctp_test);
+}
+
+static void pktio_test_chksum_bad_in_sctp_prep(odp_packet_t pkt)
+{
+	odph_sctphdr_t *hdr;
+
+	/* Insert incorrect checksum */
+	pktio_test_chksum_in_sctp_prep(pkt);
+	hdr = odp_packet_l4_ptr(pkt, NULL);
+	hdr->chksum ^= 1;
+}
+
+static void pktio_test_chksum_bad_in_sctp_test(odp_packet_t pkt)
+{
+	CU_ASSERT(odp_packet_has_error(pkt) != 0);
+	CU_ASSERT(odp_packet_l4_chksum_status(pkt) == ODP_PACKET_CHKSUM_BAD);
+}
+
+static void pktio_test_chksum_bad_in_sctp(void)
+{
+	pktio_test_chksum_sctp(pktio_test_chksum_in_sctp_config,
+			       pktio_test_chksum_bad_in_sctp_prep,
+			       pktio_test_chksum_bad_in_sctp_test);
 }
 
 static int pktio_check_chksum_out_ipv4(void)
@@ -3771,7 +3878,8 @@ static void pktio_test_chksum_out_ipv4_test(odp_packet_t pkt)
 		CU_ASSERT(ip->chksum != 0);
 }
 
-static void pktio_test_chksum_out_ipv4_no_ovr_prep(odp_packet_t pkt)
+static void pktio_test_chksum_out_ipv4_no_ovr_prep(odp_packet_t pkt,
+						   void *arg ODP_UNUSED)
 {
 	odp_packet_l3_chksum_insert(pkt, false);
 }
@@ -3792,7 +3900,7 @@ static void pktio_test_chksum_out_ipv4_no_ovr(void)
 			  pktio_test_chksum_out_ipv4_no_ovr_test);
 }
 
-static void pktio_test_chksum_out_ipv4_ovr_prep(odp_packet_t pkt)
+static void pktio_test_chksum_out_ipv4_ovr_prep(odp_packet_t pkt, void *arg ODP_UNUSED)
 {
 	odp_packet_l3_chksum_insert(pkt, true);
 }
@@ -3888,7 +3996,8 @@ static void pktio_test_chksum_out_udp_test(odp_packet_t pkt)
 	}
 }
 
-static void pktio_test_chksum_out_udp_no_ovr_prep(odp_packet_t pkt)
+static void pktio_test_chksum_out_udp_no_ovr_prep(odp_packet_t pkt,
+						  void *arg ODP_UNUSED)
 {
 	odph_ipv4_csum_update(pkt);
 	odp_packet_l4_chksum_insert(pkt, false);
@@ -3910,7 +4019,7 @@ static void pktio_test_chksum_out_udp_no_ovr(void)
 			  pktio_test_chksum_out_udp_no_ovr_test);
 }
 
-static void pktio_test_chksum_out_udp_ovr_prep(odp_packet_t pkt)
+static void pktio_test_chksum_out_udp_ovr_prep(odp_packet_t pkt, void *arg ODP_UNUSED)
 {
 	odp_packet_l4_chksum_insert(pkt, true);
 }
@@ -4805,9 +4914,15 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 				  pktio_check_pktout_ts),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_chksum_in_ipv4,
 				  pktio_check_chksum_in_ipv4),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_chksum_bad_in_ipv4,
+				  pktio_check_chksum_in_ipv4),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_chksum_in_udp,
 				  pktio_check_chksum_in_udp),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_chksum_bad_in_udp,
+				  pktio_check_chksum_in_udp),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_chksum_in_sctp,
+				  pktio_check_chksum_in_sctp),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_chksum_bad_in_sctp,
 				  pktio_check_chksum_in_sctp),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_chksum_out_ipv4_no_ovr,
 				  pktio_check_chksum_out_ipv4),
