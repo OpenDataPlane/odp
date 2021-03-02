@@ -64,7 +64,7 @@ typedef struct sa_thread_local_s {
 	odp_atomic_u32_t packet_quota;
 	/*
 	 * Bytes that can be processed in this thread before looking at
-	 * at the SA-global byte counter and checking hard and soft limits.
+	 * the SA-global byte counter and checking hard and soft limits.
 	 */
 	uint32_t byte_quota;
 	/*
