@@ -189,11 +189,7 @@ static void scheduler_test_wait_time(void)
 	wait_time = odp_schedule_wait_time(1);
 
 	/* check ODP_SCHED_NO_WAIT */
-	odp_queue_param_init(&qp);
-	qp.type        = ODP_QUEUE_TYPE_SCHED;
-	qp.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
-	qp.sched.prio  = odp_schedule_default_prio();
-	qp.sched.group = ODP_SCHED_GROUP_ALL;
+	sched_queue_param_init(&qp);
 	queue = odp_queue_create("dummy_queue", &qp);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
@@ -274,7 +270,6 @@ static void scheduler_test_queue_destroy(void)
 				      ODP_SCHED_SYNC_ATOMIC,
 				      ODP_SCHED_SYNC_ORDERED};
 
-	odp_queue_param_init(&qp);
 	odp_pool_param_init(&params);
 	params.buf.size  = 100;
 	params.buf.align = 0;
@@ -285,12 +280,10 @@ static void scheduler_test_queue_destroy(void)
 
 	CU_ASSERT_FATAL(p != ODP_POOL_INVALID);
 
-	for (i = 0; i < 3; i++) {
-		qp.type        = ODP_QUEUE_TYPE_SCHED;
-		qp.sched.prio  = odp_schedule_default_prio();
-		qp.sched.sync  = sync[i];
-		qp.sched.group = ODP_SCHED_GROUP_ALL;
+	sched_queue_param_init(&qp);
 
+	for (i = 0; i < 3; i++) {
+		qp.sched.sync = sync[i];
 		queue = odp_queue_create("sched_destroy_queue", &qp);
 
 		CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
@@ -352,12 +345,7 @@ static void scheduler_test_wait(void)
 
 	CU_ASSERT_FATAL(p != ODP_POOL_INVALID);
 
-	odp_queue_param_init(&queue_param);
-	queue_param.type        = ODP_QUEUE_TYPE_SCHED;
-	queue_param.sched.prio  = odp_schedule_default_prio();
-	queue_param.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
-	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
-
+	sched_queue_param_init(&queue_param);
 	queue = odp_queue_create("sched_test_wait", &queue_param);
 
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
@@ -474,11 +462,8 @@ static void scheduler_test_queue_size(void)
 				j++;
 		}
 
-		odp_queue_param_init(&queue_param);
-		queue_param.type = ODP_QUEUE_TYPE_SCHED;
-		queue_param.sched.prio  = odp_schedule_default_prio();
+		sched_queue_param_init(&queue_param);
 		queue_param.sched.sync  = sync[i];
-		queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 		queue_param.size = queue_size;
 
 		queue = odp_queue_create("test_queue_size", &queue_param);
@@ -582,11 +567,8 @@ static void scheduler_test_full_queues(void)
 
 		/* Create and fill all queues */
 		for (j = 0; j < num_queues; j++) {
-			odp_queue_param_init(&queue_param);
-			queue_param.type = ODP_QUEUE_TYPE_SCHED;
-			queue_param.sched.prio  = odp_schedule_default_prio();
+			sched_queue_param_init(&queue_param);
 			queue_param.sched.sync  = sync[i];
-			queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 			queue_param.size = events_per_queue;
 
 			queue[j] = odp_queue_create("test_full_queues",
@@ -693,11 +675,8 @@ static void scheduler_test_order_ignore(void)
 			j++;
 	}
 
-	odp_queue_param_init(&queue_param);
-	queue_param.type = ODP_QUEUE_TYPE_SCHED;
-	queue_param.sched.prio  = odp_schedule_default_prio();
-	queue_param.sched.sync  = ODP_SCHED_SYNC_ORDERED;
-	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+	sched_queue_param_init(&queue_param);
+	queue_param.sched.sync = ODP_SCHED_SYNC_ORDERED;
 
 	ordered = odp_queue_create("ordered", &queue_param);
 	CU_ASSERT_FATAL(ordered != ODP_QUEUE_INVALID);
@@ -790,9 +769,7 @@ static void scheduler_test_create_group(void)
 	pool = odp_pool_create("create_group", &pool_params);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
-	odp_queue_param_init(&qp);
-	qp.type        = ODP_QUEUE_TYPE_SCHED;
-	qp.sched.prio  = odp_schedule_default_prio();
+	sched_queue_param_init(&qp);
 	qp.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qp.sched.group = group;
 
@@ -846,9 +823,7 @@ static void scheduler_test_create_max_groups(void)
 	odp_thrmask_zero(&mask);
 	odp_thrmask_set(&mask, thr_id);
 
-	odp_queue_param_init(&queue_param);
-	queue_param.type       = ODP_QUEUE_TYPE_SCHED;
-	queue_param.sched.prio = odp_schedule_default_prio();
+	sched_queue_param_init(&queue_param);
 	queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
 
 	for (i = 0; i < max_groups; i++) {
@@ -992,9 +967,7 @@ static void scheduler_test_groups(void)
 		int num = NUM_GROUPS;
 		int schedule_retries;
 
-		odp_queue_param_init(&qp);
-		qp.type        = ODP_QUEUE_TYPE_SCHED;
-		qp.sched.prio  = odp_schedule_default_prio();
+		sched_queue_param_init(&qp);
 		qp.sched.sync  = sync[i];
 		qp.sched.group = mygrp1;
 
@@ -1218,7 +1191,6 @@ static void chaos_run(unsigned int qtype)
 
 	args->globals = globals;
 
-	odp_queue_param_init(&qp);
 	odp_pool_param_init(&params);
 	params.buf.size = sizeof(chaos_buf);
 	params.buf.align = 0;
@@ -1227,9 +1199,8 @@ static void chaos_run(unsigned int qtype)
 
 	pool = odp_pool_create("sched_chaos_pool", &params);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
-	qp.type        = ODP_QUEUE_TYPE_SCHED;
-	qp.sched.prio  = odp_schedule_default_prio();
-	qp.sched.group = ODP_SCHED_GROUP_ALL;
+
+	sched_queue_param_init(&qp);
 
 	for (i = 0; i < CHAOS_NUM_QUEUES; i++) {
 		uint32_t ndx = (qtype == num_sync ? i % num_sync : qtype);
@@ -2281,8 +2252,7 @@ static void scheduler_test_sched_and_plain(odp_schedule_sync_t sync)
 	    queue_capa.plain.max_size < events_per_queue)
 		events_per_queue = queue_capa.plain.max_size;
 
-	odp_queue_param_init(&queue_param);
-	queue_param.type = ODP_QUEUE_TYPE_SCHED;
+	sched_queue_param_init(&queue_param);
 	queue_param.sched.sync = sync;
 	queue_param.size = events_per_queue;
 	if (sync == ODP_SCHED_SYNC_ORDERED)
@@ -2688,11 +2658,8 @@ static void scheduler_test_flow_aware(void)
 		memset(flow_stat, 0, sizeof(flow_stat));
 		flow_id = 0;
 
-		odp_queue_param_init(&queue_param);
-		queue_param.type = ODP_QUEUE_TYPE_SCHED;
-		queue_param.sched.prio  = odp_schedule_default_prio();
+		sched_queue_param_init(&queue_param);
 		queue_param.sched.sync  = sync[i];
-		queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 		queue_param.size = queue_size;
 
 		queue = odp_queue_create("test_flow_aware", &queue_param);
