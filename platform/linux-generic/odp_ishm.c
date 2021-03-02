@@ -436,7 +436,7 @@ static void *alloc_fragment(uintptr_t size, int block_index, intptr_t align,
 	ishm_fragment_t *fragmnt;
 	*best_fragmnt = NULL;
 	ishm_fragment_t *rem_fragmnt;
-	uintptr_t border;/* possible start of new fragment (next alignement)  */
+	uintptr_t border;/* possible start of new fragment (next alignment)  */
 	intptr_t left;	 /* room remaining after, if the segment is allocated */
 	uintptr_t remainder = odp_global_ro.shm_max_memory;
 
@@ -1128,7 +1128,7 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 		 * can request more: If the user requirement exceeds the page
 		 * size then we have to make sure the block will be mapped at
 		 * the same address every where, otherwise alignment may be
-		 * be wrong for some process */
+		 * wrong for some process */
 		hp_align = align;
 		if (hp_align <= page_hp_size)
 			hp_align = page_hp_size;
@@ -1185,7 +1185,7 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 		 * can request more: If the user requirement exceeds the page
 		 * size then we have to make sure the block will be mapped at
 		 * the same address every where, otherwise alignment may be
-		 * be wrong for some process */
+		 * wrong for some process */
 		if (align <= odp_sys_page_size())
 			align = odp_sys_page_size();
 		else

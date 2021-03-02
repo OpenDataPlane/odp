@@ -1087,7 +1087,7 @@ static int pktin_deq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
 	if (odp_unlikely(nbr > num))
 		ODP_ABORT("queue_deq_multi req: %d, returned %d\n", num, nbr);
 
-	/** queue already has number of requsted buffers,
+	/** queue already has number of requested buffers,
 	 *  do not do receive in that case.
 	 */
 	if (nbr == num)

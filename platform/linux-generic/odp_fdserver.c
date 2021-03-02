@@ -513,7 +513,7 @@ static int handle_request(int client_sock)
 		break;
 
 	case FD_SERVERSTOP_REQ:
-		FD_ODP_DBG("Stoping FD server\n");
+		FD_ODP_DBG("Stopping FD server\n");
 		return 1;
 
 	default:
