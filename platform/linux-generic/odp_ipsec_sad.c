@@ -443,7 +443,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		odp_atomic_init_u64(&ipsec_sa->hot.in.antireplay, 0);
 	} else {
 		ipsec_sa->lookup_mode = ODP_IPSEC_LOOKUP_DISABLED;
-		odp_atomic_store_u64(&ipsec_sa->hot.out.seq, 1);
+		odp_atomic_init_u64(&ipsec_sa->hot.out.seq, 1);
 		ipsec_sa->out.frag_mode = param->outbound.frag_mode;
 		ipsec_sa->out.mtu = param->outbound.mtu;
 	}
@@ -453,8 +453,8 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	ipsec_sa->copy_flabel = param->opt.copy_flabel;
 	ipsec_sa->udp_encap = param->opt.udp_encap;
 
-	odp_atomic_store_u64(&ipsec_sa->hot.bytes, 0);
-	odp_atomic_store_u64(&ipsec_sa->hot.packets, 0);
+	odp_atomic_init_u64(&ipsec_sa->hot.bytes, 0);
+	odp_atomic_init_u64(&ipsec_sa->hot.packets, 0);
 	ipsec_sa->soft_limit_bytes = param->lifetime.soft_limit.bytes;
 	ipsec_sa->soft_limit_packets = param->lifetime.soft_limit.packets;
 	ipsec_sa->hard_limit_bytes = param->lifetime.hard_limit.bytes;
