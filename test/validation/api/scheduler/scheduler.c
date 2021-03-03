@@ -629,6 +629,117 @@ static void scheduler_test_full_queues(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+static void scheduler_test_max_queues(odp_schedule_sync_t sync)
+{
+	odp_pool_t pool;
+	odp_pool_param_t pool_param;
+	odp_schedule_capability_t sched_capa;
+	odp_queue_param_t queue_param;
+	odp_buffer_t buf;
+	odp_event_t ev;
+	odp_queue_t src_queue;
+	uint64_t wait_time;
+	uint32_t i, src_idx;
+	uint32_t num_rounds = 4;
+	uint32_t num_queues = 64 * 1024;
+
+	CU_ASSERT_FATAL(odp_schedule_capability(&sched_capa) == 0);
+	if (num_queues > sched_capa.max_queues)
+		num_queues = sched_capa.max_queues;
+
+	CU_ASSERT_FATAL(num_queues > 0);
+
+	odp_queue_t queue[num_queues];
+
+	odp_pool_param_init(&pool_param);
+	pool_param.type      = ODP_POOL_BUFFER;
+	pool_param.buf.size  = 100;
+	pool_param.buf.num   = 1;
+
+	pool = odp_pool_create("test_max_queues", &pool_param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	/* Ensure that scheduler is empty */
+	drain_queues();
+
+	sched_queue_param_init(&queue_param);
+	queue_param.sched.sync = sync;
+
+	for (i = 0; i < num_queues; i++) {
+		queue[i] = odp_queue_create("test_max_queues", &queue_param);
+		if (queue[i] == ODP_QUEUE_INVALID)
+			ODPH_ERR("Queue create failed %u/%u\n", i, num_queues);
+
+		CU_ASSERT_FATAL(queue[i] != ODP_QUEUE_INVALID);
+	}
+
+	buf = odp_buffer_alloc(pool);
+	CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+	ev = odp_buffer_to_event(buf);
+
+	CU_ASSERT_FATAL(odp_queue_enq(queue[0], ev) == 0);
+
+	wait_time = odp_schedule_wait_time(500 * ODP_TIME_MSEC_IN_NS);
+	src_idx = 0;
+
+	/* Send one event through all queues couple of times */
+	for (i = 0; i < (num_rounds * num_queues); i++) {
+		uint32_t round = i / num_queues;
+
+		ev = odp_schedule(&src_queue, wait_time);
+		if (ev == ODP_EVENT_INVALID) {
+			ODPH_ERR("Event was lost. Round %u, queue idx %u\n", round, src_idx);
+			CU_FAIL("Event was lost\n");
+			break;
+		}
+
+		CU_ASSERT(src_queue == queue[src_idx]);
+
+		src_idx++;
+		if (src_idx == num_queues)
+			src_idx = 0;
+
+		if (odp_queue_enq(queue[src_idx], ev)) {
+			ODPH_ERR("Enqueue failed. Round %u, queue idx %u\n", round, src_idx);
+			CU_FAIL("Enqueue failed\n")
+			odp_event_free(ev);
+			break;
+		}
+	}
+
+	/* Free event and scheduling context */
+	for (i = 0; i < 2; i++) {
+		ev = odp_schedule(NULL, wait_time);
+
+		if (ev == ODP_EVENT_INVALID)
+			continue;
+
+		odp_event_free(ev);
+	}
+
+	CU_ASSERT(drain_queues() == 0);
+
+	for (i = 0; i < num_queues; i++)
+		CU_ASSERT_FATAL(odp_queue_destroy(queue[i]) == 0);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+static void scheduler_test_max_queues_p(void)
+{
+	scheduler_test_max_queues(ODP_SCHED_SYNC_PARALLEL);
+}
+
+static void scheduler_test_max_queues_a(void)
+{
+	scheduler_test_max_queues(ODP_SCHED_SYNC_ATOMIC);
+}
+
+static void scheduler_test_max_queues_o(void)
+{
+	scheduler_test_max_queues(ODP_SCHED_SYNC_ORDERED);
+}
+
 static void scheduler_test_order_ignore(void)
 {
 	odp_queue_capability_t queue_capa;
@@ -2920,6 +3031,9 @@ odp_testinfo_t scheduler_basic_suite[] = {
 	ODP_TEST_INFO(scheduler_test_wait),
 	ODP_TEST_INFO(scheduler_test_queue_size),
 	ODP_TEST_INFO(scheduler_test_full_queues),
+	ODP_TEST_INFO(scheduler_test_max_queues_p),
+	ODP_TEST_INFO(scheduler_test_max_queues_a),
+	ODP_TEST_INFO(scheduler_test_max_queues_o),
 	ODP_TEST_INFO(scheduler_test_order_ignore),
 	ODP_TEST_INFO(scheduler_test_create_group),
 	ODP_TEST_INFO(scheduler_test_create_max_groups),
