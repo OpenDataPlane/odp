@@ -1,5 +1,6 @@
 /* Copyright (c) 2013-2018, Linaro Limited
  * Copyright (c) 2021, ARM Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -72,6 +73,39 @@ typedef struct ODP_ALIGNED(16) odp_u128_s {
 		uint8_t  u8[16];
 	};
 } odp_u128_t;
+
+/**
+ * Unsigned 64 bit fractional number
+ *
+ * The number is composed of integer and fraction parts. The fraction part is composed of
+ * two terms: numerator and denominator. Value of the number is sum of the integer and fraction
+ * parts: value = integer + numer/denom. When the fraction part is zero, the numerator is zero and
+ * the denominator may be zero.
+ */
+typedef struct odp_fract_u64_t {
+		/** Integer part */
+		uint64_t integer;
+
+		/** Numerator of the fraction part */
+		uint64_t numer;
+
+		/** Denominator of the fraction part. This may be zero when the numerator
+		 *  is zero. */
+		uint64_t denom;
+
+} odp_fract_u64_t;
+
+/**
+ * Convert fractional number (u64) to double
+ *
+ * Converts value of the unsigned 64 bit fractional number to a double-precision
+ * floating-point value.
+ *
+ * @param fract  Pointer to a fractional number
+ *
+ * @return Value of the fractional number as double
+ */
+double odp_fract_u64_to_dbl(const odp_fract_u64_t *fract);
 
 /**
  * @}
