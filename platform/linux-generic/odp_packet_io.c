@@ -2680,7 +2680,7 @@ int odp_packet_lso_request(odp_packet_t pkt, const odp_packet_lso_opt_t *lso_opt
 		return -1;
 	}
 
-	if (odp_unlikely((payload_offset + lso_opt->max_payload_len) > pkt_hdr->frame_len)) {
+	if (odp_unlikely((payload_offset + lso_opt->max_payload_len) > packet_len(pkt_hdr))) {
 		ODP_ERR("LSO options larger than packet data length\n");
 		return -1;
 	}
