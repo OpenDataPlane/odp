@@ -665,6 +665,12 @@ static void lso_send_custom_eth(int use_opt)
 	payload_sum = 0;
 	segnum = 0xffff;
 	for (i = 0; i < num; i++) {
+		odph_ethhdr_t *eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt_out[i], NULL);
+
+		/* Filter out possible non-test packets */
+		if (odp_be_to_cpu_16(eth->type) != 0x88B5)
+			continue;
+
 		len = odp_packet_len(pkt_out[i]);
 		payload_len = len - hdr_len;
 
@@ -751,12 +757,21 @@ static void lso_send_ipv4(int use_opt)
 	offset = hdr_len;
 	payload_sum = 0;
 	for (i = 0; i < num; i++) {
+		if (!odp_packet_has_ipv4(packet[i]))
+			continue;
+
+		odph_ipv4hdr_t *ip = odp_packet_l3_ptr(packet[i], NULL);
+
+		/* Filter out possible non-test packets */
+		if (odp_be_to_cpu_32(ip->dst_addr) != 0xc0a80101 ||
+		    odp_be_to_cpu_32(ip->src_addr) != 0xc0a80102)
+			continue;
+
 		len = odp_packet_len(packet[i]);
 		payload_len = len - hdr_len;
 
 		ODPH_DBG("    LSO segment[%i] payload:  %u bytes\n", i, payload_len);
 
-		CU_ASSERT(odp_packet_has_ipv4(packet[i]));
 		CU_ASSERT(odp_packet_has_ipfrag(packet[i]));
 		CU_ASSERT(odp_packet_has_error(packet[i]) == 0);
 		CU_ASSERT(payload_len <= IPV4_MAX_PAYLOAD);
