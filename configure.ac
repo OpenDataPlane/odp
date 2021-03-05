@@ -43,7 +43,7 @@ AS_IF([test "$ac_cv_env_CFLAGS_set" = ""], [user_cflags=0], [user_cflags=1])
 # Initialize automake
 AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects foreign nostdinc -Wall -Werror])
 AC_CONFIG_SRCDIR([include/odp/api/spec/init.h])
-AM_CONFIG_HEADER([include/odp/autoheader_build.h include/odp/autoheader_external.h include/odp/autoheader_internal.h helper/include/odp/helper/autoheader_external.h])
+AC_CONFIG_HEADERS([include/odp/autoheader_build.h include/odp/autoheader_external.h include/odp/autoheader_internal.h helper/include/odp/helper/autoheader_external.h])
 
 AC_USE_SYSTEM_EXTENSIONS
 AC_SYS_LARGEFILE
