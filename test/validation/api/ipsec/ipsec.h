@@ -11,6 +11,11 @@
 
 #include <odp_cunit_common.h>
 
+#define IPV4ADDR(a, b, c, d) odp_cpu_to_be_32(((a) << 24) | \
+					      ((b) << 16) | \
+					      ((c) << 8) | \
+					      ((d) << 0))
+
 /* test arrays: */
 extern odp_testinfo_t ipsec_in_suite[];
 extern odp_testinfo_t ipsec_out_suite[];
@@ -27,6 +32,8 @@ int ipsec_in_term(void);
 int ipsec_out_term(void);
 
 struct suite_context_s {
+	odp_bool_t reass_ipv4;
+	odp_bool_t reass_ipv6;
 	odp_ipsec_op_mode_t inbound_op_mode;
 	odp_ipsec_op_mode_t outbound_op_mode;
 	odp_pool_t pool;
@@ -80,7 +87,7 @@ typedef struct {
 		odp_proto_l3_type_t l3_type;
 		odp_proto_l4_type_t l4_type;
 		uint32_t seq_num;
-	} out[1];
+	} out[MAX_FRAGS];
 } ipsec_test_part;
 
 void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
@@ -131,5 +138,6 @@ int ipsec_check_esp_null_aes_gmac_192(void);
 int ipsec_check_esp_null_aes_gmac_256(void);
 int ipsec_check_esp_chacha20_poly1305(void);
 int ipsec_check_test_sa_update_seq_num(void);
+int ipsec_check_esp_aes_gcm_128_reass_ipv4(void);
 
 #endif
