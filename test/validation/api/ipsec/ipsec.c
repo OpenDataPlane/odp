@@ -1,6 +1,6 @@
 /* Copyright (c) 2017-2018, Linaro Limited
  * Copyright (c) 2018-2021, Nokia
- * Copyright (c) 2020, Marvell
+ * Copyright (c) 2020-2021, Marvell
  * All rights reserved.
  *
  * SPDX-License-Identifier:	 BSD-3-Clause
@@ -267,6 +267,14 @@ int ipsec_check_test_sa_update_seq_num(void)
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
+}
+
+int ipsec_check_esp_aes_gcm_128_reass_ipv4(void)
+{
+	if (suite_context.reass_ipv4)
+		return  ipsec_check_esp(ODP_CIPHER_ALG_AES_GCM, 128,
+					ODP_AUTH_ALG_AES_GCM, 0);
+	return ODP_TEST_INACTIVE;
 }
 
 void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
@@ -1157,6 +1165,68 @@ int ipsec_config(odp_instance_t ODP_UNUSED inst)
 	ipsec_config.inbound.parse_level = ODP_PROTO_LAYER_ALL;
 	ipsec_config.inbound.chksums.all_chksum = ~0;
 	ipsec_config.stats_en = true;
+
+	ipsec_config.inbound.reassembly.max_wait_time = 100 * ODP_TIME_MSEC_IN_NS;
+	if (ipsec_config.inbound.reassembly.max_wait_time > capa.reassembly.max_wait_time)
+		ipsec_config.inbound.reassembly.max_wait_time = capa.reassembly.max_wait_time;
+
+	ipsec_config.inbound.reassembly.max_num_frags = capa.reassembly.max_num_frags;
+
+	if (capa.reassembly.ip) {
+		ipsec_config.inbound.reassembly.en_ipv4 = true;
+		ipsec_config.inbound.reassembly.en_ipv6 = true;
+	}
+
+	if (capa.reassembly.ipv4)
+		ipsec_config.inbound.reassembly.en_ipv4 = true;
+
+	if (capa.reassembly.ipv6)
+		ipsec_config.inbound.reassembly.en_ipv6 = true;
+
+	if (ODP_IPSEC_OP_MODE_INLINE == suite_context.inbound_op_mode &&
+	    !capa.reass_inline) {
+		ipsec_config.inbound.reassembly.en_ipv4 = false;
+		ipsec_config.inbound.reassembly.en_ipv6 = false;
+	}
+
+	if (ODP_IPSEC_OP_MODE_ASYNC == suite_context.inbound_op_mode &&
+	    !capa.reass_async) {
+		ipsec_config.inbound.reassembly.en_ipv4 = false;
+		ipsec_config.inbound.reassembly.en_ipv6 = false;
+	}
+
+	if (ODP_IPSEC_OP_MODE_SYNC == suite_context.inbound_op_mode) {
+		ipsec_config.inbound.reassembly.en_ipv4 = false;
+		ipsec_config.inbound.reassembly.en_ipv6 = false;
+	}
+
+	if (ipsec_config.inbound.reassembly.max_num_frags > MAX_FRAGS) {
+		ipsec_config.inbound.reassembly.en_ipv4 = false;
+		ipsec_config.inbound.reassembly.en_ipv6 = false;
+	}
+
+	if (ipsec_config.inbound.reassembly.en_ipv4)
+		suite_context.reass_ipv4 = true;
+	else
+		suite_context.reass_ipv4 = false;
+
+	if (ipsec_config.inbound.reassembly.en_ipv6)
+		suite_context.reass_ipv6 = true;
+	else
+		suite_context.reass_ipv6 = false;
+
+	if (suite_context.reass_ipv4 || suite_context.reass_ipv6) {
+		if (ODP_IPSEC_OP_MODE_INLINE == suite_context.inbound_op_mode)
+			ipsec_config.inbound.reass_inline = true;
+
+		if (ODP_IPSEC_OP_MODE_ASYNC == suite_context.inbound_op_mode) {
+			ipsec_config.inbound.reass_async = true;
+
+			/* Reassembly with ASYNC not supported */
+			suite_context.reass_ipv4 = false;
+			suite_context.reass_ipv6 = false;
+		}
+	}
 
 	if (ODP_IPSEC_OK != odp_ipsec_config(&ipsec_config))
 		return -1;

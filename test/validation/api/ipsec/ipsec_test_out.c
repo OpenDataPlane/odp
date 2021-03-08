@@ -151,11 +151,6 @@ static void test_out_ipv4_ah_sha256(void)
 	ipsec_sa_destroy(sa);
 }
 
-#define IPV4ADDR(a, b, c, d) odp_cpu_to_be_32((a << 24) | \
-					      (b << 16) | \
-					      (c << 8) | \
-					      (d << 0))
-
 static void test_out_ipv4_ah_sha256_tun_ipv4(void)
 {
 	odp_ipsec_tunnel_param_t tunnel;
