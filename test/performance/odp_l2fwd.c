@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * Copyright (c) 2020, Marvell
  * All rights reserved.
  *
@@ -108,6 +108,7 @@ typedef struct {
 	uint32_t packet_len;	/* Maximum packet length supported */
 	uint32_t seg_len;	/* Pool segment length */
 	int promisc_mode;       /* Promiscuous mode enabled */
+	int mtu;                /* Interface MTU */
 } appl_args_t;
 
 /* Statistics */
@@ -1054,6 +1055,38 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 		}
 	}
 
+	if (gbl_args->appl.mtu) {
+		uint32_t maxlen_input = pktio_capa.maxlen.max_input ? gbl_args->appl.mtu : 0;
+		uint32_t maxlen_output = pktio_capa.maxlen.max_output ? gbl_args->appl.mtu : 0;
+
+		if (!pktio_capa.set_op.op.maxlen) {
+			ODPH_ERR("Error: modifying interface MTU not supported %s\n", dev);
+			return -1;
+		}
+
+		if (maxlen_input &&
+		    (maxlen_input < pktio_capa.maxlen.min_input ||
+		     maxlen_input > pktio_capa.maxlen.max_input)) {
+			ODPH_ERR("Error: unsupported MTU value %" PRIu32 " for %s "
+				 "(min %" PRIu32 ", max %" PRIu32 ")\n", maxlen_input, dev,
+				 pktio_capa.maxlen.min_input, pktio_capa.maxlen.max_input);
+			return -1;
+		}
+		if (maxlen_output &&
+		    (maxlen_output < pktio_capa.maxlen.min_output ||
+		     maxlen_output > pktio_capa.maxlen.max_output)) {
+			ODPH_ERR("Error: unsupported MTU value %" PRIu32 " for %s "
+				 "(min %" PRIu32 ", max %" PRIu32 ")\n", maxlen_output, dev,
+				 pktio_capa.maxlen.min_output, pktio_capa.maxlen.max_output);
+			return -1;
+		}
+
+		if (odp_pktio_maxlen_set(pktio, maxlen_input, maxlen_output)) {
+			ODPH_ERR("Error: setting MTU failed %s\n", dev);
+			return -1;
+		}
+	}
+
 	odp_pktin_queue_param_init(&pktin_param);
 	odp_pktout_queue_param_init(&pktout_param);
 
@@ -1508,6 +1541,7 @@ static void usage(char *progname)
 	       "                          Default is num_pkts divided by vec_size.\n"
 	       "  -x, --vec_size <num>    Vector size (default %i).\n"
 	       "  -z, --vec_tmo_ns <ns>   Vector timeout in ns (default %llu ns).\n"
+	       "  -M, --mtu <len>         Interface MTU in bytes.\n"
 	       "  -P, --promisc_mode      Enable promiscuous mode.\n"
 	       "  -l, --packet_len <len>  Maximum length of packets supported (default %d).\n"
 	       "  -L, --seg_len <len>     Packet pool segment length\n"
@@ -1555,6 +1589,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"vec_size", required_argument, NULL, 'x'},
 		{"vec_tmo_ns", required_argument, NULL, 'z'},
 		{"vector_mode", no_argument, NULL, 'u'},
+		{"mtu", required_argument, NULL, 'M'},
 		{"promisc_mode", no_argument, NULL, 'P'},
 		{"packet_len", required_argument, NULL, 'l'},
 		{"seg_len", required_argument, NULL, 'L'},
@@ -1563,7 +1598,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:p:y:n:l:L:w:x:z:uPvh";
+	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:p:y:n:l:L:w:x:z:M:uPvh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1580,6 +1615,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->num_pkt = 0;
 	appl_args->packet_len = POOL_PKT_LEN;
 	appl_args->seg_len = UINT32_MAX;
+	appl_args->mtu = 0;
 	appl_args->promisc_mode = 0;
 	appl_args->vector_mode = 0;
 	appl_args->num_vec = 0;
@@ -1731,6 +1767,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'L':
 			appl_args->seg_len = atoi(optarg);
 			break;
+		case 'M':
+			appl_args->mtu = atoi(optarg);
+			break;
 		case 'P':
 			appl_args->promisc_mode = 1;
 			break;
@@ -1822,6 +1861,11 @@ static void print_info(appl_args_t *appl_args)
 	else
 		printf("PKTOUT_DIRECT\n");
 
+	printf("MTU:                ");
+	if (appl_args->mtu)
+		printf("%i bytes\n", appl_args->mtu);
+	else
+		printf("interface default\n");
 	printf("Promisc mode:       %s\n", appl_args->promisc_mode ?
 					   "enabled" : "disabled");
 	printf("Burst size:         %i\n", appl_args->burst_rx);
