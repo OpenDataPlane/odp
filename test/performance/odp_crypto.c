@@ -1071,6 +1071,16 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	if (cargs.schedule && crypto_capa.queue_type_sched == 0) {
+		app_err("scheduled type completion queue not supported.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (cargs.poll && crypto_capa.queue_type_plain == 0) {
+		app_err("plain type completion queue not supported.\n");
+		exit(EXIT_FAILURE);
+	}
+
 	if (odp_pool_capability(&pool_capa)) {
 		app_err("Pool capability request failed.\n");
 		exit(EXIT_FAILURE);
