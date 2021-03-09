@@ -818,6 +818,14 @@ uint64_t odp_cos_to_u64(odp_cos_t hdl);
 uint64_t odp_pmr_to_u64(odp_pmr_t hdl);
 
 /**
+ * Print classifier info
+ *
+ * Print implementation defined information about classifier. The information is
+ * intended to be used for debugging.
+ */
+void odp_cls_print_all(void);
+
+/**
  * @}
  */
 
