@@ -189,6 +189,30 @@ extern "C" {
  * tree/hierarchy of nodes.
  */
 
+/** The tm_node_stats_type enumeration lists possible packet or octet
+ * statistics at a tm node.
+ */
+typedef enum odp_tm_node_stats_type_t {
+	/** Packets dropped by this node after scheduling/shaping at this node */
+	ODP_TM_NODE_STATS_PKTS_DROPPED,
+	/** Octets dropped after scheduling/shaping at this node */
+	ODP_TM_NODE_STATS_OCTETS_DROPPED,
+	/** Green packets that are sent through this tm node */
+	ODP_TM_NODE_STATS_GREEN_PKTS,
+	/** Green octets that are sent through this tm node */
+	ODP_TM_NODE_STATS_GREEN_OCTETS,
+	/** Yellow packets that are sent through this tm node */
+	ODP_TM_NODE_STATS_YELLOW_PKTS,
+	/** Yellow octets that are sent through this tm node */
+	ODP_TM_NODE_STATS_YELLOW_OCTETS,
+	/** Red packets that are sent through this tm node */
+	ODP_TM_NODE_STATS_RED_PKTS,
+	/** Red octets that are sent through this tm node */
+	ODP_TM_NODE_STATS_RED_OCTETS,
+	/** Node stats max */
+	ODP_TM_NODE_STATS_MAX,
+} odp_tm_node_stats_type_t;
+
 /** Per Level Capabilities
  *
  * The odp_tm_level_capabilities_t record is used to describe the capabilities
@@ -248,6 +272,15 @@ typedef struct {
 	/** tm_node_threshold_supported indicates that the tm_nodes at this
 	 * level support threshold profile set. */
 	odp_bool_t tm_node_threshold_supported;
+
+	/** tm_node_stats_supported indicates the statistics supported by
+	 * nodes at this level. When True, that stat counter is supported,
+	 * while False indicates it is not supported.
+	 *
+	 * @see odp_tm_node_stats_type_t
+	 * @see odp_tm_node_stats()
+	 */
+	odp_bool_t tm_node_stats_supported[ODP_TM_NODE_STATS_MAX];
 } odp_tm_level_capabilities_t;
 
 /** TM Capabilities Record.
@@ -1930,6 +1963,29 @@ typedef struct {
  */
 int odp_tm_node_fanin_info(odp_tm_node_t             tm_node,
 			   odp_tm_node_fanin_info_t *info);
+
+/** The odp_tm_node_stats_t record type  is used to return various stats
+ * supported by a given tm_node via the odp_tm_node_stats() function.
+ */
+typedef struct odp_tm_node_stats_t {
+	/** Node statistics. @see odp_tm_node_stats_type_t */
+	uint64_t stats[ODP_TM_NODE_STATS_MAX];
+} odp_tm_node_stats_t;
+
+/** Get tm_node stats
+ *
+ * The odp_tm_node_stats() function is used to extract runtime statistics
+ * associated with a given tm_node. The stats structure is written
+ * only on success.
+ *
+ * @param      tm_node    Specifies the tm_node to be queried.
+ * @param      clear      1: Clear stats before return.
+ *                        0: Don't clear stats.
+ * @param[out] node_stats A pointer to an odp_tm_node_stats_t record that is to
+ *                        be filled in by this call.
+ * @return                Returns < 0 upon failure, 0 upon success.
+ */
+int odp_tm_node_stats(odp_tm_node_t tm_node, int clear, odp_tm_node_stats_t *node_stats);
 
 /** The odp_tm_queue_info_t record type  is used to return various bits of
  * information about a given tm_queue via the odp_tm_queue_info() function.
