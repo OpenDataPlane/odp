@@ -673,6 +673,9 @@ int main(int argc, char *argv[])
 
 	configure_cos(default_cos, args);
 
+	printf("\n");
+	odp_cls_print_all();
+
 	if (odp_pktio_start(pktio)) {
 		ODPH_ERR("Error: unable to start pktio\n");
 		exit(EXIT_FAILURE);
