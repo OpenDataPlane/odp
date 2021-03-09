@@ -1210,6 +1210,7 @@ main(int argc, char *argv[])
 	odp_shm_t shm;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
+	odp_crypto_capability_t crypto_capa;
 	odp_pool_param_t params;
 	odp_instance_t instance;
 	odp_init_t init_param;
@@ -1248,6 +1249,21 @@ main(int argc, char *argv[])
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		ODPH_ERR("Error: ODP local init failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_crypto_capability(&crypto_capa)) {
+		ODPH_ERR("Error: Crypto capability request failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if ((NULL == getenv("ODP_IPSEC_USE_POLL_QUEUES")) &&
+	    (crypto_capa.queue_type_sched == 0)) {
+		ODPH_ERR("Error: scheduled type compl queue not supported.\n");
+		exit(EXIT_FAILURE);
+	} else if ((NULL != getenv("ODP_IPSEC_USE_POLL_QUEUES")) &&
+		    crypto_capa.queue_type_plain == 0) {
+		ODPH_ERR("Error: Plain type compl queue not supported.\n");
 		exit(EXIT_FAILURE);
 	}
 
