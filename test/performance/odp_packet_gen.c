@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, Nokia
+/* Copyright (c) 2020-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -57,6 +57,7 @@ typedef struct test_options_t {
 	uint16_t udp_src;
 	uint16_t udp_dst;
 	uint32_t wait_sec;
+	uint32_t mtu;
 
 	struct vlan_hdr {
 		uint16_t tpid;
@@ -162,6 +163,7 @@ static void print_usage(void)
 	       "                            into the number of bins (bins >= 2). Bin value of 0 means\n"
 	       "                            that each packet length is used. Comma-separated (no spaces).\n"
 	       "                            Overrides standard packet length option.\n"
+	       "  -M, --mtu <len>           Interface MTU in bytes.\n"
 	       "  -b, --burst_size          Transmit burst size. Default: 8\n"
 	       "  -x, --bursts              Number of bursts per one transmit round. Default: 1\n"
 	       "  -g, --gap                 Gap between transmit rounds in nsec. Default: 1000000\n"
@@ -253,6 +255,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"udp_src",     required_argument, NULL, 'o'},
 		{"udp_dst",     required_argument, NULL, 'p'},
 		{"c_mode",      required_argument, NULL, 'c'},
+		{"mtu",         required_argument, NULL, 'M'},
 		{"quit",        required_argument, NULL, 'q'},
 		{"wait",        required_argument, NULL, 'w'},
 		{"update_stat", required_argument, NULL, 'u'},
@@ -260,7 +263,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:n:l:L:b:x:g:v:s:d:o:p:c:q:u:w:h";
+	static const char *shortopts = "+i:e:r:t:n:l:L:M:b:x:g:v:s:d:o:p:c:q:u:w:h";
 
 	test_options->num_pktio  = 0;
 	test_options->num_rx     = 1;
@@ -285,6 +288,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->quit = 0;
 	test_options->update_msec = 0;
 	test_options->wait_sec = 0;
+	test_options->mtu = 0;
 
 	for (i = 0; i < MAX_PKTIOS; i++) {
 		memcpy(global->pktio[i].eth_dst.addr, default_eth_dst, 6);
@@ -397,6 +401,9 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 			val = strtoul(str, NULL, 0);
 			test_options->rand_pkt_len_bins = val;
 			test_options->use_rand_pkt_len = 1;
+			break;
+		case 'M':
+			test_options->mtu = atoi(optarg);
 			break;
 		case 'b':
 			test_options->burst_size = atoi(optarg);
@@ -631,6 +638,11 @@ static int open_pktios(test_global_t *global)
 		       test_options->rand_pkt_len_bins);
 	else
 		printf("  packet length       %u bytes\n", pkt_len);
+	printf("  MTU:                ");
+	if (test_options->mtu)
+		printf("%u bytes\n", test_options->mtu);
+	else
+		printf("interface default\n");
 	printf("  tx burst size       %u\n", test_options->burst_size);
 	printf("  tx bursts           %u\n", test_options->bursts);
 	printf("  tx burst gap        %" PRIu64 " nsec\n",
@@ -754,6 +766,41 @@ static int open_pktios(test_global_t *global)
 				       ODPH_ETHADDR_LEN) != ODPH_ETHADDR_LEN) {
 			printf("Error (%s): MAC address read failed.\n", name);
 			return -1;
+		}
+
+		if (test_options->mtu) {
+			uint32_t maxlen_input = pktio_capa.maxlen.max_input ? test_options->mtu : 0;
+			uint32_t maxlen_output = pktio_capa.maxlen.max_output ?
+							test_options->mtu : 0;
+
+			if (!pktio_capa.set_op.op.maxlen) {
+				ODPH_ERR("Error (%s): modifying interface MTU not supported.\n",
+					 name);
+				return -1;
+			}
+
+			if (maxlen_input &&
+			    (maxlen_input < pktio_capa.maxlen.min_input ||
+			     maxlen_input > pktio_capa.maxlen.max_input)) {
+				ODPH_ERR("Error (%s): unsupported MTU value %" PRIu32 " "
+					 "(min %" PRIu32 ", max %" PRIu32 ")\n", name, maxlen_input,
+					 pktio_capa.maxlen.min_input, pktio_capa.maxlen.max_input);
+				return -1;
+			}
+			if (maxlen_output &&
+			    (maxlen_output < pktio_capa.maxlen.min_output ||
+			     maxlen_output > pktio_capa.maxlen.max_output)) {
+				ODPH_ERR("Error (%s): unsupported MTU value %" PRIu32 " "
+					 "(min %" PRIu32 ", max %" PRIu32 ")\n", name,
+					 maxlen_output, pktio_capa.maxlen.min_output,
+					 pktio_capa.maxlen.max_output);
+				return -1;
+			}
+
+			if (odp_pktio_maxlen_set(pktio, maxlen_input, maxlen_output)) {
+				ODPH_ERR("Error (%s): setting MTU failed\n", name);
+				return -1;
+			}
 		}
 
 		odp_pktio_config_init(&pktio_config);
