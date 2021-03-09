@@ -309,6 +309,9 @@ static void classification_test_pmr_composite_create(void)
 	CU_ASSERT(odp_pmr_to_u64(pmr_composite) !=
 		  odp_pmr_to_u64(ODP_PMR_INVALID));
 
+	printf("\n");
+	odp_cls_print_all();
+
 	retval = odp_cls_pmr_destroy(pmr_composite);
 	CU_ASSERT(retval == 0);
 
