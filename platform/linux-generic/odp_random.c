@@ -29,8 +29,6 @@ int32_t odp_random_data(uint8_t *buf, uint32_t len, odp_random_kind_t kind)
 
 int32_t odp_random_test_data(uint8_t *buf, uint32_t len, uint64_t *seed)
 {
-	if (_ODP_OPENSSL)
-		return _odp_random_openssl_test_data(buf, len, seed);
 	return _odp_random_std_test_data(buf, len, seed);
 }
 
