@@ -36,27 +36,6 @@ int32_t _odp_random_openssl_data(uint8_t *buf, uint32_t len,
 		return -1;
 	}
 }
-
-int32_t _odp_random_openssl_test_data(uint8_t *buf, uint32_t len,
-				      uint64_t *seed)
-{
-	union {
-		uint32_t rand_word;
-		uint8_t rand_byte[4];
-	} u;
-	uint32_t i = 0, j;
-	uint32_t seed32 = (*seed) & 0xffffffff;
-
-	while (i < len) {
-		u.rand_word = rand_r(&seed32);
-
-		for (j = 0; j < 4 && i < len; j++, i++)
-			*buf++ = u.rand_byte[j];
-	}
-
-	*seed = seed32;
-	return len;
-}
 #else
 /* Dummy functions for building without OpenSSL support */
 odp_random_kind_t _odp_random_openssl_max_kind(void)
@@ -67,13 +46,6 @@ odp_random_kind_t _odp_random_openssl_max_kind(void)
 int32_t _odp_random_openssl_data(uint8_t *buf ODP_UNUSED,
 				 uint32_t len ODP_UNUSED,
 				 odp_random_kind_t kind ODP_UNUSED)
-{
-	return -1;
-}
-
-int32_t _odp_random_openssl_test_data(uint8_t *buf ODP_UNUSED,
-				      uint32_t len ODP_UNUSED,
-				      uint64_t *seed ODP_UNUSED)
 {
 	return -1;
 }

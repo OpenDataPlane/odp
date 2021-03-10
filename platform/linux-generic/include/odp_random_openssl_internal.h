@@ -16,7 +16,6 @@ extern "C" {
 #include <odp/api/random.h>
 
 odp_random_kind_t _odp_random_openssl_max_kind(void);
-int32_t _odp_random_openssl_test_data(uint8_t *buf, uint32_t len, uint64_t *seed);
 int32_t _odp_random_openssl_data(uint8_t *buf, uint32_t len, odp_random_kind_t kind);
 int _odp_random_openssl_init_local(void);
 int _odp_random_openssl_term_local(void);
