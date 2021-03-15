@@ -1,4 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2020-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -64,6 +65,7 @@ static void aarch64_part_info(char *str, int maxlen, odp_cpu_arch_arm_t *cpu_isa
 	*cpu_isa = ODP_CPU_ARCH_ARM_UNKNOWN;
 
 	if (implementer == 0x41) {
+		/* Part numbers are specified in Main ID Register (MIDR_EL1) documentation */
 		switch (part) {
 		case 0xd02:
 			snprintf(str, maxlen, "Cortex-A34");
@@ -105,6 +107,10 @@ static void aarch64_part_info(char *str, int maxlen, odp_cpu_arch_arm_t *cpu_isa
 			snprintf(str, maxlen, "Cortex-A76");
 			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
 			return;
+		case 0xd0c:
+			snprintf(str, maxlen, "Neoverse N1");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
+			return;
 		case 0xd0e:
 			snprintf(str, maxlen, "Cortex-A76AE");
 			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
@@ -115,6 +121,18 @@ static void aarch64_part_info(char *str, int maxlen, odp_cpu_arch_arm_t *cpu_isa
 			return;
 		case 0xd41:
 			snprintf(str, maxlen, "Cortex-A78");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
+			return;
+		case 0xd42:
+			snprintf(str, maxlen, "Cortex-A78AE");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
+			return;
+		case 0xd4a:
+			snprintf(str, maxlen, "Neoverse E1");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
+			return;
+		case 0xd4b:
+			snprintf(str, maxlen, "Cortex-A78C");
 			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
 			return;
 		default:
