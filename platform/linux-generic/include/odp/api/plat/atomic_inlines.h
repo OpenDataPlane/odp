@@ -1,4 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -12,6 +13,8 @@
 
 #ifndef _ODP_PLAT_ATOMIC_INLINES_H_
 #define _ODP_PLAT_ATOMIC_INLINES_H_
+
+#include <odp/api/abi/atomic_inlines.h>
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
@@ -82,6 +85,14 @@
 	#define odp_atomic_cas_acq_u32 __odp_atomic_cas_acq_u32
 	#define odp_atomic_cas_rel_u32 __odp_atomic_cas_rel_u32
 	#define odp_atomic_cas_acq_rel_u32 __odp_atomic_cas_acq_rel_u32
+	#define odp_atomic_init_u128 __odp_atomic_init_u128
+	#define odp_atomic_load_u128 __odp_atomic_load_u128
+	#define odp_atomic_store_u128 __odp_atomic_store_u128
+	#define odp_atomic_cas_u128 __odp_atomic_cas_u128
+	#define odp_atomic_cas_acq_u128 __odp_atomic_cas_acq_u128
+	#define odp_atomic_cas_rel_u128 __odp_atomic_cas_rel_u128
+	#define odp_atomic_cas_acq_rel_u128 __odp_atomic_cas_acq_rel_u128
+
 #else
 	#define _ODP_INLINE
 #endif
@@ -528,6 +539,45 @@ _ODP_INLINE int odp_atomic_cas_acq_rel_u32(odp_atomic_u32_t *atom,
 					   0 /* strong */,
 					   __ATOMIC_ACQ_REL,
 					   __ATOMIC_RELAXED);
+}
+
+_ODP_INLINE void odp_atomic_init_u128(odp_atomic_u128_t *atom, odp_u128_t val)
+{
+	_odp_atomic_init_u128(atom, val);
+}
+
+_ODP_INLINE odp_u128_t odp_atomic_load_u128(odp_atomic_u128_t *atom)
+{
+	return _odp_atomic_load_u128(atom);
+}
+
+_ODP_INLINE void odp_atomic_store_u128(odp_atomic_u128_t *atom, odp_u128_t val)
+{
+	_odp_atomic_store_u128(atom, val);
+}
+
+_ODP_INLINE int odp_atomic_cas_u128(odp_atomic_u128_t *atom,
+				    odp_u128_t *old_val, odp_u128_t new_val)
+{
+	return _odp_atomic_cas_u128(atom, old_val, new_val);
+}
+
+_ODP_INLINE int odp_atomic_cas_acq_u128(odp_atomic_u128_t *atom,
+					odp_u128_t *old_val, odp_u128_t new_val)
+{
+	return _odp_atomic_cas_acq_u128(atom, old_val, new_val);
+}
+
+_ODP_INLINE int odp_atomic_cas_rel_u128(odp_atomic_u128_t *atom,
+					odp_u128_t *old_val, odp_u128_t new_val)
+{
+	return _odp_atomic_cas_rel_u128(atom, old_val, new_val);
+}
+
+_ODP_INLINE int odp_atomic_cas_acq_rel_u128(odp_atomic_u128_t *atom,
+					    odp_u128_t *old_val, odp_u128_t new_val)
+{
+	return _odp_atomic_cas_acq_rel_u128(atom, old_val, new_val);
 }
 
 /** @endcond */
