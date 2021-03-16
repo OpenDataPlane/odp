@@ -10,6 +10,60 @@
 
 #include <odp/api/atomic.h>
 
+#ifdef __SIZEOF_INT128__
+
+static inline void _odp_atomic_init_u128(odp_atomic_u128_t *atom, odp_u128_t val)
+{
+	atom->v = val;
+}
+
+static inline odp_u128_t _odp_atomic_load_u128(odp_atomic_u128_t *atom)
+{
+	odp_u128_t val;
+
+	*(__int128_t *)&val = __atomic_load_n((__int128_t *)&atom->v, __ATOMIC_RELAXED);
+	return val;
+}
+
+static inline void _odp_atomic_store_u128(odp_atomic_u128_t *atom, odp_u128_t val)
+{
+	__atomic_store_n((__int128_t *)&atom->v, *(__int128_t *)&val, __ATOMIC_RELAXED);
+}
+
+static inline int _odp_atomic_cas_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
+				       odp_u128_t new_val)
+{
+	return __atomic_compare_exchange_n((__int128_t *)&atom->v, (__int128_t *)old_val,
+					   *(__int128_t *)&new_val, 0 /* strong */,
+					   __ATOMIC_RELAXED, __ATOMIC_RELAXED);
+}
+
+static inline int _odp_atomic_cas_acq_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
+					   odp_u128_t new_val)
+{
+	return __atomic_compare_exchange_n((__int128_t *)&atom->v, (__int128_t *)old_val,
+					   *(__int128_t *)&new_val, 0 /* strong */,
+					   __ATOMIC_ACQUIRE, __ATOMIC_RELAXED);
+}
+
+static inline int _odp_atomic_cas_rel_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
+					   odp_u128_t new_val)
+{
+	return __atomic_compare_exchange_n((__int128_t *)&atom->v, (__int128_t *)old_val,
+					   *(__int128_t *)&new_val, 0 /* strong */,
+					   __ATOMIC_RELEASE, __ATOMIC_RELAXED);
+}
+
+static inline int _odp_atomic_cas_acq_rel_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
+					       odp_u128_t new_val)
+{
+	return __atomic_compare_exchange_n((__int128_t *)&atom->v, (__int128_t *)old_val,
+					   *(__int128_t *)&new_val, 0 /* strong */,
+					   __ATOMIC_ACQ_REL, __ATOMIC_RELAXED);
+}
+
+#else /* Lock-based implementation */
+
 /**
  * @internal
  * 128 bit store operation expression for the ATOMIC_OP macro
@@ -109,5 +163,6 @@ static inline int _odp_atomic_cas_acq_rel_u128(odp_atomic_u128_t *atom, odp_u128
 	*old_val = ATOMIC_OP_128(atom, ATOMIC_CAS_OP_128(&ret, old_val, new_val));
 	return ret;
 }
+#endif
 
 #endif

@@ -15,6 +15,15 @@ if test "x$use_libatomic" = "xyes"; then
 fi
 AC_SUBST([ATOMIC_LIBS])
 
+# In non-abi-compat mode libatomic is exposed to the application
+if test $ODP_ABI_COMPAT -eq 1; then
+	ATOMIC_LIBS_ABI_COMPAT=$ATOMIC_LIBS
+	AC_SUBST([ATOMIC_LIBS_ABI_COMPAT])
+else
+	ATOMIC_LIBS_NON_ABI_COMPAT=$ATOMIC_LIBS
+	AC_SUBST([ATOMIC_LIBS_NON_ABI_COMPAT])
+fi
+
 # Double wide __atomic_compare_exchange_n is required by ipfragreass example
 use_libatomic_opt=no;
 have_atomic_cmp_exc=yes;
