@@ -35,7 +35,8 @@ typedef int (*validate_fn_t)(void *val, void *out, uint32_t num_round,
 
 typedef enum {
 	OP_32BIT,
-	OP_64BIT
+	OP_64BIT,
+	OP_128BIT
 } op_bit_t;
 
 /* Command line options */
@@ -51,6 +52,7 @@ typedef struct ODP_ALIGNED_CACHE test_atomic_t {
 	union {
 		odp_atomic_u32_t u32;
 		odp_atomic_u64_t u64;
+		odp_atomic_u128_t u128;
 	};
 } test_atomic_t;
 
@@ -73,6 +75,7 @@ struct test_global_t {
 	union {
 		odp_atomic_u32_t atomic_u32;
 		odp_atomic_u64_t atomic_u64;
+		odp_atomic_u128_t atomic_u128;
 	};
 	odp_cpumask_t cpumask;
 	odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
@@ -81,6 +84,7 @@ struct test_global_t {
 	union {
 		uint32_t u32;
 		uint64_t u64;
+		odp_u128_t u128;
 	} output[ODP_THREAD_COUNT_MAX];
 };
 
@@ -117,6 +121,25 @@ static inline void test_atomic_load_u64(void *val, void *out, uint32_t num_round
 	*result = ret;
 }
 
+static inline void test_atomic_load_u128(void *val, void *out, uint32_t num_round)
+{
+	odp_atomic_u128_t *atomic_val = val;
+	odp_u128_t *result = out;
+	odp_u128_t ret;
+
+	ret.u64[0] = 0;
+	ret.u64[1] = 0;
+
+	for (uint32_t i = 0; i < num_round; i++) {
+		odp_u128_t cur_val = odp_atomic_load_u128(atomic_val);
+
+		ret.u64[0] += cur_val.u64[0];
+		ret.u64[1] += cur_val.u64[1];
+	}
+
+	*result = ret;
+}
+
 static inline int validate_atomic_init_val_u32(void *val, void *out, uint32_t num_round,
 					       uint32_t num_worker ODP_UNUSED,
 					       int private ODP_UNUSED)
@@ -128,8 +151,7 @@ static inline int validate_atomic_init_val_u32(void *val, void *out, uint32_t nu
 	       (*result != (uint32_t)INIT_VAL * num_round);
 }
 
-static inline int validate_atomic_init_val_u64(void *val, void *out ODP_UNUSED,
-					       uint32_t num_round ODP_UNUSED,
+static inline int validate_atomic_init_val_u64(void *val, void *out, uint32_t num_round,
 					       uint32_t worker ODP_UNUSED, int private ODP_UNUSED)
 {
 	odp_atomic_u64_t *atomic_val = val;
@@ -137,6 +159,22 @@ static inline int validate_atomic_init_val_u64(void *val, void *out ODP_UNUSED,
 
 	return (odp_atomic_load_u64(atomic_val) != INIT_VAL) ||
 	       (*result != (uint64_t)INIT_VAL * num_round);
+}
+
+static inline int validate_atomic_init_val_u128(void *val, void *out, uint32_t num_round,
+						uint32_t worker ODP_UNUSED, int private ODP_UNUSED)
+{
+	odp_u128_t atomic_val = odp_atomic_load_u128((odp_atomic_u128_t *)val);
+	odp_u128_t *result = out;
+
+	if (atomic_val.u64[0] != INIT_VAL || atomic_val.u64[1] != INIT_VAL)
+		return -1;
+
+	if (result->u64[0] != (uint64_t)INIT_VAL * num_round ||
+	    result->u64[1] != (uint64_t)INIT_VAL * num_round)
+		return -1;
+
+	return 0;
 }
 
 static inline void test_atomic_store_u32(void *val, void *out ODP_UNUSED, uint32_t num_round)
@@ -157,6 +195,21 @@ static inline void test_atomic_store_u64(void *val, void *out ODP_UNUSED, uint32
 		odp_atomic_store_u64(atomic_val, new_val++);
 }
 
+static inline void test_atomic_store_u128(void *val, void *out ODP_UNUSED, uint32_t num_round)
+{
+	odp_atomic_u128_t *atomic_val = val;
+	odp_u128_t new_val;
+
+	new_val.u64[0] = INIT_VAL + 1;
+	new_val.u64[1] = INIT_VAL + 1;
+
+	for (uint32_t i = 0; i < num_round; i++) {
+		odp_atomic_store_u128(atomic_val, new_val);
+		new_val.u64[0]++;
+		new_val.u64[1]++;
+	}
+}
+
 static inline int validate_atomic_num_round_u32(void *val, void *out ODP_UNUSED, uint32_t num_round,
 						uint32_t worker ODP_UNUSED, int private ODP_UNUSED)
 {
@@ -171,6 +224,16 @@ static inline int validate_atomic_num_round_u64(void *val, void *out ODP_UNUSED,
 	odp_atomic_u64_t *atomic_val = val;
 
 	return odp_atomic_load_u64(atomic_val) != ((uint64_t)INIT_VAL + num_round);
+}
+
+static inline int validate_atomic_num_round_u128(void *val, void *out ODP_UNUSED,
+						 uint32_t num_round, uint32_t worker ODP_UNUSED,
+						 int private ODP_UNUSED)
+{
+	odp_u128_t atomic_val = odp_atomic_load_u128((odp_atomic_u128_t *)val);
+
+	return (atomic_val.u64[0] != ((uint64_t)INIT_VAL + num_round) ||
+		atomic_val.u64[1] != ((uint64_t)INIT_VAL + num_round));
 }
 
 static inline void test_atomic_fetch_add_u32(void *val, void *out, uint32_t num_round)
@@ -470,6 +533,26 @@ static inline void test_atomic_cas_u64(void *val, void *out ODP_UNUSED, uint32_t
 	}
 }
 
+static inline void test_atomic_cas_u128(void *val, void *out ODP_UNUSED, uint32_t num_round)
+{
+	odp_atomic_u128_t *atomic_val = val;
+	odp_u128_t new_val;
+	odp_u128_t old_val;
+
+	new_val.u64[0] = INIT_VAL + 1;
+	new_val.u64[1] = INIT_VAL + 1;
+	old_val.u64[0] = INIT_VAL;
+	old_val.u64[1] = INIT_VAL;
+
+	for (uint32_t i = 0; i < num_round; i++) {
+		if (odp_atomic_cas_u128(atomic_val, &old_val, new_val)) {
+			old_val = new_val;
+			new_val.u64[0]++;
+			new_val.u64[1]++;
+		}
+	}
+}
+
 static inline int validate_atomic_cas_u32(void *val, void *out ODP_UNUSED, uint32_t num_round,
 					  uint32_t num_worker ODP_UNUSED, int private)
 {
@@ -490,6 +573,19 @@ static inline int validate_atomic_cas_u64(void *val, void *out ODP_UNUSED, uint3
 		return result != ((uint64_t)INIT_VAL + num_round);
 
 	return result > ((uint64_t)INIT_VAL + num_round);
+}
+
+static inline int validate_atomic_cas_u128(void *val, void *out ODP_UNUSED, uint32_t num_round,
+					   uint32_t num_worker ODP_UNUSED, int private)
+{
+	odp_u128_t result = odp_atomic_load_u128((odp_atomic_u128_t *)val);
+
+	if (private)
+		return (result.u64[0] != ((uint64_t)INIT_VAL + num_round) ||
+			result.u64[1] != ((uint64_t)INIT_VAL + num_round));
+
+	return (result.u64[0] > ((uint64_t)INIT_VAL + num_round) ||
+		result.u64[1] > ((uint64_t)INIT_VAL + num_round));
 }
 
 static inline void test_atomic_xchg_u32(void *val, void *out, uint32_t num_round)
@@ -616,6 +712,26 @@ static inline void test_atomic_cas_acq_u64(void *val, void *out ODP_UNUSED, uint
 	}
 }
 
+static inline void test_atomic_cas_acq_u128(void *val, void *out ODP_UNUSED, uint32_t num_round)
+{
+	odp_atomic_u128_t *atomic_val = val;
+	odp_u128_t new_val;
+	odp_u128_t old_val;
+
+	new_val.u64[0] = INIT_VAL + 1;
+	new_val.u64[1] = INIT_VAL + 1;
+	old_val.u64[0] = INIT_VAL;
+	old_val.u64[1] = INIT_VAL;
+
+	for (uint32_t i = 0; i < num_round; i++) {
+		if (odp_atomic_cas_acq_u128(atomic_val, &old_val, new_val)) {
+			old_val = new_val;
+			new_val.u64[0]++;
+			new_val.u64[1]++;
+		}
+	}
+}
+
 static inline void test_atomic_cas_rel_u32(void *val, void *out ODP_UNUSED, uint32_t num_round)
 {
 	odp_atomic_u32_t *atomic_val = val;
@@ -640,6 +756,26 @@ static inline void test_atomic_cas_rel_u64(void *val, void *out ODP_UNUSED, uint
 	}
 }
 
+static inline void test_atomic_cas_rel_u128(void *val, void *out ODP_UNUSED, uint32_t num_round)
+{
+	odp_atomic_u128_t *atomic_val = val;
+	odp_u128_t new_val;
+	odp_u128_t old_val;
+
+	new_val.u64[0] = INIT_VAL + 1;
+	new_val.u64[1] = INIT_VAL + 1;
+	old_val.u64[0] = INIT_VAL;
+	old_val.u64[1] = INIT_VAL;
+
+	for (uint32_t i = 0; i < num_round; i++) {
+		if (odp_atomic_cas_rel_u128(atomic_val, &old_val, new_val)) {
+			old_val = new_val;
+			new_val.u64[0]++;
+			new_val.u64[1]++;
+		}
+	}
+}
+
 static inline void test_atomic_cas_acq_rel_u32(void *val, void *out ODP_UNUSED, uint32_t num_round)
 {
 	odp_atomic_u32_t *atomic_val = val;
@@ -661,6 +797,26 @@ static inline void test_atomic_cas_acq_rel_u64(void *val, void *out ODP_UNUSED, 
 	for (uint32_t i = 0; i < num_round; i++) {
 		if (odp_atomic_cas_acq_rel_u64(atomic_val, &old_val, new_val))
 			old_val = new_val++;
+	}
+}
+
+static inline void test_atomic_cas_acq_rel_u128(void *val, void *out ODP_UNUSED, uint32_t num_round)
+{
+	odp_atomic_u128_t *atomic_val = val;
+	odp_u128_t new_val;
+	odp_u128_t old_val;
+
+	new_val.u64[0] = INIT_VAL + 1;
+	new_val.u64[1] = INIT_VAL + 1;
+	old_val.u64[0] = INIT_VAL;
+	old_val.u64[1] = INIT_VAL;
+
+	for (uint32_t i = 0; i < num_round; i++) {
+		if (odp_atomic_cas_acq_rel_u128(atomic_val, &old_val, new_val)) {
+			old_val = new_val;
+			new_val.u64[0]++;
+			new_val.u64[1]++;
+		}
 	}
 }
 
@@ -707,6 +863,14 @@ static void print_info(test_options_t *test_options)
 	printf("  odp_atomic_max_u64:       %" PRIu32 "\n", atomic_ops.op.max);
 	printf("  odp_atomic_cas_u64:       %" PRIu32 "\n", atomic_ops.op.cas);
 	printf("  odp_atomic_xchg_u64:      %" PRIu32 "\n", atomic_ops.op.xchg);
+
+	atomic_ops.all_bits = 0;
+	odp_atomic_lock_free_u128(&atomic_ops);
+
+	printf("  odp_atomic_load_u128:     %" PRIu32 "\n", atomic_ops.op.load);
+	printf("  odp_atomic_store_u128:    %" PRIu32 "\n", atomic_ops.op.store);
+	printf("  odp_atomic_cas_u128:      %" PRIu32 "\n", atomic_ops.op.cas);
+
 	printf("\n\n");
 }
 
@@ -808,12 +972,19 @@ static int set_num_cpu(test_global_t *global)
 
 static int init_test(test_global_t *global, const char *name, op_bit_t type)
 {
+	odp_u128_t init_val;
+
+	init_val.u64[0] = INIT_VAL;
+	init_val.u64[1] = INIT_VAL;
+
 	printf("TEST: %s\n", name);
 
 	if (type == OP_32BIT)
 		odp_atomic_init_u32(&global->atomic_u32, INIT_VAL);
 	else if (type == OP_64BIT)
 		odp_atomic_init_u64(&global->atomic_u64, INIT_VAL);
+	else if (type == OP_128BIT)
+		odp_atomic_init_u128(&global->atomic_u128, init_val);
 	else
 		return -1;
 
@@ -821,9 +992,13 @@ static int init_test(test_global_t *global, const char *name, op_bit_t type)
 		if (type == OP_32BIT) {
 			global->output[i].u32 = 0;
 			odp_atomic_init_u32(&global->atomic_private[i].u32, INIT_VAL);
-		} else {
+		} else if (type == OP_64BIT) {
 			global->output[i].u64 = 0;
 			odp_atomic_init_u64(&global->atomic_private[i].u64, INIT_VAL);
+		} else {
+			global->output[i].u128.u64[0] = 0;
+			global->output[i].u128.u64[1] = 0;
+			odp_atomic_init_u128(&global->atomic_private[i].u128, init_val);
 		}
 	}
 	return 0;
@@ -844,20 +1019,29 @@ static int run_test(void *arg)
 	void *out;
 	uint32_t out_u32 = 0;
 	uint64_t out_u64 = 0;
+	odp_u128_t out_u128;
+
+	out_u128.u64[0] = 0;
+	out_u128.u64[1] = 0;
 
 	if (type == OP_32BIT) {
 		val = &global->atomic_u32;
 		out = &out_u32;
-	} else {
+	} else if (type == OP_64BIT) {
 		val = &global->atomic_u64;
 		out = &out_u64;
+	} else {
+		val = &global->atomic_u128;
+		out = &out_u128;
 	}
 
 	if (global->test_options.private) {
 		if (type == OP_32BIT)
 			val = &global->atomic_private[idx].u32;
-		else
+		else if (type == OP_64BIT)
 			val = &global->atomic_private[idx].u64;
+		else
+			val = &global->atomic_private[idx].u128;
 	}
 
 	/* Start all workers at the same time */
@@ -875,8 +1059,10 @@ static int run_test(void *arg)
 	thread_ctx->nsec = nsec;
 	if (type == OP_32BIT)
 		global->output[idx].u32 = out_u32;
-	else
+	else if (type == OP_64BIT)
 		global->output[idx].u64 = out_u64;
+	else
+		global->output[idx].u128 = out_u128;
 
 	return 0;
 }
@@ -933,11 +1119,16 @@ static int validate_results(test_global_t *global, validate_fn_t validate, op_bi
 			val = &global->atomic_u32;
 			if (private)
 				val = &global->atomic_private[i].u32;
-		} else {
+		} else if (type == OP_64BIT) {
 			out = &global->output[i].u64;
 			val = &global->atomic_u64;
 			if (private)
 				val = &global->atomic_private[i].u64;
+		} else {
+			out = &global->output[i].u128;
+			val = &global->atomic_u128;
+			if (private)
+				val = &global->atomic_private[i].u128;
 		}
 
 		if (validate(val, out, num_round, num_cpu, private))
@@ -1078,7 +1269,19 @@ static test_case_t test_suite[] = {
 	TEST_INFO("odp_atomic_cas_rel_u64", test_atomic_cas_rel_u64,
 		  validate_atomic_cas_u64, OP_64BIT),
 	TEST_INFO("odp_atomic_cas_acq_rel_u64", test_atomic_cas_acq_rel_u64,
-		  validate_atomic_cas_u64, OP_64BIT)
+		  validate_atomic_cas_u64, OP_64BIT),
+	TEST_INFO("odp_atomic_load_u128", test_atomic_load_u128,
+		  validate_atomic_init_val_u128, OP_128BIT),
+	TEST_INFO("odp_atomic_store_u128", test_atomic_store_u128,
+		  validate_atomic_num_round_u128, OP_128BIT),
+	TEST_INFO("odp_atomic_cas_u128", test_atomic_cas_u128,
+		  validate_atomic_cas_u128, OP_128BIT),
+	TEST_INFO("odp_atomic_cas_acq_u128", test_atomic_cas_acq_u128,
+		  validate_atomic_cas_u128, OP_128BIT),
+	TEST_INFO("odp_atomic_cas_rel_u128", test_atomic_cas_rel_u128,
+		  validate_atomic_cas_u128, OP_128BIT),
+	TEST_INFO("odp_atomic_cas_acq_rel_u128", test_atomic_cas_acq_rel_u128,
+		  validate_atomic_cas_u128, OP_128BIT),
 };
 
 int main(int argc, char **argv)
