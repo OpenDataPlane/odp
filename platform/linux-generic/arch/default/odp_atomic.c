@@ -28,6 +28,17 @@ int odp_atomic_lock_free_u64(odp_atomic_op_t *atomic_op)
 
 int odp_atomic_lock_free_u128(odp_atomic_op_t *atomic_op)
 {
+#ifdef __SIZEOF_INT128__
+	if (__atomic_is_lock_free(16, NULL)) {
+		if (atomic_op) {
+			atomic_op->all_bits = 0;
+			atomic_op->op.load  = 1;
+			atomic_op->op.store = 1;
+			atomic_op->op.cas  = 1;
+		}
+		return 2;
+	}
+#endif
 	/* All operations have locks */
 	if (atomic_op)
 		atomic_op->all_bits = 0;

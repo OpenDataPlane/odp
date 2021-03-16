@@ -60,7 +60,7 @@ typedef struct ODP_ALIGNED(sizeof(uint64_t)) odp_atomic_u64_s {
 
 #endif
 
-#ifdef _ODP_LOCK_FREE_128BIT_ATOMICS
+#if defined(__SIZEOF_INT128__) || defined(_ODP_LOCK_FREE_128BIT_ATOMICS)
 
 /**
  * @internal
