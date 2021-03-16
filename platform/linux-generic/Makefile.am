@@ -161,7 +161,6 @@ BUILT_SOURCES = \
 		  include/odp_libconfig_config.h
 
 __LIB__libodp_linux_la_SOURCES = \
-			   odp_atomic.c \
 			   odp_barrier.c \
 			   odp_buffer.c \
 			   odp_chksum.c \
@@ -266,7 +265,8 @@ __LIB__libodp_linux_la_SOURCES += \
 endif
 
 if ARCH_IS_ARM
-__LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_cycles.c \
+__LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
+				  arch/default/odp_cpu_cycles.c \
 				  arch/default/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
 				  arch/arm/odp_sysinfo_parse.c
@@ -284,7 +284,8 @@ noinst_HEADERS += arch/arm/odp_atomic.h \
 		  arch/arm/odp_llsc.h
 endif
 if ARCH_IS_AARCH64
-__LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_cycles.c \
+__LIB__libodp_linux_la_SOURCES += arch/aarch64/odp_atomic.c \
+				  arch/default/odp_cpu_cycles.c \
 				  arch/aarch64/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
 				  arch/aarch64/odp_sysinfo_parse.c
@@ -303,7 +304,8 @@ noinst_HEADERS += arch/aarch64/odp_atomic.h \
 		  arch/aarch64/odp_llsc.h
 endif
 if ARCH_IS_DEFAULT
-__LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_cycles.c \
+__LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
+				  arch/default/odp_cpu_cycles.c \
 				  arch/default/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
 				  arch/default/odp_sysinfo_parse.c
@@ -319,7 +321,8 @@ noinst_HEADERS += arch/default/odp_cpu.h \
 		  arch/default/odp_cpu_idling.h
 endif
 if ARCH_IS_MIPS64
-__LIB__libodp_linux_la_SOURCES += arch/mips64/odp_cpu_cycles.c \
+__LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
+				  arch/mips64/odp_cpu_cycles.c \
 				  arch/default/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
 				  arch/mips64/odp_sysinfo_parse.c
@@ -335,7 +338,8 @@ noinst_HEADERS += arch/default/odp_cpu.h \
 		  arch/default/odp_cpu_idling.h
 endif
 if ARCH_IS_POWERPC
-__LIB__libodp_linux_la_SOURCES += arch/default/odp_cpu_cycles.c \
+__LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
+				  arch/default/odp_cpu_cycles.c \
 				  arch/default/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
 				  arch/powerpc/odp_sysinfo_parse.c
@@ -351,7 +355,8 @@ noinst_HEADERS += arch/default/odp_cpu.h \
 		  arch/default/odp_cpu_idling.h
 endif
 if ARCH_IS_X86
-__LIB__libodp_linux_la_SOURCES += arch/x86/cpu_flags.c \
+__LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
+				  arch/x86/cpu_flags.c \
 				  arch/x86/odp_cpu_cycles.c \
 				  arch/x86/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
