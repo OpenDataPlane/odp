@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2019-2021, Nokia
  *
  * All rights reserved.
  *
@@ -36,15 +36,46 @@ extern "C" {
  */
 
 /**
- * Clock sources for timers in timer pool.
+ * Clock sources for timer pools
+ *
+ * ODP_CLOCK_DEFAULT is the default clock source and it is supported always. It is implementation
+ * defined which other clock sources are supported. See from implementation documentation how the
+ * supported clock sources are mapped into these enumerations.
  */
 typedef enum {
-	/** Use CPU clock as clock source for timers */
-	ODP_CLOCK_CPU,
-	/** Use external clock as clock source for timers */
-	ODP_CLOCK_EXT
-	/* Platform dependent which other clock sources exist */
+	/** Clock source number 0 */
+	ODP_CLOCK_SRC_0,
+
+	/** Clock source number 1 */
+	ODP_CLOCK_SRC_1,
+
+	/** Clock source number 2 */
+	ODP_CLOCK_SRC_2,
+
+	/** Clock source number 3  */
+	ODP_CLOCK_SRC_3,
+
+	/** Clock source number 4  */
+	ODP_CLOCK_SRC_4,
+
+	/** Clock source number 5  */
+	ODP_CLOCK_SRC_5,
+
+	/** Number of clock source enumerations */
+	ODP_CLOCK_NUM_SRC
+
 } odp_timer_clk_src_t;
+
+/** The default clock source */
+#define ODP_CLOCK_DEFAULT ODP_CLOCK_SRC_0
+
+/** For backwards compatibility, ODP_CLOCK_CPU is synonym of ODP_CLOCK_DEFAULT.
+ *  This will be deprecated in the future. */
+#define ODP_CLOCK_CPU ODP_CLOCK_DEFAULT
+
+/** For backwards compatibility, ODP_CLOCK_EXT is synonym of ODP_CLOCK_SRC_1.
+ *  This will be deprecated in the future. */
+#define ODP_CLOCK_EXT ODP_CLOCK_SRC_1
 
 /**
  * @typedef odp_timer_t
@@ -240,18 +271,19 @@ typedef struct {
 } odp_timer_capability_t;
 
 /**
- * Query timer capabilities
+ * Query timer capabilities per clock source
  *
- * Outputs timer capabilities on success.
+ * Outputs timer capabilities on success. Returns -1 if the clock source
+ * is not supported.
  *
  * @param      clk_src  Clock source for timers
  * @param[out] capa     Pointer to capability structure for output
  *
- * @retval 0 on success
- * @retval <0 on failure
+ * @retval   0 on success
+ * @retval  -1 when the clock source is not supported
+ * @retval <-1 on other failures
  */
-int odp_timer_capability(odp_timer_clk_src_t clk_src,
-			 odp_timer_capability_t *capa);
+int odp_timer_capability(odp_timer_clk_src_t clk_src, odp_timer_capability_t *capa);
 
 /**
  * Timer resolution capability
