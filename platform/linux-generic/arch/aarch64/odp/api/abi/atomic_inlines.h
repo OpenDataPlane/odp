@@ -60,18 +60,7 @@
 
 static inline void _odp_atomic_init_u128(odp_atomic_u128_t *atom, odp_u128_t new_val)
 {
-	odp_u128_t old, val;
-
-	old = atom->v;
-
-	while (1) {
-		ATOMIC_CAS_OP_128_NO_ORDER(atom, &old, new_val, val);
-
-		if ((val.u64[0] == old.u64[0]) && (val.u64[1] == old.u64[1]))
-			return;
-
-		old = val;
-	}
+	atom->v = new_val;
 }
 
 static inline odp_u128_t _odp_atomic_load_u128(odp_atomic_u128_t *atom)
@@ -103,69 +92,65 @@ static inline void _odp_atomic_store_u128(odp_atomic_u128_t *atom, odp_u128_t ne
 static inline int _odp_atomic_cas_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
 				       odp_u128_t new_val)
 {
-	int ret = 0;
 	odp_u128_t val;
 
 	ATOMIC_CAS_OP_128_NO_ORDER(atom, old_val, new_val, val);
 
 	if ((val.u64[0] == old_val->u64[0]) && (val.u64[1] == old_val->u64[1]))
-		ret = 1;
+		return 1;
 
 	old_val->u64[0] = val.u64[0];
 	old_val->u64[1] = val.u64[1];
 
-	return ret;
+	return 0;
 }
 
 static inline int _odp_atomic_cas_acq_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
 					   odp_u128_t new_val)
 {
-	int ret = 0;
 	odp_u128_t val;
 
 	ATOMIC_CAS_OP_128_ACQ(atom, old_val, new_val, val);
 
 	if ((val.u64[0] == old_val->u64[0]) && (val.u64[1] == old_val->u64[1]))
-		ret = 1;
+		return 1;
 
 	old_val->u64[0] = val.u64[0];
 	old_val->u64[1] = val.u64[1];
 
-	return ret;
+	return 0;
 }
 
 static inline int _odp_atomic_cas_rel_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
 					   odp_u128_t new_val)
 {
-	int ret = 0;
 	odp_u128_t val;
 
 	ATOMIC_CAS_OP_128_REL(atom, old_val, new_val, val);
 
 	if ((val.u64[0] == old_val->u64[0]) && (val.u64[1] == old_val->u64[1]))
-		ret = 1;
+		return 1;
 
 	old_val->u64[0] = val.u64[0];
 	old_val->u64[1] = val.u64[1];
 
-	return ret;
+	return 0;
 }
 
 static inline int _odp_atomic_cas_acq_rel_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
 					       odp_u128_t new_val)
 {
-	int ret = 0;
 	odp_u128_t val;
 
 	ATOMIC_CAS_OP_128_ACQ_REL(atom, old_val, new_val, val);
 
 	if ((val.u64[0] == old_val->u64[0]) && (val.u64[1] == old_val->u64[1]))
-		ret = 1;
+		return 1;
 
 	old_val->u64[0] = val.u64[0];
 	old_val->u64[1] = val.u64[1];
 
-	return ret;
+	return 0;
 }
 #else /* _ODP_LOCK_FREE_128BIT_ATOMICS */
 
