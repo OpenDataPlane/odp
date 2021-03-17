@@ -140,28 +140,19 @@ static inline int _odp_atomic_cas_u128(odp_atomic_u128_t *atom, odp_u128_t *old_
 static inline int _odp_atomic_cas_acq_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
 					   odp_u128_t new_val)
 {
-	int ret;
-
-	*old_val = ATOMIC_OP_128(atom, ATOMIC_CAS_OP_128(&ret, old_val, new_val));
-	return ret;
+	return _odp_atomic_cas_u128(atom, old_val, new_val);
 }
 
 static inline int _odp_atomic_cas_rel_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
 					   odp_u128_t new_val)
 {
-	int ret;
-
-	*old_val = ATOMIC_OP_128(atom, ATOMIC_CAS_OP_128(&ret, old_val, new_val));
-	return ret;
+	return _odp_atomic_cas_u128(atom, old_val, new_val);
 }
 
 static inline int _odp_atomic_cas_acq_rel_u128(odp_atomic_u128_t *atom, odp_u128_t *old_val,
 					       odp_u128_t new_val)
 {
-	int ret;
-
-	*old_val = ATOMIC_OP_128(atom, ATOMIC_CAS_OP_128(&ret, old_val, new_val));
-	return ret;
+	return _odp_atomic_cas_u128(atom, old_val, new_val);
 }
 #endif
 
