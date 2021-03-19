@@ -432,9 +432,11 @@ static int schedule_init_global(void)
 	ODP_ASSERT(ring_size <= MAX_RING_SIZE);
 	sched->ring_mask = ring_size - 1;
 
-	/* Each ring can hold in maximum ring_size-1 queues. */
+	/* Each ring can hold in maximum ring_size-1 queues. Due to ring size round up,
+	 * total capacity of rings may be larger than CONFIG_MAX_SCHED_QUEUES. */
 	sched->max_queues = sched->ring_mask * sched->config.num_spread;
-	ODP_ASSERT(sched->max_queues <= CONFIG_MAX_SCHED_QUEUES);
+	if (sched->max_queues > CONFIG_MAX_SCHED_QUEUES)
+		sched->max_queues = CONFIG_MAX_SCHED_QUEUES;
 
 	odp_spinlock_init(&sched->mask_lock);
 
