@@ -1974,6 +1974,7 @@ static inline uint8_t parse_ipv4(packet_parser_t *prs, const uint8_t **parseptr,
 		if (chksum_finalize(chksum_partial(ipv4, ihl * 4, 0)) != 0xffff) {
 			prs->flags.ip_err = 1;
 			prs->flags.l3_chksum_err = 1;
+			*offset = ODP_PACKET_OFFSET_INVALID;
 			return 0;
 		}
 	}
