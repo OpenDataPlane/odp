@@ -198,6 +198,14 @@ jobs:
     - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
              -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/out_of_tree.sh
 
+  Build_sched_config:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
+               -e CONF="--enable-debug=full" -e ODP_CONFIG_FILE=/odp/platform/linux-generic/test/sched-basic.conf
+               $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+
   Run_coverage:
     runs-on: ubuntu-18.04
     steps:
