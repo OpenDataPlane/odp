@@ -23,61 +23,12 @@
 
 typedef unsigned __int128 u128_t;
 
-static inline void atomic_zero_u128(u128_t *atomic)
+static inline void lockfree_zero_u128(u128_t *atomic)
 {
 	__atomic_store_n(atomic, 0, __ATOMIC_RELAXED);
 }
 
-#if defined(__aarch64__)
-/* ARMv8 has atomic load-acq/store-rel instructions for a pair of
- * 64bit of data. GCC atomic built-in for 128bits does not utilize these
- * instructions but uses locks instead. Override GCC built-in for ARMv8.
- */
 #include <odp_cpu.h>
-
-static inline int atomic_cas_acq_rel_u128(u128_t *atomic, u128_t old_val,
-					  u128_t new_val)
-{
-	return __lockfree_compare_exchange_16((__int128 *)atomic,
-					      (__int128 *)&old_val,
-					      new_val,
-					      0,
-					      __ATOMIC_ACQ_REL,
-					      __ATOMIC_RELAXED);
-}
-
-static inline u128_t atomic_load_u128(u128_t *atomic)
-{
-	return __lockfree_load_16((__int128 *)atomic, __ATOMIC_RELAXED);
-}
-
-static inline int atomic_is_lockfree_u128(void)
-{
-	return 1;
-}
-
-#else
-
-static inline u128_t atomic_load_u128(u128_t *atomic)
-{
-	return __atomic_load_n(atomic, __ATOMIC_RELAXED);
-}
-
-static inline int atomic_cas_acq_rel_u128(u128_t *atomic, u128_t old_val,
-					  u128_t new_val)
-{
-	return __atomic_compare_exchange_n(atomic, &old_val, new_val,
-					   0 /* strong */,
-					   __ATOMIC_ACQ_REL,
-					   __ATOMIC_RELAXED);
-}
-
-static inline int atomic_is_lockfree_u128(void)
-{
-	return __atomic_is_lock_free(16, NULL);
-}
-
-#endif
 
 #else
 
@@ -88,19 +39,19 @@ typedef struct ODP_ALIGNED(16) {
 	uint64_t u64[2];
 } u128_t;
 
-static inline u128_t atomic_load_u128(u128_t *atomic)
+static inline u128_t lockfree_load_u128(u128_t *atomic)
 {
 	return *atomic;
 }
 
-static inline void atomic_zero_u128(u128_t *atomic)
+static inline void lockfree_zero_u128(u128_t *atomic)
 {
 	atomic->u64[0] = 0;
 	atomic->u64[1] = 0;
 }
 
-static inline int atomic_cas_acq_rel_u128(u128_t *atomic, u128_t old_val,
-					  u128_t new_val)
+static inline int lockfree_cas_acq_rel_u128(u128_t *atomic, u128_t old_val,
+					    u128_t new_val)
 {
 	if (atomic->u64[0] == old_val.u64[0] &&
 	    atomic->u64[1] == old_val.u64[1]) {
@@ -112,7 +63,7 @@ static inline int atomic_cas_acq_rel_u128(u128_t *atomic, u128_t old_val,
 	return 0;
 }
 
-static inline int atomic_is_lockfree_u128(void)
+static inline int lockfree_check_u128(void)
 {
 	return 0;
 }
@@ -187,7 +138,7 @@ static int queue_lf_enq(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr)
 			node = &queue_lf->node[idx];
 			idx  = next_idx(idx);
 
-			node_val.u128 = atomic_load_u128(&node->u128);
+			node_val.u128 = lockfree_load_u128(&node->u128);
 
 			if (node_val.s.counter == 0) {
 				found = 1;
@@ -200,7 +151,7 @@ static int queue_lf_enq(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr)
 			return -1;
 
 		/* Try to insert data */
-		if (atomic_cas_acq_rel_u128(&node->u128, node_val.u128,
+		if (lockfree_cas_acq_rel_u128(&node->u128, node_val.u128,
 					    new_val.u128))
 			return 0;
 	}
@@ -244,7 +195,7 @@ static odp_buffer_hdr_t *queue_lf_deq(odp_queue_t handle)
 		 * the lowest counter. */
 		for (i = 0; i < RING_LF_SIZE; i++) {
 			node          = &queue_lf->node[i];
-			node_val.u128 = atomic_load_u128(&node->u128);
+			node_val.u128 = lockfree_load_u128(&node->u128);
 			counter       = node_val.s.counter;
 
 			if (counter && counter < lowest) {
@@ -265,7 +216,7 @@ static odp_buffer_hdr_t *queue_lf_deq(odp_queue_t handle)
 		 * values. */
 		for (i = 0; i < i_lowest; i++) {
 			node          = &queue_lf->node[i];
-			node_val.u128 = atomic_load_u128(&node->u128);
+			node_val.u128 = lockfree_load_u128(&node->u128);
 			counter       = node_val.s.counter;
 
 			if (counter && counter < lowest) {
@@ -278,7 +229,7 @@ static odp_buffer_hdr_t *queue_lf_deq(odp_queue_t handle)
 		buf_hdr = (void *)(uintptr_t)old_val.s.ptr;
 
 		/* Try to remove data */
-		if (atomic_cas_acq_rel_u128(&old->u128, old_val.u128,
+		if (lockfree_cas_acq_rel_u128(&old->u128, old_val.u128,
 					    new_val.u128))
 			return buf_hdr;
 	}
@@ -309,7 +260,7 @@ uint32_t _odp_queue_lf_init_global(uint32_t *queue_lf_size,
 	int lockfree;
 
 	/* 16 byte lockfree CAS operation is needed. */
-	lockfree = atomic_is_lockfree_u128();
+	lockfree = lockfree_check_u128();
 
 	ODP_DBG("\nLock-free queue init\n");
 	ODP_DBG("  u128 lock-free: %i\n\n", lockfree);
@@ -359,7 +310,7 @@ static void init_queue(queue_lf_t *queue_lf)
 	odp_atomic_init_u64(&queue_lf->enq_counter, 1);
 
 	for (i = 0; i < RING_LF_SIZE; i++)
-		atomic_zero_u128(&queue_lf->node[i].u128);
+		lockfree_zero_u128(&queue_lf->node[i].u128);
 }
 
 void *_odp_queue_lf_create(queue_entry_t *queue)
@@ -403,7 +354,7 @@ uint32_t _odp_queue_lf_length(void *queue_lf_ptr)
 	uint32_t num = 0;
 
 	for (i = 0; i < RING_LF_SIZE; i++) {
-		node_val.u128 =  atomic_load_u128(&queue_lf->node[i].u128);
+		node_val.u128 =  lockfree_load_u128(&queue_lf->node[i].u128);
 		if (node_val.s.counter)
 			num++;
 	}
