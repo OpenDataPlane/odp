@@ -281,7 +281,10 @@ endif
 noinst_HEADERS += arch/arm/odp_atomic.h \
 		  arch/arm/odp_cpu.h \
 		  arch/arm/odp_cpu_idling.h \
-		  arch/arm/odp_llsc.h
+		  arch/arm/odp_llsc.h \
+		  arch/default/odp_atomic.h \
+		  arch/default/odp_cpu.h \
+		  arch/default/odp_cpu_idling.h
 endif
 if ARCH_IS_AARCH64
 __LIB__libodp_linux_la_SOURCES += arch/aarch64/odp_atomic.c \
@@ -317,7 +320,8 @@ odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 				arch/default/odp/api/abi/atomic_inlines.h \
 				arch/default/odp/api/abi/cpu.h
 endif
-noinst_HEADERS += arch/default/odp_cpu.h \
+noinst_HEADERS += arch/default/odp_atomic.h \
+		  arch/default/odp_cpu.h \
 		  arch/default/odp_cpu_idling.h
 endif
 if ARCH_IS_MIPS64
@@ -334,7 +338,8 @@ odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 				arch/default/odp/api/abi/atomic_inlines.h \
 				arch/mips64/odp/api/abi/cpu.h
 endif
-noinst_HEADERS += arch/default/odp_cpu.h \
+noinst_HEADERS += arch/default/odp_atomic.h \
+		  arch/default/odp_cpu.h \
 		  arch/default/odp_cpu_idling.h
 endif
 if ARCH_IS_POWERPC
@@ -351,7 +356,8 @@ odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 				arch/default/odp/api/abi/atomic_inlines.h \
 				arch/powerpc/odp/api/abi/cpu.h
 endif
-noinst_HEADERS += arch/default/odp_cpu.h \
+noinst_HEADERS += arch/default/odp_atomic.h \
+		  arch/default/odp_cpu.h \
 		  arch/default/odp_cpu_idling.h
 endif
 if ARCH_IS_X86
@@ -372,6 +378,7 @@ odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 endif
 noinst_HEADERS += arch/x86/cpu_flags.h \
 		  arch/x86/odp_cpu.h \
+		  arch/default/odp_atomic.h \
 		  arch/default/odp_cpu.h \
 		  arch/default/odp_cpu_idling.h
 endif

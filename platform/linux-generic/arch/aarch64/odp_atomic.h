@@ -217,4 +217,28 @@ static inline __int128 __lockfree_load_16(__int128 *var, int mo)
 	return old;
 }
 
+typedef unsigned __int128 _u128_t;
+
+static inline _u128_t lockfree_load_u128(_u128_t *atomic)
+{
+	return __lockfree_load_16((__int128 *)atomic, __ATOMIC_RELAXED);
+}
+
+static inline int lockfree_cas_acq_rel_u128(_u128_t *atomic,
+					    _u128_t old_val,
+					    _u128_t new_val)
+{
+	return __lockfree_compare_exchange_16((__int128 *)atomic,
+					      (__int128 *)&old_val,
+					      new_val,
+					      0,
+					      __ATOMIC_ACQ_REL,
+					      __ATOMIC_RELAXED);
+}
+
+static inline int lockfree_check_u128(void)
+{
+	return 1;
+}
+
 #endif  /* PLATFORM_LINUXGENERIC_ARCH_ARM_ODP_ATOMIC_H */
