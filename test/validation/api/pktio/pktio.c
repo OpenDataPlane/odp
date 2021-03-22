@@ -2508,6 +2508,232 @@ static void pktio_test_pktout_ts(void)
 	}
 }
 
+static void pktio_test_pktout_compl(bool use_plain_queue)
+{
+	odp_pktio_t pktio[MAX_NUM_IFACES] = {ODP_PKTIO_INVALID};
+	odp_queue_t compl_queue[TX_BATCH_LEN];
+	odp_schedule_capability_t sched_capa;
+	odp_packet_t pkt_tbl[TX_BATCH_LEN];
+	char queuename[ODP_QUEUE_NAME_LEN];
+	odp_pktio_capability_t pktio_capa;
+	odp_queue_capability_t queue_capa;
+	uint16_t seq_found[TX_BATCH_LEN];
+	odp_pktout_queue_t pktout_queue;
+	uint32_t pkt_seq[TX_BATCH_LEN];
+	odp_pktio_t pktio_tx, pktio_rx;
+	odp_packet_tx_compl_t tx_compl;
+	odp_packet_tx_compl_opt_t opt;
+	pktio_info_t pktio_rx_info;
+	odp_pktio_config_t config;
+	odp_queue_param_t qparam;
+	int ret, i, num_rx = 0;
+	odp_event_t ev;
+	uint64_t wait;
+
+	/* Create queues to receive PKTIO Tx completion events */
+	CU_ASSERT_FATAL(!odp_schedule_capability(&sched_capa));
+	CU_ASSERT_FATAL(!odp_queue_capability(&queue_capa));
+
+	for (i = 0; i < TX_BATCH_LEN; i++) {
+		sprintf(queuename, "TxComplQueue%u", i);
+		odp_queue_param_init(&qparam);
+
+		if (use_plain_queue) {
+			qparam.type = ODP_QUEUE_TYPE_PLAIN;
+		} else {
+			qparam.type       = ODP_QUEUE_TYPE_SCHED;
+			qparam.sched.prio = odp_schedule_default_prio();
+			qparam.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+			qparam.sched.group = ODP_SCHED_GROUP_ALL;
+		}
+		compl_queue[i] = odp_queue_create(queuename, &qparam);
+		CU_ASSERT_FATAL(compl_queue[i] != ODP_QUEUE_INVALID);
+	}
+
+	memset(&pktout_queue, 0, sizeof(pktout_queue));
+	CU_ASSERT_FATAL(num_ifaces >= 1);
+
+	/* Open and configure interfaces */
+	for (i = 0; i < num_ifaces; ++i) {
+		pktio[i] = create_pktio(i, ODP_PKTIN_MODE_DIRECT,
+					ODP_PKTOUT_MODE_DIRECT);
+		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
+
+		CU_ASSERT_FATAL(odp_pktio_capability(pktio[i], &pktio_capa) == 0);
+
+		/* Configure Tx completion offload for PKTIO Tx */
+		if (i == 0) {
+			CU_ASSERT_FATAL(pktio_capa.tx_compl.mode_all == 1);
+			if (use_plain_queue) {
+				/* CU_ASSERT needs these extra braces */
+				CU_ASSERT_FATAL(pktio_capa.tx_compl.queue_type_plain != 0);
+			} else {
+				CU_ASSERT_FATAL(pktio_capa.tx_compl.queue_type_sched != 0);
+			}
+
+			odp_pktio_config_init(&config);
+			config.pktout.bit.tx_compl_ena = 1;
+			CU_ASSERT_FATAL(odp_pktio_config(pktio[i], &config) == 0);
+		}
+
+		CU_ASSERT_FATAL(odp_pktio_start(pktio[i]) == 0);
+	}
+
+	for (i = 0; i < num_ifaces; i++)
+		_pktio_wait_linkup(pktio[i]);
+
+	pktio_tx = pktio[0];
+	pktio_rx = (num_ifaces > 1) ? pktio[1] : pktio_tx;
+	pktio_rx_info.id   = pktio_rx;
+	pktio_rx_info.inq  = ODP_QUEUE_INVALID;
+	pktio_rx_info.in_mode = ODP_PKTIN_MODE_DIRECT;
+
+	ret = create_packets(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx, pktio_rx);
+	CU_ASSERT_FATAL(ret == TX_BATCH_LEN);
+
+	ret = odp_pktout_queue(pktio_tx, &pktout_queue, 1);
+	CU_ASSERT_FATAL(ret > 0);
+
+	memset(&opt, 0, sizeof(opt));
+
+	/* Prepare batch of pkts with different tx completion queues */
+	for (i = 0; i < TX_BATCH_LEN;  i++) {
+		opt.queue = compl_queue[i];
+		opt.mode = ODP_PACKET_TX_COMPL_ALL;
+		odp_packet_tx_compl_request(pkt_tbl[i], &opt);
+
+		/* Set pkt sequence number as its user ptr */
+		odp_packet_user_ptr_set(pkt_tbl[i], (const void *)&pkt_seq[i]);
+	}
+
+	CU_ASSERT_FATAL(odp_pktout_send(pktout_queue, pkt_tbl, TX_BATCH_LEN) == TX_BATCH_LEN);
+
+	num_rx = wait_for_packets(&pktio_rx_info, pkt_tbl, pkt_seq, TX_BATCH_LEN, TXRX_MODE_SINGLE,
+				  ODP_TIME_SEC_IN_NS, false);
+	CU_ASSERT(num_rx == TX_BATCH_LEN);
+	for (i = 0; i < num_rx; i++)
+		odp_packet_free(pkt_tbl[i]);
+
+	wait = odp_schedule_wait_time(ODP_TIME_SEC_IN_NS);
+	memset(seq_found, 0, sizeof(seq_found));
+
+	/* Receive Packet Tx completion events for all sent/dropped pkts */
+	for (i = 0; i < TX_BATCH_LEN; i++) {
+		if (use_plain_queue) {
+			ev = odp_queue_deq(compl_queue[i]);
+
+			/* Event validation */
+			CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+			CU_ASSERT_FATAL(odp_event_type(ev) == ODP_EVENT_PACKET_TX_COMPL);
+			CU_ASSERT_FATAL(odp_packet_tx_compl_from_event(ev) !=
+					ODP_PACKET_TX_COMPL_INVALID);
+
+			tx_compl = odp_packet_tx_compl_from_event(ev);
+			CU_ASSERT_FATAL(odp_packet_tx_compl_to_event(tx_compl) == ev);
+
+			/* User ptr should be same as packet's user ptr */
+			CU_ASSERT(odp_packet_tx_compl_user_ptr(tx_compl) ==
+				  (const void *)&pkt_seq[i]);
+
+			/* Alternatively call event free / compl free */
+			if (i % 2)
+				odp_packet_tx_compl_free(tx_compl);
+			else
+				odp_event_free(ev);
+		} else {
+			odp_queue_t rcv_queue;
+			int j;
+
+			ev = odp_schedule(&rcv_queue, wait);
+
+			/* Event validation */
+			CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+			CU_ASSERT_FATAL(odp_event_type(ev) == ODP_EVENT_PACKET_TX_COMPL);
+			CU_ASSERT_FATAL(odp_packet_tx_compl_from_event(ev) !=
+					ODP_PACKET_TX_COMPL_INVALID);
+
+			tx_compl = odp_packet_tx_compl_from_event(ev);
+			CU_ASSERT_FATAL(odp_packet_tx_compl_to_event(tx_compl) == ev);
+
+			/* User ptr should be same as packet's user ptr i.e seq array ptr */
+			for (j = 0; j < TX_BATCH_LEN; j++) {
+				if (!seq_found[j] &&
+				    ((const void *)&pkt_seq[j] ==
+				     odp_packet_tx_compl_user_ptr(tx_compl))) {
+					/* Mark that sequence number is found */
+					seq_found[j] = 1;
+
+					/* Receive queue validation */
+					CU_ASSERT(rcv_queue == compl_queue[j]);
+					break;
+				}
+			}
+			/* Check that sequence number is found */
+			CU_ASSERT(j < TX_BATCH_LEN);
+
+			/* Alternatively call event free / compl free */
+			if (i % 2)
+				odp_packet_tx_compl_free(tx_compl);
+			else
+				odp_event_free(ev);
+		}
+	}
+
+	for (i = 0; i < TX_BATCH_LEN; i++)
+		odp_queue_destroy(compl_queue[i]);
+
+	for (i = 0; i < num_ifaces; i++) {
+		CU_ASSERT_FATAL(odp_pktio_stop(pktio[i]) == 0);
+		CU_ASSERT_FATAL(odp_pktio_close(pktio[i]) == 0);
+	}
+}
+
+static int pktio_check_pktout_compl(bool plain)
+{
+	odp_pktio_param_t pktio_param;
+	odp_pktio_capability_t capa;
+	odp_pktio_t pktio;
+	int ret;
+
+	odp_pktio_param_init(&pktio_param);
+	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
+	pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
+
+	pktio = odp_pktio_open(iface_name[0], pool[0], &pktio_param);
+	if (pktio == ODP_PKTIO_INVALID)
+		return ODP_TEST_INACTIVE;
+
+	ret = odp_pktio_capability(pktio, &capa);
+	(void)odp_pktio_close(pktio);
+
+	if (ret < 0 || !capa.tx_compl.mode_all ||
+	    (plain && !capa.tx_compl.queue_type_plain) ||
+	    (!plain && !capa.tx_compl.queue_type_sched))
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+static int pktio_check_pktout_compl_plain_queue(void)
+{
+	return pktio_check_pktout_compl(true);
+}
+
+static int pktio_check_pktout_compl_sched_queue(void)
+{
+	return pktio_check_pktout_compl(false);
+}
+
+static void pktio_test_pktout_compl_plain_queue(void)
+{
+	pktio_test_pktout_compl(true);
+}
+
+static void pktio_test_pktout_compl_sched_queue(void)
+{
+	pktio_test_pktout_compl(false);
+}
+
 static void pktio_test_chksum(void (*config_fn)(odp_pktio_t, odp_pktio_t),
 			      void (*prep_fn)(odp_packet_t pkt),
 			      void (*test_fn)(odp_packet_t pkt))
@@ -3767,6 +3993,10 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 				  pktio_check_maxlen_set),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktout_aging_tmo,
 				  pktio_check_pktout_aging_tmo),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktout_compl_plain_queue,
+				  pktio_check_pktout_compl_plain_queue),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktout_compl_sched_queue,
+				  pktio_check_pktout_compl_sched_queue),
 	ODP_TEST_INFO_NULL
 };
 
