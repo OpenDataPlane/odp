@@ -170,7 +170,7 @@ jobs:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        os: ['centos_7', 'centos_8']
+        os: ['centos_7', 'centos_8', 'ubuntu_16.04']
     steps:
       - uses: actions/checkout@v2
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
@@ -247,7 +247,7 @@ jobs:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        os: ['ubuntu_16.04', 'ubuntu_20.04']
+        os: ['ubuntu_20.04']
     steps:
       - uses: actions/checkout@v2
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
