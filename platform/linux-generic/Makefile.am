@@ -370,7 +370,7 @@ __LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
 odpapiabiarchinclude_HEADERS += arch/x86/odp/api/abi/cpu_inlines.h \
 				arch/x86/odp/api/abi/cpu_rdtsc.h \
 				arch/x86/odp/api/abi/cpu_time.h \
-				arch/default/odp/api/abi/hash_crc32.h
+				arch/x86/odp/api/abi/hash_crc32.h
 if !ODP_ABI_COMPAT
 odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 				arch/default/odp/api/abi/atomic_inlines.h \
