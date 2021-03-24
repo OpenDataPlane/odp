@@ -2879,3 +2879,15 @@ int odp_packet_payload_offset_set(odp_packet_t pkt, uint32_t offset)
 
 	return 0;
 }
+
+void odp_packet_aging_tmo_set(odp_packet_t pkt, uint64_t tmo_ns)
+{
+	(void)pkt;
+	(void)tmo_ns;
+}
+
+uint64_t odp_packet_aging_tmo(odp_packet_t pkt)
+{
+	(void)pkt;
+	return 0;
+}
