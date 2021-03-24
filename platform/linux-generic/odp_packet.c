@@ -2891,3 +2891,44 @@ uint64_t odp_packet_aging_tmo(odp_packet_t pkt)
 	(void)pkt;
 	return 0;
 }
+
+int odp_packet_tx_compl_request(odp_packet_t pkt, const odp_packet_tx_compl_opt_t *opt)
+{
+	(void)pkt;
+	(void)opt;
+
+	return -1;
+}
+
+int odp_packet_has_tx_compl_request(odp_packet_t pkt)
+{
+	(void)pkt;
+
+	return 0;
+}
+
+odp_packet_tx_compl_t odp_packet_tx_compl_from_event(odp_event_t ev)
+{
+	(void)ev;
+
+	return ODP_PACKET_TX_COMPL_INVALID;
+}
+
+odp_event_t odp_packet_tx_compl_to_event(odp_packet_tx_compl_t tx_compl)
+{
+	(void)tx_compl;
+
+	return ODP_EVENT_INVALID;
+}
+
+void odp_packet_tx_compl_free(odp_packet_tx_compl_t tx_compl)
+{
+	(void)tx_compl;
+}
+
+void *odp_packet_tx_compl_user_ptr(odp_packet_tx_compl_t tx_compl)
+{
+	(void)tx_compl;
+
+	return NULL;
+}
