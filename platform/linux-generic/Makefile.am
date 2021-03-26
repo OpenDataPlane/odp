@@ -174,6 +174,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_errno.c \
 			   odp_event.c \
 			   odp_fdserver.c \
+			   odp_fractional.c \
 			   odp_hash_crc_gen.c \
 			   odp_impl.c \
 			   odp_init.c \
