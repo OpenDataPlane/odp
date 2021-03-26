@@ -47,6 +47,9 @@ struct thread_args {
 };
 
 typedef struct {
+	/* Clock source support flags */
+	uint8_t clk_supported[ODP_CLOCK_NUM_SRC];
+
 	/* Default resolution / timeout parameters */
 	struct {
 		uint64_t res_ns;
@@ -88,6 +91,7 @@ static int timer_global_init(odp_instance_t *inst)
 	odp_timer_res_capability_t res_capa;
 	uint64_t res_ns, min_tmo, max_tmo;
 	unsigned int range;
+	int i;
 
 	if (odph_options(&helper_options)) {
 		fprintf(stderr, "error: odph_options() failed.\n");
@@ -156,11 +160,18 @@ static int timer_global_init(odp_instance_t *inst)
 	}
 
 	/* Default parameters for test cases */
+	global_mem->clk_supported[0] = 1;
 	global_mem->param.res_ns  = res_ns;
 	global_mem->param.min_tmo = min_tmo;
 	global_mem->param.max_tmo = max_tmo;
 	global_mem->param.queue_type_plain = capa.queue_type_plain;
 	global_mem->param.queue_type_sched = capa.queue_type_sched;
+
+	/* Check which other source clocks are supported */
+	for (i = 1; i < ODP_CLOCK_NUM_SRC; i++) {
+		if (odp_timer_capability(ODP_CLOCK_SRC_0 + i, &capa) == 0)
+			global_mem->clk_supported[i] = 1;
+	}
 
 	return 0;
 }
@@ -206,14 +217,14 @@ check_plain_queue_support(void)
 	return ODP_TEST_INACTIVE;
 }
 
-static void timer_test_capa(void)
+static void timer_test_capa_run(odp_timer_clk_src_t clk_src)
 {
 	odp_timer_capability_t capa;
 	odp_timer_res_capability_t res_capa;
 	int ret;
 
 	memset(&capa, 0, sizeof(capa));
-	ret = odp_timer_capability(ODP_CLOCK_CPU, &capa);
+	ret = odp_timer_capability(clk_src, &capa);
 	CU_ASSERT_FATAL(ret == 0);
 
 	CU_ASSERT(capa.highest_res_ns == capa.max_res.res_ns);
@@ -234,7 +245,7 @@ static void timer_test_capa(void)
 	memset(&res_capa, 0, sizeof(res_capa));
 	res_capa.res_ns = capa.max_res.res_ns;
 
-	ret = odp_timer_res_capability(ODP_CLOCK_CPU, &res_capa);
+	ret = odp_timer_res_capability(clk_src, &res_capa);
 	CU_ASSERT_FATAL(ret == 0);
 	CU_ASSERT(res_capa.res_ns  == capa.max_res.res_ns);
 	CU_ASSERT(res_capa.min_tmo == capa.max_res.min_tmo);
@@ -244,7 +255,7 @@ static void timer_test_capa(void)
 	memset(&res_capa, 0, sizeof(res_capa));
 	res_capa.res_hz = capa.max_res.res_hz;
 
-	ret = odp_timer_res_capability(ODP_CLOCK_CPU, &res_capa);
+	ret = odp_timer_res_capability(clk_src, &res_capa);
 	CU_ASSERT_FATAL(ret == 0);
 	CU_ASSERT(res_capa.res_hz  == capa.max_res.res_hz);
 	CU_ASSERT(res_capa.min_tmo == capa.max_res.min_tmo);
@@ -254,12 +265,37 @@ static void timer_test_capa(void)
 	memset(&res_capa, 0, sizeof(res_capa));
 	res_capa.max_tmo = capa.max_tmo.max_tmo;
 
-	ret = odp_timer_res_capability(ODP_CLOCK_CPU, &res_capa);
+	ret = odp_timer_res_capability(clk_src, &res_capa);
 	CU_ASSERT_FATAL(ret == 0);
 	CU_ASSERT(res_capa.max_tmo == capa.max_tmo.max_tmo);
 	CU_ASSERT(res_capa.min_tmo == capa.max_tmo.min_tmo);
 	CU_ASSERT(res_capa.res_ns  == capa.max_tmo.res_ns);
 	CU_ASSERT(res_capa.res_hz  == capa.max_tmo.res_hz);
+}
+
+static void timer_test_capa(void)
+{
+	odp_timer_clk_src_t clk_src;
+	int i;
+
+	/* Check that all API clock source enumeration values exist */
+	CU_ASSERT_FATAL(ODP_CLOCK_DEFAULT == ODP_CLOCK_SRC_0);
+	CU_ASSERT_FATAL(ODP_CLOCK_SRC_0 + 1 == ODP_CLOCK_SRC_1);
+	CU_ASSERT_FATAL(ODP_CLOCK_SRC_0 + 2 == ODP_CLOCK_SRC_2);
+	CU_ASSERT_FATAL(ODP_CLOCK_SRC_0 + 3 == ODP_CLOCK_SRC_3);
+	CU_ASSERT_FATAL(ODP_CLOCK_SRC_0 + 4 == ODP_CLOCK_SRC_4);
+	CU_ASSERT_FATAL(ODP_CLOCK_SRC_0 + 5 == ODP_CLOCK_SRC_5);
+	CU_ASSERT_FATAL(ODP_CLOCK_SRC_5 + 1 == ODP_CLOCK_NUM_SRC);
+	CU_ASSERT_FATAL(ODP_CLOCK_CPU == ODP_CLOCK_DEFAULT);
+	CU_ASSERT_FATAL(ODP_CLOCK_EXT == ODP_CLOCK_SRC_1);
+
+	for (i = 0; i < ODP_CLOCK_NUM_SRC; i++) {
+		clk_src = ODP_CLOCK_SRC_0 + i;
+		if (global_mem->clk_supported[i]) {
+			ODPH_DBG("\nTesting clock source: %i\n", clk_src);
+			timer_test_capa_run(clk_src);
+		}
+	}
 }
 
 static void timer_test_timeout_pool_alloc(void)
