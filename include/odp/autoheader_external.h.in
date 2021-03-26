@@ -8,4 +8,7 @@
 /* Define to 1 to display debug information */
 #undef ODP_DEBUG_PRINT
 
+/* Define cache line size */
+#undef _ODP_CACHE_LINE_SIZE
+
 #endif
