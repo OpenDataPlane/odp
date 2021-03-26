@@ -431,6 +431,15 @@ static void ipsec_pkt_auth_err_set(odp_packet_t pkt)
 	odp_packet_copy_from_mem(pkt, len - sizeof(data), sizeof(data), &data);
 }
 
+static void ipsec_pkt_update(odp_packet_t pkt, const ipsec_test_flags *flags)
+{
+	if (flags && flags->stats == IPSEC_TEST_STATS_PROTO_ERR)
+		ipsec_pkt_proto_err_set(pkt);
+
+	if (flags && flags->stats == IPSEC_TEST_STATS_AUTH_ERR)
+		ipsec_pkt_auth_err_set(pkt);
+}
+
 static void ipsec_check_out_in_one(const ipsec_test_part *part_outbound,
 				   const ipsec_test_part *part_inbound,
 				   odp_ipsec_sa_t sa,
@@ -447,25 +456,12 @@ static void ipsec_check_out_in_one(const ipsec_test_part *part_outbound,
 		ipsec_test_part part_in = *part_inbound;
 		ipsec_test_packet pkt_in;
 
-		CU_ASSERT_FATAL(odp_packet_len(pkto[i]) <=
-				sizeof(pkt_in.data));
+		ipsec_pkt_update(pkto[i], flags);
 
-		if (flags && flags->stats == IPSEC_TEST_STATS_PROTO_ERR)
-			ipsec_pkt_proto_err_set(pkto[i]);
-
-		if (flags && flags->stats == IPSEC_TEST_STATS_AUTH_ERR)
-			ipsec_pkt_auth_err_set(pkto[i]);
-
-		pkt_in.len = odp_packet_len(pkto[i]);
-		pkt_in.l2_offset = odp_packet_l2_offset(pkto[i]);
-		pkt_in.l3_offset = odp_packet_l3_offset(pkto[i]);
-		pkt_in.l4_offset = odp_packet_l4_offset(pkto[i]);
-		odp_packet_copy_to_mem(pkto[i], 0,
-				       pkt_in.len,
-				       pkt_in.data);
+		ipsec_test_packet_from_pkt(&pkt_in, &pkto[i]);
 		part_in.pkt_in = &pkt_in;
+
 		ipsec_check_in_one(&part_in, sa_in);
-		odp_packet_free(pkto[i]);
 	}
 }
 
