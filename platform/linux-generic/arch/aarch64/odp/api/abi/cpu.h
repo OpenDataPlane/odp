@@ -11,7 +11,11 @@
 extern "C" {
 #endif
 
-#define ODP_CACHE_LINE_SIZE 64
+#include <odp/autoheader_external.h>
+
+#ifndef ODP_CACHE_LINE_SIZE
+	#define ODP_CACHE_LINE_SIZE _ODP_CACHE_LINE_SIZE
+#endif
 
 static inline void odp_cpu_pause(void)
 {

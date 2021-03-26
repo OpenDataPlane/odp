@@ -6,6 +6,7 @@ ODP_ATOMIC
 
 ODP_PTHREAD
 ODP_TIMER
+m4_include([platform/linux-generic/m4/odp_cpu.m4])
 m4_include([platform/linux-generic/m4/odp_pcap.m4])
 m4_include([platform/linux-generic/m4/odp_scheduler.m4])
 
