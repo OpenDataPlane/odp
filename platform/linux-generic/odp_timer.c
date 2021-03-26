@@ -1332,15 +1332,28 @@ uint64_t odp_timer_current_tick(odp_timer_pool_t tpid)
 	return current_nsec(tp);
 }
 
-int odp_timer_pool_info(odp_timer_pool_t tpid,
-			odp_timer_pool_info_t *buf)
+int odp_timer_pool_info(odp_timer_pool_t tpid, odp_timer_pool_info_t *tp_info)
 {
-	timer_pool_t *tp = timer_pool_from_hdl(tpid);
+	timer_pool_t *tp;
 
-	buf->param = tp->param;
-	buf->cur_timers = tp->num_alloc;
-	buf->hwm_timers = odp_atomic_load_u32(&tp->high_wm);
-	buf->name = tp->name;
+	if (odp_unlikely(tpid == ODP_TIMER_POOL_INVALID)) {
+		ODP_ERR("Invalid timer pool.\n");
+		return -1;
+	}
+
+	tp = timer_pool_from_hdl(tpid);
+
+	memset(tp_info, 0, sizeof(odp_timer_pool_info_t));
+	tp_info->param = tp->param;
+	tp_info->cur_timers = tp->num_alloc;
+	tp_info->hwm_timers = odp_atomic_load_u32(&tp->high_wm);
+	tp_info->name = tp->name;
+
+	/* One API timer tick is one nsec. Leave source clock information to zero
+	 * as there is no direct link between a source clock signal and a timer tick. */
+	tp_info->tick_info.freq.integer = ODP_TIME_SEC_IN_NS;
+	tp_info->tick_info.nsec.integer = 1;
+
 	return 0;
 }
 
