@@ -11,6 +11,20 @@
 #include "ipsec.h"
 #include "test_vectors.h"
 
+/*
+ * Miscellaneous parameters for combined out+in tests
+ */
+typedef struct {
+	ipsec_test_part_flags_t part_flags;
+	odp_bool_t display_algo;
+	odp_bool_t ah;
+	odp_bool_t v6;
+	odp_bool_t tunnel;
+	odp_bool_t tunnel_is_v6;
+	odp_bool_t udp_encap;
+	enum ipsec_test_stats stats;
+} ipsec_test_flags;
+
 struct cipher_param {
 	const char *name;
 	odp_cipher_alg_t algo;
@@ -420,7 +434,8 @@ static void ipsec_pkt_auth_err_set(odp_packet_t pkt)
 static void ipsec_check_out_in_one(const ipsec_test_part *part_outbound,
 				   const ipsec_test_part *part_inbound,
 				   odp_ipsec_sa_t sa,
-				   odp_ipsec_sa_t sa_in)
+				   odp_ipsec_sa_t sa_in,
+				   const ipsec_test_flags *flags)
 {
 	int num_out = part_outbound->num_pkt;
 	odp_packet_t pkto[num_out];
@@ -435,10 +450,10 @@ static void ipsec_check_out_in_one(const ipsec_test_part *part_outbound,
 		CU_ASSERT_FATAL(odp_packet_len(pkto[i]) <=
 				sizeof(pkt_in.data));
 
-		if (part_outbound->flags.stats == IPSEC_TEST_STATS_PROTO_ERR)
+		if (flags && flags->stats == IPSEC_TEST_STATS_PROTO_ERR)
 			ipsec_pkt_proto_err_set(pkto[i]);
 
-		if (part_outbound->flags.stats == IPSEC_TEST_STATS_AUTH_ERR)
+		if (flags && flags->stats == IPSEC_TEST_STATS_AUTH_ERR)
 			ipsec_pkt_auth_err_set(pkto[i]);
 
 		pkt_in.len = odp_packet_len(pkto[i]);
@@ -454,7 +469,7 @@ static void ipsec_check_out_in_one(const ipsec_test_part *part_outbound,
 	}
 }
 
-static void test_out_in_common(ipsec_test_flags *flags,
+static void test_out_in_common(const ipsec_test_flags *flags,
 			       odp_cipher_alg_t cipher,
 			       const odp_crypto_key_t *cipher_key,
 			       odp_auth_alg_t auth,
@@ -569,8 +584,8 @@ static void test_out_in_common(ipsec_test_flags *flags,
 		test_in.out[0].pkt_res = &pkt_ipv6_icmp_0;
 	}
 
-	test_out.flags = *flags;
-	test_in.flags = *flags;
+	test_out.flags = flags->part_flags;
+	test_in.flags = flags->part_flags;
 
 	if (flags->stats == IPSEC_TEST_STATS_PROTO_ERR)
 		test_in.out[0].status.error.proto = 1;
@@ -584,7 +599,7 @@ static void test_out_in_common(ipsec_test_flags *flags,
 		test_ipsec_stats_zero_assert(&stats);
 	}
 
-	if (flags->test_sa_seq_num) {
+	if (flags->part_flags.test_sa_seq_num) {
 		int rc;
 
 		test_out.out[0].seq_num = 0x1235;
@@ -600,7 +615,7 @@ static void test_out_in_common(ipsec_test_flags *flags,
 		}
 	}
 
-	ipsec_check_out_in_one(&test_out, &test_in, sa_out, sa_in);
+	ipsec_check_out_in_one(&test_out, &test_in, sa_out, sa_in, flags);
 
 	if (flags->stats == IPSEC_TEST_STATS_SUCCESS) {
 		CU_ASSERT_EQUAL(odp_ipsec_stats(sa_in, &stats), 0);
@@ -624,7 +639,7 @@ static void test_out_in_common(ipsec_test_flags *flags,
 
 static void test_esp_out_in(struct cipher_param *cipher,
 			    struct auth_param *auth,
-			    ipsec_test_flags *flags)
+			    const ipsec_test_flags *flags)
 {
 	int cipher_keylen = cipher->key ? 8 * cipher->key->length : 0;
 	int auth_keylen = auth->key ? 8 * auth->key->length : 0;
@@ -683,7 +698,7 @@ static int is_out_mode_inline(void)
 static void test_esp_out_in_all_hdr_in_packet(void)
 {
 	ipsec_test_flags flags = {
-		.inline_hdr_in_packet = true,
+		.part_flags.inline_hdr_in_packet = true,
 	};
 	test_esp_out_in_all(&flags);
 }
@@ -1281,8 +1296,8 @@ static void test_out_dummy_esp_null_sha256_tun(odp_ipsec_tunnel_param_t tunnel)
 	test_empty.out[0].l3_type = out_l3_type;
 	test_empty.out[0].l4_type = ODP_PROTO_L4_TYPE_ESP;
 
-	ipsec_check_out_in_one(&test, &test_in, sa, sa2);
-	ipsec_check_out_in_one(&test_empty, &test_in, sa, sa2);
+	ipsec_check_out_in_one(&test, &test_in, sa, sa2, NULL);
+	ipsec_check_out_in_one(&test_empty, &test_in, sa, sa2, NULL);
 
 	ipsec_sa_destroy(sa2);
 	ipsec_sa_destroy(sa);
@@ -1472,7 +1487,7 @@ static void test_sa_info(void)
 		},
 	};
 
-	ipsec_check_out_in_one(&test_out, &test_in, sa_out, sa_in);
+	ipsec_check_out_in_one(&test_out, &test_in, sa_out, sa_in, NULL);
 
 	memset(&info_out, 0, sizeof(info_out));
 	CU_ASSERT_EQUAL_FATAL(0, odp_ipsec_sa_info(sa_out, &info_out));
@@ -1519,7 +1534,7 @@ static void test_test_sa_update_seq_num(void)
 
 	memset(&flags, 0, sizeof(flags));
 	flags.display_algo = true;
-	flags.test_sa_seq_num = true;
+	flags.part_flags.test_sa_seq_num = true;
 
 	test_esp_out_in_all(&flags);
 
@@ -1751,11 +1766,13 @@ static void test_max_num_sa(void)
 		sa_odd = odp_ipsec_sa_create(&param);
 		CU_ASSERT_FATAL(sa_odd != ODP_IPSEC_SA_INVALID);
 
-		ipsec_check_out_in_one(&test_out, &test_in, sa_odd, sa_in[n]);
+		ipsec_check_out_in_one(&test_out, &test_in,
+				       sa_odd, sa_in[n], NULL);
 	}
 
 	for (n = 0; n < sa_pairs; n++)
-		ipsec_check_out_in_one(&test_out, &test_in, sa_out[n], sa_in[n]);
+		ipsec_check_out_in_one(&test_out, &test_in,
+				       sa_out[n], sa_in[n], NULL);
 
 	for (n = 0; n < sa_pairs; n++) {
 		ipsec_sa_destroy(sa_out[n]);

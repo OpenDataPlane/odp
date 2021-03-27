@@ -57,20 +57,13 @@ enum ipsec_test_stats {
 };
 
 typedef struct {
-	odp_bool_t display_algo;
 	odp_bool_t lookup;
-	odp_bool_t ah;
 	odp_bool_t inline_hdr_in_packet;
 	odp_bool_t test_sa_seq_num;
-	odp_bool_t v6;
-	odp_bool_t tunnel;
-	odp_bool_t tunnel_is_v6;
-	odp_bool_t udp_encap;
-	enum ipsec_test_stats stats;
-} ipsec_test_flags;
+} ipsec_test_part_flags_t;
 
 typedef struct {
-	ipsec_test_flags flags;
+	ipsec_test_part_flags_t flags;
 
 	/* Input for the inbound or outbound IPsec operation */
 	const ipsec_test_packet *pkt_in;
