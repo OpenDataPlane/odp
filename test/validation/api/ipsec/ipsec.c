@@ -910,6 +910,31 @@ void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 	}
 }
 
+static void parse_ip(odp_packet_t pkt)
+{
+	uint8_t *ver_ihl;
+	odp_proto_t proto = ODP_PROTO_NONE;
+	uint32_t l3 = odp_packet_l3_offset(pkt);
+
+	ver_ihl = odp_packet_l3_ptr(pkt, NULL);
+	if ((*ver_ihl >> 4) == 4)
+		proto = ODP_PROTO_IPV4;
+	else if ((*ver_ihl >> 4) == 6)
+		proto = ODP_PROTO_IPV6;
+	else
+		CU_FAIL("Invalid IP version");
+
+	odp_packet_parse_param_t param = {
+		.proto = proto,
+		.last_layer = ODP_PROTO_LAYER_L4,
+	};
+	/*
+	 * odp_packet_parse() is buggy in linux generic ODP. Intentionally
+	 * ignore the return value until the bug has been fixed.
+	 */
+	(void)odp_packet_parse(pkt, l3, &param);
+}
+
 void ipsec_check_out_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 {
 	int num_out = part->num_pkt;
@@ -943,6 +968,9 @@ void ipsec_check_out_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 			CU_ASSERT_EQUAL(sa, result.sa);
 			CU_ASSERT_EQUAL(IPSEC_SA_CTX,
 					odp_ipsec_sa_context(sa));
+
+			/* Parse the packet to set L4 offset and type */
+			parse_ip(pkto[i]);
 		}
 		ipsec_check_packet(part->out[i].pkt_res,
 				   pkto[i],
