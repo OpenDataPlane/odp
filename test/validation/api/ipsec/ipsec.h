@@ -70,10 +70,14 @@ typedef struct {
 } ipsec_test_flags;
 
 typedef struct {
-	const ipsec_test_packet *pkt_in;
 	ipsec_test_flags flags;
+
+	/* Input for the inbound or outbound IPsec operation */
+	const ipsec_test_packet *pkt_in;
 	int num_opt;
 	odp_ipsec_out_opt_t opt;
+
+	/* Expected output */
 	int num_pkt;
 	struct {
 		odp_ipsec_op_status_t status;
@@ -82,12 +86,6 @@ typedef struct {
 		odp_proto_l4_type_t l4_type;
 		uint32_t seq_num;
 	} out[1];
-	struct {
-		odp_ipsec_op_status_t status;
-		const ipsec_test_packet *pkt_res;
-		odp_proto_l3_type_t l3_type;
-		odp_proto_l4_type_t l4_type;
-	} in[1];
 } ipsec_test_part;
 
 void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
