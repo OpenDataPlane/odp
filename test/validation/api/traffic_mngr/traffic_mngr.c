@@ -113,6 +113,8 @@
 
 #define TM_PERCENT(percent) ((uint32_t)(100 * percent))
 
+#define ARRAY_SIZE(a) (sizeof((a)) / sizeof((a)[0]))
+
 typedef enum {
 	SHAPER_PROFILE, SCHED_PROFILE, THRESHOLD_PROFILE, WRED_PROFILE
 } profile_kind_t;
@@ -317,8 +319,8 @@ static uint32_t num_ifaces;
 static odp_pool_t pools[MAX_NUM_IFACES] = {ODP_POOL_INVALID, ODP_POOL_INVALID};
 
 static odp_pktio_t pktios[MAX_NUM_IFACES];
+static odp_bool_t pktio_started[MAX_NUM_IFACES];
 static odp_pktin_queue_t pktins[MAX_NUM_IFACES];
-static odp_pktout_queue_t pktouts[MAX_NUM_IFACES];
 static odp_pktin_queue_t rcv_pktin;
 static odp_pktio_t xmt_pktio;
 
@@ -327,6 +329,8 @@ static odph_ethaddr_t dst_mac;
 
 static uint32_t cpu_unique_id;
 static uint32_t cpu_tcp_seq_num;
+
+static int8_t suite_inactive;
 
 static void busy_wait(uint64_t nanoseconds)
 {
@@ -481,7 +485,6 @@ static int open_pktios(void)
 
 	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode  = ODP_PKTIN_MODE_DIRECT;
-	pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
 
 	for (iface = 0; iface < num_ifaces; iface++) {
 		snprintf(pool_name, sizeof(pool_name), "pkt_pool_%s",
@@ -494,10 +497,37 @@ static int open_pktios(void)
 		}
 
 		pools[iface] = pkt_pool;
-		pktio = odp_pktio_open(iface_name[iface], pkt_pool,
-				       &pktio_param);
-		if (pktio == ODP_PKTIO_INVALID)
-			pktio = odp_pktio_lookup(iface_name[iface]);
+
+		/* Zero'th device is always PKTOUT TM as we use it from XMIT */
+		if (iface == 0) {
+			pktio_param.out_mode = ODP_PKTOUT_MODE_TM;
+
+			pktio = odp_pktio_open(iface_name[iface], pkt_pool,
+					       &pktio_param);
+
+			/* On failure check if pktio can be opened in non-TM mode.
+			 * If non-TM mode works, then we can assume that PKTIO
+			 * does not support TM
+			 */
+			if (pktio == ODP_PKTIO_INVALID) {
+				pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
+				pktio = odp_pktio_open(iface_name[iface], pkt_pool,
+						       &pktio_param);
+
+				/* Return >0 to indicate no TM support */
+				if (pktio != ODP_PKTIO_INVALID) {
+					odp_pktio_close(pktio);
+					return 1;
+				}
+			}
+		} else {
+			pktio_param.out_mode = ODP_PKTOUT_MODE_DISABLED;
+
+			pktio = odp_pktio_open(iface_name[iface], pkt_pool,
+					       &pktio_param);
+		}
+
+		pktios[iface] = pktio;
 		if (pktio == ODP_PKTIO_INVALID) {
 			ODPH_ERR("odp_pktio_open() failed\n");
 			return -1;
@@ -505,22 +535,13 @@ static int open_pktios(void)
 
 		/* Set defaults for PktIn and PktOut queues */
 		(void)odp_pktin_queue_config(pktio, NULL);
-		(void)odp_pktout_queue_config(pktio, NULL);
 		rc = odp_pktio_promisc_mode_set(pktio, true);
 		if (rc != 0)
 			printf("****** promisc_mode_set failed  ******\n");
 
-		pktios[iface] = pktio;
-
 		if (odp_pktin_queue(pktio, &pktins[iface], 1) != 1) {
 			odp_pktio_close(pktio);
 			ODPH_ERR("odp_pktio_open() failed: no pktin queue\n");
-			return -1;
-		}
-
-		if (odp_pktout_queue(pktio, &pktouts[iface], 1) != 1) {
-			odp_pktio_close(pktio);
-			ODPH_ERR("odp_pktio_open() failed: no pktout queue\n");
 			return -1;
 		}
 
@@ -547,6 +568,7 @@ static int open_pktios(void)
 			ODPH_ERR("odp_pktio_start() failed\n");
 			return -1;
 		}
+		pktio_started[1] = true;
 	} else {
 		xmt_pktio = pktios[0];
 		rcv_pktin  = pktins[0];
@@ -557,6 +579,7 @@ static int open_pktios(void)
 		ODPH_ERR("odp_pktio_start() failed\n");
 		return -1;
 	}
+	pktio_started[0] = true;
 
 	/* Now wait until the link or links are up. */
 	rc = wait_linkup(pktios[0]);
@@ -2059,6 +2082,7 @@ static int destroy_tm_systems(void)
 static int traffic_mngr_suite_init(void)
 {
 	uint32_t payload_len, copy_len;
+	int ret;
 
 	/* Initialize some global variables. */
 	num_pkts_made   = 0;
@@ -2094,9 +2118,24 @@ static int traffic_mngr_suite_init(void)
 		       iface_name[0], iface_name[1]);
 	}
 
-	if (open_pktios() != 0)
+	pktios[0] = ODP_PKTIO_INVALID;
+	pktios[1] = ODP_PKTIO_INVALID;
+
+	ret = open_pktios();
+	if (ret < 0)
 		return -1;
 
+	/* Positive return indicates, that pktio open failed with out mode as TM
+	 * but succeeded with direct mode.
+	 */
+	if (ret > 0)
+		goto skip_tests;
+
+	return 0;
+skip_tests:
+	/* Mark all tests as inactive under this suite */
+	odp_cunit_set_inactive();
+	suite_inactive++;
 	return 0;
 }
 
@@ -2107,14 +2146,22 @@ static int traffic_mngr_suite_term(void)
 	/* Close the pktios and associated packet pools. */
 	free_rcvd_pkts();
 	for (iface = 0; iface < num_ifaces; iface++) {
-		if (odp_pktio_stop(pktios[iface]) != 0)
-			return -1;
+		/* Skip pktios not initialized */
+		if (pktios[iface] != ODP_PKTIO_INVALID) {
+			if (pktio_started[iface] &&
+			    odp_pktio_stop(pktios[iface]) != 0)
+				return -1;
 
-		if (odp_pktio_close(pktios[iface]) != 0)
-			return -1;
+			if (odp_pktio_close(pktios[iface]) != 0)
+				return -1;
+			pktios[iface] = ODP_PKTIO_INVALID;
+			pktio_started[iface] = false;
+		}
 
 		if (odp_pool_destroy(pools[iface]) != 0)
 			return -1;
+
+		pools[iface] = ODP_POOL_INVALID;
 	}
 
 	if (odp_cunit_print_inactive())
@@ -4099,5 +4146,8 @@ int main(int argc, char *argv[])
 	if (ret == 0)
 		ret = odp_cunit_run();
 
+	/* Exit with 77 in order to indicate that test is skipped completely */
+	if (!ret && suite_inactive == (ARRAY_SIZE(traffic_mngr_suites) - 1))
+		return 77;
 	return ret;
 }
