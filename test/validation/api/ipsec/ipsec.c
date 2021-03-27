@@ -423,7 +423,6 @@ static void ipsec_check_packet(const ipsec_test_packet *itp, odp_packet_t pkt,
 	uint8_t data[len];
 	const odph_ipv4hdr_t *itp_ip;
 	odph_ipv4hdr_t *ip;
-	int inline_mode = 0;
 
 	if (NULL == itp)
 		return;
@@ -431,19 +430,6 @@ static void ipsec_check_packet(const ipsec_test_packet *itp, odp_packet_t pkt,
 	CU_ASSERT_NOT_EQUAL(ODP_PACKET_INVALID, pkt);
 	if (ODP_PACKET_INVALID == pkt)
 		return;
-
-	if ((!is_outbound &&
-	     suite_context.inbound_op_mode == ODP_IPSEC_OP_MODE_INLINE) ||
-	    (is_outbound &&
-	     suite_context.outbound_op_mode == ODP_IPSEC_OP_MODE_INLINE))
-		inline_mode = 1;
-
-	if (inline_mode) {
-		/* User pointer is reset during inline mode (packet IO) */
-		CU_ASSERT(odp_packet_user_ptr(pkt) == NULL);
-	} else {
-		CU_ASSERT(odp_packet_user_ptr(pkt) == PACKET_USER_PTR);
-	}
 
 	l3 = odp_packet_l3_offset(pkt);
 	l4 = odp_packet_l4_offset(pkt);
@@ -835,6 +821,7 @@ void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 
 	for (i = 0; i < num_out; i++) {
 		odp_ipsec_packet_result_t result;
+		void *expected_user_ptr = PACKET_USER_PTR;
 
 		if (ODP_PACKET_INVALID == pkto[i]) {
 			CU_FAIL("ODP_PACKET_INVALID received");
@@ -843,7 +830,7 @@ void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 
 		if (ODP_EVENT_PACKET_IPSEC !=
 		    odp_event_subtype(odp_packet_to_event(pkto[i]))) {
-			/* Inline packet went through loop */
+			/* Inline packet failed SA lookup */
 			CU_ASSERT_EQUAL(1, part->out[i].status.error.sa_lookup);
 		} else {
 			CU_ASSERT_EQUAL(0, odp_ipsec_result(&result, pkto[i]));
@@ -869,6 +856,10 @@ void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 		ipsec_check_packet(part->out[i].pkt_res,
 				   pkto[i],
 				   false);
+		if (suite_context.inbound_op_mode == ODP_IPSEC_OP_MODE_INLINE)
+			expected_user_ptr = NULL;
+		CU_ASSERT(odp_packet_user_ptr(pkto[i]) == expected_user_ptr);
+
 		if (part->out[i].pkt_res != NULL &&
 		    part->out[i].l3_type != _ODP_PROTO_L3_TYPE_UNDEF)
 			CU_ASSERT_EQUAL(part->out[i].l3_type,
@@ -923,6 +914,7 @@ int ipsec_check_out(const ipsec_test_part *part, odp_ipsec_sa_t sa,
 		    odp_event_subtype(odp_packet_to_event(pkto[i]))) {
 			/* Inline packet went through loop */
 			CU_ASSERT_EQUAL(0, part->out[i].status.error.all);
+			CU_ASSERT(odp_packet_user_ptr(pkto[i]) == NULL);
 			/* L2 header must match the requested one */
 			check_l2_header(part->out[i].pkt_res, pkto[i]);
 		} else {
@@ -936,6 +928,7 @@ int ipsec_check_out(const ipsec_test_part *part, odp_ipsec_sa_t sa,
 			CU_ASSERT_EQUAL(sa, result.sa);
 			CU_ASSERT_EQUAL(IPSEC_SA_CTX,
 					odp_ipsec_sa_context(sa));
+			CU_ASSERT(odp_packet_user_ptr(pkto[i]) == PACKET_USER_PTR);
 
 			/* Parse the packet to set L4 offset and type */
 			parse_ip(pkto[i]);
