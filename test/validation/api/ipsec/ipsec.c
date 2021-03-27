@@ -427,10 +427,6 @@ static void ipsec_check_packet(const ipsec_test_packet *itp, odp_packet_t pkt,
 	if (NULL == itp)
 		return;
 
-	CU_ASSERT_NOT_EQUAL(ODP_PACKET_INVALID, pkt);
-	if (ODP_PACKET_INVALID == pkt)
-		return;
-
 	l3 = odp_packet_l3_offset(pkt);
 	l4 = odp_packet_l4_offset(pkt);
 	odp_packet_copy_to_mem(pkt, 0, len, data);
@@ -512,6 +508,7 @@ static int ipsec_send_in_one(const ipsec_test_part *part,
 							    pkto, &num_out,
 							    &param));
 		CU_ASSERT_EQUAL(num_out, part->num_pkt);
+		CU_ASSERT_FATAL(*pkto != ODP_PACKET_INVALID);
 		CU_ASSERT(odp_packet_subtype(*pkto) == ODP_EVENT_PACKET_IPSEC);
 	} else if (ODP_IPSEC_OP_MODE_ASYNC == suite_context.inbound_op_mode) {
 		num_out = odp_ipsec_in_enq(&pkt, 1, &param);
@@ -532,6 +529,7 @@ static int ipsec_send_in_one(const ipsec_test_part *part,
 					odp_event_types(event, &subtype));
 			CU_ASSERT_EQUAL(ODP_EVENT_PACKET_IPSEC, subtype);
 			pkto[i] = odp_ipsec_packet_from_event(event);
+			CU_ASSERT_FATAL(pkto[i] != ODP_PACKET_INVALID);
 			CU_ASSERT(odp_packet_subtype(pkto[i]) ==
 				  ODP_EVENT_PACKET_IPSEC);
 		}
@@ -563,7 +561,9 @@ static int ipsec_send_in_one(const ipsec_test_part *part,
 						subtype);
 				CU_ASSERT(part->out[i].status.error.sa_lookup);
 
-				pkto[i++] = odp_ipsec_packet_from_event(ev);
+				pkto[i] = odp_ipsec_packet_from_event(ev);
+				CU_ASSERT_FATAL(pkto[i] != ODP_PACKET_INVALID);
+				i++;
 				continue;
 			}
 
@@ -577,6 +577,7 @@ static int ipsec_send_in_one(const ipsec_test_part *part,
 				CU_ASSERT(!part->out[i].status.error.sa_lookup);
 
 				pkto[i] = odp_ipsec_packet_from_event(ev);
+				CU_ASSERT_FATAL(pkto[i] != ODP_PACKET_INVALID);
 				CU_ASSERT(odp_packet_subtype(pkto[i]) ==
 					  ODP_EVENT_PACKET_IPSEC);
 				i++;
@@ -608,11 +609,9 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 	if (ODP_IPSEC_OP_MODE_SYNC == suite_context.outbound_op_mode) {
 		CU_ASSERT_EQUAL(1, odp_ipsec_out(&pkt, 1, pkto, &num_out,
 						 &param));
-		CU_ASSERT_EQUAL(num_out, 1);
-		if (num_out == 1) {
-			CU_ASSERT(odp_packet_subtype(*pkto) ==
-				  ODP_EVENT_PACKET_IPSEC);
-		}
+		CU_ASSERT_FATAL(num_out == 1);
+		CU_ASSERT_FATAL(*pkto != ODP_PACKET_INVALID);
+		CU_ASSERT(odp_packet_subtype(*pkto) == ODP_EVENT_PACKET_IPSEC);
 	} else if (ODP_IPSEC_OP_MODE_ASYNC == suite_context.outbound_op_mode) {
 		num_out = odp_ipsec_out_enq(&pkt, 1, &param);
 		CU_ASSERT_EQUAL(1, num_out);
@@ -632,6 +631,7 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 					odp_event_types(event, &subtype));
 			CU_ASSERT_EQUAL(ODP_EVENT_PACKET_IPSEC, subtype);
 			pkto[i] = odp_ipsec_packet_from_event(event);
+			CU_ASSERT_FATAL(pkto[i] != ODP_PACKET_INVALID);
 			CU_ASSERT(odp_packet_subtype(pkto[i]) ==
 				  ODP_EVENT_PACKET_IPSEC);
 		}
@@ -715,7 +715,9 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 						subtype);
 				CU_ASSERT(!part->out[i].status.error.all);
 
-				pkto[i++] = odp_ipsec_packet_from_event(ev);
+				pkto[i] = odp_ipsec_packet_from_event(ev);
+				CU_ASSERT_FATAL(pkto[i] != ODP_PACKET_INVALID);
+				i++;
 				continue;
 			}
 
@@ -729,6 +731,7 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 				CU_ASSERT(part->out[i].status.error.all);
 
 				pkto[i] = odp_ipsec_packet_from_event(ev);
+				CU_ASSERT_FATAL(pkto[i] != ODP_PACKET_INVALID);
 				CU_ASSERT(odp_packet_subtype(pkto[i]) ==
 					  ODP_EVENT_PACKET_IPSEC);
 				i++;
@@ -823,11 +826,6 @@ void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 		odp_ipsec_packet_result_t result;
 		void *expected_user_ptr = PACKET_USER_PTR;
 
-		if (ODP_PACKET_INVALID == pkto[i]) {
-			CU_FAIL("ODP_PACKET_INVALID received");
-			continue;
-		}
-
 		if (ODP_EVENT_PACKET_IPSEC !=
 		    odp_event_subtype(odp_packet_to_event(pkto[i]))) {
 			/* Inline packet failed SA lookup */
@@ -907,8 +905,6 @@ int ipsec_check_out(const ipsec_test_part *part, odp_ipsec_sa_t sa,
 
 	for (i = 0; i < num_out; i++) {
 		odp_ipsec_packet_result_t result;
-
-		CU_ASSERT_FATAL(pkto[i] != ODP_PACKET_INVALID);
 
 		if (ODP_EVENT_PACKET_IPSEC !=
 		    odp_event_subtype(odp_packet_to_event(pkto[i]))) {
