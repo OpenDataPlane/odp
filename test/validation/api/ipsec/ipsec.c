@@ -507,6 +507,8 @@ static int send_pkts(const ipsec_test_part part[], int num_part)
 static int recv_pkts_inline(const ipsec_test_part *part,
 			    odp_packet_t *pkto)
 {
+	odp_packet_reass_partial_state_t reass_state;
+	odp_packet_reass_status_t reass_status;
 	odp_queue_t queue = ODP_QUEUE_INVALID;
 	int i;
 
@@ -534,17 +536,36 @@ static int recv_pkts_inline(const ipsec_test_part *part,
 
 		ev = odp_queue_deq(suite_context.queue);
 		if (ODP_EVENT_INVALID != ev) {
+			odp_packet_t pkt;
+			int num_pkts = 0;
+
 			CU_ASSERT(odp_event_is_valid(ev) == 1);
-			CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
-					odp_event_types(ev, &subtype));
-			CU_ASSERT_EQUAL(ODP_EVENT_PACKET_IPSEC,
-					subtype);
+			CU_ASSERT_EQUAL(ODP_EVENT_PACKET, odp_event_type(ev));
+			pkt = odp_packet_from_event(ev);
+
 			CU_ASSERT(!part->out[i].status.error.sa_lookup);
 
-			pkto[i] = odp_ipsec_packet_from_event(ev);
-			CU_ASSERT(odp_packet_subtype(pkto[i]) ==
-				  ODP_EVENT_PACKET_IPSEC);
-			i++;
+			reass_status = odp_packet_reass_status(pkt);
+			if (ODP_PACKET_REASS_INCOMPLETE != reass_status) {
+				pkto[i] = pkt;
+				num_pkts = 1;
+			} else {
+				odp_packet_t frags[MAX_FRAGS];
+				int j;
+
+				CU_ASSERT(0 ==
+					  odp_packet_reass_partial_state(pkt, frags, &reass_state));
+				num_pkts = reass_state.num_frags;
+
+				CU_ASSERT_FATAL(i + num_pkts <= part->num_pkt);
+				for (j = 0; j < num_pkts; j++)
+					pkto[i + j] = frags[j];
+			}
+
+			for (; num_pkts > 0; num_pkts--)
+				CU_ASSERT(odp_packet_subtype(pkto[i++]) ==
+					  ODP_EVENT_PACKET_IPSEC);
+
 			continue;
 		}
 	}
