@@ -109,9 +109,6 @@ int ipsec_check_out(const ipsec_test_part *part,
 		    odp_ipsec_sa_t sa,
 		    odp_packet_t *pkto);
 void ipsec_check_out_one(const ipsec_test_part *part, odp_ipsec_sa_t sa);
-void ipsec_check_out_in_one(const ipsec_test_part *part,
-			    odp_ipsec_sa_t sa,
-			    odp_ipsec_sa_t sa_in);
 int ipsec_test_sa_update_seq_num(odp_ipsec_sa_t sa, uint32_t seq_num);
 
 int ipsec_check(odp_bool_t ah,
