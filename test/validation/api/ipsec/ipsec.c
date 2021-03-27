@@ -638,7 +638,7 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 	} else {
 		struct odp_ipsec_out_inline_param_t inline_param;
 		uint32_t hdr_len;
-		uint8_t hdr[32];
+		odph_ethhdr_t hdr;
 		odp_queue_t queue = ODP_QUEUE_INVALID;
 
 		if (NULL != part->out[0].pkt_res) {
@@ -649,16 +649,16 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 			 */
 			hdr_len = part->out[0].pkt_res->l3_offset;
 			CU_ASSERT_FATAL(hdr_len <= sizeof(hdr));
-			memcpy(hdr, part->out[0].pkt_res->data, hdr_len);
-		} else if (part->pkt_in->l3_offset !=
-			   ODP_PACKET_OFFSET_INVALID) {
-			hdr_len = part->pkt_in->l3_offset;
-			CU_ASSERT_FATAL(hdr_len <= sizeof(hdr));
-			memcpy(hdr, part->pkt_in->data, hdr_len);
+			memcpy(&hdr, part->out[0].pkt_res->data, hdr_len);
 		} else {
-			/* Dummy header */
 			hdr_len = 14;
-			memset(hdr, 0xff, hdr_len);
+			memset(&hdr, 0xff, hdr_len);
+
+			if (part->out[0].l3_type == ODP_PROTO_L3_TYPE_IPV6) {
+				hdr.type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV6);
+			} else {
+				hdr.type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
+			}
 		}
 
 		if (part->flags.inline_hdr_in_packet) {
@@ -681,14 +681,14 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 			CU_ASSERT_FATAL(ret >= 0);
 			odp_packet_l2_offset_set(pkt, new_l2_offset);
 			odp_packet_l3_offset_set(pkt, new_l3_offset);
-			odp_packet_copy_from_mem(pkt, new_l2_offset, hdr_len, hdr);
+			odp_packet_copy_from_mem(pkt, new_l2_offset, hdr_len, &hdr);
 			if (l4_offset != ODP_PACKET_OFFSET_INVALID)
 				odp_packet_l4_offset_set(pkt, new_l3_offset +
 							 l4_offset - l3_offset);
 
 			inline_param.outer_hdr.ptr = NULL;
 		} else {
-			inline_param.outer_hdr.ptr = hdr;
+			inline_param.outer_hdr.ptr = (void *)&hdr;
 		}
 
 		inline_param.pktio = suite_context.pktio;
@@ -943,6 +943,20 @@ int ipsec_check_out(const ipsec_test_part *part, odp_ipsec_sa_t sa,
 		ipsec_check_packet(part->out[i].pkt_res,
 				   pkto[i],
 				   true);
+
+		/*
+		 * If we did not have an expected packet to compare the
+		 * result packet with, we will check the l3 and l4 types
+		 * against the expected ones.
+		 */
+		if (part->out[i].pkt_res == NULL) {
+			if (part->out[i].l3_type != _ODP_PROTO_L3_TYPE_UNDEF)
+				CU_ASSERT(part->out[i].l3_type ==
+					  odp_packet_l3_type(pkto[i]));
+			if (part->out[i].l4_type != _ODP_PROTO_L4_TYPE_UNDEF)
+				CU_ASSERT(part->out[i].l4_type ==
+					  odp_packet_l4_type(pkto[i]));
+		}
 	}
 	return num_out;
 }
