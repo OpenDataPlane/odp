@@ -1016,8 +1016,6 @@ static int ipsec_out_tunnel_ipv4(odp_packet_t *pkt,
 	odp_packet_copy_from_mem(*pkt, state->ip_offset,
 				 _ODP_IPV4HDR_LEN, &out_ip);
 
-	odp_packet_l4_offset_set(*pkt, state->ip_offset + _ODP_IPV4HDR_LEN);
-
 	state->ip = odp_packet_l3_ptr(*pkt, NULL);
 	state->ip_hdr_len = _ODP_IPV4HDR_LEN;
 	if (state->is_ipv4)
@@ -1076,8 +1074,6 @@ static int ipsec_out_tunnel_ipv6(odp_packet_t *pkt,
 
 	odp_packet_copy_from_mem(*pkt, state->ip_offset,
 				 sizeof(out_ip), &out_ip);
-
-	odp_packet_l4_offset_set(*pkt, state->ip_offset + _ODP_IPV6HDR_LEN);
 
 	state->ip = odp_packet_l3_ptr(*pkt, NULL);
 	state->ip_hdr_len = _ODP_IPV6HDR_LEN;
