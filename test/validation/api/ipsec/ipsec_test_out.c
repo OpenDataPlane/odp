@@ -471,7 +471,7 @@ static void test_out_in_common(ipsec_test_flags *flags,
 			  .status.error.all = 0,
 			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
 			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
-			  .pkt_res = &pkt_ipv4_icmp_0 },
+			},
 		},
 		.in = {
 			{ .status.warn.all = 0,
@@ -486,7 +486,6 @@ static void test_out_in_common(ipsec_test_flags *flags,
 		test.pkt_in = &pkt_ipv6_icmp_0;
 		test.out[0].l3_type = ODP_PROTO_L3_TYPE_IPV6;
 		test.out[0].l4_type = ODP_PROTO_L4_TYPE_ICMPV6;
-		test.out[0].pkt_res = &pkt_ipv6_icmp_0;
 		test.in[0].l3_type = ODP_PROTO_L3_TYPE_IPV6;
 		test.in[0].l4_type = ODP_PROTO_L4_TYPE_ICMPV6;
 		test.in[0].pkt_res = &pkt_ipv6_icmp_0;
@@ -1361,7 +1360,7 @@ static void test_sa_info(void)
 			  .status.error.all = 0,
 			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
 			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
-			  .pkt_res = &pkt_ipv4_icmp_0 },
+			},
 		},
 	};
 
@@ -1568,7 +1567,7 @@ static void test_max_num_sa(void)
 			  .status.error.all = 0,
 			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
 			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
-			  .pkt_res = &pkt_ipv4_icmp_0 },
+			},
 		},
 		.in = {
 			{ .status.warn.all = 0,
