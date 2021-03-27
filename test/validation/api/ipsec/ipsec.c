@@ -785,35 +785,6 @@ static void ipsec_pkt_seq_num_check(odp_packet_t pkt, uint32_t seq_num)
 	}
 }
 
-static void ipsec_pkt_v4_check_udp_encap(odp_packet_t pkt)
-{
-	uint32_t l3_off = odp_packet_l3_offset(pkt);
-	odph_ipv4hdr_t ip;
-
-	odp_packet_copy_to_mem(pkt, l3_off, sizeof(ip), &ip);
-
-	CU_ASSERT(ip.proto == ODPH_IPPROTO_UDP);
-}
-
-static void ipsec_pkt_v6_check_udp_encap(odp_packet_t pkt)
-{
-	uint32_t l3_off = odp_packet_l3_offset(pkt);
-	odph_ipv6hdr_ext_t ext;
-	odph_ipv6hdr_t ip;
-	uint8_t next_hdr;
-
-	odp_packet_copy_to_mem(pkt, l3_off, sizeof(ip), &ip);
-
-	next_hdr = ip.next_hdr;
-
-	if (ip.next_hdr == ODPH_IPPROTO_HOPOPTS) {
-		odp_packet_copy_to_mem(pkt, l3_off + sizeof(ip), sizeof(ext), &ext);
-		next_hdr = ext.next_hdr;
-	}
-
-	CU_ASSERT(next_hdr == ODPH_IPPROTO_UDP);
-}
-
 void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 {
 	int num_out = part->num_pkt;
@@ -933,13 +904,6 @@ int ipsec_check_out(const ipsec_test_part *part, odp_ipsec_sa_t sa,
 		if (part->flags.test_sa_seq_num)
 			ipsec_pkt_seq_num_check(pkto[i], part->out[i].seq_num);
 
-		if (part->flags.udp_encap) {
-			if ((!part->flags.tunnel && part->flags.v6) ||
-			    (part->flags.tunnel && part->flags.tunnel_is_v6))
-				ipsec_pkt_v6_check_udp_encap(pkto[i]);
-			else
-				ipsec_pkt_v4_check_udp_encap(pkto[i]);
-		}
 		ipsec_check_packet(part->out[i].pkt_res,
 				   pkto[i],
 				   true);
