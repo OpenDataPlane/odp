@@ -2065,6 +2065,77 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 	return 0;
 }
 
+int _odp_pktio_pktout_tm_config(odp_pktio_t pktio_hdl,
+				odp_pktout_queue_t *queue, bool reconf)
+{
+	odp_pktout_queue_param_t param;
+	bool pktio_started = false;
+	odp_pktout_mode_t mode;
+	pktio_entry_t *entry;
+	unsigned int i;
+	int rc = 0;
+
+	odp_pktout_queue_param_init(&param);
+	param.num_queues = 1;
+
+	entry = get_pktio_entry(pktio_hdl);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", pktio_hdl);
+		return -1;
+	}
+
+	rc = -ENOTSUP;
+	mode = entry->s.param.out_mode;
+	/* Don't proceed further if mode is not TM */
+	if (mode != ODP_PKTOUT_MODE_TM)
+		return rc;
+
+	/* Don't reconfigure unless requested */
+	if (entry->s.num_out_queue && !reconf) {
+		*queue = entry->s.out_queue[0].pktout;
+		return 0;
+	}
+
+	if (entry->s.state == PKTIO_STATE_STARTED) {
+		pktio_started = true;
+		rc = odp_pktio_stop(pktio_hdl);
+		if (rc) {
+			ODP_ERR("Unable to stop pktio, rc=%d\n", rc);
+			return rc;
+		}
+	}
+
+	/* If re-configuring, destroy old queues */
+	if (entry->s.num_out_queue) {
+		destroy_out_queues(entry, entry->s.num_out_queue);
+		entry->s.num_out_queue = 0;
+	}
+
+	init_out_queues(entry);
+	for (i = 0; i < param.num_queues; i++) {
+		entry->s.out_queue[i].pktout.index = i;
+		entry->s.out_queue[i].pktout.pktio = pktio_hdl;
+	}
+
+	entry->s.num_out_queue = param.num_queues;
+
+	rc = 0;
+	if (entry->s.ops->output_queues_config) {
+		rc = entry->s.ops->output_queues_config(entry, &param);
+		if (rc)
+			ODP_ERR("Unable to setup output queues, rc=%d\n", rc);
+	}
+
+	/* Return pktout queue on success */
+	if (!rc)
+		*queue = entry->s.out_queue[0].pktout;
+
+	/* Take pktio back to its previous state */
+	if (pktio_started)
+		rc |= odp_pktio_start(pktio_hdl);
+	return rc;
+}
+
 int odp_pktout_queue_config(odp_pktio_t pktio,
 			    const odp_pktout_queue_param_t *param)
 {
