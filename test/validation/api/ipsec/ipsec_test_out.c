@@ -478,6 +478,8 @@ static void test_out_in_common(ipsec_test_flags *flags,
 	odp_ipsec_stats_t stats;
 	odp_ipsec_sa_t sa_out;
 	odp_ipsec_sa_t sa_in;
+	odp_proto_l3_type_t out_l3_type = ODP_PROTO_L3_TYPE_IPV4;
+	odp_proto_l4_type_t out_l4_type = ODP_PROTO_L4_TYPE_ESP;
 
 	CU_ASSERT_NOT_EQUAL_FATAL(flags, NULL);
 
@@ -530,14 +532,22 @@ static void test_out_in_common(ipsec_test_flags *flags,
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa_in);
 
+	if ((flags->tunnel && flags->tunnel_is_v6) ||
+	    (!flags->tunnel && flags->v6))
+		out_l3_type = ODP_PROTO_L3_TYPE_IPV6;
+	if (flags->ah)
+		out_l4_type = ODP_PROTO_L4_TYPE_AH;
+	if (flags->udp_encap)
+		out_l4_type = ODP_PROTO_L4_TYPE_UDP;
+
 	ipsec_test_part test_out = {
 		.pkt_in = &pkt_ipv4_icmp_0,
 		.num_pkt = 1,
 		.out = {
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
-			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
-			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
+			  .l3_type = out_l3_type,
+			  .l4_type = out_l4_type,
 			},
 		},
 	};
@@ -797,6 +807,8 @@ static void test_out_ipv4_ah_sha256_frag_check(void)
 	test.pkt_in = &pkt_ipv4_icmp_0;
 	test.num_pkt = 1;
 	test.out[0].status.error.mtu = 1;
+	test.out[0].l3_type = ODP_PROTO_L3_TYPE_IPV4;
+	test.out[0].l4_type = ODP_PROTO_L4_TYPE_ICMPV4;
 
 	test2.pkt_in = &pkt_ipv4_icmp_0;
 	test2.num_opt = 1;
@@ -835,6 +847,8 @@ static void test_out_ipv4_ah_sha256_frag_check_2(void)
 	test.pkt_in = &pkt_ipv4_icmp_0;
 	test.num_pkt = 1;
 	test.out[0].status.error.mtu = 1;
+	test.out[0].l3_type = ODP_PROTO_L3_TYPE_IPV4;
+	test.out[0].l4_type = ODP_PROTO_L4_TYPE_ICMPV4;
 
 	ipsec_test_part test2 = {
 		.pkt_in = &pkt_ipv4_icmp_0,
@@ -881,6 +895,8 @@ static void test_out_ipv4_esp_null_sha256_frag_check(void)
 	test.pkt_in = &pkt_ipv4_icmp_0;
 	test.num_pkt = 1;
 	test.out[0].status.error.mtu = 1;
+	test.out[0].l3_type = ODP_PROTO_L3_TYPE_IPV4;
+	test.out[0].l4_type = ODP_PROTO_L4_TYPE_ICMPV4;
 
 	test2.pkt_in = &pkt_ipv4_icmp_0;
 	test2.num_opt = 1;
@@ -920,6 +936,8 @@ static void test_out_ipv4_esp_null_sha256_frag_check_2(void)
 	test.pkt_in = &pkt_ipv4_icmp_0;
 	test.num_pkt = 1;
 	test.out[0].status.error.mtu = 1;
+	test.out[0].l3_type = ODP_PROTO_L3_TYPE_IPV4;
+	test.out[0].l4_type = ODP_PROTO_L4_TYPE_ICMPV4;
 
 	ipsec_test_part test2 = {
 		.pkt_in = &pkt_ipv4_icmp_0,
@@ -1209,6 +1227,10 @@ static void test_out_dummy_esp_null_sha256_tun(odp_ipsec_tunnel_param_t tunnel)
 	ipsec_test_part test;
 	ipsec_test_part test_in;
 	ipsec_test_part test_empty;
+	odp_proto_l3_type_t out_l3_type = ODP_PROTO_L3_TYPE_IPV4;
+
+	if (tunnel.type == ODP_IPSEC_TUNNEL_IPV6)
+		out_l3_type = ODP_PROTO_L3_TYPE_IPV6;
 
 	memset(&test, 0, sizeof(ipsec_test_part));
 	memset(&test_in, 0, sizeof(ipsec_test_part));
@@ -1244,6 +1266,8 @@ static void test_out_dummy_esp_null_sha256_tun(odp_ipsec_tunnel_param_t tunnel)
 	test.opt.flag.tfc_dummy = 1;
 	test.opt.tfc_pad_len = 16;
 	test.num_pkt = 1;
+	test.out[0].l3_type = out_l3_type;
+	test.out[0].l4_type = ODP_PROTO_L4_TYPE_ESP;
 
 	test_in.num_pkt = 1;
 	test_in.out[0].l3_type = ODP_PROTO_L3_TYPE_IPV4;
@@ -1254,6 +1278,8 @@ static void test_out_dummy_esp_null_sha256_tun(odp_ipsec_tunnel_param_t tunnel)
 	test_empty.opt.flag.tfc_dummy = 1;
 	test_empty.opt.tfc_pad_len = 16;
 	test_empty.num_pkt = 1;
+	test_empty.out[0].l3_type = out_l3_type;
+	test_empty.out[0].l4_type = ODP_PROTO_L4_TYPE_ESP;
 
 	ipsec_check_out_in_one(&test, &test_in, sa, sa2);
 	ipsec_check_out_in_one(&test_empty, &test_in, sa, sa2);
@@ -1431,7 +1457,7 @@ static void test_sa_info(void)
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
 			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
-			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ESP,
 			},
 		},
 	};
@@ -1644,7 +1670,7 @@ static void test_max_num_sa(void)
 			{ .status.warn.all = 0,
 			  .status.error.all = 0,
 			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
-			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ESP,
 			},
 		},
 	};
