@@ -105,6 +105,9 @@ void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
 void ipsec_sa_destroy(odp_ipsec_sa_t sa);
 odp_packet_t ipsec_packet(const ipsec_test_packet *itp);
 void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa);
+int ipsec_check_out(const ipsec_test_part *part,
+		    odp_ipsec_sa_t sa,
+		    odp_packet_t *pkto);
 void ipsec_check_out_one(const ipsec_test_part *part, odp_ipsec_sa_t sa);
 void ipsec_check_out_in_one(const ipsec_test_part *part,
 			    odp_ipsec_sa_t sa,

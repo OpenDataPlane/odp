@@ -935,21 +935,18 @@ static void parse_ip(odp_packet_t pkt)
 	(void)odp_packet_parse(pkt, l3, &param);
 }
 
-void ipsec_check_out_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
+int ipsec_check_out(const ipsec_test_part *part, odp_ipsec_sa_t sa,
+		    odp_packet_t *pkto)
 {
-	int num_out = part->num_pkt;
-	odp_packet_t pkto[num_out];
 	int i;
+	int num_out;
 
 	num_out = ipsec_send_out_one(part, sa, pkto);
 
 	for (i = 0; i < num_out; i++) {
 		odp_ipsec_packet_result_t result;
 
-		if (ODP_PACKET_INVALID == pkto[i]) {
-			CU_FAIL("ODP_PACKET_INVALID received");
-			continue;
-		}
+		CU_ASSERT_FATAL(pkto[i] != ODP_PACKET_INVALID);
 
 		if (ODP_EVENT_PACKET_IPSEC !=
 		    odp_event_subtype(odp_packet_to_event(pkto[i]))) {
@@ -972,11 +969,34 @@ void ipsec_check_out_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 			/* Parse the packet to set L4 offset and type */
 			parse_ip(pkto[i]);
 		}
+
+		if (part->flags.test_sa_seq_num)
+			ipsec_pkt_seq_num_check(pkto[i], part->out[i].seq_num);
+
+		if (part->flags.udp_encap) {
+			if ((!part->flags.tunnel && part->flags.v6) ||
+			    (part->flags.tunnel && part->flags.tunnel_is_v6))
+				ipsec_pkt_v6_check_udp_encap(pkto[i]);
+			else
+				ipsec_pkt_v4_check_udp_encap(pkto[i]);
+		}
 		ipsec_check_packet(part->out[i].pkt_res,
 				   pkto[i],
 				   true);
-		odp_packet_free(pkto[i]);
 	}
+	return num_out;
+}
+
+void ipsec_check_out_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
+{
+	int num_out = part->num_pkt;
+	odp_packet_t pkto[num_out];
+	int i;
+
+	num_out = ipsec_check_out(part, sa, pkto);
+
+	for (i = 0; i < num_out; i++)
+		odp_packet_free(pkto[i]);
 }
 
 void ipsec_check_out_in_one(const ipsec_test_part *part,
@@ -987,52 +1007,20 @@ void ipsec_check_out_in_one(const ipsec_test_part *part,
 	odp_packet_t pkto[num_out];
 	int i;
 
-	num_out = ipsec_send_out_one(part, sa, pkto);
+	num_out = ipsec_check_out(part, sa, pkto);
 
 	for (i = 0; i < num_out; i++) {
 		ipsec_test_part part_in = *part;
 		ipsec_test_packet pkt_in;
-		odp_ipsec_packet_result_t result;
 
-		if (ODP_PACKET_INVALID == pkto[i]) {
-			CU_FAIL("ODP_PACKET_INVALID received");
-			continue;
-		}
-
-		if (ODP_EVENT_PACKET_IPSEC !=
-		    odp_event_subtype(odp_packet_to_event(pkto[i]))) {
-			/* Inline packet went through loop */
-			CU_ASSERT_EQUAL(0, part->out[i].status.error.all);
-			/* L2 header must match that of input packet */
-			check_l2_header(part->out[i].pkt_res, pkto[i]);
-		} else {
-			/* IPsec packet */
-			CU_ASSERT_EQUAL(0, odp_ipsec_result(&result, pkto[i]));
-			CU_ASSERT_EQUAL(part->out[i].status.error.all,
-					result.status.error.all);
-			CU_ASSERT_EQUAL(sa, result.sa);
-			CU_ASSERT_EQUAL(IPSEC_SA_CTX,
-					odp_ipsec_sa_context(sa));
-		}
 		CU_ASSERT_FATAL(odp_packet_len(pkto[i]) <=
 				sizeof(pkt_in.data));
-
-		if (part->flags.test_sa_seq_num)
-			ipsec_pkt_seq_num_check(pkto[i], part->out[i].seq_num);
 
 		if (part->flags.stats == IPSEC_TEST_STATS_PROTO_ERR)
 			ipsec_pkt_proto_err_set(pkto[i]);
 
 		if (part->flags.stats == IPSEC_TEST_STATS_AUTH_ERR)
 			ipsec_pkt_auth_err_set(pkto[i]);
-
-		if (part->flags.udp_encap) {
-			if ((!part->flags.tunnel && part->flags.v6) ||
-			    (part->flags.tunnel && part->flags.tunnel_is_v6))
-				ipsec_pkt_v6_check_udp_encap(pkto[i]);
-			else
-				ipsec_pkt_v4_check_udp_encap(pkto[i]);
-		}
 
 		pkt_in.len = odp_packet_len(pkto[i]);
 		pkt_in.l2_offset = odp_packet_l2_offset(pkto[i]);
