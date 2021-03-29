@@ -554,6 +554,94 @@ static void timer_pool_max_res(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+static void timer_pool_tick_info_run(odp_timer_clk_src_t clk_src)
+{
+	odp_timer_capability_t capa;
+	odp_timer_pool_param_t tp_param;
+	odp_timer_pool_t tp;
+	odp_timer_pool_info_t info;
+	uint64_t ticks_per_sec;
+	double tick_hz, tick_nsec, tick_to_nsec, tick_low;
+
+	memset(&capa, 0, sizeof(capa));
+	CU_ASSERT_FATAL(odp_timer_capability(clk_src, &capa) == 0);
+
+	/* Highest resolution */
+	memset(&tp_param, 0, sizeof(odp_timer_pool_param_t));
+	tp_param.res_hz     = capa.max_res.res_hz;
+	tp_param.min_tmo    = capa.max_res.min_tmo;
+	tp_param.max_tmo    = capa.max_res.max_tmo;
+	tp_param.num_timers = 100;
+	tp_param.priv       = 0;
+	tp_param.clk_src    = clk_src;
+
+	tp = odp_timer_pool_create("tick_info_tp", &tp_param);
+	CU_ASSERT_FATAL(tp != ODP_TIMER_POOL_INVALID);
+
+	odp_timer_pool_start();
+
+	memset(&info, 0, sizeof(odp_timer_pool_info_t));
+	CU_ASSERT_FATAL(odp_timer_pool_info(tp, &info) == 0);
+
+	/* Tick frequency in hertz. Allow 1 hz rounding error between odp_timer_ns_to_tick()
+	 * and tick_info. */
+	ticks_per_sec = odp_timer_ns_to_tick(tp, ODP_TIME_SEC_IN_NS);
+	tick_hz       = odp_fract_u64_to_dbl(&info.tick_info.freq);
+
+	CU_ASSERT(((double)(ticks_per_sec - 1)) <= tick_hz);
+	CU_ASSERT(((double)(ticks_per_sec + 1)) >= tick_hz);
+
+	printf("\nClock source %i\n", clk_src);
+	printf("  Ticks per second:     %" PRIu64 "\n", ticks_per_sec);
+	printf("  Tick info freq:       %" PRIu64 " + %" PRIu64 " / %" PRIu64 "\n",
+	       info.tick_info.freq.integer,
+	       info.tick_info.freq.numer,
+	       info.tick_info.freq.denom);
+	printf("  Tick info freq dbl:   %f\n", tick_hz);
+
+	/* One tick on nsec. For better resolution, convert 1000 ticks (and use double)
+	 * instead of one tick. Allow 1 nsec rounding error between odp_timer_tick_to_ns()
+	 * and tick_info. */
+	tick_to_nsec = odp_timer_tick_to_ns(tp, 1000) / 1000.0;
+	tick_nsec    = odp_fract_u64_to_dbl(&info.tick_info.nsec);
+	tick_low = tick_to_nsec - 1.0;
+	if (tick_to_nsec < 1.0)
+		tick_low = 0.0;
+
+	CU_ASSERT(tick_low <= tick_nsec);
+	CU_ASSERT((tick_to_nsec + 1.0) >= tick_nsec);
+
+	printf("  Tick in nsec:         %f\n", tick_to_nsec);
+	printf("  Tick info nsec:       %" PRIu64 " + %" PRIu64 " / %" PRIu64 "\n",
+	       info.tick_info.nsec.integer,
+	       info.tick_info.nsec.numer,
+	       info.tick_info.nsec.denom);
+	printf("  Tick info nsec dbl:   %f\n", tick_nsec);
+
+	/* One tick in source clock cycles. Depending on clock source it may be zero.
+	 * Print the values to have a reference to the fields. */
+	printf("  Tick info clk cycles: %" PRIu64 " + %" PRIu64 " / %" PRIu64 "\n",
+	       info.tick_info.clk_cycle.integer,
+	       info.tick_info.clk_cycle.numer,
+	       info.tick_info.clk_cycle.denom);
+
+	odp_timer_pool_destroy(tp);
+}
+
+static void timer_pool_tick_info(void)
+{
+	odp_timer_clk_src_t clk_src;
+	int i;
+
+	for (i = 0; i < ODP_CLOCK_NUM_SRC; i++) {
+		clk_src = ODP_CLOCK_SRC_0 + i;
+		if (global_mem->clk_supported[i]) {
+			ODPH_DBG("\nTesting clock source: %i\n", clk_src);
+			timer_pool_tick_info_run(clk_src);
+		}
+	}
+}
+
 static void timer_test_event_type(odp_queue_type_t queue_type,
 				  odp_event_type_t event_type)
 {
@@ -1734,6 +1822,7 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_test_timeout_pool_free),
 	ODP_TEST_INFO(timer_pool_create_destroy),
 	ODP_TEST_INFO(timer_pool_max_res),
+	ODP_TEST_INFO(timer_pool_tick_info),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_tmo_event_plain,
 				  check_plain_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_tmo_event_sched,
