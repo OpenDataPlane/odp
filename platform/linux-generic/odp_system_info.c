@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2020, Nokia
+ * Copyright (c) 2020-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -51,8 +51,6 @@ static int sysconf_cpu_count(void)
 	return odp_global_ro.num_cpus_installed;
 }
 
-#if defined __x86_64__ || defined __i386__ || defined __OCTEON__ || \
-defined __powerpc__
 /*
  * Analysis of /sys/devices/system/cpu/ files
  */
@@ -65,7 +63,9 @@ static int systemcpu_cache_line_size(void)
 	file = fopen(CACHE_LNSZ_FILE, "rt");
 	if (file == NULL) {
 		/* File not found */
-		return 0;
+		ODP_PRINT("WARN: unable to read host CPU cache line size. "
+			  "Using ODP_CACHE_LINE_SIZE instead.\n");
+		return ODP_CACHE_LINE_SIZE;
 	}
 
 	if (fgets(str, sizeof(str), file) != NULL) {
@@ -78,16 +78,6 @@ static int systemcpu_cache_line_size(void)
 
 	return size;
 }
-
-#else
-/*
- * Use dummy data if not available from /sys/devices/system/cpu/
- */
-static int systemcpu_cache_line_size(void)
-{
-	return 64;
-}
-#endif
 
 static uint64_t default_huge_page_size(void)
 {
@@ -309,10 +299,8 @@ static int systemcpu(system_info_t *sysinfo)
 
 	sysinfo->cache_line_size = ret;
 
-	if (ret != ODP_CACHE_LINE_SIZE) {
-		ODP_ERR("Cache line sizes definitions don't match.\n");
-		return -1;
-	}
+	if (ret != ODP_CACHE_LINE_SIZE)
+		ODP_PRINT("WARN: host CPU cache line size and ODP_CACHE_LINE_SIZE don't match.\n");
 
 	return 0;
 }
