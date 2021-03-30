@@ -305,12 +305,33 @@ int odp_queue_info(odp_queue_t queue, odp_queue_info_t *info);
 void odp_queue_print(odp_queue_t queue);
 
 /**
+ * Print queue info
+ *
+ * Print implementation defined information about the specified queue.
+ * The information is intended to be used for debugging.
+ *
+ * @param      queue   Queue handle
+ * @param      cb      Print callback function
+ */
+void odp_queue_print_alt(odp_queue_t queue, odp_log_func_t cb);
+
+/**
  * Print debug info about all queues
  *
  * Print implementation defined information about all created queues to the ODP
  * log. The information is intended to be used for debugging.
  */
 void odp_queue_print_all(void);
+
+/**
+ * Print debug info about all queues
+ *
+ * Print implementation defined information about all created queues.
+ * The information is intended to be used for debugging.
+ *
+ * @param      cb      Print callback function
+ */
+void odp_queue_print_all_alt(odp_log_func_t cb);
 
 /**
  * @}

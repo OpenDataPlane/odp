@@ -13,6 +13,9 @@
 
 #ifndef ODP_API_SPEC_POOL_H_
 #define ODP_API_SPEC_POOL_H_
+
+#include <odp/api/init.h>
+
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
@@ -617,6 +620,17 @@ int odp_pool_info(odp_pool_t pool, odp_pool_info_t *info);
  * specified pool to the ODP log. The intended use is for debugging.
  */
 void odp_pool_print(odp_pool_t pool);
+
+/**
+ * Print pool info
+ *
+ * @param pool      Pool handle
+ * @param cb        Print callback function
+ *
+ * @note This routine writes implementation-defined information about the
+ * specified pool. The intended use is for debugging.
+ */
+void odp_pool_print_alt(odp_pool_t pool, odp_log_func_t cb);
 
 /**
  * Get printable value for an odp_pool_t

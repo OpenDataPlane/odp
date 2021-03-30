@@ -12,6 +12,9 @@
 
 #ifndef ODP_API_SPEC_BUFFER_H_
 #define ODP_API_SPEC_BUFFER_H_
+
+#include <odp/api/init.h>
+
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
@@ -150,6 +153,14 @@ void odp_buffer_free_multi(const odp_buffer_t buf[], int num);
  *
  */
 void odp_buffer_print(odp_buffer_t buf);
+
+/**
+ * Print buffer metadata
+ *
+ * @param buf      Buffer handle
+ * @param cb       Print callback function
+ */
+void odp_buffer_print_alt(odp_buffer_t buf, odp_log_func_t cb);
 
 /**
  * Get printable value for an odp_buffer_t

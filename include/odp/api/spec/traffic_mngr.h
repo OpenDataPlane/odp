@@ -1954,6 +1954,15 @@ odp_bool_t odp_tm_is_idle(odp_tm_t odp_tm);
  */
 void odp_tm_stats_print(odp_tm_t odp_tm);
 
+/** The odp_tm_stats_print function is used to write implementation-defined
+ * information about the specified TM system. The intended use
+ * is for debugging.
+ *
+ * @param odp_tm  Specifies the TM system.
+ * @param cb      Print callback function
+ */
+void odp_tm_stats_print_alt(odp_tm_t odp_tm, odp_log_func_t cb);
+
 /**
  * Get printable value for an odp_tm_t
  *

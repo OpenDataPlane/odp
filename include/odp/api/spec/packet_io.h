@@ -1634,6 +1634,16 @@ void odp_pktio_config_init(odp_pktio_config_t *config);
  */
 void odp_pktio_print(odp_pktio_t pktio);
 
+/**
+ * Print pktio info
+ *
+ * Print implementation-defined pktio debug information.
+ *
+ * @param pktio                 Packet IO handle
+ * @param cb                    Print callback function
+ */
+void odp_pktio_print_alt(odp_pktio_t pktio, odp_log_func_t cb);
+
 /** Link status */
 typedef enum odp_pktio_link_status_t {
 	ODP_PKTIO_LINK_STATUS_UNKNOWN = -1,

@@ -251,6 +251,13 @@ int odp_shm_info(odp_shm_t shm, odp_shm_info_t *info);
 void odp_shm_print_all(void);
 
 /**
+ * Print all shared memory blocks
+ *
+ * @param cb         Print callback function
+ */
+void odp_shm_print_all_alt(odp_log_func_t cb);
+
+/**
  * Print shared memory block info
  *
  * Print implementation defined information about the specified shared memory
@@ -259,6 +266,17 @@ void odp_shm_print_all(void);
  * @param shm        Block handle
  */
 void odp_shm_print(odp_shm_t shm);
+
+/**
+ * Print shared memory block info
+ *
+ * Print implementation defined information about the specified shared memory
+ * block. The information is intended to be used for debugging.
+ *
+ * @param shm        Block handle
+ * @param cb         Print callback function
+ */
+void odp_shm_print_alt(odp_shm_t shm, odp_log_func_t cb);
 
 /**
  * Get printable value for an odp_shm_t

@@ -575,6 +575,17 @@ void odp_timeout_free(odp_timeout_t tmo);
 void odp_timer_pool_print(odp_timer_pool_t timer_pool);
 
 /**
+ * Print timer pool debug information
+ *
+ * Prints implementation specific debug information about
+ * the timer pool.
+ *
+ * @param timer_pool  Timer pool handle
+ * @param cb          Print callback function
+ */
+void odp_timer_pool_print_alt(odp_timer_pool_t timer_pool, odp_log_func_t cb);
+
+/**
  * Print timer debug information
  *
  * Prints implementation specific debug information about
@@ -585,6 +596,17 @@ void odp_timer_pool_print(odp_timer_pool_t timer_pool);
 void odp_timer_print(odp_timer_t timer);
 
 /**
+ * Print timer debug information
+ *
+ * Prints implementation specific debug information about
+ * the timer.
+ *
+ * @param timer       Timer handle
+ * @param cb          Print callback function
+ */
+void odp_timer_print_alt(odp_timer_t timer, odp_log_func_t cb);
+
+/**
  * Print timeout debug information
  *
  * Prints implementation specific debug information about
@@ -593,6 +615,17 @@ void odp_timer_print(odp_timer_t timer);
  * @param tmo         Timeout handle
  */
 void odp_timeout_print(odp_timeout_t tmo);
+
+/**
+ * Print timeout debug information
+ *
+ * Prints implementation specific debug information about
+ * the timeout.
+ *
+ * @param tmo         Timeout handle
+ * @param cb          Print callback function
+ */
+void odp_timeout_print_alt(odp_timeout_t tmo, odp_log_func_t cb);
 
 /**
  * Get printable value for an odp_timer_pool_t

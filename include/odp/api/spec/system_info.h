@@ -13,6 +13,9 @@
 
 #ifndef ODP_API_SPEC_SYSTEM_INFO_H_
 #define ODP_API_SPEC_SYSTEM_INFO_H_
+
+#include <odp/api/init.h>
+
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
@@ -242,6 +245,17 @@ int odp_sys_cache_line_size(void);
 void odp_sys_info_print(void);
 
 /**
+ * Print system info
+ *
+ * Print out implementation defined information about the system. This
+ * information is intended for debugging purposes and may contain e.g.
+ * information about CPUs, memory and other HW configuration.
+ *
+ * @param cb Print callback function
+ */
+void odp_sys_info_print_alt(odp_log_func_t cb);
+
+/**
  * Print configuration
  *
  * Print out implementation defined information about selected configuration options. This
@@ -249,6 +263,17 @@ void odp_sys_info_print(void);
  * configuration files, environment variables and configuration options of ODP API.
  */
 void odp_sys_config_print(void);
+
+/**
+ * Print configuration
+ *
+ * Print out implementation defined information about selected configuration options. This
+ * information is intended for debugging purposes and may contain e.g. content of various
+ * configuration files, environment variables and configuration options of ODP API.
+ *
+ * @param cb Print callback function
+ */
+void odp_sys_config_print_alt(odp_log_func_t cb);
 
 /**
  * @}

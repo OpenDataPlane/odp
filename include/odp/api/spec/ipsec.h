@@ -1874,6 +1874,16 @@ void *odp_ipsec_sa_context(odp_ipsec_sa_t sa);
 void odp_ipsec_print(void);
 
 /**
+ * Print global IPSEC configuration info
+ *
+ * Print implementation-defined information about the global IPSEC
+ * configuration.
+ *
+ * @param cb      Print callback function
+ */
+void odp_ipsec_print_alt(odp_log_func_t cb);
+
+/**
  * Print IPSEC SA info
  *
  * @param sa      SA handle
@@ -1881,6 +1891,16 @@ void odp_ipsec_print(void);
  * Print implementation-defined IPSEC SA debug information to the ODP log.
  */
 void odp_ipsec_sa_print(odp_ipsec_sa_t sa);
+
+/**
+ * Print IPSEC SA info
+ *
+ * @param sa      SA handle
+ * @param cb      Print callback function
+ *
+ * Print implementation-defined IPSEC SA debug information.
+ */
+void odp_ipsec_sa_print_alt(odp_ipsec_sa_t sa, odp_log_func_t cb);
 
 /**
  * Get IPSEC stats for the IPSEC SA handle

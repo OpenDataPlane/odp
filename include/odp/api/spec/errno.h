@@ -12,6 +12,9 @@
 
 #ifndef ODP_API_SPEC_ERRNO_H_
 #define ODP_API_SPEC_ERRNO_H_
+
+#include <odp/api/init.h>
+
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
@@ -64,6 +67,17 @@ void odp_errno_zero(void);
 * @param str   Pointer to the string to be appended, or NULL
 */
 void odp_errno_print(const char *str);
+
+/**
+* Print ODP errno
+*
+* Interprets the value of ODP errno as an error message, and prints it,
+* optionally preceding it with the custom message specified in str.
+*
+* @param str   Pointer to the string to be appended, or NULL
+* @param cb    Print callback function
+*/
+void odp_errno_print_alt(const char *str, odp_log_func_t cb);
 
 /**
 * Error message string

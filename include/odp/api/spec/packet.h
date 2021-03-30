@@ -13,6 +13,9 @@
 
 #ifndef ODP_API_SPEC_PACKET_H_
 #define ODP_API_SPEC_PACKET_H_
+
+#include <odp/api/init.h>
+
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
@@ -2303,6 +2306,16 @@ odp_pool_t odp_packet_vector_pool(odp_packet_vector_t pktv);
 void odp_packet_vector_print(odp_packet_vector_t pktv);
 
 /**
+ * Print packet vector debug information
+ *
+ * Print all packet vector debug information.
+ *
+ * @param pktv Packet vector handle
+ * @param cb   Print callback function
+ */
+void odp_packet_vector_print_alt(odp_packet_vector_t pktv, odp_log_func_t cb);
+
+/**
  * Get printable value for an odp_packet_vector_t
  *
  * @param hdl  odp_packet_vector_t handle to be printed
@@ -2332,6 +2345,16 @@ uint64_t odp_packet_vector_to_u64(odp_packet_vector_t hdl);
 void odp_packet_print(odp_packet_t pkt);
 
 /**
+ * Print packet debug information
+ *
+ * Print all packet debug information.
+ *
+ * @param pkt  Packet handle
+ * @param cb   Print callback function
+ */
+void odp_packet_print_alt(odp_packet_t pkt, odp_log_func_t cb);
+
+/**
  * Print packet data
  *
  * Print packet debug information with packet data to the ODP log. Operation
@@ -2343,6 +2366,20 @@ void odp_packet_print(odp_packet_t pkt);
  * @param len     Number of bytes to print
  */
 void odp_packet_print_data(odp_packet_t pkt, uint32_t offset, uint32_t len);
+
+/**
+ * Print packet data
+ *
+ * Print packet debug information with packet data. Operation
+ * prints 'len' bytes of packet data starting from 'offset' byte. Offset plus
+ * length must not exceed packet length (odp_packet_len()).
+ *
+ * @param pkt     Packet handle
+ * @param offset  Byte offset into the packet
+ * @param len     Number of bytes to print
+ * @param cb      Print callback function
+ */
+void odp_packet_print_data_alt(odp_packet_t pkt, uint32_t offset, uint32_t len, odp_log_func_t cb);
 
 /**
  * Check that packet is valid
