@@ -1653,6 +1653,7 @@ static void pktio_test_pktio_config(void)
 	odp_pktio_t pktio;
 	odp_pktio_capability_t capa;
 	odp_pktio_config_t config;
+	const char *iface = iface_name[0];
 
 	pktio = create_pktio(0, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
@@ -1669,6 +1670,10 @@ static void pktio_test_pktio_config(void)
 	CU_ASSERT(odp_pktio_config(pktio, &config) == 0);
 
 	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0);
+
+	/* Loop interface supports loopback mode by definition */
+	if (!strcmp(iface, "loop"))
+		CU_ASSERT(capa.config.enable_loop);
 
 	config = capa.config;
 
