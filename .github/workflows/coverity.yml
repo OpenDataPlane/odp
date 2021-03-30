@@ -21,5 +21,5 @@ jobs:
                -e COVERITY_TOKEN="${{ secrets.COVERITY_TOKEN }}"
                -e COVERITY_EMAIL="${COVERITY_EMAIL}"
                -e COVERITY_PROJECT="${COVERITY_PROJECT}"
-               ${CONTAINER_NAMESPACE}:odp-ci-${OS}-${ARCH}-coverity-linux-generic
+               ${CONTAINER_NAMESPACE}/odp-ci-${OS}-${ARCH}-coverity-linux-generic
                /odp/scripts/ci/coverity.sh
