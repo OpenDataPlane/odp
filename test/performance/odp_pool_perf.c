@@ -23,6 +23,7 @@ typedef struct test_options_t {
 	uint32_t max_burst;
 	uint32_t num_burst;
 	uint32_t data_size;
+	uint32_t cache_size;
 	int      pool_type;
 
 } test_options_t;
@@ -64,6 +65,7 @@ static void print_usage(void)
 	       "  -s, --data_size        Data size in bytes\n"
 	       "  -t, --pool_type        0: Buffer pool (default)\n"
 	       "                         1: Packet pool\n"
+	       "  -C, --cache_size       Pool cache size (per thread)\n"
 	       "  -h, --help             This help\n"
 	       "\n");
 }
@@ -75,26 +77,28 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	int ret = 0;
 
 	static const struct option longopts[] = {
-		{"num_cpu",   required_argument, NULL, 'c'},
-		{"num_event", required_argument, NULL, 'e'},
-		{"num_round", required_argument, NULL, 'r'},
-		{"burst",     required_argument, NULL, 'b'},
-		{"num_burst", required_argument, NULL, 'n'},
-		{"data_size", required_argument, NULL, 's'},
-		{"pool_type", required_argument, NULL, 't'},
-		{"help",      no_argument,       NULL, 'h'},
+		{"num_cpu",    required_argument, NULL, 'c'},
+		{"num_event",  required_argument, NULL, 'e'},
+		{"num_round",  required_argument, NULL, 'r'},
+		{"burst",      required_argument, NULL, 'b'},
+		{"num_burst",  required_argument, NULL, 'n'},
+		{"data_size",  required_argument, NULL, 's'},
+		{"pool_type",  required_argument, NULL, 't'},
+		{"cache_size", required_argument, NULL, 'C'},
+		{"help",       no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:e:r:b:n:s:t:h";
+	static const char *shortopts = "+c:e:r:b:n:s:t:C:h";
 
-	test_options->num_cpu   = 1;
-	test_options->num_event = 1000;
-	test_options->num_round = 100000;
-	test_options->max_burst = 100;
-	test_options->num_burst = 1;
-	test_options->data_size = 64;
-	test_options->pool_type = 0;
+	test_options->num_cpu    = 1;
+	test_options->num_event  = 1000;
+	test_options->num_round  = 100000;
+	test_options->max_burst  = 100;
+	test_options->num_burst  = 1;
+	test_options->data_size  = 64;
+	test_options->pool_type  = 0;
+	test_options->cache_size = UINT32_MAX;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -123,6 +127,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 't':
 			test_options->pool_type = atoi(optarg);
+			break;
+		case 'C':
+			test_options->cache_size = atoi(optarg);
 			break;
 		case 'h':
 			/* fall through */
@@ -181,15 +188,22 @@ static int create_pool(test_global_t *global)
 	odp_pool_capability_t pool_capa;
 	odp_pool_param_t pool_param;
 	odp_pool_t pool;
-	uint32_t max_num, max_size;
+	uint32_t max_num, max_size, min_cache_size, max_cache_size;
 	test_options_t *test_options = &global->test_options;
-	uint32_t num_event = test_options->num_event;
-	uint32_t num_round = test_options->num_round;
-	uint32_t max_burst = test_options->max_burst;
-	uint32_t num_burst = test_options->num_burst;
-	uint32_t num_cpu   = test_options->num_cpu;
-	uint32_t data_size = test_options->data_size;
+	uint32_t num_event  = test_options->num_event;
+	uint32_t num_round  = test_options->num_round;
+	uint32_t max_burst  = test_options->max_burst;
+	uint32_t num_burst  = test_options->num_burst;
+	uint32_t num_cpu    = test_options->num_cpu;
+	uint32_t data_size  = test_options->data_size;
+	uint32_t cache_size = test_options->cache_size;
 	int packet_pool = test_options->pool_type;
+
+	odp_pool_param_init(&pool_param);
+
+	if (cache_size == UINT32_MAX)
+		cache_size = packet_pool ? pool_param.pkt.cache_size :
+				pool_param.buf.cache_size;
 
 	printf("\nPool performance test\n");
 	printf("  num cpu    %u\n", num_cpu);
@@ -198,6 +212,7 @@ static int create_pool(test_global_t *global)
 	printf("  max burst  %u\n", max_burst);
 	printf("  num bursts %u\n", num_burst);
 	printf("  data size  %u\n", data_size);
+	printf("  cache size %u\n", cache_size);
 	printf("  pool type  %s\n\n", packet_pool ? "packet" : "buffer");
 
 	if (odp_pool_capability(&pool_capa)) {
@@ -206,11 +221,25 @@ static int create_pool(test_global_t *global)
 	}
 
 	if (packet_pool) {
-		max_num  = pool_capa.pkt.max_num;
-		max_size = pool_capa.pkt.max_len;
+		max_num        = pool_capa.pkt.max_num;
+		max_size       = pool_capa.pkt.max_len;
+		max_cache_size = pool_capa.pkt.max_cache_size;
+		min_cache_size = pool_capa.pkt.min_cache_size;
 	} else {
-		max_num  = pool_capa.buf.max_num;
-		max_size = pool_capa.buf.max_size;
+		max_num        = pool_capa.buf.max_num;
+		max_size       = pool_capa.buf.max_size;
+		max_cache_size = pool_capa.buf.max_cache_size;
+		min_cache_size = pool_capa.buf.min_cache_size;
+	}
+
+	if (cache_size < min_cache_size) {
+		printf("Error: min cache size supported %u\n", min_cache_size);
+		return -1;
+	}
+
+	if (cache_size > max_cache_size) {
+		printf("Error: max cache size supported %u\n", max_cache_size);
+		return -1;
 	}
 
 	if (max_num && num_event > max_num) {
@@ -223,19 +252,19 @@ static int create_pool(test_global_t *global)
 		return -1;
 	}
 
-	odp_pool_param_init(&pool_param);
-
 	if (packet_pool) {
-		pool_param.type        = ODP_POOL_PACKET;
-		pool_param.pkt.num     = num_event;
-		pool_param.pkt.len     = data_size;
-		pool_param.pkt.max_num = num_event;
-		pool_param.pkt.max_len = data_size;
+		pool_param.type           = ODP_POOL_PACKET;
+		pool_param.pkt.num        = num_event;
+		pool_param.pkt.len        = data_size;
+		pool_param.pkt.max_num    = num_event;
+		pool_param.pkt.max_len    = data_size;
+		pool_param.pkt.cache_size = cache_size;
 
 	} else {
-		pool_param.type     = ODP_POOL_BUFFER;
-		pool_param.buf.num  = num_event;
-		pool_param.buf.size = data_size;
+		pool_param.type           = ODP_POOL_BUFFER;
+		pool_param.buf.num        = num_event;
+		pool_param.buf.size       = data_size;
+		pool_param.buf.cache_size = cache_size;
 	}
 
 	pool = odp_pool_create("pool perf", &pool_param);
