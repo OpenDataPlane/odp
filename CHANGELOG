@@ -1,3 +1,24 @@
+== OpenDataPlane (1.28.0.0)
+=== API
+==== Crypto
+* New crypto capabilities for defining if a queue type (scheduled/plain) can be
+used as a crypto completion event destination
+
+=== Event
+* New packet TX completion event type and related functions
+
+=== Packet
+* New packet APIs for requesting packet TX completion events
+* New packet APIS for requesting packet TX drop based on packet age
+
+=== Classifier
+* New `odp_cls_print_all()` function for printing implementation specific
+debug information about all classifier rules
+
+=== System
+* New enumerations for ARMv8.7-A, ARMv9.0-A, ARMv9.1-A, and ARMv9.2-A ISA
+versions
+
 == OpenDataPlane (1.24.0.0)
 === Summary of Changes
 
