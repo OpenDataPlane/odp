@@ -253,7 +253,7 @@ static void print_usage(void)
  * @param argv  Argument vector
  * @param args  Test arguments
  */
-static void parse_args(int argc, char *argv[], test_args_t *args)
+static int parse_args(int argc, char *argv[], test_args_t *args)
 {
 	int opt;
 	int long_index;
@@ -273,7 +273,8 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	static const char *shortopts = "+c:r:m:x:p:t:h";
 
 	/* defaults */
-	odp_timer_capability(ODP_CLOCK_CPU, &timer_capa);
+	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa))
+		return -1;
 
 	args->cpu_count     = 1;
 	args->resolution_us = MAX(10000,
@@ -321,8 +322,9 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 
 	if (args->period_us < args->resolution_us)
 		printf("\n\tWarn: timeout is set less then resolution\n");
-}
 
+	return 0;
+}
 
 /**
  * Test main function
@@ -394,7 +396,10 @@ int main(int argc, char *argv[])
 	gbls->pool = ODP_POOL_INVALID;
 	gbls->tp = ODP_TIMER_POOL_INVALID;
 
-	parse_args(argc, argv, &gbls->args);
+	if (parse_args(argc, argv, &gbls->args)) {
+		ODPH_ERR("Parse args failed.\n");
+		goto err;
+	}
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
