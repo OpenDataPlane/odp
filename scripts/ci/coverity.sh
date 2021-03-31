@@ -7,9 +7,9 @@ cd "$(dirname "$0")"/../..
 
 make clean
 
-cov-build --dir coverity-build make -j $(nproc)
+cov-build --dir cov-int make -j $(nproc)
 
-tar czf odp-coverity.tgz coverity-build
+tar czvf odp-coverity.tgz cov-int
 
 curl --form token="${COVERITY_TOKEN}" \
   --form email="${COVERITY_EMAIL}" \
