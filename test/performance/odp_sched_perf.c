@@ -906,7 +906,11 @@ static int test_sched(void *arg)
 			queue = *next;
 		}
 
-		odp_queue_enq(queue, ev[0]);
+		if (odp_queue_enq(queue, ev[0])) {
+			printf("Error: Queue enqueue failed\n");
+			odp_event_free(ev[0]);
+			ret = -1;
+		}
 	}
 
 	return ret;
