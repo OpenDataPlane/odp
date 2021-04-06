@@ -12,9 +12,11 @@
 #include <odp/helper/odph_api.h>
 
 #include <stdlib.h>
+#include <math.h>
 #include "parser.h"
 #include "lso.h"
 
+#define IS_POWER2(x)           ((((x) - 1) & (x)) == 0)
 #define PKT_BUF_NUM            128
 #define PKT_BUF_SIZE           (9 * 1024)
 #define PKT_LEN_NORMAL         64
@@ -3554,7 +3556,17 @@ static void pktio_test_pktv_pktin_queue_config(odp_pktin_mode_t in_mode)
 	CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) == 0);
 
 	if (capa.vector.max_size != capa.vector.min_size) {
-		queue_param.vector.max_size = capa.vector.max_size - capa.vector.min_size;
+		uint32_t max_size;
+
+		if (capa.vector.size_is_pow2) {
+			CU_ASSERT(IS_POWER2(capa.vector.min_size));
+			CU_ASSERT(IS_POWER2(capa.vector.max_size));
+			max_size = (int32_t)pow(2, (int32_t)(log2(capa.vector.max_size) +
+							     log2(capa.vector.max_size)) / 2);
+		} else {
+			max_size = (capa.vector.max_size + capa.vector.min_size) / 2;
+		}
+		queue_param.vector.max_size = max_size;
 		CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) == 0);
 	}
 
@@ -3586,7 +3598,18 @@ static void pktio_test_pktv_pktin_queue_config(odp_pktin_mode_t in_mode)
 		CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) == 0);
 
 		if (capa.vector.max_size != capa.vector.min_size) {
-			queue_param.vector.max_size = capa.vector.max_size - capa.vector.min_size;
+			uint32_t max_size;
+
+			if (capa.vector.size_is_pow2) {
+				CU_ASSERT(IS_POWER2(capa.vector.min_size));
+				CU_ASSERT(IS_POWER2(capa.vector.max_size));
+				max_size = (int32_t)
+					   pow(2, (int32_t)(log2(capa.vector.max_size) +
+							    log2(capa.vector.max_size)) / 2);
+			} else {
+				max_size = (capa.vector.max_size + capa.vector.min_size) / 2;
+			}
+			queue_param.vector.max_size = max_size;
 			CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) == 0);
 		}
 
