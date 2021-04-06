@@ -790,6 +790,9 @@ typedef struct odp_pktin_vector_capability_t {
 	/** Packet input vector availability */
 	odp_support_t supported;
 
+	/** odp_pktin_vector_config_t::max_size should be power of two. */
+	odp_bool_t size_is_pow2;
+
 	/** Maximum number of packets that can be accumulated into a packet
 	 *  vector by a producer
 	 *
