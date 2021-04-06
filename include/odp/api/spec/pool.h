@@ -271,6 +271,9 @@ typedef struct odp_pool_capability_t {
 
 	/** Vector pool capabilities */
 	struct {
+		/** odp_pool_param_t::vector::max_size should be power of two. */
+		odp_bool_t size_is_pow2;
+
 		/** Maximum number of vector pools */
 		unsigned int max_pools;
 
