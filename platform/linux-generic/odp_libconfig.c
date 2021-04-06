@@ -191,7 +191,8 @@ int _odp_libconfig_lookup_ext_int(const char *base_path,
 int _odp_libconfig_print(void)
 {
 	int c;
-	/* Temp file for config_write() output */
+	/* Temp file for config_write() output. Suppress Coverity warning about tmpfile() usage. */
+	/* coverity[secure_temp] */
 	FILE *file = tmpfile();
 
 	if (file == NULL)
