@@ -173,9 +173,6 @@ static int term_global(enum init_stage stage)
 		}
 		/* Fall through */
 
-	case RANDOM_INIT:
-		/* Fall through */
-
 	case TIMER_INIT:
 		if (_odp_timer_term_global()) {
 			ODP_ERR("ODP timer term failed.\n");
@@ -283,8 +280,8 @@ static int term_global(enum init_stage stage)
 		}
 		/* Fall through */
 
-	case NO_INIT:
-		;
+	default:
+		break;
 	}
 
 	return rc;
@@ -410,9 +407,6 @@ int odp_init_global(odp_instance_t *instance,
 		goto init_failed;
 	}
 	stage = TIMER_INIT;
-
-	/* No init neeeded */
-	stage = RANDOM_INIT;
 
 	if (_odp_crypto_init_global()) {
 		ODP_ERR("ODP crypto init failed.\n");
