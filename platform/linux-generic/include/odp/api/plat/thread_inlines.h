@@ -7,6 +7,8 @@
 #ifndef ODP_PLAT_THREAD_INLINES_H_
 #define ODP_PLAT_THREAD_INLINES_H_
 
+#include <odp/api/init.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -17,6 +19,7 @@ typedef struct {
 	int thr;
 	int cpu;
 	odp_thread_type_t type;
+	odp_log_func_t log_fn;
 
 } _odp_thread_state_t;
 

@@ -20,6 +20,7 @@
 #include <odp/autoheader_external.h>
 #include <odp/api/debug.h>
 #include <odp_global_data.h>
+#include <odp/api/plat/thread_inlines.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,6 +32,14 @@ extern "C" {
 /* Debug level configure option. Zero is the highest level. Value of N prints debug messages from
  * level 0 to N. */
 #define CONFIG_DEBUG_LEVEL 0
+
+#define _ODP_LOG_FN(level, fmt, ...) \
+	do { \
+		if (_odp_this_thread && _odp_this_thread->log_fn) \
+			_odp_this_thread->log_fn(level, fmt, ##__VA_ARGS__); \
+		else \
+			odp_global_ro.log_fn(level, fmt, ##__VA_ARGS__); \
+	} while (0)
 
 /**
  * Runtime assertion-macro - aborts if 'cond' is false.
@@ -45,7 +54,7 @@ extern "C" {
  * This macro is used to indicate when a given function is not implemented
  */
 #define ODP_UNIMPLEMENTED() \
-		odp_global_ro.log_fn(ODP_LOG_UNIMPLEMENTED, \
+		_ODP_LOG_FN(ODP_LOG_UNIMPLEMENTED, \
 			"%s:%d:The function %s() is not implemented\n", \
 			__FILE__, __LINE__, __func__)
 /*
@@ -72,7 +81,7 @@ extern "C" {
 #define ODP_DBG_RAW(level, fmt, ...) \
 	do { \
 		if (ODP_DEBUG_PRINT == 1 && CONFIG_DEBUG_LEVEL >= (level)) \
-			odp_global_ro.log_fn(ODP_LOG_DBG, fmt, ##__VA_ARGS__);\
+			_ODP_LOG_FN(ODP_LOG_DBG, fmt, ##__VA_ARGS__);\
 	} while (0)
 
 /**
@@ -95,7 +104,7 @@ extern "C" {
  * ODP LOG macro.
  */
 #define ODP_LOG(level, fmt, ...) \
-	odp_global_ro.log_fn(level, "%s:%d:%s():" fmt, __FILE__, \
+	_ODP_LOG_FN(level, "%s:%d:%s():" fmt, __FILE__, \
 	__LINE__, __func__, ##__VA_ARGS__)
 
 /**
@@ -103,7 +112,7 @@ extern "C" {
  * specifically for dumping internal data.
  */
 #define ODP_PRINT(fmt, ...) \
-	odp_global_ro.log_fn(ODP_LOG_PRINT, fmt, ##__VA_ARGS__)
+	_ODP_LOG_FN(ODP_LOG_PRINT, fmt, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 }
