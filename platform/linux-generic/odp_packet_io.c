@@ -2685,10 +2685,14 @@ int odp_packet_lso_request(odp_packet_t pkt, const odp_packet_lso_opt_t *lso_opt
 		return -1;
 	}
 
+	if (odp_packet_payload_offset_set(pkt, payload_offset)) {
+		ODP_ERR("Payload offset set failed\n");
+		return -1;
+	}
+
 	pkt_hdr->p.flags.lso     = 1;
 	pkt_hdr->lso_max_payload = lso_opt->max_payload_len;
 	pkt_hdr->lso_profile_idx = lso_prof->index;
-	odp_packet_payload_offset_set(pkt, payload_offset);
 
 	return 0;
 }
