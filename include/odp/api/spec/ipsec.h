@@ -338,6 +338,28 @@ typedef struct odp_ipsec_capability_t {
 	 */
 	uint32_t max_cls_cos;
 
+	/**
+	 * Scheduled queue support
+	 *
+	 * 0: Scheduled queues are not supported either as IPsec SA destination
+	 *    queues or as IPsec default queue
+	 * 1: Scheduled queues are supported as both IPsec SA destination queues
+	 *    and IPsec default queue
+	 * @see odp_ipsec_sa_param_t
+	 */
+	odp_bool_t queue_type_sched;
+
+	/**
+	 * Plain queue support
+	 *
+	 * 0: Plain queues are not supported either as IPsec SA destination
+	 *    queues or as IPsec default queue
+	 * 1: Plain queues are supported as both IPsec SA destination queues and
+	 *    IPsec default queue
+	 * @see odp_ipsec_sa_param_t
+	 */
+	odp_bool_t queue_type_plain;
+
 	/** Maximum number of different destination queues. The same queue may
 	 *  be used for many SAs. */
 	uint32_t max_queues;
