@@ -39,8 +39,12 @@ extern "C" {
 
 #define PKTIO_MAX_QUEUES 64
 #define PKTIO_LSO_PROFILES 16
+/* Assume at least Ethernet header per each segment */
+#define PKTIO_LSO_MIN_PAYLOAD_OFFSET 14
 #define PKTIO_LSO_MAX_PAYLOAD_OFFSET 128
-#define PKTIO_LSO_MAX_SEGMENTS 8
+/* Allow 64 kB packet to be split into about 1kB segments */
+#define PKTIO_LSO_MAX_SEGMENTS 64
+
 ODP_STATIC_ASSERT(PKTIO_LSO_PROFILES < UINT8_MAX, "PKTIO_LSO_PROFILES_ERROR");
 
 #define PKTIO_NAME_LEN 256
