@@ -2246,12 +2246,14 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 			tm_egress_marking(tm_system, odp_pkt);
 
 		tm_system->egress_pkt_desc = EMPTY_PKT_DESC;
-		if (tm_system->egress.egress_kind == ODP_TM_EGRESS_PKT_IO)
-			odp_pktout_send(tm_system->pktout, &odp_pkt, 1);
-		else if (tm_system->egress.egress_kind == ODP_TM_EGRESS_FN)
+		if (tm_system->egress.egress_kind == ODP_TM_EGRESS_PKT_IO) {
+			if (odp_pktout_send(tm_system->pktout, &odp_pkt, 1) != 1)
+				odp_packet_free(odp_pkt);
+		} else if (tm_system->egress.egress_kind == ODP_TM_EGRESS_FN) {
 			tm_system->egress.egress_fcn(odp_pkt);
-		else
+		} else {
 			return;
+		}
 
 		tm_queue_obj->sent_pkt = tm_queue_obj->pkt;
 		tm_queue_obj->sent_pkt_desc = tm_queue_obj->in_pkt_desc;
@@ -2515,7 +2517,9 @@ static void *tm_system_thread(void *arg)
 	}
 
 	odp_barrier_wait(&tm_system->tm_system_destroy_barrier);
-	odp_term_local();
+	if (odp_term_local() < 0)
+		ODP_ERR("Term local failed\n");
+
 	return NULL;
 }
 
@@ -3966,7 +3970,15 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 		}
 
 		queue_obj->queue = queue;
-		odp_queue_context_set(queue, queue_obj, sizeof(tm_queue_obj_t));
+		if (odp_queue_context_set(queue, queue_obj, sizeof(tm_queue_obj_t))) {
+			ODP_ERR("Queue context set failed\n");
+			if (odp_queue_destroy(queue))
+				ODP_ERR("Queue destroy failed\n");
+
+			odp_tm_queue = ODP_TM_INVALID;
+			break;
+		}
+
 		_odp_queue_fn->set_enq_deq_fn(queue, queue_tm_reenq,
 					      queue_tm_reenq_multi, NULL, NULL);
 
