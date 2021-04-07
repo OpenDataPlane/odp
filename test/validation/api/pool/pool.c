@@ -31,6 +31,20 @@ static global_shared_mem_t *global_mem;
 static odp_pool_capability_t global_pool_capa;
 static odp_pool_param_t default_pool_param;
 
+/** Aligns input parameter to the next power of 2 */
+static inline uint32_t
+align32pow2(uint32_t x)
+{
+	x--;
+	x |= x >> 1;
+	x |= x >> 2;
+	x |= x >> 4;
+	x |= x >> 8;
+	x |= x >> 16;
+
+	return x + 1;
+}
+
 static void pool_create_destroy(odp_pool_param_t *param)
 {
 	odp_pool_t pool;
@@ -85,6 +99,7 @@ static void pool_test_create_destroy_vector(void)
 	odp_pool_param_t param;
 	odp_pool_capability_t capa;
 	uint32_t max_num = VEC_NUM;
+	uint32_t max_size = VEC_LEN;
 
 	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
 
@@ -96,7 +111,9 @@ static void pool_test_create_destroy_vector(void)
 	odp_pool_param_init(&param);
 	param.type = ODP_POOL_VECTOR;
 	param.vector.num = max_num;
-	param.vector.max_size = capa.vector.max_size  < VEC_LEN ? capa.vector.max_size : VEC_LEN;
+	if (capa.vector.size_is_pow2)
+		align32pow2(max_size);
+	param.vector.max_size = capa.vector.max_size  < max_size ? capa.vector.max_size : max_size;
 
 	pool_create_destroy(&param);
 }
@@ -190,6 +207,7 @@ static void alloc_packet_vector(uint32_t cache_size)
 	uint32_t i, num;
 	odp_packet_vector_t pkt_vec[VEC_NUM];
 	uint32_t max_num = VEC_NUM;
+	uint32_t max_size = VEC_LEN;
 
 	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
 
@@ -199,7 +217,9 @@ static void alloc_packet_vector(uint32_t cache_size)
 	odp_pool_param_init(&param);
 	param.type = ODP_POOL_VECTOR;
 	param.vector.num = max_num;
-	param.vector.max_size = capa.vector.max_size  < VEC_LEN ? capa.vector.max_size : VEC_LEN;
+	if (capa.vector.size_is_pow2)
+		align32pow2(max_size);
+	param.vector.max_size = capa.vector.max_size  < max_size ? capa.vector.max_size : max_size;
 	param.vector.cache_size = cache_size;
 
 	pool = odp_pool_create(NULL, &param);
@@ -921,6 +941,7 @@ static void pool_test_pool_statistics(int pool_type)
 	odp_pool_stats_opt_t supported;
 	uint32_t i, j, num_pool, num_obj, cache_size;
 	uint32_t max_pools = 2;
+	uint32_t max_size = VEC_LEN;
 
 	odp_pool_param_init(&param);
 
@@ -959,8 +980,10 @@ static void pool_test_pool_statistics(int pool_type)
 				global_pool_capa.vector.max_cache_size : CACHE_SIZE;
 		param.vector.cache_size = cache_size;
 		param.vector.num = num_obj;
-		param.vector.max_size = global_pool_capa.vector.max_size  < VEC_LEN ?
-						global_pool_capa.vector.max_size : VEC_LEN;
+		if (global_pool_capa.vector.size_is_pow2)
+			align32pow2(max_size);
+		param.vector.max_size = global_pool_capa.vector.max_size  < max_size ?
+						global_pool_capa.vector.max_size : max_size;
 	} else {
 		max_pools = global_pool_capa.tmo.max_pools < max_pools ?
 				global_pool_capa.tmo.max_pools : max_pools;
