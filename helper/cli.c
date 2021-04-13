@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <poll.h>
+#include <stdio.h>
 
 /* Socketpair socket roles. */
 enum {
@@ -264,6 +265,90 @@ static struct cli_def *create_cli(void)
 	return cli;
 }
 
+/* Not shared, used only in the server thread. */
+static struct cli_def *cli;
+static char *cli_log_fn_buf;
+
+ODP_PRINTF_FORMAT(2, 3)
+static int cli_log_fn(odp_log_level_t level, const char *fmt, ...)
+{
+	(void)level;
+
+	va_list args;
+	char *str, *p, *last;
+	int len;
+
+	/*
+	 * This function should be just a simple call to cli_vabufprint().
+	 * Unfortunately libcli (at least versions 1.9.7 - 1.10.4) has a few
+	 * bugs. cli_print() prints a newline at the end even if the string
+	 * doesn't end in a newline. cli_*bufprint() on the other hand just
+	 * throws away everything after the last newline.
+	 *
+	 * The following code ensures that each cli_*print() ends in a newline.
+	 * If the string does not end in a newline, we keep the part of the
+	 * string after the last newline and use it the next time we're called.
+	 */
+	va_start(args, fmt);
+	len = vsnprintf(NULL, 0, fmt, args) + 1;
+	va_end(args);
+	str = malloc(len);
+
+	if (!str) {
+		ODPH_ERR("malloc failed");
+		return 0;
+	}
+
+	va_start(args, fmt);
+	vsnprintf(str, len, fmt, args);
+	va_end(args);
+	p = str;
+	last = strrchr(p, '\n');
+
+	if (last) {
+		*last++ = 0;
+		if (cli_log_fn_buf) {
+			cli_bufprint(cli, "%s%s\n", cli_log_fn_buf, p);
+			free(cli_log_fn_buf);
+			cli_log_fn_buf = NULL;
+		} else {
+			cli_bufprint(cli, "%s\n", p);
+		}
+		p = last;
+	}
+
+	if (*p) {
+		if (cli_log_fn_buf) {
+			char *buffer_new =
+				malloc(strlen(cli_log_fn_buf) + strlen(p) + 1);
+
+			if (!buffer_new) {
+				ODPH_ERR("malloc failed");
+				goto out;
+			}
+
+			strcpy(buffer_new, cli_log_fn_buf);
+			strcat(buffer_new, p);
+			free(cli_log_fn_buf);
+			cli_log_fn_buf = buffer_new;
+		} else {
+			cli_log_fn_buf = malloc(strlen(p) + 1);
+
+			if (!cli_log_fn_buf) {
+				ODPH_ERR("malloc failed");
+				goto out;
+			}
+
+			strcpy(cli_log_fn_buf, p);
+		}
+	}
+
+out:
+	free(str);
+
+	return 0;
+}
+
 static int cli_server(void *arg ODP_UNUSED)
 {
 	cli_shm_t *shm = NULL;
@@ -277,7 +362,7 @@ static int cli_server(void *arg ODP_UNUSED)
 		return -1;
 	}
 
-	struct cli_def *cli = create_cli();
+	cli = create_cli();
 
 	while (1) {
 		struct pollfd pfd[2] = {
@@ -326,12 +411,21 @@ static int cli_server(void *arg ODP_UNUSED)
 		}
 		shm->cli_fd = fd;
 		odp_spinlock_unlock(&shm->lock);
+		odp_log_thread_fn_set(cli_log_fn);
 		/*
 		 * cli_loop() returns only when client is disconnected. One
 		 * possible reason for disconnect is odph_cli_stop().
 		 */
 		cli_loop(cli, shm->cli_fd);
+		odp_log_thread_fn_set(NULL);
 		close(shm->cli_fd);
+
+		/*
+		 * Throw away anything left in the buffer (in case the last
+		 * print didn't end in a newline).
+		 */
+		free(cli_log_fn_buf);
+		cli_log_fn_buf = NULL;
 	}
 
 	cli_done(cli);
