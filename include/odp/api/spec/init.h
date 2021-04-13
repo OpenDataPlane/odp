@@ -333,6 +333,20 @@ int odp_term_local(void);
 int odp_term_global(odp_instance_t instance);
 
 /**
+ * Set thread specific log function
+ *
+ * By default, all ODP log writes use the global log function, which may be set
+ * as part of odp_init_t. Using this operation, an alternative ODP log function
+ * may be set for the calling thread. When set, ODP uses the thread specific log
+ * function for all log writes originating from ODP API calls made by the
+ * calling thread. Setting the log function to NULL causes the calling thread to
+ * use the global log function.
+ *
+ * @param func Log function
+ */
+void odp_log_thread_fn_set(odp_log_func_t func);
+
+/**
  * @}
  */
 
