@@ -6,7 +6,8 @@
 
 #include <odp_api.h>
 #include <odp_cunit_common.h>
-#include <test_packet_parser.h>
+#include <test_packet_ipv4.h>
+#include <test_packet_custom.h>
 
 #include <odp/helper/odph_api.h>
 

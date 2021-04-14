@@ -17,7 +17,8 @@
 #include <inttypes.h>
 #include <signal.h>
 
-#include <test_packet_parser.h>
+#include <test_packet_ipv4.h>
+#include <test_packet_ipv6.h>
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
