@@ -133,7 +133,7 @@ static void process_input(odp_packet_t pkt_out,
 	do {
 		out_data =
 		    odp_packet_offset(pkt_out, start, &out_len, &cur_seg);
-		ODP_DBG("out_data 0x%x seg_data_ptr 0x%x out_len %d seg 0x%x\n",
+		ODP_DBG("out_data %p seg_data_ptr %p out_len %d seg %p\n",
 			out_data, odp_packet_seg_data(pkt_out, cur_seg),
 			out_len, cur_seg);
 
@@ -258,7 +258,7 @@ static int deflate_comp(odp_packet_t pkt_in,
 					 read,
 					 &in_len,
 					 &in_seg);
-		ODP_DBG("data 0x%x in_len %d seg 0x%x len %d\n",
+		ODP_DBG("data %p in_len %d seg %p len %d\n",
 			data, in_len, in_seg, len);
 
 		if (in_len > len)

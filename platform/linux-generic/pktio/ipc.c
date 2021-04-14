@@ -322,7 +322,7 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	pinfo = pktio_ipc->pinfo;
 	pool_name = _ipc_odp_buffer_pool_shm_name(pool_hdl);
 	if (strlen(pool_name) > ODP_POOL_NAME_LEN) {
-		ODP_ERR("pid %d ipc pool name %s is too big %d\n",
+		ODP_ERR("pid %d ipc pool name %s is too big %zu\n",
 			getpid(), pool_name, strlen(pool_name));
 		goto free_s_prod;
 	}
@@ -742,7 +742,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 	ring_ptr_enq_multi(r_p, ring_mask, ipcbufs_p, pkts);
 
 	for (i = 0; i < pkts; i++) {
-		IPC_ODP_DBG("%d/%d send to be free packet offset %x\n",
+		IPC_ODP_DBG("%d/%d send to be free packet offset %" PRIuPTR "\n",
 			    i, pkts, offsets[i]);
 	}
 
@@ -820,7 +820,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 
 		/* compile all function code even if ipc disabled with config */
 		IPC_ODP_DBG("%d/%d send packet %" PRIu64 ", pool %" PRIu64 ","
-			    "phdr = %p, offset %x, sendoff %x, addr %p iaddr "
+			    "phdr = %p, offset %td, sendoff %" PRIxPTR ", addr %p iaddr "
 			    "%p\n", i, num,
 			    odp_packet_to_u64(pkt), odp_pool_to_u64(pool_hdl),
 			    pkt_hdr, (uint8_t *)pkt_hdr->seg_data -

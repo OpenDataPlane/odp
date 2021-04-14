@@ -377,7 +377,7 @@ static const char *driver_name(odp_pktio_t hdl)
 
 	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_ERR("pktio entry %d does not exist\n", hdl);
+		ODP_ERR("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)hdl);
 		return "bad handle";
 	}
 
@@ -1253,7 +1253,7 @@ static inline uint32_t pktio_maxlen(odp_pktio_t hdl)
 
 	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", hdl);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)hdl);
 		return 0;
 	}
 
@@ -1296,7 +1296,7 @@ int odp_pktio_maxlen_set(odp_pktio_t hdl, uint32_t maxlen_input,
 
 	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_ERR("Pktio entry %d does not exist\n", hdl);
+		ODP_ERR("Pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)hdl);
 		return -1;
 	}
 
@@ -1360,7 +1360,7 @@ int odp_pktio_promisc_mode_set(odp_pktio_t hdl, odp_bool_t enable)
 
 	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", hdl);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)hdl);
 		return -1;
 	}
 
@@ -1390,7 +1390,7 @@ int odp_pktio_promisc_mode(odp_pktio_t hdl)
 
 	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", hdl);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)hdl);
 		return -1;
 	}
 
@@ -1421,7 +1421,7 @@ int odp_pktio_mac_addr(odp_pktio_t hdl, void *mac_addr, int addr_size)
 
 	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", hdl);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)hdl);
 		return -1;
 	}
 
@@ -1456,7 +1456,7 @@ int odp_pktio_mac_addr_set(odp_pktio_t hdl, const void *mac_addr, int addr_size)
 
 	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", hdl);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)hdl);
 		return -1;
 	}
 
@@ -1487,7 +1487,7 @@ odp_pktio_link_status_t odp_pktio_link_status(odp_pktio_t hdl)
 
 	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", hdl);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)hdl);
 		return ODP_PKTIO_LINK_STATUS_UNKNOWN;
 	}
 
@@ -1543,7 +1543,7 @@ int odp_pktio_info(odp_pktio_t hdl, odp_pktio_info_t *info)
 	entry = get_pktio_entry(hdl);
 
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", hdl);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)hdl);
 		return -1;
 	}
 
@@ -1563,7 +1563,7 @@ int odp_pktio_link_info(odp_pktio_t hdl, odp_pktio_link_info_t *info)
 	entry = get_pktio_entry(hdl);
 
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", hdl);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)hdl);
 		return -1;
 	}
 
@@ -1579,7 +1579,7 @@ uint64_t odp_pktio_ts_res(odp_pktio_t hdl)
 
 	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_ERR("pktio entry %d does not exist\n", hdl);
+		ODP_ERR("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)hdl);
 		return 0;
 	}
 
@@ -1596,7 +1596,7 @@ odp_time_t odp_pktio_ts_from_ns(odp_pktio_t hdl, uint64_t ns)
 	entry = get_pktio_entry(hdl);
 
 	if (entry == NULL) {
-		ODP_ERR("pktio entry %d does not exist\n", hdl);
+		ODP_ERR("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)hdl);
 		return ODP_TIME_NULL;
 	}
 
@@ -1613,7 +1613,7 @@ odp_time_t odp_pktio_time(odp_pktio_t hdl, odp_time_t *global_ts)
 
 	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_ERR("pktio entry %d does not exist\n", hdl);
+		ODP_ERR("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)hdl);
 		return ODP_TIME_NULL;
 	}
 
@@ -1652,7 +1652,7 @@ void odp_pktio_print(odp_pktio_t hdl)
 
 	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", hdl);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)hdl);
 		return;
 	}
 
@@ -1781,7 +1781,7 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
 		return -1;
 	}
 
@@ -1850,7 +1850,7 @@ int odp_pktio_stats(odp_pktio_t pktio,
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
 		return -1;
 	}
 
@@ -1880,7 +1880,7 @@ int odp_pktio_stats_reset(odp_pktio_t pktio)
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
 		return -1;
 	}
 
@@ -1920,7 +1920,7 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
 		return -1;
 	}
 
@@ -2154,7 +2154,7 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
 		return -1;
 	}
 
@@ -2260,7 +2260,7 @@ int odp_pktin_event_queue(odp_pktio_t pktio, odp_queue_t queues[], int num)
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
 		return -1;
 	}
 
@@ -2300,7 +2300,7 @@ int odp_pktin_queue(odp_pktio_t pktio, odp_pktin_queue_t queues[], int num)
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
 		return -1;
 	}
 
@@ -2339,7 +2339,7 @@ int odp_pktout_event_queue(odp_pktio_t pktio, odp_queue_t queues[], int num)
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
 		return -1;
 	}
 
@@ -2370,7 +2370,7 @@ int odp_pktout_queue(odp_pktio_t pktio, odp_pktout_queue_t queues[], int num)
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
 		return -1;
 	}
 
@@ -2407,7 +2407,7 @@ int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num)
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
 		return -1;
 	}
 
@@ -2436,7 +2436,7 @@ int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[], int num,
 
 	entry = get_pktio_entry(queue.pktio);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", queue.pktio);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)queue.pktio);
 		return -1;
 	}
 
@@ -2591,7 +2591,7 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
 		return -1;
 	}
 
@@ -2617,7 +2617,7 @@ int odp_pktout_ts_read(odp_pktio_t hdl, odp_time_t *ts)
 
 	entry = get_pktio_entry(hdl);
 	if (odp_unlikely(entry == NULL)) {
-		ODP_ERR("pktio entry %d does not exist\n", hdl);
+		ODP_ERR("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)hdl);
 		return -1;
 	}
 

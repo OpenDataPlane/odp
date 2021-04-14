@@ -4692,10 +4692,10 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 
 	ODP_PRINT("odp_tm_stats_print - tm_system=0x%" PRIX64 " tm_idx=%u\n",
 		  odp_tm, tm_system->tm_idx);
-	ODP_PRINT("  input_work_queue size=%u current cnt=%u peak cnt=%u\n",
-		  INPUT_WORK_RING_SIZE, input_work_queue->queue_cnt,
+	ODP_PRINT("  input_work_queue size=%u current cnt=%" PRIu64 " peak cnt=%" PRIu32 "\n",
+		  INPUT_WORK_RING_SIZE, odp_atomic_load_u64(&input_work_queue->queue_cnt),
 		  input_work_queue->peak_cnt);
-	ODP_PRINT("  input_work_queue enqueues=%" PRIu64 " dequeues=% " PRIu64
+	ODP_PRINT("  input_work_queue enqueues=%" PRIu64 " dequeues=%" PRIu64
 		  " fail_cnt=%" PRIu64 "\n", input_work_queue->total_enqueues,
 		  input_work_queue->total_dequeues,
 		  input_work_queue->enqueue_fail_cnt);
