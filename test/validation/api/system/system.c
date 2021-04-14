@@ -20,6 +20,9 @@
 /* 10 usec wait time assumes >100kHz resolution on CPU cycles counter */
 #define WAIT_TIME (10 * ODP_TIME_USEC_IN_NS)
 
+/* Check if value is power of two */
+#define IS_POW2(x) ((((x) - 1) & (x)) == 0)
+
 static void test_version_api_str(void)
 {
 	int char_ok = 0;
@@ -248,7 +251,11 @@ static void system_test_odp_sys_cache_line_size(void)
 
 	cache_size = odp_sys_cache_line_size();
 	CU_ASSERT(0 < cache_size);
-	CU_ASSERT(ODP_CACHE_LINE_SIZE == cache_size);
+	CU_ASSERT(0 < ODP_CACHE_LINE_SIZE);
+	CU_ASSERT(IS_POW2(cache_size));
+	CU_ASSERT(IS_POW2(ODP_CACHE_LINE_SIZE));
+	if (ODP_CACHE_LINE_SIZE != cache_size)
+		printf("WARNING: ODP_CACHE_LINE_SIZE and odp_sys_cache_line_size() not matching\n");
 
 	CU_ASSERT(ODP_CACHE_LINE_ROUNDUP(0) == 0);
 	CU_ASSERT(ODP_CACHE_LINE_ROUNDUP(1) == ODP_CACHE_LINE_SIZE);
