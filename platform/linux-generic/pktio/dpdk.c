@@ -1286,7 +1286,7 @@ static int dpdk_pktio_init(void)
 	masklen = odp_cpumask_to_str(&mask, mask_str, ODP_CPUMASK_STR_SIZE);
 
 	if (masklen < 0) {
-		ODP_ERR("CPU mask error: d\n", masklen);
+		ODP_ERR("CPU mask error: %" PRId32 "\n", masklen);
 		return -1;
 	}
 

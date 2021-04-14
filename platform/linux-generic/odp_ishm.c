@@ -1995,7 +1995,7 @@ int _odp_ishm_status(const char *title)
 	}
 
 	ODP_PRINT("%s\n", title);
-	ODP_PRINT("    %-*s flag %-29s %-08s   %-08s %-3s %-3s %-3s file\n",
+	ODP_PRINT("    %-*s flag %-29s %-8s   %-8s %-3s %-3s %-3s file\n",
 		  max_name_len, "name", "range", "user_len", "unused",
 		  "seq", "ref", "fd");
 
@@ -2045,8 +2045,8 @@ int _odp_ishm_status(const char *title)
 			entry_fd = ishm_proctable->entry[proc_index].fd;
 		}
 
-		ODP_PRINT("%2i  %-*s %s%c  %p-%p %-08" PRIu64 "   "
-			  "%-08" PRIu64 " %-3" PRIu64 " %-3" PRIu64 " "
+		ODP_PRINT("%2i  %-*s %s%c  %p-%p %-8" PRIu64 "   "
+			  "%-8" PRIu64 " %-3" PRIu64 " %-3" PRIu64 " "
 			  "%-3d %s\n",
 			  i, max_name_len, ishm_tbl->block[i].name,
 			  flags, huge, start_addr, end_addr,
@@ -2059,7 +2059,7 @@ int _odp_ishm_status(const char *title)
 					  ishm_tbl->block[i].filename :
 					  "(none)");
 	}
-	ODP_PRINT("TOTAL: %58s%-08" PRIu64 " %2s%-08" PRIu64 "\n",
+	ODP_PRINT("TOTAL: %58s%-8" PRIu64 " %2s%-8" PRIu64 "\n",
 		  "", len_total,
 		  "", lost_total);
 	ODP_PRINT("%65s(%" PRIu64 "MB) %4s(%" PRIu64 "MB)\n",
@@ -2072,15 +2072,15 @@ int _odp_ishm_status(const char *title)
 	     fragmnt; fragmnt = fragmnt->next) {
 		if (fragmnt->block_index >= 0) {
 			nb_allocated_frgments++;
-			ODP_PRINT("  %08p - %08p: ALLOCATED by block:%d\n",
-				  (uintptr_t)fragmnt->start,
-				  (uintptr_t)fragmnt->start + fragmnt->len - 1,
+			ODP_PRINT("  %8p - %8p: ALLOCATED by block:%d\n",
+				  fragmnt->start,
+				  (void *)((uintptr_t)fragmnt->start + fragmnt->len - 1),
 				  fragmnt->block_index);
 			consecutive_unallocated = 0;
 		} else {
-			ODP_PRINT("  %08p - %08p: NOT ALLOCATED\n",
-				  (uintptr_t)fragmnt->start,
-				  (uintptr_t)fragmnt->start + fragmnt->len - 1);
+			ODP_PRINT("  %8p - %8p: NOT ALLOCATED\n",
+				  fragmnt->start,
+				  (void *)((uintptr_t)fragmnt->start + fragmnt->len - 1));
 			if (consecutive_unallocated++)
 				ODP_ERR("defragmentation error\n");
 		}

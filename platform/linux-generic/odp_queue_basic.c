@@ -180,7 +180,7 @@ static int queue_init_global(void)
 	queue_capa(&capa, 0);
 
 	ODP_DBG("... done.\n");
-	ODP_DBG("  queue_entry_t size %u\n", sizeof(queue_entry_t));
+	ODP_DBG("  queue_entry_t size %zu\n", sizeof(queue_entry_t));
 	ODP_DBG("  max num queues     %u\n", capa.max_queues);
 	ODP_DBG("  max queue size     %u\n", capa.plain.max_size);
 	ODP_DBG("  max num lockfree   %u\n", capa.plain.lockfree.max_num);
@@ -740,7 +740,7 @@ static void queue_print(odp_queue_t handle)
 		if (!odp_pktio_info(queue->s.pktout.pktio, &pktio_info))
 			ODP_PRINT("  pktout          %s\n", pktio_info.name);
 	}
-	ODP_PRINT("  timers          %" PRIu32 "\n",
+	ODP_PRINT("  timers          %" PRIu64 "\n",
 		  odp_atomic_load_u64(&queue->s.num_timers));
 	ODP_PRINT("  status          %s\n",
 		  queue->s.status == QUEUE_STATUS_READY ? "ready" :

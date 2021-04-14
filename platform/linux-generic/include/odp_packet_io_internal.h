@@ -36,6 +36,7 @@ extern "C" {
 #include <net/if.h>
 #include <linux/if_ether.h>
 #include <sys/select.h>
+#include <inttypes.h>
 
 #define PKTIO_MAX_QUEUES 64
 #define PKTIO_LSO_PROFILES 16
@@ -237,7 +238,7 @@ static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 		return NULL;
 
 	if (odp_unlikely(_odp_typeval(pktio) > ODP_CONFIG_PKTIO_ENTRIES)) {
-		ODP_DBG("pktio limit %d/%d exceed\n",
+		ODP_DBG("pktio limit %" PRIuPTR "/%d exceed\n",
 			_odp_typeval(pktio), ODP_CONFIG_PKTIO_ENTRIES);
 		return NULL;
 	}

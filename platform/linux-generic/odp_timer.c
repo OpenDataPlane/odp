@@ -244,7 +244,7 @@ static inline timer_pool_t *handle_to_tp(odp_timer_t hdl)
 		if (odp_likely(tp != NULL))
 			return timer_global->timer_pool[tp_idx];
 	}
-	ODP_ABORT("Invalid timer handle %#x\n", hdl);
+	ODP_ABORT("Invalid timer handle %p\n", hdl);
 }
 
 static inline uint32_t handle_to_idx(odp_timer_t hdl,
@@ -255,7 +255,7 @@ static inline uint32_t handle_to_idx(odp_timer_t hdl,
 	__builtin_prefetch(&tp->tick_buf[idx], 0, 0);
 	if (odp_likely(idx < odp_atomic_load_u32(&tp->high_wm)))
 		return idx;
-	ODP_ABORT("Invalid timer handle %#x\n", hdl);
+	ODP_ABORT("Invalid timer handle %p\n", hdl);
 }
 
 static inline odp_timer_t tp_idx_to_handle(timer_pool_t *tp,

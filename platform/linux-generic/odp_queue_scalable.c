@@ -1000,7 +1000,7 @@ static void queue_print(odp_queue_t handle)
 		if (!odp_pktio_info(queue->s.pktout.pktio, &pktio_info))
 			ODP_PRINT("  pktout          %s\n", pktio_info.name);
 	}
-	ODP_PRINT("  timers          %" PRIu32 "\n",
+	ODP_PRINT("  timers          %" PRIu64 "\n",
 		  odp_atomic_load_u64(&queue->s.num_timers));
 	ODP_PRINT("  param.size      %" PRIu32 "\n", queue->s.param.size);
 	ODP_PRINT("\n");
