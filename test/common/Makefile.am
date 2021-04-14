@@ -17,6 +17,7 @@ endif
 noinst_HEADERS = test_packet_custom.h \
 		 test_packet_ipsec.h \
 		 test_packet_ipv4.h \
+		 test_packet_ipv4_with_crc.h \
 		 test_packet_ipv6.h
 
 dist_test_SCRIPTS = run-test.sh
