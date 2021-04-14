@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -6,6 +7,7 @@
 
 #include <odp_api.h>
 #include <odp_cunit_common.h>
+#include <test_packet_ipv4_with_crc.h>
 
 /* Commonly used CRC check string */
 #define CHECK_STR   "123456789"
@@ -15,6 +17,10 @@
 #define CRC32C_XOR  0xffffffff
 #define CRC32_INIT  0xffffffff
 #define CRC32_XOR   0xffffffff
+
+/* When Ethernet frame CRC is included into the CRC32 calculation,
+ * the result should match this value. */
+#define ETHCRC_CHECK_VAL 0xdebb20e3
 
 typedef struct hash_test_vector_t {
 	const uint8_t  *data;
@@ -236,6 +242,83 @@ static void hash_test_crc32(void)
 		result = CRC32_XOR ^ ret;
 		CU_ASSERT(result == crc32_test_vector[i].result.u32);
 	}
+}
+
+static void hash_test_ethernet_crc32(void)
+{
+	uint32_t ret;
+
+	ret = odp_hash_crc32(test_packet_ipv4_udp_64_crc,
+			     sizeof(test_packet_ipv4_udp_64_crc), CRC32_INIT);
+	CU_ASSERT(ret == ETHCRC_CHECK_VAL);
+
+	ret = odp_hash_crc32(test_packet_ipv4_udp_68_crc,
+			     sizeof(test_packet_ipv4_udp_68_crc), CRC32_INIT);
+	CU_ASSERT(ret == ETHCRC_CHECK_VAL);
+
+	ret = odp_hash_crc32(test_packet_ipv4_udp_70_crc,
+			     sizeof(test_packet_ipv4_udp_70_crc), CRC32_INIT);
+	CU_ASSERT(ret == ETHCRC_CHECK_VAL);
+
+	ret = odp_hash_crc32(test_packet_ipv4_udp_71_crc,
+			     sizeof(test_packet_ipv4_udp_71_crc), CRC32_INIT);
+	CU_ASSERT(ret == ETHCRC_CHECK_VAL);
+
+	ret = odp_hash_crc32(test_packet_ipv4_udp_287_crc,
+			     sizeof(test_packet_ipv4_udp_287_crc), CRC32_INIT);
+	CU_ASSERT(ret == ETHCRC_CHECK_VAL);
+
+	ret = odp_hash_crc32(test_packet_ipv4_udp_400_crc,
+			     sizeof(test_packet_ipv4_udp_400_crc), CRC32_INIT);
+	CU_ASSERT(ret == ETHCRC_CHECK_VAL);
+
+	ret = odp_hash_crc32(test_packet_ipv4_udp_503_crc,
+			     sizeof(test_packet_ipv4_udp_503_crc), CRC32_INIT);
+	CU_ASSERT(ret == ETHCRC_CHECK_VAL);
+}
+
+static void hash_test_ethernet_crc32_odd_align(void)
+{
+	uint32_t ret, size;
+	const uint32_t max_size = sizeof(test_packet_ipv4_udp_503_crc);
+	uint8_t buf[max_size + 1] ODP_ALIGNED(8);
+
+	memset(buf, 0, sizeof(buf));
+
+	size = sizeof(test_packet_ipv4_udp_64_crc);
+	memcpy(&buf[1], test_packet_ipv4_udp_64_crc, size);
+	ret = odp_hash_crc32(&buf[1], size, CRC32_INIT);
+	CU_ASSERT(ret == ETHCRC_CHECK_VAL);
+
+	size = sizeof(test_packet_ipv4_udp_68_crc);
+	memcpy(&buf[1], test_packet_ipv4_udp_68_crc, size);
+	ret = odp_hash_crc32(&buf[1], size, CRC32_INIT);
+	CU_ASSERT(ret == ETHCRC_CHECK_VAL);
+
+	size = sizeof(test_packet_ipv4_udp_70_crc);
+	memcpy(&buf[1], test_packet_ipv4_udp_70_crc, size);
+	ret = odp_hash_crc32(&buf[1], size, CRC32_INIT);
+	CU_ASSERT(ret == ETHCRC_CHECK_VAL);
+
+	size = sizeof(test_packet_ipv4_udp_71_crc);
+	memcpy(&buf[1], test_packet_ipv4_udp_71_crc, size);
+	ret = odp_hash_crc32(&buf[1], size, CRC32_INIT);
+	CU_ASSERT(ret == ETHCRC_CHECK_VAL);
+
+	size = sizeof(test_packet_ipv4_udp_287_crc);
+	memcpy(&buf[1], test_packet_ipv4_udp_287_crc, size);
+	ret = odp_hash_crc32(&buf[1], size, CRC32_INIT);
+	CU_ASSERT(ret == ETHCRC_CHECK_VAL);
+
+	size = sizeof(test_packet_ipv4_udp_400_crc);
+	memcpy(&buf[1], test_packet_ipv4_udp_400_crc, size);
+	ret = odp_hash_crc32(&buf[1], size, CRC32_INIT);
+	CU_ASSERT(ret == ETHCRC_CHECK_VAL);
+
+	size = sizeof(test_packet_ipv4_udp_503_crc);
+	memcpy(&buf[1], test_packet_ipv4_udp_503_crc, size);
+	ret = odp_hash_crc32(&buf[1], size, CRC32_INIT);
+	CU_ASSERT(ret == ETHCRC_CHECK_VAL);
 }
 
 /*
@@ -650,6 +733,8 @@ static void hash_test_crc16_generic(void)
 odp_testinfo_t hash_suite[] = {
 	ODP_TEST_INFO(hash_test_crc32c),
 	ODP_TEST_INFO(hash_test_crc32),
+	ODP_TEST_INFO(hash_test_ethernet_crc32),
+	ODP_TEST_INFO(hash_test_ethernet_crc32_odd_align),
 	ODP_TEST_INFO(hash_test_crc32_generic),
 	ODP_TEST_INFO(hash_test_crc24_generic),
 	ODP_TEST_INFO(hash_test_crc16_generic),
