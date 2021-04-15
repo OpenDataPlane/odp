@@ -1,5 +1,5 @@
-/* Copyright (c) 2019, Nokia
- * Copyright (c) 2013-2018, Linaro Limited
+/* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -49,11 +49,16 @@ typedef void (*pool_destroy_cb_fn)(void *pool);
 
 typedef struct pool_t {
 	odp_ticketlock_t lock ODP_ALIGNED_CACHE;
-
-	char             name[ODP_POOL_NAME_LEN];
-	odp_pool_param_t params;
 	odp_pool_t       pool_hdl;
 	uint32_t         pool_idx;
+	uint8_t          reserved;
+
+	/* Everything under this mark are memset() to zero on pool create */
+	uint8_t          memset_mark;
+	uint8_t          type;
+	uint8_t          pool_ext;
+	char             name[ODP_POOL_NAME_LEN];
+	odp_pool_param_t params;
 	uint32_t         ring_mask;
 	uint32_t         cache_size;
 	uint32_t         burst_size;
@@ -61,7 +66,6 @@ typedef struct pool_t {
 	odp_shm_t        uarea_shm;
 	uint64_t         shm_size;
 	uint64_t         uarea_shm_size;
-	int              reserved;
 	uint32_t         num;
 	uint32_t         align;
 	uint32_t         headroom;
