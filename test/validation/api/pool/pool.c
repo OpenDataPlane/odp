@@ -914,7 +914,7 @@ static int pool_check_timeout_pool_statistics(void)
 	return ODP_TEST_ACTIVE;
 }
 
-static void pool_test_pool_statistics(int pool_type)
+static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 {
 	odp_pool_stats_t stats;
 	odp_pool_param_t param;
