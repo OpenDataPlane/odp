@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -27,6 +27,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stddef.h>
 #include <inttypes.h>
 
 #include <odp/api/plat/pool_inline_types.h>
@@ -372,6 +373,8 @@ int _odp_pool_term_local(void)
 static pool_t *reserve_pool(uint32_t shmflags)
 {
 	int i;
+	odp_shm_t shm;
+	uint32_t mem_size;
 	pool_t *pool;
 	char ring_name[ODP_POOL_NAME_LEN];
 
@@ -382,19 +385,24 @@ static pool_t *reserve_pool(uint32_t shmflags)
 		if (pool->reserved == 0) {
 			pool->reserved = 1;
 			UNLOCK(&pool->lock);
+
+			memset(&pool->memset_mark, 0,
+			       sizeof(pool_t) - offsetof(pool_t, memset_mark));
 			sprintf(ring_name, "_odp_pool_ring_%d", i);
-			pool->ring_shm =
-				odp_shm_reserve(ring_name,
-						sizeof(pool_ring_t),
-						ODP_CACHE_LINE_SIZE, shmflags);
-			if (odp_unlikely(pool->ring_shm == ODP_SHM_INVALID)) {
+			mem_size = sizeof(pool_ring_t);
+
+			shm = odp_shm_reserve(ring_name, mem_size, ODP_CACHE_LINE_SIZE, shmflags);
+
+			if (odp_unlikely(shm == ODP_SHM_INVALID)) {
 				ODP_ERR("Unable to alloc pool ring %d\n", i);
 				LOCK(&pool->lock);
 				pool->reserved = 0;
 				UNLOCK(&pool->lock);
 				break;
 			}
-			pool->ring = odp_shm_addr(pool->ring_shm);
+
+			pool->ring_shm = shm;
+			pool->ring = odp_shm_addr(shm);
 			return pool;
 		}
 		UNLOCK(&pool->lock);
@@ -416,7 +424,7 @@ static void init_buffers(pool_t *pool)
 	uint32_t offset;
 	ring_ptr_t *ring;
 	uint32_t mask;
-	int type;
+	odp_pool_type_t type;
 	uint64_t page_size;
 	int skipped_blocks = 0;
 
@@ -426,7 +434,7 @@ static void init_buffers(pool_t *pool)
 	page_size = shm_info.page_size;
 	ring = &pool->ring->hdr;
 	mask = pool->ring_mask;
-	type = pool->params.type;
+	type = pool->type;
 
 	for (i = 0; i < pool->num + skipped_blocks ; i++) {
 		int skip = 0;
@@ -438,8 +446,7 @@ static void init_buffers(pool_t *pool)
 		vect_hdr = addr;
 		/* Skip packet buffers which cross huge page boundaries. Some
 		 * NICs cannot handle buffers which cross page boundaries. */
-		if (pool->params.type == ODP_POOL_PACKET &&
-		    page_size >= FIRST_HP_SIZE) {
+		if (type == ODP_POOL_PACKET && page_size >= FIRST_HP_SIZE) {
 			uint64_t first_page;
 			uint64_t last_page;
 
@@ -531,6 +538,7 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 	uint32_t seg_len, align, num, hdr_size, block_size;
 	uint32_t max_len, cache_size, burst_size;
 	uint32_t ring_size;
+	odp_pool_type_t type = params->type;
 	uint32_t num_extra = 0;
 	const char *max_prefix = "pool_000_uarea_";
 	int max_prefix_len = strlen(max_prefix);
@@ -539,7 +547,7 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 
 	align = 0;
 
-	if (params->type == ODP_POOL_PACKET) {
+	if (type == ODP_POOL_PACKET) {
 		uint32_t align_req = params->pkt.align;
 
 		if (align_req &&
@@ -551,7 +559,7 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 
 		align = _odp_pool_glb->config.pkt_base_align;
 	} else {
-		if (params->type == ODP_POOL_BUFFER)
+		if (type == ODP_POOL_BUFFER)
 			align = params->buf.align;
 
 		if (align < _odp_pool_glb->config.buf_min_align)
@@ -572,7 +580,7 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 	uarea_size  = 0;
 	cache_size  = 0;
 
-	switch (params->type) {
+	switch (type) {
 	case ODP_POOL_BUFFER:
 		num  = params->buf.num;
 		seg_len = params->buf.size;
@@ -652,10 +660,11 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 	sprintf(shm_name,   "pool_%03i_%s", pool->pool_idx, pool->name);
 	sprintf(uarea_name, "pool_%03i_uarea_%s", pool->pool_idx, pool->name);
 
+	pool->type   = type;
 	pool->params = *params;
 	pool->block_offset = 0;
 
-	if (params->type == ODP_POOL_PACKET) {
+	if (type == ODP_POOL_PACKET) {
 		uint32_t dpdk_obj_size;
 
 		hdr_size = ROUNDUP_CACHE_LINE(sizeof(odp_packet_hdr_t));
@@ -681,9 +690,9 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 		uint32_t align_pad = (align > ODP_CACHE_LINE_SIZE) ?
 				align - ODP_CACHE_LINE_SIZE : 0;
 
-		if (params->type == ODP_POOL_BUFFER)
+		if (type == ODP_POOL_BUFFER)
 			hdr_size = ROUNDUP_CACHE_LINE(sizeof(odp_buffer_hdr_t));
-		else if (params->type == ODP_POOL_TIMEOUT)
+		else if (type == ODP_POOL_TIMEOUT)
 			hdr_size = ROUNDUP_CACHE_LINE(sizeof(odp_timeout_hdr_t));
 		else
 			hdr_size = ROUNDUP_CACHE_LINE(sizeof(odp_event_vector_hdr_t));
@@ -693,7 +702,7 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 
 	/* Allocate extra memory for skipping packet buffers which cross huge
 	 * page boundaries. */
-	if (params->type == ODP_POOL_PACKET) {
+	if (type == ODP_POOL_PACKET) {
 		num_extra = ((((uint64_t)num * block_size) +
 				FIRST_HP_SIZE - 1) / FIRST_HP_SIZE);
 		num_extra += ((((uint64_t)num_extra * block_size) +
@@ -769,7 +778,7 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 	init_buffers(pool);
 
 	/* Create zero-copy DPDK memory pool. NOP if zero-copy is disabled. */
-	if (params->type == ODP_POOL_PACKET && _odp_dpdk_pool_create(pool)) {
+	if (type == ODP_POOL_PACKET && _odp_dpdk_pool_create(pool)) {
 		ODP_ERR("Creating DPDK packet pool failed\n");
 		goto error;
 	}
@@ -1047,7 +1056,7 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 	info->name = pool->name;
 	info->params = pool->params;
 
-	if (pool->params.type == ODP_POOL_PACKET)
+	if (pool->type == ODP_POOL_PACKET)
 		info->pkt.max_num = pool->num;
 
 	info->min_data_addr = (uintptr_t)pool->base_addr;
@@ -1314,10 +1323,10 @@ void odp_pool_print(odp_pool_t pool_hdl)
 		  odp_pool_to_u64(pool->pool_hdl));
 	ODP_PRINT("  name            %s\n", pool->name);
 	ODP_PRINT("  pool type       %s\n",
-		  pool->params.type == ODP_POOL_BUFFER ? "buffer" :
-		  (pool->params.type == ODP_POOL_PACKET ? "packet" :
-		   (pool->params.type == ODP_POOL_TIMEOUT ? "timeout" :
-		    (pool->params.type == ODP_POOL_VECTOR ? "vector" :
+		  pool->type == ODP_POOL_BUFFER ? "buffer" :
+		  (pool->type == ODP_POOL_PACKET ? "packet" :
+		   (pool->type == ODP_POOL_TIMEOUT ? "timeout" :
+		    (pool->type == ODP_POOL_VECTOR ? "vector" :
 		     "unknown"))));
 	ODP_PRINT("  pool shm        %" PRIu64 "\n",
 		  odp_shm_to_u64(pool->shm));

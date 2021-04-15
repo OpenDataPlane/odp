@@ -39,7 +39,7 @@ odp_packet_vector_t odp_packet_vector_alloc(odp_pool_t pool)
 {
 	odp_buffer_t buf;
 
-	ODP_ASSERT(pool_entry_from_hdl(pool)->params.type == ODP_POOL_VECTOR);
+	ODP_ASSERT(pool_entry_from_hdl(pool)->type == ODP_POOL_VECTOR);
 
 	buf = odp_buffer_alloc(pool);
 	if (odp_unlikely(buf == ODP_BUFFER_INVALID))
