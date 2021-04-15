@@ -174,6 +174,108 @@ int odp_pool_stats(odp_pool_t pool, odp_pool_stats_t *stats);
 int odp_pool_stats_reset(odp_pool_t pool);
 
 /**
+ * Query capabilities of an external memory pool type
+ *
+ * Outputs pool capabilities on success. Returns failure if a bad pool type is used. When
+ * the requested pool type is valid but not supported, sets the value of 'max_pools' to zero.
+ *
+ * @param      type    Pool type
+ * @param[out] capa    Pointer to capability structure for output
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_pool_ext_capability(odp_pool_type_t type, odp_pool_ext_capability_t *capa);
+
+/**
+ * Initialize pool params
+ *
+ * Initialize an odp_pool_ext_param_t to its default values for all fields
+ * based on the selected pool type.
+ *
+ * @param type     Pool type
+ * @param param    odp_pool_ext_param_t to be initialized
+ */
+void odp_pool_ext_param_init(odp_pool_type_t type, odp_pool_ext_param_t *param);
+
+/**
+ * Create an external memory pool
+ *
+ * This routine is used to create a pool. The use of pool name is optional.
+ * Unique names are not required. However, odp_pool_lookup() returns only a
+ * single matching pool. Use odp_pool_ext_param_init() to initialize parameters
+ * into their default values.
+ *
+ * @param name     Name of the pool or NULL. Maximum string length is ODP_POOL_NAME_LEN.
+ * @param param    Pool parameters
+ *
+ * @return Pool handle on success
+ * @retval ODP_POOL_INVALID on failure
+ */
+odp_pool_t odp_pool_ext_create(const char *name, const odp_pool_ext_param_t *param);
+
+/**
+ * Populate external memory pool with buffer memory
+ *
+ * Populate can be called multiple times to add memory buffers into the pool. Application must
+ * populate the pool with the exact number of buffers specified in pool parameters. The pool is
+ * ready to be used for allocations only after all populate calls have returned successfully.
+ * Application marks the last populate call with ODP_POOL_POPULATE_DONE flag.
+ *
+ * Depending on pool usage (and ODP implementation), the memory may need to be accessible by
+ * HW accelerators. Application may use e.g. odp_shm_reserve() with ODP_SHM_HW_ACCESS flag to
+ * ensure HW access. The memory area used for one pool, starting from (or before) the lowest
+ * addressed buffer and extending to the end (or after) of the highest addressed buffer, must not
+ * overlap with the memory area used for any other pool. Pool capabilities
+ * (odp_pool_ext_capability_t) specify the minimum alignment of the memory area.
+ *
+ * Pool type defines memory buffer layout and where the buffer pointer (buf[N]) points
+ * in the layout. Pool capabilities specify requirements for buffer size, layout and
+ * pointer alignment.
+ *
+ * For packet pools, packet buffer layout is shown below. The packet headroom (odp_packet_head())
+ * starts immediately after the application header. For a segmented packet, each segment has this
+ * same layout. Buffer size includes all headers, headroom, data, tailroom and trailer.
+ *
+ * @code{.unparsed}
+ *
+ *                      +-------------------------------+    --                     --
+ *          buf[N] ---> |                               |     |                      |
+ *                      | ODP header (optional)         |      > odp_header_size     |
+ *                      |                               |     |                      |
+ *                      +-------------------------------+    --                      |
+ *                      |                               |     |                      |
+ *                      | Application header (optional) |      > app_header_size     |
+ *                      |                               |     |                       > buf_size
+ *                      +-------------------------------+    --                      |
+ * odp_packet_head()--> |                               |                            |
+ *                      | Packet data                   |                            |
+ *                      |  (headroom, data, tailroom)   |                            |
+ *                      |                               |                            |
+ *                      |                               |                            |
+ *                      +-------------------------------+    --                      |
+ *                      |                               |     |                      |
+ *                      | ODP trailer (optional)        |      > odp_trailer_size    |
+ *                      |                               |     |                      |
+ *                      +-------------------------------+    --                     --
+ *
+ * @endcode
+ *
+ * @param pool      External memory pool
+ * @param buf       Buffer pointers to be populated into the pool
+ * @param buf_size  Buffer size
+ * @param num       Number of buffer pointers
+ * @param flags     0:                      No flags
+ *                  ODP_POOL_POPULATE_DONE: Marks the last populate call and completes the pool
+ *                                          population phase
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_pool_ext_populate(odp_pool_t pool, void *buf[], uint32_t buf_size, uint32_t num,
+			  uint32_t flags);
+
+/**
  * @}
  */
 

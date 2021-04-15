@@ -507,6 +507,204 @@ typedef struct odp_pool_param_t {
 } odp_pool_param_t;
 
 /**
+ * External memory pool population done
+ *
+ * Application uses this flag to mark the last odp_pool_ext_populate() call, which completes
+ * external memory pool population phase.
+ */
+#define ODP_POOL_POPULATE_DONE 0x1
+
+/**
+ * External memory pool capabilities
+ *
+ * Generic fields (not specific to a pool type) contain capabilities
+ * of the requested pool type.
+ */
+typedef struct odp_pool_ext_capability_t {
+	/** Requested pool type
+	 *
+	 *  Pool type from the odp_pool_ext_capability() call is recorded here for reference. */
+	odp_pool_type_t type;
+
+	/** Maximum number of pools
+	 *
+	 *  Maximum number of external memory pools of the requested type. */
+	uint32_t max_pools;
+
+	/** Minimum size of thread local cache */
+	uint32_t min_cache_size;
+
+	/** Maximum size of thread local cache */
+	uint32_t max_cache_size;
+
+	/** Supported statistics counters */
+	odp_pool_stats_opt_t stats;
+
+	/** Packet pool capabilities  */
+	struct {
+		/** Maximum number of packet buffers */
+		uint32_t max_num_buf;
+
+		/** Maximum packet buffer size in bytes */
+		uint32_t max_buf_size;
+
+		/** ODP header size in bytes
+		 *
+		 *  Application must reserve this many bytes from the start of a packet buffer
+		 *  for ODP implementation usage. When the value is zero, ODP implementation does
+		 *  not need header space to be reserved for it. Application will not modify this
+		 *  memory area (after buffer populate call).
+		 */
+		uint32_t odp_header_size;
+
+		/** ODP trailer size in bytes
+		 *
+		 *  Application must reserve this many bytes from the end of a packet buffer
+		 *  for ODP implementation usage. When the value is zero, ODP implementation does
+		 *  not need trailer space to be reserved for it. Application will not modify this
+		 *  memory area (after buffer populate call).
+		 */
+		uint32_t odp_trailer_size;
+
+		/** Minimum packet pool memory area alignment in bytes
+		 *
+		 *  The memory area used for a packet pool, starting from (or before) the lowest
+		 *  addressed buffer and extending to the end (or after) of the highest addressed
+		 *  buffer, must have at least this (power of two) alignment. The value is 1 when
+		 *  there is no alignment requirement.
+		 */
+		uint32_t min_mem_align;
+
+		/** Minimum packet buffer pointer alignment in bytes
+		 *
+		 *  Packet buffer pointers populated into a pool must be evenly divisible with
+		 *  this value. The value is 1 when there is no alignment requirement.
+		 */
+		uint32_t min_buf_align;
+
+		/** Minimum packet headroom alignment in bytes
+		 *
+		 *  Packet buffers populated into a pool must have their headroom start address
+		 *  evenly divisible with this value. The value is 1 when there is no alignment
+		 *  requirement.
+		 */
+		uint32_t min_head_align;
+
+		/** Packet buffer alignment flags
+		 *
+		 *  These flags specify additional alignment requirements for packet buffers.
+		 *  If not stated otherwise, min_buf_align and min_head_align alignment
+		 *  requirements apply also.
+		 */
+		struct {
+			/** Packet buffers are size aligned
+			 *
+			 *  When set, packet buffer pointers must be aligned to the buffer size.
+			 *  For example, if the buffer size would be 2304 bytes (0x900),
+			 *  each buffer start address must be a multiple of 0x900
+			 *  (e.g. 0x12000900, 0x12001200, 0x12004800, etc). */
+			uint16_t buf_size_aligned : 1;
+
+		};
+
+		/** Maximum headroom parameter value
+		 *
+		 *  The packet pool headroom parameter may not exceed this value.
+		 */
+		uint32_t max_headroom;
+
+		/** Maximum headroom size in bytes
+		 *
+		 *  Any newly allocated packet will have at most this much headroom. Application
+		 *  may use this to ensure that packet buffer size is large enough to fit both
+		 *  buffer headers, headroom and data.
+		 */
+		uint32_t max_headroom_size;
+
+		/** Maximum number of segments per packet */
+		uint32_t max_segs_per_pkt;
+
+		/** Maximum user area size in bytes */
+		uint32_t max_uarea_size;
+
+	} pkt;
+
+} odp_pool_ext_capability_t;
+
+/**
+ * External memory pool parameters
+ */
+typedef struct odp_pool_ext_param_t {
+	/** Pool type */
+	odp_pool_type_t type;
+
+	/** Maximum thread local cache size for the pool
+	 *
+	 *  Valid value range is from min_cache_size to max_cache_size capability.
+	 *  The default value is implementation specific. See odp_pool_param_t (buf.cache_size)
+	 *  for more detailed documentation.
+	 */
+	uint32_t cache_size;
+
+	/**
+	 * Pool statistics configuration
+	 *
+	 * All pool statistics are disabled by default. For optimal performance, enable only those
+	 * counters that are actually used. Counters may be read with odp_pool_stats().
+	 */
+	odp_pool_stats_opt_t stats;
+
+	/** Parameters for packet pools */
+	struct {
+		/** Number of packet buffers
+		 *
+		 *  The number of packet buffers application will populate into the pool.
+		 *  The maximum value is defined by pool capability pkt.max_num_buf.
+		 */
+		uint32_t num_buf;
+
+		/** Packet buffer size
+		 *
+		 *  Total buffer size in bytes including all headers, trailer, head-/tailroom
+		 *  and data. This is calculated from buffer start pointer to the end of buffer
+		 *  data area (including tailroom) or ODP trailer (see odp_trailer_size capability).
+		 *  All packet buffers application populates into the pool are of this size.
+		 */
+		uint32_t buf_size;
+
+		/** Application header size
+		 *
+		 *  Application reserves this many bytes for its own buffer header usage.
+		 *  The application header follows immediately the ODP buffer header
+		 *  (see odp_header_size capability). ODP implementation will not modify this
+		 *  memory area. The default value is 0.
+		 */
+		uint32_t app_header_size;
+
+		/** User area size
+		 *
+		 *  Per packet user area size in bytes. As with normal pools, user area location
+		 *  is ODP implementation specific. Use zero if no user area is needed.
+		 *  The maximum value is defined by pool capability pkt.max_uarea_size.
+		 *  The default value is 0.
+		 */
+		uint32_t uarea_size;
+
+		/** Minimum headroom size
+		 *
+		 *  Each newly allocated packet from the pool must have at least this much
+		 *  headroom in bytes. The configuration applies to both ODP packet input and
+		 *  application allocated packets. Use zero if headroom is not needed. The maximum
+		 *  value is defined by pool capability pkt.max_headroom. Implementation may
+		 *  round up the initial headroom size up to pool capability pkt.max_headroom_size.
+		 */
+		uint32_t headroom;
+
+	} pkt;
+
+} odp_pool_ext_param_t;
+
+/**
  * Pool information struct
  * Used to get information about a pool.
  */
@@ -514,8 +712,21 @@ typedef struct odp_pool_info_t {
 	/** Pool name */
 	const char *name;
 
-	/** Copy of pool parameters */
-	odp_pool_param_t params;
+	/** External memory pool
+	 *
+	 *  0: Pool is a normal pool
+	 *  1: Pool is an external memory pool
+	 */
+	odp_bool_t pool_ext;
+
+	/** Pool parameters union */
+	union {
+		/** Copy of pool parameters. This is set when pool_ext is 0. */
+		odp_pool_param_t params;
+
+		/** Copy of external memory pool parameters. This is set when pool_ext is 1. */
+		odp_pool_ext_param_t pool_ext_param;
+	};
 
 	/** Additional info for packet pools */
 	struct {
