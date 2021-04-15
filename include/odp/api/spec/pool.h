@@ -320,11 +320,34 @@ typedef struct odp_pool_pkt_subparam_t {
 } odp_pool_pkt_subparam_t;
 
 /**
+ * Pool types
+ */
+typedef enum odp_pool_type_t {
+	/** Packet pool*/
+	ODP_POOL_PACKET = ODP_EVENT_PACKET,
+
+	/** Buffer pool */
+	ODP_POOL_BUFFER = ODP_EVENT_BUFFER,
+
+	/** Timeout pool */
+	ODP_POOL_TIMEOUT = ODP_EVENT_TIMEOUT,
+
+	/** Vector pool
+	 *
+	 * The pool to hold a vector of general type such as odp_packet_t.
+	 * Each vector holds an array of generic types of the same type.
+	 * @see ODP_EVENT_PACKET_VECTOR
+	 */
+	ODP_POOL_VECTOR = (ODP_POOL_TIMEOUT + 1)
+
+} odp_pool_type_t;
+
+/**
  * Pool parameters
  */
 typedef struct odp_pool_param_t {
 	/** Pool type */
-	int type;
+	odp_pool_type_t type;
 
 	/** Parameters for buffer pools */
 	struct {
@@ -495,20 +518,6 @@ typedef struct odp_pool_param_t {
 	 */
 	odp_pool_stats_opt_t stats;
 } odp_pool_param_t;
-
-/** Packet pool*/
-#define ODP_POOL_PACKET       ODP_EVENT_PACKET
-/** Buffer pool */
-#define ODP_POOL_BUFFER       ODP_EVENT_BUFFER
-/** Timeout pool */
-#define ODP_POOL_TIMEOUT      ODP_EVENT_TIMEOUT
-/** Vector pool
- *
- * The pool to hold a vector of general type such as odp_packet_t.
- * Each vector holds an array of generic types of the same type.
- * @see ODP_EVENT_PACKET_VECTOR
- */
-#define ODP_POOL_VECTOR	      (ODP_POOL_TIMEOUT + 1)
 
 /**
  * Create a pool
