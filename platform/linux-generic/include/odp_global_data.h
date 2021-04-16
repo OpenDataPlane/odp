@@ -85,6 +85,7 @@ typedef struct odp_global_data_ro_t {
 typedef struct odp_global_data_rw_t {
 	odp_bool_t dpdk_initialized;
 	odp_bool_t inline_timers;
+	odp_bool_t schedule_configured;
 
 } odp_global_data_rw_t;
 

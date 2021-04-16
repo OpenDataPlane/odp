@@ -86,9 +86,6 @@ int _odp_sched_cb_pktin_poll(int pktio_index, int pktin_index,
 int _odp_sched_cb_pktin_poll_one(int pktio_index, int rx_queue, odp_event_t evts[]);
 void _odp_sched_cb_pktio_stop_finalize(int pktio_index);
 
-/* For debugging */
-extern int _odp_schedule_configured;
-
 /* API functions */
 typedef struct {
 	uint64_t (*schedule_wait_time)(uint64_t ns);

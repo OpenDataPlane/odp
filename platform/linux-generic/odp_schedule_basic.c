@@ -35,6 +35,7 @@
 #include <odp_queue_basic_internal.h>
 #include <odp_libconfig_internal.h>
 #include <odp/api/plat/queue_inlines.h>
+#include <odp_global_data.h>
 
 #include <string.h>
 
@@ -591,7 +592,7 @@ static int schedule_create_queue(uint32_t queue_index,
 	int prio = prio_level_from_api(sched_param->prio);
 	uint8_t spread = spread_index(queue_index);
 
-	if (_odp_schedule_configured == 0) {
+	if (odp_global_rw->schedule_configured == 0) {
 		ODP_ERR("Scheduler has not been configured\n");
 		return -1;
 	}
