@@ -27,6 +27,7 @@
 #include <odp_ring_u32_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_queue_basic_internal.h>
+#include <odp_global_data.h>
 
 #include <string.h>
 
@@ -437,7 +438,7 @@ static int create_queue(uint32_t qi, const odp_schedule_param_t *sched_param)
 	odp_schedule_group_t group = sched_param->group;
 	int prio = 0;
 
-	if (_odp_schedule_configured == 0) {
+	if (odp_global_rw->schedule_configured == 0) {
 		ODP_ERR("Scheduler has not been configured\n");
 		return -1;
 	}

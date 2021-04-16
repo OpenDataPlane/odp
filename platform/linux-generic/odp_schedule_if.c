@@ -9,6 +9,7 @@
 #include <odp_schedule_if.h>
 #include <odp_init_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_global_data.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -24,7 +25,6 @@ extern const schedule_api_t _odp_schedule_scalable_api;
 
 const schedule_fn_t *_odp_sched_fn;
 const schedule_api_t *_odp_sched_api;
-int _odp_schedule_configured;
 
 uint64_t odp_schedule_wait_time(uint64_t ns)
 {
@@ -48,7 +48,7 @@ int odp_schedule_config(const odp_schedule_config_t *config)
 	int ret;
 	odp_schedule_config_t defconfig;
 
-	if (_odp_schedule_configured) {
+	if (odp_global_rw->schedule_configured) {
 		ODP_ERR("Scheduler has been configured already\n");
 		return -1;
 	}
@@ -61,14 +61,14 @@ int odp_schedule_config(const odp_schedule_config_t *config)
 	ret = _odp_sched_api->schedule_config(config);
 
 	if (ret >= 0)
-		_odp_schedule_configured = 1;
+		odp_global_rw->schedule_configured = 1;
 
 	return ret;
 }
 
 odp_event_t odp_schedule(odp_queue_t *from, uint64_t wait)
 {
-	ODP_ASSERT(_odp_schedule_configured);
+	ODP_ASSERT(odp_global_rw->schedule_configured);
 
 	return _odp_sched_api->schedule(from, wait);
 }
@@ -76,7 +76,7 @@ odp_event_t odp_schedule(odp_queue_t *from, uint64_t wait)
 int odp_schedule_multi(odp_queue_t *from, uint64_t wait, odp_event_t events[],
 		       int num)
 {
-	ODP_ASSERT(_odp_schedule_configured);
+	ODP_ASSERT(odp_global_rw->schedule_configured);
 
 	return _odp_sched_api->schedule_multi(from, wait, events, num);
 }
