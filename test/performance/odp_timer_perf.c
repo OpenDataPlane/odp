@@ -1,4 +1,4 @@
-/* Copyright (c) 2019-2020, Nokia
+/* Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -110,7 +110,7 @@ typedef struct test_global_t {
 
 } test_global_t;
 
-test_global_t test_global;
+test_global_t *test_global;
 
 static void print_usage(void)
 {
@@ -946,35 +946,29 @@ static void sig_handler(int signo)
 {
 	(void)signo;
 
-	odp_atomic_add_u32(&test_global.exit_test, MAX_TIMER_POOLS);
+	if (test_global == NULL)
+		return;
+	odp_atomic_add_u32(&test_global->exit_test, MAX_TIMER_POOLS);
 }
 
 int main(int argc, char **argv)
 {
+	odph_helper_options_t helper_options;
 	odp_instance_t instance;
 	odp_init_t init;
+	odp_shm_t shm;
 	test_global_t *global;
 	test_options_t *test_options;
 	int i, shared, mode;
 
-	global = &test_global;
-	memset(global, 0, sizeof(test_global_t));
-	odp_atomic_init_u32(&global->exit_test, 0);
-	odp_atomic_init_u32(&global->timers_started, 0);
-
-	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
-		global->thread_arg[i].global = global;
-		global->thread_arg[i].worker_idx = i;
-	}
-
 	signal(SIGINT, sig_handler);
 
-	if (parse_options(argc, argv, &global->test_options))
-		return -1;
-
-	test_options = &global->test_options;
-	shared = test_options->shared;
-	mode   = test_options->mode;
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		ODPH_ERR("Reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	/* List features not to be used */
 	odp_init_param_init(&init);
@@ -983,6 +977,8 @@ int main(int argc, char **argv)
 	init.not_used.feat.crypto   = 1;
 	init.not_used.feat.ipsec    = 1;
 	init.not_used.feat.tm       = 1;
+
+	init.mem_model = helper_options.mem_model;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init, NULL)) {
@@ -995,6 +991,35 @@ int main(int argc, char **argv)
 		ODPH_ERR("Local init failed.\n");
 		return -1;
 	}
+
+	shm = odp_shm_reserve("timer_perf_global", sizeof(test_global_t), ODP_CACHE_LINE_SIZE, 0);
+	if (shm == ODP_SHM_INVALID) {
+		ODPH_ERR("Shared mem reserve failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	global = odp_shm_addr(shm);
+	if (global == NULL) {
+		ODPH_ERR("Shared mem alloc failed\n");
+		exit(EXIT_FAILURE);
+	}
+	test_global = global;
+
+	memset(global, 0, sizeof(test_global_t));
+	odp_atomic_init_u32(&global->exit_test, 0);
+	odp_atomic_init_u32(&global->timers_started, 0);
+
+	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
+		global->thread_arg[i].global = global;
+		global->thread_arg[i].worker_idx = i;
+	}
+
+	if (parse_options(argc, argv, &global->test_options))
+		return -1;
+
+	test_options = &global->test_options;
+	shared = test_options->shared;
+	mode   = test_options->mode;
 
 	odp_sys_info_print();
 
@@ -1051,6 +1076,11 @@ int main(int argc, char **argv)
 		print_stat_set_cancel_mode(global);
 
 	destroy_timer_pool(global);
+
+	if (odp_shm_free(shm)) {
+		ODPH_ERR("Shared mem free failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	if (odp_term_local()) {
 		ODPH_ERR("Term local failed.\n");
