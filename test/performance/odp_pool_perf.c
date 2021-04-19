@@ -1,5 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2021, Nokia
  *
  * All rights reserved.
  *
@@ -47,8 +47,6 @@ typedef struct test_global_t {
 	test_stat_t stat[ODP_THREAD_COUNT_MAX];
 
 } test_global_t;
-
-test_global_t test_global;
 
 static void print_usage(void)
 {
@@ -543,16 +541,18 @@ static void print_stat(test_global_t *global)
 
 int main(int argc, char **argv)
 {
+	odph_helper_options_t helper_options;
 	odp_instance_t instance;
 	odp_init_t init;
+	odp_shm_t shm;
 	test_global_t *global;
 
-	global = &test_global;
-	memset(global, 0, sizeof(test_global_t));
-	global->pool = ODP_POOL_INVALID;
-
-	if (parse_options(argc, argv, &global->test_options))
-		return -1;
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		ODPH_ERR("Error: Reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	/* List features not to be used */
 	odp_init_param_init(&init);
@@ -563,6 +563,8 @@ int main(int argc, char **argv)
 	init.not_used.feat.schedule = 1;
 	init.not_used.feat.timer    = 1;
 	init.not_used.feat.tm       = 1;
+
+	init.mem_model = helper_options.mem_model;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init, NULL)) {
@@ -575,6 +577,24 @@ int main(int argc, char **argv)
 		printf("Error: Local init failed.\n");
 		return -1;
 	}
+
+	shm = odp_shm_reserve("pool_perf_global", sizeof(test_global_t), ODP_CACHE_LINE_SIZE, 0);
+	if (shm == ODP_SHM_INVALID) {
+		ODPH_ERR("Error: Shared mem reserve failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	global = odp_shm_addr(shm);
+	if (global == NULL) {
+		ODPH_ERR("Error: Shared mem alloc failed\n");
+		exit(EXIT_FAILURE);
+	}
+
+	memset(global, 0, sizeof(test_global_t));
+	global->pool = ODP_POOL_INVALID;
+
+	if (parse_options(argc, argv, &global->test_options))
+		return -1;
 
 	odp_sys_info_print();
 
@@ -595,6 +615,11 @@ int main(int argc, char **argv)
 	if (odp_pool_destroy(global->pool)) {
 		printf("Error: Pool destroy failed.\n");
 		return -1;
+	}
+
+	if (odp_shm_free(shm)) {
+		ODPH_ERR("Error: Shared mem free failed.\n");
+		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_local()) {
