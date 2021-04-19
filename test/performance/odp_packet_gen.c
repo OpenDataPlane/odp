@@ -1735,6 +1735,7 @@ static void sig_handler(int signo)
 
 int main(int argc, char **argv)
 {
+	odph_helper_options_t helper_options;
 	odp_instance_t instance;
 	odp_init_t init;
 	test_global_t *global;
@@ -1744,6 +1745,13 @@ int main(int argc, char **argv)
 
 	signal(SIGINT, sig_handler);
 
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		ODPH_ERR("Error: reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
 	/* List features not to be used */
 	odp_init_param_init(&init);
 	init.not_used.feat.cls      = 1;
@@ -1752,6 +1760,8 @@ int main(int argc, char **argv)
 	init.not_used.feat.ipsec    = 1;
 	init.not_used.feat.timer    = 1;
 	init.not_used.feat.tm       = 1;
+
+	init.mem_model = helper_options.mem_model;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init, NULL)) {

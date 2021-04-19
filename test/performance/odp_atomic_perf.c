@@ -1286,11 +1286,19 @@ static test_case_t test_suite[] = {
 
 int main(int argc, char **argv)
 {
+	odph_helper_options_t helper_options;
 	odp_instance_t instance;
 	odp_init_t init;
 	odp_shm_t shm;
 	test_options_t test_options;
 	int num_tests, i;
+
+	/* Let helper collect its own arguments (e.g. --odph_proc) */
+	argc = odph_parse_options(argc, argv);
+	if (odph_options(&helper_options)) {
+		ODPH_ERR("Error: reading ODP helper options failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	if (parse_options(argc, argv, &test_options))
 		exit(EXIT_FAILURE);
@@ -1305,6 +1313,8 @@ int main(int argc, char **argv)
 	init.not_used.feat.stash    = 1;
 	init.not_used.feat.timer    = 1;
 	init.not_used.feat.tm       = 1;
+
+	init.mem_model = helper_options.mem_model;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init, NULL)) {
