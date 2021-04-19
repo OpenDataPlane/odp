@@ -600,11 +600,13 @@ static int ipsec_process_in(const ipsec_test_part *part,
 		CU_ASSERT_FATAL(*pkto != ODP_PACKET_INVALID);
 		CU_ASSERT(odp_packet_subtype(*pkto) == ODP_EVENT_PACKET_IPSEC);
 	} else if (ODP_IPSEC_OP_MODE_ASYNC == suite_context.inbound_op_mode) {
-		pkt = ipsec_packet(part->pkt_in);
-		num_out = odp_ipsec_in_enq(&pkt, 1, &param);
-		CU_ASSERT_EQUAL(1, num_out);
+		int consumed;
 
-		num_out = (num_out == 1) ?  1 : 0;
+		pkt = ipsec_packet(part->pkt_in);
+		consumed = odp_ipsec_in_enq(&pkt, 1, &param);
+		CU_ASSERT_EQUAL(1, consumed);
+		if (consumed <= 0)
+			num_out = 0;
 
 		for (i = 0; i < num_out; i++) {
 			odp_event_t event;
@@ -625,7 +627,8 @@ static int ipsec_process_in(const ipsec_test_part *part,
 		}
 	} else {
 		CU_ASSERT_EQUAL(1, send_pkts(part, 1));
-		CU_ASSERT_EQUAL(1, recv_pkts_inline(part, pkto));
+		if (part->num_pkt)
+			CU_ASSERT_EQUAL(part->num_pkt, recv_pkts_inline(part, pkto));
 	}
 
 	return num_out;
@@ -968,10 +971,12 @@ int ipsec_check_out(const ipsec_test_part *part, odp_ipsec_sa_t sa,
 
 void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 {
-	int num_out = part->num_pkt;
-	odp_packet_t pkto[num_out];
+	odp_packet_t pkto[MAX_FRAGS];
+	int num_out;
 
 	num_out = ipsec_process_in(part, sa, pkto);
+	CU_ASSERT_EQUAL(num_out, part->num_pkt);
+
 	verify_in(part, sa, pkto);
 }
 
