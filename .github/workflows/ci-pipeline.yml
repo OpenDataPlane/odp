@@ -66,12 +66,12 @@ jobs:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        conf: ['', 'CFLAGS=-O3', 'CFLAGS=-O1', 'CFLAGS=-O0 --enable-debug=full', '--enable-lto', '--enable-lto --disable-abi-compat', '--enable-pcapng-support']
+        conf: ['', 'CFLAGS=-O3', 'CFLAGS=-O1', 'CFLAGS=-O0 --enable-debug=full', '--enable-lto', '--enable-lto --enable-abi-compat', '--enable-pcapng-support']
         exclude:
           - cc: clang
             conf: '--enable-lto'
           - cc: clang
-            conf: '--enable-lto --disable-abi-compat'
+            conf: '--enable-lto --enable-abi-compat'
     steps:
       - uses: actions/checkout@v2
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
@@ -92,9 +92,9 @@ jobs:
         run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
 
-      - name: --disable-abi-compat
+      - name: --enable-abi-compat
         env:
-          CONF: "--disable-abi-compat"
+          CONF: "--enable-abi-compat"
         run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
 
@@ -112,7 +112,7 @@ jobs:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        conf: ['', '--disable-abi-compat']
+        conf: ['', '--enable-abi-compat']
     steps:
       - uses: actions/checkout@v2
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
@@ -126,7 +126,7 @@ jobs:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        conf: ['', '--disable-abi-compat']
+        conf: ['', '--enable-abi-compat']
     steps:
       - uses: actions/checkout@v2
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
@@ -140,7 +140,7 @@ jobs:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        conf: ['', '--disable-abi-compat']
+        conf: ['', '--enable-abi-compat']
     steps:
       - uses: actions/checkout@v2
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
@@ -155,7 +155,7 @@ jobs:
       fail-fast: false
       matrix:
         cc: [gcc]
-        conf: ['', '--disable-abi-compat']
+        conf: ['', '--enable-abi-compat']
     steps:
       - uses: actions/checkout@v2
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
@@ -171,10 +171,11 @@ jobs:
       matrix:
         cc: [gcc, clang]
         os: ['centos_7', 'centos_8', 'ubuntu_16.04']
+        conf: ['--enable-abi-compat']
     steps:
       - uses: actions/checkout@v2
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
-               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${{matrix.os}}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${{matrix.os}}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
 
   Build_gcc-10:
     runs-on: ubuntu-18.04
@@ -223,7 +224,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        conf: ['--enable-user-guides', '--enable-user-guides --disable-abi-compat']
+        conf: ['--enable-user-guides', '--enable-user-guides --enable-abi-compat']
     steps:
     - uses: actions/checkout@v2
     - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
@@ -240,7 +241,7 @@ jobs:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        conf: ['', '--disable-abi-compat', '--enable-deprecated', '--enable-dpdk-zero-copy --disable-static-applications', '--disable-host-optimization', '--disable-host-optimization --disable-abi-compat', '--without-openssl --without-pcap']
+        conf: ['', '--enable-abi-compat', '--enable-deprecated', '--enable-dpdk-zero-copy --disable-static-applications', '--disable-host-optimization', '--disable-host-optimization --enable-abi-compat', '--without-openssl --without-pcap']
     steps:
       - uses: actions/checkout@v2
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
