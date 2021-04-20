@@ -1747,8 +1747,8 @@ int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 	odp_packet_hdr_t *dsthdr = packet_hdr(dstpkt);
 	pool_t *src_pool = srchdr->buf_hdr.pool_ptr;
 	pool_t *dst_pool = dsthdr->buf_hdr.pool_ptr;
-	uint32_t src_uarea_size = src_pool->params.pkt.uarea_size;
-	uint32_t dst_uarea_size = dst_pool->params.pkt.uarea_size;
+	uint32_t src_uarea_size = src_pool->param_uarea_size;
+	uint32_t dst_uarea_size = dst_pool->param_uarea_size;
 
 	dsthdr->input = srchdr->input;
 	dsthdr->dst_queue = srchdr->dst_queue;
