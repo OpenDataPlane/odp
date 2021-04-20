@@ -704,7 +704,7 @@ Embedded applications will typically work with a copy of ODP downloaded from
 a git repository so that it can be configured for the application's precise
 needs. To specify that the application wishes to use the embedded profile:
 
-`./configure --enable-abi-compat=no ...`
+`./configure --disable-abi-compat ...`
 
 should be used as part of the ODP configuration options. This allows
 applications to use inline forms of ODP APIs to give optimal performance
@@ -724,11 +724,7 @@ that is installed via `sudo apt-get install` or equivalent command).
 When using a copy of ODP downloaded from a repository, the cloud profile is
 selected at configure time:
 
-`./configure --enable-abi-compat=yes ...`
-
-Note that `--enable-abi-compat=yes` is the default, so this need not be
-specified. Unless `no` is specified for this option, the result will be
-applications designed to run in the cloud profile.
+`./configure --enable-abi-compat ...`
 
 === ABI Characteristics
 An ABI consists of several conventions that ensure that a program compiled
