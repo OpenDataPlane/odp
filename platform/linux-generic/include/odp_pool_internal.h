@@ -73,6 +73,7 @@ typedef struct pool_t {
 	uint32_t         seg_len;
 	uint32_t         max_seg_len;
 	uint32_t         max_len;
+	uint32_t         param_uarea_size;
 	uint32_t         uarea_size;
 	uint32_t         block_size;
 	uint32_t         block_offset;
