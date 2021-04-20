@@ -42,6 +42,9 @@ typedef struct ODP_ALIGNED_CACHE {
 	/* Ring data: buffer handles */
 	odp_buffer_hdr_t *buf_hdr[CONFIG_POOL_MAX_NUM + 1];
 
+	/* Index to pointer look-up table for external memory pool */
+	odp_buffer_hdr_t *buf_hdr_by_index[0];
+
 } pool_ring_t;
 
 /* Callback function for pool destroy */
@@ -77,9 +80,11 @@ typedef struct pool_t {
 	uint32_t         uarea_size;
 	uint32_t         block_size;
 	uint32_t         block_offset;
+	uint32_t         num_populated;
 	uint8_t         *base_addr;
 	uint8_t         *max_addr;
 	uint8_t         *uarea_base_addr;
+	odp_pool_ext_param_t ext_param;
 
 	/* Used by DPDK zero-copy pktio */
 	uint32_t         dpdk_elt_size;
