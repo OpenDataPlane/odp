@@ -15,7 +15,7 @@ integrations:
 
 env:
     - CONF="--disable-test-perf"
-    - CONF="--disable-abi-compat --disable-test-perf"
+    - CONF="--enable-abi-compat --disable-test-perf"
 
 build:
   ci:
