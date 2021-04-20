@@ -226,27 +226,28 @@ AC_SUBST(PKGCONFIG_VERSION)
 ##########################################################################
 # Enable/disable ABI compatible build
 ##########################################################################
-ODP_ABI_COMPAT=1
-abi_compat=yes
+ODP_ABI_COMPAT=0
+abi_compat=no
 AC_ARG_ENABLE([abi-compat],
-    [AS_HELP_STRING([--disable-abi-compat],
-		    [disables ABI compatible mode, enables inline code in header files]
-		    [[default=enabled]])],
-    [if test "x$enableval" = "xno"; then
-	ODP_ABI_COMPAT=0
-	abi_compat=no
-
-	#if there is no ABI compatibility the .so numbers are meaningless
+    [AS_HELP_STRING([--enable-abi-compat],
+		    [enables ABI compatible mode, disables inline code in header files]
+		    [[default=disabled]])],
+    [if test "x$enableval" = "xyes"; then
+	ODP_ABI_COMPAT=1
+	abi_compat=yes
+    fi])
+if test "x$abi_compat" = "xno" ; then
+	# If there is no ABI compatibility the .so numbers are meaningless
 	ODP_LIBSO_VERSION=0:0:0
 
-	# do not use -march=native with clang (due to possible failures on
+	# Do not use -march=native with clang (due to possible failures on
 	# clang optimizations).
 	$CC --version | grep -q clang
 
 	if test $? -ne 0; then
 		ODP_CHECK_CFLAG([-march=native])
 	fi
-    fi])
+fi
 AM_CONDITIONAL(ODP_ABI_COMPAT, [test "x$ODP_ABI_COMPAT" = "x1"])
 
 ##########################################################################

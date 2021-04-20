@@ -760,8 +760,8 @@ debugging easier.
 By default, building ODP only builds the code. When this option is specified,
 the supporting user documentation (including this file) is also built.
 
-`--disable-abi-compat`::
-By default ODP builds with support for the ODP ABI, which permits application
+`--enable-abi-compat`::
+Enable ABI compatible ODP build, which permits application
 binary portability across different ODP implementations targeting the same
 Instruction Set Architecture (ISA). While this is useful in cloud/host
 environments, it does involve some performance cost to provide binary
