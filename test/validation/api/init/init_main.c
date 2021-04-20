@@ -10,6 +10,7 @@
 
 #include <stdarg.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 /* Replacement abort function */
 static void ODP_NORETURN my_abort_func(void)
@@ -30,6 +31,20 @@ static int my_log_func(odp_log_level_t level __attribute__((unused)),
 	va_end(args);
 
 	return r;
+}
+
+static uint32_t my_log_thread_func_count;
+
+/* Thread specific log function */
+ODP_PRINTF_FORMAT(2, 3)
+static int my_log_thread_func(odp_log_level_t level, const char *fmt, ...)
+{
+	(void)level;
+	(void)fmt;
+
+	my_log_thread_func_count++;
+
+	return 0;
 }
 
 static void init_test_defaults(void)
@@ -89,6 +104,39 @@ static void init_test_log(void)
 
 	ret = odp_init_local(instance, ODP_THREAD_WORKER);
 	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_term_local();
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_term_global(instance);
+	CU_ASSERT(ret == 0);
+}
+
+static void init_test_log_thread(void)
+{
+	int ret;
+	odp_instance_t instance;
+	odp_init_t param;
+
+	odp_init_param_init(&param);
+
+	ret = odp_init_global(&instance, &param, NULL);
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_init_local(instance, ODP_THREAD_WORKER);
+	CU_ASSERT_FATAL(ret == 0);
+
+	/* Test that our print function is called when set. */
+	odp_log_thread_fn_set(my_log_thread_func);
+	my_log_thread_func_count = 0;
+	odp_sys_info_print();
+	CU_ASSERT(my_log_thread_func_count != 0);
+
+	/* Test that our print function is not called when not set. */
+	odp_log_thread_fn_set(NULL);
+	my_log_thread_func_count = 0;
+	odp_sys_info_print();
+	CU_ASSERT(my_log_thread_func_count == 0);
 
 	ret = odp_term_local();
 	CU_ASSERT_FATAL(ret == 0);
@@ -178,7 +226,8 @@ odp_testinfo_t testinfo[] = {
 	ODP_TEST_INFO(init_test_log),
 	ODP_TEST_INFO(init_test_num_thr),
 	ODP_TEST_INFO(init_test_feature_enabled),
-	ODP_TEST_INFO(init_test_feature_disabled)
+	ODP_TEST_INFO(init_test_feature_disabled),
+	ODP_TEST_INFO(init_test_log_thread),
 };
 
 odp_testinfo_t init_suite[] = {

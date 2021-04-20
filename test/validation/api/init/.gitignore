@@ -1,6 +1,7 @@
 init_defaults
 init_abort
 init_log
+init_log_thread
 init_num_thr
 init_feature_enabled
 init_feature_disabled
