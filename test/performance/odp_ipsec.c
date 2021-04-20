@@ -866,7 +866,12 @@ run_measure_one_config(ipsec_args_t *cargs,
 		odp_ipsec_status_t status;
 
 		while (1) {
-			odp_event_t event = odp_queue_deq(out_queue);
+			odp_event_t event;
+
+			if (cargs->poll)
+				event = odp_queue_deq(out_queue);
+			else
+				event = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
 
 			if (event != ODP_EVENT_INVALID &&
 			    odp_event_type(event) == ODP_EVENT_IPSEC_STATUS &&
