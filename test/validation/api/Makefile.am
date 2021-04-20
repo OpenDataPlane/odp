@@ -47,6 +47,7 @@ TESTS = \
 	init/init_defaults$(EXEEXT) \
 	init/init_abort$(EXEEXT) \
 	init/init_log$(EXEEXT) \
+	init/init_log_thread$(EXEEXT) \
 	init/init_num_thr$(EXEEXT) \
 	init/init_feature_enabled$(EXEEXT) \
 	init/init_feature_disabled$(EXEEXT) \
