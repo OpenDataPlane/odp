@@ -231,6 +231,8 @@ int _odp_thread_term_local(void)
 	if (type == ODP_THREAD_CONTROL && group_control)
 		_odp_sched_fn->thr_rem(ODP_SCHED_GROUP_CONTROL, id);
 
+	_odp_this_thread = NULL;
+
 	odp_spinlock_lock(&thread_globals->lock);
 	num = free_id(id);
 	odp_spinlock_unlock(&thread_globals->lock);
