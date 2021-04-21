@@ -561,7 +561,7 @@ static int ipsec_send_in_one(const ipsec_test_part *part,
 						subtype);
 				CU_ASSERT(part->out[i].status.error.sa_lookup);
 
-				pkto[i] = odp_ipsec_packet_from_event(ev);
+				pkto[i] = odp_packet_from_event(ev);
 				CU_ASSERT_FATAL(pkto[i] != ODP_PACKET_INVALID);
 				i++;
 				continue;
@@ -715,7 +715,7 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 						subtype);
 				CU_ASSERT(!part->out[i].status.error.all);
 
-				pkto[i] = odp_ipsec_packet_from_event(ev);
+				pkto[i] = odp_packet_from_event(ev);
 				CU_ASSERT_FATAL(pkto[i] != ODP_PACKET_INVALID);
 				i++;
 				continue;
