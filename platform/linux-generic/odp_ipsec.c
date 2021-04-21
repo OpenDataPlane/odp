@@ -2078,6 +2078,8 @@ int odp_ipsec_result(odp_ipsec_packet_result_t *result, odp_packet_t packet)
 
 odp_packet_t odp_ipsec_packet_from_event(odp_event_t ev)
 {
+	ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
+	ODP_ASSERT(odp_event_subtype(ev) == ODP_EVENT_PACKET_IPSEC);
 	return odp_packet_from_event(ev);
 }
 
