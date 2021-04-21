@@ -411,17 +411,56 @@ static pool_t *reserve_pool(uint32_t shmflags)
 	return NULL;
 }
 
+static void init_buffer_hdr(pool_t *pool, odp_buffer_hdr_t *buf_hdr, uint32_t buf_index,
+			    uint32_t hdr_len, uint8_t *data_ptr, void *uarea)
+{
+	odp_pool_type_t type = pool->type;
+
+	memset(buf_hdr, 0, hdr_len);
+
+	/* Initialize buffer metadata */
+	buf_hdr->index.u32    = 0;
+	buf_hdr->index.pool   = pool->pool_idx;
+	buf_hdr->index.buffer = buf_index;
+	buf_hdr->type         = type;
+	buf_hdr->event_type   = type;
+	buf_hdr->pool_ptr     = pool;
+	buf_hdr->uarea_addr   = uarea;
+	odp_atomic_init_u32(&buf_hdr->ref_cnt, 0);
+
+	/* Store base values for fast init */
+	buf_hdr->base_data = data_ptr;
+	buf_hdr->buf_end   = data_ptr + pool->seg_len + pool->tailroom;
+
+	/* Initialize segmentation metadata */
+	if (type == ODP_POOL_PACKET) {
+		odp_packet_hdr_t *pkt_hdr = (void *)buf_hdr;
+
+		pkt_hdr->seg_data  = data_ptr;
+		pkt_hdr->seg_len   = pool->seg_len;
+		pkt_hdr->seg_count = 1;
+		pkt_hdr->seg_next  = NULL;
+	}
+
+	/* Initialize event vector metadata */
+	if (type == ODP_POOL_VECTOR) {
+		odp_event_vector_hdr_t *vect_hdr = (void *)buf_hdr;
+
+		vect_hdr->size      = 0;
+		buf_hdr->event_type = ODP_EVENT_PACKET_VECTOR;
+	}
+}
+
 static void init_buffers(pool_t *pool)
 {
 	uint64_t i;
 	odp_buffer_hdr_t *buf_hdr;
 	odp_packet_hdr_t *pkt_hdr;
-	odp_event_vector_hdr_t *vect_hdr;
 	odp_shm_info_t shm_info;
 	void *addr;
 	void *uarea = NULL;
 	uint8_t *data;
-	uint32_t offset;
+	uint32_t offset, hdr_len;
 	ring_ptr_t *ring;
 	uint32_t mask;
 	odp_pool_type_t type;
@@ -443,7 +482,7 @@ static void init_buffers(pool_t *pool)
 					   pool->block_offset];
 		buf_hdr = addr;
 		pkt_hdr = addr;
-		vect_hdr = addr;
+
 		/* Skip packet buffers which cross huge page boundaries. Some
 		 * NICs cannot handle buffers which cross page boundaries. */
 		if (type == ODP_POOL_PACKET && page_size >= FIRST_HP_SIZE) {
@@ -474,37 +513,8 @@ static void init_buffers(pool_t *pool)
 		while (((uintptr_t)&data[offset]) % pool->align != 0)
 			offset++;
 
-		memset(buf_hdr, 0, (uintptr_t)data - (uintptr_t)buf_hdr);
-
-		/* Initialize buffer metadata */
-		buf_hdr->index.u32    = 0;
-		buf_hdr->index.pool   = pool->pool_idx;
-		buf_hdr->index.buffer = i;
-		buf_hdr->type = type;
-		buf_hdr->event_type = type;
-		if (type == ODP_POOL_VECTOR)
-			buf_hdr->event_type = ODP_EVENT_PACKET_VECTOR;
-		buf_hdr->pool_ptr = pool;
-		buf_hdr->uarea_addr = uarea;
-
-		/* Initialize segmentation metadata */
-		if (type == ODP_POOL_PACKET) {
-			pkt_hdr->seg_data = &data[offset];
-			pkt_hdr->seg_len  = pool->seg_len;
-			pkt_hdr->seg_count = 1;
-			pkt_hdr->seg_next = NULL;
-		}
-
-		odp_atomic_init_u32(&buf_hdr->ref_cnt, 0);
-
-		/* Initialize event vector metadata */
-		if (type == ODP_POOL_VECTOR)
-			vect_hdr->size = 0;
-
-		/* Store base values for fast init */
-		buf_hdr->base_data = &data[offset];
-		buf_hdr->buf_end   = &data[offset + pool->seg_len +
-				     pool->tailroom];
+		hdr_len = (uintptr_t)data - (uintptr_t)buf_hdr;
+		init_buffer_hdr(pool, buf_hdr, i, hdr_len, &data[offset], uarea);
 
 		/* Store buffer into the global pool */
 		if (!skip)
