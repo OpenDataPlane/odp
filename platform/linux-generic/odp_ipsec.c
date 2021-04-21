@@ -103,6 +103,9 @@ static int set_ipsec_crypto_capa(odp_ipsec_capability_t *capa)
 	return 0;
 }
 
+#define	IPSEC_IN_ORDER_LOCK_INDEX 	0
+#define	IPSEC_OUT_ORDER_LOCK_INDEX 	1
+
 int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 {
 	int rc;
@@ -789,9 +792,13 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		goto exit;
 	}
 
-	if (_odp_ipsec_sa_replay_update(ipsec_sa,
-					state.in.seq_no,
-					status) < 0)
+	odp_schedule_order_lock(IPSEC_IN_ORDER_LOCK_INDEX);
+	rc = _odp_ipsec_sa_replay_update(ipsec_sa,
+					 state.in.seq_no,
+					 status);
+	odp_schedule_order_unlock(IPSEC_IN_ORDER_LOCK_INDEX);
+
+	if (rc < 0)
 		goto exit;
 
 	if (_odp_ipsec_sa_lifetime_update(ipsec_sa,
@@ -913,11 +920,19 @@ exit:
 	return ipsec_sa;
 }
 
-/* Generate sequence number */
+/* Generate sequence number in order */
 static inline
 uint64_t ipsec_seq_no(ipsec_sa_t *ipsec_sa)
 {
-	return odp_atomic_fetch_add_u64(&ipsec_sa->hot.out.seq, 1);
+	uint64_t seq;
+
+	odp_schedule_order_lock(IPSEC_OUT_ORDER_LOCK_INDEX);
+
+	/* Atomic is still required as some platforms don't support order locks */
+	seq =  odp_atomic_fetch_add_u64(&ipsec_sa->hot.out.seq, 1);
+	odp_schedule_order_unlock(IPSEC_OUT_ORDER_LOCK_INDEX);
+
+	return seq;
 }
 
 /* Helper for calculating encode length using data length and block size */
