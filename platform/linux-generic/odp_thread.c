@@ -88,7 +88,14 @@ int _odp_thread_init_global(void)
 
 int _odp_thread_term_global(void)
 {
-	int ret;
+	int ret, num;
+
+	odp_spinlock_lock(&thread_globals->lock);
+	num = thread_globals->num;
+	odp_spinlock_unlock(&thread_globals->lock);
+
+	if (num)
+		ODP_ERR("%u threads have not called odp_term_local().\n", num);
 
 	ret = odp_shm_free(odp_shm_lookup("_odp_thread_globals"));
 	if (ret < 0)
