@@ -82,9 +82,19 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	if (ret == 0) {
 		/* Child process */
 		worker_fn(NULL);
+
+		if (odp_term_local() < 0) {
+			ODPH_ERR("Error: ODP local term failed.\n");
+			exit(EXIT_FAILURE);
+		}
 	} else {
 		/* Parent process */
 		odph_linux_process_wait_n(proc, num_workers);
+
+		if (odp_term_local()) {
+			ODPH_ERR("Error: ODP local term failed.\n");
+			exit(EXIT_FAILURE);
+		}
 
 		if (odp_term_global(instance)) {
 			ODPH_ERR("Error: ODP global term failed.\n");
