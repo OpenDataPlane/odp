@@ -1,9 +1,12 @@
 /* Copyright (c) 2017-2018, Linaro Limited
  * Copyright (c) 2020-2021, Marvell
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
+
+#include <odp/helper/odph_api.h>
 
 #include "ipsec.h"
 
@@ -1764,132 +1767,109 @@ static void test_ipsec_sa_print(void)
 	ipsec_sa_destroy(in_sa);
 }
 
-static void test_in_ipv4_esp_reass_success_two_frags(odp_ipsec_sa_t out_sa,
-						     odp_ipsec_sa_t in_sa)
+static void test_multi_out_in(odp_ipsec_sa_t out_sa,
+			      odp_ipsec_sa_t in_sa,
+			      uint8_t tunnel_ip_ver,
+			      int num_input_packets,
+			      ipsec_test_packet *input_packets[],
+			      ipsec_test_packet *result_packet)
 {
-	ipsec_test_part test_out[MAX_FRAGS], test_in[MAX_FRAGS];
+	uint8_t ver_ihl = result_packet->data[result_packet->l3_offset];
+	odp_bool_t is_result_ipv6 = (ODPH_IPV4HDR_VER(ver_ihl) == ODPH_IPV6);
 	int i;
 
-	memset(test_in, 0, sizeof(test_in));
-
-	CU_ASSERT(MAX_FRAGS >= 2);
-
-	part_prep_esp(test_out, 2, false);
-
-	test_out[0].pkt_in = &pkt_ipv4_udp_p1_f1;
-	test_out[1].pkt_in = &pkt_ipv4_udp_p1_f2;
-
-	part_prep_plain(&test_in[1], 1, false, true);
-	test_in[1].out[0].pkt_res = &pkt_ipv4_udp_p1;
-
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < num_input_packets; i++) {
+		ipsec_test_part test_out;
+		ipsec_test_part test_in;
 		ipsec_test_packet test_pkt;
 		odp_packet_t pkt;
 
-		CU_ASSERT_EQUAL(ipsec_check_out(&test_out[i], out_sa, &pkt), 1);
+		/*
+		 * Convert plain text packet to IPsec packet through
+		 * outbound IPsec processing.
+		 */
+		part_prep_esp(&test_out, 1, tunnel_ip_ver == ODPH_IPV6);
+		test_out.pkt_in = input_packets[i];
+		CU_ASSERT_EQUAL(ipsec_check_out(&test_out, out_sa, &pkt), 1);
 
+		/*
+		 * Perform inbound IPsec processing for the IPsec packet.
+		 * Expect result packet only for the last packet.
+		 */
+		memset(&test_in, 0, sizeof(test_in));
+		if (i == num_input_packets - 1) {
+			part_prep_plain(&test_in, 1, is_result_ipv6, true);
+			test_in.out[0].pkt_res = result_packet;
+		}
 		ipsec_test_packet_from_pkt(&test_pkt, &pkt);
-		test_in[i].pkt_in = &test_pkt;
+		test_in.pkt_in = &test_pkt;
 
-		ipsec_check_in_one(&test_in[i], in_sa);
+		ipsec_check_in_one(&test_in, in_sa);
 	}
+}
+
+static void test_in_ipv4_esp_reass_success_two_frags(odp_ipsec_sa_t out_sa,
+						     odp_ipsec_sa_t in_sa)
+{
+	ipsec_test_packet *input_packets[] = {
+		&pkt_ipv4_udp_p1_f1,
+		&pkt_ipv4_udp_p1_f2,
+	};
+	ipsec_test_packet *result_packet = &pkt_ipv4_udp_p1;
+
+	test_multi_out_in(out_sa, in_sa, ODPH_IPV4,
+			  ARRAY_SIZE(input_packets),
+			  input_packets,
+			  result_packet);
 }
 
 static void test_in_ipv4_esp_reass_success_four_frags(odp_ipsec_sa_t out_sa,
 						      odp_ipsec_sa_t in_sa)
 {
-	ipsec_test_part test_out[MAX_FRAGS], test_in[MAX_FRAGS];
-	int i;
+	ipsec_test_packet *input_packets[] = {
+		&pkt_ipv4_udp_p2_f1,
+		&pkt_ipv4_udp_p2_f2,
+		&pkt_ipv4_udp_p2_f3,
+		&pkt_ipv4_udp_p2_f4,
+	};
+	ipsec_test_packet *result_packet = &pkt_ipv4_udp_p2;
 
-	memset(test_in, 0, sizeof(test_in));
-
-	CU_ASSERT(MAX_FRAGS >= 4);
-
-	part_prep_esp(test_out, 4, false);
-
-	test_out[0].pkt_in = &pkt_ipv4_udp_p2_f1;
-	test_out[1].pkt_in = &pkt_ipv4_udp_p2_f2;
-	test_out[2].pkt_in = &pkt_ipv4_udp_p2_f3;
-	test_out[3].pkt_in = &pkt_ipv4_udp_p2_f4;
-
-	part_prep_plain(&test_in[3], 1, false, true);
-	test_in[3].out[0].pkt_res = &pkt_ipv4_udp_p2;
-
-	for (i = 0; i < 4; i++) {
-		ipsec_test_packet test_pkt;
-		odp_packet_t pkt;
-
-		CU_ASSERT_EQUAL(ipsec_check_out(&test_out[i], out_sa, &pkt), 1);
-
-		ipsec_test_packet_from_pkt(&test_pkt, &pkt);
-		test_in[i].pkt_in = &test_pkt;
-
-		ipsec_check_in_one(&test_in[i], in_sa);
-	}
+	test_multi_out_in(out_sa, in_sa, ODPH_IPV4,
+			  ARRAY_SIZE(input_packets),
+			  input_packets,
+			  result_packet);
 }
 
 static void test_in_ipv4_esp_reass_success_two_frags_ooo(odp_ipsec_sa_t out_sa,
 							 odp_ipsec_sa_t in_sa)
 {
-	ipsec_test_part test_out[MAX_FRAGS], test_in[MAX_FRAGS];
-	int i;
+	ipsec_test_packet *input_packets[] = {
+		&pkt_ipv4_udp_p1_f2,
+		&pkt_ipv4_udp_p1_f1,
+	};
+	ipsec_test_packet *result_packet = &pkt_ipv4_udp_p1;
 
-	memset(test_in, 0, sizeof(test_in));
-
-	CU_ASSERT(MAX_FRAGS >= 2);
-
-	part_prep_esp(test_out, 2, false);
-
-	test_out[0].pkt_in = &pkt_ipv4_udp_p1_f2;
-	test_out[1].pkt_in = &pkt_ipv4_udp_p1_f1;
-
-	part_prep_plain(&test_in[1], 1, false, true);
-	test_in[1].out[0].pkt_res = &pkt_ipv4_udp_p1;
-
-	for (i = 0; i < 2; i++) {
-		ipsec_test_packet test_pkt;
-		odp_packet_t pkt;
-
-		CU_ASSERT_EQUAL(ipsec_check_out(&test_out[i], out_sa, &pkt), 1);
-
-		ipsec_test_packet_from_pkt(&test_pkt, &pkt);
-		test_in[i].pkt_in = &test_pkt;
-
-		ipsec_check_in_one(&test_in[i], in_sa);
-	}
+	test_multi_out_in(out_sa, in_sa, ODPH_IPV4,
+			  ARRAY_SIZE(input_packets),
+			  input_packets,
+			  result_packet);
 }
 
 static void test_in_ipv4_esp_reass_success_four_frags_ooo(odp_ipsec_sa_t out_sa,
 							  odp_ipsec_sa_t in_sa)
 {
-	ipsec_test_part test_out[MAX_FRAGS], test_in[MAX_FRAGS];
-	int i;
+	ipsec_test_packet *input_packets[] = {
+		&pkt_ipv4_udp_p2_f4,
+		&pkt_ipv4_udp_p2_f1,
+		&pkt_ipv4_udp_p2_f2,
+		&pkt_ipv4_udp_p2_f3,
+	};
+	ipsec_test_packet *result_packet = &pkt_ipv4_udp_p2;
 
-	memset(test_in, 0, sizeof(test_in));
-
-	CU_ASSERT(MAX_FRAGS >= 4);
-
-	part_prep_esp(test_out, 4, false);
-
-	test_out[0].pkt_in = &pkt_ipv4_udp_p2_f4;
-	test_out[1].pkt_in = &pkt_ipv4_udp_p2_f1;
-	test_out[2].pkt_in = &pkt_ipv4_udp_p2_f2;
-	test_out[3].pkt_in = &pkt_ipv4_udp_p2_f3;
-
-	part_prep_plain(&test_in[3], 1, false, true);
-	test_in[3].out[0].pkt_res = &pkt_ipv4_udp_p2;
-
-	for (i = 0; i < 4; i++) {
-		ipsec_test_packet test_pkt;
-		odp_packet_t pkt;
-
-		CU_ASSERT_EQUAL(ipsec_check_out(&test_out[i], out_sa, &pkt), 1);
-
-		ipsec_test_packet_from_pkt(&test_pkt, &pkt);
-		test_in[i].pkt_in = &test_pkt;
-
-		ipsec_check_in_one(&test_in[i], in_sa);
-	}
+	test_multi_out_in(out_sa, in_sa, ODPH_IPV4,
+			  ARRAY_SIZE(input_packets),
+			  input_packets,
+			  result_packet);
 }
 
 static void test_in_ipv4_esp_reass_incomp_missing(odp_ipsec_sa_t out_sa,
@@ -2024,129 +2004,65 @@ static void test_in_ipv4_esp_reass_incomp(void)
 static void test_in_ipv6_esp_reass_success_two_frags(odp_ipsec_sa_t out_sa,
 						     odp_ipsec_sa_t in_sa)
 {
-	ipsec_test_part test_out[MAX_FRAGS], test_in[MAX_FRAGS];
-	int i;
+	ipsec_test_packet *input_packets[] = {
+		&pkt_ipv6_udp_p1_f1,
+		&pkt_ipv6_udp_p1_f2,
+	};
+	ipsec_test_packet *result_packet = &pkt_ipv6_udp_p1;
 
-	memset(test_in, 0, sizeof(test_in));
-
-	CU_ASSERT(MAX_FRAGS >= 2);
-
-	part_prep_esp(test_out, 2, true);
-
-	test_out[0].pkt_in = &pkt_ipv6_udp_p1_f1;
-	test_out[1].pkt_in = &pkt_ipv6_udp_p1_f2;
-
-	part_prep_plain(&test_in[1], 1, true, true);
-	test_in[1].out[0].pkt_res = &pkt_ipv6_udp_p1;
-
-	for (i = 0; i < 2; i++) {
-		ipsec_test_packet test_pkt;
-		odp_packet_t pkt;
-
-		CU_ASSERT_EQUAL(ipsec_check_out(&test_out[i], out_sa, &pkt), 1);
-
-		ipsec_test_packet_from_pkt(&test_pkt, &pkt);
-		test_in[i].pkt_in = &test_pkt;
-
-		ipsec_check_in_one(&test_in[i], in_sa);
-	}
+	test_multi_out_in(out_sa, in_sa, ODPH_IPV6,
+			  ARRAY_SIZE(input_packets),
+			  input_packets,
+			  result_packet);
 }
 
 static void test_in_ipv6_esp_reass_success_four_frags(odp_ipsec_sa_t out_sa,
 						      odp_ipsec_sa_t in_sa)
 {
-	ipsec_test_part test_out[MAX_FRAGS], test_in[MAX_FRAGS];
-	int i;
+	ipsec_test_packet *input_packets[] = {
+		&pkt_ipv6_udp_p2_f1,
+		&pkt_ipv6_udp_p2_f2,
+		&pkt_ipv6_udp_p2_f3,
+		&pkt_ipv6_udp_p2_f4,
+	};
+	ipsec_test_packet *result_packet = &pkt_ipv6_udp_p2;
 
-	memset(test_in, 0, sizeof(test_in));
-
-	CU_ASSERT(MAX_FRAGS >= 4);
-
-	part_prep_esp(test_out, 4, true);
-
-	test_out[0].pkt_in = &pkt_ipv6_udp_p2_f1;
-	test_out[1].pkt_in = &pkt_ipv6_udp_p2_f2;
-	test_out[2].pkt_in = &pkt_ipv6_udp_p2_f3;
-	test_out[3].pkt_in = &pkt_ipv6_udp_p2_f4;
-
-	part_prep_plain(&test_in[3], 1, true, true);
-	test_in[3].out[0].pkt_res = &pkt_ipv6_udp_p2;
-
-	for (i = 0; i < 4; i++) {
-		ipsec_test_packet test_pkt;
-		odp_packet_t pkt;
-
-		CU_ASSERT_EQUAL(ipsec_check_out(&test_out[i], out_sa, &pkt), 1);
-
-		ipsec_test_packet_from_pkt(&test_pkt, &pkt);
-		test_in[i].pkt_in = &test_pkt;
-
-		ipsec_check_in_one(&test_in[i], in_sa);
-	}
+	test_multi_out_in(out_sa, in_sa, ODPH_IPV6,
+			  ARRAY_SIZE(input_packets),
+			  input_packets,
+			  result_packet);
 }
 
 static void test_in_ipv6_esp_reass_success_two_frags_ooo(odp_ipsec_sa_t out_sa,
 							 odp_ipsec_sa_t in_sa)
 {
-	ipsec_test_part test_out[MAX_FRAGS], test_in[MAX_FRAGS];
-	int i;
+	ipsec_test_packet *input_packets[] = {
+		&pkt_ipv6_udp_p1_f2,
+		&pkt_ipv6_udp_p1_f1,
+	};
+	ipsec_test_packet *result_packet = &pkt_ipv6_udp_p1;
 
-	memset(test_in, 0, sizeof(test_in));
-
-	CU_ASSERT(MAX_FRAGS >= 2);
-
-	part_prep_esp(test_out, 2, true);
-
-	test_out[0].pkt_in = &pkt_ipv6_udp_p1_f2;
-	test_out[1].pkt_in = &pkt_ipv6_udp_p1_f1;
-
-	part_prep_plain(&test_in[1], 1, true, true);
-	test_in[1].out[0].pkt_res = &pkt_ipv6_udp_p1;
-
-	for (i = 0; i < 2; i++) {
-		ipsec_test_packet test_pkt;
-		odp_packet_t pkt;
-
-		CU_ASSERT_EQUAL(ipsec_check_out(&test_out[i], out_sa, &pkt), 1);
-
-		ipsec_test_packet_from_pkt(&test_pkt, &pkt);
-		test_in[i].pkt_in = &test_pkt;
-
-		ipsec_check_in_one(&test_in[i], in_sa);
-	}
+	test_multi_out_in(out_sa, in_sa, ODPH_IPV6,
+			  ARRAY_SIZE(input_packets),
+			  input_packets,
+			  result_packet);
 }
 
 static void test_in_ipv6_esp_reass_success_four_frags_ooo(odp_ipsec_sa_t out_sa,
 							  odp_ipsec_sa_t in_sa)
 {
-	ipsec_test_part test_out[MAX_FRAGS], test_in[MAX_FRAGS];
-	int i;
+	ipsec_test_packet *input_packets[] = {
+		&pkt_ipv6_udp_p2_f2,
+		&pkt_ipv6_udp_p2_f3,
+		&pkt_ipv6_udp_p2_f4,
+		&pkt_ipv6_udp_p2_f1,
+	};
+	ipsec_test_packet *result_packet = &pkt_ipv6_udp_p2;
 
-	memset(test_in, 0, sizeof(test_in));
-
-	CU_ASSERT(MAX_FRAGS >= 4);
-
-	part_prep_esp(test_out, 4, true);
-
-	test_out[1].pkt_in = &pkt_ipv6_udp_p2_f2;
-	test_out[2].pkt_in = &pkt_ipv6_udp_p2_f3;
-	test_out[3].pkt_in = &pkt_ipv6_udp_p2_f4;
-	test_out[0].pkt_in = &pkt_ipv6_udp_p2_f1;
-
-	part_prep_plain(&test_in[3], 1, true, true);
-	test_in[3].out[0].pkt_res = &pkt_ipv6_udp_p2;
-
-	for (i = 0; i < 4; i++) {
-		ipsec_test_packet test_pkt;
-		odp_packet_t pkt;
-
-		CU_ASSERT_EQUAL(ipsec_check_out(&test_out[i], out_sa, &pkt), 1);
-
-		ipsec_test_packet_from_pkt(&test_pkt, &pkt);
-		test_in[i].pkt_in = &test_pkt;
-
-		ipsec_check_in_one(&test_in[i], in_sa);
-	}
+	test_multi_out_in(out_sa, in_sa, ODPH_IPV6,
+			  ARRAY_SIZE(input_packets),
+			  input_packets,
+			  result_packet);
 }
 
 static void test_in_ipv6_esp_reass_incomp_missing(odp_ipsec_sa_t out_sa,

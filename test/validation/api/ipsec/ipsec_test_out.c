@@ -119,8 +119,6 @@ static struct cipher_auth_comb_param cipher_auth_comb[] = {
 	},
 };
 
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
-
 static void test_out_ipv4_ah_sha256(void)
 {
 	odp_ipsec_sa_param_t param;
