@@ -531,7 +531,7 @@ static int term_local(enum init_stage stage)
 			rc = -1;
 		} else {
 			if (!rc)
-				rc = rc_thd;
+				rc = (rc_thd == 0) ? 0 : 1;
 		}
 		/* Fall through */
 
