@@ -230,8 +230,8 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	* segment occupied by the allocated length.
 	*/
 	pkt_hdr->frame_len = len;
-	pkt_hdr->headroom  = CONFIG_PACKET_HEADROOM;
-	pkt_hdr->tailroom  = pool->seg_len - seg_len + CONFIG_PACKET_TAILROOM;
+	pkt_hdr->headroom  = pool->headroom;
+	pkt_hdr->tailroom  = pool->seg_len - seg_len + pool->tailroom;
 
 	if (odp_unlikely(pkt_hdr->subtype != ODP_EVENT_PACKET_BASIC))
 		pkt_hdr->subtype = ODP_EVENT_PACKET_BASIC;

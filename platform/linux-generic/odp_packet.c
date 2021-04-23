@@ -134,10 +134,11 @@ static inline void *packet_tail(odp_packet_hdr_t *pkt_hdr)
 static inline uint32_t seg_headroom(odp_packet_hdr_t *pkt_seg)
 {
 	odp_buffer_hdr_t *hdr = &pkt_seg->buf_hdr;
+	pool_t *pool = hdr->pool_ptr;
 	uint8_t *base = hdr->base_data;
 	uint8_t *head = pkt_seg->seg_data;
 
-	return CONFIG_PACKET_HEADROOM + (head - base);
+	return pool->headroom + (head - base);
 }
 
 static inline uint32_t seg_tailroom(odp_packet_hdr_t *pkt_seg)
