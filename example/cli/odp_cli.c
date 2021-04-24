@@ -88,6 +88,14 @@ static void sig_handler(int signo)
 	shutdown_sig = 1;
 }
 
+static void my_cmd(int argc, char *argv[])
+{
+	odph_cli_log("%s(%d): %s\n", __FILE__, __LINE__, __func__);
+
+	for (int i = 0; i < argc; i++)
+		odph_cli_log("argv[%d]: %s\n", i, argv[i]);
+}
+
 int main(int argc, char *argv[])
 {
 	signal(SIGINT, sig_handler);
@@ -140,13 +148,27 @@ int main(int argc, char *argv[])
 	if (opt.port)
 		cli_param.port = opt.port;
 
+	/* Initialize CLI helper. */
+	if (odph_cli_init(inst, &cli_param)) {
+		ODPH_ERR("CLI helper initialization failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	/* Register user command. */
+	if (odph_cli_register_command("my_command", my_cmd,
+				      "Example user command.")) {
+		ODPH_ERR("Registering user command failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
 	/* Start CLI server. */
-	if (odph_cli_start(inst, &cli_param)) {
+	if (odph_cli_start()) {
 		ODPH_ERR("CLI start failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	printf("CLI server started on %s:%d\n", cli_param.address, cli_param.port);
+	printf("CLI server started on %s:%d\n", cli_param.address,
+	       cli_param.port);
 
 	/* Wait for the given number of seconds. */
 	for (int i = 0; (opt.time < 0 || i < opt.time) && !shutdown_sig; i++)
@@ -157,6 +179,12 @@ int main(int argc, char *argv[])
 	/* Stop CLI server. */
 	if (odph_cli_stop()) {
 		ODPH_ERR("CLI stop failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	/* Terminate CLI helper. */
+	if (odph_cli_term()) {
+		ODPH_ERR("CLI helper termination failed.\n");
 		exit(EXIT_FAILURE);
 	}
 

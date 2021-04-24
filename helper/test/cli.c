@@ -38,13 +38,23 @@ int main(int argc, char *argv[])
 
 	odph_cli_param_init(&cli_param);
 
-	if (odph_cli_start(instance, &cli_param)) {
+	if (odph_cli_init(instance, &cli_param)) {
+		ODPH_ERR("Error: odph_cli_init() failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odph_cli_start()) {
 		ODPH_ERR("Error: odph_cli_start() failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odph_cli_stop()) {
 		ODPH_ERR("Error: odph_cli_stop() failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odph_cli_term()) {
+		ODPH_ERR("Error: odph_cli_term() failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
