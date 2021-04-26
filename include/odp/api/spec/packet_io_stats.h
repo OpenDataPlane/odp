@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -7,7 +8,7 @@
 /**
  * @file
  *
- * ODP Packet IO
+ * ODP Packet IO statistics
  */
 
 #ifndef ODP_API_SPEC_PACKET_IO_STATS_H_
@@ -109,25 +110,25 @@ typedef struct odp_pktio_stats_t {
 /**
  * Get statistics for pktio handle
  *
- * @param	pktio	 Packet IO handle
- * @param[out]	stats	 Output buffer for counters
+ * Counters not supported by the interface are set to zero.
+ *
+ * @param       pktio	 Packet IO handle
+ * @param[out]  stats	 Output buffer for counters
+ *
  * @retval  0 on success
  * @retval <0 on failure
- *
- * @note: If counter is not supported by platform it has
- *	  to be set to 0.
  */
-int odp_pktio_stats(odp_pktio_t pktio,
-		    odp_pktio_stats_t *stats);
+int odp_pktio_stats(odp_pktio_t pktio, odp_pktio_stats_t *stats);
 
 /**
  * Reset statistics for pktio handle
  *
- * Reset all pktio counters to 0.
- * @param	pktio	 Packet IO handle
+ * Reset all statistics counters to zero.
+ *
+ * @param       pktio	 Packet IO handle
+ *
  * @retval  0 on success
  * @retval <0 on failure
- *
  */
 int odp_pktio_stats_reset(odp_pktio_t pktio);
 
