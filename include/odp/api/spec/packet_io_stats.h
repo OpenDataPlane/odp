@@ -38,6 +38,9 @@ typedef struct odp_pktio_stats_t {
 	 *  Ethernet, packet size includes MAC header and FCS. */
 	uint64_t in_octets;
 
+	/** Number of successfully received packets. */
+	uint64_t in_packets;
+
 	/** Number of successfully received Ethernet packets with a unicast
 	 *  destination MAC address. */
 	uint64_t in_ucast_pkts;
@@ -67,6 +70,9 @@ typedef struct odp_pktio_stats_t {
 	/** Number of octets in successfully transmitted packets. In case of
 	 *  Ethernet, packet size includes MAC header and FCS. */
 	uint64_t out_octets;
+
+	/** Number of successfully transmitted packets. */
+	uint64_t out_packets;
 
 	/** Number of successfully transmitted Ethernet packets with a unicast
 	 *  destination MAC address. */
