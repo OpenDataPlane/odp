@@ -19,6 +19,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/deprecated.h>
+
 /** @addtogroup odp_packet_io
  *  @{
  */
@@ -71,8 +73,10 @@ typedef struct odp_pktio_stats_t {
 	 * because of an unknown or unsupported protocol.  For any interface
 	 * that does not support protocol multiplexing, this counter will always
 	 * be 0. See ifInUnknownProtos in RFC 2863, RFC 3635.
+	 *
+	 * @deprecated This counter has been deprecated.
 	 */
-	uint64_t in_unknown_protos;
+	uint64_t ODP_DEPRECATE(in_unknown_protos);
 
 	/**
 	 * The number of octets transmitted in valid MAC frames on this

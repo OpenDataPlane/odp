@@ -1945,7 +1945,6 @@ static void _print_pktio_stats(odp_pktio_stats_t *s, const char *name)
 		 "  in_ucast_pkts %" PRIu64 "\n"
 		 "  in_discards %" PRIu64 "\n"
 		 "  in_errors %" PRIu64 "\n"
-		 "  in_unknown_protos %" PRIu64 "\n"
 		 "  out_octets %" PRIu64 "\n"
 		 "  out_ucast_pkts %" PRIu64 "\n"
 		 "  out_discards %" PRIu64 "\n"
@@ -1955,7 +1954,6 @@ static void _print_pktio_stats(odp_pktio_stats_t *s, const char *name)
 		 s->in_ucast_pkts,
 		 s->in_discards,
 		 s->in_errors,
-		 s->in_unknown_protos,
 		 s->out_octets,
 		 s->out_ucast_pkts,
 		 s->out_discards,
@@ -2080,7 +2078,6 @@ static void pktio_test_statistics_counters(void)
 
 	CU_ASSERT(0 == stats[0].in_discards);
 	CU_ASSERT(0 == stats[0].in_errors);
-	CU_ASSERT(0 == stats[0].in_unknown_protos);
 	CU_ASSERT(0 == stats[0].out_discards);
 	CU_ASSERT(0 == stats[0].out_errors);
 
