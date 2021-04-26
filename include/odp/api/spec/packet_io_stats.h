@@ -26,42 +26,28 @@ extern "C" {
  */
 
 /**
- * Packet IO statistics
+ * Packet IO statistics counters
  *
- * Packet IO statistics counters follow RFCs for Management Information Base
- * (MIB)for use with network management protocols in the Internet community:
- * https://tools.ietf.org/html/rfc3635
- * https://tools.ietf.org/html/rfc2863
- * https://tools.ietf.org/html/rfc2819
+ * In the counter definitions the term successfully refers to packets which were
+ * not discarded or detected to contain errors by the packet IO interface. In
+ * case of Ethernet, it's implementation specific whether valid pause frames are
+ * included in the counters or not.
  */
 typedef struct odp_pktio_stats_t {
-	/**
-	 * The number of octets in valid MAC frames received on this interface,
-	 * including the MAC header and FCS. See ifHCInOctets counter
-	 * description in RFC 3635 for details.
-	 */
+	/** Number of octets in successfully received packets. In case of
+	 *  Ethernet, packet size includes MAC header and FCS. */
 	uint64_t in_octets;
 
-	/**
-	 * The number of packets, delivered by this sub-layer to a higher
-	 * (sub-)layer, which were not addressed to a multicast or broadcast
-	 * address at this sub-layer. See ifHCInUcastPkts in RFC 2863, RFC 3635.
-	 */
+	/** Number of successfully received Ethernet packets with a unicast
+	 *  destination MAC address. */
 	uint64_t in_ucast_pkts;
 
-	/**
-	 * The number of inbound packets which were chosen to be discarded
-	 * even though no errors had been detected to prevent their being
-	 * deliverable to a higher-layer protocol.  One possible reason for
-	 * discarding such a packet could be to free up buffer space.
-	 * See ifInDiscards in RFC 2863.
-	 */
+	/** Number of inbound packets which were discarded due to a lack of free
+	 *  resources (e.g. buffers) or other reasons than packet errors. */
 	uint64_t in_discards;
 
-	/**
-	 * The sum for this interface of AlignmentErrors, FCSErrors,
-	 * FrameTooLongs, InternalMacReceiveErrors. See ifInErrors in RFC 3635.
-	 */
+	/** Number of inbound packets with errors. Depending on packet input
+	 *  configuration, packets with errors may be dropped or not. */
 	uint64_t in_errors;
 
 	/**
@@ -78,36 +64,19 @@ typedef struct odp_pktio_stats_t {
 	 */
 	uint64_t ODP_DEPRECATE(in_unknown_protos);
 
-	/**
-	 * The number of octets transmitted in valid MAC frames on this
-	 * interface, including the MAC header and FCS.  This does include
-	 * the number of octets in valid MAC Control frames transmitted on
-	 * this interface. See ifHCOutOctets in RFC 3635.
-	 */
+	/** Number of octets in successfully transmitted packets. In case of
+	 *  Ethernet, packet size includes MAC header and FCS. */
 	uint64_t out_octets;
 
-	/**
-	 * The total number of packets that higher-level protocols requested
-	 * be transmitted, and which were not addressed to a multicast or
-	 * broadcast address at this sub-layer, including those that were
-	 * discarded or not sent. does not include MAC Control frames.
-	 * See ifHCOutUcastPkts RFC 2863, 3635.
-	 */
+	/** Number of successfully transmitted Ethernet packets with a unicast
+	 *  destination MAC address. */
 	uint64_t out_ucast_pkts;
 
-	/**
-	 * The number of outbound packets which were chosen to be discarded
-	 * even though no errors had been detected to prevent their being
-	 * transmitted.  One possible reason for discarding such a packet could
-	 * be to free up buffer space.  See  OutDiscards in  RFC 2863.
-	 */
+	/** Number of outbound packets which were discarded due to a lack of
+	 *  free resources (e.g. buffers) or other reasons than errors. */
 	uint64_t out_discards;
 
-	/**
-	 * The sum for this interface of SQETestErrors, LateCollisions,
-	 * ExcessiveCollisions, InternalMacTransmitErrors and
-	 * CarrierSenseErrors. See ifOutErrors in RFC 3635.
-	 */
+	/** Number of packets with transmission errors. */
 	uint64_t out_errors;
 } odp_pktio_stats_t;
 
