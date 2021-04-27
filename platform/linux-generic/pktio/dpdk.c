@@ -2201,9 +2201,11 @@ static void stats_convert(const struct rte_eth_stats *rte_stats,
 	memset(stats, 0, sizeof(odp_pktio_stats_t));
 
 	stats->in_octets = rte_stats->ibytes;
+	stats->in_packets = rte_stats->ipackets;
 	stats->in_discards = rte_stats->imissed;
 	stats->in_errors = rte_stats->ierrors;
 	stats->out_octets = rte_stats->obytes;
+	stats->out_packets = rte_stats->opackets;
 	stats->out_errors = rte_stats->oerrors;
 }
 

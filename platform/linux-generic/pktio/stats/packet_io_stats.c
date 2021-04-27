@@ -62,6 +62,8 @@ int _odp_sock_stats_fd(pktio_entry_t *pktio_entry,
 
 	stats->in_octets = cur_stats.in_octets -
 				pktio_entry->s.stats.in_octets;
+	stats->in_packets = cur_stats.in_packets -
+				pktio_entry->s.stats.in_packets;
 	stats->in_ucast_pkts = cur_stats.in_ucast_pkts -
 				pktio_entry->s.stats.in_ucast_pkts;
 	stats->in_discards = cur_stats.in_discards -
@@ -74,6 +76,8 @@ int _odp_sock_stats_fd(pktio_entry_t *pktio_entry,
 #endif
 	stats->out_octets = cur_stats.out_octets -
 				pktio_entry->s.stats.out_octets;
+	stats->out_packets = cur_stats.out_packets -
+				pktio_entry->s.stats.out_packets;
 	stats->out_ucast_pkts = cur_stats.out_ucast_pkts -
 				pktio_entry->s.stats.out_ucast_pkts;
 	stats->out_discards = cur_stats.out_discards -
