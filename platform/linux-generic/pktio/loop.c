@@ -191,7 +191,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	}
 
 	pktio_entry->s.stats.in_errors += failed;
-	pktio_entry->s.stats.in_ucast_pkts += num_rx - failed;
+	pktio_entry->s.stats.in_packets += num_rx - failed;
 
 	odp_ticketlock_unlock(&pktio_entry->s.rxl);
 
@@ -355,7 +355,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		if (odp_unlikely(tx_ts_idx) && ret >= tx_ts_idx)
 			_odp_pktio_tx_ts_set(pktio_entry);
 
-		pktio_entry->s.stats.out_ucast_pkts += ret;
+		pktio_entry->s.stats.out_packets += ret;
 		pktio_entry->s.stats.out_octets += out_octets_tbl[ret - 1];
 	} else {
 		ODP_DBG("queue enqueue failed %i\n", ret);

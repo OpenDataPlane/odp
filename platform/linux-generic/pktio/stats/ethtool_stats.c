@@ -128,6 +128,9 @@ static int ethtool_stats(int fd, struct ifreq *ifr, odp_pktio_stats_t *stats)
 		if (!strcmp(cnt, "rx_octets")) {
 			stats->in_octets = val;
 			cnts++;
+		} else if (!strcmp(cnt, "rx_packets")) {
+			stats->in_packets = val;
+			cnts++;
 		} else if (!strcmp(cnt, "rx_ucast_packets")) {
 			stats->in_ucast_pkts = val;
 			cnts++;
@@ -139,6 +142,9 @@ static int ethtool_stats(int fd, struct ifreq *ifr, odp_pktio_stats_t *stats)
 			cnts++;
 		} else if (!strcmp(cnt, "tx_octets")) {
 			stats->out_octets = val;
+			cnts++;
+		} else if (!strcmp(cnt, "tx_packets")) {
+			stats->out_packets = val;
 			cnts++;
 		} else if (!strcmp(cnt, "tx_ucast_packets")) {
 			stats->out_ucast_pkts = val;

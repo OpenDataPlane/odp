@@ -318,7 +318,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		i++;
 	}
-	pktio_entry->s.stats.in_ucast_pkts += i;
+	pktio_entry->s.stats.in_packets += i;
 
 	odp_ticketlock_unlock(&pktio_entry->s.rxl);
 
@@ -377,7 +377,7 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		odp_packet_free(pkts[i]);
 	}
 
-	pktio_entry->s.stats.out_ucast_pkts += i;
+	pktio_entry->s.stats.out_packets += i;
 
 	odp_ticketlock_unlock(&pktio_entry->s.txl);
 

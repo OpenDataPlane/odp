@@ -52,6 +52,9 @@ int _odp_sysfs_stats(pktio_entry_t *pktio_entry,
 	ret -= sysfs_get_val(fname, &stats->in_octets);
 
 	sprintf(fname, "/sys/class/net/%s/statistics/rx_packets", dev);
+	ret -= sysfs_get_val(fname, &stats->in_packets);
+
+	sprintf(fname, "/sys/class/net/%s/statistics/rx_packets", dev);
 	ret -= sysfs_get_val(fname, &stats->in_ucast_pkts);
 
 	sprintf(fname, "/sys/class/net/%s/statistics/rx_droppped", dev);
@@ -62,6 +65,9 @@ int _odp_sysfs_stats(pktio_entry_t *pktio_entry,
 
 	sprintf(fname, "/sys/class/net/%s/statistics/tx_bytes", dev);
 	ret -= sysfs_get_val(fname, &stats->out_octets);
+
+	sprintf(fname, "/sys/class/net/%s/statistics/tx_packets", dev);
+	ret -= sysfs_get_val(fname, &stats->out_packets);
 
 	sprintf(fname, "/sys/class/net/%s/statistics/tx_packets", dev);
 	ret -= sysfs_get_val(fname, &stats->out_ucast_pkts);
