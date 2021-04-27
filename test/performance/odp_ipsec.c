@@ -26,7 +26,7 @@
 /** @def POOL_NUM_PKT
  * Number of packets in the pool
  */
-#define POOL_NUM_PKT  64
+#define POOL_NUM_PKT  (51 * 1024)
 
 static uint8_t test_salt[16] = "0123456789abcdef";
 
@@ -143,6 +143,13 @@ typedef struct {
 	 * Specified through -u argument.
 	 */
 	int ah;
+
+	/*
+	 * Use anti-replay for inbound processing.
+	 * Specified through -w argument.
+	 * Default is 0, anti-replay disabled.
+	 */
+	uint32_t ws;
 } ipsec_args_t;
 
 /*
@@ -192,6 +199,9 @@ static unsigned int global_payloads[] = {
 
 /** Number of payloads used in the test */
 static unsigned int global_num_payloads;
+
+/** Inbound packets array for all the payloads */
+static odp_packet_t inbound_packets[7 * 100000];
 
 /**
  * Set of known algorithms to test
@@ -578,6 +588,56 @@ create_sa_from_config(ipsec_alg_config_t *config,
 	return odp_ipsec_sa_create(&param);
 }
 
+/**
+ * Create ODP IPsec SA for given config for inbound processing.
+ */
+static odp_ipsec_sa_t
+create_insa_from_config(ipsec_alg_config_t *config,
+			ipsec_args_t *cargs)
+{
+	odp_ipsec_sa_param_t param;
+	odp_queue_t in_queue;
+
+	odp_ipsec_sa_param_init(&param);
+	memcpy(&param.crypto, &config->crypto,
+	       sizeof(odp_ipsec_crypto_param_t));
+
+	param.proto = ODP_IPSEC_ESP;
+	param.dir = ODP_IPSEC_DIR_INBOUND;
+	param.inbound.antireplay_ws = cargs->ws;
+	printf("AR window size :%u\n", cargs->ws);
+
+	if (cargs->tunnel) {
+		uint32_t src = IPV4ADDR(10, 0, 111, 2);
+		uint32_t dst = IPV4ADDR(10, 0, 222, 2);
+		odp_ipsec_tunnel_param_t tunnel;
+
+		memset(&tunnel, 0, sizeof(tunnel));
+		tunnel.type = ODP_IPSEC_TUNNEL_IPV4;
+		tunnel.ipv4.src_addr = &src;
+		tunnel.ipv4.dst_addr = &dst;
+		tunnel.ipv4.ttl = 64;
+
+		param.mode = ODP_IPSEC_MODE_TUNNEL;
+		param.outbound.tunnel = tunnel;
+	} else {
+		param.mode = ODP_IPSEC_MODE_TRANSPORT;
+	}
+
+	if (cargs->schedule || cargs->poll) {
+		in_queue = odp_queue_lookup("ipsec-in");
+		if (in_queue == ODP_QUEUE_INVALID) {
+			app_err("ipsec-in queue not found\n");
+			return ODP_IPSEC_SA_INVALID;
+		}
+		param.dest_queue = in_queue;
+	} else {
+		param.dest_queue = ODP_QUEUE_INVALID;
+	}
+
+	return odp_ipsec_sa_create(&param);
+}
+
 static uint8_t test_data[] = {
 	/* IP */
 	0x45, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
@@ -617,6 +677,88 @@ make_packet(odp_pool_t pkt_pool, unsigned int payload_length)
  * Result of run returned in 'result' out parameter.
  */
 static int
+run_measure_one_in(ipsec_args_t *cargs,
+		   odp_ipsec_sa_t in_sa,
+		   unsigned int payload_length,
+		   time_record_t *start,
+		   time_record_t *end)
+{
+	odp_ipsec_in_param_t in_param;
+	static uint32_t in_pkt_idx;
+	int packets_received = 0;
+	int packets_sent = 0;
+	int rc = 0;
+
+	/* Inbound performance */
+	packets_received = 0;
+	packets_sent = 0;
+
+	/* Initialize parameters block */
+	memset(&in_param, 0, sizeof(in_param));
+	in_param.num_sa = 1;
+	in_param.sa = &in_sa;
+
+	fill_time_record(start);
+
+	while ((packets_received < cargs->iteration_count) ||
+	       (packets_sent < cargs->iteration_count)) {
+		if ((packets_received < cargs->iteration_count) &&
+		    (packets_received - packets_sent <
+		     cargs->in_flight)) {
+			odp_packet_t in_tmp_pkt;
+			odp_packet_t in_out_pkt;
+			int num_out = 1;
+
+			in_tmp_pkt = inbound_packets[in_pkt_idx + packets_sent];
+
+			if (in_tmp_pkt == ODP_PACKET_INVALID) {
+				app_err("failed to allocate buffer\n");
+				return -1;
+			}
+
+			rc = odp_ipsec_in(&in_tmp_pkt, 1,
+					  &in_out_pkt, &num_out,
+					  &in_param);
+			if (rc <= 0) {
+				app_err("failed odp_ipsec_out: rc = %d\n",
+					rc);
+				odp_packet_free(in_tmp_pkt);
+				break;
+			}
+			if (odp_packet_has_error(in_out_pkt)) {
+				odp_ipsec_packet_result_t result;
+
+				odp_ipsec_result(&result, in_out_pkt);
+				app_err("Received error packet: %d\n",
+					result.status.error.all);
+			}
+
+			packets_received += rc;
+			packets_sent += num_out;
+			if (cargs->debug_packets)
+				odp_packet_print_data(in_out_pkt, 0,
+						      odp_packet_len(in_out_pkt));
+
+			if (odp_packet_len(in_out_pkt) != payload_length)
+				app_err("Inbound out_pkt size mismatch : %u\n",
+					odp_packet_len(in_out_pkt));
+
+			odp_packet_free(in_out_pkt);
+		}
+	}
+
+	fill_time_record(end);
+
+	in_pkt_idx += cargs->iteration_count;
+
+	return rc < 0 ? rc : 0;
+}
+
+/**
+ * Run measurement iterations for given config and payload size.
+ * Result of run returned in 'result' out parameter.
+ */
+static int
 run_measure_one(ipsec_args_t *cargs,
 		odp_ipsec_sa_t sa,
 		unsigned int payload_length,
@@ -626,6 +768,7 @@ run_measure_one(ipsec_args_t *cargs,
 	odp_ipsec_out_param_t param;
 	odp_pool_t pkt_pool;
 	odp_packet_t pkt = ODP_PACKET_INVALID;
+	static uint32_t out_pkt_idx;
 	int rc = 0;
 
 	pkt_pool = odp_pool_lookup("packet_pool");
@@ -677,16 +820,21 @@ run_measure_one(ipsec_args_t *cargs,
 				app_err("Received error packet: %d\n",
 					result.status.error.all);
 			}
+			inbound_packets[out_pkt_idx + packets_received] = pkt;
+
 			packets_sent += rc;
 			packets_received += num_out;
 			if (cargs->debug_packets)
 				odp_packet_print_data(out_pkt, 0,
 						      odp_packet_len(out_pkt));
-			odp_packet_free(out_pkt);
+
+			/*odp_packet_free(out_pkt);*/
 		}
 	}
 
 	fill_time_record(end);
+
+	out_pkt_idx += cargs->iteration_count;
 
 	return rc < 0 ? rc : 0;
 }
@@ -795,8 +943,9 @@ run_measure_one_config(ipsec_args_t *cargs,
 	unsigned int num_payloads = global_num_payloads;
 	unsigned int *payloads = global_payloads;
 	odp_ipsec_capability_t capa;
+	odp_ipsec_sa_t in_sa;
 	odp_ipsec_sa_t sa;
-	unsigned int i;
+	unsigned int i, j;
 	int rc = 0;
 
 	if (odp_ipsec_capability(&capa) < 0) {
@@ -825,6 +974,9 @@ run_measure_one_config(ipsec_args_t *cargs,
 		return -1;
 	}
 
+	memset(inbound_packets, 0, sizeof(inbound_packets));
+	printf("\nOutbound performance:\n");
+
 	print_result_header();
 	if (cargs->payload_length) {
 		num_payloads = 1;
@@ -844,6 +996,7 @@ run_measure_one_config(ipsec_args_t *cargs,
 			rc = run_measure_one(cargs, sa,
 					     payloads[i],
 					     &start, &end);
+
 		if (rc)
 			break;
 
@@ -857,6 +1010,46 @@ run_measure_one_config(ipsec_args_t *cargs,
 		result.rusage_thread = count / cargs->iteration_count;
 
 		print_result(cargs, payloads[i],
+			     config, &result);
+	}
+
+	/* Inbound processig performance computation */
+	printf("\nInbound performance:\n");
+
+	in_sa = create_insa_from_config(config, cargs);
+	if (sa == ODP_IPSEC_SA_INVALID) {
+		app_err("IPsec INSA create failed.\n");
+		return -1;
+	}
+
+	if (cargs->payload_length) {
+		num_payloads = 1;
+		payloads = &cargs->payload_length;
+	}
+
+	print_result_header();
+
+	for (j = 0; j < num_payloads; j++) {
+		double count;
+		ipsec_run_result_t result;
+		time_record_t start, end;
+
+		rc = run_measure_one_in(cargs, in_sa,
+					payloads[j],
+					&start, &end);
+		if (rc)
+			break;
+
+		count = get_elapsed_usec(&start, &end);
+		result.elapsed = count / cargs->iteration_count;
+
+		count = get_rusage_self_diff(&start, &end);
+		result.rusage_self = count / cargs->iteration_count;
+
+		count = get_rusage_thread_diff(&start, &end);
+		result.rusage_thread = count / cargs->iteration_count;
+
+		print_result(cargs, payloads[j],
 			     config, &result);
 	}
 
@@ -877,6 +1070,9 @@ run_measure_one_config(ipsec_args_t *cargs,
 		}
 	}
 	odp_ipsec_sa_destroy(sa);
+
+	odp_ipsec_sa_disable(in_sa);
+	odp_ipsec_sa_destroy(in_sa);
 
 	return rc;
 }
@@ -919,6 +1115,7 @@ static void usage(char *progname)
 	       "  -p, --poll           Poll completion queue for completion events.\n"
 	       "  -t, --tunnel         Use tunnel-mode IPsec transformation.\n"
 	       "  -u, --ah             Use AH transformation instead of ESP.\n"
+	       "  -w, --ws             Anti-replay window size.\n"
 	       "  -h, --help	       Display help and exit.\n"
 	       "\n");
 }
@@ -939,10 +1136,11 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 		{"schedule", no_argument, NULL, 's'},
 		{"tunnel", no_argument, NULL, 't'},
 		{"ah", no_argument, NULL, 'u'},
+		{"ws", optional_argument, NULL, 'w'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+a:c:df:hi:m:nl:sptu";
+	static const char *shortopts = "+a:c:df:hi:m:nl:w:sptu";
 
 	cargs->in_flight = 1;
 	cargs->debug_packets = 0;
@@ -951,6 +1149,7 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 	cargs->alg_config = NULL;
 	cargs->schedule = 0;
 	cargs->ah = 0;
+	cargs->ws = 0; /* default: AR disabled */
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -996,6 +1195,9 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 		case 'u':
 			cargs->ah = 1;
 			break;
+		case 'w':
+			cargs->ws = atoi(optarg);
+			break;
 		default:
 			break;
 		}
@@ -1017,6 +1219,7 @@ int main(int argc, char *argv[])
 	odp_queue_param_t qparam;
 	odp_pool_param_t param;
 	odp_queue_t out_queue = ODP_QUEUE_INVALID;
+	odp_queue_t in_queue = ODP_QUEUE_INVALID;
 	thr_arg_t thr_arg;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
@@ -1100,9 +1303,11 @@ int main(int argc, char *argv[])
 		qparam.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
 		qparam.sched.group = ODP_SCHED_GROUP_ALL;
 		out_queue = odp_queue_create("ipsec-out", &qparam);
+		in_queue = odp_queue_create("ipsec-in", &qparam);
 	} else if (cargs.poll) {
 		qparam.type = ODP_QUEUE_TYPE_PLAIN;
 		out_queue = odp_queue_create("ipsec-out", &qparam);
+		in_queue = odp_queue_create("ipsec-in", &qparam);
 	}
 	if (cargs.schedule || cargs.poll) {
 		if (out_queue == ODP_QUEUE_INVALID) {
@@ -1115,13 +1320,12 @@ int main(int argc, char *argv[])
 	} else {
 		config.inbound_mode = ODP_IPSEC_OP_MODE_SYNC;
 		config.outbound_mode = ODP_IPSEC_OP_MODE_SYNC;
-		config.inbound.default_queue = ODP_QUEUE_INVALID;
+		config.inbound.default_queue = in_queue;
 	}
 	if (odp_ipsec_config(&config)) {
 		app_err("odp_ipsec_config() failed\n");
 		exit(EXIT_FAILURE);
 	}
-
 	if (cargs.schedule) {
 		printf("Run in async scheduled mode\n");
 
@@ -1174,8 +1378,11 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (cargs.schedule || cargs.poll)
+	if (cargs.schedule || cargs.poll) {
 		odp_queue_destroy(out_queue);
+		odp_queue_destroy(in_queue);
+	}
+
 	if (odp_pool_destroy(pool)) {
 		app_err("Error: pool destroy\n");
 		exit(EXIT_FAILURE);
