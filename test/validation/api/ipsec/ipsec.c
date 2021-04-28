@@ -937,6 +937,73 @@ void ipsec_check_out_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 		odp_packet_free(pkto[i]);
 }
 
+static void ipsec_pkt_proto_err_set(odp_packet_t pkt)
+{
+	uint32_t l3_off = odp_packet_l3_offset(pkt);
+	odph_ipv4hdr_t ip;
+
+	/* Simulate proto error by corrupting protocol field */
+
+	odp_packet_copy_to_mem(pkt, l3_off, sizeof(ip), &ip);
+
+	if (ip.proto == ODPH_IPPROTO_ESP)
+		ip.proto = ODPH_IPPROTO_AH;
+	else
+		ip.proto = ODPH_IPPROTO_ESP;
+
+	odp_packet_copy_from_mem(pkt, l3_off, sizeof(ip), &ip);
+}
+
+static void ipsec_pkt_auth_err_set(odp_packet_t pkt)
+{
+	uint32_t data, len;
+
+	/* Simulate auth error by corrupting ICV */
+
+	len = odp_packet_len(pkt);
+	odp_packet_copy_to_mem(pkt, len - sizeof(data), sizeof(data), &data);
+	data = ~data;
+	odp_packet_copy_from_mem(pkt, len - sizeof(data), sizeof(data), &data);
+}
+
+void ipsec_check_out_in_one(const ipsec_test_part *part_outbound,
+			    const ipsec_test_part *part_inbound,
+			    odp_ipsec_sa_t sa,
+			    odp_ipsec_sa_t sa_in,
+			    const ipsec_test_flags *flags)
+{
+	int num_out = part_outbound->num_pkt;
+	odp_packet_t pkto[num_out];
+	int i;
+
+	num_out = ipsec_check_out(part_outbound, sa, pkto);
+
+	for (i = 0; i < num_out; i++) {
+		ipsec_test_part part_in = *part_inbound;
+		ipsec_test_packet pkt_in;
+
+		CU_ASSERT_FATAL(odp_packet_len(pkto[i]) <=
+				sizeof(pkt_in.data));
+
+		if (flags && flags->stats == IPSEC_TEST_STATS_PROTO_ERR)
+			ipsec_pkt_proto_err_set(pkto[i]);
+
+		if (flags && flags->stats == IPSEC_TEST_STATS_AUTH_ERR)
+			ipsec_pkt_auth_err_set(pkto[i]);
+
+		pkt_in.len = odp_packet_len(pkto[i]);
+		pkt_in.l2_offset = odp_packet_l2_offset(pkto[i]);
+		pkt_in.l3_offset = odp_packet_l3_offset(pkto[i]);
+		pkt_in.l4_offset = odp_packet_l4_offset(pkto[i]);
+		odp_packet_copy_to_mem(pkto[i], 0,
+				       pkt_in.len,
+				       pkt_in.data);
+		part_in.pkt_in = &pkt_in;
+		ipsec_check_in_one(&part_in, sa_in);
+		odp_packet_free(pkto[i]);
+	}
+}
+
 int ipsec_suite_init(void)
 {
 	int rc = 0;

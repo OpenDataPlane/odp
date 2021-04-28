@@ -1727,6 +1727,137 @@ static void test_ipsec_sa_print(void)
 	ipsec_sa_destroy(in_sa);
 }
 
+static void test_antireplay(uint32_t window_sz)
+{
+	odp_ipsec_test_sa_operation_t sa_op = ODP_IPSEC_TEST_SA_UPDATE_SEQ_NUM;
+	odp_ipsec_tunnel_param_t in_tunnel, out_tunnel;
+	odp_ipsec_sa_param_t param_in, param_out;
+	uint32_t src = IPV4ADDR(10, 0, 111, 2);
+	uint32_t dst = IPV4ADDR(10, 0, 222, 2);
+	odp_ipsec_test_sa_param_t sa_param;
+	odp_ipsec_sa_info_t sa_info;
+	ipsec_test_part test_fail_in;
+	odp_ipsec_sa_t out_sa;
+	odp_ipsec_sa_t in_sa;
+
+	memset(&in_tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	memset(&out_tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	memset(&test_fail_in, 0, sizeof(ipsec_test_part));
+
+	out_tunnel.type = ODP_IPSEC_TUNNEL_IPV4;
+	out_tunnel.ipv4.src_addr = &src;
+	out_tunnel.ipv4.dst_addr = &dst;
+
+	ipsec_sa_param_fill(&param_out,
+			    false, false, 0x4a2cbfe3, &out_tunnel,
+			    ODP_CIPHER_ALG_AES_GCM, &key_mcgrew_gcm_4,
+			    ODP_AUTH_ALG_AES_GCM, NULL,
+			    &key_mcgrew_gcm_salt_4, NULL);
+
+	ipsec_sa_param_fill(&param_in,
+			    true, false, 0x4a2cbfe3, &in_tunnel,
+			    ODP_CIPHER_ALG_AES_GCM, &key_mcgrew_gcm_4,
+			    ODP_AUTH_ALG_AES_GCM, NULL,
+			    &key_mcgrew_gcm_salt_4, NULL);
+
+	ipsec_test_part test_pass_out = {
+		.pkt_in = &pkt_mcgrew_gcm_test_4,
+		.num_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ESP,
+			},
+		},
+	};
+
+	ipsec_test_part test_pass_in = {
+		.num_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ICMPV4,
+			  .pkt_res = &pkt_mcgrew_gcm_test_4},
+		},
+	};
+
+	test_fail_in.pkt_in = &pkt_mcgrew_gcm_test_4;
+	test_fail_in.num_pkt = 1;
+	test_fail_in.out[0].status.error.antireplay = 1;
+
+	out_sa = odp_ipsec_sa_create(&param_out);
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, out_sa);
+
+	param_in.inbound.antireplay_ws = window_sz;
+	in_sa = odp_ipsec_sa_create(&param_in);
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, in_sa);
+
+	memset(&sa_info, 0, sizeof(odp_ipsec_sa_info_t));
+	CU_ASSERT_EQUAL_FATAL(0, odp_ipsec_sa_info(in_sa, &sa_info));
+
+	window_sz = sa_info.inbound.antireplay_ws;
+
+	/* 1. Advance the TOP of the window to WS * 2 */
+	sa_param.seq_num =  window_sz * 2;
+	CU_ASSERT_EQUAL(0, odp_ipsec_test_sa_update(out_sa,
+						    sa_op, &sa_param));
+	ipsec_check_out_in_one(&test_pass_out, &test_pass_in, out_sa, in_sa, NULL);
+
+	/* 2. Test sequence number within the new window(WS + 1) */
+	sa_param.seq_num = window_sz + 1;
+	CU_ASSERT_EQUAL(0, odp_ipsec_test_sa_update(out_sa,
+						    sa_op, &sa_param));
+	ipsec_check_out_in_one(&test_pass_out, &test_pass_in, out_sa, in_sa, NULL);
+
+	/* 3. Test sequence number less than the window BOTTOM */
+	sa_param.seq_num = window_sz;
+	CU_ASSERT_EQUAL(0, odp_ipsec_test_sa_update(out_sa,
+						    sa_op, &sa_param));
+	ipsec_check_out_in_one(&test_pass_out, &test_fail_in, out_sa, in_sa, NULL);
+
+	/* 4. Test sequence number in the middle of the window  */
+	sa_param.seq_num = (window_sz + (window_sz / 2));
+	CU_ASSERT_EQUAL(0, odp_ipsec_test_sa_update(out_sa, sa_op, &sa_param));
+
+	ipsec_check_out_in_one(&test_pass_out, &test_pass_in, out_sa, in_sa, NULL);
+
+	/* 5. Test replay of the packet in the middle of the window */
+	sa_param.seq_num = (window_sz + (window_sz / 2));
+	CU_ASSERT_EQUAL(0, odp_ipsec_test_sa_update(out_sa, sa_op, &sa_param));
+
+	ipsec_check_out_in_one(&test_pass_out, &test_fail_in, out_sa, in_sa, NULL);
+
+	ipsec_sa_destroy(in_sa);
+	ipsec_sa_destroy(out_sa);
+}
+
+/*
+ * Test antireplay feature with various window sizes supported by
+ * the AR implementation.
+ */
+static void test_in_esp_aes_gcm_128_tun_antireplay(void)
+{
+	odp_ipsec_capability_t capa;
+	uint32_t window_sz = 32;
+
+	if (ipsec_check_esp_aes_gcm_128() != ODP_TEST_ACTIVE)
+		return;
+
+	CU_ASSERT(odp_ipsec_capability(&capa) == 0);
+
+	/* Test for antireply feature */
+	while (window_sz <= capa.max_antireplay_ws) {
+		if (window_sz > 32)
+			test_antireplay(window_sz - 1);
+		test_antireplay(window_sz);
+		if (window_sz < 4096)
+			test_antireplay(window_sz + 1);
+		window_sz *= 2;
+	}
+}
+
 static void ipsec_test_capability(void)
 {
 	odp_ipsec_capability_t capa;
@@ -1839,5 +1970,6 @@ odp_testinfo_t ipsec_in_suite[] = {
 	ODP_TEST_INFO(test_ipsec_print),
 	ODP_TEST_INFO_CONDITIONAL(test_ipsec_sa_print,
 				  ipsec_check_esp_aes_cbc_128_sha1),
+	ODP_TEST_INFO(test_in_esp_aes_gcm_128_tun_antireplay),
 	ODP_TEST_INFO_NULL,
 };
