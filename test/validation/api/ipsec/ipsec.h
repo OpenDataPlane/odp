@@ -11,6 +11,11 @@
 
 #include <odp_cunit_common.h>
 
+#define IPV4ADDR(a, b, c, d) odp_cpu_to_be_32(((a) << 24) | \
+					      ((b) << 16) | \
+					      ((c) << 8) | \
+					      ((d) << 0))
+
 /* test arrays: */
 extern odp_testinfo_t ipsec_in_suite[];
 extern odp_testinfo_t ipsec_out_suite[];
@@ -81,6 +86,20 @@ typedef struct {
 	} out[1];
 } ipsec_test_part;
 
+/*
+ * Miscellaneous parameters for combined out+in tests
+ */
+typedef struct {
+	ipsec_test_part_flags_t part_flags;
+	odp_bool_t display_algo;
+	odp_bool_t ah;
+	odp_bool_t v6;
+	odp_bool_t tunnel;
+	odp_bool_t tunnel_is_v6;
+	odp_bool_t udp_encap;
+	enum ipsec_test_stats stats;
+} ipsec_test_flags;
+
 void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
 			 odp_bool_t in,
 			 odp_bool_t ah,
@@ -100,6 +119,11 @@ int ipsec_check_out(const ipsec_test_part *part,
 		    odp_ipsec_sa_t sa,
 		    odp_packet_t *pkto);
 void ipsec_check_out_one(const ipsec_test_part *part, odp_ipsec_sa_t sa);
+void ipsec_check_out_in_one(const ipsec_test_part *part_outbound,
+			    const ipsec_test_part *part_inbound,
+			    odp_ipsec_sa_t sa,
+			    odp_ipsec_sa_t sa_in,
+			    const ipsec_test_flags *flags);
 int ipsec_test_sa_update_seq_num(odp_ipsec_sa_t sa, uint32_t seq_num);
 
 int ipsec_check(odp_bool_t ah,
