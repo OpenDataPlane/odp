@@ -533,11 +533,16 @@ int odph_cli_start(const odp_instance_t instance,
 	return 0;
 
 error:
-	close(shm->sp[SP_READ]);
-	close(shm->sp[SP_WRITE]);
-	close(shm->listen_fd);
-	close(shm->cli_fd);
-	shm->run = 0;
+	if (shm->sp[SP_READ] >= 0)
+		close(shm->sp[SP_READ]);
+	if (shm->sp[SP_WRITE] >= 0)
+		close(shm->sp[SP_WRITE]);
+	if (shm->listen_fd >= 0)
+		close(shm->listen_fd);
+	if (shm->cli_fd >= 0)
+		close(shm->cli_fd);
+	if (odp_shm_free(shm_hdl))
+		ODPH_ERR("Error: odp_shm_free() failed\n");
 	return -1;
 }
 
