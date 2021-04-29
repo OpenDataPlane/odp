@@ -67,6 +67,18 @@ static int check_num_args(struct cli_def *cli, int argc, int req_argc)
 	return 0;
 }
 
+static int cmd_call_odp_cls_print_all(struct cli_def *cli,
+				      const char *command ODP_UNUSED,
+				      char *argv[] ODP_UNUSED, int argc)
+{
+	if (check_num_args(cli, argc, 0))
+		return CLI_ERROR;
+
+	odp_cls_print_all();
+
+	return CLI_OK;
+}
+
 static int cmd_call_odp_ipsec_print(struct cli_def *cli,
 				    const char *command ODP_UNUSED,
 				    char *argv[] ODP_UNUSED, int argc)
@@ -203,6 +215,9 @@ static struct cli_def *create_cli(void)
 	c = cli_register_command(cli, NULL, "call", NULL,
 				 PRIVILEGE_UNPRIVILEGED, MODE_EXEC,
 				 "Call ODP API function.");
+	cli_register_command(cli, c, "odp_cls_print_all",
+			     cmd_call_odp_cls_print_all,
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
 	cli_register_command(cli, c, "odp_ipsec_print",
 			     cmd_call_odp_ipsec_print,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
