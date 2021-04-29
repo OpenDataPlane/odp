@@ -916,7 +916,7 @@ static void _verify_headroom_shift(odp_packet_t *pkt,
 			extended = 1;
 		}
 	} else {
-		if ((uint32_t)abs(shift) <= seg_data_len) {
+		if ((uint32_t)abs(shift) < seg_data_len) {
 			data = odp_packet_pull_head(*pkt, -shift);
 			extended = 0;
 		} else {
@@ -1019,7 +1019,7 @@ static void _verify_tailroom_shift(odp_packet_t *pkt,
 		CU_ASSERT(l3_off == odp_packet_l3_offset(*pkt));
 		CU_ASSERT(l4_off == odp_packet_l4_offset(*pkt));
 	} else {
-		if ((uint32_t)abs(shift) <= seg_data_len) {
+		if ((uint32_t)abs(shift) < seg_data_len) {
 			tail = odp_packet_pull_tail(*pkt, -shift);
 			extended = 0;
 		} else {
