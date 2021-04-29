@@ -929,13 +929,7 @@ static void _verify_headroom_shift(odp_packet_t *pkt,
 	CU_ASSERT_PTR_NOT_NULL(data);
 	if (extended) {
 		CU_ASSERT(rc >= 0);
-		if (shift >= 0) {
-			CU_ASSERT(odp_packet_seg_len(*pkt) == shift - room);
-		} else {
-			CU_ASSERT(odp_packet_headroom(*pkt) >=
-				  (uint32_t)abs(shift) - seg_data_len);
-		}
-		CU_ASSERT(odp_packet_head(*pkt) != head_orig);
+		CU_ASSERT(odp_packet_seg_len(*pkt) == seg_len);
 	} else {
 		CU_ASSERT(odp_packet_headroom(*pkt) == room - shift);
 		CU_ASSERT(odp_packet_seg_len(*pkt) == seg_data_len + shift);
@@ -1032,15 +1026,13 @@ static void _verify_tailroom_shift(odp_packet_t *pkt,
 	CU_ASSERT_PTR_NOT_NULL(tail);
 	if (extended) {
 		CU_ASSERT(rc >= 0);
-		CU_ASSERT(odp_packet_last_seg(*pkt) != seg);
-		seg = odp_packet_last_seg(*pkt);
-		if (shift > 0) {
-			CU_ASSERT(odp_packet_seg_data_len(*pkt, seg) ==
-				  shift - room);
+
+		if (shift >= 0) {
+			if (rc == 0)
+				CU_ASSERT(tail == tail_orig);
 		} else {
-			CU_ASSERT(odp_packet_tailroom(*pkt) >=
-				  (uint32_t)abs(shift) - seg_data_len);
-			CU_ASSERT(seg_len == odp_packet_tailroom(*pkt));
+			CU_ASSERT(odp_packet_tail(*pkt) == tail);
+			CU_ASSERT(odp_packet_tailroom(*pkt) == seg_len);
 		}
 	} else {
 		CU_ASSERT(odp_packet_seg_data_len(*pkt, seg) ==
@@ -1049,19 +1041,15 @@ static void _verify_tailroom_shift(odp_packet_t *pkt,
 		if (room == 0 || (room - shift) == 0)
 			return;
 		if (shift >= 0) {
-			CU_ASSERT(odp_packet_tail(*pkt) ==
-				  tail_orig + shift);
+			CU_ASSERT(odp_packet_tail(*pkt) == tail_orig + shift);
+			CU_ASSERT(tail == tail_orig);
 		} else {
+			CU_ASSERT(odp_packet_tail(*pkt) == tail);
 			CU_ASSERT(tail == tail_orig + shift);
 		}
 	}
 
 	CU_ASSERT(odp_packet_len(*pkt) == pkt_data_len + shift);
-	if (shift >= 0) {
-		CU_ASSERT(tail == tail_orig);
-	} else {
-		CU_ASSERT(odp_packet_tail(*pkt) == tail);
-	}
 }
 
 static void packet_test_tailroom(void)
