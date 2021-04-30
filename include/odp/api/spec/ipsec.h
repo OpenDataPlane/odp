@@ -937,6 +937,15 @@ typedef struct odp_ipsec_stats_t {
 
 	/** Number of packets with hard lifetime(packets) expired */
 	uint64_t hard_exp_pkts_err;
+
+	/** Total bytes of packet data processed by IPsec SA in success cases
+	 *
+	 * The range of packet bytes included in the success_bytes count is
+	 * implementation defined but includes at least the bytes input for
+	 * encryption or bytes output after decryption in ESP or the bytes
+	 * authenticated in AH.
+	 */
+	uint64_t success_bytes;
 } odp_ipsec_stats_t;
 
 /**
