@@ -16,6 +16,17 @@ AC_ARG_WITH([dpdk-path],
      pktio_dpdk_support=yes],[])
 
 ##########################################################################
+# Use shared DPDK library
+##########################################################################
+dpdk_shared=no
+AC_ARG_ENABLE([dpdk-shared],
+    [AS_HELP_STRING([--enable-dpdk-shared],
+                    [use shared DPDK library [default=disabled] (linux-generic)])],
+    [if test x$enableval = xyes; then
+        dpdk_shared=yes
+    fi])
+
+##########################################################################
 # Enable zero-copy DPDK pktio
 ##########################################################################
 zero_copy=0
@@ -34,7 +45,7 @@ AC_ARG_ENABLE([dpdk-zero-copy],
 ##########################################################################
 if test x$pktio_dpdk_support = xyes
 then
-    ODP_DPDK([$DPDK_PATH], [],
+    ODP_DPDK([$DPDK_PATH], [$dpdk_shared], [],
 	     [AC_MSG_FAILURE([can't find DPDK])])
 
     case "${host}" in
