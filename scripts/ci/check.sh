@@ -5,7 +5,7 @@ echo 1500 | tee /proc/sys/vm/nr_hugepages
 mkdir -p /mnt/huge
 mount -t hugetlbfs nodev /mnt/huge
 
-"`dirname "$0"`"/build_x86_64.sh
+"`dirname "$0"`"/build_${ARCH}.sh
 
 cd "$(dirname "$0")"/../..
 

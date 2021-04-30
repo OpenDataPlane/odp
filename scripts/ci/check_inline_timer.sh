@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-"`dirname "$0"`"/build_x86_64.sh
+"`dirname "$0"`"/build_${ARCH}.sh
 
 cd "$(dirname "$0")"/../..
 

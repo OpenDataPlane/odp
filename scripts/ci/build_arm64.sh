@@ -2,6 +2,10 @@
 set -e
 
 export TARGET_ARCH=aarch64-linux-gnu
+if [[ $(uname -m) =~ ^(arm64|aarch64)$ ]]; then
+  export BUILD_ARCH=aarch64-linux-gnu
+fi
+
 if [ "${CC#clang}" != "${CC}" ] ; then
 	export CC="clang --target=${TARGET_ARCH}"
 	export CXX="clang++ --target=${TARGET_ARCH}"
