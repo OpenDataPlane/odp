@@ -956,8 +956,11 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 	goto exit;
 
 post_lifetime_err_cnt_update:
-	if (ipsec_config->stats_en)
+	if (ipsec_config->stats_en) {
 		odp_atomic_inc_u64(&ipsec_sa->stats.post_lifetime_err_pkts);
+		odp_atomic_add_u64(&ipsec_sa->stats.post_lifetime_err_bytes,
+				   state.stats_length);
+	}
 
 exit:
 	*pkt_out = pkt;
@@ -1708,8 +1711,11 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	goto exit;
 
 post_lifetime_err_cnt_update:
-	if (ipsec_config->stats_en)
+	if (ipsec_config->stats_en) {
 		odp_atomic_inc_u64(&ipsec_sa->stats.post_lifetime_err_pkts);
+		odp_atomic_add_u64(&ipsec_sa->stats.post_lifetime_err_bytes,
+				   state.stats_length);
+	}
 
 exit:
 	*pkt_out = pkt;
@@ -2175,7 +2181,7 @@ int odp_ipsec_stats(odp_ipsec_sa_t sa, odp_ipsec_stats_t *stats)
 	ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
 	ODP_ASSERT(NULL != ipsec_sa);
 
-	stats->success = _odp_ipsec_sa_stats_pkts(ipsec_sa);
+	_odp_ipsec_sa_stats_pkts(ipsec_sa, stats);
 	stats->proto_err = odp_atomic_load_u64(&ipsec_sa->stats.proto_err);
 	stats->auth_err = odp_atomic_load_u64(&ipsec_sa->stats.auth_err);
 	stats->antireplay_err = odp_atomic_load_u64(&ipsec_sa->stats.antireplay_err);
