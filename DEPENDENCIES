@@ -180,7 +180,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
 3.4 DPDK packet I/O support (optional)
 
    Use DPDK for ODP packet I/O. Currently supported DPDK versions are v19.11
-   (recommended) and v18.11.
+   (recommended) and v20.11.
 
    Note: only packet I/O is accelerated with DPDK. See
         https://github.com/OpenDataPlane/odp-dpdk.git
@@ -196,11 +196,11 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ sudo yum install numactl-devel
 
 3.4.2 Native DPDK install
-   # Debian/Ubuntu starting from 18.04
+   # Debian/Ubuntu starting from 20.04
    $ sudo apt-get install dpdk-dev
 
-3.4.2 Build DPDK from source
-   $ git clone --branch=19.11 http://dpdk.org/git/dpdk-stable dpdk
+3.4.3 Build DPDK v19.11 from source
+   $ git clone https://dpdk.org/git/dpdk-stable --branch 19.11 --depth 1 ./<dpdk-dir>
 
    # Make and edit DPDK configuration
    $ export TARGET="x86_64-native-linuxapp-gcc"
@@ -214,10 +214,28 @@ Prerequisites for building the OpenDataPlane (ODP) API
    # Build and install DPDK
    $ make install T=${TARGET} EXTRA_CFLAGS="-fPIC" DESTDIR=./install
 
-   # Compile ODP
-   $ ./configure --with-dpdk-path=<dpdk_install_dir>
+   # Configure ODP
+   $ ./configure --with-dpdk-path=<dpdk-dir>
 
-3.4.3 Setup system
+3.4.4 Build DPDK v20.11 from source
+   $ git clone https://dpdk.org/git/dpdk-stable --branch 20.11 --depth 1 ./<dpdk-dir>
+
+   # Prepare the build directory
+   $ cd <dpdk-dir>
+   $ meson build
+   $ cd build
+
+   # Configure the location where DPDK will be installed
+   $ meson configure -Dprefix=$(pwd)/../install
+
+   # Build and install DPDK
+   $ ninja install
+
+   # Configure ODP
+   # Instead of using --with-dpdk-path option, set PKG_CONFIG_PATH
+   $ PKG_CONFIG_PATH=<dpdk-dir>/install/lib/x86_64-linux-gnu/pkgconfig ./configure --enable-dpdk
+
+3.4.5 Setup system
 
    # Load DPDK modules
    $ sudo modprobe uio
@@ -229,7 +247,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    512 x 2MB huge pages. All this can be done with the DPDK setup script
    (<dpdk-dir>/usertools/dpdk-setup.sh).
 
-3.4.4 Running ODP with DPDK pktio
+3.4.6 Running ODP with DPDK pktio
 
    ODP applications will try use DPDK for packet I/O by default. If some other
    I/O type is desired instead, DPDK I/O can be disabled by setting the
