@@ -316,12 +316,14 @@ jobs:
         if: ${{ failure() }}
         run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
 
-  Run_dpdk-18_11:
+  Run_dpdk-20_11:
     runs-on: ubuntu-18.04
+    env:
+      OS: ubuntu_20.04
     steps:
       - uses: actions/checkout@v2
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
-               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-dpdk_18.11 /odp/scripts/ci/check.sh
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-dpdk_20.11 /odp/scripts/ci/check.sh
       - name: Failure log
         if: ${{ failure() }}
         run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done

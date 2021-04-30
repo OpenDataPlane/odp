@@ -187,18 +187,16 @@ jobs:
         run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
 
 
-  Run_dpdk-18_11:
+  Run_dpdk-20_11:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: [self-hosted, ARM64]
-    strategy:
-      fail-fast: false
-      matrix:
-        os: ['ubuntu_18.04']
+    env:
+      OS: ubuntu_20.04
     steps:
       - uses: AutoModality/action-clean@v1.1.0
       - uses: actions/checkout@v2
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}" -e ARCH="${ARCH}"
-               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${{matrix.os}}-${ARCH}-native-dpdk_18.11 /odp/scripts/ci/check.sh
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native-dpdk_20.11 /odp/scripts/ci/check.sh
       - name: Failure log
         if: ${{ failure() }}
         run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
