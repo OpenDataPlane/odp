@@ -241,7 +241,7 @@ jobs:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        conf: ['', '--enable-abi-compat', '--enable-deprecated', '--enable-dpdk-zero-copy --disable-static-applications', '--disable-host-optimization', '--disable-host-optimization --enable-abi-compat', '--without-openssl --without-pcap']
+        conf: ['', '--enable-abi-compat', '--enable-deprecated --enable-debug=full', '--enable-dpdk-zero-copy --disable-static-applications', '--disable-host-optimization', '--disable-host-optimization --enable-abi-compat', '--without-openssl --without-pcap']
     steps:
       - uses: actions/checkout@v2
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}" -e ARCH="${ARCH}"
