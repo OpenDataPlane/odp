@@ -359,17 +359,19 @@ static void test_ipsec_stats_zero_assert(odp_ipsec_stats_t *stats)
 	CU_ASSERT_EQUAL(stats->mtu_err, 0);
 	CU_ASSERT_EQUAL(stats->hard_exp_bytes_err, 0);
 	CU_ASSERT_EQUAL(stats->hard_exp_pkts_err, 0);
+	CU_ASSERT_EQUAL(stats->success_bytes, 0);
 }
 
 static void test_ipsec_stats_test_assert(odp_ipsec_stats_t *stats,
-					 enum ipsec_test_stats test)
+					 enum ipsec_test_stats test,
+					 uint64_t succ_bytes)
 {
 	if (test == IPSEC_TEST_STATS_SUCCESS) {
-		/* Braces needed by CU macro */
 		CU_ASSERT_EQUAL(stats->success, 1);
+		CU_ASSERT(stats->success_bytes >= succ_bytes);
 	} else {
-		/* Braces needed by CU macro */
 		CU_ASSERT_EQUAL(stats->success, 0);
+		CU_ASSERT_EQUAL(stats->success_bytes, 0);
 	}
 
 	if (test == IPSEC_TEST_STATS_PROTO_ERR) {
@@ -606,20 +608,36 @@ static void test_out_in_common(const ipsec_test_flags *flags,
 
 	ipsec_check_out_in_one(&test_out, &test_in, sa_out, sa_in, flags);
 
-	if (flags->stats == IPSEC_TEST_STATS_SUCCESS) {
-		CU_ASSERT_EQUAL(odp_ipsec_stats(sa_in, &stats), 0);
-		test_ipsec_stats_test_assert(&stats, flags->stats);
-	}
-
 	if (flags->stats != IPSEC_TEST_STATS_NONE) {
+		uint64_t succ_bytes = 0;
+
+		/* Minimum bytes to be counted for stats.success_bytes */
+		if (!flags->ah) {
+			succ_bytes = test_out.pkt_in[0].len -
+				     test_out.pkt_in[0].l4_offset;
+
+			if (flags->tunnel)
+				succ_bytes += test_out.pkt_in[0].l4_offset -
+					      test_out.pkt_in[0].l3_offset;
+		} else {
+			succ_bytes = test_out.pkt_in[0].len -
+				     test_out.pkt_in[0].l3_offset;
+
+			if (flags->tunnel)
+				succ_bytes += (flags->tunnel_is_v6 ?
+					       ODPH_IPV6HDR_LEN :
+					       ODPH_IPV4HDR_LEN);
+		}
+
 		/* All stats tests have outbound operation success and inbound
 		 * varying.
 		 */
 		CU_ASSERT_EQUAL(odp_ipsec_stats(sa_out, &stats), 0);
-		test_ipsec_stats_test_assert(&stats, IPSEC_TEST_STATS_SUCCESS);
+		test_ipsec_stats_test_assert(&stats, IPSEC_TEST_STATS_SUCCESS,
+					     succ_bytes);
 
 		CU_ASSERT_EQUAL(odp_ipsec_stats(sa_in, &stats), 0);
-		test_ipsec_stats_test_assert(&stats, flags->stats);
+		test_ipsec_stats_test_assert(&stats, flags->stats, succ_bytes);
 	}
 
 	ipsec_sa_destroy(sa_out);
