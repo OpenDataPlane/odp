@@ -10,11 +10,9 @@ endif
 SUBDIRS =
 
 if WITH_EXAMPLES
-TESTS = ipsec/ipsec_api_example.sh \
-	ipsec/ipsec_crypto_example.sh
+TESTS = ipsec/ipsec_crypto_example.sh
 
-dist_check_SCRIPTS = ipsec/ipsec_api_example.sh \
-		     ipsec/ipsec_crypto_example.sh
+dist_check_SCRIPTS = ipsec/ipsec_crypto_example.sh
 else
 TESTS =
 dist_check_SCRIPTS =
