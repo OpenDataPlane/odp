@@ -184,6 +184,18 @@ static int cmd_call_odp_queue_print(struct cli_def *cli,
 	return CLI_OK;
 }
 
+static int cmd_call_odp_queue_print_all(struct cli_def *cli,
+					const char *command ODP_UNUSED,
+					char *argv[] ODP_UNUSED, int argc)
+{
+	if (check_num_args(cli, argc, 0))
+		return CLI_ERROR;
+
+	odp_queue_print_all();
+
+	return CLI_OK;
+}
+
 static int cmd_call_odp_shm_print(struct cli_def *cli,
 				  const char *command ODP_UNUSED, char *argv[],
 				  int argc)
@@ -230,6 +242,9 @@ static struct cli_def *create_cli(void)
 	cli_register_command(cli, c, "odp_queue_print",
 			     cmd_call_odp_queue_print,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
+	cli_register_command(cli, c, "odp_queue_print_all",
+			     cmd_call_odp_queue_print_all,
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
 	cli_register_command(cli, c, "odp_shm_print_all",
 			     cmd_call_odp_shm_print_all,
 			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
