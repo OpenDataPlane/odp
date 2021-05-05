@@ -1,4 +1,4 @@
-name: CI
+name: CI x86_64
 
 on: [push, pull_request]
 env:
@@ -58,15 +58,14 @@ jobs:
         make doxygen-doc 2>&1 | tee ./doxygen.log
         ! fgrep -rq warning ./doxygen.log
 
-  Build_x86_64:
+  Build:
     runs-on: ubuntu-18.04
-    env:
-      ARCH: x86_64
     strategy:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        conf: ['', 'CFLAGS=-O3', 'CFLAGS=-O1', 'CFLAGS=-O0 --enable-debug=full', '--enable-lto', '--enable-lto --enable-abi-compat', '--enable-pcapng-support']
+        conf: ['', 'CFLAGS=-O3', 'CFLAGS=-O1', 'CFLAGS=-O0 --enable-debug=full', '--enable-lto',
+               '--enable-lto --enable-abi-compat', '--enable-pcapng-support']
         exclude:
           - cc: clang
             conf: '--enable-lto'
@@ -164,8 +163,6 @@ jobs:
 
   Build_OS:
     runs-on: ubuntu-18.04
-    env:
-      ARCH: x86_64
     strategy:
       fail-fast: false
       matrix:
@@ -180,7 +177,6 @@ jobs:
   Build_gcc-10:
     runs-on: ubuntu-18.04
     env:
-      ARCH: x86_64
       CC: gcc-10
       OS: ubuntu_20.04
     strategy:
@@ -233,15 +229,16 @@ jobs:
       if: ${{ failure() }}
       run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
 
-  Run_x86_64:
+  Run:
     runs-on: ubuntu-18.04
-    env:
-      ARCH: x86_64
     strategy:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        conf: ['', '--enable-abi-compat', '--enable-deprecated --enable-debug=full', '--enable-dpdk-zero-copy --disable-static-applications', '--disable-host-optimization', '--disable-host-optimization --enable-abi-compat', '--without-openssl --without-pcap']
+        conf: ['', '--enable-abi-compat', '--enable-deprecated --enable-debug=full',
+               '--enable-dpdk-zero-copy --disable-static-applications',
+               '--disable-host-optimization', '--disable-host-optimization --enable-abi-compat',
+               '--without-openssl --without-pcap']
     steps:
       - uses: actions/checkout@v2
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}" -e ARCH="${ARCH}"
@@ -330,7 +327,8 @@ jobs:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        conf: ['--with-netmap-path=/odp/netmap', '--with-netmap-path=/odp/netmap --disable-static-applications']
+        conf: ['--with-netmap-path=/odp/netmap',
+               '--with-netmap-path=/odp/netmap --disable-static-applications']
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies

@@ -1,4 +1,4 @@
-name: Arm64 CI
+name: CI arm64
 
 # github.repository has been used to ensure CI is only run on the repo where
 # self-hosted runners are installed. This will prevent [self-hosted, ARM64] CI failing on forks
