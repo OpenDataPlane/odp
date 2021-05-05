@@ -47,30 +47,6 @@ void odph_cli_param_init(odph_cli_param_t *param)
 	*param = param_default;
 }
 
-static int cmd_show_cpu(struct cli_def *cli, const char *command ODP_UNUSED,
-			char *argv[] ODP_UNUSED, int argc ODP_UNUSED)
-{
-	for (int c = 0; c < odp_cpu_count(); c++) {
-		cli_print(cli, "% 4d: %s %.03f / %.03f GHz", c,
-			  odp_cpu_model_str_id(c),
-			  (float)odp_cpu_hz_id(c) / 1000000000.0,
-			  (float)odp_cpu_hz_max_id(c) / 1000000000.0);
-	}
-
-	return CLI_OK;
-}
-
-static int cmd_show_version(struct cli_def *cli, const char *command ODP_UNUSED,
-			    char *argv[] ODP_UNUSED, int argc ODP_UNUSED)
-{
-	cli_print(cli, "ODP API version: %s", odp_version_api_str());
-	cli_print(cli, "ODP implementation name: %s", odp_version_impl_name());
-	cli_print(cli, "ODP implementation version: %s",
-		  odp_version_impl_str());
-
-	return CLI_OK;
-}
-
 /*
  * Check that number of given arguments matches required number of
  * arguments. Print error messages if this is not the case. Return 0
@@ -223,16 +199,6 @@ static struct cli_def *create_cli(void)
 	cli = cli_init();
 	cli_set_banner(cli, NULL);
 	cli_set_hostname(cli, "ODP");
-
-	c = cli_register_command(cli, NULL, "show", NULL,
-				 PRIVILEGE_UNPRIVILEGED, MODE_EXEC,
-				 "Show information.");
-	cli_register_command(cli, c, "cpu", cmd_show_cpu,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC,
-			     "Show CPU information.");
-	cli_register_command(cli, c, "version", cmd_show_version,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC,
-			     "Show version information.");
 
 	c = cli_register_command(cli, NULL, "call", NULL,
 				 PRIVILEGE_UNPRIVILEGED, MODE_EXEC,
