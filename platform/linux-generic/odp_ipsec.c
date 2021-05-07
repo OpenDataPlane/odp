@@ -240,6 +240,14 @@ int odp_ipsec_config(const odp_ipsec_config_t *config)
 	return 0;
 }
 
+odp_bool_t _odp_ipsec_is_sync_mode(odp_ipsec_dir_t dir)
+{
+	return ((dir == ODP_IPSEC_DIR_INBOUND &&
+		 ipsec_config->inbound_mode == ODP_IPSEC_OP_MODE_SYNC) ||
+		(dir == ODP_IPSEC_DIR_OUTBOUND &&
+		 ipsec_config->outbound_mode == ODP_IPSEC_OP_MODE_SYNC));
+}
+
 static odp_ipsec_packet_result_t *ipsec_pkt_result(odp_packet_t packet)
 {
 	ODP_ASSERT(ODP_EVENT_PACKET_IPSEC ==
