@@ -22,9 +22,22 @@
 
 #include <string.h>
 
-#define IPSEC_SA_STATE_DISABLE	0x40000000
-#define IPSEC_SA_STATE_FREE	0xc0000000
-#define IPSEC_SA_STATE_RESERVED	0x80000000
+/*
+ * SA state consists of state value in the high order bits of ipsec_sa_t::state
+ * and use counter in the low order bits.
+ *
+ * An SA cannot be destroyed if its use count is higher than one. Use counter
+ * is needed for the case SA lookup is done by us and not the application.
+ * In the latter case we rely on the fact that the application may not pass
+ * the SA as a parameter to an IPsec operation concurrently with a call
+ * to odp_ipsec_sa_disable().
+ *
+ * SAs that are free or being disabled cannot be found in SA lookup by ODP.
+ */
+#define IPSEC_SA_STATE_ACTIVE   0x00000000 /* SA is in use */
+#define IPSEC_SA_STATE_DISABLE	0x40000000 /* SA is being disabled */
+#define IPSEC_SA_STATE_FREE	0xc0000000 /* SA is unused and free */
+#define IPSEC_SA_STATE_MASK     0xc0000000 /* mask of state bits */
 
 #define SA_IDX_NONE UINT32_MAX
 
@@ -264,8 +277,6 @@ static ipsec_sa_t *ipsec_sa_reserve(void)
 	if (sa_idx != SA_IDX_NONE) {
 		ipsec_sa = ipsec_sa_entry(sa_idx);
 		ipsec_sa_tbl->sa_freelist.head = ipsec_sa->next_sa;
-		odp_atomic_store_u32(&ipsec_sa->state,
-				     IPSEC_SA_STATE_RESERVED);
 	}
 	odp_spinlock_unlock(&ipsec_sa_tbl->sa_freelist.lock);
 	return ipsec_sa;
@@ -283,7 +294,7 @@ static void ipsec_sa_release(ipsec_sa_t *ipsec_sa)
 /* Mark reserved SA as available now */
 static void ipsec_sa_publish(ipsec_sa_t *ipsec_sa)
 {
-	odp_atomic_store_rel_u32(&ipsec_sa->state, 0);
+	odp_atomic_store_rel_u32(&ipsec_sa->state, IPSEC_SA_STATE_ACTIVE);
 }
 
 static int ipsec_sa_lock(ipsec_sa_t *ipsec_sa)
@@ -294,11 +305,9 @@ static int ipsec_sa_lock(ipsec_sa_t *ipsec_sa)
 	while (0 == cas) {
 		/*
 		 * This can be called from lookup path, so we really need this
-		 * check. Thanks to the way flags are defined we actually test
-		 * that the SA is not DISABLED, FREE or RESERVED using just one
-		 * condition.
+		 * check.
 		 */
-		if (state & IPSEC_SA_STATE_FREE)
+		if ((state & IPSEC_SA_STATE_MASK) != IPSEC_SA_STATE_ACTIVE)
 			return -1;
 
 		cas = odp_atomic_cas_acq_u32(&ipsec_sa->state, &state,
