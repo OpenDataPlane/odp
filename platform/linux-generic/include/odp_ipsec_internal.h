@@ -310,6 +310,11 @@ int _odp_ipsec_try_inline(odp_packet_t *pkt);
 uint64_t _odp_ipsec_sa_stats_pkts(ipsec_sa_t *sa);
 
 /**
+  * Return true if IPsec operates in sync mode in the given direction.
+  */
+odp_bool_t _odp_ipsec_is_sync_mode(odp_ipsec_dir_t dir);
+
+/**
  * @}
  */
 

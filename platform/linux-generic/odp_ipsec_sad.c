@@ -463,6 +463,10 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	ipsec_sa->spi = param->spi;
 	ipsec_sa->context = param->context;
 	ipsec_sa->queue = param->dest_queue;
+	if (_odp_ipsec_is_sync_mode(param->dir)) {
+		/* Invalid queue indicates sync mode */
+		ipsec_sa->queue = ODP_QUEUE_INVALID;
+	}
 	ipsec_sa->mode = param->mode;
 	ipsec_sa->flags = 0;
 	if (param->opt.esn) {
