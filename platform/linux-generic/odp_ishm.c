@@ -1621,11 +1621,12 @@ int _odp_ishm_cleanup_files(const char *dirpath)
 	char userdir[PATH_MAX];
 	char prefix[PATH_MAX];
 	char *fullpath;
-	int d_len = strlen(dirpath);
+	int d_len;
 	int p_len;
 	int f_len;
 
 	snprintf(userdir, PATH_MAX, "%s/%s", dirpath, odp_global_ro.uid);
+	d_len = strlen(userdir);
 
 	dir = opendir(userdir);
 	if (!dir) {
