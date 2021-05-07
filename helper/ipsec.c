@@ -108,7 +108,7 @@ int odph_ipsec_alg_check(odp_ipsec_capability_t capa,
 	}
 
 	/* Check whether requested cipher key length is supported */
-	max_capa = odp_crypto_cipher_capability(cipher_alg, NULL, 0);
+	max_capa = odp_ipsec_cipher_capability(cipher_alg, NULL, 0);
 	if (max_capa <= 0)
 		return -1;
 
@@ -134,7 +134,7 @@ int odph_ipsec_alg_check(odp_ipsec_capability_t capa,
 	}
 
 	/* Check whether requested auth key length is supported */
-	max_capa = odp_crypto_auth_capability(auth_alg, NULL, 0);
+	max_capa = odp_ipsec_auth_capability(auth_alg, NULL, 0);
 	if (max_capa <= 0)
 		return max_capa;
 
