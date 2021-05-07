@@ -29,8 +29,6 @@ jobs:
       run: |
         pushd doc
         mkdir gh-pages
-        # Prevent Shippable run on gh-pages branch
-        printf "branches:\n  except:\n    - gh-pages\n" >> gh-pages/.shippable.yml
         cp -r application-api-guide/output/html/* gh-pages/
         cp -r platform-api-guide/output/html/ gh-pages/platform-api-guide
         cp -r helper-guide/output/html/ gh-pages/helper-guide
