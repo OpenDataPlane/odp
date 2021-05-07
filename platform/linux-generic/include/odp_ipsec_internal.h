@@ -170,7 +170,7 @@ struct ipsec_sa_s {
 
 		struct {
 			odp_ipsec_frag_mode_t frag_mode;
-			uint32_t mtu;
+			odp_atomic_u32_t mtu;
 
 			union {
 			struct {

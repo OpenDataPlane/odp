@@ -492,7 +492,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->lookup_mode = ODP_IPSEC_LOOKUP_DISABLED;
 		odp_atomic_init_u64(&ipsec_sa->hot.out.seq, 1);
 		ipsec_sa->out.frag_mode = param->outbound.frag_mode;
-		ipsec_sa->out.mtu = param->outbound.mtu;
+		odp_atomic_init_u32(&ipsec_sa->out.mtu, param->outbound.mtu);
 	}
 	ipsec_sa->dec_ttl = param->opt.dec_ttl;
 	ipsec_sa->copy_dscp = param->opt.copy_dscp;
@@ -793,13 +793,9 @@ int odp_ipsec_sa_mtu_update(odp_ipsec_sa_t sa, uint32_t mtu)
 {
 	ipsec_sa_t *ipsec_sa;
 
-	ipsec_sa = _odp_ipsec_sa_use(sa);
+	ipsec_sa = ipsec_sa_entry_from_hdl(sa);
 	ODP_ASSERT(NULL != ipsec_sa);
-
-	ipsec_sa->out.mtu = mtu;
-
-	_odp_ipsec_sa_unuse(ipsec_sa);
-
+	odp_atomic_store_u32(&ipsec_sa->out.mtu, mtu);
 	return 0;
 }
 

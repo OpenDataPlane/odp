@@ -1533,7 +1533,7 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 	frag_mode = opt->flag.frag_mode ? opt->frag_mode :
 					  ipsec_sa->out.frag_mode;
 	if (frag_mode == ODP_IPSEC_FRAG_CHECK)
-		mtu = ipsec_sa->out.mtu;
+		mtu = odp_atomic_load_u32(&ipsec_sa->out.mtu);
 	else
 		mtu = UINT32_MAX;
 
