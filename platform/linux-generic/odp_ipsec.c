@@ -409,7 +409,7 @@ static inline ipsec_sa_t *ipsec_get_sa(odp_ipsec_sa_t sa,
 			return NULL;
 		}
 	} else {
-		ipsec_sa = _odp_ipsec_sa_use(sa);
+		ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
 		ODP_ASSERT(NULL != ipsec_sa);
 		if (ipsec_sa->proto != proto ||
 		    ipsec_sa->spi != spi) {
@@ -1702,8 +1702,12 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
 		out_pkt++;
 		sa_idx += sa_inc;
 
-		/* Last thing */
-		if (NULL != ipsec_sa)
+		/*
+		 * We need to decrease SA use count only if the SA was not
+		 * provided to us by the caller but was found through our own
+		 * SA lookup that increased the use count.
+		 */
+		if (sa == ODP_IPSEC_SA_INVALID && ipsec_sa)
 			_odp_ipsec_sa_unuse(ipsec_sa);
 	}
 
@@ -1815,8 +1819,12 @@ int odp_ipsec_in_enq(const odp_packet_t pkt_in[], int num_in,
 		in_pkt++;
 		sa_idx += sa_inc;
 
-		/* Last thing */
-		if (NULL != ipsec_sa)
+		/*
+		 * We need to decrease SA use count only if the SA was not
+		 * provided to us by the caller but was found through our own
+		 * SA lookup that increased the use count.
+		 */
+		if (sa == ODP_IPSEC_SA_INVALID && ipsec_sa)
 			_odp_ipsec_sa_unuse(ipsec_sa);
 	}
 
