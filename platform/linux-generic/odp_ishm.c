@@ -1645,7 +1645,7 @@ int _odp_ishm_cleanup_files(const char *dirpath)
 				return -1;
 			}
 			snprintf(fullpath, PATH_MAX, "%s/%s",
-				 dirpath, e->d_name);
+				 userdir, e->d_name);
 			ODP_DBG("deleting obsolete file: %s\n", fullpath);
 			if (unlink(fullpath))
 				ODP_ERR("unlink failed for %s: %s\n",
