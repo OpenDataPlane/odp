@@ -1,4 +1,5 @@
 /* Copyright (c) 2017-2018, Linaro Limited
+ * Copyright (c) 2018, 2020-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -203,6 +204,7 @@ struct ipsec_sa_s {
 		odp_atomic_u64_t post_lifetime_err_pkts;
 	} stats;
 
+	uint32_t next_sa;
 	odp_ipsec_sa_param_t param;
 };
 

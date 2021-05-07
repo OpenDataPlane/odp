@@ -26,6 +26,8 @@
 #define IPSEC_SA_STATE_FREE	0xc0000000
 #define IPSEC_SA_STATE_RESERVED	0x80000000
 
+#define SA_IDX_NONE UINT32_MAX
+
 /*
  * We do not have global IPv4 ID counter that is accessed for every outbound
  * packet. Instead, we split IPv4 ID space to fixed size blocks that we
@@ -88,6 +90,10 @@ typedef struct ipsec_sa_table_t {
 		ring_mpmc_t ipv4_id_ring;
 		uint32_t ipv4_id_data[IPV4_ID_RING_SIZE] ODP_ALIGNED_CACHE;
 	} hot;
+	struct {
+		uint32_t head;
+		odp_spinlock_t lock;
+	} sa_freelist;
 	uint32_t max_num_sa;
 	odp_shm_t shm;
 	ipsec_thread_local_t per_thread[];
@@ -199,10 +205,15 @@ int _odp_ipsec_sad_init_global(void)
 
 		ipsec_sa->ipsec_sa_hdl = ipsec_sa_index_to_handle(i);
 		ipsec_sa->ipsec_sa_idx = i;
+		ipsec_sa->next_sa = i + 1;
+		if (i == ipsec_sa_tbl->max_num_sa - 1)
+			ipsec_sa->next_sa = SA_IDX_NONE;
 		odp_atomic_init_u32(&ipsec_sa->state, IPSEC_SA_STATE_FREE);
 		odp_atomic_init_u64(&ipsec_sa->hot.bytes, 0);
 		odp_atomic_init_u64(&ipsec_sa->hot.packets, 0);
 	}
+	ipsec_sa_tbl->sa_freelist.head = 0;
+	odp_spinlock_init(&ipsec_sa_tbl->sa_freelist.lock);
 
 	return 0;
 }
@@ -245,25 +256,28 @@ uint32_t _odp_ipsec_max_num_sa(void)
 
 static ipsec_sa_t *ipsec_sa_reserve(void)
 {
-	uint32_t i;
-	ipsec_sa_t *ipsec_sa;
+	ipsec_sa_t *ipsec_sa = NULL;
+	uint32_t sa_idx;
 
-	for (i = 0; i < ipsec_sa_tbl->max_num_sa; i++) {
-		uint32_t state = IPSEC_SA_STATE_FREE;
-
-		ipsec_sa = ipsec_sa_entry(i);
-
-		if (odp_atomic_cas_acq_u32(&ipsec_sa->state, &state,
-					   IPSEC_SA_STATE_RESERVED))
-			return ipsec_sa;
+	odp_spinlock_lock(&ipsec_sa_tbl->sa_freelist.lock);
+	sa_idx = ipsec_sa_tbl->sa_freelist.head;
+	if (sa_idx != SA_IDX_NONE) {
+		ipsec_sa = ipsec_sa_entry(sa_idx);
+		ipsec_sa_tbl->sa_freelist.head = ipsec_sa->next_sa;
+		odp_atomic_store_u32(&ipsec_sa->state,
+				     IPSEC_SA_STATE_RESERVED);
 	}
-
-	return NULL;
+	odp_spinlock_unlock(&ipsec_sa_tbl->sa_freelist.lock);
+	return ipsec_sa;
 }
 
 static void ipsec_sa_release(ipsec_sa_t *ipsec_sa)
 {
-	odp_atomic_store_rel_u32(&ipsec_sa->state, IPSEC_SA_STATE_FREE);
+	odp_spinlock_lock(&ipsec_sa_tbl->sa_freelist.lock);
+	ipsec_sa->next_sa = ipsec_sa_tbl->sa_freelist.head;
+	ipsec_sa_tbl->sa_freelist.head = ipsec_sa->ipsec_sa_idx;
+	odp_atomic_store_u32(&ipsec_sa->state, IPSEC_SA_STATE_FREE);
+	odp_spinlock_unlock(&ipsec_sa_tbl->sa_freelist.lock);
 }
 
 /* Mark reserved SA as available now */
