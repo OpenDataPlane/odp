@@ -303,11 +303,17 @@ static int send_packet(struct packet *tail, odp_queue_t out)
 	 */
 	while (current && equal_flow(current, &result)) {
 		struct packet new_result = *current;
-		int concat_success;
+		int concat_success, trunc_success;
 
 		current = prev_packet(new_result);
 		header = odp_packet_data(result.handle);
-		odp_packet_pull_head(result.handle, ipv4hdr_ihl(*header));
+		trunc_success = odp_packet_trunc_head(&result.handle, ipv4hdr_ihl(*header),
+						      NULL, NULL);
+		if (trunc_success < 0) {
+			fprintf(stderr, "ERROR: odp_packet_trunc_head\n");
+			return -1;
+		}
+
 		concat_success = odp_packet_concat(&new_result.handle,
 						   result.handle);
 		if (concat_success < 0) {
