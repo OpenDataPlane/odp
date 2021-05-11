@@ -3810,6 +3810,169 @@ static void pktio_test_pktout_aging_tmo(void)
 	}
 }
 
+static void pktio_test_pktin_event_queue(odp_pktin_mode_t pktin_mode)
+{
+	odp_pktio_t pktio_tx, pktio_rx;
+	odp_pktin_queue_param_t in_queue_param;
+	odp_pktout_queue_param_t out_queue_param;
+	odp_pktout_queue_t pktout_queue;
+	odp_queue_t queue, from;
+	odp_pool_t buf_pool;
+	odp_pool_param_t pool_param;
+	odp_packet_t pkt_tbl[TX_BATCH_LEN];
+	odp_packet_t pkt;
+	odp_buffer_t buf;
+	odp_event_t ev;
+	uint32_t pkt_seq[TX_BATCH_LEN];
+	int ret, i;
+	odp_time_t t1, t2;
+	int inactive = 0;
+	int num_pkt = 0;
+	int num_buf = 0;
+	int num_bad = 0;
+	odp_pktio_t pktio[MAX_NUM_IFACES] = {0};
+	uint64_t wait_sec = odp_schedule_wait_time(ODP_TIME_SEC_IN_NS);
+
+	CU_ASSERT_FATAL(num_ifaces >= 1);
+
+	odp_pool_param_init(&pool_param);
+	pool_param.type = ODP_POOL_BUFFER;
+	pool_param.buf.num = 2 * TX_BATCH_LEN;
+	pool_param.buf.size = 100;
+
+	buf_pool = odp_pool_create("buffer pool", &pool_param);
+	CU_ASSERT_FATAL(buf_pool != ODP_POOL_INVALID);
+
+	buf = odp_buffer_alloc(buf_pool);
+	CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+
+	odp_pktin_queue_param_init(&in_queue_param);
+	in_queue_param.num_queues  = 1;
+	in_queue_param.hash_enable = 0;
+	in_queue_param.classifier_enable = 0;
+
+	if (pktin_mode == ODP_PKTIN_MODE_SCHED) {
+		in_queue_param.queue_param.type = ODP_QUEUE_TYPE_SCHED;
+		in_queue_param.queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+		in_queue_param.queue_param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
+		in_queue_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+	}
+
+	odp_pktout_queue_param_init(&out_queue_param);
+	out_queue_param.num_queues  = 1;
+
+	/* Open and configure interfaces */
+	for (i = 0; i < num_ifaces; ++i) {
+		pktio[i] = create_pktio(i, pktin_mode, ODP_PKTOUT_MODE_DIRECT);
+		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
+
+		ret = odp_pktin_queue_config(pktio[i], &in_queue_param);
+		CU_ASSERT_FATAL(ret == 0);
+
+		ret = odp_pktout_queue_config(pktio[i], &out_queue_param);
+		CU_ASSERT_FATAL(ret == 0);
+
+		CU_ASSERT_FATAL(odp_pktio_start(pktio[i]) == 0);
+	}
+
+	for (i = 0; i < num_ifaces; ++i)
+		_pktio_wait_linkup(pktio[i]);
+
+	pktio_tx = pktio[0];
+	if (num_ifaces > 1)
+		pktio_rx = pktio[1];
+	else
+		pktio_rx = pktio_tx;
+
+	CU_ASSERT_FATAL(odp_pktin_event_queue(pktio_rx, &queue, 1) == 1);
+	CU_ASSERT_FATAL(odp_pktout_queue(pktio_tx, &pktout_queue, 1) == 1);
+
+	/* Allocate and initialize test packets */
+	ret = create_packets(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx, pktio_rx);
+	if (ret != TX_BATCH_LEN) {
+		CU_FAIL("Failed to generate test packets");
+		return;
+	}
+
+	/* Send packets */
+	ret = odp_pktout_send(pktout_queue, pkt_tbl, TX_BATCH_LEN);
+	CU_ASSERT_FATAL(ret == TX_BATCH_LEN);
+
+	/* Send buffer event */
+	ret = odp_queue_enq(queue, odp_buffer_to_event(buf));
+	CU_ASSERT_FATAL(ret == 0);
+
+	/* Receive events */
+	while (1) {
+		/* Break after 1 sec of inactivity */
+		if (pktin_mode == ODP_PKTIN_MODE_SCHED) {
+			ev = odp_schedule(&from, wait_sec);
+
+			if (ev == ODP_EVENT_INVALID)
+				break;
+
+			CU_ASSERT(from == queue);
+		} else {
+			ev = odp_queue_deq(queue);
+
+			if (ev == ODP_EVENT_INVALID) {
+				if (inactive == 0) {
+					inactive = 1;
+					t1 = odp_time_local();
+					continue;
+				} else {
+					t2 = odp_time_local();
+					if (odp_time_diff_ns(t2, t1) > ODP_TIME_SEC_IN_NS)
+						break;
+
+					continue;
+				}
+			}
+
+			inactive = 0;
+		}
+
+		if (odp_event_type(ev) == ODP_EVENT_PACKET) {
+			pkt = odp_packet_from_event(ev);
+
+			if (pktio_pkt_seq(pkt) != TEST_SEQ_INVALID)
+				num_pkt++;
+
+		} else if (odp_event_type(ev) == ODP_EVENT_BUFFER) {
+			num_buf++;
+		} else {
+			CU_FAIL("Bad event type");
+			num_bad++;
+		}
+
+		odp_event_free(ev);
+	}
+
+	CU_ASSERT(num_pkt == TX_BATCH_LEN);
+	CU_ASSERT(num_buf == 1);
+	CU_ASSERT(num_bad == 0);
+
+	for (i = 0; i < num_ifaces; i++) {
+		CU_ASSERT_FATAL(odp_pktio_stop(pktio[i]) == 0);
+		CU_ASSERT_FATAL(odp_pktio_close(pktio[i]) == 0);
+	}
+
+	CU_ASSERT_FATAL(odp_pool_destroy(buf_pool) == 0);
+}
+
+static void pktio_test_pktin_event_sched(void)
+{
+	pktio_test_pktin_event_queue(ODP_PKTIN_MODE_SCHED);
+}
+
+static int pktio_check_pktin_event_sched(void)
+{
+	if (odp_cunit_ci_skip("pktio_test_pktin_event_sched"))
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
 static int pktio_suite_init(void)
 {
 	int i;
@@ -3965,6 +4128,8 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_plain_multi_event),
 	ODP_TEST_INFO(pktio_test_sched_multi_event),
 	ODP_TEST_INFO(pktio_test_recv_multi_event),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktin_event_sched,
+				  pktio_check_pktin_event_sched),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_statistics_counters,
 				  pktio_check_statistics_counters),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktin_ts,
