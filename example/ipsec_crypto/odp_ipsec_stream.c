@@ -322,8 +322,8 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 
 		encrypt_len = ESP_ENCODE_LEN(payload_len + sizeof(*esp_t),
 					     entry->esp.block_len);
-		memset(data, 0, encrypt_len - payload_len);
-		data += encrypt_len - payload_len;
+		for (int n = 0; n < encrypt_len - payload_len; n++)
+			*data++ = n + 1;
 
 		esp_t = (odph_esptrl_t *)(data) - 1;
 		esp_t->pad_len = encrypt_len - payload_len - sizeof(*esp_t);
