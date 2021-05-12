@@ -932,9 +932,6 @@ int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
 	int cas = 0;
 	uint64_t state, new_state;
 
-	if (!ipsec_sa->antireplay)
-		return 0;
-
 	state = odp_atomic_load_u64(&ipsec_sa->hot.in.antireplay);
 
 	while (0 == cas) {
