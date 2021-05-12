@@ -640,11 +640,20 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t *ppkt)
 		return PKT_POSTED;
 	} else {
 		int out = 1;
+		odp_ipsec_packet_result_t result;
 
 		rc = odp_ipsec_in(ppkt, 1, ppkt, &out, &in_param);
 		if (rc <= 0)
 			return PKT_DROP;
 
+		if (odp_ipsec_result(&result, *ppkt) < 0) {
+			ODPH_DBG("odp_ipsec_result() failed\n");
+			return PKT_DROP;
+		}
+		if (result.status.error.all != 0) {
+			ODPH_DBG("Error in inbound IPsec processing\n");
+			return PKT_DROP;
+		}
 		return PKT_CONTINUE;
 	}
 }
@@ -704,11 +713,20 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t *ppkt, pkt_ctx_t *ctx)
 		return PKT_POSTED;
 	} else {
 		int out = 1;
+		odp_ipsec_packet_result_t result;
 
 		rc = odp_ipsec_out(ppkt, 1, ppkt, &out, &out_param);
 		if (rc <= 0)
 			return PKT_DROP;
 
+		if (odp_ipsec_result(&result, *ppkt) < 0) {
+			ODPH_DBG("odp_ipsec_result() failed\n");
+			return PKT_DROP;
+		}
+		if (result.status.error.all != 0) {
+			ODPH_DBG("Error in outbound IPsec processing\n");
+			return PKT_DROP;
+		}
 		return PKT_CONTINUE;
 	}
 }
