@@ -145,10 +145,13 @@ static void scheduler_test_init(void)
 
 	odp_schedule_config_init(&default_config);
 
+	CU_ASSERT(default_config.max_flow_id == 0);
+
 	CU_ASSERT(default_config.sched_group.all);
 	CU_ASSERT(default_config.sched_group.control);
 	CU_ASSERT(default_config.sched_group.worker);
 }
+
 static void scheduler_test_capa(void)
 {
 	odp_schedule_capability_t sched_capa;
