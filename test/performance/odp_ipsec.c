@@ -1030,6 +1030,7 @@ int main(int argc, char *argv[])
 	odph_odpthread_t thr[num_workers];
 	odp_instance_t instance;
 	odp_init_t init_param;
+	odp_ipsec_capability_t ipsec_capa;
 	odp_pool_capability_t capa;
 	odp_ipsec_config_t config;
 	uint32_t max_seg_len;
@@ -1091,6 +1092,21 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	odp_pool_print(pool);
+
+	if (odp_ipsec_capability(&ipsec_capa) < 0) {
+		app_err("IPSEC capability call failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (cargs.schedule && !ipsec_capa.queue_type_sched) {
+		app_err("Scheduled type destination queue not supported.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (cargs.poll && !ipsec_capa.queue_type_plain) {
+		app_err("Plain type destination queue not supported.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	odp_ipsec_config_init(&config);
 	config.max_num_sa = 2;
