@@ -921,6 +921,7 @@ main(int argc, char *argv[])
 	odp_shm_t shm;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
+	odp_ipsec_capability_t ipsec_capa;
 	odp_pool_param_t params;
 	odp_instance_t instance;
 	odp_init_t init_param;
@@ -961,6 +962,23 @@ main(int argc, char *argv[])
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		ODPH_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
+	}
+
+	if (odp_ipsec_capability(&ipsec_capa)) {
+		ODPH_ERR("Error: IPsec capability request failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (queue_create == polled_odp_queue_create) {
+		if (!ipsec_capa.queue_type_plain) {
+			ODPH_ERR("Error: Plain type dest queue not supported.\n");
+			exit(EXIT_FAILURE);
+		}
+	} else {
+		if (!ipsec_capa.queue_type_sched) {
+			ODPH_ERR("Error: scheduled type dest queue not supported.\n");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	/* Reserve memory for args from shared mem */
