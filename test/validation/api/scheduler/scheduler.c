@@ -59,6 +59,7 @@
 #define WAIT_1MS_RETRIES 1000
 
 #define SCHED_AND_PLAIN_ROUNDS 10000
+#define ATOMICITY_ROUNDS 100
 
 /* Test global variables */
 typedef struct {
@@ -75,6 +76,10 @@ typedef struct {
 	uint64_t num_flows;
 	odp_ticketlock_t lock;
 	odp_spinlock_t atomic_lock;
+	struct {
+		odp_queue_t handle;
+		odp_atomic_u32_t state;
+	} atomicity_q;
 	struct {
 		odp_queue_t handle;
 		char name[ODP_QUEUE_NAME_LEN];
@@ -2484,6 +2489,121 @@ static void scheduler_test_ordered_and_plain(void)
 	scheduler_test_sched_and_plain(ODP_SCHED_SYNC_ORDERED);
 }
 
+static int atomicity_test_run(void *arg)
+{
+	thread_args_t *args = (thread_args_t *)arg;
+	odp_event_t ev;
+	odp_queue_t atomic_queue = args->globals->atomicity_q.handle;
+	odp_queue_t from;
+	odp_atomic_u32_t *state;
+	uint32_t old;
+	uint32_t num_processed = 0;
+
+	if (args->num_workers > 1)
+		odp_barrier_wait(&globals->barrier);
+
+	while (num_processed < ATOMICITY_ROUNDS) {
+		ev  = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+		if (ev == ODP_EVENT_INVALID)
+			continue;
+
+		CU_ASSERT(from == atomic_queue);
+		if (from != atomic_queue) {
+			odp_event_free(ev);
+			continue;
+		}
+
+		state = odp_queue_context(from);
+		CU_ASSERT_FATAL(state != NULL);
+
+		old = 0;
+		CU_ASSERT_FATAL(odp_atomic_cas_acq_rel_u32(state, &old, 1));
+
+		/* Hold atomic context a while to better reveal possible atomicity bugs */
+		odp_time_wait_ns(ODP_TIME_MSEC_IN_NS);
+
+		old = 1;
+		CU_ASSERT_FATAL(odp_atomic_cas_acq_rel_u32(state, &old, 0));
+
+		CU_ASSERT_FATAL(odp_queue_enq(from, ev) == 0);
+
+		num_processed++;
+	}
+
+	/* Release atomic context and get rid of possible prescheduled events */
+	odp_schedule_pause();
+	while ((ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT)) != ODP_EVENT_INVALID)
+		CU_ASSERT_FATAL(odp_queue_enq(atomic_queue, ev) == 0);
+
+	if (args->num_workers > 1)
+		odp_barrier_wait(&globals->barrier);
+
+	odp_schedule_resume();
+	drain_queues();
+
+	return 0;
+}
+
+static void scheduler_test_atomicity(void)
+{
+	odp_shm_t shm;
+	test_globals_t *globals;
+	thread_args_t *args;
+	odp_pool_t pool;
+	odp_queue_t queue;
+	odp_queue_param_t queue_param;
+	int i;
+
+	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+	globals = odp_shm_addr(shm);
+	CU_ASSERT_FATAL(globals != NULL);
+
+	shm = odp_shm_lookup(SHM_THR_ARGS_NAME);
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+	args = odp_shm_addr(shm);
+	CU_ASSERT_FATAL(args != NULL);
+
+	pool = odp_pool_lookup(MSG_POOL_NAME);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	odp_queue_param_init(&queue_param);
+	queue_param.type = ODP_QUEUE_TYPE_SCHED;
+	queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+	queue_param.size = globals->max_sched_queue_size;
+	queue_param.context     = &globals->atomicity_q.state;
+	queue_param.context_len = sizeof(globals->atomicity_q.state);
+
+	queue = odp_queue_create("atomicity_test", &queue_param);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	for (i = 0; i < BUFS_PER_QUEUE; i++) {
+		odp_buffer_t buf = odp_buffer_alloc(pool);
+
+		CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+
+		CU_ASSERT_FATAL(odp_queue_enq(queue, odp_buffer_to_event(buf)) == 0);
+	}
+	globals->atomicity_q.handle = queue;
+	odp_atomic_init_u32(&globals->atomicity_q.state, 0);
+
+	/* Create and launch worker threads */
+	/* Test runs also on the main thread */
+	args->num_workers = globals->num_workers;
+	args->cu_thr.numthrds = globals->num_workers - 1;
+	if (args->cu_thr.numthrds > 0)
+		odp_cunit_thread_create(atomicity_test_run, &args->cu_thr);
+
+	atomicity_test_run(args);
+
+	/* Wait for worker threads to terminate */
+	if (args->cu_thr.numthrds > 0)
+		odp_cunit_thread_exit(&args->cu_thr);
+
+	odp_queue_destroy(globals->atomicity_q.handle);
+}
+
 static int create_queues(test_globals_t *globals)
 {
 	int i, j, prios, rc;
@@ -3051,6 +3171,7 @@ odp_testinfo_t scheduler_basic_suite[] = {
 	ODP_TEST_INFO(scheduler_test_ordered),
 	ODP_TEST_INFO(scheduler_test_atomic_and_plain),
 	ODP_TEST_INFO(scheduler_test_ordered_and_plain),
+	ODP_TEST_INFO(scheduler_test_atomicity),
 	ODP_TEST_INFO_NULL
 };
 
