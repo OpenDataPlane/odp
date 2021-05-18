@@ -395,14 +395,37 @@ static int cli_server(void *arg ODP_UNUSED)
 			break;
 		}
 
+		/*
+		 * The only way to break out of cli_loop() is to close the
+		 * socket, after which cli_loop() gets an error on the next
+		 * select() and then calls close() before returning. This is a
+		 * problem because the fd may be reused before the select() or
+		 * the final close().
+		 *
+		 * To avoid this problem, switch to a higher fd number
+		 * (select() maximum). We will still run into problems if the
+		 * descriptor numbers in the process reach FD_SETSIZE - 1 =
+		 * 1023.
+		 */
+		int newfd = dup2(fd, FD_SETSIZE - 1);
+
+		if (newfd < 0) {
+			ODPH_ERR("Error: dup2(): %s\n", strerror(errno));
+			close(fd);
+			continue;
+		}
+
+		close(fd);
+		fd = newfd;
+
 		odp_spinlock_lock(&shm->lock);
 		if (!shm->run) {
+			odp_spinlock_unlock(&shm->lock);
 			/*
 			 * odph_cli_stop() has been called. Close the
 			 * socket we just accepted and exit.
 			 */
 			close(fd);
-			odp_spinlock_unlock(&shm->lock);
 			break;
 		}
 		shm->cli_fd = fd;
@@ -414,7 +437,13 @@ static int cli_server(void *arg ODP_UNUSED)
 		 */
 		cli_loop(cli, shm->cli_fd);
 		odp_log_thread_fn_set(NULL);
-		close(shm->cli_fd);
+
+		odp_spinlock_lock(&shm->lock);
+		/*
+		 * cli_loop() closes the socket before returning (undocumented).
+		 */
+		shm->cli_fd = -1;
+		odp_spinlock_unlock(&shm->lock);
 
 		/*
 		 * Throw away anything left in the buffer (in case the last
@@ -558,9 +587,14 @@ int odph_cli_stop(void)
 	odp_spinlock_lock(&shm->lock);
 	shm->run = 0;
 	/*
-	 * Close the current cli connection. This stops cli_loop().
+	 * Close the current cli connection. This stops cli_loop(). If cli
+	 * client is disconnecting at the same time, cli_fd may already have
+	 * been closed.
 	 */
-	close(shm->cli_fd);
+	if (shm->cli_fd >= 0) {
+		close(shm->cli_fd);
+		shm->cli_fd = -1;
+	}
 	odp_spinlock_unlock(&shm->lock);
 
 	/*
