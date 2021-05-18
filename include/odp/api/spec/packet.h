@@ -44,11 +44,28 @@ extern "C" {
 /**
  * @typedef odp_packet_seg_t
  * ODP packet segment
+ *
+ * A packet segment refers to a contiguous part of packet data (in memory). Segments of a packet
+ * can be examined with odp_packet_seg_data(), odp_packet_seg_data_len() and other calls.
  */
 
 /**
  * @def ODP_PACKET_SEG_INVALID
  * Invalid packet segment
+ */
+
+/**
+ * @typedef odp_packet_buf_t
+ * ODP packet buffer
+ *
+ * Packet buffers are not part of any packet, but they result from a previous
+ * odp_packet_disassemble() call. A new packet is formed from packet buffers with
+ * a odp_packet_reassemble() call.
+ */
+
+/**
+ * @def ODP_PACKET_BUF_INVALID
+ * Invalid packet buffer
  */
 
 /**
@@ -1154,6 +1171,135 @@ int odp_packet_concat(odp_packet_t *dst, odp_packet_t src);
  * @retval <0  Operation failed
  */
 int odp_packet_split(odp_packet_t *pkt, uint32_t len, odp_packet_t *tail);
+
+/**
+ * Packet buffer head pointer
+ *
+ * Packet buffer start address. Buffer level headroom starts from here. For the first
+ * packet buffer of a packet this is equivalent to odp_packet_head().
+ *
+ * @param      pkt_buf   Packet buffer
+ *
+ * @return Packet buffer head pointer
+ */
+void *odp_packet_buf_head(odp_packet_buf_t pkt_buf);
+
+/**
+ * Packet buffer size in bytes
+ *
+ * Packet buffer size is calculated from the buffer head pointer (@see odp_packet_buf_head()).
+ * It contains all buffer level headroom, data, and tailroom. For a single segmented packet this is
+ * equivalent to odp_packet_buf_len().
+ *
+ * @param      pkt_buf   Packet buffer
+ *
+ * @return Packet buffer size
+ */
+uint32_t odp_packet_buf_size(odp_packet_buf_t pkt_buf);
+
+/**
+ * Packet buffer data offset
+ *
+ * Offset from the buffer head pointer to the first byte of packet data in the packet buffer.
+ * Valid values range from 0 to buf_size - 1. For the first packet buffer of a packet
+ * this is equivalent to odp_packet_headroom().
+ *
+ * @param      pkt_buf   Packet buffer
+ *
+ * @return Packet buffer data offset
+ */
+uint32_t odp_packet_buf_data_offset(odp_packet_buf_t pkt_buf);
+
+/**
+ * Packet buffer data length in bytes
+ *
+ * Packet buffer contains this many bytes of packet data. Valid values range from 1 to
+ * buf_size - data_offset. For the first packet buffer of a packet this is equivalent to
+ * odp_packet_seg_len().
+ *
+ * @param      pkt_buf   Packet buffer
+ *
+ * @return Packet buffer data length
+ */
+uint32_t odp_packet_buf_data_len(odp_packet_buf_t pkt_buf);
+
+/**
+ * Packet buffer data set
+ *
+ * Update packet data start offset and length in the packet buffer. Valid offset values range
+ * from 0 to buf_size - 1. Valid length values range from 1 to buf_size - data_offset.
+ *
+ * @param      pkt_buf      Packet buffer
+ * @param      data_offset  Packet buffer data offset in bytes (from the buffer head pointer)
+ * @param      data_len     Packet buffer data length in bytes
+ */
+void odp_packet_buf_data_set(odp_packet_buf_t pkt_buf, uint32_t data_offset, uint32_t data_len);
+
+/**
+ * Convert packet buffer head pointer to handle
+ *
+ * Converts a packet buffer head pointer (from a previous odp_packet_buf_head() call) to a packet
+ * buffer handle. This allows an application to save memory as it can store only buffer pointers
+ * (instead of pointers and handles) and convert those to handles when needed. This conversion
+ * may be done only for packet buffers that are not part of any packet (i.e. buffers between
+ * odp_packet_disassemble() and odp_packet_reassemble() calls).
+ *
+ * This call can be used only for packets of an external memory pool (@see odp_pool_ext_create()).
+ *
+ * @param      pool     Pool from which the packet buffer (disassembled packet) originate from
+ * @param      head     Head pointer
+ *
+ * @return Packet buffer handle on success
+ * @retval ODP_PACKET_BUF_INVALID on failure
+ */
+odp_packet_buf_t odp_packet_buf_from_head(odp_pool_t pool, void *head);
+
+/**
+ * Disassemble packet into packet buffers
+ *
+ * Breaks up a packet into a list of packet buffers. Outputs a packet buffer handle for each
+ * segment of the packet (@see odp_packet_num_segs()). After a successful operation the packet
+ * handle must not be referenced anymore. Packet buffers are reassembled into a new packet (or
+ * several new packets) with a later odp_packet_reassemble() call(s). All packet buffers must be
+ * reassembled into a packet and freed into the originating pool before the pool is destroyed.
+ *
+ * This call can be used only for packets of an external memory pool (@see odp_pool_ext_create()).
+ *
+ * @param      pkt      Packet to be disassembled
+ * @param[out] pkt_buf  Packet buffer handle array for output
+ * @param      num      Number of elements in packet buffer handle array. Must be equal to or
+ *                      larger than number of segments in the packet.
+ *
+ * @return Number of handles written (equals the number of segments in the packet)
+ * @retval 0 on failure
+ */
+uint32_t odp_packet_disassemble(odp_packet_t pkt, odp_packet_buf_t pkt_buf[], uint32_t num);
+
+/**
+ * Reassemble packet from packet buffers
+ *
+ * Forms a new packet from packet buffers of a previous odp_packet_disassemble() call(s). Packet
+ * buffers from different disassembled packets may be used, but all buffers must be from packets of
+ * the same pool. Packet pool capability 'max_segs_per_pkt' defines the maximum number of
+ * packet buffers that can be reassembled to form a new packet.
+ *
+ * Application may use odp_packet_buf_data_set() to adjust data_offset and data_len values
+ * in each packet buffer to match the current packet data placement. The operation
+ * maintains packet data content and position. Each buffer becomes a segment in the new packet.
+ * Packet metadata related to data length and position are set according data layout
+ * in the buffers. All other packet metadata are set to their default values. After a successful
+ * operation packet buffer handles must not be referenced anymore.
+ *
+ * This call can be used only for packets of an external memory pool (@see odp_pool_ext_create()).
+ *
+ * @param      pool     Pool from which all packet buffers (disassembled packets) originate from
+ * @param      pkt_buf  Packet buffers to form a new packet
+ * @param      num      Number of packet buffers. Must not exceed max_segs_per_pkt pool capability.
+ *
+ * @return Handle of the newly formed packet
+ * @retval ODP_PACKET_INVALID on failure
+ */
+odp_packet_t odp_packet_reassemble(odp_pool_t pool, odp_packet_buf_t pkt_buf[], uint32_t num);
 
 /*
  *
