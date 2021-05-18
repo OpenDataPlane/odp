@@ -272,6 +272,10 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 		inner_ip = (odph_ipv4hdr_t *)data;
 		memset((char *)inner_ip, 0, sizeof(*inner_ip));
 		inner_ip->ver_ihl = 0x45;
+		inner_ip->tot_len = odp_cpu_to_be_16(sizeof(odph_ipv4hdr_t) +
+						     sizeof(odph_icmphdr_t) +
+						     sizeof(stream_pkt_hdr_t) +
+						     stream->length);
 		inner_ip->proto = ODPH_IPPROTO_ICMPV4;
 		inner_ip->id = odp_cpu_to_be_16(stream->id);
 		inner_ip->ttl = 64;
