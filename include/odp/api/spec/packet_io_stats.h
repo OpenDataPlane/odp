@@ -45,6 +45,14 @@ typedef struct odp_pktio_stats_t {
 	 *  destination MAC address. */
 	uint64_t in_ucast_pkts;
 
+	/** Number of successfully received Ethernet packets with a multicast
+	 *  destination MAC address. */
+	uint64_t in_mcast_pkts;
+
+	/** Number of successfully received Ethernet packets with a broadcast
+	 *  destination MAC address. */
+	uint64_t in_bcast_pkts;
+
 	/** Number of inbound packets which were discarded due to a lack of free
 	 *  resources (e.g. buffers) or other reasons than packet errors. */
 	uint64_t in_discards;
@@ -78,6 +86,14 @@ typedef struct odp_pktio_stats_t {
 	 *  destination MAC address. */
 	uint64_t out_ucast_pkts;
 
+	/** Number of successfully transmitted Ethernet packets with a multicast
+	 *  destination MAC address. */
+	uint64_t out_mcast_pkts;
+
+	/** Number of successfully transmitted Ethernet packets with a broadcast
+	 *  destination MAC address. */
+	uint64_t out_bcast_pkts;
+
 	/** Number of outbound packets which were discarded due to a lack of
 	 *  free resources (e.g. buffers) or other reasons than errors. */
 	uint64_t out_discards;
@@ -105,6 +121,12 @@ typedef struct odp_pktio_stats_capability_t {
 				/** @see odp_pktio_stats_t::in_ucast_pkts */
 				uint64_t in_ucast_pkts      : 1;
 
+				/** @see odp_pktio_stats_t::in_mcast_pkts */
+				uint64_t in_mcast_pkts      : 1;
+
+				/** @see odp_pktio_stats_t::in_bcast_pkts */
+				uint64_t in_bcast_pkts      : 1;
+
 				/** @see odp_pktio_stats_t::in_discards */
 				uint64_t in_discards        : 1;
 
@@ -119,6 +141,12 @@ typedef struct odp_pktio_stats_capability_t {
 
 				/** @see odp_pktio_stats_t::out_ucast_pkts */
 				uint64_t out_ucast_pkts     : 1;
+
+				/** @see odp_pktio_stats_t::out_mcast_pkts */
+				uint64_t out_mcast_pkts     : 1;
+
+				/** @see odp_pktio_stats_t::out_bcast_pkts */
+				uint64_t out_bcast_pkts     : 1;
 
 				/** @see odp_pktio_stats_t::out_discards */
 				uint64_t out_discards       : 1;
