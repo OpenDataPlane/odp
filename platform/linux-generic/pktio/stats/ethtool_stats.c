@@ -134,6 +134,14 @@ static int ethtool_stats(int fd, struct ifreq *ifr, odp_pktio_stats_t *stats)
 		} else if (!strcmp(cnt, "rx_ucast_packets")) {
 			stats->in_ucast_pkts = val;
 			cnts++;
+		} else if (!strcmp(cnt, "rx_broadcast") ||
+			   !strcmp(cnt, "rx_bcast_packets")) {
+			stats->in_bcast_pkts = val;
+			cnts++;
+		} else if (!strcmp(cnt, "rx_multicast") ||
+			   !strcmp(cnt, "rx_mcast_packets")) {
+			stats->in_mcast_pkts = val;
+			cnts++;
 		} else if (!strcmp(cnt, "rx_discards")) {
 			stats->in_discards = val;
 			cnts++;
@@ -148,6 +156,14 @@ static int ethtool_stats(int fd, struct ifreq *ifr, odp_pktio_stats_t *stats)
 			cnts++;
 		} else if (!strcmp(cnt, "tx_ucast_packets")) {
 			stats->out_ucast_pkts = val;
+			cnts++;
+		} else if (!strcmp(cnt, "tx_broadcast") ||
+			   !strcmp(cnt, "tx_bcast_packets")) {
+			stats->out_bcast_pkts = val;
+			cnts++;
+		} else if (!strcmp(cnt, "tx_multicast") ||
+			   !strcmp(cnt, "tx_mcast_packets")) {
+			stats->out_mcast_pkts = val;
 			cnts++;
 		} else if (!strcmp(cnt, "tx_discards")) {
 			stats->out_discards = val;
@@ -164,7 +180,7 @@ static int ethtool_stats(int fd, struct ifreq *ifr, odp_pktio_stats_t *stats)
 	/* Ethtool strings came from kernel driver. Name of that
 	 * strings is not universal. Current function needs to be updated
 	 * if your driver has different names for counters */
-	if (cnts < 8)
+	if (cnts < 14)
 		return -1;
 
 	return 0;
