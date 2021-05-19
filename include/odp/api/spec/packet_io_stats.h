@@ -20,6 +20,7 @@ extern "C" {
 #endif
 
 #include <odp/api/deprecated.h>
+#include <odp/api/queue.h>
 
 /** @addtogroup odp_packet_io
  *  @{
@@ -103,6 +104,48 @@ typedef struct odp_pktio_stats_t {
 } odp_pktio_stats_t;
 
 /**
+ * Packet IO input queue specific statistics counters
+ *
+ * Statistics counters for an individual packet input queue. Refer to packet IO
+ * level statistics odp_pktio_stats_t for counter definitions.
+ */
+typedef struct odp_pktin_queue_stats_t {
+	/** @see odp_pktio_stats_t::in_octets */
+	uint64_t octets;
+
+	/** @see odp_pktio_stats_t::in_packets */
+	uint64_t packets;
+
+	/** @see odp_pktio_stats_t::in_discards */
+	uint64_t discards;
+
+	/** @see odp_pktio_stats_t::in_errors */
+	uint64_t errors;
+
+} odp_pktin_queue_stats_t;
+
+/**
+ * Packet IO output queue specific statistics counters
+ *
+ * Statistics counters for an individual packet output queue. Refer to packet IO
+ * level statistics odp_pktio_stats_t for counter definitions.
+ */
+typedef struct odp_pktout_queue_stats_t {
+	/** @see odp_pktio_stats_t::out_octets */
+	uint64_t octets;
+
+	/** @see odp_pktio_stats_t::out_packets */
+	uint64_t packets;
+
+	/** @see odp_pktio_stats_t::out_discards */
+	uint64_t discards;
+
+	/** @see odp_pktio_stats_t::out_errors */
+	uint64_t errors;
+
+} odp_pktout_queue_stats_t;
+
+/**
  * Packet IO statistics capabilities
  */
 typedef struct odp_pktio_stats_capability_t {
@@ -163,6 +206,60 @@ typedef struct odp_pktio_stats_capability_t {
 		};
 	} pktio;
 
+	/** Input queue level capabilities */
+	struct {
+		/** Supported counters */
+		union {
+			/** Statistics counters in a bit field structure */
+			struct {
+				/** @see odp_pktin_queue_stats_t::octets */
+				uint64_t octets             : 1;
+
+				/** @see odp_pktin_queue_stats_t::packets */
+				uint64_t packets            : 1;
+
+				/** @see odp_pktin_queue_stats_t::discards */
+				uint64_t discards           : 1;
+
+				/** @see odp_pktin_queue_stats_t::errors */
+				uint64_t errors             : 1;
+			} counter;
+
+			/** All bits of the bit field structure
+			 *
+			 *  This field can be used to set/clear all flags, or
+			 *  for bitwise operations over the entire structure. */
+			uint64_t all_counters;
+		};
+	} pktin_queue;
+
+	/** Output queue level capabilities */
+	struct {
+		/** Supported counters */
+		union {
+			/** Statistics counters in a bit field structure */
+			struct {
+				/** @see odp_pktout_queue_stats_t::octets */
+				uint64_t octets             : 1;
+
+				/** @see odp_pktout_queue_stats_t::packets */
+				uint64_t packets            : 1;
+
+				/** @see odp_pktout_queue_stats_t::discards */
+				uint64_t discards           : 1;
+
+				/** @see odp_pktout_queue_stats_t::errors */
+				uint64_t errors             : 1;
+			} counter;
+
+			/** All bits of the bit field structure
+			 *
+			 *  This field can be used to set/clear all flags, or
+			 *  for bitwise operations over the entire structure. */
+			uint64_t all_counters;
+		};
+	} pktout_queue;
+
 } odp_pktio_stats_capability_t;
 
 /**
@@ -179,9 +276,75 @@ typedef struct odp_pktio_stats_capability_t {
 int odp_pktio_stats(odp_pktio_t pktio, odp_pktio_stats_t *stats);
 
 /**
+ * Get statistics for direct packet input queue
+ *
+ * Packet input queue handles can be requested with odp_pktin_queue(). Counters
+ * not supported by the interface are set to zero.
+ *
+ * @param       queue	 Packet input queue handle
+ * @param[out]  stats	 Output buffer for counters
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_pktin_queue_stats(odp_pktin_queue_t queue,
+			  odp_pktin_queue_stats_t *stats);
+
+/**
+ * Get statistics for packet input event queue
+ *
+ * The queue must be a packet input event queue. Event queue handles can be
+ * requested with odp_pktin_event_queue(). Counters not supported by the
+ * interface are set to zero.
+ *
+ * @param       pktio	 Packet IO handle
+ * @param       queue	 Packet input event queue handle
+ * @param[out]  stats	 Output buffer for counters
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_pktin_event_queue_stats(odp_pktio_t pktio, odp_queue_t queue,
+				odp_pktin_queue_stats_t *stats);
+
+/**
+ * Get statistics for direct packet output queue
+ *
+ * Packet output queue handles can be requested with odp_pktout_queue().
+ * Counters not supported by the interface are set to zero.
+ *
+ * @param       queue	 Packet output queue handle
+ * @param[out]  stats	 Output buffer for counters
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_pktout_queue_stats(odp_pktout_queue_t queue,
+			   odp_pktout_queue_stats_t *stats);
+
+/**
+ * Get statistics for packet output event queue
+ *
+ * The queue must be a packet output event queue. Event queue handles can be
+ * requested with odp_pktout_event_queue(). Counters not supported by the
+ * interface are set to zero.
+ *
+ * @param       pktio	 Packet IO handle
+ * @param       queue	 Packet output event queue handle
+ * @param[out]  stats	 Output buffer for counters
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_pktout_event_queue_stats(odp_pktio_t pktio, odp_queue_t queue,
+				 odp_pktout_queue_stats_t *stats);
+
+/**
  * Reset statistics for pktio handle
  *
- * Reset all statistics counters to zero.
+ * Reset all interface level statistics counters (odp_pktio_stats_t) to zero.
+ * It's implementation defined if other packet IO related statistics are
+ * affected.
  *
  * @param       pktio	 Packet IO handle
  *
