@@ -458,6 +458,12 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 	capa->config.pktout.bit.sctp_chksum_ena =
 		capa->config.pktout.bit.sctp_chksum;
 
+	capa->stats.pktio.counter.in_octets = 1;
+	capa->stats.pktio.counter.in_packets = 1;
+	capa->stats.pktio.counter.in_errors = 1;
+	capa->stats.pktio.counter.out_octets = 1;
+	capa->stats.pktio.counter.out_packets = 1;
+
 	return 0;
 }
 

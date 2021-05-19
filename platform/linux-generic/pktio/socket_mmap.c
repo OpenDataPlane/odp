@@ -841,7 +841,7 @@ static int sock_mmap_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t
 	return _odp_link_info_fd(pkt_priv(pktio_entry)->sockfd, pktio_entry->s.name, info);
 }
 
-static int sock_mmap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
+static int sock_mmap_capability(pktio_entry_t *pktio_entry,
 				odp_pktio_capability_t *capa)
 {
 	pkt_sock_mmap_t *const pkt_sock = pkt_priv(pktio_entry);
@@ -864,6 +864,9 @@ static int sock_mmap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	capa->config.pktin.bit.ts_ptp = 1;
 
 	capa->config.pktout.bit.ts_ena = 1;
+
+	/* Fill statistics capabilities */
+	_odp_sock_stats_capa(pktio_entry, capa);
 
 	return 0;
 }

@@ -108,3 +108,40 @@ pktio_stats_type_t _odp_sock_stats_type_fd(pktio_entry_t *pktio_entry, int fd)
 
 	return STATS_UNSUPPORTED;
 }
+
+void _odp_sock_stats_capa(pktio_entry_t *pktio_entry,
+			  odp_pktio_capability_t *capa)
+{
+	capa->stats.pktio.all_counters = 0;
+	capa->stats.pktin_queue.all_counters = 0;
+	capa->stats.pktout_queue.all_counters = 0;
+
+	if (pktio_entry->s.stats_type == STATS_SYSFS) {
+		capa->stats.pktio.counter.in_octets = 1;
+		capa->stats.pktio.counter.in_packets = 1;
+		capa->stats.pktio.counter.in_ucast_pkts = 1;
+		capa->stats.pktio.counter.in_mcast_pkts = 1;
+		capa->stats.pktio.counter.in_discards = 1;
+		capa->stats.pktio.counter.in_errors = 1;
+		capa->stats.pktio.counter.out_octets = 1;
+		capa->stats.pktio.counter.out_packets = 1;
+		capa->stats.pktio.counter.out_ucast_pkts = 1;
+		capa->stats.pktio.counter.out_discards = 1;
+		capa->stats.pktio.counter.out_errors = 1;
+	} else if (pktio_entry->s.stats_type == STATS_ETHTOOL) {
+		capa->stats.pktio.counter.in_octets = 1;
+		capa->stats.pktio.counter.in_packets = 1;
+		capa->stats.pktio.counter.in_ucast_pkts = 1;
+		capa->stats.pktio.counter.in_bcast_pkts = 1;
+		capa->stats.pktio.counter.in_mcast_pkts = 1;
+		capa->stats.pktio.counter.in_discards = 1;
+		capa->stats.pktio.counter.in_errors = 1;
+		capa->stats.pktio.counter.out_octets = 1;
+		capa->stats.pktio.counter.out_packets = 1;
+		capa->stats.pktio.counter.out_ucast_pkts = 1;
+		capa->stats.pktio.counter.out_bcast_pkts = 1;
+		capa->stats.pktio.counter.out_mcast_pkts = 1;
+		capa->stats.pktio.counter.out_discards = 1;
+		capa->stats.pktio.counter.out_errors = 1;
+	}
+}

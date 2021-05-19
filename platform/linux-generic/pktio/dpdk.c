@@ -1613,6 +1613,14 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
 		capa->config.pktout.bit.tcp_chksum;
 	capa->config.pktout.bit.ts_ena = 1;
 
+	capa->stats.pktio.counter.in_octets = 1;
+	capa->stats.pktio.counter.in_packets = 1;
+	capa->stats.pktio.counter.in_discards = 1;
+	capa->stats.pktio.counter.in_errors = 1;
+	capa->stats.pktio.counter.out_octets = 1;
+	capa->stats.pktio.counter.out_packets = 1;
+	capa->stats.pktio.counter.out_errors = 1;
+
 	return 0;
 }
 
