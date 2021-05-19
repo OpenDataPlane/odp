@@ -66,6 +66,10 @@ int _odp_sock_stats_fd(pktio_entry_t *pktio_entry,
 				pktio_entry->s.stats.in_packets;
 	stats->in_ucast_pkts = cur_stats.in_ucast_pkts -
 				pktio_entry->s.stats.in_ucast_pkts;
+	stats->in_bcast_pkts = cur_stats.in_bcast_pkts -
+				pktio_entry->s.stats.in_bcast_pkts;
+	stats->in_mcast_pkts = cur_stats.in_mcast_pkts -
+				pktio_entry->s.stats.in_mcast_pkts;
 	stats->in_discards = cur_stats.in_discards -
 				pktio_entry->s.stats.in_discards;
 	stats->in_errors = cur_stats.in_errors -
@@ -80,6 +84,10 @@ int _odp_sock_stats_fd(pktio_entry_t *pktio_entry,
 				pktio_entry->s.stats.out_packets;
 	stats->out_ucast_pkts = cur_stats.out_ucast_pkts -
 				pktio_entry->s.stats.out_ucast_pkts;
+	stats->out_bcast_pkts = cur_stats.out_bcast_pkts -
+				pktio_entry->s.stats.out_bcast_pkts;
+	stats->out_mcast_pkts = cur_stats.out_mcast_pkts -
+				pktio_entry->s.stats.out_mcast_pkts;
 	stats->out_discards = cur_stats.out_discards -
 				pktio_entry->s.stats.out_discards;
 	stats->out_errors = cur_stats.out_errors -
