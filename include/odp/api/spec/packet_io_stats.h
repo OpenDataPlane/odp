@@ -87,6 +87,57 @@ typedef struct odp_pktio_stats_t {
 } odp_pktio_stats_t;
 
 /**
+ * Packet IO statistics capabilities
+ */
+typedef struct odp_pktio_stats_capability_t {
+	/** Interface level capabilities */
+	struct {
+		/** Supported counters */
+		union {
+			/** Statistics counters in a bit field structure */
+			struct {
+				/** @see odp_pktio_stats_t::in_octets */
+				uint64_t in_octets          : 1;
+
+				/** @see odp_pktio_stats_t::in_packets */
+				uint64_t in_packets         : 1;
+
+				/** @see odp_pktio_stats_t::in_ucast_pkts */
+				uint64_t in_ucast_pkts      : 1;
+
+				/** @see odp_pktio_stats_t::in_discards */
+				uint64_t in_discards        : 1;
+
+				/** @see odp_pktio_stats_t::in_errors */
+				uint64_t in_errors          : 1;
+
+				/** @see odp_pktio_stats_t::out_octets */
+				uint64_t out_octets         : 1;
+
+				/** @see odp_pktio_stats_t::out_packets */
+				uint64_t out_packets        : 1;
+
+				/** @see odp_pktio_stats_t::out_ucast_pkts */
+				uint64_t out_ucast_pkts     : 1;
+
+				/** @see odp_pktio_stats_t::out_discards */
+				uint64_t out_discards       : 1;
+
+				/** @see odp_pktio_stats_t::out_errors */
+				uint64_t out_errors         : 1;
+			} counter;
+
+			/** All bits of the bit field structure
+			 *
+			 *  This field can be used to set/clear all flags, or
+			 *  for bitwise operations over the entire structure. */
+			uint64_t all_counters;
+		};
+	} pktio;
+
+} odp_pktio_stats_capability_t;
+
+/**
  * Get statistics for pktio handle
  *
  * Counters not supported by the interface are set to zero.

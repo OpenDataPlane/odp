@@ -908,6 +908,9 @@ typedef struct odp_pktio_capability_t {
 	/** Packet input reassembly capability */
 	odp_reass_capability_t reassembly;
 
+	/** Statistics counters capabilities */
+	odp_pktio_stats_capability_t stats;
+
 } odp_pktio_capability_t;
 
 /**
