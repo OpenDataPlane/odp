@@ -637,6 +637,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		pktio_entry->s.stats_type = STATS_UNSUPPORTED;
 	} else {
 		pktio_entry->s.stats_type = STATS_ETHTOOL;
+		_odp_sock_stats_capa(pktio_entry, &pktio_entry->s.capa);
 	}
 
 	(void)netmap_stats_reset(pktio_entry);

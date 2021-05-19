@@ -22,6 +22,9 @@ int _odp_sock_stats_fd(pktio_entry_t *pktio_entry,
 		       int fd);
 int _odp_sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd);
 
+void _odp_sock_stats_capa(pktio_entry_t *pktio_entry,
+			  odp_pktio_capability_t *capa);
+
 pktio_stats_type_t _odp_sock_stats_type_fd(pktio_entry_t *pktio_entry, int fd);
 
 #ifdef __cplusplus
