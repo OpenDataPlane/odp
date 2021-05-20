@@ -1510,6 +1510,125 @@ static void test_packet_pool_ext_alloc_seg(void)
 	packet_pool_ext_alloc(PKT_LEN_SEGMENTED);
 }
 
+static void test_packet_pool_ext_disassemble(void)
+{
+	odp_shm_t shm;
+	odp_pool_t pool;
+	odp_pool_ext_param_t param;
+	odp_pool_ext_capability_t capa;
+	uint32_t i, j, buf_size, num_buf, num_pkt, num_alloc, buf_index;
+	uint32_t pkt_len, head_offset, trailer_size, headroom, max_headroom;
+	uint32_t hr, max_payload, buf_data_size;
+	uint32_t num_seg;
+	void *buf[EXT_NUM_BUF];
+	odp_packet_t pkt_tbl[EXT_NUM_BUF];
+
+	CU_ASSERT_FATAL(odp_pool_ext_capability(ODP_POOL_PACKET, &capa) == 0);
+	CU_ASSERT_FATAL(capa.pkt.max_segs_per_pkt > 1);
+
+	pool_ext_init_packet_pool_param(&param);
+	num_buf    = param.pkt.num_buf;
+	buf_size   = param.pkt.buf_size;
+
+	pool = odp_pool_ext_create("pool_ext_0", &param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	shm = populate_pool(pool, &capa, buf, num_buf, buf_size);
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+
+	head_offset  = capa.pkt.odp_header_size + param.pkt.app_header_size;
+	max_headroom = capa.pkt.max_headroom_size;
+	headroom = param.pkt.headroom;
+	trailer_size = capa.pkt.odp_trailer_size;
+	buf_data_size = buf_size - head_offset - trailer_size;
+	max_payload = buf_data_size - max_headroom;
+
+	 /* length that results 2 segments */
+	pkt_len = max_payload + (buf_size / 2);
+	num_seg = 2;
+	num_pkt = num_buf / num_seg;
+
+	for (i = 0; i < num_pkt; i++) {
+		odp_packet_t pkt;
+		odp_packet_seg_t seg;
+		uint32_t num_pkt_buf, data_offset, data_len;
+		void *head, *data, *pkt_head;
+		odp_packet_buf_t pkt_buf[num_seg];
+		void *seg_data[num_seg];
+		uint32_t seg_len[num_seg];
+
+		pkt = odp_packet_alloc(pool, pkt_len);
+		pkt_tbl[i] = pkt;
+		CU_ASSERT(pkt != ODP_PACKET_INVALID);
+		if (pkt == ODP_PACKET_INVALID)
+			break;
+
+		CU_ASSERT(odp_packet_len(pkt) == pkt_len);
+		CU_ASSERT(odp_packet_headroom(pkt) >= headroom);
+		buf_index = find_buf(pkt, buf, num_buf, head_offset);
+		CU_ASSERT(buf_index < num_buf);
+		pkt_head = odp_packet_head(pkt);
+		hr = (uintptr_t)odp_packet_data(pkt) - (uintptr_t)pkt_head;
+		CU_ASSERT(hr == odp_packet_headroom(pkt));
+		CU_ASSERT((int)num_seg == odp_packet_num_segs(pkt));
+
+		seg = odp_packet_first_seg(pkt);
+		for (j = 0; j < num_seg; j++) {
+			seg_data[j] = odp_packet_seg_data(pkt, seg);
+			seg_len[j]  = odp_packet_seg_data_len(pkt, seg);
+			seg = odp_packet_next_seg(pkt, seg);
+		}
+
+		CU_ASSERT(odp_packet_data(pkt) == seg_data[0]);
+		CU_ASSERT(odp_packet_seg_len(pkt) == seg_len[0])
+
+		/* Disassemble packet */
+		num_pkt_buf = odp_packet_disassemble(pkt, pkt_buf, num_seg);
+		CU_ASSERT_FATAL(num_pkt_buf == num_seg);
+
+		CU_ASSERT(odp_packet_buf_head(pkt_buf[0]) == pkt_head);
+		CU_ASSERT(odp_packet_buf_data_offset(pkt_buf[0]) == hr);
+
+		for (j = 0; j < num_seg; j++) {
+			CU_ASSERT(odp_packet_buf_size(pkt_buf[j]) == buf_data_size);
+
+			head = odp_packet_buf_head(pkt_buf[j]);
+			data_offset = odp_packet_buf_data_offset(pkt_buf[j]);
+			data = (uint8_t *)head + data_offset;
+			CU_ASSERT(seg_data[j] == data);
+			data_len = odp_packet_buf_data_len(pkt_buf[j]);
+			CU_ASSERT(seg_len[j] == data_len);
+
+			CU_ASSERT(odp_packet_buf_from_head(pool, head) == pkt_buf[j]);
+
+			/* Pull in head and tail by one byte */
+			odp_packet_buf_data_set(pkt_buf[j], data_offset + 1, data_len - 2);
+			CU_ASSERT(odp_packet_buf_data_offset(pkt_buf[j]) == data_offset + 1);
+			CU_ASSERT(odp_packet_buf_data_len(pkt_buf[j]) == data_len - 2);
+		}
+
+		/* Reassemble packet, each segment is now 2 bytes shorter */
+		pkt = odp_packet_reassemble(pool, pkt_buf, num_seg);
+
+		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+		pkt_tbl[i] = pkt;
+
+		CU_ASSERT(odp_packet_len(pkt) == (pkt_len - (num_seg * 2)));
+	}
+
+	num_alloc = i;
+	CU_ASSERT(num_alloc == num_pkt);
+
+	/* Pool is now empty */
+	CU_ASSERT(odp_packet_alloc(pool, pkt_len) == ODP_PACKET_INVALID);
+
+	for (i = 0; i < num_alloc; i++)
+		odp_packet_free(pkt_tbl[i]);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+	CU_ASSERT(odp_shm_free(shm) == 0);
+}
+
 static int pool_suite_init(void)
 {
 	memset(&global_pool_capa, 0, sizeof(odp_pool_capability_t));
@@ -1607,6 +1726,7 @@ odp_testinfo_t pool_ext_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_alloc, check_pool_ext_support),
 	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_alloc_max, check_pool_ext_support),
 	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_alloc_seg, check_pool_ext_segment_support),
+	ODP_TEST_INFO_CONDITIONAL(test_packet_pool_ext_disassemble, check_pool_ext_segment_support),
 	ODP_TEST_INFO_NULL,
 };
 
