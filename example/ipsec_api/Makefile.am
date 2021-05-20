@@ -8,7 +8,9 @@ TESTS = \
 	odp_ipsec_api_run_ah_out.sh \
 	odp_ipsec_api_run_ah_tun_in.sh \
 	odp_ipsec_api_run_ah_tun_out.sh \
+	odp_ipsec_api_run_esp_in.sh \
 	odp_ipsec_api_run_esp_out.sh \
+	odp_ipsec_api_run_esp_tun_in.sh \
 	odp_ipsec_api_run_esp_tun_out.sh \
 	odp_ipsec_api_run_simple.sh
 endif
