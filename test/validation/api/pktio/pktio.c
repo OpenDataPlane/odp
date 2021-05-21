@@ -1965,32 +1965,27 @@ static void _print_pktio_stats(odp_pktio_stats_t *s, const char *name)
 }
 #endif
 
-/* some pktio like netmap support various methods to
- * get statistics counters. ethtool strings are not standardised
- * and sysfs may not be supported. skip pktio_stats test until
- * we will solve that.*/
 static int pktio_check_statistics_counters(void)
 {
 	odp_pktio_t pktio;
-	odp_pktio_stats_t stats;
-	int ret;
+	odp_pktio_capability_t capa;
 	odp_pktio_param_t pktio_param;
-	const char *iface = iface_name[0];
+	int ret;
 
 	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
-	pktio = odp_pktio_open(iface, pool[0], &pktio_param);
+	pktio = odp_pktio_open(iface_name[0], pool[0], &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID)
 		return ODP_TEST_INACTIVE;
 
-	ret = odp_pktio_stats(pktio, &stats);
+	ret = odp_pktio_capability(pktio, &capa);
 	(void)odp_pktio_close(pktio);
 
-	if (ret == 0)
-		return ODP_TEST_ACTIVE;
+	if (ret < 0 || capa.stats.pktio.all_counters == 0)
+		return ODP_TEST_INACTIVE;
 
-	return ODP_TEST_INACTIVE;
+	return ODP_TEST_ACTIVE;
 }
 
 static void pktio_test_statistics_counters(void)
@@ -2008,6 +2003,7 @@ static void pktio_test_statistics_counters(void)
 	uint64_t wait = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS);
 	odp_pktio_stats_t stats[2];
 	odp_pktio_stats_t *rx_stats, *tx_stats;
+	odp_pktio_capability_t rx_capa, tx_capa;
 
 	for (i = 0; i < num_ifaces; i++) {
 		pktio[i] = create_pktio(i, ODP_PKTIN_MODE_SCHED,
@@ -2017,6 +2013,9 @@ static void pktio_test_statistics_counters(void)
 	}
 	pktio_tx = pktio[0];
 	pktio_rx = (num_ifaces > 1) ? pktio[1] : pktio_tx;
+
+	CU_ASSERT_FATAL(odp_pktio_capability(pktio_tx, &tx_capa) == 0);
+	CU_ASSERT_FATAL(odp_pktio_capability(pktio_rx, &rx_capa) == 0);
 
 	CU_ASSERT_FATAL(odp_pktout_queue(pktio_tx, &pktout, 1) == 1);
 
@@ -2066,11 +2065,11 @@ static void pktio_test_statistics_counters(void)
 	CU_ASSERT(ret == 0);
 	tx_stats = &stats[0];
 
-	CU_ASSERT((tx_stats->out_octets == 0) ||
+	CU_ASSERT((tx_capa.stats.pktio.counter.out_octets == 0) ||
 		  (tx_stats->out_octets >= (PKT_LEN_NORMAL * (uint64_t)pkts)));
-	CU_ASSERT((tx_stats->out_packets == 0) ||
+	CU_ASSERT((tx_capa.stats.pktio.counter.out_packets == 0) ||
 		  (tx_stats->out_packets >= (uint64_t)pkts));
-	CU_ASSERT((tx_stats->out_ucast_pkts == 0) ||
+	CU_ASSERT((tx_capa.stats.pktio.counter.out_ucast_pkts == 0) ||
 		  (tx_stats->out_ucast_pkts >= (uint64_t)pkts));
 	CU_ASSERT(tx_stats->out_discards == 0);
 	CU_ASSERT(tx_stats->out_errors == 0);
@@ -2081,14 +2080,45 @@ static void pktio_test_statistics_counters(void)
 		ret = odp_pktio_stats(pktio_rx, rx_stats);
 		CU_ASSERT(ret == 0);
 	}
-	CU_ASSERT((rx_stats->in_octets == 0) ||
+	CU_ASSERT((rx_capa.stats.pktio.counter.in_octets == 0) ||
 		  (rx_stats->in_octets >= (PKT_LEN_NORMAL * (uint64_t)pkts)));
-	CU_ASSERT((rx_stats->in_packets == 0) ||
+	CU_ASSERT((rx_capa.stats.pktio.counter.in_packets == 0) ||
 		  (rx_stats->in_packets >= (uint64_t)pkts));
-	CU_ASSERT((rx_stats->in_ucast_pkts == 0) ||
+	CU_ASSERT((rx_capa.stats.pktio.counter.in_ucast_pkts == 0) ||
 		  (rx_stats->in_ucast_pkts >= (uint64_t)pkts));
 	CU_ASSERT(rx_stats->in_discards == 0);
 	CU_ASSERT(rx_stats->in_errors == 0);
+
+	/* Check that all unsupported counters are still zero */
+	if (!rx_capa.stats.pktio.counter.in_octets)
+		CU_ASSERT(rx_stats->in_octets == 0);
+	if (!rx_capa.stats.pktio.counter.in_packets)
+		CU_ASSERT(rx_stats->in_packets == 0);
+	if (!rx_capa.stats.pktio.counter.in_ucast_pkts)
+		CU_ASSERT(rx_stats->in_ucast_pkts == 0);
+	if (!rx_capa.stats.pktio.counter.in_mcast_pkts)
+		CU_ASSERT(rx_stats->in_mcast_pkts == 0);
+	if (!rx_capa.stats.pktio.counter.in_bcast_pkts)
+		CU_ASSERT(rx_stats->in_bcast_pkts == 0);
+	if (!rx_capa.stats.pktio.counter.in_discards)
+		CU_ASSERT(rx_stats->in_discards == 0);
+	if (!rx_capa.stats.pktio.counter.in_errors)
+		CU_ASSERT(rx_stats->in_errors == 0);
+
+	if (!tx_capa.stats.pktio.counter.out_octets)
+		CU_ASSERT(tx_stats->out_octets == 0);
+	if (!tx_capa.stats.pktio.counter.out_packets)
+		CU_ASSERT(tx_stats->out_packets == 0);
+	if (!tx_capa.stats.pktio.counter.out_ucast_pkts)
+		CU_ASSERT(tx_stats->out_ucast_pkts == 0);
+	if (!tx_capa.stats.pktio.counter.out_mcast_pkts)
+		CU_ASSERT(tx_stats->out_mcast_pkts == 0);
+	if (!tx_capa.stats.pktio.counter.out_bcast_pkts)
+		CU_ASSERT(tx_stats->out_bcast_pkts == 0);
+	if (!tx_capa.stats.pktio.counter.out_discards)
+		CU_ASSERT(tx_stats->out_discards == 0);
+	if (!tx_capa.stats.pktio.counter.out_errors)
+		CU_ASSERT(tx_stats->out_errors == 0);
 
 	for (i = 0; i < num_ifaces; i++) {
 		CU_ASSERT(odp_pktio_stop(pktio[i]) == 0);
