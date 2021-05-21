@@ -1901,6 +1901,156 @@ int odp_pktio_stats_reset(odp_pktio_t pktio)
 	return ret;
 }
 
+int odp_pktin_queue_stats(odp_pktin_queue_t queue,
+			  odp_pktin_queue_stats_t *stats)
+{
+	pktio_entry_t *entry;
+	odp_pktin_mode_t mode;
+	int ret = -1;
+
+	entry = get_pktio_entry(queue.pktio);
+	if (entry == NULL) {
+		ODP_ERR("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)queue.pktio);
+		return -1;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_ERR("pktio entry already freed\n");
+		return -1;
+	}
+
+	mode = entry->s.param.in_mode;
+	if (odp_unlikely(mode != ODP_PKTIN_MODE_DIRECT)) {
+		unlock_entry(entry);
+		ODP_ERR("invalid packet input mode: %d\n", mode);
+		return -1;
+	}
+
+	if (entry->s.ops->pktin_queue_stats)
+		ret = entry->s.ops->pktin_queue_stats(entry, queue.index, stats);
+
+	unlock_entry(entry);
+
+	return ret;
+}
+
+int odp_pktin_event_queue_stats(odp_pktio_t pktio, odp_queue_t queue,
+				odp_pktin_queue_stats_t *stats)
+{
+	pktio_entry_t *entry;
+	odp_pktin_mode_t mode;
+	odp_pktin_queue_t pktin_queue;
+	int ret = -1;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL) {
+		ODP_ERR("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
+		return -1;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_ERR("pktio entry already freed\n");
+		return -1;
+	}
+
+	mode = entry->s.param.in_mode;
+	if (odp_unlikely(mode != ODP_PKTIN_MODE_SCHED && mode != ODP_PKTIN_MODE_QUEUE)) {
+		unlock_entry(entry);
+		ODP_ERR("invalid packet input mode: %d\n", mode);
+		return -1;
+	}
+
+	pktin_queue = _odp_queue_fn->get_pktin(queue);
+
+	if (entry->s.ops->pktin_queue_stats)
+		ret = entry->s.ops->pktin_queue_stats(entry, pktin_queue.index, stats);
+
+	unlock_entry(entry);
+
+	return ret;
+}
+
+int odp_pktout_queue_stats(odp_pktout_queue_t queue,
+			   odp_pktout_queue_stats_t *stats)
+{
+	pktio_entry_t *entry;
+	odp_pktout_mode_t mode;
+	int ret = -1;
+
+	entry = get_pktio_entry(queue.pktio);
+	if (entry == NULL) {
+		ODP_ERR("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)queue.pktio);
+		return -1;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_ERR("pktio entry already freed\n");
+		return -1;
+	}
+
+	mode = entry->s.param.out_mode;
+	if (odp_unlikely(mode != ODP_PKTOUT_MODE_DIRECT)) {
+		unlock_entry(entry);
+		ODP_ERR("invalid packet output mode: %d\n", mode);
+		return -1;
+	}
+
+	if (entry->s.ops->pktout_queue_stats)
+		ret = entry->s.ops->pktout_queue_stats(entry, queue.index, stats);
+
+	unlock_entry(entry);
+
+	return ret;
+}
+
+int odp_pktout_event_queue_stats(odp_pktio_t pktio, odp_queue_t queue,
+				 odp_pktout_queue_stats_t *stats)
+{
+	pktio_entry_t *entry;
+	odp_pktout_mode_t mode;
+	odp_pktout_queue_t pktout_queue;
+	int ret = -1;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL) {
+		ODP_ERR("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
+		return -1;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_ERR("pktio entry already freed\n");
+		return -1;
+	}
+
+	mode = entry->s.param.out_mode;
+	if (odp_unlikely(mode != ODP_PKTOUT_MODE_QUEUE)) {
+		unlock_entry(entry);
+		ODP_ERR("invalid packet output mode: %d\n", mode);
+		return -1;
+	}
+
+	pktout_queue = _odp_queue_fn->get_pktout(queue);
+
+	if (entry->s.ops->pktout_queue_stats)
+		ret = entry->s.ops->pktout_queue_stats(entry, pktout_queue.index, stats);
+
+	unlock_entry(entry);
+
+	return ret;
+}
+
 int odp_pktin_queue_config(odp_pktio_t pktio,
 			   const odp_pktin_queue_param_t *param)
 {
@@ -2037,14 +2187,13 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 				return -1;
 			}
 
-			if (mode == ODP_PKTIN_MODE_QUEUE) {
-				_odp_queue_fn->set_pktin(queue, pktio, i);
+			_odp_queue_fn->set_pktin(queue, pktio, i);
+			if (mode == ODP_PKTIN_MODE_QUEUE)
 				_odp_queue_fn->set_enq_deq_fn(queue,
 							      NULL,
 							      NULL,
 							      pktin_dequeue,
 							      pktin_deq_multi);
-			}
 
 			entry->s.in_queue[i].queue = queue;
 
