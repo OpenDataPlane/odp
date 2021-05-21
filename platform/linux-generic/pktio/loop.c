@@ -463,7 +463,11 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 	capa->stats.pktio.counter.in_errors = 1;
 	capa->stats.pktio.counter.out_octets = 1;
 	capa->stats.pktio.counter.out_packets = 1;
-
+	capa->stats.pktin_queue.counter.octets = 1;
+	capa->stats.pktin_queue.counter.packets = 1;
+	capa->stats.pktin_queue.counter.errors = 1;
+	capa->stats.pktout_queue.counter.octets = 1;
+	capa->stats.pktout_queue.counter.packets = 1;
 	return 0;
 }
 
@@ -499,6 +503,27 @@ static int loopback_stats_reset(pktio_entry_t *pktio_entry ODP_UNUSED)
 	return 0;
 }
 
+static int loopback_pktin_stats(pktio_entry_t *pktio_entry,
+				uint32_t index ODP_UNUSED,
+				odp_pktin_queue_stats_t *pktin_stats)
+{
+	memset(pktin_stats, 0, sizeof(odp_pktin_queue_stats_t));
+	pktin_stats->octets = pktio_entry->s.stats.in_octets;
+	pktin_stats->packets = pktio_entry->s.stats.in_packets;
+	pktin_stats->errors = pktio_entry->s.stats.in_errors;
+	return 0;
+}
+
+static int loopback_pktout_stats(pktio_entry_t *pktio_entry,
+				 uint32_t index ODP_UNUSED,
+				 odp_pktout_queue_stats_t *pktout_stats)
+{
+	memset(pktout_stats, 0, sizeof(odp_pktout_queue_stats_t));
+	pktout_stats->octets = pktio_entry->s.stats.out_octets;
+	pktout_stats->packets = pktio_entry->s.stats.out_packets;
+	return 0;
+}
+
 static int loop_init_global(void)
 {
 	ODP_PRINT("PKTIO: initialized loop interface.\n");
@@ -517,6 +542,8 @@ const pktio_if_ops_t _odp_loopback_pktio_ops = {
 	.stop = NULL,
 	.stats = loopback_stats,
 	.stats_reset = loopback_stats_reset,
+	.pktin_queue_stats = loopback_pktin_stats,
+	.pktout_queue_stats = loopback_pktout_stats,
 	.recv = loopback_recv,
 	.send = loopback_send,
 	.maxlen_get = loopback_mtu_get,
