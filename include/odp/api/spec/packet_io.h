@@ -1074,8 +1074,10 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
  * output. If return value (N) is less than 'num', only queues[0 ... N-1] have
  * been written.
  *
- * Packets (and other events) from these queues are received with
- * odp_queue_deq(), odp_schedule(), etc calls.
+ * In addition to packet input, application and other parts of ODP (e.g. timer)
+ * may enqueue events into these queues. Depending on the queue mode, application
+ * uses either odp_queue_deq() or odp_schedule() (or variants of those) to receive
+ * packets and other events from these queues.
  *
  * @param      pktio    Packet IO handle
  * @param[out] queues   Points to an array of queue handles for output
@@ -1117,7 +1119,7 @@ int odp_pktin_queue(odp_pktio_t pktio, odp_pktin_queue_t queues[], int num);
  *
  * Packets are enqueued to these queues with odp_queue_enq() or
  * odp_queue_enq_multi(). Behaviour is undefined if other events than packets
- * are enqueued.
+ * are enqueued. Application cannot dequeue from these queues.
  *
  * @param      pktio    Packet IO handle
  * @param[out] queues   Points to an array of queue handles for output
