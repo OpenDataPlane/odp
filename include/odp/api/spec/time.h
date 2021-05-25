@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2020, Nokia
+ * Copyright (c) 2020-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -66,6 +66,35 @@ extern "C" {
 odp_time_t odp_time_local(void);
 
 /**
+ * Current local time in nanoseconds
+ *
+ * Like odp_time_local(), but the time stamp value is converted into nanoseconds.
+ *
+ * @return Local time stamp in nanoseconds
+ */
+uint64_t odp_time_local_ns(void);
+
+/**
+ * Current local time (strict)
+ *
+ * Like odp_time_local(), but reads the time stamp value more strictly in the program order.
+ * The function may decrease CPU performance around the call, as it may include additional
+ * barrier instructions or otherwise limit out-of-order execution.
+ *
+ * @return Local time stamp
+ */
+odp_time_t odp_time_local_strict(void);
+
+/**
+ * Current local time in nanoseconds (strict)
+ *
+ * Like odp_time_local_strict(), but the time stamp value is converted into nanoseconds.
+ *
+ * @return Local time stamp in nanoseconds
+ */
+uint64_t odp_time_local_strict_ns(void);
+
+/**
  * Current global time
  *
  * Returns current global time stamp value. The global time source provides high
@@ -78,15 +107,6 @@ odp_time_t odp_time_local(void);
 odp_time_t odp_time_global(void);
 
 /**
- * Current local time in nanoseconds
- *
- * Like odp_time_local(), but the time stamp value is converted into nanoseconds.
- *
- * @return Local time stamp in nanoseconds
- */
-uint64_t odp_time_local_ns(void);
-
-/**
  * Current global time in nanoseconds
  *
  * Like odp_time_global(), but the time stamp value is converted into nanoseconds.
@@ -94,6 +114,25 @@ uint64_t odp_time_local_ns(void);
  * @return Global time stamp in nanoseconds
  */
 uint64_t odp_time_global_ns(void);
+
+/**
+ * Current global time (strict)
+ *
+ * Like odp_time_global(), but reads the time stamp value more strictly (see
+ * odp_time_local_strict() documentation) in the program order.
+ *
+ * @return Global time stamp
+ */
+odp_time_t odp_time_global_strict(void);
+
+/**
+ * Current global time in nanoseconds (strict)
+ *
+ * Like odp_time_global_strict(), but the time stamp value is converted into nanoseconds.
+ *
+ * @return Global time stamp in nanoseconds
+ */
+uint64_t odp_time_global_strict_ns(void);
 
 /**
  * Time difference
