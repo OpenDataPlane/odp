@@ -1621,6 +1621,13 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
 	capa->stats.pktio.counter.out_packets = 1;
 	capa->stats.pktio.counter.out_errors = 1;
 
+	capa->stats.pktin_queue.counter.octets = 1;
+	capa->stats.pktin_queue.counter.packets = 1;
+	capa->stats.pktin_queue.counter.errors = 1;
+
+	capa->stats.pktout_queue.counter.octets = 1;
+	capa->stats.pktout_queue.counter.packets = 1;
+
 	return 0;
 }
 
@@ -2239,6 +2246,59 @@ static int dpdk_stats_reset(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
+static int dpdk_pktin_stats(pktio_entry_t *pktio_entry, uint32_t index,
+			    odp_pktin_queue_stats_t *pktin_stats)
+{
+	struct rte_eth_stats rte_stats;
+	int ret;
+
+	if (odp_unlikely(index > RTE_ETHDEV_QUEUE_STAT_CNTRS - 1)) {
+		ODP_ERR("DPDK supports max %d per queue counters\n",
+			RTE_ETHDEV_QUEUE_STAT_CNTRS);
+		return -1;
+	}
+
+	ret = rte_eth_stats_get(pkt_priv(pktio_entry)->port_id, &rte_stats);
+	if (odp_unlikely(ret)) {
+		ODP_ERR("Failed to read DPDK pktio stats: %d\n", ret);
+		return -1;
+	}
+
+	memset(pktin_stats, 0, sizeof(odp_pktin_queue_stats_t));
+
+	pktin_stats->packets = rte_stats.q_ipackets[index];
+	pktin_stats->octets = rte_stats.q_ibytes[index];
+	pktin_stats->errors = rte_stats.q_errors[index];
+
+	return 0;
+}
+
+static int dpdk_pktout_stats(pktio_entry_t *pktio_entry, uint32_t index,
+			     odp_pktout_queue_stats_t *pktout_stats)
+{
+	struct rte_eth_stats rte_stats;
+	int ret;
+
+	if (odp_unlikely(index > RTE_ETHDEV_QUEUE_STAT_CNTRS - 1)) {
+		ODP_ERR("DPDK supports max %d per queue counters\n",
+			RTE_ETHDEV_QUEUE_STAT_CNTRS);
+		return -1;
+	}
+
+	ret = rte_eth_stats_get(pkt_priv(pktio_entry)->port_id, &rte_stats);
+	if (odp_unlikely(ret)) {
+		ODP_ERR("Failed to read DPDK pktio stats: %d\n", ret);
+		return -1;
+	}
+
+	memset(pktout_stats, 0, sizeof(odp_pktout_queue_stats_t));
+
+	pktout_stats->packets = rte_stats.q_opackets[index];
+	pktout_stats->octets = rte_stats.q_obytes[index];
+
+	return 0;
+}
+
 const pktio_if_ops_t _odp_dpdk_pktio_ops = {
 	.name = "dpdk",
 	.init_global = dpdk_pktio_init_global,
@@ -2250,6 +2310,8 @@ const pktio_if_ops_t _odp_dpdk_pktio_ops = {
 	.stop = dpdk_stop,
 	.stats = dpdk_stats,
 	.stats_reset = dpdk_stats_reset,
+	.pktin_queue_stats = dpdk_pktin_stats,
+	.pktout_queue_stats = dpdk_pktout_stats,
 	.recv = dpdk_recv,
 	.send = dpdk_send,
 	.link_status = dpdk_link_status,
