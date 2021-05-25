@@ -2080,7 +2080,7 @@ int _odp_pktio_pktout_tm_config(odp_pktio_t pktio_hdl,
 
 	entry = get_pktio_entry(pktio_hdl);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", pktio_hdl);
+		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio_hdl);
 		return -1;
 	}
 
