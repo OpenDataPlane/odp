@@ -223,6 +223,16 @@ static void time_test_global_cmp(void)
 	time_test_cmp(odp_time_global, odp_time_global_from_ns);
 }
 
+static void time_test_local_strict_cmp(void)
+{
+	time_test_cmp(odp_time_local_strict, odp_time_local_from_ns);
+}
+
+static void time_test_global_strict_cmp(void)
+{
+	time_test_cmp(odp_time_global_strict, odp_time_global_from_ns);
+}
+
 /* check that a time difference gives a reasonable result */
 static void time_test_diff(time_cb time_cur,
 			   time_from_ns_cb time_from_ns,
@@ -318,6 +328,16 @@ static void time_test_global_diff(void)
 	time_test_diff(odp_time_global, odp_time_global_from_ns, global_res);
 }
 
+static void time_test_local_strict_diff(void)
+{
+	time_test_diff(odp_time_local_strict, odp_time_local_from_ns, local_res);
+}
+
+static void time_test_global_strict_diff(void)
+{
+	time_test_diff(odp_time_global_strict, odp_time_global_from_ns, global_res);
+}
+
 /* check that a time sum gives a reasonable result */
 static void time_test_sum(time_cb time_cur,
 			  time_from_ns_cb time_from_ns,
@@ -368,6 +388,16 @@ static void time_test_local_sum(void)
 static void time_test_global_sum(void)
 {
 	time_test_sum(odp_time_global, odp_time_global_from_ns, global_res);
+}
+
+static void time_test_local_strict_sum(void)
+{
+	time_test_sum(odp_time_local_strict, odp_time_local_from_ns, local_res);
+}
+
+static void time_test_global_strict_sum(void)
+{
+	time_test_sum(odp_time_global_strict, odp_time_global_from_ns, global_res);
 }
 
 static void time_test_wait_until(time_cb time_cur, time_from_ns_cb time_from_ns)
@@ -488,16 +518,6 @@ static void time_test_accuracy(time_cb time_cur, time_from_ns_cb time_from_ns)
 	CU_ASSERT(sec_t > sec_c * 0.95);
 }
 
-static void time_test_local_accuracy(void)
-{
-	time_test_accuracy(odp_time_local, odp_time_local_from_ns);
-}
-
-static void time_test_global_accuracy(void)
-{
-	time_test_accuracy(odp_time_global, odp_time_global_from_ns);
-}
-
 static void time_test_accuracy_nsec(time_nsec_cb time_nsec)
 {
 	uint64_t t1, t2, diff;
@@ -533,6 +553,26 @@ static void time_test_accuracy_nsec(time_nsec_cb time_nsec)
 	CU_ASSERT(sec_t > sec_c * 0.95);
 }
 
+static void time_test_local_accuracy(void)
+{
+	time_test_accuracy(odp_time_local, odp_time_local_from_ns);
+}
+
+static void time_test_global_accuracy(void)
+{
+	time_test_accuracy(odp_time_global, odp_time_global_from_ns);
+}
+
+static void time_test_local_strict_accuracy(void)
+{
+	time_test_accuracy(odp_time_local_strict, odp_time_local_from_ns);
+}
+
+static void time_test_global_strict_accuracy(void)
+{
+	time_test_accuracy(odp_time_global_strict, odp_time_global_from_ns);
+}
+
 static void time_test_local_accuracy_nsec(void)
 {
 	time_test_accuracy_nsec(odp_time_local_ns);
@@ -543,26 +583,46 @@ static void time_test_global_accuracy_nsec(void)
 	time_test_accuracy_nsec(odp_time_global_ns);
 }
 
+static void time_test_local_strict_accuracy_nsec(void)
+{
+	time_test_accuracy_nsec(odp_time_local_strict_ns);
+}
+
+static void time_test_global_strict_accuracy_nsec(void)
+{
+	time_test_accuracy_nsec(odp_time_global_strict_ns);
+}
+
 odp_testinfo_t time_suite_time[] = {
 	ODP_TEST_INFO(time_test_constants),
 	ODP_TEST_INFO(time_test_local_res),
 	ODP_TEST_INFO(time_test_local_conversion),
-	ODP_TEST_INFO(time_test_monotony),
 	ODP_TEST_INFO(time_test_local_cmp),
 	ODP_TEST_INFO(time_test_local_diff),
 	ODP_TEST_INFO(time_test_local_sum),
-	ODP_TEST_INFO(time_test_local_wait_until),
-	ODP_TEST_INFO(time_test_wait_ns),
-	ODP_TEST_INFO(time_test_local_accuracy),
 	ODP_TEST_INFO(time_test_global_res),
 	ODP_TEST_INFO(time_test_global_conversion),
 	ODP_TEST_INFO(time_test_global_cmp),
 	ODP_TEST_INFO(time_test_global_diff),
 	ODP_TEST_INFO(time_test_global_sum),
+	ODP_TEST_INFO(time_test_wait_ns),
+	ODP_TEST_INFO(time_test_monotony),
+	ODP_TEST_INFO(time_test_local_wait_until),
 	ODP_TEST_INFO(time_test_global_wait_until),
+	ODP_TEST_INFO(time_test_local_accuracy),
 	ODP_TEST_INFO(time_test_global_accuracy),
 	ODP_TEST_INFO(time_test_local_accuracy_nsec),
 	ODP_TEST_INFO(time_test_global_accuracy_nsec),
+	ODP_TEST_INFO(time_test_local_strict_diff),
+	ODP_TEST_INFO(time_test_local_strict_sum),
+	ODP_TEST_INFO(time_test_local_strict_cmp),
+	ODP_TEST_INFO(time_test_global_strict_diff),
+	ODP_TEST_INFO(time_test_global_strict_sum),
+	ODP_TEST_INFO(time_test_global_strict_cmp),
+	ODP_TEST_INFO(time_test_local_strict_accuracy),
+	ODP_TEST_INFO(time_test_global_strict_accuracy),
+	ODP_TEST_INFO(time_test_local_strict_accuracy_nsec),
+	ODP_TEST_INFO(time_test_global_strict_accuracy_nsec),
 	ODP_TEST_INFO_NULL
 };
 
