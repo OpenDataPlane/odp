@@ -15,6 +15,7 @@ extern "C" {
 
 int _odp_cpu_has_global_time(void);
 uint64_t _odp_cpu_global_time(void);
+uint64_t _odp_cpu_global_time_strict(void);
 uint64_t _odp_cpu_global_time_freq(void);
 
 #ifdef __cplusplus
