@@ -399,7 +399,7 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	odp_ticketlock_unlock(&timer_global->lock);
 
 	if (!odp_global_rw->inline_timers) {
-		if (tp->param.clk_src == ODP_CLOCK_CPU)
+		if (tp->param.clk_src == ODP_CLOCK_DEFAULT)
 			itimer_init(tp);
 	} else {
 		/* Update the highest index for inline timer scan */
@@ -441,7 +441,7 @@ static void odp_timer_pool_del(timer_pool_t *tp)
 
 	if (!odp_global_rw->inline_timers) {
 		/* Stop POSIX itimer signals */
-		if (tp->param.clk_src == ODP_CLOCK_CPU)
+		if (tp->param.clk_src == ODP_CLOCK_DEFAULT)
 			itimer_fini(tp);
 
 		stop_timer_thread(tp);
@@ -1220,8 +1220,8 @@ static void itimer_fini(timer_pool_t *tp)
 int odp_timer_capability(odp_timer_clk_src_t clk_src,
 			 odp_timer_capability_t *capa)
 {
-	if (clk_src != ODP_CLOCK_CPU) {
-		ODP_ERR("Only CPU clock source supported\n");
+	if (clk_src != ODP_CLOCK_DEFAULT) {
+		ODP_ERR("Only ODP_CLOCK_DEFAULT supported. Requested %i.\n", clk_src);
 		return -1;
 	}
 
@@ -1248,8 +1248,8 @@ int odp_timer_capability(odp_timer_clk_src_t clk_src,
 int odp_timer_res_capability(odp_timer_clk_src_t clk_src,
 			     odp_timer_res_capability_t *res_capa)
 {
-	if (clk_src != ODP_CLOCK_CPU) {
-		ODP_ERR("Only CPU clock source supported\n");
+	if (clk_src != ODP_CLOCK_DEFAULT) {
+		ODP_ERR("Only ODP_CLOCK_DEFAULT supported. Requested %i.\n", clk_src);
 		return -1;
 	}
 
