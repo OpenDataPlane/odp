@@ -34,7 +34,7 @@ static inline uint32_t _odp_hash_crc32c(const void *data, uint32_t data_len,
 
 #ifdef __x86_64__
 	for (i = 0; i < data_len / 8; i++) {
-		init_val = __builtin_ia32_crc32di(init_val, *(const uint64_t *)pd);
+		init_val = (uint32_t)__builtin_ia32_crc32di(init_val, *(const uint64_t *)pd);
 		pd += 8;
 	}
 
