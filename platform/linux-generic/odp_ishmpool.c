@@ -280,7 +280,7 @@ static void *_odp_ishmbud_alloc(pool_t *bpool, uint64_t size)
 	uintptr_t nr;
 
 	/* if size is zero or too big reject: */
-	if ((!size) && (size > (1U << bpool->ctrl.order))) {
+	if ((!size) && (size > (1ULL << bpool->ctrl.order))) {
 		ODP_ERR("Invalid alloc size (0 or larger than whole pool)\n");
 		return NULL;
 	}
