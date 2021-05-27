@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -1385,13 +1385,13 @@ int odp_timer_set_abs(odp_timer_t hdl,
 	uint32_t idx = handle_to_idx(hdl, tp);
 
 	if (odp_unlikely(abs_tck < cur_tick + tp->min_rel_tck))
-		return ODP_TIMER_TOOEARLY;
+		return ODP_TIMER_TOO_NEAR;
 	if (odp_unlikely(abs_tck > cur_tick + tp->max_rel_tck))
-		return ODP_TIMER_TOOLATE;
+		return ODP_TIMER_TOO_FAR;
 	if (timer_reset(idx, abs_tck, (odp_buffer_t *)tmo_ev, tp))
 		return ODP_TIMER_SUCCESS;
 	else
-		return ODP_TIMER_NOEVENT;
+		return ODP_TIMER_FAIL;
 }
 
 int odp_timer_set_rel(odp_timer_t hdl,
@@ -1404,13 +1404,13 @@ int odp_timer_set_rel(odp_timer_t hdl,
 	uint32_t idx = handle_to_idx(hdl, tp);
 
 	if (odp_unlikely(rel_tck < tp->min_rel_tck))
-		return ODP_TIMER_TOOEARLY;
+		return ODP_TIMER_TOO_NEAR;
 	if (odp_unlikely(rel_tck > tp->max_rel_tck))
-		return ODP_TIMER_TOOLATE;
+		return ODP_TIMER_TOO_FAR;
 	if (timer_reset(idx, abs_tck, (odp_buffer_t *)tmo_ev, tp))
 		return ODP_TIMER_SUCCESS;
 	else
-		return ODP_TIMER_NOEVENT;
+		return ODP_TIMER_FAIL;
 }
 
 int odp_timer_cancel(odp_timer_t hdl, odp_event_t *tmo_ev)
