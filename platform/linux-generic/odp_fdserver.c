@@ -246,10 +246,14 @@ static int get_socket(void)
 	int len;
 
 	/* construct the named socket path: */
-	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCK_FORMAT,
-		 odp_global_ro.shm_dir,
-		 odp_global_ro.uid,
-		 odp_global_ro.main_pid);
+	len = snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCK_FORMAT,
+		       odp_global_ro.shm_dir, odp_global_ro.uid,
+		       odp_global_ro.main_pid);
+
+	if (len >= FDSERVER_SOCKPATH_MAXLEN || len >= (int)sizeof(remote.sun_path)) {
+		ODP_ERR("path too long\n");
+		return -1;
+	}
 
 	s_sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (s_sock == -1) {
@@ -561,7 +565,7 @@ int _odp_fdserver_init_global(void)
 	int sock;
 	struct sockaddr_un local;
 	pid_t server_pid;
-	int res;
+	int len, res;
 
 	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCKDIR_FORMAT,
 		 odp_global_ro.shm_dir,
@@ -570,10 +574,14 @@ int _odp_fdserver_init_global(void)
 	mkdir(sockpath, 0744);
 
 	/* construct the server named socket path: */
-	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCK_FORMAT,
-		 odp_global_ro.shm_dir,
-		 odp_global_ro.uid,
-		 odp_global_ro.main_pid);
+	len = snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCK_FORMAT,
+		       odp_global_ro.shm_dir, odp_global_ro.uid,
+		       odp_global_ro.main_pid);
+
+	if (len >= FDSERVER_SOCKPATH_MAXLEN || len >= (int)sizeof(local.sun_path)) {
+		ODP_ERR("path too long\n");
+		return -1;
+	}
 
 	/* create UNIX domain socket: */
 	sock = socket(AF_UNIX, SOCK_STREAM, 0);
