@@ -984,7 +984,7 @@ int ipsec_check_out(const ipsec_test_part *part, odp_ipsec_sa_t sa,
 
 void ipsec_check_in_one(const ipsec_test_part *part, odp_ipsec_sa_t sa)
 {
-	odp_packet_t pkto[MAX_FRAGS];
+	odp_packet_t pkto[MAX_FRAGS] = {0};
 	int num_out;
 
 	num_out = ipsec_process_in(part, sa, pkto);
