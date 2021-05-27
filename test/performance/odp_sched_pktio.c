@@ -490,7 +490,7 @@ static int worker_thread_timers(void *arg)
 			ret = odp_timer_set_rel(timer, tick, NULL);
 
 			if (odp_unlikely(ret != ODP_TIMER_SUCCESS &&
-					 ret != ODP_TIMER_NOEVENT)) {
+					 ret != ODP_TIMER_FAIL)) {
 				/* Tick period is too short or long. Normally,
 				 * reset either succeeds or fails due to timer
 				 * expiration, in which case timeout event will
