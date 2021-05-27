@@ -56,12 +56,12 @@ static const char *timerset2str(odp_timer_set_t val)
 	switch (val) {
 	case ODP_TIMER_SUCCESS:
 		return "success";
-	case ODP_TIMER_TOOEARLY:
-		return "too early";
-	case ODP_TIMER_TOOLATE:
-		return "too late";
-	case ODP_TIMER_NOEVENT:
-		return "no event";
+	case ODP_TIMER_TOO_NEAR:
+		return "too near";
+	case ODP_TIMER_TOO_FAR:
+		return "too far";
+	case ODP_TIMER_FAIL:
+		return "failure";
 	default:
 		return "?";
 	}
