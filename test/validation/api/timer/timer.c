@@ -650,12 +650,12 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 
 		ret = odp_timer_set_rel(timer[i], (i + 1) * period_tick, &ev);
 
-		if (ret == ODP_TIMER_TOOEARLY)
-			ODPH_DBG("Too early %i\n", i);
-		else if (ret == ODP_TIMER_TOOLATE)
-			ODPH_DBG("Too late %i\n", i);
-		else if (ret == ODP_TIMER_NOEVENT)
-			ODPH_DBG("No event %i\n", i);
+		if (ret == ODP_TIMER_TOO_NEAR)
+			ODPH_DBG("Timer set failed. Too near %i.\n", i);
+		else if (ret == ODP_TIMER_TOO_FAR)
+			ODPH_DBG("Timer set failed. Too far %i.\n", i);
+		else if (ret == ODP_TIMER_FAIL)
+			ODPH_DBG("Timer set failed %i\n", i);
 
 		CU_ASSERT(ret == ODP_TIMER_SUCCESS);
 	}
@@ -828,12 +828,12 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv)
 		target_tick[i] = tick;
 
 		ODPH_DBG("abs timer tick %" PRIu64 "\n", tick);
-		if (ret == ODP_TIMER_TOOEARLY)
-			ODPH_DBG("Too early %" PRIu64 "\n", tick);
-		else if (ret == ODP_TIMER_TOOLATE)
-			ODPH_DBG("Too late %" PRIu64 "\n", tick);
-		else if (ret == ODP_TIMER_NOEVENT)
-			ODPH_DBG("No event %" PRIu64 "\n", tick);
+		if (ret == ODP_TIMER_TOO_NEAR)
+			ODPH_DBG("Timer set failed. Too near %" PRIu64 ".\n", tick);
+		else if (ret == ODP_TIMER_TOO_FAR)
+			ODPH_DBG("Timer set failed. Too far %" PRIu64 ".\n", tick);
+		else if (ret == ODP_TIMER_FAIL)
+			ODPH_DBG("Timer set failed %" PRIu64 "\n", tick);
 
 		CU_ASSERT(ret == ODP_TIMER_SUCCESS);
 	}
@@ -1121,12 +1121,12 @@ static void timer_test_tmo_limit(odp_queue_type_t queue_type,
 		t1  = odp_time_local();
 		ret = odp_timer_set_rel(timer[i], tmo_tick, &ev);
 
-		if (ret == ODP_TIMER_TOOEARLY)
-			ODPH_DBG("Too early %i\n", i);
-		else if (ret == ODP_TIMER_TOOLATE)
-			ODPH_DBG("Too late %i\n", i);
-		else if (ret == ODP_TIMER_NOEVENT)
-			ODPH_DBG("No event %i\n", i);
+		if (ret == ODP_TIMER_TOO_NEAR)
+			ODPH_DBG("Timer set failed. Too near %i.\n", i);
+		else if (ret == ODP_TIMER_TOO_FAR)
+			ODPH_DBG("Timer set failed. Too late %i.\n", i);
+		else if (ret == ODP_TIMER_FAIL)
+			ODPH_DBG("Timer set failed %i\n", i);
 
 		CU_ASSERT(ret == ODP_TIMER_SUCCESS);
 
@@ -1400,7 +1400,7 @@ static int worker_entrypoint(void *arg)
 		tck = odp_timer_current_tick(tp) +
 		      odp_timer_ns_to_tick(tp, nsec);
 		timer_rc = odp_timer_set_abs(tt[i].tim, tck, &tt[i].ev);
-		if (timer_rc == ODP_TIMER_TOOEARLY) {
+		if (timer_rc == ODP_TIMER_TOO_NEAR) {
 			ODPH_ERR("Missed tick, setting timer\n");
 		} else if (timer_rc != ODP_TIMER_SUCCESS) {
 			ODPH_ERR("Failed to set timer: %d\n", timer_rc);
@@ -1467,11 +1467,11 @@ static int worker_entrypoint(void *arg)
 			cur_tick = odp_timer_current_tick(tp);
 			rc = odp_timer_set_rel(tt[i].tim, tck, &tt[i].ev);
 
-			if (rc == ODP_TIMER_TOOEARLY) {
-				CU_FAIL("Failed to set timer: TOO EARLY");
-			} else if (rc == ODP_TIMER_TOOLATE) {
-				CU_FAIL("Failed to set timer: TOO LATE");
-			} else if (rc == ODP_TIMER_NOEVENT) {
+			if (rc == ODP_TIMER_TOO_NEAR) {
+				CU_FAIL("Failed to set timer: TOO NEAR");
+			} else if (rc == ODP_TIMER_TOO_FAR) {
+				CU_FAIL("Failed to set timer: TOO FAR");
+			} else if (rc == ODP_TIMER_FAIL) {
 				/* Set/reset failed, timer already expired */
 				ntoolate++;
 			} else if (rc == ODP_TIMER_SUCCESS) {
