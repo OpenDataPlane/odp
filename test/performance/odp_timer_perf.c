@@ -307,14 +307,14 @@ static int create_timer_pools(test_global_t *global)
 			global->timer[i][j] = ODP_TIMER_INVALID;
 	}
 
-	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa)) {
+	if (odp_timer_capability(ODP_CLOCK_DEFAULT, &timer_capa)) {
 		ODPH_ERR("Timer capability failed\n");
 		return -1;
 	}
 
 	memset(&timer_res_capa, 0, sizeof(odp_timer_res_capability_t));
 	timer_res_capa.res_ns = res_ns;
-	if (odp_timer_res_capability(ODP_CLOCK_CPU, &timer_res_capa)) {
+	if (odp_timer_res_capability(ODP_CLOCK_DEFAULT, &timer_res_capa)) {
 		ODPH_ERR("Timer resolution capability failed\n");
 		return -1;
 	}
@@ -352,7 +352,7 @@ static int create_timer_pools(test_global_t *global)
 	timer_pool_param.max_tmo    = max_tmo_ns;
 	timer_pool_param.num_timers = num_timer;
 	timer_pool_param.priv       = priv;
-	timer_pool_param.clk_src    = ODP_CLOCK_CPU;
+	timer_pool_param.clk_src    = ODP_CLOCK_DEFAULT;
 
 	odp_pool_param_init(&pool_param);
 	pool_param.type    = ODP_POOL_TIMEOUT;

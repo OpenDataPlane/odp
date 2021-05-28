@@ -273,7 +273,7 @@ static int parse_args(int argc, char *argv[], test_args_t *args)
 	static const char *shortopts = "+c:r:m:x:p:t:h";
 
 	/* defaults */
-	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa))
+	if (odp_timer_capability(ODP_CLOCK_DEFAULT, &timer_capa))
 		return -1;
 
 	args->cpu_count     = 1;
@@ -444,7 +444,7 @@ int main(int argc, char *argv[])
 	tparams.max_tmo = gbls->args.max_us * ODP_TIME_USEC_IN_NS;
 	tparams.num_timers = num_workers; /* One timer per worker */
 	tparams.priv = 0; /* Shared */
-	tparams.clk_src = ODP_CLOCK_CPU;
+	tparams.clk_src = ODP_CLOCK_DEFAULT;
 	gbls->tp = odp_timer_pool_create("timer_pool", &tparams);
 	if (gbls->tp == ODP_TIMER_POOL_INVALID) {
 		err = 1;

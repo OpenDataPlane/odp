@@ -375,7 +375,7 @@ static int timer_debug(void)
 		return -1;
 	}
 
-	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa)) {
+	if (odp_timer_capability(ODP_CLOCK_DEFAULT, &timer_capa)) {
 		ODPH_ERR("Timer capa failed\n");
 		return -1;
 	}
@@ -385,7 +385,7 @@ static int timer_debug(void)
 
 	memset(&timer_res_capa, 0, sizeof(odp_timer_res_capability_t));
 	timer_res_capa.max_tmo = max_tmo;
-	if (odp_timer_res_capability(ODP_CLOCK_CPU, &timer_res_capa)) {
+	if (odp_timer_res_capability(ODP_CLOCK_DEFAULT, &timer_res_capa)) {
 		ODPH_ERR("Timer resolution capability failed\n");
 		return -1;
 	}
@@ -398,7 +398,7 @@ static int timer_debug(void)
 	timer_param.min_tmo = max_tmo / 10;
 	timer_param.max_tmo = max_tmo;
 	timer_param.num_timers = 10;
-	timer_param.clk_src = ODP_CLOCK_CPU;
+	timer_param.clk_src = ODP_CLOCK_DEFAULT;
 
 	timer_pool = odp_timer_pool_create("debug_timer", &timer_param);
 
