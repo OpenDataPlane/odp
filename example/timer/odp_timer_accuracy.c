@@ -106,8 +106,8 @@ static void print_usage(void)
 	       "  -e, --early_retry <num> When timer restart fails due to ODP_TIMER_TOOEARLY, retry this many times\n"
 	       "                          with expiration time incremented by the period. Default: 0\n"
 	       "  -s, --clk_src           Clock source select (default 0):\n"
-	       "                            0: ODP_CLOCK_CPU\n"
-	       "                            1: ODP_CLOCK_EXT\n"
+	       "                            0: ODP_CLOCK_DEFAULT\n"
+	       "                            1: ODP_CLOCK_SRC_1, ...\n"
 	       "  -i, --init              Set global init parameters. Default: init params not set.\n"
 	       "  -h, --help              Display help and exit.\n\n");
 }
@@ -144,7 +144,7 @@ static int parse_options(int argc, char *argv[], test_global_t *test_global)
 	test_global->opt.burst     = 1;
 	test_global->opt.burst_gap = 0;
 	test_global->opt.mode      = 0;
-	test_global->opt.clk_src   = 0;
+	test_global->opt.clk_src   = ODP_CLOCK_DEFAULT;
 	test_global->opt.init      = 0;
 	test_global->opt.output    = 0;
 	test_global->opt.early_retry = 0;
@@ -289,11 +289,7 @@ static int start_timers(test_global_t *test_global)
 	}
 
 	test_global->timeout_pool = pool;
-
-	if (test_global->opt.clk_src == 0)
-		clk_src = ODP_CLOCK_CPU;
-	else
-		clk_src = ODP_CLOCK_EXT;
+	clk_src = test_global->opt.clk_src;
 
 	if (odp_timer_capability(clk_src, &timer_capa)) {
 		printf("Timer capa failed\n");
