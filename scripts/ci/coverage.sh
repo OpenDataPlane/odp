@@ -25,7 +25,7 @@ ODP_SCHEDULER=basic    make check
 
 # Run only validation tests for scalable and sp schedulers
 pushd ./test/validation/api/
-ODP_SCHEDULER=scalable make check
+ODP_SCHEDULER=scalable CI_SKIP=pktio_test_pktin_event_sched make check
 ODP_SCHEDULER=sp       make check
 popd
 
