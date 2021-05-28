@@ -65,7 +65,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	/*
 	 * Create pool of timeouts
 	 */
-	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa)) {
+	if (odp_timer_capability(ODP_CLOCK_DEFAULT, &timer_capa)) {
 		ret += 1;
 		goto err_tp;
 	}
@@ -76,7 +76,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	tparams.max_tmo = 1 * ODP_TIME_SEC_IN_NS;
 	tparams.num_timers = 1; /* One timer per worker */
 	tparams.priv = 0; /* Shared */
-	tparams.clk_src = ODP_CLOCK_CPU;
+	tparams.clk_src = ODP_CLOCK_DEFAULT;
 	timer_pool = odp_timer_pool_create("timer_pool", &tparams);
 	if (timer_pool == ODP_TIMER_POOL_INVALID) {
 		ret += 1;

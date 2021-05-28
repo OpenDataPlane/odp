@@ -408,7 +408,7 @@ int main(void)
 		return -1;
 	}
 
-	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa)) {
+	if (odp_timer_capability(ODP_CLOCK_DEFAULT, &timer_capa)) {
 		printf("timer capability failed\n");
 		return -1;
 	}
