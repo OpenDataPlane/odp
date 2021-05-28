@@ -107,6 +107,9 @@ int odp_cunit_ret(int val);
 int odp_cunit_print_inactive(void);
 int odp_cunit_set_inactive(void);
 
+/* Check from CI_SKIP environment variable if the test case should be skipped by CI */
+int odp_cunit_ci_skip(const char *test_name);
+
 /*
  * Wrapper for CU_ASSERT_FATAL implementation to show the compiler that
  * the function does not return if the assertion fails. This reduces bogus

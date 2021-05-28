@@ -555,3 +555,17 @@ int odp_cunit_ret(int val)
 {
 	return allow_skip_result ? 0 : val;
 }
+
+int odp_cunit_ci_skip(const char *test_name)
+{
+	const char *ci_skip;
+	const char *found;
+
+	ci_skip = getenv("CI_SKIP");
+	if (ci_skip == NULL)
+		return 0;
+
+	found = strstr(ci_skip, test_name);
+
+	return found != NULL;
+}
