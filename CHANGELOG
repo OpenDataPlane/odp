@@ -1,3 +1,47 @@
+== OpenDataPlane (1.30.0.0)
+=== API
+==== IPsec
+* New success bytes field in stats (`odp_ipsec_stats_t.success_bytes`)
+
+==== Packet IO
+* Specify explicitly that an application may enqueue to packet input side event
+queues, and cannot dequeue from output side event queues
+
+==== Time
+* Added time stamp read functions which read time stamp value more strictly
+in the program order: `odp_time_local_strict()`, `odp_time_local_strict_ns()`,
+`odp_time_global_strict()`, `odp_time_global_strict_ns()`
+
+==== Timer
+* Added new default clock source enumeration `ODP_CLOCK_DEFAULT`
+(=`ODP_CLOCK_SRC_0`) and support for multiple clock sources (`ODP_CLOCK_SRC_1`,
+`ODP_CLOCK_SRC_2`...). The old `ODP_CLOCK_CPU` and `ODP_CLOCK_EXT` enumerations
+will be deprecated in the future.
+* Renamed set operation return codes (`odp_timer_set_t`) to better document
+expiration time position to current time:
+`ODP_TIMER_TOOEARLY` -> `ODP_TIMER_TOO_NEAR`, `ODP_TIMER_TOOLATE` ->
+`ODP_TIMER_TOO_FAR`
+* Renamed set operation failure code (`odp_timer_set_t`) to cover all error
+cases: `ODP_TIMER_NOEVENT` -> `ODP_TIMER_FAIL`
+
+==== Traffic Manager
+* Added option to enable packet mode shaper (packets per second as opposed to
+bits per second)
+* Added new mandatory `odp_tm_start()` and `odp_tm_stop()` calls for starting and
+stopping traffic manager system
+* Added capabilities (`odp_tm_capabilities_t`) for supported dynamic
+configuration updates
+* Deprecated shaper commit information rate bps
+(`odp_tm_shaper_params_t.commit_bps`) and peak information rate bps
+(`odp_tm_shaper_params_t.peak_bps`) fields. `odp_tm_shaper_params_t.commit_rate`
+and `odp_tm_shaper_params_t.peak_rate` fields should be used instead.
+
+=== Helper (1.1.0)
+* Added new mandatory `odph_cli_init()` and `odph_cli_term()` functions for
+initializing and terminating the CLI helper
+* Added `odph_cli_register_command()` function for registering user defined CLI
+commands
+
 == OpenDataPlane (1.29.0.0)
 === API
 ==== Packet IO
