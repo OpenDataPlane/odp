@@ -516,6 +516,28 @@ static int send_pkts(const ipsec_test_part part[], int num_part)
 	return num_part;
 }
 
+/* Receive async inbound packet */
+static odp_event_t recv_pkt_async_inbound(odp_ipsec_op_status_t status)
+{
+	odp_event_t event;
+	odp_queue_t queue;
+
+	/*
+	 * In case of SA lookup failure, the event is enqueued to the default
+	 * queue specified during odp_ipsec_config()
+	 */
+	if (status.error.sa_lookup == 0)
+		queue = suite_context.queue;
+	else
+		queue = suite_context.default_queue;
+
+	do {
+		event = odp_queue_deq(queue);
+	} while (event == ODP_EVENT_INVALID);
+
+	return event;
+}
+
 /* Receive inline processed packets */
 static int recv_pkts_inline(const ipsec_test_part *part,
 			    odp_packet_t *pkto)
@@ -625,9 +647,7 @@ static int ipsec_process_in(const ipsec_test_part *part,
 			odp_event_t event;
 			odp_event_subtype_t subtype;
 
-			do {
-				event = odp_queue_deq(suite_context.queue);
-			} while (event == ODP_EVENT_INVALID);
+			event = recv_pkt_async_inbound(part->out[i].status);
 
 			CU_ASSERT(odp_event_is_valid(event) == 1);
 			CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
@@ -1060,6 +1080,7 @@ int ipsec_init(odp_instance_t *inst, odp_ipsec_op_mode_t mode)
 	odp_pool_t pool;
 	odp_queue_t out_queue;
 	odp_pool_capability_t pool_capa;
+	odp_queue_t default_queue;
 	odp_pktio_t pktio;
 	odp_init_t init_param;
 	odph_helper_options_t helper_options;
@@ -1122,6 +1143,12 @@ int ipsec_init(odp_instance_t *inst, odp_ipsec_op_mode_t mode)
 			fprintf(stderr, "IPsec outq creation failed.\n");
 			return -1;
 		}
+
+		default_queue = odp_queue_create("ipsec-default", NULL);
+		if (ODP_QUEUE_INVALID == default_queue) {
+			fprintf(stderr, "IPsec defaultq creation failed.\n");
+			return -1;
+		}
 	}
 
 	if (mode == ODP_IPSEC_OP_MODE_INLINE) {
@@ -1166,7 +1193,7 @@ int ipsec_config(odp_instance_t ODP_UNUSED inst)
 	ipsec_config.inbound_mode = suite_context.inbound_op_mode;
 	ipsec_config.outbound_mode = suite_context.outbound_op_mode;
 	ipsec_config.outbound.all_chksum = ~0;
-	ipsec_config.inbound.default_queue = suite_context.queue;
+	ipsec_config.inbound.default_queue = suite_context.default_queue;
 	ipsec_config.inbound.parse_level = ODP_PROTO_LAYER_ALL;
 	ipsec_config.inbound.chksums.all_chksum = ~0;
 	ipsec_config.stats_en = true;
@@ -1243,6 +1270,7 @@ int ipsec_term(odp_instance_t inst)
 {
 	odp_pool_t pool = suite_context.pool;
 	odp_queue_t out_queue = suite_context.queue;
+	odp_queue_t default_queue = suite_context.default_queue;
 	/* suite_context.pktio is set to ODP_PKTIO_INVALID by ipsec_suite_init()
 	   if inline processing is not supported. */
 	odp_pktio_t pktio = odp_pktio_lookup("loop");
@@ -1255,6 +1283,11 @@ int ipsec_term(odp_instance_t inst)
 	if (ODP_QUEUE_INVALID != out_queue) {
 		if (odp_queue_destroy(out_queue))
 			fprintf(stderr, "IPsec outq destroy failed.\n");
+	}
+
+	if (ODP_QUEUE_INVALID != default_queue) {
+		if (odp_queue_destroy(default_queue))
+			fprintf(stderr, "IPsec defaultq destroy failed.\n");
 	}
 
 	if (ODP_POOL_INVALID != pool) {
