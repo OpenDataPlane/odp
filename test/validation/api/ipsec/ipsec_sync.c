@@ -10,6 +10,9 @@ static int ipsec_sync_init(odp_instance_t *inst)
 {
 	int rc;
 
+	suite_context.inbound_op_mode = ODP_IPSEC_OP_MODE_SYNC;
+	suite_context.outbound_op_mode = ODP_IPSEC_OP_MODE_SYNC;
+
 	rc = ipsec_init(inst, ODP_IPSEC_OP_MODE_SYNC);
 	if (rc != 0)
 		return rc;
@@ -18,15 +21,12 @@ static int ipsec_sync_init(odp_instance_t *inst)
 	if (suite_context.pool == ODP_POOL_INVALID)
 		return -1;
 
-	suite_context.inbound_op_mode = ODP_IPSEC_OP_MODE_SYNC;
-	suite_context.outbound_op_mode = ODP_IPSEC_OP_MODE_SYNC;
-
 	return ipsec_config(*inst);
 }
 
 odp_suiteinfo_t ipsec_suites[] = {
-	{"IPsec-in", ipsec_suite_init, ipsec_in_term, ipsec_in_suite},
-	{"IPsec-out", ipsec_suite_init, ipsec_out_term, ipsec_out_suite},
+	{"IPsec-in", ipsec_suite_sync_init, ipsec_in_term, ipsec_in_suite},
+	{"IPsec-out", ipsec_suite_sync_init, ipsec_out_term, ipsec_out_suite},
 	ODP_SUITE_INFO_NULL,
 };
 
