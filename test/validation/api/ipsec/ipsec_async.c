@@ -20,6 +20,9 @@ static int ipsec_async_init(odp_instance_t *inst)
 	suite_context.queue = odp_queue_lookup("ipsec-out");
 	if (suite_context.queue == ODP_QUEUE_INVALID)
 		return -1;
+	suite_context.default_queue = odp_queue_lookup("ipsec-default");
+	if (suite_context.default_queue == ODP_QUEUE_INVALID)
+		return -1;
 
 	suite_context.inbound_op_mode = ODP_IPSEC_OP_MODE_ASYNC;
 	suite_context.outbound_op_mode = ODP_IPSEC_OP_MODE_ASYNC;

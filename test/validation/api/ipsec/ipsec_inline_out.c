@@ -20,6 +20,9 @@ static int ipsec_sync_init(odp_instance_t *inst)
 	suite_context.queue = odp_queue_lookup("ipsec-out");
 	if (suite_context.queue == ODP_QUEUE_INVALID)
 		return -1;
+	suite_context.default_queue = odp_queue_lookup("ipsec-default");
+	if (suite_context.default_queue == ODP_QUEUE_INVALID)
+		return -1;
 	suite_context.pktio = odp_pktio_lookup("loop");
 	if (suite_context.pktio == ODP_PKTIO_INVALID)
 		return -1;

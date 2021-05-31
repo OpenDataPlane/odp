@@ -39,6 +39,7 @@ struct suite_context_s {
 	odp_ipsec_op_mode_t inbound_op_mode;
 	odp_ipsec_op_mode_t outbound_op_mode;
 	odp_pool_t pool;
+	odp_queue_t default_queue;
 	odp_queue_t queue;
 	odp_pktio_t pktio;
 };
