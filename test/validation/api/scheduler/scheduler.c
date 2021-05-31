@@ -860,6 +860,44 @@ static void scheduler_test_order_ignore(void)
 	CU_ASSERT_FATAL(odp_pool_destroy(pool) == 0);
 }
 
+static void scheduler_test_group_info_predef(void)
+{
+	odp_schedule_group_info_t info;
+	odp_thrmask_t thrmask;
+	odp_schedule_group_t group;
+	int thr;
+
+	thr = odp_thread_id();
+
+	group = ODP_SCHED_GROUP_ALL;
+	odp_thrmask_zero(&thrmask);
+	CU_ASSERT(odp_schedule_group_thrmask(group, &thrmask) == 0);
+	CU_ASSERT(odp_thrmask_isset(&thrmask, thr));
+	memset(&info, 0, sizeof(odp_schedule_group_info_t));
+	CU_ASSERT(odp_schedule_group_info(group, &info) == 0);
+	CU_ASSERT(odp_thrmask_equal(&info.thrmask, &thrmask));
+	printf("\n    Schedule group all name: %s\n", info.name);
+
+	/* This test case runs a control thread */
+	group = ODP_SCHED_GROUP_CONTROL;
+	odp_thrmask_zero(&thrmask);
+	CU_ASSERT(odp_schedule_group_thrmask(group, &thrmask) == 0);
+	CU_ASSERT(odp_thrmask_isset(&thrmask, thr));
+	memset(&info, 0, sizeof(odp_schedule_group_info_t));
+	CU_ASSERT(odp_schedule_group_info(group, &info) == 0);
+	CU_ASSERT(odp_thrmask_equal(&info.thrmask, &thrmask));
+	printf("    Schedule group control name: %s\n", info.name);
+
+	group = ODP_SCHED_GROUP_WORKER;
+	odp_thrmask_zero(&thrmask);
+	CU_ASSERT(odp_schedule_group_thrmask(group, &thrmask) == 0);
+	CU_ASSERT(!odp_thrmask_isset(&thrmask, thr));
+	memset(&info, 0, sizeof(odp_schedule_group_info_t));
+	CU_ASSERT(odp_schedule_group_info(group, &info) == 0);
+	CU_ASSERT(odp_thrmask_equal(&info.thrmask, &thrmask));
+	printf("    Schedule group worker name: %s\n", info.name);
+}
+
 static void scheduler_test_create_group(void)
 {
 	odp_thrmask_t mask;
@@ -3158,6 +3196,7 @@ odp_testinfo_t scheduler_basic_suite[] = {
 	ODP_TEST_INFO(scheduler_test_max_queues_a),
 	ODP_TEST_INFO(scheduler_test_max_queues_o),
 	ODP_TEST_INFO(scheduler_test_order_ignore),
+	ODP_TEST_INFO(scheduler_test_group_info_predef),
 	ODP_TEST_INFO(scheduler_test_create_group),
 	ODP_TEST_INFO(scheduler_test_create_max_groups),
 	ODP_TEST_INFO(scheduler_test_groups),
