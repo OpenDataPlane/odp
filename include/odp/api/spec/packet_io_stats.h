@@ -26,6 +26,12 @@ extern "C" {
  */
 
 /**
+ * @def ODP_PKTIO_STATS_EXTRA_NAME_LEN
+ * Maximum packet IO extra statistics counter name length in chars including
+ * null char
+ */
+
+/**
  * Packet IO statistics counters
  *
  * In the counter definitions the term successfully refers to packets which were
@@ -87,6 +93,15 @@ typedef struct odp_pktio_stats_t {
 } odp_pktio_stats_t;
 
 /**
+ * Packet IO extra statistics counter information
+ */
+typedef struct odp_pktio_extra_stat_info_t {
+	/** Name of the counter */
+	char name[ODP_PKTIO_STATS_EXTRA_NAME_LEN];
+
+} odp_pktio_extra_stat_info_t;
+
+/**
  * Get statistics for pktio handle
  *
  * Counters not supported by the interface are set to zero.
@@ -110,6 +125,69 @@ int odp_pktio_stats(odp_pktio_t pktio, odp_pktio_stats_t *stats);
  * @retval <0 on failure
  */
 int odp_pktio_stats_reset(odp_pktio_t pktio);
+
+/**
+ * Get extra statistics counter information for a packet IO interface
+ *
+ * Returns the number of implementation specific packet IO extra statistics
+ * counters supported by the interface. Outputs up to 'num' extra statistics
+ * counter info structures when the 'info' array pointer is not NULL. If the
+ * return value is larger than 'num', there are more extra counters than the
+ * function was allowed to output. If the return value (N) is less than 'num',
+ * only info[0 ... N-1] have been written.
+ *
+ * The index of a counter in the 'info' array can be used to read the value of
+ * the individual counter with odp_pktio_extra_stat_counter(). The order of
+ * counters in the output array matches with odp_pktio_extra_stats().
+ *
+ * @param       pktio    Packet IO handle
+ * @param[out]  info     Array of extra statistics info structs for output
+ * @param       num      Maximum number of info structs to output
+ *
+ * @return Number of extra statistics
+ * @retval <0 on failure
+ */
+int odp_pktio_extra_stat_info(odp_pktio_t pktio,
+			      odp_pktio_extra_stat_info_t info[], int num);
+
+/**
+ * Get extra statistics for a packet IO interface
+ *
+ * Returns the number of implementation specific packet IO extra statistics
+ * counters supported by the interface. Outputs up to 'num' counters when the
+ * 'stats' array pointer is not NULL. If the return value is larger than 'num',
+ * there are more counters than the function was allowed to output. If the
+ * return value (N) is less than 'num', only stats[0 ... N-1] have been written.
+ *
+ * The index of a counter in the 'stats' array can be used to read the value of
+ * the individual counter with odp_pktio_extra_stat_counter(). The order of
+ * counters in the output array matches with odp_pktio_extra_stat_info().
+ *
+ * @param       pktio    Packet IO handle
+ * @param[out]  stats    Array of extra statistics for output
+ * @param       num      Maximum number of extra statistics to output
+ *
+ * @return Number of extra statistics
+ * @retval <0 on failure
+ */
+int odp_pktio_extra_stats(odp_pktio_t pktio, uint64_t stats[], int num);
+
+/**
+ * Get extra statistic counter value
+ *
+ * 'id' is the index of the particular counter in the output array of
+ * odp_pktio_extra_stat_info() or odp_pktio_extra_stats().
+ *
+ *
+ * @param       pktio    Packet IO handle
+ * @param       id       ID of the extra statistics counter
+ * @param[out]  stat     Pointer for statistic counter output
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_pktio_extra_stat_counter(odp_pktio_t pktio, uint32_t id,
+				 uint64_t *stat);
 
 /**
  * @}

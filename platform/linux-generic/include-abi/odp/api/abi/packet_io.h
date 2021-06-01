@@ -50,6 +50,8 @@ typedef struct odp_pktout_queue_t {
 #define ODP_PKTIN_NO_WAIT 0
 #define ODP_PKTIN_WAIT    UINT64_MAX
 
+#define ODP_PKTIO_STATS_EXTRA_NAME_LEN 64
+
 /**
  * @}
  */
