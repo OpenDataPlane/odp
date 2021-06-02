@@ -218,7 +218,8 @@ typedef struct {
 	struct {
 		char           name[ODP_SCHED_GROUP_NAME_LEN];
 		odp_thrmask_t  mask;
-		int	       allocated;
+		uint16_t       spread_thrs[MAX_SPREAD];
+		uint8_t        allocated;
 	} sched_grp[NUM_SCHED_GRPS];
 
 	struct {
@@ -1495,52 +1496,106 @@ static odp_schedule_group_t schedule_group_lookup(const char *name)
 	return group;
 }
 
-static int schedule_group_join(odp_schedule_group_t group,
-			       const odp_thrmask_t *mask)
+static int schedule_group_join(odp_schedule_group_t group, const odp_thrmask_t *mask)
 {
-	int ret;
+	int i, count, thr;
+	uint8_t spread;
+	odp_thrmask_t new_mask;
+
+	if (group >= NUM_SCHED_GRPS || group < SCHED_GROUP_NAMED) {
+		ODP_ERR("Bad group %i\n", group);
+		return -1;
+	}
+
+	count = odp_thrmask_count(mask);
+	if (count <= 0) {
+		ODP_ERR("No threads in the mask\n");
+		return -1;
+	}
+
+	int thr_tbl[count];
+
+	thr = odp_thrmask_first(mask);
+	for (i = 0; i < count; i++) {
+		if (thr < 0) {
+			ODP_ERR("No more threads in the mask\n");
+			return -1;
+		}
+
+		thr_tbl[i] = thr;
+		thr = odp_thrmask_next(mask, thr);
+	}
 
 	odp_spinlock_lock(&sched->grp_lock);
 
-	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
-	    sched->sched_grp[group].allocated) {
-		odp_thrmask_t new_mask;
-
-		odp_thrmask_or(&new_mask, &sched->sched_grp[group].mask, mask);
-		grp_update_mask(group, &new_mask);
-
-		ret = 0;
-	} else {
-		ret = -1;
+	if (sched->sched_grp[group].allocated == 0) {
+		odp_spinlock_unlock(&sched->grp_lock);
+		ODP_ERR("Bad group status\n");
+		return -1;
 	}
 
+	for (i = 0; i < count; i++) {
+		spread = spread_index(thr_tbl[i]);
+		sched->sched_grp[group].spread_thrs[spread]++;
+	}
+
+	odp_thrmask_or(&new_mask, &sched->sched_grp[group].mask, mask);
+	grp_update_mask(group, &new_mask);
+
 	odp_spinlock_unlock(&sched->grp_lock);
-	return ret;
+	return 0;
 }
 
-static int schedule_group_leave(odp_schedule_group_t group,
-				const odp_thrmask_t *mask)
+static int schedule_group_leave(odp_schedule_group_t group, const odp_thrmask_t *mask)
 {
+	int i, count, thr;
+	uint8_t spread;
 	odp_thrmask_t new_mask;
-	int ret;
+
+	if (group >= NUM_SCHED_GRPS || group < SCHED_GROUP_NAMED) {
+		ODP_ERR("Bad group %i\n", group);
+		return -1;
+	}
+
+	count = odp_thrmask_count(mask);
+	if (count <= 0) {
+		ODP_ERR("No threads in the mask\n");
+		return -1;
+	}
+
+	int thr_tbl[count];
+
+	thr = odp_thrmask_first(mask);
+	for (i = 0; i < count; i++) {
+		if (thr < 0) {
+			ODP_ERR("No more threads in the mask\n");
+			return -1;
+		}
+
+		thr_tbl[i] = thr;
+		thr = odp_thrmask_next(mask, thr);
+	}
 
 	odp_thrmask_xor(&new_mask, mask, &sched->mask_all);
 
 	odp_spinlock_lock(&sched->grp_lock);
 
-	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
-	    sched->sched_grp[group].allocated) {
-		odp_thrmask_and(&new_mask, &sched->sched_grp[group].mask,
-				&new_mask);
-		grp_update_mask(group, &new_mask);
-
-		ret = 0;
-	} else {
-		ret = -1;
+	if (sched->sched_grp[group].allocated == 0) {
+		odp_spinlock_unlock(&sched->grp_lock);
+		ODP_ERR("Bad group status\n");
+		return -1;
 	}
 
+	for (i = 0; i < count; i++) {
+		spread = spread_index(thr_tbl[i]);
+		sched->sched_grp[group].spread_thrs[spread]--;
+	}
+
+	odp_thrmask_and(&new_mask, &sched->sched_grp[group].mask, &new_mask);
+	grp_update_mask(group, &new_mask);
+
 	odp_spinlock_unlock(&sched->grp_lock);
-	return ret;
+	return 0;
 }
 
 static int schedule_group_thrmask(odp_schedule_group_t group,
@@ -1584,6 +1639,7 @@ static int schedule_thr_add(odp_schedule_group_t group, int thr)
 {
 	odp_thrmask_t mask;
 	odp_thrmask_t new_mask;
+	uint8_t spread = spread_index(thr);
 
 	if (group < 0 || group >= SCHED_GROUP_NAMED)
 		return -1;
@@ -1599,6 +1655,7 @@ static int schedule_thr_add(odp_schedule_group_t group, int thr)
 	}
 
 	odp_thrmask_or(&new_mask, &sched->sched_grp[group].mask, &mask);
+	sched->sched_grp[group].spread_thrs[spread]++;
 	grp_update_mask(group, &new_mask);
 
 	odp_spinlock_unlock(&sched->grp_lock);
@@ -1610,6 +1667,7 @@ static int schedule_thr_rem(odp_schedule_group_t group, int thr)
 {
 	odp_thrmask_t mask;
 	odp_thrmask_t new_mask;
+	uint8_t spread = spread_index(thr);
 
 	if (group < 0 || group >= SCHED_GROUP_NAMED)
 		return -1;
@@ -1626,6 +1684,7 @@ static int schedule_thr_rem(odp_schedule_group_t group, int thr)
 	}
 
 	odp_thrmask_and(&new_mask, &sched->sched_grp[group].mask, &new_mask);
+	sched->sched_grp[group].spread_thrs[spread]--;
 	grp_update_mask(group, &new_mask);
 
 	odp_spinlock_unlock(&sched->grp_lock);
