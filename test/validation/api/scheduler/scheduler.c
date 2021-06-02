@@ -68,6 +68,7 @@ typedef struct {
 	int buf_count;
 	int buf_count_cpy;
 	int queues_per_prio;
+	int test_debug_print;
 	odp_shm_t shm_glb;
 	odp_shm_t shm_args;
 	odp_pool_t pool;
@@ -1825,6 +1826,9 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 
 	fill_queues(args);
 
+	if (globals->test_debug_print)
+		odp_schedule_print();
+
 	/* Create and launch worker threads */
 
 	/* Test runs also on the main thread */
@@ -2994,6 +2998,25 @@ static void scheduler_test_flow_aware(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+/* Queues created but no events */
+static void scheduler_test_print(void)
+{
+	odp_schedule_print();
+}
+
+/* Queues with initial events enqueued */
+static void scheduler_test_mq_mt_prio_a_print(void)
+{
+	int prio = odp_schedule_num_prio();
+
+	globals->test_debug_print = 1;
+
+	parallel_execute(ODP_SCHED_SYNC_ATOMIC, globals->queues_per_prio, prio,
+			 SCHD_ONE, DISABLE_EXCL_ATOMIC);
+
+	globals->test_debug_print = 0;
+}
+
 static int scheduler_test_global_init(void)
 {
 	odp_cpumask_t mask;
@@ -3217,6 +3240,7 @@ odp_testinfo_t scheduler_basic_suite[] = {
 /* Scheduler test suite which runs events through hundreds of queues. Queues are created once
  * in suite init phase. */
 odp_testinfo_t scheduler_multi_suite[] = {
+	ODP_TEST_INFO(scheduler_test_print),
 	ODP_TEST_INFO(scheduler_test_chaos),
 	ODP_TEST_INFO(scheduler_test_1q_1t_n),
 	ODP_TEST_INFO(scheduler_test_1q_1t_a),
@@ -3244,6 +3268,7 @@ odp_testinfo_t scheduler_multi_suite[] = {
 	ODP_TEST_INFO(scheduler_test_multi_mq_mt_prio_a),
 	ODP_TEST_INFO(scheduler_test_multi_mq_mt_prio_o),
 	ODP_TEST_INFO(scheduler_test_multi_1q_mt_a_excl),
+	ODP_TEST_INFO(scheduler_test_mq_mt_prio_a_print),
 	ODP_TEST_INFO_NULL
 };
 
