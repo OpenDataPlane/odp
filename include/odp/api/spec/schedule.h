@@ -547,6 +547,14 @@ void odp_schedule_order_lock_start(uint32_t lock_index);
 void odp_schedule_order_lock_wait(uint32_t lock_index);
 
 /**
+ * Print debug info about scheduler
+ *
+ * Print implementation defined information about scheduler to the ODP log.
+ * The information is intended to be used for debugging.
+ */
+void odp_schedule_print(void);
+
+/**
  * @}
  */
 
