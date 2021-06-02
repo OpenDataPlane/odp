@@ -126,6 +126,7 @@ typedef struct {
 					   uint32_t lock_index);
 	void (*schedule_order_lock_start)(uint32_t lock_index);
 	void (*schedule_order_lock_wait)(uint32_t lock_index);
+	void (*schedule_print)(void);
 
 } schedule_api_t;
 
