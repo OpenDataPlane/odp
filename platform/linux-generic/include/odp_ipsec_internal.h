@@ -84,8 +84,27 @@ int _odp_ipsec_status_send(odp_queue_t queue,
 
 #define IPSEC_MAX_SALT_LEN	4    /**< Maximum salt length in bytes */
 
-/* 32 is minimum required by the standard. We do not support more */
-#define IPSEC_ANTIREPLAY_WS	32
+/* The minimum supported AR window size */
+#define IPSEC_AR_WIN_SIZE_MIN	32
+
+/* The maximum supported AR window size */
+#define IPSEC_AR_WIN_SIZE_MAX	4096
+
+/* For a 64-bit bucket size */
+#define IPSEC_AR_WIN_BUCKET_BITS	6
+#define IPSEC_AR_WIN_BUCKET_SIZE	(1 << IPSEC_AR_WIN_BUCKET_BITS)
+#define IPSEC_AR_WIN_BITLOC_MASK	(IPSEC_AR_WIN_BUCKET_SIZE - 1)
+
+/*
+ * We need one extra bucket in addition to the buckets that contain
+ * part of the window.
+ */
+#define IPSEC_AR_WIN_NUM_BUCKETS(window_size)	\
+	(((window_size) - 1) / IPSEC_AR_WIN_BUCKET_SIZE + 2)
+
+/* Maximum number of buckets */
+#define IPSEC_AR_WIN_BUCKET_MAX		\
+	IPSEC_AR_WIN_NUM_BUCKETS(IPSEC_AR_WIN_SIZE_MAX)
 
 struct ipsec_sa_s {
 	odp_atomic_u32_t state ODP_ALIGNED_CACHE;
@@ -101,7 +120,14 @@ struct ipsec_sa_s {
 
 		union {
 			struct {
-				odp_atomic_u64_t antireplay;
+				/* AR window lock */
+				odp_spinlock_t lock;
+
+				/* AR window top sequence number */
+				odp_atomic_u64_t wintop_seq;
+
+				/* AR window bucket array */
+				uint64_t bucket_arr[IPSEC_AR_WIN_BUCKET_MAX];
 			} in;
 
 			struct {
@@ -162,6 +188,16 @@ struct ipsec_sa_s {
 	union {
 		struct {
 			odp_ipsec_ip_version_t lookup_ver;
+
+			/* Anti-replay window management. */
+			struct {
+				/* Number of buckets for AR window */
+				uint16_t num_buckets;
+
+				/* AR window size  */
+				uint32_t win_size;
+			} ar;
+
 			union {
 				odp_u32be_t	lookup_dst_ipv4;
 				uint8_t lookup_dst_ipv6[_ODP_IPV6ADDR_LEN];

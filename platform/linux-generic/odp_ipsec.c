@@ -158,7 +158,7 @@ int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 
 	capa->max_num_sa = _odp_ipsec_max_num_sa();
 
-	capa->max_antireplay_ws = IPSEC_ANTIREPLAY_WS;
+	capa->max_antireplay_ws = IPSEC_AR_WIN_SIZE_MAX;
 
 	rc = set_ipsec_crypto_capa(capa);
 	if (rc < 0)
