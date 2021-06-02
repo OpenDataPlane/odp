@@ -21,6 +21,7 @@
 #include <odp/api/plat/cpu_inlines.h>
 
 #include <string.h>
+#include <inttypes.h>
 
 /*
  * SA state consists of state value in the high order bits of ipsec_sa_t::state
@@ -446,6 +447,37 @@ static uint32_t esp_block_len_to_mask(uint32_t block_len)
 	return block_len - 1;
 }
 
+/* AR window management initialization */
+static int ipsec_antireplay_init(ipsec_sa_t *ipsec_sa,
+				 const odp_ipsec_sa_param_t *param)
+{
+	uint16_t num_bkts = 0;
+
+	if (param->inbound.antireplay_ws > IPSEC_AR_WIN_SIZE_MAX) {
+		ODP_ERR("Anti-replay window size %" PRIu32 " is not supported.\n",
+			param->inbound.antireplay_ws);
+		return -1;
+	}
+
+	ipsec_sa->antireplay = (param->inbound.antireplay_ws != 0);
+	if (!ipsec_sa->antireplay)
+		return 0;
+
+	ipsec_sa->in.ar.win_size = param->inbound.antireplay_ws;
+	/* Window size should be at least IPSEC_AR_WIN_SIZE_MIN */
+	if (ipsec_sa->in.ar.win_size < IPSEC_AR_WIN_SIZE_MIN)
+		ipsec_sa->in.ar.win_size = IPSEC_AR_WIN_SIZE_MIN;
+
+	num_bkts = IPSEC_AR_WIN_NUM_BUCKETS(ipsec_sa->in.ar.win_size);
+	ipsec_sa->in.ar.num_buckets = num_bkts;
+	odp_atomic_init_u64(&ipsec_sa->hot.in.wintop_seq, 0);
+	memset(ipsec_sa->hot.in.bucket_arr, 0, sizeof(uint64_t) * num_bkts);
+
+	odp_spinlock_init(&ipsec_sa->hot.in.lock);
+
+	return 0;
+}
+
 odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 {
 	ipsec_sa_t *ipsec_sa;
@@ -488,10 +520,8 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 				       sizeof(ipsec_sa->in.lookup_dst_ipv6));
 		}
 
-		if (param->inbound.antireplay_ws > IPSEC_ANTIREPLAY_WS)
+		if (ipsec_antireplay_init(ipsec_sa, param))
 			goto error;
-		ipsec_sa->antireplay = (param->inbound.antireplay_ws != 0);
-		odp_atomic_init_u64(&ipsec_sa->hot.in.antireplay, 0);
 	} else {
 		ipsec_sa->lookup_mode = ODP_IPSEC_LOOKUP_DISABLED;
 		odp_atomic_init_u64(&ipsec_sa->hot.out.seq, 1);
@@ -909,10 +939,9 @@ int _odp_ipsec_sa_lifetime_update(ipsec_sa_t *ipsec_sa, uint32_t len,
 
 static uint64_t ipsec_sa_antireplay_max_seq(ipsec_sa_t *ipsec_sa)
 {
-	uint64_t state, max_seq;
+	uint64_t max_seq = 0;
 
-	state = odp_atomic_load_u64(&ipsec_sa->hot.in.antireplay);
-	max_seq = state & 0xffffffff;
+	max_seq = odp_atomic_load_u64(&ipsec_sa->hot.in.wintop_seq) & 0xffffffff;
 
 	return max_seq;
 }
@@ -921,9 +950,8 @@ int _odp_ipsec_sa_replay_precheck(ipsec_sa_t *ipsec_sa, uint32_t seq,
 				  odp_ipsec_op_status_t *status)
 {
 	/* Try to be as quick as possible, we will discard packets later */
-	if (ipsec_sa->antireplay &&
-	    seq + IPSEC_ANTIREPLAY_WS <=
-	    (odp_atomic_load_u64(&ipsec_sa->hot.in.antireplay) & 0xffffffff)) {
+	if (ipsec_sa->antireplay && ((seq + ipsec_sa->in.ar.win_size) <=
+	    (odp_atomic_load_u64(&ipsec_sa->hot.in.wintop_seq) & 0xffffffff))) {
 		status->error.antireplay = 1;
 		return -1;
 	}
@@ -931,22 +959,73 @@ int _odp_ipsec_sa_replay_precheck(ipsec_sa_t *ipsec_sa, uint32_t seq,
 	return 0;
 }
 
-int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
-				odp_ipsec_op_status_t *status)
+static inline int ipsec_wslarge_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
+					      odp_ipsec_op_status_t *status)
 {
-	int cas = 0;
+	uint32_t bucket, wintop_bucket, new_bucket;
+	uint32_t bkt_diff, bkt_cnt, top_seq;
+	uint64_t bit = 0;
+
+	odp_spinlock_lock(&ipsec_sa->hot.in.lock);
+
+	top_seq = odp_atomic_load_u64(&ipsec_sa->hot.in.wintop_seq);
+	if ((seq + ipsec_sa->in.ar.win_size) <= top_seq)
+		goto ar_err;
+
+	bucket = (seq >> IPSEC_AR_WIN_BUCKET_BITS);
+
+	/* Check if the seq is within the range */
+	if (seq > top_seq) {
+		wintop_bucket =	top_seq >> IPSEC_AR_WIN_BUCKET_BITS;
+		bkt_diff = bucket - wintop_bucket;
+
+		/* Seq is way after the range of AR window size */
+		if (bkt_diff > ipsec_sa->in.ar.num_buckets)
+			bkt_diff = ipsec_sa->in.ar.num_buckets;
+
+		for (bkt_cnt = 0; bkt_cnt < bkt_diff; bkt_cnt++) {
+			new_bucket = (bkt_cnt + wintop_bucket + 1) %
+				     ipsec_sa->in.ar.num_buckets;
+			ipsec_sa->hot.in.bucket_arr[new_bucket] = 0;
+		}
+
+		/* AR window top sequence number */
+		odp_atomic_store_u64(&ipsec_sa->hot.in.wintop_seq, seq);
+	}
+
+	bucket %= ipsec_sa->in.ar.num_buckets;
+	bit = (uint64_t)1 << (seq & IPSEC_AR_WIN_BITLOC_MASK);
+
+	/* Already seen the packet, discard it */
+	if (ipsec_sa->hot.in.bucket_arr[bucket] & bit)
+		goto ar_err;
+
+	/* Packet is new, mark it as seen */
+	ipsec_sa->hot.in.bucket_arr[bucket] |= bit;
+	odp_spinlock_unlock(&ipsec_sa->hot.in.lock);
+
+	return 0;
+ar_err:
+	status->error.antireplay = 1;
+	odp_spinlock_unlock(&ipsec_sa->hot.in.lock);
+	return -1;
+}
+
+static inline int ipsec_ws32_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
+					   odp_ipsec_op_status_t *status)
+{
 	uint64_t state, new_state;
+	int cas = 0;
 
-	state = odp_atomic_load_u64(&ipsec_sa->hot.in.antireplay);
-
+	state = odp_atomic_load_u64(&ipsec_sa->hot.in.wintop_seq);
 	while (0 == cas) {
 		uint32_t max_seq = state & 0xffffffff;
 		uint32_t mask = state >> 32;
 
-		if (seq + IPSEC_ANTIREPLAY_WS <= max_seq) {
+		if (seq + IPSEC_AR_WIN_SIZE_MIN <= max_seq) {
 			status->error.antireplay = 1;
 			return -1;
-		} else if (seq >= max_seq + IPSEC_ANTIREPLAY_WS) {
+		} else if (seq >= max_seq + IPSEC_AR_WIN_SIZE_MIN) {
 			mask = 1;
 			max_seq = seq;
 		} else if (seq > max_seq) {
@@ -961,12 +1040,24 @@ int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
 		}
 
 		new_state = (((uint64_t)mask) << 32) | max_seq;
-
-		cas = odp_atomic_cas_acq_rel_u64(&ipsec_sa->hot.in.antireplay,
+		cas = odp_atomic_cas_acq_rel_u64(&ipsec_sa->hot.in.wintop_seq,
 						 &state, new_state);
 	}
-
 	return 0;
+}
+
+int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
+				odp_ipsec_op_status_t *status)
+{
+	int ret;
+
+	/* Window update for ws equal to 32 */
+	if (ipsec_sa->in.ar.win_size == IPSEC_AR_WIN_SIZE_MIN)
+		ret = ipsec_ws32_replay_update(ipsec_sa, seq, status);
+	else
+		ret = ipsec_wslarge_replay_update(ipsec_sa, seq, status);
+
+	return ret;
 }
 
 uint16_t _odp_ipsec_sa_alloc_ipv4_id(ipsec_sa_t *ipsec_sa)
@@ -1084,7 +1175,7 @@ static void ipsec_in_sa_info(ipsec_sa_t *ipsec_sa, odp_ipsec_sa_info_t *sa_info)
 	sa_info->param.inbound.lookup_param.dst_addr = dst;
 
 	if (ipsec_sa->antireplay) {
-		sa_info->inbound.antireplay_ws = IPSEC_ANTIREPLAY_WS;
+		sa_info->inbound.antireplay_ws = ipsec_sa->in.ar.win_size;
 		sa_info->inbound.antireplay_window_top =
 			ipsec_sa_antireplay_max_seq(ipsec_sa);
 	}
