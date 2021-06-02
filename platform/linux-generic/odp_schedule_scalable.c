@@ -2175,6 +2175,20 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	return 0;
 }
 
+static void schedule_print(void)
+{
+	odp_schedule_capability_t capa;
+
+	(void)schedule_capability(&capa);
+
+	ODP_PRINT("\nScheduler debug info\n");
+	ODP_PRINT("--------------------\n");
+	ODP_PRINT("  scheduler:         scalable\n");
+	ODP_PRINT("  max groups:        %u\n", capa.max_groups);
+	ODP_PRINT("  max priorities:    %u\n", capa.max_prios);
+	ODP_PRINT("\n");
+}
+
 const schedule_fn_t _odp_schedule_scalable_fn = {
 	.pktio_start	= pktio_start,
 	.thr_add	= thr_add,
@@ -2222,5 +2236,6 @@ const schedule_api_t _odp_schedule_scalable_api = {
 	.schedule_order_unlock		= schedule_order_unlock,
 	.schedule_order_unlock_lock	= schedule_order_unlock_lock,
 	.schedule_order_lock_start	= schedule_order_lock_start,
-	.schedule_order_lock_wait	= schedule_order_lock_wait
+	.schedule_order_lock_wait	= schedule_order_lock_wait,
+	.schedule_print			= schedule_print
 };

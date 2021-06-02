@@ -1039,6 +1039,20 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	return 0;
 }
 
+static void schedule_print(void)
+{
+	odp_schedule_capability_t capa;
+
+	(void)schedule_capability(&capa);
+
+	ODP_PRINT("\nScheduler debug info\n");
+	ODP_PRINT("--------------------\n");
+	ODP_PRINT("  scheduler:         sp\n");
+	ODP_PRINT("  max groups:        %u\n", capa.max_groups);
+	ODP_PRINT("  max priorities:    %u\n", capa.max_prios);
+	ODP_PRINT("\n");
+}
+
 static void get_config(schedule_config_t *config)
 {
 	*config = sched_global->config_if;
@@ -1092,7 +1106,8 @@ const schedule_api_t _odp_schedule_sp_api = {
 	.schedule_group_info      = schedule_group_info,
 	.schedule_order_lock      = schedule_order_lock,
 	.schedule_order_unlock    = schedule_order_unlock,
-	.schedule_order_unlock_lock	= schedule_order_unlock_lock,
-	.schedule_order_lock_start	= schedule_order_lock_start,
-	.schedule_order_lock_wait	= schedule_order_lock_wait
+	.schedule_order_unlock_lock = schedule_order_unlock_lock,
+	.schedule_order_lock_start  = schedule_order_lock_start,
+	.schedule_order_lock_wait   = schedule_order_lock_wait,
+	.schedule_print           = schedule_print
 };

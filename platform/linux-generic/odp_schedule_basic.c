@@ -1716,6 +1716,82 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	return 0;
 }
 
+static void schedule_print(void)
+{
+	int spr, prio, grp;
+	uint32_t num_queues, num_active;
+	ring_u32_t *ring;
+	odp_schedule_capability_t capa;
+	int num_spread = sched->config.num_spread;
+
+	(void)schedule_capability(&capa);
+
+	ODP_PRINT("\nScheduler debug info\n");
+	ODP_PRINT("--------------------\n");
+	ODP_PRINT("  scheduler:         basic\n");
+	ODP_PRINT("  max groups:        %u\n", capa.max_groups);
+	ODP_PRINT("  max priorities:    %u\n", capa.max_prios);
+	ODP_PRINT("  num spread:        %i\n", num_spread);
+	ODP_PRINT("  prefer ratio:      %u\n", sched->config.prefer_ratio);
+	ODP_PRINT("\n");
+
+	ODP_PRINT("  Number of active event queues:\n");
+	ODP_PRINT("              spread\n");
+	ODP_PRINT("            ");
+
+	for (spr = 0; spr < num_spread; spr++)
+		ODP_PRINT(" %7i", spr);
+
+	ODP_PRINT("\n");
+
+	for (prio = 0; prio < NUM_PRIO; prio++) {
+		ODP_PRINT("  prio %i", prio);
+
+		for (grp = 0; grp < NUM_SCHED_GRPS; grp++)
+			if (sched->prio_q_mask[grp][prio])
+				break;
+
+		if (grp == NUM_SCHED_GRPS) {
+			ODP_PRINT(":-\n");
+			continue;
+		}
+
+		ODP_PRINT("\n");
+
+		for (grp = 0; grp < NUM_SCHED_GRPS; grp++) {
+			if (sched->sched_grp[grp].allocated == 0)
+				continue;
+
+			ODP_PRINT("    group %i:", grp);
+
+			for (spr = 0; spr < num_spread; spr++) {
+				num_queues = sched->prio_q_count[grp][prio][spr];
+				ring = &sched->prio_q[grp][prio][spr].ring;
+				num_active = ring_u32_len(ring);
+				ODP_PRINT(" %3u/%3u", num_active, num_queues);
+			}
+			ODP_PRINT("\n");
+		}
+	}
+
+	ODP_PRINT("\n  Number of threads:\n");
+	ODP_PRINT("             spread\n");
+
+	for (grp = 0; grp < NUM_SCHED_GRPS; grp++) {
+		if (sched->sched_grp[grp].allocated == 0)
+			continue;
+
+		ODP_PRINT("    group %i:", grp);
+
+		for (spr = 0; spr < num_spread; spr++)
+			ODP_PRINT(" %u", sched->sched_grp[grp].spread_thrs[spr]);
+
+		ODP_PRINT("\n");
+	}
+
+	ODP_PRINT("\n");
+}
+
 /* Fill in scheduler interface */
 const schedule_fn_t _odp_schedule_basic_fn = {
 	.pktio_start = schedule_pktio_start,
@@ -1764,7 +1840,8 @@ const schedule_api_t _odp_schedule_basic_api = {
 	.schedule_group_info      = schedule_group_info,
 	.schedule_order_lock      = schedule_order_lock,
 	.schedule_order_unlock    = schedule_order_unlock,
-	.schedule_order_unlock_lock    = schedule_order_unlock_lock,
-	.schedule_order_lock_start	= schedule_order_lock_start,
-	.schedule_order_lock_wait      = schedule_order_lock_wait
+	.schedule_order_unlock_lock = schedule_order_unlock_lock,
+	.schedule_order_lock_start  = schedule_order_lock_start,
+	.schedule_order_lock_wait   = schedule_order_lock_wait,
+	.schedule_print           = schedule_print
 };
