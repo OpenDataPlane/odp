@@ -467,6 +467,13 @@ static int schedule_init_global(void)
 	sched->sched_grp[ODP_SCHED_GROUP_ALL].allocated = 1;
 	sched->sched_grp[ODP_SCHED_GROUP_WORKER].allocated = 1;
 	sched->sched_grp[ODP_SCHED_GROUP_CONTROL].allocated = 1;
+	strncpy(sched->sched_grp[ODP_SCHED_GROUP_ALL].name, "__SCHED_GROUP_ALL",
+		ODP_SCHED_GROUP_NAME_LEN - 1);
+	strncpy(sched->sched_grp[ODP_SCHED_GROUP_WORKER].name, "__SCHED_GROUP_WORKER",
+		ODP_SCHED_GROUP_NAME_LEN - 1);
+	strncpy(sched->sched_grp[ODP_SCHED_GROUP_CONTROL].name, "__SCHED_GROUP_CONTROL",
+		ODP_SCHED_GROUP_NAME_LEN - 1);
+
 
 	odp_thrmask_setall(&sched->mask_all);
 
@@ -1543,8 +1550,7 @@ static int schedule_group_thrmask(odp_schedule_group_t group,
 
 	odp_spinlock_lock(&sched->grp_lock);
 
-	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
-	    sched->sched_grp[group].allocated) {
+	if (group < NUM_SCHED_GRPS && sched->sched_grp[group].allocated) {
 		*thrmask = sched->sched_grp[group].mask;
 		ret = 0;
 	} else {
@@ -1562,8 +1568,7 @@ static int schedule_group_info(odp_schedule_group_t group,
 
 	odp_spinlock_lock(&sched->grp_lock);
 
-	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
-	    sched->sched_grp[group].allocated) {
+	if (group < NUM_SCHED_GRPS && sched->sched_grp[group].allocated) {
 		info->name    = sched->sched_grp[group].name;
 		info->thrmask = sched->sched_grp[group].mask;
 		ret = 0;
