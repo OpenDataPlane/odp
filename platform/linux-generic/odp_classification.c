@@ -461,7 +461,7 @@ uint32_t odp_cls_cos_queues(odp_cos_t cos_id, odp_queue_t queue[],
 	for (i = 0; i < num_queues; i++)
 		queue[i] = queue_grp_tbl->s.queue[tbl_index + i];
 
-	return num_queues;
+	return cos->s.num_queue;
 }
 
 int odp_cos_drop_set(odp_cos_t cos_id, odp_cls_drop_t drop_policy)
