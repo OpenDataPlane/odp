@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -179,6 +180,64 @@ typedef struct odp_bp_param_t {
 } odp_bp_param_t;
 
 /**
+ * Classifier queue specific statistics counters
+ *
+ * Counters are incremented per packet destined to the queue per originating
+ * CoS. Note that a single queue can be a destination for multiple CoS's.
+ */
+typedef struct odp_cls_queue_stats_t {
+	/** Number of octets in successfully delivered packets. In case of
+	 *  Ethernet, packet size includes MAC header. */
+	uint64_t octets;
+
+	/** Number of successfully delivered packets. */
+	uint64_t packets;
+
+	/** Number of discarded packets due to other reasons (e.g. RED) than
+	 *  errors. */
+	uint64_t discards;
+
+	/** Number of packets with errors. Depending on packet input
+	 *  configuration, packets with errors may be dropped or not. */
+	uint64_t errors;
+
+} odp_cls_queue_stats_t;
+
+/**
+ * Classifier statistics capabilities
+ */
+typedef struct odp_cls_stats_capability_t {
+	/** Queue level capabilities */
+	struct {
+		/** Supported counters */
+		union {
+			/** Statistics counters in a bit field structure */
+			struct {
+				/** @see odp_cls_queue_stats_t::octets */
+				uint64_t octets          : 1;
+
+				/** @see odp_cls_queue_stats_t::packets */
+				uint64_t packets         : 1;
+
+				/** @see odp_cls_queue_stats_t::discards */
+				uint64_t discards        : 1;
+
+				/** @see odp_cls_queue_stats_t::errors */
+				uint64_t errors          : 1;
+
+			} counter;
+
+			/** All bits of the bit field structure
+			 *
+			 *  This field can be used to set/clear all flags, or
+			 *  for bitwise operations over the entire structure. */
+			uint64_t all_counters;
+		};
+	} queue;
+
+} odp_cls_stats_capability_t;
+
+/**
  * Classification capabilities
  * This capability structure defines system level classification capability
  */
@@ -221,6 +280,9 @@ typedef struct odp_cls_capability_t {
 
 	/** Maximum value of odp_pmr_create_opt_t::mark */
 	uint64_t max_mark;
+
+	/** Statistics counters capabilities */
+	odp_cls_stats_capability_t stats;
 
 } odp_cls_capability_t;
 
@@ -477,6 +539,28 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 			uint8_t qos_table[],
 			odp_cos_t cos_table[],
 			odp_bool_t l3_preference);
+
+/**
+ * Get statistics for a queue assigned to a CoS
+ *
+ * The statistics counters are incremented only for packets originating from the
+ * given CoS. Queue handles can be requested with odp_cos_queue() and
+ * odp_cls_cos_queues().
+ *
+ * Counters not supported by the queue are set to zero.
+ *
+ * It's implementation defined if odp_pktio_stats_reset() call affects these
+ * counters.
+ *
+ * @param      cos     CoS handle
+ * @param      queue   Queue handle
+ * @param[out] stats   Statistics structure for output
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_cls_queue_stats(odp_cos_t cos, odp_queue_t queue,
+			odp_cls_queue_stats_t *stats);
 
 /**
  * @typedef odp_pmr_t
