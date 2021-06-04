@@ -1,4 +1,5 @@
-/** Copyright (c) 2015-2018, Linaro Limited
+/* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -188,6 +189,63 @@ extern "C" {
  * Constant that is used to refer to the egress/root node of the TM subsystem's
  * tree/hierarchy of nodes.
  */
+
+/**
+ * TM queue specific statistics counters
+ */
+typedef struct odp_tm_queue_stats_t {
+	/** Number of octets in successfully transmitted packets. In case of
+	 *  Ethernet, packet size includes MAC header. */
+	uint64_t octets;
+
+	/** Number of successfully transmitted packets. */
+	uint64_t packets;
+
+	/** Number of packets discarded due to other reasons (e.g. aging) than
+	 *  errors. */
+	uint64_t discards;
+
+	/** Number of octets in packets discarded due to other reasons (e.g.
+	 *  aging) than errors. */
+	uint64_t discard_octets;
+
+	/** Number of packets with transmission errors. */
+	uint64_t errors;
+
+} odp_tm_queue_stats_t;
+
+/**
+ *  TM queue level statistics capabilities
+ */
+typedef struct odp_tm_queue_stats_capability_t {
+	/** Supported counters */
+	union {
+		/** Statistics counters in a bit field structure */
+		struct {
+			/** @see odp_tm_queue_stats_t::octets */
+			uint64_t octets          : 1;
+
+			/** @see odp_tm_queue_stats_t::packets */
+			uint64_t packets         : 1;
+
+			/** @see odp_tm_queue_stats_t::discards */
+			uint64_t discards        : 1;
+
+			/** @see odp_tm_queue_stats_t::discard_octets */
+			uint64_t discard_octets  : 1;
+
+			/** @see odp_tm_queue_stats_t::errors */
+			uint64_t errors          : 1;
+
+		} counter;
+
+		/** All bits of the bit field structure
+		 *
+		 *  This field can be used to set/clear all flags, or
+		 *  for bitwise operations over the entire structure. */
+		uint64_t all_counters;
+	};
+} odp_tm_queue_stats_capability_t;
 
 /** Per Level Capabilities
  *
@@ -385,6 +443,10 @@ typedef struct {
 	 * the parameters of the threshold profile of any TM node or TM queue.
 	 */
 	odp_bool_t dynamic_threshold_update;
+
+	/** TM queue statistics counter capabilities */
+	odp_tm_queue_stats_capability_t queue_stats;
+
 } odp_tm_capabilities_t;
 
 /** Per Level Requirements
@@ -2099,6 +2161,22 @@ odp_bool_t odp_tm_is_idle(odp_tm_t tm);
  * @param tm      TM handle
  */
 void odp_tm_stats_print(odp_tm_t tm);
+
+/**
+ * Get statistics for a TM queue
+ *
+ * Counters not supported by the queue are set to zero.
+ *
+ * It's implementation defined if odp_pktio_stats_reset() call affects these
+ * counters.
+ *
+ * @param      tm_queue TM queue handle
+ * @param[out] stats    Statistics structure for output
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_tm_queue_stats(odp_tm_queue_t tm_queue, odp_tm_queue_stats_t *stats);
 
 /**
  * Get printable value for an odp_tm_t
