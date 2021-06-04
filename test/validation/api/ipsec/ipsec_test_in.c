@@ -1875,27 +1875,15 @@ static void test_in_ipv4_esp_reass_success_four_frags_ooo(odp_ipsec_sa_t out_sa,
 static void test_in_ipv4_esp_reass_incomp_missing(odp_ipsec_sa_t out_sa,
 						  odp_ipsec_sa_t in_sa)
 {
-	ipsec_test_part test_out[MAX_FRAGS], test_in[MAX_FRAGS];
-	ipsec_test_packet test_pkt;
-	odp_packet_t pkt;
+	ipsec_test_packet *input_packets[] = {
+		&pkt_ipv4_udp_p1_f1,
+	};
+	ipsec_test_packet *result_packet = &pkt_ipv4_udp_p1_f1;
 
-	memset(test_in, 0, sizeof(test_in));
-
-	CU_ASSERT(MAX_FRAGS >= 1);
-
-	part_prep_esp(test_out, 1, false);
-
-	test_out[0].pkt_in = &pkt_ipv4_udp_p1_f1;
-
-	part_prep_plain(&test_in[0], 1, false, true);
-	test_in[0].out[0].pkt_res = &pkt_ipv4_udp_p1_f1;
-
-	CU_ASSERT_EQUAL(ipsec_check_out(&test_out[0], out_sa, &pkt), 1);
-
-	ipsec_test_packet_from_pkt(&test_pkt, &pkt);
-	test_in[0].pkt_in = &test_pkt;
-
-	ipsec_check_in_one(&test_in[0], in_sa);
+	test_multi_out_in(out_sa, in_sa, ODPH_IPV4,
+			  ARRAY_SIZE(input_packets),
+			  input_packets,
+			  result_packet);
 }
 
 static void test_in_ipv4_esp_reass_success(void)
@@ -2068,27 +2056,15 @@ static void test_in_ipv6_esp_reass_success_four_frags_ooo(odp_ipsec_sa_t out_sa,
 static void test_in_ipv6_esp_reass_incomp_missing(odp_ipsec_sa_t out_sa,
 						  odp_ipsec_sa_t in_sa)
 {
-	ipsec_test_part test_out[MAX_FRAGS], test_in[MAX_FRAGS];
-	ipsec_test_packet test_pkt;
-	odp_packet_t pkt;
+	ipsec_test_packet *input_packets[] = {
+		&pkt_ipv6_udp_p1_f1,
+	};
+	ipsec_test_packet *result_packet = &pkt_ipv6_udp_p1_f1;
 
-	memset(test_in, 0, sizeof(test_in));
-
-	CU_ASSERT(MAX_FRAGS >= 1);
-
-	part_prep_esp(test_out, 1, true);
-
-	test_out[0].pkt_in = &pkt_ipv6_udp_p1_f1;
-
-	part_prep_plain(&test_in[0], 1, true, true);
-	test_in[0].out[0].pkt_res = &pkt_ipv6_udp_p1_f1;
-
-	CU_ASSERT_EQUAL(ipsec_check_out(&test_out[0], out_sa, &pkt), 1);
-
-	ipsec_test_packet_from_pkt(&test_pkt, &pkt);
-	test_in[0].pkt_in = &test_pkt;
-
-	ipsec_check_in_one(&test_in[0], in_sa);
+	test_multi_out_in(out_sa, in_sa, ODPH_IPV6,
+			  ARRAY_SIZE(input_packets),
+			  input_packets,
+			  result_packet);
 }
 
 static void test_in_ipv6_esp_reass_success(void)
