@@ -190,10 +190,10 @@ typedef struct {
 
 	uint16_t         max_spread;
 	uint32_t         ring_mask;
-	prio_q_mask_t    prio_q_mask[NUM_PRIO];
 	odp_spinlock_t   mask_lock;
 	odp_atomic_u32_t grp_epoch;
 	odp_shm_t        shm;
+	prio_q_mask_t    prio_q_mask[NUM_SCHED_GRPS][NUM_PRIO];
 
 	struct {
 		uint8_t grp;
@@ -210,7 +210,7 @@ typedef struct {
 	/* Scheduler priority queues */
 	prio_queue_t prio_q[NUM_SCHED_GRPS][NUM_PRIO][MAX_SPREAD];
 
-	uint32_t prio_q_count[NUM_PRIO][MAX_SPREAD];
+	uint32_t prio_q_count[NUM_SCHED_GRPS][NUM_PRIO][MAX_SPREAD];
 
 	odp_thrmask_t  mask_all;
 	odp_spinlock_t grp_lock;
@@ -597,6 +597,7 @@ static int schedule_create_queue(uint32_t queue_index,
 				 const odp_schedule_param_t *sched_param)
 {
 	int i;
+	int grp  = sched_param->group;
 	int prio = prio_level_from_api(sched_param->prio);
 	uint8_t spread = spread_index(queue_index);
 
@@ -605,22 +606,19 @@ static int schedule_create_queue(uint32_t queue_index,
 		return -1;
 	}
 
-	if (sched_param->group < 0 || sched_param->group >= NUM_SCHED_GRPS) {
-		ODP_ERR("Bad schedule group\n");
+	if (grp < 0 || grp >= NUM_SCHED_GRPS) {
+		ODP_ERR("Bad schedule group %i\n", grp);
 		return -1;
 	}
-	if (sched_param->group == ODP_SCHED_GROUP_ALL &&
-	    !sched->config_if.group_enable.all) {
+	if (grp == ODP_SCHED_GROUP_ALL && !sched->config_if.group_enable.all) {
 		ODP_ERR("Trying to use disabled ODP_SCHED_GROUP_ALL\n");
 		return -1;
 	}
-	if (sched_param->group == ODP_SCHED_GROUP_CONTROL &&
-	    !sched->config_if.group_enable.control) {
+	if (grp == ODP_SCHED_GROUP_CONTROL && !sched->config_if.group_enable.control) {
 		ODP_ERR("Trying to use disabled ODP_SCHED_GROUP_CONTROL\n");
 		return -1;
 	}
-	if (sched_param->group == ODP_SCHED_GROUP_WORKER &&
-	    !sched->config_if.group_enable.worker) {
+	if (grp == ODP_SCHED_GROUP_WORKER && !sched->config_if.group_enable.worker) {
 		ODP_ERR("Trying to use disabled ODP_SCHED_GROUP_WORKER\n");
 		return -1;
 	}
@@ -628,12 +626,12 @@ static int schedule_create_queue(uint32_t queue_index,
 	odp_spinlock_lock(&sched->mask_lock);
 
 	/* update scheduler prio queue usage status */
-	sched->prio_q_mask[prio] |= 1 << spread;
-	sched->prio_q_count[prio][spread]++;
+	sched->prio_q_mask[grp][prio] |= 1 << spread;
+	sched->prio_q_count[grp][prio][spread]++;
 
 	odp_spinlock_unlock(&sched->mask_lock);
 
-	sched->queue[queue_index].grp  = sched_param->group;
+	sched->queue[queue_index].grp  = grp;
 	sched->queue[queue_index].prio = prio;
 	sched->queue[queue_index].spread = spread;
 	sched->queue[queue_index].sync = sched_param->sync;
@@ -658,16 +656,17 @@ static inline uint8_t sched_sync_type(uint32_t queue_index)
 
 static void schedule_destroy_queue(uint32_t queue_index)
 {
+	int grp  = sched->queue[queue_index].grp;
 	int prio = sched->queue[queue_index].prio;
 	uint8_t spread = spread_index(queue_index);
 
 	odp_spinlock_lock(&sched->mask_lock);
 
 	/* Clear mask bit when last queue is removed*/
-	sched->prio_q_count[prio][spread]--;
+	sched->prio_q_count[grp][prio][spread]--;
 
-	if (sched->prio_q_count[prio][spread] == 0)
-		sched->prio_q_mask[prio] &= (uint8_t)(~(1 << spread));
+	if (sched->prio_q_count[grp][prio][spread] == 0)
+		sched->prio_q_mask[grp][prio] &= (uint8_t)(~(1 << spread));
 
 	odp_spinlock_unlock(&sched->mask_lock);
 
@@ -1034,7 +1033,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 	/* Schedule events */
 	for (prio = 0; prio < NUM_PRIO; prio++) {
-		if (sched->prio_q_mask[prio] == 0)
+		if (sched->prio_q_mask[grp][prio] == 0)
 			continue;
 
 		burst_def = sched->config.burst_default[prio];
@@ -1056,7 +1055,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 				id = 0;
 
 			/* No queues created for this priority queue */
-			if (odp_unlikely((sched->prio_q_mask[prio] & (1 << id))
+			if (odp_unlikely((sched->prio_q_mask[grp][prio] & (1 << id))
 			    == 0)) {
 				i++;
 				id++;
