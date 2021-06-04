@@ -37,7 +37,7 @@ extern "C" {
  * based systems or one or more hybrid systems - where because of
  * hardware constraints some of the packet scheduling is done in hardware
  * and some is done in software.  In addition, there may also be additional
- * API's beyond those described here for (a) controlling advanced capabilities
+ * APIs beyond those described here for (a) controlling advanced capabilities
  * supported by specific hardware, software or hybrid subsystems or (b)
  * dealing with constraints and limitations of specific implementations.
  */
@@ -283,7 +283,7 @@ typedef struct {
 	 * proper TM shaping.  Note that TM Shaping is NOT the same thing as
 	 * Ingress Metering/Policing as specified by RFC 2697 (A Single Rate
 	 * Three Color Marker) or RFC 2698 (A Two Rate Three Color Marker).
-	 * These RFC's can be used for a Diffserv traffic conditioner, or
+	 * These RFCs can be used for a Diffserv traffic conditioner, or
 	 * other ingress policing.  They make no mention of and have no
 	 * algorithms for delaying packets - which is what TM shapers are
 	 * expected to do. */
@@ -437,7 +437,7 @@ typedef struct {
 	 * disciplines. */
 	odp_bool_t fair_queuing_needed;
 
-	/** weights_needd indicates that the tm_node schedulers at this
+	/** weights_needed indicates that the tm_node schedulers at this
 	 * level are expected have different weights for their different
 	 * fanins.  When true the min_weight and max_weight fields above
 	 * specify the used range of such weights. */
@@ -494,7 +494,7 @@ typedef struct {
 	 * the application will not enable this color for vlan marking,
 	 * ecn marking nor drop precedence marking.  A value of TRUE means that
 	 * the application expects to use this color in conjunction with one or
-	 * more of the marking API's. */
+	 * more of the marking APIs. */
 	odp_bool_t marking_colors_needed[ODP_NUM_PACKET_COLORS];
 
 	/** The per_level array specifies the TM system requirements that
@@ -645,8 +645,7 @@ odp_tm_t odp_tm_find(const char            *name,
  * In addition, ODP TM implementations should fail API requests that "exceed"
  * the limits or features contracted for in the requirements.
  *
- * @param      odp_tm        The odp_tm_t value of the TM system to be
- *                           queried.
+ * @param tm                 TM handle
  * @param[out] capabilities  A pointer to an odp_tm_capabilities_t record
  *                           where the actual limits used by the TM system are
  *                           copied into.  Note that these limits do NOT
@@ -654,10 +653,11 @@ odp_tm_t odp_tm_find(const char            *name,
  *                           a TM system was created by odp_tm_create,
  *                           but of course these limits in some cases could
  *                           be larger.
+ *
  * @return                   Returns 0 upon success, < 0 upon failure (which
  *                           indicates that the odp_tm value did not exist).
  */
-int odp_tm_capability(odp_tm_t odp_tm, odp_tm_capabilities_t *capabilities);
+int odp_tm_capability(odp_tm_t tm, odp_tm_capabilities_t *capabilities);
 
 /**
  * Start a TM system
@@ -665,7 +665,7 @@ int odp_tm_capability(odp_tm_t odp_tm, odp_tm_capabilities_t *capabilities);
  * odp_tm_start() needs to be used to start an already created or found TM
  * system. By default, all the TM systems are in stopped state.
  *
- * @param tm  TM system to be started
+ * @param tm  TM handle
  *
  * @retval 0  on success
  * @retval <0 on failure
@@ -688,7 +688,7 @@ int odp_tm_start(odp_tm_t tm);
  * A following call to odp_tm_start() restarts TM system and its scheduling/shaping
  * on existing and new packets.
  *
- * @param tm  TM system to be stopped
+ * @param tm  TM handle
  *
  * @retval 0  on success
  * @retval <0 on failure
@@ -715,11 +715,11 @@ int odp_tm_stop(odp_tm_t tm);
  * TM system, other than EVENTUALLY these packets will be either sent (in ANY
  * order) or freed.
  *
- * @param odp_tm  The odp_tm_t value of the TM system to be destroyed (and
- *                hence destroyed (and hence freed).
+ * @param tm      The handle of the TM system to be destroyed (and hence freed).
+ *
  * @return        0 upon success, < 0 upon failure.
  */
-int odp_tm_destroy(odp_tm_t odp_tm);
+int odp_tm_destroy(odp_tm_t tm);
 
 /** Marking APIs */
 
@@ -736,15 +736,16 @@ int odp_tm_destroy(odp_tm_t odp_tm);
  * calls to this function with drop_eligible_enabled == FALSE - i.e. must
  * always return 0 when disabling this feature.
  *
- * @param odp_tm                 Odp_tm is used to identify the TM system
- *                               whose egress behavior is being changed.
+ * @param tm                     Handle of the TM system whose egress behavior
+ *                               is being changed.
  * @param color                  The packet color whose egress marking is
  *                               being changed.
  * @param drop_eligible_enabled  If true then will set the DEI bit for
  *                               egressed VLAN tagged pkts with this color.
+ *
  * @return                       0 upon success, < 0 upon failure.
  */
-int odp_tm_vlan_marking(odp_tm_t           odp_tm,
+int odp_tm_vlan_marking(odp_tm_t           tm,
 			odp_packet_color_t color,
 			odp_bool_t         drop_eligible_enabled);
 
@@ -765,8 +766,8 @@ int odp_tm_vlan_marking(odp_tm_t           odp_tm,
  * calls to this function with ecn_ce_enabled == FALSE - i.e. must always
  * return 0 when disabling this feature.
  *
- * @param odp_tm          Odp_tm is used to identify the TM system whose
- *                        egress behavior is being changed.
+ * @param tm              Handle of the TM system whose egress behavior is being
+ *                        changed.
  * @param color           The packet color whose egress marking is
  *                        being changed.
  * @param ecn_ce_enabled  If true then egressed IPv4/IPv6 pkts whose
@@ -774,9 +775,10 @@ int odp_tm_vlan_marking(odp_tm_t           odp_tm,
  *                        either one of the two values 1 or 2, will set this
  *                        subfield to the value ECN_CE - i.e. Congestion
  *                        Experienced (whose value is 3).
+ *
  * @return                0 upon success, < 0 upon failure.
  */
-int odp_tm_ecn_marking(odp_tm_t           odp_tm,
+int odp_tm_ecn_marking(odp_tm_t           tm,
 		       odp_packet_color_t color,
 		       odp_bool_t         ecn_ce_enabled);
 
@@ -805,17 +807,18 @@ int odp_tm_ecn_marking(odp_tm_t           odp_tm,
  * calls to this function with drop_prec_enabled == FALSE - i.e. must always
  * return 0 when disabling this feature.
  *
- * @param odp_tm            Odp_tm is used to identify the TM system whose
- *                          egress behavior is being changed.
+ * @param tm                Handle of the TM system whose egress behavior is
+ *                          being changed.
  * @param color             The packet color whose egress marking is
  *                          being changed.
  * @param drop_prec_enabled If true then egressed IPv4/IPv6 pkts with this
  *                          color will have the pkt's Drop Precedence
  *                          sub-subfield of the DSCP subfield set to
  *                          LOW, MEDIUM or HIGH drop precedence.
+ *
  * @return                  0 upon success, < 0 upon failure.
  */
-int odp_tm_drop_prec_marking(odp_tm_t           odp_tm,
+int odp_tm_drop_prec_marking(odp_tm_t           tm,
 			     odp_packet_color_t color,
 			     odp_bool_t         drop_prec_enabled);
 
@@ -1368,17 +1371,18 @@ void odp_tm_node_params_init(odp_tm_node_params_t *params);
  * strict priority levels for an tm_node cannot be changed after tm_node
  * creation.  The level parameter MUST be in the range 0..max_level - 1.
  *
- * @param odp_tm  Odp_tm is used to identify the TM system into which this
- *                odp_tm_node object is created.
+ * @param tm      Handle of the TM system into which this odp_tm_node object is
+ *                created.
  * @param name    Optional name that can be used later later to find this
  *                same odp_tm_node_t.  Can be NULL, otherwise must be
  *                unique across all odp_tm_node objects.
  * @param params  A pointer to a record holding (an extensible) set of
  *                properties/attributes of this tm_node.
+ *
  * @return        Returns ODP_TM_INVALID upon failure, otherwise returns
  *                a valid odp_tm_node_t handle if successful.
  */
-odp_tm_node_t odp_tm_node_create(odp_tm_t odp_tm, const char *name,
+odp_tm_node_t odp_tm_node_create(odp_tm_t tm, const char *name,
 				 const odp_tm_node_params_t *params);
 
 /** Destroy  a tm_node object.
@@ -1455,14 +1459,13 @@ int odp_tm_node_wred_config(odp_tm_node_t tm_node,
 /** odp_tm_node_lookup() can be used to find the tm_node object created with
  * the specified name.
  *
- * @param odp_tm  Odp_tm is used to identify the TM system into which this
- *                odp_tm_node object is created.
+ * @param tm      TM handle
  * @param name    Name of a previously created tm_node.  Cannot be NULL.
  *
  * @return        Returns ODP_TM_INVALID upon failure, or the tm_node
  *                handle created with this name.
  */
-odp_tm_node_t odp_tm_node_lookup(odp_tm_t odp_tm, const char *name);
+odp_tm_node_t odp_tm_node_lookup(odp_tm_t tm, const char *name);
 
 /** odp_tm_node_context() can be used to get the user_context value that is
  * associated with the given tm_node.
@@ -1542,14 +1545,15 @@ void odp_tm_queue_params_init(odp_tm_queue_params_t *params);
  * number of buffers and instead limit the queue memory usage by buffer counts
  * versus strictly using byte counts.
  *
- * @param odp_tm  Odp_tm is used to identify the TM system into which this
- *                odp_tm_queue object is created.
+ * @param tm      Handle of the TM system into which this odp_tm_queue object is
+ *                created.
  * @param params  A pointer to a record holding (an extensible) set of
  *                properties/attributes of this tm_queue.
+ *
  * @return        Returns ODP_TM_INVALID upon failure, otherwise a valid
  *                odp_tm_queue_t handle.
  */
-odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
+odp_tm_queue_t odp_tm_queue_create(odp_tm_t tm,
 				   const odp_tm_queue_params_t *params);
 
 /** Destroy an tm_queue object. The odp_tm_queue_destroy frees the resources
@@ -1567,7 +1571,7 @@ int odp_tm_queue_destroy(odp_tm_queue_t tm_queue);
  * @param tm_queue  Specifies the tm_queue whose user_context is to be
  *                  returned.
  * @return          Returns the user_context pointer associated with this
- *                  tm_queue.  Returns NULL if the tm_quue is not valid OR
+ *                  tm_queue. Returns NULL if the tm_queue is not valid OR
  *                  if the user_context was NULL.
  */
 void *odp_tm_queue_context(odp_tm_queue_t tm_queue);
@@ -1884,7 +1888,7 @@ typedef struct {
 	odp_tm_wred_t wred_profile[ODP_NUM_PACKET_COLORS];
 
 	/** The next_tm_node is the "next" node in the tree - i.e. the fanout
-	 * of this tm_queu.  Can be ODP_TM_ROOT if this tm_queue directly
+	 * of this tm_queue. Can be ODP_TM_ROOT if this tm_queue directly
 	 * connects to the egress spigot and can be ODP_TM_INVALID if this
 	 * tm_queue is disconnected from the TM system tree. */
 	odp_tm_node_t next_tm_node;
@@ -2063,13 +2067,14 @@ int odp_tm_priority_threshold_config(odp_tm_t           odp_tm,
  * other than returning these queue threshold values in the
  * odp_tm_query_info_t record.
  *
- * @param odp_tm              Specifies the TM system.
+ * @param tm                  TM handle
  * @param thresholds_profile  Specifies the queue threshold profile that
  *                            should now be used for the entire TM
  *                            system.
+ *
  * @return                    Returns 0 upon success and < 0 upon failure.
  */
-int odp_tm_total_threshold_config(odp_tm_t odp_tm,
+int odp_tm_total_threshold_config(odp_tm_t tm,
 				  odp_tm_threshold_t thresholds_profile);
 
 /** The odp_tm_is_idle function is used to determine if the specified ODP
@@ -2081,23 +2086,25 @@ int odp_tm_total_threshold_config(odp_tm_t odp_tm,
  * since for some implementations this call could take a fairly long time
  * to execute!
  *
- * @param odp_tm  Specifies the TM system.
+ * @param tm      TM handle
+ *
  * @return        Returns 1 if the TM system is idle and 0 otherwise.
  */
-odp_bool_t odp_tm_is_idle(odp_tm_t odp_tm);
+odp_bool_t odp_tm_is_idle(odp_tm_t tm);
 
 /** The odp_tm_stats_print function is used to write implementation-defined
  * information about the specified TM system to the ODP log. The intended use
  * is for debugging.
  *
- * @param odp_tm  Specifies the TM system.
+ * @param tm      TM handle
  */
-void odp_tm_stats_print(odp_tm_t odp_tm);
+void odp_tm_stats_print(odp_tm_t tm);
 
 /**
  * Get printable value for an odp_tm_t
  *
- * @param hdl  odp_tm_t handle to be printed
+ * @param tm   TM handle
+ *
  * @return     uint64_t value that can be used to print/display this
  *             handle
  *
@@ -2105,7 +2112,7 @@ void odp_tm_stats_print(odp_tm_t odp_tm);
  * to enable applications to generate a printable value that represents
  * an odp_tm_t handle.
  */
-uint64_t odp_tm_to_u64(odp_tm_t hdl);
+uint64_t odp_tm_to_u64(odp_tm_t tm);
 
 /**
  * Get printable value for an odp_tm_queue_t
