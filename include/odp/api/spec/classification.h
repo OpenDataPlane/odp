@@ -128,8 +128,9 @@ typedef union odp_cls_pmr_terms_t {
  * threshold values. RED is enabled when 'red_enable' boolean is true and
  * the resource usage is equal to or greater than the minimum threshold value.
  * Resource usage could be defined either as the percentage of pool being full
- * or the number of packets/bytes occupied in the queue depening on the platform
- * capabilities.
+ * or the number of packets/bytes occupied in the queue depending on the
+ * platform capabilities.
+ *
  * When RED is enabled for a particular flow then further incoming packets are
  * assigned a drop probability based on the size of the pool/queue.
  *
@@ -196,7 +197,7 @@ typedef struct odp_cls_capability_t {
 	/** Maximum number of CoS supported */
 	unsigned int max_cos;
 
-	/** Maximun number of queue supported per CoS
+	/** Maximun number of queues supported per CoS
 	 * if the value is 1, then hashing is not supported*/
 	unsigned int max_hash_queues;
 
@@ -227,8 +228,8 @@ typedef struct odp_cls_capability_t {
  * class of service packet drop policies
  */
 typedef enum {
-	ODP_COS_DROP_POOL,    /**< Follow buffer pool drop policy */
-	ODP_COS_DROP_NEVER,    /**< Never drop, ignoring buffer pool policy */
+	ODP_COS_DROP_POOL,      /**< Follow buffer pool drop policy */
+	ODP_COS_DROP_NEVER,     /**< Never drop, ignoring buffer pool policy */
 } odp_cls_drop_t;
 
 /**
@@ -264,12 +265,12 @@ typedef struct odp_cls_cos_param {
 	 * and application need not configure any queue to the class of service.
 	 * When hashing is disabled application has to configure the queue to
 	 * the class of service.
-	 * Depening on the implementation this number might be rounded-off to
+	 * Depending on the implementation this number might be rounded-off to
 	 * nearest supported value (e.g power of 2)
 	 */
 	uint32_t num_queue;
 
-	/** Variant mapping for queue hash configurataion */
+	/** Variant mapping for queue hash configuration */
 	union {
 		/** Mapping used when num_queue = 1, hashing is disabled in
 		 * this case and application has to configure this queue and
@@ -339,8 +340,8 @@ int odp_cls_capability(odp_cls_capability_t *capability);
  * @retval ODP_COS_INVALID on failure.
  *
  * @note ODP_QUEUE_INVALID and ODP_POOL_INVALID are valid values for queue
- * and pool associated with a class of service and when any one of these values
- * are configured as INVALID then the packets assigned to the CoS gets dropped.
+ * and pool associated with a class of service. When either of these values
+ * is configured as INVALID packets assigned to the CoS get dropped.
  */
 odp_cos_t odp_cls_cos_create(const char *name,
 			     const odp_cls_cos_param_t *param);
@@ -351,7 +352,7 @@ odp_cos_t odp_cls_cos_create(const char *name,
  * based on the packet parameters and hash protocol field configured with the
  * class of service.
  *
- * @param cos          class of service
+ * @param cos          CoS handle
  * @param packet       Packet handle
  *
  * @retval Returns the queue handle on which this packet will be enqueued.
@@ -364,62 +365,61 @@ odp_queue_t odp_cls_hash_result(odp_cos_t cos, odp_packet_t packet);
 /**
  * Discard a class-of-service along with all its associated resources
  *
- * @param cos_id       class-of-service instance.
+ * @param cos          CoS handle
  *
  * @retval  0 on success
  * @retval <0 on failure
  */
-int odp_cos_destroy(odp_cos_t cos_id);
+int odp_cos_destroy(odp_cos_t cos);
 
 /**
  * Assign a queue for a class-of-service
  *
- * @param cos_id       class-of-service instance.
- * @param queue_id     Identifier of a queue where all packets of this specific
+ * @param cos          CoS handle
+ * @param queue        Handle of the queue where all packets of this specific
  *                     class of service will be enqueued.
  *
  * @retval  0 on success
  * @retval <0 on failure
  */
-int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id);
+int odp_cos_queue_set(odp_cos_t cos, odp_queue_t queue);
 
 /**
 * Get the queue associated with the specific class-of-service
 *
-* @param cos_id        class-of-service instance.
+* @param cos           CoS handle
 *
 * @retval Queue handle associated with the given class-of-service
 * @retval ODP_QUEUE_INVALID on failure
 */
-odp_queue_t odp_cos_queue(odp_cos_t cos_id);
+odp_queue_t odp_cos_queue(odp_cos_t cos);
 
 /**
  * Get the number of queues linked with the specific class-of-service
  *
- * @param cos_id       class-of-service instance.
+ * @param cos          CoS handle
  *
  * @return Number of queues linked with the class-of-service.
  */
-uint32_t odp_cls_cos_num_queue(odp_cos_t cos_id);
+uint32_t odp_cls_cos_num_queue(odp_cos_t cos);
 
 /**
  * Get the list of queue associated with the specific class-of-service
  *
- * @param      cos_id  class-of-service instance.
+ * @param      cos     CoS handle
  * @param[out] queue   Array of queue handles associated with
  *                     the class-of-service.
  * @param      num     Maximum number of queue handles to output.
  *
  * @return Number of queues linked with CoS
- * @retval on 0 failure
+ * @retval 0 on failure
  */
-uint32_t odp_cls_cos_queues(odp_cos_t cos_id, odp_queue_t queue[],
-			    uint32_t num);
+uint32_t odp_cls_cos_queues(odp_cos_t cos, odp_queue_t queue[], uint32_t num);
 
 /**
  * Assign packet drop policy for specific class-of-service
  *
- * @param cos_id       class-of-service instance.
+ * @param cos          CoS handle
  * @param drop_policy  Desired packet drop policy for this class.
  *
  * @retval  0 on success
@@ -427,16 +427,16 @@ uint32_t odp_cls_cos_queues(odp_cos_t cos_id, odp_queue_t queue[],
  *
  * @note Optional.
  */
-int odp_cos_drop_set(odp_cos_t cos_id, odp_cls_drop_t drop_policy);
+int odp_cos_drop_set(odp_cos_t cos, odp_cls_drop_t drop_policy);
 
 /**
 * Get the drop policy configured for a specific class-of-service instance.
 *
-* @param cos_id        class-of-service instance.
+* @param cos           CoS handle
 *
 * @retval Drop policy configured with the given class-of-service
 */
-odp_cls_drop_t odp_cos_drop(odp_cos_t cos_id);
+odp_cls_drop_t odp_cos_drop(odp_cos_t cos);
 
 /**
  * Request to override per-port class of service
@@ -608,7 +608,8 @@ typedef enum {
  * an exception to this (uint32_t in CPU endian).
  */
 typedef struct odp_pmr_param_t {
-	odp_cls_pmr_term_t  term;	/**< Packet Matching Rule term */
+	/** Packet Matching Rule term */
+	odp_cls_pmr_term_t  term;
 
 	/** True if the value is range and false if match */
 	odp_bool_t range_term;
@@ -700,6 +701,7 @@ void odp_cls_pmr_create_opt_init(odp_pmr_create_opt_t *opt);
  * This packet matching rule is applied on all packets arriving at the source
  * class of service and packets satisfying this PMR are sent to the destination
  * class of service.
+ *
  * A composite PMR rule is created when the number of terms in the match rule
  * is more than one. The composite rule is considered as matching only if
  * the packet satisfies all the terms in Packet Match Rule.
@@ -751,50 +753,53 @@ odp_pmr_t odp_cls_pmr_create_opt(const odp_pmr_create_opt_t *opt,
 				 odp_cos_t src_cos, odp_cos_t dst_cos);
 /**
  * Function to destroy a packet match rule
+ *
  * Destroying a PMR removes the link between the source and destination
  * class of service and this PMR will no longer be applied for packets arriving
- * at the source class of service. All the resource associated with the PMR
- * be release but the class of service will remain intact.
+ * at the source class of service. All the resources associated with the PMR
+ * will be released but the class of service will remain intact.
+ *
  * Depending on the implementation details, destroying a composite rule
  * may not guarantee the availability of hardware resources to create the
  * same or essentially similar rule.
  *
- * @param pmr_id       Identifier of the PMR to be destroyed
+ * @param pmr       Handle of the PMR to be destroyed
  *
  * @retval  0 on success
  * @retval <0 on failure
  */
-int odp_cls_pmr_destroy(odp_pmr_t pmr_id);
+int odp_cls_pmr_destroy(odp_pmr_t pmr);
 
 /**
-* Assigns a packet pool for a specific class of service.
+* Assigns a packet pool for a specific class of service
+*
 * All the packets belonging to the given class of service will
 * be allocated from the assigned packet pool.
 * The packet pool associated with class of service will supersede the
 * packet pool associated with the pktio interface.
 *
-* @param cos_id        class of service handle
-* @param pool_id       packet pool handle
+* @param cos        CoS handle
+* @param pool_id    Packet pool handle
 *
 * @retval  0 on success
 * @retval <0 on failure
 */
-int odp_cls_cos_pool_set(odp_cos_t cos_id, odp_pool_t pool_id);
+int odp_cls_cos_pool_set(odp_cos_t cos, odp_pool_t pool_id);
 
 /**
 * Get the pool associated with the given class of service
 *
-* @param cos_id        class of service handle
+* @param cos        CoS handle
 *
 * @retval pool handle of the associated pool
 * @retval ODP_POOL_INVALID if no associated pool found or in case of an error
 */
-odp_pool_t odp_cls_cos_pool(odp_cos_t cos_id);
+odp_pool_t odp_cls_cos_pool(odp_cos_t cos);
 
 /**
  * Get printable value for an odp_cos_t
  *
- * @param hdl          odp_cos_t handle to be printed
+ * @param cos       CoS handle to be printed
  *
  * @return uint64_t value that can be used to print/display this handle
  *
@@ -802,12 +807,12 @@ odp_pool_t odp_cls_cos_pool(odp_cos_t cos_id);
  * to enable applications to generate a printable value that represents
  * an odp_cos_t handle.
  */
-uint64_t odp_cos_to_u64(odp_cos_t hdl);
+uint64_t odp_cos_to_u64(odp_cos_t cos);
 
 /**
  * Get printable value for an odp_pmr_t
  *
- * @param hdl          odp_pmr_t handle to be printed
+ * @param pmr          odp_pmr_t handle to be printed
  *
  * @return uint64_t value that can be used to print/display this handle
  *
@@ -815,7 +820,7 @@ uint64_t odp_cos_to_u64(odp_cos_t hdl);
  * to enable applications to generate a printable value that represents
  * an odp_pmr_t handle.
  */
-uint64_t odp_pmr_to_u64(odp_pmr_t hdl);
+uint64_t odp_pmr_to_u64(odp_pmr_t pmr);
 
 /**
  * Print classifier info
