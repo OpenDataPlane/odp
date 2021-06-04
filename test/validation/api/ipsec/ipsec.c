@@ -1175,7 +1175,7 @@ int ipsec_config(odp_instance_t ODP_UNUSED inst)
 	if (ipsec_config.inbound.reassembly.max_wait_time > capa.reassembly.max_wait_time)
 		ipsec_config.inbound.reassembly.max_wait_time = capa.reassembly.max_wait_time;
 
-	ipsec_config.inbound.reassembly.max_num_frags = capa.reassembly.max_num_frags;
+	ipsec_config.inbound.reassembly.max_num_frags = MAX_FRAGS;
 
 	if (capa.reassembly.ip) {
 		ipsec_config.inbound.reassembly.en_ipv4 = true;
@@ -1205,7 +1205,7 @@ int ipsec_config(odp_instance_t ODP_UNUSED inst)
 		ipsec_config.inbound.reassembly.en_ipv6 = false;
 	}
 
-	if (ipsec_config.inbound.reassembly.max_num_frags > MAX_FRAGS) {
+	if (capa.reassembly.max_num_frags < MAX_FRAGS) {
 		ipsec_config.inbound.reassembly.en_ipv4 = false;
 		ipsec_config.inbound.reassembly.en_ipv6 = false;
 	}
