@@ -11,6 +11,8 @@
 extern "C" {
 #endif
 
+#include <openssl/evp.h>
+
 #include <odp_api.h>
 #include <odp_ipsec_misc.h>
 #include <odp_ipsec_cache.h>
@@ -27,6 +29,7 @@ typedef struct stream_db_entry_s {
 	uint32_t         length;        /**< Packet payload length */
 	uint32_t         created;       /**< Number successfully created */
 	uint32_t         verified;      /**< Number successfully verified */
+	const EVP_MD    *evp_md;        /**< Digest method */
 	struct {
 		const char *intf;	/**< Input interface name */
 		odp_pktio_t pktio;	/**< Input PktI/O interface */

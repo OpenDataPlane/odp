@@ -1646,7 +1646,7 @@ static void usage(char *progname)
 	       " -r, --route SubNet,Intf,NextHopMAC\n"
 	       " -p, --policy SrcSubNet,DstSubNet,(in|out),(ah|esp|both)\n"
 	       " -e, --esp SrcIP,DstIP,(3des|null),SPI,Key192\n"
-	       " -a, --ah SrcIP,DstIP,(sha256|md5|null),SPI,Key(256|128)\n"
+	       " -a, --ah SrcIP,DstIP,(sha256|sha1|md5|null),SPI,Key(256|160|128)\n"
 	       "\n"
 	       "  Where: NextHopMAC is raw hex/colon notation, i.e. 03:BA;44:9A:CE:02\n"
 	       "         IP is decimal/dot notation, i.e. 192.168.1.1\n"
