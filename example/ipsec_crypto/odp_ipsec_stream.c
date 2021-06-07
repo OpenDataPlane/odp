@@ -15,7 +15,6 @@
 #include <openssl/des.h>
 #include <openssl/rand.h>
 #include <openssl/hmac.h>
-#include <openssl/evp.h>
 
 #include <odp_api.h>
 
@@ -139,6 +138,27 @@ int create_stream_db_entry(char *input)
 	return 0;
 }
 
+static const EVP_MD *get_evp_md(odp_auth_alg_t auth)
+{
+	const EVP_MD *evp_md;
+
+	switch (auth) {
+	case ODP_AUTH_ALG_MD5_HMAC:
+		evp_md = EVP_md5();
+		break;
+	case ODP_AUTH_ALG_SHA1_HMAC:
+		evp_md = EVP_sha1();
+		break;
+	case ODP_AUTH_ALG_SHA256_HMAC:
+		evp_md = EVP_sha256();
+		break;
+	default:
+		evp_md = NULL;
+	}
+
+	return evp_md;
+}
+
 void resolve_stream_db(void)
 {
 	stream_db_entry_t *stream = NULL;
@@ -156,6 +176,9 @@ void resolve_stream_db(void)
 
 		stream->input.pktio = odp_pktio_lookup(stream->input.intf);
 
+		if (entry)
+			stream->evp_md = get_evp_md(entry->ah.alg);
+
 		/* Lookup output entry */
 		entry = find_ipsec_cache_entry_out(stream->src_ip,
 						   stream->dst_ip,
@@ -163,6 +186,9 @@ void resolve_stream_db(void)
 		stream->output.entry = entry;
 
 		stream->output.pktio = odp_pktio_lookup(stream->output.intf);
+
+		if (stream->evp_md == NULL && entry)
+			stream->evp_md = get_evp_md(entry->ah.alg);
 	}
 }
 
@@ -238,6 +264,7 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	if (entry && (entry == stream->input.entry) &&
 	    (ODP_AUTH_ALG_NULL != entry->ah.alg)) {
 		if (entry->ah.alg != ODP_AUTH_ALG_MD5_HMAC &&
+		    entry->ah.alg != ODP_AUTH_ALG_SHA1_HMAC &&
 		    entry->ah.alg != ODP_AUTH_ALG_SHA256_HMAC)
 			abort();
 
@@ -359,7 +386,7 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 		ah->next_header = ip->proto;
 		ip->proto = ODPH_IPPROTO_AH;
 
-		HMAC(EVP_md5(),
+		HMAC(stream->evp_md,
 		     entry->ah.key.data,
 		     entry->ah.key.length,
 		     (uint8_t *)ip,
@@ -367,7 +394,7 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 		     hash,
 		     NULL);
 
-		memcpy(ah->icv, hash, 12);
+		memcpy(ah->icv, hash, entry->ah.icv_len);
 	}
 
 	/* Correct set packet length offsets */
@@ -446,7 +473,9 @@ odp_bool_t verify_ipv4_packet(stream_db_entry_t *stream,
 			return FALSE;
 		if (odp_be_to_cpu_32(ah->spi) != entry->ah.spi)
 			return FALSE;
-		if (ODP_AUTH_ALG_MD5_HMAC != entry->ah.alg)
+		if (ODP_AUTH_ALG_MD5_HMAC != entry->ah.alg &&
+		    ODP_AUTH_ALG_SHA1_HMAC != entry->ah.alg &&
+		    ODP_AUTH_ALG_SHA256_HMAC != entry->ah.alg)
 			abort();
 	} else {
 		if (entry && (ODP_AUTH_ALG_NULL != entry->ah.alg))
@@ -473,7 +502,7 @@ odp_bool_t verify_ipv4_packet(stream_db_entry_t *stream,
 		uint8_t  ip_tos;
 		uint8_t  ip_ttl;
 		uint16_t ip_frag_offset;
-		uint8_t  icv[12];
+		uint8_t  icv[entry->ah.icv_len];
 		uint8_t  hash[EVP_MAX_MD_SIZE];
 
 		/* Save/clear mutable fields */
@@ -484,11 +513,11 @@ odp_bool_t verify_ipv4_packet(stream_db_entry_t *stream,
 		ip->ttl = 0;
 		ip->frag_offset = 0;
 		ip->chksum = 0;
-		memcpy(icv, ah->icv, 12);
-		memset(ah->icv, 0, 12);
+		memcpy(icv, ah->icv, entry->ah.icv_len);
+		memset(ah->icv, 0, entry->ah.icv_len);
 
 		/* Calculate HMAC and compare */
-		HMAC(EVP_md5(),
+		HMAC(stream->evp_md,
 		     entry->ah.key.data,
 		     entry->ah.key.length,
 		     (uint8_t *)ip,
