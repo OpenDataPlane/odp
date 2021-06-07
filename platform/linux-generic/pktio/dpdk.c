@@ -1423,8 +1423,8 @@ static int dpdk_pktio_term(void)
 	return 0;
 }
 
-static int check_hash_proto(pktio_entry_t *pktio_entry,
-			    const odp_pktin_queue_param_t *p)
+static void check_hash_proto(pktio_entry_t *pktio_entry,
+			     const odp_pktin_queue_param_t *p)
 {
 	struct rte_eth_dev_info dev_info;
 	uint64_t rss_hf_capa;
@@ -1434,48 +1434,37 @@ static int check_hash_proto(pktio_entry_t *pktio_entry,
 	rte_eth_dev_info_get(port_id, &dev_info);
 	rss_hf_capa = dev_info.flow_type_rss_offloads;
 
+	/* Print debug info about unsupported hash protocols. Unsupported
+	 * protocols are later filtered out by dpdk_setup_eth_dev(). */
 	if (p->hash_proto.proto.ipv4 &&
-	    ((rss_hf_capa & ETH_RSS_IPV4) == 0)) {
-		ODP_ERR("hash_proto.ipv4 not supported\n");
-		return -1;
-	}
+	    ((rss_hf_capa & ETH_RSS_IPV4) == 0))
+		ODP_PRINT("DPDK: hash_proto.ipv4 not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			  rss_hf_capa);
 
 	if (p->hash_proto.proto.ipv4_udp &&
-	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV4_UDP) == 0)) {
-		ODP_ERR("hash_proto.ipv4_udp not supported. "
-			"rss_hf_capa 0x%" PRIx64 "\n", rss_hf_capa);
-		return -1;
-	}
+	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV4_UDP) == 0))
+		ODP_PRINT("DPDK: hash_proto.ipv4_udp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			  rss_hf_capa);
 
 	if (p->hash_proto.proto.ipv4_tcp &&
-	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV4_TCP) == 0)) {
-		ODP_ERR("hash_proto.ipv4_tcp not supported. "
-			"rss_hf_capa 0x%" PRIx64 "\n", rss_hf_capa);
-		return -1;
-	}
+	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV4_TCP) == 0))
+		ODP_PRINT("DPDK: hash_proto.ipv4_tcp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			  rss_hf_capa);
 
 	if (p->hash_proto.proto.ipv6 &&
-	    ((rss_hf_capa & ETH_RSS_IPV6) == 0)) {
-		ODP_ERR("hash_proto.ipv6 not supported. "
-			"rss_hf_capa 0x%" PRIx64 "\n", rss_hf_capa);
-		return -1;
-	}
+	    ((rss_hf_capa & ETH_RSS_IPV6) == 0))
+		ODP_PRINT("DPDK: hash_proto.ipv6 not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			  rss_hf_capa);
 
 	if (p->hash_proto.proto.ipv6_udp &&
-	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV6_UDP) == 0)) {
-		ODP_ERR("hash_proto.ipv6_udp not supported. "
-			"rss_hf_capa 0x%" PRIx64 "\n", rss_hf_capa);
-		return -1;
-	}
+	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV6_UDP) == 0))
+		ODP_PRINT("DPDK: hash_proto.ipv6_udp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			  rss_hf_capa);
 
 	if (p->hash_proto.proto.ipv6_tcp &&
-	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV6_TCP) == 0)) {
-		ODP_ERR("hash_proto.ipv6_tcp not supported. "
-			"rss_hf_capa 0x%" PRIx64 "\n", rss_hf_capa);
-		return -1;
-	}
-
-	return 0;
+	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV6_TCP) == 0))
+		ODP_PRINT("DPDK: hash_proto.ipv6_tcp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
+			  rss_hf_capa);
 }
 
 static int dpdk_input_queues_config(pktio_entry_t *pktio_entry,
@@ -1484,8 +1473,8 @@ static int dpdk_input_queues_config(pktio_entry_t *pktio_entry,
 	odp_pktin_mode_t mode = pktio_entry->s.param.in_mode;
 	uint8_t lockless;
 
-	if (p->hash_enable && check_hash_proto(pktio_entry, p))
-		return -1;
+	if (p->hash_enable)
+		check_hash_proto(pktio_entry, p);
 
 	/**
 	 * Scheduler synchronizes input queue polls. Only single thread
