@@ -647,6 +647,9 @@ void odp_tm_egress_init(odp_tm_egress_t *egress);
 
 /** Query All TM Capabilities
  *
+ * @deprecated Use odp_tm_egress_capabilities() instead that also additionally
+ * takes egress as input to provide capabilities specific to a given egress.
+ *
  * This function returns the set of TM capabilities that are common for all
  * egresses. The reason that this returns a SET of capabilities and not just
  * one, is because it is expected that many HW based implementations may have
@@ -672,8 +675,8 @@ void odp_tm_egress_init(odp_tm_egress_t *egress);
  *                               implementations supports. *NOTE* that this
  *                               number can be > capabilities_size!
  */
-int odp_tm_capabilities(odp_tm_capabilities_t capabilities[],
-			uint32_t              capabilities_size);
+int ODP_DEPRECATE(odp_tm_capabilities)(odp_tm_capabilities_t capabilities[],
+				       uint32_t              capabilities_size);
 
 /** Query TM Capabilities specific to an egress
  *
