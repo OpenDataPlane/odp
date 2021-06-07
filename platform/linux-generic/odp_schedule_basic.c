@@ -1021,11 +1021,9 @@ static inline int poll_pktin(uint32_t qi, int direct_recv,
 }
 
 static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
-				  unsigned int max_num, int grp, int first)
+				  unsigned int max_num, int grp, int first_spr)
 {
-	int prio, i;
-	int ret;
-	int id;
+	int prio, spr, i, ret;
 	uint32_t qi;
 	uint16_t burst_def;
 	int num_spread = sched->config.num_spread;
@@ -1038,8 +1036,8 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 		burst_def = sched->config.burst_default[prio];
 
-		/* Select the first ring based on weights */
-		id = first;
+		/* Select the first spread based on weights */
+		spr = first_spr;
 
 		for (i = 0; i < num_spread;) {
 			int num;
@@ -1051,24 +1049,24 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 			int stashed = 1;
 			odp_event_t *ev_tbl = sched_local.stash.ev;
 
-			if (id >= num_spread)
-				id = 0;
+			if (spr >= num_spread)
+				spr = 0;
 
 			/* No queues created for this priority queue */
-			if (odp_unlikely((sched->prio_q_mask[grp][prio] & (1 << id))
+			if (odp_unlikely((sched->prio_q_mask[grp][prio] & (1 << spr))
 			    == 0)) {
 				i++;
-				id++;
+				spr++;
 				continue;
 			}
 
 			/* Get queue index from the priority queue */
-			ring = &sched->prio_q[grp][prio][id].ring;
+			ring = &sched->prio_q[grp][prio][spr].ring;
 
 			if (ring_u32_deq(ring, ring_mask, &qi) == 0) {
 				/* Priority queue empty */
 				i++;
-				id++;
+				spr++;
 				continue;
 			}
 
@@ -1187,9 +1185,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 static inline int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 			      unsigned int max_num)
 {
-	int i, num_grp;
-	int ret;
-	int first, grp_id;
+	int i, num_grp, ret, spr, grp_id;
 	uint16_t spread_round, grp_round;
 	uint32_t epoch;
 
@@ -1221,7 +1217,7 @@ static inline int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 	else
 		sched_local.spread_round = spread_round + 1;
 
-	first = sched_local.spread_tbl[spread_round];
+	spr = sched_local.spread_tbl[spread_round];
 
 	epoch = odp_atomic_load_acq_u32(&sched->grp_epoch);
 	num_grp = sched_local.num_grp;
@@ -1238,7 +1234,7 @@ static inline int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		int grp;
 
 		grp = sched_local.grp[grp_id];
-		ret = do_schedule_grp(out_queue, out_ev, max_num, grp, first);
+		ret = do_schedule_grp(out_queue, out_ev, max_num, grp, spr);
 
 		if (odp_likely(ret))
 			return ret;
