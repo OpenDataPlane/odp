@@ -12,6 +12,8 @@ TESTS = \
 	odp_ipsec_api_run_esp_out.sh \
 	odp_ipsec_api_run_esp_tun_in.sh \
 	odp_ipsec_api_run_esp_tun_out.sh \
+	odp_ipsec_api_run_live.sh \
+	odp_ipsec_api_run_router.sh \
 	odp_ipsec_api_run_simple.sh
 endif
 
