@@ -29,8 +29,6 @@ PID=app_pid
 	-r 192.168.222.2/32,$IF1,$NEXT_HOP_MAC1 \
 	-c 1 "$@" & echo $! > $PID) | tee -a $LOG &
 
-APP_PID=`cat $PID`
-
 # Wait till application thread starts.
 APP_READY="Pktio thread \[..\] starts"
 
@@ -43,6 +41,8 @@ tail -f $LOG | grep -qm 1 "$APP_READY"
 
 validate_result
 ret=$?
+
+APP_PID=`cat $PID`
 
 kill -2 ${APP_PID}
 
