@@ -138,7 +138,8 @@ typedef struct ODP_ALIGNED_CACHE {
 	struct rte_mempool *pkt_pool;	/**< DPDK packet pool */
 	uint32_t data_room;		/**< maximum packet length */
 	unsigned int min_rx_burst;	/**< minimum RX burst size */
-	odp_pktin_hash_proto_t hash;	/**< Packet input hash protocol */
+	/** RSS configuration */
+	struct rte_eth_rss_conf rss_conf;
 	/* Supported RTE_PTYPE_XXX flags in a mask */
 	uint32_t supported_ptypes;
 	uint16_t mtu;			/**< maximum transmission unit */
@@ -1131,7 +1132,7 @@ static int dpdk_vdev_promisc_mode_set(uint16_t port_id, int enable)
 	return mode;
 }
 
-static void rss_conf_to_hash_proto(struct rte_eth_rss_conf *rss_conf,
+static void hash_proto_to_rss_conf(struct rte_eth_rss_conf *rss_conf,
 				   const odp_pktin_hash_proto_t *hash_proto)
 {
 	if (hash_proto->proto.ipv4_udp)
@@ -1154,34 +1155,19 @@ static void rss_conf_to_hash_proto(struct rte_eth_rss_conf *rss_conf,
 	rss_conf->rss_key = NULL;
 }
 
-static int dpdk_setup_eth_dev(pktio_entry_t *pktio_entry,
-			      const struct rte_eth_dev_info *dev_info)
+static int dpdk_setup_eth_dev(pktio_entry_t *pktio_entry)
 {
 	int ret;
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
-	struct rte_eth_rss_conf rss_conf;
 	struct rte_eth_conf eth_conf;
-	uint64_t rss_hf_capa = dev_info->flow_type_rss_offloads;
 	uint64_t rx_offloads = 0;
 	uint64_t tx_offloads = 0;
-
-	memset(&rss_conf, 0, sizeof(struct rte_eth_rss_conf));
-
-	/* Always set some hash functions to enable DPDK RSS hash calculation.
-	 * Hash capability has been checked in pktin config. */
-	if (pkt_dpdk->hash.all_bits == 0)
-		rss_conf.rss_hf = ETH_RSS_IP | ETH_RSS_TCP | ETH_RSS_UDP;
-	else
-		rss_conf_to_hash_proto(&rss_conf, &pkt_dpdk->hash);
-
-	/* Filter out unsupported flags */
-	rss_conf.rss_hf &= rss_hf_capa;
 
 	memset(&eth_conf, 0, sizeof(eth_conf));
 
 	eth_conf.rxmode.mq_mode = ETH_MQ_RX_RSS;
 	eth_conf.txmode.mq_mode = ETH_MQ_TX_NONE;
-	eth_conf.rx_adv_conf.rss_conf = rss_conf;
+	eth_conf.rx_adv_conf.rss_conf = pkt_dpdk->rss_conf;
 
 	/* Setup RX checksum offloads */
 	if (pktio_entry->s.config.pktin.bit.ipv4_chksum)
@@ -1423,7 +1409,7 @@ static int dpdk_pktio_term(void)
 	return 0;
 }
 
-static void check_hash_proto(pktio_entry_t *pktio_entry,
+static void prepare_rss_conf(pktio_entry_t *pktio_entry,
 			     const odp_pktin_queue_param_t *p)
 {
 	struct rte_eth_dev_info dev_info;
@@ -1431,11 +1417,15 @@ static void check_hash_proto(pktio_entry_t *pktio_entry,
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	uint16_t port_id = pkt_dpdk->port_id;
 
+	memset(&pkt_dpdk->rss_conf, 0, sizeof(struct rte_eth_rss_conf));
+
+	if (!p->hash_enable)
+		return;
+
 	rte_eth_dev_info_get(port_id, &dev_info);
 	rss_hf_capa = dev_info.flow_type_rss_offloads;
 
-	/* Print debug info about unsupported hash protocols. Unsupported
-	 * protocols are later filtered out by dpdk_setup_eth_dev(). */
+	/* Print debug info about unsupported hash protocols */
 	if (p->hash_proto.proto.ipv4 &&
 	    ((rss_hf_capa & ETH_RSS_IPV4) == 0))
 		ODP_PRINT("DPDK: hash_proto.ipv4 not supported (rss_hf_capa 0x%" PRIx64 ")\n",
@@ -1465,6 +1455,11 @@ static void check_hash_proto(pktio_entry_t *pktio_entry,
 	    ((rss_hf_capa & ETH_RSS_NONFRAG_IPV6_TCP) == 0))
 		ODP_PRINT("DPDK: hash_proto.ipv6_tcp not supported (rss_hf_capa 0x%" PRIx64 ")\n",
 			  rss_hf_capa);
+
+	hash_proto_to_rss_conf(&pkt_dpdk->rss_conf, &p->hash_proto);
+
+	/* Filter out unsupported hash functions */
+	pkt_dpdk->rss_conf.rss_hf &= rss_hf_capa;
 }
 
 static int dpdk_input_queues_config(pktio_entry_t *pktio_entry,
@@ -1473,8 +1468,7 @@ static int dpdk_input_queues_config(pktio_entry_t *pktio_entry,
 	odp_pktin_mode_t mode = pktio_entry->s.param.in_mode;
 	uint8_t lockless;
 
-	if (p->hash_enable)
-		check_hash_proto(pktio_entry, p);
+	prepare_rss_conf(pktio_entry, p);
 
 	/**
 	 * Scheduler synchronizes input queue polls. Only single thread
@@ -1484,9 +1478,6 @@ static int dpdk_input_queues_config(pktio_entry_t *pktio_entry,
 		lockless = 1;
 	else
 		lockless = 0;
-
-	if (p->hash_enable && p->num_queues > 1)
-		pkt_priv(pktio_entry)->hash = p->hash_proto;
 
 	pkt_priv(pktio_entry)->lockless_rx = lockless;
 
@@ -1890,7 +1881,7 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 	rte_eth_dev_info_get(port_id, &dev_info);
 
 	/* Setup device */
-	if (dpdk_setup_eth_dev(pktio_entry, &dev_info)) {
+	if (dpdk_setup_eth_dev(pktio_entry)) {
 		ODP_ERR("Failed to configure device\n");
 		return -1;
 	}
