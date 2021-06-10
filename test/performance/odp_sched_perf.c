@@ -33,7 +33,7 @@ typedef struct test_options_t {
 	uint32_t num_dummy;
 	uint32_t num_event;
 	uint32_t num_sched;
-	uint32_t num_group;
+	int      num_group;
 	uint32_t num_join;
 	uint32_t max_burst;
 	int      queue_type;
@@ -81,6 +81,7 @@ typedef struct test_global_t {
 	odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
 	test_stat_t stat[ODP_THREAD_COUNT_MAX];
 	thread_arg_t thread_arg[ODP_THREAD_COUNT_MAX];
+	odp_atomic_u32_t num_worker;
 
 } test_global_t;
 
@@ -95,9 +96,10 @@ static void print_usage(void)
 	       "  -q, --num_queue        Number of queues. Default: 1.\n"
 	       "  -d, --num_dummy        Number of empty queues. Default: 0.\n"
 	       "  -e, --num_event        Number of events per queue. Default: 100.\n"
-	       "  -s, --num_sched        Number of events to schedule per thread\n"
+	       "  -s, --num_sched        Number of events to schedule per thread. Default: 100 000.\n"
 	       "  -g, --num_group        Number of schedule groups. Round robins threads and queues into groups.\n"
-	       "                         0: SCHED_GROUP_ALL (default)\n"
+	       "                         -1: SCHED_GROUP_WORKER\n"
+	       "                         0:  SCHED_GROUP_ALL (default)\n"
 	       "  -j, --num_join         Number of groups a thread joins. Threads are divide evenly into groups,\n"
 	       "                         if num_cpu is multiple of num_group and num_group is multiple of num_join.\n"
 	       "                         0: join all groups (default)\n"
@@ -115,9 +117,7 @@ static void print_usage(void)
 
 static int parse_options(int argc, char *argv[], test_options_t *test_options)
 {
-	int opt;
-	int long_index;
-	uint32_t num_group, num_join;
+	int opt, long_index, num_group, num_join;
 	int ret = 0;
 	uint32_t ctx_size = 0;
 
@@ -232,21 +232,18 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	num_group = test_options->num_group;
 	num_join  = test_options->num_join;
 	if (num_group > MAX_GROUPS) {
-		printf("Error: Too many groups. Max supported %i.\n",
-		       MAX_GROUPS);
+		ODPH_ERR("Too many groups. Max supported %i.\n", MAX_GROUPS);
 		ret = -1;
 	}
 
-	if (num_join > num_group) {
-		printf("Error: num_join (%u) larger than num_group (%u).\n",
-		       num_join, num_group);
+	if (num_group > 0 && num_join > num_group) {
+		ODPH_ERR("num_join (%i) larger than num_group (%i).\n", num_join, num_group);
 		ret = -1;
 	}
 
-	if (num_join && num_group > (test_options->num_cpu * num_join)) {
-		printf("WARNING: Too many groups (%u). Some groups (%u) are not served.\n\n",
-		       num_group,
-		       num_group - (test_options->num_cpu * num_join));
+	if (num_join && num_group > (int)(test_options->num_cpu * num_join)) {
+		printf("WARNING: Too many groups (%i). Some groups (%i) are not served.\n\n",
+		       num_group, num_group - (test_options->num_cpu * num_join));
 
 		if (test_options->forward) {
 			printf("Error: Cannot forward when some queues are not served.\n");
@@ -333,7 +330,7 @@ static int create_pool(test_global_t *global)
 	uint32_t tot_queue = test_options->tot_queue;
 	uint32_t tot_event = test_options->tot_event;
 	uint32_t queue_size = test_options->queue_size;
-	uint32_t num_group = test_options->num_group;
+	int      num_group = test_options->num_group;
 	uint32_t num_join = test_options->num_join;
 	int      forward   = test_options->forward;
 	uint64_t wait_ns = test_options->wait_ns;
@@ -352,7 +349,14 @@ static int create_pool(test_global_t *global)
 	printf("  num queues       %u\n", num_queue);
 	printf("  num empty queues %u\n", num_dummy);
 	printf("  total queues     %u\n", tot_queue);
-	printf("  num groups       %u\n", num_group);
+	printf("  num groups       %i", num_group);
+	if (num_group == -1)
+		printf(" (ODP_SCHED_GROUP_WORKER)\n");
+	else if (num_group == 0)
+		printf(" (ODP_SCHED_GROUP_ALL)\n");
+	else
+		printf("\n");
+
 	printf("  num join         %u\n", num_join);
 	printf("  forward events   %i\n", forward ? 1 : 0);
 	printf("  wait nsec        %" PRIu64 "\n", wait_ns);
@@ -422,7 +426,7 @@ static int create_groups(test_global_t *global)
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_group = test_options->num_group;
 
-	if (num_group == 0)
+	if (test_options->num_group <= 0)
 		return 0;
 
 	if (odp_schedule_capability(&sched_capa)) {
@@ -466,7 +470,7 @@ static int create_queues(test_global_t *global)
 	uint32_t num_event = test_options->num_event;
 	uint32_t queue_size = test_options->queue_size;
 	uint32_t tot_queue = test_options->tot_queue;
-	uint32_t num_group = test_options->num_group;
+	int num_group = test_options->num_group;
 	int type = test_options->queue_type;
 	odp_pool_t pool = global->pool;
 	uint8_t *ctx = NULL;
@@ -510,11 +514,14 @@ static int create_queues(test_global_t *global)
 	queue_param.type = ODP_QUEUE_TYPE_SCHED;
 	queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	queue_param.sched.sync  = sync;
-	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 	queue_param.size = queue_size;
+	if (num_group == -1)
+		queue_param.sched.group = ODP_SCHED_GROUP_WORKER;
+	else
+		queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 
 	for (i = 0; i < tot_queue; i++) {
-		if (num_group) {
+		if (num_group > 0) {
 			odp_schedule_group_t group;
 
 			/* Divide all queues evenly into groups */
@@ -598,11 +605,11 @@ static int join_group(test_global_t *global, int grp_index, int thr)
 
 static int join_all_groups(test_global_t *global, int thr)
 {
-	uint32_t i;
+	int i;
 	test_options_t *test_options = &global->test_options;
-	uint32_t num_group = test_options->num_group;
+	int num_group = test_options->num_group;
 
-	if (num_group == 0)
+	if (num_group <= 0)
 		return 0;
 
 	for (i = 0; i < num_group; i++) {
@@ -647,11 +654,11 @@ static int destroy_queues(test_global_t *global)
 
 static int destroy_groups(test_global_t *global)
 {
-	uint32_t i;
+	int i;
 	test_options_t *test_options = &global->test_options;
-	uint32_t num_group = test_options->num_group;
+	int num_group = test_options->num_group;
 
-	if (num_group == 0)
+	if (num_group <= 0)
 		return 0;
 
 	for (i = 0; i < num_group; i++) {
@@ -725,7 +732,7 @@ static int test_sched(void *arg)
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_sched = test_options->num_sched;
 	uint32_t max_burst = test_options->max_burst;
-	uint32_t num_group = test_options->num_group;
+	int num_group = test_options->num_group;
 	int forward = test_options->forward;
 	int touch_data = test_options->touch_data;
 	uint32_t rd_words = test_options->rd_words;
@@ -746,7 +753,7 @@ static int test_sched(void *arg)
 	if (forward)
 		ctx_offset = ROUNDUP(sizeof(odp_queue_t), 8);
 
-	if (num_group) {
+	if (num_group > 0) {
 		uint32_t num_join = test_options->num_join;
 
 		if (num_join) {
@@ -890,6 +897,16 @@ static int test_sched(void *arg)
 	global->stat[thr].dummy_sum = data_sum + ctx_sum;
 	global->stat[thr].failed = ret;
 
+	if (odp_atomic_fetch_dec_u32(&global->num_worker) == 1) {
+		/* The last worker frees all events. This is needed when the main
+		 * thread cannot do the clean up (ODP_SCHED_GROUP_WORKER). */
+		odp_event_t event;
+		uint64_t sched_wait = odp_schedule_wait_time(200 * ODP_TIME_MSEC_IN_NS);
+
+		while ((event = odp_schedule(NULL, sched_wait)) != ODP_EVENT_INVALID)
+			odp_event_free(event);
+	}
+
 	/* Pause scheduling before thread exit */
 	odp_schedule_pause();
 
@@ -919,10 +936,12 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 	odph_thread_common_param_t thr_common;
 	int i, ret;
 	test_options_t *test_options = &global->test_options;
-	uint32_t num_group = test_options->num_group;
+	int num_group = test_options->num_group;
 	uint32_t num_join  = test_options->num_join;
 	int num_cpu   = test_options->num_cpu;
 	odph_thread_param_t thr_param[num_cpu];
+
+	odp_atomic_init_u32(&global->num_worker, num_cpu);
 
 	memset(global->thread_tbl, 0, sizeof(global->thread_tbl));
 	memset(thr_param, 0, sizeof(thr_param));
@@ -939,7 +958,7 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 		global->thread_arg[i].global = global;
 		global->thread_arg[i].first_group = 0;
 
-		if (num_group && num_join) {
+		if (num_group > 0 && num_join) {
 			/* Each thread joins only num_join groups, starting
 			 * from this group index and wraping around the group
 			 * table. */
