@@ -51,6 +51,18 @@
 /* Group weight table size */
 #define GRP_WEIGHT_TBL_SIZE NUM_SCHED_GRPS
 
+/* Spread balancing frequency. Balance every BALANCE_ROUNDS_M1 + 1 scheduling rounds. */
+#define BALANCE_ROUNDS_M1 0xfffff
+
+/* Load of a queue */
+#define QUEUE_LOAD 256
+
+/* Margin for load balance hysteresis */
+#define QUEUE_LOAD_MARGIN 8
+
+/* Ensure that load calculation does not wrap around */
+ODP_STATIC_ASSERT((QUEUE_LOAD * CONFIG_MAX_SCHED_QUEUES) < UINT32_MAX, "Load_value_too_large");
+
 /* Maximum priority queue spread */
 #define MAX_SPREAD 8
 
@@ -123,10 +135,12 @@ ODP_STATIC_ASSERT(sizeof(lock_called_t) == sizeof(uint32_t),
 
 /* Scheduler local data */
 typedef struct ODP_ALIGNED_CACHE {
+	uint32_t sched_round;
 	uint16_t thr;
 	uint8_t  pause;
 	uint8_t  sync_ctx;
-	uint16_t grp_round;
+	uint8_t  balance_on;
+	uint16_t balance_start;
 	uint16_t spread_round;
 
 	struct {
@@ -188,6 +202,7 @@ typedef struct {
 		uint8_t prefer_ratio;
 	} config;
 
+	uint8_t          load_balance;
 	uint16_t         max_spread;
 	uint32_t         ring_mask;
 	odp_spinlock_t   mask_lock;
@@ -289,6 +304,22 @@ static int read_config_file(sched_global_t *sched)
 	sched->config.prefer_ratio = val + 1;
 	ODP_PRINT("  %s: %i\n", str, val);
 
+	str = "sched_basic.load_balance";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	if (val > 1 || val < 0) {
+		ODP_ERR("Bad value %s = %i\n", str, val);
+		return -1;
+	}
+	ODP_PRINT("  %s: %i\n", str, val);
+
+	sched->load_balance = 1;
+	if (val == 0 || sched->config.num_spread == 1)
+		sched->load_balance = 0;
+
 	str = "sched_basic.burst_size_default";
 	if (_odp_libconfig_lookup_array(str, burst_val, NUM_PRIO) !=
 	    NUM_PRIO) {
@@ -357,6 +388,8 @@ static int read_config_file(sched_global_t *sched)
 	sched->config_if.group_enable.control = val;
 	ODP_PRINT("  %s: %i\n", str, val);
 
+	ODP_PRINT("  dynamic load balance: %s\n", sched->load_balance ? "ON" : "OFF");
+
 	ODP_PRINT("\n");
 
 	return 0;
@@ -402,7 +435,7 @@ static int schedule_init_global(void)
 	odp_shm_t shm;
 	int i, j, grp;
 	int prefer_ratio;
-	uint32_t ring_size;
+	uint32_t ring_size, num_rings;
 
 	ODP_DBG("Schedule init ... ");
 
@@ -429,14 +462,23 @@ static int schedule_init_global(void)
 	/* When num_spread == 1, only spread_tbl[0] is used. */
 	sched->max_spread = (sched->config.num_spread - 1) * prefer_ratio;
 
-	ring_size = MAX_RING_SIZE / sched->config.num_spread;
+	/* Dynamic load balance may move all queues into a single ring.
+	 * Ring size can be smaller with fixed spreading. */
+	if (sched->load_balance) {
+		ring_size = MAX_RING_SIZE;
+		num_rings = 1;
+	} else {
+		ring_size = MAX_RING_SIZE / sched->config.num_spread;
+		num_rings = sched->config.num_spread;
+	}
+
 	ring_size = ROUNDUP_POWER2_U32(ring_size);
 	ODP_ASSERT(ring_size <= MAX_RING_SIZE);
 	sched->ring_mask = ring_size - 1;
 
 	/* Each ring can hold in maximum ring_size-1 queues. Due to ring size round up,
 	 * total capacity of rings may be larger than CONFIG_MAX_SCHED_QUEUES. */
-	sched->max_queues = sched->ring_mask * sched->config.num_spread;
+	sched->max_queues = sched->ring_mask * num_rings;
 	if (sched->max_queues > CONFIG_MAX_SCHED_QUEUES)
 		sched->max_queues = CONFIG_MAX_SCHED_QUEUES;
 
@@ -593,6 +635,44 @@ static inline int prio_level_from_api(int api_prio)
 	return schedule_max_prio() - api_prio;
 }
 
+static inline void inc_queue_count(int grp, int prio, int spr)
+{
+	odp_spinlock_lock(&sched->mask_lock);
+
+	sched->prio_q_mask[grp][prio] |= 1 << spr;
+	sched->prio_q_count[grp][prio][spr]++;
+
+	odp_spinlock_unlock(&sched->mask_lock);
+}
+
+static inline void dec_queue_count(int grp, int prio, int spr)
+{
+	odp_spinlock_lock(&sched->mask_lock);
+
+	sched->prio_q_count[grp][prio][spr]--;
+
+	/* Clear mask bit only when the last queue is removed */
+	if (sched->prio_q_count[grp][prio][spr] == 0)
+		sched->prio_q_mask[grp][prio] &= (uint8_t)(~(1 << spr));
+
+	odp_spinlock_unlock(&sched->mask_lock);
+}
+
+static inline void update_queue_count(int grp, int prio, int old_spr, int new_spr)
+{
+	odp_spinlock_lock(&sched->mask_lock);
+
+	sched->prio_q_mask[grp][prio] |= 1 << new_spr;
+	sched->prio_q_count[grp][prio][new_spr]++;
+
+	sched->prio_q_count[grp][prio][old_spr]--;
+
+	if (sched->prio_q_count[grp][prio][old_spr] == 0)
+		sched->prio_q_mask[grp][prio] &= (uint8_t)(~(1 << old_spr));
+
+	odp_spinlock_unlock(&sched->mask_lock);
+}
+
 static int schedule_create_queue(uint32_t queue_index,
 				 const odp_schedule_param_t *sched_param)
 {
@@ -623,13 +703,7 @@ static int schedule_create_queue(uint32_t queue_index,
 		return -1;
 	}
 
-	odp_spinlock_lock(&sched->mask_lock);
-
-	/* update scheduler prio queue usage status */
-	sched->prio_q_mask[grp][prio] |= 1 << spread;
-	sched->prio_q_count[grp][prio][spread]++;
-
-	odp_spinlock_unlock(&sched->mask_lock);
+	inc_queue_count(grp, prio, spread);
 
 	sched->queue[queue_index].grp  = grp;
 	sched->queue[queue_index].prio = prio;
@@ -658,17 +732,9 @@ static void schedule_destroy_queue(uint32_t queue_index)
 {
 	int grp  = sched->queue[queue_index].grp;
 	int prio = sched->queue[queue_index].prio;
-	uint8_t spread = spread_index(queue_index);
+	int spread = sched->queue[queue_index].spread;
 
-	odp_spinlock_lock(&sched->mask_lock);
-
-	/* Clear mask bit when last queue is removed*/
-	sched->prio_q_count[grp][prio][spread]--;
-
-	if (sched->prio_q_count[grp][prio][spread] == 0)
-		sched->prio_q_mask[grp][prio] &= (uint8_t)(~(1 << spread));
-
-	odp_spinlock_unlock(&sched->mask_lock);
+	dec_queue_count(grp, prio, spread);
 
 	sched->queue[queue_index].grp    = 0;
 	sched->queue[queue_index].prio   = 0;
@@ -881,6 +947,46 @@ static int schedule_config(const odp_schedule_config_t *config)
 	return 0;
 }
 
+/* Spread load after adding 'num' queues */
+static inline uint32_t spread_load(int grp, int prio, int spr, int num)
+{
+	uint32_t num_q, num_thr;
+
+	num_q   = sched->prio_q_count[grp][prio][spr];
+	num_thr = sched->sched_grp[grp].spread_thrs[spr];
+
+	if (num_thr == 0)
+		return UINT32_MAX;
+
+	return ((num_q + num) * QUEUE_LOAD) / num_thr;
+}
+
+static inline int balance_spread(int grp, int prio, int cur_spr)
+{
+	int spr;
+	uint64_t cur_load, min_load, load;
+	int num_spread = sched->config.num_spread;
+	int new_spr = cur_spr;
+
+	cur_load = spread_load(grp, prio, cur_spr, 0);
+	min_load = cur_load;
+
+	for (spr = 0; spr < num_spread; spr++) {
+		if (spr == cur_spr)
+			continue;
+
+		load = spread_load(grp, prio, spr, 1);
+
+		/* Move queue if improvement is larger than marginal */
+		if ((load + QUEUE_LOAD_MARGIN) < min_load) {
+			new_spr  = spr;
+			min_load = load;
+		}
+	}
+
+	return new_spr;
+}
+
 static inline int copy_from_stash(odp_event_t out_ev[], unsigned int max)
 {
 	int i = 0;
@@ -1021,9 +1127,9 @@ static inline int poll_pktin(uint32_t qi, int direct_recv,
 }
 
 static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
-				  unsigned int max_num, int grp, int first_spr)
+				  unsigned int max_num, int grp, int first_spr, int balance)
 {
-	int prio, spr, i, ret;
+	int prio, spr, new_spr, i, ret;
 	uint32_t qi;
 	uint16_t burst_def;
 	int num_spread = sched->config.num_spread;
@@ -1090,6 +1196,19 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 			}
 
 			pktin = queue_is_pktin(qi);
+
+			/* Update queue spread before dequeue. Dequeue changes status of an empty
+			 * queue, which enables a following enqueue operation to insert the queue
+			 * back into scheduling (with new spread). */
+			if (odp_unlikely(balance)) {
+				new_spr = balance_spread(grp, prio, spr);
+
+				if (new_spr != spr) {
+					sched->queue[qi].spread = new_spr;
+					ring = &sched->prio_q[grp][prio][new_spr].ring;
+					update_queue_count(grp, prio, spr, new_spr);
+				}
+			}
 
 			num = _odp_sched_queue_deq(qi, ev_tbl, max_deq, !pktin);
 
@@ -1186,8 +1305,10 @@ static inline int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 			      unsigned int max_num)
 {
 	int i, num_grp, ret, spr, grp_id;
+	uint32_t sched_round;
 	uint16_t spread_round, grp_round;
 	uint32_t epoch;
+	int balance = 0;
 
 	if (sched_local.stash.num_ev) {
 		ret = copy_from_stash(out_ev, max_num);
@@ -1207,10 +1328,28 @@ static inline int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 	if (odp_unlikely(sched_local.pause))
 		return 0;
 
+	sched_round = sched_local.sched_round++;
+	grp_round   = sched_round & (GRP_WEIGHT_TBL_SIZE - 1);
+
 	/* Each thread prefers a priority queue. Spread weight table avoids
 	 * starvation of other priority queues on low thread counts. */
 	spread_round = sched_local.spread_round;
-	grp_round    = (sched_local.grp_round++) & (GRP_WEIGHT_TBL_SIZE - 1);
+
+	if (odp_likely(sched->load_balance)) {
+		/* Spread balance is checked max_spread times in every BALANCE_ROUNDS_M1 + 1
+		 * scheduling rounds. */
+		if (odp_unlikely(sched_local.balance_on)) {
+			balance = 1;
+
+			if (sched_local.balance_start == spread_round)
+				sched_local.balance_on = 0;
+		}
+
+		if (odp_unlikely((sched_round & BALANCE_ROUNDS_M1) == 0)) {
+			sched_local.balance_start = spread_round;
+			sched_local.balance_on    = 1;
+		}
+	}
 
 	if (odp_unlikely(spread_round + 1 >= sched->max_spread))
 		sched_local.spread_round = 0;
@@ -1234,7 +1373,7 @@ static inline int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		int grp;
 
 		grp = sched_local.grp[grp_id];
-		ret = do_schedule_grp(out_queue, out_ev, max_num, grp, spr);
+		ret = do_schedule_grp(out_queue, out_ev, max_num, grp, spr, balance);
 
 		if (odp_likely(ret))
 			return ret;
