@@ -94,7 +94,7 @@ static inline uint16_t dpdk_parse_eth(packet_parser_t *prs,
 			goto error;
 		}
 		ethtype = odp_be_to_cpu_16(*((const uint16_t *)(uintptr_t)
-					      (parseptr + 6)));
+					      (*parseptr + 6)));
 		*offset   += 8;
 		*parseptr += 8;
 	}
