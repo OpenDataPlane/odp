@@ -20,6 +20,7 @@ struct suite_context_s suite_context;
 static odp_ipsec_capability_t capa;
 
 #define PKT_POOL_NUM  64
+#define EVENT_WAIT_TIME ODP_TIME_SEC_IN_NS
 
 #define PACKET_USER_PTR	((void *)0x1212fefe)
 #define IPSEC_SA_CTX	((void *)0xfefefafa)
@@ -100,12 +101,39 @@ static int pktio_start(odp_pktio_t pktio, odp_bool_t in, odp_bool_t out)
 	return 1;
 }
 
-static odp_event_t recv_event(odp_queue_t queue)
+static odp_event_t sched_queue_deq(uint64_t wait_ns)
 {
+	uint64_t wait = odp_schedule_wait_time(wait_ns);
+
+	return odp_schedule(NULL, wait);
+}
+
+static odp_event_t plain_queue_deq(odp_queue_t queue, uint64_t wait_ns)
+{
+	odp_time_t cur, wait, next;
+	odp_event_t event;
+
+	wait = odp_time_local_from_ns(wait_ns);
+	next = odp_time_sum(odp_time_local(), wait);
+
+	do {
+		event = odp_queue_deq(queue);
+		cur = odp_time_local();
+	} while (event == ODP_EVENT_INVALID && odp_time_cmp(next, cur) >= 0);
+
+	return event;
+}
+
+static odp_event_t recv_event(odp_queue_t queue, uint64_t wait_ns)
+{
+	odp_event_t event;
+
 	if (odp_queue_type(queue) == ODP_QUEUE_TYPE_PLAIN)
-		return odp_queue_deq(queue);
+		event = plain_queue_deq(queue, wait_ns);
 	else
-		return odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+		event = sched_queue_deq(wait_ns);
+
+	return event;
 }
 
 static void pktio_stop(odp_pktio_t pktio)
@@ -118,7 +146,7 @@ static void pktio_stop(odp_pktio_t pktio)
 		fprintf(stderr, "IPsec pktio stop failed.\n");
 
 	while (1) {
-		odp_event_t ev = recv_event(queue);
+		odp_event_t ev = recv_event(queue, 0);
 
 		if (ev != ODP_EVENT_INVALID)
 			odp_event_free(ev);
@@ -375,9 +403,7 @@ void ipsec_sa_destroy(odp_ipsec_sa_t sa)
 	CU_ASSERT_EQUAL(ODP_IPSEC_OK, odp_ipsec_sa_disable(sa));
 
 	if (ODP_QUEUE_INVALID != suite_context.queue) {
-		do {
-			event = recv_event(suite_context.queue);
-		} while (event == ODP_EVENT_INVALID);
+		event = recv_event(suite_context.queue, EVENT_WAIT_TIME);
 
 		CU_ASSERT(odp_event_is_valid(event) == 1);
 		CU_ASSERT_EQUAL(ODP_EVENT_IPSEC_STATUS, odp_event_type(event));
@@ -538,7 +564,6 @@ static int send_pkts(const ipsec_test_part part[], int num_part)
 /* Receive async inbound packet */
 static odp_event_t recv_pkt_async_inbound(odp_ipsec_op_status_t status)
 {
-	odp_event_t event;
 	odp_queue_t queue;
 
 	/*
@@ -550,11 +575,7 @@ static odp_event_t recv_pkt_async_inbound(odp_ipsec_op_status_t status)
 	else
 		queue = suite_context.default_queue;
 
-	do {
-		event = recv_event(queue);
-	} while (event == ODP_EVENT_INVALID);
-
-	return event;
+	return recv_event(queue, EVENT_WAIT_TIME);
 }
 
 /* Receive inline processed packets */
@@ -573,7 +594,7 @@ static int recv_pkts_inline(const ipsec_test_part *part,
 		odp_event_t ev;
 		odp_event_subtype_t subtype;
 
-		ev = recv_event(queue);
+		ev = recv_event(queue, 0);
 		if (ODP_EVENT_INVALID != ev) {
 			CU_ASSERT(odp_event_is_valid(ev) == 1);
 			CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
@@ -588,7 +609,7 @@ static int recv_pkts_inline(const ipsec_test_part *part,
 			continue;
 		}
 
-		ev = recv_event(suite_context.queue);
+		ev = recv_event(suite_context.queue, 0);
 		if (ODP_EVENT_INVALID != ev) {
 			odp_packet_t pkt;
 			int num_pkts = 0;
@@ -719,9 +740,7 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 			odp_event_t event;
 			odp_event_subtype_t subtype;
 
-			do {
-				event = recv_event(suite_context.queue);
-			} while (event == ODP_EVENT_INVALID);
+			event = recv_event(suite_context.queue, EVENT_WAIT_TIME);
 
 			CU_ASSERT(odp_event_is_valid(event) == 1);
 			CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
@@ -803,7 +822,7 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 			odp_event_t ev;
 			odp_event_subtype_t subtype;
 
-			ev = recv_event(queue);
+			ev = recv_event(queue, 0);
 			if (ODP_EVENT_INVALID != ev) {
 				CU_ASSERT(odp_event_is_valid(ev) == 1);
 				CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
@@ -818,7 +837,7 @@ static int ipsec_send_out_one(const ipsec_test_part *part,
 				continue;
 			}
 
-			ev = recv_event(suite_context.queue);
+			ev = recv_event(suite_context.queue, 0);
 			if (ODP_EVENT_INVALID != ev) {
 				CU_ASSERT(odp_event_is_valid(ev) == 1);
 				CU_ASSERT_EQUAL(ODP_EVENT_PACKET,
