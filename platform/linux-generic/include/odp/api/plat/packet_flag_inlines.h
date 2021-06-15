@@ -13,7 +13,7 @@
 #ifndef _ODP_PLAT_PACKET_FLAG_INLINES_H_
 #define _ODP_PLAT_PACKET_FLAG_INLINES_H_
 
-#include <odp/api/abi/packet.h>
+#include <odp/api/abi/packet_types.h>
 #include <odp/api/plat/packet_inline_types.h>
 #include <odp/api/hints.h>
 
