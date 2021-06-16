@@ -24,6 +24,8 @@ static odp_ipsec_capability_t capa;
 #define PACKET_USER_PTR	((void *)0x1212fefe)
 #define IPSEC_SA_CTX	((void *)0xfefefafa)
 
+static void parse_ip(odp_packet_t pkt);
+
 static odp_pktio_t pktio_create(odp_pool_t pool)
 {
 	odp_pktio_t pktio;
@@ -398,6 +400,7 @@ odp_packet_t ipsec_packet(const ipsec_test_packet *itp)
 	if (itp->l4_offset != ODP_PACKET_OFFSET_INVALID)
 		CU_ASSERT_EQUAL(0, odp_packet_l4_offset_set(pkt,
 							    itp->l4_offset));
+	parse_ip(pkt);
 
 	odp_packet_user_ptr_set(pkt, PACKET_USER_PTR);
 
@@ -903,6 +906,9 @@ static void parse_ip(odp_packet_t pkt)
 	uint8_t *ver_ihl;
 	odp_proto_t proto = ODP_PROTO_NONE;
 	uint32_t l3 = odp_packet_l3_offset(pkt);
+
+	if (l3 == ODP_PACKET_OFFSET_INVALID)
+		return;
 
 	ver_ihl = odp_packet_l3_ptr(pkt, NULL);
 	if ((*ver_ihl >> 4) == 4)
