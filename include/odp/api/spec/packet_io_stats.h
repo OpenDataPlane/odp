@@ -35,7 +35,7 @@ extern "C" {
  */
 typedef struct odp_pktio_stats_t {
 	/** Number of octets in successfully received packets. In case of
-	 *  Ethernet, packet size includes MAC header and FCS. */
+	 *  Ethernet, packet size includes MAC header. */
 	uint64_t in_octets;
 
 	/** Number of successfully received packets. */
@@ -68,7 +68,7 @@ typedef struct odp_pktio_stats_t {
 	uint64_t ODP_DEPRECATE(in_unknown_protos);
 
 	/** Number of octets in successfully transmitted packets. In case of
-	 *  Ethernet, packet size includes MAC header and FCS. */
+	 *  Ethernet, packet size includes MAC header. */
 	uint64_t out_octets;
 
 	/** Number of successfully transmitted packets. */
