@@ -896,6 +896,28 @@ static int sock_mmap_stats_reset(pktio_entry_t *pktio_entry)
 					pkt_priv(pktio_entry)->sockfd);
 }
 
+static int sock_mmap_extra_stat_info(pktio_entry_t *pktio_entry,
+				     odp_pktio_extra_stat_info_t info[],
+				     int num)
+{
+	return _odp_sock_extra_stat_info(pktio_entry, info, num,
+					 pkt_priv(pktio_entry)->sockfd);
+}
+
+static int sock_mmap_extra_stats(pktio_entry_t *pktio_entry, uint64_t stats[],
+				 int num)
+{
+	return _odp_sock_extra_stats(pktio_entry, stats, num,
+				     pkt_priv(pktio_entry)->sockfd);
+}
+
+static int sock_mmap_extra_stat_counter(pktio_entry_t *pktio_entry, uint32_t id,
+					uint64_t *stat)
+{
+	return _odp_sock_extra_stat_counter(pktio_entry, id, stat,
+					    pkt_priv(pktio_entry)->sockfd);
+}
+
 static int sock_mmap_init_global(void)
 {
 	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMAP")) {
@@ -921,6 +943,9 @@ const pktio_if_ops_t _odp_sock_mmap_pktio_ops = {
 	.stop = NULL,
 	.stats = sock_mmap_stats,
 	.stats_reset = sock_mmap_stats_reset,
+	.extra_stat_info = sock_mmap_extra_stat_info,
+	.extra_stats = sock_mmap_extra_stats,
+	.extra_stat_counter = sock_mmap_extra_stat_counter,
 	.recv = sock_mmap_recv,
 	.recv_tmo = sock_mmap_recv_tmo,
 	.recv_mq_tmo = sock_mmap_recv_mq_tmo,
