@@ -283,6 +283,9 @@ static int queue_debug(void)
 	printf("\n");
 	odp_queue_print(queue);
 
+	printf("\n");
+	odp_schedule_print();
+
 	if (odp_queue_destroy(queue)) {
 		ODPH_ERR("Queue destroy failed: %s\n", name);
 		return -1;
