@@ -344,7 +344,7 @@ static int run_worker_sched_mode_vector(void *arg)
 	thr = odp_thread_id();
 	max_burst = gbl_args->appl.burst_rx;
 
-	if (gbl_args->appl.num_groups) {
+	if (gbl_args->appl.num_groups > 0) {
 		odp_thrmask_t mask;
 
 		odp_thrmask_zero(&mask);
@@ -527,7 +527,7 @@ static int run_worker_sched_mode(void *arg)
 	thr = odp_thread_id();
 	max_burst = gbl_args->appl.burst_rx;
 
-	if (gbl_args->appl.num_groups) {
+	if (gbl_args->appl.num_groups > 0) {
 		odp_thrmask_t mask;
 
 		odp_thrmask_zero(&mask);
@@ -1523,7 +1523,8 @@ static void usage(char *progname)
 	       "  -k, --chksum <arg>      0: Don't use checksum offload (default)\n"
 	       "                          1: Use checksum offload\n"
 	       "  -g, --groups <num>      Number of groups to use: 0 ... num\n"
-	       "                          0: SCHED_GROUP_ALL (default)\n"
+	       "                          -1:  SCHED_GROUP_WORKER\n"
+	       "                          0:   SCHED_GROUP_ALL (default)\n"
 	       "                          num: must not exceed number of interfaces or workers\n"
 	       "  -b, --burst_rx <num>    0:   Use max burst size (default)\n"
 	       "                          num: Max number of packets per receive call\n"
@@ -2071,8 +2072,13 @@ int main(int argc, char *argv[])
 	printf("First CPU:          %i\n", odp_cpumask_first(&cpumask));
 	printf("CPU mask:           %s\n", cpumaskstr);
 
-	if (num_groups)
+	if (num_groups > 0)
 		printf("num groups:         %i\n", num_groups);
+	else if (num_groups == 0)
+		printf("group:              ODP_SCHED_GROUP_ALL\n");
+	else
+		printf("group:              ODP_SCHED_GROUP_WORKER\n");
+
 
 	if (num_groups > if_count || num_groups > num_workers) {
 		ODPH_ERR("Too many groups. Number of groups may not exceed "
@@ -2209,6 +2215,9 @@ int main(int argc, char *argv[])
 	/* Default */
 	if (num_groups == 0) {
 		group[0]   = ODP_SCHED_GROUP_ALL;
+		num_groups = 1;
+	} else if (num_groups == -1) {
+		group[0]   = ODP_SCHED_GROUP_WORKER;
 		num_groups = 1;
 	} else {
 		create_groups(num_groups, group);
