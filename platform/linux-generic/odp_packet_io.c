@@ -2051,6 +2051,127 @@ int odp_pktout_event_queue_stats(odp_pktio_t pktio, odp_queue_t queue,
 	return ret;
 }
 
+int odp_pktio_extra_stat_info(odp_pktio_t pktio,
+			      odp_pktio_extra_stat_info_t info[], int num)
+{
+	pktio_entry_t *entry;
+	int ret = 0;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL) {
+		ODP_ERR("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
+		return -1;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_ERR("already freed pktio\n");
+		return -1;
+	}
+
+	if (entry->s.ops->extra_stat_info)
+		ret = entry->s.ops->extra_stat_info(entry, info, num);
+
+	unlock_entry(entry);
+
+	return ret;
+}
+
+int odp_pktio_extra_stats(odp_pktio_t pktio, uint64_t stats[], int num)
+{
+	pktio_entry_t *entry;
+	int ret = 0;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL) {
+		ODP_ERR("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
+		return -1;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_ERR("already freed pktio\n");
+		return -1;
+	}
+
+	if (entry->s.ops->extra_stats)
+		ret = entry->s.ops->extra_stats(entry, stats, num);
+
+	unlock_entry(entry);
+
+	return ret;
+}
+
+int odp_pktio_extra_stat_counter(odp_pktio_t pktio, uint32_t id, uint64_t *stat)
+{
+	pktio_entry_t *entry;
+	int ret = -1;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL) {
+		ODP_ERR("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
+		return -1;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_ERR("already freed pktio\n");
+		return -1;
+	}
+
+	if (entry->s.ops->extra_stat_counter)
+		ret = entry->s.ops->extra_stat_counter(entry, id, stat);
+
+	unlock_entry(entry);
+
+	return ret;
+}
+
+void odp_pktio_extra_stats_print(odp_pktio_t pktio)
+{
+	int num_info, num_stats, i;
+
+	num_info = odp_pktio_extra_stat_info(pktio, NULL, 0);
+	if (num_info <= 0)
+		return;
+
+	num_stats = odp_pktio_extra_stats(pktio, NULL, 0);
+	if (num_stats <= 0)
+		return;
+
+	if (num_info != num_stats) {
+		ODP_ERR("extra statistics info counts not matching\n");
+		return;
+	}
+
+	odp_pktio_extra_stat_info_t stats_info[num_stats];
+	uint64_t extra_stats[num_stats];
+
+	num_info = odp_pktio_extra_stat_info(pktio, stats_info, num_stats);
+	if (num_info <= 0)
+		return;
+
+	num_stats = odp_pktio_extra_stats(pktio, extra_stats, num_stats);
+	if (num_stats <= 0)
+		return;
+
+	if (num_info != num_stats) {
+		ODP_ERR("extra statistics info counts not matching\n");
+		return;
+	}
+
+	printf("Pktio extra statistics\n----------------------\n");
+	for (i = 0; i < num_stats; i++)
+		ODP_PRINT("  %s=%" PRIu64 "\n", stats_info[i].name, extra_stats[i]);
+	ODP_PRINT("\n");
+}
+
 int odp_pktin_queue_config(odp_pktio_t pktio,
 			   const odp_pktin_queue_param_t *param)
 {
