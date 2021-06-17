@@ -1,4 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -16,6 +17,13 @@ extern "C" {
 
 int _odp_sysfs_stats(pktio_entry_t *pktio_entry,
 		     odp_pktio_stats_t *stats);
+
+int _odp_sysfs_extra_stat_info(pktio_entry_t *pktio_entry,
+			       odp_pktio_extra_stat_info_t info[], int num);
+int _odp_sysfs_extra_stats(pktio_entry_t *pktio_entry, uint64_t stats[],
+			   int num);
+int _odp_sysfs_extra_stat_counter(pktio_entry_t *pktio_entry, uint32_t id,
+				  uint64_t *stat);
 
 #ifdef __cplusplus
 }
