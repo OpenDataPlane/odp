@@ -2512,6 +2512,60 @@ static void pktio_test_event_queue_statistics_counters(void)
 	}
 }
 
+static void pktio_test_extra_stats(void)
+{
+	odp_pktio_t pktio;
+	int num_info, num_stats, i, ret;
+
+	pktio = create_pktio(0, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID)
+	CU_ASSERT_FATAL(odp_pktio_start(pktio) == 0);
+
+	num_info = odp_pktio_extra_stat_info(pktio, NULL, 0);
+	CU_ASSERT_FATAL(num_info >= 0);
+
+	num_stats = odp_pktio_extra_stats(pktio, NULL, 0);
+	CU_ASSERT_FATAL(num_stats >= 0);
+
+	CU_ASSERT_FATAL(num_info == num_stats);
+
+	/* No extra statistics supported */
+	if (num_stats == 0) {
+		CU_ASSERT(odp_pktio_stop(pktio) == 0);
+		CU_ASSERT(odp_pktio_close(pktio) == 0);
+		return;
+	}
+
+	odp_pktio_extra_stat_info_t stats_info[num_stats];
+	uint64_t extra_stats[num_stats];
+
+	ret = odp_pktio_extra_stat_info(pktio, stats_info, num_stats);
+	CU_ASSERT(ret == num_stats);
+	num_info = ret;
+
+	ret = odp_pktio_extra_stats(pktio, extra_stats, num_stats);
+	CU_ASSERT(ret == num_stats);
+	CU_ASSERT_FATAL(ret <= num_stats);
+	num_stats = ret;
+
+	CU_ASSERT_FATAL(num_info == num_stats);
+
+	printf("\nPktio extra statistics\n----------------------\n");
+	for (i = 0; i < num_stats; i++)
+		printf("  %s=%" PRIu64 "\n", stats_info[i].name, extra_stats[i]);
+
+	for (i = 0; i < num_stats; i++) {
+		uint64_t stat = 0;
+
+		CU_ASSERT(odp_pktio_extra_stat_counter(pktio, i, &stat) == 0);
+	}
+
+	odp_pktio_extra_stats_print(pktio);
+
+	CU_ASSERT(odp_pktio_stop(pktio) == 0);
+	CU_ASSERT(odp_pktio_close(pktio) == 0);
+}
+
 static int pktio_check_start_stop(void)
 {
 	if (getenv("ODP_PKTIO_TEST_DISABLE_START_STOP"))
@@ -4550,6 +4604,7 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 				  pktio_check_queue_statistics_counters),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_event_queue_statistics_counters,
 				  pktio_check_event_queue_statistics_counters),
+	ODP_TEST_INFO(pktio_test_extra_stats),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktin_ts,
 				  pktio_check_pktin_ts),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktout_ts,
