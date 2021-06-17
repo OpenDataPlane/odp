@@ -60,7 +60,7 @@ int _odp_sysfs_stats(pktio_entry_t *pktio_entry,
 	sprintf(fname, "/sys/class/net/%s/statistics/multicast", dev);
 	ret -= sysfs_get_val(fname, &stats->in_mcast_pkts);
 
-	sprintf(fname, "/sys/class/net/%s/statistics/rx_droppped", dev);
+	sprintf(fname, "/sys/class/net/%s/statistics/rx_dropped", dev);
 	ret -= sysfs_get_val(fname, &stats->in_discards);
 
 	sprintf(fname, "/sys/class/net/%s/statistics/rx_errors", dev);
