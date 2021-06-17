@@ -1250,6 +1250,27 @@ static int netmap_stats_reset(pktio_entry_t *pktio_entry)
 					pkt_priv(pktio_entry)->sockfd);
 }
 
+static int netmap_extra_stat_info(pktio_entry_t *pktio_entry,
+				  odp_pktio_extra_stat_info_t info[], int num)
+{
+	return _odp_sock_extra_stat_info(pktio_entry, info, num,
+					 pkt_priv(pktio_entry)->sockfd);
+}
+
+static int netmap_extra_stats(pktio_entry_t *pktio_entry, uint64_t stats[],
+			      int num)
+{
+	return _odp_sock_extra_stats(pktio_entry, stats, num,
+				     pkt_priv(pktio_entry)->sockfd);
+}
+
+static int netmap_extra_stat_counter(pktio_entry_t *pktio_entry, uint32_t id,
+				     uint64_t *stat)
+{
+	return _odp_sock_extra_stat_counter(pktio_entry, id, stat,
+					    pkt_priv(pktio_entry)->sockfd);
+}
+
 static void netmap_print(pktio_entry_t *pktio_entry)
 {
 	odp_pktin_hash_proto_t hash_proto;
@@ -1288,6 +1309,9 @@ const pktio_if_ops_t _odp_netmap_pktio_ops = {
 	.link_info = netmap_link_info,
 	.stats = netmap_stats,
 	.stats_reset = netmap_stats_reset,
+	.extra_stat_info = netmap_extra_stat_info,
+	.extra_stats = netmap_extra_stats,
+	.extra_stat_counter = netmap_extra_stat_counter,
 	.maxlen_get = netmap_mtu_get,
 	.maxlen_set = netmap_mtu_set,
 	.promisc_mode_set = netmap_promisc_mode_set,
