@@ -315,6 +315,10 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 		return ODP_PKTIO_INVALID;
 	}
 
+	snprintf(pktio_entry->s.name,
+		 sizeof(pktio_entry->s.name), "%s", if_name);
+	snprintf(pktio_entry->s.full_name,
+		 sizeof(pktio_entry->s.full_name), "%s", name);
 	pktio_entry->s.pool = pool;
 	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
 	pktio_entry->s.handle = hdl;
@@ -347,10 +351,6 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 		return ODP_PKTIO_INVALID;
 	}
 
-	snprintf(pktio_entry->s.name,
-		 sizeof(pktio_entry->s.name), "%s", if_name);
-	snprintf(pktio_entry->s.full_name,
-		 sizeof(pktio_entry->s.full_name), "%s", name);
 	pktio_entry->s.state = PKTIO_STATE_OPENED;
 	pktio_entry->s.ops = _odp_pktio_if_ops[pktio_if];
 	unlock_entry(pktio_entry);
