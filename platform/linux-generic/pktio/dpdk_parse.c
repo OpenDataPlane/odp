@@ -8,6 +8,8 @@
 
 #ifdef _ODP_PKTIO_DPDK
 
+#include <odp_posix_extensions.h>
+
 #include <odp_packet_io_internal.h>
 #include <odp_packet_dpdk.h>
 #include <odp/api/byteorder.h>
