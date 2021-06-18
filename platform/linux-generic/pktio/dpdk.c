@@ -1676,6 +1676,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	uint32_t mtu;
 	int i;
 	pool_t *pool_entry;
+	uint16_t port_id;
 
 	if (disable_pktio)
 		return -1;
@@ -1684,8 +1685,15 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		return -1;
 	pool_entry = pool_entry_from_hdl(pool);
 
-	if (!dpdk_netdev_is_valid(netdev)) {
-		ODP_ERR("Invalid dpdk netdev: %s\n", netdev);
+	/* Init pktio entry */
+	memset(pkt_dpdk, 0, sizeof(*pkt_dpdk));
+
+	if (!rte_eth_dev_get_port_by_name(netdev, &port_id))
+		pkt_dpdk->port_id = port_id;
+	else if (dpdk_netdev_is_valid(netdev))
+		pkt_dpdk->port_id = atoi(netdev);
+	else {
+		ODP_ERR("Invalid DPDK interface name: %s\n", netdev);
 		return -1;
 	}
 
@@ -1696,11 +1704,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		odp_global_rw->dpdk_initialized = 1;
 	}
 
-	/* Init pktio entry */
-	memset(pkt_dpdk, 0, sizeof(*pkt_dpdk));
-
 	pkt_dpdk->pool = pool;
-	pkt_dpdk->port_id = atoi(netdev);
 
 	/* rte_eth_dev_count() was removed in v18.05 */
 #if RTE_VERSION < RTE_VERSION_NUM(18, 5, 0, 0)
