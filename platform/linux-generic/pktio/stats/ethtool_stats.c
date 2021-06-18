@@ -125,13 +125,15 @@ static int ethtool_stats(int fd, struct ifreq *ifr, odp_pktio_stats_t *stats)
 		char *cnt = (char *)&strings->data[i * ETH_GSTRING_LEN];
 		uint64_t val = estats->data[i];
 
-		if (!strcmp(cnt, "rx_octets")) {
+		if (!strcmp(cnt, "rx_octets") ||
+		    !strcmp(cnt, "rx_bytes")) {
 			stats->in_octets = val;
 			cnts++;
 		} else if (!strcmp(cnt, "rx_packets")) {
 			stats->in_packets = val;
 			cnts++;
-		} else if (!strcmp(cnt, "rx_ucast_packets")) {
+		} else if (!strcmp(cnt, "rx_ucast_packets") ||
+			   !strcmp(cnt, "rx_unicast")) {
 			stats->in_ucast_pkts = val;
 			cnts++;
 		} else if (!strcmp(cnt, "rx_broadcast") ||
@@ -142,19 +144,22 @@ static int ethtool_stats(int fd, struct ifreq *ifr, odp_pktio_stats_t *stats)
 			   !strcmp(cnt, "rx_mcast_packets")) {
 			stats->in_mcast_pkts = val;
 			cnts++;
-		} else if (!strcmp(cnt, "rx_discards")) {
+		} else if (!strcmp(cnt, "rx_discards") ||
+			   !strcmp(cnt, "rx_dropped")) {
 			stats->in_discards = val;
 			cnts++;
 		} else if (!strcmp(cnt, "rx_errors")) {
 			stats->in_errors = val;
 			cnts++;
-		} else if (!strcmp(cnt, "tx_octets")) {
+		} else if (!strcmp(cnt, "tx_octets") ||
+			   !strcmp(cnt, "tx_bytes")) {
 			stats->out_octets = val;
 			cnts++;
 		} else if (!strcmp(cnt, "tx_packets")) {
 			stats->out_packets = val;
 			cnts++;
-		} else if (!strcmp(cnt, "tx_ucast_packets")) {
+		} else if (!strcmp(cnt, "tx_ucast_packets") ||
+			   !strcmp(cnt, "tx_unicast")) {
 			stats->out_ucast_pkts = val;
 			cnts++;
 		} else if (!strcmp(cnt, "tx_broadcast") ||
@@ -165,7 +170,8 @@ static int ethtool_stats(int fd, struct ifreq *ifr, odp_pktio_stats_t *stats)
 			   !strcmp(cnt, "tx_mcast_packets")) {
 			stats->out_mcast_pkts = val;
 			cnts++;
-		} else if (!strcmp(cnt, "tx_discards")) {
+		} else if (!strcmp(cnt, "tx_discards") ||
+			   !strcmp(cnt, "tx_dropped")) {
 			stats->out_discards = val;
 			cnts++;
 		} else if (!strcmp(cnt, "tx_errors")) {
