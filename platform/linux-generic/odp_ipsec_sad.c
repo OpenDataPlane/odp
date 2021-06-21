@@ -631,6 +631,10 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	crypto_param.auth_digest_len =
 		_odp_ipsec_auth_digest_len(crypto_param.auth_alg);
 
+	if (param->crypto.icv_len != 0 &&
+	    param->crypto.icv_len != crypto_param.auth_digest_len)
+		goto error;
+
 	if ((uint32_t)-1 == crypto_param.cipher_iv.length ||
 	    (uint32_t)-1 == crypto_param.auth_digest_len)
 		goto error;
