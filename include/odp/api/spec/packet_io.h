@@ -585,7 +585,10 @@ typedef struct odp_pktio_config_t {
 	 * In this mode the packets sent out through the interface is
 	 * looped back to input of the same interface. Supporting loopback mode
 	 * is an optional feature per interface and should be queried in the
-	 * interface capability before enabling the same. */
+	 * interface capability before enabling the same.
+	 *
+	 * Default value is false.
+	 */
 	odp_bool_t enable_loop;
 
 	/** Inbound IPSEC inlined with packet input
