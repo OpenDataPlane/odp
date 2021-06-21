@@ -430,6 +430,8 @@ uint32_t _odp_ipsec_auth_digest_len(odp_auth_alg_t auth)
 		return 16;
 	case ODP_AUTH_ALG_AES_CCM:
 		return 16;
+	case ODP_AUTH_ALG_AES_CMAC:
+		return 12;
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
 		return 16;
 	default:
