@@ -98,6 +98,10 @@ int odph_ipsec_alg_check(odp_ipsec_capability_t capa,
 		if (!capa.auths.bit.aes_ccm)
 			return -1;
 		break;
+	case ODP_AUTH_ALG_AES_CMAC:
+		if (!capa.auths.bit.aes_cmac)
+			return -1;
+		break;
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
 		if (!capa.auths.bit.chacha20_poly1305)
 			return -1;
