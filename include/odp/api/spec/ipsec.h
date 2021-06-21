@@ -1,4 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -392,6 +393,8 @@ typedef struct odp_ipsec_auth_capability_t {
 	/** Key length in bytes */
 	uint32_t key_len;
 
+	/** ICV length in bytes */
+	uint32_t icv_len;
 } odp_ipsec_auth_capability_t;
 
 /**
@@ -542,6 +545,37 @@ typedef struct odp_ipsec_crypto_param_t {
 	 *  - ODP_AUTH_ALG_AES_GMAC: 4 bytes of salt
 	 */
 	odp_crypto_key_t auth_key_extra;
+
+	/**
+	 * Length of integrity check value (ICV) in bytes.
+	 *
+	 * Some algorithms support multiple ICV lengths when used with IPsec.
+	 * This field can be used to select a non-default ICV length.
+	 *
+	 * Zero value indicates that the default ICV length shall be used.
+	 * The default length depends on the selected algorithm as follows:
+	 *
+	 * Algorithm                       Default length     Other lengths
+	 * ----------------------------------------------------------------
+	 * ODP_AUTH_ALG_NULL               0
+	 * ODP_AUTH_ALG_MD5_HMAC           12
+	 * ODP_AUTH_ALG_SHA1_HMAC          12
+	 * ODP_AUTH_ALG_SHA256_HMAC        16
+	 * ODP_AUTH_ALG_SHA384_HMAC        24
+	 * ODP_AUTH_ALG_SHA512_HMAC        32
+	 * ODP_AUTH_ALG_AES_GCM            16                 8, 12
+	 * ODP_AUTH_ALG_AES_GMAC           16
+	 * ODP_AUTH_ALG_AES_CCM            16                 8, 12
+	 * ODP_AUTH_ALG_AES_CMAC           12
+	 * ODP_AUTH_ALG_AES_XCBC_MAC       12
+	 * ODP_AUTH_ALG_CHACHA20_POLY1305  16
+	 *
+	 * The requested ICV length must be supported for the selected
+	 * algorithm as indicated by odp_ipsec_auth_capability().
+	 *
+	 * The default value is 0.
+	 */
+	uint32_t icv_len;
 
 } odp_ipsec_crypto_param_t;
 
@@ -1065,11 +1099,9 @@ int odp_ipsec_cipher_capability(odp_cipher_alg_t cipher,
  * Query supported IPSEC authentication algorithm capabilities
  *
  * Outputs all supported configuration options for the algorithm. Output is
- * sorted (from the smallest to the largest) first by digest length, then by key
+ * sorted (from the smallest to the largest) first by ICV length, then by key
  * length. Use this information to select key lengths, etc authentication
- * algorithm options for SA creation (odp_ipsec_crypto_param_t). Application
- * must ignore values for AAD length capabilities as those are not relevant for
- * IPSEC API (fixed in IPSEC RFCs).
+ * algorithm options for SA creation (odp_ipsec_crypto_param_t).
  *
  * @param      auth         Authentication algorithm
  * @param[out] capa         Array of capability structures for output
