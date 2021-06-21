@@ -1570,6 +1570,12 @@ static void ipsec_test_default_values(void)
 	CU_ASSERT(config.inbound.retain_outer == ODP_PROTO_LAYER_NONE);
 	CU_ASSERT(config.inbound.parse_level == ODP_PROTO_LAYER_NONE);
 	CU_ASSERT(config.inbound.chksums.all_chksum == 0);
+	CU_ASSERT(!config.inbound.reassembly.en_ipv4);
+	CU_ASSERT(!config.inbound.reassembly.en_ipv6);
+	CU_ASSERT(config.inbound.reassembly.max_wait_time == 0);
+	CU_ASSERT(config.inbound.reassembly.max_num_frags == 2);
+	CU_ASSERT(!config.inbound.reass_async);
+	CU_ASSERT(!config.inbound.reass_inline);
 	CU_ASSERT(config.outbound.all_chksum == 0);
 	CU_ASSERT(!config.stats_en);
 
@@ -1592,6 +1598,7 @@ static void ipsec_test_default_values(void)
 	CU_ASSERT(sa_param.inbound.lookup_mode == ODP_IPSEC_LOOKUP_DISABLED);
 	CU_ASSERT(sa_param.inbound.antireplay_ws == 0);
 	CU_ASSERT(sa_param.inbound.pipeline == ODP_IPSEC_PIPELINE_NONE);
+	CU_ASSERT(!sa_param.inbound.reassembly_en);
 	CU_ASSERT(sa_param.outbound.tunnel.type == ODP_IPSEC_TUNNEL_IPV4);
 	CU_ASSERT(sa_param.outbound.tunnel.ipv4.dscp == 0);
 	CU_ASSERT(sa_param.outbound.tunnel.ipv4.df == 0);
