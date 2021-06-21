@@ -1584,6 +1584,7 @@ static void ipsec_test_default_values(void)
 	CU_ASSERT(sa_param.proto == ODP_IPSEC_ESP);
 	CU_ASSERT(sa_param.crypto.cipher_alg == ODP_CIPHER_ALG_NULL);
 	CU_ASSERT(sa_param.crypto.auth_alg == ODP_AUTH_ALG_NULL);
+	CU_ASSERT(sa_param.crypto.icv_len == 0);
 	CU_ASSERT(sa_param.opt.esn == 0);
 	CU_ASSERT(sa_param.opt.udp_encap == 0);
 	CU_ASSERT(sa_param.opt.copy_dscp == 0);
