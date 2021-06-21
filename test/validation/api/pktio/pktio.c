@@ -1658,12 +1658,24 @@ static void pktio_test_pktio_config(void)
 	pktio = create_pktio(0, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
+	memset(&config, 0xff, sizeof(config));
 	odp_pktio_config_init(&config);
+
+	/* Check default values */
+	CU_ASSERT(config.pktin.all_bits == 0);
+	CU_ASSERT(config.pktout.all_bits == 0);
+	CU_ASSERT(config.parser.layer == ODP_PROTO_LAYER_ALL);
+	CU_ASSERT(!config.enable_loop);
+	CU_ASSERT(!config.inbound_ipsec);
+	CU_ASSERT(!config.outbound_ipsec);
+	CU_ASSERT(!config.enable_lso);
+	CU_ASSERT(!config.reassembly.en_ipv4);
+	CU_ASSERT(!config.reassembly.en_ipv6);
+	CU_ASSERT(config.reassembly.max_wait_time == 0);
+	CU_ASSERT(config.reassembly.max_num_frags == 2);
 
 	/* Indicate packet refs might be used */
 	config.pktout.bit.no_packet_refs = 0;
-
-	CU_ASSERT(config.parser.layer == ODP_PROTO_LAYER_ALL);
 
 	CU_ASSERT(odp_pktio_config(pktio, NULL) == 0);
 
