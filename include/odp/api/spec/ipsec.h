@@ -203,11 +203,13 @@ typedef struct odp_ipsec_inbound_config_t {
 	odp_reass_config_t reassembly;
 
 	/** Attempt reassembly after inbound IPsec processing in
-	 *  odp_ipsec_in_enq().
+	 *  odp_ipsec_in_enq(). Default value is false.
 	 */
 	odp_bool_t reass_async;
 
-	/** Attempt reassembly after inline inbound IPsec processing. */
+	/** Attempt reassembly after inline inbound IPsec processing.
+	 *  Default value is false.
+	 **/
 	odp_bool_t reass_inline;
 
 } odp_ipsec_inbound_config_t;
@@ -879,6 +881,8 @@ typedef struct odp_ipsec_sa_param_t {
 			 *  Reassembly may be enabled for an SA only if
 			 *  reassembly was enabled in the global IPsec
 			 *  configuration.
+			 *
+			 *  Default value is false.
 			 *
 			 *  @see odp_ipsec_config()
 			 *
