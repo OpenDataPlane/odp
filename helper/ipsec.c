@@ -1,5 +1,6 @@
 /* Copyright (c) 2017-2018, Linaro Limited
  * Copyright (c) 2020 Marvell
+ * Copyright (c) 2021 Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	 BSD-3-Clause
@@ -8,6 +9,55 @@
 #include <odp/helper/ipsec.h>
 #include <odp/helper/odph_debug.h>
 
+uint32_t odph_ipsec_auth_icv_len_default(odp_auth_alg_t auth_alg)
+{
+	uint32_t icv_len;
+
+	switch (auth_alg) {
+	case ODP_AUTH_ALG_NULL:
+		icv_len = 0;
+		break;
+	case ODP_AUTH_ALG_MD5_HMAC:
+		icv_len = 12;
+		break;
+	case ODP_AUTH_ALG_SHA1_HMAC:
+		icv_len = 12;
+		break;
+	case ODP_AUTH_ALG_SHA256_HMAC:
+		icv_len = 16;
+		break;
+	case ODP_AUTH_ALG_SHA384_HMAC:
+		icv_len = 24;
+		break;
+	case ODP_AUTH_ALG_SHA512_HMAC:
+		icv_len = 32;
+		break;
+	case ODP_AUTH_ALG_AES_GCM:
+		icv_len = 16;
+		break;
+	case ODP_AUTH_ALG_AES_GMAC:
+		icv_len = 16;
+		break;
+	case ODP_AUTH_ALG_AES_CCM:
+		icv_len = 16;
+		break;
+	case ODP_AUTH_ALG_AES_CMAC:
+		icv_len = 12;
+		break;
+	case ODP_AUTH_ALG_AES_XCBC_MAC:
+		icv_len = 12;
+		break;
+	case ODP_AUTH_ALG_CHACHA20_POLY1305:
+		icv_len = 16;
+		break;
+	default:
+		ODPH_DBG("Unsupported authentication algorithm\n");
+		icv_len = 0;
+		break;
+	}
+	return icv_len;
+}
+
 int odph_ipsec_alg_check(odp_ipsec_capability_t capa,
 			 odp_cipher_alg_t cipher_alg,
 			 uint32_t cipher_key_len,
@@ -15,6 +65,7 @@ int odph_ipsec_alg_check(odp_ipsec_capability_t capa,
 			 uint32_t auth_key_len)
 {
 	int i, num, max_capa;
+	uint32_t default_icv_len;
 	odp_bool_t found;
 
 	/* Check whether requested cipher algorithm is supported */
@@ -150,16 +201,18 @@ int odph_ipsec_alg_check(odp_ipsec_capability_t capa,
 		return -1;
 	}
 
+	default_icv_len = odph_ipsec_auth_icv_len_default(auth_alg);
 	found = false;
 	for (i = 0; i < num; i++) {
-		if (auth_capa[i].key_len == auth_key_len) {
+		if (auth_capa[i].key_len == auth_key_len &&
+		    auth_capa[i].icv_len == default_icv_len) {
 			found = 1;
 			break;
 		}
 	}
 
 	if (!found) {
-		ODPH_DBG("Unsupported auth key length\n");
+		ODPH_DBG("Unsupported auth key length & ICV length pair\n");
 		return -1;
 	}
 
