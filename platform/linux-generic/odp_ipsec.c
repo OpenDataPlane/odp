@@ -244,8 +244,10 @@ int odp_ipsec_auth_capability(odp_auth_alg_t auth,
 				continue;
 		}
 
-		if (out < num)
+		if (out < num) {
 			capa[out].key_len = crypto_capa[i].key_len;
+			capa[out].icv_len = crypto_capa[i].digest_len;
+		}
 		out++;
 	}
 
