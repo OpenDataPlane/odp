@@ -261,6 +261,7 @@ void odp_ipsec_config_init(odp_ipsec_config_t *config)
 	config->inbound.default_queue = ODP_QUEUE_INVALID;
 	config->inbound.lookup.min_spi = 0;
 	config->inbound.lookup.max_spi = UINT32_MAX;
+	config->inbound.reassembly.max_num_frags = 2;
 	config->stats_en = false;
 }
 

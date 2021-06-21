@@ -1534,6 +1534,7 @@ void odp_pktio_config_init(odp_pktio_config_t *config)
 	memset(config, 0, sizeof(odp_pktio_config_t));
 
 	config->parser.layer = ODP_PROTO_LAYER_ALL;
+	config->reassembly.max_num_frags = 2;
 }
 
 int odp_pktio_info(odp_pktio_t hdl, odp_pktio_info_t *info)
