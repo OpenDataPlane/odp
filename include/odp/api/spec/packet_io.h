@@ -21,7 +21,7 @@ extern "C" {
 
 #include <odp/api/deprecated.h>
 #include <odp/api/packet_io_stats.h>
-#include <odp/api/queue.h>
+#include <odp/api/queue_types.h>
 #include <odp/api/reassembly.h>
 #include <odp/api/time.h>
 #include <odp/api/packet.h>

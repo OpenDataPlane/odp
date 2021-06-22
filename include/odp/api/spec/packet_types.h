@@ -19,7 +19,7 @@
 extern "C" {
 #endif
 
-#include <odp/api/queue.h>
+#include <odp/api/queue_types.h>
 
 /** @addtogroup odp_packet
  *  @{

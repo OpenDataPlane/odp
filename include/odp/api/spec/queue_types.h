@@ -26,6 +26,21 @@ extern "C" {
  */
 
 /**
+ * @typedef odp_queue_t
+ * ODP queue
+ */
+
+/**
+ * @def ODP_QUEUE_INVALID
+ * Invalid queue
+ */
+
+/**
+ * @def ODP_QUEUE_NAME_LEN
+ * Maximum queue name length in chars including null char
+ */
+
+/**
  * Queue type
  */
 typedef enum odp_queue_type_t {

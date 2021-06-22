@@ -19,7 +19,7 @@ extern "C" {
 
 #include <odp/api/abi/comp.h>
 #include <odp/api/abi/event.h>
-#include <odp/api/abi/queue.h>
+#include <odp/api/abi/queue_types.h>
 
 #include <odp/api/spec/comp.h>
 
