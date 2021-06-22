@@ -46,13 +46,13 @@ extern "C" {
 /**
  * The smallest SCHED weight is 1 (i.e. 0 is not a legal WFQ/WRR value).
  */
-#define ODP_TM_MIN_SCHED_WEIGHT  1
+#define ODP_TM_MIN_SCHED_WEIGHT  1U
 
 /** The ODP_TM_MAX_SCHED_WEIGHT constant is the largest weight any TM system
  * can support (at least from a configuration standpoint).  A given TM system
  * could have a smaller value.
  */
-#define ODP_TM_MAX_SCHED_WEIGHT  255
+#define ODP_TM_MAX_SCHED_WEIGHT  255U
 
 /** The ODP_TM_MAX_TM_QUEUES constant is the largest number of tm_queues
  * that can be handled by any one TM system.
