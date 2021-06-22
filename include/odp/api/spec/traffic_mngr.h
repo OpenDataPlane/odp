@@ -213,12 +213,12 @@ typedef struct {
 	/** min_weight only has significance when the weights_supported field
 	 * below is true, in which case it specifies the smallest value
 	 * of the weights allowed at this level. */
-	uint8_t min_weight;
+	uint32_t min_weight;
 
 	/** max_weight only has significance when the weights_supported field
 	 * below is true, in which case it specifies the largest value
 	 * of the weights allowed at this level. */
-	uint8_t max_weight;
+	uint32_t max_weight;
 
 	/** tm_node_shaper_supported indicates that the tm_nodes at this level
 	 * all support TM shaping, */
@@ -411,12 +411,12 @@ typedef struct {
 	/** min_weight only has significance when the weights_supported field
 	 * below is true, in which case it specifies the smallest value
 	 * of the weights that will be used at this level. */
-	uint8_t min_weight;
+	uint32_t min_weight;
 
 	/** max_weight only has significance when the weights_supported field
 	 * below is true, in which case it specifies the largest value
 	 * of the weights that will be used at this level. */
-	uint8_t max_weight;
+	uint32_t max_weight;
 
 	/** tm_node_shaper_needed indicates that the tm_nodes at this level
 	 * are expected to do TM shaping, */
@@ -1004,11 +1004,11 @@ typedef struct {
 	/** In the case that sched_modes for a given strict priority level
 	 * indicates the use of weighted scheduling, this field supplies the
 	 * weighting factors.  The weights - when defined - are used such that
-	 * the (adjusted) frame lengths are divided by these 8-bit weights
+	 * the (adjusted) frame lengths are divided by these weights
 	 * (i.e. they are divisors and not multipliers).  Consequently a
 	 * weight of 0 (when sched_mode is ODP_TM_BYTE_BASED_WEIGHTS) is
 	 * illegal. */
-	uint8_t sched_weights[ODP_TM_MAX_PRIORITIES];
+	uint32_t sched_weights[ODP_TM_MAX_PRIORITIES];
 } odp_tm_sched_params_t;
 
 /** odp_tm_sched_params_init() must be called to initialize any
