@@ -20,7 +20,7 @@ extern "C" {
 #include <odp/api/std_types.h>
 #include <odp/api/abi/event.h>
 #include <odp/api/abi/pool.h>
-#include <odp/api/abi/queue.h>
+#include <odp/api/abi/queue_types.h>
 #include <odp/api/abi/timer.h>
 
 #include <odp/api/spec/timer.h>

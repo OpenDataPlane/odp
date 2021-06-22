@@ -11,22 +11,7 @@
 extern "C" {
 #endif
 
-/** @internal Dummy type for strong typing */
-typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_queue_t;
-
-/** @ingroup odp_queue
- *  @{
- */
-
-typedef _odp_abi_queue_t *odp_queue_t;
-
-#define ODP_QUEUE_INVALID   ((odp_queue_t)0)
-
-#define ODP_QUEUE_NAME_LEN  32
-
-/**
- * @}
- */
+/* Empty header required due to the queue inline functions */
 
 #ifdef __cplusplus
 }

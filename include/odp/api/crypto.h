@@ -22,7 +22,7 @@ extern "C" {
 #include <odp/api/abi/crypto.h>
 #include <odp/api/abi/buffer.h>
 #include <odp/api/abi/pool.h>
-#include <odp/api/queue.h>
+#include <odp/api/abi/queue_types.h>
 
 /** @ingroup odp_crypto
  *  @{

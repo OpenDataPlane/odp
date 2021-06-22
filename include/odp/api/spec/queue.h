@@ -19,26 +19,11 @@ extern "C" {
 #endif
 
 #include <odp/api/event.h>
-#include <odp/api/spec/queue_types.h>
+#include <odp/api/queue_types.h>
 
 /** @defgroup odp_queue ODP QUEUE
  *  Queues for event passing and scheduling.
  *  @{
- */
-
-/**
- * @typedef odp_queue_t
- * ODP queue
- */
-
-/**
- * @def ODP_QUEUE_INVALID
- * Invalid queue
- */
-
-/**
- * @def ODP_QUEUE_NAME_LEN
- * Maximum queue name length in chars including null char
  */
 
 /**
