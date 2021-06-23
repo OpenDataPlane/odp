@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -42,15 +42,7 @@ static cos_tbl_t *cos_tbl;
 static pmr_tbl_t	*pmr_tbl;
 static _cls_queue_grp_tbl_t *queue_grp_tbl;
 
-typedef struct cls_global_t {
-	cos_tbl_t cos_tbl;
-	pmr_tbl_t pmr_tbl;
-	_cls_queue_grp_tbl_t queue_grp_tbl;
-	odp_shm_t shm;
-
-} cls_global_t;
-
-static cls_global_t *cls_global;
+cls_global_t *_odp_cls_global;
 
 static const rss_key default_rss = {
 	.u8 = {
@@ -61,11 +53,6 @@ static const rss_key default_rss = {
 	0x6a, 0x42, 0xb7, 0x3b, 0xbe, 0xac, 0x01, 0xfa,
 	}
 };
-
-cos_t *_odp_cos_entry_from_idx(uint32_t ndx)
-{
-	return &cos_tbl->cos_entry[ndx];
-}
 
 static inline uint32_t _odp_cos_to_ndx(odp_cos_t cos)
 {
@@ -109,13 +96,13 @@ int _odp_classification_init_global(void)
 	if (shm == ODP_SHM_INVALID)
 		return -1;
 
-	cls_global = odp_shm_addr(shm);
-	memset(cls_global, 0, sizeof(cls_global_t));
+	_odp_cls_global = odp_shm_addr(shm);
+	memset(_odp_cls_global, 0, sizeof(cls_global_t));
 
-	cls_global->shm = shm;
-	cos_tbl       = &cls_global->cos_tbl;
-	pmr_tbl       = &cls_global->pmr_tbl;
-	queue_grp_tbl = &cls_global->queue_grp_tbl;
+	_odp_cls_global->shm = shm;
+	cos_tbl       = &_odp_cls_global->cos_tbl;
+	pmr_tbl       = &_odp_cls_global->pmr_tbl;
+	queue_grp_tbl = &_odp_cls_global->queue_grp_tbl;
 
 	for (i = 0; i < CLS_COS_MAX_ENTRY; i++) {
 		/* init locks */
@@ -136,7 +123,7 @@ int _odp_classification_init_global(void)
 
 int _odp_classification_term_global(void)
 {
-	if (cls_global && odp_shm_free(cls_global->shm)) {
+	if (_odp_cls_global && odp_shm_free(_odp_cls_global->shm)) {
 		ODP_ERR("shm free failed\n");
 		return -1;
 	}
