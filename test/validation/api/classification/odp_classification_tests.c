@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2020, Nokia
+ * Copyright (c) 2020-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -451,6 +451,80 @@ void test_pktio_default_cos(odp_bool_t enable_pktv)
 	CU_ASSERT(pool == pool_list[CLS_DEFAULT]);
 
 	odp_packet_free(pkt);
+}
+
+static int classification_check_queue_stats(void)
+{
+	odp_cls_capability_t capa;
+
+	if (odp_cls_capability(&capa))
+		return ODP_TEST_INACTIVE;
+
+	if (capa.stats.queue.all_counters)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
+}
+
+static void classification_test_queue_stats(odp_bool_t enable_pktv)
+{
+	odp_cls_capability_t capa;
+	odp_cls_queue_stats_t stats_start;
+	odp_cls_queue_stats_t stats_stop;
+	odp_cos_t cos;
+	odp_queue_t queue;
+
+	/* Default CoS used for test packets */
+	if (!tc.default_cos || !TEST_DEFAULT) {
+		printf("Default CoS not supported, skipping test\n");
+		return;
+	}
+
+	cos = cos_list[CLS_DEFAULT];
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+	queue = odp_cos_queue(cos);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	CU_ASSERT_FATAL(odp_cls_capability(&capa) == 0);
+
+	CU_ASSERT(odp_cls_queue_stats(cos, queue, &stats_start) == 0);
+
+	test_pktio_default_cos(enable_pktv);
+
+	CU_ASSERT(odp_cls_queue_stats(cos, queue, &stats_stop) == 0);
+
+	if (capa.stats.queue.counter.packets)
+		CU_ASSERT(stats_stop.packets > stats_start.packets);
+	if (capa.stats.queue.counter.octets)
+		CU_ASSERT(stats_stop.octets > stats_start.octets);
+	CU_ASSERT((stats_stop.discards - stats_start.discards) == 0);
+	CU_ASSERT((stats_stop.errors - stats_start.errors) == 0);
+
+	printf("\nQueue statistics\n----------------\n");
+	printf("  discards: %" PRIu64 "\n", stats_stop.discards);
+	printf("  errors:   %" PRIu64 "\n", stats_stop.errors);
+	printf("  octets:   %" PRIu64 "\n", stats_stop.octets);
+	printf("  packets:  %" PRIu64 "\n", stats_stop.packets);
+
+	/* Check that all unsupported counters are still zero */
+	if (!capa.stats.queue.counter.discards)
+		CU_ASSERT(stats_stop.discards == 0);
+	if (!capa.stats.queue.counter.errors)
+		CU_ASSERT(stats_stop.errors == 0);
+	if (!capa.stats.queue.counter.octets)
+		CU_ASSERT(stats_stop.octets == 0);
+	if (!capa.stats.queue.counter.packets)
+		CU_ASSERT(stats_stop.packets == 0);
+}
+
+static void classification_test_queue_stats_pkt(void)
+{
+	classification_test_queue_stats(false);
+}
+
+static void classification_test_queue_stats_pktv(void)
+{
+	classification_test_queue_stats(true);
 }
 
 void configure_pktio_error_cos(odp_bool_t enable_pktv)
@@ -933,6 +1007,8 @@ odp_testinfo_t classification_suite[] = {
 	ODP_TEST_INFO(classification_test_pktio_set_headroom),
 	ODP_TEST_INFO(classification_test_pktio_configure),
 	ODP_TEST_INFO(classification_test_pktio_test),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_queue_stats_pkt,
+				  classification_check_queue_stats),
 	ODP_TEST_INFO_NULL,
 };
 
@@ -941,5 +1017,7 @@ odp_testinfo_t classification_suite_pktv[] = {
 				  classification_check_pktv),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pktio_test_pktv,
 				  classification_check_pktv),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_queue_stats_pktv,
+				  classification_check_queue_stats),
 	ODP_TEST_INFO_NULL,
 };
