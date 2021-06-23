@@ -284,9 +284,15 @@ struct tm_queue_obj_s {
 	uint8_t tm_idx;
 	uint8_t delayed_cnt;
 	uint8_t blocked_cnt;
+	odp_bool_t ordered_enqueue;
 	tm_status_t status;
 	odp_queue_t queue;
-	odp_bool_t ordered_enqueue;
+	/* Statistics for odp_tm_queue_stats_t */
+	struct {
+		odp_atomic_u64_t discards;
+		odp_atomic_u64_t errors;
+		odp_atomic_u64_t packets;
+	} stats;
 };
 
 struct tm_node_obj_s {
