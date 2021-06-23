@@ -230,6 +230,17 @@ typedef struct pmr_tbl {
 	pmr_t pmr[CLS_PMR_MAX_ENTRY];
 } pmr_tbl_t;
 
+/**
+Classifier global data
+**/
+typedef struct cls_global_t {
+	cos_tbl_t cos_tbl;
+	pmr_tbl_t pmr_tbl;
+	_cls_queue_grp_tbl_t queue_grp_tbl;
+	odp_shm_t shm;
+
+} cls_global_t;
+
 #ifdef __cplusplus
 }
 #endif

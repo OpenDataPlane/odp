@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -25,7 +26,12 @@ extern "C" {
 #include <odp_packet_io_internal.h>
 #include <odp_classification_datamodel.h>
 
-cos_t *_odp_cos_entry_from_idx(uint32_t ndx);
+extern cls_global_t *_odp_cls_global;
+
+static inline cos_t *_odp_cos_entry_from_idx(uint32_t ndx)
+{
+	return &_odp_cls_global->cos_tbl.cos_entry[ndx];
+}
 
 /** Classification Internal function **/
 
