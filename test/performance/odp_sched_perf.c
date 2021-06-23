@@ -48,6 +48,7 @@ typedef struct test_options_t {
 	uint32_t ctx_rd_words;
 	uint32_t ctx_rw_words;
 	uint64_t wait_ns;
+	int      verbose;
 
 } test_options_t;
 
@@ -111,6 +112,7 @@ static void print_usage(void)
 	       "  -l, --ctx_rw_words     Number of queue context words (uint64_t) to modify on every event. Default: 0.\n"
 	       "  -n, --rd_words         Number of event data words (uint64_t) to read before enqueueing it. Default: 0.\n"
 	       "  -m, --rw_words         Number of event data words (uint64_t) to modify before enqueueing it. Default: 0.\n"
+	       "  -v, --verbose          Verbose output.\n"
 	       "  -h, --help             This help\n"
 	       "\n");
 }
@@ -137,11 +139,12 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"ctx_rw_words", required_argument, NULL, 'l'},
 		{"rd_words",     required_argument, NULL, 'n'},
 		{"rw_words",     required_argument, NULL, 'm'},
+		{"verbose",      no_argument,       NULL, 'v'},
 		{"help",         no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:q:d:e:s:g:j:b:t:f:w:k:l:n:m:h";
+	static const char *shortopts = "+c:q:d:e:s:g:j:b:t:f:w:k:l:n:m:vh";
 
 	test_options->num_cpu    = 1;
 	test_options->num_queue  = 1;
@@ -158,6 +161,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->rd_words   = 0;
 	test_options->rw_words   = 0;
 	test_options->wait_ns    = 0;
+	test_options->verbose    = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -210,6 +214,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 'w':
 			test_options->wait_ns = atoll(optarg);
+			break;
+		case 'v':
+			test_options->verbose = 1;
 			break;
 		case 'h':
 			/* fall through */
@@ -902,6 +909,11 @@ static int test_sched(void *arg)
 		 * thread cannot do the clean up (ODP_SCHED_GROUP_WORKER). */
 		odp_event_t event;
 		uint64_t sched_wait = odp_schedule_wait_time(200 * ODP_TIME_MSEC_IN_NS);
+
+		/* Print schedule status at the end of the test, before any queues
+		 * are emptied or destroyed. */
+		if (test_options->verbose)
+			odp_schedule_print();
 
 		while ((event = odp_schedule(NULL, sched_wait)) != ODP_EVENT_INVALID)
 			odp_event_free(event);
