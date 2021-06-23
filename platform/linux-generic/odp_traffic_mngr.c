@@ -2234,6 +2234,7 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 	odp_packet_t odp_pkt;
 	pkt_desc_t *pkt_desc;
 	uint32_t cnt;
+	int ret;
 
 	for (cnt = 1; cnt <= max_sends; cnt++) {
 		pkt_desc = &tm_system->egress_pkt_desc;
@@ -2252,8 +2253,16 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 
 		tm_system->egress_pkt_desc = EMPTY_PKT_DESC;
 		if (tm_system->egress.egress_kind == ODP_TM_EGRESS_PKT_IO) {
-			if (odp_pktout_send(tm_system->pktout, &odp_pkt, 1) != 1)
+			ret = odp_pktout_send(tm_system->pktout, &odp_pkt, 1);
+			if (odp_unlikely(ret != 1)) {
 				odp_packet_free(odp_pkt);
+				if (odp_unlikely(ret < 0))
+					odp_atomic_inc_u64(&tm_queue_obj->stats.errors);
+				else
+					odp_atomic_inc_u64(&tm_queue_obj->stats.discards);
+			} else {
+				odp_atomic_inc_u64(&tm_queue_obj->stats.packets);
+			}
 		} else if (tm_system->egress.egress_kind == ODP_TM_EGRESS_FN) {
 			tm_system->egress.egress_fcn(odp_pkt);
 		} else {
@@ -2595,6 +2604,10 @@ int odp_tm_capabilities(odp_tm_capabilities_t capabilities[] ODP_UNUSED,
 		per_level_cap->weights_supported            = true;
 	}
 
+	cap_ptr->queue_stats.counter.discards = 1;
+	cap_ptr->queue_stats.counter.errors = 1;
+	cap_ptr->queue_stats.counter.packets = 1;
+
 	return 1;
 }
 
@@ -2670,6 +2683,10 @@ static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
 		per_level_cap->fair_queuing_supported       = true;
 		per_level_cap->weights_supported            = true;
 	}
+
+	cap_ptr->queue_stats.counter.discards = 1;
+	cap_ptr->queue_stats.counter.errors = 1;
+	cap_ptr->queue_stats.counter.packets = 1;
 }
 
 static int affinitize_main_thread(void)
@@ -4009,6 +4026,9 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 		queue_obj->_odp_int_pkt_queue = _odp_int_pkt_queue;
 		queue_obj->pkt = ODP_PACKET_INVALID;
 		odp_ticketlock_init(&queue_obj->tm_wred_node.tm_wred_node_lock);
+		odp_atomic_init_u64(&queue_obj->stats.discards, 0);
+		odp_atomic_init_u64(&queue_obj->stats.errors, 0);
+		odp_atomic_init_u64(&queue_obj->stats.packets, 0);
 
 		queue = odp_queue_create(NULL, NULL);
 		if (queue == ODP_QUEUE_INVALID) {
@@ -4471,8 +4491,10 @@ int odp_tm_enq_multi(odp_tm_queue_t tm_queue, const odp_packet_t packets[],
 		/* For RED failure, just drop current pkt but
 		 * continue with next pkts.
 		 */
-		if (rc == -2)
+		if (rc == -2) {
 			odp_packet_free(packets[i]);
+			odp_atomic_inc_u64(&tm_queue_obj->stats.discards);
+		}
 	}
 
 	return i;
@@ -4792,6 +4814,23 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 				  tm_queue_obj->pkts_dequeued_cnt,
 				  tm_queue_obj->pkts_consumed_cnt);
 	}
+}
+
+int odp_tm_queue_stats(odp_tm_queue_t tm_queue, odp_tm_queue_stats_t *stats)
+{
+	tm_queue_obj_t *tm_queue_obj = GET_TM_QUEUE_OBJ(tm_queue);
+
+	if (!tm_queue_obj) {
+		ODP_ERR("Invalid TM queue handle\n");
+		return -1;
+	}
+
+	memset(stats, 0, sizeof(odp_tm_queue_stats_t));
+	stats->discards = odp_atomic_load_u64(&tm_queue_obj->stats.discards);
+	stats->errors = odp_atomic_load_u64(&tm_queue_obj->stats.errors);
+	stats->packets = odp_atomic_load_u64(&tm_queue_obj->stats.packets);
+
+	return 0;
 }
 
 uint64_t odp_tm_to_u64(odp_tm_t hdl)
