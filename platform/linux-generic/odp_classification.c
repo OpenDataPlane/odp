@@ -150,7 +150,9 @@ void odp_cls_pmr_param_init(odp_pmr_param_t *param)
 
 int odp_cls_capability(odp_cls_capability_t *capability)
 {
-	unsigned count = 0;
+	unsigned int count = 0;
+
+	memset(capability, 0, sizeof(odp_cls_capability_t));
 
 	for (int i = 0; i < CLS_PMR_MAX_ENTRY; i++)
 		if (!pmr_tbl->pmr[i].s.valid)
@@ -184,6 +186,9 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 	capability->threshold_bp.all_bits = 0;
 	capability->max_hash_queues = CLS_COS_QUEUE_MAX;
 	capability->max_mark = MAX_MARK;
+	capability->stats.queue.counter.discards = 1;
+	capability->stats.queue.counter.packets = 1;
+
 	return 0;
 }
 
@@ -292,6 +297,11 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param)
 
 			} else {
 				cos->s.queue = param->queue;
+			}
+			/* Initialize statistics counters */
+			for (j = 0; j < cos->s.num_queue; j++) {
+				odp_atomic_init_u64(&cos->s.stats[j].discards, 0);
+				odp_atomic_init_u64(&cos->s.stats[j].packets, 0);
 			}
 
 			cos->s.pool = param->pool;
@@ -1768,6 +1778,35 @@ uint64_t odp_cos_to_u64(odp_cos_t hdl)
 uint64_t odp_pmr_to_u64(odp_pmr_t hdl)
 {
 	return _odp_pri(hdl);
+}
+
+int odp_cls_queue_stats(odp_cos_t hdl, odp_queue_t queue,
+			odp_cls_queue_stats_t *stats)
+{
+	cos_t *cos = get_cos_entry(hdl);
+	int queue_idx;
+
+	if (odp_unlikely(cos == NULL)) {
+		ODP_ERR("Invalid odp_cos_t handle\n");
+		return -1;
+	}
+
+	if (odp_unlikely(stats == NULL)) {
+		ODP_ERR("Output structure NULL\n");
+		return -1;
+	}
+
+	queue_idx = _odp_cos_queue_idx(cos, queue);
+	if (odp_unlikely(queue_idx < 0)) {
+		ODP_ERR("Invalid odp_queue_t handle\n");
+		return -1;
+	}
+
+	memset(stats, 0, sizeof(odp_cls_queue_stats_t));
+	stats->discards = odp_atomic_load_u64(&cos->s.stats[queue_idx].discards);
+	stats->packets = odp_atomic_load_u64(&cos->s.stats[queue_idx].packets);
+
+	return 0;
 }
 
 static
