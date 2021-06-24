@@ -2604,7 +2604,8 @@ static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
 	odp_bool_t                   dual_slope;
 	uint32_t                     num_levels, level_idx, max_nodes;
 	uint32_t                     max_queues, max_fanin;
-	uint8_t                      max_priority, min_weight, max_weight;
+	uint32_t                     min_weight, max_weight;
+	uint8_t                      max_priority;
 
 	num_levels = MAX(MIN(req_ptr->num_levels, ODP_TM_MAX_LEVELS), 1);
 	memset(cap_ptr, 0, sizeof(odp_tm_capabilities_t));
