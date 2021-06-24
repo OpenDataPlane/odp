@@ -624,8 +624,10 @@ static int reserve_uarea(pool_t *pool, uint32_t uarea_size, uint32_t num_pkt, ui
 	return 0;
 }
 
-static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
-			      uint32_t shmflags)
+/* Create pool according to params. Actual type of the pool is type_2, which is recorded for pool
+ * info calls. */
+odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
+			    odp_pool_type_t type_2)
 {
 	pool_t *pool;
 	uint32_t uarea_size, headroom, tailroom;
@@ -634,10 +636,16 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 	uint32_t max_len, cache_size;
 	uint32_t ring_size;
 	odp_pool_type_t type = params->type;
+	uint32_t shmflags = 0;
 	uint32_t num_extra = 0;
 	const char *max_prefix = "pool_000_";
 	int max_prefix_len = strlen(max_prefix);
 	char shm_name[ODP_POOL_NAME_LEN + max_prefix_len];
+
+	if (type == ODP_POOL_PACKET)
+		shmflags = ODP_SHM_PROC;
+	if (odp_global_ro.shm_single_va)
+		shmflags |= ODP_SHM_SINGLE_VA;
 
 	align = 0;
 
@@ -756,6 +764,7 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 	sprintf(shm_name,   "pool_%03i_%s", pool->pool_idx, pool->name);
 
 	pool->type   = type;
+	pool->type_2 = type_2;
 	pool->params = *params;
 	pool->block_offset = 0;
 
@@ -1037,17 +1046,10 @@ static int check_params(const odp_pool_param_t *params)
 
 odp_pool_t odp_pool_create(const char *name, const odp_pool_param_t *params)
 {
-	uint32_t shm_flags = 0;
-
 	if (check_params(params))
 		return ODP_POOL_INVALID;
 
-	if (params->type == ODP_POOL_PACKET)
-		shm_flags = ODP_SHM_PROC;
-	if (odp_global_ro.shm_single_va)
-		shm_flags |= ODP_SHM_SINGLE_VA;
-
-	return pool_create(name, params, shm_flags);
+	return _odp_pool_create(name, params, params->type);
 }
 
 int odp_pool_destroy(odp_pool_t pool_hdl)
@@ -1120,11 +1122,17 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 
 	memset(info, 0, sizeof(odp_pool_info_t));
 
+	info->type = pool->type_2;
 	info->name = pool->name;
 
 	if (pool->pool_ext) {
 		info->pool_ext = 1;
 		info->pool_ext_param = pool->ext_param;
+
+	} else if (pool->type_2 == ODP_POOL_DMA_COMPL) {
+		info->dma_pool_param.num        = pool->params.buf.num;
+		info->dma_pool_param.cache_size = pool->params.buf.cache_size;
+
 	} else {
 		info->params = pool->params;
 	}

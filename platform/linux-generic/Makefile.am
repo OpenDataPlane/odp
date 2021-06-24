@@ -61,6 +61,7 @@ odpapiabiarchinclude_HEADERS += \
 		  include-abi/odp/api/abi/cpumask.h \
 		  include-abi/odp/api/abi/crypto.h \
 		  include-abi/odp/api/abi/debug.h \
+		  include-abi/odp/api/abi/dma_types.h \
 		  include-abi/odp/api/abi/errno.h \
 		  include-abi/odp/api/abi/event.h \
 		  include-abi/odp/api/abi/hash.h \
@@ -177,6 +178,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   miniz/miniz_tinfl.c miniz/miniz_tinfl.h \
 			   odp_cpumask.c \
 			   odp_cpumask_task.c \
+			   odp_dma.c \
 			   odp_errno.c \
 			   odp_event.c \
 			   odp_fdserver.c \

@@ -20,6 +20,8 @@
 #include <odp_ring_u32_internal.h>
 #include <odp_ring_u64_internal.h>
 
+ODP_STATIC_ASSERT(CONFIG_INTERNAL_STASHES < CONFIG_MAX_STASHES, "TOO_MANY_INTERNAL_STASHES");
+
 #define MAX_RING_SIZE (1024 * 1024)
 #define MIN_RING_SIZE 64
 
@@ -110,8 +112,8 @@ int odp_stash_capability(odp_stash_capability_t *capa, odp_stash_type_t type)
 	(void)type;
 	memset(capa, 0, sizeof(odp_stash_capability_t));
 
-	capa->max_stashes_any_type = CONFIG_MAX_STASHES;
-	capa->max_stashes          = CONFIG_MAX_STASHES;
+	capa->max_stashes_any_type = CONFIG_MAX_STASHES - CONFIG_INTERNAL_STASHES;
+	capa->max_stashes          = CONFIG_MAX_STASHES - CONFIG_INTERNAL_STASHES;
 	capa->max_num_obj          = MAX_RING_SIZE;
 	capa->max_obj_size         = sizeof(uint64_t);
 

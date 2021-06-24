@@ -54,6 +54,16 @@ extern "C" {
 #define CONFIG_QUEUE_MAX_ORD_LOCKS 2
 
 /*
+ * Maximum number of DMA sessions
+ */
+#define CONFIG_MAX_DMA_SESSIONS 32
+
+/*
+ * Stashes reserved for internal usage
+ */
+#define CONFIG_INTERNAL_STASHES CONFIG_MAX_DMA_SESSIONS
+
+/*
  * Maximum number of stashes
  */
 #define CONFIG_MAX_STASHES 128

@@ -77,6 +77,7 @@ typedef struct odp_global_data_ro_t {
 	struct {
 		uint8_t compress;
 		uint8_t crypto;
+		uint8_t dma;
 		uint8_t ipsec;
 		uint8_t stash;
 		uint8_t traffic_mngr;

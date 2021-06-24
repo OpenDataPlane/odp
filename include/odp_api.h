@@ -63,6 +63,7 @@ extern "C" {
 #include <odp/api/ipsec.h>
 #include <odp/api/stash.h>
 #include <odp/api/reassembly.h>
+#include <odp/api/dma.h>
 
 #ifdef __cplusplus
 }
