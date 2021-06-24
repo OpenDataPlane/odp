@@ -89,6 +89,7 @@ typedef struct pool_t {
 	uint8_t         *base_addr;
 	uint8_t         *max_addr;
 	uint8_t         *uarea_base_addr;
+	odp_pool_type_t  type_2;
 	odp_pool_ext_param_t ext_param;
 
 	/* Used by DPDK zero-copy pktio */
@@ -179,6 +180,9 @@ static inline void _odp_event_free(odp_event_t event)
 {
 	_odp_event_free_multi((_odp_event_hdr_t **)&event, 1);
 }
+
+odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
+			    odp_pool_type_t type_2);
 
 #ifdef __cplusplus
 }

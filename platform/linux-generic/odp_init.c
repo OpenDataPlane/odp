@@ -45,6 +45,7 @@ enum init_stage {
 	IPSEC_EVENTS_INIT,
 	IPSEC_SAD_INIT,
 	IPSEC_INIT,
+	DMA_INIT,
 	ALL_INIT      /* All init stages completed */
 };
 
@@ -58,6 +59,7 @@ static void disable_features(odp_global_data_ro_t *global_ro,
 			     const odp_init_t *init_param)
 {
 	int disable_ipsec, disable_crypto;
+	int disable_dma;
 
 	if (init_param == NULL)
 		return;
@@ -70,7 +72,13 @@ static void disable_features(odp_global_data_ro_t *global_ro,
 	if (disable_ipsec && disable_crypto)
 		global_ro->disable.crypto = 1;
 
-	global_ro->disable.stash = init_param->not_used.feat.stash;
+	disable_dma = init_param->not_used.feat.dma;
+	global_ro->disable.dma = disable_dma;
+
+	/* DMA uses stash. Disable stash only when both are disabled. */
+	if (disable_dma && init_param->not_used.feat.stash)
+		global_ro->disable.stash = 1;
+
 	global_ro->disable.traffic_mngr = init_param->not_used.feat.tm;
 	global_ro->disable.compress = init_param->not_used.feat.compress;
 }
@@ -123,6 +131,13 @@ static int term_global(enum init_stage stage)
 
 	switch (stage) {
 	case ALL_INIT:
+	case DMA_INIT:
+		if (_odp_dma_term_global()) {
+			ODP_ERR("ODP DMA term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
 	case IPSEC_INIT:
 		if (_odp_ipsec_term_global()) {
 			ODP_ERR("ODP IPsec term failed.\n");
@@ -461,6 +476,12 @@ int odp_init_global(odp_instance_t *instance,
 		goto init_failed;
 	}
 	stage = IPSEC_INIT;
+
+	if (_odp_dma_init_global()) {
+		ODP_ERR("ODP DMA init failed.\n");
+		goto init_failed;
+	}
+	stage = DMA_INIT;
 
 	*instance = (odp_instance_t)odp_global_ro.main_pid;
 
