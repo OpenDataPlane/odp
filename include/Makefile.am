@@ -88,6 +88,7 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/packet_io_stats.h \
 		  odp/api/spec/protocols.h \
 		  odp/api/spec/pool.h \
+		  odp/api/spec/pool_types.h \
 		  odp/api/spec/queue.h \
 		  odp/api/spec/queue_types.h \
 		  odp/api/spec/random.h \
