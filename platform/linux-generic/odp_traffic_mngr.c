@@ -4553,6 +4553,14 @@ int odp_tm_node_fanin_info(odp_tm_node_t             tm_node,
 	return 0;
 }
 
+int odp_tm_node_stats(odp_tm_node_t tm_node, odp_tm_node_stats_t *node_stats)
+{
+	(void)tm_node;
+	(void)node_stats;
+
+	return -1;
+}
+
 int odp_tm_queue_info(odp_tm_queue_t tm_queue, odp_tm_queue_info_t *info)
 {
 	tm_queue_thresholds_t *threshold_params;
