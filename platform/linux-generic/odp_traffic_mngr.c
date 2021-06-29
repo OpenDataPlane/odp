@@ -2024,14 +2024,18 @@ static int tm_enqueue(tm_system_t *tm_system,
 		drop = random_early_discard(tm_system, tm_queue_obj,
 					    initial_tm_wred_node, pkt_color);
 		if (drop)
-			return -1;
+			return -2;
 	}
 
 	work_item.queue_num = tm_queue_obj->queue_num;
 	work_item.pkt = pkt;
-	_odp_sched_fn->order_lock();
+	if (tm_queue_obj->ordered_enqueue)
+		_odp_sched_fn->order_lock();
+
 	rc = input_work_queue_append(tm_system, &work_item);
-	_odp_sched_fn->order_unlock();
+
+	if (tm_queue_obj->ordered_enqueue)
+		_odp_sched_fn->order_unlock();
 
 	if (rc < 0) {
 		ODP_DBG("%s work queue full\n", __func__);
@@ -3961,6 +3965,8 @@ int odp_tm_node_context_set(odp_tm_node_t tm_node, void *user_context)
 void odp_tm_queue_params_init(odp_tm_queue_params_t *params)
 {
 	memset(params, 0, sizeof(odp_tm_queue_params_t));
+
+	params->ordered_enqueue = true;
 }
 
 odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
@@ -3997,6 +4003,7 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 		memset(queue_obj, 0, sizeof(tm_queue_obj_t));
 		queue_obj->user_context = params->user_context;
 		queue_obj->priority = params->priority;
+		queue_obj->ordered_enqueue = params->ordered_enqueue;
 		queue_obj->tm_idx = tm_system->tm_idx;
 		queue_obj->queue_num = (uint32_t)_odp_int_pkt_queue;
 		queue_obj->_odp_int_pkt_queue = _odp_int_pkt_queue;
@@ -4437,6 +4444,38 @@ int odp_tm_enq_with_cnt(odp_tm_queue_t tm_queue, odp_packet_t pkt)
 
 	pkt_cnt = rc;
 	return pkt_cnt;
+}
+
+int odp_tm_enq_multi(odp_tm_queue_t tm_queue, const odp_packet_t packets[],
+		     int num)
+{
+	tm_queue_obj_t *tm_queue_obj;
+	tm_system_t *tm_system;
+	int i, rc;
+
+	tm_queue_obj = GET_TM_QUEUE_OBJ(tm_queue);
+	if (!tm_queue_obj)
+		return -1;
+
+	tm_system = &tm_glb->system[tm_queue_obj->tm_idx];
+	if (!tm_system)
+		return -1;
+
+	if (odp_atomic_load_u64(&tm_system->destroying))
+		return -1;
+
+	for (i = 0; i < num; i++) {
+		rc = tm_enqueue(tm_system, tm_queue_obj, packets[i]);
+		if (rc < 0 && rc != -2)
+			break;
+		/* For RED failure, just drop current pkt but
+		 * continue with next pkts.
+		 */
+		if (rc == -2)
+			odp_packet_free(packets[i]);
+	}
+
+	return i;
 }
 
 int odp_tm_node_info(odp_tm_node_t tm_node, odp_tm_node_info_t *info)
