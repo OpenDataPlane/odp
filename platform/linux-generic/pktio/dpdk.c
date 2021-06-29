@@ -116,6 +116,7 @@ ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
 typedef struct {
 	int num_rx_desc;
 	int num_tx_desc;
+	uint8_t multicast_en;
 	uint8_t rx_drop_en;
 	uint8_t set_flow_hash;
 } dpdk_opt_t;
@@ -227,8 +228,13 @@ static int init_options(pktio_entry_t *pktio_entry,
 		return -1;
 	opt->set_flow_hash = !!val;
 
+	if (!lookup_opt("multicast_en", NULL, &val))
+		return -1;
+	opt->multicast_en = !!val;
+
 	ODP_DBG("DPDK interface (%s): %" PRIu16 "\n", dev_info->driver_name,
 		pkt_priv(pktio_entry)->port_id);
+	ODP_DBG("  multicast_en: %d\n", opt->multicast_en);
 	ODP_DBG("  num_rx_desc: %d\n", opt->num_rx_desc);
 	ODP_DBG("  num_tx_desc: %d\n", opt->num_tx_desc);
 	ODP_DBG("  rx_drop_en: %d\n", opt->rx_drop_en);
@@ -1669,7 +1675,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	char pool_name[RTE_MEMPOOL_NAMESIZE];
 	uint16_t data_room;
 	uint32_t mtu;
-	int i;
+	int i, ret;
 	pool_t *pool_entry;
 	uint16_t port_id;
 
@@ -1730,6 +1736,14 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	pkt_dpdk->mtu_set = false;
 
 	promisc_mode_check(pkt_dpdk);
+
+	if (pkt_dpdk->opt.multicast_en)
+		ret = rte_eth_allmulticast_enable(pkt_dpdk->port_id);
+	else
+		ret = rte_eth_allmulticast_disable(pkt_dpdk->port_id);
+	/* Not supported by all PMDs, so ignore the return value */
+	if (ret)
+		ODP_DBG("Configuring multicast reception not supported by the PMD\n");
 
 	/* Drivers requiring minimum burst size. Supports also *_vf versions
 	 * of the drivers. */
