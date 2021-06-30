@@ -4155,6 +4155,80 @@ static void traffic_mngr_test_thresholds(void)
 				 0,  6400) == 0);
 }
 
+static int traffic_mngr_check_queue_stats(void)
+{
+	odp_tm_capabilities_t capa;
+
+	if (odp_tm_capabilities(&capa, 1) < 1)
+		return ODP_TEST_INACTIVE;
+
+	if (capa.queue_stats.all_counters == 0)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+static void traffic_mngr_test_queue_stats(void)
+{
+	odp_tm_queue_stats_t stats_start, stats_stop;
+	odp_tm_queue_t tm_queue;
+	odp_tm_capabilities_t capa;
+	pkt_info_t pkt_info;
+	uint32_t pkts_sent;
+	uint32_t num_pkts = MIN(50, MAX_PKTS);
+	uint32_t pkt_len = 256;
+
+	CU_ASSERT_FATAL(odp_tm_capability(odp_tm_systems[0], &capa) == 0);
+
+	/* Reuse threshold test node */
+	tm_queue = find_tm_queue(0, "node_1_2_1", 0);
+	CU_ASSERT_FATAL(tm_queue != ODP_TM_INVALID);
+
+	init_xmt_pkts(&pkt_info);
+	pkt_info.drop_eligible = false;
+	pkt_info.pkt_class     = 1;
+	CU_ASSERT_FATAL(make_pkts(num_pkts, pkt_len, &pkt_info) == 0);
+
+	CU_ASSERT(odp_tm_queue_stats(tm_queue, &stats_start) == 0);
+
+	pkts_sent = send_pkts(tm_queue, num_pkts);
+
+	num_rcv_pkts = receive_pkts(odp_tm_systems[0], rcv_pktin, pkts_sent,
+				    1 * GBPS);
+
+	CU_ASSERT(odp_tm_queue_stats(tm_queue, &stats_stop) == 0);
+
+	if (capa.queue_stats.counter.packets)
+		CU_ASSERT(stats_stop.packets >= stats_start.packets + num_rcv_pkts);
+	if (capa.queue_stats.counter.octets)
+		CU_ASSERT(stats_stop.octets >= stats_start.octets + (num_rcv_pkts * pkt_len));
+	CU_ASSERT((stats_stop.discards - stats_start.discards) == 0);
+	CU_ASSERT((stats_stop.discard_octets - stats_start.discard_octets) == 0);
+	CU_ASSERT((stats_stop.errors - stats_start.errors) == 0);
+
+	printf("\nTM queue statistics\n-------------------\n");
+	printf("  discards:        %" PRIu64 "\n", stats_stop.discards);
+	printf("  discard octets:  %" PRIu64 "\n", stats_stop.discard_octets);
+	printf("  errors:          %" PRIu64 "\n", stats_stop.errors);
+	printf("  octets:          %" PRIu64 "\n", stats_stop.octets);
+	printf("  packets:         %" PRIu64 "\n", stats_stop.packets);
+
+	/* Check that all unsupported counters are still zero */
+	if (!capa.queue_stats.counter.discards)
+		CU_ASSERT(stats_stop.discards == 0);
+	if (!capa.queue_stats.counter.discard_octets)
+		CU_ASSERT(stats_stop.discard_octets == 0);
+	if (!capa.queue_stats.counter.errors)
+		CU_ASSERT(stats_stop.errors == 0);
+	if (!capa.queue_stats.counter.octets)
+		CU_ASSERT(stats_stop.octets == 0);
+	if (!capa.queue_stats.counter.packets)
+		CU_ASSERT(stats_stop.packets == 0);
+
+	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
+	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
+}
+
 static void traffic_mngr_test_byte_wred(void)
 {
 	if (!tm_capabilities.tm_queue_wred_supported) {
@@ -4301,6 +4375,8 @@ odp_testinfo_t traffic_mngr_suite[] = {
 	ODP_TEST_INFO(traffic_mngr_test_byte_wred),
 	ODP_TEST_INFO(traffic_mngr_test_pkt_wred),
 	ODP_TEST_INFO(traffic_mngr_test_query),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_queue_stats,
+				  traffic_mngr_check_queue_stats),
 	ODP_TEST_INFO(traffic_mngr_test_marking),
 	ODP_TEST_INFO(traffic_mngr_test_fanin_info),
 	ODP_TEST_INFO(traffic_mngr_test_destroy),
