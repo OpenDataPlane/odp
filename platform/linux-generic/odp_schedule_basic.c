@@ -205,9 +205,9 @@ typedef struct {
 	uint8_t          load_balance;
 	uint16_t         max_spread;
 	uint32_t         ring_mask;
-	odp_spinlock_t   mask_lock;
 	odp_atomic_u32_t grp_epoch;
 	odp_shm_t        shm;
+	odp_spinlock_t   mask_lock[NUM_SCHED_GRPS];
 	prio_q_mask_t    prio_q_mask[NUM_SCHED_GRPS][NUM_PRIO];
 
 	struct {
@@ -482,9 +482,9 @@ static int schedule_init_global(void)
 	if (sched->max_queues > CONFIG_MAX_SCHED_QUEUES)
 		sched->max_queues = CONFIG_MAX_SCHED_QUEUES;
 
-	odp_spinlock_init(&sched->mask_lock);
-
 	for (grp = 0; grp < NUM_SCHED_GRPS; grp++) {
+		odp_spinlock_init(&sched->mask_lock[grp]);
+
 		for (i = 0; i < NUM_PRIO; i++) {
 			for (j = 0; j < MAX_SPREAD; j++) {
 				prio_queue_t *prio_q;
@@ -637,17 +637,17 @@ static inline int prio_level_from_api(int api_prio)
 
 static inline void inc_queue_count(int grp, int prio, int spr)
 {
-	odp_spinlock_lock(&sched->mask_lock);
+	odp_spinlock_lock(&sched->mask_lock[grp]);
 
 	sched->prio_q_mask[grp][prio] |= 1 << spr;
 	sched->prio_q_count[grp][prio][spr]++;
 
-	odp_spinlock_unlock(&sched->mask_lock);
+	odp_spinlock_unlock(&sched->mask_lock[grp]);
 }
 
 static inline void dec_queue_count(int grp, int prio, int spr)
 {
-	odp_spinlock_lock(&sched->mask_lock);
+	odp_spinlock_lock(&sched->mask_lock[grp]);
 
 	sched->prio_q_count[grp][prio][spr]--;
 
@@ -655,12 +655,12 @@ static inline void dec_queue_count(int grp, int prio, int spr)
 	if (sched->prio_q_count[grp][prio][spr] == 0)
 		sched->prio_q_mask[grp][prio] &= (uint8_t)(~(1 << spr));
 
-	odp_spinlock_unlock(&sched->mask_lock);
+	odp_spinlock_unlock(&sched->mask_lock[grp]);
 }
 
 static inline void update_queue_count(int grp, int prio, int old_spr, int new_spr)
 {
-	odp_spinlock_lock(&sched->mask_lock);
+	odp_spinlock_lock(&sched->mask_lock[grp]);
 
 	sched->prio_q_mask[grp][prio] |= 1 << new_spr;
 	sched->prio_q_count[grp][prio][new_spr]++;
@@ -670,7 +670,7 @@ static inline void update_queue_count(int grp, int prio, int old_spr, int new_sp
 	if (sched->prio_q_count[grp][prio][old_spr] == 0)
 		sched->prio_q_mask[grp][prio] &= (uint8_t)(~(1 << old_spr));
 
-	odp_spinlock_unlock(&sched->mask_lock);
+	odp_spinlock_unlock(&sched->mask_lock[grp]);
 }
 
 static int schedule_create_queue(uint32_t queue_index,
