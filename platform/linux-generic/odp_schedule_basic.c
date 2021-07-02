@@ -22,7 +22,7 @@
 #include <odp/api/plat/thread_inlines.h>
 #include <odp/api/time.h>
 #include <odp/api/plat/time_inlines.h>
-#include <odp/api/spinlock.h>
+#include <odp/api/ticketlock.h>
 #include <odp/api/hints.h>
 #include <odp/api/cpu.h>
 #include <odp/api/thrmask.h>
@@ -207,7 +207,7 @@ typedef struct {
 	uint32_t         ring_mask;
 	odp_atomic_u32_t grp_epoch;
 	odp_shm_t        shm;
-	odp_spinlock_t   mask_lock[NUM_SCHED_GRPS];
+	odp_ticketlock_t mask_lock[NUM_SCHED_GRPS];
 	prio_q_mask_t    prio_q_mask[NUM_SCHED_GRPS][NUM_PRIO];
 
 	struct {
@@ -228,7 +228,7 @@ typedef struct {
 	uint32_t prio_q_count[NUM_SCHED_GRPS][NUM_PRIO][MAX_SPREAD];
 
 	odp_thrmask_t  mask_all;
-	odp_spinlock_t grp_lock;
+	odp_ticketlock_t grp_lock;
 
 	struct {
 		char           name[ODP_SCHED_GROUP_NAME_LEN];
@@ -240,7 +240,7 @@ typedef struct {
 	struct {
 		int num_pktin;
 	} pktio[NUM_PKTIO];
-	odp_spinlock_t pktio_lock;
+	odp_ticketlock_t pktio_lock;
 
 	order_context_t order[CONFIG_MAX_SCHED_QUEUES];
 
@@ -483,7 +483,7 @@ static int schedule_init_global(void)
 		sched->max_queues = CONFIG_MAX_SCHED_QUEUES;
 
 	for (grp = 0; grp < NUM_SCHED_GRPS; grp++) {
-		odp_spinlock_init(&sched->mask_lock[grp]);
+		odp_ticketlock_init(&sched->mask_lock[grp]);
 
 		for (i = 0; i < NUM_PRIO; i++) {
 			for (j = 0; j < MAX_SPREAD; j++) {
@@ -495,11 +495,11 @@ static int schedule_init_global(void)
 		}
 	}
 
-	odp_spinlock_init(&sched->pktio_lock);
+	odp_ticketlock_init(&sched->pktio_lock);
 	for (i = 0; i < NUM_PKTIO; i++)
 		sched->pktio[i].num_pktin = 0;
 
-	odp_spinlock_init(&sched->grp_lock);
+	odp_ticketlock_init(&sched->grp_lock);
 	odp_atomic_init_u32(&sched->grp_epoch, 0);
 
 	for (i = 0; i < NUM_SCHED_GRPS; i++) {
@@ -580,7 +580,7 @@ static inline int grp_update_tbl(void)
 	int num = 0;
 	int thr = sched_local.thr;
 
-	odp_spinlock_lock(&sched->grp_lock);
+	odp_ticketlock_lock(&sched->grp_lock);
 
 	for (i = 0; i < NUM_SCHED_GRPS; i++) {
 		if (sched->sched_grp[i].allocated == 0)
@@ -592,7 +592,7 @@ static inline int grp_update_tbl(void)
 		}
 	}
 
-	odp_spinlock_unlock(&sched->grp_lock);
+	odp_ticketlock_unlock(&sched->grp_lock);
 
 	if (odp_unlikely(num == 0))
 		return 0;
@@ -637,17 +637,17 @@ static inline int prio_level_from_api(int api_prio)
 
 static inline void inc_queue_count(int grp, int prio, int spr)
 {
-	odp_spinlock_lock(&sched->mask_lock[grp]);
+	odp_ticketlock_lock(&sched->mask_lock[grp]);
 
 	sched->prio_q_mask[grp][prio] |= 1 << spr;
 	sched->prio_q_count[grp][prio][spr]++;
 
-	odp_spinlock_unlock(&sched->mask_lock[grp]);
+	odp_ticketlock_unlock(&sched->mask_lock[grp]);
 }
 
 static inline void dec_queue_count(int grp, int prio, int spr)
 {
-	odp_spinlock_lock(&sched->mask_lock[grp]);
+	odp_ticketlock_lock(&sched->mask_lock[grp]);
 
 	sched->prio_q_count[grp][prio][spr]--;
 
@@ -655,12 +655,12 @@ static inline void dec_queue_count(int grp, int prio, int spr)
 	if (sched->prio_q_count[grp][prio][spr] == 0)
 		sched->prio_q_mask[grp][prio] &= (uint8_t)(~(1 << spr));
 
-	odp_spinlock_unlock(&sched->mask_lock[grp]);
+	odp_ticketlock_unlock(&sched->mask_lock[grp]);
 }
 
 static inline void update_queue_count(int grp, int prio, int old_spr, int new_spr)
 {
-	odp_spinlock_lock(&sched->mask_lock[grp]);
+	odp_ticketlock_lock(&sched->mask_lock[grp]);
 
 	sched->prio_q_mask[grp][prio] |= 1 << new_spr;
 	sched->prio_q_count[grp][prio][new_spr]++;
@@ -670,7 +670,7 @@ static inline void update_queue_count(int grp, int prio, int old_spr, int new_sp
 	if (sched->prio_q_count[grp][prio][old_spr] == 0)
 		sched->prio_q_mask[grp][prio] &= (uint8_t)(~(1 << old_spr));
 
-	odp_spinlock_unlock(&sched->mask_lock[grp]);
+	odp_ticketlock_unlock(&sched->mask_lock[grp]);
 }
 
 static int schedule_create_queue(uint32_t queue_index,
@@ -926,7 +926,7 @@ static void schedule_group_clear(odp_schedule_group_t group)
 
 static int schedule_config(const odp_schedule_config_t *config)
 {
-	odp_spinlock_lock(&sched->grp_lock);
+	odp_ticketlock_lock(&sched->grp_lock);
 
 	sched->config_if.group_enable.all = config->sched_group.all;
 	sched->config_if.group_enable.control = config->sched_group.control;
@@ -942,7 +942,7 @@ static int schedule_config(const odp_schedule_config_t *config)
 	if (!config->sched_group.control)
 		schedule_group_clear(ODP_SCHED_GROUP_CONTROL);
 
-	odp_spinlock_unlock(&sched->grp_lock);
+	odp_ticketlock_unlock(&sched->grp_lock);
 
 	return 0;
 }
@@ -1092,10 +1092,10 @@ static inline int poll_pktin(uint32_t qi, int direct_recv,
 	/* Pktio stopped or closed. Call stop_finalize when we have stopped
 	 * polling all pktin queues of the pktio. */
 	if (odp_unlikely(num < 0)) {
-		odp_spinlock_lock(&sched->pktio_lock);
+		odp_ticketlock_lock(&sched->pktio_lock);
 		sched->pktio[pktio_index].num_pktin--;
 		num_pktin = sched->pktio[pktio_index].num_pktin;
-		odp_spinlock_unlock(&sched->pktio_lock);
+		odp_ticketlock_unlock(&sched->pktio_lock);
 
 		_odp_sched_queue_set_status(qi, QUEUE_STATUS_NOTSCHED);
 
@@ -1563,7 +1563,7 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 	odp_schedule_group_t group = ODP_SCHED_GROUP_INVALID;
 	int i;
 
-	odp_spinlock_lock(&sched->grp_lock);
+	odp_ticketlock_lock(&sched->grp_lock);
 
 	for (i = SCHED_GROUP_NAMED; i < NUM_SCHED_GRPS; i++) {
 		if (!sched->sched_grp[i].allocated) {
@@ -1584,7 +1584,7 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 		}
 	}
 
-	odp_spinlock_unlock(&sched->grp_lock);
+	odp_ticketlock_unlock(&sched->grp_lock);
 	return group;
 }
 
@@ -1595,7 +1595,7 @@ static int schedule_group_destroy(odp_schedule_group_t group)
 
 	odp_thrmask_zero(&zero);
 
-	odp_spinlock_lock(&sched->grp_lock);
+	odp_ticketlock_lock(&sched->grp_lock);
 
 	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
 	    sched->sched_grp[group].allocated) {
@@ -1608,7 +1608,7 @@ static int schedule_group_destroy(odp_schedule_group_t group)
 		ret = -1;
 	}
 
-	odp_spinlock_unlock(&sched->grp_lock);
+	odp_ticketlock_unlock(&sched->grp_lock);
 	return ret;
 }
 
@@ -1617,7 +1617,7 @@ static odp_schedule_group_t schedule_group_lookup(const char *name)
 	odp_schedule_group_t group = ODP_SCHED_GROUP_INVALID;
 	int i;
 
-	odp_spinlock_lock(&sched->grp_lock);
+	odp_ticketlock_lock(&sched->grp_lock);
 
 	for (i = SCHED_GROUP_NAMED; i < NUM_SCHED_GRPS; i++) {
 		if (strcmp(name, sched->sched_grp[i].name) == 0) {
@@ -1626,7 +1626,7 @@ static odp_schedule_group_t schedule_group_lookup(const char *name)
 		}
 	}
 
-	odp_spinlock_unlock(&sched->grp_lock);
+	odp_ticketlock_unlock(&sched->grp_lock);
 	return group;
 }
 
@@ -1660,10 +1660,10 @@ static int schedule_group_join(odp_schedule_group_t group, const odp_thrmask_t *
 		thr = odp_thrmask_next(mask, thr);
 	}
 
-	odp_spinlock_lock(&sched->grp_lock);
+	odp_ticketlock_lock(&sched->grp_lock);
 
 	if (sched->sched_grp[group].allocated == 0) {
-		odp_spinlock_unlock(&sched->grp_lock);
+		odp_ticketlock_unlock(&sched->grp_lock);
 		ODP_ERR("Bad group status\n");
 		return -1;
 	}
@@ -1676,7 +1676,7 @@ static int schedule_group_join(odp_schedule_group_t group, const odp_thrmask_t *
 	odp_thrmask_or(&new_mask, &sched->sched_grp[group].mask, mask);
 	grp_update_mask(group, &new_mask);
 
-	odp_spinlock_unlock(&sched->grp_lock);
+	odp_ticketlock_unlock(&sched->grp_lock);
 	return 0;
 }
 
@@ -1712,10 +1712,10 @@ static int schedule_group_leave(odp_schedule_group_t group, const odp_thrmask_t 
 
 	odp_thrmask_xor(&new_mask, mask, &sched->mask_all);
 
-	odp_spinlock_lock(&sched->grp_lock);
+	odp_ticketlock_lock(&sched->grp_lock);
 
 	if (sched->sched_grp[group].allocated == 0) {
-		odp_spinlock_unlock(&sched->grp_lock);
+		odp_ticketlock_unlock(&sched->grp_lock);
 		ODP_ERR("Bad group status\n");
 		return -1;
 	}
@@ -1728,7 +1728,7 @@ static int schedule_group_leave(odp_schedule_group_t group, const odp_thrmask_t 
 	odp_thrmask_and(&new_mask, &sched->sched_grp[group].mask, &new_mask);
 	grp_update_mask(group, &new_mask);
 
-	odp_spinlock_unlock(&sched->grp_lock);
+	odp_ticketlock_unlock(&sched->grp_lock);
 	return 0;
 }
 
@@ -1737,7 +1737,7 @@ static int schedule_group_thrmask(odp_schedule_group_t group,
 {
 	int ret;
 
-	odp_spinlock_lock(&sched->grp_lock);
+	odp_ticketlock_lock(&sched->grp_lock);
 
 	if (group < NUM_SCHED_GRPS && sched->sched_grp[group].allocated) {
 		*thrmask = sched->sched_grp[group].mask;
@@ -1746,7 +1746,7 @@ static int schedule_group_thrmask(odp_schedule_group_t group,
 		ret = -1;
 	}
 
-	odp_spinlock_unlock(&sched->grp_lock);
+	odp_ticketlock_unlock(&sched->grp_lock);
 	return ret;
 }
 
@@ -1755,7 +1755,7 @@ static int schedule_group_info(odp_schedule_group_t group,
 {
 	int ret;
 
-	odp_spinlock_lock(&sched->grp_lock);
+	odp_ticketlock_lock(&sched->grp_lock);
 
 	if (group < NUM_SCHED_GRPS && sched->sched_grp[group].allocated) {
 		info->name    = sched->sched_grp[group].name;
@@ -1765,7 +1765,7 @@ static int schedule_group_info(odp_schedule_group_t group,
 		ret = -1;
 	}
 
-	odp_spinlock_unlock(&sched->grp_lock);
+	odp_ticketlock_unlock(&sched->grp_lock);
 	return ret;
 }
 
@@ -1781,10 +1781,10 @@ static int schedule_thr_add(odp_schedule_group_t group, int thr)
 	odp_thrmask_zero(&mask);
 	odp_thrmask_set(&mask, thr);
 
-	odp_spinlock_lock(&sched->grp_lock);
+	odp_ticketlock_lock(&sched->grp_lock);
 
 	if (!sched->sched_grp[group].allocated) {
-		odp_spinlock_unlock(&sched->grp_lock);
+		odp_ticketlock_unlock(&sched->grp_lock);
 		return 0;
 	}
 
@@ -1792,7 +1792,7 @@ static int schedule_thr_add(odp_schedule_group_t group, int thr)
 	sched->sched_grp[group].spread_thrs[spread]++;
 	grp_update_mask(group, &new_mask);
 
-	odp_spinlock_unlock(&sched->grp_lock);
+	odp_ticketlock_unlock(&sched->grp_lock);
 
 	return 0;
 }
@@ -1810,10 +1810,10 @@ static int schedule_thr_rem(odp_schedule_group_t group, int thr)
 	odp_thrmask_set(&mask, thr);
 	odp_thrmask_xor(&new_mask, &mask, &sched->mask_all);
 
-	odp_spinlock_lock(&sched->grp_lock);
+	odp_ticketlock_lock(&sched->grp_lock);
 
 	if (!sched->sched_grp[group].allocated) {
-		odp_spinlock_unlock(&sched->grp_lock);
+		odp_ticketlock_unlock(&sched->grp_lock);
 		return 0;
 	}
 
@@ -1821,7 +1821,7 @@ static int schedule_thr_rem(odp_schedule_group_t group, int thr)
 	sched->sched_grp[group].spread_thrs[spread]--;
 	grp_update_mask(group, &new_mask);
 
-	odp_spinlock_unlock(&sched->grp_lock);
+	odp_ticketlock_unlock(&sched->grp_lock);
 
 	return 0;
 }
