@@ -2578,6 +2578,186 @@ static void pktio_test_extra_stats(void)
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
 }
 
+static int pktio_check_proto_statistics_counters(void)
+{
+	odp_proto_stats_capability_t capa;
+	odp_pktio_param_t pktio_param;
+	odp_pktio_t pktio;
+	int ret;
+
+	odp_pktio_param_init(&pktio_param);
+	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+
+	pktio = odp_pktio_open(iface_name[0], pool[0], &pktio_param);
+	if (pktio == ODP_PKTIO_INVALID)
+		return ODP_TEST_INACTIVE;
+
+	ret = odp_proto_stats_capability(pktio, &capa);
+	(void)odp_pktio_close(pktio);
+
+	if (ret < 0 || capa.tx.counters.all_bits == 0)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+static void validate_proto_stats(odp_proto_stats_t stat, odp_packet_proto_stats_opt_t opt,
+				 odp_proto_stats_capability_t capa, uint64_t pkts)
+{
+	odp_proto_stats_data_t data;
+	int ret;
+
+	ret = odp_proto_stats(stat, &data);
+	CU_ASSERT(ret == 0);
+
+	CU_ASSERT(!(capa.tx.counters.bit.tx_pkt_drops && (data.tx_pkt_drops > 0)));
+	CU_ASSERT(!(capa.tx.counters.bit.tx_oct_count0_drops && (data.tx_oct_count0_drops > 0)));
+	CU_ASSERT(!(capa.tx.counters.bit.tx_oct_count1_drops && (data.tx_oct_count1_drops > 0)));
+	CU_ASSERT(!(capa.tx.counters.bit.tx_pkts && (data.tx_pkts != pkts)));
+
+	if (capa.tx.counters.bit.tx_oct_count0) {
+		int64_t counted_bytes = PKT_LEN_NORMAL;
+
+		if (capa.tx.oct_count0_adj)
+			counted_bytes += opt.oct_count0_adj;
+		CU_ASSERT(data.tx_oct_count0 == counted_bytes * pkts);
+	}
+
+	if (capa.tx.counters.bit.tx_oct_count1) {
+		int64_t counted_bytes = PKT_LEN_NORMAL;
+
+		if (capa.tx.oct_count1_adj)
+			counted_bytes += opt.oct_count1_adj;
+		CU_ASSERT(data.tx_oct_count1 == counted_bytes * pkts);
+	}
+}
+
+static void pktio_test_proto_statistics_counters(void)
+{
+	odp_pktio_t pktio_rx, pktio_tx;
+	odp_pktio_t pktio[MAX_NUM_IFACES] = {
+		ODP_PKTIO_INVALID, ODP_PKTIO_INVALID
+	};
+	odp_packet_t pkt;
+	const uint32_t num_pkts = 10;
+	odp_packet_t tx_pkt[num_pkts];
+	uint32_t pkt_seq[num_pkts];
+	odp_event_t ev;
+	int i, pkts, tx_pkts, ret, alloc = 0;
+	odp_pktout_queue_t pktout;
+	uint64_t wait = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS);
+	uint64_t flow0_pkts = 0, flow1_pkts = 0;
+	odp_proto_stats_capability_t capa;
+	odp_packet_proto_stats_opt_t opt0;
+	odp_packet_proto_stats_opt_t opt1;
+	odp_proto_stats_param_t param;
+	odp_pktio_config_t config;
+	odp_proto_stats_t stat0;
+	odp_proto_stats_t stat1;
+
+	memset(&pktout, 0, sizeof(pktout));
+
+	for (i = 0; i < num_ifaces; i++) {
+		pktio[i] = create_pktio(i, ODP_PKTIN_MODE_SCHED,
+					ODP_PKTOUT_MODE_DIRECT);
+
+		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
+	}
+	pktio_tx = pktio[0];
+	pktio_rx = (num_ifaces > 1) ? pktio[1] : pktio_tx;
+
+	/* Enable protocol stats on Tx interface */
+	odp_pktio_config_init(&config);
+	config.pktout.bit.proto_stats_ena = 1;
+	ret = odp_pktio_config(pktio_tx, &config);
+	CU_ASSERT(ret == 0);
+
+	CU_ASSERT_FATAL(odp_pktout_queue(pktio_tx, &pktout, 1) == 1);
+
+	ret = odp_pktio_start(pktio_tx);
+	CU_ASSERT(ret == 0);
+	if (num_ifaces > 1) {
+		ret = odp_pktio_start(pktio_rx);
+		CU_ASSERT(ret == 0);
+	}
+
+	odp_proto_stats_param_init(&param);
+	odp_proto_stats_capability(pktio_tx, &capa);
+	CU_ASSERT(capa.tx.counters.all_bits != 0);
+	param.counters.all_bits = capa.tx.counters.all_bits;
+	/* Create statistics object with all supported counters */
+	stat0 = odp_proto_stats_create("flow0_stat", &param);
+	CU_ASSERT_FATAL(stat0 != ODP_PROTO_STATS_INVALID);
+	stat1 = odp_proto_stats_create("flow1_stat", &param);
+	CU_ASSERT_FATAL(stat1 != ODP_PROTO_STATS_INVALID);
+
+	/* Flow-0 options */
+	opt0.stat = stat0;
+	opt0.oct_count0_adj = 0;
+	/* oct1 contains byte count of packets excluding Ethernet header */
+	opt0.oct_count1_adj = -14;
+
+	/* Flow-1 options */
+	opt1.stat = stat1;
+	opt1.oct_count0_adj = -8;
+	opt1.oct_count1_adj = 14;
+
+	alloc = create_packets(tx_pkt, pkt_seq, num_pkts, pktio_tx, pktio_rx);
+
+	/* Attach statistics object to all Tx packets */
+	for (pkts = 0; pkts < alloc; pkts++) {
+		if ((pkts % 2) == 0) {
+			odp_packet_proto_stats_request(tx_pkt[pkts], &opt0);
+			flow0_pkts++;
+		} else {
+			odp_packet_proto_stats_request(tx_pkt[pkts], &opt1);
+			flow1_pkts++;
+		}
+	}
+
+	/* send */
+	for (pkts = 0; pkts != alloc; ) {
+		ret = odp_pktout_send(pktout, &tx_pkt[pkts], alloc - pkts);
+		if (ret < 0) {
+			CU_FAIL("unable to send packet\n");
+			break;
+		}
+		pkts += ret;
+	}
+	tx_pkts = pkts;
+
+	/* get */
+	for (i = 0, pkts = 0; i < (int)num_pkts && pkts != tx_pkts; i++) {
+		ev = odp_schedule(NULL, wait);
+		if (ev != ODP_EVENT_INVALID) {
+			if (odp_event_type(ev) == ODP_EVENT_PACKET) {
+				pkt = odp_packet_from_event(ev);
+				if (pktio_pkt_seq(pkt) != TEST_SEQ_INVALID)
+					pkts++;
+			}
+			odp_event_free(ev);
+		}
+	}
+
+	CU_ASSERT(pkts == tx_pkts);
+
+	/* Validate Flow-0 packet statistics */
+	validate_proto_stats(stat0, opt0, capa, flow0_pkts);
+
+	/* Validate Flow-1 packet statistics */
+	validate_proto_stats(stat1, opt1, capa, flow1_pkts);
+
+	for (i = 0; i < num_ifaces; i++) {
+		CU_ASSERT(odp_pktio_stop(pktio[i]) == 0);
+		flush_input_queue(pktio[i], ODP_PKTIN_MODE_SCHED);
+		CU_ASSERT(odp_pktio_close(pktio[i]) == 0);
+	}
+
+	/* Destroy proto statistics object */
+	CU_ASSERT(odp_proto_stats_destroy(stat0) == 0);
+	CU_ASSERT(odp_proto_stats_destroy(stat1) == 0);
+}
+
 static int pktio_check_start_stop(void)
 {
 	if (getenv("ODP_PKTIO_TEST_DISABLE_START_STOP"))
@@ -4617,6 +4797,8 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_event_queue_statistics_counters,
 				  pktio_check_event_queue_statistics_counters),
 	ODP_TEST_INFO(pktio_test_extra_stats),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_proto_statistics_counters,
+				  pktio_check_proto_statistics_counters),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktin_ts,
 				  pktio_check_pktin_ts),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktout_ts,
