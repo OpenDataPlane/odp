@@ -1737,10 +1737,19 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 
 	promisc_mode_check(pkt_dpdk);
 
+#if RTE_VERSION < RTE_VERSION_NUM(19, 11, 0, 0)
+	ret = 0;
+	if (pkt_dpdk->opt.multicast_en)
+		rte_eth_allmulticast_enable(pkt_dpdk->port_id);
+	else
+		rte_eth_allmulticast_disable(pkt_dpdk->port_id);
+#else
 	if (pkt_dpdk->opt.multicast_en)
 		ret = rte_eth_allmulticast_enable(pkt_dpdk->port_id);
 	else
 		ret = rte_eth_allmulticast_disable(pkt_dpdk->port_id);
+#endif
+
 	/* Not supported by all PMDs, so ignore the return value */
 	if (ret)
 		ODP_DBG("Configuring multicast reception not supported by the PMD\n");
