@@ -395,9 +395,9 @@ static int read_config_file(sched_global_t *sched)
 	return 0;
 }
 
-static inline uint8_t spread_index(uint32_t index)
+/* Spread from thread or other index */
+static inline uint8_t spread_from_index(uint32_t index)
 {
-	/* thread/queue index to spread index */
 	return index % sched->config.num_spread;
 }
 
@@ -414,15 +414,14 @@ static void sched_local_init(void)
 	sched_local.sync_ctx    = NO_SYNC_CONTEXT;
 	sched_local.stash.queue = ODP_QUEUE_INVALID;
 
-	spread = spread_index(sched_local.thr);
+	spread = spread_from_index(sched_local.thr);
 	prefer_ratio = sched->config.prefer_ratio;
 
 	for (i = 0; i < SPREAD_TBL_SIZE; i++) {
 		sched_local.spread_tbl[i] = spread;
 
 		if (num_spread > 1 && (i % prefer_ratio) == 0) {
-			sched_local.spread_tbl[i] = spread_index(spread +
-								 offset);
+			sched_local.spread_tbl[i] = spread_from_index(spread + offset);
 			offset++;
 			if (offset == num_spread)
 				offset = 1;
@@ -635,16 +634,6 @@ static inline int prio_level_from_api(int api_prio)
 	return schedule_max_prio() - api_prio;
 }
 
-static inline void inc_queue_count(int grp, int prio, int spr)
-{
-	odp_ticketlock_lock(&sched->mask_lock[grp]);
-
-	sched->prio_q_mask[grp][prio] |= 1 << spr;
-	sched->prio_q_count[grp][prio][spr]++;
-
-	odp_ticketlock_unlock(&sched->mask_lock[grp]);
-}
-
 static inline void dec_queue_count(int grp, int prio, int spr)
 {
 	odp_ticketlock_lock(&sched->mask_lock[grp]);
@@ -673,13 +662,40 @@ static inline void update_queue_count(int grp, int prio, int old_spr, int new_sp
 	odp_ticketlock_unlock(&sched->mask_lock[grp]);
 }
 
+/* Select the spread that has least queues */
+static uint8_t allocate_spread(int grp, int prio)
+{
+	uint8_t i;
+	uint32_t num;
+	uint32_t min = UINT32_MAX;
+	uint8_t num_spread = sched->config.num_spread;
+	uint8_t spr = 0;
+
+	odp_ticketlock_lock(&sched->mask_lock[grp]);
+
+	for (i = 0; i < num_spread; i++) {
+		num = sched->prio_q_count[grp][prio][i];
+		if (num < min) {
+			spr = i;
+			min = num;
+		}
+	}
+
+	sched->prio_q_mask[grp][prio] |= 1 << spr;
+	sched->prio_q_count[grp][prio][spr]++;
+
+	odp_ticketlock_unlock(&sched->mask_lock[grp]);
+
+	return spr;
+}
+
 static int schedule_create_queue(uint32_t queue_index,
 				 const odp_schedule_param_t *sched_param)
 {
 	int i;
+	uint8_t spread;
 	int grp  = sched_param->group;
 	int prio = prio_level_from_api(sched_param->prio);
-	uint8_t spread = spread_index(queue_index);
 
 	if (odp_global_rw->schedule_configured == 0) {
 		ODP_ERR("Scheduler has not been configured\n");
@@ -703,7 +719,7 @@ static int schedule_create_queue(uint32_t queue_index,
 		return -1;
 	}
 
-	inc_queue_count(grp, prio, spread);
+	spread = allocate_spread(grp, prio);
 
 	sched->queue[queue_index].grp  = grp;
 	sched->queue[queue_index].prio = prio;
@@ -1669,7 +1685,7 @@ static int schedule_group_join(odp_schedule_group_t group, const odp_thrmask_t *
 	}
 
 	for (i = 0; i < count; i++) {
-		spread = spread_index(thr_tbl[i]);
+		spread = spread_from_index(thr_tbl[i]);
 		sched->sched_grp[group].spread_thrs[spread]++;
 	}
 
@@ -1721,7 +1737,7 @@ static int schedule_group_leave(odp_schedule_group_t group, const odp_thrmask_t 
 	}
 
 	for (i = 0; i < count; i++) {
-		spread = spread_index(thr_tbl[i]);
+		spread = spread_from_index(thr_tbl[i]);
 		sched->sched_grp[group].spread_thrs[spread]--;
 	}
 
@@ -1773,7 +1789,7 @@ static int schedule_thr_add(odp_schedule_group_t group, int thr)
 {
 	odp_thrmask_t mask;
 	odp_thrmask_t new_mask;
-	uint8_t spread = spread_index(thr);
+	uint8_t spread = spread_from_index(thr);
 
 	if (group < 0 || group >= SCHED_GROUP_NAMED)
 		return -1;
@@ -1801,7 +1817,7 @@ static int schedule_thr_rem(odp_schedule_group_t group, int thr)
 {
 	odp_thrmask_t mask;
 	odp_thrmask_t new_mask;
-	uint8_t spread = spread_index(thr);
+	uint8_t spread = spread_from_index(thr);
 
 	if (group < 0 || group >= SCHED_GROUP_NAMED)
 		return -1;
