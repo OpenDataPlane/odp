@@ -97,6 +97,12 @@ jobs:
         run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
 
+      - name: "--enable-crypto-default=armv8crypto"
+        env:
+          CONF: "--enable-crypto-default=armv8crypto"
+        run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+
       - name: Ubuntu 20.04
         env:
           CONF: "--enable-dpdk-shared"

@@ -14,6 +14,7 @@ AM_CPPFLAGS +=  -I$(top_srcdir)/platform/$(with_platform)/arch/default
 AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
 AM_CPPFLAGS +=  $(NETMAP_CPPFLAGS)
 
+AM_CFLAGS +=  $(AARCH64CRYPTO_CFLAGS)
 AM_CFLAGS +=  $(DPDK_CFLAGS)
 AM_CFLAGS +=  $(LIBCONFIG_CFLAGS)
 
@@ -243,8 +244,13 @@ if WITH_OPENSSL
 __LIB__libodp_linux_la_SOURCES += \
 			   odp_crypto_openssl.c
 else
+if WITH_ARMV8_CRYPTO
+__LIB__libodp_linux_la_SOURCES += \
+			   arch/aarch64/odp_crypto_armv8.c
+else
 __LIB__libodp_linux_la_SOURCES += \
 			   odp_crypto_null.c
+endif
 endif
 if ODP_ABI_COMPAT
 __LIB__libodp_linux_la_SOURCES += \
@@ -388,7 +394,8 @@ if ODP_PKTIO_PCAP
 __LIB__libodp_linux_la_SOURCES += pktio/pcap.c
 endif
 
-__LIB__libodp_linux_la_LIBADD = $(ATOMIC_LIBS)
+__LIB__libodp_linux_la_LIBADD =  $(AARCH64CRYPTO_LIBS)
+__LIB__libodp_linux_la_LIBADD += $(ATOMIC_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(OPENSSL_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(LIBCONFIG_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(DPDK_LIBS_LIBODP)

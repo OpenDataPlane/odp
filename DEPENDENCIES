@@ -98,11 +98,36 @@ Prerequisites for building the OpenDataPlane (ODP) API
      --with-openssl-path=/home/${USER}/src/install-openssl-aarch64
    $ make
 
-3.3 Netmap packet I/O support (optional)
+3.3 ARMv8 Crypto native compile (optional)
+
+   Optimized crypto library using ARMv8 cryptographic extensions for currently
+   only AES-GCM algorithm.
+
+3.3.1 Building ARMv8 crypto library
+
+   # Checkout and build AArch64cryptolib code
+   $ git clone https://github.com/ARM-software/AArch64cryptolib
+   $ cd AArch64cryptolib/
+   $ make
+
+   For additional instructions, refer to README.md
+
+3.3.2 Building ODP with ARMv8 crypto library
+   $ ./bootstrap
+
+   # Append the Armv8 crypto library path to PKG_CONFIG_PATH if necessary
+   $ echo $PKG_CONFIG_PATH
+   $ export PKG_CONFIG_PATH=<AArch64cryptolib-path>/pkgconfig:$PKG_CONFIG_PATH
+
+   # Compile and build ODP with Armv8 crypto library
+   $ ./configure --enable-crypto-default=armv8crypto
+   $ make
+
+3.4 Netmap packet I/O support (optional)
 
    Netmap accelerated ODP packet I/O.
 
-3.3.1 Building netmap kernel modules
+3.4.1 Building netmap kernel modules
 
    ODP works at least with the latest release version of netmap, which is
    currently v13.0. However, if possible one should try to use the latest netmap
@@ -146,14 +171,14 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ ./configure --kernel-sources=<path_to_kernel_src>
    $ make
 
-3.3.2 Building ODP
+3.4.2 Building ODP
 
    $ cd <odp_dir>
    $ ./bootstrap
    $ ./configure --with-netmap-path=<netmap_dir>
    $ make
 
-3.3.3 Inserting netmap kernel modules
+3.4.3 Inserting netmap kernel modules
 
    In order to use netmap I/O you need to insert at least the core netmap
    kernel module.
@@ -171,13 +196,13 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
    To restore the original drivers you should be able to use modprobe.
 
-3.3.4 Running ODP with netmap I/O
+3.4.4 Running ODP with netmap I/O
 
    ODP applications will use netmap for packet I/O by default as long as the
    netmap kernel module is loaded. If socket I/O is desired instead, it can be
    activated by setting the environment variable ODP_PKTIO_DISABLE_NETMAP.
 
-3.4 DPDK packet I/O support (optional)
+3.5 DPDK packet I/O support (optional)
 
    Use DPDK for ODP packet I/O. Currently supported DPDK versions are v19.11
    (recommended) and v20.11.
@@ -186,7 +211,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
         https://github.com/OpenDataPlane/odp-dpdk.git
    for a full DPDK based ODP implementation.
 
-3.4.1 DPDK pktio requirements
+3.5.1 DPDK pktio requirements
 
    DPDK pktio adds a dependency to NUMA library.
    # Debian/Ubuntu
@@ -195,11 +220,11 @@ Prerequisites for building the OpenDataPlane (ODP) API
    # CentOS/RedHat/Fedora
    $ sudo yum install numactl-devel
 
-3.4.2 Native DPDK install
+3.5.2 Native DPDK install
    # Debian/Ubuntu starting from 20.04
    $ sudo apt-get install dpdk-dev
 
-3.4.3 Build DPDK v19.11 from source
+3.5.3 Build DPDK v19.11 from source
    $ git clone https://dpdk.org/git/dpdk-stable --branch 19.11 --depth 1 ./<dpdk-dir>
 
    # Make and edit DPDK configuration
@@ -217,7 +242,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    # Configure ODP
    $ ./configure --with-dpdk-path=<dpdk-dir>
 
-3.4.4 Build DPDK v20.11 from source
+3.5.4 Build DPDK v20.11 from source
    $ git clone https://dpdk.org/git/dpdk-stable --branch 20.11 --depth 1 ./<dpdk-dir>
 
    # Prepare the build directory
@@ -235,7 +260,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    # Instead of using --with-dpdk-path option, set PKG_CONFIG_PATH
    $ PKG_CONFIG_PATH=<dpdk-dir>/install/lib/x86_64-linux-gnu/pkgconfig ./configure --enable-dpdk
 
-3.4.5 Setup system
+3.5.5 Setup system
 
    # Load DPDK modules
    $ sudo modprobe uio
@@ -247,7 +272,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    512 x 2MB huge pages. All this can be done with the DPDK setup script
    (<dpdk-dir>/usertools/dpdk-setup.sh).
 
-3.4.6 Running ODP with DPDK pktio
+3.5.6 Running ODP with DPDK pktio
 
    ODP applications will try use DPDK for packet I/O by default. If some other
    I/O type is desired instead, DPDK I/O can be disabled by setting the

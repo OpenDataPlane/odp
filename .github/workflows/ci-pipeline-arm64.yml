@@ -70,7 +70,6 @@ jobs:
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${CC}"
                -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/out_of_tree.sh
 
-
   Build_sched_config:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: [self-hosted, ARM64]
@@ -97,7 +96,6 @@ jobs:
         if: ${{ failure() }}
         run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
 
-
   Run:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: [self-hosted, ARM64]
@@ -108,7 +106,7 @@ jobs:
         conf: ['', '--enable-abi-compat', '--enable-deprecated --enable-debug=full',
                '--enable-dpdk-zero-copy --disable-static-applications',
                '--disable-host-optimization', '--disable-host-optimization --enable-abi-compat',
-               '--without-openssl --without-pcap']
+               '--without-openssl --without-pcap', '--enable-crypto-default=armv8crypto']
     steps:
       - uses: AutoModality/action-clean@v1.1.0
       - uses: actions/checkout@v2
@@ -117,7 +115,6 @@ jobs:
       - name: Failure log
         if: ${{ failure() }}
         run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
-
 
   Run_OS:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
@@ -172,7 +169,6 @@ jobs:
         if: ${{ failure() }}
         run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
 
-
   Run_packet_align:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: [self-hosted, ARM64]
@@ -185,7 +181,6 @@ jobs:
       - name: Failure log
         if: ${{ failure() }}
         run: find . -name "*.trs" | xargs grep -l '^.test-result. FAIL' | while read trs ; do echo FAILURE detected at $trs; cat ${trs%%.trs}.log ; done
-
 
   Run_dpdk-20_11:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}

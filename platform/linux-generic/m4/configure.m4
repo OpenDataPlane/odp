@@ -7,6 +7,7 @@ ODP_ATOMIC
 ODP_PTHREAD
 ODP_TIMER
 m4_include([platform/linux-generic/m4/odp_cpu.m4])
+m4_include([platform/linux-generic/m4/odp_crypto.m4])
 m4_include([platform/linux-generic/m4/odp_pcap.m4])
 m4_include([platform/linux-generic/m4/odp_scheduler.m4])
 
@@ -28,14 +29,15 @@ m4_include([platform/linux-generic/m4/odp_netmap.m4])
 m4_include([platform/linux-generic/m4/odp_dpdk.m4])
 ODP_SCHEDULER
 
-AS_VAR_APPEND([PLAT_DEP_LIBS], ["${ATOMIC_LIBS} ${LIBCONFIG_LIBS} ${OPENSSL_LIBS} ${DPDK_LIBS_LT} ${LIBCLI_LIBS}"])
+AS_VAR_APPEND([PLAT_DEP_LIBS], ["${ATOMIC_LIBS} ${AARCH64CRYPTO_LIBS} ${LIBCONFIG_LIBS} ${OPENSSL_LIBS} ${DPDK_LIBS_LT} ${LIBCLI_LIBS}"])
 
 # Add text to the end of configure with platform specific settings.
 # Make sure it's aligned same as other lines in configure.ac.
 AS_VAR_APPEND([PLAT_CFG_TEXT], ["
+	crypto:                 ${default_crypto}
+	default_config_path:    ${default_config_path}
 	pcap:			${have_pcap}
-	pcapng:			${have_pcapng}
-	default_config_path:	${default_config_path}"])
+	pcapng:			${have_pcapng}"])
 
 AC_CONFIG_COMMANDS_PRE([dnl
 AM_CONDITIONAL([PLATFORM_IS_LINUX_GENERIC],
