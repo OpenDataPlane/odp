@@ -327,7 +327,7 @@ TESTS = validation/api/pktio/pktio_run.sh \
 	$(ALL_API_VALIDATION)/queue/queue_main$(EXEEXT) \
 	$(ALL_API_VALIDATION)/random/random_main$(EXEEXT) \
 	$(ALL_API_VALIDATION)/scheduler/scheduler_main$(EXEEXT) \
-	$(ALL_API_VALIDATION)/std_clib/std_clib_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/std/std_main$(EXEEXT) \
 	$(ALL_API_VALIDATION)/thread/thread_main$(EXEEXT) \
 	$(ALL_API_VALIDATION)/time/time_main$(EXEEXT) \
 	$(ALL_API_VALIDATION)/timer/timer_main$(EXEEXT) \

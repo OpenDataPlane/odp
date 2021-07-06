@@ -40,7 +40,7 @@ AC_CONFIG_FILES([test/common/Makefile
 		 test/validation/api/scheduler/Makefile
 		 test/validation/api/shmem/Makefile
 		 test/validation/api/stash/Makefile
-		 test/validation/api/std_clib/Makefile
+		 test/validation/api/std/Makefile
 		 test/validation/api/system/Makefile
 		 test/validation/api/thread/Makefile
 		 test/validation/api/time/Makefile

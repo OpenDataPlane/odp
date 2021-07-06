@@ -11,7 +11,7 @@
 
 #define PATTERN 0x5e
 
-static void std_clib_test_memcpy(void)
+static void std_test_memcpy(void)
 {
 	uint8_t src[] = {0, 1,  2,  3,  4,  5,  6,  7,
 			 8, 9, 10, 11, 12, 13, 14, 15};
@@ -27,7 +27,7 @@ static void std_clib_test_memcpy(void)
 	CU_ASSERT(ret == 0);
 }
 
-static void std_clib_test_memset(void)
+static void std_test_memset(void)
 {
 	uint8_t data[] = {0, 1,  2,  3,  4,  5,  6,  7,
 			  8, 9, 10, 11, 12, 13, 14, 15};
@@ -43,7 +43,7 @@ static void std_clib_test_memset(void)
 	CU_ASSERT(ret == 0);
 }
 
-static void std_clib_test_memcmp(void)
+static void std_test_memcmp(void)
 {
 	uint8_t data[]       = {1,  2,  3,  4,  5,  6,  7,  8,
 				9, 10, 11, 12, 13, 14, 15, 16};
@@ -80,15 +80,15 @@ static void std_clib_test_memcmp(void)
 	}
 }
 
-odp_testinfo_t std_clib_suite[] = {
-	ODP_TEST_INFO(std_clib_test_memcpy),
-	ODP_TEST_INFO(std_clib_test_memset),
-	ODP_TEST_INFO(std_clib_test_memcmp),
+odp_testinfo_t std_suite[] = {
+	ODP_TEST_INFO(std_test_memcpy),
+	ODP_TEST_INFO(std_test_memset),
+	ODP_TEST_INFO(std_test_memcmp),
 	ODP_TEST_INFO_NULL,
 };
 
-odp_suiteinfo_t std_clib_suites[] = {
-	{"Std C library", NULL, NULL, std_clib_suite},
+odp_suiteinfo_t std_suites[] = {
+	{"Std", NULL, NULL, std_suite},
 	ODP_SUITE_INFO_NULL
 };
 
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 	if (odp_cunit_parse_options(argc, argv))
 		return -1;
 
-	ret = odp_cunit_register(std_clib_suites);
+	ret = odp_cunit_register(std_suites);
 
 	if (ret == 0)
 		ret = odp_cunit_run();
