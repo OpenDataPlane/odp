@@ -59,7 +59,7 @@ extern "C" {
 #include <odp/api/traffic_mngr.h>
 #include <odp/api/spinlock_recursive.h>
 #include <odp/api/rwlock_recursive.h>
-#include <odp/api/std_clib.h>
+#include <odp/api/std.h>
 #include <odp/api/support.h>
 #include <odp/api/ipsec.h>
 #include <odp/api/stash.h>

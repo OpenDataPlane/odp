@@ -43,7 +43,7 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/pool_inline_types.h \
 		  include/odp/api/plat/queue_inlines.h \
 		  include/odp/api/plat/queue_inline_types.h \
-		  include/odp/api/plat/std_clib_inlines.h \
+		  include/odp/api/plat/std_inlines.h \
 		  include/odp/api/plat/strong_types.h \
 		  include/odp/api/plat/sync_inlines.h \
 		  include/odp/api/plat/thread_inlines.h \
@@ -81,7 +81,7 @@ odpapiabiarchinclude_HEADERS += \
 		  include-abi/odp/api/abi/spinlock.h \
 		  include-abi/odp/api/abi/spinlock_recursive.h \
 		  include-abi/odp/api/abi/stash.h \
-		  include-abi/odp/api/abi/std_clib.h \
+		  include-abi/odp/api/abi/std.h \
 		  include-abi/odp/api/abi/std_types.h \
 		  include-abi/odp/api/abi/sync.h \
 		  include-abi/odp/api/abi/thread.h \
@@ -176,7 +176,6 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_errno.c \
 			   odp_event.c \
 			   odp_fdserver.c \
-			   odp_fractional.c \
 			   odp_hash_crc_gen.c \
 			   odp_impl.c \
 			   odp_init.c \
@@ -214,6 +213,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_spinlock.c \
 			   odp_spinlock_recursive.c \
 			   odp_stash.c \
+			   odp_std.c \
 			   odp_system_info.c \
 			   odp_pcapng.c \
 			   odp_thread.c \
@@ -260,7 +260,7 @@ __LIB__libodp_linux_la_SOURCES += \
 			   odp_packet_flags_api.c \
 			   odp_pktio_api.c \
 			   odp_queue_api.c \
-			   odp_std_clib_api.c \
+			   odp_std_api.c \
 			   odp_sync_api.c \
 			   odp_thread_api.c \
 			   odp_ticketlock_api.c \

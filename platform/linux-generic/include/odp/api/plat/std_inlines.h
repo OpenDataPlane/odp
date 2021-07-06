@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#ifndef ODP_PLAT_STD_CLIB_INLINE_H_
-#define ODP_PLAT_STD_CLIB_INLINE_H_
+#ifndef ODP_PLAT_STD_INLINE_H_
+#define ODP_PLAT_STD_INLINE_H_
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
