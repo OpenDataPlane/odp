@@ -22,18 +22,13 @@
 
 #define MAX_NUM_IFACES           2
 #define MAX_TM_SYSTEMS           3
-#define NUM_LEVELS               3
-#define NUM_PRIORITIES           4
-#define NUM_QUEUES_PER_NODE      NUM_PRIORITIES
-#define FANIN_RATIO              8
-#define NUM_LEVEL0_TM_NODES      1
-#define NUM_LEVEL1_TM_NODES      FANIN_RATIO
-#define NUM_LEVEL2_TM_NODES      (FANIN_RATIO * FANIN_RATIO)
-#define NUM_TM_QUEUES            (NUM_LEVEL2_TM_NODES * NUM_QUEUES_PER_NODE)
-#define NUM_SHAPER_PROFILES      64
-#define NUM_SCHED_PROFILES       64
-#define NUM_THRESHOLD_PROFILES   64
-#define NUM_WRED_PROFILES        64
+#define MAX_TM_LEVELS            5
+#define MAX_TM_PRIORITIES        4
+#define MAX_FANIN_RATIO          8
+#define MAX_SHAPER_PROFILES      64
+#define MAX_SCHED_PROFILES       64
+#define MAX_THRESHOLD_PROFILES   64
+#define MAX_WRED_PROFILES        64
 #define NUM_SHAPER_TEST_PROFILES 8
 #define NUM_SCHED_TEST_PROFILES  8
 #define NUM_THRESH_TEST_PROFILES 8
@@ -177,16 +172,6 @@ typedef struct {
 } wred_pkt_cnts_t;
 
 typedef struct {
-	uint32_t       num_queues;
-	uint32_t       priority;
-	odp_tm_queue_t tm_queues[NUM_LEVEL2_TM_NODES];
-} queue_array_t;
-
-typedef struct {
-	queue_array_t queue_array[NUM_PRIORITIES];
-} queues_set_t;
-
-typedef struct {
 	uint16_t           vlan_tci;
 	uint8_t            pkt_class;
 	uint8_t            ip_tos;        /* TOS for IPv4 and TC for IPv6 */
@@ -250,11 +235,11 @@ static wred_pkt_cnts_t EXPECTED_PKT_RCVD[] = {
 	{ TM_PERCENT(99.99), TM_PERCENT(90.0),  1, 23 },
 };
 
-static uint8_t EQUAL_WEIGHTS[FANIN_RATIO] = {
+static uint8_t EQUAL_WEIGHTS[MAX_FANIN_RATIO] = {
 	16, 16, 16, 16, 16, 16, 16, 16
 };
 
-static uint8_t INCREASING_WEIGHTS[FANIN_RATIO] = {
+static uint8_t INCREASING_WEIGHTS[MAX_FANIN_RATIO] = {
 	8, 12, 16, 24, 32, 48, 64, 96
 };
 
@@ -276,21 +261,30 @@ static uint8_t IPV6_DST_ADDR[ODPH_IPV6ADDR_LEN] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 10, 0, 0, 100
 };
 
-static odp_tm_t        odp_tm_systems[MAX_TM_SYSTEMS];
+static odp_tm_t odp_tm_systems[MAX_TM_SYSTEMS] = {
+	ODP_TM_INVALID, ODP_TM_INVALID, ODP_TM_INVALID
+};
 static tm_node_desc_t *root_node_descs[MAX_TM_SYSTEMS];
 static uint32_t        num_odp_tm_systems;
+static odp_bool_t      queue_priority;
+static uint16_t        total_tm_queues;
+static uint16_t        qs_per_node;
+static uint16_t        fanin_ratio;
+static uint16_t        num_lvls;
+static uint16_t        num_prio;
+static uint16_t        tm_nodes_per_lvl[MAX_TM_LEVELS];
 
 static odp_tm_capabilities_t tm_capabilities;
 
-static bool dynamic_shaper_update = true;
-static bool dynamic_sched_update = true;
-static bool dynamic_threshold_update = true;
-static bool dynamic_wred_update = true;
+static odp_bool_t dynamic_shaper_update = true;
+static odp_bool_t dynamic_sched_update = true;
+static odp_bool_t dynamic_threshold_update = true;
+static odp_bool_t dynamic_wred_update = true;
 
-static odp_tm_shaper_t    shaper_profiles[NUM_SHAPER_PROFILES];
-static odp_tm_sched_t     sched_profiles[NUM_SCHED_PROFILES];
-static odp_tm_threshold_t threshold_profiles[NUM_THRESHOLD_PROFILES];
-static odp_tm_wred_t      wred_profiles[NUM_WRED_PROFILES][ODP_NUM_PKT_COLORS];
+static odp_tm_shaper_t    shaper_profiles[MAX_SHAPER_PROFILES];
+static odp_tm_sched_t     sched_profiles[MAX_SCHED_PROFILES];
+static odp_tm_threshold_t threshold_profiles[MAX_THRESHOLD_PROFILES];
+static odp_tm_wred_t      wred_profiles[MAX_WRED_PROFILES][ODP_NUM_PKT_COLORS];
 
 static uint32_t num_shaper_profiles;
 static uint32_t num_sched_profiles;
@@ -311,7 +305,6 @@ static uint32_t       num_rcv_pkts;
 static uint32_t rcv_gaps[MAX_PKTS];
 static uint32_t rcv_gap_cnt;
 
-static queues_set_t queues_set;
 static uint32_t     unique_id_list[MAX_PKTS];
 
 /* interface names used for testing */
@@ -335,6 +328,8 @@ static uint32_t cpu_unique_id;
 static uint32_t cpu_tcp_seq_num;
 
 static int8_t suite_inactive;
+
+static int destroy_tm_subtree(tm_node_desc_t *node_desc);
 
 static void busy_wait(uint64_t nanoseconds)
 {
@@ -436,11 +431,6 @@ static int test_overall_capabilities(void)
 
 			if (per_level->max_fanin_per_node == 0) {
 				CU_ASSERT(per_level->max_fanin_per_node != 0);
-				return -1;
-			}
-
-			if (per_level->max_priority == 0) {
-				CU_ASSERT(per_level->max_priority != 0);
 				return -1;
 			}
 		}
@@ -1355,11 +1345,10 @@ static int rcv_rate_stats(rcv_stats_t *rcv_stats, uint8_t pkt_class)
 	return 0;
 }
 
-static int create_tm_queue(odp_tm_t         odp_tm,
-			   odp_tm_node_t    tm_node,
-			   uint32_t         node_idx,
-			   tm_queue_desc_t *queue_desc,
-			   uint32_t         priority)
+static odp_tm_queue_t create_tm_queue(odp_tm_t         odp_tm,
+				      odp_tm_node_t    tm_node,
+				      uint32_t         node_idx,
+				      uint32_t         priority)
 {
 	odp_tm_queue_params_t queue_params;
 	odp_tm_queue_t        tm_queue;
@@ -1384,19 +1373,18 @@ static int create_tm_queue(odp_tm_t         odp_tm,
 	tm_queue = odp_tm_queue_create(odp_tm, &queue_params);
 	if (tm_queue == ODP_TM_INVALID) {
 		ODPH_ERR("odp_tm_queue_create() failed\n");
-		return -1;
+		return ODP_TM_INVALID;
 	}
 
-	queue_desc->tm_queues[priority] = tm_queue;
 	rc = odp_tm_queue_connect(tm_queue, tm_node);
 	if (rc != 0) {
 		ODPH_ERR("odp_tm_queue_connect() failed for queue %" PRIx64
 			"\n", odp_tm_queue_to_u64(tm_queue));
 		odp_tm_queue_destroy(tm_queue);
-		return -1;
+		return ODP_TM_INVALID;
 	}
 
-	return 0;
+	return tm_queue;
 }
 
 static int destroy_tm_queue(odp_tm_queue_t tm_queue)
@@ -1418,6 +1406,7 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 	odp_tm_node_t         tm_node, parent_node;
 	uint32_t              node_desc_size, queue_desc_size, priority;
 	char                  node_name[TM_NAME_LEN];
+	uint16_t              queue;
 	int                   rc;
 
 	odp_tm_node_params_init(&node_params);
@@ -1440,7 +1429,7 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 		}
 	}
 
-	node_params.max_fanin = FANIN_RATIO;
+	node_params.max_fanin = fanin_ratio;
 	node_params.level = level;
 	/* This is ignored when pkt priority mode is not overwrite */
 	node_params.priority = 0;
@@ -1474,12 +1463,12 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 	}
 
 	node_desc_size = sizeof(tm_node_desc_t) +
-			 sizeof(odp_tm_node_t) * FANIN_RATIO;
+		sizeof(odp_tm_node_t) * fanin_ratio;
 	node_desc = malloc(node_desc_size);
 	memset(node_desc, 0, node_desc_size);
 	node_desc->level = level;
 	node_desc->node_idx = node_idx;
-	node_desc->num_children = FANIN_RATIO;
+	node_desc->num_children = fanin_ratio;
 	node_desc->node = tm_node;
 	node_desc->parent_node = parent_node;
 	node_desc->node_name = strdup(node_name);
@@ -1491,25 +1480,29 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 
 	node_desc->num_children = 0;
 	queue_desc_size = sizeof(tm_queue_desc_t) +
-			  sizeof(odp_tm_queue_t) * NUM_QUEUES_PER_NODE;
+		sizeof(odp_tm_queue_t) * qs_per_node;
 	queue_desc = malloc(queue_desc_size);
 	memset(queue_desc, 0, queue_desc_size);
-	queue_desc->num_queues = NUM_QUEUES_PER_NODE;
+	queue_desc->num_queues = qs_per_node;
 	node_desc->queue_desc = queue_desc;
 
-	for (priority = 0; priority < NUM_QUEUES_PER_NODE; priority++) {
-		rc = create_tm_queue(odp_tm, tm_node, node_idx, queue_desc,
-				     priority);
-		if (rc != 0) {
+	for (queue = 0; queue < qs_per_node; queue++) {
+		odp_tm_queue_t tm_queue;
+
+		/* Set priority as queue id only if priority enabled in test */
+		priority = queue_priority ? queue : 0;
+		tm_queue = create_tm_queue(odp_tm, tm_node, node_idx, priority);
+		if (tm_queue == ODP_TM_INVALID) {
 			ODPH_ERR("create_tm_queue() failed @ "
 				 "level=%" PRIu32 "\n", level);
-			while (priority > 0)
+			while (queue > 0)
 				(void)destroy_tm_queue
-					(queue_desc->tm_queues[--priority]);
+					(queue_desc->tm_queues[--queue]);
 			free(queue_desc);
 			free(node_desc);
 			return NULL;
 		}
+		queue_desc->tm_queues[queue] = tm_queue;
 	}
 
 	return node_desc;
@@ -1524,8 +1517,8 @@ static tm_node_desc_t *create_tm_subtree(odp_tm_t        odp_tm,
 	tm_node_desc_t *node_desc, *child_desc;
 	uint32_t        child_idx;
 
-	node_desc = create_tm_node(odp_tm, level, num_levels,
-				   node_idx, parent_node);
+	node_desc = create_tm_node(odp_tm, level, num_levels, node_idx,
+				   parent_node);
 	if (node_desc == NULL) {
 		ODPH_ERR("create_tm_node() failed @ level=%" PRIu32 "\n",
 			 level);
@@ -1533,7 +1526,7 @@ static tm_node_desc_t *create_tm_subtree(odp_tm_t        odp_tm,
 	}
 
 	if (level < (num_levels - 1)) {
-		for (child_idx = 0; child_idx < FANIN_RATIO; child_idx++) {
+		for (child_idx = 0; child_idx < fanin_ratio; child_idx++) {
 			child_desc = create_tm_subtree(odp_tm, level + 1,
 						       num_levels, child_idx,
 						       node_desc);
@@ -1549,6 +1542,38 @@ static tm_node_desc_t *create_tm_subtree(odp_tm_t        odp_tm,
 	}
 
 	return node_desc;
+}
+
+static int
+create_tm_tree(odp_tm_t odp_tm, uint32_t num_levels, tm_node_desc_t **root)
+{
+	tm_node_desc_t *node_desc, *child_desc;
+	uint32_t        child_idx;
+
+	/* Root node */
+	node_desc = create_tm_node(odp_tm, 0, num_levels, 0, NULL);
+	if (node_desc == NULL) {
+		ODPH_ERR("create_tm_node() failed @ level=0 (root)\n");
+		return -1;
+	}
+	*root = node_desc;
+
+	if (num_levels - 1) {
+		for (child_idx = 0; child_idx < fanin_ratio; child_idx++) {
+			child_desc = create_tm_subtree(odp_tm, 1, num_levels,
+						       child_idx, node_desc);
+			if (child_desc == NULL) {
+				ODPH_ERR("%s failed level 0 (root level)\n",
+					 __func__);
+
+				return -1;
+			}
+
+			node_desc->children[child_idx] = child_desc;
+		}
+	}
+
+	return 0;
 }
 
 static odp_tm_node_t find_tm_node(uint8_t tm_system_idx, const char *node_name)
@@ -1705,8 +1730,8 @@ static int create_tm_system(void)
 	odp_tm_level_requirements_t *per_level;
 	odp_tm_requirements_t        requirements;
 	odp_tm_egress_t              egress;
-	tm_node_desc_t              *root_node_desc;
-	uint32_t                     level, max_nodes[ODP_TM_MAX_LEVELS];
+	tm_node_desc_t              *root_node_desc = NULL;
+	uint32_t                     level;
 	odp_tm_t                     odp_tm, found_odp_tm;
 	char                         tm_name[TM_NAME_LEN];
 	int                          rc;
@@ -1714,24 +1739,20 @@ static int create_tm_system(void)
 	odp_tm_requirements_init(&requirements);
 	odp_tm_egress_init(&egress);
 
-	requirements.max_tm_queues              = NUM_TM_QUEUES;
-	requirements.num_levels                 = NUM_LEVELS;
+	requirements.max_tm_queues              = total_tm_queues;
+	requirements.num_levels                 = num_lvls;
 
 	set_reqs_based_on_capas(&requirements);
 
-	/* Set the max_num_tm_nodes to be double the expected number of nodes
-	 * at that level */
-	memset(max_nodes, 0, sizeof(max_nodes));
-	max_nodes[0] = 2 * NUM_LEVEL0_TM_NODES;
-	max_nodes[1] = 2 * NUM_LEVEL1_TM_NODES;
-	max_nodes[2] = 2 * NUM_LEVEL2_TM_NODES;
-	max_nodes[3] = 2 * NUM_LEVEL2_TM_NODES * FANIN_RATIO;
-
-	for (level = 0; level < NUM_LEVELS; level++) {
+	for (level = 0; level < num_lvls; level++) {
 		per_level = &requirements.per_level[level];
-		per_level->max_priority              = NUM_PRIORITIES - 1;
-		per_level->max_num_tm_nodes          = max_nodes[level];
-		per_level->max_fanin_per_node        = FANIN_RATIO;
+		if (queue_priority)
+			per_level->max_priority = num_prio - 1;
+		else
+			per_level->max_priority = 0;
+
+		per_level->max_num_tm_nodes          = tm_nodes_per_lvl[level];
+		per_level->max_fanin_per_node        = fanin_ratio;
 		per_level->tm_node_shaper_needed     = true;
 		per_level->tm_node_wred_needed       = false;
 		per_level->tm_node_dual_slope_needed = false;
@@ -1747,24 +1768,20 @@ static int create_tm_system(void)
 	odp_tm = odp_tm_create(tm_name, &requirements, &egress);
 	CU_ASSERT_FATAL(odp_tm != ODP_TM_INVALID);
 
-
-	odp_tm_systems[num_odp_tm_systems] = odp_tm;
-
-	root_node_desc = create_tm_subtree(odp_tm, 0, NUM_LEVELS, 0, NULL);
-	root_node_descs[num_odp_tm_systems] = root_node_desc;
-	if (root_node_desc == NULL) {
-		ODPH_ERR("create_tm_subtree() failed\n");
-		return -1;
+	CU_ASSERT((rc = create_tm_tree(odp_tm, num_lvls,
+				       &root_node_desc)) == 0);
+	if (rc) {
+		ODPH_ERR("create_tm_tree() failed\n");
+		goto error;
 	}
-
-	num_odp_tm_systems++;
 
 	/* Test odp_tm_capability and odp_tm_find. */
 	rc = odp_tm_capability(odp_tm, &tm_capabilities);
+	CU_ASSERT(rc == 0);
 	if (rc != 0) {
 		ODPH_ERR("odp_tm_capability() failed for tm: %" PRIx64 "\n",
 			 odp_tm_to_u64(odp_tm));
-		return -1;
+		goto error;
 	}
 
 	/* Update dynamic capability flags from created tm system */
@@ -1774,9 +1791,10 @@ static int create_tm_system(void)
 	dynamic_wred_update = tm_capabilities.dynamic_wred_update;
 
 	found_odp_tm = odp_tm_find(tm_name, &requirements, &egress);
+	CU_ASSERT(found_odp_tm == odp_tm);
 	if ((found_odp_tm == ODP_TM_INVALID) || (found_odp_tm != odp_tm)) {
 		ODPH_ERR("odp_tm_find() failed\n");
-		return -1;
+		goto error;
 	}
 
 	/* Start TM system */
@@ -1784,10 +1802,22 @@ static int create_tm_system(void)
 	if (rc != 0) {
 		ODPH_ERR("odp_tm_start() failed for tm: %" PRIx64 "\n",
 			 odp_tm_to_u64(odp_tm));
-		return -1;
+		goto error;
 	}
 
+#if TM_DEBUG
+	odp_tm_stats_print(odp_tm);
+#endif
+	root_node_descs[num_odp_tm_systems] = root_node_desc;
+	odp_tm_systems[num_odp_tm_systems] = odp_tm;
+	num_odp_tm_systems++;
 	return 0;
+error:
+	odp_tm_stats_print(odp_tm);
+	/* Close/free the TM systems. */
+	rc |= destroy_tm_subtree(root_node_desc);
+	rc |= odp_tm_destroy(odp_tm);
+	return rc;
 }
 
 static void dump_tm_subtree(tm_node_desc_t *node_desc)
@@ -2032,7 +2062,7 @@ static int destroy_all_shaper_profiles(void)
 	uint32_t        idx;
 	int             rc;
 
-	for (idx = 0; idx < NUM_SHAPER_PROFILES; idx++) {
+	for (idx = 0; idx < MAX_SHAPER_PROFILES; idx++) {
 		shaper_profile = shaper_profiles[idx];
 		if (shaper_profile != ODP_TM_INVALID) {
 			rc = odp_tm_shaper_destroy(shaper_profile);
@@ -2047,6 +2077,7 @@ static int destroy_all_shaper_profiles(void)
 			shaper_profiles[idx] = ODP_TM_INVALID;
 		}
 	}
+	num_shaper_profiles = 0;
 
 	return 0;
 }
@@ -2057,7 +2088,7 @@ static int destroy_all_sched_profiles(void)
 	uint32_t       idx;
 	int            rc;
 
-	for (idx = 0; idx < NUM_SCHED_PROFILES; idx++) {
+	for (idx = 0; idx < MAX_SCHED_PROFILES; idx++) {
 		sched_profile = sched_profiles[idx];
 		if (sched_profile != ODP_TM_INVALID) {
 			rc = odp_tm_sched_destroy(sched_profile);
@@ -2072,6 +2103,7 @@ static int destroy_all_sched_profiles(void)
 			sched_profiles[idx] = ODP_TM_INVALID;
 		}
 	}
+	num_sched_profiles = 0;
 
 	return 0;
 }
@@ -2082,7 +2114,7 @@ static int destroy_all_threshold_profiles(void)
 	uint32_t           idx;
 	int                rc;
 
-	for (idx = 0; idx < NUM_THRESHOLD_PROFILES; idx++) {
+	for (idx = 0; idx < MAX_THRESHOLD_PROFILES; idx++) {
 		thr_profile = threshold_profiles[idx];
 		if (thr_profile != ODP_TM_INVALID) {
 			rc = odp_tm_threshold_destroy(thr_profile);
@@ -2097,6 +2129,7 @@ static int destroy_all_threshold_profiles(void)
 			threshold_profiles[idx] = ODP_TM_INVALID;
 		}
 	}
+	num_threshold_profiles = 0;
 
 	return 0;
 }
@@ -2107,7 +2140,7 @@ static int destroy_all_wred_profiles(void)
 	uint32_t      idx, color;
 	int           rc;
 
-	for (idx = 0; idx < NUM_WRED_PROFILES; idx++) {
+	for (idx = 0; idx < MAX_WRED_PROFILES; idx++) {
 		for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
 			wred_prof = wred_profiles[idx][color];
 			if (wred_prof != ODP_TM_INVALID) {
@@ -2124,6 +2157,7 @@ static int destroy_all_wred_profiles(void)
 			}
 		}
 	}
+	num_wred_profiles = 0;
 
 	return 0;
 }
@@ -2177,6 +2211,8 @@ static int destroy_tm_systems(void)
 		odp_tm_systems[idx] = ODP_TM_INVALID;
 	}
 
+	num_odp_tm_systems = 0;
+
 	/* Close/free the TM profiles. */
 	if (destroy_all_profiles() != 0)
 		return -1;
@@ -2184,7 +2220,7 @@ static int destroy_tm_systems(void)
 	return 0;
 }
 
-static int traffic_mngr_suite_init(void)
+static int traffic_mngr_suite_common_init(void)
 {
 	odp_tm_capabilities_t egress_capa;
 	uint32_t payload_len, copy_len;
@@ -2250,25 +2286,25 @@ static int traffic_mngr_suite_init(void)
 	}
 
 	/* Check for sufficient TM queues */
-	if (egress_capa.max_tm_queues < NUM_TM_QUEUES)
+	if (egress_capa.max_tm_queues < total_tm_queues)
 		goto skip_tests;
 
 	/* Check for sufficient TM levels */
-	if (egress_capa.max_levels < NUM_LEVELS)
+	if (egress_capa.max_levels < num_lvls)
 		goto skip_tests;
 
-	for (j = 0; j < NUM_LEVELS; j++) {
+	for (j = 0; j < num_lvls; j++) {
 		/* Per node fanin */
 		if (egress_capa.per_level[j].max_fanin_per_node <
-		    FANIN_RATIO)
+		    fanin_ratio)
 			break;
 	}
 
-	if (j != NUM_LEVELS)
+	if (j != num_lvls)
 		goto skip_tests;
 
 	if (egress_capa.pkt_prio_modes[ODP_TM_PKT_PRIO_MODE_PRESERVE] &&
-	    egress_capa.max_schedulers_per_node < NUM_QUEUES_PER_NODE)
+	    egress_capa.max_schedulers_per_node < qs_per_node)
 		goto skip_tests;
 
 	if (!egress_capa.pkt_prio_modes[ODP_TM_PKT_PRIO_MODE_PRESERVE] &&
@@ -2329,6 +2365,26 @@ static int traffic_mngr_suite_term(void)
 	return 0;
 }
 
+static int
+traffic_mngr_suite_3l_8f_4q_init(void)
+{
+	int i;
+
+	/* Test topology */
+	qs_per_node = 4;
+	fanin_ratio = 8;
+	num_lvls = 3;
+	queue_priority = true;
+	num_prio = qs_per_node;
+
+	tm_nodes_per_lvl[0] = 1;
+	for (i = 1; i < num_lvls; i++)
+		tm_nodes_per_lvl[i] = tm_nodes_per_lvl[i - 1] * fanin_ratio;
+	total_tm_queues = tm_nodes_per_lvl[i - 1] * qs_per_node;
+
+	return traffic_mngr_suite_common_init();
+}
+
 static void check_shaper_profile(char *shaper_name, uint32_t shaper_idx)
 {
 	odp_tm_shaper_params_t shaper_params;
@@ -2369,6 +2425,8 @@ static void traffic_mngr_test_shaper_profile(void)
 	shaper_params.dual_rate         = 0;
 
 	for (idx = 1; idx <= NUM_SHAPER_TEST_PROFILES; idx++) {
+		CU_ASSERT_FATAL(num_shaper_profiles < MAX_SHAPER_PROFILES);
+
 		snprintf(shaper_name, sizeof(shaper_name),
 			 "shaper_profile_%" PRIu32, idx);
 		shaper_params.commit_rate  = idx * MIN_COMMIT_BW;
@@ -2413,7 +2471,7 @@ static void check_sched_profile(char *sched_name, uint32_t sched_idx)
 		return;
 
 	odp_tm_sched_params_read(profile, &sched_params);
-	for (priority = 0; priority < NUM_PRIORITIES; priority++) {
+	for (priority = 0; priority < num_prio; priority++) {
 		CU_ASSERT(sched_params.sched_modes[priority] ==
 			  ODP_TM_BYTE_BASED_WEIGHTS);
 		CU_ASSERT(approx_eq32(sched_params.sched_weights[priority],
@@ -2431,6 +2489,8 @@ static void traffic_mngr_test_sched_profile(void)
 	odp_tm_sched_params_init(&sched_params);
 
 	for (idx = 1; idx <= NUM_SCHED_TEST_PROFILES; idx++) {
+		CU_ASSERT_FATAL(num_sched_profiles < MAX_SCHED_PROFILES);
+
 		snprintf(sched_name, sizeof(sched_name),
 			 "sched_profile_%" PRIu32, idx);
 		for (priority = 0; priority < ODP_TM_MAX_PRIORITIES; priority++) {
@@ -2503,6 +2563,9 @@ static void traffic_mngr_test_threshold_profile(void)
 	threshold_params.enable_max_bytes = 1;
 
 	for (idx = 1; idx <= NUM_THRESH_TEST_PROFILES; idx++) {
+		CU_ASSERT_FATAL(num_threshold_profiles <
+				MAX_THRESHOLD_PROFILES);
+
 		snprintf(threshold_name, sizeof(threshold_name),
 			 "threshold_profile_%" PRIu32, idx);
 		threshold_params.max_pkts  = idx * MIN_PKT_THRESHOLD;
@@ -2573,6 +2636,8 @@ static void traffic_mngr_test_wred_profile(void)
 	wred_params.use_byte_fullness = 0;
 
 	for (idx = 1; idx <= NUM_WRED_TEST_PROFILES; idx++) {
+		CU_ASSERT_FATAL(num_wred_profiles < MAX_WRED_PROFILES);
+
 		for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
 			snprintf(wred_name, sizeof(wred_name),
 				 "wred_profile_%" PRIu32 "_%" PRIu32,
@@ -2651,6 +2716,8 @@ static int set_shaper(const char    *node_name,
 	if (shaper_profile != ODP_TM_INVALID) {
 		odp_tm_shaper_params_update(shaper_profile, &shaper_params);
 	} else {
+		CU_ASSERT_FATAL(num_shaper_profiles < MAX_SHAPER_PROFILES);
+
 		shaper_profile = odp_tm_shaper_create(shaper_name,
 						      &shaper_params);
 		shaper_profiles[num_shaper_profiles] = shaper_profile;
@@ -2693,6 +2760,9 @@ static int traffic_mngr_check_scheduler(void)
 {
 	odp_cpumask_t cpumask;
 	int cpucount = odp_cpumask_all_available(&cpumask);
+
+	if (!queue_priority)
+		return ODP_TEST_INACTIVE;
 
 	if (cpucount < 2) {
 		ODPH_DBG("\nSkipping scheduler test because cpucount = %d "
@@ -2822,7 +2892,7 @@ static int test_shaper_bw(const char *shaper_name,
 static int set_sched_fanin(const char         *node_name,
 			   const char         *sched_base_name,
 			   odp_tm_sched_mode_t sched_mode,
-			   uint8_t             sched_weights[FANIN_RATIO])
+			   uint8_t             sched_weights[MAX_FANIN_RATIO])
 {
 	odp_tm_sched_params_t sched_params;
 	odp_tm_sched_t        sched_profile;
@@ -2844,13 +2914,13 @@ static int set_sched_fanin(const char         *node_name,
 		CU_ASSERT_FATAL(odp_tm_stop(odp_tm_systems[0]) == 0);
 	}
 
-	fanin_cnt = MIN(node_desc->num_children, FANIN_RATIO);
+	fanin_cnt = MIN(node_desc->num_children, MAX_FANIN_RATIO);
 	for (fanin = 0; fanin < fanin_cnt; fanin++) {
 		odp_tm_sched_params_init(&sched_params);
 		sched_weight = sched_weights[fanin];
 
 		/* Set the weights and mode the same for all priorities */
-		for (priority = 0; priority < NUM_PRIORITIES; priority++) {
+		for (priority = 0; priority < num_prio; priority++) {
 			sched_params.sched_modes[priority]   = sched_mode;
 			sched_params.sched_weights[priority] = sched_weight;
 		}
@@ -2867,6 +2937,8 @@ static int set_sched_fanin(const char         *node_name,
 			odp_tm_sched_params_update(sched_profile,
 						   &sched_params);
 		} else {
+			CU_ASSERT_FATAL(num_sched_profiles < MAX_SCHED_PROFILES);
+
 			sched_profile = odp_tm_sched_create(sched_name,
 							    &sched_params);
 			sched_profiles[num_sched_profiles] = sched_profile;
@@ -2895,14 +2967,14 @@ static int test_sched_queue_priority(const char *shaper_name,
 				     const char *node_name,
 				     uint32_t    num_pkts)
 {
-	odp_tm_queue_t tm_queues[NUM_PRIORITIES];
+	odp_tm_queue_t tm_queues[MAX_TM_PRIORITIES];
 	pkt_info_t     pkt_info;
 	uint32_t       pkt_cnt, pkts_in_order, base_idx;
 	uint32_t       idx, unique_id, pkt_len, base_pkt_len, pkts_sent;
 	int            priority;
 
 	memset(unique_id_list, 0, sizeof(unique_id_list));
-	for (priority = 0; priority < NUM_PRIORITIES; priority++)
+	for (priority = 0; priority < num_prio; priority++)
 		tm_queues[priority] = find_tm_queue(0, node_name, priority);
 
 	/* Enable the shaper to be low bandwidth. */
@@ -2917,9 +2989,9 @@ static int test_sched_queue_priority(const char *shaper_name,
 	/* Now make "num_pkts" first at the lowest priority, then "num_pkts"
 	 * at the second lowest priority, etc until "num_pkts" are made last
 	 * at the highest priority (which is always priority 0). */
-	pkt_cnt      = NUM_PRIORITIES * num_pkts;
+	pkt_cnt      = num_prio * num_pkts;
 	base_pkt_len = 256;
-	for (priority = NUM_PRIORITIES - 1; 0 <= priority; priority--) {
+	for (priority = num_prio - 1; 0 <= priority; priority--) {
 		unique_id          = cpu_unique_id;
 		pkt_info.pkt_class = priority + 1;
 		pkt_len            = base_pkt_len + 64 * priority;
@@ -2933,12 +3005,12 @@ static int test_sched_queue_priority(const char *shaper_name,
 
 	/* Send the low priority dummy pkts first.  The arrival order of
 	 * these pkts will be ignored. */
-	pkts_sent = send_pkts_multi(tm_queues[NUM_PRIORITIES - 1], 4);
+	pkts_sent = send_pkts_multi(tm_queues[num_prio - 1], 4);
 
 	/* Now send "num_pkts" first at the lowest priority, then "num_pkts"
 	 * at the second lowest priority, etc until "num_pkts" are sent last
 	 * at the highest priority. */
-	for (priority = NUM_PRIORITIES - 1; 0 <= priority; priority--)
+	for (priority = num_prio - 1; 0 <= priority; priority--)
 		pkts_sent += send_pkts_multi(tm_queues[priority], num_pkts);
 
 	busy_wait(100 * ODP_TIME_MSEC_IN_NS);
@@ -2978,13 +3050,15 @@ static int test_sched_node_priority(const char *shaper_name,
 				    const char *node_name,
 				    uint32_t    num_pkts)
 {
+	tm_queue_desc_t *queues_set[MAX_TM_PRIORITIES];
 	odp_tm_queue_t *tm_queues, tm_queue;
 	tm_node_desc_t *node_desc;
-	queue_array_t  *queue_array;
+	tm_queue_desc_t *queue_array;
 	pkt_info_t      pkt_info;
-	uint32_t        total_num_queues, max_queues, num_queues, pkt_cnt;
+	uint32_t        found_queues, num_queues, pkt_cnt;
 	uint32_t        pkts_in_order, base_idx, queue_idx, idx, unique_id;
 	uint32_t        pkt_len, base_pkt_len, total_pkt_cnt, pkts_sent;
+	uint16_t        sz;
 	int             priority;
 
 	memset(unique_id_list, 0, sizeof(unique_id_list));
@@ -2992,16 +3066,19 @@ static int test_sched_node_priority(const char *shaper_name,
 	if (node_desc == NULL)
 		return -1;
 
-	total_num_queues = 0;
-	for (priority = 0; priority < NUM_PRIORITIES; priority++) {
-		max_queues  = NUM_LEVEL2_TM_NODES;
-		queue_array = &queues_set.queue_array[priority];
+	found_queues = 0;
+	sz = (sizeof(tm_queue_desc_t) + (total_tm_queues * sizeof(odp_tm_queue_t)));
+	for (priority = 0; priority < num_prio; priority++) {
+		queue_array = malloc(sz);
+		CU_ASSERT_FATAL(queue_array != NULL);
+		queues_set[priority] = queue_array;
+
+		memset(queue_array, 0, sz);
 		tm_queues   = queue_array->tm_queues;
 		num_queues  = find_child_queues(0, node_desc, priority,
-						tm_queues, max_queues);
+						tm_queues, total_tm_queues);
 		queue_array->num_queues = num_queues;
-		queue_array->priority   = priority;
-		total_num_queues       += num_queues;
+		found_queues += num_queues;
 	}
 
 	/* Enable the shaper to be low bandwidth. */
@@ -3017,12 +3094,12 @@ static int test_sched_node_priority(const char *shaper_name,
 	 * "num_pkts" for each tm_queue at the second lowest priority, etc.
 	 * until "num_pkts" for each tm_queue at the highest priority are made
 	 * last.  Note that the highest priority is always priority 0. */
-	total_pkt_cnt  = total_num_queues * num_pkts;
+	total_pkt_cnt  = found_queues * num_pkts;
 	base_pkt_len   = 256;
 	base_idx       = 0;
-	for (priority = NUM_PRIORITIES - 1; 0 <= priority; priority--) {
+	for (priority = num_prio - 1; 0 <= priority; priority--) {
 		unique_id          = cpu_unique_id;
-		queue_array        = &queues_set.queue_array[priority];
+		queue_array        = queues_set[priority];
 		num_queues         = queue_array->num_queues;
 		pkt_cnt            = num_queues * num_pkts;
 		pkt_info.pkt_class = priority + 1;
@@ -3037,7 +3114,7 @@ static int test_sched_node_priority(const char *shaper_name,
 
 	/* Send the low priority dummy pkts first.  The arrival order of
 	 * these pkts will be ignored. */
-	queue_array = &queues_set.queue_array[NUM_PRIORITIES - 1];
+	queue_array = queues_set[num_prio - 1];
 	tm_queue    = queue_array->tm_queues[0];
 	pkts_sent   = send_pkts(tm_queue, 4);
 
@@ -3045,8 +3122,8 @@ static int test_sched_node_priority(const char *shaper_name,
 	 * "num_pkts" for each tm_queue at the second lowest priority, etc.
 	 * until "num_pkts" for each tm_queue at the highest priority are sent
 	 * last. */
-	for (priority = NUM_PRIORITIES - 1; 0 <= priority; priority--) {
-		queue_array = &queues_set.queue_array[priority];
+	for (priority = num_prio - 1; 0 <= priority; priority--) {
+		queue_array = queues_set[priority];
 		num_queues  = queue_array->num_queues;
 		for (queue_idx = 0; queue_idx < num_queues; queue_idx++) {
 			tm_queue   = queue_array->tm_queues[queue_idx];
@@ -3085,11 +3162,11 @@ static int test_sched_wfq(const char         *sched_base_name,
 			  const char         *shaper_name,
 			  const char         *node_name,
 			  odp_tm_sched_mode_t sched_mode,
-			  uint8_t             sched_weights[FANIN_RATIO])
+			  uint8_t             sched_weights[MAX_FANIN_RATIO])
 {
-	odp_tm_queue_t  tm_queues[FANIN_RATIO], tm_queue;
+	odp_tm_queue_t  tm_queues[MAX_FANIN_RATIO], tm_queue;
 	tm_node_desc_t *node_desc, *child_desc;
-	rcv_stats_t     rcv_stats[FANIN_RATIO];
+	rcv_stats_t     rcv_stats[MAX_FANIN_RATIO];
 	pkt_info_t      pkt_info;
 	uint32_t        fanin_cnt, fanin, num_queues, pkt_cnt;
 	uint32_t        pkt_len, pkts_sent, pkt_idx;
@@ -3109,7 +3186,7 @@ static int test_sched_wfq(const char         *sched_base_name,
 	/* Now determine at least one tm_queue that feeds into each fanin/
 	 * child node. */
 	priority  = 0;
-	fanin_cnt = MIN(node_desc->num_children, FANIN_RATIO);
+	fanin_cnt = MIN(node_desc->num_children, MAX_FANIN_RATIO);
 	for (fanin = 0; fanin < fanin_cnt; fanin++) {
 		child_desc = node_desc->children[fanin];
 		num_queues = find_child_queues(0, child_desc, priority,
@@ -3129,7 +3206,7 @@ static int test_sched_wfq(const char         *sched_base_name,
 
 	/* Make 100 pkts for each fanin of this node, alternating amongst
 	 * the inputs. */
-	pkt_cnt = FANIN_RATIO * 100;
+	pkt_cnt = MAX_FANIN_RATIO * 100;
 	fanin   = 0;
 	for (pkt_idx = 0; pkt_idx < pkt_cnt; pkt_idx++) {
 		pkt_len            = 128 + 128 * fanin;
@@ -3137,20 +3214,20 @@ static int test_sched_wfq(const char         *sched_base_name,
 		if (make_pkts(1, pkt_len, &pkt_info) != 0)
 			return -1;
 
-		if (FANIN_RATIO <= fanin)
+		if (MAX_FANIN_RATIO <= fanin)
 			fanin = 0;
 	}
 
 	/* Send the low priority dummy pkts first.  The arrival order of
 	 * these pkts will be ignored. */
-	pkts_sent = send_pkts(tm_queues[NUM_PRIORITIES - 1], 4);
+	pkts_sent = send_pkts(tm_queues[num_prio - 1], 4);
 
 	/* Now send the test pkts, alternating amongst the input queues. */
 	fanin = 0;
 	for (pkt_idx = 0; pkt_idx < pkt_cnt; pkt_idx++) {
 		tm_queue   = tm_queues[fanin++];
 		pkts_sent += send_pkts(tm_queue, 1);
-		if (FANIN_RATIO <= fanin)
+		if (MAX_FANIN_RATIO <= fanin)
 			fanin = 0;
 	}
 
@@ -3204,6 +3281,9 @@ static int set_queue_thresholds(odp_tm_queue_t             tm_queue,
 		if (ret)
 			goto exit;
 	} else {
+		CU_ASSERT_FATAL(num_threshold_profiles <
+				MAX_THRESHOLD_PROFILES);
+
 		threshold_profile = odp_tm_threshold_create(threshold_name,
 							    threshold_params);
 		if (threshold_profile == ODP_TM_INVALID) {
@@ -3354,6 +3434,8 @@ static int set_queue_wred(odp_tm_queue_t   tm_queue,
 			wred_profiles[num_wred_profiles - 1][pkt_color] =
 					wred_profile;
 		} else {
+			CU_ASSERT_FATAL(num_wred_profiles < MAX_WRED_PROFILES);
+
 			wred_profiles[num_wred_profiles][pkt_color] =
 					wred_profile;
 			num_wred_profiles++;
@@ -4378,6 +4460,10 @@ static int traffic_mngr_check_query(void)
 	if ((tm_capabilities.tm_queue_query_flags & query_flags) != query_flags)
 		return ODP_TEST_INACTIVE;
 
+	/* Queue query test needs queue priority support */
+	if (!queue_priority)
+		return ODP_TEST_INACTIVE;
+
 	return ODP_TEST_ACTIVE;
 }
 
@@ -4453,7 +4539,7 @@ static void traffic_mngr_test_destroy(void)
 	CU_ASSERT(destroy_tm_systems() == 0);
 }
 
-odp_testinfo_t traffic_mngr_suite[] = {
+odp_testinfo_t traffic_mngr_suite_common[] = {
 	ODP_TEST_INFO(traffic_mngr_test_capabilities),
 	ODP_TEST_INFO(traffic_mngr_test_tm_create),
 	ODP_TEST_INFO(traffic_mngr_test_shaper_profile),
@@ -4490,8 +4576,8 @@ odp_testinfo_t traffic_mngr_suite[] = {
 };
 
 odp_suiteinfo_t traffic_mngr_suites[] = {
-	{ "traffic_mngr tests", traffic_mngr_suite_init,
-	  traffic_mngr_suite_term, traffic_mngr_suite },
+	{ "3_levels_8_fanin_4_qs_per_node", traffic_mngr_suite_3l_8f_4q_init,
+	  traffic_mngr_suite_term, traffic_mngr_suite_common },
 	ODP_SUITE_INFO_NULL
 };
 
