@@ -388,6 +388,7 @@ static int test_overall_capabilities(void)
 	odp_tm_capabilities_t        capabilities_array[2];
 	odp_tm_capabilities_t       *cap_ptr;
 	odp_tm_egress_t              egress;
+	odp_bool_t                  *prio_modes;
 	uint32_t                     num_records, idx, num_levels, level;
 	int                          rc;
 
@@ -443,6 +444,11 @@ static int test_overall_capabilities(void)
 				return -1;
 			}
 		}
+
+		/* At least one pkt priority mode needs to be supported */
+		prio_modes = cap_ptr->pkt_prio_modes;
+		CU_ASSERT((prio_modes[ODP_TM_PKT_PRIO_MODE_PRESERVE] != 0) ||
+			  (prio_modes[ODP_TM_PKT_PRIO_MODE_OVERWRITE] != 0))
 	}
 
 	return 0;
@@ -1436,6 +1442,9 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 
 	node_params.max_fanin = FANIN_RATIO;
 	node_params.level = level;
+	/* This is ignored when pkt priority mode is not overwrite */
+	node_params.priority = 0;
+
 	if (parent_node_desc == NULL)
 		snprintf(node_name, sizeof(node_name), "node_%" PRIu32,
 			 node_idx + 1);
@@ -1679,6 +1688,16 @@ set_reqs_based_on_capas(odp_tm_requirements_t *req)
 
 	if (tm_capabilities.tm_queue_shaper_supported)
 		req->tm_queue_shaper_needed = true;
+
+	/* We can use any packet priority mode since it does not affect
+	 * our tests. Our scheduler test tests scheduling only in a node
+	 * directly connected to TM queues and such nodes see the original
+	 * packet priority before it could have been overwritten by any node.
+	 */
+	req->pkt_prio_mode = ODP_TM_PKT_PRIO_MODE_PRESERVE;
+	if (!tm_capabilities.pkt_prio_modes[ODP_TM_PKT_PRIO_MODE_PRESERVE])
+		req->pkt_prio_mode = ODP_TM_PKT_PRIO_MODE_OVERWRITE;
+
 }
 
 static int create_tm_system(void)
