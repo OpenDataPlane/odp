@@ -19,7 +19,7 @@ ODP_MODULES = atomic \
 	      random \
 	      scheduler \
 	      stash \
-	      std_clib \
+	      std \
 	      thread \
 	      time \
 	      timer \
@@ -64,7 +64,7 @@ TESTS = \
 	scheduler/scheduler_main$(EXEEXT) \
 	scheduler/scheduler_no_predef_groups$(EXEEXT) \
 	stash/stash_main$(EXEEXT) \
-	std_clib/std_clib_main$(EXEEXT) \
+	std/std_main$(EXEEXT) \
 	thread/thread_main$(EXEEXT) \
 	time/time_main$(EXEEXT) \
 	timer/timer_main$(EXEEXT) \
