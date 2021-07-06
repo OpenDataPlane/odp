@@ -1098,6 +1098,44 @@ static int make_pkts(uint32_t    num_pkts,
 	return 0;
 }
 
+static uint32_t send_pkts_multi(odp_tm_queue_t tm_queue, uint32_t num_pkts)
+{
+	xmt_pkt_desc_t *xmt_pkt_desc;
+	odp_packet_t    odp_pkt;
+	uint32_t        xmt_pkt_idx, pkts_sent;
+	int64_t         rc, i = 0;
+
+	/* Now send the pkts as fast as we can. RED drops are internally
+	 * consumed by odp_tm_enq_multi().
+	 */
+	xmt_pkt_idx = num_pkts_sent;
+	rc = odp_tm_enq_multi(tm_queue, &xmt_pkts[xmt_pkt_idx], num_pkts);
+	CU_ASSERT(rc <= num_pkts);
+
+	/* Record consumed packets */
+	pkts_sent = 0;
+	for (i = 0; i < rc; i++) {
+		xmt_pkt_desc = &xmt_pkt_descs[xmt_pkt_idx + i];
+		xmt_pkt_desc->xmt_idx = xmt_pkt_idx + i;
+		xmt_pkt_desc->xmt_time = odp_time_local();
+		xmt_pkt_desc->tm_queue = tm_queue;
+		pkts_sent++;
+	}
+
+	/* Free rejected pkts */
+	for (; i < num_pkts; i++) {
+		xmt_pkt_desc = &xmt_pkt_descs[xmt_pkt_idx + i];
+		xmt_pkt_desc->xmt_idx = xmt_pkt_idx + i;
+
+		odp_pkt = xmt_pkts[xmt_pkt_idx + i];
+		odp_packet_free(odp_pkt);
+		xmt_pkts[xmt_pkt_idx + i] = ODP_PACKET_INVALID;
+	}
+	num_pkts_sent += num_pkts;
+
+	return pkts_sent;
+}
+
 static uint32_t send_pkts(odp_tm_queue_t tm_queue, uint32_t num_pkts)
 {
 	xmt_pkt_desc_t *xmt_pkt_desc;
@@ -1341,6 +1379,7 @@ static int create_tm_queue(odp_tm_t         odp_tm,
 		queue_params.wred_profile[PKT_GREEN]  = green_profile;
 		queue_params.wred_profile[PKT_YELLOW] = yellow_profile;
 		queue_params.wred_profile[PKT_RED]    = red_profile;
+		queue_params.ordered_enqueue          = true;
 	}
 
 	tm_queue = odp_tm_queue_create(odp_tm, &queue_params);
@@ -2820,13 +2859,13 @@ static int test_sched_queue_priority(const char *shaper_name,
 
 	/* Send the low priority dummy pkts first.  The arrival order of
 	 * these pkts will be ignored. */
-	pkts_sent = send_pkts(tm_queues[NUM_PRIORITIES - 1], 4);
+	pkts_sent = send_pkts_multi(tm_queues[NUM_PRIORITIES - 1], 4);
 
 	/* Now send "num_pkts" first at the lowest priority, then "num_pkts"
 	 * at the second lowest priority, etc until "num_pkts" are sent last
 	 * at the highest priority. */
 	for (priority = NUM_PRIORITIES - 1; 0 <= priority; priority--)
-		pkts_sent += send_pkts(tm_queues[priority], num_pkts);
+		pkts_sent += send_pkts_multi(tm_queues[priority], num_pkts);
 
 	busy_wait(100 * ODP_TIME_MSEC_IN_NS);
 
