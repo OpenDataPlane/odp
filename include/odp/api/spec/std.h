@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -7,23 +8,24 @@
 /**
  * @file
  *
- * ODP version of often used C library calls
+ * ODP standard types and optimized C library functions
  */
 
-#ifndef ODP_API_SPEC_STD_CLIB_H_
-#define ODP_API_SPEC_STD_CLIB_H_
+#ifndef ODP_API_SPEC_STD_H_
+#define ODP_API_SPEC_STD_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#include <odp/api/std_types.h>
+
 /**
- * @defgroup odp_std_clib ODP STD CLIB
- * Performance optimized versions of selected C library functions.
+ * @defgroup odp_std ODP STD
+ * Standard types and performance optimized versions of selected C library
+ * functions.
  *
- * @details
- * ODP version of often used C library calls
  * @{
  */
 
@@ -73,6 +75,18 @@ void *odp_memset(void *ptr, int value, size_t num);
  *            block 'ptr1' is greater than block 'ptr2'
  */
 int odp_memcmp(const void *ptr1, const void *ptr2, size_t num);
+
+/**
+ * Convert fractional number (u64) to double
+ *
+ * Converts value of the unsigned 64 bit fractional number to a double-precision
+ * floating-point value.
+ *
+ * @param fract  Pointer to a fractional number
+ *
+ * @return Value of the fractional number as double
+ */
+double odp_fract_u64_to_dbl(const odp_fract_u64_t *fract);
 
 /**
  * @}

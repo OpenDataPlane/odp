@@ -10,12 +10,15 @@
  * ODP barrier
  */
 
-#ifndef ODP_ABI_STD_CLIB_H_
-#define ODP_ABI_STD_CLIB_H_
+#ifndef ODP_API_ABI_STD_H_
+#define ODP_API_ABI_STD_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define _ODP_INLINE static inline
+#include <odp/api/plat/std_inlines.h>
 
 #ifdef __cplusplus
 }

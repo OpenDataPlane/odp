@@ -4,7 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/api/std_types.h>
+#include <odp/api/std.h>
 
 double odp_fract_u64_to_dbl(const odp_fract_u64_t *fract)
 {

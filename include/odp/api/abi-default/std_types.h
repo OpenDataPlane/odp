@@ -4,12 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-/**
- * @file
- *
- * Standard C language types and definitions for ODP.
- */
-
 #ifndef ODP_ABI_STD_TYPES_H_
 #define ODP_ABI_STD_TYPES_H_
 
@@ -26,7 +20,7 @@ extern "C" {
 /* true and false for odp_bool_t */
 #include <stdbool.h>
 
-/** @addtogroup odp_system ODP SYSTEM
+/** @addtogroup odp_std
  *  @{
  */
 

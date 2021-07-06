@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_system ODP SYSTEM
+/** @addtogroup odp_std ODP STD
  *  @{
  */
 
@@ -94,18 +94,6 @@ typedef struct odp_fract_u64_t {
 		uint64_t denom;
 
 } odp_fract_u64_t;
-
-/**
- * Convert fractional number (u64) to double
- *
- * Converts value of the unsigned 64 bit fractional number to a double-precision
- * floating-point value.
- *
- * @param fract  Pointer to a fractional number
- *
- * @return Value of the fractional number as double
- */
-double odp_fract_u64_to_dbl(const odp_fract_u64_t *fract);
 
 /**
  * @}
