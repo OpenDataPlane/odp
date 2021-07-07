@@ -69,6 +69,7 @@ odpapiabiarchinclude_HEADERS += \
 		  include-abi/odp/api/abi/packet.h \
 		  include-abi/odp/api/abi/packet_flags.h \
 		  include-abi/odp/api/abi/packet_io.h \
+		  include-abi/odp/api/abi/proto_stats.h \
 		  include-abi/odp/api/abi/pool.h \
 		  include-abi/odp/api/abi/queue.h \
 		  include-abi/odp/api/abi/rwlock.h \
