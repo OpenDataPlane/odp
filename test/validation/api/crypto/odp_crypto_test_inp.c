@@ -1035,10 +1035,6 @@ static int check_alg_3des_cbc(void)
 	return check_alg_support(ODP_CIPHER_ALG_3DES_CBC, ODP_AUTH_ALG_NULL);
 }
 
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for 3DES_CBC algorithm. IV for the operation is the session IV.
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.*/
 static void crypto_test_enc_alg_3des_cbc(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1050,9 +1046,6 @@ static void crypto_test_enc_alg_3des_cbc(void)
 		  false);
 }
 
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for 3DES_CBC algorithm. IV for the operation is the operation IV.
- * */
 static void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1064,11 +1057,6 @@ static void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
 		  false);
 }
 
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for 3DES_CBC algorithm. IV for the operation is the session IV
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_dec_alg_3des_cbc(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
@@ -1080,11 +1068,6 @@ static void crypto_test_dec_alg_3des_cbc(void)
 		  false);
 }
 
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for 3DES_CBC algorithm. IV for the operation is the session IV
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
@@ -1101,8 +1084,6 @@ static int check_alg_3des_ecb(void)
 	return check_alg_support(ODP_CIPHER_ALG_3DES_ECB, ODP_AUTH_ALG_NULL);
 }
 
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for 3DES_ECB algorithm. */
 static void crypto_test_enc_alg_3des_ecb(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1114,11 +1095,6 @@ static void crypto_test_enc_alg_3des_ecb(void)
 		  false);
 }
 
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for 3DES_ECB algorithm. IV for the operation is the session IV
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_dec_alg_3des_ecb(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
@@ -1185,10 +1161,6 @@ static int check_alg_aes_gcm(void)
 	return check_alg_support(ODP_CIPHER_ALG_AES_GCM, ODP_AUTH_ALG_AES_GCM);
 }
 
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for AES128_GCM algorithm. IV for the operation is the session IV.
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.*/
 static void crypto_test_enc_alg_aes_gcm(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1200,10 +1172,6 @@ static void crypto_test_enc_alg_aes_gcm(void)
 		  false);
 }
 
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for AES128_GCM algorithm. IV for the operation is the session IV.
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.*/
 static void crypto_test_enc_alg_aes_gcm_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1215,11 +1183,6 @@ static void crypto_test_enc_alg_aes_gcm_ovr_iv(void)
 		  false);
 }
 
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for 3DES_CBC algorithm. IV for the operation is the session IV
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_dec_alg_aes_gcm(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
@@ -1231,11 +1194,6 @@ static void crypto_test_dec_alg_aes_gcm(void)
 		  false);
 }
 
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for 3DES_CBC algorithm. IV for the operation is the session IV
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_dec_alg_aes_gcm_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
@@ -1301,10 +1259,6 @@ static int check_alg_aes_cbc(void)
 	return check_alg_support(ODP_CIPHER_ALG_AES_CBC, ODP_AUTH_ALG_NULL);
 }
 
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for AES128_CBC algorithm. IV for the operation is the session IV.
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.*/
 static void crypto_test_enc_alg_aes_cbc(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1316,9 +1270,6 @@ static void crypto_test_enc_alg_aes_cbc(void)
 		  false);
 }
 
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for AES128_CBC algorithm. IV for the operation is the operation IV.
- * */
 static void crypto_test_enc_alg_aes_cbc_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1330,11 +1281,6 @@ static void crypto_test_enc_alg_aes_cbc_ovr_iv(void)
 		  false);
 }
 
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for AES128_CBC algorithm. IV for the operation is the session IV
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_dec_alg_aes_cbc(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
@@ -1346,11 +1292,6 @@ static void crypto_test_dec_alg_aes_cbc(void)
 		  false);
 }
 
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for AES128_CBC algorithm. IV for the operation is the session IV
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_dec_alg_aes_cbc_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
@@ -1367,10 +1308,6 @@ static int check_alg_aes_ctr(void)
 	return check_alg_support(ODP_CIPHER_ALG_AES_CTR, ODP_AUTH_ALG_NULL);
 }
 
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for AES128_CTR algorithm. IV for the operation is the session IV.
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.*/
 static void crypto_test_enc_alg_aes_ctr(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1382,9 +1319,6 @@ static void crypto_test_enc_alg_aes_ctr(void)
 		  false);
 }
 
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for AES128_CTR algorithm. IV for the operation is the operation IV.
- * */
 static void crypto_test_enc_alg_aes_ctr_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1396,11 +1330,6 @@ static void crypto_test_enc_alg_aes_ctr_ovr_iv(void)
 		  false);
 }
 
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for AES128_CTR algorithm. IV for the operation is the session IV
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_dec_alg_aes_ctr(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
@@ -1412,11 +1341,6 @@ static void crypto_test_dec_alg_aes_ctr(void)
 		  false);
 }
 
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for AES128_CTR algorithm. IV for the operation is the session IV
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_dec_alg_aes_ctr_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
@@ -1433,9 +1357,6 @@ static int check_alg_aes_ecb(void)
 	return check_alg_support(ODP_CIPHER_ALG_AES_ECB, ODP_AUTH_ALG_NULL);
 }
 
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for AES128_ECB algorithm.
- */
 static void crypto_test_enc_alg_aes_ecb(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1447,9 +1368,6 @@ static void crypto_test_enc_alg_aes_ecb(void)
 		  false);
 }
 
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for AES128_ECB algorithm.
- * */
 static void crypto_test_dec_alg_aes_ecb(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
@@ -1466,11 +1384,6 @@ static int check_alg_aes_cfb128(void)
 	return check_alg_support(ODP_CIPHER_ALG_AES_CFB128, ODP_AUTH_ALG_NULL);
 }
 
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for AES128_CFB128 algorithm. IV for the operation is the session
- * IV.
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.*/
 static void crypto_test_enc_alg_aes_cfb128(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1482,10 +1395,6 @@ static void crypto_test_enc_alg_aes_cfb128(void)
 		  false);
 }
 
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for AES128_CFB128 algorithm. IV for the operation is the operation
- * IV.
- * */
 static void crypto_test_enc_alg_aes_cfb128_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1497,11 +1406,6 @@ static void crypto_test_enc_alg_aes_cfb128_ovr_iv(void)
 		  false);
 }
 
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for AES128_CFB128 algorithm. IV for the operation is the session IV
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_dec_alg_aes_cfb128(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
@@ -1513,11 +1417,6 @@ static void crypto_test_dec_alg_aes_cfb128(void)
 		  false);
 }
 
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for AES128_CFB128 algorithm. IV for the operation is the session IV
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_dec_alg_aes_cfb128_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
@@ -1534,10 +1433,6 @@ static int check_alg_aes_xts(void)
 	return check_alg_support(ODP_CIPHER_ALG_AES_XTS, ODP_AUTH_ALG_NULL);
 }
 
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for AES128_XTS algorithm. IV for the operation is the session IV.
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.*/
 static void crypto_test_enc_alg_aes_xts(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1549,9 +1444,6 @@ static void crypto_test_enc_alg_aes_xts(void)
 		  false);
 }
 
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for AES128_XTS algorithm. IV for the operation is the operation IV.
- * */
 static void crypto_test_enc_alg_aes_xts_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1563,11 +1455,6 @@ static void crypto_test_enc_alg_aes_xts_ovr_iv(void)
 		  false);
 }
 
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for AES128_XTS algorithm. IV for the operation is the session IV
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_dec_alg_aes_xts(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
@@ -1579,11 +1466,6 @@ static void crypto_test_dec_alg_aes_xts(void)
 		  false);
 }
 
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for AES128_XTS algorithm. IV for the operation is the session IV
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_dec_alg_aes_xts_ovr_iv(void)
 {
 	check_alg(ODP_CRYPTO_OP_DECODE,
@@ -1797,13 +1679,6 @@ static int check_alg_hmac_md5(void)
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_MD5_HMAC);
 }
 
-/* This test verifies the correctness of HMAC_MD5 digest operation.
- * The output check length is truncated to 12 bytes (96 bits) as
- * returned by the crypto operation API call.
- * Note that hash digest is a one-way operation.
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_gen_alg_hmac_md5(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1831,13 +1706,6 @@ static int check_alg_hmac_sha1(void)
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA1_HMAC);
 }
 
-/* This test verifies the correctness of HMAC_SHA1 digest operation.
- * The output check length is truncated to 12 bytes (96 bits) as
- * returned by the crypto operation API call.
- * Note that hash digest is a one-way operation.
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_gen_alg_hmac_sha1(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1892,13 +1760,6 @@ static int check_alg_hmac_sha256(void)
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA256_HMAC);
 }
 
-/* This test verifies the correctness of HMAC_SHA256 digest operation.
- * The output check length is truncated to 16 bytes (128 bits) as
- * returned by the crypto operation API call.
- * Note that hash digest is a one-way operation.
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_gen_alg_hmac_sha256(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1926,13 +1787,6 @@ static int check_alg_hmac_sha384(void)
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA384_HMAC);
 }
 
-/* This test verifies the correctness of HMAC_SHA384 digest operation.
- * The output check length is truncated to 24 bytes (192 bits) as
- * returned by the crypto operation API call.
- * Note that hash digest is a one-way operation.
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_gen_alg_hmac_sha384(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1960,13 +1814,6 @@ static int check_alg_hmac_sha512(void)
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA512_HMAC);
 }
 
-/* This test verifies the correctness of HMAC_SHA512 digest operation.
- * The output check length is truncated to 32 bytes (256 bits) as
- * returned by the crypto operation API call.
- * Note that hash digest is a one-way operation.
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_gen_alg_hmac_sha512(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
@@ -1995,13 +1842,6 @@ static int check_alg_aes_xcbc(void)
 						ODP_AUTH_ALG_AES_XCBC_MAC);
 }
 
-/* This test verifies the correctness of AES_XCBC_MAC digest operation.
- * The output check length is truncated to 16 bytes (128 bits) as
- * returned by the crypto operation API call.
- * Note that hash digest is a one-way operation.
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
 static void crypto_test_gen_alg_aes_xcbc(void)
 {
 	check_alg(ODP_CRYPTO_OP_ENCODE,
