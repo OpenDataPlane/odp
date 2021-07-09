@@ -189,6 +189,47 @@ extern "C" {
  * tree/hierarchy of nodes.
  */
 
+/**
+ * TM node stats capability
+ */
+typedef struct odp_tm_node_stats_capability_t {
+	/** Supported counters */
+	union {
+		/** Statistics counters supported in bit field struct */
+		struct {
+			/** @see odp_tm_node_stats_t::dropped_pkts */
+			uint64_t dropped_pkts;
+
+			/** @see odp_tm_node_stats_t::dropped_octets */
+			uint64_t dropped_octets;
+
+			/** @see odp_tm_node_stats_t::green_pkts */
+			uint64_t green_pkts;
+
+			/** @see odp_tm_node_stats_t::green_octets */
+			uint64_t green_octets;
+
+			/** @see odp_tm_node_stats_t::yellow_pkts */
+			uint64_t yellow_pkts;
+
+			/** @see odp_tm_node_stats_t::yellow_octets */
+			uint64_t yellow_octets;
+
+			/** @see odp_tm_node_stats_t::red_pkts */
+			uint64_t red_pkts;
+
+			/** @see odp_tm_node_stats_t::red_octets */
+			uint64_t red_octets;
+		} counter;
+
+		/** All bits of the bit field structure
+		 *
+		 *  This field can be used to set/clear all flags, or
+		 *  for bitwise operations over the entire structure. */
+		uint64_t all_counters;
+	};
+} odp_tm_node_stats_capability_t;
+
 /** Per Level Capabilities
  *
  * The odp_tm_level_capabilities_t record is used to describe the capabilities
@@ -248,6 +289,9 @@ typedef struct {
 	 * When true the min_weight and max_weight fields above specify
 	 * the legal range of such weights. */
 	odp_bool_t weights_supported;
+
+	/** Node statistics counter capabilities */
+	odp_tm_node_stats_capability_t stats;
 } odp_tm_level_capabilities_t;
 
 /** TM Capabilities Record.
@@ -1840,6 +1884,48 @@ typedef struct {
  */
 int odp_tm_node_fanin_info(odp_tm_node_t             tm_node,
 			   odp_tm_node_fanin_info_t *info);
+
+/** The odp_tm_node_stats_t record type  is used to return various stats
+ * supported by a given tm_node via the odp_tm_node_stats() function.
+ */
+typedef struct odp_tm_node_stats_t {
+	/** Packets dropped by this node post scheduling/shaping at this node */
+	uint64_t dropped_pkts;
+
+	/** Octets dropped after scheduling/shaping at this node */
+	uint64_t dropped_octets;
+
+	/** Green packets that are sent through this tm node */
+	uint64_t green_pkts;
+
+	/** Green octets that are sent through this tm node */
+	uint64_t green_octets;
+
+	/** Yellow packets that are sent through this tm node */
+	uint64_t yellow_pkts;
+
+	/** Yellow octets that are sent through this tm node */
+	uint64_t yellow_octets;
+
+	/** Red packets that are sent through this tm node */
+	uint64_t red_pkts;
+
+	/** Red octets that are sent through this tm node */
+	uint64_t red_octets;
+} odp_tm_node_stats_t;
+
+/** Get tm_node stats
+ *
+ * The odp_tm_node_stats() function is used to extract runtime statistics
+ * associated with a given tm_node. The stats structure is written
+ * only on success.
+ *
+ * @param      tm_node    Specifies the tm_node to be queried.
+ * @param[out] node_stats A pointer to an odp_tm_node_stats_t record that is to
+ *                        be filled in by this call.
+ * @return                Returns < 0 upon failure, 0 upon success.
+ */
+int odp_tm_node_stats(odp_tm_node_t tm_node, odp_tm_node_stats_t *node_stats);
 
 /** The odp_tm_queue_info_t record type  is used to return various bits of
  * information about a given tm_queue via the odp_tm_queue_info() function.
