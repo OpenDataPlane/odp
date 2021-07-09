@@ -1,3 +1,65 @@
+== OpenDataPlane (1.31.0.0)
+=== Backward incompatible API changes
+==== Traffic Manager
+* Added new TM feature capabilities and an egress specific capability function
+`odp_tm_egress_capabilities()`
+* Deprecated `odp_tm_capabilities()` function which is replaced by
+`odp_tm_egress_capabilities()`
+* Added `odp_tm_capabilities_t.max_schedulers_per_node` capability to express
+the maximum number of schedulers per TM node
+* Added support for non-global packet priority mode
+
+=== Backward compatible API changes
+==== Classifier
+* Added queue specific statistics counters (`odp_cls_queue_stats()`)
+
+==== IPsec
+* Added ICV length into SA configuration parameters
+(`odp_ipsec_crypto_param_t.icv_len`)
+
+==== Packet
+* Moved packet type definitions into a separate `packet_types.h` header to
+enable easier function inlining
+* Added `odp_packet_disassemble()`, `odp_packet_reassemble()`, and other new
+functions for packets allocated from external memory pools
+* Added packet protocol statistics functions `odp_packet_proto_stats_request()`
+and `odp_packet_proto_stats()`
+
+==== Packet IO
+* Added `odp_pktout_config_opt_t.bit.proto_stats_ena` option for enabling packet
+protocol statistics updates
+
+==== Pool
+* Added new concept of external memory pools, which are populated with
+application provided memory
+* Added new `odp_pool_type_t` enumeration
+* Moved pool type definitions into a separate `pool_types.h` header to enable
+easier function inlining
+
+==== Protocol Stats
+* Added new generic protocol statistics framework
+
+==== Queue
+* Moved queue type definitions into a separate `queue_types.h` header to enable
+easier function inlining
+
+==== Std
+* Renamed std_clib module std and moved all generic ODP data types and functions
+there
+
+==== Traffic Manager
+* Increased scheduling weight parameter size (`uint8_t` to `uint32_t`)
+* Added queue specific statistics counters (`odp_tm_queue_stats()`)
+* Added `odp_tm_enq_multi()` function for enqueueing multiple packets at a time
+* Added `odp_tm_queue_params_t.ordered_enqueue` option which can be used to
+control if ordering is enabled
+
+=== Helper (1.1.1)
+* Added `odph_ipsec_auth_icv_len_default()` function for returning the default
+ICV length of an algorithm
+* Added support for `AES-CMAC` into `odph_ipsec_alg_check()`
+* Added default ICV length check into `odph_ipsec_alg_check()`
+
 == OpenDataPlane (1.30.1.0)
 === API
 ==== Packet IO
