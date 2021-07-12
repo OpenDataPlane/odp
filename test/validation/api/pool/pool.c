@@ -1611,6 +1611,7 @@ static void test_packet_pool_ext_disassemble(void)
 		pkt = odp_packet_reassemble(pool, pkt_buf, num_seg);
 
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+		CU_ASSERT(odp_packet_num_segs(pkt) == (int)num_seg);
 		pkt_tbl[i] = pkt;
 
 		CU_ASSERT(odp_packet_len(pkt) == (pkt_len - (num_seg * 2)));
