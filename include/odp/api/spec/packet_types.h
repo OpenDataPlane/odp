@@ -68,7 +68,7 @@ extern "C" {
  */
 
 /**
- * @enum odp_packet_color_t
+ * @typedef odp_packet_color_t
  * Color of packet for shaper/drop processing
  *
  * @var ODP_PACKET_GREEN
@@ -179,7 +179,7 @@ extern "C" {
  */
 
 /**
- * @enum odp_packet_chksum_status_t
+ * @typedef odp_packet_chksum_status_t
  * Checksum check status in packet
  *
  * @var ODP_PACKET_CHKSUM_UNKNOWN

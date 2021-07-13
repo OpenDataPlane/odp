@@ -79,6 +79,7 @@ typedef uint8_t odp_proto_l4_type_t;
 #define ODP_PROTO_L4_TYPE_SCTP      132
 #define ODP_PROTO_L4_TYPE_ROHC      142
 
+/** Packet Color */
 typedef enum {
 	ODP_PACKET_GREEN = 0,
 	ODP_PACKET_YELLOW = 1,
@@ -86,6 +87,7 @@ typedef enum {
 	ODP_PACKET_ALL_COLORS = 3,
 } odp_packet_color_t;
 
+/** Packet Checksum Status */
 typedef enum {
 	ODP_PACKET_CHKSUM_UNKNOWN = 0,
 	ODP_PACKET_CHKSUM_BAD,
