@@ -2267,6 +2267,14 @@ static int traffic_mngr_suite_init(void)
 	if (j != NUM_LEVELS)
 		goto skip_tests;
 
+	if (egress_capa.pkt_prio_modes[ODP_TM_PKT_PRIO_MODE_PRESERVE] &&
+	    egress_capa.max_schedulers_per_node < NUM_QUEUES_PER_NODE)
+		goto skip_tests;
+
+	if (!egress_capa.pkt_prio_modes[ODP_TM_PKT_PRIO_MODE_PRESERVE] &&
+	    egress_capa.max_schedulers_per_node < 1)
+		goto skip_tests;
+
 	/* Init tm capabilities with matching egress capa until tm is created */
 	tm_capabilities = egress_capa;
 
