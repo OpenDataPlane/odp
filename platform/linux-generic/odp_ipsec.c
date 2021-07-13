@@ -375,6 +375,34 @@ typedef struct {
 	uint8_t	iv[IPSEC_MAX_IV_LEN];
 } ipsec_state_t;
 
+/*
+ * Computes 64-bit seq number according to RFC4303 A2
+ */
+static inline uint64_t ipsec_compute_esn(ipsec_sa_t *ipsec_sa, uint32_t seq)
+{
+	uint32_t wintop_h, wintop_l, winbot_l, ws;
+	uint64_t new_seq = 0;
+
+	wintop_h = odp_atomic_load_u64(&ipsec_sa->hot.in.wintop_seq) >> 32;
+	wintop_l = odp_atomic_load_u64(&ipsec_sa->hot.in.wintop_seq) & 0xffffffff;
+
+	ws = ipsec_sa->in.ar.win_size;
+	winbot_l = wintop_l - ws + 1;
+
+	/* case A: window is within one sequence number subspace */
+	if (wintop_l >= (ws - 1)) {
+		if (seq < winbot_l)
+			wintop_h++;
+	/* case B: window spans two sequence number subspaces */
+	} else {
+		if (seq >= winbot_l)
+			wintop_h--;
+	}
+
+	new_seq = (((uint64_t)wintop_h << 32) | seq);
+	return new_seq;
+}
+
 static int ipsec_parse_ipv4(ipsec_state_t *state, odp_packet_t pkt)
 {
 	_odp_ipv4hdr_t ipv4hdr;
@@ -565,18 +593,41 @@ static int ipsec_in_esp(odp_packet_t *pkt,
 	param->auth_iv_ptr = state->iv;
 
 	state->esp.aad.spi = esp.spi;
-	state->esp.aad.seq_no = esp.seq_no;
 	state->in.seq_no = odp_be_to_cpu_32(esp.seq_no);
 
+	if (ipsec_sa->esn)
+		ipsec_sa->in.seq64 = ipsec_compute_esn(ipsec_sa, state->in.seq_no);
+
+	/* AAD with ESN */
+	if (ipsec_sa->esn && (!ipsec_sa->seqh_len))
+		state->esp.aad.seq_no64 = odp_cpu_to_be_64(ipsec_sa->in.seq64);
+	else if (!ipsec_sa->esn)
+		state->esp.aad.seq_no = esp.seq_no;
+
 	param->aad_ptr = (uint8_t *)&state->esp.aad;
+
+	/* Inbound ICV computation includes ESN higher 32 bits for individual algo's */
+	if (ipsec_sa->seqh_len) {
+		uint32_t inb_seqh = (ipsec_sa->in.seq64 >> 32);
+		uint32_t icv_offset =  odp_packet_len(*pkt) - ipsec_sa->icv_len;
+
+		if (odp_packet_add_data(pkt, icv_offset, ipsec_sa->seqh_len) < 0) {
+			status->error.alg = 1;
+			ODP_ERR("odp_packet_add_data failed\n");
+			return -1;
+		}
+		odp_packet_copy_from_mem(*pkt, icv_offset, ipsec_sa->seqh_len, &inb_seqh);
+	}
 
 	param->auth_range.offset = ipsec_offset;
 	param->auth_range.length = state->ip_tot_len -
 				  state->ip_hdr_len -
-				  ipsec_sa->icv_len;
+				  ipsec_sa->icv_len +
+				  ipsec_sa->seqh_len;
 	param->hash_result_offset = state->ip_offset +
 				   state->ip_tot_len -
-				   ipsec_sa->icv_len;
+				   ipsec_sa->icv_len +
+				   ipsec_sa->seqh_len;
 
 	state->stats_length = param->cipher_range.length;
 
@@ -834,11 +885,12 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		if ((crypto.cipher_status.alg_err ==
 		     ODP_CRYPTO_ALG_ERR_ICV_CHECK) ||
 		    (crypto.auth_status.alg_err ==
-		     ODP_CRYPTO_ALG_ERR_ICV_CHECK))
+		     ODP_CRYPTO_ALG_ERR_ICV_CHECK)) {
+			ODP_ERR("ICV_CHECK failed\n");
 			status->error.auth = 1;
-		else
+		} else {
 			status->error.alg = 1;
-
+		}
 		goto exit;
 	}
 
@@ -869,6 +921,9 @@ static ipsec_sa_t *ipsec_in_single(odp_packet_t pkt,
 		status->error.proto = 1;
 		goto post_lifetime_err_cnt_update;
 	}
+
+	/* Truncate the ESN higher bits */
+	state.in.trl_len += ipsec_sa->seqh_len;
 
 	if (odp_packet_trunc_tail(&pkt, state.in.trl_len, NULL, NULL) < 0) {
 		status->error.alg = 1;
@@ -1275,8 +1330,13 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 	esp.spi = odp_cpu_to_be_32(ipsec_sa->spi);
 	esp.seq_no = odp_cpu_to_be_32(seq_no & 0xffffffff);
 
+	/* AAD with ESN */
+	if (ipsec_sa->esn && (!ipsec_sa->seqh_len))
+		state->esp.aad.seq_no64 = odp_cpu_to_be_64(seq_no);
+	else if (!ipsec_sa->esn)
+		state->esp.aad.seq_no = esp.seq_no;
+
 	state->esp.aad.spi = esp.spi;
-	state->esp.aad.seq_no = esp.seq_no;
 
 	param->aad_ptr = (uint8_t *)&state->esp.aad;
 
@@ -1352,6 +1412,17 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 				 esptrl_offset, _ODP_ESPTRL_LEN,
 				 &esptrl);
 
+	/* Outbound ICV computation includes ESN upper 32 bits as part of ESP
+	 * implicit trailer for individual algo's.
+	 */
+	if (ipsec_sa->seqh_len) {
+		uint32_t oub_seqh = (seq_no >> 32);
+
+		odp_packet_copy_from_mem(*pkt,
+					 esptrl_offset + _ODP_ESPTRL_LEN,
+					 ipsec_sa->seqh_len, &oub_seqh);
+	}
+
 	if (odp_unlikely(state->ip_tot_len <
 			 state->ip_hdr_len + hdr_len + ipsec_sa->icv_len)) {
 		status->error.proto = 1;
@@ -1367,7 +1438,8 @@ static int ipsec_out_esp(odp_packet_t *pkt,
 	param->auth_range.offset = ipsec_offset;
 	param->auth_range.length = state->ip_tot_len -
 				  state->ip_hdr_len -
-				  ipsec_sa->icv_len;
+				  ipsec_sa->icv_len +
+				  ipsec_sa->seqh_len;
 	param->hash_result_offset = state->ip_offset +
 				   state->ip_tot_len -
 				   ipsec_sa->icv_len;

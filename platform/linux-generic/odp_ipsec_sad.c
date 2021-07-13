@@ -503,10 +503,8 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	}
 	ipsec_sa->mode = param->mode;
 	ipsec_sa->flags = 0;
-	if (param->opt.esn) {
-		ODP_ERR("ESN is not supported!\n");
-		return ODP_IPSEC_SA_INVALID;
-	}
+	ipsec_sa->esn = param->opt.esn;
+
 	if (ODP_IPSEC_DIR_INBOUND == param->dir) {
 		ipsec_sa->lookup_mode = param->inbound.lookup_mode;
 		if (ODP_IPSEC_LOOKUP_DSTADDR_SPI == ipsec_sa->lookup_mode) {
@@ -640,6 +638,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		goto error;
 
 	ipsec_sa->salt_length = 0;
+	ipsec_sa->seqh_len = (ipsec_sa->esn) ? 4 : 0;
 
 	switch (crypto_param.cipher_alg) {
 	case ODP_CIPHER_ALG_NULL:
@@ -700,7 +699,12 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	case ODP_AUTH_ALG_AES128_GCM:
 #endif
 	case ODP_AUTH_ALG_AES_GCM:
-		crypto_param.auth_aad_len = sizeof(ipsec_aad_t);
+		if (ipsec_sa->esn) {
+			crypto_param.auth_aad_len = 12; /* With ESN */
+			ipsec_sa->seqh_len = 0;
+		} else {
+			crypto_param.auth_aad_len = 8;
+		}
 		break;
 	case ODP_AUTH_ALG_AES_GMAC:
 		if (ODP_CIPHER_ALG_NULL != crypto_param.cipher_alg)
@@ -713,13 +717,20 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		salt_param = &param->crypto.auth_key_extra;
 		break;
 	case ODP_AUTH_ALG_CHACHA20_POLY1305:
-		crypto_param.auth_aad_len = sizeof(ipsec_aad_t);
+		if (ipsec_sa->esn) {
+			crypto_param.auth_aad_len = 12; /* With ESN */
+			ipsec_sa->seqh_len = 0;
+		} else {
+			crypto_param.auth_aad_len = 8;
+		}
 		break;
 	default:
 		break;
 	}
 
 	ipsec_sa->icv_len = crypto_param.auth_digest_len;
+	if (!ipsec_sa->icv_len) /* For ODP_AUTH_ALG_NULL */
+		ipsec_sa->seqh_len = 0;
 
 	if (ipsec_sa->salt_length) {
 		if (ipsec_sa->salt_length > IPSEC_MAX_SALT_LEN) {
@@ -947,7 +958,10 @@ static uint64_t ipsec_sa_antireplay_max_seq(ipsec_sa_t *ipsec_sa)
 {
 	uint64_t max_seq = 0;
 
-	max_seq = odp_atomic_load_u64(&ipsec_sa->hot.in.wintop_seq) & 0xffffffff;
+	if (ipsec_sa->esn)
+		max_seq = odp_atomic_load_u64(&ipsec_sa->hot.in.wintop_seq);
+	else
+		max_seq = odp_atomic_load_u64(&ipsec_sa->hot.in.wintop_seq) & 0xffffffff;
 
 	return max_seq;
 }
@@ -956,7 +970,8 @@ int _odp_ipsec_sa_replay_precheck(ipsec_sa_t *ipsec_sa, uint32_t seq,
 				  odp_ipsec_op_status_t *status)
 {
 	/* Try to be as quick as possible, we will discard packets later */
-	if (ipsec_sa->antireplay && ((seq + ipsec_sa->in.ar.win_size) <=
+	if ((!ipsec_sa->esn) && ipsec_sa->antireplay &&
+	    ((seq + ipsec_sa->in.ar.win_size) <=
 	    (odp_atomic_load_u64(&ipsec_sa->hot.in.wintop_seq) & 0xffffffff))) {
 		status->error.antireplay = 1;
 		return -1;
@@ -965,17 +980,18 @@ int _odp_ipsec_sa_replay_precheck(ipsec_sa_t *ipsec_sa, uint32_t seq,
 	return 0;
 }
 
-static inline int ipsec_wslarge_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
+static inline int ipsec_wslarge_replay_update(ipsec_sa_t *ipsec_sa, uint64_t seq,
 					      odp_ipsec_op_status_t *status)
 {
-	uint32_t bucket, wintop_bucket, new_bucket;
-	uint32_t bkt_diff, bkt_cnt, top_seq;
-	uint64_t bit = 0;
+	uint64_t bucket, wintop_bucket, new_bucket;
+	uint64_t bit = 0, top_seq;
+	uint32_t bkt_diff, bkt_cnt;
 
 	odp_spinlock_lock(&ipsec_sa->hot.in.lock);
 
 	top_seq = odp_atomic_load_u64(&ipsec_sa->hot.in.wintop_seq);
-	if ((seq + ipsec_sa->in.ar.win_size) <= top_seq)
+	if ((!ipsec_sa->esn) && ((seq + ipsec_sa->in.ar.win_size) <=
+	    (top_seq  & 0xffffffff)))
 		goto ar_err;
 
 	bucket = (seq >> IPSEC_AR_WIN_BUCKET_BITS);
@@ -1055,13 +1071,16 @@ static inline int ipsec_ws32_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
 int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
 				odp_ipsec_op_status_t *status)
 {
+	uint64_t rec_seq = 0;
 	int ret;
 
+	rec_seq = (ipsec_sa->esn) ? ipsec_sa->in.seq64 : seq;
+
 	/* Window update for ws equal to 32 */
-	if (ipsec_sa->in.ar.win_size == IPSEC_AR_WIN_SIZE_MIN)
+	if ((!ipsec_sa->esn) && (ipsec_sa->in.ar.win_size == IPSEC_AR_WIN_SIZE_MIN))
 		ret = ipsec_ws32_replay_update(ipsec_sa, seq, status);
 	else
-		ret = ipsec_wslarge_replay_update(ipsec_sa, seq, status);
+		ret = ipsec_wslarge_replay_update(ipsec_sa, rec_seq, status);
 
 	return ret;
 }
