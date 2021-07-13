@@ -502,6 +502,16 @@ typedef struct {
 	 * odp_tm_requirements_t.
 	 */
 	odp_bool_t pkt_prio_modes[ODP_TM_PKT_PRIO_MODE_MAX];
+
+	/** Maximum number of schedulers supported by a TM node at any level.
+	 * A TM node contains a WFQ/WRR scheduler for each packet priority level
+	 * for which the node has more than one possible input. TM topology and
+	 * priority configuration must be made so that the resulting number of
+	 * WFQ/WRR schedulers does not exceed this capability in any TM node.
+	 *
+	 * The value can vary between 0 and ODP_TM_MAX_PRIORITIES.
+	 */
+	uint8_t max_schedulers_per_node;
 } odp_tm_capabilities_t;
 
 /** Per Level Requirements
