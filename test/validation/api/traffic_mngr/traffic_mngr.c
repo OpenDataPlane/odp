@@ -2385,6 +2385,46 @@ traffic_mngr_suite_3l_8f_4q_init(void)
 	return traffic_mngr_suite_common_init();
 }
 
+static int
+traffic_mngr_suite_3l_4f_4q_init(void)
+{
+	int i;
+
+	/* Test topology */
+	qs_per_node = 4;
+	fanin_ratio = 4;
+	num_lvls = 3;
+	queue_priority = true;
+	num_prio = qs_per_node;
+
+	tm_nodes_per_lvl[0] = 1;
+	for (i = 1; i < num_lvls; i++)
+		tm_nodes_per_lvl[i] = tm_nodes_per_lvl[i - 1] * fanin_ratio;
+	total_tm_queues = tm_nodes_per_lvl[i - 1] * qs_per_node;
+
+	return traffic_mngr_suite_common_init();
+}
+
+static int
+traffic_mngr_suite_5l_2f_4q_wfq_init(void)
+{
+	int i;
+
+	/* Test topology */
+	qs_per_node = 4;
+	fanin_ratio = 2;
+	num_lvls = 5;
+	queue_priority = false;
+	num_prio = 1;
+
+	tm_nodes_per_lvl[0] = 1;
+	for (i = 1; i < num_lvls; i++)
+		tm_nodes_per_lvl[i] = tm_nodes_per_lvl[i - 1] * fanin_ratio;
+	total_tm_queues = tm_nodes_per_lvl[i - 1] * qs_per_node;
+
+	return traffic_mngr_suite_common_init();
+}
+
 static void check_shaper_profile(char *shaper_name, uint32_t shaper_idx)
 {
 	odp_tm_shaper_params_t shaper_params;
@@ -4262,26 +4302,49 @@ static void traffic_mngr_test_tm_create(void)
 
 static void traffic_mngr_test_shaper(void)
 {
-	CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw1",
-						"node_1_1_1",
-						0,
-						MBPS * 1)));
-	CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw4",
-						"node_1_1_1",
-						1,
-						4   * MBPS)));
-	CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw10",
-						"node_1_1_1",
-						2,
-						10  * MBPS)));
-	CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw40",
-						"node_1_1_1",
-						3,
-						40  * MBPS)));
-	CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw100",
-						"node_1_1_2",
-						0,
-						100 * MBPS)));
+	if (num_lvls == 3) {
+		CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw1",
+							"node_1_1_1",
+							0,
+							MBPS * 1)));
+		CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw4",
+							"node_1_1_1",
+							1,
+							4   * MBPS)));
+		CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw10",
+							"node_1_1_1",
+							2,
+							10  * MBPS)));
+		CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw40",
+							"node_1_1_1",
+							3,
+							40  * MBPS)));
+		CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw100",
+							"node_1_1_2",
+							0,
+							100 * MBPS)));
+	} else if (num_lvls == 5) {
+		CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw1",
+							"node_1_1_1_1_1",
+							0,
+							MBPS * 1)));
+		CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw4",
+							"node_1_1_1_1_1",
+							1,
+							4   * MBPS)));
+		CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw10",
+							"node_1_1_1_1_1",
+							2,
+							10  * MBPS)));
+		CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw40",
+							"node_1_1_1_1_1",
+							3,
+							40  * MBPS)));
+		CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw100",
+							"node_1_1_1_1_2",
+							0,
+							100 * MBPS)));
+	}
 }
 
 static void traffic_mngr_test_scheduler(void)
@@ -4316,10 +4379,17 @@ static int traffic_mngr_check_thresholds(void)
 
 static void traffic_mngr_test_thresholds(void)
 {
-	CU_ASSERT(test_threshold("thresh_A", "shaper_A", "node_1_2_1", 0,
-				 16, 0)    == 0);
-	CU_ASSERT(test_threshold("thresh_B", "shaper_B", "node_1_2_1", 1,
-				 0,  6400) == 0);
+	if (num_lvls == 3) {
+		CU_ASSERT(test_threshold("thresh_A", "shaper_A", "node_1_2_1", 0,
+					 16, 0)    == 0);
+		CU_ASSERT(test_threshold("thresh_B", "shaper_B", "node_1_2_1", 1,
+					 0,  6400) == 0);
+	} else {
+		CU_ASSERT(test_threshold("thresh_A", "shaper_A", "node_1_1_1_2_1", 0,
+					 16, 0)    == 0);
+		CU_ASSERT(test_threshold("thresh_B", "shaper_B", "node_1_1_1_2_1", 1,
+					 0,  6400) == 0);
+	}
 }
 
 static int traffic_mngr_check_queue_stats(void)
@@ -4335,6 +4405,7 @@ static void traffic_mngr_test_queue_stats(void)
 	odp_tm_queue_stats_t stats_start, stats_stop;
 	odp_tm_queue_t tm_queue;
 	odp_tm_capabilities_t capa;
+	const char *last_lvl_node;
 	pkt_info_t pkt_info;
 	uint32_t pkts_sent;
 	uint32_t num_pkts = MIN(50, MAX_PKTS);
@@ -4342,8 +4413,13 @@ static void traffic_mngr_test_queue_stats(void)
 
 	CU_ASSERT_FATAL(odp_tm_capability(odp_tm_systems[0], &capa) == 0);
 
+	if (num_lvls == 3)
+		last_lvl_node = "node_1_2_1";
+	else
+		last_lvl_node = "node_1_1_1_2_2";
+
 	/* Reuse threshold test node */
-	tm_queue = find_tm_queue(0, "node_1_2_1", 0);
+	tm_queue = find_tm_queue(0, last_lvl_node, 0);
 	CU_ASSERT_FATAL(tm_queue != ODP_TM_INVALID);
 
 	init_xmt_pkts(&pkt_info);
@@ -4402,27 +4478,49 @@ static int traffic_mngr_check_wred(void)
 
 static void traffic_mngr_test_byte_wred(void)
 {
-	CU_ASSERT(test_byte_wred("byte_wred_30G", "byte_bw_30G",
-				 "byte_thresh_30G", "node_1_3_1", 1,
-				 ODP_PACKET_GREEN, TM_PERCENT(30), true) == 0);
-	CU_ASSERT(test_byte_wred("byte_wred_50Y", "byte_bw_50Y",
-				 "byte_thresh_50Y", "node_1_3_1", 2,
-				 ODP_PACKET_YELLOW, TM_PERCENT(50), true) == 0);
-	CU_ASSERT(test_byte_wred("byte_wred_70R", "byte_bw_70R",
-				 "byte_thresh_70R", "node_1_3_1", 3,
-				 ODP_PACKET_RED, TM_PERCENT(70), true) == 0);
+	if (num_lvls == 3) {
+		CU_ASSERT(test_byte_wred("byte_wred_30G", "byte_bw_30G",
+					 "byte_thresh_30G", "node_1_3_1", 1,
+					 ODP_PACKET_GREEN, TM_PERCENT(30), true) == 0);
+		CU_ASSERT(test_byte_wred("byte_wred_50Y", "byte_bw_50Y",
+					 "byte_thresh_50Y", "node_1_3_1", 2,
+					 ODP_PACKET_YELLOW, TM_PERCENT(50), true) == 0);
+		CU_ASSERT(test_byte_wred("byte_wred_70R", "byte_bw_70R",
+					 "byte_thresh_70R", "node_1_3_1", 3,
+					 ODP_PACKET_RED, TM_PERCENT(70), true) == 0);
 
-	CU_ASSERT(test_byte_wred("byte_wred_40G", "byte_bw_40G",
-				 "byte_thresh_40G", "node_1_3_1", 1,
-				 ODP_PACKET_GREEN, TM_PERCENT(30), false) == 0);
+		CU_ASSERT(test_byte_wred("byte_wred_40G", "byte_bw_40G",
+					 "byte_thresh_40G", "node_1_3_1", 1,
+					 ODP_PACKET_GREEN, TM_PERCENT(30), false) == 0);
+	} else {
+		CU_ASSERT(test_byte_wred("byte_wred_30G", "byte_bw_30G",
+					 "byte_thresh_30G", "node_1_1_1_2_1", 1,
+					 ODP_PACKET_GREEN, TM_PERCENT(30), true) == 0);
+		CU_ASSERT(test_byte_wred("byte_wred_50Y", "byte_bw_50Y",
+					 "byte_thresh_50Y", "node_1_1_1_2_1", 2,
+					 ODP_PACKET_YELLOW, TM_PERCENT(50), true) == 0);
+		CU_ASSERT(test_byte_wred("byte_wred_70R", "byte_bw_70R",
+					 "byte_thresh_70R", "node_1_1_1_2_1", 3,
+					 ODP_PACKET_RED, TM_PERCENT(70), true) == 0);
+
+		CU_ASSERT(test_byte_wred("byte_wred_40G", "byte_bw_40G",
+					 "byte_thresh_40G", "node_1_1_1_2_1", 1,
+					 ODP_PACKET_GREEN, TM_PERCENT(30), false) == 0);
+	}
 }
 
 static void traffic_mngr_test_pkt_wred(void)
 {
+	const char *last_lvl_node;
 	int rc;
 
+	if (num_lvls == 3)
+		last_lvl_node = "node_1_3_2";
+	else
+		last_lvl_node = "node_1_1_1_2_2";
+
 	rc = test_pkt_wred("pkt_wred_40G", "pkt_bw_40G",
-			   "pkt_thresh_40G", "node_1_3_2", 1,
+			   "pkt_thresh_40G", last_lvl_node, 1,
 			   ODP_PACKET_GREEN, TM_PERCENT(30), false);
 	if (odp_cunit_ret(rc) != 0)
 		CU_FAIL("40G test failed\n");
@@ -4434,19 +4532,19 @@ static void traffic_mngr_test_pkt_wred(void)
 	}
 
 	rc = test_pkt_wred("pkt_wred_30G", "pkt_bw_30G",
-			   "pkt_thresh_30G", "node_1_3_2", 1,
+			   "pkt_thresh_30G", last_lvl_node, 1,
 			   ODP_PACKET_GREEN, TM_PERCENT(30), true);
 	if (odp_cunit_ret(rc) != 0)
 		CU_FAIL("30G test failed\n");
 
 	rc = test_pkt_wred("pkt_wred_50Y", "pkt_bw_50Y",
-			   "pkt_thresh_50Y", "node_1_3_2", 2,
+			   "pkt_thresh_50Y", last_lvl_node, 2,
 			   ODP_PACKET_YELLOW, TM_PERCENT(50), true);
 	if (odp_cunit_ret(rc) != 0)
 		CU_FAIL("50Y test failed\n");
 
 	rc = test_pkt_wred("pkt_wred_70R", "pkt_bw_70R",
-			   "pkt_thresh_70R", "node_1_3_2", 3,
+			   "pkt_thresh_70R", last_lvl_node, 3,
 			   ODP_PACKET_RED,    TM_PERCENT(70), true);
 	if (odp_cunit_ret(rc) != 0)
 		CU_FAIL("70Y test failed\n");
@@ -4507,31 +4605,57 @@ static void traffic_mngr_test_vlan_marking(void)
 	odp_packet_color_t color;
 
 	for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
-		/* Tree is 3 level */
-		CU_ASSERT(test_vlan_marking("node_1_3_1", color) == 0);
+		if (num_lvls == 3) {
+			/* Tree is 3 level */
+			CU_ASSERT(test_vlan_marking("node_1_3_1", color) == 0);
+		} else {
+			CU_ASSERT(test_vlan_marking("node_1_1_1_2_1", color) == 0);
+		}
 	}
 }
 
 static void traffic_mngr_test_ecn_marking(void)
 {
-	CU_ASSERT(ip_marking_tests("node_1_3_2", true, false) == 0);
+	if (num_lvls == 3) {
+		/* Tree is 3 level */
+		CU_ASSERT(ip_marking_tests("node_1_3_2", true, false) == 0);
+	} else {
+		CU_ASSERT(ip_marking_tests("node_1_1_1_2_2", true, false) == 0);
+	}
 }
 
 static void traffic_mngr_test_drop_prec_marking(void)
 {
-	CU_ASSERT(ip_marking_tests("node_1_4_2", false, true) == 0);
+	if (num_lvls == 3) {
+		/* Tree is 3 level */
+		CU_ASSERT(ip_marking_tests("node_1_4_2", false, true) == 0);
+	} else {
+		CU_ASSERT(ip_marking_tests("node_1_1_1_2_2", false, true) == 0);
+	}
 }
 
 static void traffic_mngr_test_ecn_drop_prec_marking(void)
 {
-	CU_ASSERT(ip_marking_tests("node_1_4_2", true, true) == 0);
+	if (num_lvls == 3) {
+		/* Tree is 3 level */
+		CU_ASSERT(ip_marking_tests("node_1_4_2", true, true) == 0);
+	} else {
+		CU_ASSERT(ip_marking_tests("node_1_1_1_2_2", true, true) == 0);
+	}
 }
 
 static void traffic_mngr_test_fanin_info(void)
 {
-	CU_ASSERT(test_fanin_info("node_1")     == 0);
-	CU_ASSERT(test_fanin_info("node_1_2")   == 0);
-	CU_ASSERT(test_fanin_info("node_1_3_7") == 0);
+	if (fanin_ratio >= 1)
+		CU_ASSERT(test_fanin_info("node_1")     == 0);
+
+	/* Valid only when we have at least 3 fanins */
+	if (fanin_ratio >= 3)
+		CU_ASSERT(test_fanin_info("node_1_2")   == 0);
+
+	/* Valid only when we have at least 8 fanins */
+	if (fanin_ratio >= 8)
+		CU_ASSERT(test_fanin_info("node_1_3_7") == 0);
 }
 
 static void traffic_mngr_test_destroy(void)
@@ -4577,6 +4701,10 @@ odp_testinfo_t traffic_mngr_suite_common[] = {
 
 odp_suiteinfo_t traffic_mngr_suites[] = {
 	{ "3_levels_8_fanin_4_qs_per_node", traffic_mngr_suite_3l_8f_4q_init,
+	  traffic_mngr_suite_term, traffic_mngr_suite_common },
+	{ "3_levels_4_fanin_4_qs_per_node", traffic_mngr_suite_3l_4f_4q_init,
+	  traffic_mngr_suite_term, traffic_mngr_suite_common },
+	{ "5_levels_2_fanin_4_qs_wfq_per_node", traffic_mngr_suite_5l_2f_4q_wfq_init,
 	  traffic_mngr_suite_term, traffic_mngr_suite_common },
 	ODP_SUITE_INFO_NULL
 };
