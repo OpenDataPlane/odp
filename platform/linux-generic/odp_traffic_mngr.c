@@ -2584,6 +2584,7 @@ static int tm_capabilities(odp_tm_capabilities_t capabilities[],
 	cap_ptr->tm_queue_query_flags          = (ODP_TM_QUERY_PKT_CNT |
 						  ODP_TM_QUERY_BYTE_CNT |
 						  ODP_TM_QUERY_THRESHOLDS);
+	cap_ptr->max_schedulers_per_node       = ODP_TM_MAX_PRIORITIES;
 
 	cap_ptr->dynamic_topology_update  = true;
 	cap_ptr->dynamic_shaper_update    = true;
@@ -2689,6 +2690,7 @@ static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
 	cap_ptr->tm_queue_query_flags          = (ODP_TM_QUERY_PKT_CNT |
 						  ODP_TM_QUERY_BYTE_CNT |
 						  ODP_TM_QUERY_THRESHOLDS);
+	cap_ptr->max_schedulers_per_node       = ODP_TM_MAX_PRIORITIES;
 
 	cap_ptr->dynamic_topology_update  = true;
 	cap_ptr->dynamic_shaper_update    = true;
