@@ -1,0 +1,51 @@
+<map id="std_types.h" name="std_types.h">
+<area shape="rect" id="node2" href="$abi-default_2atomic_8h.html" title="ODP atomic operations. " alt="" coords="5,80,84,107"/>
+<area shape="rect" id="node3" href="$abi-default_2barrier_8h.html" title="ODP barrier. " alt="" coords="108,80,184,107"/>
+<area shape="rect" id="node4" href="$abi-default_2byteorder_8h.html" title="ODP byteorder. " alt="" coords="209,80,305,107"/>
+<area shape="rect" id="node5" href="$abi-default_2cpumask_8h.html" title="ODP CPU masks and enumeration. " alt="" coords="329,80,422,107"/>
+<area shape="rect" id="node6" href="$abi-default_2init_8h.html" title="ODP initialization. " alt="" coords="447,80,501,107"/>
+<area shape="rect" id="node7" href="$abi-default_2ipsec_8h.html" title="ODP IPSEC API &#45; platform specific types. " alt="" coords="525,80,593,107"/>
+<area shape="rect" id="node8" href="$abi-default_2packet__io_8h.html" title="ODP Packet IO. " alt="" coords="617,80,715,107"/>
+<area shape="rect" id="node9" href="$abi-default_2rwlock__recursive_8h.html" title="ODP recursive read/write lock. " alt="" coords="739,80,883,107"/>
+<area shape="rect" id="node10" href="$abi-default_2schedule_8h.html" title="ODP schedule. " alt="" coords="908,80,1000,107"/>
+<area shape="rect" id="node11" href="$abi-default_2spinlock__recursive_8h.html" title="ODP recursive spinlock. " alt="" coords="1025,80,1179,107"/>
+<area shape="rect" id="node12" href="$abi-default_2traffic__mngr_8h.html" title="ODP traffic mngr. " alt="" coords="1203,80,1315,107"/>
+<area shape="rect" id="node13" href="$barrier_8h.html" title="ODP execution barriers. " alt="" coords="1340,80,1416,107"/>
+<area shape="rect" id="node14" href="$buffer_8h.html" title="ODP buffer descriptor. " alt="" coords="1440,80,1511,107"/>
+<area shape="rect" id="node15" href="$classification_8h.html" title="ODP classification descriptor. " alt="" coords="1552,379,1671,405"/>
+<area shape="rect" id="node17" href="$crypto_8h.html" title="ODP crypto. " alt="" coords="1858,229,1933,256"/>
+<area shape="rect" id="node18" href="$packet_8h.html" title="ODP packet descriptor. " alt="" coords="1827,80,1905,107"/>
+<area shape="rect" id="node22" href="$spec_2packet__flags_8h.html" title="ODP packet flags. " alt="" coords="2116,155,2232,181"/>
+<area shape="rect" id="node25" href="$packet__io_8h.html" title="ODP Packet IO. " alt="" coords="1603,229,1700,256"/>
+<area shape="rect" id="node27" href="$spec_2traffic__mngr_8h.html" title="traffic_mngr.h" alt="" coords="1746,304,1858,331"/>
+<area shape="rect" id="node28" href="$queue_8h.html" title="ODP queue. " alt="" coords="1981,80,2055,107"/>
+<area shape="rect" id="node30" href="$spec_2chksum_8h.html" title="ODP checksum functions. " alt="" coords="2079,80,2165,107"/>
+<area shape="rect" id="node32" href="$spec_2cpu_8h.html" title="ODP CPU API. " alt="" coords="2189,80,2247,107"/>
+<area shape="rect" id="node34" href="$spec_2feature_8h.html" title="ODP features. " alt="" coords="2323,80,2404,107"/>
+<area shape="rect" id="node36" href="$spec_2init_8h.html" title="init.h" alt="" coords="2633,229,2688,256"/>
+<area shape="rect" id="node38" href="$spec_2hash_8h.html" title="ODP Hash functions. " alt="" coords="2428,80,2493,107"/>
+<area shape="rect" id="node40" href="$spec_2pool_8h.html" title="ODP pool. " alt="" coords="2855,155,2917,181"/>
+<area shape="rect" id="node41" href="$pool__types_8h.html" title="Type definitions for pools. " alt="" coords="2569,80,2675,107"/>
+<area shape="rect" id="node42" href="$spec_2schedule_8h.html" title="ODP schedule. " alt="" coords="2699,80,2791,107"/>
+<area shape="rect" id="node43" href="$spec_2stash_8h.html" title="ODP stash. " alt="" coords="2815,80,2885,107"/>
+<area shape="rect" id="node44" href="$spec_2std_8h.html" title="ODP standard types and optimized C library functions. " alt="" coords="2909,80,2964,107"/>
+<area shape="rect" id="node45" href="$spec_2threshold_8h.html" title="ODP threshold descriptor. " alt="" coords="2988,80,3083,107"/>
+<area shape="rect" id="node46" href="$spec_2thrmask_8h.html" title="ODP thread masks. " alt="" coords="3107,80,3195,107"/>
+<area shape="rect" id="node47" href="$system__info_8h.html" title="ODP system information. " alt="" coords="3219,80,3334,107"/>
+<area shape="rect" id="node48" href="$time_8h.html" title="ODP time. " alt="" coords="1637,80,1701,107"/>
+<area shape="rect" id="node49" href="$timer_8h.html" title="ODP timer service. " alt="" coords="3359,80,3427,107"/>
+<area shape="rect" id="node50" href="$strong__types_8h.html" title="ODP Strong Types. " alt="" coords="3451,80,3569,107"/>
+<area shape="rect" id="node16" href="$spec_2ipsec_8h.html" title="ODP IPSEC API. " alt="" coords="1675,453,1743,480"/>
+<area shape="rect" id="node19" href="$spec_2comp_8h.html" title="ODP Compression. " alt="" coords="1827,155,1897,181"/>
+<area shape="rect" id="node20" href="$spec_2crypto_8h.html" title="ODP crypto. " alt="" coords="1922,155,1997,181"/>
+<area shape="rect" id="node21" href="$spec_2event_8h.html" title="ODP event. " alt="" coords="2021,155,2092,181"/>
+<area shape="rect" id="node24" href="$spec_2packet__io_8h.html" title="ODP Packet IO. " alt="" coords="1603,155,1700,181"/>
+<area shape="rect" id="node23" href="$packet__flags_8h.html" title="ODP packet flags. " alt="" coords="2116,229,2232,256"/>
+<area shape="rect" id="node26" href="$spec_2classification_8h.html" title="ODP classification descriptor. " alt="" coords="1552,304,1671,331"/>
+<area shape="rect" id="node29" href="$spec_2packet__io__stats_8h.html" title="ODP Packet IO statistics. " alt="" coords="2257,155,2393,181"/>
+<area shape="rect" id="node31" href="$chksum_8h.html" title="ODP checksum functions. " alt="" coords="2417,155,2502,181"/>
+<area shape="rect" id="node33" href="$cpu_8h.html" title="ODP CPU. " alt="" coords="2527,155,2584,181"/>
+<area shape="rect" id="node35" href="$feature_8h.html" title="ODP features. " alt="" coords="2660,155,2741,181"/>
+<area shape="rect" id="node37" href="$init_8h.html" title="ODP initialization. " alt="" coords="2633,304,2688,331"/>
+<area shape="rect" id="node39" href="$hash_8h.html" title="ODP Hash function. " alt="" coords="2765,155,2831,181"/>
+</map>

@@ -1,0 +1,11 @@
+<map id="odp_cls_cos_param" name="odp_cls_cos_param">
+<area shape="rect" id="node2" href="$structodp__red__param__t.html" title="Random Early Detection (RED) Random Early Detection is enabled to initiate a drop probability for the..." alt="" coords="319,5,454,32"/>
+<area shape="rect" id="node3" href="$structodp__threshold__t.html" title="ODP Threshold. " alt="" coords="28,33,155,60"/>
+<area shape="rect" id="node10" href="$structodp__bp__param__t.html" title="Back pressure (BP) When back pressure is enabled for a particular flow, the HW can send back pressure..." alt="" coords="321,56,452,83"/>
+<area shape="rect" id="node4" href="$structodp__queue__param__t.html" title="ODP Queue parameters. " alt="" coords="309,107,464,133"/>
+<area shape="rect" id="node5" href="$structodp__schedule__param__t.html" title="Scheduler parameters. " alt="" coords="5,107,177,133"/>
+<area shape="rect" id="node6" href="$struct__odp__abi__pool__t.html" title="_odp_abi_pool_t" alt="" coords="28,183,155,209"/>
+<area shape="rect" id="node9" href="$structodp__pktin__vector__config__t.html" title="Packet input vector configuration. " alt="" coords="291,220,483,247"/>
+<area shape="rect" id="node7" href="$struct__odp__abi__queue__t.html" title="_odp_abi_queue_t" alt="" coords="317,271,456,297"/>
+<area shape="rect" id="node8" href="$unionodp__pktin__hash__proto__t.html" title="Packet input hash protocols. " alt="" coords="298,321,475,348"/>
+</map>

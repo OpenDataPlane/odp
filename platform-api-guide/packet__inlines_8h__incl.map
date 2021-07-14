@@ -1,0 +1,26 @@
+<map id="packet_inlines.h" name="packet_inlines.h">
+<area shape="rect" id="node3" href="$packet__types_8h.html" title="ODP packet. " alt="" coords="763,87,936,114"/>
+<area shape="rect" id="node18" href="$pool_8h.html" title="ODP pool. " alt="" coords="1176,87,1291,114"/>
+<area shape="rect" id="node32" href="$hints_8h.html" title="ODP compiler hints. " alt="" coords="1099,266,1218,293"/>
+<area shape="rect" id="node34" href="$time_8h.html" title="ODP time. " alt="" coords="1514,355,1630,382"/>
+<area shape="rect" id="node38" href="$packet__inline__types_8h.html" title="ODP packet descriptor. " alt="" coords="1743,259,1889,300"/>
+<area shape="rect" id="node39" href="$pool__inline__types_8h.html" title="ODP packet descriptor. " alt="" coords="1835,80,2010,121"/>
+<area shape="rect" id="node40" href="$pktio__inlines_8h_source.html" title="odp/api/plat/pktio\l_inlines.h" alt="" coords="2035,80,2171,121"/>
+<area shape="rect" id="node5" href="$spec_2packet__types_8h.html" title="ODP packet types. " alt="" coords="563,169,715,211"/>
+<area shape="rect" id="node7" href="$queue__types_8h.html" title="ODP queue. " alt="" coords="493,266,662,293"/>
+<area shape="rect" id="node9" href="$spec_2queue__types_8h.html" title="ODP queue types. " alt="" coords="503,348,651,389"/>
+<area shape="rect" id="node10" href="$schedule__types_8h.html" title="ODP schedule. " alt="" coords="405,437,592,464"/>
+<area shape="rect" id="node16" href="$deprecated_8h.html" title="Control deprecated API definitions. " alt="" coords="617,437,775,464"/>
+<area shape="rect" id="node12" href="$spec_2schedule__types_8h.html" title="ODP schedule types. " alt="" coords="434,512,601,553"/>
+<area shape="rect" id="node13" href="$support_8h.html" title="ODP support API &#45; platform specific header. " alt="" coords="437,601,571,628"/>
+<area shape="rect" id="node14" href="$spec_2support_8h.html" title="ODP support API. " alt="" coords="406,676,575,703"/>
+<area shape="rect" id="node17" href="$spec_2deprecated_8h.html" title="Macro for deprecated API definitions. " alt="" coords="599,676,793,703"/>
+<area shape="rect" id="node22" href="$spec_2pool_8h.html" title="ODP pool. " alt="" coords="1281,266,1429,293"/>
+<area shape="rect" id="node23" href="$std__types_8h.html" title="Standard C language types and definitions for ODP. " alt="" coords="1373,437,1523,464"/>
+<area shape="rect" id="node30" href="$pool__types_8h.html" title="Type definitions for pools. " alt="" coords="1219,355,1410,382"/>
+<area shape="rect" id="node25" href="$spec_2std__types_8h.html" title="Standard C language types and definitions for ODP. " alt="" coords="1601,519,1783,546"/>
+<area shape="rect" id="node27" href="$align_8h.html" title="ODP alignments. " alt="" coords="1510,601,1629,628"/>
+<area shape="rect" id="node29" href="$spec_2align_8h.html" title="ODP alignments. " alt="" coords="1220,676,1372,703"/>
+<area shape="rect" id="node33" href="$spec_2hints_8h.html" title="ODP compiler hints. " alt="" coords="868,676,1020,703"/>
+<area shape="rect" id="node36" href="$spec_2time_8h.html" title="ODP time. " alt="" coords="1045,676,1195,703"/>
+</map>

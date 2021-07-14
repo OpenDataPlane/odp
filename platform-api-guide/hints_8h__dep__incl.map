@@ -1,0 +1,11 @@
+<map id="hints.h" name="hints.h">
+<area shape="rect" id="node2" href="$spec_2init_8h.html" title="init.h" alt="" coords="126,80,181,107"/>
+<area shape="rect" id="node7" href="$cpu__inlines_8h_source.html" title="cpu_inlines.h" alt="" coords="205,80,312,107"/>
+<area shape="rect" id="node8" href="$packet__flag__inlines_8h.html" title="Packet inline functions. " alt="" coords="337,80,495,107"/>
+<area shape="rect" id="node9" href="$packet__inlines_8h.html" title="Packet inline functions. " alt="" coords="520,80,648,107"/>
+<area shape="rect" id="node10" href="$time__inlines_8h_source.html" title="time_inlines.h" alt="" coords="672,80,787,107"/>
+<area shape="rect" id="node3" href="$init_8h.html" title="ODP initialization. " alt="" coords="126,155,181,181"/>
+<area shape="rect" id="node4" href="$spec_2shared__memory_8h.html" title="ODP shared memory. " alt="" coords="5,229,144,256"/>
+<area shape="rect" id="node6" href="$thread__inlines_8h_source.html" title="thread_inlines.h" alt="" coords="169,229,295,256"/>
+<area shape="rect" id="node5" href="$shared__memory_8h.html" title="ODP shared memory. " alt="" coords="5,304,144,331"/>
+</map>

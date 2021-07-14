@@ -1,0 +1,10 @@
+<map id="barrier.h" name="barrier.h">
+<area shape="rect" id="node2" href="$api_2std__types_8h.html" title="Standard C language types and definitions for ODP. " alt="" coords="399,80,549,107"/>
+<area shape="rect" id="node11" href="$api_2atomic_8h.html" title="ODP atomic operations. " alt="" coords="563,229,694,256"/>
+<area shape="rect" id="node4" href="$api_2spec_2std__types_8h.html" title="Standard C language types and definitions for ODP. " alt="" coords="141,155,324,181"/>
+<area shape="rect" id="node5" href="$visibility__begin_8h_source.html" title="odp/visibility_begin.h" alt="" coords="461,379,623,405"/>
+<area shape="rect" id="node7" href="$api_2align_8h.html" title="ODP alignments. " alt="" coords="173,229,292,256"/>
+<area shape="rect" id="node10" href="$visibility__end_8h_source.html" title="odp/visibility_end.h" alt="" coords="287,379,437,405"/>
+<area shape="rect" id="node9" href="$api_2spec_2align_8h.html" title="ODP alignments. " alt="" coords="319,304,471,331"/>
+<area shape="rect" id="node13" href="$api_2spec_2atomic_8h.html" title="ODP atomic operations. " alt="" coords="546,304,711,331"/>
+</map>

@@ -1,0 +1,40 @@
+<map id="atomic.h" name="atomic.h">
+<area shape="rect" id="node2" href="$api_2abi-default_2barrier_8h.html" title="ODP barrier. " alt="" coords="356,80,432,107"/>
+<area shape="rect" id="node10" href="$api_2barrier_8h.html" title="ODP execution barriers. " alt="" coords="656,229,732,256"/>
+<area shape="rect" id="node11" href="$odp__api_8h.html" title="The OpenDataPlane API. " alt="" coords="787,528,873,555"/>
+<area shape="rect" id="node13" href="$api_2abi-default_2rwlock_8h.html" title="ODP rwlock. " alt="" coords="1061,80,1138,107"/>
+<area shape="rect" id="node31" href="$api_2abi-default_2ticketlock_8h.html" title="ODP ticketlock. " alt="" coords="1823,80,1922,107"/>
+<area shape="rect" id="node3" href="$arch_2arm32-linux_2odp_2api_2abi_2barrier_8h_source.html" title="barrier.h" alt="" coords="5,155,81,181"/>
+<area shape="rect" id="node4" href="$arch_2arm64-linux_2odp_2api_2abi_2barrier_8h_source.html" title="barrier.h" alt="" coords="105,155,181,181"/>
+<area shape="rect" id="node5" href="$arch_2default-linux_2odp_2api_2abi_2barrier_8h_source.html" title="barrier.h" alt="" coords="205,155,281,181"/>
+<area shape="rect" id="node6" href="$arch_2mips64-linux_2odp_2api_2abi_2barrier_8h_source.html" title="barrier.h" alt="" coords="305,155,381,181"/>
+<area shape="rect" id="node7" href="$arch_2power64-linux_2odp_2api_2abi_2barrier_8h_source.html" title="barrier.h" alt="" coords="405,155,481,181"/>
+<area shape="rect" id="node8" href="$arch_2x86__32-linux_2odp_2api_2abi_2barrier_8h_source.html" title="barrier.h" alt="" coords="505,155,581,181"/>
+<area shape="rect" id="node9" href="$arch_2x86__64-linux_2odp_2api_2abi_2barrier_8h_source.html" title="barrier.h" alt="" coords="605,155,681,181"/>
+<area shape="rect" id="node12" href="$odp_8h.html" title="WARNING: THIS FILE IS DEPRECATED AND WILL BE REMOVED!!! ODP APPLICATIONS SHOULD NOW INCLUDE odp_api..." alt="" coords="801,603,859,629"/>
+<area shape="rect" id="node14" href="$arch_2arm32-linux_2odp_2api_2abi_2rwlock_8h_source.html" title="rwlock.h" alt="" coords="807,155,885,181"/>
+<area shape="rect" id="node15" href="$arch_2arm64-linux_2odp_2api_2abi_2rwlock_8h_source.html" title="rwlock.h" alt="" coords="909,155,986,181"/>
+<area shape="rect" id="node16" href="$arch_2default-linux_2odp_2api_2abi_2rwlock_8h_source.html" title="rwlock.h" alt="" coords="1010,155,1087,181"/>
+<area shape="rect" id="node17" href="$arch_2mips64-linux_2odp_2api_2abi_2rwlock_8h_source.html" title="rwlock.h" alt="" coords="1111,155,1189,181"/>
+<area shape="rect" id="node18" href="$arch_2power64-linux_2odp_2api_2abi_2rwlock_8h_source.html" title="rwlock.h" alt="" coords="1213,155,1290,181"/>
+<area shape="rect" id="node19" href="$arch_2x86__32-linux_2odp_2api_2abi_2rwlock_8h_source.html" title="rwlock.h" alt="" coords="1314,155,1391,181"/>
+<area shape="rect" id="node20" href="$arch_2x86__64-linux_2odp_2api_2abi_2rwlock_8h_source.html" title="rwlock.h" alt="" coords="1415,155,1493,181"/>
+<area shape="rect" id="node21" href="$api_2rwlock_8h.html" title="ODP RW Locks. " alt="" coords="1405,229,1482,256"/>
+<area shape="rect" id="node22" href="$api_2abi-default_2rwlock__recursive_8h.html" title="ODP recursive read/write lock. " alt="" coords="1371,304,1515,331"/>
+<area shape="rect" id="node23" href="$arch_2arm32-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title="rwlock_recursive.h" alt="" coords="867,379,1011,405"/>
+<area shape="rect" id="node24" href="$arch_2arm64-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title="rwlock_recursive.h" alt="" coords="1035,379,1179,405"/>
+<area shape="rect" id="node25" href="$arch_2default-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title="rwlock_recursive.h" alt="" coords="1203,379,1347,405"/>
+<area shape="rect" id="node26" href="$arch_2mips64-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title="rwlock_recursive.h" alt="" coords="1371,379,1515,405"/>
+<area shape="rect" id="node27" href="$arch_2power64-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title="rwlock_recursive.h" alt="" coords="1539,379,1683,405"/>
+<area shape="rect" id="node28" href="$arch_2x86__32-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title="rwlock_recursive.h" alt="" coords="1707,379,1851,405"/>
+<area shape="rect" id="node29" href="$arch_2x86__64-linux_2odp_2api_2abi_2rwlock__recursive_8h_source.html" title="rwlock_recursive.h" alt="" coords="1875,379,2019,405"/>
+<area shape="rect" id="node30" href="$api_2rwlock__recursive_8h.html" title="ODP resursive read/write lock. " alt="" coords="1475,453,1619,480"/>
+<area shape="rect" id="node32" href="$arch_2arm32-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title="ticketlock.h" alt="" coords="1517,155,1615,181"/>
+<area shape="rect" id="node33" href="$arch_2arm64-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title="ticketlock.h" alt="" coords="1639,155,1738,181"/>
+<area shape="rect" id="node34" href="$arch_2default-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title="ticketlock.h" alt="" coords="1762,155,1861,181"/>
+<area shape="rect" id="node35" href="$arch_2mips64-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title="ticketlock.h" alt="" coords="1885,155,1983,181"/>
+<area shape="rect" id="node36" href="$arch_2power64-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title="ticketlock.h" alt="" coords="2007,155,2106,181"/>
+<area shape="rect" id="node37" href="$arch_2x86__32-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title="ticketlock.h" alt="" coords="2130,155,2229,181"/>
+<area shape="rect" id="node38" href="$arch_2x86__64-linux_2odp_2api_2abi_2ticketlock_8h_source.html" title="ticketlock.h" alt="" coords="2190,229,2289,256"/>
+<area shape="rect" id="node39" href="$api_2ticketlock_8h.html" title="ODP ticketlock. " alt="" coords="2163,304,2262,331"/>
+</map>

@@ -1,0 +1,12 @@
+<map id="odp_ipsec_sa_info_t" name="odp_ipsec_sa_info_t">
+<area shape="rect" id="node2" href="$structodp__ipsec__sa__param__t.html" title="IPSEC Security Association (SA) parameters. " alt="" coords="677,129,848,156"/>
+<area shape="rect" id="node3" href="$struct__odp__abi__cos__t.html" title="_odp_abi_cos_t" alt="" coords="391,5,512,32"/>
+<area shape="rect" id="node4" href="$structodp__ipsec__lifetime__t.html" title="IPSEC SA lifetime limits. " alt="" coords="373,56,530,83"/>
+<area shape="rect" id="node5" href="$struct__odp__abi__queue__t.html" title="_odp_abi_queue_t" alt="" coords="382,107,521,133"/>
+<area shape="rect" id="node6" href="$structodp__ipsec__crypto__param__t.html" title="IPSEC crypto parameters. " alt="" coords="353,157,549,184"/>
+<area shape="rect" id="node7" href="$structodp__crypto__key.html" title="Crypto API key structure. " alt="" coords="34,157,159,184"/>
+<area shape="rect" id="node8" href="$structodp__ipsec__sa__opt__t.html" title="IPSEC SA option flags. " alt="" coords="377,208,526,235"/>
+<area shape="rect" id="node9" href="$structodp__ipsec__tunnel__param__t.html" title="IPSEC tunnel parameters. " alt="" coords="353,259,549,285"/>
+<area shape="rect" id="node10" href="$structodp__ipsec__ipv4__param__t.html" title="IPv4 header parameters. " alt="" coords="5,233,188,260"/>
+<area shape="rect" id="node11" href="$structodp__ipsec__ipv6__param__t.html" title="IPv6 header parameters. " alt="" coords="5,284,188,311"/>
+</map>

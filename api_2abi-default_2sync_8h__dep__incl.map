@@ -1,0 +1,12 @@
+<map id="sync.h" name="sync.h">
+<area shape="rect" id="node2" href="$arch_2arm32-linux_2odp_2api_2abi_2sync_8h_source.html" title="sync.h" alt="" coords="5,80,69,107"/>
+<area shape="rect" id="node3" href="$arch_2arm64-linux_2odp_2api_2abi_2sync_8h_source.html" title="sync.h" alt="" coords="93,80,157,107"/>
+<area shape="rect" id="node4" href="$arch_2default-linux_2odp_2api_2abi_2sync_8h_source.html" title="sync.h" alt="" coords="181,80,245,107"/>
+<area shape="rect" id="node5" href="$arch_2mips64-linux_2odp_2api_2abi_2sync_8h_source.html" title="sync.h" alt="" coords="269,80,333,107"/>
+<area shape="rect" id="node6" href="$arch_2power64-linux_2odp_2api_2abi_2sync_8h_source.html" title="sync.h" alt="" coords="357,80,421,107"/>
+<area shape="rect" id="node7" href="$arch_2x86__32-linux_2odp_2api_2abi_2sync_8h_source.html" title="sync.h" alt="" coords="445,80,509,107"/>
+<area shape="rect" id="node8" href="$arch_2x86__64-linux_2odp_2api_2abi_2sync_8h_source.html" title="sync.h" alt="" coords="533,80,597,107"/>
+<area shape="rect" id="node9" href="$api_2sync_8h.html" title="ODP synchronisation. " alt="" coords="533,155,597,181"/>
+<area shape="rect" id="node10" href="$odp__api_8h.html" title="The OpenDataPlane API. " alt="" coords="523,229,608,256"/>
+<area shape="rect" id="node11" href="$odp_8h.html" title="WARNING: THIS FILE IS DEPRECATED AND WILL BE REMOVED!!! ODP APPLICATIONS SHOULD NOW INCLUDE odp_api..." alt="" coords="536,304,595,331"/>
+</map>
