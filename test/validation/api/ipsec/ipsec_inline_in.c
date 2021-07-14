@@ -17,9 +17,6 @@ static int ipsec_sync_init(odp_instance_t *inst)
 	suite_context.pool = odp_pool_lookup("packet_pool");
 	if (suite_context.pool == ODP_POOL_INVALID)
 		return -1;
-	suite_context.queue = odp_queue_lookup("ipsec-out");
-	if (suite_context.queue == ODP_QUEUE_INVALID)
-		return -1;
 	suite_context.pktio = odp_pktio_lookup("loop");
 	if (suite_context.pktio == ODP_PKTIO_INVALID)
 		return -1;
@@ -31,7 +28,10 @@ static int ipsec_sync_init(odp_instance_t *inst)
 }
 
 odp_suiteinfo_t ipsec_suites[] = {
-	{"IPsec-in", ipsec_suite_init, ipsec_in_term, ipsec_in_suite},
+	{"IPsec-plain-in", ipsec_suite_plain_init, ipsec_suite_term,
+	 ipsec_in_suite},
+	{"IPsec-sched-in", ipsec_suite_sched_init, ipsec_suite_term,
+	 ipsec_in_suite},
 	ODP_SUITE_INFO_NULL,
 };
 

@@ -164,6 +164,9 @@ int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 	if (rc < 0)
 		return rc;
 
+	capa->queue_type_plain = true;
+	capa->queue_type_sched = true;
+
 	rc = odp_queue_capability(&queue_capa);
 	if (rc < 0)
 		return rc;

@@ -809,6 +809,16 @@ run_measure_one_config(ipsec_args_t *cargs,
 		return -1;
 	}
 
+	if (cargs->schedule && !capa.queue_type_sched) {
+		app_err("Scheduled type destination queue not supported.\n");
+		return -1;
+	}
+
+	if (cargs->poll && !capa.queue_type_plain) {
+		app_err("Plain type destination queue not supported.\n");
+		return -1;
+	}
+
 	rc = odph_ipsec_alg_check(capa, config->crypto.cipher_alg,
 				  config->crypto.cipher_key.length,
 				  config->crypto.auth_alg,
