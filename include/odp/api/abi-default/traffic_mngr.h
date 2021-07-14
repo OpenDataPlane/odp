@@ -89,6 +89,18 @@ extern "C" {
  */
 #define ODP_TM_MAX_SHAPER_BW  12500000
 
+/**
+ * The ODP_TM_MIN_SHAPER_BURST constant is the lowest amount of burst that
+ * any shaper's peak or commit burst can be set to. It is in units of bytes.
+ */
+#define ODP_TM_MIN_SHAPER_BURST 1U
+
+/**
+ * The ODP_TM_MAX_SHAPER_BURST constant is the largest amount of burst that
+ * any shaper's peak or commit burst can be set to. It is in units of bytes.
+ */
+#define ODP_TM_MAX_SHAPER_BURST 0x1FFFFFFFU
+
 /** The ODP_NUM_SHAPER_COLORS constant just counts the number of enumeration
  * values defined in the odp_tm_shaper_color_t type.
  */
