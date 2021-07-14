@@ -109,6 +109,18 @@ extern "C" {
  */
 
 /**
+ * @def ODP_TM_MIN_SHAPER_BURST
+ * The lowest amount of burst that any shaper's peak or commit burst can
+ * be set to. It is in units of bytes.
+ */
+
+/**
+ * @def ODP_TM_MAX_SHAPER_BURST
+ * The largest amount of burst that any shaper's peak or commit burst can
+ * be set to. It is in units of bytes.
+ */
+
+/**
  * @def ODP_NUM_SHAPER_COLORS
  * The number of enumeration values defined in the odp_tm_shaper_color_t type.
  */
