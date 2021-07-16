@@ -30,6 +30,7 @@
 #include <odp/api/plat/queue_inlines.h>
 #include <odp_libconfig_internal.h>
 #include <odp_event_vector_internal.h>
+#include <odp/api/proto_stats.h>
 
 #include <string.h>
 #include <inttypes.h>
@@ -3346,4 +3347,64 @@ int odp_pktout_send_lso(odp_pktout_queue_t queue, const odp_packet_t packet[], i
 	}
 
 	return i;
+}
+
+void
+odp_proto_stats_param_init(odp_proto_stats_param_t *param)
+{
+	if (param)
+		memset(param, 0, sizeof(*param));
+}
+
+int
+odp_proto_stats_capability(odp_pktio_t pktio, odp_proto_stats_capability_t *capa)
+{
+	(void)pktio;
+
+	if (capa == NULL)
+		return -EINVAL;
+
+	memset(capa, 0, sizeof(*capa));
+
+	return 0;
+}
+
+odp_proto_stats_t
+odp_proto_stats_lookup(const char *name)
+{
+	(void)name;
+
+	return ODP_PROTO_STATS_INVALID;
+}
+
+odp_proto_stats_t
+odp_proto_stats_create(const char *name, const odp_proto_stats_param_t *param)
+{
+	(void)name;
+	(void)param;
+
+	return ODP_PROTO_STATS_INVALID;
+}
+
+int
+odp_proto_stats_destroy(odp_proto_stats_t stat)
+{
+	(void)stat;
+
+	return 0;
+}
+
+int
+odp_proto_stats(odp_proto_stats_t stat, odp_proto_stats_data_t *data)
+{
+	(void)stat;
+	(void)data;
+
+	return 0;
+}
+
+void
+odp_proto_stats_print(odp_proto_stats_t stat)
+{
+	(void)stat;
 }
