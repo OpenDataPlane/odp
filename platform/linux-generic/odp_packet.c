@@ -18,6 +18,7 @@
 #include <odp/api/plat/byteorder_inlines.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/plat/pktio_inlines.h>
+#include <odp/api/proto_stats.h>
 
 /* Inlined API functions */
 #include <odp/api/plat/event_inlines.h>
@@ -3105,4 +3106,17 @@ odp_packet_t odp_packet_reassemble(odp_pool_t pool_hdl, odp_packet_buf_t pkt_buf
 	packet_parse_reset(pkt_hdr, 1);
 
 	return packet_handle(pkt_hdr);
+}
+
+void odp_packet_proto_stats_request(odp_packet_t pkt, odp_packet_proto_stats_opt_t *opt)
+{
+	(void)pkt;
+	(void)opt;
+}
+
+odp_proto_stats_t odp_packet_proto_stats(odp_packet_t pkt)
+{
+	(void)pkt;
+
+	return ODP_PROTO_STATS_INVALID;
 }
