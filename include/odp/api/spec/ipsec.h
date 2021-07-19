@@ -1641,8 +1641,8 @@ typedef struct odp_ipsec_status_t {
  * Each input packet must have a valid value for these metadata (other metadata
  * is ignored):
  * - L3 offset: Offset to the first byte of the (outmost) IP header
- * - L4 offset: When udp_encap is enabled, offset to the first byte of the
- *              encapsulating UDP header
+ * - L4 offset: When UDP encapsulation is used, offset to the first byte of
+ *              the encapsulating UDP header. Otherwise ignored.
  *
  * Additionally, implementation checks input IP packet length (odp_packet_len()
  * minus odp_packet_l3_offset()) against protocol headers and reports an error
@@ -1723,7 +1723,12 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
  * Each input packet must have a valid value for these metadata (other metadata
  * is ignored):
  * - L3 offset: Offset to the first byte of the (outmost) IP header
- * - L4 offset: Offset to the L4 header if L4 checksum offload is requested
+ * - L4 offset: Offset to the L4 header if L4 checksum offload is requested or
+ *              if transport mode will be used. In other cases L4 offset is
+ *              ignored and does not have to be set. With IPv4 the offset must
+ *              point to the IP payload. With IPv6 the offset must point to
+ *              the first header that shall be located after the ESP or AH
+ *              header.
  *
  * Additionally, input IP packet length (odp_packet_len() minus
  * odp_packet_l3_offset()) must match values in protocol headers. Otherwise
