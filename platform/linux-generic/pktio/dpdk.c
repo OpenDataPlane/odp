@@ -288,7 +288,7 @@ static inline void mbuf_update(struct rte_mbuf *mbuf, odp_packet_hdr_t *pkt_hdr,
 	mbuf->refcnt = 1;
 	mbuf->ol_flags = 0;
 
-	if (odp_unlikely(pkt_hdr->buf_hdr.base_data != pkt_hdr->seg_data))
+	if (odp_unlikely(((uint8_t *)mbuf->buf_addr +  mbuf->data_off) != pkt_hdr->seg_data))
 		mbuf->data_off = mbuf_data_off(mbuf, pkt_hdr);
 }
 
