@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2015-2018 Linaro Limited
- * Copyright (c) 2022 Marvell
+ * Copyright (c) 2022-2025 Marvell
  * Copyright (c) 2022 Nokia
  */
 
@@ -4717,6 +4717,110 @@ static void traffic_mngr_test_queue_stats(void)
 	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
 }
 
+static int traffic_mngr_check_node_stats(void)
+{
+	int i;
+
+	for (i = 0; i < NUM_LEVELS; i++) {
+		/* Report test case as active if even one level supports
+		 * stats.
+		 */
+		if (tm_capabilities.per_level[i].node_stats.all_counters)
+			return ODP_TEST_ACTIVE;
+	}
+
+	return ODP_TEST_INACTIVE;
+}
+
+static void traffic_mngr_test_node_stats(void)
+{
+	odp_tm_node_stats_t stats_start[NUM_LEVELS];
+	odp_tm_node_stats_capability_t stats_capa;
+	odp_tm_node_t nodes[NUM_LEVELS];
+	odp_tm_node_stats_t stats_stop;
+	odp_tm_queue_info_t q_info;
+	odp_tm_node_info_t n_info;
+	odp_tm_queue_t tm_queue;
+	odp_tm_capabilities_t capa;
+	pkt_info_t pkt_info;
+	uint32_t pkts_sent;
+	uint32_t num_pkts = ODPH_MIN(50u, MAX_PKTS);
+	uint32_t pkt_len = 256;
+	int i;
+
+	CU_ASSERT_FATAL(odp_tm_capability(odp_tm_systems[0], &capa) == 0);
+
+	/* Reuse threshold test node */
+	tm_queue = find_tm_queue(0, "node_1_2_1", 0);
+	CU_ASSERT_FATAL(tm_queue != ODP_TM_INVALID);
+
+	/* Find parent nodes */
+	CU_ASSERT_FATAL(odp_tm_queue_info(tm_queue, &q_info) == 0);
+	CU_ASSERT_FATAL(q_info.next_tm_node != ODP_TM_INVALID);
+	nodes[NUM_LEVELS - 1] = q_info.next_tm_node;
+
+	for (i = NUM_LEVELS - 2; i >= 0; i--) {
+		CU_ASSERT_FATAL(odp_tm_node_info(nodes[i + 1], &n_info) == 0);
+		CU_ASSERT_FATAL(n_info.level == (i + 1));
+		CU_ASSERT_FATAL(n_info.next_tm_node != ODP_TM_INVALID);
+
+		/* Save next TM node */
+		nodes[i] = n_info.next_tm_node;
+	}
+
+	init_xmt_pkts(&pkt_info);
+	pkt_info.drop_eligible = false;
+	pkt_info.pkt_class     = 1;
+	CU_ASSERT_FATAL(make_pkts(num_pkts, pkt_len, &pkt_info) == 0);
+
+	/* Collect available node stats */
+	for (i = 0; i < NUM_LEVELS; i++) {
+		if (capa.per_level[i].node_stats.all_counters == 0)
+			continue;
+
+		CU_ASSERT(odp_tm_node_stats(nodes[i], &stats_start[i]) == 0);
+	}
+
+	pkts_sent = send_pkts(tm_queue, num_pkts);
+
+	num_rcv_pkts = receive_pkts(odp_tm_systems[0], rcv_pktin, pkts_sent,
+				    1 * GBPS);
+
+	/* Collect available node stats and validate */
+	for (i = 0; i < NUM_LEVELS; i++) {
+		stats_capa = capa.per_level[i].node_stats;
+
+		CU_ASSERT(odp_tm_node_stats(nodes[i], &stats_stop) == 0);
+
+		if (stats_capa.counter.packets)
+			CU_ASSERT(stats_stop.packets >= stats_start[i].packets + num_rcv_pkts);
+		if (stats_capa.counter.octets)
+			CU_ASSERT(stats_stop.octets >= stats_start[i].octets +
+				  (num_rcv_pkts * pkt_len));
+		CU_ASSERT((stats_stop.discards - stats_start[i].discards) == 0);
+		CU_ASSERT((stats_stop.discard_octets - stats_start[i].discard_octets) == 0);
+
+		printf("\nLevel %d TM node statistics\n-------------------\n", i);
+		printf("  discards:        %" PRIu64 "\n", stats_stop.discards);
+		printf("  discard octets:  %" PRIu64 "\n", stats_stop.discard_octets);
+		printf("  octets:          %" PRIu64 "\n", stats_stop.octets);
+		printf("  packets:         %" PRIu64 "\n", stats_stop.packets);
+
+		/* Check that all unsupported counters are still zero */
+		if (!stats_capa.counter.discards)
+			CU_ASSERT(stats_stop.discards == 0);
+		if (!stats_capa.counter.discard_octets)
+			CU_ASSERT(stats_stop.discard_octets == 0);
+		if (!stats_capa.counter.octets)
+			CU_ASSERT(stats_stop.octets == 0);
+		if (!stats_capa.counter.packets)
+			CU_ASSERT(stats_stop.packets == 0);
+	}
+
+	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
+	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
+}
+
 static int traffic_mngr_check_wred(void)
 {
 	/* Check if wred is part of created odp_tm_t capabilities */
@@ -5088,6 +5192,8 @@ odp_testinfo_t traffic_mngr_suite[] = {
 				  traffic_mngr_check_query),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_queue_stats,
 				  traffic_mngr_check_queue_stats),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_node_stats,
+				  traffic_mngr_check_node_stats),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_vlan_marking,
 				  traffic_mngr_check_vlan_marking),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_ecn_marking,
