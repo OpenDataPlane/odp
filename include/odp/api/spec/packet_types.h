@@ -19,7 +19,7 @@
 extern "C" {
 #endif
 
-#include <odp/api/proto_stats.h>
+#include <odp/api/proto_stats_types.h>
 #include <odp/api/queue_types.h>
 
 /** @addtogroup odp_packet

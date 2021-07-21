@@ -19,7 +19,7 @@
 extern "C" {
 #endif
 
-#include <odp/api/proto_stats.h>
+#include <odp/api/proto_stats_types.h>
 #include <odp/api/time.h>
 #include <odp/api/packet_types.h>
 

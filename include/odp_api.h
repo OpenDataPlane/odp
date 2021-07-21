@@ -49,6 +49,7 @@ extern "C" {
 #include <odp/api/packet.h>
 #include <odp/api/packet_flags.h>
 #include <odp/api/packet_io.h>
+#include <odp/api/proto_stats.h>
 #include <odp/api/crypto.h>
 #include <odp/api/classification.h>
 #include <odp/api/rwlock.h>

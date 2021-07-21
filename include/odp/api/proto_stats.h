@@ -1,5 +1,7 @@
-/* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(C) 2021 Marvell.
+/* Copyright (c) 2021, Marvell
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 /**
@@ -17,6 +19,7 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 #include <odp/api/abi/queue.h>
+#include <odp/api/abi/proto_stats_types.h>
 #include <odp/api/abi/proto_stats.h>
 
 #include <odp/api/spec/proto_stats.h>
