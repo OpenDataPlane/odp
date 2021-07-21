@@ -1,6 +1,6 @@
 /* Copyright (c) 2014-2018, Linaro Limited
  * Copyright (c) 2019-2021, Nokia
- * Copyright (c) 2020, Marvell
+ * Copyright (c) 2020-2021, Marvell
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -108,6 +108,7 @@ typedef struct {
 	uint32_t packet_len;	/* Maximum packet length supported */
 	uint32_t seg_len;	/* Pool segment length */
 	int promisc_mode;       /* Promiscuous mode enabled */
+	int flow_aware;         /* Flow aware scheduling enabled */
 	int mtu;                /* Interface MTU */
 } appl_args_t;
 
@@ -1547,6 +1548,7 @@ static void usage(char *progname)
 	       "  -l, --packet_len <len>  Maximum length of packets supported (default %d).\n"
 	       "  -L, --seg_len <len>     Packet pool segment length\n"
 	       "                          (default equal to packet length).\n"
+	       "  -f, --flow_aware        Enable flow aware scheduling.\n"
 	       "  -v, --verbose           Verbose output.\n"
 	       "  -h, --help              Display help and exit.\n\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS, DEFAULT_VEC_SIZE,
@@ -1594,12 +1596,13 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"promisc_mode", no_argument, NULL, 'P'},
 		{"packet_len", required_argument, NULL, 'l'},
 		{"seg_len", required_argument, NULL, 'L'},
+		{"flow_aware", no_argument, NULL, 'f'},
 		{"verbose", no_argument, NULL, 'v'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:p:y:n:l:L:w:x:z:M:uPvh";
+	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:p:y:n:l:L:w:x:z:M:uPfvh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1622,6 +1625,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->num_vec = 0;
 	appl_args->vec_size = 0;
 	appl_args->vec_tmo_ns = 0;
+	appl_args->flow_aware = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -1786,6 +1790,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'z':
 			appl_args->vec_tmo_ns = atoi(optarg);
 			break;
+		case 'f':
+			appl_args->flow_aware = 1;
+			break;
 		case 'v':
 			appl_args->verbose = 1;
 			break;
@@ -1869,6 +1876,8 @@ static void print_info(appl_args_t *appl_args)
 		printf("interface default\n");
 	printf("Promisc mode:       %s\n", appl_args->promisc_mode ?
 					   "enabled" : "disabled");
+	printf("Flow aware:         %s\n", appl_args->flow_aware ?
+					   "yes" : "no");
 	printf("Burst size:         %i\n", appl_args->burst_rx);
 	printf("Number of pools:    %i\n", appl_args->pool_per_if ?
 					   appl_args->if_count : 1);
@@ -1988,6 +1997,8 @@ int main(int argc, char *argv[])
 	odp_pool_t pool, vec_pool;
 	odp_init_t init;
 	odp_pool_capability_t pool_capa;
+	odp_schedule_config_t sched_config;
+	odp_schedule_capability_t sched_capa;
 	uint32_t pkt_len, num_pkt, seg_len;
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
@@ -2210,7 +2221,23 @@ int main(int argc, char *argv[])
 
 	bind_workers();
 
-	odp_schedule_config(NULL);
+	odp_schedule_config_init(&sched_config);
+
+	if (odp_schedule_capability(&sched_capa)) {
+		ODPH_ERR("Error: schedule capability failed\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (gbl_args->appl.flow_aware) {
+		if (sched_capa.max_flow_id) {
+			sched_config.max_flow_id = sched_capa.max_flow_id;
+		} else {
+			ODPH_ERR("Error: flow aware mode not supported\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	odp_schedule_config(&sched_config);
 
 	/* Default */
 	if (num_groups == 0) {
