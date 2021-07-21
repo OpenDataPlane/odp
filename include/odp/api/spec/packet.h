@@ -2032,23 +2032,6 @@ int odp_packet_tx_compl_request(odp_packet_t pkt, const odp_packet_tx_compl_opt_
 int odp_packet_has_tx_compl_request(odp_packet_t pkt);
 
 /**
- * Packet proto stats options.
- */
-typedef struct odp_packet_proto_stats_opt_t {
-	/** Packet proto stats object handle
-	 *
-	 * Stats in the packet proto stats object will be updated.
-	 */
-	odp_proto_stats_t stat;
-
-	/** Octet counter 0 adjust */
-	int32_t oct_count0_adj;
-
-	/** Octet counter 1 adjust */
-	int32_t oct_count1_adj;
-} odp_packet_proto_stats_opt_t;
-
-/**
  * Request packet proto stats.
  *
  * The statistics enabled in the proto stats object are updated for the packet in

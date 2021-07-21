@@ -19,6 +19,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/proto_stats.h>
 #include <odp/api/queue_types.h>
 
 /** @addtogroup odp_packet
@@ -435,6 +436,23 @@ typedef struct odp_packet_tx_compl_opt_t {
 	odp_packet_tx_compl_mode_t mode;
 
 } odp_packet_tx_compl_opt_t;
+
+/**
+ * Packet proto stats options
+ */
+typedef struct odp_packet_proto_stats_opt_t {
+	/** Packet proto stats object handle
+	 *
+	 * Stats in the packet proto stats object will be updated.
+	 */
+	odp_proto_stats_t stat;
+
+	/** Octet counter 0 adjust */
+	int32_t oct_count0_adj;
+
+	/** Octet counter 1 adjust */
+	int32_t oct_count1_adj;
+} odp_packet_proto_stats_opt_t;
 
 /**
  * @}
