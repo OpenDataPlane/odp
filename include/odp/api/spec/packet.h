@@ -180,6 +180,20 @@ void odp_packet_to_event_multi(const odp_packet_t pkt[], odp_event_t ev[],
 			       int num);
 
 /**
+ * Get information about successful reassembly offload that has happened
+ *
+ * This function may be called only if the reassembly status of a packet
+ * is ODP_PACKET_REASS_COMPLETE.
+ *
+ * @param      pkt   Completely reassembled packet.
+ * @param[out] info  Pointer to the info structure to be filled
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_packet_reass_info(odp_packet_t pkt, odp_packet_reass_info_t *info);
+
+/**
  * Get partial reassembly state from a packet
  *
  * In case of incomplete reassembly, a packet carries information on

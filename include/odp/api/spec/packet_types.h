@@ -286,6 +286,14 @@ typedef enum odp_packet_reass_status_t {
 } odp_packet_reass_status_t;
 
 /**
+ * Information about a completed reassembly
+ */
+typedef struct odp_packet_reass_info_t {
+	/** Number of fragments reassembled */
+	uint16_t num_frags;
+} odp_packet_reass_info_t;
+
+/**
  * Result from odp_packet_reass_partial_state()
  */
 typedef struct odp_packet_reass_partial_state_t {
