@@ -1554,6 +1554,17 @@ typedef struct odp_ipsec_packet_result_t {
 		uint32_t len;
 	} outer_hdr;
 
+	/** Total IP length of the original ESP or AH packet before IPsec
+	 *  decapsulation. This is valid only for inbound inline and async
+	 *  processed packets. Zero value means that the length information
+	 *  is not available.
+	 *
+	 *  If the result packet was reassembled from multiple IPsec
+	 *  protected packets, this is the sum of the lengths of all the
+	 *  involved IPsec packets.
+	 */
+	uint32_t orig_ip_len;
+
 } odp_ipsec_packet_result_t;
 
 /**
