@@ -7,7 +7,8 @@ libtestipsec_la_SOURCES = \
 	ipsec_test_in.c \
 	ipsec_test_out.c \
 	ipsec.h \
-	ipsec.c
+	ipsec.c \
+	reass_test_vectors.c
 
 test_PROGRAMS = \
 	ipsec_sync \
