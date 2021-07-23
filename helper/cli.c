@@ -528,6 +528,15 @@ int odph_cli_log(const char *fmt, ...)
 	return r;
 }
 
+ODP_PRINTF_FORMAT(1, 0)
+int odph_cli_log_va(const char *fmt, va_list in_args)
+{
+	int r;
+
+	r = cli_log_va(ODP_LOG_PRINT, fmt, in_args);
+	return r;
+}
+
 static int msg_recv(int fd)
 {
 	uint32_t msg;
