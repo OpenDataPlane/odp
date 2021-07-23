@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2022, Marvell
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -336,6 +337,11 @@ static uint32_t cpu_tcp_seq_num;
 
 static int8_t suite_inactive;
 
+static uint64_t tm_shaper_min_rate;
+static uint64_t tm_shaper_max_rate;
+static uint32_t tm_shaper_min_burst;
+static uint32_t tm_shaper_max_burst;
+
 static void busy_wait(uint64_t nanoseconds)
 {
 	odp_time_t start_time, end_time;
@@ -380,6 +386,18 @@ static odp_bool_t approx_eq64(uint64_t val, uint64_t correct)
 		return true;
 	else
 		return false;
+}
+
+static uint64_t
+clamp_rate(uint64_t rate)
+{
+	return MIN(MAX(rate, tm_shaper_min_rate), tm_shaper_max_rate);
+}
+
+static uint32_t
+clamp_burst(uint32_t burst)
+{
+	return MIN(MAX(burst, tm_shaper_min_burst), tm_shaper_max_burst);
 }
 
 static int test_overall_capabilities(void)
@@ -442,6 +460,18 @@ static int test_overall_capabilities(void)
 			if (per_level->max_priority == 0) {
 				CU_ASSERT(per_level->max_priority != 0);
 				return -1;
+			}
+
+			if (per_level->tm_node_shaper_supported) {
+				CU_ASSERT(per_level->max_burst > 0);
+				CU_ASSERT(per_level->min_rate > 0);
+				CU_ASSERT(per_level->max_rate > 0);
+			}
+
+			if (per_level->tm_node_shaper_packet_mode) {
+				CU_ASSERT(per_level->max_burst_packets > 0);
+				CU_ASSERT(per_level->min_rate_packets > 0);
+				CU_ASSERT(per_level->max_rate_packets > 0);
 			}
 		}
 
@@ -2259,12 +2289,38 @@ static int traffic_mngr_suite_init(void)
 	if (egress_capa.max_levels < NUM_LEVELS)
 		goto skip_tests;
 
+	tm_shaper_min_rate = egress_capa.per_level[0].min_rate;
+	tm_shaper_max_rate = egress_capa.per_level[0].max_rate;
+	tm_shaper_min_burst = egress_capa.per_level[0].min_burst;
+	tm_shaper_max_burst = egress_capa.per_level[0].max_burst;
+
 	for (j = 0; j < NUM_LEVELS; j++) {
+		odp_tm_level_capabilities_t *per_level =
+			&egress_capa.per_level[j];
+
 		/* Per node fanin */
-		if (egress_capa.per_level[j].max_fanin_per_node <
-		    FANIN_RATIO)
+		if (per_level->max_fanin_per_node < FANIN_RATIO)
 			break;
+
+		if (j == 0)
+			continue;
+
+		if (per_level->min_rate > tm_shaper_min_rate)
+			tm_shaper_min_rate = per_level->min_rate;
+
+		if (per_level->min_burst > tm_shaper_min_burst)
+			tm_shaper_min_burst = per_level->min_burst;
+
+		if (per_level->max_rate < tm_shaper_max_rate)
+			tm_shaper_max_rate = per_level->max_rate;
+
+		if (per_level->max_burst < tm_shaper_max_burst)
+			tm_shaper_max_burst = per_level->max_burst;
 	}
+
+	if (tm_shaper_min_rate > tm_shaper_max_rate ||
+	    tm_shaper_min_burst > tm_shaper_max_burst)
+		goto skip_tests;
 
 	if (j != NUM_LEVELS)
 		goto skip_tests;
@@ -2347,13 +2403,13 @@ static void check_shaper_profile(char *shaper_name, uint32_t shaper_idx)
 	rc = odp_tm_shaper_params_read(profile, &shaper_params);
 	CU_ASSERT(rc == 0);
 	CU_ASSERT(approx_eq64(shaper_params.commit_rate,
-			      shaper_idx * MIN_COMMIT_BW));
+			      clamp_rate(shaper_idx * MIN_COMMIT_BW)));
 	CU_ASSERT(approx_eq64(shaper_params.peak_rate,
-			      shaper_idx * MIN_PEAK_BW));
+			      clamp_rate(shaper_idx * MIN_PEAK_BW)));
 	CU_ASSERT(approx_eq32(shaper_params.commit_burst,
-			      shaper_idx * MIN_COMMIT_BURST));
+			      clamp_burst(shaper_idx * MIN_COMMIT_BURST)));
 	CU_ASSERT(approx_eq32(shaper_params.peak_burst,
-			      shaper_idx * MIN_PEAK_BURST));
+			      clamp_burst(shaper_idx * MIN_PEAK_BURST)));
 
 	CU_ASSERT(shaper_params.shaper_len_adjust == SHAPER_LEN_ADJ);
 	CU_ASSERT(shaper_params.dual_rate         == 0);
@@ -2373,10 +2429,10 @@ static void traffic_mngr_test_shaper_profile(void)
 	for (idx = 1; idx <= NUM_SHAPER_TEST_PROFILES; idx++) {
 		snprintf(shaper_name, sizeof(shaper_name),
 			 "shaper_profile_%" PRIu32, idx);
-		shaper_params.commit_rate  = idx * MIN_COMMIT_BW;
-		shaper_params.peak_rate    = idx * MIN_PEAK_BW;
-		shaper_params.commit_burst = idx * MIN_COMMIT_BURST;
-		shaper_params.peak_burst   = idx * MIN_PEAK_BURST;
+		shaper_params.commit_rate  = clamp_rate(idx * MIN_COMMIT_BW);
+		shaper_params.peak_rate    = clamp_rate(idx * MIN_PEAK_BW);
+		shaper_params.commit_burst = clamp_burst(idx * MIN_COMMIT_BURST);
+		shaper_params.peak_burst   = clamp_burst(idx * MIN_PEAK_BURST);
 
 		profile = odp_tm_shaper_create(shaper_name, &shaper_params);
 		CU_ASSERT_FATAL(profile != ODP_TM_INVALID);
@@ -2617,13 +2673,16 @@ static void traffic_mngr_test_wred_profile(void)
 
 static int set_shaper(const char    *node_name,
 		      const char    *shaper_name,
-		      const uint64_t commit_bps,
-		      const uint64_t commit_burst_in_bits)
+		      uint64_t      commit_bps,
+		      uint64_t      commit_burst_in_bits)
 {
 	odp_tm_shaper_params_t shaper_params;
 	odp_tm_shaper_t        shaper_profile;
 	odp_tm_node_t          tm_node;
 	int rc;
+
+	commit_bps = clamp_rate(commit_bps);
+	commit_burst_in_bits = clamp_burst(commit_burst_in_bits);
 
 	tm_node = find_tm_node(0, node_name);
 	if (tm_node == ODP_TM_INVALID) {
@@ -2647,6 +2706,11 @@ static int set_shaper(const char    *node_name,
 		CU_ASSERT_FATAL(odp_tm_stop(odp_tm_systems[0]) == 0);
 	}
 
+	if (!shaper_name) {
+		shaper_profile = ODP_TM_INVALID;
+		goto skip_profile;
+	}
+
 	/* First see if a shaper profile already exists with this name, in
 	 * which case we use that profile, else create a new one. */
 	shaper_profile = odp_tm_shaper_lookup(shaper_name);
@@ -2659,6 +2723,7 @@ static int set_shaper(const char    *node_name,
 		num_shaper_profiles++;
 	}
 
+skip_profile:
 	rc = odp_tm_node_shaper_config(tm_node, shaper_profile);
 
 	if (!dynamic_shaper_update) {
@@ -2688,6 +2753,14 @@ static int traffic_mngr_check_shaper(void)
 		return ODP_TEST_INACTIVE;
 	}
 
+	/* This test needs 1 Mbps, 4 Mbps, 10 Mpbs, 40 Mbps, 100 Mbps */
+	if ((tm_shaper_min_rate > 100 * MBPS) || (tm_shaper_max_rate < 1 * MBPS))
+		return ODP_TEST_INACTIVE;
+
+	/* All the subtests run with burst of 10000 bits */
+	if ((tm_shaper_min_burst > 10000) || tm_shaper_max_burst < 10000)
+		return ODP_TEST_INACTIVE;
+
 	return ODP_TEST_ACTIVE;
 }
 
@@ -2702,6 +2775,15 @@ static int traffic_mngr_check_scheduler(void)
 		ODPH_DBG("Rerun with more cpu resources\n");
 		return ODP_TEST_INACTIVE;
 	}
+
+	/* Scheduler test test_sched_queue_priority() depends on rate of
+	 * 64 Kbps and burst of 5600.
+	 */
+	if ((tm_shaper_min_rate > 64 * 1000) ||
+	    (tm_shaper_max_rate < 64 * 1000) ||
+	    (tm_shaper_min_burst > 5600) ||
+	    (tm_shaper_max_burst < 5600))
+		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
 }
@@ -2815,7 +2897,7 @@ static int test_shaper_bw(const char *shaper_name,
 	}
 
 	/* Disable the shaper, so as to get the pkts out quicker. */
-	set_shaper(node_name, shaper_name, 0, 0);
+	set_shaper(node_name, NULL, 0, 0);
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
 	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
 	return ret_code;
@@ -2951,7 +3033,7 @@ static int test_sched_queue_priority(const char *shaper_name,
 	 * start/stop.
 	 */
 	if (dynamic_shaper_update)
-		set_shaper(node_name, shaper_name, 0, 0);
+		set_shaper(node_name, NULL, 0, 0);
 
 	num_rcv_pkts = receive_pkts(odp_tm_systems[0], rcv_pktin,
 				    pkt_cnt + 4, 64 * 1000);
@@ -2970,7 +3052,7 @@ static int test_sched_queue_priority(const char *shaper_name,
 	CU_ASSERT(pkts_in_order == pkt_cnt);
 
 	/* Disable shaper in case it is still enabled */
-	set_shaper(node_name, shaper_name, 0, 0);
+	set_shaper(node_name, NULL, 0, 0);
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
 	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
 	return 0;
@@ -3064,7 +3146,7 @@ static int test_sched_node_priority(const char *shaper_name,
 	 * start/stop.
 	 */
 	if (dynamic_shaper_update)
-		set_shaper(node_name, shaper_name, 0, 0);
+		set_shaper(node_name, NULL, 0, 0);
 
 	num_rcv_pkts = receive_pkts(odp_tm_systems[0], rcv_pktin,
 				    pkts_sent, 64 * 1000);
@@ -3077,7 +3159,7 @@ static int test_sched_node_priority(const char *shaper_name,
 	CU_ASSERT(pkts_in_order == total_pkt_cnt);
 
 	/* Disable shaper in case it is still enabled */
-	set_shaper(node_name, shaper_name, 0, 0);
+	set_shaper(node_name, NULL, 0, 0);
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
 	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
 	return 0;
@@ -3164,7 +3246,7 @@ static int test_sched_wfq(const char         *sched_base_name,
 	 * start/stop.
 	 */
 	if (dynamic_shaper_update)
-		set_shaper(node_name, shaper_name, 0, 0);
+		set_shaper(node_name, NULL, 0, 0);
 
 	num_rcv_pkts = receive_pkts(odp_tm_systems[0], rcv_pktin,
 				    pkt_cnt + 4, 64 * 1000);
@@ -3177,7 +3259,7 @@ static int test_sched_wfq(const char         *sched_base_name,
 	}
 
 	/* Disable shaper in case it is still enabled */
-	set_shaper(node_name, shaper_name, 0, 0);
+	set_shaper(node_name, NULL, 0, 0);
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
 	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
 	return 0;
@@ -3281,7 +3363,7 @@ static int test_threshold(const char *threshold_name,
 				    1 * GBPS);
 
 	/* Disable the shaper, so as to get the pkts out quicker. */
-	set_shaper(node_name, shaper_name, 0, 0);
+	set_shaper(node_name, NULL, 0, 0);
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
 	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
 
@@ -3440,7 +3522,7 @@ static int test_byte_wred(const char      *wred_name,
 	 * start/stop.
 	 */
 	if (dynamic_shaper_update)
-		set_shaper(node_name, shaper_name, 0, 0);
+		set_shaper(node_name, NULL, 0, 0);
 
 	num_rcv_pkts = receive_pkts(odp_tm_systems[0], rcv_pktin,
 				    num_fill_pkts + pkts_sent, 64 * 1000);
@@ -3452,7 +3534,7 @@ static int test_byte_wred(const char      *wred_name,
 		return -1;
 
 	/* Disable shaper in case it is still enabled */
-	set_shaper(node_name, shaper_name, 0, 0);
+	set_shaper(node_name, NULL, 0, 0);
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
 	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
 
@@ -3533,7 +3615,7 @@ static int test_pkt_wred(const char      *wred_name,
 	 * start/stop.
 	 */
 	if (dynamic_shaper_update)
-		set_shaper(node_name, shaper_name, 0, 0);
+		set_shaper(node_name, NULL, 0, 0);
 
 	ret = receive_pkts(odp_tm_systems[0], rcv_pktin,
 			   num_fill_pkts + pkts_sent, 64 * 1000);
@@ -3549,7 +3631,7 @@ static int test_pkt_wred(const char      *wred_name,
 		return -1;
 
 	/* Disable shaper in case it is still enabled */
-	set_shaper(node_name, shaper_name, 0, 0);
+	set_shaper(node_name, NULL, 0, 0);
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
 	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
 
@@ -3624,7 +3706,7 @@ static int test_query_functions(const char *shaper_name,
 	CU_ASSERT(expected_byte_cnt < query_info.total_byte_cnt);
 
 	/* Disable the shaper, so as to get the pkts out quicker. */
-	set_shaper(node_name, shaper_name, 0, 0);
+	set_shaper(node_name, NULL, 0, 0);
 	num_rcv_pkts = receive_pkts(odp_tm_systems[0], rcv_pktin, num_pkts,
 				    commit_bps);
 
@@ -4182,26 +4264,45 @@ static void traffic_mngr_test_tm_create(void)
 
 static void traffic_mngr_test_shaper(void)
 {
-	CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw1",
-						"node_1_1_1",
-						0,
-						MBPS * 1)));
-	CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw4",
-						"node_1_1_1",
-						1,
-						4   * MBPS)));
-	CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw10",
-						"node_1_1_1",
-						2,
-						10  * MBPS)));
-	CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw40",
-						"node_1_1_1",
-						3,
-						40  * MBPS)));
-	CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw100",
-						"node_1_1_2",
-						0,
-						100 * MBPS)));
+	if ((tm_shaper_min_rate <= 1 * MBPS) &&
+	    (tm_shaper_max_rate >= 1 * MBPS)) {
+		CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw1",
+							"node_1_1_1",
+							0,
+							MBPS * 1)));
+	}
+
+	if ((tm_shaper_min_rate <= 4 * MBPS) &&
+	    (tm_shaper_max_rate >= 4 * MBPS)) {
+		CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw4",
+							"node_1_1_1",
+							1,
+							4   * MBPS)));
+	}
+
+	if ((tm_shaper_min_rate <= 10 * MBPS) &&
+	    (tm_shaper_max_rate >= 10 * MBPS)) {
+		CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw10",
+							"node_1_1_1",
+							2,
+							10  * MBPS)));
+	}
+
+	if ((tm_shaper_min_rate <= 40 * MBPS) &&
+	    (tm_shaper_max_rate >= 40 * MBPS)) {
+		CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw40",
+							"node_1_1_1",
+							3,
+							40  * MBPS)));
+	}
+
+	if ((tm_shaper_min_rate <= 100 * MBPS) &&
+	    (tm_shaper_max_rate >= 100 * MBPS)) {
+		CU_ASSERT(!odp_cunit_ret(test_shaper_bw("bw100",
+							"node_1_1_2",
+							0,
+							100 * MBPS)));
+	}
 }
 
 static void traffic_mngr_test_scheduler(void)
@@ -4320,6 +4421,34 @@ static int traffic_mngr_check_wred(void)
 	return ODP_TEST_ACTIVE;
 }
 
+static int traffic_mngr_check_byte_wred(void)
+{
+	/* Check if wred is part of created odp_tm_t capabilities */
+	if (!tm_capabilities.tm_queue_wred_supported)
+		return ODP_TEST_INACTIVE;
+
+	if ((tm_shaper_min_rate > 64 * 1000) ||
+	    (tm_shaper_max_rate < 64 * 1000) ||
+	    (tm_shaper_min_burst > 8 * PKT_BUF_SIZE) ||
+	     (tm_shaper_max_burst < 8 * PKT_BUF_SIZE))
+		return ODP_TEST_INACTIVE;
+	return ODP_TEST_ACTIVE;
+}
+
+static int traffic_mngr_check_pkt_wred(void)
+{
+	/* Check if wred is part of created odp_tm_t capabilities */
+	if (!tm_capabilities.tm_queue_wred_supported)
+		return ODP_TEST_INACTIVE;
+
+	if ((tm_shaper_min_rate > 64 * 1000) ||
+	    (tm_shaper_max_rate < 64 * 1000) ||
+	    (tm_shaper_min_burst > 1000) ||
+	     (tm_shaper_max_burst < 1000))
+		return ODP_TEST_INACTIVE;
+	return ODP_TEST_ACTIVE;
+}
+
 static void traffic_mngr_test_byte_wred(void)
 {
 	CU_ASSERT(test_byte_wred("byte_wred_30G", "byte_bw_30G",
@@ -4378,6 +4507,13 @@ static int traffic_mngr_check_query(void)
 
 	/* We need both pkt count and byte count query support */
 	if ((tm_capabilities.tm_queue_query_flags & query_flags) != query_flags)
+		return ODP_TEST_INACTIVE;
+
+	/* This test uses 64 Kbps rate and a 1000 bit burst size */
+	if (tm_shaper_min_rate > 64 * 1000 ||
+	    tm_shaper_max_rate < 64 * 1000 ||
+	    tm_shaper_min_burst > 1000 ||
+	    tm_shaper_max_burst < 1000)
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
@@ -4471,9 +4607,9 @@ odp_testinfo_t traffic_mngr_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_thresholds,
 				  traffic_mngr_check_thresholds),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_byte_wred,
-				  traffic_mngr_check_wred),
+				  traffic_mngr_check_byte_wred),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_pkt_wred,
-				  traffic_mngr_check_wred),
+				  traffic_mngr_check_pkt_wred),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_query,
 				  traffic_mngr_check_query),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_queue_stats,
