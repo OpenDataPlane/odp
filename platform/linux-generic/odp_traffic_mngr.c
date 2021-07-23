@@ -1,6 +1,7 @@
 /* Copyright 2015 EZchip Semiconductor Ltd. All Rights Reserved.
  *
  * Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2022, Marvell
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -48,6 +49,10 @@ static const pkt_desc_t EMPTY_PKT_DESC = { .word = 0 };
 
 #define MAX_PRIORITIES ODP_TM_MAX_PRIORITIES
 #define NUM_SHAPER_COLORS ODP_NUM_SHAPER_COLORS
+
+/* Shaper BW limits in bits/sec */
+#define TM_MIN_SHAPER_BW  8000ULL
+#define TM_MAX_SHAPER_BW  (100ULL * 1000ULL * 1000ULL * 1000ULL)
 
 static const tm_prop_t basic_prop_tbl[MAX_PRIORITIES][NUM_SHAPER_COLORS] = {
 	[0] = {
@@ -2590,6 +2595,10 @@ static int tm_capabilities(odp_tm_capabilities_t capabilities[],
 		per_level_cap->max_priority       = ODP_TM_MAX_PRIORITIES - 1;
 		per_level_cap->min_weight         = ODP_TM_MIN_SCHED_WEIGHT;
 		per_level_cap->max_weight         = ODP_TM_MAX_SCHED_WEIGHT;
+		per_level_cap->min_burst          = 0;
+		per_level_cap->max_burst          = UINT32_MAX;
+		per_level_cap->min_rate           = TM_MIN_SHAPER_BW;
+		per_level_cap->max_rate           = TM_MAX_SHAPER_BW;
 
 		per_level_cap->tm_node_shaper_supported     = true;
 		per_level_cap->tm_node_wred_supported       = true;
@@ -2712,6 +2721,10 @@ static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
 		per_level_cap->max_priority       = max_priority;
 		per_level_cap->min_weight         = min_weight;
 		per_level_cap->max_weight         = max_weight;
+		per_level_cap->min_burst          = 0;
+		per_level_cap->max_burst          = UINT32_MAX;
+		per_level_cap->min_rate           = TM_MIN_SHAPER_BW;
+		per_level_cap->max_rate           = TM_MAX_SHAPER_BW;
 
 		per_level_cap->tm_node_shaper_supported     = shaper_supported;
 		per_level_cap->tm_node_wred_supported       = wred_supported;
