@@ -24,6 +24,7 @@ extern "C" {
 #include <odp_api.h>
 #include <odp/helper/ip.h>
 #include <stdint.h>
+#include <stdarg.h>
 
 /**
  * @addtogroup odph_cli ODPH CLI
@@ -145,6 +146,20 @@ int odph_cli_stop(void);
  *         a negative value is returned.
  */
 int odph_cli_log(const char *fmt, ...);
+
+/**
+ * Print to CLI
+ *
+ * Similar to odph_cli_log(), except that this one takes its arguments as
+ * a va_list.
+ *
+ * @param fmt printf-style message format
+ * @param in_args variadic arguments
+ * @return On success, the number of characters printed or buffered, without
+ *         accounting for any line feed conversions. If an error is encountered,
+ *         a negative value is returned.
+ */
+int odph_cli_log_va(const char *fmt, va_list in_args);
 
 /**
  * Terminate CLI helper
