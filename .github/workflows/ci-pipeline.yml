@@ -16,7 +16,9 @@ jobs:
         fetch-depth: 0
 
     - name: Install dependencies
-      run: sudo apt install codespell
+      run: |
+        sudo apt update
+        sudo apt install codespell
 
     - name: Check pull request
       if: github.event_name == 'pull_request'
@@ -43,6 +45,7 @@ jobs:
 
     - name: Install dependencies
       run: |
+        sudo apt update
         sudo apt install doxygen asciidoctor libconfig-dev libssl-dev mscgen cmake graphviz
         sudo gem install asciidoctor
     - name: Build

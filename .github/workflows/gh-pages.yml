@@ -12,6 +12,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install dependencies
       run: |
+        sudo apt update
         sudo apt install doxygen asciidoctor libconfig-dev libssl-dev mscgen cmake graphviz
         sudo gem install asciidoctor
     - name: Build
