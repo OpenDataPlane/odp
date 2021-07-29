@@ -10,6 +10,46 @@
 
 #include <odp/api/atomic.h>
 
+static inline void _odp_atomic_add_u32(odp_atomic_u32_t *atom, uint32_t val)
+{
+	(void)__atomic_fetch_add(&atom->v, val, __ATOMIC_RELAXED);
+}
+
+static inline void _odp_atomic_sub_u32(odp_atomic_u32_t *atom, uint32_t val)
+{
+	(void)__atomic_fetch_sub(&atom->v, val, __ATOMIC_RELAXED);
+}
+
+static inline void _odp_atomic_inc_u32(odp_atomic_u32_t *atom)
+{
+	(void)__atomic_fetch_add(&atom->v, 1, __ATOMIC_RELAXED);
+}
+
+static inline void _odp_atomic_dec_u32(odp_atomic_u32_t *atom)
+{
+	(void)__atomic_fetch_sub(&atom->v, 1, __ATOMIC_RELAXED);
+}
+
+static inline void _odp_atomic_add_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	(void)__atomic_fetch_add(&atom->v, val, __ATOMIC_RELAXED);
+}
+
+static inline void _odp_atomic_sub_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+	(void)__atomic_fetch_sub(&atom->v, val, __ATOMIC_RELAXED);
+}
+
+static inline void _odp_atomic_inc_u64(odp_atomic_u64_t *atom)
+{
+	(void)__atomic_fetch_add(&atom->v, 1, __ATOMIC_RELAXED);
+}
+
+static inline void _odp_atomic_dec_u64(odp_atomic_u64_t *atom)
+{
+	(void)__atomic_fetch_sub(&atom->v, 1, __ATOMIC_RELAXED);
+}
+
 #ifdef __SIZEOF_INT128__
 
 static inline void _odp_atomic_init_u128(odp_atomic_u128_t *atom, odp_u128_t val)
