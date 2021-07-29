@@ -1782,7 +1782,7 @@ static void test_multi_out_in(odp_ipsec_sa_t out_sa,
 		ipsec_test_part test_out;
 		ipsec_test_part test_in;
 		ipsec_test_packet test_pkt;
-		odp_packet_t pkt;
+		odp_packet_t pkt = ODP_PACKET_INVALID;
 
 		/*
 		 * Convert plain text packet to IPsec packet through
