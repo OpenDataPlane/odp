@@ -3398,7 +3398,8 @@ int
 odp_proto_stats(odp_proto_stats_t stat, odp_proto_stats_data_t *data)
 {
 	(void)stat;
-	(void)data;
+
+	memset(data, 0, sizeof(odp_proto_stats_data_t));
 
 	return 0;
 }
