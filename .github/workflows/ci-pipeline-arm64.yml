@@ -98,7 +98,8 @@ jobs:
         conf: ['', '--enable-abi-compat', '--enable-deprecated --enable-debug=full',
                '--enable-dpdk-zero-copy --disable-static-applications',
                '--disable-host-optimization', '--disable-host-optimization --enable-abi-compat',
-               '--without-openssl --without-pcap']
+               '--without-openssl --without-pcap', 'CFLAGS=-march="armv8.2-a" -O2',
+               'CFLAGS="-march=armv8-a+lse" -O2', 'CFLAGS="-march=armv8-a+lse -O2"']
     steps:
       - uses: AutoModality/action-clean@v1.1.0
       - uses: actions/checkout@v2
