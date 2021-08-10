@@ -702,7 +702,7 @@ int odph_cli_start(void)
 		goto error;
 	}
 
-	memset(&thr_common, 0, sizeof(thr_common));
+	odph_thread_common_param_init(&thr_common);
 	thr_common.instance = shm->instance;
 	thr_common.cpumask = &cpumask;
 

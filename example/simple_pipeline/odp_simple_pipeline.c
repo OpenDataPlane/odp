@@ -854,7 +854,7 @@ int main(int argc, char **argv)
 
 	memset(thr_tbl, 0, sizeof(thr_tbl));
 	memset(thr_param, 0, sizeof(thr_param));
-	memset(&thr_common, 0, sizeof(thr_common));
+	odph_thread_common_param_init(&thr_common);
 
 	thr_common.instance = instance;
 
