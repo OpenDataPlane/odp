@@ -179,6 +179,15 @@ typedef struct {
 } odph_thread_common_param_t;
 
 /**
+ * Initialize thread params
+ *
+ * Initialize an odph_thread_param_t to its default values for all fields.
+ *
+ * @param[out] param Pointer to parameter structure
+ */
+void odph_thread_param_init(odph_thread_param_t *param);
+
+/**
  * Initialize thread common params
  *
  * Initialize an odph_thread_common_param_t to its default values for all
@@ -206,6 +215,9 @@ void odph_thread_common_param_init(odph_thread_common_param_t *param);
  * each thread to be created. However, all threads may be created
  * with a single thread parameter table element by setting 'share_param'
  * parameter.
+ *
+ * Use odph_thread_common_param_init() and odph_thread_param_init() to
+ * initialize parameters with default values.
  *
  * Thread table must be large enough to hold 'num' elements. Also the cpumask
  * must contain 'num' CPUs. Threads are pinned to CPUs in order - the first
