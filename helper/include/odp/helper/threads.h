@@ -179,6 +179,16 @@ typedef struct {
 } odph_thread_common_param_t;
 
 /**
+ * Initialize thread common params
+ *
+ * Initialize an odph_thread_common_param_t to its default values for all
+ * fields.
+ *
+ * @param[out] param Pointer to parameter structure
+ */
+void odph_thread_common_param_init(odph_thread_common_param_t *param);
+
+/**
  * Create and pin threads (as Linux pthreads or processes)
  *
  * This is an updated version of odph_odpthreads_create() call. It may be called

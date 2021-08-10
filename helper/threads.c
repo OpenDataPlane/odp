@@ -224,6 +224,11 @@ static int wait_pthread(odph_thread_t *thread)
 	return 0;
 }
 
+void odph_thread_common_param_init(odph_thread_common_param_t *param)
+{
+	memset(param, 0, sizeof(*param));
+}
+
 int odph_thread_create(odph_thread_t thread[],
 		       const odph_thread_common_param_t *param,
 		       const odph_thread_param_t thr_param[],
