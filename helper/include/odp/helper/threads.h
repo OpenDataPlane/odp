@@ -69,6 +69,12 @@ typedef struct {
 	/** @deprecated ODP instance handle for odph_odpthreads_create(). */
 	odp_instance_t instance;
 
+	/**
+	 * Minimum stack size in bytes. 0 = use default. Ignored by
+	 * odph_odpthreads_create().
+	 */
+	uint64_t stack_size;
+
 } odph_thread_param_t;
 
 /** Helper internal thread start arguments. Used both in process and thread
