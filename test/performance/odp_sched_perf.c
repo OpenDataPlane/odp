@@ -1028,7 +1028,7 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 
 	memset(global->thread_tbl, 0, sizeof(global->thread_tbl));
 	memset(thr_param, 0, sizeof(thr_param));
-	memset(&thr_common, 0, sizeof(thr_common));
+	odph_thread_common_param_init(&thr_common);
 
 	thr_common.instance = instance;
 	thr_common.cpumask  = &global->cpumask;

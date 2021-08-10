@@ -683,7 +683,7 @@ int main(int argc, char *argv[])
 
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
-	memset(&thr_common, 0, sizeof(thr_common));
+	odph_thread_common_param_init(&thr_common);
 	memset(&thr_param, 0, sizeof(thr_param));
 
 	thr_param.start    = pktio_receive_thread;

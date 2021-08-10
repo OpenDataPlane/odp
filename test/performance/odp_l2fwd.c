@@ -2324,7 +2324,7 @@ int main(int argc, char *argv[])
 
 	/* Create worker threads */
 	memset(thr_param, 0, sizeof(thr_param));
-	memset(&thr_common, 0, sizeof(thr_common));
+	odph_thread_common_param_init(&thr_common);
 
 	thr_common.instance = instance;
 	thr_common.cpumask  = &cpumask;

@@ -311,7 +311,7 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 	int num_cpu = test_options->num_cpu;
 	odph_thread_param_t thr_param[num_cpu];
 
-	memset(&param, 0, sizeof(odph_thread_common_param_t));
+	odph_thread_common_param_init(&param);
 	param.instance = instance;
 	param.cpumask  = &global->cpumask;
 
