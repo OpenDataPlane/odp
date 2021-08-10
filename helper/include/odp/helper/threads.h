@@ -165,6 +165,19 @@ typedef struct {
 	int sync;
 
 	/**
+	 * Synchronized thread creation timeout in nanoseconds
+	 *
+	 * When synchronized thread creation has been requested, waiting for the
+	 * synchronization signal times out once the time indicated by this
+	 * parameter has passed.
+	 *
+	 * If this parameter is 0, the default value is used.
+	 *
+	 * Default value is ODP_TIME_SEC_IN_NS.
+	 */
+	uint64_t sync_timeout;
+
+	/**
 	 * Thread parameter sharing
 	 *
 	 * 0: Thread parameters are not shared. The thread parameter table
