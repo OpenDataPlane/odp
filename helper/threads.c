@@ -232,6 +232,7 @@ void odph_thread_param_init(odph_thread_param_t *param)
 void odph_thread_common_param_init(odph_thread_common_param_t *param)
 {
 	memset(param, 0, sizeof(*param));
+	param->sync_timeout = ODP_TIME_SEC_IN_NS;
 }
 
 int odph_thread_create(odph_thread_t thread[],
@@ -296,6 +297,10 @@ int odph_thread_create(odph_thread_t thread[],
 			uint32_t status;
 			int timeout = 0;
 			odp_atomic_u32_t *atomic = &start_args->status;
+			uint64_t timeout_ns = param->sync_timeout;
+
+			if (!timeout_ns)
+				timeout_ns = ODP_TIME_SEC_IN_NS;
 
 			t1 = odp_time_local();
 
@@ -303,7 +308,7 @@ int odph_thread_create(odph_thread_t thread[],
 				odp_cpu_pause();
 				t2 = odp_time_local();
 				diff_ns = odp_time_diff_ns(t2, t1);
-				timeout = diff_ns > ODP_TIME_SEC_IN_NS;
+				timeout = diff_ns > timeout_ns;
 				status = odp_atomic_load_acq_u32(atomic);
 
 			} while (status != INIT_DONE && timeout == 0);
