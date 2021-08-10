@@ -1255,7 +1255,7 @@ int main(int argc, char *argv[])
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
 	/* Init threads params */
-	memset(&thr_param, 0, sizeof(thr_param));
+	odph_thread_param_init(&thr_param);
 	thr_param.thr_type = ODP_THREAD_WORKER;
 
 	odph_thread_common_param_init(&thr_common);

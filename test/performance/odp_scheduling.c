@@ -997,16 +997,16 @@ int main(int argc, char *argv[])
 	globals->first_thr = -1;
 
 	/* Create and launch worker threads */
+
 	odph_thread_common_param_init(&thr_common);
-	memset(&thr_param, 0, sizeof(thr_param));
-
-	thr_param.thr_type = ODP_THREAD_WORKER;
-	thr_param.start    = run_thread;
-	thr_param.arg      = NULL;
-
 	thr_common.instance = instance;
 	thr_common.cpumask  = &cpumask;
 	thr_common.share_param = 1;
+
+	odph_thread_param_init(&thr_param);
+	thr_param.thr_type = ODP_THREAD_WORKER;
+	thr_param.start    = run_thread;
+	thr_param.arg      = NULL;
 
 	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
 

@@ -706,7 +706,7 @@ int odph_cli_start(void)
 	thr_common.instance = shm->instance;
 	thr_common.cpumask = &cpumask;
 
-	memset(&thr_param, 0, sizeof(thr_param));
+	odph_thread_param_init(&thr_param);
 	thr_param.thr_type = ODP_THREAD_CONTROL;
 	thr_param.start = cli_server;
 

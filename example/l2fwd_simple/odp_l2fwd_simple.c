@@ -248,7 +248,7 @@ int main(int argc, char **argv)
 	odp_cpumask_default_worker(&cpumask, MAX_WORKERS);
 
 	odph_thread_common_param_init(&thr_common);
-	memset(&thr_param, 0, sizeof(thr_param));
+	odph_thread_param_init(&thr_param);
 
 	thr_param.start    = run_worker;
 	thr_param.thr_type = ODP_THREAD_WORKER;

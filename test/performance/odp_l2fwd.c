@@ -2323,7 +2323,6 @@ int main(int argc, char *argv[])
 			run_worker_sched_mode_vector : run_worker_sched_mode;
 
 	/* Create worker threads */
-	memset(thr_param, 0, sizeof(thr_param));
 	odph_thread_common_param_init(&thr_common);
 
 	thr_common.instance = instance;
@@ -2333,6 +2332,7 @@ int main(int argc, char *argv[])
 	thr_common.sync     = 1;
 
 	for (i = 0; i < num_workers; ++i) {
+		odph_thread_param_init(&thr_param[i]);
 		thr_param[i].start    = thr_run_func;
 		thr_param[i].arg      = &gbl_args->thread_args[i];
 		thr_param[i].thr_type = ODP_THREAD_WORKER;

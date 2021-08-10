@@ -1486,7 +1486,6 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 	odph_thread_param_t thr_param[num_cpu];
 
 	memset(global->thread_tbl, 0, sizeof(global->thread_tbl));
-	memset(thr_param, 0, sizeof(thr_param));
 	odph_thread_common_param_init(&thr_common);
 
 	thr_common.instance = instance;
@@ -1494,6 +1493,7 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 
 	/* Receive threads */
 	for (i = 0; i < num_rx; i++) {
+		odph_thread_param_init(&thr_param[i]);
 		thr_param[i].start    = rx_thread;
 		thr_param[i].arg      = &global->thread_arg[i];
 		thr_param[i].thr_type = ODP_THREAD_WORKER;
@@ -1513,6 +1513,7 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 			global->thread_arg[i].pktout[j] = pktout;
 		}
 
+		odph_thread_param_init(&thr_param[i]);
 		thr_param[i].start    = tx_thread;
 		thr_param[i].arg      = &global->thread_arg[i];
 		thr_param[i].thr_type = ODP_THREAD_WORKER;

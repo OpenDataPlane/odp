@@ -1027,13 +1027,13 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 	odp_atomic_init_u32(&global->num_worker, num_cpu);
 
 	memset(global->thread_tbl, 0, sizeof(global->thread_tbl));
-	memset(thr_param, 0, sizeof(thr_param));
 	odph_thread_common_param_init(&thr_common);
 
 	thr_common.instance = instance;
 	thr_common.cpumask  = &global->cpumask;
 
 	for (i = 0; i < num_cpu; i++) {
+		odph_thread_param_init(&thr_param[i]);
 		thr_param[i].start    = test_sched;
 		thr_param[i].arg      = &global->thread_arg[i];
 		thr_param[i].thr_type = ODP_THREAD_WORKER;

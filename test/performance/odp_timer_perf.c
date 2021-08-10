@@ -795,13 +795,14 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 	odph_thread_param_t thr_param[num_cpu];
 
 	memset(global->thread_tbl, 0, sizeof(global->thread_tbl));
-	memset(thr_param, 0, sizeof(thr_param));
 	odph_thread_common_param_init(&thr_common);
 
 	thr_common.instance = instance;
 	thr_common.cpumask  = &global->cpumask;
 
 	for (i = 0; i < num_cpu; i++) {
+		odph_thread_param_init(&thr_param[i]);
+
 		if (test_options->mode == MODE_SCHED_OVERH)
 			thr_param[i].start = sched_mode_worker;
 		else

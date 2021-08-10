@@ -55,7 +55,7 @@ int odp_cunit_thread_create(int func_ptr(void *), pthrd_arg *arg)
 	odph_thread_param_t thr_param;
 
 	odph_thread_common_param_init(&thr_common);
-	memset(&thr_param, 0, sizeof(thr_param));
+	odph_thread_param_init(&thr_param);
 
 	thr_param.start    = func_ptr;
 	thr_param.arg      = arg;
