@@ -853,7 +853,6 @@ int main(int argc, char **argv)
 		stats[i] = &global->thread[i].stats;
 
 	memset(thr_tbl, 0, sizeof(thr_tbl));
-	memset(thr_param, 0, sizeof(thr_param));
 	odph_thread_common_param_init(&thr_common);
 
 	thr_common.instance = instance;
@@ -861,6 +860,7 @@ int main(int argc, char **argv)
 	/* RX thread */
 	thr_args = &global->thread[0];
 	thr_args->tx_queue = global->queue[0];
+	odph_thread_param_init(&thr_param[0]);
 	thr_param[0].start = rx_thread;
 	thr_param[0].arg = thr_args;
 	thr_param[0].thr_type = ODP_THREAD_WORKER;
@@ -873,6 +873,7 @@ int main(int argc, char **argv)
 		thr_args->rx_queue = global->queue[i];
 		thr_args->tx_queue = global->queue[i + 1];
 
+		odph_thread_param_init(&thr_param[i]);
 		thr_param[i].start    = worker_thread;
 		thr_param[i].arg      = thr_args;
 		thr_param[i].thr_type = ODP_THREAD_WORKER;
@@ -887,6 +888,7 @@ int main(int argc, char **argv)
 	/* TX thread */
 	thr_args = &global->thread[num_threads - 1];
 	thr_args->rx_queue = global->queue[num_workers];
+	odph_thread_param_init(&thr_param[0]);
 	thr_param[0].start = tx_thread;
 	thr_param[0].arg = thr_args;
 	thr_param[0].thr_type = ODP_THREAD_WORKER;

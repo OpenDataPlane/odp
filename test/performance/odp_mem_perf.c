@@ -315,7 +315,6 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 	param.instance = instance;
 	param.cpumask  = &global->cpumask;
 
-	memset(thr_param, 0, sizeof(thr_param));
 	for (i = 0; i < num_cpu; i++) {
 		test_thread_ctx_t *thread_ctx = &global->thread_ctx[i];
 
@@ -324,6 +323,7 @@ static int start_workers(test_global_t *global, odp_instance_t instance)
 		if (global->test_options.private)
 			thread_ctx->shm_addr = global->shm_addr[i];
 
+		odph_thread_param_init(&thr_param[i]);
 		thr_param[i].thr_type = ODP_THREAD_WORKER;
 		thr_param[i].start    = run_test;
 		thr_param[i].arg      = thread_ctx;
