@@ -403,3 +403,14 @@ Prerequisites for building the OpenDataPlane (ODP) API
    To have this tool also check spelling you need codespell.
    # Debian/Ubuntu
    $ sudo apt-get install codespell
+
+8.0 Command Line Interface (optional)
+
+   ODP applications (see e.g. ./example/cli) may use CLI helper (./helper/include/odp/helper/cli.h)
+   to provide a command line interface to the user. CLI helper depends on libcli library.
+
+   # Debian/Ubuntu
+   $ sudo apt-get install libcli-dev
+
+   # CentOS/RedHat/Fedora
+   $ sudo yum install libcli-devel
