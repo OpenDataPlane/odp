@@ -243,52 +243,65 @@ static int pool_debug(void)
 
 static int queue_debug(void)
 {
-	odp_queue_t queue;
 	odp_queue_param_t param;
 	const char *name;
+	int i;
+	int num = 3;
+	odp_queue_t queue[num];
 
-	name = "debug_plain_queue";
+	name = "plain_queue";
 	odp_queue_param_init(&param);
 	param.type = ODP_QUEUE_TYPE_PLAIN;
 
-	queue = odp_queue_create(name, &param);
+	queue[0] = odp_queue_create(name, &param);
 
-	if (queue == ODP_QUEUE_INVALID) {
+	if (queue[0] == ODP_QUEUE_INVALID) {
 		ODPH_ERR("Queue create failed: %s\n", name);
 		return -1;
 	}
+
+	printf("\n");
+	odp_queue_print(queue[0]);
+
+	name = "parallel_sched_queue";
+	odp_queue_param_init(&param);
+	param.type = ODP_QUEUE_TYPE_SCHED;
+
+	queue[1] = odp_queue_create(name, &param);
+
+	if (queue[1] == ODP_QUEUE_INVALID) {
+		ODPH_ERR("Queue create failed: %s\n", name);
+		return -1;
+	}
+
+	printf("\n");
+	odp_queue_print(queue[1]);
+
+	name = "atomic_sched_queue";
+	param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+	param.sched.prio = ODP_SCHED_PRIO_HIGHEST;
+
+	queue[2] = odp_queue_create(name, &param);
+
+	if (queue[2] == ODP_QUEUE_INVALID) {
+		ODPH_ERR("Queue create failed: %s\n", name);
+		return -1;
+	}
+
+	printf("\n");
+	odp_queue_print(queue[2]);
 
 	printf("\n");
 	odp_queue_print_all();
 
 	printf("\n");
-	odp_queue_print(queue);
-
-	if (odp_queue_destroy(queue)) {
-		ODPH_ERR("Queue destroy failed: %s\n", name);
-		return -1;
-	}
-
-	name = "debug_sched_queue";
-	odp_queue_param_init(&param);
-	param.type = ODP_QUEUE_TYPE_SCHED;
-
-	queue = odp_queue_create(name, &param);
-
-	if (queue == ODP_QUEUE_INVALID) {
-		ODPH_ERR("Queue create failed: %s\n", name);
-		return -1;
-	}
-
-	printf("\n");
-	odp_queue_print(queue);
-
-	printf("\n");
 	odp_schedule_print();
 
-	if (odp_queue_destroy(queue)) {
-		ODPH_ERR("Queue destroy failed: %s\n", name);
-		return -1;
+	for (i = 0; i < num; i++) {
+		if (odp_queue_destroy(queue[i])) {
+			ODPH_ERR("Queue destroy failed: %i\n", i);
+			return -1;
+		}
 	}
 
 	return 0;
