@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -16,8 +17,12 @@ extern "C" {
 #include <odp/api/schedule.h>
 #include <odp_forward_typedefs_internal.h>
 
-/* Number of ordered locks per queue */
-#define SCHEDULE_ORDERED_LOCKS_PER_QUEUE 2
+#define _ODP_SCHED_ID_BASIC    0
+#define _ODP_SCHED_ID_SP       1
+#define _ODP_SCHED_ID_SCALABLE 2
+
+/* Scheduler identifier */
+extern int _odp_sched_id;
 
 typedef struct schedule_config_t {
 	struct {
