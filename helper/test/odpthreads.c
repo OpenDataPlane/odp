@@ -62,8 +62,9 @@ static int worker_fn(void *arg ODP_UNUSED)
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_odpthread_params_t thr_params;
-	odph_odpthread_t thread_tbl[NUMBER_WORKERS];
+	odph_thread_t thread_tbl[NUMBER_WORKERS];
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
 	odp_cpumask_t cpu_mask;
 	odp_init_t init_param;
 	int num_workers;
@@ -143,15 +144,19 @@ int main(int argc, char *argv[])
 	printf("new cpu mask:               %s\n", cpumaskstr);
 	printf("new num worker threads:     %i\n\n", num_workers);
 
-	memset(&thr_params, 0, sizeof(thr_params));
-	thr_params.start    = worker_fn;
-	thr_params.arg      = NULL;
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = odp_instance;
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = odp_instance;
+	thr_common.cpumask = &cpu_mask;
+	thr_common.share_param = 1;
 
-	odph_odpthreads_create(&thread_tbl[0], &cpu_mask, &thr_params);
+	odph_thread_param_init(&thr_param);
+	thr_param.start = worker_fn;
+	thr_param.arg = NULL;
+	thr_param.thr_type = ODP_THREAD_WORKER;
 
-	ret = odph_odpthreads_join(thread_tbl);
+	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
+
+	ret = odph_thread_join(thread_tbl, num_workers);
 	if (ret < 0)
 		exit(EXIT_FAILURE);
 
