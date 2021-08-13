@@ -1947,6 +1947,12 @@ static void schedule_print(void)
 	ODP_PRINT("\n");
 }
 
+/* Returns spread for queue debug prints */
+int _odp_sched_basic_get_spread(uint32_t queue_index)
+{
+	return sched->queue[queue_index].spread;
+}
+
 /* Fill in scheduler interface */
 const schedule_fn_t _odp_schedule_basic_fn = {
 	.pktio_start = schedule_pktio_start,

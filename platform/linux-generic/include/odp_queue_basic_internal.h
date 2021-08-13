@@ -119,6 +119,9 @@ int _odp_sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int num,
 			 int update_status);
 int _odp_sched_queue_empty(uint32_t queue_index);
 
+/* Functions by schedulers */
+int _odp_sched_basic_get_spread(uint32_t queue_index);
+
 #ifdef __cplusplus
 }
 #endif
