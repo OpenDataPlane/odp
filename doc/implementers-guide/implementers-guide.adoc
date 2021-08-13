@@ -556,9 +556,9 @@ could (hopefully) be as simple as changing the OS related helper lib.
 
 In the linux helper, two functions are given to create and join ODP threads:
 
-`odph_odpthreads_create()`
+`odph_thread_create()`
 
-`odph_odpthreads_join()`
+`odph_thread_join()`
 
 These two functions abstract what an ODP thread really is and their usage
 is recommended as they would be implemented in other OS`s helper lib.

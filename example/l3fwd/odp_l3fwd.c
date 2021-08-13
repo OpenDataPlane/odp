@@ -82,7 +82,6 @@ typedef struct {
 typedef struct {
 	app_args_t		cmd_args;
 	struct l3fwd_pktio_s	l3fwd_pktios[MAX_NB_PKTIO];
-	odph_odpthread_t	l3fwd_workers[MAX_NB_WORKER];
 	struct thread_arg_s	worker_args[MAX_NB_WORKER];
 	odph_ethaddr_t		eth_dest_mac[MAX_NB_PKTIO];
 	/** Global barrier to synchronize main and workers */
@@ -937,14 +936,15 @@ static int print_speed_stats(int num_workers, int duration, int timeout)
 
 int main(int argc, char **argv)
 {
-	odph_odpthread_t thread_tbl[MAX_NB_WORKER];
+	odph_thread_t thread_tbl[MAX_NB_WORKER];
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param[MAX_NB_WORKER];
 	odp_pool_t pool;
 	odp_pool_param_t params;
 	odp_shm_t shm;
 	odp_instance_t instance;
-	odph_odpthread_params_t thr_params;
 	odp_cpumask_t cpumask;
-	int cpu, i, j, nb_worker;
+	int i, j, nb_worker;
 	uint8_t mac[ODPH_ETHADDR_LEN];
 	uint8_t *dst_mac;
 	app_args_t *args;
@@ -1101,32 +1101,25 @@ int main(int argc, char **argv)
 
 	odp_barrier_init(&global->barrier, nb_worker + 1);
 
-	memset(&thr_params, 0, sizeof(thr_params));
-	thr_params.start    = run_worker;
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = instance;
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = instance;
+	thr_common.cpumask = &cpumask;
+
+	for (i = 0; i < nb_worker; i++) {
+		odph_thread_param_init(&thr_param[i]);
+		thr_param[i].start = run_worker;
+		thr_param[i].arg = &global->worker_args[i];
+		thr_param[i].thr_type = ODP_THREAD_WORKER;
+	}
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
-	cpu = odp_cpumask_first(&cpumask);
-	for (i = 0; i < nb_worker; i++) {
-		struct thread_arg_s *arg;
-		odp_cpumask_t thr_mask;
-
-		arg = &global->worker_args[i];
-		odp_cpumask_zero(&thr_mask);
-		odp_cpumask_set(&thr_mask, cpu);
-		thr_params.arg = arg;
-		odph_odpthreads_create(&thread_tbl[i], &thr_mask,
-				       &thr_params);
-		cpu = odp_cpumask_next(&cpumask, cpu);
-	}
+	odph_thread_create(thread_tbl, &thr_common, thr_param, nb_worker);
 
 	print_speed_stats(nb_worker, args->duration, PRINT_INTERVAL);
 	odp_atomic_store_u32(&global->exit_threads, 1);
 
 	/* wait for other threads to join */
-	for (i = 0; i < nb_worker; i++)
-		odph_odpthreads_join(&thread_tbl[i]);
+	odph_thread_join(thread_tbl, nb_worker);
 
 	/* Stop and close used pktio devices */
 	for (i = 0; i < args->if_count; i++) {

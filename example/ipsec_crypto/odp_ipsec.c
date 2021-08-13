@@ -1042,7 +1042,7 @@ pkt_disposition_e do_ipsec_out_finish(odp_packet_t pkt,
  *  - Sequence number assignment queue
  *  - Per packet crypto API completion queue
  *
- * @param arg  Required by "odph_odpthreads_create", unused
+ * @param arg  Required by "odph_thread_create", unused
  *
  * @return NULL (should never return)
  */
@@ -1203,7 +1203,9 @@ int
 main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_odpthread_t thread_tbl[MAX_WORKERS];
+	odph_thread_t thread_tbl[MAX_WORKERS];
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
 	int num_workers;
 	int i;
 	int stream_count;
@@ -1214,7 +1216,6 @@ main(int argc, char *argv[])
 	odp_pool_param_t params;
 	odp_instance_t instance;
 	odp_init_t init_param;
-	odph_odpthread_params_t thr_params;
 
 	/* create by default scheduled queues */
 	queue_create = odp_queue_create;
@@ -1364,13 +1365,18 @@ main(int argc, char *argv[])
 	/*
 	 * Create and init worker threads
 	 */
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = instance;
+	thr_common.cpumask = &cpumask;
+	thr_common.share_param = 1;
+
+	odph_thread_param_init(&thr_param);
+	thr_param.start = pktio_thread;
+	thr_param.arg = NULL;
+	thr_param.thr_type = ODP_THREAD_WORKER;
+
 	memset(thread_tbl, 0, sizeof(thread_tbl));
-	memset(&thr_params, 0, sizeof(thr_params));
-	thr_params.start    = pktio_thread;
-	thr_params.arg      = NULL;
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = instance;
-	odph_odpthreads_create(thread_tbl, &cpumask, &thr_params);
+	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
 
 	/* If there are streams attempt to verify them. Otherwise, run until
 	 * SIGINT is received. */
@@ -1384,7 +1390,7 @@ main(int argc, char *argv[])
 		printf("All received\n");
 		odp_atomic_store_u32(&global->exit_threads, 1);
 	}
-	odph_odpthreads_join(thread_tbl);
+	odph_thread_join(thread_tbl, num_workers);
 
 	/* Stop and close used pktio devices */
 	for (i = 0; i < global->appl.if_count; i++) {

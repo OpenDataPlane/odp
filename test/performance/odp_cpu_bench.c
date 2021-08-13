@@ -521,7 +521,9 @@ int main(int argc, char *argv[])
 {
 	stats_t *stats[MAX_WORKERS];
 	odph_helper_options_t helper_options;
-	odph_odpthread_t thread_tbl[MAX_WORKERS];
+	odph_thread_t thread_tbl[MAX_WORKERS];
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param[MAX_WORKERS];
 	odp_cpumask_t cpumask;
 	odp_pool_capability_t pool_capa;
 	odp_pool_t pool;
@@ -540,7 +542,6 @@ int main(int argc, char *argv[])
 	uint32_t init_val;
 	unsigned int num_workers;
 	unsigned int i, j;
-	int cpu;
 	int ret = 0;
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
@@ -743,7 +744,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	memset(thread_tbl, 0, sizeof(thread_tbl));
 	odp_barrier_init(&gbl_args->init_barrier, num_workers + 1);
 	odp_barrier_init(&gbl_args->term_barrier, num_workers + 1);
 
@@ -762,34 +762,28 @@ int main(int argc, char *argv[])
 	}
 
 	/* Create worker threads */
-	cpu = odp_cpumask_first(&cpumask);
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = instance;
+	thr_common.cpumask = &cpumask;
+
 	for (i = 0; i < num_workers; i++) {
-		odp_cpumask_t thd_mask;
-		odph_odpthread_params_t thr_params;
-
 		gbl_args->thread[i].idx = i;
-
-		memset(&thr_params, 0, sizeof(thr_params));
-		thr_params.start    = run_thread;
-		thr_params.arg      = &gbl_args->thread[i];
-		thr_params.thr_type = ODP_THREAD_WORKER;
-		thr_params.instance = instance;
-
 		stats[i] = &gbl_args->thread[i].stats;
 
-		odp_cpumask_zero(&thd_mask);
-		odp_cpumask_set(&thd_mask, cpu);
-		odph_odpthreads_create(&thread_tbl[i], &thd_mask,
-				       &thr_params);
-		cpu = odp_cpumask_next(&cpumask, cpu);
+		odph_thread_param_init(&thr_param[i]);
+		thr_param[i].start = run_thread;
+		thr_param[i].arg = &gbl_args->thread[i];
+		thr_param[i].thr_type = ODP_THREAD_WORKER;
 	}
+
+	memset(thread_tbl, 0, sizeof(thread_tbl));
+	odph_thread_create(thread_tbl, &thr_common, thr_param, num_workers);
 
 	ret = print_stats(num_workers, stats, gbl_args->appl.time,
 			  gbl_args->appl.accuracy);
 
 	/* Master thread waits for other threads to exit */
-	for (i = 0; i < num_workers; ++i)
-		odph_odpthreads_join(&thread_tbl[i]);
+	odph_thread_join(thread_tbl, num_workers);
 
 	for (i = 0; i < num_groups; i++) {
 		for (j = 0; j < QUEUES_PER_GROUP; j++) {

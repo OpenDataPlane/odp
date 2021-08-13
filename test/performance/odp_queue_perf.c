@@ -44,7 +44,7 @@ typedef struct test_global_t {
 	odp_shm_t        shm;
 	odp_pool_t       pool;
 	odp_queue_t      queue[MAX_QUEUES];
-	odph_odpthread_t thread_tbl[ODP_THREAD_COUNT_MAX];
+	odph_thread_t    thread_tbl[ODP_THREAD_COUNT_MAX];
 	test_stat_t      stat[ODP_THREAD_COUNT_MAX];
 
 } test_global_t;
@@ -423,17 +423,12 @@ error:
 
 static int start_workers(test_global_t *global)
 {
-	odph_odpthread_params_t thr_params;
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
 	odp_cpumask_t cpumask;
 	int ret;
 	test_options_t *test_options = &global->options;
 	int num_cpu = test_options->num_cpu;
-
-	memset(&thr_params, 0, sizeof(thr_params));
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = global->instance;
-	thr_params.start    = run_test;
-	thr_params.arg      = global;
 
 	ret = odp_cpumask_default_worker(&cpumask, num_cpu);
 
@@ -452,8 +447,18 @@ static int start_workers(test_global_t *global)
 
 	odp_barrier_init(&global->barrier, num_cpu);
 
-	if (odph_odpthreads_create(global->thread_tbl, &cpumask, &thr_params)
-	    != num_cpu)
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = global->instance;
+	thr_common.cpumask = &cpumask;
+	thr_common.share_param = 1;
+
+	odph_thread_param_init(&thr_param);
+	thr_param.start = run_test;
+	thr_param.arg = global;
+	thr_param.thr_type = ODP_THREAD_WORKER;
+
+	if (odph_thread_create(global->thread_tbl, &thr_common, &thr_param,
+			       num_cpu) != num_cpu)
 		return -1;
 
 	return 0;
@@ -596,7 +601,7 @@ int main(int argc, char **argv)
 	}
 
 	/* Wait workers to exit */
-	odph_odpthreads_join(global->thread_tbl);
+	odph_thread_join(global->thread_tbl, global->options.num_cpu);
 
 	print_stat(global);
 

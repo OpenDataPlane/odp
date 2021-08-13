@@ -603,45 +603,61 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 			   odp_cpumask_t *thd_mask_rx,
 			   test_status_t *status)
 {
-	odph_odpthread_t thd_tbl[MAX_WORKERS];
+	odph_thread_t thread_tbl[MAX_WORKERS];
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
 	thread_args_t args_tx, args_rx;
 	uint64_t expected_tx_cnt;
 	int num_tx_workers, num_rx_workers;
-	odph_odpthread_params_t thr_params;
-
-	memset(&thr_params, 0, sizeof(thr_params));
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = gbl_args->instance;
 
 	odp_atomic_store_u32(&gbl_args->shutdown, 0);
 
-	memset(thd_tbl, 0, sizeof(thd_tbl));
+	memset(thread_tbl, 0, sizeof(thread_tbl));
 	memset(gbl_args->rx_stats, 0, gbl_args->rx_stats_size);
 	memset(gbl_args->tx_stats, 0, gbl_args->tx_stats_size);
 
 	expected_tx_cnt = status->pps_curr * gbl_args->args.duration;
 
 	/* start receiver threads first */
-	thr_params.start  = run_thread_rx;
-	thr_params.arg    = &args_rx;
-	args_rx.batch_len = gbl_args->args.rx_batch_len;
-	odph_odpthreads_create(&thd_tbl[0], thd_mask_rx, &thr_params);
-	odp_barrier_wait(&gbl_args->rx_barrier);
+
 	num_rx_workers = odp_cpumask_count(thd_mask_rx);
+	args_rx.batch_len = gbl_args->args.rx_batch_len;
+
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = gbl_args->instance;
+	thr_common.cpumask = thd_mask_rx;
+	thr_common.share_param = 1;
+
+	odph_thread_param_init(&thr_param);
+	thr_param.start = run_thread_rx;
+	thr_param.arg = &args_rx;
+	thr_param.thr_type = ODP_THREAD_WORKER;
+
+	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_rx_workers);
+	odp_barrier_wait(&gbl_args->rx_barrier);
 
 	/* then start transmitters */
-	thr_params.start  = run_thread_tx;
-	thr_params.arg    = &args_tx;
+
 	num_tx_workers    = odp_cpumask_count(thd_mask_tx);
 	args_tx.pps       = status->pps_curr / num_tx_workers;
 	args_tx.duration  = gbl_args->args.duration;
 	args_tx.batch_len = gbl_args->args.tx_batch_len;
-	odph_odpthreads_create(&thd_tbl[num_rx_workers], thd_mask_tx,
-			       &thr_params);
+
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = gbl_args->instance;
+	thr_common.cpumask = thd_mask_tx;
+	thr_common.share_param = 1;
+
+	odph_thread_param_init(&thr_param);
+	thr_param.start = run_thread_tx;
+	thr_param.arg = &args_tx;
+	thr_param.thr_type = ODP_THREAD_WORKER;
+
+	odph_thread_create(&thread_tbl[num_rx_workers], &thr_common, &thr_param, num_tx_workers);
 	odp_barrier_wait(&gbl_args->tx_barrier);
 
 	/* wait for transmitter threads to terminate */
-	odph_odpthreads_join(&thd_tbl[num_rx_workers]);
+	odph_thread_join(&thread_tbl[num_rx_workers], num_tx_workers);
 
 	/* delay to allow transmitted packets to reach the receivers */
 	odp_time_wait_ns(SHUTDOWN_DELAY_NS);
@@ -650,7 +666,7 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	odp_atomic_store_u32(&gbl_args->shutdown, 1);
 
 	/* wait for receivers */
-	odph_odpthreads_join(&thd_tbl[0]);
+	odph_thread_join(thread_tbl, num_rx_workers);
 
 	if (!status->warmup)
 		return process_results(expected_tx_cnt, status);

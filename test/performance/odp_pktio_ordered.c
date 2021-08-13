@@ -1060,10 +1060,11 @@ int main(int argc, char *argv[])
 	odp_pool_capability_t pool_capa;
 	odph_ethaddr_t new_addr;
 	odph_helper_options_t helper_options;
-	odph_odpthread_t thread_tbl[MAX_WORKERS];
+	odph_thread_t thread_tbl[MAX_WORKERS];
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param[MAX_WORKERS];
 	stats_t *stats;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
-	int cpu;
 	int i, j;
 	int if_count;
 	int ret;
@@ -1281,25 +1282,20 @@ int main(int argc, char *argv[])
 	odp_barrier_init(&gbl_args->barrier, num_workers + 1);
 
 	/* Create worker threads */
-	cpu = odp_cpumask_first(&cpumask);
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = instance;
+	thr_common.cpumask = &cpumask;
+
 	for (i = 0; i < num_workers; ++i) {
-		odp_cpumask_t thd_mask;
-		odph_odpthread_params_t thr_params;
-
-		memset(&thr_params, 0, sizeof(thr_params));
-		thr_params.start    = run_worker;
-		thr_params.arg      = &gbl_args->thread[i];
-		thr_params.thr_type = ODP_THREAD_WORKER;
-		thr_params.instance = instance;
-
 		gbl_args->thread[i].stats = &stats[i];
 
-		odp_cpumask_zero(&thd_mask);
-		odp_cpumask_set(&thd_mask, cpu);
-		odph_odpthreads_create(&thread_tbl[i], &thd_mask,
-				       &thr_params);
-		cpu = odp_cpumask_next(&cpumask, cpu);
+		odph_thread_param_init(&thr_param[i]);
+		thr_param[i].start = run_worker;
+		thr_param[i].arg = &gbl_args->thread[i];
+		thr_param[i].thr_type = ODP_THREAD_WORKER;
 	}
+
+	odph_thread_create(thread_tbl, &thr_common, thr_param, num_workers);
 
 	/* Start packet receive and transmit */
 	for (i = 0; i < if_count; ++i) {
@@ -1324,8 +1320,7 @@ int main(int argc, char *argv[])
 	odp_atomic_store_u32(&gbl_args->exit_threads, 1);
 
 	/* Master thread waits for other threads to exit */
-	for (i = 0; i < num_workers; ++i)
-		odph_odpthreads_join(&thread_tbl[i]);
+	odph_thread_join(thread_tbl, num_workers);
 
 	for (i = 0; i < if_count; i++) {
 		odp_pktio_close(gbl_args->pktios[i].pktio);
