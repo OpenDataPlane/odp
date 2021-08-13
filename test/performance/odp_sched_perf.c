@@ -979,10 +979,12 @@ static int test_sched(void *arg)
 		odp_event_t event;
 		uint64_t sched_wait = odp_schedule_wait_time(200 * ODP_TIME_MSEC_IN_NS);
 
-		/* Print schedule status at the end of the test, before any queues
+		/* Print queue and scheduler status at the end of the test, before any queues
 		 * are emptied or destroyed. */
-		if (test_options->verbose)
+		if (test_options->verbose) {
+			odp_queue_print_all();
 			odp_schedule_print();
+		}
 
 		while ((event = odp_schedule(NULL, sched_wait)) != ODP_EVENT_INVALID)
 			odp_event_free(event);
