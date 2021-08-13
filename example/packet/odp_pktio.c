@@ -342,17 +342,17 @@ static int pktio_ifburst_thread(void *arg)
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_odpthread_t thread_tbl[MAX_WORKERS];
+	odph_thread_t thread_tbl[MAX_WORKERS];
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param[MAX_WORKERS];
 	odp_pool_t pool;
 	int num_workers;
 	int i;
-	int cpu;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_pool_param_t params;
 	odp_instance_t instance;
 	odp_init_t init_param;
-	odph_odpthread_params_t thr_params;
 	odp_shm_t shm;
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
@@ -436,15 +436,11 @@ int main(int argc, char *argv[])
 		create_pktio(args->appl.if_names[i], pool, args->appl.mode);
 
 	/* Create and init worker threads */
-	memset(thread_tbl, 0, sizeof(thread_tbl));
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = instance;
+	thr_common.cpumask = &cpumask;
 
-	memset(&thr_params, 0, sizeof(thr_params));
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = instance;
-
-	cpu = odp_cpumask_first(&cpumask);
 	for (i = 0; i < num_workers; ++i) {
-		odp_cpumask_t thd_mask;
 		int (*thr_run_func)(void *);
 		int if_idx;
 
@@ -457,20 +453,15 @@ int main(int argc, char *argv[])
 			thr_run_func = pktio_ifburst_thread;
 		else /* APPL_MODE_PKT_QUEUE */
 			thr_run_func = pktio_queue_thread;
-		/*
-		 * Create threads one-by-one instead of all-at-once,
-		 * because each thread might get different arguments.
-		 * Calls odp_thread_create(cpu) for each thread
-		 */
-		odp_cpumask_zero(&thd_mask);
-		odp_cpumask_set(&thd_mask, cpu);
 
-		thr_params.start = thr_run_func;
-		thr_params.arg   = &args->thread[i];
-
-		odph_odpthreads_create(&thread_tbl[i], &thd_mask, &thr_params);
-		cpu = odp_cpumask_next(&cpumask, cpu);
+		odph_thread_param_init(&thr_param[i]);
+		thr_param[i].start = thr_run_func;
+		thr_param[i].arg = &args->thread[i];
+		thr_param[i].thr_type = ODP_THREAD_WORKER;
 	}
+
+	memset(thread_tbl, 0, sizeof(thread_tbl));
+	odph_thread_create(thread_tbl, &thr_common, thr_param, num_workers);
 
 	if (args->appl.time) {
 		odp_time_wait_ns(args->appl.time *
@@ -487,8 +478,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Master thread waits for other threads to exit */
-	for (i = 0; i < num_workers; ++i)
-		odph_odpthreads_join(&thread_tbl[i]);
+	odph_thread_join(thread_tbl, num_workers);
 
 	for (i = 0; i < args->appl.if_count; ++i)
 		odp_pktio_close(odp_pktio_lookup(args->thread[i].pktio_dev));

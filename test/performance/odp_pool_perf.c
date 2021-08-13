@@ -43,7 +43,7 @@ typedef struct test_global_t {
 	odp_barrier_t barrier;
 	odp_pool_t pool;
 	odp_cpumask_t cpumask;
-	odph_odpthread_t thread_tbl[ODP_THREAD_COUNT_MAX];
+	odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
 	test_stat_t stat[ODP_THREAD_COUNT_MAX];
 
 } test_global_t;
@@ -445,23 +445,28 @@ static int test_packet_pool(void *arg)
 
 static int start_workers(test_global_t *global, odp_instance_t instance)
 {
-	odph_odpthread_params_t thr_params;
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
 	test_options_t *test_options = &global->test_options;
 	int num_cpu = test_options->num_cpu;
 	int packet_pool = test_options->pool_type;
 
-	memset(&thr_params, 0, sizeof(thr_params));
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = instance;
-	thr_params.arg      = global;
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = instance;
+	thr_common.cpumask = &global->cpumask;
+	thr_common.share_param = 1;
+
+	odph_thread_param_init(&thr_param);
+	thr_param.arg = global;
+	thr_param.thr_type = ODP_THREAD_WORKER;
 
 	if (packet_pool)
-		thr_params.start = test_packet_pool;
+		thr_param.start = test_packet_pool;
 	else
-		thr_params.start = test_buffer_pool;
+		thr_param.start = test_buffer_pool;
 
-	if (odph_odpthreads_create(global->thread_tbl, &global->cpumask,
-				   &thr_params) != num_cpu)
+	if (odph_thread_create(global->thread_tbl, &thr_common, &thr_param,
+			       num_cpu) != num_cpu)
 		return -1;
 
 	return 0;
@@ -608,7 +613,7 @@ int main(int argc, char **argv)
 	start_workers(global, instance);
 
 	/* Wait workers to exit */
-	odph_odpthreads_join(global->thread_tbl);
+	odph_thread_join(global->thread_tbl, global->test_options.num_cpu);
 
 	print_stat(global);
 

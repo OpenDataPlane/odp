@@ -1739,7 +1739,9 @@ bench_info_t test_suite[] = {
 int main(int argc, char *argv[])
 {
 	odph_helper_options_t helper_options;
-	odph_odpthread_t worker_thread;
+	odph_thread_t worker_thread;
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
 	int cpu;
 	odp_shm_t shm;
 	odp_cpumask_t cpumask;
@@ -1864,7 +1866,7 @@ int main(int argc, char *argv[])
 
 	odp_pool_print(gbl_args->pool);
 
-	memset(&worker_thread, 0, sizeof(odph_odpthread_t));
+	memset(&worker_thread, 0, sizeof(odph_thread_t));
 
 	signal(SIGINT, sig_handler);
 
@@ -1872,20 +1874,23 @@ int main(int argc, char *argv[])
 	cpu = odp_cpumask_first(&cpumask);
 
 	odp_cpumask_t thd_mask;
-	odph_odpthread_params_t thr_params;
-
-	memset(&thr_params, 0, sizeof(thr_params));
-	thr_params.start    = run_benchmarks;
-	thr_params.arg      = gbl_args;
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = instance;
 
 	odp_cpumask_zero(&thd_mask);
 	odp_cpumask_set(&thd_mask, cpu);
-	odph_odpthreads_create(&worker_thread, &thd_mask,
-			       &thr_params);
 
-	odph_odpthreads_join(&worker_thread);
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = instance;
+	thr_common.cpumask = &thd_mask;
+	thr_common.share_param = 1;
+
+	odph_thread_param_init(&thr_param);
+	thr_param.start = run_benchmarks;
+	thr_param.arg = gbl_args;
+	thr_param.thr_type = ODP_THREAD_WORKER;
+
+	odph_thread_create(&worker_thread, &thr_common, &thr_param, 1);
+
+	odph_thread_join(&worker_thread, 1);
 
 	ret = gbl_args->bench_failed;
 

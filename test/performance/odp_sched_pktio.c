@@ -1396,45 +1396,50 @@ static void destroy_timers(test_global_t *test_global)
 	odp_timer_pool_destroy(timer_pool);
 }
 
-static void start_workers(odph_odpthread_t thread[],
+static void start_workers(odph_thread_t thread[],
 			  test_global_t *test_global)
 {
 	int i;
 	odp_cpumask_t cpumask;
-	odph_odpthread_params_t param;
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param[MAX_WORKERS];
 	int num = test_global->opt.num_worker;
 
-	memset(&param, 0, sizeof(odph_odpthread_params_t));
+	odp_cpumask_zero(&cpumask);
 
-	if (test_global->opt.timeout_us)
-		param.start = worker_thread_timers;
-	else if (test_global->opt.pipe_stages)
-		param.start = worker_thread_pipeline;
-	else
-		param.start = worker_thread_direct;
-
-	param.thr_type = ODP_THREAD_WORKER;
-	param.instance = test_global->instance;
-
-	memset(thread, 0, num * sizeof(odph_odpthread_t));
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = test_global->instance;
+	thr_common.cpumask = &cpumask;
 
 	for (i = 0; i < num; i++) {
-		odp_cpumask_zero(&cpumask);
 		odp_cpumask_set(&cpumask, test_global->worker_cpu[i]);
 		test_global->worker_arg[i].worker_id = i;
 		test_global->worker_arg[i].test_global_ptr = test_global;
-		param.arg = &test_global->worker_arg[i];
 
-		odph_odpthreads_create(&thread[i], &cpumask, &param);
+		odph_thread_param_init(&thr_param[i]);
+
+		if (!i) {
+			if (test_global->opt.timeout_us)
+				thr_param[0].start = worker_thread_timers;
+			else if (test_global->opt.pipe_stages)
+				thr_param[0].start = worker_thread_pipeline;
+			else
+				thr_param[0].start = worker_thread_direct;
+		} else {
+			thr_param[i].start = thr_param[0].start;
+		}
+
+		thr_param[i].arg = &test_global->worker_arg[i];
+		thr_param[i].thr_type = ODP_THREAD_WORKER;
 	}
+
+	memset(thread, 0, num * sizeof(odph_thread_t));
+	odph_thread_create(thread, &thr_common, thr_param, num);
 }
 
-static void wait_workers(odph_odpthread_t thread[], test_global_t *test_global)
+static void wait_workers(odph_thread_t thread[], test_global_t *test_global)
 {
-	int i;
-
-	for (i = 0; i < test_global->opt.num_worker; ++i)
-		odph_odpthreads_join(&thread[i]);
+	odph_thread_join(thread, test_global->opt.num_worker);
 }
 
 int main(int argc, char *argv[])
@@ -1444,7 +1449,7 @@ int main(int argc, char *argv[])
 	odp_shm_t shm;
 	odp_time_t t1 = ODP_TIME_NULL, t2 = ODP_TIME_NULL;
 	odph_helper_options_t helper_options;
-	odph_odpthread_t thread[MAX_WORKERS];
+	odph_thread_t thread[MAX_WORKERS];
 	test_options_t test_options;
 	int ret = 0;
 

@@ -1032,7 +1032,9 @@ int main(int argc, char *argv[])
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	int num_workers = 1;
 	odph_helper_options_t helper_options;
-	odph_odpthread_t thr[num_workers];
+	odph_thread_t thread_tbl[num_workers];
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
 	odp_instance_t instance;
 	odp_init_t init_param;
 	odp_pool_capability_t pool_capa;
@@ -1146,24 +1148,26 @@ int main(int argc, char *argv[])
 		printf("Run in sync mode\n");
 	}
 
-	memset(thr, 0, sizeof(thr));
-
 	test_run_arg.crypto_args       = cargs;
 	test_run_arg.crypto_alg_config = cargs.alg_config;
 	test_run_arg.crypto_capa       = crypto_capa;
 
 	if (cargs.alg_config) {
-		odph_odpthread_params_t thr_params;
-
-		memset(&thr_params, 0, sizeof(thr_params));
-		thr_params.start    = run_thr_func;
-		thr_params.arg      = &test_run_arg;
-		thr_params.thr_type = ODP_THREAD_WORKER;
-		thr_params.instance = instance;
+		odph_thread_common_param_init(&thr_common);
+		thr_common.instance = instance;
+		thr_common.cpumask = &cpumask;
+		thr_common.share_param = 1;
 
 		if (cargs.schedule) {
-			odph_odpthreads_create(&thr[0], &cpumask, &thr_params);
-			odph_odpthreads_join(&thr[0]);
+			odph_thread_param_init(&thr_param);
+			thr_param.start = run_thr_func;
+			thr_param.arg = &test_run_arg;
+			thr_param.thr_type = ODP_THREAD_WORKER;
+
+			memset(thread_tbl, 0, sizeof(thread_tbl));
+			odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
+
+			odph_thread_join(thread_tbl, num_workers);
 		} else {
 			run_measure_one_config(&test_run_arg);
 		}

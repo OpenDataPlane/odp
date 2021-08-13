@@ -230,8 +230,9 @@ int main(void)
 	odp_pool_t fragment_pool;
 	odp_shm_t shm;
 	odp_cpumask_t cpumask;
-	odph_odpthread_t threads[MAX_WORKERS];
-	odph_odpthread_params_t thread_params;
+	odph_thread_t thread_tbl[MAX_WORKERS];
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
 	odp_packet_t dequeued_pkts[NUM_PACKETS];
 	odp_event_t ev;
 	odp_u16be_t ip_id = 0;
@@ -242,7 +243,6 @@ int main(void)
 	int num_workers = MAX_WORKERS;
 	int reassembled;
 
-	memset(&threads, 0, sizeof(threads));
 	init(&instance, &fragment_pool, &shm, &cpumask, &num_workers);
 
 	/* Packet generation & fragmentation */
@@ -290,19 +290,25 @@ int main(void)
 	}
 
 	/* Spawn the worker threads for reassembly */
-	memset(&thread_params, 0, sizeof(thread_params));
-	thread_params.start    = run_worker;
-	thread_params.arg      = 0;
-	thread_params.thr_type = ODP_THREAD_WORKER;
-	thread_params.instance = instance;
-	odph_odpthreads_create(threads, &cpumask, &thread_params);
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = instance;
+	thr_common.cpumask = &cpumask;
+	thr_common.share_param = 1;
+
+	odph_thread_param_init(&thr_param);
+	thr_param.start = run_worker;
+	thr_param.arg = 0;
+	thr_param.thr_type = ODP_THREAD_WORKER;
+
+	memset(thread_tbl, 0, sizeof(thread_tbl));
+	odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers);
 
 	/* Go! */
 	printf("\n= Starting reassembly...\n");
 	odp_barrier_wait(&barrier);
 
 	/* Wait for all threads to complete and output statistics */
-	odph_odpthreads_join(threads);
+	odph_thread_join(thread_tbl, num_workers);
 	for (i = 0; i < num_workers; ++i)
 		printf("=== Thread %02d processed %3d fragments\n", i,
 		       thread_stats[i].frags);
