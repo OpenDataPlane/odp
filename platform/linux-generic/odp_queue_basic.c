@@ -677,7 +677,8 @@ static void queue_print(odp_queue_t handle)
 	odp_pktio_info_t pktio_info;
 	queue_entry_t *queue;
 	uint32_t queue_id;
-	int status;
+	int status, prio;
+	int max_prio = odp_schedule_max_prio();
 
 	queue_id = queue_to_index(handle);
 
@@ -701,7 +702,7 @@ static void queue_print(odp_queue_t handle)
 	ODP_PRINT("\nQueue info\n");
 	ODP_PRINT("----------\n");
 	ODP_PRINT("  handle          %p\n", queue->s.handle);
-	ODP_PRINT("  index           %" PRIu32 "\n", queue->s.index);
+	ODP_PRINT("  index           %" PRIu32 "\n", queue_id);
 	ODP_PRINT("  name            %s\n", queue->s.name);
 	ODP_PRINT("  enq mode        %s\n",
 		  queue->s.param.enq_mode == ODP_QUEUE_OP_MT ? "ODP_QUEUE_OP_MT" :
@@ -729,8 +730,11 @@ static void queue_print(odp_queue_t handle)
 			   "ODP_SCHED_SYNC_ATOMIC" :
 			   (queue->s.param.sched.sync == ODP_SCHED_SYNC_ORDERED ?
 			    "ODP_SCHED_SYNC_ORDERED" : "unknown")));
-		ODP_PRINT("    priority      %d\n", queue->s.param.sched.prio);
-		ODP_PRINT("    group         %d\n", queue->s.param.sched.group);
+		prio = queue->s.param.sched.prio;
+		ODP_PRINT("    priority      %i (%i in API)\n", max_prio - prio, prio);
+		ODP_PRINT("    group         %i\n", queue->s.param.sched.group);
+		if (_odp_sched_id == _ODP_SCHED_ID_BASIC)
+			ODP_PRINT("    spread        %i\n", _odp_sched_basic_get_spread(queue_id));
 	}
 	if (queue->s.pktin.pktio != ODP_PKTIO_INVALID) {
 		if (!odp_pktio_info(queue->s.pktin.pktio, &pktio_info))
@@ -784,11 +788,17 @@ static void queue_print_all(void)
 	char type_c, enq_c, deq_c, order_c, sync_c;
 	const int col_width = 24;
 	int prio = 0;
+	int spr = 0;
 	odp_schedule_sync_t sync = ODP_SCHED_SYNC_PARALLEL;
+	odp_schedule_group_t grp = ODP_SCHED_GROUP_INVALID;
 
 	ODP_PRINT("\nList of all queues\n");
 	ODP_PRINT("------------------\n");
-	ODP_PRINT(" idx %-*s type stat blk enq deq ord    len max_len sync prio\n", col_width, "name");
+	ODP_PRINT(" idx %-*s type stat blk enq deq ord    len max_len sync prio grp", col_width, "name");
+	if (_odp_sched_id == _ODP_SCHED_ID_BASIC)
+		ODP_PRINT(" spr\n");
+	else
+		ODP_PRINT("\n");
 
 	for (i = 0; i < CONFIG_MAX_QUEUES; i++) {
 		queue_entry_t *queue = qentry_from_index(i);
@@ -817,7 +827,10 @@ static void queue_print_all(void)
 			len     = ring_st_length(&queue->s.ring_st);
 			max_len = queue->s.ring_mask + 1;
 			prio    = queue->s.param.sched.prio;
+			grp     = queue->s.param.sched.group;
 			sync    = queue->s.param.sched.sync;
+			if (_odp_sched_id == _ODP_SCHED_ID_BASIC)
+				spr = _odp_sched_basic_get_spread(index);
 		} else {
 			len     = ring_mpmc_length(&queue->s.ring_mpmc);
 			max_len = queue->s.ring_mask + 1;
@@ -851,7 +864,13 @@ static void queue_print_all(void)
 		if (type == ODP_QUEUE_TYPE_SCHED) {
 			sync_c = (sync == ODP_SCHED_SYNC_PARALLEL) ? 'P' :
 				 ((sync == ODP_SCHED_SYNC_ATOMIC) ? 'A' : 'O');
-			ODP_PRINT("    %c %4i", sync_c, prio);
+			/* Print prio level matching odp_schedule_print() output */
+			prio = odp_schedule_max_prio() - prio;
+
+			ODP_PRINT("    %c %4i %3i", sync_c, prio, grp);
+
+			if (_odp_sched_id == _ODP_SCHED_ID_BASIC)
+				ODP_PRINT(" %3i", spr);
 		}
 
 		ODP_PRINT("\n");
