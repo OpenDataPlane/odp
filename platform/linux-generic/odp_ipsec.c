@@ -1015,13 +1015,14 @@ static int ipsec_out_tunnel_parse_ipv6(ipsec_state_t *state,
 				       ipsec_sa_t *ipsec_sa)
 {
 	_odp_ipv6hdr_t *ipv6hdr = state->ip;
+	uint32_t ver_tc_flow = odp_be_to_cpu_32(ipv6hdr->ver_tc_flow);
 
 	ipv6hdr->hop_limit -= ipsec_sa->dec_ttl;
-	state->out_tunnel.ip_tos = (ipv6hdr->ver_tc_flow &
+	state->out_tunnel.ip_tos = (ver_tc_flow &
 				    _ODP_IPV6HDR_TC_MASK) >>
 		_ODP_IPV6HDR_TC_SHIFT;
 	state->out_tunnel.ip_df = 0;
-	state->out_tunnel.ip_flabel = (ipv6hdr->ver_tc_flow &
+	state->out_tunnel.ip_flabel = (ver_tc_flow &
 				       _ODP_IPV6HDR_FLOW_LABEL_MASK) >>
 		_ODP_IPV6HDR_FLOW_LABEL_SHIFT;
 	state->ip_next_hdr = ipv6hdr->next_hdr;
