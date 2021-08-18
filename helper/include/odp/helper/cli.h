@@ -53,6 +53,8 @@ typedef struct {
 	uint16_t port;
 	/** Maximum number of user defined commands. Default is 50. */
 	uint32_t max_user_commands;
+	/** Hostname to be displayed as the first part of the prompt. */
+	const char *hostname;
 } odph_cli_param_t;
 
 /**
