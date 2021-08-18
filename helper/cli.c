@@ -44,6 +44,7 @@ typedef struct {
 	odp_spinlock_t lock;
 	odp_spinlock_t api_lock;
 	odp_instance_t instance;
+	odph_cli_param_t cli_param;
 	struct sockaddr_in addr;
 	uint32_t max_user_commands;
 	uint32_t num_user_commands;
@@ -122,6 +123,8 @@ int odph_cli_init(odp_instance_t instance, const odph_cli_param_t *param)
 		ODPH_ERR("Error: socketpair(): %s\n", strerror(errno));
 		return -1;
 	}
+
+	shm->cli_param = *param;
 
 	return 0;
 }
