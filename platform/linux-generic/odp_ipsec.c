@@ -2197,6 +2197,21 @@ int odp_ipsec_stats(odp_ipsec_sa_t sa, odp_ipsec_stats_t *stats)
 	return 0;
 }
 
+int odp_ipsec_stats_multi(odp_ipsec_sa_t sa[], odp_ipsec_stats_t stats[], int num)
+{
+	int ret, i;
+
+	ODP_ASSERT(NULL != stats);
+
+	for (i = 0; i < num; i++) {
+		ret = odp_ipsec_stats(sa[i], &stats[i]);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
 static int read_config_file(ipsec_global_t *global)
 {
 	const char *str_i = "ipsec.ordering.async_inbound";
