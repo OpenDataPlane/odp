@@ -20,6 +20,7 @@
 #include <odp/api/plat/queue_inlines.h>
 #include <odp_classification_internal.h>
 #include <odp_libconfig_internal.h>
+#include <odp_schedule_if.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>
