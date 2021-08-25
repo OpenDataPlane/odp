@@ -9,4 +9,4 @@
 #endif
 
 #include <odp/api/abi-default/atomic.h>
-
+#include <odp/api/plat/atomic_inlines.h>
