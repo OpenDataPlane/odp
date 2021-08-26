@@ -1,5 +1,6 @@
 /* Copyright (c) 2018, Linaro Limited
  * Copyright (c) 2020, Nokia
+ * Copyright (c) 2021, Marvell
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -109,6 +110,75 @@ int _odp_libconfig_lookup_int(const char *path, int *value)
 				   value);
 
 	return  (ret_def == CONFIG_TRUE || ret_rt == CONFIG_TRUE) ? 1 : 0;
+}
+
+/**
+ * String array setting values
+ *
+ * Returns the number of strings in a string array setting. A valid runtime
+ * setting overrides default even if the array is empty. Outputs upto
+ * 'count' strings when the 'value' array pointer is not NULL. If return
+ * value is larger than 'count', there are more strings than the function was
+ * allowed to output. If return value (N) is less than 'count', only
+ * strings[0 ... N-1] have been written.
+ *
+ * @param      path     Path of the setting
+ * @param[out] value    Array of strings to be copied from the setting
+ * @param      count    Number of strings to be copied
+ * @param      str_size Maximum string length to be copied
+ *
+ * @return     Number of strings in the setting
+ * @retval     <0 on failure
+*/
+int _odp_libconfig_lookup_array_str(const char *path, char **value,
+				    int count, unsigned int str_size)
+{
+	config_setting_t *setting, *elem;
+	const config_t *config;
+	int num, i, j;
+
+	for (i = 0; i < 2; i++) {
+		if (i == 0)
+			config = &odp_global_ro.libconfig_runtime;
+		else
+			config = &odp_global_ro.libconfig_default;
+
+		setting = config_lookup(config, path);
+
+		if (setting == NULL)
+			continue;
+
+		/* invalid config if element is not an array */
+		if (config_setting_is_array(setting) == CONFIG_FALSE) {
+			ODP_ERR("libconfig: %s is not an array\n", path);
+			return -1;
+		}
+		num = config_setting_length(setting);
+
+		if (num == 0 || count == 0 || value == NULL)
+			return num;
+
+		elem = config_setting_get_elem(setting, 0);
+		if (config_setting_type(elem) != CONFIG_TYPE_STRING) {
+			ODP_ERR("libconfig: %s array is not of type string\n", path);
+			return -1;
+		}
+
+		for (j = 0; j < num; j++) {
+			elem = config_setting_get_elem(setting, j);
+			if (strlen(elem->value.sval) > str_size) {
+				ODP_ERR("libconfig: length of %s bigger than size %u\n",
+					elem->value.sval, str_size);
+				return -1;
+			}
+			strcpy(value[j], elem->value.sval);
+		}
+
+		return num;
+	}
+
+	ODP_ERR("libconfig: %s is not defined in config files\n", path);
+	return -1;
 }
 
 int _odp_libconfig_lookup_array(const char *path, int value[], int max_num)
