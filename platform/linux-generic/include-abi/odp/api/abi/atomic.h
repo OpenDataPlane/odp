@@ -84,7 +84,6 @@ typedef struct ODP_ALIGNED(sizeof(odp_u128_t)) odp_atomic_u128_s {
  *  @{
  */
 
-#define _ODP_INLINE static inline
 #include <odp/api/plat/atomic_inlines.h>
 
 /**
