@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -381,6 +382,38 @@ static int alg_packet_op_enq(odp_packet_t pkt,
 	return 0;
 }
 
+/*
+ * Try to adjust packet so that the first segment holds 'first_seg_len' bytes
+ * of packet data (+ tailroom if first_seg_len is longer than the packet).
+ *
+ * If 'first_seg_len' is zero, do not try to add segments but make headroom
+ * zero.
+ *
+ * Packet data bytes are not preserved.
+ */
+static void adjust_segments(odp_packet_t *pkt, uint32_t first_seg_len)
+{
+	uint32_t shift;
+
+	shift = odp_packet_headroom(*pkt) + first_seg_len;
+
+	if (odp_packet_extend_head(pkt, shift, NULL, NULL) < 0) {
+		CU_FAIL("odp_packet_extend_head() failed\n");
+		return;
+	}
+	if (odp_packet_trunc_tail(pkt, shift, NULL, NULL) < 0) {
+		CU_FAIL("odp_packet_trunc_tail() failed\n");
+		return;
+	}
+	/*
+	 * ODP API does not seem to guarantee that we ever have a multi-segment
+	 * packet at this point, but we can print a message about it.
+	 */
+	if (first_seg_len == 1 &&
+	    first_seg_len != odp_packet_seg_len(*pkt))
+		printf("Could not create a segmented packet for testing.\n");
+}
+
 typedef enum crypto_test {
 	NORMAL_TEST = 0,   /**< Plain execution */
 	REPEAT_TEST,       /**< Rerun without reinitializing the session */
@@ -388,12 +421,18 @@ typedef enum crypto_test {
 	MAX_TEST,          /**< Final mark */
 } crypto_test;
 
-static void alg_test_execute(odp_crypto_session_t session,
-			     odp_crypto_op_t op,
-			     odp_auth_alg_t auth_alg,
-			     crypto_test_reference_t *ref,
-			     odp_bool_t ovr_iv,
-			     odp_bool_t bit_mode)
+typedef struct alg_test_param_t {
+	odp_crypto_session_t session;
+	odp_crypto_op_t op;
+	odp_auth_alg_t auth_alg;
+	crypto_test_reference_t *ref;
+	odp_bool_t override_iv;
+	odp_bool_t bit_mode;
+	odp_bool_t adjust_segmentation;
+	uint32_t first_seg_len;
+} alg_test_param_t;
+
+static void alg_test_execute(const alg_test_param_t *param)
 {
 	int rc;
 	odp_bool_t ok = false;
@@ -401,34 +440,42 @@ static void alg_test_execute(odp_crypto_session_t session,
 	uint32_t reflength;
 	odp_packet_data_range_t cipher_range;
 	odp_packet_data_range_t auth_range;
+	crypto_test_reference_t *ref = param->ref;
+	uint8_t *cipher_iv = param->override_iv ? ref->cipher_iv : NULL;
+	uint8_t *auth_iv   = param->override_iv ? ref->auth_iv : NULL;
 
 	cipher_range.offset = 0;
 	cipher_range.length = ref->length;
 	auth_range.offset = 0;
 	auth_range.length = ref->length;
 
-	if (bit_mode)
+	if (param->bit_mode)
 		reflength = (ref->length + 7) / 8;
 	else
 		reflength = ref->length;
 
-	odp_packet_t pkt = odp_packet_alloc(suite_context.pool,
-					    reflength + ref->digest_length);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
-	if (pkt == ODP_PACKET_INVALID)
-		goto cleanup;
-
 	for (iteration = NORMAL_TEST; iteration < MAX_TEST; iteration++) {
+		odp_packet_t pkt;
+
 		/*
 		 * Test detection of wrong digest value in input packet
 		 * only when decoding and using non-null auth algorithm.
 		 */
 		if (iteration == WRONG_DIGEST_TEST &&
-		    (auth_alg == ODP_AUTH_ALG_NULL ||
-		     op == ODP_CRYPTO_OP_ENCODE))
+		    (param->auth_alg == ODP_AUTH_ALG_NULL ||
+		     param->op == ODP_CRYPTO_OP_ENCODE))
 			continue;
 
-		if (op == ODP_CRYPTO_OP_ENCODE) {
+		pkt = odp_packet_alloc(suite_context.pool,
+				       reflength + ref->digest_length);
+		CU_ASSERT(pkt != ODP_PACKET_INVALID);
+		if (pkt == ODP_PACKET_INVALID)
+			continue;
+
+		if (param->adjust_segmentation)
+			adjust_segments(&pkt, param->first_seg_len);
+
+		if (param->op == ODP_CRYPTO_OP_ENCODE) {
 			odp_packet_copy_from_mem(pkt, 0, reflength,
 						 ref->plaintext);
 		} else {
@@ -446,52 +493,50 @@ static void alg_test_execute(odp_crypto_session_t session,
 		}
 
 		if (!suite_context.packet)
-			rc = alg_op(pkt, &ok, session,
-				    ovr_iv ? ref->cipher_iv : NULL,
-				    ovr_iv ? ref->auth_iv : NULL,
+			rc = alg_op(pkt, &ok, param->session,
+				    cipher_iv, auth_iv,
 				    &cipher_range, &auth_range,
 				    ref->aad, reflength);
 		else if (ODP_CRYPTO_ASYNC == suite_context.op_mode)
-			rc = alg_packet_op_enq(pkt, &ok, session,
-					       ovr_iv ? ref->cipher_iv : NULL,
-					       ovr_iv ? ref->auth_iv : NULL,
+			rc = alg_packet_op_enq(pkt, &ok, param->session,
+					       cipher_iv, auth_iv,
 					       &cipher_range, &auth_range,
 					       ref->aad, reflength);
 		else
-			rc = alg_packet_op(pkt, &ok, session,
-					   ovr_iv ? ref->cipher_iv : NULL,
-					   ovr_iv ? ref->auth_iv : NULL,
+			rc = alg_packet_op(pkt, &ok, param->session,
+					   cipher_iv, auth_iv,
 					   &cipher_range, &auth_range,
 					   ref->aad, reflength);
-		if (rc < 0)
+		if (rc < 0) {
+			odp_packet_free(pkt);
 			break;
+		}
 
 		if (iteration == WRONG_DIGEST_TEST) {
 			CU_ASSERT(!ok);
+			odp_packet_free(pkt);
 			continue;
 		}
 
 		CU_ASSERT(ok);
 
-		if (op == ODP_CRYPTO_OP_ENCODE) {
+		if (param->op == ODP_CRYPTO_OP_ENCODE) {
 			CU_ASSERT(!packet_cmp_mem(pkt, 0,
 						  ref->ciphertext,
 						  ref->length,
-						  bit_mode));
+						  param->bit_mode));
 			CU_ASSERT(!packet_cmp_mem(pkt, reflength,
 						  ref->digest,
 						  ref->digest_length,
-						  bit_mode));
+						  param->bit_mode));
 		} else {
 			CU_ASSERT(!packet_cmp_mem(pkt, 0,
 						  ref->plaintext,
 						  ref->length,
-						  bit_mode));
+						  param->bit_mode));
 		}
+		odp_packet_free(pkt);
 	}
-
-cleanup:
-	odp_packet_free(pkt);
 }
 
 /* Basic algorithm run function for async inplace mode.
@@ -510,8 +555,12 @@ static void alg_test(odp_crypto_op_t op,
 		     odp_bool_t ovr_iv,
 		     odp_bool_t bit_mode)
 {
+	unsigned int initial_num_failures = CU_get_number_of_failures();
 	odp_crypto_session_t session;
 	int rc;
+	uint32_t reflength;
+	uint32_t seg_len;
+	uint32_t max_shift;
 	odp_crypto_ses_create_err_t status;
 	odp_crypto_session_param_t ses_params;
 	odp_crypto_key_t cipher_key = {
@@ -530,6 +579,7 @@ static void alg_test(odp_crypto_op_t op,
 		.data = ovr_iv ? NULL : ref->auth_iv,
 		.length = ref->auth_iv_length
 	};
+	alg_test_param_t test_param;
 
 	/* Create a crypto session */
 	odp_crypto_session_param_init(&ses_params);
@@ -554,12 +604,39 @@ static void alg_test(odp_crypto_op_t op,
 	CU_ASSERT(odp_crypto_session_to_u64(session) !=
 		  odp_crypto_session_to_u64(ODP_CRYPTO_SESSION_INVALID));
 
-	alg_test_execute(session,
-			 op,
-			 auth_alg,
-			 ref,
-			 ovr_iv,
-			 bit_mode);
+	memset(&test_param, 0, sizeof(test_param));
+	test_param.session = session;
+	test_param.op = op;
+	test_param.auth_alg = auth_alg;
+	test_param.ref = ref;
+	test_param.override_iv = ovr_iv;
+	test_param.bit_mode = bit_mode;
+
+	alg_test_execute(&test_param);
+
+	if (bit_mode)
+		reflength = (ref->length + 7) / 8;
+	else
+		reflength = ref->length;
+	max_shift = reflength + ref->digest_length;
+
+	/*
+	 * Test with segmented packets with all possible segment boundaries
+	 * within the packet data (including boundary after the packet data
+	 * in the location where the digest will be written).
+	 */
+	for (seg_len = 0; seg_len <= max_shift; seg_len++) {
+		/*
+		 * CUnit chokes on too many assertion failures, so bail
+		 * out if this test has already failed.
+		 */
+		if (CU_get_number_of_failures() > initial_num_failures)
+			break;
+
+		test_param.adjust_segmentation = true;
+		test_param.first_seg_len = seg_len;
+		alg_test_execute(&test_param);
+	}
 
 	rc = odp_crypto_session_destroy(session);
 	CU_ASSERT(!rc);
