@@ -25,7 +25,6 @@ odpapiinclude_HEADERS = \
 	odp/api/deprecated.h \
 	odp/api/errno.h \
 	odp/api/event.h \
-	odp/api/feature.h \
 	odp/api/hash.h \
 	odp/api/hints.h \
 	odp/api/init.h \
@@ -80,7 +79,6 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/debug.h \
 		  odp/api/spec/errno.h \
 		  odp/api/spec/event.h \
-		  odp/api/spec/feature.h \
 		  odp/api/spec/hash.h \
 		  odp/api/spec/hints.h \
 		  odp/api/spec/init.h \

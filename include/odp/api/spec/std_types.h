@@ -118,6 +118,43 @@ typedef enum odp_support_t {
 
 } odp_support_t;
 
+/** Definition of ODP features */
+typedef union odp_feature_t {
+	/** All features */
+	uint32_t all_feat;
+
+	/** Individual feature bits */
+	struct {
+		/** Classifier APIs, e.g., odp_cls_xxx(), odp_cos_xxx() */
+		uint32_t cls:1;
+
+		/** Compression APIs, e.g., odp_comp_xxx() */
+		uint32_t compress:1;
+
+		/** Crypto APIs, e.g., odp_crypto_xxx() */
+		uint32_t crypto:1;
+
+		/** IPsec APIs, e.g., odp_ipsec_xxx() */
+		uint32_t ipsec:1;
+
+		/** Scheduler APIs, e.g., odp_schedule_xxx() */
+		uint32_t schedule:1;
+
+		/** Stash APIs, e.g., odp_stash_xxx() */
+		uint32_t stash:1;
+
+		/** Time APIs, e.g., odp_time_xxx() */
+		uint32_t time:1;
+
+		/** Timer APIs, e.g., odp_timer_xxx(), odp_timeout_xxx()  */
+		uint32_t timer:1;
+
+		/** Traffic Manager APIs, e.g., odp_tm_xxx() */
+		uint32_t tm:1;
+	} feat;
+
+} odp_feature_t;
+
 /**
  * @}
  */
