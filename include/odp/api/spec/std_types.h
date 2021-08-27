@@ -9,7 +9,7 @@
 /**
  * @file
  *
- * Standard C language types and definitions for ODP.
+ * Common types and definitions for ODP API files.
  *
  */
 
@@ -94,6 +94,29 @@ typedef struct odp_fract_u64_t {
 		uint64_t denom;
 
 } odp_fract_u64_t;
+
+/**
+ * ODP support
+ *
+ * Support levels are specified in the relative order, where ODP_SUPPORT_NO is
+ * the lowest level. E.g. if the examined support level is greater than
+ * ODP_SUPPORT_NO, the feature is supported in some form.
+ */
+typedef enum odp_support_t {
+	/**
+	 * Feature is not supported
+	 */
+	ODP_SUPPORT_NO = 0,
+	/**
+	 * Feature is supported
+	 */
+	ODP_SUPPORT_YES,
+	/**
+	 * Feature is supported and preferred
+	 */
+	ODP_SUPPORT_PREFERRED
+
+} odp_support_t;
 
 /**
  * @}
