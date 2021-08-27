@@ -20,7 +20,7 @@ extern "C" {
 #endif
 
 #include <odp/api/crypto.h>
-#include <odp/api/support.h>
+#include <odp/api/std_types.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/protocols.h>
 #include <odp/api/classification.h>

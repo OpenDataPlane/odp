@@ -53,7 +53,6 @@ odpapiinclude_HEADERS = \
 	odp/api/stash.h \
 	odp/api/std.h \
 	odp/api/std_types.h \
-	odp/api/support.h \
 	odp/api/sync.h \
 	odp/api/system_info.h \
 	odp/api/thread.h \
@@ -110,7 +109,6 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/stash.h \
 		  odp/api/spec/std.h \
 		  odp/api/spec/std_types.h \
-		  odp/api/spec/support.h \
 		  odp/api/spec/sync.h \
 		  odp/api/spec/system_info.h \
 		  odp/api/spec/thread.h \
