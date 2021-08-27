@@ -438,8 +438,12 @@ void packet_aes_xcbc_mac(odp_packet_t pkt,
 		len -= datalen;
 		if (eoff != 0) {
 			if (eoff + datalen > AES_BLOCK_SIZE) {
-				memxor(e + eoff, data, AES_BLOCK_SIZE - eoff);
-				datalen -= (AES_BLOCK_SIZE - eoff);
+				/* bytes needed to fill the partial block */
+				uint32_t remaining_len = AES_BLOCK_SIZE - eoff;
+
+				memxor(e + eoff, data, remaining_len);
+				datalen -= remaining_len;
+				data += remaining_len;
 				eoff = 0;
 				EVP_EncryptUpdate(ctx,
 						  e, &dummy_len, e, sizeof(e));
