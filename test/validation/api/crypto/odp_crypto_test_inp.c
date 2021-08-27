@@ -175,7 +175,7 @@ static int alg_op(odp_packet_t pkt,
 		  odp_packet_data_range_t *cipher_range,
 		  odp_packet_data_range_t *auth_range,
 		  uint8_t *aad,
-		  unsigned int plaintext_len)
+		  unsigned int hash_result_offset)
 {
 	int rc;
 	odp_crypto_op_result_t result;
@@ -199,7 +199,7 @@ static int alg_op(odp_packet_t pkt,
 
 	op_params.aad_ptr = aad;
 
-	op_params.hash_result_offset = plaintext_len;
+	op_params.hash_result_offset = hash_result_offset;
 
 	rc = odp_crypto_operation(&op_params, &posted, &result);
 	if (rc < 0) {
@@ -255,7 +255,7 @@ static int alg_packet_op(odp_packet_t pkt,
 			 odp_packet_data_range_t *cipher_range,
 			 odp_packet_data_range_t *auth_range,
 			 uint8_t *aad,
-			 unsigned int plaintext_len)
+			 unsigned int hash_result_offset)
 {
 	int rc;
 	odp_crypto_packet_result_t result;
@@ -276,7 +276,7 @@ static int alg_packet_op(odp_packet_t pkt,
 
 	op_params.aad_ptr = aad;
 
-	op_params.hash_result_offset = plaintext_len;
+	op_params.hash_result_offset = hash_result_offset;
 
 	rc = odp_crypto_op(&pkt, &out_pkt, &op_params, 1);
 	if (rc <= 0) {
@@ -316,7 +316,7 @@ static int alg_packet_op_enq(odp_packet_t pkt,
 			     odp_packet_data_range_t *cipher_range,
 			     odp_packet_data_range_t *auth_range,
 			     uint8_t *aad,
-			     unsigned int plaintext_len)
+			     unsigned int hash_result_offset)
 {
 	int rc;
 	odp_event_t event;
@@ -338,7 +338,7 @@ static int alg_packet_op_enq(odp_packet_t pkt,
 
 	op_params.aad_ptr = aad;
 
-	op_params.hash_result_offset = plaintext_len;
+	op_params.hash_result_offset = hash_result_offset;
 
 	rc = odp_crypto_op_enq(&pkt, &pkt, &op_params, 1);
 	if (rc <= 0) {
@@ -414,6 +414,37 @@ static void adjust_segments(odp_packet_t *pkt, uint32_t first_seg_len)
 		printf("Could not create a segmented packet for testing.\n");
 }
 
+/*
+ * Generate or verify header and trailer bytes
+ */
+static void do_header_and_trailer(odp_packet_t pkt,
+				  uint32_t header_len, uint32_t trailer_len,
+				  odp_bool_t check)
+{
+	uint32_t trailer_offset = odp_packet_len(pkt) - trailer_len;
+	uint32_t max_len = header_len > trailer_len ? header_len : trailer_len;
+	uint8_t buffer[max_len];
+	uint32_t n;
+	int rc;
+
+	for (n = 0; n < max_len; n++)
+		buffer[n] = n;
+
+	if (check) {
+		CU_ASSERT(!packet_cmp_mem_bytes(pkt, 0,
+						buffer, header_len));
+		CU_ASSERT(!packet_cmp_mem_bytes(pkt, trailer_offset,
+						buffer, trailer_len));
+	} else {
+		rc = odp_packet_copy_from_mem(pkt, 0,
+					      header_len, buffer);
+		CU_ASSERT(rc == 0);
+		rc = odp_packet_copy_from_mem(pkt, trailer_offset,
+					      trailer_len, buffer);
+		CU_ASSERT(rc == 0);
+	}
+}
+
 typedef enum crypto_test {
 	NORMAL_TEST = 0,   /**< Plain execution */
 	REPEAT_TEST,       /**< Rerun without reinitializing the session */
@@ -430,6 +461,8 @@ typedef struct alg_test_param_t {
 	odp_bool_t bit_mode;
 	odp_bool_t adjust_segmentation;
 	uint32_t first_seg_len;
+	uint32_t header_len;
+	uint32_t trailer_len;
 } alg_test_param_t;
 
 static void alg_test_execute(const alg_test_param_t *param)
@@ -444,9 +477,9 @@ static void alg_test_execute(const alg_test_param_t *param)
 	uint8_t *cipher_iv = param->override_iv ? ref->cipher_iv : NULL;
 	uint8_t *auth_iv   = param->override_iv ? ref->auth_iv : NULL;
 
-	cipher_range.offset = 0;
+	cipher_range.offset = param->header_len;
 	cipher_range.length = ref->length;
-	auth_range.offset = 0;
+	auth_range.offset = param->header_len;
 	auth_range.length = ref->length;
 
 	if (param->bit_mode)
@@ -456,6 +489,7 @@ static void alg_test_execute(const alg_test_param_t *param)
 
 	for (iteration = NORMAL_TEST; iteration < MAX_TEST; iteration++) {
 		odp_packet_t pkt;
+		uint32_t digest_offset = param->header_len + reflength;
 
 		/*
 		 * Test detection of wrong digest value in input packet
@@ -467,7 +501,8 @@ static void alg_test_execute(const alg_test_param_t *param)
 			continue;
 
 		pkt = odp_packet_alloc(suite_context.pool,
-				       reflength + ref->digest_length);
+				       param->header_len + reflength +
+				       ref->digest_length + param->trailer_len);
 		CU_ASSERT(pkt != ODP_PACKET_INVALID);
 		if (pkt == ODP_PACKET_INVALID)
 			continue;
@@ -475,19 +510,21 @@ static void alg_test_execute(const alg_test_param_t *param)
 		if (param->adjust_segmentation)
 			adjust_segments(&pkt, param->first_seg_len);
 
+		do_header_and_trailer(pkt, param->header_len, param->trailer_len, false);
+
 		if (param->op == ODP_CRYPTO_OP_ENCODE) {
-			odp_packet_copy_from_mem(pkt, 0, reflength,
-						 ref->plaintext);
+			odp_packet_copy_from_mem(pkt, param->header_len,
+						 reflength, ref->plaintext);
 		} else {
-			odp_packet_copy_from_mem(pkt, 0, reflength,
-						 ref->ciphertext);
-			odp_packet_copy_from_mem(pkt, reflength,
+			odp_packet_copy_from_mem(pkt, param->header_len,
+						 reflength, ref->ciphertext);
+			odp_packet_copy_from_mem(pkt, digest_offset,
 						 ref->digest_length,
 						 ref->digest);
 			if (iteration == WRONG_DIGEST_TEST) {
 				uint8_t byte = ~ref->digest[0];
 
-				odp_packet_copy_from_mem(pkt, reflength,
+				odp_packet_copy_from_mem(pkt, digest_offset,
 							 1, &byte);
 			}
 		}
@@ -496,17 +533,17 @@ static void alg_test_execute(const alg_test_param_t *param)
 			rc = alg_op(pkt, &ok, param->session,
 				    cipher_iv, auth_iv,
 				    &cipher_range, &auth_range,
-				    ref->aad, reflength);
+				    ref->aad, digest_offset);
 		else if (ODP_CRYPTO_ASYNC == suite_context.op_mode)
 			rc = alg_packet_op_enq(pkt, &ok, param->session,
 					       cipher_iv, auth_iv,
 					       &cipher_range, &auth_range,
-					       ref->aad, reflength);
+					       ref->aad, digest_offset);
 		else
 			rc = alg_packet_op(pkt, &ok, param->session,
 					   cipher_iv, auth_iv,
 					   &cipher_range, &auth_range,
-					   ref->aad, reflength);
+					   ref->aad, digest_offset);
 		if (rc < 0) {
 			odp_packet_free(pkt);
 			break;
@@ -520,17 +557,19 @@ static void alg_test_execute(const alg_test_param_t *param)
 
 		CU_ASSERT(ok);
 
+		do_header_and_trailer(pkt, param->header_len, param->trailer_len, true);
+
 		if (param->op == ODP_CRYPTO_OP_ENCODE) {
-			CU_ASSERT(!packet_cmp_mem(pkt, 0,
+			CU_ASSERT(!packet_cmp_mem(pkt, param->header_len,
 						  ref->ciphertext,
 						  ref->length,
 						  param->bit_mode));
-			CU_ASSERT(!packet_cmp_mem(pkt, reflength,
+			CU_ASSERT(!packet_cmp_mem(pkt, digest_offset,
 						  ref->digest,
 						  ref->digest_length,
 						  param->bit_mode));
 		} else {
-			CU_ASSERT(!packet_cmp_mem(pkt, 0,
+			CU_ASSERT(!packet_cmp_mem(pkt, param->header_len,
 						  ref->plaintext,
 						  ref->length,
 						  param->bit_mode));
@@ -635,6 +674,13 @@ static void alg_test(odp_crypto_op_t op,
 
 		test_param.adjust_segmentation = true;
 		test_param.first_seg_len = seg_len;
+		test_param.header_len = 0;
+		test_param.trailer_len = 0;
+		alg_test_execute(&test_param);
+
+		/* Test partial packet crypto with odd alignment. */
+		test_param.header_len = 3;
+		test_param.trailer_len = 32;
 		alg_test_execute(&test_param);
 	}
 
