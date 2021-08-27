@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -898,120 +899,146 @@ int internal_aad(EVP_CIPHER_CTX *ctx,
 	return ret;
 }
 
-static
-int internal_encrypt(EVP_CIPHER_CTX *ctx,
-		     odp_packet_t pkt,
-		     const odp_crypto_packet_op_param_t *param)
+typedef int (*evp_update_t)(EVP_CIPHER_CTX *, unsigned char *,
+			    int *, const unsigned char *, int);
+
+typedef int (*evp_final_t)(EVP_CIPHER_CTX *, unsigned char *, int *);
+
+static inline int internal_crypt(EVP_CIPHER_CTX *ctx,
+				 odp_packet_t pkt,
+				 const odp_crypto_packet_op_param_t *param,
+				 evp_update_t EVP_update,
+				 evp_final_t EVP_final)
 {
-	unsigned in_pos = param->cipher_range.offset;
-	unsigned out_pos = param->cipher_range.offset;
-	unsigned in_len = param->cipher_range.length;
-	uint8_t block[2 * EVP_MAX_BLOCK_LENGTH];
-	unsigned block_len = EVP_CIPHER_block_size(EVP_CIPHER_CTX_cipher(ctx));
-	int cipher_len;
-	int ret;
+	uint32_t in_pos = param->cipher_range.offset;
+	uint32_t out_pos = in_pos;
+	uint32_t in_len = param->cipher_range.length;
+	uint8_t block[EVP_MAX_BLOCK_LENGTH];
+	uint32_t buffered = 0;
+	uint32_t block_len = EVP_CIPHER_block_size(EVP_CIPHER_CTX_cipher(ctx));
+	int out_len;
+	int rc;
 
 	ODP_ASSERT(in_pos + in_len <= odp_packet_len(pkt));
 
+	/*
+	 * In the following loop we process one packet segment per iteration.
+	 * We rely on the following properties of the encrypt/decrypt update
+	 * function with the algorithms that we use:
+	 *
+	 * - The function processes (and writes to output) only whole blocks.
+	 * - Input data beyond the last full block is buffered inside OpenSSL.
+	 * - The amount of buffered data is always less than one block.
+	 * - Total amount of output data does not exceed the total amount
+	 *   of input data at any point.
+	 */
 	while (in_len > 0) {
-		uint32_t seglen = 0; /* GCC */
-		uint8_t *insegaddr = odp_packet_offset(pkt, in_pos,
-						       &seglen, NULL);
-		unsigned inseglen = in_len < seglen ? in_len : seglen;
+		uint32_t seglen = 0;
+		uint8_t *in_addr = odp_packet_offset(pkt, in_pos,
+						     &seglen, NULL);
+		uint32_t len = in_len < seglen ? in_len : seglen;
 
-		/* There should be at least 1 additional block in out buffer */
-		if (inseglen > block_len) {
-			unsigned part = inseglen - block_len;
+		if (odp_unlikely(buffered > 0)) {
+			/*
+			 * Leftover data from the previous segment is
+			 * in the buffer inside OpenSSL.
+			 */
+			uint32_t remaining_len = block_len - buffered;
 
-			EVP_EncryptUpdate(ctx, insegaddr, &cipher_len,
-					  insegaddr, part);
-			in_pos += part;
-			in_len -= part;
-			insegaddr += part;
-			inseglen -= part;
-
-			out_pos += cipher_len;
+			if (odp_likely(len >= remaining_len)) {
+				/*
+				 * Let's fill the buffered input data to a
+				 * full block and get the output block to
+				 * a memory buffer. The buffer is then copied
+				 * to the packet, crossing segment boundary.
+				 */
+				rc = EVP_update(ctx, block, &out_len,
+						in_addr, remaining_len);
+				if (odp_unlikely(rc != 1))
+					goto err;
+				if (odp_unlikely(out_len != (int)block_len))
+					goto err;
+				in_addr += remaining_len;
+				in_pos += remaining_len;
+				len -= remaining_len;
+				in_len -= remaining_len;
+				buffered = 0;
+				rc = odp_packet_copy_from_mem(pkt, out_pos,
+							      block_len, block);
+				if (odp_unlikely(rc))
+					goto err;
+				out_pos += block_len;
+			} else {
+				/*
+				 * Not enough data in this segment to fill
+				 * the buffer to a full block. Fill the buffer
+				 * a bit more and go to the next segment.
+				 */
+				rc = EVP_update(ctx, block, &out_len,
+						in_addr, len);
+				if (odp_unlikely(rc != 1))
+					goto err;
+				if (odp_unlikely(out_len > 0))
+					goto err;
+				in_pos += len;
+				in_len -= len;
+				buffered += len;
+				continue;
+			}
 		}
+		ODP_ASSERT(buffered == 0);
 
-		/* Use temporal storage */
-		if (inseglen > 0) {
-			unsigned part = inseglen;
-
-			EVP_EncryptUpdate(ctx, block, &cipher_len,
-					  insegaddr, part);
-			in_pos += part;
-			in_len -= part;
-			insegaddr += part;
-			inseglen -= part;
-
-			odp_packet_copy_from_mem(pkt, out_pos,
-						 cipher_len, block);
-			out_pos += cipher_len;
+		if (in_len > 0) {
+			/*
+			 * No input is buffered inside OpenSSL. We pass the
+			 * whole remaining segment to OpenSSL and expect to
+			 * get a multiple of block size of data processed,
+			 * with the rest left in the buffer.
+			 */
+			rc = EVP_update(ctx, in_addr, &out_len, in_addr, len);
+			if (odp_unlikely(rc != 1))
+				goto err;
+			ODP_ASSERT(CHECK_IS_POWER2(block_len));
+			buffered = len & (block_len - 1);
+			if (odp_unlikely(out_len + buffered != len))
+				goto err;
+			in_pos += len;
+			in_len -= len;
+			out_pos += len - buffered;
 		}
 	}
-
-	ret = EVP_EncryptFinal_ex(ctx, block, &cipher_len);
-	odp_packet_copy_from_mem(pkt, out_pos, cipher_len, block);
-
-	return ret;
+	if (odp_unlikely(buffered > 0))
+		goto err;
+	/*
+	 * We do not expect any more data out since the cipher range is
+	 * supposed to be a multiple of the block size.
+	 */
+	rc = EVP_final(ctx, block, &out_len);
+	if (odp_unlikely(out_len != 0))
+		return 0;
+	return rc;
+err:
+	ODP_ERR("internal error\n");
+	(void)EVP_final(ctx, block, &out_len);
+	return 0;
 }
 
-static
-int internal_decrypt(EVP_CIPHER_CTX *ctx,
-		     odp_packet_t pkt,
-		     const odp_crypto_packet_op_param_t *param)
+static int internal_encrypt(EVP_CIPHER_CTX *ctx,
+			    odp_packet_t pkt,
+			    const odp_crypto_packet_op_param_t *param)
 {
-	unsigned in_pos = param->cipher_range.offset;
-	unsigned out_pos = param->cipher_range.offset;
-	unsigned in_len = param->cipher_range.length;
-	uint8_t block[2 * EVP_MAX_BLOCK_LENGTH];
-	unsigned block_len = EVP_CIPHER_block_size(EVP_CIPHER_CTX_cipher(ctx));
-	int cipher_len;
-	int ret;
+	return internal_crypt(ctx, pkt, param,
+			      EVP_EncryptUpdate,
+			      EVP_EncryptFinal_ex);
+}
 
-	ODP_ASSERT(in_pos + in_len <= odp_packet_len(pkt));
-
-	while (in_len > 0) {
-		uint32_t seglen = 0; /* GCC */
-		uint8_t *insegaddr = odp_packet_offset(pkt, in_pos,
-						       &seglen, NULL);
-		unsigned inseglen = in_len < seglen ? in_len : seglen;
-
-		/* There should be at least 1 additional block in out buffer */
-		if (inseglen > block_len) {
-			unsigned part = inseglen - block_len;
-
-			EVP_DecryptUpdate(ctx, insegaddr, &cipher_len,
-					  insegaddr, part);
-			in_pos += part;
-			in_len -= part;
-			insegaddr += part;
-			inseglen -= part;
-
-			out_pos += cipher_len;
-		}
-
-		/* Use temporal storage */
-		if (inseglen > 0) {
-			unsigned part = inseglen;
-
-			EVP_DecryptUpdate(ctx, block, &cipher_len,
-					  insegaddr, part);
-			in_pos += part;
-			in_len -= part;
-			insegaddr += part;
-			inseglen -= part;
-
-			odp_packet_copy_from_mem(pkt, out_pos,
-						 cipher_len, block);
-			out_pos += cipher_len;
-		}
-	}
-
-	ret = EVP_DecryptFinal_ex(ctx, block, &cipher_len);
-	odp_packet_copy_from_mem(pkt, out_pos, cipher_len, block);
-
-	return ret;
+static int internal_decrypt(EVP_CIPHER_CTX *ctx,
+			    odp_packet_t pkt,
+			    const odp_crypto_packet_op_param_t *param)
+{
+	return internal_crypt(ctx, pkt, param,
+			      EVP_DecryptUpdate,
+			      EVP_DecryptFinal_ex);
 }
 
 static void
