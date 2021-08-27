@@ -388,70 +388,19 @@ typedef enum crypto_test {
 	MAX_TEST,          /**< Final mark */
 } crypto_test;
 
-/* Basic algorithm run function for async inplace mode.
- * Creates a session from input parameters and runs one operation
- * on input_vec. Checks the output of the crypto operation against
- * output_vec. Operation completion event is dequeued polling the
- * session output queue. Completion context pointer is retrieved
- * and checked against the one set before the operation.
- * Completion event can be a separate buffer or the input packet
- * buffer can be used.
- * */
-static void alg_test(odp_crypto_op_t op,
-		     odp_cipher_alg_t cipher_alg,
-		     odp_auth_alg_t auth_alg,
-		     crypto_test_reference_t *ref,
-		     odp_bool_t ovr_iv,
-		     odp_bool_t bit_mode)
+static void alg_test_execute(odp_crypto_session_t session,
+			     odp_crypto_op_t op,
+			     odp_auth_alg_t auth_alg,
+			     crypto_test_reference_t *ref,
+			     odp_bool_t ovr_iv,
+			     odp_bool_t bit_mode)
 {
-	odp_crypto_session_t session;
 	int rc;
-	odp_crypto_ses_create_err_t status;
 	odp_bool_t ok = false;
 	int iteration;
 	uint32_t reflength;
-	odp_crypto_session_param_t ses_params;
 	odp_packet_data_range_t cipher_range;
 	odp_packet_data_range_t auth_range;
-	odp_crypto_key_t cipher_key = {
-		.data = ref->cipher_key,
-		.length = ref->cipher_key_length
-	};
-	odp_crypto_key_t auth_key = {
-		.data = ref->auth_key,
-		.length = ref->auth_key_length
-	};
-	odp_crypto_iv_t cipher_iv = {
-		.data = ovr_iv ? NULL : ref->cipher_iv,
-		.length = ref->cipher_iv_length
-	};
-	odp_crypto_iv_t auth_iv = {
-		.data = ovr_iv ? NULL : ref->auth_iv,
-		.length = ref->auth_iv_length
-	};
-
-	/* Create a crypto session */
-	odp_crypto_session_param_init(&ses_params);
-	ses_params.op = op;
-	ses_params.auth_cipher_text = false;
-	ses_params.op_mode = suite_context.op_mode;
-	ses_params.pref_mode = suite_context.pref_mode;
-	ses_params.cipher_alg = cipher_alg;
-	ses_params.auth_alg = auth_alg;
-	ses_params.compl_queue = suite_context.queue;
-	ses_params.output_pool = suite_context.pool;
-	ses_params.cipher_key = cipher_key;
-	ses_params.cipher_iv = cipher_iv;
-	ses_params.auth_iv = auth_iv;
-	ses_params.auth_key = auth_key;
-	ses_params.auth_digest_len = ref->digest_length;
-	ses_params.auth_aad_len = ref->aad_length;
-
-	rc = odp_crypto_session_create(&ses_params, &session, &status);
-	CU_ASSERT_FATAL(!rc);
-	CU_ASSERT(status == ODP_CRYPTO_SES_CREATE_ERR_NONE);
-	CU_ASSERT(odp_crypto_session_to_u64(session) !=
-		  odp_crypto_session_to_u64(ODP_CRYPTO_SESSION_INVALID));
 
 	cipher_range.offset = 0;
 	cipher_range.length = ref->length;
@@ -463,7 +412,6 @@ static void alg_test(odp_crypto_op_t op,
 	else
 		reflength = ref->length;
 
-	/* Prepare input data */
 	odp_packet_t pkt = odp_packet_alloc(suite_context.pool,
 					    reflength + ref->digest_length);
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
@@ -471,8 +419,10 @@ static void alg_test(odp_crypto_op_t op,
 		goto cleanup;
 
 	for (iteration = NORMAL_TEST; iteration < MAX_TEST; iteration++) {
-		/* checking against wrong digest is meaningless for NULL digest
-		 * or when generating digest */
+		/*
+		 * Test detection of wrong digest value in input packet
+		 * only when decoding and using non-null auth algorithm.
+		 */
 		if (iteration == WRONG_DIGEST_TEST &&
 		    (auth_alg == ODP_AUTH_ALG_NULL ||
 		     op == ODP_CRYPTO_OP_ENCODE))
@@ -540,9 +490,77 @@ static void alg_test(odp_crypto_op_t op,
 		}
 	}
 
-	odp_packet_free(pkt);
-
 cleanup:
+	odp_packet_free(pkt);
+}
+
+/* Basic algorithm run function for async inplace mode.
+ * Creates a session from input parameters and runs one operation
+ * on input_vec. Checks the output of the crypto operation against
+ * output_vec. Operation completion event is dequeued polling the
+ * session output queue. Completion context pointer is retrieved
+ * and checked against the one set before the operation.
+ * Completion event can be a separate buffer or the input packet
+ * buffer can be used.
+ * */
+static void alg_test(odp_crypto_op_t op,
+		     odp_cipher_alg_t cipher_alg,
+		     odp_auth_alg_t auth_alg,
+		     crypto_test_reference_t *ref,
+		     odp_bool_t ovr_iv,
+		     odp_bool_t bit_mode)
+{
+	odp_crypto_session_t session;
+	int rc;
+	odp_crypto_ses_create_err_t status;
+	odp_crypto_session_param_t ses_params;
+	odp_crypto_key_t cipher_key = {
+		.data = ref->cipher_key,
+		.length = ref->cipher_key_length
+	};
+	odp_crypto_key_t auth_key = {
+		.data = ref->auth_key,
+		.length = ref->auth_key_length
+	};
+	odp_crypto_iv_t cipher_iv = {
+		.data = ovr_iv ? NULL : ref->cipher_iv,
+		.length = ref->cipher_iv_length
+	};
+	odp_crypto_iv_t auth_iv = {
+		.data = ovr_iv ? NULL : ref->auth_iv,
+		.length = ref->auth_iv_length
+	};
+
+	/* Create a crypto session */
+	odp_crypto_session_param_init(&ses_params);
+	ses_params.op = op;
+	ses_params.auth_cipher_text = false;
+	ses_params.op_mode = suite_context.op_mode;
+	ses_params.pref_mode = suite_context.pref_mode;
+	ses_params.cipher_alg = cipher_alg;
+	ses_params.auth_alg = auth_alg;
+	ses_params.compl_queue = suite_context.queue;
+	ses_params.output_pool = suite_context.pool;
+	ses_params.cipher_key = cipher_key;
+	ses_params.cipher_iv = cipher_iv;
+	ses_params.auth_iv = auth_iv;
+	ses_params.auth_key = auth_key;
+	ses_params.auth_digest_len = ref->digest_length;
+	ses_params.auth_aad_len = ref->aad_length;
+
+	rc = odp_crypto_session_create(&ses_params, &session, &status);
+	CU_ASSERT_FATAL(!rc);
+	CU_ASSERT(status == ODP_CRYPTO_SES_CREATE_ERR_NONE);
+	CU_ASSERT(odp_crypto_session_to_u64(session) !=
+		  odp_crypto_session_to_u64(ODP_CRYPTO_SESSION_INVALID));
+
+	alg_test_execute(session,
+			 op,
+			 auth_alg,
+			 ref,
+			 ovr_iv,
+			 bit_mode);
+
 	rc = odp_crypto_session_destroy(session);
 	CU_ASSERT(!rc);
 }
