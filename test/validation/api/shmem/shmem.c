@@ -297,6 +297,26 @@ static void shmem_test_flag_hp(void)
 	CU_ASSERT(odp_shm_free(shm) == 0);
 }
 
+/*
+ * Test reserving memory from normal pages
+ */
+static void shmem_test_flag_no_hp(void)
+{
+	odp_shm_t shm;
+	odp_shm_info_t info;
+
+	shm = odp_shm_reserve(MEM_NAME, sizeof(shared_test_data_t), 0,
+			      ODP_SHM_NO_HP);
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+
+	/* Make sure that the memory is reserved from normal pages */
+	CU_ASSERT_FATAL(odp_shm_info(shm, &info) == 0);
+
+	CU_ASSERT(info.page_size == odp_sys_page_size());
+
+	CU_ASSERT(odp_shm_free(shm) == 0);
+}
+
 static void shmem_test_flag_proc(void)
 {
 	odp_shm_t shm;
@@ -971,6 +991,7 @@ odp_testinfo_t shmem_suite[] = {
 	ODP_TEST_INFO(shmem_test_capability),
 	ODP_TEST_INFO(shmem_test_reserve),
 	ODP_TEST_INFO(shmem_test_flag_hp),
+	ODP_TEST_INFO(shmem_test_flag_no_hp),
 	ODP_TEST_INFO(shmem_test_flag_proc),
 	ODP_TEST_INFO(shmem_test_flag_export),
 	ODP_TEST_INFO(shmem_test_flag_hw_access),
