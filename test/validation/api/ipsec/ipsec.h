@@ -90,6 +90,8 @@ typedef struct {
 	int num_pkt;
 	struct {
 		odp_ipsec_op_status_t status;
+		odp_packet_reass_status_t reass_status;
+		uint16_t num_frags;
 		const ipsec_test_packet *pkt_res;
 		odp_proto_l3_type_t l3_type;
 		odp_proto_l4_type_t l4_type;

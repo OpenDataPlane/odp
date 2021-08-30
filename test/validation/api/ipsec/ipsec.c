@@ -582,8 +582,6 @@ static odp_event_t recv_pkt_async_inbound(odp_ipsec_op_status_t status)
 static int recv_pkts_inline(const ipsec_test_part *part,
 			    odp_packet_t *pkto)
 {
-	odp_packet_reass_partial_state_t reass_state;
-	odp_packet_reass_status_t reass_status;
 	odp_queue_t queue = ODP_QUEUE_INVALID;
 	int i;
 
@@ -613,6 +611,11 @@ static int recv_pkts_inline(const ipsec_test_part *part,
 		if (ODP_EVENT_INVALID != ev) {
 			odp_packet_t pkt;
 			int num_pkts = 0;
+			odp_packet_reass_status_t reass_status;
+			odp_packet_reass_info_t reass = {0};
+			odp_packet_reass_partial_state_t reass_state;
+			odp_packet_t frags[MAX_FRAGS];
+			int j;
 
 			CU_ASSERT(odp_event_is_valid(ev) == 1);
 			CU_ASSERT_EQUAL(ODP_EVENT_PACKET, odp_event_type(ev));
@@ -621,13 +624,18 @@ static int recv_pkts_inline(const ipsec_test_part *part,
 			CU_ASSERT(!part->out[i].status.error.sa_lookup);
 
 			reass_status = odp_packet_reass_status(pkt);
-			if (ODP_PACKET_REASS_INCOMPLETE != reass_status) {
+			CU_ASSERT(reass_status == part->out[i].reass_status);
+
+			switch (reass_status) {
+			case ODP_PACKET_REASS_COMPLETE:
+				CU_ASSERT(odp_packet_reass_info(pkt, &reass) == 0);
+				CU_ASSERT(part->out[i].num_frags == reass.num_frags);
+				/* FALLTHROUGH */
+			case ODP_PACKET_REASS_NONE:
 				pkto[i] = pkt;
 				num_pkts = 1;
-			} else {
-				odp_packet_t frags[MAX_FRAGS];
-				int j;
-
+				break;
+			case ODP_PACKET_REASS_INCOMPLETE:
 				CU_ASSERT(0 ==
 					  odp_packet_reass_partial_state(pkt, frags, &reass_state));
 				num_pkts = reass_state.num_frags;
@@ -635,6 +643,10 @@ static int recv_pkts_inline(const ipsec_test_part *part,
 				CU_ASSERT_FATAL(i + num_pkts <= part->num_pkt);
 				for (j = 0; j < num_pkts; j++)
 					pkto[i + j] = frags[j];
+				break;
+			default:
+				CU_FAIL("Unknown reassembly status");
+				break;
 			}
 
 			for (; num_pkts > 0; num_pkts--)
