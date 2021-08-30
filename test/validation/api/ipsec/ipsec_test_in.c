@@ -1772,7 +1772,8 @@ static void test_multi_out_in(odp_ipsec_sa_t out_sa,
 			      uint8_t tunnel_ip_ver,
 			      int num_input_packets,
 			      ipsec_test_packet *input_packets[],
-			      ipsec_test_packet *result_packet)
+			      ipsec_test_packet *result_packet,
+			      odp_packet_reass_status_t reass_status)
 {
 	uint8_t ver_ihl = result_packet->data[result_packet->l3_offset];
 	odp_bool_t is_result_ipv6 = (ODPH_IPV4HDR_VER(ver_ihl) == ODPH_IPV6);
@@ -1800,6 +1801,8 @@ static void test_multi_out_in(odp_ipsec_sa_t out_sa,
 		if (i == num_input_packets - 1) {
 			part_prep_plain(&test_in, 1, is_result_ipv6, true);
 			test_in.out[0].pkt_res = result_packet;
+			test_in.out[0].reass_status = reass_status;
+			test_in.out[0].num_frags = num_input_packets;
 		}
 		ipsec_test_packet_from_pkt(&test_pkt, &pkt);
 		test_in.pkt_in = &test_pkt;
@@ -1820,7 +1823,8 @@ static void test_in_ipv4_esp_reass_success_two_frags(odp_ipsec_sa_t out_sa,
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV4,
 			  ARRAY_SIZE(input_packets),
 			  input_packets,
-			  result_packet);
+			  result_packet,
+			  ODP_PACKET_REASS_COMPLETE);
 }
 
 static void test_in_ipv4_esp_reass_success_four_frags(odp_ipsec_sa_t out_sa,
@@ -1837,7 +1841,8 @@ static void test_in_ipv4_esp_reass_success_four_frags(odp_ipsec_sa_t out_sa,
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV4,
 			  ARRAY_SIZE(input_packets),
 			  input_packets,
-			  result_packet);
+			  result_packet,
+			  ODP_PACKET_REASS_COMPLETE);
 }
 
 static void test_in_ipv4_esp_reass_success_two_frags_ooo(odp_ipsec_sa_t out_sa,
@@ -1852,7 +1857,8 @@ static void test_in_ipv4_esp_reass_success_two_frags_ooo(odp_ipsec_sa_t out_sa,
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV4,
 			  ARRAY_SIZE(input_packets),
 			  input_packets,
-			  result_packet);
+			  result_packet,
+			  ODP_PACKET_REASS_COMPLETE);
 }
 
 static void test_in_ipv4_esp_reass_success_four_frags_ooo(odp_ipsec_sa_t out_sa,
@@ -1869,7 +1875,8 @@ static void test_in_ipv4_esp_reass_success_four_frags_ooo(odp_ipsec_sa_t out_sa,
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV4,
 			  ARRAY_SIZE(input_packets),
 			  input_packets,
-			  result_packet);
+			  result_packet,
+			  ODP_PACKET_REASS_COMPLETE);
 }
 
 static void test_in_ipv4_esp_reass_incomp_missing(odp_ipsec_sa_t out_sa,
@@ -1883,7 +1890,8 @@ static void test_in_ipv4_esp_reass_incomp_missing(odp_ipsec_sa_t out_sa,
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV4,
 			  ARRAY_SIZE(input_packets),
 			  input_packets,
-			  result_packet);
+			  result_packet,
+			  ODP_PACKET_REASS_INCOMPLETE);
 }
 
 static void test_in_ipv4_esp_reass_success(void)
@@ -2001,7 +2009,8 @@ static void test_in_ipv6_esp_reass_success_two_frags(odp_ipsec_sa_t out_sa,
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV6,
 			  ARRAY_SIZE(input_packets),
 			  input_packets,
-			  result_packet);
+			  result_packet,
+			  ODP_PACKET_REASS_COMPLETE);
 }
 
 static void test_in_ipv6_esp_reass_success_four_frags(odp_ipsec_sa_t out_sa,
@@ -2018,7 +2027,8 @@ static void test_in_ipv6_esp_reass_success_four_frags(odp_ipsec_sa_t out_sa,
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV6,
 			  ARRAY_SIZE(input_packets),
 			  input_packets,
-			  result_packet);
+			  result_packet,
+			  ODP_PACKET_REASS_COMPLETE);
 }
 
 static void test_in_ipv6_esp_reass_success_two_frags_ooo(odp_ipsec_sa_t out_sa,
@@ -2033,7 +2043,8 @@ static void test_in_ipv6_esp_reass_success_two_frags_ooo(odp_ipsec_sa_t out_sa,
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV6,
 			  ARRAY_SIZE(input_packets),
 			  input_packets,
-			  result_packet);
+			  result_packet,
+			  ODP_PACKET_REASS_COMPLETE);
 }
 
 static void test_in_ipv6_esp_reass_success_four_frags_ooo(odp_ipsec_sa_t out_sa,
@@ -2050,7 +2061,8 @@ static void test_in_ipv6_esp_reass_success_four_frags_ooo(odp_ipsec_sa_t out_sa,
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV6,
 			  ARRAY_SIZE(input_packets),
 			  input_packets,
-			  result_packet);
+			  result_packet,
+			  ODP_PACKET_REASS_COMPLETE);
 }
 
 static void test_in_ipv6_esp_reass_incomp_missing(odp_ipsec_sa_t out_sa,
@@ -2064,7 +2076,8 @@ static void test_in_ipv6_esp_reass_incomp_missing(odp_ipsec_sa_t out_sa,
 	test_multi_out_in(out_sa, in_sa, ODPH_IPV6,
 			  ARRAY_SIZE(input_packets),
 			  input_packets,
-			  result_packet);
+			  result_packet,
+			  ODP_PACKET_REASS_INCOMPLETE);
 }
 
 static void test_in_ipv6_esp_reass_success(void)
