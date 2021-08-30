@@ -97,6 +97,15 @@ extern "C" {
 #define ODP_SHM_HW_ACCESS	0x20
 
 /**
+ * Don't use huge pages
+ *
+ * When set, this flag guarantees that the memory reserved by odp_shm_reserve()
+ * is not allocated from huge pages. This flag must not be combined with
+ * ODP_SHM_HP.
+ */
+#define ODP_SHM_NO_HP		0x40
+
+/**
  * Shared memory block info
  */
 typedef struct odp_shm_info_t {
