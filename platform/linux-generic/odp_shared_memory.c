@@ -18,7 +18,7 @@
 
 /* Supported ODP_SHM_* flags */
 #define SUPPORTED_SHM_FLAGS (ODP_SHM_SW_ONLY | ODP_SHM_PROC | ODP_SHM_SINGLE_VA | ODP_SHM_EXPORT | \
-			     ODP_SHM_HP)
+			     ODP_SHM_HP | ODP_SHM_NO_HP)
 
 static inline uint32_t from_handle(odp_shm_t shm)
 {
