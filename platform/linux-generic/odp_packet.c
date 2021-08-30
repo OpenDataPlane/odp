@@ -3014,6 +3014,13 @@ odp_packet_reass_status(odp_packet_t pkt)
 	return ODP_PACKET_REASS_NONE;
 }
 
+int odp_packet_reass_info(odp_packet_t pkt, odp_packet_reass_info_t *info)
+{
+	(void)pkt;
+	(void)info;
+	return -1;
+}
+
 int
 odp_packet_reass_partial_state(odp_packet_t pkt, odp_packet_t frags[],
 			       odp_packet_reass_partial_state_t *res)
