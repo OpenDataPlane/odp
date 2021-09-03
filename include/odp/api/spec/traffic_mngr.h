@@ -98,18 +98,6 @@ extern "C" {
  */
 
 /**
- * @def ODP_TM_MIN_SHAPER_BW
- * The lowest amount of bandwidth that any shaper's peak or commit rate can
- * be set to. It is in units of 1000 bytes/second.
- */
-
-/**
- * @def ODP_TM_MAX_SHAPER_BW
- * The largest amount of bandwidth that any shaper's peak or commit rate can
- * be set to. It is in units of 1000 bytes/second.
- */
-
-/**
  * @def ODP_NUM_SHAPER_COLORS
  * The number of enumeration values defined in the odp_tm_shaper_color_t type.
  */
