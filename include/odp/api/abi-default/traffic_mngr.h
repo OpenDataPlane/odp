@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2022, Marvell
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -74,20 +75,6 @@ extern "C" {
  * *TBD* Does this need to be as large as ODP_TM_MAX_TM_QUEUES? *TBD*
  */
 #define ODP_TM_MAX_TM_NODE_FANIN  (4 * 1024)
-
-/** The ODP_TM_MIN_SHAPER_BW constant is the smallest amount of bandwidth that
- * can a shaper's peak or commit rate can be set to.  It is in units of
- * 1000 bytes/second so that it and the ODP_TM_MAX_SHAPER_BW can both fit in
- * 32 bits.
- */
-#define ODP_TM_MIN_SHAPER_BW  1
-
-/** The ODP_TM_MAX_SHAPER_BW constant is the largest amound of bandwidth that
- * any shaper's peak or commit rate can be set to.  It is in units of
- * 1000 bytes/second so that it and the ODP_TM_MIN_SHAPER_BW can both fit in
- * 32 bits.
- */
-#define ODP_TM_MAX_SHAPER_BW  12500000
 
 /** The ODP_NUM_SHAPER_COLORS constant just counts the number of enumeration
  * values defined in the odp_tm_shaper_color_t type.
