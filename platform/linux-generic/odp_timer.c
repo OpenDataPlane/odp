@@ -285,7 +285,7 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	size_t sz0, sz1, sz2;
 	uint64_t tp_size;
 	uint64_t res_ns, nsec_per_scan;
-	uint32_t flags = ODP_SHM_SW_ONLY;
+	uint32_t flags = 0;
 
 	if (odp_global_ro.shm_single_va)
 		flags |= ODP_SHM_SINGLE_VA;
