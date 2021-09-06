@@ -236,9 +236,8 @@ odph_cuckoo_table_create(
 	bucket_num = align32pow2(capacity) / HASH_BUCKET_ENTRIES;
 	bucket_size = bucket_num * sizeof(struct cuckoo_table_bucket);
 
-	shm_tbl = odp_shm_reserve(
-				name, impl_size + bucket_size,
-				ODP_CACHE_LINE_SIZE, ODP_SHM_SW_ONLY);
+	shm_tbl = odp_shm_reserve(name, impl_size + bucket_size,
+				  ODP_CACHE_LINE_SIZE, 0);
 
 	if (shm_tbl == ODP_SHM_INVALID) {
 		ODPH_DBG(
