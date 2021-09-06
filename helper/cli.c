@@ -85,7 +85,7 @@ int odph_cli_init(const odph_cli_param_t *param)
 	int shm_size = sizeof(cli_shm_t) +
 		param->max_user_commands * sizeof(user_cmd_t);
 	odp_shm_t shm_hdl =
-		odp_shm_reserve(shm_name, shm_size, 64, ODP_SHM_SW_ONLY);
+		odp_shm_reserve(shm_name, shm_size, 64, 0);
 
 	if (shm_hdl != ODP_SHM_INVALID)
 		shm = (cli_shm_t *)odp_shm_addr(shm_hdl);

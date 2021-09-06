@@ -513,9 +513,7 @@ odph_table_t odph_iplookup_table_create(const char *name,
 	impl_size = sizeof(odph_iplookup_table_impl);
 	l1_size = ENTRY_SIZE * ENTRY_NUM_L1;
 
-	shm_tbl = odp_shm_reserve(
-				name, impl_size + l1_size,
-				ODP_CACHE_LINE_SIZE, ODP_SHM_SW_ONLY);
+	shm_tbl = odp_shm_reserve(name, impl_size + l1_size, ODP_CACHE_LINE_SIZE, 0);
 
 	if (shm_tbl == ODP_SHM_INVALID) {
 		ODPH_DBG(

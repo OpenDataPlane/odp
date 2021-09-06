@@ -81,7 +81,7 @@ odph_table_t odph_hash_table_create(const char *name, uint32_t capacity,
 		ODPH_DBG("name already exist\n");
 		return NULL;
 	}
-	shmem = odp_shm_reserve(name, capacity << 20, 64, ODP_SHM_SW_ONLY);
+	shmem = odp_shm_reserve(name, capacity << 20, 64, 0);
 	if (shmem == ODP_SHM_INVALID) {
 		ODPH_DBG("shm reserve fail\n");
 		return NULL;
