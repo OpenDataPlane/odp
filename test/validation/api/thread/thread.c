@@ -44,7 +44,7 @@ static int thread_global_init(odp_instance_t *inst)
 
 	global_shm = odp_shm_reserve(GLOBAL_SHM_NAME,
 				     sizeof(global_shared_mem_t),
-				     ODP_CACHE_LINE_SIZE, ODP_SHM_SW_ONLY);
+				     ODP_CACHE_LINE_SIZE, 0);
 	if (global_shm == ODP_SHM_INVALID) {
 		fprintf(stderr, "Unable reserve memory for global_shm\n");
 		return -1;

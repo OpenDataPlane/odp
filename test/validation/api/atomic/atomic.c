@@ -752,8 +752,7 @@ static int atomic_init(odp_instance_t *inst)
 	}
 
 	global_shm = odp_shm_reserve(GLOBAL_SHM_NAME,
-				     sizeof(global_shared_mem_t), 64,
-				     ODP_SHM_SW_ONLY);
+				     sizeof(global_shared_mem_t), 64, 0);
 	if (ODP_SHM_INVALID == global_shm) {
 		fprintf(stderr, "Unable reserve memory for global_shm\n");
 		return -1;
