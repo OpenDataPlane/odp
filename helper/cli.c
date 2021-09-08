@@ -20,8 +20,8 @@
 
 /* Socketpair socket roles. */
 enum {
-	SP_READ = 0,
-	SP_WRITE = 1,
+	SP_SERVER = 0,
+	SP_CONTROL = 1,
 };
 
 #define MAX_NAME_LEN 20
@@ -35,7 +35,7 @@ typedef struct {
 
 typedef struct {
 	volatile int cli_fd;
-	/* Server thread will exit if this is false. */
+	/* Server will exit if this is false. */
 	volatile int run;
 	/* Socketpair descriptors. */
 	int sp[2];
@@ -43,7 +43,6 @@ typedef struct {
 	/* Guards cli_fd and run, which must be accessed atomically. */
 	odp_spinlock_t lock;
 	odp_spinlock_t api_lock;
-	odph_thread_t thr_server;
 	odp_instance_t instance;
 	struct sockaddr_in addr;
 	uint32_t max_user_commands;
@@ -99,8 +98,6 @@ int odph_cli_init(odp_instance_t instance, const odph_cli_param_t *param)
 	memset(shm, 0, shm_size);
 	odp_spinlock_init(&shm->lock);
 	odp_spinlock_init(&shm->api_lock);
-	shm->sp[SP_READ] = -1;
-	shm->sp[SP_WRITE] = -1;
 	shm->listen_fd = -1;
 	shm->cli_fd = -1;
 	shm->instance = instance;
@@ -120,6 +117,11 @@ int odph_cli_init(odp_instance_t instance, const odph_cli_param_t *param)
 	}
 
 	shm->max_user_commands = param->max_user_commands;
+
+	if (socketpair(PF_LOCAL, SOCK_STREAM, 0, shm->sp)) {
+		ODPH_ERR("Error: socketpair(): %s\n", strerror(errno));
+		return -1;
+	}
 
 	return 0;
 }
@@ -526,20 +528,39 @@ int odph_cli_log(const char *fmt, ...)
 	return r;
 }
 
-static int cli_server(void *arg ODP_UNUSED)
+static int msg_recv(int fd)
 {
-	cli_shm_t *shm = shm_lookup();
+	uint32_t msg;
+	int num = recv(fd, &msg, sizeof(msg), MSG_NOSIGNAL);
 
-	if (!shm) {
-		ODPH_ERR("Error: shm %s not found\n", shm_name);
+	if (num != sizeof(msg)) {
+		ODPH_ERR("Error: recv() = %d: %s\n", num, strerror(errno));
 		return -1;
 	}
 
+	return 0;
+}
+
+static int msg_send(int fd)
+{
+	uint32_t msg = 0;
+	int num = send(fd, &msg, sizeof(msg), MSG_DONTWAIT | MSG_NOSIGNAL);
+
+	if (num != sizeof(msg)) {
+		ODPH_ERR("Error: send() = %d: %s\n", num, strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+
+static int cli_server(cli_shm_t *shm)
+{
 	cli = create_cli(shm);
 
 	while (1) {
 		struct pollfd pfd[2] = {
-			{ .fd = shm->sp[SP_READ], .events = POLLIN, },
+			{ .fd = shm->sp[SP_SERVER], .events = POLLIN, },
 			{ .fd = shm->listen_fd, .events = POLLIN, },
 		};
 
@@ -632,10 +653,13 @@ static int cli_server(void *arg ODP_UNUSED)
 
 	cli_done(cli);
 
+	if (msg_send(shm->sp[SP_SERVER]))
+		return -1;
+
 	return 0;
 }
 
-int odph_cli_start(void)
+int odph_cli_run(void)
 {
 	cli_shm_t *shm = shm_lookup();
 
@@ -649,21 +673,12 @@ int odph_cli_start(void)
 	if (shm->run) {
 		odp_spinlock_unlock(&shm->lock);
 		odp_spinlock_unlock(&shm->api_lock);
-		ODPH_ERR("Error: cli server has already been started\n");
+		ODPH_ERR("Error: cli server is already running\n");
 		return -1;
 	}
 	shm->run = 1;
 	shm->cli_fd = -1;
 	odp_spinlock_unlock(&shm->lock);
-
-	shm->sp[SP_READ] = -1;
-	shm->sp[SP_WRITE] = -1;
-	shm->listen_fd = -1;
-
-	if (socketpair(PF_LOCAL, SOCK_STREAM, 0, shm->sp)) {
-		ODPH_ERR("Error: socketpair(): %s\n", strerror(errno));
-		goto error;
-	}
 
 	/* Create listening socket. */
 
@@ -691,41 +706,12 @@ int odph_cli_start(void)
 		goto error;
 	}
 
-	/* Create server thread. */
-
-	odp_cpumask_t cpumask;
-	odph_thread_common_param_t thr_common;
-	odph_thread_param_t thr_param;
-
-	if (odp_cpumask_default_control(&cpumask, 1) != 1) {
-		ODPH_ERR("Error: odp_cpumask_default_control() failed\n");
-		goto error;
-	}
-
-	odph_thread_common_param_init(&thr_common);
-	thr_common.instance = shm->instance;
-	thr_common.cpumask = &cpumask;
-
-	odph_thread_param_init(&thr_param);
-	thr_param.thr_type = ODP_THREAD_CONTROL;
-	thr_param.start = cli_server;
-
-	memset(&shm->thr_server, 0, sizeof(shm->thr_server));
-
-	if (odph_thread_create(&shm->thr_server, &thr_common, &thr_param, 1) != 1) {
-		ODPH_ERR("Error: odph_thread_create() failed\n");
-		goto error;
-	}
-
 	odp_spinlock_unlock(&shm->api_lock);
-	return 0;
+
+	return cli_server(shm);
 
 error:
 	shm->run = 0;
-	if (shm->sp[SP_READ] >= 0)
-		close(shm->sp[SP_READ]);
-	if (shm->sp[SP_WRITE] >= 0)
-		close(shm->sp[SP_WRITE]);
 	if (shm->listen_fd >= 0)
 		close(shm->listen_fd);
 	if (shm->cli_fd >= 0)
@@ -767,22 +753,15 @@ int odph_cli_stop(void)
 	 * Send a message to the server thread in order to break it out of a
 	 * blocking poll() call.
 	 */
-	int stop = 1;
-	int sent = send(shm->sp[SP_WRITE], &stop,
-			sizeof(stop), MSG_DONTWAIT | MSG_NOSIGNAL);
-
-	if (sent != sizeof(stop)) {
-		ODPH_ERR("Error: send() = %d: %s\n", sent, strerror(errno));
+	if (msg_send(shm->sp[SP_CONTROL]))
 		goto error;
-	}
 
-	if (odph_thread_join(&shm->thr_server, 1) != 1) {
-		ODPH_ERR("Error: odph_thread_join() failed\n");
+	/*
+	 * Wait for the server to exit.
+	 */
+	if (msg_recv(shm->sp[SP_CONTROL]))
 		goto error;
-	}
 
-	close(shm->sp[SP_READ]);
-	close(shm->sp[SP_WRITE]);
 	close(shm->listen_fd);
 	odp_spinlock_unlock(&shm->api_lock);
 	return 0;
@@ -804,6 +783,9 @@ int odph_cli_term(void)
 		ODPH_ERR("Error: shm %s not found\n", shm_name);
 		return -1;
 	}
+
+	close(shm->sp[SP_SERVER]);
+	close(shm->sp[SP_CONTROL]);
 
 	if (odp_shm_free(shm_hdl)) {
 		ODPH_ERR("Error: odp_shm_free() failed\n");
