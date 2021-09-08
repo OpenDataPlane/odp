@@ -96,6 +96,17 @@ static void my_cmd(int argc, char *argv[])
 		odph_cli_log("argv[%d]: %s\n", i, argv[i]);
 }
 
+static int cli_server(void *arg ODP_UNUSED)
+{
+	/* Run CLI server. */
+	if (odph_cli_run()) {
+		ODPH_ERR("odph_cli_run() failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	signal(SIGINT, sig_handler);
@@ -161,9 +172,30 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	/* Start CLI server. */
-	if (odph_cli_start()) {
-		ODPH_ERR("CLI start failed.\n");
+	/* Create server thread. */
+
+	odp_cpumask_t cpumask;
+	odph_thread_common_param_t thr_common;
+	odph_thread_param_t thr_param;
+	odph_thread_t thr_server;
+
+	if (odp_cpumask_default_control(&cpumask, 1) != 1) {
+		ODPH_ERR("Failed to get default CPU mask.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	odph_thread_common_param_init(&thr_common);
+	thr_common.instance = inst;
+	thr_common.cpumask = &cpumask;
+
+	odph_thread_param_init(&thr_param);
+	thr_param.thr_type = ODP_THREAD_CONTROL;
+	thr_param.start = cli_server;
+
+	memset(&thr_server, 0, sizeof(thr_server));
+
+	if (odph_thread_create(&thr_server, &thr_common, &thr_param, 1) != 1) {
+		ODPH_ERR("Failed to create server thread.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -179,6 +211,12 @@ int main(int argc, char *argv[])
 	/* Stop CLI server. */
 	if (odph_cli_stop()) {
 		ODPH_ERR("CLI stop failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	/* Wait for server thread to exit. */
+	if (odph_thread_join(&thr_server, 1) != 1) {
+		ODPH_ERR("Failed to join server thread.\n");
 		exit(EXIT_FAILURE);
 	}
 
