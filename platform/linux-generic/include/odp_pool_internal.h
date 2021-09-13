@@ -20,6 +20,7 @@ extern "C" {
 
 #include <odp/api/shared_memory.h>
 #include <odp/api/ticketlock.h>
+#include <odp/api/align.h>
 
 #include <odp_buffer_internal.h>
 #include <odp_config_internal.h>
@@ -94,7 +95,7 @@ typedef struct pool_t {
 	pool_destroy_cb_fn ext_destroy;
 	void            *ext_desc;
 
-	struct ODP_CACHE_ALIGNED {
+	struct ODP_ALIGNED_CACHE {
 		odp_atomic_u64_t alloc_ops;
 		odp_atomic_u64_t alloc_fails;
 		odp_atomic_u64_t free_ops;
