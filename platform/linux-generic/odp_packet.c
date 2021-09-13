@@ -2528,6 +2528,8 @@ static int packet_l4_chksum(odp_packet_hdr_t *pkt_hdr,
 	if (chksums.chksum.sctp &&
 	    pkt_hdr->p.input_flags.sctp &&
 	    !pkt_hdr->p.input_flags.ipfrag) {
+		uint32_t seg_len = 0;
+		_odp_sctphdr_t hdr_copy;
 		uint32_t sum = ~packet_sum_crc32c(pkt_hdr,
 						 pkt_hdr->p.l4_offset +
 						 _ODP_SCTPHDR_LEN,
@@ -2537,8 +2539,14 @@ static int packet_l4_chksum(odp_packet_hdr_t *pkt_hdr,
 						 l4_part_sum);
 		_odp_sctphdr_t *sctp = packet_map(pkt_hdr,
 						  pkt_hdr->p.l4_offset,
-						  NULL, NULL);
+						  &seg_len, NULL);
+		if (odp_unlikely(seg_len < sizeof(*sctp))) {
+			odp_packet_t pkt = packet_handle(pkt_hdr);
 
+			sctp = &hdr_copy;
+			odp_packet_copy_to_mem(pkt, pkt_hdr->p.l4_offset,
+					       sizeof(*sctp), sctp);
+		}
 		pkt_hdr->p.input_flags.l4_chksum_done = 1;
 		if (sum != sctp->chksum) {
 			pkt_hdr->p.flags.l4_chksum_err = 1;
