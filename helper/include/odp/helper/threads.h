@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -127,10 +127,10 @@ typedef struct {
 	odp_mem_model_t mem_model; /**< Process or thread */
 } odph_helper_options_t;
 
-/** Legacy thread table entry */
+/** @deprecated Legacy thread table entry */
 typedef odph_thread_t odph_odpthread_t;
 
-/** Legacy thread parameters */
+/** @deprecated Legacy thread parameters */
 typedef odph_thread_param_t odph_odpthread_params_t;
 
 /** Common parameters for odph_thread_create() call */
