@@ -1922,6 +1922,16 @@ static inline uint16_t parse_eth(packet_parser_t *prs, const uint8_t **parseptr,
 		*parseptr += sizeof(_odp_vlanhdr_t);
 	}
 
+	/*
+	 * The packet was too short for what we parsed. We just give up
+	 * entirely without trying to parse what fits in the packet.
+	 */
+	if (odp_unlikely(*offset > frame_len)) {
+		input_flags.all = 0;
+		input_flags.l2  = 1;
+		ethtype = 0;
+	}
+
 error:
 	prs->input_flags.all |= input_flags.all;
 
