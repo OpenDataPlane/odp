@@ -172,9 +172,16 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				pkt_hdr = packet_hdr(new_pkt);
 			}
 		} else {
-			_odp_packet_parse_layer(pkt_hdr,
-						pktio_entry->s.config.parser.layer,
-						pktio_entry->s.in_chksums);
+			odp_packet_parse_param_t param;
+
+			/*
+			 * Use odp_packet_parse() which can handle segmented
+			 * packets.
+			 */
+			param.proto = ODP_PROTO_ETH;
+			param.last_layer = pktio_entry->s.config.parser.layer;
+			param.chksums = pktio_entry->s.in_chksums;
+			odp_packet_parse(packet_handle(pkt_hdr), 0, &param);
 		}
 
 		packet_set_ts(pkt_hdr, ts);
