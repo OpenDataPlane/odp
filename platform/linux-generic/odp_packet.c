@@ -1864,7 +1864,7 @@ static inline uint16_t parse_eth(packet_parser_t *prs, const uint8_t **parseptr,
 	eth = (const _odp_ethhdr_t *)*parseptr;
 
 	/* Detect jumbo frames */
-	if (odp_unlikely(frame_len > _ODP_ETH_LEN_MAX))
+	if (odp_unlikely(frame_len - *offset > _ODP_ETH_LEN_MAX))
 		input_flags.jumbo = 1;
 
 	/* Handle Ethernet broadcast/multicast addresses */
