@@ -275,12 +275,13 @@ __LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
 				  arch/default/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
 				  arch/arm/odp_sysinfo_parse.c
-odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/cpu_inlines.h \
-				arch/default/odp/api/abi/cpu_time.h \
+odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/cpu_time.h \
 				arch/default/odp/api/abi/hash_crc32.h
 if !ODP_ABI_COMPAT
 odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 				arch/default/odp/api/abi/atomic_inlines.h \
+				arch/default/odp/api/abi/cpu_generic.h \
+				arch/arm/odp/api/abi/cpu_inlines.h \
 				arch/arm/odp/api/abi/cpu.h
 endif
 noinst_HEADERS += arch/arm/odp_atomic.h \
@@ -297,14 +298,15 @@ __LIB__libodp_linux_la_SOURCES += arch/aarch64/odp_atomic.c \
 				  arch/aarch64/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
 				  arch/aarch64/odp_sysinfo_parse.c
-odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/cpu_inlines.h \
-				arch/aarch64/odp/api/abi/cpu_time.h \
+odpapiabiarchinclude_HEADERS += arch/aarch64/odp/api/abi/cpu_time.h \
 				arch/aarch64/odp/api/abi/hash_crc32.h
 if !ODP_ABI_COMPAT
 odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 				arch/aarch64/odp/api/abi/atomic_inlines.h \
 				arch/aarch64/odp/api/abi/atomic.h \
-		                arch/aarch64/odp/api/abi/cpu.h
+				arch/default/odp/api/abi/cpu_generic.h \
+				arch/aarch64/odp/api/abi/cpu_inlines.h \
+				arch/aarch64/odp/api/abi/cpu.h
 endif
 noinst_HEADERS += arch/aarch64/odp_atomic.h \
 		  arch/aarch64/odp_cpu.h \
@@ -317,12 +319,13 @@ __LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
 				  arch/default/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
 				  arch/default/odp_sysinfo_parse.c
-odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/cpu_inlines.h \
-				arch/default/odp/api/abi/cpu_time.h \
+odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/cpu_time.h \
 				arch/default/odp/api/abi/hash_crc32.h
 if !ODP_ABI_COMPAT
 odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 				arch/default/odp/api/abi/atomic_inlines.h \
+				arch/default/odp/api/abi/cpu_generic.h \
+				arch/default/odp/api/abi/cpu_inlines.h \
 				arch/default/odp/api/abi/cpu.h
 endif
 noinst_HEADERS += arch/default/odp_atomic.h \
@@ -331,16 +334,16 @@ noinst_HEADERS += arch/default/odp_atomic.h \
 endif
 if ARCH_IS_MIPS64
 __LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
-				  arch/mips64/odp_cpu_cycles.c \
 				  arch/default/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
 				  arch/mips64/odp_sysinfo_parse.c
-odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/cpu_inlines.h \
-				arch/default/odp/api/abi/cpu_time.h \
+odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/cpu_time.h \
 				arch/default/odp/api/abi/hash_crc32.h
 if !ODP_ABI_COMPAT
 odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 				arch/default/odp/api/abi/atomic_inlines.h \
+				arch/default/odp/api/abi/cpu_generic.h \
+				arch/mips64/odp/api/abi/cpu_inlines.h \
 				arch/mips64/odp/api/abi/cpu.h
 endif
 noinst_HEADERS += arch/default/odp_atomic.h \
@@ -353,12 +356,13 @@ __LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
 				  arch/default/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
 				  arch/powerpc/odp_sysinfo_parse.c
-odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/cpu_inlines.h \
-				arch/default/odp/api/abi/cpu_time.h \
+odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/cpu_time.h \
 				arch/default/odp/api/abi/hash_crc32.h
 if !ODP_ABI_COMPAT
 odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 				arch/default/odp/api/abi/atomic_inlines.h \
+				arch/default/odp/api/abi/cpu_generic.h \
+				arch/default/odp/api/abi/cpu_inlines.h \
 				arch/powerpc/odp/api/abi/cpu.h
 endif
 noinst_HEADERS += arch/default/odp_atomic.h \
@@ -372,13 +376,13 @@ __LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
 				  arch/x86/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
 				  arch/x86/odp_sysinfo_parse.c
-odpapiabiarchinclude_HEADERS += arch/x86/odp/api/abi/cpu_inlines.h \
-				arch/x86/odp/api/abi/cpu_rdtsc.h \
+odpapiabiarchinclude_HEADERS += arch/x86/odp/api/abi/cpu_rdtsc.h \
 				arch/x86/odp/api/abi/cpu_time.h \
 				arch/x86/odp/api/abi/hash_crc32.h
 if !ODP_ABI_COMPAT
 odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 				arch/default/odp/api/abi/atomic_inlines.h \
+				arch/x86/odp/api/abi/cpu_inlines.h \
 				arch/x86/odp/api/abi/cpu.h
 endif
 noinst_HEADERS += arch/x86/cpu_flags.h \

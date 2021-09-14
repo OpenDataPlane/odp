@@ -1,4 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -7,10 +8,14 @@
 #ifndef ODP_ARCH_CPU_INLINES_H_
 #define ODP_ARCH_CPU_INLINES_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <odp/api/abi/cpu_rdtsc.h>
 
-_ODP_INLINE void odp_cpu_pause(void)
+static inline void _odp_cpu_pause(void)
 {
 #ifdef __SSE2__
 	__asm__ __volatile__ ("pause");
@@ -19,19 +24,23 @@ _ODP_INLINE void odp_cpu_pause(void)
 #endif
 }
 
-_ODP_INLINE uint64_t odp_cpu_cycles(void)
+static inline uint64_t _odp_cpu_cycles(void)
 {
 	return _odp_cpu_rdtsc();
 }
 
-_ODP_INLINE uint64_t odp_cpu_cycles_max(void)
+static inline uint64_t _odp_cpu_cycles_max(void)
 {
 	return UINT64_MAX;
 }
 
-_ODP_INLINE uint64_t odp_cpu_cycles_resolution(void)
+static inline uint64_t _odp_cpu_cycles_resolution(void)
 {
 	return 1;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

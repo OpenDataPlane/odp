@@ -7,9 +7,18 @@
 #ifndef ODP_ARCH_CPU_INLINES_H_
 #define ODP_ARCH_CPU_INLINES_H_
 
-#undef odp_cpu_pause
-#undef odp_cpu_cycles
-#undef odp_cpu_cycles_max
-#undef odp_cpu_cycles_resolution
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+static inline void _odp_cpu_pause(void)
+{
+}
+
+#include <odp/api/abi/cpu_generic.h>
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

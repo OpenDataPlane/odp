@@ -13,15 +13,8 @@ extern "C" {
 
 #define ODP_CACHE_LINE_SIZE 64
 
-static inline void odp_cpu_pause(void)
-{
-	/* YIELD hints the CPU to switch to another thread if possible
-	 * and executes as a NOP otherwise.
-	 * ISB flushes the pipeline, then restarts. This is guaranteed to
-	 * stall the CPU a number of cycles.
-	 */
-	__asm volatile("isb" ::: "memory");
-}
+/* Inlined functions for non-ABI compat mode */
+#include <odp/api/plat/cpu_inlines.h>
 
 #ifdef __cplusplus
 }

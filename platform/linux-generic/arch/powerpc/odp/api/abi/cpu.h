@@ -1,9 +1,25 @@
 /* Copyright (c) 2017-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#define _ODP_NEED_GENERIC_CPU_PAUSE
+#ifndef ODP_API_ABI_CPU_H_
+#define ODP_API_ABI_CPU_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define ODP_CACHE_LINE_SIZE 128
-#include <odp/api/abi-default/cpu.h>
+
+/* Inlined functions for non-ABI compat mode */
+#include <odp/api/plat/cpu_inlines.h>
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
+
