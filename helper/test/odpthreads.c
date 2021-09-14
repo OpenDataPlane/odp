@@ -1,4 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -12,6 +13,11 @@
 
 #include <unistd.h>
 #include <stdlib.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <errno.h>
+#include <string.h>
+#include <inttypes.h>
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
@@ -71,6 +77,9 @@ int main(int argc, char *argv[])
 	int cpu, affinity;
 	int ret;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
+	struct rlimit rlimit;
+	pthread_attr_t attr;
+	size_t stack_size;
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
@@ -158,6 +167,40 @@ int main(int argc, char *argv[])
 
 	ret = odph_thread_join(thread_tbl, num_workers);
 	if (ret < 0)
+		exit(EXIT_FAILURE);
+
+	/* Test threads with non-default stack size and sync timeout. */
+
+	pthread_attr_init(&attr);
+
+	if (pthread_attr_getstacksize(&attr, &stack_size)) {
+		ODPH_ERR("pthread_attr_getstacksize() failed\n");
+		return -1;
+	}
+
+	printf("\n");
+	printf("pthread default stack size:       %zu\n", stack_size);
+
+	if (getrlimit(RLIMIT_STACK, &rlimit)) {
+		ODPH_ERR("getrlimit() failed: %s\n", strerror(errno));
+		return -1;
+	}
+
+	printf("stack size soft limit (rlim_cur): %lu\n", rlimit.rlim_cur);
+
+	if (rlimit.rlim_cur < stack_size)
+		stack_size = rlimit.rlim_cur;
+
+	thr_param.stack_size = stack_size - ODP_PAGE_SIZE;
+	printf("use stack size:                   %" PRIu64 "\n", thr_param.stack_size);
+	thr_common.sync_timeout = 5 * ODP_TIME_SEC_IN_NS;
+	printf("use sync timeout:                 %" PRIu64 "\n", thr_common.sync_timeout);
+	printf("\n");
+
+	if (odph_thread_create(thread_tbl, &thr_common, &thr_param, num_workers) != num_workers)
+		exit(EXIT_FAILURE);
+
+	if (odph_thread_join(thread_tbl, num_workers) != num_workers)
 		exit(EXIT_FAILURE);
 
 	return 0;
