@@ -13,9 +13,8 @@ extern "C" {
 
 #define ODP_CACHE_LINE_SIZE 64
 
-static inline void odp_cpu_pause(void)
-{
-}
+/* Inlined functions for non-ABI compat mode */
+#include <odp/api/plat/cpu_inlines.h>
 
 #ifdef __cplusplus
 }

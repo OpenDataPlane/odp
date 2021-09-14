@@ -17,13 +17,8 @@ extern "C" {
 #error Please add support for your arch in cpu_arch.h
 #endif
 
-static inline void odp_cpu_pause(void)
-{
-	__asm__ __volatile__ ("nop");
-	__asm__ __volatile__ ("nop");
-	__asm__ __volatile__ ("nop");
-	__asm__ __volatile__ ("nop");
-}
+/* Inlined functions for non-ABI compat mode */
+#include <odp/api/plat/cpu_inlines.h>
 
 #ifdef __cplusplus
 }

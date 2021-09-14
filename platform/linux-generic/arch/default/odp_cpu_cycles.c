@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -6,16 +7,19 @@
 
 #include <odp_posix_extensions.h>
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
 
-#include <odp/api/cpu.h>
 #include <odp_debug_internal.h>
+#include <odp_global_data.h>
 #include <odp_init_internal.h>
 
 #define GIGA 1000000000
 
-uint64_t odp_cpu_cycles(void)
+#include <odp/api/abi/cpu_generic.h>
+
+uint64_t _odp_cpu_cycles(void)
 {
 	struct timespec time;
 	uint64_t sec, ns, hz, cycles;
@@ -26,7 +30,8 @@ uint64_t odp_cpu_cycles(void)
 	if (ret != 0)
 		ODP_ABORT("clock_gettime failed\n");
 
-	hz  = odp_cpu_hz_max();
+	hz  = odp_global_ro.system_info.cpu_hz_max[0];
+
 	sec = (uint64_t)time.tv_sec;
 	ns  = (uint64_t)time.tv_nsec;
 
@@ -34,16 +39,6 @@ uint64_t odp_cpu_cycles(void)
 	cycles += (ns * hz) / GIGA;
 
 	return cycles;
-}
-
-uint64_t odp_cpu_cycles_max(void)
-{
-	return UINT64_MAX;
-}
-
-uint64_t odp_cpu_cycles_resolution(void)
-{
-	return 1;
 }
 
 int _odp_cpu_cycles_init_global(void)

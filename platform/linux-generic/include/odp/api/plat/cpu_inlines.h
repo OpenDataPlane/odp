@@ -1,4 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -8,6 +9,10 @@
 #define ODP_PLAT_CPU_INLINES_H_
 
 #include <odp/api/hints.h>
+
+#include <odp/api/abi/cpu_inlines.h>
+
+#include <stdint.h>
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
@@ -23,7 +28,25 @@
 	#define _ODP_INLINE
 #endif
 
-#include <odp/api/abi/cpu_inlines.h>
+_ODP_INLINE void odp_cpu_pause(void)
+{
+	_odp_cpu_pause();
+}
+
+_ODP_INLINE uint64_t odp_cpu_cycles_max(void)
+{
+	return _odp_cpu_cycles_max();
+}
+
+_ODP_INLINE uint64_t odp_cpu_cycles_resolution(void)
+{
+	return _odp_cpu_cycles_resolution();
+}
+
+_ODP_INLINE uint64_t odp_cpu_cycles(void)
+{
+	return _odp_cpu_cycles();
+}
 
 _ODP_INLINE uint64_t odp_cpu_cycles_diff(uint64_t c2, uint64_t c1)
 {

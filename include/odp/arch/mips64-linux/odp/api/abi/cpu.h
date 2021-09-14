@@ -17,14 +17,6 @@ extern "C" {
 #error Please add support for your arch in abi/cpu.h
 #endif
 
-static inline void odp_cpu_pause(void)
-{
-	__asm__ __volatile__ ("nop");
-	__asm__ __volatile__ ("nop");
-	__asm__ __volatile__ ("nop");
-	__asm__ __volatile__ ("nop");
-}
-
 #ifdef __cplusplus
 }
 #endif
