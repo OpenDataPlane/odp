@@ -1607,3 +1607,8 @@ writting||writing
 wtih||with
 zombe||zombie
 zomebie||zombie
+
+#
+# ODP additions
+#
+odp_cache_aligned||ODP_ALIGNED_CACHE
