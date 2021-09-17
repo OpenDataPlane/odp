@@ -1,5 +1,5 @@
-/* Copyright (c) 2019, Nokia
- * Copyright (c) 2014-2018, Linaro Limited
+/* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -210,6 +210,35 @@ static void shmem_test_multi_thread(void)
 	odp_shm_print(shm);
 
 	CU_ASSERT(0 == odp_shm_free(shm));
+}
+
+static void shmem_test_capability(void)
+{
+	odp_shm_capability_t capa;
+
+	CU_ASSERT_FATAL(odp_shm_capability(&capa) == 0);
+
+	CU_ASSERT(capa.max_blocks);
+
+	printf("\nSHM capability\n--------------\n");
+
+	printf("  max_blocks: %u\n", capa.max_blocks);
+	printf("  max_size:   %" PRIu64 "\n", capa.max_size);
+	printf("  max_align:  %" PRIu64 "\n", capa.max_align);
+	printf("  flags:      ");
+	if (capa.flags & ODP_SHM_PROC)
+		printf("ODP_SHM_PROC ");
+	if (capa.flags & ODP_SHM_SINGLE_VA)
+		printf("ODP_SHM_SINGLE_VA ");
+	if (capa.flags & ODP_SHM_EXPORT)
+		printf("ODP_SHM_EXPORT ");
+	if (capa.flags & ODP_SHM_HP)
+		printf("ODP_SHM_HP ");
+	if (capa.flags & ODP_SHM_HW_ACCESS)
+		printf("ODP_SHM_HW_ACCESS ");
+	if (capa.flags & ODP_SHM_NO_HP)
+		printf("ODP_SHM_NO_HP ");
+	printf("\n\n");
 }
 
 static void shmem_test_reserve(void)
@@ -939,6 +968,7 @@ static void shmem_test_stress(void)
 }
 
 odp_testinfo_t shmem_suite[] = {
+	ODP_TEST_INFO(shmem_test_capability),
 	ODP_TEST_INFO(shmem_test_reserve),
 	ODP_TEST_INFO(shmem_test_flag_hp),
 	ODP_TEST_INFO(shmem_test_flag_proc),
