@@ -6,6 +6,7 @@ ODP_MODULES = atomic \
 	      comp \
 	      cpumask \
 	      crypto \
+	      dma \
 	      errno \
 	      event \
 	      hash \
@@ -41,6 +42,7 @@ TESTS = \
 	comp/comp_main$(EXEEXT) \
 	cpumask/cpumask_main$(EXEEXT) \
 	crypto/crypto_main$(EXEEXT) \
+	dma/dma_main$(EXEEXT) \
 	errno/errno_main$(EXEEXT) \
 	event/event_main$(EXEEXT) \
 	hash/hash_main$(EXEEXT) \
