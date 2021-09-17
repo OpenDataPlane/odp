@@ -1,11 +1,12 @@
-/* Copyright (c) 2019, Nokia
- * Copyright (c) 2013-2018, Linaro Limited
+/* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
 #include <odp_config_internal.h>
+#include <odp_debug_internal.h>
 #include <odp/api/debug.h>
 #include <odp/api/std_types.h>
 #include <odp/api/shared_memory.h>
@@ -14,6 +15,10 @@
 #include <odp_init_internal.h>
 #include <odp_global_data.h>
 #include <string.h>
+
+/* Supported ODP_SHM_* flags */
+#define SUPPORTED_SHM_FLAGS (ODP_SHM_SW_ONLY | ODP_SHM_PROC | ODP_SHM_SINGLE_VA | ODP_SHM_EXPORT | \
+			     ODP_SHM_HP)
 
 static inline uint32_t from_handle(odp_shm_t shm)
 {
@@ -47,6 +52,7 @@ int odp_shm_capability(odp_shm_capability_t *capa)
 	capa->max_blocks = CONFIG_SHM_BLOCKS;
 	capa->max_size = odp_global_ro.shm_max_size;
 	capa->max_align = 0;
+	capa->flags = SUPPORTED_SHM_FLAGS;
 
 	return 0;
 }
@@ -56,6 +62,12 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 {
 	int block_index;
 	uint32_t flgs = 0; /* internal ishm flags */
+	uint32_t supported_flgs = SUPPORTED_SHM_FLAGS;
+
+	if (flags & ~supported_flgs) {
+		ODP_ERR("Unsupported SHM flag\n");
+		return ODP_SHM_INVALID;
+	}
 
 	flgs = get_ishm_flags(flags);
 
