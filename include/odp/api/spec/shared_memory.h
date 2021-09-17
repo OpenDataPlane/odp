@@ -1,5 +1,5 @@
-/* Copyright (c) 2019, Nokia
- * Copyright (c) 2013-2018, Linaro Limited
+/* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -92,8 +92,7 @@ extern "C" {
  * When set, this flag guarantees that the reserved memory is accessible
  * by both CPUs and HW accelerators of the device. This may require e.g. that
  * the odp_shm_reserve() call configures the memory to be accessible through
- * an Input-Output Memory Management Unit (IOMMU). The reserve call will return
- * failure if such configuration is not supported.
+ * an Input-Output Memory Management Unit (IOMMU).
  */
 #define ODP_SHM_HW_ACCESS	0x20
 
@@ -138,6 +137,14 @@ typedef struct odp_shm_capability_t {
 	 * The value of zero means that alignment is limited only by the
 	 * available memory size. */
 	uint64_t max_align;
+
+	/** Supported shared memory flags
+	 *
+	 * A bit mask of supported ODP_SHM_* flags. Depending on the
+	 * implementation some flag combinations may not be supported. In this
+	 * case odp_shm_reserve() will fail.
+	 */
+	uint32_t flags;
 
 } odp_shm_capability_t;
 
