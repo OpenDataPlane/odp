@@ -20,9 +20,9 @@ extern "C" {
 #define CONFIG_NUM_CPU_IDS 256
 
 /*
- * Maximum number of pools. Limited by ISHM_MAX_NB_BLOCKS.
+ * Maximum number of pools.
  */
-#define ODP_CONFIG_POOLS 55
+#define ODP_CONFIG_POOLS 32
 
 /*
  * Queues reserved for ODP internal use
@@ -116,11 +116,21 @@ extern "C" {
 				   CONFIG_PACKET_HEADROOM + \
 				   CONFIG_PACKET_TAILROOM)
 
-/* Maximum number of shared memory blocks.
+/*
+ * Number of shared memory blocks reserved for implementation internal use.
  *
- * This the the number of separate SHM areas that can be reserved concurrently
+ * Each pool requires three SHM blocks (buffers, ring, user area). 20 blocks are
+ * reserved for per ODP module global data.
  */
-#define ODP_CONFIG_SHM_BLOCKS (ODP_CONFIG_POOLS + 48)
+#define CONFIG_INTERNAL_SHM_BLOCKS ((ODP_CONFIG_POOLS * 3)  + 20)
+
+/*
+ * Maximum number of shared memory blocks.
+ *
+ * This is the number of separate SHM blocks that an application can reserve
+ * concurrently.
+ */
+#define CONFIG_SHM_BLOCKS 64
 
 /*
  * Maximum event burst size

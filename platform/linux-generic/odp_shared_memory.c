@@ -15,9 +15,6 @@
 #include <odp_global_data.h>
 #include <string.h>
 
-ODP_STATIC_ASSERT(ODP_CONFIG_SHM_BLOCKS >= ODP_CONFIG_POOLS,
-		  "ODP_CONFIG_SHM_BLOCKS < ODP_CONFIG_POOLS");
-
 static inline uint32_t from_handle(odp_shm_t shm)
 {
 	return _odp_typeval(shm) - 1;
@@ -47,7 +44,7 @@ int odp_shm_capability(odp_shm_capability_t *capa)
 {
 	memset(capa, 0, sizeof(odp_shm_capability_t));
 
-	capa->max_blocks = ODP_CONFIG_SHM_BLOCKS;
+	capa->max_blocks = CONFIG_SHM_BLOCKS;
 	capa->max_size = odp_global_ro.shm_max_size;
 	capa->max_align = 0;
 
