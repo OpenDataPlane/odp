@@ -1855,6 +1855,7 @@ int odp_ipsec_in_enq(const odp_packet_t pkt_in[], int num_in,
 		ipsec_sa_t *ipsec_sa;
 		odp_ipsec_packet_result_t *result;
 		odp_queue_t queue;
+		int rc;
 
 		memset(&status, 0, sizeof(status));
 
@@ -1879,10 +1880,6 @@ int odp_ipsec_in_enq(const odp_packet_t pkt_in[], int num_in,
 			queue = ipsec_config->inbound.default_queue;
 		}
 
-		if (odp_queue_enq(queue, odp_ipsec_packet_to_event(pkt))) {
-			odp_packet_free(pkt);
-			break;
-		}
 		in_pkt++;
 		sa_idx += sa_inc;
 
@@ -1893,6 +1890,12 @@ int odp_ipsec_in_enq(const odp_packet_t pkt_in[], int num_in,
 		 */
 		if (sa == ODP_IPSEC_SA_INVALID && ipsec_sa)
 			_odp_ipsec_sa_unuse(ipsec_sa);
+
+		rc = odp_queue_enq(queue, odp_ipsec_packet_to_event(pkt));
+		if (odp_unlikely(rc)) {
+			odp_packet_free(pkt);
+			break;
+		}
 	}
 
 	return in_pkt;
@@ -1917,6 +1920,7 @@ int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in,
 		odp_ipsec_packet_result_t *result;
 		const odp_ipsec_out_opt_t *opt;
 		odp_queue_t queue;
+		int rc;
 
 		memset(&status, 0, sizeof(status));
 
@@ -1941,13 +1945,15 @@ int odp_ipsec_out_enq(const odp_packet_t pkt_in[], int num_in,
 		if (ipsec_config->stats_en)
 			ipsec_sa_err_stats_update(ipsec_sa, &status);
 
-		if (odp_queue_enq(queue, odp_ipsec_packet_to_event(pkt))) {
-			odp_packet_free(pkt);
-			break;
-		}
 		in_pkt++;
 		sa_idx += sa_inc;
 		opt_idx += opt_inc;
+
+		rc = odp_queue_enq(queue, odp_ipsec_packet_to_event(pkt));
+		if (odp_unlikely(rc)) {
+			odp_packet_free(pkt);
+			break;
+		}
 	}
 
 	return in_pkt;
@@ -2098,6 +2104,7 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 			}
 		} else {
 			odp_queue_t queue;
+			int rc;
 err:
 			if (ipsec_config->stats_en)
 				ipsec_sa_err_stats_update(ipsec_sa, &status);
@@ -2109,8 +2116,9 @@ err:
 			result->status = status;
 			queue = ipsec_sa->queue;
 
-			if (odp_queue_enq(queue,
-					  odp_ipsec_packet_to_event(pkt))) {
+			rc = odp_queue_enq(queue, odp_ipsec_packet_to_event(pkt));
+			if (odp_unlikely(rc)) {
+				in_pkt++;
 				odp_packet_free(pkt);
 				break;
 			}
