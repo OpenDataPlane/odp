@@ -90,7 +90,7 @@ int _odp_pcapng_init_global(void)
 {
 	odp_shm_t shm;
 
-	shm = odp_shm_reserve("_odp_pcapng_gbl", sizeof(pcapng_global_t),
+	shm = odp_shm_reserve("_odp_pcapng_global", sizeof(pcapng_global_t),
 			      ODP_PAGE_SIZE, 0);
 	if (shm == ODP_SHM_INVALID)
 		return -1;

@@ -463,7 +463,7 @@ static int schedule_init_global(void)
 
 	ODP_DBG("Schedule init ... ");
 
-	shm = odp_shm_reserve("_odp_scheduler",
+	shm = odp_shm_reserve("_odp_sched_basic_global",
 			      sizeof(sched_global_t),
 			      ODP_CACHE_LINE_SIZE,
 			      0);

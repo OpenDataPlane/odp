@@ -1792,7 +1792,7 @@ static int schedule_init_global(void)
 	uint64_t min_alloc;
 	uint64_t max_alloc;
 
-	shm = odp_shm_reserve("_odp_sched_scalable",
+	shm = odp_shm_reserve("_odp_sched_scalable_global",
 			      sizeof(sched_global_t),
 			      ODP_CACHE_LINE_SIZE, 0);
 

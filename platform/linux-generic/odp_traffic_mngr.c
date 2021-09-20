@@ -4936,7 +4936,7 @@ int _odp_tm_init_global(void)
 		return 0;
 	}
 
-	shm = odp_shm_reserve("_odp_traffic_mng", sizeof(tm_global_t), 0, 0);
+	shm = odp_shm_reserve("_odp_traffic_mng_global", sizeof(tm_global_t), 0, 0);
 	if (shm == ODP_SHM_INVALID)
 		return -1;
 
