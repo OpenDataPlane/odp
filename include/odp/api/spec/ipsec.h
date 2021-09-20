@@ -1591,9 +1591,10 @@ typedef struct odp_ipsec_status_t {
  * packets consumed and outputs a new packet handle for each outputted packet.
  * Outputted packets contain IPSEC result metadata (odp_ipsec_packet_result_t),
  * which should be checked for transformation errors, etc. Outputted packets
- * with error status have not been transformed but the original packet is
- * returned. The operation does not modify packets that it does not consume.
- * It cannot consume all input packets if 'num_out' is smaller than 'num_in'.
+ * with error status have undefined content, except that in case of sa_lookup
+ * error the original input packet data is returned. The operation does not
+ * modify packets that it does not consume. It cannot consume all input
+ * packets if 'num_out' is smaller than 'num_in'.
  *
  * Packet context pointer and user area content are copied from input to output
  * packets. Output packets are allocated from the same pool(s) as input packets.
@@ -1675,9 +1676,10 @@ int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
  * packets consumed and outputs a new packet handle for each outputted packet.
  * Outputted packets contain IPSEC result metadata (odp_ipsec_packet_result_t),
  * which should be checked for transformation errors, etc. Outputted packets
- * with error status have not been transformed but the original packet is
- * returned. The operation does not modify packets that it does not consume.
- * It cannot consume all input packets if 'num_out' is smaller than 'num_in'.
+ * with error status have undefined content, except that in case of MTU error
+ * the original input packet data is returned. The operation does not modify
+ * packets that it does not consume. It cannot consume all input packets if
+ * 'num_out' is smaller than 'num_in'.
  *
  * Packet context pointer and user area content are copied from input to output
  * packets. Output packets are allocated from the same pool(s) as input packets.
