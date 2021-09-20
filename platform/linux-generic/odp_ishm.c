@@ -75,7 +75,7 @@
  * if some of the block owners never procsync() after free). This number
  * should take that into account)
  */
-#define ISHM_MAX_NB_BLOCKS 128
+#define ISHM_MAX_NB_BLOCKS (CONFIG_INTERNAL_SHM_BLOCKS + CONFIG_SHM_BLOCKS)
 
 /*
  * Maximum internal shared memory block name length in chars
