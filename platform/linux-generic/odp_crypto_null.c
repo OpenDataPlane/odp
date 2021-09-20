@@ -322,7 +322,7 @@ _odp_crypto_init_global(void)
 	mem_size  = sizeof(odp_crypto_global_t);
 
 	/* Allocate our globally shared memory */
-	shm = odp_shm_reserve("_odp_crypto_pool_null", mem_size,
+	shm = odp_shm_reserve("_odp_crypto_null_global", mem_size,
 			      ODP_CACHE_LINE_SIZE,
 			      0);
 	if (ODP_SHM_INVALID == shm) {
@@ -359,7 +359,7 @@ int _odp_crypto_term_global(void)
 		rc = -1;
 	}
 
-	ret = odp_shm_free(odp_shm_lookup("_odp_crypto_pool_null"));
+	ret = odp_shm_free(odp_shm_lookup("_odp_crypto_null_global"));
 	if (ret < 0) {
 		ODP_ERR("shm free failed for _odp_crypto_pool_null\n");
 		rc = -1;

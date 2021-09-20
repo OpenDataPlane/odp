@@ -1599,7 +1599,7 @@ int _odp_timer_init_global(const odp_init_t *params)
 		return 0;
 	}
 
-	shm = odp_shm_reserve("_odp_timer", sizeof(timer_global_t),
+	shm = odp_shm_reserve("_odp_timer_global", sizeof(timer_global_t),
 			      ODP_CACHE_LINE_SIZE, 0);
 
 	timer_global = odp_shm_addr(shm);

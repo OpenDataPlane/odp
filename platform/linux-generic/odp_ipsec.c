@@ -2241,7 +2241,7 @@ int _odp_ipsec_init_global(void)
 	if (odp_global_ro.disable.ipsec)
 		return 0;
 
-	shm = odp_shm_reserve("_odp_ipsec", sizeof(*ipsec_global),
+	shm = odp_shm_reserve("_odp_ipsec_global", sizeof(*ipsec_global),
 			      ODP_CACHE_LINE_SIZE, 0);
 	if (shm == ODP_SHM_INVALID) {
 		ODP_ERR("Shm reserve failed for odp_ipsec\n");
@@ -2277,7 +2277,7 @@ int _odp_ipsec_term_global(void)
 	if (odp_global_ro.disable.ipsec)
 		return 0;
 
-	shm = odp_shm_lookup("_odp_ipsec");
+	shm = odp_shm_lookup("_odp_ipsec_global");
 
 	if (shm == ODP_SHM_INVALID || odp_shm_free(shm)) {
 		ODP_ERR("Shm free failed for odp_ipsec");

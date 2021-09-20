@@ -172,7 +172,7 @@ static int init_global(void)
 
 	ODP_DBG("Using SP scheduler\n");
 
-	shm = odp_shm_reserve("sp_scheduler",
+	shm = odp_shm_reserve("_odp_sched_sp_global",
 			      sizeof(sched_global_t),
 			      ODP_CACHE_LINE_SIZE, 0);
 

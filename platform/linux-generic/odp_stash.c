@@ -57,7 +57,7 @@ int _odp_stash_init_global(void)
 {
 	odp_shm_t shm;
 
-	shm = odp_shm_reserve("_odp_stash_table", sizeof(stash_global_t),
+	shm = odp_shm_reserve("_odp_stash_global", sizeof(stash_global_t),
 			      ODP_CACHE_LINE_SIZE, 0);
 
 	stash_global = odp_shm_addr(shm);

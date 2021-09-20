@@ -268,7 +268,7 @@ uint32_t _odp_queue_lf_init_global(uint32_t *queue_lf_size,
 	if (!lockfree)
 		return 0;
 
-	shm = odp_shm_reserve("_odp_queues_lf", sizeof(queue_lf_global_t),
+	shm = odp_shm_reserve("_odp_queues_lf_global", sizeof(queue_lf_global_t),
 			      ODP_CACHE_LINE_SIZE,
 			      0);
 	if (shm == ODP_SHM_INVALID)

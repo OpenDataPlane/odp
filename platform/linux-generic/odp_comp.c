@@ -620,7 +620,7 @@ int _odp_comp_init_global(void)
 	mem_size = sizeof(*global);
 
 	/* Allocate our globally shared memory */
-	shm = odp_shm_reserve("_odp_comp_pool", mem_size,
+	shm = odp_shm_reserve("_odp_comp_global", mem_size,
 			      ODP_CACHE_LINE_SIZE, 0);
 
 	global = odp_shm_addr(shm);

@@ -68,7 +68,7 @@ int _odp_thread_init_global(void)
 	if (num_max > ODP_THREAD_COUNT_MAX)
 		num_max = ODP_THREAD_COUNT_MAX;
 
-	shm = odp_shm_reserve("_odp_thread_globals",
+	shm = odp_shm_reserve("_odp_thread_global",
 			      sizeof(thread_globals_t),
 			      ODP_CACHE_LINE_SIZE, 0);
 
@@ -97,7 +97,7 @@ int _odp_thread_term_global(void)
 	if (num)
 		ODP_ERR("%u threads have not called odp_term_local().\n", num);
 
-	ret = odp_shm_free(odp_shm_lookup("_odp_thread_globals"));
+	ret = odp_shm_free(odp_shm_lookup("_odp_thread_global"));
 	if (ret < 0)
 		ODP_ERR("shm free failed for _odp_thread_globals");
 
