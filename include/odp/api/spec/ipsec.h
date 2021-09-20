@@ -1786,6 +1786,10 @@ int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
  * Logically, packet processing (e.g. sequence number check) happens in the
  * output order as defined above.
  *
+ * If a result packet event cannot be enqueued (e.g. the destination queue
+ * is full), then the output packet is dropped and no event for the consumed
+ * input packet is delivered to the appliation.
+ *
  * The function may be used also in inline processing mode, e.g. for IPSEC
  * packets for which inline processing is not possible. Packets for the same SA
  * may be processed simultaneously in both modes (initiated by this function
@@ -1835,8 +1839,12 @@ int odp_ipsec_in_enq(const odp_packet_t pkt[], int num,
  * (e.g. using locks) that the operation is not called simultaneously from
  * multiple threads for the same SA(s).
  *
- * Logically, packet processing (e.g. sequence number assignment) happens in the
- * output order as defined above.
+ * Logically, packet processing (e.g. sequence number assignment) happens in
+ * the output order as defined above.
+ *
+ * If a result packet event cannot be enqueued (e.g. the destination queue
+ * is full), then the output packet is dropped and no event for the consumed
+ * input packet is delivered to the appliation.
  *
  * The function may be used also in inline processing mode, e.g. for IPSEC
  * packets for which inline processing is not possible.
