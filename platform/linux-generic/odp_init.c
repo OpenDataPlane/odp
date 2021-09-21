@@ -66,6 +66,7 @@ static void disable_features(odp_global_data_ro_t *global_ro,
 	if (disable_ipsec && disable_crypto)
 		global_ro->disable.crypto = 1;
 
+	global_ro->disable.stash = init_param->not_used.feat.stash;
 	global_ro->disable.traffic_mngr = init_param->not_used.feat.tm;
 	global_ro->disable.compress = init_param->not_used.feat.compress;
 }
