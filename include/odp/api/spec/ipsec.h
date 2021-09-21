@@ -306,6 +306,14 @@ typedef struct odp_ipsec_capability_t {
 	 */
 	odp_support_t op_mode_inline_out;
 
+	/**
+	 * Global or Non PKTIO specific Inline SA support. When supported,
+	 * an Inline SA need not be associated with a particular PKTIO. When
+	 * false, IPSEC SA params for Inline SA should provide PKTIO handle
+	 * to which that SA needs to be associated with.
+	 */
+	odp_support_t global_inline_sa;
+
 	/** IP Authenticated Header (ODP_IPSEC_AH) support */
 	odp_support_t proto_ah;
 
@@ -847,6 +855,16 @@ typedef struct odp_ipsec_sa_param_t {
 	 *  context data bytes to prefetch. Default value is zero (no hint).
 	 */
 	uint32_t context_len;
+
+	/** PKTIO Handle
+	 *
+	 *  PKTIO Handle to which this SA will be associated with for Inline
+	 *  processing. Default value is ODP_PKTIO_INVALID that indicates
+	 *  it is not associated to any specific PKTIO.
+	 *
+	 *  @see odp_ipsec_capability_t::global_inline_sa
+	 */
+	odp_pktio_t pktio;
 
 	/** IPSEC SA direction dependent parameters */
 	struct {
