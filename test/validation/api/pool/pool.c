@@ -893,6 +893,63 @@ static void pool_test_pool_index(void)
 	}
 }
 
+static void pool_test_create_max_pkt_pools(void)
+{
+	uint32_t max_pools = global_pool_capa.pkt.max_pools;
+	uint32_t i, num_pools, num_shm;
+	odp_pool_t pool[max_pools];
+	odp_pool_param_t param;
+	odp_shm_capability_t shm_capa;
+	uint32_t shm_size = 32;
+	uint32_t uarea_size = 32;
+
+	CU_ASSERT_FATAL(max_pools > 0);
+
+	/* Reserve maximum number of SHM blocks */
+	CU_ASSERT_FATAL(odp_shm_capability(&shm_capa) == 0);
+	CU_ASSERT_FATAL(shm_capa.max_blocks > 0);
+
+	odp_shm_t shm[shm_capa.max_blocks];
+
+	if (shm_capa.max_size && shm_capa.max_size < shm_size)
+		shm_size = shm_capa.max_size;
+
+	for (i = 0; i < shm_capa.max_blocks; i++) {
+		shm[i] = odp_shm_reserve(NULL, shm_size, 0, 0);
+
+		if (shm[i] == ODP_SHM_INVALID)
+			break;
+	}
+	num_shm = i;
+	CU_ASSERT(num_shm == shm_capa.max_blocks);
+
+	/* Create maximum number of packet pools */
+	if (global_pool_capa.pkt.max_uarea_size && global_pool_capa.pkt.max_uarea_size < uarea_size)
+		uarea_size = global_pool_capa.pkt.max_uarea_size;
+
+	odp_pool_param_init(&param);
+	param.type    = ODP_POOL_PACKET;
+	param.pkt.len = PKT_LEN;
+	param.pkt.num = 1;
+	param.pkt.max_num = 1;
+	param.pkt.uarea_size = uarea_size;
+
+	for (i = 0; i < max_pools; i++) {
+		pool[i] = odp_pool_create(NULL, &param);
+
+		if (pool[i] == ODP_POOL_INVALID)
+			break;
+	}
+	num_pools = i;
+	CU_ASSERT(num_pools == max_pools);
+
+	for (i = 0; i < num_pools; i++)
+		CU_ASSERT(odp_pool_destroy(pool[i]) == 0);
+
+	for (i = 0; i < num_shm; i++)
+		CU_ASSERT(odp_shm_free(shm[i]) == 0);
+}
+
 static int pool_check_buffer_pool_statistics(void)
 {
 	if (global_pool_capa.buf.stats.all == 0)
@@ -1706,6 +1763,7 @@ odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO(pool_test_tmo_max_num),
 	ODP_TEST_INFO(pool_test_create_after_fork),
 	ODP_TEST_INFO(pool_test_pool_index),
+	ODP_TEST_INFO(pool_test_create_max_pkt_pools),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_buffer_pool_statistics,
 				  pool_check_buffer_pool_statistics),
 	ODP_TEST_INFO_CONDITIONAL(pool_test_packet_pool_statistics,
