@@ -41,6 +41,7 @@ struct suite_context_s {
 	odp_pool_t pool;
 	odp_queue_t queue;
 	odp_pktio_t pktio;
+	odp_bool_t global_inline_sa;
 };
 
 extern struct suite_context_s suite_context;
