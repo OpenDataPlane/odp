@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, Nokia
+/* Copyright (c) 2020-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -13,6 +13,7 @@
 #include <odp/api/plat/strong_types.h>
 
 #include <odp_debug_internal.h>
+#include <odp_global_data.h>
 #include <odp_init_internal.h>
 #include <odp_ring_ptr_internal.h>
 #include <odp_ring_u32_internal.h>
@@ -57,6 +58,11 @@ int _odp_stash_init_global(void)
 {
 	odp_shm_t shm;
 
+	if (odp_global_ro.disable.stash) {
+		ODP_PRINT("Stash is DISABLED\n");
+		return 0;
+	}
+
 	shm = odp_shm_reserve("_odp_stash_global", sizeof(stash_global_t),
 			      ODP_CACHE_LINE_SIZE, 0);
 
@@ -76,6 +82,9 @@ int _odp_stash_init_global(void)
 
 int _odp_stash_term_global(void)
 {
+	if (odp_global_ro.disable.stash)
+		return 0;
+
 	if (stash_global == NULL)
 		return 0;
 
@@ -89,6 +98,11 @@ int _odp_stash_term_global(void)
 
 int odp_stash_capability(odp_stash_capability_t *capa, odp_stash_type_t type)
 {
+	if (odp_global_ro.disable.stash) {
+		ODP_ERR("Stash is disabled\n");
+		return -1;
+	}
+
 	(void)type;
 	memset(capa, 0, sizeof(odp_stash_capability_t));
 
@@ -145,6 +159,11 @@ odp_stash_t odp_stash_create(const char *name, const odp_stash_param_t *param)
 	uint64_t i, ring_size, shm_size;
 	int ring_ptr, index;
 	char shm_name[ODP_STASH_NAME_LEN + 8];
+
+	if (odp_global_ro.disable.stash) {
+		ODP_ERR("Stash is disabled\n");
+		return ODP_STASH_INVALID;
+	}
 
 	if (param->obj_size > sizeof(uintptr_t)) {
 		ODP_ERR("Too large object handle.\n");
