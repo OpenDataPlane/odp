@@ -940,15 +940,6 @@ to other ODP instances running on the same OS.
 Other ODP instances willing to see this exported memory should use the
 `odp_shm_import()` ODP function.
 
-==== ODP_SHM_SW_ONLY
-This flag tells ODP that the shared memory will be used by the ODP application
-software only: no HW (such as DMA, or other accelerator) will ever
-try to access the memory. No other ODP call will be involved on this memory
-(as ODP calls could implicitly involve HW, depending on the ODP
-implementation), except for `odp_shm_lookup()` and `odp_shm_free()`.
-ODP implementations may use this flag as a hint for performance optimization,
-or may as well ignore this flag.
-
 ==== ODP_SHM_SINGLE_VA
 This flag is used to guarantee the uniqueness of the address at which
 the shared memory is mapped: without this flag, a given memory block may be
