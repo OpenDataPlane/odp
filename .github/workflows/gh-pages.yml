@@ -7,7 +7,7 @@ on:
 
 jobs:
   Documentation:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
     - name: Install dependencies
@@ -44,7 +44,7 @@ jobs:
     - name: Deploy
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      uses: crazy-max/ghaction-github-pages@v2.2.0
+      uses: crazy-max/ghaction-github-pages@v2
       with:
         allow_empty_commit: false
         build_dir: ./doc/gh-pages
