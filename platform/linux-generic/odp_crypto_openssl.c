@@ -700,7 +700,7 @@ int packet_cmac_eia2(odp_packet_t pkt,
 {
 	CMAC_CTX *ctx = local.cmac_ctx[session->idx];
 	void *iv_ptr;
-	uint32_t offset = param->auth_range.offset;
+	uint32_t offset = param->auth_range.offset / 8;
 	uint32_t len   = (param->auth_range.length + 7) / 8;
 	size_t outlen;
 
@@ -1152,6 +1152,10 @@ odp_crypto_alg_err_t cipher_encrypt_bits(odp_packet_t pkt,
 	uint32_t in_len = (param->cipher_range.length + 7) / 8;
 	uint8_t data[in_len];
 	int ret;
+	uint32_t offset;
+
+	/* Range offset is in bits in bit mode but must be divisible by 8. */
+	offset = param->cipher_range.offset / 8;
 
 	if (param->cipher_iv_ptr)
 		iv_ptr = param->cipher_iv_ptr;
@@ -1162,16 +1166,14 @@ odp_crypto_alg_err_t cipher_encrypt_bits(odp_packet_t pkt,
 
 	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
 
-	odp_packet_copy_to_mem(pkt, param->cipher_range.offset, in_len,
-			       data);
+	odp_packet_copy_to_mem(pkt, offset, in_len, data);
 
 	EVP_EncryptUpdate(ctx, data, &cipher_len, data, in_len);
 
 	ret = EVP_EncryptFinal_ex(ctx, data + cipher_len, &dummy_len);
 	cipher_len += dummy_len;
 
-	odp_packet_copy_from_mem(pkt, param->cipher_range.offset, in_len,
-				 data);
+	odp_packet_copy_from_mem(pkt, offset, in_len, data);
 
 	return ret <= 0 ? ODP_CRYPTO_ALG_ERR_DATA_SIZE :
 			  ODP_CRYPTO_ALG_ERR_NONE;
@@ -1190,6 +1192,10 @@ odp_crypto_alg_err_t cipher_decrypt_bits(odp_packet_t pkt,
 	uint32_t in_len = (param->cipher_range.length + 7) / 8;
 	uint8_t data[in_len];
 	int ret;
+	uint32_t offset;
+
+	/* Range offset is in bits in bit mode but must be divisible by 8. */
+	offset = param->cipher_range.offset / 8;
 
 	if (param->cipher_iv_ptr)
 		iv_ptr = param->cipher_iv_ptr;
@@ -1200,16 +1206,14 @@ odp_crypto_alg_err_t cipher_decrypt_bits(odp_packet_t pkt,
 
 	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
 
-	odp_packet_copy_to_mem(pkt, param->cipher_range.offset, in_len,
-			       data);
+	odp_packet_copy_to_mem(pkt, offset, in_len, data);
 
 	EVP_DecryptUpdate(ctx, data, &cipher_len, data, in_len);
 
 	ret = EVP_DecryptFinal_ex(ctx, data + cipher_len, &dummy_len);
 	cipher_len += dummy_len;
 
-	odp_packet_copy_from_mem(pkt, param->cipher_range.offset, in_len,
-				 data);
+	odp_packet_copy_from_mem(pkt, offset, in_len, data);
 
 	return ret <= 0 ? ODP_CRYPTO_ALG_ERR_DATA_SIZE :
 			  ODP_CRYPTO_ALG_ERR_NONE;
