@@ -482,10 +482,13 @@ static void alg_test_execute(const alg_test_param_t *param)
 	auth_range.offset = param->header_len;
 	auth_range.length = ref->length;
 
-	if (param->bit_mode)
+	if (param->bit_mode) {
 		reflength = (ref->length + 7) / 8;
-	else
+		cipher_range.offset *= 8;
+		auth_range.offset *= 8;
+	} else {
 		reflength = ref->length;
+	}
 
 	for (iteration = NORMAL_TEST; iteration < MAX_TEST; iteration++) {
 		odp_packet_t pkt;
