@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, Nokia
+/* Copyright (c) 2020-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -307,6 +307,22 @@ uint64_t odp_stash_to_u64(odp_stash_t stash);
 int32_t odp_stash_put(odp_stash_t stash, const void *obj, int32_t num);
 
 /**
+ * Put 64-bit integers into a stash
+ *
+ * Otherwise like odp_stash_put(), except that this function operates on 64-bit
+ * integers. The stash must have been created with 'obj_size' of 8.
+ *
+ * @param stash  Stash handle
+ * @param u64    Points to an array of 64-bit integers to be stored. The array
+ *               must be 64-bit aligned in memory.
+ * @param num    Number of integers to store
+ *
+ * @return Number of integers actually stored (0 ... num)
+ * @retval <0 on failure
+ */
+int32_t odp_stash_put_u64(odp_stash_t stash, const uint64_t u64[], int32_t num);
+
+/**
  * Get object handles from a stash
  *
  * Get previously stored object handles from the stash. Application specifies
@@ -323,6 +339,22 @@ int32_t odp_stash_put(odp_stash_t stash, const void *obj, int32_t num);
  * @retval <0 on failure
  */
 int32_t odp_stash_get(odp_stash_t stash, void *obj, int32_t num);
+
+/**
+ * Get 64-bit integers from a stash
+ *
+ * Otherwise like odp_stash_get(), except that this function operates on 64-bit
+ * integers. The stash must have been created with 'obj_size' of 8.
+ *
+ * @param      stash  Stash handle
+ * @param[out] u64    Points to an array of 64-bit integers for output. The
+ *                    array must be 64-bit aligned in memory.
+ * @param      num    Maximum number of integers to get from the stash
+ *
+ * @return Number of integers actually output (0 ... num) to 'u64' array
+ * @retval <0 on failure
+ */
+int32_t odp_stash_get_u64(odp_stash_t stash, uint64_t u64[], int32_t num);
 
 /**
  * Flush object handles from the thread local cache
