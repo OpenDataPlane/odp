@@ -29,6 +29,7 @@
 
 typedef enum stash_op_t {
 	STASH_GEN,
+	STASH_U32,
 	STASH_U64
 } stash_op_t;
 
@@ -421,6 +422,8 @@ static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op)
 	while (num_left) {
 		if (op == STASH_GEN)
 			ret = odp_stash_put(stash, input, burst);
+		else if (op == STASH_U32)
+			ret = odp_stash_put_u32(stash, input_u32, burst);
 		else if (op == STASH_U64)
 			ret = odp_stash_put_u64(stash, input_u64, burst);
 		else
@@ -458,6 +461,8 @@ static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op)
 		}
 		if (op == STASH_GEN)
 			ret = odp_stash_get(stash, output, burst);
+		else if (op == STASH_U32)
+			ret = odp_stash_get_u32(stash, &output_u32[1], burst);
 		else if (op == STASH_U64)
 			ret = odp_stash_get_u64(stash, &output_u64[1], burst);
 		else
@@ -569,6 +574,8 @@ static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op)
 		}
 		if (op == STASH_GEN)
 			ret = odp_stash_put(stash, input, burst);
+		else if (op == STASH_U32)
+			ret = odp_stash_put_u32(stash, input_u32, burst);
 		else if (op == STASH_U64)
 			ret = odp_stash_put_u64(stash, input_u64, burst);
 		else
@@ -607,6 +614,8 @@ static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op)
 
 		if (op == STASH_GEN)
 			ret = odp_stash_get(stash, output, burst);
+		else if (op == STASH_U32)
+			ret = odp_stash_get_u32(stash, &output_u32[1], burst);
 		else if (op == STASH_U64)
 			ret = odp_stash_get_u64(stash, &output_u64[1], burst);
 		else
@@ -719,6 +728,16 @@ static void stash_default_put_u32_n(void)
 	stash_default_put(sizeof(uint32_t), BURST, STASH_GEN);
 }
 
+static void stash_default_u32_put_u32_1(void)
+{
+	stash_default_put(sizeof(uint32_t), 1, STASH_U32);
+}
+
+static void stash_default_u32_put_u32_n(void)
+{
+	stash_default_put(sizeof(uint32_t), BURST, STASH_U32);
+}
+
 static void stash_default_put_u16_1(void)
 {
 	stash_default_put(sizeof(uint16_t), 1, STASH_GEN);
@@ -769,6 +788,16 @@ static void stash_fifo_put_u32_n(void)
 	stash_fifo_put(sizeof(uint32_t), BURST, STASH_GEN);
 }
 
+static void stash_fifo_u32_put_u32_1(void)
+{
+	stash_fifo_put(sizeof(uint32_t), 1, STASH_U32);
+}
+
+static void stash_fifo_u32_put_u32_n(void)
+{
+	stash_fifo_put(sizeof(uint32_t), BURST, STASH_U32);
+}
+
 static void stash_fifo_put_u16_1(void)
 {
 	stash_fifo_put(sizeof(uint16_t), 1, STASH_GEN);
@@ -800,6 +829,8 @@ odp_testinfo_t stash_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(stash_default_u64_put_u64_n, check_support_64),
 	ODP_TEST_INFO(stash_default_put_u32_1),
 	ODP_TEST_INFO(stash_default_put_u32_n),
+	ODP_TEST_INFO(stash_default_u32_put_u32_1),
+	ODP_TEST_INFO(stash_default_u32_put_u32_n),
 	ODP_TEST_INFO(stash_default_put_u16_1),
 	ODP_TEST_INFO(stash_default_put_u16_n),
 	ODP_TEST_INFO(stash_default_put_u8_1),
@@ -812,6 +843,8 @@ odp_testinfo_t stash_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(stash_fifo_u64_put_u64_n, check_support_fifo_64),
 	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u32_1, check_support_fifo),
 	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u32_n, check_support_fifo),
+	ODP_TEST_INFO_CONDITIONAL(stash_fifo_u32_put_u32_1, check_support_fifo),
+	ODP_TEST_INFO_CONDITIONAL(stash_fifo_u32_put_u32_n, check_support_fifo),
 	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u16_1, check_support_fifo),
 	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u16_n, check_support_fifo),
 	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u8_1,  check_support_fifo),
