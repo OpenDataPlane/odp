@@ -143,6 +143,7 @@ noinst_HEADERS = \
 		  include/odp_ring_spsc_internal.h \
 		  include/odp_ring_st_internal.h \
 		  include/odp_ring_u32_internal.h \
+		  include/odp_ring_u64_internal.h \
 		  include/odp_schedule_if.h \
 		  include/odp_schedule_scalable_config.h \
 		  include/odp_schedule_scalable.h \
