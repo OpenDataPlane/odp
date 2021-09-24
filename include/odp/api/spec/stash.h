@@ -339,6 +339,23 @@ int32_t odp_stash_put_u32(odp_stash_t stash, const uint32_t u32[], int32_t num);
 int32_t odp_stash_put_u64(odp_stash_t stash, const uint64_t u64[], int32_t num);
 
 /**
+ * Put pointers into a stash
+ *
+ * Otherwise like odp_stash_put(), except that this function operates on
+ * pointers. The stash must have been created with 'obj_size' matching to the
+ * size of uintptr_t.
+ *
+ * @param stash  Stash handle
+ * @param ptr    Points to an array of pointers to be stored. The array must be
+ *               pointer size aligned in memory.
+ * @param num    Number of pointers to store
+ *
+ * @return Number of pointers actually stored (0 ... num)
+ * @retval <0 on failure
+ */
+int32_t odp_stash_put_ptr(odp_stash_t stash, const uintptr_t ptr[], int32_t num);
+
+/**
  * Get object handles from a stash
  *
  * Get previously stored object handles from the stash. Application specifies
@@ -387,6 +404,23 @@ int32_t odp_stash_get_u32(odp_stash_t stash, uint32_t u32[], int32_t num);
  * @retval <0 on failure
  */
 int32_t odp_stash_get_u64(odp_stash_t stash, uint64_t u64[], int32_t num);
+
+/**
+ * Get pointers from a stash
+ *
+ * Otherwise like odp_stash_get(), except that this function operates on
+ * pointers. The stash must have been created with 'obj_size' matching to the
+ * size of uintptr_t.
+ *
+ * @param      stash  Stash handle
+ * @param[out] ptr    Points to an array of pointers for output. The array must
+ *                    be pointer size aligned in memory.
+ * @param      num    Maximum number of pointers to get from the stash
+ *
+ * @return Number of pointers actually output (0 ... num) to 'ptr' array
+ * @retval <0 on failure
+ */
+int32_t odp_stash_get_ptr(odp_stash_t stash, uintptr_t ptr[], int32_t num);
 
 /**
  * Flush object handles from the thread local cache
