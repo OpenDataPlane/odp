@@ -1,4 +1,4 @@
-/* Copyright (c) 2019, Nokia
+/* Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -12,7 +12,8 @@ extern "C" {
 #endif
 
 #define _ODP_RING_TYPE_U32 1
-#define _ODP_RING_TYPE_PTR 2
+#define _ODP_RING_TYPE_U64 2
+#define _ODP_RING_TYPE_PTR 3
 
 #ifdef __cplusplus
 }

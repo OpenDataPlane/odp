@@ -1,5 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -50,6 +50,11 @@ typedef struct ODP_ALIGNED_CACHE {
 
 typedef struct ODP_ALIGNED_CACHE {
 	struct ring_common r;
+	uint64_t data[];
+} ring_u64_t;
+
+typedef struct ODP_ALIGNED_CACHE {
+	struct ring_common r;
 	void *data[];
 } ring_ptr_t;
 
@@ -87,6 +92,16 @@ static inline int cas_mo_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
 	#define _RING_ENQ ring_u32_enq
 	#define _RING_ENQ_MULTI ring_u32_enq_multi
 	#define _RING_LEN ring_u32_len
+#elif _ODP_RING_TYPE == _ODP_RING_TYPE_U64
+	#define _ring_gen_t ring_u64_t
+	#define _ring_data_t uint64_t
+
+	#define _RING_INIT ring_u64_init
+	#define _RING_DEQ ring_u64_deq
+	#define _RING_DEQ_MULTI ring_u64_deq_multi
+	#define _RING_ENQ ring_u64_enq
+	#define _RING_ENQ_MULTI ring_u64_enq_multi
+	#define _RING_LEN ring_u64_len
 #elif _ODP_RING_TYPE == _ODP_RING_TYPE_PTR
 	#define _ring_gen_t ring_ptr_t
 	#define _ring_data_t void *
