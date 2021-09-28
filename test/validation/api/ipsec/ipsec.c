@@ -343,6 +343,16 @@ void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
 	param->lifetime.hard_limit.bytes = 1000 * 1000;
 	param->lifetime.soft_limit.packets = 9000 * 1000;
 	param->lifetime.hard_limit.packets = 10000 * 1000;
+
+	if (suite_context.global_inline_sa)
+		return;
+
+	/* For platforms that don't support global inline SA's, we need to
+	 * associate an inline SA to a pktio.
+	 */
+	if ((in && suite_context.inbound_op_mode == ODP_IPSEC_OP_MODE_INLINE) ||
+	    (!in && suite_context.outbound_op_mode == ODP_IPSEC_OP_MODE_INLINE))
+		param->pktio = suite_context.pktio;
 }
 
 void ipsec_sa_destroy(odp_ipsec_sa_t sa)
@@ -1232,6 +1242,11 @@ int ipsec_config(odp_instance_t ODP_UNUSED inst)
 			suite_context.reass_ipv6 = false;
 		}
 	}
+
+	if (capa.global_inline_sa == ODP_SUPPORT_YES)
+		suite_context.global_inline_sa = true;
+	else
+		suite_context.global_inline_sa = false;
 
 	if (ODP_IPSEC_OK != odp_ipsec_config(&ipsec_config))
 		return -1;

@@ -155,6 +155,8 @@ int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 	capa->op_mode_inline_in = ODP_SUPPORT_PREFERRED;
 	capa->op_mode_inline_out = ODP_SUPPORT_PREFERRED;
 
+	capa->global_inline_sa = ODP_SUPPORT_YES;
+
 	capa->proto_ah = ODP_SUPPORT_YES;
 
 	capa->max_num_sa = _odp_ipsec_max_num_sa();

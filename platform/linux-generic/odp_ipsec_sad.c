@@ -368,6 +368,7 @@ void odp_ipsec_sa_param_init(odp_ipsec_sa_param_t *param)
 	param->dest_queue = ODP_QUEUE_INVALID;
 	param->outbound.tunnel.ipv4.ttl = 255;
 	param->outbound.tunnel.ipv6.hlimit = 255;
+	param->pktio = ODP_PKTIO_INVALID;
 }
 
 /* Return IV length required for the cipher for IPsec use */
