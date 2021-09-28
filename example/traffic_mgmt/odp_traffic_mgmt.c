@@ -1,6 +1,7 @@
 /* Copyright 2015 EZchip Semiconductor Ltd. All Rights Reserved.
  *
  * Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2022, Marvell
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -293,6 +294,40 @@ static uint8_t  g_print_tm_stats   = TRUE;
 
 static void tester_egress_fcn(odp_packet_t odp_pkt);
 
+static uint64_t tm_shaper_min_rate;
+static uint64_t tm_shaper_max_rate;
+static uint32_t tm_shaper_min_burst;
+static uint32_t tm_shaper_max_burst;
+
+static uint64_t
+clamp_rate(uint64_t rate)
+{
+	uint64_t val = MIN(MAX(rate, tm_shaper_min_rate), tm_shaper_max_rate);
+
+	/* PIR can be zero just with CIR valid and vice versa */
+	if (!rate)
+		return 0;
+
+	if (val != rate)
+		printf("INFO: Clamped shaper rate from %" PRIu64 " bps"
+		       " to %" PRIu64 " bps\n", rate, val);
+	return val;
+}
+
+static uint32_t
+clamp_burst(uint32_t burst)
+{
+	uint32_t val = MIN(MAX(burst, tm_shaper_min_burst), tm_shaper_max_burst);
+
+	if (!burst)
+		return 0;
+
+	if (val != burst)
+		printf("INFO: Clamped shaper burst from %" PRIu32 "bits to %" PRIu32 "bits\n",
+		       burst, val);
+	return val;
+}
+
 /* Returns the number of errors encountered. */
 
 static uint32_t create_profile_set(profile_params_set_t *profile_params_set,
@@ -317,10 +352,14 @@ static uint32_t create_profile_set(profile_params_set_t *profile_params_set,
 
 	odp_tm_shaper_params_init(&shaper_params);
 	shaper                          = &profile_params_set->shaper_params;
-	shaper_params.commit_rate       = shaper->commit_rate  * shaper_scale;
-	shaper_params.peak_rate         = shaper->peak_rate    * shaper_scale;
-	shaper_params.commit_burst      = shaper->commit_burst * shaper_scale;
-	shaper_params.peak_burst        = shaper->peak_burst   * shaper_scale;
+	shaper_params.commit_rate       = clamp_rate(shaper->commit_rate *
+						     shaper_scale);
+	shaper_params.peak_rate         = clamp_rate(shaper->peak_rate *
+						     shaper_scale);
+	shaper_params.commit_burst      = clamp_burst(shaper->commit_burst *
+						      shaper_scale);
+	shaper_params.peak_burst        = clamp_burst(shaper->peak_burst *
+						      shaper_scale);
 	shaper_params.dual_rate         = shaper->dual_rate;
 	shaper_params.shaper_len_adjust = shaper->shaper_len_adjust;
 	profile_set->shaper_profile     = odp_tm_shaper_create(name,
@@ -550,6 +589,7 @@ static int create_and_config_tm(void)
 {
 	odp_tm_level_requirements_t *per_level;
 	odp_tm_requirements_t        requirements;
+	odp_tm_capabilities_t        tm_capa;
 	odp_tm_egress_t              egress;
 	uint32_t                     level, err_cnt;
 
@@ -579,6 +619,44 @@ static int create_and_config_tm(void)
 	egress.egress_fcn  = tester_egress_fcn;
 
 	odp_tm_test = odp_tm_create("TM test", &requirements, &egress);
+	if (odp_tm_test == ODP_TM_INVALID) {
+		printf("Error: failed to create TM\n");
+		return -1;
+	}
+
+	if (odp_tm_capability(odp_tm_test, &tm_capa) != 0) {
+		printf("Error: failed to get tm capability");
+		return -1;
+	}
+
+	tm_shaper_min_rate = tm_capa.per_level[0].min_rate;
+	tm_shaper_max_rate = tm_capa.per_level[0].max_rate;
+	tm_shaper_min_burst = tm_capa.per_level[0].min_burst;
+	tm_shaper_max_burst = tm_capa.per_level[0].max_burst;
+
+	for (level = 1; level < tm_capa.max_levels; level++) {
+		odp_tm_level_capabilities_t *per_level =
+			&tm_capa.per_level[level];
+
+		if (per_level->min_rate > tm_shaper_min_rate)
+			tm_shaper_min_rate = per_level->min_rate;
+
+		if (per_level->min_burst > tm_shaper_min_burst)
+			tm_shaper_min_burst = per_level->min_burst;
+
+		if (per_level->max_rate < tm_shaper_max_rate)
+			tm_shaper_max_rate = per_level->max_rate;
+
+		if (per_level->max_burst < tm_shaper_max_burst)
+			tm_shaper_max_burst = per_level->max_burst;
+	}
+
+	if (tm_shaper_min_rate > tm_shaper_max_rate ||
+	    tm_shaper_min_burst > tm_shaper_max_burst) {
+		printf("Error: No shaper rate supported by all TM levels");
+		return -1;
+	}
+
 	err_cnt     = init_profile_sets();
 	if (err_cnt != 0)
 		printf("%s init_profile_sets encountered %" PRIu32 " errors\n",
@@ -873,7 +951,9 @@ int main(int argc, char *argv[])
 	if (process_cmd_line_options(argc, argv) < 0)
 		return -1;
 
-	create_and_config_tm();
+	rc = create_and_config_tm();
+	if (rc != 0)
+		return rc;
 
 	/* Start TM */
 	rc = odp_tm_start(odp_tm_test);
