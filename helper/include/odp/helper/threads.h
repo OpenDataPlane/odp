@@ -23,6 +23,8 @@
 extern "C" {
 #endif
 
+#include <odp/helper/deprecated.h>
+
 #include <pthread.h>
 #include <getopt.h>
 #include <sys/types.h>
@@ -67,7 +69,7 @@ typedef struct {
 	odp_thread_type_t thr_type;
 
 	/** @deprecated ODP instance handle for odph_odpthreads_create(). */
-	odp_instance_t instance;
+	odp_instance_t ODPH_DEPRECATE(instance);
 
 	/**
 	 * Minimum stack size in bytes. 0 = use default. Ignored by
@@ -128,10 +130,10 @@ typedef struct {
 } odph_helper_options_t;
 
 /** @deprecated Legacy thread table entry */
-typedef odph_thread_t odph_odpthread_t;
+typedef odph_thread_t ODPH_DEPRECATE(odph_odpthread_t);
 
 /** @deprecated Legacy thread parameters */
-typedef odph_thread_param_t odph_odpthread_params_t;
+typedef odph_thread_param_t ODPH_DEPRECATE(odph_odpthread_params_t);
 
 /** Common parameters for odph_thread_create() call */
 typedef struct {
@@ -292,9 +294,10 @@ int odph_thread_join(odph_thread_t thread[], int num);
  *
  * @deprecated Use odph_thread_create() instead.
  */
-int odph_odpthreads_create(odph_odpthread_t *thread_tbl,
-			   const odp_cpumask_t *mask,
-			   const odph_odpthread_params_t *thr_params);
+int ODPH_DEPRECATE(odph_odpthreads_create)(
+	ODPH_DEPRECATE(odph_odpthread_t) *thread_tbl,
+	const odp_cpumask_t *mask,
+	const ODPH_DEPRECATE(odph_odpthread_params_t) *thr_params);
 
 /**
  * Waits odpthreads (as linux threads or processes) to exit.
@@ -308,7 +311,8 @@ int odph_odpthreads_create(odph_odpthread_t *thread_tbl,
  *
  * @deprecated Use odph_thread_join() instead.
  */
-int odph_odpthreads_join(odph_odpthread_t *thread_tbl);
+int ODPH_DEPRECATE(odph_odpthreads_join)(
+	ODPH_DEPRECATE(odph_odpthread_t) *thread_tbl);
 
 /**
  * Set CPU affinity of the current odp thread
