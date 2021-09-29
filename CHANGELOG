@@ -1,3 +1,54 @@
+== OpenDataPlane (1.32.0.0)
+=== Backward incompatible API changes
+==== IPsec
+* Added destination queue capabilities `odp_ipsec_capability_t.queue_type_sched`
+and `odp_ipsec_capability_t.queue_type_plain`
+* Modified specification to not promise the original packet back after all error
+cases
+
+=== Backward compatible API changes
+==== IPsec
+* Added original ESP/AH packet length into IPsec packet result
+(`odp_ipsec_packet_result_t.orig_ip_len`)
+
+==== Packet
+* Added `odp_packet_reass_info()` function for reading completed reassembly
+details
+
+==== Std
+* Moved all contents of support and feature modules into ODP Std module
+
+=== Helper (1.2.0)
+==== Backward incompatible changes
+===== CLI
+* Replaced `odph_cli_start()` function with `odph_cli_run()`, which doesn't
+automatically create a separate thread for running the CLI server.
+
+===== Linux
+* Deprecated `odph_odpthread_t` and `odph_odpthread_params_t` types
+* Added `odph_thread_param_init()` function for initializing thread parameters
+* Added `odph_thread_common_param_init()` function for initializing thread
+common parameters
+
+==== Backward compatible changes
+===== CLI
+* Added `odph_cli_param_t.hostname` parameter for providing a custom CLI prompt
+hostname
+* Added `odph_cli_log_va()` function for user defined CLI commands
+
+===== Linux
+* Added `odph_thread_param_t.stack_size` parameter for configuring minimum
+thread stack size
+* Added `odph_thread_common_param_t.sync_timeout` parameter for configuring
+synchronized thread creation timeout
+
+=== Implementation
+==== Crypto
+* AES-EEA2 and AES-EIA2 crypto algorithms that operate in bit mode interpret the
+crypto/auth offset now as bits as specified in the ODP API. This correction
+requires corresponding changes in applications that have relied on the old,
+incorrect behavior that interpreted the offset in bytes.
+
 == OpenDataPlane (1.31.0.0)
 === Backward incompatible API changes
 ==== Traffic Manager
