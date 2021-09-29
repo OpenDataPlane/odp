@@ -43,7 +43,7 @@ static void *run_thread(void *arg)
 	int status;
 	int ret;
 	odp_instance_t instance;
-	odph_odpthread_params_t *thr_params;
+	ODPH_DEPRECATE(odph_odpthread_params_t) *thr_params;
 
 	odph_thread_start_args_t *start_args = arg;
 
@@ -395,9 +395,10 @@ int odph_thread_join(odph_thread_t thread[], int num)
 /*
  * create an odpthread set (as linux processes or linux threads or both)
  */
-int odph_odpthreads_create(odph_odpthread_t *thread_tbl,
-			   const odp_cpumask_t *mask,
-			   const odph_odpthread_params_t *thr_params)
+int ODPH_DEPRECATE(odph_odpthreads_create)(
+	ODPH_DEPRECATE(odph_odpthread_t) *thread_tbl,
+	const odp_cpumask_t *mask,
+	const ODPH_DEPRECATE(odph_odpthread_params_t) *thr_params)
 {
 	int i;
 	int num;
@@ -406,7 +407,7 @@ int odph_odpthreads_create(odph_odpthread_t *thread_tbl,
 
 	num = odp_cpumask_count(mask);
 
-	memset(thread_tbl, 0, num * sizeof(odph_odpthread_t));
+	memset(thread_tbl, 0, num * sizeof(*thread_tbl));
 
 	cpu_count = odp_cpu_count();
 
@@ -425,7 +426,7 @@ int odph_odpthreads_create(odph_odpthread_t *thread_tbl,
 
 		/* Copy thread parameters */
 		start_args->thr_params = *thr_params;
-		start_args->instance   = thr_params->instance;
+		start_args->instance   = thr_params->ODPH_DEPRECATE(instance);
 
 		if (helper_options.mem_model == ODP_MEM_MODEL_THREAD) {
 			if (create_pthread(&thread_tbl[i], cpu, 0))
@@ -445,7 +446,8 @@ int odph_odpthreads_create(odph_odpthread_t *thread_tbl,
 /*
  * wait for the odpthreads termination (linux processes and threads)
  */
-int odph_odpthreads_join(odph_odpthread_t *thread_tbl)
+int ODPH_DEPRECATE(odph_odpthreads_join)(
+	ODPH_DEPRECATE(odph_odpthread_t) *thread_tbl)
 {
 	pid_t pid;
 	int i = 0;
