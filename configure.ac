@@ -3,7 +3,7 @@ AC_PREREQ([2.5])
 # ODP API version
 ##########################################################################
 m4_define([odpapi_generation_version], [1])
-m4_define([odpapi_major_version], [31])
+m4_define([odpapi_major_version], [32])
 m4_define([odpapi_minor_version], [0])
 m4_define([odpapi_point_version], [0])
 m4_define([odpapi_version],
@@ -21,8 +21,8 @@ AC_SUBST(ODP_VERSION_API_MINOR)
 # Helper library version
 ##########################################################################
 m4_define([odph_version_generation], [1])
-m4_define([odph_version_major], [1])
-m4_define([odph_version_minor], [1])
+m4_define([odph_version_major], [2])
+m4_define([odph_version_minor], [0])
 
 m4_define([odph_version],
     [odph_version_generation.odph_version_major.odph_version_minor])
