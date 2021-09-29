@@ -14,6 +14,7 @@ AM_LDFLAGS = -version-number '$(ODPHELPER_LIBSO_VERSION)'
 helperincludedir = $(includedir)/odp/helper/
 helperinclude_HEADERS = \
 		  include/odp/helper/autoheader_external.h\
+		  include/odp/helper/deprecated.h\
 		  include/odp/helper/chksum.h\
 		  include/odp/helper/odph_debug.h \
 		  include/odp/helper/eth.h\
@@ -80,7 +81,7 @@ __LIB__libodphelper_la_LIBADD += $(LIBCLI_LIBS)
 
 lib_LTLIBRARIES = $(LIB)/libodphelper.la
 
-CHECK_GLOBALS_REGEX = " odph_"
+CHECK_GLOBALS_REGEX = " (odph_|_deprecated_odph_)"
 
 TESTS_ENVIRONMENT = \
 	LIBTOOL="$(LIBTOOL)" \

@@ -11,4 +11,7 @@
 /* Define to 1 to display helper debug information */
 #undef ODPH_DEBUG_PRINT
 
+/* Define to 1 to enable deprecated helper API definitions */
+#undef ODPH_DEPRECATED_API
+
 #endif

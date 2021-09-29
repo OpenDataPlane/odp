@@ -47,5 +47,17 @@ AS_IF([test "x$enable_helper_debug_print" != "xno"], [ODPH_DEBUG_PRINT=1],
 AC_DEFINE_UNQUOTED([ODPH_DEBUG_PRINT], [$ODPH_DEBUG_PRINT],
 		   [Define to 1 to display helper debug information])
 
+##########################################################################
+# Enable/disable deprecated helper API definitions
+##########################################################################
+AC_ARG_ENABLE([helper-deprecated],
+    [AS_HELP_STRING([--enable-helper-deprecated],
+		    [enable deprecated helper API definitions [default=disabled]])],
+    [], [enable_helper_deprecated=no])
+AS_IF([test "x$enable_helper_deprecated" != "xno"], [ODPH_DEPRECATED_API=1],
+      [ODPH_DEPRECATED_API=0])
+AC_DEFINE_UNQUOTED([ODPH_DEPRECATED_API], [$ODPH_DEPRECATED_API],
+		   [Define to 1 to enable deprecated helper API definitions])
+
 AC_CONFIG_FILES([helper/libodphelper.pc
 		 helper/test/Makefile])
