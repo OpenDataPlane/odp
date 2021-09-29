@@ -539,6 +539,7 @@ AC_MSG_RESULT([
 	ABI compatible:		${abi_compat}
 	link time optimization:	${lto_enabled}
 	deprecated APIs:	${deprecated}
+	deprecated helper APIs:	${enable_helper_deprecated}
 	debug:			${debug_settings}
 	cunit:			${cunit_support}
 	static tests linkage:	${enable_static_applications}

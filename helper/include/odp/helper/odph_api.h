@@ -18,6 +18,8 @@
 extern "C" {
 #endif
 
+#include <odp/helper/autoheader_external.h>
+
 #include <odp/helper/odph_debug.h>
 #include <odp/helper/chksum.h>
 #include <odp/helper/odph_cuckootable.h>
@@ -37,8 +39,6 @@ extern "C" {
 #include <odp/helper/threads.h>
 #include <odp/helper/udp.h>
 #include <odp/helper/version.h>
-
-#include <odp/helper/autoheader_external.h>
 
 #ifdef ODPH_CLI
 #include <odp/helper/cli.h>
