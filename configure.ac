@@ -172,7 +172,7 @@ AS_IF([test "$GCC" == yes],
       )
 )
 
-ODP_CFLAGS="$ODP_CFLAGS -std=c99"
+ODP_CFLAGS="$ODP_CFLAGS -std=c11"
 ODP_CXXFLAGS="$ODP_CXXFLAGS -std=c++11"
 
 # Extra flags for example to suppress certain warning types
