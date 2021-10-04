@@ -804,31 +804,35 @@ static int ipsec_in_ah_post(odp_packet_t pkt,
 static void
 ipsec_sa_err_stats_update(ipsec_sa_t *sa, odp_ipsec_op_status_t *status)
 {
+	odp_ipsec_op_status_t err_status;
+
 	if (odp_likely(ODP_IPSEC_OK == status->error.all))
 		return;
 
 	if (NULL == sa)
 		return;
 
-	if (status->error.proto)
+	err_status = *status;
+
+	if (err_status.error.proto)
 		odp_atomic_inc_u64(&sa->stats.proto_err);
 
-	if (status->error.auth)
+	if (err_status.error.auth)
 		odp_atomic_inc_u64(&sa->stats.auth_err);
 
-	if (status->error.antireplay)
+	if (err_status.error.antireplay)
 		odp_atomic_inc_u64(&sa->stats.antireplay_err);
 
-	if (status->error.alg)
+	if (err_status.error.alg)
 		odp_atomic_inc_u64(&sa->stats.alg_err);
 
-	if (status->error.mtu)
+	if (err_status.error.mtu)
 		odp_atomic_inc_u64(&sa->stats.mtu_err);
 
-	if (status->error.hard_exp_bytes)
+	if (err_status.error.hard_exp_bytes)
 		odp_atomic_inc_u64(&sa->stats.hard_exp_bytes_err);
 
-	if (status->error.hard_exp_packets)
+	if (err_status.error.hard_exp_packets)
 		odp_atomic_inc_u64(&sa->stats.hard_exp_pkts_err);
 }
 
