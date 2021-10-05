@@ -411,12 +411,12 @@ _ODP_INLINE void odp_atomic_store_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
 
 _ODP_INLINE void odp_atomic_add_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
 {
-	(void)__atomic_fetch_add(&atom->v, val, __ATOMIC_RELEASE);
+	_odp_atomic_add_rel_u64(atom, val);
 }
 
 _ODP_INLINE void odp_atomic_sub_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
 {
-	(void)__atomic_fetch_sub(&atom->v, val, __ATOMIC_RELEASE);
+	_odp_atomic_sub_rel_u64(atom, val);
 }
 
 _ODP_INLINE int odp_atomic_cas_acq_u64(odp_atomic_u64_t *atom,
