@@ -485,12 +485,12 @@ _ODP_INLINE void odp_atomic_store_rel_u32(odp_atomic_u32_t *atom, uint32_t val)
 
 _ODP_INLINE void odp_atomic_add_rel_u32(odp_atomic_u32_t *atom, uint32_t val)
 {
-	(void)__atomic_fetch_add(&atom->v, val, __ATOMIC_RELEASE);
+	_odp_atomic_add_rel_u32(atom, val);
 }
 
 _ODP_INLINE void odp_atomic_sub_rel_u32(odp_atomic_u32_t *atom, uint32_t val)
 {
-	(void)__atomic_fetch_sub(&atom->v, val, __ATOMIC_RELEASE);
+	_odp_atomic_sub_rel_u32(atom, val);
 }
 
 _ODP_INLINE int odp_atomic_cas_acq_u32(odp_atomic_u32_t *atom,
