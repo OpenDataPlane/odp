@@ -951,7 +951,8 @@ static void verify_in(const ipsec_test_part *part,
 			if (suite_context.inbound_op_mode != ODP_IPSEC_OP_MODE_SYNC) {
 				uint32_t len = part->pkt_in->len - part->pkt_in->l3_offset;
 
-				CU_ASSERT(result.orig_ip_len == len);
+				CU_ASSERT(result.orig_ip_len == 0 ||
+					  result.orig_ip_len == len);
 			}
 		}
 		ipsec_check_packet(part->out[i].pkt_res,
