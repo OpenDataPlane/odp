@@ -30,6 +30,16 @@ static inline void _odp_atomic_dec_u32(odp_atomic_u32_t *atom)
 	(void)__atomic_fetch_sub(&atom->v, 1, __ATOMIC_RELAXED);
 }
 
+static inline void _odp_atomic_add_rel_u32(odp_atomic_u32_t *atom, uint32_t val)
+{
+	(void)__atomic_fetch_add(&atom->v, val, __ATOMIC_RELEASE);
+}
+
+static inline void _odp_atomic_sub_rel_u32(odp_atomic_u32_t *atom, uint32_t val)
+{
+	(void)__atomic_fetch_sub(&atom->v, val, __ATOMIC_RELEASE);
+}
+
 static inline void _odp_atomic_add_u64(odp_atomic_u64_t *atom, uint64_t val)
 {
 	(void)__atomic_fetch_add(&atom->v, val, __ATOMIC_RELAXED);

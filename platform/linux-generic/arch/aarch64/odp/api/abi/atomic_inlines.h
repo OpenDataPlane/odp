@@ -205,6 +205,24 @@ static inline void _odp_atomic_dec_u64(odp_atomic_u64_t *atom)
 	_odp_atomic_sub_u64(atom, 1);
 }
 
+static inline void _odp_atomic_add_rel_u32(odp_atomic_u32_t *atom, uint32_t val)
+{
+	__asm__ volatile("staddl   %w[val], %[atom]"
+			 : [atom] "+Q" (atom->v)
+			 : [val] "r" (val)
+			 : "memory");
+}
+
+static inline void _odp_atomic_sub_rel_u32(odp_atomic_u32_t *atom, uint32_t val)
+{
+	int32_t neg_val = -val;
+
+	__asm__ volatile("staddl   %w[neg_val], %[atom]"
+			 : [atom] "+Q" (atom->v)
+			 : [neg_val] "r" (neg_val)
+			 : "memory");
+}
+
 #else /* !_ODP_LOCK_FREE_128BIT_ATOMICS */
 
 /* Use generic implementation */
