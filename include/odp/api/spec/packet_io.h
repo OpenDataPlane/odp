@@ -134,7 +134,10 @@ typedef union odp_pktin_hash_proto_t {
 		uint32_t ipv6     : 1;
 	} proto;
 
-	/** All bits of the bit field structure */
+	/** All bits of the bit field structure
+	 *
+	 *  This field can be used to set/clear all bits, or to perform bitwise
+	 *  operations over those. */
 	uint32_t all_bits;
 } odp_pktin_hash_proto_t;
 
