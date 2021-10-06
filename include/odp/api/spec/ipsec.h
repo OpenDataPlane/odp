@@ -1296,7 +1296,10 @@ typedef struct odp_ipsec_warn_t {
 			uint32_t soft_exp_packets : 1;
 		};
 
-		/** All warnings bits */
+		/** All warning bits
+		 *
+		 *  This field can be used to set/clear all bits, or to perform
+		 *  bitwise operations over those. */
 		uint32_t all;
 	};
 
@@ -1335,7 +1338,10 @@ typedef struct odp_ipsec_op_flag_t {
 
 		};
 
-		/** All flag bits */
+		/** All flag bits
+		 *
+		 *  This field can be used to set/clear all flags, or to perform
+		 *  bitwise operations over those. */
 		uint32_t all;
 	};
 
@@ -1373,7 +1379,10 @@ typedef struct odp_ipsec_out_opt_t {
 
 		} flag;
 
-		/** All flag bits */
+		/** All flag bits
+		 *
+		 *  This field can be used to set/clear all flags, or to perform
+		 *  bitwise operations over those. */
 		uint32_t all_flags;
 	};
 
