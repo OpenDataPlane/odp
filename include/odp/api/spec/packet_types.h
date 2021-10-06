@@ -324,7 +324,10 @@ typedef union odp_proto_chksums_t {
 
 	} chksum;
 
-	/** All checksum bits. This can be used to set/clear all flags. */
+	/** All checksum bits
+	 *
+	 *  This field can be used to set/clear all flags, or to perform bitwise
+	 *  operations over those. */
 	uint32_t all_chksum;
 
 } odp_proto_chksums_t;
