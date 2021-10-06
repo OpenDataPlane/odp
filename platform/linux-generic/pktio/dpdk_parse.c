@@ -1,4 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -49,7 +50,7 @@ static inline uint16_t dpdk_parse_eth(packet_parser_t *prs,
 	eth = (const _odp_ethhdr_t *)*parseptr;
 
 	/* Detect jumbo frames */
-	if (odp_unlikely(frame_len > _ODP_ETH_LEN_MAX))
+	if (odp_unlikely(frame_len - *offset > _ODP_ETH_LEN_MAX))
 		input_flags.jumbo = 1;
 
 	/* Handle Ethernet broadcast/multicast addresses */
@@ -120,6 +121,16 @@ static inline uint16_t dpdk_parse_eth(packet_parser_t *prs,
 		*parseptr += sizeof(_odp_vlanhdr_t);
 	}
 
+	/*
+	 * The packet was too short for what we parsed. We just give up
+	 * entirely without trying to parse what fits in the packet.
+	 */
+	if (odp_unlikely(*offset > frame_len)) {
+		input_flags.all = 0;
+		input_flags.l2  = 1;
+		ethtype = 0;
+	}
+
 error:
 	prs->input_flags.all |= input_flags.all;
 
@@ -147,6 +158,7 @@ static inline uint8_t dpdk_parse_ipv4(packet_parser_t *prs,
 
 	if (odp_unlikely(ihl < _ODP_IPV4HDR_IHL_MIN ||
 			 ver != 4 ||
+			 sizeof(*ipv4) > frame_len - *offset ||
 			 (l3_len > frame_len - *offset))) {
 		prs->flags.ip_err = 1;
 		return 0;
@@ -214,8 +226,9 @@ static inline uint8_t dpdk_parse_ipv6(packet_parser_t *prs,
 	uint32_t l4_packet_type = mbuf_packet_type & RTE_PTYPE_L4_MASK;
 
 	/* Basic sanity checks on IPv6 header */
-	if ((odp_be_to_cpu_32(ipv6->ver_tc_flow) >> 28) != 6 ||
-	    l3_len > frame_len - *offset) {
+	if (odp_unlikely((odp_be_to_cpu_32(ipv6->ver_tc_flow) >> 28) != 6 ||
+			 sizeof(*ipv6) > frame_len - *offset ||
+			 l3_len > frame_len - *offset)) {
 		prs->flags.ip_err = 1;
 		return 0;
 	}
