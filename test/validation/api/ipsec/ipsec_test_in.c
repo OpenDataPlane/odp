@@ -1777,6 +1777,7 @@ static void test_multi_out_in(odp_ipsec_sa_t out_sa,
 {
 	uint8_t ver_ihl = result_packet->data[result_packet->l3_offset];
 	odp_bool_t is_result_ipv6 = (ODPH_IPV4HDR_VER(ver_ihl) == ODPH_IPV6);
+	uint32_t orig_ip_len = 0;
 	int i;
 
 	for (i = 0; i < num_input_packets; i++) {
@@ -1784,6 +1785,7 @@ static void test_multi_out_in(odp_ipsec_sa_t out_sa,
 		ipsec_test_part test_in;
 		ipsec_test_packet test_pkt;
 		odp_packet_t pkt = ODP_PACKET_INVALID;
+		uint32_t l3_off, pkt_len;
 
 		/*
 		 * Convert plain text packet to IPsec packet through
@@ -1798,11 +1800,26 @@ static void test_multi_out_in(odp_ipsec_sa_t out_sa,
 		 * Expect result packet only for the last packet.
 		 */
 		memset(&test_in, 0, sizeof(test_in));
+
+		/*
+		 * In case of complete reassembly, the original IP length is the
+		 * sum of IP lengths of the ESP packets that contained the
+		 * individual fragments.
+		 */
+		if (reass_status == ODP_PACKET_REASS_COMPLETE) {
+			pkt_len = odp_packet_len(pkt);
+			l3_off = odp_packet_l3_offset(pkt);
+			CU_ASSERT(ODP_PACKET_OFFSET_INVALID != l3_off)
+
+			orig_ip_len += pkt_len - l3_off;
+		}
+
 		if (i == num_input_packets - 1) {
 			part_prep_plain(&test_in, 1, is_result_ipv6, true);
 			test_in.out[0].pkt_res = result_packet;
 			test_in.out[0].reass_status = reass_status;
 			test_in.out[0].num_frags = num_input_packets;
+			test_in.out[0].orig_ip_len = orig_ip_len;
 		}
 		ipsec_test_packet_from_pkt(&test_pkt, &pkt);
 		test_in.pkt_in = &test_pkt;
