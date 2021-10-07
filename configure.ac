@@ -43,7 +43,12 @@ AS_IF([test "$ac_cv_env_CFLAGS_set" = ""], [user_cflags=0], [user_cflags=1])
 # Initialize automake
 AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects foreign nostdinc -Wall -Werror])
 AC_CONFIG_SRCDIR([include/odp/api/spec/init.h])
-AC_CONFIG_HEADERS([include/odp/autoheader_build.h include/odp/autoheader_external.h include/odp/autoheader_internal.h helper/include/odp/helper/autoheader_external.h])
+AC_CONFIG_HEADERS(m4_normalize([
+	include/odp/autoheader_build.h
+	include/odp/autoheader_external.h
+	include/odp/autoheader_internal.h
+	helper/include/odp/helper/autoheader_external.h
+]))
 
 AC_USE_SYSTEM_EXTENSIONS
 AC_SYS_LARGEFILE
@@ -89,11 +94,41 @@ PKG_PROG_PKG_CONFIG
 dnl breaks cross-compilation and malloc(0) behaviour is not that important
 dnl AC_FUNC_MALLOC
 AC_FUNC_MMAP
-AC_CHECK_FUNCS([bzero clock_gettime gethostbyname getpagesize gettimeofday malloc memset munmap socket strchr strerror strrchr strstr strtoull])
+AC_CHECK_FUNCS(m4_normalize([
+	bzero
+	clock_gettime
+	gethostbyname
+	getpagesize
+	gettimeofday
+	malloc
+	memset
+	munmap
+	socket
+	strchr
+	strerror
+	strrchr
+	strstr
+	strtoull
+]))
 
 # Checks for header files.
 AC_HEADER_RESOLV
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h unistd.h])
+AC_CHECK_HEADERS(m4_normalize([
+	arpa/inet.h
+	fcntl.h
+	inttypes.h
+	limits.h
+	netdb.h
+	netinet/in.h
+	stddef.h
+	stdint.h
+	stdlib.h
+	string.h
+	sys/ioctl.h
+	sys/socket.h
+	sys/time.h
+	unistd.h
+]))
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
