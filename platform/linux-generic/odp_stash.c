@@ -12,13 +12,13 @@
 #include <odp/api/stash.h>
 #include <odp/api/plat/strong_types.h>
 
+#include <odp_config_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_global_data.h>
 #include <odp_init_internal.h>
 #include <odp_ring_ptr_internal.h>
 #include <odp_ring_u32_internal.h>
 
-#define MAX_STASHES   32
 #define MAX_RING_SIZE (1024 * 1024)
 #define MIN_RING_SIZE 64
 
@@ -47,8 +47,8 @@ typedef struct stash_t {
 typedef struct stash_global_t {
 	odp_ticketlock_t  lock;
 	odp_shm_t         shm;
-	uint8_t           stash_reserved[MAX_STASHES];
-	stash_t           *stash[MAX_STASHES];
+	uint8_t           stash_reserved[CONFIG_MAX_STASHES];
+	stash_t           *stash[CONFIG_MAX_STASHES];
 
 } stash_global_t;
 
@@ -106,8 +106,8 @@ int odp_stash_capability(odp_stash_capability_t *capa, odp_stash_type_t type)
 	(void)type;
 	memset(capa, 0, sizeof(odp_stash_capability_t));
 
-	capa->max_stashes_any_type = MAX_STASHES;
-	capa->max_stashes          = MAX_STASHES;
+	capa->max_stashes_any_type = CONFIG_MAX_STASHES;
+	capa->max_stashes          = CONFIG_MAX_STASHES;
 	capa->max_num_obj          = MAX_RING_SIZE;
 	capa->max_obj_size         = sizeof(uintptr_t);
 
@@ -129,7 +129,7 @@ static int reserve_index(void)
 
 	odp_ticketlock_lock(&stash_global->lock);
 
-	for (i = 0; i < MAX_STASHES; i++) {
+	for (i = 0; i < CONFIG_MAX_STASHES; i++) {
 		if (stash_global->stash_reserved[i] == 0) {
 			index = i;
 			stash_global->stash_reserved[i] = 1;
@@ -284,7 +284,7 @@ odp_stash_t odp_stash_lookup(const char *name)
 
 	odp_ticketlock_lock(&stash_global->lock);
 
-	for (i = 0; i < MAX_STASHES; i++) {
+	for (i = 0; i < CONFIG_MAX_STASHES; i++) {
 		stash = stash_global->stash[i];
 
 		if (stash && strcmp(stash->name, name) == 0) {
