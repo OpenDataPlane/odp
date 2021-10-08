@@ -2209,6 +2209,42 @@ static void test_in_ipv6_esp_reass_incomp(void)
 	ipsec_sa_destroy(out_sa);
 }
 
+static void test_in_ipv4_null_aes_xcbc_esp(void)
+{
+	odp_ipsec_tunnel_param_t tunnel;
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	memset(&tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+
+	ipsec_sa_param_fill(&param,
+			    true, false, 0x100, &tunnel,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_AES_XCBC_MAC, &key_auth_aes_xcbc_128,
+			    NULL, NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_null_aes_xcbc_esp,
+		.num_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_UDP,
+			  .pkt_res = &pkt_ipv4_null_aes_xcbc_plain,
+			},
+		},
+	};
+
+	ipsec_check_in_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
 static void ipsec_test_capability(void)
 {
 	odp_ipsec_capability_t capa;
@@ -2329,5 +2365,7 @@ odp_testinfo_t ipsec_in_suite[] = {
 				  ipsec_check_esp_aes_gcm_128_reass_ipv6),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv6_esp_reass_incomp,
 				  ipsec_check_esp_aes_gcm_128_reass_ipv6),
+	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_null_aes_xcbc_esp,
+				  ipsec_check_esp_null_aes_xcbc),
 	ODP_TEST_INFO_NULL,
 };
