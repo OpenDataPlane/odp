@@ -1377,6 +1377,50 @@ static void test_out_ipv4_udp_esp_null_sha256(void)
 	ipsec_sa_destroy(sa);
 }
 
+static void test_out_ipv4_null_aes_xcbc(void)
+{
+	odp_ipsec_tunnel_param_t tunnel;
+	odp_ipsec_sa_param_t param;
+	odp_ipsec_sa_t sa;
+
+	memset(&tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	uint32_t src = IPV4ADDR(10, 0, 111, 2);
+	uint32_t dst = IPV4ADDR(10, 0, 222, 2);
+
+	memset(&tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+	tunnel.type = ODP_IPSEC_TUNNEL_IPV4;
+	tunnel.ipv4.src_addr = &src;
+	tunnel.ipv4.dst_addr = &dst;
+	tunnel.ipv4.ttl = 64;
+
+	ipsec_sa_param_fill(&param,
+			    false, false, 0x100, &tunnel,
+			    ODP_CIPHER_ALG_NULL, NULL,
+			    ODP_AUTH_ALG_AES_XCBC_MAC, &key_auth_aes_xcbc_128,
+			    NULL, NULL);
+
+	sa = odp_ipsec_sa_create(&param);
+
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
+
+	ipsec_test_part test = {
+		.pkt_in = &pkt_ipv4_null_aes_xcbc_plain,
+		.num_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = _ODP_PROTO_L4_TYPE_UNDEF,
+			  .pkt_res = &pkt_ipv4_null_aes_xcbc_esp,
+			},
+		},
+	};
+
+	ipsec_check_out_one(&test, sa);
+
+	ipsec_sa_destroy(sa);
+}
+
 static void test_sa_info(void)
 {
 	uint32_t src = IPV4ADDR(10, 0, 111, 2);
@@ -1849,6 +1893,8 @@ odp_testinfo_t ipsec_out_suite[] = {
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_udp_esp_null_sha256,
 				  ipsec_check_esp_null_sha256),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_null_aes_xcbc,
+				  ipsec_check_esp_null_aes_xcbc),
 	ODP_TEST_INFO_CONDITIONAL(test_sa_info,
 				  ipsec_check_esp_aes_cbc_128_sha1),
 	ODP_TEST_INFO_CONDITIONAL(test_test_sa_update_seq_num,

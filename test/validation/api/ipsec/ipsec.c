@@ -329,6 +329,12 @@ int ipsec_check_esp_aes_gcm_128_reass_ipv6(void)
 	return ODP_TEST_INACTIVE;
 }
 
+int ipsec_check_esp_null_aes_xcbc(void)
+{
+	return  ipsec_check_esp(ODP_CIPHER_ALG_NULL, 0,
+				ODP_AUTH_ALG_AES_XCBC_MAC, 128);
+}
+
 void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
 			 odp_bool_t in,
 			 odp_bool_t ah,
