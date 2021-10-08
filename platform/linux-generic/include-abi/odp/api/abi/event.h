@@ -35,7 +35,8 @@ typedef enum odp_event_type_t {
 	ODP_EVENT_CRYPTO_COMPL = 4,
 	ODP_EVENT_IPSEC_STATUS = 5,
 	ODP_EVENT_PACKET_VECTOR = 6,
-	ODP_EVENT_PACKET_TX_COMPL = 7
+	ODP_EVENT_PACKET_TX_COMPL = 7,
+	ODP_EVENT_DMA_COMPL = 8,
 } odp_event_type_t;
 
 typedef enum odp_event_subtype_t {

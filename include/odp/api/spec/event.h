@@ -63,6 +63,8 @@ extern "C" {
  * - ODP_EVENT_PACKET_TX_COMPL
  *     - Packet Tx completion event (odp_packet_tx_compl_t) generated as a result of a Packet Tx
  *       completion.
+ * - ODP_EVENT_DMA_COMPL
+ *     - DMA completion event (odp_dma_compl_t) indicates that a DMA transfer has finished
  */
 
 /**
