@@ -130,6 +130,25 @@ static void _packet_compare_data(odp_packet_t pkt1, odp_packet_t pkt2,
 	}
 }
 
+static int packet_sanity_check(odp_packet_t pkt)
+{
+	odp_packet_seg_t seg;
+	uint32_t len = 0;
+
+	for (seg = odp_packet_first_seg(pkt);
+	     seg != ODP_PACKET_SEG_INVALID;
+	     seg = odp_packet_next_seg(pkt, seg)) {
+		uint32_t seglen = odp_packet_seg_data_len(pkt, seg);
+
+		CU_ASSERT(seglen != 0);
+		if (seglen == 0)
+			return 1;
+		len += seglen;
+	}
+	CU_ASSERT(len == odp_packet_len(pkt));
+	return len != odp_packet_len(pkt);
+}
+
 static int fill_data_forward(odp_packet_t pkt, uint32_t offset, uint32_t len,
 			     uint32_t *cur_data)
 {
@@ -925,6 +944,7 @@ static void _verify_headroom_shift(odp_packet_t *pkt,
 			extended = 1;
 		}
 	}
+	packet_sanity_check(*pkt);
 
 	CU_ASSERT_PTR_NOT_NULL(data);
 	if (extended) {
@@ -1022,6 +1042,7 @@ static void _verify_tailroom_shift(odp_packet_t *pkt,
 			extended = 1;
 		}
 	}
+	packet_sanity_check(*pkt);
 
 	CU_ASSERT_PTR_NOT_NULL(tail);
 	if (extended) {
@@ -1289,6 +1310,7 @@ static void packet_test_add_rem_data(void)
 	CU_ASSERT(ret >= 0);
 	if (ret < 0)
 		goto free_packet;
+	packet_sanity_check(new_pkt);
 	CU_ASSERT(odp_packet_len(new_pkt) == pkt_len + add_len);
 	/* Verify that user metadata is preserved */
 	CU_ASSERT(odp_packet_user_ptr(new_pkt) == usr_ptr);
@@ -1310,6 +1332,7 @@ static void packet_test_add_rem_data(void)
 	CU_ASSERT(ret >= 0);
 	if (ret < 0)
 		goto free_packet;
+	packet_sanity_check(new_pkt);
 	CU_ASSERT(odp_packet_len(new_pkt) == pkt_len - add_len);
 	CU_ASSERT(odp_packet_user_ptr(new_pkt) == usr_ptr);
 
@@ -1715,12 +1738,15 @@ static void packet_test_concatsplit(void)
 
 	CU_ASSERT(odp_packet_concat(&pkt, pkt2) >= 0);
 	CU_ASSERT(odp_packet_len(pkt) == pkt_len * 2);
+	packet_sanity_check(pkt);
 	packet_compare_offset(pkt, 0, pkt, pkt_len, pkt_len);
 
 	CU_ASSERT(odp_packet_split(&pkt, pkt_len, &pkt2) == 0);
 	CU_ASSERT(pkt != pkt2);
 	CU_ASSERT(odp_packet_data(pkt) != odp_packet_data(pkt2));
 	CU_ASSERT(odp_packet_len(pkt) == odp_packet_len(pkt2));
+	packet_sanity_check(pkt);
+	packet_sanity_check(pkt2);
 	packet_compare_data(pkt, pkt2);
 	packet_compare_data(pkt, test_packet);
 
@@ -1731,19 +1757,22 @@ static void packet_test_concatsplit(void)
 			      odp_packet_pool(segmented_test_packet));
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	pkt_len = odp_packet_len(pkt);
-
+	packet_sanity_check(pkt);
 	packet_compare_data(pkt, segmented_test_packet);
+
 	CU_ASSERT(odp_packet_split(&pkt, pkt_len / 2, &splits[0]) == 0);
 	CU_ASSERT(pkt != splits[0]);
 	CU_ASSERT(odp_packet_data(pkt) != odp_packet_data(splits[0]));
 	CU_ASSERT(odp_packet_len(pkt) == pkt_len / 2);
 	CU_ASSERT(odp_packet_len(pkt) + odp_packet_len(splits[0]) == pkt_len);
-
+	packet_sanity_check(pkt);
+	packet_sanity_check(splits[0]);
 	packet_compare_offset(pkt, 0, segmented_test_packet, 0, pkt_len / 2);
 	packet_compare_offset(splits[0], 0, segmented_test_packet,
 			      pkt_len / 2, odp_packet_len(splits[0]));
 
 	CU_ASSERT(odp_packet_concat(&pkt, splits[0]) >= 0);
+	packet_sanity_check(pkt);
 	packet_compare_offset(pkt, 0, segmented_test_packet, 0, pkt_len / 2);
 	packet_compare_offset(pkt, pkt_len / 2, segmented_test_packet,
 			      pkt_len / 2, pkt_len / 2);
@@ -1754,15 +1783,24 @@ static void packet_test_concatsplit(void)
 	packet_compare_data(pkt, segmented_test_packet);
 
 	CU_ASSERT(odp_packet_split(&pkt, pkt_len / 2, &splits[0]) == 0);
+	packet_sanity_check(pkt);
 	CU_ASSERT(odp_packet_split(&pkt, pkt_len / 4, &splits[1]) == 0);
+	packet_sanity_check(pkt);
 	CU_ASSERT(odp_packet_split(&pkt, pkt_len / 8, &splits[2]) == 0);
+	packet_sanity_check(pkt);
 
+	packet_sanity_check(splits[0]);
+	packet_sanity_check(splits[1]);
+	packet_sanity_check(splits[2]);
 	CU_ASSERT(odp_packet_len(splits[0]) + odp_packet_len(splits[1]) +
 		  odp_packet_len(splits[2]) + odp_packet_len(pkt) == pkt_len);
 
 	CU_ASSERT(odp_packet_concat(&pkt, splits[2]) >= 0);
+	packet_sanity_check(pkt);
 	CU_ASSERT(odp_packet_concat(&pkt, splits[1]) >= 0);
+	packet_sanity_check(pkt);
 	CU_ASSERT(odp_packet_concat(&pkt, splits[0]) >= 0);
+	packet_sanity_check(pkt);
 
 	CU_ASSERT(odp_packet_len(pkt) == odp_packet_len(segmented_test_packet));
 	packet_compare_data(pkt, segmented_test_packet);
@@ -1813,6 +1851,9 @@ static void packet_test_concat_small(void)
 			odp_packet_free(pkt2);
 			break;
 		}
+
+		if (packet_sanity_check(pkt))
+			break;
 	}
 
 	CU_ASSERT(odp_packet_len(pkt) == len);
@@ -1866,6 +1907,7 @@ static void packet_test_concat_extend_trunc(void)
 
 		ret = odp_packet_concat(&pkt, pkt2);
 		CU_ASSERT(ret >= 0);
+		packet_sanity_check(pkt);
 
 		if (ret < 0)
 			odp_packet_free(pkt2);
@@ -1876,13 +1918,13 @@ static void packet_test_concat_extend_trunc(void)
 
 	ret = odp_packet_extend_tail(&pkt, ext_len, NULL, NULL);
 	CU_ASSERT(ret >= 0);
-
+	packet_sanity_check(pkt);
 	CU_ASSERT(odp_packet_len(pkt) == (cur_len + ext_len));
 	cur_len = odp_packet_len(pkt);
 
 	ret = odp_packet_extend_head(&pkt, ext_len, NULL, NULL);
 	CU_ASSERT(ret >= 0);
-
+	packet_sanity_check(pkt);
 	CU_ASSERT(odp_packet_len(pkt) == (cur_len + ext_len));
 	cur_len = odp_packet_len(pkt);
 
@@ -1895,18 +1937,19 @@ static void packet_test_concat_extend_trunc(void)
 	if (ret < 0)
 		odp_packet_free(pkt2);
 
+	packet_sanity_check(pkt);
 	CU_ASSERT(odp_packet_len(pkt) == (cur_len + alloc_len));
 	cur_len = odp_packet_len(pkt);
 
 	ret = odp_packet_trunc_head(&pkt, trunc_len, NULL, NULL);
 	CU_ASSERT(ret >= 0);
-
+	packet_sanity_check(pkt);
 	CU_ASSERT(odp_packet_len(pkt) == (cur_len - trunc_len));
 	cur_len = odp_packet_len(pkt);
 
 	ret = odp_packet_trunc_tail(&pkt, trunc_len, NULL, NULL);
 	CU_ASSERT(ret >= 0);
-
+	packet_sanity_check(pkt);
 	CU_ASSERT(odp_packet_len(pkt) == (cur_len - trunc_len));
 	cur_len = odp_packet_len(pkt);
 
@@ -1960,6 +2003,9 @@ static void packet_test_extend_small(void)
 			}
 
 			if (ret < 0)
+				break;
+
+			if (packet_sanity_check(pkt))
 				break;
 
 			if (tail) {
@@ -2064,6 +2110,9 @@ static void packet_test_extend_large(void)
 			}
 
 			if (ret < 0)
+				break;
+
+			if (packet_sanity_check(pkt))
 				break;
 
 			if (tail) {
@@ -2197,6 +2246,9 @@ static void packet_test_extend_mix(void)
 				CU_ASSERT(ret == 0);
 			}
 
+			if (packet_sanity_check(pkt))
+				break;
+
 			cur_len += ext_len;
 		}
 
@@ -2259,9 +2311,11 @@ static void packet_test_extend_ref(void)
 					NULL, NULL) >= 0);
 	CU_ASSERT(odp_packet_extend_head(&max_pkt, 1, NULL, NULL) >= 0);
 	CU_ASSERT(odp_packet_len(max_pkt) == max_len);
+	packet_sanity_check(max_pkt);
 
 	/* Now try with a reference in place */
 	CU_ASSERT(odp_packet_trunc_tail(&max_pkt, 100, NULL, NULL) >= 0);
+	packet_sanity_check(max_pkt);
 	ref = odp_packet_ref(max_pkt, 100);
 
 	/* Verify ref lengths */
@@ -2275,6 +2329,7 @@ static void packet_test_extend_ref(void)
 	/* Now extend max_pkt and verify effect */
 	CU_ASSERT(odp_packet_extend_head(&max_pkt, 10, NULL, NULL) >= 0);
 	CU_ASSERT(odp_packet_len(max_pkt) == max_len - 90);
+	packet_sanity_check(max_pkt);
 
 	/* Extend on max_pkt should not affect ref */
 	CU_ASSERT(odp_packet_len(ref) == max_len - 200);
@@ -2282,12 +2337,14 @@ static void packet_test_extend_ref(void)
 	/* Now extend ref and verify effect*/
 	CU_ASSERT(odp_packet_extend_head(&ref, 20, NULL, NULL) >= 0);
 	CU_ASSERT(odp_packet_len(ref) == max_len - 180);
+	packet_sanity_check(max_pkt);
 
 	/* Extend on ref should not affect max_pkt */
 	CU_ASSERT(odp_packet_len(max_pkt) == max_len - 90);
 
 	/* Trunc max_pkt of all unshared len */
 	CU_ASSERT(odp_packet_trunc_head(&max_pkt, 110, NULL, NULL) >= 0);
+	packet_sanity_check(max_pkt);
 
 	/* Verify effect on max_pkt */
 	CU_ASSERT(odp_packet_len(max_pkt) == max_len - 200);
@@ -2299,6 +2356,7 @@ static void packet_test_extend_ref(void)
 	odp_packet_free(ref);
 	CU_ASSERT(odp_packet_has_ref(max_pkt) == 0);
 	CU_ASSERT(odp_packet_len(max_pkt) == max_len - 200);
+	packet_sanity_check(max_pkt);
 
 	odp_packet_free(max_pkt);
 }
@@ -2339,6 +2397,8 @@ static void packet_test_align(void)
 
 		/* Verify requested contiguous addressabilty */
 		CU_ASSERT(aligned_seglen >= seg_len + 2);
+
+		packet_sanity_check(pkt);
 	}
 
 	/* Get a misaligned address */
@@ -2358,6 +2418,7 @@ static void packet_test_align(void)
 	packet_compare_offset(pkt, offset, segmented_test_packet, offset,
 			      aligned_seglen);
 	CU_ASSERT((uintptr_t)aligned_data % max_align == 0);
+	packet_sanity_check(pkt);
 
 	odp_packet_free(pkt);
 }
