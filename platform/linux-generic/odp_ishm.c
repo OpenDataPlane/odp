@@ -1621,17 +1621,18 @@ int _odp_ishm_cleanup_files(const char *dirpath)
 	char userdir[PATH_MAX];
 	char prefix[PATH_MAX];
 	char *fullpath;
-	int d_len = strlen(dirpath);
+	int d_len;
 	int p_len;
 	int f_len;
 
 	snprintf(userdir, PATH_MAX, "%s/%s", dirpath, odp_global_ro.uid);
+	d_len = strlen(userdir);
 
 	dir = opendir(userdir);
 	if (!dir) {
 		/* ok if the dir does not exist. no much to delete then! */
 		ODP_DBG("opendir failed for %s: %s\n",
-			dirpath, strerror(errno));
+			userdir, strerror(errno));
 		return 0;
 	}
 	snprintf(prefix, PATH_MAX, _ODP_FILES_FMT, odp_global_ro.main_pid);
@@ -1645,7 +1646,7 @@ int _odp_ishm_cleanup_files(const char *dirpath)
 				return -1;
 			}
 			snprintf(fullpath, PATH_MAX, "%s/%s",
-				 dirpath, e->d_name);
+				 userdir, e->d_name);
 			ODP_DBG("deleting obsolete file: %s\n", fullpath);
 			if (unlink(fullpath))
 				ODP_ERR("unlink failed for %s: %s\n",
