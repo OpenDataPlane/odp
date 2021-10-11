@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 #include <odp/api/std_types.h>
+#include <odp/api/dma_types.h>
 
 /** @addtogroup odp_pool
  *  @{
@@ -324,7 +325,10 @@ typedef enum odp_pool_type_t {
 	 * Each vector holds an array of generic types of the same type.
 	 * @see ODP_EVENT_PACKET_VECTOR
 	 */
-	ODP_POOL_VECTOR = (ODP_POOL_TIMEOUT + 1)
+	ODP_POOL_VECTOR,
+
+	/** DMA completion event pool */
+	ODP_POOL_DMA_COMPL
 
 } odp_pool_type_t;
 
@@ -710,6 +714,9 @@ typedef struct odp_pool_ext_param_t {
  * Used to get information about a pool.
  */
 typedef struct odp_pool_info_t {
+	/** Pool type */
+	odp_pool_type_t type;
+
 	/** Pool name */
 	const char *name;
 
@@ -727,6 +734,9 @@ typedef struct odp_pool_info_t {
 
 		/** Copy of external memory pool parameters. This is set when pool_ext is 1. */
 		odp_pool_ext_param_t pool_ext_param;
+
+		/** Copy of pool parameters when pool type is ODP_POOL_DMA_COMPL. */
+		odp_dma_pool_param_t dma_pool_param;
 	};
 
 	/** Additional info for packet pools */
