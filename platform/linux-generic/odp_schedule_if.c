@@ -95,27 +95,27 @@ int odp_schedule_multi_no_wait(odp_queue_t *from, odp_event_t events[], int num)
 
 void odp_schedule_pause(void)
 {
-	return _odp_sched_api->schedule_pause();
+	_odp_sched_api->schedule_pause();
 }
 
 void odp_schedule_resume(void)
 {
-	return _odp_sched_api->schedule_resume();
+	_odp_sched_api->schedule_resume();
 }
 
 void odp_schedule_release_atomic(void)
 {
-	return _odp_sched_api->schedule_release_atomic();
+	_odp_sched_api->schedule_release_atomic();
 }
 
 void odp_schedule_release_ordered(void)
 {
-	return _odp_sched_api->schedule_release_ordered();
+	_odp_sched_api->schedule_release_ordered();
 }
 
 void odp_schedule_prefetch(int num)
 {
-	return _odp_sched_api->schedule_prefetch(num);
+	_odp_sched_api->schedule_prefetch(num);
 }
 
 int odp_schedule_min_prio(void)
@@ -180,12 +180,12 @@ int odp_schedule_group_info(odp_schedule_group_t group,
 
 void odp_schedule_order_lock(uint32_t lock_index)
 {
-	return _odp_sched_api->schedule_order_lock(lock_index);
+	_odp_sched_api->schedule_order_lock(lock_index);
 }
 
 void odp_schedule_order_unlock(uint32_t lock_index)
 {
-	return _odp_sched_api->schedule_order_unlock(lock_index);
+	_odp_sched_api->schedule_order_unlock(lock_index);
 }
 
 void odp_schedule_order_unlock_lock(uint32_t unlock_index, uint32_t lock_index)
