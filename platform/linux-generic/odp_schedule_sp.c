@@ -1056,7 +1056,7 @@ static void schedule_print(void)
 static void get_config(schedule_config_t *config)
 {
 	*config = sched_global->config_if;
-};
+}
 
 /* Fill in scheduler interface */
 const schedule_fn_t _odp_schedule_sp_fn = {
