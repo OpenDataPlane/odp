@@ -103,7 +103,7 @@ void odp_packet_vector_print(odp_packet_vector_t pktv)
 
 	len += snprintf(&str[len], n - len, "Packet Vector\n");
 	len += snprintf(&str[len], n - len,
-			"  handle %p\n", pktv);
+			"  handle %p\n", (void *)pktv);
 	len += snprintf(&str[len], n - len,
 			"  size   %" PRIu32 "\n", pktv_hdr->size);
 
@@ -114,7 +114,7 @@ void odp_packet_vector_print(odp_packet_vector_t pktv)
 
 		str_len = snprintf(seg_str, max_len,
 				   "    packet     %p  len %" PRIu32 "\n",
-				   pkt, odp_packet_len(pkt));
+				   (void *)pkt, odp_packet_len(pkt));
 
 		/* Prevent print buffer overflow */
 		if (n - len - str_len < 10) {

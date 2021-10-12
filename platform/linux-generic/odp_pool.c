@@ -1392,10 +1392,10 @@ void odp_pool_print(odp_pool_t pool_hdl)
 	ODP_PRINT("  block size      %u\n", pool->block_size);
 	ODP_PRINT("  uarea size      %u\n", pool->uarea_size);
 	ODP_PRINT("  shm size        %" PRIu64 "\n", pool->shm_size);
-	ODP_PRINT("  base addr       %p\n", pool->base_addr);
-	ODP_PRINT("  max addr        %p\n", pool->max_addr);
+	ODP_PRINT("  base addr       %p\n", (void *)pool->base_addr);
+	ODP_PRINT("  max addr        %p\n", (void *)pool->max_addr);
 	ODP_PRINT("  uarea shm size  %" PRIu64 "\n", pool->uarea_shm_size);
-	ODP_PRINT("  uarea base addr %p\n", pool->uarea_base_addr);
+	ODP_PRINT("  uarea base addr %p\n", (void *)pool->uarea_base_addr);
 	ODP_PRINT("  cache size      %u\n", pool->cache_size);
 	ODP_PRINT("  burst size      %u\n", pool->burst_size);
 	ODP_PRINT("\n");
