@@ -22,7 +22,7 @@
  * @return 1 for success and 0 for fail
  */
 #define ATOMIC_CAS_OP_128(atom, oper, old_val, new_val, val) \
-({ \
+__extension__ ({ \
 	odp_u128_t _val; \
 	odp_atomic_u128_t *_atom = atom; \
 	odp_u128_t *_old_val = old_val; \

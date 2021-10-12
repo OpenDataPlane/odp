@@ -29,16 +29,10 @@
 #include <odp_ishmpool_internal.h>
 #include <odp/api/plat/queue_inline_types.h>
 #include <odp_global_data.h>
+#include <odp_macros_internal.h>
 
 #include <string.h>
 #include <inttypes.h>
-
-#define MIN(a, b) \
-	({ \
-		__typeof__(a) tmp_a = (a); \
-		__typeof__(b) tmp_b = (b); \
-		tmp_a < tmp_b ? tmp_a : tmp_b; \
-	})
 
 #define LOCK(a)      odp_ticketlock_lock(a)
 #define UNLOCK(a)    odp_ticketlock_unlock(a)
