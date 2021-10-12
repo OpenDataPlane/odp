@@ -138,7 +138,7 @@ static inline void _odp_atomic_flag_clear(_odp_atomic_flag_t *flag)
 
 #ifdef ODP_ATOMIC_U128
 /** An unsigned 128-bit (16-byte) scalar type */
-typedef __int128 _uint128_t;
+__extension__ typedef __int128 _uint128_t;
 
 /** Atomic 128-bit type */
 typedef struct ODP_ALIGNED(16) {
