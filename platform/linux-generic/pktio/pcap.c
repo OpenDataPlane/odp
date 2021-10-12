@@ -50,6 +50,7 @@
 #include <errno.h>
 #include <pcap/pcap.h>
 #include <pcap/bpf.h>
+#include <stdint.h>
 
 typedef struct {
 	char *fname_rx;		/**< name of pcap file for rx */
@@ -75,7 +76,7 @@ static inline pkt_pcap_t *pkt_priv(pktio_entry_t *pktio_entry)
 #define PKTIO_PCAP_MTU_MIN (68 + _ODP_ETHHDR_LEN)
 #define PKTIO_PCAP_MTU_MAX (64 * 1024)
 
-static const char pcap_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x04};
+static const uint8_t pcap_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x04};
 
 static int pcapif_stats_reset(pktio_entry_t *pktio_entry);
 
