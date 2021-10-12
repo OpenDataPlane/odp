@@ -180,7 +180,7 @@ _ODP_INLINE void odp_atomic_min_u32(odp_atomic_u32_t *atom, uint32_t new_min)
  * CAS operation expression for the ATOMIC_OP macro
  */
 #define ATOMIC_CAS_OP(ret_ptr, old_val, new_val) \
-({ \
+__extension__ ({ \
 	if (atom->v == (old_val)) { \
 		atom->v = (new_val); \
 		*(ret_ptr) = 1; \
@@ -197,7 +197,7 @@ _ODP_INLINE void odp_atomic_min_u32(odp_atomic_u32_t *atom, uint32_t new_min)
  * @return The old value of the variable.
  */
 #define ATOMIC_OP(atom, expr) \
-({ \
+__extension__ ({ \
 	uint64_t _old_val; \
 	/* Loop while lock is already taken, stop when lock becomes clear */ \
 	while (__atomic_test_and_set(&(atom)->lock, __ATOMIC_ACQUIRE)) \

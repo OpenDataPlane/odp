@@ -140,7 +140,7 @@ static inline int _odp_atomic_cas_acq_rel_u128(odp_atomic_u128_t *atom, odp_u128
  * 128 bit CAS operation expression for the ATOMIC_OP macro
  */
 #define ATOMIC_CAS_OP_128(ret_ptr, old_val, new_val) \
-({ \
+__extension__ ({ \
 	int *_ret_ptr = ret_ptr; \
 	odp_u128_t *_old_val = old_val; \
 	odp_u128_t _new_val = new_val; \
@@ -161,7 +161,7 @@ static inline int _odp_atomic_cas_acq_rel_u128(odp_atomic_u128_t *atom, odp_u128
  * @return The old value of the variable.
  */
 #define ATOMIC_OP_128(atom, expr) \
-({ \
+__extension__ ({ \
 	odp_u128_t _old_val; \
 	odp_atomic_u128_t *_atom = atom; \
 	/* Loop while lock is already taken, stop when lock becomes clear */ \
