@@ -115,11 +115,11 @@ static inline uint32_t sc(uint64_t *var, uint64_t neu, int mm)
 #define sc64(a, b, c) sc((a), (b), (c))
 
 union i128 {
-	__int128 i128;
+	__extension__ __int128 i128;
 	int64_t  i64[2];
 };
 
-static inline __int128 lld(__int128 *var, int mm)
+__extension__ static inline __int128 lld(__int128 *var, int mm)
 {
 	union i128 old;
 
@@ -139,7 +139,7 @@ static inline __int128 lld(__int128 *var, int mm)
 }
 
 /* Return 0 on success, 1 on failure */
-static inline uint32_t scd(__int128 *var, __int128 neu, int mm)
+__extension__ static inline uint32_t scd(__int128 *var, __int128 neu, int mm)
 {
 	uint32_t ret;
 

@@ -21,7 +21,7 @@
 
 #ifdef __SIZEOF_INT128__
 
-typedef unsigned __int128 u128_t;
+__extension__ typedef unsigned __int128 u128_t;
 
 static inline void lockfree_zero_u128(u128_t *atomic)
 {

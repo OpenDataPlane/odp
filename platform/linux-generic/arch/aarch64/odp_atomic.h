@@ -36,6 +36,10 @@ do {							\
 #define LL_MO(mo) (HAS_ACQ((mo)) ? __ATOMIC_ACQUIRE : __ATOMIC_RELAXED)
 #define SC_MO(mo) (HAS_RLS((mo)) ? __ATOMIC_RELEASE : __ATOMIC_RELAXED)
 
+/* Prevent warnings about ISO C not supporting __int128 */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+
 #ifndef __ARM_FEATURE_QRDMX /* Feature only available in v8.1a and beyond */
 static inline bool
 __lockfree_compare_exchange_16(register __int128 *var, __int128 *exp,
@@ -219,7 +223,7 @@ static inline __int128 __lockfree_load_16(__int128 *var, int mo)
 	return old;
 }
 
-typedef unsigned __int128 _u128_t;
+__extension__ typedef unsigned __int128 _u128_t;
 
 static inline _u128_t lockfree_load_u128(_u128_t *atomic)
 {
@@ -290,6 +294,8 @@ static inline bitset_t bitset_mask(uint32_t bit)
 	else
 		return (unsigned __int128)(1ULL << (bit - 64)) << 64;
 }
+
+#pragma GCC diagnostic pop
 
 #else
 #error Unsupported size of bit sets (ATOM_BITSET_SIZE)

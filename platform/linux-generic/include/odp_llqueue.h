@@ -49,7 +49,7 @@ static odp_bool_t llq_on_queue(struct llnode *node);
 typedef uint64_t dintptr_t;
 #endif
 #if __SIZEOF_PTRDIFF_T__ == 8
-typedef __int128 dintptr_t;
+__extension__ typedef __int128 dintptr_t;
 #endif
 
 struct llnode {
