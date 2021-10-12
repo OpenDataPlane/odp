@@ -559,7 +559,7 @@ static struct rte_mempool_ops odp_pool_ops = {
 	.get_count = pool_get_count
 };
 
-MEMPOOL_REGISTER_OPS(odp_pool_ops);
+MEMPOOL_REGISTER_OPS(odp_pool_ops)
 
 static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 			      odp_packet_t pkt_table[],

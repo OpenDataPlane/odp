@@ -1960,7 +1960,7 @@ static int schedule_num_grps(void)
 static void schedule_get_config(schedule_config_t *config)
 {
 	*config = sched->config_if;
-};
+}
 
 static int schedule_capability(odp_schedule_capability_t *capa)
 {
