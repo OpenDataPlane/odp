@@ -185,7 +185,7 @@ void odp_time_wait_ns(uint64_t ns)
 
 void odp_time_wait_until(odp_time_t time)
 {
-	return time_wait_until(time);
+	time_wait_until(time);
 }
 
 int _odp_time_init_global(void)
