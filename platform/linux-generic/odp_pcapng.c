@@ -577,4 +577,7 @@ int _odp_pcapng_write_pkts(pktio_entry_t *entry, int qidx,
 	return len;
 }
 
-#endif /* _ODP_PCAPNG */
+#else /* _ODP_PCAPNG */
+/* Avoid warning about empty translation unit */
+typedef int _odp_dummy;
+#endif

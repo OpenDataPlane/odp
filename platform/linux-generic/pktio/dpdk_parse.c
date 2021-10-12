@@ -493,4 +493,7 @@ int _odp_dpdk_packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 					      pktin_cfg);
 }
 
-#endif /* _ODP_PKTIO_DPDK */
+#else /* _ODP_PKTIO_DPDK */
+/* Avoid warning about empty translation unit */
+typedef int _odp_dummy;
+#endif
