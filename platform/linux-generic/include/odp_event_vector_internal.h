@@ -28,7 +28,7 @@ typedef struct {
 	uint32_t size;
 
 	/* Vector of packet handles */
-	odp_packet_t packet[0];
+	odp_packet_t packet[];
 
 } odp_event_vector_hdr_t;
 

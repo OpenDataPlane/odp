@@ -70,7 +70,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	uint32_t          num_avail_to_add;
 	uint32_t          base_id;
 	name_tbl_entry_t *free_list_head;
-	name_tbl_entry_t  entries[0];
+	name_tbl_entry_t  entries[];
 } name_tbl_t;
 
 typedef struct {

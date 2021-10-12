@@ -33,12 +33,12 @@ typedef struct stash_t {
 	union {
 		struct ODP_ALIGNED_CACHE {
 			ring_ptr_t hdr;
-			uintptr_t  data[0];
+			uintptr_t  data[];
 		} ring_ptr;
 
 		struct ODP_ALIGNED_CACHE {
 			ring_u32_t hdr;
-			uint32_t   data[0];
+			uint32_t   data[];
 		} ring_u32;
 	};
 

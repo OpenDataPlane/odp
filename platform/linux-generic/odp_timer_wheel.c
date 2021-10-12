@@ -105,7 +105,7 @@ typedef struct {
 	uint32_t             head_idx;
 	uint32_t             tail_idx;
 	uint32_t             max_idx;
-	current_timer_slot_t entries[0];
+	current_timer_slot_t entries[];
 } expired_ring_t;
 
 typedef struct {

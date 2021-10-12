@@ -44,7 +44,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	odp_buffer_hdr_t *buf_hdr[CONFIG_POOL_MAX_NUM + 1];
 
 	/* Index to pointer look-up table for external memory pool */
-	odp_buffer_hdr_t *buf_hdr_by_index[0];
+	odp_buffer_hdr_t *buf_hdr_by_index[];
 
 } pool_ring_t;
 
