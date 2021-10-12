@@ -219,7 +219,7 @@ static inline __int128 __lockfree_load_16(__int128 *var, int mo)
 	return old;
 }
 
-typedef unsigned __int128 _u128_t;
+__extension__ typedef unsigned __int128 _u128_t;
 
 static inline _u128_t lockfree_load_u128(_u128_t *atomic)
 {
