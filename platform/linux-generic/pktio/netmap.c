@@ -1331,5 +1331,7 @@ const pktio_if_ops_t _odp_netmap_pktio_ops = {
 	.send = netmap_send,
 	.fd_set = netmap_fd_set
 };
-
-#endif /* _ODP_PKTIO_NETMAP */
+#else /* _ODP_PKTIO_NETMAP */
+/* Avoid warning about empty translation unit */
+typedef int _odp_dummy;
+#endif
