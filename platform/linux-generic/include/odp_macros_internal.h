@@ -22,14 +22,14 @@ extern "C" {
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 #define MIN(a, b)				\
-	({					\
+	__extension__ ({			\
 		__typeof__(a) tmp_a = (a);	\
 		__typeof__(b) tmp_b = (b);	\
 		tmp_a < tmp_b ? tmp_a : tmp_b;	\
 	})
 
 #define MAX(a, b)				\
-	({					\
+	__extension__ ({			\
 		__typeof__(a) tmp_a = (a);	\
 		__typeof__(b) tmp_b = (b);	\
 		tmp_a > tmp_b ? tmp_a : tmp_b;	\
@@ -39,7 +39,7 @@ extern "C" {
 	((type *)(void *)(((char *)pointer) - offsetof(type, member)))
 
 #define DIV_ROUND_UP(a, b)					\
-	({							\
+	__extension__ ({					\
 		__typeof__(a) tmp_a = (a);			\
 		__typeof__(b) tmp_b = (b);			\
 		ODP_STATIC_ASSERT(__builtin_constant_p(b), "");	\
