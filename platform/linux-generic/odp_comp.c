@@ -134,8 +134,8 @@ static void process_input(odp_packet_t pkt_out,
 		out_data =
 		    odp_packet_offset(pkt_out, start, &out_len, &cur_seg);
 		ODP_DBG("out_data %p seg_data_ptr %p out_len %d seg %p\n",
-			out_data, odp_packet_seg_data(pkt_out, cur_seg),
-			out_len, cur_seg);
+			(void *)out_data, odp_packet_seg_data(pkt_out, cur_seg),
+			out_len, (void *)cur_seg);
 
 		if (0 == out_len) {
 			/* there are no more segments */
@@ -156,8 +156,8 @@ static void process_input(odp_packet_t pkt_out,
 
 		ODP_DBG("next_in %p, avail_in %d next_out %p"
 			" avail_out %d, sync %d\n",
-			streamp->next_in, streamp->avail_in,
-			streamp->next_out,
+			(const void *)streamp->next_in, streamp->avail_in,
+			(void *)streamp->next_out,
 			streamp->avail_out,
 			sync);
 
@@ -259,7 +259,7 @@ static int deflate_comp(odp_packet_t pkt_in,
 					 &in_len,
 					 &in_seg);
 		ODP_DBG("data %p in_len %d seg %p len %d\n",
-			data, in_len, in_seg, len);
+			(void *)data, in_len, (void *)in_seg, len);
 
 		if (in_len > len)
 			in_len = len;

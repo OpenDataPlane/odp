@@ -52,7 +52,7 @@ void odp_buffer_print(odp_buffer_t buf)
 	len += snprintf(&str[len], n - len, "Buffer\n------\n");
 	len += snprintf(&str[len], n - len, "  pool index    %u\n", hdr->index.pool);
 	len += snprintf(&str[len], n - len, "  buffer index  %u\n", hdr->index.buffer);
-	len += snprintf(&str[len], n - len, "  addr          %p\n", hdr->base_data);
+	len += snprintf(&str[len], n - len, "  addr          %p\n", (void *)hdr->base_data);
 	len += snprintf(&str[len], n - len, "  size          %u\n", odp_buffer_size(buf));
 	str[len] = 0;
 

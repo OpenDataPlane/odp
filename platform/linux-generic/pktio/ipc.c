@@ -824,7 +824,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 			    "phdr = %p, offset %td, sendoff %" PRIxPTR ", addr %p iaddr "
 			    "%p\n", i, num,
 			    odp_packet_to_u64(pkt), odp_pool_to_u64(pool_hdl),
-			    pkt_hdr, (uint8_t *)pkt_hdr->seg_data -
+			    (void *)pkt_hdr, (uint8_t *)pkt_hdr->seg_data -
 			    (uint8_t *)odp_shm_addr(pool->shm), offsets[i],
 			    odp_shm_addr(pool->shm),
 			    odp_shm_addr(ipc_pool->shm));
