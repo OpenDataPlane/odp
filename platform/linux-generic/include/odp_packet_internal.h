@@ -148,7 +148,7 @@ typedef struct odp_packet_hdr_t {
 	};
 
 	/* Packet data storage */
-	uint8_t data[0];
+	uint8_t data[];
 
 } odp_packet_hdr_t;
 

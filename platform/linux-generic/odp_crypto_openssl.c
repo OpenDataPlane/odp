@@ -245,7 +245,7 @@ struct odp_crypto_global_s {
 	/* These flags are cleared at alloc_session() */
 	uint8_t ctx_valid[ODP_THREAD_COUNT_MAX][MAX_SESSIONS];
 
-	odp_ticketlock_t              openssl_lock[0];
+	odp_ticketlock_t              openssl_lock[];
 };
 
 static odp_crypto_global_t *global;

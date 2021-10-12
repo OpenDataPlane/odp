@@ -45,12 +45,12 @@ struct ring_common {
 
 typedef struct ODP_ALIGNED_CACHE {
 	struct ring_common r;
-	uint32_t data[0];
+	uint32_t data[];
 } ring_u32_t;
 
 typedef struct ODP_ALIGNED_CACHE {
 	struct ring_common r;
-	void *data[0];
+	void *data[];
 } ring_ptr_t;
 
 /* 32-bit CAS with memory order selection */

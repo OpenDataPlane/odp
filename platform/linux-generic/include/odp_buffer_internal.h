@@ -83,7 +83,7 @@ struct ODP_ALIGNED_CACHE odp_buffer_hdr_t {
 	uint8_t   flow_id;
 
 	/* Data or next header */
-	uint8_t data[0];
+	uint8_t data[];
 };
 
 /* Buffer header size is critical for performance. Ensure that it does not accidentally
