@@ -49,7 +49,7 @@ static inline pkt_loop_t *pkt_priv(pktio_entry_t *pktio_entry)
 }
 
 /* MAC address for the "loop" interface */
-static const char pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
+static const uint8_t pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
 
 static int loopback_stats_reset(pktio_entry_t *pktio_entry);
 static int loopback_init_capability(pktio_entry_t *pktio_entry);
