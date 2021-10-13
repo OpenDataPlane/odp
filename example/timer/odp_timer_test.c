@@ -65,7 +65,7 @@ static const char *timerset2str(odp_timer_set_t val)
 	default:
 		return "?";
 	}
-};
+}
 
 /** @private test timeout */
 static void remove_prescheduled_events(void)
