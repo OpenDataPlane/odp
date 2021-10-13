@@ -73,7 +73,16 @@ static profile_params_set_t COMPANY_PROFILE_PARAMS = {
 	},
 
 	.wred_params = {
-		[ODP_PACKET_GREEN ... ODP_PACKET_YELLOW] = {
+		[ODP_PACKET_GREEN] = {
+			.min_threshold     = PERCENT(70),
+			.med_threshold     = PERCENT(90),
+			.med_drop_prob     = PERCENT(80),
+			.max_drop_prob     = PERCENT(100),
+			.enable_wred       = TRUE,
+			.use_byte_fullness = FALSE,
+		},
+
+		[ODP_PACKET_YELLOW] = {
 			.min_threshold     = PERCENT(70),
 			.med_threshold     = PERCENT(90),
 			.med_drop_prob     = PERCENT(80),
@@ -106,7 +115,16 @@ static profile_params_set_t COS0_PROFILE_PARAMS = {
 	},
 
 	.wred_params = {
-		[ODP_PACKET_GREEN ... ODP_PACKET_YELLOW] = {
+		[ODP_PACKET_GREEN] = {
+			.min_threshold     = PERCENT(80),
+			.med_threshold     = PERCENT(90),
+			.med_drop_prob     = PERCENT(50),
+			.max_drop_prob     = PERCENT(100),
+			.enable_wred       = TRUE,
+			.use_byte_fullness = FALSE,
+		},
+
+		[ODP_PACKET_YELLOW] = {
 			.min_threshold     = PERCENT(80),
 			.med_threshold     = PERCENT(90),
 			.med_drop_prob     = PERCENT(50),
@@ -139,7 +157,16 @@ static profile_params_set_t COS1_PROFILE_PARAMS = {
 	},
 
 	.wred_params = {
-		[ODP_PACKET_GREEN ... ODP_PACKET_YELLOW] = {
+		[ODP_PACKET_GREEN] = {
+			.min_threshold     = PERCENT(40),
+			.med_threshold     = PERCENT(90),
+			.med_drop_prob     = PERCENT(70),
+			.max_drop_prob     = PERCENT(100),
+			.enable_wred       = TRUE,
+			.use_byte_fullness = FALSE,
+		},
+
+		[ODP_PACKET_YELLOW] = {
 			.min_threshold     = PERCENT(40),
 			.med_threshold     = PERCENT(90),
 			.med_drop_prob     = PERCENT(70),
@@ -172,7 +199,16 @@ static profile_params_set_t COS2_PROFILE_PARAMS = {
 	},
 
 	.wred_params = {
-		[ODP_PACKET_GREEN ... ODP_PACKET_YELLOW] = {
+		[ODP_PACKET_GREEN] = {
+			.min_threshold     = PERCENT(50),
+			.med_threshold     = PERCENT(80),
+			.med_drop_prob     = PERCENT(70),
+			.max_drop_prob     = PERCENT(100),
+			.enable_wred       = TRUE,
+			.use_byte_fullness = FALSE,
+		},
+
+		[ODP_PACKET_YELLOW] = {
 			.min_threshold     = PERCENT(50),
 			.med_threshold     = PERCENT(80),
 			.med_drop_prob     = PERCENT(70),
@@ -205,7 +241,16 @@ static profile_params_set_t COS3_PROFILE_PARAMS = {
 	},
 
 	.wred_params = {
-		[ODP_PACKET_GREEN ... ODP_PACKET_YELLOW] = {
+		[ODP_PACKET_GREEN] = {
+			.min_threshold     = PERCENT(40),
+			.med_threshold     = PERCENT(70),
+			.med_drop_prob     = PERCENT(80),
+			.max_drop_prob     = PERCENT(100),
+			.enable_wred       = TRUE,
+			.use_byte_fullness = FALSE,
+		},
+
+		[ODP_PACKET_YELLOW] = {
 			.min_threshold     = PERCENT(40),
 			.med_threshold     = PERCENT(70),
 			.med_drop_prob     = PERCENT(80),
@@ -578,13 +623,17 @@ static uint32_t pkt_service_class(void)
 	* of delayed traffic so as to stimulate more interesting behaviors.
 	*/
 	rand8 = random_8();
-	switch (rand8) {
-	case 0   ... 24:  return 0;
-	case 25  ... 49:  return 1;
-	case 50  ... 150: return 2;
-	case 151 ... 255: return 3;
-	default:          return 3;
-	}
+
+	if (rand8 <= 24)
+		return 0;
+	else if (rand8 >= 25 && rand8 <= 49)
+		return 1;
+	else if (rand8 >= 50 && rand8 <= 150)
+		return 2;
+	else if (rand8 >= 151 && rand8 <= 255)
+		return 3;
+	else
+		return 3;
 }
 
 static odp_packet_t make_odp_packet(uint16_t pkt_len)
