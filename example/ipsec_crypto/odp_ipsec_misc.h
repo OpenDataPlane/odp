@@ -255,7 +255,7 @@ char *mac_addr_str(char *b, uint8_t *mac)
 static inline
 int parse_mac_string(char *macaddress, uint8_t *mac)
 {
-	int macwords[ODPH_ETHADDR_LEN];
+	unsigned int macwords[ODPH_ETHADDR_LEN];
 	int converted;
 
 	converted = sscanf(macaddress,
