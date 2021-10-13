@@ -31,7 +31,7 @@
  */
 typedef struct ODP_PACKED stream_pkt_hdr_s {
 	odp_u64be_t magic;   /**< Stream magic value for verification */
-	uint8_t    data[0];  /**< Incrementing data stream */
+	uint8_t    data[];  /**< Incrementing data stream */
 } stream_pkt_hdr_t;
 
 stream_db_t *stream_db;
