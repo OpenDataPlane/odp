@@ -274,7 +274,7 @@ static void scheduler_test_queue_destroy(void)
 	odp_buffer_t buf;
 	odp_event_t ev;
 	uint32_t *u32;
-	int i;
+	int i, ret;
 	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_PARALLEL,
 				      ODP_SCHED_SYNC_ATOMIC,
 				      ODP_SCHED_SYNC_ORDERED};
@@ -305,7 +305,10 @@ static void scheduler_test_queue_destroy(void)
 		u32[0] = MAGIC;
 
 		ev = odp_buffer_to_event(buf);
-		if (!(CU_ASSERT(odp_queue_enq(queue, ev) == 0)))
+
+		ret = odp_queue_enq(queue, ev);
+		CU_ASSERT(ret == 0);
+		if (ret)
 			odp_buffer_free(buf);
 
 		ev = odp_schedule(&from, ODP_SCHED_WAIT);
@@ -371,7 +374,9 @@ static void scheduler_test_wait(void)
 			u32[0] = MAGIC;
 
 			ev = odp_buffer_to_event(buf);
-			if (!(CU_ASSERT(odp_queue_enq(queue, ev) == 0))) {
+			ret = odp_queue_enq(queue, ev);
+			CU_ASSERT(ret == 0);
+			if (ret) {
 				odp_buffer_free(buf);
 				continue;
 			}

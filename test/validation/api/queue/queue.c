@@ -669,7 +669,9 @@ static void queue_test_param(void)
 	CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
 	ev  = odp_buffer_to_event(buf);
 
-	if (!(CU_ASSERT(odp_queue_enq(queue, ev) == 0))) {
+	ret = odp_queue_enq(queue, ev);
+	CU_ASSERT(ret == 0);
+	if (ret) {
 		odp_buffer_free(buf);
 	} else {
 		CU_ASSERT(ev == odp_queue_deq(queue));
