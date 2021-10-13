@@ -42,9 +42,11 @@ static inline bool atomic_strong_cas_dblptr(uint64_t *var, uint64_t *exp,
  *
  * @return Whether the operation succeeded
  */
-static inline bool atomic_strong_cas_dblptr(__int128 *var, __int128 *exp,
-					    __int128 neu, int mo_success,
-					    int mo_failure)
+__extension__ static inline bool atomic_strong_cas_dblptr(__int128 *var,
+							  __int128 *exp,
+							  __int128 neu,
+							  int mo_success,
+							  int mo_failure)
 {
 	return __atomic_compare_exchange_n(var, exp, neu, 0, mo_success,
 					   mo_failure);

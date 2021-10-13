@@ -10,9 +10,12 @@
 #include <odp_api.h>
 
 #if __SIZEOF_POINTER__ == 8 && defined(__aarch64__)
-static inline __int128 lld(__int128 *var, int mo)
+
+__extension__ typedef __int128 _int128_t;
+
+static inline _int128_t lld(_int128_t *var, int mo)
 {
-	__int128 old;
+	_int128_t old;
 	uint64_t lo, hi;
 
 	if (mo == __ATOMIC_ACQUIRE)
@@ -29,7 +32,7 @@ static inline __int128 lld(__int128 *var, int mo)
 
 }
 
-static inline uint32_t scd(__int128 *var, __int128 neu, int mo)
+static inline uint32_t scd(_int128_t *var, _int128_t neu, int mo)
 {
 	uint32_t ret;
 	uint64_t lo = neu, hi = neu >> 64;
@@ -43,12 +46,12 @@ static inline uint32_t scd(__int128 *var, __int128 neu, int mo)
 	return ret;
 }
 
-static inline bool atomic_strong_cas_dblptr(__int128 *var, __int128 *exp,
-					    __int128 neu, int mo_success,
+static inline bool atomic_strong_cas_dblptr(_int128_t *var, _int128_t *exp,
+					    _int128_t neu, int mo_success,
 					    int mo_failure ODP_UNUSED)
 {
-	register __int128 old;
-	register __int128 expected = *exp;
+	register _int128_t old;
+	register _int128_t expected = *exp;
 	int ll_mo, sc_mo;
 
 	ll_mo = (mo_success != __ATOMIC_RELAXED &&
