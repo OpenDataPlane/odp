@@ -120,7 +120,7 @@ typedef enum {
 
 typedef struct {
 	uint32_t       num_queues;
-	odp_tm_queue_t tm_queues[0];
+	odp_tm_queue_t tm_queues[];
 } tm_queue_desc_t;
 
 typedef struct tm_node_desc_s tm_node_desc_t;
@@ -133,7 +133,7 @@ struct tm_node_desc_s {
 	odp_tm_node_t    node;
 	odp_tm_node_t    parent_node;
 	tm_queue_desc_t *queue_desc;
-	tm_node_desc_t  *children[0];
+	tm_node_desc_t  *children[];
 };
 
 typedef struct {
