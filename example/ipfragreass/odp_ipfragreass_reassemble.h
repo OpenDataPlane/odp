@@ -125,7 +125,7 @@ union fraglist {
 	struct {
 		uint64_t half[2];
 	};
-	__int128 raw;
+	__extension__ __int128 raw;
 #endif
 };
 
