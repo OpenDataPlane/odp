@@ -19,10 +19,6 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
-#define app_err(fmt, ...) \
-	fprintf(stderr, "%s:%d:%s(): Error: " fmt, __FILE__, \
-		__LINE__, __func__, ##__VA_ARGS__)
-
 /** @def POOL_NUM_PKT
  * Number of packets in the pool
  */
@@ -640,7 +636,7 @@ create_session_from_config(odp_crypto_session_t *session,
 	/* Lookup the packet pool */
 	pkt_pool = odp_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_POOL_INVALID) {
-		app_err("packet_pool pool not found\n");
+		ODPH_ERR("packet_pool pool not found\n");
 		return -1;
 	}
 	params.output_pool = pkt_pool;
@@ -648,7 +644,7 @@ create_session_from_config(odp_crypto_session_t *session,
 	if (cargs->schedule || cargs->poll) {
 		out_queue = odp_queue_lookup("crypto-out");
 		if (out_queue == ODP_QUEUE_INVALID) {
-			app_err("crypto-out queue not found\n");
+			ODPH_ERR("crypto-out queue not found\n");
 			return -1;
 		}
 		params.compl_queue = out_queue;
@@ -659,7 +655,7 @@ create_session_from_config(odp_crypto_session_t *session,
 	}
 	if (odp_crypto_session_create(&params, session,
 				      &ses_create_rc)) {
-		app_err("crypto session create failed.\n");
+		ODPH_ERR("crypto session create failed.\n");
 		return -1;
 	}
 
@@ -673,7 +669,7 @@ make_packet(odp_pool_t pkt_pool, unsigned int payload_length)
 
 	pkt = odp_packet_alloc(pkt_pool, payload_length);
 	if (pkt == ODP_PACKET_INVALID) {
-		app_err("failed to allocate buffer\n");
+		ODPH_ERR("failed to allocate buffer\n");
 		return pkt;
 	}
 
@@ -704,14 +700,14 @@ run_measure_one(crypto_args_t *cargs,
 
 	pkt_pool = odp_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_POOL_INVALID) {
-		app_err("pkt_pool not found\n");
+		ODPH_ERR("pkt_pool not found\n");
 		return -1;
 	}
 
 	out_queue = odp_queue_lookup("crypto-out");
 	if (cargs->schedule || cargs->poll) {
 		if (out_queue == ODP_QUEUE_INVALID) {
-			app_err("crypto-out queue not found\n");
+			ODPH_ERR("crypto-out queue not found\n");
 			return -1;
 		}
 	}
@@ -766,8 +762,7 @@ run_measure_one(crypto_args_t *cargs,
 				rc = odp_crypto_op_enq(&pkt, &out_pkt,
 						       &params, 1);
 				if (rc <= 0) {
-					app_err("failed odp_crypto_packet_op_enq: rc = %d\n",
-						rc);
+					ODPH_ERR("failed odp_crypto_packet_op_enq: rc = %d\n", rc);
 					if (!cargs->reuse_packet)
 						odp_packet_free(pkt);
 					break;
@@ -777,8 +772,7 @@ run_measure_one(crypto_args_t *cargs,
 				rc = odp_crypto_op(&pkt, &out_pkt,
 						   &params, 1);
 				if (rc <= 0) {
-					app_err("failed odp_crypto_packet_op: rc = %d\n",
-						rc);
+					ODPH_ERR("failed odp_crypto_packet_op: rc = %d\n", rc);
 					if (!cargs->reuse_packet)
 						odp_packet_free(pkt);
 					break;
@@ -1045,7 +1039,7 @@ int main(int argc, char *argv[])
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
-		app_err("Reading ODP helper options failed.\n");
+		ODPH_ERR("Reading ODP helper options failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1059,7 +1053,7 @@ int main(int argc, char *argv[])
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init_param, NULL)) {
-		app_err("ODP global init failed.\n");
+		ODPH_ERR("ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1069,22 +1063,22 @@ int main(int argc, char *argv[])
 	odp_sys_info_print();
 
 	if (odp_crypto_capability(&crypto_capa)) {
-		app_err("Crypto capability request failed.\n");
+		ODPH_ERR("Crypto capability request failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (cargs.schedule && crypto_capa.queue_type_sched == 0) {
-		app_err("scheduled type completion queue not supported.\n");
+		ODPH_ERR("scheduled type completion queue not supported.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (cargs.poll && crypto_capa.queue_type_plain == 0) {
-		app_err("plain type completion queue not supported.\n");
+		ODPH_ERR("plain type completion queue not supported.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_pool_capability(&pool_capa)) {
-		app_err("Pool capability request failed.\n");
+		ODPH_ERR("Pool capability request failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1106,7 +1100,7 @@ int main(int argc, char *argv[])
 	pool = odp_pool_create("packet_pool", &params);
 
 	if (pool == ODP_POOL_INVALID) {
-		app_err("packet pool create failed.\n");
+		ODPH_ERR("packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	odp_pool_print(pool);
@@ -1125,7 +1119,7 @@ int main(int argc, char *argv[])
 	}
 	if (cargs.schedule || cargs.poll) {
 		if (out_queue == ODP_QUEUE_INVALID) {
-			app_err("crypto-out queue create failed.\n");
+			ODPH_ERR("crypto-out queue create failed.\n");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -1185,17 +1179,17 @@ int main(int argc, char *argv[])
 	if (cargs.schedule || cargs.poll)
 		odp_queue_destroy(out_queue);
 	if (odp_pool_destroy(pool)) {
-		app_err("Error: pool destroy\n");
+		ODPH_ERR("Error: pool destroy\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_local()) {
-		app_err("Error: term local\n");
+		ODPH_ERR("Error: term local\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_global(instance)) {
-		app_err("Error: term global\n");
+		ODPH_ERR("Error: term global\n");
 		exit(EXIT_FAILURE);
 	}
 
