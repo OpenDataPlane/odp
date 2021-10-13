@@ -28,6 +28,10 @@ extern "C" {
  *  @{
  */
 
+/* Avoid "ISO C99 requires at least one argument for the "..."  in a variadic
+ * macro" errors when building with 'pedantic' option. */
+#pragma GCC system_header
+
 /**
  * Assert macro for applications and helper code
  *
