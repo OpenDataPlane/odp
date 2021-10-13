@@ -52,12 +52,6 @@
  * received by this time will be assumed to have been lost. */
 #define SHUTDOWN_DELAY_NS (ODP_TIME_MSEC_IN_NS * 100)
 
-#define VPRINT(fmt, ...) \
-	do { \
-		if (gbl_args->args.verbose) \
-			printf(fmt, ##__VA_ARGS__); \
-	} while (0)
-
 #define CACHE_ALIGN_ROUNDUP(x)\
 	((ODP_CACHE_LINE_SIZE) * \
 	 (((x) + ODP_CACHE_LINE_SIZE - 1) / (ODP_CACHE_LINE_SIZE)))
@@ -369,12 +363,13 @@ static int run_thread_tx(void *arg)
 		cur_time = odp_time_local();
 	}
 
-	VPRINT(" %02d: TxPkts %-8" PRIu64 " EnqFail %-6" PRIu64
-	       " AllocFail %-6" PRIu64 " Idle %" PRIu64 "ms\n",
-	       thr_id, stats->s.tx_cnt,
-	       stats->s.enq_failures, stats->s.alloc_failures,
-	       odp_time_to_ns(stats->s.idle_ticks) /
-	       (uint64_t)ODP_TIME_MSEC_IN_NS);
+	if (gbl_args->args.verbose)
+		printf(" %02d: TxPkts %-8" PRIu64 " EnqFail %-6" PRIu64
+		       " AllocFail %-6" PRIu64 " Idle %" PRIu64 "ms\n",
+		       thr_id, stats->s.tx_cnt, stats->s.enq_failures,
+		       stats->s.alloc_failures,
+		       odp_time_to_ns(stats->s.idle_ticks) /
+		       (uint64_t)ODP_TIME_MSEC_IN_NS);
 
 	return 0;
 }

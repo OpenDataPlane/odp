@@ -19,10 +19,6 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
-#define app_err(fmt, ...) \
-	fprintf(stderr, "%s:%d:%s(): Error: " fmt, __FILE__, \
-		__LINE__, __func__, ##__VA_ARGS__)
-
 /** @def POOL_NUM_PKT
  * Number of packets in the pool
  */
@@ -567,7 +563,7 @@ create_sa_from_config(ipsec_alg_config_t *config,
 	if (cargs->schedule || cargs->poll) {
 		out_queue = odp_queue_lookup("ipsec-out");
 		if (out_queue == ODP_QUEUE_INVALID) {
-			app_err("ipsec-out queue not found\n");
+			ODPH_ERR("ipsec-out queue not found\n");
 			return ODP_IPSEC_SA_INVALID;
 		}
 		param.dest_queue = out_queue;
@@ -598,7 +594,7 @@ make_packet(odp_pool_t pkt_pool, unsigned int payload_length)
 
 	pkt = odp_packet_alloc(pkt_pool, payload_length);
 	if (pkt == ODP_PACKET_INVALID) {
-		app_err("failed to allocate buffer\n");
+		ODPH_ERR("failed to allocate buffer\n");
 		return pkt;
 	}
 
@@ -630,7 +626,7 @@ run_measure_one(ipsec_args_t *cargs,
 
 	pkt_pool = odp_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_POOL_INVALID) {
-		app_err("pkt_pool not found\n");
+		ODPH_ERR("pkt_pool not found\n");
 		return -1;
 	}
 
@@ -665,8 +661,7 @@ run_measure_one(ipsec_args_t *cargs,
 					   &out_pkt, &num_out,
 					   &param);
 			if (rc <= 0) {
-				app_err("failed odp_ipsec_out: rc = %d\n",
-					rc);
+				ODPH_ERR("failed odp_ipsec_out: rc = %d\n", rc);
 				odp_packet_free(pkt);
 				break;
 			}
@@ -674,8 +669,8 @@ run_measure_one(ipsec_args_t *cargs,
 				odp_ipsec_packet_result_t result;
 
 				odp_ipsec_result(&result, out_pkt);
-				app_err("Received error packet: %d\n",
-					result.status.error.all);
+				ODPH_ERR("Received error packet: %d\n",
+					 result.status.error.all);
 			}
 			packets_sent += rc;
 			packets_received += num_out;
@@ -706,13 +701,13 @@ run_measure_one_async(ipsec_args_t *cargs,
 
 	pkt_pool = odp_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_POOL_INVALID) {
-		app_err("pkt_pool not found\n");
+		ODPH_ERR("pkt_pool not found\n");
 		return -1;
 	}
 
 	out_queue = odp_queue_lookup("ipsec-out");
 	if (out_queue == ODP_QUEUE_INVALID) {
-		app_err("ipsec-out queue not found\n");
+		ODPH_ERR("ipsec-out queue not found\n");
 		return -1;
 	}
 
@@ -745,8 +740,8 @@ run_measure_one_async(ipsec_args_t *cargs,
 			rc = odp_ipsec_out_enq(&pkt, 1,
 					       &param);
 			if (rc <= 0) {
-				app_err("failed odp_crypto_packet_op_enq: rc = %d\n",
-					rc);
+				ODPH_ERR("failed odp_crypto_packet_op_enq: rc = %d\n",
+					 rc);
 				odp_packet_free(pkt);
 				break;
 			}
@@ -800,12 +795,12 @@ run_measure_one_config(ipsec_args_t *cargs,
 	int rc = 0;
 
 	if (odp_ipsec_capability(&capa) < 0) {
-		app_err("IPSEC capability call failed.\n");
+		ODPH_ERR("IPSEC capability call failed.\n");
 		return -1;
 	}
 
 	if (cargs->ah && (ODP_SUPPORT_NO == capa.proto_ah)) {
-		app_err("IPSEC AH protocol not supported.\n");
+		ODPH_ERR("IPSEC AH protocol not supported.\n");
 		return -1;
 	}
 
@@ -821,7 +816,7 @@ run_measure_one_config(ipsec_args_t *cargs,
 
 	sa = create_sa_from_config(config, cargs);
 	if (sa == ODP_IPSEC_SA_INVALID) {
-		app_err("IPsec SA create failed.\n");
+		ODPH_ERR("IPsec SA create failed.\n");
 		return -1;
 	}
 
@@ -1041,7 +1036,7 @@ int main(int argc, char *argv[])
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
-		app_err("Reading ODP helper options failed.\n");
+		ODPH_ERR("Reading ODP helper options failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1055,20 +1050,20 @@ int main(int argc, char *argv[])
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init_param, NULL)) {
-		app_err("ODP global init failed.\n");
+		ODPH_ERR("ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_WORKER)) {
-		app_err("ODP local init failed.\n");
+		ODPH_ERR("ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	odp_sys_info_print();
 
 	if (odp_pool_capability(&capa)) {
-		app_err("Pool capability request failed.\n");
+		ODPH_ERR("Pool capability request failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1090,23 +1085,23 @@ int main(int argc, char *argv[])
 	pool = odp_pool_create("packet_pool", &param);
 
 	if (pool == ODP_POOL_INVALID) {
-		app_err("packet pool create failed.\n");
+		ODPH_ERR("packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	odp_pool_print(pool);
 
 	if (odp_ipsec_capability(&ipsec_capa) < 0) {
-		app_err("IPSEC capability call failed.\n");
+		ODPH_ERR("IPSEC capability call failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (cargs.schedule && !ipsec_capa.queue_type_sched) {
-		app_err("Scheduled type destination queue not supported.\n");
+		ODPH_ERR("Scheduled type destination queue not supported.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (cargs.poll && !ipsec_capa.queue_type_plain) {
-		app_err("Plain type destination queue not supported.\n");
+		ODPH_ERR("Plain type destination queue not supported.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1129,7 +1124,7 @@ int main(int argc, char *argv[])
 	}
 	if (cargs.schedule || cargs.poll) {
 		if (out_queue == ODP_QUEUE_INVALID) {
-			app_err("ipsec-out queue create failed.\n");
+			ODPH_ERR("ipsec-out queue create failed.\n");
 			exit(EXIT_FAILURE);
 		}
 		config.inbound_mode = ODP_IPSEC_OP_MODE_ASYNC;
@@ -1141,7 +1136,7 @@ int main(int argc, char *argv[])
 		config.inbound.default_queue = ODP_QUEUE_INVALID;
 	}
 	if (odp_ipsec_config(&config)) {
-		app_err("odp_ipsec_config() failed\n");
+		ODPH_ERR("odp_ipsec_config() failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1202,17 +1197,17 @@ int main(int argc, char *argv[])
 	if (cargs.schedule || cargs.poll)
 		odp_queue_destroy(out_queue);
 	if (odp_pool_destroy(pool)) {
-		app_err("Error: pool destroy\n");
+		ODPH_ERR("Error: pool destroy\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_local()) {
-		app_err("Error: term local\n");
+		ODPH_ERR("Error: term local\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_global(instance)) {
-		app_err("Error: term global\n");
+		ODPH_ERR("Error: term global\n");
 		exit(EXIT_FAILURE);
 	}
 
