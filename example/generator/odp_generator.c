@@ -980,7 +980,7 @@ static int gen_recv_direct_thread(void *arg)
 }
 
 #define COUNTER_SUM(_c, _nw)						\
-({									\
+__extension__ ({							\
 	int _itr;							\
 	uint64_t _result = 0;						\
 									\
