@@ -35,7 +35,7 @@ extern "C" {
 typedef struct ODP_PACKED {
 	odp_u32be_t spi;     /**< Security Parameter Index */
 	odp_u32be_t seq_no;  /**< Sequence Number */
-	uint8_t    iv[0];    /**< Initialization vector */
+	uint8_t    iv[];     /**< Initialization vector */
 } odph_esphdr_t;
 
 /** @internal Compile time assert */
@@ -48,7 +48,7 @@ ODP_STATIC_ASSERT(sizeof(odph_esphdr_t) == ODPH_ESPHDR_LEN,
 typedef struct ODP_PACKED {
 	uint8_t pad_len;      /**< Padding length (0-255) */
 	uint8_t next_header;  /**< Next header protocol */
-	uint8_t icv[0];       /**< Integrity Check Value (optional) */
+	uint8_t icv[];        /**< Integrity Check Value (optional) */
 } odph_esptrl_t;
 
 /** @internal Compile time assert */
@@ -64,7 +64,7 @@ typedef struct ODP_PACKED {
 	odp_u16be_t pad;         /**< Padding (must be 0) */
 	odp_u32be_t spi;         /**< Security Parameter Index */
 	odp_u32be_t seq_no;      /**< Sequence Number */
-	uint8_t    icv[0];       /**< Integrity Check Value */
+	uint8_t    icv[];        /**< Integrity Check Value */
 } odph_ahhdr_t;
 
 /** @internal Compile time assert */

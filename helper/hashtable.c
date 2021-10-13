@@ -40,7 +40,7 @@ typedef struct odph_hash_node {
 	 * its structure is like:
 	 * k_byte1 k_byte2...k_byten v_byte1...v_bytem
 	 */
-	char content[0];
+	char content[];
 } odph_hash_node;
 
 typedef struct {

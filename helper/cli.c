@@ -47,7 +47,7 @@ typedef struct {
 	odph_cli_param_t cli_param;
 	struct sockaddr_in addr;
 	uint32_t num_user_commands;
-	user_cmd_t user_cmd[0];
+	user_cmd_t user_cmd[];
 } cli_shm_t;
 
 static const char *shm_name = "_odp_cli";
