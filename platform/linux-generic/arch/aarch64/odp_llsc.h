@@ -143,6 +143,8 @@ __extension__ static inline uint32_t scd(__int128 *var, __int128 neu, int mm)
 {
 	uint32_t ret;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 	if (mm == __ATOMIC_RELEASE)
 		__asm__ volatile("stlxp %w0, %1, %2, [%3]"
 				 : "=&r" (ret)
@@ -159,6 +161,7 @@ __extension__ static inline uint32_t scd(__int128 *var, __int128 neu, int mm)
 				 : );
 	else
 		ODP_ABORT();
+#pragma GCC diagnostic pop
 	return ret;
 }
 
