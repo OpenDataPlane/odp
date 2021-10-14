@@ -94,9 +94,12 @@ typedef union {
 	timer_blk_t *timer_blk_list;
 } current_timer_slot_t;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 typedef struct {
 	current_timer_slot_t slots[0];
 } current_wheel_t;
+#pragma GCC diagnostic pop
 
 typedef struct {
 	uint32_t             count;
@@ -130,9 +133,12 @@ typedef union  { /* Each general_timer_slot is 16 bytes long. */
 	list_entry_t   list_entry;
 } general_timer_slot_t;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 typedef struct {
 	general_timer_slot_t slots[0];
 } general_wheel_t;
+#pragma GCC diagnostic pop
 
 typedef struct {
        /* Note that rev stands for revolution - one complete sweep through

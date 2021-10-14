@@ -20,6 +20,8 @@
 #include <odp/api/timer.h>
 #include <odp_global_data.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 /**
  * Internal Timeout header
  */
@@ -37,6 +39,7 @@ typedef struct {
 	odp_timer_t timer;
 
 } odp_timeout_hdr_t;
+#pragma GCC diagnostic pop
 
 /* A larger decrement value should be used after receiving events compared to
  * an 'empty' call. */

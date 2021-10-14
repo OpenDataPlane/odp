@@ -28,9 +28,12 @@ typedef struct {
 	uint32_t            pad;
 } sorted_list_desc_t;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 typedef struct {
 	sorted_list_desc_t descs[0];
 } sorted_list_descs_t;
+#pragma GCC diagnostic pop
 
 typedef struct {
 	uint64_t             total_inserts;

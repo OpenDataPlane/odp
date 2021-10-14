@@ -35,6 +35,8 @@ typedef struct ODP_ALIGNED_CACHE pool_cache_t {
 
 } pool_cache_t;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 /* Buffer header ring */
 typedef struct ODP_ALIGNED_CACHE {
 	/* Ring header */
@@ -47,6 +49,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	odp_buffer_hdr_t *buf_hdr_by_index[];
 
 } pool_ring_t;
+#pragma GCC diagnostic pop
 
 /* Callback function for pool destroy */
 typedef void (*pool_destroy_cb_fn)(void *pool);

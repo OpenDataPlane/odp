@@ -22,6 +22,8 @@
 #define MAX_RING_SIZE (1024 * 1024)
 #define MIN_RING_SIZE 64
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 typedef struct stash_t {
 	char      name[ODP_STASH_NAME_LEN];
 	odp_shm_t shm;
@@ -43,6 +45,7 @@ typedef struct stash_t {
 	};
 
 } stash_t;
+#pragma GCC diagnostic pop
 
 typedef struct stash_global_t {
 	odp_ticketlock_t  lock;

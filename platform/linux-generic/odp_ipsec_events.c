@@ -18,12 +18,15 @@
 #include <odp/api/plat/event_inlines.h>
 #include <odp/api/plat/queue_inlines.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 typedef struct {
 	/* common buffer header */
 	odp_buffer_hdr_t buf_hdr;
 
 	odp_ipsec_status_t status;
 } ipsec_status_hdr_t;
+#pragma GCC diagnostic pop
 
 static odp_pool_t ipsec_status_pool = ODP_POOL_INVALID;
 

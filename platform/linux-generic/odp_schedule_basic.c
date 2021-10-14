@@ -195,6 +195,8 @@ typedef struct ODP_ALIGNED_CACHE {
 
 } sched_local_t;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 /* Priority queue */
 typedef struct ODP_ALIGNED_CACHE {
 	/* Ring header */
@@ -204,6 +206,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	uint32_t queue_index[MAX_RING_SIZE]; /* overlaps with ring.data[] */
 
 } prio_queue_t;
+#pragma GCC diagnostic pop
 
 /* Order context of a queue */
 typedef struct ODP_ALIGNED_CACHE {
@@ -247,8 +250,10 @@ typedef struct {
 	} queue[CONFIG_MAX_SCHED_QUEUES];
 
 	/* Scheduler priority queues */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 	prio_queue_t prio_q[NUM_SCHED_GRPS][NUM_PRIO][MAX_SPREAD];
-
+#pragma GCC diagnostic pop
 	uint32_t prio_q_count[NUM_SCHED_GRPS][NUM_PRIO][MAX_SPREAD];
 
 	odp_thrmask_t  mask_all;
