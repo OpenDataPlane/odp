@@ -1813,7 +1813,7 @@ static void dump_tm_subtree(tm_node_desc_t *node_desc)
 	       "level=%" PRIu32" parent=0x%" PRIX64 " children=%" PRIu32 " "
 	       "queues=%" PRIu32 " queue_fanin=%" PRIu32 " "
 	       "node_fanin=%" PRIu32 "\n",
-	       node_desc, node_desc->node_name,
+	       (void *)node_desc, node_desc->node_name,
 	       odp_tm_node_to_u64(node_desc->node), node_desc->node_idx,
 	       node_desc->level, odp_tm_node_to_u64(node_desc->parent_node),
 	       node_desc->num_children, num_queues, node_info.tm_queue_fanin,
