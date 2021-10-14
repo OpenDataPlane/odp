@@ -20,13 +20,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define IPC_ODP_DEBUG_PRINT 0
-
-#define IPC_ODP_DBG(fmt, ...) \
-	do { \
-		if (IPC_ODP_DEBUG_PRINT == 1) \
-			ODP_DBG(fmt, ##__VA_ARGS__);\
-	} while (0)
+/* Debug level for IPC */
+#define IPC_DBG  3
 
 /* Burst size for IPC free operations */
 #define IPC_BURST_SIZE 32
@@ -222,7 +217,7 @@ static int _ipc_master_start(pktio_entry_t *pktio_entry)
 
 	odp_atomic_store_u32(&pktio_ipc->ready, 1);
 
-	IPC_ODP_DBG("%s started.\n",  pktio_entry->s.name);
+	ODP_DBG_LVL(IPC_DBG, "%s started.\n",  pktio_entry->s.name);
 	return 0;
 }
 
@@ -383,7 +378,7 @@ static odp_shm_t _ipc_map_remote_pool(const char *name, int pid)
 		return ODP_SHM_INVALID;
 	}
 
-	IPC_ODP_DBG("Mapped remote pool %s to local %s\n", name, rname);
+	ODP_DBG_LVL(IPC_DBG, "Mapped remote pool %s to local %s\n", name, rname);
 	return shm;
 }
 
@@ -548,7 +543,7 @@ static int ipc_pktio_open(odp_pktio_t id ODP_UNUSED,
 		pktio_ipc->type = PKTIO_TYPE_IPC_SLAVE;
 
 		snprintf(name, sizeof(name), "ipc:%s_info", tail);
-		IPC_ODP_DBG("lookup for name %s for pid %d\n", name, pid);
+		ODP_DBG_LVL(IPC_DBG, "lookup for name %s for pid %d\n", name, pid);
 		shm = odp_shm_import(name, pid, name);
 		if (ODP_SHM_INVALID == shm)
 			return -1;
@@ -640,7 +635,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 
 	ready = odp_atomic_load_u32(&pktio_ipc->ready);
 	if (odp_unlikely(!ready)) {
-		IPC_ODP_DBG("start pktio is missing before usage?\n");
+		ODP_DBG_LVL(IPC_DBG, "start pktio is missing before usage?\n");
 		return 0;
 	}
 
@@ -693,7 +688,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 			 * packet ordering store such packets in local
 			 * cache.
 			 */
-			IPC_ODP_DBG("unable to allocate packet %d/%d\n",
+			ODP_DBG_LVL(IPC_DBG, "unable to allocate packet %d/%d\n",
 				    i, pkts);
 			break;
 		}
@@ -743,7 +738,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 	ring_ptr_enq_multi(r_p, ring_mask, ipcbufs_p, pkts);
 
 	for (i = 0; i < pkts; i++) {
-		IPC_ODP_DBG("%d/%d send to be free packet offset %" PRIuPTR "\n",
+		ODP_DBG_LVL(IPC_DBG, "%d/%d send to be free packet offset %" PRIuPTR "\n",
 			    i, pkts, offsets[i]);
 	}
 
@@ -820,7 +815,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 			     (uint8_t *)odp_shm_addr(pool->shm);
 
 		/* compile all function code even if ipc disabled with config */
-		IPC_ODP_DBG("%d/%d send packet %" PRIu64 ", pool %" PRIu64 ","
+		ODP_DBG_LVL(IPC_DBG, "%d/%d send packet %" PRIu64 ", pool %" PRIu64 ","
 			    "phdr = %p, offset %td, sendoff %" PRIxPTR ", addr %p iaddr "
 			    "%p\n", i, num,
 			    odp_packet_to_u64(pkt), odp_pool_to_u64(pool_hdl),

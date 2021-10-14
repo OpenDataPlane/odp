@@ -68,13 +68,8 @@
 #define MAP_ANONYMOUS MAP_ANON
 #endif
 
-#define FD_ODP_DEBUG_PRINT 0
-
-#define FD_ODP_DBG(fmt, ...) \
-	do { \
-		if (FD_ODP_DEBUG_PRINT == 1) \
-			ODP_DBG(fmt, ##__VA_ARGS__);\
-	} while (0)
+/* Debug level for the FD server */
+#define FD_DBG  3
 
 /* define the tables of file descriptors handled by this server: */
 #define FDSERVER_MAX_ENTRIES 256
@@ -287,8 +282,8 @@ int _odp_fdserver_register_fd(fd_server_context_e context, uint64_t key,
 	int command;
 	int fd;
 
-	FD_ODP_DBG("FD client register: pid=%d key=%" PRIu64 ", fd=%d\n",
-		   getpid(), key, fd_to_send);
+	ODP_DBG_LVL(FD_DBG, "FD client register: pid=%d key=%" PRIu64 ", fd=%d\n",
+		    getpid(), key, fd_to_send);
 
 	s_sock = get_socket();
 	if (s_sock < 0)
@@ -326,8 +321,8 @@ int _odp_fdserver_deregister_fd(fd_server_context_e context, uint64_t key)
 	int command;
 	int fd;
 
-	FD_ODP_DBG("FD client deregister: pid=%d key=%" PRIu64 "\n",
-		   getpid(), key);
+	ODP_DBG_LVL(FD_DBG, "FD client deregister: pid=%d key=%" PRIu64 "\n",
+		    getpid(), key);
 
 	s_sock = get_socket();
 	if (s_sock < 0)
@@ -399,7 +394,7 @@ static int stop_server(void)
 	int s_sock; /* server socket */
 	int res;
 
-	FD_ODP_DBG("FD sending server stop request\n");
+	ODP_DBG_LVL(FD_DBG, "FD sending server stop request\n");
 
 	s_sock = get_socket();
 	if (s_sock < 0)
@@ -446,8 +441,8 @@ static int handle_request(int client_sock)
 			fd_table[fd_table_nb_entries].context = context;
 			fd_table[fd_table_nb_entries].key     = key;
 			fd_table[fd_table_nb_entries++].fd    = fd;
-			FD_ODP_DBG("storing {ctx=%d, key=%" PRIu64 "}->fd=%d\n",
-				   context, key, fd);
+			ODP_DBG_LVL(FD_DBG, "storing {ctx=%d, key=%" PRIu64 "}->fd=%d\n",
+				    context, key, fd);
 		} else {
 			ODP_ERR("FD table full\n");
 			send_fdserver_msg(client_sock, FD_REGISTER_NACK,
@@ -499,8 +494,8 @@ static int handle_request(int client_sock)
 		for (i = 0; i < fd_table_nb_entries; i++) {
 			if ((fd_table[i].context == context) &&
 			    (fd_table[i].key == key)) {
-				FD_ODP_DBG("drop {ctx=%d,"
-					   " key=%" PRIu64 "}->fd=%d\n",
+				ODP_DBG_LVL(FD_DBG, "drop {ctx=%d,"
+					    " key=%" PRIu64 "}->fd=%d\n",
 					   context, key, fd_table[i].fd);
 				close(fd_table[i].fd);
 				fd_table[i] = fd_table[--fd_table_nb_entries];
@@ -517,7 +512,7 @@ static int handle_request(int client_sock)
 		break;
 
 	case FD_SERVERSTOP_REQ:
-		FD_ODP_DBG("Stopping FD server\n");
+		ODP_DBG_LVL(FD_DBG, "Stopping FD server\n");
 		return 1;
 
 	default:
