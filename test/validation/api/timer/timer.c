@@ -717,7 +717,7 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 	ODPH_DBG("  period_ns %" PRIu64 "\n", period_ns);
 	ODPH_DBG("  period_tick %" PRIu64 "\n", period_tick);
 	ODPH_DBG("  duration_ns %" PRIu64 "\n", duration_ns);
-	ODPH_DBG("  user_ptr %p\n\n", user_ctx);
+	ODPH_DBG("  user_ptr %p\n\n", (const void *)user_ctx);
 
 	for (i = 0; i < num; i++) {
 		if (event_type == ODP_EVENT_BUFFER) {
