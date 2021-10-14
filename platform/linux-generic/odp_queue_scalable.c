@@ -739,7 +739,7 @@ int _odp_queue_deq_sc(sched_elem_t *q, odp_event_t *evp, int num)
 	return actual;
 }
 
-inline int _odp_queue_deq(sched_elem_t *q, odp_buffer_hdr_t *buf_hdr[], int num)
+int _odp_queue_deq(sched_elem_t *q, odp_buffer_hdr_t *buf_hdr[], int num)
 {
 	int actual;
 	ringidx_t old_read;
@@ -806,7 +806,7 @@ inline int _odp_queue_deq(sched_elem_t *q, odp_buffer_hdr_t *buf_hdr[], int num)
 	return actual;
 }
 
-inline int _odp_queue_deq_mc(sched_elem_t *q, odp_event_t *evp, int num)
+int _odp_queue_deq_mc(sched_elem_t *q, odp_event_t *evp, int num)
 {
 	int ret, evt_idx;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
