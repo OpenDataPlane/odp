@@ -29,6 +29,10 @@
 extern "C" {
 #endif
 
+/* Avoid "ISO C99 requires at least one argument for the "..."  in a variadic
+ * macro" errors when building with 'pedantic' option. */
+#pragma GCC system_header
+
 /* Debug level configure option. Zero is the highest level. Value of N prints debug messages from
  * level 0 to N. */
 #define CONFIG_DEBUG_LEVEL 0
