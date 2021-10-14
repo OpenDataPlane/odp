@@ -26,19 +26,12 @@ typedef struct ODP_ALIGNED_CACHE {
 	odp_packet_t pkts[NUM_PKTS];
 } queue_blk_t;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 typedef struct ODP_ALIGNED_CACHE {
 	queue_blk_t blks[0];
 } queue_blks_t;
-
-/* The queue_num_tbl is used to map from a queue_num to a queue_num_desc.
- * The reason is based on the assumption that usually only a small fraction
- * of the max_num_queues will have more than 1 pkt associated with it.  This
- * way the active queue_desc's can be dynamically allocated and freed according
- * to the actual usage pattern.
- */
-typedef struct {
-	uint32_t queue_num_to_blk_idx[0];
-} queue_num_tbl_t;
+#pragma GCC diagnostic pop
 
 typedef struct {
 	uint32_t num_blks;

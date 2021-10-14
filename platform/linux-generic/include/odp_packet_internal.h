@@ -73,6 +73,8 @@ typedef struct {
 
 ODP_STATIC_ASSERT(PKT_MAX_SEGS < UINT16_MAX, "PACKET_MAX_SEGS_ERROR");
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 /**
  * Internal Packet header
  *
@@ -151,6 +153,7 @@ typedef struct odp_packet_hdr_t {
 	uint8_t data[];
 
 } odp_packet_hdr_t;
+#pragma GCC diagnostic pop
 
 /* Packet header size is critical for performance. Ensure that it does not accidentally
  * grow over 256 bytes when cache line size is 64 bytes (or less). With larger cache line sizes,

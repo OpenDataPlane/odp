@@ -81,6 +81,8 @@ typedef struct ODP_ALIGNED_CACHE sched_cmd_t {
 			       sizeof(struct sched_cmd_s)];
 } sched_cmd_t;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 typedef struct ODP_ALIGNED_CACHE {
 	/* Ring header */
 	ring_u32_t ring;
@@ -89,6 +91,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	uint32_t ring_idx[RING_SIZE]; /* overlaps with ring.data[] */
 
 } prio_queue_t;
+#pragma GCC diagnostic pop
 
 typedef struct thr_group_t {
 	/* A generation counter for fast comparison if groups have changed */
@@ -123,7 +126,11 @@ typedef struct ODP_ALIGNED_CACHE sched_group_t {
 typedef struct {
 	sched_cmd_t   queue_cmd[NUM_QUEUE];
 	sched_cmd_t   pktio_cmd[NUM_PKTIO];
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 	prio_queue_t  prio_queue[NUM_GROUP][NUM_PRIO];
+#pragma GCC diagnostic pop
 	sched_group_t sched_group;
 	odp_shm_t     shm;
 	/* Scheduler interface config options (not used in fast path) */
