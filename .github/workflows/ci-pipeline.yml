@@ -243,7 +243,7 @@ jobs:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        conf: ['', '--enable-abi-compat', '--enable-deprecated --enable-debug=full',
+        conf: ['', '--enable-abi-compat', '--enable-deprecated --enable-helper-deprecated --enable-debug=full',
                '--enable-dpdk-zero-copy --disable-static-applications',
                '--disable-host-optimization', '--disable-host-optimization --enable-abi-compat',
                '--without-openssl --without-pcap']
