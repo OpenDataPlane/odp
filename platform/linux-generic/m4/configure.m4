@@ -37,6 +37,11 @@ AS_VAR_APPEND([PLAT_CFG_TEXT], ["
 	pcapng:			${have_pcapng}
 	default_config_path:	${default_config_path}"])
 
+# Ignore Clang specific errors about fields with variable sized type not at the
+# end of a struct. This style is used by e.g. odp_packet_hdr_t and
+# odp_timeout_hdr_t.
+ODP_CHECK_CFLAG([-Wno-error=gnu-variable-sized-type-not-at-end])
+
 AC_CONFIG_COMMANDS_PRE([dnl
 AM_CONDITIONAL([PLATFORM_IS_LINUX_GENERIC],
 	       [test "${with_platform}" = "linux-generic"])
