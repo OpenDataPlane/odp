@@ -134,6 +134,9 @@ typedef union odp_feature_t {
 		/** Crypto APIs, e.g., odp_crypto_xxx() */
 		uint32_t crypto:1;
 
+		/** DMA APIs, e.g., odp_dma_xxx() */
+		uint32_t dma:1;
+
 		/** IPsec APIs, e.g., odp_ipsec_xxx() */
 		uint32_t ipsec:1;
 
