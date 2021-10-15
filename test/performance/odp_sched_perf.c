@@ -40,6 +40,7 @@ typedef struct test_options_t {
 	uint32_t max_burst;
 	int      queue_type;
 	int      forward;
+	int      fairness;
 	uint32_t queue_size;
 	uint32_t tot_queue;
 	uint32_t tot_event;
@@ -88,6 +89,11 @@ typedef struct test_global_t {
 
 } test_global_t;
 
+typedef struct {
+	odp_queue_t next;
+	odp_atomic_u64_t count;
+} queue_context_t;
+
 static void print_usage(void)
 {
 	printf("\n"
@@ -113,6 +119,7 @@ static void print_usage(void)
 	       "  -b, --burst            Maximum number of events per operation. Default: 100.\n"
 	       "  -t, --type             Queue type. 0: parallel, 1: atomic, 2: ordered. Default: 0.\n"
 	       "  -f, --forward          0: Keep event in the original queue, 1: Forward event to the next queue. Default: 0.\n"
+	       "  -a, --fairness         0: Don't count events per queue, 1: Count and report events relative to average. Default: 0.\n"
 	       "  -w, --wait_ns          Number of nsec to wait before enqueueing events. Default: 0.\n"
 	       "  -k, --ctx_rd_words     Number of queue context words (uint64_t) to read on every event. Default: 0.\n"
 	       "  -l, --ctx_rw_words     Number of queue context words (uint64_t) to modify on every event. Default: 0.\n"
@@ -142,6 +149,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"burst",        required_argument, NULL, 'b'},
 		{"type",         required_argument, NULL, 't'},
 		{"forward",      required_argument, NULL, 'f'},
+		{"fairness",     required_argument, NULL, 'a'},
 		{"wait_ns",      required_argument, NULL, 'w'},
 		{"ctx_rd_words", required_argument, NULL, 'k'},
 		{"ctx_rw_words", required_argument, NULL, 'l'},
@@ -152,7 +160,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:q:L:H:d:e:s:g:j:b:t:f:w:k:l:n:m:vh";
+	static const char *shortopts = "+c:q:L:H:d:e:s:g:j:b:t:f:a:w:k:l:n:m:vh";
 
 	test_options->num_cpu    = 1;
 	test_options->num_queue  = 1;
@@ -166,6 +174,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	test_options->max_burst  = 100;
 	test_options->queue_type = 0;
 	test_options->forward    = 0;
+	test_options->fairness   = 0;
 	test_options->ctx_rd_words = 0;
 	test_options->ctx_rw_words = 0;
 	test_options->rd_words   = 0;
@@ -215,6 +224,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 'f':
 			test_options->forward = atoi(optarg);
+			break;
+		case 'a':
+			test_options->fairness = atoi(optarg);
 			break;
 		case 'k':
 			test_options->ctx_rd_words = atoi(optarg);
@@ -290,8 +302,10 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		/* When forwarding, all events may end up into
 		 * a single queue */
 		test_options->queue_size = test_options->tot_event;
-		ctx_size = sizeof(odp_queue_t);
 	}
+
+	if (test_options->forward || test_options->fairness)
+		ctx_size = sizeof(queue_context_t);
 
 	if (test_options->ctx_rd_words || test_options->ctx_rw_words) {
 		/* Round up queue handle size to a multiple of 8 for correct
@@ -303,7 +317,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 
 	/* When context data is modified, round up to cache line size to avoid
 	 * false sharing */
-	if (test_options->ctx_rw_words)
+	if (test_options->fairness || test_options->ctx_rw_words)
 		ctx_size = ROUNDUP(ctx_size, ODP_CACHE_LINE_SIZE);
 
 	test_options->ctx_size = ctx_size;
@@ -624,16 +638,23 @@ static int create_queues(test_global_t *global)
 		queue = global->queue[i];
 
 		if (ctx_size) {
+			/*
+			 * Cast increases alignment, but it's ok, since ctx and
+			 * ctx_size are both cache line aligned.
+			 */
+			queue_context_t *qc = (queue_context_t *)(uintptr_t)ctx;
+
 			if (test_options->forward) {
-				odp_queue_t *next_queue;
 				uint32_t next = i + 1;
 
 				if (next == tot_queue)
 					next = first;
 
-				next_queue  = (odp_queue_t *)(uintptr_t)ctx;
-				*next_queue = global->queue[next];
+				qc->next = global->queue[next];
 			}
+
+			if (test_options->fairness)
+				odp_atomic_init_u64(&qc->count, 0);
 
 			if (odp_queue_context_set(queue, ctx, ctx_size)) {
 				printf("Error: Context set failed %u\n", i);
@@ -697,6 +718,45 @@ static int join_all_groups(test_global_t *global, int thr)
 	}
 
 	return 0;
+}
+
+static void print_queue_fairness(test_global_t *global)
+{
+	uint32_t i;
+	queue_context_t *ctx;
+	test_options_t *test_options = &global->test_options;
+	uint32_t first = test_options->num_dummy;
+	uint32_t num_queue = test_options->num_queue;
+	uint32_t tot_queue = test_options->tot_queue;
+	uint64_t total = 0;
+	double average;
+
+	if (!test_options->fairness)
+		return;
+
+	for (i = first; i < tot_queue; i++) {
+		ctx = odp_queue_context(global->queue[i]);
+		total += odp_atomic_load_u64(&ctx->count);
+	}
+
+	average = (double)total / (double)num_queue;
+
+	printf("\n");
+	printf("RESULTS - events per queue (percent of average):\n");
+	printf("------------------------------------------------\n");
+	printf("        1      2      3      4      5      6      7      8      9     10");
+
+	for (i = first; i < tot_queue; i++) {
+		ctx = odp_queue_context(global->queue[i]);
+
+		if ((i % 10) == 0)
+			printf("\n   ");
+
+		printf("%6.1f ", (double)odp_atomic_load_u64(&ctx->count) /
+					 average * 100.0);
+	}
+
+	printf("\n");
 }
 
 static int destroy_queues(test_global_t *global)
@@ -802,7 +862,6 @@ static int test_sched(void *arg)
 	uint64_t events, enqueues, waits, events_prev;
 	odp_time_t t1, t2, last_retry_ts;
 	odp_queue_t queue;
-	odp_queue_t *next;
 	thread_arg_t *thread_arg = arg;
 	test_global_t *global = thread_arg->global;
 	test_options_t *test_options = &global->test_options;
@@ -810,6 +869,7 @@ static int test_sched(void *arg)
 	uint32_t max_burst = test_options->max_burst;
 	int num_group = test_options->num_group;
 	int forward = test_options->forward;
+	int fairness = test_options->fairness;
 	int touch_data = test_options->touch_data;
 	uint32_t rd_words = test_options->rd_words;
 	uint32_t rw_words = test_options->rw_words;
@@ -826,8 +886,8 @@ static int test_sched(void *arg)
 
 	thr = odp_thread_id();
 
-	if (forward)
-		ctx_offset = ROUNDUP(sizeof(odp_queue_t), 8);
+	if (forward || fairness)
+		ctx_offset = ROUNDUP(sizeof(queue_context_t), 8);
 
 	if (num_group > 0) {
 		uint32_t num_join = test_options->num_join;
@@ -885,12 +945,13 @@ static int test_sched(void *arg)
 			i = 0;
 
 			if (odp_unlikely(ctx_size)) {
-				void *ctx = odp_queue_context(queue);
+				queue_context_t *ctx = odp_queue_context(queue);
 
-				if (forward) {
-					next  = ctx;
-					queue = *next;
-				}
+				if (forward)
+					queue = ctx->next;
+
+				if (fairness)
+					odp_atomic_add_u64(&ctx->count, num);
 
 				if (odp_unlikely(touch_ctx))
 					ctx_sum += rw_ctx_data(ctx, ctx_offset,
@@ -999,10 +1060,8 @@ static int test_sched(void *arg)
 		if (ev[0] == ODP_EVENT_INVALID)
 			break;
 
-		if (odp_unlikely(forward)) {
-			next  = odp_queue_context(queue);
-			queue = *next;
-		}
+		if (odp_unlikely(forward))
+			queue = ((queue_context_t *)odp_queue_context(queue))->next;
 
 		if (odp_queue_enq(queue, ev[0])) {
 			printf("Error: Queue enqueue failed\n");
@@ -1275,6 +1334,8 @@ int main(int argc, char **argv)
 
 	/* Wait workers to exit */
 	odph_thread_join(global->thread_tbl, global->test_options.num_cpu);
+
+	print_queue_fairness(global);
 
 	if (destroy_queues(global))
 		return -1;
