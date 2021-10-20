@@ -853,12 +853,15 @@ static int check_params(const odp_pool_param_t *params)
 	uint32_t cache_size, num;
 	int num_threads = odp_global_ro.init_param.num_control +
 				odp_global_ro.init_param.num_worker;
+	int cur_threads = odp_thread_count();
 
 	if (!params || odp_pool_capability(&capa) < 0)
 		return -1;
 
 	num = 0;
 	cache_size = 0;
+	if (num_threads < cur_threads)
+		num_threads = cur_threads;
 
 	switch (params->type) {
 	case ODP_POOL_BUFFER:
