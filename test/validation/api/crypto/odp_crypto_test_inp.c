@@ -710,6 +710,8 @@ static void check_alg(odp_crypto_op_t op,
 	CU_ASSERT_FATAL(cipher_num > 0);
 	CU_ASSERT_FATAL(auth_num > 0);
 
+	init_reference(ref, count);
+
 	odp_crypto_cipher_capability_t cipher_capa[cipher_num];
 	odp_crypto_auth_capability_t auth_capa[auth_num];
 	odp_bool_t cipher_tested[cipher_num];
