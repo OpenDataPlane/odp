@@ -4,4 +4,4 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/api/abi-default/timer.h>
+#include <odp/api/abi-default/timer_types.h>

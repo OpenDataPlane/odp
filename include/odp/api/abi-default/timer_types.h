@@ -10,8 +10,8 @@
  * ODP timer service
  */
 
-#ifndef ODP_ABI_TIMER_H_
-#define ODP_ABI_TIMER_H_
+#ifndef ODP_ABI_TIMER_TYPES_H_
+#define ODP_ABI_TIMER_TYPES_H_
 
 #ifdef __cplusplus
 extern "C" {
