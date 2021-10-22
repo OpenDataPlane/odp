@@ -1264,6 +1264,12 @@ int odp_timer_res_capability(odp_timer_clk_src_t clk_src,
 	return 0;
 }
 
+void odp_timer_pool_param_init(odp_timer_pool_param_t *param)
+{
+	memset(param, 0, sizeof(odp_timer_pool_param_t));
+	param->clk_src = ODP_CLOCK_DEFAULT;
+}
+
 odp_timer_pool_t odp_timer_pool_create(const char *name,
 				       const odp_timer_pool_param_t *param)
 {
