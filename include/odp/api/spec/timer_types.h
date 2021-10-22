@@ -209,19 +209,19 @@ typedef struct {
 	/** Timeout resolution in nanoseconds. Timer pool must serve timeouts
 	 *  with this or higher resolution. The minimum valid value (highest
 	 *  resolution) is defined by timer resolution capability. When this
-	 *  parameter is used, set 'res_hz' to zero. */
+	 *  parameter is used, set 'res_hz' to zero. The default value is zero. */
 	uint64_t res_ns;
 
 	/** Timeout resolution in hertz. This may be used to specify the highest
 	 *  required resolution in hertz instead of nanoseconds. When this
-	 *  parameter is used, set 'res_ns' to zero. */
+	 *  parameter is used, set 'res_ns' to zero. The default value is zero. */
 	uint64_t res_hz;
 
 	/** Minimum relative timeout in nanoseconds. All requested timeouts
 	 *  will be at least this many nanoseconds after the current
 	 *  time of the timer pool. Timer set functions return an error, if too
 	 *  short timeout was requested. The value may be also smaller than
-	 *  the requested resolution. */
+	 *  the requested resolution. The default value is zero. */
 	uint64_t min_tmo;
 
 	/** Maximum relative timeout in nanoseconds. All requested timeouts
@@ -236,10 +236,12 @@ typedef struct {
 
 	/** Thread private timer pool. When zero, multiple thread may use the
 	 *  timer pool concurrently. When non-zero, only single thread uses the
-	 *  timer pool (concurrently). */
+	 *  timer pool (concurrently). The default value is zero. */
 	int priv;
 
-	/** Clock source for timers */
+	/** Clock source for timers
+	 *
+	 *  The default value is ODP_CLOCK_DEFAULT. */
 	odp_timer_clk_src_t clk_src;
 
 } odp_timer_pool_param_t;
