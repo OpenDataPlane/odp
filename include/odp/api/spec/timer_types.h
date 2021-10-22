@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  *
  * All rights reserved.
  *
@@ -21,6 +21,7 @@ extern "C" {
 #endif
 
 #include <odp/api/std_types.h>
+#include <odp/api/event.h>
 
 /** @defgroup odp_timer ODP TIMER
  *  Timer generating timeout events.
@@ -277,6 +278,54 @@ typedef struct {
 	int priv;
 
 } odp_timer_pool_param_t;
+
+/**
+ * Timer tick type
+ */
+typedef enum {
+	/** Relative ticks
+	 *
+	 *  Timer tick value is relative to the current time (odp_timer_current_tick())
+	 *  of the timer pool.
+	 */
+	ODP_TIMER_TICK_REL = 0,
+
+	/** Absolute ticks
+	 *
+	 *  Timer tick value is absolute timer pool ticks.
+	 */
+	ODP_TIMER_TICK_ABS
+
+} odp_timer_tick_type_t;
+
+/**
+ * Timer start parameters
+ */
+typedef struct odp_timer_start_t {
+	/** Tick type
+	 *
+	 *  Defines if expiration time ticks are absolute or relative.
+	 */
+	odp_timer_tick_type_t tick_type;
+
+	/** Expiration time in ticks
+	 *
+	 *  New expiration time for the timer to be started/restarted. When 'tick_type' is
+	 *  ODP_TIMER_TICK_REL, expiration time is odp_timer_current_tick() + 'tick'.*/
+	uint64_t tick;
+
+	/** Timeout event
+	 *
+	 *  When the timer expires, this event is enqueued to the destination queue of the timer.
+	 *  The event type can be ODP_EVENT_BUFFER, ODP_EVENT_PACKET or ODP_EVENT_TIMEOUT. It is
+	 *  recommended to use ODP_EVENT_TIMEOUT type events. Those (odp_timeout_t) carry also
+	 *  timeout specific metadata.
+	 *
+	 *  This field is ignored by odp_timer_restart() calls.
+	 */
+	odp_event_t tmo_ev;
+
+} odp_timer_start_t;
 
 /**
  * Return values of timer set calls.
