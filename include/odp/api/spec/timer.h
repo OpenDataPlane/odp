@@ -67,9 +67,19 @@ int odp_timer_res_capability(odp_timer_clk_src_t clk_src,
 			     odp_timer_res_capability_t *res_capa);
 
 /**
+ * Initialize timer pool parameters
+ *
+ * Initialize an odp_timer_pool_param_t to its default values for all fields.
+ *
+ * @param[out] param  Pointer to the odp_timer_pool_param_t structure to be initialized
+ */
+void odp_timer_pool_param_init(odp_timer_pool_param_t *param);
+
+/**
  * Create a timer pool
  *
- * The use of pool name is optional. Unique names are not required.
+ * The use of pool name is optional. Unique names are not required. Use odp_timer_pool_param_init()
+ * to initialize timer pool parameters into their default values.
  *
  * @param name       Name of the timer pool or NULL. Maximum string length is
  *                   ODP_TIMER_POOL_NAME_LEN.
