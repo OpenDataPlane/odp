@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  *
  * All rights reserved.
  *
@@ -192,6 +192,52 @@ odp_timer_t odp_timer_alloc(odp_timer_pool_t timer_pool, odp_queue_t queue, cons
 odp_event_t odp_timer_free(odp_timer_t timer);
 
 /**
+ * Start a timer
+ *
+ * Starts a timer with an expiration time and a timeout event. The timer must not be active when
+ * calling this function. After a successful call, the timer remains active until it expires or
+ * is cancelled successfully. An active timer can be restarted with odp_timer_restart().
+ *
+ * The timeout event is sent to the destination queue when the timer expires. The expiration time
+ * may be passed as absolute timer ticks or ticks relative to the current time. Use 'tick_type'
+ * parameter to select between the tick types. Current time of the timer pool can be read with
+ * odp_timer_current_tick().
+ *
+ * The timer is not started when a failure is returned.
+ *
+ * @param timer               Timer to be started
+ * @param start_param         Timer start parameters
+ *
+ * @retval ODP_TIMER_SUCCESS  Success
+ * @retval ODP_TIMER_TOO_NEAR Failure. The expiration time passed already, or is too near to
+ *                            the current time.
+ * @retval ODP_TIMER_TOO_FAR  Failure. The expiration time is too far from the current time.
+ * @retval ODP_TIMER_FAIL     Other failure.
+ */
+int odp_timer_start(odp_timer_t timer, const odp_timer_start_t *start_param);
+
+/**
+ * Restart a timer
+ *
+ * A successful restart call updates the expiration time of an active timer. The timeout event
+ * is not changed. The timer is not modified when a failure is returned. The call returns
+ * ODP_TIMER_FAIL if the timer has expired already, or is so close to expire that it cannot be
+ * restarted anymore.
+ *
+ * The new expiration time is passed the same way as with odp_timer_start() call.
+ *
+ * @param timer               Timer to be restarted
+ * @param start_param         Timer start parameters. Value of 'tmo_ev' parameter is ignored.
+ *
+ * @retval ODP_TIMER_SUCCESS  Success
+ * @retval ODP_TIMER_TOO_NEAR Failure. The new expiration time passed already, or is too near to
+ *                            the current time.
+ * @retval ODP_TIMER_TOO_FAR  Failure. The new expiration time is too far from the current time.
+ * @retval ODP_TIMER_FAIL     Failure. The timer expired already, or other failure.
+ */
+int odp_timer_restart(odp_timer_t timer, const odp_timer_start_t *start_param);
+
+/**
  * Set (or reset) a timer with absolute expiration time
  *
  * This function sets a timer to expire at a specific time. If the timer is
@@ -222,9 +268,10 @@ odp_event_t odp_timer_free(odp_timer_t timer);
  *                            Reset operation: Too late to reset the timer.
  *
  * @see odp_timer_set_rel(), odp_timer_alloc(), odp_timer_cancel()
+ *
+ * @deprecated Use odp_timer_start() or odp_timer_restart() instead
  */
-int odp_timer_set_abs(odp_timer_t timer, uint64_t abs_tick,
-		      odp_event_t *tmo_ev);
+int odp_timer_set_abs(odp_timer_t timer, uint64_t abs_tick, odp_event_t *tmo_ev);
 
 /**
  * Set (or reset) a timer with relative expiration time
@@ -250,9 +297,10 @@ int odp_timer_set_abs(odp_timer_t timer, uint64_t abs_tick,
  *                            Reset operation: Too late to reset the timer.
  *
  * @see odp_timer_set_abs(), odp_timer_alloc(), odp_timer_cancel()
+ *
+ * @deprecated Use odp_timer_start() or odp_timer_restart() instead
  */
-int odp_timer_set_rel(odp_timer_t timer, uint64_t rel_tick,
-		      odp_event_t *tmo_ev);
+int odp_timer_set_rel(odp_timer_t timer, uint64_t rel_tick, odp_event_t *tmo_ev);
 
 /**
  * Cancel a timer
