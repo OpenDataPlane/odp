@@ -700,6 +700,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	case ODP_AUTH_ALG_AES128_GCM:
 #endif
 	case ODP_AUTH_ALG_AES_GCM:
+	case ODP_AUTH_ALG_AES_CCM:
 		crypto_param.auth_aad_len = sizeof(ipsec_aad_t);
 		break;
 	case ODP_AUTH_ALG_AES_GMAC:
