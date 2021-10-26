@@ -2595,7 +2595,7 @@ static int packet_l4_chksum(odp_packet_hdr_t *pkt_hdr,
 		}
 	}
 
-	return pkt_hdr->p.flags.all_flags != 0;
+	return pkt_hdr->p.flags.all.error != 0;
 }
 
 /**
