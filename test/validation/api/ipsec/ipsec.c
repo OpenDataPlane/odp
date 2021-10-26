@@ -1003,11 +1003,7 @@ static void parse_ip(odp_packet_t pkt)
 		.proto = proto,
 		.last_layer = ODP_PROTO_LAYER_L4,
 	};
-	/*
-	 * odp_packet_parse() is buggy in linux generic ODP. Intentionally
-	 * ignore the return value until the bug has been fixed.
-	 */
-	(void)odp_packet_parse(pkt, l3, &param);
+	CU_ASSERT(odp_packet_parse(pkt, l3, &param) == 0);
 }
 
 int ipsec_check_out(const ipsec_test_part *part, odp_ipsec_sa_t sa,
