@@ -64,6 +64,22 @@ extern "C" {
  */
 
 /**
+ * Timer type
+ *
+ * There are two types of timers. A single shot timer (ODP_TIMER_TYPE_SINGLE) is started with
+ * an expiration time for each timeout. A periodic timer (ODP_TIMER_TYPE_PERIODIC) keeps expiring
+ * and sending timeout events with the given period until it is cancelled.
+ */
+typedef enum {
+	/** Single shot timer */
+	ODP_TIMER_TYPE_SINGLE = 0,
+
+	/** Periodic timer */
+	ODP_TIMER_TYPE_PERIODIC
+
+} odp_timer_type_t;
+
+/**
  * Timer resolution capability
  */
 typedef struct {
@@ -82,20 +98,35 @@ typedef struct {
 } odp_timer_res_capability_t;
 
 /**
+ * Periodic timer capability
+ */
+typedef struct {
+	/** Periodic timer pool base frequency in hertz */
+	odp_fract_u64_t base_freq_hz;
+
+	/** Maximum base frequency multiplier */
+	uint64_t max_multiplier;
+
+	/** Timeout resolution in nanoseconds */
+	uint64_t res_ns;
+
+} odp_timer_periodic_capability_t;
+
+/**
  * Timer capability
  */
 typedef struct {
-	/** Maximum number of timer pools over all clock sources
+	/** Maximum number of timer pools
 	 *
-	 * The total number of timer pools that can be created combining
+	 * The total number of timer pools that can be created combining both types and
 	 * different clock sources.
 	 */
 	uint32_t max_pools_combined;
 
-	/** Maximum number of timer pools for the requested clock source */
+	/** Maximum number of timer pools for single shot timers (per clock source) */
 	uint32_t max_pools;
 
-	/** Maximum number of timers in a pool
+	/** Maximum number of single shot timers in a pool
 	 *
 	 * The value of zero means that limited only by the available
 	 * memory size for the pool. */
@@ -158,6 +189,25 @@ typedef struct {
 	 * @see odp_timer_alloc()
 	 */
 	odp_bool_t queue_type_plain;
+
+	/** Periodic timer capabilities */
+	struct {
+		/** Maximum number of timer pools for periodic timers
+		 *
+		 *  When zero, periodic timers (#ODP_TIMER_TYPE_PERIODIC) are not supported.
+		 */
+		uint32_t max_pools;
+
+		/** Maximum number of periodic timers in a pool */
+		uint32_t max_timers;
+
+		/** Minimum supported base frequency value */
+		odp_fract_u64_t min_base_freq_hz;
+
+		/** Maximum supported base frequency value */
+		odp_fract_u64_t max_base_freq_hz;
+
+	} periodic;
 
 } odp_timer_capability_t;
 
@@ -234,6 +284,16 @@ typedef enum {
  * Timer pool parameters
  */
 typedef struct {
+	/** Timer type
+	 *
+	 *  Select whether the pool is created for single shot (#ODP_TIMER_TYPE_SINGLE) or
+	 *  periodic (#ODP_TIMER_TYPE_PERIODIC) timers. All timers in a pool are of the same type.
+	 *  Timer capabilities specify how many pools of each type are supported.
+	 *
+	 *  The default value is ODP_TIMER_TYPE_SINGLE.
+	 */
+	odp_timer_type_t timer_type;
+
 	/** Clock source for timers
 	 *
 	 *  The default value is ODP_CLOCK_DEFAULT. */
@@ -255,18 +315,60 @@ typedef struct {
 	 *  parameter is used, set 'res_ns' to zero. The default value is zero. */
 	uint64_t res_hz;
 
-	/** Minimum relative timeout in nanoseconds. All requested timeouts
-	 *  will be at least this many nanoseconds after the current
-	 *  time of the timer pool. Timer set functions return an error, if too
-	 *  short timeout was requested. The value may be also smaller than
-	 *  the requested resolution. The default value is zero. */
+	/** Minimum relative timeout in nanoseconds
+	 *
+	 *  All requested timeouts will be at least this many nanoseconds after the current
+	 *  time of the timer pool. Timer set functions return an error, if too short timeout
+	 *  was requested. The value may be also smaller than the requested resolution.
+	 *
+	 *  The default value is zero. Ignored when timer type is periodic.
+	 */
 	uint64_t min_tmo;
 
-	/** Maximum relative timeout in nanoseconds. All requested timeouts
-	 *  will be at most this many nanoseconds after the current
-	 *  time of the timer pool. Timer set functions return an error, if too
-	 *  long timeout was requested. */
+	/** Maximum relative timeout in nanoseconds
+	 *
+	 *  All requested timeouts will be at most this many nanoseconds after the current
+	 *  time of the timer pool. Timer set functions return an error, if too long timeout was
+	 *  requested.
+	 *
+	 *  Ignored when timer type is periodic.
+	 */
 	uint64_t max_tmo;
+
+	/** Periodic timer parameters
+	 *
+	 *  Additional parameters for periodic timers. Ignored when timer type is single shot.
+	 */
+	struct {
+		/** Timer pool base frequency in hertz
+		 *
+		 *  A periodic timer pool has a base frequency. Each timer of the pool has
+		 *  an expiration frequency that is an integer multiple of the base frequency.
+		 *  Depending on the implementation, base frequency may need to be selected
+		 *  carefully to avoid timer periods to drift against the source clock.
+		 *  Use odp_timer_periodic_capability() to check base frequency support,
+		 *  and resulting max_multiplier and resolution values.
+		 *
+		 *  The default value is zero.
+		 *
+		 *  An example with two timer frequencies:
+		 *       base_freq_hz.integer = 33333, .numer = 1, .denom = 3
+		 *       max_multiplier = 30
+		 *       timer A: freq_multiplier = 2
+		 *                timer frequency: 2 * 33333 1/3 Hz = 66.6666..kHz
+		 *       timer B: freq_multiplier = 30
+		 *                timer frequency: 30 * 33333 1/3 Hz = 1 MHz
+		 */
+		odp_fract_u64_t base_freq_hz;
+
+		/** Maximum base frequency multiplier
+		 *
+		 *  This is the maximum base frequency multiplier value
+		 *  (odp_timer_periodic_start_t::freq_multiplier) for any timer in the pool.
+		 */
+		uint64_t max_multiplier;
+
+	} periodic;
 
 	/** Number of timers needed. Application will create in maximum this
 	 *  many concurrent timers from the timer pool. */
@@ -326,6 +428,71 @@ typedef struct odp_timer_start_t {
 	odp_event_t tmo_ev;
 
 } odp_timer_start_t;
+
+/**
+ * Periodic timer start parameters
+ *
+ * A periodic timer pool can be thought as a wall clock, where the base frequency
+ * (odp_timer_pool_param_t::base_freq_hz) defines how many times per second a pointer travels
+ * around the clock face. When a timer (see "Timer A" in the figure) is started with the base
+ * frequency multiplier (odp_timer_periodic_start_t::freq_multiplier) of one, a single reference
+ * to it is placed into the clock face. When a timer (see "Timer B") is started with the multiplier
+ * value of two, two references to it is placed into opposite sides of the clock face, etc. When the
+ * pointer reaches a timer reference, the timer expires and a timeout event is sent to the
+ * destination queue. The maximum base frequency multiplier (odp_timer_pool_param_t::max_multiplier)
+ * defines the maximum number of references a timer can have on the clock face. The first
+ * expiration time parameter (odp_timer_periodic_start_t::first_tick) is used to tune timer
+ * reference placement on the clock face against the current time (the current pointer location).
+ *
+ * @code{.unparsed}
+ *
+ *            Periodic timer pool
+ *
+ *                     o
+ *                o         o <--- Timer B
+ *
+ *              o      \      o
+ *                      \
+ *   Timer B ---> o      \  o <--- Timer A
+ *                     o
+ *
+ *
+ *   Timer pool: max_multiplier  = 8
+ *   Timer A:    freq_multiplier = 1
+ *   Timer B:    freq_multiplier = 2
+ *
+ * @endcode
+ *
+ */
+typedef struct odp_timer_periodic_start_t {
+	/** First expiration time
+	 *
+	 *  The first expiration time in absolute timer ticks. When zero, timer expiration starts
+	 *  from the current time. After the first expiration, timer expiration continues with the
+	 *  defined frequency. The tick value must be within one timer period from the current time.
+	 */
+	uint64_t first_tick;
+
+	/** Base frequency multiplier
+	 *
+	 *  Periodic timer expiration frequency is defined as a multiple of the timer pool
+	 *  base frequency: timer frequency (Hz) = base_freq_hz * freq_multiplier. Valid values
+	 *  range from 1 to timer pool parameter 'max_multiplier'.
+	 *
+	 *  Depending on the implementation, a multiplier value that is a divisor of
+	 *  'max_multiplier' may improve timer expiration accuracy:
+	 *  max_multiplier = k * freq_multiplier, where k is an integer.
+	 */
+	uint64_t freq_multiplier;
+
+	/** Timeout event
+	 *
+	 *  This event is enqueued to the destination queue when the timer expires. The event type
+	 *  must be ODP_EVENT_TIMEOUT.
+	 */
+	odp_event_t tmo_ev;
+
+} odp_timer_periodic_start_t;
 
 /**
  * Return values of timer set calls.
