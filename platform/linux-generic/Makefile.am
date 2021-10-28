@@ -106,6 +106,7 @@ noinst_HEADERS = \
 		  include/odp_config_internal.h \
 		  include/odp_debug_internal.h \
 		  include/odp_errno_define.h \
+		  include/odp_event_internal.h \
 		  include/odp_fdserver_internal.h \
 		  include/odp_forward_typedefs_internal.h \
 		  include/odp_global_data.h \
