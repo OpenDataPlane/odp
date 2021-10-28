@@ -72,6 +72,15 @@ enum ipsec_test_stats {
 	IPSEC_TEST_STATS_AUTH_ERR,
 };
 
+enum ipsec_test_sa_expiry {
+	IPSEC_TEST_EXPIRY_NONE = 0,
+	IPSEC_TEST_EXPIRY_IGNORED,
+	IPSEC_TEST_EXPIRY_SOFT_BYTE,
+	IPSEC_TEST_EXPIRY_SOFT_PKT,
+	IPSEC_TEST_EXPIRY_HARD_BYTE,
+	IPSEC_TEST_EXPIRY_HARD_PKT,
+};
+
 typedef struct {
 	odp_bool_t lookup;
 	odp_bool_t inline_hdr_in_packet;
@@ -101,8 +110,11 @@ typedef struct {
 		 * differs from that of input test packet (pkt_in).
 		 */
 		uint32_t orig_ip_len;
+		enum ipsec_test_sa_expiry sa_expiry;
 	} out[MAX_FRAGS];
 } ipsec_test_part;
+
+extern odp_bool_t sa_expiry_notified;
 
 void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
 			 odp_ipsec_dir_t dir,
@@ -151,5 +163,7 @@ int ipsec_check_test_sa_update_seq_num(void);
 int ipsec_check_esp_aes_gcm_128_reass_ipv4(void);
 int ipsec_check_esp_aes_gcm_128_reass_ipv6(void);
 int ipsec_check_esp_null_aes_xcbc(void);
+void ipsec_status_event_get(odp_ipsec_sa_t sa,
+			    enum ipsec_test_sa_expiry sa_expiry);
 
 #endif
