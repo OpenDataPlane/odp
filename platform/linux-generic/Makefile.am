@@ -295,6 +295,7 @@ endif
 if ARCH_IS_AARCH64
 __LIB__libodp_linux_la_SOURCES += arch/aarch64/odp_atomic.c \
 				  arch/default/odp_cpu_cycles.c \
+				  arch/aarch64/cpu_flags.c \
 				  arch/aarch64/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
 				  arch/aarch64/odp_sysinfo_parse.c
@@ -310,6 +311,7 @@ odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 endif
 noinst_HEADERS += arch/aarch64/odp_atomic.h \
 		  arch/aarch64/odp_cpu.h \
+		  arch/aarch64/cpu_flags.h \
 		  arch/aarch64/odp_cpu_idling.h \
 		  arch/aarch64/odp_llsc.h
 endif
