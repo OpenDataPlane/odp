@@ -562,6 +562,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	odp_atomic_init_u64(&ipsec_sa->stats.hard_exp_pkts_err, 0);
 	odp_atomic_init_u64(&ipsec_sa->stats.post_lifetime_err_pkts, 0);
 	odp_atomic_init_u64(&ipsec_sa->stats.post_lifetime_err_bytes, 0);
+	odp_atomic_init_u32(&ipsec_sa->soft_expiry_notified, 0);
 
 	if (ODP_IPSEC_MODE_TUNNEL == ipsec_sa->mode &&
 	    ODP_IPSEC_DIR_OUTBOUND == param->dir) {

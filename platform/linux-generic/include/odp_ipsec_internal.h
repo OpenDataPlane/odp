@@ -272,6 +272,14 @@ struct ipsec_sa_s {
 			} out;
 		};
 	} sa_info;
+
+	/*
+	 * Flag to check if the SA soft expiry status event was already
+	 * sent. This field is applicable only for the soft expiry status
+	 * event that gets generated for IPsec SAs configured in inline
+	 * outbound mode.
+	 */
+	odp_atomic_u32_t soft_expiry_notified;
 };
 
 /**
