@@ -1593,6 +1593,138 @@ static void test_test_sa_update_seq_num(void)
 	printf("\n  ");
 }
 
+#define SOFT_LIMIT_PKT_CNT 1024
+#define HARD_LIMIT_PKT_CNT 2048
+#define DELTA_PKT_CNT 320
+
+static void test_out_ipv4_esp_sa_expiry(enum ipsec_test_sa_expiry expiry)
+{
+	int byte_count_per_packet = pkt_ipv4_icmp_0.len - pkt_ipv4_icmp_0.l3_offset;
+	uint32_t src = IPV4ADDR(10, 0, 11, 2);
+	uint32_t dst = IPV4ADDR(10, 0, 22, 2);
+	odp_ipsec_tunnel_param_t out_tunnel;
+	odp_ipsec_sa_param_t param_out;
+	int i, inc, limit, delta;
+	uint64_t soft_limit_byte;
+	uint64_t hard_limit_byte;
+	uint64_t soft_limit_pkt;
+	uint64_t hard_limit_pkt;
+	odp_ipsec_sa_t out_sa;
+
+	switch (expiry)	{
+	case IPSEC_TEST_EXPIRY_SOFT_PKT:
+		soft_limit_pkt = SOFT_LIMIT_PKT_CNT;
+		hard_limit_pkt = HARD_LIMIT_PKT_CNT;
+		soft_limit_byte = 0;
+		hard_limit_byte = 0;
+		delta = DELTA_PKT_CNT;
+		limit = soft_limit_pkt;
+		inc = 1;
+		break;
+	case IPSEC_TEST_EXPIRY_HARD_PKT:
+		soft_limit_pkt = SOFT_LIMIT_PKT_CNT;
+		hard_limit_pkt = HARD_LIMIT_PKT_CNT;
+		soft_limit_byte = 0;
+		hard_limit_byte = 0;
+		delta = DELTA_PKT_CNT;
+		limit = hard_limit_pkt;
+		inc = 1;
+		break;
+	case IPSEC_TEST_EXPIRY_SOFT_BYTE:
+		soft_limit_pkt = 0;
+		hard_limit_pkt = 0;
+		soft_limit_byte = byte_count_per_packet * SOFT_LIMIT_PKT_CNT;
+		hard_limit_byte = byte_count_per_packet * HARD_LIMIT_PKT_CNT;
+		delta = byte_count_per_packet * DELTA_PKT_CNT;
+		limit = soft_limit_byte;
+		inc = byte_count_per_packet;
+		break;
+	case IPSEC_TEST_EXPIRY_HARD_BYTE:
+		soft_limit_pkt = 0;
+		hard_limit_pkt = 0;
+		soft_limit_byte = byte_count_per_packet * SOFT_LIMIT_PKT_CNT;
+		hard_limit_byte = byte_count_per_packet * HARD_LIMIT_PKT_CNT;
+		delta = byte_count_per_packet * DELTA_PKT_CNT;
+		limit = hard_limit_byte;
+		inc = byte_count_per_packet;
+		break;
+	default:
+		return;
+	}
+
+	memset(&out_tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
+
+	out_tunnel.type = ODP_IPSEC_TUNNEL_IPV4;
+	out_tunnel.ipv4.src_addr = &src;
+	out_tunnel.ipv4.dst_addr = &dst;
+
+	ipsec_sa_param_fill(&param_out, ODP_IPSEC_DIR_OUTBOUND, ODP_IPSEC_ESP,
+			    0x4a2cbfe7, &out_tunnel,
+			    ODP_CIPHER_ALG_AES_CBC, &key_a5_128,
+			    ODP_AUTH_ALG_SHA1_HMAC, &key_5a_160,
+			    NULL, NULL);
+
+	param_out.lifetime.soft_limit.bytes = soft_limit_byte;
+	param_out.lifetime.hard_limit.bytes = hard_limit_byte;
+	param_out.lifetime.soft_limit.packets = soft_limit_pkt;
+	param_out.lifetime.hard_limit.packets = hard_limit_pkt;
+
+	out_sa = odp_ipsec_sa_create(&param_out);
+	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, out_sa);
+
+	ipsec_test_part test_out = {
+		.pkt_in = &pkt_ipv4_icmp_0,
+		.num_pkt = 1,
+		.out = {
+			{ .status.warn.all = 0,
+			  .status.error.all = 0,
+			  .l3_type = ODP_PROTO_L3_TYPE_IPV4,
+			  .l4_type = ODP_PROTO_L4_TYPE_ESP,
+			},
+		},
+	};
+
+	test_out.out[0].sa_expiry = IPSEC_TEST_EXPIRY_IGNORED;
+
+	for (i = 0; i < limit - delta; i += inc)
+		ipsec_check_out_one(&test_out, out_sa);
+
+	sa_expiry_notified = false;
+	test_out.out[0].sa_expiry = expiry;
+
+	for (; i <= limit && !sa_expiry_notified; i += inc)
+		ipsec_check_out_one(&test_out, out_sa);
+
+	CU_ASSERT(sa_expiry_notified);
+
+	for (; i <= limit + delta; i += inc)
+		ipsec_check_out_one(&test_out, out_sa);
+
+	ipsec_sa_destroy(out_sa);
+}
+
+static void test_out_ipv4_esp_sa_pkt_expiry(void)
+{
+	printf("\n	IPv4 IPsec SA packet soft expiry");
+	test_out_ipv4_esp_sa_expiry(IPSEC_TEST_EXPIRY_SOFT_PKT);
+
+	printf("\n	IPv4 IPsec SA packet hard expiry");
+	test_out_ipv4_esp_sa_expiry(IPSEC_TEST_EXPIRY_HARD_PKT);
+
+	printf("\n");
+}
+
+static void test_out_ipv4_esp_sa_byte_expiry(void)
+{
+	printf("\n	IPv4 IPsec SA byte soft expiry");
+	test_out_ipv4_esp_sa_expiry(IPSEC_TEST_EXPIRY_SOFT_BYTE);
+
+	printf("\n	IPv4 IPsec SA byte hard expiry");
+	test_out_ipv4_esp_sa_expiry(IPSEC_TEST_EXPIRY_HARD_BYTE);
+
+	printf("\n");
+}
+
 static void ipsec_test_capability(void)
 {
 	odp_ipsec_capability_t capa;
@@ -1899,6 +2031,10 @@ odp_testinfo_t ipsec_out_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_null_aes_xcbc,
 				  ipsec_check_esp_null_aes_xcbc),
 	ODP_TEST_INFO_CONDITIONAL(test_sa_info,
+				  ipsec_check_esp_aes_cbc_128_sha1),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_sa_pkt_expiry,
+				  ipsec_check_esp_aes_cbc_128_sha1),
+	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_sa_byte_expiry,
 				  ipsec_check_esp_aes_cbc_128_sha1),
 	ODP_TEST_INFO_CONDITIONAL(test_test_sa_update_seq_num,
 				  ipsec_check_test_sa_update_seq_num),
