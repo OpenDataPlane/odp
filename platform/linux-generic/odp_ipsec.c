@@ -2477,6 +2477,25 @@ static void ipsec_out_inline_finalize(odp_packet_t pkt_in[],
 		ipsec_inline_op_t *op = &ops[i];
 		odp_packet_t *pkt = &pkt_in[i];
 
+		if (op->op.status.warn.soft_exp_packets || op->op.status.warn.soft_exp_bytes) {
+			if (!odp_atomic_load_u32(&op->op.sa->soft_expiry_notified)) {
+				int rc;
+
+				/*
+				 * Another thread may have sent the notification by now but we do
+				 * not care since sending duplicate expiry notifications is allowed.
+				 */
+				rc = _odp_ipsec_status_send(op->op.sa->queue,
+							    ODP_IPSEC_STATUS_WARN,
+							    op->op.sa->ipsec_sa_hdl,
+							    0, op->op.status.warn);
+				if (rc == 0)
+					odp_atomic_store_u32(&op->op.sa->soft_expiry_notified, 1);
+				else
+					_ODP_DBG("IPsec status event submission failed\n");
+			}
+		}
+
 		if (odp_unlikely(op->op.status.error.all))
 			goto handle_err;
 
