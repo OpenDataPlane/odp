@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -15,19 +16,18 @@
 
 #include <odp/api/align.h>
 #include <odp/api/debug.h>
-#include <odp_buffer_internal.h>
-#include <odp_pool_internal.h>
 #include <odp/api/timer.h>
-#include <odp_global_data.h>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
+#include <odp_event_internal.h>
+#include <odp_global_data.h>
+#include <odp_pool_internal.h>
+
 /**
  * Internal Timeout header
  */
-typedef struct {
-	/* common buffer header */
-	odp_buffer_hdr_t buf_hdr;
+typedef struct ODP_ALIGNED_CACHE odp_timeout_hdr_t {
+	/* Common event header */
+	_odp_event_hdr_t event_hdr;
 
 	/* Requested expiration time */
 	uint64_t expiration;
@@ -39,7 +39,6 @@ typedef struct {
 	odp_timer_t timer;
 
 } odp_timeout_hdr_t;
-#pragma GCC diagnostic pop
 
 /* A larger decrement value should be used after receiving events compared to
  * an 'empty' call. */
