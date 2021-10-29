@@ -5,7 +5,6 @@
  */
 
 #include <odp/api/align.h>
-#include <odp/api/buffer.h>
 #include <odp/api/hints.h>
 #include <odp/api/packet.h>
 #include <odp/api/pool.h>
@@ -24,17 +23,21 @@
 /* Packet vector header field offsets for inline functions */
 const _odp_event_vector_inline_offset_t _odp_event_vector_inline ODP_ALIGNED_CACHE = {
 	.packet    = offsetof(odp_event_vector_hdr_t, packet),
-	.pool      = offsetof(odp_event_vector_hdr_t, buf_hdr.pool_ptr),
+	.pool      = offsetof(odp_event_vector_hdr_t, event_hdr.pool_ptr),
 	.size      = offsetof(odp_event_vector_hdr_t, size)
 };
 
 #include <odp/visibility_end.h>
 
+static inline odp_event_vector_hdr_t *event_vector_hdr_from_event(odp_event_t event)
+{
+	return (odp_event_vector_hdr_t *)(uintptr_t)event;
+}
+
 odp_packet_vector_t odp_packet_vector_alloc(odp_pool_t pool_hdl)
 {
-	odp_packet_vector_t pktv;
+	odp_event_t event;
 	pool_t *pool;
-	int ret;
 
 	ODP_ASSERT(pool_hdl != ODP_POOL_INVALID);
 
@@ -42,12 +45,13 @@ odp_packet_vector_t odp_packet_vector_alloc(odp_pool_t pool_hdl)
 
 	ODP_ASSERT(pool->type == ODP_POOL_VECTOR);
 
-	ret  = _odp_buffer_alloc_multi(pool, (odp_buffer_hdr_t **)&pktv, 1);
+	event = _odp_event_alloc(pool);
+	if (odp_unlikely(event == ODP_EVENT_INVALID))
+		return ODP_PACKET_VECTOR_INVALID;
 
-	if (odp_likely(ret == 1))
-		return pktv;
+	ODP_ASSERT(event_vector_hdr_from_event(event)->size == 0);
 
-	return ODP_PACKET_VECTOR_INVALID;
+	return odp_packet_vector_from_event(event);
 }
 
 void odp_packet_vector_free(odp_packet_vector_t pktv)
@@ -56,7 +60,7 @@ void odp_packet_vector_free(odp_packet_vector_t pktv)
 
 	pktv_hdr->size = 0;
 
-	_odp_buffer_free_multi((odp_buffer_hdr_t **)&pktv_hdr, 1);
+	_odp_event_free(odp_packet_vector_to_event(pktv));
 }
 
 int odp_packet_vector_valid(odp_packet_vector_t pktv)
@@ -69,16 +73,16 @@ int odp_packet_vector_valid(odp_packet_vector_t pktv)
 	if (odp_unlikely(pktv == ODP_PACKET_VECTOR_INVALID))
 		return 0;
 
-	if (_odp_buffer_is_valid((odp_buffer_t)pktv) == 0)
-		return 0;
-
 	ev = odp_packet_vector_to_event(pktv);
+
+	if (_odp_event_is_valid(ev) == 0)
+		return 0;
 
 	if (odp_event_type(ev) != ODP_EVENT_PACKET_VECTOR)
 		return 0;
 
 	pktv_hdr = _odp_packet_vector_hdr(pktv);
-	pool = pktv_hdr->buf_hdr.pool_ptr;
+	pool = pktv_hdr->event_hdr.pool_ptr;
 
 	if (odp_unlikely(pktv_hdr->size > pool->params.vector.max_size))
 		return 0;
