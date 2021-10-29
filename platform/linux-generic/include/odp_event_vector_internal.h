@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, Nokia
+/* Copyright (c) 2020-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -13,18 +13,20 @@
 #ifndef ODP_EVENT_VECTOR_INTERNAL_H_
 #define ODP_EVENT_VECTOR_INTERNAL_H_
 
-#include <stdint.h>
+#include <odp/api/align.h>
+#include <odp/api/debug.h>
 #include <odp/api/packet.h>
-#include <odp_buffer_internal.h>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
+#include <odp_event_internal.h>
+
+#include <stdint.h>
+
 /**
  * Internal event vector header
  */
-typedef struct {
-	/* Common buffer header */
-	odp_buffer_hdr_t buf_hdr;
+typedef struct ODP_ALIGNED_CACHE odp_event_vector_hdr_t {
+	/* Common event header */
+	_odp_event_hdr_t event_hdr;
 
 	/* Event vector size */
 	uint32_t size;
@@ -33,7 +35,11 @@ typedef struct {
 	odp_packet_t packet[];
 
 } odp_event_vector_hdr_t;
-#pragma GCC diagnostic pop
+
+/* Vector header size is critical for performance. Ensure that it does not accidentally
+ * grow over cache line size. */
+ODP_STATIC_ASSERT(sizeof(odp_event_vector_hdr_t) <= ODP_CACHE_LINE_SIZE,
+		  "EVENT_VECTOR_HDR_SIZE_ERROR");
 
 /**
  * Return the vector header

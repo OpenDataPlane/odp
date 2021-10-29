@@ -63,7 +63,7 @@ static inline pktio_entry_t *pktio_entry_by_index(int index)
 
 static inline odp_buffer_hdr_t *packet_vector_to_buf_hdr(odp_packet_vector_t pktv)
 {
-	return &_odp_packet_vector_hdr(pktv)->buf_hdr;
+	return (odp_buffer_hdr_t *)(uintptr_t)&_odp_packet_vector_hdr(pktv)->event_hdr;
 }
 
 static int read_config_file(pktio_global_t *pktio_glb)
