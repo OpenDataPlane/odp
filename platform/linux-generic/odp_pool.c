@@ -1295,6 +1295,19 @@ odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 	return ODP_BUFFER_INVALID;
 }
 
+odp_event_t _odp_event_alloc(pool_t *pool)
+{
+	odp_event_t event;
+	int ret;
+
+	ret  = _odp_buffer_alloc_multi(pool, (odp_buffer_hdr_t **)&event, 1);
+
+	if (odp_likely(ret == 1))
+		return event;
+
+	return ODP_EVENT_INVALID;
+}
+
 int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
 {
 	pool_t *pool;

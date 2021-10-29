@@ -23,6 +23,7 @@ extern "C" {
 #include <odp/api/align.h>
 
 #include <odp_buffer_internal.h>
+#include <odp_event_internal.h>
 #include <odp_config_internal.h>
 #include <odp_ring_ptr_internal.h>
 #include <odp/api/plat/strong_types.h>
@@ -177,6 +178,28 @@ static inline odp_buffer_hdr_t *buf_hdr_from_index_u32(uint32_t u32)
 int _odp_buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int num);
 void _odp_buffer_free_multi(odp_buffer_hdr_t *buf_hdr[], int num_free);
 int _odp_buffer_is_valid(odp_buffer_t buf);
+
+odp_event_t _odp_event_alloc(pool_t *pool);
+
+static inline int _odp_event_is_valid(odp_event_t event)
+{
+	return _odp_buffer_is_valid((odp_buffer_t)event);
+}
+
+static inline int _odp_event_alloc_multi(pool_t *pool, _odp_event_hdr_t *event_hdr[], int num)
+{
+	return _odp_buffer_alloc_multi(pool, (odp_buffer_hdr_t **)event_hdr, num);
+}
+
+static inline void _odp_event_free(odp_event_t event)
+{
+	_odp_buffer_free_multi((odp_buffer_hdr_t **)&event, 1);
+}
+
+static inline void _odp_event_free_multi(_odp_event_hdr_t *event_hdr[], int num_free)
+{
+	_odp_buffer_free_multi((odp_buffer_hdr_t **)event_hdr, num_free);
+}
 
 #ifdef __cplusplus
 }
