@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -20,15 +20,16 @@ extern "C" {
 
 #include <odp/api/align.h>
 #include <odp/api/debug.h>
-#include <odp_buffer_internal.h>
-#include <odp_pool_internal.h>
 #include <odp/api/packet.h>
 #include <odp/api/plat/packet_inline_types.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/crypto.h>
 #include <odp/api/comp.h>
-#include <odp_ipsec_internal.h>
 #include <odp/api/abi/packet.h>
+
+#include <odp_event_internal.h>
+#include <odp_ipsec_internal.h>
+#include <odp_pool_internal.h>
 #include <odp_queue_if.h>
 
 #include <stdint.h>
@@ -73,8 +74,6 @@ typedef struct {
 
 ODP_STATIC_ASSERT(PKT_MAX_SEGS < UINT16_MAX, "PACKET_MAX_SEGS_ERROR");
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
 /**
  * Internal Packet header
  *
@@ -82,9 +81,9 @@ ODP_STATIC_ASSERT(PKT_MAX_SEGS < UINT16_MAX, "PACKET_MAX_SEGS_ERROR");
  * packet_init(). Because of this any new fields added must be reviewed for
  * initialization requirements.
  */
-typedef struct odp_packet_hdr_t {
-	/* Common buffer header (cache line aligned) */
-	odp_buffer_hdr_t buf_hdr;
+typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
+	/* Common event header */
+	_odp_event_hdr_t event_hdr;
 
 	/* Segment data start */
 	uint8_t *seg_data;
@@ -153,13 +152,10 @@ typedef struct odp_packet_hdr_t {
 	uint8_t data[];
 
 } odp_packet_hdr_t;
-#pragma GCC diagnostic pop
 
 /* Packet header size is critical for performance. Ensure that it does not accidentally
- * grow over 256 bytes when cache line size is 64 bytes (or less). With larger cache line sizes,
- * the struct size is larger due to the odp_buffer_hdr_t alignment requirement. */
-ODP_STATIC_ASSERT(sizeof(odp_packet_hdr_t) <= 256 || ODP_CACHE_LINE_SIZE > 64,
-		  "PACKET_HDR_SIZE_ERROR");
+ * grow over 256 bytes. */
+ODP_STATIC_ASSERT(sizeof(odp_packet_hdr_t) <= 256, "PACKET_HDR_SIZE_ERROR");
 
 /**
  * Return the packet header
@@ -176,7 +172,7 @@ static inline odp_packet_t packet_handle(odp_packet_hdr_t *pkt_hdr)
 
 static inline odp_buffer_hdr_t *packet_to_buf_hdr(odp_packet_t pkt)
 {
-	return &packet_hdr(pkt)->buf_hdr;
+	return (odp_buffer_hdr_t *)(uintptr_t)&packet_hdr(pkt)->event_hdr;
 }
 
 static inline odp_packet_t packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
@@ -202,7 +198,7 @@ static inline void packet_subtype_set(odp_packet_t pkt, int ev)
  */
 static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
-	pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
+	pool_t *pool = pkt_hdr->event_hdr.pool_ptr;
 	uint32_t seg_len;
 	int num = pkt_hdr->seg_count;
 

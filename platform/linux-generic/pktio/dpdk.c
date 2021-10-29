@@ -305,7 +305,7 @@ static void pktmbuf_init(struct rte_mempool *mp, void *opaque_arg ODP_UNUSED,
 	void *buf_addr;
 
 	pkt_hdr = pkt_hdr_from_mbuf(m);
-	buf_addr = pkt_hdr->buf_hdr.base_data - RTE_PKTMBUF_HEADROOM;
+	buf_addr = pkt_hdr->event_hdr.base_data - RTE_PKTMBUF_HEADROOM;
 
 	priv_size = rte_pktmbuf_priv_size(mp);
 	mbuf_size = sizeof(struct rte_mbuf);
