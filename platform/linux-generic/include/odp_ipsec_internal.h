@@ -84,6 +84,8 @@ int _odp_ipsec_status_send(odp_queue_t queue,
 
 #define IPSEC_MAX_SALT_LEN	4    /**< Maximum salt length in bytes */
 
+#define IPSEC_SEQ_HI_LEN	4    /**< ESN Higher bits length in bytes */
+
 /* The minimum supported AR window size */
 #define IPSEC_AR_WIN_SIZE_MIN	32
 
@@ -175,6 +177,8 @@ struct ipsec_sa_s {
 			unsigned	copy_flabel : 1;
 			unsigned	aes_ctr_iv : 1;
 			unsigned	udp_encap : 1;
+			unsigned	esn : 1;
+			unsigned	insert_seq_hi : 1;
 
 			/* Only for outbound */
 			unsigned	use_counter_iv : 1;
@@ -264,8 +268,14 @@ typedef struct odp_ipsec_sa_lookup_s {
 
 /** IPSEC AAD */
 typedef struct ODP_PACKED {
-	odp_u32be_t spi;     /**< Security Parameter Index */
-	odp_u32be_t seq_no;  /**< Sequence Number */
+	/**< Security Parameter Index */
+	odp_u32be_t spi;
+
+	/**< Sequence Number */
+	union {
+		odp_u32be_t seq_no;
+		odp_u64be_t seq_no64;
+	};
 } ipsec_aad_t;
 
 /* Return IV length required for the cipher for IPsec use */
@@ -317,14 +327,14 @@ int _odp_ipsec_sa_lifetime_update(ipsec_sa_t *ipsec_sa, uint32_t len,
  *
  * @retval <0 if the packet falls out of window
  */
-int _odp_ipsec_sa_replay_precheck(ipsec_sa_t *ipsec_sa, uint32_t seq,
+int _odp_ipsec_sa_replay_precheck(ipsec_sa_t *ipsec_sa, uint64_t seq,
 				  odp_ipsec_op_status_t *status);
 
 /* Run check on sequence number of the packet and update window if necessary.
  *
  * @retval <0 if the packet falls out of window
  */
-int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint32_t seq,
+int _odp_ipsec_sa_replay_update(ipsec_sa_t *ipsec_sa, uint64_t seq,
 				odp_ipsec_op_status_t *status);
 
 /**
