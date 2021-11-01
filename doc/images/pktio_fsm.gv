@@ -1,6 +1,5 @@
 digraph pktio_state_machine {
 	rankdir=LR;
-	size="9,12";
 	node [fontsize=28];
 	edge [fontsize=28];
 	node [shape=doublecircle]; Unallocated Ready;

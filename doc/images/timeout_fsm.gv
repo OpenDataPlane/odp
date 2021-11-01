@@ -1,6 +1,5 @@
 digraph timer_state_machine {
 	rankdir=LR;
-	size="12,20";
 	node [fontsize=28];
 	edge [fontsize=28];
 	node [shape=doublecircle]; TO_Unalloc;
