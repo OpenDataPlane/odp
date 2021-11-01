@@ -13,6 +13,7 @@
 #include <odp/api/schedule.h>
 #include <odp/api/ticketlock.h>
 
+#include <odp_event_internal.h>
 #include <odp_schedule_scalable_config.h>
 #include <odp_schedule_scalable_ordered.h>
 #include <odp_llqueue.h>
@@ -74,13 +75,13 @@ typedef struct ODP_ALIGNED_CACHE {
 	ringidx_t prod_read SPLIT_PC;
 	ringidx_t prod_write;
 	ringidx_t prod_mask;
-	odp_buffer_hdr_t **prod_ring;
+	_odp_event_hdr_t **prod_ring;
 	ringidx_t cons_write SPLIT_PC;
 	ringidx_t cons_read;
 	reorder_window_t *rwin;
 	void *user_ctx;
 #ifdef CONFIG_SPLIT_PRODCONS
-	odp_buffer_hdr_t **cons_ring;
+	_odp_event_hdr_t **cons_ring;
 	ringidx_t cons_mask;
 	uint16_t cons_type;
 #else

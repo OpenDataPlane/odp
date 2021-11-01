@@ -33,6 +33,7 @@
 #include <odp_errno_define.h>
 #include <odp_global_data.h>
 #include <odp_schedule_if.h>
+#include <odp_event_internal.h>
 
 /* Local vars */
 static const
@@ -166,19 +167,19 @@ static inline tm_node_obj_t *tm_nobj_from_index(uint32_t node_id)
 	return &tm_glb->node_obj.obj[node_id];
 }
 
-static int queue_tm_reenq(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr)
+static int queue_tm_reenq(odp_queue_t queue, _odp_event_hdr_t *event_hdr)
 {
 	odp_tm_queue_t tm_queue = MAKE_ODP_TM_QUEUE(odp_queue_context(queue));
-	odp_packet_t pkt = packet_from_buf_hdr(buf_hdr);
+	odp_packet_t pkt = packet_from_event_hdr(event_hdr);
 
 	return odp_tm_enq(tm_queue, pkt);
 }
 
-static int queue_tm_reenq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf[],
+static int queue_tm_reenq_multi(odp_queue_t queue, _odp_event_hdr_t *event[],
 				int num)
 {
 	(void)queue;
-	(void)buf;
+	(void)event;
 	(void)num;
 	ODP_ABORT("Invalid call to queue_tm_reenq_multi()\n");
 	return 0;

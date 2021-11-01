@@ -1,4 +1,5 @@
 /* Copyright (c) 2018-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -8,11 +9,13 @@
 #include <odp/api/atomic.h>
 #include <odp/api/plat/atomic_inlines.h>
 #include <odp/api/shared_memory.h>
-#include <odp_queue_basic_internal.h>
-#include <string.h>
-#include <stdio.h>
 
 #include <odp_debug_internal.h>
+#include <odp_event_internal.h>
+#include <odp_queue_basic_internal.h>
+
+#include <string.h>
+#include <stdio.h>
 
 #define RING_LF_SIZE   32
 #define QUEUE_LF_NUM   128
@@ -112,7 +115,7 @@ static inline int next_idx(int idx)
 	return next;
 }
 
-static int queue_lf_enq(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr)
+static int queue_lf_enq(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
 {
 	queue_entry_t *queue;
 	queue_lf_t *queue_lf;
@@ -125,7 +128,7 @@ static int queue_lf_enq(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr)
 	queue    = qentry_from_handle(handle);
 	queue_lf = queue->s.queue_lf;
 
-	new_val.s.ptr     = (uintptr_t)buf_hdr;
+	new_val.s.ptr     = (uintptr_t)event_hdr;
 	new_val.s.counter = odp_atomic_fetch_inc_u64(&queue_lf->enq_counter);
 
 	idx = 0;
@@ -159,18 +162,18 @@ static int queue_lf_enq(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr)
 	return -1;
 }
 
-static int queue_lf_enq_multi(odp_queue_t handle, odp_buffer_hdr_t **buf_hdr,
+static int queue_lf_enq_multi(odp_queue_t handle, _odp_event_hdr_t **event_hdr,
 			      int num)
 {
 	(void)num;
 
-	if (queue_lf_enq(handle, buf_hdr[0]) == 0)
+	if (queue_lf_enq(handle, event_hdr[0]) == 0)
 		return 1;
 
 	return 0;
 }
 
-static odp_buffer_hdr_t *queue_lf_deq(odp_queue_t handle)
+static _odp_event_hdr_t *queue_lf_deq(odp_queue_t handle)
 {
 	queue_entry_t *queue;
 	queue_lf_t *queue_lf;
@@ -179,7 +182,7 @@ static odp_buffer_hdr_t *queue_lf_deq(odp_queue_t handle)
 	ring_lf_node_t node_val, old_val, new_val;
 	ring_lf_node_t *node, *old;
 	uint64_t lowest, counter;
-	odp_buffer_hdr_t *buf_hdr;
+	_odp_event_hdr_t *event_hdr;
 
 	queue    = qentry_from_handle(handle);
 	queue_lf = queue->s.queue_lf;
@@ -226,21 +229,21 @@ static odp_buffer_hdr_t *queue_lf_deq(odp_queue_t handle)
 			}
 		}
 
-		buf_hdr = (void *)(uintptr_t)old_val.s.ptr;
+		event_hdr = (void *)(uintptr_t)old_val.s.ptr;
 
 		/* Try to remove data */
 		if (lockfree_cas_acq_rel_u128(&old->u128, old_val.u128,
 					    new_val.u128))
-			return buf_hdr;
+			return event_hdr;
 	}
 
 	return NULL;
 }
 
-static int queue_lf_deq_multi(odp_queue_t handle, odp_buffer_hdr_t **buf_hdr,
+static int queue_lf_deq_multi(odp_queue_t handle, _odp_event_hdr_t **event_hdr,
 			      int num)
 {
-	odp_buffer_hdr_t *buf;
+	_odp_event_hdr_t *buf;
 
 	(void)num;
 
@@ -249,7 +252,7 @@ static int queue_lf_deq_multi(odp_queue_t handle, odp_buffer_hdr_t **buf_hdr,
 	if (buf == NULL)
 		return 0;
 
-	buf_hdr[0] = buf;
+	event_hdr[0] = buf;
 	return 1;
 }
 

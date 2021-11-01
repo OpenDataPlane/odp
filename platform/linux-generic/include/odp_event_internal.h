@@ -24,14 +24,14 @@ extern "C" {
 
 #include <odp_config_internal.h>
 
-typedef union buf_index_t {
+typedef union buffer_index_t {
 	uint32_t u32;
 
 	struct {
 		uint32_t pool   :8;
 		uint32_t buffer :24;
 	};
-} buf_index_t;
+} buffer_index_t;
 
 /* Check that pool index fit into bit field */
 ODP_STATIC_ASSERT(ODP_CONFIG_POOLS    <= (0xFF + 1), "TOO_MANY_POOLS");
@@ -60,7 +60,7 @@ typedef struct _odp_event_hdr_t {
 	void    *uarea_addr;
 
 	/* Combined pool and buffer index */
-	buf_index_t index;
+	buffer_index_t index;
 
 	/* Reference count */
 	odp_atomic_u32_t ref_cnt;
@@ -84,6 +84,16 @@ static inline odp_event_t _odp_event_from_hdr(_odp_event_hdr_t *hdr)
 static inline _odp_event_hdr_t *_odp_event_hdr(odp_event_t event)
 {
 	return (_odp_event_hdr_t *)(uintptr_t)event;
+}
+
+static inline odp_event_type_t _odp_event_type(odp_event_t event)
+{
+	return _odp_event_hdr(event)->event_type;
+}
+
+static inline void _odp_event_type_set(odp_event_t event, int ev)
+{
+	_odp_event_hdr(event)->event_type = ev;
 }
 
 #ifdef __cplusplus

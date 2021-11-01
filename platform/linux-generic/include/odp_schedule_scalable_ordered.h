@@ -13,6 +13,7 @@
 
 #include <odp_align_internal.h>
 #include <odp_bitset.h>
+#include <odp_event_internal.h>
 #include <odp_ishmpool_internal.h>
 
 /* High level functioning of reordering
@@ -106,7 +107,7 @@ struct ODP_ALIGNED_CACHE reorder_context {
 	/* Number of events stored in this reorder context */
 	uint8_t numevts;
 	/* Events stored in this context */
-	odp_buffer_hdr_t *events[RC_EVT_SIZE];
+	_odp_event_hdr_t *events[RC_EVT_SIZE];
 	queue_entry_t *destq[RC_EVT_SIZE];
 };
 
@@ -119,6 +120,6 @@ void _odp_rwin_unreserve_sc(reorder_window_t *rwin, uint32_t sn);
 void _odp_rctx_init(reorder_context_t *rctx, uint16_t idx,
 		    reorder_window_t *rwin, uint32_t sn);
 void _odp_rctx_release(reorder_context_t *rctx);
-int _odp_rctx_save(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num);
+int _odp_rctx_save(queue_entry_t *queue, _odp_event_hdr_t *event_hdr[], int num);
 
 #endif  /* ODP_SCHEDULE_SCALABLE_ORDERED_H */

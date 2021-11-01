@@ -170,14 +170,14 @@ static inline odp_packet_t packet_handle(odp_packet_hdr_t *pkt_hdr)
 	return (odp_packet_t)pkt_hdr;
 }
 
-static inline odp_buffer_hdr_t *packet_to_buf_hdr(odp_packet_t pkt)
+static inline _odp_event_hdr_t *packet_to_event_hdr(odp_packet_t pkt)
 {
-	return (odp_buffer_hdr_t *)(uintptr_t)&packet_hdr(pkt)->event_hdr;
+	return (_odp_event_hdr_t *)(uintptr_t)&packet_hdr(pkt)->event_hdr;
 }
 
-static inline odp_packet_t packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
+static inline odp_packet_t packet_from_event_hdr(_odp_event_hdr_t *event_hdr)
 {
-	return (odp_packet_t)(odp_packet_hdr_t *)buf_hdr;
+	return (odp_packet_t)(uintptr_t)event_hdr;
 }
 
 static inline odp_packet_hdr_t *packet_last_seg(odp_packet_hdr_t *hdr)

@@ -36,6 +36,7 @@
 #include <odp_libconfig_internal.h>
 #include <odp/api/plat/queue_inlines.h>
 #include <odp_global_data.h>
+#include <odp_event_internal.h>
 
 #include <string.h>
 
@@ -122,7 +123,7 @@ ODP_STATIC_ASSERT((8 * sizeof(prio_q_mask_t)) >= MAX_SPREAD,
 
 /* Storage for stashed enqueue operation arguments */
 typedef struct {
-	odp_buffer_hdr_t *buf_hdr[QUEUE_MULTI_MAX];
+	_odp_event_hdr_t *event_hdr[QUEUE_MULTI_MAX];
 	odp_queue_t queue;
 	int num;
 } ordered_stash_t;
@@ -902,15 +903,15 @@ static inline void ordered_stash_release(void)
 
 	for (i = 0; i < sched_local.ordered.stash_num; i++) {
 		odp_queue_t queue;
-		odp_buffer_hdr_t **buf_hdr;
+		_odp_event_hdr_t **event_hdr;
 		int num, num_enq;
 
 		queue = sched_local.ordered.stash[i].queue;
-		buf_hdr = sched_local.ordered.stash[i].buf_hdr;
+		event_hdr = sched_local.ordered.stash[i].event_hdr;
 		num = sched_local.ordered.stash[i].num;
 
 		num_enq = odp_queue_enq_multi(queue,
-					      (odp_event_t *)buf_hdr, num);
+					      (odp_event_t *)event_hdr, num);
 
 		/* Drop packets that were not enqueued */
 		if (odp_unlikely(num_enq < num)) {
@@ -918,7 +919,7 @@ static inline void ordered_stash_release(void)
 				num_enq = 0;
 
 			ODP_DBG("Dropped %i packets\n", num - num_enq);
-			_odp_buffer_free_multi(&buf_hdr[num_enq], num - num_enq);
+			_odp_event_free_multi(&event_hdr[num_enq], num - num_enq);
 		}
 	}
 	sched_local.ordered.stash_num = 0;
@@ -1076,7 +1077,7 @@ static inline int copy_from_stash(odp_event_t out_ev[], unsigned int max)
 	return i;
 }
 
-static int schedule_ord_enq_multi(odp_queue_t dst_queue, void *buf_hdr[],
+static int schedule_ord_enq_multi(odp_queue_t dst_queue, void *event_hdr[],
 				  int num, int *ret)
 {
 	int i;
@@ -1123,7 +1124,7 @@ static int schedule_ord_enq_multi(odp_queue_t dst_queue, void *buf_hdr[],
 	sched_local.ordered.stash[stash_num].queue = dst_queue;
 	sched_local.ordered.stash[stash_num].num = num;
 	for (i = 0; i < num; i++)
-		sched_local.ordered.stash[stash_num].buf_hdr[i] = buf_hdr[i];
+		sched_local.ordered.stash[stash_num].event_hdr[i] = event_hdr[i];
 
 	sched_local.ordered.stash_num++;
 
@@ -1140,12 +1141,12 @@ static inline int poll_pktin(uint32_t qi, int direct_recv,
 			     odp_event_t ev_tbl[], int max_num)
 {
 	int pktio_index, pktin_index, num, num_pktin;
-	odp_buffer_hdr_t **hdr_tbl;
+	_odp_event_hdr_t **hdr_tbl;
 	int ret;
 	void *q_int;
-	odp_buffer_hdr_t *b_hdr[CONFIG_BURST_SIZE];
+	_odp_event_hdr_t *b_hdr[CONFIG_BURST_SIZE];
 
-	hdr_tbl = (odp_buffer_hdr_t **)ev_tbl;
+	hdr_tbl = (_odp_event_hdr_t **)ev_tbl;
 
 	if (!direct_recv) {
 		hdr_tbl = b_hdr;
@@ -1194,7 +1195,7 @@ static inline int poll_pktin(uint32_t qi, int direct_recv,
 			num_enq = 0;
 
 		ODP_DBG("Dropped %i packets\n", num - num_enq);
-		_odp_buffer_free_multi(&b_hdr[num_enq], num - num_enq);
+		_odp_event_free_multi(&b_hdr[num_enq], num - num_enq);
 	}
 
 	return ret;

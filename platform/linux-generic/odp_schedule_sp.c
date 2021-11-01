@@ -20,10 +20,12 @@
 #include <odp/api/plat/time_inlines.h>
 #include <odp/api/schedule.h>
 #include <odp/api/shared_memory.h>
+
 #include <odp_schedule_if.h>
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
 #include <odp_config_internal.h>
+#include <odp_event_internal.h>
 #include <odp_ring_u32_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_queue_basic_internal.h>
@@ -600,7 +602,7 @@ static uint64_t schedule_wait_time(uint64_t ns)
 }
 
 static inline void enqueue_packets(odp_queue_t queue,
-				   odp_buffer_hdr_t *hdr_tbl[], int num_pkt)
+				   _odp_event_hdr_t *hdr_tbl[], int num_pkt)
 {
 	int num_enq, num_drop;
 
@@ -644,7 +646,7 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 		cmd = sched_cmd();
 
 		if (cmd && cmd->s.type == CMD_PKTIO) {
-			odp_buffer_hdr_t *hdr_tbl[CONFIG_BURST_SIZE];
+			_odp_event_hdr_t *hdr_tbl[CONFIG_BURST_SIZE];
 			int i;
 			int num_pkt = 0;
 			int max_num = CONFIG_BURST_SIZE;

@@ -17,7 +17,7 @@ extern "C" {
 #include <odp/api/queue.h>
 #include <odp_forward_typedefs_internal.h>
 #include <odp_queue_if.h>
-#include <odp_buffer_internal.h>
+#include <odp_event_internal.h>
 #include <odp_align_internal.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/align.h>
@@ -58,10 +58,10 @@ union queue_entry_u {
 	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct queue_entry_s))];
 };
 
-int _odp_queue_deq(sched_elem_t *q, odp_buffer_hdr_t *buf_hdr[], int num);
+int _odp_queue_deq(sched_elem_t *q, _odp_event_hdr_t *event_hdr[], int num);
 int _odp_queue_deq_sc(sched_elem_t *q, odp_event_t *evp, int num);
 int _odp_queue_deq_mc(sched_elem_t *q, odp_event_t *evp, int num);
-int _odp_queue_enq_sp(sched_elem_t *q, odp_buffer_hdr_t *buf_hdr[], int num);
+int _odp_queue_enq_sp(sched_elem_t *q, _odp_event_hdr_t *event_hdr[], int num);
 queue_entry_t *_odp_qentry_from_ext(odp_queue_t handle);
 
 /* Round up memory size to next cache line size to

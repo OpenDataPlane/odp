@@ -13,9 +13,10 @@ extern "C" {
 #endif
 
 #include <odp/api/queue.h>
-#include <odp_queue_if.h>
 #include <odp/api/schedule.h>
-#include <odp_forward_typedefs_internal.h>
+
+#include <odp_event_internal.h>
+#include <odp_queue_if.h>
 
 #define _ODP_SCHED_ID_BASIC    0
 #define _ODP_SCHED_ID_SP       1
@@ -45,8 +46,8 @@ typedef int (*schedule_create_queue_fn_t)(uint32_t queue_index,
 typedef void (*schedule_destroy_queue_fn_t)(uint32_t queue_index);
 typedef int (*schedule_sched_queue_fn_t)(uint32_t queue_index);
 typedef int (*schedule_unsched_queue_fn_t)(uint32_t queue_index);
-typedef int (*schedule_ord_enq_multi_fn_t)(odp_queue_t queue,
-					   void *buf_hdr[], int num, int *ret);
+typedef int (*schedule_ord_enq_multi_fn_t)(odp_queue_t queue, void *event_hdr[],
+					   int num, int *ret);
 typedef int (*schedule_init_global_fn_t)(void);
 typedef int (*schedule_term_global_fn_t)(void);
 typedef int (*schedule_init_local_fn_t)(void);
@@ -87,7 +88,7 @@ extern const schedule_fn_t *_odp_sched_fn;
 
 /* Interface for the scheduler */
 int _odp_sched_cb_pktin_poll(int pktio_index, int pktin_index,
-			     odp_buffer_hdr_t *hdr_tbl[], int num);
+			     _odp_event_hdr_t *hdr_tbl[], int num);
 int _odp_sched_cb_pktin_poll_one(int pktio_index, int rx_queue, odp_event_t evts[]);
 void _odp_sched_cb_pktio_stop_finalize(int pktio_index);
 

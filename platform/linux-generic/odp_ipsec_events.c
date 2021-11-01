@@ -93,7 +93,7 @@ static odp_event_t ipsec_status_to_event(ipsec_status_t status)
 
 static ipsec_status_hdr_t *ipsec_status_hdr_from_buf(odp_buffer_t buf)
 {
-	return (ipsec_status_hdr_t *)(void *)buf_hdl_to_hdr(buf);
+	return (ipsec_status_hdr_t *)(void *)_odp_buf_hdr(buf);
 }
 
 static ipsec_status_hdr_t *ipsec_status_hdr(ipsec_status_t status)
@@ -110,7 +110,7 @@ static ipsec_status_t odp_ipsec_status_alloc(void)
 	if (odp_unlikely(buf == ODP_BUFFER_INVALID))
 		return ODP_IPSEC_STATUS_INVALID;
 
-	_odp_buffer_event_type_set(buf, ODP_EVENT_IPSEC_STATUS);
+	_odp_event_type_set(odp_buffer_to_event(buf), ODP_EVENT_IPSEC_STATUS);
 
 	return _odp_ipsec_status_from_event(odp_buffer_to_event(buf));
 }

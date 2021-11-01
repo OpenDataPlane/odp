@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -9,8 +10,6 @@
 #include <odp_queue_if.h>
 #include <odp/api/std_types.h>
 #include <odp/api/align.h>
-#include <odp/api/buffer.h>
-#include <odp_buffer_internal.h>
 #include <odp_pool_internal.h>
 #include <odp_init_internal.h>
 #include <odp_timer_internal.h>
@@ -27,6 +26,8 @@
 #include <odp_libconfig_internal.h>
 #include <odp/api/plat/queue_inline_types.h>
 #include <odp_global_data.h>
+#include <odp_queue_basic_internal.h>
+#include <odp_event_internal.h>
 
 #include <odp/api/plat/ticketlock_inlines.h>
 #define LOCK(queue_ptr)      odp_ticketlock_lock(&((queue_ptr)->s.lock))
@@ -477,81 +478,81 @@ static odp_queue_t queue_lookup(const char *name)
 	return ODP_QUEUE_INVALID;
 }
 
-static inline void buffer_index_from_buf(uint32_t buffer_index[],
-					 odp_buffer_hdr_t *buf_hdr[], int num)
+static inline void event_index_from_hdr(uint32_t event_index[],
+					_odp_event_hdr_t *event_hdr[], int num)
 {
 	int i;
 
 	for (i = 0; i < num; i++)
-		buffer_index[i] = buf_hdr[i]->index.u32;
+		event_index[i] = event_hdr[i]->index.u32;
 }
 
-static inline void buffer_index_to_buf(odp_buffer_hdr_t *buf_hdr[],
-				       uint32_t buffer_index[], int num)
+static inline void event_index_to_hdr(_odp_event_hdr_t *event_hdr[],
+				      uint32_t event_index[], int num)
 {
 	int i;
 
 	for (i = 0; i < num; i++) {
-		buf_hdr[i] = buf_hdr_from_index_u32(buffer_index[i]);
-		odp_prefetch(buf_hdr[i]);
+		event_hdr[i] = _odp_event_hdr_from_index_u32(event_index[i]);
+		odp_prefetch(event_hdr[i]);
 	}
 }
 
 static inline int _plain_queue_enq_multi(odp_queue_t handle,
-					 odp_buffer_hdr_t *buf_hdr[], int num)
+					 _odp_event_hdr_t *event_hdr[], int num)
 {
 	queue_entry_t *queue;
 	int ret, num_enq;
 	ring_mpmc_t *ring_mpmc;
-	uint32_t buf_idx[num];
+	uint32_t event_idx[num];
 
 	queue = qentry_from_handle(handle);
 	ring_mpmc = &queue->s.ring_mpmc;
 
-	if (_odp_sched_fn->ord_enq_multi(handle, (void **)buf_hdr, num, &ret))
+	if (_odp_sched_fn->ord_enq_multi(handle, (void **)event_hdr, num, &ret))
 		return ret;
 
-	buffer_index_from_buf(buf_idx, buf_hdr, num);
+	event_index_from_hdr(event_idx, event_hdr, num);
 
 	num_enq = ring_mpmc_enq_multi(ring_mpmc, queue->s.ring_data,
-				      queue->s.ring_mask, buf_idx, num);
+				      queue->s.ring_mask, event_idx, num);
 
 	return num_enq;
 }
 
 static inline int _plain_queue_deq_multi(odp_queue_t handle,
-					 odp_buffer_hdr_t *buf_hdr[], int num)
+					 _odp_event_hdr_t *event_hdr[], int num)
 {
 	int num_deq;
 	queue_entry_t *queue;
 	ring_mpmc_t *ring_mpmc;
-	uint32_t buf_idx[num];
+	uint32_t event_idx[num];
 
 	queue = qentry_from_handle(handle);
 	ring_mpmc = &queue->s.ring_mpmc;
 
 	num_deq = ring_mpmc_deq_multi(ring_mpmc, queue->s.ring_data,
-				      queue->s.ring_mask, buf_idx, num);
+				      queue->s.ring_mask, event_idx, num);
 
 	if (num_deq == 0)
 		return 0;
 
-	buffer_index_to_buf(buf_hdr, buf_idx, num_deq);
+	event_index_to_hdr(event_hdr, event_idx, num_deq);
 
 	return num_deq;
 }
 
 static int plain_queue_enq_multi(odp_queue_t handle,
-				 odp_buffer_hdr_t *buf_hdr[], int num)
+				 _odp_event_hdr_t *event_hdr[], int num)
 {
-	return _plain_queue_enq_multi(handle, buf_hdr, num);
+	return _plain_queue_enq_multi(handle, event_hdr, num);
 }
 
-static int plain_queue_enq(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr)
+static int plain_queue_enq(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
 {
 	int ret;
 
-	ret = _plain_queue_enq_multi(handle, &buf_hdr, 1);
+	ret = _plain_queue_enq_multi(handle, &event_hdr, 1);
 
 	if (ret == 1)
 		return 0;
@@ -560,27 +561,27 @@ static int plain_queue_enq(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr)
 }
 
 static int plain_queue_deq_multi(odp_queue_t handle,
-				 odp_buffer_hdr_t *buf_hdr[], int num)
+				 _odp_event_hdr_t *event_hdr[], int num)
 {
-	return _plain_queue_deq_multi(handle, buf_hdr, num);
+	return _plain_queue_deq_multi(handle, event_hdr, num);
 }
 
-static odp_buffer_hdr_t *plain_queue_deq(odp_queue_t handle)
+static _odp_event_hdr_t *plain_queue_deq(odp_queue_t handle)
 {
-	odp_buffer_hdr_t *buf_hdr = NULL;
+	_odp_event_hdr_t *event_hdr = NULL;
 	int ret;
 
-	ret = _plain_queue_deq_multi(handle, &buf_hdr, 1);
+	ret = _plain_queue_deq_multi(handle, &event_hdr, 1);
 
 	if (ret == 1)
-		return buf_hdr;
+		return event_hdr;
 	else
 		return NULL;
 }
 
-static int error_enqueue(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr)
+static int error_enqueue(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
 {
-	(void)buf_hdr;
+	(void)event_hdr;
 
 	ODP_ERR("Enqueue not supported (0x%" PRIx64 ")\n",
 		odp_queue_to_u64(handle));
@@ -589,9 +590,9 @@ static int error_enqueue(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr)
 }
 
 static int error_enqueue_multi(odp_queue_t handle,
-			       odp_buffer_hdr_t *buf_hdr[], int num)
+			       _odp_event_hdr_t *event_hdr[], int num)
 {
-	(void)buf_hdr;
+	(void)event_hdr;
 	(void)num;
 
 	ODP_ERR("Enqueue multi not supported (0x%" PRIx64 ")\n",
@@ -600,7 +601,7 @@ static int error_enqueue_multi(odp_queue_t handle,
 	return -1;
 }
 
-static odp_buffer_hdr_t *error_dequeue(odp_queue_t handle)
+static _odp_event_hdr_t *error_dequeue(odp_queue_t handle)
 {
 	ODP_ERR("Dequeue not supported (0x%" PRIx64 ")\n",
 		odp_queue_to_u64(handle));
@@ -609,9 +610,9 @@ static odp_buffer_hdr_t *error_dequeue(odp_queue_t handle)
 }
 
 static int error_dequeue_multi(odp_queue_t handle,
-			       odp_buffer_hdr_t *buf_hdr[], int num)
+			       _odp_event_hdr_t *event_hdr[], int num)
 {
-	(void)buf_hdr;
+	(void)event_hdr;
 	(void)num;
 
 	ODP_ERR("Dequeue multi not supported (0x%" PRIx64 ")\n",
@@ -880,27 +881,27 @@ static void queue_print_all(void)
 }
 
 static inline int _sched_queue_enq_multi(odp_queue_t handle,
-					 odp_buffer_hdr_t *buf_hdr[], int num)
+					 _odp_event_hdr_t *event_hdr[], int num)
 {
 	int sched = 0;
 	int ret;
 	queue_entry_t *queue;
 	int num_enq;
 	ring_st_t *ring_st;
-	uint32_t buf_idx[num];
+	uint32_t event_idx[num];
 
 	queue = qentry_from_handle(handle);
 	ring_st = &queue->s.ring_st;
 
-	if (_odp_sched_fn->ord_enq_multi(handle, (void **)buf_hdr, num, &ret))
+	if (_odp_sched_fn->ord_enq_multi(handle, (void **)event_hdr, num, &ret))
 		return ret;
 
-	buffer_index_from_buf(buf_idx, buf_hdr, num);
+	event_index_from_hdr(event_idx, event_hdr, num);
 
 	LOCK(queue);
 
 	num_enq = ring_st_enq_multi(ring_st, queue->s.ring_data,
-				    queue->s.ring_mask, buf_idx, num);
+				    queue->s.ring_mask, event_idx, num);
 
 	if (odp_unlikely(num_enq == 0)) {
 		UNLOCK(queue);
@@ -927,7 +928,7 @@ int _odp_sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int max_num,
 	int num_deq, status;
 	ring_st_t *ring_st;
 	queue_entry_t *queue = qentry_from_index(queue_index);
-	uint32_t buf_idx[max_num];
+	uint32_t event_idx[max_num];
 
 	ring_st = &queue->s.ring_st;
 
@@ -948,7 +949,7 @@ int _odp_sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int max_num,
 	}
 
 	num_deq = ring_st_deq_multi(ring_st, queue->s.ring_data,
-				    queue->s.ring_mask, buf_idx, max_num);
+				    queue->s.ring_mask, event_idx, max_num);
 
 	if (num_deq == 0) {
 		/* Already empty queue */
@@ -962,22 +963,22 @@ int _odp_sched_queue_deq(uint32_t queue_index, odp_event_t ev[], int max_num,
 
 	UNLOCK(queue);
 
-	buffer_index_to_buf((odp_buffer_hdr_t **)ev, buf_idx, num_deq);
+	event_index_to_hdr((_odp_event_hdr_t **)ev, event_idx, num_deq);
 
 	return num_deq;
 }
 
 static int sched_queue_enq_multi(odp_queue_t handle,
-				 odp_buffer_hdr_t *buf_hdr[], int num)
+				 _odp_event_hdr_t *event_hdr[], int num)
 {
-	return _sched_queue_enq_multi(handle, buf_hdr, num);
+	return _sched_queue_enq_multi(handle, event_hdr, num);
 }
 
-static int sched_queue_enq(odp_queue_t handle, odp_buffer_hdr_t *buf_hdr)
+static int sched_queue_enq(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
 {
 	int ret;
 
-	ret = _sched_queue_enq_multi(handle, &buf_hdr, 1);
+	ret = _sched_queue_enq_multi(handle, &event_hdr, 1);
 
 	if (ret == 1)
 		return 0;
@@ -1157,11 +1158,11 @@ static void queue_set_enq_deq_func(odp_queue_t handle,
 }
 
 static int queue_orig_multi(odp_queue_t handle,
-			    odp_buffer_hdr_t **buf_hdr, int num)
+			    _odp_event_hdr_t **event_hdr, int num)
 {
 	queue_entry_t *queue = qentry_from_handle(handle);
 
-	return queue->s.orig_dequeue_multi(handle, buf_hdr, num);
+	return queue->s.orig_dequeue_multi(handle, event_hdr, num);
 }
 
 static int queue_api_enq_multi(odp_queue_t handle,
@@ -1176,7 +1177,7 @@ static int queue_api_enq_multi(odp_queue_t handle,
 		num = QUEUE_MULTI_MAX;
 
 	return queue->s.enqueue_multi(handle,
-				      (odp_buffer_hdr_t **)(uintptr_t)ev, num);
+				      (_odp_event_hdr_t **)(uintptr_t)ev, num);
 }
 
 static void queue_timer_add(odp_queue_t handle)
@@ -1198,7 +1199,7 @@ static int queue_api_enq(odp_queue_t handle, odp_event_t ev)
 	queue_entry_t *queue = qentry_from_handle(handle);
 
 	return queue->s.enqueue(handle,
-				(odp_buffer_hdr_t *)(uintptr_t)ev);
+				(_odp_event_hdr_t *)(uintptr_t)ev);
 }
 
 static int queue_api_deq_multi(odp_queue_t handle, odp_event_t ev[], int num)
@@ -1209,7 +1210,7 @@ static int queue_api_deq_multi(odp_queue_t handle, odp_event_t ev[], int num)
 	if (num > QUEUE_MULTI_MAX)
 		num = QUEUE_MULTI_MAX;
 
-	ret = queue->s.dequeue_multi(handle, (odp_buffer_hdr_t **)ev, num);
+	ret = queue->s.dequeue_multi(handle, (_odp_event_hdr_t **)ev, num);
 
 	if (odp_global_rw->inline_timers &&
 	    odp_atomic_load_u64(&queue->s.num_timers))
