@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -29,88 +29,40 @@ extern "C" {
 #include <odp/api/byteorder.h>
 #include <odp/api/thread.h>
 #include <odp/api/event.h>
-#include <odp_forward_typedefs_internal.h>
+#include <odp_event_internal.h>
 #include <stddef.h>
 
-typedef union buffer_index_t {
-	uint32_t u32;
+/* Internal buffer header */
+typedef struct ODP_ALIGNED_CACHE odp_buffer_hdr_t {
+	/* Common event header */
+	_odp_event_hdr_t event_hdr;
 
-	struct {
-		uint32_t pool   :8;
-		uint32_t buffer :24;
-	};
-} buffer_index_t;
-
-/* Check that pool index fit into bit field */
-ODP_STATIC_ASSERT(ODP_CONFIG_POOLS    <= (0xFF + 1), "TOO_MANY_POOLS");
-
-/* Check that buffer index fit into bit field */
-ODP_STATIC_ASSERT(CONFIG_POOL_MAX_NUM <= (0xFFFFFF + 1), "TOO_LARGE_POOL");
-
-/* Type size limits number of flow IDs supported */
-#define BUF_HDR_MAX_FLOW_ID 255
-
-/* Common buffer header */
-struct ODP_ALIGNED_CACHE odp_buffer_hdr_t {
-	/* Initial buffer data pointer */
-	uint8_t  *base_data;
-
-	/* Pool pointer */
-	void     *pool_ptr;
-
-	/* --- Mostly read only data --- */
-	const void *user_ptr;
-
-	/* Initial buffer tail pointer */
-	uint8_t  *buf_end;
-
-	/* User area pointer */
-	void    *uarea_addr;
-
-	/* Combined pool and buffer index */
-	buffer_index_t index;
-
-	/* Reference count */
-	odp_atomic_u32_t ref_cnt;
-
-	/* Pool type */
-	int8_t    type;
-
-	/* Event type. Maybe different than pool type (crypto compl event) */
-	int8_t    event_type;
-
-	/* Event flow id */
-	uint8_t   flow_id;
-
-	/* Data or next header */
+	/* Data */
 	uint8_t data[];
-};
+} odp_buffer_hdr_t;
 
 /* Buffer header size is critical for performance. Ensure that it does not accidentally
  * grow over cache line size. Note that ODP_ALIGNED_CACHE rounds up struct size to a multiple of
  * ODP_CACHE_LINE_SIZE. */
 ODP_STATIC_ASSERT(sizeof(odp_buffer_hdr_t) <= ODP_CACHE_LINE_SIZE, "BUFFER_HDR_SIZE_ERROR");
 
-odp_event_type_t _odp_buffer_event_type(odp_buffer_t buf);
-void _odp_buffer_event_type_set(odp_buffer_t buf, int ev);
-
-static inline odp_buffer_t buf_from_buf_hdr(odp_buffer_hdr_t *hdr)
+static inline odp_buffer_hdr_t *_odp_buf_hdr(odp_buffer_t buf)
 {
-	return (odp_buffer_t)hdr;
+	return (odp_buffer_hdr_t *)(uintptr_t)buf;
 }
 
 static inline uint32_t event_flow_id(odp_event_t ev)
 {
 	odp_buffer_hdr_t *buf_hdr = (odp_buffer_hdr_t *)(uintptr_t)ev;
 
-	return buf_hdr->flow_id;
+	return buf_hdr->event_hdr.flow_id;
 }
 
 static inline void event_flow_id_set(odp_event_t ev, uint32_t flow_id)
 {
 	odp_buffer_hdr_t *buf_hdr = (odp_buffer_hdr_t *)(uintptr_t)ev;
 
-	buf_hdr->flow_id = flow_id;
+	buf_hdr->event_hdr.flow_id = flow_id;
 }
 
 #ifdef __cplusplus

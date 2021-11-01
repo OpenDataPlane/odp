@@ -18,6 +18,7 @@
 #include <odp_queue_if.h>
 #include <odp/api/plat/queue_inlines.h>
 #include <odp_global_data.h>
+#include <odp_event_internal.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>
@@ -97,7 +98,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			 odp_packet_t pkts[], int num)
 {
 	int nbr, i;
-	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
+	_odp_event_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	odp_queue_t queue;
 	odp_packet_hdr_t *pkt_hdr;
 	odp_packet_t pkt;
@@ -123,7 +124,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	for (i = 0; i < nbr; i++) {
 		uint32_t pkt_len;
 
-		pkt = packet_from_buf_hdr(hdr_tbl[i]);
+		pkt = packet_from_event_hdr(hdr_tbl[i]);
 		pkt_len = odp_packet_len(pkt);
 		pkt_hdr = packet_hdr(pkt);
 
@@ -297,7 +298,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			 const odp_packet_t pkt_tbl[], int num)
 {
 	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
-	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
+	_odp_event_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	odp_queue_t queue;
 	int i;
 	int ret;
@@ -323,7 +324,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			}
 			break;
 		}
-		hdr_tbl[i] = packet_to_buf_hdr(pkt_tbl[i]);
+		hdr_tbl[i] = packet_to_event_hdr(pkt_tbl[i]);
 		bytes += pkt_len;
 		/* Store cumulative byte counts to update 'stats.out_octets'
 		 * correctly in case enq_multi() fails to enqueue all packets.

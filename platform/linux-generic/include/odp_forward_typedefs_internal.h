@@ -10,7 +10,7 @@
  * ODP forward typedefs - implementation internal
  *
  * This needs to be a separate file because it is needed by both
- * odp_queue_internal.h and odp_buffer_internal.h and clang prohibits forward
+ * odp_queue_internal.h and odp_queue_lf.h and clang prohibits forward
  * "redefining" typedefs. Note that this file can be extended with additional
  * forward typedefs as needed.
  */
@@ -22,7 +22,6 @@
 extern "C" {
 #endif
 
-typedef struct odp_buffer_hdr_t odp_buffer_hdr_t;
 typedef union queue_entry_u queue_entry_t;
 
 #ifdef __cplusplus

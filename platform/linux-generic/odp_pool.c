@@ -24,6 +24,7 @@
 #include <odp_shm_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_event_vector_internal.h>
+#include <odp_buffer_internal.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -79,9 +80,9 @@ static inline odp_pool_t pool_index_to_handle(uint32_t pool_idx)
 
 static inline pool_t *pool_from_buf(odp_buffer_t buf)
 {
-	odp_buffer_hdr_t *buf_hdr = buf_hdl_to_hdr(buf);
+	odp_buffer_hdr_t *buf_hdr = _odp_buf_hdr(buf);
 
-	return buf_hdr->pool_ptr;
+	return buf_hdr->event_hdr.pool_ptr;
 }
 
 static inline void cache_init(pool_cache_t *cache)
@@ -425,18 +426,18 @@ static void init_buffer_hdr(pool_t *pool, odp_buffer_hdr_t *buf_hdr, uint32_t bu
 	memset(buf_hdr, 0, hdr_len);
 
 	/* Initialize buffer metadata */
-	buf_hdr->index.u32    = 0;
-	buf_hdr->index.pool   = pool->pool_idx;
-	buf_hdr->index.buffer = buf_index;
-	buf_hdr->type         = type;
-	buf_hdr->event_type   = type;
-	buf_hdr->pool_ptr     = pool;
-	buf_hdr->uarea_addr   = uarea;
-	odp_atomic_init_u32(&buf_hdr->ref_cnt, 0);
+	buf_hdr->event_hdr.index.u32    = 0;
+	buf_hdr->event_hdr.index.pool   = pool->pool_idx;
+	buf_hdr->event_hdr.index.buffer = buf_index;
+	buf_hdr->event_hdr.type         = type;
+	buf_hdr->event_hdr.event_type   = type;
+	buf_hdr->event_hdr.pool_ptr     = pool;
+	buf_hdr->event_hdr.uarea_addr   = uarea;
+	odp_atomic_init_u32(&buf_hdr->event_hdr.ref_cnt, 0);
 
 	/* Store base values for fast init */
-	buf_hdr->base_data = data_ptr;
-	buf_hdr->buf_end   = data_ptr + pool->seg_len + pool->tailroom;
+	buf_hdr->event_hdr.base_data = data_ptr;
+	buf_hdr->event_hdr.buf_end   = data_ptr + pool->seg_len + pool->tailroom;
 
 	/* Initialize segmentation metadata */
 	if (type == ODP_POOL_PACKET) {
@@ -453,7 +454,7 @@ static void init_buffer_hdr(pool_t *pool, odp_buffer_hdr_t *buf_hdr, uint32_t bu
 		odp_event_vector_hdr_t *vect_hdr = (void *)buf_hdr;
 
 		vect_hdr->size      = 0;
-		buf_hdr->event_type = ODP_EVENT_PACKET_VECTOR;
+		buf_hdr->event_hdr.event_type = ODP_EVENT_PACKET_VECTOR;
 	}
 }
 
@@ -1073,16 +1074,6 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 	return 0;
 }
 
-odp_event_type_t _odp_buffer_event_type(odp_buffer_t buf)
-{
-	return buf_hdl_to_hdr(buf)->event_type;
-}
-
-void _odp_buffer_event_type_set(odp_buffer_t buf, int ev)
-{
-	buf_hdl_to_hdr(buf)->event_type = ev;
-}
-
 odp_pool_t odp_pool_lookup(const char *name)
 {
 	uint32_t i;
@@ -1255,12 +1246,12 @@ void _odp_buffer_free_multi(odp_buffer_hdr_t *buf_hdr[], int num_total)
 	while (1) {
 		num  = 1;
 		i    = 1;
-		pool = buf_hdr[first]->pool_ptr;
+		pool = buf_hdr[first]->event_hdr.pool_ptr;
 
 		/* 'num' buffers are from the same pool */
 		if (num_total > 1) {
 			for (i = first; i < num_total; i++)
-				if (pool != buf_hdr[i]->pool_ptr)
+				if (pool != buf_hdr[i]->event_hdr.pool_ptr)
 					break;
 
 			num = i - first;
@@ -1605,7 +1596,7 @@ static pool_t *find_pool(odp_buffer_hdr_t *buf_hdr)
 int _odp_buffer_is_valid(odp_buffer_t buf)
 {
 	pool_t *pool;
-	odp_buffer_hdr_t *buf_hdr = buf_hdl_to_hdr(buf);
+	odp_buffer_hdr_t *buf_hdr = _odp_buf_hdr(buf);
 
 	if (buf == ODP_BUFFER_INVALID)
 		return 0;
@@ -1615,10 +1606,10 @@ int _odp_buffer_is_valid(odp_buffer_t buf)
 	if (pool == NULL)
 		return 0;
 
-	if (pool != buf_hdr->pool_ptr)
+	if (pool != buf_hdr->event_hdr.pool_ptr)
 		return 0;
 
-	if (buf_hdr->index.buffer >= (pool->num + pool->skipped_blocks))
+	if (buf_hdr->event_hdr.index.buffer >= (pool->num + pool->skipped_blocks))
 		return 0;
 
 	return 1;

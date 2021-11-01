@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2020, Nokia
+ * Copyright (c) 2020-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -15,6 +15,7 @@
 #include <odp_ipsec_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_internal.h>
+#include <odp_event_internal.h>
 #include <odp_event_vector_internal.h>
 
 /* Inlined API functions */
@@ -24,8 +25,7 @@
 
 odp_event_subtype_t odp_event_subtype(odp_event_t event)
 {
-	if (_odp_buffer_event_type(odp_buffer_from_event(event)) !=
-			ODP_EVENT_PACKET)
+	if (_odp_event_type(event) != ODP_EVENT_PACKET)
 		return ODP_EVENT_NO_SUBTYPE;
 
 	return odp_packet_subtype(odp_packet_from_event(event));
@@ -34,8 +34,7 @@ odp_event_subtype_t odp_event_subtype(odp_event_t event)
 odp_event_type_t odp_event_types(odp_event_t event,
 				 odp_event_subtype_t *subtype)
 {
-	odp_buffer_t buf = odp_buffer_from_event(event);
-	odp_event_type_t event_type = _odp_buffer_event_type(buf);
+	odp_event_type_t event_type = _odp_event_type(event);
 
 	*subtype = event_type == ODP_EVENT_PACKET ?
 			odp_packet_subtype(odp_packet_from_event(event)) :
@@ -100,13 +99,10 @@ uint64_t odp_event_to_u64(odp_event_t hdl)
 
 int odp_event_is_valid(odp_event_t event)
 {
-	odp_buffer_t buf;
-
 	if (event == ODP_EVENT_INVALID)
 		return 0;
 
-	buf = odp_buffer_from_event(event);
-	if (_odp_buffer_is_valid(buf) == 0)
+	if (_odp_event_is_valid(event) == 0)
 		return 0;
 
 	switch (odp_event_type(event)) {

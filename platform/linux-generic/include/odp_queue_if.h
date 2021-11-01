@@ -1,4 +1,5 @@
 /* Copyright (c) 2017, ARM Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -14,6 +15,8 @@ extern "C" {
 #include <odp/api/queue.h>
 #include <odp/api/schedule.h>
 #include <odp/api/packet_io.h>
+
+#include <odp_event_internal.h>
 #include <odp_forward_typedefs_internal.h>
 
 #define QUEUE_MULTI_MAX CONFIG_BURST_SIZE
@@ -22,12 +25,12 @@ typedef int (*queue_init_global_fn_t)(void);
 typedef int (*queue_term_global_fn_t)(void);
 typedef int (*queue_init_local_fn_t)(void);
 typedef int (*queue_term_local_fn_t)(void);
-typedef int (*queue_enq_fn_t)(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr);
+typedef int (*queue_enq_fn_t)(odp_queue_t queue, _odp_event_hdr_t *event_hdr);
 typedef int (*queue_enq_multi_fn_t)(odp_queue_t queue,
-				    odp_buffer_hdr_t **buf_hdr, int num);
-typedef odp_buffer_hdr_t *(*queue_deq_fn_t)(odp_queue_t queue);
+				    _odp_event_hdr_t **event_hdr, int num);
+typedef _odp_event_hdr_t *(*queue_deq_fn_t)(odp_queue_t queue);
 typedef int (*queue_deq_multi_fn_t)(odp_queue_t queue,
-				    odp_buffer_hdr_t **buf_hdr, int num);
+				    _odp_event_hdr_t **event_hdr, int num);
 typedef odp_pktout_queue_t (*queue_get_pktout_fn_t)(odp_queue_t queue);
 typedef void (*queue_set_pktout_fn_t)(odp_queue_t queue, odp_pktio_t pktio,
 				      int index);

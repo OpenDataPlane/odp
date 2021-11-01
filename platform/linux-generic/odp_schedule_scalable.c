@@ -30,6 +30,7 @@
 #include <odp_queue_scalable_internal.h>
 #include <odp_schedule_if.h>
 #include <odp_bitset.h>
+#include <odp_event_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_timer_internal.h>
 
@@ -828,12 +829,11 @@ events_dequeued:
 		}
 		if (num_rx > num) {
 			/* Events remain, enqueue them */
-			odp_buffer_hdr_t *bufs[QUEUE_MULTI_MAX];
+			_odp_event_hdr_t *events[QUEUE_MULTI_MAX];
 
 			for (i = num; i < num_rx; i++)
-				bufs[i] =
-					(odp_buffer_hdr_t *)(void *)rx_evts[i];
-			i = _odp_queue_enq_sp(elem, &bufs[num], num_rx - num);
+				events[i] = _odp_event_hdr(rx_evts[i]);
+			i = _odp_queue_enq_sp(elem, &events[num], num_rx - num);
 			/* Enqueue must succeed as the queue was empty */
 			ODP_ASSERT(i == num_rx - num);
 		}
@@ -2095,7 +2095,7 @@ static int sched_queue(uint32_t queue_index)
 	return 0;
 }
 
-static int ord_enq_multi(odp_queue_t handle, void *buf_hdr[], int num,
+static int ord_enq_multi(odp_queue_t handle, void *event_hdr[], int num,
 			 int *ret)
 
 {
@@ -2107,7 +2107,7 @@ static int ord_enq_multi(odp_queue_t handle, void *buf_hdr[], int num,
 	queue = qentry_from_int(handle);
 	if (ts && odp_unlikely(ts->out_of_order) &&
 	    (queue->s.param.order == ODP_QUEUE_ORDER_KEEP)) {
-		actual = _odp_rctx_save(queue, (odp_buffer_hdr_t **)buf_hdr, num);
+		actual = _odp_rctx_save(queue, (_odp_event_hdr_t **)event_hdr, num);
 		*ret = actual;
 		return 1;
 	}

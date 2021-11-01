@@ -9,9 +9,11 @@
 #include <odp/api/shared_memory.h>
 #include <odp/api/cpu.h>
 #include <odp/api/plat/cpu_inlines.h>
+
+#include <odp_bitset.h>
+#include <odp_event_internal.h>
 #include <odp_queue_scalable_internal.h>
 #include <odp_schedule_if.h>
-#include <odp_bitset.h>
 
 #include <string.h>
 
@@ -255,7 +257,7 @@ static void olock_release(const reorder_context_t *rctx)
 		olock_unlock(rctx, rwin, i);
 }
 
-static void blocking_enqueue(queue_entry_t *q, odp_buffer_hdr_t **evts, int num)
+static void blocking_enqueue(queue_entry_t *q, _odp_event_hdr_t **evts, int num)
 {
 	int actual;
 
@@ -315,7 +317,7 @@ void _odp_rctx_release(reorder_context_t *rctx)
 /* Save destination queue and events in the reorder context for deferred
  * enqueue.
  */
-int _odp_rctx_save(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
+int _odp_rctx_save(queue_entry_t *queue, _odp_event_hdr_t *event_hdr[], int num)
 {
 	int i;
 	sched_scalable_thread_state_t *ts;
@@ -361,7 +363,7 @@ int _odp_rctx_save(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 			/* The last rctx (so far) */
 			cur->next_idx = first->idx;
 		}
-		cur->events[cur->numevts] = buf_hdr[i];
+		cur->events[cur->numevts] = event_hdr[i];
 		cur->destq[cur->numevts] = queue;
 		cur->numevts++;
 	}

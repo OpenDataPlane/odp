@@ -61,9 +61,9 @@ static inline pktio_entry_t *pktio_entry_by_index(int index)
 	return _odp_pktio_entry_ptr[index];
 }
 
-static inline odp_buffer_hdr_t *packet_vector_to_buf_hdr(odp_packet_vector_t pktv)
+static inline _odp_event_hdr_t *packet_vector_to_event_hdr(odp_packet_vector_t pktv)
 {
-	return (odp_buffer_hdr_t *)(uintptr_t)&_odp_packet_vector_hdr(pktv)->event_hdr;
+	return (_odp_event_hdr_t *)(uintptr_t)&_odp_packet_vector_hdr(pktv)->event_hdr;
 }
 
 static int read_config_file(pktio_global_t *pktio_glb)
@@ -825,13 +825,13 @@ static inline odp_packet_vector_t packet_vector_create(odp_packet_t packets[], u
 }
 
 static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
-				 odp_buffer_hdr_t *buffer_hdrs[], int num)
+				 _odp_event_hdr_t *event_hdrs[], int num)
 {
 	odp_packet_t pkt;
 	odp_packet_t packets[num];
 	odp_packet_hdr_t *pkt_hdr;
 	odp_pool_t pool = ODP_POOL_INVALID;
-	odp_buffer_hdr_t *buf_hdr;
+	_odp_event_hdr_t *event_hdr;
 	int i, pkts, num_rx, num_ev, num_dst;
 	odp_queue_t cur_queue;
 	odp_event_t ev[num];
@@ -860,7 +860,7 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 	for (i = 0; i < pkts; i++) {
 		pkt = packets[i];
 		pkt_hdr = packet_hdr(pkt);
-		buf_hdr = packet_to_buf_hdr(pkt);
+		event_hdr = packet_to_event_hdr(pkt);
 
 		if (odp_unlikely(pkt_hdr->p.input_flags.dst_queue)) {
 			/* Sort events for enqueue multi operation(s) based on CoS
@@ -888,7 +888,7 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 			num_ev++;
 			continue;
 		}
-		buffer_hdrs[num_rx++] = buf_hdr;
+		event_hdrs[num_rx++] = event_hdr;
 	}
 
 	/* Optimization for the common case */
@@ -897,13 +897,13 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 			return num_rx;
 
 		/* Create packet vector */
-		odp_packet_vector_t pktv = packet_vector_create((odp_packet_t *)buffer_hdrs,
+		odp_packet_vector_t pktv = packet_vector_create((odp_packet_t *)event_hdrs,
 								num_rx, pool);
 
 		if (odp_unlikely(pktv == ODP_PACKET_VECTOR_INVALID))
 			return 0;
 
-		buffer_hdrs[0] = packet_vector_to_buf_hdr(pktv);
+		event_hdrs[0] = packet_vector_to_event_hdr(pktv);
 		return 1;
 	}
 
@@ -975,15 +975,15 @@ static inline int packet_vector_send(odp_pktout_queue_t pktout_queue, odp_event_
 	return 0;
 }
 
-static int pktout_enqueue(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr)
+static int pktout_enqueue(odp_queue_t queue, _odp_event_hdr_t *event_hdr)
 {
-	odp_event_t event = odp_buffer_to_event(buf_from_buf_hdr(buf_hdr));
-	odp_packet_t pkt = packet_from_buf_hdr(buf_hdr);
+	odp_event_t event = _odp_event_from_hdr(event_hdr);
+	odp_packet_t pkt = packet_from_event_hdr(event_hdr);
 	odp_pktout_queue_t pktout_queue;
 	int len = 1;
 	int nbr;
 
-	if (_odp_sched_fn->ord_enq_multi(queue, (void **)buf_hdr, len, &nbr))
+	if (_odp_sched_fn->ord_enq_multi(queue, (void **)event_hdr, len, &nbr))
 		return (nbr == len ? 0 : -1);
 
 	pktout_queue = _odp_queue_fn->get_pktout(queue);
@@ -995,7 +995,7 @@ static int pktout_enqueue(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr)
 	return (nbr == len ? 0 : -1);
 }
 
-static int pktout_enq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
+static int pktout_enq_multi(odp_queue_t queue, _odp_event_hdr_t *event_hdr[],
 			    int num)
 {
 	odp_event_t event;
@@ -1005,18 +1005,18 @@ static int pktout_enq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
 	int nbr;
 	int i;
 
-	if (_odp_sched_fn->ord_enq_multi(queue, (void **)buf_hdr, num, &nbr))
+	if (_odp_sched_fn->ord_enq_multi(queue, (void **)event_hdr, num, &nbr))
 		return nbr;
 
 	for (i = 0; i < num; ++i) {
-		event = odp_buffer_to_event(buf_from_buf_hdr(buf_hdr[i]));
+		event = _odp_event_from_hdr(event_hdr[i]);
 
 		if (odp_event_type(event) == ODP_EVENT_PACKET_VECTOR) {
 			have_pktv = 1;
 			break;
 		}
 
-		pkt_tbl[i] = packet_from_buf_hdr(buf_hdr[i]);
+		pkt_tbl[i] = packet_from_event_hdr(event_hdr[i]);
 	}
 
 	pktout_queue = _odp_queue_fn->get_pktout(queue);
@@ -1025,13 +1025,13 @@ static int pktout_enq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
 		return odp_pktout_send(pktout_queue, pkt_tbl, num);
 
 	for (i = 0; i < num; ++i) {
-		event = odp_buffer_to_event(buf_from_buf_hdr(buf_hdr[i]));
+		event = _odp_event_from_hdr(event_hdr[i]);
 
 		if (odp_event_type(event) == ODP_EVENT_PACKET_VECTOR) {
 			if (odp_unlikely(packet_vector_send(pktout_queue, event)))
 				break;
 		} else {
-			odp_packet_t pkt = packet_from_buf_hdr(buf_hdr[i]);
+			odp_packet_t pkt = packet_from_event_hdr(event_hdr[i]);
 
 			nbr = odp_pktout_send(pktout_queue, &pkt, 1);
 			if (odp_unlikely(nbr != 1))
@@ -1041,10 +1041,10 @@ static int pktout_enq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
 	return i;
 }
 
-static odp_buffer_hdr_t *pktin_dequeue(odp_queue_t queue)
+static _odp_event_hdr_t *pktin_dequeue(odp_queue_t queue)
 {
-	odp_buffer_hdr_t *buf_hdr;
-	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
+	_odp_event_hdr_t *event_hdr;
+	_odp_event_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	int pkts;
 	odp_pktin_queue_t pktin_queue = _odp_queue_fn->get_pktin(queue);
 	odp_pktio_t pktio = pktin_queue.pktio;
@@ -1053,8 +1053,8 @@ static odp_buffer_hdr_t *pktin_dequeue(odp_queue_t queue)
 
 	ODP_ASSERT(entry != NULL);
 
-	if (_odp_queue_fn->orig_deq_multi(queue, &buf_hdr, 1) == 1)
-		return buf_hdr;
+	if (_odp_queue_fn->orig_deq_multi(queue, &event_hdr, 1) == 1)
+		return event_hdr;
 
 	pkts = pktin_recv_buf(entry, pktin_index, hdr_tbl, QUEUE_MULTI_MAX);
 
@@ -1074,19 +1074,19 @@ static odp_buffer_hdr_t *pktin_dequeue(odp_queue_t queue)
 
 			ODP_DBG("Interface %s dropped %i packets\n",
 				entry->s.name, num - num_enq);
-			_odp_buffer_free_multi(&hdr_tbl[num_enq + 1], num - num_enq);
+			_odp_event_free_multi(&hdr_tbl[num_enq + 1], num - num_enq);
 		}
 	}
 
-	buf_hdr = hdr_tbl[0];
-	return buf_hdr;
+	event_hdr = hdr_tbl[0];
+	return event_hdr;
 }
 
-static int pktin_deq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
+static int pktin_deq_multi(odp_queue_t queue, _odp_event_hdr_t *event_hdr[],
 			   int num)
 {
 	int nbr;
-	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
+	_odp_event_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	int pkts, i, j;
 	odp_pktin_queue_t pktin_queue = _odp_queue_fn->get_pktin(queue);
 	odp_pktio_t pktio = pktin_queue.pktio;
@@ -1095,7 +1095,7 @@ static int pktin_deq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
 
 	ODP_ASSERT(entry != NULL);
 
-	nbr = _odp_queue_fn->orig_deq_multi(queue, buf_hdr, num);
+	nbr = _odp_queue_fn->orig_deq_multi(queue, event_hdr, num);
 	if (odp_unlikely(nbr > num))
 		ODP_ABORT("queue_deq_multi req: %d, returned %d\n", num, nbr);
 
@@ -1111,7 +1111,7 @@ static int pktin_deq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
 		return nbr;
 
 	for (i = 0; i < pkts && nbr < num; i++, nbr++)
-		buf_hdr[nbr] = hdr_tbl[i];
+		event_hdr[nbr] = hdr_tbl[i];
 
 	/* Queue the rest for later */
 	for (j = 0; i < pkts; i++, j++)
@@ -1128,7 +1128,7 @@ static int pktin_deq_multi(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr[],
 
 			ODP_DBG("Interface %s dropped %i packets\n",
 				entry->s.name, j - num_enq);
-			_odp_buffer_free_multi(&buf_hdr[num_enq], j - num_enq);
+			_odp_event_free_multi(&event_hdr[num_enq], j - num_enq);
 		}
 	}
 
@@ -1225,7 +1225,7 @@ int _odp_sched_cb_pktin_poll_one(int pktio_index,
 }
 
 int _odp_sched_cb_pktin_poll(int pktio_index, int pktin_index,
-			     odp_buffer_hdr_t *hdr_tbl[], int num)
+			     _odp_event_hdr_t *hdr_tbl[], int num)
 {
 	pktio_entry_t *entry = pktio_entry_by_index(pktio_index);
 	int state = entry->s.state;

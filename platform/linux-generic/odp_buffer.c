@@ -20,16 +20,16 @@
 /* Fill in buffer header field offsets for inline functions */
 const _odp_buffer_inline_offset_t
 _odp_buffer_inline_offset ODP_ALIGNED_CACHE = {
-	.event_type = offsetof(odp_buffer_hdr_t, event_type),
-	.base_data  = offsetof(odp_buffer_hdr_t, base_data)
+	.event_type = offsetof(odp_buffer_hdr_t, event_hdr.event_type),
+	.base_data  = offsetof(odp_buffer_hdr_t, event_hdr.base_data)
 };
 
 #include <odp/visibility_end.h>
 
 uint32_t odp_buffer_size(odp_buffer_t buf)
 {
-	odp_buffer_hdr_t *hdr = buf_hdl_to_hdr(buf);
-	pool_t *pool = hdr->pool_ptr;
+	odp_buffer_hdr_t *hdr = _odp_buf_hdr(buf);
+	pool_t *pool = hdr->event_hdr.pool_ptr;
 
 	return pool->seg_len;
 }
@@ -47,12 +47,13 @@ void odp_buffer_print(odp_buffer_t buf)
 		return;
 	}
 
-	hdr = buf_hdl_to_hdr(buf);
+	hdr = _odp_buf_hdr(buf);
 
 	len += snprintf(&str[len], n - len, "Buffer\n------\n");
-	len += snprintf(&str[len], n - len, "  pool index    %u\n", hdr->index.pool);
-	len += snprintf(&str[len], n - len, "  buffer index  %u\n", hdr->index.buffer);
-	len += snprintf(&str[len], n - len, "  addr          %p\n", (void *)hdr->base_data);
+	len += snprintf(&str[len], n - len, "  pool index    %u\n", hdr->event_hdr.index.pool);
+	len += snprintf(&str[len], n - len, "  buffer index  %u\n", hdr->event_hdr.index.buffer);
+	len += snprintf(&str[len], n - len, "  addr          %p\n",
+			(void *)hdr->event_hdr.base_data);
 	len += snprintf(&str[len], n - len, "  size          %u\n", odp_buffer_size(buf));
 	str[len] = 0;
 
