@@ -97,6 +97,55 @@ int _odp_libconfig_term_global(void)
 	return 0;
 }
 
+/**
+ * String setting value
+ *
+ * Returns a string from setting. A valid runtime setting overrides
+ * default even if the string is empty.
+ *
+ * @param      path     Path of the setting
+ * @param[out] value    String to be copied from the setting
+ * @param      str_size Maximum string length to be copied
+ *
+ * @return     Size of the string copied
+ * @retval     <0 on failure
+*/
+int _odp_libconfig_lookup_str(const char *path, char *value,
+			      unsigned int str_size)
+{
+	const config_t *config;
+	unsigned int length, i;
+	const char *str;
+
+	for (i = 0; i < 2; i++) {
+		if (i == 0)
+			config = &odp_global_ro.libconfig_runtime;
+		else
+			config = &odp_global_ro.libconfig_default;
+
+		if (config_lookup_string(config, path, &str) == CONFIG_FALSE)
+			continue;
+
+		length = strlen(str);
+
+		/* Runtime config overrides even if it's empty string */
+		if (value == NULL || str_size == 0 || length == 0)
+			return length;
+
+		if (length > str_size) {
+			ODP_ERR("libconfig: length of %d bigger than size %u\n",
+				length, str_size);
+			return -1;
+		}
+
+		strcpy(value, str);
+		return length;
+	}
+
+	ODP_ERR("libconfig: %s is not defined in config files\n", path);
+	return -1;
+}
+
 int _odp_libconfig_lookup_int(const char *path, int *value)
 {
 	int ret_def = CONFIG_FALSE;
