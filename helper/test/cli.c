@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 
 	odph_cli_param_init(&cli_param);
 
-	if (odph_cli_init(instance, &cli_param)) {
+	if (odph_cli_init(&cli_param)) {
 		ODPH_ERR("Error: odph_cli_init() failed.\n");
 		exit(EXIT_FAILURE);
 	}

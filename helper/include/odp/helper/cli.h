@@ -76,12 +76,11 @@ void odph_cli_param_init(odph_cli_param_t *param);
  * In process mode (ODPH_PROC_MODE), this function must be called before
  * creating the thread which calls odph_cli_run().
  *
- * @param instance ODP instance
  * @param param CLI server parameters to use
  * @retval 0 Success
  * @retval <0 Failure
  */
-int odph_cli_init(odp_instance_t instance, const odph_cli_param_t *param);
+int odph_cli_init(const odph_cli_param_t *param);
 
 /**
  * Register a user defined command
