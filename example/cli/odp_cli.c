@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
 		cli_param.port = opt.port;
 
 	/* Initialize CLI helper. */
-	if (odph_cli_init(inst, &cli_param)) {
+	if (odph_cli_init(&cli_param)) {
 		ODPH_ERR("CLI helper initialization failed.\n");
 		exit(EXIT_FAILURE);
 	}

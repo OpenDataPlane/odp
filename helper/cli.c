@@ -43,7 +43,6 @@ typedef struct {
 	/* Guards cli_fd and run, which must be accessed atomically. */
 	odp_spinlock_t lock;
 	odp_spinlock_t api_lock;
-	odp_instance_t instance;
 	odph_cli_param_t cli_param;
 	struct sockaddr_in addr;
 	uint32_t num_user_commands;
@@ -75,7 +74,7 @@ static cli_shm_t *shm_lookup(void)
 	return shm;
 }
 
-int odph_cli_init(odp_instance_t instance, const odph_cli_param_t *param)
+int odph_cli_init(const odph_cli_param_t *param)
 {
 	if (odp_shm_lookup(shm_name) != ODP_SHM_INVALID) {
 		ODPH_ERR("Error: shm %s already exists\n", shm_name);
@@ -101,7 +100,6 @@ int odph_cli_init(odp_instance_t instance, const odph_cli_param_t *param)
 	odp_spinlock_init(&shm->api_lock);
 	shm->listen_fd = -1;
 	shm->cli_fd = -1;
-	shm->instance = instance;
 
 	shm->addr.sin_family = AF_INET;
 	shm->addr.sin_port = htons(param->port);
