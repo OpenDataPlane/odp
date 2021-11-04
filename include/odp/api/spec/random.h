@@ -18,6 +18,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/std_types.h>
+
 /** @defgroup odp_random ODP RANDOM
  *  Random number generation.
  *  @{

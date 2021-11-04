@@ -7,7 +7,6 @@
 #include <odp_posix_extensions.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <odp/api/random.h>
 #include <odp/api/byteorder.h>
 #include <odp/api/cpu.h>
 #include <odp/api/debug.h>
@@ -19,11 +18,6 @@
 /* Assume at least two rand bytes are available and RAND_MAX is power of two - 1 */
 ODP_STATIC_ASSERT(RAND_MAX >= UINT16_MAX, "RAND_MAX too small");
 ODP_STATIC_ASSERT((RAND_MAX & (RAND_MAX + 1ULL))  ==  0, "RAND_MAX not power of two - 1");
-
-odp_random_kind_t _odp_random_std_max_kind(void)
-{
-	return ODP_RANDOM_BASIC;
-}
 
 static int32_t _random_data(uint8_t *buf, uint32_t len, uint32_t *seed)
 {
@@ -57,11 +51,8 @@ int32_t _odp_random_std_test_data(uint8_t *buf, uint32_t len, uint64_t *seed)
 
 static __thread uint32_t this_seed;
 
-int32_t _odp_random_std_data(uint8_t *buf, uint32_t len, odp_random_kind_t kind)
+int32_t _odp_random_std_data(uint8_t *buf, uint32_t len)
 {
-	if (kind != ODP_RANDOM_BASIC)
-		return -1;
-
 	return _random_data(buf, len, &this_seed);
 }
 

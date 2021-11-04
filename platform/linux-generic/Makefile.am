@@ -276,6 +276,7 @@ __LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
 				  arch/default/odp_cpu_cycles.c \
 				  arch/default/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
+				  arch/default/odp_random.c \
 				  arch/arm/odp_sysinfo_parse.c
 odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/cpu_time.h \
 				arch/default/odp/api/abi/hash_crc32.h
@@ -292,7 +293,8 @@ noinst_HEADERS += arch/arm/odp_atomic.h \
 		  arch/arm/odp_llsc.h \
 		  arch/default/odp_atomic.h \
 		  arch/default/odp_cpu.h \
-		  arch/default/odp_cpu_idling.h
+		  arch/default/odp_cpu_idling.h \
+		  arch/default/odp_random.h
 endif
 if ARCH_IS_AARCH64
 __LIB__libodp_linux_la_SOURCES += arch/aarch64/odp_atomic.c \
@@ -300,6 +302,7 @@ __LIB__libodp_linux_la_SOURCES += arch/aarch64/odp_atomic.c \
 				  arch/aarch64/cpu_flags.c \
 				  arch/aarch64/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
+				  arch/default/odp_random.c \
 				  arch/aarch64/odp_sysinfo_parse.c
 odpapiabiarchinclude_HEADERS += arch/aarch64/odp/api/abi/cpu_time.h \
 				arch/aarch64/odp/api/abi/hash_crc32.h
@@ -315,13 +318,15 @@ noinst_HEADERS += arch/aarch64/odp_atomic.h \
 		  arch/aarch64/odp_cpu.h \
 		  arch/aarch64/cpu_flags.h \
 		  arch/aarch64/odp_cpu_idling.h \
-		  arch/aarch64/odp_llsc.h
+		  arch/aarch64/odp_llsc.h \
+		  arch/default/odp_random.h
 endif
 if ARCH_IS_DEFAULT
 __LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
 				  arch/default/odp_cpu_cycles.c \
 				  arch/default/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
+				  arch/default/odp_random.c \
 				  arch/default/odp_sysinfo_parse.c
 odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/cpu_time.h \
 				arch/default/odp/api/abi/hash_crc32.h
@@ -334,12 +339,14 @@ odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 endif
 noinst_HEADERS += arch/default/odp_atomic.h \
 		  arch/default/odp_cpu.h \
-		  arch/default/odp_cpu_idling.h
+		  arch/default/odp_cpu_idling.h \
+		  arch/default/odp_random.h
 endif
 if ARCH_IS_MIPS64
 __LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
 				  arch/default/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
+				  arch/default/odp_random.c \
 				  arch/mips64/odp_sysinfo_parse.c
 odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/cpu_time.h \
 				arch/default/odp/api/abi/hash_crc32.h
@@ -352,13 +359,15 @@ odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 endif
 noinst_HEADERS += arch/default/odp_atomic.h \
 		  arch/default/odp_cpu.h \
-		  arch/default/odp_cpu_idling.h
+		  arch/default/odp_cpu_idling.h \
+		  arch/default/odp_random.h
 endif
 if ARCH_IS_POWERPC
 __LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
 				  arch/default/odp_cpu_cycles.c \
 				  arch/default/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
+				  arch/default/odp_random.c \
 				  arch/powerpc/odp_sysinfo_parse.c
 odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/cpu_time.h \
 				arch/default/odp/api/abi/hash_crc32.h
@@ -371,7 +380,8 @@ odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 endif
 noinst_HEADERS += arch/default/odp_atomic.h \
 		  arch/default/odp_cpu.h \
-		  arch/default/odp_cpu_idling.h
+		  arch/default/odp_cpu_idling.h \
+		  arch/default/odp_random.h
 endif
 if ARCH_IS_X86
 __LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
@@ -379,6 +389,7 @@ __LIB__libodp_linux_la_SOURCES += arch/default/odp_atomic.c \
 				  arch/x86/odp_cpu_cycles.c \
 				  arch/x86/odp_global_time.c \
 				  arch/default/odp_hash_crc32.c \
+				  arch/default/odp_random.c \
 				  arch/x86/odp_sysinfo_parse.c
 odpapiabiarchinclude_HEADERS += arch/x86/odp/api/abi/cpu_rdtsc.h \
 				arch/x86/odp/api/abi/cpu_time.h \
@@ -391,6 +402,7 @@ odpapiabiarchinclude_HEADERS += arch/default/odp/api/abi/atomic_generic.h \
 endif
 noinst_HEADERS += arch/x86/cpu_flags.h \
 		  arch/x86/odp_cpu.h \
+		  arch/x86/odp_random.h \
 		  arch/default/odp_atomic.h \
 		  arch/default/odp_cpu.h \
 		  arch/default/odp_cpu_idling.h
