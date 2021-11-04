@@ -356,6 +356,20 @@ int odp_term_global(odp_instance_t instance);
 void odp_log_thread_fn_set(odp_log_func_t func);
 
 /**
+ * Get instance handle
+ *
+ * A successful call outputs the calling thread's ODP instance handle.
+ *
+ * @param[out] instance   Instance handle pointer for output
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ *
+ * @see odp_init_global(), odp_init_local()
+ */
+int odp_instance(odp_instance_t *instance);
+
+/**
  * @}
  */
 
