@@ -19,11 +19,9 @@ extern "C" {
 #endif
 
 /**
- * @addtogroup odp_protocols
- * @details
- * <b> Protocols </b>
- *
- *  @{
+ * @defgroup odp_protocols ODP PROTOCOLS
+ * Network protocols
+ * @{
  */
 
 /** IPv4 address size */
