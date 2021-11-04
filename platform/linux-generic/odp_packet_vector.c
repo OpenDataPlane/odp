@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, Nokia
+/* Copyright (c) 2020-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -30,34 +30,33 @@ const _odp_event_vector_inline_offset_t _odp_event_vector_inline ODP_ALIGNED_CAC
 
 #include <odp/visibility_end.h>
 
-static inline odp_event_vector_hdr_t *event_vector_hdr_from_buffer(odp_buffer_t buf)
+odp_packet_vector_t odp_packet_vector_alloc(odp_pool_t pool_hdl)
 {
-	return (odp_event_vector_hdr_t *)(uintptr_t)buf;
-}
+	odp_packet_vector_t pktv;
+	pool_t *pool;
+	int ret;
 
-odp_packet_vector_t odp_packet_vector_alloc(odp_pool_t pool)
-{
-	odp_buffer_t buf;
+	ODP_ASSERT(pool_hdl != ODP_POOL_INVALID);
 
-	ODP_ASSERT(pool_entry_from_hdl(pool)->type == ODP_POOL_VECTOR);
+	pool = pool_entry_from_hdl(pool_hdl);
 
-	buf = odp_buffer_alloc(pool);
-	if (odp_unlikely(buf == ODP_BUFFER_INVALID))
-		return ODP_PACKET_VECTOR_INVALID;
+	ODP_ASSERT(pool->type == ODP_POOL_VECTOR);
 
-	ODP_ASSERT(event_vector_hdr_from_buffer(buf)->size == 0);
+	ret  = _odp_buffer_alloc_multi(pool, (odp_buffer_hdr_t **)&pktv, 1);
 
-	return odp_packet_vector_from_event(odp_buffer_to_event(buf));
+	if (odp_likely(ret == 1))
+		return pktv;
+
+	return ODP_PACKET_VECTOR_INVALID;
 }
 
 void odp_packet_vector_free(odp_packet_vector_t pktv)
 {
 	odp_event_vector_hdr_t *pktv_hdr = _odp_packet_vector_hdr(pktv);
-	odp_event_t ev = odp_packet_vector_to_event(pktv);
 
 	pktv_hdr->size = 0;
 
-	odp_buffer_free(odp_buffer_from_event(ev));
+	_odp_buffer_free_multi((odp_buffer_hdr_t **)&pktv_hdr, 1);
 }
 
 int odp_packet_vector_valid(odp_packet_vector_t pktv)
