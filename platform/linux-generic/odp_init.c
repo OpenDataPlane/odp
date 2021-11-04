@@ -630,3 +630,10 @@ void odp_log_thread_fn_set(odp_log_func_t func)
 {
 	_odp_this_thread->log_fn = func;
 }
+
+int odp_instance(odp_instance_t *instance)
+{
+	*instance = (odp_instance_t)odp_global_ro.main_pid;
+
+	return 0;
+}
