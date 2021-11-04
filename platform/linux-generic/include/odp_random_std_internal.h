@@ -13,11 +13,8 @@ extern "C" {
 
 #include <stdint.h>
 
-#include <odp/api/random.h>
-
-odp_random_kind_t _odp_random_std_max_kind(void);
 int32_t _odp_random_std_test_data(uint8_t *buf, uint32_t len, uint64_t *seed);
-int32_t _odp_random_std_data(uint8_t *buf, uint32_t len, odp_random_kind_t kind);
+int32_t _odp_random_std_data(uint8_t *buf, uint32_t len);
 int _odp_random_std_init_local(void);
 int _odp_random_std_term_local(void);
 
