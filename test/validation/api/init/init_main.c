@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -11,6 +11,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 /* Replacement abort function */
 static void ODP_NORETURN my_abort_func(void)
@@ -51,6 +52,7 @@ static void init_test_defaults(void)
 {
 	int ret;
 	odp_instance_t instance;
+	odp_instance_t current_instance;
 	odp_init_t param;
 
 	odp_init_param_init(&param);
@@ -60,6 +62,9 @@ static void init_test_defaults(void)
 
 	ret = odp_init_local(instance, ODP_THREAD_WORKER);
 	CU_ASSERT_FATAL(ret == 0);
+
+	CU_ASSERT_FATAL(odp_instance(&current_instance) == 0);
+	CU_ASSERT(memcmp(&current_instance, &instance, sizeof(odp_instance_t)) == 0);
 
 	ret = odp_term_local();
 	CU_ASSERT_FATAL(ret == 0);
