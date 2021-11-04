@@ -1505,6 +1505,9 @@ odp_timeout_t odp_timeout_alloc(odp_pool_t pool_hdl)
 	ODP_ASSERT(pool_hdl != ODP_POOL_INVALID);
 
 	pool = pool_entry_from_hdl(pool_hdl);
+
+	ODP_ASSERT(pool->type == ODP_POOL_TIMEOUT);
+
 	ret = _odp_buffer_alloc_multi(pool, (odp_buffer_hdr_t **)&tmo, 1);
 
 	if (odp_likely(ret == 1))

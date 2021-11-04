@@ -1273,6 +1273,9 @@ odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 	ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
 
 	pool = pool_entry_from_hdl(pool_hdl);
+
+	ODP_ASSERT(pool->type == ODP_POOL_BUFFER);
+
 	ret  = _odp_buffer_alloc_multi(pool, (odp_buffer_hdr_t **)&buf, 1);
 
 	if (odp_likely(ret == 1))
@@ -1288,6 +1291,8 @@ int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
 	ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
 
 	pool = pool_entry_from_hdl(pool_hdl);
+
+	ODP_ASSERT(pool->type == ODP_POOL_BUFFER);
 
 	return _odp_buffer_alloc_multi(pool, (odp_buffer_hdr_t **)buf, num);
 }
