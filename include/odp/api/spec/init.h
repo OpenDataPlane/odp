@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -36,11 +36,21 @@ extern "C" {
  * ODP log level.
  */
 typedef enum {
+	/** Debug */
 	ODP_LOG_DBG,
+
+	/** Error */
 	ODP_LOG_ERR,
+
+	/** Unimplemented */
 	ODP_LOG_UNIMPLEMENTED,
+
+	/** Abort */
 	ODP_LOG_ABORT,
+
+	/** Print */
 	ODP_LOG_PRINT
+
 } odp_log_level_t;
 
 /**
