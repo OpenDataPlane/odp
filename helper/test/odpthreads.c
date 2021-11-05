@@ -28,7 +28,7 @@
 static void main_exit(void);
 
 /* ODP application instance */
-static odp_instance_t odp_instance;
+static odp_instance_t instance;
 
 static int worker_fn(void *arg ODP_UNUSED)
 {
@@ -91,12 +91,12 @@ int main(int argc, char *argv[])
 	odp_init_param_init(&init_param);
 	init_param.mem_model = helper_options.mem_model;
 
-	if (odp_init_global(&odp_instance, &init_param, NULL)) {
+	if (odp_init_global(&instance, &init_param, NULL)) {
 		ODPH_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_init_local(odp_instance, ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		ODPH_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
 	printf("new num worker threads:     %i\n\n", num_workers);
 
 	odph_thread_common_param_init(&thr_common);
-	thr_common.instance = odp_instance;
+	thr_common.instance = instance;
 	thr_common.cpumask = &cpu_mask;
 	thr_common.share_param = 1;
 
@@ -213,7 +213,7 @@ static void main_exit(void)
 		_exit(EXIT_FAILURE);
 	}
 
-	if (odp_term_global(odp_instance)) {
+	if (odp_term_global(instance)) {
 		ODPH_ERR("Error: ODP global term failed.\n");
 		_exit(EXIT_FAILURE);
 	}
