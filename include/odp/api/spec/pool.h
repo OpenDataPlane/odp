@@ -105,6 +105,14 @@ int odp_pool_info(odp_pool_t pool, odp_pool_info_t *info);
 void odp_pool_print(odp_pool_t pool);
 
 /**
+ * Print debug info about all pools
+ *
+ * Print implementation defined information about all created pools to the ODP
+ * log. The information is intended to be used for debugging.
+ */
+void odp_pool_print_all(void);
+
+/**
  * Get printable value for an odp_pool_t
  *
  * @param hdl  odp_pool_t handle to be printed
