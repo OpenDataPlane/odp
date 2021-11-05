@@ -140,6 +140,7 @@ static void pool_test_lookup_info_print(void)
 	CU_ASSERT(param.type == info.params.type);
 
 	odp_pool_print(pool);
+	odp_pool_print_all();
 
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
