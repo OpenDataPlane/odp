@@ -1420,6 +1420,56 @@ void odp_pool_print(odp_pool_t pool_hdl)
 	ODP_PRINT("\n");
 }
 
+void odp_pool_print_all(void)
+{
+	uint64_t available;
+	uint32_t i, index, tot, cache_size, seg_len;
+	uint32_t buf_len = 0;
+	uint8_t type, ext;
+	const int col_width = 24;
+	const char *name;
+	char type_c;
+
+	ODP_PRINT("\nList of all pools\n");
+	ODP_PRINT("-----------------\n");
+	ODP_PRINT(" idx %-*s type   free    tot  cache  buf_len  ext\n", col_width, "name");
+
+	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
+		pool_t *pool = pool_entry(i);
+
+		LOCK(&pool->lock);
+
+		if (!pool->reserved) {
+			UNLOCK(&pool->lock);
+			continue;
+		}
+
+		available  = ring_ptr_len(&pool->ring->hdr);
+		cache_size = pool->cache_size;
+		ext        = pool->pool_ext;
+		index      = pool->pool_idx;
+		name       = pool->name;
+		tot        = pool->num;
+		type       = pool->type;
+		seg_len    = pool->seg_len;
+
+		UNLOCK(&pool->lock);
+
+		if (type == ODP_POOL_BUFFER || type == ODP_POOL_PACKET)
+			buf_len = seg_len;
+
+		type_c = (type == ODP_POOL_BUFFER) ? 'B' :
+			 (type == ODP_POOL_PACKET) ? 'P' :
+			 (type == ODP_POOL_TIMEOUT) ? 'T' :
+			 (type == ODP_POOL_VECTOR) ? 'V' : '-';
+
+		ODP_PRINT("%4u %-*s    %c %6" PRIu64 " %6" PRIu32 " %6" PRIu32 " %8" PRIu32 "    "
+			  "%" PRIu8 "\n", index, col_width, name, type_c, available, tot,
+			  cache_size, buf_len, ext);
+	}
+	ODP_PRINT("\n");
+}
+
 odp_pool_t odp_buffer_pool(odp_buffer_t buf)
 {
 	pool_t *pool = pool_from_buf(buf);
