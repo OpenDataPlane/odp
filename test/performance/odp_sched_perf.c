@@ -38,9 +38,11 @@ typedef struct test_options_t {
 	int      num_group;
 	uint32_t num_join;
 	uint32_t max_burst;
+	odp_pool_type_t pool_type;
 	int      queue_type;
 	int      forward;
 	int      fairness;
+	uint32_t event_size;
 	uint32_t queue_size;
 	uint32_t tot_queue;
 	uint32_t tot_event;
@@ -125,6 +127,7 @@ static void print_usage(void)
 	       "  -l, --ctx_rw_words     Number of queue context words (uint64_t) to modify on every event. Default: 0.\n"
 	       "  -n, --rd_words         Number of event data words (uint64_t) to read before enqueueing it. Default: 0.\n"
 	       "  -m, --rw_words         Number of event data words (uint64_t) to modify before enqueueing it. Default: 0.\n"
+	       "  -p, --pool_type        Pool type. 0: buffer, 1: packet. Default: 0.\n"
 	       "  -v, --verbose          Verbose output.\n"
 	       "  -h, --help             This help\n"
 	       "\n");
@@ -135,6 +138,7 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 	int opt, long_index, num_group, num_join;
 	int ret = 0;
 	uint32_t ctx_size = 0;
+	int pool_type = 0;
 
 	static const struct option longopts[] = {
 		{"num_cpu",      required_argument, NULL, 'c'},
@@ -155,12 +159,13 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{"ctx_rw_words", required_argument, NULL, 'l'},
 		{"rd_words",     required_argument, NULL, 'n'},
 		{"rw_words",     required_argument, NULL, 'm'},
+		{"pool_type",    required_argument, NULL, 'p'},
 		{"verbose",      no_argument,       NULL, 'v'},
 		{"help",         no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:q:L:H:d:e:s:g:j:b:t:f:a:w:k:l:n:m:vh";
+	static const char *shortopts = "+c:q:L:H:d:e:s:g:j:b:t:f:a:w:k:l:n:m:p:vh";
 
 	test_options->num_cpu    = 1;
 	test_options->num_queue  = 1;
@@ -240,6 +245,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		case 'm':
 			test_options->rw_words = atoi(optarg);
 			break;
+		case 'p':
+			pool_type = atoi(optarg);
+			break;
 		case 'w':
 			test_options->wait_ns = atoll(optarg);
 			break;
@@ -253,6 +261,14 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			ret = -1;
 			break;
 		}
+	}
+	if (pool_type == 0) {
+		test_options->pool_type = ODP_POOL_BUFFER;
+	} else if (pool_type == 1) {
+		test_options->pool_type = ODP_POOL_PACKET;
+	} else {
+		ODPH_ERR("Invalid pool type: %d.\n", pool_type);
+		ret = -1;
 	}
 
 	test_options->touch_data = test_options->rd_words ||
@@ -384,6 +400,7 @@ static int create_pool(test_global_t *global)
 		event_size = test_options->rd_words + test_options->rw_words;
 		event_size = 8 * event_size;
 	}
+	test_options->event_size = event_size;
 
 	printf("\nScheduler performance test\n");
 	printf("  num sched                 %u\n", num_sched);
@@ -427,33 +444,48 @@ static int create_pool(test_global_t *global)
 	}
 
 	if (odp_pool_capability(&pool_capa)) {
-		printf("Error: Pool capa failed.\n");
+		ODPH_ERR("Error: pool capa failed\n");
 		return -1;
 	}
 
-	max_num = pool_capa.buf.max_num;
-	max_size = pool_capa.buf.max_size;
+	if (test_options->pool_type == ODP_POOL_BUFFER) {
+		printf("  pool type                 buffer\n");
+		max_num = pool_capa.buf.max_num;
+		max_size = pool_capa.buf.max_size;
+
+	} else {
+		printf("  pool type                 packet\n");
+		max_num = pool_capa.pkt.max_num;
+		max_size = pool_capa.pkt.max_seg_len;
+	}
 
 	if (max_num && tot_event > max_num) {
-		printf("Error: max events supported %u\n", max_num);
+		ODPH_ERR("Error: max events supported %u\n", max_num);
 		return -1;
 	}
 
 	if (max_size && event_size > max_size) {
-		printf("Error: max supported event size %u\n", max_size);
+		ODPH_ERR("Error: max supported event size %u\n", max_size);
 		return -1;
 	}
 
 	odp_pool_param_init(&pool_param);
-	pool_param.type = ODP_POOL_BUFFER;
-	pool_param.buf.num = tot_event;
-	pool_param.buf.size = event_size;
-	pool_param.buf.align = 8;
+	if (test_options->pool_type == ODP_POOL_BUFFER) {
+		pool_param.type = ODP_POOL_BUFFER;
+		pool_param.buf.num = tot_event;
+		pool_param.buf.size = event_size;
+		pool_param.buf.align = 8;
+	} else {
+		pool_param.type = ODP_POOL_PACKET;
+		pool_param.pkt.num = tot_event;
+		pool_param.pkt.len = event_size;
+		pool_param.pkt.seg_len = event_size;
+		pool_param.pkt.align = 8;
+	}
 
 	pool = odp_pool_create("sched perf", &pool_param);
-
 	if (pool == ODP_POOL_INVALID) {
-		printf("Error: Pool create failed.\n");
+		ODPH_ERR("Error: pool create failed\n");
 		return -1;
 	}
 
@@ -506,12 +538,12 @@ static int create_queues(test_global_t *global)
 {
 	odp_queue_param_t queue_param;
 	odp_queue_t queue;
-	odp_buffer_t buf;
 	odp_schedule_sync_t sync;
 	odp_schedule_prio_t prio;
 	const char *type_str;
 	uint32_t i, j, first;
 	test_options_t *test_options = &global->test_options;
+	uint32_t event_size = test_options->event_size;
 	uint32_t num_event = test_options->num_event;
 	uint32_t queue_size = test_options->queue_size;
 	uint32_t tot_queue = test_options->tot_queue;
@@ -665,15 +697,27 @@ static int create_queues(test_global_t *global)
 		}
 
 		for (j = 0; j < num_event; j++) {
-			buf = odp_buffer_alloc(pool);
+			odp_event_t ev;
 
-			if (buf == ODP_BUFFER_INVALID) {
-				printf("Error: Alloc failed %u/%u\n", i, j);
-				return -1;
+			if (test_options->pool_type == ODP_POOL_BUFFER) {
+				odp_buffer_t buf = odp_buffer_alloc(pool);
+
+				if (buf == ODP_BUFFER_INVALID) {
+					ODPH_ERR("Error: alloc failed %u/%u\n", i, j);
+					return -1;
+				}
+				ev = odp_buffer_to_event(buf);
+			} else {
+				odp_packet_t pkt = odp_packet_alloc(pool, event_size);
+
+				if (pkt == ODP_PACKET_INVALID) {
+					ODPH_ERR("Error: alloc failed %u/%u\n", i, j);
+					return -1;
+				}
+				ev = odp_packet_to_event(pkt);
 			}
-
-			if (odp_queue_enq(queue, odp_buffer_to_event(buf))) {
-				printf("Error: Enqueue failed %u/%u\n", i, j);
+			if (odp_queue_enq(queue, ev)) {
+				ODPH_ERR("Error: enqueue failed %u/%u\n", i, j);
 				return -1;
 			}
 		}
@@ -830,17 +874,18 @@ static inline uint64_t rw_ctx_data(void *ctx, uint32_t offset,
 }
 
 static uint64_t rw_data(odp_event_t ev[], int num,
-			uint32_t rd_words, uint32_t rw_words)
+			uint32_t rd_words, uint32_t rw_words, odp_pool_type_t pool_type)
 {
-	odp_buffer_t buf;
 	uint64_t *data;
 	int i;
 	uint32_t j;
 	uint64_t sum = 0;
 
 	for (i = 0; i < num; i++) {
-		buf  = odp_buffer_from_event(ev[i]);
-		data = odp_buffer_addr(buf);
+		if (pool_type == ODP_POOL_BUFFER)
+			data = odp_buffer_addr(odp_buffer_from_event(ev[i]));
+		else
+			data = odp_packet_data(odp_packet_from_event(ev[i]));
 
 		for (j = 0; j < rd_words; j++)
 			sum += data[j];
@@ -876,6 +921,7 @@ static int test_sched(void *arg)
 	uint32_t ctx_size = test_options->ctx_size;
 	uint32_t ctx_rd_words = test_options->ctx_rd_words;
 	uint32_t ctx_rw_words = test_options->ctx_rw_words;
+	odp_pool_type_t pool_type = test_options->pool_type;
 	int touch_ctx = ctx_rd_words || ctx_rw_words;
 	uint32_t ctx_offset = 0;
 	uint32_t sched_retries = 0;
@@ -961,7 +1007,7 @@ static int test_sched(void *arg)
 
 			if (odp_unlikely(touch_data))
 				data_sum += rw_data(ev, num, rd_words,
-						    rw_words);
+						    rw_words, pool_type);
 
 			if (odp_unlikely(wait_ns)) {
 				waits++;
