@@ -418,8 +418,9 @@ typedef struct odp_pool_param_t {
 		 */
 		uint32_t align;
 
-		/** Minimum number of packet data bytes that are stored in the
-		 *  first segment of a packet. The maximum value is defined by
+		/** Minimum number of packet data bytes that can be stored in
+		 *  the first segment of a newly allocated packet (starting from
+		 *  odp_packet_data()). The maximum value is defined by
 		 *  pool capability pkt.max_seg_len. Use 0 for default.
 		 */
 		uint32_t seg_len;
