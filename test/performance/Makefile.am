@@ -12,13 +12,13 @@ EXECUTABLES = odp_atomic_perf \
 	      odp_pktio_perf \
 	      odp_pool_perf \
 	      odp_queue_perf \
-	      odp_random \
-	      odp_sched_perf
+	      odp_random
 
 COMPILE_ONLY = odp_l2fwd \
 	       odp_packet_gen \
 	       odp_pktio_ordered \
 	       odp_sched_latency \
+	       odp_sched_perf \
 	       odp_sched_pktio \
 	       odp_scheduling \
 	       odp_timer_perf
@@ -26,6 +26,7 @@ COMPILE_ONLY = odp_l2fwd \
 TESTSCRIPTS = odp_l2fwd_run.sh \
 	      odp_packet_gen_run.sh \
 	      odp_sched_latency_run.sh \
+	      odp_sched_perf_run.sh \
 	      odp_sched_pktio_run.sh \
 	      odp_scheduling_run.sh \
 	      odp_timer_perf_run.sh
