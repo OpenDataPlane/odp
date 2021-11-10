@@ -636,6 +636,41 @@ static void packet_test_alloc_max_len(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+static void packet_test_alloc_max_segment(void)
+{
+	const int num = 5;
+	uint32_t max_len, max_seg_len;
+	odp_packet_t pkt;
+	odp_pool_t pool;
+	odp_pool_param_t params;
+
+	max_len = pool_capa.pkt.max_len;
+	if (max_len == 0)
+		max_len = DEFAULT_MAX_LEN;
+
+	max_seg_len = pool_capa.pkt.max_seg_len;
+	if (max_seg_len == 0 || max_seg_len > max_len)
+		max_seg_len = max_len;
+
+	odp_pool_param_init(&params);
+	params.type           = ODP_POOL_PACKET;
+	params.pkt.seg_len    = max_seg_len;
+	params.pkt.len        = max_len;
+	params.pkt.num        = num;
+
+	pool = odp_pool_create("pool_alloc_max_segment", &params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	pkt = odp_packet_alloc(pool, max_len);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(odp_packet_len(pkt) == max_len);
+	CU_ASSERT(odp_packet_seg_len(pkt) >= max_seg_len);
+
+	odp_packet_free(pkt);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
 static void packet_test_alloc_align(void)
 {
 	odp_pool_t pool;
@@ -4193,6 +4228,7 @@ odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_free_sp),
 	ODP_TEST_INFO(packet_test_alloc_segmented),
 	ODP_TEST_INFO(packet_test_alloc_max_len),
+	ODP_TEST_INFO(packet_test_alloc_max_segment),
 	ODP_TEST_INFO(packet_test_alloc_align),
 	ODP_TEST_INFO(packet_test_basic_metadata),
 	ODP_TEST_INFO(packet_test_debug),
