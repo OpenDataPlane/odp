@@ -36,6 +36,9 @@ ODP_STATIC_ASSERT(PACKET_POOL_NUM_SEG > 1 &&
 /* Number of preallocated packet vector test packets */
 #define PKT_VEC_PACKET_NUM PKT_VEC_NUM
 
+/* Maximum packet length when 'pool_capa.pkt.max_len == 0' */
+#define DEFAULT_MAX_LEN (32 * 1024)
+
 static odp_pool_capability_t pool_capa;
 static odp_pool_param_t default_param;
 static odp_pool_t default_pool;
@@ -559,6 +562,54 @@ static void packet_test_alloc_segmented(void)
 	odp_packet_free_multi(pkts, num_alloc);
 
 	/* Max len allocs */
+	pkt = odp_packet_alloc(pool, max_len);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(odp_packet_len(pkt) == max_len);
+
+	odp_packet_free(pkt);
+
+	num_alloc = 0;
+	for (i = 0; i < num; i++) {
+		ret = odp_packet_alloc_multi(pool, max_len,
+					     &pkts[num_alloc], num - num_alloc);
+		CU_ASSERT_FATAL(ret >= 0);
+		num_alloc += ret;
+		if (num_alloc >= num)
+			break;
+	}
+
+	CU_ASSERT(num_alloc == num);
+
+	for (i = 0; i < num_alloc; i++)
+		CU_ASSERT(odp_packet_len(pkts[i]) == max_len);
+
+	odp_packet_free_multi(pkts, num_alloc);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+static void packet_test_alloc_max_len(void)
+{
+	const int num = 5;
+	odp_packet_t pkts[num];
+	odp_packet_t pkt;
+	uint32_t max_len;
+	odp_pool_t pool;
+	odp_pool_param_t params;
+	int ret, i, num_alloc;
+
+	max_len = pool_capa.pkt.max_len;
+	if (!max_len)
+		max_len = DEFAULT_MAX_LEN;
+
+	odp_pool_param_init(&params);
+	params.type    = ODP_POOL_PACKET;
+	params.pkt.len = max_len;
+	params.pkt.num = num;
+
+	pool = odp_pool_create("pool_alloc_max_len", &params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
 	pkt = odp_packet_alloc(pool, max_len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(odp_packet_len(pkt) == max_len);
@@ -4141,6 +4192,7 @@ odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_alloc_free_multi),
 	ODP_TEST_INFO(packet_test_free_sp),
 	ODP_TEST_INFO(packet_test_alloc_segmented),
+	ODP_TEST_INFO(packet_test_alloc_max_len),
 	ODP_TEST_INFO(packet_test_alloc_align),
 	ODP_TEST_INFO(packet_test_basic_metadata),
 	ODP_TEST_INFO(packet_test_debug),
