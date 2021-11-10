@@ -669,6 +669,7 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 			return ODP_POOL_INVALID;
 		}
 
+		num = params->pkt.num;
 		seg_len = CONFIG_PACKET_MAX_SEG_LEN;
 		max_len = _odp_pool_glb->config.pkt_max_len;
 
@@ -691,9 +692,19 @@ static odp_pool_t pool_create(const char *name, const odp_pool_param_t *params,
 			return ODP_POOL_INVALID;
 		}
 
+		/* Multiple segments required per 'params->pkt.len' packet */
+		if (params->pkt.len > seg_len)
+			num *= (params->pkt.len + seg_len - 1) / seg_len;
+
+		/* Make sure 'params->pkt.max_num' limitation holds */
+		if (params->pkt.max_num && num > params->pkt.max_num) {
+			ODP_ERR("Pool 'max_num' parameter too small (%u/%u)\n",
+				params->pkt.max_num, num);
+			return ODP_POOL_INVALID;
+		}
+
 		headroom    = CONFIG_PACKET_HEADROOM;
 		tailroom    = CONFIG_PACKET_TAILROOM;
-		num         = params->pkt.num;
 		uarea_size  = params->pkt.uarea_size;
 		cache_size  = params->pkt.cache_size;
 		break;
