@@ -1,3 +1,49 @@
+== OpenDataPlane (1.32.1.0)
+=== Backward compatible API changes
+==== Init
+* Added `odp_instance()` function for reading the current ODP instance handle
+
+==== IPsec
+* Clarified bit field unions' `all` member intended usage
+
+==== Packet
+* Clarified `odp_proto_chksums_t.all_chksum` intended usage
+
+==== Packet IO
+* Clarified `odp_pktin_hash_proto_t.all_bits` intended usage
+
+==== Pool
+* Added `odp_pool_print_all()` function for printing implementation defined
+information about all created pools to the ODP log
+* Clarified `odp_pool_param_t.pkt.seg_len` documentation
+
+==== Stash
+* Added 32-bit only `odp_stash_put_u32()` and `odp_stash_get_u32()` functions
+* Added 64-bit only `odp_stash_put_u64()` and `odp_stash_get_u64()` functions
+* Added pointer only `odp_stash_put_ptr()` and `odp_stash_get_ptr()` functions
+
+=== Helper (1.3.0)
+==== Backward incompatible changes
+===== CLI
+* Removed unused `instance` parameter from `odph_cli_init()`
+
+===== Deprecation Framework
+Added a deprecation framework to enable controlled API deprecation.
+
+When a helper API is deprecated, validation tests will be updated to use the
+replacement API. By default, attempts to compile code with deprecated helper
+APIs will fail. To make moving to a new API version easier, helper library
+supports `--enable-helper-deprecated` `configure` option, which makes the
+deprecated APIs visible again.
+
+===== Linux
+* Deprecated `odph_odpthreads_create()` function. Use `odph_thread_create()`
+instead.
+* Deprecated `odph_odpthreads_join()` function. Use `odph_thread_join()`
+instead.
+* Deprecated unused `odph_thread_param_t.instance` struct member
+* Deprecated `odph_odpthread_t` and `odph_odpthread_params_t` types
+
 == OpenDataPlane (1.32.0.0)
 === Backward incompatible API changes
 ==== IPsec
