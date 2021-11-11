@@ -120,6 +120,10 @@ static void aarch64_part_info(char *str, int maxlen, odp_cpu_arch_arm_t *cpu_isa
 			snprintf(str, maxlen, "Cortex-A77");
 			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
 			return;
+		case 0xd40:
+			snprintf(str, maxlen, "Neoverse V1");
+			*cpu_isa = ODP_CPU_ARCH_ARMV8_4;
+			return;
 		case 0xd41:
 			snprintf(str, maxlen, "Cortex-A78");
 			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
@@ -127,6 +131,18 @@ static void aarch64_part_info(char *str, int maxlen, odp_cpu_arch_arm_t *cpu_isa
 		case 0xd42:
 			snprintf(str, maxlen, "Cortex-A78AE");
 			*cpu_isa = ODP_CPU_ARCH_ARMV8_2;
+			return;
+		case 0xd46:
+			snprintf(str, maxlen, "Cortex-A510");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_0;
+			return;
+		case 0xd47:
+			snprintf(str, maxlen, "Cortex-A710");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_0;
+			return;
+		case 0xd49:
+			snprintf(str, maxlen, "Neoverse N2");
+			*cpu_isa = ODP_CPU_ARCH_ARMV9_0;
 			return;
 		case 0xd4a:
 			snprintf(str, maxlen, "Neoverse E1");
