@@ -1988,6 +1988,7 @@ static void schedule_print(void)
 	ring_u32_t *ring;
 	odp_schedule_capability_t capa;
 	int num_spread = sched->config.num_spread;
+	const int col_width = 24;
 
 	(void)schedule_capability(&capa);
 
@@ -2039,14 +2040,14 @@ static void schedule_print(void)
 		}
 	}
 
-	ODP_PRINT("\n  Number of threads:\n");
-	ODP_PRINT("             spread\n");
+	ODP_PRINT("\n  Number of threads per schedule group:\n");
+	ODP_PRINT("             name                     spread\n");
 
 	for (grp = 0; grp < NUM_SCHED_GRPS; grp++) {
 		if (sched->sched_grp[grp].allocated == 0)
 			continue;
 
-		ODP_PRINT("    group %i:", grp);
+		ODP_PRINT("    group %i: %-*s", grp, col_width, sched->sched_grp[grp].name);
 
 		for (spr = 0; spr < num_spread; spr++)
 			ODP_PRINT(" %u", sched->sched_grp[grp].spread_thrs[spr]);
