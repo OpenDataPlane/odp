@@ -1470,6 +1470,74 @@ int odp_timer_set_rel(odp_timer_t hdl,
 		return ODP_TIMER_FAIL;
 }
 
+int odp_timer_start(odp_timer_t timer, const odp_timer_start_t *start_param)
+{
+	uint64_t abs_tick, rel_tick;
+	timer_pool_t *tp = handle_to_tp(timer);
+	uint64_t cur_tick = current_nsec(tp);
+	uint32_t idx = handle_to_idx(timer, tp);
+	odp_event_t tmo_ev = start_param->tmo_ev;
+
+	if (start_param->tick_type == ODP_TIMER_TICK_ABS) {
+		abs_tick = start_param->tick;
+		rel_tick = abs_tick - cur_tick;
+
+		if (odp_unlikely(abs_tick < cur_tick + tp->min_rel_tck))
+			return ODP_TIMER_TOO_NEAR;
+	} else {
+		rel_tick = start_param->tick;
+		abs_tick = rel_tick + cur_tick;
+
+		if (odp_unlikely(rel_tick < tp->min_rel_tck))
+			return ODP_TIMER_TOO_NEAR;
+	}
+
+	if (odp_unlikely(rel_tick > tp->max_rel_tck))
+		return ODP_TIMER_TOO_FAR;
+
+	if (!timer_reset(idx, abs_tick, &tmo_ev, tp))
+		return ODP_TIMER_FAIL;
+
+	/* Check that timer was not active */
+	if (odp_unlikely(tmo_ev != ODP_EVENT_INVALID)) {
+		ODP_ERR("Timer was active already\n");
+		odp_event_free(tmo_ev);
+	}
+
+	return ODP_TIMER_SUCCESS;
+}
+
+int odp_timer_restart(odp_timer_t timer, const odp_timer_start_t *start_param)
+{
+	uint64_t abs_tick, rel_tick;
+	timer_pool_t *tp = handle_to_tp(timer);
+	uint64_t cur_tick = current_nsec(tp);
+	uint32_t idx = handle_to_idx(timer, tp);
+
+	if (start_param->tick_type == ODP_TIMER_TICK_ABS) {
+		abs_tick = start_param->tick;
+		rel_tick = abs_tick - cur_tick;
+
+		if (odp_unlikely(abs_tick < cur_tick + tp->min_rel_tck))
+			return ODP_TIMER_TOO_NEAR;
+	} else {
+		rel_tick = start_param->tick;
+		abs_tick = rel_tick + cur_tick;
+
+		if (odp_unlikely(rel_tick < tp->min_rel_tck))
+			return ODP_TIMER_TOO_NEAR;
+	}
+
+	if (odp_unlikely(rel_tick > tp->max_rel_tck))
+		return ODP_TIMER_TOO_FAR;
+
+	/* Reset timer without changing the event */
+	if (!timer_reset(idx, abs_tick, NULL, tp))
+		return ODP_TIMER_FAIL;
+
+	return ODP_TIMER_SUCCESS;
+}
+
 int odp_timer_cancel(odp_timer_t hdl, odp_event_t *tmo_ev)
 {
 	timer_pool_t *tp = handle_to_tp(hdl);
