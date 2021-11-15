@@ -67,7 +67,6 @@ typedef struct odp_global_data_ro_t {
 	uint8_t has_config_rt;
 	config_t libconfig_default;
 	config_t libconfig_runtime;
-	odp_random_kind_t ipsec_rand_kind;
 
 	/* Disabled features during global init */
 	struct {
