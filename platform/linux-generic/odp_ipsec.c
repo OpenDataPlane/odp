@@ -186,11 +186,37 @@ int odp_ipsec_capability(odp_ipsec_capability_t *capa)
 	return 0;
 }
 
+static int cipher_requires_randomness(odp_cipher_alg_t cipher)
+{
+	int ret;
+
+	switch (cipher) {
+	case ODP_CIPHER_ALG_NULL:
+	case ODP_CIPHER_ALG_AES_CTR:
+#if ODP_DEPRECATED_API
+	case ODP_CIPHER_ALG_AES128_GCM:
+#endif
+	case ODP_CIPHER_ALG_AES_GCM:
+	case ODP_CIPHER_ALG_AES_CCM:
+	case ODP_CIPHER_ALG_CHACHA20_POLY1305:
+		ret = 0;
+		break;
+	default:
+		ret = 1;
+		break;
+	}
+	return ret;
+}
+
 int odp_ipsec_cipher_capability(odp_cipher_alg_t cipher,
 				odp_ipsec_cipher_capability_t capa[], int num)
 {
 	uint32_t req_iv_len;
 	int rc, i, out, max_capa;
+
+	if (odp_random_max_kind() < ODP_RANDOM_CRYPTO &&
+	    cipher_requires_randomness(cipher))
+		return 0;
 
 	max_capa = odp_crypto_cipher_capability(cipher, NULL, 0);
 	if (max_capa <= 0)
@@ -1254,7 +1280,7 @@ static int ipsec_random_data(uint8_t *data, uint32_t len)
 		uint32_t rnd_len;
 
 		rnd_len = odp_random_data(buffer, IPSEC_RANDOM_BUF_SIZE,
-					  odp_global_ro.ipsec_rand_kind);
+					  ODP_RANDOM_CRYPTO);
 		if (odp_unlikely(rnd_len != IPSEC_RANDOM_BUF_SIZE))
 			return -1;
 		memcpy(data, &buffer[0], len);
@@ -2434,10 +2460,6 @@ int _odp_ipsec_init_global(void)
 	}
 
 	memset(&default_out_opt, 0, sizeof(default_out_opt));
-
-	odp_global_ro.ipsec_rand_kind = ODP_RANDOM_CRYPTO;
-	if (odp_global_ro.ipsec_rand_kind > odp_random_max_kind())
-		odp_global_ro.ipsec_rand_kind = odp_random_max_kind();
 
 	return 0;
 }

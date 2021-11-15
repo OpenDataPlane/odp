@@ -487,6 +487,10 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	odp_crypto_ses_create_err_t ses_create_rc;
 	const odp_crypto_key_t *salt_param = NULL;
 
+	if (!odp_ipsec_cipher_capability(param->crypto.cipher_alg, NULL, 0) ||
+	    !odp_ipsec_auth_capability(param->crypto.auth_alg, NULL, 0))
+		return ODP_IPSEC_SA_INVALID;
+
 	ipsec_sa = ipsec_sa_reserve();
 	if (NULL == ipsec_sa) {
 		ODP_ERR("No more free SA\n");
