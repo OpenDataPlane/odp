@@ -605,23 +605,34 @@ static void alg_test(odp_crypto_op_t op,
 	uint32_t max_shift;
 	odp_crypto_ses_create_err_t status;
 	odp_crypto_session_param_t ses_params;
+	uint8_t cipher_key_data[ref->cipher_key_length];
+	uint8_t auth_key_data[ref->auth_key_length];
+	uint8_t cipher_iv_data[ref->cipher_iv_length];
+	uint8_t auth_iv_data[ref->auth_iv_length];
 	odp_crypto_key_t cipher_key = {
-		.data = ref->cipher_key,
+		.data = cipher_key_data,
 		.length = ref->cipher_key_length
 	};
 	odp_crypto_key_t auth_key = {
-		.data = ref->auth_key,
+		.data = auth_key_data,
 		.length = ref->auth_key_length
 	};
 	odp_crypto_iv_t cipher_iv = {
-		.data = ovr_iv ? NULL : ref->cipher_iv,
+		.data = ovr_iv ? NULL : cipher_iv_data,
 		.length = ref->cipher_iv_length
 	};
 	odp_crypto_iv_t auth_iv = {
-		.data = ovr_iv ? NULL : ref->auth_iv,
+		.data = ovr_iv ? NULL : auth_iv_data,
 		.length = ref->auth_iv_length
 	};
 	alg_test_param_t test_param;
+
+	memcpy(cipher_key_data, ref->cipher_key, ref->cipher_key_length);
+	memcpy(auth_key_data, ref->auth_key, ref->auth_key_length);
+	if (!ovr_iv) {
+		memcpy(cipher_iv_data, ref->cipher_iv, ref->cipher_iv_length);
+		memcpy(auth_iv_data, ref->auth_iv, ref->auth_iv_length);
+	}
 
 	/* Create a crypto session */
 	odp_crypto_session_param_init(&ses_params);
@@ -645,6 +656,16 @@ static void alg_test(odp_crypto_op_t op,
 	CU_ASSERT(status == ODP_CRYPTO_SES_CREATE_ERR_NONE);
 	CU_ASSERT(odp_crypto_session_to_u64(session) !=
 		  odp_crypto_session_to_u64(ODP_CRYPTO_SESSION_INVALID));
+
+	/*
+	 * Clear session creation parameters so that we might notice if
+	 * the implementation still tried to use them.
+	 */
+	memset(cipher_key_data, 0, sizeof(cipher_key_data));
+	memset(auth_key_data, 0, sizeof(auth_key_data));
+	memset(cipher_iv_data, 0, sizeof(cipher_iv_data));
+	memset(auth_iv_data, 0, sizeof(auth_iv_data));
+	memset(&ses_params, 0, sizeof(ses_params));
 
 	memset(&test_param, 0, sizeof(test_param));
 	test_param.session = session;
