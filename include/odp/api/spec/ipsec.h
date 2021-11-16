@@ -1191,6 +1191,9 @@ void odp_ipsec_sa_param_init(odp_ipsec_sa_param_t *param);
  *
  * Create a new IPSEC SA according to the parameters.
  *
+ * The parameter structure as well as all key, address and other memory
+ * buffers pointed to by it can be freed after the call.
+ *
  * @param param   IPSEC SA parameters
  *
  * @return IPSEC SA handle
