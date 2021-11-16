@@ -480,6 +480,24 @@ static int ipsec_antireplay_init(ipsec_sa_t *ipsec_sa,
 	return 0;
 }
 
+static void store_sa_info(ipsec_sa_t *ipsec_sa, const odp_ipsec_sa_param_t *p)
+{
+	ipsec_sa->sa_info.cipher_alg = p->crypto.cipher_alg;
+	ipsec_sa->sa_info.cipher_key_len = p->crypto.cipher_key.length;
+	ipsec_sa->sa_info.cipher_key_extra_len = p->crypto.cipher_key.length;
+	ipsec_sa->sa_info.auth_alg = p->crypto.auth_alg;
+	ipsec_sa->sa_info.auth_key_len = p->crypto.auth_key.length;
+	ipsec_sa->sa_info.auth_key_extra_len = p->crypto.auth_key_extra.length;
+
+	ipsec_sa->sa_info.icv_len = p->crypto.icv_len;
+	ipsec_sa->sa_info.context_len = p->context_len;
+
+	if (p->dir == ODP_IPSEC_DIR_INBOUND)
+		ipsec_sa->sa_info.in.antireplay_ws = p->inbound.antireplay_ws;
+	else
+		ipsec_sa->sa_info.out.mtu = p->outbound.mtu;
+}
+
 odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 {
 	ipsec_sa_t *ipsec_sa;
@@ -497,6 +515,8 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		return ODP_IPSEC_SA_INVALID;
 	}
 
+	store_sa_info(ipsec_sa, param);
+
 	ipsec_sa->proto = param->proto;
 	ipsec_sa->spi = param->spi;
 	ipsec_sa->context = param->context;
@@ -510,6 +530,7 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	ipsec_sa->esn = param->opt.esn;
 
 	if (ODP_IPSEC_DIR_INBOUND == param->dir) {
+		ipsec_sa->inbound = 1;
 		ipsec_sa->lookup_mode = param->inbound.lookup_mode;
 		if (ODP_IPSEC_LOOKUP_DSTADDR_SPI == ipsec_sa->lookup_mode) {
 			ipsec_sa->in.lookup_ver =
@@ -554,20 +575,6 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	odp_atomic_init_u64(&ipsec_sa->stats.hard_exp_pkts_err, 0);
 	odp_atomic_init_u64(&ipsec_sa->stats.post_lifetime_err_pkts, 0);
 	odp_atomic_init_u64(&ipsec_sa->stats.post_lifetime_err_bytes, 0);
-
-	/* Copy application provided parameter values. */
-	ipsec_sa->param = *param;
-
-	/* Set all the key related pointers and ip address pointers to null. */
-	ipsec_sa->param.crypto.cipher_key.data = NULL;
-	ipsec_sa->param.crypto.cipher_key_extra.data = NULL;
-	ipsec_sa->param.crypto.auth_key.data = NULL;
-	ipsec_sa->param.crypto.auth_key_extra.data = NULL;
-	ipsec_sa->param.inbound.lookup_param.dst_addr = NULL;
-	ipsec_sa->param.outbound.tunnel.ipv4.src_addr = NULL;
-	ipsec_sa->param.outbound.tunnel.ipv4.dst_addr = NULL;
-	ipsec_sa->param.outbound.tunnel.ipv6.src_addr = NULL;
-	ipsec_sa->param.outbound.tunnel.ipv6.dst_addr = NULL;
 
 	if (ODP_IPSEC_MODE_TUNNEL == ipsec_sa->mode &&
 	    ODP_IPSEC_DIR_OUTBOUND == param->dir) {
@@ -1165,22 +1172,35 @@ void _odp_ipsec_sa_stats_pkts(ipsec_sa_t *sa, odp_ipsec_stats_t *stats)
 
 static void ipsec_out_sa_info(ipsec_sa_t *ipsec_sa, odp_ipsec_sa_info_t *sa_info)
 {
+	odp_ipsec_tunnel_param_t *tun_param = &sa_info->param.outbound.tunnel;
+
+	tun_param->type = ipsec_sa->tun_ipv4 ? ODP_IPSEC_TUNNEL_IPV4 :
+					       ODP_IPSEC_TUNNEL_IPV6;
+	tun_param->ipv4.dscp = ipsec_sa->out.tun_ipv4.param.dscp;
+	tun_param->ipv4.df = ipsec_sa->out.tun_ipv4.param.df;
+	tun_param->ipv4.ttl = ipsec_sa->out.tun_ipv4.param.ttl;
+	tun_param->ipv6.flabel = ipsec_sa->out.tun_ipv6.param.flabel;
+	tun_param->ipv6.dscp = ipsec_sa->out.tun_ipv6.param.dscp;
+	tun_param->ipv6.hlimit = ipsec_sa->out.tun_ipv6.param.hlimit;
+
+	sa_info->param.outbound.frag_mode = ipsec_sa->out.frag_mode;
+	sa_info->param.outbound.mtu = ipsec_sa->sa_info.out.mtu;
+
 	sa_info->outbound.seq_num =
 		(uint64_t)odp_atomic_load_u64(&ipsec_sa->hot.out.seq) -	1;
 
-	if (ipsec_sa->param.mode == ODP_IPSEC_MODE_TUNNEL) {
+	if (ipsec_sa->mode == ODP_IPSEC_MODE_TUNNEL) {
 		uint8_t *src, *dst;
 
-		if (ipsec_sa->param.outbound.tunnel.type ==
-				ODP_IPSEC_TUNNEL_IPV4) {
+		if (ipsec_sa->tun_ipv4) {
 			src = sa_info->outbound.tunnel.ipv4.src_addr;
 			dst = sa_info->outbound.tunnel.ipv4.dst_addr;
 			memcpy(src, &ipsec_sa->out.tun_ipv4.src_ip,
 			       ODP_IPV4_ADDR_SIZE);
 			memcpy(dst, &ipsec_sa->out.tun_ipv4.dst_ip,
 			       ODP_IPV4_ADDR_SIZE);
-			sa_info->param.outbound.tunnel.ipv4.src_addr = src;
-			sa_info->param.outbound.tunnel.ipv4.dst_addr = dst;
+			tun_param->ipv4.src_addr = src;
+			tun_param->ipv4.dst_addr = dst;
 		} else {
 			src = sa_info->outbound.tunnel.ipv6.src_addr;
 			dst = sa_info->outbound.tunnel.ipv6.dst_addr;
@@ -1188,8 +1208,8 @@ static void ipsec_out_sa_info(ipsec_sa_t *ipsec_sa, odp_ipsec_sa_info_t *sa_info
 			       ODP_IPV6_ADDR_SIZE);
 			memcpy(dst, &ipsec_sa->out.tun_ipv6.dst_ip,
 			       ODP_IPV6_ADDR_SIZE);
-			sa_info->param.outbound.tunnel.ipv6.src_addr = src;
-			sa_info->param.outbound.tunnel.ipv6.dst_addr = dst;
+			tun_param->ipv6.src_addr = src;
+			tun_param->ipv6.dst_addr = dst;
 		}
 	}
 }
@@ -1198,9 +1218,16 @@ static void ipsec_in_sa_info(ipsec_sa_t *ipsec_sa, odp_ipsec_sa_info_t *sa_info)
 {
 	uint8_t *dst = sa_info->inbound.lookup_param.dst_addr;
 
+	sa_info->param.inbound.lookup_mode = ipsec_sa->lookup_mode;
+	sa_info->param.inbound.lookup_param.ip_version = ipsec_sa->in.lookup_ver;
+	sa_info->param.inbound.lookup_param.dst_addr = dst;
+	sa_info->param.inbound.antireplay_ws = ipsec_sa->sa_info.in.antireplay_ws;
+	sa_info->param.inbound.pipeline = ODP_IPSEC_PIPELINE_NONE;
+	sa_info->param.inbound.dest_cos = ODP_COS_INVALID;
+	sa_info->param.inbound.reassembly_en = false;
+
 	if (ipsec_sa->lookup_mode == ODP_IPSEC_LOOKUP_DSTADDR_SPI) {
-		if (ipsec_sa->param.inbound.lookup_param.ip_version ==
-		    ODP_IPSEC_IPV4)
+		if (ipsec_sa->in.lookup_ver == ODP_IPSEC_IPV4)
 			memcpy(dst, &ipsec_sa->in.lookup_dst_ipv4,
 			       ODP_IPV4_ADDR_SIZE);
 		else
@@ -1220,6 +1247,7 @@ static void ipsec_in_sa_info(ipsec_sa_t *ipsec_sa, odp_ipsec_sa_info_t *sa_info)
 int odp_ipsec_sa_info(odp_ipsec_sa_t sa, odp_ipsec_sa_info_t  *sa_info)
 {
 	ipsec_sa_t *ipsec_sa;
+	odp_ipsec_sa_param_t *param;
 
 	ipsec_sa = _odp_ipsec_sa_entry_from_hdl(sa);
 
@@ -1227,13 +1255,46 @@ int odp_ipsec_sa_info(odp_ipsec_sa_t sa, odp_ipsec_sa_info_t  *sa_info)
 	ODP_ASSERT(sa_info != NULL);
 
 	memset(sa_info, 0, sizeof(*sa_info));
+	param = &sa_info->param;
 
-	sa_info->param = ipsec_sa->param;
+	param->dir = ipsec_sa->inbound ? ODP_IPSEC_DIR_INBOUND :
+					 ODP_IPSEC_DIR_OUTBOUND;
+	param->proto = ipsec_sa->proto;
+	param->mode = ipsec_sa->mode;
 
-	if (ipsec_sa->param.dir == ODP_IPSEC_DIR_OUTBOUND)
-		ipsec_out_sa_info(ipsec_sa, sa_info);
-	else
+	param->crypto.cipher_alg = ipsec_sa->sa_info.cipher_alg;
+	param->crypto.cipher_key.data = NULL;
+	param->crypto.cipher_key.length = ipsec_sa->sa_info.cipher_key_len;
+	param->crypto.cipher_key_extra.data = NULL;
+	param->crypto.cipher_key_extra.length = ipsec_sa->sa_info.cipher_key_extra_len;
+	param->crypto.auth_alg = ipsec_sa->sa_info.auth_alg;
+	param->crypto.auth_key.data = NULL;
+	param->crypto.auth_key.length = ipsec_sa->sa_info.auth_key_len;
+	param->crypto.auth_key_extra.data = NULL;
+	param->crypto.auth_key_extra.length = ipsec_sa->sa_info.auth_key_extra_len;
+	param->crypto.icv_len = ipsec_sa->sa_info.icv_len;
+
+	param->opt.esn		= ipsec_sa->esn;
+	param->opt.udp_encap	= ipsec_sa->udp_encap;
+	param->opt.copy_dscp	= ipsec_sa->copy_dscp;
+	param->opt.copy_flabel	= ipsec_sa->copy_flabel;
+	param->opt.copy_df	= ipsec_sa->copy_df;
+	param->opt.dec_ttl	= ipsec_sa->dec_ttl;
+
+	param->lifetime.soft_limit.bytes   = ipsec_sa->soft_limit_bytes;
+	param->lifetime.soft_limit.packets = ipsec_sa->soft_limit_packets;
+	param->lifetime.hard_limit.bytes   = ipsec_sa->hard_limit_bytes;
+	param->lifetime.hard_limit.packets = ipsec_sa->hard_limit_packets;
+
+	param->spi = ipsec_sa->spi;
+	param->dest_queue = ipsec_sa->queue;
+	param->context = ipsec_sa->context;
+	param->context_len = ipsec_sa->sa_info.context_len;
+
+	if (ipsec_sa->inbound)
 		ipsec_in_sa_info(ipsec_sa, sa_info);
+	else
+		ipsec_out_sa_info(ipsec_sa, sa_info);
 
 	return 0;
 }

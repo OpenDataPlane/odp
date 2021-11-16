@@ -171,6 +171,7 @@ struct ipsec_sa_s {
 	union {
 		unsigned flags;
 		struct {
+			unsigned	inbound : 1;
 			unsigned	dec_ttl : 1;
 			unsigned	copy_dscp : 1;
 			unsigned	copy_df : 1;
@@ -246,7 +247,28 @@ struct ipsec_sa_s {
 	} stats;
 
 	uint32_t next_sa;
-	odp_ipsec_sa_param_t param;
+
+	/* Data stored solely for odp_ipsec_sa_info() */
+	struct {
+		odp_cipher_alg_t cipher_alg;
+		uint32_t cipher_key_len;
+		uint32_t cipher_key_extra_len;
+
+		odp_auth_alg_t auth_alg;
+		uint32_t auth_key_len;
+		uint32_t auth_key_extra_len;
+
+		uint32_t icv_len;
+		uint32_t context_len;
+		union {
+			struct {
+				uint32_t antireplay_ws;
+			} in;
+			struct{
+				uint32_t mtu;
+			} out;
+		};
+	} sa_info;
 };
 
 /**
