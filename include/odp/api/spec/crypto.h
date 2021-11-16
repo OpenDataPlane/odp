@@ -1053,6 +1053,9 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
  * default values. If call ends up with an error no new session will be
  * created.
  *
+ * The parameter structure as well as the key and IV data pointed to by it
+ * can be freed after the call.
+ *
  * @param      param        Session parameters
  * @param[out] session      Created session else ODP_CRYPTO_SESSION_INVALID
  * @param[out] status       Failure code if unsuccessful
