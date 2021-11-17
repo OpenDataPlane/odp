@@ -339,6 +339,21 @@ AM_CONDITIONAL([WITH_OPENSSL], [test x$with_openssl != xno])
 AC_DEFINE_UNQUOTED([_ODP_OPENSSL], [$have_openssl],
 	  [Define to 1 to enable OpenSSL support])
 
+have_openssl_rand=1
+AC_ARG_ENABLE([openssl-rand],
+	[AS_HELP_STRING([--disable-openssl-rand],
+			[Disable OpenSSL random data (use arch-specific instead)]
+			[[default=enabled]])],
+	[if test "x$enableval" = "xno"; then
+		have_openssl_rand=0
+	fi])
+
+AS_IF([test "$have_openssl" != "1"], [have_openssl_rand=0])
+AS_IF([test "$have_openssl_rand" = "1"], [openssl_rand=yes], [openssl_rand=no])
+
+AC_DEFINE_UNQUOTED([_ODP_OPENSSL_RAND], [$have_openssl_rand],
+	  [Define to 1 to enable OpenSSL support])
+
 ##########################################################################
 # Include m4 files
 ##########################################################################
@@ -523,6 +538,7 @@ AC_MSG_RESULT([
 	testdir:		${testdir}
 	WITH_ARCH:              ${WITH_ARCH}
 	with_openssl:           ${with_openssl}
+	openssl_rand:           ${openssl_rand}
 
 	cc:			${CC}
 	cc version:             ${CC_VERSION}
