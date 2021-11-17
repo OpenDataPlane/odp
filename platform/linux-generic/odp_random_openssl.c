@@ -11,7 +11,7 @@
 #include <odp_init_internal.h>
 #include <odp_random_openssl_internal.h>
 
-#if _ODP_OPENSSL
+#if _ODP_OPENSSL_RAND
 #include <openssl/rand.h>
 
 int32_t _odp_random_openssl_data(uint8_t *buf, uint32_t len)
@@ -28,7 +28,7 @@ int32_t _odp_random_openssl_data(uint8_t *buf ODP_UNUSED,
 {
 	return -1;
 }
-#endif /* _ODP_OPENSSL */
+#endif /* _ODP_OPENSSL_RAND */
 
 int _odp_random_openssl_init_local(void)
 {
