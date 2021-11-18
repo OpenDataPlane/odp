@@ -41,3 +41,21 @@ SPDX-License-Identifier:        BSD-3-Clause
         socket
         socket_mmap
         tap
+
+5. Random data
+    On x86 ODP_RANDOM_TRUE type random data is generated using rdseed [1] via
+    compiler builtin functions. If OpenSSL is not available or its use for
+    generating random data is disabled with the --disable-openssl-rand
+    configure option, ODP_RANDOM_CRYPTO type random data is generated using
+    rdrand [1].
+
+    Note that there may be issues with the quality or security of rdrand and
+    rdseed. [2]
+
+6. References
+    [1] Intel Digital Random Number Generator (DRNG) Software Implementation
+        Guide. John P Mechalas, 17 October 2018.
+        https://www.intel.com/content/www/us/en/developer/articles/guide/intel-digital-random-number-generator-drng-software-implementation-guide.html
+
+    [2] RDRAND. Wikipedia, 29 September 2021.
+        https://en.wikipedia.org/wiki/RDRAND#Reception
