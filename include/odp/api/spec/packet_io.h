@@ -267,7 +267,8 @@ typedef struct odp_pktin_queue_param_t {
 	  * These are used for input queue creation in ODP_PKTIN_MODE_QUEUE
 	  * or ODP_PKTIN_MODE_SCHED modes. Scheduler parameters are considered
 	  * only in ODP_PKTIN_MODE_SCHED mode. Default values are defined in
-	  * odp_queue_param_t documentation.
+	  * odp_queue_param_t documentation. The type field is ignored
+	  * and the queue type is deduced from the pktio input mode.
 	  * When classifier is enabled in odp_pktin_queue_config() this
 	  * value is ignored. */
 	odp_queue_param_t queue_param;
