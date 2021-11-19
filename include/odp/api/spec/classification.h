@@ -149,7 +149,8 @@ typedef union odp_cls_pmr_terms_t {
 typedef struct odp_red_param_t {
 	/** A boolean to enable RED
 	 * When true, RED is enabled and configured with RED parameters.
-	 * Otherwise, RED parameters are ignored. */
+	 * Otherwise, RED parameters are ignored. Default value is false.
+	 */
 	odp_bool_t enable;
 
 	/** Threshold parameters for RED
@@ -166,7 +167,8 @@ typedef struct odp_red_param_t {
 typedef struct odp_bp_param_t {
 	/** A boolean to enable Back pressure
 	 * When true, back pressure is enabled and configured with the BP
-	 * parameters. Otherwise BP parameters are ignored.
+	 * parameters. Otherwise BP parameters are ignored. Default value
+	 * is false.
 	 */
 	odp_bool_t enable;
 
@@ -329,6 +331,8 @@ typedef struct odp_cls_cos_param {
 	 * the class of service.
 	 * Depending on the implementation this number might be rounded-off to
 	 * nearest supported value (e.g power of 2)
+	 *
+	 * Default value is 1.
 	 */
 	uint32_t num_queue;
 
@@ -695,7 +699,7 @@ typedef struct odp_pmr_param_t {
 	/** Packet Matching Rule term */
 	odp_cls_pmr_term_t  term;
 
-	/** True if the value is range and false if match */
+	/** True if the value is range and false if match. Default is false. */
 	odp_bool_t range_term;
 
 	/** Variant mappings for types of matches */
