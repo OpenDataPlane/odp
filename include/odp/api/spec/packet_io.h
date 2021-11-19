@@ -181,7 +181,9 @@ typedef struct odp_pktin_vector_config_t {
 	 *
 	 * When true, packet input vector is enabled and configured with vector
 	 * config parameters. Otherwise, packet input vector configuration
-	 * parameters are ignored.
+	 * parameters are ignored. When vectors are enabled, packets may
+	 * be delivered both as packet vector events and packet events.
+	 * The default value is false.
 	 */
 	odp_bool_t enable;
 
