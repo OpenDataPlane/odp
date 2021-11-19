@@ -685,7 +685,7 @@ static int get_packets(pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
 
 	/* convert events to packets, discarding any non-packet events */
 	for (i = 0; i < num_evts; ++i) {
-		if (!vector_mode && odp_event_type(evt_tbl[i]) == ODP_EVENT_PACKET) {
+		if (odp_event_type(evt_tbl[i]) == ODP_EVENT_PACKET) {
 			pkt_tbl[num_pkts++] = odp_packet_from_event(evt_tbl[i]);
 		} else if (vector_mode &&  odp_event_type(evt_tbl[i]) == ODP_EVENT_PACKET_VECTOR &&
 			   num_pkts < num) {

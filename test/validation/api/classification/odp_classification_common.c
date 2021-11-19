@@ -207,7 +207,7 @@ odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns, odp_bool_t enable_p
 	if (ev == ODP_EVENT_INVALID)
 		return ODP_PACKET_INVALID;
 
-	if (!enable_pktv && odp_event_type(ev) == ODP_EVENT_PACKET) {
+	if (odp_event_type(ev) == ODP_EVENT_PACKET) {
 		return odp_packet_from_event(ev);
 	} else if (enable_pktv && odp_event_type(ev) == ODP_EVENT_PACKET_VECTOR) {
 		odp_packet_vector_t pktv;
