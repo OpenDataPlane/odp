@@ -10,6 +10,23 @@
 
 #define PMR_SET_NUM	5
 
+static void classification_test_default_values(void)
+{
+	odp_cls_cos_param_t cos_param;
+	odp_pmr_param_t pmr_param;
+
+	memset(&cos_param, 0x55, sizeof(cos_param));
+	odp_cls_cos_param_init(&cos_param);
+	CU_ASSERT_EQUAL(cos_param.num_queue, 1);
+	CU_ASSERT_EQUAL(cos_param.red.enable, false);
+	CU_ASSERT_EQUAL(cos_param.bp.enable, false);
+	CU_ASSERT_EQUAL(cos_param.vector.enable, false);
+
+	memset(&pmr_param, 0x55, sizeof(pmr_param));
+	odp_cls_pmr_param_init(&pmr_param);
+	CU_ASSERT_EQUAL(pmr_param.range_term, false);
+}
+
 static void classification_test_create_cos(void)
 {
 	odp_cos_t cos;
@@ -326,6 +343,7 @@ static void classification_test_pmr_composite_create(void)
 }
 
 odp_testinfo_t classification_suite_basic[] = {
+	ODP_TEST_INFO(classification_test_default_values),
 	ODP_TEST_INFO(classification_test_create_cos),
 	ODP_TEST_INFO(classification_test_destroy_cos),
 	ODP_TEST_INFO(classification_test_create_pmr_match),
