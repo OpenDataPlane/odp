@@ -1623,6 +1623,7 @@ static void ipsec_test_default_values(void)
 	CU_ASSERT(!config.inbound.reass_inline);
 	CU_ASSERT(config.outbound.all_chksum == 0);
 	CU_ASSERT(!config.stats_en);
+	CU_ASSERT(!config.vector.enable);
 
 	odp_ipsec_sa_param_init(&sa_param);
 	CU_ASSERT(sa_param.proto == ODP_IPSEC_ESP);
