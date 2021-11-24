@@ -21,8 +21,6 @@ static int ipsec_sync_init(odp_instance_t *inst)
 	if (suite_context.pool == ODP_POOL_INVALID)
 		return -1;
 	suite_context.pktio = odp_pktio_lookup("loop");
-	if (suite_context.pktio == ODP_PKTIO_INVALID)
-		return -1;
 
 	return ipsec_config(*inst);
 }

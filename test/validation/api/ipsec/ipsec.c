@@ -1274,7 +1274,6 @@ int ipsec_init(odp_instance_t *inst, odp_ipsec_op_mode_t mode)
 		pktio = pktio_create(pool);
 		if (ODP_PKTIO_INVALID == pktio) {
 			fprintf(stderr, "IPsec pktio creation failed.\n");
-			return -1;
 		}
 	}
 
