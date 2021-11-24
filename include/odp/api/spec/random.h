@@ -85,7 +85,7 @@ int32_t odp_random_data(uint8_t *buf, uint32_t len, odp_random_kind_t kind);
  * For testing purposes it is often useful to generate "random" sequences that
  * are repeatable. This is accomplished by supplying a seed value that is used
  * for pseudo-random data generation. The caller-provided seed value is
- * updated for each call to continue the sequence. Restarting a series of
+ * updated for each call to continue the sequence. Restarting the same series of
  * calls with the same initial seed value will generate the same sequence of
  * random test data.
  *
