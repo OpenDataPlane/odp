@@ -447,26 +447,34 @@ static int run_worker_sched_mode_vector(void *arg)
 	/* Loop packets */
 	while (!odp_atomic_load_u32(&gbl_args->exit_threads)) {
 		odp_event_t  ev_tbl[MAX_PKT_BURST];
-		int pktvs;
+		int events;
 
-		pktvs = odp_schedule_multi_no_wait(NULL, ev_tbl, max_burst);
+		events = odp_schedule_multi_no_wait(NULL, ev_tbl, max_burst);
 
-		if (pktvs <= 0)
+		if (events <= 0)
 			continue;
 
-		for (i = 0; i < pktvs; i++) {
-			odp_packet_vector_t pkt_vec;
+		for (i = 0; i < events; i++) {
+			odp_packet_vector_t pkt_vec = ODP_PACKET_VECTOR_INVALID;
 			odp_packet_t *pkt_tbl;
+			odp_packet_t pkt;
 			int src_idx, dst_idx;
 			int pkts;
 
-			ODPH_ASSERT(odp_event_type(ev_tbl[i]) == ODP_EVENT_PACKET_VECTOR);
-			pkt_vec = odp_packet_vector_from_event(ev_tbl[i]);
-			pkts = odp_packet_vector_tbl(pkt_vec, &pkt_tbl);
+			if (odp_event_type(ev_tbl[i]) == ODP_EVENT_PACKET) {
+				pkt = odp_packet_from_event(ev_tbl[i]);
+				pkt_tbl = &pkt;
+				pkts = 1;
+			} else {
+				ODPH_ASSERT(odp_event_type(ev_tbl[i]) == ODP_EVENT_PACKET_VECTOR);
+				pkt_vec = odp_packet_vector_from_event(ev_tbl[i]);
+				pkts = odp_packet_vector_tbl(pkt_vec, &pkt_tbl);
+			}
 
 			pkts = process_extra_features(pkt_tbl, pkts, stats);
 			if (odp_unlikely(pkts) == 0) {
-				odp_packet_vector_free(pkt_vec);
+				if (pkt_vec != ODP_PACKET_VECTOR_INVALID)
+					odp_packet_vector_free(pkt_vec);
 				continue;
 			}
 
@@ -482,7 +490,8 @@ static int run_worker_sched_mode_vector(void *arg)
 				     pktout[dst_idx],
 				     stats);
 
-			odp_packet_vector_free(pkt_vec);
+			if (pkt_vec != ODP_PACKET_VECTOR_INVALID)
+				odp_packet_vector_free(pkt_vec);
 		}
 	}
 
