@@ -457,9 +457,8 @@ static int run_worker_sched_mode_vector(void *arg)
 		for (i = 0; i < pktvs; i++) {
 			odp_packet_vector_t pkt_vec;
 			odp_packet_t *pkt_tbl;
-			unsigned int tx_drops;
 			int src_idx, dst_idx;
-			int pkts, sent;
+			int pkts;
 
 			ODPH_ASSERT(odp_event_type(ev_tbl[i]) == ODP_EVENT_PACKET_VECTOR);
 			pkt_vec = odp_packet_vector_from_event(ev_tbl[i]);
@@ -470,7 +469,6 @@ static int run_worker_sched_mode_vector(void *arg)
 				odp_packet_vector_free(pkt_vec);
 				continue;
 			}
-			odp_packet_vector_size_set(pkt_vec, pkts);
 
 			/* packets from the same queue are from the same interface */
 			src_idx = odp_packet_input_index(pkt_tbl[0]);
@@ -478,31 +476,13 @@ static int run_worker_sched_mode_vector(void *arg)
 			dst_idx = gbl_args->dst_port_from_idx[src_idx];
 			fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
-			if (odp_unlikely(use_event_queue)) {
-				odp_event_t event = odp_packet_vector_to_event(pkt_vec);
+			send_packets(pkt_tbl, pkts,
+				     use_event_queue,
+				     tx_queue[dst_idx],
+				     pktout[dst_idx],
+				     stats);
 
-				sent = odp_queue_enq(tx_queue[dst_idx], event);
-				sent = odp_likely(sent == 0) ? pkts : 0;
-			} else {
-				sent = odp_pktout_send(pktout[dst_idx], pkt_tbl, pkts);
-				sent = odp_unlikely(sent < 0) ? 0 : sent;
-			}
-
-			tx_drops = pkts - sent;
-			if (odp_unlikely(tx_drops)) {
-				int j;
-
-				stats->s.tx_drops += tx_drops;
-				/* Drop rejected packets */
-				for (j = sent; j < pkts; j++)
-					odp_packet_free(pkt_tbl[j]);
-			}
-
-			/* Free packet vector if sending failed or in direct mode. */
-			if (tx_drops || !use_event_queue)
-				odp_packet_vector_free(pkt_vec);
-
-			stats->s.packets += pkts;
+			odp_packet_vector_free(pkt_vec);
 		}
 	}
 
