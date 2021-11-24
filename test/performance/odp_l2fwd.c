@@ -358,6 +358,36 @@ static int process_extra_features(odp_packet_t *pkt_tbl, int pkts, stats_t *stat
 	return pkts;
 }
 
+static void send_packets(odp_packet_t *pkt_tbl,
+			 int pkts,
+			 int use_event_queue,
+			 odp_queue_t tx_queue,
+			 odp_pktout_queue_t pktout_queue,
+			 stats_t *stats)
+{
+	int sent;
+	unsigned int tx_drops;
+	int i;
+
+	if (odp_unlikely(use_event_queue))
+		sent = event_queue_send(tx_queue, pkt_tbl, pkts);
+	else
+		sent = odp_pktout_send(pktout_queue, pkt_tbl, pkts);
+
+	sent = odp_unlikely(sent < 0) ? 0 : sent;
+	tx_drops = pkts - sent;
+
+	if (odp_unlikely(tx_drops)) {
+		stats->s.tx_drops += tx_drops;
+
+		/* Drop rejected packets */
+		for (i = sent; i < pkts; i++)
+			odp_packet_free(pkt_tbl[i]);
+	}
+
+	stats->s.packets += pkts;
+}
+
 /*
  * Packet IO worker thread using scheduled queues and vector mode.
  *
@@ -578,8 +608,6 @@ static int run_worker_sched_mode(void *arg)
 	while (!odp_atomic_load_u32(&gbl_args->exit_threads)) {
 		odp_event_t  ev_tbl[MAX_PKT_BURST];
 		odp_packet_t pkt_tbl[MAX_PKT_BURST];
-		int sent;
-		unsigned tx_drops;
 		int src_idx;
 
 		pkts = odp_schedule_multi_no_wait(NULL, ev_tbl, max_burst);
@@ -599,24 +627,11 @@ static int run_worker_sched_mode(void *arg)
 		dst_idx = gbl_args->dst_port_from_idx[src_idx];
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
-		if (odp_unlikely(use_event_queue))
-			sent = event_queue_send(tx_queue[dst_idx], pkt_tbl,
-						pkts);
-		else
-			sent = odp_pktout_send(pktout[dst_idx], pkt_tbl, pkts);
-
-		sent     = odp_unlikely(sent < 0) ? 0 : sent;
-		tx_drops = pkts - sent;
-
-		if (odp_unlikely(tx_drops)) {
-			stats->s.tx_drops += tx_drops;
-
-			/* Drop rejected packets */
-			for (i = sent; i < pkts; i++)
-				odp_packet_free(pkt_tbl[i]);
-		}
-
-		stats->s.packets += pkts;
+		send_packets(pkt_tbl, pkts,
+			     use_event_queue,
+			     tx_queue[dst_idx],
+			     pktout[dst_idx],
+			     stats);
 	}
 
 	/*
@@ -695,8 +710,6 @@ static int run_worker_plain_queue_mode(void *arg)
 
 	/* Loop packets */
 	while (!odp_atomic_load_u32(&gbl_args->exit_threads)) {
-		int sent;
-		unsigned tx_drops;
 		odp_event_t event[MAX_PKT_BURST];
 
 		if (num_pktio > 1) {
@@ -723,25 +736,11 @@ static int run_worker_plain_queue_mode(void *arg)
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
-		if (odp_unlikely(use_event_queue))
-			sent = event_queue_send(tx_queue, pkt_tbl, pkts);
-		else
-			sent = odp_pktout_send(pktout, pkt_tbl, pkts);
-
-		sent     = odp_unlikely(sent < 0) ? 0 : sent;
-		tx_drops = pkts - sent;
-
-		if (odp_unlikely(tx_drops)) {
-			int i;
-
-			stats->s.tx_drops += tx_drops;
-
-			/* Drop rejected packets */
-			for (i = sent; i < pkts; i++)
-				odp_packet_free(pkt_tbl[i]);
-		}
-
-		stats->s.packets += pkts;
+		send_packets(pkt_tbl, pkts,
+			     use_event_queue,
+			     tx_queue,
+			     pktout,
+			     stats);
 	}
 
 	/* Make sure that latest stat writes are visible to other threads */
@@ -807,9 +806,6 @@ static int run_worker_direct_mode(void *arg)
 
 	/* Loop packets */
 	while (!odp_atomic_load_u32(&gbl_args->exit_threads)) {
-		int sent;
-		unsigned tx_drops;
-
 		if (num_pktio > 1) {
 			dst_idx   = thr_args->pktio[pktio].tx_idx;
 			pktin     = thr_args->pktio[pktio].pktin;
@@ -832,25 +828,11 @@ static int run_worker_direct_mode(void *arg)
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
-		if (odp_unlikely(use_event_queue))
-			sent = event_queue_send(tx_queue, pkt_tbl, pkts);
-		else
-			sent = odp_pktout_send(pktout, pkt_tbl, pkts);
-
-		sent     = odp_unlikely(sent < 0) ? 0 : sent;
-		tx_drops = pkts - sent;
-
-		if (odp_unlikely(tx_drops)) {
-			int i;
-
-			stats->s.tx_drops += tx_drops;
-
-			/* Drop rejected packets */
-			for (i = sent; i < pkts; i++)
-				odp_packet_free(pkt_tbl[i]);
-		}
-
-		stats->s.packets += pkts;
+		send_packets(pkt_tbl, pkts,
+			     use_event_queue,
+			     tx_queue,
+			     pktout,
+			     stats);
 	}
 
 	/* Make sure that latest stat writes are visible to other threads */
