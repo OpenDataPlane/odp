@@ -325,6 +325,40 @@ static inline int copy_packets(odp_packet_t *pkt_tbl, int pkts)
 }
 
 /*
+ * Return number of packets remaining in the pkt_tbl
+ */
+static int process_extra_features(odp_packet_t *pkt_tbl, int pkts, stats_t *stats)
+{
+	if (odp_unlikely(gbl_args->appl.extra_feat)) {
+		if (gbl_args->appl.packet_copy) {
+			int fails;
+
+			fails = copy_packets(pkt_tbl, pkts);
+			stats->s.copy_fails += fails;
+		}
+
+		if (gbl_args->appl.chksum)
+			chksum_insert(pkt_tbl, pkts);
+
+		if (gbl_args->appl.error_check) {
+			int rx_drops;
+
+			/* Drop packets with errors */
+			rx_drops = drop_err_pkts(pkt_tbl, pkts);
+
+			if (odp_unlikely(rx_drops)) {
+				stats->s.rx_drops += rx_drops;
+				if (pkts == rx_drops)
+					return 0;
+
+				pkts -= rx_drops;
+			}
+		}
+	}
+	return pkts;
+}
+
+/*
  * Packet IO worker thread using scheduled queues and vector mode.
  *
  * arg  thread arguments of type 'thread_args_t *'
@@ -401,35 +435,12 @@ static int run_worker_sched_mode_vector(void *arg)
 			pkt_vec = odp_packet_vector_from_event(ev_tbl[i]);
 			pkts = odp_packet_vector_tbl(pkt_vec, &pkt_tbl);
 
-			if (odp_unlikely(gbl_args->appl.extra_feat)) {
-				if (gbl_args->appl.packet_copy) {
-					int fails;
-
-					fails = copy_packets(pkt_tbl, pkts);
-					stats->s.copy_fails += fails;
-				}
-
-				if (gbl_args->appl.chksum)
-					chksum_insert(pkt_tbl, pkts);
-
-				if (gbl_args->appl.error_check) {
-					int rx_drops;
-
-					/* Drop packets with errors */
-					rx_drops = drop_err_pkts(pkt_tbl, pkts);
-
-					if (odp_unlikely(rx_drops)) {
-						stats->s.rx_drops += rx_drops;
-						if (pkts == rx_drops) {
-							odp_packet_vector_free(pkt_vec);
-							continue;
-						}
-
-						pkts -= rx_drops;
-						odp_packet_vector_size_set(pkt_vec, pkts);
-					}
-				}
+			pkts = process_extra_features(pkt_tbl, pkts, stats);
+			if (odp_unlikely(pkts) == 0) {
+				odp_packet_vector_free(pkt_vec);
+				continue;
 			}
+			odp_packet_vector_size_set(pkt_vec, pkts);
 
 			/* packets from the same queue are from the same interface */
 			src_idx = odp_packet_input_index(pkt_tbl[0]);
@@ -578,32 +589,9 @@ static int run_worker_sched_mode(void *arg)
 
 		odp_packet_from_event_multi(pkt_tbl, ev_tbl, pkts);
 
-		if (odp_unlikely(gbl_args->appl.extra_feat)) {
-			if (gbl_args->appl.packet_copy) {
-				int fails;
-
-				fails = copy_packets(pkt_tbl, pkts);
-				stats->s.copy_fails += fails;
-			}
-
-			if (gbl_args->appl.chksum)
-				chksum_insert(pkt_tbl, pkts);
-
-			if (gbl_args->appl.error_check) {
-				int rx_drops;
-
-				/* Drop packets with errors */
-				rx_drops = drop_err_pkts(pkt_tbl, pkts);
-
-				if (odp_unlikely(rx_drops)) {
-					stats->s.rx_drops += rx_drops;
-					if (pkts == rx_drops)
-						continue;
-
-					pkts -= rx_drops;
-				}
-			}
-		}
+		pkts = process_extra_features(pkt_tbl, pkts, stats);
+		if (odp_unlikely(pkts) == 0)
+			continue;
 
 		/* packets from the same queue are from the same interface */
 		src_idx = odp_packet_input_index(pkt_tbl[0]);
@@ -729,32 +717,9 @@ static int run_worker_plain_queue_mode(void *arg)
 
 		odp_packet_from_event_multi(pkt_tbl, event, pkts);
 
-		if (odp_unlikely(gbl_args->appl.extra_feat)) {
-			if (gbl_args->appl.packet_copy) {
-				int fails;
-
-				fails = copy_packets(pkt_tbl, pkts);
-				stats->s.copy_fails += fails;
-			}
-
-			if (gbl_args->appl.chksum)
-				chksum_insert(pkt_tbl, pkts);
-
-			if (gbl_args->appl.error_check) {
-				int rx_drops;
-
-				/* Drop packets with errors */
-				rx_drops = drop_err_pkts(pkt_tbl, pkts);
-
-				if (odp_unlikely(rx_drops)) {
-					stats->s.rx_drops += rx_drops;
-					if (pkts == rx_drops)
-						continue;
-
-					pkts -= rx_drops;
-				}
-			}
-		}
+		pkts = process_extra_features(pkt_tbl, pkts, stats);
+		if (odp_unlikely(pkts) == 0)
+			continue;
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
@@ -861,32 +826,9 @@ static int run_worker_direct_mode(void *arg)
 		if (odp_unlikely(pkts <= 0))
 			continue;
 
-		if (odp_unlikely(gbl_args->appl.extra_feat)) {
-			if (gbl_args->appl.packet_copy) {
-				int fails;
-
-				fails = copy_packets(pkt_tbl, pkts);
-				stats->s.copy_fails += fails;
-			}
-
-			if (gbl_args->appl.chksum)
-				chksum_insert(pkt_tbl, pkts);
-
-			if (gbl_args->appl.error_check) {
-				int rx_drops;
-
-				/* Drop packets with errors */
-				rx_drops = drop_err_pkts(pkt_tbl, pkts);
-
-				if (odp_unlikely(rx_drops)) {
-					stats->s.rx_drops += rx_drops;
-					if (pkts == rx_drops)
-						continue;
-
-					pkts -= rx_drops;
-				}
-			}
-		}
+		pkts = process_extra_features(pkt_tbl, pkts, stats);
+		if (odp_unlikely(pkts) == 0)
+			continue;
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
