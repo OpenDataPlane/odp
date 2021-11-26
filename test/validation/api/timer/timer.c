@@ -298,6 +298,20 @@ static void timer_test_capa(void)
 	}
 }
 
+static void timer_test_param_init(void)
+{
+	odp_timer_pool_param_t tp_param;
+
+	memset(&tp_param, 0x55, sizeof(odp_timer_pool_param_t));
+
+	odp_timer_pool_param_init(&tp_param);
+	CU_ASSERT(tp_param.res_ns == 0);
+	CU_ASSERT(tp_param.res_hz == 0);
+	CU_ASSERT(tp_param.min_tmo == 0);
+	CU_ASSERT(tp_param.priv == 0);
+	CU_ASSERT(tp_param.clk_src == ODP_CLOCK_DEFAULT);
+}
+
 static void timer_test_timeout_pool_alloc(void)
 {
 	odp_pool_t pool;
@@ -408,7 +422,7 @@ static void timer_pool_create_destroy(void)
 	queue = odp_queue_create("timer_queue", &queue_param);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
-	memset(&tparam, 0, sizeof(odp_timer_pool_param_t));
+	odp_timer_pool_param_init(&tparam);
 	tparam.res_ns     = global_mem->param.res_ns;
 	tparam.min_tmo    = global_mem->param.min_tmo;
 	tparam.max_tmo    = global_mem->param.max_tmo;
@@ -501,7 +515,7 @@ static void timer_pool_max_res(void)
 
 	/* Highest resolution: first in nsec, then in hz */
 	for (i = 0; i < 2; i++) {
-		memset(&tp_param, 0, sizeof(odp_timer_pool_param_t));
+		odp_timer_pool_param_init(&tp_param);
 
 		if (i == 0) {
 			printf("\n    Highest resolution %" PRIu64 " nsec\n",
@@ -567,7 +581,7 @@ static void timer_pool_tick_info_run(odp_timer_clk_src_t clk_src)
 	CU_ASSERT_FATAL(odp_timer_capability(clk_src, &capa) == 0);
 
 	/* Highest resolution */
-	memset(&tp_param, 0, sizeof(odp_timer_pool_param_t));
+	odp_timer_pool_param_init(&tp_param);
 	tp_param.res_hz     = capa.max_res.res_hz;
 	tp_param.min_tmo    = capa.max_res.min_tmo;
 	tp_param.max_tmo    = capa.max_res.max_tmo;
@@ -663,7 +677,7 @@ static void timer_test_event_type(odp_queue_type_t queue_type,
 	int num = 5;
 	odp_timer_t timer[num];
 
-	memset(&timer_param, 0, sizeof(timer_param));
+	odp_timer_pool_param_init(&timer_param);
 	timer_param.res_ns     = global_mem->param.res_ns;
 	timer_param.min_tmo    = global_mem->param.min_tmo;
 	period_ns              = 2 * global_mem->param.min_tmo;
@@ -858,7 +872,7 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv)
 
 	res_ns = global_mem->param.res_ns;
 
-	memset(&tparam, 0, sizeof(odp_timer_pool_param_t));
+	odp_timer_pool_param_init(&tparam);
 	tparam.res_ns     = global_mem->param.res_ns;
 	tparam.min_tmo    = global_mem->param.min_tmo;
 	tparam.max_tmo    = global_mem->param.max_tmo;
@@ -1038,7 +1052,7 @@ static void timer_test_cancel(void)
 	if (pool == ODP_POOL_INVALID)
 		CU_FAIL_FATAL("Timeout pool create failed");
 
-	memset(&tparam, 0, sizeof(odp_timer_pool_param_t));
+	odp_timer_pool_param_init(&tparam);
 	tparam.res_ns	  = global_mem->param.res_ns;
 	tparam.min_tmo    = global_mem->param.min_tmo;
 	tparam.max_tmo    = global_mem->param.max_tmo;
@@ -1147,7 +1161,7 @@ static void timer_test_tmo_limit(odp_queue_type_t queue_type,
 		max_tmo = timer_capa.max_tmo.max_tmo;
 	}
 
-	memset(&timer_param, 0, sizeof(timer_param));
+	odp_timer_pool_param_init(&timer_param);
 	timer_param.res_ns     = res_ns;
 	timer_param.min_tmo    = min_tmo;
 	timer_param.max_tmo    = max_tmo;
@@ -1712,7 +1726,7 @@ static void timer_test_all(odp_queue_type_t queue_type)
 	max_tmo = global_mem->param.max_tmo;
 	min_tmo = global_mem->param.min_tmo;
 
-	memset(&tparam, 0, sizeof(odp_timer_pool_param_t));
+	odp_timer_pool_param_init(&tparam);
 	tparam.res_ns  = res_ns;
 	tparam.min_tmo = min_tmo;
 	tparam.max_tmo = max_tmo;
@@ -1818,6 +1832,7 @@ static void timer_test_sched_all(void)
 
 odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_test_capa),
+	ODP_TEST_INFO(timer_test_param_init),
 	ODP_TEST_INFO(timer_test_timeout_pool_alloc),
 	ODP_TEST_INFO(timer_test_timeout_pool_free),
 	ODP_TEST_INFO(timer_pool_create_destroy),
