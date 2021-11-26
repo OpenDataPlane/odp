@@ -440,12 +440,14 @@ int main(int argc, char *argv[])
 		goto err;
 	}
 
+	odp_timer_pool_param_init(&tparams);
 	tparams.res_ns = gbls->args.resolution_us * ODP_TIME_USEC_IN_NS;
 	tparams.min_tmo = gbls->args.min_us * ODP_TIME_USEC_IN_NS;
 	tparams.max_tmo = gbls->args.max_us * ODP_TIME_USEC_IN_NS;
 	tparams.num_timers = num_workers; /* One timer per worker */
 	tparams.priv = 0; /* Shared */
 	tparams.clk_src = ODP_CLOCK_DEFAULT;
+
 	gbls->tp = odp_timer_pool_create("timer_pool", &tparams);
 	if (gbls->tp == ODP_TIMER_POOL_INVALID) {
 		err = 1;

@@ -409,7 +409,7 @@ static int timer_debug(void)
 	if (timer_res_capa.res_ns > res)
 		res = timer_res_capa.res_ns;
 
-	memset(&timer_param, 0, sizeof(timer_param));
+	odp_timer_pool_param_init(&timer_param);
 	timer_param.res_ns  = res;
 	timer_param.min_tmo = max_tmo / 10;
 	timer_param.max_tmo = max_tmo;

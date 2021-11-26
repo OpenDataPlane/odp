@@ -345,8 +345,7 @@ static int create_timer_pools(test_global_t *global)
 		return -1;
 	}
 
-	memset(&timer_pool_param, 0, sizeof(odp_timer_pool_param_t));
-
+	odp_timer_pool_param_init(&timer_pool_param);
 	timer_pool_param.res_ns     = res_ns;
 	timer_pool_param.min_tmo    = min_tmo_ns;
 	timer_pool_param.max_tmo    = max_tmo_ns;
