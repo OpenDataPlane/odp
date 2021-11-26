@@ -331,7 +331,7 @@ static int start_timers(test_global_t *test_global)
 		return -1;
 	}
 
-	memset(&timer_param, 0, sizeof(odp_timer_pool_param_t));
+	odp_timer_pool_param_init(&timer_param);
 
 	if (res_ns)
 		timer_param.res_ns = res_ns;
