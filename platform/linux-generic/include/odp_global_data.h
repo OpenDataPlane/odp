@@ -11,26 +11,31 @@
 extern "C" {
 #endif
 
-#include <odp/api/init.h>
 #include <odp/api/cpumask.h>
+#include <odp/api/init.h>
 #include <odp/api/random.h>
 #include <odp/api/system_info.h>
-#include <sys/types.h>
+#include <odp/api/std_types.h>
+
+#include <odp_config_internal.h>
+
+#include <libconfig.h>
 #include <pthread.h>
 #include <stdint.h>
-#include <libconfig.h>
-#include <odp_config_internal.h>
+#include <sys/types.h>
 
 #define MODEL_STR_SIZE 128
 #define UID_MAXLEN 30
 
 typedef struct {
 	uint64_t cpu_hz_max[CONFIG_NUM_CPU_IDS];
+	uint64_t cpu_hz[CONFIG_NUM_CPU_IDS];
 	uint64_t default_cpu_hz_max;
 	uint64_t default_cpu_hz;
 	uint64_t page_size;
 	int      cache_line_size;
 	int      cpu_count;
+	odp_bool_t cpu_hz_static;
 	odp_cpu_arch_t cpu_arch;
 	odp_cpu_arch_isa_t cpu_isa_sw;
 	odp_cpu_arch_isa_t cpu_isa_hw;
