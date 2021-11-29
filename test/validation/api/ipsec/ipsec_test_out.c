@@ -72,6 +72,16 @@ static struct auth_param auths[] = {
 	ALG(ODP_AUTH_ALG_AES_XCBC_MAC, &key_5a_128, NULL)
 };
 
+/*
+ * Integrity algorithms that can be used in AH but not in ESP as
+ * individual algorithms (combined with a cipher).
+ */
+static struct auth_param ah_auths[] = {
+	ALG(ODP_AUTH_ALG_AES_GMAC, &key_a5_128, &key_mcgrew_gcm_salt_2),
+	ALG(ODP_AUTH_ALG_AES_GMAC, &key_a5_192, &key_mcgrew_gcm_salt_2),
+	ALG(ODP_AUTH_ALG_AES_GMAC, &key_a5_256, &key_mcgrew_gcm_salt_2),
+};
+
 struct cipher_auth_comb_param {
 	struct cipher_param cipher;
 	struct auth_param auth;
@@ -735,6 +745,8 @@ static void test_ah_out_in_all(void)
 
 	for (a = 0; a < ARRAY_SIZE(auths); a++)
 		test_ah_out_in(&auths[a]);
+	for (a = 0; a < ARRAY_SIZE(ah_auths); a++)
+		test_ah_out_in(&ah_auths[a]);
 	printf("\n  ");
 }
 
@@ -767,42 +779,6 @@ static void test_out_ipv4_esp_udp_null_sha256(void)
 	ipsec_check_out_one(&test, sa);
 
 	ipsec_sa_destroy(sa);
-}
-
-static void test_out_ipv4_ah_aes_gmac_128(void)
-{
-	ipsec_test_flags flags;
-
-	memset(&flags, 0, sizeof(flags));
-	flags.ah = true;
-
-	test_out_in_common(&flags, ODP_CIPHER_ALG_NULL, NULL,
-			   ODP_AUTH_ALG_AES_GMAC, &key_a5_128,
-			   NULL, &key_mcgrew_gcm_salt_2);
-}
-
-static void test_out_ipv4_ah_aes_gmac_192(void)
-{
-	ipsec_test_flags flags;
-
-	memset(&flags, 0, sizeof(flags));
-	flags.ah = true;
-
-	test_out_in_common(&flags, ODP_CIPHER_ALG_NULL, NULL,
-			   ODP_AUTH_ALG_AES_GMAC, &key_a5_192,
-			   NULL, &key_mcgrew_gcm_salt_2);
-}
-
-static void test_out_ipv4_ah_aes_gmac_256(void)
-{
-	ipsec_test_flags flags;
-
-	memset(&flags, 0, sizeof(flags));
-	flags.ah = true;
-
-	test_out_in_common(&flags, ODP_CIPHER_ALG_NULL, NULL,
-			   ODP_AUTH_ALG_AES_GMAC, &key_a5_256,
-			   NULL, &key_mcgrew_gcm_salt_2);
 }
 
 static void test_out_ipv4_ah_sha256_frag_check(void)
@@ -1857,12 +1833,6 @@ odp_testinfo_t ipsec_out_suite[] = {
 				  ipsec_check_esp_null_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_esp_udp_null_sha256,
 				  ipsec_check_esp_null_sha256),
-	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_aes_gmac_128,
-				  ipsec_check_ah_aes_gmac_128),
-	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_aes_gmac_192,
-				  ipsec_check_ah_aes_gmac_192),
-	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_aes_gmac_256,
-				  ipsec_check_ah_aes_gmac_256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sha256_frag_check,
 				  ipsec_check_ah_sha256),
 	ODP_TEST_INFO_CONDITIONAL(test_out_ipv4_ah_sha256_frag_check_2,
