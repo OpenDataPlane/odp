@@ -24,9 +24,9 @@
 #include <odp_config_internal.h>
 #include <odp/api/align.h>
 #include <odp/api/cpu.h>
+
 #include <errno.h>
 #include <pthread.h>
-#include <sched.h>
 #include <string.h>
 #include <stdio.h>
 #include <inttypes.h>
@@ -276,6 +276,21 @@ static uint64_t read_cpufreq(const char *filename, int id)
 	return ret;
 }
 
+static inline uint64_t cpu_hz_current(int id)
+{
+	uint64_t cur_hz = read_cpufreq("cpuinfo_cur_freq", id);
+
+	if (!cur_hz)
+		cur_hz = odp_cpu_arch_hz_current(id);
+
+	return cur_hz;
+}
+
+static inline uint64_t cpu_hz_static(int id)
+{
+	return odp_global_ro.system_info.cpu_hz[id];
+}
+
 /*
  * Analysis of /sys/devices/system/cpu/ files
  */
@@ -337,6 +352,13 @@ static int read_config_file(void)
 	}
 	odp_global_ro.system_info.default_cpu_hz_max = (uint64_t)val * 1000000;
 
+	str = "system.cpu_hz_static";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+	odp_global_ro.system_info.cpu_hz_static = !!val;
+
 	return 0;
 }
 
@@ -363,6 +385,10 @@ int _odp_system_info_init(void)
 		ODP_ERR("Unable to handle all %d "
 			"CPU IDs. Increase CONFIG_NUM_CPU_IDS value.\n",
 			num_cpus);
+
+	/* Read and save all CPU frequencies for static mode */
+	for (i = 0; i < CONFIG_NUM_CPU_IDS; i++)
+		odp_global_ro.system_info.cpu_hz[i] = cpu_hz_current(i);
 
 	/* By default, read max frequency from a cpufreq file */
 	for (i = 0; i < CONFIG_NUM_CPU_IDS; i++) {
@@ -407,26 +433,22 @@ int _odp_system_info_term(void)
  * Public access functions
  *************************
  */
-uint64_t odp_cpu_hz_current(int id)
-{
-	uint64_t cur_hz = read_cpufreq("cpuinfo_cur_freq", id);
-
-	if (!cur_hz)
-		cur_hz = odp_cpu_arch_hz_current(id);
-
-	return cur_hz;
-}
-
 uint64_t odp_cpu_hz(void)
 {
-	int id = sched_getcpu();
+	int id = odp_cpu_id();
 
-	return odp_cpu_hz_current(id);
+	if (odp_global_ro.system_info.cpu_hz_static)
+		return cpu_hz_static(id);
+	return cpu_hz_current(id);
 }
 
 uint64_t odp_cpu_hz_id(int id)
 {
-	return odp_cpu_hz_current(id);
+	ODP_ASSERT(id >= 0 && id < CONFIG_NUM_CPU_IDS);
+
+	if (odp_global_ro.system_info.cpu_hz_static)
+		return cpu_hz_static(id);
+	return cpu_hz_current(id);
 }
 
 uint64_t odp_cpu_hz_max(void)

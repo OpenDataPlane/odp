@@ -17,7 +17,6 @@ extern "C" {
 #include <string.h>
 
 int _odp_cpuinfo_parser(FILE *file, system_info_t *sysinfo);
-uint64_t odp_cpu_hz_current(int id);
 uint64_t odp_cpu_arch_hz_current(int id);
 void _odp_sys_info_print_arch(void);
 
