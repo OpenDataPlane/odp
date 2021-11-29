@@ -25,6 +25,8 @@ typedef struct {
 	enum ipsec_test_stats stats;
 } ipsec_test_flags;
 
+static void test_out_in_all(const ipsec_test_flags *flags);
+
 struct cipher_param {
 	const char *name;
 	odp_cipher_alg_t algo;
@@ -675,21 +677,22 @@ static void test_esp_out_in(struct cipher_param *cipher,
 			   cipher->key_extra, auth->key_extra);
 }
 
-static void test_esp_out_in_all(ipsec_test_flags *flags)
+static void test_esp_out_in_all(const ipsec_test_flags *flags_in)
 {
 	uint32_t c;
 	uint32_t a;
+	ipsec_test_flags flags = *flags_in;
 
-	flags->ah = false;
+	flags.ah = false;
 
 	for (c = 0; c < ARRAY_SIZE(ciphers); c++)
 		for (a = 0; a < ARRAY_SIZE(auths); a++)
-			test_esp_out_in(&ciphers[c], &auths[a], flags);
+			test_esp_out_in(&ciphers[c], &auths[a], &flags);
 
 	for (c = 0; c < ARRAY_SIZE(cipher_auth_comb); c++)
 		test_esp_out_in(&cipher_auth_comb[c].cipher,
 				&cipher_auth_comb[c].auth,
-				flags);
+				&flags);
 }
 
 /*
@@ -713,25 +716,26 @@ static int is_out_mode_inline(void)
 	return suite_context.outbound_op_mode == ODP_IPSEC_OP_MODE_INLINE;
 }
 
-static void test_esp_out_in_all_hdr_in_packet(void)
+static void test_inline_hdr_in_packet(void)
 {
 	ipsec_test_flags flags = {
 		.part_flags.inline_hdr_in_packet = true,
 	};
-	test_esp_out_in_all(&flags);
+	test_out_in_all(&flags);
 }
 
-static void test_ah_out_in(struct auth_param *auth)
+static void test_ah_out_in(struct auth_param *auth,
+			   const ipsec_test_flags *flags_in)
 {
 	int auth_keylen = auth->key ? 8 * auth->key->length : 0;
-	ipsec_test_flags flags;
+	ipsec_test_flags flags = *flags_in;
 
 	if (ipsec_check_ah(auth->algo, auth_keylen) != ODP_TEST_ACTIVE)
 		return;
 
-	printf("\n    %s (keylen %d) ", auth->name, auth_keylen);
+	if (flags.display_algo)
+		printf("\n    %s (keylen %d) ", auth->name, auth_keylen);
 
-	memset(&flags, 0, sizeof(flags));
 	flags.ah = true;
 
 	test_out_in_common(&flags, ODP_CIPHER_ALG_NULL, NULL,
@@ -739,15 +743,32 @@ static void test_ah_out_in(struct auth_param *auth)
 			   NULL, auth->key_extra);
 }
 
-static void test_ah_out_in_all(void)
+static void test_ah_out_in_all(const ipsec_test_flags *flags)
 {
 	uint32_t a;
 
 	for (a = 0; a < ARRAY_SIZE(auths); a++)
-		test_ah_out_in(&auths[a]);
+		test_ah_out_in(&auths[a], flags);
 	for (a = 0; a < ARRAY_SIZE(ah_auths); a++)
-		test_ah_out_in(&ah_auths[a]);
+		test_ah_out_in(&ah_auths[a], flags);
+}
+
+static void test_ah_out_in_all_basic(void)
+{
+	ipsec_test_flags flags;
+
+	memset(&flags, 0, sizeof(flags));
+	flags.display_algo = true;
+
+	test_ah_out_in_all(&flags);
+
 	printf("\n  ");
+}
+
+static void test_out_in_all(const ipsec_test_flags *flags)
+{
+	test_esp_out_in_all(flags);
+	test_ah_out_in_all(flags);
 }
 
 static void test_out_ipv4_esp_udp_null_sha256(void)
@@ -1561,7 +1582,7 @@ static void test_test_sa_update_seq_num(void)
 	flags.display_algo = true;
 	flags.part_flags.test_sa_seq_num = true;
 
-	test_esp_out_in_all(&flags);
+	test_out_in_all(&flags);
 
 	printf("\n  ");
 }
@@ -1637,15 +1658,15 @@ static void test_ipsec_stats(void)
 
 	printf("\n        Stats : success");
 	flags.stats = IPSEC_TEST_STATS_SUCCESS;
-	test_esp_out_in_all(&flags);
+	test_out_in_all(&flags);
 
 	printf("\n        Stats : proto err");
 	flags.stats = IPSEC_TEST_STATS_PROTO_ERR;
-	test_esp_out_in_all(&flags);
+	test_out_in_all(&flags);
 
 	printf("\n        Stats : auth err");
 	flags.stats = IPSEC_TEST_STATS_AUTH_ERR;
-	test_esp_out_in_all(&flags);
+	test_out_in_all(&flags);
 
 	printf("\n  ");
 }
@@ -1868,9 +1889,9 @@ odp_testinfo_t ipsec_out_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(test_test_sa_update_seq_num,
 				  ipsec_check_test_sa_update_seq_num),
 	ODP_TEST_INFO(test_esp_out_in_all_basic),
-	ODP_TEST_INFO_CONDITIONAL(test_esp_out_in_all_hdr_in_packet,
+	ODP_TEST_INFO_CONDITIONAL(test_inline_hdr_in_packet,
 				  is_out_mode_inline),
-	ODP_TEST_INFO(test_ah_out_in_all),
+	ODP_TEST_INFO(test_ah_out_in_all_basic),
 	ODP_TEST_INFO(test_ipsec_stats),
 	ODP_TEST_INFO(test_udp_encap),
 	ODP_TEST_INFO_CONDITIONAL(test_max_num_sa,
