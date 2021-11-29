@@ -1431,11 +1431,8 @@ static void test_sa_info(void)
 	odp_ipsec_sa_param_t param_in;
 	odp_ipsec_sa_info_t info_out;
 	odp_ipsec_sa_info_t info_in;
-	odp_ipsec_capability_t capa;
 	odp_ipsec_sa_t sa_out;
 	odp_ipsec_sa_t sa_in;
-
-	CU_ASSERT_EQUAL(0, odp_ipsec_capability(&capa));
 
 	memset(&tunnel_out, 0, sizeof(tunnel_out));
 	memset(&tunnel_in, 0, sizeof(tunnel_in));

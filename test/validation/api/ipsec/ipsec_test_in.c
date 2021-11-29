@@ -1918,7 +1918,6 @@ static void test_in_ipv4_esp_reass_success(void)
 	uint32_t src = IPV4ADDR(10, 0, 11, 2);
 	uint32_t dst = IPV4ADDR(10, 0, 22, 2);
 	odp_ipsec_sa_t out_sa, in_sa;
-	odp_ipsec_capability_t capa;
 
 	memset(&in_tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
 	memset(&out_tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
@@ -1926,8 +1925,6 @@ static void test_in_ipv4_esp_reass_success(void)
 	out_tunnel.type = ODP_IPSEC_TUNNEL_IPV4;
 	out_tunnel.ipv4.src_addr = &src;
 	out_tunnel.ipv4.dst_addr = &dst;
-
-	CU_ASSERT(odp_ipsec_capability(&capa) == 0);
 
 	ipsec_sa_param_fill(&param_out,
 			    false, false, 0x4a2cbfe7, &out_tunnel,
@@ -1974,7 +1971,6 @@ static void test_in_ipv4_esp_reass_incomp(void)
 	uint32_t src = IPV4ADDR(10, 0, 11, 2);
 	uint32_t dst = IPV4ADDR(10, 0, 22, 2);
 	odp_ipsec_sa_t out_sa, in_sa;
-	odp_ipsec_capability_t capa;
 
 	memset(&in_tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
 	memset(&out_tunnel, 0, sizeof(odp_ipsec_tunnel_param_t));
@@ -1982,8 +1978,6 @@ static void test_in_ipv4_esp_reass_incomp(void)
 	out_tunnel.type = ODP_IPSEC_TUNNEL_IPV4;
 	out_tunnel.ipv4.src_addr = &src;
 	out_tunnel.ipv4.dst_addr = &dst;
-
-	CU_ASSERT(odp_ipsec_capability(&capa) == 0);
 
 	ipsec_sa_param_fill(&param_out,
 			    false, false, 0x4a2cbfe7, &out_tunnel,
@@ -2102,7 +2096,6 @@ static void test_in_ipv6_esp_reass_success(void)
 	odp_ipsec_tunnel_param_t in_tunnel, out_tunnel;
 	odp_ipsec_sa_param_t param_in, param_out;
 	odp_ipsec_sa_t out_sa, in_sa;
-	odp_ipsec_capability_t capa;
 	uint8_t src[16] = {
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 		0x02, 0x11, 0x43, 0xff, 0xfe, 0x4a, 0xd7, 0x0a,
@@ -2118,8 +2111,6 @@ static void test_in_ipv6_esp_reass_success(void)
 	out_tunnel.ipv6.src_addr = &src;
 	out_tunnel.ipv6.dst_addr = &dst;
 	out_tunnel.ipv6.hlimit = 64;
-
-	CU_ASSERT(odp_ipsec_capability(&capa) == 0);
 
 	ipsec_sa_param_fill(&param_out,
 			    false, false, 0x4a2cbfe7, &out_tunnel,
@@ -2163,7 +2154,6 @@ static void test_in_ipv6_esp_reass_incomp(void)
 	odp_ipsec_tunnel_param_t in_tunnel, out_tunnel;
 	odp_ipsec_sa_param_t param_in, param_out;
 	odp_ipsec_sa_t out_sa, in_sa;
-	odp_ipsec_capability_t capa;
 	uint8_t src[16] = {
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 		0x02, 0x11, 0x43, 0xff, 0xfe, 0x4a, 0xd7, 0x0a,
@@ -2178,8 +2168,6 @@ static void test_in_ipv6_esp_reass_incomp(void)
 	out_tunnel.type = ODP_IPSEC_TUNNEL_IPV6;
 	out_tunnel.ipv6.src_addr = &src;
 	out_tunnel.ipv6.dst_addr = &dst;
-
-	CU_ASSERT(odp_ipsec_capability(&capa) == 0);
 
 	ipsec_sa_param_fill(&param_out,
 			    false, false, 0x4a2cbfe7, &out_tunnel,
@@ -2245,15 +2233,7 @@ static void test_in_ipv4_null_aes_xcbc_esp(void)
 	ipsec_sa_destroy(sa);
 }
 
-static void ipsec_test_capability(void)
-{
-	odp_ipsec_capability_t capa;
-
-	CU_ASSERT(odp_ipsec_capability(&capa) == 0);
-}
-
 odp_testinfo_t ipsec_in_suite[] = {
-	ODP_TEST_INFO(ipsec_test_capability),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_rfc3602_5_esp,
 				  ipsec_check_esp_aes_cbc_128_null),
 	ODP_TEST_INFO_CONDITIONAL(test_in_ipv4_rfc3602_6_esp,
