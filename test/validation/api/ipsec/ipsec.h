@@ -105,8 +105,8 @@ typedef struct {
 } ipsec_test_part;
 
 void ipsec_sa_param_fill(odp_ipsec_sa_param_t *param,
-			 odp_bool_t in,
-			 odp_bool_t ah,
+			 odp_ipsec_dir_t dir,
+			 odp_ipsec_protocol_t proto,
 			 uint32_t spi,
 			 odp_ipsec_tunnel_param_t *tun,
 			 odp_cipher_alg_t cipher_alg,
