@@ -57,12 +57,14 @@ static void init_test_defaults(void)
 
 	odp_init_param_init(&param);
 
+	memset(&instance, 0, sizeof(instance));
 	ret = odp_init_global(&instance, &param, NULL);
 	CU_ASSERT_FATAL(ret == 0);
 
 	ret = odp_init_local(instance, ODP_THREAD_WORKER);
 	CU_ASSERT_FATAL(ret == 0);
 
+	memset(&current_instance, 0, sizeof(current_instance));
 	CU_ASSERT_FATAL(odp_instance(&current_instance) == 0);
 	CU_ASSERT(memcmp(&current_instance, &instance, sizeof(odp_instance_t)) == 0);
 
