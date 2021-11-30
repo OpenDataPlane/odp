@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -566,6 +567,16 @@ typedef struct odp_crypto_session_param_t {
 	 */
 	odp_bool_t auth_cipher_text;
 
+	/** Hash result location may overlap authentication range
+	 *
+	 *  This flag indicates that the hash result location may (but is
+	 *  not required to) overlap authentication range. Setting this
+	 *  flag may reduce performance.
+	 *
+	 *  Default value is false.
+	 */
+	odp_bool_t hash_result_in_auth_range;
+
 	/** Preferred sync vs. async for odp_crypto_operation()
 	 *
 	 *  The default value is ODP_CRYPTO_SYNC.
@@ -710,11 +721,17 @@ typedef struct odp_crypto_op_param_t {
 
 	/** Offset from start of packet for hash result
 	 *
-	 *  Specifies the offset where the hash result is to be stored. In case
-	 *  of decode sessions, input hash values will be read from this offset,
-	 *  and overwritten with hash results. If this offset lies within
-	 *  specified 'auth_range', implementation will mute this field before
-	 *  calculating the hash result.
+	 *  In case of decode sessions, the expected hash will be read from
+	 *  this offset and compared with the calculated hash. After the
+	 *  operation the hash bytes will have undefined values.
+	 *
+	 *  In case of encode sessions the calculated hash will be stored in
+	 *  this offset.
+	 *
+	 *  If the hash_result_in_auth_range session parameter is true,
+	 *  the hash result location may overlap auth_range. In that case
+	 *  the result location will be zeroed in decode sessions before
+	 *  hash calculation. Zeroing is not done in encode sessions.
 	 */
 	uint32_t hash_result_offset;
 
@@ -754,11 +771,17 @@ typedef struct odp_crypto_packet_op_param_t {
 
 	/** Offset from start of packet for hash result
 	 *
-	 *  Specifies the offset where the hash result is to be stored. In case
-	 *  of decode sessions, input hash values will be read from this offset,
-	 *  and overwritten with hash results. If this offset lies within
-	 *  specified 'auth_range', implementation will mute this field before
-	 *  calculating the hash result.
+	 *  In case of decode sessions, the expected hash will be read from
+	 *  this offset and compared with the calculated hash. After the
+	 *  operation the hash bytes will have undefined values.
+	 *
+	 *  In case of encode sessions the calculated hash will be stored in
+	 *  this offset.
+	 *
+	 *  If the hash_result_not_in_auth_range session parameter is false,
+	 *  the hash result location may overlap auth_range. In that case the
+	 *  result location will be zeroed in decode sessions before hash
+	 *  calculation. Zeroing is not done in encode sessions.
 	 */
 	uint32_t hash_result_offset;
 
