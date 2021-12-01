@@ -302,7 +302,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 static int pktio_receive_thread(void *arg)
 {
 	int thr;
-	odp_pktout_queue_t pktout;
+	odp_pktout_queue_t pktout[1] = {0};
 	odp_packet_t pkt;
 	odp_pool_t pool;
 	odp_event_t ev;
@@ -354,7 +354,7 @@ static int pktio_receive_thread(void *arg)
 
 		pktio_tmp = odp_packet_input(pkt);
 
-		if (odp_pktout_queue(pktio_tmp, &pktout, 1) != 1) {
+		if (odp_pktout_queue(pktio_tmp, pktout, 1) != 1) {
 			ODPH_ERR("  [%02i] Error: no output queue\n", thr);
 			return -1;
 		}
@@ -376,7 +376,7 @@ static int pktio_receive_thread(void *arg)
 			continue;
 		}
 
-		if (odp_pktout_send(pktout, &pkt, 1) < 1) {
+		if (odp_pktout_send(pktout[0], &pkt, 1) < 1) {
 			ODPH_ERR("  [%i] Packet send failed\n", thr);
 			odp_packet_free(pkt);
 		}

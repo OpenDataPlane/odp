@@ -428,8 +428,8 @@ static
 void initialize_intf(char *intf)
 {
 	odp_pktio_t pktio;
-	odp_pktout_queue_t pktout;
-	odp_queue_t inq;
+	odp_pktout_queue_t pktout[1] = {0};
+	odp_queue_t inq[1] = {0};
 	int ret;
 	uint8_t src_mac[ODPH_ETHADDR_LEN];
 	char src_mac_str[MAX_STRING];
@@ -468,12 +468,12 @@ void initialize_intf(char *intf)
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_pktin_event_queue(pktio, &inq, 1) != 1) {
+	if (odp_pktin_event_queue(pktio, inq, 1) != 1) {
 		ODPH_ERR("Error: failed to get input queue for %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_pktout_queue(pktio, &pktout, 1) != 1) {
+	if (odp_pktout_queue(pktio, pktout, 1) != 1) {
 		ODPH_ERR("Error: failed to get pktout queue for %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
@@ -513,11 +513,11 @@ void initialize_intf(char *intf)
 	       "          default pktio%02" PRIu64 "-INPUT queue:%" PRIu64 "\n"
 	       "          source mac address %s\n",
 	       odp_pktio_to_u64(pktio), odp_pktio_to_u64(pktio),
-	       odp_queue_to_u64(inq),
+	       odp_queue_to_u64(inq[0]),
 	       mac_addr_str(src_mac_str, src_mac));
 
 	/* Resolve any routes using this interface for output */
-	resolve_fwd_db(intf, pktio, pktout, src_mac);
+	resolve_fwd_db(intf, pktio, pktout[0], src_mac);
 }
 
 /**

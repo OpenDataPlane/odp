@@ -173,7 +173,7 @@ static int pktio_queue_thread(void *arg)
 	int thr;
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
-	odp_pktout_queue_t pktout;
+	odp_pktout_queue_t pktout[1] = {0};
 	odp_queue_t inq;
 	odp_packet_t pkt;
 	odp_event_t ev;
@@ -229,7 +229,7 @@ static int pktio_queue_thread(void *arg)
 
 		pktio_tmp = odp_packet_input(pkt);
 
-		if (odp_pktout_queue(pktio_tmp, &pktout, 1) != 1) {
+		if (odp_pktout_queue(pktio_tmp, pktout, 1) != 1) {
 			ODPH_ERR("  [%02i] Error: no pktout queue\n", thr);
 			return -1;
 		}
@@ -238,7 +238,7 @@ static int pktio_queue_thread(void *arg)
 		swap_pkt_addrs(&pkt, 1);
 
 		/* Enqueue the packet for output */
-		if (odp_pktout_send(pktout, &pkt, 1) != 1) {
+		if (odp_pktout_send(pktout[0], &pkt, 1) != 1) {
 			ODPH_ERR("  [%i] Packet send failed.\n", thr);
 			odp_packet_free(pkt);
 			continue;
@@ -263,8 +263,8 @@ static int pktio_ifburst_thread(void *arg)
 {
 	int thr;
 	odp_pktio_t pktio;
-	odp_pktin_queue_t pktin;
-	odp_pktout_queue_t pktout;
+	odp_pktin_queue_t pktin[1] = {0};
+	odp_pktout_queue_t pktout[1] = {0};
 	thread_args_t *thr_args;
 	int pkts, pkts_ok;
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
@@ -285,19 +285,19 @@ static int pktio_ifburst_thread(void *arg)
 	printf("  [%02i] looked up pktio:%02" PRIu64 ", burst mode\n",
 	       thr, odp_pktio_to_u64(pktio));
 
-	if (odp_pktin_queue(pktio, &pktin, 1) != 1) {
+	if (odp_pktin_queue(pktio, pktin, 1) != 1) {
 		ODPH_ERR("  [%02i] Error: no pktin queue\n", thr);
 		return -1;
 	}
 
-	if (odp_pktout_queue(pktio, &pktout, 1) != 1) {
+	if (odp_pktout_queue(pktio, pktout, 1) != 1) {
 		ODPH_ERR("  [%02i] Error: no pktout queue\n", thr);
 		return -1;
 	}
 
 	/* Loop packets */
 	while (!odp_atomic_load_u32(&args->exit_threads)) {
-		pkts = odp_pktin_recv(pktin, pkt_tbl, MAX_PKT_BURST);
+		pkts = odp_pktin_recv(pktin[0], pkt_tbl, MAX_PKT_BURST);
 		if (pkts > 0) {
 			/* Drop packets with errors */
 			pkts_ok = drop_err_pkts(pkt_tbl, pkts);
@@ -306,7 +306,7 @@ static int pktio_ifburst_thread(void *arg)
 
 				/* Swap Eth MACs and IP-addrs */
 				swap_pkt_addrs(pkt_tbl, pkts_ok);
-				sent = odp_pktout_send(pktout, pkt_tbl,
+				sent = odp_pktout_send(pktout[0], pkt_tbl,
 						       pkts_ok);
 				sent = sent > 0 ? sent : 0;
 				if (odp_unlikely(sent < pkts_ok)) {

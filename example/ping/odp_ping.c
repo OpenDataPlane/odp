@@ -150,7 +150,7 @@ static int open_pktios(test_global_t *global)
 	odp_pktio_config_t pktio_config;
 	odp_pktin_queue_param_t pktin_param;
 	odp_pktout_queue_param_t pktout_param;
-	odp_pktout_queue_t pktout;
+	odp_pktout_queue_t pktout[1] = {0};
 	char *name;
 	int i, num_pktio;
 	uint32_t num_pkt = MAX_PKT_NUM;
@@ -232,13 +232,13 @@ static int open_pktios(test_global_t *global)
 			return -1;
 		}
 
-		if (odp_pktout_queue(pktio, &pktout, 1) != 1) {
+		if (odp_pktout_queue(pktio, pktout, 1) != 1) {
 			printf("Error (%s): Pktout queue request failed.\n",
 			       name);
 			return -1;
 		}
 
-		global->pktio[i].pktout = pktout;
+		global->pktio[i].pktout = pktout[0];
 	}
 
 	return 0;
