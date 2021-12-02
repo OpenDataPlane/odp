@@ -140,6 +140,7 @@ typedef struct {
 	int time;		/**< Time in seconds to run. */
 	int accuracy;		/**< Statistics print interval */
 	char *if_str;		/**< Storage for interface names */
+	int promisc_mode;	/**< Promiscuous mode enabled */
 } appl_args_t;
 
 /**
@@ -611,6 +612,20 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	config.parser.layer = ODP_PROTO_LAYER_L2;
 	odp_pktio_config(pktio, &config);
 
+	if (gbl_args->appl.promisc_mode) {
+		if (!capa.set_op.op.promisc_mode) {
+			ODPH_ERR("Error: promisc mode set not supported %s\n",
+				 dev);
+			return -1;
+		}
+
+		/* Enable promisc mode */
+		if (odp_pktio_promisc_mode_set(pktio, true)) {
+			ODPH_ERR("Error: promisc mode enable failed %s\n", dev);
+			return -1;
+		}
+	}
+
 	odp_pktin_queue_param_init(&pktin_param);
 	odp_pktout_queue_param_init(&pktout_param);
 
@@ -823,6 +838,7 @@ static void usage(char *progname)
 	       "  -a, --accuracy <number>     Statistics print interval in seconds\n"
 	       "                              (default is 1 second).\n"
 	       "  -d, --dst_addr  Destination addresses (comma-separated, no spaces)\n"
+	       "  -P, --promisc_mode          Enable promiscuous mode.\n"
 	       "  -h, --help      Display help and exit.\n\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
 	    );
@@ -853,11 +869,12 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"num_rx_q", required_argument, NULL, 'r'},
 		{"num_flows", required_argument, NULL, 'f'},
 		{"extra_input", required_argument, NULL, 'e'},
+		{"promisc_mode", no_argument, NULL, 'P'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts =  "+c:t:a:i:m:d:r:f:e:h";
+	static const char *shortopts =  "+c:t:a:i:m:d:r:f:e:Ph";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = DEF_STATS_INT;
@@ -865,6 +882,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->num_rx_q = DEF_NUM_RX_QUEUES;
 	appl_args->num_flows = DEF_NUM_FLOWS;
 	appl_args->extra_rounds = DEF_EXTRA_ROUNDS;
+	appl_args->promisc_mode = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -978,6 +996,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'e':
 			appl_args->extra_rounds = atoi(optarg);
 			break;
+		case 'P':
+			appl_args->promisc_mode = 1;
+			break;
 		case 'h':
 			usage(argv[0]);
 			exit(EXIT_SUCCESS);
@@ -1018,14 +1039,24 @@ static void print_info(char *progname, appl_args_t *appl_args)
 
 	odp_sys_info_print();
 
-	printf("Running ODP appl: \"%s\"\n"
-	       "-----------------\n"
-	       "IF-count:        %i\n"
-	       "Using IFs:      ",
+	printf("%s options\n"
+	       "-------------------------\n"
+	       "IF-count:           %i\n"
+	       "Using IFs:         ",
 	       progname, appl_args->if_count);
 	for (i = 0; i < appl_args->if_count; ++i)
 		printf(" %s", appl_args->if_names[i]);
-	printf("\n\n");
+	printf("\n"
+	       "Input queues:       %d\n"
+	       "Mode:               %s\n"
+	       "Flows:              %d\n"
+	       "Extra rounds:       %d\n"
+	       "Promisc mode:       %s\n", appl_args->num_rx_q,
+	       (appl_args->in_mode == SCHED_ATOMIC) ? "PKTIN_SCHED_ATOMIC" :
+	       (appl_args->in_mode == SCHED_PARALLEL ? "PKTIN_SCHED_PARALLEL" :
+	       "PKTIN_SCHED_ORDERED"), appl_args->num_flows,
+	       appl_args->extra_rounds, appl_args->promisc_mode ?
+	       "enabled" : "disabled");
 	fflush(NULL);
 }
 
@@ -1069,7 +1100,6 @@ int main(int argc, char *argv[])
 	int if_count;
 	int ret;
 	int num_workers;
-	int in_mode;
 	uint32_t queue_size, pool_size;
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
@@ -1262,18 +1292,6 @@ int main(int argc, char *argv[])
 			gbl_args->fqueue[i][j] = queue;
 		}
 	}
-
-	in_mode = gbl_args->appl.in_mode;
-	printf("\nApplication parameters\n"
-	       "----------------------\n"
-	       "Input queues: %d\n"
-	       "Mode:         %s\n"
-	       "Flows:        %d\n"
-	       "Extra rounds: %d\n\n", gbl_args->appl.num_rx_q,
-	       (in_mode == SCHED_ATOMIC) ? "PKTIN_SCHED_ATOMIC" :
-	       (in_mode == SCHED_PARALLEL ? "PKTIN_SCHED_PARALLEL" :
-	       "PKTIN_SCHED_ORDERED"), gbl_args->appl.num_flows,
-	       gbl_args->appl.extra_rounds);
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
