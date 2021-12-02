@@ -203,7 +203,7 @@ static int alg_op(odp_packet_t pkt,
 		  unsigned int hash_result_offset)
 {
 	int rc;
-	odp_crypto_op_result_t result;
+	odp_crypto_op_result_t result = {0};
 	odp_crypto_op_param_t op_params;
 	odp_bool_t posted;
 	odp_event_subtype_t subtype;

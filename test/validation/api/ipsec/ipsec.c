@@ -526,11 +526,11 @@ static void ipsec_check_packet(const ipsec_test_packet *itp, odp_packet_t pkt,
 
 static int send_pkts(const ipsec_test_part part[], int num_part)
 {
+	odp_pktout_queue_t pktout[1] = {0};
 	odp_packet_t pkt[num_part];
-	odp_pktout_queue_t pktout;
 	int i;
 
-	if (odp_pktout_queue(suite_context.pktio, &pktout, 1) != 1) {
+	if (odp_pktout_queue(suite_context.pktio, pktout, 1) != 1) {
 		CU_FAIL_FATAL("No pktout queue");
 		return 0;
 	}
@@ -538,7 +538,7 @@ static int send_pkts(const ipsec_test_part part[], int num_part)
 	for (i = 0; i < num_part; i++)
 		pkt[i] = ipsec_packet(part[i].pkt_in);
 
-	CU_ASSERT_EQUAL(num_part, odp_pktout_send(pktout, pkt, num_part));
+	CU_ASSERT_EQUAL(num_part, odp_pktout_send(pktout[0], pkt, num_part));
 
 	return num_part;
 }

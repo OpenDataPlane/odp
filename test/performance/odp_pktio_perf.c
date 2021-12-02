@@ -295,7 +295,7 @@ static int run_thread_tx(void *arg)
 {
 	test_globals_t *globals;
 	int thr_id;
-	odp_pktout_queue_t pktout;
+	odp_pktout_queue_t pktout[1] = {0};
 	pkt_tx_stats_t *stats;
 	odp_time_t cur_time, send_time_end, send_duration;
 	odp_time_t burst_gap_end, burst_gap;
@@ -316,7 +316,7 @@ static int run_thread_tx(void *arg)
 	globals = odp_shm_addr(odp_shm_lookup("test_globals"));
 	stats = &globals->tx_stats[thr_id];
 
-	if (odp_pktout_queue(globals->pktio_tx, &pktout, 1) != 1)
+	if (odp_pktout_queue(globals->pktio_tx, pktout, 1) != 1)
 		ODPH_ABORT("Failed to get output queue for thread %d\n",
 			   thr_id);
 
@@ -355,7 +355,7 @@ static int run_thread_tx(void *arg)
 		if (alloc_cnt != batch_len)
 			stats->s.alloc_failures++;
 
-		tx_cnt = send_packets(pktout, tx_packet, alloc_cnt);
+		tx_cnt = send_packets(pktout[0], tx_packet, alloc_cnt);
 		unsent_pkts = alloc_cnt - tx_cnt;
 		stats->s.enq_failures += unsent_pkts;
 		stats->s.tx_cnt += tx_cnt;

@@ -185,17 +185,17 @@ int parse_ipv4_string(const char *ipaddress, uint32_t *addr, uint32_t *mask)
 
 void enqueue_pktio_interface(odp_packet_t pkt, odp_pktio_t pktio)
 {
-	odp_pktout_queue_t pktout;
+	odp_pktout_queue_t pktout[1] = {0};
 	int ret;
 
-	ret = odp_pktout_queue(pktio, &pktout, 1);
+	ret = odp_pktout_queue(pktio, pktout, 1);
 
 	if (ret != 1) {
 		CU_FAIL_FATAL("No pktout queue");
 		return;
 	}
 
-	CU_ASSERT(odp_pktout_send(pktout, &pkt, 1) == 1);
+	CU_ASSERT(odp_pktout_send(pktout[0], &pkt, 1) == 1);
 }
 
 odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns, odp_bool_t enable_pktv)
