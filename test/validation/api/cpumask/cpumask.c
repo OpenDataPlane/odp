@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -14,9 +15,9 @@
 
 static void cpumask_test_odp_cpumask_def_control(void)
 {
-	unsigned num;
-	unsigned mask_count;
-	unsigned max_cpus = mask_capacity();
+	unsigned int num, max_num;
+	unsigned int mask_count;
+	unsigned int max_cpus = mask_capacity();
 	odp_cpumask_t mask;
 
 	num = odp_cpumask_default_control(&mask, ALL_AVAILABLE);
@@ -25,13 +26,21 @@ static void cpumask_test_odp_cpumask_def_control(void)
 	CU_ASSERT(mask_count == num);
 	CU_ASSERT(num > 0);
 	CU_ASSERT(num <= max_cpus);
+
+	max_num = odp_cpumask_default_control(&mask, max_cpus);
+	mask_count = odp_cpumask_count(&mask);
+
+	CU_ASSERT(max_num > 0);
+	CU_ASSERT(max_num == mask_count);
+	CU_ASSERT(max_num <= max_cpus);
+	CU_ASSERT(max_num <= num);
 }
 
 static void cpumask_test_odp_cpumask_def_worker(void)
 {
-	unsigned num;
-	unsigned mask_count;
-	unsigned max_cpus = mask_capacity();
+	unsigned int num, max_num;
+	unsigned int mask_count;
+	unsigned int max_cpus = mask_capacity();
 	odp_cpumask_t mask;
 
 	num = odp_cpumask_default_worker(&mask, ALL_AVAILABLE);
@@ -40,6 +49,14 @@ static void cpumask_test_odp_cpumask_def_worker(void)
 	CU_ASSERT(mask_count == num);
 	CU_ASSERT(num > 0);
 	CU_ASSERT(num <= max_cpus);
+
+	max_num = odp_cpumask_default_worker(&mask, max_cpus);
+	mask_count = odp_cpumask_count(&mask);
+
+	CU_ASSERT(max_num > 0);
+	CU_ASSERT(max_num == mask_count);
+	CU_ASSERT(max_num <= max_cpus);
+	CU_ASSERT(max_num <= num);
 }
 
 static void cpumask_test_odp_cpumask_def(void)
