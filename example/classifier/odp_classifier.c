@@ -1,6 +1,6 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019-2020, Nokia
- * Copyright (C) 2020, Marvell
+ * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2020, Marvell
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -892,6 +892,10 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 	len = strlen(optarg);
 	len++;
 	pmr_str = malloc(len);
+	if (pmr_str == NULL) {
+		ODPH_ERR("Memory allocation failed\n");
+		return -1;
+	}
 	strcpy(pmr_str, optarg);
 
 	/* PMR TERM */
@@ -899,7 +903,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 	token = strtok(pmr_str, ":");
 	if (convert_str_to_pmr_enum(token, &term)) {
 		ODPH_ERR("Invalid ODP_PMR_TERM string\n");
-		exit(EXIT_FAILURE);
+		goto error;
 	}
 	stats[policy_count].rule.term = term;
 	stats[policy_count].rule.offset = 0;
@@ -952,7 +956,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 
 		if (odph_ipv4_addr_parse(&ip_addr, token)) {
 			ODPH_ERR("Bad IP address\n");
-			exit(EXIT_FAILURE);
+			goto error;
 		}
 
 		u32 = odp_cpu_to_be_32(ip_addr);
@@ -982,7 +986,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 
 		if (odph_eth_addr_parse(&mac, token)) {
 			ODPH_ERR("Invalid MAC address. Use format 11-22-33-44-55-66.\n");
-			exit(EXIT_FAILURE);
+			goto error;
 		}
 
 		memcpy(stats[policy_count].rule.value_be, mac.addr, ODPH_ETHADDR_LEN);
@@ -993,7 +997,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 		mask_sz = parse_custom(token, stats[policy_count].rule.mask_be, ODPH_ETHADDR_LEN);
 		if (mask_sz != ODPH_ETHADDR_LEN) {
 			ODPH_ERR("Invalid mask. Provide mask without 0x prefix.\n");
-			return -1;
+			goto error;
 		}
 	break;
 	case ODP_PMR_CUSTOM_FRAME:
@@ -1005,7 +1009,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 		offset = strtoul(token, NULL, 0);
 		stats[policy_count].rule.offset = offset;
 		if (errno)
-			return -1;
+			goto error;
 
 		token = strtok(NULL, ":");
 		strncpy(stats[policy_count].value, token,
@@ -1015,7 +1019,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 				      MAX_VAL_SIZE);
 		stats[policy_count].rule.val_sz = val_sz;
 		if (val_sz <= 0)
-			return -1;
+			goto error;
 
 		token = strtok(NULL, ":");
 		strncpy(stats[policy_count].mask, token,
@@ -1024,11 +1028,10 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 				       stats[policy_count].rule.mask_be,
 				       MAX_VAL_SIZE);
 		if (mask_sz != val_sz)
-			return -1;
+			goto error;
 	break;
 	default:
-		usage();
-		exit(EXIT_FAILURE);
+		goto error;
 	}
 
 	/* Optional source CoS name and name of this CoS
@@ -1036,7 +1039,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 	cos0 = strtok(NULL, ":");
 	cos1 = strtok(NULL, ":");
 	if (cos0 == NULL)
-		return -1;
+		goto error;
 
 	if (cos1) {
 		stats[policy_count].has_src_cos = 1;
@@ -1052,6 +1055,10 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *optarg)
 	appl_args->policy_count++;
 	free(pmr_str);
 	return 0;
+
+error:
+	free(pmr_str);
+	return -1;
 }
 
 static int parse_policy_ci_pass_count(appl_args_t *appl_args, char *optarg)
@@ -1075,6 +1082,10 @@ static int parse_policy_ci_pass_count(appl_args_t *appl_args, char *optarg)
 	len = strlen(optarg);
 	len++;
 	count_str = malloc(len);
+	if (count_str == NULL) {
+		ODPH_ERR("Memory allocation failed\n");
+		return -1;
+	}
 	strcpy(count_str, optarg);
 
 	token = strtok(count_str, ":");
