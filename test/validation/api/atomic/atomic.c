@@ -445,9 +445,7 @@ static void test_atomic_non_relaxed_32(void)
 			;
 
 		tmp = odp_atomic_load_u32(a32u_xchg);
-		/* finally set value for validation */
-		while (odp_atomic_cas_acq_rel_u32(a32u_xchg, &tmp, U32_MAGIC)
-		       == 0)
+		while (odp_atomic_cas_acq_rel_u32(a32u_xchg, &tmp, tmp + 1) == 0)
 			;
 	}
 }
@@ -482,9 +480,7 @@ static void test_atomic_non_relaxed_64(void)
 			;
 
 		tmp = odp_atomic_load_u64(a64u_xchg);
-		/* finally set value for validation */
-		while (odp_atomic_cas_acq_rel_u64(a64u_xchg, &tmp, U64_MAGIC)
-		       == 0)
+		while (odp_atomic_cas_acq_rel_u64(a64u_xchg, &tmp, tmp + 1) == 0)
 			;
 	}
 }
@@ -802,10 +798,11 @@ static void test_atomic_validate_non_relaxed(void)
 {
 	test_atomic_validate_init_val();
 
-	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_xchg) == U32_MAGIC);
-	CU_ASSERT(odp_atomic_load_u64(&global_mem->a64u_xchg) == U64_MAGIC);
-
 	const uint64_t total_count = CNT * global_mem->g_num_threads;
+
+	/* 3 increments per round. */
+	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_xchg) == U32_INIT_VAL + 3 * total_count);
+	CU_ASSERT(odp_atomic_load_u64(&global_mem->a64u_xchg) == U64_INIT_VAL + 3 * total_count);
 
 	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_max) == U32_INIT_VAL + total_count);
 	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_min) == U32_INIT_VAL - total_count);
