@@ -371,46 +371,48 @@ static void test_atomic_xchg_32(void)
 {
 	uint32_t old, new;
 	int i;
-	odp_atomic_u32_t *a32u = &global_mem->a32u;
 	odp_atomic_u32_t *a32u_xchg = &global_mem->a32u_xchg;
+	uint8_t buf[CNT];
+	uint64_t seed = odp_thread_id();
+	uint64_t count_old = 0, count_new = 0;
+
+	odp_random_test_data(buf, CNT, &seed);
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++) {
-		new = odp_atomic_fetch_inc_u32(a32u);
+		new = buf[i];
 		old = odp_atomic_xchg_u32(a32u_xchg, new);
-
-		if (old & 0x1)
-			odp_atomic_xchg_u32(a32u_xchg, 0);
-		else
-			odp_atomic_xchg_u32(a32u_xchg, 1);
+		count_old += old;
+		count_new += new;
 	}
 
-	odp_atomic_sub_u32(a32u, CNT);
-	odp_atomic_xchg_u32(a32u_xchg, U32_MAGIC);
+	odp_atomic_add_u32(a32u_xchg, count_old);
+	odp_atomic_sub_u32(a32u_xchg, count_new);
 }
 
 static void test_atomic_xchg_64(void)
 {
 	uint64_t old, new;
 	int i;
-	odp_atomic_u64_t *a64u = &global_mem->a64u;
 	odp_atomic_u64_t *a64u_xchg = &global_mem->a64u_xchg;
+	uint8_t buf[CNT];
+	uint64_t seed = odp_thread_id();
+	uint64_t count_old = 0, count_new = 0;
+
+	odp_random_test_data(buf, CNT, &seed);
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++) {
-		new = odp_atomic_fetch_inc_u64(a64u);
+		new = buf[i];
 		old = odp_atomic_xchg_u64(a64u_xchg, new);
-
-		if (old & 0x1)
-			odp_atomic_xchg_u64(a64u_xchg, 0);
-		else
-			odp_atomic_xchg_u64(a64u_xchg, 1);
+		count_old += old;
+		count_new += new;
 	}
 
-	odp_atomic_sub_u64(a64u, CNT);
-	odp_atomic_xchg_u64(a64u_xchg, U64_MAGIC);
+	odp_atomic_add_u64(a64u_xchg, count_old);
+	odp_atomic_sub_u64(a64u_xchg, count_new);
 }
 
 static void test_atomic_non_relaxed_32(void)
@@ -792,15 +794,16 @@ static void test_atomic_validate_xchg(void)
 {
 	test_atomic_validate_init_val();
 
-	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_xchg) ==
-			U32_MAGIC);
-	CU_ASSERT(odp_atomic_load_u64(&global_mem->a64u_xchg) ==
-			U64_MAGIC);
+	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_xchg) == U32_INIT_VAL);
+	CU_ASSERT(odp_atomic_load_u64(&global_mem->a64u_xchg) == U64_INIT_VAL);
 }
 
 static void test_atomic_validate_non_relaxed(void)
 {
-	test_atomic_validate_xchg();
+	test_atomic_validate_init_val();
+
+	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_xchg) == U32_MAGIC);
+	CU_ASSERT(odp_atomic_load_u64(&global_mem->a64u_xchg) == U64_MAGIC);
 
 	const uint64_t total_count = CNT * global_mem->g_num_threads;
 
