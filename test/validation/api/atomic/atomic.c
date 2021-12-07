@@ -619,6 +619,42 @@ static void test_atomic_fetch_add_sub_64(void)
 	test_atomic_fetch_sub_64();
 }
 
+static void test_atomic_inc_add_32(void)
+{
+	test_atomic_inc_32();
+	test_atomic_fetch_inc_32();
+	test_atomic_add_32();
+	test_atomic_fetch_add_32();
+	test_atomic_cas_inc_32();
+}
+
+static void test_atomic_inc_add_64(void)
+{
+	test_atomic_inc_64();
+	test_atomic_fetch_inc_64();
+	test_atomic_add_64();
+	test_atomic_fetch_add_64();
+	test_atomic_cas_inc_64();
+}
+
+static void test_atomic_dec_sub_32(void)
+{
+	test_atomic_dec_32();
+	test_atomic_fetch_dec_32();
+	test_atomic_sub_32();
+	test_atomic_fetch_sub_32();
+	test_atomic_cas_dec_32();
+}
+
+static void test_atomic_dec_sub_64(void)
+{
+	test_atomic_dec_64();
+	test_atomic_fetch_dec_64();
+	test_atomic_sub_64();
+	test_atomic_fetch_sub_64();
+	test_atomic_cas_dec_64();
+}
+
 static void test_atomic_max_min_32(void)
 {
 	test_atomic_max_32();
@@ -705,6 +741,28 @@ static void test_atomic_validate_init_val(void)
 {
 	test_atomic_validate_init_val_32_64();
 	test_atomic_validate_init_val_128();
+}
+
+static void test_atomic_validate_inc_add(void)
+{
+	test_atomic_validate_init_val_128();
+
+	/* Two increment tests, one cas increment test and two add tests. */
+	const uint64_t total_count = CNT * (3 + 2 * ADD_SUB_CNT) * global_mem->g_num_threads;
+
+	CU_ASSERT(U32_INIT_VAL + total_count == odp_atomic_load_u32(&global_mem->a32u));
+	CU_ASSERT(U64_INIT_VAL + total_count == odp_atomic_load_u64(&global_mem->a64u));
+}
+
+static void test_atomic_validate_dec_sub(void)
+{
+	test_atomic_validate_init_val_128();
+
+	/* Two decrement tests, one cas decrement test and two sub tests. */
+	const uint64_t total_count = CNT * (3 + 2 * ADD_SUB_CNT) * global_mem->g_num_threads;
+
+	CU_ASSERT(U32_INIT_VAL - total_count == odp_atomic_load_u32(&global_mem->a32u));
+	CU_ASSERT(U64_INIT_VAL - total_count == odp_atomic_load_u64(&global_mem->a64u));
 }
 
 static void test_atomic_validate_cas(void)
@@ -882,6 +940,32 @@ static int test_atomic_fetch_add_sub_thread(void *arg UNUSED)
 	per_thread_mem = thread_init();
 	test_atomic_fetch_add_sub_32();
 	test_atomic_fetch_add_sub_64();
+
+	thread_finalize(per_thread_mem);
+
+	return CU_get_number_of_failures();
+}
+
+static int test_atomic_inc_add_thread(void *arg UNUSED)
+{
+	per_thread_mem_t *per_thread_mem;
+
+	per_thread_mem = thread_init();
+	test_atomic_inc_add_32();
+	test_atomic_inc_add_64();
+
+	thread_finalize(per_thread_mem);
+
+	return CU_get_number_of_failures();
+}
+
+static int test_atomic_dec_sub_thread(void *arg UNUSED)
+{
+	per_thread_mem_t *per_thread_mem;
+
+	per_thread_mem = thread_init();
+	test_atomic_dec_sub_32();
+	test_atomic_dec_sub_64();
 
 	thread_finalize(per_thread_mem);
 
@@ -1123,6 +1207,16 @@ static void atomic_test_atomic_fetch_add_sub(void)
 	test_atomic_functional(test_atomic_fetch_add_sub_thread, test_atomic_validate_init_val);
 }
 
+static void atomic_test_atomic_inc_add(void)
+{
+	test_atomic_functional(test_atomic_inc_add_thread, test_atomic_validate_inc_add);
+}
+
+static void atomic_test_atomic_dec_sub(void)
+{
+	test_atomic_functional(test_atomic_dec_sub_thread, test_atomic_validate_dec_sub);
+}
+
 static void atomic_test_atomic_max_min(void)
 {
 	test_atomic_functional(test_atomic_max_min_thread, test_atomic_validate_max_min);
@@ -1156,6 +1250,8 @@ odp_testinfo_t atomic_suite_atomic[] = {
 	ODP_TEST_INFO(atomic_test_atomic_add_sub),
 	ODP_TEST_INFO(atomic_test_atomic_fetch_inc_dec),
 	ODP_TEST_INFO(atomic_test_atomic_fetch_add_sub),
+	ODP_TEST_INFO(atomic_test_atomic_inc_add),
+	ODP_TEST_INFO(atomic_test_atomic_dec_sub),
 	ODP_TEST_INFO(atomic_test_atomic_max_min),
 	ODP_TEST_INFO(atomic_test_atomic_cas_inc_dec),
 	ODP_TEST_INFO(atomic_test_atomic_xchg),
