@@ -721,10 +721,13 @@ static void test_atomic_validate_max_min(void)
 {
 	test_atomic_validate_init_val();
 
-	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_max) >
-		  odp_atomic_load_u32(&global_mem->a32u_min));
-	CU_ASSERT(odp_atomic_load_u64(&global_mem->a64u_max) >
-		  odp_atomic_load_u64(&global_mem->a64u_min));
+	const uint64_t total_count = CNT * global_mem->g_num_threads;
+
+	/* Max is the result of fetch_inc, so the final max value is total_count - 1. */
+	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_max) == U32_INIT_VAL + total_count - 1);
+	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_min) == U32_INIT_VAL);
+	CU_ASSERT(odp_atomic_load_u64(&global_mem->a64u_max) == U64_INIT_VAL + total_count - 1);
+	CU_ASSERT(odp_atomic_load_u64(&global_mem->a64u_min) == U64_INIT_VAL);
 }
 
 static void test_atomic_validate_xchg(void)
@@ -739,8 +742,14 @@ static void test_atomic_validate_xchg(void)
 
 static void test_atomic_validate_non_relaxed(void)
 {
-	test_atomic_validate_max_min();
 	test_atomic_validate_xchg();
+
+	const uint64_t total_count = CNT * global_mem->g_num_threads;
+
+	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_max) == U32_INIT_VAL + total_count);
+	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_min) == U32_INIT_VAL - total_count);
+	CU_ASSERT(odp_atomic_load_u64(&global_mem->a64u_max) == U64_INIT_VAL + total_count);
+	CU_ASSERT(odp_atomic_load_u64(&global_mem->a64u_min) == U64_INIT_VAL - total_count);
 }
 
 static int atomic_init(odp_instance_t *inst)
