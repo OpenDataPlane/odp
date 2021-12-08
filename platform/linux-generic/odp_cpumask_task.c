@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2021, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -47,20 +48,11 @@ int odp_cpumask_default_control(odp_cpumask_t *mask, int num)
 	odp_cpumask_t overlap;
 	int cpu, i;
 
-	/*
-	 * If no user supplied number then default to one control CPU.
-	 */
-	if (0 == num) {
-		num = 1;
-	} else {
-		/*
-		 * If user supplied number is too large, then attempt
-		 * to use all installed control CPUs
-		 */
-		cpu = odp_cpumask_count(&odp_global_ro.control_cpus);
-		if (cpu < num)
-			num = cpu;
-	}
+	/* If no user supplied number or it's too large, attempt to use all
+	 * control CPUs. */
+	cpu = odp_cpumask_count(&odp_global_ro.control_cpus);
+	if (num == 0 || cpu < num)
+		num = cpu;
 
 	/* build the mask, allocating upwards from lowest numbered CPU */
 	odp_cpumask_zero(mask);
