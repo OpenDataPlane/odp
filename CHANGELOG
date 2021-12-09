@@ -1,3 +1,57 @@
+== OpenDataPlane (1.33.0.0)
+
+=== Backward incompatible API changes
+==== Shared Memory
+* Added a bit mask capability `odp_shm_capability_t.flags` for ODP_SHM_* flags
+
+==== Timer
+* Added initialization function `odp_timer_pool_param_init()` for timer pool
+parameters. Application must use it to initialize parameters to their
+default values.
+
+=== Backward compatible API changes
+==== Classifier
+* Added missing default values for `odp_cls_cos_param_t.num_queue`,
+`odp_cls_cos_param_t.red.enable`, `odp_cls_cos_param_t.bp.enable`, and
+`odp_pmr_param_t.range_term`.
+
+==== Crypto
+* Clarified that `odp_crypto_session_create()` parameters, including the key and
+IV data, can be freed after session creation.
+
+==== DMA
+* Added new DMA module which enables applications to offload memory transfers
+(copies) to DMA hardware. See `include/odp/api/spec/dma.h` for more information.
+
+==== IPsec
+* Added possibility to request completed packets as packet vector events
+instead of packet events. Packet vector capabilities are provided by
+`odp_ipsec_capability_t.vector` and the configuration is done using
+`odp_ipsec_config_t.vector`.
+* Clarified that `odp_ipsec_sa_create()` parameters, including the various
+memory buffers pointed to by the parameters, can be freed after SA creation.
+
+==== Packet IO
+* Clarified `odp_pktin_vector_config_t.enable` documentation to state that when
+packet vectors are enabled, packets may be delivered both as packet vector
+events and packet events. Packet vectors are disabled by default.
+* Clarified that the type of input queues (scheduled versus plain) is deduced
+from the pktio input mode in `odp_pktin_queue_config()`, and that the default
+queue type value and the queue type value passed in
+`odp_pktin_queue_param_t.queue_param` are ignored.
+
+=== Pool
+* Added new pool type for DMA completion event pools. These pools are created
+with `odp_dma_pool_create()` and pool capability is included in
+`odp_dma_capability_t`. Otherwise, pool APIs are used normally for these pools.
+
+==== Shared Memory
+* Added `ODP_SHM_NO_HP` flag which can be used to prevent the implementation
+from allocating the shared memory block from huge pages
+
+==== Std
+* Added DMA flag to `odp_feature_t`
+
 == OpenDataPlane (1.32.1.0)
 === Backward compatible API changes
 ==== Init
