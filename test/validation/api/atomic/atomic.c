@@ -41,54 +41,22 @@ typedef struct {
 	odp_atomic_u32_t a32u_xchg;
 
 	uint32_t g_num_threads;
-	uint32_t g_iterations;
-	uint32_t g_verbose;
 
 	odp_barrier_t global_barrier;
 } global_shared_mem_t;
-
-/* Per-thread memory */
-typedef struct {
-	global_shared_mem_t *global_mem;
-
-	int thread_id;
-	int thread_core;
-
-	volatile_u64_t delay_counter;
-} per_thread_mem_t;
 
 static odp_shm_t global_shm;
 static global_shared_mem_t *global_mem;
 
 /* Initialise per-thread memory */
-static per_thread_mem_t *thread_init(void)
+static void thread_init(void)
 {
 	global_shared_mem_t *global_mem;
-	per_thread_mem_t *per_thread_mem;
 	odp_shm_t global_shm;
-	uint32_t per_thread_mem_len;
-
-	per_thread_mem_len = sizeof(per_thread_mem_t);
-	per_thread_mem = malloc(per_thread_mem_len);
-	memset(per_thread_mem, 0, per_thread_mem_len);
-
-	per_thread_mem->delay_counter = 1;
-
-	per_thread_mem->thread_id = odp_thread_id();
-	per_thread_mem->thread_core = odp_cpu_id();
 
 	global_shm = odp_shm_lookup(GLOBAL_SHM_NAME);
 	global_mem = odp_shm_addr(global_shm);
 	CU_ASSERT_PTR_NOT_NULL(global_mem);
-
-	per_thread_mem->global_mem = global_mem;
-
-	return per_thread_mem;
-}
-
-static void thread_finalize(per_thread_mem_t *per_thread_mem)
-{
-	free(per_thread_mem);
 }
 
 static void test_atomic_inc_32(void)
@@ -846,8 +814,6 @@ static int atomic_init(odp_instance_t *inst)
 	memset(global_mem, 0, sizeof(global_shared_mem_t));
 
 	global_mem->g_num_threads = MAX_WORKERS;
-	global_mem->g_iterations = MAX_ITERATIONS;
-	global_mem->g_verbose = VERBOSE;
 
 	workers_count = odp_cpumask_default_worker(&mask, 0);
 
@@ -896,131 +862,91 @@ static int atomic_term(odp_instance_t inst)
 /* Atomic tests */
 static int test_atomic_inc_dec_thread(void *arg UNUSED)
 {
-	per_thread_mem_t *per_thread_mem;
-
-	per_thread_mem = thread_init();
+	thread_init();
 	test_atomic_inc_dec_32();
 	test_atomic_inc_dec_64();
-
-	thread_finalize(per_thread_mem);
 
 	return CU_get_number_of_failures();
 }
 
 static int test_atomic_add_sub_thread(void *arg UNUSED)
 {
-	per_thread_mem_t *per_thread_mem;
-
-	per_thread_mem = thread_init();
+	thread_init();
 	test_atomic_add_sub_32();
 	test_atomic_add_sub_64();
-
-	thread_finalize(per_thread_mem);
 
 	return CU_get_number_of_failures();
 }
 
 static int test_atomic_fetch_inc_dec_thread(void *arg UNUSED)
 {
-	per_thread_mem_t *per_thread_mem;
-
-	per_thread_mem = thread_init();
+	thread_init();
 	test_atomic_fetch_inc_dec_32();
 	test_atomic_fetch_inc_dec_64();
-
-	thread_finalize(per_thread_mem);
 
 	return CU_get_number_of_failures();
 }
 
 static int test_atomic_fetch_add_sub_thread(void *arg UNUSED)
 {
-	per_thread_mem_t *per_thread_mem;
-
-	per_thread_mem = thread_init();
+	thread_init();
 	test_atomic_fetch_add_sub_32();
 	test_atomic_fetch_add_sub_64();
-
-	thread_finalize(per_thread_mem);
 
 	return CU_get_number_of_failures();
 }
 
 static int test_atomic_inc_add_thread(void *arg UNUSED)
 {
-	per_thread_mem_t *per_thread_mem;
-
-	per_thread_mem = thread_init();
+	thread_init();
 	test_atomic_inc_add_32();
 	test_atomic_inc_add_64();
-
-	thread_finalize(per_thread_mem);
 
 	return CU_get_number_of_failures();
 }
 
 static int test_atomic_dec_sub_thread(void *arg UNUSED)
 {
-	per_thread_mem_t *per_thread_mem;
-
-	per_thread_mem = thread_init();
+	thread_init();
 	test_atomic_dec_sub_32();
 	test_atomic_dec_sub_64();
-
-	thread_finalize(per_thread_mem);
 
 	return CU_get_number_of_failures();
 }
 
 static int test_atomic_max_min_thread(void *arg UNUSED)
 {
-	per_thread_mem_t *per_thread_mem;
-
-	per_thread_mem = thread_init();
+	thread_init();
 	test_atomic_max_min_32();
 	test_atomic_max_min_64();
-
-	thread_finalize(per_thread_mem);
 
 	return CU_get_number_of_failures();
 }
 
 static int test_atomic_cas_inc_dec_thread(void *arg UNUSED)
 {
-	per_thread_mem_t *per_thread_mem;
-
-	per_thread_mem = thread_init();
+	thread_init();
 	test_atomic_cas_inc_dec_32();
 	test_atomic_cas_inc_dec_64();
 	test_atomic_cas_inc_128();
-
-	thread_finalize(per_thread_mem);
 
 	return CU_get_number_of_failures();
 }
 
 static int test_atomic_xchg_thread(void *arg UNUSED)
 {
-	per_thread_mem_t *per_thread_mem;
-
-	per_thread_mem = thread_init();
+	thread_init();
 	test_atomic_xchg_32();
 	test_atomic_xchg_64();
-
-	thread_finalize(per_thread_mem);
 
 	return CU_get_number_of_failures();
 }
 
 static int test_atomic_non_relaxed_thread(void *arg UNUSED)
 {
-	per_thread_mem_t *per_thread_mem;
-
-	per_thread_mem = thread_init();
+	thread_init();
 	test_atomic_non_relaxed_32();
 	test_atomic_non_relaxed_64();
-
-	thread_finalize(per_thread_mem);
 
 	return CU_get_number_of_failures();
 }
