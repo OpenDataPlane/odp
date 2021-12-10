@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2021 Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	 BSD-3-Clause
@@ -16,7 +17,7 @@
 
 #define ADD_SUB_CNT		5
 
-#define CNT			50000
+#define CNT			100000
 #define U32_INIT_VAL		(1UL << 28)
 #define U64_INIT_VAL		(1ULL << 33)
 #define U32_MAGIC		0xa23f65b2
