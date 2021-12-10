@@ -24,7 +24,6 @@ extern "C" {
 #define MAX_DB          32   /**< maximum number of data base entries */
 #define MAX_LOOPBACK    10   /**< maximum number of loop back interfaces */
 #define MAX_STRING      32   /**< maximum string length */
-#define MAX_IV_LEN      32   /**< Maximum IV length in bytes */
 
 #define KEY_BITS_3DES       192  /**< 3DES cipher key length in bits */
 #define KEY_BITS_MD5_96     128  /**< MD5_96 auth key length in bits */
