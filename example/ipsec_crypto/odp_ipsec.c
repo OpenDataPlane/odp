@@ -974,20 +974,9 @@ pkt_disposition_e do_ipsec_out_seq(odp_packet_t *pkt,
 	}
 	if (ctx->ipsec.tun_hdr_offset) {
 		odph_ipv4hdr_t *ip;
-		int ret;
 
 		ip = (odph_ipv4hdr_t *)(ctx->ipsec.tun_hdr_offset + buf);
 		ip->id = odp_cpu_to_be_16((*ctx->ipsec.tun_hdr_id)++);
-		if (!ip->id) {
-			/* re-init tunnel hdr id */
-			ret = odp_random_data((uint8_t *)ctx->ipsec.tun_hdr_id,
-					      sizeof(*ctx->ipsec.tun_hdr_id),
-					      1);
-			if (ret != sizeof(*ctx->ipsec.tun_hdr_id)) {
-				ODPH_ERR("Error: Not enough random data\n");
-				exit(EXIT_FAILURE);
-			}
-		}
 	}
 
 	out_pkt = entry->in_place ? *pkt : ODP_PACKET_INVALID;
