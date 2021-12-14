@@ -336,7 +336,7 @@ int main(int argc, char **argv)
 
 	test_shm_t *shm = NULL;
 	odp_shm_t shm_hdl = odp_shm_reserve(shm_name, sizeof(test_shm_t), 64,
-					    ODP_SHM_SW_ONLY);
+					    0);
 
 	if (shm_hdl != ODP_SHM_INVALID)
 		shm = (test_shm_t *)odp_shm_addr(shm_hdl);
