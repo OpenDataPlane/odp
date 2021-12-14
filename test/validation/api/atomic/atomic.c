@@ -17,7 +17,7 @@
 
 #define ADD_SUB_CNT		5
 
-#define CNT			100000
+#define CNT			100000ULL
 #define U32_INIT_VAL		(1UL << 28)
 #define U64_INIT_VAL		(1ULL << 33)
 #define U32_MAGIC		0xa23f65b2
@@ -62,7 +62,7 @@ static void thread_init(void)
 
 static void test_atomic_inc_32(void)
 {
-	int i;
+	uint64_t i;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -72,7 +72,7 @@ static void test_atomic_inc_32(void)
 
 static void test_atomic_inc_64(void)
 {
-	int i;
+	uint64_t i;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -82,7 +82,7 @@ static void test_atomic_inc_64(void)
 
 static void test_atomic_dec_32(void)
 {
-	int i;
+	uint64_t i;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -92,7 +92,7 @@ static void test_atomic_dec_32(void)
 
 static void test_atomic_dec_64(void)
 {
-	int i;
+	uint64_t i;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -102,7 +102,7 @@ static void test_atomic_dec_64(void)
 
 static void test_atomic_fetch_inc_32(void)
 {
-	int i;
+	uint64_t i;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -112,7 +112,7 @@ static void test_atomic_fetch_inc_32(void)
 
 static void test_atomic_fetch_inc_64(void)
 {
-	int i;
+	uint64_t i;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -122,7 +122,7 @@ static void test_atomic_fetch_inc_64(void)
 
 static void test_atomic_fetch_dec_32(void)
 {
-	int i;
+	uint64_t i;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -132,7 +132,7 @@ static void test_atomic_fetch_dec_32(void)
 
 static void test_atomic_fetch_dec_64(void)
 {
-	int i;
+	uint64_t i;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -142,7 +142,7 @@ static void test_atomic_fetch_dec_64(void)
 
 static void test_atomic_add_32(void)
 {
-	int i;
+	uint64_t i;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -152,7 +152,7 @@ static void test_atomic_add_32(void)
 
 static void test_atomic_add_64(void)
 {
-	int i;
+	uint64_t i;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -162,7 +162,7 @@ static void test_atomic_add_64(void)
 
 static void test_atomic_sub_32(void)
 {
-	int i;
+	uint64_t i;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -172,7 +172,7 @@ static void test_atomic_sub_32(void)
 
 static void test_atomic_sub_64(void)
 {
-	int i;
+	uint64_t i;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -182,7 +182,7 @@ static void test_atomic_sub_64(void)
 
 static void test_atomic_fetch_add_32(void)
 {
-	int i;
+	uint64_t i;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -192,7 +192,7 @@ static void test_atomic_fetch_add_32(void)
 
 static void test_atomic_fetch_add_64(void)
 {
-	int i;
+	uint64_t i;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -202,7 +202,7 @@ static void test_atomic_fetch_add_64(void)
 
 static void test_atomic_fetch_sub_32(void)
 {
-	int i;
+	uint64_t i;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -212,7 +212,7 @@ static void test_atomic_fetch_sub_32(void)
 
 static void test_atomic_fetch_sub_64(void)
 {
-	int i;
+	uint64_t i;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -222,7 +222,7 @@ static void test_atomic_fetch_sub_64(void)
 
 static void test_atomic_min_32(void)
 {
-	int i;
+	uint64_t i;
 	uint32_t tmp;
 
 	odp_barrier_wait(&global_mem->global_barrier);
@@ -235,8 +235,7 @@ static void test_atomic_min_32(void)
 
 static void test_atomic_min_64(void)
 {
-	int i;
-	uint64_t tmp;
+	uint64_t i, tmp;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -248,7 +247,7 @@ static void test_atomic_min_64(void)
 
 static void test_atomic_max_32(void)
 {
-	int i;
+	uint64_t i;
 	uint32_t tmp;
 
 	odp_barrier_wait(&global_mem->global_barrier);
@@ -261,8 +260,7 @@ static void test_atomic_max_32(void)
 
 static void test_atomic_max_64(void)
 {
-	int i;
-	uint64_t tmp;
+	uint64_t i, tmp;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
@@ -274,7 +272,7 @@ static void test_atomic_max_64(void)
 
 static void test_atomic_cas_inc_32(void)
 {
-	int i;
+	uint64_t i;
 	uint32_t old;
 	odp_atomic_u32_t *a32u = &global_mem->a32u;
 
@@ -290,7 +288,7 @@ static void test_atomic_cas_inc_32(void)
 
 static void test_atomic_cas_dec_32(void)
 {
-	int i;
+	uint64_t i;
 	uint32_t old;
 	odp_atomic_u32_t *a32u = &global_mem->a32u;
 
@@ -306,8 +304,7 @@ static void test_atomic_cas_dec_32(void)
 
 static void test_atomic_cas_inc_64(void)
 {
-	int i;
-	uint64_t old;
+	uint64_t i, old;
 	odp_atomic_u64_t *a64u = &global_mem->a64u;
 
 	odp_barrier_wait(&global_mem->global_barrier);
@@ -322,8 +319,7 @@ static void test_atomic_cas_inc_64(void)
 
 static void test_atomic_cas_dec_64(void)
 {
-	int i;
-	uint64_t old;
+	uint64_t i, old;
 	odp_atomic_u64_t *a64u = &global_mem->a64u;
 
 	odp_barrier_wait(&global_mem->global_barrier);
@@ -339,7 +335,7 @@ static void test_atomic_cas_dec_64(void)
 static void test_atomic_xchg_32(void)
 {
 	uint32_t old, new;
-	int i;
+	uint64_t i;
 	odp_atomic_u32_t *a32u_xchg = &global_mem->a32u_xchg;
 	uint8_t buf[CNT];
 	uint64_t seed = odp_thread_id();
@@ -363,7 +359,7 @@ static void test_atomic_xchg_32(void)
 static void test_atomic_xchg_64(void)
 {
 	uint64_t old, new;
-	int i;
+	uint64_t i;
 	odp_atomic_u64_t *a64u_xchg = &global_mem->a64u_xchg;
 	uint8_t buf[CNT];
 	uint64_t seed = odp_thread_id();
@@ -386,7 +382,7 @@ static void test_atomic_xchg_64(void)
 
 static void test_atomic_non_relaxed_32(void)
 {
-	int i;
+	uint64_t i;
 	uint32_t tmp;
 	odp_atomic_u32_t *a32u = &global_mem->a32u;
 	odp_atomic_u32_t *a32u_min = &global_mem->a32u_min;
@@ -421,8 +417,7 @@ static void test_atomic_non_relaxed_32(void)
 
 static void test_atomic_non_relaxed_64(void)
 {
-	int i;
-	uint64_t tmp;
+	uint64_t i, tmp;
 	odp_atomic_u64_t *a64u = &global_mem->a64u;
 	odp_atomic_u64_t *a64u_min = &global_mem->a64u_min;
 	odp_atomic_u64_t *a64u_max = &global_mem->a64u_max;
@@ -456,7 +451,8 @@ static void test_atomic_non_relaxed_64(void)
 
 static void test_atomic_relaxed_128(void)
 {
-	int i, ret;
+	int ret;
+	uint64_t i;
 	odp_u128_t old, new;
 	odp_atomic_u128_t *a128u = &global_mem->a128u;
 
@@ -477,7 +473,8 @@ static void test_atomic_relaxed_128(void)
 
 static void test_atomic_non_relaxed_128_acq(void)
 {
-	int i, ret;
+	int ret;
+	uint64_t i;
 	odp_u128_t old, new;
 	odp_atomic_u128_t *a128u = &global_mem->a128u;
 
@@ -498,7 +495,8 @@ static void test_atomic_non_relaxed_128_acq(void)
 
 static void test_atomic_non_relaxed_128_rel(void)
 {
-	int i, ret;
+	int ret;
+	uint64_t i;
 	odp_u128_t old, new;
 	odp_atomic_u128_t *a128u = &global_mem->a128u;
 
@@ -519,7 +517,8 @@ static void test_atomic_non_relaxed_128_rel(void)
 
 static void test_atomic_non_relaxed_128_acq_rel(void)
 {
-	int i, ret;
+	int ret;
+	uint64_t i;
 	odp_u128_t old, new;
 	odp_atomic_u128_t *a128u = &global_mem->a128u;
 
