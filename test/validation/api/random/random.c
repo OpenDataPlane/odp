@@ -8,7 +8,7 @@
 #include <odp_api.h>
 #include <odp_cunit_common.h>
 
-static void random_test_get_size(void)
+static void random_test_get_size(odp_random_kind_t kind)
 {
 	/* odp_random_data may fail to return data on every call (i.e. lack of
 	 * entropy). Therefore loop with some sane loop timeout value. Note that
@@ -25,7 +25,7 @@ static void random_test_get_size(void)
 
 	do {
 		ret = odp_random_data(buf + bytes, sizeof(buf) - bytes,
-				      ODP_RANDOM_BASIC);
+				      kind);
 		bytes += ret;
 		if (ret < 0 || bytes >= sizeof(buf))
 			break;
@@ -35,6 +35,21 @@ static void random_test_get_size(void)
 
 	CU_ASSERT(ret > 0);
 	CU_ASSERT(bytes == (int32_t)sizeof(buf));
+}
+
+static void random_test_get_size_basic(void)
+{
+	random_test_get_size(ODP_RANDOM_BASIC);
+}
+
+static void random_test_get_size_crypto(void)
+{
+	random_test_get_size(ODP_RANDOM_CRYPTO);
+}
+
+static void random_test_get_size_true(void)
+{
+	random_test_get_size(ODP_RANDOM_TRUE);
 }
 
 static void random_test_kind(void)
@@ -483,7 +498,9 @@ static int check_kind_true(void)
 }
 
 odp_testinfo_t random_suite[] = {
-	ODP_TEST_INFO(random_test_get_size),
+	ODP_TEST_INFO_CONDITIONAL(random_test_get_size_basic, check_kind_basic),
+	ODP_TEST_INFO_CONDITIONAL(random_test_get_size_crypto, check_kind_crypto),
+	ODP_TEST_INFO_CONDITIONAL(random_test_get_size_true, check_kind_true),
 	ODP_TEST_INFO(random_test_kind),
 	ODP_TEST_INFO(random_test_repeat),
 	ODP_TEST_INFO(random_test_align_and_overflow_test),
