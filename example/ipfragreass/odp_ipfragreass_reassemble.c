@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:	 BSD-3-Clause
  */
 
+#include <odp_api.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -382,7 +384,7 @@ static void sort_fraglist(union fraglist *fl, struct flts now)
  *
  * @return The number of packets reassembled and sent to the output queue
  */
-static int add_fraglist_to_fraglist(union fraglist *fl, union fraglist frags,
+static int add_fraglist_to_fraglist(odp_atomic_u128_t *fl, union fraglist frags,
 				    struct packet *frags_head, struct flts now,
 				    odp_queue_t out, odp_bool_t dont_assemble)
 {
@@ -401,8 +403,7 @@ redo:;
 	struct flts oldfl_earliest;
 	struct flts frags_earliest;
 
-	__atomic_load(&fl->half[0], &oldfl.half[0], __ATOMIC_RELAXED);
-	__atomic_load(&fl->half[1], &oldfl.half[1], __ATOMIC_RELAXED);
+	oldfl.raw = odp_atomic_load_u128(fl);
 
 	/*
 	 * If we're updating a non-empty fraglist, we should always attempt
@@ -435,9 +436,7 @@ redo:;
 	 * yet. If not, just write out our changes and move on.
 	 */
 	if (newfl.part_len < newfl.whole_len || dont_assemble) {
-		if (!atomic_strong_cas_dblptr(&fl->raw, &oldfl.raw, newfl.raw,
-					      __ATOMIC_RELEASE,
-					      __ATOMIC_RELAXED)) {
+		if (!odp_atomic_cas_rel_u128(fl, &oldfl.raw, newfl.raw)) {
 			/* Failed to add this fragment? Try again. */
 			set_prev_packet(frags_head, NULL);
 			goto redo;
@@ -456,8 +455,7 @@ redo:;
 	 * otherwise we'll update the slot with our changes later.
 	 */
 	init_fraglist(&nullfl);
-	if (!atomic_strong_cas_dblptr(&fl->raw, &oldfl.raw, nullfl.raw,
-				      __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
+	if (!odp_atomic_cas_acq_u128(fl, &oldfl.raw, nullfl.raw)) {
 		/* Failed to take this fraglist? Try again. */
 		set_prev_packet(frags_head, NULL);
 		goto redo;
@@ -560,7 +558,7 @@ redo:;
  *
  * @return The number of packets reassembled and sent to the output
  */
-static int add_frag_to_fraglist(union fraglist *fl, struct packet *frag,
+static int add_frag_to_fraglist(odp_atomic_u128_t *fl, struct packet *frag,
 				uint16_t frag_payload_len,
 				uint16_t frag_reass_payload_len,
 				odp_queue_t out)
@@ -586,7 +584,7 @@ static int add_frag_to_fraglist(union fraglist *fl, struct packet *frag,
  * @param out	   The queue to which reassembled packets should be written
  * @param force	   Whether all flows in the fraglist should be considered stale
  */
-static void remove_stale_flows(union fraglist *fl, union fraglist oldfl,
+static void remove_stale_flows(odp_atomic_u128_t *fl, union fraglist oldfl,
 			       struct flts timestamp_now, odp_queue_t out,
 			       odp_bool_t force)
 {
@@ -685,7 +683,7 @@ static void remove_stale_flows(union fraglist *fl, union fraglist oldfl,
  * @param out	   The queue to which reassembled packets should be written
  * @param force	   Whether all flows in the fraglist should be considered stale
  */
-static void garbage_collect_fraglist(union fraglist *fl, odp_queue_t out,
+static void garbage_collect_fraglist(odp_atomic_u128_t *fl, odp_queue_t out,
 				     odp_bool_t force)
 {
 	uint64_t time_now;
@@ -698,8 +696,9 @@ static void garbage_collect_fraglist(union fraglist *fl, odp_queue_t out,
 	do {
 		time_now = odp_time_to_ns(odp_time_global());
 		timestamp_now.t = time_now / TS_RES_NS;
-		__atomic_load(&fl->half[0], &oldfl.half[0], __ATOMIC_RELAXED);
-		__atomic_load(&fl->half[1], &oldfl.half[1], __ATOMIC_RELAXED);
+
+		oldfl.raw = odp_atomic_load_u128(fl);
+
 		elapsed.t = timestamp_now.t - oldfl.earliest;
 
 		if (oldfl.tail == NULL ||
@@ -712,11 +711,8 @@ static void garbage_collect_fraglist(union fraglist *fl, odp_queue_t out,
 			union fraglist nullfl;
 
 			init_fraglist(&nullfl);
-			success = atomic_strong_cas_dblptr(&fl->raw, &oldfl.raw,
-							   nullfl.raw,
-							   __ATOMIC_ACQUIRE,
-							   __ATOMIC_RELAXED);
-
+			success = odp_atomic_cas_acq_u128(fl, &oldfl.raw,
+							  nullfl.raw);
 			if (success)
 				remove_stale_flows(fl, oldfl, timestamp_now,
 						   out, force);
@@ -724,7 +720,7 @@ static void garbage_collect_fraglist(union fraglist *fl, odp_queue_t out,
 	} while (!success);
 }
 
-int reassemble_ipv4_packets(union fraglist *fraglists, int num_fraglists,
+int reassemble_ipv4_packets(odp_atomic_u128_t *fraglists, int num_fraglists,
 			    struct packet *fragments, int num_fragments,
 			    odp_queue_t out)
 {
@@ -737,7 +733,7 @@ int reassemble_ipv4_packets(union fraglist *fraglists, int num_fraglists,
 		uint16_t frag_payload_len;
 		uint16_t frag_reass_payload_len;
 		uint32_t key;
-		union fraglist *fl;
+		odp_atomic_u128_t *fl;
 		int status;
 
 		frag = fragments[i];
@@ -767,7 +763,7 @@ int reassemble_ipv4_packets(union fraglist *fraglists, int num_fraglists,
 	return packets_reassembled;
 }
 
-void garbage_collect_fraglists(union fraglist *fraglists, int num_fraglists,
+void garbage_collect_fraglists(odp_atomic_u128_t *fraglists, int num_fraglists,
 			       odp_queue_t out, odp_bool_t destroy_all)
 {
 	int i;

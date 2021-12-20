@@ -9,12 +9,6 @@
 
 #include <odp/helper/ip.h>
 
-#if defined(__ARM_ARCH)
-#include "odp_ipfragreass_atomics_arm.h"
-#else
-#include "odp_ipfragreass_atomics.h"
-#endif
-
 /**
  * Generate a random IPv4 UDP packet from the specified parameters
  *

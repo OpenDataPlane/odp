@@ -51,7 +51,7 @@ static struct ODP_ALIGNED_CACHE {
 } thread_stats[MAX_WORKERS];
 
 /** Shared hash map structure for reassembly */
-static union fraglist *fraglists;
+static odp_atomic_u128_t *fraglists;
 
 /** Barrier for synchronising reassembly worker threads */
 static odp_barrier_t barrier;
@@ -74,6 +74,7 @@ static void init(odp_instance_t *instance, odp_pool_t *fragment_pool,
 	odp_queue_param_t frag_queue_params;
 	odp_queue_param_t reass_queue_params;
 	char cpumask_str[ODP_CPUMASK_STR_SIZE];
+	union fraglist init_data;
 
 	srand(seed);
 	printf("= Seed: %d\n", seed);
@@ -103,7 +104,8 @@ static void init(odp_instance_t *instance, odp_pool_t *fragment_pool,
 	}
 
 	/* Reserve (and initialise) shared memory for reassembly fraglists */
-	*shm = odp_shm_reserve("fraglists", FRAGLISTS * sizeof(union fraglist),
+	*shm = odp_shm_reserve("fraglists",
+			       FRAGLISTS * sizeof(odp_atomic_u128_t),
 			       ODP_CACHE_LINE_SIZE, 0);
 	if (*shm == ODP_SHM_INVALID) {
 		fprintf(stderr, "ERROR: odp_shm_reserve\n");
@@ -114,8 +116,10 @@ static void init(odp_instance_t *instance, odp_pool_t *fragment_pool,
 		fprintf(stderr, "ERROR: odp_shm_addr\n");
 		exit(1);
 	}
+
+	init_fraglist(&init_data);
 	for (i = 0; i < FRAGLISTS; ++i)
-		init_fraglist(&fraglists[i]);
+		odp_atomic_init_u128(&fraglists[i], init_data.raw);
 
 	/* Create a queue for holding fragments */
 	odp_queue_param_init(&frag_queue_params);

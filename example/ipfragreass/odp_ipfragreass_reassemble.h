@@ -7,13 +7,13 @@
 #ifndef ODP_FRAGREASS_PP_REASSEMBLE_H_
 #define ODP_FRAGREASS_PP_REASSEMBLE_H_
 
+#include <odp_api.h>
 #include <odp/helper/ip.h>
 
 #include "odp_ipfragreass_ip.h"
 #include "odp_ipfragreass_helpers.h"
 
-ODP_STATIC_ASSERT((__SIZEOF_POINTER__ == 4 || __SIZEOF_POINTER__ == 8),
-		  "ODPREASS_PTR__SIZE_ERROR");
+ODP_STATIC_ASSERT(__SIZEOF_POINTER__ <= 8, "ODP_REASS_PTR__SIZE_ERROR");
 
 /**
  * The time in nanoseconds after reception of the earliest fragment that a
@@ -22,41 +22,25 @@ ODP_STATIC_ASSERT((__SIZEOF_POINTER__ == 4 || __SIZEOF_POINTER__ == 8),
 #define FLOW_TIMEOUT_NS 15000000000ULL
 
 /** Convert nanoseconds into a unit for packet.arrival */
-#if __SIZEOF_POINTER__ == 4
-#define TS_RES_NS ((uint64_t)5000000000) /**< ns -> 5s */
-#elif __SIZEOF_POINTER__ == 8
 #define TS_RES_NS ((uint64_t)1000000)    /**< ns -> 1ms */
-#endif
 
 /**
  * The maximum value of the packet.arrival field.
  */
-#if __SIZEOF_POINTER__ == 4
-#define EARLIEST_MAX 15
-#elif __SIZEOF_POINTER__ == 8
 #define EARLIEST_MAX UINT32_MAX
-#endif
 
 /**
  * The time in packet.arrival ticks that indications of the time "now" are
  * permitted to be off by.
  */
-#if __SIZEOF_POINTER__ == 4
-#define TS_NOW_TOLERANCE 1
-#elif __SIZEOF_POINTER__ == 8
 #define TS_NOW_TOLERANCE 5000
-#endif
 
 /**
  * The timestamp format used for fragments. Sadly, this has to be a structure
  * as we may need a bit field.
  */
 struct flts {
-#if __SIZEOF_POINTER__ == 4
-	uint8_t t:4;
-#elif __SIZEOF_POINTER__ == 8
 	uint32_t t;
-#endif
 };
 
 /**
@@ -81,11 +65,7 @@ union fraglist {
 		 * The timestamp of the earliest arriving fragment in this
 		 * fraglist
 		 */
-#if __SIZEOF_POINTER__ == 4
-		uint32_t earliest:4;
-#elif __SIZEOF_POINTER__ == 8
 		uint32_t earliest;
-#endif
 
 		/**
 		 * The sum of the payloads of the fragments in this list
@@ -116,17 +96,7 @@ union fraglist {
 		struct packet *tail;
 	};
 
-#if __SIZEOF_POINTER__ == 4
-	struct {
-		uint32_t half[2];
-	};
-	uint64_t raw;
-#elif __SIZEOF_POINTER__ == 8
-	struct {
-		uint64_t half[2];
-	};
-	__extension__ __int128 raw;
-#endif
+	odp_u128_t raw;
 };
 
 /**
@@ -193,7 +163,7 @@ static inline void set_prev_packet(struct packet *packet, struct packet *prev)
  *
  * @return The number of packets successfully reassembled and written to "out"
  */
-int reassemble_ipv4_packets(union fraglist *fraglists, int num_fraglists,
+int reassemble_ipv4_packets(odp_atomic_u128_t *fraglists, int num_fraglists,
 			    struct packet *fragments, int num_fragments,
 			    odp_queue_t out);
 
@@ -205,7 +175,7 @@ int reassemble_ipv4_packets(union fraglist *fraglists, int num_fraglists,
  * @param out		The queue to which reassembled packets should be written
  * @param destroy_all	Whether all encountered flows should be cleaned up
  */
-void garbage_collect_fraglists(union fraglist *fraglists, int num_fraglists,
+void garbage_collect_fraglists(odp_atomic_u128_t *fraglists, int num_fraglists,
 			       odp_queue_t out, odp_bool_t destroy_all);
 
 #endif
