@@ -56,7 +56,6 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 	odp_crypto_ses_create_err_t ses_create_rc;
 	odp_crypto_session_t session;
 	sa_mode_t mode = IPSEC_SA_MODE_TRANSPORT;
-	uint8_t unused_iv[cipher_sa ? cipher_sa->iv_len : 1];
 
 	/* Verify we have a good entry */
 	entry = &ipsec_cache->array[ipsec_cache->index];
@@ -96,13 +95,11 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 		params.cipher_alg  = cipher_sa->alg.u.cipher;
 		params.cipher_key.data  = cipher_sa->key.data;
 		params.cipher_key.length  = cipher_sa->key.length;
-		params.cipher_iv.data = unused_iv;
-		params.cipher_iv.length = cipher_sa->iv_len;
+		params.cipher_iv_len = cipher_sa->iv_len;
 		mode = cipher_sa->mode;
 	} else {
 		params.cipher_alg = ODP_CIPHER_ALG_NULL;
-		params.cipher_iv.data = NULL;
-		params.cipher_iv.length = 0;
+		params.cipher_iv_len = 0;
 	}
 
 	/* Auth */
