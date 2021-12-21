@@ -219,10 +219,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key24,
 				.length = sizeof(test_key24)
 			},
-			.cipher_iv = {
-				.data = test_iv,
-				.length = 8,
-			},
+			.cipher_iv_len = 8,
 			.auth_alg = ODP_AUTH_ALG_NULL
 		},
 	},
@@ -234,10 +231,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key24,
 				.length = sizeof(test_key24)
 			},
-			.cipher_iv = {
-				.data = test_iv,
-				.length = 8,
-			},
+			.cipher_iv_len = 8,
 			.auth_alg = ODP_AUTH_ALG_MD5_HMAC,
 			.auth_key = {
 				.data = test_key16,
@@ -266,10 +260,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
 			},
-			.cipher_iv = {
-				.data = test_iv,
-				.length = 16,
-			},
+			.cipher_iv_len = 16,
 			.auth_alg = ODP_AUTH_ALG_NULL
 		},
 	},
@@ -281,10 +272,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
 			},
-			.cipher_iv = {
-				.data = test_iv,
-				.length = 16,
-			},
+			.cipher_iv_len = 16,
 			.auth_alg = ODP_AUTH_ALG_SHA1_HMAC,
 			.auth_key = {
 				.data = test_key20,
@@ -313,10 +301,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
 			},
-			.cipher_iv = {
-				.data = test_iv,
-				.length = 16,
-			},
+			.cipher_iv_len = 16,
 			.auth_alg = ODP_AUTH_ALG_NULL
 		},
 	},
@@ -328,10 +313,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
 			},
-			.cipher_iv = {
-				.data = test_iv,
-				.length = 16,
-			},
+			.cipher_iv_len = 16,
 			.auth_alg = ODP_AUTH_ALG_SHA1_HMAC,
 			.auth_key = {
 				.data = test_key20,
@@ -373,10 +355,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
 			},
-			.auth_iv = {
-				.data = test_iv,
-				.length = 12,
-			},
+			.auth_iv_len = 12,
 			.auth_digest_len = 16,
 		},
 	},
@@ -388,10 +367,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
 			},
-			.cipher_iv = {
-				.data = test_iv,
-				.length = 12,
-			},
+			.cipher_iv_len = 12,
 			.auth_alg = ODP_AUTH_ALG_AES_GCM,
 			.auth_digest_len = 16,
 		},
@@ -404,10 +380,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
 			},
-			.cipher_iv = {
-				.data = test_iv,
-				.length = 11,
-			},
+			.cipher_iv_len = 11,
 			.auth_alg = ODP_AUTH_ALG_AES_CCM,
 			.auth_digest_len = 16,
 		},
@@ -420,10 +393,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key32,
 				.length = sizeof(test_key32)
 			},
-			.cipher_iv = {
-				.data = test_iv,
-				.length = 12,
-			},
+			.cipher_iv_len = 12,
 			.auth_alg = ODP_AUTH_ALG_CHACHA20_POLY1305,
 			.auth_digest_len = 16,
 		},
@@ -725,6 +695,8 @@ run_measure_one(crypto_args_t *cargs,
 	/* Initialize parameters block */
 	memset(&params, 0, sizeof(params));
 	params.session = *session;
+	params.cipher_iv_ptr = test_iv;
+	params.auth_iv_ptr = test_iv;
 
 	params.cipher_range.offset = 0;
 	params.cipher_range.length = payload_length;
