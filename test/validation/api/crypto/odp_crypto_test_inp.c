@@ -26,6 +26,31 @@ struct suite_context_s {
 
 static struct suite_context_s suite_context;
 
+static void test_default_values(void)
+{
+	odp_crypto_session_param_t param;
+
+	memset(&param, 0x55, sizeof(param));
+	odp_crypto_session_param_init(&param);
+
+	CU_ASSERT_EQUAL(param.op, ODP_CRYPTO_OP_ENCODE);
+	CU_ASSERT_EQUAL(param.auth_cipher_text, false);
+	CU_ASSERT_EQUAL(param.pref_mode, ODP_CRYPTO_SYNC);
+	CU_ASSERT_EQUAL(param.op_mode, ODP_CRYPTO_SYNC);
+	CU_ASSERT_EQUAL(param.cipher_alg, ODP_CIPHER_ALG_NULL);
+	CU_ASSERT_EQUAL(param.cipher_iv_len, 0);
+	CU_ASSERT_EQUAL(param.auth_alg, ODP_AUTH_ALG_NULL);
+	CU_ASSERT_EQUAL(param.auth_iv_len, 0);
+	CU_ASSERT_EQUAL(param.auth_aad_len, 0);
+
+#if ODP_DEPRECATED_API
+	CU_ASSERT_EQUAL(param.cipher_iv.data, NULL);
+	CU_ASSERT_EQUAL(param.cipher_iv.length, 0);
+	CU_ASSERT_EQUAL(param.auth_iv.data, NULL);
+	CU_ASSERT_EQUAL(param.auth_iv.length, 0);
+#endif
+}
+
 static int packet_cmp_mem_bits(odp_packet_t pkt, uint32_t offset,
 			       uint8_t *s, uint32_t len)
 {
@@ -2090,6 +2115,7 @@ static int crypto_suite_term(void)
 
 odp_testinfo_t crypto_suite[] = {
 	ODP_TEST_INFO(test_capability),
+	ODP_TEST_INFO(test_default_values),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_null,
 				  check_alg_null),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_null,
