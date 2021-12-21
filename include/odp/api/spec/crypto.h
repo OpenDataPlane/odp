@@ -538,7 +538,7 @@ typedef struct odp_crypto_iv {
 	 */
 	uint8_t *data;
 
-	/** IV length in bytes */
+	/** IV length in bytes. Default value is zero. */
 	uint32_t length;
 
 } odp_crypto_iv_t;
@@ -621,6 +621,17 @@ typedef struct odp_crypto_session_param_t {
 
 		/** Cipher Initialization Vector (IV) */
 		odp_crypto_iv_t cipher_iv;
+
+		/** Cipher IV length */
+		struct {
+			/** Unused padding field */
+			uint8_t *dummy_padding_0;
+
+			/** Length of cipher initialization vector.
+			 *  Default value is zero.
+			 */
+			uint32_t cipher_iv_len;
+		};
 	};
 
 	/** Authentication algorithm
@@ -647,7 +658,20 @@ typedef struct odp_crypto_session_param_t {
 	odp_crypto_key_t auth_key;
 
 	/** Authentication Initialization Vector (IV) */
-	odp_crypto_iv_t auth_iv;
+	union {
+		odp_crypto_iv_t auth_iv;
+
+		/** Authentication IV length */
+		struct {
+			/** Unused padding field */
+			uint8_t *dummy_padding_1;
+
+			/** Length of authentication initialization vector.
+			 *  Default value is zero.
+			 */
+			uint32_t auth_iv_len;
+		};
+	};
 
 	/** Authentication digest length in bytes
 	 *
