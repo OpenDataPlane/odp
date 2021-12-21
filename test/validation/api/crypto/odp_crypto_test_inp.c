@@ -581,6 +581,12 @@ static void alg_test_execute(const alg_test_param_t *param)
 	}
 }
 
+typedef enum {
+	PACKET_IV,
+	OLD_PACKET_IV,
+	OLD_SESSION_IV,
+} iv_test_mode_t;
+
 /* Basic algorithm run function for async inplace mode.
  * Creates a session from input parameters and runs one operation
  * on input_vec. Checks the output of the crypto operation against
@@ -594,7 +600,7 @@ static void alg_test(odp_crypto_op_t op,
 		     odp_cipher_alg_t cipher_alg,
 		     odp_auth_alg_t auth_alg,
 		     crypto_test_reference_t *ref,
-		     odp_bool_t ovr_iv,
+		     iv_test_mode_t iv_mode,
 		     odp_bool_t bit_mode)
 {
 	unsigned int initial_num_failures = CU_get_number_of_failures();
@@ -607,8 +613,6 @@ static void alg_test(odp_crypto_op_t op,
 	odp_crypto_session_param_t ses_params;
 	uint8_t cipher_key_data[ref->cipher_key_length];
 	uint8_t auth_key_data[ref->auth_key_length];
-	uint8_t cipher_iv_data[ref->cipher_iv_length];
-	uint8_t auth_iv_data[ref->auth_iv_length];
 	odp_crypto_key_t cipher_key = {
 		.data = cipher_key_data,
 		.length = ref->cipher_key_length
@@ -617,22 +621,27 @@ static void alg_test(odp_crypto_op_t op,
 		.data = auth_key_data,
 		.length = ref->auth_key_length
 	};
+	alg_test_param_t test_param;
+#if ODP_DEPRECATED_API
+	uint8_t cipher_iv_data[ref->cipher_iv_length];
+	uint8_t auth_iv_data[ref->auth_iv_length];
 	odp_crypto_iv_t cipher_iv = {
-		.data = ovr_iv ? NULL : cipher_iv_data,
 		.length = ref->cipher_iv_length
 	};
 	odp_crypto_iv_t auth_iv = {
-		.data = ovr_iv ? NULL : auth_iv_data,
 		.length = ref->auth_iv_length
 	};
-	alg_test_param_t test_param;
+
+	if (iv_mode == OLD_SESSION_IV) {
+		memcpy(cipher_iv_data, ref->cipher_iv, ref->cipher_iv_length);
+		memcpy(auth_iv_data, ref->auth_iv, ref->auth_iv_length);
+		cipher_iv.data = cipher_iv_data;
+		auth_iv.data = auth_iv_data;
+	}
+#endif
 
 	memcpy(cipher_key_data, ref->cipher_key, ref->cipher_key_length);
 	memcpy(auth_key_data, ref->auth_key, ref->auth_key_length);
-	if (!ovr_iv) {
-		memcpy(cipher_iv_data, ref->cipher_iv, ref->cipher_iv_length);
-		memcpy(auth_iv_data, ref->auth_iv, ref->auth_iv_length);
-	}
 
 	/* Create a crypto session */
 	odp_crypto_session_param_init(&ses_params);
@@ -645,8 +654,15 @@ static void alg_test(odp_crypto_op_t op,
 	ses_params.compl_queue = suite_context.queue;
 	ses_params.output_pool = suite_context.pool;
 	ses_params.cipher_key = cipher_key;
-	ses_params.cipher_iv = cipher_iv;
-	ses_params.auth_iv = auth_iv;
+	if (iv_mode == PACKET_IV) {
+		ses_params.cipher_iv_len = ref->cipher_iv_length;
+		ses_params.auth_iv_len = ref->auth_iv_length;
+	} else {
+#if ODP_DEPRECATED_API
+		ses_params.cipher_iv = cipher_iv;
+		ses_params.auth_iv = auth_iv;
+#endif
+	}
 	ses_params.auth_key = auth_key;
 	ses_params.auth_digest_len = ref->digest_length;
 	ses_params.auth_aad_len = ref->aad_length;
@@ -663,8 +679,10 @@ static void alg_test(odp_crypto_op_t op,
 	 */
 	memset(cipher_key_data, 0, sizeof(cipher_key_data));
 	memset(auth_key_data, 0, sizeof(auth_key_data));
+#if ODP_DEPRECATED_API
 	memset(cipher_iv_data, 0, sizeof(cipher_iv_data));
 	memset(auth_iv_data, 0, sizeof(auth_iv_data));
+#endif
 	memset(&ses_params, 0, sizeof(ses_params));
 
 	memset(&test_param, 0, sizeof(test_param));
@@ -672,7 +690,7 @@ static void alg_test(odp_crypto_op_t op,
 	test_param.op = op;
 	test_param.auth_alg = auth_alg;
 	test_param.ref = ref;
-	test_param.override_iv = ovr_iv;
+	test_param.override_iv = (iv_mode != OLD_SESSION_IV);
 	test_param.bit_mode = bit_mode;
 
 	alg_test_execute(&test_param);
@@ -797,9 +815,17 @@ static void check_alg(odp_crypto_op_t op,
 		}
 
 		/* test with per-packet IV */
-		alg_test(op, cipher_alg, auth_alg, &ref[idx], true, bit_mode);
+		alg_test(op, cipher_alg, auth_alg, &ref[idx],
+			 PACKET_IV, bit_mode);
+#if ODP_DEPRECATED_API
+		/* test with per-packet IV using the old API*/
+		alg_test(op, cipher_alg, auth_alg, &ref[idx],
+			 OLD_PACKET_IV, bit_mode);
+
 		/* test with per-session IV */
-		alg_test(op, cipher_alg, auth_alg, &ref[idx], false, bit_mode);
+		alg_test(op, cipher_alg, auth_alg, &ref[idx],
+			 OLD_SESSION_IV, bit_mode);
+#endif
 
 		cipher_tested[cipher_idx] = true;
 		auth_tested[auth_idx] = true;
