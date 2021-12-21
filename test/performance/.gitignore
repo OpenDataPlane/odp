@@ -6,6 +6,7 @@ odp_bench_packet
 odp_cpu_bench
 odp_crc
 odp_crypto
+odp_dma_perf
 odp_ipsec
 odp_l2fwd
 odp_lock_perf
