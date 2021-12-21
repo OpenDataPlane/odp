@@ -527,7 +527,15 @@ typedef struct odp_crypto_key {
  * Crypto API IV structure
  */
 typedef struct odp_crypto_iv {
-	/** IV data */
+	/** IV data
+	 *
+	 *  Ignored when length is zero. Null value indicates that an
+	 *  IV will be provided for each packet through the crypto
+	 *  operation parameters. In that case the per-operation
+	 *  IV override parameter must always point to a valid IV.
+	 *
+	 *  Default value is NULL.
+	 */
 	uint8_t *data;
 
 	/** IV length in bytes */
