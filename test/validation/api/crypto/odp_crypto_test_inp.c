@@ -717,7 +717,6 @@ static void check_alg(odp_crypto_op_t op,
 		      odp_auth_alg_t auth_alg,
 		      crypto_test_reference_t *ref,
 		      size_t count,
-		      odp_bool_t ovr_iv,
 		      odp_bool_t bit_mode)
 {
 	int rc, i;
@@ -797,7 +796,10 @@ static void check_alg(odp_crypto_op_t op,
 			continue;
 		}
 
-		alg_test(op, cipher_alg, auth_alg, &ref[idx], ovr_iv, bit_mode);
+		/* test with per-packet IV */
+		alg_test(op, cipher_alg, auth_alg, &ref[idx], true, bit_mode);
+		/* test with per-session IV */
+		alg_test(op, cipher_alg, auth_alg, &ref[idx], false, bit_mode);
 
 		cipher_tested[cipher_idx] = true;
 		auth_tested[auth_idx] = true;
@@ -1066,7 +1068,6 @@ static void crypto_test_enc_alg_null(void)
 		  ODP_AUTH_ALG_NULL,
 		  null_reference,
 		  ARRAY_SIZE(null_reference),
-		  false,
 		  false);
 }
 
@@ -1077,7 +1078,6 @@ static void crypto_test_dec_alg_null(void)
 		  ODP_AUTH_ALG_NULL,
 		  null_reference,
 		  ARRAY_SIZE(null_reference),
-		  false,
 		  false);
 }
 
@@ -1093,18 +1093,6 @@ static void crypto_test_enc_alg_3des_cbc(void)
 		  ODP_AUTH_ALG_NULL,
 		  tdes_cbc_reference,
 		  ARRAY_SIZE(tdes_cbc_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_3DES_CBC,
-		  ODP_AUTH_ALG_NULL,
-		  tdes_cbc_reference,
-		  ARRAY_SIZE(tdes_cbc_reference),
-		  true,
 		  false);
 }
 
@@ -1115,18 +1103,6 @@ static void crypto_test_dec_alg_3des_cbc(void)
 		  ODP_AUTH_ALG_NULL,
 		  tdes_cbc_reference,
 		  ARRAY_SIZE(tdes_cbc_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_3DES_CBC,
-		  ODP_AUTH_ALG_NULL,
-		  tdes_cbc_reference,
-		  ARRAY_SIZE(tdes_cbc_reference),
-		  true,
 		  false);
 }
 
@@ -1142,7 +1118,6 @@ static void crypto_test_enc_alg_3des_ecb(void)
 		  ODP_AUTH_ALG_NULL,
 		  tdes_ecb_reference,
 		  ARRAY_SIZE(tdes_ecb_reference),
-		  false,
 		  false);
 }
 
@@ -1153,7 +1128,6 @@ static void crypto_test_dec_alg_3des_ecb(void)
 		  ODP_AUTH_ALG_NULL,
 		  tdes_ecb_reference,
 		  ARRAY_SIZE(tdes_ecb_reference),
-		  false,
 		  false);
 }
 
@@ -1170,18 +1144,6 @@ static void crypto_test_enc_alg_chacha20_poly1305(void)
 		  ODP_AUTH_ALG_CHACHA20_POLY1305,
 		  chacha20_poly1305_reference,
 		  ARRAY_SIZE(chacha20_poly1305_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_enc_alg_chacha20_poly1305_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_CHACHA20_POLY1305,
-		  ODP_AUTH_ALG_CHACHA20_POLY1305,
-		  chacha20_poly1305_reference,
-		  ARRAY_SIZE(chacha20_poly1305_reference),
-		  true,
 		  false);
 }
 
@@ -1192,18 +1154,6 @@ static void crypto_test_dec_alg_chacha20_poly1305(void)
 		  ODP_AUTH_ALG_CHACHA20_POLY1305,
 		  chacha20_poly1305_reference,
 		  ARRAY_SIZE(chacha20_poly1305_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_dec_alg_chacha20_poly1305_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_CHACHA20_POLY1305,
-		  ODP_AUTH_ALG_CHACHA20_POLY1305,
-		  chacha20_poly1305_reference,
-		  ARRAY_SIZE(chacha20_poly1305_reference),
-		  true,
 		  false);
 }
 
@@ -1219,18 +1169,6 @@ static void crypto_test_enc_alg_aes_gcm(void)
 		  ODP_AUTH_ALG_AES_GCM,
 		  aes_gcm_reference,
 		  ARRAY_SIZE(aes_gcm_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_enc_alg_aes_gcm_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_AES_GCM,
-		  ODP_AUTH_ALG_AES_GCM,
-		  aes_gcm_reference,
-		  ARRAY_SIZE(aes_gcm_reference),
-		  true,
 		  false);
 }
 
@@ -1241,18 +1179,6 @@ static void crypto_test_dec_alg_aes_gcm(void)
 		  ODP_AUTH_ALG_AES_GCM,
 		  aes_gcm_reference,
 		  ARRAY_SIZE(aes_gcm_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_dec_alg_aes_gcm_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_AES_GCM,
-		  ODP_AUTH_ALG_AES_GCM,
-		  aes_gcm_reference,
-		  ARRAY_SIZE(aes_gcm_reference),
-		  true,
 		  false);
 }
 
@@ -1268,18 +1194,6 @@ static void crypto_test_enc_alg_aes_ccm(void)
 		  ODP_AUTH_ALG_AES_CCM,
 		  aes_ccm_reference,
 		  ARRAY_SIZE(aes_ccm_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_enc_alg_aes_ccm_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_AES_CCM,
-		  ODP_AUTH_ALG_AES_CCM,
-		  aes_ccm_reference,
-		  ARRAY_SIZE(aes_ccm_reference),
-		  true,
 		  false);
 }
 
@@ -1290,18 +1204,6 @@ static void crypto_test_dec_alg_aes_ccm(void)
 		  ODP_AUTH_ALG_AES_CCM,
 		  aes_ccm_reference,
 		  ARRAY_SIZE(aes_ccm_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_dec_alg_aes_ccm_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_AES_CCM,
-		  ODP_AUTH_ALG_AES_CCM,
-		  aes_ccm_reference,
-		  ARRAY_SIZE(aes_ccm_reference),
-		  true,
 		  false);
 }
 
@@ -1317,18 +1219,6 @@ static void crypto_test_enc_alg_aes_cbc(void)
 		  ODP_AUTH_ALG_NULL,
 		  aes_cbc_reference,
 		  ARRAY_SIZE(aes_cbc_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_enc_alg_aes_cbc_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_AES_CBC,
-		  ODP_AUTH_ALG_NULL,
-		  aes_cbc_reference,
-		  ARRAY_SIZE(aes_cbc_reference),
-		  true,
 		  false);
 }
 
@@ -1339,18 +1229,6 @@ static void crypto_test_dec_alg_aes_cbc(void)
 		  ODP_AUTH_ALG_NULL,
 		  aes_cbc_reference,
 		  ARRAY_SIZE(aes_cbc_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_dec_alg_aes_cbc_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_AES_CBC,
-		  ODP_AUTH_ALG_NULL,
-		  aes_cbc_reference,
-		  ARRAY_SIZE(aes_cbc_reference),
-		  true,
 		  false);
 }
 
@@ -1366,18 +1244,6 @@ static void crypto_test_enc_alg_aes_ctr(void)
 		  ODP_AUTH_ALG_NULL,
 		  aes_ctr_reference,
 		  ARRAY_SIZE(aes_ctr_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_enc_alg_aes_ctr_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_AES_CTR,
-		  ODP_AUTH_ALG_NULL,
-		  aes_ctr_reference,
-		  ARRAY_SIZE(aes_ctr_reference),
-		  true,
 		  false);
 }
 
@@ -1388,18 +1254,6 @@ static void crypto_test_dec_alg_aes_ctr(void)
 		  ODP_AUTH_ALG_NULL,
 		  aes_ctr_reference,
 		  ARRAY_SIZE(aes_ctr_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_dec_alg_aes_ctr_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_AES_CTR,
-		  ODP_AUTH_ALG_NULL,
-		  aes_ctr_reference,
-		  ARRAY_SIZE(aes_ctr_reference),
-		  true,
 		  false);
 }
 
@@ -1415,7 +1269,6 @@ static void crypto_test_enc_alg_aes_ecb(void)
 		  ODP_AUTH_ALG_NULL,
 		  aes_ecb_reference,
 		  ARRAY_SIZE(aes_ecb_reference),
-		  false,
 		  false);
 }
 
@@ -1426,7 +1279,6 @@ static void crypto_test_dec_alg_aes_ecb(void)
 		  ODP_AUTH_ALG_NULL,
 		  aes_ecb_reference,
 		  ARRAY_SIZE(aes_ecb_reference),
-		  false,
 		  false);
 }
 
@@ -1442,18 +1294,6 @@ static void crypto_test_enc_alg_aes_cfb128(void)
 		  ODP_AUTH_ALG_NULL,
 		  aes_cfb128_reference,
 		  ARRAY_SIZE(aes_cfb128_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_enc_alg_aes_cfb128_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_AES_CFB128,
-		  ODP_AUTH_ALG_NULL,
-		  aes_cfb128_reference,
-		  ARRAY_SIZE(aes_cfb128_reference),
-		  true,
 		  false);
 }
 
@@ -1464,18 +1304,6 @@ static void crypto_test_dec_alg_aes_cfb128(void)
 		  ODP_AUTH_ALG_NULL,
 		  aes_cfb128_reference,
 		  ARRAY_SIZE(aes_cfb128_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_dec_alg_aes_cfb128_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_AES_CFB128,
-		  ODP_AUTH_ALG_NULL,
-		  aes_cfb128_reference,
-		  ARRAY_SIZE(aes_cfb128_reference),
-		  true,
 		  false);
 }
 
@@ -1491,18 +1319,6 @@ static void crypto_test_enc_alg_aes_xts(void)
 		  ODP_AUTH_ALG_NULL,
 		  aes_xts_reference,
 		  ARRAY_SIZE(aes_xts_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_enc_alg_aes_xts_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_AES_XTS,
-		  ODP_AUTH_ALG_NULL,
-		  aes_xts_reference,
-		  ARRAY_SIZE(aes_xts_reference),
-		  true,
 		  false);
 }
 
@@ -1513,18 +1329,6 @@ static void crypto_test_dec_alg_aes_xts(void)
 		  ODP_AUTH_ALG_NULL,
 		  aes_xts_reference,
 		  ARRAY_SIZE(aes_xts_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_dec_alg_aes_xts_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_AES_XTS,
-		  ODP_AUTH_ALG_NULL,
-		  aes_xts_reference,
-		  ARRAY_SIZE(aes_xts_reference),
-		  true,
 		  false);
 }
 
@@ -1540,18 +1344,6 @@ static void crypto_test_enc_alg_kasumi_f8(void)
 		  ODP_AUTH_ALG_NULL,
 		  kasumi_f8_reference,
 		  ARRAY_SIZE(kasumi_f8_reference),
-		  false,
-		  true);
-}
-
-static void crypto_test_enc_alg_kasumi_f8_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_KASUMI_F8,
-		  ODP_AUTH_ALG_NULL,
-		  kasumi_f8_reference,
-		  ARRAY_SIZE(kasumi_f8_reference),
-		  true,
 		  true);
 }
 
@@ -1562,18 +1354,6 @@ static void crypto_test_dec_alg_kasumi_f8(void)
 		  ODP_AUTH_ALG_NULL,
 		  kasumi_f8_reference,
 		  ARRAY_SIZE(kasumi_f8_reference),
-		  false,
-		  true);
-}
-
-static void crypto_test_dec_alg_kasumi_f8_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_KASUMI_F8,
-		  ODP_AUTH_ALG_NULL,
-		  kasumi_f8_reference,
-		  ARRAY_SIZE(kasumi_f8_reference),
-		  true,
 		  true);
 }
 
@@ -1589,18 +1369,6 @@ static void crypto_test_enc_alg_snow3g_uea2(void)
 		  ODP_AUTH_ALG_NULL,
 		  snow3g_uea2_reference,
 		  ARRAY_SIZE(snow3g_uea2_reference),
-		  false,
-		  true);
-}
-
-static void crypto_test_enc_alg_snow3g_uea2_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_SNOW3G_UEA2,
-		  ODP_AUTH_ALG_NULL,
-		  snow3g_uea2_reference,
-		  ARRAY_SIZE(snow3g_uea2_reference),
-		  true,
 		  true);
 }
 
@@ -1611,18 +1379,6 @@ static void crypto_test_dec_alg_snow3g_uea2(void)
 		  ODP_AUTH_ALG_NULL,
 		  snow3g_uea2_reference,
 		  ARRAY_SIZE(snow3g_uea2_reference),
-		  false,
-		  true);
-}
-
-static void crypto_test_dec_alg_snow3g_uea2_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_SNOW3G_UEA2,
-		  ODP_AUTH_ALG_NULL,
-		  snow3g_uea2_reference,
-		  ARRAY_SIZE(snow3g_uea2_reference),
-		  true,
 		  true);
 }
 
@@ -1639,18 +1395,6 @@ static void crypto_test_enc_alg_aes_eea2(void)
 		  ODP_AUTH_ALG_NULL,
 		  aes_eea2_reference,
 		  ARRAY_SIZE(aes_eea2_reference),
-		  false,
-		  true);
-}
-
-static void crypto_test_enc_alg_aes_eea2_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_AES_EEA2,
-		  ODP_AUTH_ALG_NULL,
-		  aes_eea2_reference,
-		  ARRAY_SIZE(aes_eea2_reference),
-		  true,
 		  true);
 }
 
@@ -1661,18 +1405,6 @@ static void crypto_test_dec_alg_aes_eea2(void)
 		  ODP_AUTH_ALG_NULL,
 		  aes_eea2_reference,
 		  ARRAY_SIZE(aes_eea2_reference),
-		  false,
-		  true);
-}
-
-static void crypto_test_dec_alg_aes_eea2_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_AES_EEA2,
-		  ODP_AUTH_ALG_NULL,
-		  aes_eea2_reference,
-		  ARRAY_SIZE(aes_eea2_reference),
-		  true,
 		  true);
 }
 
@@ -1688,18 +1420,6 @@ static void crypto_test_enc_alg_zuc_eea3(void)
 		  ODP_AUTH_ALG_NULL,
 		  zuc_eea3_reference,
 		  ARRAY_SIZE(zuc_eea3_reference),
-		  false,
-		  true);
-}
-
-static void crypto_test_enc_alg_zuc_eea3_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_ZUC_EEA3,
-		  ODP_AUTH_ALG_NULL,
-		  zuc_eea3_reference,
-		  ARRAY_SIZE(zuc_eea3_reference),
-		  true,
 		  true);
 }
 
@@ -1710,18 +1430,6 @@ static void crypto_test_dec_alg_zuc_eea3(void)
 		  ODP_AUTH_ALG_NULL,
 		  zuc_eea3_reference,
 		  ARRAY_SIZE(zuc_eea3_reference),
-		  false,
-		  true);
-}
-
-static void crypto_test_dec_alg_zuc_eea3_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_ZUC_EEA3,
-		  ODP_AUTH_ALG_NULL,
-		  zuc_eea3_reference,
-		  ARRAY_SIZE(zuc_eea3_reference),
-		  true,
 		  true);
 }
 
@@ -1737,7 +1445,6 @@ static void crypto_test_gen_alg_hmac_md5(void)
 		  ODP_AUTH_ALG_MD5_HMAC,
 		  hmac_md5_reference,
 		  ARRAY_SIZE(hmac_md5_reference),
-		  false,
 		  false);
 }
 
@@ -1748,7 +1455,6 @@ static void crypto_test_check_alg_hmac_md5(void)
 		  ODP_AUTH_ALG_MD5_HMAC,
 		  hmac_md5_reference,
 		  ARRAY_SIZE(hmac_md5_reference),
-		  false,
 		  false);
 }
 
@@ -1764,7 +1470,6 @@ static void crypto_test_gen_alg_hmac_sha1(void)
 		  ODP_AUTH_ALG_SHA1_HMAC,
 		  hmac_sha1_reference,
 		  ARRAY_SIZE(hmac_sha1_reference),
-		  false,
 		  false);
 }
 
@@ -1775,7 +1480,6 @@ static void crypto_test_check_alg_hmac_sha1(void)
 		  ODP_AUTH_ALG_SHA1_HMAC,
 		  hmac_sha1_reference,
 		  ARRAY_SIZE(hmac_sha1_reference),
-		  false,
 		  false);
 }
 
@@ -1791,7 +1495,6 @@ static void crypto_test_gen_alg_hmac_sha224(void)
 		  ODP_AUTH_ALG_SHA224_HMAC,
 		  hmac_sha224_reference,
 		  ARRAY_SIZE(hmac_sha224_reference),
-		  false,
 		  false);
 }
 
@@ -1802,7 +1505,6 @@ static void crypto_test_check_alg_hmac_sha224(void)
 		  ODP_AUTH_ALG_SHA224_HMAC,
 		  hmac_sha224_reference,
 		  ARRAY_SIZE(hmac_sha224_reference),
-		  false,
 		  false);
 }
 
@@ -1818,7 +1520,6 @@ static void crypto_test_gen_alg_hmac_sha256(void)
 		  ODP_AUTH_ALG_SHA256_HMAC,
 		  hmac_sha256_reference,
 		  ARRAY_SIZE(hmac_sha256_reference),
-		  false,
 		  false);
 }
 
@@ -1829,7 +1530,6 @@ static void crypto_test_check_alg_hmac_sha256(void)
 		  ODP_AUTH_ALG_SHA256_HMAC,
 		  hmac_sha256_reference,
 		  ARRAY_SIZE(hmac_sha256_reference),
-		  false,
 		  false);
 }
 
@@ -1845,7 +1545,6 @@ static void crypto_test_gen_alg_hmac_sha384(void)
 		  ODP_AUTH_ALG_SHA384_HMAC,
 		  hmac_sha384_reference,
 		  ARRAY_SIZE(hmac_sha384_reference),
-		  false,
 		  false);
 }
 
@@ -1856,7 +1555,6 @@ static void crypto_test_check_alg_hmac_sha384(void)
 		  ODP_AUTH_ALG_SHA384_HMAC,
 		  hmac_sha384_reference,
 		  ARRAY_SIZE(hmac_sha384_reference),
-		  false,
 		  false);
 }
 
@@ -1872,7 +1570,6 @@ static void crypto_test_gen_alg_hmac_sha512(void)
 		  ODP_AUTH_ALG_SHA512_HMAC,
 		  hmac_sha512_reference,
 		  ARRAY_SIZE(hmac_sha512_reference),
-		  false,
 		  false);
 }
 
@@ -1883,7 +1580,6 @@ static void crypto_test_check_alg_hmac_sha512(void)
 		  ODP_AUTH_ALG_SHA512_HMAC,
 		  hmac_sha512_reference,
 		  ARRAY_SIZE(hmac_sha512_reference),
-		  false,
 		  false);
 }
 
@@ -1900,7 +1596,6 @@ static void crypto_test_gen_alg_aes_xcbc(void)
 		  ODP_AUTH_ALG_AES_XCBC_MAC,
 		  aes_xcbc_reference,
 		  ARRAY_SIZE(aes_xcbc_reference),
-		  false,
 		  false);
 }
 
@@ -1911,7 +1606,6 @@ static void crypto_test_check_alg_aes_xcbc(void)
 		  ODP_AUTH_ALG_AES_XCBC_MAC,
 		  aes_xcbc_reference,
 		  ARRAY_SIZE(aes_xcbc_reference),
-		  false,
 		  false);
 }
 
@@ -1927,18 +1621,6 @@ static void crypto_test_gen_alg_aes_gmac(void)
 		  ODP_AUTH_ALG_AES_GMAC,
 		  aes_gmac_reference,
 		  ARRAY_SIZE(aes_gmac_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_gen_alg_aes_gmac_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_NULL,
-		  ODP_AUTH_ALG_AES_GMAC,
-		  aes_gmac_reference,
-		  ARRAY_SIZE(aes_gmac_reference),
-		  true,
 		  false);
 }
 
@@ -1949,18 +1631,6 @@ static void crypto_test_check_alg_aes_gmac(void)
 		  ODP_AUTH_ALG_AES_GMAC,
 		  aes_gmac_reference,
 		  ARRAY_SIZE(aes_gmac_reference),
-		  false,
-		  false);
-}
-
-static void crypto_test_check_alg_aes_gmac_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_NULL,
-		  ODP_AUTH_ALG_AES_GMAC,
-		  aes_gmac_reference,
-		  ARRAY_SIZE(aes_gmac_reference),
-		  false,
 		  false);
 }
 
@@ -1976,7 +1646,6 @@ static void crypto_test_gen_alg_aes_cmac(void)
 		  ODP_AUTH_ALG_AES_CMAC,
 		  aes_cmac_reference,
 		  ARRAY_SIZE(aes_cmac_reference),
-		  false,
 		  false);
 }
 
@@ -1987,7 +1656,6 @@ static void crypto_test_check_alg_aes_cmac(void)
 		  ODP_AUTH_ALG_AES_CMAC,
 		  aes_cmac_reference,
 		  ARRAY_SIZE(aes_cmac_reference),
-		  false,
 		  false);
 }
 
@@ -2003,18 +1671,6 @@ static void crypto_test_gen_alg_kasumi_f9(void)
 		  ODP_AUTH_ALG_KASUMI_F9,
 		  kasumi_f9_reference,
 		  ARRAY_SIZE(kasumi_f9_reference),
-		  false,
-		  true);
-}
-
-static void crypto_test_gen_alg_kasumi_f9_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_NULL,
-		  ODP_AUTH_ALG_KASUMI_F9,
-		  kasumi_f9_reference,
-		  ARRAY_SIZE(kasumi_f9_reference),
-		  true,
 		  true);
 }
 
@@ -2025,18 +1681,6 @@ static void crypto_test_check_alg_kasumi_f9(void)
 		  ODP_AUTH_ALG_KASUMI_F9,
 		  kasumi_f9_reference,
 		  ARRAY_SIZE(kasumi_f9_reference),
-		  false,
-		  true);
-}
-
-static void crypto_test_check_alg_kasumi_f9_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_NULL,
-		  ODP_AUTH_ALG_KASUMI_F9,
-		  kasumi_f9_reference,
-		  ARRAY_SIZE(kasumi_f9_reference),
-		  true,
 		  true);
 }
 
@@ -2052,18 +1696,6 @@ static void crypto_test_gen_alg_snow3g_uia2(void)
 		  ODP_AUTH_ALG_SNOW3G_UIA2,
 		  snow3g_uia2_reference,
 		  ARRAY_SIZE(snow3g_uia2_reference),
-		  false,
-		  true);
-}
-
-static void crypto_test_gen_alg_snow3g_uia2_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_NULL,
-		  ODP_AUTH_ALG_SNOW3G_UIA2,
-		  snow3g_uia2_reference,
-		  ARRAY_SIZE(snow3g_uia2_reference),
-		  true,
 		  true);
 }
 
@@ -2074,18 +1706,6 @@ static void crypto_test_check_alg_snow3g_uia2(void)
 		  ODP_AUTH_ALG_SNOW3G_UIA2,
 		  snow3g_uia2_reference,
 		  ARRAY_SIZE(snow3g_uia2_reference),
-		  false,
-		  true);
-}
-
-static void crypto_test_check_alg_snow3g_uia2_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_NULL,
-		  ODP_AUTH_ALG_SNOW3G_UIA2,
-		  snow3g_uia2_reference,
-		  ARRAY_SIZE(snow3g_uia2_reference),
-		  true,
 		  true);
 }
 
@@ -2102,18 +1722,6 @@ static void crypto_test_gen_alg_aes_eia2(void)
 		  ODP_AUTH_ALG_AES_EIA2,
 		  aes_eia2_reference,
 		  ARRAY_SIZE(aes_eia2_reference),
-		  false,
-		  true);
-}
-
-static void crypto_test_gen_alg_aes_eia2_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_NULL,
-		  ODP_AUTH_ALG_AES_EIA2,
-		  aes_eia2_reference,
-		  ARRAY_SIZE(aes_eia2_reference),
-		  true,
 		  true);
 }
 
@@ -2124,18 +1732,6 @@ static void crypto_test_check_alg_aes_eia2(void)
 		  ODP_AUTH_ALG_AES_EIA2,
 		  aes_eia2_reference,
 		  ARRAY_SIZE(aes_eia2_reference),
-		  false,
-		  true);
-}
-
-static void crypto_test_check_alg_aes_eia2_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_NULL,
-		  ODP_AUTH_ALG_AES_EIA2,
-		  aes_eia2_reference,
-		  ARRAY_SIZE(aes_eia2_reference),
-		  true,
 		  true);
 }
 
@@ -2151,18 +1747,6 @@ static void crypto_test_gen_alg_zuc_eia3(void)
 		  ODP_AUTH_ALG_ZUC_EIA3,
 		  zuc_eia3_reference,
 		  ARRAY_SIZE(zuc_eia3_reference),
-		  false,
-		  true);
-}
-
-static void crypto_test_gen_alg_zuc_eia3_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_ENCODE,
-		  ODP_CIPHER_ALG_NULL,
-		  ODP_AUTH_ALG_ZUC_EIA3,
-		  zuc_eia3_reference,
-		  ARRAY_SIZE(zuc_eia3_reference),
-		  true,
 		  true);
 }
 
@@ -2173,18 +1757,6 @@ static void crypto_test_check_alg_zuc_eia3(void)
 		  ODP_AUTH_ALG_ZUC_EIA3,
 		  zuc_eia3_reference,
 		  ARRAY_SIZE(zuc_eia3_reference),
-		  false,
-		  true);
-}
-
-static void crypto_test_check_alg_zuc_eia3_ovr_iv(void)
-{
-	check_alg(ODP_CRYPTO_OP_DECODE,
-		  ODP_CIPHER_ALG_NULL,
-		  ODP_AUTH_ALG_ZUC_EIA3,
-		  zuc_eia3_reference,
-		  ARRAY_SIZE(zuc_eia3_reference),
-		  true,
 		  true);
 }
 
@@ -2200,7 +1772,6 @@ static void crypto_test_gen_alg_md5(void)
 		  ODP_AUTH_ALG_MD5,
 		  md5_reference,
 		  ARRAY_SIZE(md5_reference),
-		  false,
 		  false);
 }
 
@@ -2211,7 +1782,6 @@ static void crypto_test_check_alg_md5(void)
 		  ODP_AUTH_ALG_MD5,
 		  md5_reference,
 		  ARRAY_SIZE(md5_reference),
-		  false,
 		  false);
 }
 
@@ -2227,7 +1797,6 @@ static void crypto_test_gen_alg_sha1(void)
 		  ODP_AUTH_ALG_SHA1,
 		  sha1_reference,
 		  ARRAY_SIZE(sha1_reference),
-		  false,
 		  false);
 }
 
@@ -2238,7 +1807,6 @@ static void crypto_test_check_alg_sha1(void)
 		  ODP_AUTH_ALG_SHA1,
 		  sha1_reference,
 		  ARRAY_SIZE(sha1_reference),
-		  false,
 		  false);
 }
 
@@ -2254,7 +1822,6 @@ static void crypto_test_gen_alg_sha224(void)
 		  ODP_AUTH_ALG_SHA224,
 		  sha224_reference,
 		  ARRAY_SIZE(sha224_reference),
-		  false,
 		  false);
 }
 
@@ -2265,7 +1832,6 @@ static void crypto_test_check_alg_sha224(void)
 		  ODP_AUTH_ALG_SHA224,
 		  sha224_reference,
 		  ARRAY_SIZE(sha224_reference),
-		  false,
 		  false);
 }
 
@@ -2281,7 +1847,6 @@ static void crypto_test_gen_alg_sha256(void)
 		  ODP_AUTH_ALG_SHA256,
 		  sha256_reference,
 		  ARRAY_SIZE(sha256_reference),
-		  false,
 		  false);
 }
 
@@ -2292,7 +1857,6 @@ static void crypto_test_check_alg_sha256(void)
 		  ODP_AUTH_ALG_SHA256,
 		  sha256_reference,
 		  ARRAY_SIZE(sha256_reference),
-		  false,
 		  false);
 }
 
@@ -2308,7 +1872,6 @@ static void crypto_test_gen_alg_sha384(void)
 		  ODP_AUTH_ALG_SHA384,
 		  sha384_reference,
 		  ARRAY_SIZE(sha384_reference),
-		  false,
 		  false);
 }
 
@@ -2319,7 +1882,6 @@ static void crypto_test_check_alg_sha384(void)
 		  ODP_AUTH_ALG_SHA384,
 		  sha384_reference,
 		  ARRAY_SIZE(sha384_reference),
-		  false,
 		  false);
 }
 
@@ -2335,7 +1897,6 @@ static void crypto_test_gen_alg_sha512(void)
 		  ODP_AUTH_ALG_SHA512,
 		  sha512_reference,
 		  ARRAY_SIZE(sha512_reference),
-		  false,
 		  false);
 }
 
@@ -2346,7 +1907,6 @@ static void crypto_test_check_alg_sha512(void)
 		  ODP_AUTH_ALG_SHA512,
 		  sha512_reference,
 		  ARRAY_SIZE(sha512_reference),
-		  false,
 		  false);
 }
 
@@ -2512,10 +2072,6 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_3des_cbc),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_3des_cbc,
 				  check_alg_3des_cbc),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_3des_cbc_ovr_iv,
-				  check_alg_3des_cbc),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_3des_cbc_ovr_iv,
-				  check_alg_3des_cbc),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_3des_ecb,
 				  check_alg_3des_ecb),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_3des_ecb,
@@ -2524,17 +2080,9 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_aes_cbc),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_cbc,
 				  check_alg_aes_cbc),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_cbc_ovr_iv,
-				  check_alg_aes_cbc),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_cbc_ovr_iv,
-				  check_alg_aes_cbc),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_ctr,
 				  check_alg_aes_ctr),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_ctr,
-				  check_alg_aes_ctr),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_ctr_ovr_iv,
-				  check_alg_aes_ctr),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_ctr_ovr_iv,
 				  check_alg_aes_ctr),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_ecb,
 				  check_alg_aes_ecb),
@@ -2544,73 +2092,37 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_aes_cfb128),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_cfb128,
 				  check_alg_aes_cfb128),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_cfb128_ovr_iv,
-				  check_alg_aes_cfb128),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_cfb128_ovr_iv,
-				  check_alg_aes_cfb128),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_xts,
 				  check_alg_aes_xts),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_xts,
-				  check_alg_aes_xts),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_xts_ovr_iv,
-				  check_alg_aes_xts),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_xts_ovr_iv,
 				  check_alg_aes_xts),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_kasumi_f8,
 				  check_alg_kasumi_f8),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_kasumi_f8,
 				  check_alg_kasumi_f8),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_kasumi_f8_ovr_iv,
-				  check_alg_kasumi_f8),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_kasumi_f8_ovr_iv,
-				  check_alg_kasumi_f8),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_snow3g_uea2,
 				  check_alg_snow3g_uea2),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_snow3g_uea2,
-				  check_alg_snow3g_uea2),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_snow3g_uea2_ovr_iv,
-				  check_alg_snow3g_uea2),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_snow3g_uea2_ovr_iv,
 				  check_alg_snow3g_uea2),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_eea2,
 				  check_alg_aes_eea2),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_eea2,
 				  check_alg_aes_eea2),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_eea2_ovr_iv,
-				  check_alg_aes_eea2),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_eea2_ovr_iv,
-				  check_alg_aes_eea2),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_zuc_eea3,
 				  check_alg_zuc_eea3),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_zuc_eea3,
 				  check_alg_zuc_eea3),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_zuc_eea3_ovr_iv,
-				  check_alg_zuc_eea3),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_zuc_eea3_ovr_iv,
-				  check_alg_zuc_eea3),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_gcm,
-				  check_alg_aes_gcm),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_gcm_ovr_iv,
 				  check_alg_aes_gcm),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_gcm,
 				  check_alg_aes_gcm),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_gcm_ovr_iv,
-				  check_alg_aes_gcm),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_ccm,
-				  check_alg_aes_ccm),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_ccm_ovr_iv,
 				  check_alg_aes_ccm),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_ccm,
 				  check_alg_aes_ccm),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_ccm_ovr_iv,
-				  check_alg_aes_ccm),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_chacha20_poly1305,
 				  check_alg_chacha20_poly1305),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_chacha20_poly1305_ovr_iv,
-				  check_alg_chacha20_poly1305),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_chacha20_poly1305,
-				  check_alg_chacha20_poly1305),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_chacha20_poly1305_ovr_iv,
 				  check_alg_chacha20_poly1305),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_hmac_md5,
 				  check_alg_hmac_md5),
@@ -2642,11 +2154,7 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_aes_xcbc),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_aes_gmac,
 				  check_alg_aes_gmac),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_aes_gmac_ovr_iv,
-				  check_alg_aes_gmac),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_aes_gmac,
-				  check_alg_aes_gmac),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_aes_gmac_ovr_iv,
 				  check_alg_aes_gmac),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_aes_cmac,
 				  check_alg_aes_cmac),
@@ -2656,33 +2164,17 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_kasumi_f9),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_kasumi_f9,
 				  check_alg_kasumi_f9),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_kasumi_f9_ovr_iv,
-				  check_alg_kasumi_f9),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_kasumi_f9_ovr_iv,
-				  check_alg_kasumi_f9),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_snow3g_uia2,
 				  check_alg_snow3g_uia2),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_snow3g_uia2,
-				  check_alg_snow3g_uia2),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_snow3g_uia2_ovr_iv,
-				  check_alg_snow3g_uia2),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_snow3g_uia2_ovr_iv,
 				  check_alg_snow3g_uia2),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_aes_eia2,
 				  check_alg_aes_eia2),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_aes_eia2,
 				  check_alg_aes_eia2),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_aes_eia2_ovr_iv,
-				  check_alg_aes_eia2),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_aes_eia2_ovr_iv,
-				  check_alg_aes_eia2),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_zuc_eia3,
 				  check_alg_zuc_eia3),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_zuc_eia3,
-				  check_alg_zuc_eia3),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_zuc_eia3_ovr_iv,
-				  check_alg_zuc_eia3),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_zuc_eia3_ovr_iv,
 				  check_alg_zuc_eia3),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_md5,
 				  check_alg_md5),
