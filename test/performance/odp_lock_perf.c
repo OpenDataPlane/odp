@@ -23,6 +23,12 @@
 
 #define TEST_INFO(name, test, validate) { name, test, validate }
 
+typedef enum repeat_t {
+	REPEAT_NO,
+	REPEAT_UNTIL_FAIL,
+	REPEAT_FOREVER,
+} repeat_t;
+
 typedef enum place_t {
 	PLACE_PACK,
 	PLACE_SEPARATE,
@@ -34,6 +40,7 @@ typedef struct test_options_t {
 	uint32_t num_cpu;
 	uint32_t type;
 	uint64_t num_round;
+	repeat_t repeat;
 	uint32_t num_counter;
 	place_t place;
 } test_options_t;
@@ -43,6 +50,7 @@ static test_options_t test_options_def = {
 	.num_cpu = 0,
 	.type = 0,
 	.num_round = 100000,
+	.repeat = REPEAT_NO,
 	.num_counter = 2,
 	.place = 2,
 };
@@ -230,6 +238,10 @@ static void print_usage(void)
 	       "                             4: odp_rwlock_recursive_t\n"
 	       "                             5: odp_ticketlock_t\n"
 	       "  -r, --num_round        Number of rounds (default %" PRIu64 ")\n"
+	       "  -e, --repeat           Repeat the tests (default %u)\n"
+	       "                             0: no repeat, run the tests once\n"
+	       "                             1: repeat until failure\n"
+	       "                             2: repeat forever\n"
 	       "  -o, --num_counter      Number of counters (default %u)\n"
 	       "  -p, --place            Counter placement (default %d)\n"
 	       "                             0: pack to same cache line with lock\n"
@@ -238,8 +250,8 @@ static void print_usage(void)
 	       "  -h, --help             This help\n"
 	       "\n",
 	       DEFAULT_MAX_WORKERS, test_options_def.type,
-	       test_options_def.num_round, test_options_def.num_counter,
-	       test_options_def.place);
+	       test_options_def.num_round, test_options_def.repeat,
+	       test_options_def.num_counter, test_options_def.place);
 }
 
 static void print_info(test_options_t *test_options)
@@ -248,6 +260,7 @@ static void print_info(test_options_t *test_options)
 	printf("  num cpu          %u\n", test_options->num_cpu);
 	printf("  type             %u\n", test_options->type);
 	printf("  num rounds       %" PRIu64 "\n", test_options->num_round);
+	printf("  repeat           %u\n", test_options->repeat);
 	printf("  num counters     %u\n", test_options->num_counter);
 	printf("  place            %u\n", test_options->place);
 	printf("\n\n");
@@ -263,13 +276,14 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 		{ "num_cpu", required_argument, NULL, 'c' },
 		{ "type", required_argument, NULL, 't' },
 		{ "num_round", required_argument, NULL, 'r' },
+		{ "repeat", required_argument, NULL, 'e' },
 		{ "num_counter", required_argument, NULL, 'o' },
 		{ "place", required_argument, NULL, 'p' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 }
 	};
 
-	static const char *shortopts = "+c:t:r:o:p:h";
+	static const char *shortopts = "+c:t:r:e:o:p:h";
 
 	*test_options = test_options_def;
 
@@ -288,6 +302,9 @@ static int parse_options(int argc, char *argv[], test_options_t *test_options)
 			break;
 		case 'r':
 			test_options->num_round = atoll(optarg);
+			break;
+		case 'e':
+			test_options->repeat = atoi(optarg);
 			break;
 		case 'o':
 			test_options->num_counter = atoi(optarg);
@@ -619,34 +636,40 @@ int main(int argc, char **argv)
 	/* Loop all test cases */
 	num_tests = sizeof(test_suite) / sizeof(test_suite[0]);
 
-	for (i = 0; i < num_tests; i++) {
-		if (test_options.type && test_options.type != (uint32_t)i + 1)
-			continue;
+	while (1) {
+		for (i = 0; i < num_tests; i++) {
+			if (test_options.type && test_options.type != (uint32_t)i + 1)
+				continue;
 
-		test_global->cur_type = i;
+			test_global->cur_type = i;
 
-		/* Initialize test variables */
-		if (init_test(test_global, test_suite[i].name)) {
-			ODPH_ERR("Failed to initialize test.\n");
-			exit(EXIT_FAILURE);
+			/* Initialize test variables */
+			if (init_test(test_global, test_suite[i].name)) {
+				ODPH_ERR("Failed to initialize test.\n");
+				exit(EXIT_FAILURE);
+			}
+
+			/* Start workers */
+			if (start_workers(test_global, instance, test_suite[i].test_fn))
+				exit(EXIT_FAILURE);
+
+			/* Wait workers to exit */
+			odph_thread_join(test_global->thread_tbl,
+					 test_global->test_options.num_cpu);
+
+			print_stat(test_global);
+
+			/* Validate test results */
+			if (validate_results(test_global, test_suite[i].validate_fn)) {
+				ODPH_ERR("Test %s result validation failed.\n",
+					 test_suite[i].name);
+				if (test_options.repeat != REPEAT_FOREVER)
+					exit(EXIT_FAILURE);
+			}
 		}
 
-		/* Start workers */
-		if (start_workers(test_global, instance, test_suite[i].test_fn))
-			exit(EXIT_FAILURE);
-
-		/* Wait workers to exit */
-		odph_thread_join(test_global->thread_tbl,
-				 test_global->test_options.num_cpu);
-
-		print_stat(test_global);
-
-		/* Validate test results */
-		if (validate_results(test_global, test_suite[i].validate_fn)) {
-			ODPH_ERR("Test %s result validation failed.\n",
-				 test_suite[i].name);
-			exit(EXIT_FAILURE);
-		}
+		if (test_options.repeat == REPEAT_NO)
+			break;
 	}
 
 	if (odp_shm_free(shm)) {
