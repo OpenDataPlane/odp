@@ -201,13 +201,18 @@ static inline void test_ticketlock(test_global_t *g, uint64_t **counter,
 static inline int validate_generic(test_global_t *g, uint64_t **counter,
 				   uint32_t num_counter)
 {
+	int status = 0;
 	uint64_t total = (uint64_t)g->test_options.num_cpu * g->test_options.num_round;
 
-	for (uint32_t i = 0; i < num_counter; i++)
-		if (*counter[i] != total)
-			return 1;
+	for (uint32_t i = 0; i < num_counter; i++) {
+		if (*counter[i] != total) {
+			status = 1;
+			ODPH_ERR("Error: Counter %d value %" PRIu64 " expected %" PRIu64 "\n",
+				 i, *counter[i], total);
+		}
+	}
 
-	return 0;
+	return status;
 }
 
 static void print_usage(void)
