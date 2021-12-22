@@ -33,7 +33,7 @@ order of cipher and hashing can be controlled by the `auth_cipher_text`
 session parameter.
 
 Other Session parameters include algorithms, keys, initialization vector
-(optional), encode or decode, output queue for async mode and output packet
+lengths, encode or decode, output queue for async mode and output packet
 pool for allocation of an output packet if required.
 
 The parameters that describe the characteristics of a crypto session are
@@ -72,8 +72,9 @@ notification is expected. In the case of an async operation, the `posted`
 output parameter will be set to true.
 
 The operation arguments specify for each packet the areas that are to be
-encrypted or decrypted and authenticated. Also, there is an option of overriding
-the initialization vector specified in session parameters.
+encrypted or decrypted and authenticated. The parameters include also
+pointers to cipher and authentication initialization vectors as needed,
+depending on the initialization vector lengths specified at session creation.
 
 An operation can be executed in in-place, out-of-place or new buffer mode.
 In in-place mode output packet is same as the input packet.
