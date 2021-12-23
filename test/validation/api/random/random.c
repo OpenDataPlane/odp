@@ -80,10 +80,84 @@ static void random_test_repeat(void)
 	CU_ASSERT(memcmp(buf1, buf2, sizeof(buf1)) == 0);
 }
 
+static void random_data(uint8_t *buf, uint32_t len, odp_random_kind_t kind)
+{
+	static uint64_t seed;
+
+	switch (kind) {
+	case ODP_RANDOM_BASIC:
+	case ODP_RANDOM_CRYPTO:
+	case ODP_RANDOM_TRUE:
+		for (uint32_t i = 0; i < len;) {
+			int32_t r = odp_random_data(buf + i, len - i, kind);
+
+			CU_ASSERT_FATAL(r >= 0);
+			i += r;
+		}
+		break;
+	default:
+		CU_ASSERT_FATAL(odp_random_test_data(buf, len, &seed) ==
+				(int32_t)len);
+	}
+}
+
+static void random_test_align_and_overflow(odp_random_kind_t kind)
+{
+	uint8_t ODP_ALIGNED_CACHE buf[64];
+
+	for (int align = 8; align < 16; align++) {
+		for (int len = 1; len <= 16; len++) {
+			memset(buf, 1, sizeof(buf));
+			random_data(buf + align, len, kind);
+			CU_ASSERT(buf[align - 1] == 1);
+			CU_ASSERT(buf[align + len] == 1);
+		}
+	}
+}
+
+static void random_test_align_and_overflow_test(void)
+{
+	random_test_align_and_overflow(-1);
+}
+
+static void random_test_align_and_overflow_basic(void)
+{
+	random_test_align_and_overflow(ODP_RANDOM_BASIC);
+}
+
+static void random_test_align_and_overflow_crypto(void)
+{
+	random_test_align_and_overflow(ODP_RANDOM_CRYPTO);
+}
+
+static void random_test_align_and_overflow_true(void)
+{
+	random_test_align_and_overflow(ODP_RANDOM_TRUE);
+}
+
+static int check_kind_basic(void)
+{
+	return odp_random_max_kind() >= ODP_RANDOM_BASIC;
+}
+
+static int check_kind_crypto(void)
+{
+	return odp_random_max_kind() >= ODP_RANDOM_CRYPTO;
+}
+
+static int check_kind_true(void)
+{
+	return odp_random_max_kind() >= ODP_RANDOM_TRUE;
+}
+
 odp_testinfo_t random_suite[] = {
 	ODP_TEST_INFO(random_test_get_size),
 	ODP_TEST_INFO(random_test_kind),
 	ODP_TEST_INFO(random_test_repeat),
+	ODP_TEST_INFO(random_test_align_and_overflow_test),
+	ODP_TEST_INFO_CONDITIONAL(random_test_align_and_overflow_basic, check_kind_basic),
+	ODP_TEST_INFO_CONDITIONAL(random_test_align_and_overflow_crypto, check_kind_crypto),
+	ODP_TEST_INFO_CONDITIONAL(random_test_align_and_overflow_true, check_kind_true),
 	ODP_TEST_INFO_NULL,
 };
 
