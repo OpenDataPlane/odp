@@ -608,7 +608,7 @@ static int sock_init_global(void)
 		disable_pktio = 1;
 	} else {
 		ODP_PRINT("PKTIO: initialized socket mmsg,"
-			  "use export ODP_PKTIO_DISABLE_SOCKET_MMSG=1 to disable.\n");
+			  " use export ODP_PKTIO_DISABLE_SOCKET_MMSG=1 to disable.\n");
 	}
 	return 0;
 }
