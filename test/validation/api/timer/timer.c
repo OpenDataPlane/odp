@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019-2020, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -38,6 +38,9 @@
 /* Test case options */
 #define PRIV      1
 #define EXP_RELAX 1
+#define WAIT      0
+#define CANCEL    1
+#define RESTART   1
 
 /* Timer helper structure */
 struct test_timer {
@@ -644,6 +647,270 @@ static void timer_pool_max_res(void)
 
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+static odp_event_t wait_event(odp_queue_type_t queue_type, odp_queue_t queue,
+			      odp_time_t t1, uint64_t wait_ns)
+{
+	odp_time_t t2;
+	odp_event_t ev;
+	odp_queue_t from = ODP_QUEUE_INVALID;
+
+	while (1) {
+		if (queue_type == ODP_QUEUE_TYPE_SCHED)
+			ev = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+		else
+			ev = odp_queue_deq(queue);
+
+		if (ev != ODP_EVENT_INVALID) {
+			if (queue_type == ODP_QUEUE_TYPE_SCHED)
+				CU_ASSERT(from == queue);
+
+			return ev;
+		}
+
+		t2 = odp_time_global();
+		if (odp_time_diff_ns(t2, t1) > wait_ns)
+			break;
+	}
+
+	return ODP_EVENT_INVALID;
+}
+
+static void free_schedule_context(odp_queue_type_t queue_type)
+{
+	if (queue_type != ODP_QUEUE_TYPE_SCHED)
+		return;
+
+	while (1) {
+		odp_event_t ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+
+		CU_ASSERT(ev == ODP_EVENT_INVALID);
+
+		if (ev == ODP_EVENT_INVALID)
+			break;
+
+		odp_event_free(ev);
+	}
+}
+
+static void timer_single_shot(odp_queue_type_t queue_type, odp_timer_tick_type_t tick_type,
+			      int restart, int cancel)
+{
+	odp_timer_capability_t capa;
+	odp_timer_pool_param_t tp_param;
+	odp_queue_param_t queue_param;
+	odp_pool_param_t pool_param;
+	odp_timer_start_t start_param;
+	odp_timer_pool_t tp;
+	odp_timer_t timer;
+	odp_pool_t pool;
+	odp_queue_t queue;
+	odp_timeout_t tmo;
+	odp_event_t ev;
+	odp_time_t t1, t2;
+	uint64_t tick, nsec;
+	int ret;
+	uint64_t tmo_ns = ODP_TIME_SEC_IN_NS;
+	uint64_t res_ns = ODP_TIME_SEC_IN_NS / 10;
+
+	memset(&capa, 0, sizeof(capa));
+	ret = odp_timer_capability(ODP_CLOCK_DEFAULT, &capa);
+	CU_ASSERT_FATAL(ret == 0);
+	CU_ASSERT_FATAL(capa.max_tmo.max_tmo > 0);
+
+	if (capa.max_tmo.max_tmo < tmo_ns) {
+		tmo_ns = capa.max_tmo.max_tmo;
+		res_ns = capa.max_tmo.res_ns;
+	}
+
+	odp_pool_param_init(&pool_param);
+	pool_param.type    = ODP_POOL_TIMEOUT;
+	pool_param.tmo.num = 10;
+	pool = odp_pool_create("timeout_pool", &pool_param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	odp_queue_param_init(&queue_param);
+	queue_param.type = queue_type;
+
+	if (queue_type == ODP_QUEUE_TYPE_SCHED)
+		queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+
+	queue = odp_queue_create("timer_queue", &queue_param);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	odp_timer_pool_param_init(&tp_param);
+
+	tp_param.res_ns     = res_ns;
+	tp_param.min_tmo    = tmo_ns / 4;
+	tp_param.max_tmo    = tmo_ns;
+	tp_param.num_timers = 1;
+
+	tp = odp_timer_pool_create("test_single", &tp_param);
+	CU_ASSERT_FATAL(tp != ODP_TIMER_POOL_INVALID);
+
+	odp_timer_pool_start();
+
+	timer = odp_timer_alloc(tp, queue, USER_PTR);
+	CU_ASSERT_FATAL(timer != ODP_TIMER_INVALID);
+
+	tmo = odp_timeout_alloc(pool);
+	ev  = odp_timeout_to_event(tmo);
+	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+
+	nsec = tmo_ns;
+	if (restart)
+		nsec = tmo_ns / 2;
+
+	tick = odp_timer_ns_to_tick(tp, nsec);
+	if (tick_type == ODP_TIMER_TICK_ABS)
+		tick += odp_timer_current_tick(tp);
+
+	start_param.tick_type = tick_type;
+	start_param.tick      = tick;
+	start_param.tmo_ev    = ev;
+
+	ret = odp_timer_start(timer, &start_param);
+	CU_ASSERT_FATAL(ret == ODP_TIMER_SUCCESS);
+
+	if (restart) {
+		tick = odp_timer_ns_to_tick(tp, tmo_ns);
+		if (tick_type == ODP_TIMER_TICK_ABS)
+			tick += odp_timer_current_tick(tp);
+
+		start_param.tick   = tick;
+		start_param.tmo_ev = ODP_EVENT_INVALID;
+
+		ret = odp_timer_restart(timer, &start_param);
+		CU_ASSERT_FATAL(ret == ODP_TIMER_SUCCESS);
+	}
+
+	ev = ODP_EVENT_INVALID;
+
+	if (cancel) {
+		ret = odp_timer_cancel(timer, &ev);
+		CU_ASSERT(ret == 0);
+
+		if (ret == 0)
+			CU_ASSERT(ev != ODP_EVENT_INVALID);
+	} else {
+		uint64_t diff_ns;
+
+		t1 = odp_time_global();
+		ev = wait_event(queue_type, queue, t1, 10 * tmo_ns);
+		t2 = odp_time_global();
+		diff_ns = odp_time_diff_ns(t2, t1);
+
+		CU_ASSERT(ev != ODP_EVENT_INVALID);
+		CU_ASSERT(diff_ns < 2 * tmo_ns);
+		CU_ASSERT((double)diff_ns > 0.5 * tmo_ns);
+	}
+
+	if (ev != ODP_EVENT_INVALID) {
+		CU_ASSERT_FATAL(odp_event_type(ev) == ODP_EVENT_TIMEOUT);
+		tmo = odp_timeout_from_event(ev);
+		CU_ASSERT(odp_timeout_user_ptr(tmo) == USER_PTR);
+		CU_ASSERT(odp_timeout_timer(tmo) == timer);
+
+		if (!cancel) {
+			if (tick_type == ODP_TIMER_TICK_ABS) {
+				/* CU_ASSERT needs these extra brackets */
+				CU_ASSERT(odp_timeout_tick(tmo) == tick);
+			} else {
+				CU_ASSERT(odp_timeout_tick(tmo) > tick);
+			}
+		}
+
+		odp_event_free(ev);
+	}
+
+	free_schedule_context(queue_type);
+
+	CU_ASSERT(odp_timer_free(timer) == ODP_EVENT_INVALID);
+	odp_timer_pool_destroy(tp);
+
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+static void timer_plain_rel_wait(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ODP_TIMER_TICK_REL, 0, WAIT);
+}
+
+static void timer_plain_abs_wait(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ODP_TIMER_TICK_ABS, 0, WAIT);
+}
+
+static void timer_plain_rel_cancel(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ODP_TIMER_TICK_REL, 0, CANCEL);
+}
+
+static void timer_plain_abs_cancel(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ODP_TIMER_TICK_ABS, 0, CANCEL);
+}
+
+static void timer_plain_rel_restart_wait(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ODP_TIMER_TICK_REL, RESTART, WAIT);
+}
+
+static void timer_plain_abs_restart_wait(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ODP_TIMER_TICK_ABS, RESTART, WAIT);
+}
+
+static void timer_plain_rel_restart_cancel(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ODP_TIMER_TICK_REL, RESTART, CANCEL);
+}
+
+static void timer_plain_abs_restart_cancel(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ODP_TIMER_TICK_ABS, RESTART, CANCEL);
+}
+
+static void timer_sched_rel_wait(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ODP_TIMER_TICK_REL, 0, WAIT);
+}
+
+static void timer_sched_abs_wait(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ODP_TIMER_TICK_ABS, 0, WAIT);
+}
+
+static void timer_sched_rel_cancel(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ODP_TIMER_TICK_REL, 0, CANCEL);
+}
+
+static void timer_sched_abs_cancel(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ODP_TIMER_TICK_ABS, 0, CANCEL);
+}
+
+static void timer_sched_rel_restart_wait(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ODP_TIMER_TICK_REL, RESTART, WAIT);
+}
+
+static void timer_sched_abs_restart_wait(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ODP_TIMER_TICK_ABS, RESTART, WAIT);
+}
+
+static void timer_sched_rel_restart_cancel(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ODP_TIMER_TICK_REL, RESTART, CANCEL);
+}
+
+static void timer_sched_abs_restart_cancel(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ODP_TIMER_TICK_ABS, RESTART, CANCEL);
 }
 
 static void timer_pool_tick_info_run(odp_timer_clk_src_t clk_src)
@@ -1950,6 +2217,22 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_pool_create_max),
 	ODP_TEST_INFO(timer_pool_max_res),
 	ODP_TEST_INFO(timer_pool_tick_info),
+	ODP_TEST_INFO_CONDITIONAL(timer_plain_rel_wait, check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_plain_abs_wait, check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_plain_rel_cancel, check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_plain_abs_cancel, check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_plain_rel_restart_wait, check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_plain_abs_restart_wait, check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_plain_rel_restart_cancel, check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_plain_abs_restart_cancel, check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_sched_rel_wait, check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_sched_abs_wait, check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_sched_rel_cancel, check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_sched_abs_cancel, check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_sched_rel_restart_wait, check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_sched_abs_restart_wait, check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_sched_rel_restart_cancel, check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_sched_abs_restart_cancel, check_sched_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_tmo_event_plain,
 				  check_plain_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_tmo_event_sched,
