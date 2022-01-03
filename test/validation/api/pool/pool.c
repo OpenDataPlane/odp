@@ -1,6 +1,6 @@
 /* Copyright (c) 2014-2018, Linaro Limited
  * Copyright (c) 2020, Marvell
- * Copyright (c) 2020-2021, Nokia
+ * Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -41,6 +41,27 @@ static global_shared_mem_t *global_mem;
 static odp_pool_capability_t global_pool_capa;
 static odp_pool_param_t default_pool_param;
 static odp_pool_ext_capability_t global_pool_ext_capa;
+
+static void pool_test_param_init(void)
+{
+	odp_pool_param_t param;
+
+	odp_pool_param_init(&param);
+
+	CU_ASSERT(param.buf.cache_size >= global_pool_capa.buf.min_cache_size &&
+		  param.buf.cache_size <= global_pool_capa.buf.max_cache_size);
+
+	CU_ASSERT(param.pkt.max_num == 0);
+	CU_ASSERT(param.pkt.num_subparam == 0);
+	CU_ASSERT(param.pkt.cache_size >= global_pool_capa.pkt.min_cache_size &&
+		  param.pkt.cache_size <= global_pool_capa.pkt.max_cache_size);
+
+	CU_ASSERT(param.tmo.cache_size >= global_pool_capa.tmo.min_cache_size &&
+		  param.tmo.cache_size <= global_pool_capa.tmo.max_cache_size);
+
+	CU_ASSERT(param.vector.cache_size >= global_pool_capa.vector.min_cache_size &&
+		  param.vector.cache_size <= global_pool_capa.vector.max_cache_size);
+}
 
 static void pool_create_destroy(odp_pool_param_t *param)
 {
@@ -1737,6 +1758,7 @@ static int check_pool_ext_segment_support(void)
 }
 
 odp_testinfo_t pool_suite[] = {
+	ODP_TEST_INFO(pool_test_param_init),
 	ODP_TEST_INFO(pool_test_create_destroy_buffer),
 	ODP_TEST_INFO(pool_test_create_destroy_packet),
 	ODP_TEST_INFO(pool_test_create_destroy_timeout),
