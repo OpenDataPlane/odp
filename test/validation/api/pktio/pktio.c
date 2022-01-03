@@ -4139,7 +4139,9 @@ static int create_pool(const char *iface, int num)
 
 	odp_pool_param_init(&params);
 	set_pool_len(&params, &pool_capa);
-	params.pkt.num     = PKT_BUF_NUM;
+	/* Allocate enough buffers taking into consideration core starvation
+	 * due to caching */
+	params.pkt.num     = PKT_BUF_NUM + params.pkt.cache_size;
 	params.type        = ODP_POOL_PACKET;
 
 	snprintf(pool_name, sizeof(pool_name), "pkt_pool_%s_%d",
