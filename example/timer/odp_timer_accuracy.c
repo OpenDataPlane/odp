@@ -1,10 +1,11 @@
 /* Copyright (c) 2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
@@ -717,15 +718,6 @@ int main(int argc, char *argv[])
 	if (parse_options(argc, argv, &test_global))
 		return -1;
 
-	if (test_global.opt.output) {
-		test_global.file = fopen(test_global.filename, "w");
-		if (test_global.file == NULL) {
-			printf("Failed to open file: %s\n",
-			       test_global.filename);
-			return -1;
-		}
-	}
-
 	/* List features not to be used (may optimize performance) */
 	odp_init_param_init(&init);
 	init.not_used.feat.cls      = 1;
@@ -766,6 +758,14 @@ int main(int argc, char *argv[])
 		odp_shm_t shm;
 		void *addr;
 		uint64_t size = test_global.tot_timers * sizeof(test_log_t);
+
+		test_global.file = fopen(test_global.filename, "w");
+		if (test_global.file == NULL) {
+			printf("Failed to open output file %s: %s\n",
+			       test_global.filename, strerror(errno));
+			ret = -1;
+			goto quit;
+		}
 
 		shm = odp_shm_reserve("timer_accuracy_log", size,
 				      sizeof(test_log_t), 0);
