@@ -751,6 +751,7 @@ int main(int argc, char *argv[])
 
 	if (test_global.timer_ctx == NULL) {
 		printf("Timer context table calloc failed.\n");
+		ret = -1;
 		goto quit;
 	}
 
@@ -772,6 +773,7 @@ int main(int argc, char *argv[])
 
 		if (shm == ODP_SHM_INVALID) {
 			printf("Test log alloc failed.\n");
+			ret = -1;
 			goto quit;
 		}
 
@@ -781,7 +783,8 @@ int main(int argc, char *argv[])
 		test_global.log_shm = shm;
 	}
 
-	if (start_timers(&test_global))
+	ret = start_timers(&test_global);
+	if (ret)
 		goto quit;
 
 	run_test(&test_global);
