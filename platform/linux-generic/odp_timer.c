@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -71,6 +71,9 @@
 /* Max inline timer resolution */
 #define MAX_INLINE_RES_NS 500
 
+/* Timer pool may be reused after this period */
+#define TIMER_POOL_REUSE_NS ODP_TIME_SEC_IN_NS
+
 /* Mutual exclusion in the absence of CAS16 */
 #ifndef ODP_ATOMIC_U128
 #define NUM_LOCKS 1024
@@ -129,7 +132,6 @@ typedef struct timer_pool_s {
 	uint32_t tp_idx;/* Index into timer_pool array */
 	odp_timer_pool_param_t param;
 	char name[ODP_TIMER_POOL_NAME_LEN];
-	odp_shm_t shm;
 	timer_t timerid;
 	int notify_overrun;
 	int owner;
@@ -157,6 +159,8 @@ typedef struct timer_global_t {
 	uint64_t poll_interval_nsec;
 	int num_timer_pools;
 	uint8_t timer_pool_used[MAX_TIMER_POOLS];
+	odp_time_t destroy_time[MAX_TIMER_POOLS];
+	odp_shm_t tp_shm[MAX_TIMER_POOLS];
 	timer_pool_t *timer_pool[MAX_TIMER_POOLS];
 #ifndef ODP_ATOMIC_U128
 	/* Multiple locks per cache line! */
@@ -285,10 +289,16 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	size_t sz0, sz1, sz2;
 	uint64_t tp_size;
 	uint64_t res_ns, nsec_per_scan;
+	odp_shm_t shm;
+	timer_pool_t *tp;
+	odp_time_t diff, time;
+	odp_time_t max_diff = ODP_TIME_NULL;
 	uint32_t flags = 0;
 
 	if (odp_global_ro.shm_single_va)
 		flags |= ODP_SHM_SINGLE_VA;
+
+	time = odp_time_global();
 
 	odp_ticketlock_lock(&timer_global->lock);
 
@@ -298,31 +308,59 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 		return ODP_TIMER_POOL_INVALID;
 	}
 
+	/* Find timer pool that has not been used for a while, or is used least recently.
+	 * This ensures that inline scan of an old timer pool has completed and its memory
+	 * can be freed. */
+	tp_idx = -1;
 	for (i = 0; i < MAX_TIMER_POOLS; i++) {
 		if (timer_global->timer_pool_used[i] == 0) {
-			timer_global->timer_pool_used[i] = 1;
-			break;
+			diff = odp_time_diff(time, timer_global->destroy_time[i]);
+
+			if (odp_time_to_ns(diff) > TIMER_POOL_REUSE_NS) {
+				tp_idx = i;
+				break;
+			}
+
+			if (odp_time_cmp(diff, max_diff) > 0) {
+				max_diff = diff;
+				tp_idx = i;
+			}
 		}
 	}
 
-	tp_idx = i;
+	if (tp_idx < 0) {
+		odp_ticketlock_unlock(&timer_global->lock);
+		ODP_DBG("Did not find free timer pool\n");
+		return ODP_TIMER_POOL_INVALID;
+	}
+
+	shm = timer_global->tp_shm[tp_idx];
+	timer_global->timer_pool_used[tp_idx] = 1;
 	timer_global->num_timer_pools++;
 
 	odp_ticketlock_unlock(&timer_global->lock);
 
+	/* Free memory of previously destroyed timer pool */
+	if (shm != ODP_SHM_INVALID) {
+		if (odp_shm_free(shm)) {
+			ODP_ERR("Failed to free shared memory: tp_idx %i\n", tp_idx);
+			goto error;
+		}
+	}
+
 	sz0 = ROUNDUP_CACHE_LINE(sizeof(timer_pool_t));
 	sz1 = ROUNDUP_CACHE_LINE(sizeof(tick_buf_t) * param->num_timers);
-	sz2 = ROUNDUP_CACHE_LINE(sizeof(_odp_timer_t) *
-				 param->num_timers);
+	sz2 = ROUNDUP_CACHE_LINE(sizeof(_odp_timer_t) * param->num_timers);
 	tp_size = sz0 + sz1 + sz2;
 
-	odp_shm_t shm = odp_shm_reserve(name, tp_size, ODP_CACHE_LINE_SIZE,
-					flags);
-	if (odp_unlikely(shm == ODP_SHM_INVALID))
-		ODP_ABORT("%s: timer pool shm-alloc(%zuKB) failed\n",
-			  name, (sz0 + sz1 + sz2) / 1024);
-	timer_pool_t *tp = (timer_pool_t *)odp_shm_addr(shm);
+	shm = odp_shm_reserve(name, tp_size, ODP_CACHE_LINE_SIZE, flags);
 
+	if (odp_unlikely(shm == ODP_SHM_INVALID)) {
+		ODP_ERR("Timer pool shm reserve failed %" PRIu64 "kB\n", tp_size / 1024);
+		goto error;
+	}
+
+	tp = (timer_pool_t *)odp_shm_addr(shm);
 	memset(tp, 0, tp_size);
 
 	if (param->res_ns)
@@ -346,7 +384,7 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 		strncpy(tp->name, name, ODP_TIMER_POOL_NAME_LEN - 1);
 		tp->name[ODP_TIMER_POOL_NAME_LEN - 1] = 0;
 	}
-	tp->shm = shm;
+
 	tp->param = *param;
 	tp->param.res_ns = res_ns;
 	tp->min_rel_tck = odp_timer_ns_to_tick(timer_pool_to_hdl(tp),
@@ -382,8 +420,11 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	tp->start_time = odp_time_global();
 
 	odp_ticketlock_lock(&timer_global->lock);
+
 	/* Inline timer scan may find the timer pool after this */
+	odp_mb_release();
 	timer_global->timer_pool[tp_idx] = tp;
+	timer_global->tp_shm[tp_idx] = shm;
 
 	if (timer_global->num_timer_pools == 1)
 		odp_global_rw->inline_timers = timer_global->use_inline_timers;
@@ -395,20 +436,25 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 			odp_time_global_from_ns(nsec_per_scan);
 	}
 
+	/* Update the highest index for inline timer scan */
+	if (tp_idx > timer_global->highest_tp_idx)
+		timer_global->highest_tp_idx = tp_idx;
+
 	odp_ticketlock_unlock(&timer_global->lock);
 
-	if (!odp_global_rw->inline_timers) {
-		if (tp->param.clk_src == ODP_CLOCK_DEFAULT)
-			itimer_init(tp);
-	} else {
-		/* Update the highest index for inline timer scan */
-		odp_ticketlock_lock(&timer_global->lock);
-		if (tp_idx > timer_global->highest_tp_idx)
-			timer_global->highest_tp_idx = tp_idx;
-		odp_ticketlock_unlock(&timer_global->lock);
-	}
+	if (!odp_global_rw->inline_timers)
+		itimer_init(tp);
 
 	return timer_pool_to_hdl(tp);
+
+error:
+	odp_ticketlock_lock(&timer_global->lock);
+	timer_global->tp_shm[tp_idx] = shm;
+	timer_global->timer_pool_used[tp_idx] = 0;
+	timer_global->num_timer_pools--;
+	odp_ticketlock_unlock(&timer_global->lock);
+
+	return ODP_TIMER_POOL_INVALID;
 }
 
 static void block_sigalarm(void)
@@ -433,16 +479,14 @@ static void stop_timer_thread(timer_pool_t *tp)
 
 static void odp_timer_pool_del(timer_pool_t *tp)
 {
-	int rc, highest;
-	odp_shm_t shm;
+	int highest;
+	uint32_t tp_idx = tp->tp_idx;
 
 	odp_spinlock_lock(&tp->lock);
 
 	if (!odp_global_rw->inline_timers) {
 		/* Stop POSIX itimer signals */
-		if (tp->param.clk_src == ODP_CLOCK_DEFAULT)
-			itimer_fini(tp);
-
+		itimer_fini(tp);
 		stop_timer_thread(tp);
 	}
 
@@ -456,10 +500,10 @@ static void odp_timer_pool_del(timer_pool_t *tp)
 	odp_spinlock_unlock(&tp->lock);
 
 	odp_ticketlock_lock(&timer_global->lock);
-	shm = tp->shm;
-	timer_global->timer_pool[tp->tp_idx] = NULL;
-	timer_global->timer_pool_used[tp->tp_idx] = 0;
+	timer_global->timer_pool[tp_idx] = NULL;
+	timer_global->timer_pool_used[tp_idx] = 0;
 	timer_global->num_timer_pools--;
+	timer_global->destroy_time[tp_idx] = odp_time_global();
 
 	highest = -1;
 
@@ -477,11 +521,6 @@ static void odp_timer_pool_del(timer_pool_t *tp)
 	timer_global->highest_tp_idx = highest;
 
 	odp_ticketlock_unlock(&timer_global->lock);
-
-	rc = odp_shm_free(shm);
-
-	if (rc != 0)
-		ODP_ABORT("Failed to free shared memory (%d)\n", rc);
 }
 
 static inline odp_timer_t timer_alloc(timer_pool_t *tp, odp_queue_t queue, const void *user_ptr)
@@ -1278,6 +1317,11 @@ odp_timer_pool_t odp_timer_pool_create(const char *name,
 		return ODP_TIMER_POOL_INVALID;
 	}
 
+	if (param->clk_src != ODP_CLOCK_DEFAULT) {
+		ODP_ERR("Only ODP_CLOCK_DEFAULT supported. Requested %i.\n", param->clk_src);
+		return ODP_TIMER_POOL_INVALID;
+	}
+
 	if ((param->res_ns && param->res_hz) ||
 	    (param->res_ns == 0 && param->res_hz == 0)) {
 		_odp_errno = EINVAL;
@@ -1596,7 +1640,9 @@ void odp_timeout_print(odp_timeout_t tmo)
 int _odp_timer_init_global(const odp_init_t *params)
 {
 	odp_shm_t shm;
+	odp_time_t time;
 	const char *conf_str;
+	uint32_t i;
 	int val = 0;
 
 	if (params && params->not_used.feat.timer) {
@@ -1621,9 +1667,13 @@ int _odp_timer_init_global(const odp_init_t *params)
 	timer_global->highest_res_ns = MAX_INLINE_RES_NS;
 	timer_global->highest_tp_idx = -1;
 
-#ifndef ODP_ATOMIC_U128
-	uint32_t i;
+	time = odp_time_global();
+	for (i = 0; i < MAX_TIMER_POOLS; i++) {
+		timer_global->destroy_time[i] = time;
+		timer_global->tp_shm[i] = ODP_SHM_INVALID;
+	}
 
+#ifndef ODP_ATOMIC_U128
 	for (i = 0; i < NUM_LOCKS; i++)
 		_odp_atomic_flag_clear(&timer_global->locks[i]);
 #else
@@ -1676,8 +1726,24 @@ error:
 
 int _odp_timer_term_global(void)
 {
-	if (timer_global && odp_shm_free(timer_global->shm)) {
-		ODP_ERR("Shm free failed for odp_timer\n");
+	odp_shm_t shm;
+	int i;
+
+	if (timer_global == NULL)
+		return 0;
+
+	for (i = 0; i < MAX_TIMER_POOLS; i++) {
+		shm = timer_global->tp_shm[i];
+		if (shm != ODP_SHM_INVALID) {
+			if (odp_shm_free(shm)) {
+				ODP_ERR("Shm free failed for timer pool %i\n", i);
+				return -1;
+			}
+		}
+	}
+
+	if (odp_shm_free(timer_global->shm)) {
+		ODP_ERR("Shm free failed for timer_global\n");
 		return -1;
 	}
 
