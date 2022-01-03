@@ -3271,6 +3271,52 @@ static void packet_test_max_pools(void)
 		CU_ASSERT(odp_pool_destroy(pool[i]) == 0);
 }
 
+static void packet_test_user_area(void)
+{
+	odp_pool_param_t param;
+	odp_packet_t pkt;
+	odp_pool_t pool;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+
+	param.pkt.uarea_size = 0;
+	pool = odp_pool_create("zero_uarea", &param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+	pkt = odp_packet_alloc(pool, param.pkt.len);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(odp_packet_user_area(pkt) == NULL);
+	CU_ASSERT(odp_packet_user_area_size(pkt) == 0);
+	odp_packet_free(pkt);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+
+	param.pkt.uarea_size = 1;
+	pool = odp_pool_create("one_uarea", &param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+	pkt = odp_packet_alloc(pool, param.pkt.len);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(odp_packet_user_area(pkt) != NULL);
+	CU_ASSERT(odp_packet_user_area_size(pkt) == 1);
+	*(char *)odp_packet_user_area(pkt) = 0;
+	CU_ASSERT_FATAL(odp_packet_is_valid(pkt) == 1);
+	odp_packet_free(pkt);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+
+	if (pool_capa.pkt.max_uarea_size)
+		param.pkt.uarea_size = pool_capa.pkt.max_uarea_size;
+	else
+		param.pkt.uarea_size = 512;
+	pool = odp_pool_create("max_uarea", &param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+	pkt = odp_packet_alloc(pool, param.pkt.len);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(odp_packet_user_area(pkt) != NULL);
+	CU_ASSERT(odp_packet_user_area_size(pkt) == param.pkt.uarea_size);
+	memset(odp_packet_user_area(pkt), 0, param.pkt.uarea_size);
+	CU_ASSERT_FATAL(odp_packet_is_valid(pkt) == 1);
+	odp_packet_free(pkt);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
 static int packet_parse_suite_init(void)
 {
 	int num_test_pkt, i;
@@ -4260,6 +4306,7 @@ odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_offset),
 	ODP_TEST_INFO(packet_test_ref),
 	ODP_TEST_INFO(packet_test_max_pools),
+	ODP_TEST_INFO(packet_test_user_area),
 	ODP_TEST_INFO_NULL,
 };
 
