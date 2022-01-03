@@ -84,7 +84,9 @@ static int queue_suite_init(void)
 	odp_pool_param_init(&params);
 
 	params.buf.size  = 4;
-	params.buf.num   = MAX_NUM_EVENT;
+	/* Allocate enough buffers taking into consideration core starvation
+	 * due to caching */
+	params.buf.num   = MAX_NUM_EVENT + params.buf.cache_size;
 	params.type      = ODP_POOL_BUFFER;
 
 	pool = odp_pool_create("msg_pool", &params);
