@@ -19,6 +19,8 @@
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
+#define MAX_TIMER_POOLS  1024
+
 /* Timeout range in milliseconds (ms) */
 #define RANGE_MS 2000
 
@@ -474,6 +476,77 @@ static void timer_pool_create_destroy(void)
 	CU_ASSERT(odp_timer_free(tim) == ODP_EVENT_INVALID);
 
 	odp_timer_pool_destroy(tp[0]);
+
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+}
+
+static void timer_pool_create_max(void)
+{
+	odp_timer_capability_t capa;
+	odp_timer_pool_param_t tp_param;
+	odp_queue_param_t queue_param;
+	odp_queue_t queue;
+	uint32_t i;
+	int ret;
+	uint64_t tmo_ns = ODP_TIME_SEC_IN_NS;
+	uint64_t res_ns = ODP_TIME_SEC_IN_NS / 10;
+
+	memset(&capa, 0, sizeof(capa));
+	ret = odp_timer_capability(ODP_CLOCK_DEFAULT, &capa);
+	CU_ASSERT_FATAL(ret == 0);
+
+	uint32_t num = capa.max_pools;
+
+	if (num > MAX_TIMER_POOLS)
+		num = MAX_TIMER_POOLS;
+
+	odp_timer_pool_t tp[num];
+	odp_timer_t timer[num];
+
+	if (capa.max_tmo.max_tmo < tmo_ns) {
+		tmo_ns = capa.max_tmo.max_tmo;
+		res_ns = capa.max_tmo.res_ns;
+	}
+
+	odp_queue_param_init(&queue_param);
+
+	if (capa.queue_type_sched)
+		queue_param.type = ODP_QUEUE_TYPE_SCHED;
+
+	queue = odp_queue_create("timer_queue", &queue_param);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	odp_timer_pool_param_init(&tp_param);
+
+	tp_param.res_ns     = res_ns;
+	tp_param.min_tmo    = tmo_ns / 2;
+	tp_param.max_tmo    = tmo_ns;
+	tp_param.num_timers = 1;
+
+	for (i = 0; i < num; i++) {
+		tp[i] = odp_timer_pool_create("test_max", &tp_param);
+		if (tp[i] == ODP_TIMER_POOL_INVALID)
+			ODPH_ERR("Timer pool create failed: %u / %u\n", i, num);
+
+		CU_ASSERT_FATAL(tp[i] != ODP_TIMER_POOL_INVALID);
+	}
+
+	odp_timer_pool_start();
+
+	for (i = 0; i < num; i++) {
+		timer[i] = odp_timer_alloc(tp[i], queue, USER_PTR);
+
+		if (timer[i] == ODP_TIMER_INVALID)
+			ODPH_ERR("Timer alloc failed: %u / %u\n", i, num);
+
+		CU_ASSERT_FATAL(timer[i] != ODP_TIMER_INVALID);
+	}
+
+	for (i = 0; i < num; i++)
+		CU_ASSERT(odp_timer_free(timer[i]) == ODP_EVENT_INVALID);
+
+	for (i = 0; i < num; i++)
+		odp_timer_pool_destroy(tp[i]);
 
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
 }
@@ -1836,6 +1909,7 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO(timer_test_timeout_pool_alloc),
 	ODP_TEST_INFO(timer_test_timeout_pool_free),
 	ODP_TEST_INFO(timer_pool_create_destroy),
+	ODP_TEST_INFO(timer_pool_create_max),
 	ODP_TEST_INFO(timer_pool_max_res),
 	ODP_TEST_INFO(timer_pool_tick_info),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_tmo_event_plain,
