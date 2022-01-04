@@ -982,10 +982,10 @@ static inline void timer_pool_scan_inline(int num, odp_time_t now)
 		if (odp_atomic_cas_u64(&tp->cur_tick, &old_tick, new_tick)) {
 			if (tp->notify_overrun && diff > 1) {
 				if (old_tick == 0) {
-					ODP_ERR("Timer pool (%s) missed %" PRIi64 " scans in start up\n",
+					ODP_DBG("Timer pool (%s) missed %" PRIi64 " scans in start up\n",
 						tp->name, diff - 1);
 				} else {
-					ODP_ERR("Timer pool (%s) resolution too high: missed %" PRIi64 " scans\n",
+					ODP_DBG("Timer pool (%s) resolution too high: %" PRIi64 " scans missed\n",
 						tp->name, diff - 1);
 					tp->notify_overrun = 0;
 				}
@@ -1041,7 +1041,7 @@ static inline void timer_run_posix(timer_pool_t *tp)
 	if (tp->notify_overrun) {
 		overrun = timer_getoverrun(tp->timerid);
 		if (overrun) {
-			ODP_ERR("\n\t%d ticks overrun on timer pool \"%s\", timer resolution too high\n",
+			ODP_DBG("\n\t%d ticks overrun on timer pool \"%s\", timer resolution too high\n",
 				overrun, tp->name);
 			tp->notify_overrun = 0;
 		}
