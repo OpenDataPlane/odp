@@ -14,9 +14,6 @@ AM_CONDITIONAL([WITH_OPENSSL], [test x$with_openssl != xno])
 AC_DEFINE_UNQUOTED([_ODP_OPENSSL], [$have_openssl],
 	  [Define to 1 to enable OpenSSL support])
 
-AS_IF([test "${with_openssl}" = "no"],
-      [AC_MSG_WARN([Strong cryptography is not available without OpenSSL])])
-
 ##########################################################################
 # Enable/disable usage of OpenSSL for random data
 ##########################################################################
