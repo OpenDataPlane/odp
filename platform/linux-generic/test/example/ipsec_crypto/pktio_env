@@ -30,7 +30,7 @@ else
 fi
 
 # Skip IPsec example tests when there's no OpenSSL.
-if [ -n "$WITH_OPENSSL" ] && [ ${WITH_OPENSSL} -eq 0 ]; then
+if [ -n "$WITH_OPENSSL_CRYPTO" ] && [ ${WITH_OPENSSL_CRYPTO} -eq 0 ]; then
 	echo "Crypto not supported. Skipping."
 	exit 77
 fi
