@@ -47,6 +47,9 @@
 /* Define a practical limit for contiguous memory allocations */
 #define MAX_SIZE   (10 * 1024 * 1024)
 
+/* Maximum packet user area size */
+#define MAX_UAREA_SIZE 2048
+
 ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_LEN_MIN >= 256,
 		  "ODP Segment size must be a minimum of 256 bytes");
 
@@ -1388,7 +1391,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	capa->pkt.max_segs_per_pkt = PKT_MAX_SEGS;
 	capa->pkt.min_seg_len      = CONFIG_PACKET_SEG_LEN_MIN;
 	capa->pkt.max_seg_len      = max_seg_len;
-	capa->pkt.max_uarea_size   = MAX_SIZE;
+	capa->pkt.max_uarea_size   = MAX_UAREA_SIZE;
 	capa->pkt.min_cache_size   = 0;
 	capa->pkt.max_cache_size   = CONFIG_POOL_CACHE_MAX_SIZE;
 	capa->pkt.stats.all = supported_stats.all;
@@ -1682,7 +1685,7 @@ int odp_pool_ext_capability(odp_pool_type_t type, odp_pool_ext_capability_t *cap
 	capa->pkt.max_headroom        = CONFIG_PACKET_HEADROOM;
 	capa->pkt.max_headroom_size   = CONFIG_PACKET_HEADROOM;
 	capa->pkt.max_segs_per_pkt    = PKT_MAX_SEGS;
-	capa->pkt.max_uarea_size      = MAX_SIZE;
+	capa->pkt.max_uarea_size      = MAX_UAREA_SIZE;
 
 	return 0;
 }
