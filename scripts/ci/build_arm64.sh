@@ -19,4 +19,7 @@ export CPPFLAGS="-I/usr/include/${TARGET_ARCH}/dpdk"
 export PKG_CONFIG_PATH=
 export PKG_CONFIG_LIBDIR=/usr/lib/${TARGET_ARCH}/pkgconfig:/usr/local/lib/${TARGET_ARCH}/pkgconfig
 
+# ARMv8 crypto
+export PKG_CONFIG_PATH=~/aarch64cryptolib/pkgconfig:$PKG_CONFIG_PATH
+
 exec "$(dirname "$0")"/build.sh
