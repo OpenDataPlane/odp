@@ -13,6 +13,11 @@
  * @cond _ODP_HIDE_FROM_DOXYGEN_
  */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE /* Needed for sigaction */
+#endif
+
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -99,6 +104,7 @@ typedef struct test_global_t {
 	test_stat_t stat[ODP_THREAD_COUNT_MAX];
 	thread_arg_t thread_arg[ODP_THREAD_COUNT_MAX];
 	odp_atomic_u32_t num_worker;
+	odp_atomic_u32_t exit_threads;
 
 } test_global_t;
 
@@ -106,6 +112,23 @@ typedef struct {
 	odp_queue_t next;
 	odp_atomic_u64_t count;
 } queue_context_t;
+
+static test_global_t *test_globals;
+
+static void sig_handler(int signum ODP_UNUSED)
+{
+	odp_atomic_store_u32(&test_globals->exit_threads, 1);
+}
+
+static int setup_sig_handler(void)
+{
+	struct sigaction action = { .sa_handler = sig_handler };
+
+	if (sigemptyset(&action.sa_mask) || sigaction(SIGINT, &action, NULL))
+		return -1;
+
+	return 0;
+}
 
 static void print_usage(void)
 {
@@ -122,7 +145,8 @@ static void print_usage(void)
 	       "                         the queues are default (or lowest) priority. Default: 0.\n"
 	       "  -d, --num_dummy        Number of empty queues. Default: 0.\n"
 	       "  -e, --num_event        Number of events per queue. Default: 100.\n"
-	       "  -s, --num_sched        Number of events to schedule per thread. Default: 100 000.\n"
+	       "  -s, --num_sched        Number of events to schedule per thread. If zero, the application runs\n"
+	       "                         until SIGINT is received. Default: 100 000.\n"
 	       "  -g, --num_group        Number of schedule groups. Round robins threads and queues into groups.\n"
 	       "                         -1: SCHED_GROUP_WORKER\n"
 	       "                         0:  SCHED_GROUP_ALL (default)\n"
@@ -981,6 +1005,7 @@ static int test_sched(void *arg)
 	const uint32_t uarea_rw = test_options->uarea_rw;
 	odp_pool_type_t pool_type = test_options->pool_type;
 	int touch_ctx = ctx_rd_words || ctx_rw_words;
+	odp_atomic_u32_t *exit_threads = &global->exit_threads;
 	uint32_t ctx_offset = 0;
 	uint32_t sched_retries = 0;
 	uint64_t data_sum = 0;
@@ -1040,7 +1065,10 @@ static int test_sched(void *arg)
 	c1 = odp_cpu_cycles();
 	last_retry_ts = t1;
 
-	for (rounds = 0; events < num_sched; rounds++) {
+	for (rounds = 0; odp_likely(!odp_atomic_load_u32(exit_threads)); rounds++) {
+		if (odp_unlikely(num_sched && events >= num_sched))
+			break;
+
 		num = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT,
 					 ev, max_burst);
 
@@ -1399,10 +1427,17 @@ int main(int argc, char **argv)
 		ODPH_ERR("Error: SHM alloc failed\n");
 		exit(EXIT_FAILURE);
 	}
+	test_globals = global;
 
 	memset(global, 0, sizeof(test_global_t));
 	global->pool = ODP_POOL_INVALID;
 	global->ctx_shm = ODP_SHM_INVALID;
+	odp_atomic_init_u32(&global->exit_threads, 0);
+
+	if (setup_sig_handler()) {
+		ODPH_ERR("Error: signal handler setup failed\n");
+		exit(EXIT_FAILURE);
+	}
 
 	if (parse_options(argc, argv, &global->test_options))
 		return -1;
