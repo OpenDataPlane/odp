@@ -363,9 +363,12 @@ static int check_capabilities(test_config_t *config)
 	return 0;
 }
 
-static int configure_packet_pool(test_config_t *config)
+static int configure_packets(test_config_t *config)
 {
 	odp_pool_param_t param;
+
+	for (int i = 0; i < config->num_in_seg + 1; ++i)
+		config->seg_config.pkts[i] = ODP_PACKET_INVALID;
 
 	odp_pool_param_init(&param);
 	param.type = ODP_POOL_PACKET;
@@ -421,7 +424,7 @@ static int populate_packets(test_config_t *config)
 
 static int setup_packet_segments(test_config_t *config)
 {
-	return configure_packet_pool(config) ||
+	return configure_packets(config) ||
 	       allocate_packets(config) ||
 	       populate_packets(config);
 }
@@ -491,8 +494,12 @@ static int verify_packet_transfer(test_config_t *config)
 static void free_packets(test_config_t *config)
 {
 	/* Configured amount of input segments and one output segment */
-	odp_packet_free_multi(config->seg_config.pkts, config->num_in_seg + 1);
-	(void)odp_pool_destroy(config->seg_config.pool);
+	for (int i = 0; i < config->num_in_seg + 1; ++i)
+		if (config->seg_config.pkts[i] != ODP_PACKET_INVALID)
+			odp_packet_free(config->seg_config.pkts[i]);
+
+	if (config->seg_config.pool != ODP_POOL_INVALID)
+		(void)odp_pool_destroy(config->seg_config.pool);
 }
 
 static void print_humanised_speed(uint64_t speed)
@@ -581,6 +588,9 @@ static int configure_dma_event_completion(test_config_t *config)
 	odp_dma_pool_param_t pool_param;
 	odp_queue_param_t queue_param;
 
+	config->dma_config.pool = ODP_POOL_INVALID;
+	config->dma_config.compl_q = ODP_QUEUE_INVALID;
+
 	ret = odp_schedule_config(NULL);
 
 	if (ret < 0) {
@@ -617,9 +627,10 @@ static int configure_dma_completion_params(test_config_t *config,
 {
 	odp_dma_compl_t compl_ev;
 
-	for (int i = 0; i < config->dma_rounds; ++i) {
+	for (int i = 0; i < config->dma_rounds; ++i)
 		odp_dma_compl_param_init(&compl_params[i]);
 
+	for (int i = 0; i < config->dma_rounds; ++i) {
 		if (config->compl_modes.modes[i] == ODP_DMA_COMPL_EVENT) {
 			compl_params[i].compl_mode = ODP_DMA_COMPL_EVENT;
 			compl_ev = odp_dma_compl_alloc(config->dma_config.pool);
@@ -630,7 +641,8 @@ static int configure_dma_completion_params(test_config_t *config,
 			}
 
 			compl_params[i].event = odp_dma_compl_to_event(compl_ev);
-		} else {
+			compl_params[i].queue = config->dma_config.compl_q;
+		} else if (config->compl_modes.modes[i] == ODP_DMA_COMPL_POLL) {
 			compl_params[i].compl_mode = ODP_DMA_COMPL_POLL;
 			compl_params[i].transfer_id =
 				odp_dma_transfer_id_alloc(config->dma_config.handle);
@@ -641,7 +653,6 @@ static int configure_dma_completion_params(test_config_t *config,
 			}
 		}
 
-		compl_params[i].queue = config->dma_config.compl_q;
 		compl_params[i].user_ptr = NULL;
 	}
 
@@ -717,15 +728,21 @@ static inline int wait_dma_transfers_ready(test_config_t *config, compl_wait_ent
 	return 0;
 }
 
-static void free_dma_transfer_resources(test_config_t *config, odp_dma_compl_param_t compl_params[])
+static void free_dma_completion_events(test_config_t *config, odp_dma_compl_param_t compl_params[])
 {
-	for (int i = 0; i < config->dma_rounds; ++i) {
-		if (config->compl_modes.modes[i] == ODP_DMA_COMPL_POLL)
+	for (int i = 0; i < config->dma_rounds; ++i)
+		if (config->compl_modes.modes[i] == ODP_DMA_COMPL_EVENT &&
+		    compl_params[i].event != ODP_EVENT_INVALID)
+			odp_dma_compl_free(odp_dma_compl_from_event(compl_params[i].event));
+}
+
+static void free_dma_transfer_ids(test_config_t *config, odp_dma_compl_param_t compl_params[])
+{
+	for (int i = 0; i < config->dma_rounds; ++i)
+		if (config->compl_modes.modes[i] == ODP_DMA_COMPL_POLL &&
+		    compl_params[i].transfer_id != ODP_DMA_TRANSFER_ID_INVALID)
 			odp_dma_transfer_id_free(config->dma_config.handle,
 						 compl_params[i].transfer_id);
-		else if (config->compl_modes.modes[i] == ODP_DMA_COMPL_EVENT)
-			odp_dma_compl_free(odp_dma_compl_from_event(compl_params[i].event));
-	}
 }
 
 static int run_dma_async_transfer(test_config_t *config)
@@ -733,14 +750,17 @@ static int run_dma_async_transfer(test_config_t *config)
 	odp_dma_transfer_param_t trs_params[config->dma_rounds];
 	uint32_t trs_lengths[config->dma_rounds];
 	odp_dma_compl_param_t compl_params[config->dma_rounds];
+	int ret = 0;
 	compl_wait_entry_t compl_wait_list[config->dma_rounds];
 	odp_time_t start, end;
 	uint32_t num_rounds = config->num_rounds, offset;
 
 	config->test_case_api.trs_base_fn(config, trs_params, trs_lengths);
 
-	if (configure_dma_completion_params(config, compl_params))
-		return -1;
+	if (configure_dma_completion_params(config, compl_params)) {
+		ret = -1;
+		goto out_compl_evs;
+	}
 
 	build_wait_list(config, compl_params, compl_wait_list);
 	start = odp_time_local_strict();
@@ -754,7 +774,8 @@ static int run_dma_async_transfer(test_config_t *config)
 			if (odp_dma_transfer_start(config->dma_config.handle, &trs_params[i],
 						   &compl_params[i]) <= 0) {
 				ODPH_ERR("Error starting an async DMA transfer.\n");
-				return -1;
+				ret = -1;
+				goto out_trs_ids;
 			}
 
 			offset += trs_lengths[i];
@@ -762,37 +783,50 @@ static int run_dma_async_transfer(test_config_t *config)
 
 		if (wait_dma_transfers_ready(config, compl_wait_list)) {
 			ODPH_ERR("Error finishing an async DMA transfer.\n");
-			return -1;
+			ret = -1;
+			goto out_trs_ids;
 		}
 	}
 
 	end = odp_time_local_strict();
-	free_dma_transfer_resources(config, compl_params);
 	print_results(config, odp_time_diff_ns(end, start));
-	return 0;
+
+out_compl_evs:
+	free_dma_completion_events(config, compl_params);
+
+out_trs_ids:
+	free_dma_transfer_ids(config, compl_params);
+	return ret;
 }
 
 static void free_dma_event_completion(test_config_t *config)
 {
-	(void)odp_queue_destroy(config->dma_config.compl_q);
-	(void)odp_pool_destroy(config->dma_config.pool);
+	if (config->dma_config.compl_q != ODP_QUEUE_INVALID)
+		(void)odp_queue_destroy(config->dma_config.compl_q);
+
+	if (config->dma_config.pool != ODP_POOL_INVALID)
+		(void)odp_pool_destroy(config->dma_config.pool);
 }
 
 static int run_dma_async(test_config_t *config)
 {
 	const int is_event_compl = config->compl_modes.compl_mask & ODP_DMA_COMPL_EVENT;
+	int ret = 0;
 
 	if (is_event_compl)
-		if (configure_dma_event_completion(config))
-			return -1;
+		if (configure_dma_event_completion(config)) {
+			ret = -1;
+			goto out;
+		}
 
 	if (run_dma_async_transfer(config))
-		return -1;
+		ret = -1;
 
+out:
 	if (is_event_compl)
 		free_dma_event_completion(config);
 
-	return 0;
+	return ret;
 }
 
 static int configure_dma_session(test_config_t *config)
@@ -826,9 +860,10 @@ static void setup_test_case_api(test_config_t *config)
 							   run_dma_async;
 }
 
-static void free_test_config(test_config_t *config)
+static void free_dma_session(test_config_t *config)
 {
-	(void)odp_dma_destroy(config->dma_config.handle);
+	if (config->dma_config.handle != ODP_DMA_INVALID)
+		(void)odp_dma_destroy(config->dma_config.handle);
 }
 
 int main(int argc, char **argv)
@@ -836,6 +871,7 @@ int main(int argc, char **argv)
 	odph_helper_options_t odph_opts;
 	test_config_t test_config;
 	odp_instance_t odp_instance;
+	int ret = EXIT_SUCCESS;
 
 	argc = odph_parse_options(argc, argv);
 
@@ -859,22 +895,33 @@ int main(int argc, char **argv)
 
 	if (check_capabilities(&test_config)) {
 		ODPH_ERR("Error while checking DMA capabilities, exiting.\n");
-		exit(EXIT_FAILURE);
+		ret = EXIT_FAILURE;
+		goto out_odp;
 	}
 
 	setup_test_case_api(&test_config);
 
-	if (configure_dma_session(&test_config) ||
-	    test_config.test_case_api.setup_fn(&test_config) ||
-	    test_config.test_case_api.run_fn(&test_config) ||
-	    test_config.test_case_api.verify_fn(&test_config)) {
-		ODPH_ERR("Error while setting and running test, exiting.\n");
-		exit(EXIT_FAILURE);
+	if (configure_dma_session(&test_config)) {
+		ret = EXIT_FAILURE;
+		goto out_dma;
 	}
 
-	test_config.test_case_api.free_fn(&test_config);
-	free_test_config(&test_config);
+	if (test_config.test_case_api.setup_fn(&test_config)) {
+		ret = EXIT_FAILURE;
+		goto out_test_case;
+	}
 
+	if (test_config.test_case_api.run_fn(&test_config) ||
+	    test_config.test_case_api.verify_fn(&test_config))
+		ret = EXIT_FAILURE;
+
+out_test_case:
+	test_config.test_case_api.free_fn(&test_config);
+
+out_dma:
+	free_dma_session(&test_config);
+
+out_odp:
 	if (odp_term_local()) {
 		ODPH_ERR("ODP local terminate failed, exiting.\n");
 		exit(EXIT_FAILURE);
@@ -885,5 +932,5 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	return EXIT_SUCCESS;
+	return ret;
 }
