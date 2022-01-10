@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -206,7 +207,7 @@ static const char *res_str(int pass)
 static void random_test_frequency(odp_random_kind_t kind)
 {
 	/* Mean number of hits per cell. */
-	const uint32_t expected = 100;
+	const uint32_t expected = 50;
 
 	/* From LibreOffice CHISQ.INV.RT(0.00000001; df). */
 	const double critical[] = {
@@ -218,10 +219,10 @@ static void random_test_frequency(odp_random_kind_t kind)
 
 	printf("\n\n");
 
-	for (int bits = 1; bits <= 16; bits++) {
+	for (int bits = 1; bits <= 8; bits++) {
 		const uint32_t cells = 1 << bits;
 		const uint64_t num = expected * cells;
-		uint64_t f[256 * 256] = { 0 };
+		uint64_t f[256] = { 0 };
 
 		for (uint64_t i = 0; i < num; i++)
 			f[random_bits(bits, kind)]++;
@@ -317,11 +318,6 @@ static void random_test_independence(odp_random_kind_t kind)
 static void random_test_independence_crypto(void)
 {
 	random_test_independence(ODP_RANDOM_CRYPTO);
-}
-
-static void random_test_independence_true(void)
-{
-	random_test_independence(ODP_RANDOM_TRUE);
 }
 
 /*
@@ -423,7 +419,7 @@ static int mx_rank(uint32_t *m, int rows, int cols)
  */
 static void random_test_matrix_rank(odp_random_kind_t kind)
 {
-	const int N = 40000; /* From Marsaglia's Diehard. */
+	const int N = 100; /* [1] recommends at least 38. */
 	const double p[3] = { 0.2888, 0.5776, 0.1336 };
 
 	printf("\n\n");
@@ -497,7 +493,6 @@ odp_testinfo_t random_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(random_test_frequency_crypto, check_kind_crypto),
 	ODP_TEST_INFO_CONDITIONAL(random_test_frequency_true, check_kind_true),
 	ODP_TEST_INFO_CONDITIONAL(random_test_independence_crypto, check_kind_crypto),
-	ODP_TEST_INFO_CONDITIONAL(random_test_independence_true, check_kind_true),
 	ODP_TEST_INFO_CONDITIONAL(random_test_runs_crypto, check_kind_crypto),
 	ODP_TEST_INFO_CONDITIONAL(random_test_runs_true, check_kind_true),
 	ODP_TEST_INFO_CONDITIONAL(random_test_matrix_rank_crypto, check_kind_crypto),
