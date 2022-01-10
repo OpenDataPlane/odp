@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -51,7 +51,7 @@ void odp_buffer_print(odp_buffer_t buf)
 
 	len += snprintf(&str[len], n - len, "Buffer\n------\n");
 	len += snprintf(&str[len], n - len, "  pool index    %u\n", hdr->event_hdr.index.pool);
-	len += snprintf(&str[len], n - len, "  buffer index  %u\n", hdr->event_hdr.index.buffer);
+	len += snprintf(&str[len], n - len, "  buffer index  %u\n", hdr->event_hdr.index.event);
 	len += snprintf(&str[len], n - len, "  addr          %p\n",
 			(void *)hdr->event_hdr.base_data);
 	len += snprintf(&str[len], n - len, "  size          %u\n", odp_buffer_size(buf));

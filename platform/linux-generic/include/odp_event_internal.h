@@ -23,14 +23,15 @@ extern "C" {
 
 #include <odp_config_internal.h>
 
-typedef union buffer_index_t {
+/* Combined pool and event index */
+typedef union _odp_event_index_t {
 	uint32_t u32;
 
 	struct {
 		uint32_t pool   :8;
-		uint32_t buffer :24;
+		uint32_t event  :24;
 	};
-} buffer_index_t;
+} _odp_event_index_t;
 
 /* Check that pool index fit into bit field */
 ODP_STATIC_ASSERT(ODP_CONFIG_POOLS    <= (0xFF + 1), "TOO_MANY_POOLS");
@@ -54,8 +55,8 @@ typedef struct _odp_event_hdr_t {
 	/* Initial buffer tail pointer */
 	uint8_t  *buf_end;
 
-	/* Combined pool and buffer index */
-	buffer_index_t index;
+	/* Combined pool and event index */
+	_odp_event_index_t index;
 
 	/* Pool type */
 	int8_t    type;

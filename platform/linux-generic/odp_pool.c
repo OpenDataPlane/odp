@@ -422,7 +422,7 @@ static pool_t *reserve_pool(uint32_t shmflags, uint8_t pool_ext, uint32_t num)
 	return NULL;
 }
 
-static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t buf_index,
+static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t event_index,
 			   uint32_t hdr_len, uint8_t *data_ptr, void *uarea)
 {
 	odp_pool_type_t type = pool->type;
@@ -432,7 +432,7 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t b
 	/* Initialize common event metadata */
 	event_hdr->index.u32    = 0;
 	event_hdr->index.pool   = pool->pool_idx;
-	event_hdr->index.buffer = buf_index;
+	event_hdr->index.event  = event_index;
 	event_hdr->type         = type;
 	event_hdr->event_type   = type;
 	event_hdr->pool_ptr     = pool;
@@ -1639,7 +1639,7 @@ int _odp_event_is_valid(odp_event_t event)
 	if (pool != event_hdr->pool_ptr)
 		return 0;
 
-	if (event_hdr->index.buffer >= (pool->num + pool->skipped_blocks))
+	if (event_hdr->index.event >= (pool->num + pool->skipped_blocks))
 		return 0;
 
 	return 1;
