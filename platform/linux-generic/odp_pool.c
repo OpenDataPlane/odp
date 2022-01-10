@@ -436,7 +436,6 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t b
 	event_hdr->type         = type;
 	event_hdr->event_type   = type;
 	event_hdr->pool_ptr     = pool;
-	odp_atomic_init_u32(&event_hdr->ref_cnt, 0);
 
 	/* Store base values for fast init */
 	if (type == ODP_POOL_BUFFER || type == ODP_POOL_PACKET) {
@@ -454,6 +453,8 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t b
 		pkt_hdr->seg_len   = pool->seg_len;
 		pkt_hdr->seg_count = 1;
 		pkt_hdr->seg_next  = NULL;
+
+		odp_atomic_init_u32(&pkt_hdr->ref_cnt, 0);
 	}
 
 	/* Initialize event vector metadata */
