@@ -324,7 +324,7 @@ static inline void link_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 			uint32_t prev_ref;
 			odp_atomic_u32_t *ref_cnt;
 
-			ref_cnt = &pkt_hdr[cur]->event_hdr.ref_cnt;
+			ref_cnt = &pkt_hdr[cur]->ref_cnt;
 			prev_ref = odp_atomic_fetch_inc_u32(ref_cnt);
 
 			ODP_ASSERT(prev_ref == 0);
@@ -360,7 +360,7 @@ static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 
 	if (ODP_DEBUG == 1) {
 		uint32_t prev_ref =
-			odp_atomic_fetch_inc_u32(&hdr->event_hdr.ref_cnt);
+			odp_atomic_fetch_inc_u32(&hdr->ref_cnt);
 
 		ODP_ASSERT(prev_ref == 0);
 	}
@@ -473,25 +473,25 @@ static inline odp_packet_hdr_t *add_segments(odp_packet_hdr_t *pkt_hdr,
 	return pkt_hdr;
 }
 
-static inline void segment_ref_inc(_odp_event_hdr_t *event_hdr)
+static inline void segment_ref_inc(odp_packet_hdr_t *seg_hdr)
 {
-	uint32_t ref_cnt = odp_atomic_load_u32(&event_hdr->ref_cnt);
+	uint32_t ref_cnt = odp_atomic_load_u32(&seg_hdr->ref_cnt);
 
 	/* First count increment after alloc */
 	if (odp_likely(ref_cnt == 0))
-		odp_atomic_store_u32(&event_hdr->ref_cnt, 2);
+		odp_atomic_store_u32(&seg_hdr->ref_cnt, 2);
 	else
-		odp_atomic_inc_u32(&event_hdr->ref_cnt);
+		odp_atomic_inc_u32(&seg_hdr->ref_cnt);
 }
 
-static inline uint32_t segment_ref_dec(_odp_event_hdr_t *event_hdr)
+static inline uint32_t segment_ref_dec(odp_packet_hdr_t *seg_hdr)
 {
-	return odp_atomic_fetch_dec_u32(&event_hdr->ref_cnt);
+	return odp_atomic_fetch_dec_u32(&seg_hdr->ref_cnt);
 }
 
-static inline uint32_t segment_ref(_odp_event_hdr_t *event_hdr)
+static inline uint32_t segment_ref(odp_packet_hdr_t *seg_hdr)
 {
-	return odp_atomic_load_u32(&event_hdr->ref_cnt);
+	return odp_atomic_load_u32(&seg_hdr->ref_cnt);
 }
 
 static inline int is_multi_ref(uint32_t ref_cnt)
@@ -507,10 +507,10 @@ static inline void packet_free_multi(_odp_event_hdr_t *hdr[], int num)
 
 	for (i = 0; i < num; i++) {
 		/* Zero when reference API has not been used */
-		ref_cnt = segment_ref(hdr[i]);
+		ref_cnt = segment_ref((odp_packet_hdr_t *)(uintptr_t)hdr[i]);
 
 		if (odp_unlikely(ref_cnt)) {
-			ref_cnt = segment_ref_dec(hdr[i]);
+			ref_cnt = segment_ref_dec((odp_packet_hdr_t *)(uintptr_t)hdr[i]);
 
 			if (is_multi_ref(ref_cnt)) {
 				num_ref++;
@@ -730,7 +730,7 @@ void odp_packet_free(odp_packet_t pkt)
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 	int num_seg = pkt_hdr->seg_count;
 
-	ODP_ASSERT(segment_ref(&pkt_hdr->event_hdr) > 0);
+	ODP_ASSERT(segment_ref(pkt_hdr) > 0);
 
 	if (odp_likely(num_seg == 1)) {
 		_odp_event_hdr_t *event_hdr = &pkt_hdr->event_hdr;
@@ -751,7 +751,7 @@ void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt[i]);
 		int num_seg = pkt_hdr->seg_count;
 
-		ODP_ASSERT(segment_ref(&pkt_hdr->event_hdr) > 0);
+		ODP_ASSERT(segment_ref(pkt_hdr) > 0);
 
 		if (odp_unlikely(num_seg > 1)) {
 			free_all_segments(pkt_hdr, num_seg);
@@ -1613,7 +1613,6 @@ void odp_packet_print(odp_packet_t pkt)
 
 	for (int seg_idx = 0; seg != ODP_PACKET_SEG_INVALID; seg_idx++) {
 		odp_packet_hdr_t *seg_hdr = packet_seg_to_hdr(seg);
-		_odp_event_hdr_t *event_hdr = &seg_hdr->event_hdr;
 		char seg_str[max_len];
 		int str_len;
 
@@ -1623,7 +1622,7 @@ void odp_packet_print(odp_packet_t pkt)
 				   seg_idx,
 				   odp_packet_seg_data_len(pkt, seg),
 				   odp_packet_seg_data(pkt, seg),
-				   segment_ref(event_hdr));
+				   segment_ref(seg_hdr));
 
 		/* Prevent print buffer overflow */
 		if (n - len - str_len < 10) {
@@ -2776,7 +2775,7 @@ odp_packet_t odp_packet_ref_static(odp_packet_t pkt)
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
 	while (pkt_hdr != NULL) {
-		segment_ref_inc(&pkt_hdr->event_hdr);
+		segment_ref_inc(pkt_hdr);
 		pkt_hdr = pkt_hdr->seg_next;
 	}
 
@@ -2832,14 +2831,11 @@ odp_packet_t odp_packet_ref_pkt(odp_packet_t pkt, uint32_t offset,
 
 int odp_packet_has_ref(odp_packet_t pkt)
 {
-	_odp_event_hdr_t *event_hdr;
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 	uint32_t ref_cnt;
 
 	while (pkt_hdr != NULL) {
-		event_hdr = &pkt_hdr->event_hdr;
-
-		ref_cnt = segment_ref(event_hdr);
+		ref_cnt = segment_ref(pkt_hdr);
 
 		if (is_multi_ref(ref_cnt))
 			return 1;

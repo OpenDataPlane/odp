@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 #include <odp/api/align.h>
+#include <odp/api/atomic.h>
 #include <odp/api/debug.h>
 #include <odp/api/packet.h>
 #include <odp/api/plat/packet_inline_types.h>
@@ -116,6 +117,9 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 
 	/* Classifier destination queue */
 	odp_queue_t dst_queue;
+
+	/* Reference count */
+	odp_atomic_u32_t ref_cnt;
 
 	/* Flow hash value */
 	uint32_t flow_hash;

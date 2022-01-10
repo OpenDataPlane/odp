@@ -17,7 +17,6 @@
 extern "C" {
 #endif
 
-#include <odp/api/atomic.h>
 #include <odp/api/debug.h>
 #include <odp/api/event.h>
 #include <odp/api/std_types.h>
@@ -57,9 +56,6 @@ typedef struct _odp_event_hdr_t {
 
 	/* Combined pool and buffer index */
 	buffer_index_t index;
-
-	/* Reference count */
-	odp_atomic_u32_t ref_cnt;
 
 	/* Pool type */
 	int8_t    type;
