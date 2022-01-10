@@ -1,4 +1,4 @@
-/* Copyright (c) 2021, Nokia
+/* Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -51,7 +51,6 @@ typedef struct _odp_event_hdr_t {
 	void     *pool_ptr;
 
 	/* --- Mostly read only data --- */
-	const void *user_ptr;
 
 	/* Initial buffer tail pointer */
 	uint8_t  *buf_end;

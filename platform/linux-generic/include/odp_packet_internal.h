@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -119,6 +119,9 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 
 	/* Flow hash value */
 	uint32_t flow_hash;
+
+	/* User context pointer */
+	const void *user_ptr;
 
 	/* Classifier mark */
 	uint16_t cls_mark;
