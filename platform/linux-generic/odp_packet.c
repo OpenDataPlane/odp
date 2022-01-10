@@ -499,7 +499,7 @@ static inline int is_multi_ref(uint32_t ref_cnt)
 	return (ref_cnt > 1);
 }
 
-static inline void packet_free_multi(_odp_event_hdr_t *hdr[], int num)
+static inline void packet_free_multi(odp_packet_hdr_t *hdr[], int num)
 {
 	int i;
 	uint32_t ref_cnt;
@@ -507,10 +507,10 @@ static inline void packet_free_multi(_odp_event_hdr_t *hdr[], int num)
 
 	for (i = 0; i < num; i++) {
 		/* Zero when reference API has not been used */
-		ref_cnt = segment_ref((odp_packet_hdr_t *)(uintptr_t)hdr[i]);
+		ref_cnt = segment_ref(hdr[i]);
 
 		if (odp_unlikely(ref_cnt)) {
-			ref_cnt = segment_ref_dec((odp_packet_hdr_t *)(uintptr_t)hdr[i]);
+			ref_cnt = segment_ref_dec(hdr[i]);
 
 			if (is_multi_ref(ref_cnt)) {
 				num_ref++;
@@ -526,21 +526,21 @@ static inline void packet_free_multi(_odp_event_hdr_t *hdr[], int num)
 	num -= num_ref;
 
 	if (odp_likely(num))
-		_odp_event_free_multi(hdr, num);
+		_odp_event_free_multi((_odp_event_hdr_t **)(uintptr_t)hdr, num);
 }
 
 static inline void free_all_segments(odp_packet_hdr_t *pkt_hdr, int num)
 {
 	int i;
-	_odp_event_hdr_t *event_hdr[num];
+	odp_packet_hdr_t *pkt_hdrs[num];
 	odp_packet_hdr_t *seg_hdr = pkt_hdr;
 
 	for (i = 0; i < num; i++) {
-		event_hdr[i] = &seg_hdr->event_hdr;
+		pkt_hdrs[i] = seg_hdr;
 		seg_hdr = seg_hdr->seg_next;
 	}
 
-	packet_free_multi(event_hdr, num);
+	packet_free_multi(pkt_hdrs, num);
 }
 
 static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
@@ -552,14 +552,14 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 	int num_remain = pkt_hdr->seg_count - num;
 	odp_packet_hdr_t *hdr = pkt_hdr;
 	odp_packet_hdr_t *last_hdr = packet_last_seg(pkt_hdr);
-	_odp_event_hdr_t *event_hdr[num];
+	odp_packet_hdr_t *pkt_hdrs[num];
 
 	if (head) {
 		odp_packet_hdr_t *new_hdr;
 
 		for (i = 0; i < num; i++) {
 			seg_hdr    = packet_seg_step(&hdr);
-			event_hdr[i] = &seg_hdr->event_hdr;
+			pkt_hdrs[i] = seg_hdr;
 		}
 
 		/* The first remaining header is the new packet descriptor.
@@ -583,7 +583,7 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 
 		pkt_hdr = new_hdr;
 
-		packet_free_multi(event_hdr, num);
+		packet_free_multi(pkt_hdrs, num);
 	} else {
 		/* Free last 'num' bufs.
 		 * First, find the last remaining header. */
@@ -594,10 +594,10 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 
 		for (i = 0; i < num; i++) {
 			seg_hdr    = packet_seg_step(&hdr);
-			event_hdr[i] = &seg_hdr->event_hdr;
+			pkt_hdrs[i] = seg_hdr;
 		}
 
-		packet_free_multi(event_hdr, num);
+		packet_free_multi(pkt_hdrs, num);
 
 		/* Head segment remains, no need to copy or update majority
 		 * of the metadata. */
@@ -732,18 +732,15 @@ void odp_packet_free(odp_packet_t pkt)
 
 	ODP_ASSERT(segment_ref(pkt_hdr) > 0);
 
-	if (odp_likely(num_seg == 1)) {
-		_odp_event_hdr_t *event_hdr = &pkt_hdr->event_hdr;
-
-		packet_free_multi(&event_hdr, 1);
-	} else {
+	if (odp_likely(num_seg == 1))
+		packet_free_multi(&pkt_hdr, 1);
+	else
 		free_all_segments(pkt_hdr, num_seg);
-	}
 }
 
 void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 {
-	_odp_event_hdr_t *event_hdr[num];
+	odp_packet_hdr_t *pkt_hdrs[num];
 	int i;
 	int num_freed = 0;
 
@@ -759,11 +756,11 @@ void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 			continue;
 		}
 
-		event_hdr[i - num_freed] = &pkt_hdr->event_hdr;
+		pkt_hdrs[i - num_freed] = pkt_hdr;
 	}
 
 	if (odp_likely(num - num_freed))
-		packet_free_multi(event_hdr, num - num_freed);
+		packet_free_multi(pkt_hdrs, num - num_freed);
 }
 
 void odp_packet_free_sp(const odp_packet_t pkt[], int num)
