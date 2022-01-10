@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -50,7 +50,7 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.pool           = offsetof(odp_packet_hdr_t, event_hdr.pool_ptr),
 	.input          = offsetof(odp_packet_hdr_t, input),
 	.seg_count      = offsetof(odp_packet_hdr_t, seg_count),
-	.user_ptr       = offsetof(odp_packet_hdr_t, event_hdr.user_ptr),
+	.user_ptr       = offsetof(odp_packet_hdr_t, user_ptr),
 	.user_area      = offsetof(odp_packet_hdr_t, event_hdr.uarea_addr),
 	.l2_offset      = offsetof(odp_packet_hdr_t, p.l2_offset),
 	.l3_offset      = offsetof(odp_packet_hdr_t, p.l3_offset),
@@ -193,8 +193,8 @@ static inline void packet_seg_copy_md(odp_packet_hdr_t *dst,
 	if (src->p.flags.payload_off)
 		dst->payload_offset = src->payload_offset;
 
+	dst->user_ptr   = src->user_ptr;
 	/* event header side packet metadata */
-	dst->event_hdr.user_ptr   = src->event_hdr.user_ptr;
 	dst->event_hdr.uarea_addr = src->event_hdr.uarea_addr;
 
 	/* segmentation data is not copied:
@@ -1076,7 +1076,7 @@ void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ptr)
 		return;
 	}
 
-	pkt_hdr->event_hdr.user_ptr = ptr;
+	pkt_hdr->user_ptr = ptr;
 	pkt_hdr->p.flags.user_ptr_set = 1;
 }
 
@@ -1753,7 +1753,7 @@ int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 	dsthdr->dst_queue = srchdr->dst_queue;
 	dsthdr->cos = srchdr->cos;
 	dsthdr->cls_mark = srchdr->cls_mark;
-	dsthdr->event_hdr.user_ptr = srchdr->event_hdr.user_ptr;
+	dsthdr->user_ptr = srchdr->user_ptr;
 	if (dsthdr->event_hdr.uarea_addr != NULL &&
 	    srchdr->event_hdr.uarea_addr != NULL) {
 		memcpy(dsthdr->event_hdr.uarea_addr, srchdr->event_hdr.uarea_addr,

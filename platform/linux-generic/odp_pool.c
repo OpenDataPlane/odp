@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -449,6 +449,7 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t b
 	if (type == ODP_POOL_PACKET) {
 		odp_packet_hdr_t *pkt_hdr = (void *)event_hdr;
 
+		pkt_hdr->user_ptr  = NULL;
 		pkt_hdr->seg_data  = data_ptr;
 		pkt_hdr->seg_len   = pool->seg_len;
 		pkt_hdr->seg_count = 1;
