@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -159,16 +159,16 @@ static inline _odp_event_hdr_t *event_hdr_from_index(pool_t *pool,
 
 static inline _odp_event_hdr_t *_odp_event_hdr_from_index_u32(uint32_t u32)
 {
-	buffer_index_t index;
-	uint32_t pool_idx, buffer_idx;
+	_odp_event_index_t index;
+	uint32_t pool_idx, event_idx;
 	pool_t *pool;
 
 	index.u32  = u32;
 	pool_idx   = index.pool;
-	buffer_idx = index.buffer;
+	event_idx  = index.event;
 	pool       = pool_entry(pool_idx);
 
-	return event_hdr_from_index(pool, buffer_idx);
+	return event_hdr_from_index(pool, event_idx);
 }
 
 odp_event_t _odp_event_alloc(pool_t *pool);
