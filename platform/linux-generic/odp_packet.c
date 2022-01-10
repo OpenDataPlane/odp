@@ -51,7 +51,7 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.input          = offsetof(odp_packet_hdr_t, input),
 	.seg_count      = offsetof(odp_packet_hdr_t, seg_count),
 	.user_ptr       = offsetof(odp_packet_hdr_t, user_ptr),
-	.user_area      = offsetof(odp_packet_hdr_t, event_hdr.uarea_addr),
+	.user_area      = offsetof(odp_packet_hdr_t, uarea_addr),
 	.l2_offset      = offsetof(odp_packet_hdr_t, p.l2_offset),
 	.l3_offset      = offsetof(odp_packet_hdr_t, p.l3_offset),
 	.l4_offset      = offsetof(odp_packet_hdr_t, p.l4_offset),
@@ -194,8 +194,7 @@ static inline void packet_seg_copy_md(odp_packet_hdr_t *dst,
 		dst->payload_offset = src->payload_offset;
 
 	dst->user_ptr   = src->user_ptr;
-	/* event header side packet metadata */
-	dst->event_hdr.uarea_addr = src->event_hdr.uarea_addr;
+	dst->uarea_addr = src->uarea_addr;
 
 	/* segmentation data is not copied:
 	 *   seg_next
@@ -1754,9 +1753,8 @@ int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 	dsthdr->cos = srchdr->cos;
 	dsthdr->cls_mark = srchdr->cls_mark;
 	dsthdr->user_ptr = srchdr->user_ptr;
-	if (dsthdr->event_hdr.uarea_addr != NULL &&
-	    srchdr->event_hdr.uarea_addr != NULL) {
-		memcpy(dsthdr->event_hdr.uarea_addr, srchdr->event_hdr.uarea_addr,
+	if (dsthdr->uarea_addr != NULL && srchdr->uarea_addr != NULL) {
+		memcpy(dsthdr->uarea_addr, srchdr->uarea_addr,
 		       dst_uarea_size <= src_uarea_size ? dst_uarea_size :
 		       src_uarea_size);
 	}

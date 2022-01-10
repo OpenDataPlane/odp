@@ -55,9 +55,6 @@ typedef struct _odp_event_hdr_t {
 	/* Initial buffer tail pointer */
 	uint8_t  *buf_end;
 
-	/* User area pointer */
-	void    *uarea_addr;
-
 	/* Combined pool and buffer index */
 	buffer_index_t index;
 

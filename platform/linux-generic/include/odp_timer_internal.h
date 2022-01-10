@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -39,6 +39,9 @@ typedef struct ODP_ALIGNED_CACHE odp_timeout_hdr_t {
 	odp_timer_t timer;
 
 } odp_timeout_hdr_t;
+
+ODP_STATIC_ASSERT(sizeof(odp_timeout_hdr_t) <= ODP_CACHE_LINE_SIZE,
+		  "TIMEOUT_HDR_SIZE_ERROR");
 
 /* A larger decrement value should be used after receiving events compared to
  * an 'empty' call. */
