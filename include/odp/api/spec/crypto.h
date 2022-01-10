@@ -232,12 +232,14 @@ typedef enum {
 	 *  cipher.
 	 *
 	 *  NIST and RFC specifications of GMAC refer to all data to be
-	 *  authenticated as AAD. In constrast to that, ODP API specifies
-	 *  the bulk of authenticated data to be located in packet payload for
-	 *  all authentication algorithms. Thus GMAC operation authenticates
-	 *  only packet payload and AAD is not used. GMAC needs
-	 *  an initialization vector, which can be passed via session (auth_iv)
-	 *  or packet (auth_iv_ptr) level parameters.
+	 *  authenticated as AAD. In ODP the data to be authenticated, i.e.
+	 *  AAD, is ODP packet data and specified using the auth_range
+	 *  parameter. The aad_length and aad_ptr parameters, which would
+	 *  require the data to be contiguous in memory, are ignored with
+	 *  AES-GMAC.
+	 *
+	 *  GMAC needs an initialization vector, which can be passed via
+	 *  session (auth_iv) or packet (auth_iv_ptr) level parameters.
 	 */
 	ODP_AUTH_ALG_AES_GMAC,
 
@@ -559,6 +561,9 @@ typedef struct odp_crypto_session_param_t {
 	 *  after the cipher operation else before. When decoding, TRUE
 	 *  indicates the reverse order of operation.
 	 *
+	 *  The value is ignored with authenticated encryption algorithms
+	 *  such as AES-GCM.
+	 *
 	 *  true:  Authenticate cipher text
 	 *  false: Authenticate plain text
 	 *
@@ -723,10 +728,18 @@ typedef struct odp_crypto_op_param_t {
 	 */
 	uint8_t *aad_ptr;
 
-	/** Data range to apply cipher */
+	/** Data range to be ciphered */
 	odp_packet_data_range_t cipher_range;
 
-	/** Data range to authenticate */
+	/** Data range to be authenticated
+	 *
+	 *  The value is ignored with authenticated encryption algorithms,
+	 *  such as AES-GCM, which authenticate data in the cipher range
+	 *  and the AAD.
+	 *
+	 *  As a special case AES-GMAC uses this field instead of aad_ptr
+	 *  for the data bytes to be authenticated.
+	 */
 	odp_packet_data_range_t auth_range;
 
 } odp_crypto_op_param_t;
