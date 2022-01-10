@@ -800,6 +800,32 @@ typedef enum {
 	ODP_CRYPTO_SES_ERR_CIPHER,
 	/** Creation failed, bad auth params */
 	ODP_CRYPTO_SES_ERR_AUTH,
+
+	/** Unsupported combination of algorithms
+	 *
+	 *  The combination of cipher and auth algorithms with their
+	 *  specific parameters is not supported even if the algorithms
+	 *  appear in capabilities and are supported in combination with
+	 *  other algorithms or other algorithm specific parameters.
+	 */
+	ODP_CRYPTO_SES_ERR_ALG_COMBO,
+
+	/** Unsupported order of cipher and auth
+	 *
+	 *  The requested mutual order of ciphering and authentication
+	 *  is not supported with the chosen individual cipher and
+	 *  authentication algorithms.
+	 */
+	ODP_CRYPTO_SES_ERR_ALG_ORDER,
+
+	/** Unsupported combination of session creation parameters
+	 *
+	 *  The combination of provided session creation parameters is not
+	 *  supported. This error can occur when there are limitations that
+	 *  are not expressible through crypto capabilities or other error
+	 *  status values.
+	 */
+	ODP_CRYPTO_SES_ERR_PARAMS,
 } odp_crypto_ses_create_err_t;
 
 /** This synonym for backward compatibility will be deprecated later */
