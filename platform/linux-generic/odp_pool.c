@@ -436,7 +436,6 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t b
 	event_hdr->type         = type;
 	event_hdr->event_type   = type;
 	event_hdr->pool_ptr     = pool;
-	event_hdr->uarea_addr   = uarea;
 	odp_atomic_init_u32(&event_hdr->ref_cnt, 0);
 
 	/* Store base values for fast init */
@@ -450,6 +449,7 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t b
 		odp_packet_hdr_t *pkt_hdr = (void *)event_hdr;
 
 		pkt_hdr->user_ptr  = NULL;
+		pkt_hdr->uarea_addr = uarea;
 		pkt_hdr->seg_data  = data_ptr;
 		pkt_hdr->seg_len   = pool->seg_len;
 		pkt_hdr->seg_count = 1;

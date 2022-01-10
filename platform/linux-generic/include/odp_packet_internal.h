@@ -120,6 +120,9 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 	/* Flow hash value */
 	uint32_t flow_hash;
 
+	/* User area pointer */
+	void *uarea_addr;
+
 	/* User context pointer */
 	const void *user_ptr;
 
