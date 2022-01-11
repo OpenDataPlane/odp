@@ -1,4 +1,4 @@
-/* Copyright (c) 2021, Nokia
+/* Copyright (c) 2021-2022, Nokia
  *
  * All rights reserved.
  *
@@ -40,7 +40,7 @@ static void print_usage(void)
 	       "  -t, --threads Number of worker threads (default %u)\n"
 	       "  -s, --size    Size of buffer in bytes (default %u)\n"
 	       "  -r, --rounds  Number of test rounds (default %u)\n"
-	       "                Rounded down to nearest multiple of 8\n"
+	       "                Divided by 100 for ODP_RANDOM_TRUE\n"
 	       "  -h, --help    This help\n"
 	       "\n",
 	       options_def.num_threads, options_def.size, options_def.rounds);
@@ -116,6 +116,16 @@ static test_shm_t *shm_lookup(void)
 	return shm;
 }
 
+static uint32_t type_rounds(odp_random_kind_t type)
+{
+	switch (type) {
+	case ODP_RANDOM_TRUE:
+		return options.rounds / 100;
+	default:
+		return options.rounds;
+	}
+}
+
 static int test_random(void *p)
 {
 	(void)p;
@@ -124,12 +134,15 @@ static int test_random(void *p)
 	const unsigned long page = ODP_PAGE_SIZE;
 	odp_time_t start;
 	uint64_t nsec;
+	uint32_t rounds;
 	test_shm_t *shm = shm_lookup();
 
 	if (!shm) {
 		ODPH_ERR("Failed to look up shm %s\n", shm_name);
 		exit(EXIT_FAILURE);
 	}
+
+	rounds = type_rounds(shm->type);
 
 	/* One extra page for alignment. */
 	buf = (uint8_t *)malloc(options.size + page);
@@ -145,7 +158,7 @@ static int test_random(void *p)
 	odp_barrier_wait(&shm->barrier);
 	start = odp_time_local();
 
-	for (uint32_t i = 0; i < options.rounds; i++) {
+	for (uint32_t i = 0; i < rounds; i++) {
 		uint32_t pos = 0;
 
 		while (pos < options.size) {
@@ -178,12 +191,15 @@ static int test_random_test(void *p)
 	odp_time_t start;
 	uint64_t nsec;
 	uint64_t seed = 0;
+	uint32_t rounds;
 	test_shm_t *shm = shm_lookup();
 
 	if (!shm) {
 		ODPH_ERR("Failed to look up shm %s\n", shm_name);
 		exit(EXIT_FAILURE);
 	}
+
+	rounds = type_rounds(shm->type);
 
 	/* One extra page for alignment. */
 	buf = (uint8_t *)malloc(options.size + page);
@@ -199,7 +215,7 @@ static int test_random_test(void *p)
 	odp_barrier_wait(&shm->barrier);
 	start = odp_time_local();
 
-	for (uint32_t i = 0; i < options.rounds; i++) {
+	for (uint32_t i = 0; i < rounds; i++) {
 		uint32_t pos = 0;
 
 		while (pos < options.size) {
@@ -288,11 +304,13 @@ static void test_type(odp_instance_t instance, test_shm_t *shm,
 		printf("odp_random_test_data\n");
 	}
 
+	uint32_t rounds = type_rounds(type);
+
 	printf("--------------------\n");
 	printf("threads: %d  size: %u B  rounds: %u  ", options.num_threads,
-	       options.size, options.rounds);
+	       options.size, rounds);
 	mb = (uint64_t)options.num_threads * (uint64_t)options.size *
-	     (uint64_t)options.rounds;
+	     (uint64_t)rounds;
 	mb /= MB;
 	seconds = (double)nsec / (double)ODP_TIME_SEC_IN_NS;
 	printf("MB: %.3f  seconds: %.3f  ", mb, seconds);
