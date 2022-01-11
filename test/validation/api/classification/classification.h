@@ -23,6 +23,11 @@
 #define CLS_DEFAULT_SMAC	{0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c}
 #define CLS_MAGIC_VAL		0xdeadbeef
 
+/* Config values for Drop CoS */
+#define TEST_DROP		1
+#define CLS_DROP		6
+#define CLS_DROP_PORT		4001
+
 /* Config values for Error CoS */
 #define TEST_ERROR		1
 #define CLS_ERROR		1
@@ -47,7 +52,7 @@
 
 /* Config values for CoS L2 Priority */
 #define TEST_L2_QOS		1
-#define CLS_L2_QOS_0		6
+#define CLS_L2_QOS_0		7
 #define CLS_L2_QOS_MAX		5
 
 #define CLS_ENTRIES		(CLS_L2_QOS_0 + CLS_L2_QOS_MAX)

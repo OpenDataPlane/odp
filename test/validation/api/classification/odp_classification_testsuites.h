@@ -34,6 +34,7 @@ typedef struct cls_packet_info {
 typedef union odp_cls_testcase {
 	struct  {
 		uint32_t default_cos:1;
+		uint32_t drop_cos:1;
 		uint32_t error_cos:1;
 		uint32_t pmr_chain:1;
 		uint32_t l2_priority:1;
@@ -72,6 +73,8 @@ odp_pool_t pktv_pool_create(const char *poolname);
 odp_queue_t queue_create(const char *queuename, bool sched);
 void configure_pktio_default_cos(odp_bool_t enable_pktv);
 void test_pktio_default_cos(odp_bool_t enable_pktv);
+void configure_pktio_drop_cos(odp_bool_t enable_pktv, uint32_t max_cos_stats);
+void test_pktio_drop_cos(odp_bool_t enable_pktv);
 void configure_pktio_error_cos(odp_bool_t enable_pktv);
 void test_pktio_error_cos(odp_bool_t enable_pktv);
 void configure_cls_pmr_chain(odp_bool_t enable_pktv);
