@@ -107,7 +107,7 @@ static profile_params_set_t COS0_PROFILE_PARAMS = {
 	.shaper_params = {
 		.commit_rate = 1 * MBPS, .commit_burst      = 100000,
 		.peak_rate   = 4 * MBPS, .peak_burst        = 200000,
-		.dual_rate  = FALSE,     .shaper_len_adjust = 20
+		.dual_rate  = TRUE,      .shaper_len_adjust = 20
 	},
 
 	.threshold_params = {
@@ -149,7 +149,7 @@ static profile_params_set_t COS1_PROFILE_PARAMS = {
 	.shaper_params = {
 		.commit_rate = 500  * KBPS, .commit_burst      = 50000,
 		.peak_rate   = 1500 * KBPS, .peak_burst        = 150000,
-		.dual_rate  = FALSE,        .shaper_len_adjust = 20
+		.dual_rate  = TRUE,         .shaper_len_adjust = 20
 	},
 
 	.threshold_params = {
@@ -191,7 +191,7 @@ static profile_params_set_t COS2_PROFILE_PARAMS = {
 	.shaper_params = {
 		.commit_rate = 200 * KBPS, .commit_burst      = 20000,
 		.peak_rate   = 400 * KBPS, .peak_burst        = 40000,
-		.dual_rate  = FALSE,       .shaper_len_adjust = 20
+		.dual_rate  = TRUE,        .shaper_len_adjust = 20
 	},
 
 	.threshold_params = {
@@ -304,7 +304,6 @@ clamp_rate(uint64_t rate)
 {
 	uint64_t val = MIN(MAX(rate, tm_shaper_min_rate), tm_shaper_max_rate);
 
-	/* PIR can be zero just with CIR valid and vice versa */
 	if (!rate)
 		return 0;
 
