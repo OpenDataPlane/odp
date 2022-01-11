@@ -2412,7 +2412,7 @@ static void check_shaper_profile(char *shaper_name, uint32_t shaper_idx)
 			      clamp_burst(shaper_idx * MIN_PEAK_BURST)));
 
 	CU_ASSERT(shaper_params.shaper_len_adjust == SHAPER_LEN_ADJ);
-	CU_ASSERT(shaper_params.dual_rate         == 0);
+	CU_ASSERT(shaper_params.dual_rate         == true);
 }
 
 static void traffic_mngr_test_shaper_profile(void)
@@ -2424,7 +2424,7 @@ static void traffic_mngr_test_shaper_profile(void)
 
 	odp_tm_shaper_params_init(&shaper_params);
 	shaper_params.shaper_len_adjust = SHAPER_LEN_ADJ;
-	shaper_params.dual_rate         = 0;
+	shaper_params.dual_rate         = true;
 
 	for (idx = 1; idx <= NUM_SHAPER_TEST_PROFILES; idx++) {
 		snprintf(shaper_name, sizeof(shaper_name),
