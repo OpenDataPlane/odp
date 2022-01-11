@@ -23,6 +23,7 @@ static int global_num_l2_qos;
 
 #define NUM_COS_PMR_CHAIN	2
 #define NUM_COS_DEFAULT	1
+#define NUM_COS_DROP	1
 #define NUM_COS_ERROR	1
 #define NUM_COS_L2_PRIO	CLS_L2_QOS_MAX
 #define NUM_COS_PMR	1
@@ -451,6 +452,74 @@ void test_pktio_default_cos(odp_bool_t enable_pktv)
 	CU_ASSERT(pool == pool_list[CLS_DEFAULT]);
 
 	odp_packet_free(pkt);
+}
+
+void configure_pktio_drop_cos(odp_bool_t enable_pktv, uint32_t max_cos_stats)
+{
+	uint16_t val;
+	uint16_t mask;
+	odp_pmr_param_t pmr_param;
+	odp_cls_cos_param_t cls_param;
+	char cosname[ODP_COS_NAME_LEN];
+
+	sprintf(cosname, "DropCoS");
+	odp_cls_cos_param_init(&cls_param);
+
+	cls_param.action = ODP_COS_ACTION_DROP;
+	cls_param.stats_enable = max_cos_stats > 0;
+
+	if (enable_pktv) {
+		cls_param.vector.enable = true;
+		cls_param.vector.pool = pktv_config.pool;
+		cls_param.vector.max_size = pktv_config.max_size;
+		cls_param.vector.max_tmo_ns = pktv_config.max_tmo_ns;
+	}
+
+	cos_list[CLS_DROP] = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos_list[CLS_DROP] != ODP_COS_INVALID);
+
+	val = odp_cpu_to_be_16(CLS_DROP_PORT);
+	mask = odp_cpu_to_be_16(0xffff);
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = find_first_supported_l3_pmr();
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
+
+	pmr_list[CLS_DROP] = odp_cls_pmr_create(&pmr_param, 1,
+						cos_list[CLS_DEFAULT],
+						cos_list[CLS_DROP]);
+	CU_ASSERT_FATAL(pmr_list[CLS_DROP] != ODP_PMR_INVALID);
+}
+
+void test_pktio_drop_cos(odp_bool_t enable_pktv)
+{
+	odp_packet_t pkt;
+	odp_queue_t queue;
+	uint32_t seqno = 0;
+	cls_packet_info_t pkt_info;
+	odp_cls_capability_t capa;
+	odp_cls_cos_stats_t start, stop;
+
+	CU_ASSERT_FATAL(odp_cls_capability(&capa) == 0);
+	pkt_info = default_pkt_info;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+	set_first_supported_pmr_port(pkt, CLS_DROP_PORT);
+	CU_ASSERT(odp_cls_cos_stats(cos_list[CLS_DROP], &start) == 0);
+	enqueue_pktio_interface(pkt, pktio_loop);
+	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
+	CU_ASSERT(odp_cls_cos_stats(cos_list[CLS_DROP], &stop) == 0);
+	CU_ASSERT_FATAL(pkt == ODP_PACKET_INVALID);
+	if (capa.stats.cos.counter.packets)
+		CU_ASSERT((stop.packets - start.packets) == 1);
+	if (capa.stats.cos.counter.discards)
+		CU_ASSERT((stop.discards - start.discards) == 0);
+	if (capa.stats.cos.counter.errors)
+		CU_ASSERT((stop.errors - start.errors) == 0);
 }
 
 static int classification_check_queue_stats(void)
@@ -926,6 +995,11 @@ static void classification_test_pktio_configure_common(odp_bool_t enable_pktv)
 		tc.default_cos = 1;
 		num_cos -= NUM_COS_DEFAULT;
 	}
+	if (num_cos >= NUM_COS_DEFAULT && TEST_DROP) {
+		configure_pktio_drop_cos(enable_pktv, capa.max_cos_stats);
+		tc.drop_cos = 1;
+		num_cos -= NUM_COS_DROP;
+	}
 	if (num_cos >= NUM_COS_ERROR && TEST_ERROR) {
 		configure_pktio_error_cos(enable_pktv);
 		tc.error_cos = 1;
@@ -969,6 +1043,8 @@ static void classification_test_pktio_test_common(odp_bool_t enable_pktv)
 	/* Test Different CoS on the pktio interface */
 	if (tc.default_cos && TEST_DEFAULT)
 		test_pktio_default_cos(enable_pktv);
+	if (tc.drop_cos && TEST_DROP)
+		test_pktio_drop_cos(enable_pktv);
 	if (tc.error_cos && TEST_ERROR)
 		test_pktio_error_cos(enable_pktv);
 	if (tc.pmr_chain && TEST_PMR_CHAIN)
