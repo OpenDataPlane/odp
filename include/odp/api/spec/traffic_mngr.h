@@ -1063,6 +1063,7 @@ typedef struct {
 	/** The peak information rate for this shaper profile.  The units for
 	 * this integer is in bits per second when packet_mode is
 	 * not TRUE while in packets per second when packet mode is TRUE.
+	 * This field is ignored when dual_rate is FALSE.
 	 */
 	union {
 		/**< @deprecated Use peak_rate instead */
@@ -1079,7 +1080,9 @@ typedef struct {
 	/** The peak burst tolerance for this shaper profile.  The units for
 	 * this field in bits when packet_mode is not TRUE and packets
 	 * when packet_mode is TRUE. This value sets an upper limit for the
-	 * size of the peakCnt. */
+	 * size of the peakCnt.
+	 * This field is ignored when dual_rate is FALSE.
+	 */
 	uint32_t peak_burst;
 
 	/** The shaper_len_adjust is a value between -128 and 127 which is
