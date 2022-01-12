@@ -1,5 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -641,7 +641,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		pkt_hdr->input = input;
 
 		if (pktio_cls_enabled(pktio_entry)) {
-			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
+			_odp_packet_copy_cls_md(pkt_hdr, &parsed_hdr);
 		} else if (parse_layer != ODP_PROTO_LAYER_NONE) {
 			uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
 
@@ -933,7 +933,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		pkt_hdr->input = input;
 
 		if (pktio_cls_enabled(pktio_entry)) {
-			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
+			_odp_packet_copy_cls_md(pkt_hdr, &parsed_hdr);
 		} else if (parse_layer != ODP_PROTO_LAYER_NONE) {
 			uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
 
