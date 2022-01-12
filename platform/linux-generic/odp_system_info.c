@@ -471,7 +471,14 @@ uint64_t odp_sys_huge_page_size(void)
 
 static int pagesz_compare(const void *pagesz1, const void *pagesz2)
 {
-	return (*(const uint64_t *)pagesz1 - *(const uint64_t *)pagesz2);
+	const uint64_t val1 = *(const uint64_t *)pagesz1;
+	const uint64_t val2 = *(const uint64_t *)pagesz2;
+
+	if (val1 < val2)
+		return -1;
+	if (val1 > val2)
+		return 1;
+	return 0;
 }
 
 int odp_sys_huge_page_size_all(uint64_t size[], int num)
