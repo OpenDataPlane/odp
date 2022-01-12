@@ -624,6 +624,8 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 			ODP_CRYPTO_OP_DECODE :
 			ODP_CRYPTO_OP_ENCODE;
 	crypto_param.auth_cipher_text = 1;
+	if (param->proto == ODP_IPSEC_AH)
+		crypto_param.hash_result_in_auth_range = 1;
 
 	crypto_param.op_mode   = ODP_CRYPTO_SYNC;
 	crypto_param.compl_queue = ODP_QUEUE_INVALID;
