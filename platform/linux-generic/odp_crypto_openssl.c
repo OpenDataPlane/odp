@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -509,8 +509,8 @@ auth_xcbcmac_check(odp_packet_t pkt,
 	odp_packet_copy_to_mem(pkt, param->hash_result_offset,
 			       bytes, hash_in);
 
-	_odp_packet_set_data(pkt, param->hash_result_offset,
-			     0, bytes);
+	if (odp_unlikely(session->p.hash_result_in_auth_range))
+		_odp_packet_set_data(pkt, param->hash_result_offset, 0, bytes);
 
 	/* Hash it */
 	packet_aes_xcbc_mac(pkt, param, session, hash_out);
@@ -591,8 +591,8 @@ odp_crypto_alg_err_t auth_hmac_check(odp_packet_t pkt,
 	odp_packet_copy_to_mem(pkt, param->hash_result_offset,
 			       bytes, hash_in);
 
-	_odp_packet_set_data(pkt, param->hash_result_offset,
-			     0, bytes);
+	if (odp_unlikely(session->p.hash_result_in_auth_range))
+		_odp_packet_set_data(pkt, param->hash_result_offset, 0, bytes);
 
 	/* Hash it */
 	packet_hmac(pkt, param, session, hash_out);
@@ -678,8 +678,8 @@ odp_crypto_alg_err_t auth_cmac_check(odp_packet_t pkt,
 	odp_packet_copy_to_mem(pkt, param->hash_result_offset,
 			       bytes, hash_in);
 
-	_odp_packet_set_data(pkt, param->hash_result_offset,
-			     0, bytes);
+	if (odp_unlikely(session->p.hash_result_in_auth_range))
+		_odp_packet_set_data(pkt, param->hash_result_offset, 0, bytes);
 
 	/* Hash it */
 	packet_cmac(pkt, param, session, hash_out);
@@ -772,8 +772,8 @@ odp_crypto_alg_err_t auth_cmac_eia2_check(odp_packet_t pkt,
 	odp_packet_copy_to_mem(pkt, param->hash_result_offset,
 			       bytes, hash_in);
 
-	_odp_packet_set_data(pkt, param->hash_result_offset,
-			     0, bytes);
+	if (odp_unlikely(session->p.hash_result_in_auth_range))
+		_odp_packet_set_data(pkt, param->hash_result_offset, 0, bytes);
 
 	/* Hash it */
 	ret = packet_cmac_eia2(pkt, param, session, hash_out);
@@ -851,8 +851,8 @@ odp_crypto_alg_err_t auth_digest_check(odp_packet_t pkt,
 	odp_packet_copy_to_mem(pkt, param->hash_result_offset,
 			       bytes, hash_in);
 
-	_odp_packet_set_data(pkt, param->hash_result_offset,
-			     0, bytes);
+	if (odp_unlikely(session->p.hash_result_in_auth_range))
+		_odp_packet_set_data(pkt, param->hash_result_offset, 0, bytes);
 
 	/* Hash it */
 	packet_digest(pkt, param, session, hash_out);
@@ -1455,8 +1455,9 @@ odp_crypto_alg_err_t aes_gmac_check(odp_packet_t pkt,
 			       session->p.auth_digest_len, block);
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG,
 			    session->p.auth_digest_len, block);
-	_odp_packet_set_data(pkt, param->hash_result_offset,
-			     0, session->p.auth_digest_len);
+	if (odp_unlikely(session->p.hash_result_in_auth_range))
+		_odp_packet_set_data(pkt, param->hash_result_offset,
+				     0, session->p.auth_digest_len);
 
 	ret = internal_aad(ctx, pkt, param, false);
 
