@@ -1769,7 +1769,7 @@ int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 	if (srchdr->p.flags.payload_off)
 		dsthdr->payload_offset = srchdr->payload_offset;
 
-	copy_packet_parser_metadata(srchdr, dsthdr);
+	dsthdr->p = srchdr->p;
 
 	/* Metadata copied, but return indication of whether the packet
 	 * user area was truncated in the process. Note this can only
