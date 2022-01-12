@@ -317,6 +317,16 @@ typedef struct odp_pktout_queue_param_t {
 	  * 1 and interface capability. The default value is 1. */
 	unsigned int num_queues;
 
+	/** Output queue size array
+	  *
+	  * An array containing queue sizes for each 'num_queues' output queues.
+	  * The value of zero means implementation specific default size.
+	  * Nonzero values must be between 'min_output_queue_size' and
+	  * 'max_output_queue_size' capabilities. The implementation may
+	  * round-up given values. The default value is zero.
+	  */
+	uint32_t queue_size[ODP_PKTOUT_MAX_QUEUES];
+
 } odp_pktout_queue_param_t;
 
 /**
@@ -847,6 +857,16 @@ typedef struct odp_pktio_capability_t {
 	 *
 	 * Value does not exceed ODP_PKTOUT_MAX_QUEUES. */
 	unsigned int max_output_queues;
+
+	/** Minimum output queue size
+	 *
+	 *  Zero if configuring queue size is not supported. */
+	uint32_t min_output_queue_size;
+
+	/** Maximum output queue size
+	 *
+	 *  Zero if configuring queue size is not supported. */
+	uint32_t max_output_queue_size;
 
 	/** Supported pktio configuration options */
 	odp_pktio_config_t config;
