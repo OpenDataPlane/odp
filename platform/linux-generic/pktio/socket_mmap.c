@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2013-2021, Nokia Solutions and Networks
+ * Copyright (c) 2013-2022, Nokia Solutions and Networks
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -275,7 +275,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		hdr->input = pktio_entry->s.handle;
 
 		if (pktio_cls_enabled(pktio_entry))
-			copy_packet_cls_metadata(&parsed_hdr, hdr);
+			_odp_packet_copy_cls_md(hdr, &parsed_hdr);
 		else
 			_odp_packet_parse_layer(hdr,
 						pktio_entry->s.config.parser.layer,

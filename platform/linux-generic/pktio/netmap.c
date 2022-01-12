@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -862,7 +862,7 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 		pkt_hdr->input = pktio_entry->s.handle;
 
 		if (pktio_cls_enabled(pktio_entry))
-			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
+			_odp_packet_copy_cls_md(pkt_hdr, &parsed_hdr);
 		else
 			_odp_packet_parse_layer(pkt_hdr,
 						pktio_entry->s.config.parser.layer,

@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -706,7 +706,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 		memcpy(pkt_data, rmt_data_ptr, phdr->frame_len);
 
 		/* Copy packets L2, L3 parsed offsets and size */
-		copy_packet_cls_metadata(phdr, packet_hdr(pkt));
+		_odp_packet_copy_cls_md(packet_hdr(pkt), phdr);
 
 		packet_hdr(pkt)->frame_len = phdr->frame_len;
 		packet_hdr(pkt)->headroom = phdr->headroom;
