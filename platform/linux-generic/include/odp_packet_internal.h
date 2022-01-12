@@ -254,8 +254,6 @@ static inline void _odp_packet_copy_cls_md(odp_packet_hdr_t *dst_hdr,
 	dst_hdr->p = src_hdr->p;
 	dst_hdr->dst_queue = src_hdr->dst_queue;
 	dst_hdr->cos = src_hdr->cos;
-	dst_hdr->flow_hash = src_hdr->flow_hash;
-	dst_hdr->timestamp = src_hdr->timestamp;
 	dst_hdr->cls_mark  = src_hdr->cls_mark;
 }
 
