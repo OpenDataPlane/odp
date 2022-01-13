@@ -505,21 +505,23 @@ static void test_atomic_cas_dec_64(void)
 	}
 }
 
+#define BUF_SIZE (64 * 1024)
+
 static void test_atomic_xchg_32(void)
 {
 	uint32_t old, new;
 	uint64_t i;
 	odp_atomic_u32_t *a32u_xchg = &global_mem->a32u_xchg;
-	uint8_t buf[CNT];
+	uint8_t buf[BUF_SIZE];
 	uint64_t seed = odp_thread_id();
 	uint64_t count_old = 0, count_new = 0;
 
-	odp_random_test_data(buf, CNT, &seed);
+	odp_random_test_data(buf, BUF_SIZE, &seed);
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++) {
-		new = buf[i];
+		new = buf[i & (BUF_SIZE - 1)];
 		old = odp_atomic_xchg_u32(a32u_xchg, new);
 		count_old += old;
 		count_new += new;
@@ -534,16 +536,16 @@ static void test_atomic_xchg_64(void)
 	uint64_t old, new;
 	uint64_t i;
 	odp_atomic_u64_t *a64u_xchg = &global_mem->a64u_xchg;
-	uint8_t buf[CNT];
+	uint8_t buf[BUF_SIZE];
 	uint64_t seed = odp_thread_id();
 	uint64_t count_old = 0, count_new = 0;
 
-	odp_random_test_data(buf, CNT, &seed);
+	odp_random_test_data(buf, BUF_SIZE, &seed);
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
 	for (i = 0; i < CNT; i++) {
-		new = buf[i];
+		new = buf[i & (BUF_SIZE - 1)];
 		old = odp_atomic_xchg_u64(a64u_xchg, new);
 		count_old += old;
 		count_new += new;
