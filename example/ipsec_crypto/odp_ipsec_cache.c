@@ -117,7 +117,7 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 	/* Synchronous session create for now */
 	if (odp_crypto_session_create(&params, &session, &ses_create_rc))
 		return -1;
-	if (ODP_CRYPTO_SES_CREATE_ERR_NONE != ses_create_rc)
+	if (ODP_CRYPTO_SES_ERR_NONE != ses_create_rc)
 		return -1;
 
 	/* Copy remainder */
