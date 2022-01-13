@@ -21,6 +21,8 @@
 
 #include <odp_api.h>
 
+#include <odp/helper/odph_debug.h>
+
 #define NUM_SVC_CLASSES     4
 #define USERS_PER_SVC_CLASS 2
 #define APPS_PER_USER       2
@@ -41,7 +43,13 @@
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
+/** Get rid of path in filename - only for unix-type paths using '/' */
+#define NO_PATH(file_name) (strrchr((file_name), '/') ? \
+		strrchr((file_name), '/') + 1 : (file_name))
+
 #define RANDOM_BUF_LEN  1024
+
+#define BURST_SIZE      32
 
 typedef struct {
 	odp_tm_shaper_params_t    shaper_params;
@@ -288,8 +296,16 @@ static uint32_t next_rand_byte;
 static odp_atomic_u32_t atomic_pkts_into_tm;
 static odp_atomic_u32_t atomic_pkts_from_tm;
 
+static odp_pktio_t pktio_loop;
+static odp_pktin_queue_t pktin_queue;
+
+static uint8_t skip_threshold = FALSE;
+static uint8_t skip_wred = FALSE;
+static uint8_t node_priority_override = FALSE;
+
 static uint32_t g_num_pkts_to_send = 1000;
 static uint8_t  g_print_tm_stats   = TRUE;
+static uint8_t  g_egress_pktio_loop = FALSE;
 
 static void tester_egress_fcn(odp_packet_t odp_pkt);
 
@@ -325,8 +341,16 @@ static uint32_t create_profile_set(profile_params_set_t *profile_params_set,
 	shaper_params.shaper_len_adjust = shaper->shaper_len_adjust;
 	profile_set->shaper_profile     = odp_tm_shaper_create(name,
 							       &shaper_params);
-	if (profile_set->shaper_profile == ODP_TM_INVALID)
+	if (profile_set->shaper_profile == ODP_TM_INVALID) {
+		printf("Error: Failed to create shaper profile %s, rc=%d\n",
+		       name, odp_errno());
 		err_cnt++;
+	}
+
+	if (skip_threshold) {
+		profile_set->threshold_profile = ODP_TM_INVALID;
+		goto next;
+	}
 
 	odp_tm_threshold_params_init(&threshold_params);
 	thresholds = &profile_params_set->threshold_params;
@@ -337,8 +361,18 @@ static uint32_t create_profile_set(profile_params_set_t *profile_params_set,
 	profile_set->threshold_profile =
 		odp_tm_threshold_create(name, &threshold_params);
 
-	if (profile_set->threshold_profile == ODP_TM_INVALID)
+	if (profile_set->threshold_profile == ODP_TM_INVALID) {
+		printf("Error: Failed to create threshold profile %s, rc=%d\n",
+		       name, odp_errno());
 		err_cnt++;
+	}
+
+next:
+	if (skip_wred) {
+		for (color = 0; color < ODP_NUM_PACKET_COLORS; color++)
+			profile_set->wred_profiles[color] = ODP_TM_INVALID;
+		return err_cnt;
+	}
 
 	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
 		snprintf(wred_name, sizeof(wred_name), "%s-%" PRIu32,
@@ -354,8 +388,11 @@ static uint32_t create_profile_set(profile_params_set_t *profile_params_set,
 		wred_params.use_byte_fullness = wred->use_byte_fullness;
 		profile_set->wred_profiles[color] =
 			odp_tm_wred_create(wred_name, &wred_params);
-		if (profile_set->wred_profiles[color] == ODP_TM_INVALID)
+		if (profile_set->wred_profiles[color] == ODP_TM_INVALID) {
+			printf("Error: Failed to create wred %s, rc=%d\n",
+			       wred_name, odp_errno());
 			err_cnt++;
+		}
 	}
 
 	return err_cnt;
@@ -438,6 +475,15 @@ static int config_example_user(odp_tm_node_t cos_tm_node,
 	uint32_t              app_idx, queue_idx, svc_class_queue_num;
 	char                  user_name[64];
 	int                   rc;
+	uint8_t               queue_prio;
+
+	/* If node priority override is true, priority for this
+	 * svc class is already set for cos_tm_node w.r.t it's peers.
+	 */
+	if (node_priority_override)
+		queue_prio = 0;
+	else
+		queue_prio = svc_class;
 
 	profile_set = &USER_PROFILE_SETS[svc_class];
 
@@ -456,7 +502,18 @@ static int config_example_user(odp_tm_node_t cos_tm_node,
 	snprintf(user_name, sizeof(user_name), "Subscriber-%" PRIu32, user_num);
 	user_tm_node = odp_tm_node_create(odp_tm_test, user_name,
 					  &tm_node_params);
-	odp_tm_node_connect(user_tm_node, cos_tm_node);
+	if (user_tm_node == ODP_TM_INVALID) {
+		rc = odp_errno();
+		ODPH_ERR("Failed to create node %s, rc=%d\n", user_name, rc);
+		return rc;
+	}
+
+	rc = odp_tm_node_connect(user_tm_node, cos_tm_node);
+	if (rc) {
+		ODPH_ERR("Failed to connect %s to cos_tm_node, rc=%d\n",
+			 user_name, rc);
+		return rc;
+	}
 
 	for (app_idx = 0; app_idx < APPS_PER_USER; app_idx++) {
 		profile_set = &APP_PROFILE_SETS[svc_class][app_idx];
@@ -467,7 +524,7 @@ static int config_example_user(odp_tm_node_t cos_tm_node,
 				profile_set->shaper_profile;
 			tm_queue_params.threshold_profile =
 				profile_set->threshold_profile;
-			tm_queue_params.priority = svc_class;
+			tm_queue_params.priority = queue_prio;
 
 			tm_queue_params.wred_profile[ODP_PACKET_GREEN] =
 				profile_set->wred_profiles[ODP_PACKET_GREEN];
@@ -478,9 +535,19 @@ static int config_example_user(odp_tm_node_t cos_tm_node,
 
 			tm_queue = odp_tm_queue_create(odp_tm_test,
 						       &tm_queue_params);
-			rc = odp_tm_queue_connect(tm_queue, user_tm_node);
-			if (rc < 0)
+			if (tm_queue == ODP_TM_INVALID) {
+				rc = odp_errno();
+				ODPH_ERR("Failed to create TM queue %u, rc=%d\n",
+					 queue_idx, rc);
 				return rc;
+			}
+
+			rc = odp_tm_queue_connect(tm_queue, user_tm_node);
+			if (rc < 0) {
+				ODPH_ERR("Failed to connect TM queue %u to %s,"
+					" rc=%d\n", queue_idx, user_name, rc);
+				return rc;
+			}
 
 			svc_class_queue_num = next_queue_nums[svc_class]++;
 			queue_num_tbls[svc_class][svc_class_queue_num] =
@@ -498,6 +565,7 @@ static int config_company_node(const char *company_name)
 	odp_tm_node_t        company_tm_node, cos_tm_node;
 	uint32_t             cos_idx, user_idx;
 	char                 cos_node_name[64];
+	int                  rc;
 
 	profile_set = &COMPANY_PROFILE_SET;
 	odp_tm_node_params_init(&tm_node_params);
@@ -514,6 +582,18 @@ static int config_company_node(const char *company_name)
 
 	company_tm_node = odp_tm_node_create(odp_tm_test, company_name,
 					     &tm_node_params);
+	if (company_tm_node == ODP_TM_INVALID) {
+		ODPH_ERR("Failed to create node %s, rc=%d\n",
+			 company_name, odp_errno());
+		return -odp_errno();
+	}
+
+	rc = odp_tm_node_connect(company_tm_node, ODP_TM_ROOT);
+	if (rc) {
+		ODPH_ERR("Failed to connect %s->ROOT, rc=%d\n",
+			 company_name, rc);
+		return rc;
+	}
 
 	for (cos_idx = 0; cos_idx < NUM_SVC_CLASSES; cos_idx++) {
 		odp_tm_node_params_init(&tm_node_params);
@@ -523,6 +603,12 @@ static int config_company_node(const char *company_name)
 		tm_node_params.threshold_profile =
 			profile_set->threshold_profile;
 		tm_node_params.level             = 1;
+
+		/* If node priority override is set, then set it as class priority
+		 * instead of queue priority
+		 */
+		if (node_priority_override)
+			tm_node_params.priority = cos_idx;
 
 		tm_node_params.wred_profile[ODP_PACKET_GREEN]  =
 			profile_set->wred_profiles[ODP_PACKET_GREEN];
@@ -535,14 +621,27 @@ static int config_company_node(const char *company_name)
 			 "%s-Class-%" PRIu32, company_name, cos_idx);
 		cos_tm_node = odp_tm_node_create(odp_tm_test, cos_node_name,
 						 &tm_node_params);
-		odp_tm_node_connect(cos_tm_node, company_tm_node);
+		if (cos_tm_node == ODP_TM_INVALID) {
+			ODPH_ERR("Failed to create node %s, rc=%d\n",
+				 cos_node_name, odp_errno());
+			return -odp_errno();
+		}
 
-		for (user_idx = 0; user_idx < USERS_PER_SVC_CLASS; user_idx++)
-			config_example_user(cos_tm_node, cos_idx,
-					    cos_idx * 256 + user_idx);
+		rc = odp_tm_node_connect(cos_tm_node, company_tm_node);
+		if (rc) {
+			ODPH_ERR("Failed to connect %s->%s, rc=%d\n",
+				 cos_node_name, company_name, rc);
+			return rc;
+		}
+
+		for (user_idx = 0; user_idx < USERS_PER_SVC_CLASS; user_idx++) {
+			rc = config_example_user(cos_tm_node, cos_idx,
+						 cos_idx * 256 + user_idx);
+			if (rc)
+				return rc;
+		}
 	}
 
-	odp_tm_node_connect(company_tm_node, ODP_TM_ROOT);
 	return 0;
 }
 
@@ -550,16 +649,57 @@ static int create_and_config_tm(void)
 {
 	odp_tm_level_requirements_t *per_level;
 	odp_tm_requirements_t        requirements;
+	odp_tm_capabilities_t        capa;
 	odp_tm_egress_t              egress;
 	uint32_t                     level, err_cnt;
+	int                          rc;
 
 	odp_tm_requirements_init(&requirements);
 	odp_tm_egress_init(&egress);
 
-	requirements.max_tm_queues              = 10 * NUM_TM_QUEUES;
+	if (g_egress_pktio_loop) {
+		egress.egress_kind = ODP_TM_EGRESS_PKT_IO;
+		egress.pktio = pktio_loop;
+	} else {
+		egress.egress_kind = ODP_TM_EGRESS_FN;
+		egress.egress_fcn  = tester_egress_fcn;
+	}
+
+	/* Fetch egress capabilities */
+	rc = odp_tm_egress_capabilities(&capa, &egress);
+	if (rc) {
+		printf("Error: Failed to fetch egress capa, rc=%d\n", rc);
+		return rc;
+	}
+
+	if (capa.max_levels < 3) {
+		printf("Error: TM only supports %u levels\n", capa.max_levels);
+		return -1;
+	}
+
+	if (capa.pkt_prio_modes[ODP_TM_PKT_PRIO_MODE_PRESERVE])
+		node_priority_override = false;
+	else
+		node_priority_override = true;
+
+	/* Check if all levels support WRED and Threshold */
+	skip_wred = !capa.tm_queue_wred_supported;
+	skip_threshold = !capa.tm_queue_threshold;
+	for (level = 0; level < 3; level++) {
+		if (!capa.per_level[level].tm_node_wred_supported)
+			skip_wred = true;
+		if (!capa.per_level[level].tm_node_threshold)
+			skip_threshold = true;
+	}
+
+	requirements.max_tm_queues              = NUM_TM_QUEUES;
 	requirements.num_levels                 = 3;
 	requirements.tm_queue_shaper_needed     = true;
-	requirements.tm_queue_wred_needed       = true;
+	requirements.tm_queue_wred_needed       = !skip_wred;
+	if (node_priority_override)
+		requirements.pkt_prio_mode	= ODP_TM_PKT_PRIO_MODE_OVERWRITE;
+	else
+		requirements.pkt_prio_mode      = ODP_TM_PKT_PRIO_MODE_PRESERVE;
 
 	for (level = 0; level < 3; level++) {
 		per_level = &requirements.per_level[level];
@@ -569,23 +709,37 @@ static int create_and_config_tm(void)
 		per_level->min_weight                = 1;
 		per_level->max_weight                = 255;
 		per_level->tm_node_shaper_needed     = true;
-		per_level->tm_node_wred_needed       = true;
-		per_level->tm_node_dual_slope_needed = true;
+		per_level->tm_node_wred_needed       = !skip_wred;
+		per_level->tm_node_dual_slope_needed = !skip_wred;
 		per_level->fair_queuing_needed       = true;
 		per_level->weights_needed            = true;
 	}
 
-	egress.egress_kind = ODP_TM_EGRESS_FN;
-	egress.egress_fcn  = tester_egress_fcn;
-
 	odp_tm_test = odp_tm_create("TM test", &requirements, &egress);
-	err_cnt     = init_profile_sets();
-	if (err_cnt != 0)
-		printf("%s init_profile_sets encountered %" PRIu32 " errors\n",
-		       __func__, err_cnt);
+	if (odp_tm_test == ODP_TM_INVALID) {
+		printf("Error: Failed to create TM system, rc=%d\n",
+		       odp_errno());
+		return -odp_errno();
+	}
 
-	config_company_node("TestCompany");
-	return err_cnt;
+	err_cnt     = init_profile_sets();
+	if (err_cnt != 0) {
+		printf("Error: init_profile_sets() failed with %" PRIu32
+		       " errors\n", err_cnt);
+		return err_cnt;
+	}
+
+	rc = config_company_node("TestCompany");
+	if (rc) {
+		printf("Error: config_company_node() failed with rc=%d\n", rc);
+		return rc;
+	}
+
+	rc = odp_tm_start(odp_tm_test);
+	if (rc)
+		printf("Error: Failed to start tm system, rc=%d\n", rc);
+
+	return rc;
 }
 
 static uint32_t random_8(void)
@@ -657,14 +811,31 @@ static odp_packet_t make_odp_packet(uint16_t pkt_len)
 	return odp_pkt;
 }
 
-void tester_egress_fcn(odp_packet_t odp_pkt ODP_UNUSED)
+void tester_egress_fcn(odp_packet_t odp_pkt)
 {
 	odp_atomic_inc_u32(&atomic_pkts_from_tm);
+	odp_packet_free(odp_pkt);
+}
+
+/* Retrieve packets from loop device */
+static void tester_egress_pktio_loop(void)
+{
+	odp_packet_t pkts[BURST_SIZE];
+	int rc;
+
+	do {
+		rc = odp_pktin_recv(pktin_queue, pkts, BURST_SIZE);
+		if (rc <= 0)
+			return;
+
+		/* Account and free pkts */
+		odp_atomic_add_u32(&atomic_pkts_from_tm, rc);
+		odp_packet_free_multi(pkts, rc);
+	} while (1);
 }
 
 static int traffic_generator(uint32_t pkts_to_send)
 {
-	odp_pool_param_t pool_params;
 	odp_tm_queue_t   tm_queue;
 	odp_packet_t     pkt;
 	odp_bool_t       tm_is_idle;
@@ -672,14 +843,6 @@ static int traffic_generator(uint32_t pkts_to_send)
 	uint32_t         pkts_from_tm, pkt_cnt, millisecs, odp_tm_enq_errs;
 	int              rc;
 
-	memset(&pool_params, 0, sizeof(odp_pool_param_t));
-	pool_params.type           = ODP_POOL_PACKET;
-	pool_params.pkt.num        = pkts_to_send + 10;
-	pool_params.pkt.len        = 1600;
-	pool_params.pkt.seg_len    = 0;
-	pool_params.pkt.uarea_size = 0;
-
-	odp_pool        = odp_pool_create("MyPktPool", &pool_params);
 	odp_tm_enq_errs = 0;
 
 	pkt_cnt = 0;
@@ -708,6 +871,9 @@ static int traffic_generator(uint32_t pkts_to_send)
 	* not longer than 60 seconds.
 	*/
 	for (millisecs = 0; millisecs < 600000; millisecs++) {
+		/* Poll for pkts on loop device if egress is PKTIO */
+		if (g_egress_pktio_loop)
+			tester_egress_pktio_loop();
 		usleep(100);
 		tm_is_idle = odp_tm_is_idle(odp_tm_test);
 		if (tm_is_idle)
@@ -720,6 +886,9 @@ static int traffic_generator(uint32_t pkts_to_send)
 
 	/* Wait for up to 2 seconds for pkts_from_tm to match pkts_into_tm. */
 	for (millisecs = 0; millisecs < 2000; millisecs++) {
+		/* Poll for pkts on loop device if egress is PKTIO */
+		if (g_egress_pktio_loop)
+			tester_egress_pktio_loop();
 		usleep(1000);
 		pkts_into_tm = odp_atomic_load_u32(&atomic_pkts_into_tm);
 		pkts_from_tm = odp_atomic_load_u32(&atomic_pkts_from_tm);
@@ -728,6 +897,25 @@ static int traffic_generator(uint32_t pkts_to_send)
 	}
 
 	return 0;
+}
+
+static void
+usage(char *progname)
+{
+	printf("\n"
+	       "OpenDataPlane Traffic management example application.\n"
+	       "\n"
+	       "Usage: %s [options]\n"
+	       "\n"
+	       "Optional OPTIONS:\n"
+	       "  -n <num>        Number of pkts to send, default=1000\n"
+	       "  -q              Don't print verbose.\n"
+	       "  -l              Use loop as egress instead function cb.\n"
+	       "                  Enabled by default if function cb egress\n"
+	       "                  is not supported.\n"
+	       "  -h              Display help and exit.\n\n"
+	       "\n",
+	       NO_PATH(progname));
 }
 
 static int process_cmd_line_options(uint32_t argc, char *argv[])
@@ -752,10 +940,16 @@ static int process_cmd_line_options(uint32_t argc, char *argv[])
 			case 'q':
 				g_print_tm_stats = FALSE;
 				break;
-
+			case 'l':
+				g_egress_pktio_loop = TRUE;
+				break;
+			case 'h':
+				usage(argv[0]);
+				exit(0);
 			default:
 				printf("Unrecognized cmd line option '%s'\n",
 				       arg);
+				usage(argv[0]);
 				return -1;
 			}
 		} else {
@@ -802,6 +996,12 @@ static int destroy_tm_queues(void)
 	int class;
 	int ret;
 
+	ret = odp_tm_stop(odp_tm_test);
+	if (ret != 0) {
+		printf("Error: Failed to stop TM, rc=%d\n", ret);
+		return -1;
+	}
+
 	for (i = 0; i < NUM_SVC_CLASSES; i++)
 		for (class = 0; class < TM_QUEUES_PER_CLASS; class++) {
 			odp_tm_queue_t tm_queue;
@@ -812,12 +1012,6 @@ static int destroy_tm_queues(void)
 			ret = odp_tm_queue_info(tm_queue, &info);
 			if (ret) {
 				printf("Err: odp_tm_queue_info %d\n", ret);
-				return -1;
-			}
-
-			ret = odp_tm_node_disconnect(info.next_tm_node);
-			if (ret) {
-				printf("Err: odp_tm_node_disconnect %d\n", ret);
 				return -1;
 			}
 
@@ -842,6 +1036,7 @@ int main(int argc, char *argv[])
 	struct sigaction signal_action;
 	struct rlimit    rlimit;
 	uint32_t pkts_into_tm, pkts_from_tm;
+	odp_pool_param_t pool_params;
 	odp_instance_t instance;
 	int rc;
 
@@ -873,7 +1068,98 @@ int main(int argc, char *argv[])
 	if (process_cmd_line_options(argc, argv) < 0)
 		return -1;
 
-	create_and_config_tm();
+	/* Enable loop by default if egress function is not supported */
+	if (!g_egress_pktio_loop) {
+		odp_tm_capabilities_t capa;
+		odp_tm_egress_t egress;
+
+		odp_tm_egress_init(&egress);
+		egress.egress_kind = ODP_TM_EGRESS_FN;
+		egress.egress_fcn  = tester_egress_fcn;
+
+		rc = odp_tm_egress_capabilities(&capa, &egress);
+		if (rc) {
+			printf("Error: failed to fetch capabilities for egress fn\n");
+			exit(-1);
+		}
+
+		if (capa.max_tm_queues == 0) {
+			printf("Info: Using egress pktio loop as"
+			       " egress fn cb is supported\n");
+			g_egress_pktio_loop = TRUE;
+		}
+	}
+
+	/* Create pkt pool */
+	memset(&pool_params, 0, sizeof(odp_pool_param_t));
+	pool_params.type           = ODP_POOL_PACKET;
+	pool_params.pkt.num        = g_num_pkts_to_send * 10;
+	pool_params.pkt.len        = 1600;
+	pool_params.pkt.seg_len    = 0;
+	pool_params.pkt.uarea_size = 0;
+
+	odp_pool = odp_pool_create("MyPktPool", &pool_params);
+	if (odp_pool == ODP_POOL_INVALID) {
+		rc = odp_errno();
+
+		printf("Error: Failed to create pkt pool, rc=%d\n", rc);
+		return rc;
+	}
+
+	/* Open pktio loop if required */
+	if (g_egress_pktio_loop) {
+		odp_pktin_queue_param_t pktin_param;
+		odp_pktio_param_t param;
+
+		odp_pktio_param_init(&param);
+		param.in_mode = ODP_PKTIN_MODE_DIRECT;
+		param.out_mode = ODP_PKTOUT_MODE_TM;
+
+		pktio_loop = odp_pktio_open("loop", odp_pool, &param);
+		if (pktio_loop == ODP_PKTIO_INVALID) {
+			/* Report soft error if pktio open works in default mode */
+			param.out_mode = ODP_PKTOUT_MODE_DIRECT;
+			pktio_loop = odp_pktio_open("loop", odp_pool, &param);
+			if (pktio_loop != ODP_PKTIO_INVALID) {
+				printf("Warn: PKTOUT_MODE_TM not supported on loop\n");
+				odp_pktio_close(pktio_loop);
+				return 77;
+			}
+
+			printf("Error: Failed to open pktio\n");
+			return -1;
+		}
+
+		/* Setup pktin queue config */
+		odp_pktin_queue_param_init(&pktin_param);
+		pktin_param.num_queues = 1;
+
+		rc = odp_pktin_queue_config(pktio_loop, &pktin_param);
+		if (rc) {
+			printf("Error: Failed to setup pktin queue, rc=%d\n",
+			       rc);
+			return rc;
+		}
+
+		rc = odp_pktio_start(pktio_loop);
+		if (rc) {
+			printf("Error: Failed to start pktio, rc=%d\n", rc);
+			return rc;
+		}
+
+		rc = odp_pktin_queue(pktio_loop, &pktin_queue, 1);
+		if (rc <= 0) {
+			printf("Error: Failed to get pktin queue, rc=%d\n",
+			       rc);
+			return rc;
+		}
+	}
+
+	rc = create_and_config_tm();
+	if (rc) {
+		printf("Error: create_and_config_tm() failed, rc=%d\n", rc);
+		return rc;
+	}
 
 	/* Start TM */
 	rc = odp_tm_start(odp_tm_test);
@@ -895,7 +1181,8 @@ int main(int argc, char *argv[])
 	printf("pkts_into_tm=%" PRIu32 " pkts_from_tm=%" PRIu32 "\n",
 	       pkts_into_tm, pkts_from_tm);
 
-	odp_tm_stats_print(odp_tm_test);
+	if (g_print_tm_stats)
+		odp_tm_stats_print(odp_tm_test);
 
 	/* Stop TM */
 	rc = odp_tm_stop(odp_tm_test);
@@ -910,15 +1197,29 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	rc = odp_pool_destroy(odp_pool);
-	if (rc != 0) {
-		printf("Error: odp_pool_destroy() failed, rc = %d\n", rc);
-		return -1;
-	}
-
 	rc = odp_tm_destroy(odp_tm_test);
 	if (rc != 0) {
 		printf("Error: odp_tm_destroy() failed, rc = %d\n", rc);
+		return -1;
+	}
+
+	if (pktio_loop != ODP_PKTIO_INVALID) {
+		rc = odp_pktio_stop(pktio_loop);
+		if (rc) {
+			printf("Error: Failed to stop pktio, rc=%d\n", rc);
+			return -1;
+		}
+
+		rc = odp_pktio_close(pktio_loop);
+		if (rc) {
+			printf("Error: Failed to close pktio, rc=%d\n", rc);
+			return -1;
+		}
+	}
+
+	rc = odp_pool_destroy(odp_pool);
+	if (rc != 0) {
+		printf("Error: odp_pool_destroy() failed, rc = %d\n", rc);
 		return -1;
 	}
 
@@ -935,5 +1236,10 @@ int main(int argc, char *argv[])
 	}
 
 	printf("Quit\n");
+
+	/* Report as not pass if pkt count does not match */
+	if (pkts_into_tm != pkts_from_tm)
+		return 1;
+
 	return 0;
 }
