@@ -18,14 +18,17 @@
 #define ADD_SUB_CNT		5
 
 #define CNT			100000ULL
-#define U32_INIT_VAL		(1UL << 28)
-#define U64_INIT_VAL		(1ULL << 33)
+#define U32_INIT_VAL		(1UL << 31)
+#define U64_INIT_VAL		(1ULL << 63)
 #define U32_MAGIC		0xa23f65b2
 #define U64_MAGIC		0xf2e1c5430cb6a52e
 
 #define GLOBAL_SHM_NAME		"GlobalLockTest"
 
 #define UNUSED			__attribute__((__unused__))
+
+#define min(a, b) (a < b ? a : b)
+#define max(a, b) (a > b ? a : b)
 
 typedef __volatile uint32_t volatile_u32_t;
 typedef __volatile uint64_t volatile_u64_t;
@@ -890,8 +893,9 @@ static void test_atomic_validate_inc_add(void)
 
 	/* Two increment tests, one cas increment test and two add tests. */
 	const uint64_t total_count = CNT * (3 + 2 * ADD_SUB_CNT) * global_mem->g_num_threads;
+	const uint32_t a32u = U32_INIT_VAL + total_count;
 
-	CU_ASSERT(U32_INIT_VAL + total_count == odp_atomic_load_u32(&global_mem->a32u));
+	CU_ASSERT(a32u == odp_atomic_load_u32(&global_mem->a32u));
 	CU_ASSERT(U64_INIT_VAL + total_count == odp_atomic_load_u64(&global_mem->a64u));
 }
 
@@ -901,8 +905,9 @@ static void test_atomic_validate_dec_sub(void)
 
 	/* Two decrement tests, one cas decrement test and two sub tests. */
 	const uint64_t total_count = CNT * (3 + 2 * ADD_SUB_CNT) * global_mem->g_num_threads;
+	const uint32_t a32u = U32_INIT_VAL - total_count;
 
-	CU_ASSERT(U32_INIT_VAL - total_count == odp_atomic_load_u32(&global_mem->a32u));
+	CU_ASSERT(a32u == odp_atomic_load_u32(&global_mem->a32u));
 	CU_ASSERT(U64_INIT_VAL - total_count == odp_atomic_load_u64(&global_mem->a64u));
 }
 
@@ -921,10 +926,16 @@ static void test_atomic_validate_max_min(void)
 	test_atomic_validate_init_val();
 
 	const uint64_t total_count = CNT * global_mem->g_num_threads;
+	/*
+	 * Max is the result of fetch_inc, so the final max value is total_count - 1. In
+	 * a long test, counter may overflow, in which case max is saturated at
+	 * UINT32_MAX, and min at 0.
+	 */
+	const uint32_t a32u_max = min(U32_INIT_VAL + total_count - 1, UINT32_MAX);
+	const uint32_t a32u_min = U32_INIT_VAL + total_count - 1 > UINT32_MAX ? 0 : U32_INIT_VAL;
 
-	/* Max is the result of fetch_inc, so the final max value is total_count - 1. */
-	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_max) == U32_INIT_VAL + total_count - 1);
-	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_min) == U32_INIT_VAL);
+	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_max) == a32u_max);
+	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_min) == a32u_min);
 	CU_ASSERT(odp_atomic_load_u64(&global_mem->a64u_max) == U64_INIT_VAL + total_count - 1);
 	CU_ASSERT(odp_atomic_load_u64(&global_mem->a64u_min) == U64_INIT_VAL);
 }
@@ -942,13 +953,17 @@ static void test_atomic_validate_non_relaxed(void)
 	test_atomic_validate_init_val();
 
 	const uint64_t total_count = CNT * global_mem->g_num_threads;
-
 	/* 3 increments per round. */
-	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_xchg) == U32_INIT_VAL + 3 * total_count);
+	const uint32_t a32u = U32_INIT_VAL + 3 * total_count;
+	/* 1 increment per round. */
+	const uint32_t a32u_max = U32_INIT_VAL + total_count;
+	const uint32_t a32u_min = U32_INIT_VAL - total_count;
+
+	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_xchg) == a32u);
 	CU_ASSERT(odp_atomic_load_u64(&global_mem->a64u_xchg) == U64_INIT_VAL + 3 * total_count);
 
-	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_max) == U32_INIT_VAL + total_count);
-	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_min) == U32_INIT_VAL - total_count);
+	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_max) == a32u_max);
+	CU_ASSERT(odp_atomic_load_u32(&global_mem->a32u_min) == a32u_min);
 	CU_ASSERT(odp_atomic_load_u64(&global_mem->a64u_max) == U64_INIT_VAL + total_count);
 	CU_ASSERT(odp_atomic_load_u64(&global_mem->a64u_min) == U64_INIT_VAL - total_count);
 }
@@ -1458,8 +1473,9 @@ static void atomic_test_atomic_init(void)
 static void test_atomic_validate_inc(void)
 {
 	const uint64_t total_count = CNT * global_mem->g_num_threads;
+	const uint32_t a32u = U32_INIT_VAL + total_count;
 
-	CU_ASSERT(U32_INIT_VAL + total_count == odp_atomic_load_u32(&global_mem->a32u));
+	CU_ASSERT(a32u == odp_atomic_load_u32(&global_mem->a32u));
 	CU_ASSERT(U64_INIT_VAL + total_count == odp_atomic_load_u64(&global_mem->a64u));
 }
 
@@ -1471,8 +1487,9 @@ static void atomic_test_atomic_inc(void)
 static void test_atomic_validate_dec(void)
 {
 	const uint64_t total_count = CNT * global_mem->g_num_threads;
+	const uint32_t a32u = U32_INIT_VAL - total_count;
 
-	CU_ASSERT(U32_INIT_VAL - total_count == odp_atomic_load_u32(&global_mem->a32u));
+	CU_ASSERT(a32u == odp_atomic_load_u32(&global_mem->a32u));
 	CU_ASSERT(U64_INIT_VAL - total_count == odp_atomic_load_u64(&global_mem->a64u));
 }
 
@@ -1484,8 +1501,9 @@ static void atomic_test_atomic_dec(void)
 static void test_atomic_validate_add(void)
 {
 	const uint64_t total_count = CNT * ADD_SUB_CNT * global_mem->g_num_threads;
+	const uint32_t a32u = U32_INIT_VAL + total_count;
 
-	CU_ASSERT(U32_INIT_VAL + total_count == odp_atomic_load_u32(&global_mem->a32u));
+	CU_ASSERT(a32u == odp_atomic_load_u32(&global_mem->a32u));
 	CU_ASSERT(U64_INIT_VAL + total_count == odp_atomic_load_u64(&global_mem->a64u));
 }
 
@@ -1497,8 +1515,9 @@ static void atomic_test_atomic_add(void)
 static void test_atomic_validate_sub(void)
 {
 	const uint64_t total_count = CNT * ADD_SUB_CNT * global_mem->g_num_threads;
+	const uint32_t a32u = U32_INIT_VAL - total_count;
 
-	CU_ASSERT(U32_INIT_VAL - total_count == odp_atomic_load_u32(&global_mem->a32u));
+	CU_ASSERT(a32u == odp_atomic_load_u32(&global_mem->a32u));
 	CU_ASSERT(U64_INIT_VAL - total_count == odp_atomic_load_u64(&global_mem->a64u));
 }
 
@@ -1530,8 +1549,10 @@ static void atomic_test_atomic_fetch_sub(void)
 static void test_atomic_validate_max(void)
 {
 	const uint64_t total_count = CNT * global_mem->g_num_threads - 1;
+	/* In a long test, counter may overflow, in which case max is saturated at UINT32_MAX. */
+	const uint32_t a32u_max = min(U32_INIT_VAL + total_count, UINT32_MAX);
 
-	CU_ASSERT(U32_INIT_VAL + total_count == odp_atomic_load_u32(&global_mem->a32u_max));
+	CU_ASSERT(a32u_max == odp_atomic_load_u32(&global_mem->a32u_max));
 	CU_ASSERT(U64_INIT_VAL + total_count == odp_atomic_load_u64(&global_mem->a64u_max));
 }
 
@@ -1543,8 +1564,10 @@ static void atomic_test_atomic_max(void)
 static void test_atomic_validate_min(void)
 {
 	const uint64_t total_count = CNT * global_mem->g_num_threads - 1;
+	/* In a long test, counter may underflow, in which case min is saturated at 0. */
+	const uint32_t a32u_min = max((int64_t)U32_INIT_VAL - (int64_t)total_count, 0);
 
-	CU_ASSERT(U32_INIT_VAL - total_count == odp_atomic_load_u32(&global_mem->a32u_min));
+	CU_ASSERT(a32u_min == odp_atomic_load_u32(&global_mem->a32u_min));
 	CU_ASSERT(U64_INIT_VAL - total_count == odp_atomic_load_u64(&global_mem->a64u_min));
 }
 
