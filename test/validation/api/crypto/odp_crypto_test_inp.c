@@ -653,7 +653,7 @@ static void alg_test(odp_crypto_op_t op,
 
 	rc = odp_crypto_session_create(&ses_params, &session, &status);
 	CU_ASSERT_FATAL(!rc);
-	CU_ASSERT(status == ODP_CRYPTO_SES_CREATE_ERR_NONE);
+	CU_ASSERT(status == ODP_CRYPTO_SES_ERR_NONE);
 	CU_ASSERT(odp_crypto_session_to_u64(session) !=
 		  odp_crypto_session_to_u64(ODP_CRYPTO_SESSION_INVALID));
 
