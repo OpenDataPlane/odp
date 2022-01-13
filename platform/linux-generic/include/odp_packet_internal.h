@@ -26,14 +26,17 @@ extern "C" {
 #include <odp/api/packet_io.h>
 #include <odp/api/crypto.h>
 #include <odp/api/comp.h>
+#include <odp/api/std.h>
 #include <odp/api/abi/packet.h>
 
+#include <odp_debug_internal.h>
 #include <odp_event_internal.h>
 #include <odp_ipsec_internal.h>
 #include <odp_pool_internal.h>
 #include <odp_queue_if.h>
 
 #include <stdint.h>
+#include <string.h>
 
 /** Minimum segment length expected by _odp_packet_parse_common() */
 #define PACKET_PARSE_SEG_LEN 96
@@ -248,6 +251,101 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	pkt_hdr->input = ODP_PKTIO_INVALID;
 }
 
+/**
+ * Check if copying packet metadata between pools is possible
+ *
+ * @retval  0 when possible without user area copy
+ * @retval >0 when possible with user area copy
+ * @retval <0 when not possible
+ */
+static inline int _odp_packet_copy_md_possible(odp_pool_t dst_pool,
+					       odp_pool_t src_pool)
+{
+	const pool_t *src_hdr;
+	const pool_t *dst_hdr;
+
+	if (src_pool == dst_pool)
+		return 0;
+
+	src_hdr = pool_entry_from_hdl(src_pool);
+	dst_hdr = pool_entry_from_hdl(dst_pool);
+
+	if (dst_hdr->param_uarea_size < src_hdr->param_uarea_size)
+		return -1;
+
+	return 1;
+}
+
+/**
+ * Copy packet metadata
+ *
+ * This function is assumed to never fail. Use _odp_packet_copy_md_possible() to
+ * check beforehand that copying packet metadata between source and destination
+ * packet pools is possible.
+ *
+ * @param      uarea_copy  Copy user area data. If false, user area pointers
+ *                         are swapped between the packet headers (allowed
+ *                         only when packets are from the same pool).
+ */
+static inline void _odp_packet_copy_md(odp_packet_hdr_t *dst_hdr,
+				       odp_packet_hdr_t *src_hdr,
+				       odp_bool_t uarea_copy)
+{
+	/* Lengths and segmentation data are not copied:
+	 *   .frame_len
+	 *   .headroom
+	 *   .tailroom
+	 *   .seg_data
+	 *   .seg_next
+	 *   .seg_len
+	 *   .seg_count
+	 */
+	dst_hdr->input = src_hdr->input;
+	dst_hdr->dst_queue = src_hdr->dst_queue;
+	dst_hdr->cos = src_hdr->cos;
+	dst_hdr->cls_mark = src_hdr->cls_mark;
+	dst_hdr->user_ptr = src_hdr->user_ptr;
+
+	if (src_hdr->p.input_flags.flow_hash)
+		dst_hdr->flow_hash = src_hdr->flow_hash;
+
+	if (src_hdr->p.input_flags.timestamp)
+		dst_hdr->timestamp = src_hdr->timestamp;
+
+	if (src_hdr->p.flags.lso) {
+		dst_hdr->lso_max_payload = src_hdr->lso_max_payload;
+		dst_hdr->lso_profile_idx = src_hdr->lso_profile_idx;
+	}
+
+	if (src_hdr->p.flags.payload_off)
+		dst_hdr->payload_offset = src_hdr->payload_offset;
+
+	dst_hdr->p = src_hdr->p;
+
+	if (src_hdr->uarea_addr) {
+		if (uarea_copy) {
+			const pool_t *src_pool = src_hdr->event_hdr.pool_ptr;
+			const pool_t *dst_pool = dst_hdr->event_hdr.pool_ptr;
+			const uint32_t src_uarea_size = src_pool->param_uarea_size;
+			const uint32_t dst_uarea_size = dst_pool->param_uarea_size;
+
+			ODP_ASSERT(dst_hdr->uarea_addr != NULL);
+			ODP_ASSERT(dst_uarea_size >= src_uarea_size);
+
+			memcpy(dst_hdr->uarea_addr, src_hdr->uarea_addr, src_uarea_size);
+		} else {
+			void *src_uarea = src_hdr->uarea_addr;
+
+			/* If user area exists, packets should always be from the same pool, so
+			 * user area pointers can simply be swapped. */
+			ODP_ASSERT(dst_hdr->event_hdr.pool_ptr == src_hdr->event_hdr.pool_ptr);
+
+			src_hdr->uarea_addr = dst_hdr->uarea_addr;
+			dst_hdr->uarea_addr = src_uarea;
+		}
+	}
+}
+
 static inline void _odp_packet_copy_cls_md(odp_packet_hdr_t *dst_hdr,
 					   odp_packet_hdr_t *src_hdr)
 {
@@ -296,9 +394,6 @@ static inline void packet_set_len(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
 	pkt_hdr->frame_len = len;
 }
-
-/* Forward declarations */
-int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 
 /* Packet alloc of pktios */
 int _odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
