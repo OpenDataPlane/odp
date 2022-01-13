@@ -864,14 +864,23 @@ typedef struct odp_crypto_packet_op_param_t {
  */
 typedef enum {
 	/** Session created */
-	ODP_CRYPTO_SES_CREATE_ERR_NONE,
+	ODP_CRYPTO_SES_ERR_NONE,
 	/** Creation failed, no resources */
-	ODP_CRYPTO_SES_CREATE_ERR_ENOMEM,
+	ODP_CRYPTO_SES_ERR_ENOMEM,
 	/** Creation failed, bad cipher params */
-	ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER,
+	ODP_CRYPTO_SES_ERR_CIPHER,
 	/** Creation failed, bad auth params */
-	ODP_CRYPTO_SES_CREATE_ERR_INV_AUTH,
+	ODP_CRYPTO_SES_ERR_AUTH,
 } odp_crypto_ses_create_err_t;
+
+/** This synonym for backward compatibility will be deprecated later */
+#define ODP_CRYPTO_SES_CREATE_ERR_NONE       ODP_CRYPTO_SES_ERR_NONE
+/** This synonym for backward compatibility will be deprecated later */
+#define ODP_CRYPTO_SES_CREATE_ERR_ENOMEM     ODP_CRYPTO_SES_ERR_ENOMEM
+/** This synonym for backward compatibility will be deprecated later */
+#define ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER ODP_CRYPTO_SES_ERR_CIPHER
+/** This synonym for backward compatibility will be deprecated later */
+#define ODP_CRYPTO_SES_CREATE_ERR_INV_AUTH   ODP_CRYPTO_SES_ERR_AUTH
 
 /**
  * Crypto API algorithm return code
