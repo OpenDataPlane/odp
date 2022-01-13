@@ -550,7 +550,7 @@ static void free_packets(test_config_t *config)
 
 static int allocate_memory(test_config_t *config)
 {
-	const uint64_t size = config->num_in_seg * config->seg_size;
+	const uint64_t size = config->num_in_seg * (uint64_t)config->seg_size;
 
 	config->seg_config.shm_src = ODP_SHM_INVALID;
 	config->seg_config.shm_dst = ODP_SHM_INVALID;
