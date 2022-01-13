@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -652,6 +652,25 @@ static void alg_test(odp_crypto_op_t op,
 	ses_params.auth_aad_len = ref->aad_length;
 
 	rc = odp_crypto_session_create(&ses_params, &session, &status);
+	/*
+	 * In some cases an individual algorithm cannot be used alone,
+	 * i.e. with the null cipher/auth algorithm.
+	 */
+	if (rc == ODP_CRYPTO_SES_ERR_ALG_COMBO) {
+		printf("\n    Unsupported algorithm combination: %s, %s\n",
+		       cipher_alg_name(cipher_alg),
+		       auth_alg_name(auth_alg));
+		return;
+	}
+	/*
+	 * We do not allow ODP_CRYPTO_SES_ERR_ALG_ORDER since we do
+	 * not combine individual non-null crypto and auth algorithms
+	 * with each other in the tests. Both orders should work when
+	 * only one algorithm is used (i.e. the other one is null).
+	 *
+	 * We do not allow ODP_CRYPTO_SES_ERR_PARAMS until needed for
+	 * some ODP implementation.
+	 */
 	CU_ASSERT_FATAL(!rc);
 	CU_ASSERT(status == ODP_CRYPTO_SES_ERR_NONE);
 	CU_ASSERT(odp_crypto_session_to_u64(session) !=
