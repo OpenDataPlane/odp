@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2021 Nokia
+ * Copyright (c) 2021-2022 Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	 BSD-3-Clause
@@ -11,9 +11,6 @@
 #include <CUnit/Basic.h>
 #include <odp_cunit_common.h>
 #include <unistd.h>
-
-#define VERBOSE			0
-#define MAX_ITERATIONS		1000
 
 #define ADD_SUB_CNT		5
 
