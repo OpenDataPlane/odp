@@ -2003,6 +2003,25 @@ int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt);
  */
 int odp_tm_enq_multi(odp_tm_queue_t tm_queue, const odp_packet_t packets[], int num);
 
+/** Send packets with segmentation offload to TM system
+ *
+ * Like odp_tm_enq_multi(), but segments packets according LSO configuration. See e.g.
+ * odp_pktout_send_lso() for documentation how packets are split into smaller packets during
+ * the segmentation offload. Packet segmentation is done first and TM functionality is applied
+ * to the resulting packets.
+ *
+ * @param tm_queue  Specifies the tm_queue (and indirectly the TM system)
+ * @param packets   Array of packets to enqueue with segmentation offload
+ * @param num       Number of packets in the array
+ * @param lso_opt   LSO options to be used for all packets. When NULL, LSO options are
+ *                  read from each packet (see odp_packet_lso_request()).
+ *
+ * @return Number of packets successfully processed and consumed (0 ... num)
+ * @retval <0 on failure
+ */
+int odp_tm_enq_multi_lso(odp_tm_queue_t tm_queue, const odp_packet_t packets[], int num,
+			 const odp_packet_lso_opt_t *lso_opt);
+
 /** The odp_tm_enq_with_cnt() function behaves identically to odp_tm_enq(),
  * except that it also returns (an approximation to?) the current tm_queue
  * packet queue count.
