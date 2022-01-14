@@ -932,7 +932,8 @@ int odp_tm_stop(odp_tm_t tm);
  */
 int odp_tm_destroy(odp_tm_t tm);
 
-/** Marking APIs */
+/* Marking APIs
+ * -------------------------------------------------------- */
 
 /** Vlan Marking.
  *
@@ -1033,7 +1034,8 @@ int odp_tm_drop_prec_marking(odp_tm_t           tm,
 			     odp_packet_color_t color,
 			     odp_bool_t         drop_prec_enabled);
 
-/** Shaper profile types and functions */
+/* Shaper profile types and functions
+ * -------------------------------------------------------- */
 
 /** Possible values of running the shaper algorithm.  ODP_TM_SHAPER_GREEN
  * means that the traffic is within the commit specification (rate and burst
@@ -1197,7 +1199,8 @@ int odp_tm_shaper_params_update(odp_tm_shaper_t shaper_profile,
  */
 odp_tm_shaper_t odp_tm_shaper_lookup(const char *name);
 
-/** Scheduler Profiles - types and functions */
+/* Scheduler Profiles - types and functions
+ * -------------------------------------------------------- */
 
 /** The odp_tm_sched_mode_t type is used to control whether a tm_node
  * scheduler takes into account packet lengths (by setting the sched_mode to
@@ -1309,7 +1312,8 @@ int odp_tm_sched_params_update(odp_tm_sched_t sched_profile,
  */
 odp_tm_sched_t odp_tm_sched_lookup(const char *name);
 
-/** Queue Threshold Profiles - types and functions */
+/* Queue Threshold Profiles - types and functions
+ * -------------------------------------------------------- */
 
 /** The odp_tm_threshold_params_t record type is used to supply the parameters
  * associated with a queue thresholds profile.  Since it is expected that
@@ -1406,7 +1410,8 @@ int odp_tm_thresholds_params_update(odp_tm_threshold_t threshold_profile,
  */
 odp_tm_threshold_t odp_tm_thresholds_lookup(const char *name);
 
-/** WRED Profiles - types and functions */
+/* WRED Profiles - types and functions
+ * -------------------------------------------------------- */
 
 /** The odp_tm_wred_params_t record type is used to supply the parameters
  * associated with a Random Early Detection profile.  Since it is expected that
@@ -1899,7 +1904,8 @@ int odp_tm_queue_wred_config(odp_tm_queue_t tm_queue,
 			     odp_packet_color_t pkt_color,
 			     odp_tm_wred_t wred_profile);
 
-/** Topology setting functions */
+/* Topology setting functions
+ * -------------------------------------------------------- */
 
 /** Connects two tm_nodes
  *
@@ -1956,7 +1962,8 @@ int odp_tm_queue_connect(odp_tm_queue_t tm_queue, odp_tm_node_t dst_tm_node);
  */
 int odp_tm_queue_disconnect(odp_tm_queue_t tm_queue);
 
-/** Input API */
+/* Input API
+ * -------------------------------------------------------- */
 
 /** The odp_tm_enq() function is used to add packets to a given TM system.
  * Note that the System Metadata associated with the pkt needed by the TM
@@ -2005,7 +2012,8 @@ int odp_tm_enq_multi(odp_tm_queue_t tm_queue, const odp_packet_t packets[],
  */
 int odp_tm_enq_with_cnt(odp_tm_queue_t tm_queue, odp_packet_t pkt);
 
-/* Dynamic state query functions */
+/* Dynamic state query functions
+ * -------------------------------------------------------- */
 
 /** The odp_tm_node_info_t record type  is used to return various bits of
  * information about a given tm_node via the odp_tm_node_info() function.
