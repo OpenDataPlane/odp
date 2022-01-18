@@ -22,6 +22,7 @@
 #include <odp_event_internal.h>
 #include <odp_macros_internal.h>
 #include <odp_packet_internal.h>
+#include <odp_packet_io_internal.h>
 
 /* Inlined API functions */
 #include <odp/api/plat/byteorder_inlines.h>
@@ -2890,43 +2891,41 @@ uint64_t odp_packet_aging_tmo(odp_packet_t pkt)
 
 int odp_packet_tx_compl_request(odp_packet_t pkt, const odp_packet_tx_compl_opt_t *opt)
 {
-	(void)pkt;
-	(void)opt;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	return -1;
-}
-
-int odp_packet_has_tx_compl_request(odp_packet_t pkt)
-{
-	(void)pkt;
+	pkt_hdr->p.flags.tx_compl = opt->mode == ODP_PACKET_TX_COMPL_ALL ? 1 : 0;
+	pkt_hdr->dst_queue = opt->queue;
 
 	return 0;
 }
 
-odp_packet_tx_compl_t odp_packet_tx_compl_from_event(odp_event_t ev)
+int odp_packet_has_tx_compl_request(odp_packet_t pkt)
 {
-	(void)ev;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	return ODP_PACKET_TX_COMPL_INVALID;
-}
-
-odp_event_t odp_packet_tx_compl_to_event(odp_packet_tx_compl_t tx_compl)
-{
-	(void)tx_compl;
-
-	return ODP_EVENT_INVALID;
+	return pkt_hdr->p.flags.tx_compl;
 }
 
 void odp_packet_tx_compl_free(odp_packet_tx_compl_t tx_compl)
 {
-	(void)tx_compl;
+	if (odp_unlikely(tx_compl == ODP_PACKET_TX_COMPL_INVALID)) {
+		ODP_ERR("Bad TX completion event handle\n");
+		return;
+	}
+
+	odp_buffer_free((odp_buffer_t)tx_compl);
 }
 
 void *odp_packet_tx_compl_user_ptr(odp_packet_tx_compl_t tx_compl)
 {
-	(void)tx_compl;
+	if (odp_unlikely(tx_compl == ODP_PACKET_TX_COMPL_INVALID)) {
+		ODP_ERR("Bad TX completion event handle\n");
+		return NULL;
+	}
 
-	return NULL;
+	_odp_pktio_tx_compl_t *data = odp_buffer_addr((odp_buffer_t)tx_compl);
+
+	return (void *)(uintptr_t)data->user_ptr;
 }
 
 odp_packet_reass_status_t
