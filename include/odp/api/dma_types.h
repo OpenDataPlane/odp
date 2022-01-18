@@ -17,6 +17,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/abi/event.h>
 #include <odp/api/abi/dma_types.h>
 
 #include <odp/api/spec/dma_types.h>

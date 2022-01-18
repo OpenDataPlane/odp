@@ -20,8 +20,10 @@ extern "C" {
 #endif
 
 #include <odp/api/packet_io.h>
+#include <odp/api/pool_types.h>
 #include <odp/api/std_types.h>
 #include <odp/api/threshold.h>
+
 /** @defgroup odp_classification ODP CLASSIFICATION
  *  Packet input classification.
  *  @{

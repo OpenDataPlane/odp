@@ -37,6 +37,7 @@ odpapiinclude_HEADERS = \
 	odp/api/packet_io_stats.h \
 	odp/api/protocols.h \
 	odp/api/pool.h \
+	odp/api/pool_types.h \
 	odp/api/proto_stats.h \
 	odp/api/proto_stats_types.h \
 	odp/api/queue.h \
@@ -153,6 +154,7 @@ odpapiabidefaultinclude_HEADERS = \
 	odp/api/abi-default/proto_stats.h \
 	odp/api/abi-default/proto_stats_types.h \
 	odp/api/abi-default/pool.h \
+	odp/api/abi-default/pool_types.h \
 	odp/api/abi-default/queue.h \
 	odp/api/abi-default/queue_types.h \
 	odp/api/abi-default/rwlock.h \
@@ -202,6 +204,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm32-linux/odp/api/abi/packet_flags.h \
 	odp/arch/arm32-linux/odp/api/abi/packet_io.h \
 	odp/arch/arm32-linux/odp/api/abi/pool.h \
+	odp/arch/arm32-linux/odp/api/abi/pool_types.h \
 	odp/arch/arm32-linux/odp/api/abi/proto_stats.h \
 	odp/arch/arm32-linux/odp/api/abi/proto_stats_types.h \
 	odp/arch/arm32-linux/odp/api/abi/queue.h \
@@ -249,6 +252,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm64-linux/odp/api/abi/packet_flags.h \
 	odp/arch/arm64-linux/odp/api/abi/packet_io.h \
 	odp/arch/arm64-linux/odp/api/abi/pool.h \
+	odp/arch/arm64-linux/odp/api/abi/pool_types.h \
 	odp/arch/arm64-linux/odp/api/abi/proto_stats.h \
 	odp/arch/arm64-linux/odp/api/abi/proto_stats_types.h \
 	odp/arch/arm64-linux/odp/api/abi/queue.h \
@@ -296,6 +300,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/default-linux/odp/api/abi/packet_flags.h \
 	odp/arch/default-linux/odp/api/abi/packet_io.h \
 	odp/arch/default-linux/odp/api/abi/pool.h \
+	odp/arch/default-linux/odp/api/abi/pool_types.h \
 	odp/arch/default-linux/odp/api/abi/proto_stats.h \
 	odp/arch/default-linux/odp/api/abi/proto_stats_types.h \
 	odp/arch/default-linux/odp/api/abi/queue.h \
@@ -343,6 +348,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/power64-linux/odp/api/abi/packet_flags.h \
 	odp/arch/power64-linux/odp/api/abi/packet_io.h \
 	odp/arch/power64-linux/odp/api/abi/pool.h \
+	odp/arch/power64-linux/odp/api/abi/pool_types.h \
 	odp/arch/power64-linux/odp/api/abi/proto_stats.h \
 	odp/arch/power64-linux/odp/api/abi/proto_stats_types.h \
 	odp/arch/power64-linux/odp/api/abi/queue.h \
@@ -390,6 +396,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_32-linux/odp/api/abi/packet_flags.h \
 	odp/arch/x86_32-linux/odp/api/abi/packet_io.h \
 	odp/arch/x86_32-linux/odp/api/abi/pool.h \
+	odp/arch/x86_32-linux/odp/api/abi/pool_types.h \
 	odp/arch/x86_32-linux/odp/api/abi/proto_stats.h \
 	odp/arch/x86_32-linux/odp/api/abi/proto_stats_types.h \
 	odp/arch/x86_32-linux/odp/api/abi/queue.h \
@@ -437,6 +444,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_64-linux/odp/api/abi/packet_flags.h \
 	odp/arch/x86_64-linux/odp/api/abi/packet_io.h \
 	odp/arch/x86_64-linux/odp/api/abi/pool.h \
+	odp/arch/x86_64-linux/odp/api/abi/pool_types.h \
 	odp/arch/x86_64-linux/odp/api/abi/proto_stats.h \
 	odp/arch/x86_64-linux/odp/api/abi/proto_stats_types.h \
 	odp/arch/x86_64-linux/odp/api/abi/queue.h \

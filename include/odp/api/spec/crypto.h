@@ -16,6 +16,7 @@
 #include <odp/visibility_begin.h>
 
 #include <odp/api/deprecated.h>
+#include <odp/api/pool_types.h>
 #include <odp/api/std_types.h>
 
 #ifdef __cplusplus

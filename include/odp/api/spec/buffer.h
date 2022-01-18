@@ -18,6 +18,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/pool_types.h>
+
 /** @defgroup odp_buffer ODP BUFFER
  *  Buffer event metadata and operations.
  *  @{
