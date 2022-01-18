@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018, Linaro Limited
+/* Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -10,16 +10,16 @@
  * ODP pool
  */
 
-#ifndef ODP_API_POOL_H_
-#define ODP_API_POOL_H_
+#ifndef ODP_API_POOL_TYPES_H_
+#define ODP_API_POOL_TYPES_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <odp/api/abi/pool.h>
+#include <odp/api/abi/pool_types.h>
 
-#include <odp/api/spec/pool.h>
+#include <odp/api/spec/pool_types.h>
 
 #ifdef __cplusplus
 }

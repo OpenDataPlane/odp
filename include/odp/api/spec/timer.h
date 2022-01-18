@@ -22,8 +22,8 @@ extern "C" {
 
 #include <odp/api/timer_types.h>
 #include <odp/api/event.h>
+#include <odp/api/pool_types.h>
 #include <odp/api/queue_types.h>
-#include <odp/api/pool.h>
 
 /** @addtogroup odp_timer
  *  @{

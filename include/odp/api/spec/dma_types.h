@@ -1,4 +1,4 @@
-/* Copyright (c) 2021, Nokia
+/* Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -18,6 +18,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/packet_types.h>
 #include <odp/api/std_types.h>
 
 /** @defgroup odp_dma ODP DMA
@@ -100,7 +101,7 @@ typedef struct odp_dma_pool_param_t {
 } odp_dma_pool_param_t;
 
 /* Includes pool_types.h, which depends on odp_dma_pool_param_t. */
-#include <odp/api/queue.h>
+#include <odp/api/queue_types.h>
 
 /**
  * DMA transfer direction

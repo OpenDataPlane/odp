@@ -75,6 +75,7 @@ odpapiabiarchinclude_HEADERS += \
 		  include-abi/odp/api/abi/proto_stats.h \
 		  include-abi/odp/api/abi/proto_stats_types.h \
 		  include-abi/odp/api/abi/pool.h \
+		  include-abi/odp/api/abi/pool_types.h \
 		  include-abi/odp/api/abi/queue.h \
 		  include-abi/odp/api/abi/queue_types.h \
 		  include-abi/odp/api/abi/rwlock.h \

@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, Nokia
+/* Copyright (c) 2020-2022, Nokia
  *
  * All rights reserved.
  *
@@ -16,7 +16,7 @@
 
 #include <odp/api/abi/event.h>
 #include <odp/api/abi/packet_types.h>
-#include <odp/api/abi/pool.h>
+#include <odp/api/abi/pool_types.h>
 
 #include <odp/api/plat/event_vector_inline_types.h>
 #include <odp/api/plat/pool_inline_types.h>

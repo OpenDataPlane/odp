@@ -22,7 +22,6 @@ extern "C" {
 #include <odp/api/abi/queue_types.h>
 #include <odp/api/abi/queue.h>
 #include <odp/api/abi/buffer.h>
-#include <odp/api/abi/pool.h>
 
 #include <odp/api/spec/queue.h>
 
