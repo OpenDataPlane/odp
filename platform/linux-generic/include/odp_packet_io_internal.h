@@ -244,6 +244,10 @@ typedef struct pktio_if_ops {
 				    const odp_pktout_queue_param_t *p);
 } pktio_if_ops_t;
 
+typedef struct {
+	const void *user_ptr;
+} _odp_pktio_tx_compl_t;
+
 extern void *_odp_pktio_entry_ptr[];
 
 static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
