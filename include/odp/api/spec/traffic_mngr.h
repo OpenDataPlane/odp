@@ -14,8 +14,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/packet_io_types.h>
 #include <odp/api/std_types.h>
-#include <odp/api/packet_io.h>
 
 /**
  * @file

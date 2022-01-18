@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-#include <odp/api/abi/packet_io.h>
+#include <odp/api/abi/packet_io_types.h>
 
 #include <stdint.h>
 
