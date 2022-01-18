@@ -17,19 +17,7 @@
 extern "C" {
 #endif
 
-#include <odp/api/std_types.h>
-#include <odp/api/abi/classification.h>
-#include <odp/api/abi/packet_types.h>
 #include <odp/api/abi/packet_io.h>
-#include <odp/api/abi/queue_types.h>
-
-/** @ingroup odp_packet_io
- *  @{
- */
-
-/**
- * @}
- */
 
 #include <odp/api/spec/packet_io.h>
 

@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -20,7 +20,7 @@ extern "C" {
 #endif
 
 #include <odp/api/deprecated.h>
-#include <odp/api/queue.h>
+#include <odp/api/queue_types.h>
 
 /** @addtogroup odp_packet_io
  *  @{

@@ -18,6 +18,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/std_types.h>
+
 /** @defgroup odp_reassembly ODP REASSEMBLY
  *  Reassembly
  *  @{

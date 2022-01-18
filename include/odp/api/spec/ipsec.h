@@ -21,7 +21,7 @@ extern "C" {
 
 #include <odp/api/crypto.h>
 #include <odp/api/std_types.h>
-#include <odp/api/packet_io.h>
+#include <odp/api/packet_io_types.h>
 #include <odp/api/protocols.h>
 #include <odp/api/classification.h>
 #include <odp/api/traffic_mngr.h>
