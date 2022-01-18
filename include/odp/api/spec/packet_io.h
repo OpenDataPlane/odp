@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2020-2021, Nokia
+ * Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -81,6 +81,12 @@ extern "C" {
 /**
  * @def ODP_PKTIN_NO_WAIT
  * Do not wait on packet input
+ */
+
+/**
+ * @def ODP_PKTOUT_MAX_QUEUES
+ * Maximum number of packet output queues supported by the API. Use
+ * odp_pktio_capability() to check the maximum number of queues per interface.
  */
 
 /**
@@ -837,7 +843,9 @@ typedef struct odp_pktio_capability_t {
 	/** Maximum number of input queues */
 	unsigned int max_input_queues;
 
-	/** Maximum number of output queues */
+	/** Maximum number of output queues
+	 *
+	 * Value does not exceed ODP_PKTOUT_MAX_QUEUES. */
 	unsigned int max_output_queues;
 
 	/** Supported pktio configuration options */
