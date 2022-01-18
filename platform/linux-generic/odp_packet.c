@@ -2958,43 +2958,44 @@ uint64_t odp_packet_aging_tmo(odp_packet_t pkt)
 
 int odp_packet_tx_compl_request(odp_packet_t pkt, const odp_packet_tx_compl_opt_t *opt)
 {
-	(void)pkt;
-	(void)opt;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	return -1;
-}
-
-int odp_packet_has_tx_compl_request(odp_packet_t pkt)
-{
-	(void)pkt;
+	pkt_hdr->p.flags.tx_compl = 1;
+	pkt_hdr->tx_compl_queue = opt->queue;
+	pkt_hdr->tx_compl_mode = opt->mode;
 
 	return 0;
 }
 
-odp_packet_tx_compl_t odp_packet_tx_compl_from_event(odp_event_t ev)
+int odp_packet_has_tx_compl_request(odp_packet_t pkt)
 {
-	(void)ev;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	return ODP_PACKET_TX_COMPL_INVALID;
-}
-
-odp_event_t odp_packet_tx_compl_to_event(odp_packet_tx_compl_t tx_compl)
-{
-	(void)tx_compl;
-
-	return ODP_EVENT_INVALID;
+	return pkt_hdr->p.flags.tx_compl;
 }
 
 void odp_packet_tx_compl_free(odp_packet_tx_compl_t tx_compl)
 {
-	(void)tx_compl;
+	odp_buffer_t buf = (odp_buffer_t)(uintptr_t)tx_compl;
+
+	if (odp_unlikely(tx_compl == ODP_PACKET_TX_COMPL_INVALID)) {
+		ODP_ERR("Bad TX completion event handle\n");
+		return;
+	}
+
+	odp_buffer_free(buf);
 }
 
 void *odp_packet_tx_compl_user_ptr(odp_packet_tx_compl_t tx_compl)
 {
-	(void)tx_compl;
+	odp_buffer_t buf = (odp_buffer_t)(uintptr_t)tx_compl;
 
-	return NULL;
+	if (odp_unlikely(tx_compl == ODP_PACKET_TX_COMPL_INVALID)) {
+		ODP_ERR("Bad TX completion event handle\n");
+		return NULL;
+	}
+
+	return *(void **)odp_buffer_addr(buf);
 }
 
 odp_packet_reass_status_t

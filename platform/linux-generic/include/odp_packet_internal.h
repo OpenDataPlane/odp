@@ -145,6 +145,12 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 	/* LSO profile index */
 	uint8_t lso_profile_idx;
 
+	/* Tx completion event queue */
+	odp_queue_t tx_compl_queue;
+
+	/* Tx completion event mode */
+	odp_packet_tx_compl_mode_t tx_compl_mode;
+
 	union {
 		struct {
 			/* Result for crypto packet op */

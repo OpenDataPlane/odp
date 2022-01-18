@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2020-2021, Nokia
+ * Copyright (c) 2020-2022, Nokia
  * Copyright (c) 2020, Marvell
  * All rights reserved.
  *
@@ -3316,7 +3316,7 @@ static void pktio_test_pktout_compl(bool use_plain_queue)
 		opt.queue = compl_queue[i];
 		opt.mode = ODP_PACKET_TX_COMPL_ALL;
 		odp_packet_tx_compl_request(pkt_tbl[i], &opt);
-
+		CU_ASSERT(odp_packet_has_tx_compl_request(pkt_tbl[i]) == 1);
 		/* Set pkt sequence number as its user ptr */
 		odp_packet_user_ptr_set(pkt_tbl[i], (const void *)&pkt_seq[i]);
 	}
