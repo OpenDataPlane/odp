@@ -1,4 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2022, Marvell
  * Copyright (c) 2022, Nokia
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
 /** @def POOL_NUM_PKT
  * Number of packets in the pool
  */
-#define POOL_NUM_PKT  64
+#define POOL_NUM_PKT  4096
 
 static uint8_t test_salt[16] = "0123456789abcdef";
 
@@ -99,11 +100,11 @@ typedef struct {
 	int in_flight;
 
 	/**
-	 * Number of iteration to repeat crypto operation to get good
-	 * average number. Specified through -i or --terations option.
+	 * Number of packets to be IPsec processed to get good average number.
+	 * Specified through -c or --count option.
 	 * Default is 10000.
 	 */
-	int iteration_count;
+	int packet_count;
 
 	/**
 	 * Payload size to test. If 0 set of predefined payload sizes
@@ -141,6 +142,13 @@ typedef struct {
 	 * Specified through -u argument.
 	 */
 	int ah;
+
+	/*
+	 * Burst size.
+	 * Prepare and submit as many packets for IPsec processing in each
+	 * iteration of the loop.
+	 */
+	int burst_size;
 } ipsec_args_t;
 
 /*
@@ -518,7 +526,7 @@ print_result(ipsec_args_t *cargs,
 
 	throughput = (1000000.0 / result->elapsed) * payload_length / 1024;
 	printf("%30.30s %15d %15d %15.3f %15.3f %15.3f %15d\n",
-	       config->name, cargs->iteration_count, payload_length,
+	       config->name, cargs->packet_count, payload_length,
 	       result->elapsed, result->rusage_self, result->rusage_thread,
 	       throughput);
 }
@@ -586,28 +594,30 @@ static uint8_t test_data[] = {
 	0x08, 0x00, 0xfb, 0x37, 0x12, 0x34, 0x00, 0x00
 };
 
-static odp_packet_t
-make_packet(odp_pool_t pkt_pool, unsigned int payload_length)
+static int
+make_packet_multi(odp_pool_t pkt_pool, unsigned int payload_length,
+		  odp_packet_t pkt[], int num)
 {
-	odp_packet_t pkt;
+	int i, ret;
 
-	if (payload_length < sizeof(test_data))
-		return ODP_PACKET_INVALID;
-
-	pkt = odp_packet_alloc(pkt_pool, payload_length);
-	if (pkt == ODP_PACKET_INVALID) {
-		ODPH_ERR("failed to allocate buffer\n");
-		return pkt;
+	ret = odp_packet_alloc_multi(pkt_pool, payload_length, pkt, num);
+	if (ret != num) {
+		ODPH_ERR("Could not allocate buffer\n");
+		if (ret > 0)
+			odp_packet_free_sp(pkt, ret);
+		return -1;
 	}
 
-	odp_packet_copy_from_mem(pkt, 0, sizeof(test_data), test_data);
-	odp_packet_l3_offset_set(pkt, 0);
+	for (i = 0; i < num; i++) {
+		odp_packet_copy_from_mem(pkt[i], 0, sizeof(test_data), test_data);
+		odp_packet_l3_offset_set(pkt[i], 0);
 
-	uint8_t *mem = odp_packet_data(pkt);
-	((odph_ipv4hdr_t *)mem)->tot_len = odp_cpu_to_be_16(payload_length);
-	memset(mem + sizeof(test_data), 1, payload_length - sizeof(test_data));
+		uint8_t *mem = odp_packet_data(pkt[i]);
+		((odph_ipv4hdr_t *)mem)->tot_len = odp_cpu_to_be_16(payload_length);
+		memset(mem + sizeof(test_data), 1, payload_length - sizeof(test_data));
+	}
 
-	return pkt;
+	return 0;
 }
 
 static inline void check_ipsec_result(odp_packet_t ipsec_pkt)
@@ -632,16 +642,20 @@ run_measure_one(ipsec_args_t *cargs,
 		time_record_t *start,
 		time_record_t *end)
 {
+	int in_flight, pkts_allowed, num_out, num_pkts, rc = 0;
+	const int max_in_flight = cargs->in_flight;
+	const int burst_size = cargs->burst_size;
 	odp_ipsec_out_param_t param;
 	odp_pool_t pkt_pool;
-	odp_packet_t pkt = ODP_PACKET_INVALID;
-	int rc = 0;
 
 	pkt_pool = odp_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_POOL_INVALID) {
 		ODPH_ERR("pkt_pool not found\n");
 		return -1;
 	}
+
+	if (payload_length < sizeof(test_data))
+		return -1;
 
 	int packets_sent = 0;
 	int packets_received = 0;
@@ -654,38 +668,62 @@ run_measure_one(ipsec_args_t *cargs,
 
 	fill_time_record(start);
 
-	while ((packets_sent < cargs->iteration_count) ||
-	       (packets_received < cargs->iteration_count)) {
-		if ((packets_sent < cargs->iteration_count) &&
-		    (packets_sent - packets_received <
-		     cargs->in_flight)) {
-			odp_packet_t out_pkt;
-			int num_out = 1;
+	while ((packets_sent < cargs->packet_count) ||
+	       (packets_received < cargs->packet_count)) {
+		num_pkts = cargs->packet_count - packets_sent;
 
-			pkt = make_packet(pkt_pool, payload_length);
-			if (ODP_PACKET_INVALID == pkt)
+		/* Enqueue up to burst size */
+		num_pkts = num_pkts > burst_size ? burst_size : num_pkts;
+
+		/* Enqueue up to (max in flight - current in flight) */
+		in_flight = packets_sent - packets_received;
+		pkts_allowed = max_in_flight - in_flight;
+
+		/* Enqueue either a burst of packets or skip */
+		num_pkts = num_pkts > pkts_allowed ? 0 : num_pkts;
+
+		if (odp_likely(num_pkts)) {
+			odp_packet_t out_pkt[num_pkts];
+			odp_packet_t pkt[num_pkts];
+			int i;
+
+			if (odp_unlikely(make_packet_multi(pkt_pool,
+							   payload_length,
+							   pkt,
+							   num_pkts)))
 				return -1;
 
-			if (cargs->debug_packets)
-				odp_packet_print_data(pkt, 0,
-						      odp_packet_len(pkt));
+			if (cargs->debug_packets) {
+				for (i = 0; i < num_pkts; i++)
+					odp_packet_print_data(pkt[i], 0,
+							      odp_packet_len(pkt[i]));
+			}
 
-			rc = odp_ipsec_out(&pkt, 1,
-					   &out_pkt, &num_out,
+			num_out = num_pkts;
+
+			rc = odp_ipsec_out(pkt, num_pkts,
+					   out_pkt, &num_out,
 					   &param);
-			if (rc <= 0) {
-				ODPH_ERR("failed odp_ipsec_out: rc = %d\n", rc);
-				odp_packet_free(pkt);
+			if (odp_unlikely(rc <= 0)) {
+				ODPH_ERR("Failed odp_ipsec_out: rc = %d\n", rc);
+				odp_packet_free_sp(pkt, num_pkts);
 				break;
 			}
-			check_ipsec_result(out_pkt);
+
+			for (i = 0; i < num_out; i++)
+				check_ipsec_result(out_pkt[i]);
 
 			packets_sent += rc;
 			packets_received += num_out;
-			if (cargs->debug_packets)
-				odp_packet_print_data(out_pkt, 0,
-						      odp_packet_len(out_pkt));
-			odp_packet_free(out_pkt);
+			if (cargs->debug_packets) {
+				for (i = 0; i < num_out; i++)
+					odp_packet_print_data(out_pkt[i], 0,
+							      odp_packet_len(out_pkt[i]));
+			}
+
+			if (odp_unlikely(rc != num_pkts))
+				odp_packet_free_sp(&pkt[rc], num_pkts - rc);
+			odp_packet_free_sp(out_pkt, num_out);
 		}
 	}
 
@@ -701,11 +739,12 @@ run_measure_one_async(ipsec_args_t *cargs,
 		      time_record_t *start,
 		      time_record_t *end)
 {
+	int in_flight, pkts_allowed, i, num_pkts, rc = 0;
+	const int max_in_flight = cargs->in_flight;
+	const int burst_size = cargs->burst_size;
 	odp_ipsec_out_param_t param;
 	odp_pool_t pkt_pool;
 	odp_queue_t out_queue;
-	odp_packet_t pkt = ODP_PACKET_INVALID;
-	int rc = 0;
 
 	pkt_pool = odp_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_POOL_INVALID) {
@@ -719,6 +758,9 @@ run_measure_one_async(ipsec_args_t *cargs,
 		return -1;
 	}
 
+	if (payload_length < sizeof(test_data))
+		return -1;
+
 	int packets_sent = 0;
 	int packets_received = 0;
 
@@ -730,31 +772,53 @@ run_measure_one_async(ipsec_args_t *cargs,
 
 	fill_time_record(start);
 
-	while ((packets_sent < cargs->iteration_count) ||
-	       (packets_received < cargs->iteration_count)) {
+	while ((packets_sent < cargs->packet_count) ||
+	       (packets_received < cargs->packet_count)) {
+		odp_packet_t pkt_out[max_in_flight];
 		odp_event_t ev;
 
-		if ((packets_sent < cargs->iteration_count) &&
-		    (packets_sent - packets_received <
-		     cargs->in_flight)) {
-			pkt = make_packet(pkt_pool, payload_length);
-			if (ODP_PACKET_INVALID == pkt)
+		num_pkts = cargs->packet_count - packets_sent;
+
+		/* Enqueue up to burst size */
+		num_pkts = num_pkts > burst_size ? burst_size : num_pkts;
+
+		/* Enqueue up to (max in flight - current in flight) */
+		in_flight = packets_sent - packets_received;
+		pkts_allowed = max_in_flight - in_flight;
+
+		/* Enqueue either a burst of packets or skip */
+		num_pkts = num_pkts > pkts_allowed ? 0 : num_pkts;
+
+		if (odp_likely(num_pkts)) {
+			odp_packet_t pkt[num_pkts];
+
+			if (odp_unlikely(make_packet_multi(pkt_pool,
+							   payload_length,
+							   pkt,
+							   num_pkts)))
 				return -1;
 
-			if (cargs->debug_packets)
-				odp_packet_print_data(pkt, 0,
-						      odp_packet_len(pkt));
+			if (cargs->debug_packets) {
+				for (i = 0; i < num_pkts; i++)
+					odp_packet_print_data(pkt[i], 0,
+							      odp_packet_len(pkt[i]));
+			}
 
-			rc = odp_ipsec_out_enq(&pkt, 1,
-					       &param);
-			if (rc <= 0) {
-				ODPH_ERR("failed odp_crypto_packet_op_enq: rc = %d\n",
+			rc = odp_ipsec_out_enq(pkt, num_pkts, &param);
+			if (odp_unlikely(rc <= 0)) {
+				ODPH_ERR("Failed odp_ipsec_out_enq: rc = %d\n",
 					 rc);
-				odp_packet_free(pkt);
+				odp_packet_free_sp(pkt, num_pkts);
 				break;
 			}
+
+			if (odp_unlikely(rc != num_pkts))
+				odp_packet_free_sp(&pkt[rc], num_pkts - rc);
+
 			packets_sent += rc;
 		}
+
+		i = 0;
 
 		if (cargs->schedule)
 			ev = odp_schedule(NULL,
@@ -763,22 +827,23 @@ run_measure_one_async(ipsec_args_t *cargs,
 			ev = odp_queue_deq(out_queue);
 
 		while (ev != ODP_EVENT_INVALID) {
-			odp_packet_t out_pkt;
-
-			out_pkt = odp_ipsec_packet_from_event(ev);
-			check_ipsec_result(out_pkt);
+			pkt_out[i] = odp_ipsec_packet_from_event(ev);
+			check_ipsec_result(pkt_out[i]);
 
 			if (cargs->debug_packets)
-				odp_packet_print_data(out_pkt, 0,
-						      odp_packet_len(out_pkt));
-			odp_packet_free(out_pkt);
+				odp_packet_print_data(pkt_out[i], 0,
+						      odp_packet_len(pkt_out[i]));
 			packets_received++;
 			if (cargs->schedule)
 				ev = odp_schedule(NULL,
 						  ODP_SCHED_NO_WAIT);
 			else
 				ev = odp_queue_deq(out_queue);
+			i++;
 		}
+
+		if (i)
+			odp_packet_free_sp(pkt_out, i);
 	}
 
 	fill_time_record(end);
@@ -850,13 +915,13 @@ run_measure_one_config(ipsec_args_t *cargs,
 			break;
 
 		count = get_elapsed_usec(&start, &end);
-		result.elapsed = count / cargs->iteration_count;
+		result.elapsed = count / cargs->packet_count;
 
 		count = get_rusage_self_diff(&start, &end);
-		result.rusage_self = count / cargs->iteration_count;
+		result.rusage_self = count / cargs->packet_count;
 
 		count = get_rusage_thread_diff(&start, &end);
-		result.rusage_thread = count / cargs->iteration_count;
+		result.rusage_thread = count / cargs->packet_count;
 
 		print_result(cargs, payloads[i],
 			     config, &result);
@@ -920,7 +985,8 @@ static void usage(char *progname)
 	print_config_names("				      ");
 	printf("  -d, --debug	       Enable dump of processed packets.\n"
 	       "  -f, --flight <number> Max number of packet processed in parallel (default 1)\n"
-	       "  -i, --iterations <number> Number of iterations.\n"
+	       "  -c, --count <number> Number of packets (default 10000)\n"
+	       "  -b, --burst <number> Number of packets in one IPsec API submission (default 1)\n"
 	       "  -l, --payload	       Payload length.\n"
 	       "  -s, --schedule       Use scheduler for completion events.\n"
 	       "  -p, --poll           Poll completion queue for completion events.\n"
@@ -939,7 +1005,8 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 		{"debug",  no_argument, NULL, 'd'},
 		{"flight", optional_argument, NULL, 'f'},
 		{"help", no_argument, NULL, 'h'},
-		{"iterations", optional_argument, NULL, 'i'},
+		{"count", optional_argument, NULL, 'c'},
+		{"burst", optional_argument, NULL, 'b'},
 		{"payload", optional_argument, NULL, 'l'},
 		{"sessions", optional_argument, NULL, 'm'},
 		{"poll", no_argument, NULL, 'p'},
@@ -949,11 +1016,12 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+a:c:df:hi:m:nl:sptu";
+	static const char *shortopts = "+a:b:c:df:hm:nl:sptu";
 
 	cargs->in_flight = 1;
 	cargs->debug_packets = 0;
-	cargs->iteration_count = 10000;
+	cargs->packet_count = 10000;
+	cargs->burst_size = 1;
 	cargs->payload_length = 0;
 	cargs->alg_config = NULL;
 	cargs->schedule = 0;
@@ -978,8 +1046,18 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 		case 'd':
 			cargs->debug_packets = 1;
 			break;
-		case 'i':
-			cargs->iteration_count = atoi(optarg);
+		case 'c':
+			cargs->packet_count = atoi(optarg);
+			break;
+		case 'b':
+			if (optarg == NULL)
+				cargs->burst_size = 32;
+			else
+				cargs->burst_size = atoi(optarg);
+			if (cargs->burst_size > POOL_NUM_PKT) {
+				printf("Invalid burst size (max allowed: %d)\n", POOL_NUM_PKT);
+				exit(-1);
+			}
 			break;
 		case 'f':
 			cargs->in_flight = atoi(optarg);
@@ -1006,6 +1084,11 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 		default:
 			break;
 		}
+	}
+
+	if (cargs->in_flight < cargs->burst_size) {
+		printf("-f (flight) must be greater than or equal to -b (burst)\n");
+		exit(-1);
 	}
 
 	optind = 1;		/* reset 'extern optind' from the getopt lib */
