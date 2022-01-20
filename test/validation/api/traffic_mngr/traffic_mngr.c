@@ -1150,10 +1150,12 @@ static uint32_t send_pkts(odp_tm_queue_t tm_queue, uint32_t num_pkts)
 		xmt_pkt_desc = &xmt_pkt_descs[xmt_pkt_idx];
 
 		/* Alternate calling with odp_tm_enq and odp_tm_enq_with_cnt */
-		if ((idx & 1) == 0)
+		if ((idx & 1) == 0) {
 			rc = odp_tm_enq(tm_queue, odp_pkt);
-		else
+			CU_ASSERT(rc <= 0);
+		} else {
 			rc = odp_tm_enq_with_cnt(tm_queue, odp_pkt);
+		}
 
 		xmt_pkt_desc->xmt_idx = xmt_pkt_idx;
 		if (0 <= rc) {
