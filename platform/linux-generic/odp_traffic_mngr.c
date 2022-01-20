@@ -4445,6 +4445,7 @@ int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt)
 {
 	tm_queue_obj_t *tm_queue_obj;
 	tm_system_t *tm_system;
+	int rc;
 
 	tm_queue_obj = GET_TM_QUEUE_OBJ(tm_queue);
 	if (!tm_queue_obj)
@@ -4457,7 +4458,10 @@ int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt)
 	if (odp_atomic_load_u64(&tm_system->destroying))
 		return -1;
 
-	return tm_enqueue(tm_system, tm_queue_obj, pkt);
+	rc = tm_enqueue(tm_system, tm_queue_obj, pkt);
+	if (rc < 0)
+		return rc;
+	return 0;
 }
 
 int odp_tm_enq_with_cnt(odp_tm_queue_t tm_queue, odp_packet_t pkt)
