@@ -17,6 +17,8 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
+#define EXIT_NOT_SUP 2
+
 #define DEFAULT_SEG_SIZE 1024U
 #define ROUNDS 1000000
 #define COMPL_DELIMITER ","
@@ -1062,8 +1064,8 @@ int main(int argc, char **argv)
 	}
 
 	if (check_capabilities(&test_config)) {
-		ODPH_ERR("Error while checking DMA capabilities, exiting.\n");
-		ret = EXIT_FAILURE;
+		ODPH_ERR("Unsupported scenario attempted, exiting.\n");
+		ret = EXIT_NOT_SUP;
 		goto out_odp;
 	}
 
