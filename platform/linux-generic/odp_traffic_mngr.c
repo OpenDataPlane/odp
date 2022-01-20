@@ -167,24 +167,6 @@ static inline tm_node_obj_t *tm_nobj_from_index(uint32_t node_id)
 	return &tm_glb->node_obj.obj[node_id];
 }
 
-static int queue_tm_reenq(odp_queue_t queue, _odp_event_hdr_t *event_hdr)
-{
-	odp_tm_queue_t tm_queue = MAKE_ODP_TM_QUEUE(odp_queue_context(queue));
-	odp_packet_t pkt = packet_from_event_hdr(event_hdr);
-
-	return odp_tm_enq(tm_queue, pkt);
-}
-
-static int queue_tm_reenq_multi(odp_queue_t queue, _odp_event_hdr_t *event[],
-				int num)
-{
-	(void)queue;
-	(void)event;
-	(void)num;
-	ODP_ABORT("Invalid call to queue_tm_reenq_multi()\n");
-	return 0;
-}
-
 static tm_queue_obj_t *get_tm_queue_obj(tm_system_t *tm_system,
 					pkt_desc_t *pkt_desc)
 {
@@ -4052,7 +4034,6 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 	_odp_int_pkt_queue_t _odp_int_pkt_queue;
 	tm_queue_obj_t *queue_obj;
 	odp_tm_queue_t odp_tm_queue = ODP_TM_INVALID;
-	odp_queue_t queue;
 	odp_tm_wred_t wred_profile;
 	tm_system_t *tm_system;
 	uint32_t color;
@@ -4089,25 +4070,6 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 		odp_atomic_init_u64(&queue_obj->stats.discards, 0);
 		odp_atomic_init_u64(&queue_obj->stats.errors, 0);
 		odp_atomic_init_u64(&queue_obj->stats.packets, 0);
-
-		queue = odp_queue_create(NULL, NULL);
-		if (queue == ODP_QUEUE_INVALID) {
-			odp_tm_queue = ODP_TM_INVALID;
-			continue;
-		}
-
-		queue_obj->queue = queue;
-		if (odp_queue_context_set(queue, queue_obj, sizeof(tm_queue_obj_t))) {
-			ODP_ERR("Queue context set failed\n");
-			if (odp_queue_destroy(queue))
-				ODP_ERR("Queue destroy failed\n");
-
-			odp_tm_queue = ODP_TM_INVALID;
-			break;
-		}
-
-		_odp_queue_fn->set_enq_deq_fn(queue, queue_tm_reenq,
-					      queue_tm_reenq_multi, NULL, NULL);
 
 		tm_system->queue_num_tbl[queue_obj->queue_num - 1] = queue_obj;
 
@@ -4168,8 +4130,6 @@ int odp_tm_queue_destroy(odp_tm_queue_t tm_queue)
 	/* Now that all of the checks are done, time to so some freeing. */
 	odp_ticketlock_lock(&tm_system->tm_system_lock);
 	tm_system->queue_num_tbl[tm_queue_obj->queue_num - 1] = NULL;
-
-	odp_queue_destroy(tm_queue_obj->queue);
 
 	odp_ticketlock_lock(&tm_glb->queue_obj.lock);
 	_odp_pkt_queue_destroy(tm_system->_odp_int_queue_pool,
