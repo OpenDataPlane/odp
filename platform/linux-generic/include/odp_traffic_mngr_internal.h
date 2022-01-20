@@ -286,7 +286,6 @@ struct tm_queue_obj_s {
 	uint8_t blocked_cnt;
 	odp_bool_t ordered_enqueue;
 	tm_status_t status;
-	odp_queue_t queue;
 	/* Statistics for odp_tm_queue_stats_t */
 	struct {
 		odp_atomic_u64_t discards;
