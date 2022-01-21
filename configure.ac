@@ -207,7 +207,6 @@ AC_SUBST([archincludedir])
 AS_CASE([$host],
   [x86*], [ARCH_DIR=x86],
   [i686*], [ARCH_DIR=x86],
-  [mips64*], [ARCH_DIR=mips64],
   [powerpc*], [ARCH_DIR=powerpc],
   [aarch64*], [ARCH_DIR=aarch64],
   [arm*], [ARCH_DIR=arm],
@@ -221,7 +220,6 @@ AC_SUBST([ARCH_DIR])
 AS_CASE([$host],
   [x86*],     [ARCH_ABI=x86_64-linux],
   [i686*],    [ARCH_ABI=x86_32-linux],
-  [mips64*],  [ARCH_ABI=mips64-linux],
   [powerpc*], [ARCH_ABI=power64-linux],
   [aarch64*], [ARCH_ABI=arm64-linux],
   [arm*],     [ARCH_ABI=arm32-linux],
@@ -355,7 +353,6 @@ AM_CONDITIONAL([helper_cli], [test x$helper_cli = xyes ])
 AM_CONDITIONAL([ARCH_IS_ARM], [test "x${ARCH_DIR}" = "xarm"])
 AM_CONDITIONAL([ARCH_IS_AARCH64], [test "x${ARCH_DIR}" = "xaarch64"])
 AM_CONDITIONAL([ARCH_IS_DEFAULT], [test "x${ARCH_DIR}" = "xdefault"])
-AM_CONDITIONAL([ARCH_IS_MIPS64], [test "x${ARCH_DIR}" = "xmips64"])
 AM_CONDITIONAL([ARCH_IS_POWERPC], [test "x${ARCH_DIR}" = "xpowerpc"])
 AM_CONDITIONAL([ARCH_IS_X86], [test "x${ARCH_DIR}" = "xx86"])
 AM_CONDITIONAL([ARCH_IS_X86_32], [test "x${ARCH_ABI}" = "xx86_32-linux"])
