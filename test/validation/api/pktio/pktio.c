@@ -1614,6 +1614,7 @@ static void pktio_test_default_values(void)
 	odp_pktout_queue_param_init(&qp_out);
 	CU_ASSERT_EQUAL(qp_out.op_mode, ODP_PKTIO_OP_MT);
 	CU_ASSERT_EQUAL(qp_out.num_queues, 1);
+	CU_ASSERT_EQUAL(qp_out.queue_size[0], 0);
 
 	memset(&pktio_conf, 0x55, sizeof(pktio_conf));
 	odp_pktio_config_init(&pktio_conf);
@@ -1989,11 +1990,17 @@ static void pktio_test_pktout_queue_config(void)
 	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0 &&
 			capa.max_output_queues > 0);
 	num_queues = capa.max_output_queues;
+	CU_ASSERT_FATAL(num_queues <= ODP_PKTOUT_MAX_QUEUES);
+
+	CU_ASSERT(capa.min_output_queue_size <= capa.max_output_queue_size);
 
 	odp_pktout_queue_param_init(&queue_param);
 
 	queue_param.op_mode = ODP_PKTIO_OP_MT_UNSAFE;
 	queue_param.num_queues  = num_queues;
+	for (int i = 0; i < num_queues; i++)
+		queue_param.queue_size[i] = capa.max_output_queue_size;
+
 	CU_ASSERT(odp_pktout_queue_config(pktio, &queue_param) == 0);
 
 	CU_ASSERT(odp_pktout_queue(pktio, pktout_queues, MAX_QUEUES)
@@ -2001,6 +2008,8 @@ static void pktio_test_pktout_queue_config(void)
 
 	queue_param.op_mode = ODP_PKTIO_OP_MT;
 	queue_param.num_queues  = 1;
+	queue_param.queue_size[0] = capa.min_output_queue_size;
+
 	CU_ASSERT(odp_pktout_queue_config(pktio, &queue_param) == 0);
 
 	CU_ASSERT(odp_pktout_queue_config(ODP_PKTIO_INVALID, &queue_param) < 0);
