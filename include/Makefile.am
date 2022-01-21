@@ -320,53 +320,6 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/default-linux/odp/api/abi/traffic_mngr.h \
 	odp/arch/default-linux/odp/api/abi/version.h
 endif
-if ARCH_IS_MIPS64
-odpapiabiarchinclude_HEADERS = \
-	odp/arch/mips64-linux/odp/api/abi/align.h \
-	odp/arch/mips64-linux/odp/api/abi/atomic.h \
-	odp/arch/mips64-linux/odp/api/abi/barrier.h \
-	odp/arch/mips64-linux/odp/api/abi/buffer.h \
-	odp/arch/mips64-linux/odp/api/abi/byteorder.h \
-	odp/arch/mips64-linux/odp/api/abi/classification.h \
-	odp/arch/mips64-linux/odp/api/abi/comp.h \
-	odp/arch/mips64-linux/odp/api/abi/cpu.h \
-	odp/arch/mips64-linux/odp/api/abi/cpumask.h \
-	odp/arch/mips64-linux/odp/api/abi/crypto.h \
-	odp/arch/mips64-linux/odp/api/abi/debug.h \
-	odp/arch/mips64-linux/odp/api/abi/dma_types.h \
-	odp/arch/mips64-linux/odp/api/abi/errno.h \
-	odp/arch/mips64-linux/odp/api/abi/event.h \
-	odp/arch/mips64-linux/odp/api/abi/hash.h \
-	odp/arch/mips64-linux/odp/api/abi/init.h \
-	odp/arch/mips64-linux/odp/api/abi/ipsec.h \
-	odp/arch/mips64-linux/odp/api/abi/packet.h \
-	odp/arch/mips64-linux/odp/api/abi/packet_types.h \
-	odp/arch/mips64-linux/odp/api/abi/packet_flags.h \
-	odp/arch/mips64-linux/odp/api/abi/packet_io.h \
-	odp/arch/mips64-linux/odp/api/abi/pool.h \
-	odp/arch/mips64-linux/odp/api/abi/proto_stats.h \
-	odp/arch/mips64-linux/odp/api/abi/proto_stats_types.h \
-	odp/arch/mips64-linux/odp/api/abi/queue.h \
-	odp/arch/mips64-linux/odp/api/abi/queue_types.h \
-	odp/arch/mips64-linux/odp/api/abi/rwlock.h \
-	odp/arch/mips64-linux/odp/api/abi/rwlock_recursive.h \
-	odp/arch/mips64-linux/odp/api/abi/schedule.h \
-	odp/arch/mips64-linux/odp/api/abi/schedule_types.h \
-	odp/arch/mips64-linux/odp/api/abi/shared_memory.h \
-	odp/arch/mips64-linux/odp/api/abi/spinlock.h \
-	odp/arch/mips64-linux/odp/api/abi/spinlock_recursive.h \
-	odp/arch/mips64-linux/odp/api/abi/stash.h \
-	odp/arch/mips64-linux/odp/api/abi/std.h \
-	odp/arch/mips64-linux/odp/api/abi/std_types.h \
-	odp/arch/mips64-linux/odp/api/abi/sync.h \
-	odp/arch/mips64-linux/odp/api/abi/thread.h \
-	odp/arch/mips64-linux/odp/api/abi/thrmask.h \
-	odp/arch/mips64-linux/odp/api/abi/ticketlock.h \
-	odp/arch/mips64-linux/odp/api/abi/time.h \
-	odp/arch/mips64-linux/odp/api/abi/timer_types.h \
-	odp/arch/mips64-linux/odp/api/abi/traffic_mngr.h \
-	odp/arch/mips64-linux/odp/api/abi/version.h
-endif
 if ARCH_IS_POWERPC
 odpapiabiarchinclude_HEADERS = \
 	odp/arch/power64-linux/odp/api/abi/align.h \

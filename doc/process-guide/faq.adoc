@@ -27,7 +27,7 @@ in the nuances of any target platform.
 At the same time, ODP is also a set of implementations of these APIs that are
 optimized for each platform that supports ODP. Implementations of ODP currently
 exist for a wide range of platforms spanning diverse instruction set
-architectures including ARM, MIPS, Power, x86, as well as proprietary SoC
+architectures including ARM, Power, x86, as well as proprietary SoC
 architectures, and include both general-purpose servers as well as specialized
 networking SoCs.
 
@@ -150,8 +150,8 @@ advantage of vendor extensions that have not yet been standardized.
 
 == What platforms does ODP support?
 
-To date, ODP is running on seven different network platforms that span five
-different processing architectures (ARMv7, ARMv8, MIPS64, Power, and x86),
+To date, ODP is running on several different network platforms that span four
+different processing architectures (ARMv7, ARMv8, Power, and x86),
 offering both application portability and accelerated performance tailored to
 each platform.  Other implementations are under development by both LNG member
 companies and other companies participating in the project.
