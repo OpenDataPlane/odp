@@ -827,6 +827,7 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 	int num;
 	uint32_t max_len;
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
+	int num_rx = 0;
 
 	/* Allocate maximum sized packets */
 	max_len = pkt_priv(pktio_entry)->mtu;
@@ -847,17 +848,17 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 			if (_odp_cls_classify_packet(pktio_entry,
 						     (const uint8_t *)slot.buf, len,
 						     len, &pool, &parsed_hdr, true))
-				goto fail;
+				continue;
 		}
 
-		pkt = pkt_tbl[i];
+		pkt = pkt_tbl[num_rx];
 		pkt_hdr = packet_hdr(pkt);
 		pull_tail(pkt_hdr, max_len - len);
 		if (frame_offset)
 			pull_head(pkt_hdr, frame_offset);
 
 		if (odp_packet_copy_from_mem(pkt, 0, len, slot.buf) != 0)
-			goto fail;
+			break;
 
 		pkt_hdr->input = pktio_entry->s.handle;
 
@@ -869,13 +870,13 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 						pktio_entry->s.in_chksums);
 
 		packet_set_ts(pkt_hdr, ts);
+		num_rx++;
 	}
 
-	return i;
+	if (num_rx < num)
+		odp_packet_free_multi(&pkt_tbl[num_rx], num - num_rx);
 
-fail:
-	odp_packet_free_multi(&pkt_tbl[i], num - i);
-	return i;
+	return num_rx;
 }
 
 static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
