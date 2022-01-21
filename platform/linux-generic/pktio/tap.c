@@ -335,6 +335,7 @@ static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	uint8_t buf[mtu];
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
+	int num_rx = 0;
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
@@ -355,14 +356,15 @@ static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			break;
 		}
 
-		pkts[i] = pack_odp_pkt(pktio_entry, buf, retval, ts);
-		if (pkts[i] == ODP_PACKET_INVALID)
+		pkts[num_rx] = pack_odp_pkt(pktio_entry, buf, retval, ts);
+		if (pkts[num_rx] == ODP_PACKET_INVALID)
 			break;
+		num_rx++;
 	}
 
 	odp_ticketlock_unlock(&pktio_entry->s.rxl);
 
-	return i;
+	return num_rx;
 }
 
 static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,

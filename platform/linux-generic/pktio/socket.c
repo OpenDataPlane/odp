@@ -277,7 +277,6 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			if (_odp_cls_classify_packet(pktio_entry, base, pkt_len,
 						     seg_len, &pool, pkt_hdr,
 						     true)) {
-				ODP_ERR("_odp_cls_classify_packet failed");
 				odp_packet_free(pkt);
 				continue;
 			}
