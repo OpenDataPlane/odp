@@ -619,7 +619,7 @@ static void tm_shaper_params_cvt_to(const odp_tm_shaper_params_t *shaper_params,
 	commit_burst = (int64_t)shaper_params->commit_burst;
 
 	peak_rate = tm_bps_to_rate(shaper_params->peak_rate);
-	if ((shaper_params->peak_rate == 0) || (peak_rate == 0)) {
+	if ((!shaper_params->dual_rate) || (peak_rate == 0)) {
 		peak_rate = 0;
 		max_peak_time_delta = 0;
 		peak_burst = 0;
@@ -816,7 +816,7 @@ static void update_shaper_elapsed_time(tm_system_t        *tm_system,
 
 	shaper_obj->commit_cnt = (int64_t)MIN(max_commit, commit + commit_inc);
 
-	if (shaper_params->peak_rate != 0) {
+	if (shaper_params->dual_rate) {
 		peak = shaper_obj->peak_cnt;
 		max_peak = shaper_params->max_peak;
 		if (shaper_params->max_peak_time_delta <= time_delta)
@@ -847,7 +847,7 @@ static uint64_t time_till_not_red(tm_shaper_params_t *shaper_params,
 	min_time_delay =
 	    MAX(shaper_obj->shaper_params->min_time_delta, UINT64_C(256));
 	commit_delay = MAX(commit_delay, min_time_delay);
-	if (shaper_params->peak_rate == 0)
+	if (!shaper_params->dual_rate)
 		return commit_delay;
 
 	peak_delay = 0;
@@ -1051,7 +1051,7 @@ static odp_bool_t rm_pkt_from_shaper(tm_system_t *tm_system,
 		    (shaper_action == DECR_COMMIT))
 			shaper_obj->commit_cnt -= tkn_count;
 
-		if (shaper_params->peak_rate != 0)
+		if (shaper_params->dual_rate)
 			if ((shaper_action == DECR_BOTH) ||
 			    (shaper_action == DECR_PEAK))
 				shaper_obj->peak_cnt -= tkn_count;
@@ -1083,7 +1083,7 @@ static odp_bool_t run_shaper(tm_system_t     *tm_system,
 		if (shaper_params->enabled) {
 			if (0 < shaper_obj->commit_cnt)
 				shaper_color = ODP_TM_SHAPER_GREEN;
-			else if (shaper_params->peak_rate == 0)
+			else if (!shaper_params->dual_rate)
 				shaper_color = ODP_TM_SHAPER_RED;
 			else if (shaper_obj->peak_cnt <= 0)
 				shaper_color = ODP_TM_SHAPER_RED;
