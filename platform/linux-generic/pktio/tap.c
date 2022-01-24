@@ -1,5 +1,5 @@
 /* Copyright (c) 2015, Ilya Maximets <i.maximets@samsung.com>
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -367,7 +367,9 @@ static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
 	uint32_t pkt_len;
 	uint32_t mtu = tap->mtu;
 	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
+	uint8_t tx_compl_enabled = _odp_pktio_tx_compl_enabled(pktio_entry);
 	uint8_t buf[mtu];
+	odp_packet_hdr_t *pkt_hdr;
 
 	for (i = 0; i < num; i++) {
 		pkt_len = odp_packet_len(pkts[i]);
@@ -405,10 +407,16 @@ static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
 			break;
 		}
 
+		pkt_hdr = packet_hdr(pkts[i]);
+
 		if (tx_ts_enabled) {
-			if (odp_unlikely(packet_hdr(pkts[i])->p.flags.ts_set))
+			if (odp_unlikely(pkt_hdr->p.flags.ts_set))
 				_odp_pktio_tx_ts_set(pktio_entry);
 		}
+
+		if (odp_unlikely(tx_compl_enabled && pkt_hdr->p.flags.tx_compl &&
+				 pkt_hdr->tx_compl_mode == ODP_PACKET_TX_COMPL_ALL))
+			_odp_pktio_send_tx_compl_ev(pktio_entry, pkt_hdr);
 	}
 
 	for (n = 0; n < i; n++)
@@ -522,6 +530,7 @@ static int tap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	capa->config.pktin.bit.ts_ptp = 1;
 
 	capa->config.pktout.bit.ts_ena = 1;
+	capa->config.pktout.bit.tx_compl_ena = 1;
 
 	return 0;
 }
