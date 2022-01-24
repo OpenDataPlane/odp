@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2013-2021, Nokia Solutions and Networks
+ * Copyright (c) 2013-2022, Nokia Solutions and Networks
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -305,11 +305,13 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int nb_tx = 0;
 	int tx_ts_idx = 0;
 	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
+	uint8_t tx_compl_enabled = _odp_pktio_tx_compl_enabled(pktio_entry);
 	uint32_t bytes = 0;
 	uint32_t out_octets_tbl[num];
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
 	odp_pktout_config_opt_t *pktout_capa =
 		&pktio_entry->s.capa.config.pktout;
+	odp_packet_hdr_t *pkt_hdr;
 
 	if (odp_unlikely(num > QUEUE_MULTI_MAX))
 		num = QUEUE_MULTI_MAX;
@@ -365,6 +367,15 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		pktio_entry->s.stats.out_packets += ret;
 		pktio_entry->s.stats.out_octets += out_octets_tbl[ret - 1];
+
+		if (odp_unlikely(tx_compl_enabled))
+			for (i = 0; i < ret; i++) {
+				pkt_hdr = packet_hdr(pkt_tbl[i]);
+				if (odp_unlikely(pkt_hdr->p.flags.tx_compl &&
+						 pkt_hdr->tx_compl_mode ==
+							ODP_PACKET_TX_COMPL_ALL))
+					_odp_pktio_send_tx_compl_ev(pktio_entry, pkt_hdr);
+			}
 	} else {
 		ODP_DBG("queue enqueue failed %i\n", ret);
 		ret = -1;
@@ -451,6 +462,7 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 	capa->config.pktout.bit.udp_chksum = 1;
 	capa->config.pktout.bit.sctp_chksum = 1;
 	capa->config.pktout.bit.ts_ena = 1;
+	capa->config.pktout.bit.tx_compl_ena = 1;
 
 	if (odp_global_ro.disable.ipsec == 0) {
 		capa->config.inbound_ipsec = 1;
