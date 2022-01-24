@@ -76,6 +76,9 @@ void odp_event_free(odp_event_t event)
 	case ODP_EVENT_IPSEC_STATUS:
 		_odp_ipsec_status_free(_odp_ipsec_status_from_event(event));
 		break;
+	case ODP_EVENT_PACKET_TX_COMPL:
+		odp_packet_tx_compl_free(odp_packet_tx_compl_from_event(event));
+		break;
 	case ODP_EVENT_DMA_COMPL:
 		odp_dma_compl_free(odp_dma_compl_from_event(event));
 		break;
@@ -124,6 +127,8 @@ int odp_event_is_valid(odp_event_t event)
 	case ODP_EVENT_PACKET_VECTOR:
 		/* Fall through */
 	case ODP_EVENT_DMA_COMPL:
+		/* Fall through */
+	case ODP_EVENT_PACKET_TX_COMPL:
 		break;
 	default:
 		return 0;
