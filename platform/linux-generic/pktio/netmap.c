@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -463,6 +463,7 @@ static void netmap_init_capability(pktio_entry_t *pktio_entry)
 	capa->config.pktin.bit.ts_ptp = 1;
 
 	capa->config.pktout.bit.ts_ena = 1;
+	capa->config.pktout.bit.tx_compl_ena = 1;
 }
 
 /**
@@ -1100,10 +1101,12 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 	int desc_id;
 	int tx_ts_idx = 0;
 	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
+	uint8_t tx_compl_enabled = _odp_pktio_tx_compl_enabled(pktio_entry);
 	odp_packet_t pkt;
 	uint32_t pkt_len;
 	unsigned slot_id;
 	char *buf;
+	odp_packet_hdr_t *pkt_hdr;
 
 	/* Only one netmap tx ring per pktout queue */
 	desc_id = pkt_nm->tx_desc_ring[index].s.cur;
@@ -1147,10 +1150,16 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 		if (i == NM_INJECT_RETRIES)
 			break;
 
+		pkt_hdr = packet_hdr(pkt);
+
 		if (tx_ts_enabled && tx_ts_idx == 0) {
-			if (odp_unlikely(packet_hdr(pkt)->p.flags.ts_set))
+			if (odp_unlikely(pkt_hdr->p.flags.ts_set))
 				tx_ts_idx = i + 1;
 		}
+
+		if (odp_unlikely(tx_compl_enabled && pkt_hdr->p.flags.tx_compl &&
+				 pkt_hdr->tx_compl_mode == ODP_PACKET_TX_COMPL_ALL))
+			_odp_pktio_send_tx_compl_ev(pktio_entry, pkt_hdr);
 	}
 	/* Send pending packets */
 	poll(&polld, 1, 0);
