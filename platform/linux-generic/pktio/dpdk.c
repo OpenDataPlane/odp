@@ -1,5 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -1618,6 +1618,7 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
 	capa->config.pktout.bit.tcp_chksum_ena =
 		capa->config.pktout.bit.tcp_chksum;
 	capa->config.pktout.bit.ts_ena = 1;
+	capa->config.pktout.bit.tx_compl_ena = 1;
 
 	capa->stats.pktio.counter.in_octets = 1;
 	capa->stats.pktio.counter.in_packets = 1;
@@ -2059,6 +2060,19 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 	return nb_rx;
 }
 
+static inline void send_tx_compl_evs(const pktio_entry_t *pktio_entry,
+				     const odp_packet_t pkt_table[], int num)
+{
+	odp_packet_hdr_t *pkt_hdr;
+
+	for (int i = 0; i < num; i++) {
+		pkt_hdr = packet_hdr(pkt_table[i]);
+		if (odp_unlikely(pkt_hdr->p.flags.tx_compl &&
+				 pkt_hdr->tx_compl_mode == ODP_PACKET_TX_COMPL_ALL))
+			_odp_pktio_send_tx_compl_ev(pktio_entry, pkt_hdr);
+	}
+}
+
 static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 		     const odp_packet_t pkt_table[], int num)
 {
@@ -2069,6 +2083,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	int i;
 	int mbufs;
 	int tx_ts_idx = 0;
+	uint8_t tx_compl_enabled = _odp_pktio_tx_compl_enabled(pktio_entry);
 
 	if (_ODP_DPDK_ZERO_COPY)
 		mbufs = pkt_to_mbuf_zero(pktio_entry, tx_mbufs, pkt_table, num,
@@ -2098,6 +2113,13 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 				odp_packet_t pkt = pkt_table[i];
 				odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
+				if (i < tx_pkts)
+					if (odp_unlikely(tx_compl_enabled &&
+							 pkt_hdr->p.flags.tx_compl &&
+							 pkt_hdr->tx_compl_mode ==
+								ODP_PACKET_TX_COMPL_ALL))
+						_odp_pktio_send_tx_compl_ev(pktio_entry, pkt_hdr);
+
 				if (pkt_hdr->seg_count > 1) {
 					if (odp_likely(i < tx_pkts))
 						odp_packet_free(pkt);
@@ -2106,6 +2128,9 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 					freed++;
 				}
 			}
+		} else {
+			if (odp_unlikely(tx_compl_enabled))
+				send_tx_compl_evs(pktio_entry, pkt_table, tx_pkts);
 		}
 		if (odp_unlikely(tx_pkts == 0 && _odp_errno != 0))
 			return -1;
@@ -2119,6 +2144,9 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 			if (_odp_errno != 0)
 				return -1;
 		} else {
+			if (odp_unlikely(tx_compl_enabled))
+				send_tx_compl_evs(pktio_entry, pkt_table, tx_pkts);
+
 			odp_packet_free_multi(pkt_table, tx_pkts);
 		}
 	}
