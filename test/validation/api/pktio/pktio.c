@@ -3285,7 +3285,7 @@ static void pktio_test_pktout_compl(bool use_plain_queue)
 			} else {
 				CU_ASSERT_FATAL(pktio_capa.tx_compl.queue_type_sched != 0);
 			}
-
+			CU_ASSERT_FATAL(pktio_capa.config.pktout.bit.tx_compl_ena == 1);
 			odp_pktio_config_init(&config);
 			config.pktout.bit.tx_compl_ena = 1;
 			CU_ASSERT_FATAL(odp_pktio_config(pktio[i], &config) == 0);
@@ -3394,6 +3394,17 @@ static void pktio_test_pktout_compl(bool use_plain_queue)
 		}
 	}
 
+	odp_schedule_pause();
+
+	while (1) {
+		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+
+		if (ev == ODP_EVENT_INVALID)
+			break;
+
+		odp_event_free(ev);
+	}
+
 	for (i = 0; i < TX_BATCH_LEN; i++)
 		odp_queue_destroy(compl_queue[i]);
 
@@ -3401,6 +3412,8 @@ static void pktio_test_pktout_compl(bool use_plain_queue)
 		CU_ASSERT_FATAL(odp_pktio_stop(pktio[i]) == 0);
 		CU_ASSERT_FATAL(odp_pktio_close(pktio[i]) == 0);
 	}
+
+	odp_schedule_resume();
 }
 
 static int pktio_check_pktout_compl(bool plain)
@@ -3422,6 +3435,7 @@ static int pktio_check_pktout_compl(bool plain)
 	(void)odp_pktio_close(pktio);
 
 	if (ret < 0 || !capa.tx_compl.mode_all ||
+	    !capa.config.pktout.bit.tx_compl_ena ||
 	    (plain && !capa.tx_compl.queue_type_plain) ||
 	    (!plain && !capa.tx_compl.queue_type_sched))
 		return ODP_TEST_INACTIVE;

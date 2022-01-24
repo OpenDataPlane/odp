@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2020-2021, Nokia
+ * Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -73,6 +73,9 @@ void odp_event_free(odp_event_t event)
 		break;
 	case ODP_EVENT_IPSEC_STATUS:
 		_odp_ipsec_status_free(_odp_ipsec_status_from_event(event));
+		break;
+	case ODP_EVENT_PACKET_TX_COMPL:
+		odp_packet_tx_compl_free(odp_packet_tx_compl_from_event(event));
 		break;
 	case ODP_EVENT_DMA_COMPL:
 		odp_dma_compl_free(odp_dma_compl_from_event(event));

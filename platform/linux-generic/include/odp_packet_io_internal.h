@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -85,6 +85,8 @@ struct pktio_entry {
 		uint8_t cls : 1;
 		/* Tx timestamp */
 		uint8_t tx_ts : 1;
+		/* Tx completion events */
+		uint8_t tx_compl : 1;
 	} enabled;
 	odp_pktio_t handle;		/**< pktio handle */
 	unsigned char pkt_priv[PKTIO_PRIVATE_SIZE] ODP_ALIGNED_CACHE;
@@ -127,6 +129,9 @@ struct pktio_entry {
 	odp_pool_t pool;
 	odp_pktio_param_t param;
 	odp_pktio_capability_t capa;	/**< Packet IO capabilities */
+
+	/* Buffer pool for Tx completion events */
+	odp_pool_t tx_compl_pool;
 
 	/* Storage for queue handles
 	 * Multi-queue support is pktio driver specific */
@@ -276,6 +281,36 @@ static inline void _odp_pktio_tx_ts_set(pktio_entry_t *entry)
 	odp_time_t ts_val = odp_time_global();
 
 	odp_atomic_store_u64(&entry->s.tx_ts, ts_val.u64);
+}
+
+static inline int _odp_pktio_tx_compl_enabled(pktio_entry_t *entry)
+{
+	return entry->s.enabled.tx_compl;
+}
+
+static inline void _odp_pktio_send_tx_compl_ev(const pktio_entry_t *entry,
+					       const odp_packet_hdr_t *hdr)
+{
+	odp_buffer_t buf;
+	const void **data;
+	odp_event_t ev;
+
+	buf = odp_buffer_alloc(entry->s.tx_compl_pool);
+
+	if (odp_unlikely(buf == ODP_BUFFER_INVALID)) {
+		ODP_ERR("Failed to allocate Tx completion event\n");
+		return;
+	}
+
+	data = odp_buffer_addr(buf);
+	*data = hdr->user_ptr;
+	ev = odp_buffer_to_event(buf);
+	_odp_event_type_set(ev, ODP_EVENT_PACKET_TX_COMPL);
+
+	if (odp_unlikely(odp_queue_enq(hdr->tx_compl_queue, ev))) {
+		ODP_ERR("Failed to enqueue Tx completion event\n");
+		odp_buffer_free(buf);
+	}
 }
 
 extern const pktio_if_ops_t _odp_netmap_pktio_ops;

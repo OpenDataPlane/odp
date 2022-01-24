@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -322,6 +322,8 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 		 sizeof(pktio_entry->s.full_name), "%s", name);
 	pktio_entry->s.pool = pool;
 	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
+	pktio_entry->s.enabled.tx_compl = 0;
+	pktio_entry->s.tx_compl_pool = ODP_POOL_INVALID;
 	pktio_entry->s.handle = hdl;
 	pktio_entry->s.pktin_frame_offset = pktin_frame_offset;
 	odp_atomic_init_u64(&pktio_entry->s.stats_extra.in_discards, 0);
@@ -516,6 +518,11 @@ int odp_pktio_close(odp_pktio_t hdl)
 	entry->s.num_in_queue  = 0;
 	entry->s.num_out_queue = 0;
 
+	if (entry->s.tx_compl_pool != ODP_POOL_INVALID) {
+		res = odp_pool_destroy(entry->s.tx_compl_pool);
+		ODP_ASSERT(res == 0);
+	}
+
 	odp_spinlock_lock(&pktio_global->lock);
 	res = _pktio_close(entry);
 	odp_spinlock_unlock(&pktio_global->lock);
@@ -525,6 +532,28 @@ int odp_pktio_close(odp_pktio_t hdl)
 	unlock_entry(entry);
 
 	ODP_DBG("interface: %s\n", entry->s.name);
+
+	return 0;
+}
+
+static int configure_tx_event_compl(pktio_entry_t *entry)
+{
+	odp_pool_info_t info;
+	odp_pool_param_t params;
+
+	if (odp_pool_info(entry->s.pool, &info))
+		return -1;
+
+	odp_pool_param_init(&params);
+
+	params.buf.num = info.pkt.max_num;
+	/* Room for odp_packet_hdr_t::user_ptr */
+	params.buf.size = sizeof(void *);
+	params.type = ODP_POOL_BUFFER;
+	entry->s.tx_compl_pool = odp_pool_create("_odp_pktio_tx_compl_pool", &params);
+
+	if (entry->s.tx_compl_pool == ODP_POOL_INVALID)
+		return -1;
 
 	return 0;
 }
@@ -581,10 +610,19 @@ int odp_pktio_config(odp_pktio_t hdl, const odp_pktio_config_t *config)
 	entry->s.in_chksums.chksum.sctp = config->pktin.bit.sctp_chksum;
 
 	entry->s.enabled.tx_ts = config->pktout.bit.ts_ena;
+	entry->s.enabled.tx_compl = config->pktout.bit.tx_compl_ena;
+
+	if (entry->s.enabled.tx_compl)
+		if (configure_tx_event_compl(entry)) {
+			ODP_ERR("Unable to configure Tx event completion\n");
+			res = -1;
+			goto out_unlock;
+		}
 
 	if (entry->s.ops->config)
 		res = entry->s.ops->config(entry, config);
 
+out_unlock:
 	unlock_entry(entry);
 
 	return res;
@@ -950,7 +988,8 @@ static inline int packet_vector_send(odp_pktout_queue_t pktout_queue, odp_event_
 {
 	odp_packet_vector_t pktv = odp_packet_vector_from_event(event);
 	odp_packet_t *pkt_tbl;
-	int num, sent;
+	int num, sent, i;
+	odp_packet_hdr_t *pkt_hdr;
 
 	num = odp_packet_vector_tbl(pktv, &pkt_tbl);
 	ODP_ASSERT(num > 0);
@@ -967,6 +1006,16 @@ static inline int packet_vector_send(odp_pktout_queue_t pktout_queue, odp_event_
 		ODP_ASSERT(entry != NULL);
 
 		odp_atomic_add_u64(&entry->s.stats_extra.out_discards, discards);
+
+		if (odp_unlikely(_odp_pktio_tx_compl_enabled(entry)))
+			for (i = sent; i < num; i++) {
+				pkt_hdr = packet_hdr(pkt_tbl[i]);
+				if (odp_unlikely(pkt_hdr->p.flags.tx_compl &&
+						 pkt_hdr->tx_compl_mode ==
+							ODP_PACKET_TX_COMPL_ALL))
+					_odp_pktio_send_tx_compl_ev(entry, pkt_hdr);
+			}
+
 		odp_packet_free_multi(&pkt_tbl[sent], discards);
 	}
 
@@ -1839,6 +1888,10 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 		capa->lso.proto.ipv4             = 1;
 		capa->lso.proto.custom           = 1;
 		capa->lso.mod_op.add_segment_num = 1;
+
+		capa->tx_compl.queue_type_sched = 1;
+		capa->tx_compl.queue_type_plain = 1;
+		capa->tx_compl.mode_all = 1;
 	}
 
 	/* Packet vector generation is common for all pktio types */
