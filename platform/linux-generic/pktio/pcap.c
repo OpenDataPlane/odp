@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -353,6 +353,8 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	pkt_pcap_t *pcap = pkt_priv(pktio_entry);
 	int i;
 	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
+	uint8_t tx_compl_enabled = _odp_pktio_tx_compl_enabled(pktio_entry);
+	odp_packet_hdr_t *pkt_hdr;
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
@@ -371,9 +373,14 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			break;
 
 		pktio_entry->s.stats.out_octets += pkt_len;
+		pkt_hdr = packet_hdr(pkts[i]);
 
-		if (odp_unlikely(tx_ts_enabled && packet_hdr(pkts[i])->p.flags.ts_set))
+		if (odp_unlikely(tx_ts_enabled && pkt_hdr->p.flags.ts_set))
 			_odp_pktio_tx_ts_set(pktio_entry);
+
+		if (odp_unlikely(tx_compl_enabled && pkt_hdr->p.flags.tx_compl &&
+				 pkt_hdr->tx_compl_mode == ODP_PACKET_TX_COMPL_ALL))
+			_odp_pktio_send_tx_compl_ev(pktio_entry, pkt_hdr);
 
 		odp_packet_free(pkts[i]);
 	}
@@ -431,6 +438,7 @@ static int pcapif_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	capa->config.pktin.bit.ts_ptp = 1;
 
 	capa->config.pktout.bit.ts_ena = 1;
+	capa->config.pktout.bit.tx_compl_ena = 1;
 
 	capa->stats.pktio.counter.in_octets = 1;
 	capa->stats.pktio.counter.in_packets = 1;
