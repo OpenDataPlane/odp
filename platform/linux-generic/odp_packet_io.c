@@ -50,6 +50,12 @@
 /* Max wait time supported to avoid potential overflow */
 #define MAX_WAIT_TIME (UINT64_MAX / 1024)
 
+typedef struct {
+	const void *user_ptr;
+	odp_queue_t queue;
+	uint16_t idx;
+} tx_compl_info_t;
+
 /* Global variables */
 static pktio_global_t *pktio_global;
 
@@ -85,6 +91,20 @@ static int read_config_file(pktio_global_t *pktio_glb)
 	}
 
 	pktio_glb->config.pktin_frame_offset = val;
+	ODP_PRINT("  %s: %i\n", str, val);
+
+	str = "pktio.tx_compl_pool_size";
+	if (!_odp_libconfig_lookup_int(str, &val)) {
+		ODP_ERR("Config option '%s' not found.\n", str);
+		return -1;
+	}
+
+	if (val < 0) {
+		ODP_ERR("Bad value %s = %i\n", str, val);
+		return -1;
+	}
+
+	pktio_glb->config.tx_compl_pool_size = val;
 	ODP_PRINT("  %s: %i\n", str, val);
 
 	ODP_PRINT("\n");
@@ -246,6 +266,8 @@ static void init_pktio_entry(pktio_entry_t *entry)
 
 	/* Clear all flags */
 	entry->s.enabled.all_flags = 0;
+
+	entry->s.tx_compl_pool = ODP_POOL_INVALID;
 
 	odp_atomic_init_u64(&entry->s.stats_extra.in_discards, 0);
 	odp_atomic_init_u64(&entry->s.stats_extra.out_discards, 0);
@@ -493,6 +515,14 @@ int odp_pktio_close(odp_pktio_t hdl)
 	entry->s.num_in_queue  = 0;
 	entry->s.num_out_queue = 0;
 
+	if (entry->s.tx_compl_pool != ODP_POOL_INVALID) {
+		if (odp_pool_destroy(entry->s.tx_compl_pool)) {
+			unlock_entry(entry);
+			ODP_ERR("Unable to destroy Tx event completion pool\n");
+			return -1;
+		}
+	}
+
 	odp_spinlock_lock(&pktio_global->lock);
 	res = _pktio_close(entry);
 	odp_spinlock_unlock(&pktio_global->lock);
@@ -502,6 +532,30 @@ int odp_pktio_close(odp_pktio_t hdl)
 	unlock_entry(entry);
 
 	ODP_DBG("interface: %s\n", entry->s.name);
+
+	return 0;
+}
+
+static int configure_tx_event_compl(pktio_entry_t *entry)
+{
+	odp_pool_param_t params;
+	const char *name_base = "_odp_pktio_tx_compl_pool_";
+	char pool_name[ODP_POOL_NAME_LEN];
+
+	if (entry->s.tx_compl_pool != ODP_POOL_INVALID)
+		return 0;
+
+	snprintf(pool_name, sizeof(pool_name), "%s%d", name_base,
+		 odp_pktio_index(entry->s.handle));
+	odp_pool_param_init(&params);
+
+	params.type = ODP_POOL_BUFFER;
+	params.buf.num = pktio_global->config.tx_compl_pool_size;
+	params.buf.size = sizeof(_odp_pktio_tx_compl_t);
+	entry->s.tx_compl_pool = odp_pool_create(pool_name, &params);
+
+	if (entry->s.tx_compl_pool == ODP_POOL_INVALID)
+		return -1;
 
 	return 0;
 }
@@ -558,6 +612,14 @@ int odp_pktio_config(odp_pktio_t hdl, const odp_pktio_config_t *config)
 	entry->s.in_chksums.chksum.sctp = config->pktin.bit.sctp_chksum;
 
 	entry->s.enabled.tx_ts = config->pktout.bit.ts_ena;
+	entry->s.enabled.tx_compl = config->pktout.bit.tx_compl_ena;
+
+	if (entry->s.enabled.tx_compl)
+		if (configure_tx_event_compl(entry)) {
+			unlock_entry(entry);
+			ODP_ERR("Unable to configure Tx event completion\n");
+			return -1;
+		}
 
 	if (entry->s.ops->config)
 		res = entry->s.ops->config(entry, config);
@@ -944,6 +1006,11 @@ static inline int packet_vector_send(odp_pktout_queue_t pktout_queue, odp_event_
 		ODP_ASSERT(entry != NULL);
 
 		odp_atomic_add_u64(&entry->s.stats_extra.out_discards, discards);
+
+		if (odp_unlikely(_odp_pktio_tx_compl_enabled(entry)))
+			_odp_pktio_allocate_and_send_tx_compl_events(entry, &pkt_tbl[sent],
+								     discards);
+
 		odp_packet_free_multi(&pkt_tbl[sent], discards);
 	}
 
@@ -1816,6 +1883,11 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 		capa->lso.proto.ipv4             = 1;
 		capa->lso.proto.custom           = 1;
 		capa->lso.mod_op.add_segment_num = 1;
+
+		capa->config.pktout.bit.tx_compl_ena = 1;
+		capa->tx_compl.queue_type_sched = 1;
+		capa->tx_compl.queue_type_plain = 1;
+		capa->tx_compl.mode_all = 1;
 	}
 
 	/* Packet vector generation is common for all pktio types */
@@ -2851,11 +2923,55 @@ uint64_t odp_pktin_wait_time(uint64_t nsec)
 	return (nsec / (1000)) + 1;
 }
 
+static void check_tx_compl_ev(const odp_packet_hdr_t *hdr, int pkt_idx, tx_compl_info_t *info,
+			      uint16_t *num)
+{
+	if (odp_unlikely(hdr->p.flags.tx_compl)) {
+		info[*num].user_ptr = hdr->user_ptr;
+		info[*num].queue = hdr->dst_queue;
+		info[*num].idx = pkt_idx;
+		(*num)++;
+	}
+}
+
+static void send_tx_compl_event(odp_buffer_t buf, const void *user_ptr, odp_queue_t queue)
+{
+	_odp_pktio_tx_compl_t *data;
+	odp_event_t ev;
+
+	data = odp_buffer_addr(buf);
+	data->user_ptr = user_ptr;
+	ev = odp_buffer_to_event(buf);
+	_odp_event_type_set(ev, ODP_EVENT_PACKET_TX_COMPL);
+
+	if (odp_unlikely(odp_queue_enq(queue, ev))) {
+		ODP_ERR("Failed to enqueue Tx completion event\n");
+		odp_event_free(ev);
+	}
+}
+
+static void send_tx_compl_events(tx_compl_info_t *info, uint16_t num, odp_buffer_t bufs[],
+				 int num_sent)
+{
+	for (int i = 0; i < num; i++) {
+		if (info[i].idx < num_sent) {
+			send_tx_compl_event(bufs[i], info[i].user_ptr, info[i].queue);
+		} else {
+			odp_buffer_free_multi(&bufs[i], num - i);
+			break;
+		}
+	}
+}
+
 int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 		    int num)
 {
 	pktio_entry_t *entry;
 	odp_pktio_t pktio = queue.pktio;
+	uint16_t num_tx_cevs = 0;
+	tx_compl_info_t tx_compl_info[num];
+	odp_buffer_t bufs[num];
+	int num_to_send = num, num_sent;
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
@@ -2869,7 +2985,30 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 	if (_ODP_PCAPNG)
 		_odp_dump_pcapng_pkts(entry, queue.index, packets, num);
 
-	return entry->s.ops->send(entry, queue.index, packets, num);
+	if (odp_unlikely(_odp_pktio_tx_compl_enabled(entry))) {
+		for (int i = 0; i < num; i++)
+			check_tx_compl_ev(packet_hdr(packets[i]), i, tx_compl_info, &num_tx_cevs);
+
+		if (odp_unlikely(num_tx_cevs)) {
+			int num_alloc = odp_buffer_alloc_multi(entry->s.tx_compl_pool, bufs,
+							       num_tx_cevs);
+
+			if (odp_unlikely(num_alloc < num_tx_cevs)) {
+				if (odp_unlikely(num_alloc < 0))
+					num_alloc = 0;
+
+				num_to_send = tx_compl_info[num_alloc].idx;
+				num_tx_cevs = num_alloc;
+			}
+		}
+	}
+
+	num_sent = entry->s.ops->send(entry, queue.index, packets, num_to_send);
+
+	if (odp_unlikely(num_tx_cevs))
+		send_tx_compl_events(tx_compl_info, num_tx_cevs, bufs, num_sent);
+
+	return num_sent;
 }
 
 /** Get printable format of odp_pktio_t */
@@ -3361,6 +3500,28 @@ int odp_pktout_send_lso(odp_pktout_queue_t queue, const odp_packet_t packet[], i
 	}
 
 	return i;
+}
+
+void _odp_pktio_allocate_and_send_tx_compl_events(const pktio_entry_t *entry,
+						  const odp_packet_t packets[], int num)
+{
+	uint16_t num_tx_cevs = 0, num_alloc;
+	int idx[num];
+	odp_buffer_t bufs[num];
+	odp_packet_hdr_t *hdr;
+
+	for (int i = 0; i < num; i++)
+		if (odp_unlikely(packet_hdr(packets[i])->p.flags.tx_compl))
+			idx[num_tx_cevs++] = i;
+
+	if (odp_unlikely(num_tx_cevs)) {
+		num_alloc = odp_buffer_alloc_multi(entry->s.tx_compl_pool, bufs, num_tx_cevs);
+
+		for (int i = 0; i < num_alloc; i++) {
+			hdr = packet_hdr(packets[idx[i]]);
+			send_tx_compl_event(bufs[i], hdr->user_ptr, hdr->dst_queue);
+		}
+	}
 }
 
 void

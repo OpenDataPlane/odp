@@ -90,6 +90,8 @@ struct pktio_entry {
 				uint8_t cls : 1;
 				/* Tx timestamp */
 				uint8_t tx_ts : 1;
+				/* Tx completion events */
+				uint8_t tx_compl : 1;
 			};
 		};
 	} enabled;
@@ -135,6 +137,9 @@ struct pktio_entry {
 	odp_pool_t pool;
 	odp_pktio_param_t param;
 	odp_pktio_capability_t capa;	/**< Packet IO capabilities */
+
+	/* Pool for Tx completion events */
+	odp_pool_t tx_compl_pool;
 
 	/* Storage for queue handles
 	 * Multi-queue support is pktio driver specific */
@@ -182,6 +187,8 @@ typedef struct {
 	struct {
 		/* Frame start offset from base pointer at packet input */
 		uint16_t pktin_frame_offset;
+		/* Pool size for potential completion events */
+		uint32_t tx_compl_pool_size;
 	} config;
 
 	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
@@ -278,6 +285,11 @@ static inline int _odp_pktio_tx_ts_enabled(pktio_entry_t *entry)
 	return entry->s.enabled.tx_ts;
 }
 
+static inline int _odp_pktio_tx_compl_enabled(const pktio_entry_t *entry)
+{
+	return entry->s.enabled.tx_compl;
+}
+
 static inline void _odp_pktio_tx_ts_set(pktio_entry_t *entry)
 {
 	odp_time_t ts_val = odp_time_global();
@@ -331,6 +343,9 @@ int _odp_lso_num_packets(odp_packet_t packet, const odp_packet_lso_opt_t *lso_op
 int _odp_lso_create_packets(odp_packet_t packet, const odp_packet_lso_opt_t *lso_opt,
 			    uint32_t payload_len, uint32_t left_over_len,
 			    odp_packet_t pkt_out[], int num_pkt);
+
+void _odp_pktio_allocate_and_send_tx_compl_events(const pktio_entry_t *entry,
+						  const odp_packet_t packets[], int num);
 
 #ifdef __cplusplus
 }
