@@ -203,9 +203,46 @@ typedef enum {
 #define ODP_CLOCK_EXT ODP_CLOCK_SRC_1
 
 /**
+ * Timer expiration mode
+ *
+ * Expiration mode selects how timer expiration tick is interpreted. In ODP_TIMER_EXP_RELAXED mode,
+ * timer implementation may round the requested time up or down within resolution limits, and
+ * therefore application may receive timeouts slightly before or after the requested time.
+ * In ODP_TIMER_EXP_AFTER mode, timers are limited to expire exactly on the requested time or
+ * after it, but never before the time.
+ */
+typedef enum {
+	/**
+	 * Expiration after the target time
+	 *
+	 * Timers expire on the specified time or after it, but never before it. */
+	ODP_TIMER_EXP_AFTER = 0,
+
+	/**
+	 * Expiration relaxed
+	 *
+	 * Timers may expire before or after the specified time (within resolution limits).
+	 * Depending on implementation, this may improve expiration accuracy compared to
+	 * ODP_TIMER_EXP_AFTER.
+	 */
+	ODP_TIMER_EXP_RELAXED
+
+} odp_timer_exp_mode_t;
+
+/**
  * Timer pool parameters
  */
 typedef struct {
+	/** Clock source for timers
+	 *
+	 *  The default value is ODP_CLOCK_DEFAULT. */
+	odp_timer_clk_src_t clk_src;
+
+	/** Timer expiration mode
+	 *
+	 *  The default value is ODP_TIMER_EXP_AFTER. */
+	odp_timer_exp_mode_t exp_mode;
+
 	/** Timeout resolution in nanoseconds. Timer pool must serve timeouts
 	 *  with this or higher resolution. The minimum valid value (highest
 	 *  resolution) is defined by timer resolution capability. When this
@@ -238,11 +275,6 @@ typedef struct {
 	 *  timer pool concurrently. When non-zero, only single thread uses the
 	 *  timer pool (concurrently). The default value is zero. */
 	int priv;
-
-	/** Clock source for timers
-	 *
-	 *  The default value is ODP_CLOCK_DEFAULT. */
-	odp_timer_clk_src_t clk_src;
 
 } odp_timer_pool_param_t;
 
