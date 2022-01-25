@@ -2,6 +2,7 @@
  *
  * Copyright (c) 2015-2018, Linaro Limited
  * Copyright (c) 2022, Marvell
+ * Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -2230,6 +2231,7 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 	pkt_desc_t *pkt_desc;
 	uint32_t cnt;
 	int ret;
+	pktio_entry_t *pktio_entry;
 
 	for (cnt = 1; cnt <= max_sends; cnt++) {
 		pkt_desc = &tm_system->egress_pkt_desc;
@@ -2250,6 +2252,10 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 		if (tm_system->egress.egress_kind == ODP_TM_EGRESS_PKT_IO) {
 			ret = odp_pktout_send(tm_system->pktout, &odp_pkt, 1);
 			if (odp_unlikely(ret != 1)) {
+				pktio_entry = get_pktio_entry(tm_system->pktout.pktio);
+				if (odp_unlikely(_odp_pktio_tx_compl_enabled(pktio_entry)))
+					_odp_pktio_allocate_and_send_tx_compl_events(pktio_entry,
+										     &odp_pkt, 1);
 				odp_packet_free(odp_pkt);
 				if (odp_unlikely(ret < 0))
 					odp_atomic_inc_u64(&tm_queue_obj->stats.errors);
