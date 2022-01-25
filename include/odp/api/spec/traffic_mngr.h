@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * Copyright (c) 2022, Marvell
  * All rights reserved.
  *
@@ -555,7 +555,8 @@ typedef struct {
  *
  * The odp_tm_level_requirements_t record is used to describe the requirements
  * that might vary based upon the tm_node level.  It is always used as
- * part of the odp_tm_requirements record. */
+ * part of the odp_tm_requirements record. The default value of all boolean
+ * fields is false. */
 typedef struct {
 	/** max_num_tm_nodes specifies the maximum number of tm_nodes required
 	 * at this level. */
@@ -615,7 +616,10 @@ typedef struct {
 /** TM Requirements Record.
  *
  * The odp_tm_requirements_t record type is used to describe the minimum
- * set of features and limits to be actually used by the application. */
+ * set of features and limits to be actually used by the application.
+ *
+ * The default value of all boolean fields is false.
+ **/
 typedef struct {
 	/** max_tm_queues specifies the maximum number of tm_queues that will
 	 * be used for this TM System. */
@@ -623,7 +627,8 @@ typedef struct {
 
 	/** num_levels specifies that number of levels of hierarchical
 	 * scheduling that will be used.  This is a count of the tm_node
-	 * stages and does not include tm_queues or tm_egress objects. */
+	 * stages and does not include tm_queues or tm_egress objects.
+	 * The default value is 0. */
 	uint8_t num_levels;
 
 	/** tm_queue_shaper_needed indicates that the tm_queues are expected
@@ -710,7 +715,7 @@ typedef struct {
 	};
 } odp_tm_egress_t;
 
-/** Initialize Requirements record.
+/** Initialize Requirements record fields to their default values.
  *
  * odp_tm_requirements_init() must be called to initialize any
  * odp_tm_requirements_t record before it is first used or assigned to.
@@ -1095,25 +1100,30 @@ typedef struct {
 	 * would be the value 20 (8 + 12), but in same cases can be as low as
 	 * 9 (4 + 5).
 	 * This field is ignored when packet_mode is TRUE.
-	 */
+	 *
+	 * The default value is 0. */
 	int8_t shaper_len_adjust;
 
 	/** If dual_rate is TRUE it indicates the desire for the
 	 * implementation to use dual rate shaping for packets associated with
 	 * this profile.  The precise semantics of dual rate shaping are
 	 * implementation specific, but in any case require a non-zero set of
-	 * both commit and peak parameters. */
+	 * both commit and peak parameters.
+	 *
+	 * The default value is false. */
 	odp_bool_t dual_rate;
 
 	/** If packet_mode is TRUE it indicates that shaper should work
 	 * in packet mode ignoring lengths of packet and hence shaping
 	 * traffic in packet's per second as opposed to bits per second.
-	 */
+	 *
+	 * The default value is false. */
 	odp_bool_t packet_mode;
 } odp_tm_shaper_params_t;
 
 /** odp_tm_shaper_params_init() must be called to initialize any
  * odp_tm_shaper_params_t record before it is first used or assigned to.
+ * The parameters are initialized to their default values.
  *
  * @param params  A pointer to an odp_tm_shaper_params_t record which
  *                is to be initialized.
@@ -1210,7 +1220,8 @@ typedef enum {
  */
 typedef struct {
 	/** sched_modes indicates whether weighted scheduling should be used
-	 * or not - on a priority basis. */
+	 * or not - on a priority basis.
+	 * The default value is ODP_TM_BYTE_BASED_WEIGHTS for all priorities */
 	odp_tm_sched_mode_t sched_modes[ODP_TM_MAX_PRIORITIES];
 
 	/** In the case that sched_modes for a given strict priority level
@@ -1225,6 +1236,7 @@ typedef struct {
 
 /** odp_tm_sched_params_init() must be called to initialize any
  * odp_tm_sched_params_t record before it is first used or assigned to.
+ * The parameters are initialized to their default values.
  *
  * @param params  A pointer to an odp_tm_sched_params_t record which
  *                is to be initialized.
@@ -1308,12 +1320,17 @@ odp_tm_sched_t odp_tm_sched_lookup(const char *name);
 typedef struct {
 	uint64_t max_pkts; /**<  max pkt cnt for this threshold profile */
 	uint64_t max_bytes; /**<  max byte cnt for this threshold profile */
-	odp_bool_t enable_max_pkts; /**<  TRUE if max_pkts is valid */
-	odp_bool_t enable_max_bytes; /**<  TRUE if max_bytes is valid */
+
+	/** TRUE if max_pkts is valid. The default value is false. */
+	odp_bool_t enable_max_pkts;
+
+	/** TRUE if max_bytes is valid. The default value is false. */
+	odp_bool_t enable_max_bytes;
 } odp_tm_threshold_params_t;
 
 /** odp_tm_threshold_params_init() must be called to initialize any
  * odp_tm_threshold_params_t record before it is first used or assigned to.
+ * The parameters are initialized to their default values.
  *
  * @param params  A pointer to an odp_tm_threshold_params_t record which
  *                is to be initialized.
@@ -1437,7 +1454,7 @@ typedef struct {
 
 	/** When enable_wred is false, all tm_queues and tm_nodes that are
 	 * attached to this profile will not take part in a Random Early
-	 * Detection algorithm. */
+	 * Detection algorithm. The default value is false. */
 	odp_bool_t enable_wred;
 
 	/** When use_byte_fullness is true then WRED will use queue memory
@@ -1445,12 +1462,13 @@ typedef struct {
 	 * is false, WRED will use the queue length (i.e. the number of
 	 * packets in the queue) as the fullness criterion.  Often will be set
 	 * to true for WRED profiles applied to tm_queues and set to false for
-	 * WRED profiles applied to tm_nodes. */
+	 * WRED profiles applied to tm_nodes. The default value is false. */
 	odp_bool_t use_byte_fullness;
 } odp_tm_wred_params_t;
 
 /** odp_tm_wred_params_init() must be called to initialize any
  * odp_tm_wred_params_t record before it is first used or assigned to.
+ * The parameters are initialized to their default values.
  *
  * @param params  A pointer to an odp_tm_wred_params_t record which
  *                is to be initialized.
@@ -1544,17 +1562,19 @@ typedef struct {
 
 	/** The shaper profile to be associated with this tm_node.  Can be
 	 * ODP_TM_INVALID and can also be set and changed post-creation via
-	 * odp_tm_node_shaper_config(); */
+	 * odp_tm_node_shaper_config(); The default value is ODP_TM_INVALID. */
 	odp_tm_shaper_t shaper_profile;
 
 	/** The threshold profile to be used in setting the max queue fullness
 	 * for WRED and/or tail drop?  Can be ODP_TM_INVALID and can also be
-	 * set and changed post-creation via odp_tm_node_threshold_config(). */
+	 * set and changed post-creation via odp_tm_node_threshold_config().
+	 * The default value is ODP_TM_INVALID. */
 	odp_tm_threshold_t threshold_profile;
 
 	/** The WRED profile(s) to be associated with this tm_node.  Any or
 	 * all array elements can be ODP_TM_INVALID and can also be set and
-	 * changed post-creation via odp_tm_node_wred_config(). */
+	 * changed post-creation via odp_tm_node_wred_config().
+	 * The default value is ODP_TM_INVALID for every color. */
 	odp_tm_wred_t wred_profile[ODP_NUM_PACKET_COLORS];
 
 	/** The level (or tm_node stage) sets the level for this tm_node It
@@ -1583,6 +1603,7 @@ typedef struct {
 
 /** odp_tm_node_params_init() must be called to initialize any
  * odp_tm_node_params_t record before it is first used or assigned to.
+ * The parameters are initialized to their default values.
  *
  * @param params  A pointer to an odp_tm_node_params_t record which
  *                is to be initialized.
@@ -1728,23 +1749,25 @@ typedef struct {
 
 	/** The shaper profile to be associated with this tm_queue.  Can be
 	 * ODP_TM_INVALID and can also be set and changed post-creation via
-	 * odp_tm_queue_shaper_config(). */
+	 * odp_tm_queue_shaper_config(). The default value is ODP_TM_INVALID. */
 	odp_tm_shaper_t shaper_profile;
 
 	/** The threshold profile to be used in setting the max queue fullness
 	 * for WRED and/or tail drop?  Can be ODP_TM_INVALID and can also be
-	 * set and changed post-creation via odp_tm_queue_threshold_config(). */
+	 * set and changed post-creation via odp_tm_queue_threshold_config().
+	 * The default value is ODP_TM_INVALID. */
 	odp_tm_threshold_t threshold_profile;
 
 	/** The WRED profile(s) to be associated with this tm_queue.  Any or
 	 * all array elements can be ODP_TM_INVALID and can also be set and
-	 * changed post-creation via odp_tm_queue_wred_config(). */
+	 * changed post-creation via odp_tm_queue_wred_config().
+	 * The default value is ODP_TM_INVALID for every color. */
 	odp_tm_wred_t wred_profile[ODP_NUM_PACKET_COLORS];
 
 	/** The strict priority level assigned to packets in this tm_queue -
 	 * in other words all packets associated with a given tm_queue MUST
 	 * have the same single strict priority level and this level must be
-	 * in the range 0..max_priority. */
+	 * in the range 0..max_priority. The default value is 0. */
 	uint8_t priority;
 
 	/** Maintain original packet order of the source queue when enqueuing
@@ -1756,6 +1779,7 @@ typedef struct {
 
 /** odp_tm_queue_params_init() must be called to initialize any
  * odp_tm_queue_params_t record before it is first used or assigned to.
+ * The parameters are initialized to their default values.
  *
  * @param params  A pointer to an odp_tm_queue_params_t record which
  *                is to be initialized.
