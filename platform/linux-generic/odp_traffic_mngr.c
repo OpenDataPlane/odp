@@ -1,6 +1,7 @@
 /* Copyright 2015 EZchip Semiconductor Ltd. All Rights Reserved.
  *
  * Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -2218,7 +2219,9 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 	odp_packet_t odp_pkt;
 	pkt_desc_t *pkt_desc;
 	uint32_t cnt;
-	int ret;
+	int ret, tx_compl_enabled;
+	pktio_entry_t *pktio_entry;
+	odp_packet_hdr_t *pkt_hdr;
 
 	for (cnt = 1; cnt <= max_sends; cnt++) {
 		pkt_desc = &tm_system->egress_pkt_desc;
@@ -2237,8 +2240,15 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 
 		tm_system->egress_pkt_desc = EMPTY_PKT_DESC;
 		if (tm_system->egress.egress_kind == ODP_TM_EGRESS_PKT_IO) {
+			pktio_entry = get_pktio_entry(tm_system->pktout.pktio);
+			tx_compl_enabled = _odp_pktio_tx_compl_enabled(pktio_entry);
 			ret = odp_pktout_send(tm_system->pktout, &odp_pkt, 1);
 			if (odp_unlikely(ret != 1)) {
+				pkt_hdr = packet_hdr(odp_pkt);
+				if (odp_unlikely(tx_compl_enabled && pkt_hdr->p.flags.tx_compl &&
+						 pkt_hdr->tx_compl_mode ==
+							ODP_PACKET_TX_COMPL_ALL))
+					_odp_pktio_send_tx_compl_ev(pktio_entry, pkt_hdr);
 				odp_packet_free(odp_pkt);
 				if (odp_unlikely(ret < 0))
 					odp_atomic_inc_u64(&tm_queue_obj->stats.errors);
