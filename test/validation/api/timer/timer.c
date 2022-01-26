@@ -35,6 +35,10 @@
 #define USER_PTR ((void *)0xdead)
 #define TICK_INVALID (~(uint64_t)0)
 
+/* Test case options */
+#define PRIV      1
+#define EXP_RELAX 1
+
 /* Timer helper structure */
 struct test_timer {
 	odp_timer_t tim; /* Timer handle */
@@ -312,6 +316,7 @@ static void timer_test_param_init(void)
 	CU_ASSERT(tp_param.min_tmo == 0);
 	CU_ASSERT(tp_param.priv == 0);
 	CU_ASSERT(tp_param.clk_src == ODP_CLOCK_DEFAULT);
+	CU_ASSERT(tp_param.exp_mode == ODP_TIMER_EXP_AFTER);
 }
 
 static void timer_test_timeout_pool_alloc(void)
@@ -915,7 +920,7 @@ static void timer_test_pkt_event_sched(void)
 	timer_test_event_type(ODP_QUEUE_TYPE_SCHED, ODP_EVENT_PACKET);
 }
 
-static void timer_test_queue_type(odp_queue_type_t queue_type, int priv)
+static void timer_test_queue_type(odp_queue_type_t queue_type, int priv, int exp_relax)
 {
 	odp_pool_t pool;
 	const int num = 10;
@@ -927,13 +932,14 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv)
 	odp_queue_t queue;
 	odp_timer_t tim;
 	int i, ret, num_tmo;
-	uint64_t tick_base, tick;
+	uint64_t tick_base, tick, nsec_base, nsec;
 	uint64_t res_ns, period_ns, period_tick, test_period;
-	uint64_t diff_period, diff_test;
+	uint64_t diff_test;
 	odp_pool_param_t params;
-	odp_time_t t0, t1, t2;
+	odp_time_t t0, t1;
 	odp_timer_t timer[num];
 	uint64_t target_tick[num];
+	uint64_t target_nsec[num];
 	void *user_ptr[num];
 
 	odp_pool_param_init(&params);
@@ -952,6 +958,9 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv)
 	tparam.num_timers = num + 1;
 	tparam.priv       = priv;
 	tparam.clk_src    = ODP_CLOCK_DEFAULT;
+
+	if (exp_relax)
+		tparam.exp_mode = ODP_TIMER_EXP_RELAXED;
 
 	ODPH_DBG("\nTimer pool parameters:\n");
 	ODPH_DBG("  res_ns  %" PRIu64 "\n", tparam.res_ns);
@@ -985,7 +994,7 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv)
 	tick_base = odp_timer_current_tick(tp);
 	t0 = odp_time_local();
 	t1 = t0;
-	t2 = t0;
+	nsec_base = odp_time_to_ns(t0);
 
 	for (i = 0; i < num; i++) {
 		tmo = odp_timeout_alloc(pool);
@@ -1001,6 +1010,7 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv)
 		tick = tick_base + ((i + 1) * period_tick);
 		ret = odp_timer_set_abs(tim, tick, &ev);
 		target_tick[i] = tick;
+		target_nsec[i] = nsec_base + ((i + 1) * period_ns);
 
 		ODPH_DBG("abs timer tick %" PRIu64 "\n", tick);
 		if (ret == ODP_TIMER_TOO_NEAR)
@@ -1021,26 +1031,40 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv)
 		else
 			ev = odp_queue_deq(queue);
 
-		t2 = odp_time_local();
-		diff_test = odp_time_diff_ns(t2, t0);
+		t1 = odp_time_local();
+		nsec = odp_time_to_ns(t1);
+		diff_test = nsec - nsec_base;
 
 		if (ev != ODP_EVENT_INVALID) {
-			diff_period = odp_time_diff_ns(t2, t1);
-			t1 = t2;
+			uint64_t target;
+
 			tmo = odp_timeout_from_event(ev);
 			tim = odp_timeout_timer(tmo);
 			tick = odp_timeout_tick(tmo);
+			target = target_nsec[num_tmo];
 
 			CU_ASSERT(timer[num_tmo] == tim);
 			CU_ASSERT(target_tick[num_tmo] == tick);
-			CU_ASSERT(user_ptr[num_tmo] ==
-				  odp_timeout_user_ptr(tmo));
-			CU_ASSERT(diff_period > (period_ns - (5 * res_ns)));
-			CU_ASSERT(diff_period < (period_ns + (5 * res_ns)));
+			CU_ASSERT(user_ptr[num_tmo] == odp_timeout_user_ptr(tmo));
 
-			ODPH_DBG("timeout tick %" PRIu64 ", target tick  "
-				 "%" PRIu64 ", timeout period %" PRIu64 "\n",
-				 tick, target_tick[num_tmo], diff_period);
+			CU_ASSERT(nsec < (target + (5 * res_ns)));
+
+			if (exp_relax) {
+				CU_ASSERT(nsec > (target - (5 * res_ns)));
+			} else {
+				/* Timeout must not arrive before the current time has passed
+				 * the target time (in timer ticks). */
+				CU_ASSERT(target_tick[num_tmo] <= odp_timer_current_tick(tp));
+
+				/* Timeout should not arrive before the target wall clock time.
+				 * However, allow small drift or error between wall clock and
+				 * timer. */
+				CU_ASSERT(nsec > (target - res_ns));
+			}
+
+			ODPH_DBG("timeout tick %" PRIu64 ", nsec %" PRIu64 ", "
+				 "target nsec %" PRIu64 ", diff nsec %" PRIi64 "\n",
+				 tick, nsec, target, (int64_t)(nsec - target));
 
 			odp_timeout_free(tmo);
 			CU_ASSERT(odp_timer_free(tim) == ODP_EVENT_INVALID);
@@ -1078,22 +1102,32 @@ static void timer_test_queue_type(odp_queue_type_t queue_type, int priv)
 
 static void timer_test_plain_queue(void)
 {
-	timer_test_queue_type(ODP_QUEUE_TYPE_PLAIN, 0);
+	timer_test_queue_type(ODP_QUEUE_TYPE_PLAIN, 0, 0);
 }
 
 static void timer_test_sched_queue(void)
 {
-	timer_test_queue_type(ODP_QUEUE_TYPE_SCHED, 0);
+	timer_test_queue_type(ODP_QUEUE_TYPE_SCHED, 0, 0);
 }
 
 static void timer_test_plain_queue_priv(void)
 {
-	timer_test_queue_type(ODP_QUEUE_TYPE_PLAIN, 1);
+	timer_test_queue_type(ODP_QUEUE_TYPE_PLAIN, PRIV, 0);
 }
 
 static void timer_test_sched_queue_priv(void)
 {
-	timer_test_queue_type(ODP_QUEUE_TYPE_SCHED, 1);
+	timer_test_queue_type(ODP_QUEUE_TYPE_SCHED, PRIV, 0);
+}
+
+static void timer_test_plain_queue_exp_relax(void)
+{
+	timer_test_queue_type(ODP_QUEUE_TYPE_PLAIN, 0, EXP_RELAX);
+}
+
+static void timer_test_sched_queue_exp_relax(void)
+{
+	timer_test_queue_type(ODP_QUEUE_TYPE_SCHED, 0, EXP_RELAX);
 }
 
 static void timer_test_cancel(void)
@@ -1469,7 +1503,7 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 		}
 
 		if (tick > odp_timer_current_tick(global_mem->tp))
-			CU_FAIL("Timeout delivered early");
+			CU_FAIL("Timeout delivered early in ODP_TIMER_EXP_AFTER mode");
 
 		if (tick < prev_tick) {
 			ODPH_DBG("Too late tick: %" PRIu64 " prev_tick "
@@ -1948,6 +1982,10 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(timer_test_plain_queue_priv,
 				  check_plain_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_sched_queue_priv,
+				  check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_plain_queue_exp_relax,
+				  check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_sched_queue_exp_relax,
 				  check_sched_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_plain_all,
 				  check_plain_queue_support),
