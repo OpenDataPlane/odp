@@ -1307,6 +1307,7 @@ void odp_timer_pool_param_init(odp_timer_pool_param_t *param)
 {
 	memset(param, 0, sizeof(odp_timer_pool_param_t));
 	param->clk_src = ODP_CLOCK_DEFAULT;
+	param->exp_mode = ODP_TIMER_EXP_AFTER;
 }
 
 odp_timer_pool_t odp_timer_pool_create(const char *name,
