@@ -220,21 +220,29 @@ static inline void _cls_queue_unwind(uint32_t tbl_index, uint32_t j)
 		odp_queue_destroy(queue_grp_tbl->s.queue[tbl_index + --j]);
 }
 
-odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param)
+odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_in)
 {
 	uint32_t i, j;
 	odp_queue_t queue;
 	odp_cls_drop_t drop_policy;
 	cos_t *cos;
 	uint32_t tbl_index;
+	odp_cls_cos_param_t param = *param_in;
+
+	if (param.action == ODP_COS_ACTION_DROP) {
+		param.num_queue = 1;
+		param.queue = ODP_QUEUE_INVALID;
+		param.pool = ODP_POOL_INVALID;
+		param.vector.enable = false;
+	}
 
 	/* num_queue should not be zero */
-	if (param->num_queue > CLS_COS_QUEUE_MAX || param->num_queue < 1)
+	if (param.num_queue > CLS_COS_QUEUE_MAX || param.num_queue < 1)
 		return ODP_COS_INVALID;
 
 	/* Validate packet vector parameters */
-	if (param->vector.enable) {
-		odp_pool_t pool = param->vector.pool;
+	if (param.vector.enable) {
+		odp_pool_t pool = param.vector.pool;
 		odp_pool_info_t pool_info;
 
 		if (pool == ODP_POOL_INVALID || odp_pool_info(pool, &pool_info)) {
@@ -245,17 +253,17 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param)
 			ODP_ERR("wrong pool type\n");
 			return ODP_COS_INVALID;
 		}
-		if (param->vector.max_size == 0) {
+		if (param.vector.max_size == 0) {
 			ODP_ERR("vector.max_size is zero\n");
 			return ODP_COS_INVALID;
 		}
-		if (param->vector.max_size > pool_info.params.vector.max_size) {
+		if (param.vector.max_size > pool_info.params.vector.max_size) {
 			ODP_ERR("vector.max_size larger than pool max vector size\n");
 			return ODP_COS_INVALID;
 		}
 	}
 
-	drop_policy = param->drop_policy;
+	drop_policy = param.drop_policy;
 
 	for (i = 0; i < CLS_COS_MAX_ENTRY; i++) {
 		cos = &cos_tbl->cos_entry[i];
@@ -274,16 +282,16 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param)
 				cos->s.linked_cos[j] = NULL;
 			}
 
-			cos->s.num_queue = param->num_queue;
+			cos->s.num_queue = param.num_queue;
 
-			if (param->num_queue > 1) {
+			if (param.num_queue > 1) {
 				odp_queue_param_init(&cos->s.queue_param);
 				cos->s.queue_group = true;
 				cos->s.queue = ODP_QUEUE_INVALID;
 				_odp_cls_update_hash_proto(cos,
-							   param->hash_proto);
+							   param.hash_proto);
 				tbl_index = i * CLS_COS_QUEUE_MAX;
-				for (j = 0; j < param->num_queue; j++) {
+				for (j = 0; j < param.num_queue; j++) {
 					queue = odp_queue_create(NULL, &cos->s.queue_param);
 					if (queue == ODP_QUEUE_INVALID) {
 						/* unwind the queues */
@@ -296,7 +304,7 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param)
 				}
 
 			} else {
-				cos->s.queue = param->queue;
+				cos->s.queue = param.queue;
 			}
 			/* Initialize statistics counters */
 			for (j = 0; j < cos->s.num_queue; j++) {
@@ -304,13 +312,14 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param)
 				odp_atomic_init_u64(&cos->s.stats[j].packets, 0);
 			}
 
-			cos->s.pool = param->pool;
+			cos->s.action = param.action;
+			cos->s.pool = param.pool;
 			cos->s.headroom = 0;
 			cos->s.valid = 1;
 			cos->s.drop_policy = drop_policy;
 			odp_atomic_init_u32(&cos->s.num_rule, 0);
 			cos->s.index = i;
-			cos->s.vector = param->vector;
+			cos->s.vector = param.vector;
 			UNLOCK(&cos->s.lock);
 			return _odp_cos_from_ndx(i);
 		}
@@ -1575,6 +1584,7 @@ static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
  * @retval 0 on success
  * @retval -EFAULT Bug
  * @retval -EINVAL Config error
+ * @retval -ENOENT Drop action
  *
  * @note *base is not released
  */
@@ -1591,6 +1601,9 @@ int _odp_cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 
 	if (cos == NULL)
 		return -EINVAL;
+
+	if (cos->s.action == ODP_COS_ACTION_DROP)
+		return -ENOENT;
 
 	if (cos->s.queue == ODP_QUEUE_INVALID && cos->s.num_queue == 1)
 		return -EFAULT;
