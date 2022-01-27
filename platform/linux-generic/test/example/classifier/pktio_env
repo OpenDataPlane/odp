@@ -20,7 +20,7 @@ PCAP_IN=`find . ${TEST_DIR} $(dirname $0) -name udp64.pcap -print -quit`
 echo "using PCAP in=${PCAP_IN}"
 
 IF0=pcap:in=${PCAP_IN}
-TIME_OUT_VAL=10
+TIME_OUT_VAL=1
 CPASS_COUNT_ARG1=100
 CPASS_COUNT_ARG2=100
 

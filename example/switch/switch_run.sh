@@ -18,7 +18,7 @@ fi
 
 setup_interfaces
 
-./odp_switch${EXEEXT} -i $IF0,$IF1,$IF2,$IF3 -t 1
+./odp_switch${EXEEXT} -i $IF0,$IF1,$IF2,$IF3 -t 1 -a 1
 STATUS=$?
 if [ "$STATUS" -ne 0 ]; then
   echo "Error: status was: $STATUS, expected 0"
