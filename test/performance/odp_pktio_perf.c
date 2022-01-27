@@ -52,6 +52,12 @@
  * received by this time will be assumed to have been lost. */
 #define SHUTDOWN_DELAY_NS (ODP_TIME_MSEC_IN_NS * 100)
 
+/* Number of duration units in a second. */
+#define T_SCALE 10
+
+/* Default test duration in T_SCALE units */
+#define DEFAULT_DURATION 1
+
 #define CACHE_ALIGN_ROUNDUP(x)\
 	((ODP_CACHE_LINE_SIZE) * \
 	 (((x) + ODP_CACHE_LINE_SIZE - 1) / (ODP_CACHE_LINE_SIZE)))
@@ -63,8 +69,7 @@
 typedef struct {
 	unsigned int cpu_count;	/* CPU count */
 	int      num_tx_workers;/* Number of CPUs to use for transmit */
-	int      duration;	/* Number of seconds to run each iteration
-				   of the test for */
+	int      duration;	/* Time to run each iteration of the test for */
 	uint32_t tx_batch_len;	/* Number of packets to send in a single
 				   batch */
 	int      schedule;	/* 1: receive packets via scheduler
@@ -141,7 +146,7 @@ typedef struct {
 /* Thread specific arguments */
 typedef struct {
 	int batch_len; /* Number of packets per transmit batch */
-	int duration;  /* Run duration in seconds */
+	int duration;  /* Run duration in scaled time units */
 	uint64_t pps;  /* Packets per second for this thread */
 } thread_args_t;
 
@@ -323,7 +328,7 @@ static int run_thread_tx(void *arg)
 	burst_gap = odp_time_local_from_ns(
 			ODP_TIME_SEC_IN_NS / (targs->pps / targs->batch_len));
 	send_duration =
-		odp_time_local_from_ns(targs->duration * ODP_TIME_SEC_IN_NS);
+		odp_time_local_from_ns(targs->duration * ODP_TIME_SEC_IN_NS / T_SCALE);
 
 	odp_barrier_wait(&globals->tx_barrier);
 
@@ -611,7 +616,7 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	memset(gbl_args->rx_stats, 0, gbl_args->rx_stats_size);
 	memset(gbl_args->tx_stats, 0, gbl_args->tx_stats_size);
 
-	expected_tx_cnt = status->pps_curr * gbl_args->args.duration;
+	expected_tx_cnt = status->pps_curr * gbl_args->args.duration / T_SCALE;
 
 	/* start receiver threads first */
 
@@ -973,7 +978,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	args->num_tx_workers = 0; /* defaults to cpu_count+1/2 */
 	args->tx_batch_len   = BATCH_LEN_MAX;
 	args->rx_batch_len   = BATCH_LEN_MAX;
-	args->duration       = 1;
+	args->duration       = DEFAULT_DURATION;
 	args->pps            = RATE_SEARCH_INITIAL_PPS;
 	args->search         = 1;
 	args->schedule       = 1;
@@ -997,7 +1002,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 			args->num_tx_workers = atoi(optarg);
 			break;
 		case 'd':
-			args->duration = atoi(optarg);
+			args->duration = atoi(optarg) * T_SCALE;
 			break;
 		case 'r':
 			args->pps     = atoi(optarg);
