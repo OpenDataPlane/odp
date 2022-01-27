@@ -28,7 +28,7 @@
 #define MAX_NB_ROUTE	32
 
 #define INVALID_ID	(-1)
-#define PRINT_INTERVAL	10	/* interval seconds of printing stats */
+#define PRINT_INTERVAL	1	/* interval seconds of printing stats */
 
 /** Get rid of path in filename - only for unix-type paths using '/' */
 #define NO_PATH(file_name) (strrchr((file_name), '/') ? \
