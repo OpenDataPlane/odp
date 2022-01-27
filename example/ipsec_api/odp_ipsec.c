@@ -1099,7 +1099,7 @@ main(int argc, char *argv[])
 
 		do {
 			done = verify_stream_db_outputs();
-			sleep(1);
+			usleep(100000);
 		} while (!done);
 		printf("All received\n");
 		odp_atomic_store_u32(&global->exit_threads, 1);
