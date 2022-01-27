@@ -67,9 +67,9 @@ static inline void _odp_cos_queue_stats_add(cos_t *cos, odp_queue_t queue,
 	}
 
 	if (packets)
-		odp_atomic_add_u64(&cos->s.stats[queue_idx].packets, packets);
+		odp_atomic_add_u64(&cos->s.queue_stats[queue_idx].packets, packets);
 	if (discards)
-		odp_atomic_add_u64(&cos->s.stats[queue_idx].discards, discards);
+		odp_atomic_add_u64(&cos->s.queue_stats[queue_idx].discards, discards);
 }
 
 /** Classification Internal function **/

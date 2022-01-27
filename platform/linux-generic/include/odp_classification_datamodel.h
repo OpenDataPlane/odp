@@ -146,10 +146,11 @@ struct cos_s {
 	odp_queue_param_t queue_param;
 	char name[ODP_COS_NAME_LEN];	/* name */
 	uint8_t index;
+	odp_bool_t stats_enable;
 	struct {
 		odp_atomic_u64_t discards;
 		odp_atomic_u64_t packets;
-	} stats[CLS_COS_QUEUE_MAX];
+	} stats, queue_stats[CLS_COS_QUEUE_MAX];
 };
 
 typedef union cos_u {
