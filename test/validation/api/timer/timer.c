@@ -1535,7 +1535,7 @@ static int worker_entrypoint(void *arg)
 	uint32_t ncancel;
 	uint32_t ntoolate;
 	uint32_t ms;
-	uint64_t prev_tick, nsec;
+	uint64_t prev_tick, late_margin, nsec;
 	odp_event_t ev;
 	struct timespec ts;
 	uint32_t nstale;
@@ -1550,6 +1550,7 @@ static int worker_entrypoint(void *arg)
 	odp_schedule_group_t group;
 	struct thread_args *thr_args = arg;
 	uint64_t sched_tmo;
+	uint64_t res_ns  = global_mem->param.res_ns;
 
 	odp_queue_param_init(&queue_param);
 	if (thr_args->queue_type == ODP_QUEUE_TYPE_PLAIN) {
@@ -1625,6 +1626,7 @@ static int worker_entrypoint(void *arg)
 	nreset = 0;
 	ncancel = 0;
 	ntoolate = 0;
+	late_margin = odp_timer_ns_to_tick(tp, 2 * res_ns);
 	prev_tick = odp_timer_current_tick(tp);
 
 	for (ms = 0; ms < 7 * RANGE_MS / 10 && allocated > 0; ms++) {
@@ -1632,9 +1634,8 @@ static int worker_entrypoint(void *arg)
 			odp_queue_deq(queue) :
 			odp_schedule(NULL, ODP_SCHED_NO_WAIT))
 				!= ODP_EVENT_INVALID) {
-			/* Subtract one from prev_tick to allow for timeouts
-			 * to be delivered a tick late */
-			handle_tmo(ev, false, prev_tick - 1);
+			/* Allow timeouts to be delivered late_margin ticks late */
+			handle_tmo(ev, false, prev_tick - late_margin);
 			nrcv++;
 		}
 		prev_tick = odp_timer_current_tick(tp);
