@@ -197,16 +197,25 @@ static void system_test_cpu_cycles_diff(void)
 static void system_test_cpu_cycles_long_period(void)
 {
 	int i;
+	int periods = PERIODS_100_MSEC;
 	uint64_t c2, c1, c3, max;
 	uint64_t tmp, diff, res;
-
-	printf("\n        Testing CPU cycles for %i seconds... ", PERIODS_100_MSEC / 10);
 
 	res = odp_cpu_cycles_resolution();
 	max = odp_cpu_cycles_max();
 
+	/*
+	 * We can virtually never see a 64 bit cycle counter wrap around,
+	 * so let's not even try. Use small a number of periods to speed
+	 * up testing in this common case.
+	 */
+	if (max == UINT64_MAX)
+		periods = 10;
+
+	printf("\n        Testing CPU cycles for %i seconds... ", periods / 10);
+
 	c3 = odp_cpu_cycles();
-	for (i = 0; i < PERIODS_100_MSEC; i++) {
+	for (i = 0; i < periods; i++) {
 		c1 = odp_cpu_cycles();
 		odp_time_wait_ns(100 * ODP_TIME_MSEC_IN_NS + i);
 		c2 = odp_cpu_cycles();
