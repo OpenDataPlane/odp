@@ -69,6 +69,8 @@ static int pktio_run_loop(odp_pool_t pool)
 			break;
 		if (!master_pid)
 			break;
+
+		odp_time_wait_ns(50 * ODP_TIME_MSEC_IN_NS);
 	}
 
 	if (ipc_pktio == ODP_PKTIO_INVALID)
