@@ -8,7 +8,7 @@
 TEST_SRC_DIR=$(dirname $0)
 TEST_DIR="${TEST_DIR:-$(dirname $0)}"
 
-DURATION=5
+DURATION=1
 LOG=odp_pktio_ordered.log
 LOOPS=100000000
 PASS_PPS=100

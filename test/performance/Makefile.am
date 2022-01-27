@@ -4,10 +4,7 @@ TESTS_ENVIRONMENT += TEST_DIR=${builddir}
 
 EXECUTABLES = odp_atomic_perf \
 	      odp_bench_packet \
-	      odp_cpu_bench \
 	      odp_crc \
-	      odp_crypto \
-	      odp_ipsec \
 	      odp_lock_perf \
 	      odp_mem_perf \
 	      odp_pktio_perf \
@@ -15,7 +12,10 @@ EXECUTABLES = odp_atomic_perf \
 	      odp_queue_perf \
 	      odp_random
 
-COMPILE_ONLY = odp_dma_perf \
+COMPILE_ONLY = odp_cpu_bench \
+	       odp_crypto \
+	       odp_dma_perf \
+	       odp_ipsec \
 	       odp_l2fwd \
 	       odp_packet_gen \
 	       odp_pktio_ordered \
@@ -25,7 +25,10 @@ COMPILE_ONLY = odp_dma_perf \
 	       odp_scheduling \
 	       odp_timer_perf
 
-TESTSCRIPTS = odp_dma_perf_run.sh \
+TESTSCRIPTS = odp_cpu_bench_run.sh \
+	      odp_crypto_run.sh \
+	      odp_dma_perf_run.sh \
+	      odp_ipsec_run.sh \
 	      odp_l2fwd_run.sh \
 	      odp_packet_gen_run.sh \
 	      odp_sched_latency_run.sh \
