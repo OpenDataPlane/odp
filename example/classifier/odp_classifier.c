@@ -187,6 +187,8 @@ static inline void print_cls_statistics(appl_args_t *args)
 		infinite = 1;
 
 	for (; timeout > 0 || infinite; timeout--) {
+		sleep(1);
+		printf("\r");
 		for (i = 0; i < args->policy_count; i++) {
 			printf("%-6" PRIu64 " ",
 			       odp_atomic_load_u64(&args->stats[i]
@@ -198,13 +200,10 @@ static inline void print_cls_statistics(appl_args_t *args)
 
 		printf("%-" PRIu64, odp_atomic_load_u64(&args->
 							total_packets));
+		fflush(stdout);
 
 		if (args->shutdown_sig)
 			break;
-
-		sleep(1);
-		printf("\r");
-		fflush(stdout);
 	}
 
 	printf("\n");
