@@ -17,9 +17,9 @@ PATH=$(dirname $0):$PATH
 PATH=$(dirname $0)/../../../../platform/linux-generic/test/pktio_ipc:$PATH
 PATH=.:$PATH
 
-RUNTIME1=10
-RUNTIME2=5
-TIMEOUT=13
+RUNTIME1=3
+RUNTIME2=1
+TIMEOUT=3
 if [ "${TEST}" = "coverage" ]; then
 	RUNTIME1=30
 	RUNTIME2=15
