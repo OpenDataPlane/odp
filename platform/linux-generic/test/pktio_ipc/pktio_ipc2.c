@@ -66,6 +66,8 @@ static int ipc_second_process(int master_pid)
 			break;
 		if (!master_pid)
 			break;
+
+		odp_time_wait_ns(50 * ODP_TIME_MSEC_IN_NS);
 	}
 
 	if (ipc_pktio == ODP_PKTIO_INVALID) {
