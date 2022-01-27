@@ -24,7 +24,7 @@ fi
 
 setup_interfaces
 
-./odp_simple_pipeline${EXEEXT} -i $IF0,$IF1 -e -t 2
+./odp_simple_pipeline${EXEEXT} -i $IF0,$IF1 -e -t 1 -a 1
 STATUS=$?
 
 if [ "$STATUS" -ne 0 ]; then
