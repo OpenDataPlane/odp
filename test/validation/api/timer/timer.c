@@ -683,6 +683,9 @@ static void timer_pool_tick_info_run(odp_timer_clk_src_t clk_src)
 	CU_ASSERT(((double)(ticks_per_sec - 1)) <= tick_hz);
 	CU_ASSERT(((double)(ticks_per_sec + 1)) >= tick_hz);
 
+	/* Tick frequency must be the same or higher that resolution */
+	CU_ASSERT(tick_hz >= tp_param.res_hz);
+
 	printf("\nClock source %i\n", clk_src);
 	printf("  Ticks per second:     %" PRIu64 "\n", ticks_per_sec);
 	printf("  Tick info freq:       %" PRIu64 " + %" PRIu64 " / %" PRIu64 "\n",
