@@ -134,9 +134,17 @@ uint64_t odp_timer_ns_to_tick(odp_timer_pool_t timer_pool, uint64_t ns);
 /**
  * Current tick value
  *
+ * Returns the current tick value of the timer pool. Timer tick is an implementation defined unit
+ * of time. Timer tick value increments with a constant, timer pool specific frequency. Tick
+ * frequency may be equal or higher than the requested timer pool resolution. The frequency can be
+ * checked with odp_timer_pool_info(). Tick value increments with implementation specific step
+ * sizes. The value will not wrap around in at least 10 years from the ODP instance startup.
+ *
  * @param timer_pool  Timer pool
  *
  * @return Current time in timer ticks
+ *
+ * @see odp_timer_tick_info_t
  */
 uint64_t odp_timer_current_tick(odp_timer_pool_t timer_pool);
 
