@@ -93,6 +93,24 @@ static int loopback_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	return 0;
 }
 
+static int loopback_queue_destroy(odp_queue_t queue)
+{
+	odp_event_t event;
+
+	do {
+		event = odp_queue_deq(queue);
+		if (event != ODP_EVENT_INVALID)
+			odp_event_free(event);
+
+	} while (event != ODP_EVENT_INVALID);
+
+	if (odp_queue_destroy(queue)) {
+		ODP_ERR("Destroying loopback pktio queue failed\n");
+		return -1;
+	}
+	return 0;
+}
+
 static int loopback_pktout_queue_config(pktio_entry_t *pktio_entry,
 					const odp_pktout_queue_param_t *param)
 {
@@ -101,12 +119,8 @@ static int loopback_pktout_queue_config(pktio_entry_t *pktio_entry,
 	char queue_name[ODP_QUEUE_NAME_LEN];
 
 	/* Destroy old queue */
-	if (pkt_loop->loopq != ODP_QUEUE_INVALID) {
-		if (odp_queue_destroy(pkt_loop->loopq)) {
-			ODP_ERR("Destroying old loopback pktio queue failed\n");
-			return -1;
-		}
-	}
+	if (pkt_loop->loopq != ODP_QUEUE_INVALID && loopback_queue_destroy(pkt_loop->loopq))
+		return -1;
 
 	odp_queue_param_init(&queue_param);
 	queue_param.size = param->queue_size[0];
@@ -128,7 +142,7 @@ static int loopback_close(pktio_entry_t *pktio_entry)
 	pkt_loop_t *pkt_loop = pkt_priv(pktio_entry);
 
 	if (pkt_loop->loopq != ODP_QUEUE_INVALID)
-		return odp_queue_destroy(pkt_loop->loopq);
+		return loopback_queue_destroy(pkt_loop->loopq);
 
 	return 0;
 }
