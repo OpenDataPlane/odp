@@ -1,3 +1,57 @@
+== OpenDataPlane (1.34.0.0)
+
+=== Backward incompatible API changes
+==== Crypto
+* Specify that hash result field is not cleared in hash generation in encode
+sessions. Applications can do the clearing if needed if the hash result lies
+within the authenticated range.
+* Specify that the hash result field is left to an undefined value after
+verification.
+* Add a new session parameter
+`odp_crypto_session_param_t.hash_result_in_auth_range` to indicate if the hash
+result location may overlap the authenticated range. Leaving the flag unset may
+enable optimizations in the implementation.
+* Define new fields for cipher and auth IV lengths in the session parameter
+structure `odp_crypto_session_param_t`. Deprecated the old fields for cipher and
+auth IV lengths.
+* Deprecate the mechanism of configuring initialization vectors in sessions
+since reusing the same IV with the same key is almost always wrong. Require that
+IV is provided for each packet in the operation parameters.
+
+==== Traffic Manager
+* Add capabilities to `odp_tm_level_capabilities_t` for platforms to express
+shaper rate and burst min and max limits.
+* Remove support for min and max shaper rate via platform defined macros
+`ODP_TM_MIN_SHAPER_BW` and `ODP_TM_MAX_SHAPER_BW`. Min and Max shaper bandwidths
+can be read from TM per level capabilities (`odp_tm_level_capabilities_t`).
+
+=== Backward compatible API changes
+==== Crypto
+* Clarify that in case of AEAD algorithms the `odp_crypto_op_param_t.auth_range`
+parameter is not used, except with AES-GMAC.
+* Clarify `ODP_AUTH_ALG_AES_GMAC` API text to not sound as if ODP did not use
+AAD as defined in the GMAC algorithm specification.
+* Make the names of session creation errors (`odp_crypto_ses_create_err_t`) a
+bit shorter but retain the old names for backward compatibility.
+* Add crypto session creation error codes (`odp_crypto_ses_create_err_t`) for
+cases where the requested combination of algorithms, order of algorithms or
+other combination of creation parameters is not supported.
+
+==== Random
+* Explicitly state that the same series of `odp_random_test_data()` calls is
+required to generate the same data.
+
+==== Traffic Manager
+* Clarify that peak rate and peak burst are ignored when dual rate is set to
+false in `odp_tm_shaper_params_t`, indicating that the single rate is commit
+rate.
+* Define the default values for many parameters to be set by various init
+functions.
+
+=== ABI changes
+* Removed mips64 architecture support. MIPS devices may still use ODP by
+utilizing the generic default architecture.
+
 == OpenDataPlane (1.33.0.0)
 
 === Backward incompatible API changes
