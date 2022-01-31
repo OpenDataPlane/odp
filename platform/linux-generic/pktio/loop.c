@@ -203,9 +203,17 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				pkt_addr = odp_packet_data(pkt);
 			}
 
+			ret = _odp_packet_parse_common(&pkt_hdr->p, pkt_addr, pkt_len,
+						       seg_len, ODP_PROTO_LAYER_ALL,
+						       pktio_entry->s.in_chksums);
+			if (ret < 0) {
+				failed++;
+				odp_packet_free(pkt);
+				continue;
+			}
+
 			ret = _odp_cls_classify_packet(pktio_entry, pkt_addr,
-						       pkt_len, seg_len,
-						       &new_pool, pkt_hdr, true);
+						       &new_pool, pkt_hdr);
 			if (ret) {
 				failed++;
 				odp_packet_free(pkt);

@@ -289,9 +289,17 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
 
 	if (pktio_cls_enabled(pktio_entry)) {
-		if (_odp_cls_classify_packet(pktio_entry, data, len, len,
+		packet_parse_reset(&parsed_hdr, 1);
+		packet_set_len(&parsed_hdr, len);
+		if (_odp_packet_parse_common(&parsed_hdr.p, data, len, len,
+					     ODP_PROTO_LAYER_ALL,
+					     pktio_entry->s.in_chksums) < 0) {
+			return ODP_PACKET_INVALID;
+		}
+
+		if (_odp_cls_classify_packet(pktio_entry, data,
 					     &pkt_priv(pktio_entry)->pool,
-					     &parsed_hdr, true)) {
+					     &parsed_hdr)) {
 			return ODP_PACKET_INVALID;
 		}
 	}

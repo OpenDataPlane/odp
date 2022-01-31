@@ -268,15 +268,30 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			ODP_DBG("dropped truncated packet\n");
 			continue;
 		}
+
+		ret = odp_packet_trunc_tail(&pkt, odp_packet_len(pkt) - pkt_len,
+					    NULL, NULL);
+		if (ret < 0) {
+			ODP_ERR("trunc_tail failed");
+			odp_packet_free(pkt);
+			continue;
+		}
+
 		if (pktio_cls_enabled(pktio_entry)) {
 			uint16_t seg_len =  pkt_len;
 
 			if (msgvec[i].msg_hdr.msg_iov->iov_len < pkt_len)
 				seg_len = msgvec[i].msg_hdr.msg_iov->iov_len;
 
-			if (_odp_cls_classify_packet(pktio_entry, base, pkt_len,
-						     seg_len, &pool, pkt_hdr,
-						     true)) {
+			if (_odp_packet_parse_common(&pkt_hdr->p, base, pkt_len,
+						     seg_len, ODP_PROTO_LAYER_ALL,
+						     pktio_entry->s.in_chksums) < 0) {
+				odp_packet_free(pkt);
+				continue;
+			}
+
+			if (_odp_cls_classify_packet(pktio_entry, base, &pool,
+						     pkt_hdr)) {
 				odp_packet_free(pkt);
 				continue;
 			}
@@ -285,14 +300,6 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		/* Don't receive packets sent by ourselves */
 		if (odp_unlikely(ethaddrs_equal(pkt_sock->if_mac,
 						eth_hdr->h_source))) {
-			odp_packet_free(pkt);
-			continue;
-		}
-
-		ret = odp_packet_trunc_tail(&pkt, odp_packet_len(pkt) - pkt_len,
-					    NULL, NULL);
-		if (ret < 0) {
-			ODP_ERR("trunk_tail failed");
 			odp_packet_free(pkt);
 			continue;
 		}

@@ -213,9 +213,20 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		}
 
 		if (pktio_cls_enabled(pktio_entry)) {
-			if (_odp_cls_classify_packet(pktio_entry, pkt_buf, pkt_len,
-						     pkt_len, &pool, &parsed_hdr,
-						     true)) {
+			packet_parse_reset(&parsed_hdr, 1);
+			packet_set_len(&parsed_hdr, pkt_len);
+			if (_odp_packet_parse_common(&parsed_hdr.p, pkt_buf,
+						     pkt_len, pkt_len,
+						     ODP_PROTO_LAYER_ALL,
+						     pktio_entry->s.in_chksums) < 0) {
+				odp_packet_free(pkt);
+				tp_hdr->tp_status = TP_STATUS_KERNEL;
+				frame_num = next_frame_num;
+				continue;
+			}
+
+			if (_odp_cls_classify_packet(pktio_entry, pkt_buf,
+						     &pool, &parsed_hdr)) {
 				odp_packet_free(pkt);
 				tp_hdr->tp_status = TP_STATUS_KERNEL;
 				frame_num = next_frame_num;

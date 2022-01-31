@@ -294,9 +294,16 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		if (pktio_cls_enabled(pktio_entry)) {
 			odp_packet_t new_pkt;
 
+			ret = _odp_packet_parse_common(&pkt_hdr->p, data, pkt_len,
+						       pkt_len, ODP_PROTO_LAYER_ALL,
+						       pktio_entry->s.in_chksums);
+			if (ret < 0) {
+				odp_packet_free(pkt);
+				continue;
+			}
+
 			ret = _odp_cls_classify_packet(pktio_entry, data,
-						       pkt_len, pkt_len,
-						       &new_pool, pkt_hdr, true);
+						       &new_pool, pkt_hdr);
 			if (ret) {
 				odp_packet_free(pkt);
 				continue;
