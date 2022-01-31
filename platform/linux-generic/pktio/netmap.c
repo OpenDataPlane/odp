@@ -845,9 +845,17 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 		odp_prefetch(slot.buf);
 
 		if (pktio_cls_enabled(pktio_entry)) {
-			if (_odp_cls_classify_packet(pktio_entry,
-						     (const uint8_t *)slot.buf, len,
-						     len, &pool, &parsed_hdr, true))
+			const uint8_t *buf = (const uint8_t *)slot.buf;
+
+			packet_parse_reset(&parsed_hdr, 1);
+			packet_set_len(&parsed_hdr, len);
+			if (_odp_packet_parse_common(&parsed_hdr.p, buf, len, len,
+						     ODP_PROTO_LAYER_ALL,
+						     pktio_entry->s.in_chksums) < 0)
+				continue;
+
+			if (_odp_cls_classify_packet(pktio_entry, buf, &pool,
+						     &parsed_hdr))
 				continue;
 		}
 
