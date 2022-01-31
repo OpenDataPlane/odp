@@ -151,6 +151,12 @@ typedef struct {
 	 * iteration of the loop.
 	 */
 	int burst_size;
+
+	/*
+	 * Use vector packet completion from IPsec APIs.
+	 * Specified through -v or --vector argument.
+	 */
+	uint32_t vec_pkt_size;
 } ipsec_args_t;
 
 /*
@@ -755,6 +761,26 @@ static uint32_t dequeue_burst(odp_queue_t polled_queue,
 	return num;
 }
 
+static inline uint32_t vec_pkt_handle(int debug, odp_event_t ev)
+{
+	odp_packet_vector_t vec = odp_packet_vector_from_event(ev);
+	uint32_t vec_size = odp_packet_vector_size(vec);
+	odp_packet_t *pkt_tbl;
+	uint32_t j;
+
+	odp_packet_vector_tbl(vec, &pkt_tbl);
+
+	for (j = 0; j < vec_size; j++)
+		check_ipsec_result(pkt_tbl[j]);
+
+	debug_packets(debug, pkt_tbl, vec_size);
+
+	odp_packet_free_sp(pkt_tbl, vec_size);
+	odp_packet_vector_free(vec);
+
+	return vec_size;
+}
+
 static int
 run_measure_one_async(ipsec_args_t *cargs,
 		      odp_ipsec_sa_t sa,
@@ -851,9 +877,18 @@ run_measure_one_async(ipsec_args_t *cargs,
 				num = dequeue_burst(polled_queue, events, MAX_DEQUEUE_BURST);
 
 				for (uint32_t n = 0; n < num; n++) {
-					pkt_out[i] = odp_ipsec_packet_from_event(events[n]);
-					check_ipsec_result(pkt_out[i]);
-					i++;
+					if (odp_event_type(events[n]) == ODP_EVENT_PACKET_VECTOR) {
+						uint32_t vec_size;
+
+						vec_size = vec_pkt_handle(debug, events[n]);
+						packets_received += vec_size - 1;
+						packets_allowed += vec_size - 1;
+					} else {
+						pkt_out[i] = odp_ipsec_packet_from_event(events[n]);
+						check_ipsec_result(pkt_out[i]);
+						i++;
+					}
+
 				}
 				packets_received += num;
 				packets_allowed += num;
@@ -1006,6 +1041,7 @@ static void usage(char *progname)
 	       "  -f, --flight <number> Max number of packet processed in parallel (default 1)\n"
 	       "  -c, --count <number> Number of packets (default 10000)\n"
 	       "  -b, --burst <number> Number of packets in one IPsec API submission (default 1)\n"
+	       "  -v, --vector <number> Enable vector packet completion from IPsec APIs with specified vector size.\n"
 	       "  -l, --payload	       Payload length.\n"
 	       "  -s, --schedule       Use scheduler for completion events.\n"
 	       "  -p, --poll           Poll completion queue for completion events.\n"
@@ -1026,6 +1062,7 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 		{"help", no_argument, NULL, 'h'},
 		{"count", optional_argument, NULL, 'c'},
 		{"burst", optional_argument, NULL, 'b'},
+		{"vector", optional_argument, NULL, 'v'},
 		{"payload", optional_argument, NULL, 'l'},
 		{"sessions", optional_argument, NULL, 'm'},
 		{"poll", no_argument, NULL, 'p'},
@@ -1035,12 +1072,13 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+a:b:c:df:hm:nl:sptu";
+	static const char *shortopts = "+a:b:c:df:hm:nl:sptuv:";
 
 	cargs->in_flight = 1;
 	cargs->debug_packets = 0;
 	cargs->packet_count = 10000;
 	cargs->burst_size = 1;
+	cargs->vec_pkt_size = 0;
 	cargs->payload_length = 0;
 	cargs->alg_config = NULL;
 	cargs->schedule = 0;
@@ -1077,6 +1115,12 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 				printf("Invalid burst size (max allowed: %d)\n", POOL_NUM_PKT);
 				exit(-1);
 			}
+			break;
+		case 'v':
+			if (optarg == NULL)
+				cargs->vec_pkt_size = 32;
+			else
+				cargs->vec_pkt_size = atoi(optarg);
 			break;
 		case 'f':
 			cargs->in_flight = atoi(optarg);
@@ -1121,6 +1165,7 @@ static void parse_args(int argc, char *argv[], ipsec_args_t *cargs)
 
 int main(int argc, char *argv[])
 {
+	odp_pool_t vec_pool = ODP_POOL_INVALID;
 	ipsec_args_t cargs;
 	odp_pool_t pool;
 	odp_queue_param_t qparam;
@@ -1214,10 +1259,53 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	if (cargs.vec_pkt_size) {
+		if (capa.vector.max_pools < 1) {
+			ODPH_ERR("Vector packet pool not available");
+			exit(EXIT_FAILURE);
+		}
+
+		if (!ipsec_capa.vector.supported) {
+			ODPH_ERR("Vector packet completion not supported by IPsec.\n");
+			exit(EXIT_FAILURE);
+		}
+
+		if (capa.vector.max_size < cargs.vec_pkt_size) {
+			ODPH_ERR("Vector size larger than max size supported by vector pool.\n");
+			exit(EXIT_FAILURE);
+		}
+
+		if (!cargs.schedule && !cargs.poll) {
+			ODPH_ERR("Vector packet is not supported with sync APIs.\n");
+			exit(EXIT_FAILURE);
+		}
+
+		/* Create vector pool */
+		odp_pool_param_init(&param);
+		param.vector.num	= POOL_NUM_PKT;
+		param.vector.max_size	= cargs.vec_pkt_size;
+		param.type		= ODP_POOL_VECTOR;
+		vec_pool = odp_pool_create("vector_pool", &param);
+
+		if (vec_pool == ODP_POOL_INVALID) {
+			ODPH_ERR("Vector packet pool create failed.\n");
+			exit(EXIT_FAILURE);
+		}
+
+		odp_pool_print(vec_pool);
+	}
+
 	odp_ipsec_config_init(&config);
 	config.max_num_sa = 2;
 	config.inbound.chksums.all_chksum = 0;
 	config.outbound.all_chksum = 0;
+
+	if (vec_pool != ODP_POOL_INVALID) {
+		config.vector.enable = true;
+		config.vector.pool = vec_pool;
+		config.vector.max_size = cargs.vec_pkt_size;
+		config.vector.max_tmo_ns = ipsec_capa.vector.max_tmo_ns;
+	}
 
 	odp_queue_param_init(&qparam);
 	if (cargs.schedule) {
@@ -1305,6 +1393,14 @@ int main(int argc, char *argv[])
 
 	if (cargs.schedule || cargs.poll)
 		odp_queue_destroy(out_queue);
+
+	if (cargs.vec_pkt_size) {
+		if (odp_pool_destroy(vec_pool)) {
+			ODPH_ERR("Error: vector pool destroy\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	if (odp_pool_destroy(pool)) {
 		ODPH_ERR("Error: pool destroy\n");
 		exit(EXIT_FAILURE);
