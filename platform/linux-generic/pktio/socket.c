@@ -274,9 +274,17 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			if (msgvec[i].msg_hdr.msg_iov->iov_len < pkt_len)
 				seg_len = msgvec[i].msg_hdr.msg_iov->iov_len;
 
-			if (_odp_cls_classify_packet(pktio_entry, base, pkt_len,
-						     seg_len, &pool, pkt_hdr,
-						     true)) {
+			packet_parse_reset(pkt_hdr, 1);
+			packet_set_len(pkt_hdr, pkt_len);
+			if (_odp_packet_parse_common(&pkt_hdr->p, base, pkt_len,
+						     seg_len, ODP_PROTO_LAYER_ALL,
+						     pktio_entry->s.in_chksums) < 0) {
+				odp_packet_free(pkt);
+				continue;
+			}
+
+			if (_odp_cls_classify_packet(pktio_entry, base, &pool,
+						     pkt_hdr)) {
 				odp_packet_free(pkt);
 				continue;
 			}
