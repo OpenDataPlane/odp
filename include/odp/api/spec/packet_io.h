@@ -652,13 +652,16 @@ typedef struct odp_pktio_config_t {
 
 	/** Enable Large Send Offload (LSO)
 	 *
-	 *  LSO operation cannot be combined with IPSEC or Traffic Manager (ODP_PKTOUT_MODE_TM) on
+	 *  Enables LSO on the interface. Use LSO capabilities (odp_lso_capability_t) to check if
+	 *  the interface supports LSO (in the selected packet output mode). LSO cannot be enabled
+	 *  in ODP_PKTOUT_MODE_QUEUE mode. Also, LSO operation cannot be combined with IPSEC on
 	 *  packet output.
+	 *
+	 *  Application requests LSO for outgoing packets with odp_pktout_send_lso() or
+	 *  odp_tm_enq_multi_lso(). Other packet output calls ignore LSO metadata in packets.
 	 *
 	 *  0: Application will not use LSO (default)
 	 *  1: Application will use LSO
-	 *
-	 *  @see odp_pktout_send_lso()
 	 */
 	odp_bool_t enable_lso;
 
@@ -848,6 +851,10 @@ typedef struct odp_pktin_vector_capability_t {
 
 /**
  * Packet IO capabilities
+ *
+ * Note that interface capabilities may differ between packet output modes. For example,
+ * LSO may not be supported in ODP_PKTOUT_MODE_TM mode, while it is supported in
+ * ODP_PKTOUT_MODE_DIRECT mode.
  */
 typedef struct odp_pktio_capability_t {
 	/** Maximum number of input queues */
