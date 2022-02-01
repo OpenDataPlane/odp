@@ -3918,6 +3918,7 @@ int odp_tm_node_shaper_config(odp_tm_node_t tm_node,
 {
 	tm_node_obj_t *tm_node_obj;
 	tm_system_t *tm_system;
+	odp_bool_t sync_needed;
 
 	tm_node_obj = GET_TM_NODE_OBJ(tm_node);
 	if (!tm_node_obj)
@@ -3928,8 +3929,13 @@ int odp_tm_node_shaper_config(odp_tm_node_t tm_node,
 		return -1;
 
 	odp_ticketlock_lock(&tm_glb->profile_lock);
+	sync_needed = tm_glb->main_loop_running;
+	if (sync_needed)
+		signal_request();
 	tm_shaper_config_set(tm_system, shaper_profile,
 			     &tm_node_obj->shaper_obj);
+	if (sync_needed)
+		signal_request_done();
 	odp_ticketlock_unlock(&tm_glb->profile_lock);
 	return 0;
 }
