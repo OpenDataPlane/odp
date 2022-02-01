@@ -204,7 +204,7 @@ static int create_pthread(odph_thread_t *thread, int cpu, uint64_t stack_size)
 		 */
 		stack_size = (stack_size + ODP_PAGE_SIZE - 1) & ~(ODP_PAGE_SIZE - 1);
 
-		if (stack_size < PTHREAD_STACK_MIN)
+		if (stack_size < (uint64_t)PTHREAD_STACK_MIN)
 			stack_size = PTHREAD_STACK_MIN;
 
 		if (pthread_attr_setstacksize(&thread->thread.attr, stack_size)) {
