@@ -1137,7 +1137,7 @@ static int pktin_deq_multi(odp_queue_t queue, _odp_event_hdr_t *event_hdr[],
 
 int _odp_sched_cb_pktin_poll_one(int pktio_index,
 				 int rx_queue,
-				 odp_event_t evt_tbl[QUEUE_MULTI_MAX])
+				 odp_event_t evt_tbl[])
 {
 	int num_rx, num_pkts, i;
 	pktio_entry_t *entry = pktio_entry_by_index(pktio_index);
