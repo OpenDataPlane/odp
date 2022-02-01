@@ -189,7 +189,8 @@ static const char *_ipc_odp_buffer_pool_shm_name(odp_pool_t pool_hdl)
 	pool    = pool_entry_from_hdl(pool_hdl);
 	shm = pool->shm;
 
-	odp_shm_info(shm, &info);
+	if (odp_shm_info(shm, &info))
+		return "name_unknown";
 
 	return info.name;
 }
