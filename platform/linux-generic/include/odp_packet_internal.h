@@ -431,8 +431,6 @@ static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 	}
 }
 
-int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
-
 int _odp_packet_set_data(odp_packet_t pkt, uint32_t offset,
 			 uint8_t c, uint32_t len);
 
