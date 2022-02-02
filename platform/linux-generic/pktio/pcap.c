@@ -46,6 +46,7 @@
 
 #include <odp/api/plat/packet_inlines.h>
 
+#include <odp_parse_internal.h>
 #include <odp_classification_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_global_data.h>
