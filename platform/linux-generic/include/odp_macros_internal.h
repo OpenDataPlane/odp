@@ -35,6 +35,8 @@ extern "C" {
 		tmp_a > tmp_b ? tmp_a : tmp_b;	\
 	})
 
+#define MAX3(a, b, c) (MAX(MAX((a), (b)), (c)))
+
 #define odp_container_of(pointer, type, member) \
 	((type *)(void *)(((char *)pointer) - offsetof(type, member)))
 

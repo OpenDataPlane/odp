@@ -16,6 +16,7 @@
 #include <odp/api/time.h>
 #include <odp/api/plat/time_inlines.h>
 
+#include <odp_parse_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_packet_io_stats.h>
 #include <odp_ethtool_stats.h>

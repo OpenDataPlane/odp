@@ -38,14 +38,22 @@ extern "C" {
 #include <stdint.h>
 #include <string.h>
 
-/** Minimum segment length expected by _odp_packet_parse_common() */
-#define PACKET_PARSE_SEG_LEN 96
-
 ODP_STATIC_ASSERT(sizeof(_odp_packet_input_flags_t) == sizeof(uint64_t),
 		  "INPUT_FLAGS_SIZE_ERROR");
 
 ODP_STATIC_ASSERT(sizeof(_odp_packet_flags_t) == sizeof(uint32_t),
 		  "PACKET_FLAGS_SIZE_ERROR");
+
+/* Packet extra data length */
+#define PKT_EXTRA_LEN 128
+
+/* Packet extra data types */
+#define PKT_EXTRA_TYPE_DPDK 1
+
+/* Maximum number of segments per packet */
+#define PKT_MAX_SEGS 255
+
+ODP_STATIC_ASSERT(PKT_MAX_SEGS < UINT16_MAX, "PACKET_MAX_SEGS_ERROR");
 
 /**
  * Packet parser metadata
@@ -66,17 +74,6 @@ typedef struct {
 	/* offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
 	uint16_t l4_offset;
 } packet_parser_t;
-
-/* Packet extra data length */
-#define PKT_EXTRA_LEN 128
-
-/* Packet extra data types */
-#define PKT_EXTRA_TYPE_DPDK 1
-
-/* Maximum number of segments per packet */
-#define PKT_MAX_SEGS 255
-
-ODP_STATIC_ASSERT(PKT_MAX_SEGS < UINT16_MAX, "PACKET_MAX_SEGS_ERROR");
 
 /**
  * Internal Packet header
@@ -196,6 +193,11 @@ static inline _odp_event_hdr_t *packet_to_event_hdr(odp_packet_t pkt)
 static inline odp_packet_t packet_from_event_hdr(_odp_event_hdr_t *event_hdr)
 {
 	return (odp_packet_t)(uintptr_t)event_hdr;
+}
+
+static inline uint32_t packet_first_seg_len(odp_packet_hdr_t *pkt_hdr)
+{
+	return pkt_hdr->seg_len;
 }
 
 static inline odp_packet_hdr_t *packet_last_seg(odp_packet_hdr_t *hdr)
@@ -404,11 +406,6 @@ static inline void packet_set_len(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 int _odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 			    odp_packet_t pkt[], int max_num);
 
-/* Perform packet parse up to a given protocol layer */
-int _odp_packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
-			    odp_proto_layer_t layer,
-			    odp_proto_chksums_t chksums);
-
 /* Reset parser metadata for a new parse */
 static inline void packet_parse_reset(odp_packet_hdr_t *pkt_hdr, int all)
 {
@@ -458,10 +455,6 @@ static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 	}
 }
 
-int _odp_packet_parse_common(packet_parser_t *pkt_hdr, const uint8_t *ptr,
-			     uint32_t pkt_len, uint32_t seg_len, int layer,
-			     odp_proto_chksums_t chksums);
-
 int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
 
 int _odp_packet_set_data(odp_packet_t pkt, uint32_t offset,
@@ -474,6 +467,9 @@ int _odp_packet_ipv4_chksum_insert(odp_packet_t pkt);
 int _odp_packet_tcp_chksum_insert(odp_packet_t pkt);
 int _odp_packet_udp_chksum_insert(odp_packet_t pkt);
 int _odp_packet_sctp_chksum_insert(odp_packet_t pkt);
+
+int packet_l4_chksum(odp_packet_hdr_t *pkt_hdr, odp_proto_chksums_t chksums,
+		     uint64_t l4_part_sum);
 
 #ifdef __cplusplus
 }

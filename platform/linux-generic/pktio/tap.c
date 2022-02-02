@@ -38,6 +38,7 @@
 
 #include <odp/api/plat/packet_inlines.h>
 
+#include <odp_parse_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_socket_common.h>
 #include <odp_packet_internal.h>
