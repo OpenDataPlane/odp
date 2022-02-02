@@ -39,6 +39,7 @@ jobs:
         cp users-guide/users-guide.html gh-pages/users-guide/index.html
         mkdir gh-pages/process-guide
         cp process-guide/*.html gh-pages/process-guide/
+        touch gh-pages/.nojekyll
         popd
 
     - name: Deploy
