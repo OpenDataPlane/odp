@@ -252,14 +252,16 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ meson build
    $ cd build
 
-   # Configure the location where DPDK will be installed
+   # Optionally, configure the location where DPDK will be installed. By default,
+   # DPDK will be installed in /usr/local:
    $ meson configure -Dprefix=$(pwd)/../install
 
    # Build and install DPDK
    $ ninja install
 
    # Configure ODP
-   # Instead of using --with-dpdk-path option, set PKG_CONFIG_PATH
+   $ ./configure --enable-dpdk
+   # Or, if DPDK was not installed to the default location, set PKG_CONFIG_PATH:
    $ PKG_CONFIG_PATH=<dpdk-dir>/install/lib/x86_64-linux-gnu/pkgconfig ./configure --enable-dpdk
 
 3.5.5 Setup system
