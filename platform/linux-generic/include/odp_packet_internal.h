@@ -29,6 +29,7 @@ extern "C" {
 #include <odp/api/std.h>
 #include <odp/api/abi/packet.h>
 
+#include <odp_parse_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_event_internal.h>
 #include <odp_ipsec_internal.h>
@@ -38,34 +39,11 @@ extern "C" {
 #include <stdint.h>
 #include <string.h>
 
-/** Minimum segment length expected by _odp_packet_parse_common() */
-#define PACKET_PARSE_SEG_LEN 96
-
 ODP_STATIC_ASSERT(sizeof(_odp_packet_input_flags_t) == sizeof(uint64_t),
 		  "INPUT_FLAGS_SIZE_ERROR");
 
 ODP_STATIC_ASSERT(sizeof(_odp_packet_flags_t) == sizeof(uint32_t),
 		  "PACKET_FLAGS_SIZE_ERROR");
-
-/**
- * Packet parser metadata
- */
-typedef struct {
-	/* Packet input flags */
-	_odp_packet_input_flags_t  input_flags;
-
-	/* Other flags */
-	_odp_packet_flags_t        flags;
-
-	 /* offset to L2 hdr, e.g. Eth */
-	uint16_t l2_offset;
-
-	/* offset to L3 hdr, e.g. IPv4, IPv6 */
-	uint16_t l3_offset;
-
-	/* offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
-	uint16_t l4_offset;
-} packet_parser_t;
 
 /* Packet extra data length */
 #define PKT_EXTRA_LEN 128
@@ -452,10 +430,6 @@ static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 		pkt_hdr->p.input_flags.timestamp = 1;
 	}
 }
-
-int _odp_packet_parse_common(packet_parser_t *pkt_hdr, const uint8_t *ptr,
-			     uint32_t pkt_len, uint32_t seg_len, int layer,
-			     odp_proto_chksums_t chksums);
 
 int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
 
