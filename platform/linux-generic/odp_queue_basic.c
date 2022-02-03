@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -56,16 +56,6 @@ static int queue_capa(odp_queue_capability_t *capa, int sched ODP_UNUSED)
 	capa->plain.max_size    = _odp_queue_glb->config.max_queue_size;
 	capa->plain.lockfree.max_num  = _odp_queue_glb->queue_lf_num;
 	capa->plain.lockfree.max_size = _odp_queue_glb->queue_lf_size;
-#if ODP_DEPRECATED_API
-	capa->sched.max_num     = CONFIG_MAX_SCHED_QUEUES;
-	capa->sched.max_size    = _odp_queue_glb->config.max_queue_size;
-
-	if (sched) {
-		capa->max_ordered_locks = _odp_sched_fn->max_ordered_locks();
-		capa->max_sched_groups  = _odp_sched_fn->num_grps();
-		capa->sched_prios       = odp_schedule_num_prio();
-	}
-#endif
 
 	return 0;
 }
