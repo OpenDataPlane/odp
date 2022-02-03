@@ -541,33 +541,6 @@ typedef union odp_pktout_config_opt_t {
 } odp_pktout_config_opt_t;
 
 /**
- * Parser layers
- *
- * @deprecated Use odp_proto_layer_t instead
- */
-typedef odp_proto_layer_t odp_pktio_parser_layer_t;
-
-/** No layers
- *  @deprecated Use ODP_PROTO_LAYER_NONE, instead */
-#define ODP_PKTIO_PARSER_LAYER_NONE ODP_PROTO_LAYER_NONE
-
-/** Layer L2 protocols (Ethernet, VLAN, ARP, etc)
- *  @deprecated Use ODP_PROTO_LAYER_L2, instead */
-#define ODP_PKTIO_PARSER_LAYER_L2 ODP_PROTO_LAYER_L2
-
-/** Layer L3 protocols (IPv4, IPv6, ICMP, IPsec, etc)
- *  @deprecated Use ODP_PROTO_LAYER_L3, instead */
-#define ODP_PKTIO_PARSER_LAYER_L3 ODP_PROTO_LAYER_L3
-
-/** Layer L4 protocols (UDP, TCP, SCTP)
- *  @deprecated Use ODP_PROTO_LAYER_L4, instead */
-#define ODP_PKTIO_PARSER_LAYER_L4 ODP_PROTO_LAYER_L4
-
-/** All layers
- *  @deprecated Use ODP_PROTO_LAYER_ALL instead */
-#define ODP_PKTIO_PARSER_LAYER_ALL ODP_PROTO_LAYER_ALL
-
-/**
  * Parser configuration
  */
 typedef struct odp_pktio_parser_config_t {
