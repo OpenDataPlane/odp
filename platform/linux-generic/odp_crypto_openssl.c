@@ -2187,7 +2187,6 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 {
 	int rc;
 	odp_crypto_generic_session_t *session;
-	int aes_gcm = 0;
 
 	if (odp_global_ro.disable.crypto) {
 		ODP_ERR("Crypto is disabled\n");
@@ -2357,8 +2356,6 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		goto err;
 	}
 
-	aes_gcm = 0;
-
 	/* Process based on auth */
 	switch (param->auth_alg) {
 	case ODP_AUTH_ALG_NULL:
@@ -2366,12 +2363,6 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		session->auth.init = null_crypto_init_routine;
 		rc = 0;
 		break;
-#if ODP_DEPRECATED_API
-	case ODP_AUTH_ALG_MD5_96:
-		/* Fixed digest tag length with deprecated algo */
-		session->p.auth_digest_len = 96 / 8;
-#endif
-		/* Fallthrough */
 	case ODP_AUTH_ALG_MD5_HMAC:
 		rc = process_auth_hmac_param(session, EVP_md5());
 		break;
@@ -2381,12 +2372,6 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	case ODP_AUTH_ALG_SHA224_HMAC:
 		rc = process_auth_hmac_param(session, EVP_sha224());
 		break;
-#if ODP_DEPRECATED_API
-	case ODP_AUTH_ALG_SHA256_128:
-		/* Fixed digest tag length with deprecated algo */
-		session->p.auth_digest_len = 128 / 8;
-#endif
-		/* Fallthrough */
 	case ODP_AUTH_ALG_SHA256_HMAC:
 		rc = process_auth_hmac_param(session, EVP_sha256());
 		break;
@@ -2399,18 +2384,10 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	case ODP_AUTH_ALG_AES_XCBC_MAC:
 		rc = process_aesxcbc_param(session, EVP_aes_128_ecb());
 		break;
-#if ODP_DEPRECATED_API
-	case ODP_AUTH_ALG_AES128_GCM:
-		if (param->cipher_alg == ODP_CIPHER_ALG_AES128_GCM)
-			aes_gcm = 1;
-		/* Fixed digest tag length with deprecated algo */
-		session->p.auth_digest_len = 16;
-#endif
-		/* Fallthrough */
 	case ODP_AUTH_ALG_AES_GCM:
 		/* AES-GCM requires to do both auth and
 		 * cipher at the same time */
-		if (param->cipher_alg == ODP_CIPHER_ALG_AES_GCM || aes_gcm) {
+		if (param->cipher_alg == ODP_CIPHER_ALG_AES_GCM) {
 			session->auth.func = null_crypto_routine;
 			session->auth.init = null_crypto_init_routine;
 			rc = 0;

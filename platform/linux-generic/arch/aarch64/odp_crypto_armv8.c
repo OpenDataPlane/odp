@@ -484,7 +484,6 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 {
 	int rc = 0;
 	odp_crypto_generic_session_t *session;
-	int aes_gcm = 0;
 
 	if (odp_global_ro.disable.crypto) {
 		ODP_ERR("Crypto is disabled\n");
@@ -589,26 +588,16 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		goto err;
 	}
 
-	aes_gcm = 0;
-
 	/* Process based on auth */
 	switch (param->auth_alg) {
 	case ODP_AUTH_ALG_NULL:
 		session->auth.func = null_crypto_routine;
 		rc = 0;
 		break;
-#if ODP_DEPRECATED_API
-	case ODP_AUTH_ALG_AES128_GCM:
-		if (param->cipher_alg == ODP_CIPHER_ALG_AES128_GCM)
-			aes_gcm = 1;
-		/* Fixed digest tag length with deprecated algo */
-		session->p.auth_digest_len = 16;
-#endif
-		/* Fallthrough */
 	case ODP_AUTH_ALG_AES_GCM:
 		/* AES-GCM requires to do both auth and
 		 * cipher at the same time */
-		if (param->cipher_alg == ODP_CIPHER_ALG_AES_GCM || aes_gcm) {
+		if (param->cipher_alg == ODP_CIPHER_ALG_AES_GCM) {
 			session->auth.func = null_crypto_routine;
 			rc = 0;
 		} else {

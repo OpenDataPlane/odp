@@ -334,15 +334,6 @@ typedef enum {
 	/** 512 bit SHA2 algorithm */
 	ODP_AUTH_ALG_SHA512,
 
-	/** @deprecated  Use ODP_AUTH_ALG_MD5_HMAC instead */
-	ODP_DEPRECATE(ODP_AUTH_ALG_MD5_96),
-
-	/** @deprecated  Use ODP_AUTH_ALG_SHA256_HMAC instead */
-	ODP_DEPRECATE(ODP_AUTH_ALG_SHA256_128),
-
-	/** @deprecated  Use ODP_AUTH_ALG_AES_GCM instead */
-	ODP_DEPRECATE(ODP_AUTH_ALG_AES128_GCM)
-
 } odp_auth_alg_t;
 
 /**
