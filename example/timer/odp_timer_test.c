@@ -471,7 +471,7 @@ int main(int argc, char *argv[])
 	 */
 	odp_queue_param_init(&param);
 	param.type        = ODP_QUEUE_TYPE_SCHED;
-	param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	param.sched.prio  = odp_schedule_default_prio();
 	param.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
 	param.sched.group = ODP_SCHED_GROUP_ALL;
 

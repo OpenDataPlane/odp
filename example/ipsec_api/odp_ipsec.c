@@ -285,7 +285,7 @@ void ipsec_init_pre(void)
 	 */
 	odp_queue_param_init(&qparam);
 	qparam.type        = ODP_QUEUE_TYPE_SCHED;
-	qparam.sched.prio  = ODP_SCHED_PRIO_HIGHEST;
+	qparam.sched.prio  = odp_schedule_max_prio();
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
@@ -296,7 +296,7 @@ void ipsec_init_pre(void)
 	}
 
 	qparam.type        = ODP_QUEUE_TYPE_SCHED;
-	qparam.sched.prio  = ODP_SCHED_PRIO_HIGHEST;
+	qparam.sched.prio  = odp_schedule_max_prio();
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
