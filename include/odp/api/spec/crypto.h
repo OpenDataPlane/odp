@@ -390,12 +390,6 @@ typedef union odp_crypto_cipher_algos_t {
 		/** ODP_CIPHER_ALG_ZUC_EEA3 */
 		uint32_t zuc_eea3    : 1;
 
-		/** @deprecated  Use aes_cbc instead */
-		uint32_t ODP_DEPRECATE(aes128_cbc) : 1;
-
-		/** @deprecated  Use aes_gcm instead */
-		uint32_t ODP_DEPRECATE(aes128_gcm) : 1;
-
 	} bit;
 
 	/** All bits of the bit field structure
