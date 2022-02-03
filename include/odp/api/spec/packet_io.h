@@ -974,6 +974,12 @@ typedef struct odp_pktio_capability_t {
  * output mode is ODP_PKTOUT_MODE_DISABLED or ODP_PKTOUT_MODE_TM,
  * odp_pktout_queue_config() call is optional and will ignore all parameters.
  *
+ * Advanced packet IO interface offload features and options can be setup with
+ * odp_pktio_config() before the interface is started. These features include e.g.
+ * checksum, segmentation (LSO), reassembly and inline IPSEC offloads. When
+ * odp_pktio_config() is not used, the interface is started with the default
+ * values of odp_pktio_config_t.
+ *
  * Packet receive and transmit on the interface is enabled with a call to
  * odp_pktio_start(). If not specified otherwise, any interface level
  * configuration must not be changed when the interface is active (between start
@@ -983,6 +989,7 @@ typedef struct odp_pktio_capability_t {
  *   * odp_pktio_open()
  *   * odp_pktin_queue_config()
  *   * odp_pktout_queue_config()
+ *   * [optionally] odp_pktio_config()
  *   * odp_pktio_start()
  *
  * ... and tear down sequence is:
