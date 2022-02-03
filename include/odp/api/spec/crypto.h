@@ -165,12 +165,6 @@ typedef enum {
 	 */
 	ODP_CIPHER_ALG_ZUC_EEA3,
 
-	/** @deprecated  Use ODP_CIPHER_ALG_AES_CBC instead */
-	ODP_DEPRECATE(ODP_CIPHER_ALG_AES128_CBC),
-
-	/** @deprecated  Use ODP_CIPHER_ALG_AES_GCM instead */
-	ODP_DEPRECATE(ODP_CIPHER_ALG_AES128_GCM),
-
 } odp_cipher_alg_t;
 
 /**
