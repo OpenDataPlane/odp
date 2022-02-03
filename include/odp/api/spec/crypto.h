@@ -772,12 +772,7 @@ typedef struct odp_crypto_packet_op_param_t {
 	odp_crypto_session_t session;
 
 	/** IV pointer for cipher */
-	union {
-		/** @deprecated use cipher_iv_ptr */
-		uint8_t *ODP_DEPRECATE(override_iv_ptr);
-		/** IV pointer for cipher */
-		uint8_t *cipher_iv_ptr;
-	};
+	uint8_t *cipher_iv_ptr;
 
 	/** IV pointer for authentication */
 	uint8_t *auth_iv_ptr;
