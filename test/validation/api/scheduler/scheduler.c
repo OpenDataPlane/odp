@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -258,11 +258,6 @@ static void scheduler_test_num_prio(void)
 	CU_ASSERT(min_prio <= default_prio);
 	CU_ASSERT(default_prio <= max_prio);
 	CU_ASSERT(num_prio == (max_prio - min_prio + 1));
-
-	CU_ASSERT(min_prio == ODP_SCHED_PRIO_LOWEST);
-	CU_ASSERT(max_prio == ODP_SCHED_PRIO_HIGHEST);
-	CU_ASSERT(default_prio == ODP_SCHED_PRIO_DEFAULT);
-	CU_ASSERT(default_prio == ODP_SCHED_PRIO_NORMAL);
 }
 
 static void scheduler_test_queue_destroy(void)

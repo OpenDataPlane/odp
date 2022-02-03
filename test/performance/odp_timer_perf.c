@@ -1,4 +1,4 @@
-/* Copyright (c) 2019-2021, Nokia
+/* Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -359,7 +359,7 @@ static int create_timer_pools(test_global_t *global)
 
 	odp_queue_param_init(&queue_param);
 	queue_param.type        = ODP_QUEUE_TYPE_SCHED;
-	queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	queue_param.sched.prio  = odp_schedule_default_prio();
 	queue_param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 

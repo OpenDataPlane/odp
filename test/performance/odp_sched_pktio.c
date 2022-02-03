@@ -941,7 +941,7 @@ static int open_pktios(test_global_t *test_global)
 
 		odp_pktin_queue_param_init(&pktin_param);
 
-		pktin_param.queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+		pktin_param.queue_param.sched.prio  = odp_schedule_default_prio();
 		pktin_param.queue_param.sched.sync  = sched_sync;
 		pktin_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 
@@ -1140,7 +1140,7 @@ static int create_pipeline_queues(test_global_t *test_global)
 
 	odp_queue_param_init(&queue_param);
 	queue_param.type = ODP_QUEUE_TYPE_SCHED;
-	queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	queue_param.sched.prio  = odp_schedule_default_prio();
 	queue_param.sched.sync  = sched_sync;
 	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 

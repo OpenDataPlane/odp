@@ -512,7 +512,7 @@ static odp_pktio_t create_pktv_pktio(int iface_idx, odp_pktin_mode_t imode,
 	odp_pktin_queue_param_init(&pktin_param);
 
 	if (imode == ODP_PKTIN_MODE_SCHED) {
-		pktin_param.queue_param.sched.prio = ODP_SCHED_PRIO_DEFAULT;
+		pktin_param.queue_param.sched.prio = odp_schedule_default_prio();
 		pktin_param.queue_param.sched.sync = sync_mode;
 		pktin_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 	}
@@ -4588,7 +4588,7 @@ static void pktio_test_pktin_event_queue(odp_pktin_mode_t pktin_mode)
 
 	if (pktin_mode == ODP_PKTIN_MODE_SCHED) {
 		in_queue_param.queue_param.type = ODP_QUEUE_TYPE_SCHED;
-		in_queue_param.queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+		in_queue_param.queue_param.sched.prio  = odp_schedule_default_prio();
 		in_queue_param.queue_param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 		in_queue_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 	}

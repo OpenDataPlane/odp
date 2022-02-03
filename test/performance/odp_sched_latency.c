@@ -1,5 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
- * Copyright (c) 2020, Nokia
+ * Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -822,9 +822,9 @@ int main(int argc, char *argv[])
 		int prio;
 
 		if (i == HI_PRIO)
-			prio = ODP_SCHED_PRIO_HIGHEST;
+			prio = odp_schedule_max_prio();
 		else
-			prio = ODP_SCHED_PRIO_LOWEST;
+			prio = odp_schedule_min_prio();
 
 		name[6] = '0' + (prio / 10);
 		name[7] = '0' + prio - (10 * (prio / 10));

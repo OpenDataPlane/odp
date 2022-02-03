@@ -1,5 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
- * Copyright (c) 2020-2021, Nokia
+ * Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -612,16 +612,16 @@ static int create_queues(test_global_t *global)
 
 		/* Create low, high and default queues in a mixed order. Dummy queues are created
 		 * first and with default priority. */
-		prio = ODP_SCHED_PRIO_DEFAULT;
+		prio = odp_schedule_default_prio();
 		if (i >= first) {
 			switch (i % 3) {
 			case 0:
 				if (num_low) {
 					num_low--;
-					prio = ODP_SCHED_PRIO_LOWEST;
+					prio = odp_schedule_min_prio();
 				} else if (num_high) {
 					num_high--;
-					prio = ODP_SCHED_PRIO_HIGHEST;
+					prio = odp_schedule_max_prio();
 				} else {
 					num_default--;
 				}
@@ -629,10 +629,10 @@ static int create_queues(test_global_t *global)
 			case 1:
 				if (num_high) {
 					num_high--;
-					prio = ODP_SCHED_PRIO_HIGHEST;
+					prio = odp_schedule_max_prio();
 				} else if (num_low) {
 					num_low--;
-					prio = ODP_SCHED_PRIO_LOWEST;
+					prio = odp_schedule_min_prio();
 				} else {
 					num_default--;
 				}
@@ -642,10 +642,10 @@ static int create_queues(test_global_t *global)
 					num_default--;
 				} else if (num_high) {
 					num_high--;
-					prio = ODP_SCHED_PRIO_HIGHEST;
+					prio = odp_schedule_max_prio();
 				} else {
 					num_low--;
-					prio = ODP_SCHED_PRIO_LOWEST;
+					prio = odp_schedule_min_prio();
 				}
 				break;
 			}

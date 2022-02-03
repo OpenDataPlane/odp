@@ -1169,7 +1169,7 @@ int main(int argc, char *argv[])
 	if (cargs.schedule) {
 		odp_schedule_config(NULL);
 		qparam.type = ODP_QUEUE_TYPE_SCHED;
-		qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+		qparam.sched.prio  = odp_schedule_default_prio();
 		qparam.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
 		qparam.sched.group = ODP_SCHED_GROUP_ALL;
 		out_queue = odp_queue_create("crypto-out", &qparam);

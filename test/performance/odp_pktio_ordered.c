@@ -640,7 +640,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 		pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ORDERED;
 		pktin_param.queue_param.sched.lock_count = 1;
 	}
-	pktin_param.queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	pktin_param.queue_param.sched.prio  = odp_schedule_default_prio();
 	pktin_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 
 	if (num_rx > (int)capa.max_input_queues) {
@@ -1273,7 +1273,7 @@ int main(int argc, char *argv[])
 
 			odp_queue_param_init(&qparam);
 			qparam.type       = ODP_QUEUE_TYPE_SCHED;
-			qparam.sched.prio = ODP_SCHED_PRIO_DEFAULT;
+			qparam.sched.prio = odp_schedule_default_prio();
 			qparam.sched.sync = ODP_SCHED_SYNC_ATOMIC;
 			qparam.sched.group = ODP_SCHED_GROUP_ALL;
 			qparam.size	  = queue_size;
