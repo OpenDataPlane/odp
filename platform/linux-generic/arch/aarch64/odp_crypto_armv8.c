@@ -540,14 +540,6 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		session->cipher.func = null_crypto_routine;
 		rc = 0;
 		break;
-#if ODP_DEPRECATED_API
-	case ODP_CIPHER_ALG_AES128_GCM:
-		/* AES-GCM requires to do both auth and
-		 * cipher at the same time */
-		if (param->auth_alg != ODP_AUTH_ALG_AES128_GCM)
-			rc = -1;
-#endif
-		/* Fall through */
 	case ODP_CIPHER_ALG_AES_GCM:
 	{
 		/* Set cipher mode for AES-GCM */

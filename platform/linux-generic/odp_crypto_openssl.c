@@ -2250,14 +2250,6 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	case ODP_CIPHER_ALG_3DES_ECB:
 		rc = process_cipher_param(session, EVP_des_ede3_ecb());
 		break;
-#if ODP_DEPRECATED_API
-	case ODP_CIPHER_ALG_AES128_CBC:
-		if (param->cipher_key.length == 16)
-			rc = process_cipher_param(session, EVP_aes_128_cbc());
-		else
-			rc = -1;
-		break;
-#endif
 	case ODP_CIPHER_ALG_AES_CBC:
 		if (param->cipher_key.length == 16)
 			rc = process_cipher_param(session, EVP_aes_128_cbc());
@@ -2309,18 +2301,6 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		else
 			rc = -1;
 		break;
-#if ODP_DEPRECATED_API
-	case ODP_CIPHER_ALG_AES128_GCM:
-		/* AES-GCM requires to do both auth and
-		 * cipher at the same time */
-		if (param->auth_alg != ODP_AUTH_ALG_AES128_GCM)
-			rc = -1;
-		else if (param->cipher_key.length == 16)
-			rc = process_aes_gcm_param(session, EVP_aes_128_gcm());
-		else
-			rc = -1;
-		break;
-#endif
 	case ODP_CIPHER_ALG_AES_GCM:
 		/* AES-GCM requires to do both auth and
 		 * cipher at the same time */

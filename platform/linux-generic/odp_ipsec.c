@@ -1,5 +1,5 @@
 /* Copyright (c) 2017-2018, Linaro Limited
- * Copyright (c) 2018-2021, Nokia
+ * Copyright (c) 2018-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -193,9 +193,6 @@ static int cipher_requires_randomness(odp_cipher_alg_t cipher)
 	switch (cipher) {
 	case ODP_CIPHER_ALG_NULL:
 	case ODP_CIPHER_ALG_AES_CTR:
-#if ODP_DEPRECATED_API
-	case ODP_CIPHER_ALG_AES128_GCM:
-#endif
 	case ODP_CIPHER_ALG_AES_GCM:
 	case ODP_CIPHER_ALG_AES_CCM:
 	case ODP_CIPHER_ALG_CHACHA20_POLY1305:

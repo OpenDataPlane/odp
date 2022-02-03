@@ -1,5 +1,5 @@
 /* Copyright (c) 2017-2018, Linaro Limited
- * Copyright (c) 2018-2021, Nokia
+ * Copyright (c) 2018-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -379,15 +379,9 @@ uint32_t _odp_ipsec_cipher_iv_len(odp_cipher_alg_t cipher)
 	case ODP_CIPHER_ALG_DES:
 	case ODP_CIPHER_ALG_3DES_CBC:
 		return 8;
-#if ODP_DEPRECATED_API
-	case ODP_CIPHER_ALG_AES128_CBC:
-#endif
 	case ODP_CIPHER_ALG_AES_CBC:
 	case ODP_CIPHER_ALG_AES_CTR:
 		return 16;
-#if ODP_DEPRECATED_API
-	case ODP_CIPHER_ALG_AES128_GCM:
-#endif
 	case ODP_CIPHER_ALG_AES_GCM:
 		return 12;
 	case ODP_CIPHER_ALG_AES_CCM:
@@ -667,9 +661,6 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->esp_iv_len = 8;
 		ipsec_sa->esp_pad_mask = esp_block_len_to_mask(8);
 		break;
-#if ODP_DEPRECATED_API
-	case ODP_CIPHER_ALG_AES128_CBC:
-#endif
 	case ODP_CIPHER_ALG_AES_CBC:
 		ipsec_sa->esp_iv_len = 16;
 		ipsec_sa->esp_pad_mask = esp_block_len_to_mask(16);
@@ -683,9 +674,6 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 		ipsec_sa->salt_length = 4;
 		salt_param = &param->crypto.cipher_key_extra;
 		break;
-#if ODP_DEPRECATED_API
-	case ODP_CIPHER_ALG_AES128_GCM:
-#endif
 	case ODP_CIPHER_ALG_AES_GCM:
 		ipsec_sa->use_counter_iv = 1;
 		ipsec_sa->esp_iv_len = 8;
