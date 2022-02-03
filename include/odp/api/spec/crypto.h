@@ -518,13 +518,6 @@ typedef struct odp_crypto_iv {
 } ODP_DEPRECATE(odp_crypto_iv_t);
 
 /**
- * Crypto API data range specifier
- *
- * @deprecated  Use odp_packet_data_range_t instead
- */
-typedef odp_packet_data_range_t ODP_DEPRECATE(odp_crypto_data_range_t);
-
-/**
  * Crypto API session creation parameters
  */
 typedef struct odp_crypto_session_param_t {
