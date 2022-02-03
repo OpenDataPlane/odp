@@ -1477,20 +1477,6 @@ int odp_pktout_send_lso(odp_pktout_queue_t queue, const odp_packet_t packet[], i
 			const odp_packet_lso_opt_t *lso_opt);
 
 /**
- * MTU value of a packet IO interface
- *
- * @deprecated  Use odp_pktin_maxlen() and odp_pktout_maxlen() instead. MTU was
- * not well defined. There may be difference between MTU and maximum frame
- * length values.
- *
- * @param pktio  Packet IO handle.
- *
- * @return MTU value on success
- * @retval 0 on failure
- */
-uint32_t ODP_DEPRECATE(odp_pktio_mtu)(odp_pktio_t pktio);
-
-/**
  * Enable/Disable promiscuous mode on a packet IO interface.
  *
  * @param pktio   Packet IO handle.
