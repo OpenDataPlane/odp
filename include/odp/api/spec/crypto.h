@@ -474,15 +474,6 @@ typedef union odp_crypto_auth_algos_t {
 		/** ODP_AUTH_ALG_SHA512 */
 		uint32_t sha512 : 1;
 
-		/** @deprecated  Use md5_hmac instead */
-		uint32_t ODP_DEPRECATE(md5_96)     : 1;
-
-		/** @deprecated  Use sha256_hmac instead */
-		uint32_t ODP_DEPRECATE(sha256_128) : 1;
-
-		/** @deprecated  Use aes_gcm instead */
-		uint32_t ODP_DEPRECATE(aes128_gcm) : 1;
-
 	} bit;
 
 	/** All bits of the bit field structure

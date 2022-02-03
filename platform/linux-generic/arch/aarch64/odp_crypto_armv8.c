@@ -400,14 +400,8 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->auths.bit.null         = 1;
 
 #ifdef __ARM_FEATURE_AES
-
 	capa->ciphers.bit.aes_gcm    = 1;
 	capa->auths.bit.aes_gcm      = 1;
-
-#if ODP_DEPRECATED_API
-	capa->auths.bit.aes128_gcm   = 1;
-#endif
-
 #endif
 
 	capa->max_sessions = MAX_SESSIONS;

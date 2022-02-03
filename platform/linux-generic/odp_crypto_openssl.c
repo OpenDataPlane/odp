@@ -1994,12 +1994,6 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->auths.bit.sha384       = 1;
 	capa->auths.bit.sha512       = 1;
 
-#if ODP_DEPRECATED_API
-	capa->auths.bit.md5_96       = 1;
-	capa->auths.bit.sha256_128   = 1;
-	capa->auths.bit.aes128_gcm   = 1;
-#endif
-
 	capa->max_sessions = MAX_SESSIONS;
 
 	return 0;
