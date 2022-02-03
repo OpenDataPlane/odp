@@ -405,7 +405,6 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->auths.bit.aes_gcm      = 1;
 
 #if ODP_DEPRECATED_API
-	capa->ciphers.bit.aes128_gcm = 1;
 	capa->auths.bit.aes128_gcm   = 1;
 #endif
 
