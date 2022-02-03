@@ -399,15 +399,9 @@ uint32_t _odp_ipsec_auth_digest_len(odp_auth_alg_t auth)
 	switch (auth) {
 	case ODP_AUTH_ALG_NULL:
 		return 0;
-#if ODP_DEPRECATED_API
-	case ODP_AUTH_ALG_MD5_96:
-#endif
 	case ODP_AUTH_ALG_MD5_HMAC:
 	case ODP_AUTH_ALG_SHA1_HMAC:
 		return 12;
-#if ODP_DEPRECATED_API
-	case ODP_AUTH_ALG_SHA256_128:
-#endif
 	case ODP_AUTH_ALG_SHA256_HMAC:
 		return 16;
 	case ODP_AUTH_ALG_SHA384_HMAC:
@@ -416,9 +410,6 @@ uint32_t _odp_ipsec_auth_digest_len(odp_auth_alg_t auth)
 		return 32;
 	case ODP_AUTH_ALG_AES_XCBC_MAC:
 		return 12;
-#if ODP_DEPRECATED_API
-	case ODP_AUTH_ALG_AES128_GCM:
-#endif
 	case ODP_AUTH_ALG_AES_GCM:
 	case ODP_AUTH_ALG_AES_GMAC:
 		return 16;
@@ -700,9 +691,6 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	}
 
 	switch (crypto_param.auth_alg) {
-#if ODP_DEPRECATED_API
-	case ODP_AUTH_ALG_AES128_GCM:
-#endif
 	case ODP_AUTH_ALG_AES_GCM:
 	case ODP_AUTH_ALG_AES_CCM:
 		if (ipsec_sa->esn) {
