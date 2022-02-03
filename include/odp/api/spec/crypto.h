@@ -592,9 +592,6 @@ typedef struct odp_crypto_session_param_t {
 	 */
 	union {
 #if ODP_DEPRECATED_API
-		/** @deprecated Use cipher_iv */
-		odp_crypto_iv_t ODP_DEPRECATE(iv);
-
 		/** Cipher Initialization Vector (IV) */
 		odp_crypto_iv_t ODP_DEPRECATE(cipher_iv);
 #endif
