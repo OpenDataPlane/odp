@@ -19,7 +19,6 @@ extern "C" {
 #endif
 
 #include <odp/api/schedule_types.h>
-#include <odp/api/deprecated.h>
 
 /** @addtogroup odp_queue
  *  @{
@@ -177,18 +176,6 @@ typedef struct odp_queue_capability_t {
 	  * types are used simultaneously. */
 	uint32_t max_queues;
 
-	/** @deprecated Use max_ordered_locks field of
-	 * odp_schedule_capability_t instead */
-	uint32_t ODP_DEPRECATE(max_ordered_locks);
-
-	/** @deprecated Use max_groups field of odp_schedule_capability_t
-	 * instead */
-	unsigned int ODP_DEPRECATE(max_sched_groups);
-
-	/** @deprecated Use max_prios field of odp_schedule_capability_t
-	 * instead */
-	unsigned int ODP_DEPRECATE(sched_prios);
-
 	/** Plain queue capabilities */
 	struct {
 		/** Maximum number of plain (ODP_BLOCKING) queues of the
@@ -230,47 +217,6 @@ typedef struct odp_queue_capability_t {
 		} waitfree;
 
 	} plain;
-
-	/** @deprecated Use queue capabilities in odp_schedule_capability_t
-	 * instead */
-	struct {
-		/** Maximum number of scheduled (ODP_BLOCKING) queues of the
-		  * default size. */
-		uint32_t max_num;
-
-		/** Maximum number of events a scheduled (ODP_BLOCKING) queue
-		  * can store simultaneously. The value of zero means that
-		  * scheduled queues do not have a size limit, but a single
-		  * queue can store all available events. */
-		uint32_t max_size;
-
-		/** Lock-free (ODP_NONBLOCKING_LF) implementation capabilities.
-		  * The specification is the same as for the blocking
-		  * implementation. */
-		struct {
-			/** Maximum number of queues. Lock-free queues are not
-			  * supported when zero. */
-			uint32_t max_num;
-
-			/** Maximum queue size */
-			uint32_t max_size;
-
-		} lockfree;
-
-		/** Wait-free (ODP_NONBLOCKING_WF) implementation capabilities.
-		  * The specification is the same as for the blocking
-		  * implementation. */
-		struct {
-			/** Maximum number of queues. Wait-free queues are not
-			  * supported when zero. */
-			uint32_t max_num;
-
-			/** Maximum queue size */
-			uint32_t max_size;
-
-		} waitfree;
-
-	} ODP_DEPRECATE(sched);
 
 } odp_queue_capability_t;
 

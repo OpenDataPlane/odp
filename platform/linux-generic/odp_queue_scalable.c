@@ -1,5 +1,4 @@
-/* Copyright (c) 2017, ARM Limited. All rights reserved.
- *
+/* Copyright (c) 2017, ARM Limited
  * Copyright (c) 2017-2018, Linaro Limited
  * All rights reserved.
  *
@@ -305,13 +304,7 @@ static int queue_capability(odp_queue_capability_t *capa)
 
 	/* Reserve some queues for internal use */
 	capa->max_queues        = CONFIG_MAX_QUEUES - CONFIG_INTERNAL_QUEUES;
-#if ODP_DEPRECATED_API
-	capa->max_ordered_locks = _odp_sched_fn->max_ordered_locks();
-	capa->max_sched_groups  = _odp_sched_fn->num_grps();
-	capa->sched_prios       = odp_schedule_num_prio();
-	capa->sched.max_num     = CONFIG_MAX_SCHED_QUEUES;
-	capa->sched.max_size    = 0;
-#endif
+
 	capa->plain.max_num     = CONFIG_MAX_PLAIN_QUEUES;
 	capa->plain.max_size    = 0;
 
