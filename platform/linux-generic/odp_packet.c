@@ -2548,7 +2548,7 @@ int _odp_packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
 	if (rc != 0)
 		return rc;
 
-	if (layer >= ODP_PKTIO_PARSER_LAYER_L4)
+	if (layer >= ODP_PROTO_LAYER_L4)
 		return packet_l4_chksum(pkt_hdr, chksums, l4_part_sum);
 	else
 		return 0;

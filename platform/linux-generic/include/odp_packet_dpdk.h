@@ -1,5 +1,5 @@
 /* Copyright (c) 2016-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -48,7 +48,7 @@ int _odp_dpdk_packet_parse_common(packet_parser_t *pkt_hdr,
 
 static inline int _odp_dpdk_packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
 					       struct rte_mbuf *mbuf,
-					       odp_pktio_parser_layer_t layer,
+					       odp_proto_layer_t layer,
 					       uint32_t supported_ptypes,
 					       odp_pktin_config_opt_t pktin_cfg)
 {
