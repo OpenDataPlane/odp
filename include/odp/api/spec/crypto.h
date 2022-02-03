@@ -686,9 +686,6 @@ typedef struct odp_crypto_session_param_t {
 
 } odp_crypto_session_param_t;
 
-/** @deprecated  Use odp_crypto_session_param_t instead */
-typedef odp_crypto_session_param_t ODP_DEPRECATE(odp_crypto_session_params_t);
-
 /**
  * Crypto API per packet operation parameters
  */
