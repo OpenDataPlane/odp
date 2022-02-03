@@ -4555,6 +4555,82 @@ int odp_tm_enq_multi(odp_tm_queue_t tm_queue, const odp_packet_t packets[],
 	return i;
 }
 
+int odp_tm_enq_multi_lso(odp_tm_queue_t tm_queue, const odp_packet_t packets[], int num,
+			 const odp_packet_lso_opt_t *opt)
+{
+	int i, ret, num_pkt;
+	uint32_t payload_len, left_over_len;
+	odp_packet_t pkt;
+	odp_packet_lso_opt_t lso_opt;
+	const odp_packet_lso_opt_t *opt_ptr = &lso_opt;
+
+	if (odp_unlikely(num <= 0)) {
+		ODP_ERR("No packets\n");
+		return -1;
+	}
+
+	memset(&lso_opt, 0, sizeof(odp_packet_lso_opt_t));
+	if (opt)
+		opt_ptr = opt;
+
+	for (i = 0; i < num; i++) {
+		pkt = packets[i];
+
+		if (opt == NULL) {
+			odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+			if (pkt_hdr->p.flags.lso == 0) {
+				ODP_ERR("No LSO options on packet %i\n", i);
+				goto error;
+			}
+			/* Fill in LSO options from packet */
+			lso_opt.lso_profile     = _odp_lso_prof_from_idx(pkt_hdr->lso_profile_idx);
+			lso_opt.payload_offset  = odp_packet_payload_offset(pkt);
+			lso_opt.max_payload_len = pkt_hdr->lso_max_payload;
+		}
+
+		/* Calculate number of packets */
+		num_pkt = _odp_lso_num_packets(pkt, opt_ptr, &payload_len, &left_over_len);
+		if (odp_unlikely(num_pkt <= 0)) {
+			ODP_DBG("LSO num packets failed on packet %i\n", i);
+			goto error;
+		}
+
+		/* Create packets */
+		odp_packet_t pkt_out[num_pkt];
+
+		ret = _odp_lso_create_packets(pkt, opt_ptr, payload_len, left_over_len, pkt_out,
+					      num_pkt);
+
+		if (odp_unlikely(ret))
+			goto error;
+
+		/* Enqueue resulting packets */
+		ret = odp_tm_enq_multi(tm_queue, pkt_out, num_pkt);
+
+		if (odp_unlikely(ret < num_pkt)) {
+			ODP_DBG("TM enqueue failed on packet %i\n", i);
+
+			if (ret < 0)
+				ret = 0;
+
+			odp_packet_free_multi(&pkt_out[ret], num_pkt - ret);
+			goto error;
+		}
+
+		/* Free original packet */
+		odp_packet_free(pkt);
+	}
+
+	return i;
+
+error:
+	if (i == 0)
+		return -1;
+
+	return i;
+}
+
 int odp_tm_node_info(odp_tm_node_t tm_node, odp_tm_node_info_t *info)
 {
 	tm_queue_thresholds_t *threshold_params;
