@@ -892,9 +892,6 @@ typedef struct odp_crypto_op_status {
 
 } odp_crypto_op_status_t;
 
-/** @deprecated  Use ODP_DEPRECATE(odp_crypto_op_status_t) instead */
-typedef odp_crypto_op_status_t ODP_DEPRECATE(odp_crypto_compl_status_t);
-
 /**
  * Crypto API operation result
  */
