@@ -26,26 +26,26 @@ extern "C" {
 
 /**
  * @def ODP_SCHED_PRIO_HIGHEST
- * This macro is equivalent of calling odp_schedule_max_prio() and will be
- * deprecated. Use direct function call instead.
+ * @deprecated This macro is equivalent of calling odp_schedule_max_prio(). Use
+ * direct function call instead.
  */
 
 /**
  * @def ODP_SCHED_PRIO_NORMAL
- * This macro is equivalent of calling odp_schedule_default_prio() and will be
- * deprecated. Use direct function call instead.
+ * @deprecated This macro is equivalent of calling odp_schedule_default_prio().
+ * Use direct function call instead.
  */
 
 /**
  * @def ODP_SCHED_PRIO_LOWEST
- * This macro is equivalent of calling odp_schedule_min_prio() and will be
- * deprecated. Use direct function call instead.
+ * @deprecated This macro is equivalent of calling odp_schedule_min_prio(). Use
+ * direct function call instead.
  */
 
 /**
  * @def ODP_SCHED_PRIO_DEFAULT
- * This macro is equivalent of calling odp_schedule_default_prio() and will be
- * deprecated. Use direct function call instead.
+ * @deprecated This macro is equivalent of calling odp_schedule_default_prio().
+ * Use direct function call instead.
  */
 
 /**
