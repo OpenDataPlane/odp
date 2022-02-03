@@ -857,9 +857,6 @@ typedef struct odp_pktio_capability_t {
 	 * set to zero. */
 	odp_pktio_set_op_t set_op;
 
-	/** @deprecated Use enable_loop inside odp_pktin_config_t */
-	odp_bool_t ODP_DEPRECATE(loop_supported);
-
 	/** Packet input vector capability */
 	odp_pktin_vector_capability_t vector;
 
