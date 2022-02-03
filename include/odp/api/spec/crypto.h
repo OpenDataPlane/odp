@@ -761,9 +761,6 @@ typedef struct odp_crypto_op_param_t {
 
 } odp_crypto_op_param_t;
 
-/** @deprecated  Use odp_crypto_op_param_t instead */
-typedef odp_crypto_op_param_t ODP_DEPRECATE(odp_crypto_op_params_t);
-
 /**
  * Crypto packet API per packet operation parameters
  */
