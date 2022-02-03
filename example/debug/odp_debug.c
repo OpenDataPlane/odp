@@ -1,4 +1,4 @@
-/* Copyright (c) 2020-2021, Nokia
+/* Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -279,7 +279,7 @@ static int queue_debug(void)
 
 	name = "atomic_sched_queue";
 	param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
-	param.sched.prio = ODP_SCHED_PRIO_HIGHEST;
+	param.sched.prio = odp_schedule_max_prio();
 
 	queue[2] = odp_queue_create(name, &param);
 

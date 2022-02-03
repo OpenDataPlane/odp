@@ -266,7 +266,7 @@ static int start_timers(test_global_t *test_global)
 
 	odp_queue_param_init(&queue_param);
 	queue_param.type        = ODP_QUEUE_TYPE_SCHED;
-	queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	queue_param.sched.prio  = odp_schedule_default_prio();
 	queue_param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 
