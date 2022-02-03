@@ -719,12 +719,7 @@ typedef struct odp_crypto_op_param_t {
 	odp_packet_t out_pkt;
 
 	/** IV pointer for cipher */
-	union {
-		/** @deprecated use cipher_iv_ptr */
-		uint8_t *ODP_DEPRECATE(override_iv_ptr);
-		/** IV pointer for cipher */
-		uint8_t *cipher_iv_ptr;
-	};
+	uint8_t *cipher_iv_ptr;
 
 	/** Authentication IV pointer */
 	uint8_t *auth_iv_ptr;
