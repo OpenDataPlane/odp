@@ -1,5 +1,5 @@
 /* Copyright (c) 2017-2018, Linaro Limited
- * Copyright (c) 2018-2021, Nokia
+ * Copyright (c) 2018-2022, Nokia
  * Copyright (c) 2020-2021, Marvell
  * All rights reserved.
  *
@@ -1124,7 +1124,7 @@ static odp_queue_t sched_queue_create(const char *name)
 
 	odp_queue_param_init(&qparam);
 	qparam.type = ODP_QUEUE_TYPE_SCHED;
-	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	qparam.sched.prio  = odp_schedule_default_prio();
 	qparam.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 

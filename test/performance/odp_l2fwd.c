@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * Copyright (c) 2020-2021, Marvell
  * All rights reserved.
  *
@@ -1017,7 +1017,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 		else
 			sync_mode = ODP_SCHED_SYNC_PARALLEL;
 
-		pktin_param.queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+		pktin_param.queue_param.sched.prio  = odp_schedule_default_prio();
 		pktin_param.queue_param.sched.sync  = sync_mode;
 		pktin_param.queue_param.sched.group = group;
 	}

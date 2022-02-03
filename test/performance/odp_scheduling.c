@@ -75,7 +75,7 @@ static void print_stats(int prio, test_globals_t *globals)
 {
 	int i, j, k;
 
-	if (prio == ODP_SCHED_PRIO_HIGHEST)
+	if (prio == odp_schedule_max_prio())
 		i = 0;
 	else
 		i = 1;
@@ -135,7 +135,7 @@ static int enqueue_events(int thr, int prio, int num_queues, int num_events,
 	odp_queue_t queue;
 	int i, j, k, ret;
 
-	if (prio == ODP_SCHED_PRIO_HIGHEST)
+	if (prio == odp_schedule_max_prio())
 		i = 0;
 	else
 		i = 1;
@@ -644,19 +644,19 @@ static int run_thread(void *arg ODP_UNUSED)
 	odp_barrier_wait(barrier);
 
 	if (test_schedule_single("sched_____s_lo", thr,
-				 ODP_SCHED_PRIO_LOWEST, globals))
+				 odp_schedule_min_prio(), globals))
 		return -1;
 
 	odp_barrier_wait(barrier);
 
 	if (test_schedule_many("sched_____m_lo", thr,
-			       ODP_SCHED_PRIO_LOWEST, globals))
+			       odp_schedule_min_prio(), globals))
 		return -1;
 
 	odp_barrier_wait(barrier);
 
 	if (test_schedule_multi("sched_multi_lo", thr,
-				ODP_SCHED_PRIO_LOWEST, globals))
+				odp_schedule_min_prio(), globals))
 		return -1;
 
 	/* High prio */
@@ -664,19 +664,19 @@ static int run_thread(void *arg ODP_UNUSED)
 	odp_barrier_wait(barrier);
 
 	if (test_schedule_single("sched_____s_hi", thr,
-				 ODP_SCHED_PRIO_HIGHEST, globals))
+				 odp_schedule_max_prio(), globals))
 		return -1;
 
 	odp_barrier_wait(barrier);
 
 	if (test_schedule_many("sched_____m_hi", thr,
-			       ODP_SCHED_PRIO_HIGHEST, globals))
+			       odp_schedule_max_prio(), globals))
 		return -1;
 
 	odp_barrier_wait(barrier);
 
 	if (test_schedule_multi("sched_multi_hi", thr,
-				ODP_SCHED_PRIO_HIGHEST, globals))
+				odp_schedule_max_prio(), globals))
 		return -1;
 
 	printf("Thread %i exits\n", thr);
@@ -950,9 +950,9 @@ int main(int argc, char *argv[])
 		int prio;
 
 		if (i == 0)
-			prio = ODP_SCHED_PRIO_HIGHEST;
+			prio = odp_schedule_max_prio();
 		else
-			prio = ODP_SCHED_PRIO_LOWEST;
+			prio = odp_schedule_min_prio();
 
 		name[6] = '0' + (prio / 10);
 		name[7] = '0' + prio - (10 * (prio / 10));

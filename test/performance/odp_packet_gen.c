@@ -1,4 +1,4 @@
-/* Copyright (c) 2020-2021, Nokia
+/* Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -816,7 +816,7 @@ static int open_pktios(test_global_t *global)
 
 		odp_pktin_queue_param_init(&pktin_param);
 
-		pktin_param.queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+		pktin_param.queue_param.sched.prio  = odp_schedule_default_prio();
 		pktin_param.queue_param.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
 		pktin_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 		pktin_param.hash_enable = 1;
