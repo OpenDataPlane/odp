@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -1814,13 +1814,13 @@ void odp_packet_flow_hash_set(odp_packet_t pkt, uint32_t flow_hash);
  * additional operations on packet timestamp values or conversion into
  * nanoseconds. Use odp_packet_has_ts() to check if packet has a valid
  * timestamp. Packet input interface timestamp resolution can be checked with
- * odp_pktin_ts_res().
+ * odp_pktio_ts_res().
  *
  * @param pkt  Packet handle
  *
  * @return Timestamp value
  *
- * @see odp_pktin_ts_res(), odp_packet_has_ts(), odp_time_to_ns()
+ * @see odp_pktio_ts_res(), odp_packet_has_ts(), odp_time_to_ns()
  */
 odp_time_t odp_packet_ts(odp_packet_t pkt);
 
@@ -1832,8 +1832,7 @@ odp_time_t odp_packet_ts(odp_packet_t pkt);
  * @param pkt        Packet handle
  * @param timestamp  Timestamp value
  *
- * @see odp_packet_ts(), odp_packet_has_ts(),
- * odp_pktin_ts_from_ns()
+ * @see odp_packet_ts(), odp_packet_has_ts(), odp_pktio_ts_from_ns()
  */
 void odp_packet_ts_set(odp_packet_t pkt, odp_time_t timestamp);
 
