@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -49,11 +49,6 @@ extern "C" {
  * Invalid odp_pmr_t value.
  * This value is returned from odp_cls_pmr_create()
  * function on failure.
- */
-
-/**
- * @def ODP_PMR_INVAL
- * @deprecated Use ODP_PMR_INVALID instead
  */
 
 /**
