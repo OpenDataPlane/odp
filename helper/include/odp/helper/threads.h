@@ -11,7 +11,7 @@
  *
  * ODP Linux helper API
  *
- * This file is an optional helper to odp.h APIs. These functions are provided
+ * This file is an optional helper to ODP APIs. These functions are provided
  * to ease common setups in a Linux system. User is free to implement the same
  * setups in otherways (not via this API).
  */

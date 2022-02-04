@@ -20,7 +20,7 @@
 #include <signal.h>
 #include <sys/wait.h>
 
-#include <odp.h>
+#include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
 /** @def SHM_PKT_POOL_SIZE
