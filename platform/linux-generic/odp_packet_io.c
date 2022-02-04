@@ -2494,12 +2494,12 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
+		ODP_ERR("pktio entry %" PRIuPTR " does not exist\n", (uintptr_t)pktio);
 		return -1;
 	}
 
 	if (entry->s.state == PKTIO_STATE_STARTED) {
-		ODP_DBG("pktio %s: not stopped\n", entry->s.name);
+		ODP_ERR("pktio %s: not stopped\n", entry->s.name);
 		return -1;
 	}
 
@@ -2511,27 +2511,49 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 		return 0;
 
 	if (mode != ODP_PKTOUT_MODE_DIRECT && mode != ODP_PKTOUT_MODE_QUEUE) {
-		ODP_DBG("pktio %s: bad packet output mode\n", entry->s.name);
+		ODP_ERR("pktio %s: bad packet output mode\n", entry->s.name);
 		return -1;
 	}
 
 	num_queues = param->num_queues;
 
 	if (num_queues == 0) {
-		ODP_DBG("pktio %s: zero output queues\n", entry->s.name);
+		ODP_ERR("pktio %s: zero output queues\n", entry->s.name);
 		return -1;
 	}
 
 	rc = odp_pktio_capability(pktio, &capa);
 	if (rc) {
-		ODP_DBG("pktio %s: unable to read capabilities\n",
+		ODP_ERR("pktio %s: unable to read capabilities\n",
 			entry->s.name);
 		return -1;
 	}
 
 	if (num_queues > capa.max_output_queues) {
-		ODP_DBG("pktio %s: too many output queues\n", entry->s.name);
+		ODP_ERR("pktio %s: too many output queues\n", entry->s.name);
 		return -1;
+	}
+
+	/* Check output queue sizes */
+	for (i = 0; i < num_queues; i++) {
+		uint32_t queue_size = param->queue_size[i];
+
+		if (queue_size == 0)
+			continue;
+
+		if (capa.max_output_queue_size == 0) {
+			ODP_ERR("pktio %s: configuring output queue size not supported\n",
+				entry->s.name);
+			return -1;
+		}
+		if (queue_size < capa.min_output_queue_size) {
+			ODP_ERR("pktio %s: output queue size too small\n", entry->s.name);
+			return -1;
+		}
+		if (queue_size > capa.max_output_queue_size) {
+			ODP_ERR("pktio %s: output queue size too large\n", entry->s.name);
+			return -1;
+		}
 	}
 
 	/* If re-configuring, destroy old queues */
@@ -2566,7 +2588,7 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 			queue = odp_queue_create(name, &queue_param);
 
 			if (queue == ODP_QUEUE_INVALID) {
-				ODP_DBG("pktout %s: event queue create failed\n",
+				ODP_ERR("pktout %s: event queue create failed\n",
 					entry->s.name);
 				destroy_out_queues(entry, i + 1);
 				return -1;
