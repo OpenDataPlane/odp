@@ -1,5 +1,4 @@
 include_HEADERS = \
-		  odp.h \
 		  odp_api.h
 
 odpincludedir= $(includedir)/odp
