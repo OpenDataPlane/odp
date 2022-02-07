@@ -5560,6 +5560,7 @@ sub process {
 			    $var !~ /^(?:Clear|Set|TestClear|TestSet|)Page[A-Z]/ &&
 #ODP ignores
 			    $var !~ /\bCU_/ &&
+			    $var !~ /\bPRI[diux]PTR/ &&
 			    $var !~ /\bPRI[diux]8/ &&
 			    $var !~ /\bPRI[diux]16/ &&
 			    $var !~ /\bPRI[diux]32/ &&
