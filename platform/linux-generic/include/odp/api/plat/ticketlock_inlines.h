@@ -10,6 +10,8 @@
 #include <odp/api/atomic.h>
 #include <odp/api/cpu.h>
 
+#include <odp/api/abi/ticketlock.h>
+
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #ifndef _ODP_NO_INLINE

@@ -6,14 +6,18 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <odp/api/hash.h>
+#include <odp/api/ticketlock.h>
+
+#include <odp_name_table_internal.h>
+#include <odp_debug_internal.h>
+#include <odp_macros_internal.h>
+
 #include <stdint.h>
 #include <string.h>
 #include <malloc.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include <odp_name_table_internal.h>
-#include <odp_debug_internal.h>
-#include <odp_macros_internal.h>
 
  /* The following constants define some tunable parameters of this module.
  * They are set to fairly reasonable values (perhaps somewhat biased toward

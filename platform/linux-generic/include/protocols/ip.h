@@ -17,7 +17,9 @@
 extern "C" {
 #endif
 
-#include <odp_api.h>
+#include <odp/api/align.h>
+#include <odp/api/byteorder.h>
+#include <odp/api/debug.h>
 
 /** @addtogroup odp_header ODP HEADER
  *  @{

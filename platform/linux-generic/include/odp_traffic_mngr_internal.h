@@ -19,9 +19,10 @@
 extern "C" {
 #endif
 
-#include <pthread.h>
-#include <odp/api/traffic_mngr.h>
+#include <odp/api/barrier.h>
 #include <odp/api/packet_io.h>
+#include <odp/api/traffic_mngr.h>
+
 #include <odp_name_table_internal.h>
 #include <odp_timer_wheel_internal.h>
 #include <odp_pkt_queue_internal.h>
@@ -30,6 +31,8 @@ extern "C" {
 #include <odp_buffer_internal.h>
 #include <odp_queue_if.h>
 #include <odp_packet_internal.h>
+
+#include <pthread.h>
 
 typedef struct stat  file_stat_t;
 

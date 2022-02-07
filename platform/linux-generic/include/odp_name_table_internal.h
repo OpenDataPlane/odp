@@ -14,7 +14,6 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include <odp_api.h>
 
 typedef enum {
 	ODP_COS_HANDLE,

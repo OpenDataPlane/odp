@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -7,17 +7,18 @@
 
 #include <odp_posix_extensions.h>
 
+#include <odp/api/packet_io_stats.h>
+
+#include <odp_debug_internal.h>
+#include <odp_errno_define.h>
+#include <odp_ethtool_stats.h>
+
 #include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <linux/sockios.h>
 #include <linux/ethtool.h>
 #include <errno.h>
 #include <net/if.h>
-
-#include <odp_api.h>
-#include <odp_ethtool_stats.h>
-#include <odp_debug_internal.h>
-#include <odp_errno_define.h>
 
 /*
  * Suppress bounds warnings about interior zero length arrays. Such an array
