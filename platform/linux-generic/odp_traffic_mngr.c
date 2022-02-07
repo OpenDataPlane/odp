@@ -9,6 +9,27 @@
 
 #include <odp_posix_extensions.h>
 
+#include <odp/api/packet.h>
+#include <odp/api/packet_flags.h>
+#include <odp/api/std_types.h>
+#include <odp/api/time.h>
+
+#include <odp/api/plat/byteorder_inlines.h>
+#include <odp/api/plat/packet_inlines.h>
+#include <odp/api/plat/time_inlines.h>
+
+#include <odp_packet_io_internal.h>
+#include <odp_traffic_mngr_internal.h>
+#include <odp_macros_internal.h>
+#include <odp_init_internal.h>
+#include <odp_errno_define.h>
+#include <odp_global_data.h>
+#include <odp_schedule_if.h>
+#include <odp_event_internal.h>
+
+#include <protocols/eth.h>
+#include <protocols/ip.h>
+
 #include <stdint.h>
 #include <string.h>
 #include <malloc.h>
@@ -20,21 +41,6 @@
 #include <sched.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <odp/api/std_types.h>
-#include <protocols/eth.h>
-#include <protocols/ip.h>
-#include <odp_packet_io_internal.h>
-#include <odp_traffic_mngr_internal.h>
-#include <odp/api/plat/packet_inlines.h>
-#include <odp/api/plat/byteorder_inlines.h>
-#include <odp/api/time.h>
-#include <odp/api/plat/time_inlines.h>
-#include <odp_macros_internal.h>
-#include <odp_init_internal.h>
-#include <odp_errno_define.h>
-#include <odp_global_data.h>
-#include <odp_schedule_if.h>
-#include <odp_event_internal.h>
 
 /* Local vars */
 static const

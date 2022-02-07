@@ -17,7 +17,13 @@
 extern "C" {
 #endif
 
+#include <odp/api/align.h>
+#include <odp/api/byteorder.h>
+#include <odp/api/debug.h>
+
 #include <protocols/ip.h>
+
+#include <stdint.h>
 
 /** rss data type */
 typedef union {

@@ -1,24 +1,32 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2013-2021, Nokia Solutions and Networks
+ * Copyright (c) 2013-2022, Nokia Solutions and Networks
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_api.h>
-#include <odp_packet_internal.h>
-#include <odp_packet_io_internal.h>
+#include <odp/api/debug.h>
+#include <odp/api/event.h>
+#include <odp/api/hints.h>
+#include <odp/api/packet.h>
+#include <odp/api/packet_io.h>
+#include <odp/api/queue.h>
+#include <odp/api/ticketlock.h>
+#include <odp/api/time.h>
+
+#include <odp/api/plat/byteorder_inlines.h>
+#include <odp/api/plat/packet_flag_inlines.h>
+#include <odp/api/plat/queue_inlines.h>
+
 #include <odp_classification_internal.h>
-#include <odp_ipsec_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_errno_define.h>
-#include <odp/api/plat/packet_flag_inlines.h>
-#include <odp/api/hints.h>
-#include <odp/api/plat/byteorder_inlines.h>
-#include <odp_queue_if.h>
-#include <odp/api/plat/queue_inlines.h>
-#include <odp_global_data.h>
 #include <odp_event_internal.h>
+#include <odp_global_data.h>
+#include <odp_ipsec_internal.h>
+#include <odp_packet_internal.h>
+#include <odp_packet_io_internal.h>
+#include <odp_queue_if.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>

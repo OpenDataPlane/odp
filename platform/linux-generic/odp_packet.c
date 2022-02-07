@@ -7,24 +7,27 @@
 
 #include <odp/autoheader_external.h>
 
-#include <odp/api/packet.h>
-#include <odp/api/plat/packet_inlines.h>
-#include <odp_packet_internal.h>
-#include <odp_debug_internal.h>
-#include <odp_macros_internal.h>
-#include <odp_chksum_internal.h>
-#include <odp_errno_define.h>
-#include <odp/api/hints.h>
 #include <odp/api/byteorder.h>
-#include <odp/api/plat/byteorder_inlines.h>
+#include <odp/api/hash.h>
+#include <odp/api/hints.h>
+#include <odp/api/packet.h>
+#include <odp/api/packet_flags.h>
 #include <odp/api/packet_io.h>
-#include <odp/api/plat/pktio_inlines.h>
 #include <odp/api/proto_stats.h>
+#include <odp/api/timer.h>
 
+#include <odp_chksum_internal.h>
+#include <odp_debug_internal.h>
+#include <odp_errno_define.h>
 #include <odp_event_internal.h>
+#include <odp_macros_internal.h>
+#include <odp_packet_internal.h>
 
 /* Inlined API functions */
+#include <odp/api/plat/byteorder_inlines.h>
 #include <odp/api/plat/event_inlines.h>
+#include <odp/api/plat/packet_inlines.h>
+#include <odp/api/plat/pktio_inlines.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>

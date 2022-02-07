@@ -15,7 +15,7 @@
 #define _ODP_PLAT_PACKET_VECTOR_INLINES_H_
 
 #include <odp/api/abi/event.h>
-#include <odp/api/abi/packet.h>
+#include <odp/api/abi/packet_types.h>
 #include <odp/api/abi/pool.h>
 
 #include <odp/api/plat/event_vector_inline_types.h>

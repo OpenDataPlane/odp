@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2020-2021, Nokia
+ * Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -8,9 +8,11 @@
 #include <odp/api/event.h>
 #include <odp/api/buffer.h>
 #include <odp/api/crypto.h>
+#include <odp/api/dma.h>
 #include <odp/api/packet.h>
 #include <odp/api/timer.h>
 #include <odp/api/pool.h>
+
 #include <odp_buffer_internal.h>
 #include <odp_ipsec_internal.h>
 #include <odp_debug_internal.h>

@@ -1,11 +1,26 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2013-2021, Nokia Solutions and Networks
+ * Copyright (c) 2013-2022, Nokia Solutions and Networks
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
 #include <odp_posix_extensions.h>
+
+#include <odp/api/align.h>
+#include <odp/api/debug.h>
+#include <odp/api/hints.h>
+#include <odp/api/packet.h>
+#include <odp/api/packet_io.h>
+#include <odp/api/ticketlock.h>
+
+#include <odp_socket_common.h>
+#include <odp_packet_internal.h>
+#include <odp_packet_io_internal.h>
+#include <odp_packet_io_stats.h>
+#include <odp_debug_internal.h>
+#include <odp_errno_define.h>
+#include <odp_classification_internal.h>
 
 #include <sys/socket.h>
 #include <stdio.h>
@@ -19,15 +34,6 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <sys/syscall.h>
-
-#include <odp_api.h>
-#include <odp_socket_common.h>
-#include <odp_packet_internal.h>
-#include <odp_packet_io_internal.h>
-#include <odp_packet_io_stats.h>
-#include <odp_debug_internal.h>
-#include <odp_errno_define.h>
-#include <odp_classification_internal.h>
 
 typedef struct {
 	odp_ticketlock_t rx_lock ODP_ALIGNED_CACHE;

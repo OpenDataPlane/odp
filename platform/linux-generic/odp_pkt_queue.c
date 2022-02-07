@@ -6,16 +6,18 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <odp/api/packet.h>
+
+#include <odp_pkt_queue_internal.h>
+#include <odp_traffic_mngr_internal.h>
+#include <odp_debug_internal.h>
+#include <odp_macros_internal.h>
+
 #include <stdint.h>
 #include <string.h>
 #include <malloc.h>
 #include <stdio.h>
 #include <inttypes.h>
-#include <odp_api.h>
-#include <odp_pkt_queue_internal.h>
-#include <odp_traffic_mngr_internal.h>
-#include <odp_debug_internal.h>
-#include <odp_macros_internal.h>
 
 #define NUM_PKTS     7
 

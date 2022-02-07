@@ -30,6 +30,21 @@
 
 #include <odp_posix_extensions.h>
 
+#include <odp/api/debug.h>
+#include <odp/api/hints.h>
+#include <odp/api/packet_io.h>
+#include <odp/api/random.h>
+#include <odp/api/ticketlock.h>
+
+#include <odp/api/plat/packet_inlines.h>
+
+#include <odp_debug_internal.h>
+#include <odp_socket_common.h>
+#include <odp_packet_internal.h>
+#include <odp_packet_io_internal.h>
+#include <odp_classification_internal.h>
+#include <odp_errno_define.h>
+
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -39,14 +54,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <linux/if_tun.h>
-
-#include <odp_api.h>
-#include <odp/api/plat/packet_inlines.h>
-#include <odp_socket_common.h>
-#include <odp_packet_internal.h>
-#include <odp_packet_io_internal.h>
-#include <odp_classification_internal.h>
-#include <odp_errno_define.h>
 
 typedef struct {
 	int fd;				/**< file descriptor for tap interface*/

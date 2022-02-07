@@ -13,8 +13,9 @@
 extern "C" {
 #endif
 
+#include <odp/api/packet.h>
+
 #include <stdint.h>
-#include <odp_api.h>
 
 typedef uint64_t _odp_int_queue_pool_t;
 typedef uint32_t _odp_int_pkt_queue_t;

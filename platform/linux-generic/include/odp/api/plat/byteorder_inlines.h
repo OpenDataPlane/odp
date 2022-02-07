@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/abi/byteorder.h>
+
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #ifndef __odp_force
