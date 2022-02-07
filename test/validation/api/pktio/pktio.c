@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2020-2021, Nokia
+ * Copyright (c) 2020-2022, Nokia
  * Copyright (c) 2020, Marvell
  * All rights reserved.
  *
@@ -3316,7 +3316,7 @@ static void pktio_test_pktout_compl(bool use_plain_queue)
 		opt.queue = compl_queue[i];
 		opt.mode = ODP_PACKET_TX_COMPL_ALL;
 		odp_packet_tx_compl_request(pkt_tbl[i], &opt);
-
+		CU_ASSERT(odp_packet_has_tx_compl_request(pkt_tbl[i]) != 0);
 		/* Set pkt sequence number as its user ptr */
 		odp_packet_user_ptr_set(pkt_tbl[i], (const void *)&pkt_seq[i]);
 	}
@@ -3339,6 +3339,7 @@ static void pktio_test_pktout_compl(bool use_plain_queue)
 
 			/* Event validation */
 			CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+			CU_ASSERT_FATAL(odp_event_is_valid(ev) == 1);
 			CU_ASSERT_FATAL(odp_event_type(ev) == ODP_EVENT_PACKET_TX_COMPL);
 			CU_ASSERT_FATAL(odp_packet_tx_compl_from_event(ev) !=
 					ODP_PACKET_TX_COMPL_INVALID);
@@ -3363,6 +3364,7 @@ static void pktio_test_pktout_compl(bool use_plain_queue)
 
 			/* Event validation */
 			CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+			CU_ASSERT_FATAL(odp_event_is_valid(ev) == 1);
 			CU_ASSERT_FATAL(odp_event_type(ev) == ODP_EVENT_PACKET_TX_COMPL);
 			CU_ASSERT_FATAL(odp_packet_tx_compl_from_event(ev) !=
 					ODP_PACKET_TX_COMPL_INVALID);
@@ -3394,13 +3396,26 @@ static void pktio_test_pktout_compl(bool use_plain_queue)
 		}
 	}
 
-	for (i = 0; i < TX_BATCH_LEN; i++)
-		odp_queue_destroy(compl_queue[i]);
-
 	for (i = 0; i < num_ifaces; i++) {
 		CU_ASSERT_FATAL(odp_pktio_stop(pktio[i]) == 0);
 		CU_ASSERT_FATAL(odp_pktio_close(pktio[i]) == 0);
 	}
+
+	odp_schedule_pause();
+
+	while (1) {
+		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+
+		if (ev == ODP_EVENT_INVALID)
+			break;
+
+		odp_event_free(ev);
+	}
+
+	odp_schedule_resume();
+
+	for (i = 0; i < TX_BATCH_LEN; i++)
+		odp_queue_destroy(compl_queue[i]);
 }
 
 static int pktio_check_pktout_compl(bool plain)
