@@ -28,7 +28,7 @@
 #include <odp/api/plat/byteorder_inlines.h>
 #include <odp/api/plat/event_inlines.h>
 #include <odp/api/plat/packet_inlines.h>
-#include <odp/api/plat/pktio_inlines.h>
+#include <odp/api/plat/packet_io_inlines.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>
