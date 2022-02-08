@@ -9,7 +9,7 @@
 
 #include <odp/autoheader_internal.h>
 #include <odp/api/packet_io.h>
-#include <odp/api/plat/pktio_inlines.h>
+#include <odp/api/plat/packet_io_inlines.h>
 #include <odp_packet_io_internal.h>
 #include <odp/api/packet.h>
 #include <odp/api/plat/packet_inlines.h>

@@ -21,7 +21,7 @@ extern "C" {
 #include <odp/autoheader_internal.h>
 
 #include <odp/api/packet_io.h>
-#include <odp/api/plat/pktio_inlines.h>
+#include <odp/api/plat/packet_io_inlines.h>
 #include <odp/api/spinlock.h>
 #include <odp/api/ticketlock.h>
 #include <odp_classification_datamodel.h>

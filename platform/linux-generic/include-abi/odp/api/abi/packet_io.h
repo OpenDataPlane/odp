@@ -53,11 +53,12 @@ typedef struct odp_pktout_queue_t {
 
 #define ODP_PKTIO_STATS_EXTRA_NAME_LEN 64
 
+/* Inlined functions for non-ABI compat mode */
+#include <odp/api/plat/packet_io_inlines.h>
+
 /**
  * @}
  */
-
-#include <odp/api/plat/pktio_inlines.h>
 
 #ifdef __cplusplus
 }

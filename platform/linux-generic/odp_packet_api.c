@@ -21,7 +21,7 @@
 #include <inttypes.h>
 
 /* Prevent this header from being included again later */
-#include <odp/api/plat/pktio_inlines.h>
+#include <odp/api/plat/packet_io_inlines.h>
 
 /* Include non-inlined versions of API functions */
 #define _ODP_NO_INLINE

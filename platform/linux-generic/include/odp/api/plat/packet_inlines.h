@@ -25,7 +25,7 @@
 
 #include <odp/api/plat/packet_inline_types.h>
 #include <odp/api/plat/pool_inline_types.h>
-#include <odp/api/plat/pktio_inlines.h>
+#include <odp/api/plat/packet_io_inlines.h>
 
 #include <string.h>
 

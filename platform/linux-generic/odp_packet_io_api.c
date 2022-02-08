@@ -8,4 +8,4 @@
 
 /* Include non-inlined versions of API functions */
 #define _ODP_NO_INLINE
-#include <odp/api/plat/pktio_inlines.h>
+#include <odp/api/plat/packet_io_inlines.h>
