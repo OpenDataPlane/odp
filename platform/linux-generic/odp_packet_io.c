@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -3003,7 +3003,7 @@ odp_lso_profile_t odp_lso_profile_create(odp_pktio_t pktio, const odp_lso_profil
 	return (odp_lso_profile_t)(uintptr_t)lso_prof;
 }
 
-static inline odp_lso_profile_t lso_profile_from_idx(uint8_t idx)
+odp_lso_profile_t _odp_lso_prof_from_idx(uint8_t idx)
 {
 	return (odp_lso_profile_t)(uintptr_t)&pktio_global->lso_profile[idx];
 }
@@ -3140,26 +3140,16 @@ static int lso_update_custom(lso_profile_t *lso_prof, odp_packet_t pkt, int segn
 	return 0;
 }
 
-static int pktout_send_lso(odp_pktout_queue_t queue, odp_packet_t packet,
-			   const odp_packet_lso_opt_t *lso_opt)
+int _odp_lso_num_packets(odp_packet_t packet, const odp_packet_lso_opt_t *lso_opt,
+			 uint32_t *len_out, uint32_t *left_over_out)
 {
-	odp_pool_t pool;
-	odp_packet_t pkt;
-	int i, ret, num, num_pkt, num_full;
-	uint32_t hdr_len, pkt_len, pkt_payload, payload_len, left_over_len, offset;
-	uint32_t l3_offset, iphdr_len;
-	int left_over = 0;
-	int num_free = 0;
-	int first_free = 0;
+	uint32_t num_pkt, left_over, l3_offset, iphdr_len;
 	odp_lso_profile_t lso_profile = lso_opt->lso_profile;
 	lso_profile_t *lso_prof = lso_profile_ptr(lso_profile);
-	int num_custom = lso_prof->param.custom.num_custom;
-	odp_lso_protocol_t lso_proto = lso_prof->param.lso_proto;
-
-	payload_len = lso_opt->max_payload_len;
-	hdr_len     = lso_opt->payload_offset;
-	pkt_len     = odp_packet_len(packet);
-	pkt_payload = pkt_len - hdr_len;
+	uint32_t payload_len = lso_opt->max_payload_len;
+	uint32_t hdr_len     = lso_opt->payload_offset;
+	uint32_t pkt_len     = odp_packet_len(packet);
+	uint32_t pkt_payload = pkt_len - hdr_len;
 
 	if (odp_unlikely(hdr_len > PKTIO_LSO_MAX_PAYLOAD_OFFSET)) {
 		ODP_ERR("Too large LSO payload offset\n");
@@ -3171,7 +3161,7 @@ static int pktout_send_lso(odp_pktout_queue_t queue, odp_packet_t packet,
 		return -1;
 	}
 
-	if (lso_proto == ODP_LSO_PROTO_IPV4) {
+	if (lso_prof->param.lso_proto == ODP_LSO_PROTO_IPV4) {
 		l3_offset = odp_packet_l3_offset(packet);
 		iphdr_len = hdr_len - l3_offset;
 
@@ -3189,15 +3179,11 @@ static int pktout_send_lso(odp_pktout_queue_t queue, odp_packet_t packet,
 		payload_len = (payload_len / 8) * 8;
 	}
 
-	pool = odp_packet_pool(packet);
-	pkt_len = hdr_len + payload_len;
 	num_pkt = pkt_payload / payload_len;
-	num_full = num_pkt;
-	left_over_len = pkt_payload - (num_pkt * payload_len);
-	if (left_over_len) {
-		left_over = 1;
+
+	left_over = pkt_payload - (num_pkt * payload_len);
+	if (left_over)
 		num_pkt++;
-	}
 
 	if (num_pkt > PKTIO_LSO_MAX_SEGMENTS) {
 		ODP_ERR("Too many LSO segments %i. Maximum is %i\n", num_pkt,
@@ -3205,8 +3191,29 @@ static int pktout_send_lso(odp_pktout_queue_t queue, odp_packet_t packet,
 		return -1;
 	}
 
-	/* Alloc packets */
-	odp_packet_t pkt_out[num_pkt];
+	*len_out       = payload_len;
+	*left_over_out = left_over;
+
+	return num_pkt;
+}
+
+int _odp_lso_create_packets(odp_packet_t packet, const odp_packet_lso_opt_t *lso_opt,
+			    uint32_t payload_len, uint32_t left_over_len,
+			    odp_packet_t pkt_out[], int num_pkt)
+{
+	int i, num;
+	uint32_t offset;
+	odp_packet_t pkt;
+	odp_lso_profile_t lso_profile = lso_opt->lso_profile;
+	lso_profile_t *lso_prof = lso_profile_ptr(lso_profile);
+	const uint32_t hdr_len = lso_opt->payload_offset;
+	const uint32_t pkt_len = hdr_len + payload_len;
+	odp_pool_t pool = odp_packet_pool(packet);
+	int num_free = 0;
+	int num_full = num_pkt;
+
+	if (left_over_len)
+		num_full = num_pkt - 1;
 
 	num = odp_packet_alloc_multi(pool, pkt_len, pkt_out, num_full);
 	if (odp_unlikely(num < num_full)) {
@@ -3217,7 +3224,7 @@ static int pktout_send_lso(odp_pktout_queue_t queue, odp_packet_t packet,
 		}
 	}
 
-	if (left_over) {
+	if (left_over_len) {
 		pkt = odp_packet_alloc(pool, hdr_len + left_over_len);
 		if (pkt == ODP_PACKET_INVALID) {
 			ODP_DBG("Alloc failed\n");
@@ -3228,11 +3235,12 @@ static int pktout_send_lso(odp_pktout_queue_t queue, odp_packet_t packet,
 		pkt_out[num_pkt - 1] = pkt;
 	}
 
+	num_free = num_pkt;
+
 	/* Copy headers */
 	for (i = 0; i < num_pkt; i++) {
 		if (odp_packet_copy_from_pkt(pkt_out[i], 0, packet, 0, hdr_len)) {
 			ODP_ERR("Header copy failed\n");
-			num_free = num_pkt;
 			goto error;
 		}
 	}
@@ -3242,66 +3250,95 @@ static int pktout_send_lso(odp_pktout_queue_t queue, odp_packet_t packet,
 		offset = hdr_len + (i * payload_len);
 		if (odp_packet_copy_from_pkt(pkt_out[i], hdr_len, packet, offset, payload_len)) {
 			ODP_ERR("Payload copy failed\n");
-			num_free = num_pkt;
 			goto error;
 		}
 	}
 
-	if (left_over) {
+	/* Copy left over payload */
+	if (left_over_len) {
 		offset = hdr_len + (num_full * payload_len);
 		if (odp_packet_copy_from_pkt(pkt_out[num_pkt - 1], hdr_len, packet, offset,
 					     left_over_len)){
 			ODP_ERR("Payload copy failed\n");
-			num_free = num_pkt;
 			goto error;
 		}
 	}
 
-	if (lso_proto == ODP_LSO_PROTO_IPV4) {
-		l3_offset = odp_packet_l3_offset(packet);
+	if (lso_prof->param.lso_proto == ODP_LSO_PROTO_IPV4) {
+		offset = odp_packet_l3_offset(packet);
 
-		if (l3_offset == ODP_PACKET_OFFSET_INVALID) {
+		if (offset == ODP_PACKET_OFFSET_INVALID) {
 			ODP_ERR("Invalid L3 offset\n");
-			num_free = num_pkt;
 			goto error;
 		}
 
 		for (i = 0; i < num_pkt; i++) {
-			if (lso_update_ipv4(pkt_out[i], i, num_pkt, l3_offset, payload_len)) {
+			if (lso_update_ipv4(pkt_out[i], i, num_pkt, offset, payload_len)) {
 				ODP_ERR("IPv4 header update failed. Packet %i.\n", i);
-				num_free = num_pkt;
 				goto error;
 			}
 		}
 	} else {
 		/* Update custom fields */
+		int num_custom = lso_prof->param.custom.num_custom;
+
 		for (i = 0; num_custom && i < num_pkt; i++) {
 			if (lso_update_custom(lso_prof, pkt_out[i], i)) {
 				ODP_ERR("Custom field update failed. Segment %i\n", i);
-				num_free = num_pkt;
 				goto error;
 			}
 		}
 	}
 
+	return 0;
+
+error:
+	odp_packet_free_multi(pkt_out, num_free);
+	return -1;
+}
+
+static int pktout_send_lso(odp_pktout_queue_t queue, odp_packet_t packet,
+			   const odp_packet_lso_opt_t *lso_opt)
+{
+	int ret, num_pkt;
+	uint32_t payload_len, left_over_len;
+
+	/* Calculate number of packets */
+	num_pkt = _odp_lso_num_packets(packet, lso_opt, &payload_len, &left_over_len);
+	if (odp_unlikely(num_pkt <= 0))
+		return -1;
+
+	/* Create packets */
+	odp_packet_t pkt_out[num_pkt];
+
+	ret = _odp_lso_create_packets(packet, lso_opt, payload_len, left_over_len, pkt_out,
+				      num_pkt);
+
+	if (odp_unlikely(ret))
+		return -1;
+
+	/* Send LSO packets */
 	ret = odp_pktout_send(queue, pkt_out, num_pkt);
 
 	if (ret < num_pkt) {
+		int first_free = 0;
+		int num_free = num_pkt;
+
 		ODP_DBG("Packet send failed %i\n", ret);
-		num_free = num_pkt;
+
 		if (ret > 0) {
 			first_free = ret;
 			num_free = num_pkt - ret;
 		}
+
+		odp_packet_free_multi(&pkt_out[first_free], num_free);
+		return -1;
 	}
 
+	/* Free original packet */
 	odp_packet_free(packet);
 
 	return 0;
-
-error:
-	odp_packet_free_multi(&pkt_out[first_free], num_free);
-	return -1;
 }
 
 int odp_pktout_send_lso(odp_pktout_queue_t queue, const odp_packet_t packet[], int num,
@@ -3335,7 +3372,7 @@ int odp_pktout_send_lso(odp_pktout_queue_t queue, const odp_packet_t packet[], i
 				return i;
 			}
 
-			lso_opt.lso_profile     = lso_profile_from_idx(pkt_hdr->lso_profile_idx);
+			lso_opt.lso_profile     = _odp_lso_prof_from_idx(pkt_hdr->lso_profile_idx);
 			lso_opt.payload_offset  = odp_packet_payload_offset(pkt);
 			lso_opt.max_payload_len = pkt_hdr->lso_max_payload;
 		}

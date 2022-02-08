@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -314,6 +314,16 @@ int _odp_sock_recv_mq_tmo_try_int_driven(const struct odp_pktin_queue_t queues[]
 /* Setup PKTOUT with single queue for TM */
 int _odp_pktio_pktout_tm_config(odp_pktio_t pktio_hdl,
 				odp_pktout_queue_t *queue, bool reconf);
+
+/* LSO functions shared with TM */
+odp_lso_profile_t _odp_lso_prof_from_idx(uint8_t idx);
+
+int _odp_lso_num_packets(odp_packet_t packet, const odp_packet_lso_opt_t *lso_opt,
+			 uint32_t *len_out, uint32_t *left_over_out);
+
+int _odp_lso_create_packets(odp_packet_t packet, const odp_packet_lso_opt_t *lso_opt,
+			    uint32_t payload_len, uint32_t left_over_len,
+			    odp_packet_t pkt_out[], int num_pkt);
 
 #ifdef __cplusplus
 }
