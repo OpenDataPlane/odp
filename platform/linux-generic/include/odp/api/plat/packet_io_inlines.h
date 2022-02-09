@@ -12,6 +12,10 @@
 extern "C" {
 #endif
 
+#include <odp/api/abi/packet_io.h>
+
+#include <stdint.h>
+
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
 #ifndef _ODP_NO_INLINE
