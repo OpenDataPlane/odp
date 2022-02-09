@@ -14,19 +14,21 @@
 #ifndef _ODP_PLAT_PACKET_INLINES_H_
 #define _ODP_PLAT_PACKET_INLINES_H_
 
-#include <odp/api/abi/packet.h>
+#include <odp/api/hints.h>
 #include <odp/api/packet_types.h>
 #include <odp/api/pool.h>
-#include <odp/api/abi/packet_io.h>
-#include <odp/api/hints.h>
 #include <odp/api/time.h>
+
 #include <odp/api/abi/buffer.h>
 #include <odp/api/abi/event.h>
+#include <odp/api/abi/packet.h>
+#include <odp/api/abi/packet_io.h>
 
+#include <odp/api/plat/packet_io_inlines.h>
 #include <odp/api/plat/packet_inline_types.h>
 #include <odp/api/plat/pool_inline_types.h>
-#include <odp/api/plat/packet_io_inlines.h>
 
+#include <stdint.h>
 #include <string.h>
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
