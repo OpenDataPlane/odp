@@ -18,25 +18,26 @@
 extern "C" {
 #endif
 
-#include <odp/autoheader_internal.h>
-
+#include <odp/api/hints.h>
 #include <odp/api/packet_io.h>
-#include <odp/api/plat/packet_io_inlines.h>
 #include <odp/api/spinlock.h>
 #include <odp/api/ticketlock.h>
-#include <odp_classification_datamodel.h>
+
+#include <odp/api/plat/packet_io_inlines.h>
+
+#include <odp/autoheader_internal.h>
 #include <odp_align_internal.h>
+#include <odp_classification_datamodel.h>
+#include <odp_config_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_io_stats_common.h>
 #include <odp_queue_if.h>
 
-#include <odp_config_internal.h>
-#include <odp/api/hints.h>
-#include <string.h>
-#include <net/if.h>
-#include <linux/if_ether.h>
-#include <sys/select.h>
 #include <inttypes.h>
+#include <linux/if_ether.h>
+#include <net/if.h>
+#include <string.h>
+#include <sys/select.h>
 
 #define PKTIO_MAX_QUEUES ODP_PKTOUT_MAX_QUEUES
 #define PKTIO_LSO_PROFILES 16
