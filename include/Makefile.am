@@ -44,6 +44,7 @@ odpapiinclude_HEADERS = \
 	odp/api/queue.h \
 	odp/api/queue_types.h \
 	odp/api/random.h \
+	odp/api/random_types.h \
 	odp/api/reassembly.h \
 	odp/api/rwlock.h \
 	odp/api/rwlock_recursive.h \
@@ -103,6 +104,7 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/queue.h \
 		  odp/api/spec/queue_types.h \
 		  odp/api/spec/random.h \
+		  odp/api/spec/random_types.h \
 		  odp/api/spec/reassembly.h \
 		  odp/api/spec/rwlock.h \
 		  odp/api/spec/rwlock_recursive.h \
@@ -160,6 +162,7 @@ odpapiabidefaultinclude_HEADERS = \
 	odp/api/abi-default/pool_types.h \
 	odp/api/abi-default/queue.h \
 	odp/api/abi-default/queue_types.h \
+	odp/api/abi-default/random.h \
 	odp/api/abi-default/rwlock.h \
 	odp/api/abi-default/rwlock_recursive.h \
 	odp/api/abi-default/schedule.h \
@@ -213,6 +216,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm32-linux/odp/api/abi/proto_stats_types.h \
 	odp/arch/arm32-linux/odp/api/abi/queue.h \
 	odp/arch/arm32-linux/odp/api/abi/queue_types.h \
+	odp/arch/arm32-linux/odp/api/abi/random.h \
 	odp/arch/arm32-linux/odp/api/abi/rwlock.h \
 	odp/arch/arm32-linux/odp/api/abi/rwlock_recursive.h \
 	odp/arch/arm32-linux/odp/api/abi/schedule.h \
@@ -262,6 +266,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm64-linux/odp/api/abi/proto_stats_types.h \
 	odp/arch/arm64-linux/odp/api/abi/queue.h \
 	odp/arch/arm64-linux/odp/api/abi/queue_types.h \
+	odp/arch/arm64-linux/odp/api/abi/random.h \
 	odp/arch/arm64-linux/odp/api/abi/rwlock.h \
 	odp/arch/arm64-linux/odp/api/abi/rwlock_recursive.h \
 	odp/arch/arm64-linux/odp/api/abi/schedule.h \
@@ -311,6 +316,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/default-linux/odp/api/abi/proto_stats_types.h \
 	odp/arch/default-linux/odp/api/abi/queue.h \
 	odp/arch/default-linux/odp/api/abi/queue_types.h \
+	odp/arch/default-linux/odp/api/abi/random.h \
 	odp/arch/default-linux/odp/api/abi/rwlock.h \
 	odp/arch/default-linux/odp/api/abi/rwlock_recursive.h \
 	odp/arch/default-linux/odp/api/abi/schedule.h \
@@ -360,6 +366,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/power64-linux/odp/api/abi/proto_stats_types.h \
 	odp/arch/power64-linux/odp/api/abi/queue.h \
 	odp/arch/power64-linux/odp/api/abi/queue_types.h \
+	odp/arch/power64-linux/odp/api/abi/random.h \
 	odp/arch/power64-linux/odp/api/abi/rwlock.h \
 	odp/arch/power64-linux/odp/api/abi/rwlock_recursive.h \
 	odp/arch/power64-linux/odp/api/abi/schedule.h \
@@ -409,6 +416,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_32-linux/odp/api/abi/proto_stats_types.h \
 	odp/arch/x86_32-linux/odp/api/abi/queue.h \
 	odp/arch/x86_32-linux/odp/api/abi/queue_types.h \
+	odp/arch/x86_32-linux/odp/api/abi/random.h \
 	odp/arch/x86_32-linux/odp/api/abi/rwlock.h \
 	odp/arch/x86_32-linux/odp/api/abi/rwlock_recursive.h \
 	odp/arch/x86_32-linux/odp/api/abi/schedule.h \
@@ -458,6 +466,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_64-linux/odp/api/abi/proto_stats_types.h \
 	odp/arch/x86_64-linux/odp/api/abi/queue.h \
 	odp/arch/x86_64-linux/odp/api/abi/queue_types.h \
+	odp/arch/x86_64-linux/odp/api/abi/random.h \
 	odp/arch/x86_64-linux/odp/api/abi/rwlock.h \
 	odp/arch/x86_64-linux/odp/api/abi/rwlock_recursive.h \
 	odp/arch/x86_64-linux/odp/api/abi/schedule.h \

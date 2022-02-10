@@ -79,6 +79,7 @@ odpapiabiarchinclude_HEADERS += \
 		  include-abi/odp/api/abi/pool_types.h \
 		  include-abi/odp/api/abi/queue.h \
 		  include-abi/odp/api/abi/queue_types.h \
+		  include-abi/odp/api/abi/random.h \
 		  include-abi/odp/api/abi/rwlock.h \
 		  include-abi/odp/api/abi/rwlock_recursive.h \
 		  include-abi/odp/api/abi/schedule.h \
