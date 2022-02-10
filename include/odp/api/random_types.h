@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018, Linaro Limited
+/* Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -10,16 +10,14 @@
  * ODP random number API
  */
 
-#ifndef ODP_API_RANDOM_H_
-#define ODP_API_RANDOM_H_
+#ifndef ODP_API_RANDOM_TYPES_H_
+#define ODP_API_RANDOM_TYPES_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <odp/api/abi/random.h>
-
-#include <odp/api/spec/random.h>
+#include <odp/api/spec/random_types.h>
 
 #ifdef __cplusplus
 }
