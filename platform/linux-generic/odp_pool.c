@@ -72,16 +72,10 @@ static __thread pool_local_t local;
 
 /* Fill in pool header field offsets for inline functions */
 const _odp_pool_inline_offset_t _odp_pool_inline ODP_ALIGNED_CACHE = {
-	.pool_hdl          = offsetof(pool_t, pool_hdl),
 	.uarea_size        = offsetof(pool_t, param_uarea_size)
 };
 
 #include <odp/visibility_end.h>
-
-static inline odp_pool_t pool_index_to_handle(uint32_t pool_idx)
-{
-	return _odp_cast_scalar(odp_pool_t, pool_idx + 1);
-}
 
 static inline pool_t *pool_from_buf(odp_buffer_t buf)
 {
@@ -297,10 +291,9 @@ int _odp_pool_init_global(void)
 	}
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
-		pool_t *pool = pool_entry(i);
+		pool_t *pool = _odp_pool_entry_from_idx(i);
 
 		LOCK_INIT(&pool->lock);
-		pool->pool_hdl = pool_index_to_handle(i);
 		pool->pool_idx = i;
 	}
 
@@ -327,7 +320,7 @@ int _odp_pool_term_global(void)
 		return 0;
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
-		pool = pool_entry(i);
+		pool = _odp_pool_entry_from_idx(i);
 
 		LOCK(&pool->lock);
 		if (pool->reserved) {
@@ -355,7 +348,7 @@ int _odp_pool_init_local(void)
 	memset(&local, 0, sizeof(pool_local_t));
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
-		pool           = pool_entry(i);
+		pool           = _odp_pool_entry_from_idx(i);
 		local.cache[i] = &pool->local_cache[thr_id];
 		cache_init(local.cache[i]);
 	}
@@ -369,7 +362,7 @@ int _odp_pool_term_local(void)
 	int i;
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
-		pool_t *pool = pool_entry(i);
+		pool_t *pool = _odp_pool_entry_from_idx(i);
 
 		cache_flush(local.cache[i], pool);
 	}
@@ -386,7 +379,7 @@ static pool_t *reserve_pool(uint32_t shmflags, uint8_t pool_ext, uint32_t num)
 	char ring_name[ODP_POOL_NAME_LEN];
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
-		pool = pool_entry(i);
+		pool = _odp_pool_entry_from_idx(i);
 
 		LOCK(&pool->lock);
 		if (pool->reserved == 0) {
@@ -905,7 +898,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 	odp_atomic_init_u64(&pool->stats.cache_alloc_ops, 0);
 	odp_atomic_init_u64(&pool->stats.cache_free_ops, 0);
 
-	return pool->pool_hdl;
+	return _odp_pool_handle(pool);
 
 error:
 	if (pool->shm != ODP_SHM_INVALID)
@@ -1089,7 +1082,7 @@ odp_pool_t odp_pool_create(const char *name, const odp_pool_param_t *params)
 
 int odp_pool_destroy(odp_pool_t pool_hdl)
 {
-	pool_t *pool = pool_entry_from_hdl(pool_hdl);
+	pool_t *pool = _odp_pool_entry(pool_hdl);
 	int i;
 
 	if (pool == NULL)
@@ -1130,13 +1123,13 @@ odp_pool_t odp_pool_lookup(const char *name)
 	pool_t *pool;
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
-		pool = pool_entry(i);
+		pool = _odp_pool_entry_from_idx(i);
 
 		LOCK(&pool->lock);
 		if (strcmp(name, pool->name) == 0) {
 			/* found it */
 			UNLOCK(&pool->lock);
-			return pool->pool_hdl;
+			return _odp_pool_handle(pool);
 		}
 		UNLOCK(&pool->lock);
 	}
@@ -1146,7 +1139,7 @@ odp_pool_t odp_pool_lookup(const char *name)
 
 int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 {
-	pool_t *pool = pool_entry_from_hdl(pool_hdl);
+	pool_t *pool = _odp_pool_entry(pool_hdl);
 
 	if (pool == NULL || info == NULL)
 		return -1;
@@ -1330,7 +1323,7 @@ odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 
 	ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
 
-	pool = pool_entry_from_hdl(pool_hdl);
+	pool = _odp_pool_entry(pool_hdl);
 
 	ODP_ASSERT(pool->type == ODP_POOL_BUFFER);
 
@@ -1361,7 +1354,7 @@ int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
 
 	ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
 
-	pool = pool_entry_from_hdl(pool_hdl);
+	pool = _odp_pool_entry(pool_hdl);
 
 	ODP_ASSERT(pool->type == ODP_POOL_BUFFER);
 
@@ -1445,12 +1438,12 @@ void odp_pool_print(odp_pool_t pool_hdl)
 {
 	pool_t *pool;
 
-	pool = pool_entry_from_hdl(pool_hdl);
+	pool = _odp_pool_entry(pool_hdl);
 
 	ODP_PRINT("\nPool info\n");
 	ODP_PRINT("---------\n");
 	ODP_PRINT("  pool            %" PRIu64 "\n",
-		  odp_pool_to_u64(pool->pool_hdl));
+		  odp_pool_to_u64(_odp_pool_handle(pool)));
 	ODP_PRINT("  name            %s\n", pool->name);
 	ODP_PRINT("  pool type       %s\n",
 		  pool->type == ODP_POOL_BUFFER ? "buffer" :
@@ -1497,7 +1490,7 @@ void odp_pool_print_all(void)
 	ODP_PRINT(" idx %-*s type   free    tot  cache  buf_len  ext\n", col_width, "name");
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
-		pool_t *pool = pool_entry(i);
+		pool_t *pool = _odp_pool_entry_from_idx(i);
 
 		LOCK(&pool->lock);
 
@@ -1536,7 +1529,7 @@ odp_pool_t odp_buffer_pool(odp_buffer_t buf)
 {
 	pool_t *pool = pool_from_buf(buf);
 
-	return pool->pool_hdl;
+	return _odp_pool_handle(pool);
 }
 
 void odp_pool_param_init(odp_pool_param_t *params)
@@ -1567,7 +1560,7 @@ int odp_pool_index(odp_pool_t pool_hdl)
 
 	ODP_ASSERT(pool_hdl != ODP_POOL_INVALID);
 
-	pool = pool_entry_from_hdl(pool_hdl);
+	pool = _odp_pool_entry(pool_hdl);
 
 	return pool->pool_idx;
 }
@@ -1585,7 +1578,7 @@ int odp_pool_stats(odp_pool_t pool_hdl, odp_pool_stats_t *stats)
 		return -1;
 	}
 
-	pool = pool_entry_from_hdl(pool_hdl);
+	pool = _odp_pool_entry(pool_hdl);
 
 	memset(stats, 0, sizeof(odp_pool_stats_t));
 
@@ -1625,7 +1618,7 @@ int odp_pool_stats_reset(odp_pool_t pool_hdl)
 		return -1;
 	}
 
-	pool = pool_entry_from_hdl(pool_hdl);
+	pool = _odp_pool_entry(pool_hdl);
 
 	odp_atomic_store_u64(&pool->stats.alloc_ops, 0);
 	odp_atomic_store_u64(&pool->stats.alloc_fails, 0);
@@ -1642,7 +1635,7 @@ static pool_t *find_pool(_odp_event_hdr_t *event_hdr)
 	uint8_t *ptr = (uint8_t *)event_hdr;
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
-		pool_t *pool = pool_entry(i);
+		pool_t *pool = _odp_pool_entry_from_idx(i);
 
 		if (pool->reserved == 0)
 			continue;
@@ -1841,7 +1834,7 @@ odp_pool_t odp_pool_ext_create(const char *name, const odp_pool_ext_param_t *par
 
 	ring_ptr_init(&pool->ring->hdr);
 
-	return pool->pool_hdl;
+	return _odp_pool_handle(pool);
 
 error:
 	if (pool->ring_shm != ODP_SHM_INVALID)
@@ -1871,7 +1864,7 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 		return -1;
 	}
 
-	pool = pool_entry_from_hdl(pool_hdl);
+	pool = _odp_pool_entry(pool_hdl);
 
 	if (pool->type != ODP_POOL_PACKET || pool->pool_ext == 0) {
 		ODP_ERR("Bad pool type\n");

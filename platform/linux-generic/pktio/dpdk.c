@@ -28,6 +28,7 @@
 #include <odp_classification_internal.h>
 #include <odp_socket_common.h>
 #include <odp_packet_dpdk.h>
+#include <odp_pool_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_libconfig_internal.h>
 #include <odp_errno_define.h>
@@ -376,7 +377,7 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 		goto fail;
 	}
 
-	mp->pool_data = pool_entry->pool_hdl;
+	mp->pool_data = _odp_pool_handle(pool_entry);
 
 	if (rte_mempool_set_ops_byname(mp, "odp_pool", pool_entry)) {
 		ODP_ERR("Failed setting mempool operations\n");
@@ -1707,7 +1708,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 
 	if (pool == ODP_POOL_INVALID)
 		return -1;
-	pool_entry = pool_entry_from_hdl(pool);
+	pool_entry = _odp_pool_entry(pool);
 
 	/* Init pktio entry */
 	memset(pkt_dpdk, 0, sizeof(*pkt_dpdk));

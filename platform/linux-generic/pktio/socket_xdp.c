@@ -15,14 +15,15 @@
 #include <odp/api/ticketlock.h>
 #include <odp/api/packet_io_stats.h>
 
+#include <odp_classification_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_libconfig_internal.h>
 #include <odp_macros_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_parse_internal.h>
-#include <odp_classification_internal.h>
+#include <odp_pool_internal.h>
 #include <odp_socket_common.h>
-#include <odp_libconfig_internal.h>
 
 #include <string.h>
 #include <errno.h>
@@ -245,7 +246,7 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 
 	priv = pkt_priv(pktio_entry);
 	memset(priv, 0, sizeof(xdp_sock_info_t));
-	pool = pool_entry_from_hdl(pool_hdl);
+	pool = _odp_pool_entry(pool_hdl);
 	priv->umem_info = (xdp_umem_info_t *)pool->mem_src_data;
 	ret = umem_create(priv->umem_info, pool);
 
@@ -569,7 +570,7 @@ static odp_bool_t reserve_fill_queue_elements(xdp_sock_info_t *sock_info, xdp_so
 	odp_packet_hdr_t *pkt_hdr;
 
 	pool = sock_info->umem_info->pool;
-	count = odp_packet_alloc_multi(pool->pool_hdl, sock_info->mtu, packets, num);
+	count = odp_packet_alloc_multi(_odp_pool_handle(pool), sock_info->mtu, packets, num);
 
 	if (count <= 0) {
 		++sock->i_stats[RX_PKT_ALLOC_ERR];
@@ -724,7 +725,7 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 		odp_ticketlock_lock(&sock->tx_lock);
 
 	pool = priv->umem_info->pool;
-	pool_hdl = pool->pool_hdl;
+	pool_hdl = _odp_pool_handle(pool);
 	pktio_idx = priv->pktio_idx;
 	tx = &sock->tx;
 	base_addr = priv->umem_info->pool->base_addr;

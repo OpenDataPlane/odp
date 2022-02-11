@@ -9,6 +9,7 @@
 
 #include <odp_debug_internal.h>
 #include <odp_packet_io_internal.h>
+#include <odp_pool_internal.h>
 #include <odp_errno_define.h>
 #include <odp_macros_internal.h>
 #include <odp_shm_internal.h>
@@ -188,7 +189,7 @@ static const char *_ipc_odp_buffer_pool_shm_name(odp_pool_t pool_hdl)
 	odp_shm_t shm;
 	odp_shm_info_t info;
 
-	pool    = pool_entry_from_hdl(pool_hdl);
+	pool = _odp_pool_entry(pool_hdl);
 	shm = pool->shm;
 
 	if (odp_shm_info(shm, &info))
@@ -232,7 +233,7 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	char ipc_shm_name[ODP_POOL_NAME_LEN + sizeof("_m_prod")];
 	struct pktio_info *pinfo;
 	const char *pool_name;
-	pool_t *pool = pool_entry_from_hdl(pool_hdl);
+	pool_t *pool = _odp_pool_entry(pool_hdl);
 	uint32_t ring_size;
 	uint32_t ring_mask;
 
@@ -361,7 +362,7 @@ free_m_prod:
 static void _ipc_export_pool(struct pktio_info *pinfo,
 			     odp_pool_t pool_hdl)
 {
-	pool_t *pool = pool_entry_from_hdl(pool_hdl);
+	pool_t *pool = _odp_pool_entry(pool_hdl);
 
 	snprintf(pinfo->slave.pool_name, ODP_POOL_NAME_LEN, "%s",
 		 _ipc_odp_buffer_pool_shm_name(pool_hdl));
@@ -402,7 +403,7 @@ static int _ipc_init_slave(const char *dev, pktio_entry_t *pktio_entry,
 			   odp_pool_t pool_hdl)
 {
 	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
-	pool_t *pool = pool_entry_from_hdl(pool_hdl);
+	pool_t *pool = _odp_pool_entry(pool_hdl);
 	uint32_t ring_size = pktio_ipc->pinfo->master.ring_size;
 
 	if (strlen(dev) > (ODP_POOL_NAME_LEN - sizeof("_slave_r"))) {
@@ -602,7 +603,7 @@ static void _ipc_free_ring_packets(pktio_entry_t *pktio_entry, ring_ptr_t *r,
 	if (!r)
 		return;
 
-	pool = pool_entry_from_hdl(pktio_ipc->pool);
+	pool = _odp_pool_entry(pktio_ipc->pool);
 	addr = odp_shm_addr(pool->shm);
 
 	rbuf_p = (void *)&offsets;
@@ -771,7 +772,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 	void **rbuf_p;
 	int i;
 	uint32_t ready = odp_atomic_load_u32(&pktio_ipc->ready);
-	pool_t *ipc_pool = pool_entry_from_hdl(pktio_ipc->pool);
+	pool_t *ipc_pool = _odp_pool_entry(pktio_ipc->pool);
 	odp_packet_t pkt_table_mapped[num]; /**< Ready to send packet has to be
 					      * in memory mapped pool. */
 	uintptr_t offsets[num];
@@ -812,7 +813,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 		odp_packet_t pkt = pkt_table_mapped[i];
 		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 		odp_pool_t pool_hdl = odp_packet_pool(pkt);
-		pool_t *pool = pool_entry_from_hdl(pool_hdl);
+		pool_t *pool = _odp_pool_entry(pool_hdl);
 
 		offsets[i] = (uint8_t *)pkt_hdr -
 			     (uint8_t *)odp_shm_addr(pool->shm);
