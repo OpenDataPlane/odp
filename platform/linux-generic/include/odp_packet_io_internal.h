@@ -78,14 +78,22 @@ struct pktio_entry {
 	odp_ticketlock_t rxl;		/**< RX ticketlock */
 	odp_ticketlock_t txl;		/**< TX ticketlock */
 	uint16_t pktin_frame_offset;
+
 	struct {
-		/* Pktout checksum offload */
-		uint8_t chksum_insert : 1;
-		/* Classifier */
-		uint8_t cls : 1;
-		/* Tx timestamp */
-		uint8_t tx_ts : 1;
+		union {
+			uint8_t all_flags;
+
+			struct {
+				/* Pktout checksum offload */
+				uint8_t chksum_insert : 1;
+				/* Classifier */
+				uint8_t cls : 1;
+				/* Tx timestamp */
+				uint8_t tx_ts : 1;
+			};
+		};
 	} enabled;
+
 	odp_pktio_t handle;		/**< pktio handle */
 	unsigned char pkt_priv[PKTIO_PRIVATE_SIZE] ODP_ALIGNED_CACHE;
 	enum {
@@ -259,11 +267,6 @@ static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 static inline int pktio_cls_enabled(pktio_entry_t *entry)
 {
 	return entry->s.enabled.cls;
-}
-
-static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
-{
-	entry->s.enabled.cls = !!ena;
 }
 
 static inline int _odp_pktio_tx_ts_enabled(pktio_entry_t *entry)
