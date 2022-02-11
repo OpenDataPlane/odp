@@ -283,6 +283,7 @@ static int alg_packet_op(odp_packet_t pkt,
 			 unsigned int hash_result_offset)
 {
 	int rc;
+	odp_event_t event;
 	odp_crypto_packet_result_t result;
 	odp_crypto_packet_op_param_t op_params;
 	odp_event_subtype_t subtype;
@@ -303,10 +304,31 @@ static int alg_packet_op(odp_packet_t pkt,
 
 	op_params.hash_result_offset = hash_result_offset;
 
-	rc = odp_crypto_op(&pkt, &out_pkt, &op_params, 1);
-	if (rc <= 0) {
-		CU_FAIL("Failed odp_crypto_packet_op()");
-		return rc;
+	if (suite_context.op_mode == ODP_CRYPTO_SYNC) {
+		rc = odp_crypto_op(&pkt, &out_pkt, &op_params, 1);
+		if (rc <= 0) {
+			CU_FAIL("Failed odp_crypto_packet_op()");
+			return rc;
+		}
+	} else {
+		rc = odp_crypto_op_enq(&pkt, &pkt, &op_params, 1);
+		if (rc <= 0) {
+			CU_FAIL("Failed odp_crypto_op_enq()");
+			return rc;
+		}
+
+		/* Get crypto completion event from compl_queue. */
+		CU_ASSERT_FATAL(NULL != suite_context.compl_queue_deq);
+		do {
+			event = suite_context.compl_queue_deq();
+		} while (event == ODP_EVENT_INVALID);
+
+		CU_ASSERT(ODP_EVENT_PACKET == odp_event_type(event));
+		CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == odp_event_subtype(event));
+		CU_ASSERT(ODP_EVENT_PACKET == odp_event_types(event, &subtype));
+		CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == subtype);
+
+		pkt = odp_crypto_packet_from_event(event);
 	}
 
 	CU_ASSERT(out_pkt == pkt);
@@ -333,80 +355,6 @@ static int alg_packet_op(odp_packet_t pkt,
 	return 0;
 }
 
-static int alg_packet_op_enq(odp_packet_t pkt,
-			     odp_bool_t *ok,
-			     odp_crypto_session_t session,
-			     uint8_t *cipher_iv_ptr,
-			     uint8_t *auth_iv_ptr,
-			     odp_packet_data_range_t *cipher_range,
-			     odp_packet_data_range_t *auth_range,
-			     uint8_t *aad,
-			     unsigned int hash_result_offset)
-{
-	int rc;
-	odp_event_t event;
-	odp_crypto_packet_result_t result;
-	odp_crypto_packet_op_param_t op_params;
-	odp_event_subtype_t subtype;
-	odp_packet_t out_pkt = pkt;
-
-	/* Prepare input/output params */
-	memset(&op_params, 0, sizeof(op_params));
-	op_params.session = session;
-
-	op_params.cipher_range = *cipher_range;
-	op_params.auth_range = *auth_range;
-	if (cipher_iv_ptr)
-		op_params.cipher_iv_ptr = cipher_iv_ptr;
-	if (auth_iv_ptr)
-		op_params.auth_iv_ptr = auth_iv_ptr;
-
-	op_params.aad_ptr = aad;
-
-	op_params.hash_result_offset = hash_result_offset;
-
-	rc = odp_crypto_op_enq(&pkt, &pkt, &op_params, 1);
-	if (rc <= 0) {
-		CU_FAIL("Failed odp_crypto_op_enq()");
-		return rc;
-	}
-
-	/* Get crypto completion event from compl_queue. */
-	CU_ASSERT_FATAL(NULL != suite_context.compl_queue_deq);
-	do {
-		event = suite_context.compl_queue_deq();
-	} while (event == ODP_EVENT_INVALID);
-
-	CU_ASSERT(ODP_EVENT_PACKET == odp_event_type(event));
-	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == odp_event_subtype(event));
-	CU_ASSERT(ODP_EVENT_PACKET == odp_event_types(event, &subtype));
-	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == subtype);
-
-	pkt = odp_crypto_packet_from_event(event);
-
-	CU_ASSERT(out_pkt == pkt);
-	CU_ASSERT(ODP_EVENT_PACKET ==
-		  odp_event_type(odp_packet_to_event(pkt)));
-	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO ==
-		  odp_event_subtype(odp_packet_to_event(pkt)));
-	CU_ASSERT(ODP_EVENT_PACKET ==
-		  odp_event_types(odp_packet_to_event(pkt), &subtype));
-	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == subtype);
-	CU_ASSERT(odp_packet_subtype(pkt) == ODP_EVENT_PACKET_CRYPTO);
-
-	rc = odp_crypto_result(&result, pkt);
-	if (rc < 0) {
-		CU_FAIL("Failed odp_crypto_packet_result()");
-		return rc;
-	}
-
-	CU_ASSERT((!odp_packet_has_error(pkt)) == result.ok);
-
-	*ok = result.ok;
-
-	return 0;
-}
-
 static int crypto_op(odp_packet_t pkt,
 		     odp_bool_t *ok,
 		     odp_crypto_session_t session,
@@ -424,11 +372,6 @@ static int crypto_op(odp_packet_t pkt,
 			    cipher_iv, auth_iv,
 			    cipher_range, auth_range,
 			    aad, hash_result_offset);
-	else if (ODP_CRYPTO_ASYNC == suite_context.op_mode)
-		rc = alg_packet_op_enq(pkt, ok, session,
-				       cipher_iv, auth_iv,
-				       cipher_range, auth_range,
-				       aad, hash_result_offset);
 	else
 		rc = alg_packet_op(pkt, ok, session,
 				   cipher_iv, auth_iv,
