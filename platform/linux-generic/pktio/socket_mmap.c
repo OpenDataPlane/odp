@@ -402,9 +402,6 @@ static inline int pkt_mmap_v2_tx(pktio_entry_t *pktio_entry, int sock,
 	if (odp_unlikely(tx_ts_idx && num_tx >= tx_ts_idx))
 		_odp_pktio_tx_ts_set(pktio_entry);
 
-	/* Free sent packets */
-	odp_packet_free_multi(pkt_table, num_tx);
-
 	return num_tx;
 }
 
@@ -968,4 +965,5 @@ const pktio_if_ops_t _odp_sock_mmap_pktio_ops = {
 	.config = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
+	.is_sent_free_req = 1
 };

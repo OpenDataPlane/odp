@@ -476,8 +476,6 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	odp_ticketlock_unlock(&pkt_sock->tx_lock);
 
-	odp_packet_free_multi(pkt_table, i);
-
 	return i;
 }
 
@@ -654,4 +652,5 @@ const pktio_if_ops_t _odp_sock_mmsg_pktio_ops = {
 	.config = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
+	.is_sent_free_req = 1
 };

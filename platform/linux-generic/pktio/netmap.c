@@ -1164,8 +1164,6 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 	} else {
 		if (odp_unlikely(tx_ts_idx && nb_tx >= tx_ts_idx))
 			_odp_pktio_tx_ts_set(pktio_entry);
-
-		odp_packet_free_multi(pkt_table, nb_tx);
 	}
 
 	return nb_tx;
@@ -1329,7 +1327,8 @@ const pktio_if_ops_t _odp_netmap_pktio_ops = {
 	.recv_tmo = netmap_recv_tmo,
 	.recv_mq_tmo = netmap_recv_mq_tmo,
 	.send = netmap_send,
-	.fd_set = netmap_fd_set
+	.fd_set = netmap_fd_set,
+	.is_sent_free_req = 1
 };
 #else /* _ODP_PKTIO_NETMAP */
 /* Avoid warning about empty translation unit */

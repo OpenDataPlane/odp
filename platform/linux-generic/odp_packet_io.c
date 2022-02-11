@@ -2879,6 +2879,7 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 {
 	pktio_entry_t *entry;
 	odp_pktio_t pktio = queue.pktio;
+	int num_sent;
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
@@ -2892,7 +2893,12 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 	if (_ODP_PCAPNG)
 		_odp_dump_pcapng_pkts(entry, queue.index, packets, num);
 
-	return entry->s.ops->send(entry, queue.index, packets, num);
+	num_sent = entry->s.ops->send(entry, queue.index, packets, num);
+
+	if (entry->s.ops->is_sent_free_req && num_sent > 0)
+		odp_packet_free_multi(packets, num_sent);
+
+	return num_sent;
 }
 
 /** Get printable format of odp_pktio_t */

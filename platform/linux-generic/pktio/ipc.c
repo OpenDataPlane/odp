@@ -983,5 +983,6 @@ const pktio_if_ops_t _odp_ipc_pktio_ops = {
 	.pktio_ts_res = NULL,
 	.pktio_ts_from_ns = NULL,
 	.pktio_time = NULL,
-	.config = NULL
+	.config = NULL,
+	.is_sent_free_req = 0
 };

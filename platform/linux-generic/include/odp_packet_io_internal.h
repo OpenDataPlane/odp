@@ -234,6 +234,8 @@ typedef struct pktio_if_ops {
 				   const odp_pktin_queue_param_t *param);
 	int (*output_queues_config)(pktio_entry_t *pktio_entry,
 				    const odp_pktout_queue_param_t *p);
+	/* Indicate if packets need freeing after successfully sent */
+	uint8_t is_sent_free_req;
 } pktio_if_ops_t;
 
 extern void *_odp_pktio_entry_ptr[];

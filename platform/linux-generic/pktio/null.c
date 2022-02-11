@@ -106,8 +106,6 @@ static int null_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		}
 	}
 
-	odp_packet_free_multi(pkt_table, num);
-
 	if (odp_unlikely(set_tx_ts))
 		_odp_pktio_tx_ts_set(pktio_entry);
 
@@ -224,5 +222,6 @@ const pktio_if_ops_t _odp_null_pktio_ops = {
 	.input_queues_config = null_inqueues_config,
 	.output_queues_config = null_outqueues_config,
 	.link_status = null_link_status,
-	.link_info = null_link_info
+	.link_info = null_link_info,
+	.is_sent_free_req = 1
 };

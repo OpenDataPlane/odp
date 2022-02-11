@@ -2118,8 +2118,6 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 		if (odp_unlikely(tx_pkts == 0)) {
 			if (_odp_errno != 0)
 				return -1;
-		} else {
-			odp_packet_free_multi(pkt_table, tx_pkts);
 		}
 	}
 
@@ -2436,7 +2434,12 @@ const pktio_if_ops_t _odp_dpdk_pktio_ops = {
 	.pktio_time = NULL,
 	.config = NULL,
 	.input_queues_config = dpdk_input_queues_config,
-	.output_queues_config = dpdk_output_queues_config
+	.output_queues_config = dpdk_output_queues_config,
+#if _ODP_DPDK_ZERO_COPY
+	.is_sent_free_req = 0
+#else
+	.is_sent_free_req = 1
+#endif
 };
 
 #else

@@ -381,8 +381,6 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		if (odp_unlikely(tx_ts_enabled && packet_hdr(pkts[i])->p.flags.ts_set))
 			_odp_pktio_tx_ts_set(pktio_entry);
-
-		odp_packet_free(pkts[i]);
 	}
 
 	pktio_entry->s.stats.out_packets += i;
@@ -559,5 +557,6 @@ const pktio_if_ops_t _odp_pcap_pktio_ops = {
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
 	.link_status = pcapif_link_status,
-	.link_info = pcapif_link_info
+	.link_info = pcapif_link_info,
+	.is_sent_free_req = 1
 };

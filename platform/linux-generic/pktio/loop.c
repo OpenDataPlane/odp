@@ -577,4 +577,5 @@ const pktio_if_ops_t _odp_loopback_pktio_ops = {
 	.config = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
+	.is_sent_free_req = 0
 };

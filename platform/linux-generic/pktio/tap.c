@@ -370,7 +370,7 @@ static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
 {
 	pkt_tap_t *tap = pkt_priv(pktio_entry);
 	ssize_t retval;
-	int i, n;
+	int i;
 	uint32_t pkt_len;
 	uint32_t mtu = tap->mtu;
 	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
@@ -417,9 +417,6 @@ static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
 				_odp_pktio_tx_ts_set(pktio_entry);
 		}
 	}
-
-	for (n = 0; n < i; n++)
-		odp_packet_free(pkts[n]);
 
 	return i;
 }
@@ -557,5 +554,6 @@ const pktio_if_ops_t _odp_tap_pktio_ops = {
 	.pktio_ts_res = NULL,
 	.pktio_ts_from_ns = NULL,
 	.pktio_time = NULL,
-	.config = NULL
+	.config = NULL,
+	.is_sent_free_req = 1
 };
