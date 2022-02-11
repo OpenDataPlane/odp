@@ -407,6 +407,40 @@ static int alg_packet_op_enq(odp_packet_t pkt,
 	return 0;
 }
 
+static int crypto_op(odp_packet_t pkt,
+		     odp_bool_t *ok,
+		     odp_crypto_session_t session,
+		     uint8_t *cipher_iv,
+		     uint8_t *auth_iv,
+		     odp_packet_data_range_t *cipher_range,
+		     odp_packet_data_range_t *auth_range,
+		     uint8_t *aad,
+		     unsigned int hash_result_offset)
+{
+	int rc;
+
+	if (!suite_context.packet)
+		rc = alg_op(pkt, ok, session,
+			    cipher_iv, auth_iv,
+			    cipher_range, auth_range,
+			    aad, hash_result_offset);
+	else if (ODP_CRYPTO_ASYNC == suite_context.op_mode)
+		rc = alg_packet_op_enq(pkt, ok, session,
+				       cipher_iv, auth_iv,
+				       cipher_range, auth_range,
+				       aad, hash_result_offset);
+	else
+		rc = alg_packet_op(pkt, ok, session,
+				   cipher_iv, auth_iv,
+				   cipher_range, auth_range,
+				   aad, hash_result_offset);
+
+	if (rc < 0)
+		odp_packet_free(pkt);
+
+	return rc;
+}
+
 /*
  * Try to adjust packet so that the first segment holds 'first_seg_len' bytes
  * of packet data (+ tailroom if first_seg_len is longer than the packet).
@@ -492,7 +526,6 @@ typedef struct alg_test_param_t {
 
 static void alg_test_execute(const alg_test_param_t *param)
 {
-	int rc;
 	odp_bool_t ok = false;
 	int iteration;
 	uint32_t reflength;
@@ -557,25 +590,11 @@ static void alg_test_execute(const alg_test_param_t *param)
 			}
 		}
 
-		if (!suite_context.packet)
-			rc = alg_op(pkt, &ok, param->session,
-				    cipher_iv, auth_iv,
-				    &cipher_range, &auth_range,
-				    ref->aad, digest_offset);
-		else if (ODP_CRYPTO_ASYNC == suite_context.op_mode)
-			rc = alg_packet_op_enq(pkt, &ok, param->session,
-					       cipher_iv, auth_iv,
-					       &cipher_range, &auth_range,
-					       ref->aad, digest_offset);
-		else
-			rc = alg_packet_op(pkt, &ok, param->session,
-					   cipher_iv, auth_iv,
-					   &cipher_range, &auth_range,
-					   ref->aad, digest_offset);
-		if (rc < 0) {
-			odp_packet_free(pkt);
+		if (crypto_op(pkt, &ok, param->session,
+			      cipher_iv, auth_iv,
+			      &cipher_range, &auth_range,
+			      ref->aad, digest_offset))
 			break;
-		}
 
 		if (iteration == WRONG_DIGEST_TEST) {
 			CU_ASSERT(!ok);
@@ -612,28 +631,14 @@ typedef enum {
 	OLD_SESSION_IV,
 } iv_test_mode_t;
 
-/* Basic algorithm run function for async inplace mode.
- * Creates a session from input parameters and runs one operation
- * on input_vec. Checks the output of the crypto operation against
- * output_vec. Operation completion event is dequeued polling the
- * session output queue. Completion context pointer is retrieved
- * and checked against the one set before the operation.
- * Completion event can be a separate buffer or the input packet
- * buffer can be used.
- * */
-static void alg_test(odp_crypto_op_t op,
-		     odp_cipher_alg_t cipher_alg,
-		     odp_auth_alg_t auth_alg,
-		     crypto_test_reference_t *ref,
-		     iv_test_mode_t iv_mode,
-		     odp_bool_t bit_mode)
+static odp_crypto_session_t session_create(odp_crypto_op_t op,
+					   odp_cipher_alg_t cipher_alg,
+					   odp_auth_alg_t auth_alg,
+					   crypto_test_reference_t *ref,
+					   iv_test_mode_t iv_mode)
 {
-	unsigned int initial_num_failures = CU_get_number_of_failures();
-	odp_crypto_session_t session;
+	odp_crypto_session_t session = ODP_CRYPTO_SESSION_INVALID;
 	int rc;
-	uint32_t reflength;
-	uint32_t seg_len;
-	uint32_t max_shift;
 	odp_crypto_ses_create_err_t status;
 	odp_crypto_session_param_t ses_params;
 	uint8_t cipher_key_data[ref->cipher_key_length];
@@ -646,7 +651,6 @@ static void alg_test(odp_crypto_op_t op,
 		.data = auth_key_data,
 		.length = ref->auth_key_length
 	};
-	alg_test_param_t test_param;
 #if ODP_DEPRECATED_API
 	uint8_t cipher_iv_data[ref->cipher_iv_length];
 	uint8_t auth_iv_data[ref->auth_iv_length];
@@ -701,7 +705,7 @@ static void alg_test(odp_crypto_op_t op,
 		printf("\n    Unsupported algorithm combination: %s, %s\n",
 		       cipher_alg_name(cipher_alg),
 		       auth_alg_name(auth_alg));
-		return;
+		return ODP_CRYPTO_SESSION_INVALID;
 	}
 	/*
 	 * We do not allow ODP_CRYPTO_SES_ERR_ALG_ORDER since we do
@@ -728,6 +732,29 @@ static void alg_test(odp_crypto_op_t op,
 	memset(auth_iv_data, 0, sizeof(auth_iv_data));
 #endif
 	memset(&ses_params, 0, sizeof(ses_params));
+
+	return session;
+}
+
+static void alg_test(odp_crypto_op_t op,
+		     odp_cipher_alg_t cipher_alg,
+		     odp_auth_alg_t auth_alg,
+		     crypto_test_reference_t *ref,
+		     uint32_t digest_offset,
+		     iv_test_mode_t iv_mode,
+		     odp_bool_t bit_mode)
+{
+	unsigned int initial_num_failures = CU_get_number_of_failures();
+	odp_crypto_session_t session;
+	int rc;
+	uint32_t reflength;
+	uint32_t seg_len;
+	uint32_t max_shift;
+	alg_test_param_t test_param;
+
+	session = session_create(op, cipher_alg, auth_alg, ref, iv_mode);
+	if (session == ODP_CRYPTO_SESSION_INVALID)
+		return;
 
 	memset(&test_param, 0, sizeof(test_param));
 	test_param.session = session;
