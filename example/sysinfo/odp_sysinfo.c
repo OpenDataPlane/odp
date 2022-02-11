@@ -1,4 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -14,6 +15,9 @@
 #define KB              1024
 #define MB              (1024 * 1024)
 #define MAX_HUGE_PAGES  32
+
+/* Check that prints can use %u instead of %PRIu32 */
+ODP_STATIC_ASSERT(sizeof(unsigned int) >= sizeof(uint32_t), "unsigned int smaller than uint32_t");
 
 static const char *support_level(odp_support_t support)
 {
@@ -452,10 +456,8 @@ int main(void)
 	       "big" : "little",
 	       ODP_BIG_ENDIAN_BITFIELD, ODP_LITTLE_ENDIAN_BITFIELD);
 	printf("  Cache line size:        %i B\n", odp_sys_cache_line_size());
-	printf("  Page size:              %" PRIu64 " kB\n",
-	       odp_sys_page_size() / KB);
-	printf("  Default huge page size: %" PRIu64 " kB\n",
-	       odp_sys_huge_page_size() / KB);
+	printf("  Page size:              %" PRIu64 " kB\n", odp_sys_page_size() / KB);
+	printf("  Default huge page size: %" PRIu64 " kB\n", odp_sys_huge_page_size() / KB);
 	printf("  Num huge page sizes:    %i\n", num_hp);
 
 	for (i = 0; i < num_hp_print; i++)
@@ -465,62 +467,42 @@ int main(void)
 	printf("\n");
 	printf("  SHM\n");
 	printf("    max_blocks:           %u\n", shm_capa.max_blocks);
-	printf("    max_size:             %" PRIu64 " MB\n",
-	       shm_capa.max_size / MB);
+	printf("    max_size:             %" PRIu64 " MB\n", shm_capa.max_size / MB);
 	printf("    max_align:            %" PRIu64 " B\n", shm_capa.max_align);
 
 	printf("\n");
 	printf("  POOL\n");
 	printf("    max_pools:            %u\n", pool_capa.max_pools);
 	printf("    buf.max_pools:        %u\n", pool_capa.buf.max_pools);
-	printf("    buf.max_align:        %" PRIu32 " B\n",
-	       pool_capa.buf.max_align);
-	printf("    buf.max_size:         %" PRIu32 " kB\n",
-	       pool_capa.buf.max_size / KB);
-	printf("    buf.max_num:          %" PRIu32 "\n",
-	       pool_capa.buf.max_num);
+	printf("    buf.max_align:        %u B\n", pool_capa.buf.max_align);
+	printf("    buf.max_size:         %u kB\n", pool_capa.buf.max_size / KB);
+	printf("    buf.max_num:          %u\n", pool_capa.buf.max_num);
 	printf("    pkt.max_pools:        %u\n", pool_capa.pkt.max_pools);
-	printf("    pkt.max_len:          %" PRIu32 " kB\n",
-	       pool_capa.pkt.max_len / KB);
-	printf("    pkt.max_num:          %" PRIu32 "\n",
-	       pool_capa.pkt.max_num);
-	printf("    pkt.max_segs:         %" PRIu32 "\n",
-	       pool_capa.pkt.max_segs_per_pkt);
-	printf("    pkt.max_seg_len:      %" PRIu32 " B\n",
-	       pool_capa.pkt.max_seg_len);
-	printf("    pkt.max_uarea:        %" PRIu32 " B\n",
-	       pool_capa.pkt.max_uarea_size);
+	printf("    pkt.max_len:          %u kB\n", pool_capa.pkt.max_len / KB);
+	printf("    pkt.max_num:          %u\n", pool_capa.pkt.max_num);
+	printf("    pkt.max_segs:         %u\n", pool_capa.pkt.max_segs_per_pkt);
+	printf("    pkt.max_seg_len:      %u B\n", pool_capa.pkt.max_seg_len);
+	printf("    pkt.max_uarea:        %u B\n", pool_capa.pkt.max_uarea_size);
 	printf("    tmo.max_pools:        %u\n", pool_capa.tmo.max_pools);
-	printf("    tmo.max_num:          %" PRIu32 "\n",
-	       pool_capa.tmo.max_num);
+	printf("    tmo.max_num:          %u\n", pool_capa.tmo.max_num);
 
 	printf("\n");
 	printf("  QUEUE\n");
-	printf("    max queues:           %" PRIu32 "\n",
-	       queue_capa.max_queues);
-	printf("    plain.max_num:        %" PRIu32 "\n",
-	       queue_capa.plain.max_num);
-	printf("    plain.max_size:       %" PRIu32 "\n",
-	       queue_capa.plain.max_size);
-	printf("    plain.lf.max_num:     %" PRIu32 "\n",
-	       queue_capa.plain.lockfree.max_num);
-	printf("    plain.lf.max_size:    %" PRIu32 "\n",
-	       queue_capa.plain.lockfree.max_size);
-	printf("    plain.wf.max_num:     %" PRIu32 "\n",
-	       queue_capa.plain.waitfree.max_num);
-	printf("    plain.wf.max_size:    %" PRIu32 "\n",
-	       queue_capa.plain.waitfree.max_size);
+	printf("    max queues:           %u\n", queue_capa.max_queues);
+	printf("    plain.max_num:        %u\n", queue_capa.plain.max_num);
+	printf("    plain.max_size:       %u\n", queue_capa.plain.max_size);
+	printf("    plain.lf.max_num:     %u\n", queue_capa.plain.lockfree.max_num);
+	printf("    plain.lf.max_size:    %u\n", queue_capa.plain.lockfree.max_size);
+	printf("    plain.wf.max_num:     %u\n", queue_capa.plain.waitfree.max_num);
+	printf("    plain.wf.max_size:    %u\n", queue_capa.plain.waitfree.max_size);
 
 	printf("\n");
 	printf("  SCHEDULER\n");
-	printf("    max ordered locks:    %" PRIu32 "\n",
-	       schedule_capa.max_ordered_locks);
+	printf("    max ordered locks:    %u\n", schedule_capa.max_ordered_locks);
 	printf("    max groups:           %u\n", schedule_capa.max_groups);
 	printf("    priorities:           %u\n", schedule_capa.max_prios);
-	printf("    sched.max_queues:     %" PRIu32 "\n",
-	       schedule_capa.max_queues);
-	printf("    sched.max_queue_size: %" PRIu32 "\n",
-	       schedule_capa.max_queue_size);
+	printf("    sched.max_queues:     %u\n", schedule_capa.max_queues);
+	printf("    sched.max_queue_size: %u\n", schedule_capa.max_queue_size);
 	printf("    sched.lf_queues:      %ssupported\n",
 	       schedule_capa.lockfree_queues ? "" : "not ");
 	printf("    sched.wf_queues:      %ssupported\n",
@@ -535,12 +517,9 @@ int main(void)
 
 	if (crypto_ret == 0) {
 		printf("  CRYPTO\n");
-		printf("    max sessions:         %" PRIu32 "\n",
-		       crypto_capa.max_sessions);
-		printf("    sync mode support:    %s\n",
-		       support_level(crypto_capa.sync_mode));
-		printf("    async mode support:   %s\n",
-		       support_level(crypto_capa.async_mode));
+		printf("    max sessions:         %u\n", crypto_capa.max_sessions);
+		printf("    sync mode support:    %s\n", support_level(crypto_capa.sync_mode));
+		printf("    async mode support:   %s\n", support_level(crypto_capa.async_mode));
 		printf("    cipher algorithms:    ");
 		print_cipher_algos(crypto_capa.ciphers);
 		printf("\n");
@@ -554,8 +533,7 @@ int main(void)
 
 	if (ipsec_ret == 0) {
 		printf("  IPSEC\n");
-		printf("    max SAs:                      %" PRIu32 "\n",
-		       ipsec_capa.max_num_sa);
+		printf("    max SAs:                      %u\n", ipsec_capa.max_num_sa);
 		printf("    sync mode support:            %s\n",
 		       support_level(ipsec_capa.op_mode_sync));
 		printf("    async mode support:           %s\n",
@@ -583,11 +561,9 @@ int main(void)
 		       support_level(ipsec_capa.chksums_in.chksum.tcp));
 		printf("      SCTP checksum:              %s\n",
 		       support_level(ipsec_capa.chksums_in.chksum.sctp));
-		printf("    max destination CoSes:        %" PRIu32 "\n",
-		       ipsec_capa.max_cls_cos);
-		printf("    max destination queues:       %" PRIu32 "\n",
-		       ipsec_capa.max_queues);
-		printf("    max anti-replay window size:  %" PRIu32 "\n",
+		printf("    max destination CoSes:        %u\n", ipsec_capa.max_cls_cos);
+		printf("    max destination queues:       %u\n", ipsec_capa.max_queues);
+		printf("    max anti-replay window size:  %u\n",
 		       ipsec_capa.max_antireplay_ws);
 		printf("    inline TM pipelining:         %s\n",
 		       support_level(ipsec_capa.inline_ipsec_tm));
