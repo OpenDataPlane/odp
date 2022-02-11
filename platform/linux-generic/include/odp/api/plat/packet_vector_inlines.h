@@ -14,12 +14,11 @@
 #ifndef _ODP_PLAT_PACKET_VECTOR_INLINES_H_
 #define _ODP_PLAT_PACKET_VECTOR_INLINES_H_
 
-#include <odp/api/abi/event_types.h>
-#include <odp/api/abi/packet_types.h>
-#include <odp/api/abi/pool_types.h>
+#include <odp/api/event_types.h>
+#include <odp/api/packet_types.h>
+#include <odp/api/pool_types.h>
 
 #include <odp/api/plat/event_vector_inline_types.h>
-#include <odp/api/plat/pool_inline_types.h>
 
 #include <stdint.h>
 
@@ -40,7 +39,6 @@
 #endif
 
 extern const _odp_event_vector_inline_offset_t _odp_event_vector_inline;
-extern const _odp_pool_inline_offset_t _odp_pool_inline;
 
 _ODP_INLINE odp_packet_vector_t odp_packet_vector_from_event(odp_event_t ev)
 {
@@ -61,9 +59,7 @@ _ODP_INLINE uint32_t odp_packet_vector_tbl(odp_packet_vector_t pktv, odp_packet_
 
 _ODP_INLINE odp_pool_t odp_packet_vector_pool(odp_packet_vector_t pktv)
 {
-	void *pool = _odp_event_vect_get(pktv, void *, pool);
-
-	return _odp_pool_get(pool, odp_pool_t, pool_hdl);
+	return (odp_pool_t)(uintptr_t)_odp_event_vect_get(pktv, void *, pool);
 }
 
 _ODP_INLINE uint32_t odp_packet_vector_size(odp_packet_vector_t pktv)

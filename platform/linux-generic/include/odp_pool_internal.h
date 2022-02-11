@@ -58,7 +58,6 @@ struct _odp_pool_mem_src_ops_t;
 
 typedef struct pool_t {
 	odp_ticketlock_t lock ODP_ALIGNED_CACHE;
-	odp_pool_t       pool_hdl;
 	uint32_t         pool_idx;
 	uint8_t          reserved;
 
@@ -149,14 +148,19 @@ typedef struct _odp_pool_mem_src_ops_t {
 
 extern pool_global_t *_odp_pool_glb;
 
-static inline pool_t *pool_entry(uint32_t pool_idx)
+static inline pool_t *_odp_pool_entry_from_idx(uint32_t pool_idx)
 {
 	return &_odp_pool_glb->pool[pool_idx];
 }
 
-static inline pool_t *pool_entry_from_hdl(odp_pool_t pool_hdl)
+static inline pool_t *_odp_pool_entry(odp_pool_t pool_hdl)
 {
-	return &_odp_pool_glb->pool[_odp_typeval(pool_hdl) - 1];
+	return (pool_t *)(uintptr_t)pool_hdl;
+}
+
+static inline odp_pool_t _odp_pool_handle(pool_t *pool)
+{
+	return (odp_pool_t)(uintptr_t)pool;
 }
 
 static inline _odp_event_hdr_t *event_hdr_from_index(pool_t *pool,
@@ -183,7 +187,7 @@ static inline _odp_event_hdr_t *_odp_event_hdr_from_index_u32(uint32_t u32)
 	index.u32  = u32;
 	pool_idx   = index.pool;
 	event_idx  = index.event;
-	pool       = pool_entry(pool_idx);
+	pool       = _odp_pool_entry_from_idx(pool_idx);
 
 	return event_hdr_from_index(pool, event_idx);
 }

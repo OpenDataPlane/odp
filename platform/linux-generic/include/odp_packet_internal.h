@@ -277,8 +277,8 @@ static inline int _odp_packet_copy_md_possible(odp_pool_t dst_pool,
 	if (src_pool == dst_pool)
 		return 0;
 
-	src_hdr = pool_entry_from_hdl(src_pool);
-	dst_hdr = pool_entry_from_hdl(dst_pool);
+	src_hdr = _odp_pool_entry(src_pool);
+	dst_hdr = _odp_pool_entry(dst_pool);
 
 	if (dst_hdr->param_uarea_size < src_hdr->param_uarea_size)
 		return -1;

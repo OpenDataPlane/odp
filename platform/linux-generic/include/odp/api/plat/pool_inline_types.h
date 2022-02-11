@@ -24,8 +24,6 @@ extern "C" {
 /** @internal Pool header field offsets for inline functions */
 typedef struct _odp_pool_inline_offset_t {
 	/** @internal field offset */
-	uint16_t pool_hdl;
-	/** @internal field offset */
 	uint16_t uarea_size;
 
 } _odp_pool_inline_offset_t;

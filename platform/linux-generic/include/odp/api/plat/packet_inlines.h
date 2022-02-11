@@ -16,7 +16,7 @@
 
 #include <odp/api/hints.h>
 #include <odp/api/packet_types.h>
-#include <odp/api/pool.h>
+#include <odp/api/pool_types.h>
 #include <odp/api/time.h>
 
 #include <odp/api/abi/buffer.h>
@@ -127,9 +127,7 @@ _ODP_INLINE uint32_t odp_packet_tailroom(odp_packet_t pkt)
 
 _ODP_INLINE odp_pool_t odp_packet_pool(odp_packet_t pkt)
 {
-	void *pool = _odp_pkt_get(pkt, void *, pool);
-
-	return _odp_pool_get(pool, odp_pool_t, pool_hdl);
+	return (odp_pool_t)(uintptr_t)_odp_pkt_get(pkt, void *, pool);
 }
 
 _ODP_INLINE odp_pktio_t odp_packet_input(odp_packet_t pkt)

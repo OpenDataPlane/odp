@@ -41,7 +41,7 @@ odp_packet_vector_t odp_packet_vector_alloc(odp_pool_t pool_hdl)
 
 	ODP_ASSERT(pool_hdl != ODP_POOL_INVALID);
 
-	pool = pool_entry_from_hdl(pool_hdl);
+	pool = _odp_pool_entry(pool_hdl);
 
 	ODP_ASSERT(pool->type == ODP_POOL_VECTOR);
 
