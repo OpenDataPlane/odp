@@ -119,6 +119,7 @@ int _odp_pktio_init_global(void)
 	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
 		pktio_entry = &pktio_global->entries[i];
 
+		pktio_entry->s.handle = _odp_cast_scalar(odp_pktio_t, i + 1);
 		odp_ticketlock_init(&pktio_entry->s.rxl);
 		odp_ticketlock_init(&pktio_entry->s.txl);
 		odp_spinlock_init(&pktio_entry->s.cls.l2_cos_table.lock);
@@ -179,60 +180,6 @@ static void unlock_entry(pktio_entry_t *entry)
 	odp_ticketlock_unlock(&entry->s.rxl);
 }
 
-static void init_in_queues(pktio_entry_t *entry)
-{
-	int i;
-
-	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
-		entry->s.in_queue[i].queue = ODP_QUEUE_INVALID;
-		entry->s.in_queue[i].pktin = PKTIN_INVALID;
-	}
-}
-
-static void init_out_queues(pktio_entry_t *entry)
-{
-	int i;
-
-	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
-		entry->s.out_queue[i].queue  = ODP_QUEUE_INVALID;
-		entry->s.out_queue[i].pktout = PKTOUT_INVALID;
-	}
-}
-
-static void init_pktio_entry(pktio_entry_t *entry)
-{
-	pktio_cls_enabled_set(entry, 0);
-
-	init_in_queues(entry);
-	init_out_queues(entry);
-
-	_odp_pktio_classifier_init(entry);
-}
-
-static odp_pktio_t alloc_lock_pktio_entry(void)
-{
-	pktio_entry_t *entry;
-	int i;
-
-	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
-		entry = &pktio_global->entries[i];
-		if (is_free(entry)) {
-			lock_entry(entry);
-			if (is_free(entry)) {
-				odp_pktio_t hdl;
-
-				entry->s.state = PKTIO_STATE_ACTIVE;
-				init_pktio_entry(entry);
-				hdl = _odp_cast_scalar(odp_pktio_t, i + 1);
-				return hdl; /* return with entry locked! */
-			}
-			unlock_entry(entry);
-		}
-	}
-
-	return ODP_PKTIO_INVALID;
-}
-
 /**
  * Strip optional pktio type from device name by moving start pointer
  *
@@ -283,53 +230,83 @@ static const char *strip_pktio_type(const char *name, char *type_out)
 	return name;
 }
 
+static void init_out_queues(pktio_entry_t *entry)
+{
+	int i;
+
+	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
+		entry->s.out_queue[i].queue  = ODP_QUEUE_INVALID;
+		entry->s.out_queue[i].pktout = PKTOUT_INVALID;
+	}
+}
+
+static void init_pktio_entry(pktio_entry_t *entry)
+{
+	int i;
+
+	/* Clear all flags */
+	entry->s.enabled.all_flags = 0;
+
+	odp_atomic_init_u64(&entry->s.stats_extra.in_discards, 0);
+	odp_atomic_init_u64(&entry->s.stats_extra.out_discards, 0);
+	odp_atomic_init_u64(&entry->s.tx_ts, 0);
+
+	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
+		entry->s.in_queue[i].queue = ODP_QUEUE_INVALID;
+		entry->s.in_queue[i].pktin = PKTIN_INVALID;
+	}
+
+	init_out_queues(entry);
+
+	_odp_pktio_classifier_init(entry);
+}
+
 static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 				     const odp_pktio_param_t *param)
 {
 	odp_pktio_t hdl;
 	pktio_entry_t *pktio_entry;
-	int ret = -1;
-	int pktio_if;
+	int i, pktio_if;
 	char pktio_type[PKTIO_NAME_LEN];
 	const char *if_name;
 	uint16_t pktin_frame_offset = pktio_global->config.pktin_frame_offset;
+	int ret = -1;
 
 	if (strlen(name) >= PKTIO_NAME_LEN - 1) {
 		/* ioctl names limitation */
-		ODP_ERR("pktio name %s is too big, limit is %d bytes\n",
-			name, PKTIO_NAME_LEN - 1);
+		ODP_ERR("pktio name %s is too long (max: %d chars)\n", name, PKTIO_NAME_LEN - 1);
 		return ODP_PKTIO_INVALID;
 	}
 
 	if_name = strip_pktio_type(name, pktio_type);
 
-	hdl = alloc_lock_pktio_entry();
-	if (hdl == ODP_PKTIO_INVALID) {
-		ODP_ERR("No resources available.\n");
+	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
+		pktio_entry = &pktio_global->entries[i];
+		if (is_free(pktio_entry)) {
+			lock_entry(pktio_entry);
+			if (is_free(pktio_entry))
+				break;
+
+			unlock_entry(pktio_entry);
+		}
+	}
+
+	if (i == ODP_CONFIG_PKTIO_ENTRIES) {
+		ODP_ERR("All pktios used already\n");
 		return ODP_PKTIO_INVALID;
 	}
 
-	/* if successful, alloc_pktio_entry() returns with the entry locked */
-	pktio_entry = get_pktio_entry(hdl);
-	if (!pktio_entry) {
-		unlock_entry(pktio_entry);
-		return ODP_PKTIO_INVALID;
-	}
+	/* Entry was found and is now locked */
+	pktio_entry->s.state = PKTIO_STATE_ACTIVE;
+	hdl = pktio_entry->s.handle;
 
-	snprintf(pktio_entry->s.name,
-		 sizeof(pktio_entry->s.name), "%s", if_name);
-	snprintf(pktio_entry->s.full_name,
-		 sizeof(pktio_entry->s.full_name), "%s", name);
+	init_pktio_entry(pktio_entry);
+
+	snprintf(pktio_entry->s.name, sizeof(pktio_entry->s.name), "%s", if_name);
+	snprintf(pktio_entry->s.full_name, sizeof(pktio_entry->s.full_name), "%s", name);
 	pktio_entry->s.pool = pool;
 	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
-	pktio_entry->s.handle = hdl;
 	pktio_entry->s.pktin_frame_offset = pktin_frame_offset;
-	odp_atomic_init_u64(&pktio_entry->s.stats_extra.in_discards, 0);
-	odp_atomic_init_u64(&pktio_entry->s.stats_extra.out_discards, 0);
-
-	/* Tx timestamping is disabled by default */
-	pktio_entry->s.enabled.tx_ts = 0;
-	odp_atomic_init_u64(&pktio_entry->s.tx_ts, 0);
 
 	odp_pktio_config_init(&pktio_entry->s.config);
 
@@ -339,8 +316,8 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 		    strcmp(_odp_pktio_if_ops[pktio_if]->name, pktio_type))
 			continue;
 
-		ret = _odp_pktio_if_ops[pktio_if]->open(hdl, pktio_entry, if_name,
-							pool);
+		ret = _odp_pktio_if_ops[pktio_if]->open(hdl, pktio_entry, if_name, pool);
+
 		if (!ret)
 			break;
 	}
@@ -2241,7 +2218,7 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 		return -1;
 	}
 
-	pktio_cls_enabled_set(entry, param->classifier_enable);
+	entry->s.enabled.cls = !!param->classifier_enable;
 
 	if (num_queues > capa.max_input_queues) {
 		ODP_DBG("pktio %s: too many input queues\n", entry->s.name);
