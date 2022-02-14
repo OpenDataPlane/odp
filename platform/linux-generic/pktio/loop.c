@@ -207,7 +207,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	}
 
 	pktio_entry->s.stats.in_errors += failed;
-	pktio_entry->s.stats.in_packets += num_rx - failed;
+	pktio_entry->s.stats.in_packets += num_rx;
 
 	odp_ticketlock_unlock(&pktio_entry->s.rxl);
 
