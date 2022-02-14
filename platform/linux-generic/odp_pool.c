@@ -78,13 +78,6 @@ const _odp_pool_inline_offset_t _odp_pool_inline ODP_ALIGNED_CACHE = {
 
 #include <odp/visibility_end.h>
 
-static inline pool_t *pool_from_buf(odp_buffer_t buf)
-{
-	odp_buffer_hdr_t *buf_hdr = _odp_buf_hdr(buf);
-
-	return buf_hdr->event_hdr.pool_ptr;
-}
-
 static inline void cache_init(pool_cache_t *cache)
 {
 	memset(cache, 0, sizeof(pool_cache_t));
@@ -1524,13 +1517,6 @@ void odp_pool_print_all(void)
 			  cache_size, buf_len, ext);
 	}
 	ODP_PRINT("\n");
-}
-
-odp_pool_t odp_buffer_pool(odp_buffer_t buf)
-{
-	pool_t *pool = pool_from_buf(buf);
-
-	return _odp_pool_handle(pool);
 }
 
 void odp_pool_param_init(odp_pool_param_t *params)
