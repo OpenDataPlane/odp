@@ -7,8 +7,10 @@
 #ifndef ODP_PLAT_BUFFER_INLINES_H_
 #define ODP_PLAT_BUFFER_INLINES_H_
 
+#include <odp/api/event_types.h>
+#include <odp/api/pool_types.h>
+
 #include <odp/api/abi/buffer.h>
-#include <odp/api/abi/event_types.h>
 
 #include <odp/api/plat/event_inline_types.h>
 
@@ -22,6 +24,7 @@ extern const _odp_event_inline_offset_t _odp_event_inline_offset;
 	#define odp_buffer_from_event __odp_buffer_from_event
 	#define odp_buffer_to_event __odp_buffer_to_event
 	#define odp_buffer_addr __odp_buffer_addr
+	#define odp_buffer_pool __odp_buffer_pool
 #else
 	#define _ODP_INLINE
 #endif
@@ -39,6 +42,11 @@ _ODP_INLINE odp_event_t odp_buffer_to_event(odp_buffer_t buf)
 _ODP_INLINE void *odp_buffer_addr(odp_buffer_t buf)
 {
 	return _odp_event_hdr_field((odp_event_t)buf, void *, base_data);
+}
+
+_ODP_INLINE odp_pool_t odp_buffer_pool(odp_buffer_t buf)
+{
+	return (odp_pool_t)(uintptr_t)_odp_event_hdr_field(buf, void *, pool);
 }
 
 /** @endcond */
