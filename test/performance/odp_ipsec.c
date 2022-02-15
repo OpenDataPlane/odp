@@ -1,4 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -18,6 +19,7 @@
 
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
+#include <inttypes.h>
 
 /** @def POOL_NUM_PKT
  * Number of packets in the pool
@@ -608,6 +610,17 @@ make_packet(odp_pool_t pkt_pool, unsigned int payload_length)
 	return pkt;
 }
 
+static inline void check_ipsec_result(odp_packet_t ipsec_pkt)
+{
+	odp_ipsec_packet_result_t result;
+
+	if (odp_unlikely(odp_ipsec_result(&result, ipsec_pkt)))
+		ODPH_ERR("odp_ipsec_result() failed\n");
+	else if (odp_unlikely(result.status.error.all))
+		ODPH_ERR("IPsec processing error: %" PRIu32 "\n",
+			 result.status.error.all);
+}
+
 /**
  * Run measurement iterations for given config and payload size.
  * Result of run returned in 'result' out parameter.
@@ -665,13 +678,8 @@ run_measure_one(ipsec_args_t *cargs,
 				odp_packet_free(pkt);
 				break;
 			}
-			if (odp_packet_has_error(out_pkt)) {
-				odp_ipsec_packet_result_t result;
+			check_ipsec_result(out_pkt);
 
-				odp_ipsec_result(&result, out_pkt);
-				ODPH_ERR("Received error packet: %d\n",
-					 result.status.error.all);
-			}
 			packets_sent += rc;
 			packets_received += num_out;
 			if (cargs->debug_packets)
@@ -756,10 +764,9 @@ run_measure_one_async(ipsec_args_t *cargs,
 
 		while (ev != ODP_EVENT_INVALID) {
 			odp_packet_t out_pkt;
-			odp_ipsec_packet_result_t result;
 
 			out_pkt = odp_ipsec_packet_from_event(ev);
-			odp_ipsec_result(&result, out_pkt);
+			check_ipsec_result(out_pkt);
 
 			if (cargs->debug_packets)
 				odp_packet_print_data(out_pkt, 0,
