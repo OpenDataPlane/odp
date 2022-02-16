@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -111,9 +112,10 @@ int odp_cunit_set_inactive(void);
 int odp_cunit_ci_skip(const char *test_name);
 
 /*
- * Wrapper for CU_ASSERT_FATAL implementation to show the compiler that
- * the function does not return if the assertion fails. This reduces bogus
- * warnings generated from the code after the fatal assert.
+ * Wrapper for CU_assertImplementation for the fatal asserts to show the
+ * compiler and static analyzers that the function does not return if the
+ * assertion fails. This reduces bogus warnings generated from the code
+ * after the fatal assert.
  */
 static inline void odp_cu_assert_fatal(CU_BOOL value, unsigned int line,
 				       const char *condition, const char *file)
@@ -128,8 +130,39 @@ static inline void odp_cu_assert_fatal(CU_BOOL value, unsigned int line,
 	}
 }
 
+/*
+ * Redefine the macros used in ODP. Do it without the do-while idiom for
+ * compatibility with CU and existing code that assumes this kind of macros.
+ */
+
 #undef CU_ASSERT_FATAL
 #define CU_ASSERT_FATAL(value) \
 	{ odp_cu_assert_fatal((value), __LINE__, #value, __FILE__); }
+
+#undef CU_FAIL_FATAL
+#define CU_FAIL_FATAL(msg) \
+	{ odp_cu_assert_fatal(CU_FALSE, __LINE__, ("CU_FAIL_FATAL(" #msg ")"), __FILE__); }
+
+#undef CU_ASSERT_EQUAL_FATAL
+#define CU_ASSERT_EQUAL_FATAL(actual, expected) \
+	{ odp_cu_assert_fatal(((actual) == (expected)), __LINE__, \
+			      ("CU_ASSERT_EQUAL_FATAL(" #actual "," #expected ")"), \
+			      __FILE__); }
+
+#undef CU_ASSERT_NOT_EQUAL_FATAL
+#define CU_ASSERT_NOT_EQUAL_FATAL(actual, expected) \
+	{ odp_cu_assert_fatal(((actual) != (expected)), __LINE__, \
+			      ("CU_ASSERT_NOT_EQUAL_FATAL(" #actual "," #expected ")"), \
+			      __FILE__); }
+
+#undef CU_ASSERT_PTR_NULL_FATAL
+#define CU_ASSERT_PTR_NULL_FATAL(value) \
+	{ odp_cu_assert_fatal((NULL == (const void *)(value)), __LINE__, \
+			      ("CU_ASSERT_PTR_NULL_FATAL(" #value ")"), __FILE__); }
+
+#undef CU_ASSERT_PTR_NOT_NULL_FATAL
+#define CU_ASSERT_PTR_NOT_NULL_FATAL(value) \
+	{ odp_cu_assert_fatal((NULL != (const void *)(value)), __LINE__, \
+			      ("CU_ASSERT_PTR_NOT_NULL_FATAL(" #value ")"), __FILE__); }
 
 #endif /* ODP_CUNICT_COMMON_H */
