@@ -168,7 +168,7 @@ static const odp_crypto_auth_capability_t auth_capa_chacha20_poly1305[] = {
 
 static const odp_crypto_auth_capability_t auth_capa_aes_eia2[] = {
 {.digest_len = 4, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0},
-	.iv_len = 8, .bit_mode = 1 } };
+	.iv_len = 8} };
 
 static const odp_crypto_auth_capability_t auth_capa_md5[] = {
 {.digest_len = 16, .key_len = 0, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
@@ -704,8 +704,8 @@ int packet_cmac_eia2(odp_packet_t pkt,
 {
 	CMAC_CTX *ctx = local.cmac_ctx[session->idx];
 	void *iv_ptr;
-	uint32_t offset = param->auth_range.offset / 8;
-	uint32_t len   = (param->auth_range.length + 7) / 8;
+	uint32_t offset = param->auth_range.offset;
+	uint32_t len    = param->auth_range.length;
 	size_t outlen;
 
 #if ODP_DEPRECATED_API
