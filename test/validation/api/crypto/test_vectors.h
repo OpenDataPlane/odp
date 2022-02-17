@@ -30,6 +30,22 @@ typedef struct crypto_test_reference_s {
 	uint8_t digest[MAX_DIGEST_LEN];
 } crypto_test_reference_t;
 
+/*
+ * Return test data length in bytes, rounding up to full bytes.
+ */
+static inline uint32_t ref_length_in_bytes(const crypto_test_reference_t *ref)
+{
+	return ref->is_length_in_bits ? (ref->length + 7) / 8 : ref->length;
+}
+
+/*
+ * Return test data length in bits
+ */
+static inline uint32_t ref_length_in_bits(const crypto_test_reference_t *ref)
+{
+	return ref->is_length_in_bits ? ref->length : 8 * ref->length;
+}
+
 static crypto_test_reference_t null_reference[] = {
 	{
 		.length = 8,
