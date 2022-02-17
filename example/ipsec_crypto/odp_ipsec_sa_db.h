@@ -17,6 +17,12 @@ typedef enum sa_mode_s {
 	IPSEC_SA_MODE_TRANSPORT,
 	IPSEC_SA_MODE_TUNNEL
 } sa_mode_t;
+
+typedef enum sa_flags_s {
+	BIT_MODE_CIPHER = 1,
+	BIT_MODE_AUTH = 2,
+} sa_flags_t;
+
 /**
  * Security Association (SA) data base entry
  */
@@ -31,6 +37,7 @@ typedef struct sa_db_entry_s {
 	uint32_t              iv_len;    /**< Initialization Vector length */
 	uint32_t              icv_len;   /**< Integrity Check Value length */
 	sa_mode_t             mode;      /**< SA mode - transport/tun */
+	int                   flags;     /**< Miscellaneous flags */
 } sa_db_entry_t;
 
 /**

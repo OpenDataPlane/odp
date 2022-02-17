@@ -666,6 +666,15 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t *pkt,
 		params.cipher_iv_ptr = esp->iv;
 	}
 
+	if (entry->sa_flags & BIT_MODE_CIPHER) {
+		params.cipher_range.offset *= 8;
+		params.cipher_range.length *= 8;
+	}
+	if (entry->sa_flags & BIT_MODE_AUTH) {
+		params.auth_range.offset *= 8;
+		params.auth_range.length *= 8;
+	}
+
 	/* Issue crypto request */
 	*skip = FALSE;
 	ctx->state = PKT_STATE_IPSEC_IN_FINISH;
@@ -1687,7 +1696,7 @@ static void usage(char *progname)
 		);
 }
 
-static odp_bool_t cipher_supported(odp_cipher_alg_t alg, const sa_db_entry_t *sa)
+static odp_bool_t cipher_supported(odp_cipher_alg_t alg, const sa_db_entry_t *sa, int *sa_flags)
 {
 	const odp_crypto_cipher_algos_t *algos = &global->crypto_capa.ciphers;
 	odp_bool_t alg_ok = true;
@@ -1724,10 +1733,8 @@ static odp_bool_t cipher_supported(odp_cipher_alg_t alg, const sa_db_entry_t *sa
 
 		if (capa->key_len == sa->key.length &&
 		    capa->iv_len == sa->iv_len) {
-			if (capa->bit_mode && alg != ODP_CIPHER_ALG_NULL) {
-				printf("ERROR: bit mode cipher not supported\n");
-				return false;
-			}
+			if (capa->bit_mode)
+				*sa_flags |= BIT_MODE_CIPHER;
 			return true;
 		}
 	}
@@ -1735,7 +1742,7 @@ static odp_bool_t cipher_supported(odp_cipher_alg_t alg, const sa_db_entry_t *sa
 	return false;
 }
 
-static odp_bool_t auth_supported(odp_auth_alg_t alg, const sa_db_entry_t *sa)
+static odp_bool_t auth_supported(odp_auth_alg_t alg, const sa_db_entry_t *sa, int *sa_flags)
 {
 	const odp_crypto_auth_algos_t *algos = &global->crypto_capa.auths;
 	odp_bool_t alg_ok = true;
@@ -1781,10 +1788,8 @@ static odp_bool_t auth_supported(odp_auth_alg_t alg, const sa_db_entry_t *sa)
 		if (capa->digest_len == sa->icv_len &&
 		    capa->key_len == sa->key.length &&
 		    capa->iv_len == 0) {
-			if (capa->bit_mode && alg != ODP_AUTH_ALG_NULL) {
-				printf("ERROR: bit mode auth not supported\n");
-				return false;
-			}
+			if (capa->bit_mode)
+				*sa_flags |= BIT_MODE_AUTH;
 			return true;
 		}
 	}
@@ -1792,10 +1797,10 @@ static odp_bool_t auth_supported(odp_auth_alg_t alg, const sa_db_entry_t *sa)
 	return false;
 }
 
-odp_bool_t sa_config_supported(const sa_db_entry_t *sa);
+odp_bool_t sa_config_supported(const sa_db_entry_t *sa, int *sa_flags);
 
-odp_bool_t sa_config_supported(const sa_db_entry_t *sa)
+odp_bool_t sa_config_supported(const sa_db_entry_t *sa, int *sa_flags)
 {
-	return sa->alg.cipher ? cipher_supported(sa->alg.u.cipher, sa)
-			      : auth_supported(sa->alg.u.auth, sa);
+	return sa->alg.cipher ? cipher_supported(sa->alg.u.cipher, sa, sa_flags)
+			      : auth_supported(sa->alg.u.auth, sa, sa_flags);
 }

@@ -89,6 +89,7 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 	else
 		entry->in_place = TRUE;
 
+	entry->sa_flags = 0;
 
 	/* Cipher */
 	if (cipher_sa) {
@@ -97,6 +98,8 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 		params.cipher_key.length  = cipher_sa->key.length;
 		params.cipher_iv_len = cipher_sa->iv_len;
 		mode = cipher_sa->mode;
+		if (cipher_sa->flags & BIT_MODE_CIPHER)
+			entry->sa_flags |= BIT_MODE_CIPHER;
 	} else {
 		params.cipher_alg = ODP_CIPHER_ALG_NULL;
 		params.cipher_iv_len = 0;
@@ -110,6 +113,8 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 		params.auth_digest_len = auth_sa->icv_len;
 		mode = auth_sa->mode;
 		params.hash_result_in_auth_range = true;
+		if (auth_sa->flags & BIT_MODE_AUTH)
+			entry->sa_flags |= BIT_MODE_AUTH;
 	} else {
 		params.auth_alg = ODP_AUTH_ALG_NULL;
 	}
