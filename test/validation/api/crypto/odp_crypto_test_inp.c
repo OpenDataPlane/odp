@@ -717,11 +717,11 @@ static void alg_test(odp_crypto_op_t op,
 		     odp_bool_t bit_mode)
 {
 	unsigned int initial_num_failures = CU_get_number_of_failures();
-	const hash_test_mode_t hash_mode = digest_offset < ref->length ? HASH_OVERLAP
-								       : HASH_NO_OVERLAP;
+	const uint32_t reflength = bit_mode ? (ref->length + 7) / 8 : ref->length;
+	const hash_test_mode_t hash_mode = digest_offset < reflength ? HASH_OVERLAP
+								     : HASH_NO_OVERLAP;
 	odp_crypto_session_t session;
 	int rc;
-	uint32_t reflength;
 	uint32_t seg_len;
 	uint32_t max_shift;
 	alg_test_param_t test_param;
@@ -741,10 +741,6 @@ static void alg_test(odp_crypto_op_t op,
 
 	alg_test_execute(&test_param);
 
-	if (bit_mode)
-		reflength = (ref->length + 7) / 8;
-	else
-		reflength = ref->length;
 	max_shift = reflength + ref->digest_length;
 
 	/*
