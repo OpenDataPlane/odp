@@ -565,10 +565,9 @@ static void alg_test_execute(const alg_test_param_t *param)
 						  ref->ciphertext,
 						  ref->length,
 						  param->bit_mode));
-			CU_ASSERT(!packet_cmp_mem(pkt, digest_offset,
-						  ref->digest,
-						  ref->digest_length,
-						  param->bit_mode));
+			CU_ASSERT(!packet_cmp_mem_bytes(pkt, digest_offset,
+							ref->digest,
+							ref->digest_length));
 		} else {
 			/*
 			 * Hash result in the packet is left to undefined
