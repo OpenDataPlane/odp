@@ -1396,3 +1396,10 @@ static void usage(char *progname)
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 		);
 }
+
+odp_bool_t sa_config_supported(const sa_db_entry_t *sa_entry);
+
+odp_bool_t sa_config_supported(const sa_db_entry_t *sa_entry ODP_UNUSED)
+{
+	return true;
+}
