@@ -1397,9 +1397,9 @@ static void usage(char *progname)
 		);
 }
 
-odp_bool_t sa_config_supported(const sa_db_entry_t *sa_entry);
+odp_bool_t sa_config_supported(const sa_db_entry_t *sa_entry, int *sa_flags);
 
-odp_bool_t sa_config_supported(const sa_db_entry_t *sa_entry ODP_UNUSED)
+odp_bool_t sa_config_supported(const sa_db_entry_t *sa_entry ODP_UNUSED, int *sa_flags ODP_UNUSED)
 {
 	return true;
 }
