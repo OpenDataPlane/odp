@@ -893,7 +893,7 @@ static void check_alg(odp_crypto_op_t op,
 
 	for (i = 0; i < cipher_num; i++) {
 		cipher_ok |= cipher_tested[i];
-		if (!cipher_tested[i] && cipher_capa[i].bit_mode == bit_mode)
+		if (!cipher_tested[i] && cipher_alg != ODP_CIPHER_ALG_NULL)
 			printf("\n    Untested: alg=%s, key_len=%" PRIu32 ", "
 			       "iv_len=%" PRIu32 "%s\n",
 			       cipher_alg_name(cipher_alg),
@@ -904,7 +904,7 @@ static void check_alg(odp_crypto_op_t op,
 
 	for (i = 0; i < auth_num; i++) {
 		auth_ok |= auth_tested[i];
-		if (!auth_tested[i] && auth_capa[i].bit_mode == bit_mode)
+		if (!auth_tested[i] && auth_alg != ODP_AUTH_ALG_NULL)
 			printf("\n    Untested: alg=%s, key_len=%" PRIu32 ", "
 			       "digest_len=%" PRIu32 "%s\n",
 			       auth_alg_name(auth_alg),
@@ -913,7 +913,7 @@ static void check_alg(odp_crypto_op_t op,
 			       auth_capa[i].bit_mode ? " using bits" : "");
 	}
 
-	/* Verify that we were able to run at least several tests */
+	/* Verify that we were able to run at least one test */
 	CU_ASSERT(cipher_ok);
 	CU_ASSERT(auth_ok);
 }
