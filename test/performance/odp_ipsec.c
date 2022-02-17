@@ -600,6 +600,7 @@ make_packet(odp_pool_t pkt_pool, unsigned int payload_length)
 
 	odp_packet_copy_from_mem(pkt, 0, sizeof(test_data), test_data);
 	odp_packet_l3_offset_set(pkt, 0);
+	odp_packet_l4_offset_set(pkt, ODPH_IPV4HDR_LEN);
 
 	uint8_t *mem = odp_packet_data(pkt);
 	((odph_ipv4hdr_t *)mem)->tot_len = odp_cpu_to_be_16(payload_length);
