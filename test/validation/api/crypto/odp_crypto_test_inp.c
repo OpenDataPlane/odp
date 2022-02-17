@@ -463,11 +463,13 @@ typedef enum crypto_test {
 typedef struct alg_test_param_t {
 	odp_crypto_session_t session;
 	odp_crypto_op_t op;
+	odp_cipher_alg_t cipher_alg;
 	odp_auth_alg_t auth_alg;
 	crypto_test_reference_t *ref;
 	uint32_t digest_offset;
 	odp_bool_t override_iv;
-	odp_bool_t bit_mode;
+	odp_bool_t is_bit_mode_cipher;
+	odp_bool_t is_bit_mode_auth;
 	odp_bool_t adjust_segmentation;
 	uint32_t first_seg_len;
 	uint32_t header_len;
@@ -478,26 +480,34 @@ static void alg_test_execute(const alg_test_param_t *param)
 {
 	odp_bool_t ok = false;
 	int iteration;
-	uint32_t reflength;
+	crypto_test_reference_t *ref = param->ref;
+	uint32_t reflength = ref_length_in_bytes(ref);
+	odp_packet_data_range_t zero_range = {.offset = 0, .length = 0};
 	odp_packet_data_range_t cipher_range;
 	odp_packet_data_range_t auth_range;
-	crypto_test_reference_t *ref = param->ref;
 	uint8_t *cipher_iv = param->override_iv ? ref->cipher_iv : NULL;
 	uint8_t *auth_iv   = param->override_iv ? ref->auth_iv : NULL;
 
 	cipher_range.offset = param->header_len;
-	cipher_range.length = ref->length;
+	cipher_range.length = reflength;
 	auth_range.offset = param->header_len;
-	auth_range.length = ref->length;
-
-	if (param->bit_mode) {
-		reflength = (ref->length + 7) / 8;
+	auth_range.length = reflength;
+	if (param->is_bit_mode_cipher) {
 		cipher_range.offset *= 8;
-		auth_range.offset *= 8;
-	} else {
-		reflength = ref->length;
+		cipher_range.length = ref_length_in_bits(ref);
 	}
-
+	if (param->is_bit_mode_auth) {
+		auth_range.offset *= 8;
+		auth_range.length = ref_length_in_bits(ref);
+	}
+	/*
+	 * We did not check the bit mode of the null algorithms, so let's
+	 * not pass potentially invalid ranges to them.
+	 */
+	if (param->cipher_alg == ODP_CIPHER_ALG_NULL)
+		cipher_range = zero_range;
+	if (param->auth_alg == ODP_AUTH_ALG_NULL)
+		auth_range = zero_range;
 	for (iteration = NORMAL_TEST; iteration < MAX_TEST; iteration++) {
 		odp_packet_t pkt;
 		uint32_t digest_offset = param->digest_offset;
@@ -564,7 +574,7 @@ static void alg_test_execute(const alg_test_param_t *param)
 			CU_ASSERT(!packet_cmp_mem(pkt, param->header_len,
 						  ref->ciphertext,
 						  ref->length,
-						  param->bit_mode));
+						  ref->is_length_in_bits));
 			CU_ASSERT(!packet_cmp_mem_bytes(pkt, digest_offset,
 							ref->digest,
 							ref->digest_length));
@@ -583,7 +593,7 @@ static void alg_test_execute(const alg_test_param_t *param)
 			CU_ASSERT(!packet_cmp_mem(pkt, param->header_len,
 						  ref->plaintext,
 						  ref->length,
-						  param->bit_mode));
+						  ref->is_length_in_bits));
 		}
 		odp_packet_free(pkt);
 	}
@@ -713,10 +723,11 @@ static void alg_test(odp_crypto_op_t op,
 		     crypto_test_reference_t *ref,
 		     uint32_t digest_offset,
 		     iv_test_mode_t iv_mode,
-		     odp_bool_t bit_mode)
+		     odp_bool_t is_bit_mode_cipher,
+		     odp_bool_t is_bit_mode_auth)
 {
 	unsigned int initial_num_failures = CU_get_number_of_failures();
-	const uint32_t reflength = bit_mode ? (ref->length + 7) / 8 : ref->length;
+	const uint32_t reflength = ref_length_in_bytes(ref);
 	const hash_test_mode_t hash_mode = digest_offset < reflength ? HASH_OVERLAP
 								     : HASH_NO_OVERLAP;
 	odp_crypto_session_t session;
@@ -732,10 +743,12 @@ static void alg_test(odp_crypto_op_t op,
 	memset(&test_param, 0, sizeof(test_param));
 	test_param.session = session;
 	test_param.op = op;
+	test_param.cipher_alg = cipher_alg;
 	test_param.auth_alg = auth_alg;
 	test_param.ref = ref;
 	test_param.override_iv = (iv_mode != OLD_SESSION_IV);
-	test_param.bit_mode = bit_mode;
+	test_param.is_bit_mode_cipher = is_bit_mode_cipher;
+	test_param.is_bit_mode_auth = is_bit_mode_auth;
 	test_param.digest_offset = digest_offset;
 
 	alg_test_execute(&test_param);
@@ -819,20 +832,25 @@ static void check_alg(odp_crypto_op_t op,
 
 	for (idx = 0; idx < count; idx++) {
 		int cipher_idx = -1, auth_idx = -1;
-		odp_bool_t bit_mode = ref[idx].is_length_in_bits;
-		uint32_t digest_offs = ref[idx].length;
+		odp_bool_t bit_mode_needed = false;
+		odp_bool_t is_bit_mode_cipher = false;
+		odp_bool_t is_bit_mode_auth = false;
+		uint32_t digest_offs = ref_length_in_bytes(&ref[idx]);
 
-		if (bit_mode)
-			digest_offs = (digest_offs + 7) / 8;
+		if (ref_length_in_bits(&ref[idx]) % 8 != 0)
+			bit_mode_needed = true;
 
 		for (i = 0; i < cipher_num; i++) {
 			if (cipher_capa[i].key_len ==
 			    ref[idx].cipher_key_length &&
 			    cipher_capa[i].iv_len ==
-			    ref[idx].cipher_iv_length &&
-			    cipher_capa[i].bit_mode ==
-			    bit_mode) {
+			    ref[idx].cipher_iv_length) {
+				if (bit_mode_needed &&
+				    cipher_alg != ODP_CIPHER_ALG_NULL &&
+				    !cipher_capa[i].bit_mode)
+					continue;
 				cipher_idx = i;
+				is_bit_mode_cipher = cipher_capa[i].bit_mode;
 				break;
 			}
 		}
@@ -843,7 +861,7 @@ static void check_alg(odp_crypto_op_t op,
 			       cipher_alg_name(cipher_alg),
 			       ref[idx].cipher_key_length,
 			       ref[idx].cipher_iv_length,
-			       bit_mode ? " using bits" : "");
+			       bit_mode_needed ? ", bit mode" : "");
 			continue;
 		}
 
@@ -854,10 +872,13 @@ static void check_alg(odp_crypto_op_t op,
 			    ref[idx].auth_iv_length &&
 			    auth_capa[i].key_len ==
 			    ref[idx].auth_key_length &&
-			    aad_len_ok(&auth_capa[i], ref[idx].aad_length) &&
-			    auth_capa[i].bit_mode ==
-			    bit_mode) {
+			    aad_len_ok(&auth_capa[i], ref[idx].aad_length)) {
+				if (bit_mode_needed &&
+				    auth_alg != ODP_AUTH_ALG_NULL &&
+				    !auth_capa[i].bit_mode)
+					continue;
 				auth_idx = i;
+				is_bit_mode_auth = auth_capa[i].bit_mode;
 				break;
 			}
 		}
@@ -870,21 +891,21 @@ static void check_alg(odp_crypto_op_t op,
 			       ref[idx].auth_key_length,
 			       ref[idx].auth_iv_length,
 			       ref[idx].digest_length,
-			       bit_mode ? " using bits" : "");
+			       bit_mode_needed ? ", bit mode" : "");
 			continue;
 		}
 
 		/* test with per-packet IV */
-		alg_test(op, cipher_alg, auth_alg, &ref[idx],
-			 digest_offs, PACKET_IV, bit_mode);
+		alg_test(op, cipher_alg, auth_alg, &ref[idx], digest_offs,
+			 PACKET_IV, is_bit_mode_cipher, is_bit_mode_auth);
 #if ODP_DEPRECATED_API
 		/* test with per-packet IV using the old API*/
-		alg_test(op, cipher_alg, auth_alg, &ref[idx],
-			 digest_offs, OLD_PACKET_IV, bit_mode);
+		alg_test(op, cipher_alg, auth_alg, &ref[idx], digest_offs,
+			 OLD_PACKET_IV, is_bit_mode_cipher, is_bit_mode_auth);
 
 		/* test with per-session IV */
-		alg_test(op, cipher_alg, auth_alg, &ref[idx],
-			 digest_offs, OLD_SESSION_IV, bit_mode);
+		alg_test(op, cipher_alg, auth_alg, &ref[idx], digest_offs,
+			 OLD_SESSION_IV, is_bit_mode_cipher, is_bit_mode_auth);
 #endif
 
 		cipher_tested[cipher_idx] = true;
@@ -899,7 +920,7 @@ static void check_alg(odp_crypto_op_t op,
 			       cipher_alg_name(cipher_alg),
 			       cipher_capa[i].key_len,
 			       cipher_capa[i].iv_len,
-			       cipher_capa[i].bit_mode ? " using bits" : "");
+			       cipher_capa[i].bit_mode ? ", bit mode" : "");
 	}
 
 	for (i = 0; i < auth_num; i++) {
@@ -910,7 +931,7 @@ static void check_alg(odp_crypto_op_t op,
 			       auth_alg_name(auth_alg),
 			       auth_capa[i].key_len,
 			       auth_capa[i].digest_len,
-			       auth_capa[i].bit_mode ? " using bits" : "");
+			       auth_capa[i].bit_mode ? ", bit mode" : "");
 	}
 
 	/* Verify that we were able to run at least one test */
@@ -1167,9 +1188,9 @@ static void create_hash_test_reference(odp_auth_alg_t auth,
 	ref->auth_key_length = capa->key_len;
 	ref->auth_iv_length = capa->iv_len;
 	ref->digest_length = capa->digest_len;
-	ref->is_length_in_bits = capa->bit_mode;
-	ref->length = ref->is_length_in_bits ? auth_bytes * 8 : auth_bytes;
-	auth_range.length = ref->length;
+	ref->is_length_in_bits = false;
+	ref->length = auth_bytes;
+	auth_range.length = capa->bit_mode ? auth_bytes * 8 : auth_bytes;
 
 	if (ref->auth_key_length > MAX_KEY_LEN ||
 	    ref->auth_iv_length > MAX_IV_LEN ||
@@ -1244,6 +1265,7 @@ static void test_auth_hash_in_auth_range(odp_auth_alg_t auth,
 		 &ref,
 		 digest_offset,
 		 PACKET_IV,
+		 false,
 		 capa->bit_mode);
 
 	/*
@@ -1265,6 +1287,7 @@ static void test_auth_hash_in_auth_range(odp_auth_alg_t auth,
 		 &ref,
 		 digest_offset,
 		 PACKET_IV,
+		 false,
 		 capa->bit_mode);
 }
 
