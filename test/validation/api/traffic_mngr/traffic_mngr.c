@@ -1140,6 +1140,7 @@ static uint32_t send_pkts_multi(odp_tm_queue_t tm_queue, uint32_t num_pkts)
 	 */
 	xmt_pkt_idx = num_pkts_sent;
 	rc = odp_tm_enq_multi(tm_queue, &xmt_pkts[xmt_pkt_idx], num_pkts);
+	CU_ASSERT(rc >= 0);
 	CU_ASSERT(rc <= num_pkts);
 
 	/* Record consumed packets */
