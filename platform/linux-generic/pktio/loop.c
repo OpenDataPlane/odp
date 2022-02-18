@@ -227,7 +227,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				odp_packet_free(pkt);
 
 				if (new_pkt == ODP_PACKET_INVALID) {
-					failed++;
+					pktio_entry->s.stats.in_discards++;
 					continue;
 				}
 
@@ -542,6 +542,7 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 	capa->stats.pktio.counter.in_octets = 1;
 	capa->stats.pktio.counter.in_packets = 1;
 	capa->stats.pktio.counter.in_errors = 1;
+	capa->stats.pktio.counter.in_discards = 1;
 	capa->stats.pktio.counter.out_octets = 1;
 	capa->stats.pktio.counter.out_packets = 1;
 	capa->stats.pktin_queue.counter.octets = 1;
