@@ -159,7 +159,8 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
 	int num_rx = 0;
-	int failed = 0;
+	int packets = 0, errors = 0;
+	uint32_t octets = 0;
 
 	if (odp_unlikely(num > QUEUE_MULTI_MAX))
 		num = QUEUE_MULTI_MAX;
@@ -207,8 +208,10 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			ret = _odp_packet_parse_common(&pkt_hdr->p, pkt_addr, pkt_len,
 						       seg_len, ODP_PROTO_LAYER_ALL,
 						       pktio_entry->s.in_chksums);
+			if (ret)
+				errors++;
+
 			if (ret < 0) {
-				failed++;
 				odp_packet_free(pkt);
 				continue;
 			}
@@ -216,7 +219,6 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			ret = _odp_cls_classify_packet(pktio_entry, pkt_addr,
 						       &new_pool, pkt_hdr);
 			if (ret) {
-				failed++;
 				odp_packet_free(pkt);
 				continue;
 			}
@@ -256,12 +258,17 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		    odp_packet_has_ipsec(pkt))
 			_odp_ipsec_try_inline(&pkt);
 
-		pktio_entry->s.stats.in_octets += pkt_len;
+		if (!pkt_hdr->p.flags.all.error) {
+			octets += pkt_len;
+			packets++;
+		}
+
 		pkts[num_rx++] = pkt;
 	}
 
-	pktio_entry->s.stats.in_errors += failed;
-	pktio_entry->s.stats.in_packets += num_rx;
+	pktio_entry->s.stats.in_octets += octets;
+	pktio_entry->s.stats.in_packets += packets;
+	pktio_entry->s.stats.in_errors += errors;
 
 	odp_ticketlock_unlock(&pktio_entry->s.rxl);
 
