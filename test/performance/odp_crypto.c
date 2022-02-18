@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -24,6 +25,9 @@
  */
 #define POOL_NUM_PKT  64
 
+#define AAD_LEN 8 /* typical AAD length used in IPsec when ESN is not in use */
+
+static uint8_t test_aad[AAD_LEN] = "01234567";
 static uint8_t test_iv[16] = "0123456789abcdef";
 
 static uint8_t test_key16[16] = { 0x01, 0x02, 0x03, 0x04, 0x05,
@@ -370,6 +374,7 @@ static crypto_alg_config_t algs_config[] = {
 			.cipher_iv_len = 12,
 			.auth_alg = ODP_AUTH_ALG_AES_GCM,
 			.auth_digest_len = 16,
+			.auth_aad_len = AAD_LEN,
 		},
 	},
 	{
@@ -383,6 +388,7 @@ static crypto_alg_config_t algs_config[] = {
 			.cipher_iv_len = 11,
 			.auth_alg = ODP_AUTH_ALG_AES_CCM,
 			.auth_digest_len = 16,
+			.auth_aad_len = AAD_LEN,
 		},
 	},
 	{
@@ -396,6 +402,7 @@ static crypto_alg_config_t algs_config[] = {
 			.cipher_iv_len = 12,
 			.auth_alg = ODP_AUTH_ALG_CHACHA20_POLY1305,
 			.auth_digest_len = 16,
+			.auth_aad_len = AAD_LEN,
 		},
 	},
 };
@@ -697,6 +704,7 @@ run_measure_one(crypto_args_t *cargs,
 	params.session = *session;
 	params.cipher_iv_ptr = test_iv;
 	params.auth_iv_ptr = test_iv;
+	params.aad_ptr = test_aad;
 
 	params.cipher_range.offset = 0;
 	params.cipher_range.length = payload_length;
