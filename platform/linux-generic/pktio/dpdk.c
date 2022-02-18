@@ -959,7 +959,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 				   struct rte_mbuf *mbuf_table[],
 				   const odp_packet_t pkt_table[], uint16_t num,
-				   uint16_t *copy_count, int *tx_ts_idx)
+				   uint16_t *copy_count, uint16_t cpy_idx[], int *tx_ts_idx)
 {
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
@@ -993,7 +993,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 			if (odp_unlikely(pkt_to_mbuf(pktio_entry, &mbuf,
 						     &pkt, 1, &dummy_idx) != 1))
 				goto fail;
-			(*copy_count)++;
+			cpy_idx[(*copy_count)++] = i;
 		}
 		mbuf_table[i] = mbuf;
 
@@ -2065,6 +2065,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	struct rte_mbuf *tx_mbufs[num];
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	uint16_t copy_count = 0;
+	uint16_t cpy_idx[num];
 	int tx_pkts;
 	int i;
 	int mbufs;
@@ -2072,7 +2073,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 
 	if (_ODP_DPDK_ZERO_COPY)
 		mbufs = pkt_to_mbuf_zero(pktio_entry, tx_mbufs, pkt_table, num,
-					 &copy_count, &tx_ts_idx);
+					 &copy_count, cpy_idx, &tx_ts_idx);
 	else
 		mbufs = pkt_to_mbuf(pktio_entry, tx_mbufs, pkt_table, num,
 				    &tx_ts_idx);
@@ -2092,19 +2093,15 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	if (_ODP_DPDK_ZERO_COPY) {
 		/* Free copied packets */
 		if (odp_unlikely(copy_count)) {
-			uint16_t freed = 0;
+			uint16_t idx;
 
-			for (i = 0; i < mbufs && freed != copy_count; i++) {
-				odp_packet_t pkt = pkt_table[i];
-				odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+			for (i = 0; i < copy_count; i++) {
+				idx = cpy_idx[i];
 
-				if (pkt_hdr->seg_count > 1) {
-					if (odp_likely(i < tx_pkts))
-						odp_packet_free(pkt);
-					else
-						rte_pktmbuf_free(tx_mbufs[i]);
-					freed++;
-				}
+				if (odp_likely(idx < tx_pkts))
+					odp_packet_free(pkt_table[idx]);
+				else
+					rte_pktmbuf_free(tx_mbufs[idx]);
 			}
 		}
 		if (odp_unlikely(tx_pkts == 0 && _odp_errno != 0))
