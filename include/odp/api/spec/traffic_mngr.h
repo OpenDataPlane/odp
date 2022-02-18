@@ -1991,15 +1991,17 @@ int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt);
  * cause this function to return a failure. Such packets get consumed just like
  * the packets that are not dropped.
  *
+ * When the return value is less than 'num', the remaining packets at the end of
+ * the array are not consumed, and the caller maintains ownership of those.
+ *
  * @param tm_queue  Specifies the tm_queue (and indirectly the TM system).
  * @param packets   Array of packets to enqueue.
- * @param num       Number of packets to send.
+ * @param num       Number of packets to enqueue.
  *
- * @retval >0  on success indicating number of packets consumed
- * @retval <=0 on failure.
+ * @return Number of packets consumed (0 ... num)
+ * @retval <0 on failure.
  */
-int odp_tm_enq_multi(odp_tm_queue_t tm_queue, const odp_packet_t packets[],
-		     int num);
+int odp_tm_enq_multi(odp_tm_queue_t tm_queue, const odp_packet_t packets[], int num);
 
 /** The odp_tm_enq_with_cnt() function behaves identically to odp_tm_enq(),
  * except that it also returns (an approximation to?) the current tm_queue
