@@ -777,6 +777,19 @@ static void alg_test(odp_crypto_op_t op,
 	CU_ASSERT(!rc);
 }
 
+static odp_bool_t aad_len_ok(const odp_crypto_auth_capability_t *capa, uint32_t len)
+{
+	if (len < capa->aad_len.min || len > capa->aad_len.max)
+		return false;
+
+	if (len == capa->aad_len.min)
+		return true;
+	if (capa->aad_len.inc == 0)
+		return false;
+
+	return ((len - capa->aad_len.min) % capa->aad_len.inc) == 0;
+}
+
 static void check_alg(odp_crypto_op_t op,
 		      odp_cipher_alg_t cipher_alg,
 		      odp_auth_alg_t auth_alg,
@@ -846,6 +859,7 @@ static void check_alg(odp_crypto_op_t op,
 			    ref[idx].auth_iv_length &&
 			    auth_capa[i].key_len ==
 			    ref[idx].auth_key_length &&
+			    aad_len_ok(&auth_capa[i], ref[idx].aad_length) &&
 			    auth_capa[i].bit_mode ==
 			    bit_mode) {
 				auth_idx = i;
