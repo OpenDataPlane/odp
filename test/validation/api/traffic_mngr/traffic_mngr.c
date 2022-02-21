@@ -890,42 +890,57 @@ static xmt_pkt_desc_t *find_matching_xmt_pkt_desc(uint16_t unique_id)
 	return NULL;
 }
 
-static int receive_pkts(odp_tm_t          odp_tm,
-			odp_pktin_queue_t pktin,
-			uint32_t          num_pkts,
-			uint64_t          rate_bps)
+static int32_t receive_loop(odp_tm_t tm, odp_pktin_queue_t pktin, uint32_t num_pkts,
+			    uint64_t timeout_ns)
 {
-	xmt_pkt_desc_t *xmt_pkt_desc;
-	rcv_pkt_desc_t *rcv_pkt_desc;
-	odp_packet_t    rcv_pkt;
-	odp_time_t      start_time, current_time, duration, xmt_time;
-	odp_time_t      rcv_time, delta_time;
-	uint64_t        temp1, timeout_ns, duration_ns, delta_ns;
-	uint32_t        pkts_rcvd, rcv_idx, l4_offset, l4_hdr_len, app_offset;
-	uint16_t        unique_id;
-	uint8_t        *pkt_class_ptr, pkt_class, is_ipv4_pkt;
-	int             rc;
-
-	temp1      = (1000000ULL * 10000ULL * (uint64_t)num_pkts) / rate_bps;
-	timeout_ns = 1000ULL * ((4ULL * temp1) + 10000ULL);
+	odp_time_t start_time, current_time;
+	uint64_t duration_ns;
+	uint32_t pkts_rcvd;
+	int rc;
 
 	pkts_rcvd   = 0;
 	start_time  = odp_time_local();
 	duration_ns = 0;
 
-	while ((pkts_rcvd < num_pkts) || (!odp_tm_is_idle(odp_tm))) {
+	while ((pkts_rcvd < num_pkts) || (!odp_tm_is_idle(tm))) {
 		rc = odp_pktin_recv(pktin, &rcv_pkts[pkts_rcvd], 1);
 		if (rc < 0)
-			return rc;
+			return -1;
 
 		current_time = odp_time_local();
-		duration     = odp_time_diff(current_time, start_time);
-		duration_ns  = odp_time_to_ns(duration);
+		duration_ns  = odp_time_diff_ns(current_time, start_time);
+
 		if (rc == 1)
 			rcv_pkt_descs[pkts_rcvd++].rcv_time = current_time;
 		else if (timeout_ns < duration_ns)
 			break;
 	}
+
+	return pkts_rcvd;
+}
+
+static int receive_pkts(odp_tm_t tm, odp_pktin_queue_t pktin, uint32_t num_pkts,
+			uint64_t rate_bps)
+{
+	xmt_pkt_desc_t *xmt_pkt_desc;
+	rcv_pkt_desc_t *rcv_pkt_desc;
+	odp_packet_t    rcv_pkt;
+	odp_time_t      xmt_time;
+	odp_time_t      rcv_time, delta_time;
+	uint64_t        delta_ns, tmp, timeout_ns;
+	uint32_t        pkts_rcvd, rcv_idx, l4_offset, l4_hdr_len, app_offset;
+	uint16_t        unique_id;
+	uint8_t        *pkt_class_ptr, pkt_class, is_ipv4_pkt;
+	int32_t         rc;
+
+	tmp        = (1000000ULL * 10000ULL * (uint64_t)num_pkts) / rate_bps;
+	timeout_ns = 1000ULL * ((4ULL * tmp) + 10000ULL);
+
+	rc = receive_loop(tm, pktin, num_pkts, timeout_ns);
+	if (rc < 0)
+		return -1;
+
+	pkts_rcvd = rc;
 
 	/* Now go through matching the rcv pkts to the xmt pkts, determining
 	 * which xmt_pkts were lost and for the ones that did arrive, how
