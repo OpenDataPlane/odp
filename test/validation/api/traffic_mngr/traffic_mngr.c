@@ -516,6 +516,7 @@ static int open_pktios(void)
 	uint32_t          iface;
 	char              pool_name[ODP_POOL_NAME_LEN];
 	int               rc, ret;
+	int pkt_aging = 0;
 	int lso = 0;
 
 	odp_pool_param_init(&pool_param);
@@ -620,6 +621,12 @@ static int open_pktios(void)
 
 	odp_pktio_config_init(&pktio_config);
 
+	/* Enable packet aging if supported */
+	if (xmt_pktio_capa.max_tx_aging_tmo_ns) {
+		pkt_aging = 1;
+		pktio_config.pktout.bit.aging_ena = 1;
+	}
+
 	/* Enable LSO if supported */
 	if (xmt_pktio_capa.lso.max_profiles && xmt_pktio_capa.lso.max_profiles_per_pktio) {
 		lso = 1;
@@ -627,7 +634,7 @@ static int open_pktios(void)
 	}
 
 	/* Enable selected features */
-	if (lso) {
+	if (lso || pkt_aging) {
 		if (odp_pktio_config(xmt_pktio, &pktio_config)) {
 			ODPH_ERR("pktio configure failed\n");
 			return -1;
@@ -4366,6 +4373,40 @@ static int test_fanin_info(const char *node_name)
 	return walk_tree_backwards(node_desc->node);
 }
 
+static void test_packet_aging(uint64_t tmo_ns, uint32_t pkt_len, odp_bool_t is_dropping)
+{
+	odp_tm_queue_t tm_queue;
+	const char *node_name = "node_1_1_1";
+	const char *shaper_name = "test_shaper";
+	const uint64_t rate = 256 * 1000;
+	pkt_info_t pkt_info;
+	const uint16_t num_pkts = 4;
+	int recv_pkts;
+
+	tm_queue = find_tm_queue(0, node_name, 0);
+	CU_ASSERT_FATAL(tm_queue != ODP_TM_INVALID);
+	init_xmt_pkts(&pkt_info);
+	pkt_info.drop_eligible = false;
+	pkt_info.pkt_class = 1;
+	CU_ASSERT_FATAL(make_pkts(num_pkts, pkt_len, &pkt_info) == 0);
+
+	for (int i = 0; i < num_pkts; i++)
+		odp_packet_aging_tmo_set(xmt_pkts[i], tmo_ns);
+
+	CU_ASSERT_FATAL(set_shaper(node_name, shaper_name, rate, rate) == 0);
+	CU_ASSERT(send_pkts(tm_queue, num_pkts) == num_pkts);
+	recv_pkts = receive_pkts(odp_tm_systems[0], rcv_pktin, num_pkts, MBPS);
+
+	if (is_dropping)
+		CU_ASSERT(recv_pkts < num_pkts)
+	else
+		CU_ASSERT(recv_pkts == num_pkts);
+
+	set_shaper(node_name, NULL, 0, 0);
+	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
+	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
+}
+
 static void traffic_mngr_test_default_values(void)
 {
 	odp_tm_requirements_t req;
@@ -4772,6 +4813,23 @@ static void traffic_mngr_test_ecn_drop_prec_marking(void)
 	CU_ASSERT(ip_marking_tests("node_1_4_2", true, true) == 0);
 }
 
+static int traffic_mngr_check_tx_aging(void)
+{
+	return xmt_pktio_capa.max_tx_aging_tmo_ns ? ODP_TEST_ACTIVE : ODP_TEST_INACTIVE;
+}
+
+static void traffic_mngr_test_tx_aging_no_drop(void)
+{
+	/* Set very long aging tmo, packets should not be dropped due to aging */
+	test_packet_aging(60000000000, 128, false);
+}
+
+static void traffic_mngr_test_tx_aging_drop(void)
+{
+	/* Set very short aging tmo, there should be drops due to aging */
+	test_packet_aging(10, MAX_PAYLOAD, true);
+}
+
 static void traffic_mngr_test_fanin_info(void)
 {
 	CU_ASSERT(test_fanin_info("node_1")     == 0);
@@ -4871,6 +4929,10 @@ odp_testinfo_t traffic_mngr_suite[] = {
 				  traffic_mngr_check_drop_prec_marking),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_ecn_drop_prec_marking,
 				  traffic_mngr_check_ecn_drop_prec_marking),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_tx_aging_no_drop,
+				  traffic_mngr_check_tx_aging),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_tx_aging_drop,
+				  traffic_mngr_check_tx_aging),
 	ODP_TEST_INFO(traffic_mngr_test_fanin_info),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_lso_ipv4, traffic_mngr_check_lso_ipv4),
 	ODP_TEST_INFO(traffic_mngr_test_destroy),
