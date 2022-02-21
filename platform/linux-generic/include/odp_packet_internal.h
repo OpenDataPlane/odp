@@ -146,6 +146,10 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 	/* Max payload size in a LSO segment */
 	uint16_t lso_max_payload;
 
+	/* Packet aging drop timeout before enqueue. Once enqueued holds the maximum age (time of
+	 * request + requested drop timeout). */
+	uint64_t tx_aging_ns;
+
 	/* LSO profile index */
 	uint8_t lso_profile_idx;
 

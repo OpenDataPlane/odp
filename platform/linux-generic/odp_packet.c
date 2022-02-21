@@ -2879,14 +2879,17 @@ int odp_packet_payload_offset_set(odp_packet_t pkt, uint32_t offset)
 
 void odp_packet_aging_tmo_set(odp_packet_t pkt, uint64_t tmo_ns)
 {
-	(void)pkt;
-	(void)tmo_ns;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	pkt_hdr->p.flags.tx_aging = tmo_ns ? 1 : 0;
+	pkt_hdr->tx_aging_ns = tmo_ns;
 }
 
 uint64_t odp_packet_aging_tmo(odp_packet_t pkt)
 {
-	(void)pkt;
-	return 0;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	return pkt_hdr->p.flags.tx_aging ? pkt_hdr->tx_aging_ns : 0;
 }
 
 int odp_packet_tx_compl_request(odp_packet_t pkt, const odp_packet_tx_compl_opt_t *opt)
