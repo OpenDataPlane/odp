@@ -1994,6 +1994,12 @@ static void tm_queue_cnts_decrement(tm_system_t *tm_system,
 	odp_atomic_sub_u64(&queue_cnts->byte_cnt, frame_len);
 }
 
+static inline void activate_packet_aging(odp_packet_hdr_t *pkt_hdr)
+{
+	if (odp_unlikely(pkt_hdr->p.flags.tx_aging))
+		pkt_hdr->tx_aging_ns = pkt_hdr->tx_aging_ns + odp_time_global_ns();
+}
+
 static int tm_enqueue(tm_system_t *tm_system,
 		      tm_queue_obj_t *tm_queue_obj,
 		      odp_packet_t pkt)
@@ -2028,6 +2034,7 @@ static int tm_enqueue(tm_system_t *tm_system,
 	if (tm_queue_obj->ordered_enqueue)
 		_odp_sched_fn->order_lock();
 
+	activate_packet_aging(packet_hdr(pkt));
 	rc = input_work_queue_append(tm_system, &work_item);
 
 	if (tm_queue_obj->ordered_enqueue)
@@ -2224,6 +2231,11 @@ static void tm_egress_marking(tm_system_t *tm_system, odp_packet_t odp_pkt)
 	}
 }
 
+static inline odp_bool_t is_packet_aged(odp_packet_hdr_t *pkt_hdr)
+{
+	return pkt_hdr->p.flags.tx_aging && pkt_hdr->tx_aging_ns < odp_time_global_ns();
+}
+
 static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 {
 	tm_queue_obj_t *tm_queue_obj;
@@ -2250,9 +2262,13 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 
 		tm_system->egress_pkt_desc = EMPTY_PKT_DESC;
 		if (tm_system->egress.egress_kind == ODP_TM_EGRESS_PKT_IO) {
-			ret = odp_pktout_send(tm_system->pktout, &odp_pkt, 1);
+			pktio_entry = get_pktio_entry(tm_system->pktout.pktio);
+			if (odp_unlikely(_odp_pktio_tx_aging_enabled(pktio_entry) &&
+					 is_packet_aged(packet_hdr(odp_pkt))))
+				ret = 0; /* Aged packet handled as a discard */
+			else
+				ret = odp_pktout_send(tm_system->pktout, &odp_pkt, 1);
 			if (odp_unlikely(ret != 1)) {
-				pktio_entry = get_pktio_entry(tm_system->pktout.pktio);
 				if (odp_unlikely(_odp_pktio_tx_compl_enabled(pktio_entry)))
 					_odp_pktio_allocate_and_send_tx_compl_events(pktio_entry,
 										     &odp_pkt, 1);
