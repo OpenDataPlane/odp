@@ -93,6 +93,8 @@ struct pktio_entry {
 				uint8_t tx_ts : 1;
 				/* Tx completion events */
 				uint8_t tx_compl : 1;
+				/* Packet aging */
+				uint8_t tx_aging : 1;
 			};
 		};
 	} enabled;
@@ -289,6 +291,11 @@ static inline int _odp_pktio_tx_ts_enabled(pktio_entry_t *entry)
 static inline int _odp_pktio_tx_compl_enabled(const pktio_entry_t *entry)
 {
 	return entry->s.enabled.tx_compl;
+}
+
+static inline int _odp_pktio_tx_aging_enabled(pktio_entry_t *entry)
+{
+	return entry->s.enabled.tx_aging;
 }
 
 static inline void _odp_pktio_tx_ts_set(pktio_entry_t *entry)

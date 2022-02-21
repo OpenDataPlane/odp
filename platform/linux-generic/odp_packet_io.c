@@ -52,6 +52,10 @@
 /* Max wait time supported to avoid potential overflow */
 #define MAX_WAIT_TIME (UINT64_MAX / 1024)
 
+/* One hour maximum aging timeout, no real limitations imposed by the implementation other than
+ * integer width, so just use some value. */
+#define MAX_TX_AGING_TMO_NS 3600000000000ULL
+
 typedef struct {
 	const void *user_ptr;
 	odp_queue_t queue;
@@ -622,6 +626,8 @@ int odp_pktio_config(odp_pktio_t hdl, const odp_pktio_config_t *config)
 			ODP_ERR("Unable to configure Tx event completion\n");
 			return -1;
 		}
+
+	entry->s.enabled.tx_aging = config->pktout.bit.aging_ena;
 
 	if (entry->s.ops->config)
 		res = entry->s.ops->config(entry, config);
@@ -1885,6 +1891,9 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 		capa->tx_compl.queue_type_sched = 1;
 		capa->tx_compl.queue_type_plain = 1;
 		capa->tx_compl.mode_all = 1;
+
+		capa->config.pktout.bit.aging_ena = 1;
+		capa->max_tx_aging_tmo_ns = MAX_TX_AGING_TMO_NS;
 	}
 
 	/* Packet vector generation is common for all pktio types */
