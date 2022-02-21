@@ -329,6 +329,8 @@ static odp_bool_t pktio_started[MAX_NUM_IFACES];
 static odp_pktin_queue_t pktins[MAX_NUM_IFACES];
 static odp_pktin_queue_t rcv_pktin;
 static odp_pktio_t xmt_pktio;
+static odp_pktio_capability_t xmt_pktio_capa;
+static odp_lso_profile_t lso_ipv4_profile;
 
 static odph_ethaddr_t src_mac;
 static odph_ethaddr_t dst_mac;
@@ -507,12 +509,14 @@ static int wait_linkup(odp_pktio_t pktio)
 static int open_pktios(void)
 {
 	odp_pktio_param_t pktio_param;
+	odp_pktio_config_t pktio_config;
 	odp_pool_param_t  pool_param;
 	odp_pktio_t       pktio;
 	odp_pool_t        pkt_pool;
 	uint32_t          iface;
 	char              pool_name[ODP_POOL_NAME_LEN];
 	int               rc, ret;
+	int lso = 0;
 
 	odp_pool_param_init(&pool_param);
 	pool_param.pkt.num  = 10 * MAX_PKTS;
@@ -609,7 +613,44 @@ static int open_pktios(void)
 		rcv_pktin  = pktins[0];
 	}
 
-	ret = odp_pktio_start(pktios[0]);
+	if (odp_pktio_capability(xmt_pktio, &xmt_pktio_capa)) {
+		ODPH_ERR("pktio capa failed\n");
+		return -1;
+	}
+
+	odp_pktio_config_init(&pktio_config);
+
+	/* Enable LSO if supported */
+	if (xmt_pktio_capa.lso.max_profiles && xmt_pktio_capa.lso.max_profiles_per_pktio) {
+		lso = 1;
+		pktio_config.enable_lso = 1;
+	}
+
+	/* Enable selected features */
+	if (lso) {
+		if (odp_pktio_config(xmt_pktio, &pktio_config)) {
+			ODPH_ERR("pktio configure failed\n");
+			return -1;
+		}
+	}
+
+	/* Add LSO profiles before start */
+	if (lso) {
+		odp_lso_profile_param_t prof_param;
+
+		if (xmt_pktio_capa.lso.proto.ipv4) {
+			odp_lso_profile_param_init(&prof_param);
+			prof_param.lso_proto = ODP_LSO_PROTO_IPV4;
+
+			lso_ipv4_profile = odp_lso_profile_create(xmt_pktio, &prof_param);
+			if (lso_ipv4_profile == ODP_LSO_PROFILE_INVALID) {
+				ODPH_ERR("Failed to create IPv4 LSO profile\n");
+				return -1;
+			}
+		}
+	}
+
+	ret = odp_pktio_start(xmt_pktio);
 	if (ret != 0) {
 		ODPH_ERR("odp_pktio_start() failed\n");
 		return -1;
@@ -617,10 +658,9 @@ static int open_pktios(void)
 	pktio_started[0] = true;
 
 	/* Now wait until the link or links are up. */
-	rc = wait_linkup(pktios[0]);
+	rc = wait_linkup(xmt_pktio);
 	if (rc != 1) {
-		ODPH_ERR("link %" PRIX64 " not up\n",
-			 odp_pktio_to_u64(pktios[0]));
+		ODPH_ERR("link %" PRIX64 " not up\n", odp_pktio_to_u64(xmt_pktio));
 		return -1;
 	}
 
@@ -630,8 +670,7 @@ static int open_pktios(void)
 	/* Wait for 2nd link to be up */
 	rc = wait_linkup(pktios[1]);
 	if (rc != 1) {
-		ODPH_ERR("link %" PRIX64 " not up\n",
-			 odp_pktio_to_u64(pktios[0]));
+		ODPH_ERR("link %" PRIX64 " not up\n", odp_pktio_to_u64(pktios[1]));
 		return -1;
 	}
 
@@ -1216,6 +1255,66 @@ static uint32_t send_pkts(odp_tm_queue_t tm_queue, uint32_t num_pkts)
 
 		num_pkts_sent++;
 	}
+
+	return pkts_sent;
+}
+
+static uint32_t send_pkts_lso(odp_tm_queue_t tm_queue, uint32_t num_pkts,
+			      odp_lso_protocol_t lso_proto, uint32_t max_len)
+{
+	odp_packet_lso_opt_t lso_opt;
+	odp_lso_profile_t profile;
+	xmt_pkt_desc_t *xmt_pkt_desc;
+	odp_packet_t pkt;
+	uint32_t offset, pkts_sent;
+	int64_t rc, i, idx;
+
+	pkt = xmt_pkts[0];
+
+	if (lso_proto == ODP_LSO_PROTO_IPV4) {
+		profile = lso_ipv4_profile;
+		offset  = odp_packet_l4_offset(pkt);
+	} else {
+		ODPH_ERR("Bad LSO protocol\n");
+		return 0;
+	}
+
+	lso_opt.lso_profile     = profile;
+	lso_opt.payload_offset  = offset;
+	lso_opt.max_payload_len = max_len;
+
+	pkts_sent = 0;
+
+	for (i = 0; i < num_pkts; i++) {
+		idx = num_pkts_sent + i;
+		pkt = xmt_pkts[idx];
+		xmt_pkt_desc = &xmt_pkt_descs[idx];
+
+		rc = odp_tm_enq_multi_lso(tm_queue, &pkt, 1, &lso_opt);
+
+		CU_ASSERT(rc == 0 || rc == 1);
+
+		if (rc < 0) {
+			ODPH_ERR("Enqueue LSO failed\n");
+			num_pkts_sent += i;
+			return pkts_sent;
+		}
+
+		xmt_pkt_desc->xmt_idx = idx;
+
+		if (rc > 0) {
+			/* Record consumed packets */
+			xmt_pkt_desc->xmt_time = odp_time_local();
+			xmt_pkt_desc->tm_queue = tm_queue;
+			pkts_sent++;
+		} else {
+			/* Free rejected pkts */
+			odp_packet_free(pkt);
+			xmt_pkts[idx] = ODP_PACKET_INVALID;
+		}
+	}
+
+	num_pkts_sent += num_pkts;
 
 	return pkts_sent;
 }
@@ -4680,6 +4779,61 @@ static void traffic_mngr_test_fanin_info(void)
 	CU_ASSERT(test_fanin_info("node_1_3_7") == 0);
 }
 
+static int traffic_mngr_check_lso_ipv4(void)
+{
+	if (xmt_pktio_capa.lso.max_profiles == 0 || xmt_pktio_capa.lso.max_profiles_per_pktio == 0)
+		return ODP_TEST_INACTIVE;
+
+	if (xmt_pktio_capa.lso.proto.ipv4 == 0)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+static void traffic_mngr_test_lso_ipv4(void)
+{
+	odp_tm_queue_t tm_queue;
+	pkt_info_t pkt_info;
+	uint32_t pkts_sent;
+	int32_t ret, expect;
+	uint32_t num_pkts = 20;
+	uint32_t pkt_len  = 256;
+
+	/* Reuse shaper test node */
+	tm_queue = find_tm_queue(0, "node_1_1_1", 0);
+	CU_ASSERT_FATAL(tm_queue != ODP_TM_INVALID);
+
+	/* IPv4 / UDP packets */
+	init_xmt_pkts(&pkt_info);
+	pkt_info.drop_eligible = false;
+	pkt_info.pkt_class     = 1;
+	pkt_info.use_ipv6      = 0;
+	pkt_info.use_tcp       = 0;
+	CU_ASSERT_FATAL(make_pkts(num_pkts, pkt_len, &pkt_info) == 0);
+
+	pkts_sent = send_pkts_lso(tm_queue, num_pkts, ODP_LSO_PROTO_IPV4, pkt_len / 2);
+	CU_ASSERT(pkts_sent == num_pkts);
+
+	expect = 2 * pkts_sent;
+	ret = receive_loop(odp_tm_systems[0], rcv_pktin, expect, 1000 * ODP_TIME_MSEC_IN_NS);
+	CU_ASSERT(ret > 0);
+
+	num_rcv_pkts = ret;
+
+	/* As packet size is small, there should not be a reason to
+	 * split each packet into more than two segments. */
+	CU_ASSERT(ret == expect)
+	if (ret != expect) {
+		ODPH_ERR("\nReceived %i packets, expected %i\n", ret, expect);
+
+		if (ret < 0)
+			num_rcv_pkts = 0;
+	}
+
+	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
+	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
+}
+
 static void traffic_mngr_test_destroy(void)
 {
 	CU_ASSERT(destroy_tm_systems() == 0);
@@ -4718,6 +4872,7 @@ odp_testinfo_t traffic_mngr_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_ecn_drop_prec_marking,
 				  traffic_mngr_check_ecn_drop_prec_marking),
 	ODP_TEST_INFO(traffic_mngr_test_fanin_info),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_lso_ipv4, traffic_mngr_check_lso_ipv4),
 	ODP_TEST_INFO(traffic_mngr_test_destroy),
 	ODP_TEST_INFO_NULL,
 };
