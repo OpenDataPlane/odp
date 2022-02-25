@@ -65,7 +65,8 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 				   uint32_t frame_len, uint32_t seg_len,
 				   int layer, uint16_t ethtype,
 				   odp_proto_chksums_t chksums,
-				   uint64_t *l4_part_sum);
+				   uint64_t *l4_part_sum,
+				   odp_pktin_config_opt_t opt);
 
 /**
  * Parse common packet headers up to given layer
@@ -81,7 +82,8 @@ static inline int _odp_packet_parse_common(packet_parser_t *prs,
 					   uint32_t frame_len, uint32_t seg_len,
 					   int layer,
 					   odp_proto_chksums_t chksums,
-					   uint64_t *l4_part_sum)
+					   uint64_t *l4_part_sum,
+					   odp_pktin_config_opt_t opt)
 {
 	uint32_t offset;
 	uint16_t ethtype;
@@ -100,7 +102,7 @@ static inline int _odp_packet_parse_common(packet_parser_t *prs,
 
 	return _odp_packet_parse_common_l3_l4(prs, parseptr, offset, frame_len,
 					      seg_len, layer, ethtype, chksums,
-					      l4_part_sum);
+					      l4_part_sum, opt);
 }
 
 #ifdef __cplusplus

@@ -359,7 +359,8 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 				   uint32_t frame_len, uint32_t seg_len,
 				   int layer, uint16_t ethtype,
 				   odp_proto_chksums_t chksums,
-				   uint64_t *l4_part_sum)
+				   uint64_t *l4_part_sum,
+				   odp_pktin_config_opt_t opt)
 {
 	uint8_t  ip_proto;
 
@@ -378,6 +379,8 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 		ip_proto = parse_ipv4(prs, &parseptr, &offset, frame_len,
 				      chksums, l4_part_sum);
 		prs->l4_offset = offset;
+		if (prs->flags.ip_err && opt.bit.drop_ipv4_err)
+			return -1; /* drop */
 		break;
 
 	case _ODP_ETHTYPE_IPV6:
@@ -385,6 +388,8 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 		ip_proto = parse_ipv6(prs, &parseptr, &offset, frame_len,
 				      seg_len, chksums, l4_part_sum);
 		prs->l4_offset = offset;
+		if (prs->flags.ip_err && opt.bit.drop_ipv6_err)
+			return -1; /* drop */
 		break;
 
 	case _ODP_ETHTYPE_ARP:
@@ -422,6 +427,8 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 		prs->input_flags.tcp = 1;
 		parse_tcp(prs, &parseptr, frame_len - prs->l4_offset, chksums,
 			  l4_part_sum);
+		if (prs->flags.tcp_err && opt.bit.drop_tcp_err)
+			return -1; /* drop */
 		break;
 
 	case _ODP_IPPROTO_UDP:
@@ -429,6 +436,8 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 			return -1;
 		prs->input_flags.udp = 1;
 		parse_udp(prs, &parseptr, chksums, l4_part_sum);
+		if (prs->flags.udp_err && opt.bit.drop_udp_err)
+			return -1; /* drop */
 		break;
 
 	case _ODP_IPPROTO_AH:
@@ -445,6 +454,8 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 		prs->input_flags.sctp = 1;
 		parse_sctp(prs, &parseptr, frame_len - prs->l4_offset, chksums,
 			   l4_part_sum);
+		if (prs->flags.sctp_err && opt.bit.drop_sctp_err)
+			return -1; /* drop */
 		break;
 
 	case _ODP_IPPROTO_NO_NEXT:

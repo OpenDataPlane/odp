@@ -2033,6 +2033,7 @@ int odp_packet_parse(odp_packet_t pkt, uint32_t offset,
 	uint64_t l4_part_sum = 0;
 	const uint32_t min_seglen = PARSE_ETH_BYTES + PARSE_L3_L4_BYTES;
 	uint8_t buf[min_seglen];
+	odp_pktin_config_opt_t opt;
 
 	if (proto == ODP_PROTO_NONE || layer == ODP_PROTO_LAYER_NONE)
 		return -1;
@@ -2072,10 +2073,12 @@ int odp_packet_parse(odp_packet_t pkt, uint32_t offset,
 		ethtype = 0; /* Invalid */
 	}
 
+	opt.all_bits = 0;
+
 	ret = _odp_packet_parse_common_l3_l4(&pkt_hdr->p, data, offset,
 					     packet_len, seg_len, layer,
 					     ethtype, param->chksums,
-					     &l4_part_sum);
+					     &l4_part_sum, opt);
 
 	if (ret)
 		return -1;

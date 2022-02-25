@@ -830,6 +830,7 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 	int num_rx = 0;
 	const odp_proto_chksums_t chksums = pktio_entry->s.in_chksums;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
+	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
 
 	/* Allocate maximum sized packets */
 	max_len = pkt_priv(pktio_entry)->mtu;
@@ -854,7 +855,7 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 
 		if (layer) {
 			if (_odp_packet_parse_common(&pkt_hdr->p, buf, len, len,
-						     layer, chksums, &l4_part_sum) < 0)
+						     layer, chksums, &l4_part_sum, opt) < 0)
 				continue;
 
 			if (pktio_cls_enabled(pktio_entry)) {
