@@ -252,6 +252,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
 	const odp_proto_chksums_t chksums = pktio_entry->s.in_chksums;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
+	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
@@ -259,8 +260,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		odp_ticketlock_unlock(&pktio_entry->s.rxl);
 		return 0;
 	}
-	if (pktio_entry->s.config.pktin.bit.ts_all ||
-	    pktio_entry->s.config.pktin.bit.ts_ptp)
+	if (opt.bit.ts_all || opt.bit.ts_ptp)
 		ts = &ts_val;
 
 	for (i = 0; i < num; ) {
@@ -299,7 +299,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 			ret = _odp_packet_parse_common(&pkt_hdr->p, data, pkt_len,
 						       pkt_len, layer, chksums,
-						       &l4_part_sum);
+						       &l4_part_sum, opt);
 			if (ret < 0) {
 				odp_packet_free(pkt);
 				continue;

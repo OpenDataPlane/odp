@@ -236,6 +236,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	uint32_t alloc_len = pkt_sock->mtu + frame_offset;
 	const odp_proto_chksums_t chksums = pktio_entry->s.in_chksums;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
+	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
 
 	memset(msgvec, 0, sizeof(msgvec));
 
@@ -252,8 +253,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	recv_msgs = recvmmsg(sockfd, msgvec, nb_pkts, MSG_DONTWAIT, NULL);
 	odp_ticketlock_unlock(&pkt_sock->rx_lock);
 
-	if (pktio_entry->s.config.pktin.bit.ts_all ||
-	    pktio_entry->s.config.pktin.bit.ts_ptp) {
+	if (opt.bit.ts_all || opt.bit.ts_ptp) {
 		ts_val = odp_time_global();
 		ts = &ts_val;
 	}
@@ -289,7 +289,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 			if (_odp_packet_parse_common(&pkt_hdr->p, base, pkt_len,
 						     seg_len, layer, chksums,
-						     &l4_part_sum) < 0) {
+						     &l4_part_sum, opt) < 0) {
 				odp_packet_free(pkt);
 				continue;
 			}
