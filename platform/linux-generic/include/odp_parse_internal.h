@@ -49,15 +49,15 @@ extern "C" {
 #define PARSE_L3_L4_BYTES (MAX(PARSE_IPV4_BYTES, PARSE_IPV6_BYTES) + \
 			   MAX3(PARSE_TCP_BYTES, PARSE_UDP_BYTES, PARSE_SCTP_BYTES))
 
-uint16_t parse_eth(packet_parser_t *prs, const uint8_t **parseptr,
-		   uint32_t *offset, uint32_t frame_len);
+uint16_t _odp_parse_eth(packet_parser_t *prs, const uint8_t **parseptr,
+			uint32_t *offset, uint32_t frame_len);
 
-int packet_parse_common_l3_l4(packet_parser_t *prs, const uint8_t *parseptr,
-			      uint32_t offset,
-			      uint32_t frame_len, uint32_t seg_len,
-			      int layer, uint16_t ethtype,
-			      odp_proto_chksums_t chksums,
-			      uint64_t *l4_part_sum);
+int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
+				   const uint8_t *parseptr, uint32_t offset,
+				   uint32_t frame_len, uint32_t seg_len,
+				   int layer, uint16_t ethtype,
+				   odp_proto_chksums_t chksums,
+				   uint64_t *l4_part_sum);
 
 /**
  * Parse common packet headers up to given layer
@@ -85,11 +85,11 @@ static inline int _odp_packet_parse_common(packet_parser_t *prs,
 	/* Assume valid L2 header, no CRC/FCS check in SW */
 	prs->l2_offset = offset;
 
-	ethtype = parse_eth(prs, &parseptr, &offset, frame_len);
+	ethtype = _odp_parse_eth(prs, &parseptr, &offset, frame_len);
 
-	return packet_parse_common_l3_l4(prs, parseptr, offset, frame_len,
-					 seg_len, layer, ethtype, chksums,
-					 &l4_part_sum);
+	return _odp_packet_parse_common_l3_l4(prs, parseptr, offset, frame_len,
+					      seg_len, layer, ethtype, chksums,
+					      &l4_part_sum);
 }
 
 /* Perform packet parse up to a given protocol layer */
