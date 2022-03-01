@@ -52,6 +52,49 @@ static void classification_test_create_cos(void)
 	odp_queue_destroy(queue);
 }
 
+static void classification_test_create_cos_max_common(odp_bool_t stats)
+{
+	uint32_t i;
+	odp_cls_cos_param_t cls_param;
+	odp_cls_capability_t capa;
+
+	CU_ASSERT_FATAL(odp_cls_capability(&capa) == 0);
+
+	uint32_t num = capa.max_cos;
+
+	if (stats && capa.max_cos_stats < num)
+		num = capa.max_cos_stats;
+
+	odp_cos_t cos[num];
+
+	for (i = 0; i < num; i++) {
+		odp_cls_cos_param_init(&cls_param);
+		cls_param.action = ODP_COS_ACTION_DROP;
+		cls_param.stats_enable = stats;
+
+		cos[i] = odp_cls_cos_create(NULL, &cls_param);
+		if (cos[i] == ODP_COS_INVALID) {
+			ODPH_ERR("odp_cls_cos_create() failed at CoS %u out of %u.\n", i + 1, num);
+			break;
+		}
+	}
+
+	CU_ASSERT(i == num);
+
+	for (uint32_t j = 0; j < i; j++)
+		CU_ASSERT(!odp_cos_destroy(cos[j]));
+}
+
+static void classification_test_create_cos_max(void)
+{
+	classification_test_create_cos_max_common(false);
+}
+
+static void classification_test_create_cos_max_stats(void)
+{
+	classification_test_create_cos_max_common(true);
+}
+
 static void classification_test_destroy_cos(void)
 {
 	odp_cos_t cos;
@@ -345,6 +388,8 @@ static void classification_test_pmr_composite_create(void)
 odp_testinfo_t classification_suite_basic[] = {
 	ODP_TEST_INFO(classification_test_default_values),
 	ODP_TEST_INFO(classification_test_create_cos),
+	ODP_TEST_INFO(classification_test_create_cos_max),
+	ODP_TEST_INFO(classification_test_create_cos_max_stats),
 	ODP_TEST_INFO(classification_test_destroy_cos),
 	ODP_TEST_INFO(classification_test_create_pmr_match),
 	ODP_TEST_INFO(classification_test_cos_set_queue),
