@@ -32,8 +32,8 @@ extern "C" {
 #define PARSE_ETH_BYTES (sizeof(_odp_ethhdr_t) + 8 + 2 * sizeof(_odp_vlanhdr_t))
 #define PARSE_IPV4_BYTES (0xfU * 4) /* max IPv4 header length with options */
 /*
- * Peeks 2 bytes beyond IPv6 base header without length check if there
- * are extension headers.
+ * Peek 2 bytes beyond IPv6 base header without length check if there are
+ * extension headers.
  */
 #define PARSE_IPV6_BYTES (sizeof(_odp_ipv6hdr_t) + 2)
 #define PARSE_TCP_BYTES (sizeof(_odp_tcphdr_t))
@@ -44,6 +44,7 @@ extern "C" {
 #define PARSE_UDP_BYTES (sizeof(_odp_udphdr_t) + 4)
 #define PARSE_SCTP_BYTES (sizeof(_odp_sctphdr_t))
 
+/* _odp_packet_parse_common_l3_l4() requires up to this many bytes. */
 #define PARSE_L3_L4_BYTES (MAX(PARSE_IPV4_BYTES, PARSE_IPV6_BYTES) + \
 			   MAX3(PARSE_TCP_BYTES, PARSE_UDP_BYTES, PARSE_SCTP_BYTES))
 
@@ -53,6 +54,12 @@ extern "C" {
 uint16_t _odp_parse_eth(packet_parser_t *prs, const uint8_t **parseptr,
 			uint32_t *offset, uint32_t frame_len);
 
+/*
+ * Parse common L3 and L4 packet headers up to given layer
+ *
+ * See _odp_packet_parse_common(). Requires up to PARSE_L3_L4_BYTES bytes of
+ * contiguous packet data.
+ */
 int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 				   const uint8_t *parseptr, uint32_t offset,
 				   uint32_t frame_len, uint32_t seg_len,
@@ -65,6 +72,9 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
  *
  * Requires up to PARSE_BYTES bytes of contiguous packet data. Also parse
  * metadata must be already initialized.
+ *
+ * Returns 0 on success, 1 on packet errors, and -1 if the packet should be
+ * dropped.
  */
 static inline int _odp_packet_parse_common(packet_parser_t *prs,
 					   const uint8_t *ptr,
