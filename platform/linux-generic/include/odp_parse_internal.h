@@ -25,8 +25,6 @@ extern "C" {
 #include <odp/api/packet_types.h>
 #include <stdint.h>
 
-/** Minimum segment length expected by _odp_packet_parse_common() */
-#define PACKET_PARSE_SEG_LEN 96
 /*
  * In the worst case we look at the Ethernet header, 8 bytes of LLC/SNAP
  * header and two VLAN tags in the same packet.
@@ -49,6 +47,9 @@ extern "C" {
 #define PARSE_L3_L4_BYTES (MAX(PARSE_IPV4_BYTES, PARSE_IPV6_BYTES) + \
 			   MAX3(PARSE_TCP_BYTES, PARSE_UDP_BYTES, PARSE_SCTP_BYTES))
 
+/* _odp_packet_parse_common() requires up to this many bytes. */
+#define PARSE_BYTES (PARSE_ETH_BYTES + PARSE_L3_L4_BYTES)
+
 uint16_t _odp_parse_eth(packet_parser_t *prs, const uint8_t **parseptr,
 			uint32_t *offset, uint32_t frame_len);
 
@@ -62,8 +63,8 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 /**
  * Parse common packet headers up to given layer
  *
- * The function expects at least PACKET_PARSE_SEG_LEN bytes of data to be
- * available from the ptr. Also parse metadata must be already initialized.
+ * Requires up to PARSE_BYTES bytes of contiguous packet data. Also parse
+ * metadata must be already initialized.
  */
 static inline int _odp_packet_parse_common(packet_parser_t *prs,
 					   const uint8_t *ptr,
