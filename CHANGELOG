@@ -1,3 +1,78 @@
+== OpenDataPlane (1.35.0.0)
+
+=== Backward incompatible API changes
+
+==== Scheduler
+* Deprecate scheduling priority level defines `ODP_SCHED_PRIO_HIGHEST`,
+`ODP_SCHED_PRIO_NORMAL`, `ODP_SCHED_PRIO_LOWEST`, and `ODP_SCHED_PRIO_DEFAULT`.
+These defines have been replaced by matching functions.
+
+==== Traffic Manager
+* Change meaning of `odp_tm_enq_multi()` return value of zero from failure code
+to part of normal operation.
+
+=== Backward compatible API changes
+==== Packet
+* Remove references to deprecated `odp_pktin_ts_res()` and
+`odp_pktin_ts_from_ns()` functions.
+
+==== Packet IO
+* Add `ODP_PKTOUT_MAX_QUEUES` define for the maximum number of packet output
+queues.
+* Add new packet output queue size configuration option
+`odp_pktout_queue_param_t.queue_size` and matching capabilities
+`odp_pktio_capability_t.min_output_queue_size` and
+`odp_pktio_capability_t.max_output_queue_size`.
+* Clarify `odp_pktio_config()` usage in the interface setup sequence.
+* Allow large send offload (LSO) usage with traffic manager
+(`odp_pktio_config_t.enable_lso`).
+
+==== Timer
+* Clarify timer tick properties and especially that it may run with a higher
+frequency than the requested timer pool resolution.
+* Add new timer pool parameter (`odp_timer_pool_param_t.exp_mode`), which
+application can use to select if timer expiration may happen before or only
+after the specified time.
+* Add new `odp_timer_start()` and `odp_timer_restart()` functions.
+* Add support for periodic timers. New capabilities, parameters, and functions
+are added to create/start/ack periodic timers.
+
+==== Traffic Manager
+* Add `odp_tm_enq_multi_lso()` function which does also LSO as part of the TM
+output operation.
+
+=== Remove deprecated APIs
+==== Classifier
+* Remove deprecated `ODP_PMR_INVAL` define.
+
+==== Crypto
+* Remove deprecated old style cipher algorithm enumerations
+`ODP_CIPHER_ALG_AES128_CBC` and `ODP_CIPHER_ALG_AES128_GCM`.
+* Remove deprecated old style authentication algorithm enumerations
+`ODP_AUTH_ALG_MD5_96`, `ODP_AUTH_ALG_SHA256_128`, and `ODP_AUTH_ALG_AES128_GCM`.
+* Remove deprecated fields `aes128_cbc` and `aes128_gcm` from
+`odp_crypto_cipher_algos_t`.
+* Remove deprecated fields `md5_96`, `sha256_128`, and `aes128_gcm` from
+`odp_crypto_auth_algos_t`.
+* Remove deprecated data range specifier `odp_crypto_data_range_t`.
+* Remove deprecated `iv` field from `odp_crypto_session_param_t`.
+* Remove deprecated `odp_crypto_session_params_t` type.
+* Remove deprecated `override_iv_ptr` field from `odp_crypto_op_param_t`.
+* Remove deprecated `override_iv_ptr` field from `odp_crypto_packet_op_param_t`.
+* Remove deprecated `odp_crypto_op_params_t` type.
+* Remove deprecated `odp_crypto_compl_status_t` type.
+
+==== Packet IO
+* Remove deprecated parser layer defines (`ODP_PKTIO_PARSER_LAYER_*`).
+* Remove deprecated `odp_pktio_capability_t.loop_supported` capability.
+* Remove deprecated `odp_pktio_mtu()` function.
+
+==== Queue
+* Remove deprecated scheduled queue capabilities from `odp_queue_capability_t`.
+
+==== Miscellaneous
+* Remove deprecated `odp.h` header file which has been replaced by `odp_api.h`.
+
 == OpenDataPlane (1.34.0.0)
 
 === Backward incompatible API changes
