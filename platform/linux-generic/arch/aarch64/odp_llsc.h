@@ -13,6 +13,8 @@
 #error This file should not be included directly, please include odp_cpu.h
 #endif
 
+#include <odp_types_internal.h>
+
 static inline uint16_t ll8(uint8_t *var, int mm)
 {
 	uint16_t old;
@@ -115,11 +117,11 @@ static inline uint32_t sc(uint64_t *var, uint64_t neu, int mm)
 #define sc64(a, b, c) sc((a), (b), (c))
 
 union i128 {
-	__extension__ __int128 i128;
+	_odp_u128_t i128;
 	int64_t  i64[2];
 };
 
-__extension__ static inline __int128 lld(__int128 *var, int mm)
+static inline _odp_u128_t lld(_odp_u128_t *var, int mm)
 {
 	union i128 old;
 
@@ -139,7 +141,7 @@ __extension__ static inline __int128 lld(__int128 *var, int mm)
 }
 
 /* Return 0 on success, 1 on failure */
-__extension__ static inline uint32_t scd(__int128 *var, __int128 neu, int mm)
+static inline uint32_t scd(_odp_u128_t *var, _odp_u128_t neu, int mm)
 {
 	uint32_t ret;
 
