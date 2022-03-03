@@ -12,6 +12,7 @@
 #error This file should not be included directly, please include odp_cpu.h
 #endif
 
+#include <odp_types_internal.h>
 #include <limits.h>
 
 #ifdef CONFIG_DMBSTR
@@ -70,7 +71,7 @@ static inline bitset_t bitset_mask(uint32_t bit)
 	if (bit < 64)
 		return 1ULL << bit;
 	else
-		return (unsigned __int128)(1ULL << (bit - 64)) << 64;
+		return (_odp_u128_t)(1ULL << (bit - 64)) << 64;
 }
 
 #else
