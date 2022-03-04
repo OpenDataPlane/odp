@@ -719,7 +719,6 @@ typedef struct {
  *
  * odp_tm_requirements_init() must be called to initialize any
  * odp_tm_requirements_t record before it is first used or assigned to.
- * This is done to allow for vendor specific additions to this record.
  *
  * @param requirements  A pointer to an odp_tm_requirements_t record which
  *                      is to be initialized.
@@ -730,7 +729,6 @@ void odp_tm_requirements_init(odp_tm_requirements_t *requirements);
  *
  * odp_tm_egress_init() must be called to initialize any odp_tm_egress_t
  * record before it is first used or assigned to.
- * This is done to allow for vendor specific additions to this record.
  *
  * @param egress  A pointer to an odp_tm_egress_t record which
  *                is to be initialized.
@@ -1050,11 +1048,11 @@ typedef enum {
 	ODP_TM_SHAPER_GREEN, ODP_TM_SHAPER_YELLOW, ODP_TM_SHAPER_RED
 } odp_tm_shaper_color_t;
 
-/** The odp_tm_shaper_params_t record type is used to supply the parameters
- * associated with a shaper profile.  Since it is expected that
- * implementations might augment this record type with platform specific
- * additional fields - it is required that odp_tm_shaper_params_init() be
- * called on variables of this type before any of the fields are filled in.
+/**
+ * TM shaper parameters
+ *
+ * Use odp_tm_shaper_params_init() to initialize parameters into their default
+ * values.
  */
 typedef struct {
 	/** The committed information rate for this shaper profile.  The units
@@ -1123,12 +1121,12 @@ typedef struct {
 	odp_bool_t packet_mode;
 } odp_tm_shaper_params_t;
 
-/** odp_tm_shaper_params_init() must be called to initialize any
- * odp_tm_shaper_params_t record before it is first used or assigned to.
- * The parameters are initialized to their default values.
+/**
+ * Initialize TM shaper parameters
  *
- * @param params  A pointer to an odp_tm_shaper_params_t record which
- *                is to be initialized.
+ * Initialize an odp_tm_shaper_params_t to its default values for all fields.
+ *
+ * @param params  Address of the odp_tm_shaper_params_t to be initialized
  */
 void odp_tm_shaper_params_init(odp_tm_shaper_params_t *params);
 
@@ -1215,11 +1213,11 @@ typedef enum {
 	ODP_TM_FRAME_BASED_WEIGHTS /**< Ignore the packet length */
 } odp_tm_sched_mode_t;
 
-/** The odp_tm_sched_params_t record type is used to supply the parameters
- * associated with a scheduler profile.  Since it is expected that
- * implementations might augment this record type with platform specific
- * additional fields - it is required that odp_tm_sched_params_init() be
- * called on variables of this type before any of the fields are filled in.
+/**
+ * TM scheduler parameters
+ *
+ * Use odp_tm_sched_params_init() to initialize parameters into their default
+ * values.
  */
 typedef struct {
 	/** sched_modes indicates whether weighted scheduling should be used
@@ -1237,12 +1235,12 @@ typedef struct {
 	uint32_t sched_weights[ODP_TM_MAX_PRIORITIES];
 } odp_tm_sched_params_t;
 
-/** odp_tm_sched_params_init() must be called to initialize any
- * odp_tm_sched_params_t record before it is first used or assigned to.
- * The parameters are initialized to their default values.
+/**
+ * Initialize TM scheduler parameters
  *
- * @param params  A pointer to an odp_tm_sched_params_t record which
- *                is to be initialized.
+ * Initialize an odp_tm_sched_params_t to its default values for all fields.
+ *
+ * @param params  Address of the odp_tm_sched_params_t to be initialized
  */
 void odp_tm_sched_params_init(odp_tm_sched_params_t *params);
 
@@ -1315,11 +1313,11 @@ odp_tm_sched_t odp_tm_sched_lookup(const char *name);
 /* Queue Threshold Profiles - types and functions
  * -------------------------------------------------------- */
 
-/** The odp_tm_threshold_params_t record type is used to supply the parameters
- * associated with a queue thresholds profile.  Since it is expected that
- * implementations might augment this record type with platform specific
- * additional fields - it is required that odp_tm_threshold_params_init() be
- * called on variables of this type before any of the fields are filled in
+/**
+ * TM threshold parameters
+ *
+ * Use odp_tm_threshold_params_init() to initialize parameters into their
+ * default values.
  */
 typedef struct {
 	uint64_t max_pkts; /**<  max pkt cnt for this threshold profile */
@@ -1332,12 +1330,12 @@ typedef struct {
 	odp_bool_t enable_max_bytes;
 } odp_tm_threshold_params_t;
 
-/** odp_tm_threshold_params_init() must be called to initialize any
- * odp_tm_threshold_params_t record before it is first used or assigned to.
- * The parameters are initialized to their default values.
+/**
+ * Initialize TM threshold parameters
  *
- * @param params  A pointer to an odp_tm_threshold_params_t record which
- *                is to be initialized.
+ * Initialize an odp_tm_threshold_params_t to its default values for all fields.
+ *
+ * @param params  Address of the odp_tm_threshold_params_t to be initialized
  */
 void odp_tm_threshold_params_init(odp_tm_threshold_params_t *params);
 
@@ -1413,11 +1411,11 @@ odp_tm_threshold_t odp_tm_thresholds_lookup(const char *name);
 /* WRED Profiles - types and functions
  * -------------------------------------------------------- */
 
-/** The odp_tm_wred_params_t record type is used to supply the parameters
- * associated with a Random Early Detection profile.  Since it is expected that
- * implementations might augment this record type with platform specific
- * additional fields - it is required that odp_tm_wred_params_init() be called
- * on variables of this type before any of the fields are filled in.
+/**
+ * TM WRED parameters
+ *
+ * Use odp_tm_wred_params_init() to initialize parameters into their default
+ * values.
  */
 typedef struct {
 	/** When min_threshold is set to zero then single-slope WRED is
@@ -1471,12 +1469,12 @@ typedef struct {
 	odp_bool_t use_byte_fullness;
 } odp_tm_wred_params_t;
 
-/** odp_tm_wred_params_init() must be called to initialize any
- * odp_tm_wred_params_t record before it is first used or assigned to.
- * The parameters are initialized to their default values.
+/**
+ * Initialize TM WRED parameters
  *
- * @param params  A pointer to an odp_tm_wred_params_t record which
- *                is to be initialized.
+ * Initialize an odp_tm_wred_params_t to its default values for all fields.
+ *
+ * @param params  Address of the odp_tm_wred_params_t to be initialized
  */
 void odp_tm_wred_params_init(odp_tm_wred_params_t *params);
 
@@ -1547,12 +1545,11 @@ int odp_tm_wred_params_update(odp_tm_wred_t wred_profile,
  */
 odp_tm_wred_t odp_tm_wred_lookup(const char *name);
 
-/** The odp_tm_node_params_t record type is used to hold extra parameters when
- * calling the odp_tm_node_create() function.  Many of these fields are
- * optional EXCEPT for max_fanin and level.  Also since it is expected that
- * implementations might augment this record type with platform specific
- * additional fields - it is required that odp_tm_node_params_init() be called
- * on variables of this type before any of the fields are filled in.
+/**
+ * TM node parameters
+ *
+ * Many of these fields are optional EXCEPT for max_fanin and level. Use
+ * odp_tm_node_params_init() to initialize parameters into their default values.
  */
 typedef struct {
 	/** The user_context field is an generic pointer that the user can
@@ -1606,12 +1603,12 @@ typedef struct {
 	uint8_t priority;
 } odp_tm_node_params_t;
 
-/** odp_tm_node_params_init() must be called to initialize any
- * odp_tm_node_params_t record before it is first used or assigned to.
- * The parameters are initialized to their default values.
+/**
+ * Initialize TM node parameters
  *
- * @param params  A pointer to an odp_tm_node_params_t record which
- *                is to be initialized.
+ * Initialize an odp_tm_node_params_t to its default values for all fields.
+ *
+ * @param params  Address of the odp_tm_node_params_t to be initialized
  */
 void odp_tm_node_params_init(odp_tm_node_params_t *params);
 
@@ -1627,8 +1624,7 @@ void odp_tm_node_params_init(odp_tm_node_params_t *params);
  * @param name    Optional name that can be used later later to find this
  *                same odp_tm_node_t.  Can be NULL, otherwise must be
  *                unique across all odp_tm_node objects.
- * @param params  A pointer to a record holding (an extensible) set of
- *                properties/attributes of this tm_node.
+ * @param params  TM node parameters.
  *
  * @return        Returns ODP_TM_INVALID upon failure, otherwise returns
  *                a valid odp_tm_node_t handle if successful.
@@ -1739,12 +1735,11 @@ void *odp_tm_node_context(odp_tm_node_t tm_node);
  */
 int odp_tm_node_context_set(odp_tm_node_t tm_node, void *user_context);
 
-/** The odp_tm_queue_params_t record type is used to hold extra parameters
- * when calling the odp_tm_queue_create() function.  Many of these fields are
- * optional EXCEPT for priority.  Also since it is expected that
- * implementations might augment this record type with platform specific
- * additional fields - it is required that odp_tm_queue_params_init() be
- * called on variables of this type before any of the fields are filled in.
+/**
+ * TM queue parameters
+ *
+ * Use odp_tm_queue_params_init() to initialize parameters into their default
+ * values.
  */
 typedef struct {
 	/** The user_context field is an generic pointer that the user can
@@ -1782,12 +1777,12 @@ typedef struct {
 	odp_bool_t ordered_enqueue;
 } odp_tm_queue_params_t;
 
-/** odp_tm_queue_params_init() must be called to initialize any
- * odp_tm_queue_params_t record before it is first used or assigned to.
- * The parameters are initialized to their default values.
+/**
+ * Initialize TM queue parameters
  *
- * @param params  A pointer to an odp_tm_queue_params_t record which
- *                is to be initialized.
+ * Initialize an odp_tm_queue_params_t to its default values for all fields.
+ *
+ * @param params  Address of the odp_tm_queue_params_t to be initialized
  */
 void odp_tm_queue_params_init(odp_tm_queue_params_t *params);
 
@@ -1801,8 +1796,7 @@ void odp_tm_queue_params_init(odp_tm_queue_params_t *params);
  *
  * @param tm      Handle of the TM system into which this odp_tm_queue object is
  *                created.
- * @param params  A pointer to a record holding (an extensible) set of
- *                properties/attributes of this tm_queue.
+ * @param params  TM queue parameters.
  *
  * @return        Returns ODP_TM_INVALID upon failure, otherwise a valid
  *                odp_tm_queue_t handle.
