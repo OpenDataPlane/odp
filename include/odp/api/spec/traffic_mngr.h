@@ -98,11 +98,6 @@ extern "C" {
  */
 
 /**
- * @def ODP_NUM_SHAPER_COLORS
- * The number of enumeration values defined in the odp_tm_shaper_color_t type.
- */
-
-/**
  * @def ODP_TM_INVALID_PRIORITY
  * Used to indicate an invalid priority value.
  */
@@ -938,9 +933,9 @@ int odp_tm_destroy(odp_tm_t tm);
  * The odp_tm_vlan_marking() function allows one to configure the TM egress
  * so as to have it set the one bit VLAN Drop Eligibility Indicator (DEI)
  * field (but only for pkts that already carry a VLAN tag) of a pkt based upon
- * the final pkt (or shaper?) color assigned to the pkt when it reaches the
- * egress node.  When drop_eligible_enabled is false, then the given color has
- * no effect on the VLAN fields.  See IEEE 802.1q for more details.
+ * the final pkt color assigned to the pkt when it reaches the egress node. When
+ * drop_eligible_enabled is false, then the given color has no effect on the
+ * VLAN fields. See IEEE 802.1q for more details.
  *
  * Note that ALL ODP implementations are required to SUCCESSFULLY handle all
  * calls to this function with drop_eligible_enabled == FALSE - i.e. must
@@ -1034,19 +1029,6 @@ int odp_tm_drop_prec_marking(odp_tm_t           tm,
 
 /* Shaper profile types and functions
  * -------------------------------------------------------- */
-
-/** Possible values of running the shaper algorithm.  ODP_TM_SHAPER_GREEN
- * means that the traffic is within the commit specification (rate and burst
- * size), ODP_TM_SHAPER_YELLOW means that the traffic is within the peak
- * specification (rate and burst size) and ODP_TM_SHAPER_RED means that the
- * traffic is exceeding both its commit and peak specifications.  Note that
- * packets can also have an assigned <b> packet color</b> of ODP_PACKET_GREEN,
- * ODP_PACKET_YELLOW or ODP_PACKET_RED which has a different meaning and
- * purpose than the shaper colors.
- */
-typedef enum {
-	ODP_TM_SHAPER_GREEN, ODP_TM_SHAPER_YELLOW, ODP_TM_SHAPER_RED
-} odp_tm_shaper_color_t;
 
 /**
  * TM shaper parameters
@@ -1968,9 +1950,7 @@ int odp_tm_queue_disconnect(odp_tm_queue_t tm_queue);
  * after any non-zero shaper_len_adjust that is part of the shaper profile.
  *
  * The pkt_color bits are a result of some earlier Metering/Marking/Policing
- * processing (typically ingress based), and should not be confused with the
- * shaper_color produced from the TM shaper entities within the tm_inputs and
- * tm_nodes.
+ * processing.
  *
  * @param tm_queue  Specifies the tm_queue (and indirectly the TM system).
  * @param pkt       Handle to a packet.
