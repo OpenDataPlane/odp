@@ -15,6 +15,7 @@
 
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_types_internal.h>
 #include <odp_cpu.h>
 
 #include <stdint.h>
@@ -49,7 +50,7 @@ static odp_bool_t llq_on_queue(struct llnode *node);
 typedef uint64_t dintptr_t;
 #endif
 #if __SIZEOF_PTRDIFF_T__ == 8
-__extension__ typedef __int128 dintptr_t;
+typedef _odp_u128_t dintptr_t;
 #endif
 
 struct llnode {

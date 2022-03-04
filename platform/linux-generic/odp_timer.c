@@ -53,6 +53,7 @@
 #include <odp/api/plat/queue_inlines.h>
 #include <odp_global_data.h>
 #include <odp_event_internal.h>
+#include <odp_types_internal.h>
 
 /* Inlined API functions */
 #include <odp/api/plat/event_inlines.h>
@@ -689,7 +690,7 @@ static bool timer_reset(uint32_t idx, uint64_t abs_tck, odp_event_t *tmo_event,
 			/* Atomic CAS will fail if we experienced torn reads,
 			 * retry update sequence until CAS succeeds */
 		} while (!_odp_atomic_u128_cmp_xchg_mm((_odp_atomic_u128_t *)tb,
-						       (_uint128_t *)&old, (_uint128_t *)&new,
+						       (_odp_u128_t *)&old, (_odp_u128_t *)&new,
 						       _ODP_MEMMODEL_RLS, _ODP_MEMMODEL_RLX));
 #elif __GCC_ATOMIC_LLONG_LOCK_FREE >= 2 && \
 	defined __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8
@@ -760,8 +761,8 @@ static bool timer_reset(uint32_t idx, uint64_t abs_tck, odp_event_t *tmo_event,
 		/* We are releasing the new timeout event to some other
 		 * thread */
 		_odp_atomic_u128_xchg_mm((_odp_atomic_u128_t *)tb,
-					 (_uint128_t *)&new,
-					 (_uint128_t *)&old,
+					 (_odp_u128_t *)&new,
+					 (_odp_u128_t *)&old,
 					 _ODP_MEMMODEL_ACQ_RLS);
 		old_event = old.tmo_event;
 #else
@@ -804,7 +805,7 @@ static odp_event_t timer_set_unused(timer_pool_t *tp, uint32_t idx)
 	new.tmo_event = ODP_EVENT_INVALID;
 
 	_odp_atomic_u128_xchg_mm((_odp_atomic_u128_t *)tb,
-				 (_uint128_t *)&new, (_uint128_t *)&old,
+				 (_odp_u128_t *)&new, (_odp_u128_t *)&old,
 				 _ODP_MEMMODEL_RLX);
 	old_event = old.tmo_event;
 #else
@@ -858,8 +859,8 @@ static odp_event_t timer_cancel(timer_pool_t *tp, uint32_t idx)
 		/* Atomic CAS will fail if we experienced torn reads,
 		 * retry update sequence until CAS succeeds */
 	} while (!_odp_atomic_u128_cmp_xchg_mm((_odp_atomic_u128_t *)tb,
-					       (_uint128_t *)&old,
-					       (_uint128_t *)&new,
+					       (_odp_u128_t *)&old,
+					       (_odp_u128_t *)&new,
 					       _ODP_MEMMODEL_RLS,
 					       _ODP_MEMMODEL_RLX));
 	old_event = old.tmo_event;
@@ -916,7 +917,7 @@ static inline void timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 		new.tmo_event = ODP_EVENT_INVALID;
 
 		int succ = _odp_atomic_u128_cmp_xchg_mm((_odp_atomic_u128_t *)tb,
-							(_uint128_t *)&old, (_uint128_t *)&new,
+							(_odp_u128_t *)&old, (_odp_u128_t *)&new,
 							_ODP_MEMMODEL_RLS, _ODP_MEMMODEL_RLX);
 		if (succ)
 			tmo_event = old.tmo_event;
