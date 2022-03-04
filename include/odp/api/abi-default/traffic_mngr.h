@@ -76,11 +76,6 @@ extern "C" {
  */
 #define ODP_TM_MAX_TM_NODE_FANIN  (4 * 1024)
 
-/** The ODP_NUM_SHAPER_COLORS constant just counts the number of enumeration
- * values defined in the odp_tm_shaper_color_t type.
- */
-#define ODP_NUM_SHAPER_COLORS  3
-
 /** The INVALID_PRIORITY constant is used when one needs to indicate an
  * invalid priority value.
  */

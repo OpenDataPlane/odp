@@ -55,45 +55,60 @@ _odp_int_name_kind_t PROFILE_TO_HANDLE_KIND[ODP_TM_NUM_PROFILES] = {
 static const pkt_desc_t EMPTY_PKT_DESC = { .word = 0 };
 
 #define MAX_PRIORITIES ODP_TM_MAX_PRIORITIES
-#define NUM_SHAPER_COLORS ODP_NUM_SHAPER_COLORS
 
 /* Shaper BW limits in bits/sec */
 #define TM_MIN_SHAPER_BW  8000ULL
 #define TM_MAX_SHAPER_BW  (100ULL * 1000ULL * 1000ULL * 1000ULL)
 
+/* Possible values for running the shaper algorithm. TM_SHAPER_GREEN means that
+ * the traffic is within the commit specification (rate and burst size),
+ * TM_SHAPER_YELLOW means that the traffic is within the peak specification
+ * (rate and burst size) and TM_SHAPER_RED means that the traffic is exceeding
+ * both its commit and peak specifications.  Note that packets can also have an
+ * assigned packet color of ODP_PACKET_GREEN, ODP_PACKET_YELLOW or
+ * ODP_PACKET_RED, which has a different meaning and purpose than the shaper
+ * colors.
+ */
+typedef enum {
+	TM_SHAPER_GREEN, TM_SHAPER_YELLOW, TM_SHAPER_RED
+} tm_shaper_color_t;
+
+/* Number of enumeration values defined in tm_shaper_color_t type. */
+#define NUM_SHAPER_COLORS  3
+
 static const tm_prop_t basic_prop_tbl[MAX_PRIORITIES][NUM_SHAPER_COLORS] = {
 	[0] = {
-		[ODP_TM_SHAPER_GREEN] = { 0, DECR_BOTH },
-		[ODP_TM_SHAPER_YELLOW] = { 0, DECR_BOTH },
-		[ODP_TM_SHAPER_RED] = { 0, DELAY_PKT } },
+		[TM_SHAPER_GREEN] = { 0, DECR_BOTH },
+		[TM_SHAPER_YELLOW] = { 0, DECR_BOTH },
+		[TM_SHAPER_RED] = { 0, DELAY_PKT } },
 	[1] = {
-		[ODP_TM_SHAPER_GREEN] = { 1, DECR_BOTH },
-		[ODP_TM_SHAPER_YELLOW] = { 1, DECR_BOTH },
-		[ODP_TM_SHAPER_RED] = { 1, DELAY_PKT } },
+		[TM_SHAPER_GREEN] = { 1, DECR_BOTH },
+		[TM_SHAPER_YELLOW] = { 1, DECR_BOTH },
+		[TM_SHAPER_RED] = { 1, DELAY_PKT } },
 	[2] = {
-		[ODP_TM_SHAPER_GREEN] = { 2, DECR_BOTH },
-		[ODP_TM_SHAPER_YELLOW] = { 2, DECR_BOTH },
-		[ODP_TM_SHAPER_RED] = { 2, DELAY_PKT } },
+		[TM_SHAPER_GREEN] = { 2, DECR_BOTH },
+		[TM_SHAPER_YELLOW] = { 2, DECR_BOTH },
+		[TM_SHAPER_RED] = { 2, DELAY_PKT } },
 	[3] = {
-		[ODP_TM_SHAPER_GREEN] = { 3, DECR_BOTH },
-		[ODP_TM_SHAPER_YELLOW] = { 3, DECR_BOTH },
-		[ODP_TM_SHAPER_RED] = { 3, DELAY_PKT } },
+		[TM_SHAPER_GREEN] = { 3, DECR_BOTH },
+		[TM_SHAPER_YELLOW] = { 3, DECR_BOTH },
+		[TM_SHAPER_RED] = { 3, DELAY_PKT } },
 	[4] = {
-		[ODP_TM_SHAPER_GREEN] = { 4, DECR_BOTH },
-		[ODP_TM_SHAPER_YELLOW] = { 4, DECR_BOTH },
-		[ODP_TM_SHAPER_RED] = { 4, DELAY_PKT } },
+		[TM_SHAPER_GREEN] = { 4, DECR_BOTH },
+		[TM_SHAPER_YELLOW] = { 4, DECR_BOTH },
+		[TM_SHAPER_RED] = { 4, DELAY_PKT } },
 	[5] = {
-		[ODP_TM_SHAPER_GREEN] = { 5, DECR_BOTH },
-		[ODP_TM_SHAPER_YELLOW] = { 5, DECR_BOTH },
-		[ODP_TM_SHAPER_RED] = { 5, DELAY_PKT } },
+		[TM_SHAPER_GREEN] = { 5, DECR_BOTH },
+		[TM_SHAPER_YELLOW] = { 5, DECR_BOTH },
+		[TM_SHAPER_RED] = { 5, DELAY_PKT } },
 	[6] = {
-		[ODP_TM_SHAPER_GREEN] = { 6, DECR_BOTH },
-		[ODP_TM_SHAPER_YELLOW] = { 6, DECR_BOTH },
-		[ODP_TM_SHAPER_RED] = { 6, DELAY_PKT } },
+		[TM_SHAPER_GREEN] = { 6, DECR_BOTH },
+		[TM_SHAPER_YELLOW] = { 6, DECR_BOTH },
+		[TM_SHAPER_RED] = { 6, DELAY_PKT } },
 	[7] = {
-		[ODP_TM_SHAPER_GREEN] = { 7, DECR_BOTH },
-		[ODP_TM_SHAPER_YELLOW] = { 7, DECR_BOTH },
-		[ODP_TM_SHAPER_RED] = { 7, DELAY_PKT } }
+		[TM_SHAPER_GREEN] = { 7, DECR_BOTH },
+		[TM_SHAPER_YELLOW] = { 7, DECR_BOTH },
+		[TM_SHAPER_RED] = { 7, DELAY_PKT } }
 };
 
 #define MAX_SHAPER_PROFILES 128
@@ -1076,30 +1091,30 @@ static odp_bool_t run_shaper(tm_system_t     *tm_system,
 			     pkt_desc_t      *pkt_desc,
 			     uint8_t          priority)
 {
-	odp_tm_shaper_color_t shaper_color;
+	tm_shaper_color_t shaper_color;
 	tm_shaper_params_t *shaper_params;
 	odp_bool_t output_change;
 	tm_prop_t propagation;
 
 	shaper_params = shaper_obj->shaper_params;
-	shaper_color  = ODP_TM_SHAPER_GREEN;
+	shaper_color  = TM_SHAPER_GREEN;
 
 	if (shaper_params) {
 		update_shaper_elapsed_time(tm_system, shaper_params,
 					   shaper_obj);
 		if (shaper_params->enabled) {
 			if (0 < shaper_obj->commit_cnt)
-				shaper_color = ODP_TM_SHAPER_GREEN;
+				shaper_color = TM_SHAPER_GREEN;
 			else if (!shaper_params->dual_rate)
-				shaper_color = ODP_TM_SHAPER_RED;
+				shaper_color = TM_SHAPER_RED;
 			else if (shaper_obj->peak_cnt <= 0)
-				shaper_color = ODP_TM_SHAPER_RED;
+				shaper_color = TM_SHAPER_RED;
 			else
-				shaper_color = ODP_TM_SHAPER_YELLOW;
+				shaper_color = TM_SHAPER_YELLOW;
 
-			if (shaper_color == ODP_TM_SHAPER_GREEN)
+			if (shaper_color == TM_SHAPER_GREEN)
 				tm_system->shaper_green_cnt++;
-			else if (shaper_color == ODP_TM_SHAPER_YELLOW)
+			else if (shaper_color == TM_SHAPER_YELLOW)
 				tm_system->shaper_yellow_cnt++;
 			else
 				tm_system->shaper_red_cnt++;
