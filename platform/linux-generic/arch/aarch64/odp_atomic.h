@@ -12,6 +12,7 @@
 #error This file should not be included directly, please include odp_cpu.h
 #endif
 
+#include <odp_types_internal.h>
 #include <limits.h>
 
 #ifdef CONFIG_DMBSTR
@@ -223,16 +224,14 @@ static inline __int128 __lockfree_load_16(__int128 *var, int mo)
 	return old;
 }
 
-__extension__ typedef unsigned __int128 _u128_t;
-
-static inline _u128_t lockfree_load_u128(_u128_t *atomic)
+static inline _odp_u128_t lockfree_load_u128(_odp_u128_t *atomic)
 {
 	return __lockfree_load_16((__int128 *)atomic, __ATOMIC_RELAXED);
 }
 
-static inline int lockfree_cas_acq_rel_u128(_u128_t *atomic,
-					    _u128_t old_val,
-					    _u128_t new_val)
+static inline int lockfree_cas_acq_rel_u128(_odp_u128_t *atomic,
+					    _odp_u128_t old_val,
+					    _odp_u128_t new_val)
 {
 	return __lockfree_compare_exchange_16((__int128 *)atomic,
 					      (__int128 *)&old_val,
@@ -249,7 +248,7 @@ static inline int lockfree_check_u128(void)
 
 /** Atomic bit set operations with memory ordering */
 #if defined(__SIZEOF_INT128__) && __SIZEOF_INT128__ == 16
-typedef __int128 bitset_t;
+typedef _odp_u128_t bitset_t;
 #define ATOM_BITSET_SIZE (CHAR_BIT * __SIZEOF_INT128__)
 
 #elif __GCC_ATOMIC_LLONG_LOCK_FREE == 2 && \

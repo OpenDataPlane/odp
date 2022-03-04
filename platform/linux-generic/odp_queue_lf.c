@@ -13,6 +13,7 @@
 #include <odp_debug_internal.h>
 #include <odp_event_internal.h>
 #include <odp_queue_basic_internal.h>
+#include <odp_types_internal.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -24,9 +25,7 @@
 
 #ifdef __SIZEOF_INT128__
 
-__extension__ typedef unsigned __int128 u128_t;
-
-static inline void lockfree_zero_u128(u128_t *atomic)
+static inline void lockfree_zero_u128(_odp_u128_t *atomic)
 {
 	__atomic_store_n(atomic, 0, __ATOMIC_RELAXED);
 }
@@ -40,21 +39,21 @@ static inline void lockfree_zero_u128(u128_t *atomic)
  * So, these are never actually used. */
 typedef struct ODP_ALIGNED(16) {
 	uint64_t u64[2];
-} u128_t;
+} _odp_u128_t;
 
-static inline u128_t lockfree_load_u128(u128_t *atomic)
+static inline _odp_u128_t lockfree_load_u128(_odp_u128_t *atomic)
 {
 	return *atomic;
 }
 
-static inline void lockfree_zero_u128(u128_t *atomic)
+static inline void lockfree_zero_u128(_odp_u128_t *atomic)
 {
 	atomic->u64[0] = 0;
 	atomic->u64[1] = 0;
 }
 
-static inline int lockfree_cas_acq_rel_u128(u128_t *atomic, u128_t old_val,
-					    u128_t new_val)
+static inline int lockfree_cas_acq_rel_u128(_odp_u128_t *atomic, _odp_u128_t old_val,
+					    _odp_u128_t new_val)
 {
 	if (atomic->u64[0] == old_val.u64[0] &&
 	    atomic->u64[1] == old_val.u64[1]) {
@@ -75,7 +74,7 @@ static inline int lockfree_check_u128(void)
 
 /* Node in lock-free ring */
 typedef union {
-	u128_t u128;
+	_odp_u128_t u128;
 
 	struct {
 		/* Data with lowest counter value is the head. Empty node has
