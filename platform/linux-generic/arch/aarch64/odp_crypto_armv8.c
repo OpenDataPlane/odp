@@ -81,9 +81,11 @@ static const odp_crypto_cipher_capability_t cipher_capa_aes_gcm[] = {
 static const odp_crypto_auth_capability_t auth_capa_null[] = {
 {.digest_len = 0, .key_len = 0, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
 
+#define AES_GCM_TAG_LEN 16
+
 #ifdef __ARM_FEATURE_AES
 static const odp_crypto_auth_capability_t auth_capa_aes_gcm[] = {
-{.digest_len = 16, .key_len = 0, .aad_len = {.min = 8, .max = 12, .inc = 4} } };
+{.digest_len = AES_GCM_TAG_LEN, .key_len = 0, .aad_len = {.min = 8, .max = 12, .inc = 4} } };
 #endif
 
 /** Forward declaration of session structure */
@@ -142,7 +144,6 @@ static odp_crypto_global_t *global;
 
 typedef struct crypto_local_t {
 	uint8_t buffer[ARM_CRYPTO_MAX_DATA_LENGTH];
-	uint8_t digest[ARM_CRYPTO_MAX_DIGEST_LENGTH];
 } crypto_local_t;
 
 static __thread crypto_local_t local;
@@ -215,6 +216,7 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
 	int ret = 0;
 	odp_bool_t continuous_data;
 	uint16_t saved_tail[OOB_WRITE_LEN];
+	uint8_t tag[AES_GCM_TAG_LEN];
 
 	/* Fail early if cipher_range is too large */
 	if (in_len > ARM_CRYPTO_MAX_DATA_LENGTH) {
@@ -271,18 +273,21 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
 					 aad, aad_bit_length,
 					 data, plaintext_bit_length,
 					 data,
-					 local.digest) != 0) {
+					 tag) != 0) {
 		ODP_DBG("ARM Crypto: AES GCM Encoding failed\n");
 		ret = -1;
 		goto err;
 	}
 
-	if (odp_likely(continuous_data))
+	if (odp_likely(continuous_data)) {
 		memcpy(data + in_len, saved_tail, OOB_WRITE_LEN);
-	else
+		memcpy(data - in_pos + param->hash_result_offset,
+		       tag, AES_GCM_TAG_LEN);
+	} else {
 		odp_packet_copy_from_mem(pkt, in_pos, in_len, data);
-	odp_packet_copy_from_mem(pkt, param->hash_result_offset,
-				 session->p.auth_digest_len, local.digest);
+		odp_packet_copy_from_mem(pkt, param->hash_result_offset,
+					 AES_GCM_TAG_LEN, tag);
+	}
 
 err:
 	return ret < 0 ? ODP_CRYPTO_ALG_ERR_DATA_SIZE :
@@ -300,7 +305,7 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
 		}
 	};
 	uint8_t *iv_ptr;
-	uint8_t tag[16];
+	uint8_t tag[AES_GCM_TAG_LEN];
 	uint64_t iv_bit_length = session->p.cipher_iv_len * 8;
 	uint64_t plaintext_bit_length = param->cipher_range.length * 8;
 	uint64_t aad_bit_length = session->p.auth_aad_len * 8;
@@ -337,10 +342,6 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
 		goto err;
 	}
 
-	/* Copy current hash bytes to a buffer and clear it */
-	odp_packet_copy_to_mem(pkt, param->hash_result_offset,
-			       session->p.auth_digest_len, tag);
-
 	/* Copy AAD in a stack to make sure that the ARM crypto library can
 	 * read it in 16 byte chunks. */
 	uint8_t aad[ARM_CRYPTO_MAX_AAD_LENGTH];
@@ -356,12 +357,16 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
 		 * beyond the end of packet data. Copy the cipher range to a
 		 * contiguous buffer. */
 		odp_packet_copy_to_mem(pkt, in_pos, in_len, local.buffer);
-
 		data = local.buffer;
+		/* Copy tag from the packet to a buffer */
+		odp_packet_copy_to_mem(pkt, param->hash_result_offset,
+				       AES_GCM_TAG_LEN, tag);
 		continuous_data = false;
 	} else {
 		/* Save data that might get overwritten */
 		memcpy(saved_tail, data + in_len, OOB_WRITE_LEN);
+		/* Copy tag from the packet to a buffer */
+		memcpy(tag, data - in_pos + param->hash_result_offset, AES_GCM_TAG_LEN);
 		continuous_data = true;
 	}
 
