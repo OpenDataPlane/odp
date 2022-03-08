@@ -1754,7 +1754,11 @@ typedef struct {
 	/** The threshold profile to be used in setting the max queue fullness
 	 * for WRED and/or tail drop. Can be ODP_TM_INVALID and can also be set
 	 * and changed post-creation via odp_tm_queue_threshold_config(). The
-	 * default value is ODP_TM_INVALID. */
+	 * default value is ODP_TM_INVALID.
+	 *
+	 * One can specify the maximum queue limits either as a maximum number
+	 * of packets in the queue or as a maximum number of bytes in the queue,
+	 * or if both are specified, then whichever limit is hit first. */
 	odp_tm_threshold_t threshold_profile;
 
 	/** The WRED profile(s) to be associated with this tm_queue.  Any or
@@ -1785,13 +1789,11 @@ typedef struct {
  */
 void odp_tm_queue_params_init(odp_tm_queue_params_t *params);
 
-/** Create an tm_queue object.  One can specify the maximum queue limits
- * either as a maximum number of packets in the queue OR as a maximum number
- * of bytes in the queue, or if both are specified, then whichever limit is
- * hit first.  Note that in the case of specifying the maximum queue memory
- * size as bytes, the system is free to instead convert this byte value into a
- * number of buffers and instead limit the queue memory usage by buffer counts
- * versus strictly using byte counts.
+/**
+ * TM queue create
+ *
+ * Create a TM queue according to the queue parameters. Use
+ * odp_tm_queue_params_init() to initialize parameters into their default values.
  *
  * @param tm      Handle of the TM system into which this odp_tm_queue object is
  *                created.
