@@ -8,11 +8,6 @@
 #include <odp/api/packet_flags.h>
 #include <odp_packet_internal.h>
 
-#define retflag(pkt, x) do {                             \
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt); \
-	return pkt_hdr->p.x;                             \
-	} while (0)
-
 #define setflag(pkt, x, v) do {                          \
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt); \
 	pkt_hdr->p.x = (v) & 1;				 \
@@ -47,11 +42,6 @@ int odp_packet_has_l4_error(odp_packet_t pkt)
 	return pkt_hdr->p.flags.tcp_err | pkt_hdr->p.flags.udp_err;
 }
 
-odp_packet_color_t odp_packet_color(odp_packet_t pkt)
-{
-	retflag(pkt, input_flags.color);
-}
-
 void odp_packet_color_set(odp_packet_t pkt, odp_packet_color_t color)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
@@ -59,21 +49,9 @@ void odp_packet_color_set(odp_packet_t pkt, odp_packet_color_t color)
 	pkt_hdr->p.input_flags.color = color;
 }
 
-odp_bool_t odp_packet_drop_eligible(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	return !pkt_hdr->p.input_flags.nodrop;
-}
-
 void odp_packet_drop_eligible_set(odp_packet_t pkt, odp_bool_t drop)
 {
 	setflag(pkt, input_flags.nodrop, !drop);
-}
-
-int8_t odp_packet_shaper_len_adjust(odp_packet_t pkt)
-{
-	retflag(pkt, flags.shaper_len_adj);
 }
 
 void odp_packet_shaper_len_adjust_set(odp_packet_t pkt, int8_t adj)

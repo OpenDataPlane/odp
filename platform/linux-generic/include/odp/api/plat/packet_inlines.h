@@ -73,6 +73,9 @@
 	#define odp_packet_subtype __odp_packet_subtype
 	#define odp_packet_tx_compl_from_event __odp_packet_tx_compl_from_event
 	#define odp_packet_tx_compl_to_event __odp_packet_tx_compl_to_event
+	#define odp_packet_color __odp_packet_color
+	#define odp_packet_drop_eligible __odp_packet_drop_eligible
+	#define odp_packet_shaper_len_adjust __odp_packet_shaper_len_adjust
 #else
 	#undef _ODP_INLINE
 	#define _ODP_INLINE
@@ -370,6 +373,33 @@ _ODP_INLINE odp_packet_tx_compl_t odp_packet_tx_compl_from_event(odp_event_t ev)
 _ODP_INLINE odp_event_t odp_packet_tx_compl_to_event(odp_packet_tx_compl_t tx_compl)
 {
 	return (odp_event_t)(uintptr_t)tx_compl;
+}
+
+_ODP_INLINE odp_packet_color_t odp_packet_color(odp_packet_t pkt)
+{
+	_odp_packet_input_flags_t input_flags;
+
+	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+
+	return (odp_packet_color_t)input_flags.color;
+}
+
+_ODP_INLINE odp_bool_t odp_packet_drop_eligible(odp_packet_t pkt)
+{
+	_odp_packet_input_flags_t input_flags;
+
+	input_flags.all = _odp_pkt_get(pkt, uint64_t, input_flags);
+
+	return !input_flags.nodrop;
+}
+
+_ODP_INLINE int8_t odp_packet_shaper_len_adjust(odp_packet_t pkt)
+{
+	_odp_packet_flags_t flags;
+
+	flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
+
+	return flags.shaper_len_adj;
 }
 
 /** @endcond */
