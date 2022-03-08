@@ -13,35 +13,6 @@
 	pkt_hdr->p.x = (v) & 1;				 \
 	} while (0)
 
-int odp_packet_has_error(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	return pkt_hdr->p.flags.all.error != 0;
-}
-
-int odp_packet_has_l2_error(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-	/* L2 parsing is always done by default and hence
-	no additional check is required */
-	return pkt_hdr->p.flags.snap_len_err;
-}
-
-int odp_packet_has_l3_error(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	return pkt_hdr->p.flags.ip_err;
-}
-
-int odp_packet_has_l4_error(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	return pkt_hdr->p.flags.tcp_err | pkt_hdr->p.flags.udp_err;
-}
-
 void odp_packet_color_set(odp_packet_t pkt, odp_packet_color_t color)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
