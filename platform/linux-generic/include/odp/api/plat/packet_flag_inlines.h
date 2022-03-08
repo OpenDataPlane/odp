@@ -53,6 +53,10 @@ static inline uint64_t _odp_packet_input_flags(odp_packet_t pkt)
 	#define odp_packet_has_tcp __odp_packet_has_tcp
 	#define odp_packet_has_sctp __odp_packet_has_sctp
 	#define odp_packet_has_icmp __odp_packet_has_icmp
+	#define odp_packet_has_error __odp_packet_has_error
+	#define odp_packet_has_l2_error __odp_packet_has_l2_error
+	#define odp_packet_has_l3_error __odp_packet_has_l3_error
+	#define odp_packet_has_l4_error __odp_packet_has_l4_error
 #else
 	#undef _ODP_INLINE
 	#define _ODP_INLINE
@@ -240,6 +244,43 @@ _ODP_INLINE int odp_packet_has_icmp(odp_packet_t pkt)
 
 	flags.all = _odp_packet_input_flags(pkt);
 	return flags.icmp;
+}
+
+_ODP_INLINE int odp_packet_has_error(odp_packet_t pkt)
+{
+	_odp_packet_flags_t flags;
+
+	flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
+	return flags.all.error != 0;
+}
+
+_ODP_INLINE int odp_packet_has_l2_error(odp_packet_t pkt)
+{
+	_odp_packet_flags_t flags;
+
+	flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
+
+	/* L2 parsing is always done by default and hence
+	no additional check is required. */
+	return flags.snap_len_err;
+}
+
+_ODP_INLINE int odp_packet_has_l3_error(odp_packet_t pkt)
+{
+	_odp_packet_flags_t flags;
+
+	flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
+
+	return flags.ip_err;
+}
+
+_ODP_INLINE int odp_packet_has_l4_error(odp_packet_t pkt)
+{
+	_odp_packet_flags_t flags;
+
+	flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
+
+	return flags.tcp_err | flags.udp_err;
 }
 
 /** @endcond */
