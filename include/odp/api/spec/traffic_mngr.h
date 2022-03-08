@@ -339,9 +339,19 @@ typedef struct {
 	 * the legal range of such weights. */
 	odp_bool_t weights_supported;
 
-	/** tm_node_threshold indicates that the tm_nodes at this
-	 * level support threshold profiles. */
-	odp_bool_t tm_node_threshold;
+	/** TM node threshold profile support */
+	struct {
+		/** Threshold given as bytes */
+		uint8_t byte            : 1;
+
+		/** Threshold given as packets */
+		uint8_t packet          : 1;
+
+		/** Threshold given as bytes and packets simultaneously */
+		uint8_t byte_and_packet : 1;
+
+	} tm_node_threshold;
+
 } odp_tm_level_capabilities_t;
 
 /** The tm_pkt_prio_mode_t enumeration type is used to indicate different
