@@ -1,5 +1,6 @@
 /* Copyright (c) 2014-2018, Linaro Limited
  * Copyright (c) 2021, ARM Limited
+ * Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -37,9 +38,9 @@
 
 /*
  * ARM crypto library may read up to 15 bytes past the end of input
- * data and AAD.
+ * data and AAD and write up to 15 bytes past the end of output data.
  */
-#define OOB_READ_LEN 15
+#define OOB_WRITE_LEN 16 /* rounded up to 16 bytes for efficiency */
 
 /*
  * Data buffer size must be a multiple of 16, because the ARM crypto
@@ -201,6 +202,8 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
 	uint32_t in_pos = param->cipher_range.offset;
 	uint32_t in_len = param->cipher_range.length;
 	int ret = 0;
+	odp_bool_t continuous_data;
+	uint16_t saved_tail[OOB_WRITE_LEN];
 
 	/* Fail early if cipher_range is too large */
 	if (in_len > ARM_CRYPTO_MAX_DATA_LENGTH) {
@@ -239,28 +242,34 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
 	uint8_t *data = odp_packet_offset(pkt, in_pos, &seg_len, NULL);
 
 	if (odp_unlikely(odp_packet_is_segmented(pkt)) ||
-	    odp_unlikely(odp_packet_tailroom(pkt) < OOB_READ_LEN)) {
-		/* Packet is segmented or it may not be safe to read beyond
-		 * the end of packet data. Copy the cipher range to a
+	    odp_unlikely(odp_packet_tailroom(pkt) < OOB_WRITE_LEN)) {
+		/* Packet is segmented or it may not be safe to read and write
+		 * beyond the end of packet data. Copy the cipher range to a
 		 * contiguous buffer. */
 		odp_packet_copy_to_mem(pkt, in_pos, in_len, local.buffer);
 
 		data = local.buffer;
+		continuous_data = false;
+	} else {
+		/* Save data that might get overwritten */
+		memcpy(saved_tail, data + in_len, OOB_WRITE_LEN);
+		continuous_data = true;
 	}
 
 	if (armv8_enc_aes_gcm_from_state(&cs,
 					 aad, aad_bit_length,
 					 data, plaintext_bit_length,
-					 local.buffer,
+					 data,
 					 local.digest) != 0) {
 		ODP_DBG("ARM Crypto: AES GCM Encoding failed\n");
 		ret = -1;
 		goto err;
 	}
 
-	odp_packet_copy_from_mem(pkt, param->cipher_range.offset,
-				 param->cipher_range.length, local.buffer);
-
+	if (odp_likely(continuous_data))
+		memcpy(data + in_len, saved_tail, OOB_WRITE_LEN);
+	else
+		odp_packet_copy_from_mem(pkt, in_pos, in_len, data);
 	odp_packet_copy_from_mem(pkt, param->hash_result_offset,
 				 session->p.auth_digest_len, local.digest);
 
@@ -287,6 +296,8 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
 	uint32_t in_pos = param->cipher_range.offset;
 	uint32_t in_len = param->cipher_range.length;
 	int ret = 0;
+	odp_bool_t continuous_data;
+	uint16_t saved_tail[OOB_WRITE_LEN];
 
 	/* Fail early if cipher_range is too large */
 	if (in_len > ARM_CRYPTO_MAX_DATA_LENGTH) {
@@ -329,27 +340,34 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
 	uint8_t *data = odp_packet_offset(pkt, in_pos, &seg_len, NULL);
 
 	if (odp_unlikely(odp_packet_is_segmented(pkt)) ||
-	    odp_unlikely(odp_packet_tailroom(pkt) < OOB_READ_LEN)) {
-		/* Packet is segmented or it may not be safe to read beyond
-		 * the end of packet data. Copy the cipher range to a
+	    odp_unlikely(odp_packet_tailroom(pkt) < OOB_WRITE_LEN)) {
+		/* Packet is segmented or it may not be safe to read and write
+		 * beyond the end of packet data. Copy the cipher range to a
 		 * contiguous buffer. */
 		odp_packet_copy_to_mem(pkt, in_pos, in_len, local.buffer);
 
 		data = local.buffer;
+		continuous_data = false;
+	} else {
+		/* Save data that might get overwritten */
+		memcpy(saved_tail, data + in_len, OOB_WRITE_LEN);
+		continuous_data = true;
 	}
 
 	if (armv8_dec_aes_gcm_from_state(&cs,
 					 aad, aad_bit_length,
 					 data, plaintext_bit_length,
 					 tag,
-					 local.buffer) != 0) {
+					 data) != 0) {
 		ODP_DBG("ARM Crypto: AES GCM Decoding failed\n");
 		ret = -1;
 		goto err;
 	}
 
-	odp_packet_copy_from_mem(pkt, param->cipher_range.offset,
-				 param->cipher_range.length, local.buffer);
+	if (odp_likely(continuous_data))
+		memcpy(data + in_len, saved_tail, OOB_WRITE_LEN);
+	else
+		odp_packet_copy_from_mem(pkt, in_pos, in_len, data);
 
 err:
 	return ret < 0 ? ODP_CRYPTO_ALG_ERR_ICV_CHECK :
