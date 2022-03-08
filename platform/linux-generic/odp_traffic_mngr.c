@@ -2652,7 +2652,10 @@ static int tm_capabilities(odp_tm_capabilities_t capabilities[],
 		per_level_cap->tm_node_dual_slope_supported = true;
 		per_level_cap->fair_queuing_supported       = true;
 		per_level_cap->weights_supported            = true;
-		per_level_cap->tm_node_threshold            = true;
+
+		per_level_cap->tm_node_threshold.byte = true;
+		per_level_cap->tm_node_threshold.packet = true;
+		per_level_cap->tm_node_threshold.byte_and_packet = true;
 	}
 
 	cap_ptr->queue_stats.counter.discards = 1;
@@ -2782,7 +2785,10 @@ static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
 		per_level_cap->tm_node_dual_slope_supported = dual_slope;
 		per_level_cap->fair_queuing_supported       = true;
 		per_level_cap->weights_supported            = true;
-		per_level_cap->tm_node_threshold            = threshold;
+
+		per_level_cap->tm_node_threshold.byte = threshold;
+		per_level_cap->tm_node_threshold.packet = threshold;
+		per_level_cap->tm_node_threshold.byte_and_packet = threshold;
 	}
 
 	cap_ptr->queue_stats.counter.discards = 1;

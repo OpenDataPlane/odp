@@ -1831,7 +1831,9 @@ set_reqs_based_on_capas(odp_tm_requirements_t *req)
 		req->tm_queue_threshold_needed = true;
 
 	for (j = 0; j < tm_capabilities.max_levels; j++) {
-		if (tm_capabilities.per_level[j].tm_node_threshold)
+		if (tm_capabilities.per_level[j].tm_node_threshold.byte ||
+		    tm_capabilities.per_level[j].tm_node_threshold.packet ||
+		    tm_capabilities.per_level[j].tm_node_threshold.byte_and_packet)
 			req->per_level[j].tm_node_threshold_needed = true;
 	}
 
