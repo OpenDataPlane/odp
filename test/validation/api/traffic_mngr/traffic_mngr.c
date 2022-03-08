@@ -1825,7 +1825,9 @@ set_reqs_based_on_capas(odp_tm_requirements_t *req)
 		req->tm_queue_dual_slope_needed = true;
 	if (tm_capabilities.vlan_marking_supported)
 		req->vlan_marking_needed = true;
-	if (tm_capabilities.tm_queue_threshold)
+	if (tm_capabilities.tm_queue_threshold.byte ||
+	    tm_capabilities.tm_queue_threshold.packet ||
+	    tm_capabilities.tm_queue_threshold.byte_and_packet)
 		req->tm_queue_threshold_needed = true;
 
 	for (j = 0; j < tm_capabilities.max_levels; j++) {
@@ -4561,10 +4563,9 @@ static void traffic_mngr_test_scheduler(void)
 
 static int traffic_mngr_check_thresholds(void)
 {
-	/* Check only for tm queue threshold support as
-	 * we only test queue threshold.
-	 */
-	if (!tm_capabilities.tm_queue_threshold)
+	/* Check only for TM queue threshold support as we only test queue
+	 * threshold. */
+	if (!tm_capabilities.tm_queue_threshold.byte_and_packet)
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
@@ -4659,7 +4660,8 @@ static int traffic_mngr_check_wred(void)
 static int traffic_mngr_check_byte_wred(void)
 {
 	/* Check if wred is part of created odp_tm_t capabilities */
-	if (!tm_capabilities.tm_queue_wred_supported)
+	if (!tm_capabilities.tm_queue_wred_supported ||
+	    !tm_capabilities.tm_queue_threshold.byte)
 		return ODP_TEST_INACTIVE;
 
 	if ((tm_shaper_min_rate > 64 * 1000) ||
@@ -4673,7 +4675,8 @@ static int traffic_mngr_check_byte_wred(void)
 static int traffic_mngr_check_pkt_wred(void)
 {
 	/* Check if wred is part of created odp_tm_t capabilities */
-	if (!tm_capabilities.tm_queue_wred_supported)
+	if (!tm_capabilities.tm_queue_wred_supported ||
+	    !tm_capabilities.tm_queue_threshold.packet)
 		return ODP_TEST_INACTIVE;
 
 	if ((tm_shaper_min_rate > 64 * 1000) ||

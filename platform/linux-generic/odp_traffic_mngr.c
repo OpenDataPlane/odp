@@ -2612,7 +2612,11 @@ static int tm_capabilities(odp_tm_capabilities_t capabilities[],
 	cap_ptr->vlan_marking_supported        = true;
 	cap_ptr->ecn_marking_supported         = true;
 	cap_ptr->drop_prec_marking_supported   = true;
-	cap_ptr->tm_queue_threshold            = true;
+
+	cap_ptr->tm_queue_threshold.byte = true;
+	cap_ptr->tm_queue_threshold.packet = true;
+	cap_ptr->tm_queue_threshold.byte_and_packet = true;
+
 	cap_ptr->tm_queue_query_flags          = (ODP_TM_QUERY_PKT_CNT |
 						  ODP_TM_QUERY_BYTE_CNT |
 						  ODP_TM_QUERY_THRESHOLDS);
@@ -2722,7 +2726,11 @@ static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
 	cap_ptr->ecn_marking_supported         = req_ptr->ecn_marking_needed;
 	cap_ptr->drop_prec_marking_supported   =
 					req_ptr->drop_prec_marking_needed;
-	cap_ptr->tm_queue_threshold            = threshold;
+
+	cap_ptr->tm_queue_threshold.byte = threshold;
+	cap_ptr->tm_queue_threshold.packet = threshold;
+	cap_ptr->tm_queue_threshold.byte_and_packet = threshold;
+
 	cap_ptr->tm_queue_query_flags          = (ODP_TM_QUERY_PKT_CNT |
 						  ODP_TM_QUERY_BYTE_CNT |
 						  ODP_TM_QUERY_THRESHOLDS);
