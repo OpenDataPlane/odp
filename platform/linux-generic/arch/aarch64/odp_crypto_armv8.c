@@ -95,9 +95,9 @@ typedef struct odp_crypto_generic_session_t odp_crypto_generic_session_t;
  * Algorithm handler function prototype
  */
 typedef
-odp_crypto_alg_err_t (*crypto_func_t)(odp_packet_t pkt,
-				      const odp_crypto_packet_op_param_t *param,
-				      odp_crypto_generic_session_t *session);
+odp_bool_t (*crypto_func_t)(odp_packet_t pkt,
+			    const odp_crypto_packet_op_param_t *param,
+			    odp_crypto_generic_session_t *session);
 
 /**
  * Per crypto session data structure
@@ -108,15 +108,12 @@ struct odp_crypto_generic_session_t {
 	/* Session creation parameters */
 	odp_crypto_session_param_t p;
 
-	odp_bool_t do_cipher_first;
-
 	struct {
 #if ODP_DEPRECATED_API
 		/* Copy of session IV data */
 		uint8_t iv_data[ARM_CRYPTO_MAX_IV_LENGTH];
 #endif
 		uint8_t key_data[ARM_CRYPTO_MAX_CIPHER_KEY_LENGTH];
-		crypto_func_t func;
 	} cipher;
 
 	struct {
@@ -124,11 +121,10 @@ struct odp_crypto_generic_session_t {
 #if ODP_DEPRECATED_API
 		uint8_t  iv_data[ARM_CRYPTO_MAX_IV_LENGTH];
 #endif
-		crypto_func_t func;
 	} auth;
 
+	crypto_func_t func;
 	unsigned int idx;
-
 	armv8_cipher_constants_t cc;
 };
 
@@ -178,12 +174,43 @@ void free_session(odp_crypto_generic_session_t *session)
 	odp_spinlock_unlock(&global->lock);
 }
 
-static odp_crypto_alg_err_t
+static
+odp_crypto_packet_result_t *get_op_result_from_packet(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *hdr = packet_hdr(pkt);
+
+	return &hdr->crypto_op_result;
+}
+
+static inline void set_crypto_op_result(odp_packet_t pkt,
+					odp_crypto_alg_err_t cipher_err,
+					odp_crypto_alg_err_t auth_err)
+{
+	odp_crypto_packet_result_t *op_result;
+
+	op_result = get_op_result_from_packet(pkt);
+	op_result->cipher_status.alg_err = cipher_err;
+	op_result->cipher_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
+	op_result->auth_status.alg_err = auth_err;
+	op_result->auth_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
+	op_result->ok = (cipher_err == ODP_CRYPTO_ALG_ERR_NONE &&
+			 auth_err   == ODP_CRYPTO_ALG_ERR_NONE);
+}
+
+static inline void set_crypto_op_result_ok(odp_packet_t pkt)
+{
+	set_crypto_op_result(pkt,
+			     ODP_CRYPTO_ALG_ERR_NONE,
+			     ODP_CRYPTO_ALG_ERR_NONE);
+}
+
+static odp_bool_t
 null_crypto_routine(odp_packet_t pkt ODP_UNUSED,
 		    const odp_crypto_packet_op_param_t *param ODP_UNUSED,
 		    odp_crypto_generic_session_t *session ODP_UNUSED)
 {
-	return ODP_CRYPTO_ALG_ERR_NONE;
+	set_crypto_op_result_ok(pkt);
+	return true;
 }
 
 static inline void copy_aad(uint8_t *dst, uint8_t *src, uint32_t len)
@@ -198,9 +225,9 @@ static inline void copy_aad(uint8_t *dst, uint8_t *src, uint32_t len)
 }
 
 static
-odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
-				     const odp_crypto_packet_op_param_t *param,
-				     odp_crypto_generic_session_t *session)
+odp_bool_t aes_gcm_encrypt(odp_packet_t pkt,
+			   const odp_crypto_packet_op_param_t *param,
+			   odp_crypto_generic_session_t *session)
 {
 	armv8_cipher_state_t cs = {
 		.counter = {
@@ -213,15 +240,14 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
 	uint64_t aad_bit_length = session->p.auth_aad_len * 8;
 	uint32_t in_pos = param->cipher_range.offset;
 	uint32_t in_len = param->cipher_range.length;
-	int ret = 0;
 	odp_bool_t continuous_data;
 	uint16_t saved_tail[OOB_WRITE_LEN];
 	uint8_t tag[AES_GCM_TAG_LEN];
+	int rc;
 
 	/* Fail early if cipher_range is too large */
-	if (in_len > ARM_CRYPTO_MAX_DATA_LENGTH) {
+	if (odp_unlikely(in_len > ARM_CRYPTO_MAX_DATA_LENGTH)) {
 		ODP_DBG("ARM Crypto: Packet size too large for requested operation\n");
-		ret = -1;
 		goto err;
 	}
 
@@ -239,9 +265,9 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
 
 	cs.constants = &session->cc;
 
-	if (armv8_aes_gcm_set_counter(iv_ptr, iv_bit_length, &cs) != 0) {
+	rc = armv8_aes_gcm_set_counter(iv_ptr, iv_bit_length, &cs);
+	if (odp_unlikely(rc)) {
 		ODP_DBG("ARM Crypto: Failure while setting nonce\n");
-		ret = -1;
 		goto err;
 	}
 
@@ -269,13 +295,13 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
 		continuous_data = true;
 	}
 
-	if (armv8_enc_aes_gcm_from_state(&cs,
-					 aad, aad_bit_length,
-					 data, plaintext_bit_length,
-					 data,
-					 tag) != 0) {
+	rc = armv8_enc_aes_gcm_from_state(&cs,
+					  aad, aad_bit_length,
+					  data, plaintext_bit_length,
+					  data,
+					  tag);
+	if (odp_unlikely(rc)) {
 		ODP_DBG("ARM Crypto: AES GCM Encoding failed\n");
-		ret = -1;
 		goto err;
 	}
 
@@ -289,15 +315,20 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
 					 AES_GCM_TAG_LEN, tag);
 	}
 
+	set_crypto_op_result_ok(pkt);
+	return true;
+
 err:
-	return ret < 0 ? ODP_CRYPTO_ALG_ERR_DATA_SIZE :
-			 ODP_CRYPTO_ALG_ERR_NONE;
+	set_crypto_op_result(pkt,
+			     ODP_CRYPTO_ALG_ERR_DATA_SIZE,
+			     ODP_CRYPTO_ALG_ERR_NONE);
+	return false;
 }
 
 static
-odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
-				     const odp_crypto_packet_op_param_t *param,
-				     odp_crypto_generic_session_t *session)
+odp_bool_t aes_gcm_decrypt(odp_packet_t pkt,
+			   const odp_crypto_packet_op_param_t *param,
+			   odp_crypto_generic_session_t *session)
 {
 	armv8_cipher_state_t cs = {
 		.counter = {
@@ -311,14 +342,13 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
 	uint64_t aad_bit_length = session->p.auth_aad_len * 8;
 	uint32_t in_pos = param->cipher_range.offset;
 	uint32_t in_len = param->cipher_range.length;
-	int ret = 0;
 	odp_bool_t continuous_data;
 	uint16_t saved_tail[OOB_WRITE_LEN];
+	int rc;
 
 	/* Fail early if cipher_range is too large */
-	if (in_len > ARM_CRYPTO_MAX_DATA_LENGTH) {
+	if (odp_unlikely(in_len > ARM_CRYPTO_MAX_DATA_LENGTH)) {
 		ODP_DBG("ARM Crypto: Packet size too large for requested operation\n");
-		ret = -1;
 		goto err;
 	}
 
@@ -336,9 +366,9 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
 
 	cs.constants = &session->cc;
 
-	if (armv8_aes_gcm_set_counter(iv_ptr, iv_bit_length, &cs) != 0) {
+	rc = armv8_aes_gcm_set_counter(iv_ptr, iv_bit_length, &cs);
+	if (odp_unlikely(rc)) {
 		ODP_DBG("ARM Crypto: Failure while setting nonce\n");
-		ret = -1;
 		goto err;
 	}
 
@@ -370,13 +400,13 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
 		continuous_data = true;
 	}
 
-	if (armv8_dec_aes_gcm_from_state(&cs,
-					 aad, aad_bit_length,
-					 data, plaintext_bit_length,
-					 tag,
-					 data) != 0) {
+	rc = armv8_dec_aes_gcm_from_state(&cs,
+					  aad, aad_bit_length,
+					  data, plaintext_bit_length,
+					  tag,
+					  data);
+	if (odp_unlikely(rc)) {
 		ODP_DBG("ARM Crypto: AES GCM Decoding failed\n");
-		ret = -1;
 		goto err;
 	}
 
@@ -385,9 +415,14 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
 	else
 		odp_packet_copy_from_mem(pkt, in_pos, in_len, data);
 
+	set_crypto_op_result_ok(pkt);
+	return true;
+
 err:
-	return ret < 0 ? ODP_CRYPTO_ALG_ERR_ICV_CHECK :
-			 ODP_CRYPTO_ALG_ERR_NONE;
+	set_crypto_op_result(pkt,
+			     ODP_CRYPTO_ALG_ERR_NONE,
+			     ODP_CRYPTO_ALG_ERR_ICV_CHECK);
+	return false;
 }
 
 static int process_aes_gcm_param(odp_crypto_generic_session_t *session)
@@ -410,9 +445,9 @@ static int process_aes_gcm_param(odp_crypto_generic_session_t *session)
 
 	/* Set function */
 	if (ODP_CRYPTO_OP_ENCODE == session->p.op)
-		session->cipher.func = aes_gcm_encrypt;
+		session->func = aes_gcm_encrypt;
 	else
-		session->cipher.func = aes_gcm_decrypt;
+		session->func = aes_gcm_decrypt;
 
 	return 0;
 }
@@ -554,16 +589,10 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		       session->p.auth_iv.length);
 #endif
 
-	/* Derive order */
-	if (ODP_CRYPTO_OP_ENCODE == param->op)
-		session->do_cipher_first = param->auth_cipher_text;
-	else
-		session->do_cipher_first = !param->auth_cipher_text;
-
 	/* Process based on cipher */
 	switch (param->cipher_alg) {
 	case ODP_CIPHER_ALG_NULL:
-		session->cipher.func = null_crypto_routine;
+		session->func = null_crypto_routine;
 		rc = 0;
 		break;
 	case ODP_CIPHER_ALG_AES_GCM:
@@ -618,14 +647,15 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 	/* Process based on auth */
 	switch (param->auth_alg) {
 	case ODP_AUTH_ALG_NULL:
-		session->auth.func = null_crypto_routine;
-		rc = 0;
+		if (param->cipher_alg == ODP_CIPHER_ALG_NULL)
+			rc = 0;
+		else
+			rc = -1;
 		break;
 	case ODP_AUTH_ALG_AES_GCM:
 		/* AES-GCM requires to do both auth and
 		 * cipher at the same time */
 		if (param->cipher_alg == ODP_CIPHER_ALG_AES_GCM) {
-			session->auth.func = null_crypto_routine;
 			rc = 0;
 		} else {
 			rc = -1;
@@ -862,14 +892,6 @@ odp_event_t odp_crypto_packet_to_event(odp_packet_t pkt)
 	return odp_packet_to_event(pkt);
 }
 
-static
-odp_crypto_packet_result_t *get_op_result_from_packet(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *hdr = packet_hdr(pkt);
-
-	return &hdr->crypto_op_result;
-}
-
 int odp_crypto_result(odp_crypto_packet_result_t *result,
 		      odp_packet_t packet)
 {
@@ -890,18 +912,16 @@ int crypto_int(odp_packet_t pkt_in,
 	       odp_packet_t *pkt_out,
 	       const odp_crypto_packet_op_param_t *param)
 {
-	odp_crypto_alg_err_t rc_cipher = ODP_CRYPTO_ALG_ERR_NONE;
-	odp_crypto_alg_err_t rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
 	odp_crypto_generic_session_t *session;
 	odp_bool_t allocated = false;
 	odp_packet_t out_pkt = *pkt_out;
-	odp_crypto_packet_result_t *op_result;
 	odp_packet_hdr_t *pkt_hdr;
+	odp_bool_t ok;
 
 	session = (odp_crypto_generic_session_t *)(intptr_t)param->session;
 
 	/* Resolve output buffer */
-	if (ODP_PACKET_INVALID == out_pkt &&
+	if (odp_unlikely(ODP_PACKET_INVALID == out_pkt) &&
 	    ODP_POOL_INVALID != session->p.output_pool) {
 		out_pkt = odp_packet_alloc(session->p.output_pool,
 					   odp_packet_len(pkt_in));
@@ -913,7 +933,7 @@ int crypto_int(odp_packet_t pkt_in,
 		return -1;
 	}
 
-	if (pkt_in != out_pkt) {
+	if (odp_unlikely(pkt_in != out_pkt)) {
 		int ret;
 		int md_copy;
 
@@ -937,28 +957,12 @@ int crypto_int(odp_packet_t pkt_in,
 		pkt_in = ODP_PACKET_INVALID;
 	}
 
-	/* Invoke the functions */
-	if (session->do_cipher_first) {
-		rc_cipher = session->cipher.func(out_pkt, param, session);
-		rc_auth = session->auth.func(out_pkt, param, session);
-	} else {
-		rc_auth = session->auth.func(out_pkt, param, session);
-		rc_cipher = session->cipher.func(out_pkt, param, session);
-	}
+	/* Invoke the crypto function */
+	ok = session->func(out_pkt, param, session);
 
-	/* Fill in result */
 	packet_subtype_set(out_pkt, ODP_EVENT_PACKET_CRYPTO);
-	op_result = get_op_result_from_packet(out_pkt);
-	op_result->cipher_status.alg_err = rc_cipher;
-	op_result->cipher_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
-	op_result->auth_status.alg_err = rc_auth;
-	op_result->auth_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
-	op_result->ok =
-		(rc_cipher == ODP_CRYPTO_ALG_ERR_NONE) &&
-		(rc_auth == ODP_CRYPTO_ALG_ERR_NONE);
-
 	pkt_hdr = packet_hdr(out_pkt);
-	pkt_hdr->p.flags.crypto_err = !op_result->ok;
+	pkt_hdr->p.flags.crypto_err = !ok;
 
 	/* Synchronous, simply return results */
 	*pkt_out = out_pkt;
