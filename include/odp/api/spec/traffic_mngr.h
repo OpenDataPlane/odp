@@ -510,11 +510,18 @@ typedef struct {
 	/** TM queue statistics counter capabilities */
 	odp_tm_queue_stats_capability_t queue_stats;
 
-	/** tm_queue_threshold indicates support for threshold profile on a
-	 * TM queue. When TRUE, users can set/clear/update threshold profile
-	 * on a TM queue. When false none of it is supported.
-	 */
-	odp_bool_t tm_queue_threshold;
+	/** TM queue threshold profile support */
+	struct {
+		/** Threshold given as bytes */
+		uint8_t byte            : 1;
+
+		/** Threshold given as packets */
+		uint8_t packet          : 1;
+
+		/** Threshold given as bytes and packets simultaneously */
+		uint8_t byte_and_packet : 1;
+
+	} tm_queue_threshold;
 
 	/** tm_queue_query_flags indicates supported types of TM queue query.
 	 * Types of TM queue query are same as query_flags that are passed to
