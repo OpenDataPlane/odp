@@ -185,6 +185,17 @@ null_crypto_routine(odp_packet_t pkt ODP_UNUSED,
 	return ODP_CRYPTO_ALG_ERR_NONE;
 }
 
+static inline void copy_aad(uint8_t *dst, uint8_t *src, uint32_t len)
+{
+	ODP_ASSERT(len == 8 || len == 12);
+
+	/* Use constant length memcpy for better optimization result */
+	if (len == 8)
+		memcpy(dst, src, 8);
+	else
+		memcpy(dst, src, 12);
+}
+
 static
 odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
 				     const odp_crypto_packet_op_param_t *param,
@@ -236,7 +247,7 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_packet_t pkt,
 	 * read it in 16 byte chunks. */
 	uint8_t aad[ARM_CRYPTO_MAX_AAD_LENGTH];
 
-	memcpy(aad, param->aad_ptr, session->p.auth_aad_len);
+	copy_aad(aad, param->aad_ptr, session->p.auth_aad_len);
 
 	uint32_t seg_len = 0;
 	uint8_t *data = odp_packet_offset(pkt, in_pos, &seg_len, NULL);
@@ -334,7 +345,7 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_packet_t pkt,
 	 * read it in 16 byte chunks. */
 	uint8_t aad[ARM_CRYPTO_MAX_AAD_LENGTH];
 
-	memcpy(aad, param->aad_ptr, session->p.auth_aad_len);
+	copy_aad(aad, param->aad_ptr, session->p.auth_aad_len);
 
 	uint32_t seg_len = 0;
 	uint8_t *data = odp_packet_offset(pkt, in_pos, &seg_len, NULL);
