@@ -1156,8 +1156,8 @@ int odp_tm_shaper_params_read(odp_tm_shaper_t shaper_profile,
 
 /** odp_tm_shaper_params_update() "sets" the current set of values associated
  * with the specified shaper profile object.  In addition, this call has the
- * effect that all tm_input's and tm_nodes that are associated (attached?)
- * with this shaper profile object will be updated with the new values.
+ * effect that all tm_input's and tm_nodes that are associated with this shaper
+ * profile object will be updated with the new values.
  *
  * @param shaper_profile  Specifies the shaper profile object whose
  *                        values are to be set.
@@ -1269,8 +1269,8 @@ int odp_tm_sched_params_read(odp_tm_sched_t sched_profile,
 
 /** odp_tm_sched_params_update() "sets" the current set of values associated
  * with the specified scheduler profile object.  In addition, this call has
- * the effect that all tm_nodes that are associated (attached?) with this
- * Scheduler profile object will be updated with the new values.
+ * the effect that all tm_nodes that are associated with this scheduler profile
+ * object will be updated with the new values.
  *
  * @param sched_profile   Specifies the Scheduler profile object whose
  *                        values are to be set.
@@ -1367,8 +1367,8 @@ int odp_tm_thresholds_params_read(odp_tm_threshold_t threshold_profile,
 /** odp_tm_thresholds_params_update() "sets" the current set of values
  * associated with the specified queue thresholds profile object.  In addition,
  * this call has the effect that all tm_input's and tm_nodes that are
- * associated (attached?) with this queue thresholds profile object will be
- * updated with the new values.
+ * associated with this queue thresholds profile object will be updated with the
+ * new values.
  *
  * @param threshold_profile  Specifies the queue thresholds profile
  *                           object whose values are to be set.
@@ -1504,8 +1504,8 @@ int odp_tm_wred_params_read(odp_tm_wred_t wred_profile,
 
 /** odp_tm_wred_params_update() "sets" the current set of values associated
  * with the specified WRED profile object.  In addition, this call has the
- * effect that all tm_input's and tm_nodes that are associated (attached?)
- * with this WRED profile object will be updated with the new values.
+ * effect that all tm_input's and tm_nodes that are associated with this WRED
+ * profile object will be updated with the new values.
  *
  * @param wred_profile  Specifies the WRED profile object whose
  *                      values are to be set.
@@ -1550,9 +1550,9 @@ typedef struct {
 	odp_tm_shaper_t shaper_profile;
 
 	/** The threshold profile to be used in setting the max queue fullness
-	 * for WRED and/or tail drop?  Can be ODP_TM_INVALID and can also be
-	 * set and changed post-creation via odp_tm_node_threshold_config().
-	 * The default value is ODP_TM_INVALID. */
+	 * for WRED and/or tail drop. Can be ODP_TM_INVALID and can also be set
+	 * and changed post-creation via odp_tm_node_threshold_config(). The
+	 * default value is ODP_TM_INVALID. */
 	odp_tm_threshold_t threshold_profile;
 
 	/** The WRED profile(s) to be associated with this tm_node.  Any or
@@ -1735,9 +1735,9 @@ typedef struct {
 	odp_tm_shaper_t shaper_profile;
 
 	/** The threshold profile to be used in setting the max queue fullness
-	 * for WRED and/or tail drop?  Can be ODP_TM_INVALID and can also be
-	 * set and changed post-creation via odp_tm_queue_threshold_config().
-	 * The default value is ODP_TM_INVALID. */
+	 * for WRED and/or tail drop. Can be ODP_TM_INVALID and can also be set
+	 * and changed post-creation via odp_tm_queue_threshold_config(). The
+	 * default value is ODP_TM_INVALID. */
 	odp_tm_threshold_t threshold_profile;
 
 	/** The WRED profile(s) to be associated with this tm_queue.  Any or
@@ -1941,10 +1941,10 @@ int odp_tm_queue_disconnect(odp_tm_queue_t tm_queue);
 /* Input API
  * -------------------------------------------------------- */
 
-/** The odp_tm_enq() function is used to add packets to a given TM system.
- * Note that the System Metadata associated with the pkt needed by the TM
- * system is (a) a drop_eligible bit, (b) a two bit "pkt_color", (c) a 16-bit
- * pkt_len, and MAYBE? (d) a signed 8-bit shaper_len_adjust.
+/** Send packet to TM system
+ *
+ * Note that the packet metadata utilized by the TM system is (a)
+ * drop_eligible, (b) pkt_color, (c) pkt_len, and (d) shaper_len_adjust.
  *
  * If there is a non-zero shaper_len_adjust, then it is added to the pkt_len
  * after any non-zero shaper_len_adjust that is part of the shaper profile.
@@ -1997,8 +1997,8 @@ int odp_tm_enq_multi_lso(odp_tm_queue_t tm_queue, const odp_packet_t packets[], 
 			 const odp_packet_lso_opt_t *lso_opt);
 
 /** The odp_tm_enq_with_cnt() function behaves identically to odp_tm_enq(),
- * except that it also returns (an approximation to?) the current tm_queue
- * packet queue count.
+ * except that it also returns the current tm_queue packet queue count (may be
+ * an approximation).
  *
  * @param tm_queue  Specifies the tm_queue (and indirectly the TM system).
  * @param pkt       Handle to a packet.
@@ -2168,7 +2168,7 @@ int odp_tm_queue_info(odp_tm_queue_t tm_queue, odp_tm_queue_info_t *info);
  */
 #define ODP_TM_QUERY_PKT_CNT     0x01   /**<  The total_pkt_cnt value */
 #define ODP_TM_QUERY_BYTE_CNT    0x02   /**<  The total_byte_cnt value */
-#define ODP_TM_QUERY_THRESHOLDS  0x04   /**<  The thresholds??? */
+#define ODP_TM_QUERY_THRESHOLDS  0x04   /**<  The threshold values */
 
 /** The odp_tm_query_info_t record type is used to return the various counts
  * as requested by functions like odp_tm_queue_query() and
