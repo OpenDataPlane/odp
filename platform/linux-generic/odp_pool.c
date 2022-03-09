@@ -494,12 +494,7 @@ static void init_buffers(pool_t *pool)
 
 	for (i = 0; i < pool->num + skipped_blocks ; i++) {
 		int skip = 0;
-
-		addr    = &pool->base_addr[(i * pool->block_size) +
-					   pool->block_offset];
-		event_hdr = addr;
-		buf_hdr = addr;
-		pkt_hdr = addr;
+		addr = &pool->base_addr[i * pool->block_size];
 
 		/* Skip packet buffers which cross huge page boundaries. Some
 		 * NICs cannot handle buffers which cross page boundaries. */
@@ -517,6 +512,12 @@ static void init_buffers(pool_t *pool)
 				skip = 1;
 			}
 		}
+
+		addr = (uint8_t *)addr + pool->block_offset;
+		event_hdr = addr;
+		buf_hdr = addr;
+		pkt_hdr = addr;
+
 		if (pool->uarea_size)
 			uarea = &pool->uarea_base_addr[(i - skipped_blocks) *
 						       pool->uarea_size];
