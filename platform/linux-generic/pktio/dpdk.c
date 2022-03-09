@@ -76,13 +76,7 @@
 #define rte_log_set_global_level rte_set_log_level
 #endif
 
-/* Release notes v19.11: "Changed the mempool allocation behaviour
- * so that objects no longer cross pages by default" */
-#if RTE_VERSION >= RTE_VERSION_NUM(19, 11, 0, 0)
-#define MEMPOOL_FLAGS MEMPOOL_F_NO_IOVA_CONTIG
-#else
 #define MEMPOOL_FLAGS 0
-#endif
 
 #if _ODP_DPDK_ZERO_COPY
 ODP_STATIC_ASSERT(CONFIG_PACKET_HEADROOM == RTE_PKTMBUF_HEADROOM,
@@ -334,12 +328,16 @@ static void pktmbuf_init(struct rte_mempool *mp, void *opaque_arg ODP_UNUSED,
 static struct rte_mempool *mbuf_pool_create(const char *name,
 					    pool_t *pool_entry)
 {
+	odp_shm_info_t shm_info;
 	struct rte_mempool *mp = NULL;
 	struct rte_pktmbuf_pool_private mbp_priv;
 	struct rte_mempool_objsz sz;
 	unsigned int elt_size = pool_entry->dpdk_elt_size;
-	unsigned int num = pool_entry->num;
+	unsigned int num = pool_entry->num, populated = 0;
 	uint32_t total_size;
+	uint64_t page_size, offset = 0, remainder = 0;
+	uint8_t *addr;
+	int ret;
 
 	if (!(pool_entry->mem_from_huge_pages)) {
 		ODP_ERR("DPDK requires memory is allocated from huge pages\n");
@@ -348,11 +346,17 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 
 	if (pool_entry->seg_len < RTE_MBUF_DEFAULT_BUF_SIZE) {
 		ODP_ERR("Some NICs need at least %dB buffers to not segment "
-			 "standard ethernet frames. Increase pool seg_len.\n",
-			 RTE_MBUF_DEFAULT_BUF_SIZE);
+			"standard ethernet frames. Increase pool seg_len.\n",
+			RTE_MBUF_DEFAULT_BUF_SIZE);
 		goto fail;
 	}
 
+	if (odp_shm_info(pool_entry->shm, &shm_info)) {
+		ODP_ERR("Failed to query SHM info.\n");
+		goto fail;
+	}
+
+	page_size = shm_info.page_size;
 	total_size = rte_mempool_calc_obj_size(elt_size, MEMPOOL_FLAGS, &sz);
 	if (total_size != pool_entry->block_size) {
 		ODP_ERR("DPDK pool block size not matching to ODP pool: "
@@ -361,10 +365,7 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 		goto fail;
 	}
 
-	/* Skipped buffers have to be taken into account to populate pool
-	 * properly. */
-	mp = rte_mempool_create_empty(name, num + pool_entry->skipped_blocks,
-				      elt_size, cache_size(num),
+	mp = rte_mempool_create_empty(name, num, elt_size, cache_size(num),
 				      sizeof(struct rte_pktmbuf_pool_private),
 				      rte_socket_id(), MEMPOOL_FLAGS);
 	if (mp == NULL) {
@@ -380,16 +381,34 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 	}
 
 	mbp_priv.mbuf_data_room_size = pool_entry->headroom +
-			pool_entry->seg_len;
+			pool_entry->seg_len + pool_entry->tailroom;
 	mbp_priv.mbuf_priv_size = RTE_ALIGN(sizeof(odp_packet_hdr_t),
 					    RTE_MBUF_PRIV_ALIGN);
 	rte_pktmbuf_pool_init(mp, &mbp_priv);
 
-	num = rte_mempool_populate_iova(mp, (char *)pool_entry->base_addr,
-					RTE_BAD_IOVA, pool_entry->shm_size,
-					NULL, NULL);
-	if (num <= 0) {
-		ODP_ERR("Failed to populate mempool: %d\n", num);
+	/* DPDK expects buffers that would be crossing a hugepage boundary to be aligned to the
+	 * boundary. This isn't the case with ODP pools as boundary-crossing buffers are skipped
+	 * and unused but still part of the pool. Thus, populate the mempool with several virtually
+	 * and physically contiguous chunks as dictated by the skipped buffers. */
+	for (uint64_t i = 0; i < pool_entry->shm_size; i += page_size) {
+		remainder = (page_size - offset) % total_size;
+		addr = pool_entry->base_addr + i + offset;
+		ret = rte_mempool_populate_iova(mp, (char *)addr, rte_mem_virt2iova(addr),
+						page_size - remainder - offset,
+						NULL, NULL);
+
+		if (ret <= 0) {
+			ODP_ERR("Failed to populate mempool: %d\n", ret);
+			goto fail;
+		}
+
+		populated += ret;
+		offset = remainder ? total_size - remainder : 0;
+	}
+
+	if (populated != num) {
+		ODP_ERR("Failed to populate mempool with all requested blocks, populated: %u, "
+			"requested: %u\n", populated, num);
 		goto fail;
 	}
 
