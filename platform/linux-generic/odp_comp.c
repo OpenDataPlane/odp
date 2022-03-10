@@ -9,12 +9,14 @@
 #include <odp/api/comp.h>
 #include <odp/api/event.h>
 #include <odp/api/packet.h>
+#include <odp/api/queue.h>
+
 #include <odp/api/plat/strong_types.h>
-#include <odp_packet_internal.h>
-#include <odp_global_data.h>
 
 #include <odp_debug_internal.h>
+#include <odp_global_data.h>
 #include <odp_init_internal.h>
+#include <odp_packet_internal.h>
 
 #include "miniz/miniz.h"
 
