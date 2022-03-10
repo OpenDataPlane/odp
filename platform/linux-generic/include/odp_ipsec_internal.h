@@ -18,14 +18,17 @@
 extern "C" {
 #endif
 
-#include <odp/api/std_types.h>
-#include <odp/api/plat/strong_types.h>
-
+#include <odp/api/atomic.h>
 #include <odp/api/byteorder.h>
+#include <odp/api/event.h>
 #include <odp/api/ipsec.h>
 #include <odp/api/spinlock.h>
+#include <odp/api/std_types.h>
+
+#include <odp/api/plat/strong_types.h>
 
 #include <protocols/ip.h>
+#include <stdint.h>
 
 /** @ingroup odp_ipsec
  *  @{
