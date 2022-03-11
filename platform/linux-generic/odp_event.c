@@ -71,9 +71,11 @@ void odp_event_free(odp_event_t event)
 	case ODP_EVENT_TIMEOUT:
 		odp_timeout_free(odp_timeout_from_event(event));
 		break;
+#if ODP_DEPRECATED_API
 	case ODP_EVENT_CRYPTO_COMPL:
 		odp_crypto_compl_free(odp_crypto_compl_from_event(event));
 		break;
+#endif
 	case ODP_EVENT_IPSEC_STATUS:
 		_odp_ipsec_status_free(_odp_ipsec_status_from_event(event));
 		break;
@@ -121,8 +123,10 @@ int odp_event_is_valid(odp_event_t event)
 		/* Fall through */
 	case ODP_EVENT_TIMEOUT:
 		/* Fall through */
+#if ODP_DEPRECATED_API
 	case ODP_EVENT_CRYPTO_COMPL:
 		/* Fall through */
+#endif
 	case ODP_EVENT_IPSEC_STATUS:
 		/* Fall through */
 	case ODP_EVENT_PACKET_VECTOR:

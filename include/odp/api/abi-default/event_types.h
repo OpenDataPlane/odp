@@ -13,6 +13,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <odp/api/deprecated.h>
 
 /** @internal Dummy type for strong typing */
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_event_t;
@@ -29,7 +30,9 @@ typedef enum {
 	ODP_EVENT_BUFFER = 1,
 	ODP_EVENT_PACKET = 2,
 	ODP_EVENT_TIMEOUT = 3,
+#if ODP_DEPRECATED_API
 	ODP_EVENT_CRYPTO_COMPL = 4,
+#endif
 	ODP_EVENT_IPSEC_STATUS = 5,
 	ODP_EVENT_PACKET_VECTOR = 6,
 	ODP_EVENT_PACKET_TX_COMPL = 7,

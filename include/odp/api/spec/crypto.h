@@ -41,7 +41,7 @@ extern "C" {
 
 /**
  * @typedef odp_crypto_compl_t
-* Crypto API completion event (platform dependent).
+*  @deprecated Crypto API completion event (platform dependent).
 */
 
 /**
@@ -558,8 +558,10 @@ typedef struct odp_crypto_session_param_t {
 	/** Preferred sync vs. async for odp_crypto_operation()
 	 *
 	 *  The default value is ODP_CRYPTO_SYNC.
+	 *
+	 *  @deprecated Used only with deprecated odp_crypto_operation()
 	 */
-	odp_crypto_op_mode_t pref_mode;
+	odp_crypto_op_mode_t ODP_DEPRECATE(pref_mode);
 
 	/** Operation mode when using packet interface: sync or async
 	 *
@@ -671,8 +673,8 @@ typedef struct odp_crypto_session_param_t {
 	/** Async mode completion event queue
 	 *
 	 *  The completion queue is used to return completions from
-	 *  odp_crypto_operation() or odp_crypto_op_enq() results to the
-	 *  application.
+	 *  odp_crypto_op_enq() (and the deprecated odp_crypto_operation())
+	 *  to the application.
 	 */
 	odp_queue_t compl_queue;
 
@@ -688,6 +690,8 @@ typedef struct odp_crypto_session_param_t {
 
 /**
  * Crypto API per packet operation parameters
+ *
+ * @deprecated Use odp_crypto_packet_op_param_t instead.
  */
 typedef struct odp_crypto_op_param_t {
 	/** Session handle from creation */
@@ -759,7 +763,7 @@ typedef struct odp_crypto_op_param_t {
 	 */
 	odp_packet_data_range_t auth_range;
 
-} odp_crypto_op_param_t;
+} ODP_DEPRECATE(odp_crypto_op_param_t);
 
 /**
  * Crypto packet API per packet operation parameters
@@ -894,6 +898,8 @@ typedef struct odp_crypto_op_status {
 
 /**
  * Crypto API operation result
+ *
+ * @deprecated Use odp_crypto_packet_result_t instead.
  */
 typedef struct odp_crypto_op_result {
 	/** Request completed successfully */
@@ -911,7 +917,7 @@ typedef struct odp_crypto_op_result {
 	/** Authentication status */
 	odp_crypto_op_status_t auth_status;
 
-} odp_crypto_op_result_t;
+} ODP_DEPRECATE(odp_crypto_op_result_t);
 
 /**
  * Crypto packet API operation result
@@ -1140,8 +1146,12 @@ int odp_crypto_session_create(const odp_crypto_session_param_t *param,
  */
 int odp_crypto_session_destroy(odp_crypto_session_t session);
 
+#if ODP_DEPRECATED_API
+
 /**
  * Return crypto completion handle that is associated with event
+ *
+ * @deprecated Used only with the deprecated odp_crypto_operation()
  *
  * Note: any invalid parameters will cause undefined behavior and may cause
  * the application to abort or crash.
@@ -1155,6 +1165,8 @@ odp_crypto_compl_t odp_crypto_compl_from_event(odp_event_t ev);
 /**
  * Convert crypto completion handle to event handle
  *
+ * @deprecated Used only with the deprecated odp_crypto_operation()
+ *
  * @param completion_event  Completion event to convert to generic event
  *
  * @return Event handle
@@ -1164,12 +1176,16 @@ odp_event_t odp_crypto_compl_to_event(odp_crypto_compl_t completion_event);
 /**
  * Release crypto completion event
  *
+ * @deprecated Used only with the deprecated odp_crypto_operation()
+ *
  * @param completion_event  Completion event we are done accessing
  */
 void odp_crypto_compl_free(odp_crypto_compl_t completion_event);
 
 /**
  * Crypto per packet operation
+ *
+ * @deprecated Use odp_crypto_op() or odp_crypto_op_enq() instead.
  *
  * Performs the cryptographic operations specified during session creation
  * on the packet.  If the operation is performed synchronously, "posted"
@@ -1191,11 +1207,15 @@ int odp_crypto_operation(odp_crypto_op_param_t *param,
 /**
  * Crypto per packet operation query result from completion event
  *
+ * @deprecated Used only with the deprecated odp_crypto_operation()
+ *
  * @param completion_event  Event containing operation results
  * @param result            Pointer to result structure
  */
 void odp_crypto_compl_result(odp_crypto_compl_t completion_event,
 			     odp_crypto_op_result_t *result);
+
+#endif /* ODP_DEPRECATED_API */
 
 /**
  * Get printable value for an odp_crypto_session_t
@@ -1210,8 +1230,11 @@ void odp_crypto_compl_result(odp_crypto_compl_t completion_event,
  */
 uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl);
 
+#if ODP_DEPRECATED_API
 /**
  * Get printable value for an odp_crypto_compl_t
+ *
+ * @deprecated Used only with the deprecated odp_crypto_operation()
  *
  * @param hdl  odp_crypto_compl_t handle to be printed
  * @return     uint64_t value that can be used to print/display this
@@ -1222,6 +1245,7 @@ uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl);
  * an odp_crypto_compl_t handle.
  */
 uint64_t odp_crypto_compl_to_u64(odp_crypto_compl_t hdl);
+#endif
 
 /**
  * Initialize crypto session parameters
