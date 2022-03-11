@@ -7,6 +7,7 @@
 
 #include <odp_posix_extensions.h>
 
+#include <odp/api/buffer.h>
 #include <odp/api/packet.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/proto_stats.h>
