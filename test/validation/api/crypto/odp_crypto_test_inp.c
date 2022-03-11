@@ -37,7 +37,9 @@ static void test_default_values(void)
 
 	CU_ASSERT_EQUAL(param.op, ODP_CRYPTO_OP_ENCODE);
 	CU_ASSERT_EQUAL(param.auth_cipher_text, false);
+#if ODP_DEPRECATED_API
 	CU_ASSERT_EQUAL(param.pref_mode, ODP_CRYPTO_SYNC);
+#endif
 	CU_ASSERT_EQUAL(param.op_mode, ODP_CRYPTO_SYNC);
 	CU_ASSERT_EQUAL(param.cipher_alg, ODP_CIPHER_ALG_NULL);
 	CU_ASSERT_EQUAL(param.cipher_iv_len, 0);
@@ -194,6 +196,7 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 	}
 }
 
+#if ODP_DEPRECATED_API
 static int alg_op(odp_packet_t pkt,
 		  odp_bool_t *ok,
 		  odp_crypto_session_t session,
@@ -273,6 +276,7 @@ static int alg_op(odp_packet_t pkt,
 
 	return 0;
 }
+#endif
 
 static int alg_packet_op(odp_packet_t pkt,
 			 odp_bool_t *ok,
@@ -370,10 +374,14 @@ static int crypto_op(odp_packet_t pkt,
 	int rc;
 
 	if (!suite_context.packet)
+#if ODP_DEPRECATED_API
 		rc = alg_op(pkt, ok, session,
 			    cipher_iv, auth_iv,
 			    cipher_range, auth_range,
 			    aad, hash_result_offset);
+#else
+		rc = -1;
+#endif
 	else
 		rc = alg_packet_op(pkt, ok, session,
 				   cipher_iv, auth_iv,
@@ -657,7 +665,9 @@ static odp_crypto_session_t session_create(odp_crypto_op_t op,
 	ses_params.op = op;
 	ses_params.auth_cipher_text = false;
 	ses_params.op_mode = suite_context.op_mode;
+#if ODP_DEPRECATED_API
 	ses_params.pref_mode = suite_context.pref_mode;
+#endif
 	ses_params.cipher_alg = cipher_alg;
 	ses_params.auth_alg = auth_alg;
 	ses_params.compl_queue = suite_context.queue;
@@ -2154,6 +2164,7 @@ static odp_event_t plain_compl_queue_deq(void)
 	return odp_queue_deq(suite_context.queue);
 }
 
+#if ODP_DEPRECATED_API
 static int crypto_suite_sync_init(void)
 {
 	suite_context.pool = odp_pool_lookup("packet_pool");
@@ -2206,6 +2217,7 @@ static int crypto_suite_async_sched_init(void)
 
 	return 0;
 }
+#endif
 
 static int crypto_suite_packet_sync_init(void)
 {
@@ -2422,12 +2434,14 @@ odp_testinfo_t crypto_suite[] = {
 };
 
 odp_suiteinfo_t crypto_suites[] = {
+#if ODP_DEPRECATED_API
 	{"odp_crypto_sync_inp", crypto_suite_sync_init,
 	 NULL, crypto_suite},
 	{"odp_crypto_async_plain_inp", crypto_suite_async_plain_init,
 	 crypto_suite_term, crypto_suite},
 	{"odp_crypto_async_sched_inp", crypto_suite_async_sched_init,
 	 crypto_suite_term, crypto_suite},
+#endif
 	{"odp_crypto_packet_sync_inp", crypto_suite_packet_sync_init,
 	 NULL, crypto_suite},
 	{"odp_crypto_packet_async_plain_inp",
