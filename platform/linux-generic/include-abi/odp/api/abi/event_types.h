@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 #include <odp/api/plat/strong_types.h>
+#include <odp/api/deprecated.h>
 
 /** @ingroup odp_event
  *  @{
@@ -32,7 +33,9 @@ typedef enum odp_event_type_t {
 	ODP_EVENT_BUFFER = 1,
 	ODP_EVENT_PACKET = 2,
 	ODP_EVENT_TIMEOUT = 3,
+#if ODP_DEPRECATED_API
 	ODP_EVENT_CRYPTO_COMPL = 4,
+#endif
 	ODP_EVENT_IPSEC_STATUS = 5,
 	ODP_EVENT_PACKET_VECTOR = 6,
 	ODP_EVENT_PACKET_TX_COMPL = 7,
