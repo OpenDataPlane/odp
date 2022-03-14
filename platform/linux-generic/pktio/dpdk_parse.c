@@ -1,5 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -22,9 +22,19 @@
 
 #include <rte_config.h>
 #include <rte_mbuf.h>
+#include <rte_version.h>
 
-#define IP4_CSUM_RESULT(ol_flags) (ol_flags & PKT_RX_IP_CKSUM_MASK)
-#define L4_CSUM_RESULT(ol_flags) (ol_flags & PKT_RX_L4_CKSUM_MASK)
+#if RTE_VERSION < RTE_VERSION_NUM(21, 11, 0, 0)
+	#define RTE_MBUF_F_RX_IP_CKSUM_MASK PKT_RX_IP_CKSUM_MASK
+	#define RTE_MBUF_F_RX_IP_CKSUM_GOOD PKT_RX_IP_CKSUM_GOOD
+	#define RTE_MBUF_F_RX_IP_CKSUM_UNKNOWN PKT_RX_IP_CKSUM_UNKNOWN
+	#define RTE_MBUF_F_RX_L4_CKSUM_MASK PKT_RX_L4_CKSUM_MASK
+	#define RTE_MBUF_F_RX_L4_CKSUM_GOOD PKT_RX_L4_CKSUM_GOOD
+	#define RTE_MBUF_F_RX_L4_CKSUM_UNKNOWN PKT_RX_L4_CKSUM_UNKNOWN
+#endif
+
+#define IP4_CSUM_RESULT(ol_flags) ((ol_flags) & RTE_MBUF_F_RX_IP_CKSUM_MASK)
+#define L4_CSUM_RESULT(ol_flags) ((ol_flags) & RTE_MBUF_F_RX_L4_CKSUM_MASK)
 
 /** Parser helper function for Ethernet packets */
 static inline uint16_t dpdk_parse_eth(packet_parser_t *prs,
@@ -170,9 +180,9 @@ static inline uint8_t dpdk_parse_ipv4(packet_parser_t *prs,
 	if (do_csum) {
 		uint64_t packet_csum_result = IP4_CSUM_RESULT(mbuf_ol);
 
-		if (packet_csum_result == PKT_RX_IP_CKSUM_GOOD) {
+		if (packet_csum_result == RTE_MBUF_F_RX_IP_CKSUM_GOOD) {
 			prs->input_flags.l3_chksum_done = 1;
-		} else if (packet_csum_result != PKT_RX_IP_CKSUM_UNKNOWN) {
+		} else if (packet_csum_result != RTE_MBUF_F_RX_IP_CKSUM_UNKNOWN) {
 			prs->input_flags.l3_chksum_done = 1;
 			prs->flags.ip_err = 1;
 			prs->flags.l3_chksum_err = 1;
@@ -298,9 +308,9 @@ static inline void dpdk_parse_tcp(packet_parser_t *prs,
 	if (do_csum) {
 		uint64_t packet_csum_result = L4_CSUM_RESULT(mbuf_ol);
 
-		if (packet_csum_result == PKT_RX_L4_CKSUM_GOOD) {
+		if (packet_csum_result == RTE_MBUF_F_RX_L4_CKSUM_GOOD) {
 			prs->input_flags.l4_chksum_done = 1;
-		} else if (packet_csum_result != PKT_RX_L4_CKSUM_UNKNOWN) {
+		} else if (packet_csum_result != RTE_MBUF_F_RX_L4_CKSUM_UNKNOWN) {
 			prs->input_flags.l4_chksum_done = 1;
 			prs->flags.tcp_err = 1;
 			prs->flags.l4_chksum_err = 1;
@@ -328,9 +338,9 @@ static inline void dpdk_parse_udp(packet_parser_t *prs,
 	if (do_csum) {
 		uint64_t packet_csum_result = L4_CSUM_RESULT(mbuf_ol);
 
-		if (packet_csum_result == PKT_RX_L4_CKSUM_GOOD) {
+		if (packet_csum_result == RTE_MBUF_F_RX_L4_CKSUM_GOOD) {
 			prs->input_flags.l4_chksum_done = 1;
-		} else if (packet_csum_result != PKT_RX_L4_CKSUM_UNKNOWN) {
+		} else if (packet_csum_result != RTE_MBUF_F_RX_L4_CKSUM_UNKNOWN) {
 			if (prs->input_flags.ipv4 && !udp->chksum) {
 				prs->input_flags.l4_chksum_done = 1;
 			} else {
