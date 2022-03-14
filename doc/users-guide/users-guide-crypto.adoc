@@ -13,11 +13,6 @@ ODP provides APIs for following cryptographic services:
 * Random number generation
 * Crypto capability inquiries
 
-Ciphering and authentication services are accessible via two complementary
-sets of related APIs. The original ODP crypto APIs, and a newer
-_packet-oriented_ set of crypto APIs that are designed to be consistent with
-the protocol-aware cryptographic services offered by the IPsec API set.
-
 === Crypto Sessions
 
 To apply a cryptographic operation to a packet a session must be created. All
@@ -49,112 +44,35 @@ with an `odp_crypto_session_t`.
 === Crypto operations
 
 After session creation, a cryptographic operation can be applied to a packet
-in one of two ways.
-
-==== Parameter-based Crypto Operations
-This is the original ODP support for cryptographic operations. The
-`odp_crypto_operation()` API takes an input `odp_crypto_op_param_t` struct
-that describes the cryptographic operation to be performed. This struct
-contains the session to use as well as the input packet the operation is to be
-performed on. The caller may either specify an output packet to receive the
-operation results or may request that the ODP implementation allocate a new
-packet to receive these results from the output pool associated with the
-`odp_crypto_session_t`. If the input packet is also used as the output packet,
-then an "in place" operation is requested.
-
-When using the `odp_crypto_operation()` API. Applications may indicate a
-preference for synchronous or asynchronous processing in the session's
-`pref_mode` parameter.  However crypto operations may complete synchronously
-even if an asynchronous preference is indicated, and applications must examine
-the `posted` output parameter from `odp_crypto_operation()` to determine
-whether the operation has completed or if an `ODP_EVENT_CRYPTO_COMPL`
-notification is expected. In the case of an async operation, the `posted`
-output parameter will be set to true.
-
-The operation arguments specify for each packet the areas that are to be
-encrypted or decrypted and authenticated. The parameters include also
-pointers to cipher and authentication initialization vectors as needed,
-depending on the initialization vector lengths specified at session creation.
-
-An operation can be executed in in-place, out-of-place or new buffer mode.
-In in-place mode output packet is same as the input packet.
-In case of out-of-place mode output packet is different from input packet as
-specified by the application, while in new buffer mode implementation allocates
-a new output buffer from the session’s output pool.
-
-The application can also specify a context associated with a given operation
-that will be retained during async operation and can be retrieved via the
-completion event.
-
-Results of an asynchronous session will be posted as completion events to the
-session’s completion queue, which can be accessed directly or via the ODP
-scheduler. The completion event contains the status of the operation and the
-result. The application has the responsibility to free the completion event.
-
-Upon receipt of an `ODP_EVENT_CRYPTO_COMPL` event, the
-`odp_crypto_compl_result()` API is used to retrieve the
-`odp_crypto_op_result_t` associated with the event. This result struct in turn
-contains:
-
-* An indication of the success or failure of the crypto operation
-* The user context associated with the event
-* The output `odp_packet_t`.
-* The `odp_crypto_op_status_t` for the requested cipher operation
-* The `odp_crypto_op_status_t` for the requested authentication operation
-
-==== Packet-based Crypto Operations
-To simplify the original cryptographic operation request API, as well as to
-be more flexible and consistent with the protocol-aware APIs introduced for
-IPsec support, a newer packet-oriented set of cryptographic operation
-APIs is also provided. Applications may use either API set, but going forward
-it is expected that these newer APIs will be the focus of continued
-development.
-
-Instead of a single `odp_crypto_operation()` API, the packet-based form
-provides two APIs: `odp_crypto_op()` is the synchronous form while
-`odp_crypto_op_enq()` is the asynchronous form. To check which of these are
-supported by the ODP implementation, examine the `sync_mode` and `async_mode`
-fields in the `odp_crypto_capability_t` struct returned by the
+synchronously or asynchronously. `odp_crypto_op()` is the synchronous API
+while `odp_crypto_op_enq()` is the asynchronous API. To check which of these
+are supported by the ODP implementation, examine the `sync_mode` and
+`async_mode` fields in the `odp_crypto_capability_t` struct returned by the
 `odp_crypto_capability()` API.
 
 Both forms take an input array of packets, an optional output array of packets
 to receive the results, and an array of `odp_crypto_packet_op_param_t` structs
-that describe the operation to be performed on each input packet. As with the
-original APIs, the output array may be the same packets to request in-place
-operation, or may be specified as `ODP_PACKET_INVALID` to request that ODP
-allocate output packets from the pool associated with the
-`odp_crypto_session_t` being used.
+that describe the operation to be performed on each input packet. The output
+array may be the same packets to request in-place operation, or may be
+specified as `ODP_PACKET_INVALID` to request that ODP allocate output packets
+from the pool associated with the `odp_crypto_session_t` being used.
 
-The key differences between the `odp_crypto_op_param_t` used by the original
-APIs and the `odp_crypto_packet_op_param_t` used by the new APIs are:
+The op_mode field of `odp_crypto_session_t` indicates whether asynchronous
+or synchronous operations are used with the session. If `op_mode` is set
+to `ODP_CRYPTO_SYNC` then the synchronous API must be used and if `op_mode`
+is set to `ODP_CRYPTO_ASYNC` then the asynchronous API must be used. It is
+an error to use a form of the API that does not match the mode of the crypto
+session.
 
-* The original API takes a single `odp_crypto_op_param_t` since it operates on
-a single packet whereas the new forms take an array of
-`odp_crypto_packet_op_param_t` structs, one for each input packet.
+The output of a crypto operation is an `odp_packet_t` (one for each input
+packet) that is returned either synchronously or asynchronously. Asynchronous
+return is in the form of `ODP_EVENT_PACKET` events that have event subtype
+`ODP_EVENT_PACKET_CRYPTO`. The packet associated with such events is obtained
+via the `odp_crypto_packet_from_event()` API. The `odp_crypto_result()` API,
+in turn, retrieves the `odp_crypto_packet_result_t` from this `odp_packet_t`
+that contains:
 
-* The `odp_crypto_packet_op_param_t` does not contain any packet information
-since the input and output packets are supplied as API parameters rather than
-being encoded in this struct.
-
-* The `odp_crypto_packet_op_param_t` does not contain a user context field.
-
-In addition, the `odp_crypto_session_t` field `op_mode` is used instead of
-the `pref_mode` field when the packet-oriented APIs are used. If the
-`op_mode` is set to `ODP_CRYPTO_SYNC` then the synchronous form of the API
-must be used and if `op_mode` is set to `ODP_CRYPTO_ASYNC` then the
-asynchronous form of the API must be used. It is an error to attempt to use
-a form of the API not properly matched to the mode of the crypto session.
-
-The output of a packet-based crypto operation is an `odp_packet_t` (one for
-each input packet) that is returned either synchronously or
-asynchronously. Asynchronous return is in the form of `ODP_EVENT_PACKET`
-events that have event subtype `ODP_EVENT_PACKET_CRYPTO`. The packet
-associated with such events is obtained via the
-`odp_crypto_packet_from_event()` API. The `odp_crypto_result()` API, in turn,
-retrieves the `odp_crypto_packet_result_t` from this `odp_packet_t` that
-contains:
-
-* An indication of whether the crypto packet operation was successful or not
+* An indication of whether the crypto operation was successful or not
 * The `odp_crypto_op_status_t` for the requested cipher operation
 * The `odp_crypto_op_status_t` for the requested authentication operation
 
