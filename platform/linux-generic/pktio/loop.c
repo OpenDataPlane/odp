@@ -27,6 +27,7 @@
 #include <odp_ipsec_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
+#include <odp_macros_internal.h>
 #include <odp_queue_if.h>
 
 #include <protocols/eth.h>
@@ -195,10 +196,9 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			/* Make sure there is enough data for the packet
 			 * parser in the case of a segmented packet. */
 			if (odp_unlikely(seg_len < PARSE_BYTES &&
-					 pkt_len > PARSE_BYTES)) {
-				odp_packet_copy_to_mem(pkt, 0, PARSE_BYTES,
-						       buf);
-				seg_len = PARSE_BYTES;
+					 pkt_len > seg_len)) {
+				seg_len = MIN(pkt_len, PARSE_BYTES);
+				odp_packet_copy_to_mem(pkt, 0, seg_len, buf);
 				pkt_addr = buf;
 			} else {
 				pkt_addr = odp_packet_data(pkt);
