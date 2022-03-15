@@ -1777,7 +1777,11 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	}
 
 	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
-	rte_eth_dev_info_get(pkt_dpdk->port_id, &dev_info);
+	ret = rte_eth_dev_info_get(pkt_dpdk->port_id, &dev_info);
+	if (ret) {
+		ODP_ERR("Failed to read device info: %d\n", ret);
+		return -1;
+	}
 
 	/* Initialize runtime options */
 	if (init_options(pktio_entry, &dev_info)) {
