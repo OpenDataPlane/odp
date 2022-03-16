@@ -594,6 +594,14 @@ static uint8_t test_data[] = {
 	0x08, 0x00, 0xfb, 0x37, 0x12, 0x34, 0x00, 0x00
 };
 
+static inline void debug_packets(int debug, odp_packet_t *pkt, int num_pkts)
+{
+	if (odp_likely(!debug))
+		return;
+	for (int i = 0; i < num_pkts; i++)
+		odp_packet_print_data(pkt[i], 0, odp_packet_len(pkt[i]));
+}
+
 static int
 make_packet_multi(odp_pool_t pkt_pool, unsigned int payload_length,
 		  odp_packet_t pkt[], int num)
@@ -645,6 +653,7 @@ run_measure_one(ipsec_args_t *cargs,
 	int in_flight, pkts_allowed, num_out, num_pkts, rc = 0;
 	const int max_in_flight = cargs->in_flight;
 	const int burst_size = cargs->burst_size;
+	const int debug = cargs->debug_packets;
 	odp_ipsec_out_param_t param;
 	odp_pool_t pkt_pool;
 
@@ -693,12 +702,7 @@ run_measure_one(ipsec_args_t *cargs,
 							   num_pkts)))
 				return -1;
 
-			if (cargs->debug_packets) {
-				for (i = 0; i < num_pkts; i++)
-					odp_packet_print_data(pkt[i], 0,
-							      odp_packet_len(pkt[i]));
-			}
-
+			debug_packets(debug, pkt, num_pkts);
 			num_out = num_pkts;
 
 			rc = odp_ipsec_out(pkt, num_pkts,
@@ -715,11 +719,7 @@ run_measure_one(ipsec_args_t *cargs,
 
 			packets_sent += rc;
 			packets_received += num_out;
-			if (cargs->debug_packets) {
-				for (i = 0; i < num_out; i++)
-					odp_packet_print_data(out_pkt[i], 0,
-							      odp_packet_len(out_pkt[i]));
-			}
+			debug_packets(debug, out_pkt, num_out);
 
 			if (odp_unlikely(rc != num_pkts))
 				odp_packet_free_sp(&pkt[rc], num_pkts - rc);
@@ -742,6 +742,7 @@ run_measure_one_async(ipsec_args_t *cargs,
 	int in_flight, pkts_allowed, i, num_pkts, rc = 0;
 	const int max_in_flight = cargs->in_flight;
 	const int burst_size = cargs->burst_size;
+	const int debug = cargs->debug_packets;
 	odp_ipsec_out_param_t param;
 	odp_pool_t pkt_pool;
 	odp_queue_t out_queue;
@@ -798,11 +799,7 @@ run_measure_one_async(ipsec_args_t *cargs,
 							   num_pkts)))
 				return -1;
 
-			if (cargs->debug_packets) {
-				for (i = 0; i < num_pkts; i++)
-					odp_packet_print_data(pkt[i], 0,
-							      odp_packet_len(pkt[i]));
-			}
+			debug_packets(debug, pkt, num_pkts);
 
 			rc = odp_ipsec_out_enq(pkt, num_pkts, &param);
 			if (odp_unlikely(rc <= 0)) {
@@ -830,9 +827,6 @@ run_measure_one_async(ipsec_args_t *cargs,
 			pkt_out[i] = odp_ipsec_packet_from_event(ev);
 			check_ipsec_result(pkt_out[i]);
 
-			if (cargs->debug_packets)
-				odp_packet_print_data(pkt_out[i], 0,
-						      odp_packet_len(pkt_out[i]));
 			packets_received++;
 			if (cargs->schedule)
 				ev = odp_schedule(NULL,
@@ -841,6 +835,7 @@ run_measure_one_async(ipsec_args_t *cargs,
 				ev = odp_queue_deq(out_queue);
 			i++;
 		}
+		debug_packets(debug, pkt_out, i);
 
 		if (i)
 			odp_packet_free_sp(pkt_out, i);
