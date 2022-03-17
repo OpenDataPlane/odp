@@ -67,23 +67,11 @@
 	#define RTE_MEMPOOL_REGISTER_OPS MEMPOOL_REGISTER_OPS
 #endif
 
-#if RTE_VERSION < RTE_VERSION_NUM(19, 8, 0, 0)
-	#define rte_ether_addr ether_addr
-	#define rte_ipv4_hdr   ipv4_hdr
-	#define rte_ipv6_hdr   ipv6_hdr
-	#define rte_tcp_hdr    tcp_hdr
-	#define rte_udp_hdr    udp_hdr
-#endif
-
 /* NUMA is not supported on all platforms */
 #ifdef _ODP_HAVE_NUMA_LIBRARY
 #include <numa.h>
 #else
 #define numa_num_configured_nodes() 1
-#endif
-
-#if RTE_VERSION < RTE_VERSION_NUM(17, 5, 0, 0)
-#define rte_log_set_global_level rte_set_log_level
 #endif
 
 #define MEMPOOL_FLAGS 0
@@ -111,11 +99,7 @@ ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
 #define DPDK_MIN_RX_BURST 4
 
 /* Limits for setting link MTU */
-#if RTE_VERSION >= RTE_VERSION_NUM(19, 11, 0, 0)
 #define DPDK_MTU_MIN (RTE_ETHER_MIN_MTU + _ODP_ETHHDR_LEN)
-#else
-#define DPDK_MTU_MIN (68 + _ODP_ETHHDR_LEN)
-#endif
 #define DPDK_MTU_MAX (9000 + _ODP_ETHHDR_LEN)
 
 /** DPDK runtime configuration options */
@@ -1256,11 +1240,6 @@ static int dpdk_close(pktio_entry_t *pktio_entry)
 			rte_pktmbuf_free(pkt_dpdk->rx_cache[i].s.pkt[idx++]);
 	}
 
-#if RTE_VERSION < RTE_VERSION_NUM(17, 8, 0, 0)
-	if (pktio_entry->s.state != PKTIO_STATE_OPENED)
-		rte_eth_dev_close(pkt_dpdk->port_id);
-#endif
-
 	return 0;
 }
 
@@ -1410,18 +1389,6 @@ static void dpdk_mempool_free(struct rte_mempool *mp, void *arg ODP_UNUSED)
 	rte_mempool_free(mp);
 }
 
-/* RTE_ETH_FOREACH_DEV was introduced in v17.8, but causes a build error in
- * v18.2 (only a warning, but our build system treats warnings as errors). */
-#if (RTE_VERSION >= RTE_VERSION_NUM(18, 2, 0, 0)) && \
-	(RTE_VERSION < RTE_VERSION_NUM(18, 5, 0, 0))
-	#define ETH_FOREACH_DEV(p)					\
-		for (p = rte_eth_find_next(0);				\
-		     (unsigned int)p < (unsigned int)RTE_MAX_ETHPORTS;	\
-		     p = rte_eth_find_next(p + 1))
-#elif RTE_VERSION >= RTE_VERSION_NUM(17, 8, 0, 0)
-	#define ETH_FOREACH_DEV(p) RTE_ETH_FOREACH_DEV(p)
-#endif
-
 static int dpdk_pktio_term(void)
 {
 	uint16_t port_id;
@@ -1429,11 +1396,9 @@ static int dpdk_pktio_term(void)
 	if (!odp_global_rw->dpdk_initialized)
 		return 0;
 
-#if RTE_VERSION >= RTE_VERSION_NUM(17, 8, 0, 0)
-	ETH_FOREACH_DEV(port_id) {
+	RTE_ETH_FOREACH_DEV(port_id) {
 		rte_eth_dev_close(port_id);
 	}
-#endif
 
 	if (!_ODP_DPDK_ZERO_COPY)
 		rte_mempool_walk(dpdk_mempool_free, NULL);
@@ -1700,15 +1665,6 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
  * mode change. Use system call for them. */
 static void promisc_mode_check(pkt_dpdk_t *pkt_dpdk)
 {
-#if RTE_VERSION < RTE_VERSION_NUM(19, 11, 0, 0)
-	/* Enable and disable calls do not have return value */
-	rte_eth_promiscuous_enable(pkt_dpdk->port_id);
-
-	if (!rte_eth_promiscuous_get(pkt_dpdk->port_id))
-		pkt_dpdk->vdev_sysc_promisc = 1;
-
-	rte_eth_promiscuous_disable(pkt_dpdk->port_id);
-#else
 	int ret;
 
 	ret = rte_eth_promiscuous_enable(pkt_dpdk->port_id);
@@ -1720,7 +1676,6 @@ static void promisc_mode_check(pkt_dpdk_t *pkt_dpdk)
 
 	if (ret)
 		pkt_dpdk->vdev_sysc_promisc = 1;
-#endif
 }
 
 static int dpdk_open(odp_pktio_t id ODP_UNUSED,
@@ -1766,12 +1721,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 
 	pkt_dpdk->pool = pool;
 
-	/* rte_eth_dev_count() was removed in v18.05 */
-#if RTE_VERSION < RTE_VERSION_NUM(18, 5, 0, 0)
-	if (rte_eth_dev_count() == 0) {
-#else
 	if (rte_eth_dev_count_avail() == 0) {
-#endif
 		ODP_ERR("No DPDK ports found\n");
 		return -1;
 	}
@@ -1800,18 +1750,10 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 
 	promisc_mode_check(pkt_dpdk);
 
-#if RTE_VERSION < RTE_VERSION_NUM(19, 11, 0, 0)
-	ret = 0;
-	if (pkt_dpdk->opt.multicast_en)
-		rte_eth_allmulticast_enable(pkt_dpdk->port_id);
-	else
-		rte_eth_allmulticast_disable(pkt_dpdk->port_id);
-#else
 	if (pkt_dpdk->opt.multicast_en)
 		ret = rte_eth_allmulticast_enable(pkt_dpdk->port_id);
 	else
 		ret = rte_eth_allmulticast_disable(pkt_dpdk->port_id);
-#endif
 
 	/* Not supported by all PMDs, so ignore the return value */
 	if (ret)
