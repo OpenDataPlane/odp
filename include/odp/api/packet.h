@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -17,12 +18,7 @@
 extern "C" {
 #endif
 
-#include <odp/api/std_types.h>
-#include <odp/api/abi/event.h>
-#include <odp/api/abi/packet_io_types.h>
-#include <odp/api/abi/packet_types.h>
 #include <odp/api/abi/packet.h>
-#include <odp/api/abi/buffer.h>
 
 #include <odp/api/spec/packet.h>
 

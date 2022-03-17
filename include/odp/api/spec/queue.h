@@ -18,8 +18,9 @@
 extern "C" {
 #endif
 
-#include <odp/api/event.h>
+#include <odp/api/event_types.h>
 #include <odp/api/queue_types.h>
+#include <odp/api/std_types.h>
 
 /** @defgroup odp_queue ODP QUEUE
  *  Queues for event passing and scheduling.

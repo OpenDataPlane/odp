@@ -16,14 +16,13 @@
 #include <odp/visibility_begin.h>
 
 #include <odp/api/deprecated.h>
+#include <odp/api/packet_types.h>
 #include <odp/api/pool_types.h>
 #include <odp/api/std_types.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/packet.h>
 
 /** @defgroup odp_crypto ODP CRYPTO
  *  Data ciphering and authentication.
