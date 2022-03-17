@@ -653,6 +653,7 @@ run_measure_one(ipsec_args_t *cargs,
 	int in_flight, pkts_allowed, num_out, num_pkts, rc = 0;
 	const int max_in_flight = cargs->in_flight;
 	const int burst_size = cargs->burst_size;
+	const int packet_count = cargs->packet_count;
 	const int debug = cargs->debug_packets;
 	odp_ipsec_out_param_t param;
 	odp_pool_t pkt_pool;
@@ -677,9 +678,9 @@ run_measure_one(ipsec_args_t *cargs,
 
 	fill_time_record(start);
 
-	while ((packets_sent < cargs->packet_count) ||
-	       (packets_received < cargs->packet_count)) {
-		num_pkts = cargs->packet_count - packets_sent;
+	while ((packets_sent < packet_count) ||
+	       (packets_received < packet_count)) {
+		num_pkts = packet_count - packets_sent;
 
 		/* Enqueue up to burst size */
 		num_pkts = num_pkts > burst_size ? burst_size : num_pkts;
@@ -739,13 +740,14 @@ run_measure_one_async(ipsec_args_t *cargs,
 		      time_record_t *start,
 		      time_record_t *end)
 {
-	int in_flight, pkts_allowed, i, num_pkts, rc = 0;
+	int in_flight, packets_allowed, num_pkts, rc = 0;
 	const int max_in_flight = cargs->in_flight;
 	const int burst_size = cargs->burst_size;
+	const int packet_count = cargs->packet_count;
 	const int debug = cargs->debug_packets;
 	odp_ipsec_out_param_t param;
 	odp_pool_t pkt_pool;
-	odp_queue_t out_queue;
+	odp_queue_t polled_queue = ODP_QUEUE_INVALID;
 
 	pkt_pool = odp_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_POOL_INVALID) {
@@ -753,10 +755,12 @@ run_measure_one_async(ipsec_args_t *cargs,
 		return -1;
 	}
 
-	out_queue = odp_queue_lookup("ipsec-out");
-	if (out_queue == ODP_QUEUE_INVALID) {
-		ODPH_ERR("ipsec-out queue not found\n");
-		return -1;
+	if (cargs->poll) {
+		polled_queue = odp_queue_lookup("ipsec-out");
+		if (polled_queue == ODP_QUEUE_INVALID) {
+			ODPH_ERR("ipsec-out queue not found\n");
+			return -1;
+		}
 	}
 
 	if (payload_length < sizeof(test_data))
@@ -773,24 +777,19 @@ run_measure_one_async(ipsec_args_t *cargs,
 
 	fill_time_record(start);
 
-	while ((packets_sent < cargs->packet_count) ||
-	       (packets_received < cargs->packet_count)) {
-		odp_packet_t pkt_out[max_in_flight];
-		odp_event_t ev;
+	while ((packets_sent < packet_count) ||
+	       (packets_received < packet_count)) {
 
-		num_pkts = cargs->packet_count - packets_sent;
+		num_pkts = packet_count - packets_sent;
 
 		/* Enqueue up to burst size */
 		num_pkts = num_pkts > burst_size ? burst_size : num_pkts;
 
 		/* Enqueue up to (max in flight - current in flight) */
 		in_flight = packets_sent - packets_received;
-		pkts_allowed = max_in_flight - in_flight;
+		packets_allowed = max_in_flight - in_flight;
 
-		/* Enqueue either a burst of packets or skip */
-		num_pkts = num_pkts > pkts_allowed ? 0 : num_pkts;
-
-		if (odp_likely(num_pkts)) {
+		if (num_pkts > 0 && num_pkts <= packets_allowed) {
 			odp_packet_t pkt[num_pkts];
 
 			if (odp_unlikely(make_packet_multi(pkt_pool,
@@ -813,32 +812,37 @@ run_measure_one_async(ipsec_args_t *cargs,
 				odp_packet_free_sp(&pkt[rc], num_pkts - rc);
 
 			packets_sent += rc;
+		} else {
+			odp_packet_t pkt_out[max_in_flight];
+			odp_event_t ev;
+			uint32_t i = 0;
+
+			/*
+			 * Dequeue packets until we can enqueue the next burst
+			 * or until we have received all remaining packets
+			 * when there are no more packets to be sent.
+			 */
+			while (num_pkts > packets_allowed ||
+			       (num_pkts == 0 && packets_received < packet_count)) {
+				if (polled_queue == ODP_QUEUE_INVALID)
+					ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+				else
+					ev = odp_queue_deq(polled_queue);
+
+				if (ev != ODP_EVENT_INVALID) {
+					pkt_out[i] = odp_ipsec_packet_from_event(ev);
+					check_ipsec_result(pkt_out[i]);
+
+					packets_received++;
+					packets_allowed++;
+					i++;
+				}
+			}
+			debug_packets(debug, pkt_out, i);
+
+			if (i)
+				odp_packet_free_sp(pkt_out, i);
 		}
-
-		i = 0;
-
-		if (cargs->schedule)
-			ev = odp_schedule(NULL,
-					  ODP_SCHED_NO_WAIT);
-		else
-			ev = odp_queue_deq(out_queue);
-
-		while (ev != ODP_EVENT_INVALID) {
-			pkt_out[i] = odp_ipsec_packet_from_event(ev);
-			check_ipsec_result(pkt_out[i]);
-
-			packets_received++;
-			if (cargs->schedule)
-				ev = odp_schedule(NULL,
-						  ODP_SCHED_NO_WAIT);
-			else
-				ev = odp_queue_deq(out_queue);
-			i++;
-		}
-		debug_packets(debug, pkt_out, i);
-
-		if (i)
-			odp_packet_free_sp(pkt_out, i);
 	}
 
 	fill_time_record(end);
