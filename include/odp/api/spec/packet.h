@@ -19,10 +19,13 @@
 extern "C" {
 #endif
 
-#include <odp/api/proto_stats_types.h>
-#include <odp/api/time.h>
+#include <odp/api/event_types.h>
 #include <odp/api/packet_types.h>
+#include <odp/api/packet_io_types.h>
 #include <odp/api/pool_types.h>
+#include <odp/api/proto_stats_types.h>
+#include <odp/api/std_types.h>
+#include <odp/api/time.h>
 
 /** @defgroup odp_packet ODP PACKET
  *  Packet event metadata and operations.

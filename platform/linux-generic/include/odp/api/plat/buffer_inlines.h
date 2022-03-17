@@ -8,7 +8,7 @@
 #define ODP_PLAT_BUFFER_INLINES_H_
 
 #include <odp/api/abi/buffer.h>
-#include <odp/api/abi/event.h>
+#include <odp/api/abi/event_types.h>
 
 #include <odp/api/plat/buffer_inline_types.h>
 

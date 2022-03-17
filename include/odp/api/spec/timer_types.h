@@ -21,7 +21,7 @@ extern "C" {
 #endif
 
 #include <odp/api/std_types.h>
-#include <odp/api/event.h>
+#include <odp/api/event_types.h>
 
 /** @defgroup odp_timer ODP TIMER
  *  Timer generating timeout events.

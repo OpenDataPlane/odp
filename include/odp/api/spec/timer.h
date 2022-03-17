@@ -21,7 +21,7 @@ extern "C" {
 #endif
 
 #include <odp/api/timer_types.h>
-#include <odp/api/event.h>
+#include <odp/api/event_types.h>
 #include <odp/api/pool_types.h>
 #include <odp/api/queue_types.h>
 

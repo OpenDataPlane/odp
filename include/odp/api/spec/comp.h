@@ -14,8 +14,11 @@
 #define ODP_API_SPEC_COMP_H_
 
 #include <odp/visibility_begin.h>
+
+#include <odp/api/event_types.h>
+#include <odp/api/packet_types.h>
+#include <odp/api/queue_types.h>
 #include <odp/api/std_types.h>
-#include <odp/api/packet.h>
 
 #ifdef __cplusplus
 extern "C" {

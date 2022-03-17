@@ -20,7 +20,7 @@
 #include <odp/api/time.h>
 
 #include <odp/api/abi/buffer.h>
-#include <odp/api/abi/event.h>
+#include <odp/api/abi/event_types.h>
 #include <odp/api/abi/packet.h>
 #include <odp/api/abi/packet_io.h>
 

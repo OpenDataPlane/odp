@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include <odp/api/event.h>
+#include <odp/api/event_types.h>
 #include <odp/api/queue_types.h>
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */

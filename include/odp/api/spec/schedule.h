@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 #include <odp/api/std_types.h>
-#include <odp/api/event.h>
+#include <odp/api/event_types.h>
 #include <odp/api/queue_types.h>
 #include <odp/api/schedule_types.h>
 #include <odp/api/thrmask.h>

@@ -18,7 +18,9 @@
 extern "C" {
 #endif
 
+#include <odp/api/event_types.h>
 #include <odp/api/packet_types.h>
+#include <odp/api/queue_types.h>
 #include <odp/api/std_types.h>
 
 /** @defgroup odp_dma ODP DMA

@@ -10,6 +10,7 @@
 #include <odp/api/align.h>
 #include <odp/api/buffer.h>
 #include <odp/api/stash.h>
+#include <odp/api/packet.h>
 #include <odp/api/pool.h>
 #include <odp/api/queue.h>
 

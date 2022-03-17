@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 #include <odp/api/std_types.h>
-#include <odp/api/packet.h>
+#include <odp/api/packet_types.h>
 
 /** @addtogroup odp_packet
  *  Operations on packet metadata flags.

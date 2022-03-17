@@ -13,6 +13,7 @@
 #pragma GCC diagnostic ignored "-Wzero-length-bounds"
 #endif
 
+#include <odp/api/packet.h>
 #include <odp/api/ticketlock.h>
 #include <odp/api/thread.h>
 #include <odp/api/plat/thread_inlines.h>
