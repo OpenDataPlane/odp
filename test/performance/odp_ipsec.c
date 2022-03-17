@@ -27,6 +27,8 @@
  */
 #define POOL_NUM_PKT  4096
 
+#define MAX_DEQUEUE_BURST 16
+
 static uint8_t test_salt[16] = "0123456789abcdef";
 
 static uint8_t test_key16[16] = { 0x01, 0x02, 0x03, 0x04, 0x05,
@@ -733,6 +735,26 @@ run_measure_one(ipsec_args_t *cargs,
 	return rc < 0 ? rc : 0;
 }
 
+static uint32_t dequeue_burst(odp_queue_t polled_queue,
+			      odp_event_t *events,
+			      int max_burst)
+{
+	int num = 0;
+
+	if (polled_queue != ODP_QUEUE_INVALID) {
+		int rc = odp_queue_deq_multi(polled_queue,
+					     events,
+					     max_burst);
+		num = odp_likely(rc >= 0) ? rc : 0;
+	} else {
+		num = odp_schedule_multi(NULL,
+					 ODP_SCHED_NO_WAIT,
+					 events,
+					 max_burst);
+	}
+	return num;
+}
+
 static int
 run_measure_one_async(ipsec_args_t *cargs,
 		      odp_ipsec_sa_t sa,
@@ -814,7 +836,6 @@ run_measure_one_async(ipsec_args_t *cargs,
 			packets_sent += rc;
 		} else {
 			odp_packet_t pkt_out[max_in_flight];
-			odp_event_t ev;
 			uint32_t i = 0;
 
 			/*
@@ -824,19 +845,18 @@ run_measure_one_async(ipsec_args_t *cargs,
 			 */
 			while (num_pkts > packets_allowed ||
 			       (num_pkts == 0 && packets_received < packet_count)) {
-				if (polled_queue == ODP_QUEUE_INVALID)
-					ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
-				else
-					ev = odp_queue_deq(polled_queue);
+				odp_event_t events[MAX_DEQUEUE_BURST];
+				uint32_t num;
 
-				if (ev != ODP_EVENT_INVALID) {
-					pkt_out[i] = odp_ipsec_packet_from_event(ev);
+				num = dequeue_burst(polled_queue, events, MAX_DEQUEUE_BURST);
+
+				for (uint32_t n = 0; n < num; n++) {
+					pkt_out[i] = odp_ipsec_packet_from_event(events[n]);
 					check_ipsec_result(pkt_out[i]);
-
-					packets_received++;
-					packets_allowed++;
 					i++;
 				}
+				packets_received += num;
+				packets_allowed += num;
 			}
 			debug_packets(debug, pkt_out, i);
 
