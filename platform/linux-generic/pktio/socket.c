@@ -263,6 +263,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 		uint16_t pkt_len = msgvec[i].msg_len;
 		int ret;
+		uint64_t l4_part_sum = 0;
 
 		if (odp_unlikely(msgvec[i].msg_hdr.msg_flags & MSG_TRUNC)) {
 			odp_packet_free(pkt);
@@ -286,7 +287,8 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 			if (_odp_packet_parse_common(&pkt_hdr->p, base, pkt_len,
 						     seg_len, ODP_PROTO_LAYER_ALL,
-						     pktio_entry->s.in_chksums) < 0) {
+						     pktio_entry->s.in_chksums,
+						     &l4_part_sum) < 0) {
 				odp_packet_free(pkt);
 				continue;
 			}
@@ -307,7 +309,9 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		pkt_hdr->input = pktio_entry->s.handle;
 
-		if (!pktio_cls_enabled(pktio_entry))
+		if (pktio_cls_enabled(pktio_entry))
+			_odp_packet_l4_chksum(pkt_hdr, pktio_entry->s.in_chksums, l4_part_sum);
+		else
 			_odp_packet_parse_layer(pkt_hdr,
 						pktio_entry->s.config.parser.layer,
 						pktio_entry->s.in_chksums);

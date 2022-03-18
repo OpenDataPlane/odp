@@ -839,6 +839,7 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 	for (i = 0; i < num; i++) {
 		netmap_slot_t slot;
 		uint16_t len;
+		uint64_t l4_part_sum = 0;
 
 		slot = slot_tbl[i];
 		len = slot.len;
@@ -852,7 +853,8 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 			packet_set_len(&parsed_hdr, len);
 			if (_odp_packet_parse_common(&parsed_hdr.p, buf, len, len,
 						     ODP_PROTO_LAYER_ALL,
-						     pktio_entry->s.in_chksums) < 0)
+						     pktio_entry->s.in_chksums,
+						     &l4_part_sum) < 0)
 				continue;
 
 			if (_odp_cls_classify_packet(pktio_entry, buf, &pool,
@@ -871,12 +873,14 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 
 		pkt_hdr->input = pktio_entry->s.handle;
 
-		if (pktio_cls_enabled(pktio_entry))
+		if (pktio_cls_enabled(pktio_entry)) {
 			_odp_packet_copy_cls_md(pkt_hdr, &parsed_hdr);
-		else
+			_odp_packet_l4_chksum(pkt_hdr, pktio_entry->s.in_chksums, l4_part_sum);
+		} else {
 			_odp_packet_parse_layer(pkt_hdr,
 						pktio_entry->s.config.parser.layer,
 						pktio_entry->s.in_chksums);
+		}
 
 		packet_set_ts(pkt_hdr, ts);
 		num_rx++;

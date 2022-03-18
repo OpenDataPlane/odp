@@ -287,6 +287,7 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 	odp_packet_hdr_t *pkt_hdr;
 	odp_packet_hdr_t parsed_hdr;
 	int num;
+	uint64_t l4_part_sum = 0;
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
 
 	if (pktio_cls_enabled(pktio_entry)) {
@@ -294,7 +295,8 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 		packet_set_len(&parsed_hdr, len);
 		if (_odp_packet_parse_common(&parsed_hdr.p, data, len, len,
 					     ODP_PROTO_LAYER_ALL,
-					     pktio_entry->s.in_chksums) < 0) {
+					     pktio_entry->s.in_chksums,
+					     &l4_part_sum) < 0) {
 			return ODP_PACKET_INVALID;
 		}
 
@@ -321,12 +323,14 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 		return ODP_PACKET_INVALID;
 	}
 
-	if (pktio_cls_enabled(pktio_entry))
+	if (pktio_cls_enabled(pktio_entry)) {
 		_odp_packet_copy_cls_md(pkt_hdr, &parsed_hdr);
-	else
+		_odp_packet_l4_chksum(pkt_hdr, pktio_entry->s.in_chksums, l4_part_sum);
+	} else {
 		_odp_packet_parse_layer(pkt_hdr,
 					pktio_entry->s.config.parser.layer,
 					pktio_entry->s.in_chksums);
+	}
 
 	packet_set_ts(pkt_hdr, ts);
 	pkt_hdr->input = pktio_entry->s.handle;

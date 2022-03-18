@@ -166,6 +166,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		odp_packet_hdr_t *hdr;
 		odp_packet_hdr_t parsed_hdr;
 		int ret;
+		uint64_t l4_part_sum = 0;
 
 		tp_hdr = (void *)next_ptr;
 
@@ -219,7 +220,8 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			if (_odp_packet_parse_common(&parsed_hdr.p, pkt_buf,
 						     pkt_len, pkt_len,
 						     ODP_PROTO_LAYER_ALL,
-						     pktio_entry->s.in_chksums) < 0) {
+						     pktio_entry->s.in_chksums,
+						     &l4_part_sum) < 0) {
 				odp_packet_free(pkt);
 				tp_hdr->tp_status = TP_STATUS_KERNEL;
 				frame_num = next_frame_num;
@@ -288,12 +290,14 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 
 		hdr->input = pktio_entry->s.handle;
 
-		if (pktio_cls_enabled(pktio_entry))
+		if (pktio_cls_enabled(pktio_entry)) {
 			_odp_packet_copy_cls_md(hdr, &parsed_hdr);
-		else
+			_odp_packet_l4_chksum(hdr, pktio_entry->s.in_chksums, l4_part_sum);
+		} else {
 			_odp_packet_parse_layer(hdr,
 						pktio_entry->s.config.parser.layer,
 						pktio_entry->s.in_chksums);
+		}
 
 		packet_set_ts(hdr, ts);
 
