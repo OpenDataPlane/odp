@@ -78,6 +78,7 @@ struct pktio_entry {
 	/* These two locks together lock the whole pktio device */
 	odp_ticketlock_t rxl;		/**< RX ticketlock */
 	odp_ticketlock_t txl;		/**< TX ticketlock */
+	odp_proto_layer_t parse_layer;
 	uint16_t pktin_frame_offset;
 
 	struct {

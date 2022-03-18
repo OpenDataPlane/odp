@@ -151,6 +151,8 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	odp_pool_t pool = pkt_sock->pool;
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
 	uint16_t vlan_len = 0;
+	const odp_proto_chksums_t chksums = pktio_entry->s.in_chksums;
+	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
 
 	if (pktio_entry->s.config.pktin.bit.ts_all ||
 	    pktio_entry->s.config.pktin.bit.ts_ptp)
@@ -164,7 +166,6 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		struct tpacket2_hdr *tp_hdr;
 		odp_packet_t pkt;
 		odp_packet_hdr_t *hdr;
-		odp_packet_hdr_t parsed_hdr;
 		int ret;
 		uint64_t l4_part_sum = 0;
 
@@ -214,13 +215,11 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			continue;
 		}
 
-		if (pktio_cls_enabled(pktio_entry)) {
-			packet_parse_reset(&parsed_hdr, 1);
-			packet_set_len(&parsed_hdr, pkt_len);
-			if (_odp_packet_parse_common(&parsed_hdr.p, pkt_buf,
-						     pkt_len, pkt_len,
-						     ODP_PROTO_LAYER_ALL,
-						     pktio_entry->s.in_chksums,
+		hdr = packet_hdr(pkt);
+
+		if (layer) {
+			if (_odp_packet_parse_common(&hdr->p, pkt_buf, pkt_len,
+						     pkt_len, layer, chksums,
 						     &l4_part_sum) < 0) {
 				odp_packet_free(pkt);
 				tp_hdr->tp_status = TP_STATUS_KERNEL;
@@ -228,16 +227,17 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 				continue;
 			}
 
-			if (_odp_cls_classify_packet(pktio_entry, pkt_buf,
-						     &pool, &parsed_hdr)) {
-				odp_packet_free(pkt);
-				tp_hdr->tp_status = TP_STATUS_KERNEL;
-				frame_num = next_frame_num;
-				continue;
+			if (pktio_cls_enabled(pktio_entry)) {
+				if (_odp_cls_classify_packet(pktio_entry, pkt_buf,
+							     &pool, hdr)) {
+					odp_packet_free(pkt);
+					tp_hdr->tp_status = TP_STATUS_KERNEL;
+					frame_num = next_frame_num;
+					continue;
+				}
 			}
 		}
 
-		hdr = packet_hdr(pkt);
 		if (frame_offset)
 			pull_head(hdr, frame_offset);
 
@@ -290,14 +290,8 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 
 		hdr->input = pktio_entry->s.handle;
 
-		if (pktio_cls_enabled(pktio_entry)) {
-			_odp_packet_copy_cls_md(hdr, &parsed_hdr);
-			_odp_packet_l4_chksum(hdr, pktio_entry->s.in_chksums, l4_part_sum);
-		} else {
-			_odp_packet_parse_layer(hdr,
-						pktio_entry->s.config.parser.layer,
-						pktio_entry->s.in_chksums);
-		}
+		if (layer >= ODP_PROTO_LAYER_L4)
+			_odp_packet_l4_chksum(hdr, chksums, l4_part_sum);
 
 		packet_set_ts(hdr, ts);
 

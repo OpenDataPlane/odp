@@ -656,6 +656,9 @@ int odp_pktio_start(odp_pktio_t hdl)
 		ODP_ERR("Already started\n");
 		return -1;
 	}
+	entry->s.parse_layer = pktio_cls_enabled(entry) ?
+				       ODP_PROTO_LAYER_ALL :
+				       entry->s.config.parser.layer;
 	if (entry->s.ops->start)
 		res = entry->s.ops->start(entry);
 	if (!res)
