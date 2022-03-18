@@ -249,6 +249,8 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	pkt_pcap_t *pcap = pkt_priv(pktio_entry);
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
+	int packets = 0, errors = 0;
+	uint32_t octets = 0;
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
 	const odp_proto_chksums_t chksums = pktio_entry->s.in_chksums;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
@@ -300,6 +302,9 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			ret = _odp_packet_parse_common(&pkt_hdr->p, data, pkt_len,
 						       pkt_len, layer, chksums,
 						       &l4_part_sum, opt);
+			if (ret)
+				errors++;
+
 			if (ret < 0) {
 				odp_packet_free(pkt);
 				continue;
@@ -319,8 +324,10 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 					odp_packet_free(pkt);
 
-					if (odp_unlikely(new_pkt == ODP_PACKET_INVALID))
+					if (odp_unlikely(new_pkt == ODP_PACKET_INVALID)) {
+						pktio_entry->s.stats.in_discards++;
 						continue;
+					}
 
 					pkt = new_pkt;
 					pkt_hdr = packet_hdr(new_pkt);
@@ -331,16 +338,22 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				_odp_packet_l4_chksum(pkt_hdr, chksums, l4_part_sum);
 		}
 
-		pktio_entry->s.stats.in_octets += pkt_hdr->frame_len;
-
 		packet_set_ts(pkt_hdr, ts);
 		pkt_hdr->input = pktio_entry->s.handle;
+
+		if (!pkt_hdr->p.flags.all.error) {
+			octets += pkt_len;
+			packets++;
+		}
 
 		pkts[i] = pkt;
 
 		i++;
 	}
-	pktio_entry->s.stats.in_packets += i;
+
+	pktio_entry->s.stats.in_octets += octets;
+	pktio_entry->s.stats.in_packets += packets;
+	pktio_entry->s.stats.in_errors += errors;
 
 	odp_ticketlock_unlock(&pktio_entry->s.rxl);
 
@@ -455,6 +468,8 @@ static int pcapif_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 
 	capa->stats.pktio.counter.in_octets = 1;
 	capa->stats.pktio.counter.in_packets = 1;
+	capa->stats.pktio.counter.in_discards = 1;
+	capa->stats.pktio.counter.in_errors = 1;
 	capa->stats.pktio.counter.out_octets = 1;
 	capa->stats.pktio.counter.out_packets = 1;
 
