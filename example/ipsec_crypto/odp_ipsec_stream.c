@@ -15,6 +15,7 @@
 #include <openssl/des.h>
 #include <openssl/rand.h>
 #include <openssl/hmac.h>
+#include <openssl/opensslv.h>
 
 #include <odp_api.h>
 
@@ -25,6 +26,11 @@
 #define STREAM_MAGIC 0xBABE01234567CAFE
 
 #define LOOP_DEQ_COUNT        32    /**< packets to dequeue at once */
+
+/* Ignore warnings about APIs deprecated in OpenSSL 3.0 */
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 /**
  * Stream packet header
