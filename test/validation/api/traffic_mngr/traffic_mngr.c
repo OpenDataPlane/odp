@@ -3360,6 +3360,7 @@ static int test_sched_wfq(const char         *sched_base_name,
 		if (FANIN_RATIO <= fanin)
 			fanin = 0;
 	}
+	CU_ASSERT(pkts_sent == pkt_cnt + 4);
 
 	busy_wait(1000000);   /* wait 1 millisecond */
 
