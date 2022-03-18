@@ -183,11 +183,9 @@ static struct packet *extract_complete_packet(struct packet *tail,
 		struct packet *current = tail;
 		odph_ipv4hdr_t tail_hdr;
 		uint16_t final_frag_offset;
-		uint16_t expected_frag_offset;
 
 		tail_hdr = *(odph_ipv4hdr_t *)odp_packet_data(tail->handle);
 		final_frag_offset = ipv4hdr_fragment_offset_oct(tail_hdr);
-		expected_frag_offset = final_frag_offset;
 		while (current) {
 			odph_ipv4hdr_t curr_hdr;
 			uint16_t curr_offset_oct;
@@ -258,7 +256,6 @@ static struct packet *extract_complete_packet(struct packet *tail,
 				break;
 			}
 
-			expected_frag_offset -= prev_oct;
 			current = prev;
 		}
 
