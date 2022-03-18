@@ -234,6 +234,8 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int i;
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
 	uint32_t alloc_len = pkt_sock->mtu + frame_offset;
+	const odp_proto_chksums_t chksums = pktio_entry->s.in_chksums;
+	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
 
 	memset(msgvec, 0, sizeof(msgvec));
 
@@ -279,24 +281,25 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			continue;
 		}
 
-		if (pktio_cls_enabled(pktio_entry)) {
-			uint16_t seg_len =  pkt_len;
+		if (layer) {
+			uint16_t seg_len = pkt_len;
 
 			if (msgvec[i].msg_hdr.msg_iov->iov_len < pkt_len)
 				seg_len = msgvec[i].msg_hdr.msg_iov->iov_len;
 
 			if (_odp_packet_parse_common(&pkt_hdr->p, base, pkt_len,
-						     seg_len, ODP_PROTO_LAYER_ALL,
-						     pktio_entry->s.in_chksums,
+						     seg_len, layer, chksums,
 						     &l4_part_sum) < 0) {
 				odp_packet_free(pkt);
 				continue;
 			}
 
-			if (_odp_cls_classify_packet(pktio_entry, base, &pool,
-						     pkt_hdr)) {
-				odp_packet_free(pkt);
-				continue;
+			if (pktio_cls_enabled(pktio_entry)) {
+				if (_odp_cls_classify_packet(pktio_entry, base, &pool,
+							     pkt_hdr)) {
+					odp_packet_free(pkt);
+					continue;
+				}
 			}
 		}
 
@@ -309,12 +312,8 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		pkt_hdr->input = pktio_entry->s.handle;
 
-		if (pktio_cls_enabled(pktio_entry))
-			_odp_packet_l4_chksum(pkt_hdr, pktio_entry->s.in_chksums, l4_part_sum);
-		else
-			_odp_packet_parse_layer(pkt_hdr,
-						pktio_entry->s.config.parser.layer,
-						pktio_entry->s.in_chksums);
+		if (layer >= ODP_PROTO_LAYER_L4)
+			_odp_packet_l4_chksum(pkt_hdr, chksums, l4_part_sum);
 
 		packet_set_ts(pkt_hdr, ts);
 

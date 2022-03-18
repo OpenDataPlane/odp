@@ -587,9 +587,9 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	odp_pool_t pool = pkt_dpdk->pool;
 	odp_pktin_config_opt_t pktin_cfg = pktio_entry->s.config.pktin;
-	odp_proto_layer_t parse_layer = pktio_entry->s.config.parser.layer;
 	odp_pktio_t input = pktio_entry->s.handle;
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
+	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
 
 	/* Allocate maximum sized packets */
 	max_len = pkt_dpdk->data_room;
@@ -604,8 +604,6 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	}
 
 	for (i = 0; i < num; i++) {
-		odp_packet_hdr_t parsed_hdr;
-
 		mbuf = mbuf_table[i];
 		if (odp_unlikely(mbuf->nb_segs != 1)) {
 			ODP_ERR("Segmented buffers not supported\n");
@@ -616,33 +614,33 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		odp_prefetch(data);
 
 		pkt_len = rte_pktmbuf_pkt_len(mbuf);
+		pkt     = pkt_table[i];
+		pkt_hdr = packet_hdr(pkt);
 
-		if (pktio_cls_enabled(pktio_entry)) {
+		if (layer) {
 			uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
 
-			packet_parse_reset(&parsed_hdr, 1);
-			packet_set_len(&parsed_hdr, pkt_len);
-			if (_odp_dpdk_packet_parse_common(&parsed_hdr.p, data,
-							  pkt_len, pkt_len,
-							  mbuf,
-							  ODP_PROTO_LAYER_ALL,
-							  supported_ptypes,
+			packet_parse_reset(pkt_hdr, 1);
+			if (_odp_dpdk_packet_parse_common(&pkt_hdr->p, data,
+							  pkt_len, pkt_len, mbuf,
+							  layer, supported_ptypes,
 							  pktin_cfg)) {
 				odp_packet_free(pkt_table[i]);
 				rte_pktmbuf_free(mbuf);
 				continue;
 			}
-			if (_odp_cls_classify_packet(pktio_entry,
-						     (const uint8_t *)data,
-						     &pool, &parsed_hdr)) {
-				odp_packet_free(pkt_table[i]);
-				rte_pktmbuf_free(mbuf);
-				continue;
+
+			if (pktio_cls_enabled(pktio_entry)) {
+				if (_odp_cls_classify_packet(pktio_entry,
+							     (const uint8_t *)data,
+							     &pool, pkt_hdr)) {
+					odp_packet_free(pkt_table[i]);
+					rte_pktmbuf_free(mbuf);
+					continue;
+				}
 			}
 		}
 
-		pkt     = pkt_table[i];
-		pkt_hdr = packet_hdr(pkt);
 		pull_tail(pkt_hdr, max_len - pkt_len);
 		if (frame_offset)
 			pull_head(pkt_hdr, frame_offset);
@@ -651,21 +649,6 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 			goto fail;
 
 		pkt_hdr->input = input;
-
-		if (pktio_cls_enabled(pktio_entry)) {
-			_odp_packet_copy_cls_md(pkt_hdr, &parsed_hdr);
-		} else if (parse_layer != ODP_PROTO_LAYER_NONE) {
-			uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
-
-			if (_odp_dpdk_packet_parse_layer(pkt_hdr, mbuf,
-							 parse_layer,
-							 supported_ptypes,
-							 pktin_cfg)) {
-				odp_packet_free(pkt);
-				rte_pktmbuf_free(mbuf);
-				continue;
-			}
-		}
 
 		if (mbuf->ol_flags & RTE_MBUF_F_RX_RSS_HASH)
 			packet_set_flow_hash(pkt_hdr, mbuf->hash.rss);
@@ -878,9 +861,9 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 	int i, nb_pkts;
 	odp_pool_t pool;
 	odp_pktin_config_opt_t pktin_cfg;
-	odp_proto_layer_t parse_layer;
 	odp_pktio_t input;
 	pkt_dpdk_t *pkt_dpdk;
+	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
 
 	prefetch_pkt(mbuf_table[0]);
 
@@ -889,15 +872,12 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 	pool = pkt_dpdk->pool;
 	set_flow_hash = pkt_dpdk->opt.set_flow_hash;
 	pktin_cfg = pktio_entry->s.config.pktin;
-	parse_layer = pktio_entry->s.config.parser.layer;
 	input = pktio_entry->s.handle;
 
 	if (odp_likely(mbuf_num > 1))
 		prefetch_pkt(mbuf_table[1]);
 
 	for (i = 0; i < mbuf_num; i++) {
-		odp_packet_hdr_t parsed_hdr;
-
 		if (odp_likely((i + 2) < mbuf_num))
 			prefetch_pkt(mbuf_table[i + 2]);
 
@@ -910,28 +890,27 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 
 		data = rte_pktmbuf_mtod(mbuf, char *);
 		pkt_len = rte_pktmbuf_pkt_len(mbuf);
-
 		pkt_hdr = pkt_hdr_from_mbuf(mbuf);
+		packet_init(pkt_hdr, pkt_len);
 
-		if (pktio_cls_enabled(pktio_entry)) {
+		if (layer) {
 			uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
 
-			packet_parse_reset(&parsed_hdr, 1);
-			packet_set_len(&parsed_hdr, pkt_len);
-			if (_odp_dpdk_packet_parse_common(&parsed_hdr.p, data,
-							  pkt_len, pkt_len,
-							  mbuf,
-							  ODP_PROTO_LAYER_ALL,
-							  supported_ptypes,
+			if (_odp_dpdk_packet_parse_common(&pkt_hdr->p, data,
+							  pkt_len, pkt_len, mbuf,
+							  layer, supported_ptypes,
 							  pktin_cfg)) {
 				rte_pktmbuf_free(mbuf);
 				continue;
 			}
-			if (_odp_cls_classify_packet(pktio_entry,
-						     (const uint8_t *)data,
-						     &pool, &parsed_hdr)) {
-				rte_pktmbuf_free(mbuf);
-				continue;
+
+			if (pktio_cls_enabled(pktio_entry)) {
+				if (_odp_cls_classify_packet(pktio_entry,
+							     (const uint8_t *)data,
+							     &pool, pkt_hdr)) {
+					rte_pktmbuf_free(mbuf);
+					continue;
+				}
 			}
 		}
 
@@ -939,22 +918,8 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		 * are supported. */
 		pkt_hdr->seg_data = data;
 
-		packet_init(pkt_hdr, pkt_len);
 		pkt_hdr->input = input;
 
-		if (pktio_cls_enabled(pktio_entry)) {
-			_odp_packet_copy_cls_md(pkt_hdr, &parsed_hdr);
-		} else if (parse_layer != ODP_PROTO_LAYER_NONE) {
-			uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
-
-			if (_odp_dpdk_packet_parse_layer(pkt_hdr, mbuf,
-							 parse_layer,
-							 supported_ptypes,
-							 pktin_cfg)) {
-				rte_pktmbuf_free(mbuf);
-				continue;
-			}
-		}
 		if (set_flow_hash && (mbuf->ol_flags & RTE_MBUF_F_RX_RSS_HASH))
 			packet_set_flow_hash(pkt_hdr, mbuf->hash.rss);
 

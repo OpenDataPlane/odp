@@ -162,6 +162,8 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int num_rx = 0;
 	int packets = 0, errors = 0;
 	uint32_t octets = 0;
+	const odp_proto_chksums_t chksums = pktio_entry->s.in_chksums;
+	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
 
 	if (odp_unlikely(num > QUEUE_MULTI_MAX))
 		num = QUEUE_MULTI_MAX;
@@ -184,10 +186,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		pkt_len = odp_packet_len(pkt);
 		pkt_hdr = packet_hdr(pkt);
 
-		packet_parse_reset(pkt_hdr, 1);
-		if (pktio_cls_enabled(pktio_entry)) {
-			odp_packet_t new_pkt;
-			odp_pool_t new_pool;
+		if (layer) {
 			uint8_t *pkt_addr;
 			uint8_t buf[PARSE_BYTES];
 			int ret;
@@ -205,9 +204,9 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				pkt_addr = odp_packet_data(pkt);
 			}
 
+			packet_parse_reset(pkt_hdr, 1);
 			ret = _odp_packet_parse_common(&pkt_hdr->p, pkt_addr, pkt_len,
-						       seg_len, ODP_PROTO_LAYER_ALL,
-						       pktio_entry->s.in_chksums,
+						       seg_len, layer, chksums,
 						       &l4_part_sum);
 			if (ret)
 				errors++;
@@ -217,39 +216,34 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				continue;
 			}
 
-			ret = _odp_cls_classify_packet(pktio_entry, pkt_addr,
-						       &new_pool, pkt_hdr);
-			if (ret) {
-				odp_packet_free(pkt);
-				continue;
-			}
+			if (pktio_cls_enabled(pktio_entry)) {
+				odp_packet_t new_pkt;
+				odp_pool_t new_pool;
 
-			if (new_pool != odp_packet_pool(pkt)) {
-				new_pkt = odp_packet_copy(pkt, new_pool);
-
-				odp_packet_free(pkt);
-
-				if (new_pkt == ODP_PACKET_INVALID) {
-					pktio_entry->s.stats.in_discards++;
+				ret = _odp_cls_classify_packet(pktio_entry, pkt_addr,
+							       &new_pool, pkt_hdr);
+				if (ret) {
+					odp_packet_free(pkt);
 					continue;
 				}
 
-				pkt = new_pkt;
-				pkt_hdr = packet_hdr(new_pkt);
+				if (new_pool != odp_packet_pool(pkt)) {
+					new_pkt = odp_packet_copy(pkt, new_pool);
+
+					odp_packet_free(pkt);
+
+					if (new_pkt == ODP_PACKET_INVALID) {
+						pktio_entry->s.stats.in_discards++;
+						continue;
+					}
+
+					pkt = new_pkt;
+					pkt_hdr = packet_hdr(new_pkt);
+				}
 			}
 
-			_odp_packet_l4_chksum(pkt_hdr, pktio_entry->s.in_chksums, l4_part_sum);
-		} else {
-			odp_packet_parse_param_t param;
-
-			/*
-			 * Use odp_packet_parse() which can handle segmented
-			 * packets.
-			 */
-			param.proto = ODP_PROTO_ETH;
-			param.last_layer = pktio_entry->s.config.parser.layer;
-			param.chksums = pktio_entry->s.in_chksums;
-			odp_packet_parse(packet_handle(pkt_hdr), 0, &param);
+			if (layer >= ODP_PROTO_LAYER_L4)
+				_odp_packet_l4_chksum(pkt_hdr, chksums, l4_part_sum);
 		}
 
 		packet_set_ts(pkt_hdr, ts);

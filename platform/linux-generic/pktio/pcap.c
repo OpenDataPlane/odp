@@ -250,6 +250,8 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
+	const odp_proto_chksums_t chksums = pktio_entry->s.in_chksums;
+	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
@@ -292,43 +294,43 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			break;
 		}
 
-		if (pktio_cls_enabled(pktio_entry)) {
-			odp_packet_t new_pkt;
+		if (layer) {
 			uint64_t l4_part_sum = 0;
 
 			ret = _odp_packet_parse_common(&pkt_hdr->p, data, pkt_len,
-						       pkt_len, ODP_PROTO_LAYER_ALL,
-						       pktio_entry->s.in_chksums,
+						       pkt_len, layer, chksums,
 						       &l4_part_sum);
 			if (ret < 0) {
 				odp_packet_free(pkt);
 				continue;
 			}
 
-			ret = _odp_cls_classify_packet(pktio_entry, data,
-						       &new_pool, pkt_hdr);
-			if (ret) {
-				odp_packet_free(pkt);
-				continue;
-			}
-			if (new_pool != pcap->pool) {
-				new_pkt = odp_packet_copy(pkt, new_pool);
+			if (pktio_cls_enabled(pktio_entry)) {
+				odp_packet_t new_pkt;
 
-				odp_packet_free(pkt);
-
-				if (odp_unlikely(new_pkt == ODP_PACKET_INVALID))
+				ret = _odp_cls_classify_packet(pktio_entry, data,
+							       &new_pool, pkt_hdr);
+				if (ret) {
+					odp_packet_free(pkt);
 					continue;
+				}
+				if (new_pool != pcap->pool) {
+					new_pkt = odp_packet_copy(pkt, new_pool);
 
-				pkt = new_pkt;
-				pkt_hdr = packet_hdr(new_pkt);
+					odp_packet_free(pkt);
+
+					if (odp_unlikely(new_pkt == ODP_PACKET_INVALID))
+						continue;
+
+					pkt = new_pkt;
+					pkt_hdr = packet_hdr(new_pkt);
+				}
 			}
 
-			_odp_packet_l4_chksum(pkt_hdr, pktio_entry->s.in_chksums, l4_part_sum);
-		} else {
-			_odp_packet_parse_layer(pkt_hdr,
-						pktio_entry->s.config.parser.layer,
-						pktio_entry->s.in_chksums);
+			if (layer >= ODP_PROTO_LAYER_L4)
+				_odp_packet_l4_chksum(pkt_hdr, chksums, l4_part_sum);
 		}
+
 		pktio_entry->s.stats.in_octets += pkt_hdr->frame_len;
 
 		packet_set_ts(pkt_hdr, ts);
