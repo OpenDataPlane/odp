@@ -294,10 +294,12 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		if (pktio_cls_enabled(pktio_entry)) {
 			odp_packet_t new_pkt;
+			uint64_t l4_part_sum = 0;
 
 			ret = _odp_packet_parse_common(&pkt_hdr->p, data, pkt_len,
 						       pkt_len, ODP_PROTO_LAYER_ALL,
-						       pktio_entry->s.in_chksums);
+						       pktio_entry->s.in_chksums,
+						       &l4_part_sum);
 			if (ret < 0) {
 				odp_packet_free(pkt);
 				continue;
@@ -320,6 +322,8 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				pkt = new_pkt;
 				pkt_hdr = packet_hdr(new_pkt);
 			}
+
+			_odp_packet_l4_chksum(pkt_hdr, pktio_entry->s.in_chksums, l4_part_sum);
 		} else {
 			_odp_packet_parse_layer(pkt_hdr,
 						pktio_entry->s.config.parser.layer,
