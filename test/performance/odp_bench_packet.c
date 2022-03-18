@@ -756,7 +756,7 @@ static int bench_packet_headroom(void)
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
 		ret += odp_packet_headroom(gbl_args->pkt_tbl[i]);
 
-	return i;
+	return i + ret;
 }
 
 static int bench_packet_tailroom(void)
@@ -767,7 +767,7 @@ static int bench_packet_tailroom(void)
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
 		ret += odp_packet_tailroom(gbl_args->pkt_tbl[i]);
 
-	return i;
+	return i + ret;
 }
 
 static int bench_packet_tail(void)
@@ -1412,7 +1412,7 @@ static int bench_packet_has_ref(void)
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
 		ret += odp_packet_has_ref(pkt_tbl[i]);
 
-	return i;
+	return i + ret;
 }
 
 static int bench_packet_subtype(void)
