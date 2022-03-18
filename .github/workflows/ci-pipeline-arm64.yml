@@ -141,7 +141,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ['ubuntu_18.04']
+        os: ['ubuntu_18.04', 'ubuntu_22.04']
     steps:
       - uses: AutoModality/action-clean@v1.1.0
       - uses: actions/checkout@v2

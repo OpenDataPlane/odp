@@ -293,7 +293,7 @@ jobs:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
-        os: ['ubuntu_20.04']
+        os: ['ubuntu_20.04', 'ubuntu_22.04']
     steps:
       - uses: actions/checkout@v2
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}" -e ARCH="${ARCH}"
