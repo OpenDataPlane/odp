@@ -458,38 +458,3 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 
 	return prs->flags.all.error != 0;
 }
-
-/**
- * Simple packet parser
- */
-int _odp_packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
-			    odp_proto_layer_t layer,
-			    odp_proto_chksums_t chksums)
-{
-	uint32_t seg_len = packet_first_seg_len(pkt_hdr);
-	const uint8_t *base = packet_data(pkt_hdr);
-	uint32_t offset = 0;
-	uint16_t ethtype;
-	uint64_t l4_part_sum = 0;
-	int rc;
-
-	if (odp_unlikely(layer == ODP_PROTO_LAYER_NONE))
-		return 0;
-
-	/* Assume valid L2 header, no CRC/FCS check in SW */
-	pkt_hdr->p.l2_offset = offset;
-
-	ethtype = _odp_parse_eth(&pkt_hdr->p, &base, &offset, pkt_hdr->frame_len);
-
-	rc = _odp_packet_parse_common_l3_l4(&pkt_hdr->p, base, offset,
-					    pkt_hdr->frame_len, seg_len, layer,
-					    ethtype, chksums, &l4_part_sum);
-
-	if (rc != 0)
-		return rc;
-
-	if (layer >= ODP_PROTO_LAYER_L4)
-		return _odp_packet_l4_chksum(pkt_hdr, chksums, l4_part_sum);
-	else
-		return 0;
-}
