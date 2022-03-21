@@ -103,11 +103,6 @@ static inline int _odp_packet_parse_common(packet_parser_t *prs,
 					      l4_part_sum);
 }
 
-/* Perform packet parse up to a given protocol layer */
-int _odp_packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
-			    odp_proto_layer_t layer,
-			    odp_proto_chksums_t chksums);
-
 #ifdef __cplusplus
 }
 #endif
