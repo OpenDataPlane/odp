@@ -120,6 +120,12 @@ typedef enum {
 	SHAPER_PROFILE, SCHED_PROFILE, THRESHOLD_PROFILE, WRED_PROFILE
 } profile_kind_t;
 
+typedef enum {
+	THRESHOLD_BYTE,
+	THRESHOLD_PACKET,
+	THRESHOLD_BYTE_AND_PACKET
+} threshold_type_t;
+
 typedef struct {
 	uint32_t       num_queues;
 	odp_tm_queue_t tm_queues[];
@@ -2649,7 +2655,8 @@ static void traffic_mngr_test_sched_profile(void)
 }
 
 static void check_threshold_profile(char    *threshold_name,
-				    uint32_t threshold_idx)
+				    uint32_t threshold_idx,
+				    threshold_type_t threshold)
 {
 	odp_tm_threshold_params_t threshold_params;
 	odp_tm_threshold_t        profile;
@@ -2668,15 +2675,17 @@ static void check_threshold_profile(char    *threshold_name,
 	if (ret)
 		return;
 
-	CU_ASSERT(threshold_params.max_pkts  ==
-				  threshold_idx * MIN_PKT_THRESHOLD);
-	CU_ASSERT(threshold_params.max_bytes ==
-				  threshold_idx * MIN_BYTE_THRESHOLD);
-	CU_ASSERT(threshold_params.enable_max_pkts  == 1);
-	CU_ASSERT(threshold_params.enable_max_bytes == 1);
+	if (threshold == THRESHOLD_PACKET || threshold == THRESHOLD_BYTE_AND_PACKET) {
+		CU_ASSERT(threshold_params.enable_max_pkts  == 1);
+		CU_ASSERT(threshold_params.max_pkts  == threshold_idx * MIN_PKT_THRESHOLD);
+	}
+	if (threshold == THRESHOLD_BYTE || threshold == THRESHOLD_BYTE_AND_PACKET) {
+		CU_ASSERT(threshold_params.enable_max_bytes == 1);
+		CU_ASSERT(threshold_params.max_bytes == threshold_idx * MIN_BYTE_THRESHOLD);
+	}
 }
 
-static void traffic_mngr_test_threshold_profile(void)
+static void traffic_mngr_test_threshold_profile(threshold_type_t threshold)
 {
 	odp_tm_threshold_params_t threshold_params;
 	odp_tm_threshold_t        profile;
@@ -2684,14 +2693,19 @@ static void traffic_mngr_test_threshold_profile(void)
 	char                      threshold_name[TM_NAME_LEN];
 
 	odp_tm_threshold_params_init(&threshold_params);
-	threshold_params.enable_max_pkts  = 1;
-	threshold_params.enable_max_bytes = 1;
+
+	if (threshold == THRESHOLD_PACKET || threshold == THRESHOLD_BYTE_AND_PACKET)
+		threshold_params.enable_max_pkts  = 1;
+	if (threshold == THRESHOLD_BYTE || threshold == THRESHOLD_BYTE_AND_PACKET)
+		threshold_params.enable_max_bytes = 1;
 
 	for (idx = 1; idx <= NUM_THRESH_TEST_PROFILES; idx++) {
 		snprintf(threshold_name, sizeof(threshold_name),
 			 "threshold_profile_%" PRIu32, idx);
-		threshold_params.max_pkts  = idx * MIN_PKT_THRESHOLD;
-		threshold_params.max_bytes = idx * MIN_BYTE_THRESHOLD;
+		if (threshold == THRESHOLD_PACKET || threshold == THRESHOLD_BYTE_AND_PACKET)
+			threshold_params.max_pkts = idx * MIN_PKT_THRESHOLD;
+		if (threshold == THRESHOLD_BYTE || threshold == THRESHOLD_BYTE_AND_PACKET)
+			threshold_params.max_bytes = idx * MIN_BYTE_THRESHOLD;
 
 		profile = odp_tm_threshold_create(threshold_name,
 						  &threshold_params);
@@ -2713,8 +2727,28 @@ static void traffic_mngr_test_threshold_profile(void)
 		threshold_idx = ((3 + 7 * idx) % NUM_THRESH_TEST_PROFILES) + 1;
 		snprintf(threshold_name, sizeof(threshold_name),
 			 "threshold_profile_%" PRIu32, threshold_idx);
-		check_threshold_profile(threshold_name, threshold_idx);
+		check_threshold_profile(threshold_name, threshold_idx, threshold);
 	}
+
+	for (i = 0; i < NUM_THRESH_TEST_PROFILES; i++) {
+		CU_ASSERT(odp_tm_threshold_destroy(threshold_profiles[i]) == 0);
+		num_threshold_profiles--;
+	}
+}
+
+static void traffic_mngr_test_threshold_profile_byte(void)
+{
+	traffic_mngr_test_threshold_profile(THRESHOLD_BYTE);
+}
+
+static void traffic_mngr_test_threshold_profile_packet(void)
+{
+	traffic_mngr_test_threshold_profile(THRESHOLD_PACKET);
+}
+
+static void traffic_mngr_test_threshold_profile_byte_and_packet(void)
+{
+	traffic_mngr_test_threshold_profile(THRESHOLD_BYTE_AND_PACKET);
 }
 
 static void check_wred_profile(char    *wred_name,
@@ -4563,10 +4597,27 @@ static void traffic_mngr_test_scheduler(void)
 				 INCREASING_WEIGHTS) == 0);
 }
 
-static int traffic_mngr_check_thresholds(void)
+static int traffic_mngr_check_thresholds_byte(void)
 {
-	/* Check only for TM queue threshold support as we only test queue
-	 * threshold. */
+	/* Check only for TM queue threshold support as we only test queue threshold. */
+	if (!tm_capabilities.tm_queue_threshold.byte)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+static int traffic_mngr_check_thresholds_packet(void)
+{
+	/* Check only for TM queue threshold support as we only test queue threshold. */
+	if (!tm_capabilities.tm_queue_threshold.packet)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+static int traffic_mngr_check_thresholds_byte_and_packet(void)
+{
+	/* Check only for TM queue threshold support as we only test queue threshold. */
 	if (!tm_capabilities.tm_queue_threshold.byte_and_packet)
 		return ODP_TEST_INACTIVE;
 
@@ -4909,8 +4960,12 @@ odp_testinfo_t traffic_mngr_suite[] = {
 	ODP_TEST_INFO(traffic_mngr_test_tm_create),
 	ODP_TEST_INFO(traffic_mngr_test_shaper_profile),
 	ODP_TEST_INFO(traffic_mngr_test_sched_profile),
-	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_threshold_profile,
-				  traffic_mngr_check_thresholds),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_threshold_profile_byte,
+				  traffic_mngr_check_thresholds_byte),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_threshold_profile_packet,
+				  traffic_mngr_check_thresholds_packet),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_threshold_profile_byte_and_packet,
+				  traffic_mngr_check_thresholds_byte_and_packet),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_wred_profile,
 				  traffic_mngr_check_wred),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_shaper,
@@ -4918,7 +4973,7 @@ odp_testinfo_t traffic_mngr_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_scheduler,
 				  traffic_mngr_check_scheduler),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_thresholds,
-				  traffic_mngr_check_thresholds),
+				  traffic_mngr_check_thresholds_byte_and_packet),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_byte_wred,
 				  traffic_mngr_check_byte_wred),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_pkt_wred,
