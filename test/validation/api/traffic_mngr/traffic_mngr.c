@@ -3479,7 +3479,8 @@ static int test_threshold(const char *threshold_name,
 	odp_tm_threshold_params_t threshold_params;
 	odp_tm_queue_t            tm_queue;
 	pkt_info_t                pkt_info;
-	uint32_t                  num_pkts, pkt_len, pkts_sent;
+	uint32_t                  pkt_len, pkts_sent;
+	uint32_t                  num_pkts = 0;
 
 	odp_tm_threshold_params_init(&threshold_params);
 	if (max_pkts != 0) {
@@ -3488,15 +3489,18 @@ static int test_threshold(const char *threshold_name,
 		threshold_params.enable_max_pkts = true;
 		num_pkts = 2 * max_pkts;
 		pkt_len  = 256;
-	} else if (max_bytes != 0) {
+	}
+
+	if (max_bytes != 0) {
 		max_bytes = MIN(max_bytes, MAX_PKTS * MAX_PAYLOAD / 3);
 		threshold_params.max_bytes        = max_bytes;
 		threshold_params.enable_max_bytes = true;
 		num_pkts = 2 * max_bytes / MAX_PAYLOAD;
 		pkt_len  = MAX_PAYLOAD;
-	} else {
-		return -1;
 	}
+
+	if (max_pkts == 0 && max_bytes == 0)
+		return -1;
 
 	/* Pick a tm_queue and set the tm_queue's threshold profile and then
 	 * send in twice the amount of traffic as suggested by the thresholds
@@ -4624,12 +4628,22 @@ static int traffic_mngr_check_thresholds_byte_and_packet(void)
 	return ODP_TEST_ACTIVE;
 }
 
-static void traffic_mngr_test_thresholds(void)
+static void traffic_mngr_test_thresholds_byte(void)
 {
-	CU_ASSERT(test_threshold("thresh_A", "shaper_A", "node_1_2_1", 0,
-				 16, 0)    == 0);
-	CU_ASSERT(test_threshold("thresh_B", "shaper_B", "node_1_2_1", 1,
+	CU_ASSERT(test_threshold("thresh_byte", "shaper_B", "node_1_2_1", 1,
 				 0,  6400) == 0);
+}
+
+static void traffic_mngr_test_thresholds_packet(void)
+{
+	CU_ASSERT(test_threshold("thresh_packet", "shaper_A", "node_1_2_1", 0,
+				 16, 0) == 0);
+}
+
+static void traffic_mngr_test_thresholds_byte_and_packet(void)
+{
+	CU_ASSERT(test_threshold("thresh_byte_and_packet", "shaper_A", "node_1_2_1", 0,
+				 16, 6400) == 0);
 }
 
 static int traffic_mngr_check_queue_stats(void)
@@ -4972,7 +4986,11 @@ odp_testinfo_t traffic_mngr_suite[] = {
 				  traffic_mngr_check_shaper),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_scheduler,
 				  traffic_mngr_check_scheduler),
-	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_thresholds,
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_thresholds_byte,
+				  traffic_mngr_check_thresholds_byte),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_thresholds_packet,
+				  traffic_mngr_check_thresholds_packet),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_thresholds_byte_and_packet,
 				  traffic_mngr_check_thresholds_byte_and_packet),
 	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_byte_wred,
 				  traffic_mngr_check_byte_wred),
