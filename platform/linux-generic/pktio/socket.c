@@ -22,6 +22,7 @@
 #include <odp_debug_internal.h>
 #include <odp_errno_define.h>
 #include <odp_classification_internal.h>
+#include <odp_macros_internal.h>
 
 #include <sys/socket.h>
 #include <stdio.h>
@@ -282,10 +283,16 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		}
 
 		if (layer) {
-			uint16_t seg_len = pkt_len;
+			uint8_t buf[PARSE_BYTES];
+			uint16_t seg_len = msgvec[i].msg_hdr.msg_iov->iov_len;
 
-			if (msgvec[i].msg_hdr.msg_iov->iov_len < pkt_len)
-				seg_len = msgvec[i].msg_hdr.msg_iov->iov_len;
+			/* Make sure there is enough data for the packet
+			* parser in the case of a segmented packet. */
+			if (odp_unlikely(seg_len < PARSE_BYTES && pkt_len > seg_len)) {
+				seg_len = MIN(pkt_len, PARSE_BYTES);
+				odp_packet_copy_to_mem(pkt, 0, seg_len, buf);
+				base = buf;
+			}
 
 			if (_odp_packet_parse_common(&pkt_hdr->p, base, pkt_len,
 						     seg_len, layer, chksums,
