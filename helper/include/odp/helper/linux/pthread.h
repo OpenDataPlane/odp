@@ -18,6 +18,7 @@
 #define ODPH_LINUX_PTHREAD_H_
 
 #include <odp/helper/threads.h>
+#include <odp_api.h>
 
 #ifdef __cplusplus
 extern "C" {

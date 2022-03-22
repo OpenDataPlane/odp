@@ -21,8 +21,6 @@
 extern "C" {
 #endif
 
-#include <odp_api.h>
-#include <odp/helper/ip.h>
 #include <stdint.h>
 #include <stdarg.h>
 
