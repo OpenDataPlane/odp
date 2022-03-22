@@ -468,7 +468,7 @@ specified independently at *open* time.
 .PktIO Input Modes
 * `ODP_PKTIN_MODE_DIRECT`
 * `ODP_PKTIN_MODE_QUEUE`
-* `ODP_OKTIN_MODE_SCHED`
+* `ODP_PKTIN_MODE_SCHED`
 * `ODP_PKTIN_MODE_DISABLED`
 
 .PktIO Output Modes
