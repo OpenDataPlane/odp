@@ -24,6 +24,7 @@ extern "C" {
 #endif
 
 #include <odp/helper/deprecated.h>
+#include <odp_api.h>
 
 #include <pthread.h>
 #include <getopt.h>
