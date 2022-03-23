@@ -24,6 +24,7 @@
 #include <odp/api/plat/event_inlines.h>
 #include <odp/api/plat/packet_inlines.h>
 #include <odp/api/plat/packet_vector_inlines.h>
+#include <odp/api/plat/timer_inlines.h>
 
 odp_event_subtype_t odp_event_subtype(odp_event_t event)
 {
