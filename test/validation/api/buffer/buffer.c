@@ -1,5 +1,6 @@
 /* Copyright (c) 2014-2018, Linaro Limited
  * Copyright (c) 2019, Nokia
+ * Copyright (c) 2022, Marvell
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -51,7 +52,7 @@ static int buffer_suite_init(void)
 	return 0;
 }
 
-static void buffer_test_pool_alloc_free(void)
+static void test_pool_alloc_free(const odp_pool_param_t *param)
 {
 	odp_pool_t pool;
 	odp_event_t ev;
@@ -59,14 +60,15 @@ static void buffer_test_pool_alloc_free(void)
 	uint32_t num_buf = 0;
 	void *addr;
 	odp_event_subtype_t subtype;
-	uint32_t num = default_param.buf.num;
-	uint32_t size = default_param.buf.size;
-	uint32_t align = default_param.buf.align;
+	uint32_t num = param->buf.num;
+	uint32_t size = param->buf.size;
+	uint32_t align = param->buf.align;
+
 	odp_buffer_t buffer[num];
 	odp_bool_t wrong_type = false, wrong_subtype = false;
 	odp_bool_t wrong_size = false, wrong_align = false;
 
-	pool = odp_pool_create("default pool", &default_param);
+	pool = odp_pool_create("default pool", param);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	odp_pool_print(pool);
@@ -123,7 +125,7 @@ static void buffer_test_pool_alloc_free(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-static void buffer_test_pool_alloc_free_multi(void)
+static void test_pool_alloc_free_multi(const odp_pool_param_t *param)
 {
 	odp_pool_t pool;
 	uint32_t i, num_buf;
@@ -131,14 +133,15 @@ static void buffer_test_pool_alloc_free_multi(void)
 	odp_event_t ev;
 	void *addr;
 	odp_event_subtype_t subtype;
-	uint32_t num = default_param.buf.num;
-	uint32_t size = default_param.buf.size;
-	uint32_t align = default_param.buf.align;
+	uint32_t num = param->buf.num;
+	uint32_t size = param->buf.size;
+	uint32_t align = param->buf.align;
+
 	odp_buffer_t buffer[num + BURST];
 	odp_bool_t wrong_type = false, wrong_subtype = false;
 	odp_bool_t wrong_size = false, wrong_align = false;
 
-	pool = odp_pool_create("default pool", &default_param);
+	pool = odp_pool_create("default pool", param);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	ret = 0;
@@ -203,16 +206,14 @@ static void buffer_test_pool_alloc_free_multi(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-static void buffer_test_pool_single_pool(void)
+static void test_pool_single_pool(odp_pool_param_t *param)
 {
 	odp_pool_t pool;
 	odp_buffer_t buffer;
-	odp_pool_param_t param;
 
-	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
-	param.buf.num = 1;
+	param->buf.num = 1;
 
-	pool = odp_pool_create("pool 0", &param);
+	pool = odp_pool_create("pool 0", param);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	odp_pool_print(pool);
@@ -246,23 +247,21 @@ static void buffer_test_pool_single_pool(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-static void buffer_test_pool_two_pools(void)
+static void test_pool_two_pools(odp_pool_param_t *param)
 {
 	odp_pool_t pool0, pool1;
 	odp_buffer_t buf, buffer[2];
-	odp_pool_param_t param;
 	int num = 0;
 
 	if (pool_capa.buf.max_pools < 2)
 		return;
 
-	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
-	param.buf.num = 1;
+	param->buf.num = 1;
 
-	pool0 = odp_pool_create("pool 0", &param);
+	pool0 = odp_pool_create("pool 0", param);
 	CU_ASSERT_FATAL(pool0 != ODP_POOL_INVALID);
 
-	pool1 = odp_pool_create("pool 1", &param);
+	pool1 = odp_pool_create("pool 1", param);
 	CU_ASSERT_FATAL(pool1 != ODP_POOL_INVALID);
 
 	buffer[0] = odp_buffer_alloc(pool0);
@@ -309,15 +308,14 @@ static void buffer_test_pool_two_pools(void)
 	CU_ASSERT(odp_pool_destroy(pool1) == 0);
 }
 
-static void buffer_test_pool_max_pools(void)
+static void test_pool_max_pools(odp_pool_param_t *param)
 {
-	odp_pool_param_t param;
 	uint32_t i, num_pool, num_buf;
 	void *addr;
 	odp_event_t ev;
 	uint32_t max_pools = pool_capa.buf.max_pools;
-	uint32_t size = default_param.buf.size;
-	uint32_t align = default_param.buf.align;
+	uint32_t size = param->buf.size;
+	uint32_t align = param->buf.align;
 	odp_pool_t pool[max_pools];
 	odp_buffer_t buffer[max_pools];
 
@@ -325,11 +323,10 @@ static void buffer_test_pool_max_pools(void)
 
 	printf("\n  Creating %u pools\n", max_pools);
 
-	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
-	param.buf.num = 1;
+	param->buf.num = 1;
 
 	for (i = 0; i < max_pools; i++) {
-		pool[i] = odp_pool_create(NULL, &param);
+		pool[i] = odp_pool_create(NULL, param);
 
 		if (pool[i] == ODP_POOL_INVALID)
 			break;
@@ -370,12 +367,146 @@ static void buffer_test_pool_max_pools(void)
 		CU_ASSERT(odp_pool_destroy(pool[i]) == 0);
 }
 
+static void buffer_test_pool_alloc_free(void)
+{
+	test_pool_alloc_free(&default_param);
+}
+
+static void buffer_test_pool_alloc_free_min_cache(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	param.buf.cache_size = pool_capa.buf.min_cache_size;
+	test_pool_alloc_free(&param);
+}
+
+static void buffer_test_pool_alloc_free_max_cache(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	param.buf.cache_size = pool_capa.buf.max_cache_size;
+	test_pool_alloc_free(&param);
+}
+
+static void buffer_test_pool_alloc_free_multi(void)
+{
+	test_pool_alloc_free_multi(&default_param);
+}
+
+static void buffer_test_pool_alloc_free_multi_min_cache(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	param.buf.cache_size = pool_capa.buf.min_cache_size;
+	test_pool_alloc_free_multi(&param);
+}
+
+static void buffer_test_pool_alloc_free_multi_max_cache(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	param.buf.cache_size = pool_capa.buf.max_cache_size;
+	test_pool_alloc_free_multi(&param);
+}
+
+static void buffer_test_pool_single_pool(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	test_pool_single_pool(&param);
+}
+
+static void buffer_test_pool_single_pool_min_cache(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	param.buf.cache_size = pool_capa.buf.min_cache_size;
+	test_pool_single_pool(&param);
+}
+
+static void buffer_test_pool_single_pool_max_cache(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	param.buf.cache_size = pool_capa.buf.max_cache_size;
+	test_pool_single_pool(&param);
+}
+
+static void buffer_test_pool_two_pools(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	test_pool_two_pools(&param);
+}
+
+static void buffer_test_pool_two_pools_min_cache(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	param.buf.cache_size = pool_capa.buf.min_cache_size;
+	test_pool_two_pools(&param);
+}
+
+static void buffer_test_pool_two_pools_max_cache(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	param.buf.cache_size = pool_capa.buf.max_cache_size;
+	test_pool_two_pools(&param);
+}
+
+static void buffer_test_pool_max_pools(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	test_pool_max_pools(&param);
+}
+
+static void buffer_test_pool_max_pools_min_cache(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	param.buf.cache_size = pool_capa.buf.min_cache_size;
+	test_pool_max_pools(&param);
+}
+
+static void buffer_test_pool_max_pools_max_cache(void)
+{
+	odp_pool_param_t param;
+
+	memcpy(&param, &default_param, sizeof(odp_pool_param_t));
+	param.buf.cache_size = pool_capa.buf.max_cache_size;
+	test_pool_max_pools(&param);
+}
+
 odp_testinfo_t buffer_suite[] = {
 	ODP_TEST_INFO(buffer_test_pool_alloc_free),
+	ODP_TEST_INFO(buffer_test_pool_alloc_free_min_cache),
+	ODP_TEST_INFO(buffer_test_pool_alloc_free_max_cache),
 	ODP_TEST_INFO(buffer_test_pool_alloc_free_multi),
+	ODP_TEST_INFO(buffer_test_pool_alloc_free_multi_min_cache),
+	ODP_TEST_INFO(buffer_test_pool_alloc_free_multi_max_cache),
 	ODP_TEST_INFO(buffer_test_pool_single_pool),
+	ODP_TEST_INFO(buffer_test_pool_single_pool_min_cache),
+	ODP_TEST_INFO(buffer_test_pool_single_pool_max_cache),
 	ODP_TEST_INFO(buffer_test_pool_two_pools),
+	ODP_TEST_INFO(buffer_test_pool_two_pools_min_cache),
+	ODP_TEST_INFO(buffer_test_pool_two_pools_max_cache),
 	ODP_TEST_INFO(buffer_test_pool_max_pools),
+	ODP_TEST_INFO(buffer_test_pool_max_pools_min_cache),
+	ODP_TEST_INFO(buffer_test_pool_max_pools_max_cache),
 	ODP_TEST_INFO_NULL,
 };
 
