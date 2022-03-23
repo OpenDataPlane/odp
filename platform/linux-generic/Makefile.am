@@ -49,7 +49,9 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/sync_inlines.h \
 		  include/odp/api/plat/thread_inlines.h \
 		  include/odp/api/plat/ticketlock_inlines.h \
-		  include/odp/api/plat/time_inlines.h
+		  include/odp/api/plat/time_inlines.h \
+		  include/odp/api/plat/timer_inlines.h \
+		  include/odp/api/plat/timer_inline_types.h
 
 odpapiabiarchinclude_HEADERS += \
 		  include-abi/odp/api/abi/align.h \
@@ -284,7 +286,8 @@ __LIB__libodp_linux_la_SOURCES += \
 			   odp_sync_api.c \
 			   odp_thread_api.c \
 			   odp_ticketlock_api.c \
-			   odp_time_api.c
+			   odp_time_api.c \
+			   odp_timer_api.c
 endif
 
 if ARCH_IS_ARM
