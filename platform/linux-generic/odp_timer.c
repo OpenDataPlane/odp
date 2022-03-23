@@ -13,50 +13,49 @@
  */
 #include <odp_posix_extensions.h>
 
-#include <errno.h>
-#include <stdlib.h>
-#include <time.h>
-#include <signal.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <sys/syscall.h>
-#include <inttypes.h>
-#include <string.h>
-
-#include <odp/api/std.h>
 #include <odp/api/align.h>
-#include <odp_align_internal.h>
 #include <odp/api/atomic.h>
-#include <odp/api/plat/atomic_inlines.h>
-#include <odp_atomic_internal.h>
-#include <odp/api/buffer.h>
 #include <odp/api/cpu.h>
-#include <odp/api/pool.h>
-#include <odp_pool_internal.h>
 #include <odp/api/debug.h>
-#include <odp_debug_internal.h>
 #include <odp/api/event.h>
 #include <odp/api/hints.h>
-#include <odp_init_internal.h>
-#include <odp_errno_define.h>
+#include <odp/api/pool.h>
 #include <odp/api/queue.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/spinlock.h>
-#include <odp/api/std_types.h>
+#include <odp/api/std.h>
 #include <odp/api/sync.h>
 #include <odp/api/time.h>
-#include <odp/api/plat/time_inlines.h>
 #include <odp/api/timer.h>
-#include <odp_libconfig_internal.h>
-#include <odp_queue_if.h>
-#include <odp_timer_internal.h>
-#include <odp/api/plat/queue_inlines.h>
-#include <odp_global_data.h>
-#include <odp_event_internal.h>
-#include <odp_types_internal.h>
 
 /* Inlined API functions */
+#include <odp/api/plat/atomic_inlines.h>
 #include <odp/api/plat/event_inlines.h>
+#include <odp/api/plat/queue_inlines.h>
+#include <odp/api/plat/time_inlines.h>
+
+#include <odp_align_internal.h>
+#include <odp_atomic_internal.h>
+#include <odp_debug_internal.h>
+#include <odp_errno_define.h>
+#include <odp_event_internal.h>
+#include <odp_global_data.h>
+#include <odp_init_internal.h>
+#include <odp_libconfig_internal.h>
+#include <odp_pool_internal.h>
+#include <odp_queue_if.h>
+#include <odp_timer_internal.h>
+#include <odp_types_internal.h>
+
+#include <errno.h>
+#include <inttypes.h>
+#include <pthread.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/syscall.h>
+#include <time.h>
+#include <unistd.h>
 
 /* One divided by one nanosecond in Hz */
 #define GIGA_HZ 1000000000
