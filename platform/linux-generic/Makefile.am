@@ -96,6 +96,7 @@ odpapiabiarchinclude_HEADERS += \
 		  include-abi/odp/api/abi/thrmask.h \
 		  include-abi/odp/api/abi/ticketlock.h \
 		  include-abi/odp/api/abi/time.h \
+		  include-abi/odp/api/abi/timer.h \
 		  include-abi/odp/api/abi/timer_types.h \
 		  include-abi/odp/api/abi/traffic_mngr.h \
 		  include-abi/odp/api/abi/version.h

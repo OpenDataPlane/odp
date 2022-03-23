@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/abi/timer.h>
+
 #include <odp/api/spec/timer.h>
 
 #ifdef __cplusplus
