@@ -71,9 +71,9 @@ static int null_recv_tmo(pktio_entry_t *pktio_entry ODP_UNUSED,
 }
 
 static int null_recv_mq_tmo(pktio_entry_t *pktio_entry[] ODP_UNUSED,
-			    int index[] ODP_UNUSED, int num_q ODP_UNUSED,
+			    int index[] ODP_UNUSED, uint32_t num_q ODP_UNUSED,
 			    odp_packet_t pkt_table[] ODP_UNUSED,
-			    int num ODP_UNUSED, unsigned *from ODP_UNUSED,
+			    int num ODP_UNUSED, uint32_t *from ODP_UNUSED,
 			    uint64_t usecs)
 {
 	struct timeval timeout;
