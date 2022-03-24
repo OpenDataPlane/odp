@@ -297,13 +297,13 @@ typedef struct odp_cls_capability_t {
 	odp_cls_pmr_terms_t supported_terms;
 
 	/** Maximum number of PMR terms */
-	unsigned int max_pmr_terms;
+	uint32_t max_pmr_terms;
 
 	/** Number of PMR terms available for use now */
-	unsigned int available_pmr_terms;
+	uint32_t available_pmr_terms;
 
 	/** Maximum number of CoS supported */
-	unsigned int max_cos;
+	uint32_t max_cos;
 
 	/** Maximum number of CoSes that can have statistics enabled at the same
 	 * time. If this value is zero, then CoS level statistics are not
@@ -312,7 +312,7 @@ typedef struct odp_cls_capability_t {
 
 	/** Maximun number of queues supported per CoS
 	 * if the value is 1, then hashing is not supported*/
-	unsigned int max_hash_queues;
+	uint32_t max_hash_queues;
 
 	/** Protocol header combination supported for Hashing */
 	odp_pktin_hash_proto_t hash_protocols;
