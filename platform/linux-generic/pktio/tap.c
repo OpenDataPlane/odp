@@ -535,6 +535,8 @@ static int tap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	capa->maxlen.min_output = _ODP_SOCKET_MTU_MIN;
 	capa->maxlen.max_output = tap->mtu_max;
 
+	capa->cls_cos_pool = true;
+
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
 	capa->config.pktin.bit.ts_ptp = 1;

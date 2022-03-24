@@ -517,6 +517,8 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 	if (capa->max_output_queue_size == 0)
 		capa->max_output_queue_size = LOOP_MAX_TX_QUEUE_SIZE;
 
+	capa->cls_cos_pool = true;
+
 	odp_pktio_config_init(&capa->config);
 	capa->config.enable_loop = 1;
 	capa->config.pktin.bit.ts_all = 1;

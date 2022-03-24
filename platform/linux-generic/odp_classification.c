@@ -1595,7 +1595,7 @@ int _odp_cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	if (cos->s.queue == ODP_QUEUE_INVALID && cos->s.num_queue == 1)
 		return -EFAULT;
 
-	if (cos->s.pool == ODP_POOL_INVALID)
+	if (entry->s.capa.cls_cos_pool && cos->s.pool == ODP_POOL_INVALID)
 		return -EFAULT;
 
 	*pool = cos->s.pool;
