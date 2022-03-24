@@ -431,9 +431,8 @@ int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[],
  * @return Number of packets received
  * @retval <0 on failure
  */
-int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned int num_q,
-			  unsigned int *from, odp_packet_t packets[], int num,
-			  uint64_t wait);
+int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], uint32_t num_q, uint32_t *from,
+			  odp_packet_t packets[], int num, uint64_t wait);
 
 /**
  * Packet input wait time
