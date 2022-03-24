@@ -11,13 +11,13 @@
 
 static int sock_recv_mq_tmo_select(pktio_entry_t * const *entry,
 				   const int index[],
-				   unsigned int num_q, unsigned int *from,
+				   uint32_t num_q, uint32_t *from,
 				   odp_packet_t packets[], int num,
 				   uint64_t usecs, fd_set *readfds,
 				   int maxfd)
 {
 	struct timeval timeout;
-	unsigned int i;
+	uint32_t i;
 	int ret;
 
 	for (i = 0; i < num_q; i++) {
@@ -50,17 +50,17 @@ static int sock_recv_mq_tmo_select(pktio_entry_t * const *entry,
 }
 
 int _odp_sock_recv_mq_tmo_try_int_driven(const struct odp_pktin_queue_t queues[],
-					 unsigned int num_q, unsigned int *from,
+					 uint32_t num_q, uint32_t *from,
 					 odp_packet_t packets[], int num,
 					 uint64_t usecs, int *trial_successful)
 {
-	unsigned int i;
+	uint32_t i;
 	pktio_entry_t *entry[num_q];
 	int index[num_q];
 	fd_set readfds;
 	int maxfd = -1;
-	int (*impl)(pktio_entry_t *entry[], int index[], int num_q,
-		    odp_packet_t packets[], int num, unsigned int *from,
+	int (*impl)(pktio_entry_t *entry[], int index[], uint32_t num_q,
+		    odp_packet_t packets[], int num, uint32_t *from,
 		    uint64_t wait_usecs) = NULL;
 	int impl_set = 0;
 

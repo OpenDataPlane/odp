@@ -376,11 +376,11 @@ static int sock_recv_tmo(pktio_entry_t *pktio_entry, int index,
 }
 
 static int sock_recv_mq_tmo(pktio_entry_t *pktio_entry[], int index[],
-			    int num_q, odp_packet_t pkt_table[], int num,
-			    unsigned *from, uint64_t usecs)
+			    uint32_t num_q, odp_packet_t pkt_table[], int num,
+			    uint32_t *from, uint64_t usecs)
 {
 	struct timeval timeout;
-	int i;
+	uint32_t i;
 	int ret;
 	int maxfd = -1, maxfd2;
 	fd_set readfds;

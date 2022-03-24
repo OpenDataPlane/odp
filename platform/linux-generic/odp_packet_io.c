@@ -669,8 +669,8 @@ int odp_pktio_start(odp_pktio_t hdl)
 	mode = entry->s.param.in_mode;
 
 	if (mode == ODP_PKTIN_MODE_SCHED) {
-		unsigned int i;
-		unsigned int num = entry->s.num_in_queue;
+		uint32_t i;
+		uint32_t num = entry->s.num_in_queue;
 		int index[num];
 		odp_queue_t odpq[num];
 
@@ -2169,8 +2169,7 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 	pktio_entry_t *entry;
 	odp_pktin_mode_t mode;
 	odp_pktio_capability_t capa;
-	unsigned int num_queues;
-	unsigned int i;
+	uint32_t num_queues, i;
 	int rc;
 	odp_queue_t queue;
 	odp_pktin_queue_param_t default_param;
@@ -2333,7 +2332,7 @@ int _odp_pktio_pktout_tm_config(odp_pktio_t pktio_hdl,
 	bool pktio_started = false;
 	odp_pktout_mode_t mode;
 	pktio_entry_t *entry;
-	unsigned int i;
+	uint32_t i;
 	int rc = 0;
 
 	odp_pktout_queue_param_init(&param);
@@ -2403,8 +2402,7 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 	pktio_entry_t *entry;
 	odp_pktout_mode_t mode;
 	odp_pktio_capability_t capa;
-	unsigned int num_queues;
-	unsigned int i;
+	uint32_t num_queues, i;
 	int rc;
 	odp_pktout_queue_param_t default_param;
 
@@ -2770,18 +2768,17 @@ int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[], int num,
 	}
 }
 
-int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned int num_q,
-			  unsigned int *from, odp_packet_t packets[], int num,
-			  uint64_t wait)
+int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], uint32_t num_q, uint32_t *from,
+			  odp_packet_t packets[], int num, uint64_t wait)
 {
-	unsigned int i;
+	uint32_t i;
 	int ret;
 	odp_time_t t1, t2;
 	struct timespec ts;
 	int started = 0;
 	uint64_t sleep_round = 0;
 	int trial_successful = 0;
-	unsigned int lfrom = 0;
+	uint32_t lfrom = 0;
 
 	for (i = 0; i < num_q; i++) {
 		ret = odp_pktin_recv(queues[i], packets, num);
