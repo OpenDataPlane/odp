@@ -150,7 +150,7 @@ void odp_cls_pmr_param_init(odp_pmr_param_t *param)
 
 int odp_cls_capability(odp_cls_capability_t *capability)
 {
-	unsigned int count = 0;
+	uint32_t count = 0;
 
 	memset(capability, 0, sizeof(odp_cls_capability_t));
 
