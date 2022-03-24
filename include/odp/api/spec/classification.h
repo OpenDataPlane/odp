@@ -351,7 +351,11 @@ typedef struct odp_cls_cos_param {
 			odp_pktin_hash_proto_t hash_proto;
 		};
 	};
-	/** Pool associated with CoS */
+	/** Pool associated with CoS
+	 *
+	 * If the pktio does not support moving packets to another pool, this
+	 * parameter is ignored. @see odp_pktio_capability_t::cls_cos_pool
+	 */
 	odp_pool_t pool;
 
 	/** Drop policy associated with CoS */

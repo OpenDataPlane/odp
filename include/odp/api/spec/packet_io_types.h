@@ -917,6 +917,11 @@ typedef struct odp_pktio_capability_t {
 	/** Statistics counters capabilities */
 	odp_pktio_stats_capability_t stats;
 
+	/** This defines whether the pktio supports moving received packets to
+	 * the pool indicated by Class of Service. @see
+	 * odp_cls_cos_param_t::pool */
+	odp_bool_t cls_cos_pool;
+
 } odp_pktio_capability_t;
 
 /**
