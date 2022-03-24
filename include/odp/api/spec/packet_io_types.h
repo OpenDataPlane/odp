@@ -257,7 +257,7 @@ typedef struct odp_pktin_queue_param_t {
 	  * More than one input queues require flow hashing configured.
 	  * The maximum value is defined by pktio capability 'max_input_queues'.
 	  * Queue type is defined by the input mode. The default value is 1. */
-	unsigned int num_queues;
+	uint32_t num_queues;
 
 	/** Queue parameters
 	  *
@@ -304,7 +304,7 @@ typedef struct odp_pktout_queue_param_t {
 
 	/** Number of output queues to be created. The value must be between
 	  * 1 and interface capability. The default value is 1. */
-	unsigned int num_queues;
+	uint32_t num_queues;
 
 	/** Output queue size array
 	  *
@@ -820,12 +820,12 @@ typedef struct odp_pktin_vector_capability_t {
  */
 typedef struct odp_pktio_capability_t {
 	/** Maximum number of input queues */
-	unsigned int max_input_queues;
+	uint32_t max_input_queues;
 
 	/** Maximum number of output queues
 	 *
 	 * Value does not exceed ODP_PKTOUT_MAX_QUEUES. */
-	unsigned int max_output_queues;
+	uint32_t max_output_queues;
 
 	/** Minimum output queue size
 	 *
