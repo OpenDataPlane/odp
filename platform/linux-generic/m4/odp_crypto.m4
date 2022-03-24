@@ -20,7 +20,9 @@ AS_IF([test "x$with_crypto" != "xopenssl" -a "x$with_crypto" != "xarmv8crypto" -
 ##########################################################################
 # OpenSSL implementation
 ##########################################################################
+AC_CONFIG_COMMANDS_PRE([dnl
 AM_CONDITIONAL([WITH_OPENSSL_CRYPTO], [test "x$with_crypto" == "xopenssl"])
+])
 
 ##########################################################################
 # ARMv8 Crypto library implementation
@@ -29,7 +31,10 @@ AS_IF([test "x$with_crypto" == "xarmv8crypto"],
       [PKG_CHECK_MODULES([AARCH64CRYPTO], [libAArch64crypto])
        AARCH64CRYPTO_PKG=", libAArch64crypto"
        AC_SUBST([AARCH64CRYPTO_PKG])])
+AC_CONFIG_COMMANDS_PRE([dnl
 AM_CONDITIONAL([WITH_ARMV8_CRYPTO], [test "x$with_crypto" == "xarmv8crypto"])
+])
+
 ##########################################################################
 # Null implementation
 ##########################################################################
