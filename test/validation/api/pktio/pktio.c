@@ -770,8 +770,8 @@ static int recv_packets_tmo(odp_pktio_t pktio, odp_packet_t pkt_tbl[],
 	int num_q;
 	int i;
 	int n;
-	unsigned int from_val = 0;
-	unsigned *from = NULL;
+	uint32_t from_val = 0;
+	uint32_t *from = NULL;
 
 	if (mode == RECV_MQ_TMO)
 		from = &from_val;
@@ -787,8 +787,7 @@ static int recv_packets_tmo(odp_pktio_t pktio, odp_packet_t pkt_tbl[],
 			n = odp_pktin_recv_tmo(pktin[0], pkt_tmp, num - num_rx,
 					       tmo);
 		else
-			n = odp_pktin_recv_mq_tmo(pktin, (unsigned)num_q,
-						  from, pkt_tmp,
+			n = odp_pktin_recv_mq_tmo(pktin, (uint32_t)num_q, from, pkt_tmp,
 						  num - num_rx, tmo);
 		ts2 = odp_time_global();
 
@@ -812,7 +811,7 @@ static int recv_packets_tmo(odp_pktio_t pktio, odp_packet_t pkt_tbl[],
 				odp_packet_free(pkt_tmp[i]);
 		}
 		if (mode == RECV_MQ_TMO)
-			CU_ASSERT(from_val < (unsigned)num_q);
+			CU_ASSERT(from_val < (uint32_t)num_q);
 	} while (num_rx < num);
 
 	if (num_rx < num) {
@@ -1265,7 +1264,7 @@ static void test_recv_tmo(recv_tmo_mode_e mode)
 	odp_packet_t pkt_tbl[test_pkt_count];
 	uint32_t pkt_seq[test_pkt_count];
 	uint64_t ns;
-	unsigned num_q;
+	uint32_t num_q;
 	int ret;
 	int i;
 
