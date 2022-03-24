@@ -1,5 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
- * Copyright (c) 2020-2021, Nokia
+ * Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -99,6 +99,7 @@ static inline uint64_t _odp_time_convert_to_ns(odp_time_t time)
 
 	#define odp_time_cmp        __odp_time_cmp
 	#define odp_time_diff       __odp_time_diff
+	#define odp_time_diff_ns    __odp_time_diff_ns
 	#define odp_time_sum        __odp_time_sum
 
 #else
@@ -168,6 +169,15 @@ _ODP_INLINE odp_time_t odp_time_diff(odp_time_t t2, odp_time_t t1)
 	time.u64 = t2.u64 - t1.u64;
 
 	return time;
+}
+
+_ODP_INLINE uint64_t odp_time_diff_ns(odp_time_t t2, odp_time_t t1)
+{
+	odp_time_t time;
+
+	time.u64 = t2.u64 - t1.u64;
+
+	return odp_time_to_ns(time);
 }
 
 _ODP_INLINE odp_time_t odp_time_sum(odp_time_t t1, odp_time_t t2)
