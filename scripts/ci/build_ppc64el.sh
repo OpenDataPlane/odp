@@ -7,6 +7,10 @@ if [ "${CC#clang}" != "${CC}" ] ; then
 	export CXX="clang++ --target=${TARGET_ARCH}"
 	# DPDK clang build broken
 	export CONF="${CONF} --disable-dpdk"
+
+	# Ignore warnings about large atomic operation performance penalty
+	export ODP_CFLAGS_EXTRA=-Wno-error=atomic-alignment
+
 else
 	export CC="${TARGET_ARCH}-gcc"
 	export CXX="${TARGET_ARCH}-g++"
