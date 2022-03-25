@@ -125,7 +125,7 @@ static int pkt_queue_free_list_add(queue_pool_t *pool,
 		}
 
 		/* Now add as many queue_blks to the free list as... */
-		blks_to_add = MIN(num_blks - start_idx, num_queue_blks);
+		blks_to_add = _ODP_MIN(num_blks - start_idx, num_queue_blks);
 		queue_blk = &queue_blks->blks[start_idx];
 		for (cnt = 1; cnt <= blks_to_add; cnt++) {
 			queue_blk->next_queue_blk_idx = start_idx + cnt;
@@ -223,7 +223,7 @@ _odp_int_queue_pool_t _odp_queue_pool_create(uint32_t max_num_queues,
        /* Initialize the queue_blk_tbl_sizes array based upon the
 	* max_queued_pkts.
 	*/
-	max_queued_pkts = MAX(max_queued_pkts, 64 * UINT32_C(1024));
+	max_queued_pkts = _ODP_MAX(max_queued_pkts, 64 * UINT32_C(1024));
 	queue_region_desc_init(pool, 0, max_queued_pkts / 4);
 	queue_region_desc_init(pool, 1, max_queued_pkts / 64);
 	queue_region_desc_init(pool, 2, max_queued_pkts / 64);
@@ -235,7 +235,7 @@ _odp_int_queue_pool_t _odp_queue_pool_create(uint32_t max_num_queues,
        /* Now allocate the first queue_blk_tbl and add its blks to the free
 	* list.  Replenish the queue_blk_t free list.
 	*/
-	initial_free_list_size = MIN(64 * UINT32_C(1024), max_queued_pkts / 4);
+	initial_free_list_size = _ODP_MIN(64 * UINT32_C(1024), max_queued_pkts / 4);
 	rc = pkt_queue_free_list_add(pool, initial_free_list_size);
 	if (rc < 0) {
 		free(pool->queue_num_tbl);

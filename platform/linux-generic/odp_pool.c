@@ -18,6 +18,7 @@
 #include <odp_packet_dpdk.h>
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_macros_internal.h>
 #include <odp_ring_ptr_internal.h>
 #include <odp_global_data.h>
 #include <odp_libconfig_internal.h>
@@ -239,7 +240,7 @@ static int read_config_file(pool_global_t *pool_glb)
 	if (val == 0)
 		align = ODP_CACHE_LINE_SIZE;
 
-	if (!CHECK_IS_POWER2(align)) {
+	if (!_ODP_CHECK_IS_POWER2(align)) {
 		ODP_ERR("Not a power of two: %s = %i\n", str, val);
 		return -1;
 	}
@@ -257,7 +258,7 @@ static int read_config_file(pool_global_t *pool_glb)
 	if (val == 0)
 		align = ODP_CACHE_LINE_SIZE;
 
-	if (!CHECK_IS_POWER2(align)) {
+	if (!_ODP_CHECK_IS_POWER2(align)) {
 		ODP_ERR("Not a power of two: %s = %i\n", str, val);
 		return -1;
 	}
@@ -617,7 +618,7 @@ static int reserve_uarea(pool_t *pool, uint32_t uarea_size, uint32_t num_pkt, ui
 	sprintf(uarea_name, "pool_%03i_uarea_%s", pool->pool_idx, pool->name);
 
 	pool->param_uarea_size = uarea_size;
-	pool->uarea_size       = ROUNDUP_CACHE_LINE(uarea_size);
+	pool->uarea_size       = _ODP_ROUNDUP_CACHE_LINE(uarea_size);
 	pool->uarea_shm_size   = num_pkt * (uint64_t)pool->uarea_size;
 
 	shm = odp_shm_reserve(uarea_name, pool->uarea_shm_size, ODP_PAGE_SIZE, shmflags);
@@ -659,7 +660,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 		uint32_t align_req = params->pkt.align;
 
 		if (align_req &&
-		    (!CHECK_IS_POWER2(align_req) ||
+		    (!_ODP_CHECK_IS_POWER2(align_req) ||
 		     align_req > _odp_pool_glb->config.pkt_base_align)) {
 			ODP_ERR("Bad align requirement\n");
 			return ODP_POOL_INVALID;
@@ -676,7 +677,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 
 	/* Validate requested buffer alignment */
 	if (align > ODP_CONFIG_BUFFER_ALIGN_MAX ||
-	    align != ROUNDDOWN_POWER2(align, align)) {
+	    align != _ODP_ROUNDDOWN_POWER2(align, align)) {
 		ODP_ERR("Bad align requirement\n");
 		return ODP_POOL_INVALID;
 	}
@@ -777,7 +778,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 	if (type == ODP_POOL_PACKET) {
 		uint32_t dpdk_obj_size;
 
-		hdr_size = ROUNDUP_CACHE_LINE(sizeof(odp_packet_hdr_t));
+		hdr_size = _ODP_ROUNDUP_CACHE_LINE(sizeof(odp_packet_hdr_t));
 		block_size = hdr_size + align + headroom + seg_len + tailroom;
 		/* Calculate extra space required for storing DPDK objects and
 		 * mbuf headers. NOP if no DPDK pktio used or zero-copy mode is
@@ -791,7 +792,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 			shmflags |= ODP_SHM_HP;
 			block_size = dpdk_obj_size;
 		} else {
-			block_size = ROUNDUP_CACHE_LINE(block_size);
+			block_size = _ODP_ROUNDUP_CACHE_LINE(block_size);
 		}
 	} else {
 		/* Header size is rounded up to cache line size, so the
@@ -801,13 +802,13 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 				align - ODP_CACHE_LINE_SIZE : 0;
 
 		if (type == ODP_POOL_BUFFER)
-			hdr_size = ROUNDUP_CACHE_LINE(sizeof(odp_buffer_hdr_t));
+			hdr_size = _ODP_ROUNDUP_CACHE_LINE(sizeof(odp_buffer_hdr_t));
 		else if (type == ODP_POOL_TIMEOUT)
-			hdr_size = ROUNDUP_CACHE_LINE(sizeof(odp_timeout_hdr_t));
+			hdr_size = _ODP_ROUNDUP_CACHE_LINE(sizeof(odp_timeout_hdr_t));
 		else
-			hdr_size = ROUNDUP_CACHE_LINE(sizeof(odp_event_vector_hdr_t));
+			hdr_size = _ODP_ROUNDUP_CACHE_LINE(sizeof(odp_event_vector_hdr_t));
 
-		block_size = ROUNDUP_CACHE_LINE(hdr_size + align_pad + seg_len);
+		block_size = _ODP_ROUNDUP_CACHE_LINE(hdr_size + align_pad + seg_len);
 	}
 
 	/* Allocate extra memory for skipping packet buffers which cross huge
@@ -823,7 +824,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 	if (num + 1 <= RING_SIZE_MIN)
 		ring_size = RING_SIZE_MIN;
 	else
-		ring_size = ROUNDUP_POWER2_U32(num + 1);
+		ring_size = _ODP_ROUNDUP_POWER2_U32(num + 1);
 
 	pool->ring_mask      = ring_size - 1;
 	pool->num            = num;
@@ -1807,7 +1808,7 @@ odp_pool_t odp_pool_ext_create(const char *name, const odp_pool_ext_param_t *par
 	if (num_buf + 1 <= RING_SIZE_MIN)
 		ring_size = RING_SIZE_MIN;
 	else
-		ring_size = ROUNDUP_POWER2_U32(num_buf + 1);
+		ring_size = _ODP_ROUNDUP_POWER2_U32(num_buf + 1);
 
 	pool->ring_mask      = ring_size - 1;
 	pool->type           = param->type;

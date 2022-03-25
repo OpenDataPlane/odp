@@ -105,7 +105,6 @@ odpapiabiarchinclude_HEADERS += \
 endif
 
 noinst_HEADERS = \
-		  include/odp_align_internal.h \
 		  include/odp_atomic_internal.h \
 		  include/odp_bitset.h \
 		  include/odp_buffer_internal.h \

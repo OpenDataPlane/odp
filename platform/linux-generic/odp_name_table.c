@@ -248,7 +248,7 @@ static uint32_t name_tbl_free_list_add(name_tbl_t *name_tbl,
 	name_tbl_id = name_tbl->base_id | first_idx;
 	entry_idx   = first_idx;
 
-	num_added = MIN(num_to_add, name_tbl->num_avail_to_add);
+	num_added = _ODP_MIN(num_to_add, name_tbl->num_avail_to_add);
 	if (num_added == 0)
 		return 0;
 
@@ -299,7 +299,7 @@ static int new_name_tbl_add(void)
 	name_tbls_idx = name_tbls.num_name_tbls;
 	num_entries   = INITIAL_NAME_TBL_SIZE << name_tbls_idx;
 	new_name_tbl  = name_tbl_alloc(name_tbls_idx, num_entries);
-	name_tbl_free_list_add(new_name_tbl, MIN(num_entries, UINT32_C(256)));
+	name_tbl_free_list_add(new_name_tbl, _ODP_MIN(num_entries, UINT32_C(256)));
 
 	name_tbls.tbls[name_tbls_idx]   = new_name_tbl;
 	name_tbls.avail_space_bit_mask |= 1 << name_tbls_idx;
@@ -389,7 +389,7 @@ static hash_tbl_entry_t make_hash_tbl_entry(name_tbl_entry_t *name_tbl_entry,
 	hash_tbl_entry_t hash_tbl_entry;
 	uint32_t         new_entry_cnt;
 
-	new_entry_cnt   = MIN(entry_cnt + 1, UINT32_C(0x3F));
+	new_entry_cnt   = _ODP_MIN(entry_cnt + 1, UINT32_C(0x3F));
 	hash_tbl_entry  = (hash_tbl_entry_t)(uintptr_t)name_tbl_entry;
 	hash_tbl_entry &= ~0x3F;
 	hash_tbl_entry |= new_entry_cnt;
@@ -1008,7 +1008,7 @@ static uint32_t level2_hash_histo(secondary_hash_tbl_t *hash_tbl,
 			collisions     = linked_list_len(name_tbl_entry);
 		}
 
-		level2_histo[MIN(collisions, UINT32_C(256))]++;
+		level2_histo[_ODP_MIN(collisions, UINT32_C(256))]++;
 		total_collisions += collisions;
 	}
 
@@ -1040,7 +1040,7 @@ static uint32_t level1_hash_histo(secondary_hash_tbl_t *hash_tbl,
 							   level2_histo);
 		}
 
-		level1_histo[MIN(collisions, UINT32_C(256))]++;
+		level1_histo[_ODP_MIN(collisions, UINT32_C(256))]++;
 		total_collisions += collisions;
 	}
 
@@ -1150,7 +1150,7 @@ void _odp_int_name_tbl_stats_print(void)
 	memset(primary_hash_histo, 0, sizeof(primary_hash_histo));
 	for (idx = 0; idx < PRIMARY_HASH_TBL_SIZE; idx++) {
 		collisions =
-		    MIN(name_hash_tbl.hash_collisions[idx], UINT32_C(256));
+		    _ODP_MIN(name_hash_tbl.hash_collisions[idx], UINT32_C(256));
 		primary_hash_histo[collisions]++;
 	}
 

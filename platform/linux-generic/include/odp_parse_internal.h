@@ -45,8 +45,8 @@ extern "C" {
 #define PARSE_SCTP_BYTES (sizeof(_odp_sctphdr_t))
 
 /* _odp_packet_parse_common_l3_l4() requires up to this many bytes. */
-#define PARSE_L3_L4_BYTES (MAX(PARSE_IPV4_BYTES, PARSE_IPV6_BYTES) + \
-			   MAX3(PARSE_TCP_BYTES, PARSE_UDP_BYTES, PARSE_SCTP_BYTES))
+#define PARSE_L3_L4_BYTES (_ODP_MAX(PARSE_IPV4_BYTES, PARSE_IPV6_BYTES) + \
+			   _ODP_MAX3(PARSE_TCP_BYTES, PARSE_UDP_BYTES, PARSE_SCTP_BYTES))
 
 /* _odp_packet_parse_common() requires up to this many bytes. */
 #define PARSE_BYTES (PARSE_ETH_BYTES + PARSE_L3_L4_BYTES)

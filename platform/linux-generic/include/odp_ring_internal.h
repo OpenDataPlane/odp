@@ -15,12 +15,14 @@
 extern "C" {
 #endif
 
+#include <odp/api/align.h>
 #include <odp/api/atomic.h>
 #include <odp/api/cpu.h>
 #include <odp/api/hints.h>
-#include <odp_align_internal.h>
+
 #include <odp/api/plat/atomic_inlines.h>
 #include <odp/api/plat/cpu_inlines.h>
+
 #include <odp_ring_common.h>
 
 /* Generic ring implementation

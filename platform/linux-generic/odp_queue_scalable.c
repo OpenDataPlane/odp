@@ -104,7 +104,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 
 	sched_elem = &queue->s.sched_elem;
 	ring_size = param->size > 0 ?
-		ROUNDUP_POWER2_U32(param->size) : CONFIG_SCAL_QUEUE_SIZE;
+		_ODP_ROUNDUP_POWER2_U32(param->size) : CONFIG_SCAL_QUEUE_SIZE;
 	strncpy(queue->s.name, name ? name : "", ODP_QUEUE_NAME_LEN - 1);
 	queue->s.name[ODP_QUEUE_NAME_LEN - 1] = 0;
 	memcpy(&queue->s.param, param, sizeof(odp_queue_param_t));
@@ -529,7 +529,7 @@ static inline int _odp_queue_enq(sched_elem_t *q,
 		 */
 		old_read = __atomic_load_n(&q->prod_read, __ATOMIC_ACQUIRE);
 
-		actual = MIN(num, (int)((mask + 1) - (old_write - old_read)));
+		actual = _ODP_MIN(num, (int)((mask + 1) - (old_write - old_read)));
 		if (odp_unlikely(actual <= 0))
 			return 0;
 
@@ -591,7 +591,7 @@ int _odp_queue_enq_sp(sched_elem_t *q,
 	old_write = q->prod_write;
 	/* Consumer does store-release prod_read, we need load-acquire */
 	old_read = __atomic_load_n(&q->prod_read, __ATOMIC_ACQUIRE);
-	actual = MIN(num, (int)((mask + 1) - (old_write - old_read)));
+	actual = _ODP_MIN(num, (int)((mask + 1) - (old_write - old_read)));
 	if (odp_unlikely(actual <= 0))
 		return 0;
 
@@ -704,7 +704,7 @@ int _odp_queue_deq_sc(sched_elem_t *q, odp_event_t *evp, int num)
 	old_read  = q->cons_read;
 	/* Producer does store-release cons_write, we need load-acquire */
 	old_write = __atomic_load_n(&q->cons_write, __ATOMIC_ACQUIRE);
-	actual    = MIN(num, (int)(old_write - old_read));
+	actual    = _ODP_MIN(num, (int)(old_write - old_read));
 
 	if (odp_unlikely(actual <= 0))
 		return 0;
@@ -757,7 +757,7 @@ int _odp_queue_deq(sched_elem_t *q, _odp_event_hdr_t *event_hdr[], int num)
 		/* Prefetch ring buffer array */
 		__builtin_prefetch(&q->cons_ring[old_read & mask], 0, 0);
 
-		actual = MIN(num, (int)(old_write - old_read));
+		actual = _ODP_MIN(num, (int)(old_write - old_read));
 		if (odp_unlikely(actual <= 0))
 			return 0;
 

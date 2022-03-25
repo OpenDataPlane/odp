@@ -4,10 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-
 #include <odp/api/ticketlock.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/stash.h>
@@ -17,8 +13,13 @@
 #include <odp_debug_internal.h>
 #include <odp_global_data.h>
 #include <odp_init_internal.h>
+#include <odp_macros_internal.h>
 #include <odp_ring_u32_internal.h>
 #include <odp_ring_u64_internal.h>
+
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
 
 ODP_STATIC_ASSERT(CONFIG_INTERNAL_STASHES < CONFIG_MAX_STASHES, "TOO_MANY_INTERNAL_STASHES");
 
@@ -203,7 +204,7 @@ odp_stash_t odp_stash_create(const char *name, const odp_stash_param_t *param)
 	if (ring_size + 1 <= MIN_RING_SIZE)
 		ring_size = MIN_RING_SIZE;
 	else
-		ring_size = ROUNDUP_POWER2_U32(ring_size + 1);
+		ring_size = _ODP_ROUNDUP_POWER2_U32(ring_size + 1);
 
 	memset(shm_name, 0, sizeof(shm_name));
 	snprintf(shm_name, sizeof(shm_name) - 1, "_stash_%s", name);

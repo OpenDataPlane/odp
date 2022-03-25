@@ -1,4 +1,5 @@
-/* Copyright (c) 2018-2018, Linaro Limited
+/* Copyright (c) 2014-2018, Linaro Limited
+ * Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -17,37 +18,67 @@
 extern "C" {
 #endif
 
-#include <odp/api/debug.h>
+#include <odp/api/align.h>
 
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#include <stdint.h>
 
-#define MIN(a, b)				\
+#define _ODP_ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
+#define _ODP_MIN(a, b)				\
 	__extension__ ({			\
 		__typeof__(a) tmp_a = (a);	\
 		__typeof__(b) tmp_b = (b);	\
 		tmp_a < tmp_b ? tmp_a : tmp_b;	\
 	})
 
-#define MAX(a, b)				\
+#define _ODP_MAX(a, b)				\
 	__extension__ ({			\
 		__typeof__(a) tmp_a = (a);	\
 		__typeof__(b) tmp_b = (b);	\
 		tmp_a > tmp_b ? tmp_a : tmp_b;	\
 	})
 
-#define MAX3(a, b, c) (MAX(MAX((a), (b)), (c)))
+#define _ODP_MAX3(a, b, c) (_ODP_MAX(_ODP_MAX((a), (b)), (c)))
 
-#define odp_container_of(pointer, type, member) \
-	((type *)(void *)(((char *)pointer) - offsetof(type, member)))
+/* Macros to calculate ODP_ROUNDUP_POWER2_U32() in five rounds of shift
+ * and OR operations. */
+#define __ODP_RSHIFT_U32(x, y) (((uint32_t)(x)) >> (y))
+#define __ODP_POW2_U32_R1(x)   (((uint32_t)(x)) | __ODP_RSHIFT_U32(x, 1))
+#define __ODP_POW2_U32_R2(x)   (__ODP_POW2_U32_R1(x) | __ODP_RSHIFT_U32(__ODP_POW2_U32_R1(x), 2))
+#define __ODP_POW2_U32_R3(x)   (__ODP_POW2_U32_R2(x) | __ODP_RSHIFT_U32(__ODP_POW2_U32_R2(x), 4))
+#define __ODP_POW2_U32_R4(x)   (__ODP_POW2_U32_R3(x) | __ODP_RSHIFT_U32(__ODP_POW2_U32_R3(x), 8))
+#define __ODP_POW2_U32_R5(x)   (__ODP_POW2_U32_R4(x) | __ODP_RSHIFT_U32(__ODP_POW2_U32_R4(x), 16))
 
-#define DIV_ROUND_UP(a, b)					\
-	__extension__ ({					\
-		__typeof__(a) tmp_a = (a);			\
-		__typeof__(b) tmp_b = (b);			\
-		ODP_STATIC_ASSERT(__builtin_constant_p(b), "");	\
-		ODP_STATIC_ASSERT((((b) - 1) & (b)) == 0, "");	\
-		(tmp_a + tmp_b - 1) >> __builtin_ctz(tmp_b);	\
-	})
+/* Round up a uint32_t value 'x' to the next power of two.
+ *
+ * The value is not round up, if it's already a power of two (including 1).
+ * The value must be larger than 0 and not exceed 0x80000000.
+ */
+#define _ODP_ROUNDUP_POWER2_U32(x) \
+	((((uint32_t)(x)) > 0x80000000) ? 0 : (__ODP_POW2_U32_R5(x - 1) + 1))
+
+/*
+ * Round up 'x' to alignment 'align'
+ */
+#define _ODP_ROUNDUP_ALIGN(x, align)\
+	((align) * (((x) + (align) - 1) / (align)))
+
+/*
+ * Round up 'x' to cache line size alignment
+ */
+#define _ODP_ROUNDUP_CACHE_LINE(x)\
+	_ODP_ROUNDUP_ALIGN(x, ODP_CACHE_LINE_SIZE)
+
+/*
+ * Round down 'x' to 'align' alignment, which is a power of two
+ */
+#define _ODP_ROUNDDOWN_POWER2(x, align)\
+	((x) & (~((align) - 1)))
+
+/*
+ * Check if value is a power of two
+ */
+#define _ODP_CHECK_IS_POWER2(x) ((((x) - 1) & (x)) == 0)
 
 #ifdef __cplusplus
 }

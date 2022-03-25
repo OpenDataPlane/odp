@@ -25,6 +25,7 @@
 #include <odp_classification_datamodel.h>
 #include <odp_classification_internal.h>
 #include <odp_global_data.h>
+#include <odp_macros_internal.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>
@@ -433,8 +434,7 @@ static int mmap_setup_ring(pkt_sock_mmap_t *pkt_sock, struct ring *ring,
 	ring->type = type;
 	ring->version = TPACKET_V2;
 
-	frame_size = ROUNDUP_POWER2_U32(mtu + TPACKET_HDRLEN
-					+ TPACKET_ALIGNMENT);
+	frame_size = _ODP_ROUNDUP_POWER2_U32(mtu + TPACKET_HDRLEN + TPACKET_ALIGNMENT);
 	block_size = BLOCK_SIZE;
 	if (frame_size > block_size)
 		block_size = frame_size;

@@ -649,7 +649,7 @@ static void tm_shaper_params_cvt_to(const odp_tm_shaper_params_t *shaper_params,
 	} else {
 		max_peak_time_delta = tm_max_time_delta(peak_rate);
 		peak_burst = (int64_t)shaper_params->peak_burst;
-		highest_rate = MAX(commit_rate, peak_rate);
+		highest_rate = _ODP_MAX(commit_rate, peak_rate);
 		min_time_delta = (uint32_t)((1 << 26) / highest_rate);
 	}
 
@@ -836,7 +836,7 @@ static void update_shaper_elapsed_time(tm_system_t        *tm_system,
 	else
 		commit_inc = time_delta * shaper_params->commit_rate;
 
-	shaper_obj->commit_cnt = (int64_t)MIN(max_commit, commit + commit_inc);
+	shaper_obj->commit_cnt = (int64_t)_ODP_MIN(max_commit, commit + commit_inc);
 
 	if (shaper_params->dual_rate) {
 		peak = shaper_obj->peak_cnt;
@@ -846,7 +846,7 @@ static void update_shaper_elapsed_time(tm_system_t        *tm_system,
 		else
 			peak_inc = time_delta * shaper_params->peak_rate;
 
-		shaper_obj->peak_cnt = (int64_t)MIN(max_peak, peak + peak_inc);
+		shaper_obj->peak_cnt = (int64_t)_ODP_MIN(max_peak, peak + peak_inc);
 	}
 
 	shaper_obj->last_update_time = tm_system->current_time;
@@ -866,9 +866,8 @@ static uint64_t time_till_not_red(tm_shaper_params_t *shaper_params,
 		commit_delay = (-shaper_obj->commit_cnt)
 			/ shaper_params->commit_rate;
 
-	min_time_delay =
-	    MAX(shaper_obj->shaper_params->min_time_delta, UINT64_C(256));
-	commit_delay = MAX(commit_delay, min_time_delay);
+	min_time_delay =  _ODP_MAX(shaper_obj->shaper_params->min_time_delta, UINT64_C(256));
+	commit_delay = _ODP_MAX(commit_delay, min_time_delay);
 	if (!shaper_params->dual_rate)
 		return commit_delay;
 
@@ -876,13 +875,13 @@ static uint64_t time_till_not_red(tm_shaper_params_t *shaper_params,
 	if (shaper_obj->peak_cnt < 0)
 		peak_delay = (-shaper_obj->peak_cnt) / shaper_params->peak_rate;
 
-	peak_delay = MAX(peak_delay, min_time_delay);
+	peak_delay = _ODP_MAX(peak_delay, min_time_delay);
 	if (0 < shaper_obj->commit_cnt)
 		return peak_delay;
 	else if (0 < shaper_obj->peak_cnt)
 		return commit_delay;
 	else
-		return MIN(commit_delay, peak_delay);
+		return _ODP_MIN(commit_delay, peak_delay);
 }
 
 static int delete_timer(tm_system_t *tm_system ODP_UNUSED,
@@ -1192,8 +1191,8 @@ static int tm_set_finish_time(tm_schedulers_obj_t *schedulers_obj,
 	frame_weight = ((inverted_weight * frame_len) + (1 << 15)) >> 16;
 
 	sched_state = &schedulers_obj->sched_states[new_priority];
-	base_virtual_time = MAX(prod_shaper_obj->virtual_finish_time,
-				sched_state->base_virtual_time);
+	base_virtual_time = _ODP_MAX(prod_shaper_obj->virtual_finish_time,
+				     sched_state->base_virtual_time);
 
 	virtual_finish_time = base_virtual_time + frame_weight;
 	prod_shaper_obj->virtual_finish_time = virtual_finish_time;
@@ -1805,7 +1804,7 @@ static odp_tm_percent_t tm_queue_fullness(tm_wred_params_t      *wred_params,
 		return 0;
 
 	fullness = (10000 * current_cnt) / max_cnt;
-	return (odp_tm_percent_t)MIN(fullness, UINT64_C(50000));
+	return (odp_tm_percent_t)_ODP_MIN(fullness, UINT64_C(50000));
 }
 
 static odp_bool_t tm_local_random_drop(tm_system_t      *tm_system,
@@ -2711,11 +2710,10 @@ static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
 	uint32_t                     min_weight, max_weight;
 	uint8_t                      max_priority;
 
-	num_levels = MAX(MIN(req_ptr->num_levels, ODP_TM_MAX_LEVELS), 1);
+	num_levels = _ODP_MAX(_ODP_MIN(req_ptr->num_levels, ODP_TM_MAX_LEVELS), 1);
 	memset(cap_ptr, 0, sizeof(odp_tm_capabilities_t));
 
-	max_queues       = MIN(req_ptr->max_tm_queues,
-			       (uint32_t)ODP_TM_MAX_NUM_TM_NODES);
+	max_queues       = _ODP_MIN(req_ptr->max_tm_queues, (uint32_t)ODP_TM_MAX_NUM_TM_NODES);
 	shaper_supported = req_ptr->tm_queue_shaper_needed;
 	wred_supported   = req_ptr->tm_queue_wred_needed;
 	dual_slope       = req_ptr->tm_queue_dual_slope_needed;
@@ -2756,16 +2754,16 @@ static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
 		per_level_cap = &cap_ptr->per_level[level_idx];
 		per_level_req = &req_ptr->per_level[level_idx];
 
-		max_nodes        = MIN(per_level_req->max_num_tm_nodes,
-				       (uint32_t)ODP_TM_MAX_NUM_TM_NODES);
-		max_fanin        = MIN(per_level_req->max_fanin_per_node,
-				       UINT32_C(1024));
-		max_priority     = MIN(per_level_req->max_priority,
-				       ODP_TM_MAX_PRIORITIES - 1);
-		min_weight       = MAX(per_level_req->min_weight,
-				       ODP_TM_MIN_SCHED_WEIGHT);
-		max_weight       = MIN(per_level_req->max_weight,
-				       ODP_TM_MAX_SCHED_WEIGHT);
+		max_nodes        = _ODP_MIN(per_level_req->max_num_tm_nodes,
+					    (uint32_t)ODP_TM_MAX_NUM_TM_NODES);
+		max_fanin        = _ODP_MIN(per_level_req->max_fanin_per_node,
+					    UINT32_C(1024));
+		max_priority     = _ODP_MIN(per_level_req->max_priority,
+					    ODP_TM_MAX_PRIORITIES - 1);
+		min_weight       = _ODP_MAX(per_level_req->min_weight,
+					    ODP_TM_MIN_SCHED_WEIGHT);
+		max_weight       = _ODP_MIN(per_level_req->max_weight,
+					    ODP_TM_MAX_SCHED_WEIGHT);
 		shaper_supported = per_level_req->tm_node_shaper_needed;
 		wred_supported   = per_level_req->tm_node_wred_needed;
 		dual_slope       = per_level_req->tm_node_dual_slope_needed;

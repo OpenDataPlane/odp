@@ -45,7 +45,6 @@
 #include <odp_errno_define.h>
 #include <odp_shm_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_align_internal.h>
 #include <odp_fdserver_internal.h>
 #include <odp_shm_internal.h>
 #include <odp_ishmphy_internal.h>
