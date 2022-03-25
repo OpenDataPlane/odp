@@ -862,10 +862,9 @@ static int open_pktios(test_global_t *test_global)
 	odp_pktin_queue_param_t pktin_param;
 	odp_pktout_queue_param_t pktout_param;
 	odp_schedule_sync_t sched_sync;
-	unsigned int num_queue;
+	uint32_t num_queue, j;
 	char *name;
 	int i, num_pktio, ret;
-	unsigned int j;
 
 	num_pktio = test_global->opt.num_pktio;
 	num_queue = test_global->opt.num_pktio_queue;

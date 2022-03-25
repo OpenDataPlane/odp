@@ -55,9 +55,9 @@ typedef struct {
 	odp_pktio_t pktio;
 	odp_pktio_config_t config;
 	odp_pktout_queue_t pktout[MAX_WORKERS];
-	unsigned pktout_count;
+	uint32_t pktout_count;
 	odp_pktin_queue_t pktin[MAX_WORKERS];
-	unsigned pktin_count;
+	uint32_t pktin_count;
 } interface_t;
 
 /**
@@ -537,8 +537,8 @@ static int setup_icmp_pkt(odp_packet_t pkt,
  * @warning This routine aborts if the create is unsuccessful.
  */
 static int create_pktio(const char *dev, odp_pool_t pool,
-			unsigned num_rx_queues,
-			unsigned num_tx_queues,
+			uint32_t num_rx_queues,
+			uint32_t num_tx_queues,
 			interface_t *itf)
 {
 	odp_pktio_capability_t capa;
@@ -1104,7 +1104,7 @@ int main(int argc, char *argv[])
 	odph_thread_t thread_tbl[MAX_WORKERS];
 	odp_pool_t pool;
 	int num_workers;
-	unsigned num_rx_queues, num_tx_queues;
+	uint32_t num_rx_queues, num_tx_queues;
 	int i;
 	odp_shm_t shm;
 	odp_cpumask_t cpumask;
