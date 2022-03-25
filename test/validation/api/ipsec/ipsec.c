@@ -942,9 +942,8 @@ static void verify_in(const ipsec_test_part *part,
 					  result.orig_ip_len == len);
 			}
 		}
-		ipsec_check_packet(part->out[i].pkt_res,
-				   pkto[i],
-				   false);
+		if (part->out[i].l3_type != ODP_PROTO_L3_TYPE_NONE)
+			ipsec_check_packet(part->out[i].pkt_res, pkto[i], false);
 		if (suite_context.inbound_op_mode == ODP_IPSEC_OP_MODE_INLINE)
 			expected_user_ptr = NULL;
 		CU_ASSERT(odp_packet_user_ptr(pkto[i]) == expected_user_ptr);
