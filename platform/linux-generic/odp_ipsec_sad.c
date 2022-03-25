@@ -10,15 +10,16 @@
 #include <odp/api/random.h>
 #include <odp/api/shared_memory.h>
 
+#include <odp/api/plat/atomic_inlines.h>
+#include <odp/api/plat/cpu_inlines.h>
+
 #include <odp_config_internal.h>
 #include <odp_init_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_ipsec_internal.h>
+#include <odp_macros_internal.h>
 #include <odp_ring_mpmc_internal.h>
 #include <odp_global_data.h>
-
-#include <odp/api/plat/atomic_inlines.h>
-#include <odp/api/plat/cpu_inlines.h>
 
 #include <string.h>
 #include <inttypes.h>
@@ -430,7 +431,7 @@ static uint32_t esp_block_len_to_mask(uint32_t block_len)
 	if (block_len < 4)
 		block_len = 4;
 
-	ODP_ASSERT(CHECK_IS_POWER2(block_len));
+	ODP_ASSERT(_ODP_CHECK_IS_POWER2(block_len));
 	return block_len - 1;
 }
 

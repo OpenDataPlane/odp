@@ -5,19 +5,20 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <odp/api/byteorder.h>
 #include <odp/api/ipsec.h>
 #include <odp/api/chksum.h>
 
 #include <odp/api/plat/packet_inlines.h>
-#include <odp/api/byteorder.h>
 #include <odp/api/plat/byteorder_inlines.h>
+#include <odp/api/plat/queue_inlines.h>
 
 #include <odp_global_data.h>
 #include <odp_init_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_macros_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_ipsec_internal.h>
-#include <odp/api/plat/queue_inlines.h>
 #include <odp_classification_internal.h>
 #include <odp_libconfig_internal.h>
 #include <odp_schedule_if.h>
@@ -1099,7 +1100,7 @@ uint64_t ipsec_seq_no(ipsec_sa_t *ipsec_sa)
  */
 static inline uint32_t ipsec_padded_len(uint32_t len, uint32_t pad_mask)
 {
-	ODP_ASSERT(CHECK_IS_POWER2(pad_mask + 1));
+	ODP_ASSERT(_ODP_CHECK_IS_POWER2(pad_mask + 1));
 
 	return (len + pad_mask) & ~pad_mask;
 }

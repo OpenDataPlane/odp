@@ -37,7 +37,6 @@
 
 #include <odp/api/plat/timer_inline_types.h>
 
-#include <odp_align_internal.h>
 #include <odp_atomic_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_errno_define.h>
@@ -45,6 +44,7 @@
 #include <odp_global_data.h>
 #include <odp_init_internal.h>
 #include <odp_libconfig_internal.h>
+#include <odp_macros_internal.h>
 #include <odp_pool_internal.h>
 #include <odp_queue_if.h>
 #include <odp_timer_internal.h>
@@ -431,9 +431,9 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 		}
 	}
 
-	sz0 = ROUNDUP_CACHE_LINE(sizeof(timer_pool_t));
-	sz1 = ROUNDUP_CACHE_LINE(sizeof(tick_buf_t) * param->num_timers);
-	sz2 = ROUNDUP_CACHE_LINE(sizeof(_odp_timer_t) * param->num_timers);
+	sz0 = _ODP_ROUNDUP_CACHE_LINE(sizeof(timer_pool_t));
+	sz1 = _ODP_ROUNDUP_CACHE_LINE(sizeof(tick_buf_t) * param->num_timers);
+	sz2 = _ODP_ROUNDUP_CACHE_LINE(sizeof(_odp_timer_t) * param->num_timers);
 	tp_size = sz0 + sz1 + sz2;
 
 	shm = odp_shm_reserve(name, tp_size, ODP_CACHE_LINE_SIZE, flags);

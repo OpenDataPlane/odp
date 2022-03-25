@@ -130,8 +130,7 @@ static void pcapng_drain_fifo(int fd)
 static void inotify_event_handle(pktio_entry_t *entry, int qidx,
 				 struct inotify_event *event)
 {
-	int mtu = MAX(odp_pktin_maxlen(entry->s.handle),
-		      odp_pktout_maxlen(entry->s.handle));
+	int mtu = _ODP_MAX(odp_pktin_maxlen(entry->s.handle), odp_pktout_maxlen(entry->s.handle));
 
 	if (event->mask & IN_OPEN) {
 		int ret;
@@ -173,8 +172,7 @@ static void get_pcapng_fifo_name(char *pcapng_entry, size_t len,
 
 static int get_qidx_from_fifo(pktio_entry_t *entry, char *name)
 {
-	unsigned int max_queue =
-		MAX(entry->s.num_in_queue, entry->s.num_out_queue);
+	unsigned int max_queue = _ODP_MAX(entry->s.num_in_queue, entry->s.num_out_queue);
 	unsigned int i;
 
 	for (i = 0; i < max_queue; i++) {
@@ -291,8 +289,7 @@ int _odp_pcapng_start(pktio_entry_t *entry)
 	int ret = -1, fd;
 	pthread_attr_t attr;
 	unsigned int i;
-	unsigned int max_queue =
-		MAX(entry->s.num_in_queue, entry->s.num_out_queue);
+	unsigned int max_queue = _ODP_MAX(entry->s.num_in_queue, entry->s.num_out_queue);
 	int fifo_sz;
 
 	fifo_sz = get_fifo_max_size();
@@ -396,8 +393,7 @@ void _odp_pcapng_stop(pktio_entry_t *entry)
 {
 	int ret;
 	unsigned int i;
-	unsigned int max_queue =
-		MAX(entry->s.num_in_queue, entry->s.num_out_queue);
+	unsigned int max_queue = _ODP_MAX(entry->s.num_in_queue, entry->s.num_out_queue);
 
 	odp_spinlock_lock(&pcapng_gbl->lock);
 
@@ -528,7 +524,7 @@ int _odp_pcapng_write_pkts(pktio_entry_t *entry, int qidx,
 						      NULL);
 
 		if (block_len + sizeof(epb[i]) +
-		    ROUNDUP_ALIGN(seg_len, PCAPNG_DATA_ALIGN) +
+		    _ODP_ROUNDUP_ALIGN(seg_len, PCAPNG_DATA_ALIGN) +
 		    sizeof(uint32_t) > PIPE_BUF) {
 			wlen = write_fifo(fd, packet_iov, iovcnt);
 			if (wlen > 0) {
@@ -539,7 +535,7 @@ int _odp_pcapng_write_pkts(pktio_entry_t *entry, int qidx,
 		}
 		epb[i].block_type = PCAPNG_BLOCK_TYPE_EPB;
 		epb[i].block_total_length = sizeof(epb[i]) +
-			ROUNDUP_ALIGN(seg_len, PCAPNG_DATA_ALIGN) +
+			_ODP_ROUNDUP_ALIGN(seg_len, PCAPNG_DATA_ALIGN) +
 			PCAPNG_DATA_ALIGN;
 		epb[i].interface_idx = 0;
 		epb[i].timestamp_high =
@@ -556,8 +552,7 @@ int _odp_pcapng_write_pkts(pktio_entry_t *entry, int qidx,
 
 		/* data */
 		packet_iov[iovcnt].iov_base = buf;
-		packet_iov[iovcnt].iov_len =
-			ROUNDUP_ALIGN(seg_len, PCAPNG_DATA_ALIGN);
+		packet_iov[iovcnt].iov_len = _ODP_ROUNDUP_ALIGN(seg_len, PCAPNG_DATA_ALIGN);
 		block_len += packet_iov[iovcnt].iov_len;
 		iovcnt++;
 

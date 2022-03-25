@@ -24,9 +24,9 @@
 
 #include <odp_schedule_if.h>
 #include <odp_debug_internal.h>
-#include <odp_align_internal.h>
 #include <odp_config_internal.h>
 #include <odp_event_internal.h>
+#include <odp_macros_internal.h>
 #include <odp_ring_u32_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_queue_basic_internal.h>
@@ -53,11 +53,11 @@
 #define GROUP_PKTIN       GROUP_ALL
 
 /* Maximum number of commands: one priority/group for all queues and pktios */
-#define RING_SIZE         (ROUNDUP_POWER2_U32(NUM_QUEUE + NUM_PKTIO))
+#define RING_SIZE         (_ODP_ROUNDUP_POWER2_U32(NUM_QUEUE + NUM_PKTIO))
 #define RING_MASK         (RING_SIZE - 1)
 
 /* Ring size must be power of two */
-ODP_STATIC_ASSERT(CHECK_IS_POWER2(RING_SIZE),
+ODP_STATIC_ASSERT(_ODP_CHECK_IS_POWER2(RING_SIZE),
 		  "Ring_size_is_not_power_of_two");
 
 ODP_STATIC_ASSERT(NUM_ORDERED_LOCKS <= CONFIG_QUEUE_MAX_ORD_LOCKS,
@@ -80,7 +80,7 @@ struct sched_cmd_s {
 
 typedef struct ODP_ALIGNED_CACHE sched_cmd_t {
 	struct sched_cmd_s s;
-	uint8_t            pad[ROUNDUP_CACHE_LINE(sizeof(struct sched_cmd_s)) -
+	uint8_t            pad[_ODP_ROUNDUP_CACHE_LINE(sizeof(struct sched_cmd_s)) -
 			       sizeof(struct sched_cmd_s)];
 } sched_cmd_t;
 

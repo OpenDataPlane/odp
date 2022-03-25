@@ -11,8 +11,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/align.h>
 #include <odp/api/hints.h>
-#include <odp_align_internal.h>
 
 /* Basic ring for single thread usage. Operations must be synchronized by using
  * locks (or other means), when multiple threads use the same ring. */

@@ -18,12 +18,12 @@ extern "C" {
 #include <odp_forward_typedefs_internal.h>
 #include <odp_queue_if.h>
 #include <odp_event_internal.h>
-#include <odp_align_internal.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/align.h>
 #include <odp/api/hints.h>
 #include <odp/api/ticketlock.h>
 #include <odp_config_internal.h>
+#include <odp_macros_internal.h>
 #include <odp_schedule_scalable.h>
 #include <odp_schedule_scalable_ordered.h>
 
@@ -55,7 +55,7 @@ struct queue_entry_s {
 
 union queue_entry_u {
 	struct queue_entry_s s;
-	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct queue_entry_s))];
+	uint8_t pad[_ODP_ROUNDUP_CACHE_LINE(sizeof(struct queue_entry_s))];
 };
 
 int _odp_queue_deq(sched_elem_t *q, _odp_event_hdr_t *event_hdr[], int num);
@@ -71,7 +71,7 @@ static inline void *shm_pool_alloc_align(_odp_ishm_pool_t *pool, uint32_t size)
 {
 	void *addr;
 
-	addr = _odp_ishm_pool_alloc(pool, ROUNDUP_CACHE_LINE(size));
+	addr = _odp_ishm_pool_alloc(pool, _ODP_ROUNDUP_CACHE_LINE(size));
 	ODP_ASSERT(((uintptr_t)addr & (ODP_CACHE_LINE_SIZE - 1)) == 0);
 
 	return addr;

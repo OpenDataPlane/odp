@@ -197,7 +197,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			 * parser in the case of a segmented packet. */
 			if (odp_unlikely(seg_len < PARSE_BYTES &&
 					 pkt_len > seg_len)) {
-				seg_len = MIN(pkt_len, PARSE_BYTES);
+				seg_len = _ODP_MIN(pkt_len, PARSE_BYTES);
 				odp_packet_copy_to_mem(pkt, 0, seg_len, buf);
 				pkt_addr = buf;
 			} else {

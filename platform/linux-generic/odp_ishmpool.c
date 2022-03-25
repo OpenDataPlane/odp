@@ -43,14 +43,17 @@
  */
 
 #include <odp_posix_extensions.h>
+
 #include <odp/api/spinlock.h>
 #include <odp/api/align.h>
 #include <odp/api/debug.h>
+
 #include <odp_shm_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_align_internal.h>
+#include <odp_macros_internal.h>
 #include <odp_shm_internal.h>
 #include <odp_ishmpool_internal.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -203,14 +206,14 @@ static pool_t *_odp_ishmbud_pool_create(const char *pool_name, int store_idx,
 	max_nb_bblock = (1 << (order - min_order));
 
 	/* space needed for the control area (padded to cache line size)*/
-	control_sz = ROUNDUP_CACHE_LINE(sizeof(_odp_ishm_pool_ctrl_t));
+	control_sz = _ODP_ROUNDUP_CACHE_LINE(sizeof(_odp_ishm_pool_ctrl_t));
 
 	/* space needed for 'order' free bblock list heads:             */
 	/* Note that only lists from min_order to order are really used.*/
-	free_head_sz = ROUNDUP_CACHE_LINE(sizeof(void *) * (order + 1));
+	free_head_sz = _ODP_ROUNDUP_CACHE_LINE(sizeof(void *) * (order + 1));
 
 	/* space needed for order -i.e. size- storage of alloc'd bblock:*/
-	saved_order_sz = ROUNDUP_CACHE_LINE(max_nb_bblock * sizeof(uint8_t));
+	saved_order_sz = _ODP_ROUNDUP_CACHE_LINE(max_nb_bblock * sizeof(uint8_t));
 
 	/* space needed for user area is 2^order bytes: */
 	user_sz = 1ULL << order;
@@ -455,7 +458,7 @@ static pool_t *_odp_ishmslab_pool_create(const char *pool_name, int store_idx,
 	nb_sblock = (size / elt_size) + ((size % elt_size) ? 1 : 0);
 
 	/* space needed for the control area (padded to cache line size)*/
-	control_sz = ROUNDUP_CACHE_LINE(sizeof(_odp_ishm_pool_ctrl_t));
+	control_sz = _ODP_ROUNDUP_CACHE_LINE(sizeof(_odp_ishm_pool_ctrl_t));
 
 	/* space needed for user area is : */
 	user_sz = nb_sblock * elt_size;

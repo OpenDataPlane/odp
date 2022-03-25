@@ -27,7 +27,6 @@
 #include <odp/api/cpu.h>
 #include <odp/api/thrmask.h>
 #include <odp_config_internal.h>
-#include <odp_align_internal.h>
 #include <odp/api/sync.h>
 #include <odp/api/packet_io.h>
 #include <odp_ring_u32_internal.h>
@@ -37,6 +36,7 @@
 #include <odp/api/plat/queue_inlines.h>
 #include <odp_global_data.h>
 #include <odp_event_internal.h>
+#include <odp_macros_internal.h>
 
 #include <string.h>
 
@@ -94,11 +94,11 @@ ODP_STATIC_ASSERT((QUEUE_LOAD * CONFIG_MAX_SCHED_QUEUES) < UINT32_MAX, "Load_val
 #define MAX_RING_SIZE CONFIG_MAX_SCHED_QUEUES
 
 /* For best performance, the number of queues should be a power of two. */
-ODP_STATIC_ASSERT(CHECK_IS_POWER2(CONFIG_MAX_SCHED_QUEUES),
+ODP_STATIC_ASSERT(_ODP_CHECK_IS_POWER2(CONFIG_MAX_SCHED_QUEUES),
 		  "Number_of_queues_is_not_power_of_two");
 
 /* Ring size must be power of two, so that mask can be used. */
-ODP_STATIC_ASSERT(CHECK_IS_POWER2(MAX_RING_SIZE),
+ODP_STATIC_ASSERT(_ODP_CHECK_IS_POWER2(MAX_RING_SIZE),
 		  "Ring_size_is_not_power_of_two");
 
 /* Thread ID is saved into uint16_t variable */
@@ -289,7 +289,7 @@ ODP_STATIC_ASSERT(MAX_SPREAD      <= 256, "Spread_does_not_fit_8_bits");
 ODP_STATIC_ASSERT(CONFIG_QUEUE_MAX_ORD_LOCKS <= 256,
 		  "Ordered_lock_count_does_not_fit_8_bits");
 ODP_STATIC_ASSERT(NUM_PKTIO        <= 256, "Pktio_index_does_not_fit_8_bits");
-ODP_STATIC_ASSERT(CHECK_IS_POWER2(GRP_WEIGHT_TBL_SIZE), "Not_power_of_2");
+ODP_STATIC_ASSERT(_ODP_CHECK_IS_POWER2(GRP_WEIGHT_TBL_SIZE), "Not_power_of_2");
 
 /* Global scheduler context */
 static sched_global_t *sched;
@@ -503,7 +503,7 @@ static int schedule_init_global(void)
 		num_rings = sched->config.num_spread;
 	}
 
-	ring_size = ROUNDUP_POWER2_U32(ring_size);
+	ring_size = _ODP_ROUNDUP_POWER2_U32(ring_size);
 	ODP_ASSERT(ring_size <= MAX_RING_SIZE);
 	sched->ring_mask = ring_size - 1;
 

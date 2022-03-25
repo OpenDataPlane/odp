@@ -632,7 +632,7 @@ static int timer_current_wheel_update(timer_wheels_t *timer_wheels,
 	slot_idx      = wheel_desc->slot_idx;
 	num_slots     = wheel_desc->num_slots;
 	max_ticks     = wheel_desc->max_ticks;
-	max_cnt       = MIN(elapsed_ticks, UINT32_C(32));
+	max_cnt       = _ODP_MIN(elapsed_ticks, UINT32_C(32));
 	current_wheel = timer_wheels->current_wheel;
 	ret_code      = 0;
 	rc            = -1;

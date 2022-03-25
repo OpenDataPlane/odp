@@ -28,6 +28,7 @@
 #include <odp_global_data.h>
 #include <odp_queue_basic_internal.h>
 #include <odp_event_internal.h>
+#include <odp_macros_internal.h>
 
 #include <odp/api/plat/ticketlock_inlines.h>
 #define LOCK(queue_ptr)      odp_ticketlock_lock(&((queue_ptr)->s.lock))
@@ -77,7 +78,7 @@ static int read_config_file(queue_global_t *_odp_queue_glb)
 	val_u32 = val;
 
 	if (val_u32 > MAX_QUEUE_SIZE || val_u32 < MIN_QUEUE_SIZE ||
-	    !CHECK_IS_POWER2(val_u32)) {
+	    !_ODP_CHECK_IS_POWER2(val_u32)) {
 		ODP_ERR("Bad value %s = %u\n", str, val_u32);
 		return -1;
 	}
@@ -95,7 +96,7 @@ static int read_config_file(queue_global_t *_odp_queue_glb)
 
 	if (val_u32 > _odp_queue_glb->config.max_queue_size ||
 	    val_u32 < MIN_QUEUE_SIZE ||
-	    !CHECK_IS_POWER2(val_u32)) {
+	    !_ODP_CHECK_IS_POWER2(val_u32)) {
 		ODP_ERR("Bad value %s = %u\n", str, val_u32);
 		return -1;
 	}
@@ -1039,7 +1040,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 		queue_size = MIN_QUEUE_SIZE;
 
 	/* Round up if not already a power of two */
-	queue_size = ROUNDUP_POWER2_U32(queue_size);
+	queue_size = _ODP_ROUNDUP_POWER2_U32(queue_size);
 
 	if (queue_size > _odp_queue_glb->config.max_queue_size) {
 		ODP_ERR("Too large queue size %u\n", queue_size);

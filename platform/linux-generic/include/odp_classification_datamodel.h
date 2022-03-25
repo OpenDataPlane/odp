@@ -21,10 +21,13 @@ extern "C" {
 #include <odp/api/spinlock.h>
 #include <odp/api/classification.h>
 #include <odp/api/debug.h>
+
+#include <odp_macros_internal.h>
 #include <odp_pool_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_queue_if.h>
+
 #include <protocols/ip.h>
 
 /* Maximum Class Of Service Entry */
@@ -155,7 +158,7 @@ struct cos_s {
 
 typedef union cos_u {
 	struct cos_s s;
-	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct cos_s))];
+	uint8_t pad[_ODP_ROUNDUP_CACHE_LINE(sizeof(struct cos_s))];
 } cos_t;
 
 /* Pattern Matching Rule */
@@ -172,7 +175,7 @@ struct pmr_s {
 
 typedef union pmr_u {
 	struct pmr_s s;
-	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct pmr_s))];
+	uint8_t pad[_ODP_ROUNDUP_CACHE_LINE(sizeof(struct pmr_s))];
 } pmr_t;
 
 typedef struct _cls_queue_grp_tbl_s {
@@ -181,7 +184,7 @@ typedef struct _cls_queue_grp_tbl_s {
 
 typedef union _cls_queue_grp_tbl_t {
 	_cls_queue_grp_tbl_s s;
-	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(_cls_queue_grp_tbl_s))];
+	uint8_t pad[_ODP_ROUNDUP_CACHE_LINE(sizeof(_cls_queue_grp_tbl_s))];
 } _cls_queue_grp_tbl_t;
 
 /**

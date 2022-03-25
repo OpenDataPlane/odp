@@ -24,17 +24,17 @@
 #include <odp_socket_common.h>
 #include <odp_debug_internal.h>
 #include <odp_errno_define.h>
-#include <protocols/eth.h>
+#include <odp_classification_datamodel.h>
+#include <odp_classification_internal.h>
+#include <odp_libconfig_internal.h>
+#include <odp_macros_internal.h>
 
+#include <protocols/eth.h>
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
 #include <poll.h>
 #include <linux/ethtool.h>
 #include <linux/sockios.h>
-#include <odp_classification_datamodel.h>
-#include <odp_classification_internal.h>
-#include <odp_libconfig_internal.h>
-
 #include <inttypes.h>
 
 /* Disable netmap debug prints */
@@ -73,7 +73,7 @@ struct netmap_ring_t {
 
 typedef union ODP_ALIGNED_CACHE {
 	struct netmap_ring_t s;
-	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct netmap_ring_t))];
+	uint8_t pad[_ODP_ROUNDUP_CACHE_LINE(sizeof(struct netmap_ring_t))];
 } netmap_ring_t;
 
 /** Netmap ring slot */

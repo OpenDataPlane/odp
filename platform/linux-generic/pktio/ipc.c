@@ -5,10 +5,12 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <odp/api/system_info.h>
+
 #include <odp_debug_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_errno_define.h>
-#include <odp/api/system_info.h>
+#include <odp_macros_internal.h>
 #include <odp_shm_internal.h>
 #include <odp_ring_ptr_internal.h>
 #include <odp_global_data.h>
@@ -124,7 +126,7 @@ static ring_ptr_t *_ring_create(const char *name, uint32_t count,
 		shm_flags |= ODP_SHM_SINGLE_VA;
 
 	/* count must be a power of 2 */
-	if (!CHECK_IS_POWER2(count)) {
+	if (!_ODP_CHECK_IS_POWER2(count)) {
 		ODP_ERR("Requested size is invalid, must be a power of 2\n");
 		_odp_errno = EINVAL;
 		return NULL;
@@ -234,17 +236,17 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	uint32_t ring_size;
 	uint32_t ring_mask;
 
-	if ((uint64_t)ROUNDUP_POWER2_U32(pool->num + 1) > UINT32_MAX) {
+	if ((uint64_t)_ODP_ROUNDUP_POWER2_U32(pool->num + 1) > UINT32_MAX) {
 		ODP_ERR("Too large packet pool\n");
 		return -1;
 	}
 
 	/* Ring must be able to store all packets in the pool */
-	ring_size = ROUNDUP_POWER2_U32(pool->num + 1);
+	ring_size = _ODP_ROUNDUP_POWER2_U32(pool->num + 1);
 
 	/* Ring size has to larger than burst size */
 	if (ring_size <= IPC_BURST_SIZE)
-		ring_size = ROUNDUP_POWER2_U32(IPC_BURST_SIZE + 1);
+		ring_size = _ODP_ROUNDUP_POWER2_U32(IPC_BURST_SIZE + 1);
 	ring_mask = ring_size - 1;
 
 	pktio_ipc->ring_size = ring_size;

@@ -23,7 +23,6 @@
 #include <odp/api/time.h>
 #include <odp/api/plat/time_inlines.h>
 
-#include <odp_align_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_classification_internal.h>
 #include <odp_socket_common.h>
@@ -31,6 +30,7 @@
 #include <odp_debug_internal.h>
 #include <odp_libconfig_internal.h>
 #include <odp_errno_define.h>
+#include <odp_macros_internal.h>
 
 #include <protocols/eth.h>
 #include <protocols/udp.h>
@@ -120,7 +120,7 @@ struct pkt_cache_t {
 
 typedef union ODP_ALIGNED_CACHE {
 	struct pkt_cache_t s;
-	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct pkt_cache_t))];
+	uint8_t pad[_ODP_ROUNDUP_CACHE_LINE(sizeof(struct pkt_cache_t))];
 } pkt_cache_t;
 
 /** Packet IO using DPDK interface */

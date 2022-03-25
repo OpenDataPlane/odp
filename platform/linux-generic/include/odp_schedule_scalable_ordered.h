@@ -9,11 +9,12 @@
 #ifndef ODP_SCHEDULE_SCALABLE_ORDERED_H
 #define ODP_SCHEDULE_SCALABLE_ORDERED_H
 
+#include <odp/api/align.h>
 #include <odp/api/shared_memory.h>
 
-#include <odp_align_internal.h>
 #include <odp_bitset.h>
 #include <odp_event_internal.h>
+#include <odp_macros_internal.h>
 #include <odp_ishmpool_internal.h>
 
 /* High level functioning of reordering
@@ -68,7 +69,7 @@ typedef struct ODP_ALIGNED(sizeof(uint64_t)) hc {
  * Should be at least one per CPU.
  */
 #define RWIN_SIZE 32
-ODP_STATIC_ASSERT(CHECK_IS_POWER2(RWIN_SIZE), "RWIN_SIZE is not a power of 2");
+ODP_STATIC_ASSERT(_ODP_CHECK_IS_POWER2(RWIN_SIZE), "RWIN_SIZE is not a power of 2");
 
 typedef struct reorder_context reorder_context_t;
 
