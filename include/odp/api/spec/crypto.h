@@ -498,7 +498,7 @@ typedef struct odp_crypto_key {
 /**
  * Crypto API IV structure
  *
- * @deprecated
+ * @deprecated Use per-packet IV in crypto operation parameters
  */
 typedef struct odp_crypto_iv {
 	/** IV data
@@ -594,14 +594,17 @@ typedef struct odp_crypto_session_param_t {
 	 */
 	union {
 #if ODP_DEPRECATED_API
-		/** Cipher Initialization Vector (IV) */
+		/** @deprecated Cipher IV */
 		odp_crypto_iv_t ODP_DEPRECATE(cipher_iv);
 #endif
 		/** Cipher IV length */
 		struct {
 #if ODP_DEPRECATED_API
-			/** Unused padding field */
+			/** @cond
+			 *  Unused padding field
+			 */
 			uint8_t *dummy_padding_0;
+			/** @endcond */
 #endif
 			/** Length of cipher initialization vector.
 			 *  Default value is zero.
@@ -641,13 +644,17 @@ typedef struct odp_crypto_session_param_t {
 	 */
 	union {
 #if ODP_DEPRECATED_API
+		/** @deprecated Authentication IV */
 		odp_crypto_iv_t ODP_DEPRECATE(auth_iv);
 #endif
 		/** Authentication IV length */
 		struct {
 #if ODP_DEPRECATED_API
-			/** Unused padding field */
+			/** @cond
+			 *  Unused padding field
+			 */
 			uint8_t *dummy_padding_1;
+			/** @endcond */
 #endif
 			/** Length of authentication initialization vector.
 			 *  Default value is zero.

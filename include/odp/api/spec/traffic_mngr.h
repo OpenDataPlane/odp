@@ -1059,7 +1059,7 @@ typedef struct {
 	 * not TRUE while packets per second when packet mode is TRUE.
 	 */
 	union {
-		/**< @deprecated Use commit_rate instead */
+		/** @deprecated Use commit_rate instead */
 		uint64_t ODP_DEPRECATE(commit_bps);
 		uint64_t commit_rate; /**< Commit information rate */
 	};
@@ -1070,7 +1070,7 @@ typedef struct {
 	 * This field is ignored when dual_rate is FALSE.
 	 */
 	union {
-		/**< @deprecated Use peak_rate instead */
+		/** @deprecated Use peak_rate instead */
 		uint64_t ODP_DEPRECATE(peak_bps);
 		uint64_t peak_rate; /**< Peak information rate */
 	};
