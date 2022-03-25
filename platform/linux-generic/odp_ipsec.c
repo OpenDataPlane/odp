@@ -1803,6 +1803,7 @@ static ipsec_sa_t *ipsec_out_single(odp_packet_t pkt,
 			state.out_tunnel.ip_tos = 0;
 			state.out_tunnel.ip_df = 0;
 			state.out_tunnel.ip_flabel = 0;
+			state.ip_next_hdr = _ODP_IPPROTO_NO_NEXT;
 			rc = 0;
 		} else {
 			rc = -1;
