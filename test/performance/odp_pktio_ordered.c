@@ -1258,7 +1258,7 @@ int main(int argc, char *argv[])
 			exit(EXIT_FAILURE);
 		}
 
-		if ((unsigned)gbl_args->appl.num_flows > capa.max_output_queues)
+		if ((uint32_t)gbl_args->appl.num_flows > capa.max_output_queues)
 			gbl_args->appl.num_flows = capa.max_output_queues;
 	}
 
