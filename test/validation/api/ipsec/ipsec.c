@@ -281,10 +281,6 @@ int ipsec_check_esp_chacha20_poly1305(void)
 
 int ipsec_check_test_sa_update_seq_num(void)
 {
-	odp_ipsec_capability_t capa;
-
-	odp_ipsec_capability(&capa);
-
 	if (!capa.test.sa_operations.seq_num)
 		return ODP_TEST_INACTIVE;
 
