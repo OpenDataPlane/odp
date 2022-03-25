@@ -2269,12 +2269,6 @@ int odp_ipsec_out_inline(const odp_packet_t pkt_in[], int num_in,
 					     ptr) < 0)
 			status.error.alg = 1;
 
-		packet_subtype_set(pkt, ODP_EVENT_PACKET_IPSEC);
-		result = ipsec_pkt_result(pkt);
-		memset(result, 0, sizeof(*result));
-		result->sa = ipsec_sa->ipsec_sa_hdl;
-		result->status = status;
-
 		if (!status.error.all) {
 			odp_pktout_queue_t pkqueue;
 
