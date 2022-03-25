@@ -38,4 +38,5 @@ PREDEFINED = __GNUC__ \
 	     __x86_64__ \
 	     ODP_PACKED \
 	     ODP_DEPRECATE(x)=x \
+	     ODP_DEPRECATED_API=1 \
 	     "ODP_HANDLE_T(type)=odp_handle_t type"
