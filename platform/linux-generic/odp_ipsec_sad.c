@@ -863,7 +863,10 @@ ipsec_sa_t *_odp_ipsec_sa_lookup(const ipsec_sa_lookup_t *lookup)
 		    lookup->proto == ipsec_sa->proto &&
 		    lookup->spi == ipsec_sa->spi &&
 		    lookup->ver == ipsec_sa->in.lookup_ver &&
-		    !memcmp(lookup->dst_addr, &ipsec_sa->in.lookup_dst_ipv4,
+		    !memcmp(lookup->dst_addr,
+			    lookup->ver == ODP_IPSEC_IPV4 ?
+				    (void *)&ipsec_sa->in.lookup_dst_ipv4 :
+				    (void *)&ipsec_sa->in.lookup_dst_ipv6,
 			    lookup->ver == ODP_IPSEC_IPV4 ?
 				    _ODP_IPV4ADDR_LEN :
 				    _ODP_IPV6ADDR_LEN)) {
