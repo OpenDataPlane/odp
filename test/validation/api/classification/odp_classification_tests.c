@@ -354,7 +354,7 @@ void test_cls_pmr_chain(odp_bool_t enable_pktv)
 
 	enqueue_pktio_interface(pkt, pktio_loop);
 
-	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
+	pkt = receive_packet(&queue, 60 * ODP_TIME_SEC_IN_NS, enable_pktv);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(queue == queue_list[CLS_PMR_CHAIN_DST]);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
@@ -373,7 +373,7 @@ void test_cls_pmr_chain(odp_bool_t enable_pktv)
 	odph_ipv4_csum_update(pkt);
 
 	enqueue_pktio_interface(pkt, pktio_loop);
-	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
+	pkt = receive_packet(&queue, 60 * ODP_TIME_SEC_IN_NS, enable_pktv);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(queue == queue_list[CLS_PMR_CHAIN_SRC]);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
@@ -442,7 +442,7 @@ void test_pktio_default_cos(odp_bool_t enable_pktv)
 
 	enqueue_pktio_interface(pkt, pktio_loop);
 
-	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
+	pkt = receive_packet(&queue, 60 * ODP_TIME_SEC_IN_NS, enable_pktv);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	/* Default packet should be received in default queue */
 	CU_ASSERT(queue == queue_list[CLS_DEFAULT]);
@@ -589,7 +589,7 @@ void test_pktio_error_cos(odp_bool_t enable_pktv)
 	ip->chksum = 0;
 	enqueue_pktio_interface(pkt, pktio_loop);
 
-	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
+	pkt = receive_packet(&queue, 60 * ODP_TIME_SEC_IN_NS, enable_pktv);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	/* Error packet should be received in error queue */
 	CU_ASSERT(queue == queue_list[CLS_ERROR]);
@@ -719,7 +719,7 @@ void test_cos_with_l2_priority(odp_bool_t enable_pktv)
 		vlan = (odph_vlanhdr_t *)(ethhdr + 1);
 		vlan->tci = odp_cpu_to_be_16(i << 13);
 		enqueue_pktio_interface(pkt, pktio_loop);
-		pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
+		pkt = receive_packet(&queue, 60 * ODP_TIME_SEC_IN_NS, enable_pktv);
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 		CU_ASSERT(queue == queue_list[CLS_L2_QOS_0 + i]);
 		pool = odp_packet_pool(pkt);
@@ -800,7 +800,7 @@ void test_pmr_cos(odp_bool_t enable_pktv)
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 	set_first_supported_pmr_port(pkt, CLS_PMR_PORT);
 	enqueue_pktio_interface(pkt, pktio_loop);
-	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
+	pkt = receive_packet(&queue, 60 * ODP_TIME_SEC_IN_NS, enable_pktv);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(queue == queue_list[CLS_PMR]);
 	pool = odp_packet_pool(pkt);
@@ -903,7 +903,7 @@ void test_pktio_pmr_composite_cos(odp_bool_t enable_pktv)
 
 	set_first_supported_pmr_port(pkt, CLS_PMR_SET_PORT);
 	enqueue_pktio_interface(pkt, pktio_loop);
-	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS, enable_pktv);
+	pkt = receive_packet(&queue, 60 * ODP_TIME_SEC_IN_NS, enable_pktv);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(queue == queue_list[CLS_PMR_SET]);
 	pool = odp_packet_pool(pkt);
