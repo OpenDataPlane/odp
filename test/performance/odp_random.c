@@ -37,21 +37,29 @@ struct test_global_t {
 
 	struct {
 		uint64_t nsec[ODP_THREAD_COUNT_MAX];
+		uint64_t sum[ODP_THREAD_COUNT_MAX];
+		uint64_t min[ODP_THREAD_COUNT_MAX];
+		uint64_t max[ODP_THREAD_COUNT_MAX];
 	} stat;
 };
 
 /* Command line options */
 typedef struct {
+	int mode;
 	int num_threads;
 	uint32_t size;
 	uint32_t rounds;
+	uint64_t delay;
+
 } options_t;
 
 static options_t options;
 static const options_t options_def = {
+	.mode = 0,
 	.num_threads = 1,
 	.size = 256,
 	.rounds = 100000,
+	.delay = 0,
 };
 
 static void print_usage(void)
@@ -61,13 +69,18 @@ static void print_usage(void)
 	       "\n"
 	       "Usage: odp_random [options]\n"
 	       "\n"
+	       "  -m, --mode    Test mode select (default: 0):\n"
+	       "                  0: Data throughput\n"
+	       "                  1: Data generation latency (size: 8B by default)\n"
 	       "  -t, --threads Number of worker threads (default %u)\n"
 	       "  -s, --size    Size of buffer in bytes (default %u)\n"
 	       "  -r, --rounds  Number of test rounds (default %u)\n"
 	       "                Divided by 100 for ODP_RANDOM_TRUE\n"
+	       "  -d, --delay   Delay (nsec) between buffer fills (default %" PRIu64 ").\n"
+	       "                Affects only latency mode.\n"
 	       "  -h, --help    This help\n"
 	       "\n",
-	       options_def.num_threads, options_def.size, options_def.rounds);
+	       options_def.num_threads, options_def.size, options_def.rounds, options_def.delay);
 }
 
 static int parse_options(int argc, char *argv[])
@@ -77,16 +90,19 @@ static int parse_options(int argc, char *argv[])
 	int ret = 0;
 
 	static const struct option longopts[] = {
+		{ "mode", required_argument, NULL, 'm' },
 		{ "threads", required_argument, NULL, 't' },
 		{ "size", required_argument, NULL, 's' },
 		{ "rounds", required_argument, NULL, 'r' },
+		{ "delay", required_argument, NULL, 'd' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 }
 	};
 
-	static const char *shortopts = "+t:s:r:h";
+	static const char *shortopts = "+m:t:s:r:d:h";
 
 	options = options_def;
+	options.size = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -95,6 +111,9 @@ static int parse_options(int argc, char *argv[])
 			break;
 
 		switch (opt) {
+		case 'm':
+			options.mode = atoi(optarg);
+			break;
 		case 't':
 			options.num_threads = atol(optarg);
 			break;
@@ -103,6 +122,9 @@ static int parse_options(int argc, char *argv[])
 			break;
 		case 'r':
 			options.rounds = atol(optarg);
+			break;
+		case 'd':
+			options.delay = atol(optarg);
 			break;
 		case 'h':
 			/* fall through */
@@ -113,10 +135,26 @@ static int parse_options(int argc, char *argv[])
 		}
 	}
 
-	if (options.size < 1) {
-		ODPH_ERR("Invalid size: %" PRIu32 "\n", options.size);
+	if (options.num_threads < 1 || options.num_threads > ODP_THREAD_COUNT_MAX) {
+		ODPH_ERR("Bad number of threads: %i\n", options.num_threads);
 		return -1;
 	}
+
+	if (options.size == 0) {
+		options.size = options_def.size;
+
+		if (options.mode)
+			options.size = 8;
+	}
+
+	printf("\nOptions:\n");
+	printf("------------------------\n");
+	printf("  mode:      %i\n", options.mode);
+	printf("  threads:   %i\n", options.num_threads);
+	printf("  size:      %u\n", options.size);
+	printf("  rounds:    %u\n", options.rounds);
+	printf("  delay:     %" PRIu64 "\n", options.delay);
+	printf("\n");
 
 	return ret;
 }
@@ -191,6 +229,94 @@ static int test_random_perf(void *ptr)
 	return 0;
 }
 
+static inline void random_data_latency(test_global_t *global, int thread_idx,
+				       uint32_t rounds, uint8_t *data, uint32_t size)
+{
+	uint32_t i;
+	int32_t ret;
+	odp_time_t t1, t2, start;
+	uint64_t nsec;
+	odp_random_kind_t type = global->type;
+	uint64_t delay = options.delay;
+	uint64_t min = UINT64_MAX;
+	uint64_t max = 0;
+	uint64_t sum = 0;
+	uint64_t seed = 0;
+
+	start = odp_time_local();
+
+	for (i = 0; i < rounds; i++) {
+		uint32_t pos = 0;
+
+		if (delay)
+			odp_time_wait_ns(delay);
+
+		if ((int)type == PSEUDO_RANDOM) {
+			t1 = odp_time_local_strict();
+			while (pos < size) {
+				ret = odp_random_test_data(data + pos, size - pos, &seed);
+
+				if (ret < 0) {
+					ODPH_ERR("odp_random_test_data() failed\n");
+					exit(EXIT_FAILURE);
+				}
+
+				pos += ret;
+			}
+			t2 = odp_time_local_strict();
+		} else {
+			t1 = odp_time_local_strict();
+			while (pos < size) {
+				ret = odp_random_data(data + pos, size - pos, type);
+
+				if (ret < 0) {
+					ODPH_ERR("odp_random_data() failed\n");
+					exit(EXIT_FAILURE);
+				}
+
+				pos += ret;
+			}
+			t2 = odp_time_local_strict();
+		}
+
+		nsec = odp_time_diff_ns(t2, t1);
+		sum += nsec;
+
+		if (nsec > max)
+			max = nsec;
+		if (nsec < min)
+			min = nsec;
+	}
+
+	nsec = odp_time_diff_ns(odp_time_local(), start);
+
+	global->stat.nsec[thread_idx] = nsec;
+	global->stat.sum[thread_idx] = sum;
+	global->stat.min[thread_idx] = min;
+	global->stat.max[thread_idx] = max;
+}
+
+static int test_random_latency(void *ptr)
+{
+	thread_arg_t *thread_arg = ptr;
+	test_global_t *global = thread_arg->global;
+	odp_random_kind_t type = global->type;
+	int thread_idx = thread_arg->thread_idx;
+	uint8_t *data = thread_arg->data;
+	uint32_t size = options.size;
+	uint32_t rounds = global->rounds;
+
+	/* One warm up round */
+	random_data_loop(type, 1, data, size);
+
+	odp_barrier_wait(&global->barrier);
+
+	/* Test run */
+	random_data_latency(global, thread_idx, rounds, data, size);
+
+	return 0;
+}
+
 static uint32_t type_rounds(odp_random_kind_t type)
 {
 	switch (type) {
@@ -206,6 +332,7 @@ static void test_type(odp_instance_t instance, test_global_t *global, odp_random
 	int i;
 	int num_threads = options.num_threads;
 	uint32_t rounds = type_rounds(type);
+	uint32_t size = options.size;
 
 	memset(&global->stat, 0, sizeof(global->stat));
 	global->type = type;
@@ -229,8 +356,12 @@ static void test_type(odp_instance_t instance, test_global_t *global, odp_random
 	for (i = 0; i < num_threads; i++) {
 		odph_thread_param_init(&thr_param[i]);
 		thr_param[i].thr_type = ODP_THREAD_WORKER;
-		thr_param[i].start    = test_random_perf;
 		thr_param[i].arg      = &global->thread_arg[i];
+
+		if (options.mode == 0)
+			thr_param[i].start = test_random_perf;
+		else
+			thr_param[i].start = test_random_latency;
 	}
 
 	memset(&thr_worker, 0, sizeof(thr_worker));
@@ -247,7 +378,7 @@ static void test_type(odp_instance_t instance, test_global_t *global, odp_random
 
 	double mb, seconds, nsec = 0;
 
-	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++)
+	for (i = 0; i < num_threads; i++)
 		nsec += global->stat.nsec[i];
 
 	nsec /= num_threads;
@@ -267,16 +398,41 @@ static void test_type(odp_instance_t instance, test_global_t *global, odp_random
 	}
 
 	printf("--------------------\n");
-	printf("threads: %d  size: %u B  rounds: %u  ", num_threads,
-	       options.size, rounds);
-	mb = (uint64_t)num_threads * (uint64_t)options.size *
-	     (uint64_t)rounds;
+	printf("threads: %d  size: %u B  rounds: %u  ", num_threads, size, rounds);
+	mb = (uint64_t)num_threads * (uint64_t)size * (uint64_t)rounds;
 	mb /= MB;
 	seconds = (double)nsec / (double)ODP_TIME_SEC_IN_NS;
 	printf("MB: %.3f  seconds: %.3f  ", mb, seconds);
 	printf("MB/s: %.3f  ", mb / seconds);
-	printf("MB/s/thread: %.3f", mb / seconds / (double)num_threads);
-	printf("\n\n");
+	printf("MB/s/thread: %.3f\n", mb / seconds / (double)num_threads);
+
+	if (options.mode) {
+		double ave;
+		uint64_t min = UINT64_MAX;
+		uint64_t max = 0;
+		uint64_t sum = 0;
+
+		printf("  latency (nsec)\n");
+		printf("  thread      min      max        ave\n");
+		for (i = 0; i < num_threads; i++) {
+			ave  = (double)global->stat.sum[i] / rounds;
+			sum += global->stat.sum[i];
+
+			if (global->stat.min[i] < min)
+				min = global->stat.min[i];
+
+			if (global->stat.max[i] > max)
+				max = global->stat.max[i];
+
+			printf("%8i %8" PRIu64 " %8" PRIu64 " %10.1f\n", i, global->stat.min[i],
+			       global->stat.max[i], ave);
+		}
+
+		printf("     all %8" PRIu64 " %8" PRIu64 " %10.1f\n",
+		       min, max, ((double)sum / rounds) / num_threads);
+	}
+
+	printf("\n");
 }
 
 int main(int argc, char **argv)
