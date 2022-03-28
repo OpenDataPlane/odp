@@ -58,7 +58,6 @@
 #endif
 
 #include <ctype.h>
-#include <math.h>
 #include <sched.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -267,15 +266,15 @@ static int init_options(pktio_entry_t *pktio_entry,
 /**
  * Calculate valid cache size for DPDK packet pool
  */
-static unsigned cache_size(uint32_t num)
+static uint32_t cache_size(uint32_t num)
 {
-	unsigned size = 0;
-	unsigned i;
+	uint32_t size = 0;
+	uint32_t i;
 
 	if (!RTE_MEMPOOL_CACHE_MAX_SIZE)
 		return 0;
 
-	i = ceil((double)num / RTE_MEMPOOL_CACHE_MAX_SIZE);
+	i = (num + RTE_MEMPOOL_CACHE_MAX_SIZE - 1) / RTE_MEMPOOL_CACHE_MAX_SIZE;
 	i = RTE_MAX(i, 2UL);
 	for (; i <= (num / 2); ++i)
 		if ((num % i) == 0) {
