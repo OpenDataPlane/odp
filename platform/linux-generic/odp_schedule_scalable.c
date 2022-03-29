@@ -817,23 +817,19 @@ events_dequeued:
 	}
 
 	/* Ingress queue empty => poll pktio RX queue */
-	odp_event_t rx_evts[QUEUE_MULTI_MAX];
-	int num_rx = _odp_sched_cb_pktin_poll_one(elem->pktio_idx,
-			elem->rx_queue,
-			rx_evts);
+	_odp_event_hdr_t *rx_evts[QUEUE_MULTI_MAX];
+	int num_rx = _odp_sched_cb_pktin_poll(elem->pktio_idx, elem->rx_queue,
+					      rx_evts, QUEUE_MULTI_MAX);
+
 	if (odp_likely(num_rx > 0)) {
 		num = num_rx < num_evts ? num_rx : num_evts;
 		for (i = 0; i < num; i++) {
 			/* Return events directly to caller */
-			ev[i] = rx_evts[i];
+			ev[i] = _odp_event_from_hdr(rx_evts[i]);
 		}
 		if (num_rx > num) {
 			/* Events remain, enqueue them */
-			_odp_event_hdr_t *events[QUEUE_MULTI_MAX];
-
-			for (i = num; i < num_rx; i++)
-				events[i] = _odp_event_hdr(rx_evts[i]);
-			i = _odp_queue_enq_sp(elem, &events[num], num_rx - num);
+			i = _odp_queue_enq_sp(elem, &rx_evts[num], num_rx - num);
 			/* Enqueue must succeed as the queue was empty */
 			ODP_ASSERT(i == num_rx - num);
 		}
