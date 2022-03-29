@@ -89,8 +89,6 @@ extern const schedule_fn_t *_odp_sched_fn;
 /* Interface for the scheduler */
 int _odp_sched_cb_pktin_poll(int pktio_index, int pktin_index,
 			     _odp_event_hdr_t *hdr_tbl[], int num);
-/* evts must have at least QUEUE_MULTI_MAX elements */
-int _odp_sched_cb_pktin_poll_one(int pktio_index, int rx_queue, odp_event_t evts[]);
 void _odp_sched_cb_pktio_stop_finalize(int pktio_index);
 
 /* API functions */
