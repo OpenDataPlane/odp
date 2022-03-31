@@ -1,18 +1,21 @@
 /* Copyright (c) 2018, Linaro Limited
- * Copyright (c) 2020-2021, Nokia
+ * Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <odp/api/hints.h>
+
+#include <odp_debug_internal.h>
+#include <odp_macros_internal.h>
+
+#include "cpu_flags.h"
+
+#include <asm/hwcap.h>
 #include <string.h>
 #include <stdlib.h>
 #include <sys/auxv.h>
-#include <asm/hwcap.h>
-
-#include <odp/api/hints.h>
-#include <odp_debug_internal.h>
-#include "cpu_flags.h"
 
 typedef struct {
 	const char *feat_flag;
@@ -895,7 +898,7 @@ static void _odp_sys_info_print_hwcap_flags(void)
 	/* Print supported hardware flags via AT_HWCAP entry of the hwcaps
 	 * auxiliary vector. */
 	hwcaps = getauxval(AT_HWCAP);
-	size = sizeof(hwcap_flags) / sizeof(hwcap_feat_flag_t);
+	size = _ODP_ARRAY_SIZE(hwcap_flags);
 	for (unsigned int i = 0; i < size; i++) {
 		if (hwcap_flags[i].valid) {
 			if (check_hwcap_duplicates(hwcap_flags[i].hwcap_field)) {
@@ -912,7 +915,7 @@ static void _odp_sys_info_print_hwcap_flags(void)
 	/* Print supported hardware flags via AT_HWCAP2 entry of the hwcaps
 	 * auxiliary vector. */
 	hwcaps2 = getauxval(AT_HWCAP2);
-	size2 = sizeof(hwcap2_flags) / sizeof(hwcap_feat_flag_t);
+	size2 = _ODP_ARRAY_SIZE(hwcap2_flags);
 	for (unsigned long i = 0; i < size2; i++) {
 		if (hwcap2_flags[i].valid) {
 			if (hwcaps2 & 0x01)
