@@ -1368,7 +1368,7 @@ static inline int schedule_grp_prio(odp_queue_t *out_queue, odp_event_t out_ev[]
  */
 static inline int do_schedule(odp_queue_t *out_q, odp_event_t out_ev[], uint32_t max_num)
 {
-	int i, num_grp, ret, spr, grp_id;
+	int i, num_grp, ret, spr, first_id, grp_id, grp, prio;
 	uint32_t sched_round;
 	uint16_t spread_round, grp_round;
 	uint32_t epoch;
@@ -1430,15 +1430,18 @@ static inline int do_schedule(odp_queue_t *out_q, odp_event_t out_ev[], uint32_t
 		sched_local.grp_epoch = epoch;
 	}
 
-	grp_id = sched_local.grp_weight[grp_round];
+	first_id = sched_local.grp_weight[grp_round];
 
-	/* Schedule queues per group and priority */
-	for (i = 0; i < num_grp; i++) {
-		int grp, prio;
+	for (prio = 0; prio < NUM_PRIO; prio++) {
+		grp_id = first_id;
 
-		grp = sched_local.grp[grp_id];
+		for (i = 0; i < num_grp; i++) {
+			grp = sched_local.grp[grp_id];
 
-		for (prio = 0; prio < NUM_PRIO; prio++) {
+			grp_id++;
+			if (odp_unlikely(grp_id >= num_grp))
+				grp_id = 0;
+
 			if (sched->prio_q_mask[grp][prio] == 0)
 				continue;
 
@@ -1448,10 +1451,6 @@ static inline int do_schedule(odp_queue_t *out_q, odp_event_t out_ev[], uint32_t
 			if (odp_likely(ret))
 				return ret;
 		}
-
-		grp_id++;
-		if (odp_unlikely(grp_id >= num_grp))
-			grp_id = 0;
 	}
 
 	return 0;
