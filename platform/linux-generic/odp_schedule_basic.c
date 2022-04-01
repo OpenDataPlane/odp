@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -1063,7 +1063,7 @@ static inline int balance_spread(int grp, int prio, int cur_spr)
 	return new_spr;
 }
 
-static inline int copy_from_stash(odp_event_t out_ev[], unsigned int max)
+static inline int copy_from_stash(odp_event_t out_ev[], uint32_t max)
 {
 	int i = 0;
 
@@ -1202,8 +1202,8 @@ static inline int poll_pktin(uint32_t qi, int direct_recv,
 	return ret;
 }
 
-static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
-				  unsigned int max_num, int grp, int first_spr, int balance)
+static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[], uint32_t max_num,
+				  int grp, int first_spr, int balance)
 {
 	int prio, spr, new_spr, i, ret;
 	uint32_t qi;
@@ -1377,8 +1377,7 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 /*
  * Schedule queues
  */
-static inline int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
-			      unsigned int max_num)
+static inline int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[], uint32_t max_num)
 {
 	int i, num_grp, ret, spr, grp_id;
 	uint32_t sched_round;
@@ -1462,8 +1461,7 @@ static inline int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 	return 0;
 }
 
-static inline int schedule_run(odp_queue_t *out_queue, odp_event_t out_ev[],
-			       unsigned int max_num)
+static inline int schedule_run(odp_queue_t *out_queue, odp_event_t out_ev[], uint32_t max_num)
 {
 	timer_run(1);
 
@@ -1471,7 +1469,7 @@ static inline int schedule_run(odp_queue_t *out_queue, odp_event_t out_ev[],
 }
 
 static inline int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
-				odp_event_t out_ev[], unsigned int max_num)
+				odp_event_t out_ev[], uint32_t max_num)
 {
 	odp_time_t next, wtime;
 	int first = 1;
