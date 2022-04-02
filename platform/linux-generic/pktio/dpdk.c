@@ -24,6 +24,7 @@
 #include <odp/api/plat/time_inlines.h>
 
 #include <odp_packet_io_internal.h>
+#include <odp_pool_internal.h>
 #include <odp_classification_internal.h>
 #include <odp_socket_common.h>
 #include <odp_packet_dpdk.h>
@@ -153,6 +154,15 @@ typedef struct ODP_ALIGNED_CACHE {
 ODP_STATIC_ASSERT(PKTIO_PRIVATE_SIZE >= sizeof(pkt_dpdk_t),
 		  "PKTIO_PRIVATE_SIZE too small");
 
+typedef struct {
+	uint32_t dpdk_elt_size;
+	uint8_t pool_in_use;
+	struct rte_mempool *pkt_pool;
+} mem_src_data_t;
+
+ODP_STATIC_ASSERT(_ODP_POOL_MEM_SRC_DATA_SIZE >= sizeof(mem_src_data_t),
+		  "_ODP_POOL_MEM_SRC_DATA_SIZE too small");
+
 static inline struct rte_mbuf *mbuf_from_pkt_hdr(odp_packet_hdr_t *pkt_hdr)
 {
 	return ((struct rte_mbuf *)pkt_hdr) - 1;
@@ -166,6 +176,11 @@ static inline odp_packet_hdr_t *pkt_hdr_from_mbuf(struct rte_mbuf *mbuf)
 static inline pkt_dpdk_t *pkt_priv(pktio_entry_t *pktio_entry)
 {
 	return (pkt_dpdk_t *)(uintptr_t)(pktio_entry->s.pkt_priv);
+}
+
+static inline mem_src_data_t *mem_src_priv(uint8_t *data)
+{
+	return (mem_src_data_t *)data;
 }
 
 static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
@@ -320,13 +335,14 @@ static void pktmbuf_init(struct rte_mempool *mp, void *opaque_arg ODP_UNUSED,
  *  Create custom DPDK packet pool
  */
 static struct rte_mempool *mbuf_pool_create(const char *name,
-					    pool_t *pool_entry)
+					    pool_t *pool_entry,
+					    uint32_t dpdk_elt_size)
 {
 	odp_shm_info_t shm_info;
 	struct rte_mempool *mp = NULL;
 	struct rte_pktmbuf_pool_private mbp_priv;
 	struct rte_mempool_objsz sz;
-	unsigned int elt_size = pool_entry->dpdk_elt_size;
+	unsigned int elt_size = dpdk_elt_size;
 	unsigned int num = pool_entry->num, populated = 0;
 	uint32_t total_size;
 	uint64_t page_size, offset = 0, remainder = 0;
@@ -423,9 +439,10 @@ static int pool_enqueue(struct rte_mempool *mp,
 {
 	odp_packet_t pkt_tbl[num];
 	pool_t *pool_entry = (pool_t *)mp->pool_config;
+	mem_src_data_t *mem_src_data = mem_src_priv(pool_entry->mem_src_data);
 	unsigned i;
 
-	if (odp_unlikely(num == 0 || !pool_entry->pool_in_use))
+	if (odp_unlikely(num == 0 || !mem_src_data->pool_in_use))
 		return 0;
 
 	for (i = 0; i < num; i++) {
@@ -497,67 +514,72 @@ static void pool_free(struct rte_mempool *mp)
 	}
 }
 
-static void pool_destroy(void *pool)
+static void pool_destroy(uint8_t *data)
 {
-	struct rte_mempool *mp = (struct rte_mempool *)pool;
+	mem_src_data_t *mem_src_data = mem_src_priv(data);
 
-	if (mp != NULL) {
-		pool_t *pool_entry = (pool_t *)mp->pool_config;
-
-		pool_entry->pool_in_use = 0;
-		rte_mempool_free(mp);
+	if (mem_src_data->pkt_pool != NULL) {
+		mem_src_data->pool_in_use = 0;
+		rte_mempool_free(mem_src_data->pkt_pool);
 	}
+
+	mem_src_data->pkt_pool = NULL;
 }
 
-int _odp_dpdk_pool_create(pool_t *pool)
+static int pool_create(uint8_t *data, pool_t *pool)
 {
 	struct rte_mempool *pkt_pool;
 	char pool_name[RTE_MEMPOOL_NAMESIZE];
+	mem_src_data_t *mem_src_data = mem_src_priv(data);
+
+	mem_src_data->pkt_pool = NULL;
 
 	if (!_ODP_DPDK_ZERO_COPY)
 		return 0;
 
-	pool->pool_in_use = 0;
-
+	mem_src_data->pool_in_use = 0;
 	snprintf(pool_name, sizeof(pool_name),
 		 "dpdk_pktpool_%" PRIu32 "_%" PRIu32 "", odp_global_ro.main_pid,
 		 pool->pool_idx);
-	pkt_pool = mbuf_pool_create(pool_name, pool);
+	pkt_pool = mbuf_pool_create(pool_name, pool, mem_src_data->dpdk_elt_size);
 
 	if (pkt_pool == NULL) {
 		ODP_ERR("Creating external DPDK pool failed\n");
 		return -1;
 	}
 
-	pool->ext_desc = pkt_pool;
-	pool->ext_destroy = pool_destroy;
-	pool->pool_in_use = 1;
+	mem_src_data->pkt_pool = pkt_pool;
+	mem_src_data->pool_in_use = 1;
 
 	return 0;
 }
 
-uint32_t _odp_dpdk_pool_obj_size(pool_t *pool, uint32_t block_size)
+static void pool_obj_size(uint8_t *data, uint32_t *block_size, uint32_t *block_offset,
+			  uint32_t *flags)
 {
 	struct rte_mempool_objsz sz;
+	uint32_t size;
 	uint32_t total_size;
+	mem_src_data_t *mem_src_data = mem_src_priv(data);
 
 	if (!_ODP_DPDK_ZERO_COPY)
-		return block_size;
+		return;
 
 	if (odp_global_rw->dpdk_initialized == 0) {
 		if (dpdk_pktio_init()) {
 			ODP_ERR("Initializing DPDK failed\n");
-			return 0;
+			*block_size = 0;
+			return;
 		}
 		odp_global_rw->dpdk_initialized = 1;
 	}
 
-	block_size += sizeof(struct rte_mbuf);
-	total_size = rte_mempool_calc_obj_size(block_size, MEMPOOL_FLAGS, &sz);
-	pool->dpdk_elt_size = sz.elt_size;
-	pool->block_offset = sz.header_size + sizeof(struct rte_mbuf);
-
-	return total_size;
+	*flags |= ODP_SHM_HP;
+	size = *block_size + sizeof(struct rte_mbuf);
+	total_size = rte_mempool_calc_obj_size(size, MEMPOOL_FLAGS, &sz);
+	mem_src_data->dpdk_elt_size = sz.elt_size;
+	*block_size = total_size;
+	*block_offset = sz.header_size + sizeof(struct rte_mbuf);
 }
 
 static struct rte_mempool_ops odp_pool_ops = {
@@ -1735,7 +1757,9 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		pkt_dpdk->min_rx_burst = 0;
 
 	if (_ODP_DPDK_ZERO_COPY) {
-		pkt_pool = (struct rte_mempool *)pool_entry->ext_desc;
+		mem_src_data_t *mem_src_data = mem_src_priv(pool_entry->mem_src_data);
+
+		pkt_pool = mem_src_data->pkt_pool;
 	} else {
 		snprintf(pool_name, sizeof(pool_name), "pktpool_%s", netdev);
 		/* Check if the pool exists already */
@@ -2406,27 +2430,27 @@ const pktio_if_ops_t _odp_dpdk_pktio_ops = {
 	.output_queues_config = dpdk_output_queues_config
 };
 
+static odp_bool_t is_mem_src_active(void)
+{
+	return !disable_pktio && _ODP_DPDK_ZERO_COPY;
+}
+
+static void force_mem_src_disable(void)
+{
+	if (_ODP_DPDK_ZERO_COPY)
+		disable_pktio = 1;
+}
+
+const _odp_pool_mem_src_ops_t _odp_pool_dpdk_mem_src_ops = {
+	.name = "dpdk_zc",
+	.is_active = is_mem_src_active,
+	.force_disable = force_mem_src_disable,
+	.adjust_size = pool_obj_size,
+	.bind = pool_create,
+	.unbind = pool_destroy
+};
+
 #else
-
-#include <stdint.h>
-
-#include <odp/api/hints.h>
-
-#include <odp_packet_dpdk.h>
-#include <odp_pool_internal.h>
-
-/*
- * Dummy functions for pool_create()
- */
-
-uint32_t _odp_dpdk_pool_obj_size(pool_t *pool ODP_UNUSED, uint32_t block_size)
-{
-	return block_size;
-}
-
-int _odp_dpdk_pool_create(pool_t *pool ODP_UNUSED)
-{
-	return 0;
-}
-
+/* Avoid warning about empty translation unit */
+typedef int _odp_dummy;
 #endif /* _ODP_PKTIO_DPDK */

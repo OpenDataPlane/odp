@@ -26,16 +26,6 @@ struct rte_mbuf;
 #define PTYPE_UDP       0x20
 #define PTYPE_TCP       0x40
 
-/**
- * Calculate size of zero-copy DPDK packet pool object
- */
-uint32_t _odp_dpdk_pool_obj_size(pool_t *pool, uint32_t block_size);
-
-/**
- * Create zero-copy DPDK packet pool
- */
-int _odp_dpdk_pool_create(pool_t *pool);
-
 /** Packet parser using DPDK interface */
 int _odp_dpdk_packet_parse_common(packet_parser_t *pkt_hdr,
 				  const uint8_t *ptr,
