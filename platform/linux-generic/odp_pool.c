@@ -64,6 +64,8 @@ typedef struct pool_local_t {
 
 } pool_local_t;
 
+extern const _odp_pool_mem_src_ops_t * const _odp_pool_mem_src_ops[];
+
 pool_global_t *_odp_pool_glb;
 static __thread pool_local_t local;
 

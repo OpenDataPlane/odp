@@ -28,6 +28,8 @@ extern "C" {
 #include <odp_ring_ptr_internal.h>
 #include <odp/api/plat/strong_types.h>
 
+#define _ODP_POOL_MEM_SRC_DATA_SIZE 128
+
 typedef struct ODP_ALIGNED_CACHE pool_cache_t {
 	/* Number of buffers in cache */
 	uint32_t cache_num;
@@ -54,6 +56,8 @@ typedef struct ODP_ALIGNED_CACHE {
 
 /* Callback function for pool destroy */
 typedef void (*pool_destroy_cb_fn)(void *pool);
+
+struct _odp_pool_mem_src_ops_t;
 
 typedef struct pool_t {
 	odp_ticketlock_t lock ODP_ALIGNED_CACHE;
@@ -99,6 +103,9 @@ typedef struct pool_t {
 	uint8_t          mem_from_huge_pages;
 	pool_destroy_cb_fn ext_destroy;
 	void            *ext_desc;
+	const struct _odp_pool_mem_src_ops_t *mem_src_ops;
+	/* Private area for memory source operations */
+	uint8_t mem_src_data[_ODP_POOL_MEM_SRC_DATA_SIZE] ODP_ALIGNED_CACHE;
 
 	struct ODP_ALIGNED_CACHE {
 		odp_atomic_u64_t alloc_ops;
@@ -129,6 +136,25 @@ typedef struct pool_global_t {
 	} config;
 
 } pool_global_t;
+
+/* Operations for when ODP packet pool is used as a memory source for e.g. zero-copy packet IO
+ * purposes */
+typedef struct _odp_pool_mem_src_ops_t {
+	/* Name of the ops provider */
+	const char *name;
+	/* Signal if ops provider is an active user for the pool as a memory source */
+	odp_bool_t (*is_active)(void);
+	/* Force disable for the ops provider (for now, if one active memory source user is found,
+	 * others are disabled) */
+	void (*force_disable)(void);
+	/* Adjust pool block sizes as required by memory consumer */
+	void (*adjust_size)(uint8_t *data, uint32_t *block_size, uint32_t *block_offset,
+			    uint32_t *flags);
+	/* Bind the pool as a memory source */
+	int (*bind)(uint8_t *data, pool_t *pool);
+	/* Unbind the pool as a memory source */
+	void (*unbind)(uint8_t *data);
+} _odp_pool_mem_src_ops_t;
 
 extern pool_global_t *_odp_pool_glb;
 
