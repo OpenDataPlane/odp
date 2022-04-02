@@ -15,7 +15,6 @@
 #include <odp_pool_internal.h>
 #include <odp_init_internal.h>
 #include <odp_packet_internal.h>
-#include <odp_packet_dpdk.h>
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_macros_internal.h>
@@ -633,6 +632,26 @@ static int reserve_uarea(pool_t *pool, uint32_t uarea_size, uint32_t num_pkt, ui
 	return 0;
 }
 
+static void set_mem_src_ops(pool_t *pool)
+{
+	odp_bool_t is_active_found = false;
+
+	pool->mem_src_ops = NULL;
+
+	for (int i = 0; _odp_pool_mem_src_ops[i]; i++) {
+		if (!is_active_found) {
+			if (_odp_pool_mem_src_ops[i]->is_active()) {
+				is_active_found = true;
+				pool->mem_src_ops = _odp_pool_mem_src_ops[i];
+				ODP_DBG("Packet pool as a memory source for: %s\n",
+					pool->mem_src_ops->name);
+			}
+		} else if (_odp_pool_mem_src_ops[i]->is_active()) {
+			_odp_pool_mem_src_ops[i]->force_disable();
+		}
+	}
+}
+
 /* Create pool according to params. Actual type of the pool is type_2, which is recorded for pool
  * info calls. */
 odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
@@ -776,26 +795,29 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 	pool->type_2 = type_2;
 	pool->params = *params;
 	pool->block_offset = 0;
+	set_mem_src_ops(pool);
 
 	if (type == ODP_POOL_PACKET) {
-		uint32_t dpdk_obj_size;
+		uint32_t adj_size;
 
 		hdr_size = _ODP_ROUNDUP_CACHE_LINE(sizeof(odp_packet_hdr_t));
 		block_size = hdr_size + align + headroom + seg_len + tailroom;
-		/* Calculate extra space required for storing DPDK objects and
-		 * mbuf headers. NOP if no DPDK pktio used or zero-copy mode is
-		 * disabled. */
-		dpdk_obj_size = _odp_dpdk_pool_obj_size(pool, block_size);
-		if (!dpdk_obj_size) {
-			ODP_ERR("Calculating DPDK mempool obj size failed\n");
-			return ODP_POOL_INVALID;
+		adj_size = block_size;
+
+		if (pool->mem_src_ops && pool->mem_src_ops->adjust_size) {
+			pool->mem_src_ops->adjust_size(pool->mem_src_data,  &adj_size,
+						       &pool->block_offset, &shmflags);
+
+			if (!adj_size) {
+				ODP_ERR("Calculating adjusted block size failed\n");
+				return ODP_POOL_INVALID;
+			}
 		}
-		if (dpdk_obj_size != block_size) {
-			shmflags |= ODP_SHM_HP;
-			block_size = dpdk_obj_size;
-		} else {
+
+		if (adj_size != block_size)
+			block_size = adj_size;
+		else
 			block_size = _ODP_ROUNDUP_CACHE_LINE(block_size);
-		}
 	} else {
 		/* Header size is rounded up to cache line size, so the
 		 * following data can be cache line aligned without extra
@@ -838,8 +860,6 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 	pool->tailroom       = tailroom;
 	pool->block_size     = block_size;
 	pool->shm_size       = (num + num_extra) * (uint64_t)block_size;
-	pool->ext_desc       = NULL;
-	pool->ext_destroy    = NULL;
 
 	set_pool_cache_size(pool, cache_size);
 
@@ -866,9 +886,9 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 	ring_ptr_init(&pool->ring->hdr);
 	init_buffers(pool);
 
-	/* Create zero-copy DPDK memory pool. NOP if zero-copy is disabled. */
-	if (type == ODP_POOL_PACKET && _odp_dpdk_pool_create(pool)) {
-		ODP_ERR("Creating DPDK packet pool failed\n");
+	if (type == ODP_POOL_PACKET && pool->mem_src_ops && pool->mem_src_ops->bind &&
+	    pool->mem_src_ops->bind(pool->mem_src_data, pool)) {
+		ODP_ERR("Binding pool as memory source failed\n");
 		goto error;
 	}
 
@@ -1083,12 +1103,8 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 		return -1;
 	}
 
-	/* Destroy external DPDK mempool */
-	if (pool->ext_destroy) {
-		pool->ext_destroy(pool->ext_desc);
-		pool->ext_destroy = NULL;
-		pool->ext_desc = NULL;
-	}
+	if (pool->type == ODP_POOL_PACKET && pool->mem_src_ops && pool->mem_src_ops->unbind)
+		pool->mem_src_ops->unbind(pool->mem_src_data);
 
 	/* Make sure local caches are empty */
 	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++)
@@ -1461,6 +1477,8 @@ void odp_pool_print(odp_pool_t pool_hdl)
 	ODP_PRINT("  uarea base addr %p\n", (void *)pool->uarea_base_addr);
 	ODP_PRINT("  cache size      %u\n", pool->cache_size);
 	ODP_PRINT("  burst size      %u\n", pool->burst_size);
+	ODP_PRINT("  mem src         %s\n",
+		  pool->mem_src_ops ? pool->mem_src_ops->name : "(none)");
 	ODP_PRINT("\n");
 }
 
