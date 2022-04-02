@@ -209,6 +209,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_parse.c \
 			   odp_pkt_queue.c \
 			   odp_pool.c \
+			   odp_pool_mem_src_ops.c \
 			   odp_queue_basic.c \
 			   odp_queue_if.c \
 			   odp_queue_lf.c \
