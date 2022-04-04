@@ -291,6 +291,72 @@ Prerequisites for building the OpenDataPlane (ODP) API
    1024MB of memory:
    $ sudo ODP_PKTIO_DPDK_PARAMS="-m 1024" ./test/performance/odp_l2fwd -i 0 -c 1
 
+3.6 AF_XDP socket based packet I/O support (optional)
+
+   Use AF_XDP socket for packet I/O. At the moment, only zero-copy variant is
+   supported, requiring a kernel version 5.4 or higher. Additionally, if packet
+   pools are to be shared between packet I/Os, kernel version of 5.10 or higher
+   is required.
+
+   More information about XDP and AF_XDP can be found here:
+   https://www.kernel.org/doc/Documentation/networking/af_xdp.rst
+
+   The status of the implementation is **experimental** and may cause issues
+   e.g. with some packet length, packet segment length and pool size
+   combinations that would otherwise conform to reported capabilities.
+
+3.6.1 AF_XDP socket packet I/O requirements
+
+   AF_XDP socket packet I/O implementation requires libxdp and libbpf libraries.
+   They can be fetched from XDP-project in GitHub:
+
+   $ git clone https://github.com/xdp-project/xdp-tools
+
+   (Contains submodules which should be cloned as well.)
+
+   Additional packages might be needed to be installed as well: llvm-dev and
+   gcc-multilib.
+
+   $ ./configure
+   $ make
+
+   After building, libraries should be installed.
+
+   $ cd <path to built libxdp>
+   $ make install
+   $ cd <path to built libbpf>
+   $ make install
+
+3.6.2 Build ODP with AF_XDP socket packet I/O support
+
+   After building and installing libxdp and libbpf, ODP can be configured to be
+   built with AF_XDP support (pass PKG_CONFIG_PATH if needed).
+
+   $ ./configure --enable-xdp
+
+3.6.3 Running ODP with AF_XDP socket packet I/O
+
+   At the moment, each AF_XDP socket packet I/O binds to a single TRX queue,
+   this means that NIC(s) of the environment have to be configured accordingly.
+
+   $ ethtool -L <if name> combined 1
+
+   Additionally, with some NICs (e.g. Mellanox), when zero-copy XDP is in use,
+   the queue configuration is adjusted by the NIC with additional queues on top
+   of the configured single TRX queue. This requires a forwarding rule:
+
+   $ ethtool -N <if name> flow-type ether dst <mac of if> action 1
+
+   Which queue to bind to in a given interface can be controlled with an
+   environment variable when starting an ODP executable:
+
+   $ ODP_PKTIO_XDP_PARAMS="<if name>:<queue index> <if name>:<queue index> ..." ./<odp executable> ...
+
+   parameter being a string of interface-queue index pairs, where interface and
+   queue is separated by a colon and pairs separated by a whitespace. If no
+   environment variable is passed, zero (0) queue is chosen for all AF_XDP
+   interfaces.
+
 4.0 Packages needed to build API tests
 
    CUnit test framework version 2.1-3 is required
