@@ -176,6 +176,7 @@ typedef struct ODP_ALIGNED_CACHE {
 	} stash;
 
 	uint32_t grp_epoch;
+	uint32_t grp_mask;
 	uint16_t num_grp;
 	uint8_t grp_idx;
 	uint8_t grp[NUM_SCHED_GRPS];
@@ -236,6 +237,9 @@ typedef struct {
 	odp_ticketlock_t mask_lock[NUM_SCHED_GRPS];
 	prio_q_mask_t    prio_q_mask[NUM_SCHED_GRPS][NUM_PRIO];
 
+	/* Groups on a priority level that have queues created */
+	uint32_t prio_grp_mask[NUM_PRIO];
+
 	struct {
 		uint8_t grp;
 		/* Inverted prio value (max = 0) vs API (min = 0)*/
@@ -254,6 +258,9 @@ typedef struct {
 	prio_queue_t prio_q[NUM_SCHED_GRPS][NUM_PRIO][MAX_SPREAD];
 #pragma GCC diagnostic pop
 	uint32_t prio_q_count[NUM_SCHED_GRPS][NUM_PRIO][MAX_SPREAD];
+
+	/* Number of queues per group and priority  */
+	uint32_t prio_grp_count[NUM_PRIO][NUM_SCHED_GRPS];
 
 	odp_thrmask_t  mask_all;
 	odp_ticketlock_t grp_lock;
@@ -280,7 +287,7 @@ typedef struct {
 } sched_global_t;
 
 /* Check that queue[] variables are large enough */
-ODP_STATIC_ASSERT(NUM_SCHED_GRPS  <= 256, "Group_does_not_fit_8_bits");
+ODP_STATIC_ASSERT(NUM_SCHED_GRPS  <= 32,  "Group mask is 32 bits");
 ODP_STATIC_ASSERT(NUM_PRIO        <= 256, "Prio_does_not_fit_8_bits");
 ODP_STATIC_ASSERT(MAX_SPREAD      <= 256, "Spread_does_not_fit_8_bits");
 ODP_STATIC_ASSERT(CONFIG_QUEUE_MAX_ORD_LOCKS <= 256,
@@ -607,6 +614,7 @@ static inline int grp_update_tbl(void)
 	int i;
 	int num = 0;
 	int thr = sched_local.thr;
+	uint32_t mask = 0;
 
 	odp_ticketlock_lock(&sched->grp_lock);
 
@@ -617,15 +625,40 @@ static inline int grp_update_tbl(void)
 		if (odp_thrmask_isset(&sched->sched_grp[i].mask, thr)) {
 			sched_local.grp[num] = i;
 			num++;
+			mask |= 0x1u << i;
 		}
 	}
 
 	odp_ticketlock_unlock(&sched->grp_lock);
 
+	sched_local.grp_mask = mask;
 	sched_local.grp_idx = 0;
 	sched_local.num_grp = num;
 
 	return num;
+}
+
+static inline void prio_grp_mask_set(int prio, int grp)
+{
+	uint32_t mask = 0x1u << grp;
+
+	sched->prio_grp_mask[prio] |= mask;
+	sched->prio_grp_count[prio][grp]++;
+}
+
+static inline void prio_grp_mask_clear(int prio, int grp)
+{
+	uint32_t mask = 0x1u << grp;
+
+	sched->prio_grp_count[prio][grp]--;
+
+	if (sched->prio_grp_count[prio][grp] == 0)
+		sched->prio_grp_mask[prio] &= (~mask);
+}
+
+static inline uint32_t prio_grp_mask_check(int prio, uint32_t grp_mask)
+{
+	return sched->prio_grp_mask[prio] & grp_mask;
 }
 
 static uint32_t schedule_max_ordered_locks(void)
@@ -768,6 +801,8 @@ static int schedule_create_queue(uint32_t queue_index,
 		return -1;
 	}
 
+	prio_grp_mask_set(prio, grp);
+
 	odp_ticketlock_unlock(&sched->grp_lock);
 
 	spread = allocate_spread(grp, prio);
@@ -802,6 +837,10 @@ static void schedule_destroy_queue(uint32_t queue_index)
 	int spread = sched->queue[queue_index].spread;
 
 	dec_queue_count(grp, prio, spread);
+
+	odp_ticketlock_lock(&sched->grp_lock);
+	prio_grp_mask_clear(prio, grp);
+	odp_ticketlock_unlock(&sched->grp_lock);
 
 	sched->queue[queue_index].grp    = 0;
 	sched->queue[queue_index].prio   = 0;
@@ -1363,6 +1402,7 @@ static inline int do_schedule(odp_queue_t *out_q, odp_event_t out_ev[], uint32_t
 	uint32_t sched_round;
 	uint16_t spread_round;
 	uint32_t epoch;
+	uint32_t my_groups;
 	int balance = 0;
 
 	if (sched_local.stash.num_ev) {
@@ -1423,11 +1463,23 @@ static inline int do_schedule(odp_queue_t *out_q, odp_event_t out_ev[], uint32_t
 	if (odp_unlikely(num_grp == 0))
 		return 0;
 
+	my_groups = sched_local.grp_mask;
 	first_id = sched_local.grp_idx;
 	sched_local.grp_idx = (first_id + 1) % num_grp;
 
 	for (prio = 0; prio < NUM_PRIO; prio++) {
 		grp_id = first_id;
+
+		if (prio_grp_mask_check(prio, my_groups) == 0) {
+			/* My groups do not have queues at this priority level, continue to
+			 * the next level.
+			 *
+			 * As a performance optimization, prio_grp_mask[] is checked without
+			 * taking the lock. Masks change infrequently and usage of an old mask
+			 * just leads into searching events from old priority levels,
+			 * new levels are likely used on the next schedule call. */
+			continue;
+		}
 
 		for (i = 0; i < num_grp; i++) {
 			grp = sched_local.grp[grp_id];
@@ -1436,8 +1488,10 @@ static inline int do_schedule(odp_queue_t *out_q, odp_event_t out_ev[], uint32_t
 			if (odp_unlikely(grp_id >= num_grp))
 				grp_id = 0;
 
-			if (sched->prio_q_mask[grp][prio] == 0)
+			if (sched->prio_q_mask[grp][prio] == 0) {
+				/* Group does not have queues at this priority level */
 				continue;
+			}
 
 			/* Schedule events from the selected group and priority level */
 			ret = schedule_grp_prio(out_q, out_ev, max_num, grp, prio, spr, balance);
