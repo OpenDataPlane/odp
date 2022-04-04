@@ -32,4 +32,7 @@
 /* Define to 1 to enable OpenSSL random data */
 #undef _ODP_OPENSSL_RAND
 
+/* Define to 1 to enable XDP support */
+#undef _ODP_PKTIO_XDP
+
 #endif

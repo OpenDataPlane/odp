@@ -70,7 +70,7 @@ struct pktio_if_ops;
 #elif defined(_ODP_PKTIO_DPDK)
 #define PKTIO_PRIVATE_SIZE 5632
 #else
-#define PKTIO_PRIVATE_SIZE 384
+#define PKTIO_PRIVATE_SIZE 512
 #endif
 
 struct pktio_entry {
@@ -308,6 +308,7 @@ static inline void _odp_pktio_tx_ts_set(pktio_entry_t *entry)
 
 extern const pktio_if_ops_t _odp_netmap_pktio_ops;
 extern const pktio_if_ops_t _odp_dpdk_pktio_ops;
+extern const pktio_if_ops_t _odp_sock_xdp_pktio_ops;
 extern const pktio_if_ops_t _odp_sock_mmsg_pktio_ops;
 extern const pktio_if_ops_t _odp_sock_mmap_pktio_ops;
 extern const pktio_if_ops_t _odp_loopback_pktio_ops;
