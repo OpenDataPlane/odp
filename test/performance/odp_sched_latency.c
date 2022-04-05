@@ -563,6 +563,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 
 	static const struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
+		{"duration", required_argument, NULL, 'd'},
 		{"forward-mode", required_argument, NULL, 'f'},
 		{"lo-prio-queues", required_argument, NULL, 'l'},
 		{"hi-prio-queues", required_argument, NULL, 't'},
@@ -570,14 +571,14 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		{"hi-prio-events-per-queue", required_argument, NULL, 'n'},
 		{"lo-prio-events", required_argument, NULL, 'o'},
 		{"hi-prio-events", required_argument, NULL, 'p'},
-		{"sample-per-prio", no_argument, NULL, 'r'},
 		{"sync", required_argument, NULL, 's'},
 		{"warm-up", required_argument, NULL, 'w'},
+		{"sample-per-prio", no_argument, NULL, 'r'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:d:f:s:l:t:m:n:o:p:rw:h";
+	static const char *shortopts = "+c:d:f:l:t:m:n:o:p:s:w:rh";
 
 	args->cpu_count = 1;
 	args->forward_mode = EVENT_FORWARD_RAND;
@@ -762,10 +763,13 @@ int main(int argc, char *argv[])
 
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
-	printf("CPU mask info:\n");
+	printf("Test options:\n");
 	printf("  Worker threads: %i\n", num_workers);
 	printf("  First CPU:      %i\n", odp_cpumask_first(&cpumask));
 	printf("  CPU mask:       %s\n", cpumaskstr);
+	printf("  Test rounds:    %iM\n", args.test_rounds);
+	printf("  Warm-up rounds: %i\n", args.warm_up_rounds);
+	printf("\n");
 
 	thread_tbl = calloc(sizeof(odph_thread_t), num_workers);
 	if (!thread_tbl) {
