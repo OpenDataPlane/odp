@@ -25,6 +25,7 @@
 #include <getopt.h>
 
 #define MAX_QUEUES	  4096		/**< Maximum number of queues */
+#define MAX_GROUPS        64
 #define EVENT_POOL_SIZE	  (1024 * 1024) /**< Event pool size */
 #define TEST_ROUNDS	  10	/**< Test rounds for each thread (millions) */
 #define MAIN_THREAD	  1	/**< Thread ID performing maintenance tasks */
@@ -81,6 +82,8 @@ typedef struct {
 	unsigned int cpu_count;	/**< CPU count */
 	odp_schedule_sync_t sync_type;	/**< Scheduler sync type */
 	int forward_mode;	/**< Event forwarding mode */
+	int num_group;
+	int isolate;
 	int test_rounds;	/**< Number of test rounds (millions) */
 	int warm_up_rounds;	/**< Number of warm-up rounds */
 	struct {
@@ -117,6 +120,9 @@ typedef struct {
 	odp_pool_t       pool;	  /**< Pool for allocating test events */
 	test_args_t      args;	  /**< Parsed command line arguments */
 	odp_queue_t      queue[NUM_PRIOS][MAX_QUEUES]; /**< Scheduled queues */
+
+	odp_schedule_group_t group[NUM_PRIOS][MAX_GROUPS];
+
 } test_globals_t;
 
 /**
@@ -343,6 +349,38 @@ static void print_results(test_globals_t *globals)
 	}
 }
 
+static int join_groups(test_globals_t *globals, int thr)
+{
+	odp_thrmask_t thrmask;
+	odp_schedule_group_t group;
+	int i, num;
+	int num_group = globals->args.num_group;
+
+	if (num_group <= 0)
+		return 0;
+
+	num = num_group;
+	if (globals->args.isolate)
+		num = 2 * num_group;
+
+	odp_thrmask_zero(&thrmask);
+	odp_thrmask_set(&thrmask, thr);
+
+	for (i = 0; i < num; i++) {
+		if (globals->args.isolate)
+			group = globals->group[i % 2][i / 2];
+		else
+			group = globals->group[0][i];
+
+		if (odp_schedule_group_join(group, &thrmask)) {
+			ODPH_ERR("Group join failed %i (thr %i)\n", i, thr);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
 /**
  * Measure latency of scheduled ODP events
  *
@@ -485,6 +523,9 @@ static int run_thread(void *arg ODP_UNUSED)
 		return -1;
 	}
 
+	if (join_groups(globals, thr))
+		return -1;
+
 	if (thr == MAIN_THREAD) {
 		args = &globals->args;
 
@@ -528,6 +569,12 @@ static void usage(void)
 	       "               0: Random (default)\n"
 	       "               1: Incremental\n"
 	       "               2: Use source queue\n"
+	       "  -g, --num_group <num>  Number of schedule groups. Round robins queues into groups.\n"
+	       "                         -1: SCHED_GROUP_WORKER\n"
+	       "                          0: SCHED_GROUP_ALL (default)\n"
+	       "  -i, --isolate <mode> Select if shared or isolated groups are used. Ignored when num_group <= 0.\n"
+	       "                       0: All queues share groups (default)\n"
+	       "                       1: Separate groups for high and low priority queues. Creates 2xnum_group groups.\n"
 	       "  -l, --lo-prio-queues <number> Number of low priority scheduled queues\n"
 	       "  -t, --hi-prio-queues <number> Number of high priority scheduled queues\n"
 	       "  -m, --lo-prio-events-per-queue <number> Number of events per low priority queue\n"
@@ -565,6 +612,8 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		{"count", required_argument, NULL, 'c'},
 		{"duration", required_argument, NULL, 'd'},
 		{"forward-mode", required_argument, NULL, 'f'},
+		{"num_group", required_argument, NULL, 'g'},
+		{"isolate", required_argument, NULL, 'i'},
 		{"lo-prio-queues", required_argument, NULL, 'l'},
 		{"hi-prio-queues", required_argument, NULL, 't'},
 		{"lo-prio-events-per-queue", required_argument, NULL, 'm'},
@@ -578,10 +627,12 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:d:f:l:t:m:n:o:p:s:w:rh";
+	static const char *shortopts = "+c:d:f:g:i:l:t:m:n:o:p:s:w:rh";
 
 	args->cpu_count = 1;
 	args->forward_mode = EVENT_FORWARD_RAND;
+	args->num_group = 0;
+	args->isolate = 0;
 	args->test_rounds = TEST_ROUNDS;
 	args->warm_up_rounds = WARM_UP_ROUNDS;
 	args->sync_type = ODP_SCHED_SYNC_PARALLEL;
@@ -608,6 +659,12 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 			break;
 		case 'f':
 			args->forward_mode = atoi(optarg);
+			break;
+		case 'g':
+			args->num_group = atoi(optarg);
+			break;
+		case 'i':
+			args->isolate = atoi(optarg);
 			break;
 		case 'l':
 			args->prio[LO_PRIO].queues = atoi(optarg);
@@ -677,6 +734,11 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		usage();
 		exit(EXIT_FAILURE);
 	}
+
+	if (args->num_group > MAX_GROUPS) {
+		ODPH_ERR("Too many groups. Max supported %i.\n", MAX_GROUPS);
+		exit(EXIT_FAILURE);
+	}
 }
 
 static void randomize_queues(odp_queue_t queues[], uint32_t num, uint64_t *seed)
@@ -698,6 +760,68 @@ static void randomize_queues(odp_queue_t queues[], uint32_t num, uint64_t *seed)
 	}
 }
 
+static int create_groups(test_globals_t *globals, odp_schedule_group_t group[], int num)
+{
+	odp_schedule_capability_t sched_capa;
+	odp_thrmask_t zeromask;
+	int i, j, max;
+
+	if (num <= 0)
+		return 0;
+
+	if (odp_schedule_capability(&sched_capa)) {
+		ODPH_ERR("Schedule capability failed\n");
+		return 0;
+	}
+
+	max = sched_capa.max_groups - 3;
+	if (num > max) {
+		printf("Too many schedule groups %i (max %u)\n", num, max);
+		return 0;
+	}
+
+	for (i = 0; i < NUM_PRIOS; i++)
+		for (j = 0; j < MAX_GROUPS; j++)
+			globals->group[i][j] = ODP_SCHED_GROUP_INVALID;
+
+	odp_thrmask_zero(&zeromask);
+
+	for (i = 0; i < num; i++) {
+		group[i] = odp_schedule_group_create("test_group", &zeromask);
+
+		if (group[i] == ODP_SCHED_GROUP_INVALID) {
+			ODPH_ERR("Group create failed %i\n", i);
+			break;
+		}
+
+		if (globals->args.isolate) {
+			globals->group[i % 2][i / 2] = group[i];
+		} else {
+			globals->group[0][i] = group[i];
+			globals->group[1][i] = group[i];
+		}
+	}
+
+	return i;
+}
+
+static int destroy_groups(odp_schedule_group_t group[], int num)
+{
+	int i;
+
+	if (num <= 0)
+		return 0;
+
+	for (i = 0; i < num; i++) {
+		if (odp_schedule_group_destroy(group[i])) {
+			ODPH_ERR("Group destroy failed %i\n", i);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
 /**
  * Test main function
  */
@@ -706,21 +830,23 @@ int main(int argc, char *argv[])
 	odp_instance_t instance;
 	odp_init_t init_param;
 	odph_helper_options_t helper_options;
-	odph_thread_t *thread_tbl;
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param;
 	odp_cpumask_t cpumask;
-	odp_pool_t pool;
 	odp_pool_capability_t pool_capa;
 	odp_pool_param_t params;
-	odp_shm_t shm;
 	test_globals_t *globals;
 	test_args_t args;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	uint32_t pool_size;
-	int i, j;
-	int ret = 0;
+	int i, j, ret;
+	int num_group, tot_group;
+	odp_schedule_group_t group[2 * MAX_GROUPS];
+	odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
+	int err = 0;
 	int num_workers = 0;
+	odp_shm_t shm = ODP_SHM_INVALID;
+	odp_pool_t pool = ODP_POOL_INVALID;
 
 	printf("\nODP scheduling latency benchmark starts\n\n");
 
@@ -740,7 +866,7 @@ int main(int argc, char *argv[])
 	/* ODP global init */
 	if (odp_init_global(&instance, &init_param, NULL)) {
 		ODPH_ERR("ODP global init failed.\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	/*
@@ -749,10 +875,16 @@ int main(int argc, char *argv[])
 	 */
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		ODPH_ERR("ODP global init failed.\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	odp_sys_info_print();
+
+	num_group = args.num_group;
+
+	tot_group = 0;
+	if (num_group > 0)
+		tot_group = args.isolate ? 2 * num_group : num_group;
 
 	/* Get default worker cpumask */
 	if (args.cpu_count)
@@ -764,24 +896,21 @@ int main(int argc, char *argv[])
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
 	printf("Test options:\n");
-	printf("  Worker threads: %i\n", num_workers);
-	printf("  First CPU:      %i\n", odp_cpumask_first(&cpumask));
-	printf("  CPU mask:       %s\n", cpumaskstr);
-	printf("  Test rounds:    %iM\n", args.test_rounds);
-	printf("  Warm-up rounds: %i\n", args.warm_up_rounds);
+	printf("  Worker threads:   %i\n", num_workers);
+	printf("  First CPU:        %i\n", odp_cpumask_first(&cpumask));
+	printf("  CPU mask:         %s\n", cpumaskstr);
+	printf("  Test rounds:      %iM\n", args.test_rounds);
+	printf("  Warm-up rounds:   %i\n", args.warm_up_rounds);
+	printf("  Isolated groups:  %i\n", args.isolate);
+	printf("  Number of groups: %i\n", num_group);
+	printf("  Created groups:   %i\n", tot_group);
 	printf("\n");
 
-	thread_tbl = calloc(sizeof(odph_thread_t), num_workers);
-	if (!thread_tbl) {
-		ODPH_ERR("no memory for thread_tbl\n");
-		return -1;
-	}
-
-	shm = odp_shm_reserve("test_globals",
-			      sizeof(test_globals_t), ODP_CACHE_LINE_SIZE, 0);
+	shm = odp_shm_reserve("test_globals", sizeof(test_globals_t), ODP_CACHE_LINE_SIZE, 0);
 	if (shm == ODP_SHM_INVALID) {
 		ODPH_ERR("Shared memory reserve failed.\n");
-		return -1;
+		err = -1;
+		goto error;
 	}
 
 	globals = odp_shm_addr(shm);
@@ -795,7 +924,8 @@ int main(int argc, char *argv[])
 	 */
 	if (odp_pool_capability(&pool_capa)) {
 		ODPH_ERR("pool capa failed\n");
-		return -1;
+		err = -1;
+		goto error;
 	}
 
 	pool_size = EVENT_POOL_SIZE;
@@ -812,9 +942,19 @@ int main(int argc, char *argv[])
 
 	if (pool == ODP_POOL_INVALID) {
 		ODPH_ERR("Pool create failed.\n");
-		return -1;
+		err = -1;
+		goto error;
 	}
 	globals->pool = pool;
+
+	/* Create groups */
+	ret = create_groups(globals, group, tot_group);
+	if (ret != tot_group) {
+		ODPH_ERR("Group create failed.\n");
+		tot_group = ret;
+		err = -1;
+		goto error;
+	}
 
 	/*
 	 * Create queues for schedule test
@@ -823,7 +963,12 @@ int main(int argc, char *argv[])
 		char name[] = "sched_XX_YY";
 		odp_queue_t queue;
 		odp_queue_param_t param;
+		odp_schedule_group_t grp;
 		int prio;
+
+		grp = ODP_SCHED_GROUP_ALL;
+		if (num_group < 0)
+			grp = ODP_SCHED_GROUP_WORKER;
 
 		if (i == HI_PRIO)
 			prio = odp_schedule_max_prio();
@@ -837,17 +982,22 @@ int main(int argc, char *argv[])
 		param.type        = ODP_QUEUE_TYPE_SCHED;
 		param.sched.prio  = prio;
 		param.sched.sync  = args.sync_type;
-		param.sched.group = ODP_SCHED_GROUP_ALL;
 
 		for (j = 0; j < args.prio[i].queues; j++) {
 			name[9]  = '0' + j / 10;
 			name[10] = '0' + j - 10 * (j / 10);
 
+			/* Round robin queues into groups */
+			if (num_group > 0)
+				grp = globals->group[i][j % num_group];
+
+			param.sched.group = grp;
+
 			queue = odp_queue_create(name, &param);
 
 			if (queue == ODP_QUEUE_INVALID) {
 				ODPH_ERR("Scheduled queue create failed.\n");
-				return -1;
+				exit(EXIT_FAILURE);
 			}
 
 			globals->queue[i][j] = queue;
@@ -863,6 +1013,8 @@ int main(int argc, char *argv[])
 	odp_barrier_init(&globals->barrier, num_workers);
 
 	/* Create and launch worker threads */
+	memset(thread_tbl, 0, sizeof(thread_tbl));
+
 	odph_thread_common_param_init(&thr_common);
 	thr_common.instance = instance;
 	thr_common.cpumask = &cpumask;
@@ -877,7 +1029,6 @@ int main(int argc, char *argv[])
 
 	/* Wait for worker threads to terminate */
 	odph_thread_join(thread_tbl, num_workers);
-	free(thread_tbl);
 
 	printf("ODP scheduling latency test complete\n\n");
 
@@ -889,14 +1040,36 @@ int main(int argc, char *argv[])
 
 		for (j = 0; j < num_queues; j++) {
 			queue = globals->queue[i][j];
-			ret += odp_queue_destroy(queue);
+			if (odp_queue_destroy(queue)) {
+				ODPH_ERR("Queue destroy failed [%i][%i]\n", i, j);
+				err = -1;
+				break;
+			}
 		}
 	}
 
-	ret += odp_shm_free(shm);
-	ret += odp_pool_destroy(pool);
-	ret += odp_term_local();
-	ret += odp_term_global(instance);
+error:
+	if (destroy_groups(group, tot_group)) {
+		ODPH_ERR("Group destroy failed\n");
+		err = -1;
+	}
 
-	return ret;
+	if (pool != ODP_POOL_INVALID) {
+		if (odp_pool_destroy(pool)) {
+			ODPH_ERR("Pool destroy failed\n");
+			err = -1;
+		}
+	}
+
+	if (shm != ODP_SHM_INVALID) {
+		if (odp_shm_free(shm)) {
+			ODPH_ERR("SHM destroy failed\n");
+			err = -1;
+		}
+	}
+
+	err += odp_term_local();
+	err += odp_term_global(instance);
+
+	return err;
 }
