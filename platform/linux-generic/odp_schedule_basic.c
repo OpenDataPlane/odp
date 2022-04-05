@@ -1227,18 +1227,18 @@ static inline int schedule_grp_prio(odp_queue_t *out_queue, odp_event_t out_ev[]
 		if (spr >= num_spread)
 			spr = 0;
 
-		/* No queues created for this priority queue */
+		/* No queues allocated to this spread */
 		if (odp_unlikely((sched->prio_q_mask[grp][prio] & (1 << spr)) == 0)) {
 			i++;
 			spr++;
 			continue;
 		}
 
-		/* Get queue index from the priority queue */
 		ring = &sched->prio_q[grp][prio][spr].ring;
 
+		/* Get queue index from the spread queue */
 		if (ring_u32_deq(ring, ring_mask, &qi) == 0) {
-			/* Priority queue empty */
+			/* Spread queue is empty */
 			i++;
 			spr++;
 			continue;
@@ -1281,40 +1281,40 @@ static inline int schedule_grp_prio(odp_queue_t *out_queue, odp_event_t out_ev[]
 		num = _odp_sched_queue_deq(qi, ev_tbl, max_deq, !pktin);
 
 		if (odp_unlikely(num < 0)) {
-			/* Destroyed queue. Continue scheduling the same
-			 * priority queue. */
+			/* Remove destroyed queue from scheduling. Continue scheduling
+			 * the same group/prio/spread. */
 			continue;
 		}
 
 		if (num == 0) {
-			/* Poll packet input. Continue scheduling queue
-			 * connected to a packet input. Move to the next
-			 * priority to avoid starvation of other
-			 * priorities. Stop scheduling queue when pktio
-			 * has been stopped. */
-			if (pktin) {
-				int direct_recv = !ordered;
-				int num_pkt;
+			int direct_recv = !ordered;
+			int num_pkt;
 
-				num_pkt = poll_pktin(qi, direct_recv, ev_tbl, max_deq);
-
-				if (odp_unlikely(num_pkt < 0))
-					continue;
-
-				if (num_pkt == 0 || !direct_recv) {
-					ring_u32_enq(ring, ring_mask, qi);
-					break;
-				}
-
-				/* Process packets from an atomic or
-				 * parallel queue right away. */
-				num = num_pkt;
-			} else {
-				/* Remove empty queue from scheduling.
-				 * Continue scheduling the same priority
-				 * queue. */
+			if (!pktin) {
+				/* Remove empty queue from scheduling */
 				continue;
 			}
+
+			/* Poll packet input queue */
+			num_pkt = poll_pktin(qi, direct_recv, ev_tbl, max_deq);
+
+			if (odp_unlikely(num_pkt < 0)) {
+				/* Pktio has been stopped or closed. Stop polling
+				 * the packet input queue. */
+				continue;
+			}
+
+			if (num_pkt == 0 || !direct_recv) {
+				/* No packets to be returned. Continue scheduling
+				 * packet input queue even when it is empty. */
+				ring_u32_enq(ring, ring_mask, qi);
+
+				/* Continue scheduling from the next group/priority */
+				return 0;
+			}
+
+			/* Process packets from an atomic or parallel queue right away. */
+			num = num_pkt;
 		}
 
 		if (ordered) {
@@ -1337,7 +1337,7 @@ static inline int schedule_grp_prio(odp_queue_t *out_queue, odp_event_t out_ev[]
 			sched_local.stash.ring = ring;
 			sched_local.sync_ctx   = sync_ctx;
 		} else {
-			/* Continue scheduling the queue */
+			/* Continue scheduling parallel queues */
 			ring_u32_enq(ring, ring_mask, qi);
 		}
 
