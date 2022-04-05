@@ -1339,8 +1339,10 @@ static inline int schedule_grp_prio(odp_queue_t *out_queue, odp_event_t out_ev[]
 				 * packet input queue even when it is empty. */
 				ring_u32_enq(ring, ring_mask, qi);
 
-				/* Continue scheduling from the next group/priority */
-				return 0;
+				/* Continue scheduling from the next spread */
+				i++;
+				spr++;
+				continue;
 			}
 
 			/* Process packets from an atomic or parallel queue right away. */
