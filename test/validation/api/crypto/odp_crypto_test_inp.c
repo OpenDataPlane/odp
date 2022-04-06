@@ -527,6 +527,17 @@ static void alg_test_execute(const alg_test_param_t *param)
 		     param->op == ODP_CRYPTO_OP_ENCODE))
 			continue;
 
+		/*
+		 * Checking against wrong digest is meaningless for AES-CBC +
+		 * HMAC-SHA chained operation. As per Armv8 crypto library
+		 * specification, a new digest is generated for decryption too.
+		 */
+		if (iteration == WRONG_DIGEST_TEST &&
+		    (param->auth_alg == ODP_AUTH_ALG_SHA1_HMAC ||
+		    param->auth_alg == ODP_AUTH_ALG_SHA256_HMAC) &&
+		    param->op == ODP_CRYPTO_OP_DECODE)
+			continue;
+
 		pkt_len = param->header_len + reflength + param->trailer_len;
 		if (param->digest_offset == param->header_len + reflength)
 			pkt_len += ref->digest_length;
@@ -689,7 +700,7 @@ static odp_crypto_session_t session_create(odp_crypto_op_t op,
 	 * In some cases an individual algorithm cannot be used alone,
 	 * i.e. with the null cipher/auth algorithm.
 	 */
-	if (rc == ODP_CRYPTO_SES_ERR_ALG_COMBO) {
+	if (status == ODP_CRYPTO_SES_ERR_ALG_COMBO) {
 		printf("\n    Unsupported algorithm combination: %s, %s\n",
 		       cipher_alg_name(cipher_alg),
 		       auth_alg_name(auth_alg));
@@ -1219,6 +1230,8 @@ static void create_hash_test_reference(odp_auth_alg_t auth,
 
 	session = session_create(ODP_CRYPTO_OP_ENCODE, ODP_CIPHER_ALG_NULL,
 				 auth, ref, PACKET_IV, HASH_NO_OVERLAP);
+	if (session == ODP_CRYPTO_SESSION_INVALID)
+		return;
 
 	if (crypto_op(pkt, &ok, session,
 		      ref->cipher_iv, ref->auth_iv,
@@ -2133,6 +2146,54 @@ static void crypto_test_check_alg_sha512(void)
 		  ARRAY_SIZE(sha512_reference));
 }
 
+static int check_alg_aes_cbc_hmac_sha1(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_AES_CBC,
+				 ODP_AUTH_ALG_SHA1_HMAC);
+}
+
+static void crypto_test_enc_alg_aes_cbc_hmac_sha1(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_AES_CBC,
+		  ODP_AUTH_ALG_SHA1_HMAC,
+		  aes_cbc_hmac_sha1_reference,
+		  ARRAY_SIZE(aes_cbc_hmac_sha1_reference));
+}
+
+static void crypto_test_dec_alg_aes_cbc_hmac_sha1(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_AES_CBC,
+		  ODP_AUTH_ALG_SHA1_HMAC,
+		  aes_cbc_hmac_sha1_reference,
+		  ARRAY_SIZE(aes_cbc_hmac_sha1_reference));
+}
+
+static int check_alg_aes_cbc_hmac_sha256(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_AES_CBC,
+				 ODP_AUTH_ALG_SHA256_HMAC);
+}
+
+static void crypto_test_enc_alg_aes_cbc_hmac_sha256(void)
+{
+	check_alg(ODP_CRYPTO_OP_ENCODE,
+		  ODP_CIPHER_ALG_AES_CBC,
+		  ODP_AUTH_ALG_SHA256_HMAC,
+		  aes_cbc_hmac_sha256_reference,
+		  ARRAY_SIZE(aes_cbc_hmac_sha256_reference));
+}
+
+static void crypto_test_dec_alg_aes_cbc_hmac_sha256(void)
+{
+	check_alg(ODP_CRYPTO_OP_DECODE,
+		  ODP_CIPHER_ALG_AES_CBC,
+		  ODP_AUTH_ALG_SHA256_HMAC,
+		  aes_cbc_hmac_sha256_reference,
+		  ARRAY_SIZE(aes_cbc_hmac_sha256_reference));
+}
+
 static odp_queue_t sched_compl_queue_create(void)
 {
 	odp_queue_param_t qparam;
@@ -2426,6 +2487,14 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_sha512),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_sha512,
 				  check_alg_sha512),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_cbc_hmac_sha1,
+				  check_alg_aes_cbc_hmac_sha1),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_cbc_hmac_sha1,
+				  check_alg_aes_cbc_hmac_sha1),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_cbc_hmac_sha256,
+				  check_alg_aes_cbc_hmac_sha256),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_cbc_hmac_sha256,
+				  check_alg_aes_cbc_hmac_sha256),
 	ODP_TEST_INFO(test_auth_hashes_in_auth_range),
 	ODP_TEST_INFO_NULL,
 };
