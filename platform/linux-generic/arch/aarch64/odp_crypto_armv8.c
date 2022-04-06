@@ -34,7 +34,13 @@
 #define ARM_CRYPTO_MAX_IV_LENGTH              16
 #define ARM_CRYPTO_MAX_AAD_LENGTH             16
 #define ARM_CRYPTO_MAX_DATA_LENGTH	      65536
-#define ARM_CRYPTO_MAX_DIGEST_LENGTH          16
+#define ARM_CRYPTO_MAX_DIGEST_LENGTH          32
+
+#define HMAC_SHA1_BLOCK_SIZE                  64
+#define HMAC_SHA256_BLOCK_SIZE                64
+#define HMAC_SHA_BLOCK_MAX                    HMAC_SHA256_BLOCK_SIZE
+#define HMAC_IPAD_VALUE                       (0x36)
+#define HMAC_OPAD_VALUE                       (0x5C)
 
 /*
  * ARM crypto library may read up to 15 bytes past the end of input
@@ -71,6 +77,12 @@ static const odp_crypto_cipher_capability_t cipher_capa_aes_gcm[] = {
 {.key_len = 16, .iv_len = 12},
 {.key_len = 24, .iv_len = 12},
 {.key_len = 32, .iv_len = 12} };
+
+#ifdef __ARM_FEATURE_SHA2
+static const odp_crypto_cipher_capability_t cipher_capa_aes_cbc[] = {
+{.key_len = 16, .iv_len = 16} };
+#endif
+
 #endif
 
 /*
@@ -86,6 +98,17 @@ static const odp_crypto_auth_capability_t auth_capa_null[] = {
 #ifdef __ARM_FEATURE_AES
 static const odp_crypto_auth_capability_t auth_capa_aes_gcm[] = {
 {.digest_len = AES_GCM_TAG_LEN, .key_len = 0, .aad_len = {.min = 8, .max = 12, .inc = 4} } };
+
+#ifdef __ARM_FEATURE_SHA2
+static const odp_crypto_auth_capability_t auth_capa_sha1_hmac[] = {
+{.digest_len = 12, .key_len = 20, .aad_len = {.min = 0, .max = 0, .inc = 0} },
+{.digest_len = 20, .key_len = 20, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
+
+static const odp_crypto_auth_capability_t auth_capa_sha256_hmac[] = {
+{.digest_len = 16, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0} },
+{.digest_len = 32, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
+#endif
+
 #endif
 
 /** Forward declaration of session structure */
@@ -121,6 +144,10 @@ struct odp_crypto_generic_session_t {
 #if ODP_DEPRECATED_API
 		uint8_t  iv_data[ARM_CRYPTO_MAX_IV_LENGTH];
 #endif
+		/* Inner pad (max supported block length) */
+		uint8_t i_key_pad[HMAC_SHA_BLOCK_MAX];
+		/* Outer pad (max supported block length) */
+		uint8_t o_key_pad[HMAC_SHA_BLOCK_MAX];
 	} auth;
 
 	crypto_func_t func;
@@ -449,6 +476,261 @@ static int process_aes_gcm_param(odp_crypto_generic_session_t *session)
 	return 0;
 }
 
+static void
+aes_cbc_encrypt_hmac_gen(odp_packet_t pkt,
+			 const odp_crypto_packet_op_param_t *param,
+			 odp_crypto_generic_session_t *session)
+{
+	armv8_cipher_digest_t arg;
+	void *iv_ptr;
+	uint32_t in_len = param->cipher_range.length;
+	uint32_t hash_len = param->auth_range.length;
+	uint32_t in_pos = param->cipher_range.offset;
+	uint32_t hash_pos = param->auth_range.offset;
+	uint8_t key_expanded[256] = {0};
+	uint8_t hash_buf[hash_len];
+	uint8_t digest[ARM_CRYPTO_MAX_DIGEST_LENGTH];
+	int rc;
+
+	/* Fail early if cipher_range is too large */
+	if (odp_unlikely(in_len > ARM_CRYPTO_MAX_DATA_LENGTH)) {
+		ODP_DBG("ARM Crypto: Packet size too large for requested operation\n");
+		goto err;
+	}
+
+#if ODP_DEPRECATED_API
+	if (param->cipher_iv_ptr)
+		iv_ptr = param->cipher_iv_ptr;
+	else if (session->p.cipher_iv.data)
+		iv_ptr = session->cipher.iv_data;
+	else
+		goto err;
+#else
+	iv_ptr = param->cipher_iv_ptr;
+	ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
+#endif
+
+	armv8_expandkeys_enc_aes_cbc_128(key_expanded, session->cipher.key_data);
+	arg.cipher.key = key_expanded;
+	arg.cipher.iv = iv_ptr;
+
+	arg.digest.hmac.key = session->auth.key;
+	arg.digest.hmac.i_key_pad = session->auth.i_key_pad;
+	arg.digest.hmac.o_key_pad = session->auth.o_key_pad;
+
+	uint32_t seg_len = 0;
+	uint8_t *data = odp_packet_offset(pkt, in_pos, &seg_len, NULL);
+
+	if (odp_unlikely(odp_packet_is_segmented(pkt)) ||
+	    odp_unlikely(odp_packet_tailroom(pkt) < OOB_WRITE_LEN)) {
+		/* Packet is segmented or it may not be safe to read and write
+		 * beyond the end of packet data. Copy the cipher range to a
+		 * contiguous buffer. */
+		odp_packet_copy_to_mem(pkt, in_pos, in_len, local.buffer);
+
+		data = local.buffer;
+	}
+
+	seg_len = 0;
+	uint8_t *hash = odp_packet_offset(pkt, hash_pos, &seg_len, NULL);
+
+	if (odp_unlikely(odp_packet_is_segmented(pkt)) ||
+	    odp_unlikely(odp_packet_tailroom(pkt) < OOB_WRITE_LEN)) {
+		/* Packet is segmented or it may not be safe to read and write
+		 * beyond the end of packet data. Copy the hash range to a
+		 * contiguous buffer. */
+		odp_packet_copy_to_mem(pkt, hash_pos, hash_len, hash_buf);
+
+		hash = hash_buf;
+	}
+
+	if (odp_unlikely(session->p.hash_result_in_auth_range))
+		_odp_packet_set_data(pkt, param->hash_result_offset, 0, session->p.auth_digest_len);
+
+	switch (session->p.auth_alg) {
+	case ODP_AUTH_ALG_SHA1_HMAC:
+		rc = armv8_enc_aes_cbc_sha1_128(data, local.buffer, in_len,
+						hash, digest, hash_len,
+						&arg);
+
+		if (odp_unlikely(rc)) {
+			ODP_DBG("ARM Crypto: AES-CBC Encoding and HMAC-SHA1 "
+				"digest generation failed\n");
+			goto err;
+		}
+		break;
+	case ODP_AUTH_ALG_SHA256_HMAC:
+		rc = armv8_enc_aes_cbc_sha256_128(data, local.buffer, in_len,
+						  hash, digest, hash_len,
+						  &arg);
+
+		if (odp_unlikely(rc)) {
+			ODP_DBG("ARM Crypto: AES-CBC Encoding and HMAC-SHA256 "
+				"digest generation failed\n");
+			goto err;
+		}
+		break;
+	default:
+		goto err;
+	}
+
+	odp_packet_copy_from_mem(pkt, in_pos, in_len, local.buffer);
+	odp_packet_copy_from_mem(pkt, param->hash_result_offset,
+				 session->p.auth_digest_len, digest);
+
+	set_crypto_op_result_ok(pkt);
+	return;
+
+err:
+	set_crypto_op_result(pkt,
+			     ODP_CRYPTO_ALG_ERR_DATA_SIZE,
+			     ODP_CRYPTO_ALG_ERR_NONE);
+}
+
+static void
+aes_cbc_decrypt_hmac_gen(odp_packet_t pkt,
+			 const odp_crypto_packet_op_param_t *param,
+			 odp_crypto_generic_session_t *session)
+{
+	armv8_cipher_digest_t arg;
+	void *iv_ptr;
+	uint32_t in_len = param->cipher_range.length;
+	uint32_t hash_len = param->auth_range.length;
+	uint32_t in_pos = param->cipher_range.offset;
+	uint32_t hash_pos = param->auth_range.offset;
+	uint8_t key_expanded[256] = {0};
+	uint8_t hash_buf[hash_len];
+	uint8_t digest[ARM_CRYPTO_MAX_DIGEST_LENGTH];
+	int rc;
+
+	/* Fail early if cipher_range is too large */
+	if (odp_unlikely(in_len > ARM_CRYPTO_MAX_DATA_LENGTH)) {
+		ODP_DBG("ARM Crypto: Packet size too large for requested operation\n");
+		goto err;
+	}
+
+#if ODP_DEPRECATED_API
+	if (param->cipher_iv_ptr)
+		iv_ptr = param->cipher_iv_ptr;
+	else if (session->p.cipher_iv.data)
+		iv_ptr = session->cipher.iv_data;
+	else
+		goto err;
+#else
+	iv_ptr = param->cipher_iv_ptr;
+	ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
+#endif
+
+	armv8_expandkeys_dec_aes_cbc_128(key_expanded, session->cipher.key_data);
+	arg.cipher.key = key_expanded;
+	arg.cipher.iv = iv_ptr;
+
+	arg.digest.hmac.key = session->auth.key;
+	arg.digest.hmac.i_key_pad = session->auth.i_key_pad;
+	arg.digest.hmac.o_key_pad = session->auth.o_key_pad;
+
+	uint32_t seg_len = 0;
+	uint8_t *data = odp_packet_offset(pkt, in_pos, &seg_len, NULL);
+
+	if (odp_unlikely(odp_packet_is_segmented(pkt)) ||
+	    odp_unlikely(odp_packet_tailroom(pkt) < OOB_WRITE_LEN)) {
+		/* Packet is segmented or it may not be safe to read and write
+		 * beyond the end of packet data. Copy the cipher range to a
+		 * contiguous buffer. */
+		odp_packet_copy_to_mem(pkt, in_pos, in_len, local.buffer);
+
+		data = local.buffer;
+	}
+
+	seg_len = 0;
+	uint8_t *hash = odp_packet_offset(pkt, hash_pos, &seg_len, NULL);
+
+	if (odp_unlikely(odp_packet_is_segmented(pkt)) ||
+	    odp_unlikely(odp_packet_tailroom(pkt) < OOB_WRITE_LEN)) {
+		/* Packet is segmented or it may not be safe to read and write
+		 * beyond the end of packet data. Copy the cipher range to a
+		 * contiguous buffer. */
+		odp_packet_copy_to_mem(pkt, hash_pos, hash_len, hash_buf);
+
+		hash = hash_buf;
+	}
+
+	if (odp_unlikely(session->p.hash_result_in_auth_range))
+		_odp_packet_set_data(pkt, param->hash_result_offset, 0, session->p.auth_digest_len);
+
+	switch (session->p.auth_alg) {
+	case ODP_AUTH_ALG_SHA1_HMAC:
+		rc = armv8_dec_aes_cbc_sha1_128(data, local.buffer, in_len,
+						hash, digest, hash_len,
+						&arg);
+
+		if (odp_unlikely(rc)) {
+			ODP_DBG("ARM Crypto: AES-CBC Decoding and HMAC-SHA1 "
+				"digest generation failed\n");
+			goto err;
+		}
+		break;
+	case ODP_AUTH_ALG_SHA256_HMAC:
+		rc = armv8_dec_aes_cbc_sha256_128(data, local.buffer, in_len,
+						  hash, digest, hash_len,
+						  &arg);
+
+		if (odp_unlikely(rc)) {
+			ODP_DBG("ARM Crypto: AES-CBC Decoding and HMAC-SHA256 "
+				"digest generation failed\n");
+			goto err;
+		}
+		break;
+	default:
+		goto err;
+	}
+
+	odp_packet_copy_from_mem(pkt, in_pos, in_len, local.buffer);
+
+	set_crypto_op_result_ok(pkt);
+	return;
+
+err:
+	set_crypto_op_result(pkt,
+			     ODP_CRYPTO_ALG_ERR_NONE,
+			     ODP_CRYPTO_ALG_ERR_ICV_CHECK);
+}
+
+static int process_cipher_auth_hmac_param(odp_crypto_generic_session_t *session)
+{
+	/* Verify cipher Key len is valid */
+	if (16 != session->p.cipher_key.length)
+		return -1;
+
+	/* Verify cipher IV len is correct */
+	if (ARM_CRYPTO_MAX_IV_LENGTH != session->p.cipher_iv_len)
+		return -1;
+
+	/* Verify auth IV len is correct */
+	if (0 != session->p.auth_iv_len)
+		return -1;
+
+	/* Zero memory under key */
+	if (session->p.auth_alg == ODP_AUTH_ALG_SHA1_HMAC)
+		memset(session->auth.key, 0, sizeof(session->auth.key));
+	else if (session->p.auth_alg == ODP_AUTH_ALG_SHA256_HMAC)
+		memset(session->auth.key, 0, sizeof(session->auth.key));
+
+	/* Convert keys */
+	memcpy(session->cipher.key_data, session->p.cipher_key.data,
+	       session->p.cipher_key.length);
+	memcpy(session->auth.key, session->p.auth_key.data,
+	       session->p.auth_key.length);
+
+	/* Set function */
+	if (ODP_CRYPTO_OP_ENCODE == session->p.op)
+		session->func = aes_cbc_encrypt_hmac_gen;
+	else
+		session->func = aes_cbc_decrypt_hmac_gen;
+
+	return 0;
+}
+
 int odp_crypto_capability(odp_crypto_capability_t *capa)
 {
 	if (NULL == capa)
@@ -468,6 +750,13 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 #ifdef __ARM_FEATURE_AES
 	capa->ciphers.bit.aes_gcm    = 1;
 	capa->auths.bit.aes_gcm      = 1;
+
+#ifdef __ARM_FEATURE_SHA2
+	capa->ciphers.bit.aes_cbc    = 1;
+	capa->auths.bit.sha1_hmac    = 1;
+	capa->auths.bit.sha256_hmac  = 1;
+#endif
+
 #endif
 
 	capa->max_sessions = MAX_SESSIONS;
@@ -493,6 +782,14 @@ int odp_crypto_cipher_capability(odp_cipher_alg_t cipher,
 		src = cipher_capa_aes_gcm;
 		num = sizeof(cipher_capa_aes_gcm) / size;
 		break;
+
+#ifdef __ARM_FEATURE_SHA2
+	case ODP_CIPHER_ALG_AES_CBC:
+		src = cipher_capa_aes_cbc;
+		num = sizeof(cipher_capa_aes_cbc) / size;
+		break;
+#endif
+
 #endif
 	default:
 		return -1;
@@ -523,6 +820,18 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 		src = auth_capa_aes_gcm;
 		num = sizeof(auth_capa_aes_gcm) / size;
 		break;
+
+#ifdef __ARM_FEATURE_SHA2
+	case ODP_AUTH_ALG_SHA1_HMAC:
+		src = auth_capa_sha1_hmac;
+		num = sizeof(auth_capa_sha1_hmac) / size;
+		break;
+	case ODP_AUTH_ALG_SHA256_HMAC:
+		src = auth_capa_sha256_hmac;
+		num = sizeof(auth_capa_sha256_hmac) / size;
+		break;
+#endif
+
 #endif
 	default:
 		return -1;
@@ -543,6 +852,7 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 {
 	int rc = 0;
 	odp_crypto_generic_session_t *session;
+	uint8_t partial[256] = {0};
 
 	if (odp_global_ro.disable.crypto) {
 		ODP_ERR("Crypto is disabled\n");
@@ -585,6 +895,21 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		memcpy(session->auth.iv_data, session->p.auth_iv.data,
 		       session->p.auth_iv.length);
 #endif
+
+	/* Copy the auth_key data and XOR key with IPAD/OPAD values to obtain
+	 * i_key_pad and o_key_pad */
+	memset(session->auth.i_key_pad, 0, sizeof(session->auth.i_key_pad));
+	memcpy(session->auth.i_key_pad, session->p.auth_key.data,
+	       session->p.auth_key.length);
+
+	memset(session->auth.o_key_pad, 0, sizeof(session->auth.o_key_pad));
+	memcpy(session->auth.o_key_pad, session->p.auth_key.data,
+	       session->p.auth_key.length);
+
+	for (size_t i = 0; i < HMAC_SHA_BLOCK_MAX; i++) {
+		session->auth.i_key_pad[i] ^= HMAC_IPAD_VALUE;
+		session->auth.o_key_pad[i] ^= HMAC_OPAD_VALUE;
+	}
 
 	/* Process based on cipher */
 	switch (param->cipher_alg) {
@@ -631,13 +956,29 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		}
 		break;
 	}
+	case ODP_CIPHER_ALG_AES_CBC:
+		/* Only AES-CBC and HMAC-SHA chained operation is supported */
+		if (param->auth_alg != ODP_AUTH_ALG_SHA1_HMAC &&
+		    param->auth_alg != ODP_AUTH_ALG_SHA256_HMAC) {
+			rc = -2;
+			break;
+		}
+		/* Only 128-bit key length is supported */
+		if (param->cipher_key.length == 16)
+			rc = process_cipher_auth_hmac_param(session);
+		else
+			rc = -1;
+		break;
 	default:
 		rc = -1;
 	}
 
 	/* Check result */
 	if (rc) {
-		*status = ODP_CRYPTO_SES_ERR_CIPHER;
+		if (rc == -2)
+			*status = ODP_CRYPTO_SES_ERR_ALG_COMBO;
+		else
+			*status = ODP_CRYPTO_SES_ERR_CIPHER;
 		goto err;
 	}
 
@@ -658,13 +999,78 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 			rc = -1;
 		}
 		break;
+	case ODP_AUTH_ALG_SHA1_HMAC:
+		/* Only AES-CBC and HMAC-SHA chained operation is supported */
+		if (param->cipher_alg != ODP_CIPHER_ALG_AES_CBC) {
+			rc = -2;
+			break;
+		}
+
+		if (param->cipher_alg == ODP_CIPHER_ALG_AES_CBC) {
+			/* Calculate partial hash values for i_key_pad and
+			 * o_key_pad */
+			if (armv8_sha1_block_partial(NULL, session->auth.i_key_pad,
+						     partial, HMAC_SHA1_BLOCK_SIZE) != 0) {
+				ODP_DBG("ARM Crypto: Partial hash block calculation "
+					"failed\n");
+				rc = -1;
+			}
+			memcpy(session->auth.i_key_pad, partial, HMAC_SHA1_BLOCK_SIZE);
+
+			if (armv8_sha1_block_partial(NULL, session->auth.o_key_pad,
+						     partial, HMAC_SHA1_BLOCK_SIZE) != 0) {
+				ODP_DBG("ARM Crypto: Partial hash block calculation "
+					"failed\n");
+				rc = -1;
+			}
+			memcpy(session->auth.o_key_pad, partial, HMAC_SHA1_BLOCK_SIZE);
+
+			rc =  0;
+		} else {
+			rc = -1;
+		}
+		break;
+	case ODP_AUTH_ALG_SHA256_HMAC:
+		/* Only AES-CBC and HMAC-SHA chained operation is supported */
+		if (param->cipher_alg != ODP_CIPHER_ALG_AES_CBC) {
+			rc = -2;
+			break;
+		}
+
+		if (param->cipher_alg == ODP_CIPHER_ALG_AES_CBC) {
+			/* Calculate partial hash values for i_key_pad and
+			 * o_key_pad */
+			if (armv8_sha256_block_partial(NULL, session->auth.i_key_pad,
+						       partial, HMAC_SHA256_BLOCK_SIZE) != 0) {
+				ODP_DBG("ARM Crypto: Partial hash block calculation "
+					"failed\n");
+				rc = -1;
+			}
+			memcpy(session->auth.i_key_pad, partial, HMAC_SHA256_BLOCK_SIZE);
+
+			if (armv8_sha256_block_partial(NULL, session->auth.o_key_pad,
+						       partial, HMAC_SHA256_BLOCK_SIZE) != 0) {
+				ODP_DBG("ARM Crypto: Partial hash block calculation "
+					"failed\n");
+				rc = -1;
+			}
+			memcpy(session->auth.o_key_pad, partial, HMAC_SHA256_BLOCK_SIZE);
+
+			rc =  0;
+		} else {
+			rc = -1;
+		}
+		break;
 	default:
 		rc = -1;
 	}
 
 	/* Check result */
 	if (rc) {
-		*status = ODP_CRYPTO_SES_ERR_AUTH;
+		if (rc == -2)
+			*status = ODP_CRYPTO_SES_ERR_ALG_COMBO;
+		else
+			*status = ODP_CRYPTO_SES_ERR_AUTH;
 		goto err;
 	}
 
