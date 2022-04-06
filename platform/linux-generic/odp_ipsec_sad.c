@@ -745,8 +745,18 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
 	}
 
 	if (odp_crypto_session_create(&crypto_param, &ipsec_sa->session,
-				      &ses_create_rc))
+				      &ses_create_rc)) {
+		/*
+		 * In some cases an individual algorithm cannot be used alone,
+		 * i.e. with the null cipher/auth algorithm.
+		 */
+		if (ses_create_rc == ODP_CRYPTO_SES_ERR_ALG_COMBO) {
+			ipsec_sa_release(ipsec_sa);
+			return ODP_IPSEC_SA_INVALID_COMBO;
+		}
+
 		goto error;
+	}
 
 	init_sa_thread_local(ipsec_sa);
 

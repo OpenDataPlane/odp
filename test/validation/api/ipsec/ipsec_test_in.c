@@ -61,6 +61,10 @@ static void test_in_ipv4_ah_sha256(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -96,6 +100,10 @@ static void test_in_ipv4_ah_sha256_tun_ipv4(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -131,6 +139,10 @@ static void test_in_ipv4_ah_sha256_tun_ipv6(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -163,6 +175,10 @@ static void test_in_ipv4_ah_sha256_tun_ipv4_notun(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -196,6 +212,10 @@ static void test_in_ipv4_esp_null_sha256(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -228,6 +248,10 @@ static void test_in_ipv4_esp_aes_cbc_null(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -260,6 +284,10 @@ static void test_in_ipv4_esp_aes_cbc_sha1(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -292,6 +320,10 @@ static void test_in_ipv4_esp_aes_cbc_sha256(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -324,6 +356,10 @@ static void test_in_ipv4_esp_aes_cbc_sha384(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -356,6 +392,10 @@ static void test_in_ipv4_esp_aes_cbc_sha512(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -388,6 +428,10 @@ static void test_in_ipv4_esp_aes_ctr_null(void)
 			    &key_mcgrew_gcm_salt_3, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -420,6 +464,10 @@ static void test_in_ipv4_ah_sha256_lookup(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -455,6 +503,10 @@ static void test_in_ipv4_esp_null_sha256_lookup(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -493,6 +545,10 @@ static void test_in_ipv4_esp_null_sha256_tun_ipv4(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -528,6 +584,10 @@ static void test_in_ipv4_esp_null_sha256_tun_ipv6(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -561,6 +621,10 @@ static void test_in_ipv4_esp_udp_null_sha256(void)
 	param.opt.udp_encap = 1;
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -594,6 +658,10 @@ static void test_in_ipv4_esp_udp_null_sha256_lookup(void)
 	param.opt.udp_encap = 1;
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -630,6 +698,10 @@ static void test_in_ipv4_ah_sha256_noreplay(void)
 	param.inbound.antireplay_ws = 0;
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -681,6 +753,10 @@ static void test_in_ipv4_ah_sha256_replay(void)
 	param.inbound.antireplay_ws = 32;
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -733,6 +809,10 @@ static void test_in_ipv4_esp_null_sha256_noreplay(void)
 	param.inbound.antireplay_ws = 0;
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -784,6 +864,10 @@ static void test_in_ipv4_esp_null_sha256_replay(void)
 	param.inbound.antireplay_ws = 32;
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -843,6 +927,10 @@ static void test_in_ipv4_ah_esp_pkt(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -875,6 +963,10 @@ static void test_in_ipv4_esp_ah_pkt(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -902,6 +994,10 @@ static void test_in_ipv4_ah_esp_pkt_lookup(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -930,6 +1026,10 @@ static void test_in_ipv4_esp_ah_pkt_lookup(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -958,6 +1058,10 @@ static void test_in_ipv4_ah_sha256_bad1(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -985,6 +1089,10 @@ static void test_in_ipv4_ah_sha256_bad2(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1012,6 +1120,10 @@ static void test_in_ipv4_esp_null_sha256_bad1(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1036,6 +1148,10 @@ static void test_in_ipv4_rfc3602_5_esp(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1068,6 +1184,10 @@ static void test_in_ipv4_rfc3602_6_esp(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1104,6 +1224,10 @@ static void test_in_ipv4_rfc3602_7_esp(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1140,6 +1264,10 @@ static void test_in_ipv4_rfc3602_8_esp(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1176,6 +1304,10 @@ static void test_in_ipv4_mcgrew_gcm_2_esp(void)
 			    &key_mcgrew_gcm_salt_2, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1212,6 +1344,10 @@ static void test_in_ipv4_mcgrew_gcm_3_esp(void)
 			    &key_mcgrew_gcm_salt_3, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1248,6 +1384,10 @@ static void test_in_ipv4_mcgrew_gcm_4_esp(void)
 			    &key_mcgrew_gcm_salt_4, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1289,6 +1429,10 @@ static void test_in_ipv4_mcgrew_gcm_12_esp(void)
 			    &key_mcgrew_gcm_salt_12, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1322,6 +1466,10 @@ static void test_in_ipv4_mcgrew_gcm_12_esp_notun(void)
 			    &key_mcgrew_gcm_salt_12, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1358,6 +1506,10 @@ static void test_in_ipv4_mcgrew_gcm_15_esp(void)
 			    NULL, &key_mcgrew_gcm_salt_15);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1394,6 +1546,10 @@ static void test_in_ipv4_rfc7634_chacha(void)
 			    &key_rfc7634_salt, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1426,6 +1582,10 @@ static void test_in_ipv4_ah_aes_gmac_128(void)
 			    NULL, &key_mcgrew_gcm_salt_2);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1458,6 +1618,10 @@ static void test_in_ipv4_esp_null_aes_gmac_128(void)
 			    NULL, &key_mcgrew_gcm_salt_2);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1490,6 +1654,10 @@ static void test_in_ipv6_ah_sha256(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1525,6 +1693,10 @@ static void test_in_ipv6_ah_sha256_tun_ipv4(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1560,6 +1732,10 @@ static void test_in_ipv6_ah_sha256_tun_ipv6(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1592,6 +1768,10 @@ static void test_in_ipv6_esp_null_sha256(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1627,6 +1807,10 @@ static void test_in_ipv6_esp_null_sha256_tun_ipv4(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1662,6 +1846,10 @@ static void test_in_ipv6_esp_null_sha256_tun_ipv6(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1695,6 +1883,10 @@ static void test_in_ipv6_esp_udp_null_sha256(void)
 	param.opt.udp_encap = 1;
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1728,6 +1920,10 @@ static void test_in_ipv6_esp_udp_null_sha256_lookup(void)
 	param.opt.udp_encap = 1;
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
@@ -1768,6 +1964,10 @@ static void test_ipsec_sa_print(void)
 			    NULL, NULL);
 
 	in_sa = odp_ipsec_sa_create(&param_in);
+	if (in_sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, in_sa);
 
@@ -1952,9 +2152,17 @@ static void test_in_ipv4_esp_reass_success(void)
 	param_in.inbound.reassembly_en = 1;
 
 	out_sa = odp_ipsec_sa_create(&param_out);
+	if (out_sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, out_sa);
 
 	in_sa = odp_ipsec_sa_create(&param_in);
+	if (in_sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, in_sa);
 
 	printf("\n	IPv4 two frags");
@@ -2007,9 +2215,17 @@ static void test_in_ipv4_esp_reass_incomp(void)
 	param_in.inbound.reassembly_en = 1;
 
 	out_sa = odp_ipsec_sa_create(&param_out);
+	if (out_sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, out_sa);
 
 	in_sa = odp_ipsec_sa_create(&param_in);
+	if (in_sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, in_sa);
 
 	printf("\n	IPv4 missing frag");
@@ -2141,9 +2357,17 @@ static void test_in_ipv6_esp_reass_success(void)
 	param_in.inbound.reassembly_en = 1;
 
 	out_sa = odp_ipsec_sa_create(&param_out);
+	if (out_sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, out_sa);
 
 	in_sa = odp_ipsec_sa_create(&param_in);
+	if (in_sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, in_sa);
 
 	printf("\n	IPv6 two frags");
@@ -2200,9 +2424,17 @@ static void test_in_ipv6_esp_reass_incomp(void)
 	param_in.inbound.reassembly_en = 1;
 
 	out_sa = odp_ipsec_sa_create(&param_out);
+	if (out_sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, out_sa);
 
 	in_sa = odp_ipsec_sa_create(&param_in);
+	if (in_sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, in_sa);
 
 	printf("\n	IPv6 missing frag");
@@ -2230,6 +2462,10 @@ static void test_in_ipv4_null_aes_xcbc_esp(void)
 			    NULL, NULL);
 
 	sa = odp_ipsec_sa_create(&param);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("\n    Unsupported algorithm combination\n");
+		return;
+	}
 
 	CU_ASSERT_NOT_EQUAL_FATAL(ODP_IPSEC_SA_INVALID, sa);
 
