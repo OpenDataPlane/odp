@@ -27,6 +27,7 @@ extern "C" {
 typedef ODP_HANDLE_T(odp_ipsec_sa_t);
 
 #define ODP_IPSEC_SA_INVALID _odp_cast_scalar(odp_ipsec_sa_t, 0)
+#define ODP_IPSEC_SA_INVALID_COMBO _odp_cast_scalar(odp_ipsec_sa_t, -1)
 
 /**
  * @}
