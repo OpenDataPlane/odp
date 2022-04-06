@@ -288,6 +288,23 @@ static crypto_alg_config_t algs_config[] = {
 		},
 	},
 	{
+		.name = "aes-cbc-hmac-sha256-128",
+		.session = {
+			.cipher_alg = ODP_CIPHER_ALG_AES_CBC,
+			.cipher_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.cipher_iv_len = 16,
+			.auth_alg = ODP_AUTH_ALG_SHA256_HMAC,
+			.auth_key = {
+				.data = test_key32,
+				.length = sizeof(test_key32)
+			},
+			.auth_digest_len = 16,
+		},
+	},
+	{
 		.name = "null-hmac-sha1-96",
 		.session = {
 			.cipher_alg = ODP_CIPHER_ALG_NULL,
@@ -631,9 +648,20 @@ create_session_from_config(odp_crypto_session_t *session,
 		params.compl_queue = ODP_QUEUE_INVALID;
 		params.op_mode = ODP_CRYPTO_SYNC;
 	}
+
 	if (odp_crypto_session_create(&params, session,
 				      &ses_create_rc)) {
-		ODPH_ERR("crypto session create failed.\n");
+		/*
+		 * In some cases an individual algorithm cannot be used alone,
+		 * i.e. with the null cipher/auth algorithm.
+		 */
+		if (ses_create_rc == ODP_CRYPTO_SES_ERR_ALG_COMBO) {
+			printf("    Cipher Auth algorithm combination not supported\n"
+			       "    => %s skipped\n\n", config->name);
+		} else {
+			ODPH_ERR("crypto session create failed.\n");
+		}
+
 		return -1;
 	}
 
