@@ -275,6 +275,21 @@ static ipsec_alg_config_t algs_config[] = {
 		},
 	},
 	{
+		.name = "aes-cbc-hmac-sha256-128",
+		.crypto = {
+			.cipher_alg = ODP_CIPHER_ALG_AES_CBC,
+			.cipher_key = {
+				.data = test_key16,
+				.length = sizeof(test_key16)
+			},
+			.auth_alg = ODP_AUTH_ALG_SHA256_HMAC,
+			.auth_key = {
+				.data = test_key32,
+				.length = sizeof(test_key32)
+			},
+		},
+	},
+	{
 		.name = "aes-ctr-null",
 		.crypto = {
 			.cipher_alg = ODP_CIPHER_ALG_AES_CTR,
@@ -941,6 +956,12 @@ run_measure_one_config(ipsec_args_t *cargs,
 	}
 
 	sa = create_sa_from_config(config, cargs);
+	if (sa == ODP_IPSEC_SA_INVALID_COMBO) {
+		printf("    Cipher Auth algorithm combination not supported\n"
+		       "    => %s skipped\n\n", config->name);
+		return 0;
+	}
+
 	if (sa == ODP_IPSEC_SA_INVALID) {
 		ODPH_ERR("IPsec SA create failed.\n");
 		return -1;
