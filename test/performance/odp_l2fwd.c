@@ -851,7 +851,7 @@ static int set_pktin_vector_params(odp_pktin_queue_param_t *pktin_param, odp_poo
 				pktio_capa.vector.max_size : pktio_capa.vector.min_size;
 			printf("\nWarning: Modified vector size to %u\n\n", vec_size);
 		} else {
-			ODPH_ERR("Error: Invalid pktio vector size %u, valid range [%u, %u]\n",
+			ODPH_ERR("Invalid pktio vector size %u, valid range [%u, %u]\n",
 				 vec_size, pktio_capa.vector.min_size, pktio_capa.vector.max_size);
 			return -1;
 		}
@@ -870,7 +870,7 @@ static int set_pktin_vector_params(odp_pktin_queue_param_t *pktin_param, odp_poo
 				pktio_capa.vector.max_tmo_ns : pktio_capa.vector.min_tmo_ns;
 			printf("\nWarning: Modified vector timeout to %" PRIu64 "\n\n", vec_tmo_ns);
 		} else {
-			ODPH_ERR("Error: Invalid vector timeout %" PRIu64 ", valid range [%" PRIu64
+			ODPH_ERR("Invalid vector timeout %" PRIu64 ", valid range [%" PRIu64
 				 ", %" PRIu64 "]\n", vec_tmo_ns,
 				 pktio_capa.vector.min_tmo_ns, pktio_capa.vector.max_tmo_ns);
 			return -1;
@@ -917,12 +917,12 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 
 	pktio = odp_pktio_open(dev, pool, &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID) {
-		ODPH_ERR("Error: failed to open %s\n", dev);
+		ODPH_ERR("Pktio open failed: %s\n", dev);
 		return -1;
 	}
 
 	if (odp_pktio_info(pktio, &info)) {
-		ODPH_ERR("Error: pktio info failed %s\n", dev);
+		ODPH_ERR("Pktio info failed: %s\n", dev);
 		return -1;
 	}
 
@@ -933,7 +933,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 		odp_pktio_print(pktio);
 
 	if (odp_pktio_capability(pktio, &pktio_capa)) {
-		ODPH_ERR("Error: pktio capability query failed %s\n", dev);
+		ODPH_ERR("Pktio capability query failed: %s\n", dev);
 		return -1;
 	}
 
@@ -957,14 +957,13 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 
 	if (gbl_args->appl.promisc_mode) {
 		if (!pktio_capa.set_op.op.promisc_mode) {
-			ODPH_ERR("Error: promisc mode set not supported %s\n",
-				 dev);
+			ODPH_ERR("Promisc mode set not supported: %s\n", dev);
 			return -1;
 		}
 
 		/* Enable promisc mode */
 		if (odp_pktio_promisc_mode_set(pktio, true)) {
-			ODPH_ERR("Error: promisc mode enable failed %s\n", dev);
+			ODPH_ERR("Promisc mode enable failed: %s\n", dev);
 			return -1;
 		}
 	}
@@ -974,14 +973,14 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 		uint32_t maxlen_output = pktio_capa.maxlen.max_output ? gbl_args->appl.mtu : 0;
 
 		if (!pktio_capa.set_op.op.maxlen) {
-			ODPH_ERR("Error: modifying interface MTU not supported %s\n", dev);
+			ODPH_ERR("Modifying interface MTU not supported: %s\n", dev);
 			return -1;
 		}
 
 		if (maxlen_input &&
 		    (maxlen_input < pktio_capa.maxlen.min_input ||
 		     maxlen_input > pktio_capa.maxlen.max_input)) {
-			ODPH_ERR("Error: unsupported MTU value %" PRIu32 " for %s "
+			ODPH_ERR("Unsupported MTU value %" PRIu32 " for %s "
 				 "(min %" PRIu32 ", max %" PRIu32 ")\n", maxlen_input, dev,
 				 pktio_capa.maxlen.min_input, pktio_capa.maxlen.max_input);
 			return -1;
@@ -989,14 +988,14 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 		if (maxlen_output &&
 		    (maxlen_output < pktio_capa.maxlen.min_output ||
 		     maxlen_output > pktio_capa.maxlen.max_output)) {
-			ODPH_ERR("Error: unsupported MTU value %" PRIu32 " for %s "
+			ODPH_ERR("Unsupported MTU value %" PRIu32 " for %s "
 				 "(min %" PRIu32 ", max %" PRIu32 ")\n", maxlen_output, dev,
 				 pktio_capa.maxlen.min_output, pktio_capa.maxlen.max_output);
 			return -1;
 		}
 
 		if (odp_pktio_maxlen_set(pktio, maxlen_input, maxlen_output)) {
-			ODPH_ERR("Error: setting MTU failed %s\n", dev);
+			ODPH_ERR("Setting MTU failed: %s\n", dev);
 			return -1;
 		}
 	}
@@ -1046,7 +1045,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 
 	if (gbl_args->appl.vector_mode) {
 		if (!pktio_capa.vector.supported) {
-			ODPH_ERR("Error: packet vector input not supported %s\n", dev);
+			ODPH_ERR("Packet vector input not supported: %s\n", dev);
 			return -1;
 		}
 		if (set_pktin_vector_params(&pktin_param, vec_pool, pktio_capa))
@@ -1054,43 +1053,35 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 	}
 
 	if (odp_pktin_queue_config(pktio, &pktin_param)) {
-		ODPH_ERR("Error: input queue config failed %s\n", dev);
+		ODPH_ERR("Input queue config failed: %s\n", dev);
 		return -1;
 	}
 
 	if (odp_pktout_queue_config(pktio, &pktout_param)) {
-		ODPH_ERR("Error: output queue config failed %s\n", dev);
+		ODPH_ERR("Output queue config failed: %s\n", dev);
 		return -1;
 	}
 
 	if (gbl_args->appl.in_mode == DIRECT_RECV) {
-		if (odp_pktin_queue(pktio, gbl_args->pktios[idx].pktin,
-				    num_rx) != num_rx) {
-			ODPH_ERR("Error: pktin queue query failed %s\n", dev);
+		if (odp_pktin_queue(pktio, gbl_args->pktios[idx].pktin, num_rx) != num_rx) {
+			ODPH_ERR("Pktin queue query failed: %s\n", dev);
 			return -1;
 		}
 	} else {
-		if (odp_pktin_event_queue(pktio,
-					  gbl_args->pktios[idx].rx_q,
-					  num_rx) != num_rx) {
-			ODPH_ERR("Error: pktin event queue query failed %s\n",
-				 dev);
+		if (odp_pktin_event_queue(pktio, gbl_args->pktios[idx].rx_q, num_rx) != num_rx) {
+			ODPH_ERR("Pktin event queue query failed: %s\n", dev);
 			return -1;
 		}
 	}
 
 	if (gbl_args->appl.out_mode == PKTOUT_DIRECT) {
-		if (odp_pktout_queue(pktio,
-				     gbl_args->pktios[idx].pktout,
-				     num_tx) != num_tx) {
-			ODPH_ERR("Error: pktout queue query failed %s\n", dev);
+		if (odp_pktout_queue(pktio, gbl_args->pktios[idx].pktout, num_tx) != num_tx) {
+			ODPH_ERR("Pktout queue query failed: %s\n", dev);
 			return -1;
 		}
 	} else {
-		if (odp_pktout_event_queue(pktio,
-					   gbl_args->pktios[idx].tx_q,
-					   num_tx) != num_tx) {
-			ODPH_ERR("Error: event queue query failed %s\n", dev);
+		if (odp_pktout_event_queue(pktio, gbl_args->pktios[idx].tx_q, num_tx) != num_tx) {
+			ODPH_ERR("Event queue query failed: %s\n", dev);
 			return -1;
 		}
 	}
@@ -1560,14 +1551,14 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'r':
 			len = strlen(optarg);
 			if (len == 0) {
-				usage(argv[0]);
+				ODPH_ERR("Bad dest address string\n");
 				exit(EXIT_FAILURE);
 			}
 			len += 1;	/* add room for '\0' */
 
 			addr_str = malloc(len);
 			if (addr_str == NULL) {
-				usage(argv[0]);
+				ODPH_ERR("Dest address malloc() failed\n");
 				exit(EXIT_FAILURE);
 			}
 
@@ -1576,20 +1567,17 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			for (token = strtok(addr_str, ","), i = 0;
 			     token != NULL; token = strtok(NULL, ","), i++) {
 				if (i >= MAX_PKTIOS) {
-					printf("too many MAC addresses\n");
-					usage(argv[0]);
+					ODPH_ERR("Too many MAC addresses\n");
 					exit(EXIT_FAILURE);
 				}
-				if (odph_eth_addr_parse(&appl_args->addrs[i],
-							token) != 0) {
-					printf("invalid MAC address\n");
-					usage(argv[0]);
+				if (odph_eth_addr_parse(&appl_args->addrs[i], token) != 0) {
+					ODPH_ERR("Invalid MAC address\n");
 					exit(EXIT_FAILURE);
 				}
 			}
 			appl_args->addr_count = i;
 			if (appl_args->addr_count < 1) {
-				usage(argv[0]);
+				ODPH_ERR("Bad dest address count\n");
 				exit(EXIT_FAILURE);
 			}
 			free(addr_str);
@@ -1597,14 +1585,14 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'i':
 			len = strlen(optarg);
 			if (len == 0) {
-				usage(argv[0]);
+				ODPH_ERR("Bad pktio interface string\n");
 				exit(EXIT_FAILURE);
 			}
 			len += 1;	/* add room for '\0' */
 
 			appl_args->if_str = malloc(len);
 			if (appl_args->if_str == NULL) {
-				usage(argv[0]);
+				ODPH_ERR("Pktio interface malloc() failed\n");
 				exit(EXIT_FAILURE);
 			}
 
@@ -1617,9 +1605,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 			appl_args->if_count = i;
 
-			if (appl_args->if_count < 1 ||
-			    appl_args->if_count > MAX_PKTIOS) {
-				usage(argv[0]);
+			if (appl_args->if_count < 1 || appl_args->if_count > MAX_PKTIOS) {
+				ODPH_ERR("Bad pktio interface count: %i\n", appl_args->if_count);
 				exit(EXIT_FAILURE);
 			}
 
@@ -1719,20 +1706,17 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	}
 
 	if (appl_args->if_count == 0) {
-		usage(argv[0]);
+		ODPH_ERR("No pktio interfaces\n");
 		exit(EXIT_FAILURE);
 	}
-	if (appl_args->addr_count != 0 &&
-	    appl_args->addr_count != appl_args->if_count) {
-		printf("Number of destination addresses differs from number"
-		       " of interfaces\n");
-		usage(argv[0]);
+	if (appl_args->addr_count != 0 && appl_args->addr_count != appl_args->if_count) {
+		ODPH_ERR("Number of dest addresses differs from number of interfaces\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (appl_args->burst_rx > MAX_PKT_BURST) {
-		printf("Error: Burst size (%i) too large. Maximum is %i.\n",
-		       appl_args->burst_rx, MAX_PKT_BURST);
+		ODPH_ERR("Burst size (%i) too large. Maximum is %i.\n",
+			 appl_args->burst_rx, MAX_PKT_BURST);
 		exit(EXIT_FAILURE);
 	}
 
@@ -1851,7 +1835,7 @@ static int set_vector_pool_params(odp_pool_param_t *params, odp_pool_capability_
 			vec_size = pool_capa.vector.max_size;
 			printf("\nWarning: Vector size reduced to %u\n\n", vec_size);
 		} else {
-			ODPH_ERR("Error: Vector size too big %u. Maximum is %u.\n",
+			ODPH_ERR("Vector size too big %u. Maximum is %u.\n",
 				 vec_size, pool_capa.vector.max_size);
 			return -1;
 		}
@@ -1871,7 +1855,7 @@ static int set_vector_pool_params(odp_pool_param_t *params, odp_pool_capability_
 			num_vec = pool_capa.vector.max_num;
 			printf("\nWarning: number of vectors reduced to %u\n\n", num_vec);
 		} else {
-			ODPH_ERR("Error: Too many vectors (%u) per pool. Maximum is %u.\n",
+			ODPH_ERR("Too many vectors (%u) per pool. Maximum is %u.\n",
 				 num_vec, pool_capa.vector.max_num);
 			return -1;
 		}
@@ -1917,7 +1901,7 @@ int main(int argc, char *argv[])
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
 	if (odph_options(&helper_options)) {
-		ODPH_ERR("Error: reading ODP helper options failed.\n");
+		ODPH_ERR("Reading ODP helper options failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1939,13 +1923,13 @@ int main(int argc, char *argv[])
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, &init, NULL)) {
-		ODPH_ERR("Error: ODP global init failed.\n");
+		ODPH_ERR("ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
-		ODPH_ERR("Error: ODP local init failed.\n");
+		ODPH_ERR("ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1954,14 +1938,14 @@ int main(int argc, char *argv[])
 			      ODP_CACHE_LINE_SIZE, 0);
 
 	if (shm == ODP_SHM_INVALID) {
-		ODPH_ERR("Error: shared mem reserve failed.\n");
+		ODPH_ERR("Shared mem reserve failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	gbl_args = odp_shm_addr(shm);
 
 	if (gbl_args == NULL) {
-		ODPH_ERR("Error: shared mem alloc failed.\n");
+		ODPH_ERR("Shared mem addr failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	gbl_args_init(gbl_args);
@@ -2015,12 +1999,12 @@ int main(int argc, char *argv[])
 		num_pools = if_count;
 
 	if (odp_pool_capability(&pool_capa)) {
-		ODPH_ERR("Error: pool capability failed\n");
+		ODPH_ERR("Pool capability failed\n");
 		return -1;
 	}
 
 	if (num_pools > (int)pool_capa.pkt.max_pools) {
-		ODPH_ERR("Error: Too many pools %i\n", num_pools);
+		ODPH_ERR("Too many pools %i\n", num_pools);
 		return -1;
 	}
 
@@ -2063,7 +2047,7 @@ int main(int argc, char *argv[])
 			printf("\nWarning: number of packets reduced to %u\n\n",
 			       num_pkt);
 		} else {
-			ODPH_ERR("Error: Too many packets %u. Maximum is %u.\n",
+			ODPH_ERR("Too many packets %u. Maximum is %u.\n",
 				 num_pkt, pool_capa.pkt.max_num);
 			return -1;
 		}
@@ -2085,7 +2069,7 @@ int main(int argc, char *argv[])
 		pool_tbl[i] = odp_pool_create("packet pool", &params);
 
 		if (pool_tbl[i] == ODP_POOL_INVALID) {
-			ODPH_ERR("Error: pool create failed %i\n", i);
+			ODPH_ERR("Pool create failed %i\n", i);
 			exit(EXIT_FAILURE);
 		}
 
@@ -2097,13 +2081,13 @@ int main(int argc, char *argv[])
 	num_vec_pools = 0;
 	if (gbl_args->appl.vector_mode) {
 		if (!sched_mode(gbl_args->appl.in_mode)) {
-			ODPH_ERR("Error: vector mode only supports scheduler pktin modes (1-3)\n");
+			ODPH_ERR("Vector mode only supports scheduler pktin modes (1-3)\n");
 			return -1;
 		}
 
 		num_vec_pools = gbl_args->appl.pool_per_if ? if_count : 1;
 		if (num_vec_pools > (int)pool_capa.vector.max_pools) {
-			ODPH_ERR("Error: Too many vector pools %i\n", num_vec_pools);
+			ODPH_ERR("Too many vector pools %i\n", num_vec_pools);
 			return -1;
 		}
 
@@ -2119,7 +2103,7 @@ int main(int argc, char *argv[])
 			vec_pool_tbl[i] = odp_pool_create("vector pool", &params);
 
 			if (vec_pool_tbl[i] == ODP_POOL_INVALID) {
-				ODPH_ERR("Error: vector pool create failed %i\n", i);
+				ODPH_ERR("Vector pool create failed %i\n", i);
 				exit(EXIT_FAILURE);
 			}
 
@@ -2137,7 +2121,7 @@ int main(int argc, char *argv[])
 	odp_schedule_config_init(&sched_config);
 
 	if (odp_schedule_capability(&sched_capa)) {
-		ODPH_ERR("Error: schedule capability failed\n");
+		ODPH_ERR("Schedule capability failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -2145,7 +2129,7 @@ int main(int argc, char *argv[])
 		if (sched_capa.max_flow_id) {
 			sched_config.max_flow_id = sched_capa.max_flow_id;
 		} else {
-			ODPH_ERR("Error: flow aware mode not supported\n");
+			ODPH_ERR("Flow aware mode not supported\n");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -2196,7 +2180,7 @@ int main(int argc, char *argv[])
 		if (odp_pktio_mac_addr(gbl_args->pktios[i].pktio,
 				       gbl_args->port_eth_addr[i].addr,
 				       ODPH_ETHADDR_LEN) != ODPH_ETHADDR_LEN) {
-			ODPH_ERR("Error: interface ethernet address unknown\n");
+			ODPH_ERR("Interface ethernet address unknown\n");
 			exit(EXIT_FAILURE);
 		}
 
@@ -2261,7 +2245,7 @@ int main(int argc, char *argv[])
 				     thr_param, num_workers);
 
 	if (num_thr != num_workers) {
-		ODPH_ERR("Error: worker create failed %i\n", num_thr);
+		ODPH_ERR("Worker create failed: %i\n", num_thr);
 		exit(EXIT_FAILURE);
 	}
 
@@ -2275,8 +2259,7 @@ int main(int argc, char *argv[])
 		pktio = gbl_args->pktios[i].pktio;
 		ret   = odp_pktio_start(pktio);
 		if (ret) {
-			ODPH_ERR("Error: unable to start %s\n",
-				 gbl_args->appl.if_names[i]);
+			ODPH_ERR("Pktio start failed: %s\n", gbl_args->appl.if_names[i]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -2286,8 +2269,7 @@ int main(int argc, char *argv[])
 
 	for (i = 0; i < if_count; ++i) {
 		if (odp_pktio_stop(gbl_args->pktios[i].pktio)) {
-			ODPH_ERR("Error: unable to stop %s\n",
-				 gbl_args->appl.if_names[i]);
+			ODPH_ERR("Pktio stop failed: %s\n", gbl_args->appl.if_names[i]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -2299,14 +2281,13 @@ int main(int argc, char *argv[])
 	/* Master thread waits for other threads to exit */
 	num_thr = odph_thread_join(gbl_args->thread_tbl, num_workers);
 	if (num_thr != num_workers) {
-		ODPH_ERR("Error: worker join failed %i\n", num_thr);
+		ODPH_ERR("Worker join failed: %i\n", num_thr);
 			 exit(EXIT_FAILURE);
 	}
 
 	for (i = 0; i < if_count; ++i) {
 		if (odp_pktio_close(gbl_args->pktios[i].pktio)) {
-			ODPH_ERR("Error: unable to close %s\n",
-				 gbl_args->appl.if_names[i]);
+			ODPH_ERR("Pktio close failed: %s\n", gbl_args->appl.if_names[i]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -2318,30 +2299,30 @@ int main(int argc, char *argv[])
 
 	for (i = 0; i < num_pools; i++) {
 		if (odp_pool_destroy(pool_tbl[i])) {
-			ODPH_ERR("Error: pool destroy failed %i\n", i);
+			ODPH_ERR("Pool destroy failed: %i\n", i);
 			exit(EXIT_FAILURE);
 		}
 	}
 
 	for (i = 0; i < num_vec_pools; i++) {
 		if (odp_pool_destroy(vec_pool_tbl[i])) {
-			ODPH_ERR("Error: vector pool destroy failed %i\n", i);
+			ODPH_ERR("Vector pool destroy failed: %i\n", i);
 			exit(EXIT_FAILURE);
 		}
 	}
 
 	if (odp_shm_free(shm)) {
-		ODPH_ERR("Error: shm free\n");
+		ODPH_ERR("Shm free failed\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_local()) {
-		ODPH_ERR("Error: term local\n");
+		ODPH_ERR("Term local failed\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_global(instance)) {
-		ODPH_ERR("Error: term global\n");
+		ODPH_ERR("Term global failed\n");
 		exit(EXIT_FAILURE);
 	}
 
