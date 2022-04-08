@@ -192,6 +192,13 @@ typedef struct {
 	/* Break workers loop if set to 1 */
 	odp_atomic_u32_t exit_threads;
 
+	uint32_t pkt_len;
+	uint32_t num_pkt;
+	uint32_t seg_len;
+	uint32_t vector_num;
+	uint32_t vector_max_size;
+	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
+
 } args_t;
 
 /* Global pointer to args */
@@ -1734,11 +1741,10 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 /*
  * Print system and application info
  */
-static void print_info(appl_args_t *appl_args)
+static void print_info(void)
 {
 	int i;
-
-	odp_sys_info_print();
+	appl_args_t *appl_args = &gbl_args->appl;
 
 	printf("\n"
 	       "odp_l2fwd options\n"
@@ -1785,6 +1791,24 @@ static void print_info(appl_args_t *appl_args)
 		       appl_args->chksum ? "chksum " : "",
 		       appl_args->packet_copy ? "packet_copy" : "");
 	}
+
+	printf("Num worker threads: %i\n", appl_args->num_workers);
+	printf("CPU mask:           %s\n", gbl_args->cpumaskstr);
+
+	if (appl_args->num_groups > 0)
+		printf("num groups:         %i\n", appl_args->num_groups);
+	else if (appl_args->num_groups == 0)
+		printf("group:              ODP_SCHED_GROUP_ALL\n");
+	else
+		printf("group:              ODP_SCHED_GROUP_WORKER\n");
+
+	printf("Packets per pool:   %u\n", gbl_args->num_pkt);
+	printf("Packet length:      %u\n", gbl_args->pkt_len);
+	printf("Segment length:     %u\n", gbl_args->seg_len);
+	printf("Vectors per pool:   %u\n", gbl_args->vector_num);
+	printf("Vector size:        %u\n", gbl_args->vector_max_size);
+
+	printf("\n\n");
 }
 
 static void gbl_args_init(args_t *args)
@@ -1880,7 +1904,6 @@ int main(int argc, char *argv[])
 	int num_workers, num_thr;
 	odp_shm_t shm;
 	odp_cpumask_t cpumask;
-	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odph_ethaddr_t new_addr;
 	odp_pool_param_t params;
 	int ret;
@@ -1953,11 +1976,10 @@ int main(int argc, char *argv[])
 	/* Parse and store the application arguments */
 	parse_args(argc, argv, &gbl_args->appl);
 
+	odp_sys_info_print();
+
 	if (sched_mode(gbl_args->appl.in_mode))
 		gbl_args->appl.sched_mode = 1;
-
-	/* Print both system and application information */
-	print_info(&gbl_args->appl);
 
 	num_workers = MAX_WORKERS;
 	if (gbl_args->appl.cpu_count && gbl_args->appl.cpu_count < MAX_WORKERS)
@@ -1965,7 +1987,7 @@ int main(int argc, char *argv[])
 
 	/* Get default worker cpumask */
 	num_workers = odp_cpumask_default_worker(&cpumask, num_workers);
-	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
+	(void)odp_cpumask_to_str(&cpumask, gbl_args->cpumaskstr, sizeof(gbl_args->cpumaskstr));
 
 	gbl_args->appl.num_workers = num_workers;
 
@@ -1975,18 +1997,6 @@ int main(int argc, char *argv[])
 	if_count = gbl_args->appl.if_count;
 
 	num_groups = gbl_args->appl.num_groups;
-
-	printf("Num worker threads: %i\n", num_workers);
-	printf("First CPU:          %i\n", odp_cpumask_first(&cpumask));
-	printf("CPU mask:           %s\n", cpumaskstr);
-
-	if (num_groups > 0)
-		printf("num groups:         %i\n", num_groups);
-	else if (num_groups == 0)
-		printf("group:              ODP_SCHED_GROUP_ALL\n");
-	else
-		printf("group:              ODP_SCHED_GROUP_WORKER\n");
-
 
 	if (num_groups > if_count || num_groups > num_workers) {
 		ODPH_ERR("Too many groups. Number of groups may not exceed "
@@ -2053,10 +2063,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	printf("Packets per pool:   %u\n", num_pkt);
-	printf("Packet length:      %u\n", pkt_len);
-	printf("Segment length:     %u\n", seg_len);
-	printf("\n\n");
+	gbl_args->num_pkt = num_pkt;
+	gbl_args->pkt_len = pkt_len;
+	gbl_args->seg_len = seg_len;
 
 	/* Create packet pool */
 	odp_pool_param_init(&params);
@@ -2095,9 +2104,8 @@ int main(int argc, char *argv[])
 		if (set_vector_pool_params(&params, pool_capa))
 			return -1;
 
-		printf("Vectors per pool:   %u\n", params.vector.num);
-		printf("Vector size:        %u\n", params.vector.max_size);
-		printf("\n\n");
+		gbl_args->vector_num = params.vector.num;
+		gbl_args->vector_max_size = params.vector.max_size;
 
 		for (i = 0; i < num_vec_pools; i++) {
 			vec_pool_tbl[i] = odp_pool_create("vector pool", &params);
@@ -2200,6 +2208,9 @@ int main(int argc, char *argv[])
 	}
 
 	gbl_args->pktios[i].pktio = ODP_PKTIO_INVALID;
+
+	/* Print application information */
+	print_info();
 
 	bind_queues();
 
