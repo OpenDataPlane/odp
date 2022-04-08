@@ -110,6 +110,9 @@ typedef struct {
 	int promisc_mode;       /* Promiscuous mode enabled */
 	int flow_aware;         /* Flow aware scheduling enabled */
 	int mtu;                /* Interface MTU */
+	int num_prio;
+	odp_schedule_prio_t prio[MAX_PKTIOS]; /* Priority of input queues of an interface */
+
 } appl_args_t;
 
 /* Statistics */
@@ -1016,6 +1019,15 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 	mode_tx = ODP_PKTIO_OP_MT_UNSAFE;
 
 	if (gbl_args->appl.sched_mode) {
+		odp_schedule_prio_t prio;
+
+		if (gbl_args->appl.num_prio) {
+			prio = gbl_args->appl.prio[idx];
+		} else {
+			prio = odp_schedule_default_prio();
+			gbl_args->appl.prio[idx] = prio;
+		}
+
 		if (gbl_args->appl.in_mode == SCHED_ATOMIC)
 			sync_mode = ODP_SCHED_SYNC_ATOMIC;
 		else if (gbl_args->appl.in_mode == SCHED_ORDERED)
@@ -1023,7 +1035,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 		else
 			sync_mode = ODP_SCHED_SYNC_PARALLEL;
 
-		pktin_param.queue_param.sched.prio  = odp_schedule_default_prio();
+		pktin_param.queue_param.sched.prio  = prio;
 		pktin_param.queue_param.sched.sync  = sync_mode;
 		pktin_param.queue_param.sched.group = group;
 	}
@@ -1433,11 +1445,19 @@ static void usage(char *progname)
 	       "  -e, --error_check <arg> 0: Don't check packet errors (default)\n"
 	       "                          1: Check packet errors\n"
 	       "  -k, --chksum <arg>      0: Don't use checksum offload (default)\n"
-	       "                          1: Use checksum offload\n"
-	       "  -g, --groups <num>      Number of groups to use: 0 ... num\n"
+	       "                          1: Use checksum offload\n",
+	       NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS);
+
+	printf("  -g, --groups <num>      Number of groups to use: 0 ... num\n"
 	       "                          -1:  SCHED_GROUP_WORKER\n"
 	       "                          0:   SCHED_GROUP_ALL (default)\n"
 	       "                          num: must not exceed number of interfaces or workers\n"
+	       "  -I, --prio <prio list>  Schedule priority of packet input queues.\n"
+	       "                          Comma separated list of priorities (no spaces). A value\n"
+	       "                          per interface. All queues of an interface have the same\n"
+	       "                          priority. Values must be between odp_schedule_min_prio\n"
+	       "                          and odp_schedule_max_prio. odp_schedule_default_prio is\n"
+	       "                          used by default.\n"
 	       "  -b, --burst_rx <num>    0:   Use max burst size (default)\n"
 	       "                          num: Max number of packets per receive call\n"
 	       "  -p, --packet_copy       0: Don't copy packet (default)\n"
@@ -1462,9 +1482,7 @@ static void usage(char *progname)
 	       "  -f, --flow_aware        Enable flow aware scheduling.\n"
 	       "  -v, --verbose           Verbose output.\n"
 	       "  -h, --help              Display help and exit.\n\n"
-	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS, DEFAULT_VEC_SIZE,
-		DEFAULT_VEC_TMO, POOL_PKT_LEN
-	    );
+	       "\n", DEFAULT_VEC_SIZE, DEFAULT_VEC_TMO, POOL_PKT_LEN);
 }
 
 /*
@@ -1479,8 +1497,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	int opt;
 	int long_index;
 	char *token;
-	char *addr_str;
-	size_t len;
+	char *tmp_str;
+	size_t str_len, len;
 	int i;
 	static const struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
@@ -1495,6 +1513,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"error_check", required_argument, NULL, 'e'},
 		{"chksum", required_argument, NULL, 'k'},
 		{"groups", required_argument, NULL, 'g'},
+		{"prio", required_argument, NULL, 'I'},
 		{"burst_rx", required_argument, NULL, 'b'},
 		{"packet_copy", required_argument, NULL, 'p'},
 		{"pool_per_if", required_argument, NULL, 'y'},
@@ -1513,7 +1532,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:b:p:y:n:l:L:w:x:z:M:uPfvh";
+	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:I:b:p:y:n:l:L:w:x:z:M:uPfvh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1537,6 +1556,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->vec_size = 0;
 	appl_args->vec_tmo_ns = 0;
 	appl_args->flow_aware = 0;
+	appl_args->num_prio = 0;
 
 	while (1) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -1554,24 +1574,24 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'a':
 			appl_args->accuracy = atoi(optarg);
 			break;
-			/* parse packet-io interface names */
 		case 'r':
 			len = strlen(optarg);
 			if (len == 0) {
 				ODPH_ERR("Bad dest address string\n");
 				exit(EXIT_FAILURE);
 			}
-			len += 1;	/* add room for '\0' */
 
-			addr_str = malloc(len);
-			if (addr_str == NULL) {
+			str_len = len + 1;
+
+			tmp_str = malloc(str_len);
+			if (tmp_str == NULL) {
 				ODPH_ERR("Dest address malloc() failed\n");
 				exit(EXIT_FAILURE);
 			}
 
 			/* store the mac addresses names */
-			strcpy(addr_str, optarg);
-			for (token = strtok(addr_str, ","), i = 0;
+			memcpy(tmp_str, optarg, str_len);
+			for (token = strtok(tmp_str, ","), i = 0;
 			     token != NULL; token = strtok(NULL, ","), i++) {
 				if (i >= MAX_PKTIOS) {
 					ODPH_ERR("Too many MAC addresses\n");
@@ -1587,7 +1607,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 				ODPH_ERR("Bad dest address count\n");
 				exit(EXIT_FAILURE);
 			}
-			free(addr_str);
+			free(tmp_str);
 			break;
 		case 'i':
 			len = strlen(optarg);
@@ -1595,16 +1615,17 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 				ODPH_ERR("Bad pktio interface string\n");
 				exit(EXIT_FAILURE);
 			}
-			len += 1;	/* add room for '\0' */
 
-			appl_args->if_str = malloc(len);
+			str_len = len + 1;
+
+			appl_args->if_str = malloc(str_len);
 			if (appl_args->if_str == NULL) {
 				ODPH_ERR("Pktio interface malloc() failed\n");
 				exit(EXIT_FAILURE);
 			}
 
 			/* count the number of tokens separated by ',' */
-			strcpy(appl_args->if_str, optarg);
+			memcpy(appl_args->if_str, optarg, str_len);
 			for (token = strtok(appl_args->if_str, ","), i = 0;
 			     token != NULL;
 			     token = strtok(NULL, ","), i++)
@@ -1618,11 +1639,10 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			}
 
 			/* allocate storage for the if names */
-			appl_args->if_names =
-			    calloc(appl_args->if_count, sizeof(char *));
+			appl_args->if_names = calloc(appl_args->if_count, sizeof(char *));
 
 			/* store the if names (reset names string) */
-			strcpy(appl_args->if_str, optarg);
+			memcpy(appl_args->if_str, optarg, str_len);
 			for (token = strtok(appl_args->if_str, ","), i = 0;
 			     token != NULL; token = strtok(NULL, ","), i++) {
 				appl_args->if_names[i] = token;
@@ -1660,6 +1680,41 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 		case 'g':
 			appl_args->num_groups = atoi(optarg);
+			break;
+		case 'I':
+			len = strlen(optarg);
+			if (len == 0) {
+				ODPH_ERR("Bad priority list\n");
+				exit(EXIT_FAILURE);
+			}
+
+			str_len = len + 1;
+
+			tmp_str = malloc(str_len);
+			if (tmp_str == NULL) {
+				ODPH_ERR("Priority list malloc() failed\n");
+				exit(EXIT_FAILURE);
+			}
+
+			memcpy(tmp_str, optarg, str_len);
+			token = strtok(tmp_str, ",");
+
+			for (i = 0; token != NULL; token = strtok(NULL, ","), i++) {
+				if (i >= MAX_PKTIOS) {
+					ODPH_ERR("Too many priorities\n");
+					exit(EXIT_FAILURE);
+				}
+
+				appl_args->prio[i] = atoi(token);
+				appl_args->num_prio++;
+			}
+
+			if (appl_args->num_prio == 0) {
+				ODPH_ERR("Bad priority list\n");
+				exit(EXIT_FAILURE);
+			}
+
+			free(tmp_str);
 			break;
 		case 'b':
 			appl_args->burst_rx = atoi(optarg);
@@ -1716,6 +1771,12 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		ODPH_ERR("No pktio interfaces\n");
 		exit(EXIT_FAILURE);
 	}
+
+	if (appl_args->num_prio && appl_args->num_prio != appl_args->if_count) {
+		ODPH_ERR("Different number of priorities and pktio interfaces\n");
+		exit(EXIT_FAILURE);
+	}
+
 	if (appl_args->addr_count != 0 && appl_args->addr_count != appl_args->if_count) {
 		ODPH_ERR("Number of dest addresses differs from number of interfaces\n");
 		exit(EXIT_FAILURE);
@@ -1807,6 +1868,10 @@ static void print_info(void)
 	printf("Segment length:     %u\n", gbl_args->seg_len);
 	printf("Vectors per pool:   %u\n", gbl_args->vector_num);
 	printf("Vector size:        %u\n", gbl_args->vector_max_size);
+	printf("Priority per IF:   ");
+
+	for (i = 0; i < appl_args->if_count; i++)
+		printf(" %i", appl_args->prio[i]);
 
 	printf("\n\n");
 }
