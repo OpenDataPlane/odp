@@ -36,6 +36,9 @@
 /* Maximum number of pktio queues per interface */
 #define MAX_QUEUES             32
 
+/* Maximum number of schedule groups */
+#define MAX_GROUPS             32
+
 /* Maximum number of pktio interfaces */
 #define MAX_PKTIOS             8
 
@@ -47,6 +50,9 @@
 
 /* Default vector timeout */
 #define DEFAULT_VEC_TMO        ODP_TIME_MSEC_IN_NS
+
+/* Maximum thread info string length */
+#define EXTRA_STR_LEN          32
 
 /* Packet input mode */
 typedef enum pktin_mode_t {
@@ -97,6 +103,7 @@ typedef struct {
 	int chksum;             /* Checksum offload */
 	int sched_mode;         /* Scheduler mode */
 	int num_groups;         /* Number of scheduling groups */
+	int group_mode;         /* How threads join groups */
 	int burst_rx;           /* Receive burst size */
 	int pool_per_if;        /* Create pool per interface */
 	uint32_t num_pkt;       /* Number of packets per pool */
@@ -147,11 +154,12 @@ typedef struct thread_args_t {
 	} pktio[MAX_PKTIOS];
 
 	/* Groups to join */
-	odp_schedule_group_t group[MAX_PKTIOS];
+	odp_schedule_group_t group[MAX_GROUPS];
 
 	int thr_idx;
 	int num_pktio;
-	int num_groups;
+	int num_grp_join;
+
 } thread_args_t;
 
 /*
@@ -409,6 +417,7 @@ static int run_worker_sched_mode_vector(void *arg)
 	int i;
 	int pktio, num_pktio;
 	uint16_t max_burst;
+	odp_thrmask_t mask;
 	odp_pktout_queue_t pktout[MAX_PKTIOS];
 	odp_queue_t tx_queue[MAX_PKTIOS];
 	thread_args_t *thr_args = arg;
@@ -419,19 +428,14 @@ static int run_worker_sched_mode_vector(void *arg)
 	thr = odp_thread_id();
 	max_burst = gbl_args->appl.burst_rx;
 
-	if (gbl_args->appl.num_groups > 0) {
-		odp_thrmask_t mask;
+	odp_thrmask_zero(&mask);
+	odp_thrmask_set(&mask, thr);
 
-		odp_thrmask_zero(&mask);
-		odp_thrmask_set(&mask, thr);
-
-		/* Join non-default groups */
-		for (i = 0; i < thr_args->num_groups; i++) {
-			if (odp_schedule_group_join(thr_args->group[i],
-						    &mask)) {
-				ODPH_ERR("Join failed\n");
-				return -1;
-			}
+	/* Join non-default groups */
+	for (i = 0; i < thr_args->num_grp_join; i++) {
+		if (odp_schedule_group_join(thr_args->group[i], &mask)) {
+			ODPH_ERR("Join failed: %i\n", i);
+			return -1;
 		}
 	}
 
@@ -558,8 +562,10 @@ static int run_worker_sched_mode(void *arg)
 	int i;
 	int pktio, num_pktio;
 	uint16_t max_burst;
+	odp_thrmask_t mask;
 	odp_pktout_queue_t pktout[MAX_PKTIOS];
 	odp_queue_t tx_queue[MAX_PKTIOS];
+	char extra_str[EXTRA_STR_LEN];
 	thread_args_t *thr_args = arg;
 	stats_t *stats = &thr_args->stats;
 	int use_event_queue = gbl_args->appl.out_mode;
@@ -568,21 +574,30 @@ static int run_worker_sched_mode(void *arg)
 	thr = odp_thread_id();
 	max_burst = gbl_args->appl.burst_rx;
 
-	if (gbl_args->appl.num_groups > 0) {
-		odp_thrmask_t mask;
+	memset(extra_str, 0, EXTRA_STR_LEN);
+	odp_thrmask_zero(&mask);
+	odp_thrmask_set(&mask, thr);
 
-		odp_thrmask_zero(&mask);
-		odp_thrmask_set(&mask, thr);
+	/* Join non-default groups */
+	for (i = 0; i < thr_args->num_grp_join; i++) {
+		if (odp_schedule_group_join(thr_args->group[i], &mask)) {
+			ODPH_ERR("Join failed: %i\n", i);
+			return -1;
+		}
 
-		/* Join non-default groups */
-		for (i = 0; i < thr_args->num_groups; i++) {
-			if (odp_schedule_group_join(thr_args->group[i],
-						    &mask)) {
-				ODPH_ERR("Join failed\n");
-				return -1;
-			}
+		if (gbl_args->appl.verbose) {
+			uint64_t tmp = (uint64_t)(uintptr_t)thr_args->group[i];
+
+			printf("[%02i] Joined group 0x%" PRIx64 "\n", thr, tmp);
 		}
 	}
+
+	if (thr_args->num_grp_join)
+		snprintf(extra_str, EXTRA_STR_LEN, ", joined %i groups", thr_args->num_grp_join);
+	else if (gbl_args->appl.num_groups == 0)
+		snprintf(extra_str, EXTRA_STR_LEN, ", GROUP_ALL");
+	else if (gbl_args->appl.num_groups)
+		snprintf(extra_str, EXTRA_STR_LEN, ", GROUP_WORKER");
 
 	num_pktio = thr_args->num_pktio;
 
@@ -596,10 +611,10 @@ static int run_worker_sched_mode(void *arg)
 		pktout[pktio]   = thr_args->pktio[pktio].pktout;
 	}
 
-	printf("[%02i] PKTIN_SCHED_%s, %s\n", thr,
+	printf("[%02i] PKTIN_SCHED_%s, %s%s\n", thr,
 	       (in_mode == SCHED_PARALLEL) ? "PARALLEL" :
 	       ((in_mode == SCHED_ATOMIC) ? "ATOMIC" : "ORDERED"),
-	       (use_event_queue) ? "PKTOUT_QUEUE" : "PKTOUT_DIRECT");
+	       (use_event_queue) ? "PKTOUT_QUEUE" : "PKTOUT_DIRECT", extra_str);
 
 	odp_barrier_wait(&gbl_args->init_barrier);
 
@@ -1448,10 +1463,16 @@ static void usage(char *progname)
 	       "                          1: Use checksum offload\n",
 	       NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS);
 
-	printf("  -g, --groups <num>      Number of groups to use: 0 ... num\n"
-	       "                          -1:  SCHED_GROUP_WORKER\n"
-	       "                          0:   SCHED_GROUP_ALL (default)\n"
-	       "                          num: must not exceed number of interfaces or workers\n"
+	printf("  -g, --groups <num>      Number of new groups to create (1 ... num). Interfaces\n"
+	       "                          are placed into the groups in round robin.\n"
+	       "                           0: Use SCHED_GROUP_ALL (default)\n"
+	       "                          -1: Use SCHED_GROUP_WORKER\n"
+	       "  -G, --group_mode <arg>  Select how threads join new groups (when -g > 0)\n"
+	       "                          0: All threads join all created groups (default)\n"
+	       "                          1: All threads join first N created groups.\n"
+	       "                             N is number of interfaces (== active groups).\n"
+	       "                          2: Each thread joins a part of the first N groups\n"
+	       "                             (in round robin).\n"
 	       "  -I, --prio <prio list>  Schedule priority of packet input queues.\n"
 	       "                          Comma separated list of priorities (no spaces). A value\n"
 	       "                          per interface. All queues of an interface have the same\n"
@@ -1513,6 +1534,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"error_check", required_argument, NULL, 'e'},
 		{"chksum", required_argument, NULL, 'k'},
 		{"groups", required_argument, NULL, 'g'},
+		{"group_mode", required_argument, NULL, 'G'},
 		{"prio", required_argument, NULL, 'I'},
 		{"burst_rx", required_argument, NULL, 'b'},
 		{"packet_copy", required_argument, NULL, 'p'},
@@ -1532,7 +1554,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:I:b:p:y:n:l:L:w:x:z:M:uPfvh";
+	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:G:I:b:p:y:n:l:L:w:x:z:M:uPfvh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1540,6 +1562,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->dst_change = 1; /* change eth dst address by default */
 	appl_args->src_change = 1; /* change eth src address by default */
 	appl_args->num_groups = 0; /* use default group */
+	appl_args->group_mode = 0;
 	appl_args->error_check = 0; /* don't check packet errors by default */
 	appl_args->packet_copy = 0;
 	appl_args->burst_rx = 0;
@@ -1680,6 +1703,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 		case 'g':
 			appl_args->num_groups = atoi(optarg);
+			break;
+		case 'G':
+			appl_args->group_mode = atoi(optarg);
 			break;
 		case 'I':
 			len = strlen(optarg);
@@ -1976,8 +2002,8 @@ int main(int argc, char *argv[])
 	int if_count, num_pools, num_vec_pools;
 	int (*thr_run_func)(void *);
 	odp_instance_t instance;
-	int num_groups;
-	odp_schedule_group_t group[MAX_PKTIOS];
+	int num_groups, max_groups;
+	odp_schedule_group_t group[MAX_GROUPS];
 	odp_pool_t pool_tbl[MAX_PKTIOS], vec_pool_tbl[MAX_PKTIOS];
 	odp_pool_t pool, vec_pool;
 	odp_init_t init;
@@ -2060,14 +2086,6 @@ int main(int argc, char *argv[])
 		gbl_args->thread_args[i].thr_idx = i;
 
 	if_count = gbl_args->appl.if_count;
-
-	num_groups = gbl_args->appl.num_groups;
-
-	if (num_groups > if_count || num_groups > num_workers) {
-		ODPH_ERR("Too many groups. Number of groups may not exceed "
-			 "number of interfaces or workers.\n");
-		exit(EXIT_FAILURE);
-	}
 
 	num_pools = 1;
 	if (gbl_args->appl.pool_per_if)
@@ -2207,6 +2225,17 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	num_groups = gbl_args->appl.num_groups;
+	/* Predefined groups are enabled by default */
+	max_groups = sched_capa.max_groups - 3;
+	if (max_groups > MAX_GROUPS)
+		max_groups = MAX_GROUPS;
+
+	if (num_groups > max_groups) {
+		ODPH_ERR("Too many groups. Maximum is %i.\n", max_groups);
+		exit(EXIT_FAILURE);
+	}
+
 	odp_schedule_config(&sched_config);
 
 	/* Default */
@@ -2305,14 +2334,47 @@ int main(int argc, char *argv[])
 	thr_common.sync     = 1;
 
 	for (i = 0; i < num_workers; ++i) {
+		int j;
+		int num_join;
+		int mode = gbl_args->appl.group_mode;
+
 		odph_thread_param_init(&thr_param[i]);
 		thr_param[i].start    = thr_run_func;
 		thr_param[i].arg      = &gbl_args->thread_args[i];
 		thr_param[i].thr_type = ODP_THREAD_WORKER;
 
-		/* Round robin threads to groups */
-		gbl_args->thread_args[i].num_groups = 1;
-		gbl_args->thread_args[i].group[0] = group[i % num_groups];
+		gbl_args->thread_args[i].num_grp_join = 0;
+
+		/* Fill in list of groups to join */
+		if (gbl_args->appl.num_groups > 0) {
+			num_join = if_count < num_groups ? if_count : num_groups;
+
+			if (mode == 0 || mode == 1) {
+				/* All threads join all groups */
+				if (mode == 0)
+					num_join = num_groups;
+
+				gbl_args->thread_args[i].num_grp_join = num_join;
+
+				for (j = 0; j < num_join; j++)
+					gbl_args->thread_args[i].group[j] = group[j];
+			} else {
+				/* Thread joins first groups in round robin */
+				if (num_workers >= num_join) {
+					gbl_args->thread_args[i].num_grp_join = 1;
+					gbl_args->thread_args[i].group[0] = group[i % num_join];
+				} else {
+					int cnt = 0;
+
+					for (j = 0; i + j < num_join; j += num_workers) {
+						gbl_args->thread_args[i].group[cnt] = group[i + j];
+						cnt++;
+					}
+
+					gbl_args->thread_args[i].num_grp_join = cnt;
+				}
+			}
+		}
 
 		stats[i] = &gbl_args->thread_args[i].stats;
 	}
