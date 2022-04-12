@@ -2228,6 +2228,7 @@ static void tm_egress_marking(tm_system_t *tm_system, odp_packet_t odp_pkt)
 	tm_tos_marking_t  *ip_marking;
 
 	color = odp_packet_color(odp_pkt);
+	ODP_ASSERT(color < ODP_NUM_PACKET_COLORS);
 
 	if (odp_packet_has_vlan(odp_pkt)) {
 		vlan_marking = &tm_system->marking.vlan_marking[color];
