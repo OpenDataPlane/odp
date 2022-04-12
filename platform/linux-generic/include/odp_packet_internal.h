@@ -151,13 +151,11 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 	uint8_t lso_profile_idx;
 
 	union {
-		struct {
-			/* Result for crypto packet op */
-			odp_crypto_packet_result_t crypto_op_result;
+		/* Result for crypto packet op */
+		odp_crypto_packet_result_t crypto_op_result;
 
-			/* Context for IPsec */
-			odp_ipsec_packet_result_t ipsec_ctx;
-		};
+		/* Context for IPsec */
+		odp_ipsec_packet_result_t ipsec_ctx;
 
 		/* Result for comp packet op */
 		odp_comp_packet_result_t comp_op_result;
