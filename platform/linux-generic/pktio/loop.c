@@ -405,20 +405,9 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	}
 
 	for (i = 0; i < nb_tx; ++i) {
-		odp_ipsec_packet_result_t result;
-
-		if (odp_packet_subtype(pkt_tbl[i]) ==
-				ODP_EVENT_PACKET_IPSEC &&
-		    pktio_entry->s.config.outbound_ipsec) {
-
-			/* Possibly postprocessing packet */
-			odp_ipsec_result(&result, pkt_tbl[i]);
-		}
 		packet_subtype_set(pkt_tbl[i], ODP_EVENT_PACKET_BASIC);
-	}
-
-	for (i = 0; i < nb_tx; ++i)
 		loopback_fix_checksums(pkt_tbl[i], pktout_cfg, pktout_capa);
+	}
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
