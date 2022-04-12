@@ -3078,6 +3078,7 @@ static void pktio_test_pktin_ts(void)
 	ns1 = 100;
 	ts = odp_pktio_ts_from_ns(pktio_tx, ns1);
 	ns2 = odp_time_to_ns(ts);
+	CU_ASSERT_FATAL(res != 0);
 	res_ns = ODP_TIME_SEC_IN_NS / res;
 	if (ODP_TIME_SEC_IN_NS % res)
 		res_ns++;
