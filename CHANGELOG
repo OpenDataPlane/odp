@@ -1,3 +1,36 @@
+== OpenDataPlane (1.36.0.0)
+
+=== Backward incompatible API changes
+
+==== Classifier
+* Add an action parameter `odp_cos_action_t` to CoS parameters
+(`odp_cls_cos_param_t`). Action may be to enqueue or drop the packet classified
+to the CoS. The old methods of creating a drop CoS have been replaced by the
+new drop action.
+
+==== Crypto
+* Deprecate `odp_crypto_operation()`, the associated data structures, and the
+completion event. Use `odp_crypto_op()` or `odp_crypto_op_enq()` instead.
+
+==== Traffic Manager
+* Split `odp_tm_capabilities_t.tm_queue_threshold` capability into byte and
+packet modes.
+* Split `odp_tm_level_capabilities_t.tm_node_threshold` capability into byte and
+packet modes.
+
+=== Backward compatible API changes
+==== Classifier
+* Add CoS specific statistics counters (`odp_cls_cos_stats_t`) and
+matching capabilities (`odp_cls_stats_capability_t`). Statistics counters can be
+read with `odp_cls_cos_stats()`.
+
+==== Common
+* Convert `unsigned int` types to `uint32_t`.
+
+==== Traffic Manager
+* Remove unused TM shaper color enum `odp_tm_shaper_color_t` and
+`ODP_NUM_SHAPER_COLORS` define.
+
 == OpenDataPlane (1.35.0.0)
 
 === Backward incompatible API changes
