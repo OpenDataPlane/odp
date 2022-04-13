@@ -225,6 +225,10 @@ typedef struct odp_schedule_capability_t {
 	 * The specification is the same as for the blocking implementation. */
 	odp_support_t waitfree_queues;
 
+	/** Order wait support. If not supported, odp_schedule_order_wait()
+	 *  does nothing. */
+	odp_support_t order_wait;
+
 } odp_schedule_capability_t;
 
 /**
