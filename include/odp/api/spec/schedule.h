@@ -547,6 +547,21 @@ void odp_schedule_order_lock_start(uint32_t lock_index);
 void odp_schedule_order_lock_wait(uint32_t lock_index);
 
 /**
+ * Wait until the currently held scheduling context is the first in order
+ *
+ * Wait until there are no other scheduling contexts that precede the
+ * scheduling context of the calling thread in the source queue order.
+ * The context remains the first in order until the thread releases it.
+ *
+ * This function must not be called if the current thread is not holding
+ * an ordered scheduling context or if an ordered lock is being held.
+ *
+ * This functions does nothing if ordered wait is not supported.
+ * @see odp_schedule_capability()
+ */
+void odp_schedule_order_wait(void);
+
+/**
  * Print debug info about scheduler
  *
  * Print implementation defined information about scheduler to the ODP log.
