@@ -82,6 +82,25 @@ jobs:
         if: ${{ failure() }}
         run: find . -name config.log -exec cat {} \;
 
+  Build_XDP:
+    if: ${{ github.repository == 'OpenDataPlane/odp' }}
+    runs-on: [self-hosted, ARM64]
+    env:
+      CONF: "--enable-xdp"
+      OS: ubuntu_22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+    steps:
+      - uses: AutoModality/action-clean@v1.1.0
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/build_${ARCH}.sh
+      - name: Failure log
+        if: ${{ failure() }}
+        run: find . -name config.log -exec cat {} \;
+
   Run_distcheck:
     if: ${{ github.repository == 'OpenDataPlane/odp' }}
     runs-on: [self-hosted, ARM64]
