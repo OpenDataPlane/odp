@@ -90,6 +90,13 @@ typedef enum {
 	/** IPv4 Protocol or IPv6 Next Header (val_sz = 1) */
 	ODP_PMR_IPPROTO,
 
+	/** Differentiated Services Code Point (DSCP) bits in IPv4 or IPv6 header (val_sz = 1)
+	 *
+	 *  DSCP value is stored into six least significant bits of the octet pointed by
+	 *  odp_pmr_param_t::value. The same applies for odp_pmr_param_t::mask.
+	 */
+	ODP_PMR_IP_DSCP,
+
 	/** Destination UDP port (val_sz = 2) */
 	ODP_PMR_UDP_DPORT,
 
@@ -191,6 +198,8 @@ typedef union odp_cls_pmr_terms_t {
 		uint64_t	dmac:1;
 		/** IP Protocol or IPv6 Next Header */
 		uint64_t	ip_proto:1;
+		/** DSCP in IP header (#ODP_PMR_IP_DSCP) */
+		uint64_t	ip_dscp:1;
 		/** Destination UDP port, implies IPPROTO=17 */
 		uint64_t	udp_dport:1;
 		/** Destination TCP port implies IPPROTO=6 */
