@@ -243,6 +243,23 @@ jobs:
       if: ${{ failure() }}
       run: find . -name config.log -exec cat {} \;
 
+  Build_XDP:
+    runs-on: ubuntu-18.04
+    env:
+        CONF: "--enable-xdp"
+        OS: ubuntu_22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+               -e CONF="${CONF}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_${ARCH}.sh
+      - name: Failure log
+        if: ${{ failure() }}
+        run: find . -name config.log -exec cat {} \;
+
   Run_coverage:
     runs-on: ubuntu-18.04
     steps:
