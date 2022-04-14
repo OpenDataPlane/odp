@@ -349,27 +349,6 @@ typedef enum {
 } odp_cls_drop_t;
 
 /**
- * Packet header field enumeration
- * for fields that may be used to calculate
- * the flow signature, if present in a packet.
- */
-typedef enum {
-	ODP_COS_FHDR_IN_PKTIO,	/**< Ingress port number */
-	ODP_COS_FHDR_L2_SAP,	/**< Ethernet Source MAC address */
-	ODP_COS_FHDR_L2_DAP,	/**< Ethernet Destination MAC address */
-	ODP_COS_FHDR_L2_VID,	/**< Ethernet VLAN ID */
-	ODP_COS_FHDR_L3_FLOW,	/**< IPv6 flow_id */
-	ODP_COS_FHDR_L3_SAP,	/**< IP source address */
-	ODP_COS_FHDR_L3_DAP,	/**< IP destination address */
-	ODP_COS_FHDR_L4_PROTO,	/**< IP protocol (e.g. TCP/UDP/ICMP) */
-	ODP_COS_FHDR_L4_SAP,	/**< Transport source port */
-	ODP_COS_FHDR_L4_DAP,	/**< Transport destination port */
-	ODP_COS_FHDR_IPSEC_SPI,	/**< IPsec session identifier */
-	ODP_COS_FHDR_LD_VNI,	/**< NVGRE/VXLAN network identifier */
-	ODP_COS_FHDR_USER	/**< Application-specific header field(s) */
-} odp_cos_hdr_flow_fields_t;
-
-/**
  * Enumeration of actions for CoS.
  */
 typedef enum {
