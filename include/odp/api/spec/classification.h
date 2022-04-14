@@ -11,8 +11,8 @@
  * ODP classification descriptor
  */
 
-#ifndef ODP_API_SPEC_CLASSIFY_H_
-#define ODP_API_SPEC_CLASSIFY_H_
+#ifndef ODP_API_SPEC_CLASSIFICATION_H_
+#define ODP_API_SPEC_CLASSIFICATION_H_
 #include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
@@ -30,26 +30,144 @@ extern "C" {
  */
 
 /**
- * @typedef odp_cos_t
- * ODP Class of service handle
- */
-
-/**
- * @def ODP_COS_INVALID
- * This value is returned from odp_cls_cos_create() on failure.
- */
-
-/**
- * @def ODP_COS_NAME_LEN
- * Maximum ClassOfService name length in chars including null char
+ * @typedef odp_pmr_t
+ * Packet matching rule handle
  */
 
 /**
  * @def ODP_PMR_INVALID
- * Invalid odp_pmr_t value.
- * This value is returned from odp_cls_pmr_create()
- * function on failure.
+ * Invalid packet matching rule handle
  */
+
+/**
+ * @typedef odp_cos_t
+ * Class of service handle
+ */
+
+/**
+ * @def ODP_COS_INVALID
+ * Invalid class of service handle
+ */
+
+/**
+ * @def ODP_COS_NAME_LEN
+ * Maximum class of service name length in chars including null char
+ */
+
+/**
+ * Packet Matching Rule terms
+ *
+ * This enumeration selects the protocol field that is matched against PMR
+ * value/mask or value range. Protocol field values and masks are passed in big
+ * endian (network endian) format. However, ODP_PMR_LEN value and range are
+ * passed in CPU native endian (uint32_t words), as the term does not represent
+ * a protocol field.
+ *
+ * PMR value/mask data size is term specific. This size must be set into val_sz
+ * field of odp_pmr_param_t. There is no alignment requirement for PMR
+ * value/mask data.
+ */
+typedef enum {
+	/** Total length of received packet. Exceptionally, value and mask are
+	  * uint32_t (val_sz = 4) in CPU endian. */
+	ODP_PMR_LEN,
+
+	/** Initial (outer) Ethertype only (val_sz = 2) */
+	ODP_PMR_ETHTYPE_0,
+
+	/** Ethertype of most inner VLAN tag (val_sz = 2) */
+	ODP_PMR_ETHTYPE_X,
+
+	/** First (outer) VLAN ID (val_sz = 2) */
+	ODP_PMR_VLAN_ID_0,
+
+	/** Last (most inner) VLAN ID (val_sz = 2) */
+	ODP_PMR_VLAN_ID_X,
+
+	/** Destination MAC address (val_sz = 6) */
+	ODP_PMR_DMAC,
+
+	/** IPv4 Protocol or IPv6 Next Header (val_sz = 1) */
+	ODP_PMR_IPPROTO,
+
+	/** Destination UDP port (val_sz = 2) */
+	ODP_PMR_UDP_DPORT,
+
+	/** Destination TCP port (val_sz = 2) */
+	ODP_PMR_TCP_DPORT,
+
+	/** Source UDP port (val_sz = 2) */
+	ODP_PMR_UDP_SPORT,
+
+	/** Source TCP port (val_sz = 2) */
+	ODP_PMR_TCP_SPORT,
+
+	/** Source IPv4 address (val_sz = 4) */
+	ODP_PMR_SIP_ADDR,
+
+	/** Destination IPv4 address (val_sz = 4) */
+	ODP_PMR_DIP_ADDR,
+
+	/** Source IPv6 address (val_sz = 16) */
+	ODP_PMR_SIP6_ADDR,
+
+	/** Destination IPv6 address (val_sz = 16) */
+	ODP_PMR_DIP6_ADDR,
+
+	/** IPsec session identifier (val_sz = 4)*/
+	ODP_PMR_IPSEC_SPI,
+
+	/** NVGRE/VXLAN network identifier (val_sz = 4) */
+	ODP_PMR_LD_VNI,
+
+	/**
+	 * Custom frame match rule
+	 *
+	 * PMR offset is counted from the start of the packet. The match is
+	 * defined by the offset, the expected value, and its size. Custom frame
+	 * rules must be applied before any other PMR.
+	 */
+	ODP_PMR_CUSTOM_FRAME,
+
+	/**
+	 * Custom layer 3 match rule
+	 *
+	 * PMR offset is counted from the start of layer 3 in the packet.
+	 * The match is defined by the offset, the expected value, and its size.
+	 * Custom L3 rules may be combined with other PMRs.
+	 */
+	ODP_PMR_CUSTOM_L3,
+
+	/** IGMP Group address (val_sz = 4), implies IPPROTO=2 */
+	ODP_PMR_IGMP_GRP_ADDR,
+
+	/** ICMP identifier (val_sz = 2), implies IPPROTO=1 and ICMP_TYPE=0 or ICMP_TYPE=8 */
+	ODP_PMR_ICMP_ID,
+
+	/** ICMP type (val_sz = 1), implies IPPROTO=1 */
+	ODP_PMR_ICMP_TYPE,
+
+	/** ICMP code (val_sz = 1), implies IPPROTO=1 */
+	ODP_PMR_ICMP_CODE,
+
+	/** Source SCTP port (val_sz = 2), implies IPPROTO=132 */
+	ODP_PMR_SCTP_SPORT,
+
+	/** Destination SCTP port (val_sz = 2), implies IPPROTO=132 */
+	ODP_PMR_SCTP_DPORT,
+
+	/** GTPv1 tunnel endpoint identifier (val_sz = 4)
+	 *
+	 * Matches if and only if IP protocol is UDP, UDP destination port
+	 * is 2152 and the UDP payload interpreted as GTP header has GTP
+	 * version 1 and TEID as specified.
+	 */
+	ODP_PMR_GTPV1_TEID,
+
+	/** Inner header may repeat above values with this offset */
+	ODP_PMR_INNER_HDR_OFF = 32
+
+} odp_cls_pmr_term_t;
 
 /**
  * Supported PMR term values
@@ -114,9 +232,88 @@ typedef union odp_cls_pmr_terms_t {
 		/** GTPv1 tunnel endpoint identifier */
 		uint64_t	gtpv1_teid:1;
 	} bit;
+
 	/** All bits of the bit field structure */
 	uint64_t all_bits;
+
 } odp_cls_pmr_terms_t;
+
+/**
+ * Packet Matching Rule parameter structure
+ *
+ * Match value/mask size and endianness are defined in PMR term documentation
+ * (@see odp_cls_pmr_term_t). Most values and masks are passed in big
+ * endian format without data alignment requirement. ODP_PMR_LEN is
+ * an exception to this (uint32_t in CPU endian).
+ */
+typedef struct odp_pmr_param_t {
+	/** Packet Matching Rule term */
+	odp_cls_pmr_term_t  term;
+
+	/** True if the value is range and false if match. Default is false. */
+	odp_bool_t range_term;
+
+	/** Variant mappings for types of matches */
+	union {
+		/** Parameters for single-valued matches */
+		struct {
+			/** Points to the value to be matched. Value size and
+			 *  endianness are defined by the term used. Values of
+			 *  protocol fields are defined in big endian format.
+			 */
+			const void *value;
+
+			/** Mask of the bits to be matched. The same size and
+			 *  endianness is used than with the value. */
+			const void *mask;
+		} match;
+
+		/** Parameter for range value matches */
+		struct {
+			/** Start value of the range */
+			const void *val_start;
+
+			/** End value of the range */
+			const void *val_end;
+		} range;
+	};
+
+	/** Size of the value to be matched */
+	uint32_t val_sz;
+
+	/** Offset to the value
+	 *
+	 * Byte offset to the value to be matched in a packet. PMR term defines
+	 * starting point for the offset. Used only with custom PMR terms,
+	 * ignored with other terms.
+	 */
+	uint32_t offset;
+
+} odp_pmr_param_t;
+
+/**
+ * Packet Matching Rule creation options
+ */
+typedef struct odp_pmr_create_opt_t {
+	/** PMR terms
+	 *
+	 *  Array of odp_pmr_param_t entries, one entry per term desired.
+	 *  Use odp_cls_pmr_param_init() to initialize parameters into their default values.
+	 */
+	odp_pmr_param_t *terms;
+
+	/** Number of terms in the match rule. */
+	int num_terms;
+
+	/** Classification mark value
+	 *
+	 * Value to be set in the CLS mark of a packet when the packet matches this
+	 * Packet Matching Rule. The default value is zero. The maximum value is indicated in
+	 * odp_cls_capability_t::max_mark capability.
+	 */
+	uint64_t mark;
+
+} odp_pmr_create_opt_t;
 
 /** Random Early Detection (RED)
  * Random Early Detection is enabled to initiate a drop probability for the
@@ -153,6 +350,7 @@ typedef struct odp_red_param_t {
 	 * the minimum threshold value and is disabled otherwise
 	 */
 	odp_threshold_t threshold;
+
 } odp_red_param_t;
 
 /** Back pressure (BP)
@@ -174,6 +372,7 @@ typedef struct odp_bp_param_t {
 	 * @see odp_red_param_t for 'resource usage' documentation.
 	 */
 	odp_threshold_t threshold;
+
 } odp_bp_param_t;
 
 /**
@@ -346,6 +545,7 @@ typedef struct odp_cls_capability_t {
 typedef enum {
 	ODP_COS_DROP_POOL,      /**< Follow buffer pool drop policy */
 	ODP_COS_DROP_NEVER,     /**< Never drop, ignoring buffer pool policy */
+
 } odp_cls_drop_t;
 
 /**
@@ -366,6 +566,7 @@ typedef enum {
 	 * their originating pool.
 	 */
 	ODP_COS_ACTION_DROP,
+
 } odp_cos_action_t;
 
 /**
@@ -437,6 +638,7 @@ typedef struct odp_cls_cos_param {
 
 	/** Packet input vector configuration */
 	odp_pktin_vector_config_t vector;
+
 } odp_cls_cos_param_t;
 
 /**
@@ -652,204 +854,6 @@ int odp_cls_cos_stats(odp_cos_t cos, odp_cls_cos_stats_t *stats);
  */
 int odp_cls_queue_stats(odp_cos_t cos, odp_queue_t queue,
 			odp_cls_queue_stats_t *stats);
-
-/**
- * @typedef odp_pmr_t
- * PMR - Packet Matching Rule
- * Up to 32 bit of ternary matching of one of the available header fields
- */
-
-/**
- * Packet Matching Rule terms
- *
- * This enumeration selects the protocol field that is matched against PMR
- * value/mask or value range. Protocol field values and masks are passed in big
- * endian (network endian) format. However, ODP_PMR_LEN value and range are
- * passed in CPU native endian (uint32_t words), as the term does not represent
- * a protocol field.
- *
- * PMR value/mask data size is term specific. This size must be set into val_sz
- * field of odp_pmr_param_t. There is no alignment requirement for PMR
- * value/mask data.
- */
-typedef enum {
-	/** Total length of received packet. Exceptionally, value and mask are
-	  * uint32_t (val_sz = 4) in CPU endian. */
-	ODP_PMR_LEN,
-
-	/** Initial (outer) Ethertype only (val_sz = 2) */
-	ODP_PMR_ETHTYPE_0,
-
-	/** Ethertype of most inner VLAN tag (val_sz = 2) */
-	ODP_PMR_ETHTYPE_X,
-
-	/** First (outer) VLAN ID (val_sz = 2) */
-	ODP_PMR_VLAN_ID_0,
-
-	/** Last (most inner) VLAN ID (val_sz = 2) */
-	ODP_PMR_VLAN_ID_X,
-
-	/** Destination MAC address (val_sz = 6) */
-	ODP_PMR_DMAC,
-
-	/** IPv4 Protocol or IPv6 Next Header (val_sz = 1) */
-	ODP_PMR_IPPROTO,
-
-	/** Destination UDP port (val_sz = 2) */
-	ODP_PMR_UDP_DPORT,
-
-	/** Destination TCP port (val_sz = 2) */
-	ODP_PMR_TCP_DPORT,
-
-	/** Source UDP port (val_sz = 2) */
-	ODP_PMR_UDP_SPORT,
-
-	/** Source TCP port (val_sz = 2) */
-	ODP_PMR_TCP_SPORT,
-
-	/** Source IPv4 address (val_sz = 4) */
-	ODP_PMR_SIP_ADDR,
-
-	/** Destination IPv4 address (val_sz = 4) */
-	ODP_PMR_DIP_ADDR,
-
-	/** Source IPv6 address (val_sz = 16) */
-	ODP_PMR_SIP6_ADDR,
-
-	/** Destination IPv6 address (val_sz = 16) */
-	ODP_PMR_DIP6_ADDR,
-
-	/** IPsec session identifier (val_sz = 4)*/
-	ODP_PMR_IPSEC_SPI,
-
-	/** NVGRE/VXLAN network identifier (val_sz = 4) */
-	ODP_PMR_LD_VNI,
-
-	/**
-	 * Custom frame match rule
-	 *
-	 * PMR offset is counted from the start of the packet. The match is
-	 * defined by the offset, the expected value, and its size. Custom frame
-	 * rules must be applied before any other PMR.
-	 */
-	ODP_PMR_CUSTOM_FRAME,
-
-	/**
-	 * Custom layer 3 match rule
-	 *
-	 * PMR offset is counted from the start of layer 3 in the packet.
-	 * The match is defined by the offset, the expected value, and its size.
-	 * Custom L3 rules may be combined with other PMRs.
-	 */
-	ODP_PMR_CUSTOM_L3,
-
-	/** IGMP Group address (val_sz = 4), implies IPPROTO=2 */
-	ODP_PMR_IGMP_GRP_ADDR,
-
-	/** ICMP identifier (val_sz = 2), implies IPPROTO=1 and ICMP_TYPE=0 or ICMP_TYPE=8 */
-	ODP_PMR_ICMP_ID,
-
-	/** ICMP type (val_sz = 1), implies IPPROTO=1 */
-	ODP_PMR_ICMP_TYPE,
-
-	/** ICMP code (val_sz = 1), implies IPPROTO=1 */
-	ODP_PMR_ICMP_CODE,
-
-	/** Source SCTP port (val_sz = 2), implies IPPROTO=132 */
-	ODP_PMR_SCTP_SPORT,
-
-	/** Destination SCTP port (val_sz = 2), implies IPPROTO=132 */
-	ODP_PMR_SCTP_DPORT,
-
-	/** GTPv1 tunnel endpoint identifier (val_sz = 4)
-	 *
-	 * Matches if and only if IP protocol is UDP, UDP destination port
-	 * is 2152 and the UDP payload interpreted as GTP header has GTP
-	 * version 1 and TEID as specified.
-	 */
-	ODP_PMR_GTPV1_TEID,
-
-	/** Inner header may repeat above values with this offset */
-	ODP_PMR_INNER_HDR_OFF = 32
-
-} odp_cls_pmr_term_t;
-
-/**
- * Packet Matching Rule parameter structure
- *
- * Match value/mask size and endianness are defined in PMR term documentation
- * (@see odp_cls_pmr_term_t). Most values and masks are passed in big
- * endian format without data alignment requirement. ODP_PMR_LEN is
- * an exception to this (uint32_t in CPU endian).
- */
-typedef struct odp_pmr_param_t {
-	/** Packet Matching Rule term */
-	odp_cls_pmr_term_t  term;
-
-	/** True if the value is range and false if match. Default is false. */
-	odp_bool_t range_term;
-
-	/** Variant mappings for types of matches */
-	union {
-		/** Parameters for single-valued matches */
-		struct {
-			/** Points to the value to be matched. Value size and
-			 *  endianness are defined by the term used. Values of
-			 *  protocol fields are defined in big endian format.
-			 */
-			const void *value;
-
-			/** Mask of the bits to be matched. The same size and
-			 *  endianness is used than with the value. */
-			const void *mask;
-		} match;
-
-		/** Parameter for range value matches */
-		struct {
-			/** Start value of the range */
-			const void *val_start;
-
-			/** End value of the range */
-			const void *val_end;
-		} range;
-	};
-
-	/** Size of the value to be matched */
-	uint32_t val_sz;
-
-	/** Offset to the value
-	 *
-	 * Byte offset to the value to be matched in a packet. PMR term defines
-	 * starting point for the offset. Used only with custom PMR terms,
-	 * ignored with other terms.
-	 */
-	uint32_t offset;
-
-} odp_pmr_param_t;
-
-/**
- * Packet Matching Rule creation options
- */
-typedef struct odp_pmr_create_opt_t {
-	/** PMR terms
-	 *
-	 *  Array of odp_pmr_param_t entries, one entry per term desired.
-	 *  Use odp_cls_pmr_param_init() to initialize parameters into their default values.
-	 */
-	odp_pmr_param_t *terms;
-
-	/** Number of terms in the match rule. */
-	int num_terms;
-
-	/** Classification mark value
-	 *
-	 * Value to be set in the CLS mark of a packet when the packet matches this
-	 * Packet Matching Rule. The default value is zero. The maximum value is indicated in
-	 * odp_cls_capability_t::max_mark capability.
-	 */
-	uint64_t mark;
-
-} odp_pmr_create_opt_t;
 
 /**
  * Initialize packet matching rule parameters
