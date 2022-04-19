@@ -604,6 +604,49 @@ static void classification_test_pmr_term_ipv6_proto(void)
 	classification_test_pmr_term_proto(TEST_IPV6);
 }
 
+static void classification_test_pmr_term_dscp(odp_bool_t ipv6)
+{
+	odp_packet_t pkt;
+	uint8_t val;
+	uint8_t mask;
+	odp_pmr_param_t pmr_param;
+	cls_packet_info_t pkt_info;
+
+	val  = DSCP_CLASS4;
+	mask = 0x3f;
+
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_IP_DSCP;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
+
+	pkt_info = default_pkt_info;
+	pkt_info.ipv6    = ipv6;
+	pkt_info.l4_type = CLS_PKT_L4_UDP;
+	pkt_info.dscp    = DSCP_CLASS4;
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+
+	test_pmr(&pmr_param, pkt, MATCH);
+
+	pkt_info.dscp = 0;
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+
+	test_pmr(&pmr_param, pkt, NO_MATCH);
+}
+
+static void classification_test_pmr_term_ipv4_dscp(void)
+{
+	classification_test_pmr_term_dscp(TEST_IPV4);
+}
+
+static void classification_test_pmr_term_ipv6_dscp(void)
+{
+	classification_test_pmr_term_dscp(TEST_IPV6);
+}
+
 static void classification_test_pmr_term_dmac(void)
 {
 	odp_packet_t pkt;
@@ -1817,6 +1860,11 @@ static int check_capa_ip_proto(void)
 	return cls_capa.supported_terms.bit.ip_proto;
 }
 
+static int check_capa_ip_dscp(void)
+{
+	return cls_capa.supported_terms.bit.ip_dscp;
+}
+
 static int check_capa_dmac(void)
 {
 	return cls_capa.supported_terms.bit.dmac;
@@ -1963,6 +2011,10 @@ odp_testinfo_t classification_suite_pmr[] = {
 				  check_capa_ip_proto),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipv6_proto,
 				  check_capa_ip_proto),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipv4_dscp,
+				  check_capa_ip_dscp),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipv6_dscp,
+				  check_capa_ip_dscp),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_dmac,
 				  check_capa_dmac),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_pool_set,
