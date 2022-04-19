@@ -417,7 +417,7 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 		ip->tot_len = odp_cpu_to_be_16(l3_len);
 		ip->ttl = DEFAULT_TTL;
 		ip->frag_offset = 0;
-		ip->tos = 0;
+		ip->tos = pkt_info.dscp << ODPH_IP_TOS_DSCP_SHIFT;
 		odp_packet_has_ipv4_set(pkt, 1);
 		odph_ipv4_csum_update(pkt);
 	} else {
@@ -425,7 +425,8 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 		odp_packet_has_ipv6_set(pkt, 1);
 		ipv6 = (odph_ipv6hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 		version     = ODPH_IPV6        << ODPH_IPV6HDR_VERSION_SHIFT;
-		tc          = DEFAULT_TOS << ODPH_IPV6HDR_TC_SHIFT;
+		tc   = pkt_info.dscp << ODPH_IP_TOS_DSCP_SHIFT;
+		tc <<= ODPH_IPV6HDR_TC_SHIFT;
 		flow        = seqno       << ODPH_IPV6HDR_FLOW_LABEL_SHIFT;
 		ver_tc_flow = version | tc | flow;
 
