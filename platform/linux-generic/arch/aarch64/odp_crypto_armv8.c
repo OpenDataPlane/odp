@@ -724,7 +724,6 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 		 * We cannot fail since odp_crypto_op() has already processed
 		 * the packet. Let's indicate error in the result instead.
 		 */
-		packet_hdr(out_pkt)->p.flags.crypto_err = 1;
 		packet_result.ok = false;
 	}
 
@@ -916,8 +915,6 @@ int crypto_int(odp_packet_t pkt_in,
 	odp_crypto_generic_session_t *session;
 	odp_bool_t allocated = false;
 	odp_packet_t out_pkt = *pkt_out;
-	odp_packet_hdr_t *pkt_hdr;
-	odp_bool_t ok;
 
 	session = (odp_crypto_generic_session_t *)(intptr_t)param->session;
 
@@ -959,11 +956,9 @@ int crypto_int(odp_packet_t pkt_in,
 	}
 
 	/* Invoke the crypto function */
-	ok = session->func(out_pkt, param, session);
+	(void)session->func(out_pkt, param, session);
 
 	packet_subtype_set(out_pkt, ODP_EVENT_PACKET_CRYPTO);
-	pkt_hdr = packet_hdr(out_pkt);
-	pkt_hdr->p.flags.crypto_err = !ok;
 
 	/* Synchronous, simply return results */
 	*pkt_out = out_pkt;
