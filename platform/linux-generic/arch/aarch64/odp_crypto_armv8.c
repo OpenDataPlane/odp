@@ -95,9 +95,9 @@ typedef struct odp_crypto_generic_session_t odp_crypto_generic_session_t;
  * Algorithm handler function prototype
  */
 typedef
-odp_bool_t (*crypto_func_t)(odp_packet_t pkt,
-			    const odp_crypto_packet_op_param_t *param,
-			    odp_crypto_generic_session_t *session);
+void (*crypto_func_t)(odp_packet_t pkt,
+		      const odp_crypto_packet_op_param_t *param,
+		      odp_crypto_generic_session_t *session);
 
 /**
  * Per crypto session data structure
@@ -204,13 +204,12 @@ static inline void set_crypto_op_result_ok(odp_packet_t pkt)
 			     ODP_CRYPTO_ALG_ERR_NONE);
 }
 
-static odp_bool_t
+static void
 null_crypto_routine(odp_packet_t pkt ODP_UNUSED,
 		    const odp_crypto_packet_op_param_t *param ODP_UNUSED,
 		    odp_crypto_generic_session_t *session ODP_UNUSED)
 {
 	set_crypto_op_result_ok(pkt);
-	return true;
 }
 
 static inline void copy_aad(uint8_t *dst, uint8_t *src, uint32_t len)
@@ -225,9 +224,9 @@ static inline void copy_aad(uint8_t *dst, uint8_t *src, uint32_t len)
 }
 
 static
-odp_bool_t aes_gcm_encrypt(odp_packet_t pkt,
-			   const odp_crypto_packet_op_param_t *param,
-			   odp_crypto_generic_session_t *session)
+void aes_gcm_encrypt(odp_packet_t pkt,
+		     const odp_crypto_packet_op_param_t *param,
+		     odp_crypto_generic_session_t *session)
 {
 	armv8_cipher_state_t cs = {
 		.counter = {
@@ -257,7 +256,7 @@ odp_bool_t aes_gcm_encrypt(odp_packet_t pkt,
 	else if (session->p.cipher_iv.data)
 		iv_ptr = session->cipher.iv_data;
 	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
+		goto err;
 #else
 	iv_ptr = param->cipher_iv_ptr;
 	ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
@@ -316,19 +315,18 @@ odp_bool_t aes_gcm_encrypt(odp_packet_t pkt,
 	}
 
 	set_crypto_op_result_ok(pkt);
-	return true;
+	return;
 
 err:
 	set_crypto_op_result(pkt,
 			     ODP_CRYPTO_ALG_ERR_DATA_SIZE,
 			     ODP_CRYPTO_ALG_ERR_NONE);
-	return false;
 }
 
 static
-odp_bool_t aes_gcm_decrypt(odp_packet_t pkt,
-			   const odp_crypto_packet_op_param_t *param,
-			   odp_crypto_generic_session_t *session)
+void aes_gcm_decrypt(odp_packet_t pkt,
+		     const odp_crypto_packet_op_param_t *param,
+		     odp_crypto_generic_session_t *session)
 {
 	armv8_cipher_state_t cs = {
 		.counter = {
@@ -358,7 +356,7 @@ odp_bool_t aes_gcm_decrypt(odp_packet_t pkt,
 	else if (session->p.cipher_iv.data)
 		iv_ptr = session->cipher.iv_data;
 	else
-		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
+		goto err;
 #else
 	iv_ptr = param->cipher_iv_ptr;
 	ODP_ASSERT(session->p.cipher_iv_len == 0 || iv_ptr != NULL);
@@ -416,13 +414,12 @@ odp_bool_t aes_gcm_decrypt(odp_packet_t pkt,
 		odp_packet_copy_from_mem(pkt, in_pos, in_len, data);
 
 	set_crypto_op_result_ok(pkt);
-	return true;
+	return;
 
 err:
 	set_crypto_op_result(pkt,
 			     ODP_CRYPTO_ALG_ERR_NONE,
 			     ODP_CRYPTO_ALG_ERR_ICV_CHECK);
-	return false;
 }
 
 static int process_aes_gcm_param(odp_crypto_generic_session_t *session)
@@ -956,7 +953,7 @@ int crypto_int(odp_packet_t pkt_in,
 	}
 
 	/* Invoke the crypto function */
-	(void)session->func(out_pkt, param, session);
+	session->func(out_pkt, param, session);
 
 	packet_subtype_set(out_pkt, ODP_EVENT_PACKET_CRYPTO);
 
