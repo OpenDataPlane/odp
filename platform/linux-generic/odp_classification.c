@@ -171,6 +171,7 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 	capability->supported_terms.bit.vlan_id_x = 1;
 	capability->supported_terms.bit.dmac = 1;
 	capability->supported_terms.bit.ip_proto = 1;
+	capability->supported_terms.bit.ip_dscp = 1;
 	capability->supported_terms.bit.udp_dport = 1;
 	capability->supported_terms.bit.udp_sport = 1;
 	capability->supported_terms.bit.tcp_dport = 1;
@@ -645,6 +646,8 @@ static int pmr_create_term(pmr_term_value_t *value,
 
 	switch (term) {
 	case ODP_PMR_IPPROTO:
+		/* Fall through */
+	case ODP_PMR_IP_DSCP:
 		size = 1;
 		break;
 
@@ -873,6 +876,28 @@ static inline int verify_pmr_ipv6_next_hdr(const _odp_ipv6hdr_t *ipv6, pmr_term_
 
 	next_hdr = ipv6->next_hdr;
 	if (term_value->match.value == (next_hdr & term_value->match.mask))
+		return 1;
+
+	return 0;
+}
+
+static inline int verify_pmr_ipv4_dscp(const _odp_ipv4hdr_t *ipv4, pmr_term_value_t *term_value)
+{
+	uint8_t dscp;
+
+	dscp = _ODP_IPV4HDR_DSCP(ipv4->tos);
+	if (term_value->match.value == (dscp & term_value->match.mask))
+		return 1;
+
+	return 0;
+}
+
+static inline int verify_pmr_ipv6_dscp(const _odp_ipv6hdr_t *ipv6, pmr_term_value_t *term_value)
+{
+	uint8_t dscp;
+
+	dscp = _ODP_IPV6HDR_DSCP(odp_be_to_cpu_32(ipv6->ver_tc_flow));
+	if (term_value->match.value == (dscp & term_value->match.mask))
 		return 1;
 
 	return 0;
@@ -1305,6 +1330,17 @@ static int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr,
 				pmr_failure = 1;
 			}
 			break;
+		case ODP_PMR_IP_DSCP:
+			if (ipv4) {
+				if (!verify_pmr_ipv4_dscp(ipv4, term_value))
+					pmr_failure = 1;
+			} else if (ipv6) {
+				if (!verify_pmr_ipv6_dscp(ipv6, term_value))
+					pmr_failure = 1;
+			} else {
+				pmr_failure = 1;
+			}
+			break;
 		case ODP_PMR_UDP_DPORT:
 			if (!verify_pmr_udp_dport(pkt_addr, pkt_hdr,
 						  term_value))
@@ -1404,6 +1440,9 @@ static const char *format_pmr_name(odp_cls_pmr_term_t pmr_term)
 		break;
 	case ODP_PMR_IPPROTO:
 		name = "PMR_IPPROTO";
+		break;
+	case ODP_PMR_IP_DSCP:
+		name = "PMR_IP_DSCP";
 		break;
 	case ODP_PMR_UDP_DPORT:
 		name = "PMR_UDP_DPORT";
