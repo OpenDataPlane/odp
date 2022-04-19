@@ -13,6 +13,8 @@
 #define MAX_NUM_UDP 4
 #define MARK_IP     1
 #define MARK_UDP    2
+#define TEST_IPV4   false
+#define TEST_IPV6   true
 
 static odp_pool_t pkt_pool;
 /** sequence number of IP packets */
@@ -560,7 +562,7 @@ static void classification_test_pmr_term_udp_sport(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
-static void classification_test_pmr_term_ipproto(void)
+static void classification_test_pmr_term_proto(odp_bool_t ipv6)
 {
 	odp_packet_t pkt;
 	uint8_t val;
@@ -578,16 +580,28 @@ static void classification_test_pmr_term_ipproto(void)
 	pmr_param.val_sz = sizeof(val);
 
 	pkt_info = default_pkt_info;
+	pkt_info.ipv6 = ipv6;
 	pkt_info.l4_type = CLS_PKT_L4_UDP;
 	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
 	test_pmr(&pmr_param, pkt, MATCH);
 
-	pkt = create_packet(default_pkt_info);
+	pkt_info.l4_type = CLS_PKT_L4_TCP;
+	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
 	test_pmr(&pmr_param, pkt, NO_MATCH);
+}
+
+static void classification_test_pmr_term_ipv4_proto(void)
+{
+	classification_test_pmr_term_proto(TEST_IPV4);
+}
+
+static void classification_test_pmr_term_ipv6_proto(void)
+{
+	classification_test_pmr_term_proto(TEST_IPV6);
 }
 
 static void classification_test_pmr_term_dmac(void)
@@ -1945,7 +1959,9 @@ odp_testinfo_t classification_suite_pmr[] = {
 				  check_capa_icmp_code),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_icmp_id,
 				  check_capa_icmp_id),
-	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipproto,
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipv4_proto,
+				  check_capa_ip_proto),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_ipv6_proto,
 				  check_capa_ip_proto),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_dmac,
 				  check_capa_dmac),
