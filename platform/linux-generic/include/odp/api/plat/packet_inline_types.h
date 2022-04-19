@@ -115,7 +115,7 @@ typedef union {
 	uint32_t all_flags;
 
 	struct {
-		uint32_t reserved1:      6;
+		uint32_t reserved1:      7;
 
 	/*
 	 * Init flags
@@ -146,14 +146,13 @@ typedef union {
 		uint32_t udp_err:        1; /* UDP error */
 		uint32_t sctp_err:       1; /* SCTP error */
 		uint32_t l4_chksum_err:  1; /* L4 checksum error */
-		uint32_t crypto_err:     1; /* Crypto packet operation error */
 	};
 
 	/* Flag groups */
 	struct {
-		uint32_t reserved2:      6;
+		uint32_t reserved2:      7;
 		uint32_t other:         18; /* All other flags */
-		uint32_t error:          8; /* All error flags */
+		uint32_t error:          7; /* All error flags */
 	} all;
 
 } _odp_packet_flags_t;
