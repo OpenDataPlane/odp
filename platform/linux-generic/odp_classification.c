@@ -856,18 +856,23 @@ static inline int verify_pmr_packet_len(odp_packet_hdr_t *pkt_hdr,
 	return 0;
 }
 
-static inline int verify_pmr_ip_proto(const uint8_t *pkt_addr,
-				      odp_packet_hdr_t *pkt_hdr,
-				      pmr_term_value_t *term_value)
+static inline int verify_pmr_ipv4_proto(const _odp_ipv4hdr_t *ipv4, pmr_term_value_t *term_value)
 {
-	const _odp_ipv4hdr_t *ip;
 	uint8_t proto;
 
-	if (!pkt_hdr->p.input_flags.ipv4)
-		return 0;
-	ip = (const _odp_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
-	proto = ip->proto;
+	proto = ipv4->proto;
 	if (term_value->match.value == (proto & term_value->match.mask))
+		return 1;
+
+	return 0;
+}
+
+static inline int verify_pmr_ipv6_next_hdr(const _odp_ipv6hdr_t *ipv6, pmr_term_value_t *term_value)
+{
+	uint8_t next_hdr;
+
+	next_hdr = ipv6->next_hdr;
+	if (term_value->match.value == (next_hdr & term_value->match.mask))
 		return 1;
 
 	return 0;
@@ -1241,6 +1246,8 @@ static int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr,
 	int num_pmr;
 	int i;
 	pmr_term_value_t *term_value;
+	const _odp_ipv4hdr_t *ipv4 = NULL;
+	const _odp_ipv6hdr_t *ipv6 = NULL;
 
 	/* Locking is not required as PMR rules for in-flight packets
 	delivery during a PMR change is indeterminate*/
@@ -1248,6 +1255,11 @@ static int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr,
 	if (!pmr->s.valid)
 		return 0;
 	num_pmr = pmr->s.num_pmr;
+
+	if (pkt_hdr->p.input_flags.ipv4)
+		ipv4 = (const _odp_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
+	if (pkt_hdr->p.input_flags.ipv6)
+		ipv6 = (const _odp_ipv6hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
 
 	/* Iterate through list of PMR Term values in a pmr_t */
 	for (i = 0; i < num_pmr; i++) {
@@ -1283,9 +1295,15 @@ static int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr,
 				pmr_failure = 1;
 			break;
 		case ODP_PMR_IPPROTO:
-			if (!verify_pmr_ip_proto(pkt_addr, pkt_hdr,
-						 term_value))
+			if (ipv4) {
+				if (!verify_pmr_ipv4_proto(ipv4, term_value))
+					pmr_failure = 1;
+			} else if (ipv6) {
+				if (!verify_pmr_ipv6_next_hdr(ipv6, term_value))
+					pmr_failure = 1;
+			} else {
 				pmr_failure = 1;
+			}
 			break;
 		case ODP_PMR_UDP_DPORT:
 			if (!verify_pmr_udp_dport(pkt_addr, pkt_hdr,
