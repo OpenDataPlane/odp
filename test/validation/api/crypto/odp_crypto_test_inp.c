@@ -353,9 +353,6 @@ static int alg_packet_op(odp_packet_t pkt,
 		return rc;
 	}
 
-	if (!result.ok)
-		CU_ASSERT(odp_packet_has_error(pkt));
-
 	*ok = result.ok;
 
 	return 0;
