@@ -596,11 +596,8 @@ int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
 	return 0;
 }
 
-int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
-			uint32_t num_qos,
-			uint8_t qos_table[],
-			odp_cos_t cos_table[],
-			odp_bool_t l3_preference)
+int ODP_DEPRECATE(odp_cos_with_l3_qos)(odp_pktio_t pktio_in, uint32_t num_qos, uint8_t qos_table[],
+				       odp_cos_t cos_table[], odp_bool_t l3_preference)
 {
 	pmr_l3_cos_t *l3_cos;
 	uint32_t i;

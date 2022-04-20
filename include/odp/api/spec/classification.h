@@ -23,6 +23,7 @@ extern "C" {
 #include <odp/api/pool_types.h>
 #include <odp/api/std_types.h>
 #include <odp/api/threshold.h>
+#include <odp/api/deprecated.h>
 
 /** @defgroup odp_classification ODP CLASSIFICATION
  *  Packet input classification.
@@ -802,8 +803,9 @@ int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
 			     odp_cos_t cos_table[]);
 
 /**
- * Request to override per-port class of service
- * based on Layer-3 priority field if present.
+ * Request to override per-port class of service based on Layer-3 priority field if present.
+ *
+ * @deprecated Use #ODP_PMR_IP_DSCP instead.
  *
  * @param pktio_in       Ingress port identifier.
  * @param num_qos        Number of allowed Layer-3 QoS levels.
@@ -814,14 +816,9 @@ int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
  *
  * @retval  0 on success
  * @retval <0 on failure
- *
- * @note Optional.
  */
-int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
-			uint32_t num_qos,
-			uint8_t qos_table[],
-			odp_cos_t cos_table[],
-			odp_bool_t l3_preference);
+int ODP_DEPRECATE(odp_cos_with_l3_qos)(odp_pktio_t pktio_in, uint32_t num_qos, uint8_t qos_table[],
+				       odp_cos_t cos_table[], odp_bool_t l3_preference);
 
 /**
  * Get statistics for a CoS
