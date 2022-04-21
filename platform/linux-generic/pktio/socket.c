@@ -266,7 +266,6 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 		uint16_t pkt_len = msgvec[i].msg_len;
 		int ret;
-		uint64_t l4_part_sum = 0;
 
 		if (odp_unlikely(msgvec[i].msg_hdr.msg_flags & MSG_TRUNC)) {
 			odp_packet_free(pkt);
@@ -294,9 +293,9 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				base = buf;
 			}
 
-			if (_odp_packet_parse_common(&pkt_hdr->p, base, pkt_len,
+			if (_odp_packet_parse_common(pkt_hdr, base, pkt_len,
 						     seg_len, layer, chksums,
-						     &l4_part_sum, opt) < 0) {
+						     opt) < 0) {
 				odp_packet_free(pkt);
 				continue;
 			}
@@ -318,10 +317,6 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		}
 
 		pkt_hdr->input = pktio_entry->s.handle;
-
-		if (layer >= ODP_PROTO_LAYER_L4)
-			_odp_packet_l4_chksum(pkt_hdr, chksums, l4_part_sum);
-
 		packet_set_ts(pkt_hdr, ts);
 
 		pkt_table[nb_rx++] = pkt;

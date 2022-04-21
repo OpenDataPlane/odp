@@ -77,17 +77,19 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
  * Returns 0 on success, 1 on packet errors, and -1 if the packet should be
  * dropped.
  */
-static inline int _odp_packet_parse_common(packet_parser_t *prs,
+static inline int _odp_packet_parse_common(odp_packet_hdr_t *pkt_hdr,
 					   const uint8_t *ptr,
 					   uint32_t frame_len, uint32_t seg_len,
 					   int layer,
 					   odp_proto_chksums_t chksums,
-					   uint64_t *l4_part_sum,
 					   odp_pktin_config_opt_t opt)
 {
+	int r;
 	uint32_t offset;
 	uint16_t ethtype;
 	const uint8_t *parseptr;
+	packet_parser_t *prs = &pkt_hdr->p;
+	uint64_t l4_part_sum = 0;
 
 	parseptr = ptr;
 	offset = 0;
@@ -100,9 +102,14 @@ static inline int _odp_packet_parse_common(packet_parser_t *prs,
 
 	ethtype = _odp_parse_eth(prs, &parseptr, &offset, frame_len);
 
-	return _odp_packet_parse_common_l3_l4(prs, parseptr, offset, frame_len,
-					      seg_len, layer, ethtype, chksums,
-					      l4_part_sum, opt);
+	r = _odp_packet_parse_common_l3_l4(prs, parseptr, offset, frame_len,
+					   seg_len, layer, ethtype, chksums,
+					   &l4_part_sum, opt);
+
+	if (!r && layer >= ODP_PROTO_LAYER_L4)
+		r = _odp_packet_l4_chksum(pkt_hdr, chksums, l4_part_sum);
+
+	return r;
 }
 
 #ifdef __cplusplus

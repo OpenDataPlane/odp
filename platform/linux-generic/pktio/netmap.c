@@ -842,7 +842,6 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 		netmap_slot_t slot;
 		uint16_t len;
 		const uint8_t *buf;
-		uint64_t l4_part_sum = 0;
 
 		slot = slot_tbl[i];
 		len = slot.len;
@@ -863,8 +862,8 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 		}
 
 		if (layer) {
-			if (_odp_packet_parse_common(&pkt_hdr->p, buf, len, len,
-						     layer, chksums, &l4_part_sum, opt) < 0) {
+			if (_odp_packet_parse_common(pkt_hdr, buf, len, len,
+						     layer, chksums, opt) < 0) {
 				odp_packet_free(pkt);
 				continue;
 			}
@@ -879,11 +878,8 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 		}
 
 		pkt_hdr->input = pktio_entry->s.handle;
-
-		if (layer >= ODP_PROTO_LAYER_L4)
-			_odp_packet_l4_chksum(pkt_hdr, chksums, l4_part_sum);
-
 		packet_set_ts(pkt_hdr, ts);
+
 		pkt_tbl[num_rx++] = pkt;
 	}
 
