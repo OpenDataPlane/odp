@@ -297,11 +297,9 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		}
 
 		if (layer) {
-			uint64_t l4_part_sum = 0;
-
-			ret = _odp_packet_parse_common(&pkt_hdr->p, data, pkt_len,
+			ret = _odp_packet_parse_common(pkt_hdr, data, pkt_len,
 						       pkt_len, layer, chksums,
-						       &l4_part_sum, opt);
+						       opt);
 			if (ret)
 				errors++;
 
@@ -334,9 +332,6 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 					pkt_hdr = packet_hdr(new_pkt);
 				}
 			}
-
-			if (layer >= ODP_PROTO_LAYER_L4)
-				_odp_packet_l4_chksum(pkt_hdr, chksums, l4_part_sum);
 		}
 
 		packet_set_ts(pkt_hdr, ts);

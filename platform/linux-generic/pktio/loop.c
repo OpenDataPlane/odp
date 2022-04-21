@@ -191,7 +191,6 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			uint8_t buf[PARSE_BYTES];
 			int ret;
 			uint32_t seg_len = odp_packet_seg_len(pkt);
-			uint64_t l4_part_sum = 0;
 
 			/* Make sure there is enough data for the packet
 			 * parser in the case of a segmented packet. */
@@ -205,9 +204,9 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			}
 
 			packet_parse_reset(pkt_hdr, 1);
-			ret = _odp_packet_parse_common(&pkt_hdr->p, pkt_addr, pkt_len,
-						       seg_len, layer, chksums,
-						       &l4_part_sum, opt);
+			ret = _odp_packet_parse_common(pkt_hdr, pkt_addr,
+						       pkt_len, seg_len, layer,
+						       chksums, opt);
 			if (ret)
 				errors++;
 
@@ -242,9 +241,6 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 					pkt_hdr = packet_hdr(new_pkt);
 				}
 			}
-
-			if (layer >= ODP_PROTO_LAYER_L4)
-				_odp_packet_l4_chksum(pkt_hdr, chksums, l4_part_sum);
 		}
 
 		packet_set_ts(pkt_hdr, ts);
