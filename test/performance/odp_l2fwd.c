@@ -345,7 +345,8 @@ static inline int copy_packets(odp_packet_t *pkt_tbl, int pkts)
 /*
  * Return number of packets remaining in the pkt_tbl
  */
-static int process_extra_features(odp_packet_t *pkt_tbl, int pkts, stats_t *stats)
+static inline int process_extra_features(odp_packet_t *pkt_tbl, int pkts,
+					 stats_t *stats)
 {
 	if (odp_unlikely(gbl_args->appl.extra_feat)) {
 		if (gbl_args->appl.packet_copy) {
@@ -376,12 +377,12 @@ static int process_extra_features(odp_packet_t *pkt_tbl, int pkts, stats_t *stat
 	return pkts;
 }
 
-static void send_packets(odp_packet_t *pkt_tbl,
-			 int pkts,
-			 int use_event_queue,
-			 odp_queue_t tx_queue,
-			 odp_pktout_queue_t pktout_queue,
-			 stats_t *stats)
+static inline void send_packets(odp_packet_t *pkt_tbl,
+				int pkts,
+				int use_event_queue,
+				odp_queue_t tx_queue,
+				odp_pktout_queue_t pktout_queue,
+				stats_t *stats)
 {
 	int sent;
 	unsigned int tx_drops;
