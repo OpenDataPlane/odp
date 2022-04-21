@@ -853,6 +853,15 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 		pkt = pkt_tbl[i];
 		pkt_hdr = packet_hdr(pkt);
 
+		pull_tail(pkt_hdr, max_len - len);
+		if (frame_offset)
+			pull_head(pkt_hdr, frame_offset);
+
+		if (odp_packet_copy_from_mem(pkt, 0, len, slot.buf) != 0) {
+			odp_packet_free(pkt);
+			continue;
+		}
+
 		if (layer) {
 			if (_odp_packet_parse_common(&pkt_hdr->p, buf, len, len,
 						     layer, chksums, &l4_part_sum, opt) < 0) {
@@ -868,13 +877,6 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 				}
 			}
 		}
-
-		pull_tail(pkt_hdr, max_len - len);
-		if (frame_offset)
-			pull_head(pkt_hdr, frame_offset);
-
-		if (odp_packet_copy_from_mem(pkt, 0, len, slot.buf) != 0)
-			break;
 
 		pkt_hdr->input = pktio_entry->s.handle;
 

@@ -218,27 +218,6 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 
 		hdr = packet_hdr(pkt);
 
-		if (layer) {
-			if (_odp_packet_parse_common(&hdr->p, pkt_buf, pkt_len,
-						     pkt_len, layer, chksums,
-						     &l4_part_sum, opt) < 0) {
-				odp_packet_free(pkt);
-				tp_hdr->tp_status = TP_STATUS_KERNEL;
-				frame_num = next_frame_num;
-				continue;
-			}
-
-			if (pktio_cls_enabled(pktio_entry)) {
-				if (_odp_cls_classify_packet(pktio_entry, pkt_buf,
-							     &pool, hdr)) {
-					odp_packet_free(pkt);
-					tp_hdr->tp_status = TP_STATUS_KERNEL;
-					frame_num = next_frame_num;
-					continue;
-				}
-			}
-		}
-
 		if (frame_offset)
 			pull_head(hdr, frame_offset);
 
@@ -287,6 +266,27 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 
 			tci   = type + 1;
 			*tci  = odp_cpu_to_be_16(tp_hdr->tp_vlan_tci);
+		}
+
+		if (layer) {
+			if (_odp_packet_parse_common(&hdr->p, pkt_buf, pkt_len,
+						     pkt_len, layer, chksums,
+						     &l4_part_sum, opt) < 0) {
+				odp_packet_free(pkt);
+				tp_hdr->tp_status = TP_STATUS_KERNEL;
+				frame_num = next_frame_num;
+				continue;
+			}
+
+			if (pktio_cls_enabled(pktio_entry)) {
+				if (_odp_cls_classify_packet(pktio_entry, pkt_buf,
+							     &pool, hdr)) {
+					odp_packet_free(pkt);
+					tp_hdr->tp_status = TP_STATUS_KERNEL;
+					frame_num = next_frame_num;
+					continue;
+				}
+			}
 		}
 
 		hdr->input = pktio_entry->s.handle;
