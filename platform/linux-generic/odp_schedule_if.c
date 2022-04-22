@@ -203,6 +203,11 @@ void odp_schedule_order_lock_wait(uint32_t lock_index)
 	_odp_sched_api->schedule_order_lock_wait(lock_index);
 }
 
+void odp_schedule_order_wait(void)
+{
+	_odp_sched_api->schedule_order_wait();
+}
+
 void odp_schedule_print(void)
 {
 	_odp_sched_api->schedule_print();

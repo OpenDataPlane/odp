@@ -1979,6 +1979,7 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	capa->max_queues = sched->max_queues;
 	capa->max_queue_size = _odp_queue_glb->config.max_queue_size;
 	capa->max_flow_id = BUF_HDR_MAX_FLOW_ID;
+	capa->order_wait = ODP_SUPPORT_YES;
 
 	return 0;
 }
@@ -2117,5 +2118,6 @@ const schedule_api_t _odp_schedule_basic_api = {
 	.schedule_order_unlock_lock = schedule_order_unlock_lock,
 	.schedule_order_lock_start  = schedule_order_lock_start,
 	.schedule_order_lock_wait   = schedule_order_lock_wait,
+	.schedule_order_wait      = order_lock,
 	.schedule_print           = schedule_print
 };

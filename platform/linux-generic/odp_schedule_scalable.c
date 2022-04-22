@@ -2167,6 +2167,7 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 	capa->max_prios = schedule_num_prio();
 	capa->max_queues = CONFIG_MAX_SCHED_QUEUES;
 	capa->max_queue_size = 0;
+	capa->order_wait = ODP_SUPPORT_YES;
 
 	return 0;
 }
@@ -2233,5 +2234,6 @@ const schedule_api_t _odp_schedule_scalable_api = {
 	.schedule_order_unlock_lock	= schedule_order_unlock_lock,
 	.schedule_order_lock_start	= schedule_order_lock_start,
 	.schedule_order_lock_wait	= schedule_order_lock_wait,
+	.schedule_order_wait		= order_lock,
 	.schedule_print			= schedule_print
 };
