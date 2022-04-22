@@ -233,7 +233,8 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 					odp_packet_free(pkt);
 
 					if (new_pkt == ODP_PACKET_INVALID) {
-						pktio_entry->s.stats.in_discards++;
+						odp_atomic_inc_u64(&pktio_entry->s
+								   .stats_extra.in_discards);
 						continue;
 					}
 
