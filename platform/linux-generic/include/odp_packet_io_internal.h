@@ -128,7 +128,7 @@ struct pktio_entry {
 	classifier_t cls;		/**< classifier linked with this pktio*/
 	/* Driver level statistics counters */
 	odp_pktio_stats_t stats;
-	/* Statistics counters used outside drivers */
+	/* Statistics counters used also outside drivers */
 	struct {
 		odp_atomic_u64_t in_discards;
 		odp_atomic_u64_t out_discards;
