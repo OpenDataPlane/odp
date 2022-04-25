@@ -850,18 +850,22 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 
 		odp_prefetch(slot.buf);
 
-		pkt = pkt_tbl[num_rx];
+		pkt = pkt_tbl[i];
 		pkt_hdr = packet_hdr(pkt);
 
 		if (layer) {
 			if (_odp_packet_parse_common(&pkt_hdr->p, buf, len, len,
-						     layer, chksums, &l4_part_sum, opt) < 0)
+						     layer, chksums, &l4_part_sum, opt) < 0) {
+				odp_packet_free(pkt);
 				continue;
+			}
 
 			if (pktio_cls_enabled(pktio_entry)) {
 				if (_odp_cls_classify_packet(pktio_entry, buf, &pool,
-							     pkt_hdr))
+							     pkt_hdr)) {
+					odp_packet_free(pkt);
 					continue;
+				}
 			}
 		}
 
@@ -878,11 +882,8 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 			_odp_packet_l4_chksum(pkt_hdr, chksums, l4_part_sum);
 
 		packet_set_ts(pkt_hdr, ts);
-		num_rx++;
+		pkt_tbl[num_rx++] = pkt;
 	}
-
-	if (num_rx < num)
-		odp_packet_free_multi(&pkt_tbl[num_rx], num - num_rx);
 
 	return num_rx;
 }
