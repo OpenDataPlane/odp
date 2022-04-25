@@ -315,10 +315,19 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 		}
 
 		if (pktio_cls_enabled(pktio_entry)) {
+			odp_pool_t new_pool;
+
 			if (_odp_cls_classify_packet(pktio_entry, data,
-						     &pkt_priv(pktio_entry)->pool,
-						     pkt_hdr)) {
+						     &new_pool, pkt_hdr)) {
 				odp_packet_free(pkt);
+				return ODP_PACKET_INVALID;
+			}
+
+			if (odp_unlikely(_odp_pktio_packet_to_pool(
+				    &pkt, &pkt_hdr, new_pool))) {
+				odp_packet_free(pkt);
+				odp_atomic_inc_u64(
+					&pktio_entry->s.stats_extra.in_discards);
 				return ODP_PACKET_INVALID;
 			}
 		}
