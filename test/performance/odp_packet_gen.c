@@ -30,9 +30,13 @@
 #define RAND_16BIT_WORDS  128
 /* Max retries to generate random data */
 #define MAX_RAND_RETRIES  1000
+/* Maximum pktio index table size */
+#define MAX_PKTIO_INDEXES 1024
 
 /* Minimum number of packets to receive in CI test */
 #define MIN_RX_PACKETS_CI 800
+
+ODP_STATIC_ASSERT(MAX_PKTIOS <= UINT8_MAX, "Interface index must fit into uint8_t\n");
 
 typedef struct test_options_t {
 	uint64_t gap_nsec;
@@ -124,6 +128,9 @@ typedef struct test_global_t {
 		int started;
 
 	} pktio[MAX_PKTIOS];
+
+	/* Interface lookup table. Table index is pktio_index of the API. */
+	uint8_t if_from_pktio_idx[MAX_PKTIO_INDEXES];
 
 } test_global_t;
 
@@ -621,7 +628,7 @@ static int open_pktios(test_global_t *global)
 	odp_pktout_queue_param_t pktout_param;
 	char *name;
 	uint32_t i, seg_len;
-	int j;
+	int j, pktio_idx;
 	test_options_t *test_options = &global->test_options;
 	uint32_t num_rx = test_options->num_rx;
 	int num_tx = test_options->num_tx;
@@ -729,6 +736,9 @@ static int open_pktios(test_global_t *global)
 
 	global->pool = pool;
 
+	if (odp_pktio_max_index() >= MAX_PKTIO_INDEXES)
+		printf("Warning: max pktio index (%u) is too large\n", odp_pktio_max_index());
+
 	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode  = ODP_PKTIN_MODE_SCHED;
 	pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
@@ -749,6 +759,13 @@ static int open_pktios(test_global_t *global)
 		global->pktio[i].pktio = pktio;
 
 		odp_pktio_print(pktio);
+
+		pktio_idx = odp_pktio_index(pktio);
+		if (pktio_idx < 0 || pktio_idx >= MAX_PKTIO_INDEXES) {
+			printf("Error (%s): Bad pktio index: %i\n", name, pktio_idx);
+			return -1;
+		}
+		global->if_from_pktio_idx[pktio_idx] = i;
 
 		if (odp_pktio_capability(pktio, &pktio_capa)) {
 			printf("Error (%s): Pktio capability failed.\n", name);
@@ -1056,8 +1073,11 @@ static int rx_thread(void *arg)
 			/* All packets from the same queue are from the same pktio interface */
 			int index = odp_packet_input_index(odp_packet_from_event(ev[0]));
 
-			if (index >= 0)
-				global->stat[thr].pktio[index].rx_packets += num;
+			if (index >= 0) {
+				int if_idx = global->if_from_pktio_idx[index];
+
+				global->stat[thr].pktio[if_idx].rx_packets += num;
+			}
 		}
 
 		odp_event_free_multi(ev, num);
