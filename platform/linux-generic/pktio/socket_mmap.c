@@ -278,11 +278,24 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			}
 
 			if (pktio_cls_enabled(pktio_entry)) {
+				odp_pool_t new_pool;
+
 				if (_odp_cls_classify_packet(pktio_entry, pkt_buf,
-							     &pool, hdr)) {
+							     &new_pool, hdr)) {
 					odp_packet_free(pkt);
 					tp_hdr->tp_status = TP_STATUS_KERNEL;
 					frame_num = next_frame_num;
+					continue;
+				}
+
+				if (odp_unlikely(_odp_pktio_packet_to_pool(
+					    &pkt, &hdr, new_pool))) {
+					odp_packet_free(pkt);
+					tp_hdr->tp_status = TP_STATUS_KERNEL;
+					frame_num = next_frame_num;
+					odp_atomic_inc_u64(
+						&pktio_entry->s.stats_extra
+							 .in_discards);
 					continue;
 				}
 			}

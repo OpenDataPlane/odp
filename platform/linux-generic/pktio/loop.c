@@ -216,7 +216,6 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			}
 
 			if (pktio_cls_enabled(pktio_entry)) {
-				odp_packet_t new_pkt;
 				odp_pool_t new_pool;
 
 				ret = _odp_cls_classify_packet(pktio_entry, pkt_addr,
@@ -226,19 +225,13 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 					continue;
 				}
 
-				if (new_pool != odp_packet_pool(pkt)) {
-					new_pkt = odp_packet_copy(pkt, new_pool);
-
+				if (odp_unlikely(_odp_pktio_packet_to_pool(
+					    &pkt, &pkt_hdr, new_pool))) {
 					odp_packet_free(pkt);
-
-					if (new_pkt == ODP_PACKET_INVALID) {
-						odp_atomic_inc_u64(&pktio_entry->s
-								   .stats_extra.in_discards);
-						continue;
-					}
-
-					pkt = new_pkt;
-					pkt_hdr = packet_hdr(new_pkt);
+					odp_atomic_inc_u64(
+						&pktio_entry->s.stats_extra
+							 .in_discards);
+					continue;
 				}
 			}
 		}

@@ -334,7 +334,6 @@ static uint32_t process_received(pktio_entry_t *pktio_entry, xdp_sock_t *sock, p
 	int ret;
 	const odp_proto_chksums_t in_chksums = pktio_entry->s.in_chksums;
 	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
-	odp_pool_t *pool_hdl = &pool->pool_hdl;
 	uint64_t errors = 0U, octets = 0U;
 	odp_pktio_t pktio_hdl = pktio_entry->s.handle;
 	uint32_t num_rx = 0U;
@@ -343,6 +342,8 @@ static uint32_t process_received(pktio_entry_t *pktio_entry, xdp_sock_t *sock, p
 		extract_data(xsk_ring_cons__rx_desc(rx, start_idx++), base_addr, &pkt_data);
 		pkt_data.pkt_hdr->ms_pktio_idx = 0U;
 		packet_init(pkt_data.pkt_hdr, pkt_data.len);
+		pkt_data.pkt_hdr->seg_data = pkt_data.data;
+		pkt_data.pkt_hdr->event_hdr.base_data = pkt_data.data;
 
 		if (layer) {
 			ret = _odp_packet_parse_common(pkt_data.pkt_hdr, pkt_data.data,
@@ -357,16 +358,24 @@ static uint32_t process_received(pktio_entry_t *pktio_entry, xdp_sock_t *sock, p
 				continue;
 			}
 
-			if (pktio_cls_enabled(pktio_entry) &&
-			    _odp_cls_classify_packet(pktio_entry, pkt_data.data, pool_hdl,
-						     pkt_data.pkt_hdr)) {
-				odp_packet_free(pkt_data.pkt);
-				continue;
+			if (pktio_cls_enabled(pktio_entry)) {
+				odp_pool_t new_pool;
+
+				ret = _odp_cls_classify_packet(pktio_entry, pkt_data.data,
+							       &new_pool, pkt_data.pkt_hdr);
+				if (ret) {
+					odp_packet_free(pkt_data.pkt);
+					continue;
+				}
+
+				if (odp_unlikely(_odp_pktio_packet_to_pool(
+					    &pkt_data.pkt, &pkt_data.pkt_hdr, new_pool))) {
+					odp_packet_free(pkt_data.pkt);
+					continue;
+				}
 			}
 		}
 
-		pkt_data.pkt_hdr->seg_data = pkt_data.data;
-		pkt_data.pkt_hdr->event_hdr.base_data = pkt_data.data;
 		pkt_data.pkt_hdr->input = pktio_hdl;
 		packets[num_rx++] = pkt_data.pkt;
 		octets += pkt_data.len;
