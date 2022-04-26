@@ -62,6 +62,7 @@ typedef struct test_options_t {
 	uint16_t udp_dst;
 	uint32_t wait_sec;
 	uint32_t mtu;
+	odp_bool_t promisc_mode;
 
 	struct vlan_hdr {
 		uint16_t tpid;
@@ -180,6 +181,7 @@ static void print_usage(void)
 	       "  -d, --ipv4_dst            IPv4 destination address. Default: 192.168.0.2\n"
 	       "  -o, --udp_src             UDP source port. Default: 10000\n"
 	       "  -p, --udp_dst             UDP destination port. Default: 20000\n"
+	       "  -P, --promisc_mode        Enable promiscuous mode.\n"
 	       "  -c, --c_mode <counts>     Counter mode for incrementing UDP port numbers.\n"
 	       "                            Specify the number of port numbers used starting from\n"
 	       "                            udp_src/udp_dst. Comma-separated (no spaces) list of\n"
@@ -261,6 +263,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"ipv4_dst",    required_argument, NULL, 'd'},
 		{"udp_src",     required_argument, NULL, 'o'},
 		{"udp_dst",     required_argument, NULL, 'p'},
+		{"promisc_mode", no_argument, NULL, 'P'},
 		{"c_mode",      required_argument, NULL, 'c'},
 		{"mtu",         required_argument, NULL, 'M'},
 		{"quit",        required_argument, NULL, 'q'},
@@ -270,7 +273,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:n:l:L:M:b:x:g:v:s:d:o:p:c:q:u:w:h";
+	static const char *shortopts = "+i:e:r:t:n:l:L:M:b:x:g:v:s:d:o:p:c:q:u:w:Ph";
 
 	test_options->num_pktio  = 0;
 	test_options->num_rx     = 1;
@@ -282,6 +285,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->bursts     = 1;
 	test_options->gap_nsec   = 1000000;
 	test_options->num_vlan   = 0;
+	test_options->promisc_mode = 0;
 	strncpy(test_options->ipv4_src_s, "192.168.0.1",
 		sizeof(test_options->ipv4_src_s) - 1);
 	strncpy(test_options->ipv4_dst_s, "192.168.0.2",
@@ -391,6 +395,9 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 				break;
 			}
 			test_options->udp_dst = udp_port;
+			break;
+		case 'P':
+			test_options->promisc_mode = 1;
 			break;
 		case 'r':
 			test_options->num_rx = atoi(optarg);
@@ -656,6 +663,7 @@ static int open_pktios(test_global_t *global)
 		printf("%u bytes\n", test_options->mtu);
 	else
 		printf("interface default\n");
+	printf("  promisc mode:       %s\n", test_options->promisc_mode ? "enabled" : "disabled");
 	printf("  tx burst size       %u\n", test_options->burst_size);
 	printf("  tx bursts           %u\n", test_options->bursts);
 	printf("  tx burst gap        %" PRIu64 " nsec\n",
@@ -830,6 +838,18 @@ static int open_pktios(test_global_t *global)
 		pktio_config.parser.layer = ODP_PROTO_LAYER_ALL;
 
 		odp_pktio_config(pktio, &pktio_config);
+
+		if (test_options->promisc_mode) {
+			if (!pktio_capa.set_op.op.promisc_mode) {
+				ODPH_ERR("Error (%s): promisc mode set not supported\n", name);
+				return -1;
+			}
+
+			if (odp_pktio_promisc_mode_set(pktio, true)) {
+				ODPH_ERR("Error (%s): promisc mode enable failed\n", name);
+				return -1;
+			}
+		}
 
 		odp_pktin_queue_param_init(&pktin_param);
 
