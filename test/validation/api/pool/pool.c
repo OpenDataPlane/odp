@@ -1291,7 +1291,6 @@ static void test_packet_pool_ext_capa(void)
 	CU_ASSERT(capa.pkt.max_headroom_size > 0);
 	CU_ASSERT(capa.pkt.max_headroom_size >= capa.pkt.max_headroom);
 	CU_ASSERT(capa.pkt.max_segs_per_pkt > 0);
-	CU_ASSERT(capa.pkt.max_uarea_size > 0);
 }
 
 static void test_packet_pool_ext_param_init(void)
