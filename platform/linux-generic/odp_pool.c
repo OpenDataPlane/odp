@@ -869,6 +869,12 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 		goto error;
 	}
 
+	/* Total ops utilizes alloc_ops and free_ops counters */
+	if (pool->params.stats.bit.total_ops) {
+		pool->params.stats.bit.alloc_ops = 1;
+		pool->params.stats.bit.free_ops = 1;
+	}
+
 	/* Reset pool stats */
 	odp_atomic_init_u64(&pool->stats.alloc_ops, 0);
 	odp_atomic_init_u64(&pool->stats.alloc_fails, 0);
@@ -1369,7 +1375,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	supported_stats.bit.alloc_ops = CONFIG_POOL_STATISTICS;
 	supported_stats.bit.alloc_fails = CONFIG_POOL_STATISTICS;
 	supported_stats.bit.free_ops = CONFIG_POOL_STATISTICS;
-	supported_stats.bit.total_ops = 0;
+	supported_stats.bit.total_ops = CONFIG_POOL_STATISTICS;
 	supported_stats.bit.cache_available = 1;
 	supported_stats.bit.cache_alloc_ops = CONFIG_POOL_STATISTICS;
 	supported_stats.bit.cache_free_ops = CONFIG_POOL_STATISTICS;
@@ -1573,6 +1579,9 @@ int odp_pool_stats(odp_pool_t pool_hdl, odp_pool_stats_t *stats)
 
 	if (pool->params.stats.bit.free_ops)
 		stats->free_ops = odp_atomic_load_u64(&pool->stats.free_ops);
+
+	if (pool->params.stats.bit.total_ops)
+		stats->total_ops = stats->alloc_ops + stats->free_ops;
 
 	if (pool->params.stats.bit.cache_available)
 		stats->cache_available = cache_total_available(pool);
