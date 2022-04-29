@@ -854,6 +854,44 @@ static void classification_test_pmr_term_vlan_id_x(void)
 	test_pmr(&pmr_param, pkt, NO_MATCH);
 }
 
+static void classification_test_pmr_term_vlan_pcp_0(void)
+{
+	odp_packet_t pkt;
+	uint8_t val;
+	uint8_t mask;
+	uint16_t tci;
+	odp_pmr_param_t pmr_param;
+	odph_ethhdr_t *eth;
+	odph_vlanhdr_t *vlan_0;
+	cls_packet_info_t pkt_info;
+
+	val  = 5;
+	mask = 0x7;
+	tci  = ((uint16_t)val) << ODPH_VLANHDR_PCP_SHIFT;
+	tci |= 0x123;
+
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_VLAN_PCP_0;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
+
+	pkt_info = default_pkt_info;
+	pkt_info.vlan = true;
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+	vlan_0 = (odph_vlanhdr_t *)(eth + 1);
+	vlan_0->tci = odp_cpu_to_be_16(tci);
+
+	test_pmr(&pmr_param, pkt, MATCH);
+
+	pkt = create_packet(pkt_info);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+
+	test_pmr(&pmr_param, pkt, NO_MATCH);
+}
+
 static void classification_test_pmr_term_eth_type_0(void)
 {
 	odp_packet_t pkt;
@@ -1905,6 +1943,11 @@ static int check_capa_vlan_id_x(void)
 	return cls_capa.supported_terms.bit.vlan_id_x;
 }
 
+static int check_capa_vlan_pcp_0(void)
+{
+	return cls_capa.supported_terms.bit.vlan_pcp_0;
+}
+
 static int check_capa_ethtype_0(void)
 {
 	return cls_capa.supported_terms.bit.ethtype_0;
@@ -2035,6 +2078,8 @@ odp_testinfo_t classification_suite_pmr[] = {
 				  check_capa_vlan_id_0),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_vlan_id_x,
 				  check_capa_vlan_id_x),
+	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_vlan_pcp_0,
+				  check_capa_vlan_pcp_0),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_eth_type_0,
 				  check_capa_ethtype_0),
 	ODP_TEST_INFO_CONDITIONAL(classification_test_pmr_term_eth_type_x,
