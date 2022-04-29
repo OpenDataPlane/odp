@@ -169,6 +169,7 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 	capability->supported_terms.bit.ethtype_x = 1;
 	capability->supported_terms.bit.vlan_id_0 = 1;
 	capability->supported_terms.bit.vlan_id_x = 1;
+	capability->supported_terms.bit.vlan_pcp_0 = 1;
 	capability->supported_terms.bit.dmac = 1;
 	capability->supported_terms.bit.ip_proto = 1;
 	capability->supported_terms.bit.ip_dscp = 1;
@@ -642,6 +643,8 @@ static int pmr_create_term(pmr_term_value_t *value,
 	value->range_term = param->range_term;
 
 	switch (term) {
+	case ODP_PMR_VLAN_PCP_0:
+		/* Fall through */
 	case ODP_PMR_IPPROTO:
 		/* Fall through */
 	case ODP_PMR_IP_DSCP:
@@ -1122,6 +1125,28 @@ static inline int verify_pmr_vlan_id_x(const uint8_t *pkt_addr,
 	return 0;
 }
 
+static inline int verify_pmr_vlan_pcp_0(const uint8_t *pkt_addr, odp_packet_hdr_t *pkt_hdr,
+					pmr_term_value_t *term_value)
+{
+	const _odp_ethhdr_t *eth;
+	const _odp_vlanhdr_t *vlan;
+	uint16_t tci;
+	uint8_t pcp;
+
+	if (!packet_hdr_has_eth(pkt_hdr) || !pkt_hdr->p.input_flags.vlan)
+		return 0;
+
+	eth = (const _odp_ethhdr_t *)(pkt_addr + pkt_hdr->p.l2_offset);
+	vlan = (const _odp_vlanhdr_t *)(eth + 1);
+	tci = odp_be_to_cpu_16(vlan->tci);
+	pcp = tci >> _ODP_VLANHDR_PCP_SHIFT;
+
+	if (term_value->match.value == (pcp & term_value->match.mask))
+		return 1;
+
+	return 0;
+}
+
 static inline int verify_pmr_ipsec_spi(const uint8_t *pkt_addr,
 				       odp_packet_hdr_t *pkt_hdr,
 				       pmr_term_value_t *term_value)
@@ -1311,6 +1336,10 @@ static int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr,
 						  term_value))
 				pmr_failure = 1;
 			break;
+		case ODP_PMR_VLAN_PCP_0:
+			if (!verify_pmr_vlan_pcp_0(pkt_addr, pkt_hdr, term_value))
+				pmr_failure = 1;
+			break;
 		case ODP_PMR_DMAC:
 			if (!verify_pmr_dmac(pkt_addr, pkt_hdr,
 					     term_value))
@@ -1431,6 +1460,9 @@ static const char *format_pmr_name(odp_cls_pmr_term_t pmr_term)
 		break;
 	case ODP_PMR_VLAN_ID_X:
 		name = "PMR_VLAN_ID_X";
+		break;
+	case ODP_PMR_VLAN_PCP_0:
+		name = "PMR_VLAN_PCP_0";
 		break;
 	case ODP_PMR_DMAC:
 		name = "PMR_DMAC";
