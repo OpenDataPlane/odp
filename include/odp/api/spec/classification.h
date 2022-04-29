@@ -85,6 +85,13 @@ typedef enum {
 	/** Last (most inner) VLAN ID (val_sz = 2) */
 	ODP_PMR_VLAN_ID_X,
 
+	/** PCP bits in the first (outer) VLAN header (val_sz = 1)
+	 *
+	 *  Priority Code Point (PCP) value is stored into three least significant bits of
+	 *  the octet pointed by odp_pmr_param_t::value. The same applies for odp_pmr_param_t::mask.
+	 */
+	ODP_PMR_VLAN_PCP_0,
+
 	/** Destination MAC address (val_sz = 6) */
 	ODP_PMR_DMAC,
 
@@ -195,6 +202,8 @@ typedef union odp_cls_pmr_terms_t {
 		uint64_t	vlan_id_0:1;
 		/** Last VLAN ID (inner) */
 		uint64_t	vlan_id_x:1;
+		/** PCP in the first VLAN header (#ODP_PMR_VLAN_PCP_0) */
+		uint64_t	vlan_pcp_0:1;
 		/** destination MAC address */
 		uint64_t	dmac:1;
 		/** IP Protocol or IPv6 Next Header */
