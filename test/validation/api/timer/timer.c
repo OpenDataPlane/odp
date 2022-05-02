@@ -36,11 +36,12 @@
 #define TICK_INVALID (~(uint64_t)0)
 
 /* Test case options */
-#define PRIV      1
-#define EXP_RELAX 1
-#define WAIT      0
-#define CANCEL    1
-#define RESTART   1
+#define PRIV        1
+#define EXP_RELAX   1
+#define WAIT        0
+#define CANCEL      1
+#define RESTART     1
+#define FIRST_TICK  1
 
 /* Timer helper structure */
 struct test_timer {
@@ -2235,7 +2236,7 @@ static void timer_test_sched_all(void)
 	timer_test_all(ODP_QUEUE_TYPE_SCHED);
 }
 
-static void timer_test_periodic(odp_queue_type_t queue_type)
+static void timer_test_periodic(odp_queue_type_t queue_type, int use_first)
 {
 	odp_timer_capability_t timer_capa;
 	odp_timer_periodic_capability_t periodic_capa;
@@ -2369,7 +2370,9 @@ static void timer_test_periodic(odp_queue_type_t queue_type)
 	cur_tick = odp_timer_current_tick(timer_pool);
 	tick = cur_tick + odp_timer_ns_to_tick(timer_pool, period_ns / 2);
 
-	start_param.first_tick = tick;
+	if (use_first)
+		start_param.first_tick = tick;
+
 	start_param.freq_multiplier = multiplier;
 	start_param.tmo_ev = ev;
 
@@ -2479,12 +2482,22 @@ static void timer_test_periodic(odp_queue_type_t queue_type)
 
 static void timer_test_periodic_sched(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_SCHED);
+	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, 0);
 }
 
 static void timer_test_periodic_plain(void)
 {
-	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN);
+	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN, 0);
+}
+
+static void timer_test_periodic_sched_first(void)
+{
+	timer_test_periodic(ODP_QUEUE_TYPE_SCHED, FIRST_TICK);
+}
+
+static void timer_test_periodic_plain_first(void)
+{
+	timer_test_periodic(ODP_QUEUE_TYPE_PLAIN, FIRST_TICK);
 }
 
 odp_testinfo_t timer_suite[] = {
@@ -2559,7 +2572,11 @@ odp_testinfo_t timer_suite[] = {
 				  check_sched_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_sched,
 				  check_periodic_sched_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_sched_first,
+				  check_periodic_sched_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_plain,
+				  check_periodic_plain_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_test_periodic_plain_first,
 				  check_periodic_plain_support),
 	ODP_TEST_INFO_NULL,
 };
