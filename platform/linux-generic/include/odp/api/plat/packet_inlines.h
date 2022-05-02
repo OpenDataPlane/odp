@@ -399,7 +399,7 @@ _ODP_INLINE int8_t odp_packet_shaper_len_adjust(odp_packet_t pkt)
 
 	flags.all_flags = _odp_pkt_get(pkt, uint32_t, flags);
 
-	return flags.shaper_len_adj;
+	return (int8_t)flags.shaper_len_adj;
 }
 
 /** @endcond */
