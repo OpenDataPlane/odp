@@ -2424,7 +2424,9 @@ static void timer_test_periodic(odp_queue_type_t queue_type)
 	}
 
 	CU_ASSERT(num_tmo == num);
-	CU_ASSERT(diff_ns < 2 * duration_ns);
+
+	/* Allow +-30% error on test duration */
+	CU_ASSERT((diff_ns > 0.7 * duration_ns) && (diff_ns < 1.3 * duration_ns));
 
 	/* Stop periodic timer */
 	ret = odp_timer_periodic_cancel(timer);
