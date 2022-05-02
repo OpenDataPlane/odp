@@ -2467,6 +2467,10 @@ static void timer_test_periodic(odp_queue_type_t queue_type)
 		}
 	}
 
+	/* Check that ack() returned 2 on the last event */
+	CU_ASSERT(done);
+	CU_ASSERT(ret == 2);
+
 	CU_ASSERT(odp_timer_free(timer) == ODP_EVENT_INVALID);
 	odp_timer_pool_destroy(timer_pool);
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
