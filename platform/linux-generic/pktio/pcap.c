@@ -251,7 +251,6 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int packets = 0, errors = 0;
 	uint32_t octets = 0;
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
-	const odp_proto_chksums_t chksums = pktio_entry->s.in_chksums;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
 	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
 
@@ -297,8 +296,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		if (layer) {
 			ret = _odp_packet_parse_common(pkt_hdr, data, pkt_len,
-						       pkt_len, layer, chksums,
-						       opt);
+						       pkt_len, layer, opt);
 			if (ret)
 				errors++;
 

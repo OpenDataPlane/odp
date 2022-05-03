@@ -287,7 +287,6 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 	odp_packet_hdr_t *pkt_hdr;
 	int num;
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
-	const odp_proto_chksums_t chksums = pktio_entry->s.in_chksums;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
 	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
 
@@ -309,7 +308,7 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 
 	if (layer) {
 		if (_odp_packet_parse_common(pkt_hdr, data, len, len, layer,
-					     chksums, opt) < 0) {
+					     opt) < 0) {
 			odp_packet_free(pkt);
 			return ODP_PACKET_INVALID;
 		}

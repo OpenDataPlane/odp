@@ -135,7 +135,6 @@ struct pktio_entry {
 	} stats_extra;
 	/* Latest Tx timestamp */
 	odp_atomic_u64_t tx_ts;
-	odp_proto_chksums_t in_chksums; /**< Checksums validation settings */
 	pktio_stats_type_t stats_type;
 	char name[PKTIO_NAME_LEN];	/**< name of pktio provided to
 					     internal pktio_open() calls */

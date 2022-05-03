@@ -162,7 +162,6 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int num_rx = 0;
 	int packets = 0, errors = 0;
 	uint32_t octets = 0;
-	const odp_proto_chksums_t chksums = pktio_entry->s.in_chksums;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
 	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
 
@@ -204,9 +203,8 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			}
 
 			packet_parse_reset(pkt_hdr, 1);
-			ret = _odp_packet_parse_common(pkt_hdr, pkt_addr,
-						       pkt_len, seg_len, layer,
-						       chksums, opt);
+			ret = _odp_packet_parse_common(pkt_hdr, pkt_addr, pkt_len,
+						       seg_len, layer, opt);
 			if (ret)
 				errors++;
 

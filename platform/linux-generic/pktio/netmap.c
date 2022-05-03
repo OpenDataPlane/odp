@@ -828,7 +828,6 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 	uint32_t max_len;
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
 	int num_rx = 0;
-	const odp_proto_chksums_t chksums = pktio_entry->s.in_chksums;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
 	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
 
@@ -863,7 +862,7 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 
 		if (layer) {
 			if (_odp_packet_parse_common(pkt_hdr, buf, len, len,
-						     layer, chksums, opt) < 0) {
+						     layer, opt) < 0) {
 				odp_packet_free(pkt);
 				continue;
 			}

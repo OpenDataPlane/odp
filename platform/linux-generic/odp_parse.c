@@ -119,7 +119,7 @@ error:
  */
 static inline uint8_t parse_ipv4(packet_parser_t *prs, const uint8_t **parseptr,
 				 uint32_t *offset, uint32_t frame_len,
-				 odp_proto_chksums_t chksums,
+				 odp_pktin_config_opt_t opt,
 				 uint64_t *l4_part_sum)
 {
 	const _odp_ipv4hdr_t *ipv4 = (const _odp_ipv4hdr_t *)*parseptr;
@@ -137,7 +137,7 @@ static inline uint8_t parse_ipv4(packet_parser_t *prs, const uint8_t **parseptr,
 		return 0;
 	}
 
-	if (chksums.chksum.ipv4) {
+	if (opt.bit.ipv4_chksum) {
 		prs->input_flags.l3_chksum_done = 1;
 		if (chksum_finalize(chksum_partial(ipv4, ihl * 4, 0)) != 0xffff) {
 			prs->flags.ip_err = 1;
@@ -149,7 +149,7 @@ static inline uint8_t parse_ipv4(packet_parser_t *prs, const uint8_t **parseptr,
 	*offset   += ihl * 4;
 	*parseptr += ihl * 4;
 
-	if (chksums.chksum.udp || chksums.chksum.tcp)
+	if (opt.bit.udp_chksum || opt.bit.tcp_chksum)
 		*l4_part_sum = chksum_partial((const uint8_t *)&ipv4->src_addr,
 					      2 * _ODP_IPV4ADDR_LEN, 0);
 
@@ -182,7 +182,7 @@ static inline uint8_t parse_ipv4(packet_parser_t *prs, const uint8_t **parseptr,
 static inline uint8_t parse_ipv6(packet_parser_t *prs, const uint8_t **parseptr,
 				 uint32_t *offset, uint32_t frame_len,
 				 uint32_t seg_len,
-				 odp_proto_chksums_t chksums,
+				 odp_pktin_config_opt_t opt,
 				 uint64_t *l4_part_sum)
 {
 	const _odp_ipv6hdr_t *ipv6 = (const _odp_ipv6hdr_t *)*parseptr;
@@ -207,7 +207,7 @@ static inline uint8_t parse_ipv6(packet_parser_t *prs, const uint8_t **parseptr,
 	*offset   += sizeof(_odp_ipv6hdr_t);
 	*parseptr += sizeof(_odp_ipv6hdr_t);
 
-	if (chksums.chksum.udp || chksums.chksum.tcp)
+	if (opt.bit.udp_chksum || opt.bit.tcp_chksum)
 		*l4_part_sum = chksum_partial((const uint8_t *)&ipv6->src_addr,
 					      2 * _ODP_IPV6ADDR_LEN, 0);
 
@@ -253,7 +253,7 @@ static inline uint8_t parse_ipv6(packet_parser_t *prs, const uint8_t **parseptr,
  */
 static inline void parse_tcp(packet_parser_t *prs, const uint8_t **parseptr,
 			     uint16_t tcp_len,
-			     odp_proto_chksums_t chksums,
+			     odp_pktin_config_opt_t opt,
 			     uint64_t *l4_part_sum)
 {
 	const _odp_tcphdr_t *tcp = (const _odp_tcphdr_t *)*parseptr;
@@ -262,7 +262,7 @@ static inline void parse_tcp(packet_parser_t *prs, const uint8_t **parseptr,
 	if (odp_unlikely(tcp->hl < sizeof(_odp_tcphdr_t) / sizeof(uint32_t)))
 		prs->flags.tcp_err = 1;
 
-	if (chksums.chksum.tcp &&
+	if (opt.bit.tcp_chksum &&
 	    !prs->input_flags.ipfrag) {
 		*l4_part_sum += odp_cpu_to_be_16(tcp_len);
 #if ODP_BYTE_ORDER == ODP_BIG_ENDIAN
@@ -281,7 +281,7 @@ static inline void parse_tcp(packet_parser_t *prs, const uint8_t **parseptr,
  * Requires PARSE_UDP_BYTES bytes of contiguous packet data.
  */
 static inline void parse_udp(packet_parser_t *prs, const uint8_t **parseptr,
-			     odp_proto_chksums_t chksums,
+			     odp_pktin_config_opt_t opt,
 			     uint64_t *l4_part_sum)
 {
 	const _odp_udphdr_t *udp = (const _odp_udphdr_t *)*parseptr;
@@ -293,7 +293,7 @@ static inline void parse_udp(packet_parser_t *prs, const uint8_t **parseptr,
 		return;
 	}
 
-	if (chksums.chksum.udp &&
+	if (opt.bit.udp_chksum &&
 	    !prs->input_flags.ipfrag) {
 		if (udp->chksum == 0) {
 			prs->input_flags.l4_chksum_done = 1;
@@ -330,7 +330,7 @@ static inline void parse_udp(packet_parser_t *prs, const uint8_t **parseptr,
  */
 static inline void parse_sctp(packet_parser_t *prs, const uint8_t **parseptr,
 			      uint16_t sctp_len,
-			      odp_proto_chksums_t chksums,
+			      odp_pktin_config_opt_t opt,
 			      uint64_t *l4_part_sum)
 {
 	if (odp_unlikely(sctp_len < sizeof(_odp_sctphdr_t))) {
@@ -338,7 +338,7 @@ static inline void parse_sctp(packet_parser_t *prs, const uint8_t **parseptr,
 		return;
 	}
 
-	if (chksums.chksum.sctp &&
+	if (opt.bit.sctp_chksum &&
 	    !prs->input_flags.ipfrag) {
 		const _odp_sctphdr_t *sctp =
 			(const _odp_sctphdr_t *)*parseptr;
@@ -358,7 +358,6 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 				   const uint8_t *parseptr, uint32_t offset,
 				   uint32_t frame_len, uint32_t seg_len,
 				   int layer, uint16_t ethtype,
-				   odp_proto_chksums_t chksums,
 				   uint64_t *l4_part_sum,
 				   odp_pktin_config_opt_t opt)
 {
@@ -377,7 +376,7 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 	case _ODP_ETHTYPE_IPV4:
 		prs->input_flags.ipv4 = 1;
 		ip_proto = parse_ipv4(prs, &parseptr, &offset, frame_len,
-				      chksums, l4_part_sum);
+				      opt, l4_part_sum);
 		prs->l4_offset = offset;
 		if (prs->flags.ip_err && opt.bit.drop_ipv4_err)
 			return -1; /* drop */
@@ -386,7 +385,7 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 	case _ODP_ETHTYPE_IPV6:
 		prs->input_flags.ipv6 = 1;
 		ip_proto = parse_ipv6(prs, &parseptr, &offset, frame_len,
-				      seg_len, chksums, l4_part_sum);
+				      seg_len, opt, l4_part_sum);
 		prs->l4_offset = offset;
 		if (prs->flags.ip_err && opt.bit.drop_ipv6_err)
 			return -1; /* drop */
@@ -425,7 +424,7 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 		if (odp_unlikely(offset + _ODP_TCPHDR_LEN > seg_len))
 			return -1;
 		prs->input_flags.tcp = 1;
-		parse_tcp(prs, &parseptr, frame_len - prs->l4_offset, chksums,
+		parse_tcp(prs, &parseptr, frame_len - prs->l4_offset, opt,
 			  l4_part_sum);
 		if (prs->flags.tcp_err && opt.bit.drop_tcp_err)
 			return -1; /* drop */
@@ -435,7 +434,7 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 		if (odp_unlikely(offset + _ODP_UDPHDR_LEN > seg_len))
 			return -1;
 		prs->input_flags.udp = 1;
-		parse_udp(prs, &parseptr, chksums, l4_part_sum);
+		parse_udp(prs, &parseptr, opt, l4_part_sum);
 		if (prs->flags.udp_err && opt.bit.drop_udp_err)
 			return -1; /* drop */
 		break;
@@ -452,7 +451,7 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 
 	case _ODP_IPPROTO_SCTP:
 		prs->input_flags.sctp = 1;
-		parse_sctp(prs, &parseptr, frame_len - prs->l4_offset, chksums,
+		parse_sctp(prs, &parseptr, frame_len - prs->l4_offset, opt,
 			   l4_part_sum);
 		if (prs->flags.sctp_err && opt.bit.drop_sctp_err)
 			return -1; /* drop */
