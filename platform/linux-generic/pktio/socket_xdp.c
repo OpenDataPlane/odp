@@ -33,8 +33,25 @@
 
 #define NUM_XDP_DESCS 1024U
 #define MIN_FRAME_SIZE 2048U
+
 #define IF_DELIM " "
 #define Q_DELIM ':'
+
+enum {
+	RX_PKT_ALLOC_ERR,
+	RX_DESC_RSV_ERR,
+	TX_PKT_ALLOC_ERR,
+	TX_DESC_RSV_ERR
+};
+
+static const char * const internal_stats_strs[] = {
+	"rx_packet_allocation_errors",
+	"rx_umem_descriptor_reservation_errors",
+	"tx_packet_allocation_errors",
+	"tx_umem_descriptor_reservation_errors"
+};
+
+#define MAX_INTERNAL_STATS _ODP_ARRAY_SIZE(internal_stats_strs)
 
 typedef struct {
 	struct xsk_ring_prod fill_q;
@@ -48,6 +65,7 @@ typedef struct {
 	struct xsk_ring_cons compl_q;
 	struct xsk_ring_prod tx;
 	struct xsk_ring_prod fill_q;
+	uint64_t i_stats[MAX_INTERNAL_STATS];
 	xdp_umem_info_t *umem_info;
 	struct xsk_socket *xsk;
 	int pktio_idx;
@@ -157,13 +175,16 @@ static odp_bool_t reserve_fill_queue_elements(xdp_sock_info_t *sock_info, int nu
 	pool = sock_info->umem_info->pool;
 	count = odp_packet_alloc_multi(pool->pool_hdl, sock_info->mtu, packets, num);
 
-	if (count <= 0)
+	if (count <= 0) {
+		++sock_info->i_stats[RX_PKT_ALLOC_ERR];
 		return false;
+	}
 
 	fill_q = &sock_info->fill_q;
 
 	if (xsk_ring_prod__reserve(fill_q, count, &start_idx) == 0U) {
 		odp_packet_free_multi(packets, count);
+		++sock_info->i_stats[RX_DESC_RSV_ERR];
 		return false;
 	}
 
@@ -322,6 +343,54 @@ static int sock_xdp_stats(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats)
 
 	lock_rxtx(priv);
 	memcpy(stats, &pktio_entry->s.stats, sizeof(odp_pktio_stats_t));
+	unlock_rxtx(priv);
+
+	return 0;
+}
+
+static int sock_xdp_extra_stat_info(pktio_entry_t *pktio_entry ODP_UNUSED,
+				    odp_pktio_extra_stat_info_t info[],
+				    int num)
+{
+	if (info != NULL && num > 0) {
+		for (int i = 0; i < _ODP_MIN(num, (int)MAX_INTERNAL_STATS); ++i) {
+			strncpy(info[i].name, internal_stats_strs[i],
+				ODP_PKTIO_STATS_EXTRA_NAME_LEN - 1);
+		}
+	}
+
+	return MAX_INTERNAL_STATS;
+}
+
+static int sock_xdp_extra_stats(pktio_entry_t *pktio_entry, uint64_t stats[], int num)
+{
+	pkt_xdp_t *priv = pkt_priv(pktio_entry);
+	uint64_t *i_stats = priv->sock_info.i_stats;
+
+	if (stats != NULL && num > 0) {
+		lock_rxtx(priv);
+
+		for (int i = 0; i < _ODP_MIN(num, (int)MAX_INTERNAL_STATS); ++i)
+			stats[i] = i_stats[i];
+
+		unlock_rxtx(priv);
+	}
+
+	return MAX_INTERNAL_STATS;
+}
+
+static int sock_xdp_extra_stat_counter(pktio_entry_t *pktio_entry, uint32_t id, uint64_t *stat)
+{
+	pkt_xdp_t *priv = pkt_priv(pktio_entry);
+
+	if (id >= MAX_INTERNAL_STATS) {
+		ODP_ERR("Invalid counter id: %u (allowed range: 0-%" PRIu64 ")\n", id,
+			MAX_INTERNAL_STATS - 1U);
+		return -1;
+	}
+
+	lock_rxtx(priv);
+	*stat = priv->sock_info.i_stats[id];
 	unlock_rxtx(priv);
 
 	return 0;
@@ -519,8 +588,10 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		if (pkt_hdr->event_hdr.pool_ptr != pool) {
 			pkt = odp_packet_copy(packets[i], pool_hdl);
 
-			if (odp_unlikely(pkt == ODP_PACKET_INVALID))
+			if (odp_unlikely(pkt == ODP_PACKET_INVALID)) {
+				++sock_info->i_stats[TX_PKT_ALLOC_ERR];
 				break;
+			}
 
 			pkt_hdr = packet_hdr(pkt);
 		}
@@ -531,6 +602,8 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			if (xsk_ring_prod__reserve(tx, 1U, &start_idx) == 0U) {
 				if (pkt != ODP_PACKET_INVALID)
 					odp_packet_free(pkt);
+
+				++sock_info->i_stats[TX_DESC_RSV_ERR];
 
 				break;
 			}
@@ -647,9 +720,9 @@ const pktio_if_ops_t _odp_sock_xdp_pktio_ops = {
 	.stats_reset = sock_xdp_stats_reset,
 	.pktin_queue_stats = NULL,
 	.pktout_queue_stats = NULL,
-	.extra_stat_info = NULL,
-	.extra_stats = NULL,
-	.extra_stat_counter = NULL,
+	.extra_stat_info = sock_xdp_extra_stat_info,
+	.extra_stats = sock_xdp_extra_stats,
+	.extra_stat_counter = sock_xdp_extra_stat_counter,
 	.pktio_ts_res = NULL,
 	.pktio_ts_from_ns = NULL,
 	.pktio_time = NULL,
