@@ -129,7 +129,8 @@ static inline uint8_t parse_ipv4(packet_parser_t *prs, const uint8_t **parseptr,
 	uint8_t ver = _ODP_IPV4HDR_VER(ipv4->ver_ihl);
 	uint8_t ihl = _ODP_IPV4HDR_IHL(ipv4->ver_ihl);
 
-	if (odp_unlikely(ihl < _ODP_IPV4HDR_IHL_MIN ||
+	if (odp_unlikely(prs->flags.l3_chksum_err ||
+			 ihl < _ODP_IPV4HDR_IHL_MIN ||
 			 ver != 4 ||
 			 sizeof(*ipv4) > frame_len - *offset ||
 			 (l3_len > frame_len - *offset))) {
@@ -192,7 +193,8 @@ static inline uint8_t parse_ipv6(packet_parser_t *prs, const uint8_t **parseptr,
 			  _ODP_IPV6HDR_LEN;
 
 	/* Basic sanity checks on IPv6 header */
-	if (odp_unlikely((odp_be_to_cpu_32(ipv6->ver_tc_flow) >> 28) != 6 ||
+	if (odp_unlikely(prs->flags.l3_chksum_err ||
+			 (odp_be_to_cpu_32(ipv6->ver_tc_flow) >> 28) != 6 ||
 			 sizeof(*ipv6) > frame_len - *offset ||
 			 l3_len > frame_len - *offset)) {
 		prs->flags.ip_err = 1;

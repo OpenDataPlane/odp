@@ -642,10 +642,9 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 
 		if (layer) {
 			packet_parse_reset(pkt_hdr, 1);
-			if (_odp_dpdk_packet_parse_common(&pkt_hdr->p, data,
+			if (_odp_dpdk_packet_parse_common(pkt_hdr, data,
 							  pkt_len, pkt_len, mbuf,
-							  layer, supported_ptypes,
-							  pktin_cfg)) {
+							  layer, pktin_cfg) < 0) {
 				odp_packet_free(pkt);
 				rte_pktmbuf_free(mbuf);
 				continue;
@@ -929,10 +928,9 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		pkt_hdr->seg_data = data;
 
 		if (layer) {
-			if (_odp_dpdk_packet_parse_common(&pkt_hdr->p, data,
+			if (_odp_dpdk_packet_parse_common(pkt_hdr, data,
 							  pkt_len, pkt_len, mbuf,
-							  layer, supported_ptypes,
-							  pktin_cfg)) {
+							  layer, pktin_cfg) < 0) {
 				rte_pktmbuf_free(mbuf);
 				continue;
 			}
