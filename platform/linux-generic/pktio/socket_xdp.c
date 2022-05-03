@@ -13,6 +13,7 @@
 #include <odp/api/hints.h>
 #include <odp/api/system_info.h>
 #include <odp/api/ticketlock.h>
+#include <odp/api/packet_io_stats.h>
 
 #include <odp_debug_internal.h>
 #include <odp_macros_internal.h>
@@ -181,6 +182,29 @@ static odp_bool_t reserve_fill_queue_elements(xdp_sock_info_t *sock_info, int nu
 	return true;
 }
 
+static inline void lock_rxtx(pkt_xdp_t *priv)
+{
+	odp_ticketlock_lock(&priv->rx_lock);
+	odp_ticketlock_lock(&priv->tx_lock);
+}
+
+static inline void unlock_rxtx(pkt_xdp_t *priv)
+{
+	odp_ticketlock_unlock(&priv->rx_lock);
+	odp_ticketlock_unlock(&priv->tx_lock);
+}
+
+static int sock_xdp_stats_reset(pktio_entry_t *pktio_entry)
+{
+	pkt_xdp_t *priv = pkt_priv(pktio_entry);
+
+	lock_rxtx(priv);
+	memset(&pktio_entry->s.stats, 0, sizeof(odp_pktio_stats_t));
+	unlock_rxtx(priv);
+
+	return 0;
+}
+
 static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const char *devname,
 			 odp_pool_t pool_hdl)
 {
@@ -247,6 +271,7 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 
 	odp_ticketlock_init(&priv->rx_lock);
 	odp_ticketlock_init(&priv->tx_lock);
+	sock_xdp_stats_reset(pktio_entry);
 
 	return 0;
 
@@ -291,6 +316,17 @@ static int sock_xdp_close(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
+static int sock_xdp_stats(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats)
+{
+	pkt_xdp_t *priv = pkt_priv(pktio_entry);
+
+	lock_rxtx(priv);
+	memcpy(stats, &pktio_entry->s.stats, sizeof(odp_pktio_stats_t));
+	unlock_rxtx(priv);
+
+	return 0;
+}
+
 static inline void extract_data(const struct xdp_desc *rx_desc, uint8_t *pool_base_addr,
 				pkt_data_t *pkt_data)
 {
@@ -318,10 +354,12 @@ static uint32_t process_received(pktio_entry_t *pktio_entry, xdp_sock_info_t *so
 	struct xsk_ring_cons *rx = &sock_info->rx;
 	uint8_t *base_addr = sock_info->umem_info->pool->base_addr;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
+	int ret;
 	const odp_proto_chksums_t in_chksums = pktio_entry->s.in_chksums;
 	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
 	uint64_t l4_part_sum = 0U;
 	odp_pool_t *pool_hdl = &sock_info->umem_info->pool->pool_hdl;
+	uint64_t errors = 0U, octets = 0U;
 	odp_pktio_t pktio_hdl = pktio_entry->s.handle;
 	uint32_t num_rx = 0U;
 
@@ -331,9 +369,14 @@ static uint32_t process_received(pktio_entry_t *pktio_entry, xdp_sock_info_t *so
 		packet_init(pkt_data.pkt_hdr, pkt_data.len);
 
 		if (layer) {
-			if (_odp_packet_parse_common(&pkt_data.pkt_hdr->p, pkt_data.data,
-						     pkt_data.len, pkt_data.len,
-						     layer, in_chksums, &l4_part_sum, opt) < 0) {
+			ret = _odp_packet_parse_common(&pkt_data.pkt_hdr->p, pkt_data.data,
+						       pkt_data.len, pkt_data.len,
+						       layer, in_chksums, &l4_part_sum, opt);
+
+			if (ret)
+				++errors;
+
+			if (ret < 0) {
 				odp_packet_free(pkt_data.pkt);
 				continue;
 			}
@@ -350,7 +393,12 @@ static uint32_t process_received(pktio_entry_t *pktio_entry, xdp_sock_info_t *so
 		pkt_data.pkt_hdr->event_hdr.base_data = pkt_data.data;
 		pkt_data.pkt_hdr->input = pktio_hdl;
 		packets[num_rx++] = pkt_data.pkt;
+		octets += pkt_data.len;
 	}
+
+	pktio_entry->s.stats.in_octets += octets;
+	pktio_entry->s.stats.in_packets += num_rx;
+	pktio_entry->s.stats.in_errors += errors;
 
 	return num_rx;
 }
@@ -444,6 +492,7 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_packet_t pkt;
 	odp_packet_hdr_t *pkt_hdr;
 	uint32_t start_idx;
+	uint64_t octets = 0U;
 
 	if (odp_unlikely(num == 0))
 		return 0;
@@ -492,10 +541,13 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		pkt_hdr->ms_pktio_idx = pktio_idx;
 		populate_tx_desc(pool, pkt_hdr, xsk_ring_prod__tx_desc(tx, start_idx));
+		octets += odp_packet_len(packet_handle(pkt_hdr));
 	}
 
 	xsk_ring_prod__submit(tx, i);
 	handle_pending_tx(sock_info, NUM_XDP_DESCS);
+	pktio_entry->s.stats.out_octets += octets;
+	pktio_entry->s.stats.out_packets += i;
 	odp_ticketlock_unlock(&priv->tx_lock);
 
 	return i;
@@ -569,7 +621,12 @@ static int sock_xdp_capability(pktio_entry_t *pktio_entry, odp_pktio_capability_
 
 	capa->config.parser.layer = ODP_PROTO_LAYER_ALL;
 
-	capa->stats.pktio.all_counters = 0U;
+	capa->stats.pktio.counter.in_octets = 1U;
+	capa->stats.pktio.counter.in_packets = 1U;
+	capa->stats.pktio.counter.in_errors = 1U;
+	capa->stats.pktio.counter.out_octets = 1U;
+	capa->stats.pktio.counter.out_packets = 1U;
+
 	capa->stats.pktin_queue.all_counters = 0U;
 	capa->stats.pktout_queue.all_counters = 0U;
 
@@ -577,7 +634,6 @@ static int sock_xdp_capability(pktio_entry_t *pktio_entry, odp_pktio_capability_
 }
 
 const pktio_if_ops_t _odp_sock_xdp_pktio_ops = {
-	/* TODO: at least stats */
 	.name = "socket_xdp",
 	.print = NULL,
 	.init_global = sock_xdp_init_global,
@@ -587,8 +643,8 @@ const pktio_if_ops_t _odp_sock_xdp_pktio_ops = {
 	.close = sock_xdp_close,
 	.start = NULL,
 	.stop = NULL,
-	.stats = NULL,
-	.stats_reset = NULL,
+	.stats = sock_xdp_stats,
+	.stats_reset = sock_xdp_stats_reset,
 	.pktin_queue_stats = NULL,
 	.pktout_queue_stats = NULL,
 	.extra_stat_info = NULL,
