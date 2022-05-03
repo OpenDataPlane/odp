@@ -64,7 +64,6 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 				   const uint8_t *parseptr, uint32_t offset,
 				   uint32_t frame_len, uint32_t seg_len,
 				   int layer, uint16_t ethtype,
-				   odp_proto_chksums_t chksums,
 				   uint64_t *l4_part_sum,
 				   odp_pktin_config_opt_t opt);
 
@@ -81,7 +80,6 @@ static inline int _odp_packet_parse_common(odp_packet_hdr_t *pkt_hdr,
 					   const uint8_t *ptr,
 					   uint32_t frame_len, uint32_t seg_len,
 					   int layer,
-					   odp_proto_chksums_t chksums,
 					   odp_pktin_config_opt_t opt)
 {
 	int r;
@@ -103,11 +101,11 @@ static inline int _odp_packet_parse_common(odp_packet_hdr_t *pkt_hdr,
 	ethtype = _odp_parse_eth(prs, &parseptr, &offset, frame_len);
 
 	r = _odp_packet_parse_common_l3_l4(prs, parseptr, offset, frame_len,
-					   seg_len, layer, ethtype, chksums,
+					   seg_len, layer, ethtype,
 					   &l4_part_sum, opt);
 
 	if (!r && layer >= ODP_PROTO_LAYER_L4)
-		r = _odp_packet_l4_chksum(pkt_hdr, chksums, l4_part_sum);
+		r = _odp_packet_l4_chksum(pkt_hdr, opt, l4_part_sum);
 
 	return r;
 }

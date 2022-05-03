@@ -235,7 +235,6 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int i;
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
 	uint32_t alloc_len = pkt_sock->mtu + frame_offset;
-	const odp_proto_chksums_t chksums = pktio_entry->s.in_chksums;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
 	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
 
@@ -294,8 +293,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			}
 
 			if (_odp_packet_parse_common(pkt_hdr, base, pkt_len,
-						     seg_len, layer, chksums,
-						     opt) < 0) {
+						     seg_len, layer, opt) < 0) {
 				odp_packet_free(pkt);
 				continue;
 			}

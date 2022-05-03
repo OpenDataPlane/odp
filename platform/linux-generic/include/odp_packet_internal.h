@@ -478,7 +478,7 @@ int _odp_packet_udp_chksum_insert(odp_packet_t pkt);
 int _odp_packet_sctp_chksum_insert(odp_packet_t pkt);
 
 int _odp_packet_l4_chksum(odp_packet_hdr_t *pkt_hdr,
-			  odp_proto_chksums_t chksums, uint64_t l4_part_sum);
+			  odp_pktin_config_opt_t opt, uint64_t l4_part_sum);
 
 #ifdef __cplusplus
 }

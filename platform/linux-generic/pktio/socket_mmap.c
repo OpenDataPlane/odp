@@ -152,7 +152,6 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	odp_pool_t pool = pkt_sock->pool;
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
 	uint16_t vlan_len = 0;
-	const odp_proto_chksums_t chksums = pktio_entry->s.in_chksums;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
 	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
 
@@ -269,8 +268,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 
 		if (layer) {
 			if (_odp_packet_parse_common(hdr, pkt_buf, pkt_len,
-						     pkt_len, layer, chksums,
-						     opt) < 0) {
+						     pkt_len, layer, opt) < 0) {
 				odp_packet_free(pkt);
 				tp_hdr->tp_status = TP_STATUS_KERNEL;
 				frame_num = next_frame_num;

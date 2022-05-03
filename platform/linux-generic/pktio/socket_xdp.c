@@ -332,7 +332,6 @@ static uint32_t process_received(pktio_entry_t *pktio_entry, xdp_sock_t *sock, p
 	pkt_data_t pkt_data;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
 	int ret;
-	const odp_proto_chksums_t in_chksums = pktio_entry->s.in_chksums;
 	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
 	uint64_t errors = 0U, octets = 0U;
 	odp_pktio_t pktio_hdl = pktio_entry->s.handle;
@@ -348,7 +347,7 @@ static uint32_t process_received(pktio_entry_t *pktio_entry, xdp_sock_t *sock, p
 		if (layer) {
 			ret = _odp_packet_parse_common(pkt_data.pkt_hdr, pkt_data.data,
 						       pkt_data.len, pkt_data.len,
-						       layer, in_chksums, opt);
+						       layer, opt);
 
 			if (ret)
 				++errors;
