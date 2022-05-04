@@ -73,16 +73,29 @@ typedef enum {
 	  * uint32_t (val_sz = 4) in CPU endian. */
 	ODP_PMR_LEN,
 
-	/** Initial (outer) Ethertype only (val_sz = 2) */
+	/** Initial (outer) Ethertype only (val_sz = 2)
+	 *
+	 *  PMR matches Ethertype field when packet does not have VLAN headers. When there are
+	 *  VLAN headers, it matches Tag protocol identifier (TPID) field of the first VLAN header.
+	 *  I.e. it matches a field in the same offset from the start of the packet in both cases.
+	 */
 	ODP_PMR_ETHTYPE_0,
 
 	/** Ethertype of most inner VLAN tag (val_sz = 2) */
 	ODP_PMR_ETHTYPE_X,
 
-	/** First (outer) VLAN ID (val_sz = 2) */
+	/** First (outer) VLAN ID (val_sz = 2)
+	 *
+	 *  VLAN ID value and mask are stored into 12 least significant bits of a 16-bit word.
+	 *  The word is passed in big endian format.
+	 */
 	ODP_PMR_VLAN_ID_0,
 
-	/** Last (most inner) VLAN ID (val_sz = 2) */
+	/** Last (most inner) VLAN ID (val_sz = 2)
+	 *
+	 *  VLAN ID value and mask are stored into 12 least significant bits of a 16-bit word.
+	 *  The word is passed in big endian format.
+	 */
 	ODP_PMR_VLAN_ID_X,
 
 	/** PCP bits in the first (outer) VLAN header (val_sz = 1)
