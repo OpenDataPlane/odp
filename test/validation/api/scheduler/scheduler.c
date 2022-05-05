@@ -2297,6 +2297,57 @@ static void scheduler_test_ordered_lock(void)
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
 }
 
+static void enqueue_event(odp_queue_t queue)
+{
+	odp_pool_t pool;
+	odp_buffer_t buf;
+	odp_event_t ev;
+	int ret;
+
+	pool = odp_pool_lookup(MSG_POOL_NAME);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	buf = odp_buffer_alloc(pool);
+	CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+	ev = odp_buffer_to_event(buf);
+	ret = odp_queue_enq(queue, ev);
+	CU_ASSERT_FATAL(ret == 0);
+}
+
+static void scheduler_test_order_wait_1_thread(void)
+{
+	odp_schedule_capability_t sched_capa;
+	odp_queue_param_t queue_param;
+	odp_queue_t queue;
+	odp_event_t ev;
+
+	CU_ASSERT(!odp_schedule_capability(&sched_capa));
+
+	sched_queue_param_init(&queue_param);
+	queue_param.sched.sync = ODP_SCHED_SYNC_ORDERED;
+	queue = odp_queue_create("ordered queue", &queue_param);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+	CU_ASSERT_FATAL(odp_queue_type(queue) == ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(odp_queue_sched_type(queue) == ODP_SCHED_SYNC_ORDERED);
+
+	/* Set up an ordered scheduling context */
+	enqueue_event(queue);
+	ev = odp_schedule(NULL, ODP_SCHED_WAIT);
+	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+	odp_event_free(ev);
+
+	/* Fail build if the capability field does not exist */
+	printf(" (capa=%d) ", sched_capa.order_wait);
+	/* Check that order wait does not get stuck or crash */
+	odp_schedule_order_wait();
+
+	/* Release the context */
+	ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+	CU_ASSERT(ev == ODP_EVENT_INVALID);
+
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+}
+
 static int sched_and_plain_thread(void *arg)
 {
 	odp_event_t ev1, ev2;
@@ -3226,6 +3277,7 @@ odp_testinfo_t scheduler_basic_suite[] = {
 	ODP_TEST_INFO(scheduler_test_pause_resume),
 	ODP_TEST_INFO(scheduler_test_pause_enqueue),
 	ODP_TEST_INFO(scheduler_test_ordered_lock),
+	ODP_TEST_INFO(scheduler_test_order_wait_1_thread),
 	ODP_TEST_INFO_CONDITIONAL(scheduler_test_flow_aware,
 				  check_flow_aware_support),
 	ODP_TEST_INFO(scheduler_test_parallel),
