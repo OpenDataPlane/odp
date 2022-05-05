@@ -46,12 +46,6 @@ ODP_STATIC_ASSERT(sizeof(_odp_packet_input_flags_t) == sizeof(uint64_t),
 ODP_STATIC_ASSERT(sizeof(_odp_packet_flags_t) == sizeof(uint32_t),
 		  "PACKET_FLAGS_SIZE_ERROR");
 
-/* Packet extra data length */
-#define PKT_EXTRA_LEN 128
-
-/* Packet extra data types */
-#define PKT_EXTRA_TYPE_DPDK 1
-
 /* Maximum number of segments per packet */
 #define PKT_MAX_SEGS 255
 
