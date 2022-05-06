@@ -1,3 +1,28 @@
+== OpenDataPlane (1.37.0.0)
+
+=== Backward incompatible API changes
+==== Classifier
+* Deprecate `odp_cos_with_l3_qos()` function. Use new `ODP_PMR_IP_DSCP` PMR
+term instead.
+
+=== Backward compatible API changes
+==== Classifier
+* Add new PMR term enumeration `ODP_PMR_IP_DSCP` for Differentiated Services
+Code Point (DSCP) bits in IP header.
+* Add new PMR term enumeration `ODP_PMR_VLAN_PCP_0` for Priority Code Point
+(PCP) bits in VLAN header.
+* Clarify `ODP_PMR_ETHTYPE_0`, `ODP_PMR_VLAN_ID_0`, and `ODP_PMR_VLAN_ID_X`
+PMR term specifications.
+* Remove unused `odp_cos_hdr_flow_fields_t` enumeration.
+
+==== Scheduler
+* Add new `odp_schedule_order_wait()` function which waits until the currently
+held scheduling context is the first in order.
+
+=== Implementation
+==== Packet IO
+* Add new experimental AF_XDP socket based packet IO device.
+
 == OpenDataPlane (1.36.0.0)
 
 === Backward incompatible API changes
