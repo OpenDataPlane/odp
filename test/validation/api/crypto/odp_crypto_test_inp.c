@@ -689,7 +689,8 @@ static odp_crypto_session_t session_create(odp_crypto_op_t op,
 	 * In some cases an individual algorithm cannot be used alone,
 	 * i.e. with the null cipher/auth algorithm.
 	 */
-	if (rc == ODP_CRYPTO_SES_ERR_ALG_COMBO) {
+	if (rc < 0 &&
+	    status == ODP_CRYPTO_SES_ERR_ALG_COMBO) {
 		printf("\n    Unsupported algorithm combination: %s, %s\n",
 		       cipher_alg_name(cipher_alg),
 		       auth_alg_name(auth_alg));
