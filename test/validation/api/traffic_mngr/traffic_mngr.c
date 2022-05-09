@@ -706,15 +706,16 @@ static int get_unique_id(odp_packet_t odp_pkt,
 		/* For IPv4 pkts use the ident field to store the unique_id. */
 		ident_offset = l3_offset + offsetof(odph_ipv4hdr_t, id);
 
-		odp_packet_copy_to_mem(odp_pkt, ident_offset, 2, &be_ip_ident);
+		CU_ASSERT_FATAL(odp_packet_copy_to_mem(odp_pkt, ident_offset, 2,
+						       &be_ip_ident) == 0);
 		unique_id = odp_be_to_cpu_16(be_ip_ident);
 		is_ipv4   = true;
 	} else if (odp_packet_has_ipv6(odp_pkt)) {
 		/* For IPv6 pkts use the flow field to store the unique_id. */
 		flow_offset = l3_offset + offsetof(odph_ipv6hdr_t, ver_tc_flow);
 
-		odp_packet_copy_to_mem(odp_pkt, flow_offset, 4,
-				       &be_ver_tc_flow);
+		CU_ASSERT_FATAL(odp_packet_copy_to_mem(odp_pkt, flow_offset, 4,
+						       &be_ver_tc_flow) == 0);
 		ver_tc_flow = odp_be_to_cpu_32(be_ver_tc_flow);
 		unique_id   = ver_tc_flow & ODPH_IPV6HDR_FLOW_LABEL_MASK;
 		is_ipv4     = false;
