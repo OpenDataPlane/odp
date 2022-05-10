@@ -1178,11 +1178,11 @@ static void test_capability(void)
  * operation with hash_result_offset outside the auth_range and by
  * copying the hash in the ciphertext packet.
  */
-static void create_hash_test_reference(odp_auth_alg_t auth,
-				       const odp_crypto_auth_capability_t *capa,
-				       crypto_test_reference_t *ref,
-				       uint32_t digest_offset,
-				       uint8_t digest_fill_byte)
+static int create_hash_test_reference(odp_auth_alg_t auth,
+				      const odp_crypto_auth_capability_t *capa,
+				      crypto_test_reference_t *ref,
+				      uint32_t digest_offset,
+				      uint8_t digest_fill_byte)
 {
 	odp_crypto_session_t session;
 	int rc;
@@ -1220,12 +1220,12 @@ static void create_hash_test_reference(odp_auth_alg_t auth,
 
 	session = session_create(ODP_CRYPTO_OP_ENCODE, ODP_CIPHER_ALG_NULL,
 				 auth, ref, PACKET_IV, HASH_NO_OVERLAP);
+	if (session == ODP_CRYPTO_SESSION_INVALID)
+		return -1;
 
-	if (crypto_op(pkt, &ok, session,
-		      ref->cipher_iv, ref->auth_iv,
-		      &cipher_range, &auth_range,
-		      ref->aad, enc_digest_offset))
-		return;
+	rc = crypto_op(pkt, &ok, session, ref->cipher_iv, ref->auth_iv,
+		       &cipher_range, &auth_range, ref->aad, enc_digest_offset);
+	CU_ASSERT(rc == 0);
 	CU_ASSERT(ok);
 
 	rc = odp_crypto_session_destroy(session);
@@ -1246,6 +1246,8 @@ static void create_hash_test_reference(odp_auth_alg_t auth,
 	CU_ASSERT(rc == 0);
 
 	odp_packet_free(pkt);
+
+	return 0;
 }
 
 static void test_auth_hash_in_auth_range(odp_auth_alg_t auth,
@@ -1258,7 +1260,8 @@ static void test_auth_hash_in_auth_range(odp_auth_alg_t auth,
 	 * Create test packets with auth hash in the authenticated range and
 	 * zeroes in the hash location in the plaintext packet.
 	 */
-	create_hash_test_reference(auth, capa, &ref, digest_offset, 0);
+	if (create_hash_test_reference(auth, capa, &ref, digest_offset, 0))
+		return;
 
 	/*
 	 * Decode the ciphertext packet.
@@ -1280,7 +1283,8 @@ static void test_auth_hash_in_auth_range(odp_auth_alg_t auth,
 	 * Create test packets with auth hash in the authenticated range and
 	 * ones in the hash location in the plaintext packet.
 	 */
-	create_hash_test_reference(auth, capa, &ref, digest_offset, 1);
+	if (create_hash_test_reference(auth, capa, &ref, digest_offset, 1))
+		return;
 
 	/*
 	 * Encode the plaintext packet.
