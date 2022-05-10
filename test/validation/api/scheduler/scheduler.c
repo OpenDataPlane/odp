@@ -89,6 +89,10 @@ typedef struct {
 		odp_queue_t sched;
 		odp_queue_t plain;
 	} sched_and_plain_q;
+	struct {
+		odp_atomic_u32_t helper_ready;
+		odp_atomic_u32_t helper_active;
+	} order_wait;
 } test_globals_t;
 
 typedef struct {
@@ -2316,12 +2320,9 @@ static void enqueue_event(odp_queue_t queue)
 
 static void scheduler_test_order_wait_1_thread(void)
 {
-	odp_schedule_capability_t sched_capa;
 	odp_queue_param_t queue_param;
 	odp_queue_t queue;
 	odp_event_t ev;
-
-	CU_ASSERT(!odp_schedule_capability(&sched_capa));
 
 	sched_queue_param_init(&queue_param);
 	queue_param.sched.sync = ODP_SCHED_SYNC_ORDERED;
@@ -2336,8 +2337,6 @@ static void scheduler_test_order_wait_1_thread(void)
 	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
 	odp_event_free(ev);
 
-	/* Fail build if the capability field does not exist */
-	printf(" (capa=%d) ", sched_capa.order_wait);
 	/* Check that order wait does not get stuck or crash */
 	odp_schedule_order_wait();
 
@@ -2346,6 +2345,137 @@ static void scheduler_test_order_wait_1_thread(void)
 	CU_ASSERT(ev == ODP_EVENT_INVALID);
 
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
+}
+
+static int order_wait_helper(void *arg ODP_UNUSED)
+{
+	odp_event_t ev;
+
+	ev = odp_schedule(NULL, odp_schedule_wait_time(ODP_TIME_SEC_IN_NS));
+
+	if (ev != ODP_EVENT_INVALID) {
+		odp_event_free(ev);
+
+		odp_atomic_store_rel_u32(&globals->order_wait.helper_active, 1);
+		odp_atomic_store_rel_u32(&globals->order_wait.helper_ready, 1);
+
+		/* Wait that the main thread can attempt to overtake us */
+		odp_time_wait_ns(ODP_TIME_SEC_IN_NS);
+
+		odp_atomic_store_rel_u32(&globals->order_wait.helper_active, 0);
+	}
+
+	/* We are not interested in further events */
+	odp_schedule_pause();
+	/* Release context */
+	while ((ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT))
+	       != ODP_EVENT_INVALID) {
+		/* We got an event that was meant for the main thread */
+		odp_event_free(ev);
+	}
+
+	return 0;
+}
+
+static void scheduler_test_order_wait_2_threads(void)
+{
+	odp_schedule_capability_t sched_capa;
+	odp_queue_param_t queue_param;
+	odp_queue_t queue;
+	pthrd_arg thr_arg = {.numthrds = 1};
+	int ret;
+	odp_time_t start;
+	odp_event_t ev;
+
+	CU_ASSERT(!odp_schedule_capability(&sched_capa));
+
+	sched_queue_param_init(&queue_param);
+	queue_param.sched.sync = ODP_SCHED_SYNC_ORDERED;
+	queue = odp_queue_create("ordered queue", &queue_param);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+	CU_ASSERT_FATAL(odp_queue_type(queue) == ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(odp_queue_sched_type(queue) == ODP_SCHED_SYNC_ORDERED);
+
+	odp_atomic_init_u32(&globals->order_wait.helper_ready, 0);
+	odp_atomic_init_u32(&globals->order_wait.helper_active, 0);
+
+	ret = odp_cunit_thread_create(order_wait_helper, &thr_arg);
+	CU_ASSERT_FATAL(ret == thr_arg.numthrds);
+
+	/* Send an event to the helper thread */
+	enqueue_event(queue);
+
+	/* Wait that the helper thread gets the event */
+	start = odp_time_local();
+	while (!odp_atomic_load_acq_u32(&globals->order_wait.helper_ready)) {
+		odp_time_t now = odp_time_local();
+
+		if (odp_time_diff_ns(now, start) > ODP_TIME_SEC_IN_NS) {
+			CU_FAIL("Timeout waiting for helper\n");
+			break;
+		}
+	}
+
+	/* Try to send an event to ourselves */
+	enqueue_event(queue);
+	/*
+	 * If ordered queues are implemented as atomic queues, the schedule
+	 * call here will not return anything until the helper thread has
+	 * released the scheduling context of the first event. So we have
+	 * to wait long enough before giving up.
+	 */
+	ev = odp_schedule(NULL, odp_schedule_wait_time(2 * ODP_TIME_SEC_IN_NS));
+	if (ev == ODP_EVENT_INVALID) {
+		/* Helper thread got the event. Give up. */
+		printf("SKIPPED...");
+		goto out;
+	}
+	odp_event_free(ev);
+
+	/*
+	 * We are now in an ordered scheduling context and behind the helper
+	 * thread in source queue order if the helper thread has not released
+	 * the scheuduling context.
+	 */
+
+	if (!odp_atomic_load_acq_u32(&globals->order_wait.helper_active)) {
+		/*
+		 * Helper thread has released the context already.
+		 * We cannot test order wait fully.
+		 */
+		printf("reduced test...");
+	}
+
+	/*
+	 * The function we are testing: Wait until there are no scheduling
+	 * contexts that precede ours.
+	 */
+	odp_schedule_order_wait();
+
+	/*
+	 * If order wait is supported, we are now first in the source queue
+	 * order, so the helper thread must have released its context.
+	 */
+	if (sched_capa.order_wait)
+		CU_ASSERT(!odp_atomic_load_acq_u32(&globals->order_wait.helper_active));
+
+	/* Release the context */
+	ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+	CU_ASSERT(ev == ODP_EVENT_INVALID);
+
+out:
+	CU_ASSERT(odp_cunit_thread_exit(&thr_arg) == 0);
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+}
+
+static int check_2_workers(void)
+{
+	if (globals->num_workers < 2) {
+		printf("\nTest: scheduler_test_order_wait_2_threads: SKIPPED\n");
+		return ODP_TEST_INACTIVE;
+	}
+
+	return ODP_TEST_ACTIVE;
 }
 
 static int sched_and_plain_thread(void *arg)
@@ -3278,6 +3408,7 @@ odp_testinfo_t scheduler_basic_suite[] = {
 	ODP_TEST_INFO(scheduler_test_pause_enqueue),
 	ODP_TEST_INFO(scheduler_test_ordered_lock),
 	ODP_TEST_INFO(scheduler_test_order_wait_1_thread),
+	ODP_TEST_INFO_CONDITIONAL(scheduler_test_order_wait_2_threads, check_2_workers),
 	ODP_TEST_INFO_CONDITIONAL(scheduler_test_flow_aware,
 				  check_flow_aware_support),
 	ODP_TEST_INFO(scheduler_test_parallel),
