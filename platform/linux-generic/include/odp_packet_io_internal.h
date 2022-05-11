@@ -65,12 +65,16 @@ struct pktio_if_ops;
 
 #if defined(_ODP_PKTIO_NETMAP)
 #define PKTIO_PRIVATE_SIZE 74752
+#elif defined(_ODP_PKTIO_XDP) && ODP_CACHE_LINE_SIZE == 128
+#define PKTIO_PRIVATE_SIZE 33792
+#elif defined(_ODP_PKTIO_XDP)
+#define PKTIO_PRIVATE_SIZE 25600
 #elif defined(_ODP_PKTIO_DPDK) && ODP_CACHE_LINE_SIZE == 128
 #define PKTIO_PRIVATE_SIZE 10240
 #elif defined(_ODP_PKTIO_DPDK)
 #define PKTIO_PRIVATE_SIZE 5632
 #else
-#define PKTIO_PRIVATE_SIZE 512
+#define PKTIO_PRIVATE_SIZE 384
 #endif
 
 struct pktio_entry {
