@@ -71,6 +71,8 @@ typedef struct {
 	struct xsk_ring_cons compl_q;
 	struct xsk_ring_prod tx;
 	struct xsk_ring_prod fill_q;
+	odp_pktin_queue_stats_t qi_stats;
+	odp_pktout_queue_stats_t qo_stats;
 	struct xsk_socket *xsk;
 	uint64_t i_stats[MAX_INTERNAL_STATS];
 } xdp_sock_t;
@@ -213,6 +215,26 @@ static int sock_xdp_stats(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats)
 	return 0;
 }
 
+static int sock_xdp_pktin_queue_stats(pktio_entry_t *pktio_entry, uint32_t index,
+				      odp_pktin_queue_stats_t *pktin_stats)
+{
+	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
+
+	*pktin_stats = priv->qs[index].qi_stats;
+
+	return 0;
+}
+
+static int sock_xdp_pktout_queue_stats(pktio_entry_t *pktio_entry, uint32_t index,
+				       odp_pktout_queue_stats_t *pktout_stats)
+{
+	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
+
+	*pktout_stats = priv->qs[index].qo_stats;
+
+	return 0;
+}
+
 static int sock_xdp_extra_stat_info(pktio_entry_t *pktio_entry, odp_pktio_extra_stat_info_t info[],
 				    int num)
 {
@@ -280,12 +302,12 @@ static inline void extract_data(const struct xdp_desc *rx_desc, uint8_t *pool_ba
 	pkt_data->len = rx_desc->len;
 }
 
-static uint32_t process_received(pktio_entry_t *pktio_entry, pool_t *pool,
-				 struct xsk_ring_cons *rx, uint32_t start_idx,
-				 odp_packet_t packets[], int num)
+static uint32_t process_received(pktio_entry_t *pktio_entry, xdp_sock_t *sock, pool_t *pool,
+				 uint32_t start_idx, odp_packet_t packets[], int num)
 {
-	pkt_data_t pkt_data;
+	struct xsk_ring_cons *rx = &sock->rx;
 	uint8_t *base_addr = pool->base_addr;
+	pkt_data_t pkt_data;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
 	int ret;
 	const odp_proto_chksums_t in_chksums = pktio_entry->s.in_chksums;
@@ -329,6 +351,9 @@ static uint32_t process_received(pktio_entry_t *pktio_entry, pool_t *pool,
 		octets += pkt_data.len;
 	}
 
+	sock->qi_stats.octets += octets;
+	sock->qi_stats.packets += num_rx;
+	sock->qi_stats.errors += errors;
 	pktio_entry->s.stats.in_octets += octets;
 	pktio_entry->s.stats.in_packets += num_rx;
 	pktio_entry->s.stats.in_errors += errors;
@@ -407,7 +432,7 @@ static int sock_xdp_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pac
 		return 0;
 	}
 
-	procd = process_received(pktio_entry, priv->umem_info->pool, &sock->rx, start_idx, packets,
+	procd = process_received(pktio_entry, sock, priv->umem_info->pool, start_idx, packets,
 				 recvd);
 	xsk_ring_cons__release(&sock->rx, recvd);
 	(void)reserve_fill_queue_elements(priv, index, recvd);
@@ -537,6 +562,8 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 
 	xsk_ring_prod__submit(tx, i);
 	handle_pending_tx(sock, base_addr, NUM_XDP_DESCS);
+	sock->qo_stats.octets += octets;
+	sock->qo_stats.packets += i;
 	pktio_entry->s.stats.out_octets += octets;
 	pktio_entry->s.stats.out_packets += i;
 
@@ -651,8 +678,11 @@ static int sock_xdp_capability(pktio_entry_t *pktio_entry, odp_pktio_capability_
 	capa->stats.pktio.counter.out_octets = 1U;
 	capa->stats.pktio.counter.out_packets = 1U;
 
-	capa->stats.pktin_queue.all_counters = 0U;
-	capa->stats.pktout_queue.all_counters = 0U;
+	capa->stats.pktin_queue.counter.octets = 1U;
+	capa->stats.pktin_queue.counter.packets = 1U;
+	capa->stats.pktin_queue.counter.errors = 1U;
+	capa->stats.pktout_queue.counter.octets = 1U;
+	capa->stats.pktout_queue.counter.packets = 1U;
 
 	return 0;
 }
@@ -781,8 +811,8 @@ const pktio_if_ops_t _odp_sock_xdp_pktio_ops = {
 	.stop = NULL,
 	.stats = sock_xdp_stats,
 	.stats_reset = sock_xdp_stats_reset,
-	.pktin_queue_stats = NULL,
-	.pktout_queue_stats = NULL,
+	.pktin_queue_stats = sock_xdp_pktin_queue_stats,
+	.pktout_queue_stats = sock_xdp_pktout_queue_stats,
 	.extra_stat_info = sock_xdp_extra_stat_info,
 	.extra_stats = sock_xdp_extra_stats,
 	.extra_stat_counter = sock_xdp_extra_stat_counter,
