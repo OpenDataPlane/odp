@@ -336,26 +336,39 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 3.6.3 Running ODP with AF_XDP socket packet I/O
 
-   At the moment, each AF_XDP socket packet I/O binds to a single TRX queue,
-   this means that NIC(s) of the environment have to be configured accordingly.
+   AF_XDP socket packet I/Os bind to TRX-combined queues. Based on the packet
+   prosessing needs, NIC(s) of the environment should be configured
+   accordingly.
 
-   $ ethtool -L <if name> combined 1
+   $ ethtool -L <if name> combined <count>
+
+   For example, with four (4) TRX queues, packet processing can be divided to
+   four (4) processing cores.
 
    Additionally, with some NICs (e.g. Mellanox), when zero-copy XDP is in use,
    the queue configuration is adjusted by the NIC with additional queues on top
-   of the configured single TRX queue. This requires a forwarding rule:
+   of the configured amount of TRX queues which are then used as the actual
+   queues. This will require additional forwarding rules as otherwise packets
+   do not get forwarded to the zero-copy queues.
 
-   $ ethtool -N <if name> flow-type ether dst <mac of if> action 1
+   For example:
 
-   Which queue to bind to in a given interface can be controlled with an
+   ethtool -N <if name> flow-type ether dst <mac of if> action 5
+
+   Would forward Ethernet frames with a given destination address to queue 5,
+   which should be one of the zero-copy queues, i.e. queue index on top of the
+   amount configured with "ethtool -L" option.
+
+   Which queues to bind to a given interface can be controlled with an
    environment variable when starting an ODP executable:
 
    $ ODP_PKTIO_XDP_PARAMS="<if name>:<queue index> <if name>:<queue index> ..." ./<odp executable> ...
 
    parameter being a string of interface-queue index pairs, where interface and
-   queue is separated by a colon and pairs separated by a whitespace. If no
-   environment variable is passed, zero (0) queue is chosen for all AF_XDP
-   interfaces.
+   queue are separated by a colon and pairs separated by a whitespace. The queue
+   index dictates the starting queue in case of multiple TRX queues per packet
+   I/O. If no environment variable is passed, zero (0) starting queue is chosen
+   for all AF_XDP interfaces.
 
 4.0 Packages needed to build API tests
 
