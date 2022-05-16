@@ -267,14 +267,15 @@ static inline odp_timer_pool_t timer_pool_to_hdl(timer_pool_t *tp)
 static inline timer_pool_t *handle_to_tp(odp_timer_t hdl)
 {
 	uint32_t tp_idx = _odp_typeval(hdl) >> INDEX_BITS;
+	timer_pool_t *tp;
 
-	if (odp_likely(tp_idx < MAX_TIMER_POOLS)) {
-		timer_pool_t *tp = timer_global->timer_pool[tp_idx];
+	ODP_ASSERT(tp_idx < MAX_TIMER_POOLS);
 
-		if (odp_likely(tp != NULL))
-			return timer_global->timer_pool[tp_idx];
-	}
-	ODP_ABORT("Invalid timer handle %p\n", (void *)hdl);
+	tp = timer_global->timer_pool[tp_idx];
+
+	ODP_ASSERT(tp != NULL);
+
+	return tp;
 }
 
 static inline uint32_t handle_to_idx(odp_timer_t hdl,
@@ -282,10 +283,11 @@ static inline uint32_t handle_to_idx(odp_timer_t hdl,
 {
 	uint32_t idx = (_odp_typeval(hdl) & ((1U << INDEX_BITS) - 1U)) - 1;
 
+	ODP_ASSERT(idx < odp_atomic_load_u32(&tp->high_wm));
+
 	__builtin_prefetch(&tp->tick_buf[idx], 0, 0);
-	if (odp_likely(idx < odp_atomic_load_u32(&tp->high_wm)))
-		return idx;
-	ODP_ABORT("Invalid timer handle %p\n", (void *)hdl);
+
+	return idx;
 }
 
 static inline odp_timer_t tp_idx_to_handle(timer_pool_t *tp,
