@@ -905,11 +905,10 @@ static inline void timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 	}
 	/* Else false positive, ignore */
 #else
-	/* Take a related lock */
-	while (_odp_atomic_flag_tas(IDX2LOCK(tp, idx)))
-		/* While lock is taken, spin using relaxed loads */
-		while (_odp_atomic_flag_load(IDX2LOCK(tp, idx)))
-			odp_cpu_pause();
+	/* Try to take a related lock */
+	if (_odp_atomic_flag_tas(IDX2LOCK(tp, idx)))
+		return;
+
 	/* Proper check for timer expired */
 	exp_tck = tb->exp_tck.v;
 	if (odp_likely(exp_tck <= tick)) {
