@@ -93,8 +93,8 @@
 
 /* Mutual exclusion in the absence of CAS16 */
 #ifndef ODP_ATOMIC_U128
-#define NUM_LOCKS 1024
-#define IDX2LOCK(idx) (&timer_global->locks[(idx) % NUM_LOCKS])
+#define NUM_LOCKS 256
+#define IDX2LOCK(tp, idx) (&(tp)->locks[(idx) % NUM_LOCKS])
 #endif
 
 #include <odp/visibility_begin.h>
@@ -167,6 +167,10 @@ typedef struct timer_pool_s {
 	double base_freq;
 	uint64_t max_multiplier;
 	uint8_t periodic;
+#ifndef ODP_ATOMIC_U128
+	/* Multiple locks per cache line! */
+	_odp_atomic_flag_t locks[NUM_LOCKS] ODP_ALIGNED_CACHE;
+#endif
 
 } timer_pool_t;
 
@@ -190,10 +194,7 @@ typedef struct timer_global_t {
 	odp_time_t destroy_time[MAX_TIMER_POOLS];
 	odp_shm_t tp_shm[MAX_TIMER_POOLS];
 	timer_pool_t *timer_pool[MAX_TIMER_POOLS];
-#ifndef ODP_ATOMIC_U128
-	/* Multiple locks per cache line! */
-	_odp_atomic_flag_t locks[NUM_LOCKS] ODP_ALIGNED_CACHE;
-#endif
+
 	/* These are read frequently from inline timer */
 	odp_time_t poll_interval_time;
 	odp_bool_t use_inline_timers;
@@ -473,6 +474,11 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	tp->tick_buf = (void *)((char *)odp_shm_addr(shm) + sz0);
 	tp->timers = (void *)((char *)odp_shm_addr(shm) + sz0 + sz1);
 
+#ifndef ODP_ATOMIC_U128
+	for (i = 0; i < NUM_LOCKS; i++)
+		_odp_atomic_flag_clear(&tp->locks[i]);
+#endif
+
 	/* Initialize all odp_timer entries */
 	for (i = 0; i < tp->param.num_timers; i++) {
 		tp->timers[i].queue = ODP_QUEUE_INVALID;
@@ -691,9 +697,9 @@ static bool timer_reset(uint32_t idx, uint64_t abs_tck, odp_event_t *tmo_event,
 						       _ODP_MEMMODEL_RLS, _ODP_MEMMODEL_RLX));
 #else
 		/* Take a related lock */
-		while (_odp_atomic_flag_tas(IDX2LOCK(idx)))
+		while (_odp_atomic_flag_tas(IDX2LOCK(tp, idx)))
 			/* While lock is taken, spin using relaxed loads */
-			while (_odp_atomic_flag_load(IDX2LOCK(idx)))
+			while (_odp_atomic_flag_load(IDX2LOCK(tp, idx)))
 				odp_cpu_pause();
 
 		/* Only if there is a timeout event can the timer be reset */
@@ -707,7 +713,7 @@ static bool timer_reset(uint32_t idx, uint64_t abs_tck, odp_event_t *tmo_event,
 		}
 
 		/* Release the lock */
-		_odp_atomic_flag_clear(IDX2LOCK(idx));
+		_odp_atomic_flag_clear(IDX2LOCK(tp, idx));
 #endif
 	} else {
 		/* We have a new timeout event which replaces any old one */
@@ -740,9 +746,9 @@ static bool timer_reset(uint32_t idx, uint64_t abs_tck, odp_event_t *tmo_event,
 		old_event = old.tmo_event;
 #else
 		/* Take a related lock */
-		while (_odp_atomic_flag_tas(IDX2LOCK(idx)))
+		while (_odp_atomic_flag_tas(IDX2LOCK(tp, idx)))
 			/* While lock is taken, spin using relaxed loads */
-			while (_odp_atomic_flag_load(IDX2LOCK(idx)))
+			while (_odp_atomic_flag_load(IDX2LOCK(tp, idx)))
 				odp_cpu_pause();
 
 		/* Swap in new event, save any old event */
@@ -753,7 +759,7 @@ static bool timer_reset(uint32_t idx, uint64_t abs_tck, odp_event_t *tmo_event,
 		tb->exp_tck.v = abs_tck;
 
 		/* Release the lock */
-		_odp_atomic_flag_clear(IDX2LOCK(idx));
+		_odp_atomic_flag_clear(IDX2LOCK(tp, idx));
 #endif
 		/* Return old timeout event */
 		*tmo_event = old_event;
@@ -783,9 +789,9 @@ static odp_event_t timer_set_unused(timer_pool_t *tp, uint32_t idx)
 	old_event = old.tmo_event;
 #else
 	/* Take a related lock */
-	while (_odp_atomic_flag_tas(IDX2LOCK(idx)))
+	while (_odp_atomic_flag_tas(IDX2LOCK(tp, idx)))
 		/* While lock is taken, spin using relaxed loads */
-		while (_odp_atomic_flag_load(IDX2LOCK(idx)))
+		while (_odp_atomic_flag_load(IDX2LOCK(tp, idx)))
 			odp_cpu_pause();
 
 	/* Update the timer state (e.g. cancel the current timeout) */
@@ -796,7 +802,7 @@ static odp_event_t timer_set_unused(timer_pool_t *tp, uint32_t idx)
 	tb->tmo_event = ODP_EVENT_INVALID;
 
 	/* Release the lock */
-	_odp_atomic_flag_clear(IDX2LOCK(idx));
+	_odp_atomic_flag_clear(IDX2LOCK(tp, idx));
 #endif
 	/* Return the old event */
 	return old_event;
@@ -839,9 +845,9 @@ static odp_event_t timer_cancel(timer_pool_t *tp, uint32_t idx)
 	old_event = old.tmo_event;
 #else
 	/* Take a related lock */
-	while (_odp_atomic_flag_tas(IDX2LOCK(idx)))
+	while (_odp_atomic_flag_tas(IDX2LOCK(tp, idx)))
 		/* While lock is taken, spin using relaxed loads */
-		while (_odp_atomic_flag_load(IDX2LOCK(idx)))
+		while (_odp_atomic_flag_load(IDX2LOCK(tp, idx)))
 			odp_cpu_pause();
 
 	/* Swap in new event, save any old event */
@@ -855,7 +861,7 @@ static odp_event_t timer_cancel(timer_pool_t *tp, uint32_t idx)
 		tb->exp_tck.v = TMO_INACTIVE;
 
 	/* Release the lock */
-	_odp_atomic_flag_clear(IDX2LOCK(idx));
+	_odp_atomic_flag_clear(IDX2LOCK(tp, idx));
 #endif
 	/* Return the old event */
 	return old_event;
@@ -900,9 +906,9 @@ static inline void timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 	/* Else false positive, ignore */
 #else
 	/* Take a related lock */
-	while (_odp_atomic_flag_tas(IDX2LOCK(idx)))
+	while (_odp_atomic_flag_tas(IDX2LOCK(tp, idx)))
 		/* While lock is taken, spin using relaxed loads */
-		while (_odp_atomic_flag_load(IDX2LOCK(idx)))
+		while (_odp_atomic_flag_load(IDX2LOCK(tp, idx)))
 			odp_cpu_pause();
 	/* Proper check for timer expired */
 	exp_tck = tb->exp_tck.v;
@@ -922,7 +928,7 @@ static inline void timer_expire(timer_pool_t *tp, uint32_t idx, uint64_t tick)
 	}
 	/* Else false positive, ignore */
 	/* Release the lock */
-	_odp_atomic_flag_clear(IDX2LOCK(idx));
+	_odp_atomic_flag_clear(IDX2LOCK(tp, idx));
 #endif
 	if (odp_likely(tmo_event != ODP_EVENT_INVALID)) {
 		/* Fill in expiration tick for timeout events */
@@ -1927,8 +1933,7 @@ int _odp_timer_init_global(const odp_init_t *params)
 	}
 
 #ifndef ODP_ATOMIC_U128
-	for (i = 0; i < NUM_LOCKS; i++)
-		_odp_atomic_flag_clear(&timer_global->locks[i]);
+	ODP_DBG("Using lock-based timer implementation\n");
 #else
 	ODP_DBG("Using lock-less timer implementation\n");
 #endif
