@@ -179,6 +179,16 @@ extern "C" {
  */
 #define CONFIG_IPSEC_MAX_NUM_SA 4000
 
+/*
+ * Use 128-bit atomics for timer implementation (if available)
+ *
+ * On some platforms 128-bit atomic operations may be available, but the
+ * implementation of used 128-bit GCC built-in functions (e.g.
+ * __atomic_compare_exchange_n) utilizes expensive locking. Set to zero to use
+ * ODP lock based implementation instead.
+ */
+#define CONFIG_TIMER_128BIT_ATOMICS 1
+
 #ifdef __cplusplus
 }
 #endif
