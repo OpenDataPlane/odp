@@ -114,16 +114,8 @@ typedef struct
 ODP_ALIGNED(16) /* 16-byte atomic operations need properly aligned addresses */
 #endif
 tick_buf_s {
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	/* No atomics support for 64-bit variables, will use separate lock */
-	/* Use the same layout as odp_atomic_u64_t but without lock variable */
-	struct {
-		uint64_t v;
-	} exp_tck;/* Expiration tick or TMO_xxx */
-#else
-	odp_atomic_u64_t exp_tck;/* Expiration tick or TMO_xxx */
-#endif
-
+	/* Expiration tick or TMO_xxx */
+	odp_atomic_u64_t exp_tck;
 	union {
 		/* ODP_EVENT_INVALID if timer not active */
 		odp_event_t tmo_event;
@@ -134,8 +126,7 @@ tick_buf_s {
 
 } tick_buf_t;
 
-#if __GCC_ATOMIC_LLONG_LOCK_FREE >= 2
-/* Only assert this when we perform atomic operations on tick_buf_t */
+#ifndef ODP_ATOMIC_U64_LOCK
 ODP_STATIC_ASSERT(sizeof(tick_buf_t) == 16, "sizeof(tick_buf_t) == 16");
 #endif
 
@@ -237,11 +228,7 @@ static void timer_init(_odp_timer_t *tim, tick_buf_t *tb, odp_queue_t _q, const 
 	tb->tmo_event = ODP_EVENT_INVALID;
 
 	/* Release the timer by setting timer state to inactive */
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	tb->exp_tck.v = TMO_INACTIVE;
-#else
 	odp_atomic_store_rel_u64(&tb->exp_tck, TMO_INACTIVE);
-#endif
 }
 
 /* Teardown when timer is freed */
@@ -491,11 +478,7 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 		tp->timers[i].queue = ODP_QUEUE_INVALID;
 		set_next_free(&tp->timers[i], i + 1);
 		tp->timers[i].user_ptr = NULL;
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-		tp->tick_buf[i].exp_tck.v = TMO_UNUSED;
-#else
 		odp_atomic_init_u64(&tp->tick_buf[i].exp_tck, TMO_UNUSED);
-#endif
 		tp->tick_buf[i].tmo_event = ODP_EVENT_INVALID;
 	}
 	tp->tp_idx = tp_idx;
@@ -706,31 +689,7 @@ static bool timer_reset(uint32_t idx, uint64_t abs_tck, odp_event_t *tmo_event,
 		} while (!_odp_atomic_u128_cmp_xchg_mm((_odp_atomic_u128_t *)tb,
 						       (_odp_u128_t *)&old, (_odp_u128_t *)&new,
 						       _ODP_MEMMODEL_RLS, _ODP_MEMMODEL_RLX));
-#elif __GCC_ATOMIC_LLONG_LOCK_FREE >= 2 && \
-	defined __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8
-	/* Target supports lock-free 64-bit CAS (and probably exchange) */
-		/* Since locks/barriers are not good for C-A15, we take an
-		 * alternative approach using relaxed memory model */
-		uint64_t old;
-		/* Swap in new expiration tick, get back old tick which
-		 * will indicate active/inactive timer state */
-		old = odp_atomic_xchg_u64(&tb->exp_tck, abs_tck);
-
-		if ((old & TMO_INACTIVE) != 0) {
-			/* Timer was inactive (cancelled or expired),
-			 * we can't reset a timer without a timeout event.
-			 * Attempt to restore inactive state, we don't
-			 * want this timer to continue as active without
-			 * timeout as this will trigger unnecessary and
-			 * aborted expiration attempts.
-			 * We don't care if we fail, then some other thread
-			 * reset or cancelled the timer. Without any
-			 * synchronization between the threads, we have a
-			 * data race and the behavior is undefined */
-			(void)odp_atomic_cas_u64(&tb->exp_tck, &abs_tck, old);
-			success = false;
-		}
-#else /* Target supports neither 128-bit nor 64-bit CAS => use lock */
+#else
 		/* Take a related lock */
 		while (_odp_atomic_flag_tas(IDX2LOCK(idx)))
 			/* While lock is taken, spin using relaxed loads */
@@ -1823,11 +1782,8 @@ int odp_timeout_fresh(odp_timeout_t tmo)
 	timer_pool_t *tp = handle_to_tp(hdl);
 	uint32_t idx = handle_to_idx(hdl, tp);
 	tick_buf_t *tb = &tp->tick_buf[idx];
-#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	uint64_t exp_tck = tb->exp_tck.v;
-#else
 	uint64_t exp_tck = odp_atomic_load_u64(&tb->exp_tck);
-#endif
+
 	/* Return true if the timer still has the same expiration tick
 	 * (ignoring the inactive/expired bit) as the timeout */
 	return hdr->expiration == (exp_tck & ~TMO_INACTIVE);
