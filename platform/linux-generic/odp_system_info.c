@@ -362,6 +362,21 @@ static int read_config_file(void)
 	return 0;
 }
 
+static void print_compiler_info(void)
+{
+	ODP_PRINT("Compiler defines:\n");
+	ODP_PRINT("  __GCC_ATOMIC_LLONG_LOCK_FREE:        %d\n", __GCC_ATOMIC_LLONG_LOCK_FREE);
+	ODP_PRINT("  __GCC_ATOMIC_LONG_LOCK_FREE:         %d\n", __GCC_ATOMIC_LONG_LOCK_FREE);
+	ODP_PRINT("  __GCC_ATOMIC_INT_LOCK_FREE:          %d\n", __GCC_ATOMIC_INT_LOCK_FREE);
+	ODP_PRINT("  __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16: ");
+#ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
+	ODP_PRINT("1\n");
+#else
+	ODP_PRINT("0\n");
+#endif
+	ODP_PRINT("\n");
+}
+
 /*
  * System info initialisation
  */
@@ -414,6 +429,8 @@ int _odp_system_info_init(void)
 	}
 
 	system_hp(&odp_global_ro.hugepage_info);
+
+	print_compiler_info();
 
 	return 0;
 }
