@@ -1946,12 +1946,16 @@ int _odp_timer_init_global(const odp_init_t *params)
 #else
 	ODP_PRINT("Timer using lock-based implementation\n");
 #endif
+
+	ODP_PRINT("Timer config:\n");
+
 	conf_str =  "timer.inline";
 	if (!_odp_libconfig_lookup_int(conf_str, &val)) {
 		ODP_ERR("Config option '%s' not found.\n", conf_str);
 		goto error;
 	}
 	timer_global->use_inline_timers = val;
+	ODP_PRINT("  %s: %i\n", conf_str, val);
 
 	conf_str =  "timer.inline_poll_interval";
 	if (!_odp_libconfig_lookup_int(conf_str, &val)) {
@@ -1959,6 +1963,7 @@ int _odp_timer_init_global(const odp_init_t *params)
 		goto error;
 	}
 	timer_global->poll_interval = val;
+	ODP_PRINT("  %s: %i\n", conf_str, val);
 
 	conf_str =  "timer.inline_poll_interval_nsec";
 	if (!_odp_libconfig_lookup_int(conf_str, &val)) {
@@ -1968,6 +1973,7 @@ int _odp_timer_init_global(const odp_init_t *params)
 	timer_global->poll_interval_nsec = val;
 	timer_global->poll_interval_time =
 		odp_time_global_from_ns(timer_global->poll_interval_nsec);
+	ODP_PRINT("  %s: %i\n", conf_str, val);
 
 	conf_str =  "timer.inline_thread_type";
 	if (!_odp_libconfig_lookup_int(conf_str, &val)) {
@@ -1975,6 +1981,8 @@ int _odp_timer_init_global(const odp_init_t *params)
 		goto error;
 	}
 	timer_global->thread_type = val;
+	ODP_PRINT("  %s: %i\n", conf_str, val);
+	ODP_PRINT("\n");
 
 	if (!timer_global->use_inline_timers) {
 		timer_res_init();
