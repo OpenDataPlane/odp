@@ -5,3 +5,6 @@
  */
 
 #include <odp/api/abi-default/spinlock_recursive.h>
+
+/* Include inlined versions of API functions */
+#include <odp/api/plat/spinlock_recursive_inlines.h>
