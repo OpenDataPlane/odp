@@ -132,8 +132,6 @@ typedef struct ODP_ALIGNED_CACHE {
 	unsigned int min_rx_burst;	/**< minimum RX burst size */
 	/** RSS configuration */
 	struct rte_eth_rss_conf rss_conf;
-	/* Supported RTE_PTYPE_XXX flags in a mask */
-	uint32_t supported_ptypes;
 	uint16_t mtu;			/**< maximum transmission unit */
 	uint32_t mtu_max;		/**< maximum supported MTU value */
 	odp_bool_t mtu_set;		/**< DPDK MTU has been modified */
@@ -612,7 +610,6 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	odp_pktio_t input = pktio_entry->s.handle;
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
-	const uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
 
 	/* Allocate maximum sized packets */
 	max_len = pkt_dpdk->data_room;
@@ -892,7 +889,6 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 	odp_pktio_t input;
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
-	const uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
 
 	prefetch_pkt(mbuf_table[0]);
 
@@ -1893,49 +1889,6 @@ static int dpdk_setup_eth_rx(const pktio_entry_t *pktio_entry,
 	return 0;
 }
 
-static void dpdk_ptype_support_set(pktio_entry_t *pktio_entry, uint16_t port_id)
-{
-	int max_num, num, i;
-	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
-	uint32_t mask = RTE_PTYPE_L2_MASK | RTE_PTYPE_L3_MASK |
-			RTE_PTYPE_L4_MASK;
-
-	pkt_dpdk->supported_ptypes = 0;
-
-	max_num = rte_eth_dev_get_supported_ptypes(port_id, mask, NULL, 0);
-	if (max_num <= 0) {
-		ODP_DBG("Device does not support any ptype flags\n");
-		return;
-	}
-
-	uint32_t ptype[max_num];
-
-	num = rte_eth_dev_get_supported_ptypes(port_id, mask, ptype, max_num);
-	if (num <= 0) {
-		ODP_DBG("Device does not support any ptype flags\n");
-		return;
-	}
-
-	for (i = 0; i < num; i++) {
-		ODP_DBG("  supported ptype: 0x%x\n", ptype[i]);
-
-		if (ptype[i] == RTE_PTYPE_L2_ETHER_VLAN)
-			pkt_dpdk->supported_ptypes |= PTYPE_VLAN;
-		else if (ptype[i] == RTE_PTYPE_L2_ETHER_QINQ)
-			pkt_dpdk->supported_ptypes |= PTYPE_VLAN_QINQ;
-		else if (ptype[i] == RTE_PTYPE_L2_ETHER_ARP)
-			pkt_dpdk->supported_ptypes |= PTYPE_ARP;
-		else if (RTE_ETH_IS_IPV4_HDR(ptype[i]))
-			pkt_dpdk->supported_ptypes |= PTYPE_IPV4;
-		else if (RTE_ETH_IS_IPV6_HDR(ptype[i]))
-			pkt_dpdk->supported_ptypes |= PTYPE_IPV6;
-		else if (ptype[i] == RTE_PTYPE_L4_UDP)
-			pkt_dpdk->supported_ptypes |= PTYPE_UDP;
-		else if (ptype[i] == RTE_PTYPE_L4_TCP)
-			pkt_dpdk->supported_ptypes |= PTYPE_TCP;
-	}
-}
-
 static int dpdk_start(pktio_entry_t *pktio_entry)
 {
 	struct rte_eth_dev_info dev_info;
@@ -1981,9 +1934,6 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 			ret, port_id);
 		return -1;
 	}
-
-	/* Record supported parser ptype flags */
-	dpdk_ptype_support_set(pktio_entry, port_id);
 
 	return 0;
 }
