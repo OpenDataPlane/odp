@@ -17,15 +17,6 @@
 
 struct rte_mbuf;
 
-/* Flags for pkt_dpdk_t.supported_ptypes */
-#define PTYPE_VLAN      0x01
-#define PTYPE_VLAN_QINQ 0x02
-#define PTYPE_ARP       0x04
-#define PTYPE_IPV4      0x08
-#define PTYPE_IPV6      0x10
-#define PTYPE_UDP       0x20
-#define PTYPE_TCP       0x40
-
 /** Packet parser using DPDK interface */
 int _odp_dpdk_packet_parse_common(odp_packet_hdr_t *pkt_hdr,
 				  const uint8_t *ptr,
