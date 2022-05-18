@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, Nokia
+/* Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -22,7 +22,6 @@
 
 /* Max payload bytes per LSO segment */
 #define CUSTOM_MAX_PAYLOAD 288
-#define IPV4_MAX_PAYLOAD   700
 
 /* Pktio interface info
  */
@@ -59,6 +58,7 @@ odp_pool_t lso_pool = ODP_POOL_INVALID;
 
 /* Check test packet size */
 ODP_STATIC_ASSERT(sizeof(test_packet_ipv4_udp_1500) == 1500, "error: size is not 1500");
+ODP_STATIC_ASSERT(sizeof(test_packet_ipv4_udp_325) == 325, "error: size is not 325");
 
 static inline void wait_linkup(odp_pktio_t pktio)
 {
@@ -490,9 +490,12 @@ static int check_lso_ipv4(void)
 	return ODP_TEST_ACTIVE;
 }
 
-static int check_lso_ipv4_restart(void)
+static int check_lso_ipv4_segs(uint32_t num)
 {
 	if (check_lso_ipv4() == ODP_TEST_INACTIVE)
+		return ODP_TEST_INACTIVE;
+
+	if (num > pktio_a->capa.lso.max_segments)
 		return ODP_TEST_INACTIVE;
 
 	if (disable_restart && num_starts > 0)
@@ -501,6 +504,21 @@ static int check_lso_ipv4_restart(void)
 	num_starts++;
 
 	return ODP_TEST_ACTIVE;
+}
+
+static int check_lso_ipv4_segs_1(void)
+{
+	return check_lso_ipv4_segs(1);
+}
+
+static int check_lso_ipv4_segs_2(void)
+{
+	return check_lso_ipv4_segs(2);
+}
+
+static int check_lso_ipv4_segs_3(void)
+{
+	return check_lso_ipv4_segs(3);
 }
 
 static void lso_capability(void)
@@ -720,7 +738,8 @@ static void lso_send_custom_eth_use_opt(void)
 	lso_send_custom_eth(1);
 }
 
-static void lso_send_ipv4(int use_opt)
+static void lso_send_ipv4(const uint8_t *test_packet, uint32_t pkt_len, uint32_t max_payload,
+			  int use_opt)
 {
 	int i, ret, num;
 	odp_lso_profile_param_t param;
@@ -729,9 +748,7 @@ static void lso_send_ipv4(int use_opt)
 	odp_packet_t packet[MAX_NUM_SEG];
 	/* Ethernet 14B + IPv4 header 20B */
 	uint32_t hdr_len = 34;
-	uint32_t pkt_len = sizeof(test_packet_ipv4_udp_1500);
 	uint32_t sent_payload = pkt_len - hdr_len;
-	uint32_t max_payload = IPV4_MAX_PAYLOAD;
 
 	odp_lso_profile_param_init(&param);
 	param.lso_proto = ODP_LSO_PROTO_IPV4;
@@ -741,10 +758,10 @@ static void lso_send_ipv4(int use_opt)
 
 	CU_ASSERT_FATAL(start_interfaces() == 0);
 
-	test_lso_request_clear(profile, test_packet_ipv4_udp_1500, pkt_len, hdr_len, max_payload);
+	test_lso_request_clear(profile, test_packet, pkt_len, hdr_len, max_payload);
 
-	ret = send_packets(profile, pktio_a, pktio_b, test_packet_ipv4_udp_1500,
-			   pkt_len, hdr_len, max_payload, 14, use_opt);
+	ret = send_packets(profile, pktio_a, pktio_b, test_packet, pkt_len,
+			   hdr_len, max_payload, 14, use_opt);
 	CU_ASSERT_FATAL(ret == 0);
 
 	ODPH_DBG("\n    Sent payload length:     %u bytes\n", sent_payload);
@@ -773,12 +790,13 @@ static void lso_send_ipv4(int use_opt)
 
 		ODPH_DBG("    LSO segment[%i] payload:  %u bytes\n", i, payload_len);
 
-		CU_ASSERT(odp_packet_has_ipfrag(packet[i]));
 		CU_ASSERT(odp_packet_has_error(packet[i]) == 0);
-		CU_ASSERT(payload_len <= IPV4_MAX_PAYLOAD);
+		CU_ASSERT(payload_len <= max_payload);
 
-		if (compare_data(packet[i], hdr_len,
-				 test_packet_ipv4_udp_1500 + offset, payload_len) >= 0) {
+		if (pkt_len > max_payload)
+			CU_ASSERT(odp_packet_has_ipfrag(packet[i]));
+
+		if (compare_data(packet[i], hdr_len, test_packet + offset, payload_len) >= 0) {
 			ODPH_ERR("    Payload compare failed at offset %u\n", offset);
 			CU_FAIL("Payload compare failed\n");
 		}
@@ -799,22 +817,69 @@ static void lso_send_ipv4(int use_opt)
 	CU_ASSERT_FATAL(odp_lso_profile_destroy(profile) == 0);
 }
 
-static void lso_send_ipv4_use_pkt_meta(void)
+static void lso_send_ipv4_udp_325(uint32_t max_payload, int use_opt)
 {
-	lso_send_ipv4(0);
+	uint32_t pkt_len = sizeof(test_packet_ipv4_udp_325);
+
+	if (max_payload > pktio_a->capa.lso.max_payload_len)
+		max_payload = pktio_a->capa.lso.max_payload_len;
+
+	lso_send_ipv4(test_packet_ipv4_udp_325, pkt_len, max_payload, use_opt);
 }
 
-static void lso_send_ipv4_use_opt(void)
+static void lso_send_ipv4_udp_1500(uint32_t max_payload, int use_opt)
 {
-	lso_send_ipv4(1);
+	uint32_t pkt_len = sizeof(test_packet_ipv4_udp_1500);
+
+	if (max_payload > pktio_a->capa.lso.max_payload_len)
+		max_payload = pktio_a->capa.lso.max_payload_len;
+
+	lso_send_ipv4(test_packet_ipv4_udp_1500, pkt_len, max_payload, use_opt);
+}
+
+/* No segmentation needed: packet size 325 bytes, LSO segment payload 700 bytes */
+static void lso_send_ipv4_325_700_pkt_meta(void)
+{
+	lso_send_ipv4_udp_325(700, 0);
+}
+
+static void lso_send_ipv4_325_700_opt(void)
+{
+	lso_send_ipv4_udp_325(700, 1);
+}
+
+/* At least 2 segments: packet size 1500 bytes, LSO segment payload 1000 bytes */
+static void lso_send_ipv4_1500_1000_pkt_meta(void)
+{
+	lso_send_ipv4_udp_1500(1000, 0);
+}
+
+static void lso_send_ipv4_1500_1000_opt(void)
+{
+	lso_send_ipv4_udp_1500(1000, 1);
+}
+
+/* At least 3 segments: packet size 1500 bytes, LSO segment payload 700 bytes */
+static void lso_send_ipv4_1500_700_pkt_meta(void)
+{
+	lso_send_ipv4_udp_1500(700, 0);
+}
+
+static void lso_send_ipv4_1500_700_opt(void)
+{
+	lso_send_ipv4_udp_1500(700, 1);
 }
 
 odp_testinfo_t lso_suite[] = {
 	ODP_TEST_INFO(lso_capability),
 	ODP_TEST_INFO_CONDITIONAL(lso_create_ipv4_profile, check_lso_ipv4),
 	ODP_TEST_INFO_CONDITIONAL(lso_create_custom_profile, check_lso_custom),
-	ODP_TEST_INFO_CONDITIONAL(lso_send_ipv4_use_pkt_meta, check_lso_ipv4_restart),
-	ODP_TEST_INFO_CONDITIONAL(lso_send_ipv4_use_opt, check_lso_ipv4_restart),
+	ODP_TEST_INFO_CONDITIONAL(lso_send_ipv4_325_700_pkt_meta, check_lso_ipv4_segs_1),
+	ODP_TEST_INFO_CONDITIONAL(lso_send_ipv4_325_700_opt, check_lso_ipv4_segs_1),
+	ODP_TEST_INFO_CONDITIONAL(lso_send_ipv4_1500_1000_pkt_meta, check_lso_ipv4_segs_2),
+	ODP_TEST_INFO_CONDITIONAL(lso_send_ipv4_1500_1000_opt, check_lso_ipv4_segs_2),
+	ODP_TEST_INFO_CONDITIONAL(lso_send_ipv4_1500_700_pkt_meta, check_lso_ipv4_segs_3),
+	ODP_TEST_INFO_CONDITIONAL(lso_send_ipv4_1500_700_opt, check_lso_ipv4_segs_3),
 	ODP_TEST_INFO_CONDITIONAL(lso_send_custom_eth_use_pkt_meta, check_lso_custom_restart),
 	ODP_TEST_INFO_CONDITIONAL(lso_send_custom_eth_use_opt, check_lso_custom_restart),
 	ODP_TEST_INFO_NULL
