@@ -246,7 +246,6 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pktio/stats/sysfs_stats.c \
 			   pktio/stats/packet_io_stats.c \
 			   pktio/dpdk.c \
-			   pktio/dpdk_parse.c \
 			   pktio/socket_common.c \
 			   pktio/ethtool_rss.c \
 			   pktio/io_ops.c \
