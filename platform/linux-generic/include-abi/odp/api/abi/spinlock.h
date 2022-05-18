@@ -5,3 +5,6 @@
  */
 
 #include <odp/api/abi-default/spinlock.h>
+
+/* Include inlined versions of API functions */
+#include <odp/api/plat/spinlock_inlines.h>
