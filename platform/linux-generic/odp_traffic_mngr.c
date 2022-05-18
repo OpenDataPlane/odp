@@ -4640,6 +4640,17 @@ int odp_tm_enq_multi_lso(odp_tm_queue_t tm_queue, const odp_packet_t packets[], 
 			goto error;
 		}
 
+		if (odp_unlikely(num_pkt == 1)) {
+			/* Segmentation not needed */
+			if (odp_tm_enq_multi(tm_queue, &pkt, 1) != 1) {
+				ODP_DBG("TM enqueue failed on packet %i\n", i);
+
+				goto error;
+			}
+
+			continue;
+		}
+
 		/* Create packets */
 		odp_packet_t pkt_out[num_pkt];
 
