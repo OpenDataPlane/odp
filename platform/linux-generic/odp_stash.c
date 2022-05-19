@@ -166,6 +166,7 @@ odp_stash_t odp_stash_create(const char *name, const odp_stash_param_t *param)
 	uint64_t i, ring_size, shm_size;
 	int ring_u64, index;
 	char shm_name[ODP_STASH_NAME_LEN + 8];
+	uint32_t shm_flags = 0;
 
 	if (odp_global_ro.disable.stash) {
 		ODP_ERR("Stash is disabled\n");
@@ -214,7 +215,10 @@ odp_stash_t odp_stash_create(const char *name, const odp_stash_param_t *param)
 	else
 		shm_size = sizeof(stash_t) + (ring_size * sizeof(uint32_t));
 
-	shm = odp_shm_reserve(shm_name, shm_size, ODP_CACHE_LINE_SIZE, 0);
+	if (odp_global_ro.shm_single_va)
+		shm_flags |= ODP_SHM_SINGLE_VA;
+
+	shm = odp_shm_reserve(shm_name, shm_size, ODP_CACHE_LINE_SIZE, shm_flags);
 
 	if (shm == ODP_SHM_INVALID) {
 		ODP_ERR("SHM reserve failed.\n");
