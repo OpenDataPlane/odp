@@ -122,7 +122,15 @@ static inline xdp_sock_info_t *pkt_priv(pktio_entry_t *pktio_entry)
 
 static int sock_xdp_stats_reset(pktio_entry_t *pktio_entry)
 {
-	memset(&pktio_entry->s.stats, 0, sizeof(odp_pktio_stats_t));
+	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
+	xdp_sock_t *sock;
+
+	for (uint32_t i = 0U; i < priv->num_q; ++i) {
+		sock = &priv->qs[i];
+		memset(&sock->qi_stats, 0, sizeof(odp_pktin_queue_stats_t));
+		memset(&sock->qo_stats, 0, sizeof(odp_pktout_queue_stats_t));
+		memset(sock->i_stats, 0, sizeof(sock->i_stats));
+	}
 
 	return 0;
 }
@@ -166,8 +174,6 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 		odp_ticketlock_init(&priv->qs[i].tx_lock);
 	}
 
-	sock_xdp_stats_reset(pktio_entry);
-
 	return 0;
 
 mtu_err:
@@ -210,7 +216,23 @@ static int sock_xdp_close(pktio_entry_t *pktio_entry)
 
 static int sock_xdp_stats(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats)
 {
-	memcpy(stats, &pktio_entry->s.stats, sizeof(odp_pktio_stats_t));
+	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
+	xdp_sock_t *sock;
+	odp_pktin_queue_stats_t qi_stats;
+	odp_pktout_queue_stats_t qo_stats;
+
+	memset(stats, 0, sizeof(odp_pktio_stats_t));
+
+	for (uint32_t i = 0U; i < priv->num_q; ++i) {
+		sock = &priv->qs[i];
+		qi_stats = sock->qi_stats;
+		qo_stats = sock->qo_stats;
+		stats->in_octets += qi_stats.octets;
+		stats->in_packets += qi_stats.packets;
+		stats->in_errors += qi_stats.errors;
+		stats->out_octets += qo_stats.octets;
+		stats->out_packets += qo_stats.packets;
+	}
 
 	return 0;
 }
@@ -354,9 +376,6 @@ static uint32_t process_received(pktio_entry_t *pktio_entry, xdp_sock_t *sock, p
 	sock->qi_stats.octets += octets;
 	sock->qi_stats.packets += num_rx;
 	sock->qi_stats.errors += errors;
-	pktio_entry->s.stats.in_octets += octets;
-	pktio_entry->s.stats.in_packets += num_rx;
-	pktio_entry->s.stats.in_errors += errors;
 
 	return num_rx;
 }
@@ -564,8 +583,6 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 	handle_pending_tx(sock, base_addr, NUM_XDP_DESCS);
 	sock->qo_stats.octets += octets;
 	sock->qo_stats.packets += i;
-	pktio_entry->s.stats.out_octets += octets;
-	pktio_entry->s.stats.out_packets += i;
 
 	if (!priv->lockless_tx)
 		odp_ticketlock_unlock(&priv->qs[index].tx_lock);
