@@ -25,6 +25,7 @@ extern "C" {
 typedef struct _odp_event_inline_offset_t {
 	uint16_t event_type;
 	uint16_t base_data;
+	uint16_t flow_id;
 
 } _odp_event_inline_offset_t;
 

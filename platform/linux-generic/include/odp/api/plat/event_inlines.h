@@ -1,4 +1,5 @@
 /* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -20,6 +21,7 @@ extern const _odp_event_inline_offset_t _odp_event_inline_offset;
 	#define _ODP_INLINE static inline
 	#define odp_event_type __odp_event_type
 	#define odp_event_type_multi __odp_event_type_multi
+	#define odp_event_flow_id __odp_event_flow_id
 #else
 	#define _ODP_INLINE
 #endif
@@ -52,6 +54,11 @@ _ODP_INLINE int odp_event_type_multi(const odp_event_t event[], int num,
 	*type_out = type;
 
 	return i;
+}
+
+_ODP_INLINE uint32_t odp_event_flow_id(odp_event_t event)
+{
+	return _odp_event_hdr_field(event, uint8_t, flow_id);
 }
 
 /** @endcond */
