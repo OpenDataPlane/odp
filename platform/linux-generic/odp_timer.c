@@ -683,11 +683,11 @@ static bool timer_reset(uint32_t idx, uint64_t abs_tck, odp_event_t *tmo_event,
 		new.tmo_u64 = 0;
 		old.tmo_u64 = 0;
 
-		do {
-			/* Relaxed and non-atomic read of current values */
-			old.exp_tck.v = tb->exp_tck.v;
-			old.tmo_event = tb->tmo_event;
+		/* Relaxed and non-atomic read of current values */
+		old.exp_tck.v = tb->exp_tck.v;
+		old.tmo_event = tb->tmo_event;
 
+		do {
 			/* Check if there actually is a timeout event
 			 * present */
 			if (old.tmo_event == ODP_EVENT_INVALID) {
@@ -830,11 +830,11 @@ static odp_event_t timer_cancel(timer_pool_t *tp, uint32_t idx)
 	new.tmo_u64 = 0;
 	old.tmo_u64 = 0;
 
-	do {
-		/* Relaxed and non-atomic read of current values */
-		old.exp_tck.v = tb->exp_tck.v;
-		old.tmo_event = tb->tmo_event;
+	/* Relaxed and non-atomic read of current values */
+	old.exp_tck.v = tb->exp_tck.v;
+	old.tmo_event = tb->tmo_event;
 
+	do {
 		/* Check if it is not expired already */
 		if (old.exp_tck.v & TMO_INACTIVE) {
 			old.tmo_event = ODP_EVENT_INVALID;
