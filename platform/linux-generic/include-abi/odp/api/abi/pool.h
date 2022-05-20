@@ -18,7 +18,8 @@
 extern "C" {
 #endif
 
-/* Empty placeholder header for inline functions */
+/* Inlined API functions */
+#include <odp/api/plat/pool_inlines.h>
 
 #ifdef __cplusplus
 }
