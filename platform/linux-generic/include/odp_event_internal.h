@@ -79,11 +79,6 @@ static inline _odp_event_hdr_t *_odp_event_hdr(odp_event_t event)
 	return (_odp_event_hdr_t *)(uintptr_t)event;
 }
 
-static inline odp_event_type_t _odp_event_type(odp_event_t event)
-{
-	return _odp_event_hdr(event)->event_type;
-}
-
 static inline void _odp_event_type_set(odp_event_t event, int ev)
 {
 	_odp_event_hdr(event)->event_type = ev;

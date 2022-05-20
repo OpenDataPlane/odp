@@ -9,6 +9,7 @@
 #define ODP_PLAT_EVENT_INLINES_H_
 
 #include <odp/api/event_types.h>
+#include <odp/api/packet.h>
 
 #include <odp/api/plat/event_inline_types.h>
 
@@ -21,7 +22,10 @@ extern const _odp_event_inline_offset_t _odp_event_inline_offset;
 	#define _ODP_INLINE static inline
 	#define odp_event_type __odp_event_type
 	#define odp_event_type_multi __odp_event_type_multi
+	#define odp_event_subtype __odp_event_subtype
 	#define odp_event_flow_id __odp_event_flow_id
+
+	#include <odp/api/plat/packet_inlines.h>
 #else
 	#define _ODP_INLINE
 #endif
@@ -54,6 +58,14 @@ _ODP_INLINE int odp_event_type_multi(const odp_event_t event[], int num,
 	*type_out = type;
 
 	return i;
+}
+
+_ODP_INLINE odp_event_subtype_t odp_event_subtype(odp_event_t event)
+{
+	if (__odp_event_type_get(event) != ODP_EVENT_PACKET)
+		return ODP_EVENT_NO_SUBTYPE;
+
+	return odp_packet_subtype(odp_packet_from_event(event));
 }
 
 _ODP_INLINE uint32_t odp_event_flow_id(odp_event_t event)
