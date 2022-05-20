@@ -26,6 +26,19 @@
 #include <odp/api/plat/packet_vector_inlines.h>
 #include <odp/api/plat/timer_inlines.h>
 
+#include <odp/api/plat/event_inline_types.h>
+
+#include <odp/visibility_begin.h>
+
+/* Fill in event header field offsets for inline functions */
+const _odp_event_inline_offset_t
+_odp_event_inline_offset ODP_ALIGNED_CACHE = {
+	.event_type = offsetof(_odp_event_hdr_t, event_type),
+	.base_data  = offsetof(_odp_event_hdr_t, base_data)
+};
+
+#include <odp/visibility_end.h>
+
 odp_event_subtype_t odp_event_subtype(odp_event_t event)
 {
 	if (_odp_event_type(event) != ODP_EVENT_PACKET)

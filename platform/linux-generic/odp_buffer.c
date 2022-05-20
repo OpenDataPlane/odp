@@ -6,25 +6,14 @@
  */
 
 #include <odp/api/buffer.h>
+
 #include <odp_pool_internal.h>
 #include <odp_buffer_internal.h>
 #include <odp_debug_internal.h>
-#include <odp/api/plat/buffer_inline_types.h>
 
 #include <string.h>
 #include <stdio.h>
 #include <inttypes.h>
-
-#include <odp/visibility_begin.h>
-
-/* Fill in buffer header field offsets for inline functions */
-const _odp_buffer_inline_offset_t
-_odp_buffer_inline_offset ODP_ALIGNED_CACHE = {
-	.event_type = offsetof(odp_buffer_hdr_t, event_hdr.event_type),
-	.base_data  = offsetof(odp_buffer_hdr_t, event_hdr.base_data)
-};
-
-#include <odp/visibility_end.h>
 
 uint32_t odp_buffer_size(odp_buffer_t buf)
 {
