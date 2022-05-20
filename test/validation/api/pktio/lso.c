@@ -20,9 +20,6 @@
 /* Maximum number of segments test is prepared to receive per outgoing packet */
 #define MAX_NUM_SEG     256
 
-/* Max payload bytes per LSO segment */
-#define CUSTOM_MAX_PAYLOAD 288
-
 /* Pktio interface info
  */
 typedef struct {
@@ -59,6 +56,7 @@ odp_pool_t lso_pool = ODP_POOL_INVALID;
 /* Check test packet size */
 ODP_STATIC_ASSERT(sizeof(test_packet_ipv4_udp_1500) == 1500, "error: size is not 1500");
 ODP_STATIC_ASSERT(sizeof(test_packet_ipv4_udp_325) == 325, "error: size is not 325");
+ODP_STATIC_ASSERT(sizeof(test_packet_custom_eth_1) == 723, "error: size is not 723");
 
 static inline void wait_linkup(odp_pktio_t pktio)
 {
@@ -465,9 +463,12 @@ static int check_lso_custom(void)
 	return ODP_TEST_ACTIVE;
 }
 
-static int check_lso_custom_restart(void)
+static int check_lso_custom_segs(uint32_t num)
 {
 	if (check_lso_custom() == ODP_TEST_INACTIVE)
+		return ODP_TEST_INACTIVE;
+
+	if (num > pktio_a->capa.lso.max_segments)
 		return ODP_TEST_INACTIVE;
 
 	if (disable_restart && num_starts > 0)
@@ -477,6 +478,21 @@ static int check_lso_custom_restart(void)
 	num_starts++;
 
 	return ODP_TEST_ACTIVE;
+}
+
+static int check_lso_custom_segs_1(void)
+{
+	return check_lso_custom_segs(1);
+}
+
+static int check_lso_custom_segs_2(void)
+{
+	return check_lso_custom_segs(2);
+}
+
+static int check_lso_custom_segs_3(void)
+{
+	return check_lso_custom_segs(3);
 }
 
 static int check_lso_ipv4(void)
@@ -638,7 +654,8 @@ static void test_lso_request_clear(odp_lso_profile_t lso_profile, const uint8_t 
 	odp_packet_free(pkt);
 }
 
-static void lso_send_custom_eth(int use_opt)
+static void lso_send_custom_eth(const uint8_t *test_packet, uint32_t pkt_len, uint32_t max_payload,
+				int use_opt)
 {
 	int i, ret, num;
 	odp_lso_profile_param_t param;
@@ -650,9 +667,7 @@ static void lso_send_custom_eth(int use_opt)
 	uint32_t hdr_len = 22;
 	/* Offset to "segment number" field */
 	uint32_t segnum_offset = 16;
-	uint32_t pkt_len = sizeof(test_packet_custom_eth_1);
 	uint32_t sent_payload = pkt_len - hdr_len;
-	uint32_t max_payload = CUSTOM_MAX_PAYLOAD;
 
 	odp_lso_profile_param_init(&param);
 	param.lso_proto = ODP_LSO_PROTO_CUSTOM;
@@ -666,10 +681,10 @@ static void lso_send_custom_eth(int use_opt)
 
 	CU_ASSERT_FATAL(start_interfaces() == 0);
 
-	test_lso_request_clear(profile, test_packet_custom_eth_1, pkt_len, hdr_len, max_payload);
+	test_lso_request_clear(profile, test_packet, pkt_len, hdr_len, max_payload);
 
-	ret = send_packets(profile, pktio_a, pktio_b, test_packet_custom_eth_1,
-			   pkt_len, hdr_len, max_payload, 0, use_opt);
+	ret = send_packets(profile, pktio_a, pktio_b, test_packet, pkt_len, hdr_len,
+			   max_payload, 0, use_opt);
 	CU_ASSERT_FATAL(ret == 0);
 
 	ODPH_DBG("\n    Sent payload length:     %u bytes\n", sent_payload);
@@ -704,7 +719,7 @@ static void lso_send_custom_eth(int use_opt)
 
 		ODPH_DBG("    LSO segment[%u] payload:  %u bytes\n", segnum, payload_len);
 
-		CU_ASSERT(payload_len <= CUSTOM_MAX_PAYLOAD);
+		CU_ASSERT(payload_len <= max_payload);
 
 		if (compare_data(pkt_out[i], hdr_len,
 				 test_packet_custom_eth_1 + offset, payload_len) >= 0) {
@@ -728,14 +743,47 @@ static void lso_send_custom_eth(int use_opt)
 	CU_ASSERT_FATAL(odp_lso_profile_destroy(profile) == 0);
 }
 
-static void lso_send_custom_eth_use_pkt_meta(void)
+static void lso_send_custom_eth_723(uint32_t max_payload, int use_opt)
 {
-	lso_send_custom_eth(0);
+	uint32_t pkt_len = sizeof(test_packet_custom_eth_1);
+
+	if (max_payload > pktio_a->capa.lso.max_payload_len)
+		max_payload = pktio_a->capa.lso.max_payload_len;
+
+	lso_send_custom_eth(test_packet_custom_eth_1, pkt_len, max_payload, use_opt);
 }
 
-static void lso_send_custom_eth_use_opt(void)
+/* No segmentation needed: packet size 723 bytes, LSO segment payload 800 bytes */
+static void lso_send_custom_eth_723_800_pkt_meta(void)
 {
-	lso_send_custom_eth(1);
+	lso_send_custom_eth_723(800, 0);
+}
+
+static void lso_send_custom_eth_723_800_opt(void)
+{
+	lso_send_custom_eth_723(800, 1);
+}
+
+/* At least 2 segments: packet size 723 bytes, LSO segment payload 500 bytes */
+static void lso_send_custom_eth_723_500_pkt_meta(void)
+{
+	lso_send_custom_eth_723(500, 0);
+}
+
+static void lso_send_custom_eth_723_500_opt(void)
+{
+	lso_send_custom_eth_723(500, 1);
+}
+
+/* At least 3 segments: packet size 723 bytes, LSO segment payload 288 bytes */
+static void lso_send_custom_eth_723_288_pkt_meta(void)
+{
+	lso_send_custom_eth_723(288, 0);
+}
+
+static void lso_send_custom_eth_723_288_opt(void)
+{
+	lso_send_custom_eth_723(288, 1);
 }
 
 static void lso_send_ipv4(const uint8_t *test_packet, uint32_t pkt_len, uint32_t max_payload,
@@ -880,7 +928,11 @@ odp_testinfo_t lso_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(lso_send_ipv4_1500_1000_opt, check_lso_ipv4_segs_2),
 	ODP_TEST_INFO_CONDITIONAL(lso_send_ipv4_1500_700_pkt_meta, check_lso_ipv4_segs_3),
 	ODP_TEST_INFO_CONDITIONAL(lso_send_ipv4_1500_700_opt, check_lso_ipv4_segs_3),
-	ODP_TEST_INFO_CONDITIONAL(lso_send_custom_eth_use_pkt_meta, check_lso_custom_restart),
-	ODP_TEST_INFO_CONDITIONAL(lso_send_custom_eth_use_opt, check_lso_custom_restart),
+	ODP_TEST_INFO_CONDITIONAL(lso_send_custom_eth_723_800_pkt_meta, check_lso_custom_segs_1),
+	ODP_TEST_INFO_CONDITIONAL(lso_send_custom_eth_723_800_opt, check_lso_custom_segs_1),
+	ODP_TEST_INFO_CONDITIONAL(lso_send_custom_eth_723_500_pkt_meta, check_lso_custom_segs_2),
+	ODP_TEST_INFO_CONDITIONAL(lso_send_custom_eth_723_500_opt, check_lso_custom_segs_2),
+	ODP_TEST_INFO_CONDITIONAL(lso_send_custom_eth_723_288_pkt_meta, check_lso_custom_segs_3),
+	ODP_TEST_INFO_CONDITIONAL(lso_send_custom_eth_723_288_opt, check_lso_custom_segs_3),
 	ODP_TEST_INFO_NULL
 };
