@@ -25,6 +25,7 @@ extern const _odp_event_inline_offset_t _odp_event_inline_offset;
 	#define odp_event_subtype __odp_event_subtype
 	#define odp_event_types __odp_event_types
 	#define odp_event_flow_id __odp_event_flow_id
+	#define odp_event_flow_id_set __odp_event_flow_id_set
 
 	#include <odp/api/plat/packet_inlines.h>
 #else
@@ -84,6 +85,13 @@ _ODP_INLINE odp_event_type_t odp_event_types(odp_event_t event,
 _ODP_INLINE uint32_t odp_event_flow_id(odp_event_t event)
 {
 	return _odp_event_hdr_field(event, uint8_t, flow_id);
+}
+
+_ODP_INLINE void odp_event_flow_id_set(odp_event_t event, uint32_t id)
+{
+	uint8_t *flow_id = _odp_event_hdr_ptr(event, uint8_t, flow_id);
+
+	*flow_id = id;
 }
 
 /** @endcond */

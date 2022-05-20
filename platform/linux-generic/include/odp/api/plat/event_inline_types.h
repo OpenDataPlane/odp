@@ -16,10 +16,13 @@ extern "C" {
 
 /** @cond _ODP_HIDE_FROM_DOXYGEN_ */
 
-/* Event header field accessor */
+/* Event header field accessors */
 #define _odp_event_hdr_field(event_hdr, cast, field) \
 	(*(cast *)(uintptr_t)((uint8_t *)event_hdr + \
 	 _odp_event_inline_offset.field))
+#define _odp_event_hdr_ptr(event_hdr, cast, field) \
+	((cast *)(uintptr_t)((uint8_t *)event_hdr + \
+	_odp_event_inline_offset.field))
 
 /* Event header field offsets for inline functions */
 typedef struct _odp_event_inline_offset_t {
