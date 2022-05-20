@@ -34,7 +34,8 @@
 const _odp_event_inline_offset_t
 _odp_event_inline_offset ODP_ALIGNED_CACHE = {
 	.event_type = offsetof(_odp_event_hdr_t, event_type),
-	.base_data  = offsetof(_odp_event_hdr_t, base_data)
+	.base_data  = offsetof(_odp_event_hdr_t, base_data),
+	.flow_id    = offsetof(_odp_event_hdr_t, flow_id)
 };
 
 #include <odp/visibility_end.h>
@@ -57,11 +58,6 @@ odp_event_type_t odp_event_types(odp_event_t event,
 			ODP_EVENT_NO_SUBTYPE;
 
 	return event_type;
-}
-
-uint32_t odp_event_flow_id(odp_event_t event)
-{
-	return event_flow_id(event);
 }
 
 void odp_event_flow_id_set(odp_event_t event, uint32_t flow_id)
