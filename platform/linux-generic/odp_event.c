@@ -40,18 +40,6 @@ _odp_event_inline_offset ODP_ALIGNED_CACHE = {
 
 #include <odp/visibility_end.h>
 
-odp_event_type_t odp_event_types(odp_event_t event,
-				 odp_event_subtype_t *subtype)
-{
-	odp_event_type_t event_type = odp_event_type(event);
-
-	*subtype = event_type == ODP_EVENT_PACKET ?
-			odp_packet_subtype(odp_packet_from_event(event)) :
-			ODP_EVENT_NO_SUBTYPE;
-
-	return event_type;
-}
-
 void odp_event_flow_id_set(odp_event_t event, uint32_t flow_id)
 {
 	event_flow_id_set(event, flow_id);
