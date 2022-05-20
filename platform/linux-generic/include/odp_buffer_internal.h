@@ -50,13 +50,6 @@ static inline odp_buffer_hdr_t *_odp_buf_hdr(odp_buffer_t buf)
 	return (odp_buffer_hdr_t *)(uintptr_t)buf;
 }
 
-static inline void event_flow_id_set(odp_event_t ev, uint32_t flow_id)
-{
-	odp_buffer_hdr_t *buf_hdr = (odp_buffer_hdr_t *)(uintptr_t)ev;
-
-	buf_hdr->event_hdr.flow_id = flow_id;
-}
-
 #ifdef __cplusplus
 }
 #endif
