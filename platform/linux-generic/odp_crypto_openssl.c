@@ -1957,10 +1957,18 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	/* Initialize crypto capability structure */
 	memset(capa, 0, sizeof(odp_crypto_capability_t));
 
+	capa->max_sessions = MAX_SESSIONS;
 	capa->sync_mode = ODP_SUPPORT_PREFERRED;
 	capa->async_mode = ODP_SUPPORT_YES;
 	capa->queue_type_plain = 1;
 	capa->queue_type_sched = 1;
+
+	/* Memory allocation in libssl is not compatible with process mode */
+	if (odp_global_ro.init_param.mem_model == ODP_MEM_MODEL_PROCESS) {
+		capa->ciphers.bit.null = 1;
+		capa->auths.bit.null = 1;
+		return 0;
+	}
 
 	capa->ciphers.bit.null       = 1;
 	capa->ciphers.bit.trides_cbc = 1;
@@ -2000,8 +2008,6 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->auths.bit.sha256       = 1;
 	capa->auths.bit.sha384       = 1;
 	capa->auths.bit.sha512       = 1;
-
-	capa->max_sessions = MAX_SESSIONS;
 
 	return 0;
 }
@@ -2192,6 +2198,16 @@ odp_crypto_session_create(const odp_crypto_session_param_t *param,
 		/* Dummy output to avoid compiler warning about uninitialized
 		 * variables */
 		*status = ODP_CRYPTO_SES_ERR_ENOMEM;
+		*session_out = ODP_CRYPTO_SESSION_INVALID;
+		return -1;
+	}
+
+	/* Process mode is not supported with libssl based algos */
+	if (odp_global_ro.init_param.mem_model == ODP_MEM_MODEL_PROCESS &&
+	    (param->cipher_alg != ODP_CIPHER_ALG_NULL ||
+	     param->auth_alg != ODP_AUTH_ALG_NULL)) {
+		*status = param->cipher_alg != ODP_CIPHER_ALG_NULL ?
+			ODP_CRYPTO_SES_ERR_CIPHER : ODP_CRYPTO_SES_ERR_AUTH;
 		*session_out = ODP_CRYPTO_SESSION_INVALID;
 		return -1;
 	}
