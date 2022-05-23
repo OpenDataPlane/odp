@@ -532,6 +532,9 @@ int odp_lso_profile_destroy(odp_lso_profile_t lso_profile);
  * performance as a number of packet metadata writes/reads are avoided. Results are undefined if
  * 'lso_opt' is NULL and a packet misses LSO options.
  *
+ * Packets with less than (or equal to) 'max_payload_len' payload bytes can be sent also, however
+ * odp_pktout_send() should be more optimal for those than this function.
+ *
  * Check LSO support level from packet IO capabilities (odp_pktio_capability_t).
  *
  * @param queue     Packet output queue handle
