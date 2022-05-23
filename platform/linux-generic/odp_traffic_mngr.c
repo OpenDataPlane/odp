@@ -2603,6 +2603,9 @@ static int tm_capabilities(odp_tm_capabilities_t capabilities[],
 	cap_ptr = &capabilities[0];
 	memset(cap_ptr, 0, sizeof(odp_tm_capabilities_t));
 
+	if (odp_global_ro.init_param.mem_model == ODP_MEM_MODEL_PROCESS)
+		return 1;
+
 	cap_ptr->max_tm_queues                 = ODP_TM_MAX_TM_QUEUES;
 	cap_ptr->max_levels                    = ODP_TM_MAX_LEVELS;
 	cap_ptr->tm_queue_shaper_supported     = true;
@@ -3057,6 +3060,11 @@ odp_tm_t odp_tm_create(const char            *name,
 
 	if (odp_global_ro.disable.traffic_mngr) {
 		ODP_ERR("TM has been disabled\n");
+		return ODP_TM_INVALID;
+	}
+
+	if (odp_global_ro.init_param.mem_model == ODP_MEM_MODEL_PROCESS) {
+		ODP_ERR("TM is not supported in process mode\n");
 		return ODP_TM_INVALID;
 	}
 
