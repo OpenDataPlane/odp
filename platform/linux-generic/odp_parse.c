@@ -377,8 +377,9 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 		prs->input_flags.ipv4 = 1;
 		ip_proto = parse_ipv4(prs, &parseptr, &offset, frame_len,
 				      opt, l4_part_sum);
-		prs->l4_offset = offset;
-		if (prs->flags.ip_err && opt.bit.drop_ipv4_err)
+		if (odp_likely(!prs->flags.ip_err))
+			prs->l4_offset = offset;
+		else if (opt.bit.drop_ipv4_err)
 			return -1; /* drop */
 		break;
 
@@ -386,8 +387,9 @@ int _odp_packet_parse_common_l3_l4(packet_parser_t *prs,
 		prs->input_flags.ipv6 = 1;
 		ip_proto = parse_ipv6(prs, &parseptr, &offset, frame_len,
 				      seg_len, opt, l4_part_sum);
-		prs->l4_offset = offset;
-		if (prs->flags.ip_err && opt.bit.drop_ipv6_err)
+		if (odp_likely(!prs->flags.ip_err))
+			prs->l4_offset = offset;
+		else if (opt.bit.drop_ipv6_err)
 			return -1; /* drop */
 		break;
 
