@@ -35,6 +35,11 @@ if [ -n "$WITH_OPENSSL_CRYPTO" ] && [ ${WITH_OPENSSL_CRYPTO} -eq 0 ]; then
 	exit 77
 fi
 
+if [ ${ODPH_PROC_MODE} -eq 1 ]; then
+	echo "Process mode not supported. Skipping."
+	exit 77
+fi
+
 # Skip live and router mode tests.
 if [ ${IPSEC_APP_MODE} -eq 1 ] || [ ${IPSEC_APP_MODE} -eq 2 ]; then
 	echo "Live / Router mode test. Skipping."
