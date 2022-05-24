@@ -238,7 +238,7 @@ typedef struct {
 	prio_q_mask_t    prio_q_mask[NUM_SCHED_GRPS][NUM_PRIO];
 
 	/* Groups on a priority level that have queues created */
-	uint32_t prio_grp_mask[NUM_PRIO];
+	odp_atomic_u32_t prio_grp_mask[NUM_PRIO];
 
 	struct {
 		uint8_t grp;
@@ -537,6 +537,9 @@ static int schedule_init_global(void)
 	odp_atomic_init_u32(&sched->grp_epoch, 0);
 	odp_atomic_init_u32(&sched->next_rand, 0);
 
+	for (i = 0; i < NUM_PRIO; i++)
+		odp_atomic_init_u32(&sched->prio_grp_mask[i], 0);
+
 	for (i = 0; i < NUM_SCHED_GRPS; i++) {
 		memset(sched->sched_grp[i].name, 0, ODP_SCHED_GROUP_NAME_LEN);
 		odp_thrmask_zero(&sched->sched_grp[i].mask);
@@ -640,25 +643,28 @@ static inline int grp_update_tbl(void)
 
 static inline void prio_grp_mask_set(int prio, int grp)
 {
-	uint32_t mask = 0x1u << grp;
+	uint32_t grp_mask = 0x1u << grp;
+	uint32_t mask = odp_atomic_load_u32(&sched->prio_grp_mask[prio]);
 
-	sched->prio_grp_mask[prio] |= mask;
+	odp_atomic_store_u32(&sched->prio_grp_mask[prio], mask | grp_mask);
+
 	sched->prio_grp_count[prio][grp]++;
 }
 
 static inline void prio_grp_mask_clear(int prio, int grp)
 {
-	uint32_t mask = 0x1u << grp;
+	uint32_t grp_mask = 0x1u << grp;
+	uint32_t mask = odp_atomic_load_u32(&sched->prio_grp_mask[prio]);
 
 	sched->prio_grp_count[prio][grp]--;
 
 	if (sched->prio_grp_count[prio][grp] == 0)
-		sched->prio_grp_mask[prio] &= (~mask);
+		odp_atomic_store_u32(&sched->prio_grp_mask[prio], mask &= (~grp_mask));
 }
 
 static inline uint32_t prio_grp_mask_check(int prio, uint32_t grp_mask)
 {
-	return sched->prio_grp_mask[prio] & grp_mask;
+	return odp_atomic_load_u32(&sched->prio_grp_mask[prio]) & grp_mask;
 }
 
 static uint32_t schedule_max_ordered_locks(void)
