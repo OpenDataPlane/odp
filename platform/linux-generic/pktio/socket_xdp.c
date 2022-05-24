@@ -22,6 +22,7 @@
 #include <odp_parse_internal.h>
 #include <odp_classification_internal.h>
 #include <odp_socket_common.h>
+#include <odp_libconfig_internal.h>
 
 #include <string.h>
 #include <errno.h>
@@ -35,11 +36,14 @@
 
 #include <xdp/xsk.h>
 
-#define NUM_XDP_DESCS 1024U
+#define NUM_DESCS_DEFAULT 1024U
 #define MIN_FRAME_SIZE 2048U
 
 #define IF_DELIM " "
 #define Q_DELIM ':'
+#define CONF_BASE_STR "pktio_xdp"
+#define RX_DESCS_STR "num_rx_desc"
+#define TX_DESCS_STR "num_tx_desc"
 
 enum {
 	RX_PKT_ALLOC_ERR,
@@ -62,6 +66,8 @@ typedef struct {
 	struct xsk_ring_cons compl_q;
 	struct xsk_umem *umem;
 	pool_t *pool;
+	int num_rx_desc;
+	int num_tx_desc;
 } xdp_umem_info_t;
 
 typedef struct {
@@ -85,6 +91,7 @@ typedef struct {
 	int helper_sock;
 	uint32_t mtu;
 	uint32_t max_mtu;
+	uint32_t bind_q;
 	odp_bool_t lockless_rx;
 	odp_bool_t lockless_tx;
 } xdp_sock_info_t;
@@ -135,6 +142,47 @@ static int sock_xdp_stats_reset(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
+static uint32_t get_bind_queue_index(const char *devname)
+{
+	const char *param = getenv("ODP_PKTIO_XDP_PARAMS");
+	char *tmp_str;
+	char *tmp;
+	char *if_str;
+	int idx = 0;
+
+	if (param == NULL)
+		goto out;
+
+	tmp_str = strdup(param);
+
+	if (tmp_str == NULL)
+		goto out;
+
+	tmp = strtok(tmp_str, IF_DELIM);
+
+	if (tmp == NULL)
+		goto out_str;
+
+	while (tmp) {
+		if_str = strchr(tmp, Q_DELIM);
+
+		if (if_str != NULL && if_str != &tmp[strlen(tmp) - 1U]) {
+			if (strncmp(devname, tmp, (uint64_t)(uintptr_t)(if_str - tmp)) == 0) {
+				idx = _ODP_MAX(atoi(++if_str), 0);
+				break;
+			}
+		}
+
+		tmp = strtok(NULL, IF_DELIM);
+	}
+
+out_str:
+	free(tmp_str);
+
+out:
+	return idx;
+}
+
 static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const char *devname,
 			 odp_pool_t pool_hdl)
 {
@@ -173,6 +221,13 @@ static int sock_xdp_open(odp_pktio_t pktio, pktio_entry_t *pktio_entry, const ch
 		odp_ticketlock_init(&priv->qs[i].rx_lock);
 		odp_ticketlock_init(&priv->qs[i].tx_lock);
 	}
+
+	priv->bind_q = get_bind_queue_index(pktio_entry->s.name);
+
+	ODP_DBG("Socket xdp interface (%s):\n", pktio_entry->s.name);
+	ODP_DBG("  num_rx_desc: %d\n", priv->umem_info->num_rx_desc);
+	ODP_DBG("  num_tx_desc: %d\n", priv->umem_info->num_tx_desc);
+	ODP_DBG("  starting bind queue: %u\n", priv->bind_q);
 
 	return 0;
 
@@ -543,7 +598,7 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 	uint8_t *base_addr;
 	odp_packet_t pkt;
 	odp_packet_hdr_t *pkt_hdr;
-	uint32_t start_idx, sent = 0U;
+	uint32_t tx_descs, start_idx, sent = 0U;
 	uint64_t octets = 0U;
 
 	if (odp_unlikely(num == 0))
@@ -560,6 +615,7 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 	pktio_idx = priv->pktio_idx;
 	tx = &sock->tx;
 	base_addr = priv->umem_info->pool->base_addr;
+	tx_descs = priv->umem_info->num_tx_desc;
 
 	for (i = 0; i < num; ++i) {
 		pkt = ODP_PACKET_INVALID;
@@ -579,7 +635,7 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 		}
 
 		if (xsk_ring_prod__reserve(tx, seg_cnt, &start_idx) == 0U) {
-			handle_pending_tx(sock, base_addr, NUM_XDP_DESCS);
+			handle_pending_tx(sock, base_addr, tx_descs);
 
 			if (xsk_ring_prod__reserve(tx, seg_cnt, &start_idx) == 0U) {
 				if (pkt != ODP_PACKET_INVALID)
@@ -600,7 +656,7 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 	}
 
 	xsk_ring_prod__submit(tx, sent);
-	handle_pending_tx(sock, base_addr, NUM_XDP_DESCS);
+	handle_pending_tx(sock, base_addr, tx_descs);
 	sock->qo_stats.octets += octets;
 	sock->qo_stats.packets += i;
 
@@ -735,54 +791,13 @@ static int sock_xdp_input_queues_config(pktio_entry_t *pktio_entry,
 	return 0;
 }
 
-static void fill_socket_config(struct xsk_socket_config *config)
+static void fill_socket_config(struct xsk_socket_config *config, xdp_umem_info_t *umem_info)
 {
-	config->rx_size = NUM_XDP_DESCS;
-	config->tx_size = NUM_XDP_DESCS;
+	config->rx_size = umem_info->num_rx_desc;
+	config->tx_size = umem_info->num_tx_desc;
 	config->libxdp_flags = 0U;
 	config->xdp_flags = 0U;
 	config->bind_flags = XDP_ZEROCOPY; /* TODO: XDP_COPY */
-}
-
-static uint32_t get_bind_queue_index(const char *devname)
-{
-	const char *param = getenv("ODP_PKTIO_XDP_PARAMS");
-	char *tmp_str;
-	char *tmp;
-	char *if_str;
-	int idx = 0;
-
-	if (param == NULL)
-		goto out;
-
-	tmp_str = strdup(param);
-
-	if (tmp_str == NULL)
-		goto out;
-
-	tmp = strtok(tmp_str, IF_DELIM);
-
-	if (tmp == NULL)
-		goto out_str;
-
-	while (tmp) {
-		if_str = strchr(tmp, Q_DELIM);
-
-		if (if_str != NULL && if_str != &tmp[strlen(tmp) - 1U]) {
-			if (strncmp(devname, tmp, (uint64_t)(uintptr_t)(if_str - tmp)) == 0) {
-				idx = _ODP_MAX(atoi(++if_str), 0);
-				break;
-			}
-		}
-
-		tmp = strtok(NULL, IF_DELIM);
-	}
-
-out_str:
-	free(tmp_str);
-
-out:
-	return idx;
 }
 
 static int sock_xdp_output_queues_config(pktio_entry_t *pktio_entry,
@@ -797,8 +812,8 @@ static int sock_xdp_output_queues_config(pktio_entry_t *pktio_entry,
 	int ret;
 
 	priv->lockless_tx = param->op_mode == ODP_PKTIO_OP_MT_UNSAFE;
-	fill_socket_config(&config);
-	bind_q = get_bind_queue_index(devname);
+	fill_socket_config(&config, priv->umem_info);
+	bind_q = priv->bind_q;
 	umem = priv->umem_info->umem;
 
 	for (i = 0U; i < param->num_queues; ++i) {
@@ -906,16 +921,43 @@ static void sock_xdp_adjust_block_size(uint8_t *data ODP_UNUSED, uint32_t *block
 	*block_size = _ODP_MAX(size, MIN_FRAME_SIZE);
 }
 
+static void parse_options(xdp_umem_info_t *umem_info)
+{
+	if (!_odp_libconfig_lookup_ext_int(CONF_BASE_STR, NULL, RX_DESCS_STR,
+					   &umem_info->num_rx_desc) ||
+	    !_odp_libconfig_lookup_ext_int(CONF_BASE_STR, NULL, TX_DESCS_STR,
+					   &umem_info->num_tx_desc)) {
+		ODP_ERR("Unable to parse xdp descriptor configuration, using defaults (%d).\n",
+			NUM_DESCS_DEFAULT);
+		goto defaults;
+	}
+
+	if (umem_info->num_rx_desc <= 0 || umem_info->num_tx_desc <= 0 ||
+	    !_ODP_CHECK_IS_POWER2(umem_info->num_rx_desc) ||
+	    !_ODP_CHECK_IS_POWER2(umem_info->num_tx_desc)) {
+		ODP_ERR("Invalid xdp descriptor configuration, using defaults (%d).\n",
+			NUM_DESCS_DEFAULT);
+		goto defaults;
+	}
+
+	return;
+
+defaults:
+	umem_info->num_rx_desc = NUM_DESCS_DEFAULT;
+	umem_info->num_tx_desc = NUM_DESCS_DEFAULT;
+}
+
 static int sock_xdp_umem_create(uint8_t *data, pool_t *pool)
 {
 	struct xsk_umem_config cfg;
 	xdp_umem_info_t *umem_info = (xdp_umem_info_t *)data;
 
+	parse_options(umem_info);
 	umem_info->pool = pool;
 	/* Fill queue size is recommended to be >= HW RX ring size + AF_XDP RX
 	 * ring size, so use size twice the size of AF_XDP RX ring. */
-	cfg.fill_size = NUM_XDP_DESCS * 2U; /* TODO: num descs vs pool size */
-	cfg.comp_size = NUM_XDP_DESCS;
+	cfg.fill_size = umem_info->num_rx_desc * 2U;
+	cfg.comp_size = umem_info->num_tx_desc;
 	cfg.frame_size = pool->block_size;
 	cfg.frame_headroom = sizeof(odp_packet_hdr_t) + pool->headroom;
 	cfg.flags = XDP_UMEM_UNALIGNED_CHUNK_FLAG;
