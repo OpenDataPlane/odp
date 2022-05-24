@@ -268,7 +268,7 @@ typedef struct {
 	 */
 	uint32_t min_burst_packets;
 
-	/** Maximum allowed value fand odp_tm_shaper_params_t::commit_burst and
+	/** Maximum allowed value for odp_tm_shaper_params_t::commit_burst and
 	 * odp_tm_shaper_params_t::peak_burst when
 	 * odp_tm_shaper_params_t::packet_mode is true.
 	 */
@@ -310,9 +310,11 @@ typedef struct {
 	 */
 	uint64_t max_rate;
 
-	/** tm_node_shaper_supported indicates that the tm_nodes at this level
-	 * all support TM shaping, */
+	/** Shaper is supported in rate shape mode */
 	odp_bool_t tm_node_shaper_supported;
+
+	/** Shaper is supported in rate limit mode */
+	odp_bool_t tm_node_rate_limiter_supported;
 
 	/** tm_node_shaper_packet_mode indicates that tm_nodes at this level
 	 * support shaper in packet mode */
@@ -410,15 +412,11 @@ typedef struct {
 	*/
 	odp_bool_t egress_fcn_supported;
 
-	/** tm_queue_shaper_supported indicates that the tm_queues support
-	 * proper TM shaping.  Note that TM Shaping is NOT the same thing as
-	 * Ingress Metering/Policing as specified by RFC 2697 (A Single Rate
-	 * Three Color Marker) or RFC 2698 (A Two Rate Three Color Marker).
-	 * These RFCs can be used for a Diffserv traffic conditioner, or
-	 * other ingress policing.  They make no mention of and have no
-	 * algorithms for delaying packets - which is what TM shapers are
-	 * expected to do. */
+	/** Shaper is supported in rate shape mode */
 	odp_bool_t tm_queue_shaper_supported;
+
+	/** Shaper is supported in rate limit mode */
+	odp_bool_t tm_queue_rate_limiter_supported;
 
 	/** tm_queue_shaper_packet_mode indicates that tm_queues support
 	 * shaper in packet mode */
@@ -1047,6 +1045,31 @@ int odp_tm_drop_prec_marking(odp_tm_t           tm,
 /* Shaper profile types and functions
  * -------------------------------------------------------- */
 
+/** Mode selection between rate shaping and rate limiting */
+typedef enum {
+	/** Rate shape traffic to the specified burst and rate by delaying
+	 *  packets.
+	 *
+	 *  The shaper does not drop packets in normal operation, but since
+	 *  it delays packets, it can cause queues to fill up and cause queue
+	 *  management to drop packets.
+	 */
+	ODP_TM_SHAPER_RATE_SHAPE,
+
+	/** Rate limit traffic to the specified burst and rate by dropping
+	 *  excess packets.
+	 *
+	 *  It is implementation dependent when exactly the limiter state
+	 *  update and packet drop happens. For example, they may occur
+	 *  immediately when packets are available from the source or when
+	 *  the downstream node and scheduler are accepting new packets from
+	 *  this node/queue. It is possible that in some cases a delayed
+	 *  packet drop causes queues to fill up.
+	 */
+	ODP_TM_SHAPER_RATE_LIMIT
+
+} odp_tm_shaper_mode_t;
+
 /**
  * TM shaper parameters
  *
@@ -1054,6 +1077,19 @@ int odp_tm_drop_prec_marking(odp_tm_t           tm,
  * values.
  */
 typedef struct {
+	/** Shaper mode. The default value is ODP_TM_SHAPER_RATE_SHAPE.
+	 *
+	 *  A shaper profile must not be used in a TM queue or TM node if
+	 *  the queue/node does not support shaper or if it does not support
+	 *  the shaper mode set in the profile.
+	 *
+	 *  @see odp_tm_capabilities_t::tm_queue_shaper_supported
+	 *  @see odp_tm_capabilities_t::tm_queue_rate_limiter_supported
+	 *  @see odp_tm_level_capabilities_t::tm_node_shaper_supported
+	 *  @see odp_tm_level_capabilities_t::tm_node_rate_limiter_supported
+	 */
+	odp_tm_shaper_mode_t mode;
+
 	/** The committed information rate for this shaper profile.  The units
 	 * for this integer is in bits per second when packet_mode is
 	 * not TRUE while packets per second when packet mode is TRUE.
@@ -1118,6 +1154,7 @@ typedef struct {
 	 *
 	 * The default value is false. */
 	odp_bool_t packet_mode;
+
 } odp_tm_shaper_params_t;
 
 /**
