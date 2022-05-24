@@ -469,20 +469,6 @@ static int sock_xdp_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pac
 	return procd;
 }
 
-static inline void populate_tx_desc(pool_t *pool, odp_packet_hdr_t *pkt_hdr,
-				    struct xdp_desc *tx_desc)
-{
-	uint64_t frame_off;
-	uint64_t pkt_off;
-
-	frame_off = pkt_hdr->event_hdr.index.event * pool->block_size;
-	pkt_off = (uint64_t)(uintptr_t)pkt_hdr->event_hdr.base_data
-		  - (uint64_t)(uintptr_t)pool->base_addr - frame_off;
-	pkt_off <<= XSK_UNALIGNED_BUF_OFFSET_SHIFT;
-	tx_desc->addr = frame_off | pkt_off;
-	tx_desc->len = pkt_hdr->frame_len;
-}
-
 static void handle_pending_tx(xdp_sock_t *sock, uint8_t *base_addr, int num)
 {
 	struct xsk_ring_cons *compl_q;
@@ -513,6 +499,38 @@ static void handle_pending_tx(xdp_sock_t *sock, uint8_t *base_addr, int num)
 	}
 }
 
+static inline void populate_tx_desc(odp_packet_hdr_t *pkt_hdr, pool_t *pool,
+				    struct xdp_desc *tx_desc, uint32_t len)
+{
+	uint64_t frame_off;
+	uint64_t pkt_off;
+
+	frame_off = pkt_hdr->event_hdr.index.event * pool->block_size;
+	pkt_off = (uint64_t)(uintptr_t)pkt_hdr->event_hdr.base_data
+		  - (uint64_t)(uintptr_t)pool->base_addr - frame_off;
+	pkt_off <<= XSK_UNALIGNED_BUF_OFFSET_SHIFT;
+	tx_desc->addr = frame_off | pkt_off;
+	tx_desc->len = len;
+}
+
+static inline void populate_tx_descs(odp_packet_hdr_t *pkt_hdr, pool_t *pool,
+				     struct xsk_ring_prod *tx, int seg_cnt, uint32_t start_idx,
+				     int pktio_idx)
+{
+	if (odp_likely(seg_cnt == 1)) {
+		populate_tx_desc(pkt_hdr, pool, xsk_ring_prod__tx_desc(tx, start_idx),
+				 pkt_hdr->frame_len);
+		pkt_hdr->ms_pktio_idx = pktio_idx;
+	} else {
+		for (int i = 0; i < seg_cnt; ++i) {
+			populate_tx_desc(pkt_hdr, pool, xsk_ring_prod__tx_desc(tx, start_idx++),
+					 pkt_hdr->seg_len);
+			pkt_hdr->ms_pktio_idx = pktio_idx;
+			pkt_hdr = pkt_hdr->seg_next;
+		}
+	}
+}
+
 static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet_t packets[],
 			 int num)
 {
@@ -520,12 +538,12 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 	xdp_sock_t *sock;
 	pool_t *pool;
 	odp_pool_t pool_hdl;
-	int pktio_idx, i;
+	int pktio_idx, i, seg_cnt;
 	struct xsk_ring_prod *tx;
 	uint8_t *base_addr;
 	odp_packet_t pkt;
 	odp_packet_hdr_t *pkt_hdr;
-	uint32_t start_idx;
+	uint32_t start_idx, sent = 0U;
 	uint64_t octets = 0U;
 
 	if (odp_unlikely(num == 0))
@@ -545,14 +563,8 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 
 	for (i = 0; i < num; ++i) {
 		pkt = ODP_PACKET_INVALID;
-
-		if (odp_unlikely(odp_packet_num_segs(packets[i])) > 1) {
-			/* TODO: handle segmented packets */
-			ODP_ERR("Only single-segment packets supported\n");
-			break;
-		}
-
 		pkt_hdr = packet_hdr(packets[i]);
+		seg_cnt = pkt_hdr->seg_count;
 
 		if (pkt_hdr->event_hdr.pool_ptr != pool) {
 			pkt = odp_packet_copy(packets[i], pool_hdl);
@@ -563,12 +575,13 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 			}
 
 			pkt_hdr = packet_hdr(pkt);
+			seg_cnt = pkt_hdr->seg_count;
 		}
 
-		if (xsk_ring_prod__reserve(tx, 1U, &start_idx) == 0U) {
+		if (xsk_ring_prod__reserve(tx, seg_cnt, &start_idx) == 0U) {
 			handle_pending_tx(sock, base_addr, NUM_XDP_DESCS);
 
-			if (xsk_ring_prod__reserve(tx, 1U, &start_idx) == 0U) {
+			if (xsk_ring_prod__reserve(tx, seg_cnt, &start_idx) == 0U) {
 				if (pkt != ODP_PACKET_INVALID)
 					odp_packet_free(pkt);
 
@@ -581,12 +594,12 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 		if (pkt != ODP_PACKET_INVALID)
 			odp_packet_free(packets[i]);
 
-		pkt_hdr->ms_pktio_idx = pktio_idx;
-		populate_tx_desc(pool, pkt_hdr, xsk_ring_prod__tx_desc(tx, start_idx));
-		octets += odp_packet_len(packet_handle(pkt_hdr));
+		populate_tx_descs(pkt_hdr, pool, tx, seg_cnt, start_idx, pktio_idx);
+		sent += seg_cnt;
+		octets += pkt_hdr->frame_len;
 	}
 
-	xsk_ring_prod__submit(tx, i);
+	xsk_ring_prod__submit(tx, sent);
 	handle_pending_tx(sock, base_addr, NUM_XDP_DESCS);
 	sock->qo_stats.octets += octets;
 	sock->qo_stats.packets += i;
