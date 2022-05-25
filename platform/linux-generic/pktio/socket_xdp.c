@@ -556,12 +556,12 @@ static uint32_t process_received(pktio_entry_t *pktio_entry, xdp_sock_t *sock, p
 	return num_rx;
 }
 
-static odp_bool_t reserve_fill_queue_elements(xdp_sock_info_t *sock_info, int q_idx, int num)
+static odp_bool_t reserve_fill_queue_elements(xdp_sock_info_t *sock_info, xdp_sock_t *sock,
+					      int num)
 {
 	pool_t *pool;
 	odp_packet_t packets[num];
 	int count;
-	xdp_sock_t *sock;
 	struct xsk_ring_prod *fill_q;
 	uint32_t start_idx;
 	int pktio_idx;
@@ -569,7 +569,6 @@ static odp_bool_t reserve_fill_queue_elements(xdp_sock_info_t *sock_info, int q_
 	odp_packet_hdr_t *pkt_hdr;
 
 	pool = sock_info->umem_info->pool;
-	sock = &sock_info->qs[q_idx];
 	count = odp_packet_alloc_multi(pool->pool_hdl, sock_info->mtu, packets, num);
 
 	if (count <= 0) {
@@ -611,7 +610,7 @@ static int sock_xdp_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pac
 	sock = &priv->qs[index];
 
 	if (!priv->lockless_rx)
-		odp_ticketlock_lock(&priv->qs[index].rx_lock);
+		odp_ticketlock_lock(&sock->rx_lock);
 
 	if (odp_unlikely(xsk_ring_prod__needs_wakeup(&sock->fill_q))) {
 		fd.fd = xsk_socket__fd(sock->xsk);
@@ -623,17 +622,17 @@ static int sock_xdp_recv(pktio_entry_t *pktio_entry, int index, odp_packet_t pac
 
 	if (recvd == 0U) {
 		if (!priv->lockless_rx)
-			odp_ticketlock_unlock(&priv->qs[index].rx_lock);
+			odp_ticketlock_unlock(&sock->rx_lock);
 		return 0;
 	}
 
 	procd = process_received(pktio_entry, sock, priv->umem_info->pool, start_idx, packets,
 				 recvd);
 	xsk_ring_cons__release(&sock->rx, recvd);
-	(void)reserve_fill_queue_elements(priv, index, recvd);
+	(void)reserve_fill_queue_elements(priv, sock, recvd);
 
 	if (!priv->lockless_rx)
-		odp_ticketlock_unlock(&priv->qs[index].rx_lock);
+		odp_ticketlock_unlock(&sock->rx_lock);
 
 	return procd;
 }
@@ -719,11 +718,11 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 		return 0;
 
 	priv = pkt_priv(pktio_entry);
+	sock = &priv->qs[index];
 
 	if (!priv->lockless_tx)
-		odp_ticketlock_lock(&priv->qs[index].tx_lock);
+		odp_ticketlock_lock(&sock->tx_lock);
 
-	sock = &priv->qs[index];
 	pool = priv->umem_info->pool;
 	pool_hdl = pool->pool_hdl;
 	pktio_idx = priv->pktio_idx;
@@ -775,7 +774,7 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 	sock->qo_stats.packets += i;
 
 	if (!priv->lockless_tx)
-		odp_ticketlock_unlock(&priv->qs[index].tx_lock);
+		odp_ticketlock_unlock(&sock->tx_lock);
 
 	return i;
 }
@@ -944,7 +943,7 @@ static int sock_xdp_output_queues_config(pktio_entry_t *pktio_entry,
 			goto err;
 		}
 
-		if (!reserve_fill_queue_elements(priv, i, config.rx_size)) {
+		if (!reserve_fill_queue_elements(priv, sock, config.rx_size)) {
 			ODP_ERR("Unable to reserve fill queue descriptors for queue: %u.\n",
 				bind_q);
 			goto err;
