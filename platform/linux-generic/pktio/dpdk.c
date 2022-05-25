@@ -612,6 +612,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	odp_pktio_t input = pktio_entry->s.handle;
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
+	const uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
 
 	/* Allocate maximum sized packets */
 	max_len = pkt_dpdk->data_room;
@@ -640,8 +641,6 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		pkt_hdr = packet_hdr(pkt);
 
 		if (layer) {
-			uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
-
 			packet_parse_reset(pkt_hdr, 1);
 			if (_odp_dpdk_packet_parse_common(&pkt_hdr->p, data,
 							  pkt_len, pkt_len, mbuf,
@@ -892,12 +891,12 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 	int i, nb_pkts;
 	odp_pktin_config_opt_t pktin_cfg;
 	odp_pktio_t input;
-	pkt_dpdk_t *pkt_dpdk;
+	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
+	const uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
 
 	prefetch_pkt(mbuf_table[0]);
 
-	pkt_dpdk = pkt_priv(pktio_entry);
 	nb_pkts = 0;
 	set_flow_hash = pkt_dpdk->opt.set_flow_hash;
 	pktin_cfg = pktio_entry->s.config.pktin;
@@ -930,8 +929,6 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		pkt_hdr->seg_data = data;
 
 		if (layer) {
-			uint32_t supported_ptypes = pkt_dpdk->supported_ptypes;
-
 			if (_odp_dpdk_packet_parse_common(&pkt_hdr->p, data,
 							  pkt_len, pkt_len, mbuf,
 							  layer, supported_ptypes,
