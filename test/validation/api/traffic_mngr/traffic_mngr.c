@@ -471,7 +471,8 @@ static int test_overall_capabilities(void)
 				return -1;
 			}
 
-			if (per_level->tm_node_shaper_supported) {
+			if (per_level->tm_node_shaper_supported ||
+			    per_level->tm_node_rate_limiter_supported) {
 				CU_ASSERT(per_level->max_burst > 0);
 				CU_ASSERT(per_level->min_rate > 0);
 				CU_ASSERT(per_level->max_rate > 0);
@@ -1852,7 +1853,8 @@ set_reqs_based_on_capas(odp_tm_requirements_t *req)
 			req->marking_colors_needed[color] = true;
 	}
 
-	if (tm_capabilities.tm_queue_shaper_supported)
+	if (tm_capabilities.tm_queue_shaper_supported ||
+	    tm_capabilities.tm_queue_rate_limiter_supported)
 		req->tm_queue_shaper_needed = true;
 
 	/* We can use any packet priority mode since it does not affect
@@ -4488,6 +4490,7 @@ static void test_defaults(uint8_t fill)
 
 	memset(&shaper, fill, sizeof(shaper));
 	odp_tm_shaper_params_init(&shaper);
+	CU_ASSERT(shaper.packet_mode == ODP_TM_SHAPER_RATE_SHAPE);
 	CU_ASSERT_EQUAL(shaper.shaper_len_adjust, 0);
 	CU_ASSERT(!shaper.dual_rate);
 	CU_ASSERT(!shaper.packet_mode);
