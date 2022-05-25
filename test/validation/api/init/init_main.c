@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -46,6 +46,22 @@ static int my_log_thread_func(odp_log_level_t level, const char *fmt, ...)
 	my_log_thread_func_count++;
 
 	return 0;
+}
+
+static void test_param_init(uint8_t fill)
+{
+	odp_init_t param;
+
+	memset(&param, fill, sizeof(param));
+	odp_init_param_init(&param);
+	CU_ASSERT(param.mem_model == ODP_MEM_MODEL_THREAD);
+	CU_ASSERT(param.shm.max_memory == 0);
+}
+
+static void init_test_param_init(void)
+{
+	test_param_init(0);
+	test_param_init(0xff);
 }
 
 static void init_test_defaults(void)
@@ -226,6 +242,7 @@ static void init_test_feature_disabled(void)
 }
 
 odp_testinfo_t testinfo[] = {
+	ODP_TEST_INFO(init_test_param_init),
 	ODP_TEST_INFO(init_test_defaults),
 	ODP_TEST_INFO(init_test_abort),
 	ODP_TEST_INFO(init_test_log),
