@@ -28,11 +28,11 @@ struct suite_context_s {
 
 static struct suite_context_s suite_context;
 
-static void test_default_values(void)
+static void test_defaults(uint8_t fill)
 {
 	odp_crypto_session_param_t param;
 
-	memset(&param, 0x55, sizeof(param));
+	memset(&param, fill, sizeof(param));
 	odp_crypto_session_param_init(&param);
 
 	CU_ASSERT_EQUAL(param.op, ODP_CRYPTO_OP_ENCODE);
@@ -53,6 +53,12 @@ static void test_default_values(void)
 	CU_ASSERT_EQUAL(param.auth_iv.data, NULL);
 	CU_ASSERT_EQUAL(param.auth_iv.length, 0);
 #endif
+}
+
+static void test_default_values(void)
+{
+	test_defaults(0);
+	test_defaults(0xff);
 }
 
 static int packet_cmp_mem_bits(odp_packet_t pkt, uint32_t offset,
@@ -1182,7 +1188,7 @@ static int create_hash_test_reference(odp_auth_alg_t auth,
 				      const odp_crypto_auth_capability_t *capa,
 				      crypto_test_reference_t *ref,
 				      uint32_t digest_offset,
-				      uint8_t digest_fill_byte)
+				      uint8_t digest_fill)
 {
 	odp_crypto_session_t session;
 	int rc;
@@ -1210,7 +1216,7 @@ static int create_hash_test_reference(odp_auth_alg_t auth,
 	fill_with_pattern(ref->auth_iv, ref->auth_iv_length);
 	fill_with_pattern(ref->plaintext, auth_bytes);
 
-	memset(ref->plaintext + digest_offset, digest_fill_byte, ref->digest_length);
+	memset(ref->plaintext + digest_offset, digest_fill, ref->digest_length);
 
 	pkt = odp_packet_alloc(suite_context.pool, auth_bytes + ref->digest_length);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);

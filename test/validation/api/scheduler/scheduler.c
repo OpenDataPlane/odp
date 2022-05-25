@@ -145,10 +145,11 @@ static void release_context(odp_schedule_sync_t sync)
 		odp_schedule_release_ordered();
 }
 
-static void scheduler_test_init(void)
+static void test_init(uint8_t fill)
 {
 	odp_schedule_config_t default_config;
 
+	memset(&default_config, fill, sizeof(default_config));
 	odp_schedule_config_init(&default_config);
 
 	CU_ASSERT(default_config.max_flow_id == 0);
@@ -156,6 +157,12 @@ static void scheduler_test_init(void)
 	CU_ASSERT(default_config.sched_group.all);
 	CU_ASSERT(default_config.sched_group.control);
 	CU_ASSERT(default_config.sched_group.worker);
+}
+
+static void scheduler_test_init(void)
+{
+	test_init(0);
+	test_init(0xff);
 }
 
 static void scheduler_test_capa(void)

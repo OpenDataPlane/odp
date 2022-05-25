@@ -1,4 +1,4 @@
-/* Copyright (c) 2020-2021, Nokia
+/* Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -129,16 +129,22 @@ static void stash_capability(void)
 	}
 }
 
-static void stash_param_defaults(void)
+static void param_defaults(uint8_t fill)
 {
 	odp_stash_param_t param;
 
-	memset(&param, 0xff, sizeof(odp_stash_param_t));
+	memset(&param, fill, sizeof(param));
 	odp_stash_param_init(&param);
 	CU_ASSERT(param.type == ODP_STASH_TYPE_DEFAULT);
 	CU_ASSERT(param.put_mode == ODP_STASH_OP_MT);
 	CU_ASSERT(param.get_mode == ODP_STASH_OP_MT);
 	CU_ASSERT(param.cache_size == 0);
+}
+
+static void stash_param_defaults(void)
+{
+	param_defaults(0);
+	param_defaults(0xff);
 }
 
 static void stash_create_u64(void)

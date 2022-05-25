@@ -4451,7 +4451,7 @@ static void test_packet_aging(uint64_t tmo_ns, uint32_t pkt_len, odp_bool_t is_d
 	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
 }
 
-static void traffic_mngr_test_default_values(void)
+static void test_defaults(uint8_t fill)
 {
 	odp_tm_requirements_t req;
 	odp_tm_shaper_params_t shaper;
@@ -4462,7 +4462,7 @@ static void traffic_mngr_test_default_values(void)
 	odp_tm_queue_params_t queue;
 	int n;
 
-	memset(&req, 0xff, sizeof(req));
+	memset(&req, fill, sizeof(req));
 	odp_tm_requirements_init(&req);
 	CU_ASSERT_EQUAL(req.num_levels, 0);
 	CU_ASSERT(!req.tm_queue_shaper_needed);
@@ -4486,7 +4486,7 @@ static void traffic_mngr_test_default_values(void)
 		CU_ASSERT(!l_req->tm_node_threshold_needed);
 	}
 
-	memset(&shaper, 0xff, sizeof(shaper));
+	memset(&shaper, fill, sizeof(shaper));
 	odp_tm_shaper_params_init(&shaper);
 	CU_ASSERT_EQUAL(shaper.shaper_len_adjust, 0);
 	CU_ASSERT(!shaper.dual_rate);
@@ -4497,24 +4497,24 @@ static void traffic_mngr_test_default_values(void)
 	for (n = 0; n < ODP_TM_MAX_PRIORITIES; n++)
 		CU_ASSERT_EQUAL(sched.sched_modes[n], ODP_TM_BYTE_BASED_WEIGHTS);
 
-	memset(&threshold, 0xff, sizeof(threshold));
+	memset(&threshold, fill, sizeof(threshold));
 	odp_tm_threshold_params_init(&threshold);
 	CU_ASSERT(!threshold.enable_max_pkts);
 	CU_ASSERT(!threshold.enable_max_bytes);
 
-	memset(&wred, 0xff, sizeof(wred));
+	memset(&wred, fill, sizeof(wred));
 	odp_tm_wred_params_init(&wred);
 	CU_ASSERT(!wred.enable_wred);
 	CU_ASSERT(!wred.use_byte_fullness);
 
-	memset(&node, 0xff, sizeof(node));
+	memset(&node, fill, sizeof(node));
 	odp_tm_node_params_init(&node);
 	CU_ASSERT_EQUAL(node.shaper_profile, ODP_TM_INVALID);
 	CU_ASSERT_EQUAL(node.threshold_profile, ODP_TM_INVALID);
 	for (n = 0; n < ODP_NUM_PACKET_COLORS; n++)
 		CU_ASSERT_EQUAL(node.wred_profile[n], ODP_TM_INVALID);
 
-	memset(&queue, 0xff, sizeof(queue));
+	memset(&queue, fill, sizeof(queue));
 	odp_tm_queue_params_init(&queue);
 	CU_ASSERT_EQUAL(queue.shaper_profile, ODP_TM_INVALID);
 	CU_ASSERT_EQUAL(queue.threshold_profile, ODP_TM_INVALID);
@@ -4522,10 +4522,12 @@ static void traffic_mngr_test_default_values(void)
 		CU_ASSERT_EQUAL(queue.wred_profile[n], ODP_TM_INVALID);
 	CU_ASSERT_EQUAL(queue.priority, 0);
 	CU_ASSERT(queue.ordered_enqueue);
-	/* re-check ordered_enqueue to notice if it is not set at all */
-	memset(&queue, 0, sizeof(queue));
-	odp_tm_queue_params_init(&queue);
-	CU_ASSERT(queue.ordered_enqueue);
+}
+
+static void traffic_mngr_test_default_values(void)
+{
+	test_defaults(0);
+	test_defaults(0xff);
 }
 
 static void traffic_mngr_test_capabilities(void)

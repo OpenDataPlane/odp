@@ -331,11 +331,11 @@ static void timer_test_capa(void)
 	}
 }
 
-static void timer_test_param_init(void)
+static void test_param_init(uint8_t fill)
 {
 	odp_timer_pool_param_t tp_param;
 
-	memset(&tp_param, 0x55, sizeof(odp_timer_pool_param_t));
+	memset(&tp_param, fill, sizeof(tp_param));
 
 	odp_timer_pool_param_init(&tp_param);
 	CU_ASSERT(tp_param.res_ns == 0);
@@ -348,6 +348,12 @@ static void timer_test_param_init(void)
 	CU_ASSERT(tp_param.periodic.base_freq_hz.integer == 0);
 	CU_ASSERT(tp_param.periodic.base_freq_hz.numer == 0);
 	CU_ASSERT(tp_param.periodic.base_freq_hz.denom == 0);
+}
+
+static void timer_test_param_init(void)
+{
+	test_param_init(0);
+	test_param_init(0xff);
 }
 
 static void timer_test_timeout_pool_alloc(void)

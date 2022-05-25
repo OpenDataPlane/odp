@@ -42,10 +42,11 @@ static odp_pool_capability_t global_pool_capa;
 static odp_pool_param_t default_pool_param;
 static odp_pool_ext_capability_t global_pool_ext_capa;
 
-static void pool_test_param_init(void)
+static void test_param_init(uint8_t fill)
 {
 	odp_pool_param_t param;
 
+	memset(&param, fill, sizeof(param));
 	odp_pool_param_init(&param);
 
 	CU_ASSERT(param.buf.cache_size >= global_pool_capa.buf.min_cache_size &&
@@ -61,6 +62,12 @@ static void pool_test_param_init(void)
 
 	CU_ASSERT(param.vector.cache_size >= global_pool_capa.vector.min_cache_size &&
 		  param.vector.cache_size <= global_pool_capa.vector.max_cache_size);
+}
+
+static void pool_test_param_init(void)
+{
+	test_param_init(0);
+	test_param_init(0xff);
 }
 
 static void pool_create_destroy(odp_pool_param_t *param)
@@ -1293,10 +1300,11 @@ static void test_packet_pool_ext_capa(void)
 	CU_ASSERT(capa.pkt.max_segs_per_pkt > 0);
 }
 
-static void test_packet_pool_ext_param_init(void)
+static void test_ext_param_init(uint8_t fill)
 {
 	odp_pool_ext_param_t param;
 
+	memset(&param, fill, sizeof(param));
 	odp_pool_ext_param_init(ODP_POOL_PACKET, &param);
 
 	CU_ASSERT(param.type == ODP_POOL_PACKET);
@@ -1305,6 +1313,12 @@ static void test_packet_pool_ext_param_init(void)
 	CU_ASSERT(param.stats.all == 0);
 	CU_ASSERT(param.pkt.app_header_size == 0);
 	CU_ASSERT(param.pkt.uarea_size == 0);
+}
+
+static void test_packet_pool_ext_param_init(void)
+{
+	test_ext_param_init(0);
+	test_ext_param_init(0xff);
 }
 
 static void test_packet_pool_ext_create(void)
