@@ -1,5 +1,5 @@
 /* Copyright (c) 2014-2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -132,6 +132,32 @@ static void queue_test_capa(void)
 	CU_ASSERT(capa.max_queues >= capa.plain.max_num);
 	CU_ASSERT(capa.max_queues >= capa.plain.lockfree.max_num);
 	CU_ASSERT(capa.max_queues >= capa.plain.waitfree.max_num);
+}
+
+static void test_defaults(uint8_t fill)
+{
+	odp_queue_param_t param;
+
+	memset(&param, fill, sizeof(param));
+	odp_queue_param_init(&param);
+	CU_ASSERT(param.type == ODP_QUEUE_TYPE_PLAIN);
+	CU_ASSERT(param.enq_mode == ODP_QUEUE_OP_MT);
+	CU_ASSERT(param.deq_mode == ODP_QUEUE_OP_MT);
+	CU_ASSERT(param.sched.prio == odp_schedule_default_prio());
+	CU_ASSERT(param.sched.sync == ODP_SCHED_SYNC_PARALLEL);
+	CU_ASSERT(param.sched.group == ODP_SCHED_GROUP_ALL);
+	CU_ASSERT(param.sched.lock_count == 0);
+	CU_ASSERT(param.order == ODP_QUEUE_ORDER_KEEP);
+	CU_ASSERT(param.nonblocking == ODP_BLOCKING);
+	CU_ASSERT(param.context == NULL);
+	CU_ASSERT(param.context_len == 0);
+	CU_ASSERT(param.size == 0);
+}
+
+static void queue_test_param_init(void)
+{
+	test_defaults(0);
+	test_defaults(0xff);
 }
 
 static void queue_test_max_plain(void)
@@ -607,20 +633,7 @@ static void queue_test_param(void)
 	odp_queue_param_t qparams;
 	odp_buffer_t enbuf;
 
-	/* Defaults */
 	odp_queue_param_init(&qparams);
-	CU_ASSERT(qparams.type == ODP_QUEUE_TYPE_PLAIN);
-	CU_ASSERT(qparams.enq_mode == ODP_QUEUE_OP_MT);
-	CU_ASSERT(qparams.deq_mode == ODP_QUEUE_OP_MT);
-	CU_ASSERT(qparams.sched.prio == odp_schedule_default_prio());
-	CU_ASSERT(qparams.sched.sync == ODP_SCHED_SYNC_PARALLEL);
-	CU_ASSERT(qparams.sched.group == ODP_SCHED_GROUP_ALL);
-	CU_ASSERT(qparams.sched.lock_count == 0);
-	CU_ASSERT(qparams.order == ODP_QUEUE_ORDER_KEEP);
-	CU_ASSERT(qparams.nonblocking == ODP_BLOCKING);
-	CU_ASSERT(qparams.context == NULL);
-	CU_ASSERT(qparams.context_len == 0);
-	CU_ASSERT(qparams.size == 0);
 
 	/* Schedule type queue */
 	qparams.type       = ODP_QUEUE_TYPE_SCHED;
@@ -985,6 +998,7 @@ static void queue_test_mt_plain_nonblock_lf(void)
 
 odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_capa),
+	ODP_TEST_INFO(queue_test_param_init),
 	ODP_TEST_INFO(queue_test_mode),
 	ODP_TEST_INFO(queue_test_max_plain),
 	ODP_TEST_INFO(queue_test_burst),

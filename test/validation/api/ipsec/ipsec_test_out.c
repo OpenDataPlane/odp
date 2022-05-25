@@ -1,6 +1,6 @@
 /* Copyright (c) 2017-2018, Linaro Limited
  * Copyright (c) 2020, Marvell
- * Copyright (c) 2020-2021, Nokia
+ * Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -1598,14 +1598,12 @@ static void ipsec_test_capability(void)
 	CU_ASSERT(odp_ipsec_capability(&capa) == 0);
 }
 
-static void ipsec_test_default_values(void)
+static void test_defaults(uint8_t fill)
 {
 	odp_ipsec_config_t config;
 	odp_ipsec_sa_param_t sa_param;
 
-	memset(&config, 0x55, sizeof(config));
-	memset(&sa_param, 0x55, sizeof(sa_param));
-
+	memset(&config, fill, sizeof(config));
 	odp_ipsec_config_init(&config);
 	CU_ASSERT(config.inbound.lookup.min_spi == 0);
 	CU_ASSERT(config.inbound.lookup.max_spi == UINT32_MAX);
@@ -1623,6 +1621,7 @@ static void ipsec_test_default_values(void)
 	CU_ASSERT(!config.stats_en);
 	CU_ASSERT(!config.vector.enable);
 
+	memset(&sa_param, fill, sizeof(sa_param));
 	odp_ipsec_sa_param_init(&sa_param);
 	CU_ASSERT(sa_param.proto == ODP_IPSEC_ESP);
 	CU_ASSERT(sa_param.crypto.cipher_alg == ODP_CIPHER_ALG_NULL);
@@ -1652,6 +1651,12 @@ static void ipsec_test_default_values(void)
 	CU_ASSERT(sa_param.outbound.tunnel.ipv6.dscp == 0);
 	CU_ASSERT(sa_param.outbound.tunnel.ipv6.hlimit == 255);
 	CU_ASSERT(sa_param.outbound.frag_mode == ODP_IPSEC_FRAG_DISABLED);
+}
+
+static void ipsec_test_default_values(void)
+{
+	test_defaults(0);
+	test_defaults(0xff);
 }
 
 static void test_ipsec_stats(void)

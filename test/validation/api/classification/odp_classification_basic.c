@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:	BSD-3-Clause
@@ -10,21 +11,27 @@
 
 #define PMR_SET_NUM	5
 
-static void classification_test_default_values(void)
+static void test_defaults(uint8_t fill)
 {
 	odp_cls_cos_param_t cos_param;
 	odp_pmr_param_t pmr_param;
 
-	memset(&cos_param, 0x55, sizeof(cos_param));
+	memset(&cos_param, fill, sizeof(cos_param));
 	odp_cls_cos_param_init(&cos_param);
 	CU_ASSERT_EQUAL(cos_param.num_queue, 1);
 	CU_ASSERT_EQUAL(cos_param.red.enable, false);
 	CU_ASSERT_EQUAL(cos_param.bp.enable, false);
 	CU_ASSERT_EQUAL(cos_param.vector.enable, false);
 
-	memset(&pmr_param, 0x55, sizeof(pmr_param));
+	memset(&pmr_param, fill, sizeof(pmr_param));
 	odp_cls_pmr_param_init(&pmr_param);
 	CU_ASSERT_EQUAL(pmr_param.range_term, false);
+}
+
+static void classification_test_default_values(void)
+{
+	test_defaults(0);
+	test_defaults(0xff);
 }
 
 static void classification_test_create_cos(void)

@@ -1578,19 +1578,19 @@ static void pktio_test_mac(void)
 	CU_ASSERT(0 == ret);
 }
 
-static void pktio_test_default_values(void)
+static void test_defaults(uint8_t fill)
 {
 	odp_pktio_param_t pktio_p;
 	odp_pktin_queue_param_t qp_in;
 	odp_pktout_queue_param_t qp_out;
 	odp_pktio_config_t pktio_conf;
 
-	memset(&pktio_p, 0x55, sizeof(pktio_p));
+	memset(&pktio_p, fill, sizeof(pktio_p));
 	odp_pktio_param_init(&pktio_p);
 	CU_ASSERT_EQUAL(pktio_p.in_mode, ODP_PKTIN_MODE_DIRECT);
 	CU_ASSERT_EQUAL(pktio_p.out_mode, ODP_PKTOUT_MODE_DIRECT);
 
-	memset(&qp_in, 0x55, sizeof(qp_in));
+	memset(&qp_in, fill, sizeof(qp_in));
 	odp_pktin_queue_param_init(&qp_in);
 	CU_ASSERT_EQUAL(qp_in.op_mode, ODP_PKTIO_OP_MT);
 	CU_ASSERT_EQUAL(qp_in.classifier_enable, 0);
@@ -1609,13 +1609,13 @@ static void pktio_test_default_values(void)
 	CU_ASSERT_EQUAL(qp_in.queue_param_ovr, NULL);
 	CU_ASSERT_EQUAL(qp_in.vector.enable, false);
 
-	memset(&qp_out, 0x55, sizeof(qp_out));
+	memset(&qp_out, fill, sizeof(qp_out));
 	odp_pktout_queue_param_init(&qp_out);
 	CU_ASSERT_EQUAL(qp_out.op_mode, ODP_PKTIO_OP_MT);
 	CU_ASSERT_EQUAL(qp_out.num_queues, 1);
 	CU_ASSERT_EQUAL(qp_out.queue_size[0], 0);
 
-	memset(&pktio_conf, 0x55, sizeof(pktio_conf));
+	memset(&pktio_conf, fill, sizeof(pktio_conf));
 	odp_pktio_config_init(&pktio_conf);
 	CU_ASSERT_EQUAL(pktio_conf.pktin.all_bits, 0);
 	CU_ASSERT_EQUAL(pktio_conf.pktout.all_bits, 0);
@@ -1628,6 +1628,12 @@ static void pktio_test_default_values(void)
 	CU_ASSERT_EQUAL(pktio_conf.reassembly.en_ipv6, false);
 	CU_ASSERT_EQUAL(pktio_conf.reassembly.max_wait_time, 0);
 	CU_ASSERT_EQUAL(pktio_conf.reassembly.max_num_frags, 2);
+}
+
+static void pktio_test_default_values(void)
+{
+	test_defaults(0);
+	test_defaults(0xff);
 }
 
 static void pktio_test_open(void)
