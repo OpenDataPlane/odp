@@ -33,6 +33,7 @@
 #include <linux/ethtool.h>
 #include <linux/sockios.h>
 #include <net/if.h>
+#include <linux/if_xdp.h>
 
 #include <xdp/xsk.h>
 
@@ -62,14 +63,10 @@ static const char * const internal_stats_strs[] = {
 #define MAX_INTERNAL_STATS _ODP_ARRAY_SIZE(internal_stats_strs)
 
 typedef struct {
-	struct xsk_ring_prod fill_q;
-	struct xsk_ring_cons compl_q;
-	struct xsk_umem *umem;
-	pool_t *pool;
-	int num_rx_desc;
-	int num_tx_desc;
-	uint32_t ref_cnt;
-} xdp_umem_info_t;
+	uint64_t rx_dropped;
+	uint64_t rx_inv_descs;
+	uint64_t tx_inv_descs;
+} xdp_sock_stats_t;
 
 typedef struct {
 	odp_ticketlock_t rx_lock ODP_ALIGNED_CACHE;
@@ -80,9 +77,20 @@ typedef struct {
 	struct xsk_ring_prod fill_q;
 	odp_pktin_queue_stats_t qi_stats;
 	odp_pktout_queue_stats_t qo_stats;
+	xdp_sock_stats_t xdp_stats;
 	struct xsk_socket *xsk;
 	uint64_t i_stats[MAX_INTERNAL_STATS];
 } xdp_sock_t;
+
+typedef struct {
+	struct xsk_ring_prod fill_q;
+	struct xsk_ring_cons compl_q;
+	struct xsk_umem *umem;
+	pool_t *pool;
+	int num_rx_desc;
+	int num_tx_desc;
+	uint32_t ref_cnt;
+} xdp_umem_info_t;
 
 typedef struct {
 	xdp_sock_t qs[PKTIO_MAX_QUEUES];
@@ -328,6 +336,8 @@ static int sock_xdp_stats(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats)
 	xdp_sock_t *sock;
 	odp_pktin_queue_stats_t qi_stats;
 	odp_pktout_queue_stats_t qo_stats;
+	struct xdp_statistics xdp_stats;
+	socklen_t optlen = sizeof(struct xdp_statistics);
 
 	memset(stats, 0, sizeof(odp_pktio_stats_t));
 
@@ -340,6 +350,15 @@ static int sock_xdp_stats(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats)
 		stats->in_errors += qi_stats.errors;
 		stats->out_octets += qo_stats.octets;
 		stats->out_packets += qo_stats.packets;
+
+		if (!getsockopt(xsk_socket__fd(sock->xsk), SOL_XDP, XDP_STATISTICS, &xdp_stats,
+				&optlen)) {
+			stats->in_errors += (xdp_stats.rx_dropped - sock->xdp_stats.rx_dropped);
+			stats->in_discards +=
+				(xdp_stats.rx_invalid_descs - sock->xdp_stats.rx_inv_descs);
+			stats->out_discards +=
+				(xdp_stats.tx_invalid_descs - sock->xdp_stats.tx_inv_descs);
+		}
 	}
 
 	return 0;
@@ -349,12 +368,21 @@ static int sock_xdp_stats_reset(pktio_entry_t *pktio_entry)
 {
 	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
 	xdp_sock_t *sock;
+	struct xdp_statistics xdp_stats;
+	socklen_t optlen = sizeof(struct xdp_statistics);
 
 	for (uint32_t i = 0U; i < priv->num_q; ++i) {
 		sock = &priv->qs[i];
 		memset(&sock->qi_stats, 0, sizeof(odp_pktin_queue_stats_t));
 		memset(&sock->qo_stats, 0, sizeof(odp_pktout_queue_stats_t));
 		memset(sock->i_stats, 0, sizeof(sock->i_stats));
+
+		if (!getsockopt(xsk_socket__fd(sock->xsk), SOL_XDP, XDP_STATISTICS, &xdp_stats,
+				&optlen)) {
+			sock->xdp_stats.rx_dropped = xdp_stats.rx_dropped;
+			sock->xdp_stats.rx_inv_descs = xdp_stats.rx_invalid_descs;
+			sock->xdp_stats.tx_inv_descs = xdp_stats.tx_invalid_descs;
+		}
 	}
 
 	return 0;
@@ -364,8 +392,18 @@ static int sock_xdp_pktin_queue_stats(pktio_entry_t *pktio_entry, uint32_t index
 				      odp_pktin_queue_stats_t *pktin_stats)
 {
 	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
+	xdp_sock_t *sock;
+	struct xdp_statistics xdp_stats;
+	socklen_t optlen = sizeof(struct xdp_statistics);
 
-	*pktin_stats = priv->qs[index].qi_stats;
+	sock = &priv->qs[index];
+	*pktin_stats = sock->qi_stats;
+
+	if (!getsockopt(xsk_socket__fd(sock->xsk), SOL_XDP, XDP_STATISTICS, &xdp_stats, &optlen)) {
+		pktin_stats->errors += (xdp_stats.rx_dropped - sock->xdp_stats.rx_dropped);
+		pktin_stats->discards +=
+			(xdp_stats.rx_invalid_descs - sock->xdp_stats.rx_inv_descs);
+	}
 
 	return 0;
 }
@@ -374,8 +412,16 @@ static int sock_xdp_pktout_queue_stats(pktio_entry_t *pktio_entry, uint32_t inde
 				       odp_pktout_queue_stats_t *pktout_stats)
 {
 	xdp_sock_info_t *priv = pkt_priv(pktio_entry);
+	xdp_sock_t *sock;
+	struct xdp_statistics xdp_stats;
+	socklen_t optlen = sizeof(struct xdp_statistics);
 
-	*pktout_stats = priv->qs[index].qo_stats;
+	sock = &priv->qs[index];
+	*pktout_stats = sock->qo_stats;
+
+	if (!getsockopt(xsk_socket__fd(sock->xsk), SOL_XDP, XDP_STATISTICS, &xdp_stats, &optlen))
+		pktout_stats->discards +=
+			(xdp_stats.tx_invalid_descs - sock->xdp_stats.tx_inv_descs);
 
 	return 0;
 }
@@ -836,14 +882,18 @@ static int sock_xdp_capability(pktio_entry_t *pktio_entry, odp_pktio_capability_
 	capa->stats.pktio.counter.in_octets = 1U;
 	capa->stats.pktio.counter.in_packets = 1U;
 	capa->stats.pktio.counter.in_errors = 1U;
+	capa->stats.pktio.counter.in_discards = 1U;
 	capa->stats.pktio.counter.out_octets = 1U;
 	capa->stats.pktio.counter.out_packets = 1U;
+	capa->stats.pktio.counter.out_discards = 1U;
 
 	capa->stats.pktin_queue.counter.octets = 1U;
 	capa->stats.pktin_queue.counter.packets = 1U;
 	capa->stats.pktin_queue.counter.errors = 1U;
+	capa->stats.pktin_queue.counter.discards = 1U;
 	capa->stats.pktout_queue.counter.octets = 1U;
 	capa->stats.pktout_queue.counter.packets = 1U;
+	capa->stats.pktout_queue.counter.discards = 1U;
 
 	return 0;
 }
