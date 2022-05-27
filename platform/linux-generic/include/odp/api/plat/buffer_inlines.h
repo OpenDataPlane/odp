@@ -46,7 +46,7 @@ _ODP_INLINE void *odp_buffer_addr(odp_buffer_t buf)
 
 _ODP_INLINE odp_pool_t odp_buffer_pool(odp_buffer_t buf)
 {
-	return (odp_pool_t)(uintptr_t)_odp_event_hdr_field(buf, void *, pool);
+	return _odp_event_hdr_field(buf, odp_pool_t, pool);
 }
 
 /** @endcond */

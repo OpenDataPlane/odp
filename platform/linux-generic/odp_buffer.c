@@ -18,7 +18,7 @@
 uint32_t odp_buffer_size(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = _odp_buf_hdr(buf);
-	pool_t *pool = hdr->event_hdr.pool_ptr;
+	pool_t *pool = _odp_pool_entry(hdr->event_hdr.pool);
 
 	return pool->seg_len;
 }

@@ -736,7 +736,7 @@ static int sock_xdp_send(pktio_entry_t *pktio_entry, int index, const odp_packet
 		pkt_hdr = packet_hdr(packets[i]);
 		seg_cnt = pkt_hdr->seg_count;
 
-		if (pkt_hdr->event_hdr.pool_ptr != pool) {
+		if (_odp_pool_entry(pkt_hdr->event_hdr.pool) != pool) {
 			pkt = odp_packet_copy(packets[i], pool_hdl);
 
 			if (odp_unlikely(pkt == ODP_PACKET_INVALID)) {

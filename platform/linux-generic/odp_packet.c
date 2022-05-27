@@ -53,7 +53,7 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.frame_len      = offsetof(odp_packet_hdr_t, frame_len),
 	.headroom       = offsetof(odp_packet_hdr_t, headroom),
 	.tailroom       = offsetof(odp_packet_hdr_t, tailroom),
-	.pool           = offsetof(odp_packet_hdr_t, event_hdr.pool_ptr),
+	.pool           = offsetof(odp_packet_hdr_t, event_hdr.pool),
 	.input          = offsetof(odp_packet_hdr_t, input),
 	.seg_count      = offsetof(odp_packet_hdr_t, seg_count),
 	.user_ptr       = offsetof(odp_packet_hdr_t, user_ptr),
@@ -143,7 +143,7 @@ static inline void *packet_tail(odp_packet_hdr_t *pkt_hdr)
 static inline uint32_t seg_headroom(odp_packet_hdr_t *pkt_seg)
 {
 	_odp_event_hdr_t *hdr = &pkt_seg->event_hdr;
-	pool_t *pool = hdr->pool_ptr;
+	pool_t *pool = _odp_pool_entry(hdr->pool);
 	uint8_t *base = hdr->base_data;
 	uint8_t *head = pkt_seg->seg_data;
 
@@ -273,7 +273,7 @@ static inline void link_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 	int cur = 0;
 	odp_packet_hdr_t *hdr;
 	odp_packet_hdr_t *head = pkt_hdr[0];
-	uint32_t seg_len = ((pool_t *)(head->event_hdr.pool_ptr))->seg_len;
+	uint32_t seg_len = _odp_pool_entry(head->event_hdr.pool)->seg_len;
 
 	while (1) {
 		_odp_event_hdr_t *event_hdr = &pkt_hdr[cur]->event_hdr;
@@ -312,7 +312,7 @@ static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 
 	/* First segment is the packet descriptor */
 	hdr = pkt_hdr[0];
-	seg_len = ((pool_t *)(hdr->event_hdr.pool_ptr))->seg_len;
+	seg_len = _odp_pool_entry(hdr->event_hdr.pool)->seg_len;
 
 	/* Defaults for single segment packet */
 	hdr->seg_data = hdr->event_hdr.base_data;
@@ -336,7 +336,7 @@ static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 static inline void reset_segments(odp_packet_hdr_t *pkt_hdr)
 {
 	void *base;
-	uint32_t seg_len = ((pool_t *)(pkt_hdr->event_hdr.pool_ptr))->seg_len;
+	uint32_t seg_len = _odp_pool_entry(pkt_hdr->event_hdr.pool)->seg_len;
 
 	while (pkt_hdr != NULL) {
 		base = pkt_hdr->event_hdr.base_data;
@@ -734,7 +734,7 @@ void odp_packet_free_sp(const odp_packet_t pkt[], int num)
 int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr_t *const pkt_hdr = packet_hdr(pkt);
-	pool_t *pool = pkt_hdr->event_hdr.pool_ptr;
+	pool_t *pool = _odp_pool_entry(pkt_hdr->event_hdr.pool);
 	int num = pkt_hdr->seg_count;
 	int num_req;
 
@@ -783,7 +783,7 @@ int odp_event_filter_packet(const odp_event_t event[],
 uint32_t odp_packet_buf_len(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-	pool_t *pool = pkt_hdr->event_hdr.pool_ptr;
+	pool_t *pool = _odp_pool_entry(pkt_hdr->event_hdr.pool);
 
 	return pool->max_seg_len * pkt_hdr->seg_count;
 }
@@ -815,7 +815,7 @@ int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len,
 	int ret = 0;
 
 	if (len > headroom) {
-		pool_t *pool = pkt_hdr->event_hdr.pool_ptr;
+		pool_t *pool = _odp_pool_entry(pkt_hdr->event_hdr.pool);
 		int num;
 		void *ptr;
 
@@ -924,7 +924,7 @@ int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len,
 	ODP_ASSERT(odp_packet_has_ref(*pkt) == 0);
 
 	if (len > tailroom) {
-		pool_t *pool = pkt_hdr->event_hdr.pool_ptr;
+		pool_t *pool = _odp_pool_entry(pkt_hdr->event_hdr.pool);
 		int num;
 		void *ptr;
 
@@ -1168,13 +1168,13 @@ int odp_packet_add_data(odp_packet_t *pkt_ptr, uint32_t offset, uint32_t len)
 	odp_packet_t pkt = *pkt_ptr;
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 	uint32_t pktlen = pkt_hdr->frame_len;
-	pool_t *pool = pkt_hdr->event_hdr.pool_ptr;
+	odp_pool_t pool = pkt_hdr->event_hdr.pool;
 	odp_packet_t newpkt;
 
 	if (offset > pktlen)
 		return -1;
 
-	newpkt = odp_packet_alloc(_odp_pool_handle(pool), pktlen + len);
+	newpkt = odp_packet_alloc(pool, pktlen + len);
 
 	if (newpkt == ODP_PACKET_INVALID)
 		return -1;
@@ -1198,13 +1198,13 @@ int odp_packet_rem_data(odp_packet_t *pkt_ptr, uint32_t offset, uint32_t len)
 	odp_packet_t pkt = *pkt_ptr;
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 	uint32_t pktlen = pkt_hdr->frame_len;
-	pool_t *pool = pkt_hdr->event_hdr.pool_ptr;
+	odp_pool_t pool = pkt_hdr->event_hdr.pool;
 	odp_packet_t newpkt;
 
 	if (offset + len >= pktlen)
 		return -1;
 
-	newpkt = odp_packet_alloc(_odp_pool_handle(pool), pktlen - len);
+	newpkt = odp_packet_alloc(pool, pktlen - len);
 
 	if (newpkt == ODP_PACKET_INVALID)
 		return -1;
@@ -1230,7 +1230,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 	uint32_t shift;
 	uint32_t seglen = 0;  /* GCC */
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(*pkt);
-	pool_t *pool = pkt_hdr->event_hdr.pool_ptr;
+	pool_t *pool = _odp_pool_entry(pkt_hdr->event_hdr.pool);
 	void *addr = packet_map(pkt_hdr, offset, &seglen, NULL);
 	uint64_t uaddr = (uint64_t)(uintptr_t)addr;
 	uint64_t misalign;
@@ -1272,8 +1272,8 @@ int odp_packet_concat(odp_packet_t *dst, odp_packet_t src)
 {
 	odp_packet_hdr_t *dst_hdr = packet_hdr(*dst);
 	odp_packet_hdr_t *src_hdr = packet_hdr(src);
-	pool_t *dst_pool = dst_hdr->event_hdr.pool_ptr;
-	pool_t *src_pool = src_hdr->event_hdr.pool_ptr;
+	pool_t *dst_pool = _odp_pool_entry(dst_hdr->event_hdr.pool);
+	pool_t *src_pool = _odp_pool_entry(src_hdr->event_hdr.pool);
 	uint32_t dst_len = dst_hdr->frame_len;
 	uint32_t src_len = src_hdr->frame_len;
 
@@ -1618,7 +1618,7 @@ void odp_packet_print_data(odp_packet_t pkt, uint32_t offset,
 	int len = 0;
 	int n = max_len - 1;
 	uint32_t data_len = odp_packet_len(pkt);
-	pool_t *pool = hdr->event_hdr.pool_ptr;
+	pool_t *pool = _odp_pool_entry(hdr->event_hdr.pool);
 
 	len += snprintf(&str[len], n - len, "Packet\n------\n");
 	len += snprintf(&str[len], n - len,
@@ -2440,7 +2440,7 @@ static inline odp_packet_hdr_t *packet_buf_to_hdr(odp_packet_buf_t pkt_buf)
 void *odp_packet_buf_head(odp_packet_buf_t pkt_buf)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_buf_to_hdr(pkt_buf);
-	pool_t *pool = pkt_hdr->event_hdr.pool_ptr;
+	pool_t *pool = _odp_pool_entry(pkt_hdr->event_hdr.pool);
 	uint32_t head_offset = sizeof(odp_packet_hdr_t) + pool->ext_param.pkt.app_header_size;
 
 	if (odp_unlikely(pool->pool_ext == 0)) {
@@ -2454,7 +2454,7 @@ void *odp_packet_buf_head(odp_packet_buf_t pkt_buf)
 uint32_t odp_packet_buf_size(odp_packet_buf_t pkt_buf)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_buf_to_hdr(pkt_buf);
-	pool_t *pool = pkt_hdr->event_hdr.pool_ptr;
+	pool_t *pool = _odp_pool_entry(pkt_hdr->event_hdr.pool);
 	uint32_t head_offset = sizeof(odp_packet_hdr_t) + pool->ext_param.pkt.app_header_size;
 
 	return pool->ext_param.pkt.buf_size - head_offset;
@@ -2506,7 +2506,7 @@ uint32_t odp_packet_disassemble(odp_packet_t pkt, odp_packet_buf_t pkt_buf[], ui
 	uint32_t i;
 	odp_packet_seg_t seg;
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-	pool_t *pool = pkt_hdr->event_hdr.pool_ptr;
+	pool_t *pool = _odp_pool_entry(pkt_hdr->event_hdr.pool);
 	uint32_t num_segs = odp_packet_num_segs(pkt);
 
 	if (odp_unlikely(pool->type != ODP_POOL_PACKET)) {

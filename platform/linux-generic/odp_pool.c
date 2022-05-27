@@ -424,7 +424,7 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t e
 	event_hdr->index.event  = event_index;
 	event_hdr->type         = type;
 	event_hdr->event_type   = type;
-	event_hdr->pool_ptr     = pool;
+	event_hdr->pool         = _odp_pool_handle(pool);
 
 	/* Store base values for fast init */
 	if (type == ODP_POOL_BUFFER || type == ODP_POOL_PACKET) {
@@ -1289,12 +1289,12 @@ void _odp_event_free_multi(_odp_event_hdr_t *event_hdr[], int num_total)
 	while (1) {
 		num  = 1;
 		i    = 1;
-		pool = event_hdr[first]->pool_ptr;
+		pool = _odp_pool_entry(event_hdr[first]->pool);
 
 		/* 'num' buffers are from the same pool */
 		if (num_total > 1) {
 			for (i = first; i < num_total; i++)
-				if (pool != event_hdr[i]->pool_ptr)
+				if (pool != _odp_pool_entry(event_hdr[i]->pool))
 					break;
 
 			num = i - first;
@@ -1636,7 +1636,7 @@ int _odp_event_is_valid(odp_event_t event)
 	if (pool == NULL)
 		return 0;
 
-	if (pool != event_hdr->pool_ptr)
+	if (pool != _odp_pool_entry(event_hdr->pool))
 		return 0;
 
 	if (event_hdr->index.event >= (pool->num + pool->skipped_blocks))
