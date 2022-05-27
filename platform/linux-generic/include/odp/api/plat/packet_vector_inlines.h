@@ -59,7 +59,7 @@ _ODP_INLINE uint32_t odp_packet_vector_tbl(odp_packet_vector_t pktv, odp_packet_
 
 _ODP_INLINE odp_pool_t odp_packet_vector_pool(odp_packet_vector_t pktv)
 {
-	return (odp_pool_t)(uintptr_t)_odp_event_vect_get(pktv, void *, pool);
+	return _odp_event_vect_get(pktv, odp_pool_t, pool);
 }
 
 _ODP_INLINE uint32_t odp_packet_vector_size(odp_packet_vector_t pktv)

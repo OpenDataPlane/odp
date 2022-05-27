@@ -127,7 +127,7 @@ _ODP_INLINE uint32_t odp_packet_tailroom(odp_packet_t pkt)
 
 _ODP_INLINE odp_pool_t odp_packet_pool(odp_packet_t pkt)
 {
-	return (odp_pool_t)(uintptr_t)_odp_pkt_get(pkt, void *, pool);
+	return _odp_pkt_get(pkt, odp_pool_t, pool);
 }
 
 _ODP_INLINE odp_pktio_t odp_packet_input(odp_packet_t pkt)

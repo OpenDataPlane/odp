@@ -791,7 +791,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 		pool_t *pool;
 
 		pkt_hdr = packet_hdr(pkt);
-		pool = pkt_hdr->event_hdr.pool_ptr;
+		pool = _odp_pool_entry(pkt_hdr->event_hdr.pool);
 
 		if (pool->pool_idx != ipc_pool->pool_idx ||
 		    odp_packet_has_ref(pkt)) {
