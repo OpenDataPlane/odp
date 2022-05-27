@@ -2011,6 +2011,7 @@ int main(int argc, char *argv[])
 	odp_schedule_config_t sched_config;
 	odp_schedule_capability_t sched_capa;
 	uint32_t pkt_len, num_pkt, seg_len;
+	char pool_name[ODP_POOL_NAME_LEN];
 
 	/* Let helper collect its own arguments (e.g. --odph_proc) */
 	argc = odph_parse_options(argc, argv);
@@ -2158,7 +2159,8 @@ int main(int argc, char *argv[])
 	params.type        = ODP_POOL_PACKET;
 
 	for (i = 0; i < num_pools; i++) {
-		pool_tbl[i] = odp_pool_create("packet pool", &params);
+		snprintf(pool_name, sizeof(pool_name), "packet_pool_%d", i);
+		pool_tbl[i] = odp_pool_create(pool_name, &params);
 
 		if (pool_tbl[i] == ODP_POOL_INVALID) {
 			ODPH_ERR("Pool create failed %i\n", i);
@@ -2191,7 +2193,8 @@ int main(int argc, char *argv[])
 		gbl_args->vector_max_size = params.vector.max_size;
 
 		for (i = 0; i < num_vec_pools; i++) {
-			vec_pool_tbl[i] = odp_pool_create("vector pool", &params);
+			snprintf(pool_name, sizeof(pool_name), "vector_pool_%d", i);
+			vec_pool_tbl[i] = odp_pool_create(pool_name, &params);
 
 			if (vec_pool_tbl[i] == ODP_POOL_INVALID) {
 				ODPH_ERR("Vector pool create failed %i\n", i);
