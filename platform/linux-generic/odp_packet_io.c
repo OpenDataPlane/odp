@@ -1819,6 +1819,9 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 	capa->reassembly.ipv4 = false;
 	capa->reassembly.ipv6 = false;
 
+	/* Setting up max flow hash capability. */
+	capa->max_flow_hash = UINT32_MAX;
+
 	return ret;
 }
 
