@@ -766,6 +766,8 @@ static void packet_test_basic_metadata(void)
 	odp_packet_t pkt = test_packet;
 	odp_time_t ts;
 	odp_packet_data_range_t range;
+	odp_pktio_t pktio;
+	odp_pktio_capability_t capa;
 
 	CU_ASSERT_PTR_NOT_NULL(odp_packet_head(pkt));
 	CU_ASSERT_PTR_NOT_NULL(odp_packet_data(pkt));
@@ -780,9 +782,13 @@ static void packet_test_basic_metadata(void)
 	odp_packet_ones_comp(pkt, &range);
 	CU_ASSERT(range.length == 0);
 
-	odp_packet_flow_hash_set(pkt, UINT32_MAX);
+	pktio = odp_pktio_open("loop", odp_packet_pool(pkt), NULL);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0);
+
+	odp_packet_flow_hash_set(pkt, capa.max_flow_hash);
 	CU_ASSERT(odp_packet_has_flow_hash(pkt));
-	CU_ASSERT(odp_packet_flow_hash(pkt) == UINT32_MAX);
+	CU_ASSERT(odp_packet_flow_hash(pkt) == capa.max_flow_hash);
 	odp_packet_has_flow_hash_clr(pkt);
 	CU_ASSERT(!odp_packet_has_flow_hash(pkt));
 
@@ -794,6 +800,7 @@ static void packet_test_basic_metadata(void)
 	CU_ASSERT(!odp_time_cmp(ts, odp_packet_ts(pkt)));
 	odp_packet_has_ts_clr(pkt);
 	CU_ASSERT(!odp_packet_has_ts(pkt));
+	CU_ASSERT(odp_pktio_close(pktio) == 0);
 }
 
 static void packet_test_length(void)
