@@ -1798,7 +1798,8 @@ uint32_t odp_packet_flow_hash(odp_packet_t pkt);
  *
  * Store the packet flow hash for the packet and sets the flow hash flag. This
  * enables (but does not require!) application to reflect packet header
- * changes in the hash.
+ * changes in the hash. Maximum hash value that can be set is defined by
+ * pktio capability 'max_flow_hash'.
  *
  * @param      pkt              Packet handle
  * @param      flow_hash        Hash value to set
@@ -1808,6 +1809,8 @@ uint32_t odp_packet_flow_hash(odp_packet_t pkt);
  * change how the platform handles this packet after it.
  * @note The application is not required to keep this hash valid for new or
  * modified packets.
+ *
+ * @see odp_pktio_capability_t::max_flow_hash
  */
 void odp_packet_flow_hash_set(odp_packet_t pkt, uint32_t flow_hash);
 

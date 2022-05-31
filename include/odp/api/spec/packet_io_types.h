@@ -917,6 +917,14 @@ typedef struct odp_pktio_capability_t {
 	/** Statistics counters capabilities */
 	odp_pktio_stats_capability_t stats;
 
+	/** Maximum flow hash value.
+	 *
+	 * This defines the maximum flow hash value that an application can set.
+	 * Attempts to set flow hash value greater than this limit will fail.
+	 *
+	 * @see odp_packet_flow_hash_set()
+	 */
+	uint32_t max_flow_hash;
 } odp_pktio_capability_t;
 
 /**
