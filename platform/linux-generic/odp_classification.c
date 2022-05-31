@@ -1687,10 +1687,9 @@ static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
  * @param pool[out]	Packet pool
  * @param pkt_hdr[out]	Packet header
  *
- * @retval 0 on success
- * @retval -EFAULT Bug
- * @retval -EINVAL Config error
- * @retval -ENOENT Drop action
+ * @retval 0 success
+ * @retval -1 drop packet and increment in_discards
+ * @retval 1 drop packet
  *
  * @note *base is not released
  */
@@ -1706,10 +1705,10 @@ int _odp_cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	cos = cls_select_cos(entry, base, pkt_hdr);
 
 	if (cos == NULL)
-		return -EINVAL;
+		return -1;
 
 	if (cos->s.action == ODP_COS_ACTION_DROP)
-		return -ENOENT;
+		return 1;
 
 	if (cos->s.queue == ODP_QUEUE_INVALID && cos->s.num_queue == 1)
 		goto error;
@@ -1736,7 +1735,7 @@ int _odp_cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 
 error:
 	odp_atomic_inc_u64(&cos->s.stats.discards);
-	return -EFAULT;
+	return 1;
 }
 
 static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,

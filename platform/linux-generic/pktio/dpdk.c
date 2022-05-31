@@ -648,11 +648,15 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 			}
 
 			if (pktio_cls_enabled(pktio_entry)) {
+				int ret;
 				odp_pool_t new_pool;
 
-				if (_odp_cls_classify_packet(pktio_entry,
-							     (const uint8_t *)data,
-							     &new_pool, pkt_hdr)) {
+				ret = _odp_cls_classify_packet(pktio_entry, (const uint8_t *)data,
+							       &new_pool, pkt_hdr);
+				if (ret < 0)
+					odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_discards);
+
+				if (ret) {
 					odp_packet_free(pkt);
 					rte_pktmbuf_free(mbuf);
 					continue;
@@ -932,11 +936,15 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 			}
 
 			if (pktio_cls_enabled(pktio_entry)) {
+				int ret;
 				odp_pool_t new_pool;
 
-				if (_odp_cls_classify_packet(pktio_entry,
-							     (const uint8_t *)data,
-							     &new_pool, pkt_hdr)) {
+				ret = _odp_cls_classify_packet(pktio_entry, (const uint8_t *)data,
+							       &new_pool, pkt_hdr);
+				if (ret < 0)
+					odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_discards);
+
+				if (ret) {
 					rte_pktmbuf_free(mbuf);
 					continue;
 				}

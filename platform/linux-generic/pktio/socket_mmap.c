@@ -278,8 +278,12 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			if (pktio_cls_enabled(pktio_entry)) {
 				odp_pool_t new_pool;
 
-				if (_odp_cls_classify_packet(pktio_entry, pkt_buf,
-							     &new_pool, hdr)) {
+				ret = _odp_cls_classify_packet(pktio_entry, pkt_buf,
+							       &new_pool, hdr);
+				if (ret < 0)
+					odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_discards);
+
+				if (ret) {
 					odp_packet_free(pkt);
 					tp_hdr->tp_status = TP_STATUS_KERNEL;
 					frame_num = next_frame_num;
@@ -291,9 +295,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 					odp_packet_free(pkt);
 					tp_hdr->tp_status = TP_STATUS_KERNEL;
 					frame_num = next_frame_num;
-					odp_atomic_inc_u64(
-						&pktio_entry->s.stats_extra
-							 .in_discards);
+					odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_discards);
 					continue;
 				}
 			}
