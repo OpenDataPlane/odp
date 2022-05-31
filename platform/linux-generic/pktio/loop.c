@@ -218,6 +218,9 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 				ret = _odp_cls_classify_packet(pktio_entry, pkt_addr,
 							       &new_pool, pkt_hdr);
+				if (ret < 0)
+					odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_discards);
+
 				if (ret) {
 					odp_packet_free(pkt);
 					continue;
@@ -226,9 +229,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				if (odp_unlikely(_odp_pktio_packet_to_pool(
 					    &pkt, &pkt_hdr, new_pool))) {
 					odp_packet_free(pkt);
-					odp_atomic_inc_u64(
-						&pktio_entry->s.stats_extra
-							 .in_discards);
+					odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_discards);
 					continue;
 				}
 			}

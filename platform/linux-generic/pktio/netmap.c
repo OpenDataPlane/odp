@@ -868,10 +868,15 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 			}
 
 			if (pktio_cls_enabled(pktio_entry)) {
+				int ret;
 				odp_pool_t new_pool;
 
-				if (_odp_cls_classify_packet(pktio_entry, buf, &new_pool,
-							     pkt_hdr)) {
+				ret = _odp_cls_classify_packet(pktio_entry, buf,
+							       &new_pool, pkt_hdr);
+				if (ret < 0)
+					odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_discards);
+
+				if (ret) {
 					odp_packet_free(pkt);
 					continue;
 				}
@@ -879,9 +884,7 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 				if (odp_unlikely(_odp_pktio_packet_to_pool(
 					    &pkt, &pkt_hdr, new_pool))) {
 					odp_packet_free(pkt);
-					odp_atomic_inc_u64(
-						&pktio_entry->s.stats_extra
-							 .in_discards);
+					odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_discards);
 					continue;
 				}
 			}
