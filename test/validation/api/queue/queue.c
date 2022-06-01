@@ -727,6 +727,44 @@ static void queue_test_param(void)
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
 }
 
+static void queue_test_same_name(int sched)
+{
+	odp_queue_t queue, queue_a, queue_b;
+	odp_queue_param_t param;
+	const char *name = "same_name";
+
+	odp_queue_param_init(&param);
+
+	if (sched)
+		param.type = ODP_QUEUE_TYPE_SCHED;
+
+	queue_a = odp_queue_create(name, &param);
+	CU_ASSERT_FATAL(queue_a != ODP_QUEUE_INVALID);
+
+	queue = odp_queue_lookup(name);
+	CU_ASSERT(queue == queue_a);
+
+	/* Second queue with the same name */
+	queue_b = odp_queue_create(name, &param);
+	CU_ASSERT_FATAL(queue_b != ODP_QUEUE_INVALID);
+
+	queue = odp_queue_lookup(name);
+	CU_ASSERT(queue == queue_a || queue == queue_b);
+
+	CU_ASSERT_FATAL(odp_queue_destroy(queue_a) == 0);
+	CU_ASSERT_FATAL(odp_queue_destroy(queue_b) == 0);
+}
+
+static void queue_test_same_name_plain(void)
+{
+	queue_test_same_name(0);
+}
+
+static void queue_test_same_name_sched(void)
+{
+	queue_test_same_name(1);
+}
+
 static void queue_test_info(void)
 {
 	odp_queue_t q_plain, q_order;
@@ -1018,6 +1056,8 @@ odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_pair_lf_mpsc),
 	ODP_TEST_INFO(queue_test_pair_lf_spsc),
 	ODP_TEST_INFO(queue_test_param),
+	ODP_TEST_INFO(queue_test_same_name_plain),
+	ODP_TEST_INFO(queue_test_same_name_sched),
 	ODP_TEST_INFO(queue_test_info),
 	ODP_TEST_INFO(queue_test_mt_plain_block),
 	ODP_TEST_INFO(queue_test_mt_plain_nonblock_lf),
