@@ -173,6 +173,79 @@ static void pool_test_lookup_info_print(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+static void pool_test_same_name(const odp_pool_param_t *param)
+{
+	odp_pool_t pool, pool_a, pool_b;
+	const char *name = "same_name";
+
+	pool_a = odp_pool_create(name, param);
+	CU_ASSERT_FATAL(pool_a != ODP_POOL_INVALID);
+
+	pool = odp_pool_lookup(name);
+	CU_ASSERT(pool == pool_a);
+
+	/* Second pool with the same name */
+	pool_b = odp_pool_create(name, param);
+	CU_ASSERT_FATAL(pool_b != ODP_POOL_INVALID);
+
+	pool = odp_pool_lookup(name);
+	CU_ASSERT(pool == pool_a || pool == pool_b);
+
+	CU_ASSERT(odp_pool_destroy(pool_a) == 0);
+	CU_ASSERT(odp_pool_destroy(pool_b) == 0);
+}
+
+static void pool_test_same_name_buf(void)
+{
+	odp_pool_param_t param;
+
+	odp_pool_param_init(&param);
+
+	param.type     = ODP_POOL_BUFFER;
+	param.buf.size = BUF_SIZE;
+	param.buf.num  = BUF_NUM;
+
+	pool_test_same_name(&param);
+}
+
+static void pool_test_same_name_pkt(void)
+{
+	odp_pool_param_t param;
+
+	odp_pool_param_init(&param);
+
+	param.type    = ODP_POOL_PACKET;
+	param.pkt.len = PKT_LEN;
+	param.pkt.num = PKT_NUM;
+
+	pool_test_same_name(&param);
+}
+
+static void pool_test_same_name_tmo(void)
+{
+	odp_pool_param_t param;
+
+	odp_pool_param_init(&param);
+
+	param.type    = ODP_POOL_TIMEOUT;
+	param.tmo.num = TMO_NUM;
+
+	pool_test_same_name(&param);
+}
+
+static void pool_test_same_name_vec(void)
+{
+	odp_pool_param_t param;
+
+	odp_pool_param_init(&param);
+
+	param.type            = ODP_POOL_VECTOR;
+	param.vector.num      = 10;
+	param.vector.max_size = 2;
+
+	pool_test_same_name(&param);
+}
+
 static void alloc_buffer(uint32_t cache_size)
 {
 	odp_pool_t pool;
@@ -1776,6 +1849,11 @@ odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO(pool_test_create_destroy_packet),
 	ODP_TEST_INFO(pool_test_create_destroy_timeout),
 	ODP_TEST_INFO(pool_test_create_destroy_vector),
+	ODP_TEST_INFO(pool_test_lookup_info_print),
+	ODP_TEST_INFO(pool_test_same_name_buf),
+	ODP_TEST_INFO(pool_test_same_name_pkt),
+	ODP_TEST_INFO(pool_test_same_name_tmo),
+	ODP_TEST_INFO(pool_test_same_name_vec),
 	ODP_TEST_INFO(pool_test_alloc_buffer),
 	ODP_TEST_INFO(pool_test_alloc_buffer_min_cache),
 	ODP_TEST_INFO(pool_test_alloc_buffer_max_cache),
@@ -1790,7 +1868,6 @@ odp_testinfo_t pool_suite[] = {
 	ODP_TEST_INFO(pool_test_alloc_timeout_min_cache),
 	ODP_TEST_INFO(pool_test_alloc_timeout_max_cache),
 	ODP_TEST_INFO(pool_test_info_packet),
-	ODP_TEST_INFO(pool_test_lookup_info_print),
 	ODP_TEST_INFO(pool_test_info_data_range),
 	ODP_TEST_INFO(pool_test_buf_max_num),
 	ODP_TEST_INFO(pool_test_pkt_max_num),
