@@ -807,6 +807,10 @@ static void queue_test_info(void)
 	CU_ASSERT(strcmp(nq_plain, info.name) == 0);
 	CU_ASSERT(info.param.type == ODP_QUEUE_TYPE_PLAIN);
 	CU_ASSERT(info.param.type == odp_queue_type(q_plain));
+	CU_ASSERT(info.param.enq_mode == ODP_QUEUE_OP_MT);
+	CU_ASSERT(info.param.deq_mode == ODP_QUEUE_OP_MT);
+	CU_ASSERT(info.param.order == ODP_QUEUE_ORDER_KEEP);
+	CU_ASSERT(info.param.nonblocking == ODP_BLOCKING);
 	ctx = info.param.context; /* 'char' context ptr */
 	CU_ASSERT(ctx == q_plain_ctx);
 	CU_ASSERT(info.param.context == odp_queue_context(q_plain));
@@ -817,6 +821,10 @@ static void queue_test_info(void)
 	CU_ASSERT(strcmp(nq_order, info.name) == 0);
 	CU_ASSERT(info.param.type == ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(info.param.type == odp_queue_type(q_order));
+	CU_ASSERT(info.param.enq_mode == ODP_QUEUE_OP_MT);
+	CU_ASSERT(info.param.deq_mode == ODP_QUEUE_OP_DISABLED);
+	CU_ASSERT(info.param.order == ODP_QUEUE_ORDER_KEEP);
+	CU_ASSERT(info.param.nonblocking == ODP_BLOCKING);
 	ctx = info.param.context; /* 'char' context ptr */
 	CU_ASSERT(ctx == q_order_ctx);
 	CU_ASSERT(info.param.context == odp_queue_context(q_order));
