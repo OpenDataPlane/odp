@@ -118,6 +118,10 @@ static int queue_init(queue_entry_t *queue, const char *name,
 		ring[ring_idx] = NULL;
 
 	queue->s.type = queue->s.param.type;
+
+	if (queue->s.type == ODP_QUEUE_TYPE_SCHED)
+		queue->s.param.deq_mode = ODP_QUEUE_OP_DISABLED;
+
 	odp_atomic_init_u64(&queue->s.num_timers, 0);
 
 	queue->s.enqueue = _queue_enq;
