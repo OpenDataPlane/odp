@@ -325,8 +325,6 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 			if (odp_unlikely(_odp_pktio_packet_to_pool(
 				    &pkt, &pkt_hdr, new_pool))) {
 				odp_packet_free(pkt);
-				odp_atomic_inc_u64(
-					&pktio_entry->s.stats_extra.in_discards);
 				return ODP_PACKET_INVALID;
 			}
 		}
