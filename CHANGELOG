@@ -1,3 +1,17 @@
+== OpenDataPlane (1.37.1.0)
+
+=== Backward compatible API changes
+==== Packet IO
+* Clarify that `odp_pktout_send_lso()` can be used also for packets that have
+payload less than `max_payload_len` bytes.
+
+==== Stash
+* Change 32-bit and 64-bit specific get/put functions' parameter names to avoid
+name conflicts.
+
+==== Traffic Manager
+* Add option to do rate limiting instead of rate shaping in TM nodes and queues.
+
 == OpenDataPlane (1.37.0.0)
 
 === Backward incompatible API changes
