@@ -1253,12 +1253,6 @@ static int netmap_stats(pktio_entry_t *pktio_entry,
 
 static int netmap_stats_reset(pktio_entry_t *pktio_entry)
 {
-	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED) {
-		memset(&pktio_entry->s.stats, 0,
-		       sizeof(odp_pktio_stats_t));
-		return 0;
-	}
-
 	return _odp_sock_stats_reset_fd(pktio_entry,
 					pkt_priv(pktio_entry)->sockfd);
 }
