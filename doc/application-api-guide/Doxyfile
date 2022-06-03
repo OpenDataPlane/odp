@@ -1,7 +1,7 @@
 @INCLUDE = $(SRCDIR)/doc/Doxyfile_common
 
 PROJECT_NAME = "API Reference Manual"
-PROJECT_NUMBER = $(VERSION)
+PROJECT_NUMBER = $(ODP_VERSION_API)
 PROJECT_LOGO = $(SRCDIR)/doc/images/ODP-Logo-HQ.svg
 INPUT = $(SRCDIR)/doc/application-api-guide \
 	include \
