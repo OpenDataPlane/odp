@@ -49,8 +49,10 @@ int _odp_sock_stats_fd(pktio_entry_t *pktio_entry,
 	odp_pktio_stats_t cur_stats;
 	int ret = 0;
 
-	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED)
+	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED) {
+		memset(stats, 0, sizeof(*stats));
 		return 0;
+	}
 
 	memset(&cur_stats, 0, sizeof(odp_pktio_stats_t));
 	if (pktio_entry->s.stats_type == STATS_ETHTOOL) {
