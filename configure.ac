@@ -2,20 +2,26 @@ AC_PREREQ([2.5])
 ##########################################################################
 # ODP API version
 ##########################################################################
-m4_define([odpapi_generation_version], [1])
-m4_define([odpapi_major_version], [37])
-m4_define([odpapi_minor_version], [1])
-m4_define([odpapi_point_version], [0])
-m4_define([odpapi_version],
-    [odpapi_generation_version.odpapi_major_version.odpapi_minor_version.odpapi_point_version])
-AC_INIT([OpenDataPlane],[odpapi_version],[odp@lists.opendataplane.org])
+m4_define([odp_version_generation], [1])
+m4_define([odp_version_major],     [37])
+m4_define([odp_version_minor],      [1])
+m4_define([odp_version_point],      [0])
 
-ODP_VERSION_API_GENERATION=odpapi_generation_version
+m4_define([odp_version_api],
+    [odp_version_generation.odp_version_major.odp_version_minor])
+m4_define([odp_version_library],
+    [odp_version_generation.odp_version_major.odp_version_minor.odp_version_point])
+
+AC_INIT([OpenDataPlane],[odp_version_library],[odp@lists.opendataplane.org])
+
+ODP_VERSION_API_GENERATION=odp_version_generation
 AC_SUBST(ODP_VERSION_API_GENERATION)
-ODP_VERSION_API_MAJOR=odpapi_major_version
+ODP_VERSION_API_MAJOR=odp_version_major
 AC_SUBST(ODP_VERSION_API_MAJOR)
-ODP_VERSION_API_MINOR=odpapi_minor_version
+ODP_VERSION_API_MINOR=odp_version_minor
 AC_SUBST(ODP_VERSION_API_MINOR)
+ODP_VERSION_API=odp_version_api
+AC_SUBST(ODP_VERSION_API)
 
 ##########################################################################
 # Helper library version
@@ -33,6 +39,8 @@ ODPH_VERSION_MAJOR=odph_version_major
 AC_SUBST(ODPH_VERSION_MAJOR)
 ODPH_VERSION_MINOR=odph_version_minor
 AC_SUBST(ODPH_VERSION_MINOR)
+ODPH_VERSION=odph_version
+AC_SUBST(ODPH_VERSION)
 
 ##########################################################################
 # Test if user has set CFLAGS. Automake initializes CFLAGS to "-g -O2"
@@ -63,7 +71,7 @@ AM_SILENT_RULES([yes])
 ##########################################################################
 
 m4_define([odpso_version],
-    [odpapi_generation_version[]odpapi_major_version:odpapi_minor_version:odpapi_point_version])
+    [odp_version_generation[]odp_version_major:odp_version_minor:odp_version_point])
 
 ODP_LIBSO_VERSION=odpso_version
 AC_SUBST(ODP_LIBSO_VERSION)
@@ -435,9 +443,10 @@ AC_OUTPUT
 AC_MSG_RESULT([
 	$PACKAGE $VERSION
 
+	ODP API version:	${ODP_VERSION_API}
 	ODP Library name:	${ODP_LIB_NAME}
 	ODP Library version:	${ODP_LIBSO_VERSION}
-	Helper Library version:	${ODPHELPER_LIBSO_VERSION}
+	Helper version:		${ODPH_VERSION}
 
 	implementation_name:	${ODP_IMPLEMENTATION_NAME}
 	host:			${host}
