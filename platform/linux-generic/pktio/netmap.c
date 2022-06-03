@@ -1246,11 +1246,6 @@ static int netmap_capability(pktio_entry_t *pktio_entry,
 static int netmap_stats(pktio_entry_t *pktio_entry,
 			odp_pktio_stats_t *stats)
 {
-	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED) {
-		memset(stats, 0, sizeof(*stats));
-		return 0;
-	}
-
 	return _odp_sock_stats_fd(pktio_entry,
 				  stats,
 				  pkt_priv(pktio_entry)->sockfd);
