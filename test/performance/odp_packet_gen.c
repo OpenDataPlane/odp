@@ -61,6 +61,7 @@ typedef struct test_options_t {
 	uint16_t udp_src;
 	uint16_t udp_dst;
 	uint32_t wait_sec;
+	uint32_t wait_start_sec;
 	uint32_t mtu;
 	odp_bool_t promisc_mode;
 
@@ -194,6 +195,7 @@ static void print_usage(void)
 	       "  -h, --help                This help\n"
 	       "  -w, --wait <sec>          Wait up to <sec> seconds for network links to be up.\n"
 	       "                            Default: 0 (don't check link status)\n"
+	       "  -W, --wait_start <sec>    Wait <sec> seconds before starting traffic. Default: 0\n"
 	       "\n");
 }
 
@@ -268,12 +270,13 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"mtu",         required_argument, NULL, 'M'},
 		{"quit",        required_argument, NULL, 'q'},
 		{"wait",        required_argument, NULL, 'w'},
+		{"wait_start",  required_argument, NULL, 'W'},
 		{"update_stat", required_argument, NULL, 'u'},
 		{"help",        no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+i:e:r:t:n:l:L:M:b:x:g:v:s:d:o:p:c:q:u:w:Ph";
+	static const char *shortopts = "+i:e:r:t:n:l:L:M:b:x:g:v:s:d:o:p:c:q:u:w:W:Ph";
 
 	test_options->num_pktio  = 0;
 	test_options->num_rx     = 1;
@@ -305,6 +308,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	test_options->quit = 0;
 	test_options->update_msec = 0;
 	test_options->wait_sec = 0;
+	test_options->wait_start_sec = 0;
 	test_options->mtu = 0;
 
 	for (i = 0; i < MAX_PKTIOS; i++) {
@@ -477,6 +481,9 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 			break;
 		case 'w':
 			test_options->wait_sec = atoi(optarg);
+			break;
+		case 'W':
+			test_options->wait_start_sec = atoi(optarg);
 			break;
 		case 'h':
 			/* fall through */
@@ -931,11 +938,8 @@ static int start_pktios(test_global_t *global)
 		global->pktio[i].started = 1;
 	}
 
-	if (!test_options->wait_sec)
-		return 0;
-
 	/* Wait until all links are up */
-	for (i = 0; i < num_pktio; i++) {
+	for (i = 0; test_options->wait_sec && i < num_pktio; i++) {
 		while (1) {
 			odp_pktio_t pktio = global->pktio[i].pktio;
 
@@ -957,6 +961,10 @@ static int start_pktios(test_global_t *global)
 			odp_time_wait_ns(ODP_TIME_SEC_IN_NS);
 		}
 	}
+
+	if (test_options->wait_start_sec)
+		odp_time_wait_ns(test_options->wait_start_sec * ODP_TIME_SEC_IN_NS);
+
 	return 0;
 }
 
