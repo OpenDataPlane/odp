@@ -1,5 +1,5 @@
-PROJECT_NAME = "Helper Reference Manual for $(WITH_PLATFORM)"
-PROJECT_NUMBER = $(VERSION)
+PROJECT_NAME = "Helper Reference Manual"
+PROJECT_NUMBER = $(ODPH_VERSION)
 PROJECT_LOGO = $(SRCDIR)/doc/images/ODP-Logo-HQ.svg
 QUIET = YES
 OUTPUT_DIRECTORY = $(DOCDIR)
