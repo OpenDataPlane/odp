@@ -666,6 +666,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 					    &pkt, &pkt_hdr, new_pool))) {
 					odp_packet_free(pkt);
 					rte_pktmbuf_free(mbuf);
+					odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_discards);
 					continue;
 				}
 			}
@@ -952,6 +953,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 				if (odp_unlikely(_odp_pktio_packet_to_pool(
 					    &pkt, &pkt_hdr, new_pool))) {
 					rte_pktmbuf_free(mbuf);
+					odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_discards);
 					continue;
 				}
 			}
