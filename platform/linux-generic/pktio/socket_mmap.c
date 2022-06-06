@@ -267,8 +267,12 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		}
 
 		if (layer) {
-			if (_odp_packet_parse_common(hdr, pkt_buf, pkt_len,
-						     pkt_len, layer, opt) < 0) {
+			ret = _odp_packet_parse_common(hdr, pkt_buf, pkt_len,
+						       pkt_len, layer, opt);
+			if (ret)
+				odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_errors);
+
+			if (ret < 0) {
 				odp_packet_free(pkt);
 				tp_hdr->tp_status = TP_STATUS_KERNEL;
 				frame_num = next_frame_num;

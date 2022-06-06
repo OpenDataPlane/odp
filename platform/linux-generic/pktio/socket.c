@@ -292,8 +292,12 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				base = buf;
 			}
 
-			if (_odp_packet_parse_common(pkt_hdr, base, pkt_len,
-						     seg_len, layer, opt) < 0) {
+			ret = _odp_packet_parse_common(pkt_hdr, base, pkt_len,
+						       seg_len, layer, opt);
+			if (ret)
+				odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_errors);
+
+			if (ret < 0) {
 				odp_packet_free(pkt);
 				continue;
 			}
