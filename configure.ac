@@ -5,12 +5,12 @@ AC_PREREQ([2.5])
 m4_define([odp_version_generation], [1])
 m4_define([odp_version_major],     [37])
 m4_define([odp_version_minor],      [1])
-m4_define([odp_version_point],      [0])
+m4_define([odp_version_patch],      [0])
 
 m4_define([odp_version_api],
     [odp_version_generation.odp_version_major.odp_version_minor])
 m4_define([odp_version_library],
-    [odp_version_generation.odp_version_major.odp_version_minor.odp_version_point])
+    [odp_version_generation.odp_version_major.odp_version_minor.odp_version_patch])
 
 AC_INIT([OpenDataPlane],[odp_version_library],[odp@lists.opendataplane.org])
 
@@ -71,7 +71,7 @@ AM_SILENT_RULES([yes])
 ##########################################################################
 
 m4_define([odpso_version],
-    [odp_version_generation[]odp_version_major:odp_version_minor:odp_version_point])
+    [odp_version_generation[]odp_version_major:odp_version_minor:odp_version_patch])
 
 ODP_LIBSO_VERSION=odpso_version
 AC_SUBST(ODP_LIBSO_VERSION)
