@@ -1964,6 +1964,8 @@ int _odp_packet_l4_chksum(odp_packet_hdr_t *pkt_hdr,
 			pkt_hdr->p.flags.l4_chksum_err = 1;
 			pkt_hdr->p.flags.udp_err = 1;
 			ODP_DBG("UDP chksum fail (%x)!\n", sum);
+			if (opt.bit.drop_udp_err)
+				return -1;
 		}
 	}
 
@@ -1982,6 +1984,8 @@ int _odp_packet_l4_chksum(odp_packet_hdr_t *pkt_hdr,
 			pkt_hdr->p.flags.l4_chksum_err = 1;
 			pkt_hdr->p.flags.tcp_err = 1;
 			ODP_DBG("TCP chksum fail (%x)!\n", sum);
+			if (opt.bit.drop_tcp_err)
+				return -1;
 		}
 	}
 
@@ -2013,6 +2017,8 @@ int _odp_packet_l4_chksum(odp_packet_hdr_t *pkt_hdr,
 			pkt_hdr->p.flags.sctp_err = 1;
 			ODP_DBG("SCTP chksum fail (%x/%x)!\n", sum,
 				sctp->chksum);
+			if (opt.bit.drop_sctp_err)
+				return -1;
 		}
 	}
 
