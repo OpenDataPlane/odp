@@ -861,14 +861,19 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 		}
 
 		if (layer) {
-			if (_odp_packet_parse_common(pkt_hdr, buf, len, len,
-						     layer, opt) < 0) {
+			int ret;
+
+			ret = _odp_packet_parse_common(pkt_hdr, buf, len, len,
+						       layer, opt);
+			if (ret)
+				odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_errors);
+
+			if (ret < 0) {
 				odp_packet_free(pkt);
 				continue;
 			}
 
 			if (pktio_cls_enabled(pktio_entry)) {
-				int ret;
 				odp_pool_t new_pool;
 
 				ret = _odp_cls_classify_packet(pktio_entry, buf,

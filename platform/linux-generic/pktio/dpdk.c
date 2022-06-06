@@ -638,17 +638,21 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		pkt_hdr = packet_hdr(pkt);
 
 		if (layer) {
+			int ret;
+
 			packet_parse_reset(pkt_hdr, 1);
-			if (_odp_dpdk_packet_parse_common(pkt_hdr, data,
-							  pkt_len, pkt_len, mbuf,
-							  layer, pktin_cfg) < 0) {
+			ret = _odp_dpdk_packet_parse_common(pkt_hdr, data, pkt_len, pkt_len,
+							    mbuf, layer, pktin_cfg);
+			if (ret)
+				odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_errors);
+
+			if (ret < 0) {
 				odp_packet_free(pkt);
 				rte_pktmbuf_free(mbuf);
 				continue;
 			}
 
 			if (pktio_cls_enabled(pktio_entry)) {
-				int ret;
 				odp_pool_t new_pool;
 
 				ret = _odp_cls_classify_packet(pktio_entry, (const uint8_t *)data,
@@ -929,15 +933,19 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 		pkt_hdr->seg_data = data;
 
 		if (layer) {
-			if (_odp_dpdk_packet_parse_common(pkt_hdr, data,
-							  pkt_len, pkt_len, mbuf,
-							  layer, pktin_cfg) < 0) {
+			int ret;
+
+			ret = _odp_dpdk_packet_parse_common(pkt_hdr, data, pkt_len, pkt_len,
+							    mbuf, layer, pktin_cfg);
+			if (ret)
+				odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_errors);
+
+			if (ret < 0) {
 				rte_pktmbuf_free(mbuf);
 				continue;
 			}
 
 			if (pktio_cls_enabled(pktio_entry)) {
-				int ret;
 				odp_pool_t new_pool;
 
 				ret = _odp_cls_classify_packet(pktio_entry, (const uint8_t *)data,
