@@ -21,7 +21,7 @@ static int sock_recv_mq_tmo_select(pktio_entry_t * const *entry,
 	int ret;
 
 	for (i = 0; i < num_q; i++) {
-		ret = entry[i]->s.ops->recv(entry[i], index[i], packets, num);
+		ret = entry[i]->ops->recv(entry[i], index[i], packets, num);
 
 		if (ret > 0 && from)
 			*from = i;
@@ -37,7 +37,7 @@ static int sock_recv_mq_tmo_select(pktio_entry_t * const *entry,
 		return 0;
 
 	for (i = 0; i < num_q; i++) {
-		ret = entry[i]->s.ops->recv(entry[i], index[i], packets, num);
+		ret = entry[i]->ops->recv(entry[i], index[i], packets, num);
 
 		if (ret > 0 && from)
 			*from = i;
@@ -78,21 +78,21 @@ int _odp_sock_recv_mq_tmo_try_int_driven(const struct odp_pktin_queue_t queues[]
 			return -1;
 		}
 
-		if (odp_unlikely(entry[i]->s.state != PKTIO_STATE_STARTED)) {
+		if (odp_unlikely(entry[i]->state != PKTIO_STATE_STARTED)) {
 			*trial_successful = 0;
 			return 0;
 		}
 
-		if (entry[i]->s.ops->recv_mq_tmo == NULL &&
-		    entry[i]->s.ops->fd_set == NULL) {
+		if (entry[i]->ops->recv_mq_tmo == NULL &&
+		    entry[i]->ops->fd_set == NULL) {
 			*trial_successful = 0;
 			return 0;
 		}
 		if (!impl_set) {
-			impl = entry[i]->s.ops->recv_mq_tmo;
+			impl = entry[i]->ops->recv_mq_tmo;
 			impl_set = 1;
 		} else {
-			if (impl != entry[i]->s.ops->recv_mq_tmo)
+			if (impl != entry[i]->ops->recv_mq_tmo)
 				impl = NULL;
 		}
 	}
@@ -107,11 +107,10 @@ int _odp_sock_recv_mq_tmo_try_int_driven(const struct odp_pktin_queue_t queues[]
 	   fails. */
 	FD_ZERO(&readfds);
 	for (i = 0; i < num_q; i++) {
-		if (entry[i]->s.ops->fd_set) {
+		if (entry[i]->ops->fd_set) {
 			int maxfd2;
 
-			maxfd2 = entry[i]->s.ops->fd_set(
-				entry[i], queues[i].index, &readfds);
+			maxfd2 = entry[i]->ops->fd_set(entry[i], queues[i].index, &readfds);
 			if (maxfd2 < 0) {
 				maxfd = -1;
 				break;

@@ -78,7 +78,7 @@ ODP_STATIC_ASSERT(PKTIO_PRIVATE_SIZE >= sizeof(pkt_pcap_t),
 
 static inline pkt_pcap_t *pkt_priv(pktio_entry_t *pktio_entry)
 {
-	return (pkt_pcap_t *)(uintptr_t)(pktio_entry->s.pkt_priv);
+	return (pkt_pcap_t *)(uintptr_t)(pktio_entry->pkt_priv);
 }
 
 #define PKTIO_PCAP_MTU_MIN (68 + _ODP_ETHHDR_LEN)
@@ -250,14 +250,14 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_time_t *ts = NULL;
 	int packets = 0;
 	uint32_t octets = 0;
-	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
-	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
-	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
+	uint16_t frame_offset = pktio_entry->pktin_frame_offset;
+	const odp_proto_layer_t layer = pktio_entry->parse_layer;
+	const odp_pktin_config_opt_t opt = pktio_entry->config.pktin;
 
-	odp_ticketlock_lock(&pktio_entry->s.rxl);
+	odp_ticketlock_lock(&pktio_entry->rxl);
 
 	if (odp_unlikely(!pcap->rx)) {
-		odp_ticketlock_unlock(&pktio_entry->s.rxl);
+		odp_ticketlock_unlock(&pktio_entry->rxl);
 		return 0;
 	}
 	if (opt.bit.ts_all || opt.bit.ts_ptp)
@@ -298,7 +298,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			ret = _odp_packet_parse_common(pkt_hdr, data, pkt_len,
 						       pkt_len, layer, opt);
 			if (ret)
-				odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_errors);
+				odp_atomic_inc_u64(&pktio_entry->stats_extra.in_errors);
 
 			if (ret < 0) {
 				odp_packet_free(pkt);
@@ -311,7 +311,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				ret = _odp_cls_classify_packet(pktio_entry, data,
 							       &new_pool, pkt_hdr);
 				if (ret < 0)
-					odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_discards);
+					odp_atomic_inc_u64(&pktio_entry->stats_extra.in_discards);
 
 				if (ret) {
 					odp_packet_free(pkt);
@@ -321,14 +321,14 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				if (odp_unlikely(_odp_pktio_packet_to_pool(
 					    &pkt, &pkt_hdr, new_pool))) {
 					odp_packet_free(pkt);
-					odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_discards);
+					odp_atomic_inc_u64(&pktio_entry->stats_extra.in_discards);
 					continue;
 				}
 			}
 		}
 
 		packet_set_ts(pkt_hdr, ts);
-		pkt_hdr->input = pktio_entry->s.handle;
+		pkt_hdr->input = pktio_entry->handle;
 
 		if (!pkt_hdr->p.flags.all.error) {
 			octets += pkt_len;
@@ -340,10 +340,10 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		i++;
 	}
 
-	pktio_entry->s.stats.in_octets += octets;
-	pktio_entry->s.stats.in_packets += packets;
+	pktio_entry->stats.in_octets += octets;
+	pktio_entry->stats.in_packets += packets;
 
-	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+	odp_ticketlock_unlock(&pktio_entry->rxl);
 
 	return i;
 }
@@ -376,14 +376,14 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int i;
 	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
 
-	odp_ticketlock_lock(&pktio_entry->s.txl);
+	odp_ticketlock_lock(&pktio_entry->txl);
 
 	for (i = 0; i < num; ++i) {
 		uint32_t pkt_len = odp_packet_len(pkts[i]);
 
 		if (odp_unlikely(pkt_len > pcap->mtu)) {
 			if (i == 0) {
-				odp_ticketlock_unlock(&pktio_entry->s.txl);
+				odp_ticketlock_unlock(&pktio_entry->txl);
 				return -1;
 			}
 			break;
@@ -392,7 +392,7 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		if (_pcapif_dump_pkt(pcap, pkts[i]) != 0)
 			break;
 
-		pktio_entry->s.stats.out_octets += pkt_len;
+		pktio_entry->stats.out_octets += pkt_len;
 
 		if (odp_unlikely(tx_ts_enabled && packet_hdr(pkts[i])->p.flags.ts_set))
 			_odp_pktio_tx_ts_set(pktio_entry);
@@ -400,9 +400,9 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		odp_packet_free(pkts[i]);
 	}
 
-	pktio_entry->s.stats.out_packets += i;
+	pktio_entry->stats.out_packets += i;
 
-	odp_ticketlock_unlock(&pktio_entry->s.txl);
+	odp_ticketlock_unlock(&pktio_entry->txl);
 
 	return i;
 }
@@ -514,14 +514,14 @@ static int pcapif_promisc_mode_get(pktio_entry_t *pktio_entry)
 
 static int pcapif_stats_reset(pktio_entry_t *pktio_entry)
 {
-	memset(&pktio_entry->s.stats, 0, sizeof(odp_pktio_stats_t));
+	memset(&pktio_entry->stats, 0, sizeof(odp_pktio_stats_t));
 	return 0;
 }
 
 static int pcapif_stats(pktio_entry_t *pktio_entry,
 			odp_pktio_stats_t *stats)
 {
-	memcpy(stats, &pktio_entry->s.stats, sizeof(odp_pktio_stats_t));
+	memcpy(stats, &pktio_entry->stats, sizeof(odp_pktio_stats_t));
 	return 0;
 }
 

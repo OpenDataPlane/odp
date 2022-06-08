@@ -71,7 +71,7 @@ ODP_STATIC_ASSERT(PKTIO_PRIVATE_SIZE >= sizeof(pkt_tap_t),
 
 static inline pkt_tap_t *pkt_priv(pktio_entry_t *pktio_entry)
 {
-	return (pkt_tap_t *)(uintptr_t)(pktio_entry->s.pkt_priv);
+	return (pkt_tap_t *)(uintptr_t)(pktio_entry->pkt_priv);
 }
 
 static int gen_random_mac(unsigned char *mac)
@@ -205,7 +205,7 @@ static int tap_pktio_start(pktio_entry_t *pktio_entry)
 
 	odp_memset(&ifr, 0, sizeof(ifr));
 	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s",
-		 (char *)pktio_entry->s.name + 4);
+		 (char *)pktio_entry->name + 4);
 
 		/* Up interface by default. */
 	if (ioctl(tap->skfd, SIOCGIFFLAGS, &ifr) < 0) {
@@ -236,7 +236,7 @@ static int tap_pktio_stop(pktio_entry_t *pktio_entry)
 
 	odp_memset(&ifr, 0, sizeof(ifr));
 	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s",
-		 (char *)pktio_entry->s.name + 4);
+		 (char *)pktio_entry->name + 4);
 
 		/* Up interface by default. */
 	if (ioctl(tap->skfd, SIOCGIFFLAGS, &ifr) < 0) {
@@ -286,9 +286,9 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 	odp_packet_t pkt;
 	odp_packet_hdr_t *pkt_hdr;
 	int num;
-	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
-	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
-	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
+	uint16_t frame_offset = pktio_entry->pktin_frame_offset;
+	const odp_proto_layer_t layer = pktio_entry->parse_layer;
+	const odp_pktin_config_opt_t opt = pktio_entry->config.pktin;
 
 	num = _odp_packet_alloc_multi(pkt_priv(pktio_entry)->pool,
 				      len + frame_offset, &pkt, 1);
@@ -331,7 +331,7 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 	}
 
 	packet_set_ts(pkt_hdr, ts);
-	pkt_hdr->input = pktio_entry->s.handle;
+	pkt_hdr->input = pktio_entry->handle;
 
 	return pkt;
 }
@@ -348,10 +348,10 @@ static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_time_t *ts = NULL;
 	int num_rx = 0;
 
-	odp_ticketlock_lock(&pktio_entry->s.rxl);
+	odp_ticketlock_lock(&pktio_entry->rxl);
 
-	if (pktio_entry->s.config.pktin.bit.ts_all ||
-	    pktio_entry->s.config.pktin.bit.ts_ptp)
+	if (pktio_entry->config.pktin.bit.ts_all ||
+	    pktio_entry->config.pktin.bit.ts_ptp)
 		ts = &ts_val;
 
 	for (i = 0; i < num; i++) {
@@ -373,7 +373,7 @@ static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		num_rx++;
 	}
 
-	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+	odp_ticketlock_unlock(&pktio_entry->rxl);
 
 	return num_rx;
 }
@@ -442,11 +442,11 @@ static int tap_pktio_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 {
 	int ret;
 
-	odp_ticketlock_lock(&pktio_entry->s.txl);
+	odp_ticketlock_lock(&pktio_entry->txl);
 
 	ret = tap_pktio_send_lockless(pktio_entry, pkts, num);
 
-	odp_ticketlock_unlock(&pktio_entry->s.txl);
+	odp_ticketlock_unlock(&pktio_entry->txl);
 
 	return ret;
 }
@@ -456,7 +456,7 @@ static uint32_t tap_mtu_get(pktio_entry_t *pktio_entry)
 	uint32_t ret;
 
 	ret =  _odp_mtu_get_fd(pkt_priv(pktio_entry)->skfd,
-			       pktio_entry->s.name + 4);
+			       pktio_entry->name + 4);
 	if (ret > 0)
 		pkt_priv(pktio_entry)->mtu = ret;
 
@@ -469,7 +469,7 @@ static int tap_mtu_set(pktio_entry_t *pktio_entry, uint32_t maxlen_input,
 	pkt_tap_t *tap = pkt_priv(pktio_entry);
 	int ret;
 
-	ret = _odp_mtu_set_fd(tap->skfd, pktio_entry->s.name + 4, maxlen_input);
+	ret = _odp_mtu_set_fd(tap->skfd, pktio_entry->name + 4, maxlen_input);
 	if (ret)
 		return ret;
 
@@ -482,13 +482,13 @@ static int tap_promisc_mode_set(pktio_entry_t *pktio_entry,
 				odp_bool_t enable)
 {
 	return _odp_promisc_mode_set_fd(pkt_priv(pktio_entry)->skfd,
-					pktio_entry->s.name + 4, enable);
+					pktio_entry->name + 4, enable);
 }
 
 static int tap_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
 	return _odp_promisc_mode_get_fd(pkt_priv(pktio_entry)->skfd,
-					pktio_entry->s.name + 4);
+					pktio_entry->name + 4);
 }
 
 static int tap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
@@ -503,19 +503,19 @@ static int tap_mac_addr_set(pktio_entry_t *pktio_entry, const void *mac_addr)
 
 	memcpy(tap->if_mac, mac_addr, ETH_ALEN);
 
-	return mac_addr_set_fd(tap->fd, (char *)pktio_entry->s.name + 4,
+	return mac_addr_set_fd(tap->fd, (char *)pktio_entry->name + 4,
 			  tap->if_mac);
 }
 
 static int tap_link_status(pktio_entry_t *pktio_entry)
 {
 	return _odp_link_status_fd(pkt_priv(pktio_entry)->skfd,
-				   pktio_entry->s.name + 4);
+				   pktio_entry->name + 4);
 }
 
 static int tap_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info)
 {
-	return _odp_link_info_fd(pkt_priv(pktio_entry)->skfd, pktio_entry->s.name + 4, info);
+	return _odp_link_info_fd(pkt_priv(pktio_entry)->skfd, pktio_entry->name + 4, info);
 }
 
 static int tap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,

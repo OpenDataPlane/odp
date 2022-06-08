@@ -52,7 +52,7 @@ ODP_STATIC_ASSERT(PKTIO_PRIVATE_SIZE >= sizeof(pkt_sock_t),
 
 static inline pkt_sock_t *pkt_priv(pktio_entry_t *pktio_entry)
 {
-	return (pkt_sock_t *)(uintptr_t)(pktio_entry->s.pkt_priv);
+	return (pkt_sock_t *)(uintptr_t)(pktio_entry->pkt_priv);
 }
 
 static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
@@ -168,10 +168,10 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 		goto error;
 	}
 
-	pktio_entry->s.stats_type = _odp_sock_stats_type_fd(pktio_entry,
-							    pkt_sock->sockfd);
-	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED)
-		ODP_DBG("pktio: %s unsupported stats\n", pktio_entry->s.name);
+	pktio_entry->stats_type = _odp_sock_stats_type_fd(pktio_entry,
+							  pkt_sock->sockfd);
+	if (pktio_entry->stats_type == STATS_UNSUPPORTED)
+		ODP_DBG("pktio: %s unsupported stats\n", pktio_entry->name);
 
 	err = sock_stats_reset(pktio_entry);
 	if (err != 0)
@@ -233,10 +233,10 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	int nb_pkts;
 	int recv_msgs;
 	int i;
-	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
+	uint16_t frame_offset = pktio_entry->pktin_frame_offset;
 	uint32_t alloc_len = pkt_sock->mtu + frame_offset;
-	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
-	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
+	const odp_proto_layer_t layer = pktio_entry->parse_layer;
+	const odp_pktin_config_opt_t opt = pktio_entry->config.pktin;
 
 	memset(msgvec, 0, sizeof(msgvec));
 
@@ -295,7 +295,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			ret = _odp_packet_parse_common(pkt_hdr, base, pkt_len,
 						       seg_len, layer, opt);
 			if (ret)
-				odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_errors);
+				odp_atomic_inc_u64(&pktio_entry->stats_extra.in_errors);
 
 			if (ret < 0) {
 				odp_packet_free(pkt);
@@ -308,7 +308,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				ret = _odp_cls_classify_packet(pktio_entry, base,
 							       &new_pool, pkt_hdr);
 				if (ret < 0)
-					odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_discards);
+					odp_atomic_inc_u64(&pktio_entry->stats_extra.in_discards);
 
 				if (ret) {
 					odp_packet_free(pkt);
@@ -318,7 +318,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				if (odp_unlikely(_odp_pktio_packet_to_pool(
 					    &pkt, &pkt_hdr, new_pool))) {
 					odp_packet_free(pkt);
-					odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_discards);
+					odp_atomic_inc_u64(&pktio_entry->stats_extra.in_discards);
 					continue;
 				}
 			}
@@ -331,7 +331,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			continue;
 		}
 
-		pkt_hdr->input = pktio_entry->s.handle;
+		pkt_hdr->input = pktio_entry->handle;
 		packet_set_ts(pkt_hdr, ts);
 
 		pkt_table[nb_rx++] = pkt;
@@ -519,7 +519,7 @@ static int sock_mtu_set(pktio_entry_t *pktio_entry, uint32_t maxlen_input,
 	pkt_sock_t *pkt_sock = pkt_priv(pktio_entry);
 	int ret;
 
-	ret = _odp_mtu_set_fd(pkt_sock->sockfd, pktio_entry->s.name, maxlen_input);
+	ret = _odp_mtu_set_fd(pkt_sock->sockfd, pktio_entry->name, maxlen_input);
 	if (ret)
 		return ret;
 
@@ -539,24 +539,24 @@ static int sock_promisc_mode_set(pktio_entry_t *pktio_entry,
 				 odp_bool_t enable)
 {
 	return _odp_promisc_mode_set_fd(pkt_priv(pktio_entry)->sockfd,
-					pktio_entry->s.name, enable);
+					pktio_entry->name, enable);
 }
 
 static int sock_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
 	return _odp_promisc_mode_get_fd(pkt_priv(pktio_entry)->sockfd,
-					pktio_entry->s.name);
+					pktio_entry->name);
 }
 
 static int sock_link_status(pktio_entry_t *pktio_entry)
 {
 	return _odp_link_status_fd(pkt_priv(pktio_entry)->sockfd,
-				   pktio_entry->s.name);
+				   pktio_entry->name);
 }
 
 static int sock_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info)
 {
-	return _odp_link_info_fd(pkt_priv(pktio_entry)->sockfd, pktio_entry->s.name, info);
+	return _odp_link_info_fd(pkt_priv(pktio_entry)->sockfd, pktio_entry->name, info);
 }
 
 static int sock_capability(pktio_entry_t *pktio_entry,

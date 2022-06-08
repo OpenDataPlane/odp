@@ -53,7 +53,7 @@ int _odp_sysfs_stats(pktio_entry_t *pktio_entry,
 		     odp_pktio_stats_t *stats)
 {
 	char fname[256];
-	const char *dev = pktio_entry->s.name;
+	const char *dev = pktio_entry->name;
 	int ret = 0;
 
 	sprintf(fname, "/sys/class/net/%s/statistics/rx_bytes", dev);
@@ -100,7 +100,7 @@ int _odp_sysfs_extra_stat_info(pktio_entry_t *pktio_entry,
 	char sysfs_dir[PATH_MAX];
 	int counters = 0;
 
-	snprintf(sysfs_dir, PATH_MAX, SYSFS_DIR, pktio_entry->s.name);
+	snprintf(sysfs_dir, PATH_MAX, SYSFS_DIR, pktio_entry->name);
 	dir = opendir(sysfs_dir);
 	if (!dir) {
 		ODP_ERR("Failed to open sysfs dir: %s\n", sysfs_dir);
@@ -132,7 +132,7 @@ int _odp_sysfs_extra_stats(pktio_entry_t *pktio_entry, uint64_t stats[],
 	char file_path[PATH_MAX];
 	int counters = 0;
 
-	snprintf(sysfs_dir, PATH_MAX, SYSFS_DIR, pktio_entry->s.name);
+	snprintf(sysfs_dir, PATH_MAX, SYSFS_DIR, pktio_entry->name);
 	dir = opendir(sysfs_dir);
 	if (!dir) {
 		ODP_ERR("Failed to open dir: %s\n", sysfs_dir);
@@ -173,7 +173,7 @@ int _odp_sysfs_extra_stat_counter(pktio_entry_t *pktio_entry, uint32_t id,
 	uint32_t counters = 0;
 	int ret = -1;
 
-	snprintf(sysfs_dir, PATH_MAX, SYSFS_DIR, pktio_entry->s.name);
+	snprintf(sysfs_dir, PATH_MAX, SYSFS_DIR, pktio_entry->name);
 	dir = opendir(sysfs_dir);
 	if (!dir) {
 		ODP_ERR("Failed to open dir: %s\n", sysfs_dir);

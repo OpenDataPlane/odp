@@ -130,7 +130,7 @@ static void pcapng_drain_fifo(int fd)
 static void inotify_event_handle(pktio_entry_t *entry, int qidx,
 				 struct inotify_event *event)
 {
-	int mtu = _ODP_MAX(odp_pktin_maxlen(entry->s.handle), odp_pktout_maxlen(entry->s.handle));
+	int mtu = _ODP_MAX(odp_pktin_maxlen(entry->handle), odp_pktout_maxlen(entry->handle));
 
 	if (event->mask & IN_OPEN) {
 		int ret;
@@ -139,23 +139,23 @@ static void inotify_event_handle(pktio_entry_t *entry, int qidx,
 		    sizeof(uint32_t)) {
 			ODP_ERR("PIPE_BUF:%d too small. Disabling pcap\n",
 				PIPE_BUF);
-			entry->s.pcapng.state[qidx] = PCAPNG_WR_STOP;
+			entry->pcapng.state[qidx] = PCAPNG_WR_STOP;
 
 			return;
 		}
 
 		ret = write_pcapng_hdr(entry, qidx);
 		if (ret) {
-			entry->s.pcapng.state[qidx] = PCAPNG_WR_STOP;
+			entry->pcapng.state[qidx] = PCAPNG_WR_STOP;
 		} else {
-			entry->s.pcapng.state[qidx] = PCAPNG_WR_PKT;
+			entry->pcapng.state[qidx] = PCAPNG_WR_PKT;
 			ODP_DBG("Open %s for pcap tracing\n", event->name);
 		}
 	} else if (event->mask & IN_CLOSE) {
-		int fd = entry->s.pcapng.fd[qidx];
+		int fd = entry->pcapng.fd[qidx];
 
 		pcapng_drain_fifo(fd);
-		entry->s.pcapng.state[qidx] = PCAPNG_WR_STOP;
+		entry->pcapng.state[qidx] = PCAPNG_WR_STOP;
 		ODP_DBG("Close %s for pcap tracing\n", event->name);
 	} else {
 		ODP_ERR("Unknown inotify event 0x%08x\n", event->mask);
@@ -172,14 +172,14 @@ static void get_pcapng_fifo_name(char *pcapng_entry, size_t len,
 
 static int get_qidx_from_fifo(pktio_entry_t *entry, char *name)
 {
-	unsigned int max_queue = _ODP_MAX(entry->s.num_in_queue, entry->s.num_out_queue);
+	unsigned int max_queue = _ODP_MAX(entry->num_in_queue, entry->num_out_queue);
 	unsigned int i;
 
 	for (i = 0; i < max_queue; i++) {
 		char pcapng_entry[256];
 
 		get_pcapng_fifo_name(pcapng_entry, sizeof(pcapng_entry),
-				     entry->s.name, i);
+				     entry->name, i);
 		/*
 		 * verify we still talk to a fifo before returning a valid
 		 * queue number
@@ -289,7 +289,7 @@ int _odp_pcapng_start(pktio_entry_t *entry)
 	int ret = -1, fd;
 	pthread_attr_t attr;
 	unsigned int i;
-	unsigned int max_queue = _ODP_MAX(entry->s.num_in_queue, entry->s.num_out_queue);
+	unsigned int max_queue = _ODP_MAX(entry->num_in_queue, entry->num_out_queue);
 	int fifo_sz;
 
 	fifo_sz = get_fifo_max_size();
@@ -300,11 +300,11 @@ int _odp_pcapng_start(pktio_entry_t *entry)
 		char pcapng_name[128];
 		char pcapng_path[256];
 
-		entry->s.pcapng.fd[i] = -1;
-		entry->s.pcapng.state[i] = PCAPNG_WR_STOP;
+		entry->pcapng.fd[i] = -1;
+		entry->pcapng.state[i] = PCAPNG_WR_STOP;
 
 		get_pcapng_fifo_name(pcapng_name, sizeof(pcapng_name),
-				     entry->s.name, i);
+				     entry->name, i);
 		snprintf(pcapng_path, sizeof(pcapng_path), "%s/%s",
 			 PCAPNG_WATCH_DIR, pcapng_name);
 		if (mkfifo(pcapng_path, O_RDWR)) {
@@ -320,7 +320,7 @@ int _odp_pcapng_start(pktio_entry_t *entry)
 		fd = open(pcapng_path, O_RDWR | O_NONBLOCK);
 		if (fd == -1) {
 			ODP_ERR("Fail to open fifo\n");
-			entry->s.pcapng.state[i] = PCAPNG_WR_STOP;
+			entry->pcapng.state[i] = PCAPNG_WR_STOP;
 			if (remove(pcapng_path) == -1)
 				ODP_ERR("Can't remove fifo %s\n", pcapng_path);
 			continue;
@@ -333,14 +333,14 @@ int _odp_pcapng_start(pktio_entry_t *entry)
 				ODP_DBG("set pcap fifo size %i\n", fifo_sz);
 		}
 
-		entry->s.pcapng.fd[i] = fd;
+		entry->pcapng.fd[i] = fd;
 	}
 
 	odp_spinlock_lock(&pcapng_gbl->lock);
 
 	/* already running from a previous pktio */
 	if (pcapng_gbl->inotify_is_running == 1) {
-		pcapng_gbl->entry[odp_pktio_index(entry->s.handle)] = entry;
+		pcapng_gbl->entry[odp_pktio_index(entry->handle)] = entry;
 		pcapng_gbl->num_entries++;
 		odp_spinlock_unlock(&pcapng_gbl->lock);
 		return 0;
@@ -372,7 +372,7 @@ int _odp_pcapng_start(pktio_entry_t *entry)
 	if (ret) {
 		ODP_ERR("Can't start inotify thread (ret=%d). pcapng disabled.\n", ret);
 	} else {
-		pcapng_gbl->entry[odp_pktio_index(entry->s.handle)] = entry;
+		pcapng_gbl->entry[odp_pktio_index(entry->handle)] = entry;
 		pcapng_gbl->num_entries++;
 		pcapng_gbl->inotify_is_running = 1;
 	}
@@ -393,11 +393,11 @@ void _odp_pcapng_stop(pktio_entry_t *entry)
 {
 	int ret;
 	unsigned int i;
-	unsigned int max_queue = _ODP_MAX(entry->s.num_in_queue, entry->s.num_out_queue);
+	unsigned int max_queue = _ODP_MAX(entry->num_in_queue, entry->num_out_queue);
 
 	odp_spinlock_lock(&pcapng_gbl->lock);
 
-	pcapng_gbl->entry[odp_pktio_index(entry->s.handle)] = NULL;
+	pcapng_gbl->entry[odp_pktio_index(entry->handle)] = NULL;
 	pcapng_gbl->num_entries--;
 
 	if (pcapng_gbl->inotify_is_running == 1 &&
@@ -430,11 +430,11 @@ void _odp_pcapng_stop(pktio_entry_t *entry)
 		char pcapng_name[128];
 		char pcapng_path[256];
 
-		entry->s.pcapng.state[i] = PCAPNG_WR_STOP;
-		close(entry->s.pcapng.fd[i]);
+		entry->pcapng.state[i] = PCAPNG_WR_STOP;
+		close(entry->pcapng.fd[i]);
 
 		get_pcapng_fifo_name(pcapng_name, sizeof(pcapng_name),
-				     entry->s.name, i);
+				     entry->name, i);
 		snprintf(pcapng_path, sizeof(pcapng_path), "%s/%s",
 			 PCAPNG_WATCH_DIR, pcapng_name);
 
@@ -448,7 +448,7 @@ int write_pcapng_hdr(pktio_entry_t *entry, int qidx)
 	size_t len;
 	pcapng_section_hdr_block_t shb;
 	pcapng_interface_description_block_t idb;
-	int fd = entry->s.pcapng.fd[qidx];
+	int fd = entry->pcapng.fd[qidx];
 
 	memset(&shb, 0, sizeof(shb));
 	memset(&idb, 0, sizeof(idb));
@@ -514,7 +514,7 @@ int _odp_pcapng_write_pkts(pktio_entry_t *entry, int qidx,
 	pcapng_enhanced_packet_block_t epb[num];
 	int iovcnt = 0;
 	ssize_t block_len = 0;
-	int fd = entry->s.pcapng.fd[qidx];
+	int fd = entry->pcapng.fd[qidx];
 	ssize_t len = 0, wlen;
 
 	for (i = 0; i < num; i++) {

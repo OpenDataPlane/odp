@@ -2690,7 +2690,7 @@ int odp_tm_egress_capabilities(odp_tm_capabilities_t *capabilities,
 		}
 
 		/* Report not capable if pktout mode is not TM */
-		if (entry->s.param.out_mode != ODP_PKTOUT_MODE_TM)
+		if (entry->param.out_mode != ODP_PKTOUT_MODE_TM)
 			return 0;
 	}
 
