@@ -112,16 +112,11 @@ typedef struct {
 	uint8_t set_flow_hash;
 } dpdk_opt_t;
 
-struct pkt_cache_t {
+typedef struct ODP_ALIGNED_CACHE {
 	/** array for storing extra RX packets */
 	struct rte_mbuf *pkt[DPDK_MIN_RX_BURST];
 	unsigned int idx;			  /**< head of cache */
 	unsigned int count;			  /**< packets in cache */
-};
-
-typedef union ODP_ALIGNED_CACHE {
-	struct pkt_cache_t s;
-	uint8_t pad[_ODP_ROUNDUP_CACHE_LINE(sizeof(struct pkt_cache_t))];
 } pkt_cache_t;
 
 /** Packet IO using DPDK interface */
@@ -1248,10 +1243,10 @@ static int dpdk_close(pktio_entry_t *pktio_entry)
 
 	/* Free cache packets */
 	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
-		idx = pkt_dpdk->rx_cache[i].s.idx;
+		idx = pkt_dpdk->rx_cache[i].idx;
 
-		for (j = 0; j < pkt_dpdk->rx_cache[i].s.count; j++)
-			rte_pktmbuf_free(pkt_dpdk->rx_cache[i].s.pkt[idx++]);
+		for (j = 0; j < pkt_dpdk->rx_cache[i].count; j++)
+			rte_pktmbuf_free(pkt_dpdk->rx_cache[i].pkt[idx++]);
 	}
 
 	return 0;
@@ -1985,11 +1980,11 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 	 *
 	 * Either use cached packets or receive new ones. Not both during the
 	 * same call. */
-	if (rx_cache->s.count > 0) {
-		for (i = 0; i < num && rx_cache->s.count; i++) {
-			rx_mbufs[i] = rx_cache->s.pkt[rx_cache->s.idx];
-			rx_cache->s.idx++;
-			rx_cache->s.count--;
+	if (rx_cache->count > 0) {
+		for (i = 0; i < num && rx_cache->count; i++) {
+			rx_mbufs[i] = rx_cache->pkt[rx_cache->idx];
+			rx_cache->idx++;
+			rx_cache->count--;
 		}
 		nb_rx = i;
 	} else if ((unsigned)num < pkt_dpdk->min_rx_burst) {
@@ -1997,14 +1992,14 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 
 		nb_rx = rte_eth_rx_burst(pkt_priv(pktio_entry)->port_id, index,
 					 new_mbufs, pkt_dpdk->min_rx_burst);
-		rx_cache->s.idx = 0;
+		rx_cache->idx = 0;
 		for (i = 0; i < nb_rx; i++) {
 			if (i < num) {
 				rx_mbufs[i] = new_mbufs[i];
 			} else {
-				cache_idx = rx_cache->s.count;
-				rx_cache->s.pkt[cache_idx] = new_mbufs[i];
-				rx_cache->s.count++;
+				cache_idx = rx_cache->count;
+				rx_cache->pkt[cache_idx] = new_mbufs[i];
+				rx_cache->count++;
 			}
 		}
 		nb_rx = RTE_MIN(num, nb_rx);
