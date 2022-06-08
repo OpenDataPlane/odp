@@ -48,7 +48,7 @@ static inline int _odp_cos_queue_idx(const cos_t *cos, odp_queue_t queue)
 
 	tbl_idx = cos->index * CLS_COS_QUEUE_MAX;
 	for (i = 0; i < cos->num_queue; i++) {
-		if (_odp_cls_global->queue_grp_tbl.s.queue[tbl_idx + i] == queue) {
+		if (_odp_cls_global->queue_grp_tbl.queue[tbl_idx + i] == queue) {
 			queue_idx = i;
 			break;
 		}

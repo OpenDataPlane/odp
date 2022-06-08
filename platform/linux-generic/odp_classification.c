@@ -222,7 +222,7 @@ static void _odp_cls_update_hash_proto(cos_t *cos,
 static inline void _cls_queue_unwind(uint32_t tbl_index, uint32_t j)
 {
 	while (j > 0)
-		odp_queue_destroy(queue_grp_tbl->s.queue[tbl_index + --j]);
+		odp_queue_destroy(queue_grp_tbl->queue[tbl_index + --j]);
 }
 
 odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_in)
@@ -304,7 +304,7 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 						UNLOCK(&cos->lock);
 						return ODP_COS_INVALID;
 					}
-					queue_grp_tbl->s.queue[tbl_index + j] =
+					queue_grp_tbl->queue[tbl_index + j] =
 							queue;
 				}
 
@@ -475,7 +475,7 @@ uint32_t odp_cls_cos_queues(odp_cos_t cos_id, odp_queue_t queue[],
 
 	tbl_index = cos->index * CLS_COS_QUEUE_MAX;
 	for (i = 0; i < num_queues; i++)
-		queue[i] = queue_grp_tbl->s.queue[tbl_index + i];
+		queue[i] = queue_grp_tbl->queue[tbl_index + i];
 
 	return cos->num_queue;
 }
@@ -1730,7 +1730,7 @@ int _odp_cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	hash = hash & (CLS_COS_QUEUE_MAX - 1);
 	tbl_index = (cos->index * CLS_COS_QUEUE_MAX) + (hash %
 							  cos->num_queue);
-	pkt_hdr->dst_queue = queue_grp_tbl->s.queue[tbl_index];
+	pkt_hdr->dst_queue = queue_grp_tbl->queue[tbl_index];
 	return 0;
 
 error:
