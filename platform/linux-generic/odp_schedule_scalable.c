@@ -718,7 +718,7 @@ static void pktio_start(int pktio_idx,
 		__atomic_fetch_add(&global->poll_count[pktio_idx], 1,
 				   __ATOMIC_RELAXED);
 		qentry = _odp_qentry_from_ext(odpq[i]);
-		elem = &qentry->s.sched_elem;
+		elem = &qentry->sched_elem;
 		elem->cons_type |= FLAG_PKTIN; /* Set pktin queue flag */
 		elem->pktio_idx = pktio_idx;
 		elem->rx_queue = rxq;
@@ -2102,7 +2102,7 @@ static int ord_enq_multi(odp_queue_t handle, void *event_hdr[], int num,
 	ts = _odp_sched_ts;
 	queue = qentry_from_int(handle);
 	if (ts && odp_unlikely(ts->out_of_order) &&
-	    (queue->s.param.order == ODP_QUEUE_ORDER_KEEP)) {
+	    (queue->param.order == ODP_QUEUE_ORDER_KEEP)) {
 		actual = _odp_rctx_save(queue, (_odp_event_hdr_t **)event_hdr, num);
 		*ret = actual;
 		return 1;

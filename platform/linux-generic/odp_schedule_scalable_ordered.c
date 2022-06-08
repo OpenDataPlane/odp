@@ -264,7 +264,7 @@ static void blocking_enqueue(queue_entry_t *q, _odp_event_hdr_t **evts, int num)
 	/* Iterate until all events have been successfully enqueued */
 	for (;;) {
 		/* Attempt to enqueue remaining events */
-		actual = q->s.enqueue_multi(qentry_to_int(q), evts, num);
+		actual = q->enqueue_multi(qentry_to_int(q), evts, num);
 		if (odp_unlikely(actual < 0))
 			ODP_ERR("Failed to enqueue deferred events\n");
 		/* Update for potential partial success */

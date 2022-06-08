@@ -31,7 +31,7 @@ extern "C" {
 #define QUEUE_STATUS_DESTROYED    1
 #define QUEUE_STATUS_READY        2
 
-struct queue_entry_s {
+struct ODP_ALIGNED_CACHE queue_entry_s {
 	sched_elem_t     sched_elem;
 
 	odp_ticketlock_t lock ODP_ALIGNED_CACHE;
@@ -51,11 +51,6 @@ struct queue_entry_s {
 	odp_pktin_queue_t  pktin;
 	odp_pktout_queue_t pktout;
 	char               name[ODP_QUEUE_NAME_LEN];
-};
-
-union queue_entry_u {
-	struct queue_entry_s s;
-	uint8_t pad[_ODP_ROUNDUP_CACHE_LINE(sizeof(struct queue_entry_s))];
 };
 
 int _odp_queue_deq(sched_elem_t *q, _odp_event_hdr_t *event_hdr[], int num);
@@ -79,7 +74,7 @@ static inline void *shm_pool_alloc_align(_odp_ishm_pool_t *pool, uint32_t size)
 
 static inline uint32_t queue_to_id(odp_queue_t handle)
 {
-	return _odp_qentry_from_ext(handle)->s.index;
+	return _odp_qentry_from_ext(handle)->index;
 }
 
 static inline queue_entry_t *qentry_from_int(odp_queue_t handle)
@@ -94,12 +89,12 @@ static inline odp_queue_t qentry_to_int(queue_entry_t *qentry)
 
 static inline odp_queue_t queue_get_handle(queue_entry_t *queue)
 {
-	return queue->s.handle;
+	return queue->handle;
 }
 
 static inline reorder_window_t *queue_get_rwin(queue_entry_t *queue)
 {
-	return queue->s.sched_elem.rwin;
+	return queue->sched_elem.rwin;
 }
 
 #ifdef __cplusplus

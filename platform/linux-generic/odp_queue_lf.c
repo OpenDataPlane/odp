@@ -125,7 +125,7 @@ static int queue_lf_enq(odp_queue_t handle, _odp_event_hdr_t *event_hdr)
 	ring_lf_node_t *node;
 
 	queue    = qentry_from_handle(handle);
-	queue_lf = queue->s.queue_lf;
+	queue_lf = queue->queue_lf;
 
 	new_val.s.ptr     = (uintptr_t)event_hdr;
 	new_val.s.counter = odp_atomic_fetch_inc_u64(&queue_lf->enq_counter);
@@ -184,7 +184,7 @@ static _odp_event_hdr_t *queue_lf_deq(odp_queue_t handle)
 	_odp_event_hdr_t *event_hdr;
 
 	queue    = qentry_from_handle(handle);
-	queue_lf = queue->s.queue_lf;
+	queue_lf = queue->queue_lf;
 	new_val.s.counter = 0;
 	new_val.s.ptr     = 0;
 	old = NULL;
@@ -325,7 +325,7 @@ void *_odp_queue_lf_create(queue_entry_t *queue)
 		return NULL;
 	}
 
-	if (queue->s.type != ODP_QUEUE_TYPE_PLAIN)
+	if (queue->type != ODP_QUEUE_TYPE_PLAIN)
 		return NULL;
 
 	for (i = 0; i < QUEUE_LF_NUM; i++) {

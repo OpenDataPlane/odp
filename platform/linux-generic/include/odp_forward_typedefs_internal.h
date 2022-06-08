@@ -22,7 +22,7 @@
 extern "C" {
 #endif
 
-typedef union queue_entry_u queue_entry_t;
+typedef struct queue_entry_s queue_entry_t;
 
 #ifdef __cplusplus
 }
