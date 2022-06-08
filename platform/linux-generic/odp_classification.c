@@ -115,7 +115,7 @@ int _odp_classification_init_global(void)
 		/* init locks */
 		pmr_t *pmr = get_pmr_entry_internal(_odp_pmr_from_ndx(i));
 
-		LOCK_INIT(&pmr->s.lock);
+		LOCK_INIT(&pmr->lock);
 	}
 
 	return 0;
@@ -155,7 +155,7 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 	memset(capability, 0, sizeof(odp_cls_capability_t));
 
 	for (int i = 0; i < CLS_PMR_MAX_ENTRY; i++)
-		if (!pmr_tbl->pmr[i].s.valid)
+		if (!pmr_tbl->pmr[i].valid)
 			count++;
 
 	capability->max_pmr_terms = CLS_PMR_MAX_ENTRY;
@@ -349,16 +349,16 @@ odp_pmr_t alloc_pmr(pmr_t **pmr)
 	int i;
 
 	for (i = 0; i < CLS_PMR_MAX_ENTRY; i++) {
-		LOCK(&pmr_tbl->pmr[i].s.lock);
-		if (0 == pmr_tbl->pmr[i].s.valid) {
-			pmr_tbl->pmr[i].s.valid = 1;
-			odp_atomic_init_u32(&pmr_tbl->pmr[i].s.count, 0);
-			pmr_tbl->pmr[i].s.num_pmr = 0;
+		LOCK(&pmr_tbl->pmr[i].lock);
+		if (0 == pmr_tbl->pmr[i].valid) {
+			pmr_tbl->pmr[i].valid = 1;
+			odp_atomic_init_u32(&pmr_tbl->pmr[i].count, 0);
+			pmr_tbl->pmr[i].num_pmr = 0;
 			*pmr = &pmr_tbl->pmr[i];
 			/* return as locked */
 			return _odp_pmr_from_ndx(i);
 		}
-		UNLOCK(&pmr_tbl->pmr[i].s.lock);
+		UNLOCK(&pmr_tbl->pmr[i].lock);
 	}
 	ODP_ERR("CLS_PMR_MAX_ENTRY reached\n");
 	return ODP_PMR_INVALID;
@@ -384,7 +384,7 @@ pmr_t *get_pmr_entry(odp_pmr_t pmr)
 	if (pmr_id >= CLS_PMR_MAX_ENTRY ||
 	    pmr == ODP_PMR_INVALID)
 		return NULL;
-	if (pmr_tbl->pmr[pmr_id].s.valid == 0)
+	if (pmr_tbl->pmr[pmr_id].valid == 0)
 		return NULL;
 	return &pmr_tbl->pmr[pmr_id];
 }
@@ -729,10 +729,10 @@ int odp_cls_pmr_destroy(odp_pmr_t pmr_id)
 	uint8_t i;
 
 	pmr = get_pmr_entry(pmr_id);
-	if (pmr == NULL || pmr->s.src_cos == NULL)
+	if (pmr == NULL || pmr->src_cos == NULL)
 		return -1;
 
-	src_cos = pmr->s.src_cos;
+	src_cos = pmr->src_cos;
 	LOCK(&src_cos->lock);
 	loc = odp_atomic_load_u32(&src_cos->num_rule);
 	if (loc == 0)
@@ -746,7 +746,7 @@ int odp_cls_pmr_destroy(odp_pmr_t pmr_id)
 	odp_atomic_dec_u32(&src_cos->num_rule);
 
 no_rule:
-	pmr->s.valid = 0;
+	pmr->valid = 0;
 	UNLOCK(&src_cos->lock);
 	return 0;
 }
@@ -779,23 +779,23 @@ static odp_pmr_t cls_pmr_create(const odp_pmr_param_t *terms, int num_terms, uin
 	if (id == ODP_PMR_INVALID)
 		return id;
 
-	pmr->s.num_pmr = num_terms;
+	pmr->num_pmr = num_terms;
 	for (i = 0; i < num_terms; i++) {
-		if (pmr_create_term(&pmr->s.pmr_term_value[i], &terms[i])) {
-			pmr->s.valid = 0;
-			UNLOCK(&pmr->s.lock);
+		if (pmr_create_term(&pmr->pmr_term_value[i], &terms[i])) {
+			pmr->valid = 0;
+			UNLOCK(&pmr->lock);
 			return ODP_PMR_INVALID;
 		}
 	}
 
-	pmr->s.mark = mark;
+	pmr->mark = mark;
 
 	loc = odp_atomic_fetch_inc_u32(&cos_src->num_rule);
 	cos_src->pmr[loc] = pmr;
 	cos_src->linked_cos[loc] = cos_dst;
-	pmr->s.src_cos = cos_src;
+	pmr->src_cos = cos_src;
 
-	UNLOCK(&pmr->s.lock);
+	UNLOCK(&pmr->lock);
 	return id;
 }
 
@@ -1299,9 +1299,9 @@ static int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr,
 	/* Locking is not required as PMR rules for in-flight packets
 	delivery during a PMR change is indeterminate*/
 
-	if (!pmr->s.valid)
+	if (!pmr->valid)
 		return 0;
-	num_pmr = pmr->s.num_pmr;
+	num_pmr = pmr->num_pmr;
 
 	if (pkt_hdr->p.input_flags.ipv4)
 		ipv4 = (const _odp_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
@@ -1310,7 +1310,7 @@ static int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr,
 
 	/* Iterate through list of PMR Term values in a pmr_t */
 	for (i = 0; i < num_pmr; i++) {
-		term_value = &pmr->s.pmr_term_value[i];
+		term_value = &pmr->pmr_term_value[i];
 		switch (term_value->term) {
 		case ODP_PMR_LEN:
 			if (!verify_pmr_packet_len(pkt_hdr, term_value))
@@ -1437,7 +1437,7 @@ static int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr,
 		if (pmr_failure)
 			return 0;
 	}
-	odp_atomic_inc_u32(&pmr->s.count);
+	odp_atomic_inc_u32(&pmr->count);
 	return 1;
 }
 
@@ -1523,13 +1523,13 @@ static inline void pmr_debug_print(pmr_t *pmr, cos_t *cos)
 	const char *pmr_name;
 	const char *cos_name = cos->name;
 	uint32_t cos_index = cos->index;
-	uint32_t num_pmr = pmr->s.num_pmr;
+	uint32_t num_pmr = pmr->num_pmr;
 
 	if (ODP_DEBUG_PRINT == 0)
 		return;
 
 	if (num_pmr == 1) {
-		pmr_name = format_pmr_name(pmr->s.pmr_term_value[0].term);
+		pmr_name = format_pmr_name(pmr->pmr_term_value[0].term);
 		ODP_DBG_RAW(CLS_DBG, "  PMR matched: %s -> cos: %s(%u)\n", pmr_name, cos_name,
 			    cos_index);
 		return;
@@ -1537,7 +1537,7 @@ static inline void pmr_debug_print(pmr_t *pmr, cos_t *cos)
 
 	ODP_DBG_RAW(CLS_DBG, "  PMRs matched:");
 	for (i = 0; i < num_pmr; i++) {
-		pmr_name = format_pmr_name(pmr->s.pmr_term_value[i].term);
+		pmr_name = format_pmr_name(pmr->pmr_term_value[i].term);
 		ODP_DBG_RAW(CLS_DBG, " %s", pmr_name);
 	}
 
@@ -1568,9 +1568,9 @@ static cos_t *match_pmr_cos(cos_t *cos, const uint8_t *pkt_addr, pmr_t *pmr,
 			odp_atomic_inc_u64(&cos->stats.packets);
 
 		hdr->p.input_flags.cls_mark = 0;
-		if (pmr->s.mark) {
+		if (pmr->mark) {
 			hdr->p.input_flags.cls_mark = 1;
-			hdr->cls_mark = pmr->s.mark;
+			hdr->cls_mark = pmr->mark;
 		}
 
 		/* This gets called recursively. First matching leaf or branch
@@ -1987,7 +1987,7 @@ void cls_print_cos(cos_t *cos)
 	print_queue_ident(cos->queue);
 
 	for (uint32_t j = 0; j < num_rule; j++) {
-		struct pmr_s *pmr = &cos->pmr[j]->s;
+		pmr_t *pmr = cos->pmr[j];
 
 		LOCK(&pmr->lock);
 		for (uint32_t k = 0; k < pmr->num_pmr; k++) {
