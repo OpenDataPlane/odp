@@ -777,8 +777,8 @@ static void packet_vector_enq_cos(odp_queue_t queue, odp_event_t events[],
 				  uint32_t num, cos_t *cos_hdr)
 {
 	odp_packet_vector_t pktv;
-	odp_pool_t pool = cos_hdr->s.vector.pool;
-	uint32_t max_size = cos_hdr->s.vector.max_size;
+	odp_pool_t pool = cos_hdr->vector.pool;
+	uint32_t max_size = cos_hdr->vector.max_size;
 	uint32_t num_enq;
 	int num_pktv = (num + max_size - 1) / max_size;
 	int ret;
@@ -967,7 +967,7 @@ static inline int pktin_recv_buf(pktio_entry_t *entry, int pktin_index,
 			/* Packets from classifier */
 			cos_hdr = _odp_cos_entry_from_idx(cos[i]);
 
-			if (cos_hdr->s.vector.enable) {
+			if (cos_hdr->vector.enable) {
 				packet_vector_enq_cos(dst[i], &ev[idx], num_enq, cos_hdr);
 				continue;
 			}

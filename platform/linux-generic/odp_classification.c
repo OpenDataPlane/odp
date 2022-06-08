@@ -108,7 +108,7 @@ int _odp_classification_init_global(void)
 		/* init locks */
 		cos_t *cos = get_cos_entry_internal(_odp_cos_from_ndx(i));
 
-		LOCK_INIT(&cos->s.lock);
+		LOCK_INIT(&cos->lock);
 	}
 
 	for (i = 0; i < CLS_PMR_MAX_ENTRY; i++) {
@@ -209,14 +209,14 @@ static void _odp_cls_update_hash_proto(cos_t *cos,
 {
 	if (hash_proto.proto.ipv4 || hash_proto.proto.ipv4_tcp ||
 	    hash_proto.proto.ipv4_udp)
-		cos->s.hash_proto.ipv4 = 1;
+		cos->hash_proto.ipv4 = 1;
 	if (hash_proto.proto.ipv6 || hash_proto.proto.ipv6_tcp ||
 	    hash_proto.proto.ipv6_udp)
-		cos->s.hash_proto.ipv6 = 1;
+		cos->hash_proto.ipv6 = 1;
 	if (hash_proto.proto.ipv4_tcp || hash_proto.proto.ipv6_tcp)
-		cos->s.hash_proto.tcp = 1;
+		cos->hash_proto.tcp = 1;
 	if (hash_proto.proto.ipv4_udp || hash_proto.proto.ipv6_udp)
-		cos->s.hash_proto.udp = 1;
+		cos->hash_proto.udp = 1;
 }
 
 static inline void _cls_queue_unwind(uint32_t tbl_index, uint32_t j)
@@ -272,9 +272,9 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 
 	for (i = 0; i < CLS_COS_MAX_ENTRY; i++) {
 		cos = &cos_tbl->cos_entry[i];
-		LOCK(&cos->s.lock);
-		if (0 == cos->s.valid) {
-			char *cos_name = cos->s.name;
+		LOCK(&cos->lock);
+		if (0 == cos->valid) {
+			char *cos_name = cos->name;
 
 			if (name == NULL) {
 				cos_name[0] = 0;
@@ -283,25 +283,25 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 				cos_name[ODP_COS_NAME_LEN - 1] = 0;
 			}
 			for (j = 0; j < CLS_PMR_PER_COS_MAX; j++) {
-				cos->s.pmr[j] = NULL;
-				cos->s.linked_cos[j] = NULL;
+				cos->pmr[j] = NULL;
+				cos->linked_cos[j] = NULL;
 			}
 
-			cos->s.num_queue = param.num_queue;
+			cos->num_queue = param.num_queue;
 
 			if (param.num_queue > 1) {
-				odp_queue_param_init(&cos->s.queue_param);
-				cos->s.queue_group = true;
-				cos->s.queue = ODP_QUEUE_INVALID;
+				odp_queue_param_init(&cos->queue_param);
+				cos->queue_group = true;
+				cos->queue = ODP_QUEUE_INVALID;
 				_odp_cls_update_hash_proto(cos,
 							   param.hash_proto);
 				tbl_index = i * CLS_COS_QUEUE_MAX;
 				for (j = 0; j < param.num_queue; j++) {
-					queue = odp_queue_create(NULL, &cos->s.queue_param);
+					queue = odp_queue_create(NULL, &cos->queue_param);
 					if (queue == ODP_QUEUE_INVALID) {
 						/* unwind the queues */
 						_cls_queue_unwind(tbl_index, j);
-						UNLOCK(&cos->s.lock);
+						UNLOCK(&cos->lock);
 						return ODP_COS_INVALID;
 					}
 					queue_grp_tbl->s.queue[tbl_index + j] =
@@ -309,31 +309,31 @@ odp_cos_t odp_cls_cos_create(const char *name, const odp_cls_cos_param_t *param_
 				}
 
 			} else {
-				cos->s.queue = param.queue;
+				cos->queue = param.queue;
 			}
 
-			odp_atomic_init_u64(&cos->s.stats.discards, 0);
-			odp_atomic_init_u64(&cos->s.stats.packets, 0);
+			odp_atomic_init_u64(&cos->stats.discards, 0);
+			odp_atomic_init_u64(&cos->stats.packets, 0);
 
 			/* Initialize statistics counters */
-			for (j = 0; j < cos->s.num_queue; j++) {
-				odp_atomic_init_u64(&cos->s.queue_stats[j].discards, 0);
-				odp_atomic_init_u64(&cos->s.queue_stats[j].packets, 0);
+			for (j = 0; j < cos->num_queue; j++) {
+				odp_atomic_init_u64(&cos->queue_stats[j].discards, 0);
+				odp_atomic_init_u64(&cos->queue_stats[j].packets, 0);
 			}
 
-			cos->s.action = param.action;
-			cos->s.pool = param.pool;
-			cos->s.headroom = 0;
-			cos->s.valid = 1;
-			cos->s.drop_policy = drop_policy;
-			odp_atomic_init_u32(&cos->s.num_rule, 0);
-			cos->s.index = i;
-			cos->s.vector = param.vector;
-			cos->s.stats_enable = param.stats_enable;
-			UNLOCK(&cos->s.lock);
+			cos->action = param.action;
+			cos->pool = param.pool;
+			cos->headroom = 0;
+			cos->valid = 1;
+			cos->drop_policy = drop_policy;
+			odp_atomic_init_u32(&cos->num_rule, 0);
+			cos->index = i;
+			cos->vector = param.vector;
+			cos->stats_enable = param.stats_enable;
+			UNLOCK(&cos->lock);
 			return _odp_cos_from_ndx(i);
 		}
-		UNLOCK(&cos->s.lock);
+		UNLOCK(&cos->lock);
 	}
 
 	ODP_ERR("CLS_COS_MAX_ENTRY reached\n");
@@ -371,7 +371,7 @@ cos_t *get_cos_entry(odp_cos_t cos)
 
 	if (cos_id >= CLS_COS_MAX_ENTRY || cos == ODP_COS_INVALID)
 		return NULL;
-	if (cos_tbl->cos_entry[cos_id].s.valid == 0)
+	if (cos_tbl->cos_entry[cos_id].valid == 0)
 		return NULL;
 	return &cos_tbl->cos_entry[cos_id];
 }
@@ -398,7 +398,7 @@ int odp_cos_destroy(odp_cos_t cos_id)
 		return -1;
 	}
 
-	cos->s.valid = 0;
+	cos->valid = 0;
 	return 0;
 }
 
@@ -411,14 +411,14 @@ int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id)
 		return -1;
 	}
 
-	if (cos->s.num_queue != 1) {
+	if (cos->num_queue != 1) {
 		ODP_ERR("Hashing enabled, cannot set queue\n");
 		return -1;
 	}
 
 	/* Locking is not required as intermittent stale
 	data during CoS modification is acceptable*/
-	cos->s.queue = queue_id;
+	cos->queue = queue_id;
 	return 0;
 }
 
@@ -431,7 +431,7 @@ odp_queue_t odp_cos_queue(odp_cos_t cos_id)
 		return ODP_QUEUE_INVALID;
 	}
 
-	return cos->s.queue;
+	return cos->queue;
 }
 
 uint32_t odp_cls_cos_num_queue(odp_cos_t cos_id)
@@ -443,7 +443,7 @@ uint32_t odp_cls_cos_num_queue(odp_cos_t cos_id)
 		return 0;
 	}
 
-	return cos->s.num_queue;
+	return cos->num_queue;
 }
 
 uint32_t odp_cls_cos_queues(odp_cos_t cos_id, odp_queue_t queue[],
@@ -460,24 +460,24 @@ uint32_t odp_cls_cos_queues(odp_cos_t cos_id, odp_queue_t queue[],
 		return 0;
 	}
 
-	if (cos->s.num_queue == 1) {
+	if (cos->num_queue == 1) {
 		if (num == 0)
 			return 1;
 
-		queue[0] = cos->s.queue;
+		queue[0] = cos->queue;
 		return 1;
 	}
 
-	if (num < cos->s.num_queue)
+	if (num < cos->num_queue)
 		num_queues = num;
 	else
-		num_queues = cos->s.num_queue;
+		num_queues = cos->num_queue;
 
-	tbl_index = cos->s.index * CLS_COS_QUEUE_MAX;
+	tbl_index = cos->index * CLS_COS_QUEUE_MAX;
 	for (i = 0; i < num_queues; i++)
 		queue[i] = queue_grp_tbl->s.queue[tbl_index + i];
 
-	return cos->s.num_queue;
+	return cos->num_queue;
 }
 
 int odp_cos_drop_set(odp_cos_t cos_id, odp_cls_drop_t drop_policy)
@@ -490,7 +490,7 @@ int odp_cos_drop_set(odp_cos_t cos_id, odp_cls_drop_t drop_policy)
 	}
 
 	/*Drop policy is not supported in v1.0*/
-	cos->s.drop_policy = drop_policy;
+	cos->drop_policy = drop_policy;
 	return 0;
 }
 
@@ -503,7 +503,7 @@ odp_cls_drop_t odp_cos_drop(odp_cos_t cos_id)
 		return -1;
 	}
 
-	return cos->s.drop_policy;
+	return cos->drop_policy;
 }
 
 int odp_pktio_default_cos_set(odp_pktio_t pktio_in, odp_cos_t default_cos)
@@ -733,21 +733,21 @@ int odp_cls_pmr_destroy(odp_pmr_t pmr_id)
 		return -1;
 
 	src_cos = pmr->s.src_cos;
-	LOCK(&src_cos->s.lock);
-	loc = odp_atomic_load_u32(&src_cos->s.num_rule);
+	LOCK(&src_cos->lock);
+	loc = odp_atomic_load_u32(&src_cos->num_rule);
 	if (loc == 0)
 		goto no_rule;
 	loc -= 1;
 	for (i = 0; i <= loc; i++)
-		if (src_cos->s.pmr[i] == pmr) {
-			src_cos->s.pmr[i] = src_cos->s.pmr[loc];
-			src_cos->s.linked_cos[i] = src_cos->s.linked_cos[loc];
+		if (src_cos->pmr[i] == pmr) {
+			src_cos->pmr[i] = src_cos->pmr[loc];
+			src_cos->linked_cos[i] = src_cos->linked_cos[loc];
 		}
-	odp_atomic_dec_u32(&src_cos->s.num_rule);
+	odp_atomic_dec_u32(&src_cos->num_rule);
 
 no_rule:
 	pmr->s.valid = 0;
-	UNLOCK(&src_cos->s.lock);
+	UNLOCK(&src_cos->lock);
 	return 0;
 }
 
@@ -771,7 +771,7 @@ static odp_pmr_t cls_pmr_create(const odp_pmr_param_t *terms, int num_terms, uin
 		return ODP_PMR_INVALID;
 	}
 
-	if (CLS_PMR_PER_COS_MAX == odp_atomic_load_u32(&cos_src->s.num_rule))
+	if (CLS_PMR_PER_COS_MAX == odp_atomic_load_u32(&cos_src->num_rule))
 		return ODP_PMR_INVALID;
 
 	id = alloc_pmr(&pmr);
@@ -790,9 +790,9 @@ static odp_pmr_t cls_pmr_create(const odp_pmr_param_t *terms, int num_terms, uin
 
 	pmr->s.mark = mark;
 
-	loc = odp_atomic_fetch_inc_u32(&cos_src->s.num_rule);
-	cos_src->s.pmr[loc] = pmr;
-	cos_src->s.linked_cos[loc] = cos_dst;
+	loc = odp_atomic_fetch_inc_u32(&cos_src->num_rule);
+	cos_src->pmr[loc] = pmr;
+	cos_src->linked_cos[loc] = cos_dst;
 	pmr->s.src_cos = cos_src;
 
 	UNLOCK(&pmr->s.lock);
@@ -831,7 +831,7 @@ int odp_cls_cos_pool_set(odp_cos_t cos_id, odp_pool_t pool)
 		return -1;
 	}
 
-	cos->s.pool = pool;
+	cos->pool = pool;
 
 	return 0;
 }
@@ -846,7 +846,7 @@ odp_pool_t odp_cls_cos_pool(odp_cos_t cos_id)
 		return ODP_POOL_INVALID;
 	}
 
-	return cos->s.pool;
+	return cos->pool;
 }
 
 static inline int verify_pmr_packet_len(odp_packet_hdr_t *pkt_hdr,
@@ -1521,8 +1521,8 @@ static inline void pmr_debug_print(pmr_t *pmr, cos_t *cos)
 {
 	uint32_t i;
 	const char *pmr_name;
-	const char *cos_name = cos->s.name;
-	uint32_t cos_index = cos->s.index;
+	const char *cos_name = cos->name;
+	uint32_t cos_index = cos->index;
 	uint32_t num_pmr = pmr->s.num_pmr;
 
 	if (ODP_DEBUG_PRINT == 0)
@@ -1557,15 +1557,15 @@ static cos_t *match_pmr_cos(cos_t *cos, const uint8_t *pkt_addr, pmr_t *pmr,
 	if (cos == NULL || pmr == NULL)
 		return NULL;
 
-	if (!cos->s.valid)
+	if (!cos->valid)
 		return NULL;
 
 	if (verify_pmr(pmr, pkt_addr, hdr)) {
 		/* PMR matched */
 		pmr_debug_print(pmr, cos);
 
-		if (cos->s.stats_enable)
-			odp_atomic_inc_u64(&cos->s.stats.packets);
+		if (cos->stats_enable)
+			odp_atomic_inc_u64(&cos->stats.packets);
 
 		hdr->p.input_flags.cls_mark = 0;
 		if (pmr->s.mark) {
@@ -1575,15 +1575,15 @@ static cos_t *match_pmr_cos(cos_t *cos, const uint8_t *pkt_addr, pmr_t *pmr,
 
 		/* This gets called recursively. First matching leaf or branch
 		 * is returned. */
-		num_rule = odp_atomic_load_u32(&cos->s.num_rule);
+		num_rule = odp_atomic_load_u32(&cos->num_rule);
 
 		/* No more rules. This is the best match. */
 		if (num_rule == 0)
 			return cos;
 
 		for (i = 0; i < num_rule; i++) {
-			cos_t *retcos = match_pmr_cos(cos->s.linked_cos[i],
-						      pkt_addr, cos->s.pmr[i],
+			cos_t *retcos = match_pmr_cos(cos->linked_cos[i],
+						      pkt_addr, cos->pmr[i],
 						      hdr);
 
 			/* Found a matching leaf */
@@ -1649,9 +1649,9 @@ static inline cos_t *cls_select_cos(pktio_entry_t *entry,
 	}
 
 	/* Calls all the PMRs attached at the PKTIO level*/
-	for (i = 0; i < odp_atomic_load_u32(&default_cos->s.num_rule); i++) {
-		pmr = default_cos->s.pmr[i];
-		cos = default_cos->s.linked_cos[i];
+	for (i = 0; i < odp_atomic_load_u32(&default_cos->num_rule); i++) {
+		pmr = default_cos->pmr[i];
+		cos = default_cos->linked_cos[i];
 		cos = match_pmr_cos(cos, pkt_addr, pmr, pkt_hdr);
 		if (cos)
 			return cos;
@@ -1659,7 +1659,7 @@ static inline cos_t *cls_select_cos(pktio_entry_t *entry,
 
 	cos = match_qos_cos(entry, pkt_addr, pkt_hdr);
 	if (cos) {
-		ODP_DBG_RAW(CLS_DBG, "  QoS matched -> cos: %s(%u)\n", cos->s.name, cos->s.index);
+		ODP_DBG_RAW(CLS_DBG, "  QoS matched -> cos: %s(%u)\n", cos->name, cos->index);
 		goto done;
 	}
 
@@ -1667,8 +1667,8 @@ static inline cos_t *cls_select_cos(pktio_entry_t *entry,
 	cos = cls->default_cos;
 
 done:
-	if (cos && cos->s.stats_enable)
-		odp_atomic_inc_u64(&cos->s.stats.packets);
+	if (cos && cos->stats_enable)
+		odp_atomic_inc_u64(&cos->stats.packets);
 
 	return cos;
 }
@@ -1707,34 +1707,34 @@ int _odp_cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	if (cos == NULL)
 		return -1;
 
-	if (cos->s.action == ODP_COS_ACTION_DROP)
+	if (cos->action == ODP_COS_ACTION_DROP)
 		return 1;
 
-	if (cos->s.queue == ODP_QUEUE_INVALID && cos->s.num_queue == 1)
+	if (cos->queue == ODP_QUEUE_INVALID && cos->num_queue == 1)
 		goto error;
 
-	if (cos->s.pool == ODP_POOL_INVALID)
+	if (cos->pool == ODP_POOL_INVALID)
 		goto error;
 
-	*pool = cos->s.pool;
+	*pool = cos->pool;
 	pkt_hdr->p.input_flags.dst_queue = 1;
-	pkt_hdr->cos = cos->s.index;
+	pkt_hdr->cos = cos->index;
 
-	if (!cos->s.queue_group) {
-		pkt_hdr->dst_queue = cos->s.queue;
+	if (!cos->queue_group) {
+		pkt_hdr->dst_queue = cos->queue;
 		return 0;
 	}
 
-	hash = packet_rss_hash(pkt_hdr, cos->s.hash_proto, base);
+	hash = packet_rss_hash(pkt_hdr, cos->hash_proto, base);
 	/* CLS_COS_QUEUE_MAX is a power of 2 */
 	hash = hash & (CLS_COS_QUEUE_MAX - 1);
-	tbl_index = (cos->s.index * CLS_COS_QUEUE_MAX) + (hash %
-							  cos->s.num_queue);
+	tbl_index = (cos->index * CLS_COS_QUEUE_MAX) + (hash %
+							  cos->num_queue);
 	pkt_hdr->dst_queue = queue_grp_tbl->s.queue[tbl_index];
 	return 0;
 
 error:
-	odp_atomic_inc_u64(&cos->s.stats.discards);
+	odp_atomic_inc_u64(&cos->stats.discards);
 	return 1;
 }
 
@@ -1908,8 +1908,8 @@ int odp_cls_cos_stats(odp_cos_t hdl, odp_cls_cos_stats_t *stats)
 	}
 
 	memset(stats, 0, sizeof(*stats));
-	stats->discards = odp_atomic_load_u64(&cos->s.stats.discards);
-	stats->packets = odp_atomic_load_u64(&cos->s.stats.packets);
+	stats->discards = odp_atomic_load_u64(&cos->stats.discards);
+	stats->packets = odp_atomic_load_u64(&cos->stats.packets);
 
 	return 0;
 }
@@ -1937,14 +1937,14 @@ int odp_cls_queue_stats(odp_cos_t hdl, odp_queue_t queue,
 	}
 
 	memset(stats, 0, sizeof(odp_cls_queue_stats_t));
-	stats->discards = odp_atomic_load_u64(&cos->s.queue_stats[queue_idx].discards);
-	stats->packets = odp_atomic_load_u64(&cos->s.queue_stats[queue_idx].packets);
+	stats->discards = odp_atomic_load_u64(&cos->queue_stats[queue_idx].discards);
+	stats->packets = odp_atomic_load_u64(&cos->queue_stats[queue_idx].packets);
 
 	return 0;
 }
 
 static
-void print_cos_ident(struct cos_s *cos)
+void print_cos_ident(cos_t *cos)
 {
 	if (strlen(cos->name))
 		ODP_PRINT("%s", cos->name);
@@ -1976,7 +1976,7 @@ void print_hex(const void *vp, int len)
 }
 
 static
-void cls_print_cos(struct cos_s *cos)
+void cls_print_cos(cos_t *cos)
 {
 	uint32_t num_rule = odp_atomic_load_u32(&cos->num_rule);
 	bool first = true;
@@ -2019,7 +2019,7 @@ void cls_print_cos(struct cos_s *cos)
 			if (pmr->mark)
 				ODP_PRINT("mark:%" PRIu16 " ", pmr->mark);
 
-			print_cos_ident(&cos->linked_cos[j]->s);
+			print_cos_ident(cos->linked_cos[j]);
 		}
 		UNLOCK(&pmr->lock);
 	}
@@ -2032,7 +2032,7 @@ void odp_cls_print_all(void)
 		  "---------------\n\n");
 
 	for (uint32_t i = 0; i < CLS_COS_MAX_ENTRY; i++) {
-		struct cos_s *cos = &cos_tbl->cos_entry[i].s;
+		cos_t *cos = &cos_tbl->cos_entry[i];
 
 		LOCK(&cos->lock);
 		if (cos->valid)
