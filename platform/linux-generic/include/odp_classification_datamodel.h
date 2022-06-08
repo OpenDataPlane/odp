@@ -168,13 +168,8 @@ typedef struct ODP_ALIGNED_CACHE pmr_s {
 			/* List of associated PMR Terms */
 } pmr_t;
 
-typedef struct _cls_queue_grp_tbl_s {
+typedef struct ODP_ALIGNED_CACHE {
 	odp_queue_t queue[CLS_QUEUE_GROUP_MAX];
-} _cls_queue_grp_tbl_s;
-
-typedef union _cls_queue_grp_tbl_t {
-	_cls_queue_grp_tbl_s s;
-	uint8_t pad[_ODP_ROUNDUP_CACHE_LINE(sizeof(_cls_queue_grp_tbl_s))];
 } _cls_queue_grp_tbl_t;
 
 /**
