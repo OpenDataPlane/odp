@@ -21,7 +21,7 @@ ODP_STATIC_ASSERT(PKTIO_PRIVATE_SIZE >= sizeof(pkt_null_t),
 
 static inline pkt_null_t *pkt_priv(pktio_entry_t *pktio_entry)
 {
-	return (pkt_null_t *)(uintptr_t)(pktio_entry->s.pkt_priv);
+	return (pkt_null_t *)(uintptr_t)(pktio_entry->pkt_priv);
 }
 
 static int null_close(pktio_entry_t *pktio_entry ODP_UNUSED)

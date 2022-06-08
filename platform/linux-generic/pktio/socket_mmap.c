@@ -101,7 +101,7 @@ ODP_STATIC_ASSERT(PKTIO_PRIVATE_SIZE >= sizeof(pkt_sock_mmap_t),
 
 static inline pkt_sock_mmap_t *pkt_priv(pktio_entry_t *pktio_entry)
 {
-	return (pkt_sock_mmap_t *)(uintptr_t)(pktio_entry->s.pkt_priv);
+	return (pkt_sock_mmap_t *)(uintptr_t)(pktio_entry->pkt_priv);
 }
 
 static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
@@ -150,10 +150,10 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	unsigned nb_rx;
 	struct ring *ring;
 	odp_pool_t pool = pkt_sock->pool;
-	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
+	uint16_t frame_offset = pktio_entry->pktin_frame_offset;
 	uint16_t vlan_len = 0;
-	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
-	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
+	const odp_proto_layer_t layer = pktio_entry->parse_layer;
+	const odp_pktin_config_opt_t opt = pktio_entry->config.pktin;
 
 	if (opt.bit.ts_all || opt.bit.ts_ptp)
 		ts = &ts_val;
@@ -270,7 +270,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			ret = _odp_packet_parse_common(hdr, pkt_buf, pkt_len,
 						       pkt_len, layer, opt);
 			if (ret)
-				odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_errors);
+				odp_atomic_inc_u64(&pktio_entry->stats_extra.in_errors);
 
 			if (ret < 0) {
 				odp_packet_free(pkt);
@@ -285,7 +285,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 				ret = _odp_cls_classify_packet(pktio_entry, pkt_buf,
 							       &new_pool, hdr);
 				if (ret < 0)
-					odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_discards);
+					odp_atomic_inc_u64(&pktio_entry->stats_extra.in_discards);
 
 				if (ret) {
 					odp_packet_free(pkt);
@@ -299,13 +299,13 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 					odp_packet_free(pkt);
 					tp_hdr->tp_status = TP_STATUS_KERNEL;
 					frame_num = next_frame_num;
-					odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_discards);
+					odp_atomic_inc_u64(&pktio_entry->stats_extra.in_discards);
 					continue;
 				}
 			}
 		}
 
-		hdr->input = pktio_entry->s.handle;
+		hdr->input = pktio_entry->handle;
 		packet_set_ts(hdr, ts);
 
 		tp_hdr->tp_status = TP_STATUS_KERNEL;
@@ -670,10 +670,10 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 		goto error;
 	}
 
-	pktio_entry->s.stats_type = _odp_sock_stats_type_fd(pktio_entry,
-							    pkt_sock->sockfd);
-	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED)
-		ODP_DBG("pktio: %s unsupported stats\n", pktio_entry->s.name);
+	pktio_entry->stats_type = _odp_sock_stats_type_fd(pktio_entry,
+							  pkt_sock->sockfd);
+	if (pktio_entry->stats_type == STATS_UNSUPPORTED)
+		ODP_DBG("pktio: %s unsupported stats\n", pktio_entry->name);
 
 	ret = _odp_sock_stats_reset_fd(pktio_entry,
 				       pkt_priv(pktio_entry)->sockfd);
@@ -693,10 +693,10 @@ static int sock_mmap_fd_set(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	pkt_sock_mmap_t *const pkt_sock = pkt_priv(pktio_entry);
 	int fd;
 
-	odp_ticketlock_lock(&pktio_entry->s.rxl);
+	odp_ticketlock_lock(&pktio_entry->rxl);
 	fd = pkt_sock->sockfd;
 	FD_SET(fd, readfds);
-	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+	odp_ticketlock_unlock(&pktio_entry->rxl);
 
 	return fd;
 }
@@ -817,7 +817,7 @@ static int sock_mmap_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 static uint32_t sock_mmap_mtu_get(pktio_entry_t *pktio_entry)
 {
 	return _odp_mtu_get_fd(pkt_priv(pktio_entry)->sockfd,
-			       pktio_entry->s.name);
+			       pktio_entry->name);
 }
 
 static int sock_mmap_mtu_set(pktio_entry_t *pktio_entry, uint32_t maxlen_input,
@@ -826,7 +826,7 @@ static int sock_mmap_mtu_set(pktio_entry_t *pktio_entry, uint32_t maxlen_input,
 	pkt_sock_mmap_t *pkt_sock = pkt_priv(pktio_entry);
 	int ret;
 
-	ret = _odp_mtu_set_fd(pkt_sock->sockfd, pktio_entry->s.name, maxlen_input);
+	ret = _odp_mtu_set_fd(pkt_sock->sockfd, pktio_entry->name, maxlen_input);
 	if (ret)
 		return ret;
 
@@ -845,24 +845,24 @@ static int sock_mmap_promisc_mode_set(pktio_entry_t *pktio_entry,
 				      odp_bool_t enable)
 {
 	return _odp_promisc_mode_set_fd(pkt_priv(pktio_entry)->sockfd,
-					pktio_entry->s.name, enable);
+					pktio_entry->name, enable);
 }
 
 static int sock_mmap_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
 	return _odp_promisc_mode_get_fd(pkt_priv(pktio_entry)->sockfd,
-					pktio_entry->s.name);
+					pktio_entry->name);
 }
 
 static int sock_mmap_link_status(pktio_entry_t *pktio_entry)
 {
 	return _odp_link_status_fd(pkt_priv(pktio_entry)->sockfd,
-				   pktio_entry->s.name);
+				   pktio_entry->name);
 }
 
 static int sock_mmap_link_info(pktio_entry_t *pktio_entry, odp_pktio_link_info_t *info)
 {
-	return _odp_link_info_fd(pkt_priv(pktio_entry)->sockfd, pktio_entry->s.name, info);
+	return _odp_link_info_fd(pkt_priv(pktio_entry)->sockfd, pktio_entry->name, info);
 }
 
 static int sock_mmap_capability(pktio_entry_t *pktio_entry,

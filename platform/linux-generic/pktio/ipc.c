@@ -106,7 +106,7 @@ ODP_STATIC_ASSERT(PKTIO_PRIVATE_SIZE >= sizeof(pkt_ipc_t),
 
 static inline pkt_ipc_t *pkt_priv(pktio_entry_t *pktio_entry)
 {
-	return (pkt_ipc_t *)(uintptr_t)(pktio_entry->s.pkt_priv);
+	return (pkt_ipc_t *)(uintptr_t)(pktio_entry->pkt_priv);
 }
 
 /* MAC address for the "ipc" interface */
@@ -220,7 +220,7 @@ static int _ipc_master_start(pktio_entry_t *pktio_entry)
 
 	odp_atomic_store_u32(&pktio_ipc->ready, 1);
 
-	ODP_DBG_LVL(IPC_DBG, "%s started.\n",  pktio_entry->s.name);
+	ODP_DBG_LVL(IPC_DBG, "%s started.\n",  pktio_entry->name);
 	return 0;
 }
 
@@ -440,7 +440,7 @@ static int _ipc_slave_start(pktio_entry_t *pktio_entry)
 	int pid;
 	uint32_t ring_mask = pktio_ipc->ring_mask;
 
-	if (sscanf(pktio_entry->s.name, "ipc:%d:%s", &pid, tail) != 2) {
+	if (sscanf(pktio_entry->name, "ipc:%d:%s", &pid, tail) != 2) {
 		ODP_ERR("wrong pktio name\n");
 		return -1;
 	}
@@ -505,7 +505,7 @@ static int _ipc_slave_start(pktio_entry_t *pktio_entry)
 	odp_atomic_store_u32(&pktio_ipc->ready, 1);
 	pinfo->slave.init_done = 1;
 
-	ODP_DBG("%s started.\n",  pktio_entry->s.name);
+	ODP_DBG("%s started.\n",  pktio_entry->name);
 	return 0;
 
 free_s_prod:
@@ -753,11 +753,11 @@ static int ipc_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 {
 	int ret;
 
-	odp_ticketlock_lock(&pktio_entry->s.rxl);
+	odp_ticketlock_lock(&pktio_entry->rxl);
 
 	ret = ipc_pktio_recv_lockless(pktio_entry, pkt_table, num);
 
-	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+	odp_ticketlock_unlock(&pktio_entry->rxl);
 
 	return ret;
 }
@@ -841,11 +841,11 @@ static int ipc_pktio_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 {
 	int ret;
 
-	odp_ticketlock_lock(&pktio_entry->s.txl);
+	odp_ticketlock_lock(&pktio_entry->txl);
 
 	ret = ipc_pktio_send_lockless(pktio_entry, pkt_table, num);
 
-	odp_ticketlock_unlock(&pktio_entry->s.txl);
+	odp_ticketlock_unlock(&pktio_entry->txl);
 
 	return ret;
 }
@@ -869,7 +869,7 @@ static int ipc_start(pktio_entry_t *pktio_entry)
 	uint32_t ready = odp_atomic_load_u32(&pktio_ipc->ready);
 
 	if (ready) {
-		ODP_ABORT("%s Already started\n", pktio_entry->s.name);
+		ODP_ABORT("%s Already started\n", pktio_entry->name);
 		return -1;
 	}
 
@@ -932,7 +932,7 @@ static int ipc_close(pktio_entry_t *pktio_entry)
 {
 	pkt_ipc_t *pktio_ipc = pkt_priv(pktio_entry);
 	char ipc_shm_name[ODP_POOL_NAME_LEN + sizeof("_m_prod")];
-	char *dev = pktio_entry->s.name;
+	char *dev = pktio_entry->name;
 	char name[ODP_POOL_NAME_LEN];
 	char tail[ODP_POOL_NAME_LEN];
 	int pid = 0;
