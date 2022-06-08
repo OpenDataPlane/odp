@@ -36,13 +36,16 @@ extern "C" {
 
 struct ring_common {
 	/* Writer head and tail */
-	odp_atomic_u32_t w_head;
-	odp_atomic_u32_t w_tail;
-	uint8_t pad[ODP_CACHE_LINE_SIZE - (2 * sizeof(odp_atomic_u32_t))];
+	struct ODP_ALIGNED_CACHE {
+		odp_atomic_u32_t w_head;
+		odp_atomic_u32_t w_tail;
+	};
 
 	/* Reader head and tail */
-	odp_atomic_u32_t r_head;
-	odp_atomic_u32_t r_tail;
+	struct ODP_ALIGNED_CACHE {
+		odp_atomic_u32_t r_head;
+		odp_atomic_u32_t r_tail;
+	};
 };
 
 typedef struct ODP_ALIGNED_CACHE {
