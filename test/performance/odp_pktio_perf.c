@@ -91,26 +91,16 @@ typedef struct {
 	int      num_ifaces;
 } test_args_t;
 
-struct rx_stats_s {
+typedef struct ODP_ALIGNED_CACHE {
 	uint64_t rx_cnt;	/* Valid packets received */
 	uint64_t rx_ignore;	/* Ignored packets */
-};
-
-typedef union rx_stats_u {
-	struct rx_stats_s s;
-	uint8_t pad[CACHE_ALIGN_ROUNDUP(sizeof(struct rx_stats_s))];
 } pkt_rx_stats_t;
 
-struct tx_stats_s {
+typedef struct ODP_ALIGNED_CACHE {
 	uint64_t tx_cnt;	/* Packets transmitted */
 	uint64_t alloc_failures;/* Packet allocation failures */
 	uint64_t enq_failures;	/* Enqueue failures */
 	odp_time_t idle_ticks;	/* Idle ticks count in TX loop */
-};
-
-typedef union tx_stats_u {
-	struct tx_stats_s s;
-	uint8_t pad[CACHE_ALIGN_ROUNDUP(sizeof(struct tx_stats_s))];
 } pkt_tx_stats_t;
 
 /* Test global variables */
@@ -348,8 +338,8 @@ static int run_thread_tx(void *arg)
 		if (odp_time_cmp(idle_start, ODP_TIME_NULL) > 0) {
 			odp_time_t diff = odp_time_diff(cur_time, idle_start);
 
-			stats->s.idle_ticks =
-				odp_time_sum(diff, stats->s.idle_ticks);
+			stats->idle_ticks =
+				odp_time_sum(diff, stats->idle_ticks);
 
 			idle_start = ODP_TIME_NULL;
 		}
@@ -358,12 +348,12 @@ static int run_thread_tx(void *arg)
 
 		alloc_cnt = alloc_packets(tx_packet, batch_len - unsent_pkts);
 		if (alloc_cnt != batch_len)
-			stats->s.alloc_failures++;
+			stats->alloc_failures++;
 
 		tx_cnt = send_packets(pktout, tx_packet, alloc_cnt);
 		unsent_pkts = alloc_cnt - tx_cnt;
-		stats->s.enq_failures += unsent_pkts;
-		stats->s.tx_cnt += tx_cnt;
+		stats->enq_failures += unsent_pkts;
+		stats->tx_cnt += tx_cnt;
 
 		cur_time = odp_time_local();
 	}
@@ -371,9 +361,9 @@ static int run_thread_tx(void *arg)
 	if (gbl_args->args.verbose)
 		printf(" %02d: TxPkts %-8" PRIu64 " EnqFail %-6" PRIu64
 		       " AllocFail %-6" PRIu64 " Idle %" PRIu64 "ms\n",
-		       thr_id, stats->s.tx_cnt, stats->s.enq_failures,
-		       stats->s.alloc_failures,
-		       odp_time_to_ns(stats->s.idle_ticks) /
+		       thr_id, stats->tx_cnt, stats->enq_failures,
+		       stats->alloc_failures,
+		       odp_time_to_ns(stats->idle_ticks) /
 		       (uint64_t)ODP_TIME_MSEC_IN_NS);
 
 	return 0;
@@ -442,9 +432,9 @@ static int run_thread_rx(void *arg)
 			if (odp_event_type(ev[i]) == ODP_EVENT_PACKET) {
 				pkt = odp_packet_from_event(ev[i]);
 				if (pktio_pkt_has_magic(pkt))
-					stats->s.rx_cnt++;
+					stats->rx_cnt++;
 				else
-					stats->s.rx_ignore++;
+					stats->rx_ignore++;
 			}
 			odp_event_free(ev[i]);
 		}
@@ -473,8 +463,8 @@ static int process_results(uint64_t expected_tx_cnt,
 	int len = 0;
 
 	for (i = 0; i < odp_thread_count_max(); ++i) {
-		rx_pkts += gbl_args->rx_stats[i].s.rx_cnt;
-		tx_pkts += gbl_args->tx_stats[i].s.tx_cnt;
+		rx_pkts += gbl_args->rx_stats[i].rx_cnt;
+		tx_pkts += gbl_args->tx_stats[i].tx_cnt;
 	}
 
 	if (rx_pkts == 0) {
