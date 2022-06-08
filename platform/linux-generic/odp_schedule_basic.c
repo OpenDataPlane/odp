@@ -1132,7 +1132,7 @@ static int schedule_ord_enq_multi(odp_queue_t dst_queue, void *event_hdr[],
 
 	dst_qentry = qentry_from_handle(dst_queue);
 
-	if (dst_qentry->s.param.order == ODP_QUEUE_ORDER_IGNORE)
+	if (dst_qentry->param.order == ODP_QUEUE_ORDER_IGNORE)
 		return 0;
 
 	src_queue  = sched_local.ordered.src_queue;
@@ -1146,7 +1146,7 @@ static int schedule_ord_enq_multi(odp_queue_t dst_queue, void *event_hdr[],
 	}
 
 	/* Pktout may drop packets, so the operation cannot be stashed. */
-	if (dst_qentry->s.pktout.pktio != ODP_PKTIO_INVALID ||
+	if (dst_qentry->pktout.pktio != ODP_PKTIO_INVALID ||
 	    odp_unlikely(stash_num >=  MAX_ORDERED_STASH)) {
 		/* If the local stash is full, wait until it is our turn and
 		 * then release the stash and do enqueue directly. */

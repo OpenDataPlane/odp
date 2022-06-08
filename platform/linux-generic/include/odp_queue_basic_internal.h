@@ -34,7 +34,7 @@ extern "C" {
 #define QUEUE_STATUS_NOTSCHED     3
 #define QUEUE_STATUS_SCHED        4
 
-struct queue_entry_s {
+typedef struct ODP_ALIGNED_CACHE queue_entry_s {
 	/* The first cache line is read only */
 	queue_enq_fn_t       enqueue ODP_ALIGNED_CACHE;
 	queue_deq_fn_t       dequeue;
@@ -65,12 +65,7 @@ struct queue_entry_s {
 	void             *queue_lf;
 	int               spsc;
 	char              name[ODP_QUEUE_NAME_LEN];
-};
-
-union queue_entry_u {
-	struct queue_entry_s s;
-	uint8_t pad[_ODP_ROUNDUP_CACHE_LINE(sizeof(struct queue_entry_s))];
-};
+} queue_entry_t;
 
 typedef struct queue_global_t {
 	queue_entry_t   queue[CONFIG_MAX_QUEUES];
@@ -94,7 +89,7 @@ static inline uint32_t queue_to_index(odp_queue_t handle)
 {
 	queue_entry_t *qentry = (queue_entry_t *)(uintptr_t)handle;
 
-	return qentry->s.index;
+	return qentry->index;
 }
 
 static inline queue_entry_t *qentry_from_index(uint32_t queue_id)

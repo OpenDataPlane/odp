@@ -41,17 +41,17 @@ static inline int spsc_enq_multi(odp_queue_t handle,
 	uint32_t buf_idx[num];
 
 	queue = qentry_from_handle(handle);
-	ring_spsc = &queue->s.ring_spsc;
+	ring_spsc = &queue->ring_spsc;
 
 	event_index_from_hdr(buf_idx, event_hdr, num);
 
-	if (odp_unlikely(queue->s.status < QUEUE_STATUS_READY)) {
+	if (odp_unlikely(queue->status < QUEUE_STATUS_READY)) {
 		ODP_ERR("Bad queue status\n");
 		return -1;
 	}
 
-	return ring_spsc_enq_multi(ring_spsc, queue->s.ring_data,
-				   queue->s.ring_mask, buf_idx, num);
+	return ring_spsc_enq_multi(ring_spsc, queue->ring_data,
+				   queue->ring_mask, buf_idx, num);
 }
 
 static inline int spsc_deq_multi(odp_queue_t handle,
@@ -63,15 +63,15 @@ static inline int spsc_deq_multi(odp_queue_t handle,
 	uint32_t buf_idx[num];
 
 	queue = qentry_from_handle(handle);
-	ring_spsc = &queue->s.ring_spsc;
+	ring_spsc = &queue->ring_spsc;
 
-	if (odp_unlikely(queue->s.status < QUEUE_STATUS_READY)) {
+	if (odp_unlikely(queue->status < QUEUE_STATUS_READY)) {
 		/* Bad queue, or queue has been destroyed. */
 		return -1;
 	}
 
-	num_deq = ring_spsc_deq_multi(ring_spsc, queue->s.ring_data,
-				      queue->s.ring_mask, buf_idx, num);
+	num_deq = ring_spsc_deq_multi(ring_spsc, queue->ring_data,
+				      queue->ring_mask, buf_idx, num);
 
 	if (num_deq == 0)
 		return 0;
@@ -122,15 +122,15 @@ void _odp_queue_spsc_init(queue_entry_t *queue, uint32_t queue_size)
 {
 	uint64_t offset;
 
-	queue->s.enqueue = queue_spsc_enq;
-	queue->s.dequeue = queue_spsc_deq;
-	queue->s.enqueue_multi = queue_spsc_enq_multi;
-	queue->s.dequeue_multi = queue_spsc_deq_multi;
-	queue->s.orig_dequeue_multi = queue_spsc_deq_multi;
+	queue->enqueue = queue_spsc_enq;
+	queue->dequeue = queue_spsc_deq;
+	queue->enqueue_multi = queue_spsc_enq_multi;
+	queue->dequeue_multi = queue_spsc_deq_multi;
+	queue->orig_dequeue_multi = queue_spsc_deq_multi;
 
-	offset = queue->s.index * (uint64_t)_odp_queue_glb->config.max_queue_size;
+	offset = queue->index * (uint64_t)_odp_queue_glb->config.max_queue_size;
 
-	queue->s.ring_data = &_odp_queue_glb->ring_data[offset];
-	queue->s.ring_mask = queue_size - 1;
-	ring_spsc_init(&queue->s.ring_spsc);
+	queue->ring_data = &_odp_queue_glb->ring_data[offset];
+	queue->ring_mask = queue_size - 1;
+	ring_spsc_init(&queue->ring_spsc);
 }
