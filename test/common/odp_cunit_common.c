@@ -29,6 +29,7 @@
 /* Globals */
 static int allow_skip_result;
 static odph_thread_t thread_tbl[MAX_WORKERS];
+static int threads_running;
 static odp_instance_t instance;
 static char *progname;
 
@@ -51,6 +52,12 @@ int odp_cunit_thread_create(int num, int func_ptr(void *), void *const arg[], in
 	odp_cpumask_t cpumask;
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param[num];
+
+	if (threads_running) {
+		/* thread_tbl is already in use */
+		fprintf(stderr, "error: %s: threads already running\n", __func__);
+		return -1;
+	}
 
 	odph_thread_common_param_init(&thr_common);
 
@@ -84,6 +91,8 @@ int odp_cunit_thread_create(int num, int func_ptr(void *), void *const arg[], in
 	if (ret != num)
 		fprintf(stderr, "error: odph_thread_create() failed.\n");
 
+	threads_running = (ret > 0);
+
 	return ret;
 }
 
@@ -94,6 +103,7 @@ int odp_cunit_thread_join(int num)
 		fprintf(stderr, "error: odph_thread_join() failed.\n");
 		return -1;
 	}
+	threads_running = 0;
 
 	return 0;
 }
