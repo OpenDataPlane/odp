@@ -131,13 +131,13 @@ typedef struct pmr_term_value {
 /*
 Class Of Service
 */
-struct cos_s {
+typedef struct ODP_ALIGNED_CACHE cos_s {
 	odp_cos_action_t action;	/* Action */
 	odp_queue_t queue;		/* Associated Queue */
 	odp_pool_t pool;		/* Associated Buffer pool */
 	odp_pktin_vector_config_t vector;	/* Packet vector config */
 	union pmr_u *pmr[CLS_PMR_PER_COS_MAX];	/* Chained PMR */
-	union cos_u *linked_cos[CLS_PMR_PER_COS_MAX]; /* Chained CoS with PMR*/
+	struct cos_s *linked_cos[CLS_PMR_PER_COS_MAX]; /* Chained CoS with PMR*/
 	uint32_t valid;			/* validity Flag */
 	odp_cls_drop_t drop_policy;	/* Associated Drop Policy */
 	size_t headroom;		/* Headroom for this CoS */
@@ -154,11 +154,6 @@ struct cos_s {
 		odp_atomic_u64_t discards;
 		odp_atomic_u64_t packets;
 	} stats, queue_stats[CLS_COS_QUEUE_MAX];
-};
-
-typedef union cos_u {
-	struct cos_s s;
-	uint8_t pad[_ODP_ROUNDUP_CACHE_LINE(sizeof(struct cos_s))];
 } cos_t;
 
 /* Pattern Matching Rule */

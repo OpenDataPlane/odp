@@ -40,14 +40,14 @@ static inline int _odp_cos_queue_idx(const cos_t *cos, odp_queue_t queue)
 	uint32_t i, tbl_idx;
 	int queue_idx = -1;
 
-	if (cos->s.num_queue == 1) {
-		if (odp_unlikely(cos->s.queue != queue))
+	if (cos->num_queue == 1) {
+		if (odp_unlikely(cos->queue != queue))
 			return -1;
 		return 0;
 	}
 
-	tbl_idx = cos->s.index * CLS_COS_QUEUE_MAX;
-	for (i = 0; i < cos->s.num_queue; i++) {
+	tbl_idx = cos->index * CLS_COS_QUEUE_MAX;
+	for (i = 0; i < cos->num_queue; i++) {
 		if (_odp_cls_global->queue_grp_tbl.s.queue[tbl_idx + i] == queue) {
 			queue_idx = i;
 			break;
@@ -67,9 +67,9 @@ static inline void _odp_cos_queue_stats_add(cos_t *cos, odp_queue_t queue,
 	}
 
 	if (packets)
-		odp_atomic_add_u64(&cos->s.queue_stats[queue_idx].packets, packets);
+		odp_atomic_add_u64(&cos->queue_stats[queue_idx].packets, packets);
 	if (discards)
-		odp_atomic_add_u64(&cos->s.queue_stats[queue_idx].discards, discards);
+		odp_atomic_add_u64(&cos->queue_stats[queue_idx].discards, discards);
 }
 
 /** Classification Internal function **/
