@@ -61,7 +61,7 @@ typedef struct {
 } netmap_opt_t;
 
 /** Ring for mapping pktin/pktout queues to netmap descriptors */
-struct netmap_ring_t {
+typedef struct ODP_ALIGNED_CACHE {
 	unsigned int first; /**< Index of first netmap descriptor */
 	unsigned int last;  /**< Index of last netmap descriptor */
 	unsigned int num;   /**< Number of netmap descriptors */
@@ -69,11 +69,6 @@ struct netmap_ring_t {
 	struct nm_desc *desc[NM_MAX_DESC];
 	unsigned int cur;	/**< Index of current netmap descriptor */
 	odp_ticketlock_t lock;  /**< Queue lock */
-};
-
-typedef union ODP_ALIGNED_CACHE {
-	struct netmap_ring_t s;
-	uint8_t pad[_ODP_ROUNDUP_CACHE_LINE(sizeof(struct netmap_ring_t))];
 } netmap_ring_t;
 
 /** Netmap ring slot */
@@ -240,7 +235,7 @@ done:
 static inline void map_netmap_rings(netmap_ring_t *rings,
 				    unsigned int num_queues, unsigned int num_rings)
 {
-	struct netmap_ring_t *desc_ring;
+	netmap_ring_t *desc_ring;
 	unsigned int rings_per_queue;
 	unsigned int remainder;
 	unsigned int mapped_rings;
@@ -254,7 +249,7 @@ static inline void map_netmap_rings(netmap_ring_t *rings,
 		ODP_DBG("WARNING: Netmap rings mapped unevenly to queues\n");
 
 	for (i = 0; i < num_queues; i++) {
-		desc_ring = &rings[i].s;
+		desc_ring = &rings[i];
 		if (i < remainder)
 			mapped_rings = rings_per_queue + 1;
 		else
@@ -322,15 +317,15 @@ static inline void netmap_close_descriptors(pktio_entry_t *pktio_entry)
 
 	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
 		for (j = 0; j < NM_MAX_DESC; j++) {
-			if (pkt_nm->rx_desc_ring[i].s.desc[j] != NULL) {
-				nm_close(pkt_nm->rx_desc_ring[i].s.desc[j]);
-				pkt_nm->rx_desc_ring[i].s.desc[j] = NULL;
+			if (pkt_nm->rx_desc_ring[i].desc[j] != NULL) {
+				nm_close(pkt_nm->rx_desc_ring[i].desc[j]);
+				pkt_nm->rx_desc_ring[i].desc[j] = NULL;
 			}
 		}
 		for (j = 0; j < NM_MAX_DESC; j++) {
-			if (pkt_nm->tx_desc_ring[i].s.desc[j] != NULL) {
-				nm_close(pkt_nm->tx_desc_ring[i].s.desc[j]);
-				pkt_nm->tx_desc_ring[i].s.desc[j] = NULL;
+			if (pkt_nm->tx_desc_ring[i].desc[j] != NULL) {
+				nm_close(pkt_nm->tx_desc_ring[i].desc[j]);
+				pkt_nm->tx_desc_ring[i].desc[j] = NULL;
 			}
 		}
 	}
@@ -585,8 +580,8 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	nm_close(desc);
 
 	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
-		odp_ticketlock_init(&pkt_nm->rx_desc_ring[i].s.lock);
-		odp_ticketlock_init(&pkt_nm->tx_desc_ring[i].s.lock);
+		odp_ticketlock_init(&pkt_nm->rx_desc_ring[i].lock);
+		odp_ticketlock_init(&pkt_nm->tx_desc_ring[i].lock);
 	}
 
 	if (pkt_nm->is_virtual) {
@@ -738,9 +733,9 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	flags = NM_OPEN_IFNAME | NETMAP_NO_TX_POLL;
 	if (pkt_priv(pktio_entry)->is_virtual)
 		flags |= NM_OPEN_RING_CFG;
-	desc_ring[0].s.desc[0] = nm_open(pkt_nm->nm_name, NULL, flags,
-					 &base_desc);
-	if (desc_ring[0].s.desc[0] == NULL) {
+	desc_ring[0].desc[0] = nm_open(pkt_nm->nm_name, NULL, flags,
+				       &base_desc);
+	if (desc_ring[0].desc[0] == NULL) {
 		ODP_ERR("nm_start(%s) failed\n", pkt_nm->nm_name);
 		goto error;
 	}
@@ -749,7 +744,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	if (pkt_priv(pktio_entry)->is_virtual)
 		flags |= NM_OPEN_RING_CFG;
 	for (i = 0; i < pktio_entry->num_in_queue; i++) {
-		for (j = desc_ring[i].s.first; j <= desc_ring[i].s.last; j++) {
+		for (j = desc_ring[i].first; j <= desc_ring[i].last; j++) {
 			if (i == 0 && j == 0) { /* First already opened */
 				if (num_rx_desc > 1)
 					continue;
@@ -757,9 +752,9 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 					break;
 			}
 			base_desc.req.nr_ringid = j;
-			desc_ring[i].s.desc[j] = nm_open(pkt_nm->nm_name, NULL,
-							 flags, &base_desc);
-			if (desc_ring[i].s.desc[j] == NULL) {
+			desc_ring[i].desc[j] = nm_open(pkt_nm->nm_name, NULL,
+						       flags, &base_desc);
+			if (desc_ring[i].desc[j] == NULL) {
 				ODP_ERR("nm_start(%s) failed\n",
 					pkt_nm->nm_name);
 				goto error;
@@ -778,11 +773,11 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	}
 
 	for (i = 0; i < pktio_entry->num_out_queue; i++) {
-		for (j = desc_ring[i].s.first; j <= desc_ring[i].s.last; j++) {
+		for (j = desc_ring[i].first; j <= desc_ring[i].last; j++) {
 			base_desc.req.nr_ringid = j;
-			desc_ring[i].s.desc[j] = nm_open(pkt_nm->nm_name, NULL,
-							 flags, &base_desc);
-			if (desc_ring[i].s.desc[j] == NULL) {
+			desc_ring[i].desc[j] = nm_open(pkt_nm->nm_name, NULL,
+						       flags, &base_desc);
+			if (desc_ring[i].desc[j] == NULL) {
 				ODP_ERR("nm_start(%s) failed\n",
 					pkt_nm->nm_name);
 				goto error;
@@ -962,33 +957,33 @@ static int netmap_fd_set(pktio_entry_t *pktio_entry, int index, fd_set *readfds)
 {
 	struct nm_desc *desc;
 	pkt_netmap_t *pkt_nm = pkt_priv(pktio_entry);
-	unsigned int first_desc_id = pkt_nm->rx_desc_ring[index].s.first;
-	unsigned int last_desc_id = pkt_nm->rx_desc_ring[index].s.last;
+	unsigned int first_desc_id = pkt_nm->rx_desc_ring[index].first;
+	unsigned int last_desc_id = pkt_nm->rx_desc_ring[index].last;
 	unsigned int desc_id;
-	int num_desc = pkt_nm->rx_desc_ring[index].s.num;
+	int num_desc = pkt_nm->rx_desc_ring[index].num;
 	int i;
 	int max_fd = 0;
 
 	if (!pkt_nm->lockless_rx)
-		odp_ticketlock_lock(&pkt_nm->rx_desc_ring[index].s.lock);
+		odp_ticketlock_lock(&pkt_nm->rx_desc_ring[index].lock);
 
-	desc_id = pkt_nm->rx_desc_ring[index].s.cur;
+	desc_id = pkt_nm->rx_desc_ring[index].cur;
 
 	for (i = 0; i < num_desc; i++) {
 		if (desc_id > last_desc_id)
 			desc_id = first_desc_id;
 
-		desc = pkt_nm->rx_desc_ring[index].s.desc[desc_id];
+		desc = pkt_nm->rx_desc_ring[index].desc[desc_id];
 
 		FD_SET(desc->fd, readfds);
 		if (desc->fd > max_fd)
 			max_fd = desc->fd;
 		desc_id++;
 	}
-	pkt_nm->rx_desc_ring[index].s.cur = desc_id;
+	pkt_nm->rx_desc_ring[index].cur = desc_id;
 
 	if (!pkt_nm->lockless_rx)
-		odp_ticketlock_unlock(&pkt_nm->rx_desc_ring[index].s.lock);
+		odp_ticketlock_unlock(&pkt_nm->rx_desc_ring[index].lock);
 
 	return max_fd;
 }
@@ -998,10 +993,10 @@ static int netmap_recv(pktio_entry_t *pktio_entry, int index,
 {
 	struct nm_desc *desc;
 	pkt_netmap_t *pkt_nm = pkt_priv(pktio_entry);
-	unsigned int first_desc_id = pkt_nm->rx_desc_ring[index].s.first;
-	unsigned int last_desc_id = pkt_nm->rx_desc_ring[index].s.last;
+	unsigned int first_desc_id = pkt_nm->rx_desc_ring[index].first;
+	unsigned int last_desc_id = pkt_nm->rx_desc_ring[index].last;
 	unsigned int desc_id;
-	int num_desc = pkt_nm->rx_desc_ring[index].s.num;
+	int num_desc = pkt_nm->rx_desc_ring[index].num;
 	int i;
 	int num_rx = 0;
 	int max_fd = 0;
@@ -1010,15 +1005,15 @@ static int netmap_recv(pktio_entry_t *pktio_entry, int index,
 	FD_ZERO(&empty_rings);
 
 	if (!pkt_nm->lockless_rx)
-		odp_ticketlock_lock(&pkt_nm->rx_desc_ring[index].s.lock);
+		odp_ticketlock_lock(&pkt_nm->rx_desc_ring[index].lock);
 
-	desc_id = pkt_nm->rx_desc_ring[index].s.cur;
+	desc_id = pkt_nm->rx_desc_ring[index].cur;
 
 	for (i = 0; i < num_desc && num_rx != num; i++) {
 		if (desc_id > last_desc_id)
 			desc_id = first_desc_id;
 
-		desc = pkt_nm->rx_desc_ring[index].s.desc[desc_id];
+		desc = pkt_nm->rx_desc_ring[index].desc[desc_id];
 
 		num_rx += netmap_recv_desc(pktio_entry, desc,
 					   &pkt_table[num_rx], num - num_rx);
@@ -1030,7 +1025,7 @@ static int netmap_recv(pktio_entry_t *pktio_entry, int index,
 		}
 		desc_id++;
 	}
-	pkt_nm->rx_desc_ring[index].s.cur = desc_id;
+	pkt_nm->rx_desc_ring[index].cur = desc_id;
 
 	if (num_rx != num) {
 		struct timeval tout = {.tv_sec = 0, .tv_usec = 0};
@@ -1039,7 +1034,7 @@ static int netmap_recv(pktio_entry_t *pktio_entry, int index,
 			ODP_ERR("RX: select error\n");
 	}
 	if (!pkt_nm->lockless_rx)
-		odp_ticketlock_unlock(&pkt_nm->rx_desc_ring[index].s.lock);
+		odp_ticketlock_unlock(&pkt_nm->rx_desc_ring[index].lock);
 
 	return num_rx;
 }
@@ -1132,12 +1127,12 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 	char *buf;
 
 	/* Only one netmap tx ring per pktout queue */
-	desc_id = pkt_nm->tx_desc_ring[index].s.cur;
-	desc = pkt_nm->tx_desc_ring[index].s.desc[desc_id];
+	desc_id = pkt_nm->tx_desc_ring[index].cur;
+	desc = pkt_nm->tx_desc_ring[index].desc[desc_id];
 	ring = NETMAP_TXRING(desc->nifp, desc->cur_tx_ring);
 
 	if (!pkt_nm->lockless_tx)
-		odp_ticketlock_lock(&pkt_nm->tx_desc_ring[index].s.lock);
+		odp_ticketlock_lock(&pkt_nm->tx_desc_ring[index].lock);
 
 	polld.fd = desc->fd;
 	polld.events = POLLOUT;
@@ -1182,7 +1177,7 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 	poll(&polld, 1, 0);
 
 	if (!pkt_nm->lockless_tx)
-		odp_ticketlock_unlock(&pkt_nm->tx_desc_ring[index].s.lock);
+		odp_ticketlock_unlock(&pkt_nm->tx_desc_ring[index].lock);
 
 	if (odp_unlikely(nb_tx == 0)) {
 		if (_odp_errno != 0)
