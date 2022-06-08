@@ -106,10 +106,8 @@ typedef struct {
 } test_stat_t;
 
 /** Performance test statistics (per core) */
-typedef union ODP_ALIGNED_CACHE {
+typedef struct ODP_ALIGNED_CACHE {
 	test_stat_t prio[NUM_PRIOS]; /**< Test statistics per priority */
-
-	uint8_t pad[CACHE_ALIGN_ROUNDUP(NUM_PRIOS * sizeof(test_stat_t))];
 } core_stat_t;
 
 /** Test global variables */
