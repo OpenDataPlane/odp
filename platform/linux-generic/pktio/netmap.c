@@ -238,14 +238,14 @@ done:
  * @param num_rings      Number of matching netmap rings
  */
 static inline void map_netmap_rings(netmap_ring_t *rings,
-				    unsigned num_queues, unsigned num_rings)
+				    unsigned int num_queues, unsigned int num_rings)
 {
 	struct netmap_ring_t *desc_ring;
-	unsigned rings_per_queue;
-	unsigned remainder;
-	unsigned mapped_rings;
-	unsigned i;
-	unsigned desc_id = 0;
+	unsigned int rings_per_queue;
+	unsigned int remainder;
+	unsigned int mapped_rings;
+	unsigned int i;
+	unsigned int desc_id = 0;
 
 	rings_per_queue = num_rings / num_queues;
 	remainder = num_rings % num_queues;
@@ -274,7 +274,7 @@ static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
 {
 	pkt_netmap_t *pkt_nm = pkt_priv(pktio_entry);
 	odp_pktin_mode_t mode = pktio_entry->param.in_mode;
-	unsigned num_queues = p->num_queues;
+	unsigned int num_queues = p->num_queues;
 	odp_bool_t lockless;
 
 	/* Scheduler synchronizes input queue polls. Only single thread
@@ -590,7 +590,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	}
 
 	if (pkt_nm->is_virtual) {
-		static unsigned mac;
+		static unsigned int mac;
 		uint32_t tid = syscall(SYS_gettid);
 
 		if ((int)tid == -1)
@@ -655,9 +655,9 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	pkt_netmap_t *pkt_nm = pkt_priv(pktio_entry);
 	netmap_ring_t *desc_ring;
 	struct nm_desc *desc_ptr;
-	unsigned i;
-	unsigned j;
-	unsigned num_rx_desc = 0;
+	unsigned int i;
+	unsigned int j;
+	unsigned int num_rx_desc = 0;
 	uint64_t flags;
 	odp_pktin_mode_t in_mode = pktio_entry->param.in_mode;
 	odp_pktout_mode_t out_mode = pktio_entry->param.out_mode;
@@ -962,9 +962,9 @@ static int netmap_fd_set(pktio_entry_t *pktio_entry, int index, fd_set *readfds)
 {
 	struct nm_desc *desc;
 	pkt_netmap_t *pkt_nm = pkt_priv(pktio_entry);
-	unsigned first_desc_id = pkt_nm->rx_desc_ring[index].s.first;
-	unsigned last_desc_id = pkt_nm->rx_desc_ring[index].s.last;
-	unsigned desc_id;
+	unsigned int first_desc_id = pkt_nm->rx_desc_ring[index].s.first;
+	unsigned int last_desc_id = pkt_nm->rx_desc_ring[index].s.last;
+	unsigned int desc_id;
 	int num_desc = pkt_nm->rx_desc_ring[index].s.num;
 	int i;
 	int max_fd = 0;
@@ -998,9 +998,9 @@ static int netmap_recv(pktio_entry_t *pktio_entry, int index,
 {
 	struct nm_desc *desc;
 	pkt_netmap_t *pkt_nm = pkt_priv(pktio_entry);
-	unsigned first_desc_id = pkt_nm->rx_desc_ring[index].s.first;
-	unsigned last_desc_id = pkt_nm->rx_desc_ring[index].s.last;
-	unsigned desc_id;
+	unsigned int first_desc_id = pkt_nm->rx_desc_ring[index].s.first;
+	unsigned int last_desc_id = pkt_nm->rx_desc_ring[index].s.last;
+	unsigned int desc_id;
 	int num_desc = pkt_nm->rx_desc_ring[index].s.num;
 	int i;
 	int num_rx = 0;
@@ -1128,7 +1128,7 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
 	odp_packet_t pkt;
 	uint32_t pkt_len;
-	unsigned slot_id;
+	unsigned int slot_id;
 	char *buf;
 
 	/* Only one netmap tx ring per pktout queue */
