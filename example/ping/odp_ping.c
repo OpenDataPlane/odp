@@ -16,8 +16,11 @@
 #include <odp/helper/odph_api.h>
 
 #define MAX_PKTIOS        32
+#define MAX_PKTIO_INDEXES 1024
 #define MAX_PKTIO_NAME    255
 #define MAX_PKT_NUM       1024
+
+ODP_STATIC_ASSERT(MAX_PKTIOS < UINT8_MAX, "MAX_PKTIOS too large for index lookup");
 
 typedef struct test_options_t {
 	uint64_t num_packet;
@@ -41,6 +44,9 @@ typedef struct test_global_t {
 		int started;
 
 	} pktio[MAX_PKTIOS];
+
+	/* Pktio index lookup table */
+	uint8_t pktio_from_idx[MAX_PKTIO_INDEXES];
 
 } test_global_t;
 
@@ -178,6 +184,9 @@ static int open_pktios(test_global_t *global)
 		return -1;
 	}
 
+	if (odp_pktio_max_index() >= MAX_PKTIO_INDEXES)
+		printf("Warning: max pktio index (%u) is too large\n", odp_pktio_max_index());
+
 	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode  = ODP_PKTIN_MODE_SCHED;
 	pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
@@ -241,6 +250,22 @@ static int open_pktios(test_global_t *global)
 		global->pktio[i].pktout = pktout;
 	}
 
+	return 0;
+}
+
+static int init_pktio_lookup_tbl(test_global_t *global)
+{
+	for (int i = 0; i < global->opt.num_pktio; i++) {
+		odp_pktio_t pktio = global->pktio[i].pktio;
+		int pktio_idx = odp_pktio_index(pktio);
+
+		if (pktio_idx < 0 || pktio_idx >= MAX_PKTIO_INDEXES) {
+			ODPH_ERR("Bad pktio index %i\n", pktio_idx);
+			return -1;
+		}
+
+		global->pktio_from_idx[pktio_idx] = i;
+	}
 	return 0;
 }
 
@@ -497,7 +522,7 @@ static void icmp_reply(test_global_t *global, odp_packet_t pkt)
 	odph_ethhdr_t *eth_hdr;
 	uint16_t old, new;
 	uint32_t len = 0;
-	int index = odp_packet_input_index(pkt);
+	int index = global->pktio_from_idx[odp_packet_input_index(pkt)];
 	odp_pktout_queue_t pktout = global->pktio[index].pktout;
 	odph_ethaddr_t *eth_addr = &global->pktio[index].eth_addr;
 	int icmp = odp_packet_has_icmp(pkt);
@@ -656,6 +681,11 @@ int main(int argc, char *argv[])
 
 	if (open_pktios(global)) {
 		printf("Error: pktio open failed\n");
+		return -1;
+	}
+
+	if (init_pktio_lookup_tbl(global)) {
+		printf("Error: mapping pktio indexes failed\n");
 		return -1;
 	}
 
