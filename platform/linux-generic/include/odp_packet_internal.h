@@ -87,6 +87,8 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 
 	packet_parser_t p;
 
+	/* --- 64-byte cache line boundary --- */
+
 	odp_pktio_t input;
 
 	/* Next header which continues the segment list */
@@ -108,9 +110,6 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 	/* Event subtype */
 	int8_t   subtype;
 
-	/* Timestamp value */
-	odp_time_t timestamp;
-
 	/* Used as classifier destination queue, in IPsec inline input processing and as Tx
 	 * completion event queue. */
 	odp_queue_t dst_queue;
@@ -126,6 +125,11 @@ typedef struct ODP_ALIGNED_CACHE odp_packet_hdr_t {
 
 	/* User context pointer */
 	const void *user_ptr;
+
+	/* --- 64-byte cache line boundary --- */
+
+	/* Timestamp value */
+	odp_time_t timestamp;
 
 	/* Classifier mark */
 	uint16_t cls_mark;
