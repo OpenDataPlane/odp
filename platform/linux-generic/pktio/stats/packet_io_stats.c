@@ -12,10 +12,27 @@
 
 #include <string.h>
 
+static int sock_stats_get(pktio_entry_t *e, odp_pktio_stats_t *stats, int fd)
+{
+	int ret = 0;
+
+	memset(stats, 0, sizeof(*stats));
+
+	if (e->s.stats_type == STATS_ETHTOOL)
+		ret = _odp_ethtool_stats_get_fd(fd, e->s.name, stats);
+	else if (e->s.stats_type == STATS_SYSFS)
+		ret = _odp_sysfs_stats(e, stats);
+
+	if (ret)
+		ODP_ERR("Failed to get pktio statistics.\n");
+
+	return ret;
+}
+
 int _odp_sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd)
 {
-	int err = 0;
 	odp_pktio_stats_t cur_stats;
+	int ret;
 
 	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED) {
 		memset(&pktio_entry->s.stats, 0,
@@ -23,23 +40,13 @@ int _odp_sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd)
 		return 0;
 	}
 
-	memset(&cur_stats, 0, sizeof(odp_pktio_stats_t));
+	ret = sock_stats_get(pktio_entry, &cur_stats, fd);
 
-	if (pktio_entry->s.stats_type == STATS_ETHTOOL) {
-		(void)_odp_ethtool_stats_get_fd(fd,
-						pktio_entry->s.name,
-						&cur_stats);
-	} else if (pktio_entry->s.stats_type == STATS_SYSFS) {
-		err = _odp_sysfs_stats(pktio_entry, &cur_stats);
-		if (err != 0)
-			ODP_ERR("stats error\n");
-	}
-
-	if (err == 0)
+	if (!ret)
 		memcpy(&pktio_entry->s.stats, &cur_stats,
 		       sizeof(odp_pktio_stats_t));
 
-	return err;
+	return ret;
 }
 
 int _odp_sock_stats_fd(pktio_entry_t *pktio_entry,
@@ -47,21 +54,14 @@ int _odp_sock_stats_fd(pktio_entry_t *pktio_entry,
 		       int fd)
 {
 	odp_pktio_stats_t cur_stats;
-	int ret = 0;
 
 	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED) {
 		memset(stats, 0, sizeof(*stats));
 		return 0;
 	}
 
-	memset(&cur_stats, 0, sizeof(odp_pktio_stats_t));
-	if (pktio_entry->s.stats_type == STATS_ETHTOOL) {
-		(void)_odp_ethtool_stats_get_fd(fd,
-						pktio_entry->s.name,
-						&cur_stats);
-	} else if (pktio_entry->s.stats_type == STATS_SYSFS) {
-		_odp_sysfs_stats(pktio_entry, &cur_stats);
-	}
+	if (sock_stats_get(pktio_entry, &cur_stats, fd))
+		return -1;
 
 	stats->in_octets = cur_stats.in_octets -
 				pktio_entry->s.stats.in_octets;
@@ -96,7 +96,7 @@ int _odp_sock_stats_fd(pktio_entry_t *pktio_entry,
 	stats->out_errors = cur_stats.out_errors -
 				pktio_entry->s.stats.out_errors;
 
-	return ret;
+	return 0;
 }
 
 int _odp_sock_extra_stat_info(pktio_entry_t *pktio_entry,
