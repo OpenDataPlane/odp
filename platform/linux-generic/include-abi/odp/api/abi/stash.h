@@ -15,21 +15,7 @@
 extern "C" {
 #endif
 
-#include <odp/api/plat/strong_types.h>
-
-/** @ingroup odp_stash
- *  @{
- */
-
-typedef ODP_HANDLE_T(odp_stash_t);
-
-#define ODP_STASH_INVALID _odp_cast_scalar(odp_stash_t, 0)
-
-#define ODP_STASH_NAME_LEN  32
-
-/**
- * @}
- */
+/* Empty placeholder header for inline functions */
 
 #ifdef __cplusplus
 }
