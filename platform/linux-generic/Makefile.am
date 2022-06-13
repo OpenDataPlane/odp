@@ -95,6 +95,7 @@ odpapiabiarchinclude_HEADERS += \
 		  include-abi/odp/api/abi/spinlock.h \
 		  include-abi/odp/api/abi/spinlock_recursive.h \
 		  include-abi/odp/api/abi/stash.h \
+		  include-abi/odp/api/abi/stash_types.h \
 		  include-abi/odp/api/abi/std.h \
 		  include-abi/odp/api/abi/std_types.h \
 		  include-abi/odp/api/abi/sync.h \

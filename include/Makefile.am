@@ -55,6 +55,7 @@ odpapiinclude_HEADERS = \
 	odp/api/spinlock.h \
 	odp/api/spinlock_recursive.h \
 	odp/api/stash.h \
+	odp/api/stash_types.h \
 	odp/api/std.h \
 	odp/api/std_types.h \
 	odp/api/sync.h \
@@ -116,6 +117,7 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/spinlock.h \
 		  odp/api/spec/spinlock_recursive.h \
 		  odp/api/spec/stash.h \
+		  odp/api/spec/stash_types.h \
 		  odp/api/spec/std.h \
 		  odp/api/spec/std_types.h \
 		  odp/api/spec/sync.h \
@@ -174,6 +176,7 @@ odpapiabidefaultinclude_HEADERS = \
 	odp/api/abi-default/spinlock.h \
 	odp/api/abi-default/spinlock_recursive.h \
 	odp/api/abi-default/stash.h \
+	odp/api/abi-default/stash_types.h \
 	odp/api/abi-default/std.h \
 	odp/api/abi-default/std_types.h \
 	odp/api/abi-default/sync.h \
@@ -230,6 +233,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm32-linux/odp/api/abi/spinlock.h \
 	odp/arch/arm32-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/arm32-linux/odp/api/abi/stash.h \
+	odp/arch/arm32-linux/odp/api/abi/stash_types.h \
 	odp/arch/arm32-linux/odp/api/abi/std.h \
 	odp/arch/arm32-linux/odp/api/abi/std_types.h \
 	odp/arch/arm32-linux/odp/api/abi/sync.h \
@@ -282,6 +286,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/arm64-linux/odp/api/abi/spinlock.h \
 	odp/arch/arm64-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/arm64-linux/odp/api/abi/stash.h \
+	odp/arch/arm64-linux/odp/api/abi/stash_types.h \
 	odp/arch/arm64-linux/odp/api/abi/std.h \
 	odp/arch/arm64-linux/odp/api/abi/std_types.h \
 	odp/arch/arm64-linux/odp/api/abi/sync.h \
@@ -334,6 +339,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/default-linux/odp/api/abi/spinlock.h \
 	odp/arch/default-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/default-linux/odp/api/abi/stash.h \
+	odp/arch/default-linux/odp/api/abi/stash_types.h \
 	odp/arch/default-linux/odp/api/abi/std.h \
 	odp/arch/default-linux/odp/api/abi/std_types.h \
 	odp/arch/default-linux/odp/api/abi/sync.h \
@@ -386,6 +392,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/power64-linux/odp/api/abi/spinlock.h \
 	odp/arch/power64-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/power64-linux/odp/api/abi/stash.h \
+	odp/arch/power64-linux/odp/api/abi/stash_types.h \
 	odp/arch/power64-linux/odp/api/abi/std.h \
 	odp/arch/power64-linux/odp/api/abi/std_types.h \
 	odp/arch/power64-linux/odp/api/abi/sync.h \
@@ -438,6 +445,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_32-linux/odp/api/abi/spinlock.h \
 	odp/arch/x86_32-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/x86_32-linux/odp/api/abi/stash.h \
+	odp/arch/x86_32-linux/odp/api/abi/stash_types.h \
 	odp/arch/x86_32-linux/odp/api/abi/std.h \
 	odp/arch/x86_32-linux/odp/api/abi/std_types.h \
 	odp/arch/x86_32-linux/odp/api/abi/sync.h \
@@ -490,6 +498,7 @@ odpapiabiarchinclude_HEADERS = \
 	odp/arch/x86_64-linux/odp/api/abi/spinlock.h \
 	odp/arch/x86_64-linux/odp/api/abi/spinlock_recursive.h \
 	odp/arch/x86_64-linux/odp/api/abi/stash.h \
+	odp/arch/x86_64-linux/odp/api/abi/stash_types.h \
 	odp/arch/x86_64-linux/odp/api/abi/std.h \
 	odp/arch/x86_64-linux/odp/api/abi/std_types.h \
 	odp/arch/x86_64-linux/odp/api/abi/sync.h \
