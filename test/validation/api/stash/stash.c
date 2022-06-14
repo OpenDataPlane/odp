@@ -139,6 +139,9 @@ static void param_defaults(uint8_t fill)
 	CU_ASSERT(param.put_mode == ODP_STASH_OP_MT);
 	CU_ASSERT(param.get_mode == ODP_STASH_OP_MT);
 	CU_ASSERT(param.cache_size == 0);
+	CU_ASSERT(param.stats.all == 0);
+	CU_ASSERT(param.stats.bit.count == 0);
+	CU_ASSERT(param.stats.bit.cache_count == 0);
 }
 
 static void stash_param_defaults(void)
@@ -372,6 +375,73 @@ static void stash_create_fifo_u32_all(void)
 
 	for (i = 0; i < num_stash; i++)
 		CU_ASSERT_FATAL(odp_stash_destroy(stash[i]) == 0);
+}
+
+static void stash_stats_u32(void)
+{
+	odp_stash_t stash;
+	odp_stash_param_t param;
+	odp_stash_stats_t stats;
+	int capa_count, capa_cache_count;
+	uint32_t i, input, output;
+	uint32_t max_num = 10;
+	uint32_t num = max_num / 2;
+	uint32_t num_put = 0;
+
+	capa_count       = global.capa_default.stats.bit.count;
+	capa_cache_count = global.capa_default.stats.bit.cache_count;
+
+	odp_stash_param_init(&param);
+	param.num_obj  = max_num;
+	param.obj_size = sizeof(uint32_t);
+	param.stats.bit.count       = capa_count;
+	param.stats.bit.cache_count = capa_cache_count;
+
+	stash = odp_stash_create("test_stats_u32", &param);
+	CU_ASSERT_FATAL(stash != ODP_STASH_INVALID);
+
+	memset(&stats, 0xff, sizeof(odp_stash_stats_t));
+
+	CU_ASSERT_FATAL(odp_stash_stats(stash, &stats) == 0);
+	CU_ASSERT(stats.count == 0);
+	CU_ASSERT(stats.cache_count == 0);
+
+	for (i = 0; i < num; i++) {
+		input = i;
+		if (odp_stash_put_u32(stash, &input, 1) == 1)
+			num_put++;
+	}
+
+	CU_ASSERT(num_put == num);
+
+	memset(&stats, 0xff, sizeof(odp_stash_stats_t));
+
+	CU_ASSERT_FATAL(odp_stash_stats(stash, &stats) == 0);
+
+	if (capa_count) {
+		/* CU_ASSERT needs extra brackets */
+		CU_ASSERT(stats.count <= num_put);
+	} else {
+		CU_ASSERT(stats.count == 0);
+	}
+
+	if (capa_cache_count) {
+		/* CU_ASSERT needs extra brackets */
+		CU_ASSERT(stats.cache_count <= num_put);
+	} else {
+		CU_ASSERT(stats.cache_count == 0);
+	}
+
+	if (capa_count && capa_cache_count)
+		CU_ASSERT((stats.count + stats.cache_count) == num_put);
+
+	for (i = 0; i < num_put; i++) {
+		output = -1;
+		CU_ASSERT(odp_stash_get_u32(stash, &output, 1) == 1);
+		CU_ASSERT(output < num);
+	}
+
+	CU_ASSERT_FATAL(odp_stash_destroy(stash) == 0);
 }
 
 static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op)
@@ -894,6 +964,7 @@ odp_testinfo_t stash_suite[] = {
 	ODP_TEST_INFO(stash_default_put_u8_n),
 	ODP_TEST_INFO_CONDITIONAL(stash_create_u64_all, check_support_64),
 	ODP_TEST_INFO(stash_create_u32_all),
+	ODP_TEST_INFO(stash_stats_u32),
 	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u64_1, check_support_fifo_64),
 	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u64_n, check_support_fifo_64),
 	ODP_TEST_INFO_CONDITIONAL(stash_fifo_u64_put_u64_1, check_support_fifo_64),
