@@ -187,6 +187,9 @@ static void stash_create_u32(void)
 
 	printf("\n    Stash handle: 0x%" PRIx64 "\n", odp_stash_to_u64(stash));
 
+	printf("\n--- Stash print ----\n");
+	odp_stash_print(stash);
+
 	lookup = odp_stash_lookup("test_stash_u32");
 	CU_ASSERT(lookup != ODP_STASH_INVALID);
 	CU_ASSERT(stash == lookup);
