@@ -99,6 +99,50 @@ typedef enum odp_stash_op_mode_t {
 } odp_stash_op_mode_t;
 
 /**
+ * Stash statistics counters options
+ *
+ * Statistics counters listed in a bit field structure.
+ */
+typedef union odp_stash_stats_opt_t {
+	/** Option flags */
+	struct {
+		/** @see odp_stash_stats_t::count */
+		uint64_t count          : 1;
+
+		/** @see odp_stash_stats_t::cache_count */
+		uint64_t cache_count    : 1;
+
+	} bit;
+
+	/** All bits of the bit field structure
+	 *
+	 *  This field can be used to set/clear all flags, or for bitwise
+	 *  operations over the entire structure. */
+	uint64_t all;
+
+} odp_stash_stats_opt_t;
+
+/**
+ * Stash statistics counters
+ */
+typedef struct odp_stash_stats_t {
+	/** Object count in the stash
+	 *
+	 *  Number of objects currently stored in the stash. The count does not include objects
+	 *  stored in thread local caches. When caching is enabled, the total object count
+	 *  is the sum of 'count' and 'cache_count'.
+	 */
+	uint64_t count;
+
+	/** Object count in thread local caches of the stash
+	 *
+	 *  Number of objects stored in all thread local caches of the stash.
+	 */
+	uint64_t cache_count;
+
+} odp_stash_stats_t;
+
+/**
  * Stash capabilities (per stash type)
  */
 typedef struct odp_stash_capability_t {
@@ -127,6 +171,9 @@ typedef struct odp_stash_capability_t {
 
 	/** Maximum size of thread local cache */
 	uint32_t max_cache_size;
+
+	/** Supported statistics counters */
+	odp_stash_stats_opt_t stats;
 
 } odp_stash_capability_t;
 
@@ -196,6 +243,15 @@ typedef struct odp_stash_param_t {
 	 *  Thread local cache may be emptied with odp_stash_flush_cache().
 	 */
 	uint32_t cache_size;
+
+	/**
+	 * Configure statistics counters
+	 *
+	 * See stash capabilities for supported statistics counters. Use odp_stash_stats() to read
+	 * the enabled counters. For optimal performance, enable only those counters that are
+	 * actually used. All counters are disabled by default.
+	 */
+	odp_stash_stats_opt_t stats;
 
 } odp_stash_param_t;
 

@@ -277,6 +277,20 @@ int odp_stash_flush_cache(odp_stash_t stash);
 void odp_stash_print(odp_stash_t stash);
 
 /**
+ * Read statistics counters of a stash
+ *
+ * Read the statistics counters enabled using odp_stash_stats_opt_t during stash creation.
+ * Inactive counters are set to zero by the implementation.
+ *
+ * @param      stash  Stash handle
+ * @param[out] stats  Points to statistics counters structure for output
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_stash_stats(odp_stash_t stash, odp_stash_stats_t *stats);
+
+/**
  * @}
  */
 
