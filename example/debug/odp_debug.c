@@ -22,6 +22,7 @@ typedef struct test_global_t {
 	int pktio;
 	int ipsec;
 	int timer;
+	int stash;
 
 } test_global_t;
 
@@ -41,6 +42,7 @@ static void print_usage(void)
 	       "  -i, --interface    Create packet IO interface (loop) and call odp_pktio_print()\n"
 	       "  -I, --ipsec        Call odp_ipsec_print()\n"
 	       "  -t, --timer        Call timer pool, timer and timeout print functions\n"
+	       "  -a, --stash        Create stash and call odp_stash_print()\n"
 	       "  -h, --help         Display help and exit.\n\n");
 }
 
@@ -56,10 +58,11 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		{"interface",   no_argument,       NULL, 'i'},
 		{"ipsec",       no_argument,       NULL, 'I'},
 		{"timer",       no_argument,       NULL, 't'},
+		{"stash",       no_argument,       NULL, 'a'},
 		{"help",        no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+SspqiIth";
+	const char *shortopts =  "+SspqiItah";
 	int ret = 0;
 
 	while (1) {
@@ -89,6 +92,9 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 			break;
 		case 't':
 			global->timer = 1;
+			break;
+		case 'a':
+			global->stash = 1;
 			break;
 		case 'h':
 		default:
@@ -480,6 +486,44 @@ static int timer_debug(void)
 	return 0;
 }
 
+static int stash_debug(void)
+{
+	odp_stash_param_t param;
+	odp_stash_t stash;
+	uint32_t val = 0xdeadbeef;
+
+	odp_stash_param_init(&param);
+	param.num_obj  = 10;
+	param.obj_size = 4;
+
+	stash = odp_stash_create("debug_stash", &param);
+
+	if (stash == ODP_STASH_INVALID) {
+		ODPH_ERR("Stash create failed\n");
+		return -1;
+	}
+
+	if (odp_stash_put_u32(stash, &val, 1) != 1) {
+		ODPH_ERR("Stash put failed\n");
+		return -1;
+	}
+
+	printf("\n");
+	odp_stash_print(stash);
+
+	if (odp_stash_get_u32(stash, &val, 1) != 1) {
+		ODPH_ERR("Stash get failed\n");
+		return -1;
+	}
+
+	if (odp_stash_destroy(stash)) {
+		ODPH_ERR("Stash destroy failed\n");
+		return -1;
+	}
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	odp_instance_t inst;
@@ -497,6 +541,7 @@ int main(int argc, char *argv[])
 		global->pktio   = 1;
 		global->ipsec   = 1;
 		global->timer   = 1;
+		global->stash   = 1;
 	} else {
 		if (parse_options(argc, argv, global))
 			exit(EXIT_FAILURE);
@@ -553,6 +598,11 @@ int main(int argc, char *argv[])
 
 	if (global->timer && timer_debug()) {
 		ODPH_ERR("Timer debug failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (global->stash && stash_debug()) {
+		ODPH_ERR("Stash debug failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
