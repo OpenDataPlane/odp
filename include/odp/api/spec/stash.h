@@ -1,4 +1,4 @@
-/* Copyright (c) 2020-2021, Nokia
+/* Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -265,6 +265,16 @@ int32_t odp_stash_get_ptr(odp_stash_t stash, uintptr_t ptr[], int32_t num);
  * @retval <0 on failure
  */
 int odp_stash_flush_cache(odp_stash_t stash);
+
+/**
+ * Print debug information about the stash
+ *
+ * Print implementation defined information about the stash to the ODP log. The information
+ * is intended to be used for debugging.
+ *
+ * @param stash  Stash handle
+ */
+void odp_stash_print(odp_stash_t stash);
 
 /**
  * @}
