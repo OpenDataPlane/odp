@@ -123,11 +123,20 @@ typedef struct odp_ipsec_inbound_config_t {
 	 *
 	 *  When inbound SA lookup fails in the asynchronous mode,
 	 *  resulting IPSEC events are enqueued into this queue.
+	 *
+	 *  Ignored by odp_ipsec_inline_config().
 	 */
 	odp_queue_t default_queue;
 
 	/** Constraints for SPI values used with inbound SA lookup. Minimal
-	 *  SPI range and unique values may improve performance. */
+	 *  SPI range and unique values may improve performance.
+	 *
+	 *  In odp_ipsec_config() these fields specify the constraints
+	 *  to lookups done by look-a-side processing.
+	 *
+	 *  In odp_ipsec_inline_config() these fields specify the constraints
+	 *  to lookups done by inline processing in the particular pktio.
+	 */
 	struct {
 		/** Minimum SPI value for SA lookup. Default value is 0. */
 		uint32_t min_spi;
@@ -283,7 +292,15 @@ typedef struct odp_ipsec_test_capability_t {
  * IPSEC capability
  */
 typedef struct odp_ipsec_capability_t {
-	/** Maximum number of IPSEC SAs */
+	/** Maximum number of IPSEC SAs
+	 *
+	 *  In odp_ipsec_capability() this indicates the maximum total number
+	 *  of SAs, including inline SAs.
+	 *
+	 *  In odp_ipsec_inline_capability() this indicates the maximum number
+	 *  of SAs that can be created with the given SA scope (but SAs created
+	 *  with other SA scopes may lower the maximum value).
+	 */
 	uint32_t max_num_sa;
 
 	/** Synchronous IPSEC operation mode (ODP_IPSEC_OP_MODE_SYNC) support */
@@ -297,12 +314,18 @@ typedef struct odp_ipsec_capability_t {
 	/**
 	 * Inline inbound IPSEC operation mode (ODP_IPSEC_OP_MODE_INLINE)
 	 * support
+	 *
+	 * odp_ipsec_inline_capability() sets this to ODP_SUPPORT_NO if
+	 * inbound inline processing is not supported with the given SA scope.
 	 */
 	odp_support_t op_mode_inline_in;
 
 	/**
 	 * Inline outgoing IPSEC operation mode (ODP_IPSEC_OP_MODE_INLINE)
 	 * support
+	 *
+	 * odp_ipsec_inline_capability() sets this to ODP_SUPPORT_NO if
+	 * outbound inline processing is not supported with the given SA scope.
 	 */
 	odp_support_t op_mode_inline_out;
 
@@ -335,6 +358,10 @@ typedef struct odp_ipsec_capability_t {
 	/** Maximum number of different destination CoSes in classification
 	 *  pipelining. The same CoS may be used for many SAs. This is equal or
 	 *  less than 'max_cos' capability in classifier API.
+	 *
+	 *  In odp_ipsec_inline_capability() this indicates the maximum number
+	 *  of destination CoSes that can be used in the given SA scope
+	 *  (but SAs created with other SA scopes may lower the maximum value).
 	 */
 	uint32_t max_cls_cos;
 
@@ -429,6 +456,8 @@ typedef struct odp_ipsec_config_t {
 	/** Inbound IPSEC operation mode. Application selects which mode
 	 *  will be used for inbound IPSEC operations.
 	 *
+	 *  Ignored by odp_ipsec_inline_config().
+	 *
 	 *  @see odp_ipsec_in(), odp_ipsec_in_enq()
 	 */
 	odp_ipsec_op_mode_t inbound_mode;
@@ -436,12 +465,21 @@ typedef struct odp_ipsec_config_t {
 	/** Outbound IPSEC operation mode. Application selects which mode
 	 *  will be used for outbound IPSEC operations.
 	 *
+	 *  Ignored by odp_ipsec_inline_config().
+	 *
 	 *  @see odp_ipsec_out(), odp_ipsec_out_enq(), odp_ipsec_out_inline()
 	 */
 	odp_ipsec_op_mode_t outbound_mode;
 
 	/** Maximum number of IPSEC SAs that application will use
-	 * simultaneously */
+	 * simultaneously
+	 *
+	 * In odp_ipsec_config() this is the maximum total number of all SAs,
+	 * including inline SAs.
+	 *
+	 * In odp_ipsec_inline_config() this is the maximum number of inline
+	 * SAs that have the pktio in their scope.
+	 */
 	uint32_t max_num_sa;
 
 	/** IPSEC inbound processing configuration */
@@ -835,6 +873,40 @@ typedef enum odp_ipsec_ip_version_t {
 } odp_ipsec_ip_version_t;
 
 /**
+ * IPsec inline scope
+ *
+ * Defines the scope where an inline SA can be used. The scope includes
+ * one or more pktios for inline processing and optionally look-a-side
+ * processing using async IPsec operations.
+ *
+ * An inline SA may not be used outside its configured scope in async
+ * or outbound inline operations. Received packets are matched against
+ * the SA for inbound inline processing only in the pktios that are in
+ * the scope of the SA and if inbound inline processing has been enabled
+ * for the pktio.
+ *
+ * TODO: Do we require that the pktios have been configured at SA creation
+ * time and that the configuration does not change if an SA has it in its
+ * scope?
+ *
+ * It is implementation dependent which scopes are supported.
+ */
+typedef struct {
+	/** Number of pktios in the pktio array. Zero means all pktios.
+	 *  Default value is zero.
+	 */
+	int num_pktio;
+
+	/** Pointer to an array of num_pktio pktios. Ignored if num_pktio
+	 *  is zero.
+	 */
+	odp_pktio_t *pktio;
+
+	/** Enable look-a-side operations too. Default is false. */
+	odp_bool_t look_a_side;
+} odp_ipsec_inline_sa_scope_t;
+
+/**
  * IPSEC Security Association (SA) parameters
  */
 typedef struct odp_ipsec_sa_param_t {
@@ -882,6 +954,22 @@ typedef struct odp_ipsec_sa_param_t {
 	 *  context data bytes to prefetch. Default value is zero (no hint).
 	 */
 	uint32_t context_len;
+
+	/** Parameters specific to inline processing */
+	struct {
+		/** Enable inline processing for this SA
+		 *
+		 * Whether look-a-side async processing is also possible
+		 * depends on the scope parameter.
+		 *
+		 * Default value is false.
+		 */
+		odp_bool_t inline_enable;
+
+		/** Scope where this SA can be used. Ignored if inline
+		 * processing is not enabled. */
+		odp_ipsec_inline_sa_scope_t inline_scope;
+	} inline_param;
 
 	/** IPSEC SA direction dependent parameters */
 	struct {
@@ -942,7 +1030,9 @@ typedef struct odp_ipsec_sa_param_t {
 			 *  the synchronous API function.
 			 *
 			 *  Fragments received through different SAs will not be
-			 *  reassembled into the same packet.
+			 *  reassembled into the same packet. Inline processed
+			 *  fragments that are received through different
+			 *  pktios may not be reassembled into the same packet.
 			 *
 			 *  IPsec statistics reflect IPsec processing before
 			 *  reassembly and thus count all individual fragments.
@@ -950,6 +1040,12 @@ typedef struct odp_ipsec_sa_param_t {
 			 *  Reassembly may be enabled for an SA only if
 			 *  reassembly was enabled in the global IPsec
 			 *  configuration.
+			 *
+			 *  Reassembly can always be enabled for an SA but
+			 *  whether ressemly is attempted depends on the global
+			 *  IPsec configuration in look-a-side processing and
+			 *  on pktio specific IPsec configuration in inline
+			 *  processing.
 			 *
 			 *  Default value is false.
 			 *
@@ -1101,7 +1197,9 @@ typedef struct odp_ipsec_sa_info_t {
 /**
  * Query IPSEC capabilities
  *
- * Outputs IPSEC capabilities on success.
+ * Outputs IPSEC capabilities on success. The capabilities returned are
+ * for look-a-side type synchronous and asynchronous processing. Use
+ * odp_ipsec_inline_capability() to query inline processing capabilities.
  *
  * @param[out] capa   Pointer to capability structure for output
  *
@@ -1111,12 +1209,28 @@ typedef struct odp_ipsec_sa_info_t {
 int odp_ipsec_capability(odp_ipsec_capability_t *capa);
 
 /**
+ * Query capabilities for a given inline SA scope
+ *
+ * @param      scope  Inline SA scope
+ * @param[out] capa   Pointer to capability structure for output
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_ipsec_inline_capability(const odp_ipsec_inline_sa_scope_t *scope,
+				odp_ipsec_capability_t *capa);
+
+/**
  * Query supported IPSEC cipher algorithm capabilities
  *
  * Outputs all supported configuration options for the algorithm. Output is
  * sorted (from the smallest to the largest) first by key length, then by IV
  * length. Use this information to select key lengths, etc cipher algorithm
  * options for SA creation (odp_ipsec_crypto_param_t).
+ *
+ * The capabilities returned are for look-a-side type synchronous and
+ * asynchronous processing. Use odp_ipsec_inline_cipher_capability()
+ * to query inline processing capabilities.
  *
  * @param      cipher       Cipher algorithm
  * @param[out] capa         Array of capability structures for output
@@ -1131,12 +1245,37 @@ int odp_ipsec_cipher_capability(odp_cipher_alg_t cipher,
 				odp_ipsec_cipher_capability_t capa[], int num);
 
 /**
+ * Query supported IPSEC cipher algorithm capabilities for inline processing
+ *
+ * This is similar to odp_ipsec_cipher_capability() but returns capabilities
+ * for a given inline SA scope.
+ *
+ * @param      scope        Inline SA scope
+ * @param      cipher       Cipher algorithm
+ * @param[out] capa         Array of capability structures for output
+ * @param      num          Maximum number of capability structures to output
+ *
+ * @return Number of capability structures for the algorithm. If this is larger
+ *         than 'num', only 'num' first structures were output and application
+ *         may call the function again with a larger value of 'num'.
+ * @retval <0 on failure
+ */
+int odp_ipsec_inline_cipher_capability(const odp_ipsec_inline_sa_scope_t *scope,
+				       odp_cipher_alg_t cipher,
+				       odp_ipsec_cipher_capability_t capa[],
+				       int num);
+
+/**
  * Query supported IPSEC authentication algorithm capabilities
  *
  * Outputs all supported configuration options for the algorithm. Output is
  * sorted (from the smallest to the largest) first by ICV length, then by key
  * length. Use this information to select key lengths, etc authentication
  * algorithm options for SA creation (odp_ipsec_crypto_param_t).
+ *
+ * The capabilities returned are for look-a-side type synchronous and
+ * asynchronous processing. Use odp_ipsec_inline_auth_capability()
+ * to query inline processing capabilities.
  *
  * @param      auth         Authentication algorithm
  * @param[out] capa         Array of capability structures for output
@@ -1149,6 +1288,27 @@ int odp_ipsec_cipher_capability(odp_cipher_alg_t cipher,
  */
 int odp_ipsec_auth_capability(odp_auth_alg_t auth,
 			      odp_ipsec_auth_capability_t capa[], int num);
+
+/**
+ * Query supported IPSEC cipher algorithm capabilities for inline processing
+ *
+ * This is similar to odp_ipsec_auth_capability() but returns capabilities
+ * for a given inline SA scope.
+ *
+ * @param      scope        Inline SA scope
+ * @param      auth         Authentication algorithm
+ * @param[out] capa         Array of capability structures for output
+ * @param      num          Maximum number of capability structures to output
+ *
+ * @return Number of capability structures for the algorithm. If this is larger
+ *         than 'num', only 'num' first structures were output and application
+ *         may call the function again with a larger value of 'num'.
+ * @retval <0 on failure
+ */
+int odp_ipsec_inline_auth_capability(const odp_ipsec_inline_sa_scope_t *scope,
+				     odp_auth_alg_t auth,
+				     odp_ipsec_cipher_capability_t capa[],
+				     int num);
 
 /**
  * Initialize IPSEC configuration options
@@ -1176,6 +1336,30 @@ void odp_ipsec_config_init(odp_ipsec_config_t *config);
  * @see odp_ipsec_capability(), odp_ipsec_config_init()
  */
 int odp_ipsec_config(const odp_ipsec_config_t *config);
+
+/**
+ * Inline IPsec config for a particular pktio.
+ *
+ * Ínitialize and configure IPsec for use in inline processing mode with
+ * a given pktio. This must be called after odp_ipsec_config() has been called
+ * with ODP_IPSEC_OP_MODE_INLINE inbound_mode or outbound_mode, after the
+ * pktio has been configured and before any inline SAs is created with
+ * a scope that includes the pktio.
+ *
+ * Calling this function multiple times for the same open pktio results in
+ * undefined behaviour.
+ *
+ * @param pktio    Inline-enabled open pktio for which the configuration is
+ *                 done
+ * @param config   Pointer to IPSEC configuration structure
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ *
+ * @see odp_ipsec_inline_capability(), odp_ipsec_config_init()
+ */
+int odp_ipsec_inline_config(odp_pktio_t pktio,
+			    const odp_ipsec_config_t *config);
 
 /**
  * Initialize IPSEC SA parameters
@@ -1496,9 +1680,10 @@ typedef struct odp_ipsec_in_param_t {
 typedef struct odp_ipsec_out_inline_param_t {
 	/** Packet output interface for inline outbound operation without TM
 	 *
-	 *  Outbound inline IPSEC operation uses this packet IO interface to
-	 *  output the packet after a successful IPSEC transformation. The pktio
-	 *  must have been configured to operate in inline IPSEC mode.
+	 *  Outbound inline IPsec operation uses this packet IO interface to
+	 *  output the packet after a successful IPsec transformation.
+	 *  The pktio must have been included in the inline scope of the
+	 *  SA and must have been configured to operate in inline IPsec mode.
 	 *
 	 *  The pktio must not have been configured with ODP_PKTOUT_MODE_TM.
 	 *  For IPSEC inline output to TM enabled interfaces set this field
