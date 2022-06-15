@@ -242,7 +242,6 @@ static void init_test_feature_disabled(void)
 }
 
 odp_testinfo_t testinfo[] = {
-	ODP_TEST_INFO(init_test_param_init),
 	ODP_TEST_INFO(init_test_defaults),
 	ODP_TEST_INFO(init_test_abort),
 	ODP_TEST_INFO(init_test_log),
@@ -250,6 +249,7 @@ odp_testinfo_t testinfo[] = {
 	ODP_TEST_INFO(init_test_feature_enabled),
 	ODP_TEST_INFO(init_test_feature_disabled),
 	ODP_TEST_INFO(init_test_log_thread),
+	ODP_TEST_INFO(init_test_param_init),
 };
 
 odp_testinfo_t init_suite[] = {

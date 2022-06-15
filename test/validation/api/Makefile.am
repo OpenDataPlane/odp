@@ -53,6 +53,7 @@ TESTS = \
 	init/init_num_thr$(EXEEXT) \
 	init/init_feature_enabled$(EXEEXT) \
 	init/init_feature_disabled$(EXEEXT) \
+	init/init_test_param_init$(EXEEXT) \
 	ipsec/ipsec_sync$(EXEEXT) \
 	ipsec/ipsec_async$(EXEEXT) \
 	ipsec/ipsec_inline_in$(EXEEXT) \

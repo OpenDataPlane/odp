@@ -5,3 +5,4 @@ init_log_thread
 init_num_thr
 init_feature_enabled
 init_feature_disabled
+init_test_parama_init
