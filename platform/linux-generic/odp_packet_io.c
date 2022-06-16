@@ -277,6 +277,7 @@ static void init_pktio_entry(pktio_entry_t *entry)
 	entry->s.tx_compl_pool = ODP_POOL_INVALID;
 
 	odp_atomic_init_u64(&entry->s.stats_extra.in_discards, 0);
+	odp_atomic_init_u64(&entry->s.stats_extra.in_errors, 0);
 	odp_atomic_init_u64(&entry->s.stats_extra.out_discards, 0);
 	odp_atomic_init_u64(&entry->s.tx_ts, 0);
 
@@ -1851,6 +1852,7 @@ int odp_pktio_stats(odp_pktio_t pktio,
 		ret = entry->s.ops->stats(entry, stats);
 	if (odp_likely(ret == 0)) {
 		stats->in_discards += odp_atomic_load_u64(&entry->s.stats_extra.in_discards);
+		stats->in_errors += odp_atomic_load_u64(&entry->s.stats_extra.in_errors);
 		stats->out_discards += odp_atomic_load_u64(&entry->s.stats_extra.out_discards);
 	}
 	unlock_entry(entry);
@@ -1878,6 +1880,7 @@ int odp_pktio_stats_reset(odp_pktio_t pktio)
 	}
 
 	odp_atomic_store_u64(&entry->s.stats_extra.in_discards, 0);
+	odp_atomic_store_u64(&entry->s.stats_extra.in_errors, 0);
 	odp_atomic_store_u64(&entry->s.stats_extra.out_discards, 0);
 	if (entry->s.ops->stats)
 		ret = entry->s.ops->stats_reset(entry);
