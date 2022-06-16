@@ -248,7 +248,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	pkt_pcap_t *pcap = pkt_priv(pktio_entry);
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
-	int packets = 0, errors = 0;
+	int packets = 0;
 	uint32_t octets = 0;
 	uint16_t frame_offset = pktio_entry->s.pktin_frame_offset;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
@@ -298,7 +298,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			ret = _odp_packet_parse_common(pkt_hdr, data, pkt_len,
 						       pkt_len, layer, opt);
 			if (ret)
-				errors++;
+				odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_errors);
 
 			if (ret < 0) {
 				odp_packet_free(pkt);
@@ -342,7 +342,6 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	pktio_entry->s.stats.in_octets += octets;
 	pktio_entry->s.stats.in_packets += packets;
-	pktio_entry->s.stats.in_errors += errors;
 
 	odp_ticketlock_unlock(&pktio_entry->s.rxl);
 
