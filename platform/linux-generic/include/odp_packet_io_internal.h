@@ -131,6 +131,7 @@ struct pktio_entry {
 	/* Statistics counters used also outside drivers */
 	struct {
 		odp_atomic_u64_t in_discards;
+		odp_atomic_u64_t in_errors;
 		odp_atomic_u64_t out_discards;
 	} stats_extra;
 	/* Latest Tx timestamp */
