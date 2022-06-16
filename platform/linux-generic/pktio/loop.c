@@ -160,7 +160,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
 	int num_rx = 0;
-	int packets = 0, errors = 0;
+	int packets = 0;
 	uint32_t octets = 0;
 	const odp_proto_layer_t layer = pktio_entry->s.parse_layer;
 	const odp_pktin_config_opt_t opt = pktio_entry->s.config.pktin;
@@ -206,7 +206,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			ret = _odp_packet_parse_common(pkt_hdr, pkt_addr, pkt_len,
 						       seg_len, layer, opt);
 			if (ret)
-				errors++;
+				odp_atomic_inc_u64(&pktio_entry->s.stats_extra.in_errors);
 
 			if (ret < 0) {
 				odp_packet_free(pkt);
@@ -254,7 +254,6 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	pktio_entry->s.stats.in_octets += octets;
 	pktio_entry->s.stats.in_packets += packets;
-	pktio_entry->s.stats.in_errors += errors;
 
 	odp_ticketlock_unlock(&pktio_entry->s.rxl);
 
