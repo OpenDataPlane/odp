@@ -61,6 +61,8 @@
 #define SCHED_AND_PLAIN_ROUNDS 10000
 #define ATOMICITY_ROUNDS 100
 
+#define FIFO_MAX_EVENTS  151
+
 /* Test global variables */
 typedef struct {
 	int num_workers;
@@ -93,6 +95,19 @@ typedef struct {
 		odp_atomic_u32_t helper_ready;
 		odp_atomic_u32_t helper_active;
 	} order_wait;
+	struct {
+		odp_barrier_t barrier;
+		int multi;
+		odp_queue_t queue;
+		odp_pool_t pool;
+		uint32_t num_events;
+		uint32_t num_enq;
+		uint32_t burst;
+		odp_atomic_u32_t cur_thr;
+		uint16_t num_thr;
+		odp_event_t event[FIFO_MAX_EVENTS];
+	} fifo;
+
 } test_globals_t;
 
 typedef struct {
@@ -2725,6 +2740,233 @@ static void scheduler_test_ordered_and_plain(void)
 	scheduler_test_sched_and_plain(ODP_SCHED_SYNC_ORDERED);
 }
 
+static void scheduler_fifo_init(odp_schedule_sync_t sync, int multi, uint32_t num_thr)
+{
+	odp_queue_t queue;
+	odp_pool_t pool;
+	odp_buffer_t buf;
+	uint32_t *seq;
+	uint32_t i;
+	odp_queue_param_t queue_param;
+	odp_pool_param_t pool_param;
+	odp_schedule_capability_t sched_capa;
+	uint32_t num_events = FIFO_MAX_EVENTS;
+
+	CU_ASSERT_FATAL(!odp_schedule_capability(&sched_capa));
+
+	/* Make sure events fit into the queue */
+	if (sched_capa.max_queue_size && num_events > sched_capa.max_queue_size)
+		num_events = sched_capa.max_queue_size;
+
+	sched_queue_param_init(&queue_param);
+	queue_param.sched.sync = sync;
+	queue_param.size = num_events;
+
+	queue = odp_queue_create("sched_fifo", &queue_param);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	odp_pool_param_init(&pool_param);
+	pool_param.type      = ODP_POOL_BUFFER;
+	pool_param.buf.size  = 32;
+	pool_param.buf.num   = num_events;
+
+	pool = odp_pool_create("sched_fifo", &pool_param);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	for (i = 0; i < num_events; i++) {
+		buf = odp_buffer_alloc(pool);
+		if (buf == ODP_BUFFER_INVALID)
+			break;
+
+		seq = odp_buffer_addr(buf);
+		*seq = i;
+		globals->fifo.event[i] = odp_buffer_to_event(buf);
+	}
+
+	CU_ASSERT_FATAL(i == num_events);
+
+	odp_barrier_init(&globals->fifo.barrier, num_thr);
+
+	globals->fifo.multi = multi;
+	globals->fifo.queue = queue;
+	globals->fifo.pool = pool;
+	globals->fifo.num_events = num_events;
+	globals->fifo.num_enq = 0;
+	globals->fifo.burst = 0;
+	globals->fifo.num_thr = num_thr;
+	odp_atomic_init_u32(&globals->fifo.cur_thr, 0);
+}
+
+static int scheduler_fifo_test(void *arg)
+{
+	odp_queue_t from;
+	odp_buffer_t buf;
+	int ret;
+	uint32_t *seq;
+	uint32_t i, num, cur_thr;
+	uint32_t num_enq = 0;
+	uint32_t thr;
+	uint16_t num_thr = globals->fifo.num_thr;
+	uint64_t wait = odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS);
+	int multi = globals->fifo.multi;
+	odp_queue_t queue = globals->fifo.queue;
+	odp_pool_t pool = globals->fifo.pool;
+	uint32_t num_events = globals->fifo.num_events;
+	odp_event_t events[num_events];
+
+	/* Thread index as argument */
+	thr = (uintptr_t)arg;
+
+	odp_barrier_wait(&globals->fifo.barrier);
+
+	/* Threads enqueue events in round robin */
+	while (1) {
+		cur_thr = odp_atomic_load_acq_u32(&globals->fifo.cur_thr);
+		if (cur_thr != thr)
+			continue;
+
+		num_enq = globals->fifo.num_enq;
+
+		if (num_enq >= num_events) {
+			odp_atomic_store_u32(&globals->fifo.cur_thr, (cur_thr + 1) % num_thr);
+			break;
+		}
+
+		if (multi) {
+			num = globals->fifo.burst + 1;
+			globals->fifo.burst = num % 10;
+
+			if (num > (num_events - num_enq))
+				num = num_events - num_enq;
+
+			ret = odp_queue_enq_multi(queue, &globals->fifo.event[num_enq], num);
+			CU_ASSERT(ret > 0);
+			CU_ASSERT_FATAL(ret <= (int)num);
+		} else {
+			ret = odp_queue_enq(queue, globals->fifo.event[num_enq]);
+			CU_ASSERT(ret == 0);
+			if (ret == 0)
+				ret = 1;
+		}
+
+		if (ret > 0)
+			globals->fifo.num_enq += ret;
+
+		odp_atomic_store_rel_u32(&globals->fifo.cur_thr, (cur_thr + 1) % num_thr);
+	}
+
+	odp_barrier_wait(&globals->fifo.barrier);
+
+	if (thr != 0)
+		return 0;
+
+	/* Thread 0 checks event order and destroys queue/pool */
+	CU_ASSERT(globals->fifo.num_enq == num_events);
+	if (globals->fifo.num_enq > num_events)
+		return -1;
+
+	num_events = globals->fifo.num_enq;
+
+	for (i = 0; i < num_events; i++)
+		events[i] = ODP_EVENT_INVALID;
+
+	num = 0;
+
+	while (1) {
+		uint32_t num_recv;
+		int max_num = 3;
+		odp_event_t ev[max_num];
+
+		from = ODP_QUEUE_INVALID;
+
+		if (multi) {
+			ret = odp_schedule_multi(&from, wait, ev, max_num);
+			CU_ASSERT_FATAL(ret >= 0 && ret <= max_num);
+
+			if (ret == 0)
+				break;
+		} else {
+			ev[0] = odp_schedule(&from, wait);
+			if (ev[0] == ODP_EVENT_INVALID)
+				break;
+
+			ret = 1;
+		}
+
+		num_recv = ret;
+		CU_ASSERT(num < num_events);
+
+		if (num >= num_events) {
+			/* Drop extra events */
+			odp_event_free_multi(ev, num_recv);
+			continue;
+		}
+
+		for (i = 0; i < num_recv; i++) {
+			CU_ASSERT(odp_event_type(ev[i]) == ODP_EVENT_BUFFER);
+			events[num] = ev[i];
+			num++;
+		}
+
+		CU_ASSERT(from == queue);
+	}
+
+	CU_ASSERT(num == num_events);
+
+	for (i = 0; i < num; i++) {
+		buf = odp_buffer_from_event(events[i]);
+		seq = odp_buffer_addr(buf);
+
+		CU_ASSERT(*seq == i);
+
+		if (*seq != i)
+			ODPH_ERR("Bad sequence number %u,  expected %u\n", *seq, i);
+
+		odp_buffer_free(buf);
+	}
+
+	CU_ASSERT_FATAL(!odp_queue_destroy(queue));
+	CU_ASSERT_FATAL(!odp_pool_destroy(pool));
+
+	return 0;
+}
+
+static void scheduler_fifo_parallel_single(void)
+{
+	scheduler_fifo_init(ODP_SCHED_SYNC_PARALLEL, 0, 1);
+	scheduler_fifo_test(0);
+}
+
+static void scheduler_fifo_parallel_multi(void)
+{
+	scheduler_fifo_init(ODP_SCHED_SYNC_PARALLEL, 1, 1);
+	scheduler_fifo_test(0);
+}
+
+static void scheduler_fifo_atomic_single(void)
+{
+	scheduler_fifo_init(ODP_SCHED_SYNC_ATOMIC, 0, 1);
+	scheduler_fifo_test(0);
+}
+
+static void scheduler_fifo_atomic_multi(void)
+{
+	scheduler_fifo_init(ODP_SCHED_SYNC_ATOMIC, 1, 1);
+	scheduler_fifo_test(0);
+}
+
+static void scheduler_fifo_ordered_single(void)
+{
+	scheduler_fifo_init(ODP_SCHED_SYNC_ORDERED, 0, 1);
+	scheduler_fifo_test(0);
+}
+
+static void scheduler_fifo_ordered_multi(void)
+{
+	scheduler_fifo_init(ODP_SCHED_SYNC_ORDERED, 1, 1);
+	scheduler_fifo_test(0);
+}
+
 static int atomicity_test_run(void *arg)
 {
 	thread_args_t *args = (thread_args_t *)arg;
@@ -3314,6 +3556,9 @@ static int scheduler_test_global_init(void)
 
 static int scheduler_multi_suite_init(void)
 {
+	/* Line feeds to separate output from basic suite prints */
+	printf("\n\n");
+
 	if (create_queues(globals) != 0)
 		return -1;
 
@@ -3431,6 +3676,12 @@ odp_testinfo_t scheduler_basic_suite[] = {
 	ODP_TEST_INFO(scheduler_test_ordered),
 	ODP_TEST_INFO(scheduler_test_atomic_and_plain),
 	ODP_TEST_INFO(scheduler_test_ordered_and_plain),
+	ODP_TEST_INFO(scheduler_fifo_parallel_single),
+	ODP_TEST_INFO(scheduler_fifo_parallel_multi),
+	ODP_TEST_INFO(scheduler_fifo_atomic_single),
+	ODP_TEST_INFO(scheduler_fifo_atomic_multi),
+	ODP_TEST_INFO(scheduler_fifo_ordered_single),
+	ODP_TEST_INFO(scheduler_fifo_ordered_multi),
 	ODP_TEST_INFO(scheduler_test_atomicity),
 	ODP_TEST_INFO_NULL
 };
