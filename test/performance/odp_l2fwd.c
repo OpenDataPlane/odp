@@ -1070,7 +1070,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 		mode_tx = ODP_PKTIO_OP_MT;
 	}
 
-	pktin_param.hash_enable = (num_rx > 1) ? 1 : 0;
+	pktin_param.hash_enable = (num_rx > 1 || gbl_args->appl.flow_aware) ? 1 : 0;
 	pktin_param.hash_proto.proto.ipv4_udp = 1;
 	pktin_param.num_queues  = num_rx;
 	pktin_param.op_mode     = mode_rx;
