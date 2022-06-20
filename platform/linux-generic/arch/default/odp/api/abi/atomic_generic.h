@@ -1,5 +1,5 @@
 /* Copyright (c) 2021, ARM Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -81,10 +81,13 @@ static inline void _odp_atomic_init_u128(odp_atomic_u128_t *atom, odp_u128_t val
 
 static inline odp_u128_t _odp_atomic_load_u128(odp_atomic_u128_t *atom)
 {
-	odp_u128_t val;
+	union {
+		odp_u128_t val;
+		__int128_t i;
+	} u;
 
-	*(__int128_t *)&val = __atomic_load_n((__int128_t *)&atom->v, __ATOMIC_RELAXED);
-	return val;
+	u.i = __atomic_load_n((__int128_t *)&atom->v, __ATOMIC_RELAXED);
+	return u.val;
 }
 
 static inline void _odp_atomic_store_u128(odp_atomic_u128_t *atom, odp_u128_t val)
