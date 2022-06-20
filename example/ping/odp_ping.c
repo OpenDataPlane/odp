@@ -104,14 +104,13 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 				str_len -= len + 1;
 
 				if (i == MAX_PKTIOS) {
-					printf("Error: Too many interfaces\n");
+					ODPH_ERR("Too many interfaces\n");
 					ret = -1;
 					break;
 				}
 
 				if (len > MAX_PKTIO_NAME) {
-					printf("Error: Too long interface name %s\n",
-					       str);
+					ODPH_ERR("Too long interface name: %s\n", str);
 					ret = -1;
 					break;
 				}
@@ -139,7 +138,7 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	}
 
 	if (global->opt.num_pktio == 0) {
-		printf("Error: At least one pktio interface needed.\n");
+		ODPH_ERR("At least one pktio interface needed\n");
 		ret = -1;
 	}
 
@@ -164,7 +163,7 @@ static int open_pktios(test_global_t *global)
 	num_pktio = global->opt.num_pktio;
 
 	if (odp_pool_capability(&pool_capa)) {
-		printf("Error: Pool capability failed.\n");
+		ODPH_ERR("Pool capability failed\n");
 		return -1;
 	}
 
@@ -180,7 +179,7 @@ static int open_pktios(test_global_t *global)
 	global->pool = pool;
 
 	if (pool == ODP_POOL_INVALID) {
-		printf("Error: Pool create.\n");
+		ODPH_ERR("Pool create failed\n");
 		return -1;
 	}
 
@@ -200,7 +199,7 @@ static int open_pktios(test_global_t *global)
 		pktio = odp_pktio_open(name, pool, &pktio_param);
 
 		if (pktio == ODP_PKTIO_INVALID) {
-			printf("Error (%s): Pktio open failed.\n", name);
+			ODPH_ERR("Pktio open failed: %s\n", name);
 			return -1;
 		}
 
@@ -211,7 +210,7 @@ static int open_pktios(test_global_t *global)
 		if (odp_pktio_mac_addr(pktio,
 				       &global->pktio[i].eth_addr.addr,
 				       ODPH_ETHADDR_LEN) != ODPH_ETHADDR_LEN) {
-			printf("Error (%s): MAC address read failed.\n", name);
+			ODPH_ERR("MAC address read failed: %s\n", name);
 			return -1;
 		}
 
@@ -229,7 +228,7 @@ static int open_pktios(test_global_t *global)
 		pktin_param.num_queues = 1;
 
 		if (odp_pktin_queue_config(pktio, &pktin_param)) {
-			printf("Error (%s): Pktin config failed.\n", name);
+			ODPH_ERR("Pktin config failed: %s\n", name);
 			return -1;
 		}
 
@@ -237,13 +236,12 @@ static int open_pktios(test_global_t *global)
 		pktout_param.num_queues = 1;
 
 		if (odp_pktout_queue_config(pktio, &pktout_param)) {
-			printf("Error (%s): Pktout config failed.\n", name);
+			ODPH_ERR("Pktout config failed: %s\n", name);
 			return -1;
 		}
 
 		if (odp_pktout_queue(pktio, &pktout, 1) != 1) {
-			printf("Error (%s): Pktout queue request failed.\n",
-			       name);
+			ODPH_ERR("Pktout queue request failed: %s\n", name);
 			return -1;
 		}
 
@@ -260,7 +258,7 @@ static int init_pktio_lookup_tbl(test_global_t *global)
 		int pktio_idx = odp_pktio_index(pktio);
 
 		if (pktio_idx < 0 || pktio_idx >= MAX_PKTIO_INDEXES) {
-			ODPH_ERR("Bad pktio index %i\n", pktio_idx);
+			ODPH_ERR("Bad pktio index: %i\n", pktio_idx);
 			return -1;
 		}
 
@@ -275,9 +273,7 @@ static int start_pktios(test_global_t *global)
 
 	for (i = 0; i < global->opt.num_pktio; i++) {
 		if (odp_pktio_start(global->pktio[i].pktio)) {
-			printf("Error (%s): Pktio start failed.\n",
-			       global->opt.pktio_name[i]);
-
+			ODPH_ERR("Pktio start failed: %s\n", global->opt.pktio_name[i]);
 			return -1;
 		}
 
@@ -299,8 +295,7 @@ static int stop_pktios(test_global_t *global)
 			continue;
 
 		if (odp_pktio_stop(pktio)) {
-			printf("Error (%s): Pktio stop failed.\n",
-			       global->opt.pktio_name[i]);
+			ODPH_ERR("Pktio stop failed: %s\n", global->opt.pktio_name[i]);
 			ret = -1;
 		}
 	}
@@ -337,8 +332,7 @@ static int close_pktios(test_global_t *global)
 			continue;
 
 		if (odp_pktio_close(pktio)) {
-			printf("Error (%s): Pktio close failed.\n",
-			       global->opt.pktio_name[i]);
+			ODPH_ERR("Pktio close failed: %s\n", global->opt.pktio_name[i]);
 			ret = -1;
 		}
 	}
@@ -349,7 +343,7 @@ static int close_pktios(test_global_t *global)
 		return ret;
 
 	if (odp_pool_destroy(pool)) {
-		printf("Error: Pool destroy failed.\n");
+		ODPH_ERR("Pool destroy failed\n");
 		ret = -1;
 	}
 
@@ -663,13 +657,13 @@ int main(int argc, char *argv[])
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, NULL, NULL)) {
-		printf("Error: Global init failed.\n");
+		ODPH_ERR("Global init failed\n");
 		return -1;
 	}
 
 	/* Init this thread */
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
-		printf("Error: Local init failed.\n");
+		ODPH_ERR("Local init failed\n");
 		return -1;
 	}
 
@@ -680,44 +674,44 @@ int main(int argc, char *argv[])
 	odp_sys_info_print();
 
 	if (open_pktios(global)) {
-		printf("Error: pktio open failed\n");
+		ODPH_ERR("Pktio open failed\n");
 		return -1;
 	}
 
 	if (init_pktio_lookup_tbl(global)) {
-		printf("Error: mapping pktio indexes failed\n");
+		ODPH_ERR("Mapping pktio indexes failed\n");
 		return -1;
 	}
 
 	if (start_pktios(global)) {
-		printf("Error: pktio start failed\n");
+		ODPH_ERR("Pktio start failed\n");
 		return -1;
 	}
 
 	if (receive_packets(global)) {
-		printf("Error: packet receive failed\n");
+		ODPH_ERR("Packet receive failed\n");
 		return -1;
 	}
 
 	if (stop_pktios(global)) {
-		printf("Error: pktio stop failed\n");
+		ODPH_ERR("Pktio stop failed\n");
 		return -1;
 	}
 
 	empty_queues();
 
 	if (close_pktios(global)) {
-		printf("Error: pktio close failed\n");
+		ODPH_ERR("Pktio close failed\n");
 		return -1;
 	}
 
 	if (odp_term_local()) {
-		printf("Error: term local failed.\n");
+		ODPH_ERR("Term local failed\n");
 		return -1;
 	}
 
 	if (odp_term_global(instance)) {
-		printf("Error: term global failed.\n");
+		ODPH_ERR("Term global failed\n");
 		return -1;
 	}
 
