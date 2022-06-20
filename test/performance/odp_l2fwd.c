@@ -105,6 +105,7 @@ typedef struct {
 	int num_groups;         /* Number of scheduling groups */
 	int group_mode;         /* How threads join groups */
 	int burst_rx;           /* Receive burst size */
+	int rx_queues;          /* RX queues per interface */
 	int pool_per_if;        /* Create pool per interface */
 	uint32_t num_pkt;       /* Number of packets per pool */
 	bool vector_mode;       /* Vector mode enabled */
@@ -1057,11 +1058,14 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx, odp_po
 	}
 
 	if (num_rx > (int)pktio_capa.max_input_queues) {
-		printf("Sharing %i input queues between %i workers\n",
-		       pktio_capa.max_input_queues, num_rx);
 		num_rx  = pktio_capa.max_input_queues;
 		mode_rx = ODP_PKTIO_OP_MT;
+		printf("Maximum number of input queues: %i\n", num_rx);
 	}
+
+	if (num_rx < gbl_args->appl.num_workers)
+		printf("Sharing %i input queues between %i workers\n",
+		       num_rx, gbl_args->appl.num_workers);
 
 	if (num_tx > (int)pktio_capa.max_output_queues) {
 		printf("Sharing %i output queues between %i workers\n",
@@ -1482,6 +1486,8 @@ static void usage(char *progname)
 	       "                          used by default.\n"
 	       "  -b, --burst_rx <num>    0:   Use max burst size (default)\n"
 	       "                          num: Max number of packets per receive call\n"
+	       "  -q, --rx_queues <num>   Number of RX queues per interface in scheduler mode\n"
+	       "                          0: RX queue per worker CPU (default)\n"
 	       "  -p, --packet_copy       0: Don't copy packet (default)\n"
 	       "                          1: Create and send copy of the received packet.\n"
 	       "                             Free the original packet.\n"
@@ -1538,6 +1544,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"group_mode", required_argument, NULL, 'G'},
 		{"prio", required_argument, NULL, 'I'},
 		{"burst_rx", required_argument, NULL, 'b'},
+		{"rx_queues", required_argument, NULL, 'q'},
 		{"packet_copy", required_argument, NULL, 'p'},
 		{"pool_per_if", required_argument, NULL, 'y'},
 		{"num_pkt", required_argument, NULL, 'n'},
@@ -1555,7 +1562,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:G:I:b:p:y:n:l:L:w:x:z:M:uPfvh";
+	static const char *shortopts = "+c:t:a:i:m:o:r:d:s:e:k:g:G:I:b:q:p:y:n:l:L:w:x:z:M:uPfvh";
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
@@ -1567,6 +1574,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->error_check = 0; /* don't check packet errors by default */
 	appl_args->packet_copy = 0;
 	appl_args->burst_rx = 0;
+	appl_args->rx_queues = 0;
 	appl_args->verbose = 0;
 	appl_args->chksum = 0; /* don't use checksum offload by default */
 	appl_args->pool_per_if = 0;
@@ -1746,6 +1754,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'b':
 			appl_args->burst_rx = atoi(optarg);
 			break;
+		case 'q':
+			appl_args->rx_queues = atoi(optarg);
+			break;
 		case 'p':
 			appl_args->packet_copy = atoi(optarg);
 			break;
@@ -1870,6 +1881,7 @@ static void print_info(void)
 	printf("Flow aware:         %s\n", appl_args->flow_aware ?
 					   "yes" : "no");
 	printf("Burst size:         %i\n", appl_args->burst_rx);
+	printf("RX queues per IF:   %i\n", appl_args->rx_queues);
 	printf("Number of pools:    %i\n", appl_args->pool_per_if ?
 					   appl_args->if_count : 1);
 
@@ -2259,7 +2271,7 @@ int main(int argc, char *argv[])
 		odp_schedule_group_t grp;
 
 		/* A queue per worker in scheduled mode */
-		num_rx = num_workers;
+		num_rx = gbl_args->appl.rx_queues > 0 ? gbl_args->appl.rx_queues : num_workers;
 		num_tx = num_workers;
 
 		if (!gbl_args->appl.sched_mode) {
