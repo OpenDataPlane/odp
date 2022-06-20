@@ -16,6 +16,7 @@ COMPILE_ONLY = odp_cpu_bench \
 	       odp_crypto \
 	       odp_dma_perf \
 	       odp_ipsec \
+	       odp_ipsecfwd \
 	       odp_l2fwd \
 	       odp_packet_gen \
 	       odp_pktio_ordered \
@@ -56,6 +57,7 @@ odp_crc_SOURCES = odp_crc.c
 odp_crypto_SOURCES = odp_crypto.c
 odp_dma_perf_SOURCES = odp_dma_perf.c
 odp_ipsec_SOURCES = odp_ipsec.c
+odp_ipsecfwd_SOURCES = odp_ipsecfwd.c
 odp_lock_perf_SOURCES = odp_lock_perf.c
 odp_mem_perf_SOURCES = odp_mem_perf.c
 odp_packet_gen_SOURCES = odp_packet_gen.c

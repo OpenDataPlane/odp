@@ -8,6 +8,7 @@ odp_crc
 odp_crypto
 odp_dma_perf
 odp_ipsec
+odp_ipsecfwd
 odp_l2fwd
 odp_lock_perf
 odp_mem_perf
