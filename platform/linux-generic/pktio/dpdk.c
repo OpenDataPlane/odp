@@ -19,6 +19,7 @@
 #include <odp/api/cpumask.h>
 
 #include <odp/api/packet.h>
+#include <odp/api/packet_io.h>
 #include <odp/api/plat/packet_inlines.h>
 #include <odp/api/time.h>
 #include <odp/api/plat/time_inlines.h>
@@ -128,6 +129,8 @@ typedef struct ODP_ALIGNED_CACHE {
 	unsigned int min_rx_burst;	/**< minimum RX burst size */
 	/** RSS configuration */
 	struct rte_eth_rss_conf rss_conf;
+	/** Packet output capabilities */
+	odp_pktout_config_opt_t pktout_capa;
 	uint16_t mtu;			/**< maximum transmission unit */
 	uint32_t mtu_max;		/**< maximum supported MTU value */
 	odp_bool_t mtu_set;		/**< DPDK MTU has been modified */
@@ -847,13 +850,9 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 
 		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
 
-		if (odp_unlikely(chksum_enabled)) {
-			odp_pktout_config_opt_t *pktout_capa =
-			&pktio_entry->capa.config.pktout;
-
-			pkt_set_ol_tx(pktout_cfg, pktout_capa, pkt_hdr,
+		if (odp_unlikely(chksum_enabled))
+			pkt_set_ol_tx(pktout_cfg, &pkt_dpdk->pktout_capa, pkt_hdr,
 				      mbuf_table[i], data);
-		}
 
 		if (odp_unlikely(tx_ts_enabled)) {
 			if (odp_unlikely(*tx_ts_idx == 0 && pkt_hdr->p.flags.ts_set))
@@ -983,8 +982,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 {
 	pkt_dpdk_t *pkt_dpdk = pkt_priv(pktio_entry);
 	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->config.pktout;
-	odp_pktout_config_opt_t *pktout_capa =
-		&pktio_entry->capa.config.pktout;
+	odp_pktout_config_opt_t *pktout_capa = &pkt_dpdk->pktout_capa;
 	uint16_t mtu = pkt_dpdk->mtu;
 	uint8_t chksum_enabled = pktio_entry->enabled.chksum_insert;
 	uint8_t tx_ts_enabled = _odp_pktio_tx_ts_enabled(pktio_entry);
@@ -1652,6 +1650,9 @@ static int dpdk_init_capability(pktio_entry_t *pktio_entry,
 	capa->config.pktout.bit.tcp_chksum_ena =
 		capa->config.pktout.bit.tcp_chksum;
 	capa->config.pktout.bit.ts_ena = 1;
+
+	/* Copy for fast path access */
+	pkt_dpdk->pktout_capa = capa->config.pktout;
 
 	capa->stats.pktio.counter.in_octets = 1;
 	capa->stats.pktio.counter.in_packets = 1;
