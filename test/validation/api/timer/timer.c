@@ -51,11 +51,6 @@ struct test_timer {
 	uint64_t tick; /* Expiration tick or TICK_INVALID */
 };
 
-struct thread_args {
-	pthrd_arg thrdarg;
-	odp_queue_type_t queue_type;
-};
-
 typedef struct {
 	/* Clock source support flags */
 	uint8_t clk_supported[ODP_CLOCK_NUM_SRC];
@@ -90,6 +85,9 @@ typedef struct {
 
 	/* Periodic timers supported */
 	int periodic;
+
+	/* Queue type to be tested */
+	odp_queue_type_t test_queue_type;
 
 } global_shared_mem_t;
 
@@ -1824,7 +1822,7 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 
 /* Worker thread entrypoint which performs timer alloc/set/cancel/free
  * tests */
-static int worker_entrypoint(void *arg)
+static int worker_entrypoint(void *arg ODP_UNUSED)
 {
 	int thr = odp_thread_id();
 	uint32_t i, allocated;
@@ -1849,27 +1847,23 @@ static int worker_entrypoint(void *arg)
 	uint32_t num_timers = global_mem->timers_per_thread;
 	uint64_t min_tmo = global_mem->param.min_tmo;
 	odp_queue_param_t queue_param;
-	odp_queue_type_t queue_type = ODP_QUEUE_TYPE_PLAIN;
 	odp_thrmask_t thr_mask;
 	odp_schedule_group_t group;
-	struct thread_args *thr_args = arg;
 	uint64_t sched_tmo;
-	uint64_t res_ns  = global_mem->param.res_ns;
+	uint64_t res_ns = global_mem->param.res_ns;
+	odp_queue_type_t queue_type = global_mem->test_queue_type;
 
 	odp_queue_param_init(&queue_param);
-	if (thr_args->queue_type == ODP_QUEUE_TYPE_PLAIN) {
-		queue_param.type = ODP_QUEUE_TYPE_PLAIN;
-		queue_type = ODP_QUEUE_TYPE_PLAIN;
-	} else {
+	queue_param.type = queue_type;
+
+	if (queue_type == ODP_QUEUE_TYPE_SCHED) {
 		odp_thrmask_zero(&thr_mask);
 		odp_thrmask_set(&thr_mask, odp_thread_id());
 		group = odp_schedule_group_create(NULL, &thr_mask);
 		if (group == ODP_SCHED_GROUP_INVALID)
 			CU_FAIL_FATAL("Schedule group create failed");
 
-		queue_param.type = ODP_QUEUE_TYPE_SCHED;
 		queue_param.sched.sync = ODP_SCHED_SYNC_PARALLEL;
-		queue_type = ODP_QUEUE_TYPE_SCHED;
 		queue_param.sched.group = group;
 	}
 
@@ -2082,7 +2076,6 @@ static void timer_test_all(odp_queue_type_t queue_type)
 	uint64_t ns, tick, ns2;
 	uint64_t res_ns, min_tmo, max_tmo;
 	uint32_t timers_allocated;
-	struct thread_args thr_args;
 	odp_pool_capability_t pool_capa;
 	odp_timer_capability_t timer_capa;
 	odp_schedule_capability_t sched_capa;
@@ -2205,13 +2198,11 @@ static void timer_test_all(odp_queue_type_t queue_type)
 	odp_atomic_init_u32(&global_mem->timers_allocated, 0);
 
 	/* Create and start worker threads */
-	thr_args.thrdarg.testcase = 0;
-	thr_args.thrdarg.numthrds = num_workers;
-	thr_args.queue_type = queue_type;
-	odp_cunit_thread_create(worker_entrypoint, &thr_args.thrdarg);
+	global_mem->test_queue_type = queue_type;
+	odp_cunit_thread_create(num_workers, worker_entrypoint, NULL, 0);
 
 	/* Wait for worker threads to exit */
-	odp_cunit_thread_exit(&thr_args.thrdarg);
+	odp_cunit_thread_join(num_workers);
 	ODPH_DBG("Number of timeouts delivered/received too late: "
 		 "%" PRIu32 "\n",
 		 odp_atomic_load_u32(&global_mem->ndelivtoolate));

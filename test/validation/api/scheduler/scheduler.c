@@ -96,7 +96,6 @@ typedef struct {
 } test_globals_t;
 
 typedef struct {
-	pthrd_arg cu_thr;
 	test_globals_t *globals;
 	odp_schedule_sync_t sync;
 	int num_queues;
@@ -1340,7 +1339,8 @@ static void chaos_run(unsigned int qtype)
 	test_globals_t *globals;
 	thread_args_t *args;
 	odp_shm_t shm;
-	int i, rc;
+	int i, rc, num_thr;
+	void *arg_ptr;
 	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_PARALLEL,
 				      ODP_SCHED_SYNC_ATOMIC,
 				      ODP_SCHED_SYNC_ORDERED};
@@ -1403,14 +1403,15 @@ static void chaos_run(unsigned int qtype)
 	}
 
 	/* Test runs also on the main thread */
-	args->cu_thr.numthrds = globals->num_workers - 1;
-	if (args->cu_thr.numthrds > 0)
-		odp_cunit_thread_create(chaos_thread, &args->cu_thr);
+	num_thr = globals->num_workers - 1;
+	arg_ptr = args;
+	if (num_thr > 0)
+		odp_cunit_thread_create(num_thr, chaos_thread, &arg_ptr, 0);
 
 	chaos_thread(args);
 
-	if (args->cu_thr.numthrds > 0)
-		odp_cunit_thread_exit(&args->cu_thr);
+	if (num_thr > 0)
+		odp_cunit_thread_join(num_thr);
 
 	if (CHAOS_DEBUG)
 		printf("Thread %d returning from chaos threads..cleaning up\n",
@@ -1812,6 +1813,8 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 	odp_shm_t shm;
 	test_globals_t *globals;
 	thread_args_t *args;
+	void *arg_ptr;
+	int num;
 
 	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
@@ -1843,15 +1846,16 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 	/* Create and launch worker threads */
 
 	/* Test runs also on the main thread */
-	args->cu_thr.numthrds = globals->num_workers - 1;
-	if (args->cu_thr.numthrds > 0)
-		odp_cunit_thread_create(schedule_common_, &args->cu_thr);
+	num = globals->num_workers - 1;
+	arg_ptr = args;
+	if (num > 0)
+		odp_cunit_thread_create(num, schedule_common_, &arg_ptr, 0);
 
 	schedule_common_(args);
 
 	/* Wait for worker threads to terminate */
-	if (args->cu_thr.numthrds > 0)
-		odp_cunit_thread_exit(&args->cu_thr);
+	if (num > 0)
+		odp_cunit_thread_join(num);
 
 	/* Cleanup ordered queues for next pass */
 	if (sync == ODP_SCHED_SYNC_ORDERED)
@@ -2389,10 +2393,10 @@ static void scheduler_test_order_wait_2_threads(void)
 	odp_schedule_capability_t sched_capa;
 	odp_queue_param_t queue_param;
 	odp_queue_t queue;
-	pthrd_arg thr_arg = {.numthrds = 1};
 	int ret;
 	odp_time_t start;
 	odp_event_t ev;
+	int num = 1;
 
 	CU_ASSERT(!odp_schedule_capability(&sched_capa));
 
@@ -2406,8 +2410,8 @@ static void scheduler_test_order_wait_2_threads(void)
 	odp_atomic_init_u32(&globals->order_wait.helper_ready, 0);
 	odp_atomic_init_u32(&globals->order_wait.helper_active, 0);
 
-	ret = odp_cunit_thread_create(order_wait_helper, &thr_arg);
-	CU_ASSERT_FATAL(ret == thr_arg.numthrds);
+	ret = odp_cunit_thread_create(num, order_wait_helper, NULL, 0);
+	CU_ASSERT_FATAL(ret == num);
 
 	/* Send an event to the helper thread */
 	enqueue_event(queue);
@@ -2471,7 +2475,7 @@ static void scheduler_test_order_wait_2_threads(void)
 	CU_ASSERT(ev == ODP_EVENT_INVALID);
 
 out:
-	CU_ASSERT(odp_cunit_thread_exit(&thr_arg) == 0);
+	CU_ASSERT(odp_cunit_thread_join(num) == 0);
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
 }
 
@@ -2570,7 +2574,8 @@ static void scheduler_test_sched_and_plain(odp_schedule_sync_t sync)
 	uint64_t wait = odp_schedule_wait_time(100 * ODP_TIME_MSEC_IN_NS);
 	uint32_t events_per_queue = BUFS_PER_QUEUE / 2;
 	uint32_t prev_seq;
-	int first;
+	int first, num;
+	void *arg_ptr;
 
 	CU_ASSERT_FATAL(!odp_schedule_capability(&sched_capa));
 	CU_ASSERT_FATAL(!odp_queue_capability(&queue_capa))
@@ -2653,14 +2658,15 @@ static void scheduler_test_sched_and_plain(odp_schedule_sync_t sync)
 	CU_ASSERT_FATAL(seq > 2);
 
 	/* Test runs also on the main thread */
-	args->cu_thr.numthrds = globals->num_workers - 1;
-	if (args->cu_thr.numthrds > 0)
-		odp_cunit_thread_create(sched_and_plain_thread, &args->cu_thr);
+	num = globals->num_workers - 1;
+	arg_ptr = args;
+	if (num > 0)
+		odp_cunit_thread_create(num, sched_and_plain_thread, &arg_ptr, 0);
 
 	sched_and_plain_thread(args);
 
-	if (args->cu_thr.numthrds > 0)
-		odp_cunit_thread_exit(&args->cu_thr);
+	if (num > 0)
+		odp_cunit_thread_join(num);
 
 	/* Check plain queue sequence numbers and free events */
 	first = 1;
@@ -2782,7 +2788,8 @@ static void scheduler_test_atomicity(void)
 	odp_pool_t pool;
 	odp_queue_t queue;
 	odp_queue_param_t queue_param;
-	int i;
+	int i, num;
+	void *arg_ptr;
 
 	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
@@ -2821,15 +2828,16 @@ static void scheduler_test_atomicity(void)
 	/* Create and launch worker threads */
 	/* Test runs also on the main thread */
 	args->num_workers = globals->num_workers;
-	args->cu_thr.numthrds = globals->num_workers - 1;
-	if (args->cu_thr.numthrds > 0)
-		odp_cunit_thread_create(atomicity_test_run, &args->cu_thr);
+	num = globals->num_workers - 1;
+	arg_ptr = args;
+	if (num > 0)
+		odp_cunit_thread_create(num, atomicity_test_run, &arg_ptr, 0);
 
 	atomicity_test_run(args);
 
 	/* Wait for worker threads to terminate */
-	if (args->cu_thr.numthrds > 0)
-		odp_cunit_thread_exit(&args->cu_thr);
+	if (num > 0)
+		odp_cunit_thread_join(num);
 
 	odp_queue_destroy(globals->atomicity_q.handle);
 }

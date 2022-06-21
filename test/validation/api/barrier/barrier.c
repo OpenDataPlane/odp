@@ -298,22 +298,20 @@ static void barrier_test_memory_barrier(void)
 
 static void barrier_test_no_barrier_functional(void)
 {
-	pthrd_arg arg;
+	int num = global_mem->g_num_threads;
 
-	arg.numthrds = global_mem->g_num_threads;
 	barrier_test_init();
-	odp_cunit_thread_create(no_barrier_functional_test, &arg);
-	odp_cunit_thread_exit(&arg);
+	odp_cunit_thread_create(num, no_barrier_functional_test, NULL, 0);
+	odp_cunit_thread_join(num);
 }
 
 static void barrier_test_barrier_functional(void)
 {
-	pthrd_arg arg;
+	int num = global_mem->g_num_threads;
 
-	arg.numthrds = global_mem->g_num_threads;
 	barrier_test_init();
-	odp_cunit_thread_create(barrier_functional_test, &arg);
-	odp_cunit_thread_exit(&arg);
+	odp_cunit_thread_create(num, barrier_functional_test, NULL, 0);
+	odp_cunit_thread_join(num);
 }
 
 odp_testinfo_t barrier_suite_barrier[] = {
