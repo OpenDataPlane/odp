@@ -135,19 +135,23 @@ typedef struct ODP_ALIGNED_CACHE {
 	uint16_t port_id;
 	/* Maximum transmission unit */
 	uint16_t mtu;
+	struct {
+		/* No locking for rx */
+		uint8_t lockless_rx;
+		/* No locking for tx */
+		uint8_t lockless_tx;
+		/* Store RX RSS hash as flow hash */
+		uint8_t set_flow_hash;
+	} flags;
 	/* Minimum RX burst size */
 	uint8_t min_rx_burst;
-	/* No locking for rx */
-	uint8_t lockless_rx;
-	/* No locking for tx */
-	uint8_t lockless_tx;
-	/* Runtime config options */
-	dpdk_opt_t opt;
 	/* Cache for storing extra RX packets */
 	pkt_cache_t rx_cache[PKTIO_MAX_QUEUES];
 
 	/* --- Control path data --- */
 
+	/* Runtime config options */
+	dpdk_opt_t opt;
 	/* ODP packet pool */
 	odp_pool_t pool;
 	/* DPDK packet pool */
@@ -922,7 +926,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 	prefetch_pkt(mbuf_table[0]);
 
 	nb_pkts = 0;
-	set_flow_hash = pkt_dpdk->opt.set_flow_hash;
+	set_flow_hash = pkt_dpdk->flags.set_flow_hash;
 	pktin_cfg = pktio_entry->config.pktin;
 	input = pktio_entry->handle;
 
@@ -1509,7 +1513,7 @@ static int dpdk_input_queues_config(pktio_entry_t *pktio_entry,
 	else
 		lockless = 0;
 
-	pkt_priv(pktio_entry)->lockless_rx = lockless;
+	pkt_priv(pktio_entry)->flags.lockless_rx = lockless;
 
 	return 0;
 }
@@ -1527,7 +1531,7 @@ static int dpdk_output_queues_config(pktio_entry_t *pktio_entry,
 	else
 		lockless = 0;
 
-	pkt_dpdk->lockless_tx = lockless;
+	pkt_dpdk->flags.lockless_tx = lockless;
 
 	ret  = rte_eth_dev_info_get(pkt_dpdk->port_id, &dev_info);
 	if (ret) {
@@ -1774,6 +1778,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		ODP_ERR("Initializing runtime options failed\n");
 		return -1;
 	}
+	pkt_dpdk->flags.set_flow_hash = pkt_dpdk->opt.set_flow_hash; /* Copy for fast path access */
 
 	mtu = dpdk_mtu_get(pktio_entry);
 	if (mtu == 0) {
@@ -1997,7 +2002,7 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 	int i;
 	unsigned cache_idx;
 
-	if (!pkt_dpdk->lockless_rx)
+	if (!pkt_dpdk->flags.lockless_rx)
 		odp_ticketlock_lock(&pkt_dpdk->rx_lock[index]);
 	/**
 	 * ixgbe and i40e drivers have a minimum supported RX burst size
@@ -2036,7 +2041,7 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 					 rx_mbufs, num);
 	}
 
-	if (!pkt_dpdk->lockless_rx)
+	if (!pkt_dpdk->flags.lockless_rx)
 		odp_ticketlock_unlock(&pkt_dpdk->rx_lock[index]);
 
 	if (nb_rx > 0) {
@@ -2075,13 +2080,13 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 		mbufs = pkt_to_mbuf(pktio_entry, tx_mbufs, pkt_table, num,
 				    &tx_ts_idx);
 
-	if (!pkt_dpdk->lockless_tx)
+	if (!pkt_dpdk->flags.lockless_tx)
 		odp_ticketlock_lock(&pkt_dpdk->tx_lock[index]);
 
 	tx_pkts = rte_eth_tx_burst(pkt_dpdk->port_id, index,
 				   tx_mbufs, mbufs);
 
-	if (!pkt_dpdk->lockless_tx)
+	if (!pkt_dpdk->flags.lockless_tx)
 		odp_ticketlock_unlock(&pkt_dpdk->tx_lock[index]);
 
 	if (odp_unlikely(tx_ts_idx && tx_pkts >= tx_ts_idx))
