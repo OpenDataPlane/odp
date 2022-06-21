@@ -156,18 +156,18 @@ typedef struct ODP_ALIGNED_CACHE {
 	odp_pool_t pool;
 	/* DPDK packet pool */
 	struct rte_mempool *pkt_pool;
-	/* Maximum packet length */
-	uint32_t data_room;
 	/* RSS configuration */
 	struct rte_eth_rss_conf rss_conf;
+	/* Maximum packet length */
+	uint32_t data_room;
 	/* Maximum supported MTU value */
 	uint32_t mtu_max;
 	/* DPDK MTU has been modified */
-	odp_bool_t mtu_set;
-	/* Number of TX descriptors per queue */
-	uint16_t num_tx_desc[PKTIO_MAX_QUEUES];
+	uint8_t mtu_set;
 	/* Use system call to get/set vdev promisc mode */
 	uint8_t vdev_sysc_promisc;
+	/* Number of TX descriptors per queue */
+	uint16_t num_tx_desc[PKTIO_MAX_QUEUES];
 
 	/* --- Locks for MT safe operations --- */
 
@@ -1134,7 +1134,7 @@ static int dpdk_maxlen_set(pktio_entry_t *pktio_entry, uint32_t maxlen_input,
 		ODP_ERR("rte_eth_dev_set_mtu() failed: %d\n", ret);
 
 	pkt_dpdk->mtu = maxlen_input;
-	pkt_dpdk->mtu_set = true;
+	pkt_dpdk->mtu_set = 1;
 
 	return ret;
 }
@@ -1787,7 +1787,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	}
 	pkt_dpdk->mtu = mtu + _ODP_ETHHDR_LEN;
 	pkt_dpdk->mtu_max = RTE_MAX(pkt_dpdk->mtu, DPDK_MTU_MAX);
-	pkt_dpdk->mtu_set = false;
+	pkt_dpdk->mtu_set = 0;
 
 	promisc_mode_check(pkt_dpdk);
 
