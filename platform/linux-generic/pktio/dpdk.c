@@ -121,31 +121,52 @@ typedef struct ODP_ALIGNED_CACHE {
 	unsigned int count;			  /**< packets in cache */
 } pkt_cache_t;
 
-/** Packet IO using DPDK interface */
+/* DPDK pktio specific data */
 typedef struct ODP_ALIGNED_CACHE {
-	odp_pool_t pool;		/**< pool to alloc packets from */
-	struct rte_mempool *pkt_pool;	/**< DPDK packet pool */
-	uint32_t data_room;		/**< maximum packet length */
-	unsigned int min_rx_burst;	/**< minimum RX burst size */
-	/** RSS configuration */
-	struct rte_eth_rss_conf rss_conf;
-	/** Packet output capabilities */
+	/* --- Fast path data --- */
+
+	/* Packet output capabilities */
 	odp_pktout_config_opt_t pktout_capa;
-	uint16_t mtu;			/**< maximum transmission unit */
-	uint32_t mtu_max;		/**< maximum supported MTU value */
-	odp_bool_t mtu_set;		/**< DPDK MTU has been modified */
-	uint16_t port_id;		/**< DPDK port identifier */
-	uint16_t num_tx_desc[PKTIO_MAX_QUEUES]; /**< Number of TX descriptors per queue */
-	/** Use system call to get/set vdev promisc mode */
-	uint8_t vdev_sysc_promisc;
-	uint8_t lockless_rx;		/**< no locking for rx */
-	uint8_t lockless_tx;		/**< no locking for tx */
-	  /** RX queue locks */
-	odp_ticketlock_t rx_lock[PKTIO_MAX_QUEUES] ODP_ALIGNED_CACHE;
-	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES];  /**< TX queue locks */
-	/** cache for storing extra RX packets */
-	pkt_cache_t rx_cache[PKTIO_MAX_QUEUES];
+	/* Minimum RX burst size */
+	unsigned int min_rx_burst;
+	/* DPDK port identifier */
+	uint16_t port_id;
+	/* Maximum transmission unit */
+	uint16_t mtu;
+	/* No locking for rx */
+	uint8_t lockless_rx;
+	/* No locking for tx */
+	uint8_t lockless_tx;
+	/* Runtime config options */
 	dpdk_opt_t opt;
+	/* Cache for storing extra RX packets */
+	pkt_cache_t rx_cache[PKTIO_MAX_QUEUES];
+
+	/* --- Control path data --- */
+
+	/* ODP packet pool */
+	odp_pool_t pool;
+	/* DPDK packet pool */
+	struct rte_mempool *pkt_pool;
+	/* Maximum packet length */
+	uint32_t data_room;
+	/* RSS configuration */
+	struct rte_eth_rss_conf rss_conf;
+	/* Maximum supported MTU value */
+	uint32_t mtu_max;
+	/* DPDK MTU has been modified */
+	odp_bool_t mtu_set;
+	/* Number of TX descriptors per queue */
+	uint16_t num_tx_desc[PKTIO_MAX_QUEUES];
+	/* Use system call to get/set vdev promisc mode */
+	uint8_t vdev_sysc_promisc;
+
+	/* --- Locks for MT safe operations --- */
+
+	/* RX queue locks */
+	odp_ticketlock_t rx_lock[PKTIO_MAX_QUEUES] ODP_ALIGNED_CACHE;
+	/* TX queue locks */
+	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES] ODP_ALIGNED_CACHE;
 } pkt_dpdk_t;
 
 ODP_STATIC_ASSERT(PKTIO_PRIVATE_SIZE >= sizeof(pkt_dpdk_t),
