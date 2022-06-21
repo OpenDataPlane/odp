@@ -114,12 +114,12 @@ static void thread_test_odp_thrmask_worker(void)
 {
 	odp_thrmask_t mask;
 	int ret;
-	pthrd_arg args = { .testcase = 0, .numthrds = 1 };
+	int num = 1;
 
 	CU_ASSERT_FATAL(odp_thread_type() == ODP_THREAD_CONTROL);
 
-	odp_barrier_init(&global_mem->bar_entry, args.numthrds + 1);
-	odp_barrier_init(&global_mem->bar_exit,  args.numthrds + 1);
+	odp_barrier_init(&global_mem->bar_entry, num + 1);
+	odp_barrier_init(&global_mem->bar_exit,  num + 1);
 
 	/* should start out with 0 worker threads */
 	ret = odp_thrmask_worker(&mask);
@@ -127,10 +127,10 @@ static void thread_test_odp_thrmask_worker(void)
 	CU_ASSERT(ret == 0);
 
 	/* start the test thread(s) */
-	ret = odp_cunit_thread_create(thread_func, &args);
-	CU_ASSERT(ret == args.numthrds);
+	ret = odp_cunit_thread_create(num, thread_func, NULL, 0);
+	CU_ASSERT(ret == num);
 
-	if (ret != args.numthrds)
+	if (ret != num)
 		return;
 
 	/* wait for thread(s) to start */
@@ -138,13 +138,13 @@ static void thread_test_odp_thrmask_worker(void)
 
 	ret = odp_thrmask_worker(&mask);
 	CU_ASSERT(ret == odp_thrmask_count(&mask));
-	CU_ASSERT(ret == args.numthrds);
+	CU_ASSERT(ret == num);
 	CU_ASSERT(ret <= odp_thread_count_max());
 
 	/* allow thread(s) to exit */
 	odp_barrier_wait(&global_mem->bar_exit);
 
-	odp_cunit_thread_exit(&args);
+	odp_cunit_thread_join(num);
 }
 
 static void thread_test_odp_thrmask_control(void)

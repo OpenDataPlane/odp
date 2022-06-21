@@ -135,12 +135,11 @@ static int run_test_basic_thread(void *arg ODP_UNUSED)
  */
 static void shmem_test_multi_thread(void)
 {
-	pthrd_arg thrdarg;
 	odp_shm_t shm;
 	odp_shm_t shm2;
 	shared_test_data_t *shared_test_data;
 	odp_cpumask_t unused;
-	int i;
+	int i, num;
 	char max_name[ODP_SHM_NAME_LEN];
 
 	for (i = 0; i < ODP_SHM_NAME_LEN; i++)
@@ -202,14 +201,14 @@ static void shmem_test_multi_thread(void)
 	shared_test_data->foo = TEST_SHARE_FOO;
 	shared_test_data->bar = TEST_SHARE_BAR;
 
-	thrdarg.numthrds = odp_cpumask_default_worker(&unused, 0);
+	num = odp_cpumask_default_worker(&unused, 0);
 
-	if (thrdarg.numthrds > MAX_WORKERS)
-		thrdarg.numthrds = MAX_WORKERS;
+	if (num > MAX_WORKERS)
+		num = MAX_WORKERS;
 
-	odp_barrier_init(&shared_test_data->test_barrier1, thrdarg.numthrds);
-	odp_cunit_thread_create(run_test_basic_thread, &thrdarg);
-	CU_ASSERT(odp_cunit_thread_exit(&thrdarg) >= 0);
+	odp_barrier_init(&shared_test_data->test_barrier1, num);
+	odp_cunit_thread_create(num, run_test_basic_thread, NULL, 0);
+	CU_ASSERT(odp_cunit_thread_join(num) >= 0);
 
 	odp_shm_print(shm);
 
@@ -541,13 +540,11 @@ static int run_test_reserve_after_fork(void *arg ODP_UNUSED)
  */
 static void shmem_test_reserve_after_fork(void)
 {
-	pthrd_arg thrdarg;
 	odp_shm_t shm;
 	odp_shm_t thr_shm;
 	shared_test_data_t *glob_data;
 	odp_cpumask_t unused;
-	int thr_index;
-	int i;
+	int thr_index, i, num;
 	shared_test_data_small_t  *pattern_small;
 	shared_test_data_medium_t *pattern_medium;
 	shared_test_data_big_t    *pattern_big;
@@ -557,27 +554,27 @@ static void shmem_test_reserve_after_fork(void)
 	glob_data = odp_shm_addr(shm);
 	CU_ASSERT_PTR_NOT_NULL(glob_data);
 
-	thrdarg.numthrds = odp_cpumask_default_worker(&unused, 0);
-	if (thrdarg.numthrds > MAX_WORKERS)
-		thrdarg.numthrds = MAX_WORKERS;
+	num = odp_cpumask_default_worker(&unused, 0);
+	if (num > MAX_WORKERS)
+		num = MAX_WORKERS;
 
-	odp_barrier_init(&glob_data->test_barrier1, thrdarg.numthrds + 1);
-	odp_barrier_init(&glob_data->test_barrier2, thrdarg.numthrds + 1);
+	odp_barrier_init(&glob_data->test_barrier1, num + 1);
+	odp_barrier_init(&glob_data->test_barrier2, num + 1);
 	odp_atomic_store_u32(&glob_data->index, 0);
 
-	odp_cunit_thread_create(run_test_reserve_after_fork, &thrdarg);
+	odp_cunit_thread_create(num, run_test_reserve_after_fork, NULL, 0);
 
 	/* wait until all threads have made their shm_reserve: */
 	odp_barrier_wait(&glob_data->test_barrier1);
 
 	/* perform a lookup of all memories: */
-	for (thr_index = 0; thr_index < thrdarg.numthrds; thr_index++) {
+	for (thr_index = 0; thr_index < num; thr_index++) {
 		thr_shm = odp_shm_lookup(glob_data->name[thr_index]);
 		CU_ASSERT(thr_shm == glob_data->shm[thr_index]);
 	}
 
 	/* check that the patterns are correct: */
-	for (thr_index = 0; thr_index < thrdarg.numthrds; thr_index++) {
+	for (thr_index = 0; thr_index < num; thr_index++) {
 		switch (thr_index % 3) {
 		case 0:
 			pattern_small =
@@ -606,7 +603,7 @@ static void shmem_test_reserve_after_fork(void)
 	/*
 	 * print the mapping address of the blocks
 	 */
-	for (thr_index = 0; thr_index < thrdarg.numthrds; thr_index++)
+	for (thr_index = 0; thr_index < num; thr_index++)
 		printf("In main Block index: %d mapped at %p\n",
 		       thr_index, odp_shm_addr(glob_data->shm[thr_index]));
 
@@ -614,13 +611,13 @@ static void shmem_test_reserve_after_fork(void)
 	odp_barrier_wait(&glob_data->test_barrier2);
 
 	/* at the same time, (race),free of all memories: */
-	for (thr_index = 0; thr_index < thrdarg.numthrds; thr_index++) {
+	for (thr_index = 0; thr_index < num; thr_index++) {
 		thr_shm = glob_data->shm[thr_index];
 		CU_ASSERT(odp_shm_free(thr_shm) == 0);
 	}
 
 	/* wait for all thread endings: */
-	CU_ASSERT(odp_cunit_thread_exit(&thrdarg) >= 0);
+	CU_ASSERT(odp_cunit_thread_join(num) >= 0);
 
 	/* just glob_data should remain: */
 
@@ -734,13 +731,11 @@ static int shmem_check_flag_single_va(void)
  */
 static void shmem_test_singleva_after_fork(void)
 {
-	pthrd_arg thrdarg;
 	odp_shm_t shm;
 	odp_shm_t thr_shm;
 	shared_test_data_t *glob_data;
 	odp_cpumask_t unused;
-	int thr_index;
-	int i;
+	int thr_index, i, num;
 	void *address;
 	shared_test_data_small_t  *pattern_small;
 	shared_test_data_medium_t *pattern_medium;
@@ -752,30 +747,30 @@ static void shmem_test_singleva_after_fork(void)
 	glob_data = odp_shm_addr(shm);
 	CU_ASSERT_PTR_NOT_NULL(glob_data);
 
-	thrdarg.numthrds = odp_cpumask_default_worker(&unused, 3);
-	if (thrdarg.numthrds > MAX_WORKERS)
-		thrdarg.numthrds = MAX_WORKERS;
+	num = odp_cpumask_default_worker(&unused, 3);
+	if (num > MAX_WORKERS)
+		num = MAX_WORKERS;
 
-	glob_data->nb_threads = thrdarg.numthrds;
-	odp_barrier_init(&glob_data->test_barrier1, thrdarg.numthrds + 1);
-	odp_barrier_init(&glob_data->test_barrier2, thrdarg.numthrds + 1);
-	odp_barrier_init(&glob_data->test_barrier3, thrdarg.numthrds + 1);
-	odp_barrier_init(&glob_data->test_barrier4, thrdarg.numthrds + 1);
+	glob_data->nb_threads = num;
+	odp_barrier_init(&glob_data->test_barrier1, num + 1);
+	odp_barrier_init(&glob_data->test_barrier2, num + 1);
+	odp_barrier_init(&glob_data->test_barrier3, num + 1);
+	odp_barrier_init(&glob_data->test_barrier4, num + 1);
 	odp_atomic_store_u32(&glob_data->index, 0);
 
-	odp_cunit_thread_create(run_test_singleva_after_fork, &thrdarg);
+	odp_cunit_thread_create(num, run_test_singleva_after_fork, NULL, 0);
 
 	/* wait until all threads have made their shm_reserve: */
 	odp_barrier_wait(&glob_data->test_barrier1);
 
 	/* perform a lookup of all memories: */
-	for (thr_index = 0; thr_index < thrdarg.numthrds; thr_index++) {
+	for (thr_index = 0; thr_index < num; thr_index++) {
 		thr_shm = odp_shm_lookup(glob_data->name[thr_index]);
 		CU_ASSERT(thr_shm == glob_data->shm[thr_index]);
 	}
 
 	/* check that the patterns are correct: */
-	for (thr_index = 0; thr_index < thrdarg.numthrds; thr_index++) {
+	for (thr_index = 0; thr_index < num; thr_index++) {
 		switch (thr_index % 3) {
 		case 0:
 			pattern_small =
@@ -804,7 +799,7 @@ static void shmem_test_singleva_after_fork(void)
 	/*
 	 * check that the mapping address is common to all (SINGLE_VA):
 	 */
-	for (thr_index = 0; thr_index < thrdarg.numthrds; thr_index++) {
+	for (thr_index = 0; thr_index < num; thr_index++) {
 		address = odp_shm_addr(glob_data->shm[thr_index]);
 		CU_ASSERT(glob_data->address[thr_index] == address);
 	}
@@ -819,7 +814,7 @@ static void shmem_test_singleva_after_fork(void)
 	odp_barrier_wait(&glob_data->test_barrier4);
 
 	/* wait for all thread endings: */
-	CU_ASSERT(odp_cunit_thread_exit(&thrdarg) >= 0);
+	CU_ASSERT(odp_cunit_thread_join(num) >= 0);
 
 	/* just glob_data should remain: */
 
@@ -976,12 +971,12 @@ static int run_test_stress(void *arg ODP_UNUSED)
  */
 static void shmem_test_stress(void)
 {
-	pthrd_arg thrdarg;
 	odp_shm_t shm;
 	odp_shm_t globshm;
 	shared_test_data_t *glob_data;
 	odp_cpumask_t unused;
 	uint32_t i;
+	int num;
 
 	globshm = odp_shm_reserve(MEM_NAME, sizeof(shared_test_data_t),
 				  0, 0);
@@ -989,12 +984,12 @@ static void shmem_test_stress(void)
 	glob_data = odp_shm_addr(globshm);
 	CU_ASSERT_PTR_NOT_NULL(glob_data);
 
-	thrdarg.numthrds = odp_cpumask_default_worker(&unused, 0);
-	if (thrdarg.numthrds > MAX_WORKERS)
-		thrdarg.numthrds = MAX_WORKERS;
+	num = odp_cpumask_default_worker(&unused, 0);
+	if (num > MAX_WORKERS)
+		num = MAX_WORKERS;
 
-	glob_data->nb_threads = thrdarg.numthrds;
-	odp_barrier_init(&glob_data->test_barrier1, thrdarg.numthrds);
+	glob_data->nb_threads = num;
+	odp_barrier_init(&glob_data->test_barrier1, num);
 	odp_spinlock_init(&glob_data->stress_lock);
 
 	/* before starting the threads, mark all entries as free: */
@@ -1002,10 +997,10 @@ static void shmem_test_stress(void)
 		glob_data->stress[i].state = STRESS_FREE;
 
 	/* create threads */
-	odp_cunit_thread_create(run_test_stress, &thrdarg);
+	odp_cunit_thread_create(num, run_test_stress, NULL, 0);
 
 	/* wait for all thread endings: */
-	CU_ASSERT(odp_cunit_thread_exit(&thrdarg) >= 0);
+	CU_ASSERT(odp_cunit_thread_join(num) >= 0);
 
 	/* release left overs: */
 	for (i = 0; i < STRESS_SIZE; i++) {

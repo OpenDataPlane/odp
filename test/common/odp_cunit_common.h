@@ -67,14 +67,6 @@ typedef struct {
 	uint32_t bar;
 } test_shared_data_t;
 
-/**
- * Thread argument
- */
-typedef struct {
-	int testcase; /**< specifies which set of API's to exercise */
-	int numthrds; /**< no of pthreads to create */
-} pthrd_arg;
-
 /* parse parameters that affect the behaviour of odp_cunit_common */
 int odp_cunit_parse_options(int argc, char *argv[]);
 /* register suites to be run via odp_cunit_run() */
@@ -84,9 +76,16 @@ int odp_cunit_update(odp_suiteinfo_t testsuites[]);
 /* the function, called by module main(), to run the testsuites: */
 int odp_cunit_run(void);
 
-/** create thread for start_routine function (which returns 0 on success) */
-int odp_cunit_thread_create(int func_ptr(void *), pthrd_arg *arg);
-int odp_cunit_thread_exit(pthrd_arg *);
+/* Create threads for a validation test
+ *
+ * Thread arguments table (arg[]) can be set to NULL, when there are no arguments.
+ * When 'priv' is 0, the same argument pointer (arg[0]) is passed to all threads. Otherwise,
+ * a pointer is passed (from arg[]) to each thread. Returns 0 on success.
+ */
+int odp_cunit_thread_create(int num, int func_ptr(void *arg), void *const arg[], int priv);
+
+/* Wait for previously created threads to exit */
+int odp_cunit_thread_join(int num);
 
 /**
  * Global tests initialization/termination.

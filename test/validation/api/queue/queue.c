@@ -17,7 +17,6 @@
 #define ENQ_RETRIES             100
 
 typedef struct {
-	pthrd_arg        cu_thr;
 	int              num_workers;
 	odp_barrier_t    barrier;
 	odp_queue_t      queue;
@@ -494,6 +493,7 @@ static void test_pair(odp_nonblocking_t nonblocking,
 	odp_event_t ev;
 	odp_shm_t shm;
 	test_globals_t *globals;
+	void *arg;
 
 	shm = odp_shm_lookup(GLOBALS_NAME);
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
@@ -546,14 +546,14 @@ static void test_pair(odp_nonblocking_t nonblocking,
 	odp_atomic_init_u32(&globals->pair.counter, 0);
 
 	/* Create one worker thread */
-	globals->cu_thr.numthrds = 1;
-	odp_cunit_thread_create(queue_pair_work_loop, (pthrd_arg *)globals);
+	arg = globals;
+	odp_cunit_thread_create(1, queue_pair_work_loop, &arg, 0);
 
 	/* Run this thread as the second thread */
 	CU_ASSERT(queue_pair_work_loop(globals) == 0);
 
 	/* Wait worker to terminate */
-	odp_cunit_thread_exit((pthrd_arg *)globals);
+	odp_cunit_thread_join(1);
 
 	CU_ASSERT(globals->pair.passed_a);
 	CU_ASSERT(globals->pair.passed_b);
@@ -972,6 +972,8 @@ static void multithread_test(odp_nonblocking_t nonblocking)
 	odp_queue_capability_t capa;
 	uint32_t queue_size, max_size;
 	uint32_t num, sum, num_free, i;
+	int num_workers;
+	void *arg;
 
 	CU_ASSERT(odp_queue_capability(&capa) == 0);
 
@@ -1000,7 +1002,7 @@ static void multithread_test(odp_nonblocking_t nonblocking)
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
 
 	globals = odp_shm_addr(shm);
-	globals->cu_thr.numthrds = globals->num_workers;
+	num_workers = globals->num_workers;
 
 	odp_queue_param_init(&qparams);
 	qparams.type = ODP_QUEUE_TYPE_PLAIN;
@@ -1015,10 +1017,11 @@ static void multithread_test(odp_nonblocking_t nonblocking)
 
 	CU_ASSERT(alloc_and_enqueue(queue, pool, num) == num);
 
-	odp_cunit_thread_create(queue_test_worker, (pthrd_arg *)globals);
+	arg = globals;
+	odp_cunit_thread_create(num_workers, queue_test_worker, &arg, 0);
 
 	/* Wait for worker threads to terminate */
-	odp_cunit_thread_exit((pthrd_arg *)globals);
+	odp_cunit_thread_join(num_workers);
 
 	sum = 0;
 	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++)

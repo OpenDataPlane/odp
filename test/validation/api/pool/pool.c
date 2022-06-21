@@ -896,7 +896,7 @@ static void pool_test_create_after_fork(void)
 {
 	odp_shm_t shm;
 	odp_cpumask_t unused;
-	pthrd_arg thrdarg;
+	int num;
 
 	/* No single VA required since reserve is done before fork */
 	shm = odp_shm_reserve(NULL, sizeof(global_shared_mem_t), 0, 0);
@@ -904,17 +904,17 @@ static void pool_test_create_after_fork(void)
 	global_mem = odp_shm_addr(shm);
 	CU_ASSERT_PTR_NOT_NULL_FATAL(global_mem);
 
-	thrdarg.numthrds = odp_cpumask_default_worker(&unused, 0);
-	if (thrdarg.numthrds > MAX_WORKERS)
-		thrdarg.numthrds = MAX_WORKERS;
+	num = odp_cpumask_default_worker(&unused, 0);
+	if (num > MAX_WORKERS)
+		num = MAX_WORKERS;
 
-	global_mem->nb_threads = thrdarg.numthrds;
+	global_mem->nb_threads = num;
 	global_mem->pool = ODP_POOL_INVALID;
-	odp_barrier_init(&global_mem->init_barrier, thrdarg.numthrds + 1);
+	odp_barrier_init(&global_mem->init_barrier, num + 1);
 	odp_atomic_init_u32(&global_mem->index, 0);
 
 	/* Fork here */
-	odp_cunit_thread_create(run_pool_test_create_after_fork, &thrdarg);
+	odp_cunit_thread_create(num, run_pool_test_create_after_fork, NULL, 0);
 
 	/* Wait until thread 0 has created the test pool */
 	odp_barrier_wait(&global_mem->init_barrier);
@@ -922,7 +922,7 @@ static void pool_test_create_after_fork(void)
 	buffer_alloc_loop(global_mem->pool, BUF_NUM, BUF_SIZE);
 
 	/* Wait for all thread endings */
-	CU_ASSERT(odp_cunit_thread_exit(&thrdarg) >= 0);
+	CU_ASSERT(odp_cunit_thread_join(num) >= 0);
 
 	CU_ASSERT(!odp_pool_destroy(global_mem->pool));
 
