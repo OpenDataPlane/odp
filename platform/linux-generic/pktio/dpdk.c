@@ -101,6 +101,8 @@ ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
 /* Minimum RX burst size */
 #define DPDK_MIN_RX_BURST 4
 
+ODP_STATIC_ASSERT(DPDK_MIN_RX_BURST <= UINT8_MAX, "DPDK_MIN_RX_BURST too large");
+
 /* Limits for setting link MTU */
 #define DPDK_MTU_MIN (RTE_ETHER_MIN_MTU + _ODP_ETHHDR_LEN)
 #define DPDK_MTU_MAX (9000 + _ODP_ETHHDR_LEN)
@@ -114,11 +116,13 @@ typedef struct {
 	uint8_t set_flow_hash;
 } dpdk_opt_t;
 
-typedef struct ODP_ALIGNED_CACHE {
-	/** array for storing extra RX packets */
+typedef struct {
+	/* Array for storing extra RX packets */
 	struct rte_mbuf *pkt[DPDK_MIN_RX_BURST];
-	unsigned int idx;			  /**< head of cache */
-	unsigned int count;			  /**< packets in cache */
+	/* Head of cache */
+	uint8_t idx;
+	/* Packets in cache */
+	uint8_t count;
 } pkt_cache_t;
 
 /* DPDK pktio specific data */
@@ -127,12 +131,12 @@ typedef struct ODP_ALIGNED_CACHE {
 
 	/* Packet output capabilities */
 	odp_pktout_config_opt_t pktout_capa;
-	/* Minimum RX burst size */
-	unsigned int min_rx_burst;
 	/* DPDK port identifier */
 	uint16_t port_id;
 	/* Maximum transmission unit */
 	uint16_t mtu;
+	/* Minimum RX burst size */
+	uint8_t min_rx_burst;
 	/* No locking for rx */
 	uint8_t lockless_rx;
 	/* No locking for tx */
