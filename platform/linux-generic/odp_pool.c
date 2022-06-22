@@ -130,15 +130,41 @@ static void cache_flush(pool_cache_t *cache, pool_t *pool)
 		ring_ptr_enq(ring, mask, event_hdr);
 }
 
-static inline uint64_t cache_total_available(pool_t *pool)
+static inline int cache_available(pool_t *pool, odp_pool_stats_t *stats)
 {
 	uint64_t cached = 0;
-	int i;
+	const uint16_t first = stats->thread.first;
+	const uint16_t last = stats->thread.last;
+	const odp_bool_t per_thread = pool->params.stats.bit.thread_cache_available;
+	uint16_t out_idx = 0;
 
-	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++)
-		cached += pool->local_cache[i].cache_num;
+	if (per_thread) {
+		if (first > last || last >= odp_thread_count_max()) {
+			ODP_ERR("Bad thread ids: first=%" PRIu16 " last=%" PRIu16 "\n",
+				first, last);
+			return -1;
+		}
 
-	return cached;
+		if (last - first + 1 > ODP_POOL_MAX_THREAD_STATS) {
+			ODP_ERR("Too many thread ids: max=%d\n", ODP_POOL_MAX_THREAD_STATS);
+			return -1;
+		}
+	}
+
+	for (int i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
+		/* TODO: thread specific counters should be atomics */
+		uint32_t cur = pool->local_cache[i].cache_num;
+
+		if (per_thread && i >= first && i <= last)
+			stats->thread.cache_available[out_idx++] = cur;
+
+		cached += cur;
+	}
+
+	if (pool->params.stats.bit.cache_available)
+		stats->cache_available = cached;
+
+	return 0;
 }
 
 static int read_config_file(pool_global_t *pool_glb)
@@ -1385,6 +1411,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	supported_stats.bit.cache_available = 1;
 	supported_stats.bit.cache_alloc_ops = CONFIG_POOL_STATISTICS;
 	supported_stats.bit.cache_free_ops = CONFIG_POOL_STATISTICS;
+	supported_stats.bit.thread_cache_available = 1;
 
 	/* Buffer pools */
 	capa->buf.max_pools = max_pools;
@@ -1544,6 +1571,7 @@ unsigned int odp_pool_max_index(void)
 int odp_pool_stats(odp_pool_t pool_hdl, odp_pool_stats_t *stats)
 {
 	pool_t *pool;
+	uint16_t first, last;
 
 	if (odp_unlikely(pool_hdl == ODP_POOL_INVALID)) {
 		ODP_ERR("Invalid pool handle\n");
@@ -1555,8 +1583,14 @@ int odp_pool_stats(odp_pool_t pool_hdl, odp_pool_stats_t *stats)
 	}
 
 	pool = _odp_pool_entry(pool_hdl);
+	first = stats->thread.first;
+	last = stats->thread.last;
 
 	memset(stats, 0, sizeof(odp_pool_stats_t));
+
+	/* Restore input parameters */
+	stats->thread.first = first;
+	stats->thread.last = last;
 
 	if (pool->params.stats.bit.available)
 		stats->available = ring_ptr_len(&pool->ring->hdr);
@@ -1573,8 +1607,11 @@ int odp_pool_stats(odp_pool_t pool_hdl, odp_pool_stats_t *stats)
 	if (pool->params.stats.bit.total_ops)
 		stats->total_ops = stats->alloc_ops + stats->free_ops;
 
-	if (pool->params.stats.bit.cache_available)
-		stats->cache_available = cache_total_available(pool);
+	if (pool->params.stats.bit.cache_available ||
+	    pool->params.stats.bit.thread_cache_available) {
+		if (cache_available(pool, stats))
+			return -1;
+	}
 
 	if (pool->params.stats.bit.cache_alloc_ops)
 		stats->cache_alloc_ops = odp_atomic_load_u64(&pool->stats.cache_alloc_ops);
