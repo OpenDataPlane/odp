@@ -1092,6 +1092,11 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 	odp_pool_stats_opt_t supported;
 	uint32_t i, j, num_pool, num_obj, cache_size;
 	uint32_t max_pools = 2;
+	uint16_t first = 0;
+	uint16_t last = ODP_POOL_MAX_THREAD_STATS - 1;
+
+	if (last > odp_thread_count_max() - 1)
+		last = odp_thread_count_max() - 1;
 
 	odp_pool_param_init(&param);
 
@@ -1169,6 +1174,8 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 		uint32_t num_fails = 0;
 
 		CU_ASSERT_FATAL(odp_pool_stats_reset(pool[i]) == 0);
+		stats.thread.first = first;
+		stats.thread.last = last;
 		CU_ASSERT_FATAL(odp_pool_stats(pool[i], &stats) == 0);
 
 		CU_ASSERT(stats.available <= num_obj);
@@ -1179,10 +1186,17 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 		CU_ASSERT(stats.cache_available <= num_obj);
 		CU_ASSERT(stats.cache_alloc_ops == 0);
 		CU_ASSERT(stats.cache_free_ops == 0);
+		CU_ASSERT(stats.thread.first == first);
+		CU_ASSERT(stats.thread.last == last);
+		for (j = 0; j < ODP_POOL_MAX_THREAD_STATS; j++)
+			CU_ASSERT(stats.thread.cache_available[j] <= stats.cache_available);
 
 		/* Allocate the events */
 		for (j = 0; j < num_alloc_rounds; j++) {
 			odp_event_t new_event = ODP_EVENT_INVALID;
+			uint64_t total_cached = 0;
+			uint16_t first_id = 0;
+			uint16_t last_id = last;
 
 			if (pool_type == ODP_POOL_BUFFER) {
 				odp_buffer_t buf = odp_buffer_alloc(pool[i]);
@@ -1214,16 +1228,42 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 			CU_ASSERT_FATAL(odp_pool_stats(pool[i], &stats) == 0);
 			CU_ASSERT(stats.available <= num_obj - num_events);
 			CU_ASSERT(stats.cache_available <= num_obj - num_events);
+
+			while (first_id < odp_thread_count_max()) {
+				stats.thread.first = first_id;
+				stats.thread.last = last_id;
+				CU_ASSERT_FATAL(odp_pool_stats(pool[i], &stats) == 0);
+
+				for (int i = 0; i < ODP_POOL_MAX_THREAD_STATS; i++) {
+					uint64_t cached = stats.thread.cache_available[i];
+
+					CU_ASSERT(cached <= num_obj - num_events);
+					total_cached += cached;
+				}
+				first_id = last_id + 1;
+				last_id += ODP_POOL_MAX_THREAD_STATS;
+				if (last_id >= odp_thread_count_max())
+					last_id = odp_thread_count_max() - 1;
+			};
+
+			if (supported.bit.cache_available && supported.bit.thread_cache_available &&
+			    ODP_POOL_MAX_THREAD_STATS >= odp_thread_count_max())
+				CU_ASSERT(stats.cache_available == total_cached);
 		}
 
 		CU_ASSERT(num_events == num_obj);
 		num_event[i] = num_events;
 
+		stats.thread.first = first;
+		stats.thread.last = last;
+		CU_ASSERT_FATAL(odp_pool_stats(pool[i], &stats) == 0);
+
 		/* All events are allocated, available count in pool and pool
 		 * local caches should be zero. */
-		CU_ASSERT_FATAL(odp_pool_stats(pool[i], &stats) == 0);
 		CU_ASSERT(stats.available == 0);
 		CU_ASSERT(stats.cache_available == 0);
+		for (j = 0; j < ODP_POOL_MAX_THREAD_STATS; j++)
+			CU_ASSERT(stats.thread.cache_available[j] == 0);
 		if (supported.bit.alloc_ops)
 			CU_ASSERT(stats.alloc_ops > 0 && stats.alloc_ops <= num_obj + 1);
 		if (supported.bit.alloc_fails)
@@ -1237,6 +1277,8 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 	for (i = 0; i < num_pool; i++) {
 		odp_event_free_multi(event[i], num_event[i]);
 
+		stats.thread.first = odp_thread_id();
+		stats.thread.last = odp_thread_id();
 		CU_ASSERT_FATAL(odp_pool_stats(pool[i], &stats) == 0);
 
 		if (supported.bit.available && supported.bit.cache_available)
@@ -1256,6 +1298,8 @@ static void pool_test_pool_statistics(odp_pool_type_t pool_type)
 			printf("  cache_available: %" PRIu64 "\n", stats.cache_available);
 			printf("  cache_alloc_ops: %" PRIu64 "\n", stats.cache_alloc_ops);
 			printf("  cache_free_ops:  %" PRIu64 "\n", stats.cache_free_ops);
+			printf("  thread.cache_available[0]: %" PRIu64 "\n",
+			       stats.thread.cache_available[0]);
 		}
 
 		CU_ASSERT_FATAL(odp_pool_stats_reset(pool[i]) == 0);
