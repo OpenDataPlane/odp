@@ -11,54 +11,57 @@
 
 #include <odp_posix_extensions.h>
 
-#include <sched.h>
-#include <ctype.h>
-#include <unistd.h>
-#include <math.h>
-
 #include <odp/api/cpumask.h>
-
+#include <odp/api/hints.h>
 #include <odp/api/packet.h>
 #include <odp/api/packet_io.h>
-#include <odp/api/plat/packet_inlines.h>
+#include <odp/api/packet_io_stats.h>
+#include <odp/api/std_types.h>
 #include <odp/api/time.h>
+
+#include <odp/api/plat/packet_inlines.h>
 #include <odp/api/plat/time_inlines.h>
 
-#include <odp_packet_io_internal.h>
-#include <odp_pool_internal.h>
 #include <odp_classification_internal.h>
-#include <odp_socket_common.h>
-#include <odp_packet_dpdk.h>
-#include <odp_pool_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_libconfig_internal.h>
 #include <odp_errno_define.h>
+#include <odp_global_data.h>
+#include <odp_libconfig_internal.h>
 #include <odp_macros_internal.h>
-
+#include <odp_packet_dpdk.h>
+#include <odp_packet_internal.h>
+#include <odp_packet_io_internal.h>
 #include <protocols/eth.h>
 #include <protocols/udp.h>
+#include <odp_pool_internal.h>
+#include <odp_socket_common.h>
 
 #include <rte_config.h>
 #include <rte_common.h>
+#include <rte_ethdev.h>
 #include <rte_mbuf.h>
 #include <rte_malloc.h>
-#if __GNUC__ >= 7
-#pragma GCC diagnostic push
-#pragma GCC diagnostic warning "-Wimplicit-fallthrough=0"
-#endif
-#include <rte_mbuf.h>
-#if __GNUC__ >= 7
-#pragma GCC diagnostic pop
-#endif
 #include <rte_mempool.h>
-#include <rte_ethdev.h>
 #include <rte_ip.h>
 #include <rte_ip_frag.h>
 #include <rte_log.h>
-#include <rte_udp.h>
-#include <rte_tcp.h>
 #include <rte_string_fns.h>
+#include <rte_tcp.h>
+#include <rte_udp.h>
 #include <rte_version.h>
+
+/* NUMA is not supported on all platforms */
+#ifdef _ODP_HAVE_NUMA_LIBRARY
+#include <numa.h>
+#else
+#define numa_num_configured_nodes() 1
+#endif
+
+#include <ctype.h>
+#include <math.h>
+#include <sched.h>
+#include <stdint.h>
+#include <unistd.h>
 
 #if RTE_VERSION < RTE_VERSION_NUM(21, 11, 0, 0)
 	#define RTE_MBUF_F_RX_RSS_HASH PKT_RX_RSS_HASH
@@ -68,13 +71,6 @@
 	#define RTE_MBUF_F_TX_UDP_CKSUM PKT_TX_UDP_CKSUM
 	#define RTE_MBUF_F_TX_TCP_CKSUM PKT_TX_TCP_CKSUM
 	#define RTE_MEMPOOL_REGISTER_OPS MEMPOOL_REGISTER_OPS
-#endif
-
-/* NUMA is not supported on all platforms */
-#ifdef _ODP_HAVE_NUMA_LIBRARY
-#include <numa.h>
-#else
-#define numa_num_configured_nodes() 1
 #endif
 
 #define MEMPOOL_FLAGS 0
