@@ -1,4 +1,4 @@
-/* Copyright (c) 2021, Nokia
+/* Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -40,6 +40,11 @@ extern "C" {
  * Maximum pool name length in chars including null char
  */
 
+/**
+ * @def ODP_POOL_MAX_THREAD_STATS
+ * Maximum number of per thread statistics a single odp_pool_stats() call can read
+ */
+
 /** Maximum number of packet pool subparameters */
 #define ODP_POOL_MAX_SUBPARAMS  7
 
@@ -74,6 +79,9 @@ typedef union odp_pool_stats_opt_t {
 
 		/** @see odp_pool_stats_t::cache_free_ops */
 		uint64_t cache_free_ops     : 1;
+
+		/** @see odp_pool_stats_t::thread::cache_available */
+		uint64_t thread_cache_available : 1;
 	} bit;
 
 	/** All bits of the bit field structure
@@ -109,8 +117,7 @@ typedef struct odp_pool_stats_t {
 	 *  successful and failed operations (pool empty). */
 	uint64_t total_ops;
 
-	/** The number of available events in the local caches of all threads
-	 *  using the pool */
+	/** The number of available events in the local caches of all threads */
 	uint64_t cache_available;
 
 	/** The number of successful alloc operations from pool caches (returned
@@ -119,6 +126,24 @@ typedef struct odp_pool_stats_t {
 
 	/** The number of free operations, which stored events to pool caches. */
 	uint64_t cache_free_ops;
+
+	/** Per thread counters */
+	struct {
+		/** First thread identifier to read counters from. Ignored when
+		 *  'thread.cache_available' is not enabled. */
+		uint16_t first;
+
+		/** Last thread identifier to read counters from. Ignored when
+		 *  'thread.cache_available' is not enabled. */
+		uint16_t last;
+
+		/** The number of available events in each thread local cache
+		 *
+		 *  If 'first' and 'last' include all threads of the instance,
+		 *  the sum of 'thread.cache_available' matches
+		 *  'cache_available'. */
+		uint64_t cache_available[ODP_POOL_MAX_THREAD_STATS];
+	} thread;
 
 } odp_pool_stats_t;
 

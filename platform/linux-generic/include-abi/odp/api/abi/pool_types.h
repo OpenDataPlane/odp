@@ -29,6 +29,8 @@ typedef ODP_HANDLE_T(odp_pool_t);
 
 #define ODP_POOL_NAME_LEN  32
 
+#define ODP_POOL_MAX_THREAD_STATS  128
+
 /**
  * @}
  */

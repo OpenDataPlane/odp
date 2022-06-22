@@ -160,8 +160,14 @@ int odp_pool_index(odp_pool_t pool);
  * Read the statistics counters enabled using odp_pool_stats_opt_t during pool
  * creation. The inactive counters are set to zero by the implementation.
  *
- * @param      pool   Pool handle
- * @param[out] stats  Output buffer for counters
+ * A single call may read statistics from one to ODP_POOL_MAX_THREAD_STATS
+ * threads. Set 'stats.thread.first' and 'stats.thread.last' to select the
+ * threads ('first' <= 'last'). Valid values range from 0 to odp_thread_count_max() - 1.
+ * A successful call fills the output array starting always from the first element
+ * 'stats.thread.cache_available[0]' (='stats.thread.first').
+ *
+ * @param         pool   Pool handle
+ * @param[in,out] stats  Output buffer for counters
  *
  * @retval  0 on success
  * @retval <0 on failure
@@ -172,7 +178,7 @@ int odp_pool_stats(odp_pool_t pool, odp_pool_stats_t *stats);
  * Reset statistics for pool handle
  *
  * Reset all statistics counters to zero except: odp_pool_stats_t::available,
- * odp_pool_stats_t::cache_available
+ * odp_pool_stats_t::cache_available, odp_pool_stats_t::thread::cache_available
  *
  * @param pool    Pool handle
  *
