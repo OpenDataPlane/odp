@@ -2967,6 +2967,58 @@ static void scheduler_fifo_ordered_multi(void)
 	scheduler_fifo_test(0);
 }
 
+static void scheduler_fifo_mt(odp_schedule_sync_t sync, int multi)
+{
+	uint32_t i;
+	uint32_t num_thr = globals->num_workers;
+	uintptr_t arg[num_thr];
+
+	scheduler_fifo_init(sync, multi, num_thr);
+
+	for (i = 0; i < num_thr; i++)
+		arg[i] = i;
+
+	if (num_thr > 1)
+		odp_cunit_thread_create(num_thr - 1, scheduler_fifo_test, (void **)&arg[1], 1);
+
+	/* Main thread runs as thread 0 */
+	scheduler_fifo_test(0);
+
+	/* Wait for worker threads to terminate */
+	if (num_thr > 1)
+		odp_cunit_thread_join(num_thr - 1);
+}
+
+static void scheduler_fifo_mt_parallel_single(void)
+{
+	scheduler_fifo_mt(ODP_SCHED_SYNC_PARALLEL, 0);
+}
+
+static void scheduler_fifo_mt_parallel_multi(void)
+{
+	scheduler_fifo_mt(ODP_SCHED_SYNC_PARALLEL, 1);
+}
+
+static void scheduler_fifo_mt_atomic_single(void)
+{
+	scheduler_fifo_mt(ODP_SCHED_SYNC_ATOMIC, 0);
+}
+
+static void scheduler_fifo_mt_atomic_multi(void)
+{
+	scheduler_fifo_mt(ODP_SCHED_SYNC_ATOMIC, 1);
+}
+
+static void scheduler_fifo_mt_ordered_single(void)
+{
+	scheduler_fifo_mt(ODP_SCHED_SYNC_ORDERED, 0);
+}
+
+static void scheduler_fifo_mt_ordered_multi(void)
+{
+	scheduler_fifo_mt(ODP_SCHED_SYNC_ORDERED, 1);
+}
+
 static int atomicity_test_run(void *arg)
 {
 	thread_args_t *args = (thread_args_t *)arg;
@@ -3682,6 +3734,12 @@ odp_testinfo_t scheduler_basic_suite[] = {
 	ODP_TEST_INFO(scheduler_fifo_atomic_multi),
 	ODP_TEST_INFO(scheduler_fifo_ordered_single),
 	ODP_TEST_INFO(scheduler_fifo_ordered_multi),
+	ODP_TEST_INFO(scheduler_fifo_mt_parallel_single),
+	ODP_TEST_INFO(scheduler_fifo_mt_parallel_multi),
+	ODP_TEST_INFO(scheduler_fifo_mt_atomic_single),
+	ODP_TEST_INFO(scheduler_fifo_mt_atomic_multi),
+	ODP_TEST_INFO(scheduler_fifo_mt_ordered_single),
+	ODP_TEST_INFO(scheduler_fifo_mt_ordered_multi),
 	ODP_TEST_INFO(scheduler_test_atomicity),
 	ODP_TEST_INFO_NULL
 };
