@@ -91,7 +91,7 @@ _ODP_INLINE void odp_event_flow_id_set(odp_event_t event, uint32_t id)
 {
 	uint8_t *flow_id = _odp_event_hdr_ptr(event, uint8_t, flow_id);
 
-	*flow_id = id;
+	*flow_id = (uint8_t)id;
 }
 
 /** @endcond */
