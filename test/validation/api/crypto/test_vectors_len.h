@@ -8,7 +8,7 @@
 
 /* Maximum */
 #define MAX_KEY_LEN         64
-#define MAX_IV_LEN          16
+#define MAX_IV_LEN          32
 #define MAX_DATA_LEN        1000
 #define MAX_AAD_LEN         12
 #define MAX_DIGEST_LEN      64
@@ -101,6 +101,10 @@
 #define ZUC_EEA3_KEY_LEN         16
 #define ZUC_EEA3_IV_LEN          16
 
+/* ZUC_EEA3_256 */
+#define ZUC_EEA3_256_KEY_LEN     32
+#define ZUC_EEA3_256_IV_LEN      25
+
 /* KASUMI_F9 */
 #define KASUMI_F9_KEY_LEN        16
 #define KASUMI_F9_IV_LEN         9
@@ -120,6 +124,10 @@
 #define ZUC_EIA3_KEY_LEN         16
 #define ZUC_EIA3_IV_LEN          16
 #define ZUC_EIA3_DIGEST_LEN      4
+
+/* ZUC_EIA3_256 */
+#define ZUC_EIA3_256_KEY_LEN       32
+#define ZUC_EIA3_256_IV_LEN        25
 
 /* MD5 */
 #define MD5_DIGEST_LEN     16
