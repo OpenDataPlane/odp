@@ -118,6 +118,7 @@ int odp_stash_capability(odp_stash_capability_t *capa, odp_stash_type_t type)
 	capa->max_stashes          = CONFIG_MAX_STASHES - CONFIG_INTERNAL_STASHES;
 	capa->max_num_obj          = MAX_RING_SIZE;
 	capa->max_obj_size         = sizeof(uint64_t);
+	capa->stats.bit.count      = 1;
 
 	return 0;
 }
@@ -559,4 +560,19 @@ void odp_stash_print(odp_stash_t st)
 	ODP_PRINT("  obj count       %u\n", stash_obj_count(stash));
 	ODP_PRINT("  ring size       %u\n", stash->ring_mask + 1);
 	ODP_PRINT("\n");
+}
+
+int odp_stash_stats(odp_stash_t st, odp_stash_stats_t *stats)
+{
+	stash_t *stash = (stash_t *)(uintptr_t)st;
+
+	if (st == ODP_STASH_INVALID) {
+		ODP_ERR("Bad stash handle\n");
+		return -1;
+	}
+
+	stats->count       = stash_obj_count(stash);
+	stats->cache_count = 0;
+
+	return 0;
 }
