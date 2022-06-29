@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -35,6 +35,7 @@ enum init_stage {
 	HASH_INIT,
 	THREAD_INIT,
 	POOL_INIT,
+	EVENT_VALIDATION_INIT,
 	STASH_INIT,
 	QUEUE_INIT,
 	SCHED_INIT,
@@ -242,6 +243,13 @@ static int term_global(enum init_stage stage)
 		}
 		/* Fall through */
 
+	case EVENT_VALIDATION_INIT:
+		if (_odp_event_validation_term_global()) {
+			_ODP_ERR("ODP event validation term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
 	case POOL_INIT:
 		if (_odp_pool_term_global()) {
 			_ODP_ERR("ODP buffer pool term failed.\n");
@@ -411,6 +419,12 @@ int odp_init_global(odp_instance_t *instance,
 		goto init_failed;
 	}
 	stage = POOL_INIT;
+
+	if (_odp_event_validation_init_global()) {
+		_ODP_ERR("ODP event validation init failed.\n");
+		goto init_failed;
+	}
+	stage = EVENT_VALIDATION_INIT;
 
 	if (_odp_stash_init_global()) {
 		_ODP_ERR("ODP stash init failed.\n");

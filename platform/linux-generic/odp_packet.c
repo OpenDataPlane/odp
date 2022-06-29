@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
+ * Copyright (c) 2019-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -21,6 +21,7 @@
 #include <odp_debug_internal.h>
 #include <odp_errno_define.h>
 #include <odp_event_internal.h>
+#include <odp_event_validation_internal.h>
 #include <odp_macros_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
@@ -696,6 +697,8 @@ void odp_packet_free(odp_packet_t pkt)
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 	int num_seg = pkt_hdr->seg_count;
 
+	_odp_packet_validate(pkt, _ODP_EV_PACKET_FREE);
+
 	_ODP_ASSERT(segment_ref(pkt_hdr) > 0);
 
 	if (odp_likely(num_seg == 1))
@@ -704,11 +707,13 @@ void odp_packet_free(odp_packet_t pkt)
 		free_all_segments(pkt_hdr, num_seg);
 }
 
-void odp_packet_free_multi(const odp_packet_t pkt[], int num)
+static inline void packet_free_multi_ev(const odp_packet_t pkt[], int num, _odp_ev_id_t id)
 {
 	odp_packet_hdr_t *pkt_hdrs[num];
 	int i;
 	int num_freed = 0;
+
+	_odp_packet_validate_multi(pkt, num, id);
 
 	for (i = 0; i < num; i++) {
 		odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt[i]);
@@ -729,9 +734,14 @@ void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 		packet_free_multi(pkt_hdrs, num - num_freed);
 }
 
+void odp_packet_free_multi(const odp_packet_t pkt[], int num)
+{
+	packet_free_multi_ev(pkt, num, _ODP_EV_PACKET_FREE_MULTI);
+}
+
 void odp_packet_free_sp(const odp_packet_t pkt[], int num)
 {
-	odp_packet_free_multi(pkt, num);
+	packet_free_multi_ev(pkt, num, _ODP_EV_PACKET_FREE_SP);
 }
 
 int odp_packet_reset(odp_packet_t pkt, uint32_t len)
@@ -1588,6 +1598,9 @@ int odp_packet_is_valid(odp_packet_t pkt)
 	if (odp_event_type(ev) != ODP_EVENT_PACKET)
 		return 0;
 
+	if (odp_unlikely(_odp_packet_validate(pkt, _ODP_EV_PACKET_IS_VALID)))
+		return 0;
+
 	switch (odp_event_subtype(ev)) {
 	case ODP_EVENT_PACKET_BASIC:
 		/* Fall through */
@@ -2344,6 +2357,7 @@ odp_packet_t odp_packet_reassemble(odp_pool_t pool_hdl, odp_packet_buf_t pkt_buf
 	tailroom  = pool->ext_param.pkt.buf_size - sizeof(odp_packet_hdr_t);
 	tailroom -= pool->ext_param.pkt.app_header_size;
 	tailroom -= odp_packet_buf_data_len(pkt_buf[num - 1]);
+	tailroom -= pool->trailer_size;
 
 	pkt_hdr->seg_count = num;
 	pkt_hdr->frame_len = data_len;

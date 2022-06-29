@@ -53,7 +53,7 @@ typedef struct _odp_event_hdr_t {
 
 	/* --- Mostly read only data --- */
 
-	/* Initial buffer tail pointer */
+	/* Initial buffer tail pointer and endmark location (if enabled) */
 	uint8_t  *buf_end;
 
 	/* Combined pool and event index */
@@ -83,6 +83,11 @@ static inline _odp_event_hdr_t *_odp_event_hdr(odp_event_t event)
 static inline void _odp_event_type_set(odp_event_t event, int ev)
 {
 	_odp_event_hdr(event)->event_type = ev;
+}
+
+static inline uint64_t *_odp_event_endmark_get_ptr(odp_event_t event)
+{
+	return (uint64_t *)(uintptr_t)_odp_event_hdr(event)->buf_end;
 }
 
 #ifdef __cplusplus

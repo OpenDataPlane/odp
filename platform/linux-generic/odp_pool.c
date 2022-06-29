@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2022, Nokia
+ * Copyright (c) 2019-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -7,6 +7,7 @@
 
 #include <odp/api/align.h>
 #include <odp/api/atomic.h>
+#include <odp/api/hints.h>
 #include <odp/api/pool.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/system_info.h>
@@ -21,6 +22,8 @@
 #include <odp_packet_internal.h>
 #include <odp_config_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_event_internal.h>
+#include <odp_event_validation_internal.h>
 #include <odp_macros_internal.h>
 #include <odp_ring_ptr_internal.h>
 #include <odp_global_data.h>
@@ -77,6 +80,7 @@ const _odp_pool_inline_offset_t _odp_pool_inline ODP_ALIGNED_CACHE = {
 	.index             = offsetof(pool_t, pool_idx),
 	.seg_len           = offsetof(pool_t, seg_len),
 	.uarea_size        = offsetof(pool_t, param_uarea_size),
+	.trailer_size      = offsetof(pool_t, trailer_size),
 	.ext_head_offset   = offsetof(pool_t, ext_head_offset),
 	.ext_pkt_buf_size  = offsetof(pool_t, ext_param.pkt.buf_size)
 };
@@ -472,6 +476,7 @@ static void init_event_hdr(pool_t *pool, _odp_event_hdr_t *event_hdr, uint32_t e
 	if (type == ODP_POOL_BUFFER || type == ODP_POOL_PACKET) {
 		event_hdr->base_data = data_ptr;
 		event_hdr->buf_end   = data_ptr + pool->seg_len + pool->tailroom;
+		_odp_event_endmark_set(_odp_event_from_hdr(event_hdr));
 	}
 
 	if (type == ODP_POOL_BUFFER) {
@@ -697,7 +702,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 	uint32_t uarea_size, headroom, tailroom;
 	odp_shm_t shm;
 	uint32_t seg_len, align, num, hdr_size, block_size;
-	uint32_t max_len, cache_size;
+	uint32_t max_len, cache_size, trailer_size;
 	uint32_t ring_size;
 	odp_pool_type_t type = params->type;
 	uint32_t shmflags = 0;
@@ -743,6 +748,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 	tailroom    = 0;
 	seg_len     = 0;
 	max_len     = 0;
+	trailer_size = 0;
 	uarea_size  = 0;
 	cache_size  = 0;
 
@@ -752,6 +758,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 		seg_len = params->buf.size;
 		uarea_size = params->buf.uarea_size;
 		cache_size = params->buf.cache_size;
+		trailer_size = _ODP_EV_ENDMARK_SIZE;
 		break;
 
 	case ODP_POOL_PACKET:
@@ -763,6 +770,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 		num = params->pkt.num;
 		seg_len = CONFIG_PACKET_MAX_SEG_LEN;
 		max_len = _odp_pool_glb->config.pkt_max_len;
+		trailer_size = _ODP_EV_ENDMARK_SIZE;
 
 		if (params->pkt.len &&
 		    params->pkt.len < CONFIG_PACKET_MAX_SEG_LEN)
@@ -840,7 +848,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 		uint32_t adj_size;
 
 		hdr_size = _ODP_ROUNDUP_CACHE_LINE(sizeof(odp_packet_hdr_t));
-		block_size = hdr_size + align + headroom + seg_len + tailroom;
+		block_size = hdr_size + align + headroom + seg_len + tailroom + trailer_size;
 		adj_size = block_size;
 
 		if (pool->mem_src_ops && pool->mem_src_ops->adjust_size) {
@@ -871,7 +879,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 		else
 			hdr_size = _ODP_ROUNDUP_CACHE_LINE(sizeof(odp_event_vector_hdr_t));
 
-		block_size = _ODP_ROUNDUP_CACHE_LINE(hdr_size + align_pad + seg_len);
+		block_size = _ODP_ROUNDUP_CACHE_LINE(hdr_size + align_pad + seg_len + trailer_size);
 	}
 
 	/* Allocate extra memory for skipping packet buffers which cross huge
@@ -894,6 +902,7 @@ odp_pool_t _odp_pool_create(const char *name, const odp_pool_param_t *params,
 	pool->align          = align;
 	pool->headroom       = headroom;
 	pool->seg_len        = seg_len;
+	pool->trailer_size   = trailer_size;
 	pool->max_seg_len    = headroom + seg_len + tailroom;
 	pool->max_len        = max_len;
 	pool->tailroom       = tailroom;
@@ -1419,11 +1428,15 @@ int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
 
 void odp_buffer_free(odp_buffer_t buf)
 {
+	_odp_buffer_validate(buf, _ODP_EV_BUFFER_FREE);
+
 	_odp_event_free_multi((_odp_event_hdr_t **)&buf, 1);
 }
 
 void odp_buffer_free_multi(const odp_buffer_t buf[], int num)
 {
+	_odp_buffer_validate_multi(buf, num, _ODP_EV_BUFFER_FREE_MULTI);
+
 	_odp_event_free_multi((_odp_event_hdr_t **)(uintptr_t)buf, num);
 }
 
@@ -1530,6 +1543,7 @@ void odp_pool_print(odp_pool_t pool_hdl)
 	_ODP_PRINT("  burst size      %u\n", pool->burst_size);
 	_ODP_PRINT("  mem src         %s\n",
 		   pool->mem_src_ops ? pool->mem_src_ops->name : "(none)");
+	_ODP_PRINT("  event valid.    %d\n", _ODP_EVENT_VALIDATION);
 	_ODP_PRINT("\n");
 }
 
@@ -1727,6 +1741,9 @@ int odp_buffer_is_valid(odp_buffer_t buf)
 	if (odp_event_type(odp_buffer_to_event(buf)) != ODP_EVENT_BUFFER)
 		return 0;
 
+	if (odp_unlikely(_odp_buffer_validate(buf, _ODP_EV_BUFFER_IS_VALID)))
+		return 0;
+
 	return 1;
 }
 
@@ -1753,7 +1770,7 @@ int odp_pool_ext_capability(odp_pool_type_t type, odp_pool_ext_capability_t *cap
 	capa->pkt.max_num_buf         = _odp_pool_glb->config.pkt_max_num;
 	capa->pkt.max_buf_size        = MAX_SIZE;
 	capa->pkt.odp_header_size     = sizeof(odp_packet_hdr_t);
-	capa->pkt.odp_trailer_size    = 0;
+	capa->pkt.odp_trailer_size    = _ODP_EV_ENDMARK_SIZE;
 	capa->pkt.min_mem_align       = ODP_CACHE_LINE_SIZE;
 	capa->pkt.min_buf_align       = ODP_CACHE_LINE_SIZE;
 	capa->pkt.min_head_align      = MIN_HEAD_ALIGN;
@@ -1878,7 +1895,9 @@ odp_pool_t odp_pool_ext_create(const char *name, const odp_pool_ext_param_t *par
 	pool->num            = num_buf;
 	pool->headroom       = headroom;
 	pool->tailroom       = 0;
-	pool->seg_len        = buf_size - head_offset - headroom - pool->tailroom;
+	pool->trailer_size   = _ODP_EV_ENDMARK_SIZE;
+	pool->seg_len        = buf_size - head_offset - headroom - pool->tailroom -
+				pool->trailer_size;
 	pool->max_seg_len    = headroom + pool->seg_len + pool->tailroom;
 	pool->max_len        = PKT_MAX_SEGS * pool->seg_len;
 	pool->ext_head_offset = head_offset;

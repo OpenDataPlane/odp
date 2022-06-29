@@ -87,6 +87,7 @@ typedef struct pool_t {
 	uint32_t         block_size;
 	uint32_t         block_offset;
 	uint32_t         num_populated;
+	uint32_t         trailer_size;
 	uint8_t         *base_addr;
 	uint8_t         *max_addr;
 	uint8_t         *uarea_base_addr;

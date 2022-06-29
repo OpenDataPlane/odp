@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2020-2022, Nokia
+ * Copyright (c) 2020-2023, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -18,6 +18,7 @@
 #include <odp_debug_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_event_internal.h>
+#include <odp_event_validation_internal.h>
 #include <odp_event_vector_internal.h>
 
 /* Inlined API functions */
@@ -41,13 +42,15 @@ _odp_event_inline_offset ODP_ALIGNED_CACHE = {
 
 #include <odp/visibility_end.h>
 
-void odp_event_free(odp_event_t event)
+static inline void event_free(odp_event_t event, _odp_ev_id_t id)
 {
 	switch (odp_event_type(event)) {
 	case ODP_EVENT_BUFFER:
+		_odp_buffer_validate(odp_buffer_from_event(event), id);
 		odp_buffer_free(odp_buffer_from_event(event));
 		break;
 	case ODP_EVENT_PACKET:
+		_odp_packet_validate(odp_packet_from_event(event), id);
 		odp_packet_free(odp_packet_from_event(event));
 		break;
 	case ODP_EVENT_PACKET_VECTOR:
@@ -75,17 +78,21 @@ void odp_event_free(odp_event_t event)
 	}
 }
 
+void odp_event_free(odp_event_t event)
+{
+	event_free(event, _ODP_EV_EVENT_FREE);
+}
+
 void odp_event_free_multi(const odp_event_t event[], int num)
 {
-	int i;
-
-	for (i = 0; i < num; i++)
-		odp_event_free(event[i]);
+	for (int i = 0; i < num; i++)
+		event_free(event[i], _ODP_EV_EVENT_FREE_MULTI);
 }
 
 void odp_event_free_sp(const odp_event_t event[], int num)
 {
-	odp_event_free_multi(event, num);
+	for (int i = 0; i < num; i++)
+		event_free(event[i], _ODP_EV_EVENT_FREE_SP);
 }
 
 uint64_t odp_event_to_u64(odp_event_t hdl)
@@ -103,9 +110,9 @@ int odp_event_is_valid(odp_event_t event)
 
 	switch (odp_event_type(event)) {
 	case ODP_EVENT_BUFFER:
-		/* Fall through */
+		return !_odp_buffer_validate(odp_buffer_from_event(event), _ODP_EV_EVENT_IS_VALID);
 	case ODP_EVENT_PACKET:
-		/* Fall through */
+		return !_odp_packet_validate(odp_packet_from_event(event), _ODP_EV_EVENT_IS_VALID);
 	case ODP_EVENT_TIMEOUT:
 		/* Fall through */
 #if ODP_DEPRECATED_API
