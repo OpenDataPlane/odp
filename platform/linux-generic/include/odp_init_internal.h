@@ -33,6 +33,9 @@ int _odp_pool_init_local(void);
 int _odp_pool_term_global(void);
 int _odp_pool_term_local(void);
 
+int _odp_event_validation_init_global(void);
+int _odp_event_validation_term_global(void);
+
 int _odp_queue_init_global(void);
 int _odp_queue_term_global(void);
 

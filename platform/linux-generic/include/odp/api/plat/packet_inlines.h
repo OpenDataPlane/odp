@@ -632,7 +632,8 @@ _ODP_INLINE uint32_t odp_packet_buf_size(odp_packet_buf_t pkt_buf)
 	odp_pool_t pool = _odp_pkt_get(pkt_buf, odp_pool_t, pool);
 
 	return _odp_pool_get(pool, uint32_t, ext_pkt_buf_size) -
-			_odp_pool_get(pool, uint32_t, ext_head_offset);
+			_odp_pool_get(pool, uint32_t, ext_head_offset) -
+			_odp_pool_get(pool, uint32_t, trailer_size);
 }
 
 _ODP_INLINE void *odp_packet_buf_head(odp_packet_buf_t pkt_buf)

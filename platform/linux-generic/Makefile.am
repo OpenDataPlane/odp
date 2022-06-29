@@ -38,6 +38,7 @@ odpapiplatinclude_HEADERS = \
 		  include/odp/api/plat/debug_inlines.h \
 		  include/odp/api/plat/event_inlines.h \
 		  include/odp/api/plat/event_inline_types.h \
+		  include/odp/api/plat/event_validation_external.h \
 		  include/odp/api/plat/event_vector_inline_types.h \
 		  include/odp/api/plat/hash_inlines.h \
 		  include/odp/api/plat/ipsec_inlines.h \
@@ -131,6 +132,7 @@ noinst_HEADERS = \
 		  include/odp_debug_internal.h \
 		  include/odp_errno_define.h \
 		  include/odp_event_internal.h \
+		  include/odp_event_validation_internal.h \
 		  include/odp_fdserver_internal.h \
 		  include/odp_forward_typedefs_internal.h \
 		  include/odp_global_data.h \
@@ -207,6 +209,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_dma.c \
 			   odp_errno.c \
 			   odp_event.c \
+			   odp_event_validation.c \
 			   odp_fdserver.c \
 			   odp_hash_crc_gen.c \
 			   odp_impl.c \

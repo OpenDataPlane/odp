@@ -11,4 +11,7 @@
 /* Define cache line size */
 #undef _ODP_CACHE_LINE_SIZE
 
+/* Define to 1 or 2 to enable event validation */
+#undef _ODP_EVENT_VALIDATION
+
 #endif

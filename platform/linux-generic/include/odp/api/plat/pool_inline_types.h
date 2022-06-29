@@ -30,6 +30,7 @@ typedef struct _odp_pool_inline_offset_t {
 	uint16_t index;
 	uint16_t seg_len;
 	uint16_t uarea_size;
+	uint16_t trailer_size;
 	uint16_t ext_head_offset;
 	uint16_t ext_pkt_buf_size;
 
