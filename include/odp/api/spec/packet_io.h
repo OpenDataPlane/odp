@@ -550,7 +550,11 @@ int odp_pktout_send_lso(odp_pktout_queue_t queue, const odp_packet_t packet[], i
 			const odp_packet_lso_opt_t *lso_opt);
 
 /**
- * Enable/Disable promiscuous mode on a packet IO interface.
+ * Set promiscuous mode
+ *
+ * Enable or disable promiscuous mode on a packet IO interface. Use packet IO capability
+ * odp_pktio_set_op_t::promisc_mode to check if an interface supports this operation.
+ * When the operation is supported, promiscuous mode is disabled by default.
  *
  * @param pktio   Packet IO handle.
  * @param enable  1 to enable, 0 to disable.
