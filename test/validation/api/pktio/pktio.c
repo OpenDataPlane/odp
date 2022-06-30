@@ -1495,11 +1495,17 @@ static void pktio_test_promisc(void)
 	odp_pktio_t pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED,
 					 ODP_PKTOUT_MODE_DIRECT);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0);
 
 	ret = odp_pktio_promisc_mode(pktio);
 	CU_ASSERT(ret >= 0);
+	CU_ASSERT(ret == 0 || ret == 1);
 
-	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0);
+	if (capa.set_op.op.promisc_mode) {
+		/* Disabled by default */
+		CU_ASSERT(ret == 0);
+	}
+
 	if (!capa.set_op.op.promisc_mode) {
 		printf("promiscuous mode not supported\n");
 		ret = odp_pktio_close(pktio);
