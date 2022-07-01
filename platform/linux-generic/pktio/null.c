@@ -1,4 +1,5 @@
 /* Copyright (c) 2018-2018, Linaro Limited
+ * Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -12,30 +13,17 @@
 
 #include <stdint.h>
 
-typedef struct {
-	int promisc;			/**< whether promiscuous mode is on */
-} pkt_null_t;
-
-ODP_STATIC_ASSERT(PKTIO_PRIVATE_SIZE >= sizeof(pkt_null_t),
-		  "PKTIO_PRIVATE_SIZE too small");
-
-static inline pkt_null_t *pkt_priv(pktio_entry_t *pktio_entry)
-{
-	return (pkt_null_t *)(uintptr_t)(pktio_entry->pkt_priv);
-}
-
 static int null_close(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
 	return 0;
 }
 
-static int null_open(odp_pktio_t id ODP_UNUSED,
-		     pktio_entry_t *pktio_entry,
+static int null_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry ODP_UNUSED,
 		     const char *devname, odp_pool_t pool ODP_UNUSED)
 {
 	if (strncmp(devname, "null:", 5) != 0)
 		return -1;
-	pkt_priv(pktio_entry)->promisc = 0;
+
 	return 0;
 }
 
@@ -130,15 +118,11 @@ static int null_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
 	return ETH_ALEN;
 }
 
-static int null_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable)
+static int null_promisc_mode_get(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
-	pkt_priv(pktio_entry)->promisc = !!enable;
+	/* Promisc mode disabled. Mode does not matter, as packet input does not
+	 * return any packets.*/
 	return 0;
-}
-
-static int null_promisc_mode_get(pktio_entry_t *pktio_entry)
-{
-	return pkt_priv(pktio_entry)->promisc;
 }
 
 static int null_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
@@ -148,7 +132,7 @@ static int null_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 
 	capa->max_input_queues  = PKTIO_MAX_QUEUES;
 	capa->max_output_queues = PKTIO_MAX_QUEUES;
-	capa->set_op.op.promisc_mode = 1;
+	capa->set_op.op.promisc_mode = 0;
 
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
@@ -213,7 +197,7 @@ const pktio_if_ops_t _odp_null_pktio_ops = {
 	.fd_set = null_fd_set,
 	.send = null_send,
 	.maxlen_get = null_mtu_get,
-	.promisc_mode_set = null_promisc_mode_set,
+	.promisc_mode_set = NULL,
 	.promisc_mode_get = null_promisc_mode_get,
 	.mac_get = null_mac_addr_get,
 	.capability = null_capability,
