@@ -8,7 +8,6 @@ env:
   ARCH: x86_64
   CONTAINER_NAMESPACE: ghcr.io/opendataplane/odp-docker-images
   OS: ubuntu_20.04
-  COVERITY_EMAIL: odp@lists.opendataplane.org
   COVERITY_PROJECT: ODP
 
 jobs:
@@ -19,7 +18,6 @@ jobs:
       - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g
                -e CC="${CC}" -e GITHUB_SHA="${GITHUB_SHA}"
                -e COVERITY_TOKEN="${{ secrets.COVERITY_TOKEN }}"
-               -e COVERITY_EMAIL="${COVERITY_EMAIL}"
                -e COVERITY_PROJECT="${COVERITY_PROJECT}"
                ${CONTAINER_NAMESPACE}/odp-ci-${OS}-${ARCH}-coverity-linux-generic
                /odp/scripts/ci/coverity.sh
