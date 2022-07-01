@@ -84,7 +84,8 @@ static inline pkt_pcap_t *pkt_priv(pktio_entry_t *pktio_entry)
 #define PKTIO_PCAP_MTU_MIN (68 + _ODP_ETHHDR_LEN)
 #define PKTIO_PCAP_MTU_MAX (64 * 1024)
 
-static const uint8_t pcap_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x04};
+/* Dummy MAC address used in .pcap test files, when not in promisc mode */
+static const uint8_t pcap_mac[] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x02};
 
 static int pcapif_stats_reset(pktio_entry_t *pktio_entry);
 
@@ -164,6 +165,49 @@ static int _pcapif_init_tx(pkt_pcap_t *pcap)
 	return pcap_dump_flush(pcap->tx_dump);
 }
 
+static int pcapif_promisc_mode_set(pktio_entry_t *pktio_entry,
+				   odp_bool_t enable)
+{
+	char filter_exp[64] = {0};
+	struct bpf_program bpf;
+	pkt_pcap_t *pcap = pkt_priv(pktio_entry);
+
+	if (!pcap->rx) {
+		pcap->promisc = enable;
+		return 0;
+	}
+
+	if (!enable) {
+		char mac_str[18];
+
+		snprintf(mac_str, sizeof(mac_str),
+			 "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+			 pcap_mac[0], pcap_mac[1], pcap_mac[2],
+			 pcap_mac[3], pcap_mac[4], pcap_mac[5]);
+
+		snprintf(filter_exp, sizeof(filter_exp),
+			 "ether dst %s or broadcast or multicast",
+			 mac_str);
+	}
+
+	if (pcap_compile(pcap->rx, &bpf, filter_exp,
+			 0, PCAP_NETMASK_UNKNOWN) != 0) {
+		ODP_ERR("failed to compile promisc mode filter: %s\n",
+			pcap_geterr(pcap->rx));
+		return -1;
+	}
+
+	if (pcap_setfilter(pcap->rx, &bpf) != 0) {
+		ODP_ERR("failed to set promisc mode filter: %s\n",
+			pcap_geterr(pcap->rx));
+		return -1;
+	}
+
+	pcap->promisc = enable;
+
+	return 0;
+}
+
 static int pcapif_init(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		       const char *devname, odp_pool_t pool)
 {
@@ -174,7 +218,6 @@ static int pcapif_init(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	pcap->loop_cnt = 1;
 	pcap->loops = 1;
 	pcap->pool = pool;
-	pcap->promisc = 1;
 	pcap->mtu = PKTIO_PCAP_MTU_MAX;
 
 	ret = _pcapif_parse_devname(pcap, devname);
@@ -189,6 +232,9 @@ static int pcapif_init(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		ret = -1;
 
 	(void)pcapif_stats_reset(pktio_entry);
+
+	if (pcapif_promisc_mode_set(pktio_entry, 0))
+		ret = -1;
 
 	return ret;
 }
@@ -460,49 +506,6 @@ static int pcapif_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	capa->stats.pktio.counter.in_errors = 1;
 	capa->stats.pktio.counter.out_octets = 1;
 	capa->stats.pktio.counter.out_packets = 1;
-
-	return 0;
-}
-
-static int pcapif_promisc_mode_set(pktio_entry_t *pktio_entry,
-				   odp_bool_t enable)
-{
-	char filter_exp[64] = {0};
-	struct bpf_program bpf;
-	pkt_pcap_t *pcap = pkt_priv(pktio_entry);
-
-	if (!pcap->rx) {
-		pcap->promisc = enable;
-		return 0;
-	}
-
-	if (!enable) {
-		char mac_str[18];
-
-		snprintf(mac_str, sizeof(mac_str),
-			 "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
-			 pcap_mac[0], pcap_mac[1], pcap_mac[2],
-			 pcap_mac[3], pcap_mac[4], pcap_mac[5]);
-
-		snprintf(filter_exp, sizeof(filter_exp),
-			 "ether dst %s or broadcast or multicast",
-			 mac_str);
-	}
-
-	if (pcap_compile(pcap->rx, &bpf, filter_exp,
-			 0, PCAP_NETMASK_UNKNOWN) != 0) {
-		ODP_ERR("failed to compile promisc mode filter: %s\n",
-			pcap_geterr(pcap->rx));
-		return -1;
-	}
-
-	if (pcap_setfilter(pcap->rx, &bpf) != 0) {
-		ODP_ERR("failed to set promisc mode filter: %s\n",
-			pcap_geterr(pcap->rx));
-		return -1;
-	}
-
-	pcap->promisc = enable;
 
 	return 0;
 }
