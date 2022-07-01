@@ -24,6 +24,8 @@ ODP_STATIC_ASSERT(MAX_PKTIOS < UINT8_MAX, "MAX_PKTIOS too large for index lookup
 
 typedef struct test_options_t {
 	uint64_t num_packet;
+	uint32_t timeout;
+	int promisc;
 	int verbose;
 	int num_pktio;
 	char pktio_name[MAX_PKTIOS][MAX_PKTIO_NAME + 1];
@@ -67,6 +69,8 @@ static void print_usage(void)
 	       "OPTIONS:\n"
 	       "  -i, --interface <name>      Packet IO interfaces (comma-separated, no spaces)\n"
 	       "  -n, --num_packet <number>   Exit after this many packets. Use 0 to run infinitely. Default 0.\n"
+	       "  -t, --timeout <sec>         Exit after this many seconds. Use 0 to run infinitely. Default 0.\n"
+	       "  -p, --promisc               Set interface into promiscuous mode.\n"
 	       "  -v, --verbose               Print extra packet information.\n"
 	       "  -h, --help                  Display help and exit.\n\n");
 }
@@ -80,11 +84,13 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 	const struct option longopts[] = {
 		{"interface",   required_argument, NULL, 'i'},
 		{"num_packet",  required_argument, NULL, 'n'},
+		{"timeout",     required_argument, NULL, 't'},
+		{"promisc",     no_argument,       NULL, 'p'},
 		{"verbose",     no_argument,       NULL, 'v'},
 		{"help",        no_argument,       NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
-	const char *shortopts =  "+i:n:vh";
+	const char *shortopts =  "+i:n:t:pvh";
 	int ret = 0;
 
 	while (1) {
@@ -127,6 +133,12 @@ static int parse_options(int argc, char *argv[], test_global_t *global)
 		case 'n':
 			global->opt.num_packet = atoll(optarg);
 			break;
+		case 't':
+			global->opt.timeout = atoi(optarg);
+			break;
+		case 'p':
+			global->opt.promisc = 1;
+			break;
 		case 'v':
 			global->opt.verbose = 1;
 			break;
@@ -151,6 +163,7 @@ static int open_pktios(test_global_t *global)
 	odp_pktio_param_t pktio_param;
 	odp_pool_t pool;
 	odp_pool_capability_t pool_capa;
+	odp_pktio_capability_t pktio_capa;
 	odp_pktio_t pktio;
 	odp_pktio_config_t pktio_config;
 	odp_pktin_queue_param_t pktin_param;
@@ -205,7 +218,10 @@ static int open_pktios(test_global_t *global)
 
 		global->pktio[i].pktio = pktio;
 
-		odp_pktio_print(pktio);
+		if (odp_pktio_capability(pktio, &pktio_capa)) {
+			ODPH_ERR("Packet IO capability failed\n");
+			return -1;
+		}
 
 		if (odp_pktio_mac_addr(pktio,
 				       &global->pktio[i].eth_addr.addr,
@@ -246,6 +262,20 @@ static int open_pktios(test_global_t *global)
 		}
 
 		global->pktio[i].pktout = pktout;
+
+		if (global->opt.promisc) {
+			if (pktio_capa.set_op.op.promisc_mode == 0) {
+				ODPH_ERR("Promiscuous mode cannot be set: %s\n", name);
+				return -1;
+			}
+
+			if (odp_pktio_promisc_mode_set(pktio, 1)) {
+				ODPH_ERR("Promiscuous mode set failed: %s\n", name);
+				return -1;
+			}
+		}
+
+		odp_pktio_print(pktio);
 	}
 
 	return 0;
@@ -590,9 +620,11 @@ static int receive_packets(test_global_t *global)
 	uint64_t diff_ns;
 	int print = 0;
 	uint64_t num_packet = 0;
+	uint64_t timeout_ns = global->opt.timeout * ODP_TIME_SEC_IN_NS;
 	uint64_t wait = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS);
-	odp_time_t cur = odp_time_local();
-	odp_time_t prev = cur;
+	odp_time_t start = odp_time_local();
+	odp_time_t cur = start;
+	odp_time_t prev = start;
 
 	while (!odp_atomic_load_u32(&global->stop)) {
 		ev = odp_schedule(NULL, wait);
@@ -609,6 +641,12 @@ static int receive_packets(test_global_t *global)
 				print_stat(global, num_packet, diff_ns);
 				print = 0;
 			}
+
+			if (timeout_ns) {
+				if (odp_time_diff_ns(cur, start) >= timeout_ns)
+					break;
+			}
+
 			continue;
 		}
 
@@ -632,9 +670,15 @@ static int receive_packets(test_global_t *global)
 			print = 0;
 		}
 
-		if (global->opt.num_packet &&
-		    num_packet >= global->opt.num_packet)
+		if (global->opt.num_packet && num_packet >= global->opt.num_packet)
 			break;
+	}
+
+	/* Timeout before num packets received */
+	if (global->opt.num_packet && num_packet < global->opt.num_packet) {
+		ODPH_ERR("Received %" PRIu64 "/%" PRIu64 " packets\n",
+			 num_packet, global->opt.num_packet);
+		return -1;
 	}
 
 	return 0;
@@ -689,8 +733,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (receive_packets(global)) {
-		ODPH_ERR("Packet receive failed\n");
-		return -1;
+		ret = -1;
 	}
 
 	if (stop_pktios(global)) {

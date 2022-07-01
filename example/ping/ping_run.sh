@@ -16,8 +16,9 @@ fi
 
 setup_interfaces
 
-# Ping test with 100 ICMP echo request packets (verbose mode)
-./odp_ping${EXEEXT} -v -n 100 -i $IF0
+# Ping test with 100 ICMP echo request packets. Timeout 5 sec.
+# Promiscuous and verbose mode enabled.
+./odp_ping${EXEEXT} -v -p -t 5 -n 100 -i $IF0
 STATUS=$?
 
 if [ ${STATUS} -ne 0 ]; then
