@@ -435,8 +435,7 @@ static int loopback_mtu_set(pktio_entry_t *pktio_entry, uint32_t maxlen_input,
 	return 0;
 }
 
-static int loopback_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
-				 void *mac_addr)
+static int loopback_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 {
 	memcpy(mac_addr, pktio_loop_mac, ETH_ALEN);
 	((uint8_t *)mac_addr)[ETH_ALEN - 1] += pkt_priv(pktio_entry)->idx;
@@ -534,8 +533,7 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
-static int loopback_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
-			       odp_pktio_capability_t *capa)
+static int loopback_capability(pktio_entry_t *pktio_entry, odp_pktio_capability_t *capa)
 {
 	*capa = pktio_entry->capa;
 	return 0;
@@ -560,7 +558,7 @@ static int loopback_stats(pktio_entry_t *pktio_entry,
 	return 0;
 }
 
-static int loopback_stats_reset(pktio_entry_t *pktio_entry ODP_UNUSED)
+static int loopback_stats_reset(pktio_entry_t *pktio_entry)
 {
 	memset(&pktio_entry->stats, 0, sizeof(odp_pktio_stats_t));
 	return 0;
