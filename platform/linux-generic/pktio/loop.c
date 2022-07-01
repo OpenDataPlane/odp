@@ -48,7 +48,6 @@
 
 typedef struct {
 	odp_queue_t loopq;		/**< loopback queue for "loop" device */
-	odp_bool_t promisc;		/**< promiscuous mode state */
 	uint16_t mtu;			/**< link MTU */
 	uint8_t idx;			/**< index of "loop" device */
 } pkt_loop_t;
@@ -477,7 +476,7 @@ static int loopback_init_capability(pktio_entry_t *pktio_entry)
 
 	capa->max_input_queues  = 1;
 	capa->max_output_queues = 1;
-	capa->set_op.op.promisc_mode = 1;
+	capa->set_op.op.promisc_mode = 0;
 	capa->set_op.op.maxlen = 1;
 
 	capa->maxlen.equal = true;
@@ -539,16 +538,9 @@ static int loopback_capability(pktio_entry_t *pktio_entry, odp_pktio_capability_
 	return 0;
 }
 
-static int loopback_promisc_mode_set(pktio_entry_t *pktio_entry,
-				     odp_bool_t enable)
+static int loopback_promisc_mode_get(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
-	pkt_priv(pktio_entry)->promisc = enable;
-	return 0;
-}
-
-static int loopback_promisc_mode_get(pktio_entry_t *pktio_entry)
-{
-	return pkt_priv(pktio_entry)->promisc ? 1 : 0;
+	return 1;
 }
 
 static int loopback_stats(pktio_entry_t *pktio_entry,
@@ -609,7 +601,7 @@ const pktio_if_ops_t _odp_loopback_pktio_ops = {
 	.send = loopback_send,
 	.maxlen_get = loopback_mtu_get,
 	.maxlen_set = loopback_mtu_set,
-	.promisc_mode_set = loopback_promisc_mode_set,
+	.promisc_mode_set = NULL,
 	.promisc_mode_get = loopback_promisc_mode_get,
 	.mac_get = loopback_mac_addr_get,
 	.mac_set = NULL,
