@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -208,26 +209,36 @@ int odp_cpumask_last(const odp_cpumask_t *mask);
 int odp_cpumask_next(const odp_cpumask_t *mask, int cpu);
 
 /**
- * Default cpumask for worker threads
+ * Default CPU mask for worker threads
  *
- * Initializes cpumask with CPUs available for worker threads. Sets up to 'num'
- * CPUs and returns the count actually set. Use zero for all available CPUs.
+ * Initializes CPU mask with the default set of CPUs available for worker threads. It's system
+ * specific if other CPUs may be used for worker threads as well. Parameter 'num' defines
+ * the maximum number of CPUs to be returned. Use zero for all available CPUs. The mask pointer
+ * may be set to NULL when CPU mask is not required.
+ *
+ * Returns the number of CPUs selected and written into the CPU mask (when not NULL).
  *
  * @param[out] mask      CPU mask to initialize
- * @param      num       Number of worker threads, zero for all available CPUs
- * @return Actual number of CPUs used to create the mask
+ * @param      num       Maximum number of CPUs to return. Use zero for all available CPUs.
+ *
+ * @return Number of selected CPUs
  */
 int odp_cpumask_default_worker(odp_cpumask_t *mask, int num);
 
 /**
- * Default cpumask for control threads
+ * Default CPU mask for control threads
  *
- * Initializes cpumask with CPUs available for control threads. Sets up to 'num'
- * CPUs and returns the count actually set. Use zero for all available CPUs.
+ * Initializes CPU mask with the default set of CPUs available for control threads. It's system
+ * specific if other CPUs may be used for control threads as well. Parameter 'num' defines
+ * the maximum number of CPUs to be returned. Use zero for all available CPUs. The mask pointer
+ * may be set to NULL when CPU mask is not required.
+ *
+ * Returns the number of CPUs selected and written into the CPU mask (when not NULL).
  *
  * @param[out] mask      CPU mask to initialize
- * @param      num       Number of control threads, zero for all available CPUs
- * @return Actual number of CPUs used to create the mask
+ * @param      num       Maximum number of CPUs to return. Use zero for all available CPUs.
+ *
+ * @return Number of selected CPUs
  */
 int odp_cpumask_default_control(odp_cpumask_t *mask, int num);
 
