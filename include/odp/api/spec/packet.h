@@ -1645,6 +1645,19 @@ uint32_t odp_packet_l4_offset(odp_packet_t pkt);
 int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset);
 
 /**
+ * Get information on the VLAN tag stripped in packet reception.
+ *
+ * @see odp_pktin_config_opt_t::bit.vlan_strip
+ *
+ * @param      pkt  Packet handle
+ * @param[out] info Structure into which VLAN tag information will be written
+ *
+ * @retval 0  on success
+ * @retval <0 VLAN strip not done, packet does not have VLAN strip metadata
+ */
+int odp_packet_vlan_info(odp_packet_t pkt, odp_packet_vlan_info_t *info);
+
+/**
  * Layer 2 protocol type
  *
  * Returns layer 2 protocol type. Initial type value is ODP_PROTO_L2_TYPE_NONE.

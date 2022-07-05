@@ -377,6 +377,29 @@ typedef union odp_pktin_config_opt_t {
 		  * on packet input */
 		uint64_t ts_ptp        : 1;
 
+		/** Strip VLAN tags of received packets so that the ODP
+		 *  application sees untagged packets. VLAN ID is saved
+		 *  in packet metadata and can be read using
+		 *  odp_packet_vlan_info().
+		 *
+		 *  This removes only the outermost VLAN tag and only if
+		 *  its ethertype is 0x8100.
+		 *
+		 *  VLAN stripping is done as a last step of packet input
+		 *  processing just before the application gets the packet.
+		 *  This means that packet parsing and classification is
+		 *  done with the VLAN tag still in the packet. The has_vlan
+		 *  and has_qinq packet flags are set at packet parsing
+		 *  before the stripping. Retained L2 headers in inline
+		 *  IPsec processing include the VLAN tag.
+		 *
+		 *  Support for VLAN strip offload must be checked from
+		 *  odp_pktio_capability_t::vlan_offload returned by
+		 *  odp_pktio_capability(). This flag is used only for
+		 *  configuration.
+		 */
+		uint64_t vlan_strip    : 1;
+
 		/** Check IPv4 header checksum on packet input */
 		uint64_t ipv4_chksum   : 1;
 
@@ -812,6 +835,18 @@ typedef struct odp_pktin_vector_capability_t {
 } odp_pktin_vector_capability_t;
 
 /**
+ * VLAN offload capabilities
+ */
+typedef struct odp_vlan_offload_capability_t {
+	/** Supported offloads */
+	struct {
+		/** VLAN strip in packet input */
+		uint32_t vlan_strip:1;
+	} offloads;
+
+} odp_vlan_offload_capability_t;
+
+/**
  * Packet IO capabilities
  *
  * Note that interface capabilities may differ between packet output modes. For example,
@@ -913,6 +948,9 @@ typedef struct odp_pktio_capability_t {
 
 	/** Packet input reassembly capability */
 	odp_reass_capability_t reassembly;
+
+	/** VLAN offload capability */
+	odp_vlan_offload_capability_t vlan_offload;
 
 	/** Statistics counters capabilities */
 	odp_pktio_stats_capability_t stats;

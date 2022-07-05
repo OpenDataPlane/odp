@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -303,6 +303,15 @@ typedef struct odp_packet_reass_partial_state_t {
 	/** Time, in ns, since the reception of the first received fragment */
 	uint64_t elapsed_time;
 } odp_packet_reass_partial_state_t;
+
+/**
+ * Information about a stripped VLAN header
+ */
+typedef struct odp_packet_vlan_info_t {
+	/** VLAN ID in host byte order */
+	uint16_t vlan_id;
+
+} odp_packet_vlan_info_t;
 
 /**
  * Flags to control packet data checksum checking
