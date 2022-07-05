@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
- * Copyright (c) 2021, Nokia
+ * Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -13,62 +13,67 @@
 #include <odp/api/cpumask.h>
 #include <odp_debug_internal.h>
 
-int odp_cpumask_default_worker(odp_cpumask_t *mask, int num)
+int odp_cpumask_default_worker(odp_cpumask_t *mask, int max_num)
 {
-	odp_cpumask_t overlap;
-	int cpu, i;
+	int num, cpu, ret;
+	odp_cpumask_t *worker_cpus = &odp_global_ro.worker_cpus;
 
-	/*
-	 * If no user supplied number or it's too large, then attempt
-	 * to use all CPUs
-	 */
-	cpu = odp_cpumask_count(&odp_global_ro.worker_cpus);
-	if (0 == num || cpu < num)
-		num = cpu;
+	num = odp_cpumask_count(worker_cpus);
 
-	/* build the mask, allocating down from highest numbered CPU */
+	if (max_num && num > max_num)
+		num = max_num;
+
+	if (mask == NULL)
+		return num;
+
 	odp_cpumask_zero(mask);
-	for (cpu = 0, i = CPU_SETSIZE - 1; i >= 0 && cpu < num; --i) {
-		if (odp_cpumask_isset(&odp_global_ro.worker_cpus, i)) {
-			odp_cpumask_set(mask, i);
-			cpu++;
+
+	/* Allocate down from the highest numbered CPU */
+	cpu = odp_cpumask_last(worker_cpus);
+	ret = num;
+
+	while (cpu >= 0 && num > 0) {
+		if (odp_cpumask_isset(worker_cpus, cpu)) {
+			odp_cpumask_set(mask, cpu);
+			num--;
 		}
+
+		cpu--;
 	}
 
-	odp_cpumask_and(&overlap, mask, &odp_global_ro.control_cpus);
-	if (odp_cpumask_count(&overlap))
-		ODP_DBG("\n\tWorker CPUs overlap with control CPUs...\n"
-			"\tthis will likely have a performance impact on the worker threads.\n");
-
-	return cpu;
+	return ret;
 }
 
-int odp_cpumask_default_control(odp_cpumask_t *mask, int num)
+int odp_cpumask_default_control(odp_cpumask_t *mask, int max_num)
 {
-	odp_cpumask_t overlap;
-	int cpu, i;
+	int num, cpu, last, ret;
+	odp_cpumask_t *control_cpus = &odp_global_ro.control_cpus;
 
-	/* If no user supplied number or it's too large, attempt to use all
-	 * control CPUs. */
-	cpu = odp_cpumask_count(&odp_global_ro.control_cpus);
-	if (num == 0 || cpu < num)
-		num = cpu;
+	num = odp_cpumask_count(control_cpus);
 
-	/* build the mask, allocating upwards from lowest numbered CPU */
+	if (max_num && num > max_num)
+		num = max_num;
+
+	if (mask == NULL)
+		return num;
+
 	odp_cpumask_zero(mask);
-	for (cpu = 0, i = 0; i < CPU_SETSIZE && cpu < num; i++) {
-		if (odp_cpumask_isset(&odp_global_ro.control_cpus, i)) {
-			odp_cpumask_set(mask, i);
-			cpu++;
+
+	/* Allocate up from the lowest numbered CPU */
+	cpu  = odp_cpumask_first(control_cpus);
+	last = odp_cpumask_last(control_cpus);
+	ret  = num;
+
+	while (cpu <= last && num > 0) {
+		if (odp_cpumask_isset(control_cpus, cpu)) {
+			odp_cpumask_set(mask, cpu);
+			num--;
 		}
+
+		cpu++;
 	}
 
-	odp_cpumask_and(&overlap, mask, &odp_global_ro.worker_cpus);
-	if (odp_cpumask_count(&overlap))
-		ODP_DBG("\n\tControl CPUs overlap with worker CPUs...\n"
-			"\tthis will likely have a performance impact on the worker threads.\n");
-
-	return cpu;
+	return ret;
 }
 
 int odp_cpumask_all_available(odp_cpumask_t *mask)
