@@ -78,8 +78,7 @@ int odp_cpumask_default_control(odp_cpumask_t *mask, int max_num)
 
 int odp_cpumask_all_available(odp_cpumask_t *mask)
 {
-	odp_cpumask_or(mask, &odp_global_ro.worker_cpus,
-		       &odp_global_ro.control_cpus);
+	odp_cpumask_copy(mask, &odp_global_ro.all_cpus);
 
-	return odp_cpumask_count(mask);
+	return odp_global_ro.num_cpus_installed;
 }
