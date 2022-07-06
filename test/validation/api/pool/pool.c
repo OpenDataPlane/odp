@@ -895,7 +895,6 @@ static int run_pool_test_create_after_fork(void *arg ODP_UNUSED)
 static void pool_test_create_after_fork(void)
 {
 	odp_shm_t shm;
-	odp_cpumask_t unused;
 	int num;
 
 	/* No single VA required since reserve is done before fork */
@@ -904,7 +903,7 @@ static void pool_test_create_after_fork(void)
 	global_mem = odp_shm_addr(shm);
 	CU_ASSERT_PTR_NOT_NULL_FATAL(global_mem);
 
-	num = odp_cpumask_default_worker(&unused, 0);
+	num = odp_cpumask_default_worker(NULL, 0);
 	if (num > MAX_WORKERS)
 		num = MAX_WORKERS;
 
