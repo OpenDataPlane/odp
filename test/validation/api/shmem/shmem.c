@@ -139,7 +139,6 @@ static void shmem_test_multi_thread(void)
 	odp_shm_t shm;
 	odp_shm_t shm2;
 	shared_test_data_t *shared_test_data;
-	odp_cpumask_t unused;
 	int i, num;
 	char max_name[ODP_SHM_NAME_LEN];
 
@@ -202,7 +201,7 @@ static void shmem_test_multi_thread(void)
 	shared_test_data->foo = TEST_SHARE_FOO;
 	shared_test_data->bar = TEST_SHARE_BAR;
 
-	num = odp_cpumask_default_worker(&unused, 0);
+	num = odp_cpumask_default_worker(NULL, 0);
 
 	if (num > MAX_WORKERS)
 		num = MAX_WORKERS;
@@ -544,7 +543,6 @@ static void shmem_test_reserve_after_fork(void)
 	odp_shm_t shm;
 	odp_shm_t thr_shm;
 	shared_test_data_t *glob_data;
-	odp_cpumask_t unused;
 	int thr_index, i, num;
 	shared_test_data_small_t  *pattern_small;
 	shared_test_data_medium_t *pattern_medium;
@@ -555,7 +553,7 @@ static void shmem_test_reserve_after_fork(void)
 	glob_data = odp_shm_addr(shm);
 	CU_ASSERT_PTR_NOT_NULL(glob_data);
 
-	num = odp_cpumask_default_worker(&unused, 0);
+	num = odp_cpumask_default_worker(NULL, 0);
 	if (num > MAX_WORKERS)
 		num = MAX_WORKERS;
 
@@ -735,7 +733,6 @@ static void shmem_test_singleva_after_fork(void)
 	odp_shm_t shm;
 	odp_shm_t thr_shm;
 	shared_test_data_t *glob_data;
-	odp_cpumask_t unused;
 	int thr_index, i, num;
 	void *address;
 	shared_test_data_small_t  *pattern_small;
@@ -748,7 +745,7 @@ static void shmem_test_singleva_after_fork(void)
 	glob_data = odp_shm_addr(shm);
 	CU_ASSERT_PTR_NOT_NULL(glob_data);
 
-	num = odp_cpumask_default_worker(&unused, 3);
+	num = odp_cpumask_default_worker(NULL, 3);
 	if (num > MAX_WORKERS)
 		num = MAX_WORKERS;
 
@@ -975,7 +972,6 @@ static void shmem_test_stress(void)
 	odp_shm_t shm;
 	odp_shm_t globshm;
 	shared_test_data_t *glob_data;
-	odp_cpumask_t unused;
 	uint32_t i;
 	int num;
 
@@ -985,7 +981,7 @@ static void shmem_test_stress(void)
 	glob_data = odp_shm_addr(globshm);
 	CU_ASSERT_PTR_NOT_NULL(glob_data);
 
-	num = odp_cpumask_default_worker(&unused, 0);
+	num = odp_cpumask_default_worker(NULL, 0);
 	if (num > MAX_WORKERS)
 		num = MAX_WORKERS;
 
