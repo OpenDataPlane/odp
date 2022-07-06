@@ -2073,7 +2073,6 @@ static void timer_test_all(odp_queue_type_t queue_type)
 	int rc;
 	odp_pool_param_t params;
 	odp_timer_pool_param_t tparam;
-	odp_cpumask_t unused;
 	odp_timer_pool_info_t tpinfo;
 	uint64_t ns, tick, ns2;
 	uint64_t res_ns, min_tmo, max_tmo;
@@ -2091,7 +2090,7 @@ static void timer_test_all(odp_queue_type_t queue_type)
 	/* Reserve at least one core for running other processes so the timer
 	 * test hopefully can run undisturbed and thus get better timing
 	 * results. */
-	num_workers = odp_cpumask_default_worker(&unused, 0);
+	num_workers = odp_cpumask_default_worker(NULL, 0);
 
 	/* force to max CPU count */
 	if (num_workers > MAX_WORKERS)

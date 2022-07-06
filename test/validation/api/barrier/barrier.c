@@ -302,7 +302,6 @@ static int barrier_init(odp_instance_t *inst)
 {
 	uint32_t workers_count, max_threads;
 	int ret = 0;
-	odp_cpumask_t mask;
 	odp_init_t init_param;
 	odph_helper_options_t helper_options;
 
@@ -337,7 +336,7 @@ static int barrier_init(odp_instance_t *inst)
 	global_mem->g_iterations = MAX_ITERATIONS;
 	global_mem->g_verbose = VERBOSE;
 
-	workers_count = odp_cpumask_default_worker(&mask, 0);
+	workers_count = odp_cpumask_default_worker(NULL, 0);
 
 	max_threads = (workers_count >= MAX_WORKERS) ?
 			MAX_WORKERS : workers_count;

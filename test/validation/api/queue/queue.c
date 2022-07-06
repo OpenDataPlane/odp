@@ -60,7 +60,6 @@ static int queue_suite_init(void)
 	test_globals_t *globals;
 	odp_pool_param_t params;
 	int num_workers;
-	odp_cpumask_t mask;
 
 	shm = odp_shm_reserve(GLOBALS_NAME, sizeof(test_globals_t),
 			      ODP_CACHE_LINE_SIZE, 0);
@@ -73,7 +72,7 @@ static int queue_suite_init(void)
 	globals = odp_shm_addr(shm);
 	memset(globals, 0, sizeof(test_globals_t));
 
-	num_workers = odp_cpumask_default_worker(&mask, 0);
+	num_workers = odp_cpumask_default_worker(NULL, 0);
 
 	if (num_workers > MAX_WORKERS)
 		num_workers = MAX_WORKERS;

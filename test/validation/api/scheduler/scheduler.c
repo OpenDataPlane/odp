@@ -3510,7 +3510,6 @@ static void scheduler_test_mq_mt_prio_a_print(void)
 
 static int scheduler_test_global_init(void)
 {
-	odp_cpumask_t mask;
 	odp_shm_t shm;
 	thread_args_t *args;
 	odp_pool_t pool;
@@ -3537,7 +3536,7 @@ static int scheduler_test_global_init(void)
 	memset(globals, 0, sizeof(test_globals_t));
 	globals->shm_glb = shm;
 
-	globals->num_workers = odp_cpumask_default_worker(&mask, 0);
+	globals->num_workers = odp_cpumask_default_worker(NULL, 0);
 	if (globals->num_workers > MAX_WORKERS)
 		globals->num_workers = MAX_WORKERS;
 
