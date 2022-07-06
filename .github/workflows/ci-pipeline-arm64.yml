@@ -147,7 +147,8 @@ jobs:
         cc: [gcc, clang]
         conf: ['', '--enable-abi-compat', '--enable-deprecated --enable-helper-deprecated --enable-debug=full',
                '--enable-dpdk-zero-copy --disable-static-applications',
-               '--disable-host-optimization', '--disable-host-optimization --enable-abi-compat',
+               '--disable-host-optimization --enable-event-validation=warn',
+               '--disable-host-optimization --enable-abi-compat',
                '--without-openssl --without-pcap', '--with-crypto=armv8crypto', '--with-crypto=ipsecmb']
     steps:
       - uses: AutoModality/action-clean@v1.1.0
