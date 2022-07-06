@@ -229,13 +229,10 @@ int odp_cpumask_next(const odp_cpumask_t *mask, int cpu)
  */
 static int get_available_cpus(void)
 {
-	int cpu_idnum;
 	cpu_set_t cpuset;
-	int ret;
+	int cpu, ret;
 
-	/* Clear the global cpumasks for control and worker CPUs */
-	odp_cpumask_zero(&odp_global_ro.control_cpus);
-	odp_cpumask_zero(&odp_global_ro.worker_cpus);
+	odp_cpumask_zero(&odp_global_ro.all_cpus);
 
 	CPU_ZERO(&cpuset);
 	ret = sched_getaffinity(0, sizeof(cpuset), &cpuset);
@@ -245,16 +242,16 @@ static int get_available_cpus(void)
 			return -1;
 	}
 
-	for (cpu_idnum = 0; cpu_idnum < CPU_SETSIZE - 1; cpu_idnum++) {
-		if (CPU_ISSET(cpu_idnum, &cpuset)) {
+	for (cpu = 0; cpu < CPU_SETSIZE - 1; cpu++) {
+		if (CPU_ISSET(cpu, &cpuset)) {
 			odp_global_ro.num_cpus_installed++;
-			/* Add the CPU to our default cpumasks */
-			odp_cpumask_set(&odp_global_ro.control_cpus,
-					(int)cpu_idnum);
-			odp_cpumask_set(&odp_global_ro.worker_cpus,
-					(int)cpu_idnum);
+			odp_cpumask_set(&odp_global_ro.all_cpus, cpu);
 		}
 	}
+
+	/* Initialize control and worker masks with all CPUs */
+	odp_cpumask_copy(&odp_global_ro.control_cpus, &odp_global_ro.all_cpus);
+	odp_cpumask_copy(&odp_global_ro.worker_cpus, &odp_global_ro.all_cpus);
 
 	return 0;
 }

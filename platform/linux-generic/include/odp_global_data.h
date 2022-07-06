@@ -65,6 +65,7 @@ typedef struct odp_global_data_ro_t {
 	odp_abort_func_t abort_fn;
 	system_info_t system_info;
 	hugepage_info_t hugepage_info;
+	odp_cpumask_t all_cpus;
 	odp_cpumask_t control_cpus;
 	odp_cpumask_t worker_cpus;
 	int num_cpus_installed;
