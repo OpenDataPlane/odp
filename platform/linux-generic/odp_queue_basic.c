@@ -5,38 +5,41 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <odp/api/align.h>
+#include <odp/api/hints.h>
+#include <odp/api/packet_io.h>
 #include <odp/api/queue.h>
+#include <odp/api/schedule.h>
+#include <odp/api/shared_memory.h>
+#include <odp/api/std_types.h>
+#include <odp/api/sync.h>
+#include <odp/api/ticketlock.h>
+#include <odp/api/traffic_mngr.h>
+
+#include <odp/api/plat/queue_inline_types.h>
+#include <odp/api/plat/sync_inlines.h>
+#include <odp/api/plat/ticketlock_inlines.h>
+
+#include <odp_config_internal.h>
+#include <odp_debug_internal.h>
+#include <odp_event_internal.h>
+#include <odp_global_data.h>
+#include <odp_init_internal.h>
+#include <odp_libconfig_internal.h>
+#include <odp_macros_internal.h>
+#include <odp_packet_io_internal.h>
+#include <odp_pool_internal.h>
 #include <odp_queue_basic_internal.h>
 #include <odp_queue_if.h>
-#include <odp/api/std_types.h>
-#include <odp/api/align.h>
-#include <odp_pool_internal.h>
-#include <odp_init_internal.h>
-#include <odp_timer_internal.h>
-#include <odp/api/shared_memory.h>
-#include <odp/api/schedule.h>
 #include <odp_schedule_if.h>
-#include <odp_config_internal.h>
-#include <odp_packet_io_internal.h>
-#include <odp_debug_internal.h>
-#include <odp/api/hints.h>
-#include <odp/api/sync.h>
-#include <odp/api/plat/sync_inlines.h>
-#include <odp/api/traffic_mngr.h>
-#include <odp_libconfig_internal.h>
-#include <odp/api/plat/queue_inline_types.h>
-#include <odp_global_data.h>
-#include <odp_queue_basic_internal.h>
-#include <odp_event_internal.h>
-#include <odp_macros_internal.h>
+#include <odp_timer_internal.h>
 
-#include <odp/api/plat/ticketlock_inlines.h>
+#include <inttypes.h>
+#include <string.h>
+
 #define LOCK(queue_ptr)      odp_ticketlock_lock(&((queue_ptr)->lock))
 #define UNLOCK(queue_ptr)    odp_ticketlock_unlock(&((queue_ptr)->lock))
 #define LOCK_INIT(queue_ptr) odp_ticketlock_init(&((queue_ptr)->lock))
-
-#include <string.h>
-#include <inttypes.h>
 
 #define MIN_QUEUE_SIZE 32
 #define MAX_QUEUE_SIZE (1 * 1024 * 1024)
