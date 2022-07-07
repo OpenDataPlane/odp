@@ -172,6 +172,18 @@ typedef struct odp_stash_capability_t {
 	/** Maximum size of thread local cache */
 	uint32_t max_cache_size;
 
+	/** Maximum number of object handles in batch get operations
+	 *
+	 *  At least 1 object batch size is always supported.
+	 */
+	uint32_t max_get_batch;
+
+	/** Maximum number of object handles in batch put operations
+	 *
+	 *  At least 1 object batch size is always supported.
+	 */
+	uint32_t max_put_batch;
+
 	/** Supported statistics counters */
 	odp_stash_stats_opt_t stats;
 
