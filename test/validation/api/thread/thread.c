@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, Linaro Limited
+ * Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -81,20 +82,29 @@ static int thread_global_term(odp_instance_t inst)
 
 static void thread_test_odp_cpu_id(void)
 {
-	(void)odp_cpu_id();
-	CU_PASS();
+	CU_ASSERT(odp_cpu_id() >= 0);
 }
 
 static void thread_test_odp_thread_id(void)
 {
-	(void)odp_thread_id();
-	CU_PASS();
+	int id = odp_thread_id();
+
+	CU_ASSERT(id >= 0);
+	CU_ASSERT(id < odp_thread_count_max());
+	CU_ASSERT(id < ODP_THREAD_COUNT_MAX);
 }
 
 static void thread_test_odp_thread_count(void)
 {
-	(void)odp_thread_count();
-	CU_PASS();
+	int count = odp_thread_count();
+
+	/* One thread running */
+	CU_ASSERT(count == 1);
+
+	CU_ASSERT(count >= 1);
+	CU_ASSERT(count <= odp_thread_count_max());
+	CU_ASSERT(count <= ODP_THREAD_COUNT_MAX);
+	CU_ASSERT(odp_thread_count_max() <= ODP_THREAD_COUNT_MAX);
 }
 
 static int thread_func(void *arg ODP_UNUSED)
