@@ -16,6 +16,9 @@ typedef struct {
 	/* Test thread entry and exit synchronization barriers */
 	odp_barrier_t bar_entry;
 	odp_barrier_t bar_exit;
+
+	/* Storage for thread ID assignment order test */
+	int thread_id[ODP_THREAD_COUNT_MAX];
 } global_shared_mem_t;
 
 static global_shared_mem_t *global_mem;
@@ -89,6 +92,9 @@ static void thread_test_odp_thread_id(void)
 {
 	int id = odp_thread_id();
 
+	/* First thread which called odp_init_local() */
+	CU_ASSERT(id == 0);
+
 	CU_ASSERT(id >= 0);
 	CU_ASSERT(id < odp_thread_count_max());
 	CU_ASSERT(id < ODP_THREAD_COUNT_MAX);
@@ -107,14 +113,22 @@ static void thread_test_odp_thread_count(void)
 	CU_ASSERT(odp_thread_count_max() <= ODP_THREAD_COUNT_MAX);
 }
 
-static int thread_func(void *arg ODP_UNUSED)
+static int thread_func(void *arg)
 {
-	/* indicate that thread has started */
+	int *id_ptr = arg;
+
+	/* Indicate that thread has started */
 	odp_barrier_wait(&global_mem->bar_entry);
+
+	/* Record thread identifier for ID assignment order check */
+	*id_ptr = odp_thread_id();
+
+	CU_ASSERT(*id_ptr > 0);
+	CU_ASSERT(*id_ptr < odp_thread_count_max());
 
 	CU_ASSERT(odp_thread_type() == ODP_THREAD_WORKER);
 
-	/* wait for indication that we can exit */
+	/* Wait for indication that we can exit */
 	odp_barrier_wait(&global_mem->bar_exit);
 
 	return CU_get_number_of_failures();
@@ -124,9 +138,21 @@ static void thread_test_odp_thrmask_worker(void)
 {
 	odp_thrmask_t mask;
 	int ret;
-	int num = 1;
+	int num = odp_cpumask_default_worker(NULL, 0);
 
+	CU_ASSERT_FATAL(num > 0);
 	CU_ASSERT_FATAL(odp_thread_type() == ODP_THREAD_CONTROL);
+
+	/* Control and worker threads may share CPUs */
+	if (num > 1)
+		num--;
+
+	void *args[num];
+
+	for (int i = 0; i < num; i++) {
+		global_mem->thread_id[i] = -1;
+		args[i] = &global_mem->thread_id[i];
+	}
 
 	odp_barrier_init(&global_mem->bar_entry, num + 1);
 	odp_barrier_init(&global_mem->bar_exit,  num + 1);
@@ -137,7 +163,7 @@ static void thread_test_odp_thrmask_worker(void)
 	CU_ASSERT(ret == 0);
 
 	/* start the test thread(s) */
-	ret = odp_cunit_thread_create(num, thread_func, NULL, 0, 0);
+	ret = odp_cunit_thread_create(num, thread_func, args, 1, 1);
 	CU_ASSERT(ret == num);
 
 	if (ret != num)
@@ -153,6 +179,10 @@ static void thread_test_odp_thrmask_worker(void)
 
 	/* allow thread(s) to exit */
 	odp_barrier_wait(&global_mem->bar_exit);
+
+	/* Thread ID 0 is used by this control thread */
+	for (int i = 0; i < num; i++)
+		CU_ASSERT(global_mem->thread_id[i] == i + 1);
 
 	odp_cunit_thread_join(num);
 }
