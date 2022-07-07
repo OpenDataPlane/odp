@@ -132,6 +132,25 @@ uint64_t odp_stash_to_u64(odp_stash_t stash);
 int32_t odp_stash_put(odp_stash_t stash, const void *obj, int32_t num);
 
 /**
+ * Put batch of object handles into a stash
+ *
+ * Otherwise like odp_stash_put(), except that this function stores either all
+ * 'num' object handles or none. odp_stash_capability_t.max_put_batch defines
+ * the maximum supported batch size.
+ *
+ * @param stash  Stash handle
+ * @param obj    Points to an array of object handles to be stored.
+ *               Object handle size is specified by 'obj_size' in stash
+ *               creation parameters. The array must be 'obj_size' aligned
+ *               in memory.
+ * @param num    Number of object handles to store
+ *
+ * @return Number of object handles actually stored (0 or num)
+ * @retval <0 on failure
+ */
+int32_t odp_stash_put_batch(odp_stash_t stash, const void *obj, int32_t num);
+
+/**
  * Put 32-bit integers into a stash
  *
  * Otherwise like odp_stash_put(), except that this function operates on 32-bit
@@ -146,6 +165,23 @@ int32_t odp_stash_put(odp_stash_t stash, const void *obj, int32_t num);
  * @retval <0 on failure
  */
 int32_t odp_stash_put_u32(odp_stash_t stash, const uint32_t val[], int32_t num);
+
+/**
+ * Put batch of 32-bit integers into a stash
+ *
+ * Otherwise like odp_stash_put_u32(), except that this function stores either
+ * all 'num' object handles or none. odp_stash_capability_t.max_put_batch
+ * defines the maximum supported batch size.
+ *
+ * @param stash  Stash handle
+ * @param val    Points to an array of 32-bit integers to be stored. The array
+ *               must be 32-bit aligned in memory.
+ * @param num    Number of integers to store
+ *
+ * @return Number of integers actually stored (0 or num)
+ * @retval <0 on failure
+ */
+int32_t odp_stash_put_u32_batch(odp_stash_t stash, const uint32_t val[], int32_t num);
 
 /**
  * Put 64-bit integers into a stash
@@ -164,6 +200,23 @@ int32_t odp_stash_put_u32(odp_stash_t stash, const uint32_t val[], int32_t num);
 int32_t odp_stash_put_u64(odp_stash_t stash, const uint64_t val[], int32_t num);
 
 /**
+ * Put batch of 64-bit integers into a stash
+ *
+ * Otherwise like odp_stash_put_u64(), except that this function stores either
+ * all 'num' object handles or none. odp_stash_capability_t.max_put_batch
+ * defines the maximum supported batch size.
+ *
+ * @param stash  Stash handle
+ * @param val    Points to an array of 64-bit integers to be stored. The array
+ *               must be 64-bit aligned in memory.
+ * @param num    Number of integers to store
+ *
+ * @return Number of integers actually stored (0 or num)
+ * @retval <0 on failure
+ */
+int32_t odp_stash_put_u64_batch(odp_stash_t stash, const uint64_t val[], int32_t num);
+
+/**
  * Put pointers into a stash
  *
  * Otherwise like odp_stash_put(), except that this function operates on
@@ -179,6 +232,23 @@ int32_t odp_stash_put_u64(odp_stash_t stash, const uint64_t val[], int32_t num);
  * @retval <0 on failure
  */
 int32_t odp_stash_put_ptr(odp_stash_t stash, const uintptr_t ptr[], int32_t num);
+
+/**
+ * Put batch of pointers into a stash
+ *
+ * Otherwise like odp_stash_put_ptr(), except that this function stores either
+ * all 'num' object handles or none. odp_stash_capability_t.max_put_batch
+ * defines the maximum supported batch size.
+ *
+ * @param stash  Stash handle
+ * @param ptr    Points to an array of pointers to be stored. The array must be
+ *               pointer size aligned in memory.
+ * @param num    Number of pointers to store
+ *
+ * @return Number of pointers actually stored (0 or num)
+ * @retval <0 on failure
+ */
+int32_t odp_stash_put_ptr_batch(odp_stash_t stash, const uintptr_t ptr[], int32_t num);
 
 /**
  * Get object handles from a stash
@@ -199,6 +269,25 @@ int32_t odp_stash_put_ptr(odp_stash_t stash, const uintptr_t ptr[], int32_t num)
 int32_t odp_stash_get(odp_stash_t stash, void *obj, int32_t num);
 
 /**
+ * Get batch of object handles from a stash
+ *
+ * Otherwise like odp_stash_get(), except that this function outputs either
+ * all 'num' object handles or none. odp_stash_capability_t.max_get_batch
+ * defines the maximum supported batch size.
+ *
+ * @param      stash  Stash handle
+ * @param[out] obj    Points to an array of object handles for output.
+ *                    Object handle size is specified by 'obj_size' in stash
+ *                    creation parameters. The array must be 'obj_size' aligned
+ *                    in memory.
+ * @param      num    Number of object handles to get from the stash
+ *
+ * @return Number of object handles actually output (0 or num) to 'obj' array
+ * @retval <0 on failure
+ */
+int32_t odp_stash_get_batch(odp_stash_t stash, void *obj, int32_t num);
+
+/**
  * Get 32-bit integers from a stash
  *
  * Otherwise like odp_stash_get(), except that this function operates on 32-bit
@@ -213,6 +302,23 @@ int32_t odp_stash_get(odp_stash_t stash, void *obj, int32_t num);
  * @retval <0 on failure
  */
 int32_t odp_stash_get_u32(odp_stash_t stash, uint32_t val[], int32_t num);
+
+/**
+ * Get batch of 32-bit integers from a stash
+ *
+ * Otherwise like odp_stash_get_u32(), except that this function outputs either
+ * all 'num' object handles or none. odp_stash_capability_t.max_get_batch
+ * defines the maximum supported batch size.
+ *
+ * @param      stash  Stash handle
+ * @param[out] val    Points to an array of 32-bit integers for output. The
+ *                    array must be 32-bit aligned in memory.
+ * @param      num    Number of integers to get from the stash
+ *
+ * @return Number of integers actually output (0 or num) to 'val' array
+ * @retval <0 on failure
+ */
+int32_t odp_stash_get_u32_batch(odp_stash_t stash, uint32_t val[], int32_t num);
 
 /**
  * Get 64-bit integers from a stash
@@ -231,6 +337,23 @@ int32_t odp_stash_get_u32(odp_stash_t stash, uint32_t val[], int32_t num);
 int32_t odp_stash_get_u64(odp_stash_t stash, uint64_t val[], int32_t num);
 
 /**
+ * Get batch of 64-bit integers from a stash
+ *
+ * Otherwise like odp_stash_get_u64(), except that this function outputs either
+ * all 'num' object handles or none. odp_stash_capability_t.max_get_batch
+ * defines the maximum supported batch size.
+ *
+ * @param      stash  Stash handle
+ * @param[out] val    Points to an array of 64-bit integers for output. The
+ *                    array must be 64-bit aligned in memory.
+ * @param      num    Number of integers to get from the stash
+ *
+ * @return Number of integers actually output (0 or num) to 'val' array
+ * @retval <0 on failure
+ */
+int32_t odp_stash_get_u64_batch(odp_stash_t stash, uint64_t val[], int32_t num);
+
+/**
  * Get pointers from a stash
  *
  * Otherwise like odp_stash_get(), except that this function operates on
@@ -246,6 +369,23 @@ int32_t odp_stash_get_u64(odp_stash_t stash, uint64_t val[], int32_t num);
  * @retval <0 on failure
  */
 int32_t odp_stash_get_ptr(odp_stash_t stash, uintptr_t ptr[], int32_t num);
+
+/**
+ * Get batch of pointers from a stash
+ *
+ * Otherwise like odp_stash_get_ptr(), except that this function outputs either
+ * all 'num' object handles or none. odp_stash_capability_t.max_get_batch
+ * defines the maximum supported batch size.
+ *
+ * @param      stash  Stash handle
+ * @param[out] ptr    Points to an array of pointers for output. The array must
+ *                    be pointer size aligned in memory.
+ * @param      num    Number of pointers to get from the stash
+ *
+ * @return Number of pointers actually output (0 or num) to 'ptr' array
+ * @retval <0 on failure
+ */
+int32_t odp_stash_get_ptr_batch(odp_stash_t stash, uintptr_t ptr[], int32_t num);
 
 /**
  * Flush object handles from the thread local cache
