@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2020-2021, Nokia
+ * Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -44,17 +44,9 @@
 	"/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size"
 
 /*
- * Report the number of logical CPUs detected at boot time
- */
-static int sysconf_cpu_count(void)
-{
-	return odp_global_ro.num_cpus_installed;
-}
-
-/*
  * Analysis of /sys/devices/system/cpu/ files
  */
-static int systemcpu_cache_line_size(void)
+static int read_cache_line_size(void)
 {
 	FILE  *file;
 	char str[128];
@@ -294,21 +286,13 @@ static inline uint64_t cpu_hz_static(int id)
 /*
  * Analysis of /sys/devices/system/cpu/ files
  */
-static int systemcpu(system_info_t *sysinfo)
+static int system_cache_line(system_info_t *sysinfo)
 {
 	int ret;
 
-	ret = sysconf_cpu_count();
+	ret = read_cache_line_size();
 	if (ret == 0) {
-		ODP_ERR("sysconf_cpu_count failed.\n");
-		return -1;
-	}
-
-	sysinfo->cpu_count = ret;
-
-	ret = systemcpu_cache_line_size();
-	if (ret == 0) {
-		ODP_ERR("systemcpu_cache_line_size failed.\n");
+		ODP_ERR("read_cache_line_size failed.\n");
 		return -1;
 	}
 
@@ -423,10 +407,8 @@ int _odp_system_info_init(void)
 		_odp_dummy_cpuinfo(&odp_global_ro.system_info);
 	}
 
-	if (systemcpu(&odp_global_ro.system_info)) {
-		ODP_ERR("systemcpu failed\n");
+	if (system_cache_line(&odp_global_ro.system_info))
 		return -1;
-	}
 
 	system_hp(&odp_global_ro.hugepage_info);
 
@@ -555,7 +537,7 @@ int odp_sys_cache_line_size(void)
 
 int odp_cpu_count(void)
 {
-	return odp_global_ro.system_info.cpu_count;
+	return odp_global_ro.num_cpus_installed;
 }
 
 int odp_system_info(odp_system_info_t *info)
