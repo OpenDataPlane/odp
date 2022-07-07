@@ -34,7 +34,6 @@ typedef struct {
 	uint64_t default_cpu_hz;
 	uint64_t page_size;
 	int      cache_line_size;
-	int      cpu_count;
 	odp_bool_t cpu_hz_static;
 	odp_cpu_arch_t cpu_arch;
 	odp_cpu_arch_isa_t cpu_isa_sw;
