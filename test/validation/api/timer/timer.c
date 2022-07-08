@@ -15,6 +15,8 @@
 #include <odp/helper/odph_api.h>
 #include "odp_cunit_common.h"
 
+#define MAX_WORKERS 32
+
 #define GLOBAL_SHM_NAME	"GlobalTimerTest"
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))

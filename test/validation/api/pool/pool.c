@@ -11,6 +11,8 @@
 #include "test_common_macros.h"
 #include <odp/helper/odph_api.h>
 
+#define MAX_WORKERS 32
+
 #define BUF_SIZE 1500
 #define BUF_NUM  1000
 #define TMO_NUM  1000

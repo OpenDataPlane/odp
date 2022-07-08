@@ -20,8 +20,6 @@
 #include <CUnit/Basic.h>
 #include <odp_api.h>
 
-#define MAX_WORKERS 32 /**< Maximum number of work threads */
-
 typedef int (*cunit_test_check_active)(void);
 
 typedef struct {
