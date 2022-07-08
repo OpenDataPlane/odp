@@ -207,7 +207,7 @@ static void shmem_test_multi_thread(void)
 		num = MAX_WORKERS;
 
 	odp_barrier_init(&shared_test_data->test_barrier1, num);
-	odp_cunit_thread_create(num, run_test_basic_thread, NULL, 0);
+	odp_cunit_thread_create(num, run_test_basic_thread, NULL, 0, 0);
 	CU_ASSERT(odp_cunit_thread_join(num) >= 0);
 
 	odp_shm_print(shm);
@@ -561,7 +561,7 @@ static void shmem_test_reserve_after_fork(void)
 	odp_barrier_init(&glob_data->test_barrier2, num + 1);
 	odp_atomic_store_u32(&glob_data->index, 0);
 
-	odp_cunit_thread_create(num, run_test_reserve_after_fork, NULL, 0);
+	odp_cunit_thread_create(num, run_test_reserve_after_fork, NULL, 0, 0);
 
 	/* wait until all threads have made their shm_reserve: */
 	odp_barrier_wait(&glob_data->test_barrier1);
@@ -756,7 +756,7 @@ static void shmem_test_singleva_after_fork(void)
 	odp_barrier_init(&glob_data->test_barrier4, num + 1);
 	odp_atomic_store_u32(&glob_data->index, 0);
 
-	odp_cunit_thread_create(num, run_test_singleva_after_fork, NULL, 0);
+	odp_cunit_thread_create(num, run_test_singleva_after_fork, NULL, 0, 0);
 
 	/* wait until all threads have made their shm_reserve: */
 	odp_barrier_wait(&glob_data->test_barrier1);
@@ -994,7 +994,7 @@ static void shmem_test_stress(void)
 		glob_data->stress[i].state = STRESS_FREE;
 
 	/* create threads */
-	odp_cunit_thread_create(num, run_test_stress, NULL, 0);
+	odp_cunit_thread_create(num, run_test_stress, NULL, 0, 0);
 
 	/* wait for all thread endings: */
 	CU_ASSERT(odp_cunit_thread_join(num) >= 0);

@@ -137,7 +137,7 @@ static void thread_test_odp_thrmask_worker(void)
 	CU_ASSERT(ret == 0);
 
 	/* start the test thread(s) */
-	ret = odp_cunit_thread_create(num, thread_func, NULL, 0);
+	ret = odp_cunit_thread_create(num, thread_func, NULL, 0, 0);
 	CU_ASSERT(ret == num);
 
 	if (ret != num)

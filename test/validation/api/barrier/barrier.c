@@ -404,7 +404,7 @@ static void barrier_test_no_barrier_functional(void)
 	int num = global_mem->g_num_threads;
 
 	barrier_test_init();
-	odp_cunit_thread_create(num, no_barrier_functional_test, NULL, 0);
+	odp_cunit_thread_create(num, no_barrier_functional_test, NULL, 0, 0);
 	odp_cunit_thread_join(num);
 }
 
@@ -413,7 +413,7 @@ static void barrier_test_barrier_functional(void)
 	int num = global_mem->g_num_threads;
 
 	barrier_test_init();
-	odp_cunit_thread_create(num, barrier_functional_test, NULL, 0);
+	odp_cunit_thread_create(num, barrier_functional_test, NULL, 0, 0);
 	odp_cunit_thread_join(num);
 }
 

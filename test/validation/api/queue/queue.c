@@ -547,7 +547,7 @@ static void test_pair(odp_nonblocking_t nonblocking,
 
 	/* Create one worker thread */
 	arg = globals;
-	odp_cunit_thread_create(1, queue_pair_work_loop, &arg, 0);
+	odp_cunit_thread_create(1, queue_pair_work_loop, &arg, 0, 0);
 
 	/* Run this thread as the second thread */
 	CU_ASSERT(queue_pair_work_loop(globals) == 0);
@@ -1018,7 +1018,7 @@ static void multithread_test(odp_nonblocking_t nonblocking)
 	CU_ASSERT(alloc_and_enqueue(queue, pool, num) == num);
 
 	arg = globals;
-	odp_cunit_thread_create(num_workers, queue_test_worker, &arg, 0);
+	odp_cunit_thread_create(num_workers, queue_test_worker, &arg, 0, 0);
 
 	/* Wait for worker threads to terminate */
 	odp_cunit_thread_join(num_workers);

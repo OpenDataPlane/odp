@@ -1276,7 +1276,7 @@ static void test_atomic_functional(int test_fn(void *), void validate_fn(void))
 
 	test_atomic_init();
 	test_atomic_store();
-	odp_cunit_thread_create(num, test_fn, NULL, 0);
+	odp_cunit_thread_create(num, test_fn, NULL, 0, 0);
 	odp_cunit_thread_join(num);
 	validate_fn();
 }

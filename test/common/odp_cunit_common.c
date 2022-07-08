@@ -182,7 +182,7 @@ static int run_thread(void *arg)
 	return rc;
 }
 
-int odp_cunit_thread_create(int num, int func_ptr(void *), void *const arg[], int priv)
+int odp_cunit_thread_create(int num, int func_ptr(void *), void *const arg[], int priv, int sync)
 {
 	int i, ret;
 	odp_cpumask_t cpumask;
@@ -228,6 +228,7 @@ int odp_cunit_thread_create(int num, int func_ptr(void *), void *const arg[], in
 	thr_common.instance    = instance;
 	thr_common.cpumask     = &cpumask;
 	thr_common.share_param = !priv;
+	thr_common.sync = sync;
 
 	/* Create and start additional threads */
 	ret = odph_thread_create(thread_tbl, &thr_common, thr_param, num);

@@ -78,9 +78,11 @@ int odp_cunit_run(void);
  *
  * Thread arguments table (arg[]) can be set to NULL, when there are no arguments.
  * When 'priv' is 0, the same argument pointer (arg[0]) is passed to all threads. Otherwise,
- * a pointer is passed (from arg[]) to each thread. Returns 0 on success.
+ * a pointer is passed (from arg[]) to each thread. When 'sync' is 1, thread
+ * creation is synchronized (odph_thread_common_param_t.sync). Returns 0 on success.
  */
-int odp_cunit_thread_create(int num, int func_ptr(void *arg), void *const arg[], int priv);
+int odp_cunit_thread_create(int num, int func_ptr(void *arg), void *const arg[],
+			    int priv, int sync);
 
 /* Wait for previously created threads to exit */
 int odp_cunit_thread_join(int num);
