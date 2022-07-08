@@ -31,7 +31,7 @@
 
 /* Globals */
 static int allow_skip_result;
-static odph_thread_t thread_tbl[MAX_WORKERS];
+static odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
 static int threads_running;
 static odp_instance_t instance;
 static char *progname;
@@ -186,6 +186,12 @@ int odp_cunit_thread_create(int num, int func_ptr(void *), void *const arg[], in
 	odp_cpumask_t cpumask;
 	odph_thread_common_param_t thr_common;
 	odph_thread_param_t thr_param[num];
+
+	if (num > ODP_THREAD_COUNT_MAX) {
+		fprintf(stderr, "error: %s: too many threads: num=%d max=%d\n", __func__,
+			num, ODP_THREAD_COUNT_MAX);
+		return -1;
+	}
 
 	if (threads_running) {
 		/* thread_tbl is already in use */

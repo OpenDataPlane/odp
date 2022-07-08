@@ -8,6 +8,7 @@
 #include <odp_api.h>
 #include <odp_cunit_common.h>
 
+#define MAX_WORKERS             32
 #define BURST_SIZE              (8)
 #define MAX_NUM_EVENT           (1 * 1024)
 #define MAX_ITERATION           (100)

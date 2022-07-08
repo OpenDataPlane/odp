@@ -13,6 +13,7 @@
 
 #define VERBOSE			0
 
+#define MAX_WORKERS		32
 #define MIN_ITERATIONS		1000
 #define MAX_ITERATIONS		30000
 #define ITER_MPLY_FACTOR	3

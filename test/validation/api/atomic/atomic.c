@@ -12,6 +12,8 @@
 #include <odp_cunit_common.h>
 #include <unistd.h>
 
+#define MAX_WORKERS		32
+
 #define ADD_SUB_CNT		5
 
 #define CNT			100000ULL

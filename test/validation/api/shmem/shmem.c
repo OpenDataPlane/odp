@@ -10,6 +10,7 @@
 #include <odp/helper/odph_api.h>
 #include <stdlib.h>
 
+#define MAX_WORKERS 32
 #define ALIGN_SIZE  (128)
 #define MEM_NAME "test_shmem"
 #define NAME_LEN (sizeof(MEM_NAME) + 20)

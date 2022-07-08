@@ -9,6 +9,7 @@
 #include "odp_cunit_common.h"
 #include <odp/helper/odph_api.h>
 
+#define MAX_WORKERS             32
 #define MAX_ORDERED_LOCKS       2
 #define MAX_POOL_SIZE		(1024 * 1024)
 #define MSG_POOL_SIZE		(64 * 1024)

@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #define VERBOSE			0
+#define MAX_WORKERS		32
 #define MAX_ITERATIONS		1000
 #define BARRIER_ITERATIONS	64
 
