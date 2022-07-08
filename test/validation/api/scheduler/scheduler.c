@@ -1422,7 +1422,7 @@ static void chaos_run(unsigned int qtype)
 	num_thr = globals->num_workers - 1;
 	arg_ptr = args;
 	if (num_thr > 0)
-		odp_cunit_thread_create(num_thr, chaos_thread, &arg_ptr, 0);
+		odp_cunit_thread_create(num_thr, chaos_thread, &arg_ptr, 0, 0);
 
 	chaos_thread(args);
 
@@ -1865,7 +1865,7 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 	num = globals->num_workers - 1;
 	arg_ptr = args;
 	if (num > 0)
-		odp_cunit_thread_create(num, schedule_common_, &arg_ptr, 0);
+		odp_cunit_thread_create(num, schedule_common_, &arg_ptr, 0, 0);
 
 	schedule_common_(args);
 
@@ -2426,7 +2426,7 @@ static void scheduler_test_order_wait_2_threads(void)
 	odp_atomic_init_u32(&globals->order_wait.helper_ready, 0);
 	odp_atomic_init_u32(&globals->order_wait.helper_active, 0);
 
-	ret = odp_cunit_thread_create(num, order_wait_helper, NULL, 0);
+	ret = odp_cunit_thread_create(num, order_wait_helper, NULL, 0, 0);
 	CU_ASSERT_FATAL(ret == num);
 
 	/* Send an event to the helper thread */
@@ -2677,7 +2677,7 @@ static void scheduler_test_sched_and_plain(odp_schedule_sync_t sync)
 	num = globals->num_workers - 1;
 	arg_ptr = args;
 	if (num > 0)
-		odp_cunit_thread_create(num, sched_and_plain_thread, &arg_ptr, 0);
+		odp_cunit_thread_create(num, sched_and_plain_thread, &arg_ptr, 0, 0);
 
 	sched_and_plain_thread(args);
 
@@ -2980,7 +2980,7 @@ static void scheduler_fifo_mt(odp_schedule_sync_t sync, int multi)
 		arg[i] = i;
 
 	if (num_thr > 1)
-		odp_cunit_thread_create(num_thr - 1, scheduler_fifo_test, (void **)&arg[1], 1);
+		odp_cunit_thread_create(num_thr - 1, scheduler_fifo_test, (void **)&arg[1], 1, 0);
 
 	/* Main thread runs as thread 0 */
 	scheduler_fifo_test(0);
@@ -3126,7 +3126,7 @@ static void scheduler_test_atomicity(void)
 	num = globals->num_workers - 1;
 	arg_ptr = args;
 	if (num > 0)
-		odp_cunit_thread_create(num, atomicity_test_run, &arg_ptr, 0);
+		odp_cunit_thread_create(num, atomicity_test_run, &arg_ptr, 0, 0);
 
 	atomicity_test_run(args);
 

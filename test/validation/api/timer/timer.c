@@ -2243,7 +2243,7 @@ static void timer_test_all(odp_queue_type_t queue_type)
 
 	/* Create and start worker threads */
 	global_mem->test_queue_type = queue_type;
-	odp_cunit_thread_create(num_workers, worker_entrypoint, NULL, 0);
+	odp_cunit_thread_create(num_workers, worker_entrypoint, NULL, 0, 0);
 
 	/* Wait for worker threads to exit */
 	odp_cunit_thread_join(num_workers);

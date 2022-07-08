@@ -915,7 +915,7 @@ static void pool_test_create_after_fork(void)
 	odp_atomic_init_u32(&global_mem->index, 0);
 
 	/* Fork here */
-	odp_cunit_thread_create(num, run_pool_test_create_after_fork, NULL, 0);
+	odp_cunit_thread_create(num, run_pool_test_create_after_fork, NULL, 0, 0);
 
 	/* Wait until thread 0 has created the test pool */
 	odp_barrier_wait(&global_mem->init_barrier);

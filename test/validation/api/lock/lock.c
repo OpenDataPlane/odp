@@ -1007,7 +1007,7 @@ static void lock_test_no_lock_functional(void)
 {
 	int num = global_mem->g_num_threads;
 
-	odp_cunit_thread_create(num, no_lock_functional_test, NULL, 0);
+	odp_cunit_thread_create(num, no_lock_functional_test, NULL, 0, 0);
 	odp_cunit_thread_join(num);
 }
 
@@ -1021,7 +1021,7 @@ static void lock_test_spinlock_api(void)
 {
 	int num = global_mem->g_num_threads;
 
-	odp_cunit_thread_create(num, spinlock_api_tests, NULL, 0);
+	odp_cunit_thread_create(num, spinlock_api_tests, NULL, 0, 0);
 	odp_cunit_thread_join(num);
 }
 
@@ -1030,7 +1030,7 @@ static void lock_test_spinlock_functional(void)
 	int num = global_mem->g_num_threads;
 
 	odp_spinlock_init(&global_mem->global_spinlock);
-	odp_cunit_thread_create(num, spinlock_functional_test, NULL, 0);
+	odp_cunit_thread_create(num, spinlock_functional_test, NULL, 0, 0);
 	odp_cunit_thread_join(num);
 }
 
@@ -1038,7 +1038,7 @@ static void lock_test_spinlock_recursive_api(void)
 {
 	int num = global_mem->g_num_threads;
 
-	odp_cunit_thread_create(num, spinlock_recursive_api_tests, NULL, 0);
+	odp_cunit_thread_create(num, spinlock_recursive_api_tests, NULL, 0, 0);
 	odp_cunit_thread_join(num);
 }
 
@@ -1047,7 +1047,7 @@ static void lock_test_spinlock_recursive_functional(void)
 	int num = global_mem->g_num_threads;
 
 	odp_spinlock_recursive_init(&global_mem->global_recursive_spinlock);
-	odp_cunit_thread_create(num, spinlock_recursive_functional_test, NULL, 0);
+	odp_cunit_thread_create(num, spinlock_recursive_functional_test, NULL, 0, 0);
 	odp_cunit_thread_join(num);
 }
 
@@ -1068,7 +1068,7 @@ static void lock_test_ticketlock_api(void)
 {
 	int num = global_mem->g_num_threads;
 
-	odp_cunit_thread_create(num, ticketlock_api_tests, NULL, 0);
+	odp_cunit_thread_create(num, ticketlock_api_tests, NULL, 0, 0);
 	odp_cunit_thread_join(num);
 }
 
@@ -1077,7 +1077,7 @@ static void lock_test_ticketlock_functional(void)
 	int num = global_mem->g_num_threads;
 
 	odp_ticketlock_init(&global_mem->global_ticketlock);
-	odp_cunit_thread_create(num, ticketlock_functional_test, NULL, 0);
+	odp_cunit_thread_create(num, ticketlock_functional_test, NULL, 0, 0);
 	odp_cunit_thread_join(num);
 }
 
@@ -1092,7 +1092,7 @@ static void lock_test_rwlock_api(void)
 {
 	int num = global_mem->g_num_threads;
 
-	odp_cunit_thread_create(num, rwlock_api_tests, NULL, 0);
+	odp_cunit_thread_create(num, rwlock_api_tests, NULL, 0, 0);
 	odp_cunit_thread_join(num);
 }
 
@@ -1101,7 +1101,7 @@ static void lock_test_rwlock_functional(void)
 	int num = global_mem->g_num_threads;
 
 	odp_rwlock_init(&global_mem->global_rwlock);
-	odp_cunit_thread_create(num, rwlock_functional_test, NULL, 0);
+	odp_cunit_thread_create(num, rwlock_functional_test, NULL, 0, 0);
 	odp_cunit_thread_join(num);
 }
 
@@ -1115,7 +1115,7 @@ static void lock_test_rwlock_recursive_api(void)
 {
 	int num = global_mem->g_num_threads;
 
-	odp_cunit_thread_create(num, rwlock_recursive_api_tests, NULL, 0);
+	odp_cunit_thread_create(num, rwlock_recursive_api_tests, NULL, 0, 0);
 	odp_cunit_thread_join(num);
 }
 
@@ -1124,7 +1124,7 @@ static void lock_test_rwlock_recursive_functional(void)
 	int num = global_mem->g_num_threads;
 
 	odp_rwlock_recursive_init(&global_mem->global_recursive_rwlock);
-	odp_cunit_thread_create(num, rwlock_recursive_functional_test, NULL, 0);
+	odp_cunit_thread_create(num, rwlock_recursive_functional_test, NULL, 0, 0);
 	odp_cunit_thread_join(num);
 }
 
