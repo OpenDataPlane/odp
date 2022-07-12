@@ -5,12 +5,16 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <odp/api/align.h>
+#include <odp/api/atomic.h>
 #include <odp/api/pool.h>
 #include <odp/api/shared_memory.h>
-#include <odp/api/align.h>
-#include <odp/api/ticketlock.h>
 #include <odp/api/system_info.h>
+#include <odp/api/ticketlock.h>
+
+#include <odp/api/plat/pool_inline_types.h>
 #include <odp/api/plat/thread_inlines.h>
+#include <odp/api/plat/ticketlock_inlines.h>
 
 #include <odp_pool_internal.h>
 #include <odp_init_internal.h>
@@ -31,8 +35,6 @@
 #include <stddef.h>
 #include <inttypes.h>
 
-#include <odp/api/plat/pool_inline_types.h>
-#include <odp/api/plat/ticketlock_inlines.h>
 #define LOCK(a)      odp_ticketlock_lock(a)
 #define UNLOCK(a)    odp_ticketlock_unlock(a)
 #define LOCK_INIT(a) odp_ticketlock_init(a)
@@ -81,12 +83,13 @@ const _odp_pool_inline_offset_t _odp_pool_inline ODP_ALIGNED_CACHE = {
 static inline void cache_init(pool_cache_t *cache)
 {
 	memset(cache, 0, sizeof(pool_cache_t));
+	odp_atomic_init_u32(&cache->cache_num, 0);
 }
 
 static inline uint32_t cache_pop(pool_cache_t *cache,
 				 _odp_event_hdr_t *event_hdr[], int max_num)
 {
-	uint32_t cache_num = cache->cache_num;
+	uint32_t cache_num = odp_atomic_load_u32(&cache->cache_num);
 	uint32_t num_ch = max_num;
 	uint32_t cache_begin;
 	uint32_t i;
@@ -100,7 +103,7 @@ static inline uint32_t cache_pop(pool_cache_t *cache,
 	for (i = 0; i < num_ch; i++)
 		event_hdr[i] = cache->event_hdr[cache_begin + i];
 
-	cache->cache_num = cache_num - num_ch;
+	odp_atomic_store_u32(&cache->cache_num, cache_num - num_ch);
 
 	return num_ch;
 }
@@ -108,13 +111,13 @@ static inline uint32_t cache_pop(pool_cache_t *cache,
 static inline void cache_push(pool_cache_t *cache, _odp_event_hdr_t *event_hdr[],
 			      uint32_t num)
 {
-	uint32_t cache_num = cache->cache_num;
+	uint32_t cache_num = odp_atomic_load_u32(&cache->cache_num);
 	uint32_t i;
 
 	for (i = 0; i < num; i++)
 		cache->event_hdr[cache_num + i] = event_hdr[i];
 
-	cache->cache_num = cache_num + num;
+	odp_atomic_store_u32(&cache->cache_num, cache_num + num);
 }
 
 static void cache_flush(pool_cache_t *cache, pool_t *pool)
@@ -152,8 +155,7 @@ static inline int cache_available(pool_t *pool, odp_pool_stats_t *stats)
 	}
 
 	for (int i = 0; i < ODP_THREAD_COUNT_MAX; i++) {
-		/* TODO: thread specific counters should be atomics */
-		uint32_t cur = pool->local_cache[i].cache_num;
+		uint32_t cur = odp_atomic_load_u32(&pool->local_cache[i].cache_num);
 
 		if (per_thread && i >= first && i <= last)
 			stats->thread.cache_available[out_idx++] = cur;
@@ -1278,7 +1280,7 @@ static inline void event_free_to_pool(pool_t *pool,
 
 	/* Make room into local cache if needed. Do at least burst size
 	 * transfer. */
-	cache_num = cache->cache_num;
+	cache_num = odp_atomic_load_u32(&cache->cache_num);
 
 	if (odp_unlikely((int)(cache_size - cache_num) < num)) {
 		int burst = pool->burst_size;

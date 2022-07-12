@@ -18,6 +18,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/atomic.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/ticketlock.h>
 #include <odp/api/align.h>
@@ -32,7 +33,7 @@ extern "C" {
 
 typedef struct ODP_ALIGNED_CACHE pool_cache_t {
 	/* Number of buffers in cache */
-	uint32_t cache_num;
+	odp_atomic_u32_t cache_num;
 	/* Cached buffers */
 	_odp_event_hdr_t *event_hdr[CONFIG_POOL_CACHE_MAX_SIZE];
 
