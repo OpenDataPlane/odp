@@ -1,12 +1,14 @@
-/* Copyright (c) 2020-2021, Nokia
+/* Copyright (c) 2020-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/api/ticketlock.h>
 #include <odp/api/shared_memory.h>
 #include <odp/api/stash.h>
+#include <odp/api/std_types.h>
+#include <odp/api/ticketlock.h>
+
 #include <odp/api/plat/strong_types.h>
 
 #include <odp_config_internal.h>
@@ -118,6 +120,8 @@ int odp_stash_capability(odp_stash_capability_t *capa, odp_stash_type_t type)
 	capa->max_stashes          = CONFIG_MAX_STASHES - CONFIG_INTERNAL_STASHES;
 	capa->max_num_obj          = MAX_RING_SIZE;
 	capa->max_obj_size         = sizeof(uint64_t);
+	capa->max_get_batch        = MIN_RING_SIZE;
+	capa->max_put_batch        = MIN_RING_SIZE;
 	capa->stats.bit.count      = 1;
 
 	return 0;
@@ -311,7 +315,7 @@ odp_stash_t odp_stash_lookup(const char *name)
 	return ODP_STASH_INVALID;
 }
 
-int32_t odp_stash_put(odp_stash_t st, const void *obj, int32_t num)
+static inline int32_t stash_put(odp_stash_t st, const void *obj, int32_t num)
 {
 	stash_t *stash;
 	uint32_t obj_size;
@@ -367,7 +371,19 @@ int32_t odp_stash_put(odp_stash_t st, const void *obj, int32_t num)
 	return -1;
 }
 
-int32_t odp_stash_put_u32(odp_stash_t st, const uint32_t val[], int32_t num)
+int32_t odp_stash_put(odp_stash_t st, const void *obj, int32_t num)
+{
+	return stash_put(st, obj, num);
+}
+
+int32_t odp_stash_put_batch(odp_stash_t st, const void *obj, int32_t num)
+{
+	/* Returns always 'num', or -1 on failure. */
+	return stash_put(st, obj, num);
+}
+
+static inline int32_t stash_put_u32(odp_stash_t st, const uint32_t val[],
+				    int32_t num)
 {
 	stash_t *stash = (stash_t *)(uintptr_t)st;
 
@@ -381,7 +397,20 @@ int32_t odp_stash_put_u32(odp_stash_t st, const uint32_t val[], int32_t num)
 	return num;
 }
 
-int32_t odp_stash_put_u64(odp_stash_t st, const uint64_t val[], int32_t num)
+int32_t odp_stash_put_u32(odp_stash_t st, const uint32_t val[], int32_t num)
+{
+	return stash_put_u32(st, val, num);
+}
+
+int32_t odp_stash_put_u32_batch(odp_stash_t st, const uint32_t val[],
+				int32_t num)
+{
+	/* Returns always 'num', or -1 on failure. */
+	return stash_put_u32(st, val, num);
+}
+
+static inline int32_t stash_put_u64(odp_stash_t st, const uint64_t val[],
+				    int32_t num)
 {
 	stash_t *stash = (stash_t *)(uintptr_t)st;
 
@@ -395,7 +424,20 @@ int32_t odp_stash_put_u64(odp_stash_t st, const uint64_t val[], int32_t num)
 	return num;
 }
 
-int32_t odp_stash_put_ptr(odp_stash_t st, const uintptr_t ptr[], int32_t num)
+int32_t odp_stash_put_u64(odp_stash_t st, const uint64_t val[], int32_t num)
+{
+	return stash_put_u64(st, val, num);
+}
+
+int32_t odp_stash_put_u64_batch(odp_stash_t st, const uint64_t val[],
+				int32_t num)
+{
+	/* Returns always 'num', or -1 on failure. */
+	return stash_put_u64(st, val, num);
+}
+
+static inline int32_t stash_put_ptr(odp_stash_t st, const uintptr_t ptr[],
+				    int32_t num)
 {
 	stash_t *stash = (stash_t *)(uintptr_t)st;
 
@@ -416,7 +458,19 @@ int32_t odp_stash_put_ptr(odp_stash_t st, const uintptr_t ptr[], int32_t num)
 	return num;
 }
 
-int32_t odp_stash_get(odp_stash_t st, void *obj, int32_t num)
+int32_t odp_stash_put_ptr(odp_stash_t st, const uintptr_t ptr[], int32_t num)
+{
+	return stash_put_ptr(st, ptr, num);
+}
+
+int32_t odp_stash_put_ptr_batch(odp_stash_t st,	const uintptr_t ptr[],
+				int32_t num)
+{
+	/* Returns always 'num', or -1 on failure. */
+	return stash_put_ptr(st, ptr, num);
+}
+
+static inline int32_t stash_get(odp_stash_t st, void *obj, int32_t num, odp_bool_t batch)
 {
 	stash_t *stash;
 	uint32_t obj_size;
@@ -432,13 +486,19 @@ int32_t odp_stash_get(odp_stash_t st, void *obj, int32_t num)
 	if (obj_size == sizeof(uint64_t)) {
 		ring_u64_t *ring_u64 = &stash->ring_u64.hdr;
 
-		return ring_u64_deq_multi(ring_u64, stash->ring_mask, obj, num);
+		if (batch)
+			return ring_u64_deq_batch(ring_u64, stash->ring_mask, obj, num);
+		else
+			return ring_u64_deq_multi(ring_u64, stash->ring_mask, obj, num);
 	}
 
 	if (obj_size == sizeof(uint32_t)) {
 		ring_u32_t *ring_u32 = &stash->ring_u32.hdr;
 
-		return ring_u32_deq_multi(ring_u32, stash->ring_mask, obj, num);
+		if (batch)
+			return ring_u32_deq_batch(ring_u32, stash->ring_mask, obj, num);
+		else
+			return ring_u32_deq_multi(ring_u32, stash->ring_mask, obj, num);
 	}
 
 	if (obj_size == sizeof(uint16_t)) {
@@ -446,8 +506,10 @@ int32_t odp_stash_get(odp_stash_t st, void *obj, int32_t num)
 		ring_u32_t *ring_u32 = &stash->ring_u32.hdr;
 		uint32_t u32[num];
 
-		num_deq = ring_u32_deq_multi(ring_u32, stash->ring_mask,
-					     u32, num);
+		if (batch)
+			num_deq = ring_u32_deq_batch(ring_u32, stash->ring_mask, u32, num);
+		else
+			num_deq = ring_u32_deq_multi(ring_u32, stash->ring_mask, u32, num);
 
 		for (i = 0; i < num_deq; i++)
 			u16_ptr[i] = u32[i];
@@ -460,8 +522,10 @@ int32_t odp_stash_get(odp_stash_t st, void *obj, int32_t num)
 		ring_u32_t *ring_u32 = &stash->ring_u32.hdr;
 		uint32_t u32[num];
 
-		num_deq = ring_u32_deq_multi(ring_u32, stash->ring_mask,
-					     u32, num);
+		if (batch)
+			num_deq = ring_u32_deq_batch(ring_u32, stash->ring_mask, u32, num);
+		else
+			num_deq = ring_u32_deq_multi(ring_u32, stash->ring_mask, u32, num);
 
 		for (i = 0; i < num_deq; i++)
 			u8_ptr[i] = u32[i];
@@ -470,6 +534,16 @@ int32_t odp_stash_get(odp_stash_t st, void *obj, int32_t num)
 	}
 
 	return -1;
+}
+
+int32_t odp_stash_get(odp_stash_t st, void *obj, int32_t num)
+{
+	return stash_get(st, obj, num, 0);
+}
+
+int32_t odp_stash_get_batch(odp_stash_t st, void *obj, int32_t num)
+{
+	return stash_get(st, obj, num, 1);
 }
 
 int32_t odp_stash_get_u32(odp_stash_t st, uint32_t val[], int32_t num)
@@ -485,6 +559,18 @@ int32_t odp_stash_get_u32(odp_stash_t st, uint32_t val[], int32_t num)
 				  num);
 }
 
+int32_t odp_stash_get_u32_batch(odp_stash_t st, uint32_t val[], int32_t num)
+{
+	stash_t *stash = (stash_t *)(uintptr_t)st;
+
+	if (odp_unlikely(st == ODP_STASH_INVALID))
+		return -1;
+
+	ODP_ASSERT(stash->obj_size == sizeof(uint32_t));
+
+	return ring_u32_deq_batch(&stash->ring_u32.hdr, stash->ring_mask, val, num);
+}
+
 int32_t odp_stash_get_u64(odp_stash_t st, uint64_t val[], int32_t num)
 {
 	stash_t *stash = (stash_t *)(uintptr_t)st;
@@ -496,6 +582,18 @@ int32_t odp_stash_get_u64(odp_stash_t st, uint64_t val[], int32_t num)
 
 	return ring_u64_deq_multi(&stash->ring_u64.hdr, stash->ring_mask, val,
 				  num);
+}
+
+int32_t odp_stash_get_u64_batch(odp_stash_t st, uint64_t val[], int32_t num)
+{
+	stash_t *stash = (stash_t *)(uintptr_t)st;
+
+	if (odp_unlikely(st == ODP_STASH_INVALID))
+		return -1;
+
+	ODP_ASSERT(stash->obj_size == sizeof(uint64_t));
+
+	return ring_u64_deq_batch(&stash->ring_u64.hdr, stash->ring_mask, val, num);
 }
 
 int32_t odp_stash_get_ptr(odp_stash_t st, uintptr_t ptr[], int32_t num)
@@ -514,6 +612,24 @@ int32_t odp_stash_get_ptr(odp_stash_t st, uintptr_t ptr[], int32_t num)
 	else if (sizeof(uintptr_t) == sizeof(uint64_t))
 		return ring_u64_deq_multi(&stash->ring_u64.hdr,
 					  stash->ring_mask,
+					  (uint64_t *)(uintptr_t)ptr, num);
+	return -1;
+}
+
+int32_t odp_stash_get_ptr_batch(odp_stash_t st, uintptr_t ptr[], int32_t num)
+{
+	stash_t *stash = (stash_t *)(uintptr_t)st;
+
+	if (odp_unlikely(st == ODP_STASH_INVALID))
+		return -1;
+
+	ODP_ASSERT(stash->obj_size == sizeof(uintptr_t));
+
+	if (sizeof(uintptr_t) == sizeof(uint32_t))
+		return ring_u32_deq_batch(&stash->ring_u32.hdr, stash->ring_mask,
+					  (uint32_t *)(uintptr_t)ptr, num);
+	else if (sizeof(uintptr_t) == sizeof(uint64_t))
+		return ring_u64_deq_batch(&stash->ring_u64.hdr, stash->ring_mask,
 					  (uint64_t *)(uintptr_t)ptr, num);
 	return -1;
 }
