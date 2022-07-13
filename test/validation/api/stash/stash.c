@@ -24,6 +24,7 @@
 
 #define CACHE_SIZE 8
 #define BURST      32
+#define BATCH      16
 #define MAX_RETRY  1024
 #define RETRY_MSEC 100
 
@@ -118,6 +119,8 @@ static void stash_capability(void)
 	CU_ASSERT(capa.max_stashes > 0);
 	CU_ASSERT(capa.max_num_obj > 0);
 	CU_ASSERT(capa.max_obj_size >= sizeof(uint32_t));
+	CU_ASSERT(capa.max_get_batch >= 1);
+	CU_ASSERT(capa.max_put_batch >= 1);
 
 	memset(&capa, 0, sizeof(odp_stash_capability_t));
 	ret = odp_stash_capability(&capa, ODP_STASH_TYPE_FIFO);
@@ -126,6 +129,8 @@ static void stash_capability(void)
 	if (ret == 0 && capa.max_stashes) {
 		CU_ASSERT(capa.max_num_obj > 0);
 		CU_ASSERT(capa.max_obj_size >= sizeof(uint32_t));
+		CU_ASSERT(capa.max_get_batch >= 1);
+		CU_ASSERT(capa.max_put_batch >= 1);
 	}
 }
 
@@ -444,13 +449,24 @@ static void stash_stats_u32(void)
 	CU_ASSERT_FATAL(odp_stash_destroy(stash) == 0);
 }
 
-static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op)
+static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op, int batch)
 {
 	odp_stash_t stash;
 	odp_stash_param_t param;
 	int32_t i, ret, retry, num_left;
-	int32_t num;
+	int32_t num, max_burst;
 	void *input, *output;
+
+	if (batch) {
+		CU_ASSERT_FATAL(global.capa_default.max_get_batch >= 1);
+		CU_ASSERT_FATAL(global.capa_default.max_put_batch >= 1);
+
+		if (burst > (int32_t)global.capa_default.max_get_batch)
+			burst = global.capa_default.max_get_batch;
+		if (burst > (int32_t)global.capa_default.max_put_batch)
+			burst = global.capa_default.max_put_batch;
+	}
+
 	uint64_t input_u64[burst];
 	uint64_t output_u64[burst + 2];
 	uint32_t input_u32[burst];
@@ -499,19 +515,38 @@ static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op)
 
 	retry = MAX_RETRY;
 	num_left = num;
-	while (num_left) {
-		if (op == STASH_GEN)
-			ret = odp_stash_put(stash, input, burst);
-		else if (op == STASH_U32)
-			ret = odp_stash_put_u32(stash, input_u32, burst);
-		else if (op == STASH_U64)
-			ret = odp_stash_put_u64(stash, input_u64, burst);
-		else if (op == STASH_PTR)
-			ret = odp_stash_put_ptr(stash, input, burst);
-		else
+	max_burst = burst;
+	while (num_left > 0) {
+		if (op == STASH_GEN) {
+			if (batch)
+				ret = odp_stash_put_batch(stash, input, burst);
+			else
+				ret = odp_stash_put(stash, input, burst);
+		} else if (op == STASH_U32) {
+			if (batch)
+				ret = odp_stash_put_u32_batch(stash, input_u32, burst);
+			else
+				ret = odp_stash_put_u32(stash, input_u32, burst);
+		} else if (op == STASH_U64) {
+			if (batch)
+				ret = odp_stash_put_u64_batch(stash, input_u64, burst);
+			else
+				ret = odp_stash_put_u64(stash, input_u64, burst);
+		} else if (op == STASH_PTR) {
+			if (batch)
+				ret = odp_stash_put_ptr_batch(stash, input, burst);
+			else
+				ret = odp_stash_put_ptr(stash, input, burst);
+		} else {
 			ret = -1;
+		}
 		CU_ASSERT_FATAL(ret >= 0);
 		CU_ASSERT_FATAL(ret <= burst);
+		if (batch) {
+			CU_ASSERT(ret == 0 || ret == burst);
+			if (num_left - ret < burst)
+				burst = num_left - ret;
+		}
 
 		if (ret) {
 			num_left -= ret;
@@ -522,9 +557,10 @@ static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op)
 		}
 	}
 
+	burst = max_burst;
 	retry = MAX_RETRY;
 	num_left = num;
-	while (num_left) {
+	while (num_left > 0) {
 		memset(output, 0, burst * size);
 
 		/* Init first and last array element for under-/overflow checking */
@@ -541,16 +577,29 @@ static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op)
 			output_u8[0]          = MAGIC_U8;
 			output_u8[burst + 1]  = MAGIC_U8;
 		}
-		if (op == STASH_GEN)
-			ret = odp_stash_get(stash, output, burst);
-		else if (op == STASH_U32)
-			ret = odp_stash_get_u32(stash, &output_u32[1], burst);
-		else if (op == STASH_U64)
-			ret = odp_stash_get_u64(stash, &output_u64[1], burst);
-		else if (op == STASH_PTR)
-			ret = odp_stash_get_ptr(stash, output, burst);
-		else
+		if (op == STASH_GEN) {
+			if (batch)
+				ret = odp_stash_get_batch(stash, output, burst);
+			else
+				ret = odp_stash_get(stash, output, burst);
+		} else if (op == STASH_U32) {
+			if (batch)
+				ret = odp_stash_get_u32_batch(stash, &output_u32[1], burst);
+			else
+				ret = odp_stash_get_u32(stash, &output_u32[1], burst);
+		} else if (op == STASH_U64) {
+			if (batch)
+				ret = odp_stash_get_u64_batch(stash, &output_u64[1], burst);
+			else
+				ret = odp_stash_get_u64(stash, &output_u64[1], burst);
+		} else if (op == STASH_PTR) {
+			if (batch)
+				ret = odp_stash_get_ptr_batch(stash, output, burst);
+			else
+				ret = odp_stash_get_ptr(stash, output, burst);
+		} else {
 			ret = -1;
+		}
 		CU_ASSERT_FATAL(ret >= 0);
 		CU_ASSERT_FATAL(ret <= burst);
 
@@ -566,6 +615,12 @@ static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op)
 		} else {
 			CU_ASSERT_FATAL(output_u8[0]          == MAGIC_U8);
 			CU_ASSERT_FATAL(output_u8[burst + 1]  == MAGIC_U8);
+		}
+
+		if (batch) {
+			CU_ASSERT(ret == 0 || ret == burst);
+			if (num_left - ret < burst)
+				burst = num_left - ret;
 		}
 
 		if (ret) {
@@ -597,13 +652,24 @@ static void stash_default_put(uint32_t size, int32_t burst, stash_op_t op)
 	CU_ASSERT_FATAL(odp_stash_destroy(stash) == 0);
 }
 
-static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op)
+static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op, int batch)
 {
 	odp_stash_t stash;
 	odp_stash_param_t param;
 	int32_t i, ret, retry, num_left;
-	int32_t num;
+	int32_t num, max_burst;
 	void *input, *output;
+
+	if (batch) {
+		CU_ASSERT_FATAL(global.capa_fifo.max_get_batch >= 1);
+		CU_ASSERT_FATAL(global.capa_fifo.max_put_batch >= 1);
+
+		if (burst > (int32_t)global.capa_fifo.max_get_batch)
+			burst = global.capa_fifo.max_get_batch;
+		if (burst > (int32_t)global.capa_fifo.max_put_batch)
+			burst = global.capa_fifo.max_put_batch;
+	}
+
 	uint64_t input_u64[burst];
 	uint64_t output_u64[burst + 2];
 	uint32_t input_u32[burst];
@@ -645,7 +711,8 @@ static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op)
 
 	retry = MAX_RETRY;
 	num_left = num;
-	while (num_left) {
+	max_burst = burst;
+	while (num_left > 0) {
 		for (i = 0; i < burst; i++) {
 			if (size == sizeof(uint64_t))
 				input_u64[i] = VAL_U64 + num_left - i;
@@ -656,20 +723,40 @@ static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op)
 			else
 				input_u8[i] = VAL_U8 + num_left - i;
 		}
-		if (op == STASH_GEN)
-			ret = odp_stash_put(stash, input, burst);
-		else if (op == STASH_U32)
-			ret = odp_stash_put_u32(stash, input_u32, burst);
-		else if (op == STASH_U64)
-			ret = odp_stash_put_u64(stash, input_u64, burst);
-		else if (op == STASH_PTR)
-			ret = odp_stash_put_ptr(stash, input, burst);
-		else
+		if (op == STASH_GEN) {
+			if (batch)
+				ret = odp_stash_put_batch(stash, input, burst);
+			else
+				ret = odp_stash_put(stash, input, burst);
+		} else if (op == STASH_U32) {
+			if (batch)
+				ret = odp_stash_put_u32_batch(stash, input_u32, burst);
+			else
+				ret = odp_stash_put_u32(stash, input_u32, burst);
+		} else if (op == STASH_U64) {
+			if (batch)
+				ret = odp_stash_put_u64_batch(stash, input_u64, burst);
+			else
+				ret = odp_stash_put_u64(stash, input_u64, burst);
+
+		} else if (op == STASH_PTR) {
+			if (batch)
+				ret = odp_stash_put_ptr_batch(stash, input, burst);
+			else
+				ret = odp_stash_put_ptr(stash, input, burst);
+		} else {
 			ret = -1;
+		}
 		CU_ASSERT_FATAL(ret >= 0);
+		CU_ASSERT_FATAL(ret <= burst);
+
+		if (batch) {
+			CU_ASSERT(ret == 0 || ret == burst);
+			if (num_left - ret < burst)
+				burst = num_left - ret;
+		}
 
 		if (ret) {
-			CU_ASSERT_FATAL(ret <= burst);
 			num_left -= ret;
 			retry = MAX_RETRY;
 		} else {
@@ -678,9 +765,10 @@ static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op)
 		}
 	}
 
+	burst = max_burst;
 	retry = MAX_RETRY;
 	num_left = num;
-	while (num_left) {
+	while (num_left > 0) {
 		memset(output, 0, burst * size);
 
 		/* Init first and last array element for under-/overflow checking */
@@ -698,17 +786,31 @@ static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op)
 			output_u8[burst + 1]  = MAGIC_U8;
 		}
 
-		if (op == STASH_GEN)
-			ret = odp_stash_get(stash, output, burst);
-		else if (op == STASH_U32)
-			ret = odp_stash_get_u32(stash, &output_u32[1], burst);
-		else if (op == STASH_U64)
-			ret = odp_stash_get_u64(stash, &output_u64[1], burst);
-		else if (op == STASH_PTR)
-			ret = odp_stash_get_ptr(stash, output, burst);
-		else
+		if (op == STASH_GEN) {
+			if (batch)
+				ret = odp_stash_get_batch(stash, output, burst);
+			else
+				ret = odp_stash_get(stash, output, burst);
+		} else if (op == STASH_U32) {
+			if (batch)
+				ret = odp_stash_get_u32_batch(stash, &output_u32[1], burst);
+			else
+				ret = odp_stash_get_u32(stash, &output_u32[1], burst);
+		} else if (op == STASH_U64) {
+			if (batch)
+				ret = odp_stash_get_u64_batch(stash, &output_u64[1], burst);
+			else
+				ret = odp_stash_get_u64(stash, &output_u64[1], burst);
+		} else if (op == STASH_PTR) {
+			if (batch)
+				ret = odp_stash_get_ptr_batch(stash, output, burst);
+			else
+				ret = odp_stash_get_ptr(stash, output, burst);
+		} else {
 			ret = -1;
+		}
 		CU_ASSERT_FATAL(ret >= 0);
+		CU_ASSERT_FATAL(ret <= burst);
 
 		if (size == sizeof(uint64_t)) {
 			CU_ASSERT_FATAL(output_u64[0]         == MAGIC_U64);
@@ -724,8 +826,13 @@ static void stash_fifo_put(uint32_t size, int32_t burst, stash_op_t op)
 			CU_ASSERT_FATAL(output_u8[burst + 1]  == MAGIC_U8);
 		}
 
+		if (batch) {
+			CU_ASSERT(ret == 0 || ret == burst);
+			if (num_left - ret < burst)
+				burst = num_left - ret;
+		}
+
 		if (ret) {
-			CU_ASSERT_FATAL(ret <= burst);
 			for (i = 0; i < ret; i++) {
 				if (size == sizeof(uint64_t)) {
 					uint64_t val = VAL_U64 + num_left - i;
@@ -805,142 +912,282 @@ static int check_support_fifo(void)
 
 static void stash_default_put_u64_1(void)
 {
-	stash_default_put(sizeof(uint64_t), 1, STASH_GEN);
+	stash_default_put(sizeof(uint64_t), 1, STASH_GEN, 0);
 }
 
 static void stash_default_put_u64_n(void)
 {
-	stash_default_put(sizeof(uint64_t), BURST, STASH_GEN);
+	stash_default_put(sizeof(uint64_t), BURST, STASH_GEN, 0);
 }
 
 static void stash_default_u64_put_u64_1(void)
 {
-	stash_default_put(sizeof(uint64_t), 1, STASH_U64);
+	stash_default_put(sizeof(uint64_t), 1, STASH_U64, 0);
 }
 
 static void stash_default_u64_put_u64_n(void)
 {
-	stash_default_put(sizeof(uint64_t), BURST, STASH_U64);
+	stash_default_put(sizeof(uint64_t), BURST, STASH_U64, 0);
 }
 
 static void stash_default_put_ptr_1(void)
 {
-	stash_default_put(sizeof(uintptr_t), 1, STASH_PTR);
+	stash_default_put(sizeof(uintptr_t), 1, STASH_PTR, 0);
 }
 
 static void stash_default_put_ptr_n(void)
 {
-	stash_default_put(sizeof(uintptr_t), BURST, STASH_PTR);
+	stash_default_put(sizeof(uintptr_t), BURST, STASH_PTR, 0);
+}
+
+static void stash_default_put_u64_1_batch(void)
+{
+	stash_default_put(sizeof(uint64_t), 1, STASH_GEN, 1);
+}
+
+static void stash_default_put_u64_n_batch(void)
+{
+	stash_default_put(sizeof(uint64_t), BATCH, STASH_GEN, 1);
+}
+
+static void stash_default_u64_put_u64_1_batch(void)
+{
+	stash_default_put(sizeof(uint64_t), 1, STASH_U64, 1);
+}
+
+static void stash_default_u64_put_u64_n_batch(void)
+{
+	stash_default_put(sizeof(uint64_t), BATCH, STASH_U64, 1);
+}
+
+static void stash_default_put_ptr_1_batch(void)
+{
+	stash_default_put(sizeof(uintptr_t), 1, STASH_PTR, 1);
+}
+
+static void stash_default_put_ptr_n_batch(void)
+{
+	stash_default_put(sizeof(uintptr_t), BATCH, STASH_PTR, 1);
 }
 
 static void stash_default_put_u32_1(void)
 {
-	stash_default_put(sizeof(uint32_t), 1, STASH_GEN);
+	stash_default_put(sizeof(uint32_t), 1, STASH_GEN, 0);
 }
 
 static void stash_default_put_u32_n(void)
 {
-	stash_default_put(sizeof(uint32_t), BURST, STASH_GEN);
+	stash_default_put(sizeof(uint32_t), BURST, STASH_GEN, 0);
 }
 
 static void stash_default_u32_put_u32_1(void)
 {
-	stash_default_put(sizeof(uint32_t), 1, STASH_U32);
+	stash_default_put(sizeof(uint32_t), 1, STASH_U32, 0);
 }
 
 static void stash_default_u32_put_u32_n(void)
 {
-	stash_default_put(sizeof(uint32_t), BURST, STASH_U32);
+	stash_default_put(sizeof(uint32_t), BURST, STASH_U32, 0);
 }
 
 static void stash_default_put_u16_1(void)
 {
-	stash_default_put(sizeof(uint16_t), 1, STASH_GEN);
+	stash_default_put(sizeof(uint16_t), 1, STASH_GEN, 0);
 }
 
 static void stash_default_put_u16_n(void)
 {
-	stash_default_put(sizeof(uint16_t), BURST, STASH_GEN);
+	stash_default_put(sizeof(uint16_t), BURST, STASH_GEN, 0);
 }
 
 static void stash_default_put_u8_1(void)
 {
-	stash_default_put(sizeof(uint8_t), 1, STASH_GEN);
+	stash_default_put(sizeof(uint8_t), 1, STASH_GEN, 0);
 }
 
 static void stash_default_put_u8_n(void)
 {
-	stash_default_put(sizeof(uint8_t), BURST, STASH_GEN);
+	stash_default_put(sizeof(uint8_t), BURST, STASH_GEN, 0);
+}
+
+static void stash_default_put_u32_1_batch(void)
+{
+	stash_default_put(sizeof(uint32_t), 1, STASH_GEN, 1);
+}
+
+static void stash_default_put_u32_n_batch(void)
+{
+	stash_default_put(sizeof(uint32_t), BATCH, STASH_GEN, 1);
+}
+
+static void stash_default_u32_put_u32_1_batch(void)
+{
+	stash_default_put(sizeof(uint32_t), 1, STASH_U32, 1);
+}
+
+static void stash_default_u32_put_u32_n_batch(void)
+{
+	stash_default_put(sizeof(uint32_t), BATCH, STASH_U32, 1);
+}
+
+static void stash_default_put_u16_1_batch(void)
+{
+	stash_default_put(sizeof(uint16_t), 1, STASH_GEN, 1);
+}
+
+static void stash_default_put_u16_n_batch(void)
+{
+	stash_default_put(sizeof(uint16_t), BATCH, STASH_GEN, 1);
+}
+
+static void stash_default_put_u8_1_batch(void)
+{
+	stash_default_put(sizeof(uint8_t), 1, STASH_GEN, 1);
+}
+
+static void stash_default_put_u8_n_batch(void)
+{
+	stash_default_put(sizeof(uint8_t), BATCH, STASH_GEN, 1);
 }
 
 static void stash_fifo_put_u64_1(void)
 {
-	stash_fifo_put(sizeof(uint64_t), 1, STASH_GEN);
+	stash_fifo_put(sizeof(uint64_t), 1, STASH_GEN, 0);
 }
 
 static void stash_fifo_put_u64_n(void)
 {
-	stash_fifo_put(sizeof(uint64_t), BURST, STASH_GEN);
+	stash_fifo_put(sizeof(uint64_t), BURST, STASH_GEN, 0);
 }
 
 static void stash_fifo_u64_put_u64_1(void)
 {
-	stash_fifo_put(sizeof(uint64_t), 1, STASH_U64);
+	stash_fifo_put(sizeof(uint64_t), 1, STASH_U64, 0);
 }
 
 static void stash_fifo_u64_put_u64_n(void)
 {
-	stash_fifo_put(sizeof(uint64_t), BURST, STASH_U64);
+	stash_fifo_put(sizeof(uint64_t), BURST, STASH_U64, 0);
 }
 
 static void stash_fifo_put_ptr_1(void)
 {
-	stash_fifo_put(sizeof(uintptr_t), 1, STASH_PTR);
+	stash_fifo_put(sizeof(uintptr_t), 1, STASH_PTR, 0);
 }
 
 static void stash_fifo_put_ptr_n(void)
 {
-	stash_fifo_put(sizeof(uintptr_t), BURST, STASH_PTR);
+	stash_fifo_put(sizeof(uintptr_t), BURST, STASH_PTR, 0);
 }
 
 static void stash_fifo_put_u32_1(void)
 {
-	stash_fifo_put(sizeof(uint32_t), 1, STASH_GEN);
+	stash_fifo_put(sizeof(uint32_t), 1, STASH_GEN, 0);
 }
 
 static void stash_fifo_put_u32_n(void)
 {
-	stash_fifo_put(sizeof(uint32_t), BURST, STASH_GEN);
+	stash_fifo_put(sizeof(uint32_t), BURST, STASH_GEN, 0);
 }
 
 static void stash_fifo_u32_put_u32_1(void)
 {
-	stash_fifo_put(sizeof(uint32_t), 1, STASH_U32);
+	stash_fifo_put(sizeof(uint32_t), 1, STASH_U32, 0);
 }
 
 static void stash_fifo_u32_put_u32_n(void)
 {
-	stash_fifo_put(sizeof(uint32_t), BURST, STASH_U32);
+	stash_fifo_put(sizeof(uint32_t), BURST, STASH_U32, 0);
 }
 
 static void stash_fifo_put_u16_1(void)
 {
-	stash_fifo_put(sizeof(uint16_t), 1, STASH_GEN);
+	stash_fifo_put(sizeof(uint16_t), 1, STASH_GEN, 0);
 }
 
 static void stash_fifo_put_u16_n(void)
 {
-	stash_fifo_put(sizeof(uint16_t), BURST, STASH_GEN);
+	stash_fifo_put(sizeof(uint16_t), BURST, STASH_GEN, 0);
 }
 
 static void stash_fifo_put_u8_1(void)
 {
-	stash_fifo_put(sizeof(uint8_t), 1, STASH_GEN);
+	stash_fifo_put(sizeof(uint8_t), 1, STASH_GEN, 0);
 }
 
 static void stash_fifo_put_u8_n(void)
 {
-	stash_fifo_put(sizeof(uint8_t), BURST, STASH_GEN);
+	stash_fifo_put(sizeof(uint8_t), BURST, STASH_GEN, 0);
+}
+
+static void stash_fifo_put_u64_1_batch(void)
+{
+	stash_fifo_put(sizeof(uint64_t), 1, STASH_GEN, 1);
+}
+
+static void stash_fifo_put_u64_n_batch(void)
+{
+	stash_fifo_put(sizeof(uint64_t), BATCH, STASH_GEN, 1);
+}
+
+static void stash_fifo_u64_put_u64_1_batch(void)
+{
+	stash_fifo_put(sizeof(uint64_t), 1, STASH_U64, 1);
+}
+
+static void stash_fifo_u64_put_u64_n_batch(void)
+{
+	stash_fifo_put(sizeof(uint64_t), BATCH, STASH_U64, 1);
+}
+
+static void stash_fifo_put_ptr_1_batch(void)
+{
+	stash_fifo_put(sizeof(uintptr_t), 1, STASH_PTR, 1);
+}
+
+static void stash_fifo_put_ptr_n_batch(void)
+{
+	stash_fifo_put(sizeof(uintptr_t), BATCH, STASH_PTR, 1);
+}
+
+static void stash_fifo_put_u32_1_batch(void)
+{
+	stash_fifo_put(sizeof(uint32_t), 1, STASH_GEN, 1);
+}
+
+static void stash_fifo_put_u32_n_batch(void)
+{
+	stash_fifo_put(sizeof(uint32_t), BATCH, STASH_GEN, 1);
+}
+
+static void stash_fifo_u32_put_u32_1_batch(void)
+{
+	stash_fifo_put(sizeof(uint32_t), 1, STASH_U32, 1);
+}
+
+static void stash_fifo_u32_put_u32_n_batch(void)
+{
+	stash_fifo_put(sizeof(uint32_t), BATCH, STASH_U32, 1);
+}
+
+static void stash_fifo_put_u16_1_batch(void)
+{
+	stash_fifo_put(sizeof(uint16_t), 1, STASH_GEN, 1);
+}
+
+static void stash_fifo_put_u16_n_batch(void)
+{
+	stash_fifo_put(sizeof(uint16_t), BATCH, STASH_GEN, 1);
+}
+
+static void stash_fifo_put_u8_1_batch(void)
+{
+	stash_fifo_put(sizeof(uint8_t), 1, STASH_GEN, 1);
+}
+
+static void stash_fifo_put_u8_n_batch(void)
+{
+	stash_fifo_put(sizeof(uint8_t), BATCH, STASH_GEN, 1);
 }
 
 odp_testinfo_t stash_suite[] = {
@@ -954,6 +1201,12 @@ odp_testinfo_t stash_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(stash_default_u64_put_u64_n, check_support_64),
 	ODP_TEST_INFO_CONDITIONAL(stash_default_put_ptr_1, check_support_ptr),
 	ODP_TEST_INFO_CONDITIONAL(stash_default_put_ptr_n, check_support_ptr),
+	ODP_TEST_INFO_CONDITIONAL(stash_default_put_u64_1_batch, check_support_64),
+	ODP_TEST_INFO_CONDITIONAL(stash_default_put_u64_n_batch, check_support_64),
+	ODP_TEST_INFO_CONDITIONAL(stash_default_u64_put_u64_1_batch, check_support_64),
+	ODP_TEST_INFO_CONDITIONAL(stash_default_u64_put_u64_n_batch, check_support_64),
+	ODP_TEST_INFO_CONDITIONAL(stash_default_put_ptr_1_batch, check_support_ptr),
+	ODP_TEST_INFO_CONDITIONAL(stash_default_put_ptr_n_batch, check_support_ptr),
 	ODP_TEST_INFO(stash_default_put_u32_1),
 	ODP_TEST_INFO(stash_default_put_u32_n),
 	ODP_TEST_INFO(stash_default_u32_put_u32_1),
@@ -962,6 +1215,14 @@ odp_testinfo_t stash_suite[] = {
 	ODP_TEST_INFO(stash_default_put_u16_n),
 	ODP_TEST_INFO(stash_default_put_u8_1),
 	ODP_TEST_INFO(stash_default_put_u8_n),
+	ODP_TEST_INFO(stash_default_put_u32_1_batch),
+	ODP_TEST_INFO(stash_default_put_u32_n_batch),
+	ODP_TEST_INFO(stash_default_u32_put_u32_1_batch),
+	ODP_TEST_INFO(stash_default_u32_put_u32_n_batch),
+	ODP_TEST_INFO(stash_default_put_u16_1_batch),
+	ODP_TEST_INFO(stash_default_put_u16_n_batch),
+	ODP_TEST_INFO(stash_default_put_u8_1_batch),
+	ODP_TEST_INFO(stash_default_put_u8_n_batch),
 	ODP_TEST_INFO_CONDITIONAL(stash_create_u64_all, check_support_64),
 	ODP_TEST_INFO(stash_create_u32_all),
 	ODP_TEST_INFO(stash_stats_u32),
@@ -979,6 +1240,20 @@ odp_testinfo_t stash_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u16_n, check_support_fifo),
 	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u8_1,  check_support_fifo),
 	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u8_n,  check_support_fifo),
+	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u64_1_batch, check_support_fifo_64),
+	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u64_n_batch, check_support_fifo_64),
+	ODP_TEST_INFO_CONDITIONAL(stash_fifo_u64_put_u64_1_batch, check_support_fifo_64),
+	ODP_TEST_INFO_CONDITIONAL(stash_fifo_u64_put_u64_n_batch, check_support_fifo_64),
+	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_ptr_1_batch, check_support_fifo_ptr),
+	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_ptr_n_batch, check_support_fifo_ptr),
+	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u32_1_batch, check_support_fifo),
+	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u32_n_batch, check_support_fifo),
+	ODP_TEST_INFO_CONDITIONAL(stash_fifo_u32_put_u32_1_batch, check_support_fifo),
+	ODP_TEST_INFO_CONDITIONAL(stash_fifo_u32_put_u32_n_batch, check_support_fifo),
+	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u16_1_batch, check_support_fifo),
+	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u16_n_batch, check_support_fifo),
+	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u8_1_batch,  check_support_fifo),
+	ODP_TEST_INFO_CONDITIONAL(stash_fifo_put_u8_n_batch,  check_support_fifo),
 	ODP_TEST_INFO_CONDITIONAL(stash_create_fifo_u64_all,
 				  check_support_fifo_64),
 	ODP_TEST_INFO_CONDITIONAL(stash_create_fifo_u32_all,
