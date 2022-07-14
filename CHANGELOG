@@ -1,3 +1,28 @@
+== OpenDataPlane (1.37.2.0)
+
+=== Backward compatible API changes
+==== CPU Mask
+* Allow usage of NULL pointer with `odp_cpumask_default_worker()` and
+`odp_cpumask_default_control()` calls. This enables applications to check the
+number of worker/control CPUs without allocating a temporary mask.
+* Clarify `odp_cpumask_default_worker()` and `odp_cpumask_default_control()`
+specifications to mention that system may allow usage of other CPUs as well.
+
+==== Packet IO
+* Specify that interfaces that support promiscuous mode set operation have
+promiscuous mode disabled by default.
+
+==== Pool
+* Add new statistics counters (`odp_pool_stats_t.thread.cache_available`) for
+reading per thread pool cache usage.
+
+==== Stash
+* Add `odp_stash_print()` function for printing implementation specific debug
+information to the ODP log.
+* Add statistics counters to stash API. Counter support is defined by stash
+capabilities (`odp_stash_capability_t.stats`). Supported counters can be enabled
+in `odp_stash_create()` and read with `odp_stash_stats()`.
+
 == OpenDataPlane (1.37.1.0)
 
 === Backward compatible API changes
