@@ -675,8 +675,8 @@ static inline void populate_tx_desc(odp_packet_hdr_t *pkt_hdr, pool_t *pool,
 	uint64_t pkt_off;
 
 	frame_off = pkt_hdr->event_hdr.index.event * pool->block_size;
-	pkt_off = (uint64_t)(uintptr_t)pkt_hdr->event_hdr.base_data
-		  - (uint64_t)(uintptr_t)pool->base_addr - frame_off;
+	pkt_off = (uint64_t)(uintptr_t)pkt_hdr->seg_data - (uint64_t)(uintptr_t)pool->base_addr
+		  - frame_off;
 	pkt_off <<= XSK_UNALIGNED_BUF_OFFSET_SHIFT;
 	tx_desc->addr = frame_off | pkt_off;
 	tx_desc->len = len;
@@ -934,7 +934,7 @@ static int sock_xdp_output_queues_config(pktio_entry_t *pktio_entry,
 	bind_q = priv->bind_q;
 	umem = priv->umem_info->umem;
 
-	for (i = 0U; i < param->num_queues; ++i) {
+	for (i = 0U; i < param->num_queues;) {
 		sock = &priv->qs[i];
 		ret = xsk_socket__create_shared(&sock->xsk, devname, bind_q, umem, &sock->rx,
 						&sock->tx, &sock->fill_q, &sock->compl_q, &config);
@@ -943,6 +943,8 @@ static int sock_xdp_output_queues_config(pktio_entry_t *pktio_entry,
 			ODP_ERR("Error creating xdp socket for bind queue %u: %d\n", bind_q, ret);
 			goto err;
 		}
+
+		++i;
 
 		if (!reserve_fill_queue_elements(priv, sock, config.rx_size)) {
 			ODP_ERR("Unable to reserve fill queue descriptors for queue: %u.\n",
