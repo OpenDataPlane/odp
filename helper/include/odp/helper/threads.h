@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019-2021, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -83,8 +83,11 @@ typedef struct {
 /** Helper internal thread start arguments. Used both in process and thread
  *  mode */
 typedef struct {
-	/** Atomic variable to sync status */
-	odp_atomic_u32_t status;
+	/** Thread status */
+	uint32_t status;
+
+	/** Socket for updating thread status */
+	int sockfd;
 
 	/** Process or thread */
 	odp_mem_model_t mem_model;

@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
- * Copyright (c) 2019, Nokia
+ * Copyright (c) 2019-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -19,6 +19,7 @@
 #include <limits.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/socket.h>
 
 #include <odp_api.h>
 #include <odp/helper/threads.h>
@@ -33,6 +34,38 @@
 #define STARTED     3
 
 static odph_helper_options_t helper_options;
+
+static uint8_t get_child_status(int fd)
+{
+	uint8_t status;
+	int ret;
+
+	ret = TEMP_FAILURE_RETRY(recv(fd, &status, sizeof(status), MSG_DONTWAIT | MSG_NOSIGNAL));
+
+	if (ret == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
+		return NOT_STARTED;
+
+	if (ret != sizeof(status)) {
+		ODPH_ERR("recv() failed: %d (%s)\n", ret, strerror(errno));
+		return NOT_STARTED;
+	}
+
+	return status;
+}
+
+static int set_child_status(int fd, uint8_t status)
+{
+	int ret;
+
+	ret = TEMP_FAILURE_RETRY(send(fd, &status, sizeof(status), MSG_NOSIGNAL));
+
+	if (ret != sizeof(status)) {
+		ODPH_ERR("send() failed: %d (%s)\n", ret, strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
 
 /*
  * Run a thread, either as Linux pthread or process.
@@ -65,8 +98,14 @@ static void *run_thread(void *arg)
 		 "pthread" : "process",
 		 (int)getpid());
 
-	if (odp_atomic_load_u32(&start_args->status) == SYNC_INIT)
-		odp_atomic_store_rel_u32(&start_args->status, INIT_DONE);
+	if (start_args->status == SYNC_INIT) {
+		if (set_child_status(start_args->sockfd, INIT_DONE)) {
+			ODPH_ERR("Setting init status failed\n");
+			if (start_args->mem_model == ODP_MEM_MODEL_PROCESS)
+				_exit(EXIT_FAILURE);
+			return (void *)-1;
+		}
+	}
 
 	status = thr_params->start(thr_params->arg);
 	ret = odp_term_local();
@@ -281,6 +320,7 @@ int odph_thread_create(odph_thread_t thread[],
 	int i, num_cpu, cpu;
 	const odp_cpumask_t *cpumask = param->cpumask;
 	int use_pthread = 1;
+	int sp[2] = {-1, -1};
 
 	if (param->thread_model == 1)
 		use_pthread = 0;
@@ -301,6 +341,13 @@ int odph_thread_create(odph_thread_t thread[],
 		return -1;
 	}
 
+	if (param->sync) {
+		if (socketpair(PF_LOCAL, SOCK_STREAM, 0, sp)) {
+			ODPH_ERR("socketpair() failed: %s\n", strerror(errno));
+			return -1;
+		}
+	}
+
 	memset(thread, 0, num * sizeof(odph_thread_t));
 
 	cpu = odp_cpumask_first(cpumask);
@@ -315,10 +362,13 @@ int odph_thread_create(odph_thread_t thread[],
 
 		start_args->instance   = param->instance;
 
-		if (param->sync)
-			odp_atomic_init_u32(&start_args->status, SYNC_INIT);
-		else
-			odp_atomic_init_u32(&start_args->status, NOT_STARTED);
+		if (param->sync) {
+			start_args->status = SYNC_INIT;
+			start_args->sockfd = sp[1];
+		} else {
+			start_args->status = NOT_STARTED;
+			start_args->sockfd = -1;
+		}
 
 		if (use_pthread) {
 			if (create_pthread(&thread[i], cpu, start_args->thr_params.stack_size))
@@ -334,7 +384,6 @@ int odph_thread_create(odph_thread_t thread[],
 			uint64_t diff_ns;
 			uint32_t status;
 			int timeout = 0;
-			odp_atomic_u32_t *atomic = &start_args->status;
 			uint64_t timeout_ns = param->sync_timeout;
 
 			if (!timeout_ns)
@@ -347,7 +396,7 @@ int odph_thread_create(odph_thread_t thread[],
 				t2 = odp_time_local();
 				diff_ns = odp_time_diff_ns(t2, t1);
 				timeout = diff_ns > timeout_ns;
-				status = odp_atomic_load_acq_u32(atomic);
+				status = get_child_status(sp[0]);
 
 			} while (status != INIT_DONE && timeout == 0);
 
@@ -357,10 +406,15 @@ int odph_thread_create(odph_thread_t thread[],
 			}
 		}
 
-		odp_atomic_store_u32(&start_args->status, STARTED);
+		start_args->status = STARTED;
 
 		cpu = odp_cpumask_next(cpumask, cpu);
 	}
+
+	if (sp[0] >= 0)
+		close(sp[0]);
+	if (sp[1] >= 0)
+		close(sp[1]);
 
 	return i;
 }
@@ -373,7 +427,7 @@ int odph_thread_join(odph_thread_t thread[], int num)
 	for (i = 0; i < num; i++) {
 		start_args = &thread[i].start_args;
 
-		if (odp_atomic_load_u32(&start_args->status) != STARTED) {
+		if (start_args->status != STARTED) {
 			ODPH_DBG("Thread (i:%i) not started.\n", i);
 			break;
 		}
@@ -386,7 +440,7 @@ int odph_thread_join(odph_thread_t thread[], int num)
 				break;
 		}
 
-		odp_atomic_store_u32(&start_args->status, NOT_STARTED);
+		start_args->status = NOT_STARTED;
 	}
 
 	return i;
