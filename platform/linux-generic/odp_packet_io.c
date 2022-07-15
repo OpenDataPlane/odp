@@ -2154,7 +2154,7 @@ void odp_pktio_extra_stats_print(odp_pktio_t pktio)
 		return;
 	}
 
-	printf("Pktio extra statistics\n----------------------\n");
+	ODP_PRINT("Pktio extra statistics\n----------------------\n");
 	for (i = 0; i < num_stats; i++)
 		ODP_PRINT("  %s=%" PRIu64 "\n", stats_info[i].name, extra_stats[i]);
 	ODP_PRINT("\n");
