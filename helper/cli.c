@@ -1,4 +1,4 @@
-/* Copyright (c) 2021, Nokia
+/* Copyright (c) 2021-2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -17,6 +17,7 @@
 #include <poll.h>
 #include <stdio.h>
 #include <strings.h>
+#include <inttypes.h>
 
 /* Socketpair socket roles. */
 enum {
@@ -195,226 +196,6 @@ static int check_num_args(struct cli_def *cli, int argc, int req_argc)
 	return 0;
 }
 
-static int cmd_call_odp_cls_print_all(struct cli_def *cli,
-				      const char *command ODP_UNUSED,
-				      char *argv[] ODP_UNUSED, int argc)
-{
-	if (check_num_args(cli, argc, 0))
-		return CLI_ERROR;
-
-	odp_cls_print_all();
-
-	return CLI_OK;
-}
-
-static int cmd_call_odp_ipsec_print(struct cli_def *cli,
-				    const char *command ODP_UNUSED,
-				    char *argv[] ODP_UNUSED, int argc)
-{
-	if (check_num_args(cli, argc, 0))
-		return CLI_ERROR;
-
-	odp_ipsec_print();
-
-	return CLI_OK;
-}
-
-static int cmd_call_odp_shm_print_all(struct cli_def *cli,
-				      const char *command ODP_UNUSED,
-				      char *argv[] ODP_UNUSED, int argc)
-{
-	if (check_num_args(cli, argc, 0))
-		return CLI_ERROR;
-
-	odp_shm_print_all();
-
-	return CLI_OK;
-}
-
-static int cmd_call_odp_sys_config_print(struct cli_def *cli,
-					 const char *command ODP_UNUSED,
-					 char *argv[] ODP_UNUSED, int argc)
-{
-	if (check_num_args(cli, argc, 0))
-		return CLI_ERROR;
-
-	odp_sys_config_print();
-
-	return CLI_OK;
-}
-
-static int cmd_call_odp_sys_info_print(struct cli_def *cli,
-				       const char *command ODP_UNUSED,
-				       char *argv[] ODP_UNUSED, int argc)
-{
-	if (check_num_args(cli, argc, 0))
-		return CLI_ERROR;
-
-	odp_sys_info_print();
-
-	return CLI_OK;
-}
-
-static int cmd_call_odp_pktio_print(struct cli_def *cli,
-				    const char *command ODP_UNUSED,
-				    char *argv[], int argc)
-{
-	if (check_num_args(cli, argc, 1))
-		return CLI_ERROR;
-
-	odp_pktio_t hdl = odp_pktio_lookup(argv[0]);
-
-	if (hdl == ODP_PKTIO_INVALID) {
-		cli_error(cli, "%% Name not found.");
-		return CLI_ERROR;
-	}
-
-	odp_pktio_print(hdl);
-
-	return CLI_OK;
-}
-
-static int cmd_call_odp_pool_print(struct cli_def *cli,
-				   const char *command ODP_UNUSED, char *argv[],
-				   int argc)
-{
-	if (check_num_args(cli, argc, 1))
-		return CLI_ERROR;
-
-	odp_pool_t hdl = odp_pool_lookup(argv[0]);
-
-	if (hdl == ODP_POOL_INVALID) {
-		cli_error(cli, "%% Name not found.");
-		return CLI_ERROR;
-	}
-
-	odp_pool_print(hdl);
-
-	return CLI_OK;
-}
-
-static int cmd_call_odp_queue_print(struct cli_def *cli,
-				    const char *command ODP_UNUSED,
-				    char *argv[], int argc)
-{
-	if (check_num_args(cli, argc, 1))
-		return CLI_ERROR;
-
-	odp_queue_t hdl = odp_queue_lookup(argv[0]);
-
-	if (hdl == ODP_QUEUE_INVALID) {
-		cli_error(cli, "%% Name not found.");
-		return CLI_ERROR;
-	}
-
-	odp_queue_print(hdl);
-
-	return CLI_OK;
-}
-
-static int cmd_call_odp_queue_print_all(struct cli_def *cli,
-					const char *command ODP_UNUSED,
-					char *argv[] ODP_UNUSED, int argc)
-{
-	if (check_num_args(cli, argc, 0))
-		return CLI_ERROR;
-
-	odp_queue_print_all();
-
-	return CLI_OK;
-}
-
-static int cmd_call_odp_shm_print(struct cli_def *cli,
-				  const char *command ODP_UNUSED, char *argv[],
-				  int argc)
-{
-	if (check_num_args(cli, argc, 1))
-		return CLI_ERROR;
-
-	odp_shm_t hdl = odp_shm_lookup(argv[0]);
-
-	if (hdl == ODP_SHM_INVALID) {
-		cli_error(cli, "%% Name not found.");
-		return CLI_ERROR;
-	}
-
-	odp_shm_print(hdl);
-
-	return CLI_OK;
-}
-
-static int cmd_user_cmd(struct cli_def *cli ODP_UNUSED, const char *command,
-			char *argv[], int argc)
-{
-	cli_shm_t *shm = shm_lookup();
-
-	if (!shm) {
-		ODPH_ERR("Error: shm %s not found\n", shm_name);
-		return CLI_ERROR;
-	}
-
-	for (uint32_t i = 0; i < shm->num_user_commands; i++) {
-		if (!strcasecmp(command, shm->user_cmd[i].name)) {
-			shm->user_cmd[i].fn(argc, argv);
-			break;
-		}
-	}
-
-	return CLI_OK;
-}
-
-static struct cli_def *create_cli(cli_shm_t *shm)
-{
-	struct cli_command *c;
-	struct cli_def *cli;
-
-	cli = cli_init();
-	cli_set_banner(cli, NULL);
-	cli_set_hostname(cli, shm->cli_param.hostname);
-
-	c = cli_register_command(cli, NULL, "call", NULL,
-				 PRIVILEGE_UNPRIVILEGED, MODE_EXEC,
-				 "Call ODP API function.");
-	cli_register_command(cli, c, "odp_cls_print_all",
-			     cmd_call_odp_cls_print_all,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, c, "odp_ipsec_print",
-			     cmd_call_odp_ipsec_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, c, "odp_pktio_print",
-			     cmd_call_odp_pktio_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, c, "odp_pool_print",
-			     cmd_call_odp_pool_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, c, "odp_queue_print",
-			     cmd_call_odp_queue_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, c, "odp_queue_print_all",
-			     cmd_call_odp_queue_print_all,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, c, "odp_shm_print_all",
-			     cmd_call_odp_shm_print_all,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, c, "odp_shm_print",
-			     cmd_call_odp_shm_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
-	cli_register_command(cli, c, "odp_sys_config_print",
-			     cmd_call_odp_sys_config_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-	cli_register_command(cli, c, "odp_sys_info_print",
-			     cmd_call_odp_sys_info_print,
-			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
-
-	for (uint32_t i = 0; i < shm->num_user_commands; i++) {
-		cli_register_command(cli, NULL, shm->user_cmd[i].name,
-				     cmd_user_cmd, PRIVILEGE_UNPRIVILEGED,
-				     MODE_EXEC, shm->user_cmd[i].help);
-	}
-
-	return cli;
-}
-
 /* Not shared, used only in the server thread. */
 static struct cli_def *cli;
 static char *cli_log_fn_buf;
@@ -512,6 +293,442 @@ static int cli_log(odp_log_level_t level, const char *fmt, ...)
 	va_end(args);
 
 	return r;
+}
+
+static int cmd_call_odp_cls_print_all(struct cli_def *cli,
+				      const char *command ODP_UNUSED,
+				      char *argv[] ODP_UNUSED, int argc)
+{
+	if (check_num_args(cli, argc, 0))
+		return CLI_ERROR;
+
+	odp_cls_print_all();
+
+	return CLI_OK;
+}
+
+static int cmd_call_odp_ipsec_print(struct cli_def *cli,
+				    const char *command ODP_UNUSED,
+				    char *argv[] ODP_UNUSED, int argc)
+{
+	if (check_num_args(cli, argc, 0))
+		return CLI_ERROR;
+
+	odp_ipsec_print();
+
+	return CLI_OK;
+}
+
+static int cmd_call_odp_shm_print_all(struct cli_def *cli,
+				      const char *command ODP_UNUSED,
+				      char *argv[] ODP_UNUSED, int argc)
+{
+	if (check_num_args(cli, argc, 0))
+		return CLI_ERROR;
+
+	odp_shm_print_all();
+
+	return CLI_OK;
+}
+
+static int cmd_call_odp_sys_config_print(struct cli_def *cli,
+					 const char *command ODP_UNUSED,
+					 char *argv[] ODP_UNUSED, int argc)
+{
+	if (check_num_args(cli, argc, 0))
+		return CLI_ERROR;
+
+	odp_sys_config_print();
+
+	return CLI_OK;
+}
+
+static int cmd_call_odp_sys_info_print(struct cli_def *cli,
+				       const char *command ODP_UNUSED,
+				       char *argv[] ODP_UNUSED, int argc)
+{
+	if (check_num_args(cli, argc, 0))
+		return CLI_ERROR;
+
+	odp_sys_info_print();
+
+	return CLI_OK;
+}
+
+static int cmd_call_odp_pktio_print(struct cli_def *cli,
+				    const char *command ODP_UNUSED,
+				    char *argv[], int argc)
+{
+	if (check_num_args(cli, argc, 1))
+		return CLI_ERROR;
+
+	odp_pktio_t hdl = odp_pktio_lookup(argv[0]);
+
+	if (hdl == ODP_PKTIO_INVALID) {
+		cli_error(cli, "%% Name not found.");
+		return CLI_ERROR;
+	}
+
+	odp_pktio_print(hdl);
+
+	return CLI_OK;
+}
+
+static int cmd_call_odp_pktio_extra_stats_print(struct cli_def *cli,
+						const char *command ODP_UNUSED,
+						char *argv[], int argc)
+{
+	if (check_num_args(cli, argc, 1))
+		return CLI_ERROR;
+
+	odp_pktio_t hdl = odp_pktio_lookup(argv[0]);
+
+	if (hdl == ODP_PKTIO_INVALID) {
+		cli_error(cli, "%% Name not found.");
+		return CLI_ERROR;
+	}
+
+	odp_pktio_extra_stats_print(hdl);
+
+	return CLI_OK;
+}
+
+static int cmd_call_odp_pool_print(struct cli_def *cli,
+				   const char *command ODP_UNUSED, char *argv[],
+				   int argc)
+{
+	if (check_num_args(cli, argc, 1))
+		return CLI_ERROR;
+
+	odp_pool_t hdl = odp_pool_lookup(argv[0]);
+
+	if (hdl == ODP_POOL_INVALID) {
+		cli_error(cli, "%% Name not found.");
+		return CLI_ERROR;
+	}
+
+	odp_pool_print(hdl);
+
+	return CLI_OK;
+}
+
+static int cmd_call_odp_queue_print(struct cli_def *cli,
+				    const char *command ODP_UNUSED,
+				    char *argv[], int argc)
+{
+	if (check_num_args(cli, argc, 1))
+		return CLI_ERROR;
+
+	odp_queue_t hdl = odp_queue_lookup(argv[0]);
+
+	if (hdl == ODP_QUEUE_INVALID) {
+		cli_error(cli, "%% Name not found.");
+		return CLI_ERROR;
+	}
+
+	odp_queue_print(hdl);
+
+	return CLI_OK;
+}
+
+static int cmd_call_odp_queue_print_all(struct cli_def *cli,
+					const char *command ODP_UNUSED,
+					char *argv[] ODP_UNUSED, int argc)
+{
+	if (check_num_args(cli, argc, 0))
+		return CLI_ERROR;
+
+	odp_queue_print_all();
+
+	return CLI_OK;
+}
+
+static int cmd_call_odp_shm_print(struct cli_def *cli,
+				  const char *command ODP_UNUSED, char *argv[],
+				  int argc)
+{
+	if (check_num_args(cli, argc, 1))
+		return CLI_ERROR;
+
+	odp_shm_t hdl = odp_shm_lookup(argv[0]);
+
+	if (hdl == ODP_SHM_INVALID) {
+		cli_error(cli, "%% Name not found.");
+		return CLI_ERROR;
+	}
+
+	odp_shm_print(hdl);
+
+	return CLI_OK;
+}
+
+static int cmd_pktio_stats_print(struct cli_def *cli, const char *command ODP_UNUSED, char *argv[],
+				 int argc)
+{
+	if (check_num_args(cli, argc, 1))
+		return CLI_ERROR;
+
+	odp_pktio_t hdl = odp_pktio_lookup(argv[0]);
+
+	if (hdl == ODP_PKTIO_INVALID) {
+		cli_error(cli, "%% Name not found.");
+		return CLI_ERROR;
+	}
+
+	odp_pktio_stats_t stats;
+
+	if (odp_pktio_stats(hdl, &stats) < 0) {
+		cli_error(cli, "%% Unable to query stats.");
+		return CLI_ERROR;
+	}
+
+	cli_log(ODP_LOG_PRINT, "Pktio statistics\n----------------\n");
+	cli_log(ODP_LOG_PRINT, "  in_octets: %" PRIu64 "\n", stats.in_octets);
+	cli_log(ODP_LOG_PRINT, "  in_packets: %" PRIu64 "\n", stats.in_packets);
+	cli_log(ODP_LOG_PRINT, "  in_ucast_pkts: %" PRIu64 "\n", stats.in_ucast_pkts);
+	cli_log(ODP_LOG_PRINT, "  in_mcast_pkts: %" PRIu64 "\n", stats.in_mcast_pkts);
+	cli_log(ODP_LOG_PRINT, "  in_bcast_pkts: %" PRIu64 "\n", stats.in_bcast_pkts);
+	cli_log(ODP_LOG_PRINT, "  in_discards: %" PRIu64 "\n", stats.in_discards);
+	cli_log(ODP_LOG_PRINT, "  in_errors: %" PRIu64 "\n", stats.in_errors);
+	cli_log(ODP_LOG_PRINT, "  out_octets: %" PRIu64 "\n", stats.out_octets);
+	cli_log(ODP_LOG_PRINT, "  out_packets: %" PRIu64 "\n", stats.out_packets);
+	cli_log(ODP_LOG_PRINT, "  out_ucast_pkts: %" PRIu64 "\n", stats.out_ucast_pkts);
+	cli_log(ODP_LOG_PRINT, "  out_mcast_pkts: %" PRIu64 "\n", stats.out_mcast_pkts);
+	cli_log(ODP_LOG_PRINT, "  out_bcast_pkts: %" PRIu64 "\n", stats.out_bcast_pkts);
+	cli_log(ODP_LOG_PRINT, "  out_discards: %" PRIu64 "\n", stats.out_discards);
+	cli_log(ODP_LOG_PRINT, "  out_errors: %" PRIu64 "\n\n", stats.out_errors);
+
+	return CLI_OK;
+}
+
+static void cli_log_pktin_queue_stats(odp_pktin_queue_stats_t *stats)
+{
+	cli_log(ODP_LOG_PRINT, "  octets: %" PRIu64 "\n", stats->octets);
+	cli_log(ODP_LOG_PRINT, "  packets: %" PRIu64 "\n", stats->packets);
+	cli_log(ODP_LOG_PRINT, "  discards: %" PRIu64 "\n", stats->discards);
+	cli_log(ODP_LOG_PRINT, "  errors: %" PRIu64 "\n", stats->errors);
+}
+
+static void cli_log_pktout_queue_stats(odp_pktout_queue_stats_t *stats)
+{
+	cli_log(ODP_LOG_PRINT, "  octets: %" PRIu64 "\n", stats->octets);
+	cli_log(ODP_LOG_PRINT, "  packets: %" PRIu64 "\n", stats->packets);
+	cli_log(ODP_LOG_PRINT, "  discards: %" PRIu64 "\n", stats->discards);
+	cli_log(ODP_LOG_PRINT, "  errors: %" PRIu64 "\n", stats->errors);
+}
+
+static int cmd_pktio_queue_stats_print(struct cli_def *cli, const char *command ODP_UNUSED,
+				       char *argv[], int argc)
+{
+	if (check_num_args(cli, argc, 1))
+		return CLI_ERROR;
+
+	odp_pktio_t hdl = odp_pktio_lookup(argv[0]);
+
+	if (hdl == ODP_PKTIO_INVALID) {
+		cli_error(cli, "%% Name not found.");
+		return CLI_ERROR;
+	}
+
+	int in_q_cnt = odp_pktin_queue(hdl, NULL, 0);
+
+	if (in_q_cnt > 0) {
+		odp_pktin_queue_t in_qs[in_q_cnt];
+		odp_pktin_queue_stats_t in_stats;
+
+		in_q_cnt = odp_pktin_queue(hdl, in_qs, in_q_cnt);
+
+		cli_log(ODP_LOG_PRINT, "Pktin queue statistics\n----------------------\n");
+
+		for (int i = 0; i < in_q_cnt; i++) {
+			cli_log(ODP_LOG_PRINT, "Pktin queue: %d:\n", i);
+
+			if (odp_pktin_queue_stats(in_qs[i], &in_stats) < 0) {
+				cli_log(ODP_LOG_PRINT,
+					"  (Unable to read statistics, skipping)\n");
+				continue;
+			}
+
+			cli_log_pktin_queue_stats(&in_stats);
+		}
+	}
+
+	int out_q_cnt = odp_pktout_queue(hdl, NULL, 0);
+
+	if (out_q_cnt > 0) {
+		odp_pktout_queue_t out_qs[out_q_cnt];
+		odp_pktout_queue_stats_t out_stats;
+
+		out_q_cnt = odp_pktout_queue(hdl, out_qs, out_q_cnt);
+
+		cli_log(ODP_LOG_PRINT, "Pktout queue statistics\n-----------------------\n");
+
+		for (int i = 0; i < out_q_cnt; i++) {
+			cli_log(ODP_LOG_PRINT, "Pktout queue: %d:\n", i);
+
+			if (odp_pktout_queue_stats(out_qs[i], &out_stats) < 0) {
+				cli_log(ODP_LOG_PRINT,
+					"  (Unable to read statistics, skipping)\n");
+				continue;
+			}
+
+			cli_log_pktout_queue_stats(&out_stats);
+		}
+	}
+
+	cli_log(ODP_LOG_PRINT, "\n");
+
+	return CLI_OK;
+}
+
+static int cmd_pktio_event_queue_stats_print(struct cli_def *cli, const char *command ODP_UNUSED,
+					     char *argv[], int argc)
+{
+	if (check_num_args(cli, argc, 1))
+		return CLI_ERROR;
+
+	odp_pktio_t hdl = odp_pktio_lookup(argv[0]);
+
+	if (hdl == ODP_PKTIO_INVALID) {
+		cli_error(cli, "%% Name not found.");
+		return CLI_ERROR;
+	}
+
+	int in_q_cnt = odp_pktin_event_queue(hdl, NULL, 0);
+
+	if (in_q_cnt > 0) {
+		odp_queue_t in_qs[in_q_cnt];
+		odp_pktin_queue_stats_t in_stats;
+
+		in_q_cnt = odp_pktin_event_queue(hdl, in_qs, in_q_cnt);
+
+		cli_log(ODP_LOG_PRINT,
+			"Pktin event queue statistics\n----------------------------\n");
+
+		for (int i = 0; i < in_q_cnt; i++) {
+			cli_log(ODP_LOG_PRINT, "Pktin event queue: %d:\n", i);
+
+			if (odp_pktin_event_queue_stats(hdl, in_qs[i], &in_stats) < 0) {
+				cli_log(ODP_LOG_PRINT,
+					"  (Unable to read statistics, skipping)\n");
+				continue;
+			}
+
+			cli_log_pktin_queue_stats(&in_stats);
+		}
+	}
+
+	int out_q_cnt = odp_pktout_event_queue(hdl, NULL, 0);
+
+	if (out_q_cnt > 0) {
+		odp_queue_t out_qs[out_q_cnt];
+		odp_pktout_queue_stats_t out_stats;
+
+		out_q_cnt = odp_pktout_event_queue(hdl, out_qs, out_q_cnt);
+
+		cli_log(ODP_LOG_PRINT,
+			"Pktout event queue statistics\n-----------------------------\n");
+
+		for (int i = 0; i < out_q_cnt; i++) {
+			cli_log(ODP_LOG_PRINT, "Pktout event queue: %d:\n", i);
+
+			if (odp_pktout_event_queue_stats(hdl, out_qs[i], &out_stats) < 0) {
+				cli_log(ODP_LOG_PRINT,
+					"  (Unable to read statistics, skipping)\n");
+				continue;
+			}
+
+			cli_log_pktout_queue_stats(&out_stats);
+		}
+	}
+
+	cli_log(ODP_LOG_PRINT, "\n");
+
+	return CLI_OK;
+}
+
+static int cmd_user_cmd(struct cli_def *cli ODP_UNUSED, const char *command,
+			char *argv[], int argc)
+{
+	cli_shm_t *shm = shm_lookup();
+
+	if (!shm) {
+		ODPH_ERR("Error: shm %s not found\n", shm_name);
+		return CLI_ERROR;
+	}
+
+	for (uint32_t i = 0; i < shm->num_user_commands; i++) {
+		if (!strcasecmp(command, shm->user_cmd[i].name)) {
+			shm->user_cmd[i].fn(argc, argv);
+			break;
+		}
+	}
+
+	return CLI_OK;
+}
+
+static struct cli_def *create_cli(cli_shm_t *shm)
+{
+	struct cli_command *c;
+	struct cli_def *cli;
+
+	cli = cli_init();
+	cli_set_banner(cli, NULL);
+	cli_set_hostname(cli, shm->cli_param.hostname);
+
+	c = cli_register_command(cli, NULL, "call", NULL,
+				 PRIVILEGE_UNPRIVILEGED, MODE_EXEC,
+				 "Call ODP API function.");
+	cli_register_command(cli, c, "odp_cls_print_all",
+			     cmd_call_odp_cls_print_all,
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
+	cli_register_command(cli, c, "odp_ipsec_print",
+			     cmd_call_odp_ipsec_print,
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
+	cli_register_command(cli, c, "odp_pktio_print",
+			     cmd_call_odp_pktio_print,
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
+	cli_register_command(cli, c, "odp_pktio_extra_stats_print",
+			     cmd_call_odp_pktio_extra_stats_print,
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
+	cli_register_command(cli, c, "odp_pool_print",
+			     cmd_call_odp_pool_print,
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
+	cli_register_command(cli, c, "odp_queue_print",
+			     cmd_call_odp_queue_print,
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
+	cli_register_command(cli, c, "odp_queue_print_all",
+			     cmd_call_odp_queue_print_all,
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
+	cli_register_command(cli, c, "odp_shm_print_all",
+			     cmd_call_odp_shm_print_all,
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
+	cli_register_command(cli, c, "odp_shm_print",
+			     cmd_call_odp_shm_print,
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
+	cli_register_command(cli, c, "odp_sys_config_print",
+			     cmd_call_odp_sys_config_print,
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
+	cli_register_command(cli, c, "odp_sys_info_print",
+			     cmd_call_odp_sys_info_print,
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, NULL);
+	cli_register_command(cli, NULL, "pktio_stats_print",
+			     cmd_pktio_stats_print,
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
+	cli_register_command(cli, NULL, "pktio_queue_stats_print",
+			     cmd_pktio_queue_stats_print,
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
+	cli_register_command(cli, NULL, "pktio_event_queue_stats_print",
+			     cmd_pktio_event_queue_stats_print,
+			     PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "<name>");
+
+	for (uint32_t i = 0; i < shm->num_user_commands; i++) {
+		cli_register_command(cli, NULL, shm->user_cmd[i].name,
+				     cmd_user_cmd, PRIVILEGE_UNPRIVILEGED,
+				     MODE_EXEC, shm->user_cmd[i].help);
+	}
+
+	return cli;
 }
 
 ODP_PRINTF_FORMAT(1, 2)
