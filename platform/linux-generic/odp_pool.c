@@ -1846,6 +1846,8 @@ odp_pool_t odp_pool_ext_create(const char *name, const odp_pool_ext_param_t *par
 	pool->seg_len        = buf_size - head_offset - headroom - pool->tailroom;
 	pool->max_seg_len    = headroom + pool->seg_len + pool->tailroom;
 	pool->max_len        = PKT_MAX_SEGS * pool->seg_len;
+	pool->base_addr      = (uint8_t *)(uintptr_t)UINT64_MAX;
+	pool->max_addr       = 0;
 
 	ring_ptr_init(&pool->ring->hdr);
 
@@ -1870,7 +1872,7 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 	ring_ptr_t *ring;
 	uint32_t i, ring_mask, buf_index, head_offset;
 	uint32_t num_populated;
-	uint8_t *data_ptr;
+	uint8_t *data_ptr, *min_addr, *max_addr;
 	uint32_t hdr_size = sizeof(odp_packet_hdr_t);
 	void *uarea = NULL;
 
@@ -1885,6 +1887,9 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 		ODP_ERR("Bad pool type\n");
 		return -1;
 	}
+
+	min_addr = pool->base_addr;
+	max_addr = pool->max_addr;
 
 	if (buf_size != pool->ext_param.pkt.buf_size) {
 		ODP_ERR("Bad buffer size\n");
@@ -1916,6 +1921,12 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 	for (i = 0; i < num; i++) {
 		event_hdr = buf[i];
 
+		if ((uint8_t *)event_hdr < min_addr)
+			min_addr = (uint8_t *)event_hdr;
+
+		if ((uint8_t *)event_hdr > max_addr)
+			max_addr = (uint8_t *)event_hdr;
+
 		if ((uintptr_t)event_hdr & (ODP_CACHE_LINE_SIZE - 1)) {
 			ODP_ERR("Bad packet buffer align: buf[%u]\n", i);
 			return -1;
@@ -1938,6 +1949,11 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 	}
 
 	pool->num_populated += num;
+	pool->base_addr = min_addr;
+	pool->max_addr = max_addr;
+
+	if (flags & ODP_POOL_POPULATE_DONE)
+		pool->max_addr = max_addr + buf_size - 1;
 
 	return 0;
 }
