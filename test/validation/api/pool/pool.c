@@ -1656,6 +1656,8 @@ static void packet_pool_ext_alloc(int len_test)
 		if (pkt[i] == ODP_PACKET_INVALID)
 			break;
 
+		CU_ASSERT(odp_packet_is_valid(pkt[i]) == 1);
+		CU_ASSERT(odp_event_is_valid(odp_packet_to_event(pkt[i])) == 1);
 		CU_ASSERT(odp_packet_len(pkt[i]) == pkt_len);
 		CU_ASSERT(odp_packet_headroom(pkt[i]) >= headroom);
 		buf_index = find_buf(pkt[i], buf, num_buf, head_offset);
