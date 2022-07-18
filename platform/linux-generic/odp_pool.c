@@ -1937,5 +1937,11 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 
 	pool->num_populated += num;
 
+	if (flags & ODP_POOL_POPULATE_DONE) {
+		pool->base_addr = (uint8_t *)pool->ring->event_hdr_by_index[0];
+		pool->max_addr = (uint8_t *)pool->ring->event_hdr_by_index[pool->num - 1]
+				 + buf_size - 1;
+	}
+
 	return 0;
 }
