@@ -305,6 +305,9 @@ Prerequisites for building the OpenDataPlane (ODP) API
    e.g. with some packet length, packet segment length and pool size
    combinations that would otherwise conform to reported capabilities.
 
+   Note that, currently, AF_XDP socket packet I/O cannot be instantiated if
+   DPDK zero-copy is enabled.
+
 3.6.1 AF_XDP socket packet I/O requirements
 
    AF_XDP socket packet I/O implementation requires libxdp and libbpf libraries.
