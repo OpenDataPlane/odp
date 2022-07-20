@@ -995,15 +995,15 @@ static void classification_test_pktio_configure_common(odp_bool_t enable_pktv)
 		tc.default_cos = 1;
 		num_cos -= NUM_COS_DEFAULT;
 	}
-	if (num_cos >= NUM_COS_DEFAULT && TEST_DROP) {
-		configure_pktio_drop_cos(enable_pktv, capa.max_cos_stats);
-		tc.drop_cos = 1;
-		num_cos -= NUM_COS_DROP;
-	}
 	if (num_cos >= NUM_COS_ERROR && TEST_ERROR) {
 		configure_pktio_error_cos(enable_pktv);
 		tc.error_cos = 1;
 		num_cos -= NUM_COS_ERROR;
+	}
+	if (num_cos >= NUM_COS_DEFAULT && TEST_DROP) {
+		configure_pktio_drop_cos(enable_pktv, capa.max_cos_stats);
+		tc.drop_cos = 1;
+		num_cos -= NUM_COS_DROP;
 	}
 	if (num_cos >= NUM_COS_PMR_CHAIN && TEST_PMR_CHAIN) {
 		configure_cls_pmr_chain(enable_pktv);
