@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, Linaro Limited
+ * Copyright (c) 2022, Nokia
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -33,10 +34,13 @@ extern "C" {
 /**
  * Get thread identifier
  *
- * Returns the thread identifier of the current thread. Thread ids range from 0
- * to odp_thread_count_max() - 1. The ODP thread id is assigned by
- * odp_init_local() and freed by odp_term_local(). Thread id is unique within
- * the ODP instance.
+ * Returns the ODP thread identifier of current thread. Thread IDs range from 0
+ * to odp_thread_count_max() - 1 and are unique within an ODP instance.
+ *
+ * Thread IDs are assigned by odp_init_local() and freed by odp_term_local().
+ * IDs are assigned sequentially starting from 0 in the same order threads call
+ * odp_init_local(). Thread IDs freed by odp_term_local() may be reused by
+ * following odp_init_local() calls.
  *
  * @return Thread identifier of the current thread
  */
