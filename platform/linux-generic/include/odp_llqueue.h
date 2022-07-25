@@ -41,6 +41,7 @@ static odp_bool_t llq_on_queue(struct llnode *node);
  *****************************************************************************/
 
 #define SENTINEL ((void *)~(uintptr_t)0)
+#define MAX_SPIN_COUNT 1000
 
 #ifdef CONFIG_LLDSCD
 /* Implement queue operations using double-word LL/SC */
@@ -114,6 +115,7 @@ static inline struct llnode *llq_dequeue(struct llqueue *llq)
 	(void)__atomic_load_n(&head->next, __ATOMIC_RELAXED);
 
 	do {
+restart_loop:
 		old.ui = lld(&llq->u.ui, __ATOMIC_RELAXED);
 		if (odp_unlikely(old.st.head == NULL)) {
 			/* Empty list */
@@ -125,13 +127,18 @@ static inline struct llnode *llq_dequeue(struct llqueue *llq)
 		} else {
 			/* Multi-element list, dequeue head */
 			struct llnode *next;
+			int	spin_count = 0;
+
 			/* Wait until llq_enqueue() has written true next
 			 * pointer
 			 */
 			while ((next = __atomic_load_n(&old.st.head->next,
 						       __ATOMIC_RELAXED)) ==
-				SENTINEL)
+				SENTINEL) {
 				odp_cpu_pause();
+				if (++spin_count >= MAX_SPIN_COUNT)
+					goto restart_loop;
+			}
 			neu.st.head = next;
 			neu.st.tail = old.st.tail;
 		}
@@ -146,6 +153,7 @@ static inline odp_bool_t llq_dequeue_cond(struct llqueue *llq,
 	union llht old, neu;
 
 	do {
+restart_loop:
 		old.ui = lld(&llq->u.ui, __ATOMIC_ACQUIRE);
 		if (odp_unlikely(old.st.head == NULL || old.st.head != exp)) {
 			/* Empty list or wrong head */
@@ -157,13 +165,17 @@ static inline odp_bool_t llq_dequeue_cond(struct llqueue *llq,
 		} else {
 			/* Multi-element list, dequeue head */
 			struct llnode *next;
+			int     spin_count = 0;
 
 			/* Wait until llq_enqueue() has written true next
 			 * pointer */
 			while ((next = __atomic_load_n(&old.st.head->next,
 						       __ATOMIC_RELAXED)) ==
-				SENTINEL)
+				SENTINEL) {
 				odp_cpu_pause();
+				if (++spin_count >= MAX_SPIN_COUNT)
+					goto restart_loop;
+			}
 
 			neu.st.head = next;
 			neu.st.tail = old.st.tail;
