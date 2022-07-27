@@ -24,7 +24,7 @@ jobs:
       if: github.event_name == 'pull_request'
       env:
         CHECKPATCH_COMMAND: ./scripts/checkpatch.pl
-      uses: webispy/checkpatch-action@v7
+      uses: webispy/checkpatch-action@v8
 
     - name: Check push
       if: github.event_name == 'push' && github.ref != 'refs/heads/master'
