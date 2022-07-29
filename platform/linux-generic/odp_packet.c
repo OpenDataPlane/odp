@@ -1039,13 +1039,6 @@ void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ptr)
 	pkt_hdr->p.flags.user_ptr_set = 1;
 }
 
-void odp_packet_input_set(odp_packet_t pkt, odp_pktio_t pktio)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	pkt_hdr->input = pktio;
-}
-
 int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);

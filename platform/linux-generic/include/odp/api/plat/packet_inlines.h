@@ -44,6 +44,7 @@
 	#define odp_packet_tailroom __odp_packet_tailroom
 	#define odp_packet_pool __odp_packet_pool
 	#define odp_packet_input __odp_packet_input
+	#define odp_packet_input_set __odp_packet_input_set
 	#define odp_packet_input_index __odp_packet_input_index
 	#define odp_packet_num_segs __odp_packet_num_segs
 	#define odp_packet_user_ptr __odp_packet_user_ptr
@@ -133,6 +134,13 @@ _ODP_INLINE odp_pool_t odp_packet_pool(odp_packet_t pkt)
 _ODP_INLINE odp_pktio_t odp_packet_input(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, odp_pktio_t, input);
+}
+
+_ODP_INLINE void odp_packet_input_set(odp_packet_t pkt, odp_pktio_t pktio)
+{
+	odp_pktio_t *pktio_ptr = _odp_pkt_get_ptr(pkt, odp_pktio_t, input);
+
+	*pktio_ptr = pktio;
 }
 
 _ODP_INLINE int odp_packet_input_index(odp_packet_t pkt)
