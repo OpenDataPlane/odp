@@ -82,6 +82,8 @@
 	#define odp_packet_buf_head __odp_packet_buf_head
 	#define odp_packet_buf_data_offset __odp_packet_buf_data_offset
 	#define odp_packet_buf_data_set __odp_packet_buf_data_set
+	#define odp_packet_buf_from_head __odp_packet_buf_from_head
+
 #else
 	#undef _ODP_INLINE
 	#define _ODP_INLINE
@@ -453,6 +455,17 @@ _ODP_INLINE void odp_packet_buf_data_set(odp_packet_buf_t pkt_buf, uint32_t data
 
 	*seg_len  = data_len;
 	*seg_data = head + data_offset;
+}
+
+_ODP_INLINE odp_packet_buf_t odp_packet_buf_from_head(odp_pool_t pool, void *head)
+{
+	const uint32_t head_offset = _odp_pool_get(pool, uint32_t, ext_head_offset);
+
+	/* Check that pool is external */
+	if (odp_unlikely(!head_offset))
+		return ODP_PACKET_BUF_INVALID;
+
+	return (odp_packet_buf_t)((uintptr_t)head - head_offset);
 }
 
 /** @endcond */
