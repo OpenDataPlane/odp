@@ -2444,15 +2444,6 @@ void *odp_packet_buf_head(odp_packet_buf_t pkt_buf)
 	return (uint8_t *)pkt_hdr + head_offset;
 }
 
-uint32_t odp_packet_buf_size(odp_packet_buf_t pkt_buf)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_buf_to_hdr(pkt_buf);
-	pool_t *pool = _odp_pool_entry(pkt_hdr->event_hdr.pool);
-	uint32_t head_offset = sizeof(odp_packet_hdr_t) + pool->ext_param.pkt.app_header_size;
-
-	return pool->ext_param.pkt.buf_size - head_offset;
-}
-
 uint32_t odp_packet_buf_data_offset(odp_packet_buf_t pkt_buf)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_buf_to_hdr(pkt_buf);
