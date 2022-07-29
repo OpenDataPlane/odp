@@ -27,6 +27,10 @@ typedef struct _odp_pool_inline_offset_t {
 	uint16_t index;
 	/** @internal field offset */
 	uint16_t uarea_size;
+	/** @internal field offset */
+	uint16_t ext_head_offset;
+	/** @internal field offset */
+	uint16_t ext_pkt_buf_size;
 
 } _odp_pool_inline_offset_t;
 

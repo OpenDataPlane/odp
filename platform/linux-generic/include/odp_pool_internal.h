@@ -92,6 +92,7 @@ typedef struct pool_t {
 	uint8_t         *uarea_base_addr;
 	odp_pool_type_t  type_2;
 	odp_pool_ext_param_t ext_param;
+	uint32_t         ext_head_offset;
 	uint32_t         skipped_blocks;
 	uint8_t          mem_from_huge_pages;
 	const struct _odp_pool_mem_src_ops_t *mem_src_ops;

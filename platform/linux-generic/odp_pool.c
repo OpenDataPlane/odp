@@ -75,7 +75,9 @@ static __thread pool_local_t local;
 /* Fill in pool header field offsets for inline functions */
 const _odp_pool_inline_offset_t _odp_pool_inline ODP_ALIGNED_CACHE = {
 	.index             = offsetof(pool_t, pool_idx),
-	.uarea_size        = offsetof(pool_t, param_uarea_size)
+	.uarea_size        = offsetof(pool_t, param_uarea_size),
+	.ext_head_offset   = offsetof(pool_t, ext_head_offset),
+	.ext_pkt_buf_size  = offsetof(pool_t, ext_param.pkt.buf_size)
 };
 
 #include <odp/visibility_end.h>
@@ -1846,6 +1848,7 @@ odp_pool_t odp_pool_ext_create(const char *name, const odp_pool_ext_param_t *par
 	pool->seg_len        = buf_size - head_offset - headroom - pool->tailroom;
 	pool->max_seg_len    = headroom + pool->seg_len + pool->tailroom;
 	pool->max_len        = PKT_MAX_SEGS * pool->seg_len;
+	pool->ext_head_offset = head_offset;
 	pool->base_addr      = (uint8_t *)(uintptr_t)UINT64_MAX;
 	pool->max_addr       = 0;
 
@@ -1916,7 +1919,7 @@ int odp_pool_ext_populate(odp_pool_t pool_hdl, void *buf[], uint32_t buf_size, u
 	ring = &pool->ring->hdr;
 	ring_mask = pool->ring_mask;
 	buf_index = pool->num_populated;
-	head_offset = sizeof(odp_packet_hdr_t) + pool->ext_param.pkt.app_header_size;
+	head_offset = pool->ext_head_offset;
 
 	for (i = 0; i < num; i++) {
 		event_hdr = buf[i];
