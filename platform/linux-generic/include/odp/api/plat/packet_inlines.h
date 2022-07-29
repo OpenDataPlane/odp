@@ -81,6 +81,7 @@
 	#define odp_packet_buf_size __odp_packet_buf_size
 	#define odp_packet_buf_head __odp_packet_buf_head
 	#define odp_packet_buf_data_offset __odp_packet_buf_data_offset
+	#define odp_packet_buf_data_set __odp_packet_buf_data_set
 #else
 	#undef _ODP_INLINE
 	#define _ODP_INLINE
@@ -441,6 +442,17 @@ _ODP_INLINE uint32_t odp_packet_buf_data_offset(odp_packet_buf_t pkt_buf)
 {
 	return (uintptr_t)_odp_pkt_get(pkt_buf, void *, seg_data) -
 			(uintptr_t)odp_packet_buf_head(pkt_buf);
+}
+
+_ODP_INLINE void odp_packet_buf_data_set(odp_packet_buf_t pkt_buf, uint32_t data_offset,
+					 uint32_t data_len)
+{
+	uint8_t *head = (uint8_t *)odp_packet_buf_head(pkt_buf);
+	uint32_t *seg_len = _odp_pkt_get_ptr(pkt_buf, uint32_t, seg_len);
+	void **seg_data = _odp_pkt_get_ptr(pkt_buf, void *, seg_data);
+
+	*seg_len  = data_len;
+	*seg_data = head + data_offset;
 }
 
 /** @endcond */

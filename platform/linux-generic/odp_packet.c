@@ -2425,20 +2425,6 @@ odp_packet_reass_partial_state(odp_packet_t pkt, odp_packet_t frags[],
 	return -ENOTSUP;
 }
 
-static inline odp_packet_hdr_t *packet_buf_to_hdr(odp_packet_buf_t pkt_buf)
-{
-	return (odp_packet_hdr_t *)(uintptr_t)pkt_buf;
-}
-
-void odp_packet_buf_data_set(odp_packet_buf_t pkt_buf, uint32_t data_offset, uint32_t data_len)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_buf_to_hdr(pkt_buf);
-	uint8_t *head = odp_packet_buf_head(pkt_buf);
-
-	pkt_hdr->seg_len  = data_len;
-	pkt_hdr->seg_data = head + data_offset;
-}
-
 odp_packet_buf_t odp_packet_buf_from_head(odp_pool_t pool_hdl, void *head)
 {
 	pool_t *pool = _odp_pool_entry(pool_hdl);
