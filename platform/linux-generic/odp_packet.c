@@ -2425,24 +2425,6 @@ odp_packet_reass_partial_state(odp_packet_t pkt, odp_packet_t frags[],
 	return -ENOTSUP;
 }
 
-odp_packet_buf_t odp_packet_buf_from_head(odp_pool_t pool_hdl, void *head)
-{
-	pool_t *pool = _odp_pool_entry(pool_hdl);
-	uint32_t head_offset = sizeof(odp_packet_hdr_t) + pool->ext_param.pkt.app_header_size;
-
-	if (odp_unlikely(pool->type != ODP_POOL_PACKET)) {
-		ODP_ERR("Not a packet pool\n");
-		return ODP_PACKET_BUF_INVALID;
-	}
-
-	if (odp_unlikely(pool->pool_ext == 0)) {
-		ODP_ERR("Not an external memory pool\n");
-		return ODP_PACKET_BUF_INVALID;
-	}
-
-	return (odp_packet_buf_t)((uintptr_t)head - head_offset);
-}
-
 uint32_t odp_packet_disassemble(odp_packet_t pkt, odp_packet_buf_t pkt_buf[], uint32_t num)
 {
 	uint32_t i;
