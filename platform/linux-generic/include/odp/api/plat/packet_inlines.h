@@ -79,6 +79,7 @@
 	#define odp_packet_shaper_len_adjust __odp_packet_shaper_len_adjust
 	#define odp_packet_buf_data_len __odp_packet_buf_data_len
 	#define odp_packet_buf_size __odp_packet_buf_size
+	#define odp_packet_buf_head __odp_packet_buf_head
 #else
 	#undef _ODP_INLINE
 	#define _ODP_INLINE
@@ -421,6 +422,18 @@ _ODP_INLINE uint32_t odp_packet_buf_size(odp_packet_buf_t pkt_buf)
 
 	return _odp_pool_get(pool, uint32_t, ext_pkt_buf_size) -
 			_odp_pool_get(pool, uint32_t, ext_head_offset);
+}
+
+_ODP_INLINE void *odp_packet_buf_head(odp_packet_buf_t pkt_buf)
+{
+	odp_pool_t pool = _odp_pkt_get(pkt_buf, odp_pool_t, pool);
+	const uint32_t head_offset = _odp_pool_get(pool, uint32_t, ext_head_offset);
+
+	/* Check that pool is external */
+	if (odp_unlikely(!head_offset))
+		return NULL;
+
+	return (uint8_t *)(uintptr_t)pkt_buf + head_offset;
 }
 
 /** @endcond */
