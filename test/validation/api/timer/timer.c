@@ -884,82 +884,82 @@ static void timer_single_shot(odp_queue_type_t queue_type, odp_timer_tick_type_t
 
 static void timer_plain_rel_wait(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, RELATIVE, START, WAIT, 1, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, RELATIVE, START, WAIT, 2, 500 * MSEC);
 }
 
 static void timer_plain_abs_wait(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, START, WAIT, 1, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, START, WAIT, 2, 500 * MSEC);
 }
 
 static void timer_plain_rel_cancel(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, RELATIVE, START, CANCEL, 1, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, RELATIVE, START, CANCEL, 5, 1000 * MSEC);
 }
 
 static void timer_plain_abs_cancel(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, START, CANCEL, 1, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, START, CANCEL, 5, 1000 * MSEC);
 }
 
 static void timer_plain_rel_restart_wait(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, RELATIVE, RESTART, WAIT, 1, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, RELATIVE, RESTART, WAIT, 2, 600 * MSEC);
 }
 
 static void timer_plain_abs_restart_wait(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, RESTART, WAIT, 1, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, RESTART, WAIT, 2, 600 * MSEC);
 }
 
 static void timer_plain_rel_restart_cancel(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, RELATIVE, RESTART, CANCEL, 1, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, RELATIVE, RESTART, CANCEL, 5, 1000 * MSEC);
 }
 
 static void timer_plain_abs_restart_cancel(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, RESTART, CANCEL, 1, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, RESTART, CANCEL, 5, 1000 * MSEC);
 }
 
 static void timer_sched_rel_wait(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, START, WAIT, 1, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, START, WAIT, 2, 500 * MSEC);
 }
 
 static void timer_sched_abs_wait(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, START, WAIT, 1, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, START, WAIT, 2, 500 * MSEC);
 }
 
 static void timer_sched_rel_cancel(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, START, CANCEL, 1, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, START, CANCEL, 5, 1000 * MSEC);
 }
 
 static void timer_sched_abs_cancel(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, START, CANCEL, 1, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, START, CANCEL, 5, 1000 * MSEC);
 }
 
 static void timer_sched_rel_restart_wait(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, RESTART, WAIT, 1, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, RESTART, WAIT, 2, 600 * MSEC);
 }
 
 static void timer_sched_abs_restart_wait(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, RESTART, WAIT, 1, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, RESTART, WAIT, 2, 600 * MSEC);
 }
 
 static void timer_sched_rel_restart_cancel(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, RESTART, CANCEL, 1, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, RESTART, CANCEL, 5, 1000 * MSEC);
 }
 
 static void timer_sched_abs_restart_cancel(void)
 {
-	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, RESTART, CANCEL, 1, 1000 * MSEC);
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, RESTART, CANCEL, 5, 1000 * MSEC);
 }
 
 static void timer_pool_tick_info_run(odp_timer_clk_src_t clk_src)
