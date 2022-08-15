@@ -940,6 +940,11 @@ static void timer_plain_abs_restart_cancel(void)
 	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, RESTART, CANCEL, 5, 1000 * MSEC);
 }
 
+static void timer_plain_abs_wait_3sec(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_PLAIN, ABSOLUTE, START, WAIT, 30, 110 * MSEC);
+}
+
 static void timer_sched_rel_wait(void)
 {
 	timer_single_shot(ODP_QUEUE_TYPE_SCHED, RELATIVE, START, WAIT, 2, 500 * MSEC);
@@ -978,6 +983,11 @@ static void timer_sched_rel_restart_cancel(void)
 static void timer_sched_abs_restart_cancel(void)
 {
 	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, RESTART, CANCEL, 5, 1000 * MSEC);
+}
+
+static void timer_sched_abs_wait_3sec(void)
+{
+	timer_single_shot(ODP_QUEUE_TYPE_SCHED, ABSOLUTE, START, WAIT, 30, 110 * MSEC);
 }
 
 static void timer_pool_tick_info_run(odp_timer_clk_src_t clk_src)
@@ -2548,6 +2558,7 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(timer_plain_abs_restart_wait, check_plain_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_plain_rel_restart_cancel, check_plain_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_plain_abs_restart_cancel, check_plain_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_plain_abs_wait_3sec, check_plain_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_sched_rel_wait, check_sched_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_sched_abs_wait, check_sched_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_sched_rel_cancel, check_sched_queue_support),
@@ -2556,6 +2567,7 @@ odp_testinfo_t timer_suite[] = {
 	ODP_TEST_INFO_CONDITIONAL(timer_sched_abs_restart_wait, check_sched_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_sched_rel_restart_cancel, check_sched_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_sched_abs_restart_cancel, check_sched_queue_support),
+	ODP_TEST_INFO_CONDITIONAL(timer_sched_abs_wait_3sec, check_sched_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_tmo_event_plain,
 				  check_plain_queue_support),
 	ODP_TEST_INFO_CONDITIONAL(timer_test_tmo_event_sched,
