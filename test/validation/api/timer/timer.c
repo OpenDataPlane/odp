@@ -742,6 +742,7 @@ static void timer_single_shot(odp_queue_type_t queue_type, odp_timer_tick_type_t
 			      int restart, int cancel, int rounds, uint64_t tmo_ns)
 {
 	odp_timer_capability_t capa;
+	odp_timer_res_capability_t res_capa;
 	odp_timer_pool_param_t tp_param;
 	odp_queue_param_t queue_param;
 	odp_pool_param_t pool_param;
@@ -753,19 +754,36 @@ static void timer_single_shot(odp_queue_type_t queue_type, odp_timer_tick_type_t
 	odp_timeout_t tmo;
 	odp_event_t ev;
 	odp_time_t t1, t2;
-	uint64_t tick, nsec;
+	uint64_t tick, nsec, res_ns, min_tmo;
 	int ret, i;
-	uint64_t res_ns = tmo_ns / 10;
 
 	memset(&capa, 0, sizeof(capa));
 	ret = odp_timer_capability(ODP_CLOCK_DEFAULT, &capa);
 	CU_ASSERT_FATAL(ret == 0);
 	CU_ASSERT_FATAL(capa.max_tmo.max_tmo > 0);
 
-	if (capa.max_tmo.max_tmo < tmo_ns) {
+	/* Use timeout and resolution values that are within capability limits */
+	if (capa.max_tmo.max_tmo < tmo_ns)
 		tmo_ns = capa.max_tmo.max_tmo;
-		res_ns = capa.max_tmo.res_ns;
-	}
+
+	memset(&res_capa, 0, sizeof(res_capa));
+	res_capa.max_tmo = tmo_ns;
+
+	ret = odp_timer_res_capability(ODP_CLOCK_DEFAULT, &res_capa);
+	CU_ASSERT_FATAL(ret == 0);
+	CU_ASSERT_FATAL(res_capa.res_ns > 0);
+
+	res_ns = tmo_ns / 10;
+
+	if (res_ns < res_capa.res_ns)
+		res_ns = res_capa.res_ns;
+
+	/* Test expects better resolution than 0.5x timeout */
+	CU_ASSERT_FATAL(res_ns < tmo_ns / 2);
+
+	min_tmo = tmo_ns / 4;
+	if (min_tmo < res_capa.min_tmo)
+		min_tmo = res_capa.min_tmo;
 
 	odp_pool_param_init(&pool_param);
 	pool_param.type    = ODP_POOL_TIMEOUT;
@@ -785,7 +803,7 @@ static void timer_single_shot(odp_queue_type_t queue_type, odp_timer_tick_type_t
 	odp_timer_pool_param_init(&tp_param);
 
 	tp_param.res_ns     = res_ns;
-	tp_param.min_tmo    = tmo_ns / 4;
+	tp_param.min_tmo    = min_tmo;
 	tp_param.max_tmo    = tmo_ns;
 	tp_param.num_timers = 1;
 
