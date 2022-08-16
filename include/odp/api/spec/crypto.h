@@ -156,6 +156,9 @@ void odp_crypto_compl_free(odp_crypto_compl_t completion_event);
  *
  * @deprecated Use odp_crypto_op() or odp_crypto_op_enq() instead.
  *
+ * This function may be called only for sessions configured with
+ * the ODP_CRYPTO_OP_TYPE_LEGACY operation type.
+ *
  * Performs the cryptographic operations specified during session creation
  * on the packet.  If the operation is performed synchronously, "posted"
  * will return FALSE and the result of the operation is immediately available.
@@ -275,10 +278,16 @@ int odp_crypto_result(odp_crypto_packet_result_t *result,
  * Crypto packet operation
  *
  * Performs the SYNC cryptographic operations specified during session creation
- * on the packets. Caller should initialize each element of pkt_out either with
- * the desired output packet handle or with ODP_PACKET_INVALID to make ODP
- * allocate a new packet from provided pool. All arrays should be of num_pkt
- * size.
+ * on the packets. All arrays should be of num_pkt size.
+ *
+ * Use of the pkt_out parameter depends on the configured crypto operation
+ * type as described below.
+ *
+ * ODP_CRYPTO_OP_TYPE_LEGACY:
+ *
+ * Caller should initialize each element of pkt_out either with the desired
+ * output packet handle or with ODP_PACKET_INVALID to make ODP allocate a new
+ * packet from provided pool.
  *
  * All packet data and metadata are copied from the input packet to the output
  * packet before the requested crypto operation is performed to the output
@@ -293,6 +302,19 @@ int odp_crypto_result(odp_crypto_packet_result_t *result,
  * output packet for the same crypto operation. In that case the input packet
  * is consumed but returned as the output packet (with possibly different
  * memory layout).
+ *
+ * ODP_CRYPTO_OP_TYPE_BASIC:
+ *
+ * ODP allocates the output packet from the pool from which the input
+ * packet was allocated. The processed input packet is consumed. All
+ * packet data and metadata are copied from the input packet to the output
+ * packet before the requested crypto operation is applied to the output
+ * packet. Memory layout (including packet data pointers, head and tail room,
+ * segmentation) of the output packet may differ from that of the input
+ * packet.
+ *
+ * The value of pktout[n] is ignored as pktout[n] is used purely as an
+ * output parameter that returns the handle of the newly allocated packet.
  *
  * @param         pkt_in   Packets to be processed
  * @param[in,out] pkt_out  Packet handle array for resulting packets
@@ -313,6 +335,9 @@ int odp_crypto_op(const odp_packet_t pkt_in[],
  * Performs the ASYNC cryptographic operations specified during session
  * creation on the packets. Behaves otherwise like odp_crypto_op() but
  * returns output packets through events.
+ *
+ * All arrays should be of num_pkt size, except that pkt_out parameter
+ * is ignored when the crypto operation type is ODP_CRYPTO_OP_TYPE_BASIC.
  *
  * @param pkt_in   Packets to be processed
  * @param pkt_out  Packet handle array for resulting packets
