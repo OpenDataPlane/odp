@@ -53,7 +53,7 @@ typedef enum {
 } odp_crypto_op_mode_t;
 
 /**
- * Crypto API operation type
+ * Crypto API operation
  */
 typedef enum {
 	/** Encrypt and/or compute authentication ICV */
@@ -510,6 +510,28 @@ typedef struct odp_crypto_key {
 } odp_crypto_key_t;
 
 /**
+ * Type of odp_crypto_op()/odp_crypto_op_enq() calls.
+ */
+typedef enum odp_crypto_op_type_t {
+	/**
+	 * Input packet data and metadata are copied in the output packet
+	 * and then processed. Output packet is allocated by the caller
+	 * or by ODP. odp_crypto_op(), odp_crypto_op_enq() and
+	 * odp_crypto_operation() can be used.
+	 *
+	 * This is the default value but will be deprecated in the future.
+	 */
+	ODP_CRYPTO_OP_TYPE_LEGACY,
+
+	/**
+	 * Input packet data and metadata are copied in the output packet
+	 * and then processed. Output packet is allocated by ODP.
+	 * odp_crypto_op() and odp_crypto_op_enq() can be used.
+	 */
+	ODP_CRYPTO_OP_TYPE_BASIC,
+} odp_crypto_op_type_t;
+
+/**
  * Crypto API session creation parameters
  */
 typedef struct odp_crypto_session_param_t {
@@ -518,6 +540,18 @@ typedef struct odp_crypto_session_param_t {
 	 *  The default value is ODP_CRYPTO_OP_ENCODE.
 	 */
 	odp_crypto_op_t op;
+
+	/** Crypto operation type
+	 *
+	 *  This field defines how the crypto operation functions are
+	 *  to be called and what they return. In particular, this field
+	 *  specifies the interpretation of the output packet parameter,
+	 *  how output packets are allocated and what data and metadata
+	 *  they contain.
+	 *
+	 *  The default value is ODP_CRYPTO_OP_TYPE_LEGACY.
+	 */
+	odp_crypto_op_type_t op_type;
 
 	/** Authenticate cipher vs. plain text
 	 *
@@ -632,8 +666,11 @@ typedef struct odp_crypto_session_param_t {
 	/** Output pool
 	 *
 	 *  When the output packet is not specified during the call to
-	 *  crypto operation, the output packet will be allocated
-	 *  from this pool.
+	 *  crypto operation in the legacy operation type, the output
+	 *  packet will be allocated from this pool.
+	 *
+	 *  In ODP_CRYPTO_OP_TYPE_BASIC operation type this must be set to
+	 *  ODP_POOL_INVALID.
 	 */
 	odp_pool_t output_pool;
 
