@@ -275,12 +275,27 @@ int odp_crypto_result(odp_crypto_packet_result_t *result,
  * Crypto packet operation
  *
  * Performs the SYNC cryptographic operations specified during session creation
- * on the packets. Caller should initialize pkt_out either with desired output
- * packet handles or with ODP_PACKET_INVALID to make ODP allocate new packets
- * from provided pool. All arrays should be of num_pkt size.
+ * on the packets. Caller should initialize each element of pkt_out either with
+ * the desired output packet handle or with ODP_PACKET_INVALID to make ODP
+ * allocate a new packet from provided pool. All arrays should be of num_pkt
+ * size.
+ *
+ * All packet data and metadata are copied from the input packet to the output
+ * packet before the requested crypto operation is performed to the output
+ * packet. If an output packet is given to the operation, it must be at least
+ * as long as the input packet and, in encode operations, long enough for the
+ * hash result to be fully inside the packet data. Memory layout of the output
+ * packet may change during the crypto operation. If the output packet is
+ * longer than needed, it is not truncated and the extra data bytes retain
+ * their content.
+ *
+ * It is ok to pass the same packet handle as both the input packet and the
+ * output packet for the same crypto operation. In that case the input packet
+ * is consumed but returned as the output packet (with possibly different
+ * memory layout).
  *
  * @param         pkt_in   Packets to be processed
- * @param[in,out] pkt_out  Packet handle array specifying resulting packets
+ * @param[in,out] pkt_out  Packet handle array for resulting packets
  * @param         param    Operation parameters array
  * @param         num_pkt  Number of packets to be processed
  *
@@ -295,14 +310,12 @@ int odp_crypto_op(const odp_packet_t pkt_in[],
 /**
  * Crypto packet operation
  *
- * Performs the ASYNC cryptographic operations specified during session creation
- * on the packets. Caller should initialize pkt_out either with desired output
- * packet handles or with ODP_PACKET_INVALID to make ODP allocate new packets
- * from provided pool. All arrays should be of num_pkt size. Resulting packets
- * are returned through events.
+ * Performs the ASYNC cryptographic operations specified during session
+ * creation on the packets. Behaves otherwise like odp_crypto_op() but
+ * returns output packets through events.
  *
  * @param pkt_in   Packets to be processed
- * @param pkt_out  Packet handle array specifying resulting packets
+ * @param pkt_out  Packet handle array for resulting packets
  * @param param    Operation parameters array
  * @param num_pkt  Number of packets to be processed
  *
