@@ -120,7 +120,7 @@ static inline int odph_ipv4_csum(odp_packet_t pkt,
 	ip->chksum = 0;
 	memcpy(buf, ip, sizeof(*ip));
 	res = odp_packet_copy_to_mem(pkt, offset + sizeof(*ip),
-				     nleft - sizeof(*ip),
+				     nleft - (uint32_t)sizeof(*ip),
 				     buf + sizeof(*ip) / 2);
 	if (odp_unlikely(res < 0))
 		return res;
