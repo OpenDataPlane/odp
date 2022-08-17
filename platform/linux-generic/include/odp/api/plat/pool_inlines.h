@@ -31,7 +31,7 @@ extern const _odp_pool_inline_offset_t _odp_pool_inline;
 
 _ODP_INLINE int odp_pool_index(odp_pool_t pool)
 {
-	return _odp_pool_get(pool, uint32_t, index);
+	return (int)_odp_pool_get(pool, uint32_t, index);
 }
 
 /** @endcond */
