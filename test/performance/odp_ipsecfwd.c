@@ -158,17 +158,17 @@ static exposed_alg_t exposed_algs[] = {
 static odp_ipsec_sa_t *spi_to_sa_map[2U][MAX_SPIS];
 static odp_atomic_u32_t is_running;
 
-static void terminate(int signal ODP_UNUSED)
-{
-	odp_atomic_store_u32(&is_running, 0U);
-}
-
 static void init_config(prog_config_t *config)
 {
 	memset(config, 0, sizeof(*config));
 	config->compl_q = ODP_QUEUE_INVALID;
 	config->pktio_pool = ODP_POOL_INVALID;
 	config->num_thrs = WORKER_CNT;
+}
+
+static void terminate(int signal ODP_UNUSED)
+{
+	odp_atomic_store_u32(&is_running, 0U);
 }
 
 static void parse_interfaces(prog_config_t *config, const char *optarg)
@@ -657,8 +657,6 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 
 	parse_sas(config);
 	parse_fwd_table(config);
-	free(config->sa_conf_file);
-	free(config->fwd_conf_file);
 
 	return check_options(config);
 }
@@ -674,8 +672,6 @@ static parse_result_t setup_program(int argc, char **argv, prog_config_t *config
 		ODPH_ERR("Error installing signal handler\n");
 		return PRS_NOK;
 	}
-
-	init_config(config);
 
 	return parse_options(argc, argv, config);
 }
@@ -1178,7 +1174,10 @@ static void wait_sas_disabled(uint32_t num_sas)
 			continue;
 		}
 
-		(void)odp_ipsec_status(&status, ev);
+		if (odp_ipsec_status(&status, ev) < 0) {
+			odp_event_free(ev);
+			continue;
+		}
 
 		if (status.id == ODP_IPSEC_STATUS_SA_DISABLE)
 			++num_sas_dis;
@@ -1213,6 +1212,9 @@ static void teardown_test(const prog_config_t *config)
 
 	if (config->compl_q != ODP_QUEUE_INVALID)
 		(void)odp_queue_destroy(config->compl_q);
+
+	free(config->sa_conf_file);
+	free(config->fwd_conf_file);
 }
 
 static void print_stats(const prog_config_t *config)
@@ -1253,6 +1255,8 @@ int main(int argc, char **argv)
 		ODPH_ERR("ODP local init failed, exiting\n");
 		exit(EXIT_FAILURE);
 	}
+
+	init_config(&config);
 
 	if (odp_schedule_config(NULL) < 0) {
 		ODPH_ERR("Error configuring scheduler\n");
