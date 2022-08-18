@@ -16,10 +16,16 @@ run()
 	echo odp_scheduling_run starts requesting $1 worker threads
 	echo ======================================================
 
+	if [ "$(which stdbuf)" != "" ]; then
+		STDBUF="stdbuf -o 0"
+	else
+		STDBUF=
+	fi
+
 	if [ $(nproc) -lt $1 ]; then
 		echo "Not enough CPU cores. Skipping test."
 	else
-		$TEST_DIR/odp_scheduling${EXEEXT} -c $1
+		$STDBUF $TEST_DIR/odp_scheduling${EXEEXT} -c $1
 		RET_VAL=$?
 		if [ $RET_VAL -ne 0 ]; then
 			echo odp_scheduling FAILED

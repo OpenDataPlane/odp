@@ -16,9 +16,15 @@ fi
 
 setup_interfaces
 
+if [ "$(which stdbuf)" != "" ]; then
+	STDBUF="stdbuf -o 0"
+else
+	STDBUF=
+fi
+
 # Ping test with 100 ICMP echo request packets. Timeout 5 sec.
 # Promiscuous and verbose mode enabled.
-./odp_ping${EXEEXT} -v -p -t 5 -n 100 -i $IF0
+$STDBUF ./odp_ping${EXEEXT} -v -p -t 5 -n 100 -i $IF0
 STATUS=$?
 
 if [ ${STATUS} -ne 0 ]; then
