@@ -16,7 +16,13 @@ fi
 
 setup_interfaces
 
-./odp_generator${EXEEXT} -w 1 -n 1 -I $IF0 -m u
+if [ "$(which stdbuf)" != "" ]; then
+	STDBUF="stdbuf -o 0"
+else
+	STDBUF=
+fi
+
+$STDBUF ./odp_generator${EXEEXT} -w 1 -n 1 -I $IF0 -m u
 STATUS=$?
 
 if [ "$STATUS" -ne 0 ]; then

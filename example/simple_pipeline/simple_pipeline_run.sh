@@ -24,7 +24,13 @@ fi
 
 setup_interfaces
 
-./odp_simple_pipeline${EXEEXT} -i $IF0,$IF1 -e -t 1 -a 1
+if [ "$(which stdbuf)" != "" ]; then
+	STDBUF="stdbuf -o 0"
+else
+	STDBUF=
+fi
+
+$STDBUF ./odp_simple_pipeline${EXEEXT} -i $IF0,$IF1 -e -t 1 -a 1
 STATUS=$?
 
 if [ "$STATUS" -ne 0 ]; then

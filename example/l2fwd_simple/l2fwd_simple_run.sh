@@ -16,7 +16,13 @@ fi
 
 setup_interfaces
 
-./odp_l2fwd_simple${EXEEXT} $IF0 $IF1 02:00:00:00:00:01 02:00:00:00:00:02 -t 2
+if [ "$(which stdbuf)" != "" ]; then
+	STDBUF="stdbuf -o 0"
+else
+	STDBUF=
+fi
+
+$STDBUF ./odp_l2fwd_simple${EXEEXT} $IF0 $IF1 02:00:00:00:00:01 02:00:00:00:00:02 -t 2
 STATUS=$?
 
 if [ "$STATUS" -ne 0 ]; then

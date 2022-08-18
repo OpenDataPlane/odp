@@ -16,7 +16,13 @@ fi
 
 setup_interfaces
 
-./odp_packet_dump${EXEEXT} -i $IF0 -n 10 -o 0 -l 64
+if [ "$(which stdbuf)" != "" ]; then
+	STDBUF="stdbuf -o 0"
+else
+	STDBUF=
+fi
+
+$STDBUF ./odp_packet_dump${EXEEXT} -i $IF0 -n 10 -o 0 -l 64
 STATUS=$?
 if [ "$STATUS" -ne 0 ]; then
   echo "Error: status was: $STATUS, expected 0"
