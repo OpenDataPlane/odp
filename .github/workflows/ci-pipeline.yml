@@ -82,6 +82,41 @@ jobs:
         if: ${{ failure() }}
         run: find . -name config.log -exec cat {} \;
 
+  Build_static_u20:
+    runs-on: ubuntu-18.04
+    env:
+      OS: ubuntu_20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cc_ver: [9]
+        conf: ['--disable-shared', '--enable-lto --disable-shared']
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
+               -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_static_${ARCH}.sh
+      - name: Failure log
+        if: ${{ failure() }}
+        run: find . -name config.log -exec cat {} \;
+
+  Build_static_u22:
+    runs-on: ubuntu-18.04
+    env:
+      OS: ubuntu_22.04
+      CONF: "--disable-shared --without-openssl --without-pcap"
+    strategy:
+      fail-fast: false
+      matrix:
+        cc_ver: [10, 11, 12]
+        conf: ['', '--enable-lto']
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
+               -e CONF="${CONF} ${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH} /odp/scripts/ci/build_static_${ARCH}.sh
+      - name: Failure log
+        if: ${{ failure() }}
+        run: find . -name config.log -exec cat {} \;
+
   Build_arm64:
     runs-on: ubuntu-18.04
     env:
