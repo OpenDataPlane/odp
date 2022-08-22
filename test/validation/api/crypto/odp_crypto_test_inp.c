@@ -1342,12 +1342,11 @@ static void test_auth_hashes_in_auth_range(void)
 		odp_auth_alg_t auth = auth_algs[n];
 		int num;
 
-		if (check_alg_support(ODP_CIPHER_ALG_NULL, auth)
-		    == ODP_TEST_INACTIVE)
+		if (check_alg_support(ODP_CIPHER_ALG_NULL, auth) == ODP_TEST_INACTIVE)
 			continue;
 
 		num = odp_crypto_auth_capability(auth, NULL, 0);
-		CU_ASSERT(num > 0);
+		CU_ASSERT_FATAL(num > 0);
 
 		odp_crypto_auth_capability_t capa[num];
 

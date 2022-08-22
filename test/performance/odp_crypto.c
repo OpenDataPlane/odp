@@ -942,6 +942,9 @@ static int check_cipher_params(const odp_crypto_capability_t *crypto_capa,
 		return 1;
 
 	num = odp_crypto_cipher_capability(param->cipher_alg, NULL, 0);
+	if (num <= 0)
+		return 1;
+
 	odp_crypto_cipher_capability_t cipher_capa[num];
 
 	rc = odp_crypto_cipher_capability(param->cipher_alg, cipher_capa, num);
@@ -984,6 +987,9 @@ static int check_auth_params(const odp_crypto_capability_t *crypto_capa,
 		return 1;
 
 	num = odp_crypto_auth_capability(param->auth_alg, NULL, 0);
+	if (num <= 0)
+		return 1;
+
 	odp_crypto_auth_capability_t auth_capa[num];
 
 	rc = odp_crypto_auth_capability(param->auth_alg, auth_capa, num);
