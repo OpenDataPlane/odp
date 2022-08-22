@@ -255,9 +255,9 @@ AC_ARG_ENABLE([lto],
 		# binutils), but object files are larger.
 		ODP_LTO_FLAGS="-flto -ffat-lto-objects"
 	fi])
-AC_SUBST(ODP_LTO_FLAGS)
 
 ODP_CFLAGS="$ODP_CFLAGS $ODP_LTO_FLAGS"
+ODP_LDFLAGS="$ODP_LDFLAGS $ODP_LTO_FLAGS"
 
 ##########################################################################
 # Build examples/tests dynamically
@@ -416,10 +416,6 @@ DX_INIT_DOXYGEN($PACKAGE_NAME,
 ##########################################################################
 # Default include setup
 ##########################################################################
-CFLAGS="$ODP_CFLAGS $CFLAGS"
-CXXFLAGS="$ODP_CXXFLAGS $CXXFLAGS"
-LDFLAGS="$ODP_LTO_FLAGS $LDFLAGS"
-
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([include/Makefile
 		 include/odp/api/spec/version.h
@@ -431,10 +427,10 @@ AC_CONFIG_FILES([helper/Makefile
 ##########################################################################
 # distribute the changed variables among the Makefiles
 
-AC_SUBST([LIBS])
-AC_SUBST([CPPFLAGS])
-AC_SUBST([CFLAGS])
-AC_SUBST([LDFLAGS])
+AC_SUBST([ODP_CFLAGS])
+AC_SUBST([ODP_CXXFLAGS])
+AC_SUBST([ODP_LDFLAGS])
+
 AC_SUBST([EXEEXT])
 
 CC_VERSION=$($CC --version | head -n 1)
@@ -465,10 +461,10 @@ AC_MSG_RESULT([
 	cc:			${CC}
 	cc version:             ${CC_VERSION}
 	cppflags:		${CPPFLAGS}
-	cflags:			${CFLAGS}
-	cxxflags:		${CXXFLAGS}
+	cflags:			${ODP_CFLAGS} ${CFLAGS}
+	cxxflags:		${ODP_CXXFLAGS} ${CXXFLAGS}
 	ld:			${LD}
-	ldflags:		${LDFLAGS}
+	ldflags:		${ODP_LDFLAGS} ${LDFLAGS}
 	libs:			${LIBS}
 	dependency libs:	${PLAT_DEP_LIBS}
 	defs:			${DEFS}

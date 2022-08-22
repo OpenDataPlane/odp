@@ -4,16 +4,14 @@ TESTS_ENVIRONMENT = EXEEXT=${EXEEXT}
 
 LDADD = $(LIB)/libodphelper.la $(LIB)/lib$(ODP_LIB_NAME).la
 
-AM_CFLAGS = \
+AM_CFLAGS += \
 	-I$(srcdir) \
 	-I$(top_srcdir)/example \
 	$(ODP_INCLUDES) \
 	$(HELPER_INCLUDES)
 
 if STATIC_APPS
-AM_LDFLAGS = -L$(LIB) -static
-else
-AM_LDFLAGS =
+AM_LDFLAGS += -L$(LIB) -static
 endif
 
 AM_LDFLAGS += $(PLAT_DEP_LIBS)
