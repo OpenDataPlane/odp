@@ -7,9 +7,9 @@ AM_CPPFLAGS = \
 	$(ODP_INCLUDES) \
 	$(HELPER_INCLUDES) \
 	$(LIBCLI_CPPFLAGS)
-AM_CFLAGS = $(PTHREAD_CFLAGS)
+AM_CFLAGS += $(PTHREAD_CFLAGS)
 
-AM_LDFLAGS = -version-number '$(ODPHELPER_LIBSO_VERSION)'
+AM_LDFLAGS += -version-number '$(ODPHELPER_LIBSO_VERSION)'
 
 helperincludedir = $(includedir)/odp/helper/
 helperinclude_HEADERS = \

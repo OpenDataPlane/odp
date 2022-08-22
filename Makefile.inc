@@ -1,3 +1,7 @@
+AM_CFLAGS = $(ODP_CFLAGS)
+AM_CXXFLAGS = $(ODP_CXXFLAGS)
+AM_LDFLAGS = $(ODP_LDFLAGS)
+
 ODP_INCLUDES = \
 	-I$(top_builddir)/include \
 	-I$(top_srcdir)/include

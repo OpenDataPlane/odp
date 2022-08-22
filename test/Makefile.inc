@@ -19,12 +19,10 @@ AM_CPPFLAGS = \
 	$(HELPER_INCLUDES) \
 	-I$(top_srcdir)/test/common
 
-AM_CFLAGS = $(CUNIT_CFLAGS)
+AM_CFLAGS += $(CUNIT_CFLAGS)
 
 if STATIC_APPS
-AM_LDFLAGS = -L$(LIB)
-else
-AM_LDFLAGS =
+AM_LDFLAGS += -L$(LIB)
 endif
 
 AM_LDFLAGS += $(PLAT_DEP_LIBS)
