@@ -42,12 +42,6 @@ AC_SUBST(ODPH_VERSION_MINOR)
 ODPH_VERSION=odph_version
 AC_SUBST(ODPH_VERSION)
 
-##########################################################################
-# Test if user has set CFLAGS. Automake initializes CFLAGS to "-g -O2"
-# by default.
-##########################################################################
-AS_IF([test "$ac_cv_env_CFLAGS_set" = ""], [user_cflags=0], [user_cflags=1])
-
 # Initialize automake
 AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects foreign nostdinc -Wall -Werror])
 AC_CONFIG_SRCDIR([include/odp/api/spec/init.h])
