@@ -168,6 +168,8 @@ int _odp_ipsec_sad_init_global(void)
 	if (odp_global_ro.disable.ipsec)
 		return 0;
 
+	crypto_capa.max_sessions = 0;
+
 	if (odp_crypto_capability(&crypto_capa)) {
 		ODP_ERR("odp_crypto_capability() failed\n");
 		return -1;

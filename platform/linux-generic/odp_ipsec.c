@@ -73,12 +73,13 @@ static void wait_for_order(ordering_mode_t mode)
  */
 static int set_ipsec_crypto_capa(odp_ipsec_capability_t *capa)
 {
-	int rc;
 	odp_crypto_capability_t crypto_capa;
 
-	rc = odp_crypto_capability(&crypto_capa);
-	if (rc < 0)
-		return rc;
+	crypto_capa.ciphers.all_bits = 0;
+	crypto_capa.auths.all_bits = 0;
+
+	if (odp_crypto_capability(&crypto_capa))
+		return -1;
 
 #define CHECK_CIPHER(field, alg) do {				\
 	if (crypto_capa.ciphers.bit.field &&			\
