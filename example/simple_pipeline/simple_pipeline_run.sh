@@ -9,11 +9,17 @@
 # Exit code expected by automake for skipped tests
 TEST_SKIPPED=77
 
+SRC_DIR=$(dirname $0)
+TEST_EXAMPLE_DIR=platform/$ODP_PLATFORM/test/example
+PLATFORM_TEST_EXAMPLE=${SRC_DIR}/../../${TEST_EXAMPLE_DIR}
+
 if  [ -f ./pktio_env ]; then
   . ./pktio_env
+elif [ -f ${PLATFORM_TEST_EXAMPLE}/simple_pipeline/pktio_env ]; then
+        . ${PLATFORM_TEST_EXAMPLE}/simple_pipeline/pktio_env
 else
   echo "BUG: unable to find pktio_env!"
-  echo "pktio_env has to be in current directory"
+  echo "pktio_env has to be in current or platform example directory"
   exit 1
 fi
 

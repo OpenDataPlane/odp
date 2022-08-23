@@ -1,6 +1,6 @@
 include $(top_srcdir)/Makefile.inc
 
-TESTS_ENVIRONMENT = EXEEXT=${EXEEXT}
+TESTS_ENVIRONMENT = ODP_PLATFORM=${with_platform} EXEEXT=${EXEEXT}
 
 LDADD = $(LIB)/libodphelper.la $(LIB)/lib$(ODP_LIB_NAME).la
 
