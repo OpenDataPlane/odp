@@ -56,7 +56,11 @@ extern "C" {
  * Don't use this function directly, instead see odp_byteorder.h
  */
 #if GCC_VERSION < 40800
-#define __odp_builtin_bswap16(u16) ((((u16)&0x00ff) << 8) | \
+/*
+ * We have to explicitly cast back to uint16_t because clang promotes the
+ * left side of << operator to int.
+ */
+#define __odp_builtin_bswap16(u16) ((uint16_t)(((u16)&0x00ff) << 8) | \
 				    (((u16)&0xff00) >> 8))
 #else
 #define __odp_builtin_bswap16(u16) __builtin_bswap16(u16)
