@@ -111,7 +111,7 @@ static inline int odph_ipv4_csum(odp_packet_t pkt,
 				 odph_ipv4hdr_t *ip,
 				 odp_u16sum_t *chksum)
 {
-	unsigned nleft = ODPH_IPV4HDR_IHL(ip->ver_ihl) * 4;
+	uint32_t nleft = (uint32_t)(ODPH_IPV4HDR_IHL(ip->ver_ihl) * 4);
 	uint16_t buf[nleft / 2];
 	int res;
 
@@ -119,13 +119,13 @@ static inline int odph_ipv4_csum(odp_packet_t pkt,
 		return -1;
 	ip->chksum = 0;
 	memcpy(buf, ip, sizeof(*ip));
-	res = odp_packet_copy_to_mem(pkt, offset + sizeof(*ip),
+	res = odp_packet_copy_to_mem(pkt, offset + (uint32_t)sizeof(*ip),
 				     nleft - (uint32_t)sizeof(*ip),
 				     buf + sizeof(*ip) / 2);
 	if (odp_unlikely(res < 0))
 		return res;
 
-	*chksum = ~odp_chksum_ones_comp16(buf, nleft);
+	*chksum = (odp_u16sum_t)~odp_chksum_ones_comp16(buf, nleft);
 
 	return 0;
 }
