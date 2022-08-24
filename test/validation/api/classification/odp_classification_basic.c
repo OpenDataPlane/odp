@@ -18,7 +18,10 @@ static void test_defaults(uint8_t fill)
 
 	memset(&cos_param, fill, sizeof(cos_param));
 	odp_cls_cos_param_init(&cos_param);
-	CU_ASSERT_EQUAL(cos_param.num_queue, 1);
+
+	CU_ASSERT(cos_param.action == ODP_COS_ACTION_ENQUEUE);
+	CU_ASSERT(cos_param.num_queue == 1);
+	CU_ASSERT_EQUAL(cos_param.stats_enable, false);
 	CU_ASSERT_EQUAL(cos_param.red.enable, false);
 	CU_ASSERT_EQUAL(cos_param.bp.enable, false);
 	CU_ASSERT_EQUAL(cos_param.vector.enable, false);
