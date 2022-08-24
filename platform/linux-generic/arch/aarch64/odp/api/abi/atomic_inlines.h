@@ -162,7 +162,7 @@ static inline void _odp_atomic_add_u32(odp_atomic_u32_t *atom, uint32_t val)
 
 static inline void _odp_atomic_sub_u32(odp_atomic_u32_t *atom, uint32_t val)
 {
-	int32_t neg_val = -val;
+	int32_t neg_val = (int32_t)-val;
 
 	__asm__ volatile("stadd   %w[neg_val], %[atom]"
 			 : [atom] "+Q" (atom->v)
@@ -188,7 +188,7 @@ static inline void _odp_atomic_add_u64(odp_atomic_u64_t *atom, uint64_t val)
 
 static inline void _odp_atomic_sub_u64(odp_atomic_u64_t *atom, uint64_t val)
 {
-	int64_t neg_val = -val;
+	int64_t neg_val = (int64_t)-val;
 
 	__asm__ volatile("stadd   %[neg_val], %[atom]"
 			 : [atom] "+Q" (atom->v)
@@ -215,7 +215,7 @@ static inline void _odp_atomic_add_rel_u32(odp_atomic_u32_t *atom, uint32_t val)
 
 static inline void _odp_atomic_sub_rel_u32(odp_atomic_u32_t *atom, uint32_t val)
 {
-	int32_t neg_val = -val;
+	int32_t neg_val = (int32_t)-val;
 
 	__asm__ volatile("staddl   %w[neg_val], %[atom]"
 			 : [atom] "+Q" (atom->v)
@@ -233,7 +233,7 @@ static inline void _odp_atomic_add_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
 
 static inline void _odp_atomic_sub_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
 {
-	int64_t neg_val = -val;
+	int64_t neg_val = (int64_t)-val;
 
 	__asm__ volatile("staddl   %[neg_val], %[atom]"
 			 : [atom] "+Q" (atom->v)
