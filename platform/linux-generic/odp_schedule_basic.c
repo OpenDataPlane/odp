@@ -37,6 +37,7 @@
 #include <odp_global_data.h>
 #include <odp_event_internal.h>
 #include <odp_macros_internal.h>
+#include <odp_print_internal.h>
 
 #include <string.h>
 
@@ -2087,12 +2088,14 @@ static int schedule_capability(odp_schedule_capability_t *capa)
 
 static void schedule_print(void)
 {
-	int spr, prio, grp;
+	int spr, prio, grp, pos;
 	uint32_t num_queues, num_active;
 	ring_u32_t *ring;
 	odp_schedule_capability_t capa;
 	int num_spread = sched->config.num_spread;
 	const int col_width = 24;
+	const int size = 512;
+	char str[size];
 
 	(void)schedule_capability(&capa);
 
@@ -2105,42 +2108,42 @@ static void schedule_print(void)
 	ODP_PRINT("  prefer ratio:      %u\n", sched->config.prefer_ratio);
 	ODP_PRINT("\n");
 
-	ODP_PRINT("  Number of active event queues:\n");
-	ODP_PRINT("              spread\n");
-	ODP_PRINT("            ");
+	pos  = 0;
+	pos += _odp_snprint(&str[pos], size - pos, "  Number of active event queues:\n");
+	pos += _odp_snprint(&str[pos], size - pos, "              spread\n");
+	pos += _odp_snprint(&str[pos], size - pos, "            ");
 
 	for (spr = 0; spr < num_spread; spr++)
-		ODP_PRINT(" %7i", spr);
+		pos += _odp_snprint(&str[pos], size - pos, " %7i", spr);
 
-	ODP_PRINT("\n");
+	ODP_PRINT("%s\n", str);
 
 	for (prio = 0; prio < NUM_PRIO; prio++) {
-		ODP_PRINT("  prio %i", prio);
-
 		for (grp = 0; grp < NUM_SCHED_GRPS; grp++)
 			if (sched->prio_q_mask[grp][prio])
 				break;
 
-		if (grp == NUM_SCHED_GRPS) {
-			ODP_PRINT(":-\n");
+		if (grp == NUM_SCHED_GRPS)
 			continue;
-		}
 
-		ODP_PRINT("\n");
+		ODP_PRINT("  prio: %i\n", prio);
 
 		for (grp = 0; grp < NUM_SCHED_GRPS; grp++) {
 			if (sched->sched_grp[grp].allocated == 0)
 				continue;
 
-			ODP_PRINT("    group %i:", grp);
+			pos  = 0;
+			pos += _odp_snprint(&str[pos], size - pos, "    group %i:", grp);
 
 			for (spr = 0; spr < num_spread; spr++) {
 				num_queues = sched->prio_q_count[grp][prio][spr];
 				ring = &sched->prio_q[grp][prio][spr].ring;
 				num_active = ring_u32_len(ring);
-				ODP_PRINT(" %3u/%3u", num_active, num_queues);
+				pos += _odp_snprint(&str[pos], size - pos, " %3u/%3u",
+						    num_active, num_queues);
 			}
-			ODP_PRINT("\n");
+
+			ODP_PRINT("%s\n", str);
 		}
 	}
 
@@ -2151,12 +2154,15 @@ static void schedule_print(void)
 		if (sched->sched_grp[grp].allocated == 0)
 			continue;
 
-		ODP_PRINT("    group %i: %-*s", grp, col_width, sched->sched_grp[grp].name);
+		pos  = 0;
+		pos += _odp_snprint(&str[pos], size - pos, "    group %i: %-*s", grp, col_width,
+				    sched->sched_grp[grp].name);
 
 		for (spr = 0; spr < num_spread; spr++)
-			ODP_PRINT(" %u", sched->sched_grp[grp].spread_thrs[spr]);
+			pos += _odp_snprint(&str[pos], size - pos, " %u",
+					    sched->sched_grp[grp].spread_thrs[spr]);
 
-		ODP_PRINT("\n");
+		ODP_PRINT("%s\n", str);
 	}
 
 	ODP_PRINT("\n");
