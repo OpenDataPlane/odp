@@ -614,6 +614,7 @@ static int recv_pkts_inline(const ipsec_test_part *part,
 				num_pkts = 1;
 				break;
 			case ODP_PACKET_REASS_INCOMPLETE:
+				reass_state.num_frags = 0;
 				CU_ASSERT(0 ==
 					  odp_packet_reass_partial_state(pkt, frags, &reass_state));
 				num_pkts = reass_state.num_frags;
