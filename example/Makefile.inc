@@ -11,7 +11,7 @@ AM_CFLAGS += \
 	$(HELPER_INCLUDES)
 
 if STATIC_APPS
-AM_LDFLAGS += -L$(LIB) -static
+AM_LDFLAGS += -static
 endif
 
 AM_LDFLAGS += $(PLAT_DEP_LIBS)
