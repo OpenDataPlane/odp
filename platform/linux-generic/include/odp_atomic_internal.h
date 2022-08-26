@@ -159,31 +159,6 @@ static inline void _odp_atomic_u128_xchg_mm(_odp_atomic_u128_t *ptr,
 {
 	__atomic_exchange(&ptr->v, val, old, mm);
 }
-
-/**
- * Atomic compare and exchange (swap) of 16-byte atomic variable
- * "Strong" semantics, will not fail spuriously.
- *
- * @param ptr   Pointer to a 16-byte atomic variable
- * @param exp   Pointer to expected value (updated on failure)
- * @param val   Pointer to new value to write
- * @param succ  Memory model associated with a successful compare-and-swap
- * operation
- * @param fail  Memory model associated with a failed compare-and-swap
- * operation
- *
- * @retval 1 exchange successul
- * @retval 0 exchange failed and '*exp' updated with current value
- */
-static inline int _odp_atomic_u128_cmp_xchg_mm(_odp_atomic_u128_t *ptr,
-					       _odp_u128_t *exp,
-					       _odp_u128_t *val,
-					       _odp_memmodel_t succ,
-					       _odp_memmodel_t fail)
-{
-	return __atomic_compare_exchange(&ptr->v, exp, val,
-			false/*strong*/, succ, fail);
-}
 #endif
 
 /**
