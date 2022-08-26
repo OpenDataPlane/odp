@@ -60,12 +60,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cc: [gcc-10, gcc-11, gcc-12]
+        cc_ver: [10, 11, 12]
         conf: ['', '--enable-lto']
     steps:
       - uses: AutoModality/action-clean@v1.1.0
       - uses: actions/checkout@v2
-      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="${{matrix.cc}}"
+      - run: sudo docker run -i -v `pwd`:/odp --privileged --shm-size 8g -e CC="gcc-${{matrix.cc_ver}}" -e CXX="g++-${{matrix.cc_ver}}"
                -e CONF="${{matrix.conf}}" $CONTAINER_NAMESPACE/odp-ci-${OS}-${ARCH}-native /odp/scripts/ci/build_${ARCH}.sh
       - name: Failure log
         if: ${{ failure() }}
