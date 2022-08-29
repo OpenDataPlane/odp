@@ -29,12 +29,12 @@
 #define MAX_SAS 64U
 #define MAX_FWDS 64U
 #define MAX_SPIS (UINT16_MAX + 1U)
-#define MAX_WORKERS (ODP_THREAD_COUNT_MAX - 1U)
-#define MAX_QUEUES 16U
+#define MAX_WORKERS (ODP_THREAD_COUNT_MAX - 1)
+#define MAX_QUEUES 64U
 #define PKT_SIZE 1024U
 #define PKT_CNT 32768U
-#define WORKER_CNT 1U
 #define NUM_EVS 32U
+#define ORDERED 0U
 
 #define ALG_ENTRY(_alg_name, _type) \
 	{ \
@@ -66,7 +66,7 @@ typedef struct pktio_s pktio_t;
 typedef struct pktio_s {
 	union {
 		odp_pktout_queue_t out_dir_qs[MAX_QUEUES];
-		odp_queue_t out_ev_q;
+		odp_queue_t out_ev_qs[MAX_QUEUES];
 	};
 
 	odph_ethaddr_t src_mac;
@@ -114,6 +114,9 @@ typedef struct prog_config_s {
 	odph_table_t fwd_tbl;
 	odp_barrier_t init_barrier;
 	odp_barrier_t term_barrier;
+	uint32_t num_input_qs;
+	uint32_t num_sa_qs;
+	uint32_t num_output_qs;
 	uint32_t num_pkts;
 	uint32_t pkt_len;
 	uint32_t num_ifs;
@@ -163,7 +166,10 @@ static void init_config(prog_config_t *config)
 	memset(config, 0, sizeof(*config));
 	config->compl_q = ODP_QUEUE_INVALID;
 	config->pktio_pool = ODP_POOL_INVALID;
-	config->num_thrs = WORKER_CNT;
+	config->num_input_qs = 1;
+	config->num_sa_qs = 1;
+	config->num_output_qs = 1;
+	config->num_thrs = 1;
 }
 
 static void terminate(int signal ODP_UNUSED)
@@ -287,10 +293,10 @@ static void print_usage(void)
 	       "                      %u by default.\n"
 	       "  -l, --pkt_len       Maximum size of packet buffers in packet I/O pool. %u by\n"
 	       "                      default.\n"
-	       "  -c, --count         Worker thread count, %u by default.\n"
-	       "  -m, --mode          Packet output mode.\n"
-	       "                          0: queued output (default)\n"
-	       "                          1: direct output\n"
+	       "  -c, --count         Worker thread count, 1 by default.\n"
+	       "  -m, --mode          Queueing mode.\n"
+	       "                          0: ordered (default)\n"
+	       "                          1: parallel\n"
 	       "  -s, --sa            SA configuration file. Individual SA configuration is\n"
 	       "                      expected to be within a single line, values whitespace\n"
 	       "                      separated:\n"
@@ -305,7 +311,7 @@ static void print_usage(void)
 	       "\n"
 	       "                      Supported cipher and authentication algorithms:\n",
 	       PROG_NAME, PROG_NAME, MIN(pool_capa.pkt.max_num, PKT_CNT),
-	       MIN(pool_capa.pkt.max_len, PKT_SIZE), WORKER_CNT);
+	       MIN(pool_capa.pkt.max_len, PKT_SIZE));
 	print_supported_algos(&ipsec_capa);
 	printf("  -f, --fwd_table     Forwarding configuration file. Individual forwarding\n"
 	       "                      configuration is expected to be within a single line,\n"
@@ -317,6 +323,9 @@ static void print_usage(void)
 	       "                      and DstMac define the outgoing interface and destination\n"
 	       "                      MAC address for a match. NetIf should be one of the\n"
 	       "                      interfaces passed with \"--interfaces\" option\n"
+	       "  -I, --num_input_qs  Input queue count. 1 by default.\n"
+	       "  -S, --num_sa_qs     SA queue count. 1 by default.\n"
+	       "  -O, --num_output_qs Output queue count. 1 by default.\n"
 	       "  -h, --help          This help.\n"
 	       "\n");
 }
@@ -353,20 +362,50 @@ static odp_bool_t setup_ipsec(prog_config_t *config)
 	return true;
 }
 
+static odp_bool_t create_sa_dest_queues(odp_ipsec_capability_t *ipsec_capa,
+					prog_config_t *config)
+{
+	odp_queue_param_t q_param;
+
+	if (config->num_sa_qs == 0U || config->num_sa_qs > ipsec_capa->max_queues) {
+		ODPH_ERR("Invalid number of SA queues: %u (min: 1, max: %u)\n", config->num_sa_qs,
+			 ipsec_capa->max_queues);
+		config->num_sa_qs = 0U;
+		return false;
+	}
+
+	for (uint32_t i = 0U; i < config->num_sa_qs; ++i) {
+		odp_queue_param_init(&q_param);
+		q_param.type = ODP_QUEUE_TYPE_SCHED;
+		q_param.sched.prio = odp_schedule_max_prio();
+		q_param.sched.sync = config->mode == ORDERED ? ODP_SCHED_SYNC_ORDERED :
+							       ODP_SCHED_SYNC_PARALLEL;
+		q_param.sched.group = ODP_SCHED_GROUP_ALL;
+		config->ev_qs[i] = odp_queue_create(PROG_NAME, &q_param);
+
+		if (config->ev_qs[i] == ODP_QUEUE_INVALID) {
+			ODPH_ERR("Error creating SA destination queue (created count: %u)\n", i);
+			config->num_sa_qs = i;
+			return false;
+		}
+	}
+
+	return true;
+}
+
 static void create_sa_entry(uint32_t dir, uint32_t spi, const char *src_ip_str,
 			    const char *dst_ip_str, int cipher_idx, uint8_t *cipher_key,
 			    uint8_t *cipher_key_extra, int auth_idx, uint8_t *auth_key,
 			    uint8_t *auth_key_extra, uint32_t icv_len, uint32_t ar_ws,
-			    prog_config_t *config)
+			    uint32_t max_num_sa, prog_config_t *config)
 {
 	uint32_t src_ip, dst_ip;
-	odp_queue_param_t q_param;
 	odp_ipsec_sa_param_t sa_param;
 	odp_ipsec_crypto_param_t crypto_param;
 	odp_ipsec_sa_t sa;
 
-	if (config->num_sas == MAX_SAS) {
-		ODPH_ERR("Maximum number of SAs parsed (%u), ignoring rest\n", MAX_SAS);
+	if (config->num_sas == max_num_sa) {
+		ODPH_ERR("Maximum number of SAs parsed (%u), ignoring rest\n", max_num_sa);
 		return;
 	}
 
@@ -386,25 +425,13 @@ static void create_sa_entry(uint32_t dir, uint32_t spi, const char *src_ip_str,
 		return;
 	}
 
-	odp_queue_param_init(&q_param);
-	q_param.type = ODP_QUEUE_TYPE_SCHED;
-	q_param.sched.prio = odp_schedule_max_prio();
-	q_param.sched.sync = config->mode == 0U ? ODP_SCHED_SYNC_ORDERED : ODP_SCHED_SYNC_PARALLEL;
-	q_param.sched.group = ODP_SCHED_GROUP_ALL;
-	config->ev_qs[config->num_sas] = odp_queue_create(PROG_NAME, &q_param);
-
-	if (config->ev_qs[config->num_sas] == ODP_QUEUE_INVALID) {
-		ODPH_ERR("Error creating SA destination queue for SA %u\n", spi);
-		return;
-	}
-
 	src_ip = odp_cpu_to_be_32(src_ip);
 	dst_ip = odp_cpu_to_be_32(dst_ip);
 	odp_ipsec_sa_param_init(&sa_param);
 	sa_param.proto = ODP_IPSEC_ESP;
 	sa_param.mode = ODP_IPSEC_MODE_TUNNEL;
 	sa_param.spi = spi;
-	sa_param.dest_queue = config->ev_qs[config->num_sas];
+	sa_param.dest_queue = config->ev_qs[config->num_sas % config->num_sa_qs];
 
 	if (dir > 0U) {
 		sa_param.dir = ODP_IPSEC_DIR_OUTBOUND;
@@ -431,8 +458,7 @@ static void create_sa_entry(uint32_t dir, uint32_t spi, const char *src_ip_str,
 	sa = odp_ipsec_sa_create(&sa_param);
 
 	if (sa == ODP_IPSEC_SA_INVALID) {
-		(void)odp_queue_destroy(config->ev_qs[config->num_sas]);
-		ODPH_ERR("Error creating SA handle\n");
+		ODPH_ERR("Error creating SA handle for SA %u\n", spi);
 		return;
 	}
 
@@ -446,10 +472,13 @@ static void parse_sas(prog_config_t *config)
 	odp_ipsec_capability_t ipsec_capa;
 	FILE *file;
 	int cipher_idx, auth_idx;
-	uint32_t dir, spi, icv_len;
+	uint32_t ar_ws, max_num_sa, dir, spi, icv_len;
 	char src_ip[16U] = { 0 }, dst_ip[16U] = { 0 };
 	uint8_t cipher_key[65U] = { 0U }, cipher_key_extra[5U] = { 0U }, auth_key[65U] = { 0U },
 	auth_key_extra[5U] = { 0U };
+
+	if (config->sa_conf_file == NULL)
+		return;
 
 	if (odp_ipsec_capability(&ipsec_capa) < 0) {
 		ODPH_ERR("Error querying IPsec capabilities\n");
@@ -459,10 +488,8 @@ static void parse_sas(prog_config_t *config)
 	if (!setup_ipsec(config))
 		return;
 
-	if (config->sa_conf_file == NULL) {
-		ODPH_ERR("Invalid SA configuration file\n");
+	if (!create_sa_dest_queues(&ipsec_capa, config))
 		return;
-	}
 
 	file = fopen(config->sa_conf_file, "r");
 
@@ -471,12 +498,15 @@ static void parse_sas(prog_config_t *config)
 		return;
 	}
 
+	ar_ws = MIN(32U, ipsec_capa.max_antireplay_ws);
+	max_num_sa = MIN(MAX_SAS, ipsec_capa.max_num_sa);
+
 	while (fscanf(file, "%u%u%s%s%d%s%s%d%s%s%u", &dir, &spi, src_ip, dst_ip,
 		      &cipher_idx, cipher_key, cipher_key_extra, &auth_idx, auth_key,
 		      auth_key_extra, &icv_len) == 11)
 		create_sa_entry(!!dir, spi, src_ip, dst_ip, cipher_idx, cipher_key,
 				cipher_key_extra, auth_idx, auth_key, auth_key_extra, icv_len,
-				MIN(32U, ipsec_capa.max_antireplay_ws), config);
+				ar_ws, max_num_sa, config);
 
 	(void)fclose(file);
 }
@@ -516,7 +546,7 @@ static void create_fwd_table_entry(const char *dst_ip_str, const char *iface,
 	entry->pktio = get_pktio(iface, config);
 
 	if (entry->pktio == NULL) {
-		ODPH_ERR("Invalid interface (%s) in forwarding entry\n", iface);
+		ODPH_ERR("Invalid interface in forwarding entry: %s\n", iface);
 		return;
 	}
 
@@ -561,13 +591,18 @@ static parse_result_t check_options(prog_config_t *config)
 	}
 
 	if (config->num_ifs == 0U) {
-		ODPH_ERR("Invalid number of interfaces: %u, (min: 1, max: %u)\n", config->num_ifs,
+		ODPH_ERR("Invalid number of interfaces: %u (min: 1, max: %u)\n", config->num_ifs,
 			 MAX_IFS);
 		return PRS_NOK;
 	}
 
+	if (config->sa_conf_file != NULL && config->num_sas == 0U) {
+		ODPH_ERR("Invalid SA configuration\n");
+		return PRS_NOK;
+	}
+
 	if (config->num_fwds == 0U) {
-		ODPH_ERR("Invalid number of forwarding entries: %u, (min: 1, max: %u)\n",
+		ODPH_ERR("Invalid number of forwarding entries: %u (min: 1, max: %u)\n",
 			 config->num_fwds, MAX_FWDS);
 		return PRS_NOK;
 	}
@@ -590,9 +625,9 @@ static parse_result_t check_options(prog_config_t *config)
 	if (config->pkt_len == 0U)
 		config->pkt_len = MIN(pool_capa.pkt.max_len, PKT_SIZE);
 
-	if (config->num_thrs <= 0 || config->num_thrs > (int)MAX_QUEUES) {
-		ODPH_ERR("Invalid CPU count: %d, (min: 1, max: %u)\n", config->num_thrs,
-			 MAX_QUEUES);
+	if (config->num_thrs <= 0 || config->num_thrs > MAX_WORKERS) {
+		ODPH_ERR("Invalid CPU count: %d (min: 1, max: %d)\n", config->num_thrs,
+			 MAX_WORKERS);
 		return PRS_NOK;
 	}
 
@@ -611,11 +646,14 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 		{ "mode", required_argument, NULL, 'm' },
 		{ "sa", required_argument, NULL, 's'},
 		{ "fwd_table", required_argument, NULL, 'f' },
+		{ "num_input_qs", required_argument, NULL, 'I' },
+		{ "num_sa_qs", required_argument, NULL, 'S' },
+		{ "num_output_qs", required_argument, NULL, 'O' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 }
 	};
 
-	static const char *shortopts = "i:n:l:c:m:s:f:h";
+	static const char *shortopts = "i:n:l:c:m:s:f:I:S:O:h";
 
 	while (true) {
 		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
@@ -644,6 +682,15 @@ static parse_result_t parse_options(int argc, char **argv, prog_config_t *config
 			break;
 		case 'f':
 			config->fwd_conf_file = strdup(optarg);
+			break;
+		case 'I':
+			config->num_input_qs = atoi(optarg);
+			break;
+		case 'S':
+			config->num_sa_qs = atoi(optarg);
+			break;
+		case 'O':
+			config->num_output_qs = atoi(optarg);
 			break;
 		case 'h':
 			print_usage();
@@ -681,9 +728,9 @@ static odp_bool_t send(const pktio_t *pktio, uint8_t index, odp_packet_t pkt)
 	return odp_pktout_send(pktio->out_dir_qs[index], &pkt, 1) == 1;
 }
 
-static odp_bool_t enqueue(const pktio_t *pktio, uint8_t index ODP_UNUSED, odp_packet_t pkt)
+static odp_bool_t enqueue(const pktio_t *pktio, uint8_t index, odp_packet_t pkt)
 {
-	return odp_queue_enq(pktio->out_ev_q, odp_packet_to_event(pkt)) == 0;
+	return odp_queue_enq(pktio->out_ev_qs[index], odp_packet_to_event(pkt)) == 0;
 }
 
 static odp_bool_t setup_pktios(prog_config_t *config)
@@ -695,7 +742,7 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 	odp_pktio_capability_t capa;
 	odp_pktout_queue_param_t pktout_param;
 	odp_pktio_config_t pktio_config;
-	uint32_t num_tx_qs;
+	uint32_t max_output_qs;
 
 	odp_pool_param_init(&pool_param);
 	pool_param.pkt.seg_len = config->pkt_len;
@@ -713,28 +760,12 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 		pktio = &config->pktios[i];
 		odp_pktio_param_init(&pktio_param);
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
-		pktio_param.out_mode = config->mode == 0U ? ODP_PKTOUT_MODE_QUEUE :
-							    ODP_PKTOUT_MODE_DIRECT;
+		pktio_param.out_mode = config->mode == ORDERED ? ODP_PKTOUT_MODE_QUEUE :
+								 ODP_PKTOUT_MODE_DIRECT;
 		pktio->handle = odp_pktio_open(pktio->name, config->pktio_pool, &pktio_param);
 
 		if (pktio->handle == ODP_PKTIO_INVALID) {
 			ODPH_ERR("Error opening packet I/O (%s)\n", pktio->name);
-			return false;
-		}
-
-		odp_pktin_queue_param_init(&pktin_param);
-
-		if (config->mode == 0U)
-			pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ORDERED;
-
-		if (config->num_thrs > 1) {
-			pktin_param.hash_enable = true;
-			pktin_param.hash_proto.proto.ipv4_udp = 1U;
-			pktin_param.num_queues = config->num_thrs;
-		}
-
-		if (odp_pktin_queue_config(pktio->handle, &pktin_param) < 0) {
-			ODPH_ERR("Error configuring packet I/O input queues (%s)\n", pktio->name);
 			return false;
 		}
 
@@ -743,27 +774,53 @@ static odp_bool_t setup_pktios(prog_config_t *config)
 			return false;
 		}
 
-		odp_pktout_queue_param_init(&pktout_param);
-
-		if (config->mode == 0U) {
-			pktio->send_fn = enqueue;
-			pktio->num_tx_qs = 1U;
-		} else {
-			num_tx_qs = MIN((uint32_t)config->num_thrs, MIN(MAX_QUEUES,
-									capa.max_output_queues));
-			pktout_param.num_queues = num_tx_qs;
-			pktout_param.op_mode = ODP_PKTIO_OP_MT_UNSAFE;
-			pktio->send_fn = send;
-			pktio->num_tx_qs = num_tx_qs;
+		if (config->num_input_qs == 0U || config->num_input_qs > capa.max_input_queues) {
+			ODPH_ERR("Invalid number of input queues for packet I/O: %u (min: 1, max: "
+				 "%u) (%s)\n", config->num_input_qs, capa.max_input_queues,
+				 pktio->name);
+			return false;
 		}
+
+		max_output_qs = MIN(MAX_QUEUES, capa.max_output_queues);
+
+		if (config->num_output_qs == 0U || config->num_output_qs > max_output_qs) {
+			ODPH_ERR("Invalid number of output queues for packet I/O: %u (min: 1, "
+				 "max: %u) (%s)\n", config->num_output_qs, max_output_qs,
+				 pktio->name);
+			return false;
+		}
+
+		odp_pktin_queue_param_init(&pktin_param);
+
+		if (config->mode == ORDERED)
+			pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ORDERED;
+
+		if (config->num_input_qs > 1U) {
+			pktin_param.hash_enable = true;
+			pktin_param.hash_proto.proto.ipv4_udp = 1U;
+			pktin_param.num_queues = config->num_input_qs;
+		}
+
+		if (odp_pktin_queue_config(pktio->handle, &pktin_param) < 0) {
+			ODPH_ERR("Error configuring packet I/O input queues (%s)\n", pktio->name);
+			return false;
+		}
+
+		pktio->send_fn = config->mode == ORDERED ? enqueue : send;
+		pktio->num_tx_qs = config->num_output_qs;
+		odp_pktout_queue_param_init(&pktout_param);
+		pktout_param.num_queues = pktio->num_tx_qs;
+		pktout_param.op_mode = config->num_thrs > (int)pktio->num_tx_qs ?
+			ODP_PKTIO_OP_MT : ODP_PKTIO_OP_MT_UNSAFE;
 
 		if (odp_pktout_queue_config(pktio->handle, &pktout_param) < 0) {
 			ODPH_ERR("Error configuring packet I/O output queues (%s)\n", pktio->name);
 			return false;
 		}
 
-		if (config->mode == 0U) {
-			if (odp_pktout_event_queue(pktio->handle, &pktio->out_ev_q, 1) != 1) {
+		if (config->mode == ORDERED) {
+			if (odp_pktout_event_queue(pktio->handle, pktio->out_ev_qs,
+						   pktio->num_tx_qs) != (int)pktio->num_tx_qs) {
 				ODPH_ERR("Error querying packet I/O output event queue (%s)\n",
 					 pktio->name);
 				return false;
@@ -880,20 +937,21 @@ static inline odp_bool_t process_ipsec_out(odp_packet_t pkt, const odp_ipsec_sa_
 	return odp_ipsec_out_enq(&pkt, 1, &param) == 1;
 }
 
-static inline const pktio_t *lookup_and_apply(odp_packet_t pkt, odph_table_t fwd_tbl)
+static inline const pktio_t *lookup_and_apply(odp_packet_t pkt, odph_table_t fwd_tbl,
+					      uint8_t *hash)
 {
 	const uint32_t l3_off = odp_packet_l3_offset(pkt);
 	odph_ipv4hdr_t ipv4;
-	uint32_t ip;
+	uint32_t dst_ip, src_ip;
 	fwd_entry_t *fwd;
 	odph_ethhdr_t eth;
 
 	if (odp_packet_copy_to_mem(pkt, l3_off, ODPH_IPV4HDR_LEN, &ipv4) < 0)
 		return NULL;
 
-	ip = odp_be_to_cpu_32(ipv4.dst_addr);
+	dst_ip = odp_be_to_cpu_32(ipv4.dst_addr);
 
-	if (odph_iplookup_table_get_value(fwd_tbl, &ip, &fwd, 0U) < 0 || fwd == NULL)
+	if (odph_iplookup_table_get_value(fwd_tbl, &dst_ip, &fwd, 0U) < 0 || fwd == NULL)
 		return NULL;
 
 	if (l3_off != ODPH_ETHHDR_LEN) {
@@ -913,20 +971,23 @@ static inline const pktio_t *lookup_and_apply(odp_packet_t pkt, odph_table_t fwd
 	if (odp_packet_copy_from_mem(pkt, 0U, ODPH_ETHHDR_LEN, &eth) < 0)
 		return NULL;
 
+	src_ip = odp_be_to_cpu_32(ipv4.src_addr);
+	*hash = src_ip ^ dst_ip;
+
 	return fwd->pktio;
 }
 
-static inline odp_bool_t forward_packet(odp_packet_t pkt, odph_table_t fwd_tbl, stats_t *stats,
-					int worker_id)
+static inline odp_bool_t forward_packet(odp_packet_t pkt, odph_table_t fwd_tbl, stats_t *stats)
 {
-	const pktio_t *pktio = lookup_and_apply(pkt, fwd_tbl);
+	uint8_t hash = 0U;
+	const pktio_t *pktio = lookup_and_apply(pkt, fwd_tbl, &hash);
 
 	if (pktio == NULL) {
 		++stats->discards;
 		return false;
 	}
 
-	if (odp_unlikely(!pktio->send_fn(pktio, worker_id % pktio->num_tx_qs, pkt))) {
+	if (odp_unlikely(!pktio->send_fn(pktio, hash % pktio->num_tx_qs, pkt))) {
 		++stats->discards;
 		return false;
 	}
@@ -934,8 +995,7 @@ static inline odp_bool_t forward_packet(odp_packet_t pkt, odph_table_t fwd_tbl, 
 	return true;
 }
 
-static inline void process_packet_out(odp_packet_t pkt, odph_table_t fwd_tbl, stats_t *stats,
-				      int worker_id)
+static inline void process_packet_out(odp_packet_t pkt, odph_table_t fwd_tbl, stats_t *stats)
 {
 	odp_ipsec_sa_t *sa;
 
@@ -947,7 +1007,7 @@ static inline void process_packet_out(odp_packet_t pkt, odph_table_t fwd_tbl, st
 			goto err;
 		}
 	} else {
-		if (!forward_packet(pkt, fwd_tbl, stats, worker_id))
+		if (!forward_packet(pkt, fwd_tbl, stats))
 			goto err;
 
 		++stats->fwd_pkts;
@@ -959,8 +1019,7 @@ err:
 	odp_packet_free(pkt);
 }
 
-static inline void process_packet_in(odp_packet_t pkt, odph_table_t fwd_tbl, stats_t *stats,
-				     int worker_id)
+static inline void process_packet_in(odp_packet_t pkt, odph_table_t fwd_tbl, stats_t *stats)
 {
 	odp_ipsec_sa_t *sa;
 
@@ -977,7 +1036,7 @@ static inline void process_packet_in(odp_packet_t pkt, odph_table_t fwd_tbl, sta
 			goto err;
 		}
 	} else {
-		process_packet_out(pkt, fwd_tbl, stats, worker_id);
+		process_packet_out(pkt, fwd_tbl, stats);
 	}
 
 	return;
@@ -991,8 +1050,7 @@ static inline odp_bool_t is_ipsec_in(odp_packet_t pkt)
 	return odp_packet_user_ptr(pkt) == NULL;
 }
 
-static inline void complete_ipsec_op(odp_packet_t pkt, odph_table_t fwd_tbl, stats_t *stats,
-				     int worker_id)
+static inline void complete_ipsec_op(odp_packet_t pkt, odph_table_t fwd_tbl, stats_t *stats)
 {
 	odp_ipsec_packet_result_t result;
 	const odp_bool_t is_in = is_ipsec_in(pkt);
@@ -1009,11 +1067,11 @@ static inline void complete_ipsec_op(odp_packet_t pkt, odph_table_t fwd_tbl, sta
 
 	if (is_in) {
 		++stats->ipsec_in_pkts;
-		process_packet_out(pkt, fwd_tbl, stats, worker_id);
+		process_packet_out(pkt, fwd_tbl, stats);
 	} else {
 		++stats->ipsec_out_pkts;
 
-		if (!forward_packet(pkt, fwd_tbl, stats, worker_id))
+		if (!forward_packet(pkt, fwd_tbl, stats))
 			goto err;
 
 		++stats->fwd_pkts;
@@ -1053,7 +1111,7 @@ static int process_packets(void *args)
 {
 	thread_config_t *config = args;
 	odp_event_t evs[NUM_EVS];
-	int cnt, worker_id = odp_thread_id();
+	int cnt;
 	odp_event_t ev;
 	odp_event_type_t type;
 	odp_event_subtype_t subtype;
@@ -1076,9 +1134,9 @@ static int process_packets(void *args)
 
 			if (type == ODP_EVENT_PACKET) {
 				if (subtype == ODP_EVENT_PACKET_BASIC) {
-					process_packet_in(pkt, fwd_tbl, stats, worker_id);
+					process_packet_in(pkt, fwd_tbl, stats);
 				} else if (subtype == ODP_EVENT_PACKET_IPSEC) {
-					complete_ipsec_op(pkt, fwd_tbl, stats, worker_id);
+					complete_ipsec_op(pkt, fwd_tbl, stats);
 				} else {
 					++stats->discards;
 					odp_event_free(ev);
@@ -1205,10 +1263,11 @@ static void teardown_test(const prog_config_t *config)
 	/* Drain SA status events. */
 	wait_sas_disabled(config->num_sas);
 
-	for (uint32_t i = 0U; i < config->num_sas; ++i) {
+	for (uint32_t i = 0U; i < config->num_sas; ++i)
 		(void)odp_ipsec_sa_destroy(config->sas[i]);
+
+	for (uint32_t i = 0U; i < config->num_sa_qs; ++i)
 		(void)odp_queue_destroy(config->ev_qs[i]);
-	}
 
 	if (config->compl_q != ODP_QUEUE_INVALID)
 		(void)odp_queue_destroy(config->compl_q);
