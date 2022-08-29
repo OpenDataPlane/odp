@@ -21,6 +21,7 @@
 #include <odp/helper/odph_api.h>
 
 #define PROG_NAME "odp_ipsecfwd"
+#define SHORT_PROG_NAME "ipsfwd"
 #define DELIMITER ","
 
 #define MIN(a, b)  (((a) <= (b)) ? (a) : (b))
@@ -334,13 +335,15 @@ static odp_bool_t setup_ipsec(prog_config_t *config)
 {
 	odp_queue_param_t q_param;
 	odp_ipsec_config_t ipsec_config;
+	char q_name[ODP_QUEUE_NAME_LEN];
 
+	snprintf(q_name, sizeof(q_name), SHORT_PROG_NAME "_sa_status");
 	odp_queue_param_init(&q_param);
 	q_param.type = ODP_QUEUE_TYPE_SCHED;
 	q_param.sched.prio = odp_schedule_default_prio();
 	q_param.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	q_param.sched.group = ODP_SCHED_GROUP_ALL;
-	config->compl_q = odp_queue_create(PROG_NAME, &q_param);
+	config->compl_q = odp_queue_create(q_name, &q_param);
 
 	if (config->compl_q == ODP_QUEUE_INVALID) {
 		ODPH_ERR("Error creating IPsec completion queue\n");
@@ -375,13 +378,16 @@ static odp_bool_t create_sa_dest_queues(odp_ipsec_capability_t *ipsec_capa,
 	}
 
 	for (uint32_t i = 0U; i < config->num_sa_qs; ++i) {
+		char q_name[ODP_QUEUE_NAME_LEN];
+
+		snprintf(q_name, sizeof(q_name), SHORT_PROG_NAME "_sa_compl_%u", i);
 		odp_queue_param_init(&q_param);
 		q_param.type = ODP_QUEUE_TYPE_SCHED;
 		q_param.sched.prio = odp_schedule_max_prio();
 		q_param.sched.sync = config->mode == ORDERED ? ODP_SCHED_SYNC_ORDERED :
 							       ODP_SCHED_SYNC_PARALLEL;
 		q_param.sched.group = ODP_SCHED_GROUP_ALL;
-		config->ev_qs[i] = odp_queue_create(PROG_NAME, &q_param);
+		config->ev_qs[i] = odp_queue_create(q_name, &q_param);
 
 		if (config->ev_qs[i] == ODP_QUEUE_INVALID) {
 			ODPH_ERR("Error creating SA destination queue (created count: %u)\n", i);
@@ -860,7 +866,8 @@ static odp_bool_t setup_fwd_table(prog_config_t *config)
 {
 	fwd_entry_t *fwd_e;
 
-	config->fwd_tbl = odph_iplookup_table_create(PROG_NAME, 0U, 0U, sizeof(fwd_entry_t *));
+	config->fwd_tbl = odph_iplookup_table_create(SHORT_PROG_NAME "_fwd_tbl", 0U, 0U,
+						     sizeof(fwd_entry_t *));
 
 	if (config->fwd_tbl == NULL) {
 		ODPH_ERR("Error creating forwarding table\n");
