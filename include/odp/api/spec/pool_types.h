@@ -304,7 +304,7 @@ typedef struct odp_pool_capability_t {
 		 * memory size for the pool. */
 		uint32_t max_num;
 
-		/** Maximum number of general types, such as odp_packet_t, in a vector. */
+		/** Maximum number of handles (such as odp_packet_t) in a vector. */
 		uint32_t max_size;
 
 		/** Minimum size of thread local cache */
@@ -344,10 +344,10 @@ typedef enum odp_pool_type_t {
 	/** Timeout pool */
 	ODP_POOL_TIMEOUT = ODP_EVENT_TIMEOUT,
 
-	/** Vector pool
+	/** Vector event pool
 	 *
-	 * The pool to hold a vector of general type such as odp_packet_t.
-	 * Each vector holds an array of generic types of the same type.
+	 * Each vector event holds an array of handles. All handles of a vector
+	 * are the same type (such as odp_packet_t).
 	 * @see ODP_EVENT_PACKET_VECTOR
 	 */
 	ODP_POOL_VECTOR,
@@ -515,7 +515,7 @@ typedef struct odp_pool_param_t {
 		/** Number of vectors in the pool */
 		uint32_t num;
 
-		/** Maximum number of general types, such as odp_packet_t, in a vector. */
+		/** Maximum number of handles (such as odp_packet_t) in a vector. */
 		uint32_t max_size;
 
 		/** Maximum number of vectors cached locally per thread
